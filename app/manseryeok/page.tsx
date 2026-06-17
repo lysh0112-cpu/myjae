@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import BottomNav from "../components/BottomNav";
 
-// ───────────────────────────── 12지시 데이터 ─────────────────────────────
 const EARTHLY_BRANCHES = [
   { char: "子", name: "자시", time: "23~01", animal: "🐭" },
   { char: "丑", name: "축시", time: "01~03", animal: "🐮" },
@@ -99,41 +98,14 @@ function SectionHeader({ step, icon, title, desc }: { step: number; icon: string
   );
 }
 
-function ResultPreview({ ready }: { ready: boolean }) {
-  if (!ready) return null;
-  return (
-    <div className="mt-4 rounded-xl p-4"
-      style={{ background: "linear-gradient(135deg, rgba(60,52,137,0.3), rgba(250,199,117,0.1))", border: "1px solid rgba(250,199,117,0.2)" }}>
-      <div className="text-xs font-semibold mb-2" style={{ color: "#FAC775" }}>✦ 사주 기둥 미리보기</div>
-      <div className="flex gap-2 justify-center">
-        {["년주", "월주", "일주", "시주"].map((col) => (
-          <div key={col} className="flex-1 text-center">
-            <div className="text-[10px] mb-1" style={{ color: "#8a88a0" }}>{col}</div>
-            <div className="rounded-lg py-2" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
-              <div className="text-base font-bold" style={{ color: "#FAC775" }}>
-                {col === "년주" ? "甲" : col === "월주" ? "庚" : col === "일주" ? "壬" : "?"}
-              </div>
-              <div className="text-xs mt-0.5" style={{ color: "#b0aec8" }}>
-                {col === "년주" ? "子" : col === "월주" ? "午" : col === "일주" ? "申" : "?"}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-      <p className="text-[10px] text-center mt-2" style={{ color: "#8a88a0" }}>시주는 태어난 시간 입력 후 확정됩니다</p>
-    </div>
-  );
-}
-
-// ───────────────────────────── 실제 페이지 내용 (useSearchParams 사용) ─────────────────────────────
 function ManseryeokContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const initGender = (searchParams.get("gender") as "남" | "여") || "남";
   const initCalType = (searchParams.get("calType") as "양력" | "음력") || "양력";
   const initBirthDate = searchParams.get("birthDate") || "";
   const initBirthHour = searchParams.get("birthHour") || "";
-
   const parsedDate = initBirthDate ? initBirthDate.split("-") : ["", "", ""];
 
   const [gender, setGender] = useState<"남" | "여">(initGender);
@@ -159,6 +131,19 @@ function ManseryeokContent() {
     setAiOptions((prev) => ({ ...prev, [id]: !prev[id] }));
   }
 
+  function handleAnalyze() {
+    if (!readyToAnalyze) return;
+    const params = new URLSearchParams();
+    params.set("gender", gender);
+    params.set("calType", calType);
+    params.set("year", year);
+    params.set("month", month);
+    params.set("day", day);
+    params.set("hour", unknownHour ? "모름" : String(selectedHour));
+    params.set("options", Object.entries(aiOptions).filter(([, v]) => v).map(([k]) => k).join(","));
+    router.push(`/manseryeok/result?${params.toString()}`);
+  }
+
   return (
     <div className="min-h-screen" style={{ background: "#1a1a18", maxWidth: "430px", margin: "0 auto" }}>
       <header className="fixed top-0 z-50 flex items-center justify-between px-4 py-4"
@@ -182,7 +167,6 @@ function ManseryeokContent() {
       </header>
 
       <main className="pt-20 pb-36 px-4 space-y-5">
-        {/* STEP 1 */}
         <div className="rounded-2xl p-5" style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
           <SectionHeader step={1} icon="👤" title="기본 정보" desc="성별과 달력 방식을 선택해주세요" />
           <div className="flex gap-3">
@@ -217,15 +201,12 @@ function ManseryeokContent() {
           </div>
         </div>
 
-        {/* STEP 2 */}
         <div className="rounded-2xl p-5"
           style={{ background: "#2C2C2A", border: `1px solid ${birthReady ? "rgba(250,199,117,0.2)" : "rgba(255,255,255,0.07)"}` }}>
           <SectionHeader step={2} icon="📅" title="생년월일" desc={`${calType}으로 입력해주세요`} />
           <BirthDateInput year={year} month={month} day={day} setYear={setYear} setMonth={setMonth} setDay={setDay} />
-          <ResultPreview ready={birthReady} />
         </div>
 
-        {/* STEP 3 */}
         <div className="rounded-2xl p-5"
           style={{ background: "#2C2C2A", border: `1px solid ${hourReady ? "rgba(250,199,117,0.2)" : "rgba(255,255,255,0.07)"}` }}>
           <SectionHeader step={3} icon="🕐" title="태어난 시 (시주)" desc="12지시 중 해당하는 시간을 선택하세요" />
@@ -264,7 +245,6 @@ function ManseryeokContent() {
           )}
         </div>
 
-        {/* STEP 4 */}
         <div className="rounded-2xl p-5" style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
           <SectionHeader step={4} icon="🤖" title="AI 통변 옵션" desc="원하는 분석 항목을 선택하세요" />
           <div className="space-y-2">
@@ -297,7 +277,7 @@ function ManseryeokContent() {
             })}
           </div>
           <div className="mt-3 text-xs text-center" style={{ color: "#8a88a0" }}>
-            {enabledCount}개 항목 선택됨 · 항목이 많을수록 분석 시간 증가
+            {enabledCount}개 항목 선택됨
           </div>
         </div>
       </main>
@@ -318,7 +298,9 @@ function ManseryeokContent() {
             ))}
           </div>
         )}
-        <button disabled={!readyToAnalyze}
+        <button
+          onClick={handleAnalyze}
+          disabled={!readyToAnalyze}
           className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all active:scale-95"
           style={readyToAnalyze
             ? { background: "linear-gradient(135deg, #3C3489 0%, #FAC775 100%)", color: "#1a1a18", boxShadow: "0 4px 24px rgba(60,52,137,0.5)" }
@@ -330,7 +312,6 @@ function ManseryeokContent() {
   );
 }
 
-// ───────────────────────────── Suspense로 감싸기 ─────────────────────────────
 export default function ManseryeokPage() {
   return (
     <Suspense fallback={
