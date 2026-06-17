@@ -131,6 +131,16 @@ function AiManseryeokSection() {
   const [birthHour, setBirthHour] = useState("");
   const [calType, setCalType] = useState<"양력" | "음력">("양력");
 
+  // URL 파라미터 생성 함수
+  function buildHref() {
+    const params = new URLSearchParams();
+    params.set("gender", gender);
+    params.set("calType", calType);
+    if (birthDate) params.set("birthDate", birthDate);
+    if (birthHour) params.set("birthHour", birthHour);
+    return `/manseryeok?${params.toString()}`;
+  }
+
   return (
     <section className="px-4 -mt-4 relative z-10">
       <div
@@ -187,7 +197,7 @@ function AiManseryeokSection() {
           </select>
         </div>
 
-        <Link href="/manseryeok">
+        <Link href={buildHref()}>
           <button
             className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all active:scale-95"
             style={{ background: "linear-gradient(135deg, #3C3489 0%, #FAC775 100%)", color: "#1a1a18", boxShadow: "0 4px 20px rgba(60,52,137,0.4)" }}>
@@ -357,7 +367,6 @@ function CommunitySection() {
 
   return (
     <section className="mt-8 pb-2">
-      {/* 헤더 */}
       <div className="flex items-center justify-between px-4 mb-4">
         <div>
           <h2 className="text-base font-bold text-white">커뮤니티</h2>
@@ -366,7 +375,6 @@ function CommunitySection() {
         <button className="text-xs font-medium" style={{ color: "#FAC775" }}>전체보기 →</button>
       </div>
 
-      {/* 탭 */}
       <div className="flex gap-1 px-4 mb-3">
         {(["인기", "최신", "Q&A"] as const).map((tab) => (
           <button
@@ -381,7 +389,6 @@ function CommunitySection() {
         ))}
       </div>
 
-      {/* 게시글 목록 */}
       <div className="px-4 flex flex-col gap-2">
         {POSTS.map((post) => {
           const catStyle = CATEGORY_COLORS[post.category] ?? { bg: "rgba(255,255,255,0.05)", color: "#8a88a0" };
@@ -424,7 +431,6 @@ function CommunitySection() {
         })}
       </div>
 
-      {/* 글쓰기 버튼 */}
       <div className="px-4 mt-4">
         <button className="w-full py-3 rounded-xl text-sm font-semibold transition-all active:scale-95"
           style={{ border: "1px solid rgba(60,52,137,0.5)", color: "#b0aec8", background: "rgba(60,52,137,0.1)" }}>

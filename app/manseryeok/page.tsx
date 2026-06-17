@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import BottomNav from "../components/BottomNav";
 
@@ -29,6 +30,13 @@ const AI_OPTIONS = [
   { id: "health", label: "건강·체질", desc: "오행 체질 분석", icon: "🌿", required: false },
   { id: "name", label: "이름 분석", desc: "성명학 에너지 분석", icon: "🖋️", required: false },
 ];
+
+// 홈에서 넘어온 birthHour 문자열을 인덱스로 변환
+const HOUR_MAP: Record<string, number> = {
+  "子시(23~01)": 0, "丑시(01~03)": 1, "寅시(03~05)": 2, "卯시(05~07)": 3,
+  "辰시(07~09)": 4, "巳시(09~11)": 5, "午시(11~13)": 6, "未시(13~15)": 7,
+  "申시(15~17)": 8, "酉시(17~19)": 9, "戌시(19~21)": 10, "亥시(21~23)": 11,
+};
 
 // ───────────────────────────── 년도 / 월 / 일 분리 입력 ─────────────────────────────
 function BirthDateInput({
@@ -169,13 +177,34 @@ function ResultPreview({ ready }: { ready: boolean }) {
 
 // ───────────────────────────── Main Page ─────────────────────────────
 export default function ManseryeokPage() {
-  const [gender, setGender] = useState<"남" | "여">("남");
-  const [calType, setCalType] = useState<"양력" | "음력">("양력");
-  const [year, setYear] = useState("");
-  const [month, setMonth] = useState("");
-  const [day, setDay] = useState("");
-  const [selectedHour, setSelectedHour] = useState<number | null>(null); // null = 모름
-  const [unknownHour, setUnknownHour] = useState(false);
+  const searchParams = useSearchParams();
+
+  // URL 파라미터에서 초기값 읽기
+  const initGender = (searchParams.get("gender") as "남" | "여") || "남";
+  const initCalType = (searchParams.get("calType") as "양력" | "음력") || "양력";
+  const initBirthDate = searchParams.get("birthDate") || "";
+  const initBirthHour = searchParams.get("birthHour") || "";
+
+  // birthDate (YYYY-MM-DD) → year, month, day 분리
+  const [birthDateParts] = useState(() => {
+    if (initBirthDate) {
+      const parts = initBirthDate.split("-");
+      return { year: parts[0] || "", month: String(parseInt(parts[1] || "0")), day: String(parseInt(parts[2] || "0")) };
+    }
+    return { year: "", month: "", day: "" };
+  });
+
+  // birthHour 문자열 → 인덱스 변환
+  const initHourIndex = initBirthHour && initBirthHour !== "모름" ? (HOUR_MAP[initBirthHour] ?? null) : null;
+  const initUnknownHour = initBirthHour === "모름";
+
+  const [gender, setGender] = useState<"남" | "여">(initGender);
+  const [calType, setCalType] = useState<"양력" | "음력">(initCalType);
+  const [year, setYear] = useState(birthDateParts.year);
+  const [month, setMonth] = useState(birthDateParts.month);
+  const [day, setDay] = useState(birthDateParts.day);
+  const [selectedHour, setSelectedHour] = useState<number | null>(initHourIndex);
+  const [unknownHour, setUnknownHour] = useState(initUnknownHour);
   const [aiOptions, setAiOptions] = useState<Record<string, boolean>>({
     basic: true,
     dayun: true,
@@ -241,7 +270,6 @@ export default function ManseryeokPage() {
           <SectionHeader step={1} icon="👤" title="기본 정보" desc="성별과 달력 방식을 선택해주세요" />
 
           <div className="flex gap-3">
-            {/* 성별 */}
             <div className="flex-1">
               <label className="text-xs font-medium block mb-2" style={{ color: "#b0aec8" }}>성별</label>
               <div className="grid grid-cols-2 gap-2">
@@ -258,7 +286,6 @@ export default function ManseryeokPage() {
               </div>
             </div>
 
-            {/* 달력 유형 */}
             <div className="flex-1">
               <label className="text-xs font-medium block mb-2" style={{ color: "#b0aec8" }}>달력</label>
               <div className="grid grid-cols-2 gap-2">
@@ -291,7 +318,6 @@ export default function ManseryeokPage() {
           style={{ background: "#2C2C2A", border: `1px solid ${hourReady ? "rgba(250,199,117,0.2)" : "rgba(255,255,255,0.07)"}` }}>
           <SectionHeader step={3} icon="🕐" title="태어난 시 (시주)" desc="12지시 중 해당하는 시간을 선택하세요" />
 
-          {/* 모름 버튼 */}
           <button
             onClick={() => { setUnknownHour(!unknownHour); setSelectedHour(null); }}
             className="w-full py-2.5 rounded-xl text-sm font-medium mb-3 transition-all"
@@ -301,7 +327,6 @@ export default function ManseryeokPage() {
             {unknownHour ? "✓ " : ""}태어난 시간을 모름
           </button>
 
-          {/* 12지시 그리드 */}
           <div className={`grid grid-cols-4 gap-2 transition-opacity ${unknownHour ? "opacity-30 pointer-events-none" : "opacity-100"}`}>
             {EARTHLY_BRANCHES.map((b, i) => {
               const isSelected = selectedHour === i;
@@ -329,7 +354,6 @@ export default function ManseryeokPage() {
             })}
           </div>
 
-          {/* 선택된 시 요약 */}
           {(selectedHour !== null || unknownHour) && (
             <div className="mt-3 rounded-xl px-4 py-2.5 flex items-center gap-2"
               style={{ background: "rgba(60,52,137,0.2)", border: "1px solid rgba(60,52,137,0.4)" }}>
@@ -375,7 +399,6 @@ export default function ManseryeokPage() {
                     </div>
                   </div>
 
-                  {/* 토글 스위치 */}
                   <div
                     className="relative w-11 h-6 rounded-full flex-shrink-0 transition-all"
                     style={{ background: on ? "#3C3489" : "rgba(255,255,255,0.1)" }}>
@@ -412,7 +435,6 @@ export default function ManseryeokPage() {
           paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 60px)",
         }}
       >
-        {/* 요약 배지 */}
         {readyToAnalyze && (
           <div className="flex items-center justify-center gap-2 mb-3 flex-wrap">
             {[
