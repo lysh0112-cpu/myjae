@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+:root {
+  --background: #1a1a18;
+  --foreground: #f5f0e8;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-navy: #2C2C2A;
+  --color-navy-light: #3a3a37;
+  --color-purple: #3C3489;
+  --color-purple-light: #4e46b0;
+  --color-gold: #FAC775;
+  --color-gold-dark: #d4a050;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+}
