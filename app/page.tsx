@@ -155,7 +155,7 @@ function AiManseryeokSection() {
               <label className="text-xs font-medium mb-1.5 block" style={{ color: "#b0aec8" }}>{label}</label>
               <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
                 {vals.map((v) => (
-                  <button key={v} onClick={() => (set as (v: typeof v) => void)(v)}
+                  <button key={v} onClick={() => (set as (x: string) => void)(v)}
                     className="flex-1 py-2.5 text-sm font-medium transition-all"
                     style={state === v ? { background: "#3C3489", color: "#FAC775" } : { background: "transparent", color: "#8a88a0" }}>
                     {v}
