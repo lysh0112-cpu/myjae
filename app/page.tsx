@@ -402,4 +402,4 @@ export default function Home() {
       <BottomNav />
     </div>
   );
-}
+} 
