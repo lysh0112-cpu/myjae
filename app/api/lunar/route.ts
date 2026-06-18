@@ -12,23 +12,22 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const url = `http://apis.data.go.kr/B090041/openapi/service/LrsrCldInfoService/getLunCalInfo?solYear=${year}&solMonth=${String(month).padStart(2,"0")}&solDay=${String(day).padStart(2,"0")}&ServiceKey=${apiKey}&_type=json`;
+    // 음력 → 양력 직접 변환 API (getSolCalInfo)
+    const url = `http://apis.data.go.kr/B090041/openapi/service/LrsrCldInfoService/getSolCalInfo?lunYear=${year}&lunMonth=${String(month).padStart(2,"0")}&lunDay=${String(day).padStart(2,"0")}&lunLeapmonth=&ServiceKey=${apiKey}&_type=json`;
     const res = await fetch(url);
     const data = await res.json();
     const item = data?.response?.body?.items?.item;
     if (!item) {
       return NextResponse.json({ error: "No data" }, { status: 404 });
     }
+    // 여러 결과가 배열로 올 수 있으므로 첫번째 항목 사용
+    const result = Array.isArray(item) ? item[0] : item;
     return NextResponse.json({
-      lunarYear: item.lunYear,
-      lunarMonth: item.lunMonth,
-      lunarDay: item.lunDay,
-      solarYear: item.solYear,
-      solarMonth: item.solMonth,
-      solarDay: item.solDay,
-      leapMonth: item.lunLeapmonth === "윤",
+      solarYear: parseInt(result.solYear),
+      solarMonth: parseInt(result.solMonth),
+      solarDay: parseInt(result.solDay),
     });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
-} 
+}
