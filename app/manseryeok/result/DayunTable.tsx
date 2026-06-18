@@ -57,6 +57,12 @@ const sipsinColor = (s: string) => {
   return "#8a88a0";
 };
 
+// 절기 날짜 (월별 절기 시작일)
+const SOLAR_TERM_DAYS: Record<number, number> = {
+  1:6, 2:4, 3:6, 4:5, 5:6, 6:6,
+  7:7, 8:8, 9:8, 10:8, 11:8, 12:7
+};
+
 function calcDayun(
   birthYear: number, birthMonth: number, birthDay: number,
   gender: string, monthGanji: string, yearStem: string
@@ -73,24 +79,36 @@ function calcDayun(
   const monthStemIdx = HEAVENLY_STEMS.indexOf(monthGanji[0]);
   const monthBranchIdx = EARTHLY_BRANCHES.indexOf(monthGanji[1]);
 
-  // 절기까지 날수 계산
-  const solarTermDays: Record<number, number> = {
-    1:6, 2:4, 3:6, 4:5, 5:6, 6:6,
-    7:7, 8:8, 9:8, 10:8, 11:8, 12:7
-  };
-
+  // 생일에서 절기까지 날수 계산
+  // 순행: 생일 → 다음 절기까지 날수
+  // 역행: 생일 → 이전 절기까지 날수
   let daysToTerm: number;
+
   if (isForward) {
+    // 다음 달 절기일까지 날수
     const nextMonth = birthMonth === 12 ? 1 : birthMonth + 1;
-    const nextTermDay = solarTermDays[nextMonth] || 6;
-    const daysInMonth = new Date(birthYear, birthMonth, 0).getDate();
-    daysToTerm = (daysInMonth - birthDay) + nextTermDay;
+    const nextYear = birthMonth === 12 ? birthYear + 1 : birthYear;
+    const nextTermDay = SOLAR_TERM_DAYS[nextMonth];
+    const nextTermDate = new Date(nextYear, nextMonth - 1, nextTermDay);
+    const birthDate = new Date(birthYear, birthMonth - 1, birthDay);
+    daysToTerm = Math.round((nextTermDate.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
   } else {
-    const termDay = solarTermDays[birthMonth];
-    daysToTerm = Math.abs(birthDay - termDay);
-    if (daysToTerm === 0) daysToTerm = 30;
+    // 이번 달 절기일까지 날수 (역방향)
+    const termDay = SOLAR_TERM_DAYS[birthMonth];
+    const termDate = new Date(birthYear, birthMonth - 1, termDay);
+    const birthDate = new Date(birthYear, birthMonth - 1, birthDay);
+    daysToTerm = Math.round((birthDate.getTime() - termDate.getTime()) / (1000 * 60 * 60 * 24));
+    // 절기 이전 출생이면 전달 절기 기준
+    if (daysToTerm < 0) {
+      const prevMonth = birthMonth === 1 ? 12 : birthMonth - 1;
+      const prevYear = birthMonth === 1 ? birthYear - 1 : birthYear;
+      const prevTermDay = SOLAR_TERM_DAYS[prevMonth];
+      const prevTermDate = new Date(prevYear, prevMonth - 1, prevTermDay);
+      daysToTerm = Math.round((birthDate.getTime() - prevTermDate.getTime()) / (1000 * 60 * 60 * 24));
+    }
   }
 
+  // 날수 ÷ 3 = 대운 시작 나이 (소수점 반올림)
   const startAge = Math.round(daysToTerm / 3);
 
   const dayuns = [];
