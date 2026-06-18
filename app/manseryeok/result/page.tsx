@@ -75,9 +75,6 @@ function ResultContent() {
   useEffect(() => {
     if (calType === "음력") {
       setConverting(true);
-      // 음력 → 양력 변환: 한국천문연구원 API 사용
-      // 음력 입력을 양력으로 변환하기 위해 해당 연도 전체를 검색
-      // 방법: 양력 날짜로 음력 정보를 조회해서 일치하는 날짜 찾기
       findSolarFromLunar(yearParam, monthParam, dayParam).then(result => {
         setSolar(result);
         setConverting(false);
@@ -88,22 +85,11 @@ function ResultContent() {
   }, [calType, yearParam, monthParam, dayParam]);
 
   async function findSolarFromLunar(lunarYear:number, lunarMonth:number, lunarDay:number) {
-    // 음력 해당 연도의 양력 1월~12월을 순회하며 일치하는 날짜 찾기
     try {
-      for (let m = 1; m <= 12; m++) {
-        const daysInMonth = new Date(lunarYear, m, 0).getDate();
-        for (let d = 1; d <= daysInMonth; d++) {
-          const res = await fetch(`/api/lunar?year=${lunarYear}&month=${m}&day=${d}`);
-          const data = await res.json();
-          if (
-            parseInt(data.lunarYear) === lunarYear &&
-            parseInt(data.lunarMonth) === lunarMonth &&
-            parseInt(data.lunarDay) === lunarDay &&
-            !data.leapMonth
-          ) {
-            return { year: lunarYear, month: m, day: d };
-          }
-        }
+      const res = await fetch(`/api/lunar?year=${lunarYear}&month=${lunarMonth}&day=${lunarDay}`);
+      const data = await res.json();
+      if (data.solarYear) {
+        return { year: data.solarYear, month: data.solarMonth, day: data.solarDay };
       }
     } catch(e) {
       console.error(e);
