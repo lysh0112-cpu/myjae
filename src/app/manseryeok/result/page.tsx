@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import BottomNav from "../../components/BottomNav";
+import BottomNav from "../../../components/BottomNav";
 
 const HEAVENLY_STEMS = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
 const EARTHLY_BRANCHES = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
@@ -94,7 +94,7 @@ function ResultContent(){
     <div className="min-h-screen" style={{background:"#1a1a18",maxWidth:"430px",margin:"0 auto"}}>
       <header className="fixed top-0 z-50 flex items-center justify-between px-4 py-4"
         style={{background:"rgba(26,26,24,0.97)",backdropFilter:"blur(12px)",borderBottom:"1px solid rgba(255,255,255,0.06)",width:"100%",maxWidth:"430px",left:"50%",transform:"translateX(-50%)"}}>
-        <Link href="/manseryeok">
+        <Link href="/">
           <button className="w-9 h-9 rounded-xl flex items-center justify-center" style={{background:"rgba(255,255,255,0.06)"}}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5 text-white"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
@@ -106,7 +106,6 @@ function ResultContent(){
       </header>
 
       <main className="pt-20 pb-36 px-4 space-y-4">
-        {/* 기본정보 */}
         <div className="rounded-2xl p-4" style={{background:"linear-gradient(135deg,#3C3489 0%,#2a2075 100%)",border:"1px solid rgba(250,199,117,0.2)"}}>
           <div className="text-xs font-semibold mb-2" style={{color:"rgba(250,199,117,0.8)"}}>분석 대상</div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -116,7 +115,6 @@ function ResultContent(){
           </div>
         </div>
 
-        {/* 사주명식 */}
         <div className="rounded-2xl p-5" style={{background:"#2C2C2A",border:"1px solid rgba(250,199,117,0.15)"}}>
           <div className="flex items-center gap-2 mb-4">
             <span style={{color:"#FAC775",fontSize:"18px"}}>✦</span>
@@ -145,7 +143,6 @@ function ResultContent(){
           </div>
         </div>
 
-        {/* 오행분포 */}
         <div className="rounded-2xl p-5" style={{background:"#2C2C2A",border:"1px solid rgba(255,255,255,0.07)"}}>
           <h2 className="text-base font-bold text-white mb-4">오행 분포</h2>
           <div className="space-y-2.5">
@@ -167,7 +164,6 @@ function ResultContent(){
           </div>
         </div>
 
-        {/* AI분석 */}
         <div className="rounded-2xl p-5" style={{background:"#2C2C2A",border:"1px solid rgba(255,255,255,0.07)"}}>
           <div className="flex items-center gap-2 mb-4">
             <span className="text-lg">🤖</span>
