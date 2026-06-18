@@ -55,9 +55,9 @@ function calcElements(saju:{stem:string;branch:string}[]){
 
 function ResultContent(){
   const searchParams=useSearchParams();
-  const [aiResult,setAiResult]=useState("");
-  const [loading,setLoading]=useState(false);
-  const [done,setDone]=useState(false);
+  const [aiResult,setAiResult]=useState<string>("");
+  const [loading,setLoading]=useState<boolean>(false);
+  const [done,setDone]=useState<boolean>(false);
 
   const gender=searchParams.get("gender")||"남";
   const calType=searchParams.get("calType")||"양력";
@@ -66,16 +66,18 @@ function ResultContent(){
   const day=parseInt(searchParams.get("day")||"0");
   const hourParam=searchParams.get("hour");
   const hourIdx=hourParam==="모름"||hourParam===null?null:parseInt(hourParam);
-  const options=searchParams.get("options")?.split(",")||["basic"];
+  const options=(searchParams.get("options")||"basic").split(",");
 
   const saju=calcSaju(year,month,day,hourIdx);
   const elements=calcElements(saju);
 
-  async function handleAiAnalysis(){
-    setLoading(true);setAiResult("");setDone(false);
+  const handleAiAnalysis=async()=>{
+    setLoading(true);
+    setAiResult("");
+    setDone(false);
     const sajuText=saju.map(s=>`${s.pillar}: ${s.stem}${s.branch}`).join(", ");
     const optLabels:Record<string,string>={basic:"사주 기본 분석",dayun:"대운·세운 흐름",career:"직업·재물운",love:"연애·궁합운",health:"건강·체질",name:"이름 분석"};
-    const prompt=`당신은 명리학 전문가입니다. 다음 사주를 분석해주세요.\n\n성별: ${gender}성\n생년월일: ${calType} ${year}년 ${month}월 ${day}일\n태어난 시: ${hourIdx===null?"모름":BRANCH_LIST[hourIdx]?.char+"시"}\n\n사주팔자: ${sajuText}\n오행: 목${elements["목"]} 화${elements["화"]} 토${elements["토"]} 금${elements["금"]} 수${elements["수"]}\n\n분석항목: ${options.map(o=>optLabels[o]||o).join(", ")}\n\n각 항목별 소제목을 붙여 친절하고 자세하게 분석해주세요.`;
+    const prompt=`당신은 명리학 전문가입니다. 다음 사주를 분석해주세요.\n\n성별: ${gender}성\n생년월일: ${calType} ${year}년 ${month}월 ${day}일\n태어난 시: ${hourIdx===null?"모름":BRANCH_LIST[hourIdx]?.char+"시"}\n\n사주팔자: ${sajuText}\n오행: 목${elements["목"]} 화${elements["화"]} 토${elements["토"]} 금${elements["금"]} 수${elements["수"]}\n\n분석항목: ${options.map((o:string)=>optLabels[o]||o).join(", ")}\n\n각 항목별 소제목을 붙여 친절하고 자세하게 분석해주세요.`;
     try{
       const res=await fetch("/api/analyze",{
         method:"POST",
@@ -83,11 +85,16 @@ function ResultContent(){
         body:JSON.stringify({messages:[{role:"user",content:prompt}]}),
       });
       const data=await res.json();
-      setAiResult(data.content?.find((c:{type:string})=>c.type==="text")?.text||"결과를 가져오지 못했습니다.");
-    }catch{
+      const text=data.content?.find((c:{type:string})=>c.type==="text")?.text;
+      setAiResult(text||"결과를 가져오지 못했습니다.");
+    }catch(e){
+      console.error(e);
       setAiResult("오류가 발생했습니다. 다시 시도해주세요.");
-    }finally{setLoading(false);setDone(true);}
-  }
+    }finally{
+      setLoading(false);
+      setDone(true);
+    }
+  };
 
   return(
     <div className="min-h-screen" style={{background:"#1a1a18",maxWidth:"430px",margin:"0 auto"}}>
