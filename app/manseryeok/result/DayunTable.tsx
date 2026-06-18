@@ -57,58 +57,66 @@ const sipsinColor = (s: string) => {
   return "#8a88a0";
 };
 
-// 절기 날짜 (월별 절기 시작일)
+// 월별 절기 시작일
 const SOLAR_TERM_DAYS: Record<number, number> = {
   1:6, 2:4, 3:6, 4:5, 5:6, 6:6,
   7:7, 8:8, 9:8, 10:8, 11:8, 12:7
 };
+
+// 다음 절입일 구하기 (생일 이후 가장 가까운 절기)
+function getNextTermDate(year: number, month: number, day: number): Date {
+  const termDay = SOLAR_TERM_DAYS[month];
+  if (day < termDay) {
+    // 같은 달 절기가 생일 이후 → 이번달 절기가 다음 절입일
+    return new Date(year, month - 1, termDay);
+  } else {
+    // 같은 달 절기가 생일 이전 → 다음달 절기가 다음 절입일
+    const nextMonth = month === 12 ? 1 : month + 1;
+    const nextYear = month === 12 ? year + 1 : year;
+    return new Date(nextYear, nextMonth - 1, SOLAR_TERM_DAYS[nextMonth]);
+  }
+}
+
+// 이전 절입일 구하기 (생일 이전 가장 가까운 절기)
+function getPrevTermDate(year: number, month: number, day: number): Date {
+  const termDay = SOLAR_TERM_DAYS[month];
+  if (day >= termDay) {
+    // 같은 달 절기가 생일 이전 → 이번달 절기가 이전 절입일
+    return new Date(year, month - 1, termDay);
+  } else {
+    // 같은 달 절기가 생일 이후 → 전달 절기가 이전 절입일
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear = month === 1 ? year - 1 : year;
+    return new Date(prevYear, prevMonth - 1, SOLAR_TERM_DAYS[prevMonth]);
+  }
+}
 
 function calcDayun(
   birthYear: number, birthMonth: number, birthDay: number,
   gender: string, monthGanji: string, yearStem: string
 ): { age: number; stem: string; branch: string }[] {
 
-  // 년주 천간 기준 음양 판단
   const yearStemIdx = HEAVENLY_STEMS.indexOf(yearStem);
   const yearYang = yearStemIdx % 2 === 0;
   const isMale = gender === "남";
-  // 양년 남성, 음년 여성 → 순행
-  // 음년 남성, 양년 여성 → 역행
   const isForward = (yearYang && isMale) || (!yearYang && !isMale);
 
   const monthStemIdx = HEAVENLY_STEMS.indexOf(monthGanji[0]);
   const monthBranchIdx = EARTHLY_BRANCHES.indexOf(monthGanji[1]);
 
-  // 생일에서 절기까지 날수 계산
-  // 순행: 생일 → 다음 절기까지 날수
-  // 역행: 생일 → 이전 절기까지 날수
-  let daysToTerm: number;
+  const birthDate = new Date(birthYear, birthMonth - 1, birthDay);
 
+  let termDate: Date;
   if (isForward) {
-    // 다음 달 절기일까지 날수
-    const nextMonth = birthMonth === 12 ? 1 : birthMonth + 1;
-    const nextYear = birthMonth === 12 ? birthYear + 1 : birthYear;
-    const nextTermDay = SOLAR_TERM_DAYS[nextMonth];
-    const nextTermDate = new Date(nextYear, nextMonth - 1, nextTermDay);
-    const birthDate = new Date(birthYear, birthMonth - 1, birthDay);
-    daysToTerm = Math.round((nextTermDate.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
+    termDate = getNextTermDate(birthYear, birthMonth, birthDay);
   } else {
-    // 이번 달 절기일까지 날수 (역방향)
-    const termDay = SOLAR_TERM_DAYS[birthMonth];
-    const termDate = new Date(birthYear, birthMonth - 1, termDay);
-    const birthDate = new Date(birthYear, birthMonth - 1, birthDay);
-    daysToTerm = Math.round((birthDate.getTime() - termDate.getTime()) / (1000 * 60 * 60 * 24));
-    // 절기 이전 출생이면 전달 절기 기준
-    if (daysToTerm < 0) {
-      const prevMonth = birthMonth === 1 ? 12 : birthMonth - 1;
-      const prevYear = birthMonth === 1 ? birthYear - 1 : birthYear;
-      const prevTermDay = SOLAR_TERM_DAYS[prevMonth];
-      const prevTermDate = new Date(prevYear, prevMonth - 1, prevTermDay);
-      daysToTerm = Math.round((birthDate.getTime() - prevTermDate.getTime()) / (1000 * 60 * 60 * 24));
-    }
+    termDate = getPrevTermDate(birthYear, birthMonth, birthDay);
   }
 
-  // 날수 ÷ 3 = 대운 시작 나이 (소수점 반올림)
+  const daysToTerm = Math.abs(
+    Math.round((termDate.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24))
+  );
+
   const startAge = Math.round(daysToTerm / 3);
 
   const dayuns = [];
