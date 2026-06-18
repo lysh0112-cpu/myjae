@@ -18,39 +18,25 @@ const BRANCH_LIST = [
   {char:"戌",name:"술"},{char:"亥",name:"해"},
 ];
 
-function calcSaju(year:number, month:number, day:number, hourIdx:number|null) {
-  const yearStem = HEAVENLY_STEMS[((year-4)%10+10)%10];
-  const yearBranch = EARTHLY_BRANCHES[((year-4)%12+12)%12];
-  const MONTH_BRANCH_IDX = [2,3,4,5,6,7,8,9,10,11,0,1];
-  const monthBranch = EARTHLY_BRANCHES[MONTH_BRANCH_IDX[month-1]];
-  const yearStemIdx = HEAVENLY_STEMS.indexOf(yearStem);
-  const monthStemBase = (yearStemIdx % 5) * 2;
-  const monthStem = HEAVENLY_STEMS[(monthStemBase + (month-1)) % 10];
-  const a = Math.floor((14-month)/12);
-  const y = year+4800-a;
-  const m = month+12*a-3;
-  const jdn = day+Math.floor((153*m+2)/5)+365*y+Math.floor(y/4)-Math.floor(y/100)+Math.floor(y/400)-32045;
-  const dayStem = HEAVENLY_STEMS[((jdn%10)+10)%10];
-  const dayBranch = EARTHLY_BRANCHES[((jdn%12)+12)%12];
-  let hourStem="?", hourBranch="?";
-  if (hourIdx !== null) {
-    const dg = HEAVENLY_STEMS.indexOf(dayStem);
-    hourStem = HEAVENLY_STEMS[(dg*2+hourIdx)%10];
-    hourBranch = EARTHLY_BRANCHES[hourIdx];
-  }
-  return [
-    {pillar:"년주", stem:yearStem, branch:yearBranch},
-    {pillar:"월주", stem:monthStem, branch:monthBranch},
-    {pillar:"일주", stem:dayStem, branch:dayBranch},
-    {pillar:"시주", stem:hourStem, branch:hourBranch},
-  ];
+// 간지 문자열(2글자)에서 천간/지지 분리
+function splitGanji(ganji: string) {
+  if (!ganji || ganji.length < 2) return { stem: "?", branch: "?" };
+  return { stem: ganji[0], branch: ganji[1] };
 }
 
-function calcElements(saju:{stem:string;branch:string}[]) {
-  const c:Record<string,number> = {목:0,화:0,토:0,금:0,수:0};
+// 시주 계산 (일간 기준)
+function calcHourPillar(dayStem: string, hourIdx: number) {
+  const dg = HEAVENLY_STEMS.indexOf(dayStem);
+  const hourStem = HEAVENLY_STEMS[(dg * 2 + hourIdx) % 10];
+  const hourBranch = EARTHLY_BRANCHES[hourIdx];
+  return { stem: hourStem, branch: hourBranch };
+}
+
+function calcElements(saju: {stem:string;branch:string}[]) {
+  const c: Record<string,number> = {목:0,화:0,토:0,금:0,수:0};
   saju.forEach(({stem,branch}) => {
-    if(STEM_ELEMENT[stem]) c[STEM_ELEMENT[stem]]++;
-    if(BRANCH_ELEMENT[branch]) c[BRANCH_ELEMENT[branch]]++;
+    if (STEM_ELEMENT[stem]) c[STEM_ELEMENT[stem]]++;
+    if (BRANCH_ELEMENT[branch]) c[BRANCH_ELEMENT[branch]]++;
   });
   return c;
 }
@@ -60,8 +46,9 @@ function ResultContent() {
   const [aiResult, setAiResult] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [done, setDone] = useState<boolean>(false);
-  const [solar, setSolar] = useState<{year:number,month:number,day:number}|null>(null);
-  const [converting, setConverting] = useState<boolean>(false);
+  const [saju, setSaju] = useState<{pillar:string;stem:string;branch:string}[]>([]);
+  const [solar, setSolar] = useState<{year:number;month:number;day:number}|null>(null);
+  const [converting, setConverting] = useState<boolean>(true);
 
   const gender = searchParams.get("gender") || "남";
   const calType = searchParams.get("calType") || "양력";
@@ -73,35 +60,53 @@ function ResultContent() {
   const options = (searchParams.get("options") || "basic").split(",");
 
   useEffect(() => {
-    if (calType === "음력") {
+    async function loadSaju() {
       setConverting(true);
-      findSolarFromLunar(yearParam, monthParam, dayParam).then(result => {
-        setSolar(result);
+      try {
+        if (calType === "음력") {
+          // 1. 음력 → 양력 변환
+          const res1 = await fetch(`/api/lunar?year=${yearParam}&month=${monthParam}&day=${dayParam}&calType=음력`);
+          const d1 = await res1.json();
+          const sy = d1.solarYear, sm = d1.solarMonth, sd = d1.solarDay;
+          setSolar({ year: sy, month: sm, day: sd });
+          // 2. 양력으로 간지 조회
+          const res2 = await fetch(`/api/lunar?year=${sy}&month=${sm}&day=${sd}&calType=양력`);
+          const d2 = await res2.json();
+          buildSaju(d2, hourIdx);
+        } else {
+          setSolar({ year: yearParam, month: monthParam, day: dayParam });
+          const res = await fetch(`/api/lunar?year=${yearParam}&month=${monthParam}&day=${dayParam}&calType=양력`);
+          const d = await res.json();
+          buildSaju(d, hourIdx);
+        }
+      } catch(e) {
+        console.error(e);
+      } finally {
         setConverting(false);
-      });
-    } else {
-      setSolar({ year: yearParam, month: monthParam, day: dayParam });
-    }
-  }, [calType, yearParam, monthParam, dayParam]);
-
-  async function findSolarFromLunar(lunarYear:number, lunarMonth:number, lunarDay:number) {
-    try {
-      const res = await fetch(`/api/lunar?year=${lunarYear}&month=${lunarMonth}&day=${lunarDay}`);
-      const data = await res.json();
-      if (data.solarYear) {
-        return { year: data.solarYear, month: data.solarMonth, day: data.solarDay };
       }
-    } catch(e) {
-      console.error(e);
     }
-    return { year: lunarYear, month: lunarMonth, day: lunarDay };
-  }
 
-  const saju = solar ? calcSaju(solar.year, solar.month, solar.day, hourIdx) : [];
-  const elements = solar ? calcElements(saju) : {목:0,화:0,토:0,금:0,수:0};
+    function buildSaju(data: {yearGanji:string;monthGanji:string;dayGanji:string}, hourIdx: number|null) {
+      const year = splitGanji(data.yearGanji);
+      const month = splitGanji(data.monthGanji);
+      const day = splitGanji(data.dayGanji);
+      const hour = hourIdx !== null
+        ? calcHourPillar(day.stem, hourIdx)
+        : { stem: "?", branch: "?" };
+      setSaju([
+        { pillar: "년주", stem: year.stem, branch: year.branch },
+        { pillar: "월주", stem: month.stem, branch: month.branch },
+        { pillar: "일주", stem: day.stem, branch: day.branch },
+        { pillar: "시주", stem: hour.stem, branch: hour.branch },
+      ]);
+    }
+
+    loadSaju();
+  }, [calType, yearParam, monthParam, dayParam, hourIdx]);
+
+  const elements = saju.length > 0 ? calcElements(saju) : {목:0,화:0,토:0,금:0,수:0};
 
   const handleAiAnalysis = async () => {
-    if (!solar) return;
     setLoading(true);
     setAiResult("");
     setDone(false);
@@ -111,7 +116,7 @@ function ResultContent() {
       career:"직업·재물운", love:"연애·궁합운",
       health:"건강·체질", name:"이름 분석"
     };
-    const lunarInfo = calType === "음력"
+    const lunarInfo = calType === "음력" && solar
       ? `\n음력 ${yearParam}년 ${monthParam}월 ${dayParam}일 → 양력 ${solar.year}년 ${solar.month}월 ${solar.day}일로 변환`
       : "";
     const prompt = `당신은 명리학 전문가입니다. 다음 사주를 분석해주세요.\n\n성별: ${gender}성\n생년월일: ${calType} ${yearParam}년 ${monthParam}월 ${dayParam}일${lunarInfo}\n태어난 시: ${hourIdx === null ? "모름" : BRANCH_LIST[hourIdx]?.char+"시"}\n\n사주팔자: ${sajuText}\n오행: 목${elements["목"]} 화${elements["화"]} 토${elements["토"]} 금${elements["금"]} 수${elements["수"]}\n\n분석항목: ${options.map((o:string) => optLabels[o]||o).join(", ")}\n\n각 항목별 소제목을 붙여 친절하고 자세하게 분석해주세요.`;
@@ -134,11 +139,11 @@ function ResultContent() {
     }
   };
 
-  if (converting || !solar) {
+  if (converting) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{background:"#1a1a18"}}>
         <div className="text-3xl animate-spin">✦</div>
-        <p style={{color:"#FAC775"}}>음력을 양력으로 변환 중...</p>
+        <p style={{color:"#FAC775"}}>사주 정보를 불러오는 중...</p>
       </div>
     );
   }
@@ -169,7 +174,7 @@ function ResultContent() {
             {[
               `${gender}성`,
               `${calType} ${yearParam}.${monthParam}.${dayParam}`,
-              calType === "음력" ? `(양력 ${solar.year}.${solar.month}.${solar.day})` : "",
+              calType === "음력" && solar ? `(양력 ${solar.year}.${solar.month}.${solar.day})` : "",
               hourIdx === null ? "시 미지정" : `${BRANCH_LIST[hourIdx]?.char}시`
             ].filter(Boolean).map(item => (
               <span key={item} className="text-sm font-semibold px-3 py-1 rounded-full"
