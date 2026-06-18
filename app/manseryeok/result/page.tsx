@@ -113,6 +113,7 @@ function ResultContent() {
   const yearParam = parseInt(searchParams.get("year") || "0");
   const monthParam = parseInt(searchParams.get("month") || "0");
   const dayParam = parseInt(searchParams.get("day") || "0");
+  const leapMonth = searchParams.get("leapMonth") || "0";
   const hourParam = searchParams.get("hour");
   const hourIdx = hourParam === "모름" || hourParam === null ? null : parseInt(hourParam);
   const options = (searchParams.get("options") || "basic").split(",");
@@ -122,7 +123,7 @@ function ResultContent() {
       setConverting(true);
       try {
         if (calType === "음력") {
-          const res1 = await fetch(`/api/lunar?year=${yearParam}&month=${monthParam}&day=${dayParam}&calType=음력`);
+          const res1 = await fetch(`/api/lunar?year=${yearParam}&month=${monthParam}&day=${dayParam}&calType=음력&leapMonth=${leapMonth}`);
           const d1 = await res1.json();
           const sy = d1.solarYear, sm = d1.solarMonth, sd = d1.solarDay;
           setSolar({ year: sy, month: sm, day: sd });
@@ -161,7 +162,7 @@ function ResultContent() {
     }
 
     loadSaju();
-  }, [calType, yearParam, monthParam, dayParam, hourIdx]);
+  }, [calType, yearParam, monthParam, dayParam, leapMonth, hourIdx]);
 
   const elements = saju.length > 0 ? calcElements(saju) : {목:0,화:0,토:0,금:0,수:0};
 
@@ -176,7 +177,7 @@ function ResultContent() {
       health:"건강·체질", name:"이름 분석"
     };
     const lunarInfo = calType === "음력" && solar
-      ? `\n음력 ${yearParam}년 ${monthParam}월 ${dayParam}일 → 양력 ${solar.year}년 ${solar.month}월 ${solar.day}일로 변환`
+      ? `\n음력 ${yearParam}년 ${monthParam}월 ${dayParam}일${leapMonth === "1" ? " (윤달)" : ""} → 양력 ${solar.year}년 ${solar.month}월 ${solar.day}일로 변환`
       : "";
     const prompt = `당신은 명리학 전문가입니다. 다음 사주를 분석해주세요.\n\n성별: ${gender}성\n생년월일: ${calType} ${yearParam}년 ${monthParam}월 ${dayParam}일${lunarInfo}\n태어난 시: ${hourIdx === null ? "모름" : BRANCH_LIST[hourIdx]?.char+"시"}\n\n사주팔자: ${sajuText}\n오행: 목${elements["목"]} 화${elements["화"]} 토${elements["토"]} 금${elements["금"]} 수${elements["수"]}\n\n분석항목: ${options.map((o:string) => optLabels[o]||o).join(", ")}\n\n각 항목별 소제목을 붙여 친절하고 자세하게 분석해주세요.`;
 
@@ -232,7 +233,7 @@ function ResultContent() {
           <div className="flex items-center gap-2 flex-wrap">
             {[
               `${gender}성`,
-              `${calType} ${yearParam}.${monthParam}.${dayParam}`,
+              `${calType} ${yearParam}.${monthParam}.${dayParam}${calType === "음력" && leapMonth === "1" ? " (윤달)" : ""}`,
               calType === "음력" && solar ? `(양력 ${solar.year}.${solar.month}.${solar.day})` : "",
               hourIdx === null ? "시 미지정" : `${BRANCH_LIST[hourIdx]?.char}시`
             ].filter(Boolean).map(item => (
@@ -303,7 +304,6 @@ function ResultContent() {
           </div>
         </div>
 
-        {/* 대운표 */}
         {dayStem && monthGanji && yearStem && (
           <DayunTable
             birthYear={yearParam}
@@ -317,7 +317,6 @@ function ResultContent() {
           />
         )}
 
-        {/* 세운표 */}
         {dayStem && (
           <SeyunTable
             dayStem={dayStem}
