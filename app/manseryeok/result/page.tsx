@@ -105,6 +105,7 @@ function ResultContent() {
   const [converting, setConverting] = useState<boolean>(true);
   const [dayStem, setDayStem] = useState<string>("");
   const [monthGanji, setMonthGanji] = useState<string>("");
+  const [yearStem, setYearStem] = useState<string>("");
 
   const gender = searchParams.get("gender") || "남";
   const calType = searchParams.get("calType") || "양력";
@@ -149,6 +150,7 @@ function ResultContent() {
         : { stem: "?", branch: "?" };
       setDayStem(day.stem);
       setMonthGanji(month.stem + month.branch);
+      setYearStem(year.stem);
       setSaju([
         { pillar: "시주", stem: hour.stem, branch: hour.branch },
         { pillar: "일주", stem: day.stem, branch: day.branch },
@@ -301,13 +303,14 @@ function ResultContent() {
         </div>
 
         {/* 대운표 */}
-        {dayStem && monthGanji && (
+        {dayStem && monthGanji && yearStem && (
           <DayunTable
             birthYear={yearParam}
             birthMonth={monthParam}
             birthDay={dayParam}
             gender={gender}
             monthGanji={monthGanji}
+            yearStem={yearStem}
             dayStem={dayStem}
             currentYear={2026}
           />
