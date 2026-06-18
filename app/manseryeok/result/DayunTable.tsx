@@ -61,13 +61,24 @@ function calcDayun(
   birthYear: number, birthMonth: number, birthDay: number,
   gender: string, monthGanji: string
 ): { age: number; stem: string; branch: string }[] {
+
+  // 디버그
+  console.log("=== 대운 계산 디버그 ===");
+  console.log("monthGanji:", monthGanji);
+  console.log("birthYear:", birthYear, "gender:", gender);
+
   const yearStemIdx = ((birthYear - 1984) % 10 + 10) % 10;
   const yearYang = yearStemIdx % 2 === 0;
   const isMale = gender === "남";
   const isForward = (yearYang && isMale) || (!yearYang && !isMale);
 
+  console.log("yearStemIdx:", yearStemIdx, "yearYang:", yearYang, "isForward:", isForward);
+
   const monthStemIdx = HEAVENLY_STEMS.indexOf(monthGanji[0]);
   const monthBranchIdx = EARTHLY_BRANCHES.indexOf(monthGanji[1]);
+
+  console.log("monthStemIdx:", monthStemIdx, "→", HEAVENLY_STEMS[monthStemIdx]);
+  console.log("monthBranchIdx:", monthBranchIdx, "→", EARTHLY_BRANCHES[monthBranchIdx]);
 
   const solarTermDays: Record<number, number> = {
     1:6, 2:4, 3:6, 4:5, 5:6, 6:6,
@@ -87,6 +98,7 @@ function calcDayun(
   }
 
   const startAge = Math.round(daysToTerm / 3);
+  console.log("daysToTerm:", daysToTerm, "startAge:", startAge);
 
   const dayuns = [];
   for (let i = 0; i < 8; i++) {
@@ -98,6 +110,7 @@ function calcDayun(
       stemIdx = ((monthStemIdx - i - 1) % 10 + 10) % 10;
       branchIdx = ((monthBranchIdx - i - 1) % 12 + 12) % 12;
     }
+    console.log(`대운 ${i+1}: ${HEAVENLY_STEMS[stemIdx]}${EARTHLY_BRANCHES[branchIdx]} (${startAge + i * 10}세)`);
     dayuns.push({
       age: startAge + i * 10,
       stem: HEAVENLY_STEMS[stemIdx],
@@ -131,6 +144,10 @@ export default function DayunTable({
   return (
     <div className="rounded-2xl p-5" style={{background:"#2C2C2A",border:"1px solid rgba(255,255,255,0.07)"}}>
       <h2 className="text-base font-bold text-white mb-4">🔄 대운표</h2>
+      {/* 디버그 표시 */}
+      <div className="text-xs mb-2 p-2 rounded" style={{background:"rgba(255,255,255,0.05)",color:"#FAC775"}}>
+        월주: {monthGanji} | 일간: {dayStem} | 성별: {gender}
+      </div>
       <div className="overflow-x-auto">
         <div style={{minWidth:"560px"}}>
           <div className="grid grid-cols-8 gap-1">
@@ -140,7 +157,6 @@ export default function DayunTable({
               const branchSipsin = getSipsinBranch(dayStem, branch);
               return (
                 <div key={age} className="flex flex-col items-center">
-                  {/* 나이 */}
                   <div className="text-[11px] font-bold w-full text-center py-1 rounded mb-1"
                     style={{
                       color: isCurrent ? "#fff" : "#FAC775",
@@ -149,12 +165,10 @@ export default function DayunTable({
                     }}>
                     {age}
                   </div>
-                  {/* 천간 육친 */}
                   <div className="text-[10px] text-center w-full mb-0.5 h-4"
                     style={{color: sipsinColor(stemSipsin)}}>
                     {stemSipsin}
                   </div>
-                  {/* 천간 */}
                   <div className="w-full rounded py-2 flex items-center justify-center mb-0.5"
                     style={{
                       background: ELEMENT_COLOR[STEM_ELEMENT[stem]] + "33",
@@ -163,7 +177,6 @@ export default function DayunTable({
                     <span className="text-xl font-bold"
                       style={{color: ELEMENT_COLOR[STEM_ELEMENT[stem]]}}>{stem}</span>
                   </div>
-                  {/* 지지 */}
                   <div className="w-full rounded py-2 flex items-center justify-center mb-0.5"
                     style={{
                       background: ELEMENT_COLOR[BRANCH_ELEMENT[branch]] + "33",
@@ -172,7 +185,6 @@ export default function DayunTable({
                     <span className="text-xl font-bold"
                       style={{color: ELEMENT_COLOR[BRANCH_ELEMENT[branch]]}}>{branch}</span>
                   </div>
-                  {/* 지지 육친 */}
                   <div className="text-[10px] text-center w-full mt-0.5 h-4"
                     style={{color: sipsinColor(branchSipsin)}}>
                     {branchSipsin}
