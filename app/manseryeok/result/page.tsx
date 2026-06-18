@@ -198,7 +198,7 @@ function ResultContent(){
       </main>
       <BottomNav/>
     </div>
-  ); 
+  );
 }
 
 export default function ResultPage(){
