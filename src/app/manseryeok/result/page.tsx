@@ -15,7 +15,7 @@ const BRANCH_LIST = [
   {char:"辰",name:"진",animal:"🐲"},{char:"巳",name:"사",animal:"🐍"},
   {char:"午",name:"오",animal:"🐴"},{char:"未",name:"미",animal:"🐑"},
   {char:"申",name:"신",animal:"🐵"},{char:"酉",name:"유",animal:"🐓"},
-  {char:"戌",name:"술",animal:"🐶"},{char:"亥",name:"해",animal:"🐷"}, 
+  {char:"戌",name:"술",animal:"🐶"},{char:"亥",name:"해",animal:"🐷"},
 ];
 
 function calcSaju(year:number,month:number,day:number,hourIdx:number|null){
