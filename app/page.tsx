@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import BottomNav from "./components/BottomNav";
 
-// ───────────────────────────── Icons ─────────────────────────────
 function IconHeart() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
@@ -38,62 +37,33 @@ function IconClock() {
   );
 }
 
-// ───────────────────────────── Header ─────────────────────────────
 function Header() {
   return (
-    <header
-      className="fixed top-0 z-50 flex items-center justify-between px-5 py-4"
-      style={{
-        background: "rgba(44,44,42,0.95)",
-        backdropFilter: "blur(12px)",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
-        width: "100%",
-        maxWidth: "430px",
-        left: "50%",
-        transform: "translateX(-50%)",
-      }}
-    >
+    <header className="fixed top-0 z-50 flex items-center justify-between px-5 py-4"
+      style={{ background: "rgba(44,44,42,0.95)", backdropFilter: "blur(12px)",
+        borderBottom: "1px solid rgba(255,255,255,0.06)", width: "100%", maxWidth: "430px", left: "50%", transform: "translateX(-50%)" }}>
       <div className="flex items-center gap-2">
-        <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold text-white"
-          style={{ background: "linear-gradient(135deg, #3C3489, #FAC775)" }}
-        >
-          명
-        </div>
-        <span className="text-lg font-bold tracking-wider" style={{ color: "#FAC775" }}>
-          명연재연구소
-        </span>
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold text-white"
+          style={{ background: "linear-gradient(135deg, #3C3489, #FAC775)" }}>명</div>
+        <span className="text-lg font-bold tracking-wider" style={{ color: "#FAC775" }}>명연재연구소</span>
       </div>
-      <button
-        className="text-sm px-4 py-1.5 rounded-full border font-medium"
-        style={{ borderColor: "#FAC775", color: "#FAC775" }}
-      >
-        로그인
-      </button>
+      <button className="text-sm px-4 py-1.5 rounded-full border font-medium"
+        style={{ borderColor: "#FAC775", color: "#FAC775" }}>로그인</button>
     </header>
   );
 }
 
-// ───────────────────────────── Hero ─────────────────────────────
 function HeroBanner() {
   return (
-    <section
-      className="relative overflow-hidden pt-24 pb-10 px-5 text-center"
-      style={{
-        background: "linear-gradient(160deg, #1a1a18 0%, #2C2C2A 40%, #3C3489 100%)",
-        minHeight: "340px",
-      }}
-    >
+    <section className="relative overflow-hidden pt-24 pb-10 px-5 text-center"
+      style={{ background: "linear-gradient(160deg, #1a1a18 0%, #2C2C2A 40%, #3C3489 100%)", minHeight: "340px" }}>
       <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full opacity-20"
         style={{ background: "radial-gradient(circle, #FAC775, transparent)" }} />
       <div className="absolute bottom-0 -left-10 w-48 h-48 rounded-full opacity-10"
         style={{ background: "radial-gradient(circle, #3C3489, transparent)" }} />
-
       <div className="relative z-10">
-        <div
-          className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full mb-5"
-          style={{ background: "rgba(250,199,117,0.15)", color: "#FAC775", border: "1px solid rgba(250,199,117,0.3)" }}
-        >
+        <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full mb-5"
+          style={{ background: "rgba(250,199,117,0.15)", color: "#FAC775", border: "1px solid rgba(250,199,117,0.3)" }}>
           ✨ AI 기반 정밀 사주 분석
         </div>
         <h1 className="text-3xl font-bold leading-tight mb-3" style={{ color: "#FAC775" }}>
@@ -118,12 +88,17 @@ function HeroBanner() {
   );
 }
 
-// ───────────────────────────── AI 만세력 ─────────────────────────────
 const HOURS = [
   "모름", "子시(23~01)", "丑시(01~03)", "寅시(03~05)", "卯시(05~07)",
   "辰시(07~09)", "巳시(09~11)", "午시(11~13)", "未시(13~15)",
   "申시(15~17)", "酉시(17~19)", "戌시(19~21)", "亥시(21~23)",
 ];
+
+const HOUR_INDEX: Record<string, number> = {
+  "子시(23~01)": 0, "丑시(01~03)": 1, "寅시(03~05)": 2, "卯시(05~07)": 3,
+  "辰시(07~09)": 4, "巳시(09~11)": 5, "午시(11~13)": 6, "未시(13~15)": 7,
+  "申시(15~17)": 8, "酉시(17~19)": 9, "戌시(19~21)": 10, "亥시(21~23)": 11,
+};
 
 function AiManseryeokSection() {
   const [gender, setGender] = useState<"남" | "여">("남");
@@ -131,22 +106,25 @@ function AiManseryeokSection() {
   const [birthHour, setBirthHour] = useState("");
   const [calType, setCalType] = useState<"양력" | "음력">("양력");
 
-  // URL 파라미터 생성 함수
   function buildHref() {
     const params = new URLSearchParams();
     params.set("gender", gender);
     params.set("calType", calType);
-    if (birthDate) params.set("birthDate", birthDate);
-    if (birthHour) params.set("birthHour", birthHour);
-    return `/manseryeok?${params.toString()}`;
+    if (birthDate) {
+      const d = birthDate.split("-");
+      params.set("year", d[0] || "");
+      params.set("month", d[1] ? String(parseInt(d[1])) : "");
+      params.set("day", d[2] ? String(parseInt(d[2])) : "");
+    }
+    params.set("hour", birthHour === "모름" ? "모름" : birthHour ? String(HOUR_INDEX[birthHour]) : "모름");
+    params.set("options", "basic,dayun");
+    return `/manseryeok/result?${params.toString()}`;
   }
 
   return (
     <section className="px-4 -mt-4 relative z-10">
-      <div
-        className="rounded-2xl p-5 shadow-2xl"
-        style={{ background: "#2C2C2A", border: "1px solid rgba(250,199,117,0.15)" }}
-      >
+      <div className="rounded-2xl p-5 shadow-2xl"
+        style={{ background: "#2C2C2A", border: "1px solid rgba(250,199,117,0.15)" }}>
         <div className="flex items-center gap-2 mb-5">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
             style={{ background: "linear-gradient(135deg, #3C3489, #4e46b0)" }}>✦</div>
@@ -198,8 +176,7 @@ function AiManseryeokSection() {
         </div>
 
         <Link href={buildHref()}>
-          <button
-            className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all active:scale-95"
+          <button className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all active:scale-95"
             style={{ background: "linear-gradient(135deg, #3C3489 0%, #FAC775 100%)", color: "#1a1a18", boxShadow: "0 4px 20px rgba(60,52,137,0.4)" }}>
             ✨ AI 만세력 상세 분석하기
           </button>
@@ -212,7 +189,6 @@ function AiManseryeokSection() {
   );
 }
 
-// ───────────────────────────── 오늘의 운세 배너 ─────────────────────────────
 function TodayFortuneBanner() {
   return (
     <section className="mx-4 mt-6">
@@ -232,7 +208,6 @@ function TodayFortuneBanner() {
   );
 }
 
-// ───────────────────────────── 카테고리 ─────────────────────────────
 const CATEGORIES = [
   { icon: "🪬", label: "사주\n팔자" },
   { icon: "💕", label: "궁합\n연애" },
@@ -263,7 +238,6 @@ function CategoryMenu() {
   );
 }
 
-// ───────────────────────────── 상담사 카드 ─────────────────────────────
 const COUNSELORS = [
   { id: 1, name: "이명연", title: "사주·운명 전문", experience: "경력 18년", tags: ["사주팔자", "궁합", "진로"], rating: 4.9, reviews: 1243, price: "30,000원~", available: true, initial: "이", color: "#3C3489", badge: "인기" },
   { id: 2, name: "박진수", title: "풍수지리·명리", experience: "경력 12년", tags: ["명리학", "풍수", "이사"], rating: 4.8, reviews: 892, price: "25,000원~", available: true, initial: "박", color: "#5a3d8a", badge: "" },
@@ -299,20 +273,17 @@ function CounselorCard({ c }: { c: Counselor }) {
           )}
         </div>
       </div>
-
       <div>
         <div className="font-bold text-white text-sm">{c.name}</div>
         <div className="text-xs mt-0.5" style={{ color: "#b0aec8" }}>{c.title}</div>
         <div className="text-xs mt-0.5" style={{ color: "#8a88a0" }}>{c.experience} · 후기 {c.reviews.toLocaleString()}</div>
       </div>
-
       <div className="flex flex-wrap gap-1">
         {c.tags.map((tag) => (
           <span key={tag} className="text-xs px-2 py-0.5 rounded-full"
             style={{ background: "rgba(60,52,137,0.3)", color: "#b0aec8" }}>#{tag}</span>
         ))}
       </div>
-
       <div className="mt-auto">
         <div className="text-xs mb-2" style={{ color: "#8a88a0" }}>
           <span style={{ color: "#FAC775", fontWeight: 600 }}>{c.price}</span> / 30분
@@ -345,7 +316,6 @@ function CounselorSection() {
   );
 }
 
-// ───────────────────────────── 커뮤니티 섹션 ─────────────────────────────
 const POSTS = [
   { id: 1, category: "사주 후기", title: "이명연 선생님 상담 후 실제로 취업됐어요 😭", author: "별빛달빛", time: "2시간 전", likes: 128, comments: 34, hot: true },
   { id: 2, category: "Q&A", title: "편인격 일간이 재성이 없으면 어떤 운이 오나요?", author: "명리초보자", time: "4시간 전", likes: 47, comments: 12, hot: false },
@@ -364,7 +334,6 @@ const CATEGORY_COLORS: Record<string, { bg: string; color: string }> = {
 
 function CommunitySection() {
   const [activeTab, setActiveTab] = useState<"인기" | "최신" | "Q&A">("인기");
-
   return (
     <section className="mt-8 pb-2">
       <div className="flex items-center justify-between px-4 mb-4">
@@ -374,21 +343,15 @@ function CommunitySection() {
         </div>
         <button className="text-xs font-medium" style={{ color: "#FAC775" }}>전체보기 →</button>
       </div>
-
       <div className="flex gap-1 px-4 mb-3">
         {(["인기", "최신", "Q&A"] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
+          <button key={tab} onClick={() => setActiveTab(tab)}
             className="px-4 py-1.5 rounded-full text-xs font-semibold transition-all"
-            style={activeTab === tab
-              ? { background: "#3C3489", color: "#FAC775" }
-              : { background: "rgba(255,255,255,0.05)", color: "#8a88a0" }}>
+            style={activeTab === tab ? { background: "#3C3489", color: "#FAC775" } : { background: "rgba(255,255,255,0.05)", color: "#8a88a0" }}>
             {tab}
           </button>
         ))}
       </div>
-
       <div className="px-4 flex flex-col gap-2">
         {POSTS.map((post) => {
           const catStyle = CATEGORY_COLORS[post.category] ?? { bg: "rgba(255,255,255,0.05)", color: "#8a88a0" };
@@ -398,39 +361,26 @@ function CommunitySection() {
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                    style={{ background: catStyle.bg, color: catStyle.color }}>
-                    {post.category}
-                  </span>
+                    style={{ background: catStyle.bg, color: catStyle.color }}>{post.category}</span>
                   {post.hot && (
                     <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
-                      style={{ background: "rgba(255,80,80,0.15)", color: "#ff8080" }}>
-                      🔥 HOT
-                    </span>
+                      style={{ background: "rgba(255,80,80,0.15)", color: "#ff8080" }}>🔥 HOT</span>
                   )}
                 </div>
                 <span className="text-[10px] flex-shrink-0" style={{ color: "#8a88a0" }}>{post.time}</span>
               </div>
-
               <p className="text-sm font-medium text-white leading-snug mb-3">{post.title}</p>
-
               <div className="flex items-center justify-between">
-                <span className="text-xs" style={{ color: "#8a88a0" }}>
-                  by {post.author}
-                </span>
+                <span className="text-xs" style={{ color: "#8a88a0" }}>by {post.author}</span>
                 <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1 text-xs" style={{ color: "#8a88a0" }}>
-                    <IconHeart />{post.likes}
-                  </span>
-                  <span className="flex items-center gap-1 text-xs" style={{ color: "#8a88a0" }}>
-                    <IconComment />{post.comments}
-                  </span>
+                  <span className="flex items-center gap-1 text-xs" style={{ color: "#8a88a0" }}><IconHeart />{post.likes}</span>
+                  <span className="flex items-center gap-1 text-xs" style={{ color: "#8a88a0" }}><IconComment />{post.comments}</span>
                 </div>
               </div>
             </div>
           );
         })}
       </div>
-
       <div className="px-4 mt-4">
         <button className="w-full py-3 rounded-xl text-sm font-semibold transition-all active:scale-95"
           style={{ border: "1px solid rgba(60,52,137,0.5)", color: "#b0aec8", background: "rgba(60,52,137,0.1)" }}>
@@ -441,7 +391,6 @@ function CommunitySection() {
   );
 }
 
-// ───────────────────────────── Page ─────────────────────────────
 export default function Home() {
   return (
     <div className="min-h-screen relative" style={{ background: "#1a1a18", maxWidth: "430px", margin: "0 auto" }}>
