@@ -59,27 +59,21 @@ const sipsinColor = (s: string) => {
 
 function calcDayun(
   birthYear: number, birthMonth: number, birthDay: number,
-  gender: string, monthGanji: string
+  gender: string, monthGanji: string, yearStem: string
 ): { age: number; stem: string; branch: string }[] {
 
-  // 디버그
-  console.log("=== 대운 계산 디버그 ===");
-  console.log("monthGanji:", monthGanji);
-  console.log("birthYear:", birthYear, "gender:", gender);
-
-  const yearStemIdx = ((birthYear - 1984) % 10 + 10) % 10;
+  // 년주 천간 기준 음양 판단
+  const yearStemIdx = HEAVENLY_STEMS.indexOf(yearStem);
   const yearYang = yearStemIdx % 2 === 0;
   const isMale = gender === "남";
+  // 양년 남성, 음년 여성 → 순행
+  // 음년 남성, 양년 여성 → 역행
   const isForward = (yearYang && isMale) || (!yearYang && !isMale);
-
-  console.log("yearStemIdx:", yearStemIdx, "yearYang:", yearYang, "isForward:", isForward);
 
   const monthStemIdx = HEAVENLY_STEMS.indexOf(monthGanji[0]);
   const monthBranchIdx = EARTHLY_BRANCHES.indexOf(monthGanji[1]);
 
-  console.log("monthStemIdx:", monthStemIdx, "→", HEAVENLY_STEMS[monthStemIdx]);
-  console.log("monthBranchIdx:", monthBranchIdx, "→", EARTHLY_BRANCHES[monthBranchIdx]);
-
+  // 절기까지 날수 계산
   const solarTermDays: Record<number, number> = {
     1:6, 2:4, 3:6, 4:5, 5:6, 6:6,
     7:7, 8:8, 9:8, 10:8, 11:8, 12:7
@@ -98,7 +92,6 @@ function calcDayun(
   }
 
   const startAge = Math.round(daysToTerm / 3);
-  console.log("daysToTerm:", daysToTerm, "startAge:", startAge);
 
   const dayuns = [];
   for (let i = 0; i < 8; i++) {
@@ -110,7 +103,6 @@ function calcDayun(
       stemIdx = ((monthStemIdx - i - 1) % 10 + 10) % 10;
       branchIdx = ((monthBranchIdx - i - 1) % 12 + 12) % 12;
     }
-    console.log(`대운 ${i+1}: ${HEAVENLY_STEMS[stemIdx]}${EARTHLY_BRANCHES[branchIdx]} (${startAge + i * 10}세)`);
     dayuns.push({
       age: startAge + i * 10,
       stem: HEAVENLY_STEMS[stemIdx],
@@ -126,17 +118,18 @@ interface DayunTableProps {
   birthDay: number;
   gender: string;
   monthGanji: string;
+  yearStem: string;
   dayStem: string;
   currentYear: number;
 }
 
 export default function DayunTable({
   birthYear, birthMonth, birthDay,
-  gender, monthGanji, dayStem, currentYear
+  gender, monthGanji, yearStem, dayStem, currentYear
 }: DayunTableProps) {
   const dayuns = useMemo(() =>
-    calcDayun(birthYear, birthMonth, birthDay, gender, monthGanji),
-    [birthYear, birthMonth, birthDay, gender, monthGanji]
+    calcDayun(birthYear, birthMonth, birthDay, gender, monthGanji, yearStem),
+    [birthYear, birthMonth, birthDay, gender, monthGanji, yearStem]
   );
 
   const currentAge = currentYear - birthYear;
@@ -144,10 +137,6 @@ export default function DayunTable({
   return (
     <div className="rounded-2xl p-5" style={{background:"#2C2C2A",border:"1px solid rgba(255,255,255,0.07)"}}>
       <h2 className="text-base font-bold text-white mb-4">🔄 대운표</h2>
-      {/* 디버그 표시 */}
-      <div className="text-xs mb-2 p-2 rounded" style={{background:"rgba(255,255,255,0.05)",color:"#FAC775"}}>
-        월주: {monthGanji} | 일간: {dayStem} | 성별: {gender}
-      </div>
       <div className="overflow-x-auto">
         <div style={{minWidth:"560px"}}>
           <div className="grid grid-cols-8 gap-1">
