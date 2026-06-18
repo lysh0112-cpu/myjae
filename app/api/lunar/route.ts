@@ -15,30 +15,40 @@ export async function GET(req: NextRequest) {
   try {
     let url = "";
     if (calType === "음력") {
-      url = `https://apis.data.go.kr/B090041/openapi/service/LrsrCldInfoService/getSolCalInfo?lunYear=${year}&lunMonth=${String(month).padStart(2,"0")}&lunDay=${String(day).padStart(2,"0")}&lunLeapmonth=&ServiceKey=${apiKey}&_type=json`;
+      url = `https://apis.data.go.kr/B090041/openapi/service/LrsrCldInfoService/getSolCalInfo?lunYear=${year}&lunMonth=${String(month).padStart(2,"0")}&lunDay=${String(day).padStart(2,"0")}&lunLeapmonth=&ServiceKey=${apiKey}`;
     } else {
-      url = `https://apis.data.go.kr/B090041/openapi/service/LrsrCldInfoService/getLunCalInfo?solYear=${year}&solMonth=${String(month).padStart(2,"0")}&solDay=${String(day).padStart(2,"0")}&ServiceKey=${apiKey}&_type=json`;
+      url = `https://apis.data.go.kr/B090041/openapi/service/LrsrCldInfoService/getLunCalInfo?solYear=${year}&solMonth=${String(month).padStart(2,"0")}&solDay=${String(day).padStart(2,"0")}&ServiceKey=${apiKey}`;
     }
 
     const res = await fetch(url);
-    const data = await res.json();
-    const item = data?.response?.body?.items?.item;
+    const xmlText = await res.text();
 
-    if (!item) {
-      return NextResponse.json({ error: "No data", raw: data }, { status: 404 });
+    // XML 파싱
+    const getValue = (tag: string) => {
+      const match = xmlText.match(new RegExp(`<${tag}>([^<]*)<\/${tag}>`));
+      return match ? match[1] : "";
+    };
+
+    if (calType === "음력") {
+      return NextResponse.json({
+        solarYear: parseInt(getValue("solYear")),
+        solarMonth: parseInt(getValue("solMonth")),
+        solarDay: parseInt(getValue("solDay")),
+      });
+    } else {
+      return NextResponse.json({
+        solarYear: parseInt(getValue("solYear")),
+        solarMonth: parseInt(getValue("solMonth")),
+        solarDay: parseInt(getValue("solDay")),
+        lunarYear: parseInt(getValue("lunYear")),
+        lunarMonth: parseInt(getValue("lunMonth")),
+        lunarDay: parseInt(getValue("lunDay")),
+        yearGanji: getValue("lunSecha"),
+        monthGanji: getValue("lunWolgeon"),
+        dayGanji: getValue("lunIljin"),
+        debug_xml: xmlText.substring(0, 500),
+      });
     }
-
-    const result = Array.isArray(item) ? item[0] : item;
-
-    return NextResponse.json({
-      debug: result,
-      solarYear: parseInt(result.solYear),
-      solarMonth: parseInt(result.solMonth),
-      solarDay: parseInt(result.solDay),
-      yearGanji: result.lunSecha || "?",
-      monthGanji: result.lunWolgeon || "?",
-      dayGanji: result.lunIljin || "?",
-    });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
