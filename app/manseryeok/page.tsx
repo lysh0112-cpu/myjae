@@ -77,6 +77,7 @@ function ManseryeokContent() {
   const [year, setYear] = useState(parsedDate[0] || "");
   const [month, setMonth] = useState(parsedDate[1] ? String(parseInt(parsedDate[1])) : "");
   const [day, setDay] = useState(parsedDate[2] ? String(parseInt(parsedDate[2])) : "");
+  const [isLeapMonth, setIsLeapMonth] = useState(false); // 윤달 여부
   const [selectedHour, setSelectedHour] = useState<number | null>(
     initBirthHour && initBirthHour !== "모름" ? (HOUR_MAP[initBirthHour] ?? null) : null
   );
@@ -103,6 +104,9 @@ function ManseryeokContent() {
     params.set("year", year);
     params.set("month", month);
     params.set("day", day);
+    if (calType === "음력") {
+      params.set("leapMonth", isLeapMonth ? "1" : "0");
+    }
     params.set("hour", unknownHour ? "모름" : String(selectedHour));
     params.set("options", Object.entries(aiOptions).filter(([, v]) => v).map(([k]) => k).join(","));
     router.push(`/manseryeok/result?${params.toString()}`);
@@ -142,7 +146,10 @@ function ManseryeokContent() {
                 <label className="text-xs font-medium block mb-2" style={{ color: "#b0aec8" }}>{label}</label>
                 <div className="grid grid-cols-2 gap-2">
                   {vals.map((v) => (
-                    <button key={v} onClick={() => (set as (x: string) => void)(v)}
+                    <button key={v} onClick={() => {
+                      (set as (x: string) => void)(v);
+                      if (v === "양력") setIsLeapMonth(false);
+                    }}
                       className="py-3 rounded-xl font-bold text-sm transition-all active:scale-95 flex flex-col items-center gap-1"
                       style={state === v
                         ? { background: "#3C3489", color: "#FAC775", border: "1px solid rgba(250,199,117,0.3)" }
@@ -187,6 +194,18 @@ function ManseryeokContent() {
               <p className="text-center text-[10px] mt-1" style={{ color: "#8a88a0" }}>일</p>
             </div>
           </div>
+
+          {/* 윤달 체크박스 — 음력 선택 시만 표시 */}
+          {calType === "음력" && (
+            <button onClick={() => setIsLeapMonth(!isLeapMonth)}
+              className="w-full mt-3 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2"
+              style={isLeapMonth
+                ? { background: "rgba(250,199,117,0.15)", color: "#FAC775", border: "1px solid rgba(250,199,117,0.3)" }
+                : { background: "rgba(255,255,255,0.04)", color: "#8a88a0", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <span>{isLeapMonth ? "🌕" : "🌙"}</span>
+              <span>{isLeapMonth ? "✓ 윤달 (閏月)" : "윤달이에요"}</span>
+            </button>
+          )}
         </div>
 
         <div className="rounded-2xl p-5"
@@ -271,7 +290,8 @@ function ManseryeokContent() {
           left: "50%", transform: "translateX(-50%)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 60px)" }}>
         {readyToAnalyze && (
           <div className="flex items-center justify-center gap-2 mb-3 flex-wrap">
-            {[`${gender}성`, `${calType} ${year}.${month}.${day}`,
+            {[`${gender}성`,
+              `${calType} ${year}.${month}.${day}${calType === "음력" && isLeapMonth ? " (윤달)" : ""}`,
               unknownHour ? "시 미지정" : `${EARTHLY_BRANCHES[selectedHour!].char}시`].map((item) => (
               <span key={item} className="text-xs px-3 py-1 rounded-full"
                 style={{ background: "rgba(60,52,137,0.3)", color: "#b0aec8", border: "1px solid rgba(60,52,137,0.4)" }}>
