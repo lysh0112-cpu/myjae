@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import DayunTable from "./DayunTable";
 
 const HEAVENLY_STEMS = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
 const EARTHLY_BRANCHES = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
@@ -18,29 +19,20 @@ const BRANCH_LIST = [
   {char:"戌",name:"술"},{char:"亥",name:"해"},
 ];
 
-// 지지 음양 (양=false, 음=true)
-// 子=음, 丑=음, 寅=양, 卯=음, 辰=양, 巳=음, 午=양, 未=음, 申=양, 酉=음, 戌=양, 亥=음
 const BRANCH_YIN: Record<string,boolean> = {
-  子:true, 丑:true, 寅:false, 卯:true, 辰:false, 巳:true,
-  午:false, 未:true, 申:false, 酉:true, 戌:false, 亥:true
+  子:true,丑:true,寅:false,卯:true,辰:false,巳:true,
+  午:false,未:true,申:false,酉:true,戌:false,亥:true
 };
 
-// 육친 계산 (천간)
 function getSipsin(dayStem: string, targetStem: string): string {
   if (!targetStem || targetStem === "?") return "";
-  if (dayStem === targetStem) return "비견";
-
   const dayIdx = HEAVENLY_STEMS.indexOf(dayStem);
   const targetIdx = HEAVENLY_STEMS.indexOf(targetStem);
   const dayElement = STEM_ELEMENT[dayStem];
   const targetElement = STEM_ELEMENT[targetStem];
-  const dayYin = dayIdx % 2 === 1;
-  const targetYin = targetIdx % 2 === 1;
-  const sameYin = dayYin === targetYin;
-
+  const sameYin = (dayIdx % 2) === (targetIdx % 2);
   const generates: Record<string,string> = {목:"화",화:"토",토:"금",금:"수",수:"목"};
   const controls: Record<string,string> = {목:"토",화:"금",토:"수",금:"목",수:"화"};
-
   if (dayElement === targetElement) return sameYin ? "비견" : "겁재";
   if (generates[dayElement] === targetElement) return sameYin ? "식신" : "상관";
   if (controls[dayElement] === targetElement) return sameYin ? "편재" : "정재";
@@ -49,20 +41,16 @@ function getSipsin(dayStem: string, targetStem: string): string {
   return "";
 }
 
-// 육친 계산 (지지)
 function getSipsinBranch(dayStem: string, branch: string): string {
   if (!branch || branch === "?") return "";
-
   const branchElement = BRANCH_ELEMENT[branch];
   const dayElement = STEM_ELEMENT[dayStem];
   const dayIdx = HEAVENLY_STEMS.indexOf(dayStem);
   const dayYin = dayIdx % 2 === 1;
   const branchYin = BRANCH_YIN[branch];
   const sameYin = dayYin === branchYin;
-
   const generates: Record<string,string> = {목:"화",화:"토",토:"금",금:"수",수:"목"};
   const controls: Record<string,string> = {목:"토",화:"금",토:"수",금:"목",수:"화"};
-
   if (dayElement === branchElement) return sameYin ? "비견" : "겁재";
   if (generates[dayElement] === branchElement) return sameYin ? "식신" : "상관";
   if (controls[dayElement] === branchElement) return sameYin ? "편재" : "정재";
@@ -71,7 +59,6 @@ function getSipsinBranch(dayStem: string, branch: string): string {
   return "";
 }
 
-// 간지 문자열에서 한자 2글자 추출
 function splitGanji(ganji: string) {
   if (!ganji) return { stem: "?", branch: "?" };
   const match = ganji.match(/\(([^)]+)\)/);
@@ -82,7 +69,6 @@ function splitGanji(ganji: string) {
   return { stem: "?", branch: "?" };
 }
 
-// 시주 계산
 function calcHourPillar(dayStem: string, hourIdx: number) {
   const dg = HEAVENLY_STEMS.indexOf(dayStem);
   const hourStem = HEAVENLY_STEMS[(dg * 2 + hourIdx) % 10];
@@ -118,6 +104,7 @@ function ResultContent() {
   const [solar, setSolar] = useState<{year:number;month:number;day:number}|null>(null);
   const [converting, setConverting] = useState<boolean>(true);
   const [dayStem, setDayStem] = useState<string>("");
+  const [monthGanji, setMonthGanji] = useState<string>("");
 
   const gender = searchParams.get("gender") || "남";
   const calType = searchParams.get("calType") || "양력";
@@ -161,6 +148,7 @@ function ResultContent() {
         ? calcHourPillar(day.stem, hourIdx)
         : { stem: "?", branch: "?" };
       setDayStem(day.stem);
+      setMonthGanji(month.stem + month.branch);
       setSaju([
         { pillar: "시주", stem: hour.stem, branch: hour.branch },
         { pillar: "일주", stem: day.stem, branch: day.branch },
@@ -311,6 +299,19 @@ function ResultContent() {
             })}
           </div>
         </div>
+
+        {/* 대운표 */}
+        {dayStem && monthGanji && (
+          <DayunTable
+            birthYear={yearParam}
+            birthMonth={monthParam}
+            birthDay={dayParam}
+            gender={gender}
+            monthGanji={monthGanji}
+            dayStem={dayStem}
+            currentYear={2026}
+          />
+        )}
 
         <div className="rounded-2xl p-5" style={{background:"#2C2C2A",border:"1px solid rgba(255,255,255,0.07)"}}>
           <div className="flex items-center gap-2 mb-4">
