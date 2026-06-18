@@ -30,6 +30,16 @@ export default function LoginPage() {
     router.refresh()
   }
 
+  const handleKakaoLogin = async () => {
+    const supabase = createClient()
+    await supabase.auth.signInWithOAuth({
+      provider: 'kakao',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+  }
+
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
@@ -41,6 +51,24 @@ export default function LoginPage() {
         <div className="bg-gray-900 rounded-2xl p-8 border border-gray-800">
           <h2 className="text-xl font-semibold text-white mb-6">로그인</h2>
 
+          {/* 카카오 로그인 버튼 */}
+          <button
+            onClick={handleKakaoLogin}
+            className="w-full flex items-center justify-center gap-3 bg-[#FEE500] text-[#191919] font-semibold rounded-lg py-3 hover:bg-[#F0D900] transition mb-4"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3C7.03 3 3 6.36 3 10.5c0 2.64 1.67 4.96 4.2 6.33l-.87 3.2a.3.3 0 0 0 .44.33L10.5 18.1A10.6 10.6 0 0 0 12 18c4.97 0 9-3.36 9-7.5S16.97 3 12 3z" fill="#191919"/>
+            </svg>
+            카카오로 시작하기
+          </button>
+
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-1 h-px bg-gray-700"/>
+            <span className="text-gray-500 text-sm">또는</span>
+            <div className="flex-1 h-px bg-gray-700"/>
+          </div>
+
+          {/* 이메일 로그인 */}
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-sm text-gray-400 mb-1">이메일</label>
@@ -75,7 +103,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full bg-amber-400 text-gray-950 font-semibold rounded-lg py-3 hover:bg-amber-300 transition disabled:opacity-50"
             >
-              {loading ? '로그인 중...' : '로그인'}
+              {loading ? '로그인 중...' : '이메일로 로그인'}
             </button>
           </form>
 
