@@ -36,6 +36,7 @@ export default function LoginPage() {
       provider: 'kakao',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
+        scopes: 'profile_nickname profile_image',
       },
     })
   }
@@ -51,7 +52,6 @@ export default function LoginPage() {
         <div className="bg-gray-900 rounded-2xl p-8 border border-gray-800">
           <h2 className="text-xl font-semibold text-white mb-6">로그인</h2>
 
-          {/* 카카오 로그인 버튼 */}
           <button
             onClick={handleKakaoLogin}
             className="w-full flex items-center justify-center gap-3 bg-[#FEE500] text-[#191919] font-semibold rounded-lg py-3 hover:bg-[#F0D900] transition mb-4"
@@ -68,7 +68,6 @@ export default function LoginPage() {
             <div className="flex-1 h-px bg-gray-700"/>
           </div>
 
-          {/* 이메일 로그인 */}
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-sm text-gray-400 mb-1">이메일</label>
