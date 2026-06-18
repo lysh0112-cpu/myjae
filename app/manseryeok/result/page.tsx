@@ -18,7 +18,72 @@ const BRANCH_LIST = [
   {char:"戌",name:"술"},{char:"亥",name:"해"},
 ];
 
-// 간지 문자열에서 한자 2글자 추출 (예: "정축(丁丑)" → stem:"丁", branch:"丑")
+// 육친 계산
+function getSipsin(dayStem: string, targetStem: string, gender: string): string {
+  if (targetStem === "?") return "";
+  if (dayStem === targetStem) return "비견";
+  
+  const dayIdx = HEAVENLY_STEMS.indexOf(dayStem);
+  const targetIdx = HEAVENLY_STEMS.indexOf(targetStem);
+  const dayElement = STEM_ELEMENT[dayStem];
+  const targetElement = STEM_ELEMENT[targetStem];
+  const dayYin = dayIdx % 2 === 1; // 음양: 홀수=음
+  const targetYin = targetIdx % 2 === 1;
+  const sameYin = dayYin === targetYin;
+
+  // 오행 관계
+  const generates: Record<string,string> = {목:"화",화:"토",토:"금",금:"수",수:"목"};
+  const controls: Record<string,string> = {목:"토",화:"금",토:"수",금:"목",수:"화"};
+
+  if (dayElement === targetElement) {
+    return sameYin ? "비견" : "겁재";
+  } else if (generates[dayElement] === targetElement) {
+    // 내가 생하는 것 = 식상
+    return sameYin ? "식신" : "상관";
+  } else if (controls[dayElement] === targetElement) {
+    // 내가 극하는 것 = 재성
+    return sameYin ? "편재" : "정재";
+  } else if (controls[targetElement] === dayElement) {
+    // 나를 극하는 것 = 관성
+    return sameYin ? "편관" : "정관";
+  } else if (generates[targetElement] === dayElement) {
+    // 나를 생하는 것 = 인성
+    return sameYin ? "편인" : "정인";
+  }
+  return "";
+}
+
+function getSipsinBranch(dayStem: string, branch: string, gender: string): string {
+  if (branch === "?") return "";
+  const branchElement = BRANCH_ELEMENT[branch];
+  const dayElement = STEM_ELEMENT[dayStem];
+  const generates: Record<string,string> = {목:"화",화:"토",토:"금",금:"수",수:"목"};
+  const controls: Record<string,string> = {목:"토",화:"금",토:"수",금:"목",수:"화"};
+
+  // 지지는 음양 동일 여부로 편/정 구분 (지지 음양)
+  const branchYin: Record<string,boolean> = {
+    子:false,丑:true,寅:false,卯:true,辰:false,巳:true,
+    午:false,未:true,申:false,酉:true,戌:false,亥:true
+  };
+  const dayIdx = HEAVENLY_STEMS.indexOf(dayStem);
+  const dayYin = dayIdx % 2 === 1;
+  const sameYin = dayYin === branchYin[branch];
+
+  if (dayElement === branchElement) {
+    return sameYin ? "비견" : "겁재";
+  } else if (generates[dayElement] === branchElement) {
+    return sameYin ? "식신" : "상관";
+  } else if (controls[dayElement] === branchElement) {
+    return sameYin ? "편재" : "정재";
+  } else if (controls[branchElement] === dayElement) {
+    return sameYin ? "편관" : "정관";
+  } else if (generates[branchElement] === dayElement) {
+    return sameYin ? "편인" : "정인";
+  }
+  return "";
+}
+
+// 간지 문자열에서 한자 2글자 추출
 function splitGanji(ganji: string) {
   if (!ganji) return { stem: "?", branch: "?" };
   const match = ganji.match(/\(([^)]+)\)/);
@@ -29,7 +94,7 @@ function splitGanji(ganji: string) {
   return { stem: "?", branch: "?" };
 }
 
-// 시주 계산 (일간 기준)
+// 시주 계산
 function calcHourPillar(dayStem: string, hourIdx: number) {
   const dg = HEAVENLY_STEMS.indexOf(dayStem);
   const hourStem = HEAVENLY_STEMS[(dg * 2 + hourIdx) % 10];
@@ -54,6 +119,7 @@ function ResultContent() {
   const [saju, setSaju] = useState<{pillar:string;stem:string;branch:string}[]>([]);
   const [solar, setSolar] = useState<{year:number;month:number;day:number}|null>(null);
   const [converting, setConverting] = useState<boolean>(true);
+  const [dayStem, setDayStem] = useState<string>("");
 
   const gender = searchParams.get("gender") || "남";
   const calType = searchParams.get("calType") || "양력";
@@ -96,7 +162,8 @@ function ResultContent() {
       const hour = hourIdx !== null
         ? calcHourPillar(day.stem, hourIdx)
         : { stem: "?", branch: "?" };
-      // 전통 배치: 시주→일주→월주→년주 (오른쪽이 년주)
+      setDayStem(day.stem);
+      // 전통 배치: 시주→일주→월주→년주
       setSaju([
         { pillar: "시주", stem: hour.stem, branch: hour.branch },
         { pillar: "일주", stem: day.stem, branch: day.branch },
@@ -196,19 +263,45 @@ function ResultContent() {
             {saju.map(({pillar,stem,branch}) => {
               const se = STEM_ELEMENT[stem];
               const be = BRANCH_ELEMENT[branch];
+              const isIlju = pillar === "일주";
+              const stemSipsin = isIlju ? "본원" : getSipsin(dayStem, stem, gender);
+              const branchSipsin = getSipsinBranch(dayStem, branch, gender);
+              const sipsinColor = (s: string) => {
+                if (!s) return "#8a88a0";
+                if (["비견","겁재"].includes(s)) return "#9e9e9e";
+                if (["식신","상관"].includes(s)) return "#4caf50";
+                if (["편재","정재"].includes(s)) return "#FAC775";
+                if (["편관","정관"].includes(s)) return "#f44336";
+                if (["편인","정인"].includes(s)) return "#2196f3";
+                return "#8a88a0";
+              };
               return (
                 <div key={pillar} className="flex flex-col items-center">
-                  <div className="text-[10px] mb-2 font-medium" style={{color:"#8a88a0"}}>{pillar}</div>
-                  <div className="w-full rounded-xl py-3 flex flex-col items-center mb-1.5"
-                    style={{background:stem==="?"?"rgba(255,255,255,0.04)":"rgba(60,52,137,0.3)",border:"1px solid rgba(60,52,137,0.4)"}}>
+                  {/* 천간 육친 */}
+                  <div className="text-[10px] mb-1 font-bold h-4"
+                    style={{color: sipsinColor(stemSipsin)}}>
+                    {stemSipsin}
+                  </div>
+                  {/* 천간 */}
+                  <div className="w-full rounded-xl py-3 flex flex-col items-center mb-1"
+                    style={{background:stem==="?"?"rgba(255,255,255,0.04)":isIlju?"rgba(250,199,117,0.15)":"rgba(60,52,137,0.3)",
+                      border:`1px solid ${isIlju?"rgba(250,199,117,0.4)":"rgba(60,52,137,0.4)"}`}}>
                     <span className="text-2xl font-bold" style={{color:stem==="?"?"#8a88a0":"#FAC775"}}>{stem}</span>
                     {se && <span className="text-[10px] mt-0.5 font-medium" style={{color:ELEMENT_COLOR[se]}}>{se}</span>}
                   </div>
-                  <div className="w-full rounded-xl py-3 flex flex-col items-center"
+                  {/* 지지 */}
+                  <div className="w-full rounded-xl py-3 flex flex-col items-center mb-1"
                     style={{background:branch==="?"?"rgba(255,255,255,0.04)":"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)"}}>
                     <span className="text-2xl font-bold" style={{color:branch==="?"?"#8a88a0":"#e0dce8"}}>{branch}</span>
                     {be && <span className="text-[10px] mt-0.5 font-medium" style={{color:ELEMENT_COLOR[be]}}>{be}</span>}
                   </div>
+                  {/* 지지 육친 */}
+                  <div className="text-[10px] mt-1 font-bold h-4"
+                    style={{color: sipsinColor(branchSipsin)}}>
+                    {branchSipsin}
+                  </div>
+                  {/* 기둥 라벨 */}
+                  <div className="text-[10px] mt-1 font-medium" style={{color:"#8a88a0"}}>{pillar}</div>
                 </div>
               );
             })}
