@@ -18,10 +18,15 @@ const BRANCH_LIST = [
   {char:"戌",name:"술"},{char:"亥",name:"해"},
 ];
 
-// 간지 문자열(2글자)에서 천간/지지 분리
+// 간지 문자열에서 한자 2글자 추출 (예: "정축(丁丑)" → stem:"丁", branch:"丑")
 function splitGanji(ganji: string) {
-  if (!ganji || ganji.length < 2) return { stem: "?", branch: "?" };
-  return { stem: ganji[0], branch: ganji[1] };
+  if (!ganji) return { stem: "?", branch: "?" };
+  const match = ganji.match(/\(([^)]+)\)/);
+  if (match && match[1].length >= 2) {
+    return { stem: match[1][0], branch: match[1][1] };
+  }
+  if (ganji.length >= 2) return { stem: ganji[0], branch: ganji[1] };
+  return { stem: "?", branch: "?" };
 }
 
 // 시주 계산 (일간 기준)
@@ -64,12 +69,10 @@ function ResultContent() {
       setConverting(true);
       try {
         if (calType === "음력") {
-          // 1. 음력 → 양력 변환
           const res1 = await fetch(`/api/lunar?year=${yearParam}&month=${monthParam}&day=${dayParam}&calType=음력`);
           const d1 = await res1.json();
           const sy = d1.solarYear, sm = d1.solarMonth, sd = d1.solarDay;
           setSolar({ year: sy, month: sm, day: sd });
-          // 2. 양력으로 간지 조회
           const res2 = await fetch(`/api/lunar?year=${sy}&month=${sm}&day=${sd}&calType=양력`);
           const d2 = await res2.json();
           buildSaju(d2, hourIdx);
