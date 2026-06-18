@@ -23,10 +23,11 @@ export async function GET(req: NextRequest) {
     const res = await fetch(url);
     const xmlText = await res.text();
 
-    // XML 파싱
+    // XML 파싱 (한글+한자 포함 태그 대응)
     const getValue = (tag: string) => {
-      const match = xmlText.match(new RegExp(`<${tag}>([^<]*)<\/${tag}>`));
-      return match ? match[1] : "";
+      const regex = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`);
+      const match = xmlText.match(regex);
+      return match ? match[1].trim() : "";
     };
 
     if (calType === "음력") {
@@ -46,7 +47,6 @@ export async function GET(req: NextRequest) {
         yearGanji: getValue("lunSecha"),
         monthGanji: getValue("lunWolgeon"),
         dayGanji: getValue("lunIljin"),
-        debug_xml: xmlText.substring(0, 500),
       });
     }
   } catch (error) {
