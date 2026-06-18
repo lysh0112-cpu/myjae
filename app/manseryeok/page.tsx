@@ -35,42 +35,6 @@ const HOUR_MAP: Record<string, number> = {
   "申시(15~17)": 8, "酉시(17~19)": 9, "戌시(19~21)": 10, "亥시(21~23)": 11,
 };
 
-function BirthDateInput({ year, month, day, setYear, setMonth, setDay }: {
-  year: string; month: string; day: string;
-  setYear: (v: string) => void; setMonth: (v: string) => void; setDay: (v: string) => void;
-}) {
-  const inputStyle = { background: "#1a1a18", border: "1px solid rgba(255,255,255,0.12)", color: "#FAC775", colorScheme: "dark" as const };
-  return (
-    <div className="flex gap-2">
-      <div className="flex-1">
-        <input type="number" placeholder="년도" value={year} min={1900} max={2025}
-          onChange={(e) => setYear(e.target.value)}
-          className="w-full rounded-xl px-3 py-3 text-sm outline-none text-center"
-          style={{ ...inputStyle, color: year ? "#FAC775" : "#8a88a0" }} />
-        <p className="text-center text-[10px] mt-1" style={{ color: "#8a88a0" }}>년</p>
-      </div>
-      <div className="w-16">
-        <select value={month} onChange={(e) => setMonth(e.target.value)}
-          className="w-full rounded-xl px-2 py-3 text-sm outline-none appearance-none text-center"
-          style={{ ...inputStyle, color: month ? "#FAC775" : "#8a88a0" }}>
-          <option value="">월</option>
-          {Array.from({ length: 12 }, (_, i) => <option key={i + 1} value={String(i + 1)}>{i + 1}</option>)}
-        </select>
-        <p className="text-center text-[10px] mt-1" style={{ color: "#8a88a0" }}>월</p>
-      </div>
-      <div className="w-16">
-        <select value={day} onChange={(e) => setDay(e.target.value)}
-          className="w-full rounded-xl px-2 py-3 text-sm outline-none appearance-none text-center"
-          style={{ ...inputStyle, color: day ? "#FAC775" : "#8a88a0" }}>
-          <option value="">일</option>
-          {Array.from({ length: 31 }, (_, i) => <option key={i + 1} value={String(i + 1)}>{i + 1}</option>)}
-        </select>
-        <p className="text-center text-[10px] mt-1" style={{ color: "#8a88a0" }}>일</p>
-      </div>
-    </div>
-  );
-}
-
 function StepIndicator({ current, total }: { current: number; total: number }) {
   return (
     <div className="flex items-center gap-1.5 justify-center">
@@ -150,7 +114,7 @@ function ManseryeokContent() {
         style={{ background: "rgba(26,26,24,0.97)", backdropFilter: "blur(12px)",
           borderBottom: "1px solid rgba(255,255,255,0.06)", width: "100%", maxWidth: "430px", left: "50%", transform: "translateX(-50%)" }}>
         <Link href="/">
-          <button className="w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-90"
+          <button className="w-9 h-9 rounded-xl flex items-center justify-center"
             style={{ background: "rgba(255,255,255,0.06)" }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5 text-white">
               <polyline points="15 18 9 12 15 6" />
@@ -170,41 +134,59 @@ function ManseryeokContent() {
         <div className="rounded-2xl p-5" style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
           <SectionHeader step={1} icon="👤" title="기본 정보" desc="성별과 달력 방식을 선택해주세요" />
           <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="text-xs font-medium block mb-2" style={{ color: "#b0aec8" }}>성별</label>
-              <div className="grid grid-cols-2 gap-2">
-                {(["남", "여"] as const).map((g) => (
-                  <button key={g} onClick={() => setGender(g)}
-                    className="py-3 rounded-xl font-bold text-sm transition-all active:scale-95 flex flex-col items-center gap-1"
-                    style={gender === g
-                      ? { background: "#3C3489", color: "#FAC775", border: "1px solid rgba(250,199,117,0.3)" }
-                      : { background: "rgba(255,255,255,0.04)", color: "#8a88a0", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span className="text-xl">{g === "남" ? "♂" : "♀"}</span><span>{g}</span>
-                  </button>
-                ))}
+            {[
+              { label: "성별", vals: ["남", "여"] as const, state: gender, set: setGender },
+              { label: "달력", vals: ["양력", "음력"] as const, state: calType, set: setCalType },
+            ].map(({ label, vals, state, set }) => (
+              <div key={label} className="flex-1">
+                <label className="text-xs font-medium block mb-2" style={{ color: "#b0aec8" }}>{label}</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {vals.map((v) => (
+                    <button key={v} onClick={() => (set as (x: string) => void)(v)}
+                      className="py-3 rounded-xl font-bold text-sm transition-all active:scale-95 flex flex-col items-center gap-1"
+                      style={state === v
+                        ? { background: "#3C3489", color: "#FAC775", border: "1px solid rgba(250,199,117,0.3)" }
+                        : { background: "rgba(255,255,255,0.04)", color: "#8a88a0", border: "1px solid rgba(255,255,255,0.08)" }}>
+                      <span className="text-xl">{v === "남" ? "♂" : v === "여" ? "♀" : v === "양력" ? "☀️" : "🌙"}</span>
+                      <span>{v}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-            <div className="flex-1">
-              <label className="text-xs font-medium block mb-2" style={{ color: "#b0aec8" }}>달력</label>
-              <div className="grid grid-cols-2 gap-2">
-                {(["양력", "음력"] as const).map((c) => (
-                  <button key={c} onClick={() => setCalType(c)}
-                    className="py-3 rounded-xl font-bold text-sm transition-all active:scale-95 flex flex-col items-center gap-1"
-                    style={calType === c
-                      ? { background: "#3C3489", color: "#FAC775", border: "1px solid rgba(250,199,117,0.3)" }
-                      : { background: "rgba(255,255,255,0.04)", color: "#8a88a0", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span className="text-xl">{c === "양력" ? "☀️" : "🌙"}</span><span>{c}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
         <div className="rounded-2xl p-5"
           style={{ background: "#2C2C2A", border: `1px solid ${birthReady ? "rgba(250,199,117,0.2)" : "rgba(255,255,255,0.07)"}` }}>
           <SectionHeader step={2} icon="📅" title="생년월일" desc={`${calType}으로 입력해주세요`} />
-          <BirthDateInput year={year} month={month} day={day} setYear={setYear} setMonth={setMonth} setDay={setDay} />
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <input type="number" placeholder="년도" value={year} min={1900} max={2025}
+                onChange={(e) => setYear(e.target.value)}
+                className="w-full rounded-xl px-3 py-3 text-sm outline-none text-center"
+                style={{ background: "#1a1a18", border: "1px solid rgba(255,255,255,0.12)", color: year ? "#FAC775" : "#8a88a0", colorScheme: "dark" }} />
+              <p className="text-center text-[10px] mt-1" style={{ color: "#8a88a0" }}>년</p>
+            </div>
+            <div className="w-16">
+              <select value={month} onChange={(e) => setMonth(e.target.value)}
+                className="w-full rounded-xl px-2 py-3 text-sm outline-none appearance-none text-center"
+                style={{ background: "#1a1a18", border: "1px solid rgba(255,255,255,0.12)", color: month ? "#FAC775" : "#8a88a0", colorScheme: "dark" }}>
+                <option value="">월</option>
+                {Array.from({ length: 12 }, (_, i) => <option key={i + 1} value={String(i + 1)}>{i + 1}</option>)}
+              </select>
+              <p className="text-center text-[10px] mt-1" style={{ color: "#8a88a0" }}>월</p>
+            </div>
+            <div className="w-16">
+              <select value={day} onChange={(e) => setDay(e.target.value)}
+                className="w-full rounded-xl px-2 py-3 text-sm outline-none appearance-none text-center"
+                style={{ background: "#1a1a18", border: "1px solid rgba(255,255,255,0.12)", color: day ? "#FAC775" : "#8a88a0", colorScheme: "dark" }}>
+                <option value="">일</option>
+                {Array.from({ length: 31 }, (_, i) => <option key={i + 1} value={String(i + 1)}>{i + 1}</option>)}
+              </select>
+              <p className="text-center text-[10px] mt-1" style={{ color: "#8a88a0" }}>일</p>
+            </div>
+          </div>
         </div>
 
         <div className="rounded-2xl p-5"
@@ -298,9 +280,7 @@ function ManseryeokContent() {
             ))}
           </div>
         )}
-        <button
-          onClick={handleAnalyze}
-          disabled={!readyToAnalyze}
+        <button onClick={handleAnalyze} disabled={!readyToAnalyze}
           className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all active:scale-95"
           style={readyToAnalyze
             ? { background: "linear-gradient(135deg, #3C3489 0%, #FAC775 100%)", color: "#1a1a18", boxShadow: "0 4px 24px rgba(60,52,137,0.5)" }
