@@ -96,11 +96,12 @@ function ResultContent() {
       const hour = hourIdx !== null
         ? calcHourPillar(day.stem, hourIdx)
         : { stem: "?", branch: "?" };
+      // 전통 배치: 시주→일주→월주→년주 (오른쪽이 년주)
       setSaju([
-        { pillar: "년주", stem: year.stem, branch: year.branch },
-        { pillar: "월주", stem: month.stem, branch: month.branch },
-        { pillar: "일주", stem: day.stem, branch: day.branch },
         { pillar: "시주", stem: hour.stem, branch: hour.branch },
+        { pillar: "일주", stem: day.stem, branch: day.branch },
+        { pillar: "월주", stem: month.stem, branch: month.branch },
+        { pillar: "년주", stem: year.stem, branch: year.branch },
       ]);
     }
 
