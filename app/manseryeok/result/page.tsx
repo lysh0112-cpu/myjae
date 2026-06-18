@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import DayunTable from "./DayunTable";
+import SeyunTable from "./SeyunTable";
 
 const HEAVENLY_STEMS = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
 const EARTHLY_BRANCHES = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
@@ -311,6 +312,14 @@ function ResultContent() {
             gender={gender}
             monthGanji={monthGanji}
             yearStem={yearStem}
+            dayStem={dayStem}
+            currentYear={2026}
+          />
+        )}
+
+        {/* 세운표 */}
+        {dayStem && (
+          <SeyunTable
             dayStem={dayStem}
             currentYear={2026}
           />
