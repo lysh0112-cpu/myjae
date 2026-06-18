@@ -77,10 +77,10 @@ function ResultContent(){
     const optLabels:Record<string,string>={basic:"사주 기본 분석",dayun:"대운·세운 흐름",career:"직업·재물운",love:"연애·궁합운",health:"건강·체질",name:"이름 분석"};
     const prompt=`당신은 명리학 전문가입니다. 다음 사주를 분석해주세요.\n\n성별: ${gender}성\n생년월일: ${calType} ${year}년 ${month}월 ${day}일\n태어난 시: ${hourIdx===null?"모름":BRANCH_LIST[hourIdx]?.char+"시"}\n\n사주팔자: ${sajuText}\n오행: 목${elements["목"]} 화${elements["화"]} 토${elements["토"]} 금${elements["금"]} 수${elements["수"]}\n\n분석항목: ${options.map(o=>optLabels[o]||o).join(", ")}\n\n각 항목별 소제목을 붙여 친절하고 자세하게 분석해주세요.`;
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{
+      const res=await fetch("/api/analyze",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,messages:[{role:"user",content:prompt}]}),
+        body:JSON.stringify({messages:[{role:"user",content:prompt}]}),
       });
       const data=await res.json();
       setAiResult(data.content?.find((c:{type:string})=>c.type==="text")?.text||"결과를 가져오지 못했습니다.");
