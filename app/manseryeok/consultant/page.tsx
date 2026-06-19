@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import SajuBoard from './components/SajuBoard'
 import ElementScore from './components/ElementScore'
@@ -28,6 +28,28 @@ const BRANCH_LIST = [
 const BRANCH_YIN: Record<string,boolean> = {
   子:true,丑:true,寅:false,卯:true,辰:false,巳:true,
   午:false,未:true,申:false,酉:true,戌:false,亥:true
+}
+
+// 시간 → 시주 인덱스 변환
+function timeToHourIdx(timeStr: string): number | null {
+  if (!timeStr || timeStr.length < 3) return null
+  const h = parseInt(timeStr.slice(0, 2))
+  const m = parseInt(timeStr.slice(2, 4) || '0')
+  const total = h * 60 + m
+  if (total >= 1390 || total < 30) return 0   // 子시 23:30~01:30
+  if (total < 90) return 1   // 丑시
+  if (total < 150) return 2  // 寅시
+  if (total < 210) return 3  // 卯시
+  if (total < 270) return 4  // 辰시
+  if (total < 330) return 5  // 巳시
+  if (total < 390) return 6  // 午시
+  if (total < 450) return 7  // 未시
+  if (total < 510) return 8  // 申시
+  if (total < 570) return 9  // 酉시
+  if (total < 630) return 10 // 戌시
+  if (total < 690) return 11 // 亥시
+  if (total < 1390) return 0 // 子시
+  return null
 }
 
 function getSipsin(dayStem: string, targetStem: string): string {
@@ -76,24 +98,186 @@ function calcHourPillar(dayStem: string, hourIdx: number) {
   return { stem: hourStem, branch: hourBranch }
 }
 
+// ── 상담사 입력 폼 컴포넌트 ──
+function ConsultantInputForm({ onSubmit }: { onSubmit: (params: Record<string, string>) => void }) {
+  const [birthInput, setBirthInput] = useState('')   // 19980105
+  const [timeInput, setTimeInput] = useState('')     // 0200
+  const [noTime, setNoTime] = useState(false)
+  const [gender, setGender] = useState<'남' | '여'>('남')
+  const [calType, setCalType] = useState<'양력' | '음력'>('양력')
+  const [customerName, setCustomerName] = useState('')
+  const [error, setError] = useState('')
+
+  function formatBirth(val: string) {
+    const n = val.replace(/\D/g, '').slice(0, 8)
+    if (n.length <= 4) return n
+    if (n.length <= 6) return `${n.slice(0,4)}.${n.slice(4)}`
+    return `${n.slice(0,4)}.${n.slice(4,6)}.${n.slice(6)}`
+  }
+
+  function formatTime(val: string) {
+    return val.replace(/\D/g, '').slice(0, 4)
+  }
+
+  function handleSubmit() {
+    const digits = birthInput.replace(/\D/g, '')
+    if (digits.length !== 8) {
+      setError('생년월일 8자리를 입력해주세요 (예: 19980105)')
+      return
+    }
+    const year = digits.slice(0, 4)
+    const month = digits.slice(4, 6)
+    const day = digits.slice(6, 8)
+
+    let hourIdx = 'moeum'
+    if (!noTime && timeInput.length >= 3) {
+      const idx = timeToHourIdx(timeInput)
+      hourIdx = idx !== null ? String(idx) : '모름'
+    } else {
+      hourIdx = '모름'
+    }
+
+    setError('')
+    onSubmit({
+      gender,
+      calType,
+      year: String(parseInt(year)),
+      month: String(parseInt(month)),
+      day: String(parseInt(day)),
+      hour: hourIdx,
+      customerName,
+    })
+  }
+
+  return (
+    <div className="rounded-2xl p-4"
+      style={{background:'linear-gradient(135deg,#3C3489 0%,#2a2075 100%)',border:'1px solid rgba(250,199,117,0.2)'}}>
+      <div className="text-xs font-semibold mb-3" style={{color:'rgba(250,199,117,0.8)'}}>
+        ✦ 고객 정보 입력
+      </div>
+
+      {/* 고객 이름 */}
+      <div className="mb-3">
+        <label className="text-xs mb-1 block" style={{color:'rgba(255,255,255,0.6)'}}>고객 이름 (선택)</label>
+        <input
+          type="text"
+          value={customerName}
+          onChange={(e) => setCustomerName(e.target.value)}
+          placeholder="홍길동"
+          className="w-full rounded-xl px-3 py-2 text-sm focus:outline-none"
+          style={{background:'rgba(255,255,255,0.1)',color:'#fff',border:'1px solid rgba(255,255,255,0.15)'}}
+        />
+      </div>
+
+      {/* 성별 + 양음력 */}
+      <div className="flex gap-2 mb-3">
+        <div className="flex-1">
+          <label className="text-xs mb-1 block" style={{color:'rgba(255,255,255,0.6)'}}>성별</label>
+          <div className="flex rounded-xl overflow-hidden" style={{border:'1px solid rgba(255,255,255,0.15)'}}>
+            {(['남','여'] as const).map(v => (
+              <button key={v} onClick={() => setGender(v)}
+                className="flex-1 py-2 text-sm font-bold transition-all"
+                style={gender===v ? {background:'rgba(250,199,117,0.3)',color:'#FAC775'} : {background:'rgba(255,255,255,0.05)',color:'rgba(255,255,255,0.5)'}}>
+                {v}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex-1">
+          <label className="text-xs mb-1 block" style={{color:'rgba(255,255,255,0.6)'}}>달력</label>
+          <div className="flex rounded-xl overflow-hidden" style={{border:'1px solid rgba(255,255,255,0.15)'}}>
+            {(['양력','음력'] as const).map(v => (
+              <button key={v} onClick={() => setCalType(v)}
+                className="flex-1 py-2 text-sm font-bold transition-all"
+                style={calType===v ? {background:'rgba(250,199,117,0.3)',color:'#FAC775'} : {background:'rgba(255,255,255,0.05)',color:'rgba(255,255,255,0.5)'}}>
+                {v}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 생년월일 */}
+      <div className="mb-3">
+        <label className="text-xs mb-1 block" style={{color:'rgba(255,255,255,0.6)'}}>생년월일 (8자리)</label>
+        <input
+          type="tel"
+          value={birthInput}
+          onChange={(e) => setBirthInput(formatBirth(e.target.value))}
+          placeholder="1998.01.05"
+          maxLength={10}
+          className="w-full rounded-xl px-3 py-2.5 text-lg text-center font-bold tracking-widest focus:outline-none"
+          style={{background:'rgba(255,255,255,0.1)',color:'#FAC775',border:'1px solid rgba(255,255,255,0.15)'}}
+        />
+      </div>
+
+      {/* 출생시간 */}
+      <div className="mb-4">
+        <label className="text-xs mb-1 block" style={{color:'rgba(255,255,255,0.6)'}}>출생시간 (4자리)</label>
+        <div className="flex gap-2 items-center">
+          <input
+            type="tel"
+            value={timeInput}
+            onChange={(e) => setTimeInput(formatTime(e.target.value))}
+            placeholder="0200"
+            maxLength={4}
+            disabled={noTime}
+            className="flex-1 rounded-xl px-3 py-2.5 text-lg text-center font-bold tracking-widest focus:outline-none"
+            style={{
+              background: noTime ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.1)',
+              color: noTime ? 'rgba(255,255,255,0.3)' : '#FAC775',
+              border:'1px solid rgba(255,255,255,0.15)'
+            }}
+          />
+          <label className="flex items-center gap-1.5 text-sm cursor-pointer" style={{color:'rgba(255,255,255,0.6)'}}>
+            <input type="checkbox" checked={noTime} onChange={(e) => setNoTime(e.target.checked)}
+              className="w-4 h-4 rounded" />
+            모름
+          </label>
+        </div>
+        {timeInput.length >= 3 && !noTime && (
+          <p className="text-xs mt-1" style={{color:'rgba(250,199,117,0.7)'}}>
+            → {BRANCH_LIST[timeToHourIdx(timeInput) ?? 0]?.char}시
+          </p>
+        )}
+      </div>
+
+      {error && <p className="text-xs mb-3 text-center" style={{color:'#ff8080'}}>{error}</p>}
+
+      <button
+        onClick={handleSubmit}
+        className="w-full py-3 rounded-xl font-bold text-sm transition-all active:scale-95"
+        style={{background:'linear-gradient(135deg,#FAC775,#f0a030)',color:'#1a1a18'}}>
+        ✦ 사주 조회하기
+      </button>
+    </div>
+  )
+}
+
 function ConsultantContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [saju, setSaju] = useState<{pillar:string;stem:string;branch:string}[]>([])
   const [dayStem, setDayStem] = useState('')
   const [monthGanji, setMonthGanji] = useState('')
   const [yearStem, setYearStem] = useState('')
-  const [converting, setConverting] = useState(true)
+  const [converting, setConverting] = useState(false)
   const [consultationId, setConsultationId] = useState<string | null>(null)
   const [customerPhone, setCustomerPhone] = useState('')
+  const [customerName, setCustomerName] = useState('')
 
-  const gender = searchParams.get('gender') || '남'
-  const calType = searchParams.get('calType') || '양력'
-  const yearParam = parseInt(searchParams.get('year') || '0')
-  const monthParam = parseInt(searchParams.get('month') || '0')
-  const dayParam = parseInt(searchParams.get('day') || '0')
-  const leapMonth = searchParams.get('leapMonth') || '0'
-  const hourParam = searchParams.get('hour')
-  const hourIdx = hourParam === '모름' || hourParam === null ? null : parseInt(hourParam)
+  // URL 파라미터
+  const [gender, setGender] = useState(searchParams.get('gender') || '')
+  const [calType, setCalType] = useState(searchParams.get('calType') || '')
+  const [yearParam, setYearParam] = useState(parseInt(searchParams.get('year') || '0'))
+  const [monthParam, setMonthParam] = useState(parseInt(searchParams.get('month') || '0'))
+  const [dayParam, setDayParam] = useState(parseInt(searchParams.get('day') || '0'))
+  const [leapMonth] = useState(searchParams.get('leapMonth') || '0')
+  const [hourIdx, setHourIdx] = useState<number | null>(() => {
+    const h = searchParams.get('hour')
+    return h === '모름' || h === null ? null : parseInt(h)
+  })
+
   const consultationIdParam = searchParams.get('consultationId') || null
   const customerPhoneParam = searchParams.get('customerPhone') || ''
 
@@ -102,7 +286,19 @@ function ConsultantContent() {
     setCustomerPhone(customerPhoneParam)
   }, [consultationIdParam, customerPhoneParam])
 
+  // 폼 제출 → 사주 로드
+  function handleFormSubmit(params: Record<string, string>) {
+    setGender(params.gender)
+    setCalType(params.calType)
+    setYearParam(parseInt(params.year))
+    setMonthParam(parseInt(params.month))
+    setDayParam(parseInt(params.day))
+    setHourIdx(params.hour === '모름' ? null : parseInt(params.hour))
+    setCustomerName(params.customerName || '')
+  }
+
   useEffect(() => {
+    if (!yearParam || !monthParam || !dayParam) return
     async function loadSaju() {
       setConverting(true)
       try {
@@ -147,21 +343,12 @@ function ConsultantContent() {
     : []
   const seyunList = dayStem ? calcSeyunList(dayStem, 2026) : []
 
-  if (converting) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{background:'#1a1a18'}}>
-        <div className="text-3xl animate-spin">✦</div>
-        <p style={{color:'#FAC775'}}>사주 정보를 불러오는 중...</p>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen" style={{background:'#1a1a18',maxWidth:'430px',margin:'0 auto'}}>
       <header className="fixed top-0 z-50 flex items-center justify-between px-4 py-4"
         style={{background:'rgba(26,26,24,0.97)',backdropFilter:'blur(12px)',
           borderBottom:'1px solid rgba(255,255,255,0.06)',width:'100%',maxWidth:'430px',left:'50%',transform:'translateX(-50%)'}}>
-        <Link href="/manseryeok/result">
+        <Link href="/manseryeok">
           <button className="w-9 h-9 rounded-xl flex items-center justify-center" style={{background:'rgba(255,255,255,0.06)'}}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5 text-white">
               <polyline points="15 18 9 12 15 6"/>
@@ -175,23 +362,39 @@ function ConsultantContent() {
       </header>
 
       <main className="pt-20 pb-10 px-4 space-y-4">
-        {/* 분석 대상 */}
-        <div className="rounded-2xl p-4"
-          style={{background:'linear-gradient(135deg,#3C3489 0%,#2a2075 100%)',border:'1px solid rgba(250,199,117,0.2)'}}>
-          <div className="text-xs font-semibold mb-2" style={{color:'rgba(250,199,117,0.8)'}}>분석 대상</div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {[
-              `${gender}성`,
-              `${calType} ${yearParam}.${monthParam}.${dayParam}`,
-              hourIdx === null ? '시 미지정' : `${BRANCH_LIST[hourIdx]?.char}시`
-            ].map(item => (
-              <span key={item} className="text-sm font-semibold px-3 py-1 rounded-full"
-                style={{background:'rgba(255,255,255,0.1)',color:'#FAC775'}}>{item}</span>
-            ))}
-          </div>
-        </div>
 
-        {saju.length > 0 && (
+        {/* 상담사 입력 폼 */}
+        <ConsultantInputForm onSubmit={handleFormSubmit} />
+
+        {/* 분석 대상 표시 */}
+        {yearParam > 0 && (
+          <div className="rounded-2xl p-4"
+            style={{background:'linear-gradient(135deg,#3C3489 0%,#2a2075 100%)',border:'1px solid rgba(250,199,117,0.2)'}}>
+            <div className="text-xs font-semibold mb-2" style={{color:'rgba(250,199,117,0.8)'}}>분석 대상</div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {[
+                customerName || '',
+                `${gender}성`,
+                `${calType} ${yearParam}.${monthParam}.${dayParam}`,
+                hourIdx === null ? '시 미지정' : `${BRANCH_LIST[hourIdx]?.char}시`
+              ].filter(Boolean).map(item => (
+                <span key={item} className="text-sm font-semibold px-3 py-1 rounded-full"
+                  style={{background:'rgba(255,255,255,0.1)',color:'#FAC775'}}>{item}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 로딩 */}
+        {converting && (
+          <div className="flex flex-col items-center justify-center py-10 gap-4">
+            <div className="text-3xl animate-spin">✦</div>
+            <p style={{color:'#FAC775'}}>사주 정보를 불러오는 중...</p>
+          </div>
+        )}
+
+        {/* 사주 분석 결과 */}
+        {saju.length > 0 && !converting && (
           <>
             <SajuBoard saju={saju} dayStem={dayStem} />
             <ElementScore />
