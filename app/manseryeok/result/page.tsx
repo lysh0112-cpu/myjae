@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import DayunTable from "./DayunTable";
 import SeyunTable from "./SeyunTable";
 import GongmangDisplay from "./components/GongmangDisplay";
+import { supabase } from "@/lib/supabase";
 
 const HEAVENLY_STEMS = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
 const EARTHLY_BRANCHES = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
@@ -97,6 +98,74 @@ const sipsinColor = (s: string) => {
   return "#8a88a0";
 };
 
+// ── 상담사 목록 컴포넌트 ──
+type Consultant = {
+  id: string
+  name: string
+  specialty: string
+  price: number
+}
+
+function ConsultantList({ searchParams }: { searchParams: URLSearchParams }) {
+  const router = useRouter()
+  const [consultants, setConsultants] = useState<Consultant[]>([])
+
+  useEffect(() => {
+    supabase
+      .from('consultants')
+      .select('id, name, specialty, price')
+      .eq('active', true)
+      .order('name')
+      .then(({ data }) => { if (data) setConsultants(data) })
+  }, [])
+
+  function handleSelect(consultant: Consultant) {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('consultantId', consultant.id)
+    params.set('consultantName', consultant.name)
+    params.set('consultantPrice', String(consultant.price))
+    router.push(`/manseryeok/consulting?${params.toString()}`)
+  }
+
+  if (consultants.length === 0) return null
+
+  return (
+    <div className="rounded-2xl p-5" style={{background:"#2C2C2A",border:"1px solid rgba(250,199,117,0.15)"}}>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-lg">🔮</span>
+        <h2 className="text-base font-bold text-white">전문 상담사와 상담하기</h2>
+      </div>
+      <p className="text-xs mb-4" style={{color:"#8a88a0"}}>
+        AI 분석이 더 궁금하신가요? 전문 상담사와 1:1 상담을 받아보세요
+      </p>
+      <div className="space-y-3">
+        {consultants.map((c) => (
+          <button
+            key={c.id}
+            onClick={() => handleSelect(c)}
+            className="w-full text-left rounded-xl p-4 transition-all"
+            style={{background:"rgba(60,52,137,0.2)",border:"1px solid rgba(60,52,137,0.3)"}}
+          >
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="font-bold text-white">{c.name}</div>
+                <div className="text-xs mt-0.5" style={{color:"#8a88a0"}}>{c.specialty}</div>
+              </div>
+              <div>
+                <div className="text-amber-400 font-bold">{c.price.toLocaleString()}원</div>
+                <div className="text-xs mt-1 text-right px-3 py-1 rounded-full"
+                  style={{background:"rgba(250,199,117,0.15)",color:"#FAC775"}}>
+                  상담 신청 →
+                </div>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function ResultContent() {
   const searchParams = useSearchParams();
   const [aiResult, setAiResult] = useState<string>("");
@@ -166,8 +235,6 @@ function ResultContent() {
   }, [calType, yearParam, monthParam, dayParam, leapMonth, hourIdx]);
 
   const elements = saju.length > 0 ? calcElements(saju) : {목:0,화:0,토:0,금:0,수:0};
-
-  // ✅ 추가: 일지, 년지 추출
   const iljji = saju[1]?.branch ?? "";
   const yeonjji = saju[3]?.branch ?? "";
 
@@ -248,7 +315,7 @@ function ResultContent() {
           </div>
         </div>
 
-        {/* 사주 명식 — 기존 그대로 */}
+        {/* 사주 명식 */}
         <div className="rounded-2xl p-5" style={{background:"#2C2C2A",border:"1px solid rgba(250,199,117,0.15)"}}>
           <div className="flex items-center gap-2 mb-4">
             <span style={{color:"#FAC775",fontSize:"18px"}}>✦</span>
@@ -289,7 +356,7 @@ function ResultContent() {
           </div>
         </div>
 
-        {/* 오행 분포 — 수치 형태만 변경: 木2 (25%) */}
+        {/* 오행 분포 */}
         <div className="rounded-2xl p-5" style={{background:"#2C2C2A",border:"1px solid rgba(255,255,255,0.07)"}}>
           <h2 className="text-base font-bold text-white mb-4">오행 분포</h2>
           <div className="space-y-2.5">
@@ -311,15 +378,12 @@ function ResultContent() {
           </div>
         </div>
 
-        {/* ✅ 추가: 공망 */}
+        {/* 공망 */}
         {dayStem && iljji && (
-          <GongmangDisplay
-            ilgan={dayStem}
-            iljji={iljji}
-          />
+          <GongmangDisplay ilgan={dayStem} iljji={iljji} />
         )}
 
-        {/* 대운표 — ✅ ilgan, yeonjji, iljji props 추가 */}
+        {/* 대운표 */}
         {dayStem && monthGanji && yearStem && (
           <DayunTable
             birthYear={yearParam}
@@ -336,7 +400,7 @@ function ResultContent() {
           />
         )}
 
-        {/* 세운표 — ✅ ilgan, yeonjji, iljji props 추가 */}
+        {/* 세운표 */}
         {dayStem && (
           <SeyunTable
             dayStem={dayStem}
@@ -347,7 +411,7 @@ function ResultContent() {
           />
         )}
 
-        {/* AI 상세 분석 — 기존 그대로 */}
+        {/* AI 상세 분석 */}
         <div className="rounded-2xl p-5" style={{background:"#2C2C2A",border:"1px solid rgba(255,255,255,0.07)"}}>
           <div className="flex items-center gap-2 mb-4">
             <span className="text-lg">🤖</span>
@@ -380,6 +444,10 @@ function ResultContent() {
             </div>
           )}
         </div>
+
+        {/* 상담사 목록 — 맨 아래 */}
+        <ConsultantList searchParams={searchParams} />
+
       </main>
     </div>
   );
