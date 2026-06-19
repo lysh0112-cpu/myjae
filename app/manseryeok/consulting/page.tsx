@@ -12,12 +12,11 @@ type Consultant = {
   active: boolean
 }
 
-type Step = 'select' | 'phone' | 'pay' | 'chat'
+type Step = 'phone' | 'pay' | 'chat'
 
 function ConsultingContent() {
   const searchParams = useSearchParams()
-  const [step, setStep] = useState<Step>('select')
-  const [consultants, setConsultants] = useState<Consultant[]>([])
+  const [step, setStep] = useState<Step>('phone')
   const [selected, setSelected] = useState<Consultant | null>(null)
   const [phone, setPhone] = useState('')
   const [consultationId, setConsultationId] = useState<string | null>(null)
@@ -31,18 +30,22 @@ function ConsultingContent() {
   const month = searchParams.get('month') ?? ''
   const day = searchParams.get('day') ?? ''
   const hour = searchParams.get('hour') ?? ''
+  const consultantId = searchParams.get('consultantId') ?? ''
+  const consultantName = searchParams.get('consultantName') ?? ''
+  const consultantPrice = parseInt(searchParams.get('consultantPrice') ?? '0')
   const birthData = { gender, calType, year, month, day, hour }
 
-  useEffect(() => { fetchConsultants() }, [])
-
-  async function fetchConsultants() {
-    const { data } = await supabase
-      .from('consultants')
-      .select('id, name, specialty, price, active')
-      .eq('active', true)
-      .order('name')
-    if (data) setConsultants(data)
-  }
+  useEffect(() => {
+    if (consultantId && consultantName && consultantPrice) {
+      setSelected({
+        id: consultantId,
+        name: consultantName,
+        specialty: '',
+        price: consultantPrice,
+        active: true,
+      })
+    }
+  }, [consultantId, consultantName, consultantPrice])
 
   function formatPhone(value: string) {
     const n = value.replace(/\D/g, '')
@@ -102,54 +105,19 @@ function ConsultingContent() {
     setStep('chat')
   }
 
-  if (step === 'select') return (
-    <div className="min-h-screen bg-stone-950 text-stone-100 p-4">
-      <div className="max-w-lg mx-auto">
-        <h1 className="text-2xl font-bold text-amber-400 mb-1">명연재 상담</h1>
-        <p className="text-stone-400 text-sm mb-6">상담사를 선택해주세요</p>
-        {consultants.length === 0 ? (
-          <div className="text-center text-stone-500 py-20">현재 활동중인 상담사가 없습니다</div>
-        ) : (
-          <div className="space-y-3">
-            {consultants.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => { setSelected(c); setStep('phone') }}
-                className="w-full text-left bg-stone-900 border border-stone-700 hover:border-amber-500 rounded-xl p-4 transition-all"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="font-bold text-lg">{c.name}</div>
-                    <div className="text-stone-400 text-sm mt-1">{c.specialty}</div>
-                  </div>
-                  <div className="text-amber-400 font-bold text-lg">
-                    {c.price.toLocaleString()}원
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-
+  // ── 1단계: 연락처 입력 ──
   if (step === 'phone') return (
     <div className="min-h-screen bg-stone-950 text-stone-100 p-4">
       <div className="max-w-lg mx-auto">
-        <button onClick={() => setStep('select')} className="text-stone-400 text-sm mb-6 flex items-center gap-1">
-          ← 상담사 선택으로
-        </button>
-        <h2 className="text-xl font-bold text-amber-400 mb-1">연락처 입력</h2>
-        <p className="text-stone-400 text-sm mb-6">
-          상담 연결을 위해 핸드폰 번호를 입력해주세요<br/>
-          <span className="text-stone-500 text-xs">별도 회원가입 없이 번호로 상담방이 열립니다</span>
-        </p>
+        <h1 className="text-2xl font-bold text-amber-400 mb-1">명연재 상담</h1>
+        <p className="text-stone-400 text-sm mb-6">연락처를 입력해주세요</p>
+
         <div className="bg-stone-900 rounded-xl p-4 mb-4 border border-stone-700">
           <div className="text-stone-400 text-sm">선택한 상담사</div>
           <div className="font-bold text-lg mt-1">{selected?.name}</div>
           <div className="text-amber-400">{selected?.price.toLocaleString()}원</div>
         </div>
+
         <input
           type="tel"
           value={phone}
@@ -170,6 +138,7 @@ function ConsultingContent() {
     </div>
   )
 
+  // ── 2단계: 결제 ──
   if (step === 'pay') return (
     <div className="min-h-screen bg-stone-950 text-stone-100 p-4">
       <div className="max-w-lg mx-auto">
@@ -218,6 +187,7 @@ function ConsultingContent() {
     </div>
   )
 
+  // ── 3단계: 채팅방 ──
   if (step === 'chat') return (
     <ChatRoom
       consultationId={consultationId!}
