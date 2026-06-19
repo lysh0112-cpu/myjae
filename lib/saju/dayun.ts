@@ -1,7 +1,7 @@
 // lib/saju/dayun.ts
 // 대운/세운/월운 계산 로직
 
-import { STEMS, BRANCHES } from './constants'
+import { CHEONGAN as STEMS, JIJI as BRANCHES } from './constants'
 
 export interface DayunItem {
   age: number
