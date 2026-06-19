@@ -17,7 +17,7 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
       setError('이메일 또는 비밀번호가 올바르지 않습니다.')
@@ -29,17 +29,10 @@ export default function LoginPage() {
     const { data: consultant } = await supabase
       .from('consultants')
       .select('id')
-      .eq('phone', data.user?.user_metadata?.phone || '')
+      .eq('email', email)
       .single()
 
-    // 이메일로도 확인 (상담사 테이블에 이메일 컬럼 추가 전까지 임시로 이름으로 확인)
-    const { data: consultantByEmail } = await supabase
-      .from('consultants')
-      .select('id')
-      .eq('phone', email.split('@')[0])
-      .single()
-
-    if (consultant || consultantByEmail) {
+    if (consultant) {
       // 상담사 → 4화면으로 이동
       router.push('/manseryeok/consultant')
     } else {
