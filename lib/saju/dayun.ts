@@ -104,7 +104,7 @@ export function calcDayunList(
   // 대운수 계산 (절기까지 남은 일수 / 3)
   const startAge = calcDayunStartAge(birthYear, birthMonth, birthDay, isForward)
 
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 10; i++) {
     if (isForward) {
       stemIdx = (stemIdx + 1) % 10
       branchIdx = (branchIdx + 1) % 12
