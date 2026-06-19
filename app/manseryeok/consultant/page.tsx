@@ -36,22 +36,32 @@ function timeToHourIdx(timeStr: string): number | null {
   const h = parseInt(timeStr.slice(0, 2))
   const m = parseInt(timeStr.slice(2, 4) || '0')
   const total = h * 60 + m
-  if (total >= 1390 || total < 30) return 0   // 子시 23:30~01:30
-  if (total < 90) return 1   // 丑시
-  if (total < 150) return 2  // 寅시
-  if (total < 210) return 3  // 卯시
-  if (total < 270) return 4  // 辰시
-  if (total < 330) return 5  // 巳시
-  if (total < 390) return 6  // 午시
-  if (total < 450) return 7  // 未시
-  if (total < 510) return 8  // 申시
-  if (total < 570) return 9  // 酉시
-  if (total < 630) return 10 // 戌시
-  if (total < 690) return 11 // 亥시
-  if (total < 1390) return 0 // 子시
-  return null
+  // 子시: 23:30~01:29
+  if (total >= 1410 || total < 90) return 0
+  // 丑시: 01:30~03:29
+  if (total < 210) return 1
+  // 寅시: 03:30~05:29
+  if (total < 330) return 2
+  // 卯시: 05:30~07:29
+  if (total < 450) return 3
+  // 辰시: 07:30~09:29
+  if (total < 570) return 4
+  // 巳시: 09:30~11:29
+  if (total < 690) return 5
+  // 午시: 11:30~13:29
+  if (total < 810) return 6
+  // 未시: 13:30~15:29
+  if (total < 930) return 7
+  // 申시: 15:30~17:29
+  if (total < 1050) return 8
+  // 酉시: 17:30~19:29
+  if (total < 1170) return 9
+  // 戌시: 19:30~21:29
+  if (total < 1290) return 10
+  // 亥시: 21:30~23:29
+  if (total < 1410) return 11
+  return 0
 }
-
 function getSipsin(dayStem: string, targetStem: string): string {
   if (!targetStem || targetStem === '?') return ''
   const dayIdx = HEAVENLY_STEMS.indexOf(dayStem)
