@@ -9,15 +9,15 @@ interface Props {
   ilgan: string
   yeonjji: string
   iljji: string
+  birthYear: number
 }
 
 const CURRENT_YEAR = new Date().getFullYear()
 const STEM_ELEMENT: Record<string,string> = {甲:'목',乙:'목',丙:'화',丁:'화',戊:'토',己:'토',庚:'금',辛:'금',壬:'수',癸:'수'}
 const ELEMENT_COLOR: Record<string,string> = {목:'#4caf50',화:'#f44336',토:'#ff9800',금:'#9e9e9e',수:'#2196f3'}
 
-export default function ConsultantDayun({ dayunList, ilgan, yeonjji, iljji }: Props) {
+export default function ConsultantDayun({ dayunList, ilgan, yeonjji, iljji, birthYear }: Props) {
   const [selected, setSelected] = useState<number | null>(null)
-  const [birthYear, setBirthYear] = useState(1990)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const currentAge = CURRENT_YEAR - birthYear
@@ -44,7 +44,6 @@ export default function ConsultantDayun({ dayunList, ilgan, yeonjji, iljji }: Pr
         <span className="text-xs ml-auto" style={{color:'#8a88a0'}}>← 스크롤 →</span>
       </div>
 
-      {/* 가로 스크롤 */}
       <div ref={scrollRef} className="flex gap-2 overflow-x-auto pb-2"
         style={{scrollbarWidth:'thin', scrollbarColor:'rgba(255,255,255,0.1) transparent'}}>
         {dayunList.map((dayun, i) => {
@@ -77,7 +76,6 @@ export default function ConsultantDayun({ dayunList, ilgan, yeonjji, iljji }: Pr
         })}
       </div>
 
-      {/* 상세 팝업 */}
       {selectedDayun && (
         <div className="mt-3 rounded-xl p-4" style={{background:'rgba(60,52,137,0.2)',border:'1px solid rgba(60,52,137,0.4)'}}>
           <div className="flex items-center justify-between mb-3">
