@@ -1,4 +1,3 @@
-// app/manseryeok/consultant/page.tsx
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
@@ -13,6 +12,7 @@ import ConsultantDayun from './components/ConsultantDayun'
 import ConsultantSeyun from './components/ConsultantSeyun'
 import ConsultantWolun from './components/ConsultantWolun'
 import Commentary from './components/Commentary'
+import AISummary from './components/AISummary'
 import { calcDayunList, calcSeyunList } from '@/lib/saju/dayun'
 
 const HEAVENLY_STEMS = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
@@ -83,6 +83,8 @@ function ConsultantContent() {
   const [monthGanji, setMonthGanji] = useState('')
   const [yearStem, setYearStem] = useState('')
   const [converting, setConverting] = useState(true)
+  const [consultationId, setConsultationId] = useState<string | null>(null)
+  const [customerPhone, setCustomerPhone] = useState('')
 
   const gender = searchParams.get('gender') || '남'
   const calType = searchParams.get('calType') || '양력'
@@ -92,6 +94,13 @@ function ConsultantContent() {
   const leapMonth = searchParams.get('leapMonth') || '0'
   const hourParam = searchParams.get('hour')
   const hourIdx = hourParam === '모름' || hourParam === null ? null : parseInt(hourParam)
+  const consultationIdParam = searchParams.get('consultationId') || null
+  const customerPhoneParam = searchParams.get('customerPhone') || ''
+
+  useEffect(() => {
+    setConsultationId(consultationIdParam)
+    setCustomerPhone(customerPhoneParam)
+  }, [consultationIdParam, customerPhoneParam])
 
   useEffect(() => {
     async function loadSaju() {
@@ -193,6 +202,11 @@ function ConsultantContent() {
             <ConsultantSeyun seyunList={seyunList} ilgan={dayStem} yeonjji={yeonjji} iljji={iljji} />
             <ConsultantWolun ilgan={dayStem} yeonjji={yeonjji} iljji={iljji} />
             <Commentary />
+            <AISummary
+              consultationId={consultationId}
+              consultantName="상담사"
+              customerPhone={customerPhone}
+            />
           </>
         )}
       </main>
