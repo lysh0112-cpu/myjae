@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import BottomNav from "./components/BottomNav";
-import { createClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 
 function IconHeart() {
   return (
@@ -44,7 +44,6 @@ function Header() {
   const [user, setUser] = useState<{ email?: string; nickname?: string } | null>(null);
 
   useEffect(() => {
-    const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
         setUser({
@@ -56,7 +55,6 @@ function Header() {
   }, []);
 
   const handleLogout = async () => {
-    const supabase = createClient();
     await supabase.auth.signOut();
     setUser(null);
     router.refresh();
