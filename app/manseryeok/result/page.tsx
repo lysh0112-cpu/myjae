@@ -6,7 +6,7 @@ import Link from "next/link";
 import DayunTable from "./DayunTable";
 import SeyunTable from "./SeyunTable";
 import { supabase } from "@/lib/supabase";
- 
+
 const HEAVENLY_STEMS = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
 const EARTHLY_BRANCHES = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
 const STEM_ELEMENT: Record<string,string> = {甲:"목",乙:"목",丙:"화",丁:"화",戊:"토",己:"토",庚:"금",辛:"금",壬:"수",癸:"수"};
@@ -78,15 +78,6 @@ function calcHourPillar(dayStem: string, hourIdx: number) {
   return { stem: hourStem, branch: hourBranch };
 }
 
-function calcElements(saju: {stem:string;branch:string}[]) {
-  const c: Record<string,number> = {목:0,화:0,토:0,금:0,수:0};
-  saju.forEach(({stem,branch}) => {
-    if (STEM_ELEMENT[stem]) c[STEM_ELEMENT[stem]]++;
-    if (BRANCH_ELEMENT[branch]) c[BRANCH_ELEMENT[branch]]++;
-  });
-  return c;
-}
-
 const sipsinColor = (s: string) => {
   if (!s) return "#8a88a0";
   if (["비견","겁재"].includes(s)) return "#9e9e9e";
@@ -97,7 +88,6 @@ const sipsinColor = (s: string) => {
   return "#8a88a0";
 };
 
-// ── 상담사 목록 컴포넌트 ──
 type Consultant = {
   id: string
   name: string
@@ -233,7 +223,6 @@ function ResultContent() {
     loadSaju();
   }, [calType, yearParam, monthParam, dayParam, leapMonth, hourIdx]);
 
-  const elements = saju.length > 0 ? calcElements(saju) : {목:0,화:0,토:0,금:0,수:0};
   const iljji = saju[1]?.branch ?? "";
   const yeonjji = saju[3]?.branch ?? "";
 
@@ -250,6 +239,11 @@ function ResultContent() {
     const lunarInfo = calType === "음력" && solar
       ? `\n음력 ${yearParam}년 ${monthParam}월 ${dayParam}일${leapMonth === "1" ? " (윤달)" : ""} → 양력 ${solar.year}년 ${solar.month}월 ${solar.day}일로 변환`
       : "";
+    const elements = {목:0,화:0,토:0,금:0,수:0} as Record<string,number>;
+    saju.forEach(({stem,branch}) => {
+      if (STEM_ELEMENT[stem]) elements[STEM_ELEMENT[stem]]++;
+      if (BRANCH_ELEMENT[branch]) elements[BRANCH_ELEMENT[branch]]++;
+    });
     const prompt = `당신은 명리학 전문가입니다. 다음 사주를 분석해주세요.\n\n성별: ${gender}성\n생년월일: ${calType} ${yearParam}년 ${monthParam}월 ${dayParam}일${lunarInfo}\n태어난 시: ${hourIdx === null ? "모름" : BRANCH_LIST[hourIdx]?.char+"시"}\n\n사주팔자: ${sajuText}\n오행: 목${elements["목"]} 화${elements["화"]} 토${elements["토"]} 금${elements["금"]} 수${elements["수"]}\n\n분석항목: ${options.map((o:string) => optLabels[o]||o).join(", ")}\n\n각 항목별 소제목을 붙여 친절하고 자세하게 분석해주세요.`;
 
     try {
@@ -329,8 +323,7 @@ function ResultContent() {
               const branchSipsin = getSipsinBranch(dayStem, branch);
               return (
                 <div key={pillar} className="flex flex-col items-center">
-                  <div className="text-[10px] mb-1 font-bold h-4"
-                    style={{color: sipsinColor(stemSipsin)}}>
+                  <div className="text-[10px] mb-1 font-bold h-4" style={{color: sipsinColor(stemSipsin)}}>
                     {stemSipsin}
                   </div>
                   <div className="w-full rounded-xl py-3 flex flex-col items-center mb-1"
@@ -344,33 +337,10 @@ function ResultContent() {
                     <span className="text-2xl font-bold" style={{color:branch==="?"?"#8a88a0":"#e0dce8"}}>{branch}</span>
                     {be && <span className="text-[10px] mt-0.5 font-medium" style={{color:ELEMENT_COLOR[be]}}>{be}</span>}
                   </div>
-                  <div className="text-[10px] mt-1 font-bold h-4"
-                    style={{color: sipsinColor(branchSipsin)}}>
+                  <div className="text-[10px] mt-1 font-bold h-4" style={{color: sipsinColor(branchSipsin)}}>
                     {branchSipsin}
                   </div>
                   <div className="text-[10px] mt-1 font-medium" style={{color:"#8a88a0"}}>{pillar}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 오행 분포 */}
-        <div className="rounded-2xl p-5" style={{background:"#2C2C2A",border:"1px solid rgba(255,255,255,0.07)"}}>
-          <h2 className="text-base font-bold text-white mb-4">오행 분포</h2>
-          <div className="space-y-2.5">
-            {(["목","화","토","금","수"] as const).map(el => {
-              const count = elements[el];
-              const total = Object.values(elements).reduce((a,b) => a+b, 0);
-              const pct = total > 0 ? Math.round((count/total)*100) : 0;
-              const emoji: Record<string,string> = {목:"🌳",화:"🔥",토:"🪨",금:"⚙️",수:"💧"};
-              return (
-                <div key={el} className="flex items-center gap-3">
-                  <span className="text-sm w-12 flex items-center gap-1" style={{color:ELEMENT_COLOR[el]}}>{emoji[el]} {el}</span>
-                  <div className="flex-1 rounded-full overflow-hidden" style={{background:"rgba(255,255,255,0.08)",height:"8px"}}>
-                    <div className="h-full rounded-full" style={{width:`${pct}%`,background:ELEMENT_COLOR[el]}}/>
-                  </div>
-                  <span className="text-xs w-16 text-right" style={{color:"#8a88a0"}}>{el}{count} ({pct}%)</span>
                 </div>
               );
             })}
