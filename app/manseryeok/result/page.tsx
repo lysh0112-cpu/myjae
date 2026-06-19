@@ -167,7 +167,7 @@ function ResultContent() {
 
   const elements = saju.length > 0 ? calcElements(saju) : {목:0,화:0,토:0,금:0,수:0};
 
-  // 일지, 년지 추출
+  // ✅ 추가: 일지, 년지 추출
   const iljji = saju[1]?.branch ?? "";
   const yeonjji = saju[3]?.branch ?? "";
 
@@ -248,7 +248,7 @@ function ResultContent() {
           </div>
         </div>
 
-        {/* 사주 명식 */}
+        {/* 사주 명식 — 기존 그대로 */}
         <div className="rounded-2xl p-5" style={{background:"#2C2C2A",border:"1px solid rgba(250,199,117,0.15)"}}>
           <div className="flex items-center gap-2 mb-4">
             <span style={{color:"#FAC775",fontSize:"18px"}}>✦</span>
@@ -289,7 +289,7 @@ function ResultContent() {
           </div>
         </div>
 
-        {/* 오행 분포 */}
+        {/* 오행 분포 — 수치 형태만 변경: 木2 (25%) */}
         <div className="rounded-2xl p-5" style={{background:"#2C2C2A",border:"1px solid rgba(255,255,255,0.07)"}}>
           <h2 className="text-base font-bold text-white mb-4">오행 분포</h2>
           <div className="space-y-2.5">
@@ -304,16 +304,14 @@ function ResultContent() {
                   <div className="flex-1 rounded-full overflow-hidden" style={{background:"rgba(255,255,255,0.08)",height:"8px"}}>
                     <div className="h-full rounded-full" style={{width:`${pct}%`,background:ELEMENT_COLOR[el]}}/>
                   </div>
-                  <span className="text-xs w-20 text-right" style={{color:"#8a88a0"}}>
-                    {el}{count} ({pct}%)
-                  </span>
+                  <span className="text-xs w-16 text-right" style={{color:"#8a88a0"}}>{el}{count} ({pct}%)</span>
                 </div>
               );
             })}
           </div>
         </div>
 
-        {/* 공망 */}
+        {/* ✅ 추가: 공망 */}
         {dayStem && iljji && (
           <GongmangDisplay
             ilgan={dayStem}
@@ -321,7 +319,7 @@ function ResultContent() {
           />
         )}
 
-        {/* 대운표 */}
+        {/* 대운표 — ✅ ilgan, yeonjji, iljji props 추가 */}
         {dayStem && monthGanji && yearStem && (
           <DayunTable
             birthYear={yearParam}
@@ -338,7 +336,7 @@ function ResultContent() {
           />
         )}
 
-        {/* 세운표 */}
+        {/* 세운표 — ✅ ilgan, yeonjji, iljji props 추가 */}
         {dayStem && (
           <SeyunTable
             dayStem={dayStem}
@@ -349,7 +347,7 @@ function ResultContent() {
           />
         )}
 
-        {/* AI 상세 분석 */}
+        {/* AI 상세 분석 — 기존 그대로 */}
         <div className="rounded-2xl p-5" style={{background:"#2C2C2A",border:"1px solid rgba(255,255,255,0.07)"}}>
           <div className="flex items-center gap-2 mb-4">
             <span className="text-lg">🤖</span>
