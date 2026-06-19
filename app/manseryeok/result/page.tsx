@@ -5,9 +5,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import DayunTable from "./DayunTable";
 import SeyunTable from "./SeyunTable";
-import GongmangDisplay from "./components/GongmangDisplay";
 import { supabase } from "@/lib/supabase";
-
+ 
 const HEAVENLY_STEMS = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
 const EARTHLY_BRANCHES = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
 const STEM_ELEMENT: Record<string,string> = {甲:"목",乙:"목",丙:"화",丁:"화",戊:"토",己:"토",庚:"금",辛:"금",壬:"수",癸:"수"};
@@ -377,11 +376,6 @@ function ResultContent() {
             })}
           </div>
         </div>
-
-        {/* 공망 */}
-        {dayStem && iljji && (
-          <GongmangDisplay ilgan={dayStem} iljji={iljji} />
-        )}
 
         {/* 대운표 */}
         {dayStem && monthGanji && yearStem && (
