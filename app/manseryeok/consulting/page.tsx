@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 type Consultant = {
@@ -14,7 +14,7 @@ type Consultant = {
 
 type Step = 'select' | 'phone' | 'pay' | 'chat'
 
-export default function ConsultingPage() {
+function ConsultingContent() {
   const searchParams = useSearchParams()
   const [step, setStep] = useState<Step>('select')
   const [consultants, setConsultants] = useState<Consultant[]>([])
@@ -102,7 +102,6 @@ export default function ConsultingPage() {
     setStep('chat')
   }
 
-  // ── 1단계: 상담사 선택 ──
   if (step === 'select') return (
     <div className="min-h-screen bg-stone-950 text-stone-100 p-4">
       <div className="max-w-lg mx-auto">
@@ -135,7 +134,6 @@ export default function ConsultingPage() {
     </div>
   )
 
-  // ── 2단계: 핸드폰 입력 ──
   if (step === 'phone') return (
     <div className="min-h-screen bg-stone-950 text-stone-100 p-4">
       <div className="max-w-lg mx-auto">
@@ -172,7 +170,6 @@ export default function ConsultingPage() {
     </div>
   )
 
-  // ── 3단계: 결제 ──
   if (step === 'pay') return (
     <div className="min-h-screen bg-stone-950 text-stone-100 p-4">
       <div className="max-w-lg mx-auto">
@@ -194,7 +191,6 @@ export default function ConsultingPage() {
             <span className="text-amber-400 font-bold text-lg">{selected?.price.toLocaleString()}원</span>
           </div>
         </div>
-
         <p className="text-stone-400 text-sm mb-3">결제 수단 선택</p>
         <div className="grid grid-cols-3 gap-3 mb-6">
           {['휴대폰 결제', '계좌이체', '카카오페이'].map((m) => (
@@ -211,7 +207,6 @@ export default function ConsultingPage() {
             </button>
           ))}
         </div>
-
         <button
           onClick={handlePayComplete}
           className="w-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold py-3 rounded-xl transition-all"
@@ -223,7 +218,6 @@ export default function ConsultingPage() {
     </div>
   )
 
-  // ── 4단계: 채팅방 ──
   if (step === 'chat') return (
     <ChatRoom
       consultationId={consultationId!}
@@ -235,7 +229,18 @@ export default function ConsultingPage() {
   return null
 }
 
-// ── 채팅방 컴포넌트 ──
+export default function ConsultingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-stone-950 flex items-center justify-center">
+        <div className="text-amber-400">로딩중...</div>
+      </div>
+    }>
+      <ConsultingContent />
+    </Suspense>
+  )
+}
+
 type Message = {
   id: string
   sender: string
