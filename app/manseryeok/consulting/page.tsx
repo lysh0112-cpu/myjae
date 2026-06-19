@@ -23,7 +23,7 @@ function ConsultingContent() {
   const [consultationId, setConsultationId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [payMethod, setPayMethod] = useState<string>('휴대폰 결제')
+  const [payMethod, setPayMethod] = useState<string>('계좌이체')
 
   const gender = searchParams.get('gender') ?? ''
   const calType = searchParams.get('calType') ?? '양력'
@@ -193,7 +193,7 @@ function ConsultingContent() {
         </div>
         <p className="text-stone-400 text-sm mb-3">결제 수단 선택</p>
         <div className="grid grid-cols-3 gap-3 mb-6">
-          {['휴대폰 결제', '계좌이체', '카카오페이'].map((m) => (
+          {['계좌이체', '카카오페이', '휴대폰 결제'].map((m) => (
             <button
               key={m}
               onClick={() => setPayMethod(m)}
