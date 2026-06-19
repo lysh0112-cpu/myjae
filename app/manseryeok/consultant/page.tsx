@@ -411,7 +411,7 @@ function ConsultantContent() {
             <UnsungBoard dayStem={dayStem} saju={saju} />
             <SinsalBoard saju={saju} yeonjji={yeonjji} iljji={iljji} />
             <GongmangBoard ilgan={dayStem} iljji={iljji} yeangan={yeangan} yeonjji={yeonjji} />
-            <ConsultantDayun dayunList={dayunList} ilgan={dayStem} yeonjji={yeonjji} iljji={iljji} />
+            <ConsultantDayun dayunList={dayunList} ilgan={dayStem} yeonjji={yeonjji} iljji={iljji} birthYear={yearParam} />
             <ConsultantSeyun seyunList={seyunList} ilgan={dayStem} yeonjji={yeonjji} iljji={iljji} />
             <ConsultantWolun ilgan={dayStem} yeonjji={yeonjji} iljji={iljji} />
             <Commentary />
