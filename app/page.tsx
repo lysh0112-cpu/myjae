@@ -271,84 +271,6 @@ function CategoryMenu() {
   );
 }
 
-const COUNSELORS = [
-  { id: 1, name: "이명연", title: "사주·운명 전문", experience: "경력 18년", tags: ["사주팔자", "궁합", "진로"], rating: 4.9, reviews: 1243, price: "30,000원~", available: true, initial: "이", color: "#3C3489", badge: "인기" },
-  { id: 2, name: "박진수", title: "풍수지리·명리", experience: "경력 12년", tags: ["명리학", "풍수", "이사"], rating: 4.8, reviews: 892, price: "25,000원~", available: true, initial: "박", color: "#5a3d8a", badge: "" },
-  { id: 3, name: "김서연", title: "타로·사주 상담", experience: "경력 9년", tags: ["타로", "연애운", "재물운"], rating: 4.9, reviews: 2104, price: "20,000원~", available: false, initial: "김", color: "#2a5a8a", badge: "신규" },
-  { id: 4, name: "최하늘", title: "사주·신점 전문", experience: "경력 22년", tags: ["신점", "사업운", "이직"], rating: 5.0, reviews: 3210, price: "50,000원~", available: true, initial: "최", color: "#7a3060", badge: "베스트" },
-  { id: 5, name: "정도운", title: "명리·수비학", experience: "경력 15년", tags: ["수비학", "이름", "작명"], rating: 4.7, reviews: 567, price: "35,000원~", available: true, initial: "정", color: "#2a6a5a", badge: "" },
-];
-
-type Counselor = typeof COUNSELORS[0];
-
-function CounselorCard({ c }: { c: Counselor }) {
-  return (
-    <div className="rounded-2xl p-4 flex-shrink-0 w-[196px] flex flex-col gap-3"
-      style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.08)" }}>
-      <div className="flex items-start justify-between">
-        <div className="relative">
-          <div className="w-14 h-14 rounded-xl flex items-center justify-center text-xl font-bold text-white"
-            style={{ background: `linear-gradient(135deg, ${c.color}, #FAC775)` }}>
-            {c.initial}
-          </div>
-          {c.available && (
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2"
-              style={{ background: "#4caf50", borderColor: "#2C2C2A" }} />
-          )}
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          <div className="text-xs" style={{ color: "#FAC775" }}>★ {c.rating}</div>
-          {c.badge && (
-            <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
-              style={{ background: "rgba(250,199,117,0.15)", color: "#FAC775", border: "1px solid rgba(250,199,117,0.3)" }}>
-              {c.badge}
-            </span>
-          )}
-        </div>
-      </div>
-      <div>
-        <div className="font-bold text-white text-sm">{c.name}</div>
-        <div className="text-xs mt-0.5" style={{ color: "#b0aec8" }}>{c.title}</div>
-        <div className="text-xs mt-0.5" style={{ color: "#8a88a0" }}>{c.experience} · 후기 {c.reviews.toLocaleString()}</div>
-      </div>
-      <div className="flex flex-wrap gap-1">
-        {c.tags.map((tag) => (
-          <span key={tag} className="text-xs px-2 py-0.5 rounded-full"
-            style={{ background: "rgba(60,52,137,0.3)", color: "#b0aec8" }}>#{tag}</span>
-        ))}
-      </div>
-      <div className="mt-auto">
-        <div className="text-xs mb-2" style={{ color: "#8a88a0" }}>
-          <span style={{ color: "#FAC775", fontWeight: 600 }}>{c.price}</span> / 30분
-        </div>
-        <button className="w-full py-2 rounded-xl text-xs font-bold transition-all active:scale-95"
-          style={c.available
-            ? { background: "linear-gradient(135deg, #3C3489, #4e46b0)", color: "#FAC775" }
-            : { background: "rgba(255,255,255,0.05)", color: "#8a88a0" }}>
-          {c.available ? "상담 신청" : "대기 중"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function CounselorSection() {
-  return (
-    <section className="mt-8">
-      <div className="flex items-center justify-between px-4 mb-4">
-        <div>
-          <h2 className="text-base font-bold text-white">전문 상담사</h2>
-          <p className="text-xs mt-0.5" style={{ color: "#8a88a0" }}>검증된 명리학 전문가와 1:1 상담</p>
-        </div>
-        <button className="text-xs font-medium" style={{ color: "#FAC775" }}>전체보기 →</button>
-      </div>
-      <div className="flex gap-3 px-4 overflow-x-auto pb-3" style={{ scrollbarWidth: "none" }}>
-        {COUNSELORS.map((c) => <CounselorCard key={c.id} c={c} />)}
-      </div>
-    </section>
-  );
-}
-
 const POSTS = [
   { id: 1, category: "사주 후기", title: "이명연 선생님 상담 후 실제로 취업됐어요 😭", author: "별빛달빛", time: "2시간 전", likes: 128, comments: 34, hot: true },
   { id: 2, category: "Q&A", title: "편인격 일간이 재성이 없으면 어떤 운이 오나요?", author: "명리초보자", time: "4시간 전", likes: 47, comments: 12, hot: false },
@@ -433,7 +355,6 @@ export default function Home() {
         <AiManseryeokSection />
         <TodayFortuneBanner />
         <CategoryMenu />
-        <CounselorSection />
         <CommunitySection />
       </main>
       <BottomNav />
