@@ -1,4 +1,3 @@
-// app/manseryeok/consultant/components/SinsalBoard.tsx
 'use client'
 
 import { getSinsal, SINSAL_HIGHLIGHT } from '@/lib/saju'
@@ -12,6 +11,9 @@ interface Props {
 }
 
 export default function SinsalBoard({ saju, yeonjji, iljji }: Props) {
+  const firstRow = JIJI.slice(0, 6)
+  const secondRow = JIJI.slice(6, 12)
+
   return (
     <div className="rounded-2xl p-5 mb-4" style={{background:'#2C2C2A',border:'1px solid rgba(255,255,255,0.07)'}}>
       <h2 className="text-base font-bold text-white mb-4">12신살</h2>
@@ -48,37 +50,49 @@ export default function SinsalBoard({ saju, yeonjji, iljji }: Props) {
         })}
       </div>
 
-      {/* 전체 대조표 */}
+      {/* 전체 대조표 — 두 줄 (6개씩) */}
       <p className="text-xs mb-2" style={{color:'rgba(250,199,117,0.8)'}}>전체 대조표</p>
-      <div className="overflow-x-auto">
-        <table className="w-full text-center border-collapse min-w-[300px]">
-          <thead>
-            <tr>
-              <th className="py-1.5 px-1 text-[10px]" style={{color:'#8a88a0'}}>지지</th>
-              <th className="py-1.5 px-1 text-[10px]" style={{color:'rgba(250,199,117,0.8)'}}>년지({yeonjji})</th>
-              <th className="py-1.5 px-1 text-[10px]" style={{color:'rgba(250,199,117,0.8)'}}>일지({iljji})</th>
-            </tr>
-          </thead>
-          <tbody>
-            {JIJI.map(jiji => {
-              const s1 = getSinsal(yeonjji, jiji)
-              const s2 = getSinsal(iljji, jiji)
-              return (
-                <tr key={jiji} className="border-t" style={{borderColor:'rgba(255,255,255,0.05)'}}>
-                  <td className="py-1.5 px-1">
-                    <span className="text-sm font-bold" style={{color:'#e0dce8'}}>{jiji}</span>
-                  </td>
-                  <td className="py-1.5 px-1">
-                    <span className="text-xs font-medium" style={{color:SINSAL_HIGHLIGHT[s1]??'#aaa'}}>{s1}</span>
-                  </td>
-                  <td className="py-1.5 px-1">
-                    <span className="text-xs font-medium" style={{color:SINSAL_HIGHLIGHT[s2]??'#aaa'}}>{s2}</span>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+
+      {/* 1행: 子~巳 */}
+      <div className="grid grid-cols-6 gap-1 mb-1">
+        {firstRow.map(jiji => (
+          <div key={jiji} className="flex flex-col items-center rounded-lg py-2"
+            style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
+            <span className="text-sm font-bold mb-1" style={{color:'#e0dce8'}}>{jiji}</span>
+            <span className="text-[10px] font-medium leading-tight text-center"
+              style={{color:SINSAL_HIGHLIGHT[getSinsal(yeonjji,jiji)]??'#aaa'}}>
+              {getSinsal(yeonjji,jiji)||'-'}
+            </span>
+            <span className="text-[10px] font-medium leading-tight text-center"
+              style={{color:SINSAL_HIGHLIGHT[getSinsal(iljji,jiji)]??'#aaa'}}>
+              {getSinsal(iljji,jiji)||'-'}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* 2행: 午~亥 */}
+      <div className="grid grid-cols-6 gap-1">
+        {secondRow.map(jiji => (
+          <div key={jiji} className="flex flex-col items-center rounded-lg py-2"
+            style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)'}}>
+            <span className="text-sm font-bold mb-1" style={{color:'#e0dce8'}}>{jiji}</span>
+            <span className="text-[10px] font-medium leading-tight text-center"
+              style={{color:SINSAL_HIGHLIGHT[getSinsal(yeonjji,jiji)]??'#aaa'}}>
+              {getSinsal(yeonjji,jiji)||'-'}
+            </span>
+            <span className="text-[10px] font-medium leading-tight text-center"
+              style={{color:SINSAL_HIGHLIGHT[getSinsal(iljji,jiji)]??'#aaa'}}>
+              {getSinsal(iljji,jiji)||'-'}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* 범례 */}
+      <div className="flex gap-3 mt-2">
+        <span className="text-[10px]" style={{color:'rgba(250,199,117,0.6)'}}>위: 년지({yeonjji}) 기준</span>
+        <span className="text-[10px]" style={{color:'rgba(250,199,117,0.6)'}}>아래: 일지({iljji}) 기준</span>
       </div>
     </div>
   )
