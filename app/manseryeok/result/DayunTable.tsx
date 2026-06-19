@@ -1,215 +1,99 @@
-"use client";
+// app/manseryeok/result/DayunTable.tsx
+'use client'
 
-import { useMemo } from "react";
+import { getUnsung, getSinsal, unsungColor, GAN_COLOR, JI_COLOR, SINSAL_HIGHLIGHT } from '@/lib/saju'
 
-const HEAVENLY_STEMS = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
-const EARTHLY_BRANCHES = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
-const STEM_ELEMENT: Record<string,string> = {甲:"목",乙:"목",丙:"화",丁:"화",戊:"토",己:"토",庚:"금",辛:"금",壬:"수",癸:"수"};
-const BRANCH_ELEMENT: Record<string,string> = {子:"수",丑:"토",寅:"목",卯:"목",辰:"토",巳:"화",午:"화",未:"토",申:"금",酉:"금",戌:"토",亥:"수"};
-const ELEMENT_COLOR: Record<string,string> = {목:"#4caf50",화:"#f44336",토:"#ff9800",금:"#9e9e9e",수:"#2196f3"};
-const BRANCH_YIN: Record<string,boolean> = {
-  子:true,丑:true,寅:false,卯:true,辰:false,巳:true,
-  午:false,未:true,申:false,酉:true,戌:false,亥:true
-};
-
-function getSipsin(dayStem: string, targetStem: string): string {
-  if (!targetStem || targetStem === "?") return "";
-  const dayIdx = HEAVENLY_STEMS.indexOf(dayStem);
-  const targetIdx = HEAVENLY_STEMS.indexOf(targetStem);
-  const dayElement = STEM_ELEMENT[dayStem];
-  const targetElement = STEM_ELEMENT[targetStem];
-  const sameYin = (dayIdx % 2) === (targetIdx % 2);
-  const generates: Record<string,string> = {목:"화",화:"토",토:"금",금:"수",수:"목"};
-  const controls: Record<string,string> = {목:"토",화:"금",토:"수",금:"목",수:"화"};
-  if (dayElement === targetElement) return sameYin ? "비견" : "겁재";
-  if (generates[dayElement] === targetElement) return sameYin ? "식신" : "상관";
-  if (controls[dayElement] === targetElement) return sameYin ? "편재" : "정재";
-  if (controls[targetElement] === dayElement) return sameYin ? "편관" : "정관";
-  if (generates[targetElement] === dayElement) return sameYin ? "편인" : "정인";
-  return "";
+interface Dayun {
+  age: number
+  cheongan: string
+  jiji: string
+  ganYukchin: string
+  jiYukchin: string
 }
 
-function getSipsinBranch(dayStem: string, branch: string): string {
-  if (!branch || branch === "?") return "";
-  const branchElement = BRANCH_ELEMENT[branch];
-  const dayElement = STEM_ELEMENT[dayStem];
-  const dayIdx = HEAVENLY_STEMS.indexOf(dayStem);
-  const dayYin = dayIdx % 2 === 1;
-  const branchYin = BRANCH_YIN[branch];
-  const sameYin = dayYin === branchYin;
-  const generates: Record<string,string> = {목:"화",화:"토",토:"금",금:"수",수:"목"};
-  const controls: Record<string,string> = {목:"토",화:"금",토:"수",금:"목",수:"화"};
-  if (dayElement === branchElement) return sameYin ? "비견" : "겁재";
-  if (generates[dayElement] === branchElement) return sameYin ? "식신" : "상관";
-  if (controls[dayElement] === branchElement) return sameYin ? "편재" : "정재";
-  if (controls[branchElement] === dayElement) return sameYin ? "편관" : "정관";
-  if (generates[branchElement] === dayElement) return sameYin ? "편인" : "정인";
-  return "";
+interface Props {
+  dayunList: Dayun[]
+  ilgan: string
+  yeonjji: string
+  iljji: string
 }
 
-const sipsinColor = (s: string) => {
-  if (!s) return "#8a88a0";
-  if (["비견","겁재"].includes(s)) return "#9e9e9e";
-  if (["식신","상관"].includes(s)) return "#4caf50";
-  if (["편재","정재"].includes(s)) return "#FAC775";
-  if (["편관","정관"].includes(s)) return "#f44336";
-  if (["편인","정인"].includes(s)) return "#2196f3";
-  return "#8a88a0";
-};
-
-// 월별 절기 시작일
-const SOLAR_TERM_DAYS: Record<number, number> = {
-  1:6, 2:4, 3:6, 4:5, 5:6, 6:6,
-  7:7, 8:8, 9:8, 10:8, 11:8, 12:7
-};
-
-// 다음 절입일 구하기 (생일 이후 가장 가까운 절기)
-function getNextTermDate(year: number, month: number, day: number): Date {
-  const termDay = SOLAR_TERM_DAYS[month];
-  if (day < termDay) {
-    // 같은 달 절기가 생일 이후 → 이번달 절기가 다음 절입일
-    return new Date(year, month - 1, termDay);
-  } else {
-    // 같은 달 절기가 생일 이전 → 다음달 절기가 다음 절입일
-    const nextMonth = month === 12 ? 1 : month + 1;
-    const nextYear = month === 12 ? year + 1 : year;
-    return new Date(nextYear, nextMonth - 1, SOLAR_TERM_DAYS[nextMonth]);
-  }
-}
-
-// 이전 절입일 구하기 (생일 이전 가장 가까운 절기)
-function getPrevTermDate(year: number, month: number, day: number): Date {
-  const termDay = SOLAR_TERM_DAYS[month];
-  if (day >= termDay) {
-    // 같은 달 절기가 생일 이전 → 이번달 절기가 이전 절입일
-    return new Date(year, month - 1, termDay);
-  } else {
-    // 같은 달 절기가 생일 이후 → 전달 절기가 이전 절입일
-    const prevMonth = month === 1 ? 12 : month - 1;
-    const prevYear = month === 1 ? year - 1 : year;
-    return new Date(prevYear, prevMonth - 1, SOLAR_TERM_DAYS[prevMonth]);
-  }
-}
-
-function calcDayun(
-  birthYear: number, birthMonth: number, birthDay: number,
-  gender: string, monthGanji: string, yearStem: string
-): { age: number; stem: string; branch: string }[] {
-
-  const yearStemIdx = HEAVENLY_STEMS.indexOf(yearStem);
-  const yearYang = yearStemIdx % 2 === 0;
-  const isMale = gender === "남";
-  const isForward = (yearYang && isMale) || (!yearYang && !isMale);
-
-  const monthStemIdx = HEAVENLY_STEMS.indexOf(monthGanji[0]);
-  const monthBranchIdx = EARTHLY_BRANCHES.indexOf(monthGanji[1]);
-
-  const birthDate = new Date(birthYear, birthMonth - 1, birthDay);
-
-  let termDate: Date;
-  if (isForward) {
-    termDate = getNextTermDate(birthYear, birthMonth, birthDay);
-  } else {
-    termDate = getPrevTermDate(birthYear, birthMonth, birthDay);
-  }
-
-  const daysToTerm = Math.abs(
-    Math.round((termDate.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24))
-  );
-
-  const startAge = Math.round(daysToTerm / 3);
-
-  const dayuns = [];
-  for (let i = 0; i < 8; i++) {
-    let stemIdx, branchIdx;
-    if (isForward) {
-      stemIdx = (monthStemIdx + i + 1) % 10;
-      branchIdx = (monthBranchIdx + i + 1) % 12;
-    } else {
-      stemIdx = ((monthStemIdx - i - 1) % 10 + 10) % 10;
-      branchIdx = ((monthBranchIdx - i - 1) % 12 + 12) % 12;
-    }
-    dayuns.push({
-      age: startAge + i * 10,
-      stem: HEAVENLY_STEMS[stemIdx],
-      branch: EARTHLY_BRANCHES[branchIdx],
-    });
-  }
-  return dayuns;
-}
-
-interface DayunTableProps {
-  birthYear: number;
-  birthMonth: number;
-  birthDay: number;
-  gender: string;
-  monthGanji: string;
-  yearStem: string;
-  dayStem: string;
-  currentYear: number;
-}
-
-export default function DayunTable({
-  birthYear, birthMonth, birthDay,
-  gender, monthGanji, yearStem, dayStem, currentYear
-}: DayunTableProps) {
-  const dayuns = useMemo(() =>
-    calcDayun(birthYear, birthMonth, birthDay, gender, monthGanji, yearStem),
-    [birthYear, birthMonth, birthDay, gender, monthGanji, yearStem]
-  );
-
-  const currentAge = currentYear - birthYear;
+export default function DayunTable({ dayunList, ilgan, yeonjji, iljji }: Props) {
+  if (!dayunList || dayunList.length === 0) return null
 
   return (
-    <div className="rounded-2xl p-5" style={{background:"#2C2C2A",border:"1px solid rgba(255,255,255,0.07)"}}>
-      <h2 className="text-base font-bold text-white mb-4">🔄 대운표</h2>
-      <div className="overflow-x-auto">
-        <div style={{minWidth:"560px"}}>
-          <div className="grid grid-cols-8 gap-1">
-            {dayuns.map(({age, stem, branch}) => {
-              const isCurrent = currentAge >= age && currentAge < age + 10;
-              const stemSipsin = getSipsin(dayStem, stem);
-              const branchSipsin = getSipsinBranch(dayStem, branch);
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
+      <h3 className="text-sm font-semibold text-gray-500 mb-4 tracking-wide">대운표</h3>
+      <div className="overflow-x-auto -mx-1">
+        <table className="w-full text-center border-collapse min-w-[560px]">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="py-2 px-2 text-xs text-gray-400 font-medium border-b border-gray-100">나이</th>
+              <th className="py-2 px-2 text-xs text-gray-400 font-medium border-b border-gray-100">천간</th>
+              <th className="py-2 px-2 text-xs text-gray-400 font-medium border-b border-gray-100">지지</th>
+              <th className="py-2 px-2 text-xs text-gray-400 font-medium border-b border-gray-100">12운성</th>
+              <th className="py-2 px-2 text-xs text-gray-400 font-medium border-b border-gray-100">
+                신살<br/><span className="text-[10px] text-gray-300">년지기준</span>
+              </th>
+              <th className="py-2 px-2 text-xs text-gray-400 font-medium border-b border-gray-100">
+                신살<br/><span className="text-[10px] text-gray-300">일지기준</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {dayunList.map((dayun, i) => {
+              const unsung  = getUnsung(ilgan, dayun.jiji)
+              const sinsal1 = getSinsal(yeonjji, dayun.jiji)
+              const sinsal2 = getSinsal(iljji, dayun.jiji)
               return (
-                <div key={age} className="flex flex-col items-center">
-                  <div className="text-[11px] font-bold w-full text-center py-1 rounded mb-1"
-                    style={{
-                      color: isCurrent ? "#fff" : "#FAC775",
-                      background: isCurrent ? "rgba(220,50,50,0.3)" : "rgba(255,255,255,0.05)",
-                      border: isCurrent ? "1px solid rgba(220,50,50,0.8)" : "1px solid rgba(255,255,255,0.1)",
-                    }}>
-                    {age}
-                  </div>
-                  <div className="text-[10px] text-center w-full mb-0.5 h-4"
-                    style={{color: sipsinColor(stemSipsin)}}>
-                    {stemSipsin}
-                  </div>
-                  <div className="w-full rounded py-2 flex items-center justify-center mb-0.5"
-                    style={{
-                      background: ELEMENT_COLOR[STEM_ELEMENT[stem]] + "33",
-                      border: isCurrent ? "2px solid rgba(220,50,50,0.8)" : "1px solid rgba(255,255,255,0.1)"
-                    }}>
-                    <span className="text-xl font-bold"
-                      style={{color: ELEMENT_COLOR[STEM_ELEMENT[stem]]}}>{stem}</span>
-                  </div>
-                  <div className="w-full rounded py-2 flex items-center justify-center mb-0.5"
-                    style={{
-                      background: ELEMENT_COLOR[BRANCH_ELEMENT[branch]] + "33",
-                      border: isCurrent ? "2px solid rgba(220,50,50,0.8)" : "1px solid rgba(255,255,255,0.1)"
-                    }}>
-                    <span className="text-xl font-bold"
-                      style={{color: ELEMENT_COLOR[BRANCH_ELEMENT[branch]]}}>{branch}</span>
-                  </div>
-                  <div className="text-[10px] text-center w-full mt-0.5 h-4"
-                    style={{color: sipsinColor(branchSipsin)}}>
-                    {branchSipsin}
-                  </div>
-                </div>
-              );
+                <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                  <td className="py-3 px-2">
+                    <span className="text-xs font-semibold text-gray-600">{dayun.age}세</span>
+                  </td>
+                  <td className="py-3 px-2">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="text-[10px] text-gray-400">{dayun.ganYukchin}</span>
+                      <span className="text-lg font-bold" style={{ color: GAN_COLOR[dayun.cheongan] ?? '#333' }}>
+                        {dayun.cheongan}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="py-3 px-2">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="text-lg font-bold" style={{ color: JI_COLOR[dayun.jiji] ?? '#333' }}>
+                        {dayun.jiji}
+                      </span>
+                      <span className="text-[10px] text-gray-400">{dayun.jiYukchin}</span>
+                    </div>
+                  </td>
+                  <td className="py-3 px-2">
+                    <span className="text-xs font-semibold" style={{ color: unsungColor(unsung) }}>
+                      {unsung}
+                    </span>
+                  </td>
+                  <td className="py-3 px-2">
+                    <span className="text-xs font-medium" style={{ color: SINSAL_HIGHLIGHT[sinsal1] ?? '#666' }}>
+                      {sinsal1}
+                    </span>
+                  </td>
+                  <td className="py-3 px-2">
+                    <span className="text-xs font-medium" style={{ color: SINSAL_HIGHLIGHT[sinsal2] ?? '#666' }}>
+                      {sinsal2}
+                    </span>
+                  </td>
+                </tr>
+              )
             })}
-          </div>
-        </div>
+          </tbody>
+        </table>
+      </div>
+      <div className="mt-3 pt-3 border-t border-gray-50 flex flex-wrap gap-3 text-[11px] text-gray-400">
+        <span><span className="font-semibold" style={{color:'#2d7a2d'}}>■</span> 강한 운성</span>
+        <span><span className="font-semibold" style={{color:'#b03030'}}>■</span> 약한 운성</span>
+        <span><span className="font-semibold" style={{color:'#D97706'}}>■</span> 역마</span>
+        <span><span className="font-semibold" style={{color:'#DC2626'}}>■</span> 겁살</span>
+        <span><span className="font-semibold" style={{color:'#DB2777'}}>■</span> 년살(도화)</span>
       </div>
     </div>
-  );
+  )
 }
