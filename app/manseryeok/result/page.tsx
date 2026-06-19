@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import DayunTable from "./DayunTable";
 import SeyunTable from "./SeyunTable";
+import GongmangDisplay from "./components/GongmangDisplay";
 
 const HEAVENLY_STEMS = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
 const EARTHLY_BRANCHES = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
@@ -166,6 +167,10 @@ function ResultContent() {
 
   const elements = saju.length > 0 ? calcElements(saju) : {목:0,화:0,토:0,금:0,수:0};
 
+  // 일지, 년지 추출
+  const iljji = saju[1]?.branch ?? "";
+  const yeonjji = saju[3]?.branch ?? "";
+
   const handleAiAnalysis = async () => {
     setLoading(true);
     setAiResult("");
@@ -243,6 +248,7 @@ function ResultContent() {
           </div>
         </div>
 
+        {/* 사주 명식 */}
         <div className="rounded-2xl p-5" style={{background:"#2C2C2A",border:"1px solid rgba(250,199,117,0.15)"}}>
           <div className="flex items-center gap-2 mb-4">
             <span style={{color:"#FAC775",fontSize:"18px"}}>✦</span>
@@ -283,6 +289,7 @@ function ResultContent() {
           </div>
         </div>
 
+        {/* 오행 분포 */}
         <div className="rounded-2xl p-5" style={{background:"#2C2C2A",border:"1px solid rgba(255,255,255,0.07)"}}>
           <h2 className="text-base font-bold text-white mb-4">오행 분포</h2>
           <div className="space-y-2.5">
@@ -297,13 +304,24 @@ function ResultContent() {
                   <div className="flex-1 rounded-full overflow-hidden" style={{background:"rgba(255,255,255,0.08)",height:"8px"}}>
                     <div className="h-full rounded-full" style={{width:`${pct}%`,background:ELEMENT_COLOR[el]}}/>
                   </div>
-                  <span className="text-xs w-14 text-right" style={{color:"#8a88a0"}}>{count}개({pct}%)</span>
+                  <span className="text-xs w-20 text-right" style={{color:"#8a88a0"}}>
+                    {el}{count} ({pct}%)
+                  </span>
                 </div>
               );
             })}
           </div>
         </div>
 
+        {/* 공망 */}
+        {dayStem && iljji && (
+          <GongmangDisplay
+            ilgan={dayStem}
+            iljji={iljji}
+          />
+        )}
+
+        {/* 대운표 */}
         {dayStem && monthGanji && yearStem && (
           <DayunTable
             birthYear={yearParam}
@@ -314,16 +332,24 @@ function ResultContent() {
             yearStem={yearStem}
             dayStem={dayStem}
             currentYear={2026}
+            ilgan={dayStem}
+            yeonjji={yeonjji}
+            iljji={iljji}
           />
         )}
 
+        {/* 세운표 */}
         {dayStem && (
           <SeyunTable
             dayStem={dayStem}
             currentYear={2026}
+            ilgan={dayStem}
+            yeonjji={yeonjji}
+            iljji={iljji}
           />
         )}
 
+        {/* AI 상세 분석 */}
         <div className="rounded-2xl p-5" style={{background:"#2C2C2A",border:"1px solid rgba(255,255,255,0.07)"}}>
           <div className="flex items-center gap-2 mb-4">
             <span className="text-lg">🤖</span>
