@@ -10,6 +10,17 @@ const BRANCH_LIST = [
   {char:"申"},{char:"酉"},{char:"戌"},{char:"亥"},
 ];
 
+// 마크다운 기호 제거 함수
+function cleanMarkdown(text: string): string {
+  return text
+    .replace(/#{1,6}\s/g, '')       // ## 제목 제거
+    .replace(/\*\*(.*?)\*\*/g, '$1') // **굵게** → 굵게
+    .replace(/\*(.*?)\*/g, '$1')     // *기울기* → 기울기
+    .replace(/^---+$/gm, '')         // --- 구분선 제거
+    .replace(/\n{3,}/g, '\n\n')      // 3줄 이상 빈줄 → 2줄로
+    .trim()
+}
+
 interface Props {
   saju: { pillar: string; stem: string; branch: string }[]
   gender: string
@@ -53,6 +64,8 @@ export default function AiAnalysis({
 태어난 시: ${hourIdx === null ? '모름' : BRANCH_LIST[hourIdx]?.char+'시'}
 사주팔자: ${sajuText}
 오행 분포: 목${elements['목']} 화${elements['화']} 토${elements['토']} 금${elements['금']} 수${elements['수']}
+
+중요: 마크다운 기호(##, **, --- 등)를 절대 사용하지 말고 일반 텍스트로만 작성해주세요.
 
 아래 10가지 항목을 각각 이모지와 제목을 붙여 친근하고 이해하기 쉽게 분석해주세요:
 
@@ -107,8 +120,8 @@ export default function AiAnalysis({
         body: JSON.stringify({messages:[{role:'user',content:prompt}]}),
       })
       const data = await res.json()
-      const text = data.content?.find((c:{type:string}) => c.type==='text')?.text
-      setAiResult(text || '결과를 가져오지 못했습니다.')
+      const rawText = data.content?.find((c:{type:string}) => c.type==='text')?.text || ''
+      setAiResult(cleanMarkdown(rawText))
     } catch(e) {
       setAiResult('오류가 발생했습니다. 다시 시도해주세요.')
     } finally {
