@@ -55,8 +55,11 @@ export default function AiAnalysis({
       })
       const data = await res.json()
       const rawText = data.content?.find((c:{type:string}) => c.type==='text')?.text || ''
-      setFreeResult(cleanMarkdown(rawText))
+      const cleaned = cleanMarkdown(rawText)
+      setFreeResult(cleaned)
       setFreeDone(true)
+      // sessionStorage에 저장
+      sessionStorage.setItem('ai_free_analysis', cleaned)
     } catch(e) {
       setFreeResult('오류가 발생했습니다. 다시 시도해주세요.')
       setFreeDone(true)
@@ -77,7 +80,11 @@ export default function AiAnalysis({
       })
       const data = await res.json()
       const rawText = data.content?.find((c:{type:string}) => c.type==='text')?.text || ''
-      setPaidResult(cleanMarkdown(rawText))
+      const cleaned = cleanMarkdown(rawText)
+      setPaidResult(cleaned)
+      // sessionStorage에 유료 분석도 저장
+      const existing = sessionStorage.getItem('ai_free_analysis') || ''
+      sessionStorage.setItem('ai_analysis', existing + '\n\n[전체 분석]\n' + cleaned)
     } catch(e) {
       setPaidResult('오류가 발생했습니다. 다시 시도해주세요.')
     } finally {
@@ -88,7 +95,6 @@ export default function AiAnalysis({
   return (
     <div className="rounded-2xl overflow-hidden"
       style={{background:"#2C2C2A",border:"1px solid rgba(255,255,255,0.07)"}}>
-
       <div className="p-5">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-lg">🤖</span>
@@ -105,7 +111,6 @@ export default function AiAnalysis({
           {isFullPaid ? '10가지 항목 전체 분석' : '사주팔자·성격 분석 + 건강·체질 분석'}
         </p>
 
-        {/* 무료 분석 버튼 */}
         {!freeDone && !loading && (
           <button onClick={handleFreeAnalysis}
             className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all active:scale-95"
@@ -115,7 +120,6 @@ export default function AiAnalysis({
           </button>
         )}
 
-        {/* 로딩 */}
         {loading && (
           <div className="flex flex-col items-center py-8 gap-3">
             <div className="text-3xl animate-spin">✦</div>
@@ -126,7 +130,6 @@ export default function AiAnalysis({
           </div>
         )}
 
-        {/* 무료 결과 */}
         {freeDone && freeResult && (
           <div className="rounded-xl p-4 mb-3"
             style={{background:"rgba(60,52,137,0.15)",border:"1px solid rgba(60,52,137,0.3)"}}>
@@ -135,7 +138,6 @@ export default function AiAnalysis({
           </div>
         )}
 
-        {/* 유료 결과 */}
         {paidResult && (
           <div className="rounded-xl p-4 mb-3 mt-3"
             style={{background:"rgba(250,199,117,0.08)",border:"1px solid rgba(250,199,117,0.2)"}}>
@@ -147,7 +149,6 @@ export default function AiAnalysis({
           </div>
         )}
 
-        {/* 다시 분석 버튼 */}
         {freeDone && !loading && (
           <button onClick={handleFreeAnalysis}
             className="w-full py-2.5 rounded-xl text-sm font-semibold mt-2"
@@ -158,7 +159,6 @@ export default function AiAnalysis({
         )}
       </div>
 
-      {/* 잠금 영역 */}
       {!isFullPaid && freeDone && (
         <PaidLockSection onPay={handlePaidAnalysis} />
       )}
