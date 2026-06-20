@@ -25,7 +25,8 @@ export default function ChatRoom({
   }
 
   return (
-    <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col">
+    <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col"
+      style={{ maxWidth: '430px', margin: '0 auto' }}>
       <div className="bg-stone-900 border-b border-stone-700 px-4 py-3">
         <div className="font-bold">{consultantName} 상담사</div>
         <div className="text-stone-400 text-xs">{customerPhone}</div>
