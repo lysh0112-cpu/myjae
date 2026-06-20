@@ -5,7 +5,7 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) return NextResponse.json({ error: 'API key not set' }, { status: 500 })
 
-    const { consultantName, customerPhone, chatText, sajuData, commentary } = await req.json()
+    const { consultantName, customerPhone, chatText, sajuData, commentary, aiAnalysis } = await req.json()
 
     const sajuText = sajuData ? `
 사주 원국:
@@ -21,6 +21,11 @@ export async function POST(req: NextRequest) {
 ${commentary}
 ` : ''
 
+    const aiAnalysisText = aiAnalysis ? `
+【고객이 받은 AI 분석 결과】(참고 자료)
+${aiAnalysis}
+` : ''
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -34,9 +39,11 @@ ${commentary}
         messages: [{
           role: 'user',
           content: `당신은 명리학 전문 상담사 보조 AI입니다.
-상담사 해설이 있으면 그 관점을 최우선으로 유지하고, 채팅 내용으로 자연스럽게 보완하세요.
+상담사 해설이 있으면 그 관점을 최우선으로 유지하고,
+채팅 내용과 고객 AI 분석 결과로 자연스럽게 보완하세요.
 ${sajuText}
 ${commentaryText}
+${aiAnalysisText}
 상담사: ${consultantName} | 고객: ${customerPhone}
 
 채팅 내용:
