@@ -47,6 +47,7 @@ export function useConsultantState() {
         setMonthParam(parseInt(b.month || '0'))
         setDayParam(parseInt(b.day || '0'))
         setHourIdx(b.hour === '모름' || !b.hour ? null : parseInt(b.hour))
+        setCustomerName(b.customerName || '') // ← 이름도 자동 로드
       }
       if (data.customer_phone) setCustomerPhone(data.customer_phone)
     }
@@ -73,7 +74,7 @@ export function useConsultantState() {
     tab, setTab,
     consultationId, setConsultationId,
     customerPhone, setCustomerPhone,
-    customerName,
+    customerName, setCustomerName,
     selectedConsultation, setSelectedConsultation,
     gender, calType, yearParam, monthParam, dayParam, leapMonth, hourIdx,
     consultantId,
