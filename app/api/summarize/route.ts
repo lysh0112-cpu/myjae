@@ -7,7 +7,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'API key not set' }, { status: 500 })
     }
 
-    const { consultantName, customerPhone, chatText } = await req.json()
+    const { consultantName, customerPhone, chatText, sajuData } = await req.json()
+
+    // 사주 데이터 텍스트 변환
+    const sajuText = sajuData ? `
+사주 원국:
+- 시주: ${sajuData.time?.stem}${sajuData.time?.branch}
+- 일주: ${sajuData.day?.stem}${sajuData.day?.branch}
+- 월주: ${sajuData.month?.stem}${sajuData.month?.branch}
+- 년주: ${sajuData.year?.stem}${sajuData.year?.branch}
+- 원국 관계: ${sajuData.relations?.join(', ') || '없음'}
+- 일간: ${sajuData.dayStem}
+` : ''
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -18,28 +29,36 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1024,
+        max_tokens: 1500,
         messages: [
           {
             role: 'user',
-            content: `다음은 명리 상담 채팅 내용입니다. 상담사(${consultantName})와 고객(${customerPhone}) 간의 대화를 아래 형식으로 요약해주세요.
+            content: `당신은 명리학 전문 상담사입니다. 아래 사주 정보와 상담 채팅 내용을 바탕으로 고객에게 전달할 상담 요약문을 작성해주세요.
 
-채팅 내용:
+${sajuText}
+상담사: ${consultantName}
+고객: ${customerPhone}
+
+채팅 상담 내용:
 ${chatText}
 
-아래 형식으로 요약해주세요:
+아래 형식으로 요약해주세요. 고객이 읽기 쉽고 이해하기 쉽게 친근한 말투로 작성해주세요:
+
 📋 상담 요약
 
-[핵심 질문]
+[사주 기본 특성]
 - 
 
-[사주 분석]
+[핵심 질문 및 고민]
+- 
+
+[사주로 본 분석]
 - 
 
 [상담사 조언]
 - 
 
-[추가 메모]
+[앞으로의 방향]
 - `,
           },
         ],
