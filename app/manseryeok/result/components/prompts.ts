@@ -36,15 +36,20 @@ interface PromptParams {
   solar: { year: number; month: number; day: number } | null
 }
 
-export function getFreePrompt(p: PromptParams): string {
+function getBaseInfo(p: PromptParams) {
   const sajuText = p.saju.map(s => `${s.pillar}: ${s.stem}${s.branch}`).join(', ')
   const lunarInfo = p.calType === '음력' && p.solar
     ? `\n음력 ${p.yearParam}년 ${p.monthParam}월 ${p.dayParam}일${p.leapMonth === '1' ? ' (윤달)' : ''} → 양력 ${p.solar.year}년 ${p.solar.month}월 ${p.solar.day}일로 변환`
     : ''
   const el = getElements(p.saju)
   const hourText = p.hourIdx === null ? '모름' : BRANCH_LIST[p.hourIdx]?.char+'시'
+  return { sajuText, lunarInfo, el, hourText }
+}
 
-  return `당신은 30년 경력의 명리학 전문가입니다. 사주를 보고 깜짝 놀랄 만큼 정확하게 분석해주세요.
+export function getFreePrompt(p: PromptParams): string {
+  const { sajuText, lunarInfo, el, hourText } = getBaseInfo(p)
+
+  return `다음 사주를 정확하게 분석해주세요.
 
 성별: ${p.gender}성
 생년월일: ${p.calType} ${p.yearParam}년 ${p.monthParam}월 ${p.dayParam}일${lunarInfo}
@@ -97,16 +102,11 @@ export function getFreePrompt(p: PromptParams): string {
 각 항목을 매우 구체적이고 상세하게, 읽는 사람이 공감할 수 있도록 작성해주세요.`
 }
 
-export function getFullPrompt(p: PromptParams): string {
+export function getPaidPrompt(p: PromptParams): string {
   const currentYear = new Date().getFullYear()
-  const sajuText = p.saju.map(s => `${s.pillar}: ${s.stem}${s.branch}`).join(', ')
-  const lunarInfo = p.calType === '음력' && p.solar
-    ? `\n음력 ${p.yearParam}년 ${p.monthParam}월 ${p.dayParam}일${p.leapMonth === '1' ? ' (윤달)' : ''} → 양력 ${p.solar.year}년 ${p.solar.month}월 ${p.solar.day}일로 변환`
-    : ''
-  const el = getElements(p.saju)
-  const hourText = p.hourIdx === null ? '모름' : BRANCH_LIST[p.hourIdx]?.char+'시'
+  const { sajuText, lunarInfo, el, hourText } = getBaseInfo(p)
 
-  return `당신은 30년 경력의 명리학 전문가입니다. 사주를 보고 깜짝 놀랄 만큼 정확하게 10가지 항목으로 분석해주세요.
+  return `다음 사주의 아래 8가지 항목을 분석해주세요.
 
 성별: ${p.gender}성
 생년월일: ${p.calType} ${p.yearParam}년 ${p.monthParam}월 ${p.dayParam}일${lunarInfo}
@@ -116,17 +116,11 @@ export function getFullPrompt(p: PromptParams): string {
 
 중요: 마크다운 기호(##, **, --- 등)를 절대 사용하지 말고 일반 텍스트로만 작성하세요.
 
-1️⃣ 나의 사주팔자·성격·기질 분석
-- 타고난 성격·강점·약점·대인관계 스타일
-
-2️⃣ 사주로 보는 건강과 체질
-- 체질·약한 부위·건강관리법·주의 시기
-
 3️⃣ 연애·결혼·배우자운
-- 연애유형·운명의 상대·결혼 최적 시기
+- 나의 연애유형·운명의 상대·결혼 최적 시기
 
 4️⃣ 적성·직업·취업운
-- 맞는 직업·사업 vs 직장·성공 시기
+- 나에게 맞는 직업·사업 vs 직장·성공 시기
 
 5️⃣ 재물·부동산·내집마련
 - 재물운·돈 버는 시기·재테크 전략
@@ -147,4 +141,9 @@ export function getFullPrompt(p: PromptParams): string {
 - ${currentYear}~${currentYear+9}년 흐름·${currentYear}년 월별 운세
 
 각 항목을 풍부하고 구체적으로 분석해주세요.`
+}
+
+// 하위 호환을 위해 유지
+export function getFullPrompt(p: PromptParams): string {
+  return getPaidPrompt(p)
 }
