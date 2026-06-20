@@ -107,6 +107,9 @@ export default function SignupPage() {
                 className="w-full bg-gray-800 text-white rounded-lg px-4 py-3 border border-gray-700 focus:border-amber-400 focus:outline-none"
                 placeholder="6자 이상"
               />
+              <p className="text-xs mt-1.5 px-1" style={{color:'#FAC775'}}>
+                💡 이 비밀번호는 명연재 전용이에요. 실제 이메일 비밀번호와 달라도 괜찮아요!
+              </p>
             </div>
 
             {error && (
