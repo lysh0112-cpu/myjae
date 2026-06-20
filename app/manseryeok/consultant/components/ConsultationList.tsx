@@ -1,5 +1,4 @@
 'use client'
-
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
@@ -27,19 +26,31 @@ export default function ConsultationList({
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!consultantId) {
+      setLoading(false)
+      return
+    }
     fetchList()
   }, [consultantId])
 
   async function fetchList() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('consultations')
       .select('*')
       .eq('consultant_id', consultantId)
       .in('status', ['paid', 'in_progress'])
       .order('created_at', { ascending: false })
+    console.log('consultantId:', consultantId)
+    console.log('consultations:', data, error)
     if (data) setList(data)
     setLoading(false)
   }
+
+  if (!consultantId) return (
+    <div className="text-center py-10 text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
+      상담사 ID가 없습니다
+    </div>
+  )
 
   if (loading) return (
     <div className="text-center py-10" style={{ color: '#FAC775' }}>
@@ -66,18 +77,12 @@ export default function ConsultationList({
           }}
         >
           <div className="flex items-center justify-between mb-1">
-            <span className="font-bold text-white">
-              {c.customer_phone}
-            </span>
-            <span
-              className="text-xs px-2 py-0.5 rounded-full"
+            <span className="font-bold text-white">{c.customer_phone}</span>
+            <span className="text-xs px-2 py-0.5 rounded-full"
               style={{
-                background: c.status === 'paid'
-                  ? 'rgba(250,199,117,0.2)'
-                  : 'rgba(76,175,80,0.2)',
+                background: c.status === 'paid' ? 'rgba(250,199,117,0.2)' : 'rgba(76,175,80,0.2)',
                 color: c.status === 'paid' ? '#FAC775' : '#4caf50',
-              }}
-            >
+              }}>
               {c.status === 'paid' ? '대기중' : '진행중'}
             </span>
           </div>
