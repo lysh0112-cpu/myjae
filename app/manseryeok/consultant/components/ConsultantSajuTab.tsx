@@ -24,8 +24,10 @@ type Props = {
   iljji: string
   yeonjji: string
   yeangan: string
-  dayunList: object[]
-  seyunList: object[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  dayunList: any[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  seyunList: any[]
   yearParam: number
   gender: string
   calType: string
