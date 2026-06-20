@@ -1,6 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { useStartConsultation } from '@/hooks/useStartConsultation'
+import { useEffect } from 'react'
 import SajuBoard from './SajuBoard'
 import ElementScore from './ElementScore'
 import UnsungBoard from './UnsungBoard'
@@ -12,19 +11,9 @@ import ConsultantWolun from './ConsultantWolun'
 import Commentary from './Commentary'
 import AISummary from './AISummary'
 import ConsultantInputForm from './ConsultantInputForm'
-
-const BRANCH_LIST = [
-  {char:'子'},{char:'丑'},{char:'寅'},{char:'卯'},
-  {char:'辰'},{char:'巳'},{char:'午'},{char:'未'},
-  {char:'申'},{char:'酉'},{char:'戌'},{char:'亥'},
-]
-
-function formatPhone(val: string) {
-  const n = val.replace(/\D/g, '').slice(0, 11)
-  if (n.length <= 3) return n
-  if (n.length <= 7) return `${n.slice(0,3)}-${n.slice(3)}`
-  return `${n.slice(0,3)}-${n.slice(3,7)}-${n.slice(7)}`
-}
+import CustomerAiAnalysis from './CustomerAiAnalysis'
+import ConsultantPhoneStart from './ConsultantPhoneStart'
+import ConsultantAnalysisInfo from './ConsultantAnalysisInfo'
 
 type Props = {
   saju: {pillar:string;stem:string;branch:string}[]
@@ -58,13 +47,6 @@ export default function ConsultantSajuTab({
   consultationId, customerPhone, consultantId,
   onFormSubmit, onConsultationStarted,
 }: Props) {
-  const { starting, startConsultation } = useStartConsultation()
-  const [phone, setPhone] = useState(customerPhone || '')
-
-  useEffect(() => {
-    if (customerPhone) setPhone(customerPhone)
-  }, [customerPhone])
-
   const initialBirth = yearParam > 0
     ? `${yearParam}${String(monthParam).padStart(2,'0')}${String(dayParam).padStart(2,'0')}`
     : ''
@@ -82,21 +64,6 @@ export default function ConsultantSajuTab({
     }
   }, [yearParam, gender, calType, monthParam, dayParam, hourIdx])
 
-  async function handleStartConsultation() {
-    if (!phone.trim()) {
-      alert('고객 전화번호를 입력해주세요.')
-      return
-    }
-    const id = await startConsultation({
-      consultantId,
-      customerPhone: phone.replace(/\D/g, ''),
-      gender, calType, year: yearParam,
-      month: monthParam, day: dayParam,
-      hour: hourIdx, customerName,
-    })
-    if (id) onConsultationStarted(id, phone.replace(/\D/g, ''))
-  }
-
   return (
     <>
       <ConsultantInputForm
@@ -109,43 +76,30 @@ export default function ConsultantSajuTab({
       />
 
       {saju.length > 0 && !consultationId && (
-        <div className="rounded-2xl p-4"
-          style={{background:'rgba(60,52,137,0.3)', border:'1px solid rgba(250,199,117,0.3)'}}>
-          <div className="text-xs font-semibold mb-3" style={{color:'rgba(250,199,117,0.8)'}}>
-            📞 전화 고객 상담 시작
-          </div>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(formatPhone(e.target.value))}
-            placeholder="010-0000-0000"
-            maxLength={13}
-            className="w-full rounded-xl px-3 py-2.5 text-lg text-center font-bold tracking-widest focus:outline-none mb-3"
-            style={{background:'rgba(255,255,255,0.1)', color:'#FAC775', border:'1px solid rgba(255,255,255,0.15)'}}
-          />
-          <button onClick={handleStartConsultation} disabled={starting}
-            className="w-full py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-50"
-            style={{background:'linear-gradient(135deg,#FAC775,#f0a030)', color:'#1a1a18'}}>
-            {starting ? '등록 중...' : '📋 상담 시작 (채팅 목록에 등록)'}
-          </button>
-        </div>
+        <ConsultantPhoneStart
+          customerPhone={customerPhone}
+          consultantId={consultantId}
+          gender={gender}
+          calType={calType}
+          yearParam={yearParam}
+          monthParam={monthParam}
+          dayParam={dayParam}
+          hourIdx={hourIdx}
+          customerName={customerName}
+          onConsultationStarted={onConsultationStarted}
+        />
       )}
 
       {yearParam > 0 && (
-        <div className="rounded-2xl p-4"
-          style={{background:'linear-gradient(135deg,#3C3489 0%,#2a2075 100%)',
-            border:'1px solid rgba(250,199,117,0.2)'}}>
-          <div className="text-xs font-semibold mb-2" style={{color:'rgba(250,199,117,0.8)'}}>분석 대상</div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {[customerName||'', `${gender}성`,
-              `${calType} ${yearParam}.${monthParam}.${dayParam}`,
-              hourIdx===null ? '시 미지정' : `${BRANCH_LIST[hourIdx]?.char}시`
-            ].filter(Boolean).map(item => (
-              <span key={item} className="text-sm font-semibold px-3 py-1 rounded-full"
-                style={{background:'rgba(255,255,255,0.1)', color:'#FAC775'}}>{item}</span>
-            ))}
-          </div>
-        </div>
+        <ConsultantAnalysisInfo
+          customerName={customerName}
+          gender={gender}
+          calType={calType}
+          yearParam={yearParam}
+          monthParam={monthParam}
+          dayParam={dayParam}
+          hourIdx={hourIdx}
+        />
       )}
 
       {converting && (
@@ -165,6 +119,7 @@ export default function ConsultantSajuTab({
           <ConsultantDayun dayunList={dayunList} ilgan={dayStem} yeonjji={yeonjji} iljji={iljji} birthYear={yearParam} />
           <ConsultantSeyun seyunList={seyunList} ilgan={dayStem} yeonjji={yeonjji} iljji={iljji} />
           <ConsultantWolun ilgan={dayStem} yeonjji={yeonjji} iljji={iljji} />
+          <CustomerAiAnalysis consultationId={consultationId} />
           <Commentary consultationId={consultationId ?? undefined} />
           <AISummary
             consultationId={consultationId}
