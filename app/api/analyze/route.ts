@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         model: 'claude-opus-4-8',
-        max_tokens: 4000,
+        max_tokens: 6000,
         messages: body.messages,
       }),
     })
