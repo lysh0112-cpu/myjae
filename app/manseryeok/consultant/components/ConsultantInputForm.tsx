@@ -1,5 +1,5 @@
 'use client'
-import { useInputForm, formatBirth, timeToHourIdx } from '@/hooks/useInputForm'
+import { useInputForm, formatBirth } from '@/hooks/useInputForm'
 
 const BRANCH_LIST = [
   {char:'子',label:'子시 (23~01시)'},
@@ -42,12 +42,16 @@ export default function ConsultantInputForm({
     <div className="rounded-2xl p-4"
       style={{background:'linear-gradient(135deg,#3C3489 0%,#2a2075 100%)',border:'1px solid rgba(250,199,117,0.2)'}}>
       <div className="text-xs font-semibold mb-3" style={{color:'rgba(250,199,117,0.8)'}}>✦ 고객 정보 입력</div>
+
+      {/* 1. 이름 입력란 - 굵고 선명하게 */}
       <div className="mb-3">
         <label className="text-xs mb-1 block" style={{color:'rgba(255,255,255,0.6)'}}>고객 이름 (선택)</label>
         <input type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)}
-          placeholder="홍길동" className="w-full rounded-xl px-3 py-2 text-sm focus:outline-none"
-          style={{background:'rgba(255,255,255,0.1)',color:'#fff',border:'1px solid rgba(255,255,255,0.15)'}} />
+          placeholder="홍길동"
+          className="w-full rounded-xl px-3 py-2.5 text-lg text-center font-bold tracking-widest focus:outline-none"
+          style={{background:'rgba(255,255,255,0.1)', color:'#FAC775', border:'1px solid rgba(255,255,255,0.15)'}} />
       </div>
+
       <div className="flex gap-2 mb-3">
         <div className="flex-1">
           <label className="text-xs mb-1 block" style={{color:'rgba(255,255,255,0.6)'}}>성별</label>
@@ -72,6 +76,7 @@ export default function ConsultantInputForm({
           </div>
         </div>
       </div>
+
       <div className="mb-3">
         <label className="text-xs mb-1 block" style={{color:'rgba(255,255,255,0.6)'}}>생년월일 (8자리)</label>
         <input type="tel" value={birthInput} onChange={(e) => setBirthInput(formatBirth(e.target.value))}
@@ -79,6 +84,8 @@ export default function ConsultantInputForm({
           className="w-full rounded-xl px-3 py-2.5 text-lg text-center font-bold tracking-widest focus:outline-none"
           style={{background:'rgba(255,255,255,0.1)',color:'#FAC775',border:'1px solid rgba(255,255,255,0.15)'}} />
       </div>
+
+      {/* 2. 시각 콤보박스 - 흰 바탕 검정 굵은 글씨 */}
       <div className="mb-4">
         <label className="text-xs mb-1 block" style={{color:'rgba(255,255,255,0.6)'}}>출생시간</label>
         <select
@@ -86,10 +93,9 @@ export default function ConsultantInputForm({
           onChange={(e) => setHourIdx(e.target.value === '모름' ? null : parseInt(e.target.value))}
           className="w-full rounded-xl px-3 py-2.5 text-sm font-bold focus:outline-none"
           style={{
-            background:'#2a2075',
-            color:'#ffffff',
+            background:'#ffffff',
+            color:'#1a1a18',
             border:'1px solid rgba(255,255,255,0.3)',
-            colorScheme:'dark',
           }}>
           <option value="모름">모름</option>
           {BRANCH_LIST.map((b, i) => (
@@ -97,6 +103,7 @@ export default function ConsultantInputForm({
           ))}
         </select>
       </div>
+
       {error && <p className="text-xs mb-3 text-center" style={{color:'#ff8080'}}>{error}</p>}
       <button onClick={handleSubmit}
         className="w-full py-3 rounded-xl font-bold text-sm transition-all active:scale-95"
