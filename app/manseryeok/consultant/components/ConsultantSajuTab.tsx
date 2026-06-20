@@ -1,4 +1,5 @@
 'use client'
+import { useEffect } from 'react'
 import SajuBoard from './SajuBoard'
 import ElementScore from './ElementScore'
 import UnsungBoard from './UnsungBoard'
@@ -50,6 +51,21 @@ export default function ConsultantSajuTab({
     ? `${yearParam}${String(monthParam).padStart(2,'0')}${String(dayParam).padStart(2,'0')}`
     : ''
   const initialHour = hourIdx !== null ? String(hourIdx).padStart(4,'0') : '모름'
+
+  // 고객 정보가 자동 로드되면 사주 자동 조회
+  useEffect(() => {
+    if (yearParam > 0 && gender && calType) {
+      onFormSubmit({
+        gender,
+        calType,
+        year: String(yearParam),
+        month: String(monthParam),
+        day: String(dayParam),
+        hour: hourIdx !== null ? String(hourIdx) : '모름',
+        customerName: customerName || '',
+      })
+    }
+  }, [yearParam, gender, calType, monthParam, dayParam, hourIdx])
 
   return (
     <>
