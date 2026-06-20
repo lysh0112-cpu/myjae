@@ -1,10 +1,19 @@
 'use client'
-import { useInputForm, formatBirth, timeToHourIdx } from '@/hooks/useInputForm'
+import { useInputForm, formatBirth } from '@/hooks/useInputForm'
 
 const BRANCH_LIST = [
-  {char:'子'},{char:'丑'},{char:'寅'},{char:'卯'},
-  {char:'辰'},{char:'巳'},{char:'午'},{char:'未'},
-  {char:'申'},{char:'酉'},{char:'戌'},{char:'亥'},
+  {char:'子',label:'子시 (23~01시)'},
+  {char:'丑',label:'丑시 (01~03시)'},
+  {char:'寅',label:'寅시 (03~05시)'},
+  {char:'卯',label:'卯시 (05~07시)'},
+  {char:'辰',label:'辰시 (07~09시)'},
+  {char:'巳',label:'巳시 (09~11시)'},
+  {char:'午',label:'午시 (11~13시)'},
+  {char:'未',label:'未시 (13~15시)'},
+  {char:'申',label:'申시 (15~17시)'},
+  {char:'酉',label:'酉시 (17~19시)'},
+  {char:'戌',label:'戌시 (19~21시)'},
+  {char:'亥',label:'亥시 (21~23시)'},
 ]
 
 export default function ConsultantInputForm({
@@ -12,23 +21,22 @@ export default function ConsultantInputForm({
   initialGender,
   initialCalType,
   initialBirth,
-  initialHour,
+  initialHourIdx,
 }: {
   onSubmit: (params: Record<string, string>) => void
   initialGender?: '남' | '여'
   initialCalType?: '양력' | '음력'
   initialBirth?: string
-  initialHour?: string
+  initialHourIdx?: number | null
 }) {
   const {
     birthInput, setBirthInput,
-    timeInput, setTimeInput,
-    noTime, setNoTime,
+    hourIdx, setHourIdx,
     gender, setGender,
     calType, setCalType,
     customerName, setCustomerName,
     error, handleSubmit,
-  } = useInputForm(onSubmit, initialGender, initialCalType, initialBirth, initialHour)
+  } = useInputForm(onSubmit, initialGender, initialCalType, initialBirth, initialHourIdx)
 
   return (
     <div className="rounded-2xl p-4"
@@ -72,23 +80,17 @@ export default function ConsultantInputForm({
           style={{background:'rgba(255,255,255,0.1)',color:'#FAC775',border:'1px solid rgba(255,255,255,0.15)'}} />
       </div>
       <div className="mb-4">
-        <label className="text-xs mb-1 block" style={{color:'rgba(255,255,255,0.6)'}}>출생시간 (4자리)</label>
-        <div className="flex gap-2 items-center">
-          <input type="tel" value={timeInput} onChange={(e) => setTimeInput(e.target.value.replace(/\D/g,'').slice(0,4))}
-            placeholder="0200" maxLength={4} disabled={noTime}
-            className="flex-1 rounded-xl px-3 py-2.5 text-lg text-center font-bold tracking-widest focus:outline-none"
-            style={{background:noTime?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.1)',
-              color:noTime?'rgba(255,255,255,0.3)':'#FAC775',border:'1px solid rgba(255,255,255,0.15)'}} />
-          <label className="flex items-center gap-1.5 text-sm cursor-pointer" style={{color:'rgba(255,255,255,0.6)'}}>
-            <input type="checkbox" checked={noTime} onChange={(e) => setNoTime(e.target.checked)} className="w-4 h-4 rounded" />
-            모름
-          </label>
-        </div>
-        {timeInput.length >= 3 && !noTime && (
-          <p className="text-xs mt-1" style={{color:'rgba(250,199,117,0.7)'}}>
-            → {BRANCH_LIST[timeToHourIdx(timeInput) ?? 0]?.char}시
-          </p>
-        )}
+        <label className="text-xs mb-1 block" style={{color:'rgba(255,255,255,0.6)'}}>출생시간</label>
+        <select
+          value={hourIdx !== null ? String(hourIdx) : '모름'}
+          onChange={(e) => setHourIdx(e.target.value === '모름' ? null : parseInt(e.target.value))}
+          className="w-full rounded-xl px-3 py-2.5 text-sm font-bold focus:outline-none"
+          style={{background:'rgba(255,255,255,0.1)',color:'#FAC775',border:'1px solid rgba(255,255,255,0.15)'}}>
+          <option value="모름">모름</option>
+          {BRANCH_LIST.map((b, i) => (
+            <option key={i} value={String(i)}>{b.char}시 — {b.label}</option>
+          ))}
+        </select>
       </div>
       {error && <p className="text-xs mb-3 text-center" style={{color:'#ff8080'}}>{error}</p>}
       <button onClick={handleSubmit}
