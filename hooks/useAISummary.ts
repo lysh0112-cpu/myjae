@@ -15,6 +15,7 @@ export function useAISummary(consultationId: string | null, consultantName: stri
     }
     setLoading(true)
     try {
+      // 채팅 내용
       const { data: messages } = await supabase
         .from('chat_messages')
         .select('sender, message')
@@ -23,9 +24,11 @@ export function useAISummary(consultationId: string | null, consultantName: stri
 
       if (!messages?.length) {
         alert('채팅 내용이 없습니다.')
+        setLoading(false)
         return
       }
 
+      // 상담사 해설
       const { data: cd } = await supabase
         .from('commentaries')
         .select('content')
@@ -37,6 +40,15 @@ export function useAISummary(consultationId: string | null, consultantName: stri
       const commentary = cd?.content ?? ''
       setCommentary(commentary)
 
+      // 고객 AI 분석 결과
+      const { data: consultationData } = await supabase
+        .from('consultations')
+        .select('ai_analysis')
+        .eq('id', consultationId)
+        .single()
+
+      const aiAnalysis = consultationData?.ai_analysis ?? ''
+
       const chatText = messages
         .filter(m => m.sender !== 'summary')
         .map(m => `${m.sender === 'customer' ? '고객' : '상담사'}: ${m.message}`)
@@ -45,7 +57,10 @@ export function useAISummary(consultationId: string | null, consultantName: stri
       const res = await fetch('/api/summarize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ consultantName, customerPhone, chatText, sajuData, commentary }),
+        body: JSON.stringify({
+          consultantName, customerPhone,
+          chatText, sajuData, commentary, aiAnalysis,
+        }),
       })
       const data = await res.json()
       setSummary(data.summary)
