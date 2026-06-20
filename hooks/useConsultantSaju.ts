@@ -1,0 +1,79 @@
+import { useState, useEffect } from 'react'
+import { calcDayunList, calcSeyunList } from '@/lib/saju/dayun'
+
+const HEAVENLY_STEMS = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
+const EARTHLY_BRANCHES = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥']
+
+function splitGanji(ganji: string) {
+  if (!ganji) return { stem: '?', branch: '?' }
+  const match = ganji.match(/\(([^)]+)\)/)
+  if (match && match[1].length >= 2) return { stem: match[1][0], branch: match[1][1] }
+  if (ganji.length >= 2) return { stem: ganji[0], branch: ganji[1] }
+  return { stem: '?', branch: '?' }
+}
+
+function calcHourPillar(dayStem: string, hourIdx: number) {
+  const dg = HEAVENLY_STEMS.indexOf(dayStem)
+  const hourStem = HEAVENLY_STEMS[(dg * 2 + hourIdx) % 10]
+  const hourBranch = EARTHLY_BRANCHES[hourIdx]
+  return { stem: hourStem, branch: hourBranch }
+}
+
+export function useConsultantSaju(
+  calType: string, yearParam: number, monthParam: number,
+  dayParam: number, leapMonth: string, hourIdx: number | null,
+  gender: string
+) {
+  const [saju, setSaju] = useState<{pillar:string;stem:string;branch:string}[]>([])
+  const [dayStem, setDayStem] = useState('')
+  const [monthGanji, setMonthGanji] = useState('')
+  const [yearStem, setYearStem] = useState('')
+  const [converting, setConverting] = useState(false)
+
+  useEffect(() => {
+    if (!yearParam || !monthParam || !dayParam) return
+    async function loadSaju() {
+      setConverting(true)
+      try {
+        let apiUrl = ''
+        if (calType === '음력') {
+          const res1 = await fetch(`/api/lunar?year=${yearParam}&month=${monthParam}&day=${dayParam}&calType=음력&leapMonth=${leapMonth}`)
+          const d1 = await res1.json()
+          apiUrl = `/api/lunar?year=${d1.solarYear}&month=${d1.solarMonth}&day=${d1.solarDay}&calType=양력`
+        } else {
+          apiUrl = `/api/lunar?year=${yearParam}&month=${monthParam}&day=${dayParam}&calType=양력`
+        }
+        const res = await fetch(apiUrl)
+        const d = await res.json()
+        const year = splitGanji(d.yearGanji)
+        const month = splitGanji(d.monthGanji)
+        const day = splitGanji(d.dayGanji)
+        const hour = hourIdx !== null ? calcHourPillar(day.stem, hourIdx) : { stem: '?', branch: '?' }
+        setDayStem(day.stem)
+        setMonthGanji(month.stem + month.branch)
+        setYearStem(year.stem)
+        setSaju([
+          { pillar: '시주', stem: hour.stem, branch: hour.branch },
+          { pillar: '일주', stem: day.stem, branch: day.branch },
+          { pillar: '월주', stem: month.stem, branch: month.branch },
+          { pillar: '년주', stem: year.stem, branch: year.branch },
+        ])
+      } catch(e) {
+        console.error(e)
+      } finally {
+        setConverting(false)
+      }
+    }
+    loadSaju()
+  }, [calType, yearParam, monthParam, dayParam, leapMonth, hourIdx])
+
+  const iljji = saju[1]?.branch ?? ''
+  const yeonjji = saju[3]?.branch ?? ''
+  const yeangan = saju[3]?.stem ?? ''
+  const dayunList = dayStem && monthGanji && yearStem
+    ? calcDayunList(yearParam, monthParam, dayParam, monthGanji, yearStem, gender, dayStem)
+    : []
+  const seyunList = dayStem ? calcSeyunList(dayStem, 2026) : []
+
+  return { saju, dayStem, converting, iljji, yeonjji, yeangan, dayunList, seyunList }
+}
