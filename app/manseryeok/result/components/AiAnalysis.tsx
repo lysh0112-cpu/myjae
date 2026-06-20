@@ -51,12 +51,13 @@ export default function AiAnalysis({
     hourIdx, leapMonth, solar
   }
 
-  const handleAiAnalysis = async () => {
+  const handleAiAnalysis = async (paid?: boolean) => {
     setLoading(true)
     setAiResult('')
     setDone(false)
 
-    const prompt = isPaid
+    const usePaid = paid !== undefined ? paid : isPaid
+    const prompt = usePaid
       ? getFullPrompt(promptParams)
       : getFreePrompt(promptParams)
 
@@ -75,6 +76,11 @@ export default function AiAnalysis({
       setLoading(false)
       setDone(true)
     }
+  }
+
+  const handlePayAndAnalyze = () => {
+    onPayRequest?.()
+    handleAiAnalysis(true)
   }
 
   return (
@@ -96,7 +102,7 @@ export default function AiAnalysis({
         </p>
 
         {!done && !loading && (
-          <button onClick={handleAiAnalysis}
+          <button onClick={() => handleAiAnalysis()}
             className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all active:scale-95"
             style={{background:"linear-gradient(135deg,#3C3489 0%,#FAC775 100%)",
               color:"#1a1a18",boxShadow:"0 4px 20px rgba(60,52,137,0.4)"}}>
@@ -107,7 +113,8 @@ export default function AiAnalysis({
           <div className="flex flex-col items-center py-8 gap-3">
             <div className="text-3xl animate-spin">✦</div>
             <p className="text-sm text-center" style={{color:"#FAC775"}}>
-              AI가 사주를 분석하고 있습니다...<br/>(약 20~30초 소요)
+              {isPaid ? 'AI가 10가지 항목을 분석하고 있습니다...' : 'AI가 사주를 분석하고 있습니다...'}<br/>
+              (약 20~30초 소요)
             </p>
           </div>
         )}
@@ -118,7 +125,7 @@ export default function AiAnalysis({
               <p className="text-sm leading-relaxed whitespace-pre-wrap"
                 style={{color:"#e0dce8"}}>{aiResult}</p>
             </div>
-            <button onClick={handleAiAnalysis}
+            <button onClick={() => handleAiAnalysis()}
               className="w-full py-2.5 rounded-xl text-sm font-semibold mb-2"
               style={{border:"1px solid rgba(60,52,137,0.5)",color:"#b0aec8",
                 background:"rgba(60,52,137,0.1)"}}>
@@ -128,63 +135,66 @@ export default function AiAnalysis({
         )}
       </div>
 
-      {/* 유료 잠금 영역 */}
-      <div className="px-5 pb-5">
-        <div className="rounded-xl overflow-hidden"
-          style={{border:"1px solid rgba(250,199,117,0.25)"}}>
+      {/* 유료 잠금 영역 — 결제 전에만 표시 */}
+      {!isPaid && (
+        <div className="px-5 pb-5">
+          <div className="rounded-xl overflow-hidden"
+            style={{border:"1px solid rgba(250,199,117,0.25)"}}>
 
-          {/* 잠금 헤더 */}
-          <div className="px-4 py-3 flex items-center justify-between"
-            style={{background:"linear-gradient(135deg,rgba(60,52,137,0.5),rgba(250,199,117,0.15))"}}>
-            <div>
-              <div className="text-sm font-bold text-white">🔒 나머지 8가지 분석</div>
-              <div className="text-xs mt-0.5" style={{color:"rgba(255,255,255,0.5)"}}>
-                연애·재물·직업·건강·10년운 등
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-xl font-bold" style={{color:"#FAC775"}}>10,000원</div>
-              <div className="text-xs" style={{color:"rgba(255,255,255,0.4)"}}>전체 공개</div>
-            </div>
-          </div>
-
-          {/* 잠금 항목 목록 */}
-          {PAID_ITEMS.map((item, i) => (
-            <div key={i} className="px-4 py-2.5 flex items-center gap-3"
-              style={{
-                borderTop:"1px solid rgba(255,255,255,0.04)",
-                background:"rgba(0,0,0,0.15)",
-              }}>
-              <span className="text-base">{item.icon}</span>
-              <div className="flex-1">
-                <div className="text-sm font-semibold" style={{color:"rgba(192,188,216,0.6)"}}>
-                  {item.label}
-                </div>
-                <div className="text-xs" style={{color:"rgba(106,104,128,0.8)"}}>
-                  {item.desc}
+            {/* 잠금 헤더 */}
+            <div className="px-4 py-3 flex items-center justify-between"
+              style={{background:"linear-gradient(135deg,rgba(60,52,137,0.5),rgba(250,199,117,0.15))"}}>
+              <div>
+                <div className="text-sm font-bold text-white">🔒 나머지 8가지 분석</div>
+                <div className="text-xs mt-0.5" style={{color:"rgba(255,255,255,0.5)"}}>
+                  연애·재물·직업·건강·10년운 등
                 </div>
               </div>
-              <span style={{color:"rgba(106,104,128,0.8)",fontSize:"14px"}}>🔒</span>
+              <div className="text-right">
+                <div className="text-xl font-bold" style={{color:"#FAC775"}}>10,000원</div>
+                <div className="text-xs" style={{color:"rgba(255,255,255,0.4)"}}>전체 공개</div>
+              </div>
             </div>
-          ))}
 
-          {/* 결제 버튼 */}
-          <div className="p-4"
-            style={{borderTop:"1px solid rgba(255,255,255,0.05)"}}>
-            <button
-              onClick={onPayRequest}
-              className="w-full py-3.5 rounded-xl font-bold text-sm transition-all active:scale-95"
-              style={{background:"linear-gradient(135deg,#FAC775,#f0a030)",
-                color:"#1a1a18",boxShadow:"0 4px 16px rgba(250,199,117,0.3)"}}>
-              ✨ 전체보기 — 10,000원 결제
-            </button>
-            <p className="text-xs text-center mt-2"
-              style={{color:"rgba(255,255,255,0.3)"}}>
-              결제 후 즉시 8가지 추가 분석 공개
-            </p>
+            {/* 잠금 항목 목록 */}
+            {PAID_ITEMS.map((item, i) => (
+              <div key={i} className="px-4 py-2.5 flex items-center gap-3"
+                style={{
+                  borderTop:"1px solid rgba(255,255,255,0.04)",
+                  background:"rgba(0,0,0,0.15)",
+                }}>
+                <span className="text-base">{item.icon}</span>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold"
+                    style={{color:"rgba(192,188,216,0.6)"}}>
+                    {item.label}
+                  </div>
+                  <div className="text-xs" style={{color:"rgba(106,104,128,0.8)"}}>
+                    {item.desc}
+                  </div>
+                </div>
+                <span style={{color:"rgba(106,104,128,0.8)",fontSize:"14px"}}>🔒</span>
+              </div>
+            ))}
+
+            {/* 결제 버튼 */}
+            <div className="p-4"
+              style={{borderTop:"1px solid rgba(255,255,255,0.05)"}}>
+              <button
+                onClick={handlePayAndAnalyze}
+                className="w-full py-3.5 rounded-xl font-bold text-sm transition-all active:scale-95"
+                style={{background:"linear-gradient(135deg,#FAC775,#f0a030)",
+                  color:"#1a1a18",boxShadow:"0 4px 16px rgba(250,199,117,0.3)"}}>
+                ✨ 전체보기 — 10,000원 결제
+              </button>
+              <p className="text-xs text-center mt-2"
+                style={{color:"rgba(255,255,255,0.3)"}}>
+                결제 후 즉시 8가지 추가 분석 공개
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
