@@ -18,6 +18,11 @@ const BRANCH_LIST = [
   {char:'申'},{char:'酉'},{char:'戌'},{char:'亥'},
 ]
 
+const HOUR_IDX_TO_TIME = [
+  '0000','0130','0300','0430','0600','0730',
+  '0900','1030','1200','1330','1500','1630'
+]
+
 type Props = {
   saju: {pillar:string;stem:string;branch:string}[]
   dayStem: string
@@ -50,9 +55,8 @@ export default function ConsultantSajuTab({
   const initialBirth = yearParam > 0
     ? `${yearParam}${String(monthParam).padStart(2,'0')}${String(dayParam).padStart(2,'0')}`
     : ''
-  const initialHour = hourIdx !== null ? String(hourIdx).padStart(4,'0') : '모름'
+  const initialHour = hourIdx !== null ? HOUR_IDX_TO_TIME[hourIdx] : '모름'
 
-  // 고객 정보가 자동 로드되면 사주 자동 조회
   useEffect(() => {
     if (yearParam > 0 && gender && calType) {
       onFormSubmit({
