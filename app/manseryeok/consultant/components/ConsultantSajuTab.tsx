@@ -46,9 +46,20 @@ export default function ConsultantSajuTab({
   monthParam, dayParam, hourIdx, customerName,
   consultationId, customerPhone, onFormSubmit,
 }: Props) {
+  const initialBirth = yearParam > 0
+    ? `${yearParam}${String(monthParam).padStart(2,'0')}${String(dayParam).padStart(2,'0')}`
+    : ''
+  const initialHour = hourIdx !== null ? String(hourIdx).padStart(4,'0') : '모름'
+
   return (
     <>
-      <ConsultantInputForm onSubmit={onFormSubmit} />
+      <ConsultantInputForm
+        onSubmit={onFormSubmit}
+        initialGender={gender as '남' | '여'}
+        initialCalType={calType as '양력' | '음력'}
+        initialBirth={initialBirth}
+        initialHour={initialHour}
+      />
       {yearParam > 0 && (
         <div className="rounded-2xl p-4"
           style={{background:'linear-gradient(135deg,#3C3489 0%,#2a2075 100%)',
