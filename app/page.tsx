@@ -44,15 +44,24 @@ function Header() {
   const [user, setUser] = useState<{ email?: string; nickname?: string } | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       if (data.user) {
         setUser({
           email: data.user.email,
           nickname: data.user.user_metadata?.nickname || data.user.email?.split("@")[0],
-        });
+        })
+        // 상담사면 4화면으로 자동 이동
+        const { data: consultant } = await supabase
+          .from('consultants')
+          .select('id')
+          .eq('email', data.user.email)
+          .single()
+        if (consultant) {
+          router.push(`/manseryeok/consultant?consultantId=${consultant.id}`)
+        }
       }
-    });
-  }, []);
+    })
+  }, [])
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
