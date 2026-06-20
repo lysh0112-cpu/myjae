@@ -78,11 +78,13 @@ export default function AiAnalysis({
     }
   }
 
-  const handlePayAndAnalyze = () => {
+const handlePayAndAnalyze = () => {
     onPayRequest?.()
-    handleAiAnalysis(true)
+    setDone(false)
+    setAiResult('')
+    setLoading(true)
+    setTimeout(() => handleAiAnalysis(true), 50)
   }
-
   return (
     <div className="rounded-2xl overflow-hidden"
       style={{background:"#2C2C2A",border:"1px solid rgba(255,255,255,0.07)"}}>
