@@ -98,26 +98,20 @@ export default function ConsultantSajuTab({
         initialCalType={calType as '양력' | '음력'}
         initialBirth={initialBirth}
         initialHourIdx={hourIdx}
+        initialCustomerName={customerName}
       />
 
-      {/* 전화 고객 상담 시작 — consultationId 없을 때만 표시 */}
       {saju.length > 0 && !consultationId && (
         <div className="rounded-2xl p-4"
           style={{background:'rgba(60,52,137,0.3)', border:'1px solid rgba(250,199,117,0.3)'}}>
           <div className="text-xs font-semibold mb-3" style={{color:'rgba(250,199,117,0.8)'}}>
             📞 전화 고객 상담 시작
           </div>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+          <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
             placeholder="고객 전화번호 입력"
             className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none mb-3"
-            style={{background:'rgba(255,255,255,0.08)', color:'#fff', border:'1px solid rgba(255,255,255,0.15)'}}
-          />
-          <button
-            onClick={handleStartConsultation}
-            disabled={starting}
+            style={{background:'rgba(255,255,255,0.08)', color:'#fff', border:'1px solid rgba(255,255,255,0.15)'}} />
+          <button onClick={handleStartConsultation} disabled={starting}
             className="w-full py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-50"
             style={{background:'linear-gradient(135deg,#FAC775,#f0a030)', color:'#1a1a18'}}>
             {starting ? '등록 중...' : '📋 상담 시작 (채팅 목록에 등록)'}
