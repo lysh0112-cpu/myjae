@@ -25,11 +25,11 @@ export default function ChatMessageList({
               {myRole === 'consultant' ? '고객' : '상담사'}
             </div>
           )}
-          <div className={`max-w-xs px-4 py-2 rounded-2xl text-sm ${
+          <div className={`max-w-xs px-4 py-2 rounded-2xl text-sm whitespace-pre-wrap ${
             m.sender === myRole
               ? 'bg-amber-500 text-stone-950'
               : m.sender === 'summary'
-              ? 'bg-stone-700 text-stone-100 whitespace-pre-wrap w-full max-w-sm'
+              ? 'bg-stone-700 text-stone-100 w-full max-w-sm'
               : 'bg-stone-800 text-stone-100'
           }`}>
             {m.sender === 'summary' && (
