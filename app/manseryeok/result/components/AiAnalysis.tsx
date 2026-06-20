@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { getFreePrompt, getFullPrompt } from './prompts'
+import { getFreePrompt, getPaidPrompt } from './prompts'
 import PaidLockSection from './PaidLockSection'
 
 function cleanMarkdown(text: string): string {
@@ -32,9 +32,10 @@ export default function AiAnalysis({
   saju, gender, calType, yearParam, monthParam, dayParam,
   hourIdx, leapMonth, solar, isPaid = false, onPayRequest
 }: Props) {
-  const [aiResult, setAiResult] = useState('')
+  const [freeResult, setFreeResult] = useState('')
+  const [paidResult, setPaidResult] = useState('')
   const [loading, setLoading] = useState(false)
-  const [done, setDone] = useState(false)
+  const [freeDone, setFreeDone] = useState(false)
   const [isPaidLocal, setIsPaidLocal] = useState(false)
 
   const isFullPaid = isPaid || isPaidLocal
@@ -44,34 +45,44 @@ export default function AiAnalysis({
     hourIdx, leapMonth, solar
   }
 
-  const handleAiAnalysis = async (paid: boolean) => {
+  const handleFreeAnalysis = async () => {
     setLoading(true)
-    setAiResult('')
-    setDone(false)
-    const prompt = paid ? getFullPrompt(promptParams) : getFreePrompt(promptParams)
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({messages:[{role:'user',content:prompt}]}),
+        body: JSON.stringify({messages:[{role:'user',content:getFreePrompt(promptParams)}]}),
       })
       const data = await res.json()
       const rawText = data.content?.find((c:{type:string}) => c.type==='text')?.text || ''
-      setAiResult(cleanMarkdown(rawText))
+      setFreeResult(cleanMarkdown(rawText))
+      setFreeDone(true)
     } catch(e) {
-      setAiResult('오류가 발생했습니다. 다시 시도해주세요.')
+      setFreeResult('오류가 발생했습니다. 다시 시도해주세요.')
+      setFreeDone(true)
     } finally {
       setLoading(false)
-      setDone(true)
     }
   }
 
-  const handlePayAndAnalyze = () => {
+  const handlePaidAnalysis = async () => {
     onPayRequest?.()
     setIsPaidLocal(true)
-    setDone(false)
-    setAiResult('')
-    handleAiAnalysis(true)
+    setLoading(true)
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({messages:[{role:'user',content:getPaidPrompt(promptParams)}]}),
+      })
+      const data = await res.json()
+      const rawText = data.content?.find((c:{type:string}) => c.type==='text')?.text || ''
+      setPaidResult(cleanMarkdown(rawText))
+    } catch(e) {
+      setPaidResult('오류가 발생했습니다. 다시 시도해주세요.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -94,41 +105,63 @@ export default function AiAnalysis({
           {isFullPaid ? '10가지 항목 전체 분석' : '사주팔자·성격 분석 + 건강·체질 분석'}
         </p>
 
-        {!done && !loading && (
-          <button onClick={() => handleAiAnalysis(false)}
+        {/* 무료 분석 버튼 */}
+        {!freeDone && !loading && (
+          <button onClick={handleFreeAnalysis}
             className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all active:scale-95"
             style={{background:"linear-gradient(135deg,#3C3489 0%,#FAC775 100%)",
               color:"#1a1a18",boxShadow:"0 4px 20px rgba(60,52,137,0.4)"}}>
             ✨ 무료 AI 분석 시작하기
           </button>
         )}
+
+        {/* 로딩 */}
         {loading && (
           <div className="flex flex-col items-center py-8 gap-3">
             <div className="text-3xl animate-spin">✦</div>
             <p className="text-sm text-center" style={{color:"#FAC775"}}>
-              {isFullPaid ? 'AI가 10가지 항목을 분석하고 있습니다...' : 'AI가 사주를 분석하고 있습니다...'}<br/>
+              {isFullPaid ? '나머지 8가지를 분석하고 있습니다...' : '사주를 분석하고 있습니다...'}<br/>
               (약 20~30초 소요)
             </p>
           </div>
         )}
-        {done && aiResult && (
-          <div>
-            <div className="rounded-xl p-4 mb-3"
-              style={{background:"rgba(60,52,137,0.15)",border:"1px solid rgba(60,52,137,0.3)"}}>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap"
-                style={{color:"#e0dce8"}}>{aiResult}</p>
-            </div>
-            <button onClick={() => handleAiAnalysis(isFullPaid)}
-              className="w-full py-2.5 rounded-xl text-sm font-semibold mb-2"
-              style={{border:"1px solid rgba(60,52,137,0.5)",color:"#b0aec8",
-                background:"rgba(60,52,137,0.1)"}}>
-              🔄 다시 분석하기
-            </button>
+
+        {/* 무료 결과 */}
+        {freeDone && freeResult && (
+          <div className="rounded-xl p-4 mb-3"
+            style={{background:"rgba(60,52,137,0.15)",border:"1px solid rgba(60,52,137,0.3)"}}>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap"
+              style={{color:"#e0dce8"}}>{freeResult}</p>
           </div>
+        )}
+
+        {/* 유료 결과 */}
+        {paidResult && (
+          <div className="rounded-xl p-4 mb-3 mt-3"
+            style={{background:"rgba(250,199,117,0.08)",border:"1px solid rgba(250,199,117,0.2)"}}>
+            <div className="text-xs font-bold mb-2" style={{color:"#FAC775"}}>
+              ✨ 전체 분석 추가 결과
+            </div>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap"
+              style={{color:"#e0dce8"}}>{paidResult}</p>
+          </div>
+        )}
+
+        {/* 다시 분석 버튼 */}
+        {freeDone && !loading && (
+          <button onClick={handleFreeAnalysis}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold mt-2"
+            style={{border:"1px solid rgba(60,52,137,0.5)",color:"#b0aec8",
+              background:"rgba(60,52,137,0.1)"}}>
+            🔄 무료 분석 다시하기
+          </button>
         )}
       </div>
 
-      {!isFullPaid && <PaidLockSection onPay={handlePayAndAnalyze} />}
+      {/* 잠금 영역 */}
+      {!isFullPaid && freeDone && (
+        <PaidLockSection onPay={handlePaidAnalysis} />
+      )}
     </div>
   )
 }
