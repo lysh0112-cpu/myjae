@@ -1,5 +1,6 @@
-// app/manseryeok/consultant/components/SajuBoard.tsx
 'use client'
+
+import { findRelations, getRelationColor } from '@/lib/saju/relations'
 
 const STEM_ELEMENT: Record<string,string> = {甲:'목',乙:'목',丙:'화',丁:'화',戊:'토',己:'토',庚:'금',辛:'금',壬:'수',癸:'수'}
 const BRANCH_ELEMENT: Record<string,string> = {子:'수',丑:'토',寅:'목',卯:'목',辰:'토',巳:'화',午:'화',未:'토',申:'금',酉:'금',戌:'토',亥:'수'}
@@ -13,13 +14,6 @@ const JIJANGAN: Record<string, string[]> = {
   申:['戊','壬','庚'],  酉:['庚','辛',''],
   戌:['戊','辛','丁'],  亥:['戊','甲','壬'],
 }
-
-const CHUNG_PAIRS = [['子','午'],['丑','未'],['寅','申'],['卯','酉'],['辰','戌'],['巳','亥']]
-const GAN_HAP = [['甲','己'],['乙','庚'],['丙','辛'],['丁','壬'],['戊','癸']]
-const JI_HAP = [['子','丑'],['寅','亥'],['卯','戌'],['辰','酉'],['巳','申'],['午','未']]
-const SAMHAP = [['申','子','辰'],['亥','卯','未'],['寅','午','戌'],['巳','酉','丑']]
-const BANGHAP = [['寅','卯','辰'],['巳','午','未'],['申','酉','戌'],['亥','子','丑']]
-const HYUNG = [['寅','巳','申'],['丑','戌','未'],['子','卯'],['辰','辰'],['午','午'],['酉','酉'],['亥','亥']]
 
 interface SajuPillar { pillar: string; stem: string; branch: string }
 interface Props { saju: SajuPillar[]; dayStem: string }
@@ -69,33 +63,9 @@ function getSipsinBranch(dayStem: string, branch: string): string {
   return ''
 }
 
-function findRelations(saju: SajuPillar[]) {
-  const branches = saju.map(s => s.branch).filter(b => b && b !== '?')
-  const stems = saju.map(s => s.stem).filter(s => s && s !== '?')
-  const results: string[] = []
-  for (const [a, b] of GAN_HAP) {
-    if (stems.includes(a) && stems.includes(b)) results.push(`${a}${b}합`)
-  }
-  for (const [a, b] of JI_HAP) {
-    if (branches.includes(a) && branches.includes(b)) results.push(`${a}${b}합`)
-  }
-  for (const [a, b] of CHUNG_PAIRS) {
-    if (branches.includes(a) && branches.includes(b)) results.push(`${a}${b}충`)
-  }
-  for (const trio of SAMHAP) {
-    if (trio.every(t => branches.includes(t))) results.push(`${trio.join('')}삼합`)
-  }
-  for (const trio of BANGHAP) {
-    if (trio.every(t => branches.includes(t))) results.push(`${trio.join('')}방합`)
-  }
-  for (const group of HYUNG) {
-    if (group.every(t => branches.includes(t))) results.push(`${group.join('')}형`)
-  }
-  return results
-}
-
 export default function SajuBoard({ saju, dayStem }: Props) {
   const relations = findRelations(saju)
+
   return (
     <div className="rounded-2xl p-5 mb-4" style={{background:'#2C2C2A',border:'1px solid rgba(250,199,117,0.15)'}}>
       <div className="flex items-center gap-2 mb-4">
@@ -136,13 +106,17 @@ export default function SajuBoard({ saju, dayStem }: Props) {
           )
         })}
       </div>
+
+      {/* 형충회합파해 */}
       {relations.length > 0 && (
         <div className="rounded-xl p-3" style={{background:'rgba(60,52,137,0.15)',border:'1px solid rgba(60,52,137,0.3)'}}>
-          <p className="text-xs font-semibold mb-2" style={{color:'rgba(250,199,117,0.8)'}}>원국 관계</p>
+          <p className="text-xs font-semibold mb-2" style={{color:'rgba(250,199,117,0.8)'}}>원국 관계 (형충회합파해)</p>
           <div className="flex flex-wrap gap-2">
             {relations.map((r,i) => (
-              <span key={i} className="text-xs px-2 py-1 rounded-lg"
-                style={{background:'rgba(255,255,255,0.08)',color:'#e0dce8'}}>{r}</span>
+              <span key={i} className="text-xs px-2 py-1 rounded-lg font-bold"
+                style={{background:'rgba(255,255,255,0.08)',color:getRelationColor(r)}}>
+                {r}
+              </span>
             ))}
           </div>
         </div>
