@@ -22,10 +22,15 @@ function ConsultantContent() {
   const { saju, dayStem, converting, iljji, yeonjji, yeangan, dayunList, seyunList } =
     useConsultantSaju(calType, yearParam, monthParam, dayParam, leapMonth, hourIdx, gender)
 
-  // 채팅방으로 바로 이동
   function handleGoToChat() {
     if (!consultationId || !customerPhone) return
     setSelectedConsultation({ id: consultationId, customer_phone: customerPhone })
+  }
+
+  function handleConsultationStarted(id: string, phone: string) {
+    setConsultationId(id)
+    setCustomerPhone(phone)
+    alert('상담이 시작됐어요! 채팅 탭에서 고객을 확인하세요 😊')
   }
 
   if (selectedConsultation) return (
@@ -81,7 +86,9 @@ function ConsultantContent() {
             customerName={customerName}
             consultationId={consultationId}
             customerPhone={customerPhone}
+            consultantId={consultantId}
             onFormSubmit={handleFormSubmit}
+            onConsultationStarted={handleConsultationStarted}
           />
         )}
         {tab === 'chat' && (
