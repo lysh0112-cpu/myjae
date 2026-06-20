@@ -8,7 +8,7 @@ export type Message = {
   created_at: string
 }
 
-export function useChatMessages(consultationId: string) {
+export function useChatMessages(consultationId: string | null) {
   const [messages, setMessages] = useState<Message[]>([])
 
   useEffect(() => {
@@ -33,7 +33,11 @@ export function useChatMessages(consultationId: string) {
         table: 'chat_messages',
         filter: `consultation_id=eq.${consultationId}`,
       }, (payload) => {
-        setMessages((prev) => [...prev, payload.new as Message])
+        setMessages((prev) => {
+          const exists = prev.find((m) => m.id === (payload.new as Message).id)
+          if (exists) return prev
+          return [...prev, payload.new as Message]
+        })
       })
       .subscribe()
 
