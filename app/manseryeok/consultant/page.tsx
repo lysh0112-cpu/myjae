@@ -22,6 +22,12 @@ function ConsultantContent() {
   const { saju, dayStem, converting, iljji, yeonjji, yeangan, dayunList, seyunList } =
     useConsultantSaju(calType, yearParam, monthParam, dayParam, leapMonth, hourIdx, gender)
 
+  // 채팅방으로 바로 이동
+  function handleGoToChat() {
+    if (!consultationId || !customerPhone) return
+    setSelectedConsultation({ id: consultationId, customer_phone: customerPhone })
+  }
+
   if (selectedConsultation) return (
     <div className="min-h-screen" style={{background:'#1a1a18', maxWidth:'430px', margin:'0 auto'}}>
       <header className="fixed top-0 z-50 px-4 py-4 w-full"
@@ -53,6 +59,7 @@ function ConsultantContent() {
         setTab={setTab}
         consultationId={consultationId}
         customerPhone={customerPhone}
+        onGoToChat={handleGoToChat}
       />
       <main className="pt-20 pb-10 px-4 space-y-4">
         {tab === 'saju' && (
