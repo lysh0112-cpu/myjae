@@ -1,5 +1,5 @@
 'use client'
-import { useInputForm, formatBirth } from '@/hooks/useInputForm'
+import { useInputForm, formatBirth, timeToHourIdx } from '@/hooks/useInputForm'
 
 const BRANCH_LIST = [
   {char:'子',label:'子시 (23~01시)'},
@@ -85,7 +85,12 @@ export default function ConsultantInputForm({
           value={hourIdx !== null ? String(hourIdx) : '모름'}
           onChange={(e) => setHourIdx(e.target.value === '모름' ? null : parseInt(e.target.value))}
           className="w-full rounded-xl px-3 py-2.5 text-sm font-bold focus:outline-none"
-          style={{background:'rgba(255,255,255,0.1)',color:'#FAC775',border:'1px solid rgba(255,255,255,0.15)'}}>
+          style={{
+            background:'#2a2075',
+            color:'#ffffff',
+            border:'1px solid rgba(255,255,255,0.3)',
+            colorScheme:'dark',
+          }}>
           <option value="모름">모름</option>
           {BRANCH_LIST.map((b, i) => (
             <option key={i} value={String(i)}>{b.char}시 — {b.label}</option>
