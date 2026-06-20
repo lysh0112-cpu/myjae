@@ -86,6 +86,11 @@ function ConsultingContent() {
 
   async function handlePayComplete() {
     if (!consultationId || !selected) return
+
+    // sessionStorage에서 AI 분석 결과 가져오기
+    const aiAnalysis = sessionStorage.getItem('ai_analysis') ||
+                       sessionStorage.getItem('ai_free_analysis') || ''
+
     await supabase
       .from('payments')
       .insert({
@@ -94,10 +99,20 @@ function ConsultingContent() {
         method: payMethod,
         status: 'done'
       })
+
     await supabase
       .from('consultations')
-      .update({ status: 'paid', paid_amount: selected.price })
+      .update({
+        status: 'paid',
+        paid_amount: selected.price,
+        ai_analysis: aiAnalysis, // AI 분석 결과 저장
+      })
       .eq('id', consultationId)
+
+    // 저장 후 sessionStorage 정리
+    sessionStorage.removeItem('ai_analysis')
+    sessionStorage.removeItem('ai_free_analysis')
+
     setStep('chat')
   }
 
