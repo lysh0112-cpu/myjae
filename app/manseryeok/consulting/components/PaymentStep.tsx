@@ -68,11 +68,36 @@ export default function PaymentStep({
           ))}
         </div>
 
+        {/* 결제 수단별 안내 */}
+        {payMethod === '계좌이체' && (
+          <div className="bg-stone-900 rounded-xl p-4 border border-stone-700 mb-6 text-sm space-y-1">
+            <p className="text-amber-400 font-bold mb-2">계좌이체 안내</p>
+            <p className="text-stone-300">예금주: 김명인</p>
+            <p className="text-stone-300">은행: 국민은행</p>
+            <p className="text-stone-300">계좌번호: 123-456-789012</p>
+            <p className="text-stone-500 text-xs mt-2">입금 확인 후 상담사가 채팅방을 열어드립니다</p>
+          </div>
+        )}
+        {payMethod === '카카오페이' && (
+          <div className="bg-stone-900 rounded-xl p-4 border border-stone-700 mb-6 text-sm">
+            <p className="text-amber-400 font-bold mb-2">카카오페이 안내</p>
+            <p className="text-stone-300">카카오페이 ID: myjae_saju</p>
+            <p className="text-stone-500 text-xs mt-2">송금 후 아래 버튼을 눌러주세요</p>
+          </div>
+        )}
+        {payMethod === '휴대폰 결제' && (
+          <div className="bg-stone-900 rounded-xl p-4 border border-stone-700 mb-6 text-sm">
+            <p className="text-amber-400 font-bold mb-2">휴대폰 결제 안내</p>
+            <p className="text-stone-300">준비 중입니다</p>
+            <p className="text-stone-500 text-xs mt-2">계좌이체 또는 카카오페이를 이용해주세요</p>
+          </div>
+        )}
+
         <button
           onClick={onComplete}
           className="w-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold py-3 rounded-xl transition-all"
         >
-          토스페이먼츠로 결제하기
+          결제 완료 — 상담방 입장
         </button>
         <p className="text-center text-stone-500 text-xs mt-3">
           결제 후 즉시 상담방이 열립니다
