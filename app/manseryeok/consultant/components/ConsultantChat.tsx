@@ -10,10 +10,12 @@ export default function ConsultantChat({
   consultationId,
   customerPhone,
   onBack,
+  onViewSaju,
 }: {
   consultationId: string
   customerPhone: string
   onBack: () => void
+  onViewSaju: () => void
 }) {
   const { messages } = useChatMessages(consultationId)
   const { sending, sendMessage } = useSendMessage(consultationId, 'consultant')
@@ -43,10 +45,15 @@ export default function ConsultantChat({
             <polyline points="15 18 9 12 15 6"/>
           </svg>
         </button>
-        <div>
+        <div className="flex-1">
           <div className="font-bold text-white text-sm">{customerPhone}</div>
           <div className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>고객 채팅방</div>
         </div>
+        <button onClick={onViewSaju}
+          className="text-xs px-3 py-1.5 rounded-xl font-semibold"
+          style={{ background: 'rgba(250,199,117,0.15)', color: '#FAC775', border: '1px solid rgba(250,199,117,0.3)' }}>
+          사주보기
+        </button>
       </div>
       <div className="flex-1 overflow-y-auto p-4">
         <ChatMessageList messages={messages} myRole="consultant" />
