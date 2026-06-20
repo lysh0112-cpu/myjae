@@ -70,10 +70,12 @@ export function useConsultantSaju(
   const iljji = saju[1]?.branch ?? ''
   const yeonjji = saju[3]?.branch ?? ''
   const yeangan = saju[3]?.stem ?? ''
-  const dayunList = dayStem && monthGanji && yearStem
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const dayunList: any[] = dayStem && monthGanji && yearStem
     ? calcDayunList(yearParam, monthParam, dayParam, monthGanji, yearStem, gender, dayStem)
     : []
-  const seyunList = dayStem ? calcSeyunList(dayStem, 2026) : []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const seyunList: any[] = dayStem ? calcSeyunList(dayStem, 2026) : []
 
   return { saju, dayStem, converting, iljji, yeonjji, yeangan, dayunList, seyunList }
 }
