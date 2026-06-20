@@ -72,6 +72,13 @@ function ConsultantContent() {
     setCustomerPhone(searchParams.get('customerPhone') || '')
   }, [])
 
+  // ★ 채팅 탭에서 상담 선택 시 consultationId + customerPhone 연결
+  function handleSelectConsultation(c: {id:string;customer_phone:string}) {
+    setSelectedConsultation(c)
+    setConsultationId(c.id)
+    setCustomerPhone(c.customer_phone)
+  }
+
   function handleFormSubmit(params: Record<string, string>) {
     setGender(params.gender)
     setCalType(params.calType)
@@ -157,7 +164,15 @@ function ConsultantContent() {
             </svg>
           </button>
         </Link>
-        <div className="text-sm font-bold text-white">전문가 분석 화면</div>
+        <div className="text-center">
+          <div className="text-sm font-bold text-white">전문가 분석 화면</div>
+          {/* 연결된 상담 표시 */}
+          {consultationId && (
+            <div className="text-xs mt-0.5" style={{color:'#4caf50'}}>
+              ● {customerPhone} 연결됨
+            </div>
+          )}
+        </div>
         <div className="flex rounded-xl overflow-hidden" style={{border:'1px solid rgba(255,255,255,0.15)'}}>
           <button onClick={() => setTab('saju')} className="px-3 py-1.5 text-xs font-bold transition-all"
             style={tab==='saju'?{background:'rgba(250,199,117,0.3)',color:'#FAC775'}:{background:'rgba(255,255,255,0.05)',color:'rgba(255,255,255,0.5)'}}>
@@ -206,7 +221,11 @@ function ConsultantContent() {
                 <ConsultantSeyun seyunList={seyunList} ilgan={dayStem} yeonjji={yeonjji} iljji={iljji} />
                 <ConsultantWolun ilgan={dayStem} yeonjji={yeonjji} iljji={iljji} />
                 <Commentary />
-                <AISummary consultationId={consultationId} consultantName="상담사" customerPhone={customerPhone} />
+                <AISummary
+                  consultationId={consultationId}
+                  consultantName="상담사"
+                  customerPhone={customerPhone}
+                />
               </>
             )}
           </>
@@ -214,7 +233,7 @@ function ConsultantContent() {
         {tab === 'chat' && (
           <ConsultationList
             consultantId={consultantId}
-            onSelect={(c) => setSelectedConsultation(c)}
+            onSelect={handleSelectConsultation}
           />
         )}
       </main>
