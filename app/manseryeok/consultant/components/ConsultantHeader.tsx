@@ -6,11 +6,13 @@ export default function ConsultantHeader({
   setTab,
   consultationId,
   customerPhone,
+  onGoToChat,
 }: {
   tab: 'saju' | 'chat'
   setTab: (t: 'saju' | 'chat') => void
   consultationId: string | null
   customerPhone: string
+  onGoToChat?: () => void
 }) {
   return (
     <header className="fixed top-0 z-50 flex items-center justify-between px-4 py-4"
@@ -33,22 +35,32 @@ export default function ConsultantHeader({
           </div>
         )}
       </div>
-      <div className="flex rounded-xl overflow-hidden"
-        style={{border:'1px solid rgba(255,255,255,0.15)'}}>
-        <button onClick={() => setTab('saju')}
-          className="px-3 py-1.5 text-xs font-bold transition-all"
-          style={tab==='saju'
-            ? {background:'rgba(250,199,117,0.3)', color:'#FAC775'}
-            : {background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.5)'}}>
-          사주
-        </button>
-        <button onClick={() => setTab('chat')}
-          className="px-3 py-1.5 text-xs font-bold transition-all"
-          style={tab==='chat'
-            ? {background:'rgba(250,199,117,0.3)', color:'#FAC775'}
-            : {background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.5)'}}>
-          채팅
-        </button>
+      <div className="flex items-center gap-2">
+        {/* 채팅 연결된 경우 채팅방 바로가기 버튼 */}
+        {consultationId && tab === 'saju' && onGoToChat && (
+          <button onClick={onGoToChat}
+            className="text-xs px-2 py-1.5 rounded-xl font-semibold"
+            style={{background:'rgba(250,199,117,0.15)', color:'#FAC775', border:'1px solid rgba(250,199,117,0.3)'}}>
+            💬 채팅
+          </button>
+        )}
+        <div className="flex rounded-xl overflow-hidden"
+          style={{border:'1px solid rgba(255,255,255,0.15)'}}>
+          <button onClick={() => setTab('saju')}
+            className="px-3 py-1.5 text-xs font-bold transition-all"
+            style={tab==='saju'
+              ? {background:'rgba(250,199,117,0.3)', color:'#FAC775'}
+              : {background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.5)'}}>
+            사주
+          </button>
+          <button onClick={() => setTab('chat')}
+            className="px-3 py-1.5 text-xs font-bold transition-all"
+            style={tab==='chat'
+              ? {background:'rgba(250,199,117,0.3)', color:'#FAC775'}
+              : {background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.5)'}}>
+            채팅
+          </button>
+        </div>
       </div>
     </header>
   )
