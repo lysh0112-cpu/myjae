@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 
 export function useConsultantState() {
   const searchParams = useSearchParams()
@@ -27,6 +28,30 @@ export function useConsultantState() {
     setConsultationId(searchParams.get('consultationId') || null)
     setCustomerPhone(searchParams.get('customerPhone') || '')
   }, [])
+
+  // consultationId 연결되면 birth_data 자동 조회
+  useEffect(() => {
+    if (!consultationId) return
+    async function loadBirthData() {
+      const { data } = await supabase
+        .from('consultations')
+        .select('birth_data, customer_phone')
+        .eq('id', consultationId)
+        .single()
+      if (!data) return
+      const b = data.birth_data
+      if (b) {
+        setGender(b.gender || '')
+        setCalType(b.calType || '양력')
+        setYearParam(parseInt(b.year || '0'))
+        setMonthParam(parseInt(b.month || '0'))
+        setDayParam(parseInt(b.day || '0'))
+        setHourIdx(b.hour === '모름' || !b.hour ? null : parseInt(b.hour))
+      }
+      if (data.customer_phone) setCustomerPhone(data.customer_phone)
+    }
+    loadBirthData()
+  }, [consultationId])
 
   function handleFormSubmit(params: Record<string, string>) {
     setGender(params.gender)
