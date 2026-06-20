@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 function timeToHourIdx(timeStr: string): number | null {
   if (!timeStr || timeStr.length < 3) return null
@@ -43,6 +43,26 @@ export function useInputForm(
   const [calType, setCalType] = useState<'양력' | '음력'>(initialCalType || '양력')
   const [customerName, setCustomerName] = useState('')
   const [error, setError] = useState('')
+
+  // 초기값이 나중에 전달될 때 반영
+  useEffect(() => {
+    if (initialGender) setGender(initialGender)
+  }, [initialGender])
+
+  useEffect(() => {
+    if (initialCalType) setCalType(initialCalType)
+  }, [initialCalType])
+
+  useEffect(() => {
+    if (initialBirth) setBirthInput(initialBirth)
+  }, [initialBirth])
+
+  useEffect(() => {
+    if (initialHour && initialHour !== '모름') {
+      setTimeInput(initialHour)
+      setNoTime(false)
+    }
+  }, [initialHour])
 
   function handleSubmit() {
     const digits = birthInput.replace(/\D/g, '')
