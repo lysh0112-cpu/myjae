@@ -36,10 +36,11 @@ function ResultContent() {
   const searchParams = useSearchParams();
   const [saju, setSaju] = useState<{pillar:string;stem:string;branch:string}[]>([]);
   const [solar, setSolar] = useState<{year:number;month:number;day:number}|null>(null);
-  const [converting, setConverting] = useState(true);
-  const [dayStem, setDayStem] = useState("");
-  const [monthGanji, setMonthGanji] = useState("");
-  const [yearStem, setYearStem] = useState("");
+ const [converting, setConverting] = useState(true);
+const [dayStem, setDayStem] = useState("");
+const [monthGanji, setMonthGanji] = useState("");
+const [yearStem, setYearStem] = useState("");
+const [isPaid, setIsPaid] = useState(false);
 
   const gender = searchParams.get("gender") || "남";
   const calType = searchParams.get("calType") || "양력";
@@ -163,6 +164,8 @@ function ResultContent() {
           saju={saju} gender={gender} calType={calType}
           yearParam={yearParam} monthParam={monthParam} dayParam={dayParam}
           hourIdx={hourIdx} leapMonth={leapMonth} solar={solar}
+       isPaid={isPaid}
+          onPayRequest={() => setIsPaid(true)}
         />
 
         {/* 상담사 목록 */}
