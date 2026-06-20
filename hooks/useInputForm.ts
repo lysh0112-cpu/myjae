@@ -13,18 +13,20 @@ export function useInputForm(
   initialCalType?: '양력' | '음력',
   initialBirth?: string,
   initialHourIdx?: number | null,
+  initialCustomerName?: string,
 ) {
   const [birthInput, setBirthInput] = useState(initialBirth || '')
   const [hourIdx, setHourIdx] = useState<number | null>(initialHourIdx ?? null)
   const [gender, setGender] = useState<'남' | '여'>(initialGender || '남')
   const [calType, setCalType] = useState<'양력' | '음력'>(initialCalType || '양력')
-  const [customerName, setCustomerName] = useState('')
+  const [customerName, setCustomerName] = useState(initialCustomerName || '')
   const [error, setError] = useState('')
 
   useEffect(() => { if (initialGender) setGender(initialGender) }, [initialGender])
   useEffect(() => { if (initialCalType) setCalType(initialCalType) }, [initialCalType])
   useEffect(() => { if (initialBirth) setBirthInput(initialBirth) }, [initialBirth])
   useEffect(() => { if (initialHourIdx !== undefined) setHourIdx(initialHourIdx ?? null) }, [initialHourIdx])
+  useEffect(() => { if (initialCustomerName) setCustomerName(initialCustomerName) }, [initialCustomerName])
 
   function handleSubmit() {
     const digits = birthInput.replace(/\D/g, '')
