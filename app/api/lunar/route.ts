@@ -111,7 +111,7 @@ function getDayGanji(year: number, month: number, day: number): string {
   const jd = toJulianDay(year, month, day);
   const baseJd = toJulianDay(2000, 1, 1);
   const diffDays = Math.round(jd - baseJd);
-  const BASE_DAY_IDX = 22;
+  const BASE_DAY_IDX = 23;
   const idx = ((diffDays + BASE_DAY_IDX) % 60 + 60) % 60;
   return STEMS[idx % 10] + BRANCHES[idx % 12];
 }
