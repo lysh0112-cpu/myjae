@@ -50,18 +50,15 @@ export function getDayGanji(year: number, month: number, day: number): string {
   function daysInMonth(y: number, m: number): number {
     return [0,31,isLeapYear(y)?29:28,31,30,31,30,31,31,30,31,30,31][m]
   }
-  const BASE_YEAR = 2000, BASE_MONTH = 1, BASE_DAY = 1, BASE_IDX = 54
-  let days = 0
-  if (year > BASE_YEAR || (year === BASE_YEAR && month > BASE_MONTH) ||
-      (year === BASE_YEAR && month === BASE_MONTH && day >= BASE_DAY)) {
-    for (let y = BASE_YEAR; y < year; y++) days += isLeapYear(y) ? 366 : 365
-    for (let m = BASE_MONTH; m < month; m++) days += daysInMonth(year, m)
-    days += day - BASE_DAY
-  } else {
-    for (let y = year; y < BASE_YEAR; y++) days -= isLeapYear(y) ? 366 : 365
-    for (let m = month; m < BASE_MONTH; m++) days -= daysInMonth(BASE_YEAR, m)
-    days -= BASE_DAY - day
+  let totalDays = 0
+  for (let y = 1900; y < year; y++) {
+    totalDays += isLeapYear(y) ? 366 : 365
   }
-  const idx = ((days + BASE_IDX) % 60 + 60) % 60
+  for (let m = 1; m < month; m++) {
+    totalDays += daysInMonth(year, m)
+  }
+  totalDays += day - 1
+  // ✅ 1900.1.1 = 甲戌 = index 14
+  const idx = ((totalDays + 14) % 60 + 60) % 60
   return STEMS[idx % 10] + BRANCHES[idx % 12]
 }
