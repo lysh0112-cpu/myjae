@@ -1,6 +1,6 @@
 'use client'
 import { calcYongsinPro } from '@/lib/saju/yongsin_pro'
-import { useYongsinAI } from '../../../hooks/useYongsinAI'
+import { useYongsinAI } from '@/hooks/useYongsinAI'
 import YongsinTrack1 from './YongsinTrack1'
 import YongsinTrack2 from './YongsinTrack2'
 
