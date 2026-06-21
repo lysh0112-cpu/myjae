@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import ChatHeader from './ChatHeader'
 import ChatMessages from './ChatMessages'
 import ChatInput from './ChatInput'
@@ -16,8 +16,6 @@ function CoupleChatInner() {
   const [messages, setMessages] = useState<Message[]>([])
   const [status, setStatus] = useState<'active' | 'completed'>('active')
   const [showSaju, setShowSaju] = useState(false)
-
-  const supabase = createClient()
 
   useEffect(() => {
     if (!consultationId) return
