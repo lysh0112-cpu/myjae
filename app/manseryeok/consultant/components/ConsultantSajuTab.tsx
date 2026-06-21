@@ -1,5 +1,5 @@
 'use client'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import SajuBoard from './SajuBoard'
 import YongsinBoard from './YongsinBoard'
 import YongsinProBoard from './YongsinProBoard'
@@ -52,6 +52,9 @@ export default function ConsultantSajuTab({
   const initialBirth = yearParam > 0
     ? `${yearParam}${String(monthParam).padStart(2,'0')}${String(dayParam).padStart(2,'0')}`
     : ''
+
+  // ✅ 연재 선생님 수정 점수 상태
+  const [customScores, setCustomScores] = useState<Record<string,number> | null>(null)
 
   useEffect(() => {
     if (yearParam > 0 && gender && calType) {
@@ -115,8 +118,18 @@ export default function ConsultantSajuTab({
         <>
           <SajuBoard saju={saju} dayStem={dayStem} />
           <YongsinBoard saju={saju} dayStem={dayStem} />
-          <YongsinProBoard saju={saju} dayStem={dayStem} hourIdx={hourIdx} />
-          <ElementScore />
+          {/* ✅ 커스텀 점수 있으면 우선 사용 */}
+          <YongsinProBoard
+            saju={saju}
+            dayStem={dayStem}
+            hourIdx={hourIdx}
+            customScores={customScores}
+          />
+          {/* ✅ consultationId + onScoreChange 전달 */}
+          <ElementScore
+            consultationId={consultationId}
+            onScoreChange={(scores) => setCustomScores(scores)}
+          />
           <UnsungBoard dayStem={dayStem} saju={saju} />
           <SinsalBoard saju={saju} yeonjji={yeonjji} iljji={iljji} />
           <GongmangBoard ilgan={dayStem} iljji={iljji} yeangan={yeangan} yeonjji={yeonjji} />
