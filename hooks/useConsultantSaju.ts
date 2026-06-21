@@ -14,7 +14,9 @@ function splitGanji(ganji: string) {
 
 function calcHourPillar(dayStem: string, hourIdx: number) {
   const dg = HEAVENLY_STEMS.indexOf(dayStem)
-  const hourStem = HEAVENLY_STEMS[(dg * 2 + hourIdx) % 10]
+  // 甲己=0, 乙庚=2, 丙辛=4, 丁壬=6, 戊癸=8
+  const groupBase = [0, 2, 4, 6, 8, 0, 2, 4, 6, 8]
+  const hourStem = HEAVENLY_STEMS[(groupBase[dg] + hourIdx) % 10]
   const hourBranch = EARTHLY_BRANCHES[hourIdx]
   return { stem: hourStem, branch: hourBranch }
 }
@@ -70,10 +72,12 @@ export function useConsultantSaju(
   const iljji = saju[1]?.branch ?? ''
   const yeonjji = saju[3]?.branch ?? ''
   const yeangan = saju[3]?.stem ?? ''
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const dayunList: any[] = dayStem && monthGanji && yearStem
     ? calcDayunList(yearParam, monthParam, dayParam, monthGanji, yearStem, gender, dayStem)
     : []
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const seyunList: any[] = dayStem ? calcSeyunList(dayStem, 2026) : []
 
