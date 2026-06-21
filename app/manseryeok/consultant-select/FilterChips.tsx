@@ -1,4 +1,3 @@
-// app/manseryeok/consultant-select/FilterChips.tsx
 const FILTERS = ['전체', '지금 가능', '부부 전문', '커플 채팅', '낮은 가격순']
 
 type Props = {
