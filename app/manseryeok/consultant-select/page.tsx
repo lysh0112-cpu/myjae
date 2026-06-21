@@ -1,4 +1,3 @@
-// app/manseryeok/consultant-select/page.tsx
 'use client'
 
 import { Suspense } from 'react'
@@ -21,13 +20,11 @@ function ConsultantSelectInner() {
     if (filter === '지금 가능')  return c.available
     if (filter === '부부 전문')  return c.tags.includes('부부 전문')
     if (filter === '커플 채팅')  return c.tags.includes('커플 채팅')
-    if (filter === '낮은 가격순') return true
     return true
   }).sort((a, b) => filter === '낮은 가격순' ? a.price - b.price : 0)
 
   return (
     <main className="min-h-screen bg-[#0d0d1a] pb-10">
-      {/* 헤더 */}
       <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-[#1e1e35]">
         <button onClick={() => history.back()} className="text-[#9d8cff] text-xl">‹</button>
         <span className="text-[16px] text-[#e8e4ff] font-medium">상담사 선택</span>
