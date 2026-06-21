@@ -6,12 +6,16 @@ import { supabase } from '@/lib/supabase'
 import ChatHeader from './ChatHeader'
 import ChatMessages from './ChatMessages'
 import ChatInput from './ChatInput'
-import type { Message, Sender } from './data'
+import type { Message } from './data'
+
+type ActiveSender = 'consultant' | 'husband' | 'wife'
 
 function CoupleChatInner() {
   const params = useSearchParams()
   const consultationId = params.get('consultationId') || ''
-  const myRole = (params.get('role') || 'husband') as Sender
+  const roleParam = params.get('role') || 'husband'
+  const myRole: ActiveSender = (['consultant', 'husband', 'wife'].includes(roleParam)
+    ? roleParam : 'husband') as ActiveSender
 
   const [messages, setMessages] = useState<Message[]>([])
   const [status, setStatus] = useState<'active' | 'completed'>('active')
