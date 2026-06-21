@@ -13,12 +13,14 @@ type UiSettings = {
   bgColor: string
   fontSize: number
   fontFamily: string
+  titleSize: number
 }
 
 const DEFAULT_SETTINGS: UiSettings = {
   bgColor: '#111118',
   fontSize: 13,
   fontFamily: 'var(--font-sans)',
+  titleSize: 12,
 }
 
 type PanelState = {
@@ -36,6 +38,7 @@ type PanelState = {
     myBubble?: string
     customerBubble?: string
     fontSize: number
+    titleSize: number
   }
 }
 
@@ -49,12 +52,12 @@ const PANEL_DEFS = [
 ]
 
 const PANEL_DEFAULT_SETTINGS = {
-  list:     { bgColor: '#1a1a24', fontSize: 13 },
-  chat:     { bgColor: '#13131e', myBubble: '#3d3488', customerBubble: '#2a2a3a', fontSize: 13 },
-  ai:       { bgColor: '#1a1a24', fontSize: 13 },
-  schedule: { bgColor: '#1a1a24', fontSize: 13 },
-  settle:   { bgColor: '#1a1a24', fontSize: 13 },
-  memo:     { bgColor: '#1a1a24', fontSize: 13 },
+  list:     { bgColor: '#1a1a24', fontSize: 13, titleSize: 12 },
+  chat:     { bgColor: '#13131e', myBubble: '#3d3488', customerBubble: '#2a2a3a', fontSize: 13, titleSize: 12 },
+  ai:       { bgColor: '#1a1a24', fontSize: 13, titleSize: 12 },
+  schedule: { bgColor: '#1a1a24', fontSize: 13, titleSize: 12 },
+  settle:   { bgColor: '#1a1a24', fontSize: 13, titleSize: 12 },
+  memo:     { bgColor: '#1a1a24', fontSize: 13, titleSize: 12 },
 }
 
 function initPanels(): PanelState[] {
@@ -91,7 +94,6 @@ function ConsultantContent() {
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null)
   const [consultantName, setConsultantName] = useState('')
   const [settings, setSettings] = useState<UiSettings>(DEFAULT_SETTINGS)
-  const [showGlobalSettings, setShowGlobalSettings] = useState(false)
   const [openPanelSettings, setOpenPanelSettings] = useState<string | null>(null)
   const [maxZ, setMaxZ] = useState(20)
 
@@ -128,7 +130,6 @@ function ConsultantContent() {
     setPanels(ps => ps.map(p => p.id === id ? { ...p, settings: { ...p.settings, [key]: value } } : p))
   }
 
-  // 드래그 이동
   const handleDragStart = (id: string, e: React.MouseEvent) => {
     e.preventDefault()
     bringToFront(id)
@@ -136,7 +137,6 @@ function ConsultantContent() {
     dragging.current = { id, startX: e.clientX, startY: e.clientY, origX: panel.x, origY: panel.y }
   }
 
-  // 리사이즈
   const handleResizeStart = (id: string, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -217,8 +217,8 @@ function ConsultantContent() {
               />
             ) : (
               <div style={{display:'flex', alignItems:'center', justifyContent:'center', height:'100%', flexDirection:'column', gap:'8px'}}>
-                <span style={{fontSize:'28px'}}>💬</span>
-                <span style={{fontSize:'12px', color:'#5555aa'}}>상담목록에서 고객을 선택하세요</span>
+                <span style={{fontSize:'24px'}}>💬</span>
+                <span style={{fontSize:'11px', color:'#5555aa'}}>상담목록에서 고객을 선택하세요</span>
               </div>
             )}
           </div>
@@ -235,8 +235,8 @@ function ConsultantContent() {
               />
             ) : (
               <div style={{display:'flex', alignItems:'center', justifyContent:'center', height:'100%', flexDirection:'column', gap:'8px'}}>
-                <span style={{fontSize:'28px'}}>🔮</span>
-                <span style={{fontSize:'12px', color:'#5555aa'}}>고객 선택 시 표시됩니다</span>
+                <span style={{fontSize:'24px'}}>🔮</span>
+                <span style={{fontSize:'11px', color:'#5555aa'}}>고객 선택 시 표시됩니다</span>
               </div>
             )}
           </div>
@@ -244,15 +244,15 @@ function ConsultantContent() {
       case 'schedule':
         return (
           <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', background:ps.bgColor, flexDirection:'column', gap:'8px'}}>
-            <span style={{fontSize:'28px'}}>📅</span>
-            <span style={{fontSize:'12px', color:'#5555aa'}}>일정관리 준비 중</span>
+            <span style={{fontSize:'24px'}}>📅</span>
+            <span style={{fontSize:'11px', color:'#5555aa'}}>일정관리 준비 중</span>
           </div>
         )
       case 'settle':
         return (
           <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', background:ps.bgColor, flexDirection:'column', gap:'8px'}}>
-            <span style={{fontSize:'28px'}}>💰</span>
-            <span style={{fontSize:'12px', color:'#5555aa'}}>정산 준비 중</span>
+            <span style={{fontSize:'24px'}}>💰</span>
+            <span style={{fontSize:'11px', color:'#5555aa'}}>정산 준비 중</span>
           </div>
         )
       case 'memo':
@@ -269,8 +269,7 @@ function ConsultantContent() {
             />
           </div>
         )
-      default:
-        return null
+      default: return null
     }
   }
 
@@ -278,10 +277,11 @@ function ConsultantContent() {
     const ps = panel.settings
     return (
       <div style={{
-        padding:'8px 10px', borderTop:'1px solid rgba(255,255,255,0.06)',
-        background:'#0d0d18', display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap',
-        flexShrink:0,
+        padding:'6px 10px', borderTop:'1px solid rgba(255,255,255,0.06)',
+        background:'#0d0d18', display:'flex', alignItems:'center',
+        gap:'10px', flexWrap:'wrap', flexShrink:0,
       }}>
+        {/* 배경색 */}
         <div style={{display:'flex', alignItems:'center', gap:'3px'}}>
           <span style={{fontSize:'10px', color:'#555577'}}>배경</span>
           <label style={{position:'relative', cursor:'pointer'}}>
@@ -292,6 +292,8 @@ function ConsultantContent() {
             />
           </label>
         </div>
+
+        {/* 채팅 버블 색상 */}
         {panel.id === 'chat' && (
           <>
             <div style={{display:'flex', alignItems:'center', gap:'3px'}}>
@@ -305,7 +307,7 @@ function ConsultantContent() {
               </label>
             </div>
             <div style={{display:'flex', alignItems:'center', gap:'3px'}}>
-              <span style={{fontSize:'10px', color:'#555577'}}>고객버블</span>
+              <span style={{fontSize:'10px', color:'#555577'}}>고객</span>
               <label style={{position:'relative', cursor:'pointer'}}>
                 <div style={{width:'14px', height:'14px', borderRadius:'2px', background:ps.customerBubble||'#2a2a3a', border:'1px solid rgba(255,255,255,0.2)'}}/>
                 <input type="color" value={ps.customerBubble||'#2a2a3a'}
@@ -316,13 +318,25 @@ function ConsultantContent() {
             </div>
           </>
         )}
+
+        {/* 내용 폰트 크기 */}
         <div style={{display:'flex', alignItems:'center', gap:'3px'}}>
-          <span style={{fontSize:'10px', color:'#555577'}}>크기</span>
-          <input type="range" min="11" max="16" step="1" value={ps.fontSize}
+          <span style={{fontSize:'10px', color:'#555577'}}>내용</span>
+          <input type="range" min="10" max="16" step="1" value={ps.fontSize}
             onChange={e => updatePanelSettings(panel.id, 'fontSize', Number(e.target.value))}
             style={{width:'50px', cursor:'pointer'}}
           />
           <span style={{fontSize:'10px', color:'#b8a9ff'}}>{ps.fontSize}px</span>
+        </div>
+
+        {/* 제목 크기 */}
+        <div style={{display:'flex', alignItems:'center', gap:'3px'}}>
+          <span style={{fontSize:'10px', color:'#555577'}}>제목</span>
+          <input type="range" min="9" max="15" step="1" value={ps.titleSize}
+            onChange={e => updatePanelSettings(panel.id, 'titleSize', Number(e.target.value))}
+            style={{width:'50px', cursor:'pointer'}}
+          />
+          <span style={{fontSize:'10px', color:'#b8a9ff'}}>{ps.titleSize}px</span>
         </div>
       </div>
     )
@@ -337,36 +351,34 @@ function ConsultantContent() {
 
       {/* 상단 메뉴바 */}
       <div style={{
-        position:'fixed', top:0, left:0, right:0, height:'48px', zIndex:1000,
+        position:'fixed', top:0, left:0, right:0, height:'44px', zIndex:1000,
         background:'rgba(18,18,28,0.97)', borderBottom:'1px solid rgba(255,255,255,0.06)',
-        display:'flex', alignItems:'center', padding:'0 16px', gap:'6px',
+        display:'flex', alignItems:'center', padding:'0 14px', gap:'5px',
       }}>
-        <span style={{fontSize:'15px', fontWeight:'500', color:'#e8e4ff', marginRight:'8px'}}>명연재</span>
-        <span style={{fontSize:'12px', color:'#333355', marginRight:'4px'}}>|</span>
+        <span style={{fontSize:'14px', fontWeight:'500', color:'#e8e4ff', marginRight:'6px'}}>명연재</span>
+        <span style={{fontSize:'11px', color:'#333355', marginRight:'3px'}}>|</span>
 
-        {/* 패널 토글 버튼들 */}
         {PANEL_DEFS.map(def => {
           const panel = panels.find(p => p.id === def.id)!
           return (
             <button key={def.id} onClick={() => togglePanel(def.id)}
               style={{
-                fontSize:'11px', padding:'4px 10px', borderRadius:'6px',
+                fontSize:'11px', padding:'3px 9px', borderRadius:'6px',
                 border: panel.open ? '1px solid rgba(119,102,221,0.5)' : '1px solid rgba(255,255,255,0.08)',
                 background: panel.open ? 'rgba(60,52,137,0.3)' : 'rgba(255,255,255,0.03)',
                 color: panel.open ? '#c8b0ff' : '#555577',
-                cursor:'pointer', display:'flex', alignItems:'center', gap:'4px',
+                cursor:'pointer', display:'flex', alignItems:'center', gap:'3px',
               }}>
-              <span>{def.icon}</span>
+              <span style={{fontSize:'12px'}}>{def.icon}</span>
               <span>{def.label}</span>
             </button>
           )
         })}
 
-        {/* 우측: 상담사 이름 + 로그아웃 */}
-        <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:'10px'}}>
-          <span style={{fontSize:'12px', color:'#7766aa'}}>{consultantName || '상담사'} 님</span>
+        <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:'8px'}}>
+          <span style={{fontSize:'11px', color:'#7766aa'}}>{consultantName || '상담사'} 님</span>
           <button onClick={handleLogout}
-            style={{fontSize:'11px', padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,80,80,0.2)', background:'transparent', color:'rgba(255,100,100,0.7)', cursor:'pointer'}}>
+            style={{fontSize:'11px', padding:'3px 9px', borderRadius:'6px', border:'1px solid rgba(255,80,80,0.2)', background:'transparent', color:'rgba(255,100,100,0.7)', cursor:'pointer'}}>
             로그아웃
           </button>
         </div>
@@ -378,6 +390,7 @@ function ConsultantContent() {
         const isMax = panel.maximized
         const isMin = panel.minimized
         const isSettingsOpen = openPanelSettings === panel.id
+        const titleSize = panel.settings.titleSize || 12
 
         return (
           <div key={panel.id}
@@ -385,66 +398,58 @@ function ConsultantContent() {
             style={{
               position:'fixed',
               left: isMax ? 0 : panel.x,
-              top: isMax ? 48 : panel.y,
+              top: isMax ? 44 : panel.y,
               width: isMax ? '100vw' : panel.width,
-              height: isMax ? 'calc(100vh - 48px)' : (isMin ? 36 : panel.height),
+              height: isMax ? 'calc(100vh - 44px)' : (isMin ? 32 : panel.height),
               zIndex: panel.zIndex,
-              borderRadius: isMax ? 0 : '10px',
+              borderRadius: isMax ? 0 : '8px',
               border:'1px solid rgba(255,255,255,0.08)',
               overflow:'hidden',
               display:'flex', flexDirection:'column',
-              boxShadow:'0 8px 32px rgba(0,0,0,0.5)',
-              transition: isMax ? 'all 0.2s' : 'none',
+              boxShadow:'0 6px 24px rgba(0,0,0,0.5)',
             }}>
 
-            {/* 패널 제목바 */}
+            {/* 제목바 */}
             <div
               onMouseDown={e => !isMax && handleDragStart(panel.id, e)}
               style={{
-                height:'36px', padding:'0 10px',
+                height:'32px', padding:'0 8px',
                 background:'rgba(20,20,35,0.98)',
                 borderBottom:'1px solid rgba(255,255,255,0.06)',
-                display:'flex', alignItems:'center', gap:'8px',
+                display:'flex', alignItems:'center', gap:'6px',
                 cursor: isMax ? 'default' : 'move',
                 flexShrink:0, userSelect:'none',
               }}>
-              <span style={{fontSize:'13px'}}>{def.icon}</span>
-              <span style={{fontSize:'12px', fontWeight:'500', color:'#c8c0ff', flex:1}}>{def.label}</span>
+              <span style={{fontSize: titleSize + 'px'}}>{def.icon}</span>
+              <span style={{fontSize: titleSize + 'px', fontWeight:'500', color:'#c8c0ff', flex:1}}>{def.label}</span>
 
-              {/* 패널 설정 토글 */}
               <button
                 onMouseDown={e => e.stopPropagation()}
                 onClick={() => setOpenPanelSettings(prev => prev === panel.id ? null : panel.id)}
                 style={{
-                  fontSize:'11px', padding:'2px 7px', borderRadius:'4px',
+                  fontSize:'10px', padding:'1px 6px', borderRadius:'3px',
                   border: isSettingsOpen ? '1px solid rgba(119,102,221,0.5)' : '1px solid rgba(255,255,255,0.08)',
                   background: isSettingsOpen ? 'rgba(60,52,137,0.3)' : 'transparent',
                   color: isSettingsOpen ? '#b8a9ff' : '#444466', cursor:'pointer',
                 }}>
                 ⚙️
               </button>
-
-              {/* 최소화 */}
               <button
                 onMouseDown={e => e.stopPropagation()}
                 onClick={() => updatePanel(panel.id, { minimized: !panel.minimized, maximized: false })}
-                style={{width:'20px', height:'20px', borderRadius:'4px', border:'none', background:'rgba(255,255,255,0.06)', color:'#888', cursor:'pointer', fontSize:'12px'}}>
+                style={{width:'18px', height:'18px', borderRadius:'3px', border:'none', background:'rgba(255,255,255,0.06)', color:'#888', cursor:'pointer', fontSize:'11px', display:'flex', alignItems:'center', justifyContent:'center'}}>
                 ─
               </button>
-
-              {/* 최대화 */}
               <button
                 onMouseDown={e => e.stopPropagation()}
                 onClick={() => updatePanel(panel.id, { maximized: !panel.maximized, minimized: false })}
-                style={{width:'20px', height:'20px', borderRadius:'4px', border:'none', background:'rgba(255,255,255,0.06)', color:'#888', cursor:'pointer', fontSize:'11px'}}>
+                style={{width:'18px', height:'18px', borderRadius:'3px', border:'none', background:'rgba(255,255,255,0.06)', color:'#888', cursor:'pointer', fontSize:'10px', display:'flex', alignItems:'center', justifyContent:'center'}}>
                 □
               </button>
-
-              {/* 닫기 */}
               <button
                 onMouseDown={e => e.stopPropagation()}
                 onClick={() => updatePanel(panel.id, { open: false })}
-                style={{width:'20px', height:'20px', borderRadius:'4px', border:'none', background:'rgba(255,80,80,0.15)', color:'rgba(255,120,120,0.8)', cursor:'pointer', fontSize:'12px'}}>
+                style={{width:'18px', height:'18px', borderRadius:'3px', border:'none', background:'rgba(255,80,80,0.15)', color:'rgba(255,120,120,0.8)', cursor:'pointer', fontSize:'11px', display:'flex', alignItems:'center', justifyContent:'center'}}>
                 ✕
               </button>
             </div>
@@ -463,22 +468,15 @@ function ConsultantContent() {
             {!isMax && !isMin && (
               <div
                 onMouseDown={e => handleResizeStart(panel.id, e)}
-                style={{
-                  position:'absolute', right:0, bottom:0,
-                  width:'14px', height:'14px', cursor:'se-resize',
-                  display:'flex', alignItems:'center', justifyContent:'center',
-                }}
-              >
+                style={{position:'absolute', right:0, bottom:0, width:'14px', height:'14px', cursor:'se-resize', display:'flex', alignItems:'center', justifyContent:'center'}}>
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                   <path d="M2 9L9 2M5 9L9 5M8 9L9 8" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" strokeLinecap="round"/>
                 </svg>
               </div>
             )}
-
           </div>
         )
       })}
-
     </div>
   )
 }
