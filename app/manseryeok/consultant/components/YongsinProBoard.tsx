@@ -1,6 +1,6 @@
 'use client'
 import { calcYongsinPro } from '@/lib/saju/yongsin_pro'
-import { useYongsinAI } from '@/hooks/useYongsinAI'
+import { useYongsinAI } from '../../../hooks/useYongsinAI'
 import YongsinTrack1 from './YongsinTrack1'
 import YongsinTrack2 from './YongsinTrack2'
 
@@ -42,7 +42,6 @@ export default function YongsinProBoard({ saju, dayStem, hourIdx, customScores }
     <div className="rounded-2xl overflow-hidden"
       style={{background:'#2C2C2A', border:'1px solid rgba(250,199,117,0.3)'}}>
 
-      {/* 헤더 */}
       <div className="px-5 pt-5 pb-3">
         <div className="flex items-center gap-2 flex-wrap mb-2">
           <span style={{color:'#FAC775', fontSize:'18px'}}>⚡</span>
@@ -61,7 +60,6 @@ export default function YongsinProBoard({ saju, dayStem, hourIdx, customScores }
         <p className="text-xs mb-3" style={{color:'#8a88a0'}}>
           자평진전 격국론 + 억부/조후/병약/종격 통합 분석
         </p>
-        {/* ✅ 버튼 전체 너비로 배치 */}
         <button onClick={handleAIDetail} disabled={loading}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95"
           style={{background: done ? 'rgba(76,175,80,0.2)' : 'rgba(250,199,117,0.15)',
@@ -73,7 +71,6 @@ export default function YongsinProBoard({ saju, dayStem, hourIdx, customScores }
         </button>
       </div>
 
-      {/* 오행 점수 */}
       <div className="px-5 pb-4">
         <p className="text-xs font-semibold mb-2" style={{color:'rgba(250,199,117,0.8)'}}>
           오행 점수 {isCustom ? '(선생님 입력값)' : '(110점 자동계산)'}
@@ -92,13 +89,9 @@ export default function YongsinProBoard({ saju, dayStem, hourIdx, customScores }
         </div>
       </div>
 
-      {/* Track 1 */}
       <YongsinTrack1 track1={track1} detail={track1Detail} loading={loading} />
-
-      {/* Track 2 */}
       <YongsinTrack2 track2={track2} detail={track2Detail} loading={loading} />
 
-      {/* 상극 시 통합 조언 */}
       {isConflict && (
         <div className="mx-4 mb-4 rounded-xl p-4"
           style={{background:'rgba(156,39,176,0.1)', border:'1px solid rgba(156,39,176,0.3)'}}>
