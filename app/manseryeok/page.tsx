@@ -29,6 +29,15 @@ const AI_OPTIONS = [
   { id: "name", label: "이름 분석", desc: "성명학 에너지 분석", icon: "🖋️", required: false },
 ];
 
+// ✅ 질문 카테고리
+const QUESTION_CATEGORIES = [
+  { id: "love", label: "연애·결혼", icon: "💕" },
+  { id: "career", label: "취업·직장", icon: "💼" },
+  { id: "business", label: "사업·재물", icon: "💰" },
+  { id: "health", label: "건강", icon: "🌿" },
+  { id: "move", label: "이사·방위", icon: "🏠" },
+]
+
 const HOUR_MAP: Record<string, number> = {
   "子시(23~01)": 0, "丑시(01~03)": 1, "寅시(03~05)": 2, "卯시(05~07)": 3,
   "辰시(07~09)": 4, "巳시(09~11)": 5, "午시(11~13)": 6, "未시(13~15)": 7,
@@ -77,7 +86,7 @@ function ManseryeokContent() {
   const [year, setYear] = useState(parsedDate[0] || "");
   const [month, setMonth] = useState(parsedDate[1] ? String(parseInt(parsedDate[1])) : "");
   const [day, setDay] = useState(parsedDate[2] ? String(parseInt(parsedDate[2])) : "");
-  const [isLeapMonth, setIsLeapMonth] = useState(false); // 윤달 여부
+  const [isLeapMonth, setIsLeapMonth] = useState(false);
   const [selectedHour, setSelectedHour] = useState<number | null>(
     initBirthHour && initBirthHour !== "모름" ? (HOUR_MAP[initBirthHour] ?? null) : null
   );
@@ -85,6 +94,10 @@ function ManseryeokContent() {
   const [aiOptions, setAiOptions] = useState<Record<string, boolean>>({
     basic: true, dayun: true, career: false, love: false, health: false, name: false,
   });
+
+  // ✅ 질문 관련 상태
+  const [selectedCategory, setSelectedCategory] = useState<string>('')
+  const [customQuestion, setCustomQuestion] = useState<string>('')
 
   const birthReady = !!year && !!month && !!day;
   const hourReady = unknownHour || selectedHour !== null;
@@ -109,6 +122,9 @@ function ManseryeokContent() {
     }
     params.set("hour", unknownHour ? "모름" : String(selectedHour));
     params.set("options", Object.entries(aiOptions).filter(([, v]) => v).map(([k]) => k).join(","));
+    // ✅ 질문 파라미터 추가
+    if (selectedCategory) params.set("category", selectedCategory)
+    if (customQuestion.trim()) params.set("question", customQuestion.trim())
     router.push(`/manseryeok/result?${params.toString()}`);
   }
 
@@ -127,7 +143,7 @@ function ManseryeokContent() {
         </Link>
         <div className="text-center">
           <div className="text-sm font-bold text-white">AI 만세력 분석</div>
-          <StepIndicator current={readyToAnalyze ? 3 : birthReady ? 2 : 1} total={3} />
+          <StepIndicator current={readyToAnalyze ? 4 : birthReady ? 2 : 1} total={4} />
         </div>
         <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(60,52,137,0.3)" }}>
           <span style={{ color: "#FAC775", fontSize: "16px" }}>✦</span>
@@ -135,6 +151,7 @@ function ManseryeokContent() {
       </header>
 
       <main className="pt-20 pb-36 px-4 space-y-5">
+        {/* STEP 1 - 기본 정보 */}
         <div className="rounded-2xl p-5" style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
           <SectionHeader step={1} icon="👤" title="기본 정보" desc="성별과 달력 방식을 선택해주세요" />
           <div className="flex gap-3">
@@ -164,6 +181,7 @@ function ManseryeokContent() {
           </div>
         </div>
 
+        {/* STEP 2 - 생년월일 */}
         <div className="rounded-2xl p-5"
           style={{ background: "#2C2C2A", border: `1px solid ${birthReady ? "rgba(250,199,117,0.2)" : "rgba(255,255,255,0.07)"}` }}>
           <SectionHeader step={2} icon="📅" title="생년월일" desc={`${calType}으로 입력해주세요`} />
@@ -194,8 +212,6 @@ function ManseryeokContent() {
               <p className="text-center text-[10px] mt-1" style={{ color: "#8a88a0" }}>일</p>
             </div>
           </div>
-
-          {/* 윤달 체크박스 — 음력 선택 시만 표시 */}
           {calType === "음력" && (
             <button onClick={() => setIsLeapMonth(!isLeapMonth)}
               className="w-full mt-3 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2"
@@ -208,6 +224,7 @@ function ManseryeokContent() {
           )}
         </div>
 
+        {/* STEP 3 - 태어난 시 */}
         <div className="rounded-2xl p-5"
           style={{ background: "#2C2C2A", border: `1px solid ${hourReady ? "rgba(250,199,117,0.2)" : "rgba(255,255,255,0.07)"}` }}>
           <SectionHeader step={3} icon="🕐" title="태어난 시 (시주)" desc="12지시 중 해당하는 시간을 선택하세요" />
@@ -235,19 +252,45 @@ function ManseryeokContent() {
               );
             })}
           </div>
-          {(selectedHour !== null || unknownHour) && (
-            <div className="mt-3 rounded-xl px-4 py-2.5 flex items-center gap-2"
-              style={{ background: "rgba(60,52,137,0.2)", border: "1px solid rgba(60,52,137,0.4)" }}>
-              <span style={{ color: "#FAC775" }}>✓</span>
-              <span className="text-sm text-white">
-                {unknownHour ? "시주 미지정 (추정 분석)" : `${EARTHLY_BRANCHES[selectedHour!].char}시 (${EARTHLY_BRANCHES[selectedHour!].time}시) 선택됨`}
-              </span>
-            </div>
-          )}
         </div>
 
+        {/* ✅ STEP 4 - 가장 궁금한 것 */}
+        <div className="rounded-2xl p-5"
+          style={{ background: "#2C2C2A", border: `1px solid ${selectedCategory || customQuestion ? "rgba(250,199,117,0.2)" : "rgba(255,255,255,0.07)"}` }}>
+          <SectionHeader step={4} icon="🔮" title="가장 궁금한 것" desc="AI가 집중 분석해 드립니다 (선택)" />
+          {/* 카테고리 칩 */}
+          <div className="flex flex-wrap gap-2 mb-3">
+            {QUESTION_CATEGORIES.map((cat) => (
+              <button key={cat.id}
+                onClick={() => setSelectedCategory(selectedCategory === cat.id ? '' : cat.id)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95"
+                style={selectedCategory === cat.id
+                  ? { background: "#3C3489", color: "#FAC775", border: "1px solid rgba(250,199,117,0.3)" }
+                  : { background: "rgba(255,255,255,0.04)", color: "#8a88a0", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <span>{cat.icon}</span>
+                <span>{cat.label}</span>
+              </button>
+            ))}
+          </div>
+          {/* 직접 입력 */}
+          <textarea
+            value={customQuestion}
+            onChange={(e) => setCustomQuestion(e.target.value)}
+            placeholder="더 구체적으로 입력해주세요&#10;예) 올해 이직해도 될까요? 지금 만나는 사람과 결혼해도 될까요?"
+            rows={3}
+            maxLength={200}
+            className="w-full rounded-xl px-4 py-3 text-sm resize-none focus:outline-none"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+              color: "#e0dce8", lineHeight: "1.7" }}
+          />
+          <div className="text-right text-xs mt-1" style={{ color: "#8a88a0" }}>
+            {customQuestion.length}/200
+          </div>
+        </div>
+
+        {/* STEP 5 - AI 옵션 */}
         <div className="rounded-2xl p-5" style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
-          <SectionHeader step={4} icon="🤖" title="AI 통변 옵션" desc="원하는 분석 항목을 선택하세요" />
+          <SectionHeader step={5} icon="🤖" title="AI 통변 옵션" desc="원하는 분석 항목을 선택하세요" />
           <div className="space-y-2">
             {AI_OPTIONS.map((opt) => {
               const on = aiOptions[opt.id];
@@ -290,9 +333,12 @@ function ManseryeokContent() {
           left: "50%", transform: "translateX(-50%)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 60px)" }}>
         {readyToAnalyze && (
           <div className="flex items-center justify-center gap-2 mb-3 flex-wrap">
-            {[`${gender}성`,
+            {[
+              `${gender}성`,
               `${calType} ${year}.${month}.${day}${calType === "음력" && isLeapMonth ? " (윤달)" : ""}`,
-              unknownHour ? "시 미지정" : `${EARTHLY_BRANCHES[selectedHour!].char}시`].map((item) => (
+              unknownHour ? "시 미지정" : `${EARTHLY_BRANCHES[selectedHour!].char}시`,
+              selectedCategory ? QUESTION_CATEGORIES.find(c => c.id === selectedCategory)?.label ?? '' : '',
+            ].filter(Boolean).map((item) => (
               <span key={item} className="text-xs px-3 py-1 rounded-full"
                 style={{ background: "rgba(60,52,137,0.3)", color: "#b0aec8", border: "1px solid rgba(60,52,137,0.4)" }}>
                 {item}
