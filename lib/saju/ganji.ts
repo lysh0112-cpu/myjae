@@ -1,13 +1,13 @@
 // lib/saju/ganji.ts
-// 년주·월주·일주 계산
-
 import { getSolarTermDay } from './solarterm'
 
 const STEMS = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"]
 const BRANCHES = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"]
 
-export function getYearGanji(year: number, month: number, day: number): string {
-  const lichunDay = getSolarTermDay(year, 2)
+export async function getYearGanji(
+  year: number, month: number, day: number
+): Promise<string> {
+  const lichunDay = await getSolarTermDay(year, 2)
   let adjustedYear = year
   if (month < 2 || (month === 2 && day < lichunDay)) adjustedYear = year - 1
   const BASE_YEAR = 1984
@@ -15,14 +15,16 @@ export function getYearGanji(year: number, month: number, day: number): string {
   return STEMS[offset % 10] + BRANCHES[offset % 12]
 }
 
-export function getMonthGanji(year: number, month: number, day: number): string {
-  const termDay = getSolarTermDay(year, month)
+export async function getMonthGanji(
+  year: number, month: number, day: number
+): Promise<string> {
+  const termDay = await getSolarTermDay(year, month)
   let monthIdx = month
   if (day < termDay) {
     monthIdx = month - 1
     if (monthIdx < 1) monthIdx = 12
   }
-  const lichunDay = getSolarTermDay(year, 2)
+  const lichunDay = await getSolarTermDay(year, 2)
   let adjustedYear = year
   if (month < 2 || (month === 2 && day < lichunDay)) adjustedYear = year - 1
   const BASE_YEAR = 1984
