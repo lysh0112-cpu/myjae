@@ -17,7 +17,6 @@ const BRANCH_LIST = [
   {char:'亥',label:'亥시 (21~23시)'},
 ]
 
-// ✅ 질문 카테고리
 const QUESTION_CATEGORIES = [
   { id: 'love', label: '연애·결혼', icon: '💕' },
   { id: 'career', label: '취업·직장', icon: '💼' },
@@ -50,15 +49,9 @@ export default function ConsultantInputForm({
     error, handleSubmit,
   } = useInputForm(onSubmit, initialGender, initialCalType, initialBirth, initialHourIdx, initialCustomerName)
 
-  // ✅ 질문 관련 상태
   const [selectedCategory, setSelectedCategory] = useState('')
   const [customQuestion, setCustomQuestion] = useState('')
   const [showQuestion, setShowQuestion] = useState(false)
-
-  function handleSubmitWithQuestion() {
-    // 질문 정보를 onSubmit에 추가로 전달
-    handleSubmit({ category: selectedCategory, question: customQuestion })
-  }
 
   return (
     <div className="rounded-2xl p-4"
@@ -137,7 +130,6 @@ export default function ConsultantInputForm({
         {showQuestion && (
           <div className="rounded-xl p-3"
             style={{background:'rgba(0,0,0,0.2)', border:'1px solid rgba(255,255,255,0.1)'}}>
-            {/* 카테고리 칩 */}
             <div className="flex flex-wrap gap-1.5 mb-2">
               {QUESTION_CATEGORIES.map((cat) => (
                 <button key={cat.id}
@@ -151,7 +143,6 @@ export default function ConsultantInputForm({
                 </button>
               ))}
             </div>
-            {/* 직접 입력 */}
             <textarea
               value={customQuestion}
               onChange={(e) => setCustomQuestion(e.target.value)}
@@ -171,7 +162,7 @@ export default function ConsultantInputForm({
 
       {error && <p className="text-xs mb-3 text-center" style={{color:'#ff8080'}}>{error}</p>}
 
-      <button onClick={() => handleSubmit()}
+      <button onClick={handleSubmit}
         className="w-full py-3 rounded-xl font-bold text-sm transition-all active:scale-95"
         style={{background:'linear-gradient(135deg,#FAC775,#f0a030)',color:'#1a1a18'}}>
         ✦ 사주 조회하기
