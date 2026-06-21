@@ -59,6 +59,6 @@ export function getDayGanji(year: number, month: number, day: number): string {
   }
   totalDays += day - 1
   // ✅ 1900.1.1 = 甲戌 = index 14
-  const idx = ((totalDays + 30) % 60 + 60) % 60
+  const idx = ((totalDays + 10) % 60 + 60) % 60
   return STEMS[idx % 10] + BRANCHES[idx % 12]
 }
