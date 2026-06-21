@@ -1,35 +1,11 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import BottomNav from "../components/BottomNav";
+import PersonForm, { PersonData } from "./components/PersonForm";
 
-const EARTHLY_BRANCHES = [
-  { char: "子", name: "자시", time: "23~01", animal: "🐭" },
-  { char: "丑", name: "축시", time: "01~03", animal: "🐮" },
-  { char: "寅", name: "인시", time: "03~05", animal: "🐯" },
-  { char: "卯", name: "묘시", time: "05~07", animal: "🐰" },
-  { char: "辰", name: "진시", time: "07~09", animal: "🐲" },
-  { char: "巳", name: "사시", time: "09~11", animal: "🐍" },
-  { char: "午", name: "오시", time: "11~13", animal: "🐴" },
-  { char: "未", name: "미시", time: "13~15", animal: "🐑" },
-  { char: "申", name: "신시", time: "15~17", animal: "🐵" },
-  { char: "酉", name: "유시", time: "17~19", animal: "🐓" },
-  { char: "戌", name: "술시", time: "19~21", animal: "🐶" },
-  { char: "亥", name: "해시", time: "21~23", animal: "🐷" },
-];
-
-const AI_OPTIONS = [
-  { id: "basic", label: "사주 기본 분석", desc: "일간·월간·사주 전반", icon: "✦", required: true },
-  { id: "dayun", label: "대운·세운 흐름", desc: "10년 대운 및 올해 세운", icon: "🌊", required: false },
-  { id: "career", label: "직업·재물운", desc: "직업적성, 사업 타이밍", icon: "💼", required: false },
-  { id: "love", label: "연애·궁합운", desc: "인연, 결혼, 연애 운세", icon: "💕", required: false },
-  { id: "health", label: "건강·체질", desc: "오행 체질 분석", icon: "🌿", required: false },
-  { id: "name", label: "이름 분석", desc: "성명학 에너지 분석", icon: "🖋️", required: false },
-];
-
-// ✅ 질문 카테고리
 const QUESTION_CATEGORIES = [
   { id: "love", label: "연애·결혼", icon: "💕" },
   { id: "career", label: "취업·직장", icon: "💼" },
@@ -38,334 +14,231 @@ const QUESTION_CATEGORIES = [
   { id: "move", label: "이사·방위", icon: "🏠" },
 ]
 
-const HOUR_MAP: Record<string, number> = {
-  "子시(23~01)": 0, "丑시(01~03)": 1, "寅시(03~05)": 2, "卯시(05~07)": 3,
-  "辰시(07~09)": 4, "巳시(09~11)": 5, "午시(11~13)": 6, "未시(13~15)": 7,
-  "申시(15~17)": 8, "酉시(17~19)": 9, "戌시(19~21)": 10, "亥시(21~23)": 11,
-};
-
-function StepIndicator({ current, total }: { current: number; total: number }) {
-  return (
-    <div className="flex items-center gap-1.5 justify-center">
-      {Array.from({ length: total }, (_, i) => (
-        <div key={i} className="rounded-full transition-all"
-          style={{ width: i === current - 1 ? "24px" : "6px", height: "6px",
-            background: i < current ? "#FAC775" : i === current - 1 ? "#FAC775" : "rgba(255,255,255,0.15)" }} />
-      ))}
-    </div>
-  );
-}
-
-function SectionHeader({ step, icon, title, desc }: { step: number; icon: string; title: string; desc: string }) {
-  return (
-    <div className="flex items-center gap-3 mb-4">
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
-        style={{ background: "linear-gradient(135deg, #3C3489, #4e46b0)" }}>{icon}</div>
-      <div>
-        <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-          style={{ background: "rgba(250,199,117,0.15)", color: "#FAC775" }}>STEP {step}</span>
-        <h3 className="text-sm font-bold text-white mt-0.5">{title}</h3>
-        <p className="text-xs" style={{ color: "#8a88a0" }}>{desc}</p>
-      </div>
-    </div>
-  );
-}
+const defaultPerson = (): PersonData => ({
+  gender: '남', calType: '양력',
+  year: '', month: '', day: '',
+  isLeapMonth: false,
+  selectedHour: null, unknownHour: false,
+})
 
 function ManseryeokContent() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
+  const router = useRouter()
 
-  const initGender = (searchParams.get("gender") as "남" | "여") || "남";
-  const initCalType = (searchParams.get("calType") as "양력" | "음력") || "양력";
-  const initBirthDate = searchParams.get("birthDate") || "";
-  const initBirthHour = searchParams.get("birthHour") || "";
-  const parsedDate = initBirthDate ? initBirthDate.split("-") : ["", "", ""];
+  // 모드: 'single' | 'couple'
+  const [mode, setMode] = useState<'single' | 'couple'>('single')
 
-  const [gender, setGender] = useState<"남" | "여">(initGender);
-  const [calType, setCalType] = useState<"양력" | "음력">(initCalType);
-  const [year, setYear] = useState(parsedDate[0] || "");
-  const [month, setMonth] = useState(parsedDate[1] ? String(parseInt(parsedDate[1])) : "");
-  const [day, setDay] = useState(parsedDate[2] ? String(parseInt(parsedDate[2])) : "");
-  const [isLeapMonth, setIsLeapMonth] = useState(false);
-  const [selectedHour, setSelectedHour] = useState<number | null>(
-    initBirthHour && initBirthHour !== "모름" ? (HOUR_MAP[initBirthHour] ?? null) : null
-  );
-  const [unknownHour, setUnknownHour] = useState(initBirthHour === "모름");
-  const [aiOptions, setAiOptions] = useState<Record<string, boolean>>({
-    basic: true, dayun: true, career: false, love: false, health: false, name: false,
-  });
+  // 개인 사주
+  const [person, setPerson] = useState<PersonData>(defaultPerson())
 
-  // ✅ 질문 관련 상태
-  const [selectedCategory, setSelectedCategory] = useState<string>('')
-  const [customQuestion, setCustomQuestion] = useState<string>('')
+  // 궁합
+  const [personA, setPersonA] = useState<PersonData>(defaultPerson())
+  const [personB, setPersonB] = useState<PersonData>(defaultPerson())
 
-  const birthReady = !!year && !!month && !!day;
-  const hourReady = unknownHour || selectedHour !== null;
-  const readyToAnalyze = birthReady && hourReady;
-  const enabledCount = Object.values(aiOptions).filter(Boolean).length;
+  // 질문
+  const [selectedCategory, setSelectedCategory] = useState('')
+  const [customQuestion, setCustomQuestion] = useState('')
 
-  function toggleOption(id: string) {
-    if (id === "basic") return;
-    setAiOptions((prev) => ({ ...prev, [id]: !prev[id] }));
+  function isPersonReady(p: PersonData) {
+    return !!p.year && !!p.month && !!p.day && (p.unknownHour || p.selectedHour !== null)
   }
 
+  const singleReady = isPersonReady(person)
+  const coupleReady = isPersonReady(personA) && isPersonReady(personB)
+  const readyToAnalyze = mode === 'single' ? singleReady : coupleReady
+
   function handleAnalyze() {
-    if (!readyToAnalyze) return;
-    const params = new URLSearchParams();
-    params.set("gender", gender);
-    params.set("calType", calType);
-    params.set("year", year);
-    params.set("month", month);
-    params.set("day", day);
-    if (calType === "음력") {
-      params.set("leapMonth", isLeapMonth ? "1" : "0");
+    if (!readyToAnalyze) return
+    const params = new URLSearchParams()
+
+    if (mode === 'single') {
+      params.set("gender", person.gender)
+      params.set("calType", person.calType)
+      params.set("year", person.year)
+      params.set("month", person.month)
+      params.set("day", person.day)
+      if (person.calType === "음력") params.set("leapMonth", person.isLeapMonth ? "1" : "0")
+      params.set("hour", person.unknownHour ? "모름" : String(person.selectedHour))
+      if (selectedCategory) params.set("category", selectedCategory)
+      if (customQuestion.trim()) params.set("question", customQuestion.trim())
+      router.push(`/manseryeok/result?${params.toString()}`)
+    } else {
+      // 궁합 모드
+      params.set("mode", "couple")
+      params.set("a_gender", personA.gender)
+      params.set("a_calType", personA.calType)
+      params.set("a_year", personA.year)
+      params.set("a_month", personA.month)
+      params.set("a_day", personA.day)
+      if (personA.calType === "음력") params.set("a_leapMonth", personA.isLeapMonth ? "1" : "0")
+      params.set("a_hour", personA.unknownHour ? "모름" : String(personA.selectedHour))
+      params.set("b_gender", personB.gender)
+      params.set("b_calType", personB.calType)
+      params.set("b_year", personB.year)
+      params.set("b_month", personB.month)
+      params.set("b_day", personB.day)
+      if (personB.calType === "음력") params.set("b_leapMonth", personB.isLeapMonth ? "1" : "0")
+      params.set("b_hour", personB.unknownHour ? "모름" : String(personB.selectedHour))
+      if (selectedCategory) params.set("category", selectedCategory)
+      if (customQuestion.trim()) params.set("question", customQuestion.trim())
+      router.push(`/manseryeok/result?${params.toString()}`)
     }
-    params.set("hour", unknownHour ? "모름" : String(selectedHour));
-    params.set("options", Object.entries(aiOptions).filter(([, v]) => v).map(([k]) => k).join(","));
-    // ✅ 질문 파라미터 추가
-    if (selectedCategory) params.set("category", selectedCategory)
-    if (customQuestion.trim()) params.set("question", customQuestion.trim())
-    router.push(`/manseryeok/result?${params.toString()}`);
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "#1a1a18", maxWidth: "430px", margin: "0 auto" }}>
+    <div className="min-h-screen" style={{background:"#1a1a18", maxWidth:"430px", margin:"0 auto"}}>
+
+      {/* 헤더 */}
       <header className="fixed top-0 z-50 flex items-center justify-between px-4 py-4"
-        style={{ background: "rgba(26,26,24,0.97)", backdropFilter: "blur(12px)",
-          borderBottom: "1px solid rgba(255,255,255,0.06)", width: "100%", maxWidth: "430px", left: "50%", transform: "translateX(-50%)" }}>
+        style={{background:"rgba(26,26,24,0.97)", backdropFilter:"blur(12px)",
+          borderBottom:"1px solid rgba(255,255,255,0.06)", width:"100%", maxWidth:"430px", left:"50%", transform:"translateX(-50%)"}}>
         <Link href="/">
           <button className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: "rgba(255,255,255,0.06)" }}>
+            style={{background:"rgba(255,255,255,0.06)"}}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5 text-white">
-              <polyline points="15 18 9 12 15 6" />
+              <polyline points="15 18 9 12 15 6"/>
             </svg>
           </button>
         </Link>
-        <div className="text-center">
-          <div className="text-sm font-bold text-white">AI 만세력 분석</div>
-          <StepIndicator current={readyToAnalyze ? 4 : birthReady ? 2 : 1} total={4} />
-        </div>
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(60,52,137,0.3)" }}>
-          <span style={{ color: "#FAC775", fontSize: "16px" }}>✦</span>
+        <div className="text-sm font-bold text-white">AI 만세력 분석</div>
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{background:"rgba(60,52,137,0.3)"}}>
+          <span style={{color:"#FAC775", fontSize:"16px"}}>✦</span>
         </div>
       </header>
 
-      <main className="pt-20 pb-36 px-4 space-y-5">
-        {/* STEP 1 - 기본 정보 */}
-        <div className="rounded-2xl p-5" style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
-          <SectionHeader step={1} icon="👤" title="기본 정보" desc="성별과 달력 방식을 선택해주세요" />
-          <div className="flex gap-3">
-            {[
-              { label: "성별", vals: ["남", "여"] as const, state: gender, set: setGender },
-              { label: "달력", vals: ["양력", "음력"] as const, state: calType, set: setCalType },
-            ].map(({ label, vals, state, set }) => (
-              <div key={label} className="flex-1">
-                <label className="text-xs font-medium block mb-2" style={{ color: "#b0aec8" }}>{label}</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {vals.map((v) => (
-                    <button key={v} onClick={() => {
-                      (set as (x: string) => void)(v);
-                      if (v === "양력") setIsLeapMonth(false);
-                    }}
-                      className="py-3 rounded-xl font-bold text-sm transition-all active:scale-95 flex flex-col items-center gap-1"
-                      style={state === v
-                        ? { background: "#3C3489", color: "#FAC775", border: "1px solid rgba(250,199,117,0.3)" }
-                        : { background: "rgba(255,255,255,0.04)", color: "#8a88a0", border: "1px solid rgba(255,255,255,0.08)" }}>
-                      <span className="text-xl">{v === "남" ? "♂" : v === "여" ? "♀" : v === "양력" ? "☀️" : "🌙"}</span>
-                      <span>{v}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      <main className="pt-20 pb-36 px-4 space-y-4">
 
-        {/* STEP 2 - 생년월일 */}
-        <div className="rounded-2xl p-5"
-          style={{ background: "#2C2C2A", border: `1px solid ${birthReady ? "rgba(250,199,117,0.2)" : "rgba(255,255,255,0.07)"}` }}>
-          <SectionHeader step={2} icon="📅" title="생년월일" desc={`${calType}으로 입력해주세요`} />
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <input type="number" placeholder="년도" value={year} min={1900} max={2025}
-                onChange={(e) => setYear(e.target.value)}
-                className="w-full rounded-xl px-3 py-3 text-sm outline-none text-center"
-                style={{ background: "#1a1a18", border: "1px solid rgba(255,255,255,0.12)", color: year ? "#FAC775" : "#8a88a0", colorScheme: "dark" }} />
-              <p className="text-center text-[10px] mt-1" style={{ color: "#8a88a0" }}>년</p>
-            </div>
-            <div className="w-16">
-              <select value={month} onChange={(e) => setMonth(e.target.value)}
-                className="w-full rounded-xl px-2 py-3 text-sm outline-none appearance-none text-center"
-                style={{ background: "#1a1a18", border: "1px solid rgba(255,255,255,0.12)", color: month ? "#FAC775" : "#8a88a0", colorScheme: "dark" }}>
-                <option value="">월</option>
-                {Array.from({ length: 12 }, (_, i) => <option key={i + 1} value={String(i + 1)}>{i + 1}</option>)}
-              </select>
-              <p className="text-center text-[10px] mt-1" style={{ color: "#8a88a0" }}>월</p>
-            </div>
-            <div className="w-16">
-              <select value={day} onChange={(e) => setDay(e.target.value)}
-                className="w-full rounded-xl px-2 py-3 text-sm outline-none appearance-none text-center"
-                style={{ background: "#1a1a18", border: "1px solid rgba(255,255,255,0.12)", color: day ? "#FAC775" : "#8a88a0", colorScheme: "dark" }}>
-                <option value="">일</option>
-                {Array.from({ length: 31 }, (_, i) => <option key={i + 1} value={String(i + 1)}>{i + 1}</option>)}
-              </select>
-              <p className="text-center text-[10px] mt-1" style={{ color: "#8a88a0" }}>일</p>
-            </div>
-          </div>
-          {calType === "음력" && (
-            <button onClick={() => setIsLeapMonth(!isLeapMonth)}
-              className="w-full mt-3 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2"
-              style={isLeapMonth
-                ? { background: "rgba(250,199,117,0.15)", color: "#FAC775", border: "1px solid rgba(250,199,117,0.3)" }
-                : { background: "rgba(255,255,255,0.04)", color: "#8a88a0", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <span>{isLeapMonth ? "🌕" : "🌙"}</span>
-              <span>{isLeapMonth ? "✓ 윤달 (閏月)" : "윤달이에요"}</span>
+        {/* 모드 선택 */}
+        <div className="rounded-2xl p-4" style={{background:"#2C2C2A", border:"1px solid rgba(255,255,255,0.07)"}}>
+          <p className="text-xs font-semibold mb-3" style={{color:"rgba(250,199,117,0.8)"}}>분석 유형 선택</p>
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={() => setMode('single')}
+              className="flex flex-col items-center py-4 rounded-xl transition-all active:scale-95"
+              style={mode==='single'
+                ? {background:"#3C3489", border:"1px solid rgba(250,199,117,0.4)"}
+                : {background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)"}}>
+              <span className="text-2xl mb-1">👤</span>
+              <span className="text-sm font-bold" style={{color: mode==='single' ? '#FAC775' : '#8a88a0'}}>개인 사주</span>
+              <span className="text-xs mt-0.5" style={{color: mode==='single' ? 'rgba(250,199,117,0.7)' : '#6a6880'}}>나의 사주 분석</span>
             </button>
-          )}
-        </div>
-
-        {/* STEP 3 - 태어난 시 */}
-        <div className="rounded-2xl p-5"
-          style={{ background: "#2C2C2A", border: `1px solid ${hourReady ? "rgba(250,199,117,0.2)" : "rgba(255,255,255,0.07)"}` }}>
-          <SectionHeader step={3} icon="🕐" title="태어난 시 (시주)" desc="12지시 중 해당하는 시간을 선택하세요" />
-          <button onClick={() => { setUnknownHour(!unknownHour); setSelectedHour(null); }}
-            className="w-full py-2.5 rounded-xl text-sm font-medium mb-3 transition-all"
-            style={unknownHour
-              ? { background: "rgba(250,199,117,0.15)", color: "#FAC775", border: "1px solid rgba(250,199,117,0.3)" }
-              : { background: "rgba(255,255,255,0.04)", color: "#8a88a0", border: "1px solid rgba(255,255,255,0.08)" }}>
-            {unknownHour ? "✓ " : ""}태어난 시간을 모름
-          </button>
-          <div className={`grid grid-cols-4 gap-2 transition-opacity ${unknownHour ? "opacity-30 pointer-events-none" : "opacity-100"}`}>
-            {EARTHLY_BRANCHES.map((b, i) => {
-              const isSelected = selectedHour === i;
-              return (
-                <button key={b.char} onClick={() => { setSelectedHour(i); setUnknownHour(false); }}
-                  className="flex flex-col items-center py-3 px-1 rounded-xl transition-all active:scale-95"
-                  style={isSelected
-                    ? { background: "#3C3489", border: "1px solid rgba(250,199,117,0.5)" }
-                    : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <span className="text-base mb-0.5">{b.animal}</span>
-                  <span className="text-base font-bold leading-none" style={{ color: isSelected ? "#FAC775" : "#e0dce8" }}>{b.char}</span>
-                  <span className="text-[10px] mt-0.5" style={{ color: isSelected ? "#FAC775" : "#8a88a0" }}>{b.name}</span>
-                  <span className="text-[9px] mt-0.5" style={{ color: isSelected ? "rgba(250,199,117,0.7)" : "#6a6880" }}>{b.time}</span>
-                </button>
-              );
-            })}
+            <button onClick={() => setMode('couple')}
+              className="flex flex-col items-center py-4 rounded-xl transition-all active:scale-95"
+              style={mode==='couple'
+                ? {background:"linear-gradient(135deg,#8B2FC9,#E91E63)", border:"1px solid rgba(233,30,99,0.4)"}
+                : {background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)"}}>
+              <span className="text-2xl mb-1">💑</span>
+              <span className="text-sm font-bold" style={{color: mode==='couple' ? '#fff' : '#8a88a0'}}>궁합 분석</span>
+              <span className="text-xs mt-0.5" style={{color: mode==='couple' ? 'rgba(255,255,255,0.7)' : '#6a6880'}}>두 사람 궁합 보기</span>
+            </button>
           </div>
         </div>
 
-        {/* ✅ STEP 4 - 가장 궁금한 것 */}
-        <div className="rounded-2xl p-5"
-          style={{ background: "#2C2C2A", border: `1px solid ${selectedCategory || customQuestion ? "rgba(250,199,117,0.2)" : "rgba(255,255,255,0.07)"}` }}>
-          <SectionHeader step={4} icon="🔮" title="가장 궁금한 것" desc="AI가 집중 분석해 드립니다 (선택)" />
-          {/* 카테고리 칩 */}
+        {/* 개인 사주 모드 */}
+        {mode === 'single' && (
+          <PersonForm
+            label="나"
+            color="rgba(60,52,137,0.8)"
+            data={person}
+            onChange={setPerson}
+          />
+        )}
+
+        {/* 궁합 분석 모드 */}
+        {mode === 'couple' && (
+          <>
+            <div className="flex items-center gap-2 px-1">
+              <div className="flex-1 h-px" style={{background:"rgba(255,255,255,0.08)"}}/>
+              <span className="text-xs" style={{color:'#8a88a0'}}>두 사람의 정보를 입력해 주세요</span>
+              <div className="flex-1 h-px" style={{background:"rgba(255,255,255,0.08)"}}/>
+            </div>
+            <PersonForm
+              label="나"
+              color="rgba(60,52,137,0.8)"
+              data={personA}
+              onChange={setPersonA}
+            />
+            <div className="flex items-center justify-center py-1">
+              <span className="text-2xl">💕</span>
+            </div>
+            <PersonForm
+              label="상대방"
+              color="rgba(233,30,99,0.8)"
+              data={personB}
+              onChange={setPersonB}
+            />
+          </>
+        )}
+
+        {/* 질문 입력 */}
+        <div className="rounded-2xl p-4"
+          style={{background:"#2C2C2A",
+            border:`1px solid ${selectedCategory || customQuestion ? "rgba(250,199,117,0.2)" : "rgba(255,255,255,0.07)"}`}}>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-lg">🔮</span>
+            <span className="text-sm font-bold text-white">가장 궁금한 것</span>
+            <span className="text-xs px-2 py-0.5 rounded-full"
+              style={{background:"rgba(255,255,255,0.06)", color:"#8a88a0"}}>선택</span>
+          </div>
           <div className="flex flex-wrap gap-2 mb-3">
-            {QUESTION_CATEGORIES.map((cat) => (
+            {QUESTION_CATEGORIES.map(cat => (
               <button key={cat.id}
                 onClick={() => setSelectedCategory(selectedCategory === cat.id ? '' : cat.id)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
                 style={selectedCategory === cat.id
-                  ? { background: "#3C3489", color: "#FAC775", border: "1px solid rgba(250,199,117,0.3)" }
-                  : { background: "rgba(255,255,255,0.04)", color: "#8a88a0", border: "1px solid rgba(255,255,255,0.08)" }}>
-                <span>{cat.icon}</span>
-                <span>{cat.label}</span>
+                  ? {background:"#3C3489", color:"#FAC775", border:"1px solid rgba(250,199,117,0.3)"}
+                  : {background:"rgba(255,255,255,0.04)", color:"#8a88a0", border:"1px solid rgba(255,255,255,0.08)"}}>
+                <span>{cat.icon}</span><span>{cat.label}</span>
               </button>
             ))}
           </div>
-          {/* 직접 입력 */}
           <textarea
             value={customQuestion}
             onChange={(e) => setCustomQuestion(e.target.value)}
-            placeholder="더 구체적으로 입력해주세요&#10;예) 올해 이직해도 될까요? 지금 만나는 사람과 결혼해도 될까요?"
-            rows={3}
-            maxLength={200}
-            className="w-full rounded-xl px-4 py-3 text-sm resize-none focus:outline-none"
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-              color: "#e0dce8", lineHeight: "1.7" }}
+            placeholder={mode === 'couple'
+              ? "두 사람에 대해 궁금한 것을 입력해주세요&#10;예) 우리 결혼해도 될까요?"
+              : "더 구체적으로 입력해주세요&#10;예) 올해 이직해도 될까요?"}
+            rows={2} maxLength={200}
+            className="w-full rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none"
+            style={{background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)",
+              color:"#e0dce8", lineHeight:"1.7"}}
           />
-          <div className="text-right text-xs mt-1" style={{ color: "#8a88a0" }}>
+          <div className="text-right text-xs mt-1" style={{color:"#8a88a0"}}>
             {customQuestion.length}/200
-          </div>
-        </div>
-
-        {/* STEP 5 - AI 옵션 */}
-        <div className="rounded-2xl p-5" style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
-          <SectionHeader step={5} icon="🤖" title="AI 통변 옵션" desc="원하는 분석 항목을 선택하세요" />
-          <div className="space-y-2">
-            {AI_OPTIONS.map((opt) => {
-              const on = aiOptions[opt.id];
-              return (
-                <button key={opt.id} onClick={() => toggleOption(opt.id)}
-                  className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl transition-all active:scale-[0.98]"
-                  style={on
-                    ? { background: "rgba(60,52,137,0.25)", border: "1px solid rgba(60,52,137,0.5)" }
-                    : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl w-7 text-center">{opt.icon}</span>
-                    <div className="text-left">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold" style={{ color: on ? "#FAC775" : "#c0bcd8" }}>{opt.label}</span>
-                        {opt.required && <span className="text-[10px] px-1.5 py-0.5 rounded-full"
-                          style={{ background: "rgba(250,199,117,0.2)", color: "#FAC775" }}>필수</span>}
-                      </div>
-                      <div className="text-xs mt-0.5" style={{ color: "#8a88a0" }}>{opt.desc}</div>
-                    </div>
-                  </div>
-                  <div className="relative w-11 h-6 rounded-full flex-shrink-0 transition-all"
-                    style={{ background: on ? "#3C3489" : "rgba(255,255,255,0.1)" }}>
-                    <div className="absolute top-1 w-4 h-4 rounded-full transition-all shadow-sm"
-                      style={{ background: on ? "#FAC775" : "#8a88a0", left: on ? "calc(100% - 20px)" : "4px" }} />
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-3 text-xs text-center" style={{ color: "#8a88a0" }}>
-            {enabledCount}개 항목 선택됨
           </div>
         </div>
       </main>
 
       <BottomNav />
 
+      {/* 분석 시작 버튼 */}
       <div className="fixed bottom-0 z-50 px-4 py-4"
-        style={{ background: "linear-gradient(to top, #1a1a18 70%, transparent)", width: "100%", maxWidth: "430px",
-          left: "50%", transform: "translateX(-50%)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 60px)" }}>
-        {readyToAnalyze && (
-          <div className="flex items-center justify-center gap-2 mb-3 flex-wrap">
-            {[
-              `${gender}성`,
-              `${calType} ${year}.${month}.${day}${calType === "음력" && isLeapMonth ? " (윤달)" : ""}`,
-              unknownHour ? "시 미지정" : `${EARTHLY_BRANCHES[selectedHour!].char}시`,
-              selectedCategory ? QUESTION_CATEGORIES.find(c => c.id === selectedCategory)?.label ?? '' : '',
-            ].filter(Boolean).map((item) => (
-              <span key={item} className="text-xs px-3 py-1 rounded-full"
-                style={{ background: "rgba(60,52,137,0.3)", color: "#b0aec8", border: "1px solid rgba(60,52,137,0.4)" }}>
-                {item}
-              </span>
-            ))}
-          </div>
-        )}
+        style={{background:"linear-gradient(to top, #1a1a18 70%, transparent)", width:"100%", maxWidth:"430px",
+          left:"50%", transform:"translateX(-50%)", paddingBottom:"calc(env(safe-area-inset-bottom, 0px) + 60px)"}}>
         <button onClick={handleAnalyze} disabled={!readyToAnalyze}
           className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all active:scale-95"
           style={readyToAnalyze
-            ? { background: "linear-gradient(135deg, #3C3489 0%, #FAC775 100%)", color: "#1a1a18", boxShadow: "0 4px 24px rgba(60,52,137,0.5)" }
-            : { background: "rgba(255,255,255,0.06)", color: "#8a88a0", cursor: "not-allowed" }}>
-          {readyToAnalyze ? `✨ AI 만세력 분석 시작 (${enabledCount}개 항목)` : "생년월일을 먼저 입력해주세요"}
+            ? mode === 'couple'
+              ? {background:"linear-gradient(135deg,#8B2FC9,#E91E63)", color:"#fff", boxShadow:"0 4px 24px rgba(233,30,99,0.4)"}
+              : {background:"linear-gradient(135deg,#3C3489 0%,#FAC775 100%)", color:"#1a1a18", boxShadow:"0 4px 24px rgba(60,52,137,0.5)"}
+            : {background:"rgba(255,255,255,0.06)", color:"#8a88a0", cursor:"not-allowed"}}>
+          {!readyToAnalyze
+            ? "생년월일을 먼저 입력해주세요"
+            : mode === 'couple'
+            ? "💑 궁합 분석 시작"
+            : "✨ AI 만세력 분석 시작"}
         </button>
       </div>
     </div>
-  );
+  )
 }
 
 export default function ManseryeokPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#1a1a18" }}>
-        <div style={{ color: "#FAC775" }}>로딩 중...</div>
+      <div className="min-h-screen flex items-center justify-center" style={{background:"#1a1a18"}}>
+        <div style={{color:"#FAC775"}}>로딩 중...</div>
       </div>
     }>
-      <ManseryeokContent />
+      <ManseryeokContent/>
     </Suspense>
-  );
+  )
 }
