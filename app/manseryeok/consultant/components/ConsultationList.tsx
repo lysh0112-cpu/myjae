@@ -23,11 +23,11 @@ type Consultation = {
 const BRANCH_LIST = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥']
 
 const TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  personal:   { label: '일반 상담',  color: '#88aadd', bg: 'rgba(30,60,120,0.3)' },
-  couple:     { label: '부부 상담',  color: '#b8a9ff', bg: 'rgba(60,52,137,0.3)' },
-  love:       { label: '연애 궁합',  color: '#dd88cc', bg: 'rgba(120,40,100,0.3)' },
-  birth:      { label: '출산 시기',  color: '#88cc88', bg: 'rgba(30,100,50,0.3)' },
-  naming:     { label: '개명 분석',  color: '#ddaa44', bg: 'rgba(100,70,10,0.3)' },
+  personal: { label: '일반', color: '#88aadd', bg: 'rgba(30,60,120,0.3)' },
+  couple:   { label: '부부', color: '#b8a9ff', bg: 'rgba(60,52,137,0.3)' },
+  love:     { label: '연애', color: '#dd88cc', bg: 'rgba(120,40,100,0.3)' },
+  birth:    { label: '출산', color: '#88cc88', bg: 'rgba(30,100,50,0.3)' },
+  naming:   { label: '개명', color: '#ddaa44', bg: 'rgba(100,70,10,0.3)' },
 }
 
 export default function ConsultationList({
@@ -83,28 +83,34 @@ export default function ConsultationList({
   const waitingCount = list.filter(c => c.status === 'paid' && !c.delete_requested_at).length
 
   if (!consultantId) return (
-    <div style={{padding:'20px',textAlign:'center',fontSize:'12px',color:'#5555aa'}}>상담사 ID가 없습니다</div>
+    <div style={{padding:'16px',textAlign:'center',fontSize:'12px',color:'#5555aa'}}>
+      상담사 ID가 없습니다
+    </div>
   )
   if (loading) return (
-    <div style={{padding:'20px',textAlign:'center',fontSize:'12px',color:'#FAC775'}}>불러오는 중...</div>
+    <div style={{padding:'16px',textAlign:'center',fontSize:'12px',color:'#FAC775'}}>
+      불러오는 중...
+    </div>
   )
 
   return (
-    <div style={{display:'flex',flexDirection:'column',gap:'0',height:'100%'}}>
+    <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
 
       {/* 필터 탭 */}
-      <div style={{display:'flex',gap:'0',padding:'8px 0',borderBottom:'1px solid rgba(255,255,255,0.06)',marginBottom:'8px',flexShrink:0}}>
+      <div style={{display:'flex',borderBottom:'1px solid rgba(255,255,255,0.06)',marginBottom:'8px',flexShrink:0}}>
         {[
-          { key: 'all', label: '전체' },
-          { key: 'waiting', label: `대기${waitingCount > 0 ? ` ${waitingCount}` : ''}` },
-          { key: 'active', label: '진행' },
-          { key: 'done', label: '완료' },
+          { key: 'all',     label: '전체' },
+          { key: 'waiting', label: waitingCount > 0 ? `대기 ${waitingCount}` : '대기' },
+          { key: 'active',  label: '진행' },
+          { key: 'done',    label: '완료' },
         ].map(f => (
           <button key={f.key} onClick={() => setFilter(f.key as any)}
             style={{
-              flex: 1, padding: '5px 4px', fontSize: '11px', border: 'none', cursor: 'pointer',
-              background: 'transparent', borderBottom: filter === f.key ? '2px solid #7766dd' : '2px solid transparent',
-              color: filter === f.key ? '#b8a9ff' : '#5555aa', fontWeight: filter === f.key ? '500' : '400',
+              flex: 1, padding: '7px 4px', fontSize: '11px',
+              border: 'none', cursor: 'pointer', background: 'transparent',
+              borderBottom: filter === f.key ? '2px solid #7766dd' : '2px solid transparent',
+              color: filter === f.key ? '#b8a9ff' : '#555577',
+              fontWeight: filter === f.key ? '500' : '400',
             }}>
             {f.label}
           </button>
@@ -112,7 +118,7 @@ export default function ConsultationList({
       </div>
 
       {/* 리스트 */}
-      <div style={{flex:1,overflowY:'auto',display:'flex',flexDirection:'column',gap:'6px'}}>
+      <div style={{flex:1,overflowY:'auto',display:'flex',flexDirection:'column',gap:'5px'}}>
         {filtered.length === 0 ? (
           <div style={{padding:'20px',textAlign:'center',fontSize:'12px',color:'#5555aa'}}>
             {filter === 'waiting' ? '대기 중인 상담이 없습니다' : '상담 내역이 없습니다'}
@@ -123,69 +129,89 @@ export default function ConsultationList({
             ? `${BRANCH_LIST[parseInt(b.hour)]}시` : ''
           const typeInfo = TYPE_LABELS[b?.consultationType || 'personal'] || TYPE_LABELS.personal
           const isSelected = selectedId === c.id
-          const isWaiting = c.status === 'paid'
           const isActive = c.status === 'in_progress'
+          const isWaiting = c.status === 'paid'
+
+          // 전화번호 마스킹 (010-****-5678)
+          const phone = c.customer_phone || ''
+          const maskedPhone = phone.length >= 8
+            ? phone.slice(0, 3) + '-****-' + phone.slice(-4)
+            : phone
 
           return (
-            <div key={c.id}
-              onClick={() => onSelect(c)}
+            <div key={c.id} onClick={() => onSelect(c)}
               style={{
-                padding: '10px 12px', borderRadius: '10px', cursor: 'pointer',
-                border: isSelected ? '1px solid #5544aa' : '1px solid rgba(255,255,255,0.06)',
-                background: isSelected ? 'rgba(60,52,137,0.3)' : 'rgba(255,255,255,0.02)',
+                padding: '9px 10px',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                border: isSelected
+                  ? '1px solid rgba(119,102,221,0.6)'
+                  : '1px solid rgba(255,255,255,0.05)',
+                background: isSelected
+                  ? 'rgba(60,52,137,0.25)'
+                  : 'rgba(255,255,255,0.02)',
                 transition: 'all 0.1s',
               }}>
 
-              {/* 상단: 이름 + 상태 + 삭제 */}
+              {/* 1행: 상태 도트 + 이름/전화 + 가격 */}
               <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'5px'}}>
                 <div style={{
-                  width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
-                  background: isActive ? '#44bb66' : isWaiting ? '#EF9F27' : '#666688',
+                  width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
+                  background: isActive ? '#44bb66' : isWaiting ? '#EF9F27' : '#555577',
                 }} />
-                <span style={{fontSize:'13px',fontWeight:'500',color:'#e8e4ff',flex:1}}>
-                  {b?.customerName || c.customer_phone}
+                <span style={{
+                  fontSize: '12px', fontWeight: '500',
+                  color: '#d8d4ff', flex: 1,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {b?.customerName || maskedPhone}
                 </span>
-                {c.paid_amount && (
-                  <span style={{fontSize:'11px',color:'#9977ff',fontWeight:'500'}}>
-                    {c.paid_amount.toLocaleString()}원
+                {c.paid_amount ? (
+                  <span style={{fontSize:'11px',color:'#9977cc',fontWeight:'500',flexShrink:0}}>
+                    {(c.paid_amount/1000).toFixed(0)}K
                   </span>
-                )}
+                ) : null}
+              </div>
+
+              {/* 2행: 유형 뱃지 + 상태 */}
+              <div style={{display:'flex',alignItems:'center',gap:'5px',marginBottom:'4px'}}>
+                <span style={{
+                  fontSize: '10px', padding: '1px 7px', borderRadius: '20px',
+                  background: typeInfo.bg, color: typeInfo.color, flexShrink: 0,
+                }}>
+                  {typeInfo.label}
+                </span>
+                <span style={{
+                  fontSize: '10px', color: isActive ? '#44aa66' : isWaiting ? '#cc9933' : '#555577',
+                }}>
+                  {isActive ? '진행 중' : isWaiting ? '대기 중' : '완료'}
+                </span>
+                <span style={{marginLeft:'auto',fontSize:'10px',color:'#444466'}}>
+                  {getTimeAgo(c.created_at)}
+                </span>
+              </div>
+
+              {/* 3행: 생년월일 + 삭제 버튼 */}
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                <span style={{fontSize:'11px',color:'#555577'}}>
+                  {b?.year}.{b?.month}.{b?.day}
+                  {hourText ? ` · ${hourText}` : ''}
+                  {b?.gender ? ` · ${b.gender === '여' ? '여성' : '남성'}` : ''}
+                </span>
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onDeleteRequest?.(c.id)
-                  }}
+                  onClick={(e) => { e.stopPropagation(); onDeleteRequest?.(c.id) }}
                   disabled={deleteLoading === c.id}
                   style={{
-                    fontSize: '10px', padding: '2px 7px', borderRadius: '20px', border: 'none',
-                    background: 'rgba(255,80,80,0.12)', color: 'rgba(255,120,120,0.7)',
-                    cursor: 'pointer', flexShrink: 0,
+                    fontSize: '10px', padding: '2px 7px',
+                    borderRadius: '20px', border: 'none', cursor: 'pointer',
+                    background: 'rgba(255,60,60,0.1)',
+                    color: 'rgba(255,100,100,0.6)',
+                    flexShrink: 0,
                   }}>
                   {deleteLoading === c.id ? '...' : '삭제요청'}
                 </button>
               </div>
 
-              {/* 상담 유형 뱃지 */}
-              <div style={{marginBottom:'4px'}}>
-                <span style={{
-                  fontSize: '10px', padding: '2px 8px', borderRadius: '20px',
-                  background: typeInfo.bg, color: typeInfo.color,
-                }}>
-                  {typeInfo.label}
-                </span>
-              </div>
-
-              {/* 생년월일 */}
-              <div style={{fontSize:'11px',color:'rgba(255,255,255,0.4)'}}>
-                {b?.year}.{b?.month}.{b?.day} {hourText} · {b?.gender === '여' ? '여성' : '남성'}
-              </div>
-
-              {/* 대기 시간 */}
-              <div style={{fontSize:'10px',color:'#444466',marginTop:'3px'}}>
-                {isWaiting ? `대기 중 · ${getTimeAgo(c.created_at)}` :
-                 isActive ? `진행 중 · ${getTimeAgo(c.created_at)}` :
-                 `완료 · ${new Date(c.created_at).toLocaleDateString('ko-KR')}`}
-              </div>
             </div>
           )
         })}
