@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import SajuBoard from './SajuBoard'
 import YongsinBoard from './YongsinBoard'
 import YongsinProBoard from './YongsinProBoard'
+import YongsinAIAnalysis from './YongsinAIAnalysis'
 import ElementScore from './ElementScore'
 import UnsungBoard from './UnsungBoard'
 import SinsalBoard from './SinsalBoard'
@@ -53,7 +54,6 @@ export default function ConsultantSajuTab({
     ? `${yearParam}${String(monthParam).padStart(2,'0')}${String(dayParam).padStart(2,'0')}`
     : ''
 
-  // ✅ 연재 선생님 수정 점수 상태
   const [customScores, setCustomScores] = useState<Record<string,number> | null>(null)
 
   useEffect(() => {
@@ -118,14 +118,12 @@ export default function ConsultantSajuTab({
         <>
           <SajuBoard saju={saju} dayStem={dayStem} />
           <YongsinBoard saju={saju} dayStem={dayStem} />
-          {/* ✅ 커스텀 점수 있으면 우선 사용 */}
           <YongsinProBoard
             saju={saju}
             dayStem={dayStem}
             hourIdx={hourIdx}
             customScores={customScores}
           />
-          {/* ✅ consultationId + onScoreChange 전달 */}
           <ElementScore
             consultationId={consultationId}
             onScoreChange={(scores) => setCustomScores(scores)}
@@ -137,6 +135,20 @@ export default function ConsultantSajuTab({
           <ConsultantSeyun seyunList={seyunList} ilgan={dayStem} yeonjji={yeonjji} iljji={iljji} />
           <ConsultantWolun ilgan={dayStem} yeonjji={yeonjji} iljji={iljji} />
           <CustomerAiAnalysis consultationId={consultationId} />
+          {/* ✅ 용신 반영 AI 사주 해석 */}
+          <YongsinAIAnalysis
+            saju={saju}
+            dayStem={dayStem}
+            hourIdx={hourIdx}
+            gender={gender}
+            yearParam={yearParam}
+            monthParam={monthParam}
+            dayParam={dayParam}
+            calType={calType}
+            customScores={customScores}
+            consultationId={consultationId}
+            customerPhone={customerPhone}
+          />
           <Commentary consultationId={consultationId ?? undefined} />
           <AISummary
             consultationId={consultationId}
