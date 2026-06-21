@@ -1,5 +1,4 @@
 'use client'
-
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 
@@ -7,46 +6,67 @@ const ELEMENTS = ['목','화','토','금','수'] as const
 const ELEMENT_COLOR: Record<string,string> = {목:'#4caf50',화:'#f44336',토:'#ff9800',금:'#9e9e9e',수:'#2196f3'}
 const EMOJI: Record<string,string> = {목:'🌳',화:'🔥',토:'🪨',금:'⚙️',수:'💧'}
 
-export default function ElementScore() {
+interface Props {
+  consultationId?: string | null
+  onScoreChange?: (scores: Record<string,number>) => void
+}
+
+export default function ElementScore({ consultationId, onScoreChange }: Props) {
   const [scores, setScores] = useState<Record<string,string>>({목:'',화:'',토:'',금:'',수:''})
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [consultantId, setConsultantId] = useState<string | null>(null)
 
-  // 로그인한 상담사의 기존 오행 비중 불러오기
+  // 고객별 저장된 점수 불러오기
   useEffect(() => {
+    if (!consultationId) return
     async function loadScores() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
       const { data } = await supabase
-        .from('consultants')
-        .select('id, element_scores')
-        .eq('email', user.email)
+        .from('consultations')
+        .select('element_scores_custom')
+        .eq('id', consultationId)
         .single()
-
-      if (data) {
-        setConsultantId(data.id)
-        if (data.element_scores) {
-          setScores({
-            목: data.element_scores['목']?.toString() || '',
-            화: data.element_scores['화']?.toString() || '',
-            토: data.element_scores['토']?.toString() || '',
-            금: data.element_scores['금']?.toString() || '',
-            수: data.element_scores['수']?.toString() || '',
-          })
-        }
+      if (data?.element_scores_custom) {
+        const s = data.element_scores_custom
+        setScores({
+          목: s['목']?.toString() || '',
+          화: s['화']?.toString() || '',
+          토: s['토']?.toString() || '',
+          금: s['금']?.toString() || '',
+          수: s['수']?.toString() || '',
+        })
+        // 부모에 초기값 전달
+        onScoreChange?.({
+          목: parseFloat(s['목']) || 0,
+          화: parseFloat(s['화']) || 0,
+          토: parseFloat(s['토']) || 0,
+          금: parseFloat(s['금']) || 0,
+          수: parseFloat(s['수']) || 0,
+        })
       }
     }
     loadScores()
-  }, [])
+  }, [consultationId])
 
   const total = ELEMENTS.reduce((sum, el) => sum + (parseFloat(scores[el]) || 0), 0)
 
+  function handleChange(el: string, value: string) {
+    const newScores = {...scores, [el]: value}
+    setScores(newScores)
+    setSaved(false)
+    // 부모에 변경값 실시간 전달
+    onScoreChange?.({
+      목: parseFloat(newScores['목']) || 0,
+      화: parseFloat(newScores['화']) || 0,
+      토: parseFloat(newScores['토']) || 0,
+      금: parseFloat(newScores['금']) || 0,
+      수: parseFloat(newScores['수']) || 0,
+    })
+  }
+
   async function handleSave() {
-    if (!consultantId) return
+    if (!consultationId) return
     setSaving(true)
-    const element_scores = {
+    const element_scores_custom = {
       목: parseFloat(scores['목']) || 0,
       화: parseFloat(scores['화']) || 0,
       토: parseFloat(scores['토']) || 0,
@@ -54,9 +74,9 @@ export default function ElementScore() {
       수: parseFloat(scores['수']) || 0,
     }
     await supabase
-      .from('consultants')
-      .update({ element_scores })
-      .eq('id', consultantId)
+      .from('consultations')
+      .update({ element_scores_custom })
+      .eq('id', consultationId)
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -68,19 +88,18 @@ export default function ElementScore() {
         <h2 className="text-base font-bold text-white">오행 분포 (전문가 입력)</h2>
         <button
           onClick={handleSave}
-          disabled={saving || !consultantId}
+          disabled={saving || !consultationId}
           className="text-xs px-3 py-1.5 rounded-xl font-bold transition-all disabled:opacity-40"
           style={{
             background: saved ? 'rgba(76,175,80,0.2)' : 'rgba(250,199,117,0.15)',
             color: saved ? '#81c784' : '#FAC775',
             border: saved ? '1px solid rgba(76,175,80,0.3)' : '1px solid rgba(250,199,117,0.3)',
-          }}
-        >
+          }}>
           {saved ? '✓ 저장됨' : saving ? '저장중...' : '저장'}
         </button>
       </div>
       <p className="text-xs mb-4" style={{color:'#8a88a0'}}>
-        총점: {total > 0 ? total.toFixed(1) : '—'} · 저장하면 다음 상담에도 유지됩니다
+        총점: {total > 0 ? total.toFixed(1) : '—'} · 저장하면 투트랙 용신에 반영됩니다
       </p>
       <div className="space-y-3">
         {ELEMENTS.map(el => {
@@ -92,15 +111,9 @@ export default function ElementScore() {
                 {EMOJI[el]} {el}
               </span>
               <input
-                type="number"
-                min={0}
-                step={0.1}
-                placeholder="0"
+                type="number" min={0} step={0.1} placeholder="0"
                 value={scores[el]}
-                onChange={e => {
-                  setScores(prev => ({...prev, [el]: e.target.value}))
-                  setSaved(false)
-                }}
+                onChange={e => handleChange(el, e.target.value)}
                 className="w-16 rounded-lg px-2 py-1.5 text-sm text-center outline-none"
                 style={{background:'#1a1a18',border:'1px solid rgba(255,255,255,0.12)',color:'#FAC775',colorScheme:'dark'}}
               />
@@ -121,6 +134,11 @@ export default function ElementScore() {
             최약: <span style={{color:'#4A90D9'}}>{ELEMENTS.reduce((a,b) => (parseFloat(scores[a])||0) < (parseFloat(scores[b])||0) ? a : b)}</span>
           </span>
         </div>
+      )}
+      {!consultationId && (
+        <p className="text-xs mt-2 text-center" style={{color:'rgba(255,255,255,0.3)'}}>
+          ※ 상담 시작 후 저장 가능합니다
+        </p>
       )}
     </div>
   )
