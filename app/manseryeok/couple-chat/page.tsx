@@ -1,9 +1,8 @@
-// app/manseryeok/couple-chat/page.tsx
 'use client'
 
 import { Suspense, useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase'
 import ChatHeader from './ChatHeader'
 import ChatMessages from './ChatMessages'
 import ChatInput from './ChatInput'
@@ -20,7 +19,6 @@ function CoupleChatInner() {
 
   const supabase = createClient()
 
-  // 메시지 로드
   useEffect(() => {
     if (!consultationId) return
 
@@ -34,7 +32,6 @@ function CoupleChatInner() {
     }
     loadMessages()
 
-    // Realtime 구독
     const channel = supabase
       .channel(`couple-chat-${consultationId}`)
       .on('postgres_changes', {
@@ -50,7 +47,6 @@ function CoupleChatInner() {
     return () => { supabase.removeChannel(channel) }
   }, [consultationId])
 
-  // 텍스트 전송
   const handleSend = async (text: string) => {
     if (!consultationId) return
     await supabase.from('chat_messages').insert({
@@ -60,7 +56,6 @@ function CoupleChatInner() {
     })
   }
 
-  // 이미지 전송
   const handleSendImage = async (file: File) => {
     if (!consultationId) return
     const ext = file.name.split('.').pop()
@@ -84,7 +79,6 @@ function CoupleChatInner() {
     })
   }
 
-  // 음성 → 텍스트 전송
   const handleVoiceText = async (text: string) => {
     if (!text.trim() || !consultationId) return
     await supabase.from('chat_messages').insert({
@@ -101,7 +95,6 @@ function CoupleChatInner() {
         onViewSaju={() => setShowSaju(prev => !prev)}
       />
 
-      {/* 사주 보기 패널 */}
       {showSaju && (
         <div className="bg-[#13132a] border-b border-[#1e1e35] px-4 py-3">
           <div className="text-[11px] text-[#5555aa] mb-2">두 사람 사주</div>
