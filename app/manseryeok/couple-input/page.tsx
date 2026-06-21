@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 type CalType = '양력' | '음력'
@@ -32,6 +32,8 @@ const DEFAULT_PERSON = (gender: Gender): PersonInput => ({
   year:'', month:'', day:'', hour:'-1', gender, calType:'양력'
 })
 
+const STORAGE_KEY = 'couple-input-data'
+
 function PersonForm({ who, relation, person, onChange }: {
   who: 1 | 2
   relation: RelationType
@@ -47,9 +49,11 @@ function PersonForm({ who, relation, person, onChange }: {
   const avatarColor = who === 1 ? '#c8b0ff' : '#88bbff'
 
   const inputStyle: React.CSSProperties = {
-    flex:1, background:'#0d0d1a', border:'1px solid rgba(255,255,255,0.1)',
-    borderRadius:'8px', padding:'10px 8px', color:'#e8e4ff',
-    fontSize:'15px', outline:'none', textAlign:'center', width:'100%',
+    flex:1, background:'#0d0d1a',
+    border:'1px solid rgba(255,255,255,0.1)',
+    borderRadius:'8px', padding:'10px 8px',
+    color:'#e8e4ff', fontSize:'15px',
+    outline:'none', textAlign:'center', width:'100%',
   }
 
   const btnStyle = (active: boolean): React.CSSProperties => ({
@@ -68,7 +72,6 @@ function PersonForm({ who, relation, person, onChange }: {
         <span style={{fontSize:'14px', color:'#c8c0ff', fontWeight:'500'}}>{label}</span>
       </div>
 
-      {/* 성별 + 달력 */}
       <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', marginBottom:'12px'}}>
         <div>
           <div style={{fontSize:'11px', color:'#5555aa', marginBottom:'5px'}}>성별</div>
@@ -86,32 +89,29 @@ function PersonForm({ who, relation, person, onChange }: {
         </div>
       </div>
 
-      {/* 생년월일 — 년/월/일 분리 */}
       <div style={{marginBottom:'12px'}}>
-        <div style={{fontSize:'11px', color:'#5555aa', marginBottom:'5px'}}>생년월일</div>
+        <div style={{fontSize:'11px', color:'#5555aa', marginBottom:'5px'}}>
+          생년월일
+          {person.year && person.month && person.day && (
+            <span style={{marginLeft:'8px', color:'#44aa66'}}>
+              ✓ {person.year}년 {person.month}월 {person.day}일
+            </span>
+          )}
+        </div>
         <div style={{display:'flex', gap:'6px', alignItems:'center'}}>
-          <input
-            type="tel"
-            placeholder="1990"
-            maxLength={4}
+          <input type="tel" placeholder="1990" maxLength={4}
             value={person.year}
             onChange={e => onChange('year', e.target.value.replace(/\D/g,'').slice(0,4))}
             style={{...inputStyle, flex:2}}
           />
           <span style={{color:'#444466', fontSize:'12px'}}>년</span>
-          <input
-            type="tel"
-            placeholder="01"
-            maxLength={2}
+          <input type="tel" placeholder="01" maxLength={2}
             value={person.month}
             onChange={e => onChange('month', e.target.value.replace(/\D/g,'').slice(0,2))}
             style={inputStyle}
           />
           <span style={{color:'#444466', fontSize:'12px'}}>월</span>
-          <input
-            type="tel"
-            placeholder="01"
-            maxLength={2}
+          <input type="tel" placeholder="01" maxLength={2}
             value={person.day}
             onChange={e => onChange('day', e.target.value.replace(/\D/g,'').slice(0,2))}
             style={inputStyle}
@@ -120,7 +120,6 @@ function PersonForm({ who, relation, person, onChange }: {
         </div>
       </div>
 
-      {/* 출생 시간 */}
       <div>
         <div style={{fontSize:'11px', color:'#5555aa', marginBottom:'5px'}}>출생 시간</div>
         <select value={person.hour} onChange={e => onChange('hour', e.target.value)}
@@ -142,6 +141,35 @@ function CoupleInputInner() {
   const [question, setQuestion] = useState('')
   const [error, setError] = useState('')
 
+  // 페이지 진입 시 저장된 데이터 복원
+  useEffect(() => {
+    const saved = sessionStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      const data = JSON.parse(saved)
+      if (data.relation) setRelation(data.relation)
+      if (data.person1) setPerson1(data.person1)
+      if (data.person2) setPerson2(data.person2)
+      if (data.question) setQuestion(data.question)
+    }
+  }, [])
+
+  // 데이터 변경 시 자동 저장
+  useEffect(() => {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+      relation, person1, person2, question
+    }))
+  }, [relation, person1, person2, question])
+
+  const handleClear = () => {
+    if (confirm('입력 내용을 초기화할까요?')) {
+      sessionStorage.removeItem(STORAGE_KEY)
+      setRelation('couple')
+      setPerson1(DEFAULT_PERSON('남'))
+      setPerson2(DEFAULT_PERSON('여'))
+      setQuestion('')
+    }
+  }
+
   const handleStart = () => {
     if (!person1.year || !person1.month || !person1.day) {
       setError('첫 번째 분의 생년월일을 입력해주세요.'); return
@@ -161,9 +189,13 @@ function CoupleInputInner() {
 
       {/* 헤더 */}
       <div style={{padding:'14px 20px', borderBottom:'1px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', gap:'10px', position:'sticky', top:0, background:'#0d0d1a', zIndex:10}}>
-        <button onClick={() => router.back()} style={{fontSize:'20px', color:'#9d8cff', background:'none', border:'none', cursor:'pointer'}}>‹</button>
+        <button onClick={() => router.back()}
+          style={{fontSize:'20px', color:'#9d8cff', background:'none', border:'none', cursor:'pointer'}}>‹</button>
         <div style={{fontSize:'15px', fontWeight:'500', color:'#e8e4ff'}}>궁합 분석</div>
-        <div style={{marginLeft:'auto', fontSize:'11px', color:'#5555aa'}}>💑 두 사람 사주</div>
+        <button onClick={handleClear}
+          style={{marginLeft:'auto', fontSize:'11px', padding:'4px 10px', borderRadius:'20px', background:'rgba(255,80,80,0.1)', color:'rgba(255,120,120,0.7)', border:'1px solid rgba(255,80,80,0.2)', cursor:'pointer'}}>
+          초기화
+        </button>
       </div>
 
       <div style={{padding:'20px 16px'}}>
