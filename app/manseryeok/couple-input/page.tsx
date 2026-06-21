@@ -52,20 +52,32 @@ function CoupleInputInner() {
   const [question, setQuestion] = useState('')
   const [error, setError] = useState('')
 
-  const updatePerson = (
-    who: 1 | 2,
-    key: keyof PersonInput,
-    value: string
-  ) => {
+  const updatePerson = (who: 1 | 2, key: keyof PersonInput, value: string) => {
     const setter = who === 1 ? setPerson1 : setPerson2
     setter(prev => ({ ...prev, [key]: value }))
+  }
+
+  // 생년월일 8자리 입력 처리
+  const handleDateInput = (who: 1 | 2, value: string) => {
+    const v = value.replace(/\D/g, '').slice(0, 8)
+    const setter = who === 1 ? setPerson1 : setPerson2
+    setter(prev => ({
+      ...prev,
+      year: v.slice(0, 4),
+      month: v.slice(4, 6),
+      day: v.slice(6, 8),
+    }))
+  }
+
+  const getDateValue = (p: PersonInput) => {
+    return p.year + p.month.padStart(2, '0') + p.day.padStart(2, '0')
   }
 
   const validate = () => {
     if (!person1.year || !person1.month || !person1.day) return '첫 번째 분의 생년월일을 입력해주세요.'
     if (!person2.year || !person2.month || !person2.day) return '두 번째 분의 생년월일을 입력해주세요.'
-    if (isNaN(Number(person1.year)) || Number(person1.year) < 1900) return '올바른 연도를 입력해주세요.'
-    if (isNaN(Number(person2.year)) || Number(person2.year) < 1900) return '올바른 연도를 입력해주세요.'
+    if (person1.year.length < 4) return '올바른 연도를 입력해주세요.'
+    if (person2.year.length < 4) return '올바른 연도를 입력해주세요.'
     return ''
   }
 
@@ -73,34 +85,23 @@ function CoupleInputInner() {
     const err = validate()
     if (err) { setError(err); return }
     setError('')
-
     const p1 = encodeURIComponent(JSON.stringify(person1))
     const p2 = encodeURIComponent(JSON.stringify(person2))
     const q = encodeURIComponent(question)
-
-    router.push(
-      `/manseryeok/ai-chat?mode=${relation}&person1=${p1}&person2=${p2}&userQuestion=${q}`
-    )
+    router.push(`/manseryeok/ai-chat?mode=${relation}&person1=${p1}&person2=${p2}&userQuestion=${q}`)
   }
 
-  const cardStyle = (selected: boolean) => ({
-    padding: '12px 16px',
-    borderRadius: '12px',
-    border: selected ? '1px solid rgba(119,102,221,0.6)' : '1px solid rgba(255,255,255,0.08)',
-    background: selected ? 'rgba(60,52,137,0.3)' : 'rgba(255,255,255,0.02)',
-    cursor: 'pointer',
-    transition: 'all 0.15s',
-  })
-
-  const inputStyle = {
+  const inputStyle: React.CSSProperties = {
     background: '#13132a',
     border: '1px solid rgba(255,255,255,0.1)',
     borderRadius: '10px',
     padding: '10px 14px',
     color: '#e8e4ff',
-    fontSize: '14px',
+    fontSize: '15px',
     outline: 'none',
     width: '100%',
+    boxSizing: 'border-box',
+    letterSpacing: '2px',
   }
 
   const renderPerson = (who: 1 | 2) => {
@@ -113,33 +114,29 @@ function CoupleInputInner() {
       ? (who === 1 ? '부모 1' : '부모 2')
       : (who === 1 ? '나' : '상대방')
 
-    const avatarColor = who === 1 ? '#2d2060' : '#1a3050'
-    const avatarTextColor = who === 1 ? '#c8b0ff' : '#88bbff'
+    const avatarBg = who === 1 ? '#2d2060' : '#1a3050'
+    const avatarColor = who === 1 ? '#c8b0ff' : '#88bbff'
 
     return (
       <div style={{background:'#13132a', borderRadius:'14px', padding:'16px', border:'1px solid rgba(255,255,255,0.06)'}}>
-        {/* 헤더 */}
         <div style={{display:'flex', alignItems:'center', gap:'10px', marginBottom:'14px'}}>
-          <div style={{width:'36px', height:'36px', borderRadius:'50%', background:avatarColor, color:avatarTextColor, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px', fontWeight:'500'}}>
+          <div style={{width:'36px', height:'36px', borderRadius:'50%', background:avatarBg, color:avatarColor, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px', fontWeight:'500', flexShrink:0}}>
             {label[0]}
           </div>
-          <div>
-            <div style={{fontSize:'14px', color:'#c8c0ff', fontWeight:'500'}}>{label}</div>
-            <div style={{fontSize:'11px', color:'#5555aa', marginTop:'1px'}}>두 번째 사람</div>
-          </div>
+          <div style={{fontSize:'14px', color:'#c8c0ff', fontWeight:'500'}}>{label}</div>
         </div>
 
-        {/* 성별 + 음양력 */}
-        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', marginBottom:'10px'}}>
+        {/* 성별 + 달력 */}
+        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', marginBottom:'12px'}}>
           <div>
             <div style={{fontSize:'11px', color:'#5555aa', marginBottom:'5px'}}>성별</div>
             <div style={{display:'flex', gap:'6px'}}>
               {(['남','여'] as Gender[]).map(g => (
                 <button key={g} onClick={() => updatePerson(who, 'gender', g)}
-                  style={{flex:1, padding:'8px', borderRadius:'8px', border:'none', cursor:'pointer', fontSize:'13px',
+                  style={{
+                    flex:1, padding:'8px', borderRadius:'8px', border:'none', cursor:'pointer', fontSize:'13px',
                     background: p.gender === g ? '#2d2060' : 'rgba(255,255,255,0.05)',
                     color: p.gender === g ? '#c8b0ff' : '#555577',
-                    fontWeight: p.gender === g ? '500' : '400',
                   }}>
                   {g === '남' ? '남성' : '여성'}
                 </button>
@@ -151,10 +148,10 @@ function CoupleInputInner() {
             <div style={{display:'flex', gap:'6px'}}>
               {(['양력','음력'] as CalType[]).map(c => (
                 <button key={c} onClick={() => updatePerson(who, 'calType', c)}
-                  style={{flex:1, padding:'8px', borderRadius:'8px', border:'none', cursor:'pointer', fontSize:'13px',
+                  style={{
+                    flex:1, padding:'8px', borderRadius:'8px', border:'none', cursor:'pointer', fontSize:'13px',
                     background: p.calType === c ? '#2d2060' : 'rgba(255,255,255,0.05)',
                     color: p.calType === c ? '#c8b0ff' : '#555577',
-                    fontWeight: p.calType === c ? '500' : '400',
                   }}>
                   {c}
                 </button>
@@ -165,18 +162,22 @@ function CoupleInputInner() {
 
         {/* 생년월일 */}
         <div style={{marginBottom:'10px'}}>
-          <div style={{fontSize:'11px', color:'#5555aa', marginBottom:'5px'}}>생년월일 (8자리)</div>
+          <div style={{fontSize:'11px', color:'#5555aa', marginBottom:'5px'}}>
+            생년월일 8자리
+            {getDateValue(p).length === 8 && (
+              <span style={{marginLeft:'8px', color:'#44aa66'}}>
+                ✓ {p.year}년 {p.month}월 {p.day}일
+              </span>
+            )}
+          </div>
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
             placeholder="예) 19901231"
-            value={p.year + p.month.padStart(2,'0') + p.day.padStart(2,'0')}
-            onChange={e => {
-              const v = e.target.value.replace(/\D/g, '').slice(0, 8)
-              updatePerson(who, 'year', v.slice(0, 4))
-              updatePerson(who, 'month', v.slice(4, 6))
-              updatePerson(who, 'day', v.slice(6, 8))
-            }}
-            style={{...inputStyle, letterSpacing:'2px'}}
+            value={getDateValue(p)}
+            onChange={e => handleDateInput(who, e.target.value)}
+            maxLength={8}
+            style={inputStyle}
           />
         </div>
 
@@ -184,7 +185,7 @@ function CoupleInputInner() {
         <div>
           <div style={{fontSize:'11px', color:'#5555aa', marginBottom:'5px'}}>출생 시간</div>
           <select value={p.hour} onChange={e => updatePerson(who, 'hour', e.target.value)}
-            style={{...inputStyle, cursor:'pointer'}}>
+            style={{...inputStyle, cursor:'pointer', letterSpacing:'0'}}>
             {HOURS.map(h => (
               <option key={h.value} value={h.value}>{h.label}</option>
             ))}
@@ -198,7 +199,11 @@ function CoupleInputInner() {
     <main style={{minHeight:'100vh', background:'#0d0d1a', maxWidth:'480px', margin:'0 auto', paddingBottom:'40px'}}>
 
       {/* 헤더 */}
-      <div style={{padding:'14px 20px', borderBottom:'1px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', gap:'10px', position:'sticky', top:0, background:'#0d0d1a', zIndex:10}}>
+      <div style={{
+        padding:'14px 20px', borderBottom:'1px solid rgba(255,255,255,0.06)',
+        display:'flex', alignItems:'center', gap:'10px',
+        position:'sticky', top:0, background:'#0d0d1a', zIndex:10,
+      }}>
         <button onClick={() => router.back()}
           style={{fontSize:'20px', color:'#9d8cff', background:'none', border:'none', cursor:'pointer'}}>
           ‹
@@ -211,48 +216,47 @@ function CoupleInputInner() {
 
         {/* 관계 선택 */}
         <div style={{marginBottom:'20px'}}>
-          <div style={{fontSize:'12px', color:'#5555aa', marginBottom:'10px', textTransform:'uppercase', letterSpacing:'1px'}}>
-            우리 사이는?
-          </div>
-          <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
+          <div style={{fontSize:'11px', color:'#5555aa', marginBottom:'10px', letterSpacing:'1px'}}>우리 사이는?</div>
+          <div style={{display:'flex', flexDirection:'column', gap:'7px'}}>
             {RELATION_TYPES.map(r => (
               <div key={r.id} onClick={() => setRelation(r.id as RelationType)}
-                style={cardStyle(relation === r.id)}>
-                <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                  <span style={{fontSize:'16px'}}>{r.label.split(' ')[0]}</span>
-                  <div>
-                    <div style={{fontSize:'13px', color: relation === r.id ? '#c8b0ff' : '#8888cc', fontWeight:'500'}}>
-                      {r.label.slice(2)}
-                    </div>
-                    <div style={{fontSize:'11px', color:'#5555aa', marginTop:'2px'}}>{r.desc}</div>
+                style={{
+                  padding:'11px 14px', borderRadius:'11px', cursor:'pointer',
+                  border: relation === r.id ? '1px solid rgba(119,102,221,0.6)' : '1px solid rgba(255,255,255,0.06)',
+                  background: relation === r.id ? 'rgba(60,52,137,0.25)' : 'rgba(255,255,255,0.02)',
+                  display:'flex', alignItems:'center', gap:'10px',
+                }}>
+                <span style={{fontSize:'16px'}}>{r.label.split(' ')[0]}</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:'13px', color: relation === r.id ? '#c8b0ff' : '#8888cc', fontWeight:'500'}}>
+                    {r.label.slice(2)}
                   </div>
-                  {relation === r.id && (
-                    <div style={{marginLeft:'auto', width:'16px', height:'16px', borderRadius:'50%', background:'#5544aa', display:'flex', alignItems:'center', justifyContent:'center'}}>
-                      <svg width="8" height="8" viewBox="0 0 8 8" fill="white">
-                        <path d="M1 4l2 2 4-4" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-                      </svg>
-                    </div>
-                  )}
+                  <div style={{fontSize:'11px', color:'#444466', marginTop:'1px'}}>{r.desc}</div>
                 </div>
+                {relation === r.id && (
+                  <div style={{width:'16px', height:'16px', borderRadius:'50%', background:'#5544aa', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
+                    <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+                      <path d="M1 3l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
 
-        {/* 두 사람 정보 입력 */}
+        {/* 두 사람 정보 */}
         <div style={{marginBottom:'16px'}}>
-          <div style={{fontSize:'12px', color:'#5555aa', marginBottom:'10px', textTransform:'uppercase', letterSpacing:'1px'}}>
-            두 사람 정보
-          </div>
+          <div style={{fontSize:'11px', color:'#5555aa', marginBottom:'10px', letterSpacing:'1px'}}>두 사람 정보</div>
           <div style={{display:'flex', flexDirection:'column', gap:'10px'}}>
             {renderPerson(1)}
             {renderPerson(2)}
           </div>
         </div>
 
-        {/* 질문 입력 */}
+        {/* 질문 */}
         <div style={{marginBottom:'20px'}}>
-          <div style={{fontSize:'12px', color:'#5555aa', marginBottom:'8px', textTransform:'uppercase', letterSpacing:'1px'}}>
+          <div style={{fontSize:'11px', color:'#5555aa', marginBottom:'8px', letterSpacing:'1px'}}>
             가장 궁금한 것 (선택)
           </div>
           <textarea
@@ -260,30 +264,32 @@ function CoupleInputInner() {
             onChange={e => setQuestion(e.target.value)}
             placeholder="예) 우리 결혼해도 될까요?"
             rows={2}
-            style={{...inputStyle, resize:'none', lineHeight:'1.6'}}
+            style={{
+              background:'#13132a', border:'1px solid rgba(255,255,255,0.1)',
+              borderRadius:'10px', padding:'10px 14px', color:'#e8e4ff',
+              fontSize:'14px', outline:'none', width:'100%',
+              resize:'none', lineHeight:'1.6', boxSizing:'border-box',
+            }}
           />
         </div>
 
-        {/* 에러 */}
         {error && (
           <div style={{fontSize:'12px', color:'#ff8888', marginBottom:'12px', textAlign:'center'}}>
             {error}
           </div>
         )}
 
-        {/* 시작 버튼 */}
         <button onClick={handleStart}
           style={{
             width:'100%', padding:'16px', borderRadius:'14px',
             background:'linear-gradient(135deg, #5544bb, #7766dd)',
             border:'none', color:'#e8e4ff', fontSize:'15px',
             fontWeight:'500', cursor:'pointer',
-            display:'flex', alignItems:'center', justifyContent:'center', gap:'8px',
           }}>
           💑 AI 궁합 분석 시작
         </button>
 
-        <div style={{textAlign:'center', marginTop:'12px', fontSize:'11px', color:'#333355'}}>
+        <div style={{textAlign:'center', marginTop:'10px', fontSize:'11px', color:'#333355'}}>
           결제 없이 AI와 자유롭게 대화할 수 있어요
         </div>
 
