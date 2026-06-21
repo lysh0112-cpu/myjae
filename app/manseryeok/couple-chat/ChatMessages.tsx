@@ -1,12 +1,13 @@
-// app/manseryeok/couple-chat/ChatMessages.tsx
 'use client'
 import { useEffect, useRef } from 'react'
 import type { Message } from './data'
 import { senderConfig } from './data'
 
+type ActiveSender = 'consultant' | 'husband' | 'wife'
+
 type Props = {
   messages: Message[]
-  myRole: 'consultant' | 'husband' | 'wife'
+  myRole: ActiveSender
 }
 
 function formatTime(dateStr: string) {
@@ -41,7 +42,6 @@ export default function ChatMessages({ messages, myRole }: Props) {
 
         return (
           <div key={msg.id} className={`flex items-end gap-2 ${isMe ? 'flex-row-reverse' : ''}`}>
-            {/* 아바타 */}
             {!isMe && (
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-medium shrink-0 ${cfg.avatar}`}>
                 {cfg.short}
@@ -49,12 +49,10 @@ export default function ChatMessages({ messages, myRole }: Props) {
             )}
 
             <div className={`max-w-[200px] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-              {/* 이름 */}
               {!isMe && (
                 <div className={`text-[10px] mb-1 px-1 ${cfg.nameColor}`}>{cfg.label}</div>
               )}
 
-              {/* 이미지 메시지 */}
               {msg.image_url ? (
                 <img
                   src={msg.image_url}
@@ -68,7 +66,6 @@ export default function ChatMessages({ messages, myRole }: Props) {
                 </div>
               )}
 
-              {/* 시간 + 읽음 */}
               <div className={`flex items-center gap-1 mt-1 px-1 ${isMe ? 'flex-row-reverse' : ''}`}>
                 <span className="text-[10px] text-[#333355]">{formatTime(msg.created_at)}</span>
                 {isMe && msg.read_at && (
