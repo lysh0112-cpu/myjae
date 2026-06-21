@@ -1,0 +1,108 @@
+// hooks/useYongsinAI.ts
+import { useState } from 'react'
+
+function cleanMarkdown(text: string): string {
+  return text
+    .replace(/#{1,6}\s/g, '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/^---+$/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+export function useYongsinAI() {
+  const [track1Detail, setTrack1Detail] = useState('')
+  const [track2Detail, setTrack2Detail] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [done, setDone] = useState(false)
+
+  async function generateDetail(
+    sajuText: string,
+    scoreText: string,
+    track1: { type:string; yongsin:string; heeksin:string; gisin:string; description:string },
+    track2: { gyeokguk:string; yongsin:string; type:string; description:string },
+    elementKor: Record<string,string>
+  ) {
+    setLoading(true)
+    try {
+      const prompt1 = `다음 사주의 Track 1 (내면·건강·행복 용신)을 상세하게 해설해주세요.
+
+사주팔자: ${sajuText}
+오행 점수: ${scoreText}
+용신 유형: ${track1.type}
+용신: ${track1.yongsin ? elementKor[track1.yongsin] : '-'}
+희신: ${track1.heeksin ? elementKor[track1.heeksin] : '-'}
+기신: ${track1.gisin ? elementKor[track1.gisin] : '-'}
+
+중요: 마크다운 기호(##, **, --- 등)를 절대 사용하지 말고 일반 텍스트로만 작성하세요.
+
+1. 용신 도출 근거
+- 왜 이 오행이 용신이 됐는지 오행 점수와 계절을 근거로 설명
+- ${track1.type} 판단 이유 상세 설명
+
+2. 심리·성격에 미치는 영향
+- 용신 오행이 충족될 때와 부족할 때의 심리 변화
+- 일상에서 나타나는 구체적인 행동 패턴
+
+3. 건강 관리
+- 기신 오행으로 인해 취약한 신체 부위와 질병
+- 용신·희신 오행으로 건강을 지키는 구체적인 방법
+
+4. 개운법 (실천 가능한 것 위주)
+- 용신 오행에 맞는 색상·방향·음식·환경
+- 일상에서 바로 실천할 수 있는 개운법 5가지`
+
+      const prompt2 = `다음 사주의 Track 2 (사회·직업·성공 용신)을 상세하게 해설해주세요.
+
+사주팔자: ${sajuText}
+격국: ${track2.gyeokguk}
+격국 유형: ${track2.type}
+사회적 용신: ${track2.yongsin ? elementKor[track2.yongsin] : '-'}
+
+중요: 마크다운 기호(##, **, --- 등)를 절대 사용하지 말고 일반 텍스트로만 작성하세요.
+
+1. 격국 도출 근거
+- 왜 ${track2.gyeokguk}이 됐는지 월지와 투출 근거 상세 설명
+- ${track2.type} 방식으로 용신을 쓰는 이유
+
+2. 직업·적성 상세 분석
+- 가장 잘 맞는 직업군 5가지와 이유
+- 절대 피해야 할 직업군과 이유
+- 사업 vs 직장 중 어느 쪽이 유리한지
+
+3. 재물운·성공 전략
+- 돈을 버는 최적의 방법과 시기
+- 재물을 잃는 패턴과 주의사항
+- 사회적 성공을 위한 구체적 전략 3가지
+
+4. 대인관계·파트너십
+- 사업·직장에서 나와 잘 맞는 사람의 특징
+- 귀인의 특징과 만나는 시기
+- 피해야 할 인간관계 유형`
+
+      const [res1, res2] = await Promise.all([
+        fetch('/api/analyze', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({messages:[{role:'user', content: prompt1}]}),
+        }),
+        fetch('/api/analyze', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({messages:[{role:'user', content: prompt2}]}),
+        }),
+      ])
+      const [data1, data2] = await Promise.all([res1.json(), res2.json()])
+      setTrack1Detail(cleanMarkdown(data1.content?.find((c:{type:string}) => c.type==='text')?.text || ''))
+      setTrack2Detail(cleanMarkdown(data2.content?.find((c:{type:string}) => c.type==='text')?.text || ''))
+      setDone(true)
+    } catch(e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return { track1Detail, track2Detail, loading, done, generateDetail }
+}
