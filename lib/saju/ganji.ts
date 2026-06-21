@@ -9,7 +9,6 @@ export async function getYearGanji(
 ): Promise<string> {
   const lichunDay = await getSolarTermDay(year, 2, apiKey)
   let adjustedYear = year
-  // ✅ 입춘 당일도 이전 년도로 처리
   if (month < 2 || (month === 2 && day <= lichunDay)) adjustedYear = year - 1
   const BASE_YEAR = 1984
   const offset = ((adjustedYear - BASE_YEAR) % 60 + 60) % 60
@@ -21,13 +20,13 @@ export async function getMonthGanji(
 ): Promise<string> {
   const termDay = await getSolarTermDay(year, month, apiKey)
   let monthIdx = month
-  if (day < termDay) {
+  // ✅ 절기 당일도 이전 월로 처리
+  if (day <= termDay) {
     monthIdx = month - 1
     if (monthIdx < 1) monthIdx = 12
   }
   const lichunDay = await getSolarTermDay(year, 2, apiKey)
   let adjustedYear = year
-  // ✅ 입춘 당일도 이전 년도로 처리
   if (month < 2 || (month === 2 && day <= lichunDay)) adjustedYear = year - 1
   const BASE_YEAR = 1984
   const yearOffset = ((adjustedYear - BASE_YEAR) % 60 + 60) % 60
@@ -59,7 +58,6 @@ export function getDayGanji(year: number, month: number, day: number): string {
     totalDays += daysInMonth(year, m)
   }
   totalDays += day - 1
-  // ✅ 1900.1.1 = 甲戌 = BASE 10
   const idx = ((totalDays + 10) % 60 + 60) % 60
   return STEMS[idx % 10] + BRANCHES[idx % 12]
 }
