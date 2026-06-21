@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import DayunTable from "./DayunTable";
@@ -8,99 +8,37 @@ import SeyunTable from "./SeyunTable";
 import SajuMyungsik from "./components/SajuMyungsik";
 import AiAnalysis from "./components/AiAnalysis";
 import ConsultantList from "./components/ConsultantList";
+import { useResultSaju } from "@/hooks/useResultSaju";
 
-const HEAVENLY_STEMS = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
-const EARTHLY_BRANCHES = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
 const BRANCH_LIST = [
   {char:"子"},{char:"丑"},{char:"寅"},{char:"卯"},
   {char:"辰"},{char:"巳"},{char:"午"},{char:"未"},
   {char:"申"},{char:"酉"},{char:"戌"},{char:"亥"},
-];
-
-function splitGanji(ganji: string) {
-  if (!ganji) return { stem: "?", branch: "?" };
-  const match = ganji.match(/\(([^)]+)\)/);
-  if (match && match[1].length >= 2) return { stem: match[1][0], branch: match[1][1] };
-  if (ganji.length >= 2) return { stem: ganji[0], branch: ganji[1] };
-  return { stem: "?", branch: "?" };
-}
-
-function calcHourPillar(dayStem: string, hourIdx: number) {
-  const dg = HEAVENLY_STEMS.indexOf(dayStem);
-  const hourStem = HEAVENLY_STEMS[(dg * 2 + hourIdx) % 10];
-  const hourBranch = EARTHLY_BRANCHES[hourIdx];
-  return { stem: hourStem, branch: hourBranch };
-}
+]
 
 function ResultContent() {
-  const searchParams = useSearchParams();
-  const [saju, setSaju] = useState<{pillar:string;stem:string;branch:string}[]>([]);
-  const [solar, setSolar] = useState<{year:number;month:number;day:number}|null>(null);
- const [converting, setConverting] = useState(true);
-const [dayStem, setDayStem] = useState("");
-const [monthGanji, setMonthGanji] = useState("");
-const [yearStem, setYearStem] = useState("");
-const [isPaid, setIsPaid] = useState(false);
+  const searchParams = useSearchParams()
+  const [isPaid, setIsPaid] = useState(false)
 
-  const gender = searchParams.get("gender") || "남";
-  const calType = searchParams.get("calType") || "양력";
-  const yearParam = parseInt(searchParams.get("year") || "0");
-  const monthParam = parseInt(searchParams.get("month") || "0");
-  const dayParam = parseInt(searchParams.get("day") || "0");
-  const leapMonth = searchParams.get("leapMonth") || "0";
-  const hourParam = searchParams.get("hour");
-  const hourIdx = hourParam === "모름" || hourParam === null ? null : parseInt(hourParam);
-  const currentYear = new Date().getFullYear();
+  const gender = searchParams.get("gender") || "남"
+  const calType = searchParams.get("calType") || "양력"
+  const yearParam = parseInt(searchParams.get("year") || "0")
+  const monthParam = parseInt(searchParams.get("month") || "0")
+  const dayParam = parseInt(searchParams.get("day") || "0")
+  const leapMonth = searchParams.get("leapMonth") || "0"
+  const hourParam = searchParams.get("hour")
+  const hourIdx = hourParam === "모름" || hourParam === null ? null : parseInt(hourParam)
+  const currentYear = new Date().getFullYear()
 
-  useEffect(() => {
-    async function loadSaju() {
-      setConverting(true);
-      try {
-        if (calType === "음력") {
-          const res1 = await fetch(`/api/lunar?year=${yearParam}&month=${monthParam}&day=${dayParam}&calType=음력&leapMonth=${leapMonth}`);
-          const d1 = await res1.json();
-          setSolar({ year: d1.solarYear, month: d1.solarMonth, day: d1.solarDay });
-          const res2 = await fetch(`/api/lunar?year=${d1.solarYear}&month=${d1.solarMonth}&day=${d1.solarDay}&calType=양력`);
-          buildSaju(await res2.json(), hourIdx);
-        } else {
-          setSolar({ year: yearParam, month: monthParam, day: dayParam });
-          const res = await fetch(`/api/lunar?year=${yearParam}&month=${monthParam}&day=${dayParam}&calType=양력`);
-          buildSaju(await res.json(), hourIdx);
-        }
-      } catch(e) {
-        console.error(e);
-      } finally {
-        setConverting(false);
-      }
-    }
-
-    function buildSaju(data: {yearGanji:string;monthGanji:string;dayGanji:string}, hourIdx: number|null) {
-      const year = splitGanji(data.yearGanji);
-      const month = splitGanji(data.monthGanji);
-      const day = splitGanji(data.dayGanji);
-      const hour = hourIdx !== null ? calcHourPillar(day.stem, hourIdx) : { stem: "?", branch: "?" };
-      setDayStem(day.stem);
-      setMonthGanji(month.stem + month.branch);
-      setYearStem(year.stem);
-      setSaju([
-        { pillar: "시주", stem: hour.stem, branch: hour.branch },
-        { pillar: "일주", stem: day.stem, branch: day.branch },
-        { pillar: "월주", stem: month.stem, branch: month.branch },
-        { pillar: "년주", stem: year.stem, branch: year.branch },
-      ]);
-    }
-    loadSaju();
-  }, [calType, yearParam, monthParam, dayParam, leapMonth, hourIdx]);
-
-  const iljji = saju[1]?.branch ?? "";
-  const yeonjji = saju[3]?.branch ?? "";
+  const { saju, solar, converting, dayStem, monthGanji, yearStem, iljji, yeonjji } =
+    useResultSaju(calType, yearParam, monthParam, dayParam, leapMonth, hourIdx)
 
   if (converting) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{background:"#1a1a18"}}>
       <div className="text-3xl animate-spin">✦</div>
       <p style={{color:"#FAC775"}}>사주 정보를 불러오는 중...</p>
     </div>
-  );
+  )
 
   return (
     <div className="min-h-screen" style={{background:"#1a1a18",maxWidth:"430px",margin:"0 auto"}}>
@@ -138,10 +76,8 @@ const [isPaid, setIsPaid] = useState(false);
           </div>
         </div>
 
-        {/* 사주 명식 */}
         <SajuMyungsik saju={saju} dayStem={dayStem} />
 
-        {/* 대운표 */}
         {dayStem && monthGanji && yearStem && (
           <DayunTable
             birthYear={yearParam} birthMonth={monthParam} birthDay={dayParam}
@@ -151,7 +87,6 @@ const [isPaid, setIsPaid] = useState(false);
           />
         )}
 
-        {/* 세운표 */}
         {dayStem && (
           <SeyunTable
             dayStem={dayStem} currentYear={currentYear}
@@ -159,20 +94,18 @@ const [isPaid, setIsPaid] = useState(false);
           />
         )}
 
-        {/* AI 상세 분석 */}
         <AiAnalysis
           saju={saju} gender={gender} calType={calType}
           yearParam={yearParam} monthParam={monthParam} dayParam={dayParam}
           hourIdx={hourIdx} leapMonth={leapMonth} solar={solar}
-       isPaid={isPaid}
+          isPaid={isPaid}
           onPayRequest={() => setIsPaid(true)}
         />
 
-        {/* 상담사 목록 */}
         <ConsultantList searchParams={searchParams} />
       </main>
     </div>
-  );
+  )
 }
 
 export default function ResultPage() {
@@ -184,5 +117,5 @@ export default function ResultPage() {
     }>
       <ResultContent/>
     </Suspense>
-  );
+  )
 }
