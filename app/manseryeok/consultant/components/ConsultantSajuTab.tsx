@@ -1,7 +1,8 @@
 'use client'
 import { useEffect } from 'react'
 import SajuBoard from './SajuBoard'
-import YongsinBoard from './YongsinBoard'  // ✅ 추가
+import YongsinBoard from './YongsinBoard'
+import YongsinProBoard from './YongsinProBoard'
 import ElementScore from './ElementScore'
 import UnsungBoard from './UnsungBoard'
 import SinsalBoard from './SinsalBoard'
@@ -113,7 +114,8 @@ export default function ConsultantSajuTab({
       {saju.length > 0 && !converting && (
         <>
           <SajuBoard saju={saju} dayStem={dayStem} />
-          <YongsinBoard saju={saju} dayStem={dayStem} />  {/* ✅ 추가 */}
+          <YongsinBoard saju={saju} dayStem={dayStem} />
+          <YongsinProBoard saju={saju} dayStem={dayStem} hourIdx={hourIdx} />
           <ElementScore />
           <UnsungBoard dayStem={dayStem} saju={saju} />
           <SinsalBoard saju={saju} yeonjji={yeonjji} iljji={iljji} />
