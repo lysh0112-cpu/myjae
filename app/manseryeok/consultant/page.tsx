@@ -13,14 +13,14 @@ type UiSettings = {
   bgColor: string
   fontSize: number
   fontFamily: string
-  titleSize: number
+  menuSize: number
 }
 
 const DEFAULT_SETTINGS: UiSettings = {
   bgColor: '#111118',
   fontSize: 13,
   fontFamily: 'var(--font-sans)',
-  titleSize: 12,
+  menuSize: 11,
 }
 
 type PanelState = {
@@ -43,12 +43,12 @@ type PanelState = {
 }
 
 const PANEL_DEFS = [
-  { id: 'list',     icon: '📋', label: '상담목록',  defaultW: 240, defaultH: 500 },
-  { id: 'chat',     icon: '💬', label: '채팅',      defaultW: 420, defaultH: 500 },
-  { id: 'ai',       icon: '🔮', label: 'AI 분석',   defaultW: 300, defaultH: 500 },
-  { id: 'schedule', icon: '📅', label: '일정관리',  defaultW: 320, defaultH: 400 },
-  { id: 'settle',   icon: '💰', label: '정산',      defaultW: 320, defaultH: 400 },
-  { id: 'memo',     icon: '📝', label: '메모',      defaultW: 280, defaultH: 360 },
+  { id: 'list',     icon: '📋', label: '상담목록', defaultW: 240, defaultH: 500 },
+  { id: 'chat',     icon: '💬', label: '채팅',     defaultW: 420, defaultH: 500 },
+  { id: 'ai',       icon: '🔮', label: 'AI분석',   defaultW: 300, defaultH: 500 },
+  { id: 'schedule', icon: '📅', label: '일정',     defaultW: 320, defaultH: 400 },
+  { id: 'settle',   icon: '💰', label: '정산',     defaultW: 320, defaultH: 400 },
+  { id: 'memo',     icon: '📝', label: '메모',     defaultW: 280, defaultH: 360 },
 ]
 
 const PANEL_DEFAULT_SETTINGS = {
@@ -64,7 +64,7 @@ function initPanels(): PanelState[] {
   return PANEL_DEFS.map((def, i) => ({
     id: def.id,
     x: 20 + (i % 3) * (def.defaultW + 12),
-    y: 20 + Math.floor(i / 3) * 60,
+    y: 60 + Math.floor(i / 3) * 60,
     width: def.defaultW,
     height: def.defaultH,
     minimized: false,
@@ -151,7 +151,7 @@ function ConsultantContent() {
         setPanels(ps => ps.map(p => p.id === id ? {
           ...p,
           x: Math.max(0, origX + e.clientX - startX),
-          y: Math.max(48, origY + e.clientY - startY),
+          y: Math.max(44, origY + e.clientY - startY),
         } : p))
       }
       if (resizing.current) {
@@ -185,6 +185,7 @@ function ConsultantContent() {
   }
 
   const s = settings
+  const ms = s.menuSize
 
   const renderPanelContent = (panel: PanelState) => {
     const ps = panel.settings
@@ -260,12 +261,7 @@ function ConsultantContent() {
           <div style={{flex:1, padding:'10px', background:ps.bgColor}}>
             <textarea
               placeholder="메모를 입력하세요..."
-              style={{
-                width:'100%', height:'100%', background:'transparent',
-                border:'none', outline:'none', resize:'none',
-                color:'#c8c0ff', fontSize:ps.fontSize+'px',
-                fontFamily: s.fontFamily, lineHeight:'1.6',
-              }}
+              style={{width:'100%', height:'100%', background:'transparent', border:'none', outline:'none', resize:'none', color:'#c8c0ff', fontSize:ps.fontSize+'px', fontFamily:s.fontFamily, lineHeight:'1.6'}}
             />
           </div>
         )
@@ -276,12 +272,7 @@ function ConsultantContent() {
   const renderPanelSettings = (panel: PanelState) => {
     const ps = panel.settings
     return (
-      <div style={{
-        padding:'6px 10px', borderTop:'1px solid rgba(255,255,255,0.06)',
-        background:'#0d0d18', display:'flex', alignItems:'center',
-        gap:'10px', flexWrap:'wrap', flexShrink:0,
-      }}>
-        {/* 배경색 */}
+      <div style={{padding:'5px 10px', borderTop:'1px solid rgba(255,255,255,0.06)', background:'#0d0d18', display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap', flexShrink:0}}>
         <div style={{display:'flex', alignItems:'center', gap:'3px'}}>
           <span style={{fontSize:'10px', color:'#555577'}}>배경</span>
           <label style={{position:'relative', cursor:'pointer'}}>
@@ -292,8 +283,6 @@ function ConsultantContent() {
             />
           </label>
         </div>
-
-        {/* 채팅 버블 색상 */}
         {panel.id === 'chat' && (
           <>
             <div style={{display:'flex', alignItems:'center', gap:'3px'}}>
@@ -318,8 +307,6 @@ function ConsultantContent() {
             </div>
           </>
         )}
-
-        {/* 내용 폰트 크기 */}
         <div style={{display:'flex', alignItems:'center', gap:'3px'}}>
           <span style={{fontSize:'10px', color:'#555577'}}>내용</span>
           <input type="range" min="10" max="16" step="1" value={ps.fontSize}
@@ -328,8 +315,6 @@ function ConsultantContent() {
           />
           <span style={{fontSize:'10px', color:'#b8a9ff'}}>{ps.fontSize}px</span>
         </div>
-
-        {/* 제목 크기 */}
         <div style={{display:'flex', alignItems:'center', gap:'3px'}}>
           <span style={{fontSize:'10px', color:'#555577'}}>제목</span>
           <input type="range" min="9" max="15" step="1" value={ps.titleSize}
@@ -343,42 +328,54 @@ function ConsultantContent() {
   }
 
   return (
-    <div style={{
-      width:'100vw', height:'100vh', overflow:'hidden',
-      background: s.bgColor, fontFamily: s.fontFamily,
-      position:'relative',
-    }}>
+    <div style={{width:'100vw', height:'100vh', overflow:'hidden', background:s.bgColor, fontFamily:s.fontFamily, position:'relative'}}>
 
       {/* 상단 메뉴바 */}
       <div style={{
-        position:'fixed', top:0, left:0, right:0, height:'44px', zIndex:1000,
+        position:'fixed', top:0, left:0, right:0, height:'40px', zIndex:1000,
         background:'rgba(18,18,28,0.97)', borderBottom:'1px solid rgba(255,255,255,0.06)',
-        display:'flex', alignItems:'center', padding:'0 14px', gap:'5px',
+        display:'flex', alignItems:'center', padding:'0 12px', gap:'4px',
       }}>
-        <span style={{fontSize:'14px', fontWeight:'500', color:'#e8e4ff', marginRight:'6px'}}>명연재</span>
-        <span style={{fontSize:'11px', color:'#333355', marginRight:'3px'}}>|</span>
+        <span style={{fontSize:'13px', fontWeight:'500', color:'#e8e4ff', marginRight:'6px'}}>명연재</span>
+        <span style={{fontSize:'10px', color:'#333355', marginRight:'2px'}}>|</span>
 
+        {/* 패널 버튼들 */}
         {PANEL_DEFS.map(def => {
           const panel = panels.find(p => p.id === def.id)!
           return (
             <button key={def.id} onClick={() => togglePanel(def.id)}
               style={{
-                fontSize:'11px', padding:'3px 9px', borderRadius:'6px',
+                fontSize: ms + 'px',
+                padding: ms <= 9 ? '1px 5px' : ms <= 11 ? '2px 7px' : '3px 9px',
+                borderRadius:'5px',
                 border: panel.open ? '1px solid rgba(119,102,221,0.5)' : '1px solid rgba(255,255,255,0.08)',
                 background: panel.open ? 'rgba(60,52,137,0.3)' : 'rgba(255,255,255,0.03)',
                 color: panel.open ? '#c8b0ff' : '#555577',
                 cursor:'pointer', display:'flex', alignItems:'center', gap:'3px',
+                whiteSpace:'nowrap',
               }}>
-              <span style={{fontSize:'12px'}}>{def.icon}</span>
+              <span style={{fontSize:(ms+1)+'px'}}>{def.icon}</span>
               <span>{def.label}</span>
             </button>
           )
         })}
 
+        {/* 메뉴 크기 슬라이더 */}
+        <div style={{display:'flex', alignItems:'center', gap:'4px', marginLeft:'8px', borderLeft:'1px solid rgba(255,255,255,0.08)', paddingLeft:'8px'}}>
+          <span style={{fontSize:'9px', color:'#444466', whiteSpace:'nowrap'}}>메뉴크기</span>
+          <input type="range" min="8" max="13" step="1"
+            value={ms}
+            onChange={e => setSettings(prev => ({...prev, menuSize: Number(e.target.value)}))}
+            style={{width:'50px', cursor:'pointer'}}
+          />
+          <span style={{fontSize:'9px', color:'#666688'}}>{ms}</span>
+        </div>
+
+        {/* 우측 */}
         <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:'8px'}}>
           <span style={{fontSize:'11px', color:'#7766aa'}}>{consultantName || '상담사'} 님</span>
           <button onClick={handleLogout}
-            style={{fontSize:'11px', padding:'3px 9px', borderRadius:'6px', border:'1px solid rgba(255,80,80,0.2)', background:'transparent', color:'rgba(255,100,100,0.7)', cursor:'pointer'}}>
+            style={{fontSize:'10px', padding:'2px 8px', borderRadius:'5px', border:'1px solid rgba(255,80,80,0.2)', background:'transparent', color:'rgba(255,100,100,0.7)', cursor:'pointer'}}>
             로그아웃
           </button>
         </div>
@@ -398,9 +395,9 @@ function ConsultantContent() {
             style={{
               position:'fixed',
               left: isMax ? 0 : panel.x,
-              top: isMax ? 44 : panel.y,
+              top: isMax ? 40 : panel.y,
               width: isMax ? '100vw' : panel.width,
-              height: isMax ? 'calc(100vh - 44px)' : (isMin ? 32 : panel.height),
+              height: isMax ? 'calc(100vh - 40px)' : (isMin ? 30 : panel.height),
               zIndex: panel.zIndex,
               borderRadius: isMax ? 0 : '8px',
               border:'1px solid rgba(255,255,255,0.08)',
@@ -413,43 +410,37 @@ function ConsultantContent() {
             <div
               onMouseDown={e => !isMax && handleDragStart(panel.id, e)}
               style={{
-                height:'32px', padding:'0 8px',
+                height:'30px', padding:'0 7px',
                 background:'rgba(20,20,35,0.98)',
                 borderBottom:'1px solid rgba(255,255,255,0.06)',
-                display:'flex', alignItems:'center', gap:'6px',
+                display:'flex', alignItems:'center', gap:'5px',
                 cursor: isMax ? 'default' : 'move',
                 flexShrink:0, userSelect:'none',
               }}>
-              <span style={{fontSize: titleSize + 'px'}}>{def.icon}</span>
-              <span style={{fontSize: titleSize + 'px', fontWeight:'500', color:'#c8c0ff', flex:1}}>{def.label}</span>
-
+              <span style={{fontSize:titleSize+'px'}}>{def.icon}</span>
+              <span style={{fontSize:titleSize+'px', fontWeight:'500', color:'#c8c0ff', flex:1}}>{def.label}</span>
               <button
                 onMouseDown={e => e.stopPropagation()}
                 onClick={() => setOpenPanelSettings(prev => prev === panel.id ? null : panel.id)}
-                style={{
-                  fontSize:'10px', padding:'1px 6px', borderRadius:'3px',
-                  border: isSettingsOpen ? '1px solid rgba(119,102,221,0.5)' : '1px solid rgba(255,255,255,0.08)',
-                  background: isSettingsOpen ? 'rgba(60,52,137,0.3)' : 'transparent',
-                  color: isSettingsOpen ? '#b8a9ff' : '#444466', cursor:'pointer',
-                }}>
+                style={{fontSize:'9px', padding:'1px 5px', borderRadius:'3px', border: isSettingsOpen ? '1px solid rgba(119,102,221,0.5)' : '1px solid rgba(255,255,255,0.08)', background: isSettingsOpen ? 'rgba(60,52,137,0.3)' : 'transparent', color: isSettingsOpen ? '#b8a9ff' : '#444466', cursor:'pointer'}}>
                 ⚙️
               </button>
               <button
                 onMouseDown={e => e.stopPropagation()}
                 onClick={() => updatePanel(panel.id, { minimized: !panel.minimized, maximized: false })}
-                style={{width:'18px', height:'18px', borderRadius:'3px', border:'none', background:'rgba(255,255,255,0.06)', color:'#888', cursor:'pointer', fontSize:'11px', display:'flex', alignItems:'center', justifyContent:'center'}}>
+                style={{width:'16px', height:'16px', borderRadius:'3px', border:'none', background:'rgba(255,255,255,0.06)', color:'#888', cursor:'pointer', fontSize:'10px', display:'flex', alignItems:'center', justifyContent:'center'}}>
                 ─
               </button>
               <button
                 onMouseDown={e => e.stopPropagation()}
                 onClick={() => updatePanel(panel.id, { maximized: !panel.maximized, minimized: false })}
-                style={{width:'18px', height:'18px', borderRadius:'3px', border:'none', background:'rgba(255,255,255,0.06)', color:'#888', cursor:'pointer', fontSize:'10px', display:'flex', alignItems:'center', justifyContent:'center'}}>
+                style={{width:'16px', height:'16px', borderRadius:'3px', border:'none', background:'rgba(255,255,255,0.06)', color:'#888', cursor:'pointer', fontSize:'9px', display:'flex', alignItems:'center', justifyContent:'center'}}>
                 □
               </button>
               <button
                 onMouseDown={e => e.stopPropagation()}
                 onClick={() => updatePanel(panel.id, { open: false })}
-                style={{width:'18px', height:'18px', borderRadius:'3px', border:'none', background:'rgba(255,80,80,0.15)', color:'rgba(255,120,120,0.8)', cursor:'pointer', fontSize:'11px', display:'flex', alignItems:'center', justifyContent:'center'}}>
+                style={{width:'16px', height:'16px', borderRadius:'3px', border:'none', background:'rgba(255,80,80,0.15)', color:'rgba(255,120,120,0.8)', cursor:'pointer', fontSize:'10px', display:'flex', alignItems:'center', justifyContent:'center'}}>
                 ✕
               </button>
             </div>
