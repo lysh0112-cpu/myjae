@@ -10,7 +10,7 @@ function cleanMarkdown(text: string): string {
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 }
-
+ 
 export function useYongsinAI() {
   const [track1Detail, setTrack1Detail] = useState('')
   const [track2Detail, setTrack2Detail] = useState('')
