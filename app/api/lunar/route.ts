@@ -36,8 +36,11 @@ export async function GET(req: NextRequest) {
       solarDay = parseInt(getValue("solDay"))
     }
 
-    const yearGanji = getYearGanji(solarYear, solarMonth, solarDay)
-    const monthGanji = getMonthGanji(solarYear, solarMonth, solarDay)
+    // ✅ KASI API 기반 정확한 절기 계산 (async)
+    const [yearGanji, monthGanji] = await Promise.all([
+      getYearGanji(solarYear, solarMonth, solarDay),
+      getMonthGanji(solarYear, solarMonth, solarDay),
+    ])
     const dayGanji = getDayGanji(solarYear, solarMonth, solarDay)
 
     let lunarYear = 0, lunarMonth = 0, lunarDay = 0
