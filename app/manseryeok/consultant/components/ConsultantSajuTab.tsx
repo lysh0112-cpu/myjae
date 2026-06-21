@@ -134,8 +134,17 @@ export default function ConsultantSajuTab({
           <ConsultantDayun dayunList={dayunList} ilgan={dayStem} yeonjji={yeonjji} iljji={iljji} birthYear={yearParam} />
           <ConsultantSeyun seyunList={seyunList} ilgan={dayStem} yeonjji={yeonjji} iljji={iljji} />
           <ConsultantWolun ilgan={dayStem} yeonjji={yeonjji} iljji={iljji} />
-          <CustomerAiAnalysis consultationId={consultationId} />
-          {/* ✅ 용신 반영 AI 사주 해석 */}
+          {/* ✅ saju·gender 등 props 추가 */}
+          <CustomerAiAnalysis
+            consultationId={consultationId}
+            saju={saju}
+            gender={gender}
+            calType={calType}
+            yearParam={yearParam}
+            monthParam={monthParam}
+            dayParam={dayParam}
+            hourIdx={hourIdx}
+          />
           <YongsinAIAnalysis
             saju={saju}
             dayStem={dayStem}
