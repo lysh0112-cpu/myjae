@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const day = searchParams.get("day")
   const calType = searchParams.get("calType") || "양력"
   const leapMonth = searchParams.get("leapMonth") || "0"
-  const apiKey = process.env.KASI_API_KEY
+  const apiKey = process.env.KASI_API_KEY ?? ""
 
   if (!apiKey || !year || !month || !day) {
     return NextResponse.json({ error: "Missing params" }, { status: 400 })
@@ -36,10 +36,10 @@ export async function GET(req: NextRequest) {
       solarDay = parseInt(getValue("solDay"))
     }
 
-    // ✅ KASI API 기반 정확한 절기 계산 (async)
+    // ✅ apiKey를 직접 넘겨서 KASI 절기 API 호출
     const [yearGanji, monthGanji] = await Promise.all([
-      getYearGanji(solarYear, solarMonth, solarDay),
-      getMonthGanji(solarYear, solarMonth, solarDay),
+      getYearGanji(solarYear, solarMonth, solarDay, apiKey),
+      getMonthGanji(solarYear, solarMonth, solarDay, apiKey),
     ])
     const dayGanji = getDayGanji(solarYear, solarMonth, solarDay)
 
