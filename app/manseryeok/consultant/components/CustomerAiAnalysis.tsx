@@ -41,7 +41,10 @@ export default function CustomerAiAnalysis({
         .select('ai_analysis')
         .eq('id', consultationId)
         .single()
-      if (data?.ai_analysis) setAnalysis(data.ai_analysis)
+      if (data?.ai_analysis) {
+        setAnalysis(data.ai_analysis)
+        setOpen(true)
+      }
       setLoading(false)
     }
     load()
@@ -53,52 +56,26 @@ export default function CustomerAiAnalysis({
     try {
       const currentYear = new Date().getFullYear()
       const sajuText = saju.map(s => `${s.pillar}: ${s.stem}${s.branch}`).join(', ')
-      const hourText = hourIdx === null ? '모름' : ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][hourIdx ?? 0] + '시'
+      const hourText = hourIdx === null ? '모름'
+        : ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][hourIdx ?? 0] + '시'
 
-      const prompt = `다음 사주를 10가지 항목으로 완전하게 분석해주세요.
+      const prompt = `사주 분석 전문가로서 아래 사주를 10가지 항목으로 분석해주세요.
+마크다운 기호(##, **, ---)는 절대 사용하지 마세요.
+각 항목은 핵심만 2~3문장, 100자 이내로 작성하세요.
 
-성별: ${gender}성
-생년월일: ${calType} ${yearParam}년 ${monthParam}월 ${dayParam}일
-태어난 시: ${hourText}
-사주팔자: ${sajuText}
+성별: ${gender}성 / 생년월일: ${calType} ${yearParam}년 ${monthParam}월 ${dayParam}일
+태어난 시: ${hourText} / 사주: ${sajuText}
 
-중요: 마크다운 기호(##, **, --- 등)를 절대 사용하지 말고 일반 텍스트로만 작성하세요.
-읽는 사람이 "어떻게 이렇게 정확하지?" 라고 느낄 만큼 구체적으로 써주세요.
-
-1️⃣ 용신 분석
-- 신강/신약 판단, 용신·희신·기신·구신·한신 명시
-- 용신 활용법 (방위·색상·직업·환경)
-
-2️⃣ 나의 사주팔자·성격·기질 분석
-- 타고난 성격과 기질, 강점과 재능
-- 약점과 주의사항, 잘 맞는 사람
-
-3️⃣ 사주로 보는 건강과 체질
-- 타고난 체질, 주의할 건강 문제
-- 건강 관리 방법
-
-4️⃣ 연애·결혼·배우자운
-- 나의 연애유형·운명의 상대·결혼 최적 시기
-
-5️⃣ 적성·직업·취업운
-- 나에게 맞는 직업·사업 vs 직장·성공 시기
-
-6️⃣ 재물·부동산·내집마련
-- 재물운·돈 버는 시기·재테크 전략
-
-7️⃣ 사업운·성공운
-- 사업 적성·성공 시기·파트너운
-
-8️⃣ 자녀운·자녀결혼운
-- 자녀 인연·자녀 운명·자녀 결혼시기
-
-9️⃣ 노후재물·안정운
-- 노후 준비·재물 안정·평안한 노년
-
-🔟 10년 운명·월별운
-- ${currentYear}~${currentYear+9}년 흐름·${currentYear}년 월별 운세
-
-각 항목을 풍부하고 구체적으로 분석해주세요.`
+1️⃣ 용신 분석 — 신강/신약, 용신·희신·기신, 활용법
+2️⃣ 성격·기질 — 타고난 성격, 강점, 약점
+3️⃣ 건강·체질 — 약한 부위, 주의 질병, 관리법
+4️⃣ 연애·결혼 — 연애유형, 배우자 특징, 결혼 시기
+5️⃣ 직업·취업 — 맞는 직업, 성공 시기
+6️⃣ 재물·부동산 — 재물운, 돈 버는 시기
+7️⃣ 사업·성공운 — 사업 적성, 성공 시기
+8️⃣ 자녀운 — 자녀 인연, 출산 시기
+9️⃣ 노후·안정 — 노후 재물, 평안한 시기
+🔟 10년 운세 — ${currentYear}~${currentYear+9}년 흐름`
 
       const res = await fetch('/api/analyze', {
         method: 'POST',
@@ -111,7 +88,6 @@ export default function CustomerAiAnalysis({
       setAnalysis(cleaned)
       setOpen(true)
 
-      // DB 저장
       if (consultationId) {
         await supabase
           .from('consultations')
@@ -145,14 +121,10 @@ export default function CustomerAiAnalysis({
           <span className="text-sm font-bold text-white">AI 전체 분석 (1~10번)</span>
           {analysis ? (
             <span className="text-xs px-2 py-0.5 rounded-full"
-              style={{background:'rgba(76,175,80,0.2)', color:'#4caf50'}}>
-              {consultationId ? '저장됨' : '생성됨'}
-            </span>
+              style={{background:'rgba(76,175,80,0.2)', color:'#4caf50'}}>저장됨</span>
           ) : (
             <span className="text-xs px-2 py-0.5 rounded-full"
-              style={{background:'rgba(255,100,100,0.2)', color:'#ff8080'}}>
-              미생성
-            </span>
+              style={{background:'rgba(255,100,100,0.2)', color:'#ff8080'}}>미생성</span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -166,7 +138,6 @@ export default function CustomerAiAnalysis({
         </div>
       </div>
 
-      {/* AI 분석 없을 때 생성 버튼 */}
       {!analysis && (
         <div className="p-4">
           <p className="text-xs mb-3 text-center" style={{color:'#8a88a0'}}>
@@ -174,18 +145,16 @@ export default function CustomerAiAnalysis({
           </p>
           <button onClick={handleGenerate} disabled={generating || !saju?.length}
             className="w-full py-3 rounded-xl text-sm font-bold disabled:opacity-40 transition-all active:scale-95"
-            style={{background:'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)',
-              color:'#1a1a18'}}>
+            style={{background:'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)', color:'#1a1a18'}}>
             {generating
               ? <span className="flex items-center justify-center gap-2">
-                  <span className="animate-spin">✦</span> AI 분석 생성 중... (약 40초)
+                  <span className="animate-spin">✦</span> AI 분석 생성 중...
                 </span>
               : '✨ AI 전체 분석 생성 (1~10번)'}
           </button>
         </div>
       )}
 
-      {/* AI 분석 있을 때 재생성 버튼 + 내용 */}
       {analysis && (
         <>
           <div className="px-4 py-2 flex justify-end"
