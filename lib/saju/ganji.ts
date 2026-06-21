@@ -9,7 +9,8 @@ export async function getYearGanji(
 ): Promise<string> {
   const lichunDay = await getSolarTermDay(year, 2, apiKey)
   let adjustedYear = year
-  if (month < 2 || (month === 2 && day < lichunDay)) adjustedYear = year - 1
+  // ✅ 입춘 당일도 이전 년도로 처리
+  if (month < 2 || (month === 2 && day <= lichunDay)) adjustedYear = year - 1
   const BASE_YEAR = 1984
   const offset = ((adjustedYear - BASE_YEAR) % 60 + 60) % 60
   return STEMS[offset % 10] + BRANCHES[offset % 12]
@@ -26,7 +27,8 @@ export async function getMonthGanji(
   }
   const lichunDay = await getSolarTermDay(year, 2, apiKey)
   let adjustedYear = year
-  if (month < 2 || (month === 2 && day < lichunDay)) adjustedYear = year - 1
+  // ✅ 입춘 당일도 이전 년도로 처리
+  if (month < 2 || (month === 2 && day <= lichunDay)) adjustedYear = year - 1
   const BASE_YEAR = 1984
   const yearOffset = ((adjustedYear - BASE_YEAR) % 60 + 60) % 60
   const yearStemIdx = yearOffset % 10
@@ -37,8 +39,7 @@ export async function getMonthGanji(
     7:7, 8:8, 9:9, 10:10, 11:11, 12:0
   }
   const monthBranchIdx = branchMap[monthIdx]
-  let stemOffset = monthBranchIdx - 2
-  if (stemOffset < 0) stemOffset += 12
+  const stemOffset = (monthBranchIdx - 2 + 12) % 12
   const monthStemIdx = (inMonthStemIdx + stemOffset) % 10
   return STEMS[monthStemIdx] + BRANCHES[monthBranchIdx]
 }
@@ -58,7 +59,7 @@ export function getDayGanji(year: number, month: number, day: number): string {
     totalDays += daysInMonth(year, m)
   }
   totalDays += day - 1
-  // ✅ 1900.1.1 = 甲戌 = index 14
+  // ✅ 1900.1.1 = 甲戌 = BASE 10
   const idx = ((totalDays + 10) % 60 + 60) % 60
   return STEMS[idx % 10] + BRANCHES[idx % 12]
 }
