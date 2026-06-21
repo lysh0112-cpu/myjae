@@ -106,99 +106,77 @@ function ConsultantContent() {
         <span style={{fontSize:'13px', color:'#9988cc'}}>{consultantName || '상담사'} 님</span>
         <div style={{marginLeft:'auto', display:'flex', gap:'8px', alignItems:'center'}}>
           <button onClick={() => setShowSettings(prev => !prev)}
-            style={{
-              fontSize:'12px', padding:'5px 12px', borderRadius:'8px',
-              border:'1px solid rgba(255,255,255,0.1)', background:'transparent',
-              color:'#8877cc', cursor:'pointer',
-            }}>
+            style={{fontSize:'12px', padding:'5px 12px', borderRadius:'8px', border:'1px solid rgba(255,255,255,0.1)', background:'transparent', color:'#8877cc', cursor:'pointer'}}>
             ⚙️ 화면 설정
           </button>
           <button onClick={handleLogout}
-            style={{
-              fontSize:'12px', padding:'5px 12px', borderRadius:'8px',
-              border:'1px solid rgba(255,80,80,0.2)', background:'transparent',
-              color:'rgba(255,100,100,0.7)', cursor:'pointer',
-            }}>
+            style={{fontSize:'12px', padding:'5px 12px', borderRadius:'8px', border:'1px solid rgba(255,80,80,0.2)', background:'transparent', color:'rgba(255,100,100,0.7)', cursor:'pointer'}}>
             로그아웃
           </button>
         </div>
       </div>
 
-      {/* 설정 패널 — 컴팩트 */}
+      {/* 설정 패널 — 컴팩트 한 줄 */}
       {showSettings && (
         <div style={{
           position:'fixed', top:'48px', right:'0', zIndex:100,
           background:'#16161f', borderLeft:'1px solid rgba(255,255,255,0.08)',
           borderBottom:'1px solid rgba(255,255,255,0.08)',
-          borderRadius:'0 0 0 10px', padding:'10px 14px',
+          borderRadius:'0 0 0 8px', padding:'7px 12px',
           boxShadow:'-4px 4px 16px rgba(0,0,0,0.5)',
-          display:'flex', flexDirection:'column', gap:'8px', minWidth:'320px',
+          display:'flex', alignItems:'center', gap:'14px', flexWrap:'wrap',
         }}>
-          {/* 1행: 색상 스와치들 */}
-          <div style={{display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap'}}>
-            {[
-              { label:'전체배경', key:'bgColor' },
-              { label:'채팅배경', key:'chatBg' },
-              { label:'내버블', key:'myBubble' },
-              { label:'고객버블', key:'customerBubble' },
-            ].map(({ label, key }) => (
-              <div key={key} style={{display:'flex', alignItems:'center', gap:'4px'}}>
-                <span style={{fontSize:'10px', color:'#666688'}}>{label}</span>
-                <label style={{position:'relative', cursor:'pointer'}}>
-                  <div style={{
-                    width:'22px', height:'22px', borderRadius:'3px',
-                    background:(s as any)[key],
-                    border:'1px solid rgba(255,255,255,0.15)', cursor:'pointer',
-                  }}/>
-                  <input type="color" value={(s as any)[key]}
-                    onChange={e => setSettings(prev => ({...prev, [key]: e.target.value}))}
-                    style={{position:'absolute', opacity:0, width:'22px', height:'22px', top:0, left:0, cursor:'pointer'}}
-                  />
-                </label>
-                <span style={{fontSize:'10px', color:'#444466', fontFamily:'monospace'}}>
-                  {(s as any)[key]}
-                </span>
-              </div>
-            ))}
+          {[
+            { label:'배경', key:'bgColor' },
+            { label:'채팅', key:'chatBg' },
+            { label:'내버블', key:'myBubble' },
+            { label:'고객버블', key:'customerBubble' },
+          ].map(({ label, key }) => (
+            <div key={key} style={{display:'flex', alignItems:'center', gap:'3px'}}>
+              <span style={{fontSize:'10px', color:'#555577'}}>{label}</span>
+              <label style={{position:'relative', cursor:'pointer'}}>
+                <div style={{width:'16px', height:'16px', borderRadius:'2px', background:(s as any)[key], border:'1px solid rgba(255,255,255,0.2)', cursor:'pointer'}}/>
+                <input type="color" value={(s as any)[key]}
+                  onChange={e => setSettings(prev => ({...prev, [key]: e.target.value}))}
+                  style={{position:'absolute', opacity:0, width:'16px', height:'16px', top:0, left:0, cursor:'pointer'}}
+                />
+              </label>
+            </div>
+          ))}
+          <div style={{width:'1px', height:'16px', background:'rgba(255,255,255,0.08)'}}/>
+          <div style={{display:'flex', alignItems:'center', gap:'4px'}}>
+            <span style={{fontSize:'10px', color:'#555577'}}>크기</span>
+            <input type="range" min="11" max="16" step="1" value={s.fontSize}
+              onChange={e => setSettings(prev => ({...prev, fontSize: Number(e.target.value)}))}
+              style={{width:'60px', cursor:'pointer'}}
+            />
+            <span style={{fontSize:'10px', color:'#b8a9ff'}}>{s.fontSize}px</span>
           </div>
-
-          {/* 2행: 폰트 크기 + 종류 + 저장 */}
-          <div style={{display:'flex', alignItems:'center', gap:'12px', flexWrap:'wrap'}}>
-            <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
-              <span style={{fontSize:'10px', color:'#666688'}}>폰트</span>
-              <span style={{fontSize:'10px', color:'#444466'}}>11</span>
-              <input type="range" min="11" max="16" step="1" value={s.fontSize}
-                onChange={e => setSettings(prev => ({...prev, fontSize: Number(e.target.value)}))}
-                style={{width:'80px', cursor:'pointer'}}
-              />
-              <span style={{fontSize:'10px', color:'#444466'}}>16</span>
-              <span style={{fontSize:'11px', color:'#b8a9ff', minWidth:'28px'}}>{s.fontSize}px</span>
-            </div>
-            <div style={{display:'flex', alignItems:'center', gap:'4px'}}>
-              <span style={{fontSize:'10px', color:'#666688'}}>종류</span>
-              <select value={s.fontFamily}
-                onChange={e => setSettings(prev => ({...prev, fontFamily: e.target.value}))}
-                style={{fontSize:'11px', padding:'2px 6px', borderRadius:'5px', background:'#1e1e2e', color:'#c8c0ff', border:'1px solid rgba(255,255,255,0.1)', cursor:'pointer'}}>
-                <option value="var(--font-sans)">기본</option>
-                <option value="Batang, serif">명조</option>
-                <option value="Malgun Gothic, sans-serif">고딕</option>
-                <option value="Apple SD Gothic Neo, sans-serif">둥근고딕</option>
-              </select>
-            </div>
-            <div style={{display:'flex', gap:'5px', marginLeft:'auto'}}>
-              <button onClick={handleSaveSettings}
-                style={{fontSize:'11px', padding:'4px 12px', borderRadius:'6px', border:'none', background:'#3d2a88', color:'#c8b0ff', cursor:'pointer'}}>
-                💾 저장
-              </button>
-              <button onClick={() => setSettings(DEFAULT_SETTINGS)}
-                style={{fontSize:'11px', padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,255,255,0.08)', background:'transparent', color:'#555577', cursor:'pointer'}}>
-                초기화
-              </button>
-              <button onClick={() => setShowSettings(false)}
-                style={{fontSize:'11px', padding:'4px 8px', borderRadius:'6px', border:'1px solid rgba(255,255,255,0.08)', background:'transparent', color:'#555577', cursor:'pointer'}}>
-                ✕
-              </button>
-            </div>
+          <div style={{display:'flex', alignItems:'center', gap:'4px'}}>
+            <span style={{fontSize:'10px', color:'#555577'}}>폰트</span>
+            <select value={s.fontFamily}
+              onChange={e => setSettings(prev => ({...prev, fontFamily: e.target.value}))}
+              style={{fontSize:'11px', padding:'2px 4px', borderRadius:'4px', background:'#1e1e2e', color:'#c8c0ff', border:'1px solid rgba(255,255,255,0.1)', cursor:'pointer'}}>
+              <option value="var(--font-sans)">기본</option>
+              <option value="Batang, serif">명조</option>
+              <option value="Malgun Gothic, sans-serif">고딕</option>
+              <option value="Apple SD Gothic Neo, sans-serif">둥근고딕</option>
+            </select>
+          </div>
+          <div style={{width:'1px', height:'16px', background:'rgba(255,255,255,0.08)'}}/>
+          <div style={{display:'flex', gap:'4px'}}>
+            <button onClick={handleSaveSettings}
+              style={{fontSize:'11px', padding:'3px 10px', borderRadius:'5px', border:'none', background:'#3d2a88', color:'#c8b0ff', cursor:'pointer'}}>
+              저장
+            </button>
+            <button onClick={() => setSettings(DEFAULT_SETTINGS)}
+              style={{fontSize:'11px', padding:'3px 8px', borderRadius:'5px', border:'1px solid rgba(255,255,255,0.08)', background:'transparent', color:'#555577', cursor:'pointer'}}>
+              초기화
+            </button>
+            <button onClick={() => setShowSettings(false)}
+              style={{fontSize:'11px', padding:'3px 6px', borderRadius:'5px', border:'none', background:'transparent', color:'#444466', cursor:'pointer'}}>
+              ✕
+            </button>
           </div>
         </div>
       )}
@@ -255,12 +233,7 @@ function ConsultantContent() {
             <div style={{marginLeft:'auto', display:'flex', gap:'5px'}}>
               {['AI 분석','사주 보기'].map((label, i) => (
                 <button key={label} onClick={() => setShowSaju(i === 1)}
-                  style={{
-                    fontSize:'11px', padding:'3px 10px', borderRadius:'20px',
-                    border:'none', cursor:'pointer',
-                    background: (i === 1) === showSaju ? '#2d2060' : 'rgba(255,255,255,0.06)',
-                    color: (i === 1) === showSaju ? '#b8a9ff' : '#666688',
-                  }}>
+                  style={{fontSize:'11px', padding:'3px 10px', borderRadius:'20px', border:'none', cursor:'pointer', background:(i === 1) === showSaju ? '#2d2060' : 'rgba(255,255,255,0.06)', color:(i === 1) === showSaju ? '#b8a9ff' : '#666688'}}>
                   {label}
                 </button>
               ))}
