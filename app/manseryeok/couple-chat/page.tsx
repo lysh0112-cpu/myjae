@@ -26,7 +26,7 @@ function CoupleChatInner() {
 
     const loadMessages = async () => {
       const { data } = await supabase
-        .from('chat_messages')
+        .from('couple_chat_messages')
         .select('*')
         .eq('consultation_id', consultationId)
         .order('created_at', { ascending: true })
@@ -39,7 +39,7 @@ function CoupleChatInner() {
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
-        table: 'chat_messages',
+        table: 'couple_chat_messages',
         filter: `consultation_id=eq.${consultationId}`,
       }, (payload) => {
         setMessages(prev => [...prev, payload.new as Message])
@@ -51,7 +51,7 @@ function CoupleChatInner() {
 
   const handleSend = async (text: string) => {
     if (!consultationId) return
-    await supabase.from('chat_messages').insert({
+    await supabase.from('couple_chat_messages').insert({
       consultation_id: consultationId,
       sender: myRole,
       message: text,
@@ -73,7 +73,7 @@ function CoupleChatInner() {
       .from('chat-images')
       .getPublicUrl(path)
 
-    await supabase.from('chat_messages').insert({
+    await supabase.from('couple_chat_messages').insert({
       consultation_id: consultationId,
       sender: myRole,
       message: '[이미지]',
@@ -83,7 +83,7 @@ function CoupleChatInner() {
 
   const handleVoiceText = async (text: string) => {
     if (!text.trim() || !consultationId) return
-    await supabase.from('chat_messages').insert({
+    await supabase.from('couple_chat_messages').insert({
       consultation_id: consultationId,
       sender: myRole,
       message: text,
