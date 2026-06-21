@@ -83,7 +83,9 @@ export default function YongsinProBoard({ saju, dayStem, hourIdx, customScores }
               <span className="text-sm font-bold" style={{color:ELEMENT_COLOR[el]}}>
                 {ELEMENT_CHAR[el]}
               </span>
-              <span className="text-xs font-bold mt-0.5" style={{color:'#e0dce8'}}>{val}</span>
+              <span className="text-xs font-bold mt-0.5" style={{color:'#e0dce8'}}>
+                {String(val)}
+              </span>
             </div>
           ))}
         </div>
