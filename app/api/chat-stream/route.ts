@@ -1,13 +1,6 @@
-import Anthropic from '@anthropic-ai/sdk'
-
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-})
-
 export async function POST(req: Request) {
   const {
-    messages,
-    mode,
+    messages, mode,
     saju1, saju2,
     gender1, gender2,
     yongsin1, yongsin2,
@@ -24,21 +17,45 @@ export async function POST(req: Request) {
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        const response = await client.messages.stream({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 800,
-          system: systemPrompt,
-          messages,
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': process.env.ANTHROPIC_API_KEY!,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 800,
+            stream: true,
+            system: systemPrompt,
+            messages,
+          }),
         })
 
-        for await (const chunk of response) {
-          if (
-            chunk.type === 'content_block_delta' &&
-            chunk.delta.type === 'text_delta'
-          ) {
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ text: chunk.delta.text })}\n\n`)
-            )
+        const reader = res.body!.getReader()
+        const decoder = new TextDecoder()
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          const chunk = decoder.decode(value)
+          const lines = chunk.split('\n')
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6)
+              if (data === '[DONE]') continue
+              try {
+                const parsed = JSON.parse(data)
+                if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ text: parsed.delta.text })}\n\n`)
+                  )
+                }
+              } catch {}
+            }
           }
         }
 
@@ -83,7 +100,6 @@ function getSystemPrompt(p: {
   yongsin1: any, yongsin2: any
   userQuestion?: string
 }): string {
-
   const base = `당신은 자평진전 격국론 기반의 명리학 전문 상담사입니다.
 마크다운 기호(##, **, ---)는 절대 사용하지 마세요.
 답변은 핵심만 3~5문장으로 간결하게 작성하세요.
