@@ -1,4 +1,3 @@
-// app/manseryeok/consultant-select/ConsultantCard.tsx
 'use client'
 import { useRouter } from 'next/navigation'
 import type { Consultant } from './data'
@@ -11,11 +10,13 @@ export default function ConsultantCard({ consultant: c, mode }: Props) {
   return (
     <div className={`mx-5 mb-3 rounded-2xl overflow-hidden border
       ${c.featured ? 'border-[#4433aa]' : 'border-[#252545]'} bg-[#13132a]`}>
+
       {c.featured && (
         <div className="bg-[#2d2060] text-[#b8a9ff] text-[10px] text-center py-[5px]">
           ⭐ {c.featuredLabel}
         </div>
       )}
+
       <div className="p-4">
         {/* 상단 프로필 */}
         <div className="flex items-start gap-3 mb-3">
@@ -59,7 +60,7 @@ export default function ConsultantCard({ consultant: c, mode }: Props) {
           <div className="text-[11px] text-[#4d4480] mt-1">— {c.reviewDate}</div>
         </div>
 
-        {/* 하단 가격·버튼 */}
+        {/* 가격·버튼 */}
         <div className="flex items-center justify-between">
           <div>
             <div className="text-[16px] text-[#b8a9ff] font-medium">{c.price.toLocaleString()}원~</div>
