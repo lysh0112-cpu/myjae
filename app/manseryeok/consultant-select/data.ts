@@ -1,4 +1,3 @@
-// app/manseryeok/consultant-select/data.ts
 export type Consultant = {
   id: string
   name: string
