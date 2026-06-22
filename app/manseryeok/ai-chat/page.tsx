@@ -2,7 +2,7 @@
 import { Suspense, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import ChatBubble from './ChatBubble'
-import { FIRST_MESSAGE, type ChatMode } from './data'
+import { type ChatMode, QUICK_QUESTIONS } from './data'
 import { calcSaju, getSajuText } from './useSaju'
 import { useAiChat } from './useAiChat'
 
@@ -34,7 +34,6 @@ function AiChatInner() {
     saju1, saju2,
     gender1: person1?.gender || '남',
     gender2: person2?.gender || '여',
-    firstAiMessage: FIRST_MESSAGE[mode],
   })
 
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -94,6 +93,16 @@ function AiChatInner() {
 
       {/* 채팅 영역 */}
       <div style={{flex:1, overflowY:'auto', padding:'20px 16px'}}>
+
+        {/* 질문 없이 진입했을 때 안내 문구 */}
+        {messages.length === 0 && !isStreaming && (
+          <div style={{textAlign:'center', marginTop:'40px'}}>
+            <div style={{fontSize:'32px', marginBottom:'12px'}}>🔮</div>
+            <div style={{fontSize:'14px', color:'#7766aa', marginBottom:'4px'}}>사주를 살펴봤어요</div>
+            <div style={{fontSize:'12px', color:'#444466'}}>아래 질문 버튼을 눌러보세요</div>
+          </div>
+        )}
+
         {messages.map((msg, i) => (
           <ChatBubble key={i} role={msg.role} content={msg.content}
             isStreaming={isStreaming && i === messages.length - 1 && msg.role === 'assistant'}
@@ -102,8 +111,8 @@ function AiChatInner() {
         <div ref={bottomRef} />
       </div>
 
-      {/* 빠른 질문 */}
-      {messages.length <= 2 && !isStreaming && !userQuestion && quickQuestions.length > 0 && (
+      {/* 빠른 질문 — 질문 없이 진입 + 대화 초반에만 */}
+      {messages.length === 0 && !isStreaming && quickQuestions.length > 0 && (
         <div style={{padding:'0 16px 12px'}}>
           <div style={{fontSize:'11px', color:'#444466', marginBottom:'8px'}}>빠른 질문</div>
           <div style={{display:'flex', flexWrap:'wrap', gap:'6px'}}>
