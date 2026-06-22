@@ -14,7 +14,7 @@ const TABS = [
   { key: 'consultant', label: '👤 상담사 관리' },
   { key: 'settlement', label: '💰 정산 관리' },
   { key: 'history', label: '📋 상담 내역' },
-  { key: 'knowledge', label: '🧠 지식 관리' },
+  { key: 'knowledge', label: '🧠 연구 자료' },
   { key: 'settings', label: '⚙️ 사이트 설정' },
 ]
 
