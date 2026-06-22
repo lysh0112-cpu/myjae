@@ -34,71 +34,29 @@ export default function KnowledgeForm({
   form, editing, loading, onChange, onSave, onCancel, onMultiSave
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
-  const [extracting, setExtracting] = useState(false)
   const [fileNames, setFileNames] = useState<string[]>([])
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files
     if (!files || files.length === 0) return
+
     const names = Array.from(files).map(f => f.name)
     setFileNames(names)
 
     if (files.length === 1) {
       const file = files[0]
-      const isPdf = file.name.toLowerCase().endsWith('.pdf')
-      const isText = file.name.toLowerCase().endsWith('.txt')
-
-      if (isPdf) {
-        setExtracting(true)
-        try {
-          const fd = new FormData()
-          fd.append('file', file)
-          const res = await fetch('/api/extract-pdf', { method: 'POST', body: fd })
-          const data = await res.json()
-          onChange({ ...form, title: '', content: data.text || '', file_type: 'pdf' })
-        } catch {
-          onChange({ ...form, title: '', content: '', file_type: 'pdf' })
-        } finally {
-          setExtracting(false)
-        }
-      } else if (isText) {
-        const text = await file.text().catch(() => '')
-        onChange({ ...form, title: '', content: text, file_type: 'txt' })
-      }
+      const text = await file.text().catch(() => '')
+      onChange({ ...form, title: '', content: text, file_type: 'txt' })
     } else {
-      // 여러 파일
       const docs: Omit<DocForm, 'id' | 'created_at'>[] = []
       for (const file of Array.from(files)) {
-        const isPdf = file.name.toLowerCase().endsWith('.pdf')
-        const isText = file.name.toLowerCase().endsWith('.txt')
-        let content = ''
-        let file_type = ''
-
-        if (isPdf) {
-          setExtracting(true)
-          try {
-            const fd = new FormData()
-            fd.append('file', file)
-            const res = await fetch('/api/extract-pdf', { method: 'POST', body: fd })
-            const data = await res.json()
-            content = data.text || ''
-            file_type = 'pdf'
-          } catch {
-            file_type = 'pdf'
-          } finally {
-            setExtracting(false)
-          }
-        } else if (isText) {
-          content = await file.text().catch(() => '')
-          file_type = 'txt'
-        }
-
+        const text = await file.text().catch(() => '')
         docs.push({
           title: '',
-          content,
+          content: text,
           category: form.category,
           is_active: true,
-          file_type,
+          file_type: 'txt',
         })
       }
       onMultiSave(docs)
@@ -108,18 +66,18 @@ export default function KnowledgeForm({
   return (
     <div className="rounded-2xl p-5"
       style={{ background: 'rgba(60,52,137,0.2)', border: '1px solid rgba(250,199,117,0.2)' }}>
+
       <div className="flex items-center justify-between mb-4">
         <div className="text-sm font-bold" style={{ color: '#FAC775' }}>
-          {editing ? '✏️ 연구자료 수정' : '➕ 연구자료'}
+          {editing ? '✏️ 연구자료 수정' : '+ 연구자료 (최대 4.5MB · txt파일만 가능)'}
         </div>
         <div className="flex gap-2 items-center">
           <button onClick={() => fileRef.current?.click()}
-            disabled={extracting}
             className="px-3 py-1.5 rounded-lg text-xs font-bold"
             style={{ background: 'rgba(255,255,255,0.08)', color: '#b0aec8', border: '1px solid rgba(255,255,255,0.1)' }}>
-            {extracting ? '⏳ 추출중...' : `📎 파일 첨부 ${fileNames.length > 0 ? `(${fileNames.length}개)` : ''}`}
+            📎 파일 첨부 {fileNames.length > 0 && `(${fileNames.length}개)`}
           </button>
-          <input ref={fileRef} type="file" accept=".pdf,.txt" multiple
+          <input ref={fileRef} type="file" accept=".txt" multiple
             className="hidden" onChange={handleFileUpload} />
           {editing && (
             <button onClick={onCancel}
@@ -128,7 +86,7 @@ export default function KnowledgeForm({
               취소
             </button>
           )}
-          <button onClick={onSave} disabled={loading || extracting}
+          <button onClick={onSave} disabled={loading}
             className="px-4 py-1.5 rounded-lg text-xs font-bold"
             style={{ background: '#FAC775', color: '#1a1a18' }}>
             {loading ? '저장중...' : '저장'}
@@ -136,14 +94,7 @@ export default function KnowledgeForm({
         </div>
       </div>
 
-      {extracting && (
-        <div className="mb-3 p-3 rounded-xl text-xs text-center"
-          style={{ background: 'rgba(250,199,117,0.1)', color: '#FAC775', border: '1px solid rgba(250,199,117,0.2)' }}>
-          ⏳ Claude AI가 PDF 텍스트를 추출하고 있어요... 잠시만 기다려주세요
-        </div>
-      )}
-
-      {fileNames.length > 0 && !extracting && (
+      {fileNames.length > 0 && (
         <div className="mb-3 p-3 rounded-xl text-xs"
           style={{ background: 'rgba(255,255,255,0.05)', color: '#b0aec8' }}>
           📄 {fileNames.join(', ')}
@@ -179,7 +130,7 @@ export default function KnowledgeForm({
           <textarea
             value={form.content}
             onChange={e => onChange({ ...form, content: e.target.value })}
-            placeholder="PDF 업로드 시 자동 추출됩니다."
+            placeholder="txt 파일 첨부 또는 직접 입력하세요."
             rows={16}
             className="w-full rounded-xl px-3 py-2.5 text-sm outline-none resize-none"
             style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}
