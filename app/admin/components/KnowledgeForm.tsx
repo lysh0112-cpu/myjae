@@ -69,7 +69,7 @@ export default function KnowledgeForm({
 
       <div className="flex items-center justify-between mb-4">
         <div className="text-sm font-bold" style={{ color: '#FAC775' }}>
-          {editing ? '✏️ 연구자료 수정' : '+ 연구자료 (최대 4.5MB · txt파일만 가능)'}
+          {editing ? '✏️ 연구자료 수정' : '+ 연구자료 (A4180장 최대 4.5MB · txt파일만 가능)'}
         </div>
         <div className="flex gap-2 items-center">
           <button onClick={() => fileRef.current?.click()}
