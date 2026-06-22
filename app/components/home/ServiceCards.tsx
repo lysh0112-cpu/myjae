@@ -1,0 +1,76 @@
+import Link from 'next/link'
+
+const SERVICES = [
+  {
+    icon: '🔮',
+    name: 'AI 사주 분석',
+    target: '누구나',
+    targetStyle: { background: 'rgba(250,199,117,0.15)', color: '#FAC775' },
+    desc: '오행·용신·10가지 정밀 분석 → 전문가 상담연결',
+    price: '무료 → 3,900원~',
+    href: '/manseryeok',
+  },
+  {
+    icon: '💕',
+    name: '궁합 분석',
+    target: '커플·연인용',
+    targetStyle: { background: 'rgba(233,30,99,0.18)', color: '#f48fb1' },
+    desc: '두 사람 운명 궁합 AI 분석 (외국인 포함 연인·미혼·돌싱)',
+    price: '9,900원~',
+    href: '/manseryeok/couple-input',
+  },
+  {
+    icon: '🎨',
+    name: '물상도 AI 그림',
+    target: '국내 유일',
+    targetStyle: { background: 'rgba(76,175,80,0.15)', color: '#81c784' },
+    desc: '사주 8글자 → AI 수묵화 풍경화 생성',
+    price: '19,900원~',
+    href: '/manseryeok',
+  },
+  {
+    icon: '💫',
+    name: 'MBTI×사주 매칭',
+    target: '솔로·미혼·돌싱',
+    targetStyle: { background: 'rgba(60,52,137,0.3)', color: '#b0aec8' },
+    desc: '운명지수 기반 글로벌 커플 매칭',
+    price: '월 9,900원 · 세계 최초',
+    href: '/matching',
+  },
+]
+
+export default function ServiceCards() {
+  return (
+    <section className="px-4 py-5">
+      <h2 className="text-base font-bold text-white mb-4">핵심 서비스</h2>
+      <div className="grid grid-cols-2 gap-3">
+        {SERVICES.map((s) => (
+          <Link key={s.name} href={s.href}>
+            <div
+              className="rounded-2xl p-4 h-full transition-all active:scale-95"
+              style={{
+                background: '#2C2C2A',
+                border: '1px solid rgba(250,199,117,0.12)',
+              }}
+            >
+              <div className="text-2xl mb-2">{s.icon}</div>
+              <div className="text-sm font-bold text-white mb-1">{s.name}</div>
+              <div
+                className="inline-block px-2 py-0.5 rounded-full font-semibold mb-2"
+                style={{ fontSize: '10px', ...s.targetStyle }}
+              >
+                {s.target}
+              </div>
+              <p style={{ color: '#8a88a0', fontSize: '11px', lineHeight: '1.5' }}>
+                {s.desc}
+              </p>
+              <p style={{ color: '#FAC775', fontSize: '11px', fontWeight: 600, marginTop: '6px' }}>
+                {s.price}
+              </p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  )
+}
