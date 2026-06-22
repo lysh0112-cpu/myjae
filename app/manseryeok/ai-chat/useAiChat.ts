@@ -5,7 +5,6 @@ import type { Message, ChatMode } from './data'
 export function useAiChat({
   mode, storageKey, userQuestion,
   saju1, saju2, gender1, gender2,
-  firstAiMessage,
 }: {
   mode: ChatMode
   storageKey: string
@@ -14,27 +13,20 @@ export function useAiChat({
   saju2: any[]
   gender1: string
   gender2: string
-  firstAiMessage: string
 }) {
-  const getInitialMessages = (): Message[] => {
-    const msgs: Message[] = [{ role: 'assistant', content: firstAiMessage }]
-    if (userQuestion) msgs.push({ role: 'user', content: userQuestion })
-    return msgs
-  }
-
   const [messages, setMessages] = useState<Message[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem(storageKey)
       if (saved) return JSON.parse(saved)
     }
-    return getInitialMessages()
+    return []
   })
 
   const [input, setInput] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
   const [quickQuestions, setQuickQuestions] = useState<string[]>([])
   const abortRef = useRef<AbortController | null>(null)
-  const didAutoSend = useRef(false)
+  const didInitRef = useRef(false)
 
   useEffect(() => {
     supabase.from('quick_questions').select('questions')
@@ -44,50 +36,40 @@ export function useAiChat({
       })
   }, [mode])
 
-  // 메시지 변경 시 저장
   useEffect(() => {
     if (messages.length > 0) {
       sessionStorage.setItem(storageKey, JSON.stringify(messages))
     }
   }, [messages, storageKey])
 
-  // 최초 1회만 — userQuestion 자동 전송
-  // 저장된 대화가 AI 답변으로 끝나면 이미 처리된 것 → 스킵
-  // 저장된 대화가 user 메시지로 끝나면 AI 답변 없는 것 → 자동 전송
+  // 최초 진입 시 AI가 첫 멘트 생성
   useEffect(() => {
-    if (didAutoSend.current) return
-    if (!userQuestion) return
-    didAutoSend.current = true
-
+    if (didInitRef.current) return
     const saved = sessionStorage.getItem(storageKey)
-    const savedMsgs: Message[] = saved ? JSON.parse(saved) : []
-    const lastMsg = savedMsgs[savedMsgs.length - 1]
+    if (saved) {
+      // 저장된 대화 있으면 유지 — 마지막이 user면 AI 답변 트리거
+      const savedMsgs: Message[] = JSON.parse(saved)
+      const last = savedMsgs[savedMsgs.length - 1]
+      if (last?.role === 'user') {
+        didInitRef.current = true
+        setTimeout(() => streamAI(savedMsgs), 300)
+      }
+      return
+    }
 
-    // 마지막이 AI 답변이면 이미 완료 → 유지만 하고 재전송 안 함
-    if (lastMsg?.role === 'assistant' && lastMsg.content.length > 0) return
+    // 처음 진입 — AI가 첫 멘트 생성
+    didInitRef.current = true
+    const initMessages: Message[] = userQuestion
+      ? [{ role: 'user', content: userQuestion }]
+      : []
 
-    // 아직 AI 답변 없음 → 자동 전송
-    const initial = getInitialMessages()
-    setMessages(initial)
-    setTimeout(() => sendMessage(userQuestion, initial), 600)
+    setMessages(initMessages)
+    setTimeout(() => streamAI(initMessages), 300)
   }, [])
 
-  const sendMessage = async (text: string, baseMessages?: Message[]) => {
-    if (!text.trim() || isStreaming) return
-
-    const currentMessages = baseMessages || messages
-    const userMsg: Message = { role: 'user', content: text }
-    const newMessages = baseMessages ? currentMessages : [...currentMessages, userMsg]
-
-    if (!baseMessages) setMessages(newMessages)
-    setInput('')
+  const streamAI = async (currentMessages: Message[]) => {
     setIsStreaming(true)
-
-    setMessages(prev => {
-      const last = prev[prev.length - 1]
-      if (last?.role === 'user') return [...prev, { role: 'assistant', content: '' }]
-      return [...prev, userMsg, { role: 'assistant', content: '' }]
-    })
+    setMessages(prev => [...prev, { role: 'assistant', content: '' }])
 
     try {
       abortRef.current = new AbortController()
@@ -95,9 +77,11 @@ export function useAiChat({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: newMessages, mode,
-          saju1, saju2, gender1, gender2,
-          yongsin1: null, yongsin2: null, userQuestion,
+          messages: currentMessages,
+          mode, saju1, saju2,
+          gender1, gender2,
+          yongsin1: null, yongsin2: null,
+          userQuestion,
         }),
         signal: abortRef.current.signal,
       })
@@ -137,15 +121,26 @@ export function useAiChat({
     }
   }
 
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || isStreaming) return
+
+    const userMsg: Message = { role: 'user', content: text }
+    const newMessages = [...messages, userMsg]
+    setMessages(newMessages)
+    setInput('')
+    await streamAI(newMessages)
+  }
+
   const handleClearChat = () => {
     if (confirm('대화 내용을 초기화할까요?')) {
       sessionStorage.removeItem(storageKey)
-      didAutoSend.current = false
-      const initial = getInitialMessages()
-      setMessages(initial)
-      if (userQuestion) {
-        setTimeout(() => sendMessage(userQuestion, initial), 300)
-      }
+      didInitRef.current = false
+      setMessages([])
+      const initMessages: Message[] = userQuestion
+        ? [{ role: 'user', content: userQuestion }]
+        : []
+      setMessages(initMessages)
+      setTimeout(() => streamAI(initMessages), 300)
     }
   }
 
@@ -153,6 +148,6 @@ export function useAiChat({
     messages, input, setInput,
     isStreaming, quickQuestions,
     sendMessage, handleClearChat,
-    abortRef, userQuestion,
+    abortRef,
   }
 }
