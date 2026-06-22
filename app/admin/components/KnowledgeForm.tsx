@@ -31,7 +31,7 @@ type Props = {
 export default function KnowledgeForm({ form, editing, loading, onChange, onSave, onCancel }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
 
-  async function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files
     if (!files || files.length === 0) return
     const file = files[0]
@@ -46,7 +46,6 @@ export default function KnowledgeForm({ form, editing, loading, onChange, onSave
   return (
     <div className="rounded-2xl p-5 h-full"
       style={{ background: 'rgba(60,52,137,0.2)', border: '1px solid rgba(250,199,117,0.2)' }}>
-
       <div className="flex items-center justify-between mb-4">
         <div className="text-sm font-bold" style={{ color: '#FAC775' }}>
           {editing ? '✏️ 연구자료 수정' : '➕ 연구자료'}
@@ -57,7 +56,7 @@ export default function KnowledgeForm({ form, editing, loading, onChange, onSave
             style={{ background: 'rgba(255,255,255,0.08)', color: '#b0aec8', border: '1px solid rgba(255,255,255,0.1)' }}>
             📎 파일 첨부
           </button>
-          <input ref={fileRef} type="file" accept=".pdf,.txt" className="hidden" onChange={handlePdfUpload} />
+          <input ref={fileRef} type="file" accept=".pdf,.txt" className="hidden" onChange={handleFileUpload} />
           {editing && (
             <button onClick={onCancel}
               className="px-3 py-1.5 rounded-lg text-xs font-bold"
@@ -72,24 +71,20 @@ export default function KnowledgeForm({ form, editing, loading, onChange, onSave
           </button>
         </div>
       </div>
-
       <div className="space-y-3">
         <input value={form.title} onChange={e => onChange({ ...form, title: e.target.value })}
           placeholder="제목 (예: 갑목 일간 특성)"
           className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
           style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }} />
-
         <select value={form.category} onChange={e => onChange({ ...form, category: e.target.value })}
           className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
           style={{ background: '#1a1a18', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}>
           {CATEGORIES.map(c => <option key={c} value={c}>{CAT_LABEL[c]}</option>)}
         </select>
-
         <textarea value={form.content} onChange={e => onChange({ ...form, content: e.target.value })}
-          placeholder="내용을 입력하거나 PDF/텍스트 파일을 첨부하세요."
+          placeholder="내용을 입력하거나 파일을 첨부하세요."
           rows={16} className="w-full rounded-xl px-3 py-2.5 text-sm outline-none resize-none"
           style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }} />
-
         <div className="flex items-center gap-3">
           <span className="text-xs" style={{ color: '#b0aec8' }}>AI 참고 여부</span>
           <button onClick={() => onChange({ ...form, is_active: !form.is_active })}
