@@ -37,6 +37,15 @@ const SERVICES = [
     price: '월 9,900원 · 세계 최초',
     href: '/matching',
   },
+  {
+    icon: '✍️',
+    name: '인생이름 풀이/개명',
+    target: '나만의이름',
+    targetStyle: { background: 'rgba(255,152,0,0.15)', color: '#ffcc80' },
+    desc: '사주 조화와 용신에 맞는 이름 분석 및 현대적이고 세련된 개명 서비스',
+    price: '분석 → 9,900원~ (전문가 개명 추천 별도)',
+    href: '/naming',
+  },
 ]
 
 export default function ServiceCards() {
@@ -48,10 +57,7 @@ export default function ServiceCards() {
           <Link key={s.name} href={s.href}>
             <div
               className="rounded-2xl p-4 h-full transition-all active:scale-95"
-              style={{
-                background: '#2C2C2A',
-                border: '1px solid rgba(250,199,117,0.12)',
-              }}
+              style={{ background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.12)' }}
             >
               <div className="text-2xl mb-2">{s.icon}</div>
               <div className="text-sm font-bold text-white mb-1">{s.name}</div>
