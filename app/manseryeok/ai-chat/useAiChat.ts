@@ -42,14 +42,15 @@ export function useAiChat({
     }
   }, [messages, storageKey])
 
-  // 최초 진입 시 AI가 첫 멘트 생성
   useEffect(() => {
     if (didInitRef.current) return
+
+    // 저장된 대화 있으면 유지
     const saved = sessionStorage.getItem(storageKey)
     if (saved) {
-      // 저장된 대화 있으면 유지 — 마지막이 user면 AI 답변 트리거
       const savedMsgs: Message[] = JSON.parse(saved)
       const last = savedMsgs[savedMsgs.length - 1]
+      // 마지막이 user면 AI 답변 아직 없음 → 트리거
       if (last?.role === 'user') {
         didInitRef.current = true
         setTimeout(() => streamAI(savedMsgs), 300)
@@ -57,14 +58,15 @@ export function useAiChat({
       return
     }
 
-    // 처음 진입 — AI가 첫 멘트 생성
     didInitRef.current = true
-    const initMessages: Message[] = userQuestion
-      ? [{ role: 'user', content: userQuestion }]
-      : []
 
-    setMessages(initMessages)
-    setTimeout(() => streamAI(initMessages), 300)
+    if (userQuestion) {
+      // 고객 질문을 첫 메시지로 → AI 바로 답변
+      const initMessages: Message[] = [{ role: 'user', content: userQuestion }]
+      setMessages(initMessages)
+      setTimeout(() => streamAI(initMessages), 300)
+    }
+    // userQuestion 없으면 빈 화면 → 빠른 질문 버튼 표시
   }, [])
 
   const streamAI = async (currentMessages: Message[]) => {
@@ -123,7 +125,6 @@ export function useAiChat({
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || isStreaming) return
-
     const userMsg: Message = { role: 'user', content: text }
     const newMessages = [...messages, userMsg]
     setMessages(newMessages)
@@ -136,11 +137,11 @@ export function useAiChat({
       sessionStorage.removeItem(storageKey)
       didInitRef.current = false
       setMessages([])
-      const initMessages: Message[] = userQuestion
-        ? [{ role: 'user', content: userQuestion }]
-        : []
-      setMessages(initMessages)
-      setTimeout(() => streamAI(initMessages), 300)
+      if (userQuestion) {
+        const initMessages: Message[] = [{ role: 'user', content: userQuestion }]
+        setMessages(initMessages)
+        setTimeout(() => streamAI(initMessages), 300)
+      }
     }
   }
 
