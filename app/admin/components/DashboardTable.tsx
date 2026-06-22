@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 type Consultation = {
@@ -127,10 +127,9 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
               </tr>
             )}
             {filtered.map((c, i) => (
-              <>
-                <tr key={c.id}
-                  style={{ background: i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
-                    borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <React.Fragment key={c.id}>
+                <tr style={{ background: i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
+                  borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                   <td className="px-3 py-3 text-xs whitespace-nowrap" style={{ color: '#8a88a0' }}>
                     {new Date(c.created_at).toLocaleDateString('ko-KR')}
                   </td>
@@ -191,7 +190,8 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
                     ) : <span className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>없음</span>}
                   </td>
                   <td className="px-3 py-3">
-                    <button className="px-3 py-1 rounded-lg text-xs font-bold"
+                    <button onClick={() => alert('수정 기능 준비중')}
+                      className="px-3 py-1 rounded-lg text-xs font-bold"
                       style={{ background: 'rgba(250,199,117,0.15)', color: '#FAC775' }}>
                       수정
                     </button>
@@ -224,7 +224,7 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
                     </td>
                   </tr>
                 )}
-              </>
+              </React.Fragment>
             ))}
           </tbody>
         </table>
