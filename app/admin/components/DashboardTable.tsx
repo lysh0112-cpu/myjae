@@ -40,6 +40,19 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
     return consultants.find(c => c.id === id)?.name ?? 'AI'
   }
 
+  const getStatusLabel = (status: string) => {
+    if (status === 'paid') return '결제완료'
+    if (status === 'closed') return '종료'
+    if (status === 'pending') return '대기중'
+    return status
+  }
+
+  const getStatusStyle = (status: string) => {
+    if (status === 'paid') return { background: 'rgba(250,199,117,0.15)', color: '#FAC775' }
+    if (status === 'closed') return { background: 'rgba(255,100,100,0.15)', color: '#ff6464' }
+    return { background: 'rgba(76,175,80,0.15)', color: '#81c784' }
+  }
+
   async function handleAssign(consultationId: string, consultantId: string) {
     await supabase.from('consultations')
       .update({ assigned_consultant_id: consultantId || null })
@@ -78,7 +91,8 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
             style={{ background: '#1a1a18', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}>
             <option value="all">전체 상태</option>
             <option value="paid">결제완료</option>
-            <option value="in_progress">진행중</option>
+            <option value="pending">대기중</option>
+            <option value="closed">종료</option>
           </select>
         </div>
         <button onClick={onExcel}
@@ -145,10 +159,8 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
                     {(c.paid_amount || 0).toLocaleString()}원
                   </td>
                   <td className="px-3 py-3">
-                    <span className="text-xs px-2 py-1 rounded-full"
-                      style={{ background: c.status === 'paid' ? 'rgba(250,199,117,0.15)' : 'rgba(76,175,80,0.15)',
-                        color: c.status === 'paid' ? '#FAC775' : '#81c784' }}>
-                      {c.status === 'paid' ? '결제완료' : '진행중'}
+                    <span className="text-xs px-2 py-1 rounded-full" style={getStatusStyle(c.status)}>
+                      {getStatusLabel(c.status)}
                     </span>
                   </td>
                   <td className="px-3 py-3">
