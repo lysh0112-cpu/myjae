@@ -94,6 +94,7 @@ export default function Dashboard() {
         consultants={consultants}
         onDelete={handleDelete}
         onExcel={handleExcel}
+        onRefresh={fetchAll}
       />
     </div>
   )
