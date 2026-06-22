@@ -34,6 +34,7 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [expandedAI, setExpandedAI] = useState<string | null>(null)
   const [expandedSummary, setExpandedSummary] = useState<string | null>(null)
+  const [assignMap, setAssignMap] = useState<Record<string, string>>({})
 
   const getConsultantName = (id: string) => {
     if (!id) return 'AI'
@@ -53,11 +54,17 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
     return { background: 'rgba(76,175,80,0.15)', color: '#81c784' }
   }
 
+  const getAssignedValue = (c: Consultation) => {
+    if (assignMap[c.id] !== undefined) return assignMap[c.id]
+    return c.assigned_consultant_id || ''
+  }
+
   async function handleAssign(consultationId: string, consultantId: string) {
+    setAssignMap(prev => ({ ...prev, [consultationId]: consultantId }))
     await supabase.from('consultations')
       .update({ assigned_consultant_id: consultantId || null })
       .eq('id', consultationId)
-    onRefresh()
+    setTimeout(() => onRefresh(), 500)
   }
 
   const filtered = list
@@ -142,12 +149,14 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap">
                     <select
-                      value={c.assigned_consultant_id || ''}
+                      value={getAssignedValue(c)}
                       onChange={e => handleAssign(c.id, e.target.value)}
                       className="rounded-lg px-2 py-1 text-xs outline-none"
-                      style={{ background: c.assigned_consultant_id ? 'rgba(231,76,60,0.2)' : '#1a1a18',
-                        color: c.assigned_consultant_id ? '#ff8080' : 'rgba(255,255,255,0.4)',
-                        border: '1px solid rgba(255,255,255,0.1)' }}>
+                      style={{
+                        background: getAssignedValue(c) ? 'rgba(231,76,60,0.2)' : '#1a1a18',
+                        color: getAssignedValue(c) ? '#ff8080' : 'rgba(255,255,255,0.4)',
+                        border: '1px solid rgba(255,255,255,0.1)'
+                      }}>
                       <option value="">배정안함</option>
                       {consultants.map(con => (
                         <option key={con.id} value={con.id}>{con.name}</option>
