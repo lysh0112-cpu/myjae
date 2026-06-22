@@ -26,7 +26,9 @@ export default function AdminPage() {
         style={{ background: 'rgba(26,26,24,0.97)', backdropFilter: 'blur(12px)',
           borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center gap-6">
-          <div className="text-base font-bold text-white whitespace-nowrap">🔐 명연재 관리자</div>
+          <div className="text-base font-bold whitespace-nowrap" style={{ color: '#FAC775' }}>
+            🔐 명카페 관리자
+          </div>
           <div className="flex gap-2">
             {TABS.map((t) => (
               <button key={t.key} onClick={() => setTab(t.key as Tab)}
