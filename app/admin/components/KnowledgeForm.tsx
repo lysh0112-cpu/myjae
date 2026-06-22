@@ -44,19 +44,14 @@ export default function KnowledgeForm({
       const file = files[0]
       const isText = file.name.endsWith('.txt')
       const text = isText ? await file.text().catch(() => '') : ''
-      // 제목은 파일명으로만 초기화, onChange로 상태 업데이트
-      onChange({
-        ...form,
-        title: file.name.replace(/\.(pdf|txt)$/i, ''),
-        content: text,
-      })
+      onChange({ ...form, title: '', content: text })
     } else {
       const docs: Omit<DocForm, 'id' | 'created_at'>[] = []
       for (const file of Array.from(files)) {
         const isText = file.name.endsWith('.txt')
         const text = isText ? await file.text().catch(() => '') : ''
         docs.push({
-          title: file.name.replace(/\.(pdf|txt)$/i, ''),
+          title: '',
           content: text,
           category: form.category,
           is_active: true,
@@ -69,8 +64,6 @@ export default function KnowledgeForm({
   return (
     <div className="rounded-2xl p-5"
       style={{ background: 'rgba(60,52,137,0.2)', border: '1px solid rgba(250,199,117,0.2)' }}>
-
-      {/* 헤더 */}
       <div className="flex items-center justify-between mb-4">
         <div className="text-sm font-bold" style={{ color: '#FAC775' }}>
           {editing ? '✏️ 연구자료 수정' : '➕ 연구자료'}
@@ -98,26 +91,24 @@ export default function KnowledgeForm({
         </div>
       </div>
 
-      {/* 첨부 파일 안내 */}
       {fileNames.length > 0 && (
         <div className="mb-3 p-3 rounded-xl text-xs"
           style={{ background: 'rgba(255,255,255,0.05)', color: '#b0aec8' }}>
           📄 {fileNames.join(', ')}
           <div className="mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            PDF는 제목만 자동입력 · 내용은 아래에 직접 붙여넣기 해주세요
+            PDF는 내용을 아래에 직접 붙여넣기 해주세요
           </div>
         </div>
       )}
 
       <div className="space-y-3">
-        {/* 제목 - 자유롭게 수정 가능 */}
         <div>
-          <label className="text-xs mb-1 block" style={{ color: '#b0aec8' }}>제목 (수정 가능)</label>
+          <label className="text-xs mb-1 block" style={{ color: '#b0aec8' }}>제목</label>
           <input
             type="text"
             value={form.title}
             onChange={e => onChange({ ...form, title: e.target.value })}
-            placeholder="제목을 입력하세요"
+            placeholder="제목을 직접 입력하세요"
             className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
             style={{
               background: 'rgba(255,255,255,0.1)',
@@ -127,7 +118,6 @@ export default function KnowledgeForm({
           />
         </div>
 
-        {/* 카테고리 */}
         <div>
           <label className="text-xs mb-1 block" style={{ color: '#b0aec8' }}>분류</label>
           <select value={form.category} onChange={e => onChange({ ...form, category: e.target.value })}
@@ -137,7 +127,6 @@ export default function KnowledgeForm({
           </select>
         </div>
 
-        {/* 내용 */}
         <div>
           <label className="text-xs mb-1 block" style={{ color: '#b0aec8' }}>
             내용 · {form.content.length.toLocaleString()}자
@@ -152,7 +141,6 @@ export default function KnowledgeForm({
           />
         </div>
 
-        {/* AI 참고 여부 */}
         <div className="flex items-center gap-3">
           <span className="text-xs" style={{ color: '#b0aec8' }}>AI 참고 여부</span>
           <button onClick={() => onChange({ ...form, is_active: !form.is_active })}
