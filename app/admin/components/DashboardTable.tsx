@@ -34,7 +34,11 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [expandedAI, setExpandedAI] = useState<string | null>(null)
   const [expandedSummary, setExpandedSummary] = useState<string | null>(null)
-  const [assignMap, setAssignMap] = useState<Record<string, string>>({})
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState<Partial<Consultation>>({})
+  const [localList, setLocalList] = useState<Consultation[]>([])
+
+  React.useEffect(() => { setLocalList(list) }, [list])
 
   const getConsultantName = (id: string) => {
     if (!id) return 'AI'
@@ -54,20 +58,37 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
     return { background: 'rgba(76,175,80,0.15)', color: '#81c784' }
   }
 
-  const getAssignedValue = (c: Consultation) => {
-    if (assignMap[c.id] !== undefined) return assignMap[c.id]
-    return c.assigned_consultant_id || ''
-  }
-
   async function handleAssign(consultationId: string, consultantId: string) {
-    setAssignMap(prev => ({ ...prev, [consultationId]: consultantId }))
+    setLocalList(prev => prev.map(c =>
+      c.id === consultationId ? { ...c, assigned_consultant_id: consultantId } : c
+    ))
     await supabase.from('consultations')
       .update({ assigned_consultant_id: consultantId || null })
       .eq('id', consultationId)
-    setTimeout(() => onRefresh(), 500)
   }
 
-  const filtered = list
+  function startEdit(c: Consultation) {
+    setEditingId(c.id)
+    setEditForm({
+      paid_amount: c.paid_amount,
+      status: c.status,
+      booking_date: c.booking_date,
+      completed_date: c.completed_date,
+    })
+  }
+
+  async function saveEdit(id: string) {
+    await supabase.from('consultations').update({
+      paid_amount: editForm.paid_amount,
+      status: editForm.status,
+      booking_date: editForm.booking_date || null,
+      completed_date: editForm.completed_date || null,
+    }).eq('id', id)
+    setEditingId(null)
+    onRefresh()
+  }
+
+  const filtered = localList
     .filter(c => selectedConsultant === 'all' ? true :
       selectedConsultant === 'ai' ? !c.consultant_id :
       c.consultant_id === selectedConsultant)
@@ -128,16 +149,34 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
             )}
             {filtered.map((c, i) => (
               <React.Fragment key={c.id}>
-                <tr style={{ background: i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
+                <tr style={{ background: editingId === c.id ? 'rgba(60,52,137,0.2)' : i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
                   borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                   <td className="px-3 py-3 text-xs whitespace-nowrap" style={{ color: '#8a88a0' }}>
                     {new Date(c.created_at).toLocaleDateString('ko-KR')}
                   </td>
-                  <td className="px-3 py-3 text-xs whitespace-nowrap" style={{ color: '#8a88a0' }}>
-                    {c.booking_date ? new Date(c.booking_date).toLocaleDateString('ko-KR') : '-'}
+                  <td className="px-3 py-2">
+                    {editingId === c.id ? (
+                      <input type="date" value={editForm.booking_date?.split('T')[0] || ''}
+                        onChange={e => setEditForm({ ...editForm, booking_date: e.target.value })}
+                        className="rounded px-2 py-1 text-xs outline-none w-28"
+                        style={{ background: '#1a1a18', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }} />
+                    ) : (
+                      <span className="text-xs" style={{ color: '#8a88a0' }}>
+                        {c.booking_date ? new Date(c.booking_date).toLocaleDateString('ko-KR') : '-'}
+                      </span>
+                    )}
                   </td>
-                  <td className="px-3 py-3 text-xs whitespace-nowrap" style={{ color: '#8a88a0' }}>
-                    {c.completed_date ? new Date(c.completed_date).toLocaleDateString('ko-KR') : '-'}
+                  <td className="px-3 py-2">
+                    {editingId === c.id ? (
+                      <input type="date" value={editForm.completed_date?.split('T')[0] || ''}
+                        onChange={e => setEditForm({ ...editForm, completed_date: e.target.value })}
+                        className="rounded px-2 py-1 text-xs outline-none w-28"
+                        style={{ background: '#1a1a18', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }} />
+                    ) : (
+                      <span className="text-xs" style={{ color: '#8a88a0' }}>
+                        {c.completed_date ? new Date(c.completed_date).toLocaleDateString('ko-KR') : '-'}
+                      </span>
+                    )}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap">
                     <span className="text-xs px-2 py-1 rounded-full"
@@ -148,12 +187,12 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap">
                     <select
-                      value={getAssignedValue(c)}
+                      value={c.assigned_consultant_id || ''}
                       onChange={e => handleAssign(c.id, e.target.value)}
                       className="rounded-lg px-2 py-1 text-xs outline-none"
                       style={{
-                        background: getAssignedValue(c) ? 'rgba(231,76,60,0.2)' : '#1a1a18',
-                        color: getAssignedValue(c) ? '#ff8080' : 'rgba(255,255,255,0.4)',
+                        background: c.assigned_consultant_id ? 'rgba(231,76,60,0.2)' : '#1a1a18',
+                        color: c.assigned_consultant_id ? '#ff8080' : 'rgba(255,255,255,0.4)',
                         border: '1px solid rgba(255,255,255,0.1)'
                       }}>
                       <option value="">배정안함</option>
@@ -163,13 +202,33 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
                     </select>
                   </td>
                   <td className="px-3 py-3 text-sm text-white whitespace-nowrap">{c.customer_phone}</td>
-                  <td className="px-3 py-3 text-sm font-bold whitespace-nowrap" style={{ color: '#FAC775' }}>
-                    {(c.paid_amount || 0).toLocaleString()}원
+                  <td className="px-3 py-2">
+                    {editingId === c.id ? (
+                      <input type="number" value={editForm.paid_amount || 0}
+                        onChange={e => setEditForm({ ...editForm, paid_amount: parseInt(e.target.value) || 0 })}
+                        className="rounded px-2 py-1 text-xs outline-none w-24"
+                        style={{ background: '#1a1a18', color: '#FAC775', border: '1px solid rgba(255,255,255,0.2)' }} />
+                    ) : (
+                      <span className="text-sm font-bold" style={{ color: '#FAC775' }}>
+                        {(c.paid_amount || 0).toLocaleString()}원
+                      </span>
+                    )}
                   </td>
-                  <td className="px-3 py-3">
-                    <span className="text-xs px-2 py-1 rounded-full" style={getStatusStyle(c.status)}>
-                      {getStatusLabel(c.status)}
-                    </span>
+                  <td className="px-3 py-2">
+                    {editingId === c.id ? (
+                      <select value={editForm.status || ''}
+                        onChange={e => setEditForm({ ...editForm, status: e.target.value })}
+                        className="rounded px-2 py-1 text-xs outline-none"
+                        style={{ background: '#1a1a18', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }}>
+                        <option value="paid">결제완료</option>
+                        <option value="pending">대기중</option>
+                        <option value="closed">종료</option>
+                      </select>
+                    ) : (
+                      <span className="text-xs px-2 py-1 rounded-full" style={getStatusStyle(c.status)}>
+                        {getStatusLabel(c.status)}
+                      </span>
+                    )}
                   </td>
                   <td className="px-3 py-3">
                     {c.ai_analysis ? (
@@ -190,11 +249,26 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
                     ) : <span className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>없음</span>}
                   </td>
                   <td className="px-3 py-3">
-                    <button onClick={() => alert('수정 기능 준비중')}
-                      className="px-3 py-1 rounded-lg text-xs font-bold"
-                      style={{ background: 'rgba(250,199,117,0.15)', color: '#FAC775' }}>
-                      수정
-                    </button>
+                    {editingId === c.id ? (
+                      <div className="flex gap-1">
+                        <button onClick={() => saveEdit(c.id)}
+                          className="px-2 py-1 rounded-lg text-xs font-bold"
+                          style={{ background: 'rgba(76,175,80,0.2)', color: '#81c784' }}>
+                          저장
+                        </button>
+                        <button onClick={() => setEditingId(null)}
+                          className="px-2 py-1 rounded-lg text-xs font-bold"
+                          style={{ background: 'rgba(255,255,255,0.08)', color: '#8a88a0' }}>
+                          취소
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={() => startEdit(c)}
+                        className="px-3 py-1 rounded-lg text-xs font-bold"
+                        style={{ background: 'rgba(250,199,117,0.15)', color: '#FAC775' }}>
+                        수정
+                      </button>
+                    )}
                   </td>
                   <td className="px-3 py-3">
                     <button onClick={() => onDelete(c.id)}
