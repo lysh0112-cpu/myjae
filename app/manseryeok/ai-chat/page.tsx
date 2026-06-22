@@ -1,48 +1,10 @@
 'use client'
-
-import { Suspense, useState, useEffect, useRef } from 'react'
+import { Suspense, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import ChatBubble from './ChatBubble'
-import { FIRST_MESSAGE, type Message, type ChatMode } from './data'
-import { supabase } from '@/lib/supabase'
-
-const STEMS = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
-const BRANCHES = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥']
-
-function calcSaju(year: number, month: number, day: number, hour: number) {
-  const yIdx = (year - 4) % 60
-  const yearStem = STEMS[((yIdx % 10) + 10) % 10]
-  const yearBranch = BRANCHES[((yIdx % 12) + 12) % 12]
-
-  const base = new Date(2000, 0, 1)
-  const target = new Date(year, month - 1, day)
-  const diff = Math.round((target.getTime() - base.getTime()) / 86400000)
-  const dayIdx = ((diff % 60) + 60) % 60
-  const dayStem = STEMS[dayIdx % 10]
-  const dayBranch = BRANCHES[dayIdx % 12]
-
-  const mIdx = ((year - 4) * 12 + (month - 1)) % 60
-  const monthStem = STEMS[((mIdx % 10) + 10) % 10]
-  const monthBranch = BRANCHES[((month + 1) % 12)]
-
-  const hIdx = hour < 0 ? -1 : Math.floor((hour + 1) / 2) % 12
-  const hourStem = hour < 0 ? '' : STEMS[((dayIdx % 5) * 2 + (hIdx % 10)) % 10]
-  const hourBranch = hour < 0 ? '' : BRANCHES[((hIdx % 12) + 12) % 12]
-
-  const saju = [
-    { pillar: '년주', stem: yearStem, branch: yearBranch },
-    { pillar: '월주', stem: monthStem, branch: monthBranch },
-    { pillar: '일주', stem: dayStem, branch: dayBranch },
-  ]
-  if (hour >= 0 && hourBranch) {
-    saju.push({ pillar: '시주', stem: hourStem, branch: hourBranch })
-  }
-  return { saju, dayStem }
-}
-
-function getSajuText(saju: any[]) {
-  return saju.map(s => `${s.pillar}: ${s.stem}${s.branch}`).join(', ')
-}
+import { FIRST_MESSAGE, type ChatMode } from './data'
+import { calcSaju, getSajuText } from './useSaju'
+import { useAiChat } from './useAiChat'
 
 function AiChatInner() {
   const params = useSearchParams()
@@ -51,144 +13,34 @@ function AiChatInner() {
   const mode = (params.get('mode') || 'personal') as ChatMode
   const person1Raw = params.get('person1')
   const person2Raw = params.get('person2')
-  const userQuestion = params.get('userQuestion') || ''
-
+  const userQuestion = decodeURIComponent(params.get('userQuestion') || '')
   const storageKey = `ai-chat-${mode}-${person1Raw?.slice(0, 20)}`
 
   const person1 = person1Raw ? JSON.parse(decodeURIComponent(person1Raw)) : null
   const person2 = person2Raw ? JSON.parse(decodeURIComponent(person2Raw)) : null
 
-  const saju1 = person1 ? calcSaju(
-    Number(person1.year), Number(person1.month), Number(person1.day), Number(person1.hour)
-  ).saju : []
-
-  const saju2 = person2 ? calcSaju(
-    Number(person2.year), Number(person2.month), Number(person2.day), Number(person2.hour)
-  ).saju : []
-
+  const saju1 = person1 ? calcSaju(Number(person1.year), Number(person1.month), Number(person1.day), Number(person1.hour)) : []
+  const saju2 = person2 ? calcSaju(Number(person2.year), Number(person2.month), Number(person2.day), Number(person2.hour)) : []
   const saju1Text = getSajuText(saju1)
   const saju2Text = getSajuText(saju2)
 
-  const getFirstMessage = () => {
-    const base = FIRST_MESSAGE[mode]
-    if (saju1Text) {
-      return base + `\n\n사주 정보를 확인했어요.\n${person1?.gender === '여' ? '여성' : '남성'}: ${saju1Text}${saju2Text ? `\n${person2?.gender === '여' ? '여성' : '남성'}: ${saju2Text}` : ''}`
-    }
-    return base
-  }
-
-  const [messages, setMessages] = useState<Message[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = sessionStorage.getItem(storageKey)
-      if (saved) return JSON.parse(saved)
-    }
-    return [{ role: 'assistant', content: getFirstMessage() }]
+  const {
+    messages, input, setInput,
+    isStreaming, quickQuestions,
+    sendMessage, handleClearChat,
+    abortRef,
+  } = useAiChat({
+    mode, storageKey, userQuestion,
+    saju1, saju2,
+    gender1: person1?.gender || '남',
+    gender2: person2?.gender || '여',
+    firstAiMessage: FIRST_MESSAGE[mode],
   })
 
-  const [input, setInput] = useState('')
-  const [isStreaming, setIsStreaming] = useState(false)
-  const [quickQuestions, setQuickQuestions] = useState<string[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
-  const abortRef = useRef<AbortController | null>(null)
-
-  // DB에서 빠른 질문 불러오기
-  useEffect(() => {
-    supabase
-      .from('quick_questions')
-      .select('questions')
-      .eq('mode', mode)
-      .single()
-      .then(({ data }) => {
-        if (data?.questions) {
-          setQuickQuestions(data.questions)
-        }
-      })
-  }, [mode])
-
-  useEffect(() => {
-    if (messages.length > 0) {
-      sessionStorage.setItem(storageKey, JSON.stringify(messages))
-    }
-  }, [messages, storageKey])
-
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
-
-  const sendMessage = async (text: string) => {
-    if (!text.trim() || isStreaming) return
-
-    const userMsg: Message = { role: 'user', content: text }
-    const newMessages = [...messages, userMsg]
-    setMessages(newMessages)
-    setInput('')
-    setIsStreaming(true)
-
-    setMessages(prev => [...prev, { role: 'assistant', content: '' }])
-
-    try {
-      abortRef.current = new AbortController()
-
-      const res = await fetch('/api/chat-stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: newMessages,
-          mode, saju1, saju2,
-          gender1: person1?.gender || '남',
-          gender2: person2?.gender || '여',
-          yongsin1: null, yongsin2: null,
-          userQuestion,
-        }),
-        signal: abortRef.current.signal,
-      })
-
-      const reader = res.body!.getReader()
-      const decoder = new TextDecoder()
-      let aiText = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n')
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6)
-            if (data === '[DONE]') break
-            try {
-              const { text } = JSON.parse(data)
-              aiText += text
-              setMessages(prev => {
-                const updated = [...prev]
-                updated[updated.length - 1] = { role: 'assistant', content: aiText }
-                return updated
-              })
-            } catch {}
-          }
-        }
-      }
-    } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        setMessages(prev => {
-          const updated = [...prev]
-          updated[updated.length - 1] = { role: 'assistant', content: '오류가 발생했어요. 다시 시도해주세요.' }
-          return updated
-        })
-      }
-    } finally {
-      setIsStreaming(false)
-    }
-  }
-
-  const handleClearChat = () => {
-    if (confirm('대화 내용을 초기화할까요?')) {
-      sessionStorage.removeItem(storageKey)
-      setMessages([{ role: 'assistant', content: getFirstMessage() }])
-    }
-  }
 
   const modeLabel: Record<ChatMode, string> = {
     couple: '💑 연인 궁합',
@@ -199,27 +51,17 @@ function AiChatInner() {
   }
 
   return (
-    <main style={{
-      minHeight: '100vh', background: '#0d0d1a',
-      display: 'flex', flexDirection: 'column',
-      maxWidth: '480px', margin: '0 auto',
-    }}>
+    <main style={{minHeight:'100vh', background:'#0d0d1a', display:'flex', flexDirection:'column', maxWidth:'480px', margin:'0 auto'}}>
 
       {/* 헤더 */}
-      <div style={{
-        padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)',
-        display: 'flex', alignItems: 'center', gap: '10px',
-        position: 'sticky', top: 0, background: '#0d0d1a', zIndex: 10,
-      }}>
+      <div style={{padding:'14px 20px', borderBottom:'1px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', gap:'10px', position:'sticky', top:0, background:'#0d0d1a', zIndex:10}}>
         <button onClick={() => router.back()}
-          style={{fontSize:'20px', color:'#9d8cff', background:'none', border:'none', cursor:'pointer'}}>
-          ‹
-        </button>
+          style={{fontSize:'20px', color:'#9d8cff', background:'none', border:'none', cursor:'pointer'}}>‹</button>
         <div style={{flex:1}}>
           <div style={{fontSize:'15px', fontWeight:'500', color:'#e8e4ff'}}>명연재 AI 상담</div>
           <div style={{fontSize:'11px', color:'#5555aa', marginTop:'1px'}}>{modeLabel[mode]}</div>
         </div>
-        <div style={{display:'flex', gap:'6px', alignItems:'center'}}>
+        <div style={{display:'flex', gap:'6px'}}>
           <button onClick={handleClearChat}
             style={{fontSize:'11px', padding:'4px 10px', borderRadius:'20px', background:'rgba(255,80,80,0.1)', color:'rgba(255,120,120,0.7)', border:'1px solid rgba(255,80,80,0.2)', cursor:'pointer'}}>
             초기화
@@ -231,24 +73,18 @@ function AiChatInner() {
         </div>
       </div>
 
-      {/* 사주 정보 요약 바 */}
+      {/* 사주 요약 바 */}
       {saju1Text && (
-        <div style={{
-          padding:'7px 16px', background:'rgba(60,52,137,0.15)',
-          borderBottom:'1px solid rgba(255,255,255,0.04)',
-          display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap',
-        }}>
+        <div style={{padding:'7px 16px', background:'rgba(60,52,137,0.15)', borderBottom:'1px solid rgba(255,255,255,0.04)', display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap'}}>
           <span style={{fontSize:'10px', color:'#7766aa'}}>
             {person1?.gender === '여' ? '여' : '남'}: {saju1Text}
           </span>
-          {saju2Text && (
-            <>
-              <span style={{fontSize:'10px', color:'#444466'}}>|</span>
-              <span style={{fontSize:'10px', color:'#7766aa'}}>
-                {person2?.gender === '여' ? '여' : '남'}: {saju2Text}
-              </span>
-            </>
-          )}
+          {saju2Text && <>
+            <span style={{fontSize:'10px', color:'#444466'}}>|</span>
+            <span style={{fontSize:'10px', color:'#7766aa'}}>
+              {person2?.gender === '여' ? '여' : '남'}: {saju2Text}
+            </span>
+          </>}
           <button onClick={() => router.back()}
             style={{marginLeft:'auto', fontSize:'10px', color:'#5544aa', background:'none', border:'none', cursor:'pointer', textDecoration:'underline'}}>
             수정
@@ -259,28 +95,21 @@ function AiChatInner() {
       {/* 채팅 영역 */}
       <div style={{flex:1, overflowY:'auto', padding:'20px 16px'}}>
         {messages.map((msg, i) => (
-          <ChatBubble
-            key={i}
-            role={msg.role}
-            content={msg.content}
+          <ChatBubble key={i} role={msg.role} content={msg.content}
             isStreaming={isStreaming && i === messages.length - 1 && msg.role === 'assistant'}
           />
         ))}
         <div ref={bottomRef} />
       </div>
 
-      {/* 빠른 질문 — DB에서 불러온 모드별 질문 */}
-      {messages.length <= 2 && !isStreaming && quickQuestions.length > 0 && (
+      {/* 빠른 질문 */}
+      {messages.length <= 2 && !isStreaming && !userQuestion && quickQuestions.length > 0 && (
         <div style={{padding:'0 16px 12px'}}>
           <div style={{fontSize:'11px', color:'#444466', marginBottom:'8px'}}>빠른 질문</div>
           <div style={{display:'flex', flexWrap:'wrap', gap:'6px'}}>
             {quickQuestions.map((q: string) => (
               <button key={q} onClick={() => sendMessage(q)}
-                style={{
-                  fontSize:'12px', padding:'7px 12px', borderRadius:'20px',
-                  background:'#13132a', color:'#9977cc',
-                  border:'1px solid rgba(119,102,221,0.3)', cursor:'pointer',
-                }}>
+                style={{fontSize:'12px', padding:'7px 12px', borderRadius:'20px', background:'#13132a', color:'#9977cc', border:'1px solid rgba(119,102,221,0.3)', cursor:'pointer'}}>
                 {q}
               </button>
             ))}
@@ -289,34 +118,12 @@ function AiChatInner() {
       )}
 
       {/* 입력창 */}
-      <div style={{
-        padding:'12px 16px', borderTop:'1px solid rgba(255,255,255,0.06)',
-        background:'#0d0d1a', display:'flex', gap:'8px', alignItems:'flex-end',
-      }}>
-        <textarea
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              sendMessage(input)
-            }
-          }}
-          placeholder="궁금한 점을 입력하세요..."
-          rows={1}
-          style={{
-            flex:1, background:'#13132a',
-            border:'1px solid rgba(255,255,255,0.1)',
-            borderRadius:'20px', padding:'10px 16px',
-            color:'#e8e4ff', fontSize:'14px', resize:'none',
-            outline:'none', fontFamily:'inherit', lineHeight:'1.5',
-            maxHeight:'100px', overflowY:'auto',
-          }}
-          onInput={e => {
-            const el = e.target as HTMLTextAreaElement
-            el.style.height = 'auto'
-            el.style.height = Math.min(el.scrollHeight, 100) + 'px'
-          }}
+      <div style={{padding:'12px 16px', borderTop:'1px solid rgba(255,255,255,0.06)', background:'#0d0d1a', display:'flex', gap:'8px', alignItems:'flex-end'}}>
+        <textarea value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input) } }}
+          placeholder="궁금한 점을 입력하세요..." rows={1}
+          style={{flex:1, background:'#13132a', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'20px', padding:'10px 16px', color:'#e8e4ff', fontSize:'14px', resize:'none', outline:'none', fontFamily:'inherit', lineHeight:'1.5', maxHeight:'100px', overflowY:'auto'}}
+          onInput={e => { const el = e.target as HTMLTextAreaElement; el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 100) + 'px' }}
         />
         {isStreaming ? (
           <button onClick={() => abortRef.current?.abort()}
