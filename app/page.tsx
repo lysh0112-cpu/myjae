@@ -1,9 +1,8 @@
 import Header from './components/home/Header'
 import HeroBanner from './components/home/HeroBanner'
 import AiManseryeokSection from './components/home/AiManseryeokSection'
-import TodayFortuneBanner from './components/home/TodayFortuneBanner'
-import CategoryMenu from './components/home/CategoryMenu'
-import CommunitySection from './components/home/CommunitySection'
+import ServiceCards from './components/home/ServiceCards'
+import ReviewSection from './components/home/ReviewSection'
 import BottomNav from './components/BottomNav'
 
 export default function Home() {
@@ -13,9 +12,10 @@ export default function Home() {
       <main className="pb-28">
         <HeroBanner />
         <AiManseryeokSection />
-        <TodayFortuneBanner />
-        <CategoryMenu />
-        <CommunitySection />
+        <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '0 16px' }} />
+        <ServiceCards />
+        <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '0 16px' }} />
+        <ReviewSection />
       </main>
       <BottomNav />
     </div>
