@@ -20,7 +20,7 @@ export default function KnowledgeManager() {
   }
 
   async function handleSave() {
-    if (!form.title || !form.content) return alert('제목과 내용을 입력해주세요')
+    if (!form.title) return alert('제목을 입력해주세요')
     setLoading(true)
     if (editing) {
       await supabase.from('knowledge_docs').update({
@@ -69,7 +69,8 @@ export default function KnowledgeManager() {
     <div className="grid gap-6" style={{ gridTemplateColumns: '1fr 1fr' }}>
       <KnowledgeForm
         form={form} editing={editing} loading={loading}
-        onChange={setForm} onSave={handleSave} onCancel={() => { setForm(emptyDoc); setEditing(false) }}
+        onChange={setForm} onSave={handleSave}
+        onCancel={() => { setForm(emptyDoc); setEditing(false) }}
         onMultiSave={handleMultiSave}
       />
       <KnowledgeList
