@@ -42,8 +42,8 @@ export default function AiManseryeokSection() {
           <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
             style={{ background: 'linear-gradient(135deg, #3C3489, #4e46b0)' }}>✦</div>
           <div>
-            <h2 className="text-base font-bold text-white">AI 만세력 분석</h2>
-            <p className="text-xs" style={{ color: '#8a88a0' }}>생년월일시를 입력하세요</p>
+            <h2 className="text-base font-bold text-white">나는 어떤 사주를 타고났을까?</h2>
+            <p className="text-xs" style={{ color: '#8a88a0' }}>생년월일과 태어난 시를 입력해주세요</p>
           </div>
         </div>
         <div className="flex gap-3 mb-4">
