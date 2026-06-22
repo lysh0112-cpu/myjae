@@ -34,7 +34,7 @@ export function useAiChat({
   const [isStreaming, setIsStreaming] = useState(false)
   const [quickQuestions, setQuickQuestions] = useState<string[]>([])
   const abortRef = useRef<AbortController | null>(null)
-  const autoSentRef = useRef(false)
+  const didAutoSend = useRef(false)
 
   useEffect(() => {
     supabase.from('quick_questions').select('questions')
@@ -44,21 +44,32 @@ export function useAiChat({
       })
   }, [mode])
 
+  // 메시지 변경 시 저장
   useEffect(() => {
     if (messages.length > 0) {
       sessionStorage.setItem(storageKey, JSON.stringify(messages))
     }
   }, [messages, storageKey])
 
+  // 최초 1회만 — userQuestion 자동 전송
+  // 저장된 대화가 AI 답변으로 끝나면 이미 처리된 것 → 스킵
+  // 저장된 대화가 user 메시지로 끝나면 AI 답변 없는 것 → 자동 전송
   useEffect(() => {
-    if (autoSentRef.current) return
+    if (didAutoSend.current) return
     if (!userQuestion) return
+    didAutoSend.current = true
+
     const saved = sessionStorage.getItem(storageKey)
-    if (saved) return
-    autoSentRef.current = true
-    setTimeout(() => {
-      sendMessage(userQuestion, getInitialMessages())
-    }, 500)
+    const savedMsgs: Message[] = saved ? JSON.parse(saved) : []
+    const lastMsg = savedMsgs[savedMsgs.length - 1]
+
+    // 마지막이 AI 답변이면 이미 완료 → 유지만 하고 재전송 안 함
+    if (lastMsg?.role === 'assistant' && lastMsg.content.length > 0) return
+
+    // 아직 AI 답변 없음 → 자동 전송
+    const initial = getInitialMessages()
+    setMessages(initial)
+    setTimeout(() => sendMessage(userQuestion, initial), 600)
   }, [])
 
   const sendMessage = async (text: string, baseMessages?: Message[]) => {
@@ -129,10 +140,12 @@ export function useAiChat({
   const handleClearChat = () => {
     if (confirm('대화 내용을 초기화할까요?')) {
       sessionStorage.removeItem(storageKey)
-      autoSentRef.current = false
+      didAutoSend.current = false
       const initial = getInitialMessages()
       setMessages(initial)
-      if (userQuestion) setTimeout(() => sendMessage(userQuestion, initial), 300)
+      if (userQuestion) {
+        setTimeout(() => sendMessage(userQuestion, initial), 300)
+      }
     }
   }
 
