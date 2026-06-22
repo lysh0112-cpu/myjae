@@ -39,6 +39,14 @@ export default function KnowledgeManager() {
     fetchList()
   }
 
+  async function handleMultiSave(docs: Omit<DocForm, 'id' | 'created_at'>[]) {
+    setLoading(true)
+    await supabase.from('knowledge_docs').insert(docs)
+    setLoading(false)
+    fetchList()
+    alert(`${docs.length}개 파일이 저장됐어요!`)
+  }
+
   async function handleDelete(id: string) {
     if (!confirm('삭제하시겠습니까?')) return
     await supabase.from('knowledge_docs').delete().eq('id', id)
@@ -61,8 +69,8 @@ export default function KnowledgeManager() {
     <div className="grid gap-6" style={{ gridTemplateColumns: '1fr 1fr' }}>
       <KnowledgeForm
         form={form} editing={editing} loading={loading}
-        onChange={setForm} onSave={handleSave}
-        onCancel={() => { setForm(emptyDoc); setEditing(false) }}
+        onChange={setForm} onSave={handleSave} onCancel={() => { setForm(emptyDoc); setEditing(false) }}
+        onMultiSave={handleMultiSave}
       />
       <KnowledgeList
         list={list}
