@@ -29,27 +29,32 @@ type Props = {
   onMultiSave: (docs: Omit<DocForm, 'id' | 'created_at'>[]) => void
 }
 
-export default function KnowledgeForm({ form, editing, loading, onChange, onSave, onCancel, onMultiSave }: Props) {
+export default function KnowledgeForm({
+  form, editing, loading, onChange, onSave, onCancel, onMultiSave
+}: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
-  const [fileCount, setFileCount] = useState(0)
+  const [fileNames, setFileNames] = useState<string[]>([])
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files
     if (!files || files.length === 0) return
-
+    const names = Array.from(files).map(f => f.name)
+    setFileNames(names)
     if (files.length === 1) {
       const file = files[0]
-      const text = await file.text().catch(() => '')
+      const isText = file.name.endsWith('.txt')
+      const text = isText ? await file.text().catch(() => '') : ''
+      // 제목은 파일명으로만 초기화, onChange로 상태 업데이트
       onChange({
         ...form,
-        title: form.title || file.name.replace(/\.(pdf|txt)$/i, ''),
-        content: text || form.content,
+        title: file.name.replace(/\.(pdf|txt)$/i, ''),
+        content: text,
       })
-      setFileCount(1)
     } else {
       const docs: Omit<DocForm, 'id' | 'created_at'>[] = []
       for (const file of Array.from(files)) {
-        const text = await file.text().catch(() => '')
+        const isText = file.name.endsWith('.txt')
+        const text = isText ? await file.text().catch(() => '') : ''
         docs.push({
           title: file.name.replace(/\.(pdf|txt)$/i, ''),
           content: text,
@@ -57,7 +62,6 @@ export default function KnowledgeForm({ form, editing, loading, onChange, onSave
           is_active: true,
         })
       }
-      setFileCount(files.length)
       onMultiSave(docs)
     }
   }
@@ -65,6 +69,8 @@ export default function KnowledgeForm({ form, editing, loading, onChange, onSave
   return (
     <div className="rounded-2xl p-5"
       style={{ background: 'rgba(60,52,137,0.2)', border: '1px solid rgba(250,199,117,0.2)' }}>
+
+      {/* 헤더 */}
       <div className="flex items-center justify-between mb-4">
         <div className="text-sm font-bold" style={{ color: '#FAC775' }}>
           {editing ? '✏️ 연구자료 수정' : '➕ 연구자료'}
@@ -73,7 +79,7 @@ export default function KnowledgeForm({ form, editing, loading, onChange, onSave
           <button onClick={() => fileRef.current?.click()}
             className="px-3 py-1.5 rounded-lg text-xs font-bold"
             style={{ background: 'rgba(255,255,255,0.08)', color: '#b0aec8', border: '1px solid rgba(255,255,255,0.1)' }}>
-            📎 파일 첨부 {fileCount > 0 && `(${fileCount}개)`}
+            📎 파일 첨부 {fileNames.length > 0 && `(${fileNames.length}개)`}
           </button>
           <input ref={fileRef} type="file" accept=".pdf,.txt" multiple
             className="hidden" onChange={handleFileUpload} />
@@ -91,20 +97,62 @@ export default function KnowledgeForm({ form, editing, loading, onChange, onSave
           </button>
         </div>
       </div>
+
+      {/* 첨부 파일 안내 */}
+      {fileNames.length > 0 && (
+        <div className="mb-3 p-3 rounded-xl text-xs"
+          style={{ background: 'rgba(255,255,255,0.05)', color: '#b0aec8' }}>
+          📄 {fileNames.join(', ')}
+          <div className="mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            PDF는 제목만 자동입력 · 내용은 아래에 직접 붙여넣기 해주세요
+          </div>
+        </div>
+      )}
+
       <div className="space-y-3">
-        <input value={form.title} onChange={e => onChange({ ...form, title: e.target.value })}
-          placeholder="제목 (예: 갑목 일간 특성)"
-          className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
-          style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }} />
-        <select value={form.category} onChange={e => onChange({ ...form, category: e.target.value })}
-          className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
-          style={{ background: '#1a1a18', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}>
-          {CATEGORIES.map(c => <option key={c} value={c}>{CAT_LABEL[c]}</option>)}
-        </select>
-        <textarea value={form.content} onChange={e => onChange({ ...form, content: e.target.value })}
-          placeholder="내용을 입력하거나 파일을 첨부하세요. 여러 파일 동시 선택 가능!"
-          rows={16} className="w-full rounded-xl px-3 py-2.5 text-sm outline-none resize-none"
-          style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }} />
+        {/* 제목 - 자유롭게 수정 가능 */}
+        <div>
+          <label className="text-xs mb-1 block" style={{ color: '#b0aec8' }}>제목 (수정 가능)</label>
+          <input
+            type="text"
+            value={form.title}
+            onChange={e => onChange({ ...form, title: e.target.value })}
+            placeholder="제목을 입력하세요"
+            className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              color: '#fff',
+              border: '1px solid rgba(250,199,117,0.3)',
+            }}
+          />
+        </div>
+
+        {/* 카테고리 */}
+        <div>
+          <label className="text-xs mb-1 block" style={{ color: '#b0aec8' }}>분류</label>
+          <select value={form.category} onChange={e => onChange({ ...form, category: e.target.value })}
+            className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+            style={{ background: '#1a1a18', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}>
+            {CATEGORIES.map(c => <option key={c} value={c}>{CAT_LABEL[c]}</option>)}
+          </select>
+        </div>
+
+        {/* 내용 */}
+        <div>
+          <label className="text-xs mb-1 block" style={{ color: '#b0aec8' }}>
+            내용 · {form.content.length.toLocaleString()}자
+          </label>
+          <textarea
+            value={form.content}
+            onChange={e => onChange({ ...form, content: e.target.value })}
+            placeholder="PDF 내용을 복사해서 붙여넣거나 직접 입력하세요."
+            rows={16}
+            className="w-full rounded-xl px-3 py-2.5 text-sm outline-none resize-none"
+            style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}
+          />
+        </div>
+
+        {/* AI 참고 여부 */}
         <div className="flex items-center gap-3">
           <span className="text-xs" style={{ color: '#b0aec8' }}>AI 참고 여부</span>
           <button onClick={() => onChange({ ...form, is_active: !form.is_active })}
@@ -114,9 +162,6 @@ export default function KnowledgeForm({ form, editing, loading, onChange, onSave
               : { background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }}>
             {form.is_active ? '✅ 활성' : '⭕ 비활성'}
           </button>
-          <span className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>
-            {form.content.length.toLocaleString()}자
-          </span>
         </div>
       </div>
     </div>
