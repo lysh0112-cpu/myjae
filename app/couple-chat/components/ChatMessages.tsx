@@ -22,44 +22,44 @@ function formatTime(dateStr: string) {
   return `${ampm} ${h > 12 ? h - 12 : h}:${m}`
 }
 
-function getFontFamily(font: string): string {
-  switch (font) {
-    case '손글씨체': return 'cursive'
-    case '귀여운체': return '"Comic Sans MS", cursive'
-    case '고딕체': return '"Noto Sans KR", sans-serif'
-    default: return 'inherit'
-  }
+const FONT_MAP: Record<string, string> = {
+  pretendard:   "'Pretendard', sans-serif",
+  noto:         "'Noto Sans KR', sans-serif",
+  nanumgothic:  "'Nanum Gothic', sans-serif",
+  spoqa:        "'Spoqa Han Sans Neo', sans-serif",
+  doHyeon:      "'Do Hyeon', sans-serif",
+  kyobo:        "'KyoboHandwriting', cursive",
+  cafe24:       "'Cafe24Ssurround', sans-serif",
+  notoserifkr:  "'Noto Serif KR', serif",
 }
 
-function getFontSize(size: string): string {
-  switch (size) {
-    case '작게': return '11px'
-    case '크게': return '16px'
-    default: return '13px'
-  }
-}
-
-function getFontWeight(weight: string): string {
-  switch (weight) {
-    case '얇게': return '300'
-    case '굵게': return '600'
-    default: return '400'
-  }
+const BG_COLOR_MAP: Record<string, string> = {
+  navy:     '#0d0d1a',
+  teal:     '#1D6B6B',
+  cloud:    '#F0EDE8',
+  icy:      '#C8DFF0',
+  dark:     '#0D1B2A',
+  terra:    '#C4622D',
+  caramel:  '#C68642',
+  olive:    '#5C6B3A',
+  lavender: '#C9B8E8',
+  rose:     '#E8C4C4',
 }
 
 function getBgStyle(settings: ChatSettings): React.CSSProperties {
-  if (settings.bg === 'upload' && settings.bgImage) {
+  if (settings.bgImage) {
     return {
       backgroundImage: `url(${settings.bgImage})`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
     }
   }
-  switch (settings.bg) {
-    case 'cherry': return { background: 'linear-gradient(180deg, #2a1020 0%, #1a0818 100%)' }
-    case 'sunset': return { background: 'linear-gradient(180deg, #1a0d05 0%, #0d0808 100%)' }
-    default: return { background: '#0d0d1a' }
-  }
+  return { background: BG_COLOR_MAP[settings.bgColor] || '#0d0d1a' }
+}
+
+function getTextColor(bgColor: string): string {
+  const lightBgs = ['cloud', 'icy', 'lavender', 'rose', 'caramel', 'terra', 'olive']
+  return lightBgs.includes(bgColor) ? '#1a1a2e' : '#e8e4ff'
 }
 
 export default function ChatMessages({ messages, settings }: Props) {
@@ -69,10 +69,13 @@ export default function ChatMessages({ messages, settings }: Props) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const fontFamily = getFontFamily(settings.font)
-  const fontSize = getFontSize(settings.fontSize)
-  const fontWeight = getFontWeight(settings.fontWeight)
+  const fontFamily = FONT_MAP[settings.font] || 'inherit'
+  const fontSize = `${settings.fontSize}px`
+  const fontWeight = String(settings.fontWeight)
   const bgStyle = getBgStyle(settings)
+  const textColor = getTextColor(settings.bgColor)
+  const myNick = settings.myNick || '나'
+  const partnerNick = settings.partnerNick || '상대'
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px', ...bgStyle }}>
@@ -83,11 +86,16 @@ export default function ChatMessages({ messages, settings }: Props) {
       )}
       {messages.map(msg => (
         <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.sender === 'me' ? 'flex-end' : 'flex-start' }}>
+          {/* 닉네임 */}
+          <div style={{ fontSize: '10px', color: msg.sender === 'me' ? '#9d8cff' : '#f48fb1', marginBottom: '2px' }}>
+            {msg.sender === 'me' ? myNick : partnerNick}
+          </div>
+          {/* 말풍선 */}
           <div style={{
             maxWidth: '75%',
             padding: '8px 12px',
             borderRadius: msg.sender === 'me' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-            background: msg.sender === 'me' ? '#5544bb' : 'rgba(255,255,255,0.1)',
+            background: msg.sender === 'me' ? '#5544bb' : 'rgba(255,255,255,0.15)',
             color: '#e8e4ff',
             fontSize, fontWeight, fontFamily,
             lineHeight: '1.5',
