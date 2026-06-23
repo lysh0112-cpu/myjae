@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 const HOURS = [
   '모름', '子시(23~01)', '丑시(01~03)', '寅시(03~05)', '卯시(05~07)',
@@ -14,24 +14,46 @@ const HOUR_INDEX: Record<string, number> = {
   '申시(15~17)': 8, '酉시(17~19)': 9, '戌시(19~21)': 10, '亥시(21~23)': 11,
 }
 
+export const MY_INFO_KEY = 'myinfo'
+
 export default function AiManseryeokSection() {
+  const router = useRouter()
   const [gender, setGender] = useState<'남' | '여'>('남')
   const [birthDate, setBirthDate] = useState('')
   const [birthHour, setBirthHour] = useState('')
   const [calType, setCalType] = useState<'양력' | '음력'>('양력')
 
-  function buildHref() {
+  function handleStart() {
     const params = new URLSearchParams()
     params.set('gender', gender)
     params.set('calType', calType)
+
+    let year = '', month = '', day = ''
     if (birthDate) {
       const d = birthDate.split('-')
-      params.set('year', d[0] || '')
-      params.set('month', d[1] ? String(parseInt(d[1])) : '')
-      params.set('day', d[2] ? String(parseInt(d[2])) : '')
+      year = d[0] || ''
+      month = d[1] ? String(parseInt(d[1])) : ''
+      day = d[2] ? String(parseInt(d[2])) : ''
+      params.set('year', year)
+      params.set('month', month)
+      params.set('day', day)
     }
-    params.set('hour', birthHour === '모름' ? '모름' : birthHour ? String(HOUR_INDEX[birthHour]) : '모름')
-    return `/manseryeok/result?${params.toString()}`
+
+    const hourVal = birthHour === '모름' ? '모름'
+      : birthHour ? String(HOUR_INDEX[birthHour]) : '모름'
+    params.set('hour', hourVal)
+
+    // 나의 정보 sessionStorage에 저장 → 다른 화면에서 공유
+    sessionStorage.setItem(MY_INFO_KEY, JSON.stringify({
+      gender,
+      calType,
+      year,
+      month,
+      day,
+      hour: hourVal,
+    }))
+
+    router.push(`/manseryeok/result?${params.toString()}`)
   }
 
   return (
@@ -82,13 +104,13 @@ export default function AiManseryeokSection() {
             {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
           </select>
         </div>
-        <Link href={buildHref()}>
-          <button className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all active:scale-95"
-            style={{ background: 'linear-gradient(135deg, #3C3489 0%, #FAC775 100%)', color: '#1a1a18',
-              boxShadow: '0 4px 20px rgba(60,52,137,0.4)' }}>
-            ✨ 만세력 상세 분석하기
-          </button>
-        </Link>
+        <button
+          onClick={handleStart}
+          className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all active:scale-95"
+          style={{ background: 'linear-gradient(135deg, #3C3489 0%, #FAC775 100%)', color: '#1a1a18',
+            boxShadow: '0 4px 20px rgba(60,52,137,0.4)' }}>
+          ✨ 만세력 상세 분석하기
+        </button>
         <p className="text-center text-xs mt-3" style={{ color: '#8a88a0' }}>
           기본 분석은 무료 · 심층 분석은 전문 상담사와 연결
         </p>
