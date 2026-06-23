@@ -33,18 +33,7 @@ const FONT_MAP: Record<string, string> = {
   notoserifkr:  "'Noto Serif KR', serif",
 }
 
-const BG_COLOR_MAP: Record<string, string> = {
-  navy:     '#0d0d1a',
-  teal:     '#1D6B6B',
-  cloud:    '#F0EDE8',
-  icy:      '#C8DFF0',
-  dark:     '#0D1B2A',
-  terra:    '#C4622D',
-  caramel:  '#C68642',
-  olive:    '#5C6B3A',
-  lavender: '#C9B8E8',
-  rose:     '#E8C4C4',
-}
+import { BG_COLOR_MAP } from './AppearanceSection'
 
 function getBgStyle(settings: ChatSettings): React.CSSProperties {
   if (settings.bgImage) {
