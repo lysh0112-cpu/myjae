@@ -35,34 +35,51 @@ export default function SettingsPanel({ isOpen, onClose, onClearChat }: Props) {
 
   const Toggle = ({ on, onToggle }: { on: boolean; onToggle: () => void }) => (
     <div onClick={onToggle}
-      style={{ width: '36px', height: '20px', borderRadius: '20px', background: on ? '#5544bb' : 'rgba(255,255,255,0.15)', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
-      <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '2px', left: on ? '18px' : '2px', transition: 'left 0.2s' }} />
+      style={{
+        width: '36px', height: '20px', borderRadius: '20px',
+        background: on ? '#5544bb' : 'rgba(255,255,255,0.15)',
+        cursor: 'pointer', position: 'relative',
+        flexShrink: 0,
+      }}>
+      <div style={{
+        width: '16px', height: '16px', borderRadius: '50%',
+        background: '#fff', position: 'absolute',
+        top: '2px', left: on ? '18px' : '2px',
+        transition: 'left 0.2s',
+      }} />
     </div>
   )
 
+  const panelStyle: React.CSSProperties = {
+    position: 'fixed',
+    bottom: 0,
+    left: '50%',
+    width: '100%',
+    maxWidth: '480px',
+    background: '#13132a',
+    borderRadius: '20px 20px 0 0',
+    border: '1px solid rgba(255,255,255,0.08)',
+    zIndex: 50,
+    maxHeight: '80vh',
+    overflowY: 'auto',
+    paddingBottom: '20px',
+    transition: 'transform 0.3s ease',
+  }
+
+  if (isOpen) {
+    panelStyle.transform = 'translateX(-50%) translateY(0%)'
+  } else {
+    panelStyle.transform = 'translateX(-50%) translateY(101%)'
+  }
+
   return (
     <>
-      {/* 배경 오버레이 */}
       {isOpen && (
         <div onClick={onClose}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 40 }} />
       )}
 
-      {/* 슬라이드 패널 */}
-      <div style={{
-        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-        width: '100%', maxWidth: '480px',
-        background: '#13132a',
-        borderRadius: '20px 20px 0 0',
-        border: '1px solid rgba(255,255,255,0.08)',
-        zIndex: 50,
-        transition: 'transform 0.3s ease',
-        transform: isOpen ? 'translateX(-50%) translateY(0)' : 'translateX(-50%) translateY(100%)',
-        maxHeight: '80vh',
-        overflowY: 'auto',
-        paddingBottom: '20px',
-      }}>
-        {/* 핸들 */}
+      <div style={panelStyle}>
         <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 8px' }}>
           <div style={{ width: '40px', height: '4px', borderRadius: '20px', background: 'rgba(255,255,255,0.2)' }} />
         </div>
@@ -70,33 +87,42 @@ export default function SettingsPanel({ isOpen, onClose, onClearChat }: Props) {
         <div style={{ padding: '0 20px' }}>
           <div style={{ fontSize: '15px', fontWeight: '500', color: '#e8e4ff', marginBottom: '16px' }}>채팅방 설정</div>
 
-          {/* 배경 테마 */}
           <div style={{ marginBottom: '16px' }}>
             <div style={{ fontSize: '11px', color: '#6666aa', marginBottom: '8px' }}>배경 테마</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
               {BACKGROUNDS.map(b => (
                 <div key={b} onClick={() => setBg(b)}
-                  style={{ padding: '8px', borderRadius: '10px', textAlign: 'center', fontSize: '12px', cursor: 'pointer', border: bg === b ? '1px solid rgba(119,102,221,0.6)' : '1px solid rgba(255,255,255,0.06)', background: bg === b ? 'rgba(60,52,137,0.3)' : 'rgba(255,255,255,0.02)', color: bg === b ? '#c8b0ff' : '#8888cc' }}>
+                  style={{
+                    padding: '8px', borderRadius: '10px', textAlign: 'center',
+                    fontSize: '12px', cursor: 'pointer',
+                    border: bg === b ? '1px solid rgba(119,102,221,0.6)' : '1px solid rgba(255,255,255,0.06)',
+                    background: bg === b ? 'rgba(60,52,137,0.3)' : 'rgba(255,255,255,0.02)',
+                    color: bg === b ? '#c8b0ff' : '#8888cc',
+                  }}>
                   {b}
                 </div>
               ))}
             </div>
           </div>
 
-          {/* 글씨체 */}
           <div style={{ marginBottom: '16px' }}>
             <div style={{ fontSize: '11px', color: '#6666aa', marginBottom: '8px' }}>글씨체</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
               {FONTS.map(f => (
                 <div key={f} onClick={() => setFont(f)}
-                  style={{ padding: '8px', borderRadius: '10px', textAlign: 'center', fontSize: '12px', cursor: 'pointer', border: font === f ? '1px solid rgba(119,102,221,0.6)' : '1px solid rgba(255,255,255,0.06)', background: font === f ? 'rgba(60,52,137,0.3)' : 'rgba(255,255,255,0.02)', color: font === f ? '#c8b0ff' : '#8888cc' }}>
+                  style={{
+                    padding: '8px', borderRadius: '10px', textAlign: 'center',
+                    fontSize: '12px', cursor: 'pointer',
+                    border: font === f ? '1px solid rgba(119,102,221,0.6)' : '1px solid rgba(255,255,255,0.06)',
+                    background: font === f ? 'rgba(60,52,137,0.3)' : 'rgba(255,255,255,0.02)',
+                    color: font === f ? '#c8b0ff' : '#8888cc',
+                  }}>
                   {f}
                 </div>
               ))}
             </div>
           </div>
 
-          {/* 커플 닉네임 */}
           <div style={{ marginBottom: '16px' }}>
             <div style={{ fontSize: '11px', color: '#6666aa', marginBottom: '8px' }}>커플 닉네임</div>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -107,7 +133,6 @@ export default function SettingsPanel({ isOpen, onClose, onClearChat }: Props) {
             </div>
           </div>
 
-          {/* 알림 설정 */}
           <div style={{ marginBottom: '16px' }}>
             <div style={{ fontSize: '11px', color: '#6666aa', marginBottom: '8px' }}>알림 설정</div>
             {[
@@ -122,7 +147,6 @@ export default function SettingsPanel({ isOpen, onClose, onClearChat }: Props) {
             ))}
           </div>
 
-          {/* 위험 영역 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
             <button onClick={handleClear}
               style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'rgba(255,80,80,0.08)', border: '1px solid rgba(255,80,80,0.2)', color: '#ff8888', fontSize: '13px', cursor: 'pointer' }}>
