@@ -52,7 +52,7 @@ function ResultContent() {
             </svg>
           </button>
         </Link>
-        <div className="text-sm font-bold text-white">사주 분석 결과</div>
+        <div className="text-sm font-bold text-white">사주가 그려낸 나의 초상</div>
         <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{background:"rgba(60,52,137,0.3)"}}>
           <span style={{color:"#FAC775",fontSize:"16px"}}>✦</span>
         </div>
