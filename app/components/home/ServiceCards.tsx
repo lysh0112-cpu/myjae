@@ -3,7 +3,7 @@ import Link from 'next/link'
 const SERVICES = [
   {
     icon: '🔮',
-    name: 'AI 사주 분석',
+    name: '정밀 사주 분석',
     target: '누구나',
     targetStyle: { background: 'rgba(250,199,117,0.15)', color: '#FAC775' },
     desc: '오행·용신·10가지 정밀 분석 → 전문가 상담연결',
@@ -15,27 +15,19 @@ const SERVICES = [
     name: '궁합 분석',
     target: '커플·연인용',
     targetStyle: { background: 'rgba(233,30,99,0.18)', color: '#f48fb1' },
-    desc: '두 사람 운명 궁합 AI 분석 (외국인 포함 연인·미혼·돌싱)',
+    subTitle: '나의 인연, 어디쯤 오고 있을까?',
+    desc: '두 사람 궁합 분석 (외국인 포함 연인·미혼·돌싱)',
     price: '9,900원~',
     href: '/manseryeok/couple-input',
   },
   {
     icon: '🎨',
-    name: '물상도 AI 그림',
+    name: '내 사주가 그림이 된다면?',
     target: '국내 유일',
     targetStyle: { background: 'rgba(76,175,80,0.15)', color: '#81c784' },
-    desc: '사주 8글자 → AI 수묵화 풍경화 생성',
+    desc: '사주 8글자 → 수묵화 풍경화 생성',
     price: '19,900원~',
     href: '/manseryeok',
-  },
-  {
-    icon: '💫',
-    name: 'MBTI×사주 매칭',
-    target: '솔로·미혼·돌싱',
-    targetStyle: { background: 'rgba(60,52,137,0.3)', color: '#b0aec8' },
-    desc: '운명지수 기반 글로벌 커플 매칭',
-    price: '월 9,900원 · 세계 최초',
-    href: '/matching',
   },
   {
     icon: '✍️',
@@ -67,6 +59,18 @@ export default function ServiceCards() {
               >
                 {s.target}
               </div>
+              {s.subTitle && (
+                <p style={{
+                  color: '#f48fb1',
+                  fontSize: '11px',
+                  fontStyle: 'italic',
+                  fontWeight: 300,
+                  marginBottom: '4px',
+                  letterSpacing: '0.3px',
+                }}>
+                  {s.subTitle}
+                </p>
+              )}
               <p style={{ color: '#8a88a0', fontSize: '11px', lineHeight: '1.5' }}>
                 {s.desc}
               </p>
