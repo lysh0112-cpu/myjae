@@ -141,7 +141,7 @@ export default function AiManseryeokSection() {
           className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all active:scale-95"
           style={{ background: 'linear-gradient(135deg, #3C3489 0%, #FAC775 100%)', color: '#1a1a18',
             boxShadow: '0 4px 20px rgba(60,52,137,0.4)' }}>
-          ✨ 만세력 상세 분석하기
+          ✨ 나의 운명을 펼쳐보기
         </button>
         <p className="text-center text-xs mt-3" style={{ color: '#8a88a0' }}>
           기본 분석은 무료 · 심층 분석은 전문 상담사와 연결
