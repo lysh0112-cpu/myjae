@@ -86,7 +86,7 @@ export default function AiManseryeokSection() {
           <button className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all active:scale-95"
             style={{ background: 'linear-gradient(135deg, #3C3489 0%, #FAC775 100%)', color: '#1a1a18',
               boxShadow: '0 4px 20px rgba(60,52,137,0.4)' }}>
-            ✨ AI 만세력 상세 분석하기
+            ✨ 만세력 상세 분석하기
           </button>
         </Link>
         <p className="text-center text-xs mt-3" style={{ color: '#8a88a0' }}>
