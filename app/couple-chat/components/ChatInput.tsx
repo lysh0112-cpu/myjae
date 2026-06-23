@@ -39,7 +39,10 @@ function calcDDayLeft(targetDate: string): number {
   return Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 }
 
-export default function ChatInput({ onSend, freeCharsLeft, startDate = '', ddayType = '', ddayTarget = '' }: Props) {
+export default function ChatInput({
+  onSend, freeCharsLeft,
+  startDate = '', ddayType = '기념일', ddayTarget = ''
+}: Props) {
   const [text, setText] = useState('')
   const [showEmoji, setShowEmoji] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -76,22 +79,35 @@ export default function ChatInput({ onSend, freeCharsLeft, startDate = '', ddayT
   const handleDDay = () => {
     const days = calcDays(startDate)
     const ddayLeft = calcDDayLeft(ddayTarget)
-    let msg = ''
-    if (days > 0) msg += `💕 우리 만난 지 D+${days}일이에요!`
-    if (ddayTarget && ddayLeft >= 0) msg += `\n🎯 ${ddayType}까지 D-${ddayLeft}일 남았어요!`
-    if (!msg) msg = '💕 기념일 설정에서 날짜를 입력해주세요!'
-    onSend(msg)
+    const parts: string[] = []
+    if (days > 0) parts.push(`💕 우리 만난 지 D+${days}일이에요!`)
+    if (ddayTarget) {
+      if (ddayLeft > 0) parts.push(`🎯 ${ddayType}까지 D-${ddayLeft}일 남았어요!`)
+      else if (ddayLeft === 0) parts.push(`🎉 오늘이 ${ddayType}이에요!`)
+      else parts.push(`🎊 ${ddayType} D+${Math.abs(ddayLeft)}일 지났어요!`)
+    }
+    if (parts.length === 0) parts.push('💕 설정에서 기념일 날짜를 입력해주세요!')
+    onSend(parts.join('\n'))
   }
+
+  const toolStyle = (active = false): React.CSSProperties => ({
+    display: 'flex', flexDirection: 'column', alignItems: 'center',
+    gap: '2px', cursor: 'pointer',
+  })
+
+  const labelStyle = (active = false): React.CSSProperties => ({
+    fontSize: '9px', color: active ? '#c8b0ff' : '#444466'
+  })
 
   return (
     <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', background: '#0d0d1a', padding: '8px 16px 12px' }}>
 
-      {/* 무료 글자수 */}
       {freeCharsLeft <= 30 && freeCharsLeft > 0 && (
         <div style={{ fontSize: '11px', color: '#ff8888', textAlign: 'center', marginBottom: '6px' }}>
           무료 글자 {freeCharsLeft}자 남음
         </div>
       )}
+
       {freeCharsLeft <= 0 && (
         <div style={{ background: 'rgba(212,83,126,0.15)', border: '1px solid rgba(212,83,126,0.3)', borderRadius: '10px', padding: '8px 12px', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: '11px', color: '#f48fb1' }}>무료 글자를 모두 사용했어요</div>
@@ -103,11 +119,11 @@ export default function ChatInput({ onSend, freeCharsLeft, startDate = '', ddayT
 
       {/* 이모지 팔레트 */}
       {showEmoji && (
-        <div style={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '10px', marginBottom: '8px' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+        <div style={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '10px', marginBottom: '8px', maxHeight: '120px', overflowY: 'auto' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
             {EMOJIS.map((emoji, i) => (
               <button key={i} onClick={() => handleEmoji(emoji)}
-                style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', padding: '4px', borderRadius: '6px', lineHeight: 1 }}>
+                style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', padding: '4px', borderRadius: '6px', lineHeight: 1 }}>
                 {emoji}
               </button>
             ))}
@@ -116,29 +132,29 @@ export default function ChatInput({ onSend, freeCharsLeft, startDate = '', ddayT
       )}
 
       {/* 툴바 */}
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '8px', paddingLeft: '4px' }}>
-        <div onClick={() => setShowEmoji(!showEmoji)}
-          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', cursor: 'pointer' }}>
-          <span style={{ fontSize: '18px' }}>😊</span>
-          <span style={{ fontSize: '9px', color: showEmoji ? '#c8b0ff' : '#444466' }}>이모티콘</span>
+      <div style={{ display: 'flex', gap: '20px', marginBottom: '8px', paddingLeft: '4px' }}>
+        <button onClick={() => setShowEmoji(!showEmoji)}
+          style={{ ...toolStyle(), background: 'none', border: 'none', padding: 0 }}>
+          <span style={{ fontSize: '20px' }}>😊</span>
+          <span style={labelStyle(showEmoji)}>이모티콘</span>
+        </button>
+        <div style={toolStyle()}>
+          <span style={{ fontSize: '20px' }}>📷</span>
+          <span style={labelStyle()}>사진</span>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', cursor: 'pointer' }}>
-          <span style={{ fontSize: '18px' }}>📷</span>
-          <span style={{ fontSize: '9px', color: '#444466' }}>사진</span>
-        </div>
-        <div onClick={handleFortune}
-          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', cursor: 'pointer' }}>
-          <span style={{ fontSize: '18px' }}>💕</span>
-          <span style={{ fontSize: '9px', color: '#444466' }}>운세</span>
-        </div>
-        <div onClick={handleDDay}
-          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', cursor: 'pointer' }}>
-          <span style={{ fontSize: '18px' }}>📅</span>
-          <span style={{ fontSize: '9px', color: '#444466' }}>기념일</span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', cursor: 'pointer' }}>
-          <span style={{ fontSize: '18px' }}>🔒</span>
-          <span style={{ fontSize: '9px', color: '#444466' }}>잠금</span>
+        <button onClick={handleFortune}
+          style={{ ...toolStyle(), background: 'none', border: 'none', padding: 0 }}>
+          <span style={{ fontSize: '20px' }}>💕</span>
+          <span style={labelStyle()}>운세</span>
+        </button>
+        <button onClick={handleDDay}
+          style={{ ...toolStyle(), background: 'none', border: 'none', padding: 0 }}>
+          <span style={{ fontSize: '20px' }}>📅</span>
+          <span style={labelStyle()}>기념일</span>
+        </button>
+        <div style={toolStyle()}>
+          <span style={{ fontSize: '20px' }}>🔒</span>
+          <span style={labelStyle()}>잠금</span>
         </div>
       </div>
 
