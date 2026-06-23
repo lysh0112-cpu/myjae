@@ -119,4 +119,107 @@ export default function SettingsPanel({ isOpen, onClose, onClearChat, onSaveSett
           <div style={{ marginBottom: '16px' }}>
             <div style={{ fontSize: '11px', color: '#6666aa', marginBottom: '8px' }}>💕 기념일 설정</div>
             <div style={{ marginBottom: '8px' }}>
-              <div style={{ fontSize: '11px', color:
+              <div style={{ fontSize: '11px', color: '#8888cc', marginBottom: '4px' }}>처음 만난 날</div>
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                style={{ width: '100%', background: '#0d0d1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: '#e8e4ff', fontSize: '13px', outline: 'none', colorScheme: 'dark' }} />
+            </div>
+            {startDate && days > 0 && (
+              <div style={{ background: 'rgba(60,52,137,0.2)', borderRadius: '10px', padding: '10px 12px' }}>
+                <div style={{ fontSize: '13px', color: '#c8b0ff', marginBottom: '6px' }}>
+                  만난 지 <span style={{ fontSize: '18px', fontWeight: '500', color: '#FAC775' }}>D+{days}</span> 일
+                </div>
+                {next && (
+                  <div style={{ fontSize: '11px', color: '#9d8cff' }}>
+                    다음 기념일 D+{next.milestone} 까지 {next.daysLeft}일 남았어요 🎉
+                  </div>
+                )}
+                <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                  {MILESTONES.map(m => (
+                    <span key={m}
+                      style={{
+                        padding: '2px 8px', borderRadius: '20px', fontSize: '10px',
+                        background: days >= m ? 'rgba(250,199,117,0.2)' : 'rgba(255,255,255,0.05)',
+                        color: days >= m ? '#FAC775' : '#555577',
+                        border: days >= m ? '1px solid rgba(250,199,117,0.3)' : '1px solid rgba(255,255,255,0.06)',
+                      }}>
+                      {days >= m ? '✓ ' : ''}D+{m}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 배경 테마 */}
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ fontSize: '11px', color: '#6666aa', marginBottom: '8px' }}>배경 테마</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+              {BACKGROUNDS.map(b => (
+                <div key={b} onClick={() => setBg(b)}
+                  style={{ padding: '8px', borderRadius: '10px', textAlign: 'center', fontSize: '12px', cursor: 'pointer', border: bg === b ? '1px solid rgba(119,102,221,0.6)' : '1px solid rgba(255,255,255,0.06)', background: bg === b ? 'rgba(60,52,137,0.3)' : 'rgba(255,255,255,0.02)', color: bg === b ? '#c8b0ff' : '#8888cc' }}>
+                  {b}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 글씨체 */}
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ fontSize: '11px', color: '#6666aa', marginBottom: '8px' }}>글씨체</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+              {FONTS.map(f => (
+                <div key={f} onClick={() => setFont(f)}
+                  style={{ padding: '8px', borderRadius: '10px', textAlign: 'center', fontSize: '12px', cursor: 'pointer', border: font === f ? '1px solid rgba(119,102,221,0.6)' : '1px solid rgba(255,255,255,0.06)', background: font === f ? 'rgba(60,52,137,0.3)' : 'rgba(255,255,255,0.02)', color: font === f ? '#c8b0ff' : '#8888cc' }}>
+                  {f}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 커플 닉네임 */}
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ fontSize: '11px', color: '#6666aa', marginBottom: '8px' }}>커플 닉네임</div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input value={myNick} onChange={e => setMyNick(e.target.value)} placeholder="나의 닉네임"
+                style={{ flex: 1, background: '#0d0d1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: '#e8e4ff', fontSize: '12px', outline: 'none' }} />
+              <input value={partnerNick} onChange={e => setPartnerNick(e.target.value)} placeholder="상대방 닉네임"
+                style={{ flex: 1, background: '#0d0d1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: '#e8e4ff', fontSize: '12px', outline: 'none' }} />
+            </div>
+          </div>
+
+          {/* 알림 설정 */}
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ fontSize: '11px', color: '#6666aa', marginBottom: '8px' }}>알림 설정</div>
+            {[
+              { label: '매일 오늘의 궁합 운세', on: fortuneOn, toggle: () => setFortuneOn(!fortuneOn) },
+              { label: '기념일 알림', on: dDayOn, toggle: () => setDDayOn(!dDayOn) },
+              { label: '채팅방 잠금', on: lockOn, toggle: () => setLockOn(!lockOn) },
+            ].map(item => (
+              <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <div style={{ flex: 1, fontSize: '13px', color: '#c8c0ff' }}>{item.label}</div>
+                <Toggle on={item.on} onToggle={item.toggle} />
+              </div>
+            ))}
+          </div>
+
+          {/* 완료 버튼 */}
+          <button onClick={handleSave}
+            style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'linear-gradient(135deg, #5544bb, #7766dd)', border: 'none', color: '#e8e4ff', fontSize: '14px', fontWeight: '500', cursor: 'pointer', marginBottom: '12px' }}>
+            ✓ 설정 완료
+          </button>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <button onClick={handleClear}
+              style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'rgba(255,80,80,0.08)', border: '1px solid rgba(255,80,80,0.2)', color: '#ff8888', fontSize: '13px', cursor: 'pointer' }}>
+              🗑 채팅 내역 전체 삭제
+            </button>
+            <button onClick={handleLeave}
+              style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', color: '#6666aa', fontSize: '13px', cursor: 'pointer' }}>
+              채팅방 나가기
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
