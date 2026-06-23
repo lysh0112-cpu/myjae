@@ -45,16 +45,6 @@ export default function AiAnalysis({
 
   const isFullPaid = isPaid || isPaidLocal
 
-  // 페이지 로드 시 localStorage에서 복원
-  useEffect(() => {
-    const savedFree = localStorage.getItem(FREE_KEY)
-    const savedPaid = localStorage.getItem(PAID_KEY)
-    const savedNote = localStorage.getItem(CONSULTANT_KEY)
-    if (savedFree) { setFreeResult(savedFree); setFreeDone(true) }
-    if (savedPaid) { setPaidResult(savedPaid); setIsPaidLocal(true) }
-    if (savedNote) setConsultantNote(savedNote)
-  }, [])
-
   const promptParams = {
     saju, gender, calType, yearParam, monthParam, dayParam,
     hourIdx, leapMonth, solar
@@ -104,6 +94,22 @@ export default function AiAnalysis({
     }
   }
 
+  // 페이지 로드 시 localStorage 복원 + 저장된 풀이 없으면 자동 시작
+  useEffect(() => {
+    const savedFree = localStorage.getItem(FREE_KEY)
+    const savedPaid = localStorage.getItem(PAID_KEY)
+    const savedNote = localStorage.getItem(CONSULTANT_KEY)
+    if (savedFree) {
+      setFreeResult(savedFree)
+      setFreeDone(true)
+    } else if (saju && saju.length > 0) {
+      // 저장된 풀이 없으면 자동 시작
+      handleFreeAnalysis()
+    }
+    if (savedPaid) { setPaidResult(savedPaid); setIsPaidLocal(true) }
+    if (savedNote) setConsultantNote(savedNote)
+  }, [])
+
   return (
     <div className="rounded-2xl overflow-hidden"
       style={{ background: '#2C2C2A', border: '1px solid rgba(255,255,255,0.07)' }}>
@@ -122,16 +128,6 @@ export default function AiAnalysis({
         <p className="text-xs mb-4" style={{ color: '#8a88a0' }}>
           {isFullPaid ? '10가지 항목 전체 분석' : '성격·기질 + 건강·체질 기본 풀이'}
         </p>
-
-        {/* 분석 결과 없을 때만 버튼 표시 */}
-        {!freeDone && !loading && (
-          <button onClick={handleFreeAnalysis}
-            className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all active:scale-95"
-            style={{ background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)',
-              color: '#1a1a18', boxShadow: '0 4px 20px rgba(60,52,137,0.4)' }}>
-            ✨ 사주 풀이 시작하기
-          </button>
-        )}
 
         {loading && (
           <div className="flex flex-col items-center py-8 gap-3">
@@ -176,7 +172,7 @@ export default function AiAnalysis({
           </div>
         )}
 
-        {/* 다시하기 버튼 — 기본 풀이 있을 때만 */}
+        {/* 다시하기 버튼 */}
         {freeDone && !loading && (
           <button onClick={handleFreeAnalysis}
             className="w-full py-2.5 rounded-xl text-sm font-semibold mt-2"
