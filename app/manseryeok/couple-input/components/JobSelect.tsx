@@ -4,6 +4,7 @@ const JOBS = [
   { id: 'earth', icon: '🌍', label: '토(土)', desc: '공무원·부동산·건설·관리' },
   { id: 'metal', icon: '⚙️', label: '금(金)', desc: '금융·법조·공학·의학' },
   { id: 'water', icon: '💧', label: '수(水)', desc: '무역·여행·연구·상담' },
+  { id: 'home',  icon: '🏠', label: '가사·무직', desc: '전업주부·육아·가사' },
 ]
 
 export default function JobSelect({ value, onChange }: {
