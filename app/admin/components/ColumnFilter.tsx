@@ -20,16 +20,17 @@ export default function ColumnFilter({ label, value, options, onChange, labelMap
           onChange={e => onChange(e.target.value)}
           className="outline-none rounded text-xs"
           style={{
-            background: isActive ? 'rgba(250,199,117,0.2)' : 'transparent',
-            color: isActive ? '#FAC775' : 'rgba(255,255,255,0.3)',
-            border: 'none',
+            background: isActive ? 'rgba(250,199,117,0.3)' : 'rgba(60,52,137,0.4)',
+            color: isActive ? '#FAC775' : 'rgba(255,255,255,0.5)',
+            border: isActive ? '1px solid rgba(250,199,117,0.4)' : '1px solid rgba(255,255,255,0.1)',
             cursor: 'pointer',
-            width: '20px',
-            padding: 0,
+            width: '22px',
+            padding: '1px',
+            borderRadius: '4px',
           }}>
-          <option value="all">▼</option>
+          <option value="all" style={{ background: '#1a1a18', color: '#fff' }}>전체</option>
           {options.map(o => (
-            <option key={o} value={o}>
+            <option key={o} value={o} style={{ background: '#1a1a18', color: '#fff' }}>
               {labelMap?.[o] ?? o}
             </option>
           ))}
