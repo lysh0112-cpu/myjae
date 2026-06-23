@@ -1,3 +1,6 @@
+'use client'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Header from './components/home/Header'
 import HeroBanner from './components/home/HeroBanner'
 import AiManseryeokSection from './components/home/AiManseryeokSection'
@@ -6,6 +9,15 @@ import ReviewSection from './components/home/ReviewSection'
 import BottomNav from './components/BottomNav'
 
 export default function Home() {
+  const router = useRouter()
+
+  useEffect(() => {
+    const chatHomeOn = localStorage.getItem('chatHomeOn')
+    if (chatHomeOn === 'true') {
+      router.replace('/couple-chat')
+    }
+  }, [router])
+
   return (
     <div className="min-h-screen relative" style={{ background: '#1a1a18', maxWidth: '430px', margin: '0 auto' }}>
       <Header />
@@ -18,7 +30,6 @@ export default function Home() {
         <ReviewSection />
       </main>
       <BottomNav />
-
       {/* 커플 채팅방 플로팅 버튼 */}
       <a href="/couple-chat"
         style={{
@@ -32,7 +43,6 @@ export default function Home() {
         }}>
         💕
       </a>
-    </div>
     </div>
   )
 }
