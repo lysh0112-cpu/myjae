@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 const HOURS = [
@@ -23,35 +23,39 @@ export default function AiManseryeokSection() {
   const [birthHour, setBirthHour] = useState('')
   const [calType, setCalType] = useState<'양력' | '음력'>('양력')
 
+  // 입력값 변경 시 실시간으로 sessionStorage에 저장
+  useEffect(() => {
+    if (!birthDate) return
+    const d = birthDate.split('-')
+    const year = d[0] || ''
+    const month = d[1] ? String(parseInt(d[1])) : ''
+    const day = d[2] ? String(parseInt(d[2])) : ''
+    const hourVal = birthHour === '모름' ? '모름'
+      : birthHour ? String(HOUR_INDEX[birthHour]) : '모름'
+
+    sessionStorage.setItem(MY_INFO_KEY, JSON.stringify({
+      gender, calType, year, month, day, hour: hourVal,
+    }))
+  }, [gender, calType, birthDate, birthHour])
+
   function handleStart() {
+    if (!birthDate) {
+      alert('생년월일을 먼저 입력해주세요 😊')
+      return
+    }
     const params = new URLSearchParams()
     params.set('gender', gender)
     params.set('calType', calType)
-
-    let year = '', month = '', day = ''
-    if (birthDate) {
-      const d = birthDate.split('-')
-      year = d[0] || ''
-      month = d[1] ? String(parseInt(d[1])) : ''
-      day = d[2] ? String(parseInt(d[2])) : ''
-      params.set('year', year)
-      params.set('month', month)
-      params.set('day', day)
-    }
-
+    const d = birthDate.split('-')
+    const year = d[0] || ''
+    const month = d[1] ? String(parseInt(d[1])) : ''
+    const day = d[2] ? String(parseInt(d[2])) : ''
+    params.set('year', year)
+    params.set('month', month)
+    params.set('day', day)
     const hourVal = birthHour === '모름' ? '모름'
       : birthHour ? String(HOUR_INDEX[birthHour]) : '모름'
     params.set('hour', hourVal)
-
-    // 나의 정보 sessionStorage에 저장 → 다른 화면에서 공유
-    sessionStorage.setItem(MY_INFO_KEY, JSON.stringify({
-      gender,
-      calType,
-      year,
-      month,
-      day,
-      hour: hourVal,
-    }))
 
     router.push(`/manseryeok/result?${params.toString()}`)
   }
