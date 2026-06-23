@@ -1,8 +1,9 @@
 'use client'
-import { useState } from 'react'
 import { Consultation, Consultant, useDashboardTable } from './useDashboardTable'
+import { useTableFilter } from './useTableFilter'
 import DashboardFilter from './DashboardFilter'
 import DashboardRow from './DashboardRow'
+import ColumnFilter from './ColumnFilter'
 
 type Props = {
   list: Consultation[]
@@ -12,9 +13,17 @@ type Props = {
   onRefresh: () => void
 }
 
+const STATUS_LABEL: Record<string, string> = {
+  paid: '결제완료', pending: '대기중', closed: '종료'
+}
+
 export default function DashboardTable({ list, consultants, onDelete, onExcel, onRefresh }: Props) {
-  const [selectedConsultant, setSelectedConsultant] = useState('all')
-  const [selectedStatus, setSelectedStatus] = useState('all')
+  const { filters, setFilter, resetFilters, options, filtered } = useTableFilter(list)
+
+  const consultantNameMap = Object.fromEntries([
+    ['AI', 'AI'],
+    ...consultants.map(c => [c.id, c.name])
+  ])
 
   const {
     assignMap, editingId, editForm, setEditForm,
@@ -23,29 +32,40 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
     handleAssign, startEdit, saveEdit, handleDelete, cancelEdit,
   } = useDashboardTable(list, onDelete, onRefresh)
 
-  const filtered = list
-    .filter(c => selectedConsultant === 'all' ? true :
-      selectedConsultant === 'ai' ? (!c.consultant_id || c.consultant_id === '') :
-      c.consultant_id === selectedConsultant)
-    .filter(c => selectedStatus === 'all' ? true : c.status === selectedStatus)
-
   return (
     <div className="rounded-2xl overflow-hidden"
       style={{ background: '#2C2C2A', border: '1px solid rgba(255,255,255,0.06)' }}>
       <DashboardFilter
-        consultants={consultants}
-        selectedConsultant={selectedConsultant}
-        selectedStatus={selectedStatus}
         filteredCount={filtered.length}
-        onConsultantChange={setSelectedConsultant}
-        onStatusChange={setSelectedStatus}
+        totalCount={list.length}
+        onReset={resetFilters}
         onExcel={onExcel}
       />
       <div style={{ overflowX: 'auto', maxHeight: '60vh', overflowY: 'auto' }}>
         <table className="w-full text-sm" style={{ borderCollapse: 'collapse', minWidth: '1100px' }}>
-          <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+          <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
             <tr style={{ background: 'rgba(60,52,137,0.3)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-              {['일자','예약일','완료일','담당상담사','강제배정','전화번호','결제금액','상태','AI분석','상담내용','수정','삭제'].map(h => (
+              <ColumnFilter label="일자" value={filters.date}
+                options={options.date} onChange={v => setFilter('date', v)} />
+              <ColumnFilter label="예약일" value={filters.bookingDate}
+                options={options.bookingDate} onChange={v => setFilter('bookingDate', v)} />
+              <ColumnFilter label="완료일" value={filters.completedDate}
+                options={options.completedDate} onChange={v => setFilter('completedDate', v)} />
+              <ColumnFilter label="담당상담사" value={filters.consultant}
+                options={options.consultant} onChange={v => setFilter('consultant', v)}
+                labelMap={consultantNameMap} />
+              <ColumnFilter label="강제배정" value={filters.assignedConsultant}
+                options={options.assignedConsultant} onChange={v => setFilter('assignedConsultant', v)}
+                labelMap={consultantNameMap} />
+              <ColumnFilter label="전화번호" value={filters.phone}
+                options={options.phone} onChange={v => setFilter('phone', v)} />
+              <ColumnFilter label="결제금액" value={filters.amount}
+                options={options.amount} onChange={v => setFilter('amount', v)}
+                labelMap={Object.fromEntries(options.amount.map(a => [a, Number(a).toLocaleString() + '원']))} />
+              <ColumnFilter label="상태" value={filters.status}
+                options={options.status} onChange={v => setFilter('status', v)}
+                labelMap={STATUS_LABEL} />
+              {['AI분석', '상담내용', '수정', '삭제'].map(h => (
                 <th key={h} className="px-3 py-3 text-left text-xs font-bold whitespace-nowrap"
                   style={{ color: '#FAC775' }}>{h}</th>
               ))}
