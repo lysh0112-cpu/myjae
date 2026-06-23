@@ -12,17 +12,19 @@ const CHAT_KEY = 'couple_chat_messages'
 const SETTINGS_KEY = 'couple_chat_settings'
 
 const DEFAULT_SETTINGS: ChatSettings = {
-  bg: 'star',
+  bgColor: 'navy',
   bgImage: '',
-  font: '기본체',
-  fontSize: '보통',
-  fontWeight: '보통',
+  font: 'pretendard',
+  fontSize: 13,
+  fontWeight: 400,
   myNick: '',
   partnerNick: '',
   fortuneOn: true,
   dDayOn: true,
   lockOn: false,
   startDate: '',
+  ddayType: '결혼기념일',
+  ddayTarget: '',
 }
 
 function calcDays(startDate: string): number {
