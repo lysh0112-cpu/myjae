@@ -45,7 +45,7 @@ function ResultContent() {
       <header className="fixed top-0 z-50 flex items-center justify-between px-4 py-4"
         style={{background:"rgba(26,26,24,0.97)",backdropFilter:"blur(12px)",
           borderBottom:"1px solid rgba(255,255,255,0.06)",width:"100%",maxWidth:"430px",left:"50%",transform:"translateX(-50%)"}}>
-        <Link href="/manseryeok">
+        <Link href="/">
           <button className="w-9 h-9 rounded-xl flex items-center justify-center" style={{background:"rgba(255,255,255,0.06)"}}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5 text-white">
               <polyline points="15 18 9 12 15 6"/>
