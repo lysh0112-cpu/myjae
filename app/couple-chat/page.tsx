@@ -108,8 +108,13 @@ export default function CoupleChatPage() {
 
       <ChatMessages messages={messages} settings={settings} />
 
-      <ChatInput onSend={handleSend} freeCharsLeft={freeCharsLeft} />
-
+      <ChatInput
+  onSend={handleSend}
+  freeCharsLeft={freeCharsLeft}
+  startDate={settings.startDate}
+  ddayType={settings.ddayType}
+  ddayTarget={settings.ddayTarget}
+/>
       <SettingsPanel
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
