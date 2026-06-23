@@ -92,14 +92,16 @@ export default function DashboardRow({
           </span>
         </td>
         {/* 강제배정 */}
-        <td className="px-3 py-3 whitespace-nowrap">
+        <td className="px-3 py-3 whitespace-nowrap" style={{ position: 'relative', zIndex: 50 }}>
           <select value={assignMap[c.id] ?? ''}
             onChange={e => onAssign(c.id, e.target.value)}
             className="rounded-lg px-2 py-1 text-xs outline-none"
             style={{
               background: assignMap[c.id] ? 'rgba(231,76,60,0.2)' : '#1a1a18',
               color: assignMap[c.id] ? '#ff8080' : 'rgba(255,255,255,0.4)',
-              border: '1px solid rgba(255,255,255,0.1)'
+              border: '1px solid rgba(255,255,255,0.1)',
+              position: 'relative',
+              zIndex: 50
             }}>
             <option value="">배정안함</option>
             {consultants.map(con => <option key={con.id} value={con.id}>{con.name}</option>)}
