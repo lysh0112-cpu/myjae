@@ -25,7 +25,7 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
 
   const filtered = list
     .filter(c => selectedConsultant === 'all' ? true :
-      selectedConsultant === 'ai' ? !c.consultant_id :
+      selectedConsultant === 'ai' ? (!c.consultant_id || c.consultant_id === '') :
       c.consultant_id === selectedConsultant)
     .filter(c => selectedStatus === 'all' ? true : c.status === selectedStatus)
 
