@@ -27,7 +27,7 @@ export default function DashboardFilter({
           className="rounded-xl px-3 py-1.5 text-xs outline-none"
           style={{ background: '#1a1a18', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}>
           <option value="all">전체 상담사</option>
-          <option value="ai">AI 분석</option>
+          <option value="ai">AI </option>
           {consultants.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <select value={selectedStatus} onChange={e => onStatusChange(e.target.value)}
