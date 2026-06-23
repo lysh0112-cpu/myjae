@@ -42,7 +42,7 @@ function CoupleResultInner() {
 
       <div style={{ padding: '16px' }}>
         <ScoreBoard result={result} />
-        <SajuSummary result={result} />
+        <SajuSummary result={result} person1={person1} person2={person2} />
         <AreaAnalysis result={result} />
         <CtaSection commonMsg={result.commonMsg} />
       </div>
