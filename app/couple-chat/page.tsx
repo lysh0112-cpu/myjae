@@ -12,8 +12,11 @@ const CHAT_KEY = 'couple_chat_messages'
 const SETTINGS_KEY = 'couple_chat_settings'
 
 const DEFAULT_SETTINGS: ChatSettings = {
-  bg: '별빛 (기본)',
+  bg: 'star',
+  bgImage: '',
   font: '기본체',
+  fontSize: '보통',
+  fontWeight: '보통',
   myNick: '',
   partnerNick: '',
   fortuneOn: true,
@@ -26,8 +29,7 @@ function calcDays(startDate: string): number {
   if (!startDate) return 0
   const start = new Date(startDate)
   const today = new Date()
-  const diff = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-  return diff + 1
+  return Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
 }
 
 function getNextMilestone(days: number): { milestone: number; daysLeft: number } | null {
@@ -54,7 +56,7 @@ export default function CoupleChatPage() {
     }
     const savedSettings = localStorage.getItem(SETTINGS_KEY)
     if (savedSettings) {
-      setSettings(JSON.parse(savedSettings))
+      setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) })
     }
   }, [])
 
@@ -92,18 +94,17 @@ export default function CoupleChatPage() {
     <main style={{ minHeight: '100vh', background: '#0d0d1a', maxWidth: '480px', margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
       <ChatHeader onSettingsOpen={() => setSettingsOpen(true)} />
 
-      {/* D+day */}
       {settings.startDate && days > 0 && (
         <div style={{ textAlign: 'center', padding: '8px 0' }}>
           <span style={{ background: 'rgba(212,83,126,0.2)', border: '1px solid rgba(212,83,126,0.3)', borderRadius: '20px', padding: '3px 12px', fontSize: '11px', color: '#f48fb1' }}>
-            💕 D+{days} {next ? `· D+${next.milestone}까지 ${next.daysLeft}일` : '· 축하해요!'}
+            💕 D+{days} {next ? `· D+${next.milestone}까지 ${next.daysLeft}일` : '· 축하해요! 🎉'}
           </span>
         </div>
       )}
 
       {settings.fortuneOn && <DailyFortune />}
 
-      <ChatMessages messages={messages} />
+      <ChatMessages messages={messages} settings={settings} />
 
       <ChatInput onSend={handleSend} freeCharsLeft={freeCharsLeft} />
 
