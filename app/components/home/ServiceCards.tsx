@@ -38,6 +38,16 @@ const SERVICES = [
     price: '분석 → 9,900원~ (전문가 개명 추천 별도)',
     href: '/naming',
   },
+  {
+    icon: '🃏',
+    name: '타로 카드 리딩',
+    target: '신규',
+    targetStyle: { background: 'rgba(156,39,176,0.15)', color: '#ce93d8' },
+    desc: '카드가 들려주는 나의 이야기 — 78장 카드에서 직접 선택',
+    price: '준비 중',
+    href: '/tarot',
+    fullWidth: true,
+  },
 ]
 
 export default function ServiceCards() {
@@ -46,7 +56,11 @@ export default function ServiceCards() {
       <h2 className="text-base font-bold text-white mb-4">핵심 서비스</h2>
       <div className="grid grid-cols-2 gap-3">
         {SERVICES.map((s) => (
-          <Link key={s.name} href={s.href}>
+          <Link
+            key={s.name}
+            href={s.href}
+            className={s.fullWidth ? 'col-span-2' : ''}
+          >
             <div
               className="rounded-2xl p-4 h-full transition-all active:scale-95"
               style={{ background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.12)' }}
