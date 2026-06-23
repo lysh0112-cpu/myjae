@@ -5,6 +5,8 @@ import { useCoupleInput } from './hooks/useCoupleInput'
 import RelationSelect from './components/RelationSelect'
 import PersonForm from './components/PersonForm'
 
+const MY_INFO_KEY = 'myinfo'
+
 function CoupleInputInner() {
   const router = useRouter()
   const [error, setError] = useState('')
@@ -17,8 +19,11 @@ function CoupleInputInner() {
   } = useCoupleInput()
 
   const handleStart = () => {
-    if (!person1.year || !person1.month || !person1.day) {
-      setError('나의 생년월일을 입력해주세요.'); return
+    // 나의 정보가 홈에서 입력되지 않은 경우
+    const myInfo = sessionStorage.getItem(MY_INFO_KEY)
+    if (!myInfo || !person1.year || !person1.month || !person1.day) {
+      setError('먼저 홈화면에서 나의 생년월일을 입력하고 사주 분석을 해주세요 😊 나의 사주 정보가 있어야 더 정확한 궁합 분석이 가능해요!')
+      return
     }
     if (!person2.year || !person2.month || !person2.day) {
       setError('상대방의 생년월일을 입력해주세요.'); return
@@ -48,6 +53,21 @@ function CoupleInputInner() {
 
       <div style={{ padding: '20px 16px' }}>
 
+        {/* 나의 정보 미입력 시 안내 배너 */}
+        {!autoLoaded && (
+          <div style={{ background: 'rgba(250,199,117,0.08)', border: '1px solid rgba(250,199,117,0.2)', borderRadius: '12px', padding: '12px 14px', marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+            <span style={{ fontSize: '18px' }}>💡</span>
+            <div>
+              <div style={{ fontSize: '12px', color: '#FAC775', fontWeight: '500', marginBottom: '4px' }}>나의 사주 정보가 없어요</div>
+              <div style={{ fontSize: '11px', color: '#8a88a0', lineHeight: '1.5' }}>홈화면에서 나의 생년월일을 먼저 입력하시면 궁합 분석이 더 정확해져요 😊</div>
+              <button onClick={() => router.push('/')}
+                style={{ marginTop: '8px', fontSize: '11px', padding: '5px 12px', borderRadius: '20px', background: 'rgba(250,199,117,0.15)', color: '#FAC775', border: '1px solid rgba(250,199,117,0.3)', cursor: 'pointer' }}>
+                홈으로 가서 입력하기 →
+              </button>
+            </div>
+          </div>
+        )}
+
         <RelationSelect relation={relation} setRelation={setRelation} />
 
         <div style={{ marginBottom: '16px' }}>
@@ -70,7 +90,7 @@ function CoupleInputInner() {
         </div>
 
         {error && (
-          <div style={{ fontSize: '12px', color: '#ff8888', marginBottom: '12px', textAlign: 'center' }}>
+          <div style={{ background: 'rgba(255,80,80,0.08)', border: '1px solid rgba(255,80,80,0.2)', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', color: '#ff8888', marginBottom: '12px', lineHeight: '1.6' }}>
             {error}
           </div>
         )}
@@ -83,7 +103,6 @@ function CoupleInputInner() {
         <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '11px', color: '#333355' }}>
           기본 분석은 무료 · 심층 분석은 전문 상담사와 연결
         </div>
-
       </div>
     </main>
   )
