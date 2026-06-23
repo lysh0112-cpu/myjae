@@ -125,7 +125,7 @@ export default function SettingsPanel({ isOpen, onClose, onClearChat, onSaveSett
             onDdayTargetChange={setDdayTarget}
           />
 
-          <AppearanceSection
+         <AppearanceSection
             bgColor={bgColor}
             bgImage={bgImage}
             font={font}
@@ -133,13 +133,13 @@ export default function SettingsPanel({ isOpen, onClose, onClearChat, onSaveSett
             fontWeight={fontWeight}
             myBubble={myBubble}
             partnerBubble={partnerBubble}
-            onBgColorChange={setBgColor}
-            onBgImageChange={setBgImage}
-            onFontChange={setFont}
-            onFontSizeChange={setFontSize}
-            onFontWeightChange={setFontWeight}
-            onMyBubbleChange={setMyBubble}
-            onPartnerBubbleChange={setPartnerBubble}
+            onBgColorChange={(v: string) => setBgColor(v)}
+            onBgImageChange={(v: string) => setBgImage(v)}
+            onFontChange={(v: string) => setFont(v)}
+            onFontSizeChange={(v: number) => setFontSize(v)}
+            onFontWeightChange={(v: number) => setFontWeight(v)}
+            onMyBubbleChange={(v: string) => setMyBubble(v)}
+            onPartnerBubbleChange={(v: string) => setPartnerBubble(v)}
             myNick={myNick}
             partnerNick={partnerNick}
           />
