@@ -6,17 +6,19 @@ import NicknameSection from './NicknameSection'
 import NotificationSection from './NotificationSection'
 
 export interface ChatSettings {
-  bg: string
+  bgColor: string
   bgImage: string
   font: string
-  fontSize: string
-  fontWeight: string
+  fontSize: number
+  fontWeight: number
   myNick: string
   partnerNick: string
   fortuneOn: boolean
   dDayOn: boolean
   lockOn: boolean
   startDate: string
+  ddayType: string
+  ddayTarget: string
 }
 
 interface Props {
@@ -28,7 +30,7 @@ interface Props {
 }
 
 export default function SettingsPanel({ isOpen, onClose, onClearChat, onSaveSettings, settings }: Props) {
-  const [bg, setBg] = useState(settings.bg)
+  const [bgColor, setBgColor] = useState(settings.bgColor)
   const [bgImage, setBgImage] = useState(settings.bgImage)
   const [font, setFont] = useState(settings.font)
   const [fontSize, setFontSize] = useState(settings.fontSize)
@@ -39,9 +41,11 @@ export default function SettingsPanel({ isOpen, onClose, onClearChat, onSaveSett
   const [dDayOn, setDDayOn] = useState(settings.dDayOn)
   const [lockOn, setLockOn] = useState(settings.lockOn)
   const [startDate, setStartDate] = useState(settings.startDate)
+  const [ddayType, setDdayType] = useState(settings.ddayType)
+  const [ddayTarget, setDdayTarget] = useState(settings.ddayTarget)
 
   useEffect(() => {
-    setBg(settings.bg)
+    setBgColor(settings.bgColor)
     setBgImage(settings.bgImage)
     setFont(settings.font)
     setFontSize(settings.fontSize)
@@ -52,10 +56,16 @@ export default function SettingsPanel({ isOpen, onClose, onClearChat, onSaveSett
     setDDayOn(settings.dDayOn)
     setLockOn(settings.lockOn)
     setStartDate(settings.startDate)
+    setDdayType(settings.ddayType)
+    setDdayTarget(settings.ddayTarget)
   }, [settings])
 
   const handleSave = () => {
-    onSaveSettings({ bg, bgImage, font, fontSize, fontWeight, myNick, partnerNick, fortuneOn, dDayOn, lockOn, startDate })
+    onSaveSettings({
+      bgColor, bgImage, font, fontSize, fontWeight,
+      myNick, partnerNick, fortuneOn, dDayOn, lockOn,
+      startDate, ddayType, ddayTarget,
+    })
     onClose()
   }
 
@@ -98,18 +108,39 @@ export default function SettingsPanel({ isOpen, onClose, onClearChat, onSaveSett
         <div style={{ padding: '0 20px' }}>
           <div style={{ fontSize: '15px', fontWeight: '500', color: '#e8e4ff', marginBottom: '16px' }}>채팅방 설정</div>
 
-          <AnniversarySection startDate={startDate} onChange={setStartDate} />
+          <AnniversarySection
+            startDate={startDate}
+            ddayType={ddayType}
+            ddayTarget={ddayTarget}
+            onStartDateChange={setStartDate}
+            onDdayTypeChange={setDdayType}
+            onDdayTargetChange={setDdayTarget}
+          />
+
           <AppearanceSection
-            bg={bg} font={font} fontSize={fontSize} fontWeight={fontWeight} bgImage={bgImage}
-            onBgChange={setBg} onFontChange={setFont} onFontSizeChange={setFontSize}
-            onFontWeightChange={setFontWeight} onBgImageChange={setBgImage}
+            bgColor={bgColor}
+            bgImage={bgImage}
+            font={font}
+            fontSize={fontSize}
+            fontWeight={fontWeight}
+            onBgColorChange={setBgColor}
+            onBgImageChange={setBgImage}
+            onFontChange={setFont}
+            onFontSizeChange={setFontSize}
+            onFontWeightChange={setFontWeight}
           />
+
           <NicknameSection
-            myNick={myNick} partnerNick={partnerNick}
-            onMyNickChange={setMyNick} onPartnerNickChange={setPartnerNick}
+            myNick={myNick}
+            partnerNick={partnerNick}
+            onMyNickChange={setMyNick}
+            onPartnerNickChange={setPartnerNick}
           />
+
           <NotificationSection
-            fortuneOn={fortuneOn} dDayOn={dDayOn} lockOn={lockOn}
+            fortuneOn={fortuneOn}
+            dDayOn={dDayOn}
+            lockOn={lockOn}
             onFortuneToggle={() => setFortuneOn(!fortuneOn)}
             onDDayToggle={() => setDDayOn(!dDayOn)}
             onLockToggle={() => setLockOn(!lockOn)}
