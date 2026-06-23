@@ -18,23 +18,30 @@ export interface CoupleResultData {
   sajuScore: number
   jobScore: number
   mbtiScore: number
+  maxScore: number
   sajuMsg: string
   jobMsg: string
   mbtiMsg: string
   commonMsg: string
   person1Summary: string
   person2Summary: string
+  hasMbti: boolean
 }
 
 const JOB_OHAENG: Record<string, string> = {
   wood: 'WOOD', fire: 'FIRE', earth: 'EARTH', metal: 'METAL', water: 'WATER'
 }
 
-const SANGSAENG: Record<string, string> = {
-  WOOD_FIRE: 'good', FIRE_EARTH: 'good', EARTH_METAL: 'good',
-  METAL_WATER: 'good', WATER_WOOD: 'good',
-  FIRE_WOOD: 'good', EARTH_FIRE: 'good', METAL_EARTH: 'good',
-  WATER_METAL: 'good', WOOD_WATER: 'good',
+const SANGSAENG: Record<string, boolean> = {
+  WOOD_FIRE: true, FIRE_EARTH: true, EARTH_METAL: true,
+  METAL_WATER: true, WATER_WOOD: true,
+  FIRE_WOOD: true, EARTH_FIRE: true, METAL_EARTH: true,
+  WATER_METAL: true, WOOD_WATER: true,
+}
+
+function calcSajuScore(job1: string, job2: string): number {
+  if (!job1 || !job2) return 40
+  return Math.floor(Math.random() * 15) + 45
 }
 
 function calcJobScore(job1: string, job2: string): number {
@@ -44,7 +51,7 @@ function calcJobScore(job1: string, job2: string): number {
 }
 
 function calcMbtiScore(mbti1: string, mbti2: string): number {
-  if (!mbti1 || !mbti2 || mbti1.length < 4 || mbti2.length < 4) return 12
+  if (!mbti1 || !mbti2 || mbti1.length < 4 || mbti2.length < 4) return 0
   let score = 0
   for (let i = 0; i < 4; i++) {
     if (mbti1[i] !== mbti2[i]) score += 6
@@ -62,8 +69,8 @@ function getGrade(score: number): { grade: string; gradeDesc: string } {
 }
 
 function getSajuMsg(score: number): string {
-  if (score >= 45) return '두 분의 오행이 서로의 부족함을 완벽하게 채워줍니다. 만남 자체가 운명이에요 💫'
-  if (score >= 30) return '약간의 기운 차이가 있지만, 오히려 서로를 자극하고 성장시키는 에너지예요 🌱'
+  if (score >= 50) return '두 분의 오행이 서로의 부족함을 완벽하게 채워줍니다. 만남 자체가 운명이에요 💫'
+  if (score >= 40) return '약간의 기운 차이가 있지만, 오히려 서로를 자극하고 성장시키는 에너지예요 🌱'
   return '사주의 기운이 다른 만큼 서로에게 없는 것을 채워줄 수 있어요. 상담으로 조화롭게 만들어 드릴게요 🙏'
 }
 
@@ -83,22 +90,36 @@ export function useCoupleResult(person1: PersonInput, person2: PersonInput) {
 
   useEffect(() => {
     if (!person1.year || !person2.year) return
-    const sajuScore = Math.floor(Math.random() * 20) + 40
+
+    const sajuScore = calcSajuScore(person1.job, person2.job)
     const jobScore = calcJobScore(person1.job, person2.job)
-    const mbtiScore = calcMbtiScore(person1.mbti, person2.mbti)
-    const totalScore = Math.min(sajuScore + jobScore + mbtiScore, 100)
+    const hasMbti = !!(person1.mbti && person2.mbti && person1.mbti.length >= 4 && person2.mbti.length >= 4)
+    const mbtiScore = hasMbti ? calcMbtiScore(person1.mbti, person2.mbti) : 0
+
+    // MBTI 없으면 75점 만점 → 100점으로 환산
+    const maxScore = hasMbti ? 100 : 75
+    const rawTotal = sajuScore + jobScore + mbtiScore
+    const totalScore = Math.min(Math.round(rawTotal / maxScore * 100), 100)
+
     const { grade, gradeDesc } = getGrade(totalScore)
+
     setResult({
-      totalScore, grade, gradeDesc,
-      sajuScore, jobScore, mbtiScore,
+      totalScore,
+      grade,
+      gradeDesc,
+      sajuScore,
+      jobScore,
+      mbtiScore,
+      maxScore,
       sajuMsg: getSajuMsg(sajuScore),
       jobMsg: getJobMsg(jobScore),
       mbtiMsg: getMbtiMsg(mbtiScore),
       commonMsg: '점수보다 중요한 건 두 분의 의지예요. 더 깊은 이야기가 궁금하시다면 전문가와 함께해 보세요',
       person1Summary: `${person1.gender} · ${person1.calType} · ${person1.year}년 ${person1.month}월 ${person1.day}일`,
       person2Summary: `${person2.gender} · ${person2.calType} · ${person2.year}년 ${person2.month}월 ${person2.day}일`,
+      hasMbti,
     })
-  }, [person1, person2])
+  }, [person1.year, person1.month, person1.day, person2.year, person2.month, person2.day])
 
   return result
 }
