@@ -2,19 +2,19 @@ interface Props {
   fortuneOn: boolean
   dDayOn: boolean
   lockOn: boolean
+  chatHomeOn: boolean
   onFortuneToggle: () => void
   onDDayToggle: () => void
   onLockToggle: () => void
+  onChatHomeToggle: () => void
 }
-
 const Toggle = ({ on, onToggle }: { on: boolean; onToggle: () => void }) => (
   <div onClick={onToggle}
     style={{ width: '36px', height: '20px', borderRadius: '20px', background: on ? '#5544bb' : 'rgba(255,255,255,0.15)', cursor: 'pointer', position: 'relative', flexShrink: 0 }}>
     <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '2px', left: on ? '18px' : '2px', transition: 'left 0.2s' }} />
   </div>
 )
-
-export default function NotificationSection({ fortuneOn, dDayOn, lockOn, onFortuneToggle, onDDayToggle, onLockToggle }: Props) {
+export default function NotificationSection({ fortuneOn, dDayOn, lockOn, chatHomeOn, onFortuneToggle, onDDayToggle, onLockToggle, onChatHomeToggle }: Props) {
   return (
     <div style={{ marginBottom: '16px' }}>
       <div style={{ fontSize: '11px', color: '#6666aa', marginBottom: '8px' }}>🔔 알림 설정</div>
@@ -28,6 +28,13 @@ export default function NotificationSection({ fortuneOn, dDayOn, lockOn, onFortu
           <Toggle on={item.on} onToggle={item.toggle} />
         </div>
       ))}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '13px', color: '#c8c0ff' }}>💕 채팅방 홈으로 설정</div>
+          <div style={{ fontSize: '11px', color: '#6666aa', marginTop: '2px' }}>ON 시 앱 접속하면 채팅방이 먼저 열려요</div>
+        </div>
+        <Toggle on={chatHomeOn} onToggle={onChatHomeToggle} />
+      </div>
     </div>
   )
 }
