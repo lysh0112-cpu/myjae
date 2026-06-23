@@ -18,6 +18,21 @@ export default function Home() {
         <ReviewSection />
       </main>
       <BottomNav />
+
+      {/* 커플 채팅방 플로팅 버튼 */}
+      <a href="/couple-chat"
+        style={{
+          position: 'fixed', bottom: '80px', right: '20px',
+          width: '50px', height: '50px', borderRadius: '50%',
+          background: 'linear-gradient(135deg, #c2185b, #e91e8c)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '22px', textDecoration: 'none',
+          boxShadow: '0 4px 15px rgba(194,24,91,0.4)',
+          zIndex: 40,
+        }}>
+        💕
+      </a>
+    </div>
     </div>
   )
 }
