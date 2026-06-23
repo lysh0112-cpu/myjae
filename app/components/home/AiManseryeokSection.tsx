@@ -57,6 +57,9 @@ export default function AiManseryeokSection() {
     if (confirm('입력 내용을 초기화할까요?')) {
       localStorage.removeItem(MY_INFO_KEY)
       sessionStorage.removeItem(MY_INFO_KEY)
+      localStorage.removeItem('saju_free_analysis')
+      localStorage.removeItem('saju_paid_analysis')
+      localStorage.removeItem('saju_consultant_note')
       setGender('남')
       setCalType('양력')
       setBirthDate('')
