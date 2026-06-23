@@ -18,6 +18,7 @@ export interface ChatSettings {
   fortuneOn: boolean
   dDayOn: boolean
   lockOn: boolean
+  chatHomeOn: boolean
   startDate: string
   ddayType: string
   ddayTarget: string
@@ -44,6 +45,7 @@ export default function SettingsPanel({ isOpen, onClose, onClearChat, onSaveSett
   const [fortuneOn, setFortuneOn] = useState(settings.fortuneOn)
   const [dDayOn, setDDayOn] = useState(settings.dDayOn)
   const [lockOn, setLockOn] = useState(settings.lockOn)
+  const [chatHomeOn, setChatHomeOn] = useState(settings.chatHomeOn ?? false)
   const [startDate, setStartDate] = useState(settings.startDate)
   const [ddayType, setDdayType] = useState(settings.ddayType)
   const [ddayTarget, setDdayTarget] = useState(settings.ddayTarget)
@@ -61,19 +63,23 @@ export default function SettingsPanel({ isOpen, onClose, onClearChat, onSaveSett
     setFortuneOn(settings.fortuneOn)
     setDDayOn(settings.dDayOn)
     setLockOn(settings.lockOn)
+    setChatHomeOn(settings.chatHomeOn ?? false)
     setStartDate(settings.startDate)
     setDdayType(settings.ddayType)
     setDdayTarget(settings.ddayTarget)
   }, [settings])
 
   const handleSave = () => {
-    onSaveSettings({
+    const newSettings = {
       bgColor, bgImage, font, fontSize, fontWeight,
       myBubble, partnerBubble,
       myNick, partnerNick,
-      fortuneOn, dDayOn, lockOn,
+      fortuneOn, dDayOn, lockOn, chatHomeOn,
       startDate, ddayType, ddayTarget,
-    })
+    }
+    // chatHomeOn localStorage 저장
+    localStorage.setItem('chatHomeOn', chatHomeOn ? 'true' : 'false')
+    onSaveSettings(newSettings)
     onClose()
   }
 
@@ -117,54 +123,34 @@ export default function SettingsPanel({ isOpen, onClose, onClearChat, onSaveSett
           <div style={{ fontSize: '15px', fontWeight: '500', color: '#e8e4ff', marginBottom: '16px' }}>채팅방 설정</div>
 
           <AnniversarySection
-            startDate={startDate}
-            ddayType={ddayType}
-            ddayTarget={ddayTarget}
-            onStartDateChange={setStartDate}
-            onDdayTypeChange={setDdayType}
-            onDdayTargetChange={setDdayTarget}
+            startDate={startDate} ddayType={ddayType} ddayTarget={ddayTarget}
+            onStartDateChange={setStartDate} onDdayTypeChange={setDdayType} onDdayTargetChange={setDdayTarget}
           />
-
-         <AppearanceSection
-            bgColor={bgColor}
-            bgImage={bgImage}
-            font={font}
-            fontSize={fontSize}
-            fontWeight={fontWeight}
-            myBubble={myBubble}
-            partnerBubble={partnerBubble}
-            onBgColorChange={(v: string) => setBgColor(v)}
-            onBgImageChange={(v: string) => setBgImage(v)}
-            onFontChange={(v: string) => setFont(v)}
-            onFontSizeChange={(v: number) => setFontSize(v)}
+          <AppearanceSection
+            bgColor={bgColor} bgImage={bgImage} font={font} fontSize={fontSize} fontWeight={fontWeight}
+            myBubble={myBubble} partnerBubble={partnerBubble}
+            onBgColorChange={(v: string) => setBgColor(v)} onBgImageChange={(v: string) => setBgImage(v)}
+            onFontChange={(v: string) => setFont(v)} onFontSizeChange={(v: number) => setFontSize(v)}
             onFontWeightChange={(v: number) => setFontWeight(v)}
-            onMyBubbleChange={(v: string) => setMyBubble(v)}
-            onPartnerBubbleChange={(v: string) => setPartnerBubble(v)}
-            myNick={myNick}
-            partnerNick={partnerNick}
+            onMyBubbleChange={(v: string) => setMyBubble(v)} onPartnerBubbleChange={(v: string) => setPartnerBubble(v)}
+            myNick={myNick} partnerNick={partnerNick}
           />
-
           <NicknameSection
-            myNick={myNick}
-            partnerNick={partnerNick}
-            onMyNickChange={setMyNick}
-            onPartnerNickChange={setPartnerNick}
+            myNick={myNick} partnerNick={partnerNick}
+            onMyNickChange={setMyNick} onPartnerNickChange={setPartnerNick}
           />
-
           <NotificationSection
-            fortuneOn={fortuneOn}
-            dDayOn={dDayOn}
-            lockOn={lockOn}
+            fortuneOn={fortuneOn} dDayOn={dDayOn} lockOn={lockOn} chatHomeOn={chatHomeOn}
             onFortuneToggle={() => setFortuneOn(!fortuneOn)}
             onDDayToggle={() => setDDayOn(!dDayOn)}
             onLockToggle={() => setLockOn(!lockOn)}
+            onChatHomeToggle={() => setChatHomeOn(!chatHomeOn)}
           />
 
           <button onClick={handleSave}
             style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'linear-gradient(135deg, #5544bb, #7766dd)', border: 'none', color: '#e8e4ff', fontSize: '14px', fontWeight: '500', cursor: 'pointer', marginBottom: '12px' }}>
             ✓ 설정 완료
           </button>
-
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <button onClick={handleClear}
               style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'rgba(255,80,80,0.08)', border: '1px solid rgba(255,80,80,0.2)', color: '#ff8888', fontSize: '13px', cursor: 'pointer' }}>
