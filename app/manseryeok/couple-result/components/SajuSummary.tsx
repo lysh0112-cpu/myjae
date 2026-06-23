@@ -1,8 +1,22 @@
 'use client'
 import { useState } from 'react'
-import { CoupleResultData } from '../hooks/useCoupleResult'
+import { CoupleResultData, PersonInput } from '../hooks/useCoupleResult'
 
-export default function SajuSummary({ result }: { result: CoupleResultData }) {
+interface Props {
+  result: CoupleResultData
+  person1: PersonInput
+  person2: PersonInput
+}
+
+async function fetchSaju(person: PersonInput) {
+  const res = await fetch(
+    `/api/lunar?year=${person.year}&month=${person.month}&day=${person.day}&calType=${person.calType}&leapMonth=0`
+  )
+  const d = await res.json()
+  return d
+}
+
+export default function SajuSummary({ result, person1, person2 }: Props) {
   const [detail, setDetail] = useState('')
   const [loading, setLoading] = useState(false)
   const [shown, setShown] = useState(false)
@@ -11,10 +25,30 @@ export default function SajuSummary({ result }: { result: CoupleResultData }) {
     if (shown) { setShown(false); return }
     setLoading(true)
     try {
+      const [d1, d2] = await Promise.all([
+        fetchSaju(person1),
+        fetchSaju(person2),
+      ])
+
+      const p1Solar = person1.calType === '음력'
+        ? `양력 ${d1.solarYear}년 ${d1.solarMonth}월 ${d1.solarDay}일`
+        : `양력 ${person1.year}년 ${person1.month}월 ${person1.day}일`
+
+      const p2Solar = person2.calType === '음력'
+        ? `양력 ${d2.solarYear}년 ${d2.solarMonth}월 ${d2.solarDay}일`
+        : `양력 ${person2.year}년 ${person2.month}월 ${person2.day}일`
+
+      const p1Saju = `${d1.yearGanji} ${d1.monthGanji} ${d1.dayGanji}`
+      const p2Saju = `${d2.yearGanji} ${d2.monthGanji} ${d2.dayGanji}`
+
       const prompt = `두 사람의 사주 궁합을 분석해주세요.
 마크다운 기호(##, **, ---)는 절대 사용하지 마세요.
-나: ${result.person1Summary}
-상대방: ${result.person2Summary}
+
+나 (${person1.gender}): ${person1.calType} ${person1.year}년 ${person1.month}월 ${person1.day}일 → ${p1Solar}
+사주: ${p1Saju}
+
+상대방 (${person2.gender}): ${person2.calType} ${person2.year}년 ${person2.month}월 ${person2.day}일 → ${p2Solar}
+사주: ${p2Saju}
 
 1. 두 사람 각각의 일간 특성과 용신
 2. 두 사람 오행의 조화와 보완 관계
