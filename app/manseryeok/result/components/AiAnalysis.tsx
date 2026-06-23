@@ -94,20 +94,25 @@ export default function AiAnalysis({
     }
   }
 
-  // 페이지 로드 시 localStorage 복원 + 저장된 풀이 없으면 자동 시작
+  // localStorage 복원
   useEffect(() => {
     const savedFree = localStorage.getItem(FREE_KEY)
     const savedPaid = localStorage.getItem(PAID_KEY)
     const savedNote = localStorage.getItem(CONSULTANT_KEY)
-    if (savedFree) {
-      setFreeResult(savedFree)
-      setFreeDone(true)
-    } else if (saju && saju.length > 0) {
-      handleFreeAnalysis()
-    }
+    if (savedFree) { setFreeResult(savedFree); setFreeDone(true) }
     if (savedPaid) { setPaidResult(savedPaid); setIsPaidLocal(true) }
     if (savedNote) setConsultantNote(savedNote)
   }, [])
+
+  // saju 데이터 로드되면 자동 시작
+  useEffect(() => {
+    if (saju && saju.length > 0 && !freeDone && !loading) {
+      const savedFree = localStorage.getItem(FREE_KEY)
+      if (!savedFree) {
+        handleFreeAnalysis()
+      }
+    }
+  }, [saju])
 
   return (
     <div className="rounded-2xl overflow-hidden"
