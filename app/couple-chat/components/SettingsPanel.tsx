@@ -11,6 +11,8 @@ export interface ChatSettings {
   font: string
   fontSize: number
   fontWeight: number
+  myBubble: string
+  partnerBubble: string
   myNick: string
   partnerNick: string
   fortuneOn: boolean
@@ -35,6 +37,8 @@ export default function SettingsPanel({ isOpen, onClose, onClearChat, onSaveSett
   const [font, setFont] = useState(settings.font)
   const [fontSize, setFontSize] = useState(settings.fontSize)
   const [fontWeight, setFontWeight] = useState(settings.fontWeight)
+  const [myBubble, setMyBubble] = useState(settings.myBubble)
+  const [partnerBubble, setPartnerBubble] = useState(settings.partnerBubble)
   const [myNick, setMyNick] = useState(settings.myNick)
   const [partnerNick, setPartnerNick] = useState(settings.partnerNick)
   const [fortuneOn, setFortuneOn] = useState(settings.fortuneOn)
@@ -50,6 +54,8 @@ export default function SettingsPanel({ isOpen, onClose, onClearChat, onSaveSett
     setFont(settings.font)
     setFontSize(settings.fontSize)
     setFontWeight(settings.fontWeight)
+    setMyBubble(settings.myBubble)
+    setPartnerBubble(settings.partnerBubble)
     setMyNick(settings.myNick)
     setPartnerNick(settings.partnerNick)
     setFortuneOn(settings.fortuneOn)
@@ -63,7 +69,9 @@ export default function SettingsPanel({ isOpen, onClose, onClearChat, onSaveSett
   const handleSave = () => {
     onSaveSettings({
       bgColor, bgImage, font, fontSize, fontWeight,
-      myNick, partnerNick, fortuneOn, dDayOn, lockOn,
+      myBubble, partnerBubble,
+      myNick, partnerNick,
+      fortuneOn, dDayOn, lockOn,
       startDate, ddayType, ddayTarget,
     })
     onClose()
@@ -123,11 +131,17 @@ export default function SettingsPanel({ isOpen, onClose, onClearChat, onSaveSett
             font={font}
             fontSize={fontSize}
             fontWeight={fontWeight}
+            myBubble={myBubble}
+            partnerBubble={partnerBubble}
             onBgColorChange={setBgColor}
             onBgImageChange={setBgImage}
             onFontChange={setFont}
             onFontSizeChange={setFontSize}
             onFontWeightChange={setFontWeight}
+            onMyBubbleChange={setMyBubble}
+            onPartnerBubbleChange={setPartnerBubble}
+            myNick={myNick}
+            partnerNick={partnerNick}
           />
 
           <NicknameSection
