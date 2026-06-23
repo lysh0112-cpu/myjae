@@ -44,9 +44,7 @@ export default function Dashboard() {
     setLoading(false)
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm('삭제하시겠습니까?')) return
-    await supabase.from('consultations').delete().eq('id', id)
+  function handleDelete(id: string) {
     fetchAll()
   }
 
