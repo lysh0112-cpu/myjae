@@ -74,6 +74,10 @@ export function useDashboardTable(
 
   async function handleDelete(id: string) {
     if (!confirm('삭제하시겠습니까?')) return
+    // 연관 테이블 먼저 삭제 (외래키 제약 해제)
+    await supabase.from('payments').delete().eq('consultation_id', id)
+    await supabase.from('chat_messages').delete().eq('consultation_id', id)
+    await supabase.from('commentaries').delete().eq('consultation_id', id)
     const { error } = await supabase.from('consultations').delete().eq('id', id)
     if (error) { alert('삭제 실패: ' + error.message); return }
     onDelete(id)
