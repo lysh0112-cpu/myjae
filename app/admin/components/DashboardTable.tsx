@@ -36,9 +36,15 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
   const [expandedSummary, setExpandedSummary] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<Consultation>>({})
-  const [localList, setLocalList] = useState<Consultation[]>([])
+  // 강제배정만 로컬 상태로 관리 (재렌더링 최소화)
+  const [assignMap, setAssignMap] = useState<Record<string, string>>({})
 
-  React.useEffect(() => { setLocalList(list) }, [list])
+  // assignMap 초기화 (list 변경 시)
+  React.useEffect(() => {
+    const map: Record<string, string> = {}
+    list.forEach(c => { map[c.id] = c.assigned_consultant_id || '' })
+    setAssignMap(map)
+  }, [list])
 
   const getConsultantName = (id: string) => {
     if (!id) return 'AI'
@@ -58,10 +64,17 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
     return { background: 'rgba(76,175,80,0.15)', color: '#81c784' }
   }
 
+  // 날짜 문자열 → input[type=date] 용 yyyy-MM-dd 변환 (Invalid Date 방어)
+  const toDateInput = (val: string | null | undefined) => {
+    if (!val || val === 'Invalid Date') return ''
+    const d = new Date(val)
+    if (isNaN(d.getTime())) return ''
+    return d.toISOString().split('T')[0]
+  }
+
   async function handleAssign(consultationId: string, consultantId: string) {
-    setLocalList(prev => prev.map(c =>
-      c.id === consultationId ? { ...c, assigned_consultant_id: consultantId } : c
-    ))
+    // 해당 행만 업데이트, 전체 리렌더링 없음
+    setAssignMap(prev => ({ ...prev, [consultationId]: consultantId }))
     await supabase.from('consultations')
       .update({ assigned_consultant_id: consultantId || null })
       .eq('id', consultationId)
@@ -72,8 +85,8 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
     setEditForm({
       paid_amount: c.paid_amount,
       status: c.status,
-      booking_date: c.booking_date,
-      completed_date: c.completed_date,
+      booking_date: toDateInput(c.booking_date),
+      completed_date: toDateInput(c.completed_date),
     })
   }
 
@@ -88,7 +101,18 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
     onRefresh()
   }
 
-  const filtered = localList
+  // 삭제: DashboardTable에서 직접 처리 후 부모에도 알림
+  async function handleDelete(id: string) {
+    if (!confirm('삭제하시겠습니까?')) return
+    const { error } = await supabase.from('consultations').delete().eq('id', id)
+    if (error) {
+      alert('삭제 실패: ' + error.message)
+      return
+    }
+    onDelete(id)
+  }
+
+  const filtered = list
     .filter(c => selectedConsultant === 'all' ? true :
       selectedConsultant === 'ai' ? !c.consultant_id :
       c.consultant_id === selectedConsultant)
@@ -149,50 +173,58 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
             )}
             {filtered.map((c, i) => (
               <React.Fragment key={c.id}>
-                <tr style={{ background: editingId === c.id ? 'rgba(60,52,137,0.2)' : i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
-                  borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <tr style={{
+                  background: editingId === c.id ? 'rgba(60,52,137,0.2)' : i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
+                  borderBottom: '1px solid rgba(255,255,255,0.04)'
+                }}>
                   <td className="px-3 py-3 text-xs whitespace-nowrap" style={{ color: '#8a88a0' }}>
                     {new Date(c.created_at).toLocaleDateString('ko-KR')}
                   </td>
                   <td className="px-3 py-2">
                     {editingId === c.id ? (
-                      <input type="date" value={editForm.booking_date?.split('T')[0] || ''}
+                      <input type="date" value={editForm.booking_date || ''}
                         onChange={e => setEditForm({ ...editForm, booking_date: e.target.value })}
                         className="rounded px-2 py-1 text-xs outline-none w-28"
                         style={{ background: '#1a1a18', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }} />
                     ) : (
                       <span className="text-xs" style={{ color: '#8a88a0' }}>
-                        {c.booking_date ? new Date(c.booking_date).toLocaleDateString('ko-KR') : '-'}
+                        {toDateInput(c.booking_date)
+                          ? new Date(c.booking_date).toLocaleDateString('ko-KR')
+                          : '-'}
                       </span>
                     )}
                   </td>
                   <td className="px-3 py-2">
                     {editingId === c.id ? (
-                      <input type="date" value={editForm.completed_date?.split('T')[0] || ''}
+                      <input type="date" value={editForm.completed_date || ''}
                         onChange={e => setEditForm({ ...editForm, completed_date: e.target.value })}
                         className="rounded px-2 py-1 text-xs outline-none w-28"
                         style={{ background: '#1a1a18', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }} />
                     ) : (
                       <span className="text-xs" style={{ color: '#8a88a0' }}>
-                        {c.completed_date ? new Date(c.completed_date).toLocaleDateString('ko-KR') : '-'}
+                        {toDateInput(c.completed_date)
+                          ? new Date(c.completed_date).toLocaleDateString('ko-KR')
+                          : '-'}
                       </span>
                     )}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap">
                     <span className="text-xs px-2 py-1 rounded-full"
-                      style={{ background: c.consultant_id ? 'rgba(60,52,137,0.3)' : 'rgba(250,199,117,0.15)',
-                        color: c.consultant_id ? '#b0aec8' : '#FAC775' }}>
+                      style={{
+                        background: c.consultant_id ? 'rgba(60,52,137,0.3)' : 'rgba(250,199,117,0.15)',
+                        color: c.consultant_id ? '#b0aec8' : '#FAC775'
+                      }}>
                       {getConsultantName(c.consultant_id)}
                     </span>
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap">
                     <select
-                      value={c.assigned_consultant_id || ''}
+                      value={assignMap[c.id] ?? ''}
                       onChange={e => handleAssign(c.id, e.target.value)}
                       className="rounded-lg px-2 py-1 text-xs outline-none"
                       style={{
-                        background: c.assigned_consultant_id ? 'rgba(231,76,60,0.2)' : '#1a1a18',
-                        color: c.assigned_consultant_id ? '#ff8080' : 'rgba(255,255,255,0.4)',
+                        background: assignMap[c.id] ? 'rgba(231,76,60,0.2)' : '#1a1a18',
+                        color: assignMap[c.id] ? '#ff8080' : 'rgba(255,255,255,0.4)',
                         border: '1px solid rgba(255,255,255,0.1)'
                       }}>
                       <option value="">배정안함</option>
@@ -271,7 +303,7 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
                     )}
                   </td>
                   <td className="px-3 py-3">
-                    <button onClick={() => onDelete(c.id)}
+                    <button onClick={() => handleDelete(c.id)}
                       className="px-3 py-1 rounded-lg text-xs font-bold"
                       style={{ background: 'rgba(255,100,100,0.15)', color: '#ff6464' }}>
                       삭제
