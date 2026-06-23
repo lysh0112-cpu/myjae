@@ -103,7 +103,6 @@ export default function AiAnalysis({
       setFreeResult(savedFree)
       setFreeDone(true)
     } else if (saju && saju.length > 0) {
-      // 저장된 풀이 없으면 자동 시작
       handleFreeAnalysis()
     }
     if (savedPaid) { setPaidResult(savedPaid); setIsPaidLocal(true) }
@@ -139,7 +138,6 @@ export default function AiAnalysis({
           </div>
         )}
 
-        {/* 기본 풀이 */}
         {freeDone && freeResult && (
           <div className="rounded-xl p-4 mb-3"
             style={{ background: 'rgba(60,52,137,0.15)', border: '1px solid rgba(60,52,137,0.3)' }}>
@@ -148,7 +146,6 @@ export default function AiAnalysis({
           </div>
         )}
 
-        {/* 상세 풀이 (유료) */}
         {paidResult && (
           <div className="rounded-xl p-4 mb-3 mt-3"
             style={{ background: 'rgba(250,199,117,0.08)', border: '1px solid rgba(250,199,117,0.2)' }}>
@@ -160,7 +157,6 @@ export default function AiAnalysis({
           </div>
         )}
 
-        {/* 상담사 부가 설명 */}
         {consultantNote && (
           <div className="rounded-xl p-4 mb-3 mt-3"
             style={{ background: 'rgba(29,158,117,0.08)', border: '1px solid rgba(29,158,117,0.2)' }}>
@@ -172,7 +168,6 @@ export default function AiAnalysis({
           </div>
         )}
 
-        {/* 다시하기 버튼 */}
         {freeDone && !loading && (
           <button onClick={handleFreeAnalysis}
             className="w-full py-2.5 rounded-xl text-sm font-semibold mt-2"
