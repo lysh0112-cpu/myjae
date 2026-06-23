@@ -17,6 +17,8 @@ const DEFAULT_SETTINGS: ChatSettings = {
   font: 'pretendard',
   fontSize: 13,
   fontWeight: 400,
+  myBubble: 'purple',
+  partnerBubble: 'white10',
   myNick: '',
   partnerNick: '',
   fortuneOn: true,
@@ -109,12 +111,13 @@ export default function CoupleChatPage() {
       <ChatMessages messages={messages} settings={settings} />
 
       <ChatInput
-  onSend={handleSend}
-  freeCharsLeft={freeCharsLeft}
-  startDate={settings.startDate}
-  ddayType={settings.ddayType}
-  ddayTarget={settings.ddayTarget}
-/>
+        onSend={handleSend}
+        freeCharsLeft={freeCharsLeft}
+        startDate={settings.startDate}
+        ddayType={settings.ddayType}
+        ddayTarget={settings.ddayTarget}
+      />
+
       <SettingsPanel
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
