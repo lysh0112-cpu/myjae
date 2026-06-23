@@ -22,8 +22,22 @@ export default function AiManseryeokSection() {
   const [birthDate, setBirthDate] = useState('')
   const [birthHour, setBirthHour] = useState('')
   const [calType, setCalType] = useState<'양력' | '음력'>('양력')
+  const [hasStored, setHasStored] = useState(false)
 
-  // 입력값 변경 시 실시간으로 sessionStorage에 저장
+  // 페이지 로드 시 localStorage에서 복원
+  useEffect(() => {
+    const saved = localStorage.getItem(MY_INFO_KEY)
+    if (saved) {
+      const info = JSON.parse(saved)
+      if (info.gender) setGender(info.gender)
+      if (info.calType) setCalType(info.calType)
+      if (info.birthDate) setBirthDate(info.birthDate)
+      if (info.birthHour) setBirthHour(info.birthHour)
+      setHasStored(true)
+    }
+  }, [])
+
+  // 입력값 변경 시 localStorage + sessionStorage 동시 저장
   useEffect(() => {
     if (!birthDate) return
     const d = birthDate.split('-')
@@ -33,10 +47,23 @@ export default function AiManseryeokSection() {
     const hourVal = birthHour === '모름' ? '모름'
       : birthHour ? String(HOUR_INDEX[birthHour]) : '모름'
 
-    sessionStorage.setItem(MY_INFO_KEY, JSON.stringify({
-      gender, calType, year, month, day, hour: hourVal,
-    }))
+    const info = { gender, calType, year, month, day, hour: hourVal, birthDate, birthHour }
+    localStorage.setItem(MY_INFO_KEY, JSON.stringify(info))
+    sessionStorage.setItem(MY_INFO_KEY, JSON.stringify(info))
+    setHasStored(true)
   }, [gender, calType, birthDate, birthHour])
+
+  const handleClear = () => {
+    if (confirm('입력 내용을 초기화할까요?')) {
+      localStorage.removeItem(MY_INFO_KEY)
+      sessionStorage.removeItem(MY_INFO_KEY)
+      setGender('남')
+      setCalType('양력')
+      setBirthDate('')
+      setBirthHour('')
+      setHasStored(false)
+    }
+  }
 
   function handleStart() {
     if (!birthDate) {
@@ -47,16 +74,12 @@ export default function AiManseryeokSection() {
     params.set('gender', gender)
     params.set('calType', calType)
     const d = birthDate.split('-')
-    const year = d[0] || ''
-    const month = d[1] ? String(parseInt(d[1])) : ''
-    const day = d[2] ? String(parseInt(d[2])) : ''
-    params.set('year', year)
-    params.set('month', month)
-    params.set('day', day)
+    params.set('year', d[0] || '')
+    params.set('month', d[1] ? String(parseInt(d[1])) : '')
+    params.set('day', d[2] ? String(parseInt(d[2])) : '')
     const hourVal = birthHour === '모름' ? '모름'
       : birthHour ? String(HOUR_INDEX[birthHour]) : '모름'
     params.set('hour', hourVal)
-
     router.push(`/manseryeok/result?${params.toString()}`)
   }
 
@@ -67,10 +90,16 @@ export default function AiManseryeokSection() {
         <div className="flex items-center gap-2 mb-5">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
             style={{ background: 'linear-gradient(135deg, #3C3489, #4e46b0)' }}>✦</div>
-          <div>
+          <div style={{ flex: 1 }}>
             <h2 className="text-base font-bold text-white">나는 어떤 사주를 타고났을까?</h2>
             <p className="text-xs" style={{ color: '#8a88a0' }}>생년월일과 태어난 시를 입력해주세요</p>
           </div>
+          {hasStored && (
+            <button onClick={handleClear}
+              style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '20px', background: 'rgba(255,80,80,0.1)', color: 'rgba(255,120,120,0.7)', border: '1px solid rgba(255,80,80,0.2)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              초기화
+            </button>
+          )}
         </div>
         <div className="flex gap-3 mb-4">
           {[
@@ -108,8 +137,7 @@ export default function AiManseryeokSection() {
             {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
           </select>
         </div>
-        <button
-          onClick={handleStart}
+        <button onClick={handleStart}
           className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all active:scale-95"
           style={{ background: 'linear-gradient(135deg, #3C3489 0%, #FAC775 100%)', color: '#1a1a18',
             boxShadow: '0 4px 20px rgba(60,52,137,0.4)' }}>
