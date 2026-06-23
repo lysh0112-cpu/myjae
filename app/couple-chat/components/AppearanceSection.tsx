@@ -32,18 +32,33 @@ const BG_CATEGORIES = [
   },
 ]
 
-const ALL_BG = BG_CATEGORIES.flatMap(c => c.options)
-
-const FONTS = [
-  { id: 'pretendard',  label: '프리텐다드 (기본)',  css: "'Pretendard', sans-serif" },
-  { id: 'noto',        label: 'Noto Sans KR',       css: "'Noto Sans KR', sans-serif" },
-  { id: 'nanumgothic', label: '나눔고딕',            css: "'Nanum Gothic', sans-serif" },
-  { id: 'spoqa',       label: 'Spoqa Han Sans',      css: "'Spoqa Han Sans Neo', sans-serif" },
-  { id: 'doHyeon',     label: '배민 도현체',          css: "'Do Hyeon', sans-serif" },
-  { id: 'kyobo',       label: '교보손글씨체',         css: "'KyoboHandwriting', cursive" },
-  { id: 'cafe24',      label: '카페24 써라운드',      css: "'Cafe24Ssurround', sans-serif" },
-  { id: 'notoserifkr', label: 'Noto Serif KR',       css: "'Noto Serif KR', serif" },
+const BUBBLE_COLORS = [
+  { id: 'purple',  label: '💜 보라 (기본)',    color: '#5544bb' },
+  { id: 'pink',    label: '🩷 핑크',           color: '#c2185b' },
+  { id: 'blue',    label: '💙 블루',           color: '#1565c0' },
+  { id: 'teal',    label: '🩵 민트',           color: '#00695c' },
+  { id: 'green',   label: '💚 그린',           color: '#2e7d32' },
+  { id: 'orange',  label: '🧡 오렌지',         color: '#e65100' },
+  { id: 'red',     label: '❤️ 레드',           color: '#b71c1c' },
+  { id: 'gold',    label: '✨ 골드',           color: '#f57f17' },
+  { id: 'gray',    label: '🩶 그레이',         color: '#424242' },
+  { id: 'black',   label: '🖤 블랙',           color: '#1a1a1a' },
 ]
+
+const PARTNER_BUBBLE_COLORS = [
+  { id: 'white10', label: '⬜ 반투명 흰색 (기본)', color: 'rgba(255,255,255,0.12)' },
+  { id: 'gray',    label: '🩶 다크 그레이',         color: '#333344' },
+  { id: 'pink',    label: '🩷 핑크',               color: '#880e4f' },
+  { id: 'purple',  label: '💜 보라',               color: '#4a148c' },
+  { id: 'blue',    label: '💙 블루',               color: '#0d47a1' },
+  { id: 'teal',    label: '🩵 민트',               color: '#004d40' },
+  { id: 'green',   label: '💚 그린',               color: '#1b5e20' },
+]
+
+export const ALL_BG = BG_CATEGORIES.flatMap(c => c.options)
+export const BG_COLOR_MAP: Record<string, string> = Object.fromEntries(ALL_BG.map(b => [b.id, b.color]))
+export const BUBBLE_COLOR_MAP: Record<string, string> = Object.fromEntries(BUBBLE_COLORS.map(b => [b.id, b.color]))
+export const PARTNER_BUBBLE_COLOR_MAP: Record<string, string> = Object.fromEntries(PARTNER_BUBBLE_COLORS.map(b => [b.id, b.color]))
 
 interface Props {
   bgColor: string
@@ -51,22 +66,36 @@ interface Props {
   font: string
   fontSize: number
   fontWeight: number
+  myBubble: string
+  partnerBubble: string
   onBgColorChange: (v: string) => void
   onBgImageChange: (v: string) => void
   onFontChange: (v: string) => void
   onFontSizeChange: (v: number) => void
   onFontWeightChange: (v: number) => void
+  onMyBubbleChange: (v: string) => void
+  onPartnerBubbleChange: (v: string) => void
   myNick?: string
   partnerNick?: string
 }
 
-const BG_COLOR_MAP: Record<string, string> = Object.fromEntries(ALL_BG.map(b => [b.id, b.color]))
-
-export { BG_COLOR_MAP, ALL_BG }
+const FONTS = [
+  { id: 'pretendard',  label: '프리텐다드 (기본)' },
+  { id: 'noto',        label: 'Noto Sans KR' },
+  { id: 'nanumgothic', label: '나눔고딕' },
+  { id: 'spoqa',       label: 'Spoqa Han Sans' },
+  { id: 'doHyeon',     label: '배민 도현체' },
+  { id: 'kyobo',       label: '교보손글씨체' },
+  { id: 'cafe24',      label: '카페24 써라운드' },
+  { id: 'notoserifkr', label: 'Noto Serif KR' },
+]
 
 export default function AppearanceSection({
   bgColor, bgImage, font, fontSize, fontWeight,
-  onBgColorChange, onBgImageChange, onFontChange, onFontSizeChange, onFontWeightChange,
+  myBubble, partnerBubble,
+  onBgColorChange, onBgImageChange, onFontChange,
+  onFontSizeChange, onFontWeightChange,
+  onMyBubbleChange, onPartnerBubbleChange,
   myNick = '나', partnerNick = '상대',
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
@@ -83,7 +112,8 @@ export default function AppearanceSection({
   }
 
   const selectedBg = ALL_BG.find(b => b.id === bgColor)
-  const previewBg = bgImage ? `url(${bgImage})` : (selectedBg?.color || '#0d0d1a')
+  const myBubbleColor = BUBBLE_COLOR_MAP[myBubble] || '#5544bb'
+  const partnerBubbleColor = PARTNER_BUBBLE_COLOR_MAP[partnerBubble] || 'rgba(255,255,255,0.12)'
 
   const lbl: React.CSSProperties = { fontSize: '11px', color: '#6666aa', marginBottom: '5px' }
   const sel: React.CSSProperties = {
@@ -111,7 +141,6 @@ export default function AppearanceSection({
               <option key={o.id} value={o.id}>{o.label}</option>
             ))}
           </select>
-          {/* 컬러 팔레트 */}
           <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
             {cat.options.map(o => (
               <div key={o.id}
@@ -127,7 +156,7 @@ export default function AppearanceSection({
       ))}
 
       {/* 사진 업로드 */}
-      <div style={{ marginBottom: '10px', marginTop: '8px' }}>
+      <div style={{ marginBottom: '12px', marginTop: '8px' }}>
         <div style={lbl}>내 사진 업로드</div>
         <div style={{ display: 'flex', gap: '6px' }}>
           <div onClick={() => fileRef.current?.click()}
@@ -148,21 +177,56 @@ export default function AppearanceSection({
         <input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} style={{ display: 'none' }} />
       </div>
 
+      {/* 말풍선 색상 */}
+      <div style={{ marginBottom: '12px' }}>
+        <div style={lbl}>말풍선 색상</div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '10px', color: '#8888cc', marginBottom: '4px' }}>{myNick} (나)</div>
+            <select value={myBubble} onChange={e => onMyBubbleChange(e.target.value)} style={sel}>
+              {BUBBLE_COLORS.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
+            </select>
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+              {BUBBLE_COLORS.map(b => (
+                <div key={b.id} onClick={() => onMyBubbleChange(b.id)}
+                  style={{ width: '18px', height: '18px', borderRadius: '50%', background: b.color, cursor: 'pointer', border: myBubble === b.id ? '2px solid #c8b0ff' : '1px solid rgba(255,255,255,0.2)' }} />
+              ))}
+            </div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '10px', color: '#8888cc', marginBottom: '4px' }}>{partnerNick} (상대)</div>
+            <select value={partnerBubble} onChange={e => onPartnerBubbleChange(e.target.value)} style={sel}>
+              {PARTNER_BUBBLE_COLORS.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
+            </select>
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+              {PARTNER_BUBBLE_COLORS.map(b => (
+                <div key={b.id} onClick={() => onPartnerBubbleChange(b.id)}
+                  style={{ width: '18px', height: '18px', borderRadius: '50%', background: b.color, cursor: 'pointer', border: partnerBubble === b.id ? '2px solid #c8b0ff' : '1px solid rgba(255,255,255,0.2)' }} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 미리보기 */}
-      <div style={{ marginBottom: '10px' }}>
+      <div style={{ marginBottom: '12px' }}>
         <div style={lbl}>미리보기</div>
         <div style={{
-          borderRadius: '10px', padding: '10px', overflow: 'hidden',
+          borderRadius: '10px', padding: '10px',
           background: bgImage ? 'transparent' : (selectedBg?.color || '#0d0d1a'),
           backgroundImage: bgImage ? `url(${bgImage})` : undefined,
           backgroundSize: 'cover', backgroundPosition: 'center',
-          minHeight: '80px',
+          minHeight: '90px',
         }}>
           <div style={{ fontSize: '9px', color: '#f48fb1', marginBottom: '2px' }}>{partnerNick}</div>
-          <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: '10px 10px 10px 2px', padding: '5px 8px', fontSize: '11px', color: '#e8e4ff', maxWidth: '75%', marginBottom: '6px' }}>오늘 운세 너무 신기해 💕</div>
+          <div style={{ background: partnerBubbleColor, borderRadius: '10px 10px 10px 2px', padding: '5px 8px', fontSize: '11px', color: '#e8e4ff', maxWidth: '75%', marginBottom: '6px' }}>
+            오늘 운세 너무 신기해 💕
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
             <div style={{ fontSize: '9px', color: '#9d8cff', marginBottom: '2px' }}>{myNick}</div>
-            <div style={{ background: '#5544bb', borderRadius: '10px 10px 2px 10px', padding: '5px 8px', fontSize: '11px', color: '#e8e4ff', maxWidth: '75%' }}>나도! 소울메이트래 ✨</div>
+            <div style={{ background: myBubbleColor, borderRadius: '10px 10px 2px 10px', padding: '5px 8px', fontSize: '11px', color: '#e8e4ff', maxWidth: '75%' }}>
+              나도! 소울메이트래 ✨
+            </div>
           </div>
         </div>
       </div>
@@ -175,7 +239,7 @@ export default function AppearanceSection({
         </select>
       </div>
 
-      {/* 글씨 크기 슬라이더 */}
+      {/* 글씨 크기 */}
       <div style={{ marginBottom: '10px' }}>
         <div style={{ ...lbl, display: 'flex', justifyContent: 'space-between' }}>
           <span>글씨 크기</span>
@@ -190,7 +254,7 @@ export default function AppearanceSection({
         </div>
       </div>
 
-      {/* 글씨 두께 슬라이더 */}
+      {/* 글씨 두께 */}
       <div style={{ marginBottom: '4px' }}>
         <div style={{ ...lbl, display: 'flex', justifyContent: 'space-between' }}>
           <span>글씨 두께</span>
