@@ -1,4 +1,4 @@
-// useCoupleResult v4
+// useCoupleResult v5
 import { useState, useEffect } from 'react'
 import { buildSajuPillars, analyzeCoupleFromPillars } from '@/lib/saju/coupleAnalysis'
 import { calcYongsin } from '@/lib/saju/yongsin'
@@ -42,6 +42,32 @@ export interface CoupleResultData {
     gongmangScore: number
     ohaengScore: number
   }
+}
+
+// =============================================
+// sessionStorage 캐시 키 생성
+// =============================================
+function makeCacheKey(
+  person1: PersonInput,
+  person2: PersonInput,
+  mode: string,
+  userQuestion: string
+): string {
+  return `couple_result_${person1.year}${person1.month}${person1.day}_${person2.year}${person2.month}${person2.day}_${mode}_${userQuestion.slice(0, 20)}`
+}
+
+function getCache(key: string): CoupleResultData | null {
+  try {
+    const saved = sessionStorage.getItem(key)
+    if (saved) return JSON.parse(saved)
+  } catch {}
+  return null
+}
+
+function setCache(key: string, data: CoupleResultData) {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(data))
+  } catch {}
 }
 
 function getGrade(score: number): { grade: string; gradeDesc: string } {
@@ -165,7 +191,7 @@ function extractYearHint(q: string, currentYear: number): number | null {
   const match = q.match(/(\d{4})년/)
   if (match) return parseInt(match[1])
   return null
-}
+ }
 function buildPrompt(
   mode: string,
   person1: PersonInput,
@@ -293,6 +319,14 @@ export function useCoupleResult(
   useEffect(() => {
     if (!person1.year || !person2.year) return
 
+    // ✅ 캐시 확인 — 같은 조합이면 즉시 표시
+    const cacheKey = makeCacheKey(person1, person2, mode, userQuestion)
+    const cached = getCache(cacheKey)
+    if (cached) {
+      setResult(cached)
+      return
+    }
+
     const callClaude = async () => {
       const [pillars1, pillars2] = await Promise.all([
         fetchSajuPillars(person1),
@@ -396,7 +430,7 @@ export function useCoupleResult(
         const clean = text.replace(/```json|```/g, '').trim()
         const parsed = JSON.parse(clean)
 
-        setResult({
+        const finalResult: CoupleResultData = {
           totalScore, grade, gradeDesc,
           sajuScore, jobScore, mbtiScore,
           maxScore: 100,
@@ -408,9 +442,13 @@ export function useCoupleResult(
           person1Summary: `${person1.gender} · ${person1.calType} · ${person1.year}년 ${person1.month}월 ${person1.day}일`,
           person2Summary: `${person2.gender} · ${person2.calType} · ${person2.year}년 ${person2.month}월 ${person2.day}일`,
           hasMbti, scoreDetails,
-        })
+        }
+        // ✅ 결과 캐시 저장
+        setCache(cacheKey, finalResult)
+        setResult(finalResult)
+
       } catch {
-        setResult({
+        const fallbackResult: CoupleResultData = {
           totalScore, grade, gradeDesc,
           sajuScore, jobScore, mbtiScore,
           maxScore: 100,
@@ -422,7 +460,9 @@ export function useCoupleResult(
           person1Summary: `${person1.gender} · ${person1.calType} · ${person1.year}년 ${person1.month}월 ${person1.day}일`,
           person2Summary: `${person2.gender} · ${person2.calType} · ${person2.year}년 ${person2.month}월 ${person2.day}일`,
           hasMbti, scoreDetails,
-        })
+        }
+        setCache(cacheKey, fallbackResult)
+        setResult(fallbackResult)
       }
     }
 
