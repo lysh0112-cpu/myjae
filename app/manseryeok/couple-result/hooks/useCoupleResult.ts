@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
 import { buildSajuPillars, analyzeCoupleFromPillars } from '@/lib/saju/coupleAnalysis'
+import { calcYongsin } from '@/lib/saju/yongsin'
+import { generateTaegilCandidates } from '@/lib/saju/taegil'
+import { getYeonJi } from '@/lib/saju/samjae'
 
 export interface PersonInput {
   year: string
@@ -57,11 +60,11 @@ function calcMbtiScore(mbti1: string, mbti2: string): number {
 }
 
 function getGrade(score: number): { grade: string; gradeDesc: string } {
-  if (score >= 95) return { grade: '운명이 점지한 천생연분 💫', gradeDesc: '이런 조합은 평생 한 번 만나기도 힘들어요' }
-  if (score >= 85) return { grade: '소울메이트형 ✨', gradeDesc: '만나기 힘든 최고의 조합이에요' }
-  if (score >= 75) return { grade: '서로를 성장시키는 황금 커플 🌟', gradeDesc: '함께할수록 더 빛나는 인연이에요' }
-  if (score >= 60) return { grade: '다름이 매력인 탐구형 커플 💡', gradeDesc: '서로의 다름이 오히려 큰 매력이에요' }
-  if (score >= 45) return { grade: '노력으로 완성되는 드라마틱 커플 🔥', gradeDesc: '함께 만들어가는 사랑이 더 특별해요' }
+  if (score >= 90) return { grade: '운명이 점지한 천생연분 💫', gradeDesc: '이런 조합은 평생 한 번 만나기도 힘들어요' }
+  if (score >= 80) return { grade: '소울메이트형 ✨', gradeDesc: '만나기 힘든 최고의 조합이에요' }
+  if (score >= 70) return { grade: '서로를 성장시키는 황금 커플 🌟', gradeDesc: '함께할수록 더 빛나는 인연이에요' }
+  if (score >= 55) return { grade: '다름이 매력인 탐구형 커플 💡', gradeDesc: '서로의 다름이 오히려 큰 매력이에요' }
+  if (score >= 40) return { grade: '노력으로 완성되는 드라마틱 커플 🔥', gradeDesc: '함께 만들어가는 사랑이 더 특별해요' }
   return { grade: '극과 극, 반전 매력 커플 ⚡', gradeDesc: '가장 강렬하고 잊지 못할 인연이에요' }
 }
 
@@ -78,33 +81,70 @@ async function fetchSajuPillars(person: PersonInput) {
   }
 }
 
-const HOLIDAYS = ['01-01','03-01','05-05','06-06','08-15','10-03','10-09','12-25']
+// 택일 후보 날짜의 음력 정보 일괄 조회
+async function fetchLunarDayMap(dates: string[]): Promise<Map<string, { lunarDay: number; yeonji: string }>> {
+  const map = new Map<string, { lunarDay: number; yeonji: string }>()
+  await Promise.all(
+    dates.map(async (dateStr) => {
+      try {
+        const [year, month, day] = dateStr.split('-')
+        const res = await fetch(`/api/lunar?year=${year}&month=${month}&day=${day}&calType=양력&leapMonth=0`)
+        const d = await res.json()
+        if (!d.error) {
+          map.set(dateStr, {
+            lunarDay: d.lunarDay ?? 0,
+            yeonji: d.yearGanji?.[1] ?? '',
+          })
+        }
+      } catch {}
+    })
+  )
+  return map
+}
 
-function getWeekendAndHolidayDates(monthsAhead: number = 18): string[] {
+// 고정 공휴일 + 대체공휴일
+const FIXED_HOLIDAYS = ['01-01','03-01','05-05','06-06','08-15','10-03','10-09','12-25']
+const SUBSTITUTE_HOLIDAYS: Record<string, string[]> = {
+  '2026': ['2026-02-02','2026-05-06','2026-09-28','2026-09-29','2026-09-30','2026-10-01'],
+  '2027': ['2027-01-28','2027-01-29','2027-03-01','2027-05-05','2027-09-20','2027-09-21','2027-09-22'],
+  '2028': ['2028-02-16','2028-02-17','2028-02-18','2028-05-05','2028-09-30','2028-10-02'],
+}
+
+function getHolidayDates(monthsAhead: number, targetYear?: number): string[] {
   const dates: string[] = []
   const today = new Date()
   const end = new Date(today)
   end.setMonth(end.getMonth() + monthsAhead)
   const cur = new Date(today)
-  cur.setDate(cur.getDate() + 7)
+  cur.setDate(cur.getDate() + 14)
+
   while (cur <= end) {
-    const str = cur.toISOString().slice(0, 10)
-    const day = cur.getDay()
-    const mmdd = str.slice(5)
-    if (day === 0 || day === 6 || HOLIDAYS.includes(mmdd)) dates.push(str)
+    const dateStr = cur.toISOString().slice(0, 10)
+    const year = String(cur.getFullYear())
+    const mmdd = dateStr.slice(5)
+    const dow = cur.getDay()
+
+    if (targetYear && cur.getFullYear() !== targetYear) {
+      cur.setDate(cur.getDate() + 1)
+      continue
+    }
+
+    const isWeekend = dow === 0 || dow === 6
+    const isFixed = FIXED_HOLIDAYS.includes(mmdd)
+    const isSub = SUBSTITUTE_HOLIDAYS[year]?.includes(dateStr) ?? false
+
+    if (isWeekend || isFixed || isSub) dates.push(dateStr)
     cur.setDate(cur.getDate() + 1)
   }
   return dates
 }
 
-// 택일 관련 질문인지 감지
 function isDateQuestion(q: string): boolean {
   if (!q) return false
   const keywords = ['날','날짜','결혼','택일','언제','일정','혼인','예식','웨딩','좋은날','길일']
   return keywords.some(k => q.includes(k))
 }
 
-// 질문에서 연도 힌트 추출
 function extractYearHint(q: string, currentYear: number): number | null {
   if (q.includes('내년')) return currentYear + 1
   if (q.includes('올해')) return currentYear
@@ -124,7 +164,7 @@ function buildPrompt(
   todayStr: string,
   currentYear: number,
   userQuestion: string,
-  candidateDates: string,
+  candidateDatesStr: string,
   myPrevAnalysis: string
 ): string {
   const baseInfo = `
@@ -134,7 +174,6 @@ function buildPrompt(
 ${analysisStr}
 ${myPrevAnalysis ? `\n[나의 기존 사주 분석 참고]\n${myPrevAnalysis}` : ''}`
 
-  // 연도 힌트
   const yearHint = userQuestion ? extractYearHint(userQuestion, currentYear) : null
   const yearInstruction = yearHint ? `반드시 ${yearHint}년 날짜만 추천하세요.` : ''
 
@@ -145,15 +184,17 @@ ${myPrevAnalysis ? `\n[나의 기존 사주 분석 참고]\n${myPrevAnalysis}` :
       return `당신은 명리학 전문가입니다. 오늘 날짜는 ${todayStr}입니다.
 ${baseInfo}
 
-⭐ 임무: 두 사람 사주를 명리학적으로 분석하고 결혼 길일을 추천해주세요.
+⭐ 임무: 아래 사전 계산된 택일 후보에서 최적의 결혼 길일을 추천해주세요.
 ${yearInstruction}
-${userQuestion ? `추가 요청: "${userQuestion}"` : ''}
 
-주말/공휴일 우선 후보 날짜:
-${candidateDates}
+[사전 계산된 택일 후보 — 점수 높은 순, 손없는날/삼재/일진 반영됨]
+${candidateDatesStr}
 
-위 목록에서 두 사람 사주와 가장 잘 맞는 날 4~6개를 선택하고,
-각 날짜마다 명리학적 이유(오행·천간지지·충극 여부)를 구체적으로 설명하세요.
+위 후보에서 4~6개를 선택하고 각 날짜마다:
+1. 날짜(요일) · 일진
+2. 손없는날 여부
+3. 삼재 여부
+4. 명리학적 길한 이유 (오행·천간지지·충극 여부) 상세 설명
 
 JSON 형식으로만 응답 (다른 텍스트 없이):
 {
@@ -161,7 +202,7 @@ JSON 형식으로만 응답 (다른 텍스트 없이):
   "sajuMsg": "나의 사주 특성 1문장 + 상대방 사주 특성 1문장",
   "jobMsg": "직업 오행 조화 1문장",
   "mbtiMsg": "MBTI 조화 1문장",
-  "questionAnswer": "결혼 길일 4~6개 추천. 각 날짜마다: 날짜(요일) · 명리학적 이유 상세 설명",
+  "questionAnswer": "결혼 길일 4~6개 추천 (각 날짜마다 상세 이유 포함)",
   "commonMsg": "마무리 1문장"
 }`
     } else {
@@ -277,26 +318,63 @@ export function useCoupleResult(
 
       // 4. 나의 기존 사주 분석 활용
       const myPrevAnalysis = typeof window !== 'undefined'
-        ? ((localStorage.getItem('saju_free_analysis') ?? '') + ' ' + (localStorage.getItem('saju_paid_analysis') ?? '')).trim()
+        ? ((localStorage.getItem('saju_free_analysis') ?? '') + ' ' +
+           (localStorage.getItem('saju_paid_analysis') ?? '')).trim()
         : ''
 
-      // 5. 오늘 날짜 + 연도 힌트 기반 후보 날짜 필터링
+      // 5. 오늘 날짜
       const today = new Date()
       const currentYear = today.getFullYear()
       const todayStr = `${currentYear}년 ${today.getMonth() + 1}월 ${today.getDate()}일`
       const yearHint = userQuestion ? extractYearHint(userQuestion, currentYear) : null
 
-      const candidateDates = getWeekendAndHolidayDates(24)
-        .filter(d => yearHint ? d.startsWith(String(yearHint)) : true)
-        .slice(0, 80)
-        .join(', ')
+      // 6. 택일 모드면 taegil.ts 로직 적용
+      let candidateDatesStr = ''
 
-      // 6. 프롬프트 생성
+      if (mode === 'prewedding' && (!userQuestion || isDateQuestion(userQuestion))) {
+        // 용신/년지/일지 추출
+        const ilju1 = pillars1?.find(p => p.pillar === '일주')
+        const ilju2 = pillars2?.find(p => p.pillar === '일주')
+        const yongsin1 = pillars1 && ilju1 ? calcYongsin(pillars1, ilju1.stem).yongsin : ''
+        const yongsin2 = pillars2 && ilju2 ? calcYongsin(pillars2, ilju2.stem).yongsin : ''
+        const yeonji1 = pillars1 ? getYeonJi(pillars1) : ''
+        const yeonji2 = pillars2 ? getYeonJi(pillars2) : ''
+        const ilji1 = ilju1?.branch ?? ''
+        const ilji2 = ilju2?.branch ?? ''
+
+        // 후보 날짜 1차 필터 (주말/공휴일) — 상위 40개만
+        const top40 = getHolidayDates(24, yearHint ?? undefined).slice(0, 40)
+
+        // 음력 정보 일괄 조회
+        const lunarDayMap = await fetchLunarDayMap(top40)
+
+        // taegil.ts 로 점수 계산 — 날짜 목록 먼저 전달
+        const taegilCandidates = generateTaegilCandidates(
+          top40,
+          lunarDayMap,
+          { yongsin1, yongsin2, ilji1, ilji2, yeonji1, yeonji2 }
+        )
+
+        // 상위 10개를 Claude에 전달
+        candidateDatesStr = taegilCandidates.slice(0, 10).map(c =>
+          `${c.date}(${c.dayOfWeek}) 일진:${c.dayGanji} 점수:${c.score}점` +
+          (c.isSonEomneun ? ' ✅손없는날' : '') +
+          (c.warnings.length > 0 ? ` ⚠️${c.warnings.join(',')}` : '') +
+          (c.reasons.length > 0 ? ` 💡${c.reasons.slice(0, 2).join(',')}` : '')
+        ).join('\n')
+
+      } else {
+        // 일반 모드 — 기존 방식
+        candidateDatesStr = getHolidayDates(24, yearHint ?? undefined)
+          .slice(0, 60).join(', ')
+      }
+
+      // 7. 프롬프트 생성
       const prompt = buildPrompt(
         mode, person1, person2,
         saju1Str, saju2Str, analysisStr,
         todayStr, currentYear, userQuestion,
-        candidateDates,
+        candidateDatesStr,
         myPrevAnalysis.slice(0, 500)
       )
 
