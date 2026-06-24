@@ -9,6 +9,15 @@ export interface SajuPillar {
   branch: string
 }
 
+export interface ScoreNumbers {
+  iljuScore: number
+  yongsinScore: number
+  yeonScore: number
+  wolScore: number
+  gongmangScore: number
+  ohaengScore: number
+}
+
 export interface CoupleAnalysis {
   person1Relations: string[]
   person2Relations: string[]
@@ -24,6 +33,7 @@ export interface CoupleAnalysis {
   grade: string
   gradeDesc: string
   scoreDetails: string
+  scoreNumbers: ScoreNumbers
   summary: string
 }
 
@@ -51,13 +61,11 @@ function getYongsinHarmony(y1: string, y2: string): string {
   return '중립적인 용신 관계예요'
 }
 
-// "甲子" → { stem: "甲", branch: "子" }
 export function parseGanji(ganji: string): { stem: string; branch: string } {
   if (!ganji || ganji.length < 2) return { stem: '?', branch: '?' }
   return { stem: ganji[0], branch: ganji[1] }
 }
 
-// API 응답으로 SajuPillar[] 생성
 export function buildSajuPillars(
   yearGanji: string,
   monthGanji: string,
@@ -104,7 +112,6 @@ export function analyzeCoupleFromPillars(
   const iljjiRelation = getIljjiRelation(iljji1, iljji2)
   const yongsinHarmony = getYongsinHarmony(person1Yongsin, person2Yongsin)
 
-  // ✅ coupleScore.ts 정교한 고정값 계산 사용
   const scoreResult = calcCoupleScore(
     saju1, saju2,
     person1Gongmang,
@@ -114,7 +121,6 @@ export function analyzeCoupleFromPillars(
   const grade = scoreResult.grade
   const gradeDesc = scoreResult.gradeDesc
 
-  // 점수 상세 내역 텍스트
   const scoreDetails = [
     `일주관계: ${scoreResult.iljuScore}점`,
     `용신조화: ${scoreResult.yongsinScore}점`,
@@ -123,6 +129,15 @@ export function analyzeCoupleFromPillars(
     `공망: ${scoreResult.gongmangScore}점`,
     `오행균형: ${scoreResult.ohaengScore}점`,
   ].join(' / ')
+
+  const scoreNumbers: ScoreNumbers = {
+    iljuScore: scoreResult.iljuScore,
+    yongsinScore: scoreResult.yongsinScore,
+    yeonScore: scoreResult.yeonScore,
+    wolScore: scoreResult.wolScore,
+    gongmangScore: scoreResult.gongmangScore,
+    ohaengScore: scoreResult.ohaengScore,
+  }
 
   const summary = `
 [명리학 계산 결과]
@@ -143,6 +158,6 @@ ${scoreDetails}
     iljji1, iljji2,
     iljjiRelation, yongsinHarmony,
     sajuScore, grade, gradeDesc,
-    scoreDetails, summary,
+    scoreDetails, scoreNumbers, summary,
   }
 }
