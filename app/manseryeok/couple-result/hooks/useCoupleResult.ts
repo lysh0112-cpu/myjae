@@ -293,20 +293,18 @@ export function useCoupleResult(
     if (!person1.year || !person2.year) return
 
     const callClaude = async () => {
-      // 1. 두 사람 사주 8글자 계산
       const [pillars1, pillars2] = await Promise.all([
         fetchSajuPillars(person1),
         fetchSajuPillars(person2),
       ])
 
-      // 2. 명리학 계산 (coupleScore.ts 고정값)
       let analysisStr = ''
       let sajuScore = 50
-      let scoreDetails = undefined
+      let scoreDetails: CoupleResultData['scoreDetails'] = undefined
       if (pillars1 && pillars2) {
         const analysis = analyzeCoupleFromPillars(pillars1, pillars2)
         analysisStr = analysis.summary
-        sajuScore = analysis.sajuScore  // coupleScore.ts 고정값
+        sajuScore = analysis.sajuScore
         scoreDetails = {
           iljuScore: 0,
           yongsinScore: 0,
@@ -317,24 +315,18 @@ export function useCoupleResult(
         }
       }
 
-      // 3. 용신 계산
       const ilju1 = pillars1?.find(p => p.pillar === '일주')
       const ilju2 = pillars2?.find(p => p.pillar === '일주')
       const yongsin1 = pillars1 && ilju1 ? calcYongsin(pillars1, ilju1.stem).yongsin : ''
       const yongsin2 = pillars2 && ilju2 ? calcYongsin(pillars2, ilju2.stem).yongsin : ''
 
-      // 4. jobScore — couple 모드만 반영
       let jobScore = 0
       if (mode === 'couple') {
-        const jobScoreResult = calcJobScoreDetailed(
-          person1.job, person2.job,
-          yongsin1, yongsin2
-        )
+        const jobScoreResult = calcJobScoreDetailed(person1.job, person2.job, yongsin1, yongsin2)
         jobScore = jobScoreResult.totalScore
         analysisStr += `\n직업 오행 분석: ${jobScoreResult.reasons.join(' / ')}`
       }
 
-      // 5. mbtiScore
       const mbtiResult = calcMbtiScoreDetailed(person1.mbti, person2.mbti)
       const hasMbti = mbtiResult.hasMbti
       const mbtiScore = mbtiResult.totalScore
@@ -342,11 +334,9 @@ export function useCoupleResult(
         analysisStr += `\nMBTI 분석: ${mbtiResult.reasons.join(' / ')}`
       }
 
-      // 6. 모드별 총점 계산 (고정값)
       const totalScore = calcTotalScore(sajuScore, jobScore, mbtiScore, hasMbti, mode)
       const { grade, gradeDesc } = getGrade(totalScore)
 
-      // 7. 사주 텍스트
       const saju1Str = pillars1
         ? pillars1.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(' ')
         : `${person1.year}년 ${person1.month}월 ${person1.day}일`
@@ -354,19 +344,16 @@ export function useCoupleResult(
         ? pillars2.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(' ')
         : `${person2.year}년 ${person2.month}월 ${person2.day}일`
 
-      // 8. 나의 기존 사주 분석 활용
       const myPrevAnalysis = typeof window !== 'undefined'
         ? ((localStorage.getItem('saju_free_analysis') ?? '') + ' ' +
            (localStorage.getItem('saju_paid_analysis') ?? '')).trim()
         : ''
 
-      // 9. 오늘 날짜
       const today = new Date()
       const currentYear = today.getFullYear()
       const todayStr = `${currentYear}년 ${today.getMonth() + 1}월 ${today.getDate()}일`
       const yearHint = userQuestion ? extractYearHint(userQuestion, currentYear) : null
 
-      // 10. 택일 모드면 taegil.ts 로직 적용
       let candidateDatesStr = ''
       if (mode === 'prewedding' && (!userQuestion || isDateQuestion(userQuestion))) {
         const yeonji1 = pillars1 ? getYeonJi(pillars1) : ''
@@ -389,7 +376,6 @@ export function useCoupleResult(
         candidateDatesStr = getHolidayDates(24, yearHint ?? undefined).slice(0, 60).join(', ')
       }
 
-      // 11. 프롬프트 생성
       const prompt = buildPrompt(
         mode, person1, person2,
         saju1Str, saju2Str, analysisStr,
@@ -420,8 +406,7 @@ export function useCoupleResult(
           commonMsg: parsed.commonMsg || '더 깊은 이야기는 전문가와 함께해 보세요',
           person1Summary: `${person1.gender} · ${person1.calType} · ${person1.year}년 ${person1.month}월 ${person1.day}일`,
           person2Summary: `${person2.gender} · ${person2.calType} · ${person2.year}년 ${person2.month}월 ${person2.day}일`,
-          hasMbti,
-          scoreDetails,
+          hasMbti, scoreDetails,
         })
       } catch {
         setResult({
@@ -435,8 +420,7 @@ export function useCoupleResult(
           commonMsg: '더 깊은 이야기는 전문가와 함께해 보세요',
           person1Summary: `${person1.gender} · ${person1.calType} · ${person1.year}년 ${person1.month}월 ${person1.day}일`,
           person2Summary: `${person2.gender} · ${person2.calType} · ${person2.year}년 ${person2.month}월 ${person2.day}일`,
-          hasMbti,
-          scoreDetails,
+          hasMbti, scoreDetails,
         })
       }
     }
