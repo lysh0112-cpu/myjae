@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { buildSajuPillars, analyzeCoupleFromPillars } from '@/lib/saju/coupleAnalysis'
 
 export interface PersonInput {
   year: string
@@ -64,16 +65,16 @@ function getGrade(score: number): { grade: string; gradeDesc: string } {
   return { grade: '극과 극, 반전 매력 커플 ⚡', gradeDesc: '가장 강렬하고 잊지 못할 인연이에요' }
 }
 
-async function getSaju(person: PersonInput): Promise<string> {
+async function fetchSajuPillars(person: PersonInput) {
   try {
     const res = await fetch(
       `/api/lunar?year=${person.year}&month=${person.month}&day=${person.day}&calType=${person.calType}&leapMonth=0`
     )
     const d = await res.json()
-    if (d.error) return `${person.year}년 ${person.month}월 ${person.day}일`
-    return `년주:${d.yearGanji} 월주:${d.monthGanji} 일주:${d.dayGanji}`
+    if (d.error) return null
+    return buildSajuPillars(d.yearGanji, d.monthGanji, d.dayGanji)
   } catch {
-    return `${person.year}년 ${person.month}월 ${person.day}일`
+    return null
   }
 }
 
@@ -90,9 +91,7 @@ function getWeekendAndHolidayDates(monthsAhead: number = 18): string[] {
     const str = cur.toISOString().slice(0, 10)
     const day = cur.getDay()
     const mmdd = str.slice(5)
-    if (day === 0 || day === 6 || HOLIDAYS.includes(mmdd)) {
-      dates.push(str)
-    }
+    if (day === 0 || day === 6 || HOLIDAYS.includes(mmdd)) dates.push(str)
     cur.setDate(cur.getDate() + 1)
   }
   return dates
@@ -100,31 +99,36 @@ function getWeekendAndHolidayDates(monthsAhead: number = 18): string[] {
 
 function buildPrompt(
   mode: string,
-  person1: PersonInput, person2: PersonInput,
-  saju1: string, saju2: string,
-  todayStr: string, userQuestion: string,
+  person1: PersonInput,
+  person2: PersonInput,
+  saju1Str: string,
+  saju2Str: string,
+  analysisStr: string,
+  todayStr: string,
+  userQuestion: string,
   candidateDates: string
 ): string {
   const baseInfo = `
-사람1 (${person1.gender}): 사주 ${saju1} · 직업오행: ${person1.job} · MBTI: ${person1.mbti || '미입력'}
-사람2 (${person2.gender}): 사주 ${saju2} · 직업오행: ${person2.job} · MBTI: ${person2.mbti || '미입력'}`
+사람1 (${person1.gender}): 사주 ${saju1Str} · 직업오행: ${person1.job} · MBTI: ${person1.mbti || '미입력'}
+사람2 (${person2.gender}): 사주 ${saju2Str} · 직업오행: ${person2.job} · MBTI: ${person2.mbti || '미입력'}
+
+${analysisStr}`
 
   if (mode === 'prewedding') {
     return `당신은 명리학 전문가입니다. 오늘 날짜는 ${todayStr}입니다.
 ${baseInfo}
 
-⭐ 임무: 두 사람 사주를 명리학적으로 분석하여 결혼 길일을 추천해주세요.
+⭐ 임무: 위 명리학 계산 결과를 바탕으로 결혼 길일을 추천해주세요.
 ${userQuestion ? `추가 요청: "${userQuestion}"` : ''}
 
-주말/공휴일 우선 후보 날짜 목록:
+주말/공휴일 우선 후보 날짜:
 ${candidateDates}
 
 위 목록에서 두 사람 사주와 가장 잘 맞는 날 4~6개를 선택하고,
-각 날짜마다 왜 좋은지 명리학적 이유(오행, 천간지지, 충극 여부 등)를 구체적으로 설명하세요.
+각 날짜마다 명리학적 이유(오행, 천간지지, 충극 여부 등)를 구체적으로 설명하세요.
 
 JSON 형식으로만 응답 (다른 텍스트 없이):
 {
-  "sajuScore": 50,
   "sajuMsg": "두 사람 사주 총평 2문장",
   "jobMsg": "직업 오행 조화 1문장",
   "mbtiMsg": "MBTI 조화 1문장",
@@ -137,16 +141,15 @@ JSON 형식으로만 응답 (다른 텍스트 없이):
     return `당신은 명리학 전문가입니다. 오늘 날짜는 ${todayStr}입니다.
 ${baseInfo}
 
-⭐ 임무: 두 사람 사주를 바탕으로 최적의 출산 시기(연도·월)를 추천해주세요.
+⭐ 임무: 위 명리학 계산 결과를 바탕으로 최적의 출산 시기를 추천해주세요.
 ${userQuestion ? `추가 요청: "${userQuestion}"` : ''}
 
 JSON 형식으로만 응답 (다른 텍스트 없이):
 {
-  "sajuScore": 50,
   "sajuMsg": "두 사람 사주 총평 2문장",
   "jobMsg": "직업 오행 조화 1문장",
   "mbtiMsg": "MBTI 조화 1문장",
-  "questionAnswer": "최적 출산 시기 3~4개 추천, 각 시기마다 명리학적 이유 포함",
+  "questionAnswer": "최적 출산 시기 3~4개, 각 시기마다 명리학적 이유 포함",
   "commonMsg": "마무리 1문장"
 }`
   }
@@ -155,13 +158,12 @@ JSON 형식으로만 응답 (다른 텍스트 없이):
     return `당신은 명리학 전문가입니다. 오늘 날짜는 ${todayStr}입니다.
 ${baseInfo}
 
-⭐ 임무: 부부 궁합을 분석하고 관계 개선 방향을 제시해주세요.
+⭐ 임무: 위 명리학 계산 결과를 바탕으로 부부 궁합과 관계 개선 방향을 제시해주세요.
 ${userQuestion ? `추가 요청: "${userQuestion}"` : ''}
 
 JSON 형식으로만 응답 (다른 텍스트 없이):
 {
-  "sajuScore": 45~60 사이 숫자,
-  "sajuMsg": "두 사람 사주 궁합 분석 2문장",
+  "sajuMsg": "부부 사주 궁합 분석 2문장",
   "jobMsg": "직업 오행 조화 1문장",
   "mbtiMsg": "MBTI 소통 방식 1문장",
   "questionAnswer": "관계 개선을 위한 구체적 방향 3~4문장",
@@ -169,7 +171,7 @@ JSON 형식으로만 응답 (다른 텍스트 없이):
 }`
   }
 
-  // 기본: couple
+  // couple (기본)
   return `당신은 명리학 전문가입니다. 오늘 날짜는 ${todayStr}입니다.
 ${baseInfo}
 
@@ -177,8 +179,7 @@ ${userQuestion ? `⭐ 핵심 질문: "${userQuestion}" — 이 질문에 가장 
 
 JSON 형식으로만 응답 (다른 텍스트 없이):
 {
-  "sajuScore": 45~60 사이 숫자,
-  "sajuMsg": "사주 궁합 분석 2문장",
+  "sajuMsg": "사주 궁합 분석 2문장 (형충회합 결과 반영)",
   "jobMsg": "직업 오행 분석 1문장",
   "mbtiMsg": "MBTI 분석 1문장",
   "questionAnswer": "${userQuestion ? '질문 답변 3~4문장' : ''}",
@@ -202,13 +203,40 @@ export function useCoupleResult(
     const mbtiScore = hasMbti ? calcMbtiScore(person1.mbti, person2.mbti) : 0
 
     const callClaude = async () => {
-      const [saju1, saju2] = await Promise.all([getSaju(person1), getSaju(person2)])
+      // 1. 두 사람 사주 8글자 계산
+      const [pillars1, pillars2] = await Promise.all([
+        fetchSajuPillars(person1),
+        fetchSajuPillars(person2),
+      ])
 
+      // 2. 명리학 계산 (형충회합파해, 용신, 공망, 일지 관계)
+      let analysisStr = ''
+      let sajuScore = 50
+      if (pillars1 && pillars2) {
+        const analysis = analyzeCoupleFromPillars(pillars1, pillars2)
+        analysisStr = analysis.summary
+        sajuScore = analysis.sajuScore
+      }
+
+      // 3. 사주 텍스트 표현
+      const saju1Str = pillars1
+        ? pillars1.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(' ')
+        : `${person1.year}년 ${person1.month}월 ${person1.day}일`
+      const saju2Str = pillars2
+        ? pillars2.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(' ')
+        : `${person2.year}년 ${person2.month}월 ${person2.day}일`
+
+      // 4. 오늘 날짜 + 후보 날짜
       const today = new Date()
       const todayStr = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`
       const candidateDates = getWeekendAndHolidayDates(18).slice(0, 80).join(', ')
 
-      const prompt = buildPrompt(mode, person1, person2, saju1, saju2, todayStr, userQuestion, candidateDates)
+      // 5. 프롬프트 생성
+      const prompt = buildPrompt(
+        mode, person1, person2,
+        saju1Str, saju2Str, analysisStr,
+        todayStr, userQuestion, candidateDates
+      )
 
       try {
         const res = await fetch('/api/analyze', {
@@ -221,7 +249,6 @@ export function useCoupleResult(
         const clean = text.replace(/```json|```/g, '').trim()
         const parsed = JSON.parse(clean)
 
-        const sajuScore = parsed.sajuScore || 50
         const maxScore = hasMbti ? 100 : 75
         const rawTotal = sajuScore + jobScore + mbtiScore
         const totalScore = Math.min(Math.round(rawTotal / maxScore * 100), 100)
@@ -240,7 +267,6 @@ export function useCoupleResult(
           hasMbti,
         })
       } catch {
-        const sajuScore = 50
         const maxScore = hasMbti ? 100 : 75
         const rawTotal = sajuScore + jobScore + mbtiScore
         const totalScore = Math.min(Math.round(rawTotal / maxScore * 100), 100)
