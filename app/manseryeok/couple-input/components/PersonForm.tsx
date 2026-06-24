@@ -8,12 +8,13 @@ const HOURS = [
   '申시(15~17)','酉시(17~19)','戌시(19~21)','亥시(21~23)',
 ]
 
-export default function PersonForm({ who, relation, person, onChange, autoLoaded }: {
+export default function PersonForm({ who, relation, person, onChange, autoLoaded, onClear }: {
   who: 1 | 2
   relation: RelationType
   person: PersonInput
   onChange: (key: keyof PersonInput, value: string) => void
   autoLoaded?: boolean
+  onClear?: () => void
 }) {
   const label = relation === 'married' ? (who === 1 ? '남편' : '아내')
     : relation === 'prewedding' ? (who === 1 ? '신랑' : '신부')
@@ -38,6 +39,13 @@ export default function PersonForm({ who, relation, person, onChange, autoLoaded
     color: active ? '#c8b0ff' : '#555577',
   })
 
+  const clearBtnStyle: React.CSSProperties = {
+    fontSize: '10px', padding: '2px 8px', borderRadius: '20px',
+    background: 'rgba(255,80,80,0.1)', color: 'rgba(255,120,120,0.7)',
+    border: '1px solid rgba(255,80,80,0.2)', cursor: 'pointer',
+    marginLeft: 'auto',
+  }
+
   return (
     <div style={{ background: '#13132a', borderRadius: '14px', padding: '16px', border: '1px solid rgba(255,255,255,0.06)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
@@ -45,10 +53,19 @@ export default function PersonForm({ who, relation, person, onChange, autoLoaded
           {label[0]}
         </div>
         <span style={{ fontSize: '14px', color: '#c8c0ff', fontWeight: '500' }}>{label}</span>
+
+        {/* 자동입력 표시 */}
         {autoLoaded && who === 1 && (
-          <span style={{ marginLeft: 'auto', fontSize: '10px', color: '#44aa66', background: 'rgba(68,170,102,0.1)', padding: '2px 8px', borderRadius: '20px' }}>
+          <span style={{ fontSize: '10px', color: '#44aa66', background: 'rgba(68,170,102,0.1)', padding: '2px 8px', borderRadius: '20px' }}>
             ✓ 자동입력
           </span>
+        )}
+
+        {/* 개별 초기화 버튼 */}
+        {onClear && !(autoLoaded && who === 1) && (
+          <button onClick={onClear} style={clearBtnStyle}>
+            초기화
+          </button>
         )}
       </div>
 
@@ -108,8 +125,8 @@ export default function PersonForm({ who, relation, person, onChange, autoLoaded
       </div>
 
       {relation === 'couple' && (
-  <JobSelect value={person.job} onChange={v => onChange('job', v)} />
-)}
+        <JobSelect value={person.job} onChange={v => onChange('job', v)} />
+      )}
 
       {relation === 'couple' && (
         <MbtiInput value={person.mbti} onChange={v => onChange('mbti', v)} />
