@@ -26,14 +26,22 @@ function CoupleResultInner() {
 
   if (!result) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0d0d1a', gap: '12px' }}>
-        <div style={{ fontSize: '24px' }}>✦</div>
-        <div style={{ color: '#FAC775', fontSize: '14px' }}>
-          {mode === 'prewedding' ? '두 분의 사주로 좋은 날을 찾고 있어요...' :
-           mode === 'birth' ? '최적의 출산 시기를 분석 중이에요...' :
-           '궁합을 분석 중이에요...'}
+      <>
+        <style>{`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0d0d1a', gap: '12px' }}>
+          <div style={{ fontSize: '32px', animation: 'spin 1.2s linear infinite', display: 'inline-block' }}>✦</div>
+          <div style={{ color: '#FAC775', fontSize: '14px' }}>
+            {mode === 'prewedding' ? '두 분의 사주로 좋은 날을 찾고 있어요...' :
+             mode === 'birth' ? '최적의 출산 시기를 분석 중이에요...' :
+             '궁합을 분석 중이에요...'}
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 
@@ -59,18 +67,12 @@ function CoupleResultInner() {
           </div>
         )}
 
-        {/* 점수판 — 택일/출산은 숨김 */}
         {mode !== 'prewedding' && mode !== 'birth' && (
           <ScoreBoard result={result} />
         )}
 
-        {/* 사주 요약 + 상대방 사주명식 + 해설 */}
         <SajuSummary result={result} person1={person1} person2={person2} mode={mode} />
-
-        {/* 영역별 분석 + 질문 답변 */}
         <AreaAnalysis result={result} mode={mode} />
-
-        {/* CTA */}
         <CtaSection commonMsg={result.commonMsg} />
       </div>
     </main>
@@ -80,9 +82,18 @@ function CoupleResultInner() {
 export default function CoupleResultPage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d0d1a' }}>
-        <div style={{ color: '#FAC775' }}>로딩 중...</div>
-      </div>
+      <>
+        <style>{`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0d0d1a', gap: '12px' }}>
+          <div style={{ fontSize: '32px', animation: 'spin 1.2s linear infinite', display: 'inline-block' }}>✦</div>
+          <div style={{ color: '#FAC775', fontSize: '14px' }}>로딩 중...</div>
+        </div>
+      </>
     }>
       <CoupleResultInner />
     </Suspense>
