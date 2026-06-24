@@ -1,4 +1,6 @@
 'use client'
+import { useRouter } from 'next/navigation'
+import PageHeader from '@/app/components/common/PageHeader'
 
 type Consultant = {
   id: string
@@ -23,6 +25,8 @@ export default function ContactStep({
   loading: boolean
   error: string
 }) {
+  const router = useRouter()
+
   function formatPhone(value: string) {
     const n = value.replace(/\D/g, '')
     if (n.length <= 3) return n
@@ -31,17 +35,18 @@ export default function ContactStep({
   }
 
   return (
-    <div className="min-h-screen bg-stone-950 text-stone-100 p-4">
-      <div className="max-w-lg mx-auto">
-        <h1 className="text-2xl font-bold text-amber-400 mb-1">명연재 상담</h1>
-        <p className="text-stone-400 text-sm mb-6">연락처를 입력해주세요</p>
-
+    <div className="min-h-screen bg-stone-950 text-stone-100">
+      <PageHeader
+        title="명연재 상담"
+        subtitle="연락처를 입력해주세요"
+        onBack={() => router.back()}
+      />
+      <div className="max-w-lg mx-auto p-4">
         <div className="bg-stone-900 rounded-xl p-4 mb-4 border border-stone-700">
           <div className="text-stone-400 text-sm">선택한 상담사</div>
           <div className="font-bold text-lg mt-1">{selected?.name}</div>
           <div className="text-amber-400">{selected?.price.toLocaleString()}원</div>
         </div>
-
         <input
           type="tel"
           value={phone}
