@@ -88,15 +88,17 @@ ${userQuestion ? `⭐ 가장 중요: 사용자의 핵심 질문 → "${userQuest
   "sajuMsg": "사주 분석 메시지 (2문장)",
   "jobMsg": "직업 오행 분석 메시지 (1문장)",
   "mbtiMsg": "MBTI 분석 메시지 (1문장)",
-  "questionAnswer": "${userQuestion ? '질문에 대한 구체적 답변 (3~4문장)' : ''}",
+  "questionAnswer": "${userQuestion ? '질문에 대한 구체적 답변 3~4문장' : ''}",
   "commonMsg": "전체 마무리 메시지 (1문장)"
 }`
 
       try {
-        const res = await fetch('/api/claude', {
+        const res = await fetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt }),
+          body: JSON.stringify({
+            messages: [{ role: 'user', content: prompt }]
+          }),
         })
         const data = await res.json()
         const text = data.content?.[0]?.text || ''
@@ -122,7 +124,6 @@ ${userQuestion ? `⭐ 가장 중요: 사용자의 핵심 질문 → "${userQuest
           hasMbti,
         })
       } catch {
-        // API 실패 시 기본값
         const sajuScore = 50
         const maxScore = hasMbti ? 100 : 75
         const rawTotal = sajuScore + jobScore + mbtiScore
