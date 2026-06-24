@@ -17,6 +17,8 @@ function CoupleInputInner() {
     person2, setPerson2,
     question, setQuestion,
     autoLoaded, handleClear,
+    handleClearPerson1,
+    handleClearPerson2,
   } = useCoupleInput()
 
   const handleStart = () => {
@@ -45,7 +47,7 @@ function CoupleInputInner() {
         rightButton={
           <button onClick={handleClear}
             style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '20px', background: 'rgba(255,80,80,0.1)', color: 'rgba(255,120,120,0.7)', border: '1px solid rgba(255,80,80,0.2)', cursor: 'pointer' }}>
-            초기화
+            전체초기화
           </button>
         }
       />
@@ -71,11 +73,21 @@ function CoupleInputInner() {
         <div style={{ marginBottom: '16px' }}>
           <div style={{ fontSize: '11px', color: '#5555aa', marginBottom: '10px' }}>두 사람 정보</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <PersonForm who={1} relation={relation} person={person1}
+            <PersonForm
+              who={1}
+              relation={relation}
+              person={person1}
               onChange={(k, v) => setPerson1(prev => ({ ...prev, [k]: v }))}
-              autoLoaded={autoLoaded} />
-            <PersonForm who={2} relation={relation} person={person2}
-              onChange={(k, v) => setPerson2(prev => ({ ...prev, [k]: v }))} />
+              autoLoaded={autoLoaded}
+              onClear={handleClearPerson1}
+            />
+            <PersonForm
+              who={2}
+              relation={relation}
+              person={person2}
+              onChange={(k, v) => setPerson2(prev => ({ ...prev, [k]: v }))}
+              onClear={handleClearPerson2}
+            />
           </div>
         </div>
 
