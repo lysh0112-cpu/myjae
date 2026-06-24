@@ -25,16 +25,17 @@ export default function DayunTable({
   birthYear, birthMonth, birthDay, gender, monthGanji, yearStem, dayStem, currentYear, ilgan, yeonjji, iljji
 }: Props) {
   const dayunList = calcDayunList(birthYear, birthMonth, birthDay, monthGanji, yearStem, gender, dayStem)
+  const reversedDayunList = [...(dayunList || [])].reverse()
   const [selected, setSelected] = useState<number | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const currentAge = currentYear - birthYear
 
-  // 현재 대운 카드로 자동 스크롤
+  // 현재 대운 카드로 자동 스크롤 (역순 — 오른쪽이 과거, 왼쪽이 미래)
   useEffect(() => {
-    if (!scrollRef.current || !dayunList) return
-    const currentIdx = dayunList.findIndex(d => d.age <= currentAge && currentAge < d.age + 10)
-    if (currentIdx > 0) {
+    if (!scrollRef.current || !reversedDayunList.length) return
+    const currentIdx = reversedDayunList.findIndex(d => d.age <= currentAge && currentAge < d.age + 10)
+    if (currentIdx >= 0) {
       const cardWidth = 66
       scrollRef.current.scrollLeft = Math.max(0, currentIdx * cardWidth - cardWidth)
     }
@@ -42,7 +43,7 @@ export default function DayunTable({
 
   if (!dayunList || dayunList.length === 0) return null
 
-  const selectedDayun = selected !== null ? dayunList[selected] : null
+  const selectedDayun = selected !== null ? reversedDayunList[selected] : null
 
   return (
     <div className="rounded-2xl p-4" style={{background:'#2C2C2A',border:'1px solid rgba(255,255,255,0.07)'}}>
@@ -51,12 +52,12 @@ export default function DayunTable({
         <span className="text-xs px-2 py-0.5 rounded-full" style={{background:'rgba(250,199,117,0.15)',color:'#FAC775'}}>
           현재 {currentAge}세
         </span>
-        <span className="text-xs ml-auto" style={{color:'#8a88a0'}}>← 옆으로 스크롤 →</span>
+        <span className="text-xs ml-auto" style={{color:'#8a88a0'}}>← 미래 · 과거 →</span>
       </div>
 
-      {/* 가로 스크롤 카드 — 100세까지 */}
+      {/* 가로 스크롤 카드 — 오른쪽(과거) → 왼쪽(미래) */}
       <div ref={scrollRef} className="flex gap-2 overflow-x-auto pb-2" style={{scrollbarWidth:'thin', scrollbarColor:'rgba(255,255,255,0.1) transparent'}}>
-        {dayunList.map((dayun, i) => {
+        {reversedDayunList.map((dayun, i) => {
           const isCurrent = dayun.age <= currentAge && currentAge < dayun.age + 10
           const isSelected = selected === i
           const ganColor = GAN_COLOR[dayun.cheongan] ?? ELEMENT_COLOR[STEM_ELEMENT[dayun.cheongan]] ?? '#FAC775'
