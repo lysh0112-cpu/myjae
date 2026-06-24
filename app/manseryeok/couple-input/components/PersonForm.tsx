@@ -62,7 +62,7 @@ export default function PersonForm({ who, relation, person, onChange, autoLoaded
         )}
 
         {/* 개별 초기화 버튼 */}
-        {onClear && !(autoLoaded && who === 1) && (
+        {onClear && (who === 2 || !autoLoaded) && (
           <button onClick={onClear} style={clearBtnStyle}>
             초기화
           </button>
