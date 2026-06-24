@@ -12,14 +12,15 @@ interface ScoreItem {
 export default function ScoreBoard({ result }: { result: CoupleResultData }) {
   const [expanded, setExpanded] = useState(false)
 
-  const sajuItems: ScoreItem[] = result.scoreDetails ? [
-    { label: '일주', score: result.scoreDetails.iljuScore,     max: 30, color: '#7F77DD' },
-    { label: '용신', score: result.scoreDetails.yongsinScore,  max: 20, color: '#9B77DD' },
-    { label: '년주', score: result.scoreDetails.yeonScore,     max: 15, color: '#7F99DD' },
-    { label: '월주', score: result.scoreDetails.wolScore,      max: 10, color: '#7FBBDD' },
-    { label: '공망', score: result.scoreDetails.gongmangScore, max: 10, color: '#7FDDCC' },
-    { label: '오행', score: result.scoreDetails.ohaengScore,   max: 15, color: '#7FDD99' },
-  ] : []
+  // scoreDetails 있으면 실제값, 없으면 0으로 표시
+  const sajuItems: ScoreItem[] = [
+    { label: '일주', score: result.scoreDetails?.iljuScore ?? 0,     max: 30, color: '#7F77DD' },
+    { label: '용신', score: result.scoreDetails?.yongsinScore ?? 0,  max: 20, color: '#9B77DD' },
+    { label: '년주', score: result.scoreDetails?.yeonScore ?? 0,     max: 15, color: '#7F99DD' },
+    { label: '월주', score: result.scoreDetails?.wolScore ?? 0,      max: 10, color: '#7FBBDD' },
+    { label: '공망', score: result.scoreDetails?.gongmangScore ?? 0, max: 10, color: '#7FDDCC' },
+    { label: '오행', score: result.scoreDetails?.ohaengScore ?? 0,   max: 15, color: '#7FDD99' },
+  ]
 
   return (
     <div style={{
@@ -63,40 +64,39 @@ export default function ScoreBoard({ result }: { result: CoupleResultData }) {
       </div>
 
       {/* 사주 상세 접기/펼치기 */}
-      {sajuItems.length > 0 && (
-        <>
-          <button
-            onClick={() => setExpanded(!expanded)}
-            style={{
-              width: '100%', padding: '8px', borderRadius: '8px',
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-              color: '#8888cc', fontSize: '11px', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
-            }}>
-            <span>사주 상세 점수 보기</span>
-            <span style={{ transition: 'transform 0.3s', display: 'inline-block', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
-          </button>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        style={{
+          width: '100%', padding: '8px', borderRadius: '8px',
+          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+          color: '#8888cc', fontSize: '11px', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+        }}>
+        <span>사주 상세 점수 보기</span>
+        <span style={{
+          transition: 'transform 0.3s', display: 'inline-block',
+          transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)'
+        }}>▼</span>
+      </button>
 
-          {expanded && (
-            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {sajuItems.map(item => (
-                <div key={item.label}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#8888cc', marginBottom: '4px' }}>
-                    <span>{item.label}</span>
-                    <span style={{ color: item.color, fontWeight: '500' }}>{item.score} / {item.max}</span>
-                  </div>
-                  <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '20px', height: '6px' }}>
-                    <div style={{
-                      background: item.color, height: '6px', borderRadius: '20px',
-                      width: `${Math.min(100, Math.max(0, Math.round((item.score / item.max) * 100)))}%`,
-                      transition: 'width 0.5s ease'
-                    }} />
-                  </div>
-                </div>
-              ))}
+      {expanded && (
+        <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {sajuItems.map(item => (
+            <div key={item.label}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#8888cc', marginBottom: '4px' }}>
+                <span>{item.label}</span>
+                <span style={{ color: item.color, fontWeight: '500' }}>{item.score} / {item.max}</span>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '20px', height: '6px' }}>
+                <div style={{
+                  background: item.color, height: '6px', borderRadius: '20px',
+                  width: `${Math.min(100, Math.max(0, Math.round((item.score / item.max) * 100)))}%`,
+                  transition: 'width 0.5s ease'
+                }} />
+              </div>
             </div>
-          )}
-        </>
+          ))}
+        </div>
       )}
     </div>
   )
