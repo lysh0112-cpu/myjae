@@ -1,4 +1,5 @@
 'use client'
+import PageHeader from '@/app/components/common/PageHeader'
 
 type Consultant = {
   id: string
@@ -24,16 +25,13 @@ export default function PaymentStep({
   onComplete: () => void
 }) {
   return (
-    <div className="min-h-screen bg-stone-950 text-stone-100 p-4">
-      <div className="max-w-lg mx-auto">
-        <button
-          onClick={onBack}
-          className="text-stone-400 text-sm mb-6 flex items-center gap-1"
-        >
-          ← 연락처 입력으로
-        </button>
-        <h2 className="text-xl font-bold text-amber-400 mb-6">결제</h2>
-
+    <div className="min-h-screen bg-stone-950 text-stone-100">
+      <PageHeader
+        title="결제"
+        subtitle="결제 수단을 선택해주세요"
+        onBack={onBack}
+      />
+      <div className="max-w-lg mx-auto p-4">
         <div className="bg-stone-900 rounded-xl p-5 border border-stone-700 mb-6 space-y-3">
           <div className="flex justify-between">
             <span className="text-stone-400">상담사</span>
@@ -68,7 +66,6 @@ export default function PaymentStep({
           ))}
         </div>
 
-        {/* 결제 수단별 안내 */}
         {payMethod === '계좌이체' && (
           <div className="bg-stone-900 rounded-xl p-4 border border-stone-700 mb-6 text-sm space-y-1">
             <p className="text-amber-400 font-bold mb-2">계좌이체 안내</p>
