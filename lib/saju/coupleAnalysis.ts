@@ -1,6 +1,7 @@
 import { findRelations } from './relations'
 import { getGongmang } from './gongmang'
 import { calcYongsin } from './yongsin'
+import { calcCoupleScore } from './coupleScore'
 
 export interface SajuPillar {
   pillar: string
@@ -20,6 +21,9 @@ export interface CoupleAnalysis {
   iljjiRelation: string
   yongsinHarmony: string
   sajuScore: number
+  grade: string
+  gradeDesc: string
+  scoreDetails: string
   summary: string
 }
 
@@ -45,16 +49,6 @@ function getYongsinHarmony(y1: string, y2: string): string {
   if (GENERATES[y2] === y1) return `${y2}이 ${y1}을 생해줘 상생 관계예요`
   if (CONTROLS[y1] === y2 || CONTROLS[y2] === y1) return `용신이 상극 관계 — 보완이 필요해요`
   return '중립적인 용신 관계예요'
-}
-
-function calcScore(iljjiRelation: string, yongsinHarmony: string): number {
-  let score = 50
-  if (iljjiRelation.includes('합')) score += 10
-  if (iljjiRelation.includes('충')) score -= 10
-  if (yongsinHarmony.includes('상생')) score += 8
-  if (yongsinHarmony.includes('상극')) score -= 5
-  if (yongsinHarmony.includes('같아')) score += 6
-  return Math.min(Math.max(score, 30), 70)
 }
 
 // "甲子" → { stem: "甲", branch: "子" }
@@ -102,15 +96,38 @@ export function analyzeCoupleFromPillars(
   const person1Yongsin = yongsin1Result?.yongsin ?? ''
   const person2Yongsin = yongsin2Result?.yongsin ?? ''
 
-  const person1Gongmang = dayStem1 && iljji1 ? getGongmang(dayStem1, iljji1) : ['?','?'] as [string,string]
-  const person2Gongmang = dayStem2 && iljji2 ? getGongmang(dayStem2, iljji2) : ['?','?'] as [string,string]
+  const person1Gongmang = dayStem1 && iljji1
+    ? getGongmang(dayStem1, iljji1) : ['?','?'] as [string,string]
+  const person2Gongmang = dayStem2 && iljji2
+    ? getGongmang(dayStem2, iljji2) : ['?','?'] as [string,string]
 
   const iljjiRelation = getIljjiRelation(iljji1, iljji2)
   const yongsinHarmony = getYongsinHarmony(person1Yongsin, person2Yongsin)
-  const sajuScore = calcScore(iljjiRelation, yongsinHarmony)
+
+  // ✅ coupleScore.ts 정교한 고정값 계산 사용
+  const scoreResult = calcCoupleScore(
+    saju1, saju2,
+    person1Gongmang,
+    person2Gongmang
+  )
+  const sajuScore = scoreResult.totalScore
+  const grade = scoreResult.grade
+  const gradeDesc = scoreResult.gradeDesc
+
+  // 점수 상세 내역 텍스트
+  const scoreDetails = [
+    `일주관계: ${scoreResult.iljuScore}점`,
+    `용신조화: ${scoreResult.yongsinScore}점`,
+    `년주관계: ${scoreResult.yeonScore}점`,
+    `월주관계: ${scoreResult.wolScore}점`,
+    `공망: ${scoreResult.gongmangScore}점`,
+    `오행균형: ${scoreResult.ohaengScore}점`,
+  ].join(' / ')
 
   const summary = `
 [명리학 계산 결과]
+총점: ${sajuScore}점 (${grade})
+${scoreDetails}
 일지 관계: ${iljjiRelation}
 용신 조화: ${yongsinHarmony}
 사람1 사주 내 형충회합파해: ${person1Relations.join(', ') || '특이사항 없음'}
@@ -125,6 +142,7 @@ export function analyzeCoupleFromPillars(
     person1Gongmang, person2Gongmang,
     iljji1, iljji2,
     iljjiRelation, yongsinHarmony,
-    sajuScore, summary,
+    sajuScore, grade, gradeDesc,
+    scoreDetails, summary,
   }
 }
