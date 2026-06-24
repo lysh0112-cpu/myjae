@@ -20,6 +20,17 @@ const JI_COLOR: Record<string,string> = {
   申:'#9e9e9e',酉:'#e0e0e0',戌:'#ff9800',亥:'#2196f3','?':'#8a88a0'
 }
 
+const HEAVENLY_STEMS = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"]
+const EARTHLY_BRANCHES = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"]
+
+function calcHourPillar(dayStem: string, hourIdx: number): { stem: string; branch: string } {
+  const dg = HEAVENLY_STEMS.indexOf(dayStem)
+  const groupBase = [0, 2, 4, 6, 8, 0, 2, 4, 6, 8]
+  const hourStem = HEAVENLY_STEMS[(groupBase[dg] + hourIdx) % 10]
+  const hourBranch = EARTHLY_BRANCHES[hourIdx]
+  return { stem: hourStem, branch: hourBranch }
+}
+
 async function fetchSajuData(person: PersonInput) {
   try {
     const res = await fetch(
@@ -27,10 +38,22 @@ async function fetchSajuData(person: PersonInput) {
     )
     const d = await res.json()
     if (d.error) return null
+
+    // 시주 계산
+    const dayGanji = d.dayGanji || ''
+    const dayStem = dayGanji[0] || ''
+    const hourIdx = person.hour && person.hour !== '-1' && person.hour !== '모름'
+      ? parseInt(person.hour) : null
+
+    const hourPillar = (dayStem && hourIdx !== null)
+      ? calcHourPillar(dayStem, hourIdx)
+      : null
+
     return {
       yearGanji: d.yearGanji || '',
       monthGanji: d.monthGanji || '',
       dayGanji: d.dayGanji || '',
+      hourPillar,
     }
   } catch {
     return null
@@ -38,8 +61,14 @@ async function fetchSajuData(person: PersonInput) {
 }
 
 export default function SajuSummary({ result, person1, person2, mode = 'couple' }: Props) {
-  const [person2Pillars, setPerson2Pillars] = useState<{ yearGanji: string; monthGanji: string; dayGanji: string } | null>(null)
-  const [person1Pillars, setPerson1Pillars] = useState<{ yearGanji: string; monthGanji: string; dayGanji: string } | null>(null)
+  const [person2Pillars, setPerson2Pillars] = useState<{
+    yearGanji: string; monthGanji: string; dayGanji: string;
+    hourPillar: { stem: string; branch: string } | null
+  } | null>(null)
+  const [person1Pillars, setPerson1Pillars] = useState<{
+    yearGanji: string; monthGanji: string; dayGanji: string;
+    hourPillar: { stem: string; branch: string } | null
+  } | null>(null)
   const [detail, setDetail] = useState('')
   const [loading, setLoading] = useState(false)
   const [shown, setShown] = useState(false)
@@ -57,12 +86,12 @@ export default function SajuSummary({ result, person1, person2, mode = 'couple' 
         setLoading(true)
         try {
           const myAnalysis = (
-            (localStorage.getItem('saju_free_analysis') || '') + ' ' +
-            (localStorage.getItem('saju_paid_analysis') || '')
+            (localStorage.getItem('saju_free_analysis') ?? '') + ' ' +
+            (localStorage.getItem('saju_paid_analysis') ?? '')
           ).trim().slice(0, 300)
 
-          const p1Saju = `${p1.yearGanji} ${p1.monthGanji} ${p1.dayGanji}`
-          const p2Saju = `${p2.yearGanji} ${p2.monthGanji} ${p2.dayGanji}`
+          const p1Saju = `${p1.yearGanji} ${p1.monthGanji} ${p1.dayGanji}${p1.hourPillar ? ' ' + p1.hourPillar.stem + p1.hourPillar.branch : ''}`
+          const p2Saju = `${p2.yearGanji} ${p2.monthGanji} ${p2.dayGanji}${p2.hourPillar ? ' ' + p2.hourPillar.stem + p2.hourPillar.branch : ''}`
 
           const modeLabel =
             mode === 'prewedding' ? '예비 신혼부부' :
@@ -110,8 +139,12 @@ ${myAnalysis ? `기존 분석 참고: ${myAnalysis}` : ''}
     setDetail('')
     setLoading(true)
     try {
-      const p1Saju = person1Pillars ? `${person1Pillars.yearGanji} ${person1Pillars.monthGanji} ${person1Pillars.dayGanji}` : ''
-      const p2Saju = person2Pillars ? `${person2Pillars.yearGanji} ${person2Pillars.monthGanji} ${person2Pillars.dayGanji}` : ''
+      const p1Saju = person1Pillars
+        ? `${person1Pillars.yearGanji} ${person1Pillars.monthGanji} ${person1Pillars.dayGanji}${person1Pillars.hourPillar ? ' ' + person1Pillars.hourPillar.stem + person1Pillars.hourPillar.branch : ''}`
+        : ''
+      const p2Saju = person2Pillars
+        ? `${person2Pillars.yearGanji} ${person2Pillars.monthGanji} ${person2Pillars.dayGanji}${person2Pillars.hourPillar ? ' ' + person2Pillars.hourPillar.stem + person2Pillars.hourPillar.branch : ''}`
+        : ''
 
       const prompt = `당신은 명리학 전문가입니다. 마크다운 기호(##, **, ---)는 절대 사용하지 마세요.
 
@@ -139,6 +172,28 @@ ${myAnalysis ? `기존 분석 참고: ${myAnalysis}` : ''}
     }
   }
 
+  // 사주명식 카드 렌더링
+  const renderPillars = (pillars: typeof person2Pillars, color: string) => {
+    if (!pillars) return null
+    const items = [
+      { name: '년주', g: pillars.yearGanji },
+      { name: '월주', g: pillars.monthGanji },
+      { name: '일주', g: pillars.dayGanji },
+      ...(pillars.hourPillar ? [{ name: '시주', g: pillars.hourPillar.stem + pillars.hourPillar.branch }] : []),
+    ]
+    return (
+      <div style={{ display: 'flex', gap: '5px' }}>
+        {items.map((p, i) => (
+          <div key={i} style={{ textAlign: 'center', flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: '8px', padding: '6px 3px' }}>
+            <div style={{ fontSize: '9px', color: '#6666aa', marginBottom: '2px' }}>{p.name}</div>
+            <div style={{ fontSize: '17px', fontWeight: 'bold', color: GAN_COLOR[p.g[0]] ?? '#FAC775' }}>{p.g[0]}</div>
+            <div style={{ fontSize: '17px', fontWeight: 'bold', color: JI_COLOR[p.g[1]] ?? '#e0dce8' }}>{p.g[1]}</div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div style={{ background: '#13132a', borderRadius: '14px', padding: '16px', marginBottom: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
       <div style={{ fontSize: '13px', fontWeight: '500', color: '#c8c0ff', marginBottom: '12px' }}>사주 요약</div>
@@ -155,14 +210,18 @@ ${myAnalysis ? `기존 분석 참고: ${myAnalysis}` : ''}
         </div>
       </div>
 
-      {/* 사주 풀이 섹션 */}
+      {/* 로딩 */}
       {loading && (
-        <div style={{ textAlign: 'center', padding: '16px', fontSize: '12px', color: '#c8b0ff' }}>
-          <div style={{ fontSize: '24px', marginBottom: '8px' }}>✦</div>
-          사주를 풀이하고 있습니다...
-        </div>
+        <>
+          <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+          <div style={{ textAlign: 'center', padding: '16px', fontSize: '12px', color: '#c8b0ff' }}>
+            <div style={{ fontSize: '24px', marginBottom: '8px', animation: 'spin 1.2s linear infinite', display: 'inline-block' }}>✦</div>
+            <div>사주를 풀이하고 있습니다...</div>
+          </div>
+        </>
       )}
 
+      {/* 사주 풀이 섹션 */}
       {shown && detail && (
         <div style={{ background: 'rgba(60,52,137,0.15)', borderRadius: '10px', padding: '14px', marginTop: '4px' }}>
 
@@ -172,19 +231,7 @@ ${myAnalysis ? `기존 분석 참고: ${myAnalysis}` : ''}
               <div style={{ fontSize: '11px', color: '#D4537E', marginBottom: '8px', fontWeight: '500' }}>
                 상대방 사주명식
               </div>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                {[
-                  { name: '년주', g: person2Pillars.yearGanji },
-                  { name: '월주', g: person2Pillars.monthGanji },
-                  { name: '일주', g: person2Pillars.dayGanji },
-                ].map((p, i) => (
-                  <div key={i} style={{ textAlign: 'center', flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: '8px', padding: '8px 4px' }}>
-                    <div style={{ fontSize: '9px', color: '#6666aa', marginBottom: '3px' }}>{p.name}</div>
-                    <div style={{ fontSize: '20px', fontWeight: 'bold', color: GAN_COLOR[p.g[0]] ?? '#FAC775' }}>{p.g[0]}</div>
-                    <div style={{ fontSize: '20px', fontWeight: 'bold', color: JI_COLOR[p.g[1]] ?? '#e0dce8' }}>{p.g[1]}</div>
-                  </div>
-                ))}
-              </div>
+              {renderPillars(person2Pillars, '#D4537E')}
             </div>
           )}
 
