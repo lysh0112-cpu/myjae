@@ -2,9 +2,9 @@
 
 import { useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import BottomNav from "../components/BottomNav";
 import PersonForm, { PersonData } from "./components/PersonForm";
+import PageHeader from '@/app/components/common/PageHeader'
 
 const QUESTION_CATEGORIES = [
   { id: "love", label: "연애·결혼", icon: "💕" },
@@ -23,18 +23,10 @@ const defaultPerson = (): PersonData => ({
 
 function ManseryeokContent() {
   const router = useRouter()
-
-  // 모드: 'single' | 'couple'
   const [mode, setMode] = useState<'single' | 'couple'>('single')
-
-  // 개인 사주
   const [person, setPerson] = useState<PersonData>(defaultPerson())
-
-  // 궁합
   const [personA, setPersonA] = useState<PersonData>(defaultPerson())
   const [personB, setPersonB] = useState<PersonData>(defaultPerson())
-
-  // 질문
   const [selectedCategory, setSelectedCategory] = useState('')
   const [customQuestion, setCustomQuestion] = useState('')
 
@@ -62,7 +54,6 @@ function ManseryeokContent() {
       if (customQuestion.trim()) params.set("question", customQuestion.trim())
       router.push(`/manseryeok/result?${params.toString()}`)
     } else {
-      // 궁합 모드
       params.set("mode", "couple")
       params.set("a_gender", personA.gender)
       params.set("a_calType", personA.calType)
@@ -88,22 +79,12 @@ function ManseryeokContent() {
     <div className="min-h-screen" style={{background:"#1a1a18", maxWidth:"430px", margin:"0 auto"}}>
 
       {/* 헤더 */}
-      <header className="fixed top-0 z-50 flex items-center justify-between px-4 py-4"
-        style={{background:"rgba(26,26,24,0.97)", backdropFilter:"blur(12px)",
-          borderBottom:"1px solid rgba(255,255,255,0.06)", width:"100%", maxWidth:"430px", left:"50%", transform:"translateX(-50%)"}}>
-        <Link href="/">
-          <button className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{background:"rgba(255,255,255,0.06)"}}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5 text-white">
-              <polyline points="15 18 9 12 15 6"/>
-            </svg>
-          </button>
-        </Link>
-        <div className="text-sm font-bold text-white">AI 만세력 분석</div>
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{background:"rgba(60,52,137,0.3)"}}>
-          <span style={{color:"#FAC775", fontSize:"16px"}}>✦</span>
-        </div>
-      </header>
+      <div className="fixed top-0 z-50" style={{width:"100%", maxWidth:"430px", left:"50%", transform:"translateX(-50%)"}}>
+        <PageHeader
+          title="AI 만세력 분석"
+          onBack={() => router.push('/')}
+        />
+      </div>
 
       <main className="pt-20 pb-36 px-4 space-y-4">
 
