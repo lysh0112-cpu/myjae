@@ -30,6 +30,7 @@ export function useCoupleInput() {
   const [question, setQuestion] = useState('')
   const [autoLoaded, setAutoLoaded] = useState(false)
 
+  // 초기 로드 — localStorage에서 복원
   useEffect(() => {
     const myInfo = sessionStorage.getItem(MY_INFO_KEY)
     if (myInfo) {
@@ -45,7 +46,9 @@ export function useCoupleInput() {
       }))
       setAutoLoaded(true)
     }
-    const saved = sessionStorage.getItem(STORAGE_KEY)
+
+    // localStorage에서 저장된 데이터 복원
+    const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) {
       const data = JSON.parse(saved)
       if (data.relation) setRelation(data.relation)
@@ -54,16 +57,33 @@ export function useCoupleInput() {
     }
   }, [])
 
+  // 변경 시 localStorage에 저장
   useEffect(() => {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ relation, person1, person2, question }))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ relation, person1, person2, question }))
   }, [relation, person1, person2, question])
 
+  // 전체 초기화
   const handleClear = () => {
-    if (confirm('입력 내용을 초기화할까요?')) {
-      sessionStorage.removeItem(STORAGE_KEY)
+    if (confirm('입력 내용을 모두 초기화할까요?')) {
+      localStorage.removeItem(STORAGE_KEY)
       setRelation('couple')
       setPerson2(DEFAULT_PERSON('여'))
       setQuestion('')
+    }
+  }
+
+  // person1 개별 초기화
+  const handleClearPerson1 = () => {
+    if (confirm('나의 정보를 초기화할까요?')) {
+      setPerson1(DEFAULT_PERSON('남'))
+      setAutoLoaded(false)
+    }
+  }
+
+  // person2 개별 초기화
+  const handleClearPerson2 = () => {
+    if (confirm('상대방 정보를 초기화할까요?')) {
+      setPerson2(DEFAULT_PERSON('여'))
     }
   }
 
@@ -73,5 +93,7 @@ export function useCoupleInput() {
     person2, setPerson2,
     question, setQuestion,
     autoLoaded, handleClear,
+    handleClearPerson1,
+    handleClearPerson2,
   }
 }
