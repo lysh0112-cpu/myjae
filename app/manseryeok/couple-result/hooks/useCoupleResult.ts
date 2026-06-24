@@ -1,3 +1,4 @@
+// useCoupleResult v3
 import { useState, useEffect } from 'react'
 import { buildSajuPillars, analyzeCoupleFromPillars } from '@/lib/saju/coupleAnalysis'
 import { calcYongsin } from '@/lib/saju/yongsin'
