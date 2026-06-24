@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS: ChatSettings = {
   fortuneOn: true,
   dDayOn: true,
   lockOn: false,
+  chatHomeOn: false,
   startDate: '',
   ddayType: '결혼기념일',
   ddayTarget: '',
