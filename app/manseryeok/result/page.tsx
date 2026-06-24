@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import DayunTable from "./DayunTable";
 import SeyunTable from "./SeyunTable";
 import SajuMyungsik from "./components/SajuMyungsik";
 import AiAnalysis from "./components/AiAnalysis";
 import ConsultantList from "./components/ConsultantList";
 import { useResultSaju } from "@/hooks/useResultSaju";
+import PageHeader from '@/app/components/common/PageHeader'
 
 const BRANCH_LIST = [
   {char:"子"},{char:"丑"},{char:"寅"},{char:"卯"},
@@ -18,6 +18,7 @@ const BRANCH_LIST = [
 
 function ResultContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [isPaid, setIsPaid] = useState(false)
 
   const gender = searchParams.get("gender") || "남"
@@ -41,27 +42,19 @@ function ResultContent() {
   )
 
   return (
-    <div className="min-h-screen" style={{background:"#1a1a18",maxWidth:"430px",margin:"0 auto"}}>
-      <header className="fixed top-0 z-50 flex items-center justify-between px-4 py-4"
-        style={{background:"rgba(26,26,24,0.97)",backdropFilter:"blur(12px)",
-          borderBottom:"1px solid rgba(255,255,255,0.06)",width:"100%",maxWidth:"430px",left:"50%",transform:"translateX(-50%)"}}>
-        <Link href="/">
-          <button className="w-9 h-9 rounded-xl flex items-center justify-center" style={{background:"rgba(255,255,255,0.06)"}}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5 text-white">
-              <polyline points="15 18 9 12 15 6"/>
-            </svg>
-          </button>
-        </Link>
-        <div className="text-sm font-bold text-white">사주가 그려낸 나의 초상</div>
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{background:"rgba(60,52,137,0.3)"}}>
-          <span style={{color:"#FAC775",fontSize:"16px"}}>✦</span>
-        </div>
-      </header>
+    <div className="min-h-screen" style={{background:"#1a1a18", maxWidth:"430px", margin:"0 auto"}}>
+
+      <div className="fixed top-0 z-50" style={{width:"100%", maxWidth:"430px", left:"50%", transform:"translateX(-50%)"}}>
+        <PageHeader
+          title="사주가 그려낸 나의 초상"
+          onBack={() => router.push('/manseryeok')}
+        />
+      </div>
 
       <main className="pt-20 pb-36 px-4 space-y-4">
         {/* 분석 대상 */}
         <div className="rounded-2xl p-4"
-          style={{background:"linear-gradient(135deg,#3C3489 0%,#2a2075 100%)",border:"1px solid rgba(250,199,117,0.2)"}}>
+          style={{background:"linear-gradient(135deg,#3C3489 0%,#2a2075 100%)", border:"1px solid rgba(250,199,117,0.2)"}}>
           <div className="text-xs font-semibold mb-2" style={{color:"rgba(250,199,117,0.8)"}}>분석 대상</div>
           <div className="flex items-center gap-2 flex-wrap">
             {[
@@ -71,7 +64,7 @@ function ResultContent() {
               hourIdx===null?"시 미지정":`${BRANCH_LIST[hourIdx]?.char}시`
             ].filter(Boolean).map(item => (
               <span key={item} className="text-sm font-semibold px-3 py-1 rounded-full"
-                style={{background:"rgba(255,255,255,0.1)",color:"#FAC775"}}>{item}</span>
+                style={{background:"rgba(255,255,255,0.1)", color:"#FAC775"}}>{item}</span>
             ))}
           </div>
         </div>
