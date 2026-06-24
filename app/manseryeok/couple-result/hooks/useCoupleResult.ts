@@ -23,6 +23,7 @@ export interface CoupleResultData {
   jobMsg: string
   mbtiMsg: string
   commonMsg: string
+  questionAnswer: string
   person1Summary: string
   person2Summary: string
   hasMbti: boolean
@@ -37,11 +38,6 @@ const SANGSAENG: Record<string, boolean> = {
   METAL_WATER: true, WATER_WOOD: true,
   FIRE_WOOD: true, EARTH_FIRE: true, METAL_EARTH: true,
   WATER_METAL: true, WOOD_WATER: true,
-}
-
-function calcSajuScore(job1: string, job2: string): number {
-  if (!job1 || !job2) return 40
-  return Math.floor(Math.random() * 15) + 45
 }
 
 function calcJobScore(job1: string, job2: string): number {
@@ -68,58 +64,88 @@ function getGrade(score: number): { grade: string; gradeDesc: string } {
   return { grade: '극과 극, 반전 매력 커플 ⚡', gradeDesc: '가장 강렬하고 잊지 못할 인연이에요' }
 }
 
-function getSajuMsg(score: number): string {
-  if (score >= 50) return '두 분의 오행이 서로의 부족함을 완벽하게 채워줍니다. 만남 자체가 운명이에요 💫'
-  if (score >= 40) return '약간의 기운 차이가 있지만, 오히려 서로를 자극하고 성장시키는 에너지예요 🌱'
-  return '사주의 기운이 다른 만큼 서로에게 없는 것을 채워줄 수 있어요. 상담으로 조화롭게 만들어 드릴게요 🙏'
-}
-
-function getJobMsg(score: number): string {
-  if (score >= 12) return '두 분의 삶의 리듬이 잘 맞아요. 함께하는 일상이 편안하고 안정적일 거예요 🏡'
-  return '라이프스타일 차이가 있지만, 이것이 오히려 서로에게 새로운 세계를 열어줄 거예요 🌍'
-}
-
-function getMbtiMsg(score: number): string {
-  if (score >= 20) return '대화가 물 흐르듯 자연스러워요. 싸워도 금방 화해하는 천생 파트너예요 😄'
-  if (score >= 12) return '소통 방식이 조금 달라요. 하지만 그 차이가 대화를 더 풍부하게 만들어줘요 💬'
-  return '성격 차이가 크지만 논리와 감성이 만날 때 가장 완벽한 팀이 돼요 🤝'
-}
-
-export function useCoupleResult(person1: PersonInput, person2: PersonInput) {
+export function useCoupleResult(person1: PersonInput, person2: PersonInput, userQuestion: string = '') {
   const [result, setResult] = useState<CoupleResultData | null>(null)
 
   useEffect(() => {
     if (!person1.year || !person2.year) return
 
-    const sajuScore = calcSajuScore(person1.job, person2.job)
     const jobScore = calcJobScore(person1.job, person2.job)
     const hasMbti = !!(person1.mbti && person2.mbti && person1.mbti.length >= 4 && person2.mbti.length >= 4)
     const mbtiScore = hasMbti ? calcMbtiScore(person1.mbti, person2.mbti) : 0
 
-    // MBTI 없으면 75점 만점 → 100점으로 환산
-    const maxScore = hasMbti ? 100 : 75
-    const rawTotal = sajuScore + jobScore + mbtiScore
-    const totalScore = Math.min(Math.round(rawTotal / maxScore * 100), 100)
+    const callClaude = async () => {
+      const prompt = `당신은 명리학 전문가입니다. 두 사람의 궁합을 분석해주세요.
 
-    const { grade, gradeDesc } = getGrade(totalScore)
+사람1: ${person1.gender} · ${person1.calType} · ${person1.year}년 ${person1.month}월 ${person1.day}일 · 직업오행: ${person1.job} · MBTI: ${person1.mbti || '미입력'}
+사람2: ${person2.gender} · ${person2.calType} · ${person2.year}년 ${person2.month}월 ${person2.day}일 · 직업오행: ${person2.job} · MBTI: ${person2.mbti || '미입력'}
 
-    setResult({
-      totalScore,
-      grade,
-      gradeDesc,
-      sajuScore,
-      jobScore,
-      mbtiScore,
-      maxScore,
-      sajuMsg: getSajuMsg(sajuScore),
-      jobMsg: getJobMsg(jobScore),
-      mbtiMsg: getMbtiMsg(mbtiScore),
-      commonMsg: '점수보다 중요한 건 두 분의 의지예요. 더 깊은 이야기가 궁금하시다면 전문가와 함께해 보세요',
-      person1Summary: `${person1.gender} · ${person1.calType} · ${person1.year}년 ${person1.month}월 ${person1.day}일`,
-      person2Summary: `${person2.gender} · ${person2.calType} · ${person2.year}년 ${person2.month}월 ${person2.day}일`,
-      hasMbti,
-    })
-  }, [person1.year, person1.month, person1.day, person2.year, person2.month, person2.day])
+${userQuestion ? `⭐ 가장 중요: 사용자의 핵심 질문 → "${userQuestion}" 이 질문에 대한 답변을 가장 먼저, 가장 구체적으로 답해주세요.` : ''}
+
+아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
+{
+  "sajuScore": 사주 점수 45~60 사이 숫자,
+  "sajuMsg": "사주 분석 메시지 (2문장)",
+  "jobMsg": "직업 오행 분석 메시지 (1문장)",
+  "mbtiMsg": "MBTI 분석 메시지 (1문장)",
+  "questionAnswer": "${userQuestion ? '질문에 대한 구체적 답변 (3~4문장)' : ''}",
+  "commonMsg": "전체 마무리 메시지 (1문장)"
+}`
+
+      try {
+        const res = await fetch('/api/claude', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt }),
+        })
+        const data = await res.json()
+        const text = data.content?.[0]?.text || ''
+        const clean = text.replace(/```json|```/g, '').trim()
+        const parsed = JSON.parse(clean)
+
+        const sajuScore = parsed.sajuScore || 50
+        const maxScore = hasMbti ? 100 : 75
+        const rawTotal = sajuScore + jobScore + mbtiScore
+        const totalScore = Math.min(Math.round(rawTotal / maxScore * 100), 100)
+        const { grade, gradeDesc } = getGrade(totalScore)
+
+        setResult({
+          totalScore, grade, gradeDesc,
+          sajuScore, jobScore, mbtiScore, maxScore,
+          sajuMsg: parsed.sajuMsg || '',
+          jobMsg: parsed.jobMsg || '',
+          mbtiMsg: parsed.mbtiMsg || '',
+          questionAnswer: parsed.questionAnswer || '',
+          commonMsg: parsed.commonMsg || '더 깊은 이야기는 전문가와 함께해 보세요',
+          person1Summary: `${person1.gender} · ${person1.calType} · ${person1.year}년 ${person1.month}월 ${person1.day}일`,
+          person2Summary: `${person2.gender} · ${person2.calType} · ${person2.year}년 ${person2.month}월 ${person2.day}일`,
+          hasMbti,
+        })
+      } catch {
+        // API 실패 시 기본값
+        const sajuScore = 50
+        const maxScore = hasMbti ? 100 : 75
+        const rawTotal = sajuScore + jobScore + mbtiScore
+        const totalScore = Math.min(Math.round(rawTotal / maxScore * 100), 100)
+        const { grade, gradeDesc } = getGrade(totalScore)
+
+        setResult({
+          totalScore, grade, gradeDesc,
+          sajuScore, jobScore, mbtiScore, maxScore,
+          sajuMsg: '두 분의 사주 기운이 조화롭게 어우러져 있어요 💫',
+          jobMsg: '두 분의 삶의 리듬이 잘 맞아요 🏡',
+          mbtiMsg: '성격의 차이가 오히려 매력이 돼요 💬',
+          questionAnswer: '',
+          commonMsg: '더 깊은 이야기는 전문가와 함께해 보세요',
+          person1Summary: `${person1.gender} · ${person1.calType} · ${person1.year}년 ${person1.month}월 ${person1.day}일`,
+          person2Summary: `${person2.gender} · ${person2.calType} · ${person2.year}년 ${person2.month}월 ${person2.day}일`,
+          hasMbti,
+        })
+      }
+    }
+
+    callClaude()
+  }, [person1.year, person1.month, person1.day, person2.year, person2.month, person2.day, userQuestion])
 
   return result
 }
