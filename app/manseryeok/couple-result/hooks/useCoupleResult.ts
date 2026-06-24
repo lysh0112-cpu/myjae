@@ -259,10 +259,9 @@ export function useCoupleResult(
         : `${person2.year}년 ${person2.month}월 ${person2.day}일`
 
       // 4. 나의 기존 사주 분석 활용
-      const myPrevAnalysis = (
-        (typeof window !== 'undefined' ? localStorage.getItem('saju_free_analysis') : '') +
-        (typeof window !== 'undefined' ? localStorage.getItem('saju_paid_analysis') : '')
-      ) || ''
+     const myPrevAnalysis = typeof window !== 'undefined'
+  ? ((localStorage.getItem('saju_free_analysis') ?? '') + ' ' + (localStorage.getItem('saju_paid_analysis') ?? '')).trim()
+  : ''
 
       // 5. 오늘 날짜 + 후보 날짜
       const today = new Date()
