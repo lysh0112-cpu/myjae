@@ -33,6 +33,14 @@ export interface CoupleResultData {
   person1Summary: string
   person2Summary: string
   hasMbti: boolean
+  scoreDetails?: {
+    iljuScore: number
+    yongsinScore: number
+    yeonScore: number
+    wolScore: number
+    gongmangScore: number
+    ohaengScore: number
+  }
 }
 
 function getGrade(score: number): { grade: string; gradeDesc: string } {
@@ -42,6 +50,40 @@ function getGrade(score: number): { grade: string; gradeDesc: string } {
   if (score >= 55) return { grade: '다름이 매력인 탐구형 커플 💡', gradeDesc: '서로의 다름이 오히려 큰 매력이에요' }
   if (score >= 40) return { grade: '노력으로 완성되는 드라마틱 커플 🔥', gradeDesc: '함께 만들어가는 사랑이 더 특별해요' }
   return { grade: '극과 극, 반전 매력 커플 ⚡', gradeDesc: '가장 강렬하고 잊지 못할 인연이에요' }
+}
+
+function calcTotalScore(
+  sajuScore: number,
+  jobScore: number,
+  mbtiScore: number,
+  hasMbti: boolean,
+  mode: string
+): number {
+  let total = 0
+  if (mode === 'couple') {
+    if (hasMbti) {
+      total = Math.round(
+        (sajuScore * 0.6) +
+        (jobScore / 30 * 100 * 0.26) +
+        (mbtiScore / 25 * 100 * 0.14)
+      )
+    } else {
+      total = Math.round(
+        (sajuScore * 0.7) +
+        (jobScore / 30 * 100 * 0.3)
+      )
+    }
+  } else {
+    if (hasMbti) {
+      total = Math.round(
+        (sajuScore * 0.75) +
+        (mbtiScore / 25 * 100 * 0.25)
+      )
+    } else {
+      total = sajuScore
+    }
+  }
+  return Math.min(100, Math.max(0, total))
 }
 
 async function fetchSajuPillars(person: PersonInput) {
@@ -122,288 +164,4 @@ function extractYearHint(q: string, currentYear: number): number | null {
   const match = q.match(/(\d{4})년/)
   if (match) return parseInt(match[1])
   return null
-}
-function buildPrompt(
-  mode: string,
-  person1: PersonInput,
-  person2: PersonInput,
-  saju1Str: string,
-  saju2Str: string,
-  analysisStr: string,
-  todayStr: string,
-  currentYear: number,
-  userQuestion: string,
-  candidateDatesStr: string,
-  myPrevAnalysis: string
-): string {
-  const baseInfo = `
-사람1 (${person1.gender}): 사주 ${saju1Str} · 직업오행: ${person1.job} · MBTI: ${person1.mbti || '미입력'}
-사람2 (${person2.gender}): 사주 ${saju2Str} · 직업오행: ${person2.job} · MBTI: ${person2.mbti || '미입력'}
-
-${analysisStr}
-${myPrevAnalysis ? `\n[나의 기존 사주 분석 참고]\n${myPrevAnalysis}` : ''}`
-
-  const yearHint = userQuestion ? extractYearHint(userQuestion, currentYear) : null
-  const yearInstruction = yearHint ? `반드시 ${yearHint}년 날짜만 추천하세요.` : ''
-
-  if (mode === 'prewedding') {
-    const needsDate = !userQuestion || isDateQuestion(userQuestion)
-    if (needsDate) {
-      return `당신은 명리학 전문가입니다. 오늘 날짜는 ${todayStr}입니다.
-${baseInfo}
-
-⭐ 임무: 아래 사전 계산된 택일 후보에서 최적의 결혼 길일을 추천해주세요.
-${yearInstruction}
-
-[사전 계산된 택일 후보 — 점수 높은 순, 손없는날/삼재/일진 반영됨]
-${candidateDatesStr}
-
-위 후보에서 4~6개를 선택하고 각 날짜마다:
-1. 날짜(요일) · 일진
-2. 손없는날 여부
-3. 삼재 여부
-4. 명리학적 길한 이유 상세 설명
-
-JSON 형식으로만 응답 (다른 텍스트 없이):
-{
-  "sajuScore": 45~60 사이 숫자,
-  "sajuMsg": "나의 사주 특성 1문장 + 상대방 사주 특성 1문장",
-  "jobMsg": "직업 오행 조화 1문장",
-  "mbtiMsg": "MBTI 조화 1문장",
-  "questionAnswer": "결혼 길일 4~6개 추천 (각 날짜마다 상세 이유 포함)",
-  "commonMsg": "마무리 1문장"
-}`
-    } else {
-      return `당신은 명리학 전문가입니다. 오늘 날짜는 ${todayStr}입니다.
-${baseInfo}
-
-⭐ 핵심 질문: "${userQuestion}" — 이 질문에 가장 먼저 구체적으로 답해주세요.
-
-JSON 형식으로만 응답 (다른 텍스트 없이):
-{
-  "sajuScore": 45~60 사이 숫자,
-  "sajuMsg": "나의 사주 특성 1문장 + 상대방 사주 특성 1문장",
-  "jobMsg": "직업 오행 조화 1문장",
-  "mbtiMsg": "MBTI 조화 1문장",
-  "questionAnswer": "질문에 대한 명리학적 답변 3~4문장",
-  "commonMsg": "마무리 1문장"
-}`
-    }
-  }
-
-  if (mode === 'birth') {
-    return `당신은 명리학 전문가입니다. 오늘 날짜는 ${todayStr}입니다.
-${baseInfo}
-
-⭐ 임무: 두 사람 사주를 바탕으로 최적의 출산 시기를 추천해주세요.
-${yearInstruction}
-${userQuestion ? `추가 요청: "${userQuestion}"` : ''}
-
-JSON 형식으로만 응답 (다른 텍스트 없이):
-{
-  "sajuScore": 45~60 사이 숫자,
-  "sajuMsg": "나의 사주 특성 1문장 + 상대방 사주 특성 1문장",
-  "jobMsg": "직업 오행 조화 1문장",
-  "mbtiMsg": "MBTI 조화 1문장",
-  "questionAnswer": "최적 출산 시기 3~4개, 각 시기마다 명리학적 이유 포함",
-  "commonMsg": "마무리 1문장"
-}`
-  }
-
-  if (mode === 'married') {
-    return `당신은 명리학 전문가입니다. 오늘 날짜는 ${todayStr}입니다.
-${baseInfo}
-
-⭐ 임무: 부부 궁합 분석 + 관계 개선 방향을 제시해주세요.
-${userQuestion ? `추가 요청: "${userQuestion}"` : ''}
-
-JSON 형식으로만 응답 (다른 텍스트 없이):
-{
-  "sajuScore": 45~60 사이 숫자,
-  "sajuMsg": "나의 사주 특성 1문장 + 상대방 사주 특성 1문장",
-  "jobMsg": "직업 오행 조화 1문장",
-  "mbtiMsg": "MBTI 소통 방식 1문장",
-  "questionAnswer": "관계 개선을 위한 구체적 방향 3~4문장${userQuestion ? ` + "${userQuestion}" 답변` : ''}",
-  "commonMsg": "마무리 1문장"
-}`
-  }
-
-  return `당신은 명리학 전문가입니다. 오늘 날짜는 ${todayStr}입니다.
-${baseInfo}
-
-${userQuestion ? `⭐ 핵심 질문: "${userQuestion}" — 이 질문에 가장 먼저 구체적으로 답해주세요.` : ''}
-
-JSON 형식으로만 응답 (다른 텍스트 없이):
-{
-  "sajuScore": 45~60 사이 숫자,
-  "sajuMsg": "나의 사주 특성 1문장 + 상대방 사주 특성 1문장",
-  "jobMsg": "직업 오행 분석 1문장",
-  "mbtiMsg": "MBTI 분석 1문장",
-  "questionAnswer": "${userQuestion ? '질문 답변 3~4문장' : ''}",
-  "commonMsg": "마무리 1문장"
-}`
-}
-
-export function useCoupleResult(
-  person1: PersonInput,
-  person2: PersonInput,
-  userQuestion: string = '',
-  mode: string = 'couple'
-) {
-  const [result, setResult] = useState<CoupleResultData | null>(null)
-
-  useEffect(() => {
-    if (!person1.year || !person2.year) return
-
-    const callClaude = async () => {
-      // 1. 두 사람 사주 8글자 계산
-      const [pillars1, pillars2] = await Promise.all([
-        fetchSajuPillars(person1),
-        fetchSajuPillars(person2),
-      ])
-
-      // 2. 명리학 계산
-      let analysisStr = ''
-      let sajuScore = 50
-      if (pillars1 && pillars2) {
-        const analysis = analyzeCoupleFromPillars(pillars1, pillars2)
-        analysisStr = analysis.summary
-        sajuScore = analysis.sajuScore
-      }
-
-      // 3. 용신 계산
-      const ilju1 = pillars1?.find(p => p.pillar === '일주')
-      const ilju2 = pillars2?.find(p => p.pillar === '일주')
-      const yongsin1 = pillars1 && ilju1 ? calcYongsin(pillars1, ilju1.stem).yongsin : ''
-      const yongsin2 = pillars2 && ilju2 ? calcYongsin(pillars2, ilju2.stem).yongsin : ''
-
-      // 4. jobScore — 부오행 + 용신 연동
-      const jobScoreResult = calcJobScoreDetailed(
-        person1.job, person2.job,
-        yongsin1, yongsin2
-      )
-      const jobScore = jobScoreResult.totalScore
-      analysisStr += `\n직업 오행 분석: ${jobScoreResult.reasons.join(' / ')}`
-
-      // 5. mbtiScore — 항목별 가중치 + 유명 조합 보정
-      const mbtiResult = calcMbtiScoreDetailed(person1.mbti, person2.mbti)
-      const hasMbti = mbtiResult.hasMbti
-      const mbtiScore = mbtiResult.totalScore
-      if (mbtiResult.hasMbti) {
-        analysisStr += `\nMBTI 분석: ${mbtiResult.reasons.join(' / ')}`
-      }
-
-      // 6. 사주 텍스트
-      const saju1Str = pillars1
-        ? pillars1.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(' ')
-        : `${person1.year}년 ${person1.month}월 ${person1.day}일`
-      const saju2Str = pillars2
-        ? pillars2.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(' ')
-        : `${person2.year}년 ${person2.month}월 ${person2.day}일`
-
-      // 7. 나의 기존 사주 분석 활용
-      const myPrevAnalysis = typeof window !== 'undefined'
-        ? ((localStorage.getItem('saju_free_analysis') ?? '') + ' ' +
-           (localStorage.getItem('saju_paid_analysis') ?? '')).trim()
-        : ''
-
-      // 8. 오늘 날짜
-      const today = new Date()
-      const currentYear = today.getFullYear()
-      const todayStr = `${currentYear}년 ${today.getMonth() + 1}월 ${today.getDate()}일`
-      const yearHint = userQuestion ? extractYearHint(userQuestion, currentYear) : null
-
-      // 9. 택일 모드면 taegil.ts 로직 적용
-      let candidateDatesStr = ''
-
-      if (mode === 'prewedding' && (!userQuestion || isDateQuestion(userQuestion))) {
-        const yeonji1 = pillars1 ? getYeonJi(pillars1) : ''
-        const yeonji2 = pillars2 ? getYeonJi(pillars2) : ''
-        const ilji1 = ilju1?.branch ?? ''
-        const ilji2 = ilju2?.branch ?? ''
-
-        const top40 = getHolidayDates(24, yearHint ?? undefined).slice(0, 40)
-        const lunarDayMap = await fetchLunarDayMap(top40)
-
-        const taegilCandidates = generateTaegilCandidates(
-          top40,
-          lunarDayMap,
-          { yongsin1, yongsin2, ilji1, ilji2, yeonji1, yeonji2 }
-        )
-
-        candidateDatesStr = taegilCandidates.slice(0, 10).map(c =>
-          `${c.date}(${c.dayOfWeek}) 일진:${c.dayGanji} 점수:${c.score}점` +
-          (c.isSonEomneun ? ' ✅손없는날' : '') +
-          (c.warnings.length > 0 ? ` ⚠️${c.warnings.join(',')}` : '') +
-          (c.reasons.length > 0 ? ` 💡${c.reasons.slice(0, 2).join(',')}` : '')
-        ).join('\n')
-
-      } else {
-        candidateDatesStr = getHolidayDates(24, yearHint ?? undefined)
-          .slice(0, 60).join(', ')
-      }
-
-      // 10. 프롬프트 생성
-      const prompt = buildPrompt(
-        mode, person1, person2,
-        saju1Str, saju2Str, analysisStr,
-        todayStr, currentYear, userQuestion,
-        candidateDatesStr,
-        myPrevAnalysis.slice(0, 500)
-      )
-
-      try {
-        const res = await fetch('/api/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] }),
-        })
-        const data = await res.json()
-        const text = data.content?.[0]?.text || ''
-        const clean = text.replace(/```json|```/g, '').trim()
-        const parsed = JSON.parse(clean)
-
-        const finalSajuScore = parsed.sajuScore || sajuScore
-        const maxScore = hasMbti ? 100 : 75
-        const rawTotal = finalSajuScore + jobScore + mbtiScore
-        const totalScore = Math.min(Math.round(rawTotal / maxScore * 100), 100)
-        const { grade, gradeDesc } = getGrade(totalScore)
-
-        setResult({
-          totalScore, grade, gradeDesc,
-          sajuScore: finalSajuScore, jobScore, mbtiScore, maxScore,
-          sajuMsg: parsed.sajuMsg || '',
-          jobMsg: parsed.jobMsg || '',
-          mbtiMsg: parsed.mbtiMsg || '',
-          questionAnswer: parsed.questionAnswer || '',
-          commonMsg: parsed.commonMsg || '더 깊은 이야기는 전문가와 함께해 보세요',
-          person1Summary: `${person1.gender} · ${person1.calType} · ${person1.year}년 ${person1.month}월 ${person1.day}일`,
-          person2Summary: `${person2.gender} · ${person2.calType} · ${person2.year}년 ${person2.month}월 ${person2.day}일`,
-          hasMbti,
-        })
-      } catch {
-        const maxScore = hasMbti ? 100 : 75
-        const rawTotal = sajuScore + jobScore + mbtiScore
-        const totalScore = Math.min(Math.round(rawTotal / maxScore * 100), 100)
-        const { grade, gradeDesc } = getGrade(totalScore)
-
-        setResult({
-          totalScore, grade, gradeDesc,
-          sajuScore, jobScore, mbtiScore, maxScore,
-          sajuMsg: '두 분의 사주 기운이 조화롭게 어우러져 있어요 💫',
-          jobMsg: '두 분의 삶의 리듬이 잘 맞아요 🏡',
-          mbtiMsg: '성격의 차이가 오히려 매력이 돼요 💬',
-          questionAnswer: '',
-          commonMsg: '더 깊은 이야기는 전문가와 함께해 보세요',
-          person1Summary: `${person1.gender} · ${person1.calType} · ${person1.year}년 ${person1.month}월 ${person1.day}일`,
-          person2Summary: `${person2.gender} · ${person2.calType} · ${person2.year}년 ${person2.month}월 ${person2.day}일`,
-          hasMbti,
-        })
-      }
-    }
-
-    callClaude()
-  }, [person1.year, person1.month, person1.day, person2.year, person2.month, person2.day, userQuestion, mode])
-
-  return result
 }
