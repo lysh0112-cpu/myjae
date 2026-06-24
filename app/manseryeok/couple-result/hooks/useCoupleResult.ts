@@ -4,6 +4,7 @@ import { calcYongsin } from '@/lib/saju/yongsin'
 import { generateTaegilCandidates } from '@/lib/saju/taegil'
 import { getYeonJi } from '@/lib/saju/samjae'
 import { calcJobScoreDetailed } from '@/lib/saju/jobScore'
+import { calcMbtiScoreDetailed } from '@/lib/saju/mbtiScore'
 
 export interface PersonInput {
   year: string
@@ -32,15 +33,6 @@ export interface CoupleResultData {
   person1Summary: string
   person2Summary: string
   hasMbti: boolean
-}
-
-function calcMbtiScore(mbti1: string, mbti2: string): number {
-  if (!mbti1 || !mbti2 || mbti1.length < 4 || mbti2.length < 4) return 0
-  let score = 0
-  for (let i = 0; i < 4; i++) {
-    if (mbti1[i] !== mbti2[i]) score += 6
-  }
-  return Math.min(score, 25)
 }
 
 function getGrade(score: number): { grade: string; gradeDesc: string } {
@@ -99,22 +91,18 @@ function getHolidayDates(monthsAhead: number, targetYear?: number): string[] {
   end.setMonth(end.getMonth() + monthsAhead)
   const cur = new Date(today)
   cur.setDate(cur.getDate() + 14)
-
   while (cur <= end) {
     const dateStr = cur.toISOString().slice(0, 10)
     const year = String(cur.getFullYear())
     const mmdd = dateStr.slice(5)
     const dow = cur.getDay()
-
     if (targetYear && cur.getFullYear() !== targetYear) {
       cur.setDate(cur.getDate() + 1)
       continue
     }
-
     const isWeekend = dow === 0 || dow === 6
     const isFixed = FIXED_HOLIDAYS.includes(mmdd)
     const isSub = SUBSTITUTE_HOLIDAYS[year]?.includes(dateStr) ?? false
-
     if (isWeekend || isFixed || isSub) dates.push(dateStr)
     cur.setDate(cur.getDate() + 1)
   }
@@ -267,9 +255,6 @@ export function useCoupleResult(
   useEffect(() => {
     if (!person1.year || !person2.year) return
 
-    const hasMbti = !!(person1.mbti && person2.mbti && person1.mbti.length >= 4 && person2.mbti.length >= 4)
-    const mbtiScore = hasMbti ? calcMbtiScore(person1.mbti, person2.mbti) : 0
-
     const callClaude = async () => {
       // 1. 두 사람 사주 8글자 계산
       const [pillars1, pillars2] = await Promise.all([
@@ -300,7 +285,15 @@ export function useCoupleResult(
       const jobScore = jobScoreResult.totalScore
       analysisStr += `\n직업 오행 분석: ${jobScoreResult.reasons.join(' / ')}`
 
-      // 5. 사주 텍스트
+      // 5. mbtiScore — 항목별 가중치 + 유명 조합 보정
+      const mbtiResult = calcMbtiScoreDetailed(person1.mbti, person2.mbti)
+      const hasMbti = mbtiResult.hasMbti
+      const mbtiScore = mbtiResult.totalScore
+      if (mbtiResult.hasMbti) {
+        analysisStr += `\nMBTI 분석: ${mbtiResult.reasons.join(' / ')}`
+      }
+
+      // 6. 사주 텍스트
       const saju1Str = pillars1
         ? pillars1.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(' ')
         : `${person1.year}년 ${person1.month}월 ${person1.day}일`
@@ -308,19 +301,19 @@ export function useCoupleResult(
         ? pillars2.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(' ')
         : `${person2.year}년 ${person2.month}월 ${person2.day}일`
 
-      // 6. 나의 기존 사주 분석 활용
+      // 7. 나의 기존 사주 분석 활용
       const myPrevAnalysis = typeof window !== 'undefined'
         ? ((localStorage.getItem('saju_free_analysis') ?? '') + ' ' +
            (localStorage.getItem('saju_paid_analysis') ?? '')).trim()
         : ''
 
-      // 7. 오늘 날짜
+      // 8. 오늘 날짜
       const today = new Date()
       const currentYear = today.getFullYear()
       const todayStr = `${currentYear}년 ${today.getMonth() + 1}월 ${today.getDate()}일`
       const yearHint = userQuestion ? extractYearHint(userQuestion, currentYear) : null
 
-      // 8. 택일 모드면 taegil.ts 로직 적용
+      // 9. 택일 모드면 taegil.ts 로직 적용
       let candidateDatesStr = ''
 
       if (mode === 'prewedding' && (!userQuestion || isDateQuestion(userQuestion))) {
@@ -350,7 +343,7 @@ export function useCoupleResult(
           .slice(0, 60).join(', ')
       }
 
-      // 9. 프롬프트 생성
+      // 10. 프롬프트 생성
       const prompt = buildPrompt(
         mode, person1, person2,
         saju1Str, saju2Str, analysisStr,
