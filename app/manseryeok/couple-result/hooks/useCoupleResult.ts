@@ -97,6 +97,13 @@ function getWeekendAndHolidayDates(monthsAhead: number = 18): string[] {
   return dates
 }
 
+// 택일 관련 질문인지 감지
+function isDateQuestion(q: string): boolean {
+  if (!q) return false
+  const keywords = ['날','날짜','결혼','택일','언제','일정','혼인','예식','웨딩','좋은날','길일']
+  return keywords.some(k => q.includes(k))
+}
+
 function buildPrompt(
   mode: string,
   person1: PersonInput,
@@ -106,47 +113,70 @@ function buildPrompt(
   analysisStr: string,
   todayStr: string,
   userQuestion: string,
-  candidateDates: string
+  candidateDates: string,
+  myPrevAnalysis: string
 ): string {
   const baseInfo = `
 사람1 (${person1.gender}): 사주 ${saju1Str} · 직업오행: ${person1.job} · MBTI: ${person1.mbti || '미입력'}
 사람2 (${person2.gender}): 사주 ${saju2Str} · 직업오행: ${person2.job} · MBTI: ${person2.mbti || '미입력'}
 
-${analysisStr}`
+${analysisStr}
+${myPrevAnalysis ? `\n[나의 기존 사주 분석 참고]\n${myPrevAnalysis}` : ''}`
 
+  // 예비 신혼부부 — 질문에 따라 분기
   if (mode === 'prewedding') {
-    return `당신은 명리학 전문가입니다. 오늘 날짜는 ${todayStr}입니다.
+    const needsDate = !userQuestion || isDateQuestion(userQuestion)
+
+    if (needsDate) {
+      // 택일 모드
+      return `당신은 명리학 전문가입니다. 오늘 날짜는 ${todayStr}입니다.
 ${baseInfo}
 
-⭐ 임무: 위 명리학 계산 결과를 바탕으로 결혼 길일을 추천해주세요.
+⭐ 임무: 두 사람 사주를 명리학적으로 분석하고 결혼 길일을 추천해주세요.
 ${userQuestion ? `추가 요청: "${userQuestion}"` : ''}
 
 주말/공휴일 우선 후보 날짜:
 ${candidateDates}
 
-위 목록에서 두 사람 사주와 가장 잘 맞는 날 4~6개를 선택하고,
-각 날짜마다 명리학적 이유(오행, 천간지지, 충극 여부 등)를 구체적으로 설명하세요.
+JSON 형식으로만 응답 (다른 텍스트 없이):
+{
+  "sajuScore": 45~60 사이 숫자,
+  "sajuMsg": "나의 사주 특성 1문장 + 상대방 사주 특성 1문장",
+  "jobMsg": "직업 오행 조화 1문장",
+  "mbtiMsg": "MBTI 조화 1문장",
+  "questionAnswer": "결혼 길일 4~6개 추천. 각 날짜마다: 날짜(요일) · 명리학적 이유(오행·천간지지·충극 여부) 상세 설명",
+  "commonMsg": "마무리 1문장"
+}`
+    } else {
+      // 택일 외 질문 모드
+      return `당신은 명리학 전문가입니다. 오늘 날짜는 ${todayStr}입니다.
+${baseInfo}
+
+⭐ 핵심 질문: "${userQuestion}" — 이 질문에 가장 먼저 구체적으로 답해주세요.
 
 JSON 형식으로만 응답 (다른 텍스트 없이):
 {
-  "sajuMsg": "두 사람 사주 총평 2문장",
+  "sajuScore": 45~60 사이 숫자,
+  "sajuMsg": "나의 사주 특성 1문장 + 상대방 사주 특성 1문장",
   "jobMsg": "직업 오행 조화 1문장",
   "mbtiMsg": "MBTI 조화 1문장",
-  "questionAnswer": "결혼 길일 추천 (날짜별 명리학적 이유 포함, 주말/공휴일 우선)",
+  "questionAnswer": "질문에 대한 명리학적 답변 3~4문장",
   "commonMsg": "마무리 1문장"
 }`
+    }
   }
 
   if (mode === 'birth') {
     return `당신은 명리학 전문가입니다. 오늘 날짜는 ${todayStr}입니다.
 ${baseInfo}
 
-⭐ 임무: 위 명리학 계산 결과를 바탕으로 최적의 출산 시기를 추천해주세요.
+⭐ 임무: 두 사람 사주를 바탕으로 최적의 출산 시기를 추천해주세요.
 ${userQuestion ? `추가 요청: "${userQuestion}"` : ''}
 
 JSON 형식으로만 응답 (다른 텍스트 없이):
 {
-  "sajuMsg": "두 사람 사주 총평 2문장",
+  "sajuScore": 45~60 사이 숫자,
+  "sajuMsg": "나의 사주 특성 1문장 + 상대방 사주 특성 1문장",
   "jobMsg": "직업 오행 조화 1문장",
   "mbtiMsg": "MBTI 조화 1문장",
   "questionAnswer": "최적 출산 시기 3~4개, 각 시기마다 명리학적 이유 포함",
@@ -158,20 +188,21 @@ JSON 형식으로만 응답 (다른 텍스트 없이):
     return `당신은 명리학 전문가입니다. 오늘 날짜는 ${todayStr}입니다.
 ${baseInfo}
 
-⭐ 임무: 위 명리학 계산 결과를 바탕으로 부부 궁합과 관계 개선 방향을 제시해주세요.
+⭐ 임무: 부부 궁합 분석 + 관계 개선 방향을 제시해주세요.
 ${userQuestion ? `추가 요청: "${userQuestion}"` : ''}
 
 JSON 형식으로만 응답 (다른 텍스트 없이):
 {
-  "sajuMsg": "부부 사주 궁합 분석 2문장",
+  "sajuScore": 45~60 사이 숫자,
+  "sajuMsg": "나의 사주 특성 1문장 + 상대방 사주 특성 1문장",
   "jobMsg": "직업 오행 조화 1문장",
   "mbtiMsg": "MBTI 소통 방식 1문장",
-  "questionAnswer": "관계 개선을 위한 구체적 방향 3~4문장",
+  "questionAnswer": "관계 개선을 위한 구체적 방향 3~4문장${userQuestion ? ` + "${userQuestion}" 답변` : ''}",
   "commonMsg": "마무리 1문장"
 }`
   }
 
-  // couple (기본)
+  // couple (기본) + 모든 기타 질문
   return `당신은 명리학 전문가입니다. 오늘 날짜는 ${todayStr}입니다.
 ${baseInfo}
 
@@ -179,7 +210,8 @@ ${userQuestion ? `⭐ 핵심 질문: "${userQuestion}" — 이 질문에 가장 
 
 JSON 형식으로만 응답 (다른 텍스트 없이):
 {
-  "sajuMsg": "사주 궁합 분석 2문장 (형충회합 결과 반영)",
+  "sajuScore": 45~60 사이 숫자,
+  "sajuMsg": "나의 사주 특성 1문장 + 상대방 사주 특성 1문장",
   "jobMsg": "직업 오행 분석 1문장",
   "mbtiMsg": "MBTI 분석 1문장",
   "questionAnswer": "${userQuestion ? '질문 답변 3~4문장' : ''}",
@@ -218,7 +250,7 @@ export function useCoupleResult(
         sajuScore = analysis.sajuScore
       }
 
-      // 3. 사주 텍스트 표현
+      // 3. 사주 텍스트
       const saju1Str = pillars1
         ? pillars1.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(' ')
         : `${person1.year}년 ${person1.month}월 ${person1.day}일`
@@ -226,16 +258,23 @@ export function useCoupleResult(
         ? pillars2.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(' ')
         : `${person2.year}년 ${person2.month}월 ${person2.day}일`
 
-      // 4. 오늘 날짜 + 후보 날짜
+      // 4. 나의 기존 사주 분석 활용
+      const myPrevAnalysis = (
+        (typeof window !== 'undefined' ? localStorage.getItem('saju_free_analysis') : '') +
+        (typeof window !== 'undefined' ? localStorage.getItem('saju_paid_analysis') : '')
+      ) || ''
+
+      // 5. 오늘 날짜 + 후보 날짜
       const today = new Date()
       const todayStr = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`
       const candidateDates = getWeekendAndHolidayDates(18).slice(0, 80).join(', ')
 
-      // 5. 프롬프트 생성
+      // 6. 프롬프트 생성
       const prompt = buildPrompt(
         mode, person1, person2,
         saju1Str, saju2Str, analysisStr,
-        todayStr, userQuestion, candidateDates
+        todayStr, userQuestion, candidateDates,
+        myPrevAnalysis.slice(0, 500) // 너무 길면 앞 500자만
       )
 
       try {
@@ -249,14 +288,15 @@ export function useCoupleResult(
         const clean = text.replace(/```json|```/g, '').trim()
         const parsed = JSON.parse(clean)
 
+        const finalSajuScore = parsed.sajuScore || sajuScore
         const maxScore = hasMbti ? 100 : 75
-        const rawTotal = sajuScore + jobScore + mbtiScore
+        const rawTotal = finalSajuScore + jobScore + mbtiScore
         const totalScore = Math.min(Math.round(rawTotal / maxScore * 100), 100)
         const { grade, gradeDesc } = getGrade(totalScore)
 
         setResult({
           totalScore, grade, gradeDesc,
-          sajuScore, jobScore, mbtiScore, maxScore,
+          sajuScore: finalSajuScore, jobScore, mbtiScore, maxScore,
           sajuMsg: parsed.sajuMsg || '',
           jobMsg: parsed.jobMsg || '',
           mbtiMsg: parsed.mbtiMsg || '',
