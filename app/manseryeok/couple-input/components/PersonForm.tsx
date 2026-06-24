@@ -107,7 +107,9 @@ export default function PersonForm({ who, relation, person, onChange, autoLoaded
         </select>
       </div>
 
-      <JobSelect value={person.job} onChange={v => onChange('job', v)} />
+      {relation === 'couple' && (
+  <JobSelect value={person.job} onChange={v => onChange('job', v)} />
+)}
 
       {relation === 'couple' && (
         <MbtiInput value={person.mbti} onChange={v => onChange('mbti', v)} />
