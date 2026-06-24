@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useCoupleInput } from './hooks/useCoupleInput'
 import RelationSelect from './components/RelationSelect'
 import PersonForm from './components/PersonForm'
+import PageHeader from '@/app/components/common/PageHeader'
 
 const MY_INFO_KEY = 'myinfo'
 
@@ -19,7 +20,6 @@ function CoupleInputInner() {
   } = useCoupleInput()
 
   const handleStart = () => {
-    // 나의 정보가 홈에서 입력되지 않은 경우
     const myInfo = sessionStorage.getItem(MY_INFO_KEY)
     if (!myInfo || !person1.year || !person1.month || !person1.day) {
       setError('먼저 홈화면에서 나의 생년월일을 입력하고 사주 분석을 해주세요 😊 나의 사주 정보가 있어야 더 정확한 궁합 분석이 가능해요!')
@@ -38,22 +38,20 @@ function CoupleInputInner() {
   return (
     <main style={{ minHeight: '100vh', background: '#0d0d1a', maxWidth: '480px', margin: '0 auto', paddingBottom: '40px' }}>
 
-      <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '10px', position: 'sticky', top: 0, background: '#0d0d1a', zIndex: 10 }}>
-        <button onClick={() => router.push('/')}
-          style={{ fontSize: '20px', color: '#9d8cff', background: 'none', border: 'none', cursor: 'pointer' }}>‹</button>
-        <div>
-          <div style={{ fontSize: '15px', fontWeight: '500', color: '#e8e4ff' }}>궁합 분석</div>
-          <div style={{ fontSize: '10px', color: '#9d8cff', fontStyle: 'italic' }}>나의 인연, 어디쯤 오고 있을까?</div>
-        </div>
-        <button onClick={handleClear}
-          style={{ marginLeft: 'auto', fontSize: '11px', padding: '4px 10px', borderRadius: '20px', background: 'rgba(255,80,80,0.1)', color: 'rgba(255,120,120,0.7)', border: '1px solid rgba(255,80,80,0.2)', cursor: 'pointer' }}>
-          초기화
-        </button>
-      </div>
+      <PageHeader
+        title="궁합 분석"
+        subtitle="나의 인연, 어디쯤 오고 있을까?"
+        onBack={() => router.push('/')}
+        rightButton={
+          <button onClick={handleClear}
+            style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '20px', background: 'rgba(255,80,80,0.1)', color: 'rgba(255,120,120,0.7)', border: '1px solid rgba(255,80,80,0.2)', cursor: 'pointer' }}>
+            초기화
+          </button>
+        }
+      />
 
       <div style={{ padding: '20px 16px' }}>
 
-        {/* 나의 정보 미입력 시 안내 배너 */}
         {!autoLoaded && (
           <div style={{ background: 'rgba(250,199,117,0.08)', border: '1px solid rgba(250,199,117,0.2)', borderRadius: '12px', padding: '12px 14px', marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
             <span style={{ fontSize: '18px' }}>💡</span>
