@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCoupleInput } from './hooks/useCoupleInput'
 import RelationSelect from './components/RelationSelect'
@@ -7,10 +7,12 @@ import PersonForm from './components/PersonForm'
 import PageHeader from '@/app/components/common/PageHeader'
 
 const MY_INFO_KEY = 'myinfo'
+const LAST_COUPLE_RESULT_KEY = 'couple_last_result_url'
 
 function CoupleInputInner() {
   const router = useRouter()
   const [error, setError] = useState('')
+  const [lastResultUrl, setLastResultUrl] = useState('')
   const {
     relation, setRelation,
     person1, setPerson1,
@@ -20,6 +22,12 @@ function CoupleInputInner() {
     handleClearPerson1,
     handleClearPerson2,
   } = useCoupleInput()
+
+  // 이전 결과 URL 복원
+  useEffect(() => {
+    const lastUrl = localStorage.getItem(LAST_COUPLE_RESULT_KEY)
+    if (lastUrl) setLastResultUrl(lastUrl)
+  }, [])
 
   const handleStart = () => {
     const myInfo = sessionStorage.getItem(MY_INFO_KEY)
@@ -34,7 +42,17 @@ function CoupleInputInner() {
     const p1 = encodeURIComponent(JSON.stringify(person1))
     const p2 = encodeURIComponent(JSON.stringify(person2))
     const q = encodeURIComponent(question)
-    router.push(`/manseryeok/couple-result?mode=${relation}&person1=${p1}&person2=${p2}&userQuestion=${q}`)
+    const url = `/manseryeok/couple-result?mode=${relation}&person1=${p1}&person2=${p2}&userQuestion=${q}`
+    // 결과 URL 저장
+    localStorage.setItem(LAST_COUPLE_RESULT_KEY, url)
+    setLastResultUrl(url)
+    router.push(url)
+  }
+
+  const handleClearAll = () => {
+    handleClear()
+    localStorage.removeItem(LAST_COUPLE_RESULT_KEY)
+    setLastResultUrl('')
   }
 
   return (
@@ -45,7 +63,7 @@ function CoupleInputInner() {
         subtitle="나의 인연, 어디쯤 오고 있을까?"
         onBack={() => router.push('/')}
         rightButton={
-          <button onClick={handleClear}
+          <button onClick={handleClearAll}
             style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '20px', background: 'rgba(255,80,80,0.1)', color: 'rgba(255,120,120,0.7)', border: '1px solid rgba(255,80,80,0.2)', cursor: 'pointer' }}>
             전체초기화
           </button>
@@ -105,10 +123,20 @@ function CoupleInputInner() {
           </div>
         )}
 
+        {/* 궁합 분석하기 버튼 */}
         <button onClick={handleStart}
           style={{ width: '100%', padding: '16px', borderRadius: '14px', background: 'linear-gradient(135deg, #5544bb, #7766dd)', border: 'none', color: '#e8e4ff', fontSize: '15px', fontWeight: '500', cursor: 'pointer' }}>
           💑 궁합 분석하기
         </button>
+
+        {/* 이전 결과 보기 버튼 — 데이터 있을 때만 표시 */}
+        {lastResultUrl && (
+          <button
+            onClick={() => router.push(lastResultUrl)}
+            style={{ width: '100%', marginTop: '8px', padding: '12px', borderRadius: '14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(200,176,255,0.2)', color: '#c8b0ff', fontSize: '13px', cursor: 'pointer' }}>
+            📋 이전 궁합 결과 보기 →
+          </button>
+        )}
 
         <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '11px', color: '#333355' }}>
           기본 분석은 무료 · 심층 분석은 전문 상담사와 연결
