@@ -47,7 +47,7 @@ function ResultContent() {
       <div className="fixed top-0 z-50" style={{width:"100%", maxWidth:"430px", left:"50%", transform:"translateX(-50%)"}}>
         <PageHeader
           title="사주가 그려낸 나의 초상"
-          onBack={() => router.push('/manseryeok')}
+          onBack={() => router.push('/')}
         />
       </div>
 
