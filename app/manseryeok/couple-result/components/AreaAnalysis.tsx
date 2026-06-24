@@ -4,8 +4,16 @@ export default function AreaAnalysis({ result }: { result: CoupleResultData }) {
   return (
     <div style={{ background: '#13132a', borderRadius: '14px', padding: '16px', marginBottom: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
       <div style={{ fontSize: '13px', fontWeight: '500', color: '#c8c0ff', marginBottom: '12px' }}>영역별 분석</div>
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+
+        {/* 질문 답변 최우선 표시 */}
+        {result.questionAnswer && (
+          <div style={{ background: 'rgba(250,199,117,0.1)', border: '1px solid rgba(250,199,117,0.3)', borderRadius: '10px', padding: '12px' }}>
+            <div style={{ fontSize: '11px', color: '#FAC775', fontWeight: '500', marginBottom: '6px' }}>⭐ 질문 답변</div>
+            <div style={{ fontSize: '12px', color: '#e8e0cc', lineHeight: '1.7' }}>{result.questionAnswer}</div>
+          </div>
+        )}
+
         <div style={{ background: 'rgba(60,52,137,0.2)', borderRadius: '10px', padding: '10px 12px' }}>
           <div style={{ fontSize: '11px', color: '#7F77DD', fontWeight: '500', marginBottom: '4px' }}>🔮 사주 — 운명의 조화</div>
           <div style={{ fontSize: '11px', color: '#8888cc', lineHeight: '1.5' }}>{result.sajuMsg}</div>
@@ -23,6 +31,7 @@ export default function AreaAnalysis({ result }: { result: CoupleResultData }) {
             🔒 상세보기 (유료)
           </div>
         </div>
+
       </div>
     </div>
   )
