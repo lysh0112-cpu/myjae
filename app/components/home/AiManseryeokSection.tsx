@@ -15,6 +15,7 @@ const HOUR_INDEX: Record<string, number> = {
 }
 
 export const MY_INFO_KEY = 'myinfo'
+const LAST_RESULT_URL_KEY = 'saju_last_result_url'
 
 export default function AiManseryeokSection() {
   const router = useRouter()
@@ -23,8 +24,8 @@ export default function AiManseryeokSection() {
   const [birthHour, setBirthHour] = useState('')
   const [calType, setCalType] = useState<'양력' | '음력'>('양력')
   const [hasStored, setHasStored] = useState(false)
+  const [lastResultUrl, setLastResultUrl] = useState('')
 
-  // 페이지 로드 시 localStorage에서 복원
   useEffect(() => {
     const saved = localStorage.getItem(MY_INFO_KEY)
     if (saved) {
@@ -35,9 +36,11 @@ export default function AiManseryeokSection() {
       if (info.birthHour) setBirthHour(info.birthHour)
       setHasStored(true)
     }
+    // 이전 결과 URL 복원
+    const lastUrl = localStorage.getItem(LAST_RESULT_URL_KEY)
+    if (lastUrl) setLastResultUrl(lastUrl)
   }, [])
 
-  // 입력값 변경 시 localStorage + sessionStorage 동시 저장
   useEffect(() => {
     if (!birthDate) return
     const d = birthDate.split('-')
@@ -60,11 +63,13 @@ export default function AiManseryeokSection() {
       localStorage.removeItem('saju_free_analysis')
       localStorage.removeItem('saju_paid_analysis')
       localStorage.removeItem('saju_consultant_note')
+      localStorage.removeItem(LAST_RESULT_URL_KEY)
       setGender('남')
       setCalType('양력')
       setBirthDate('')
       setBirthHour('')
       setHasStored(false)
+      setLastResultUrl('')
     }
   }
 
@@ -83,7 +88,11 @@ export default function AiManseryeokSection() {
     const hourVal = birthHour === '모름' ? '모름'
       : birthHour ? String(HOUR_INDEX[birthHour]) : '모름'
     params.set('hour', hourVal)
-    router.push(`/manseryeok/result?${params.toString()}`)
+    const url = `/manseryeok/result?${params.toString()}`
+    // 결과 URL 저장
+    localStorage.setItem(LAST_RESULT_URL_KEY, url)
+    setLastResultUrl(url)
+    router.push(url)
   }
 
   return (
@@ -140,12 +149,25 @@ export default function AiManseryeokSection() {
             {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
           </select>
         </div>
+
+        {/* 분석 시작 버튼 */}
         <button onClick={handleStart}
           className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all active:scale-95"
           style={{ background: 'linear-gradient(135deg, #3C3489 0%, #FAC775 100%)', color: '#1a1a18',
             boxShadow: '0 4px 20px rgba(60,52,137,0.4)' }}>
           ✨ 나의 운명을 펼쳐보기
         </button>
+
+        {/* 이전 결과 보기 버튼 — 데이터 있을 때만 표시 */}
+        {hasStored && lastResultUrl && (
+          <button
+            onClick={() => router.push(lastResultUrl)}
+            className="w-full mt-2 py-2.5 rounded-xl text-sm transition-all active:scale-95"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(250,199,117,0.2)', color: '#FAC775', cursor: 'pointer' }}>
+            📋 이전 분석 결과 보기 →
+          </button>
+        )}
+
         <p className="text-center text-xs mt-3" style={{ color: '#8a88a0' }}>
           기본 분석은 무료 · 심층 분석은 전문 상담사와 연결
         </p>
