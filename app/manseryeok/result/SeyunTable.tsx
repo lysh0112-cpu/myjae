@@ -22,10 +22,10 @@ export default function SeyunTable({ dayStem, currentYear, ilgan, yeonjji, iljji
 
   if (!seyunList || seyunList.length === 0) return null
 
-  // 현재 년도 기준 앞뒤 5년씩 10년치
+  // 현재 년도 기준 앞뒤 — 역순 (오른쪽 과거 → 왼쪽 미래)
   const currentIdx = seyunList.findIndex(s => s.year === CURRENT_YEAR)
   const startIdx = Math.max(0, currentIdx - 2)
-  const displayList = seyunList.slice(startIdx, startIdx + 10)
+  const displayList = [...seyunList.slice(startIdx, startIdx + 10)].reverse()
   const selectedSeyun = selected !== null ? displayList[selected] : null
 
   return (
@@ -35,10 +35,10 @@ export default function SeyunTable({ dayStem, currentYear, ilgan, yeonjji, iljji
         <span className="text-xs px-2 py-0.5 rounded-full" style={{background:'rgba(250,199,117,0.15)',color:'#FAC775'}}>
           {CURRENT_YEAR}년
         </span>
-        <span className="text-xs ml-auto" style={{color:'#8a88a0'}}>카드 클릭 → 상세</span>
+        <span className="text-xs ml-auto" style={{color:'#8a88a0'}}>← 미래 · 과거 →</span>
       </div>
 
-      {/* 10년 그리드 */}
+      {/* 10년 그리드 — 역순 (오른쪽 과거, 왼쪽 미래) */}
       <div className="grid gap-1.5" style={{gridTemplateColumns:'repeat(5, 1fr)'}}>
         {displayList.map((seyun, i) => {
           const isCurrent = seyun.year === CURRENT_YEAR
