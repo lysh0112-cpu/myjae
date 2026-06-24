@@ -1,16 +1,24 @@
 import { CoupleResultData } from '../hooks/useCoupleResult'
 
-export default function AreaAnalysis({ result }: { result: CoupleResultData }) {
+export default function AreaAnalysis({ result, mode = 'couple' }: { result: CoupleResultData; mode?: string }) {
   return (
     <div style={{ background: '#13132a', borderRadius: '14px', padding: '16px', marginBottom: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
-      <div style={{ fontSize: '13px', fontWeight: '500', color: '#c8c0ff', marginBottom: '12px' }}>영역별 분석</div>
+      <div style={{ fontSize: '13px', fontWeight: '500', color: '#c8c0ff', marginBottom: '12px' }}>
+        {mode === 'prewedding' ? '💍 결혼 길일 추천' :
+         mode === 'birth' ? '👶 출산 시기 추천' :
+         mode === 'married' ? '💑 관계 개선 분석' : '영역별 분석'}
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
 
-        {/* 질문 답변 최우선 표시 */}
+        {/* 질문 답변 또는 모드별 핵심 결과 최우선 표시 */}
         {result.questionAnswer && (
           <div style={{ background: 'rgba(250,199,117,0.1)', border: '1px solid rgba(250,199,117,0.3)', borderRadius: '10px', padding: '12px' }}>
-            <div style={{ fontSize: '11px', color: '#FAC775', fontWeight: '500', marginBottom: '6px' }}>⭐ 질문 답변</div>
-            <div style={{ fontSize: '12px', color: '#e8e0cc', lineHeight: '1.7' }}>{result.questionAnswer}</div>
+            <div style={{ fontSize: '11px', color: '#FAC775', fontWeight: '500', marginBottom: '6px' }}>
+              {mode === 'prewedding' ? '💍 추천 길일' :
+               mode === 'birth' ? '👶 추천 출산 시기' :
+               mode === 'married' ? '💑 관계 개선 방향' : '⭐ 질문 답변'}
+            </div>
+            <div style={{ fontSize: '12px', color: '#e8e0cc', lineHeight: '1.8', whiteSpace: 'pre-line' }}>{result.questionAnswer}</div>
           </div>
         )}
 
