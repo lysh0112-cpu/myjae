@@ -104,6 +104,16 @@ function isDateQuestion(q: string): boolean {
   return keywords.some(k => q.includes(k))
 }
 
+// 질문에서 연도 힌트 추출
+function extractYearHint(q: string, currentYear: number): number | null {
+  if (q.includes('내년')) return currentYear + 1
+  if (q.includes('올해')) return currentYear
+  if (q.includes('내후년')) return currentYear + 2
+  const match = q.match(/(\d{4})년/)
+  if (match) return parseInt(match[1])
+  return null
+}
+
 function buildPrompt(
   mode: string,
   person1: PersonInput,
@@ -112,6 +122,7 @@ function buildPrompt(
   saju2Str: string,
   analysisStr: string,
   todayStr: string,
+  currentYear: number,
   userQuestion: string,
   candidateDates: string,
   myPrevAnalysis: string
@@ -123,20 +134,26 @@ function buildPrompt(
 ${analysisStr}
 ${myPrevAnalysis ? `\n[나의 기존 사주 분석 참고]\n${myPrevAnalysis}` : ''}`
 
-  // 예비 신혼부부 — 질문에 따라 분기
+  // 연도 힌트
+  const yearHint = userQuestion ? extractYearHint(userQuestion, currentYear) : null
+  const yearInstruction = yearHint ? `반드시 ${yearHint}년 날짜만 추천하세요.` : ''
+
   if (mode === 'prewedding') {
     const needsDate = !userQuestion || isDateQuestion(userQuestion)
 
     if (needsDate) {
-      // 택일 모드
       return `당신은 명리학 전문가입니다. 오늘 날짜는 ${todayStr}입니다.
 ${baseInfo}
 
 ⭐ 임무: 두 사람 사주를 명리학적으로 분석하고 결혼 길일을 추천해주세요.
+${yearInstruction}
 ${userQuestion ? `추가 요청: "${userQuestion}"` : ''}
 
 주말/공휴일 우선 후보 날짜:
 ${candidateDates}
+
+위 목록에서 두 사람 사주와 가장 잘 맞는 날 4~6개를 선택하고,
+각 날짜마다 명리학적 이유(오행·천간지지·충극 여부)를 구체적으로 설명하세요.
 
 JSON 형식으로만 응답 (다른 텍스트 없이):
 {
@@ -144,11 +161,10 @@ JSON 형식으로만 응답 (다른 텍스트 없이):
   "sajuMsg": "나의 사주 특성 1문장 + 상대방 사주 특성 1문장",
   "jobMsg": "직업 오행 조화 1문장",
   "mbtiMsg": "MBTI 조화 1문장",
-  "questionAnswer": "결혼 길일 4~6개 추천. 각 날짜마다: 날짜(요일) · 명리학적 이유(오행·천간지지·충극 여부) 상세 설명",
+  "questionAnswer": "결혼 길일 4~6개 추천. 각 날짜마다: 날짜(요일) · 명리학적 이유 상세 설명",
   "commonMsg": "마무리 1문장"
 }`
     } else {
-      // 택일 외 질문 모드
       return `당신은 명리학 전문가입니다. 오늘 날짜는 ${todayStr}입니다.
 ${baseInfo}
 
@@ -171,6 +187,7 @@ JSON 형식으로만 응답 (다른 텍스트 없이):
 ${baseInfo}
 
 ⭐ 임무: 두 사람 사주를 바탕으로 최적의 출산 시기를 추천해주세요.
+${yearInstruction}
 ${userQuestion ? `추가 요청: "${userQuestion}"` : ''}
 
 JSON 형식으로만 응답 (다른 텍스트 없이):
@@ -202,7 +219,7 @@ JSON 형식으로만 응답 (다른 텍스트 없이):
 }`
   }
 
-  // couple (기본) + 모든 기타 질문
+  // couple (기본)
   return `당신은 명리학 전문가입니다. 오늘 날짜는 ${todayStr}입니다.
 ${baseInfo}
 
@@ -241,7 +258,7 @@ export function useCoupleResult(
         fetchSajuPillars(person2),
       ])
 
-      // 2. 명리학 계산 (형충회합파해, 용신, 공망, 일지 관계)
+      // 2. 명리학 계산
       let analysisStr = ''
       let sajuScore = 50
       if (pillars1 && pillars2) {
@@ -259,21 +276,28 @@ export function useCoupleResult(
         : `${person2.year}년 ${person2.month}월 ${person2.day}일`
 
       // 4. 나의 기존 사주 분석 활용
-     const myPrevAnalysis = typeof window !== 'undefined'
-  ? ((localStorage.getItem('saju_free_analysis') ?? '') + ' ' + (localStorage.getItem('saju_paid_analysis') ?? '')).trim()
-  : ''
+      const myPrevAnalysis = typeof window !== 'undefined'
+        ? ((localStorage.getItem('saju_free_analysis') ?? '') + ' ' + (localStorage.getItem('saju_paid_analysis') ?? '')).trim()
+        : ''
 
-      // 5. 오늘 날짜 + 후보 날짜
+      // 5. 오늘 날짜 + 연도 힌트 기반 후보 날짜 필터링
       const today = new Date()
-      const todayStr = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`
-      const candidateDates = getWeekendAndHolidayDates(18).slice(0, 80).join(', ')
+      const currentYear = today.getFullYear()
+      const todayStr = `${currentYear}년 ${today.getMonth() + 1}월 ${today.getDate()}일`
+      const yearHint = userQuestion ? extractYearHint(userQuestion, currentYear) : null
+
+      const candidateDates = getWeekendAndHolidayDates(24)
+        .filter(d => yearHint ? d.startsWith(String(yearHint)) : true)
+        .slice(0, 80)
+        .join(', ')
 
       // 6. 프롬프트 생성
       const prompt = buildPrompt(
         mode, person1, person2,
         saju1Str, saju2Str, analysisStr,
-        todayStr, userQuestion, candidateDates,
-        myPrevAnalysis.slice(0, 500) // 너무 길면 앞 500자만
+        todayStr, currentYear, userQuestion,
+        candidateDates,
+        myPrevAnalysis.slice(0, 500)
       )
 
       try {
