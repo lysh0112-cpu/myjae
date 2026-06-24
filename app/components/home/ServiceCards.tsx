@@ -18,7 +18,7 @@ const SERVICES = [
     targetStyle: { background: 'rgba(76,175,80,0.15)', color: '#81c784' },
     desc: '사주 8글자 → 수묵화 풍경화 생성',
     price: '19,900원~',
-    href: '/manseryeok',
+    href: '/',
   },
   {
     icon: '✍️',
