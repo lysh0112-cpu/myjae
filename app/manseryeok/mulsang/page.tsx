@@ -74,8 +74,8 @@ function MulsangInner() {
   const [loading, setLoading] = useState(false)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [commentary, setCommentary] = useState<Commentary | null>(null)
+  const [collapsed, setCollapsed] = useState(false)
 
-  // 저장된 마지막 결과 복원
   useEffect(() => {
     const saved = localStorage.getItem(MULSANG_RESULT_KEY)
     if (saved) {
@@ -112,6 +112,7 @@ function MulsangInner() {
     setLoading(true)
     setImageUrl(null)
     setCommentary(null)
+    setCollapsed(false)
     try {
       const monthBranch = saju.find(p => p.pillar === '월주')?.branch ?? ''
       const yongsinResult = calcYongsin(saju, dayStem)
@@ -136,19 +137,16 @@ function MulsangInner() {
           sajuText,
           saju,
           elementScores: yongsinResult.score,
-          birthKey: `${info!.year}${info!.month}${info!.day}${info!.hourIdx ?? 'x'}`,
         }),
       })
       const data = await res.json()
       setImageUrl(data.imageUrl ?? null)
       setCommentary(data.commentary ?? null)
-      // 결과를 로컬에 저장 (나갔다 와도 복원)
       try {
         localStorage.setItem(MULSANG_RESULT_KEY, JSON.stringify({
           commentary: data.commentary ?? null,
           imageUrl: data.imageUrl ?? null,
           style,
-          savedId: data.savedId ?? null,
         }))
       } catch {}
     } catch (e) {
@@ -165,55 +163,62 @@ function MulsangInner() {
   }
 
   const branchList = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥']
+  const sajuLine = converting ? '사주 불러오는 중...' :
+    `일간 ${dayStem} · ${info.calType} ${info.year}.${info.month}.${info.day}${info.hourIdx !== null ? ` ${branchList[info.hourIdx]}시` : ''}`
+
+  const hasResult = commentary && !loading
 
   return (
     <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       <PageHeader title="내 사주가 그림이 된다면?" onBack={() => router.push('/')} />
+
       <div style={{ padding: '16px' }}>
-        <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
-          <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '6px' }}>내 사주</div>
-          <div style={{ fontSize: '14px', color: '#e8e4ff' }}>
-            {converting ? '사주를 불러오는 중...' : (
-              <>일간 {dayStem} · {info.calType} {info.year}.{info.month}.{info.day}
-                {info.hourIdx !== null && ` ${branchList[info.hourIdx]}시`}</>
-            )}
-          </div>
-        </div>
 
-        <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '8px' }}>화풍 선택</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
-          {(Object.keys(STYLE_CONFIGS) as Array<'oriental' | 'ghibli'>).map(key => (
-            <button key={key} onClick={() => setStyle(key)} disabled={loading}
+        {/* 사주 + 화풍선택 + 생성버튼 — 결과 펼침 상태에서만 보임 */}
+        {!(hasResult && collapsed) && (
+          <>
+            <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '6px' }}>내 사주</div>
+              <div style={{ fontSize: '14px', color: '#e8e4ff' }}>{sajuLine}</div>
+            </div>
+
+            <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '8px' }}>화풍 선택</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
+              {(Object.keys(STYLE_CONFIGS) as Array<'oriental' | 'ghibli'>).map(key => (
+                <button key={key} onClick={() => setStyle(key)} disabled={loading}
+                  style={{
+                    padding: '16px 8px', borderRadius: '12px', cursor: loading ? 'default' : 'pointer',
+                    background: style === key ? 'rgba(250,199,117,0.12)' : 'rgba(255,255,255,0.03)',
+                    border: style === key ? `2px solid ${gold}` : '1px solid rgba(255,255,255,0.08)',
+                    color: style === key ? gold : '#8a88a0', fontSize: '14px', fontWeight: 500,
+                  }}>
+                  {STYLE_CONFIGS[key].label}
+                </button>
+              ))}
+            </div>
+
+            <button onClick={handleGenerate} disabled={loading || converting}
               style={{
-                padding: '16px 8px', borderRadius: '12px', cursor: loading ? 'default' : 'pointer',
-                background: style === key ? 'rgba(250,199,117,0.12)' : 'rgba(255,255,255,0.03)',
-                border: style === key ? `2px solid ${gold}` : '1px solid rgba(255,255,255,0.08)',
-                color: style === key ? gold : '#8a88a0', fontSize: '14px', fontWeight: 500,
+                width: '100%', padding: '14px', borderRadius: '12px', marginBottom: '20px',
+                background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)',
+                border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 'bold',
+                cursor: loading ? 'default' : 'pointer', opacity: loading || converting ? 0.6 : 1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
               }}>
-              {STYLE_CONFIGS[key].label}
+              {loading ? (
+                <>
+                  <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>✦</span>
+                  그림과 해설을 만드는 중...
+                </>
+              ) : (hasResult ? '✨ 다시 그리기' : '✨ 나의 사주 그림 그리기')}
             </button>
-          ))}
-        </div>
+          </>
+        )}
 
-        <button onClick={handleGenerate} disabled={loading || converting}
-          style={{
-            width: '100%', padding: '14px', borderRadius: '12px', marginBottom: '20px',
-            background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)',
-            border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 'bold',
-            cursor: loading ? 'default' : 'pointer', opacity: loading || converting ? 0.6 : 1,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-          }}>
-          {loading ? (
-            <>
-              <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>✦</span>
-              그림과 해설을 만드는 중...
-            </>
-          ) : (commentary ? '✨ 다시 그리기' : '✨ 나의 사주 그림 그리기')}
-        </button>
-
+        {/* 로딩 */}
         {loading && (
-          <div style={{ background: cardBg, border, borderRadius: '14px', padding: '40px 20px', marginBottom: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+          <div style={{ background: cardBg, border, borderRadius: '14px', padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
             <span style={{ fontSize: '40px', display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span>
             <div style={{ textAlign: 'center', color: gold, fontSize: '13px', lineHeight: 1.7 }}>
               당신의 사주를 풍경으로 그리고 있어요<br />
@@ -222,49 +227,56 @@ function MulsangInner() {
           </div>
         )}
 
-        {!loading && (imageUrl || commentary) && (
-          <div style={{ background: cardBg, border, borderRadius: '14px', overflow: 'hidden', marginBottom: '16px' }}>
-            {imageUrl ? (
-              <img src={imageUrl} alt="사주 풍경화" style={{ width: '100%', display: 'block' }} />
-            ) : (
-              <div style={{ aspectRatio: '1/1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#5555aa', padding: '20px', textAlign: 'center' }}>
-                <span style={{ fontSize: '40px' }}>🖼️</span>
-                <span style={{ fontSize: '12px' }}>그림 생성은 곧 제공됩니다<br />(이미지 API 연결 후 활성화)</span>
-              </div>
-            )}
+        {/* 그림 — 탭하면 위쪽 접기/펼치기 */}
+        {hasResult && (
+          <div style={{ marginBottom: '16px' }}>
+            <div onClick={() => setCollapsed(c => !c)} style={{ cursor: 'pointer', borderRadius: '14px', overflow: 'hidden', border }}>
+              {imageUrl ? (
+                <img src={imageUrl} alt="사주 풍경화" style={{ width: '100%', display: 'block' }} />
+              ) : (
+                <div style={{ aspectRatio: '1/1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#5555aa', background: cardBg }}>
+                  <span style={{ fontSize: '40px' }}>🖼️</span>
+                  <span style={{ fontSize: '12px' }}>그림 생성은 곧 제공됩니다</span>
+                </div>
+              )}
+            </div>
+            <div style={{ textAlign: 'center', fontSize: '11px', color: '#8a88a0', marginTop: '6px' }}>
+              {collapsed ? '그림을 누르면 입력 화면이 다시 나와요' : '그림을 누르면 그림과 해설만 볼 수 있어요'}
+            </div>
             {imageUrl && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', padding: '10px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                <a href={imageUrl} download style={{ fontSize: '13px', color: gold, textDecoration: 'none' }}>⬇ 저장</a>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginTop: '8px' }}>
+                <a href={imageUrl} download="mulsang.png" style={{ fontSize: '13px', color: gold, textDecoration: 'none' }}>⬇ 저장</a>
                 <button onClick={handleShare} style={{ fontSize: '13px', color: gold, background: 'none', border: 'none', cursor: 'pointer' }}>↗ 공유</button>
               </div>
             )}
           </div>
         )}
 
-        {!loading && commentary && (
-          <div style={{ background: cardBg, border, borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
-            <div style={{ fontSize: '16px', fontWeight: 'bold', color: gold, marginBottom: '12px' }}>
-              "{commentary.title}"
-            </div>
-            {[
-              { label: '주인공 (나)', text: commentary.subject },
-              { label: '환경', text: commentary.environment },
-              { label: '핵심 에너지 (용신)', text: commentary.yongsin },
-              { label: '삶의 조언', text: commentary.advice },
-            ].filter(s => s.text).map((s, i) => (
-              <div key={i} style={{ borderLeft: `3px solid ${gold}`, padding: '4px 12px', marginBottom: '12px' }}>
-                <div style={{ fontSize: '12px', color: gold, marginBottom: '4px' }}>{s.label}</div>
-                <div style={{ fontSize: '13px', color: '#e0dce8', lineHeight: 1.7 }}>{s.text}</div>
+        {/* 해설 */}
+        {hasResult && (
+          <>
+            <div style={{ background: cardBg, border, borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '16px', fontWeight: 'bold', color: gold, marginBottom: '12px', lineHeight: 1.5 }}>
+                "{commentary.title}"
               </div>
-            ))}
-          </div>
-        )}
+              {[
+                { label: '주인공 (나)', text: commentary.subject },
+                { label: '환경', text: commentary.environment },
+                { label: '핵심 에너지 (용신)', text: commentary.yongsin },
+                { label: '삶의 조언', text: commentary.advice },
+              ].filter(s => s.text).map((s, i) => (
+                <div key={i} style={{ borderLeft: `3px solid ${gold}`, padding: '4px 12px', marginBottom: '14px' }}>
+                  <div style={{ fontSize: '12px', color: gold, marginBottom: '4px' }}>{s.label}</div>
+                  <div style={{ fontSize: '14px', color: '#e0dce8', lineHeight: 1.8 }}>{s.text}</div>
+                </div>
+              ))}
+            </div>
 
-        {!loading && commentary && (
-          <button onClick={() => router.push('/manseryeok/consulting')}
-            style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'transparent', border: `1px solid ${gold}`, color: gold, fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
-            🔮 이 그림에 대해 전문가와 상담하기 →
-          </button>
+            <button onClick={() => router.push('/manseryeok/consulting')}
+              style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'transparent', border: `1px solid ${gold}`, color: gold, fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
+              🔮 이 그림에 대해 전문가와 상담하기 →
+            </button>
+          </>
         )}
       </div>
     </main>
