@@ -16,7 +16,6 @@ interface Body {
   sajuText: string
   saju: unknown
   elementScores: unknown
-  birthKey: string
 }
 
 export async function POST(req: Request) {
@@ -29,7 +28,7 @@ export async function POST(req: Request) {
       ? createClient(supabaseUrl, supabaseKey)
       : null
 
-    // ---------- 1) Claude 해설 생성 ----------
+    // ---------- 1) Claude 해설 생성 (직접 호출) ----------
     const commentaryPrompt = `당신은 따뜻한 명리학 전문가입니다.
 아래 사주를 "자연 풍경"으로 풀어 설명하는 해설을 작성하세요.
 어려운 한자 용어 대신, 그림 속 풍경에 빗대어 직관적으로 풀어주세요.
@@ -51,30 +50,36 @@ export async function POST(req: Request) {
   "advice": "삶의 조언 2~3문장 — 따뜻하고 희망적으로"
 }`
 
-    const claudeRes = await fetch(new URL('/api/analyze', req.url).toString(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: [{ role: 'user', content: commentaryPrompt }] }),
-    })
-    const claudeData = await claudeRes.json()
-    const rawText =
-      claudeData.content?.find((c: { type: string }) => c.type === 'text')?.text || '{}'
-    const clean = rawText.replace(/```json|```/g, '').trim()
+    let commentary: Record<string, string> = {
+      title: '당신의 사주 풍경', subject: '', environment: '', yongsin: '', advice: '',
+    }
 
-    let commentary: Record<string, string>
-    try {
-      commentary = JSON.parse(clean)
-    } catch {
-      commentary = {
-        title: '당신의 사주 풍경',
-        subject: clean.slice(0, 200),
-        environment: '',
-        yongsin: '',
-        advice: '',
+    const anthropicKey = process.env.ANTHROPIC_API_KEY
+    if (anthropicKey) {
+      try {
+        const cRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': anthropicKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 1500,
+            messages: [{ role: 'user', content: commentaryPrompt }],
+          }),
+        })
+        const cData = await cRes.json()
+        const rawText = cData.content?.find((c: { type: string }) => c.type === 'text')?.text || '{}'
+        const clean = rawText.replace(/```json|```/g, '').trim()
+        try { commentary = JSON.parse(clean) } catch { commentary.subject = clean.slice(0, 200) }
+      } catch (e) {
+        console.error('claude error:', e)
       }
     }
 
-    // ---------- 2) DALL-E 그림 생성 (키 있을 때만) ----------
+    // ---------- 2) DALL-E 그림 생성 (직접 호출) ----------
     let imageUrl: string | null = null
     let imageNote = ''
     const openaiKey = process.env.OPENAI_API_KEY
@@ -96,10 +101,13 @@ export async function POST(req: Request) {
         })
         const imgData = await imgRes.json()
         imageUrl = imgData.data?.[0]?.url ?? null
-        if (!imageUrl) imageNote = 'image_generation_failed'
+        if (!imageUrl) {
+          imageNote = 'image_failed'
+          console.error('DALL-E response:', JSON.stringify(imgData))
+        }
       } catch (e) {
         console.error('DALL-E error:', e)
-        imageNote = 'image_generation_error'
+        imageNote = 'image_error'
       }
     } else {
       imageNote = 'no_openai_key'
