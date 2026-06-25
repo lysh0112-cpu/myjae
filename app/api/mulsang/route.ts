@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       ? createClient(supabaseUrl, supabaseKey)
       : null
 
-    // ---------- 1) Claude 해설 생성 (직접 호출) ----------
+    // ---------- 1) Claude 해설 생성 ----------
     const commentaryPrompt = `당신은 따뜻한 명리학 전문가입니다.
 아래 사주를 "자연 풍경"으로 풀어 설명하는 해설을 작성하세요.
 어려운 한자 용어 대신, 그림 속 풍경에 빗대어 직관적으로 풀어주세요.
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // ---------- 2) DALL-E 그림 생성 (직접 호출) ----------
+    // ---------- 2) gpt-image-1 그림 생성 ----------
     let imageUrl: string | null = null
     let imageNote = ''
     const openaiKey = process.env.OPENAI_API_KEY
@@ -93,20 +93,22 @@ export async function POST(req: Request) {
             Authorization: `Bearer ${openaiKey}`,
           },
           body: JSON.stringify({
-            model: 'dall-e-3',
+            model: 'gpt-image-1',
             prompt: body.prompt,
             n: 1,
             size: '1024x1024',
           }),
         })
         const imgData = await imgRes.json()
-        imageUrl = imgData.data?.[0]?.url ?? null
-        if (!imageUrl) {
+        const b64 = imgData.data?.[0]?.b64_json ?? null
+        if (b64) {
+          imageUrl = `data:image/png;base64,${b64}`
+        } else {
           imageNote = 'image_failed'
-          console.error('DALL-E response:', JSON.stringify(imgData))
+          console.error('gpt-image response:', JSON.stringify(imgData).slice(0, 500))
         }
       } catch (e) {
-        console.error('DALL-E error:', e)
+        console.error('gpt-image error:', e)
         imageNote = 'image_error'
       }
     } else {
@@ -126,7 +128,7 @@ export async function POST(req: Request) {
             yongsin: body.yongsin,
             style: body.style,
             prompt: body.prompt,
-            image_url: imageUrl,
+            image_url: imageUrl ? '(stored inline)' : null,
             commentary,
           })
           .select('id')
