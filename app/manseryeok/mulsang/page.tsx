@@ -141,6 +141,7 @@ function MulsangInner() {
 
   return (
     <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       <PageHeader title="내 사주가 그림이 된다면?" onBack={() => router.push('/')} />
       <div style={{ padding: '16px' }}>
         <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
@@ -156,9 +157,9 @@ function MulsangInner() {
         <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '8px' }}>화풍 선택</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
           {(Object.keys(STYLE_CONFIGS) as Array<'oriental' | 'ghibli'>).map(key => (
-            <button key={key} onClick={() => setStyle(key)}
+            <button key={key} onClick={() => setStyle(key)} disabled={loading}
               style={{
-                padding: '16px 8px', borderRadius: '12px', cursor: 'pointer',
+                padding: '16px 8px', borderRadius: '12px', cursor: loading ? 'default' : 'pointer',
                 background: style === key ? 'rgba(250,199,117,0.12)' : 'rgba(255,255,255,0.03)',
                 border: style === key ? `2px solid ${gold}` : '1px solid rgba(255,255,255,0.08)',
                 color: style === key ? gold : '#8a88a0', fontSize: '14px', fontWeight: 500,
@@ -173,12 +174,29 @@ function MulsangInner() {
             width: '100%', padding: '14px', borderRadius: '12px', marginBottom: '20px',
             background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)',
             border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 'bold',
-            cursor: loading ? 'default' : 'pointer', opacity: loading || converting ? 0.5 : 1,
+            cursor: loading ? 'default' : 'pointer', opacity: loading || converting ? 0.6 : 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
           }}>
-          {loading ? '✦ 그림을 그리는 중...' : '✨ 나의 사주 그림 그리기'}
+          {loading ? (
+            <>
+              <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>✦</span>
+              그림과 해설을 만드는 중...
+            </>
+          ) : '✨ 나의 사주 그림 그리기'}
         </button>
 
-        {(imageUrl || (!loading && commentary)) && (
+        {/* 로딩 중 안내 박스 */}
+        {loading && (
+          <div style={{ background: cardBg, border, borderRadius: '14px', padding: '40px 20px', marginBottom: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+            <span style={{ fontSize: '40px', display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span>
+            <div style={{ textAlign: 'center', color: gold, fontSize: '13px', lineHeight: 1.7 }}>
+              당신의 사주를 풍경으로 그리고 있어요<br />
+              <span style={{ color: '#8a88a0', fontSize: '12px' }}>잠시만 기다려 주세요 (최대 1분)</span>
+            </div>
+          </div>
+        )}
+
+        {!loading && (imageUrl || commentary) && (
           <div style={{ background: cardBg, border, borderRadius: '14px', overflow: 'hidden', marginBottom: '16px' }}>
             {imageUrl ? (
               <img src={imageUrl} alt="사주 풍경화" style={{ width: '100%', display: 'block' }} />
@@ -197,7 +215,7 @@ function MulsangInner() {
           </div>
         )}
 
-        {commentary && (
+        {!loading && commentary && (
           <div style={{ background: cardBg, border, borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
             <div style={{ fontSize: '16px', fontWeight: 'bold', color: gold, marginBottom: '12px' }}>
               "{commentary.title}"
@@ -216,7 +234,7 @@ function MulsangInner() {
           </div>
         )}
 
-        {commentary && (
+        {!loading && commentary && (
           <button onClick={() => router.push('/manseryeok/consulting')}
             style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'transparent', border: `1px solid ${gold}`, color: gold, fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
             🔮 이 그림에 대해 전문가와 상담하기 →
