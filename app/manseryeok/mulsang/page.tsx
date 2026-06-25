@@ -14,10 +14,8 @@ interface Commentary {
   advice: string
 }
 
-type StyleKey = 'oriental' | 'ghibli'
-
 const MY_INFO_KEY = 'myinfo'
-const MULSANG_RESULT_KEY = 'mulsang_last_result_v2'
+const MULSANG_RESULT_KEY = 'mulsang_last_result_v3'
 
 function MulsangInner() {
   const router = useRouter()
@@ -72,21 +70,20 @@ function MulsangInner() {
     info?.hourIdx ?? null,
   )
 
-  // 화풍별 이미지 저장: { oriental: url, ghibli: url }
-  const [images, setImages] = useState<Record<string, string>>({})
+  const [style, setStyle] = useState<string>('oriental')
+  const [loading, setLoading] = useState(false)
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [commentary, setCommentary] = useState<Commentary | null>(null)
-  const [viewStyle, setViewStyle] = useState<StyleKey>('oriental') // 지금 보고 있는 화풍
-  const [loadingStyle, setLoadingStyle] = useState<StyleKey | null>(null) // 그리는 중인 화풍
-  const [collapsed, setCollapsed] = useState(false)
 
+  // 저장된 결과 복원
   useEffect(() => {
     const saved = localStorage.getItem(MULSANG_RESULT_KEY)
     if (saved) {
       try {
         const r = JSON.parse(saved)
-        if (r.images) setImages(r.images)
         if (r.commentary) setCommentary(r.commentary)
-        if (r.viewStyle) setViewStyle(r.viewStyle)
+        if (r.imageUrl) setImageUrl(r.imageUrl)
+        if (r.style) setStyle(r.style)
       } catch {}
     }
   }, [])
@@ -110,11 +107,11 @@ function MulsangInner() {
     )
   }
 
-  async function generate(targetStyle: StyleKey) {
+  async function handleGenerate() {
     if (!saju || saju.length === 0 || !dayStem) return
-    setLoadingStyle(targetStyle)
-    setViewStyle(targetStyle)
-    setCollapsed(false)
+    setLoading(true)
+    setImageUrl(null)
+    setCommentary(null)
     try {
       const monthBranch = saju.find(p => p.pillar === '월주')?.branch ?? ''
       const yongsinResult = calcYongsin(saju, dayStem)
@@ -122,7 +119,7 @@ function MulsangInner() {
         dayStem, monthBranch,
         elementScores: yongsinResult.score,
         yongsin: yongsinResult.yongsin,
-        style: targetStyle,
+        style,
       })
       const sajuText = saju.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(', ')
       const res = await fetch('/api/mulsang', {
@@ -135,46 +132,30 @@ function MulsangInner() {
           yongsin: yongsinResult.yongsin,
           season: built.season,
           styleLabel: built.styleLabel,
-          style: targetStyle,
+          style,
           sajuText,
           saju,
           elementScores: yongsinResult.score,
         }),
       })
       const data = await res.json()
-      const newImages = { ...images }
-      if (data.imageUrl) newImages[targetStyle] = data.imageUrl
-      setImages(newImages)
-      // 해설은 처음 한 번만 받으면 그대로 공유
-      const finalCommentary = commentary ?? data.commentary ?? null
-      if (!commentary && data.commentary) setCommentary(data.commentary)
+      setImageUrl(data.imageUrl ?? null)
+      setCommentary(data.commentary ?? null)
       try {
         localStorage.setItem(MULSANG_RESULT_KEY, JSON.stringify({
-          images: newImages,
-          commentary: finalCommentary,
-          viewStyle: targetStyle,
+          commentary: data.commentary ?? null,
+          imageUrl: data.imageUrl ?? null,
+          style,
         }))
       } catch {}
     } catch (e) {
       console.error(e)
     } finally {
-      setLoadingStyle(null)
-    }
-  }
-
-  function handleStyleTab(key: StyleKey) {
-    if (loadingStyle) return
-    if (images[key]) {
-      // 이미 만든 화풍 → 비용 없이 전환만
-      setViewStyle(key)
-    } else {
-      // 안 만든 화풍 → 새로 생성
-      generate(key)
+      setLoading(false)
     }
   }
 
   function handleShare() {
-    const url = images[viewStyle]
     if (navigator.share) {
       navigator.share({ title: '명카페 사주 풍경화', text: '내 사주를 그림으로 봤어요!', url: window.location.href })
     }
@@ -184,127 +165,116 @@ function MulsangInner() {
   const sajuLine = converting ? '사주 불러오는 중...' :
     `일간 ${dayStem} · ${info.calType} ${info.year}.${info.month}.${info.day}${info.hourIdx !== null ? ` ${branchList[info.hourIdx]}시` : ''}`
 
-  const loading = loadingStyle !== null
-  const hasAnyImage = Object.keys(images).length > 0
-  const hasResult = (commentary || hasAnyImage) && !loading
-  const currentImage = images[viewStyle] ?? null
+  const hasResult = commentary && !loading
 
+  // ===== 결과 화면: 그림 고정 + 해설 스크롤 =====
+  if (hasResult) {
+    return (
+      <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto' }}>
+        <PageHeader title="내 사주가 그림이 된다면?" onBack={() => router.push('/')} />
+
+        {/* 고정 그림 */}
+        <div style={{ position: 'sticky', top: 0, zIndex: 10, background: '#1a1a18' }}>
+          {imageUrl ? (
+            <img src={imageUrl} alt="사주 풍경화" style={{ width: '100%', display: 'block' }} />
+          ) : (
+            <div style={{ aspectRatio: '1/1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#5555aa', background: cardBg }}>
+              <span style={{ fontSize: '40px' }}>🖼️</span>
+              <span style={{ fontSize: '12px' }}>그림 생성은 곧 제공됩니다</span>
+            </div>
+          )}
+          {imageUrl && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', padding: '8px', background: '#1a1a18', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <a href={imageUrl} download="mulsang.png" style={{ fontSize: '13px', color: gold, textDecoration: 'none' }}>⬇ 저장</a>
+              <button onClick={handleShare} style={{ fontSize: '13px', color: gold, background: 'none', border: 'none', cursor: 'pointer' }}>↗ 공유</button>
+            </div>
+          )}
+        </div>
+
+        {/* 스크롤되는 해설 */}
+        <div style={{ padding: '16px' }}>
+          <div style={{ fontSize: '17px', fontWeight: 'bold', color: gold, marginBottom: '14px', lineHeight: 1.5 }}>
+            "{commentary.title}"
+          </div>
+          {[
+            { label: '주인공 (나)', text: commentary.subject },
+            { label: '환경', text: commentary.environment },
+            { label: '핵심 에너지 (용신)', text: commentary.yongsin },
+            { label: '삶의 조언', text: commentary.advice },
+          ].filter(s => s.text).map((s, i) => (
+            <div key={i} style={{ borderLeft: `3px solid ${gold}`, padding: '4px 12px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '12px', color: gold, marginBottom: '4px' }}>{s.label}</div>
+              <div style={{ fontSize: '14px', color: '#e0dce8', lineHeight: 1.8 }}>{s.text}</div>
+            </div>
+          ))}
+
+          <button onClick={() => router.push('/manseryeok/consulting')}
+            style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'transparent', border: `1px solid ${gold}`, color: gold, fontSize: '14px', fontWeight: 500, cursor: 'pointer', marginTop: '8px', marginBottom: '12px' }}>
+            🔮 이 그림에 대해 전문가와 상담하기 →
+          </button>
+
+          {/* 다시 그리기 (화풍 콤보) */}
+          <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px' }}>
+            <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '8px' }}>다른 화풍으로 다시 그리기</div>
+            <select value={style} onChange={e => setStyle(e.target.value)}
+              style={{ width: '100%', padding: '10px', borderRadius: '10px', background: '#1a1a18', border: '1px solid rgba(255,255,255,0.15)', color: gold, fontSize: '14px', marginBottom: '10px' }}>
+              {(Object.keys(STYLE_CONFIGS)).map(key => (
+                <option key={key} value={key}>{STYLE_CONFIGS[key].label}</option>
+              ))}
+            </select>
+            <button onClick={handleGenerate}
+              style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)', border: 'none', color: '#1a1a18', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}>
+              ✨ 다시 그리기
+            </button>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
+  // ===== 초기 화면 (그림 생성 전 / 로딩 중) =====
   return (
     <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       <PageHeader title="내 사주가 그림이 된다면?" onBack={() => router.push('/')} />
-
       <div style={{ padding: '16px' }}>
+        <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
+          <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '6px' }}>내 사주</div>
+          <div style={{ fontSize: '14px', color: '#e8e4ff' }}>{sajuLine}</div>
+        </div>
 
-        {/* 초기 화면 (아직 아무것도 안 만듦) */}
-        {!hasResult && !loading && (
-          <>
-            <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
-              <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '6px' }}>내 사주</div>
-              <div style={{ fontSize: '14px', color: '#e8e4ff' }}>{sajuLine}</div>
-            </div>
-            <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '8px' }}>화풍 선택</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
-              {(Object.keys(STYLE_CONFIGS) as StyleKey[]).map(key => (
-                <button key={key} onClick={() => setViewStyle(key)}
-                  style={{
-                    padding: '16px 8px', borderRadius: '12px', cursor: 'pointer',
-                    background: viewStyle === key ? 'rgba(250,199,117,0.12)' : 'rgba(255,255,255,0.03)',
-                    border: viewStyle === key ? `2px solid ${gold}` : '1px solid rgba(255,255,255,0.08)',
-                    color: viewStyle === key ? gold : '#8a88a0', fontSize: '14px', fontWeight: 500,
-                  }}>
-                  {STYLE_CONFIGS[key].label}
-                </button>
-              ))}
-            </div>
-            <button onClick={() => generate(viewStyle)} disabled={converting}
-              style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)', border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', opacity: converting ? 0.6 : 1 }}>
-              ✨ 나의 사주 그림 그리기
-            </button>
-          </>
-        )}
+        <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '8px' }}>화풍 선택</div>
+        <select value={style} onChange={e => setStyle(e.target.value)} disabled={loading}
+          style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#1a1a18', border: '1px solid rgba(255,255,255,0.15)', color: gold, fontSize: '15px', marginBottom: '16px' }}>
+          {(Object.keys(STYLE_CONFIGS)).map(key => (
+            <option key={key} value={key}>{STYLE_CONFIGS[key].label}</option>
+          ))}
+        </select>
 
-        {/* 로딩 */}
+        <button onClick={handleGenerate} disabled={loading || converting}
+          style={{
+            width: '100%', padding: '14px', borderRadius: '12px', marginBottom: '20px',
+            background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)',
+            border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 'bold',
+            cursor: loading ? 'default' : 'pointer', opacity: loading || converting ? 0.6 : 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+          }}>
+          {loading ? (
+            <>
+              <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>✦</span>
+              그림과 해설을 만드는 중...
+            </>
+          ) : '✨ 나의 사주 그림 그리기'}
+        </button>
+
         {loading && (
           <div style={{ background: cardBg, border, borderRadius: '14px', padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
             <span style={{ fontSize: '40px', display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span>
             <div style={{ textAlign: 'center', color: gold, fontSize: '13px', lineHeight: 1.7 }}>
-              {STYLE_CONFIGS[loadingStyle!].label}로 그리고 있어요<br />
+              당신의 사주를 풍경으로 그리고 있어요<br />
               <span style={{ color: '#8a88a0', fontSize: '12px' }}>잠시만 기다려 주세요 (최대 1분)</span>
             </div>
           </div>
-        )}
-
-        {/* 결과 화면 */}
-        {hasResult && (
-          <>
-            {/* 화풍 전환 탭 */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-              {(Object.keys(STYLE_CONFIGS) as StyleKey[]).map(key => {
-                const made = !!images[key]
-                const active = viewStyle === key
-                return (
-                  <button key={key} onClick={() => handleStyleTab(key)}
-                    style={{
-                      flex: 1, padding: '10px 8px', borderRadius: '10px', cursor: 'pointer',
-                      background: active ? 'rgba(250,199,117,0.15)' : 'rgba(255,255,255,0.03)',
-                      border: active ? `2px solid ${gold}` : '1px solid rgba(255,255,255,0.08)',
-                      color: active ? gold : '#8a88a0', fontSize: '13px', fontWeight: 500,
-                    }}>
-                    {STYLE_CONFIGS[key].label}{made ? '' : ' +'}
-                  </button>
-                )
-              })}
-            </div>
-            <div style={{ textAlign: 'center', fontSize: '11px', color: '#8a88a0', marginBottom: '12px' }}>
-              아직 안 그린 화풍(+)을 누르면 그 스타일로도 그려드려요
-            </div>
-
-            {/* 그림 — 탭하면 위쪽 접기/펼치기 (지금은 입력 화면이 없으니 향후 확장용) */}
-            <div style={{ marginBottom: '12px' }}>
-              <div style={{ borderRadius: '14px', overflow: 'hidden', border }}>
-                {currentImage ? (
-                  <img src={currentImage} alt="사주 풍경화" style={{ width: '100%', display: 'block' }} />
-                ) : (
-                  <div style={{ aspectRatio: '1/1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#5555aa', background: cardBg }}>
-                    <span style={{ fontSize: '40px' }}>🖼️</span>
-                    <span style={{ fontSize: '12px' }}>이 화풍은 아직 안 그렸어요</span>
-                  </div>
-                )}
-              </div>
-              {currentImage && (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginTop: '8px' }}>
-                  <a href={currentImage} download="mulsang.png" style={{ fontSize: '13px', color: gold, textDecoration: 'none' }}>⬇ 저장</a>
-                  <button onClick={handleShare} style={{ fontSize: '13px', color: gold, background: 'none', border: 'none', cursor: 'pointer' }}>↗ 공유</button>
-                </div>
-              )}
-            </div>
-
-            {/* 해설 (공유) */}
-            {commentary && (
-              <div style={{ background: cardBg, border, borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
-                <div style={{ fontSize: '16px', fontWeight: 'bold', color: gold, marginBottom: '12px', lineHeight: 1.5 }}>
-                  "{commentary.title}"
-                </div>
-                {[
-                  { label: '주인공 (나)', text: commentary.subject },
-                  { label: '환경', text: commentary.environment },
-                  { label: '핵심 에너지 (용신)', text: commentary.yongsin },
-                  { label: '삶의 조언', text: commentary.advice },
-                ].filter(s => s.text).map((s, i) => (
-                  <div key={i} style={{ borderLeft: `3px solid ${gold}`, padding: '4px 12px', marginBottom: '14px' }}>
-                    <div style={{ fontSize: '12px', color: gold, marginBottom: '4px' }}>{s.label}</div>
-                    <div style={{ fontSize: '14px', color: '#e0dce8', lineHeight: 1.8 }}>{s.text}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <button onClick={() => router.push('/manseryeok/consulting')}
-              style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'transparent', border: `1px solid ${gold}`, color: gold, fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
-              🔮 이 그림에 대해 전문가와 상담하기 →
-            </button>
-          </>
         )}
       </div>
     </main>
