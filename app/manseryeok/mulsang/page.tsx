@@ -15,6 +15,7 @@ interface Commentary {
 }
 
 const MY_INFO_KEY = 'myinfo'
+const MULSANG_RESULT_KEY = 'mulsang_last_result'
 
 function MulsangInner() {
   const router = useRouter()
@@ -74,6 +75,19 @@ function MulsangInner() {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [commentary, setCommentary] = useState<Commentary | null>(null)
 
+  // 저장된 마지막 결과 복원
+  useEffect(() => {
+    const saved = localStorage.getItem(MULSANG_RESULT_KEY)
+    if (saved) {
+      try {
+        const r = JSON.parse(saved)
+        if (r.commentary) setCommentary(r.commentary)
+        if (r.imageUrl) setImageUrl(r.imageUrl)
+        if (r.style) setStyle(r.style)
+      } catch {}
+    }
+  }, [])
+
   const gold = '#FAC775'
   const cardBg = '#2C2C2A'
   const border = '1px solid rgba(250,199,117,0.15)'
@@ -118,12 +132,25 @@ function MulsangInner() {
           yongsin: yongsinResult.yongsin,
           season: built.season,
           styleLabel: built.styleLabel,
+          style,
           sajuText,
+          saju,
+          elementScores: yongsinResult.score,
+          birthKey: `${info!.year}${info!.month}${info!.day}${info!.hourIdx ?? 'x'}`,
         }),
       })
       const data = await res.json()
       setImageUrl(data.imageUrl ?? null)
       setCommentary(data.commentary ?? null)
+      // 결과를 로컬에 저장 (나갔다 와도 복원)
+      try {
+        localStorage.setItem(MULSANG_RESULT_KEY, JSON.stringify({
+          commentary: data.commentary ?? null,
+          imageUrl: data.imageUrl ?? null,
+          style,
+          savedId: data.savedId ?? null,
+        }))
+      } catch {}
     } catch (e) {
       console.error(e)
     } finally {
@@ -182,10 +209,9 @@ function MulsangInner() {
               <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>✦</span>
               그림과 해설을 만드는 중...
             </>
-          ) : '✨ 나의 사주 그림 그리기'}
+          ) : (commentary ? '✨ 다시 그리기' : '✨ 나의 사주 그림 그리기')}
         </button>
 
-        {/* 로딩 중 안내 박스 */}
         {loading && (
           <div style={{ background: cardBg, border, borderRadius: '14px', padding: '40px 20px', marginBottom: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
             <span style={{ fontSize: '40px', display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span>
