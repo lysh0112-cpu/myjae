@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -11,13 +12,24 @@ interface Body {
   yongsin: string
   season: string
   styleLabel: string
+  style: string
   sajuText: string
+  saju: unknown
+  elementScores: unknown
+  birthKey: string
 }
 
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as Body
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const supabase = supabaseUrl && supabaseKey
+      ? createClient(supabaseUrl, supabaseKey)
+      : null
+
+    // ---------- 1) Claude 해설 생성 ----------
     const commentaryPrompt = `당신은 따뜻한 명리학 전문가입니다.
 아래 사주를 "자연 풍경"으로 풀어 설명하는 해설을 작성하세요.
 어려운 한자 용어 대신, 그림 속 풍경에 빗대어 직관적으로 풀어주세요.
@@ -62,6 +74,7 @@ export async function POST(req: Request) {
       }
     }
 
+    // ---------- 2) DALL-E 그림 생성 (키 있을 때만) ----------
     let imageUrl: string | null = null
     let imageNote = ''
     const openaiKey = process.env.OPENAI_API_KEY
@@ -92,7 +105,31 @@ export async function POST(req: Request) {
       imageNote = 'no_openai_key'
     }
 
-    return NextResponse.json({ commentary, imageUrl, imageNote, prompt: body.prompt })
+    // ---------- 3) Supabase 저장 ----------
+    let savedId: string | null = null
+    if (supabase) {
+      try {
+        const { data } = await supabase
+          .from('mulsang_images')
+          .insert({
+            saju: body.saju,
+            element_scores: body.elementScores,
+            day_master: body.dayStem,
+            yongsin: body.yongsin,
+            style: body.style,
+            prompt: body.prompt,
+            image_url: imageUrl,
+            commentary,
+          })
+          .select('id')
+          .single()
+        savedId = data?.id ?? null
+      } catch (e) {
+        console.error('supabase insert error:', e)
+      }
+    }
+
+    return NextResponse.json({ commentary, imageUrl, imageNote, savedId, prompt: body.prompt })
   } catch (e) {
     console.error('mulsang route error:', e)
     return NextResponse.json({ error: 'mulsang_failed' }, { status: 500 })
