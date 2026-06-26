@@ -75,7 +75,6 @@ function MulsangInner() {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [commentary, setCommentary] = useState<Commentary | null>(null)
 
-  // 저장된 결과 복원
   useEffect(() => {
     const saved = localStorage.getItem(MULSANG_RESULT_KEY)
     if (saved) {
@@ -116,7 +115,9 @@ function MulsangInner() {
       const monthBranch = saju.find(p => p.pillar === '월주')?.branch ?? ''
       const yongsinResult = calcYongsin(saju, dayStem)
       const built = buildMulsangPrompt({
-        dayStem, monthBranch,
+        dayStem,
+        monthBranch,
+        stems: saju.map(p => p.stem),
         elementScores: yongsinResult.score,
         yongsin: yongsinResult.yongsin,
         style,
@@ -126,9 +127,10 @@ function MulsangInner() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: built.prompt, dayStem,
+          prompt: built.prompt,
+          dayStem,
           dayElement: built.dayElement,
-          strongElement: built.strongElement,
+          strongElement: built.dayElement,
           yongsin: yongsinResult.yongsin,
           season: built.season,
           styleLabel: built.styleLabel,
@@ -167,13 +169,11 @@ function MulsangInner() {
 
   const hasResult = commentary && !loading
 
-  // ===== 결과 화면: 그림 고정 + 해설 스크롤 =====
   if (hasResult) {
     return (
       <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto' }}>
         <PageHeader title="내 사주가 그림이 된다면?" onBack={() => router.push('/')} />
 
-        {/* 고정 그림 */}
         <div style={{ position: 'sticky', top: 0, zIndex: 10, background: '#1a1a18' }}>
           {imageUrl ? (
             <img src={imageUrl} alt="사주 풍경화" style={{ width: '100%', display: 'block' }} />
@@ -191,7 +191,6 @@ function MulsangInner() {
           )}
         </div>
 
-        {/* 스크롤되는 해설 */}
         <div style={{ padding: '16px' }}>
           <div style={{ fontSize: '17px', fontWeight: 'bold', color: gold, marginBottom: '14px', lineHeight: 1.5 }}>
             "{commentary.title}"
@@ -213,7 +212,6 @@ function MulsangInner() {
             🔮 이 그림에 대해 전문가와 상담하기 →
           </button>
 
-          {/* 다시 그리기 (화풍 콤보) */}
           <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px' }}>
             <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '8px' }}>다른 화풍으로 다시 그리기</div>
             <select value={style} onChange={e => setStyle(e.target.value)}
@@ -232,7 +230,6 @@ function MulsangInner() {
     )
   }
 
-  // ===== 초기 화면 (그림 생성 전 / 로딩 중) =====
   return (
     <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
