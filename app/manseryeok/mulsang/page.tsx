@@ -17,6 +17,20 @@ interface Commentary {
 const MY_INFO_KEY = 'myinfo'
 const MULSANG_RESULT_KEY = 'mulsang_last_result_v3'
 
+// 시지(시간) 한글 설명
+const HOUR_LABEL = [
+  '한밤중(子시)', '늦은밤(丑시)', '새벽(寅시)', '이른아침(卯시)',
+  '아침(辰시)', '늦은아침(巳시)', '한낮(午시)', '이른오후(未시)',
+  '오후(申시)', '저녁무렵(酉시)', '저녁(戌시)', '밤(亥시)',
+]
+// 월지(계절) 한글 설명
+const SEASON_LABEL: Record<string, string> = {
+  寅: '이른 봄', 卯: '봄', 辰: '늦봄',
+  巳: '초여름', 午: '여름', 未: '늦여름',
+  申: '초가을', 酉: '가을', 戌: '늦가을',
+  亥: '초겨울', 子: '겨울', 丑: '늦겨울',
+}
+
 function MulsangInner() {
   const router = useRouter()
   const sp = useSearchParams()
@@ -123,6 +137,8 @@ function MulsangInner() {
         style,
       })
       const sajuText = saju.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(', ')
+      const seasonKo = SEASON_LABEL[monthBranch] ?? '계절 정보 없음'
+      const hourKo = info && info.hourIdx !== null ? HOUR_LABEL[info.hourIdx] : '시간 모름'
       const res = await fetch('/api/mulsang', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -130,9 +146,11 @@ function MulsangInner() {
           prompt: built.prompt,
           dayStem,
           dayElement: built.dayElement,
-          strongElement: built.dayElement,
           yongsin: yongsinResult.yongsin,
           season: built.season,
+          seasonKo,
+          hourKo,
+          sceneDesc: built.prompt,
           styleLabel: built.styleLabel,
           style,
           sajuText,
