@@ -6,7 +6,6 @@ import PageHeader from '@/app/components/common/PageHeader'
 const TAROT_MODE: 'ai' | 'consultant' = 'ai'
 
 // 해석 기법 + 가격 (지금은 화면 표시용. 결제는 아직 미연동 → 실제로는 전부 무료 작동)
-// 나중에 결제 붙으면 startDraw 직전에 price 보고 결제창 띄우면 됨.
 const SPREADS = [
   { id: 'one', count: 1, title: '한 장 뽑기', badge: '1회 무료 · 이후 2,000원',
     desc: '지금 가장 궁금한 한 가지에, 카드 한 장이 답합니다.',
@@ -65,10 +64,12 @@ function saveToHistory(item: HistoryItem) {
   } catch {}
 }
 
+type Step = 'question' | 'deck' | 'spread' | 'draw' | 'reveal' | 'result'
+
 function TarotInner() {
   const router = useRouter()
 
-  const [step, setStep] = useState<'question' | 'deck' | 'spread' | 'draw' | 'reveal' | 'result'>('question')
+  const [step, setStep] = useState<Step>('question')
   const [question, setQuestion] = useState('')
   const [decks, setDecks] = useState<{ code: string; name_ko: string; description: string; is_active: boolean }[]>([])
   const [deckCode, setDeckCode] = useState('universal')
@@ -93,6 +94,17 @@ function TarotInner() {
     setHasHistory(loadHistory().length > 0)
   }, [])
 
+  // 헤더 ← 화살표: 한 단계씩 뒤로. 카드/상태는 초기화하지 않고 그대로 둔다.
+  // question 에서 뒤로 가면 홈으로.
+  function goBack() {
+    if (step === 'result') { setStep('reveal'); return }
+    if (step === 'reveal') { setStep('draw'); return }
+    if (step === 'draw') { setStep('spread'); return }
+    if (step === 'spread') { setStep('deck'); return }
+    if (step === 'deck') { setStep('question'); return }
+    router.push('/') // question 단계
+  }
+
   function showLastReading() {
     const list = loadHistory()
     if (list.length > 0) {
@@ -109,8 +121,13 @@ function TarotInner() {
     setUsesReversed(data.deck?.usesReversed ?? true)
   }
 
-  // 카드 펼치기. 나중에 결제 붙으면 여기서 spread.price 보고 결제창 띄움 (지금은 전부 무료 작동)
-  function startDraw() { setPicked([]); setStep('draw') }
+  function startDraw() {
+    // 기법을 바꿔 다시 들어온 게 아니라면(이미 뽑은 카드 수가 맞으면) 유지
+    if (picked.length === 0 || picked.length !== spread.count) {
+      setPicked([])
+    }
+    setStep('draw')
+  }
 
   function drawOne() {
     if (picked.length >= spread.count) return
@@ -159,6 +176,7 @@ function TarotInner() {
     }
   }
 
+  // 완전 초기화 (새로운 질문하기 전용)
   function startNew() {
     setQuestion(''); setPicked([]); setInterp(null); setStep('question')
   }
@@ -167,7 +185,7 @@ function TarotInner() {
     <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
       <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
         @keyframes slideLeft{from{transform:translateX(0)}to{transform:translateX(-50%)}}`}</style>
-      <PageHeader title="타로 카드 리딩" onBack={() => step === 'question' ? router.push('/') : startNew()} />
+      <PageHeader title="타로 카드 리딩" onBack={goBack} />
 
       {step === 'question' && (
         <div style={{ padding: '22px 16px', textAlign: 'center' }}>
@@ -281,6 +299,12 @@ function TarotInner() {
               <div key={`e${i}`} style={{ width: '44px', height: '64px', borderRadius: '7px', background: '#1f1f1d', border: '1px dashed rgba(255,255,255,0.15)' }} />
             ))}
           </div>
+          {picked.length >= spread.count && (
+            <button onClick={() => setStep('reveal')}
+              style={{ width: '100%', padding: '13px', borderRadius: '12px', marginTop: '16px', background: 'linear-gradient(135deg,#3C3489,#FAC775)', border: 'none', color: '#1a1a18', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}>
+              뒤집으러 가기 →
+            </button>
+          )}
         </div>
       )}
 
@@ -320,23 +344,23 @@ function TarotInner() {
 
       {step === 'result' && interp && (
         <div style={{ padding: '18px 16px' }}>
-          <div style={{ fontSize: '17px', fontWeight: 'bold', color: gold, marginBottom: '16px', lineHeight: 1.5, textAlign: 'center' }}>"{interp.title}"</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: gold, marginBottom: '18px', lineHeight: 1.6, textAlign: 'center' }}>"{interp.title}"</div>
           {interp.cards?.map((c, i) => (
-            <div key={i} style={{ borderLeft: `3px solid ${gold}`, padding: '4px 12px', marginBottom: '16px' }}>
-              <div style={{ fontSize: '12px', color: gold, marginBottom: '4px' }}>{c.position} — {c.name} ({c.direction})</div>
-              <div style={{ fontSize: '14px', color: '#e0dce8', lineHeight: 1.8 }}>{c.meaning}</div>
+            <div key={i} style={{ borderLeft: `3px solid ${gold}`, padding: '4px 14px', marginBottom: '18px' }}>
+              <div style={{ fontSize: '14px', color: gold, marginBottom: '6px', fontWeight: 600 }}>{c.position} — {c.name} ({c.direction})</div>
+              <div style={{ fontSize: '15px', color: '#e8e4f2', lineHeight: 1.9 }}>{c.meaning}</div>
             </div>
           ))}
           {interp.summary && (
-            <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px', marginBottom: '14px' }}>
-              <div style={{ fontSize: '12px', color: gold, marginBottom: '6px' }}>전체 흐름</div>
-              <div style={{ fontSize: '14px', color: '#e0dce8', lineHeight: 1.8 }}>{interp.summary}</div>
+            <div style={{ background: cardBg, border, borderRadius: '14px', padding: '16px', marginBottom: '14px' }}>
+              <div style={{ fontSize: '14px', color: gold, marginBottom: '8px', fontWeight: 600 }}>전체 흐름</div>
+              <div style={{ fontSize: '15px', color: '#e8e4f2', lineHeight: 1.9 }}>{interp.summary}</div>
             </div>
           )}
           {interp.advice && (
-            <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
-              <div style={{ fontSize: '12px', color: gold, marginBottom: '6px' }}>조언</div>
-              <div style={{ fontSize: '14px', color: '#e0dce8', lineHeight: 1.8 }}>{interp.advice}</div>
+            <div style={{ background: cardBg, border, borderRadius: '14px', padding: '16px', marginBottom: '18px' }}>
+              <div style={{ fontSize: '14px', color: gold, marginBottom: '8px', fontWeight: 600 }}>조언</div>
+              <div style={{ fontSize: '15px', color: '#e8e4f2', lineHeight: 1.9 }}>{interp.advice}</div>
             </div>
           )}
           <button onClick={() => router.push('/manseryeok/consulting')}
