@@ -6,6 +6,7 @@ import ConsultationList from './components/ConsultationList'
 import ConsultantChat from './components/ConsultantChat'
 import ConsultantSajuTab from './components/ConsultantSajuTab'
 import CustomerAiAnalysis from './components/CustomerAiAnalysis'
+import ConsultantMulsang from './components/ConsultantMulsang'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -46,6 +47,7 @@ const PANEL_DEFS = [
   { id: 'list',     icon: '📋', label: '상담목록', defaultW: 240, defaultH: 500 },
   { id: 'chat',     icon: '💬', label: '채팅',     defaultW: 420, defaultH: 500 },
   { id: 'ai',       icon: '🔮', label: 'AI분석',   defaultW: 300, defaultH: 500 },
+  { id: 'mulsang',  icon: '🖼️', label: '물상도',   defaultW: 320, defaultH: 520 },
   { id: 'schedule', icon: '📅', label: '일정',     defaultW: 320, defaultH: 400 },
   { id: 'settle',   icon: '💰', label: '정산',     defaultW: 320, defaultH: 400 },
   { id: 'memo',     icon: '📝', label: '메모',     defaultW: 280, defaultH: 360 },
@@ -55,6 +57,7 @@ const PANEL_DEFAULT_SETTINGS = {
   list:     { bgColor: '#1a1a24', fontSize: 13, titleSize: 12 },
   chat:     { bgColor: '#13131e', myBubble: '#3d3488', customerBubble: '#2a2a3a', fontSize: 13, titleSize: 12 },
   ai:       { bgColor: '#1a1a24', fontSize: 13, titleSize: 12 },
+  mulsang:  { bgColor: '#1a1a24', fontSize: 13, titleSize: 12 },
   schedule: { bgColor: '#1a1a24', fontSize: 13, titleSize: 12 },
   settle:   { bgColor: '#1a1a24', fontSize: 13, titleSize: 12 },
   memo:     { bgColor: '#1a1a24', fontSize: 13, titleSize: 12 },
@@ -240,6 +243,15 @@ function ConsultantContent() {
                 <span style={{fontSize:'11px', color:'#5555aa'}}>고객 선택 시 표시됩니다</span>
               </div>
             )}
+          </div>
+        )
+      case 'mulsang':
+        return (
+          <div style={{flex:1, overflowY:'auto', padding:'12px', background:ps.bgColor, fontSize:ps.fontSize+'px'}}>
+            <ConsultantMulsang
+              consultationId={selectedConsultation?.id ?? null}
+              fontSize={ps.fontSize}
+            />
           </div>
         )
       case 'schedule':
