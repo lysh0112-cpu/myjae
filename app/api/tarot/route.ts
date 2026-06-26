@@ -25,6 +25,34 @@ interface Body {
   consultationId?: number | null
 }
 
+interface InterpCard { position: string; name: string; direction: string; meaning: string }
+interface Interp { title: string; cards: InterpCard[]; summary: string; advice: string }
+
+// 깨진 응답이 와도 화면에 JSON 덩어리가 그대로 보이지 않도록 안전하게 정리
+function safeParse(raw: string, body: Body): Interp {
+  const clean = raw.replace(/```json|```/g, '').trim()
+  try {
+    const obj = JSON.parse(clean)
+    return {
+      title: typeof obj.title === 'string' ? obj.title : '타로 리딩',
+      cards: Array.isArray(obj.cards) ? obj.cards : [],
+      summary: typeof obj.summary === 'string' ? obj.summary : '',
+      advice: typeof obj.advice === 'string' ? obj.advice : '',
+    }
+  } catch {
+    // JSON이 잘리거나 깨진 경우: 카드 자리만이라도 채우고, 덩어리 글자는 숨긴다
+    return {
+      title: '타로 리딩',
+      cards: body.cards.map(c => ({
+        position: c.position, name: c.name, direction: c.direction,
+        meaning: `${c.keyword}의 기운이 느껴지는 자리입니다.`,
+      })),
+      summary: '카드 해석을 정리하는 데 잠시 어려움이 있었어요. 다시 한 번 시도해 주시면 더 또렷한 해석을 들려드릴게요.',
+      advice: '바로 아래 "새로운 질문하기"로 다시 뽑아보시거나, 전문가 상담으로 더 깊은 이야기를 들어보셔도 좋아요.',
+    }
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as Body
@@ -38,7 +66,7 @@ export async function POST(req: Request) {
       .map((c, i) => `${i + 1}. [${c.position}] ${c.name} (${c.direction}) — 핵심: ${c.keyword}`)
       .join('\n')
 
-    let interpretation: Record<string, unknown> | null = null
+    let interpretation: Interp | null = null
 
     // ---------- AI 모드: Claude 해석 생성 ----------
     if (body.mode === 'ai') {
@@ -50,6 +78,7 @@ export async function POST(req: Request) {
 - 고객의 질문에 직접 답하세요. 일반론이 아니라 이 질문에 대한 답으로 각 카드를 풀어주세요.
 - 각 카드의 '자리(위치)'와 '정/역 방향'을 반영하세요. 같은 카드라도 자리와 방향에 따라 의미가 달라집니다.
 - 어려운 용어보다 쉽고 따뜻한 말로. 마크다운 기호(##, **)는 쓰지 마세요.
+- 카드가 많을 때는 각 카드 meaning을 너무 길게 쓰지 말고 2문장 정도로 간결히 쓰세요. (전체가 잘리지 않도록)
 
 [고객의 질문]
 ${body.question}
@@ -63,7 +92,7 @@ ${cardLines}
 {
   "title": "이 리딩을 한 줄로 담은 제목",
   "cards": [
-    { "position": "자리 이름", "name": "카드 이름", "direction": "정방향 또는 역방향", "meaning": "이 자리에서 이 카드가 질문에 답하는 의미 2~3문장" }
+    { "position": "자리 이름", "name": "카드 이름", "direction": "정방향 또는 역방향", "meaning": "이 자리에서 이 카드가 질문에 답하는 의미 2문장" }
   ],
   "summary": "카드들을 엮은 전체 흐름 2~3문장",
   "advice": "질문에 대한 실질적이고 희망적인 조언 2~3문장"
@@ -82,17 +111,32 @@ ${cardLines}
             },
             body: JSON.stringify({
               model: 'claude-sonnet-4-6',
-              max_tokens: 2000,
+              max_tokens: 8000,
               messages: [{ role: 'user', content: prompt }],
             }),
           })
           const cData = await cRes.json()
           const rawText = cData.content?.find((c: { type: string }) => c.type === 'text')?.text || '{}'
-          const clean = rawText.replace(/```json|```/g, '').trim()
-          try { interpretation = JSON.parse(clean) } catch { interpretation = { title: '타로 리딩', cards: [], summary: clean.slice(0, 300), advice: '' } }
+          interpretation = safeParse(rawText, body)
         } catch (e) {
           console.error('claude error:', e)
+          interpretation = safeParse('', body)
         }
+      } else {
+        interpretation = safeParse('', body)
+      }
+    }
+
+    // ---------- 상담사 모드: 해석 없이 안내 메시지 ----------
+    if (body.mode === 'consultant') {
+      interpretation = {
+        title: '카드를 모두 뽑았습니다',
+        cards: body.cards.map(c => ({
+          position: c.position, name: c.name, direction: c.direction,
+          meaning: '전문가 상담에서 이 카드의 의미를 자세히 풀어드립니다.',
+        })),
+        summary: '뽑으신 카드가 상담사에게 전달되었습니다. 전문가가 직접 해석해 드립니다.',
+        advice: '아래 버튼으로 전문가 상담을 신청해 주세요.',
       }
     }
 
@@ -116,19 +160,6 @@ ${cardLines}
         savedId = data?.id ?? null
       } catch (e) {
         console.error('tarot insert error:', e)
-      }
-    }
-
-    // 상담사 모드: 해석 없이, 안내 메시지를 결과로
-    if (body.mode === 'consultant') {
-      interpretation = {
-        title: '카드를 모두 뽑았습니다',
-        cards: body.cards.map(c => ({
-          position: c.position, name: c.name, direction: c.direction,
-          meaning: '전문가 상담에서 이 카드의 의미를 자세히 풀어드립니다.',
-        })),
-        summary: '뽑으신 카드가 상담사에게 전달되었습니다. 전문가가 직접 해석해 드립니다.',
-        advice: '아래 버튼으로 전문가 상담을 신청해 주세요.',
       }
     }
 
