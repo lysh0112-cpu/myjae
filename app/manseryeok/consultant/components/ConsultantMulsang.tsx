@@ -26,41 +26,34 @@ export default function ConsultantMulsang({
   fontSize?: number
 }) {
   const [loading, setLoading] = useState(false)
-  const [row, setRow] = useState<MulsangRow | null>(null)
-  const [notFound, setNotFound] = useState(false)
+  const [rows, setRows] = useState<MulsangRow[]>([])
 
   useEffect(() => {
     if (!consultationId) {
-      setRow(null)
-      setNotFound(false)
+      setRows([])
       return
     }
     setLoading(true)
-    setNotFound(false)
-    // 이 상담에 연결된 물상도 그림 찾기 (나중에 연결되면 자동으로 표시됨)
     supabase
       .from('mulsang_images')
       .select('id, image_url, commentary, style, created_at')
       .eq('consultation_id', consultationId)
-      .order('created_at', { ascending: false })
-      .limit(1)
+      .order('created_at', { ascending: true })
       .then(({ data }) => {
-        if (data && data.length > 0) {
-          setRow(data[0] as MulsangRow)
-        } else {
-          setNotFound(true)
-        }
+        setRows((data as MulsangRow[]) || [])
         setLoading(false)
       })
   }, [consultationId])
 
   const gold = '#FAC775'
+  const cardBg = 'rgba(255,255,255,0.06)'
+  const textColor = '#e8e2f5'
 
   if (!consultationId) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: '8px' }}>
         <span style={{ fontSize: '24px' }}>🖼️</span>
-        <span style={{ fontSize: '11px', color: '#5555aa' }}>고객 선택 시 표시됩니다</span>
+        <span style={{ fontSize: '11px', color: '#8a88b0' }}>고객 선택 시 표시됩니다</span>
       </div>
     )
   }
@@ -73,38 +66,57 @@ export default function ConsultantMulsang({
     )
   }
 
-  if (notFound || !row) {
+  if (rows.length === 0) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: '8px', padding: '20px', textAlign: 'center' }}>
         <span style={{ fontSize: '24px' }}>🖼️</span>
-        <span style={{ fontSize: '11px', color: '#5555aa' }}>이 고객의 물상도 그림이<br />아직 없습니다</span>
+        <span style={{ fontSize: '11px', color: '#8a88b0' }}>이 고객의 물상도 그림이<br />아직 없습니다</span>
       </div>
     )
   }
 
-  const c = row.commentary || {}
+  const mainCommentary = rows.find(r => r.commentary)?.commentary || {}
+
+  const styleLabel = (style: string | null) => {
+    if (style === 'ghibli') return '지브리풍'
+    if (style === 'oriental') return '수묵담채화'
+    return style || '그림'
+  }
 
   return (
-    <div style={{ fontSize: fontSize + 'px', color: '#d8d0f0' }}>
-      {row.image_url && (
-        <img src={row.image_url} alt="물상도" style={{ width: '100%', borderRadius: '8px', marginBottom: '10px', display: 'block' }} />
-      )}
-      {c.title && (
-        <div style={{ fontSize: (fontSize + 2) + 'px', fontWeight: 'bold', color: gold, marginBottom: '10px', lineHeight: 1.5 }}>
-          "{c.title}"
-        </div>
-      )}
-      {[
-        { label: '주인공 (나)', text: c.subject },
-        { label: '환경', text: c.environment },
-        { label: '핵심 에너지 (용신)', text: c.yongsin },
-        { label: '삶의 조언', text: c.advice },
-      ].filter(s => s.text).map((s, i) => (
-        <div key={i} style={{ borderLeft: `3px solid ${gold}`, padding: '2px 10px', marginBottom: '12px' }}>
-          <div style={{ fontSize: (fontSize - 1) + 'px', color: gold, marginBottom: '3px' }}>{s.label}</div>
-          <div style={{ lineHeight: 1.7 }}>{s.text}</div>
-        </div>
+    <div style={{ fontSize: fontSize + 'px', color: textColor }}>
+      {rows.map((row, i) => (
+        row.image_url && (
+          <div key={row.id} style={{ marginBottom: '12px' }}>
+            <div style={{ fontSize: (fontSize - 2) + 'px', color: gold, marginBottom: '4px' }}>
+              {styleLabel(row.style)} {rows.length > 1 ? `(${i + 1}/${rows.length})` : ''}
+            </div>
+            <img src={row.image_url} alt="물상도" style={{ width: '100%', borderRadius: '8px', display: 'block', border: '1px solid rgba(255,255,255,0.1)' }} />
+            <div style={{ textAlign: 'right', marginTop: '4px' }}>
+              <a href={row.image_url} download={`mulsang_${i + 1}.png`} style={{ fontSize: (fontSize - 2) + 'px', color: gold, textDecoration: 'none' }}>⬇ 저장</a>
+            </div>
+          </div>
+        )
       ))}
+
+      <div style={{ background: cardBg, borderRadius: '10px', padding: '12px', border: '1px solid rgba(250,199,117,0.15)' }}>
+        {mainCommentary.title && (
+          <div style={{ fontSize: (fontSize + 2) + 'px', fontWeight: 'bold', color: gold, marginBottom: '10px', lineHeight: 1.5 }}>
+            "{mainCommentary.title}"
+          </div>
+        )}
+        {[
+          { label: '주인공 (나)', text: mainCommentary.subject },
+          { label: '환경', text: mainCommentary.environment },
+          { label: '핵심 에너지 (용신)', text: mainCommentary.yongsin },
+          { label: '삶의 조언', text: mainCommentary.advice },
+        ].filter(s => s.text).map((s, i) => (
+          <div key={i} style={{ borderLeft: `3px solid ${gold}`, padding: '2px 10px', marginBottom: '12px' }}>
+            <div style={{ fontSize: (fontSize - 1) + 'px', color: gold, marginBottom: '3px' }}>{s.label}</div>
+            <div style={{ lineHeight: 1.7, color: textColor }}>{s.text}</div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
