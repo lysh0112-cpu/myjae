@@ -1,5 +1,4 @@
 import Link from 'next/link'
-
 const SERVICES = [
   {
     icon: '💕',
@@ -35,11 +34,10 @@ const SERVICES = [
     target: '신규',
     targetStyle: { background: 'rgba(156,39,176,0.15)', color: '#ce93d8' },
     desc: '카드가 들려주는 나의 이야기 — 78장 카드에서 직접 선택',
-    price: '준비 중',
+    price: '1장 무료 · 3장 3,000원~',
     href: '/tarot',
   },
 ]
-
 export default function ServiceCards() {
   return (
     <section className="px-4 py-5">
