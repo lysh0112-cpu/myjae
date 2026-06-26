@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import PageHeader from '@/app/components/common/PageHeader'
 
@@ -70,21 +70,16 @@ function cardsKey(picked: Picked[]): string {
 
 // 해석 전체를 읽어줄 텍스트로. 단락 사이에 쉼(…)과 짧은 안내를 넣어 자연스럽게 넘어가게 한다.
 function interpToText(interp: Interpretation): string {
-  // 마침표를 여러 개 이으면 브라우저 음성이 그만큼 더 쉰다. 단락 구분용.
   const PAUSE = '. . . '
   const parts: string[] = []
-
   if (interp.title) parts.push(`${interp.title}. ${PAUSE}`)
-
   const total = interp.cards?.length || 0
   interp.cards?.forEach((c, i) => {
     const order = total > 1 ? `${i + 1}번째 카드. ` : ''
     parts.push(`${order}${c.position}, ${c.name}, ${c.direction}. ${c.meaning} ${PAUSE}`)
   })
-
   if (interp.summary) parts.push(`${PAUSE}전체 흐름이에요. ${interp.summary} ${PAUSE}`)
   if (interp.advice) parts.push(`마지막으로, 조언이에요. ${interp.advice}`)
-
   return parts.join(' ')
 }
 
@@ -106,6 +101,7 @@ function TarotInner() {
   const [interpKey, setInterpKey] = useState<string>('')
   const [hasHistory, setHasHistory] = useState(false)
   const [speaking, setSpeaking] = useState(false)
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([])
 
   const spread = SPREADS.find(s => s.id === spreadId) || SPREADS[1]
   const fullyDrawn = picked.length > 0 && picked.length === spread.count
@@ -121,6 +117,16 @@ function TarotInner() {
     setHasHistory(loadHistory().length > 0)
   }, [])
 
+  // 음성 목소리 미리 불러오기 (안드로이드는 준비에 시간이 걸려 onvoiceschanged로 받음)
+  useEffect(() => {
+    const synth = typeof window !== 'undefined' ? window.speechSynthesis : null
+    if (!synth) return
+    const loadVoices = () => { voicesRef.current = synth.getVoices() }
+    loadVoices()
+    synth.onvoiceschanged = loadVoices
+    return () => { try { synth.onvoiceschanged = null } catch {} }
+  }, [])
+
   function stopSpeak() {
     try { window.speechSynthesis?.cancel() } catch {}
     setSpeaking(false)
@@ -132,17 +138,22 @@ function TarotInner() {
     if (step !== 'result') stopSpeak()
   }, [step])
 
-  // 브라우저 내장 음성으로 해석 읽어주기 (무료)
-  function toggleSpeak() {
+  // 한국어 목소리 고르기 (없으면 기본 목소리)
+  function pickKoreanVoice(): SpeechSynthesisVoice | null {
+    const voices = voicesRef.current.length ? voicesRef.current : (window.speechSynthesis?.getVoices() || [])
+    if (!voices.length) return null
+    const ko = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('ko'))
+    return ko || null
+  }
+
+  // 실제로 읽기 시작
+  function speakNow() {
     if (!interp) return
     const synth = window.speechSynthesis
-    if (!synth) {
-      alert('이 기기에서는 음성 읽기를 지원하지 않아요.')
-      return
-    }
-    if (speaking) { stopSpeak(); return }
     const text = interpToText(interp)
     const u = new SpeechSynthesisUtterance(text)
+    const voice = pickKoreanVoice()
+    if (voice) u.voice = voice
     u.lang = 'ko-KR'
     u.rate = 0.95
     u.pitch = 1.0
@@ -151,6 +162,38 @@ function TarotInner() {
     synth.cancel()
     synth.speak(u)
     setSpeaking(true)
+  }
+
+  // 듣기/멈추기. 목소리가 아직 준비 안 됐으면 잠깐 기다렸다 읽는다.
+  function toggleSpeak() {
+    if (!interp) return
+    const synth = window.speechSynthesis
+    if (!synth) {
+      alert('이 기기에서는 음성 읽기를 지원하지 않아요.')
+      return
+    }
+    if (speaking) { stopSpeak(); return }
+
+    // 목소리가 준비됐으면 바로, 아니면 잠깐 기다렸다 읽기
+    if (voicesRef.current.length || synth.getVoices().length) {
+      speakNow()
+    } else {
+      setSpeaking(true)
+      let tries = 0
+      const timer = setInterval(() => {
+        tries++
+        const v = synth.getVoices()
+        if (v.length) {
+          voicesRef.current = v
+          clearInterval(timer)
+          speakNow()
+        } else if (tries >= 10) { // 약 2초 기다려도 없으면 포기
+          clearInterval(timer)
+          setSpeaking(false)
+          alert('이 기기에서는 음성 읽기를 지원하지 않아요.')
+        }
+      }, 200)
+    }
   }
 
   function showLastReading() {
