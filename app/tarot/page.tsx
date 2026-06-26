@@ -84,10 +84,13 @@ function TarotInner() {
   const [picked, setPicked] = useState<Picked[]>([])
   const [loading, setLoading] = useState(false)
   const [interp, setInterp] = useState<Interpretation | null>(null)
-  const [interpKey, setInterpKey] = useState<string>('')   // 이 해석이 어떤 카드로 만들어졌는지 기억
+  const [interpKey, setInterpKey] = useState<string>('')
   const [hasHistory, setHasHistory] = useState(false)
 
   const spread = SPREADS.find(s => s.id === spreadId) || SPREADS[1]
+
+  // 이미 이 기법의 카드를 다 뽑았는지
+  const fullyDrawn = picked.length > 0 && picked.length === spread.count
 
   useEffect(() => {
     fetch('/api/tarot/cards')
@@ -100,14 +103,13 @@ function TarotInner() {
     setHasHistory(loadHistory().length > 0)
   }, [])
 
-  // 헤더 ← 화살표: 한 단계씩 뒤로. 카드/해석은 초기화하지 않고 그대로 둔다.
   function goBack() {
     if (step === 'result') { setStep('reveal'); return }
     if (step === 'reveal') { setStep('draw'); return }
     if (step === 'draw') { setStep('spread'); return }
     if (step === 'spread') { setStep('deck'); return }
     if (step === 'deck') { setStep('question'); return }
-    router.push('/') // question 단계
+    router.push('/')
   }
 
   function showLastReading() {
@@ -126,10 +128,11 @@ function TarotInner() {
     setUsesReversed(data.deck?.usesReversed ?? true)
   }
 
+  // 기법 화면에서 '카드 펼치기'. 뽑은 수가 기법과 다르면(기법 바꿨거나 처음) 새로 시작.
   function startDraw() {
-    if (picked.length === 0 || picked.length !== spread.count) {
+    if (picked.length !== spread.count) {
       setPicked([])
-      setInterp(null)      // 새로 뽑을 거라 기존 해석 비움
+      setInterp(null)
       setInterpKey('')
     }
     setStep('draw')
@@ -154,13 +157,11 @@ function TarotInner() {
   const allFlipped = picked.length > 0 && picked.every(p => p.flipped)
 
   async function getInterpretation() {
-    // 물상도처럼: 이미 같은 카드로 만든 해석이 있으면 새로 만들지 않고 그대로 보여준다
     const key = cardsKey(picked)
     if (interp && interpKey === key) {
       setStep('result')
       return
     }
-
     setLoading(true)
     try {
       const res = await fetch('/api/tarot', {
@@ -190,12 +191,10 @@ function TarotInner() {
     }
   }
 
-  // 완전 초기화 (새로운 질문하기 전용)
   function startNew() {
     setQuestion(''); setPicked([]); setInterp(null); setInterpKey(''); setStep('question')
   }
 
-  // 이미 만들어둔 해석이 지금 카드와 같은지 (버튼 문구용)
   const hasCachedInterp = interp !== null && interpKey === cardsKey(picked)
 
   return (
@@ -298,29 +297,51 @@ function TarotInner() {
 
       {step === 'draw' && (
         <div style={{ padding: '18px 16px' }}>
-          <p style={{ color: gold, fontSize: '14px', textAlign: 'center', marginBottom: '6px' }}>마음이 이끄는 카드를 눌러주세요</p>
-          <p style={{ color: '#8a88a0', fontSize: '12px', textAlign: 'center', marginBottom: '16px' }}>{picked.length} / {spread.count} 장 선택됨</p>
-          <div style={{ position: 'relative', height: '150px', overflow: 'hidden', borderRadius: '14px', background: '#111', border }}>
-            <div style={{ display: 'flex', gap: '8px', padding: '15px 0', width: 'max-content', animation: 'slideLeft 10s linear infinite' }}>
-              {[...Array(24)].map((_, i) => (
-                <div key={i} onClick={drawOne}
-                  style={{ flex: '0 0 80px', height: '118px', borderRadius: '10px', background: 'linear-gradient(135deg,#3C3489,#2C2C2A)', border: '1px solid rgba(250,199,117,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: gold, fontSize: '26px' }}>✦</div>
-              ))}
+          {fullyDrawn ? (
+            // 이미 이 기법의 카드를 다 뽑은 상태: 흘러가는 더미 대신 안내 + 뒤집으러 가기
+            <div style={{ textAlign: 'center', paddingTop: '10px' }}>
+              <div style={{ fontSize: '30px', marginBottom: '12px' }}>🔮</div>
+              <p style={{ color: gold, fontSize: '15px', marginBottom: '6px' }}>이미 카드를 다 뽑으셨어요</p>
+              <p style={{ color: '#8a88a0', fontSize: '12px', lineHeight: 1.7, marginBottom: '18px' }}>
+                뽑으신 {spread.count}장이 그대로 있어요.<br />
+                뒤집어 해석을 보거나, 새 카드로 다시 보고 싶으면 아래에서 선택하세요.
+              </p>
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '22px', flexWrap: 'wrap' }}>
+                {picked.map((p, i) => (
+                  <div key={i} style={{ width: '44px', height: '64px', borderRadius: '7px', background: cardBg, border: '1px solid rgba(250,199,117,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: gold, fontSize: '13px' }}>{i + 1}</div>
+                ))}
+              </div>
+              <button onClick={() => setStep('reveal')}
+                style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'linear-gradient(135deg,#3C3489,#FAC775)', border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '10px' }}>
+                뒤집으러 가기 →
+              </button>
+              <button onClick={() => { setPicked([]); setInterp(null); setInterpKey('') }}
+                style={{ width: '100%', padding: '13px', borderRadius: '12px', background: cardBg, border, color: '#8a88a0', fontSize: '14px', cursor: 'pointer' }}>
+                새 카드로 다시 뽑기
+              </button>
             </div>
-          </div>
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '16px', flexWrap: 'wrap' }}>
-            {picked.map((p, i) => (
-              <div key={i} style={{ width: '44px', height: '64px', borderRadius: '7px', background: cardBg, border: '1px solid rgba(250,199,117,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: gold, fontSize: '13px' }}>{i + 1}</div>
-            ))}
-            {[...Array(Math.max(0, spread.count - picked.length))].map((_, i) => (
-              <div key={`e${i}`} style={{ width: '44px', height: '64px', borderRadius: '7px', background: '#1f1f1d', border: '1px dashed rgba(255,255,255,0.15)' }} />
-            ))}
-          </div>
-          {picked.length >= spread.count && (
-            <button onClick={() => setStep('reveal')}
-              style={{ width: '100%', padding: '13px', borderRadius: '12px', marginTop: '16px', background: 'linear-gradient(135deg,#3C3489,#FAC775)', border: 'none', color: '#1a1a18', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}>
-              뒤집으러 가기 →
-            </button>
+          ) : (
+            // 아직 다 안 뽑음: 평소대로 카드를 흘려보내며 선택
+            <>
+              <p style={{ color: gold, fontSize: '14px', textAlign: 'center', marginBottom: '6px' }}>마음이 이끄는 카드를 눌러주세요</p>
+              <p style={{ color: '#8a88a0', fontSize: '12px', textAlign: 'center', marginBottom: '16px' }}>{picked.length} / {spread.count} 장 선택됨</p>
+              <div style={{ position: 'relative', height: '150px', overflow: 'hidden', borderRadius: '14px', background: '#111', border }}>
+                <div style={{ display: 'flex', gap: '8px', padding: '15px 0', width: 'max-content', animation: 'slideLeft 10s linear infinite' }}>
+                  {[...Array(24)].map((_, i) => (
+                    <div key={i} onClick={drawOne}
+                      style={{ flex: '0 0 80px', height: '118px', borderRadius: '10px', background: 'linear-gradient(135deg,#3C3489,#2C2C2A)', border: '1px solid rgba(250,199,117,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: gold, fontSize: '26px' }}>✦</div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '16px', flexWrap: 'wrap' }}>
+                {picked.map((p, i) => (
+                  <div key={i} style={{ width: '44px', height: '64px', borderRadius: '7px', background: cardBg, border: '1px solid rgba(250,199,117,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: gold, fontSize: '13px' }}>{i + 1}</div>
+                ))}
+                {[...Array(Math.max(0, spread.count - picked.length))].map((_, i) => (
+                  <div key={`e${i}`} style={{ width: '44px', height: '64px', borderRadius: '7px', background: '#1f1f1d', border: '1px dashed rgba(255,255,255,0.15)' }} />
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
