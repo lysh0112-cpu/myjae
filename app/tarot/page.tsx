@@ -64,6 +64,11 @@ function saveToHistory(item: HistoryItem) {
   } catch {}
 }
 
+// 뽑은 카드들을 한 줄 문자열로 (같은 카드인지 비교하는 열쇠)
+function cardsKey(picked: Picked[]): string {
+  return picked.map(p => `${p.card.id}${p.reversed ? 'R' : 'U'}@${p.position}`).join('|')
+}
+
 type Step = 'question' | 'deck' | 'spread' | 'draw' | 'reveal' | 'result'
 
 function TarotInner() {
@@ -79,6 +84,7 @@ function TarotInner() {
   const [picked, setPicked] = useState<Picked[]>([])
   const [loading, setLoading] = useState(false)
   const [interp, setInterp] = useState<Interpretation | null>(null)
+  const [interpKey, setInterpKey] = useState<string>('')   // 이 해석이 어떤 카드로 만들어졌는지 기억
   const [hasHistory, setHasHistory] = useState(false)
 
   const spread = SPREADS.find(s => s.id === spreadId) || SPREADS[1]
@@ -94,8 +100,7 @@ function TarotInner() {
     setHasHistory(loadHistory().length > 0)
   }, [])
 
-  // 헤더 ← 화살표: 한 단계씩 뒤로. 카드/상태는 초기화하지 않고 그대로 둔다.
-  // question 에서 뒤로 가면 홈으로.
+  // 헤더 ← 화살표: 한 단계씩 뒤로. 카드/해석은 초기화하지 않고 그대로 둔다.
   function goBack() {
     if (step === 'result') { setStep('reveal'); return }
     if (step === 'reveal') { setStep('draw'); return }
@@ -122,9 +127,10 @@ function TarotInner() {
   }
 
   function startDraw() {
-    // 기법을 바꿔 다시 들어온 게 아니라면(이미 뽑은 카드 수가 맞으면) 유지
     if (picked.length === 0 || picked.length !== spread.count) {
       setPicked([])
+      setInterp(null)      // 새로 뽑을 거라 기존 해석 비움
+      setInterpKey('')
     }
     setStep('draw')
   }
@@ -148,6 +154,13 @@ function TarotInner() {
   const allFlipped = picked.length > 0 && picked.every(p => p.flipped)
 
   async function getInterpretation() {
+    // 물상도처럼: 이미 같은 카드로 만든 해석이 있으면 새로 만들지 않고 그대로 보여준다
+    const key = cardsKey(picked)
+    if (interp && interpKey === key) {
+      setStep('result')
+      return
+    }
+
     setLoading(true)
     try {
       const res = await fetch('/api/tarot', {
@@ -165,6 +178,7 @@ function TarotInner() {
       const data = await res.json()
       if (data.interpretation) {
         setInterp(data.interpretation)
+        setInterpKey(key)
         setStep('result')
         saveToHistory({ interp: data.interpretation, question, savedAt: Date.now() })
         setHasHistory(true)
@@ -178,8 +192,11 @@ function TarotInner() {
 
   // 완전 초기화 (새로운 질문하기 전용)
   function startNew() {
-    setQuestion(''); setPicked([]); setInterp(null); setStep('question')
+    setQuestion(''); setPicked([]); setInterp(null); setInterpKey(''); setStep('question')
   }
+
+  // 이미 만들어둔 해석이 지금 카드와 같은지 (버튼 문구용)
+  const hasCachedInterp = interp !== null && interpKey === cardsKey(picked)
 
   return (
     <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
@@ -336,7 +353,7 @@ function TarotInner() {
               style={{ width: '100%', padding: '14px', borderRadius: '12px', marginTop: '22px', background: 'linear-gradient(135deg,#3C3489,#FAC775)', border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 'bold', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
               {loading
                 ? <><span style={{ animation: 'spin 1s linear infinite' }}>✦</span> {TAROT_MODE === 'ai' ? '카드를 읽는 중...' : '결과를 정리하는 중...'}</>
-                : (TAROT_MODE === 'ai' ? '🔮 해석 보기' : '🔮 상담사에게 해석 요청하기')}
+                : (hasCachedInterp ? '🔮 해석 다시 보기' : (TAROT_MODE === 'ai' ? '🔮 해석 보기' : '🔮 상담사에게 해석 요청하기'))}
             </button>
           )}
         </div>
