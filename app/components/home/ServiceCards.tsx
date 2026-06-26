@@ -1,4 +1,7 @@
+'use client'
 import Link from 'next/link'
+import { useState } from 'react'
+
 const SERVICES = [
   {
     icon: '💕',
@@ -31,53 +34,74 @@ const SERVICES = [
   {
     icon: '🃏',
     name: '타로 카드 리딩',
-    target: '신규',
-    targetStyle: { background: 'rgba(156,39,176,0.15)', color: '#ce93d8' },
-    desc: '카드가 들려주는 나의 이야기 — 78장 카드에서 직접 선택',
+    target: '국내 유일',
+    targetStyle: { background: 'rgba(156,39,176,0.18)', color: '#ce93d8' },
+    desc: '78장의 카드, 당신에게 건네는 메시지',
     price: '1장 무료 · 3장 3,000원~',
     href: '/tarot',
   },
 ]
+
 export default function ServiceCards() {
+  const [hovered, setHovered] = useState<string | null>(null)
+
   return (
     <section className="px-4 py-5">
       <h2 className="text-base font-bold text-white mb-4">핵심 서비스</h2>
       <div className="grid grid-cols-2 gap-3">
-        {SERVICES.map((s) => (
-          <Link key={s.name} href={s.href}>
-            <div
-              className="rounded-2xl p-4 h-full transition-all active:scale-95"
-              style={{ background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.12)' }}
-            >
-              <div className="text-2xl mb-2">{s.icon}</div>
-              <div className="text-sm font-bold text-white mb-1">{s.name}</div>
+        {SERVICES.map((s) => {
+          const isHover = hovered === s.name
+          return (
+            <Link key={s.name} href={s.href}>
               <div
-                className="inline-block px-2 py-0.5 rounded-full font-semibold mb-2"
-                style={{ fontSize: '10px', ...s.targetStyle }}
+                onMouseEnter={() => setHovered(s.name)}
+                onMouseLeave={() => setHovered(null)}
+                className="rounded-2xl p-4 h-full active:scale-95"
+                style={{
+                  background: isHover
+                    ? 'linear-gradient(160deg, #34322f 0%, #2C2C2A 100%)'
+                    : '#2C2C2A',
+                  border: isHover
+                    ? '1px solid rgba(250,199,117,0.55)'
+                    : '1px solid rgba(250,199,117,0.12)',
+                  boxShadow: isHover
+                    ? '0 10px 26px rgba(0,0,0,0.45), 0 0 18px rgba(250,199,117,0.18)'
+                    : '0 1px 3px rgba(0,0,0,0.25)',
+                  transform: isHover ? 'translateY(-4px) scale(1.03)' : 'translateY(0) scale(1)',
+                  transition: 'transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, background 0.25s ease',
+                  cursor: 'pointer',
+                }}
               >
-                {s.target}
-              </div>
-              {s.subTitle && (
-                <p style={{
-                  color: '#f48fb1',
-                  fontSize: '11px',
-                  fontStyle: 'italic',
-                  fontWeight: 300,
-                  marginBottom: '4px',
-                  letterSpacing: '0.3px',
-                }}>
-                  {s.subTitle}
+                <div className="text-2xl mb-2">{s.icon}</div>
+                <div className="text-sm font-bold text-white mb-1">{s.name}</div>
+                <div
+                  className="inline-block px-2 py-0.5 rounded-full font-semibold mb-2"
+                  style={{ fontSize: '10px', ...s.targetStyle }}
+                >
+                  {s.target}
+                </div>
+                {s.subTitle && (
+                  <p style={{
+                    color: '#f48fb1',
+                    fontSize: '11px',
+                    fontStyle: 'italic',
+                    fontWeight: 300,
+                    marginBottom: '4px',
+                    letterSpacing: '0.3px',
+                  }}>
+                    {s.subTitle}
+                  </p>
+                )}
+                <p style={{ color: '#8a88a0', fontSize: '11px', lineHeight: '1.5' }}>
+                  {s.desc}
                 </p>
-              )}
-              <p style={{ color: '#8a88a0', fontSize: '11px', lineHeight: '1.5' }}>
-                {s.desc}
-              </p>
-              <p style={{ color: '#FAC775', fontSize: '11px', fontWeight: 600, marginTop: '6px' }}>
-                {s.price}
-              </p>
-            </div>
-          </Link>
-        ))}
+                <p style={{ color: '#FAC775', fontSize: '11px', fontWeight: 600, marginTop: '6px' }}>
+                  {s.price}
+                </p>
+              </div>
+            </Link>
+          )
+        })}
       </div>
     </section>
   )
