@@ -30,7 +30,7 @@ const SERVICES = [
     targetStyle: { background: 'rgba(255,152,0,0.15)', color: '#ffcc80' },
     desc: '사주 조화와 용신에 맞는 이름 분석 및 현대적이고 세련된 개명 서비스',
     price: '분석 → 9,900원~ (전문가 개명 추천 별도)',
-    href: '/naming',
+    href: '/manseryeok/naming',
   },
   {
     icon: '🃏',
