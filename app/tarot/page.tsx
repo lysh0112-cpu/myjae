@@ -64,9 +64,20 @@ function saveToHistory(item: HistoryItem) {
   } catch {}
 }
 
-// 뽑은 카드들을 한 줄 문자열로 (같은 카드인지 비교하는 열쇠)
 function cardsKey(picked: Picked[]): string {
   return picked.map(p => `${p.card.id}${p.reversed ? 'R' : 'U'}@${p.position}`).join('|')
+}
+
+// 해석 전체를 읽어줄 한 덩어리 텍스트로
+function interpToText(interp: Interpretation): string {
+  const parts: string[] = []
+  if (interp.title) parts.push(interp.title)
+  interp.cards?.forEach(c => {
+    parts.push(`${c.position}, ${c.name}, ${c.direction}. ${c.meaning}`)
+  })
+  if (interp.summary) parts.push(`전체 흐름. ${interp.summary}`)
+  if (interp.advice) parts.push(`조언. ${interp.advice}`)
+  return parts.join('. ')
 }
 
 type Step = 'question' | 'deck' | 'spread' | 'draw' | 'reveal' | 'result'
@@ -86,10 +97,9 @@ function TarotInner() {
   const [interp, setInterp] = useState<Interpretation | null>(null)
   const [interpKey, setInterpKey] = useState<string>('')
   const [hasHistory, setHasHistory] = useState(false)
+  const [speaking, setSpeaking] = useState(false)
 
   const spread = SPREADS.find(s => s.id === spreadId) || SPREADS[1]
-
-  // 이미 이 기법의 카드를 다 뽑았는지
   const fullyDrawn = picked.length > 0 && picked.length === spread.count
 
   useEffect(() => {
@@ -103,13 +113,37 @@ function TarotInner() {
     setHasHistory(loadHistory().length > 0)
   }, [])
 
-  function goBack() {
-    if (step === 'result') { setStep('reveal'); return }
-    if (step === 'reveal') { setStep('draw'); return }
-    if (step === 'draw') { setStep('spread'); return }
-    if (step === 'spread') { setStep('deck'); return }
-    if (step === 'deck') { setStep('question'); return }
-    router.push('/')
+  // 화면을 떠나거나 단계가 바뀌면 읽기 멈춤
+  function stopSpeak() {
+    try { window.speechSynthesis?.cancel() } catch {}
+    setSpeaking(false)
+  }
+  useEffect(() => {
+    return () => { try { window.speechSynthesis?.cancel() } catch {} }
+  }, [])
+  useEffect(() => {
+    if (step !== 'result') stopSpeak()
+  }, [step])
+
+  // 브라우저 내장 음성으로 해석 읽어주기 (무료)
+  function toggleSpeak() {
+    if (!interp) return
+    const synth = window.speechSynthesis
+    if (!synth) {
+      alert('이 기기에서는 음성 읽기를 지원하지 않아요.')
+      return
+    }
+    if (speaking) { stopSpeak(); return }
+    const text = interpToText(interp)
+    const u = new SpeechSynthesisUtterance(text)
+    u.lang = 'ko-KR'
+    u.rate = 0.95
+    u.pitch = 1.0
+    u.onend = () => setSpeaking(false)
+    u.onerror = () => setSpeaking(false)
+    synth.cancel()
+    synth.speak(u)
+    setSpeaking(true)
   }
 
   function showLastReading() {
@@ -128,12 +162,9 @@ function TarotInner() {
     setUsesReversed(data.deck?.usesReversed ?? true)
   }
 
-  // 기법 화면에서 '카드 펼치기'. 뽑은 수가 기법과 다르면(기법 바꿨거나 처음) 새로 시작.
   function startDraw() {
     if (picked.length !== spread.count) {
-      setPicked([])
-      setInterp(null)
-      setInterpKey('')
+      setPicked([]); setInterp(null); setInterpKey('')
     }
     setStep('draw')
   }
@@ -158,10 +189,7 @@ function TarotInner() {
 
   async function getInterpretation() {
     const key = cardsKey(picked)
-    if (interp && interpKey === key) {
-      setStep('result')
-      return
-    }
+    if (interp && interpKey === key) { setStep('result'); return }
     setLoading(true)
     try {
       const res = await fetch('/api/tarot', {
@@ -192,6 +220,7 @@ function TarotInner() {
   }
 
   function startNew() {
+    stopSpeak()
     setQuestion(''); setPicked([]); setInterp(null); setInterpKey(''); setStep('question')
   }
 
@@ -201,7 +230,14 @@ function TarotInner() {
     <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
       <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
         @keyframes slideLeft{from{transform:translateX(0)}to{transform:translateX(-50%)}}`}</style>
-      <PageHeader title="타로 카드 리딩" onBack={goBack} />
+      <PageHeader title="타로 카드 리딩" onBack={() => {
+        if (step === 'result') { setStep('reveal'); return }
+        if (step === 'reveal') { setStep('draw'); return }
+        if (step === 'draw') { setStep('spread'); return }
+        if (step === 'spread') { setStep('deck'); return }
+        if (step === 'deck') { setStep('question'); return }
+        router.push('/')
+      }} />
 
       {step === 'question' && (
         <div style={{ padding: '22px 16px', textAlign: 'center' }}>
@@ -298,7 +334,6 @@ function TarotInner() {
       {step === 'draw' && (
         <div style={{ padding: '18px 16px' }}>
           {fullyDrawn ? (
-            // 이미 이 기법의 카드를 다 뽑은 상태: 흘러가는 더미 대신 안내 + 뒤집으러 가기
             <div style={{ textAlign: 'center', paddingTop: '10px' }}>
               <div style={{ fontSize: '30px', marginBottom: '12px' }}>🔮</div>
               <p style={{ color: gold, fontSize: '15px', marginBottom: '6px' }}>이미 카드를 다 뽑으셨어요</p>
@@ -321,7 +356,6 @@ function TarotInner() {
               </button>
             </div>
           ) : (
-            // 아직 다 안 뽑음: 평소대로 카드를 흘려보내며 선택
             <>
               <p style={{ color: gold, fontSize: '14px', textAlign: 'center', marginBottom: '6px' }}>마음이 이끄는 카드를 눌러주세요</p>
               <p style={{ color: '#8a88a0', fontSize: '12px', textAlign: 'center', marginBottom: '16px' }}>{picked.length} / {spread.count} 장 선택됨</p>
@@ -373,8 +407,8 @@ function TarotInner() {
             <button onClick={getInterpretation} disabled={loading}
               style={{ width: '100%', padding: '14px', borderRadius: '12px', marginTop: '22px', background: 'linear-gradient(135deg,#3C3489,#FAC775)', border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 'bold', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
               {loading
-                ? <><span style={{ animation: 'spin 1s linear infinite' }}>✦</span> {TAROT_MODE === 'ai' ? '카드를 읽는 중...' : '결과를 정리하는 중...'}</>
-                : (hasCachedInterp ? '🔮 해석 다시 보기' : (TAROT_MODE === 'ai' ? '🔮 해석 보기' : '🔮 상담사에게 해석 요청하기'))}
+                ? <><span style={{ animation: 'spin 1s linear infinite' }}>✦</span> 카드를 읽는 중...</>
+                : (hasCachedInterp ? '🔮 해석 다시 보기' : '🔮 해석 보기')}
             </button>
           )}
         </div>
@@ -382,7 +416,14 @@ function TarotInner() {
 
       {step === 'result' && interp && (
         <div style={{ padding: '18px 16px' }}>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: gold, marginBottom: '18px', lineHeight: 1.6, textAlign: 'center' }}>"{interp.title}"</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: gold, marginBottom: '16px', lineHeight: 1.6, textAlign: 'center' }}>"{interp.title}"</div>
+
+          {/* 🔊 해석 듣기 (무료: 브라우저 내장 음성) */}
+          <button onClick={toggleSpeak}
+            style={{ width: '100%', padding: '12px', borderRadius: '12px', marginBottom: '18px', background: speaking ? 'rgba(250,199,117,0.15)' : 'transparent', border: `1px solid ${gold}`, color: gold, fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
+            {speaking ? '⏸ 읽기 멈추기' : '🔊 해석 듣기'}
+          </button>
+
           {interp.cards?.map((c, i) => (
             <div key={i} style={{ borderLeft: `3px solid ${gold}`, padding: '4px 14px', marginBottom: '18px' }}>
               <div style={{ fontSize: '14px', color: gold, marginBottom: '6px', fontWeight: 600 }}>{c.position} — {c.name} ({c.direction})</div>
@@ -401,10 +442,14 @@ function TarotInner() {
               <div style={{ fontSize: '15px', color: '#e8e4f2', lineHeight: 1.9 }}>{interp.advice}</div>
             </div>
           )}
+
+          {/* 나중에 상담사 연결이 필요해지면 아래 주석을 풀어 되살리면 됨
           <button onClick={() => router.push('/manseryeok/consulting')}
             style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'transparent', border: `1px solid ${gold}`, color: gold, fontSize: '14px', fontWeight: 500, cursor: 'pointer', marginBottom: '10px' }}>
             🔮 이 결과로 전문가와 상담하기 →
           </button>
+          */}
+
           <button onClick={startNew}
             style={{ width: '100%', padding: '13px', borderRadius: '12px', background: cardBg, border, color: '#8a88a0', fontSize: '14px', cursor: 'pointer' }}>
             새로운 질문하기
