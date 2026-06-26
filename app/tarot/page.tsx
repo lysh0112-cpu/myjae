@@ -68,16 +68,24 @@ function cardsKey(picked: Picked[]): string {
   return picked.map(p => `${p.card.id}${p.reversed ? 'R' : 'U'}@${p.position}`).join('|')
 }
 
-// 해석 전체를 읽어줄 한 덩어리 텍스트로
+// 해석 전체를 읽어줄 텍스트로. 단락 사이에 쉼(…)과 짧은 안내를 넣어 자연스럽게 넘어가게 한다.
 function interpToText(interp: Interpretation): string {
+  // 마침표를 여러 개 이으면 브라우저 음성이 그만큼 더 쉰다. 단락 구분용.
+  const PAUSE = '. . . '
   const parts: string[] = []
-  if (interp.title) parts.push(interp.title)
-  interp.cards?.forEach(c => {
-    parts.push(`${c.position}, ${c.name}, ${c.direction}. ${c.meaning}`)
+
+  if (interp.title) parts.push(`${interp.title}. ${PAUSE}`)
+
+  const total = interp.cards?.length || 0
+  interp.cards?.forEach((c, i) => {
+    const order = total > 1 ? `${i + 1}번째 카드. ` : ''
+    parts.push(`${order}${c.position}, ${c.name}, ${c.direction}. ${c.meaning} ${PAUSE}`)
   })
-  if (interp.summary) parts.push(`전체 흐름. ${interp.summary}`)
-  if (interp.advice) parts.push(`조언. ${interp.advice}`)
-  return parts.join('. ')
+
+  if (interp.summary) parts.push(`${PAUSE}전체 흐름이에요. ${interp.summary} ${PAUSE}`)
+  if (interp.advice) parts.push(`마지막으로, 조언이에요. ${interp.advice}`)
+
+  return parts.join(' ')
 }
 
 type Step = 'question' | 'deck' | 'spread' | 'draw' | 'reveal' | 'result'
@@ -113,7 +121,6 @@ function TarotInner() {
     setHasHistory(loadHistory().length > 0)
   }, [])
 
-  // 화면을 떠나거나 단계가 바뀌면 읽기 멈춤
   function stopSpeak() {
     try { window.speechSynthesis?.cancel() } catch {}
     setSpeaking(false)
