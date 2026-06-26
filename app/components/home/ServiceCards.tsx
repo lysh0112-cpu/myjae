@@ -2,15 +2,14 @@
 import Link from 'next/link'
 import { useState } from 'react'
 
-// name 안에 \n 을 넣으면 그 자리에서 제목이 줄바꿈된다.
-// 예) '내 사주가\n그림이 된다면?'  →  "내 사주가" 다음 줄에 "그림이 된다면?"
+// name / subTitle 안에 \n 을 넣으면 그 자리에서 줄바꿈된다.
 const SERVICES = [
   {
     icon: '💕',
     name: '궁합 분석',
     target: '커플·연인용',
     targetStyle: { background: 'rgba(233,30,99,0.18)', color: '#f48fb1' },
-    subTitle: '나의 인연, 어디쯤 오고 있을까?',
+    subTitle: '나의 인연,\n어디쯤 오고 있을까?',
     desc: '두 사람 궁합 분석 (외국인 포함 연인·미혼·돌싱)',
     price: '9,900원~',
     href: '/manseryeok/couple-input',
@@ -90,6 +89,8 @@ export default function ServiceCards() {
                     fontWeight: 300,
                     marginBottom: '4px',
                     letterSpacing: '0.3px',
+                    whiteSpace: 'pre-line',
+                    lineHeight: 1.5,
                   }}>
                     {s.subTitle}
                   </p>
