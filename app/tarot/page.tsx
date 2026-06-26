@@ -260,7 +260,7 @@ function TarotInner() {
           <p style={{ color: gold, fontSize: '14px', textAlign: 'center', marginBottom: '6px' }}>마음이 이끄는 카드를 눌러주세요</p>
           <p style={{ color: '#8a88a0', fontSize: '12px', textAlign: 'center', marginBottom: '16px' }}>{picked.length} / {spread.count} 장 선택됨</p>
           <div style={{ position: 'relative', height: '150px', overflow: 'hidden', borderRadius: '14px', background: '#111', border }}>
-            <div style={{ display: 'flex', gap: '8px', padding: '15px 0', width: 'max-content', animation: 'slideLeft 18s linear infinite' }}>
+            <div style={{ display: 'flex', gap: '8px', padding: '15px 0', width: 'max-content', animation: 'slideLeft 10s linear infinite' }}>
               {[...Array(24)].map((_, i) => (
                 <div key={i} onClick={drawOne}
                   style={{ flex: '0 0 80px', height: '118px', borderRadius: '10px', background: 'linear-gradient(135deg,#3C3489,#2C2C2A)', border: '1px solid rgba(250,199,117,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: gold, fontSize: '26px' }}>✦</div>
