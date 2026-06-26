@@ -2,6 +2,8 @@
 import Link from 'next/link'
 import { useState } from 'react'
 
+// name 안에 \n 을 넣으면 그 자리에서 제목이 줄바꿈된다.
+// 예) '내 사주가\n그림이 된다면?'  →  "내 사주가" 다음 줄에 "그림이 된다면?"
 const SERVICES = [
   {
     icon: '💕',
@@ -15,7 +17,7 @@ const SERVICES = [
   },
   {
     icon: '🎨',
-    name: '내 사주가 그림이 된다면?',
+    name: '내 사주가\n그림이 된다면?',
     target: '국내 유일',
     targetStyle: { background: 'rgba(76,175,80,0.15)', color: '#81c784' },
     desc: '사주 8글자 → 수묵화 풍경화 생성',
@@ -73,7 +75,7 @@ export default function ServiceCards() {
                 }}
               >
                 <div className="text-2xl mb-2">{s.icon}</div>
-                <div className="text-sm font-bold text-white mb-1">{s.name}</div>
+                <div className="text-sm font-bold text-white mb-1" style={{ whiteSpace: 'pre-line', lineHeight: 1.35 }}>{s.name}</div>
                 <div
                   className="inline-block px-2 py-0.5 rounded-full font-semibold mb-2"
                   style={{ fontSize: '10px', ...s.targetStyle }}
