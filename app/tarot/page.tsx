@@ -5,19 +5,21 @@ import PageHeader from '@/app/components/common/PageHeader'
 
 const TAROT_MODE: 'ai' | 'consultant' = 'ai'
 
+// 해석 기법 + 가격 (지금은 화면 표시용. 결제는 아직 미연동 → 실제로는 전부 무료 작동)
+// 나중에 결제 붙으면 startDraw 직전에 price 보고 결제창 띄우면 됨.
 const SPREADS = [
-  { id: 'one', count: 1, title: '한 장 뽑기', badge: '무료',
+  { id: 'one', count: 1, title: '한 장 뽑기', badge: '1회 무료 · 이후 2,000원',
     desc: '지금 가장 궁금한 한 가지에, 카드 한 장이 답합니다.',
-    positions: ['오늘의 메시지'], free: true },
-  { id: 'three', count: 3, title: '세 장 뽑기', badge: '과거·현재·미래',
+    positions: ['오늘의 메시지'], price: 2000, freeFirst: true },
+  { id: 'three', count: 3, title: '세 장 뽑기', badge: '3,000원',
     desc: '시간의 흐름을 따라, 일이 어떻게 흘러갈지 읽습니다.',
-    positions: ['과거', '현재', '미래'], free: false },
-  { id: 'four', count: 4, title: '네 장 뽑기', badge: '현재·원인·조언·결과',
+    positions: ['과거', '현재', '미래'], price: 3000, freeFirst: false },
+  { id: 'four', count: 4, title: '네 장 뽑기', badge: '5,000원',
     desc: '지금 상황의 원인부터 나아갈 길까지 짚어봅니다.',
-    positions: ['현재', '원인', '조언', '결과'], free: false },
-  { id: 'celtic', count: 10, title: '열 장 뽑기', badge: '켈틱 크로스 · 프리미엄',
+    positions: ['현재', '원인', '조언', '결과'], price: 5000, freeFirst: false },
+  { id: 'celtic', count: 10, title: '열 장 뽑기', badge: '켈틱 크로스 · 10,000원',
     desc: '하나의 고민을 열 가지 각도로 깊이 파고듭니다.',
-    positions: ['현재 상황', '장애물', '먼 과거', '가까운 과거', '가능한 미래', '가까운 미래', '나의 태도', '주변 환경', '희망과 두려움', '최종 결과'], free: false },
+    positions: ['현재 상황', '장애물', '먼 과거', '가까운 과거', '가능한 미래', '가까운 미래', '나의 태도', '주변 환경', '희망과 두려움', '최종 결과'], price: 10000, freeFirst: false },
 ]
 
 const CATEGORY_CHIPS = [
@@ -107,6 +109,7 @@ function TarotInner() {
     setUsesReversed(data.deck?.usesReversed ?? true)
   }
 
+  // 카드 펼치기. 나중에 결제 붙으면 여기서 spread.price 보고 결제창 띄움 (지금은 전부 무료 작동)
   function startDraw() { setPicked([]); setStep('draw') }
 
   function drawOne() {
@@ -241,15 +244,18 @@ function TarotInner() {
                 style={{ background: cardBg, border: selected ? '1px solid rgba(250,199,117,0.4)' : '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '14px', marginBottom: '10px', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
                   <span style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>{s.title}</span>
-                  <span style={{ background: s.free ? 'rgba(76,175,80,0.15)' : 'rgba(250,199,117,0.15)', color: s.free ? '#81c784' : gold, fontSize: '10px', padding: '3px 9px', borderRadius: '20px' }}>{s.badge}</span>
+                  <span style={{ background: s.freeFirst ? 'rgba(76,175,80,0.15)' : 'rgba(250,199,117,0.15)', color: s.freeFirst ? '#81c784' : gold, fontSize: '10px', padding: '3px 9px', borderRadius: '20px' }}>{s.badge}</span>
                   {selected && <span style={{ marginLeft: 'auto', color: gold }}>✓</span>}
                 </div>
                 <p style={{ color: '#8a88a0', fontSize: '12px', margin: 0, lineHeight: 1.6 }}>{s.desc}</p>
               </div>
             )
           })}
+          <p style={{ color: '#6a6878', fontSize: '11px', textAlign: 'center', margin: '4px 0 12px' }}>
+            * 오픈 기념 체험 기간 — 지금은 모두 무료로 보실 수 있어요
+          </p>
           <button onClick={startDraw}
-            style={{ width: '100%', padding: '14px', borderRadius: '12px', marginTop: '8px', background: 'linear-gradient(135deg,#3C3489,#FAC775)', border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' }}>
+            style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'linear-gradient(135deg,#3C3489,#FAC775)', border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' }}>
             카드 펼치기 →
           </button>
         </div>
