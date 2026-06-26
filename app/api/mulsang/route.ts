@@ -8,9 +8,11 @@ interface Body {
   prompt: string
   dayStem: string
   dayElement: string
-  strongElement: string
   yongsin: string
   season: string
+  seasonKo?: string   // 계절(한글)
+  hourKo?: string     // 시간대(한글) — 예: "한낮(午시)"
+  sceneDesc?: string  // 그림에 실제로 그려진 풍경 요약
   styleLabel: string
   style: string
   sajuText: string
@@ -29,25 +31,33 @@ export async function POST(req: Request) {
       : null
 
     // ---------- 1) Claude 해설 생성 ----------
-    const commentaryPrompt = `당신은 따뜻한 명리학 전문가입니다.
-아래 사주를 "자연 풍경"으로 풀어 설명하는 해설을 작성하세요.
-어려운 한자 용어 대신, 그림 속 풍경에 빗대어 직관적으로 풀어주세요.
-마크다운 기호(##, **, ---)는 절대 쓰지 마세요.
+    const commentaryPrompt = `당신은 따뜻하면서도 정직한 명리학 전문가입니다.
+아래 사주를 "자연 풍경 그림"에 빗대어 해설합니다. 이 해설은 고객이 돈을 내고 받는 결과물입니다.
 
+[매우 중요한 원칙]
+- 100% 좋은 사주도, 100% 나쁜 사주도 없습니다. 사실(팩트)은 정확하게 설명하되, 그 안에서 강점과 가능성을 찾아 희망적으로 풀어주세요.
+- 무조건 "좋습니다"라고 하지 마세요. 또한 쓸쓸하거나 처량하게 끝내지도 마세요. 사실을 인정하되 나아갈 방향을 제시하는 것이 전문가의 역할입니다.
+- 아래 '그림에 그려진 풍경'과 반드시 일치하게 설명하세요. 그림에 없는 것(예: 그림은 등불인데 태양이라고 하기, 그림에 없는 소나무를 언급하기)을 지어내지 마세요.
+- 시간과 계절을 혼동하지 마세요. 아래 명시된 계절과 시간대를 정확히 사용하세요.
+- 어려운 한자 용어보다 풍경에 빗댄 직관적 표현을 쓰세요. 마크다운 기호(##, **, ---)는 절대 쓰지 마세요.
+
+[이 사람의 정보]
 사주: ${body.sajuText}
-일간(주인공): ${body.dayStem}(${body.dayElement})
-가장 강한 기운(환경): ${body.strongElement}
-용신(핵심 에너지): ${body.yongsin}
-계절: ${body.season}
-화풍: ${body.styleLabel}
+일간(그림의 주인공): ${body.dayStem}
+태어난 계절: ${body.seasonKo || body.season}
+태어난 시간대: ${body.hourKo || '시간 정보 없음'}
+용신(가장 필요한 기운): ${body.yongsin}
 
-아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
+[그림에 실제로 그려진 풍경]
+${body.sceneDesc || body.prompt}
+
+위 '그림에 그려진 풍경'과 일치하도록, 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
 {
-  "title": "이 풍경화의 제목 (예: 새벽녘 활기찬 정원)",
-  "subject": "주인공(일간) 해설 2~3문장 — 그림 중앙의 대상이 곧 당신",
-  "environment": "환경(강한 오행) 해설 2~3문장 — 당신을 둘러싼 풍경의 의미",
-  "yongsin": "핵심 에너지(용신) 해설 2~3문장 — 그림 속 따뜻한 빛/물/땅의 의미",
-  "advice": "삶의 조언 2~3문장 — 따뜻하고 희망적으로"
+  "title": "이 풍경화의 제목 (그림 분위기와 맞게)",
+  "subject": "주인공(일간) 해설 2~3문장 — 그림 속 주인공 대상이 곧 당신. 그림에 그려진 그대로 설명",
+  "environment": "주변 풍경(다른 기운들) 해설 2~3문장 — 그림에 그려진 만큼만 설명. 사실대로, 강점 중심으로",
+  "yongsin": "핵심 에너지(용신) 해설 2~3문장 — 그림 속 따뜻한 빛/물/땅의 의미와 그것이 주는 도움",
+  "advice": "삶의 조언 2~3문장 — 팩트를 인정하되 희망적이고 실질적으로"
 }`
 
     let commentary: Record<string, string> = {
