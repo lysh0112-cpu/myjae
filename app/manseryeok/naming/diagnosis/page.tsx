@@ -444,7 +444,6 @@ function DiagnosisInner() {
                   </div>
                 </div>
 
-                {/* 개명 연결 — 더 좋은 이름 찾기 (개명 방식 선택 화면으로) */}
                 <div style={{ background: 'linear-gradient(160deg,#34322f 0%,#2C2C2A 100%)', border: `1px solid ${gold}`, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
                   <div style={{ fontSize: '12px', color: '#f48fb1', fontStyle: 'italic', marginBottom: '8px', lineHeight: 1.5 }}>
                     {result.overallGrade !== '좋음'
@@ -472,14 +471,14 @@ function DiagnosisInner() {
           onClick={() => { setPickerIdx(null); setHanjaList([]) }}
           style={{
             position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-            display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px',
           }}>
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              width: '100%', maxWidth: '430px', background: '#222220',
-              borderRadius: '20px 20px 0 0', padding: '20px 16px 30px',
-              maxHeight: '75vh', display: 'flex', flexDirection: 'column',
+              width: '100%', maxWidth: '400px', background: '#222220',
+              borderRadius: '18px', padding: '20px 16px', boxShadow: '0 16px 40px rgba(0,0,0,0.5)',
+              maxHeight: '80vh', display: 'flex', flexDirection: 'column',
             }}>
             <div style={{ fontSize: '15px', fontWeight: 'bold', color: gold, marginBottom: '14px' }}>
               {slotLabels[pickerIdx]} — 한자 고르기
@@ -509,25 +508,27 @@ function DiagnosisInner() {
                   '{pickerHangul}' 음의 인명용 한자를 찾을 수 없어요
                 </div>
               )}
-              {hanjaList.map((row, i) => (
-                <div key={i}
-                  onClick={() => pickHanja(row)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '14px', padding: '12px',
-                    borderRadius: '12px', background: '#2C2C2A', marginBottom: '8px', cursor: 'pointer',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                  }}>
-                  <span style={{ fontSize: '30px', fontWeight: 'bold', color: gold, minWidth: '40px', textAlign: 'center' }}>
-                    {row.hanja}
-                  </span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '14px', color: '#e8e4ff' }}>{row.meaning}</div>
-                    <div style={{ fontSize: '12px', color: '#8a88a0', marginTop: '2px' }}>
-                      {row.resource_ohaeng}오행 · {row.strokes}획
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                {hanjaList.map((row, i) => (
+                  <div key={i}
+                    onClick={() => pickHanja(row)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
+                      borderRadius: '12px', background: '#2C2C2A', cursor: 'pointer',
+                      border: '1px solid rgba(255,255,255,0.05)',
+                    }}>
+                    <span style={{ fontSize: '26px', fontWeight: 'bold', color: gold, minWidth: '32px', textAlign: 'center' }}>
+                      {row.hanja}
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', color: '#e8e4ff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.meaning}</div>
+                      <div style={{ fontSize: '11px', color: '#8a88a0', marginTop: '2px' }}>
+                        {row.resource_ohaeng}·{row.strokes}획
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>
