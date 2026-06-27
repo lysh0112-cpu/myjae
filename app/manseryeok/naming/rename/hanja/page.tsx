@@ -11,7 +11,7 @@ const CARD = '#2C2C2A'
 const SUB = '#8a88a0'
 const GREEN = '#81c784'
 
-const TOP_N = 6 // 추천으로 보여줄 개수
+const TOP_N = 6
 
 const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
@@ -102,6 +102,7 @@ function HanjaInner() {
     }
   }, [saju, dayStem])
   const yongsin = yong.yongsin
+  const yongsinReady = !converting && !!yongsin
 
   const givenChars = chars.slice(1)
 
@@ -141,7 +142,7 @@ function HanjaInner() {
   }, [activeIdx, chars])
 
   const scored = useMemo(() => {
-    if (activeIdx === null || hanjaList.length === 0 || !chars[0]) return []
+    if (!yongsinReady || activeIdx === null || hanjaList.length === 0 || !chars[0]) return []
     const surname: NameChar = {
       hangul: chars[0].hangul,
       hanja: chars[0].hanja,
@@ -188,9 +189,8 @@ function HanjaInner() {
       const fitsYongsin = ohaengChar(row.resource_ohaeng) === yongsin
       return { row, weighted, fitsYongsin }
     })
-  }, [activeIdx, hanjaList, chars, givenChars, chosen, yong, yongsin])
+  }, [yongsinReady, activeIdx, hanjaList, chars, givenChars, chosen, yong, yongsin])
 
-  // 추천: 용신 맞는 것 우선, 점수 높은 순. 상위 TOP_N개에 순위 부여.
   const { recommend, others } = useMemo(() => {
     if (scored.length === 0) return { recommend: [] as { row: HanjaRow; rank: number }[], others: [] as HanjaRow[] }
     const sorted = [...scored].sort((a, b) => {
@@ -225,20 +225,26 @@ function HanjaInner() {
       setHanjaList([])
       return
     }
-    const picks = targetIdxs.map((i) => ({
-      idx: i,
-      hangul: chars[i]?.hangul,
-      from: chars[i]?.hanja,
-      to: chosen[i]?.hanja,
-      meaning: chosen[i]?.meaning,
-      resourceOhaeng: chosen[i]?.resource_ohaeng,
-      strokes: chosen[i]?.strokes,
-    }))
+    const picks = targetIdxs.map((i) => {
+      const cur = chars[i]
+      const sel = chosen[i]
+      return {
+        idx: i,
+        hangul: cur?.hangul ?? '',
+        fromHanja: cur?.hanja ?? '',
+        fromMeaning: '',
+        fromOhaeng: ohaengChar(cur?.resourceOhaeng ?? ''),
+        fromStrokes: cur?.strokes ?? 0,
+        toHanja: sel?.hanja ?? '',
+        toMeaning: sel?.meaning ?? '',
+        toOhaeng: ohaengChar(sel?.resource_ohaeng ?? ''),
+        toStrokes: sel?.strokes ?? 0,
+      }
+    })
     try {
       localStorage.setItem('rename_picks_v1', JSON.stringify({ picks, yongsin }))
     } catch {}
-    const q = picks.map((p) => p.to).join('')
-    router.push('/manseryeok/naming/rename/result?hanja=' + encodeURIComponent(q))
+    router.push('/manseryeok/naming/rename/result')
   }
 
   if (chars.length === 0 || givenChars.length === 0) {
@@ -287,10 +293,11 @@ function HanjaInner() {
 
   return (
     <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       <Header router={router} />
 
       <p style={{ fontSize: 12, color: SUB, margin: '0 0 14px', padding: '0 4px', lineHeight: 1.7 }}>
-        {converting || !yongsin
+        {!yongsinReady
           ? '사주 불러오는 중…'
           : <>내 이름 <b style={{ color: '#fff' }}>{fullName}</b> · 사주에 필요한 기운은 <b style={{ color: GOLD }}>{yongsin}</b>입니다</>}
       </p>
@@ -337,15 +344,20 @@ function HanjaInner() {
 
       {activeIdx !== null && target && (
         <>
-          {(loadingList || (!yongsin && !converting)) && <div style={{ textAlign: 'center', color: SUB, padding: 24 }}>한자를 불러오는 중…</div>}
+          {(!yongsinReady || loadingList) && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '40px 0' }}>
+              <span style={{ fontSize: 34, color: GOLD, display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span>
+              <span style={{ fontSize: 13, color: SUB }}>한자를 불러오는 중…</span>
+            </div>
+          )}
 
-          {!loadingList && hanjaList.length === 0 && (
+          {yongsinReady && !loadingList && hanjaList.length === 0 && (
             <div style={{ textAlign: 'center', color: SUB, padding: 24, fontSize: 13 }}>
               &lsquo;{target.hangul}&rsquo; 음의 인명용 한자를 찾을 수 없어요
             </div>
           )}
 
-          {!loadingList && recommend.length > 0 && (
+          {yongsinReady && !loadingList && recommend.length > 0 && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: GREEN, display: 'inline-block' }} />
@@ -357,7 +369,7 @@ function HanjaInner() {
             </>
           )}
 
-          {!loadingList && others.length > 0 && (
+          {yongsinReady && !loadingList && others.length > 0 && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: SUB, display: 'inline-block' }} />
@@ -369,18 +381,20 @@ function HanjaInner() {
             </>
           )}
 
-          <div style={{ marginTop: 20, borderRadius: 16, padding: '13px 16px',
-            background: activeIdx !== null && chosen[activeIdx] ? 'rgba(250,199,117,0.16)' : CARD,
-            border: '1px solid ' + (activeIdx !== null && chosen[activeIdx] ? GOLD : 'rgba(250,199,117,0.12)'),
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, color: activeIdx !== null && chosen[activeIdx] ? GOLD : SUB }}>
-              {activeIdx !== null && chosen[activeIdx] ? '선택 : ' + chosen[activeIdx].hanja : '한자를 선택하세요'}
-            </span>
-            <button disabled={activeIdx === null || !chosen[activeIdx]} onClick={proceed}
-              style={{ fontSize: 13, fontWeight: 600, color: activeIdx !== null && chosen[activeIdx] ? GOLD : '#555', background: 'none', border: 'none', cursor: activeIdx !== null && chosen[activeIdx] ? 'pointer' : 'default' }}>
-              {count === 2 && targetIdxs.some((i) => !chosen[i] && i !== activeIdx) ? '다음 글자 →' : '이 글자로 →'}
-            </button>
-          </div>
+          {yongsinReady && !loadingList && hanjaList.length > 0 && (
+            <div style={{ marginTop: 20, borderRadius: 16, padding: '13px 16px',
+              background: activeIdx !== null && chosen[activeIdx] ? 'rgba(250,199,117,0.16)' : CARD,
+              border: '1px solid ' + (activeIdx !== null && chosen[activeIdx] ? GOLD : 'rgba(250,199,117,0.12)'),
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: activeIdx !== null && chosen[activeIdx] ? GOLD : SUB }}>
+                {activeIdx !== null && chosen[activeIdx] ? '선택 : ' + chosen[activeIdx].hanja : '한자를 선택하세요'}
+              </span>
+              <button disabled={activeIdx === null || !chosen[activeIdx]} onClick={proceed}
+                style={{ fontSize: 13, fontWeight: 600, color: activeIdx !== null && chosen[activeIdx] ? GOLD : '#555', background: 'none', border: 'none', cursor: activeIdx !== null && chosen[activeIdx] ? 'pointer' : 'default' }}>
+                {count === 2 && targetIdxs.some((i) => !chosen[i] && i !== activeIdx) ? '다음 글자 →' : '이 글자로 →'}
+              </button>
+            </div>
+          )}
         </>
       )}
     </main>
