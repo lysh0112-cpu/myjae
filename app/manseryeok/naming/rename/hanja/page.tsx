@@ -32,7 +32,6 @@ interface SavedChar {
   resourceOhaeng: string
 }
 
-// 자원오행 표기를 한 글자(목화토금수)로 정규화
 function ohaengChar(s: string): string {
   if (!s) return ''
   const t = s.trim()
@@ -141,7 +140,6 @@ function HanjaInner() {
     return () => { cancelled = true }
   }, [activeIdx, chars])
 
-  // ── 핵심: 각 후보 한자를 끼운 이름을 diagnoseName으로 채점해 점수 산출 ──
   const scored = useMemo(() => {
     if (activeIdx === null || hanjaList.length === 0 || !chars[0]) return []
     const surname: NameChar = {
@@ -150,7 +148,6 @@ function HanjaInner() {
       strokes: chars[0].strokes,
       resourceOhaeng: ohaengChar(chars[0].resourceOhaeng),
     }
-    // 현재 이름자들을 NameChar로 (이미 고른 다른 자리 반영)
     const baseGiven: NameChar[] = givenChars.map((c, gi) => {
       const idx = gi + 1
       const pick = chosen[idx]
@@ -193,18 +190,18 @@ function HanjaInner() {
     })
   }, [activeIdx, hanjaList, chars, givenChars, chosen, yong, yongsin])
 
-  // 추천: 용신 맞는 것 우선, 그 안에서 점수 높은 순. 상위 TOP_N개.
+  // 추천: 용신 맞는 것 우선, 점수 높은 순. 상위 TOP_N개에 순위 부여.
   const { recommend, others } = useMemo(() => {
-    if (scored.length === 0) return { recommend: [] as HanjaRow[], others: [] as HanjaRow[] }
+    if (scored.length === 0) return { recommend: [] as { row: HanjaRow; rank: number }[], others: [] as HanjaRow[] }
     const sorted = [...scored].sort((a, b) => {
       if (a.fitsYongsin !== b.fitsYongsin) return a.fitsYongsin ? -1 : 1
       if (b.weighted !== a.weighted) return b.weighted - a.weighted
       return a.row.strokes - b.row.strokes
     })
-    // 용신 맞는 후보만 추천 대상으로, 그중 상위 TOP_N
     const fitSorted = sorted.filter((s) => s.fitsYongsin)
-    const rec = (fitSorted.length > 0 ? fitSorted : sorted).slice(0, TOP_N).map((s) => s.row)
-    const recSet = new Set(rec.map((r) => r.hanja + r.strokes))
+    const recSrc = (fitSorted.length > 0 ? fitSorted : sorted).slice(0, TOP_N)
+    const rec = recSrc.map((s, i) => ({ row: s.row, rank: i + 1 }))
+    const recSet = new Set(rec.map((r) => r.row.hanja + r.row.strokes))
     const oth = sorted.map((s) => s.row).filter((r) => !recSet.has(r.hanja + r.strokes))
     return { recommend: rec, others: oth }
   }, [scored, yongsin])
@@ -264,7 +261,7 @@ function HanjaInner() {
   const fullName = chars.map((c) => c.hanja).join('')
   const target = activeIdx !== null ? chars[activeIdx] : null
 
-  const cell = (x: HanjaRow, fit: boolean) => {
+  const cell = (x: HanjaRow, fit: boolean, rank?: number) => {
     const isCurrent = target && x.hanja === target.hanja
     const on = activeIdx !== null && chosen[activeIdx]?.hanja === x.hanja
     return (
@@ -273,6 +270,12 @@ function HanjaInner() {
           background: on ? 'rgba(250,199,117,0.16)' : CARD,
           border: '1px solid ' + (on ? GOLD : 'rgba(250,199,117,0.12)'),
           opacity: isCurrent && !on ? 0.55 : 1, cursor: 'pointer', transition: 'transform 0.15s ease' }}>
+        {rank !== undefined && (
+          <span style={{ position: 'absolute', top: 4, left: 6, fontSize: 10, fontWeight: 700, color: '#1a1a18',
+            background: GOLD, borderRadius: '50%', width: 16, height: 16, lineHeight: '16px', textAlign: 'center' }}>
+            {rank}
+          </span>
+        )}
         {fit && <span style={{ position: 'absolute', top: 4, right: 6, fontSize: 10, color: GREEN }}>{'\u2713'}</span>}
         <div style={{ fontSize: 24, fontWeight: 600, color: on ? GOLD : '#fff', lineHeight: 1.1 }}>{x.hanja}</div>
         <div style={{ fontSize: 10, color: SUB, marginTop: 3 }}>{x.meaning}</div>
@@ -346,10 +349,10 @@ function HanjaInner() {
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: GREEN, display: 'inline-block' }} />
-                <span style={{ fontSize: 11, color: SUB }}>사주(용신 {yongsin})에 맞는 추천 · 상위 {recommend.length}</span>
+                <span style={{ fontSize: 11, color: SUB }}>사주(용신 {yongsin})에 맞는 추천 · 좋은 순서 {recommend.length}개</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 16 }}>
-                {recommend.map((x) => cell(x, true))}
+                {recommend.map((r) => cell(r.row, true, r.rank))}
               </div>
             </>
           )}
