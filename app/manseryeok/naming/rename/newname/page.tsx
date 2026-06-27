@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 
 const GOLD = '#FAC775'
@@ -19,7 +19,7 @@ export default function NewNamePage() {
     router.push('/manseryeok/naming/rename/hanja?count=2&newname=' + encodeURIComponent(name))
   }
 
-  const inputStyle = {
+  const inputStyle: CSSProperties = {
     width: 48, height: 46, textAlign: 'center', fontSize: 18,
     borderRadius: 10, border: '1px solid ' + GOLD,
     background: 'rgba(250,199,117,0.08)', color: '#fff',
