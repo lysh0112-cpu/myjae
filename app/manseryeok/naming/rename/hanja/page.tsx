@@ -8,7 +8,9 @@ const CARD = '#2C2C2A'
 const SUB = '#8a88a0'
 const GREEN = '#81c784'
 
-const SAMPLE = [
+type HanjaItem = { h: string; m: string; fit: boolean; cur?: boolean }
+
+const SAMPLE: HanjaItem[] = [
   { h: '娟', m: '예쁠', fit: true },
   { h: '演', m: '펼', fit: true },
   { h: '沇', m: '물흐를', fit: true },
@@ -27,12 +29,12 @@ function HanjaInner() {
   const router = useRouter()
   const sp = useSearchParams()
   const count = sp.get('count') || '1'
-  const [picked, setPicked] = useState(null)
+  const [picked, setPicked] = useState<string | null>(null)
 
   const fit = SAMPLE.filter((x) => x.fit)
   const rest = SAMPLE.filter((x) => !x.fit)
 
-  const cell = (x) => {
+  const cell = (x: HanjaItem) => {
     const on = picked === x.h
     return (
       <button key={x.h} onClick={() => setPicked(x.h)} className="active:scale-95"
