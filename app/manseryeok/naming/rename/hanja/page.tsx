@@ -4,11 +4,14 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsin } from '@/lib/saju/yongsin'
 import { supabase } from '@/lib/supabase'
+import { diagnoseName, type NameChar, type Grade } from '@/lib/saju/naming'
 
 const GOLD = '#FAC775'
 const CARD = '#2C2C2A'
 const SUB = '#8a88a0'
 const GREEN = '#81c784'
+
+const TOP_N = 6 // 추천으로 보여줄 개수
 
 const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
@@ -29,7 +32,7 @@ interface SavedChar {
   resourceOhaeng: string
 }
 
-// 용신/자원오행 표기를 한 글자(목화토금수)로 정규화
+// 자원오행 표기를 한 글자(목화토금수)로 정규화
 function ohaengChar(s: string): string {
   if (!s) return ''
   const t = s.trim()
@@ -41,19 +44,21 @@ function ohaengChar(s: string): string {
   return t
 }
 
+function gradeNum(g: Grade): number {
+  return g === '좋음' ? 2 : g === '보통' ? 1 : 0
+}
+
 function HanjaInner() {
   const router = useRouter()
   const sp = useSearchParams()
   const count = sp.get('count') === '2' ? 2 : 1
 
-  // 사주 정보 (myinfo에서 직접 로딩 — diagnosis와 동일)
   const [info, setInfo] = useState<{
     gender: string; calType: string
     year: number; month: number; day: number
     leapMonth: string; hourIdx: number | null
   } | null>(null)
 
-  // 본인 이름 (naming_last_result_v1의 chars에서 복원)
   const [chars, setChars] = useState<SavedChar[]>([])
 
   useEffect(() => {
@@ -88,41 +93,34 @@ function HanjaInner() {
     info?.hourIdx ?? null,
   )
 
-  // 용신 계산
-  const yongsin = useMemo(() => {
-    if (!saju || !dayStem) return ''
+  const yong = useMemo(() => {
+    if (!saju || !dayStem) return { yongsin: '', heeksin: '', score: {} as Record<string, number> }
     try {
-      return ohaengChar(calcYongsin(saju, dayStem).yongsin)
+      const y = calcYongsin(saju, dayStem)
+      return { yongsin: ohaengChar(y.yongsin), heeksin: ohaengChar(y.heeksin), score: y.score }
     } catch {
-      return ''
+      return { yongsin: '', heeksin: '', score: {} as Record<string, number> }
     }
   }, [saju, dayStem])
+  const yongsin = yong.yongsin
 
-  // 이름자 후보 (성 제외). chars[0]=성, 나머지가 이름
   const givenChars = chars.slice(1)
 
-  // 바꿀 자리 선택 상태 (chars 기준 인덱스). count===2면 두 자리 다.
   const [targetIdxs, setTargetIdxs] = useState<number[]>([])
-  // 두 글자 모드에서 지금 고르는 순서
   const [activeIdx, setActiveIdx] = useState<number | null>(null)
-
-  // 각 자리에서 선택한 한자
   const [chosen, setChosen] = useState<Record<number, HanjaRow>>({})
 
-  // 한자 목록
   const [hanjaList, setHanjaList] = useState<HanjaRow[]>([])
   const [loadingList, setLoadingList] = useState(false)
 
-  // 두 글자 모드면 이름 두 자리 자동 지정
   useEffect(() => {
     if (count === 2 && givenChars.length >= 2) {
-      const idxs = givenChars.map((_, i) => i + 1) // chars 기준 인덱스
+      const idxs = givenChars.map((_, i) => i + 1)
       setTargetIdxs(idxs)
       setActiveIdx(idxs[0])
     }
   }, [count, givenChars.length])
 
-  // activeIdx가 정해지면 그 음의 한자 조회
   useEffect(() => {
     if (activeIdx === null) { setHanjaList([]); return }
     const target = chars[activeIdx]
@@ -143,30 +141,93 @@ function HanjaInner() {
     return () => { cancelled = true }
   }, [activeIdx, chars])
 
-  // 한 글자 모드에서 자리 선택
+  // ── 핵심: 각 후보 한자를 끼운 이름을 diagnoseName으로 채점해 점수 산출 ──
+  const scored = useMemo(() => {
+    if (activeIdx === null || hanjaList.length === 0 || !chars[0]) return []
+    const surname: NameChar = {
+      hangul: chars[0].hangul,
+      hanja: chars[0].hanja,
+      strokes: chars[0].strokes,
+      resourceOhaeng: ohaengChar(chars[0].resourceOhaeng),
+    }
+    // 현재 이름자들을 NameChar로 (이미 고른 다른 자리 반영)
+    const baseGiven: NameChar[] = givenChars.map((c, gi) => {
+      const idx = gi + 1
+      const pick = chosen[idx]
+      const src = pick
+        ? { hangul: chars[idx].hangul, hanja: pick.hanja, strokes: pick.strokes, resourceOhaeng: pick.resource_ohaeng }
+        : chars[idx]
+      return {
+        hangul: src.hangul,
+        hanja: src.hanja,
+        strokes: src.strokes,
+        resourceOhaeng: ohaengChar(src.resourceOhaeng),
+      }
+    })
+
+    return hanjaList.map((row) => {
+      const given = baseGiven.map((g, gi) => {
+        const idx = gi + 1
+        if (idx !== activeIdx) return g
+        return {
+          hangul: row.hangul,
+          hanja: row.hanja,
+          strokes: row.strokes,
+          resourceOhaeng: ohaengChar(row.resource_ohaeng),
+        }
+      })
+      const r = diagnoseName({
+        surname,
+        given,
+        yongsin: yong.yongsin,
+        heeksin: yong.heeksin,
+        elementScore: yong.score,
+      })
+      const weighted =
+        gradeNum(r.yongsinBohwan.grade) * 3 +
+        gradeNum(r.resourceFlow.grade) * 2 +
+        gradeNum(r.suri.grade) * 1.5 +
+        gradeNum(r.soundFlow.grade) * 1
+      const fitsYongsin = ohaengChar(row.resource_ohaeng) === yongsin
+      return { row, weighted, fitsYongsin }
+    })
+  }, [activeIdx, hanjaList, chars, givenChars, chosen, yong, yongsin])
+
+  // 추천: 용신 맞는 것 우선, 그 안에서 점수 높은 순. 상위 TOP_N개.
+  const { recommend, others } = useMemo(() => {
+    if (scored.length === 0) return { recommend: [] as HanjaRow[], others: [] as HanjaRow[] }
+    const sorted = [...scored].sort((a, b) => {
+      if (a.fitsYongsin !== b.fitsYongsin) return a.fitsYongsin ? -1 : 1
+      if (b.weighted !== a.weighted) return b.weighted - a.weighted
+      return a.row.strokes - b.row.strokes
+    })
+    // 용신 맞는 후보만 추천 대상으로, 그중 상위 TOP_N
+    const fitSorted = sorted.filter((s) => s.fitsYongsin)
+    const rec = (fitSorted.length > 0 ? fitSorted : sorted).slice(0, TOP_N).map((s) => s.row)
+    const recSet = new Set(rec.map((r) => r.hanja + r.strokes))
+    const oth = sorted.map((s) => s.row).filter((r) => !recSet.has(r.hanja + r.strokes))
+    return { recommend: rec, others: oth }
+  }, [scored, yongsin])
+
   function chooseSlot(idx: number) {
     setTargetIdxs([idx])
     setActiveIdx(idx)
     setChosen({})
   }
 
-  // 한자 선택
   function pickHanja(row: HanjaRow) {
     if (activeIdx === null) return
     setChosen((prev) => ({ ...prev, [activeIdx]: row }))
   }
 
-  // 다음 자리로 or 결과로
   function proceed() {
     if (activeIdx === null || !chosen[activeIdx]) return
-    // 두 글자 모드: 아직 안 고른 자리가 있으면 그 자리로 이동
     const next = targetIdxs.find((i) => !chosen[i] && i !== activeIdx)
     if (next !== undefined) {
       setActiveIdx(next)
       setHanjaList([])
       return
     }
-    // 모두 고름 → 결과로 (선택 결과를 localStorage에 임시 저장)
     const picks = targetIdxs.map((i) => ({
       idx: i,
       hangul: chars[i]?.hangul,
@@ -183,9 +244,6 @@ function HanjaInner() {
     router.push('/manseryeok/naming/rename/result?hanja=' + encodeURIComponent(q))
   }
 
-  // ----- 화면 -----
-
-  // 이름 정보가 없으면 안내
   if (chars.length === 0 || givenChars.length === 0) {
     return (
       <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
@@ -205,20 +263,17 @@ function HanjaInner() {
 
   const fullName = chars.map((c) => c.hanja).join('')
   const target = activeIdx !== null ? chars[activeIdx] : null
-  const fitList = hanjaList.filter((x) => ohaengChar(x.resource_ohaeng) === yongsin)
-  const restList = hanjaList.filter((x) => ohaengChar(x.resource_ohaeng) !== yongsin)
 
-  const cell = (x: HanjaRow) => {
+  const cell = (x: HanjaRow, fit: boolean) => {
     const isCurrent = target && x.hanja === target.hanja
     const on = activeIdx !== null && chosen[activeIdx]?.hanja === x.hanja
-    const isFit = ohaengChar(x.resource_ohaeng) === yongsin
     return (
       <button key={x.hanja + x.strokes} onClick={() => pickHanja(x)} className="active:scale-95"
         style={{ position: 'relative', padding: '10px 4px 8px', textAlign: 'center', borderRadius: 16,
           background: on ? 'rgba(250,199,117,0.16)' : CARD,
           border: '1px solid ' + (on ? GOLD : 'rgba(250,199,117,0.12)'),
           opacity: isCurrent && !on ? 0.55 : 1, cursor: 'pointer', transition: 'transform 0.15s ease' }}>
-        {isFit && <span style={{ position: 'absolute', top: 4, right: 6, fontSize: 10, color: GREEN }}>{'\u2713'}</span>}
+        {fit && <span style={{ position: 'absolute', top: 4, right: 6, fontSize: 10, color: GREEN }}>{'\u2713'}</span>}
         <div style={{ fontSize: 24, fontWeight: 600, color: on ? GOLD : '#fff', lineHeight: 1.1 }}>{x.hanja}</div>
         <div style={{ fontSize: 10, color: SUB, marginTop: 3 }}>{x.meaning}</div>
         <div style={{ fontSize: 9, color: SUB, marginTop: 1 }}>{x.resource_ohaeng}·{x.strokes}획</div>
@@ -231,14 +286,12 @@ function HanjaInner() {
     <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
       <Header router={router} />
 
-      {/* 본인 이름 + 용신 안내 */}
       <p style={{ fontSize: 12, color: SUB, margin: '0 0 14px', padding: '0 4px', lineHeight: 1.7 }}>
         {converting || !yongsin
           ? '사주 불러오는 중…'
           : <>내 이름 <b style={{ color: '#fff' }}>{fullName}</b> · 사주에 필요한 기운은 <b style={{ color: GOLD }}>{yongsin}</b>입니다</>}
       </p>
 
-      {/* 자리 선택 (한 글자 모드) */}
       {count === 1 && (
         <>
           <div style={{ fontSize: 12, color: SUB, marginBottom: 8, padding: '0 4px' }}>바꿀 글자를 골라주세요</div>
@@ -260,7 +313,6 @@ function HanjaInner() {
         </>
       )}
 
-      {/* 두 글자 모드 진행 표시 */}
       {count === 2 && targetIdxs.length === 2 && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
           {targetIdxs.map((idx) => {
@@ -280,10 +332,9 @@ function HanjaInner() {
         </div>
       )}
 
-      {/* 한자 목록 */}
       {activeIdx !== null && target && (
         <>
-          {loadingList && <div style={{ textAlign: 'center', color: SUB, padding: 24 }}>한자를 불러오는 중…</div>}
+          {(loadingList || (!yongsin && !converting)) && <div style={{ textAlign: 'center', color: SUB, padding: 24 }}>한자를 불러오는 중…</div>}
 
           {!loadingList && hanjaList.length === 0 && (
             <div style={{ textAlign: 'center', color: SUB, padding: 24, fontSize: 13 }}>
@@ -291,27 +342,30 @@ function HanjaInner() {
             </div>
           )}
 
-          {!loadingList && fitList.length > 0 && (
+          {!loadingList && recommend.length > 0 && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: GREEN, display: 'inline-block' }} />
-                <span style={{ fontSize: 11, color: SUB }}>사주(용신 {yongsin})에 맞는 한자 · 추천</span>
+                <span style={{ fontSize: 11, color: SUB }}>사주(용신 {yongsin})에 맞는 추천 · 상위 {recommend.length}</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 16 }}>{fitList.map(cell)}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 16 }}>
+                {recommend.map((x) => cell(x, true))}
+              </div>
             </>
           )}
 
-          {!loadingList && restList.length > 0 && (
+          {!loadingList && others.length > 0 && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: SUB, display: 'inline-block' }} />
                 <span style={{ fontSize: 11, color: SUB }}>그 외 &lsquo;{target.hangul}&rsquo; 한자</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>{restList.map(cell)}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
+                {others.map((x) => cell(x, false))}
+              </div>
             </>
           )}
 
-          {/* 확인 바 */}
           <div style={{ marginTop: 20, borderRadius: 16, padding: '13px 16px',
             background: activeIdx !== null && chosen[activeIdx] ? 'rgba(250,199,117,0.16)' : CARD,
             border: '1px solid ' + (activeIdx !== null && chosen[activeIdx] ? GOLD : 'rgba(250,199,117,0.12)'),
