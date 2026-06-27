@@ -10,7 +10,6 @@ import PageHeader from '@/app/components/common/PageHeader'
 const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
 
-// hanja 테이블 한 행
 interface HanjaRow {
   hangul: string
   hanja: string
@@ -32,7 +31,6 @@ const gold = '#FAC775'
 const cardBg = '#2C2C2A'
 const border = '1px solid rgba(250,199,117,0.15)'
 
-// 등급 색상
 function gradeColor(g: string) {
   if (g === '좋음') return '#7BC86C'
   if (g === '아쉬움') return '#E0A04A'
@@ -43,7 +41,6 @@ function DiagnosisInner() {
   const router = useRouter()
   const sp = useSearchParams()
 
-  // ── 사주 정보 로딩 (홈에서 입력한 정보) ──
   const [info, setInfo] = useState<{
     gender: string; calType: string
     year: number; month: number; day: number
@@ -93,21 +90,17 @@ function DiagnosisInner() {
     info?.hourIdx ?? null,
   )
 
-  // ── 이름 입력 상태 ──
-  // 글자 슬롯: [성, 이름1, 이름2]
   const [chars, setChars] = useState<(NameChar | null)[]>([null, null, null])
-  const [pickerIdx, setPickerIdx] = useState<number | null>(null) // 지금 한자 고르는 슬롯
-  const [pickerHangul, setPickerHangul] = useState('')            // 입력한 한글음
+  const [pickerIdx, setPickerIdx] = useState<number | null>(null)
+  const [pickerHangul, setPickerHangul] = useState('')
   const [hanjaList, setHanjaList] = useState<HanjaRow[]>([])
   const [searching, setSearching] = useState(false)
 
-  // ── 결과 상태 ──
   const [step, setStep] = useState<'input' | 'preview' | 'pay' | 'result'>('input')
   const [result, setResult] = useState<DiagnoseResult | null>(null)
   const [commentary, setCommentary] = useState<Commentary | null>(null)
   const [loading, setLoading] = useState(false)
 
-  // 이전 결과 복원
   useEffect(() => {
     const saved = localStorage.getItem(NAMING_RESULT_KEY)
     if (saved) {
@@ -123,7 +116,6 @@ function DiagnosisInner() {
     }
   }, [])
 
-  // ── 한자 검색 (hanja 테이블) ──
   async function searchHanja(hangul: string) {
     if (!hangul.trim()) { setHanjaList([]); return }
     setSearching(true)
@@ -143,7 +135,6 @@ function DiagnosisInner() {
     }
   }
 
-  // 슬롯에 한자 확정
   function pickHanja(row: HanjaRow) {
     if (pickerIdx === null) return
     const next = [...chars]
@@ -159,18 +150,15 @@ function DiagnosisInner() {
     setHanjaList([])
   }
 
-  // 입력 완료 여부: 성 + 이름1 최소 (이름2는 선택)
   const surname = chars[0]
   const given = chars.slice(1).filter((c): c is NameChar => c !== null)
   const canSubmit = surname !== null && given.length >= 1
 
-  // ── 진단 미리보기(맛보기): 81수리만 무료로 보여주기 ──
   function handlePreview() {
     if (!canSubmit) return
     setStep('preview')
   }
 
-  // ── 결제 후 전체 결과 ──
   async function handleFullResult() {
     if (!canSubmit || !surname || !saju || !dayStem) return
     setStep('result')
@@ -218,7 +206,6 @@ function DiagnosisInner() {
     try { localStorage.removeItem(NAMING_RESULT_KEY) } catch {}
   }
 
-  // ── 사주 정보 없을 때 ──
   if (!info) {
     return (
       <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto' }}>
@@ -245,13 +232,11 @@ function DiagnosisInner() {
       <PageHeader title="내 이름 풀이" onBack={() => router.push('/manseryeok/naming')} />
 
       <div style={{ padding: '16px' }}>
-        {/* 내 사주 */}
         <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
           <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '6px' }}>내 사주</div>
           <div style={{ fontSize: '14px', color: '#e8e4ff' }}>{sajuLine}</div>
         </div>
 
-        {/* ───────── 1단계: 이름 입력 ───────── */}
         {step === 'input' && (
           <>
             <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '10px' }}>
@@ -301,7 +286,6 @@ function DiagnosisInner() {
           </>
         )}
 
-        {/* ───────── 2단계: 미리보기(맛보기) ───────── */}
         {step === 'preview' && surname && (
           <>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
@@ -340,7 +324,6 @@ function DiagnosisInner() {
           </>
         )}
 
-        {/* ───────── 3단계: 결제 자리 (나중에 토스 붙일 곳) ───────── */}
         {step === 'pay' && (
           <>
             <div style={{
@@ -373,7 +356,6 @@ function DiagnosisInner() {
           </>
         )}
 
-        {/* ───────── 4단계: 전체 결과 ───────── */}
         {step === 'result' && (
           <>
             {loading && (
@@ -388,7 +370,6 @@ function DiagnosisInner() {
 
             {!loading && result && (
               <>
-                {/* 이름 헤더 */}
                 <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                   <div style={{ fontSize: '34px', fontWeight: 'bold', color: gold, letterSpacing: '4px' }}>
                     {chars.filter(Boolean).map(c => c!.hanja).join('')}
@@ -398,7 +379,6 @@ function DiagnosisInner() {
                   </div>
                 </div>
 
-                {/* AI 총평 */}
                 {commentary && (
                   <div style={{ background: cardBg, border, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
                     {commentary.title && (
@@ -420,7 +400,6 @@ function DiagnosisInner() {
                   </div>
                 )}
 
-                {/* 4요소 채점 */}
                 <div style={{ background: cardBg, border, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
                   <div style={{ fontSize: '13px', color: gold, marginBottom: '14px', fontWeight: 'bold' }}>
                     이름 분석 (4가지 기준)
@@ -439,7 +418,6 @@ function DiagnosisInner() {
                     </div>
                   ))}
 
-                  {/* 81수리 */}
                   <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                       <span style={{ fontSize: '13px', color: '#e8e4ff' }}>이름 수리 (81수리)</span>
@@ -456,7 +434,6 @@ function DiagnosisInner() {
                   </div>
                 </div>
 
-                {/* 종합 등급 */}
                 <div style={{
                   background: 'rgba(250,199,117,0.08)', border: `1px solid ${gold}`,
                   borderRadius: '16px', padding: '18px', marginBottom: '16px', textAlign: 'center',
@@ -467,18 +444,18 @@ function DiagnosisInner() {
                   </div>
                 </div>
 
-                {/* 개명 추천 연결 (아쉬울 때) */}
-                {result.overallGrade !== '좋음' && (
-                  <div style={{ background: cardBg, border, borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
-                    <div style={{ fontSize: '13px', color: '#e8e4ff', lineHeight: 1.7, marginBottom: '10px' }}>
-                      한 글자만 바꿔도 사주에 더 잘 맞는 이름이 될 수 있어요.
-                    </div>
-                    <button disabled
-                      style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'transparent', border, color: '#666', fontSize: '13px', cursor: 'default' }}>
-                      ✏️ 개명 후보 추천받기 (준비 중)
-                    </button>
+                {/* 개명 연결 — 더 좋은 이름 찾기 (개명 방식 선택 화면으로) */}
+                <div style={{ background: 'linear-gradient(160deg,#34322f 0%,#2C2C2A 100%)', border: `1px solid ${gold}`, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '12px', color: '#f48fb1', fontStyle: 'italic', marginBottom: '8px', lineHeight: 1.5 }}>
+                    {result.overallGrade !== '좋음'
+                      ? '부족한 기운을 채우면 이름이 당신을 받쳐줍니다'
+                      : '지금도 좋은 이름이에요. 다른 가능성도 살펴볼까요?'}
                   </div>
-                )}
+                  <button onClick={() => router.push('/manseryeok/naming/rename')}
+                    style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'rgba(250,199,117,0.16)', border: `1px solid ${gold}`, color: gold, fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' }}>
+                    더 좋은 이름, 함께 찾아볼까요? →
+                  </button>
+                </div>
 
                 <button onClick={resetAll}
                   style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#8a88a0', fontSize: '13px', cursor: 'pointer' }}>
@@ -490,7 +467,6 @@ function DiagnosisInner() {
         )}
       </div>
 
-      {/* ───────── 한자 선택 팝업 ───────── */}
       {pickerIdx !== null && (
         <div
           onClick={() => { setPickerIdx(null); setHanjaList([]) }}
@@ -509,7 +485,6 @@ function DiagnosisInner() {
               {slotLabels[pickerIdx]} — 한자 고르기
             </div>
 
-            {/* 한글음 입력 */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
               <input
                 value={pickerHangul}
@@ -527,7 +502,6 @@ function DiagnosisInner() {
               </button>
             </div>
 
-            {/* 한자 목록 */}
             <div style={{ overflowY: 'auto', flex: 1 }}>
               {searching && <div style={{ textAlign: 'center', color: '#8a88a0', padding: '20px' }}>찾는 중...</div>}
               {!searching && hanjaList.length === 0 && pickerHangul && (
