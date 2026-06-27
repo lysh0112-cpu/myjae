@@ -34,7 +34,7 @@ const OPTIONS = [
 export default function RenameMethodPage() {
   const router = useRouter()
 
-  const choose = (kind, price, label) => {
+  const choose = (kind: string, price: number, label: string) => {
     const q = new URLSearchParams({ kind, price: String(price), label })
     router.push(`/manseryeok/naming/pay?${q.toString()}`)
   }
@@ -42,7 +42,7 @@ export default function RenameMethodPage() {
   return (
     <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 4px 16px' }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: GOLD, fontSize: 20, cursor: 'pointer' }}>‹</button>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: GOLD, fontSize: 20, cursor: 'pointer' }}>{'\u2039'}</button>
         <span style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>어떻게 바꿀까요?</span>
       </div>
       <p style={{ fontSize: 12, color: SUB, margin: '0 0 14px', padding: '0 4px' }}>
