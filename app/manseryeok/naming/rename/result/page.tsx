@@ -1,12 +1,16 @@
 'use client'
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { useResultSaju } from '@/hooks/useResultSaju'
+import { calcYongsin } from '@/lib/saju/yongsin'
+import { diagnoseName, type NameChar, type DiagnoseResult, type Grade } from '@/lib/saju/naming'
 
 const GOLD = '#FAC775'
 const CARD = '#2C2C2A'
 const SUB = '#8a88a0'
 const GREEN = '#81c784'
 
+const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
 const PICKS_KEY = 'rename_picks_v1'
 
@@ -41,12 +45,24 @@ function ohaengChar(s: string): string {
   return t
 }
 
+function gradeColor(g: Grade | string) {
+  if (g === '좋음') return GREEN
+  if (g === '아쉬움') return '#E0A04A'
+  return '#9a98b0'
+}
+
 function ResultInner() {
   const router = useRouter()
   const [picks, setPicks] = useState<Pick[]>([])
   const [chars, setChars] = useState<SavedChar[]>([])
   const [yongsin, setYongsin] = useState('')
+  const [beforeResult, setBeforeResult] = useState<DiagnoseResult | null>(null)
   const [loaded, setLoaded] = useState(false)
+
+  const [info, setInfo] = useState<{
+    calType: string; year: number; month: number; day: number
+    leapMonth: string; hourIdx: number | null
+  } | null>(null)
 
   useEffect(() => {
     try {
@@ -59,11 +75,60 @@ function ResultInner() {
       if (Array.isArray(r.chars)) {
         setChars(r.chars.filter((c: SavedChar | null): c is SavedChar => !!c))
       }
+      if (r.result) setBeforeResult(r.result as DiagnoseResult)
+    } catch {}
+    try {
+      const m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
+      if (m.year) {
+        setInfo({
+          calType: m.calType || '양력',
+          year: parseInt(m.year),
+          month: parseInt(m.month),
+          day: parseInt(m.day),
+          leapMonth: m.leapMonth || '0',
+          hourIdx: m.hour === '모름' || m.hour == null ? null : parseInt(m.hour),
+        })
+      }
     } catch {}
     setLoaded(true)
   }, [])
 
-  // 데이터 없으면 안내
+  const { saju, dayStem } = useResultSaju(
+    info?.calType || '양력',
+    info?.year || 0,
+    info?.month || 0,
+    info?.day || 0,
+    info?.leapMonth || '0',
+    info?.hourIdx ?? null,
+  )
+
+  // 새 이름(바뀐 한자 반영)의 진단 결과 = "후"
+  const afterResult = useMemo<DiagnoseResult | null>(() => {
+    if (!saju || !dayStem || chars.length === 0 || picks.length === 0) return null
+    try {
+      const y = calcYongsin(saju, dayStem)
+      const surname: NameChar = {
+        hangul: chars[0].hangul,
+        hanja: chars[0].hanja,
+        strokes: chars[0].strokes,
+        resourceOhaeng: ohaengChar(chars[0].resourceOhaeng),
+      }
+      const given: NameChar[] = chars.slice(1).map((c, gi) => {
+        const idx = gi + 1
+        const p = picks.find((pp) => pp.idx === idx)
+        return p
+          ? { hangul: c.hangul, hanja: p.toHanja, strokes: p.toStrokes, resourceOhaeng: ohaengChar(p.toOhaeng) }
+          : { hangul: c.hangul, hanja: c.hanja, strokes: c.strokes, resourceOhaeng: ohaengChar(c.resourceOhaeng) }
+      })
+      return diagnoseName({
+        surname, given,
+        yongsin: y.yongsin, heeksin: y.heeksin, elementScore: y.score,
+      })
+    } catch {
+      return null
+    }
+  }, [saju, dayStem, chars, picks])
+
   if (loaded && (picks.length === 0 || chars.length === 0)) {
     return (
       <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
@@ -81,13 +146,8 @@ function ResultInner() {
     )
   }
 
-  if (!loaded) {
-    return (
-      <main style={{ minHeight: '100vh', background: '#1f1e1c' }} />
-    )
-  }
+  if (!loaded) return <main style={{ minHeight: '100vh', background: '#1f1e1c' }} />
 
-  // 새 이름 조합: chars에서 바뀐 자리를 picks의 toHanja로 교체
   const newChars = chars.map((c, i) => {
     const p = picks.find((pp) => pp.idx === i)
     return p ? p.toHanja : c.hanja
@@ -95,6 +155,15 @@ function ResultInner() {
   const oldName = chars.map((c) => c.hanja).join('')
   const newName = newChars.join('')
   const hangulName = chars.map((c) => c.hangul).join('')
+
+  // 4요소 전후 비교 행 구성
+  type Row = { label: string; before?: Grade; after?: Grade }
+  const rows: Row[] = afterResult ? [
+    { label: '사주 보완 (용신)', before: beforeResult?.yongsinBohwan.grade, after: afterResult.yongsinBohwan.grade },
+    { label: '한자 기운 (자원오행)', before: beforeResult?.resourceFlow.grade, after: afterResult.resourceFlow.grade },
+    { label: '소리 기운 (발음오행)', before: beforeResult?.soundFlow.grade, after: afterResult.soundFlow.grade },
+    { label: '이름 수리 (81수리)', before: beforeResult?.suri.grade, after: afterResult.suri.grade },
+  ] : []
 
   return (
     <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
@@ -109,13 +178,12 @@ function ResultInner() {
         </div>
       </div>
 
-      {/* 바뀌는 글자 — 동그라미 전후 비교 (절충 디자인) */}
+      {/* 동그라미 전후 비교 */}
       <div style={{ fontSize: 11, color: SUB, margin: '18px 0 8px' }}>바뀌는 글자</div>
       {picks.map((p) => {
         const fit = ohaengChar(p.toOhaeng) === yongsin
         return (
           <div key={p.idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, background: CARD, border: '1px solid rgba(250,199,117,0.1)', borderRadius: 14, padding: '18px 8px', marginBottom: 8 }}>
-            {/* 현재 */}
             <div style={{ textAlign: 'center', minWidth: 84 }}>
               <div style={{ fontSize: 10, color: SUB, marginBottom: 6 }}>현재</div>
               <div style={{ width: 70, height: 70, borderRadius: '50%', background: '#3a3a37', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
@@ -127,7 +195,6 @@ function ResultInner() {
 
             <span style={{ fontSize: 22, color: GOLD }}>{'\u2192'}</span>
 
-            {/* 추천 */}
             <div style={{ textAlign: 'center', minWidth: 84 }}>
               <div style={{ fontSize: 10, color: GOLD, marginBottom: 6 }}>추천</div>
               <div style={{ width: 74, height: 74, borderRadius: '50%', background: 'rgba(250,199,117,0.18)', border: '2px solid ' + GOLD, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
@@ -142,9 +209,54 @@ function ResultInner() {
         )
       })}
 
-      {/* 왜 좋아지나 */}
-      <div style={{ fontSize: 11, color: SUB, margin: '16px 0 6px' }}>무엇이 좋아지나</div>
-      <div style={{ background: 'rgba(129,199,132,0.1)', border: '1px solid rgba(129,199,132,0.35)', borderRadius: 14, padding: '14px 16px' }}>
+      {/* 종합 등급 전후 (C) */}
+      {afterResult && (
+        <div style={{ background: 'rgba(129,199,132,0.1)', border: '1px solid rgba(129,199,132,0.4)', borderRadius: 14, padding: 18, textAlign: 'center', margin: '16px 0 14px' }}>
+          <div style={{ fontSize: 11, color: SUB, marginBottom: 10 }}>이름 종합 등급</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: gradeColor(beforeResult?.overallGrade ?? '보통') }}>
+                {beforeResult?.overallGrade ?? '—'}
+              </div>
+              <div style={{ fontSize: 10, color: SUB, marginTop: 2 }}>기존 {oldName}</div>
+            </div>
+            <span style={{ fontSize: 20, color: GOLD }}>{'\u2192'}</span>
+            <div>
+              <div style={{ fontSize: 26, fontWeight: 700, color: gradeColor(afterResult.overallGrade) }}>
+                {afterResult.overallGrade}
+              </div>
+              <div style={{ fontSize: 10, color: GREEN, marginTop: 2 }}>추천 {newName}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4요소 전후 비교 (A) */}
+      {afterResult && (
+        <div style={{ background: CARD, border: '1px solid rgba(250,199,117,0.1)', borderRadius: 14, padding: 14, marginBottom: 14 }}>
+          <div style={{ fontSize: 12, color: GOLD, marginBottom: 10 }}>무엇이 좋아지나</div>
+          {rows.map((row, i) => {
+            const changed = row.before !== undefined && row.before !== row.after
+            const last = i === rows.length - 1
+            return (
+              <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: last ? 'none' : '1px solid rgba(255,255,255,0.05)' }}>
+                <span style={{ fontSize: 13, color: changed ? '#fff' : SUB }}>{row.label}</span>
+                {changed ? (
+                  <span style={{ fontSize: 12 }}>
+                    <span style={{ color: SUB, textDecoration: 'line-through' }}>{row.before}</span>{' '}
+                    <span style={{ color: gradeColor(row.after ?? '보통') }}>{'\u2192'} {row.after}</span>
+                  </span>
+                ) : (
+                  <span style={{ fontSize: 12, color: gradeColor(row.after ?? '보통') }}>{row.after} (유지)</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* 설명 */}
+      <div style={{ background: 'rgba(129,199,132,0.08)', border: '1px solid rgba(129,199,132,0.3)', borderRadius: 14, padding: '13px 16px' }}>
         <p style={{ fontSize: 13, color: '#dfe7d8', lineHeight: 1.8, margin: 0 }}>
           {yongsin
             ? <>발음 <b style={{ color: '#fff' }}>{hangulName}</b>은 그대로 두고 한자만 바꿔, 사주에 필요한 기운 <b style={{ color: GREEN }}>{yongsin}</b>을(를) 채워주는 글자로 보완했습니다. 부르던 이름은 변하지 않으면서 한자 기운의 균형이 한결 좋아집니다.</>
@@ -152,7 +264,6 @@ function ResultInner() {
         </p>
       </div>
 
-      {/* 안내: 정밀 진단은 전문가 상담 */}
       <div style={{ fontSize: 11, color: SUB, margin: '16px 0 6px' }}>더 정확히 보려면</div>
       <div style={{ background: CARD, border: '1px solid rgba(250,199,117,0.12)', borderRadius: 14, padding: '13px 16px', fontSize: 12, color: SUB, lineHeight: 1.7 }}>
         이 추천은 용신·자원오행·81수리를 종합한 자동 분석입니다. 최종 확정은 연재 선생님 상담에서 도와드립니다.
