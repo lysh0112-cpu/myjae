@@ -6,7 +6,7 @@ const GOLD = '#FAC775'
 const CARD = '#2C2C2A'
 const SUB = '#8a88a0'
 
-const NEXT_ROUTE = {
+const NEXT_ROUTE: Record<string, string> = {
   hanja1: '/manseryeok/naming/rename/hanja?count=1',
   hanja2: '/manseryeok/naming/rename/hanja?count=2',
   newname: '/manseryeok/naming/rename/newname',
