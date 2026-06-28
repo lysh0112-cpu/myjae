@@ -109,7 +109,7 @@ function HanjaInner() {
   const [targetIdxs, setTargetIdxs] = useState<number[]>([])
   const [activeIdx, setActiveIdx] = useState<number | null>(null)
   const [chosen, setChosen] = useState<Record<number, HanjaRow>>({})
-  const [upsell, setUpsell] = useState(false) // 잠긴 자리 클릭 시 업셀 안내
+  const [upsell, setUpsell] = useState(false)
 
   const [hanjaList, setHanjaList] = useState<HanjaRow[]>([])
   const [loadingList, setLoadingList] = useState(false)
@@ -207,12 +207,12 @@ function HanjaInner() {
     return { recommend: rec, others: oth }
   }, [scored, yongsin])
 
-  // 한 글자 모드: 이미 다른 자리에서 골랐으면 잠금
-  const lockedByPick = count === 1 && Object.keys(chosen).length > 0
+  // 한 글자 모드: 한 자리라도 선택(activeIdx 설정)되면 잠금
+  const lockedByPick = count === 1 && activeIdx !== null
 
   function chooseSlot(idx: number) {
-    if (count === 1 && lockedByPick && chosen[idx] === undefined) {
-      // 이미 다른 자리를 골라 잠긴 상태에서 잠긴 자리 클릭 → 업셀
+    if (count === 1 && activeIdx !== null && activeIdx !== idx) {
+      // 이미 한 자리를 고른 상태에서 다른(잠긴) 자리 클릭 → 업셀
       setUpsell(true)
       return
     }
@@ -225,9 +225,11 @@ function HanjaInner() {
     setChosen((prev) => ({ ...prev, [activeIdx]: row }))
   }
 
-  // 선택 취소(한 글자 모드에서 자리 바꾸려면)
   function clearPick() {
     setChosen({})
+    setActiveIdx(null)
+    setTargetIdxs([])
+    setHanjaList([])
     setUpsell(false)
   }
 
@@ -320,22 +322,22 @@ function HanjaInner() {
       {count === 1 && (
         <>
           <div style={{ fontSize: 12, color: SUB, marginBottom: 8, padding: '0 4px' }}>
-            바꿀 글자 한 개를 골라주세요 {lockedByPick && <span style={{ color: GOLD }}>· 1글자 선택 완료</span>}
+            바꿀 글자 한 개를 골라주세요 {lockedByPick && <span style={{ color: GOLD }}>· 선택됨 (다른 자리 잠김)</span>}
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
             {givenChars.map((c, gi) => {
               const idx = gi + 1
-              const on = targetIdxs[0] === idx && !lockedByPick
+              const isActive = activeIdx === idx
+              const locked = lockedByPick && !isActive
               const picked = chosen[idx] !== undefined
-              const locked = lockedByPick && !picked
               return (
                 <button key={idx} onClick={() => chooseSlot(idx)} className="active:scale-95"
                   style={{ flex: 1, padding: '14px 0', borderRadius: 14, textAlign: 'center', position: 'relative',
-                    background: picked ? 'rgba(129,199,132,0.14)' : on ? 'rgba(250,199,117,0.16)' : CARD,
-                    border: '1px solid ' + (picked ? GREEN : on ? GOLD : 'rgba(250,199,117,0.12)'),
+                    background: picked ? 'rgba(129,199,132,0.14)' : isActive ? 'rgba(250,199,117,0.16)' : CARD,
+                    border: '1px solid ' + (picked ? GREEN : isActive ? GOLD : 'rgba(250,199,117,0.12)'),
                     opacity: locked ? 0.45 : 1, cursor: 'pointer' }}>
                   {locked && <span style={{ position: 'absolute', top: 6, right: 8, fontSize: 12 }}>🔒</span>}
-                  <div style={{ fontSize: 26, fontWeight: 700, color: picked ? GREEN : on ? GOLD : '#fff' }}>
+                  <div style={{ fontSize: 26, fontWeight: 700, color: picked ? GREEN : isActive ? GOLD : '#fff' }}>
                     {picked ? chosen[idx].hanja : c.hanja}
                   </div>
                   <div style={{ fontSize: 11, color: SUB, marginTop: 3 }}>{c.hangul}{picked ? ' ✓' : ''}</div>
@@ -428,7 +430,6 @@ function HanjaInner() {
         </>
       )}
 
-      {/* 업셀 안내 모달 */}
       {upsell && (
         <div onClick={() => setUpsell(false)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
