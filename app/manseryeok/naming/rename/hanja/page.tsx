@@ -15,6 +15,7 @@ const TOP_N = 6
 
 const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
+const LOCKED_SLOT_KEY = 'rename_locked_slot' // 결제로 잠긴 자리(한 글자 모드)
 
 interface HanjaRow {
   hangul: string
@@ -60,6 +61,15 @@ function HanjaInner() {
 
   const [chars, setChars] = useState<SavedChar[]>([])
 
+  const [targetIdxs, setTargetIdxs] = useState<number[]>([])
+  const [activeIdx, setActiveIdx] = useState<number | null>(null)
+  const [chosen, setChosen] = useState<Record<number, HanjaRow>>({})
+  const [upsell, setUpsell] = useState(false)
+  const [restored, setRestored] = useState(false)
+
+  const [hanjaList, setHanjaList] = useState<HanjaRow[]>([])
+  const [loadingList, setLoadingList] = useState(false)
+
   useEffect(() => {
     try {
       const m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
@@ -75,13 +85,31 @@ function HanjaInner() {
         })
       }
     } catch {}
+    let loadedChars: SavedChar[] = []
     try {
       const r = JSON.parse(localStorage.getItem(NAMING_RESULT_KEY) || '{}')
       if (Array.isArray(r.chars)) {
-        setChars(r.chars.filter((c: SavedChar | null): c is SavedChar => !!c))
+        loadedChars = r.chars.filter((c: SavedChar | null): c is SavedChar => !!c)
+        setChars(loadedChars)
       }
     } catch {}
-  }, [])
+    // 한 글자 모드: 이전에 잠근 자리가 있으면 그 자리로 복원
+    if (count === 1) {
+      try {
+        const saved = localStorage.getItem(LOCKED_SLOT_KEY)
+        if (saved !== null) {
+          const idx = parseInt(saved)
+          if (!isNaN(idx) && idx >= 1 && idx < loadedChars.length) {
+            setTargetIdxs([idx])
+            setActiveIdx(idx)
+          }
+        }
+      } catch {}
+    }
+    setRestored(true)
+  }, [count])
+
+  const givenChars = chars.slice(1)
 
   const { saju, dayStem, converting } = useResultSaju(
     info?.calType || '양력',
@@ -104,23 +132,13 @@ function HanjaInner() {
   const yongsin = yong.yongsin
   const yongsinReady = !converting && !!yongsin
 
-  const givenChars = chars.slice(1)
-
-  const [targetIdxs, setTargetIdxs] = useState<number[]>([])
-  const [activeIdx, setActiveIdx] = useState<number | null>(null)
-  const [chosen, setChosen] = useState<Record<number, HanjaRow>>({})
-  const [upsell, setUpsell] = useState(false)
-
-  const [hanjaList, setHanjaList] = useState<HanjaRow[]>([])
-  const [loadingList, setLoadingList] = useState(false)
-
   useEffect(() => {
-    if (count === 2 && givenChars.length >= 2) {
+    if (count === 2 && givenChars.length >= 2 && targetIdxs.length === 0) {
       const idxs = givenChars.map((_, i) => i + 1)
       setTargetIdxs(idxs)
       setActiveIdx(idxs[0])
     }
-  }, [count, givenChars.length])
+  }, [count, givenChars.length, targetIdxs.length])
 
   useEffect(() => {
     if (activeIdx === null) { setHanjaList([]); return }
@@ -207,17 +225,20 @@ function HanjaInner() {
     return { recommend: rec, others: oth }
   }, [scored, yongsin])
 
-  // 한 글자 모드: 한 자리라도 선택(activeIdx 설정)되면 잠금
+  // 한 글자 모드: 한 자리라도 선택되면 잠금
   const lockedByPick = count === 1 && activeIdx !== null
 
   function chooseSlot(idx: number) {
     if (count === 1 && activeIdx !== null && activeIdx !== idx) {
-      // 이미 한 자리를 고른 상태에서 다른(잠긴) 자리 클릭 → 업셀
       setUpsell(true)
       return
     }
     setTargetIdxs([idx])
     setActiveIdx(idx)
+    // 결제 단위(자리) 잠금 기록
+    if (count === 1) {
+      try { localStorage.setItem(LOCKED_SLOT_KEY, String(idx)) } catch {}
+    }
   }
 
   function pickHanja(row: HanjaRow) {
@@ -225,12 +246,14 @@ function HanjaInner() {
     setChosen((prev) => ({ ...prev, [activeIdx]: row }))
   }
 
+  // 자리 변경(같은 결제 안에서는 불가, 추가 결제 시 rename 메뉴에서 초기화됨)
   function clearPick() {
     setChosen({})
     setActiveIdx(null)
     setTargetIdxs([])
     setHanjaList([])
     setUpsell(false)
+    try { localStorage.removeItem(LOCKED_SLOT_KEY) } catch {}
   }
 
   function proceed() {
@@ -264,7 +287,7 @@ function HanjaInner() {
     router.push('/manseryeok/naming/rename/result')
   }
 
-  if (chars.length === 0 || givenChars.length === 0) {
+  if (restored && (chars.length === 0 || givenChars.length === 0)) {
     return (
       <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
         <Header router={router} />
