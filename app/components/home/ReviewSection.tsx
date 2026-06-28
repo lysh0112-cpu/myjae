@@ -1,3 +1,7 @@
+'use client'
+
+import { useRouter } from 'next/navigation'
+
 const REVIEWS = [
   { stars: 5, title: '이명연 선생님 상담 후 실제로 취업됐어요 😭', author: '별빛달빛', time: '2시간 전', likes: 128, hot: true },
   { stars: 5, title: '물상도 그림 받고 너무 신기해서 친구들한테 다 공유했어요', author: '연분홍봄날', time: '어제', likes: 203, hot: false },
@@ -5,11 +9,18 @@ const REVIEWS = [
 ]
 
 export default function ReviewSection() {
+  const router = useRouter()
+
   return (
     <section className="px-4 py-5 pb-2">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base font-bold text-white">추천 후기</h2>
-        <button style={{ color: '#FAC775', fontSize: '13px' }}>전체보기 →</button>
+        <button
+          onClick={() => router.push('/manseryeok/reviews')}
+          style={{ color: '#FAC775', fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer' }}
+        >
+          전체보기 →
+        </button>
       </div>
       <div className="flex flex-col gap-2">
         {REVIEWS.map((r, i) => (
@@ -33,8 +44,10 @@ export default function ReviewSection() {
           </div>
         ))}
       </div>
-      <button className="w-full mt-4 py-3 rounded-2xl text-sm font-semibold"
-        style={{ border: '1px solid rgba(60,52,137,0.5)', color: '#b0aec8', background: 'rgba(60,52,137,0.1)' }}>
+      <button
+        onClick={() => router.push('/manseryeok/reviews/write')}
+        className="w-full mt-4 py-3 rounded-2xl text-sm font-semibold"
+        style={{ border: '1px solid rgba(60,52,137,0.5)', color: '#b0aec8', background: 'rgba(60,52,137,0.1)', cursor: 'pointer' }}>
         + 후기 작성하기
       </button>
     </section>
