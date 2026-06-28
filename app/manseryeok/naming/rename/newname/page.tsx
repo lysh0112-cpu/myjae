@@ -25,6 +25,9 @@ function personKey(m: Record<string, unknown> | null): string {
 
 export default function NewNamePage() {
   const router = useRouter()
+
+  // 글자 수: null(미선택) / 1(외자) / 2(두 글자)
+  const [count, setCount] = useState<1 | 2 | null>(null)
   const [c1, setC1] = useState('')
   const [c2, setC2] = useState('')
 
@@ -44,11 +47,22 @@ export default function NewNamePage() {
     setLoaded(true)
   }, [])
 
-  const ready = !!surname && c1.trim().length > 0
+  // 글자 수 바꾸면 입력값 초기화
+  function chooseCount(n: 1 | 2) {
+    setCount(n)
+    setC1('')
+    setC2('')
+  }
+
+  const ready =
+    !!surname &&
+    count !== null &&
+    c1.trim().length > 0 &&
+    (count === 1 || c2.trim().length > 0)
 
   const proceed = () => {
     if (!ready) return
-    const name = (c1 + c2).trim()
+    const name = count === 1 ? c1.trim() : (c1 + c2).trim()
     router.push('/manseryeok/naming/rename/newhanja?name=' + encodeURIComponent(name))
   }
 
@@ -58,14 +72,24 @@ export default function NewNamePage() {
     background: 'rgba(250,199,117,0.08)', color: '#fff',
   }
 
+  const chip = (n: 1 | 2, label: string) => {
+    const on = count === n
+    return (
+      <button onClick={() => chooseCount(n)} className="active:scale-95"
+        style={{ flex: 1, padding: '12px 0', borderRadius: 12, cursor: 'pointer',
+          background: on ? 'rgba(250,199,117,0.16)' : CARD,
+          border: '1px solid ' + (on ? GOLD : 'rgba(250,199,117,0.12)'),
+          color: on ? GOLD : '#cfcdc4', fontWeight: 700, fontSize: 14 }}>
+        {label}
+      </button>
+    )
+  }
+
   // 성씨 정보가 없으면(=이름 풀이 안 했으면) 안내
   if (loaded && !surname) {
     return (
       <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 4px 16px' }}>
-          <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: GOLD, fontSize: 20, cursor: 'pointer' }}>{'\u2039'}</button>
-          <span style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>새 이름 직접 정하기</span>
-        </div>
+        <Header router={router} />
         <div style={{ padding: '40px 8px', textAlign: 'center', color: SUB, lineHeight: 1.8 }}>
           먼저 &lsquo;내 이름 풀이&rsquo;에서<br />이름을 입력해 주세요.
           <div style={{ marginTop: 20 }}>
@@ -83,29 +107,47 @@ export default function NewNamePage() {
 
   return (
     <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 4px 16px' }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: GOLD, fontSize: 20, cursor: 'pointer' }}>{'\u2039'}</button>
-        <span style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>새 이름 직접 정하기</span>
-      </div>
+      <Header router={router} />
       <p style={{ fontSize: 12, color: SUB, margin: '0 0 16px', padding: '0 4px' }}>
         성씨 {surname!.hanja}({surname!.hangul})는 그대로 · 원하는 한글 이름을 적어주세요
       </p>
-      <div style={{ background: CARD, border: '1px solid rgba(250,199,117,0.12)', borderRadius: 16, padding: '18px 16px' }}>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
-          <span style={{ fontSize: 22, color: SUB }}>{surname!.hanja}</span>
-          <input value={c1} onChange={(e) => setC1(e.target.value.slice(0, 1))} placeholder="서" style={inputStyle} />
-          <input value={c2} onChange={(e) => setC2(e.target.value.slice(0, 1))} placeholder="연" style={inputStyle} />
-        </div>
-        <p style={{ fontSize: 11, color: SUB, textAlign: 'center', margin: '12px 0 0' }}>
-          외자 이름이면 한 칸만 채우셔도 됩니다
-        </p>
+
+      {/* 글자 수 먼저 선택 */}
+      <div style={{ fontSize: 12, color: SUB, marginBottom: 8, padding: '0 4px' }}>이름 글자 수를 골라주세요</div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+        {chip(1, '외자 (한 글자)')}
+        {chip(2, '두 글자')}
       </div>
-      <button onClick={proceed} disabled={!ready} className="active:scale-95"
-        style={{ marginTop: 16, width: '100%', background: ready ? 'rgba(250,199,117,0.16)' : CARD,
-          border: '1px solid ' + (ready ? GOLD : 'rgba(250,199,117,0.12)'), borderRadius: 14, padding: 14,
-          color: ready ? GOLD : '#555', fontWeight: 700, fontSize: 14, cursor: ready ? 'pointer' : 'default' }}>
-        한자 추천받기 {'\u2192'}
-      </button>
+
+      {/* 글자 수 선택 후 입력칸 표시 */}
+      {count !== null && (
+        <>
+          <div style={{ background: CARD, border: '1px solid rgba(250,199,117,0.12)', borderRadius: 16, padding: '18px 16px' }}>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
+              <span style={{ fontSize: 22, color: SUB }}>{surname!.hanja}</span>
+              <input value={c1} onChange={(e) => setC1(e.target.value.slice(0, 1))} placeholder="서" style={inputStyle} />
+              {count === 2 && (
+                <input value={c2} onChange={(e) => setC2(e.target.value.slice(0, 1))} placeholder="연" style={inputStyle} />
+              )}
+            </div>
+          </div>
+          <button onClick={proceed} disabled={!ready} className="active:scale-95"
+            style={{ marginTop: 16, width: '100%', background: ready ? 'rgba(250,199,117,0.16)' : CARD,
+              border: '1px solid ' + (ready ? GOLD : 'rgba(250,199,117,0.12)'), borderRadius: 14, padding: 14,
+              color: ready ? GOLD : '#555', fontWeight: 700, fontSize: 14, cursor: ready ? 'pointer' : 'default' }}>
+            한자 추천받기 {'\u2192'}
+          </button>
+        </>
+      )}
     </main>
+  )
+}
+
+function Header({ router }: { router: ReturnType<typeof useRouter> }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 4px 16px' }}>
+      <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: GOLD, fontSize: 20, cursor: 'pointer' }}>{'\u2039'}</button>
+      <span style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>새 이름 직접 정하기</span>
+    </div>
   )
 }
