@@ -561,7 +561,7 @@ function DiagnosisInner() {
 
                   {/* 1) 발음은 그대로, 한자 바꾸기 — 작동 */}
                   <button onClick={() => router.push('/manseryeok/naming/rename/newname')}
-                    style={{ width: '100%', padding: '14px 16px', borderRadius: '12px', background: 'rgba(250,199,117,0.16)', border: `1px solid ${gold}`, marginBottom: '10px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    style={{ width: '100%', padding: '14px 16px', borderRadius: '12px', background: 'rgba(250,199,117,0.16)', border: `1px solid ${gold}`, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ textAlign: 'left' }}>
                       <div style={{ fontSize: '14px', fontWeight: 'bold', color: gold }}>발음은 그대로, 한자 바꾸기</div>
                       <div style={{ fontSize: '11px', color: '#cbb890', marginTop: '2px' }}>부르는 이름은 두고, 사주에 맞는 한자로</div>
@@ -569,27 +569,8 @@ function DiagnosisInner() {
                     <span style={{ fontSize: '13px', fontWeight: 'bold', color: gold, whiteSpace: 'nowrap', marginLeft: '10px' }}>5,000원</span>
                   </button>
 
-                  {/* 2) 새 이름 5개 추천 — 준비 중 */}
-                  <div style={{ width: '100%', padding: '14px 16px', borderRadius: '12px', background: cardBg, border: '1px solid rgba(250,199,117,0.12)', marginBottom: '10px', opacity: 0.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ textAlign: 'left' }}>
-                      <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#e8e4ff' }}>
-                        새 이름 5개 추천 <span style={{ fontSize: '10px', color: '#8a88a0', border: '1px solid #555', borderRadius: '6px', padding: '1px 6px', marginLeft: '4px' }}>준비 중</span>
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#8a88a0', marginTop: '2px' }}>사주에 맞는 새 이름 5개를 지어드려요</div>
-                    </div>
-                    <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#666', whiteSpace: 'nowrap', marginLeft: '10px' }}>10,000원</span>
-                  </div>
-
-                  {/* 3) 새 이름 10개 추천 — 준비 중 */}
-                  <div style={{ width: '100%', padding: '14px 16px', borderRadius: '12px', background: cardBg, border: '1px solid rgba(250,199,117,0.12)', opacity: 0.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ textAlign: 'left' }}>
-                      <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#e8e4ff' }}>
-                        새 이름 10개 추천 <span style={{ fontSize: '10px', color: '#8a88a0', border: '1px solid #555', borderRadius: '6px', padding: '1px 6px', marginLeft: '4px' }}>준비 중</span>
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#8a88a0', marginTop: '2px' }}>더 많은 후보 중에서 고르고 싶다면</div>
-                    </div>
-                    <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#666', whiteSpace: 'nowrap', marginLeft: '10px' }}>20,000원</span>
-                  </div>
+                  {/* TODO(나중에): '새 이름 5개 추천' / '새 이름 10개 추천' 버튼 자리.
+                      recommend 화면 만들면 여기에 추가하고 /manseryeok/naming/rename/recommend?count=5(또는 10) 로 연결 */}
                 </div>
 
                 <button onClick={resetAll}
