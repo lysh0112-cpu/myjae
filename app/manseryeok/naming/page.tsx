@@ -21,7 +21,7 @@ const MENUS = [
     title2: '이름짓기',
     desc: '사주에 맞는 새 이름을 직접 지어드려요',
     price: '5,000원~',
-    href: '/manseryeok/naming/rename/newname',
+    href: '/manseryeok/naming/rename/newborn',
   },
 ]
 
