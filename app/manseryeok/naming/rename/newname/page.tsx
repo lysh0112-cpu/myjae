@@ -8,6 +8,7 @@ const SUB = '#8a88a0'
 
 const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
+const NEWBORN_SURNAME_KEY = 'newborn_surname_v1'
 
 interface SavedChar {
   hangul: string
@@ -51,10 +52,24 @@ export default function NewNamePage() {
   useEffect(() => {
     try {
       const m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
+      const pk = personKey(m)
+
+      // 1순위: 일반인 — 이름 풀이 결과의 성씨
       const r = JSON.parse(localStorage.getItem(NAMING_RESULT_KEY) || '{}')
-      const samePerson = r.personKey && r.personKey === personKey(m)
+      const samePerson = r.personKey && r.personKey === pk
       if (samePerson && Array.isArray(r.chars) && r.chars[0]) {
         setSurname(r.chars[0] as SavedChar)
+        setLoaded(true)
+        return
+      }
+
+      // 2순위: 신생아 — 아기 이름짓기에서 입력한 성씨
+      const nb = JSON.parse(localStorage.getItem(NEWBORN_SURNAME_KEY) || '{}')
+      const sameBaby = nb.personKey && nb.personKey === pk
+      if (sameBaby && nb.surname) {
+        setSurname(nb.surname as SavedChar)
+        setLoaded(true)
+        return
       }
     } catch {}
     setLoaded(true)
@@ -126,11 +141,11 @@ export default function NewNamePage() {
       <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
         <Header router={router} />
         <div style={{ padding: '40px 8px', textAlign: 'center', color: SUB, lineHeight: 1.8 }}>
-          먼저 &lsquo;내 이름 풀이&rsquo;에서<br />이름을 입력해 주세요.
+          먼저 &lsquo;내 이름 풀이&rsquo; 또는<br />&lsquo;내 아기 이름짓기&rsquo;에서 시작해 주세요.
           <div style={{ marginTop: 20 }}>
-            <button onClick={() => router.push('/manseryeok/naming/diagnosis')}
+            <button onClick={() => router.push('/manseryeok/naming')}
               style={{ padding: '12px 22px', borderRadius: 12, background: 'rgba(250,199,117,0.16)', border: '1px solid ' + GOLD, color: GOLD, fontWeight: 700, cursor: 'pointer' }}>
-              이름 풀이로 가기 →
+              이름 메뉴로 가기 →
             </button>
           </div>
         </div>
