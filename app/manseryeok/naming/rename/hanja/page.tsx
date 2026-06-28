@@ -15,7 +15,16 @@ const TOP_N = 6
 
 const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
-const LOCKED_SLOT_KEY = 'rename_locked_slot' // 결제로 잠긴 자리(한 글자 모드)
+const LOCKED_SLOT_KEY = 'rename_locked_slot'
+
+// 이름에 쓰지 않는 흉한 뜻 키워드 (검수 때 DB is_avoid로 정밀화)
+const AVOID_KEYWORDS = [
+  '죽을', '죽일', '주검', '시체', '시신', '송장', '애도', '슬플', '슬픔',
+  '근심', '걱정', '병', '앓을', '아플', '악할', '흉할', '흉', '재앙', '재난',
+  '천할', '천박', '종', '노예', '놈', '도둑', '도적', '귀신', '미칠', '미치광이',
+  '어리석을', '간사할', '간교', '허물', '꺾을', '무너질', '망할', '멸할',
+  '원수', '저주', '독', '괴로울', '비참', '울', '눈물', '한숨',
+]
 
 interface HanjaRow {
   hangul: string
@@ -24,6 +33,7 @@ interface HanjaRow {
   strokes: number
   resource_ohaeng: string
   sound_ohaeng: string
+  is_avoid?: boolean
 }
 
 interface SavedChar {
@@ -42,6 +52,13 @@ function ohaengChar(s: string): string {
   if (t.includes('金') || t.includes('금')) return '금'
   if (t.includes('水') || t.includes('수')) return '수'
   return t
+}
+
+// 흉한 한자인지 판정 (DB is_avoid 우선, 없으면 뜻 키워드)
+function isAvoidChar(row: HanjaRow): boolean {
+  if (row.is_avoid === true) return true
+  const m = row.meaning || ''
+  return AVOID_KEYWORDS.some((k) => m.includes(k))
 }
 
 function gradeNum(g: Grade): number {
@@ -93,7 +110,6 @@ function HanjaInner() {
         setChars(loadedChars)
       }
     } catch {}
-    // 한 글자 모드: 이전에 잠근 자리가 있으면 그 자리로 복원
     if (count === 1) {
       try {
         const saved = localStorage.getItem(LOCKED_SLOT_KEY)
@@ -154,7 +170,11 @@ function HanjaInner() {
       .then(({ data, error }) => {
         if (cancelled) return
         if (error) { console.error(error); setHanjaList([]) }
-        else setHanjaList((data as HanjaRow[]) ?? [])
+        else {
+          // 흉한 한자 제외 (개명 추천에서는 완전 제외)
+          const filtered = ((data as HanjaRow[]) ?? []).filter((row) => !isAvoidChar(row))
+          setHanjaList(filtered)
+        }
         setLoadingList(false)
       })
     return () => { cancelled = true }
@@ -225,7 +245,6 @@ function HanjaInner() {
     return { recommend: rec, others: oth }
   }, [scored, yongsin])
 
-  // 한 글자 모드: 한 자리라도 선택되면 잠금
   const lockedByPick = count === 1 && activeIdx !== null
 
   function chooseSlot(idx: number) {
@@ -235,7 +254,6 @@ function HanjaInner() {
     }
     setTargetIdxs([idx])
     setActiveIdx(idx)
-    // 결제 단위(자리) 잠금 기록
     if (count === 1) {
       try { localStorage.setItem(LOCKED_SLOT_KEY, String(idx)) } catch {}
     }
@@ -246,7 +264,6 @@ function HanjaInner() {
     setChosen((prev) => ({ ...prev, [activeIdx]: row }))
   }
 
-  // 자리 변경(같은 결제 안에서는 불가, 추가 결제 시 rename 메뉴에서 초기화됨)
   function clearPick() {
     setChosen({})
     setActiveIdx(null)
