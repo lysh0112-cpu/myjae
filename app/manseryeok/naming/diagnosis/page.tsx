@@ -10,6 +10,15 @@ import PageHeader from '@/app/components/common/PageHeader'
 const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
 
+// 이름에 잘 쓰지 않는 흉한 뜻 키워드 (rename/hanja와 동일 기준)
+const AVOID_KEYWORDS = [
+  '죽을', '죽일', '주검', '시체', '시신', '송장', '애도', '슬플', '슬픔',
+  '근심', '걱정', '병', '앓을', '아플', '악할', '흉할', '흉', '재앙', '재난',
+  '천할', '천박', '종', '노예', '놈', '도둑', '도적', '귀신', '미칠', '미치광이',
+  '어리석을', '간사할', '간교', '허물', '꺾을', '무너질', '망할', '멸할',
+  '원수', '저주', '독', '괴로울', '비참', '울', '눈물', '한숨',
+]
+
 interface HanjaRow {
   hangul: string
   hanja: string
@@ -17,6 +26,7 @@ interface HanjaRow {
   strokes: number
   resource_ohaeng: string
   sound_ohaeng: string
+  is_avoid?: boolean
 }
 
 interface Commentary {
@@ -35,6 +45,12 @@ function gradeColor(g: string) {
   if (g === '좋음') return '#7BC86C'
   if (g === '아쉬움') return '#E0A04A'
   return '#9a98b0'
+}
+
+function isAvoidChar(row: HanjaRow): boolean {
+  if (row.is_avoid === true) return true
+  const m = row.meaning || ''
+  return AVOID_KEYWORDS.some((k) => m.includes(k))
 }
 
 function personKey(info: { gender: string; calType: string; year: number; month: number; day: number; leapMonth: string; hourIdx: number | null } | null): string {
@@ -264,6 +280,30 @@ function DiagnosisInner() {
     `일간 ${dayStem} · ${info.calType} ${info.year}.${info.month}.${info.day}`
 
   const slotLabel = (i: number) => i === 0 ? '성(姓)' : `이름 ${i}글자`
+
+  // 팝업 목록: 일반 글자 / 흉한 글자로 분리
+  const normalList = hanjaList.filter((r) => !isAvoidChar(r))
+  const avoidList = hanjaList.filter((r) => isAvoidChar(r))
+
+  const hanjaCard = (row: HanjaRow, i: number, dim: boolean) => (
+    <div key={i}
+      onClick={() => pickHanja(row)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
+        borderRadius: '12px', background: '#2C2C2A', cursor: 'pointer',
+        border: '1px solid rgba(255,255,255,0.05)', opacity: dim ? 0.45 : 1,
+      }}>
+      <span style={{ fontSize: '26px', fontWeight: 'bold', color: gold, minWidth: '32px', textAlign: 'center' }}>
+        {row.hanja}
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '13px', color: '#e8e4ff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.meaning}</div>
+        <div style={{ fontSize: '11px', color: '#8a88a0', marginTop: '2px' }}>
+          {row.resource_ohaeng}·{row.strokes}획
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
@@ -559,27 +599,24 @@ function DiagnosisInner() {
                   &lsquo;{syllables[pickerIdx]}&rsquo; 음의 인명용 한자를 찾을 수 없어요
                 </div>
               )}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                {hanjaList.map((row, i) => (
-                  <div key={i}
-                    onClick={() => pickHanja(row)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
-                      borderRadius: '12px', background: '#2C2C2A', cursor: 'pointer',
-                      border: '1px solid rgba(255,255,255,0.05)',
-                    }}>
-                    <span style={{ fontSize: '26px', fontWeight: 'bold', color: gold, minWidth: '32px', textAlign: 'center' }}>
-                      {row.hanja}
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '13px', color: '#e8e4ff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.meaning}</div>
-                      <div style={{ fontSize: '11px', color: '#8a88a0', marginTop: '2px' }}>
-                        {row.resource_ohaeng}·{row.strokes}획
-                      </div>
-                    </div>
+
+              {normalList.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  {normalList.map((row, i) => hanjaCard(row, i, false))}
+                </div>
+              )}
+
+              {avoidList.length > 0 && (
+                <>
+                  <div style={{ fontSize: '11px', color: '#8a88a0', margin: '18px 0 8px', lineHeight: 1.6 }}>
+                    아래 글자들은 일반적으로 이름에 잘 쓰지 않아요.<br />
+                    본인 이름에 쓰는 글자라면 골라주세요.
                   </div>
-                ))}
-              </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    {avoidList.map((row, i) => hanjaCard(row, i + 10000, true))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
