@@ -37,6 +37,16 @@ function gradeColor(g: string) {
   return '#9a98b0'
 }
 
+function personKey(info: { gender: string; calType: string; year: number; month: number; day: number; leapMonth: string; hourIdx: number | null } | null): string {
+  if (!info) return ''
+  return [info.calType, info.year, info.month, info.day, info.leapMonth, info.hourIdx ?? 'x', info.gender].join('|')
+}
+
+function isHangulSyllable(ch: string): boolean {
+  const code = ch.charCodeAt(0)
+  return code >= 0xac00 && code <= 0xd7a3
+}
+
 function DiagnosisInner() {
   const router = useRouter()
   const sp = useSearchParams()
@@ -90,9 +100,11 @@ function DiagnosisInner() {
     info?.hourIdx ?? null,
   )
 
-  const [chars, setChars] = useState<(NameChar | null)[]>([null, null, null])
+  const [nameInput, setNameInput] = useState('')
+  const [syllables, setSyllables] = useState<string[]>([])
+  const [chars, setChars] = useState<(NameChar | null)[]>([])
+
   const [pickerIdx, setPickerIdx] = useState<number | null>(null)
-  const [pickerHangul, setPickerHangul] = useState('')
   const [hanjaList, setHanjaList] = useState<HanjaRow[]>([])
   const [searching, setSearching] = useState(false)
 
@@ -102,28 +114,50 @@ function DiagnosisInner() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    if (!info) return
     const saved = localStorage.getItem(NAMING_RESULT_KEY)
-    if (saved) {
-      try {
-        const r = JSON.parse(saved)
-        if (r.result && r.commentary) {
-          setResult(r.result)
-          setCommentary(r.commentary)
-          if (r.chars) setChars(r.chars)
-          setStep('result')
+    if (!saved) return
+    try {
+      const r = JSON.parse(saved)
+      const sameP = r.personKey && r.personKey === personKey(info)
+      if (sameP && r.result && r.commentary) {
+        setResult(r.result)
+        setCommentary(r.commentary)
+        if (r.chars) {
+          setChars(r.chars)
+          setSyllables((r.chars as (NameChar | null)[]).filter(Boolean).map((c) => c!.hangul))
         }
-      } catch {}
-    }
-  }, [])
+        setStep('result')
+      } else if (!sameP) {
+        localStorage.removeItem(NAMING_RESULT_KEY)
+        try {
+          localStorage.removeItem('rename_picks_v1')
+          localStorage.removeItem('rename_locked_slot')
+        } catch {}
+        setChars([]); setSyllables([]); setNameInput('')
+        setResult(null); setCommentary(null); setStep('input')
+      }
+    } catch {}
+  }, [info])
 
-  async function searchHanja(hangul: string) {
-    if (!hangul.trim()) { setHanjaList([]); return }
+  function applyName() {
+    const cleaned = nameInput.trim().replace(/\s/g, '')
+    const arr = Array.from(cleaned).filter(isHangulSyllable)
+    if (arr.length < 2) return
+    setSyllables(arr)
+    setChars(arr.map(() => null))
+  }
+
+  async function openPicker(idx: number) {
+    setPickerIdx(idx)
+    const hangul = syllables[idx]
+    if (!hangul) { setHanjaList([]); return }
     setSearching(true)
     try {
       const { data, error } = await supabase
         .from('hanja')
         .select('hangul, hanja, meaning, strokes, resource_ohaeng, sound_ohaeng')
-        .eq('hangul', hangul.trim())
+        .eq('hangul', hangul)
         .order('strokes', { ascending: true })
       if (error) { console.error(error); setHanjaList([]) }
       else setHanjaList((data as HanjaRow[]) ?? [])
@@ -146,13 +180,13 @@ function DiagnosisInner() {
     }
     setChars(next)
     setPickerIdx(null)
-    setPickerHangul('')
     setHanjaList([])
   }
 
-  const surname = chars[0]
+  const surname = chars[0] ?? null
   const given = chars.slice(1).filter((c): c is NameChar => c !== null)
-  const canSubmit = surname !== null && given.length >= 1
+  const allPicked = syllables.length >= 2 && chars.length === syllables.length && chars.every((c) => c !== null)
+  const canSubmit = allPicked
 
   function handlePreview() {
     if (!canSubmit) return
@@ -189,7 +223,10 @@ function DiagnosisInner() {
           result: data.result ?? null,
           commentary: data.commentary ?? null,
           chars,
+          personKey: personKey(info),
         }))
+        localStorage.removeItem('rename_picks_v1')
+        localStorage.removeItem('rename_locked_slot')
       } catch {}
     } catch (e) {
       console.error(e)
@@ -199,11 +236,13 @@ function DiagnosisInner() {
   }
 
   function resetAll() {
-    setChars([null, null, null])
-    setResult(null)
-    setCommentary(null)
-    setStep('input')
-    try { localStorage.removeItem(NAMING_RESULT_KEY) } catch {}
+    setNameInput(''); setSyllables([]); setChars([])
+    setResult(null); setCommentary(null); setStep('input')
+    try {
+      localStorage.removeItem(NAMING_RESULT_KEY)
+      localStorage.removeItem('rename_picks_v1')
+      localStorage.removeItem('rename_locked_slot')
+    } catch {}
   }
 
   if (!info) {
@@ -224,7 +263,7 @@ function DiagnosisInner() {
   const sajuLine = converting ? '사주 불러오는 중...' :
     `일간 ${dayStem} · ${info.calType} ${info.year}.${info.month}.${info.day}`
 
-  const slotLabels = ['성(姓)', '이름 첫 글자', '이름 둘째 글자']
+  const slotLabel = (i: number) => i === 0 ? '성(姓)' : `이름 ${i}글자`
 
   return (
     <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
@@ -240,49 +279,78 @@ function DiagnosisInner() {
         {step === 'input' && (
           <>
             <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '10px' }}>
-              풀이할 이름의 한자를 골라주세요
+              본인 이름을 한글로 입력하세요
             </div>
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-              {[0, 1, 2].map((i) => (
-                <button key={i}
-                  onClick={() => { setPickerIdx(i); setPickerHangul(''); setHanjaList([]) }}
-                  style={{
-                    flex: 1, aspectRatio: '3/4', borderRadius: '14px',
-                    background: chars[i] ? 'rgba(250,199,117,0.1)' : cardBg,
-                    border: chars[i] ? `1.5px solid ${gold}` : border,
-                    color: chars[i] ? gold : '#8a88a0',
-                    cursor: 'pointer', display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', justifyContent: 'center', gap: '4px',
-                  }}>
-                  {chars[i] ? (
-                    <>
-                      <span style={{ fontSize: '30px', fontWeight: 'bold' }}>{chars[i]!.hanja}</span>
-                      <span style={{ fontSize: '12px', color: '#e8e4ff' }}>{chars[i]!.hangul}</span>
-                      <span style={{ fontSize: '10px', color: '#8a88a0' }}>{chars[i]!.resourceOhaeng}·{chars[i]!.strokes}획</span>
-                    </>
-                  ) : (
-                    <>
-                      <span style={{ fontSize: '22px' }}>+</span>
-                      <span style={{ fontSize: '11px' }}>{slotLabels[i]}</span>
-                    </>
-                  )}
-                </button>
-              ))}
-            </div>
-            <div style={{ fontSize: '11px', color: '#666', marginBottom: '20px', lineHeight: 1.6 }}>
-              · 외자 이름은 첫 두 칸(성·이름)만 채우면 됩니다<br />
-              · 글자를 다시 누르면 한자를 바꿀 수 있어요
+            <div style={{ display: 'flex', gap: '8px', marginBottom: syllables.length > 0 ? '26px' : '20px' }}>
+              <input
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') applyName() }}
+                placeholder="예: 류현우"
+                maxLength={5}
+                style={{
+                  flex: 1, padding: '13px', borderRadius: '12px', background: '#1a1a18',
+                  border: '1px solid rgba(255,255,255,0.15)', color: '#e8e4ff', fontSize: '16px',
+                }} />
+              <button onClick={applyName}
+                style={{ padding: '13px 20px', borderRadius: '12px', background: gold, border: 'none', color: '#1a1a18', fontWeight: 'bold', cursor: 'pointer' }}>
+                확인
+              </button>
             </div>
 
-            <button onClick={handlePreview} disabled={!canSubmit}
-              style={{
-                width: '100%', padding: '14px', borderRadius: '12px',
-                background: canSubmit ? 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)' : '#333',
-                border: 'none', color: canSubmit ? '#1a1a18' : '#666',
-                fontSize: '15px', fontWeight: 'bold', cursor: canSubmit ? 'pointer' : 'default',
-              }}>
-              이름 풀이 보기 →
-            </button>
+            {syllables.length >= 2 && (
+              <>
+                <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '16px' }}>
+                  각 글자의 한자를 골라주세요
+                </div>
+                <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', marginBottom: '20px', flexWrap: 'wrap' }}>
+                  {syllables.map((syl, i) => {
+                    const c = chars[i]
+                    return (
+                      <div key={i} style={{ textAlign: 'center' }}>
+                        <button onClick={() => openPicker(i)} className="active:scale-95"
+                          style={{
+                            width: '78px', height: '78px', borderRadius: '50%',
+                            background: c ? 'rgba(250,199,117,0.1)' : cardBg,
+                            border: c ? `2px solid ${gold}` : '1px dashed rgba(250,199,117,0.4)',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', transition: 'transform 0.15s ease',
+                          }}>
+                          {c ? (
+                            <>
+                              <span style={{ fontSize: '30px', fontWeight: 'bold', color: gold, lineHeight: 1 }}>{c.hanja}</span>
+                              <span style={{ fontSize: '10px', color: '#8a88a0', marginTop: '3px' }}>{c.hangul}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span style={{ fontSize: '26px', fontWeight: 'bold', color: '#e8e4ff', lineHeight: 1 }}>{syl}</span>
+                              <span style={{ fontSize: '9px', color: gold, marginTop: '4px' }}>한자 고르기</span>
+                            </>
+                          )}
+                        </button>
+                        <div style={{ fontSize: '9px', color: '#8a88a0', marginTop: '5px' }}>
+                          {c ? `${c.resourceOhaeng}·${c.strokes}획` : slotLabel(i)}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div style={{ fontSize: '11px', color: '#666', marginBottom: '20px', lineHeight: 1.6 }}>
+                  · 원을 누르면 그 글자의 한자가 자동으로 나와요<br />
+                  · 이름을 바꾸려면 위에 다시 입력하고 확인을 누르세요
+                </div>
+
+                <button onClick={handlePreview} disabled={!canSubmit}
+                  style={{
+                    width: '100%', padding: '14px', borderRadius: '12px',
+                    background: canSubmit ? 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)' : '#333',
+                    border: 'none', color: canSubmit ? '#1a1a18' : '#666',
+                    fontSize: '15px', fontWeight: 'bold', cursor: canSubmit ? 'pointer' : 'default',
+                  }}>
+                  {canSubmit ? '이름 풀이 보기 →' : '모든 글자의 한자를 골라주세요'}
+                </button>
+              </>
+            )}
           </>
         )}
 
@@ -481,31 +549,14 @@ function DiagnosisInner() {
               maxHeight: '80vh', display: 'flex', flexDirection: 'column',
             }}>
             <div style={{ fontSize: '15px', fontWeight: 'bold', color: gold, marginBottom: '14px' }}>
-              {slotLabels[pickerIdx]} — 한자 고르기
-            </div>
-
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-              <input
-                value={pickerHangul}
-                onChange={(e) => setPickerHangul(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') searchHanja(pickerHangul) }}
-                placeholder="한글 음 입력 (예: 승)"
-                maxLength={1}
-                style={{
-                  flex: 1, padding: '12px', borderRadius: '10px', background: '#1a1a18',
-                  border: '1px solid rgba(255,255,255,0.15)', color: '#e8e4ff', fontSize: '15px',
-                }} />
-              <button onClick={() => searchHanja(pickerHangul)}
-                style={{ padding: '12px 18px', borderRadius: '10px', background: gold, border: 'none', color: '#1a1a18', fontWeight: 'bold', cursor: 'pointer' }}>
-                찾기
-              </button>
+              &lsquo;{syllables[pickerIdx]}&rsquo; 한자 고르기
             </div>
 
             <div style={{ overflowY: 'auto', flex: 1 }}>
               {searching && <div style={{ textAlign: 'center', color: '#8a88a0', padding: '20px' }}>찾는 중...</div>}
-              {!searching && hanjaList.length === 0 && pickerHangul && (
+              {!searching && hanjaList.length === 0 && (
                 <div style={{ textAlign: 'center', color: '#8a88a0', padding: '20px', fontSize: '13px' }}>
-                  '{pickerHangul}' 음의 인명용 한자를 찾을 수 없어요
+                  &lsquo;{syllables[pickerIdx]}&rsquo; 음의 인명용 한자를 찾을 수 없어요
                 </div>
               )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
