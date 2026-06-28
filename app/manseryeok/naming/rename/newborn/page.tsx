@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { supabase } from '@/lib/supabase'
@@ -39,6 +39,16 @@ function isHangulSyllable(ch: string): boolean {
   return code >= 0xac00 && code <= 0xd7a3
 }
 
+// 한글 음절 한 글자만 남기기 (조합 완료 후 정리용)
+function firstHangul(s: string): string {
+  const arr = Array.from(s)
+  for (const ch of arr) {
+    const code = ch.charCodeAt(0)
+    if (code >= 0xac00 && code <= 0xd7a3) return ch
+  }
+  return arr.length > 0 ? arr[arr.length - 1] : ''
+}
+
 function NewbornInner() {
   const router = useRouter()
 
@@ -52,6 +62,7 @@ function NewbornInner() {
   const [surInput, setSurInput] = useState('')
   const [surHangul, setSurHangul] = useState('')        // 확정된 성씨 한글
   const [surHanja, setSurHanja] = useState<SavedChar | null>(null) // 고른 성씨 한자
+  const composingSur = useRef(false)
 
   const [picker, setPicker] = useState(false)
   const [hanjaList, setHanjaList] = useState<HanjaRow[]>([])
@@ -84,13 +95,14 @@ function NewbornInner() {
     info?.hourIdx ?? null,
   )
 
-  function applySurname() {
-    const cleaned = surInput.trim().replace(/\s/g, '')
-    const arr = Array.from(cleaned).filter(isHangulSyllable)
-    if (arr.length < 1) return
-    setSurHangul(arr[0])
+  function applySurname(rawVal?: string) {
+    const base = rawVal !== undefined ? rawVal : surInput
+    const one = firstHangul(base)
+    if (!one || !isHangulSyllable(one)) return
+    setSurInput(one)
+    setSurHangul(one)
     setSurHanja(null)
-    openPicker(arr[0])
+    openPicker(one)
   }
 
   async function openPicker(hangul: string) {
@@ -168,7 +180,11 @@ function NewbornInner() {
         <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'stretch' }}>
           <input
             value={surInput}
-            onChange={(e) => setSurInput(e.target.value.slice(0, 1))}
+            inputMode="text"
+            maxLength={2}
+            onCompositionStart={() => { composingSur.current = true }}
+            onCompositionEnd={(e) => { composingSur.current = false; setSurInput(firstHangul(e.currentTarget.value)) }}
+            onChange={(e) => { const v = e.target.value; if (composingSur.current) setSurInput(v); else setSurInput(firstHangul(v)) }}
             onKeyDown={(e) => { if (e.key === 'Enter') applySurname() }}
             placeholder="예: 김"
             style={{ flex: 1, minWidth: 0, padding: '13px', borderRadius: '12px', background: '#1a1a18', border: '1px solid rgba(255,255,255,0.15)', color: '#e8e4ff', fontSize: '16px' }}
