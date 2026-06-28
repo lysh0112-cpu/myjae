@@ -139,12 +139,18 @@ export default function ReviewWritePage() {
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="이용하신 경험을 자유롭게 적어주세요."
+          placeholder="이용하신 경험을 자유롭게 들려주세요 :)"
           maxLength={1000}
           rows={6}
           style={{ width: '100%', boxSizing: 'border-box', background: CARD, border: `1px solid ${LINE}`, borderRadius: 12, padding: '14px 16px', color: '#fff', fontSize: 16, lineHeight: 1.6, resize: 'vertical', outline: 'none', marginBottom: 6 }}
         />
-        <div style={{ textAlign: 'right', color: SUB, fontSize: 12, marginBottom: 28 }}>{content.length}/1000</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 28 }}>
+          {/* 하단 고정 경고 안내문 */}
+          <p style={{ color: SUB, fontSize: 11, lineHeight: 1.5, margin: 0, flex: 1 }}>
+            운영정책에 따라, 비방·욕설·음란·광고성 등 부적절한 후기는 사전 안내 없이 삭제 또는 비공개 처리될 수 있습니다.
+          </p>
+          <span style={{ color: SUB, fontSize: 12, whiteSpace: 'nowrap' }}>{content.length}/1000</span>
+        </div>
 
         {/* 등록 버튼 */}
         <button
