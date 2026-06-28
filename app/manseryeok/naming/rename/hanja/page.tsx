@@ -17,15 +17,6 @@ const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
 const LOCKED_SLOT_KEY = 'rename_locked_slot'
 
-// 이름에 쓰지 않는 흉한 뜻 키워드 (검수 때 DB is_avoid로 정밀화)
-const AVOID_KEYWORDS = [
-  '죽을', '죽일', '주검', '시체', '시신', '송장', '애도', '슬플', '슬픔',
-  '근심', '걱정', '병', '앓을', '아플', '악할', '흉할', '흉', '재앙', '재난',
-  '천할', '천박', '종', '노예', '놈', '도둑', '도적', '귀신', '미칠', '미치광이',
-  '어리석을', '간사할', '간교', '허물', '꺾을', '무너질', '망할', '멸할',
-  '원수', '저주', '독', '괴로울', '비참', '울', '눈물', '한숨',
-]
-
 interface HanjaRow {
   hangul: string
   hanja: string
@@ -33,7 +24,8 @@ interface HanjaRow {
   strokes: number
   resource_ohaeng: string
   sound_ohaeng: string
-  is_avoid?: boolean
+  avoid_hard?: boolean
+  avoid_soft?: boolean
 }
 
 interface SavedChar {
@@ -52,13 +44,6 @@ function ohaengChar(s: string): string {
   if (t.includes('金') || t.includes('금')) return '금'
   if (t.includes('水') || t.includes('수')) return '수'
   return t
-}
-
-// 흉한 한자인지 판정 (DB is_avoid 우선, 없으면 뜻 키워드)
-function isAvoidChar(row: HanjaRow): boolean {
-  if (row.is_avoid === true) return true
-  const m = row.meaning || ''
-  return AVOID_KEYWORDS.some((k) => m.includes(k))
 }
 
 function gradeNum(g: Grade): number {
@@ -164,15 +149,15 @@ function HanjaInner() {
     setLoadingList(true)
     supabase
       .from('hanja')
-      .select('hangul, hanja, meaning, strokes, resource_ohaeng, sound_ohaeng')
+      .select('hangul, hanja, meaning, strokes, resource_ohaeng, sound_ohaeng, avoid_hard, avoid_soft')
       .eq('hangul', target.hangul)
       .order('strokes', { ascending: true })
       .then(({ data, error }) => {
         if (cancelled) return
         if (error) { console.error(error); setHanjaList([]) }
         else {
-          // 흉한 한자 제외 (개명 추천에서는 완전 제외)
-          const filtered = ((data as HanjaRow[]) ?? []).filter((row) => !isAvoidChar(row))
+          // 개명 추천: 뜻이 흉한 한자(avoid_hard)는 완전 제외
+          const filtered = ((data as HanjaRow[]) ?? []).filter((row) => !row.avoid_hard)
           setHanjaList(filtered)
         }
         setLoadingList(false)
@@ -233,7 +218,11 @@ function HanjaInner() {
   const { recommend, others } = useMemo(() => {
     if (scored.length === 0) return { recommend: [] as { row: HanjaRow; rank: number }[], others: [] as HanjaRow[] }
     const sorted = [...scored].sort((a, b) => {
+      // soft(주의) 글자는 같은 조건이면 뒤로
+      const aSoft = a.row.avoid_soft ? 1 : 0
+      const bSoft = b.row.avoid_soft ? 1 : 0
       if (a.fitsYongsin !== b.fitsYongsin) return a.fitsYongsin ? -1 : 1
+      if (aSoft !== bSoft) return aSoft - bSoft
       if (b.weighted !== a.weighted) return b.weighted - a.weighted
       return a.row.strokes - b.row.strokes
     })
@@ -327,6 +316,7 @@ function HanjaInner() {
   const cell = (x: HanjaRow, fit: boolean, rank?: number) => {
     const isCurrent = target && x.hanja === target.hanja
     const on = activeIdx !== null && chosen[activeIdx]?.hanja === x.hanja
+    const soft = !!x.avoid_soft
     return (
       <button key={x.hanja + x.strokes} onClick={() => pickHanja(x)} className="active:scale-95"
         style={{ position: 'relative', padding: '10px 4px 8px', textAlign: 'center', borderRadius: 16,
@@ -343,6 +333,7 @@ function HanjaInner() {
         <div style={{ fontSize: 24, fontWeight: 600, color: on ? GOLD : '#fff', lineHeight: 1.1 }}>{x.hanja}</div>
         <div style={{ fontSize: 10, color: SUB, marginTop: 3 }}>{x.meaning}</div>
         <div style={{ fontSize: 9, color: SUB, marginTop: 1 }}>{x.resource_ohaeng}·{x.strokes}획</div>
+        {soft && <div style={{ fontSize: 8, color: '#E0A04A', marginTop: 1 }}>주의</div>}
         {isCurrent && <div style={{ fontSize: 9, color: SUB, marginTop: 1 }}>현재</div>}
       </button>
     )
