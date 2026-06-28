@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useState, useEffect, useMemo, useRef } from 'react'
+import { Suspense, useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsin } from '@/lib/saju/yongsin'
@@ -11,7 +11,6 @@ const SUB = '#8a88a0'
 const GREEN = '#81c784'
 
 const TRY_LIMIT = 5
-const CHAT_LIMIT = 5
 
 const MY_INFO_KEY = 'myinfo'
 const NEWNAME_HISTORY_KEY = 'newname_history_v1'
@@ -23,12 +22,19 @@ interface SavedChar {
   resourceOhaeng: string
 }
 
+interface Commentary {
+  title: string
+  summary: string
+  good: string
+  improve: string
+  advice: string
+}
+
 interface TryItem {
   name: string
   chars: SavedChar[]
+  commentary?: Commentary   // 자세히 보기로 생성된 해설 (캐시)
 }
-
-interface ChatMsg { role: 'user' | 'assistant'; content: string }
 
 function ohaengChar(s: string): string {
   if (!s) return ''
@@ -64,12 +70,10 @@ function NewResultInner() {
   const [tries, setTries] = useState<TryItem[]>([])
   const [activeTry, setActiveTry] = useState(0)
   const [loaded, setLoaded] = useState(false)
+  const [pkey, setPkey] = useState('')
 
-  const [chatMsgs, setChatMsgs] = useState<ChatMsg[]>([])
-  const [chatInput, setChatInput] = useState('')
-  const [chatLoading, setChatLoading] = useState(false)
-  const [chatUsed, setChatUsed] = useState(0)
-  const chatEndRef = useRef<HTMLDivElement>(null)
+  // 상세 해설 생성 상태
+  const [detailLoading, setDetailLoading] = useState(false)
 
   useEffect(() => {
     let m: Record<string, unknown> = {}
@@ -87,8 +91,10 @@ function NewResultInner() {
       }
     } catch {}
     try {
+      const pk = personKey(m)
+      setPkey(pk)
       const h = JSON.parse(localStorage.getItem(NEWNAME_HISTORY_KEY) || '{}')
-      if (h.personKey === personKey(m) && Array.isArray(h.tries) && h.tries.length > 0) {
+      if (h.personKey === pk && Array.isArray(h.tries) && h.tries.length > 0) {
         setTries(h.tries)
         setActiveTry(h.tries.length - 1) // 가장 최근 이름
       }
@@ -148,37 +154,49 @@ function NewResultInner() {
     } catch { return tries.map(() => '') }
   }, [saju, dayStem, tries])
 
-  async function sendChat() {
-    const q = chatInput.trim()
-    if (!q || chatLoading || chatUsed >= CHAT_LIMIT || !cur) return
-    const next = [...chatMsgs, { role: 'user' as const, content: q }]
-    setChatMsgs(next)
-    setChatInput('')
-    setChatLoading(true)
-    const ctx = {
-      name: cur.chars.map((c) => c.hanja).join('') || undefined,
-      yongsin: yongsin || undefined,
-      candidates: undefined,
-    }
+  // 선택한 이름의 상세 해설 생성 (/api/naming 재사용) + history 캐싱
+  async function loadDetail() {
+    if (!cur || !saju || !dayStem || detailLoading) return
+    if (cur.commentary) return // 이미 있으면 재호출 안 함
+    setDetailLoading(true)
     try {
-      const res = await fetch('/api/naming-chat', {
+      const y = calcYongsin(saju, dayStem)
+      const surname: NameChar = {
+        hangul: cur.chars[0].hangul, hanja: cur.chars[0].hanja,
+        strokes: cur.chars[0].strokes, resourceOhaeng: ohaengChar(cur.chars[0].resourceOhaeng),
+      }
+      const given: NameChar[] = cur.chars.slice(1).map((c) => ({
+        hangul: c.hangul, hanja: c.hanja, strokes: c.strokes, resourceOhaeng: ohaengChar(c.resourceOhaeng),
+      }))
+      const sajuText = Array.isArray(saju)
+        ? (saju as { pillar: string; stem: string; branch: string }[]).map((p) => `${p.pillar}:${p.stem}${p.branch}`).join(', ')
+        : ''
+      const res = await fetch('/api/naming', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: next, context: ctx }),
+        body: JSON.stringify({
+          surname, given,
+          yongsin: y.yongsin, heeksin: y.heeksin, elementScore: y.score,
+          dayStem, sajuText,
+        }),
       })
       const data = await res.json()
-      setChatMsgs([...next, { role: 'assistant', content: data.reply || '죄송해요, 다시 여쭤봐 주세요.' }])
-      setChatUsed((n) => n + 1)
-    } catch {
-      setChatMsgs([...next, { role: 'assistant', content: '연결이 잠시 불안정해요. 다시 시도해 주세요.' }])
+      const commentary: Commentary = data.commentary ?? { title: '', summary: '', good: '', improve: '', advice: '' }
+
+      // 현재 이름에 commentary 캐싱 → state + localStorage
+      setTries((prev) => {
+        const nextTries = prev.map((t, i) => (i === activeTry ? { ...t, commentary } : t))
+        try {
+          localStorage.setItem(NEWNAME_HISTORY_KEY, JSON.stringify({ personKey: pkey, tries: nextTries }))
+        } catch {}
+        return nextTries
+      })
+    } catch (e) {
+      console.error('detail error:', e)
     } finally {
-      setChatLoading(false)
+      setDetailLoading(false)
     }
   }
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [chatMsgs, chatLoading])
 
   if (loaded && tries.length === 0) {
     return (
@@ -201,7 +219,6 @@ function NewResultInner() {
 
   const fullName = cur.chars.map((c) => c.hanja).join('')
   const hangulName = cur.chars.map((c) => c.hangul).join('')
-  const chatLeft = CHAT_LIMIT - chatUsed
   const triesLeft = TRY_LIMIT - tries.length
 
   const rows = result ? [
@@ -262,65 +279,51 @@ function NewResultInner() {
         </div>
       )}
 
-      {/* 설명 */}
-      <div style={{ background: 'rgba(129,199,132,0.08)', border: '1px solid rgba(129,199,132,0.3)', borderRadius: 14, padding: '13px 16px', marginBottom: 14 }}>
-        <p style={{ fontSize: 13, color: '#dfe7d8', lineHeight: 1.8, margin: 0 }}>
-          {yongsin
-            ? <><b style={{ color: '#fff' }}>{hangulName}</b> 이름의 한자들이 사주에 필요한 기운 <b style={{ color: GREEN }}>{yongsin}</b>을(를) 얼마나 채워주는지, 소리·획수의 균형까지 함께 분석했습니다.</>
-            : <>이름의 한자·소리·획수 균형을 종합해 분석했습니다.</>}
-        </p>
-      </div>
-
-      {/* AI 작명 도우미 채팅 */}
-      <div style={{ marginTop: 8, borderTop: '1px solid rgba(250,199,117,0.15)', paddingTop: 18 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: GOLD }}>✨ 작명 도우미에게 물어보기</span>
-          <span style={{ fontSize: 11, color: SUB }}>남은 질문 {chatLeft}회</span>
-        </div>
-        <div style={{ fontSize: 11, color: SUB, marginBottom: 12, lineHeight: 1.6 }}>
-          이 이름에 대해 궁금한 점을 물어보세요. (예: 이 한자 조합이 잘 어울리나요?)
-        </div>
-
-        <div style={{ background: CARD, border: '1px solid rgba(250,199,117,0.12)', borderRadius: 14, padding: 12, maxHeight: 320, overflowY: 'auto' }}>
-          {chatMsgs.length === 0 && (
-            <div style={{ fontSize: 12, color: SUB, textAlign: 'center', padding: '16px 0' }}>무엇이든 편하게 물어보세요.</div>
+      {/* 상세 해설 — 선택한 이름만 생성 (캐싱) */}
+      {cur.commentary && cur.commentary.summary ? (
+        <div style={{ background: CARD, border: '1px solid rgba(250,199,117,0.15)', borderRadius: 16, padding: 18, marginBottom: 14 }}>
+          {cur.commentary.title && (
+            <div style={{ fontSize: 16, fontWeight: 700, color: GOLD, marginBottom: 12, lineHeight: 1.5 }}>
+              &ldquo;{cur.commentary.title}&rdquo;
+            </div>
           )}
-          {chatMsgs.map((m, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start', marginBottom: 8 }}>
-              <div style={{ maxWidth: '80%', padding: '9px 12px', borderRadius: 14, fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap',
-                background: m.role === 'user' ? 'rgba(250,199,117,0.18)' : '#1f1e1c',
-                color: m.role === 'user' ? '#fff' : '#e0dce8',
-                border: m.role === 'user' ? '1px solid rgba(250,199,117,0.3)' : '1px solid rgba(255,255,255,0.06)' }}>
-                {m.content}
-              </div>
+          {[
+            { label: '종합', text: cur.commentary.summary },
+            { label: '좋은 점', text: cur.commentary.good },
+            { label: '더 좋아지려면', text: cur.commentary.improve },
+            { label: '조언', text: cur.commentary.advice },
+          ].filter((s) => s.text).map((s, i) => (
+            <div key={i} style={{ borderLeft: '3px solid ' + GOLD, padding: '4px 12px', marginBottom: 14 }}>
+              <div style={{ fontSize: 12, color: GOLD, marginBottom: 4 }}>{s.label}</div>
+              <div style={{ fontSize: 14, color: '#e0dce8', lineHeight: 1.8 }}>{s.text}</div>
             </div>
           ))}
-          {chatLoading && (
-            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 8 }}>
-              <div style={{ padding: '9px 12px', borderRadius: 14, fontSize: 13, background: '#1f1e1c', color: SUB, border: '1px solid rgba(255,255,255,0.06)' }}>
-                <span style={{ display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span> 생각 중…
-              </div>
-            </div>
-          )}
-          <div ref={chatEndRef} />
         </div>
+      ) : (
+        <div style={{ marginBottom: 14 }}>
+          <button onClick={loadDetail} disabled={detailLoading} className="active:scale-95"
+            style={{ width: '100%', background: 'rgba(250,199,117,0.16)', border: '1px solid ' + GOLD, borderRadius: 14, padding: 14, color: GOLD, fontWeight: 700, fontSize: 14, cursor: detailLoading ? 'default' : 'pointer' }}>
+            {detailLoading
+              ? <><span style={{ display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span> 이름을 정성껏 풀이하는 중…</>
+              : <>✨ 이 이름 자세히 풀이 보기</>}
+          </button>
+          <div style={{ fontSize: 11, color: SUB, textAlign: 'center', marginTop: 8, lineHeight: 1.6 }}>
+            마음에 드는 이름을 고르면, 사주에 맞는지 상세히 풀어드려요.
+          </div>
+        </div>
+      )}
 
-        {chatLeft > 0 ? (
-          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-            <input value={chatInput} onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') sendChat() }}
-              placeholder="궁금한 점을 입력하세요" disabled={chatLoading}
-              style={{ flex: 1, padding: '12px', borderRadius: 12, background: '#1a1a18', border: '1px solid rgba(255,255,255,0.15)', color: '#e8e4ff', fontSize: 14 }} />
-            <button onClick={sendChat} disabled={chatLoading || !chatInput.trim()}
-              style={{ padding: '12px 18px', borderRadius: 12, background: chatInput.trim() && !chatLoading ? GOLD : '#444', border: 'none', color: chatInput.trim() && !chatLoading ? '#1a1a18' : '#888', fontWeight: 700, cursor: chatInput.trim() && !chatLoading ? 'pointer' : 'default' }}>
-              전송
-            </button>
+      {/* 작명 도우미 (준비 중 — 비활성) */}
+      <div style={{ marginTop: 8, borderTop: '1px solid rgba(250,199,117,0.15)', paddingTop: 18 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: SUB }}>✨ 작명 도우미에게 물어보기</span>
+          <span style={{ fontSize: 11, color: SUB }}>준비 중</span>
+        </div>
+        <div style={{ background: CARD, border: '1px dashed rgba(250,199,117,0.25)', borderRadius: 14, padding: '18px 16px', textAlign: 'center' }}>
+          <div style={{ fontSize: 13, color: SUB, lineHeight: 1.7 }}>
+            작명 도우미 채팅은 곧 만나보실 수 있어요.
           </div>
-        ) : (
-          <div style={{ marginTop: 12, padding: '14px 16px', borderRadius: 14, background: 'rgba(250,199,117,0.08)', border: '1px solid rgba(250,199,117,0.3)', textAlign: 'center' }}>
-            <div style={{ fontSize: 13, color: '#fff' }}>질문 {CHAT_LIMIT}회를 모두 사용했어요.</div>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* 또 지어보기 / 카운트 안내 */}
