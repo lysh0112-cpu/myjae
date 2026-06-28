@@ -286,7 +286,7 @@ function DiagnosisInner() {
                 value={nameInput}
                 onChange={(e) => setNameInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') applyName() }}
-                placeholder="예: 류현우"
+                placeholder="예: 홍길동"
                 maxLength={5}
                 style={{
                   flex: 1, padding: '13px', borderRadius: '12px', background: '#1a1a18',
