@@ -3,11 +3,15 @@ import { Suspense, useState, useEffect, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsin } from '@/lib/saju/yongsin'
+import { supabase } from '@/lib/supabase'
+import { diagnoseName, type NameChar, type Grade } from '@/lib/saju/naming'
 
 const GOLD = '#FAC775'
 const CARD = '#2C2C2A'
 const SUB = '#8a88a0'
 const GREEN = '#81c784'
+
+const TOP_N = 6
 
 const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
@@ -19,6 +23,17 @@ interface SavedChar {
   resourceOhaeng: string
 }
 
+interface HanjaRow {
+  hangul: string
+  hanja: string
+  meaning: string
+  strokes: number
+  resource_ohaeng: string
+  sound_ohaeng: string
+  avoid_hard?: boolean
+  avoid_soft?: boolean
+}
+
 function ohaengChar(s: string): string {
   if (!s) return ''
   const t = s.trim()
@@ -28,6 +43,10 @@ function ohaengChar(s: string): string {
   if (t.includes('金') || t.includes('금')) return '금'
   if (t.includes('水') || t.includes('수')) return '수'
   return t
+}
+
+function gradeNum(g: Grade): number {
+  return g === '좋음' ? 2 : g === '보통' ? 1 : 0
 }
 
 // diagnosis 화면과 동일한 personKey 규칙 (동일인 식별)
@@ -57,6 +76,13 @@ function NewHanjaInner() {
   const [activeIdx, setActiveIdx] = useState<number>(0)
   const [restored, setRestored] = useState(false)
 
+  // 글자별 선택한 한자 (key = syllable index)
+  const [chosen, setChosen] = useState<Record<number, HanjaRow>>({})
+
+  // 활성 글자의 한자 후보 목록
+  const [hanjaList, setHanjaList] = useState<HanjaRow[]>([])
+  const [loadingList, setLoadingList] = useState(false)
+
   // 사주 정보 + 본인 성씨(동일인) + 새 이름(URL) 로딩
   useEffect(() => {
     let m: Record<string, unknown> = {}
@@ -81,7 +107,6 @@ function NewHanjaInner() {
         setSurname(r.chars[0] as SavedChar)
       }
     } catch {}
-    // URL 새 이름 → 한글 음절 분해
     const nameParam = sp.get('name') || ''
     const arr = Array.from(nameParam.trim()).filter(isHangulSyllable)
     setSyllables(arr)
@@ -110,7 +135,111 @@ function NewHanjaInner() {
   const yongsin = yong.yongsin
   const yongsinReady = !converting && !!yongsin
 
-  // 성씨 없거나 새 이름 없으면 안내
+  // 활성 글자가 바뀌면 그 음의 한자 후보 조회 (avoid_hard 제외)
+  useEffect(() => {
+    if (!restored || syllables.length === 0) { setHanjaList([]); return }
+    const hangul = syllables[activeIdx]
+    if (!hangul) { setHanjaList([]); return }
+    let cancelled = false
+    setLoadingList(true)
+    supabase
+      .from('hanja')
+      .select('hangul, hanja, meaning, strokes, resource_ohaeng, sound_ohaeng, avoid_hard, avoid_soft')
+      .eq('hangul', hangul)
+      .order('strokes', { ascending: true })
+      .then(({ data, error }) => {
+        if (cancelled) return
+        if (error) { console.error(error); setHanjaList([]) }
+        else {
+          const filtered = ((data as HanjaRow[]) ?? []).filter((row) => !row.avoid_hard)
+          setHanjaList(filtered)
+        }
+        setLoadingList(false)
+      })
+    return () => { cancelled = true }
+  }, [activeIdx, syllables, restored])
+
+  // 각 글자의 "현재 한자" 결정: 고른 게 있으면 그것, 없으면 그 음의 첫 후보(임시)
+  // — 전체 이름으로 채점하기 위해 빈 글자를 임시 한자로 채운다 (hanja 화면과 동일한 전체 채점 방식)
+  function tempRowFor(idx: number, fallback: HanjaRow[]): HanjaRow | null {
+    if (chosen[idx]) return chosen[idx]
+    if (idx === activeIdx) return fallback[0] ?? null
+    return null
+  }
+
+  // 활성 글자 후보들을 채점 → 추천/그외 분리
+  const scored = useMemo(() => {
+    if (!yongsinReady || !surname || hanjaList.length === 0) return []
+    const surnameChar: NameChar = {
+      hangul: surname.hangul,
+      hanja: surname.hanja,
+      strokes: surname.strokes,
+      resourceOhaeng: ohaengChar(surname.resourceOhaeng),
+    }
+    // 활성 글자 외의 다른 글자들의 베이스(고른 것이 있으면 반영, 없으면 빈칸은 추후 자기 차례에 채움)
+    return hanjaList.map((row) => {
+      const given: NameChar[] = syllables.map((syl, i) => {
+        if (i === activeIdx) {
+          return { hangul: row.hangul, hanja: row.hanja, strokes: row.strokes, resourceOhaeng: ohaengChar(row.resource_ohaeng) }
+        }
+        const pick = chosen[i]
+        if (pick) {
+          return { hangul: syl, hanja: pick.hanja, strokes: pick.strokes, resourceOhaeng: ohaengChar(pick.resource_ohaeng) }
+        }
+        // 아직 안 고른 다른 글자: 채점 근사를 위해 빈 글자로 둔다 (strokes 0)
+        return { hangul: syl, hanja: '', strokes: 0, resourceOhaeng: '' }
+      })
+      const r = diagnoseName({
+        surname: surnameChar,
+        given,
+        yongsin: yong.yongsin,
+        heeksin: yong.heeksin,
+        elementScore: yong.score,
+      })
+      const weighted =
+        gradeNum(r.yongsinBohwan.grade) * 3 +
+        gradeNum(r.resourceFlow.grade) * 2 +
+        gradeNum(r.suri.grade) * 1.5 +
+        gradeNum(r.soundFlow.grade) * 1
+      const fitsYongsin = ohaengChar(row.resource_ohaeng) === yongsin
+      return { row, weighted, fitsYongsin }
+    })
+  }, [yongsinReady, surname, hanjaList, syllables, activeIdx, chosen, yong, yongsin])
+
+  const { recommend, others } = useMemo(() => {
+    if (scored.length === 0) return { recommend: [] as { row: HanjaRow; rank: number }[], others: [] as HanjaRow[] }
+    const sorted = [...scored].sort((a, b) => {
+      const aSoft = a.row.avoid_soft ? 1 : 0
+      const bSoft = b.row.avoid_soft ? 1 : 0
+      if (a.fitsYongsin !== b.fitsYongsin) return a.fitsYongsin ? -1 : 1
+      if (aSoft !== bSoft) return aSoft - bSoft
+      if (b.weighted !== a.weighted) return b.weighted - a.weighted
+      return a.row.strokes - b.row.strokes
+    })
+    const fitSorted = sorted.filter((s) => s.fitsYongsin)
+    const recSrc = (fitSorted.length > 0 ? fitSorted : sorted).slice(0, TOP_N)
+    const rec = recSrc.map((s, i) => ({ row: s.row, rank: i + 1 }))
+    const recSet = new Set(rec.map((r) => r.row.hanja + r.row.strokes))
+    const oth = sorted.map((s) => s.row).filter((r) => !recSet.has(r.hanja + r.strokes))
+    return { recommend: rec, others: oth }
+  }, [scored, yongsin])
+
+  function pickHanja(row: HanjaRow) {
+    setChosen((prev) => ({ ...prev, [activeIdx]: row }))
+  }
+
+  // 다음 글자로 이동 or 결과로 (저장은 2c에서 연결)
+  function proceed() {
+    if (!chosen[activeIdx]) return
+    const next = syllables.findIndex((_, i) => !chosen[i] && i !== activeIdx)
+    if (next !== -1) {
+      setActiveIdx(next)
+      return
+    }
+    // 모든 글자 선택 완료 → 결과로 (저장 로직은 조각 2c)
+    alert('모든 글자 선택 완료! (결과 저장·이동은 다음 단계에서 연결)')
+  }
+
   if (restored && (!surname || syllables.length === 0)) {
     return (
       <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
@@ -133,6 +262,31 @@ function NewHanjaInner() {
   if (!restored) return <main style={{ minHeight: '100vh', background: '#1f1e1c' }} />
 
   const target = syllables[activeIdx]
+  const allChosen = syllables.length > 0 && syllables.every((_, i) => chosen[i])
+
+  const cell = (x: HanjaRow, fit: boolean, rank?: number) => {
+    const on = chosen[activeIdx]?.hanja === x.hanja
+    const soft = !!x.avoid_soft
+    return (
+      <button key={x.hanja + x.strokes} onClick={() => pickHanja(x)} className="active:scale-95"
+        style={{ position: 'relative', padding: '10px 4px 8px', textAlign: 'center', borderRadius: 16,
+          background: on ? 'rgba(250,199,117,0.16)' : CARD,
+          border: '1px solid ' + (on ? GOLD : 'rgba(250,199,117,0.12)'),
+          cursor: 'pointer', transition: 'transform 0.15s ease' }}>
+        {rank !== undefined && (
+          <span style={{ position: 'absolute', top: 4, left: 6, fontSize: 10, fontWeight: 700, color: '#1a1a18',
+            background: GOLD, borderRadius: '50%', width: 16, height: 16, lineHeight: '16px', textAlign: 'center' }}>
+            {rank}
+          </span>
+        )}
+        {fit && <span style={{ position: 'absolute', top: 4, right: 6, fontSize: 10, color: GREEN }}>{'\u2713'}</span>}
+        <div style={{ fontSize: 24, fontWeight: 600, color: on ? GOLD : '#fff', lineHeight: 1.1 }}>{x.hanja}</div>
+        <div style={{ fontSize: 10, color: SUB, marginTop: 3 }}>{x.meaning}</div>
+        <div style={{ fontSize: 9, color: SUB, marginTop: 1 }}>{x.resource_ohaeng}·{x.strokes}획</div>
+        {soft && <div style={{ fontSize: 8, color: '#E0A04A', marginTop: 1 }}>주의</div>}
+      </button>
+    )
+  }
 
   return (
     <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
@@ -153,28 +307,72 @@ function NewHanjaInner() {
         </div>
         {syllables.map((syl, i) => {
           const on = activeIdx === i
+          const done = !!chosen[i]
           return (
             <button key={i} onClick={() => setActiveIdx(i)} className="active:scale-95"
               style={{ flex: 1, padding: '12px 0', borderRadius: 14, textAlign: 'center', cursor: 'pointer',
-                background: on ? 'rgba(250,199,117,0.16)' : CARD,
-                border: '1px solid ' + (on ? GOLD : 'rgba(250,199,117,0.12)') }}>
-              <div style={{ fontSize: 22, fontWeight: 700, color: on ? GOLD : '#fff' }}>{syl}</div>
-              <div style={{ fontSize: 10, color: SUB, marginTop: 3 }}>{on ? '고르는 중' : '대기'}</div>
+                background: on ? 'rgba(250,199,117,0.16)' : done ? 'rgba(129,199,132,0.14)' : CARD,
+                border: '1px solid ' + (on ? GOLD : done ? GREEN : 'rgba(250,199,117,0.12)') }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color: done ? GREEN : on ? GOLD : '#fff' }}>
+                {done ? chosen[i].hanja : syl}
+              </div>
+              <div style={{ fontSize: 10, color: SUB, marginTop: 3 }}>{syl} {done ? '✓' : on ? '고르는 중' : ''}</div>
             </button>
           )
         })}
       </div>
 
-      {/* 한자 조회/추천 목록 자리 — 조각 2b에서 채움 */}
-      {!yongsinReady ? (
+      {/* 한자 조회/추천 목록 */}
+      {(!yongsinReady || loadingList) && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '40px 0' }}>
           <span style={{ fontSize: 34, color: GOLD, display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span>
-          <span style={{ fontSize: 13, color: SUB }}>사주를 불러오는 중…</span>
+          <span style={{ fontSize: 13, color: SUB }}>한자를 불러오는 중…</span>
         </div>
-      ) : (
-        <div style={{ textAlign: 'center', color: SUB, padding: 30, fontSize: 13, border: '1px dashed rgba(250,199,117,0.2)', borderRadius: 14 }}>
-          &lsquo;{target}&rsquo; 한자 추천이 여기에 표시됩니다<br />
-          <span style={{ fontSize: 11, color: GREEN }}>(다음 단계에서 연결)</span>
+      )}
+
+      {yongsinReady && !loadingList && hanjaList.length === 0 && (
+        <div style={{ textAlign: 'center', color: SUB, padding: 24, fontSize: 13 }}>
+          &lsquo;{target}&rsquo; 음의 인명용 한자를 찾을 수 없어요
+        </div>
+      )}
+
+      {yongsinReady && !loadingList && recommend.length > 0 && (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: GREEN, display: 'inline-block' }} />
+            <span style={{ fontSize: 11, color: SUB }}>사주(용신 {yongsin})에 맞는 추천 · 좋은 순서 {recommend.length}개</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 16 }}>
+            {recommend.map((r) => cell(r.row, true, r.rank))}
+          </div>
+        </>
+      )}
+
+      {yongsinReady && !loadingList && others.length > 0 && (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: SUB, display: 'inline-block' }} />
+            <span style={{ fontSize: 11, color: SUB }}>그 외 &lsquo;{target}&rsquo; 한자</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
+            {others.map((x) => cell(x, false))}
+          </div>
+        </>
+      )}
+
+      {/* 선택/다음 바 */}
+      {yongsinReady && !loadingList && hanjaList.length > 0 && (
+        <div style={{ marginTop: 20, borderRadius: 16, padding: '13px 16px',
+          background: chosen[activeIdx] ? 'rgba(250,199,117,0.16)' : CARD,
+          border: '1px solid ' + (chosen[activeIdx] ? GOLD : 'rgba(250,199,117,0.12)'),
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 13, color: chosen[activeIdx] ? GOLD : SUB }}>
+            {chosen[activeIdx] ? '선택 : ' + chosen[activeIdx].hanja : '한자를 선택하세요'}
+          </span>
+          <button disabled={!chosen[activeIdx]} onClick={proceed}
+            style={{ fontSize: 13, fontWeight: 600, color: chosen[activeIdx] ? GOLD : '#555', background: 'none', border: 'none', cursor: chosen[activeIdx] ? 'pointer' : 'default' }}>
+            {allChosen ? '이 이름으로 →' : '다음 글자 →'}
+          </button>
         </div>
       )}
     </main>
