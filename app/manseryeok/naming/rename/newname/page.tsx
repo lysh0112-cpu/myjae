@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, CSSProperties } from 'react'
+import { useState, useEffect, useRef, CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 
 const GOLD = '#FAC775'
@@ -23,18 +23,31 @@ function personKey(m: Record<string, unknown> | null): string {
   return [m.calType || '양력', m.year, m.month, m.day, m.leapMonth || '0', hourIdx, m.gender || '남'].join('|')
 }
 
+// 한글 음절 한 글자만 남기기 (조합 완료 후 정리용)
+function firstHangul(s: string): string {
+  const arr = Array.from(s)
+  for (const ch of arr) {
+    const code = ch.charCodeAt(0)
+    if (code >= 0xac00 && code <= 0xd7a3) return ch
+  }
+  // 완성형 한글이 아직 없으면(조합 중) 원본 마지막 글자 유지
+  return arr.length > 0 ? arr[arr.length - 1] : ''
+}
+
 export default function NewNamePage() {
   const router = useRouter()
 
-  // 글자 수: null(미선택) / 1(외자) / 2(두 글자)
   const [count, setCount] = useState<1 | 2 | null>(null)
   const [c1, setC1] = useState('')
   const [c2, setC2] = useState('')
 
+  // 한글 조합(IME) 진행 상태 — 조합 중에는 값을 자르지 않는다
+  const composing1 = useRef(false)
+  const composing2 = useRef(false)
+
   const [surname, setSurname] = useState<SavedChar | null>(null)
   const [loaded, setLoaded] = useState(false)
 
-  // 본인 성씨를 '내 이름 풀이' 결과에서 이어받음 (사주 동일인일 때만)
   useEffect(() => {
     try {
       const m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
@@ -47,22 +60,45 @@ export default function NewNamePage() {
     setLoaded(true)
   }, [])
 
-  // 글자 수 바꾸면 입력값 초기화
   function chooseCount(n: 1 | 2) {
     setCount(n)
     setC1('')
     setC2('')
   }
 
+  // 조합 중에는 입력 그대로 두고, 조합이 끝나거나(완성형) 비조합 입력이면 한 글자로 정리
+  function handleChange(
+    raw: string,
+    composingRef: React.MutableRefObject<boolean>,
+    setter: (v: string) => void,
+  ) {
+    if (composingRef.current) {
+      setter(raw)
+      return
+    }
+    setter(firstHangul(raw))
+  }
+
+  function handleCompositionEnd(
+    raw: string,
+    composingRef: React.MutableRefObject<boolean>,
+    setter: (v: string) => void,
+  ) {
+    composingRef.current = false
+    setter(firstHangul(raw))
+  }
+
   const ready =
     !!surname &&
     count !== null &&
-    c1.trim().length > 0 &&
-    (count === 1 || c2.trim().length > 0)
+    firstHangul(c1).trim().length > 0 &&
+    (count === 1 || firstHangul(c2).trim().length > 0)
 
   const proceed = () => {
     if (!ready) return
-    const name = count === 1 ? c1.trim() : (c1 + c2).trim()
+    const a = firstHangul(c1)
+    const b = firstHangul(c2)
+    const name = count === 1 ? a : a + b
     router.push('/manseryeok/naming/rename/newhanja?name=' + encodeURIComponent(name))
   }
 
@@ -85,7 +121,6 @@ export default function NewNamePage() {
     )
   }
 
-  // 성씨 정보가 없으면(=이름 풀이 안 했으면) 안내
   if (loaded && !surname) {
     return (
       <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
@@ -112,22 +147,38 @@ export default function NewNamePage() {
         성씨 {surname!.hanja}({surname!.hangul})는 그대로 · 원하는 한글 이름을 적어주세요
       </p>
 
-      {/* 글자 수 먼저 선택 */}
       <div style={{ fontSize: 12, color: SUB, marginBottom: 8, padding: '0 4px' }}>이름 글자 수를 골라주세요</div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
         {chip(1, '외자 (한 글자)')}
         {chip(2, '두 글자')}
       </div>
 
-      {/* 글자 수 선택 후 입력칸 표시 */}
       {count !== null && (
         <>
           <div style={{ background: CARD, border: '1px solid rgba(250,199,117,0.12)', borderRadius: 16, padding: '18px 16px' }}>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
               <span style={{ fontSize: 22, color: SUB }}>{surname!.hanja}</span>
-              <input value={c1} onChange={(e) => setC1(e.target.value.slice(0, 1))} placeholder="서" style={inputStyle} />
+              <input
+                value={c1}
+                maxLength={2}
+                inputMode="text"
+                onCompositionStart={() => { composing1.current = true }}
+                onCompositionEnd={(e) => handleCompositionEnd(e.currentTarget.value, composing1, setC1)}
+                onChange={(e) => handleChange(e.target.value, composing1, setC1)}
+                placeholder="서"
+                style={inputStyle}
+              />
               {count === 2 && (
-                <input value={c2} onChange={(e) => setC2(e.target.value.slice(0, 1))} placeholder="연" style={inputStyle} />
+                <input
+                  value={c2}
+                  maxLength={2}
+                  inputMode="text"
+                  onCompositionStart={() => { composing2.current = true }}
+                  onCompositionEnd={(e) => handleCompositionEnd(e.currentTarget.value, composing2, setC2)}
+                  onChange={(e) => handleChange(e.target.value, composing2, setC2)}
+                  placeholder="연"
+                  style={inputStyle}
+                />
               )}
             </div>
           </div>
