@@ -189,7 +189,7 @@ function NewbornInner() {
             placeholder="예: 김"
             style={{ flex: 1, minWidth: 0, padding: '13px', borderRadius: '12px', background: '#1a1a18', border: '1px solid rgba(255,255,255,0.15)', color: '#e8e4ff', fontSize: '16px' }}
           />
-          <button onClick={applySurname}
+          <button onClick={() => applySurname()}
             style={{ flexShrink: 0, padding: '0 18px', borderRadius: '12px', background: gold, border: 'none', color: '#1a1a18', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
             확인
           </button>
