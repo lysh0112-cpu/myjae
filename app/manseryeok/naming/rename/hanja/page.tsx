@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useState, useEffect, useMemo } from 'react'
+import { Suspense, useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsin } from '@/lib/saju/yongsin'
@@ -12,6 +12,7 @@ const SUB = '#8a88a0'
 const GREEN = '#81c784'
 
 const TOP_N = 6
+const CHAT_LIMIT = 5
 
 const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
@@ -34,6 +35,8 @@ interface SavedChar {
   strokes: number
   resourceOhaeng: string
 }
+
+interface ChatMsg { role: 'user' | 'assistant'; content: string }
 
 function ohaengChar(s: string): string {
   if (!s) return ''
@@ -71,6 +74,12 @@ function HanjaInner() {
 
   const [hanjaList, setHanjaList] = useState<HanjaRow[]>([])
   const [loadingList, setLoadingList] = useState(false)
+
+  const [chatMsgs, setChatMsgs] = useState<ChatMsg[]>([])
+  const [chatInput, setChatInput] = useState('')
+  const [chatLoading, setChatLoading] = useState(false)
+  const [chatUsed, setChatUsed] = useState(0)
+  const chatEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     try {
@@ -156,7 +165,6 @@ function HanjaInner() {
         if (cancelled) return
         if (error) { console.error(error); setHanjaList([]) }
         else {
-          // 개명 추천: 뜻이 흉한 한자(avoid_hard)는 완전 제외
           const filtered = ((data as HanjaRow[]) ?? []).filter((row) => !row.avoid_hard)
           setHanjaList(filtered)
         }
@@ -218,7 +226,6 @@ function HanjaInner() {
   const { recommend, others } = useMemo(() => {
     if (scored.length === 0) return { recommend: [] as { row: HanjaRow; rank: number }[], others: [] as HanjaRow[] }
     const sorted = [...scored].sort((a, b) => {
-      // soft(주의) 글자는 같은 조건이면 뒤로
       const aSoft = a.row.avoid_soft ? 1 : 0
       const bSoft = b.row.avoid_soft ? 1 : 0
       if (a.fitsYongsin !== b.fitsYongsin) return a.fitsYongsin ? -1 : 1
@@ -293,6 +300,43 @@ function HanjaInner() {
     router.push('/manseryeok/naming/rename/result')
   }
 
+  async function sendChat() {
+    const q = chatInput.trim()
+    if (!q || chatLoading) return
+    if (chatUsed >= CHAT_LIMIT) return
+
+    const next = [...chatMsgs, { role: 'user' as const, content: q }]
+    setChatMsgs(next)
+    setChatInput('')
+    setChatLoading(true)
+
+    const candText = recommend.map((r) => r.row.hanja).join(', ')
+    const ctx = {
+      name: chars.map((c) => c.hanja).join('') || undefined,
+      yongsin: yongsin || undefined,
+      candidates: candText || undefined,
+    }
+
+    try {
+      const res = await fetch('/api/naming-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: next, context: ctx }),
+      })
+      const data = await res.json()
+      setChatMsgs([...next, { role: 'assistant', content: data.reply || '죄송해요, 다시 여쭤봐 주세요.' }])
+      setChatUsed((n) => n + 1)
+    } catch {
+      setChatMsgs([...next, { role: 'assistant', content: '연결이 잠시 불안정해요. 다시 시도해 주세요.' }])
+    } finally {
+      setChatLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [chatMsgs, chatLoading])
+
   if (restored && (chars.length === 0 || givenChars.length === 0)) {
     return (
       <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
@@ -312,6 +356,7 @@ function HanjaInner() {
 
   const fullName = chars.map((c) => c.hanja).join('')
   const target = activeIdx !== null ? chars[activeIdx] : null
+  const chatLeft = CHAT_LIMIT - chatUsed
 
   const cell = (x: HanjaRow, fit: boolean, rank?: number) => {
     const isCurrent = target && x.hanja === target.hanja
@@ -459,6 +504,71 @@ function HanjaInner() {
             </div>
           )}
         </>
+      )}
+
+      {yongsinReady && recommend.length > 0 && (
+        <div style={{ marginTop: 28, borderTop: '1px solid rgba(250,199,117,0.15)', paddingTop: 18 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: GOLD }}>✨ 작명 도우미에게 물어보기</span>
+            <span style={{ fontSize: 11, color: SUB }}>남은 질문 {chatLeft}회</span>
+          </div>
+          <div style={{ fontSize: 11, color: SUB, marginBottom: 12, lineHeight: 1.6 }}>
+            추천된 한자나 이름에 대해 궁금한 점을 물어보세요. (예: 두 글자 중 뭐가 더 어울려요?)
+          </div>
+
+          <div style={{ background: CARD, border: '1px solid rgba(250,199,117,0.12)', borderRadius: 14, padding: 12, maxHeight: 320, overflowY: 'auto' }}>
+            {chatMsgs.length === 0 && (
+              <div style={{ fontSize: 12, color: SUB, textAlign: 'center', padding: '16px 0' }}>
+                무엇이든 편하게 물어보세요.
+              </div>
+            )}
+            {chatMsgs.map((m, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start', marginBottom: 8 }}>
+                <div style={{
+                  maxWidth: '80%', padding: '9px 12px', borderRadius: 14, fontSize: 13, lineHeight: 1.6,
+                  whiteSpace: 'pre-wrap',
+                  background: m.role === 'user' ? 'rgba(250,199,117,0.18)' : '#1f1e1c',
+                  color: m.role === 'user' ? '#fff' : '#e0dce8',
+                  border: m.role === 'user' ? '1px solid rgba(250,199,117,0.3)' : '1px solid rgba(255,255,255,0.06)',
+                }}>
+                  {m.content}
+                </div>
+              </div>
+            ))}
+            {chatLoading && (
+              <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 8 }}>
+                <div style={{ padding: '9px 12px', borderRadius: 14, fontSize: 13, background: '#1f1e1c', color: SUB, border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <span style={{ display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span> 생각 중…
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          {chatLeft > 0 ? (
+            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+              <input
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') sendChat() }}
+                placeholder="궁금한 점을 입력하세요"
+                disabled={chatLoading}
+                style={{ flex: 1, padding: '12px', borderRadius: 12, background: '#1a1a18', border: '1px solid rgba(255,255,255,0.15)', color: '#e8e4ff', fontSize: 14 }}
+              />
+              <button onClick={sendChat} disabled={chatLoading || !chatInput.trim()}
+                style={{ padding: '12px 18px', borderRadius: 12, background: chatInput.trim() && !chatLoading ? GOLD : '#444', border: 'none', color: chatInput.trim() && !chatLoading ? '#1a1a18' : '#888', fontWeight: 700, cursor: chatInput.trim() && !chatLoading ? 'pointer' : 'default' }}>
+                전송
+              </button>
+            </div>
+          ) : (
+            <div style={{ marginTop: 12, padding: '14px 16px', borderRadius: 14, background: 'rgba(250,199,117,0.08)', border: '1px solid rgba(250,199,117,0.3)', textAlign: 'center' }}>
+              <div style={{ fontSize: 13, color: '#fff', marginBottom: 6 }}>질문 {CHAT_LIMIT}회를 모두 사용했어요.</div>
+              <div style={{ fontSize: 12, color: SUB, lineHeight: 1.6 }}>
+                더 깊은 상담은 연재 선생님과 함께하실 수 있어요. (추가 질문은 결제 후 이용 — 준비 중)
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {upsell && (
