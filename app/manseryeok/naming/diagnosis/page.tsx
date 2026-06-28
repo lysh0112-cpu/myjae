@@ -553,15 +553,43 @@ function DiagnosisInner() {
                 </div>
 
                 <div style={{ background: 'linear-gradient(160deg,#34322f 0%,#2C2C2A 100%)', border: `1px solid ${gold}`, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
-                  <div style={{ fontSize: '12px', color: '#f48fb1', fontStyle: 'italic', marginBottom: '8px', lineHeight: 1.5 }}>
+                  <div style={{ fontSize: '12px', color: '#f48fb1', fontStyle: 'italic', marginBottom: '14px', lineHeight: 1.5, textAlign: 'center' }}>
                     {result.overallGrade !== '좋음'
                       ? '부족한 기운을 채우면 이름이 당신을 받쳐줍니다'
                       : '지금도 좋은 이름이에요. 다른 가능성도 살펴볼까요?'}
                   </div>
+
+                  {/* 1) 발음은 그대로, 한자 바꾸기 — 작동 */}
                   <button onClick={() => router.push('/manseryeok/naming/rename/newname')}
-                    style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'rgba(250,199,117,0.16)', border: `1px solid ${gold}`, color: gold, fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' }}>
-                    더 좋은 이름, 함께 찾아볼까요? →
+                    style={{ width: '100%', padding: '14px 16px', borderRadius: '12px', background: 'rgba(250,199,117,0.16)', border: `1px solid ${gold}`, marginBottom: '10px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 'bold', color: gold }}>발음은 그대로, 한자 바꾸기</div>
+                      <div style={{ fontSize: '11px', color: '#cbb890', marginTop: '2px' }}>부르는 이름은 두고, 사주에 맞는 한자로</div>
+                    </div>
+                    <span style={{ fontSize: '13px', fontWeight: 'bold', color: gold, whiteSpace: 'nowrap', marginLeft: '10px' }}>5,000원</span>
                   </button>
+
+                  {/* 2) 새 이름 5개 추천 — 준비 중 */}
+                  <div style={{ width: '100%', padding: '14px 16px', borderRadius: '12px', background: cardBg, border: '1px solid rgba(250,199,117,0.12)', marginBottom: '10px', opacity: 0.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#e8e4ff' }}>
+                        새 이름 5개 추천 <span style={{ fontSize: '10px', color: '#8a88a0', border: '1px solid #555', borderRadius: '6px', padding: '1px 6px', marginLeft: '4px' }}>준비 중</span>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#8a88a0', marginTop: '2px' }}>사주에 맞는 새 이름 5개를 지어드려요</div>
+                    </div>
+                    <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#666', whiteSpace: 'nowrap', marginLeft: '10px' }}>10,000원</span>
+                  </div>
+
+                  {/* 3) 새 이름 10개 추천 — 준비 중 */}
+                  <div style={{ width: '100%', padding: '14px 16px', borderRadius: '12px', background: cardBg, border: '1px solid rgba(250,199,117,0.12)', opacity: 0.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#e8e4ff' }}>
+                        새 이름 10개 추천 <span style={{ fontSize: '10px', color: '#8a88a0', border: '1px solid #555', borderRadius: '6px', padding: '1px 6px', marginLeft: '4px' }}>준비 중</span>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#8a88a0', marginTop: '2px' }}>더 많은 후보 중에서 고르고 싶다면</div>
+                    </div>
+                    <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#666', whiteSpace: 'nowrap', marginLeft: '10px' }}>20,000원</span>
+                  </div>
                 </div>
 
                 <button onClick={resetAll}
