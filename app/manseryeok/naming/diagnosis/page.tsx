@@ -558,7 +558,7 @@ function DiagnosisInner() {
                       ? '부족한 기운을 채우면 이름이 당신을 받쳐줍니다'
                       : '지금도 좋은 이름이에요. 다른 가능성도 살펴볼까요?'}
                   </div>
-                  <button onClick={() => router.push('/manseryeok/naming/rename')}
+                  <button onClick={() => router.push('/manseryeok/naming/rename/newname')}
                     style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'rgba(250,199,117,0.16)', border: `1px solid ${gold}`, color: gold, fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' }}>
                     더 좋은 이름, 함께 찾아볼까요? →
                   </button>
