@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 
 const GOLD = '#FAC775'
 const CARD = '#2C2C2A'
@@ -50,29 +51,53 @@ export default function NewNamePage() {
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    try {
-      const m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
-      const pk = personKey(m)
+    let cancelled = false
 
-      // 1순위: 일반인 — 이름 풀이 결과의 성씨
-      const r = JSON.parse(localStorage.getItem(NAMING_RESULT_KEY) || '{}')
-      const samePerson = r.personKey && r.personKey === pk
-      if (samePerson && Array.isArray(r.chars) && r.chars[0]) {
-        setSurname(r.chars[0] as SavedChar)
-        setLoaded(true)
-        return
-      }
+    async function load() {
+      // 1) 로그인했으면 내 계정(my_names)에서 가장 최근 이름풀이의 성씨를 먼저 시도
+      try {
+        const { data: u } = await supabase.auth.getUser()
+        if (u?.user) {
+          const { data: rows } = await supabase
+            .from('my_names')
+            .select('chars')
+            .eq('user_id', u.user.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+          if (!cancelled && rows && rows[0] && Array.isArray(rows[0].chars) && rows[0].chars[0]) {
+            setSurname(rows[0].chars[0] as SavedChar)
+            setLoaded(true)
+            return
+          }
+        }
+      } catch {}
 
-      // 2순위: 신생아 — 아기 이름짓기에서 입력한 성씨
-      const nb = JSON.parse(localStorage.getItem(NEWBORN_SURNAME_KEY) || '{}')
-      const sameBaby = nb.personKey && nb.personKey === pk
-      if (sameBaby && nb.surname) {
-        setSurname(nb.surname as SavedChar)
-        setLoaded(true)
-        return
-      }
-    } catch {}
-    setLoaded(true)
+      // 2) (비로그인/없을 때) 기존 localStorage 방식 — 이름풀이 결과 성씨
+      try {
+        const m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
+        const pk = personKey(m)
+
+        const r = JSON.parse(localStorage.getItem(NAMING_RESULT_KEY) || '{}')
+        const samePerson = r.personKey && r.personKey === pk
+        if (samePerson && Array.isArray(r.chars) && r.chars[0]) {
+          if (!cancelled) { setSurname(r.chars[0] as SavedChar); setLoaded(true) }
+          return
+        }
+
+        // 3) 신생아 — 아기 이름짓기에서 입력한 성씨
+        const nb = JSON.parse(localStorage.getItem(NEWBORN_SURNAME_KEY) || '{}')
+        const sameBaby = nb.personKey && nb.personKey === pk
+        if (sameBaby && nb.surname) {
+          if (!cancelled) { setSurname(nb.surname as SavedChar); setLoaded(true) }
+          return
+        }
+      } catch {}
+
+      if (!cancelled) setLoaded(true)
+    }
+
+    load()
+    return () => { cancelled = true }
   }, [])
 
   function chooseCount(n: 1 | 2) {
