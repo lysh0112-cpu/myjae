@@ -11,12 +11,12 @@ function NavIcon({ icon, active }: { icon: string; active: boolean }) {
   if (icon === 'grid') return <svg viewBox="0 0 24 24" fill={c} className="w-6 h-6"><path d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 0h8v8h-8z"/></svg>
   if (icon === 'heart') return <svg viewBox="0 0 24 24" fill={c} className="w-6 h-6"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
   if (icon === 'user') return <svg viewBox="0 0 24 24" fill={c} className="w-6 h-6"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-  // 마이페이지 전용: 원 안에 'My' 글자
+  // 마이페이지 전용: 채워진 원 안에 사람 (프로필)
   if (icon === 'profile') return (
     <svg viewBox="0 0 24 24" className="w-6 h-6">
-      <circle cx="12" cy="12" r="10" fill="none" stroke={c} strokeWidth="2" />
-      <text x="12" y="12" textAnchor="middle" dominantBaseline="central"
-        fill={c} style={{ fontSize: '9px', fontWeight: 600, fontFamily: 'sans-serif' }}>My</text>
+      <circle cx="12" cy="12" r="11" fill={c} />
+      <circle cx="12" cy="9.5" r="3.2" fill="#2C2C2A" />
+      <path d="M6 18.5 q0 -5.5 6 -5.5 q6 0 6 5.5 z" fill="#2C2C2A" />
     </svg>
   )
   if (icon === 'logout') return <svg viewBox="0 0 24 24" fill={c} className="w-6 h-6"><path d="M16 13v-2H7V8l-5 4 5 4v-3zM20 3h-9c-1.1 0-2 .9-2 2v4h2V5h9v14h-9v-4H9v4c0 1.1.9 2 2 2h9c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
