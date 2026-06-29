@@ -8,7 +8,8 @@ import KnowledgeManager from './components/KnowledgeManager'
 import SiteSettings from './components/SiteSettings'
 import ReviewManager from './components/ReviewManager'
 import ExpenseManager from './components/ExpenseManager'
-type Tab = 'dashboard' | 'consultant' | 'settlement' | 'history' | 'knowledge' | 'review' | 'accounting' | 'settings'
+import ExpenseApproval from './components/ExpenseApproval'
+type Tab = 'dashboard' | 'consultant' | 'settlement' | 'history' | 'knowledge' | 'review' | 'accounting' | 'approval' | 'settings'
 const TABS = [
   { key: 'dashboard', label: '📊 대시보드' },
   { key: 'consultant', label: '👤 상담사 관리' },
@@ -17,6 +18,7 @@ const TABS = [
   { key: 'knowledge', label: '🧠 연구 자료' },
   { key: 'review', label: '📝 후기 관리' },
   { key: 'accounting', label: '💳 관리회계' },
+  { key: 'approval', label: '🧾 지출결의서' },
   { key: 'settings', label: '⚙️ 사이트 설정' },
 ]
 export default function AdminPage() {
@@ -51,6 +53,7 @@ export default function AdminPage() {
         {tab === 'knowledge' && <KnowledgeManager />}
         {tab === 'review' && <ReviewManager />}
         {tab === 'accounting' && <ExpenseManager />}
+        {tab === 'approval' && <ExpenseApproval />}
         {tab === 'settings' && <SiteSettings />}
       </main>
     </div>
