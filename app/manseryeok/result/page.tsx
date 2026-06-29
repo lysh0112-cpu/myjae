@@ -41,6 +41,13 @@ function ResultContent() {
     </div>
   )
 
+  // 분석 대상 한 줄 표시: "음력 1966.1.12 (양력 1966.2.2) · 卯시 · 남성"
+  const calLabel = `${calType} ${yearParam}.${monthParam}.${dayParam}${calType === "음력" && leapMonth === "1" ? " (윤달)" : ""}`
+  const solarLabel = calType === "음력" && solar ? ` (양력 ${solar.year}.${solar.month}.${solar.day})` : ""
+  const hourLabel = hourIdx === null ? "시 미지정" : `${BRANCH_LIST[hourIdx]?.char}시`
+  const genderLabel = gender === "여" ? "여성" : "남성"
+  const targetLine = `${calLabel}${solarLabel} · ${hourLabel} · ${genderLabel}`
+
   return (
     <div className="min-h-screen" style={{background:"#1a1a18", maxWidth:"430px", margin:"0 auto"}}>
 
@@ -56,16 +63,8 @@ function ResultContent() {
         <div className="rounded-2xl p-4"
           style={{background:"linear-gradient(135deg,#3C3489 0%,#2a2075 100%)", border:"1px solid rgba(250,199,117,0.2)"}}>
           <div className="text-xs font-semibold mb-2" style={{color:"rgba(250,199,117,0.8)"}}>분석 대상</div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {[
-              `${gender}성`,
-              `${calType} ${yearParam}.${monthParam}.${dayParam}${calType==="음력"&&leapMonth==="1"?" (윤달)":""}`,
-              calType==="음력"&&solar?`(양력 ${solar.year}.${solar.month}.${solar.day})`:"",
-              hourIdx===null?"시 미지정":`${BRANCH_LIST[hourIdx]?.char}시`
-            ].filter(Boolean).map(item => (
-              <span key={item} className="text-sm font-semibold px-3 py-1 rounded-full"
-                style={{background:"rgba(255,255,255,0.1)", color:"#FAC775"}}>{item}</span>
-            ))}
+          <div className="text-sm font-semibold" style={{color:"#FAC775", lineHeight:1.6}}>
+            {targetLine}
           </div>
         </div>
 
