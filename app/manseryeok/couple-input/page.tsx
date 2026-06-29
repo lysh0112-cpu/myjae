@@ -23,9 +23,9 @@ function CoupleInputInner() {
     handleClearPerson2,
   } = useCoupleInput()
 
-  // 이전 결과 URL 복원
+  // 이전 결과 URL 복원 (sessionStorage: 같은 세션에서만, 탭 닫으면 사라짐 → 남의 사주가 안 남음)
   useEffect(() => {
-    const lastUrl = localStorage.getItem(LAST_COUPLE_RESULT_KEY)
+    const lastUrl = sessionStorage.getItem(LAST_COUPLE_RESULT_KEY)
     if (lastUrl) setLastResultUrl(lastUrl)
   }, [])
 
@@ -43,15 +43,15 @@ function CoupleInputInner() {
     const p2 = encodeURIComponent(JSON.stringify(person2))
     const q = encodeURIComponent(question)
     const url = `/manseryeok/couple-result?mode=${relation}&person1=${p1}&person2=${p2}&userQuestion=${q}`
-    // 결과 URL 저장
-    localStorage.setItem(LAST_COUPLE_RESULT_KEY, url)
+    // 결과 URL 저장 (sessionStorage: 탭 닫으면 사라짐)
+    sessionStorage.setItem(LAST_COUPLE_RESULT_KEY, url)
     setLastResultUrl(url)
     router.push(url)
   }
 
   const handleClearAll = () => {
     handleClear()
-    localStorage.removeItem(LAST_COUPLE_RESULT_KEY)
+    sessionStorage.removeItem(LAST_COUPLE_RESULT_KEY)
     setLastResultUrl('')
   }
 
