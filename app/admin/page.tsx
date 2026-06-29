@@ -9,10 +9,12 @@ import SiteSettings from './components/SiteSettings'
 import ReviewManager from './components/ReviewManager'
 import ExpenseManager from './components/ExpenseManager'
 import ExpenseApproval from './components/ExpenseApproval'
-type Tab = 'dashboard' | 'consultant' | 'settlement' | 'history' | 'knowledge' | 'review' | 'accounting' | 'approval' | 'settings'
+import MemberManager from './components/MemberManager'
+type Tab = 'dashboard' | 'consultant' | 'member' | 'settlement' | 'history' | 'knowledge' | 'review' | 'accounting' | 'approval' | 'settings'
 const TABS = [
   { key: 'dashboard', label: '📊 대시보드' },
   { key: 'consultant', label: '👤 상담사 관리' },
+  { key: 'member', label: '👥 회원 관리' },
   { key: 'settlement', label: '💰 정산 관리' },
   { key: 'history', label: '📋 상담 내역' },
   { key: 'knowledge', label: '🧠 연구 자료' },
@@ -32,7 +34,7 @@ export default function AdminPage() {
           <div className="text-base font-bold whitespace-nowrap" style={{ color: '#FAC775' }}>
             🔐 명카페 관리자
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {TABS.map((t) => (
               <button key={t.key} onClick={() => setTab(t.key as Tab)}
                 className="px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap"
@@ -48,6 +50,7 @@ export default function AdminPage() {
       <main className="max-w-7xl mx-auto px-6 pt-24 pb-10">
         {tab === 'dashboard' && <Dashboard />}
         {tab === 'consultant' && <ConsultantManager />}
+        {tab === 'member' && <MemberManager />}
         {tab === 'settlement' && <SettlementManager />}
         {tab === 'history' && <ConsultationHistory />}
         {tab === 'knowledge' && <KnowledgeManager />}
