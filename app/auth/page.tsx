@@ -1,135 +1,95 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-export default function AuthPage() {
+export default function AuthMainPage() {
   const router = useRouter()
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) routeAfterLogin(data.user.id)
+  // 구글 로그인 (실제 작동)
+  const loginGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const routeAfterLogin = async (userId: string) => {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('nickname, role, privacy_agreed')
-      .eq('id', userId)
-      .single()
-
-    if (!profile || !profile.nickname || !profile.privacy_agreed) {
-      router.push('/auth/welcome')
-      return
-    }
-    if (profile.role === 'consultant' || profile.role === 'master') {
-      router.push('/manseryeok/consultant')
-    } else {
-      router.push('/')
-    }
+    if (error) setMsg('구글 로그인 오류: ' + error.message)
   }
 
-  const handleLogin = async () => {
-    setMsg(''); setLoading(true)
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    setLoading(false)
-    if (error) { setMsg('로그인 실패: ' + error.message); return }
-    if (data.user) routeAfterLogin(data.user.id)
-  }
-
-  const handleSignup = async () => {
-    setMsg(''); setLoading(true)
-    const { data, error } = await supabase.auth.signUp({ email, password })
-    setLoading(false)
-    if (error) { setMsg('가입 실패: ' + error.message); return }
-    if (data.user) {
-      router.push('/auth/welcome')
-    } else {
-      setMsg('가입 확인 메일을 보냈어요. 메일을 확인해주세요.')
-    }
-  }
-
-  const submit = () => {
-    if (!email || !password) { setMsg('이메일과 비밀번호를 입력해주세요.'); return }
-    if (mode === 'login') handleLogin()
-    else handleSignup()
+  // 준비 중 안내
+  const notReady = (name: string) => {
+    setMsg(`${name} 로그인은 준비 중이에요. 지금은 구글 또는 이메일로 로그인해주세요.`)
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#1a1a18', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ width: '100%', maxWidth: 400, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 32 }}>
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ fontSize: 26, fontWeight: 800, color: '#FAC775', marginBottom: 6 }}>명연재 明然載</div>
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>
-            {mode === 'login' ? '로그인하고 시작하세요' : '회원가입'}
+    <div style={{ minHeight: '100vh', background: '#1a1a18', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 20px' }}>
+      <div style={{ width: '100%', maxWidth: 420 }}>
+
+        {/* 상단 안내 */}
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <div style={{ fontSize: 30, fontWeight: 800, color: '#FAC775', marginBottom: 14 }}>명연재 明然載</div>
+          <div style={{ fontSize: 19, fontWeight: 700, color: '#fff', lineHeight: 1.4, marginBottom: 8 }}>
+            나를 비추는 명리,<br />로그인하고 시작하세요
+          </div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)' }}>
+            가입은 30초면 충분해요 · 회원이면 자동 로그인
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-          {(['login', 'signup'] as const).map(m => (
-            <button key={m} onClick={() => { setMode(m); setMsg('') }}
-              style={{
-                flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 14,
-                background: mode === m ? '#FAC775' : 'rgba(255,255,255,0.06)',
-                color: mode === m ? '#1a1a18' : 'rgba(255,255,255,0.5)',
-              }}>
-              {m === 'login' ? '로그인' : '회원가입'}
-            </button>
-          ))}
-        </div>
+        {/* 소셜 버튼들 */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* 카카오 (준비 중) */}
+          <button onClick={() => notReady('카카오')}
+            style={{ ...btnBase, background: '#FEE500', color: '#3A1D1D' }}>
+            <span style={{ fontWeight: 800 }}>💬 카카오로 시작하기</span>
+            <span style={badgeSoon}>준비 중</span>
+          </button>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-            placeholder="이메일" style={inputStyle} />
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-            placeholder="비밀번호 (6자 이상)" style={inputStyle}
-            onKeyDown={e => { if (e.key === 'Enter') submit() }} />
+          {/* 네이버 (준비 중) */}
+          <button onClick={() => notReady('네이버')}
+            style={{ ...btnBase, background: '#03C75A', color: '#fff' }}>
+            <span style={{ fontWeight: 800 }}>Ⓝ 네이버로 시작하기</span>
+            <span style={badgeSoon}>준비 중</span>
+          </button>
 
-          {/* 회원가입 모드일 때만 안내 문구 */}
-          {mode === 'signup' && (
-            <div style={{ background: 'rgba(250,199,117,0.1)', border: '1px solid rgba(250,199,117,0.25)', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
-              💡 여기서 정하는 비밀번호는 <b style={{ color: '#FAC775' }}>명연재 전용 비밀번호</b>예요.
-              이메일 계정(네이버·구글 등)의 비밀번호와 <b>똑같이 하지 않아도 됩니다.</b> 원하는 새 비밀번호를 자유롭게 정하세요.
-            </div>
-          )}
-
-          <button onClick={submit} disabled={loading}
-            style={{ padding: '12px 0', borderRadius: 10, border: 'none', background: '#7c3aed', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer', opacity: loading ? 0.6 : 1, marginTop: 4 }}>
-            {loading ? '처리 중…' : (mode === 'login' ? '로그인' : '가입하기')}
+          {/* 구글 (작동) */}
+          <button onClick={loginGoogle}
+            style={{ ...btnBase, background: '#fff', color: '#1f1f1f', border: '1px solid #ddd' }}>
+            <span style={{ fontWeight: 700 }}>Ⓖ 구글로 시작하기</span>
           </button>
         </div>
 
-        {msg && <div style={{ marginTop: 14, color: '#fca5a5', fontSize: 13, textAlign: 'center' }}>{msg}</div>}
+        {/* 이메일 로그인 (작게) */}
+        <button onClick={() => router.push('/auth/login')}
+          style={{ width: '100%', marginTop: 18, padding: '12px 0', borderRadius: 12, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.6)', fontSize: 14, cursor: 'pointer' }}>
+          ✉️ 이메일로 로그인 / 회원가입
+        </button>
 
-        <div style={{ margin: '24px 0 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12 }}>간편 로그인 (준비 중)</span>
-          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <button disabled title="준비 중"
-            style={{ padding: '11px 0', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.35)', fontWeight: 600, fontSize: 14, cursor: 'not-allowed' }}>
-            구글로 시작하기 (준비 중)
-          </button>
-          <button disabled title="준비 중"
-            style={{ padding: '11px 0', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.35)', fontWeight: 600, fontSize: 14, cursor: 'not-allowed' }}>
-            카카오로 시작하기 (준비 중)
-          </button>
+        {msg && (
+          <div style={{ marginTop: 16, padding: '10px 14px', background: 'rgba(250,199,117,0.1)', border: '1px solid rgba(250,199,117,0.25)', borderRadius: 10, color: 'rgba(255,255,255,0.75)', fontSize: 13, textAlign: 'center' }}>
+            {msg}
+          </div>
+        )}
+
+        {/* 하단 안내 */}
+        <div style={{ marginTop: 24, fontSize: 11, color: 'rgba(255,255,255,0.3)', textAlign: 'center', lineHeight: 1.6 }}>
+          로그인 시 명연재 이용약관 및 개인정보 수집·이용에 동의하게 됩니다.<br />
+          민감정보(생년월일·출생시간)는 사주 분석 목적에만 사용됩니다.
         </div>
       </div>
     </div>
   )
 }
 
-const inputStyle: React.CSSProperties = {
-  padding: '12px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)',
-  background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: 15, outline: 'none',
+const btnBase: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+  width: '100%', padding: '15px 0', borderRadius: 12, border: 'none',
+  fontSize: 15, cursor: 'pointer', position: 'relative',
+}
+const badgeSoon: React.CSSProperties = {
+  position: 'absolute', right: 14, fontSize: 11, fontWeight: 700,
+  background: 'rgba(0,0,0,0.15)', padding: '2px 8px', borderRadius: 10,
 }
