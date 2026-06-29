@@ -14,9 +14,13 @@ function cleanMarkdown(text: string): string {
     .trim()
 }
 
+// 자기 화면 복원용 키
 const FREE_KEY = 'saju_free_analysis'
 const PAID_KEY = 'saju_paid_analysis'
 const CONSULTANT_KEY = 'saju_consultant_note'
+// 상담 신청 화면(consulting)이 읽어가는 전달용 키
+const CONSULT_FREE_KEY = 'ai_free_analysis'
+const CONSULT_PAID_KEY = 'ai_analysis'
 
 interface Props {
   saju: { pillar: string; stem: string; branch: string }[]
@@ -63,7 +67,9 @@ export default function AiAnalysis({
       const cleaned = cleanMarkdown(rawText)
       setFreeResult(cleaned)
       setFreeDone(true)
-      localStorage.setItem(FREE_KEY, cleaned)
+      // 임시 저장(세션): 탭 닫으면 사라져 남의 사주가 남지 않음 + 상담 전달용 키도 함께 저장
+      sessionStorage.setItem(FREE_KEY, cleaned)
+      sessionStorage.setItem(CONSULT_FREE_KEY, cleaned)
     } catch (e) {
       setFreeResult('오류가 발생했습니다. 다시 시도해주세요.')
       setFreeDone(true)
@@ -86,7 +92,9 @@ export default function AiAnalysis({
       const rawText = data.content?.find((c: { type: string }) => c.type === 'text')?.text || ''
       const cleaned = cleanMarkdown(rawText)
       setPaidResult(cleaned)
-      localStorage.setItem(PAID_KEY, cleaned)
+      // 임시 저장(세션) + 상담 전달용 키도 함께 저장
+      sessionStorage.setItem(PAID_KEY, cleaned)
+      sessionStorage.setItem(CONSULT_PAID_KEY, cleaned)
     } catch (e) {
       setPaidResult('오류가 발생했습니다. 다시 시도해주세요.')
     } finally {
@@ -94,11 +102,11 @@ export default function AiAnalysis({
     }
   }
 
-  // localStorage 복원
+  // 세션 복원 (같은 세션에서만, 탭 닫으면 사라짐)
   useEffect(() => {
-    const savedFree = localStorage.getItem(FREE_KEY)
-    const savedPaid = localStorage.getItem(PAID_KEY)
-    const savedNote = localStorage.getItem(CONSULTANT_KEY)
+    const savedFree = sessionStorage.getItem(FREE_KEY)
+    const savedPaid = sessionStorage.getItem(PAID_KEY)
+    const savedNote = sessionStorage.getItem(CONSULTANT_KEY)
     if (savedFree) { setFreeResult(savedFree); setFreeDone(true) }
     if (savedPaid) { setPaidResult(savedPaid); setIsPaidLocal(true) }
     if (savedNote) setConsultantNote(savedNote)
@@ -107,7 +115,7 @@ export default function AiAnalysis({
   // saju 데이터 로드되면 자동 시작
   useEffect(() => {
     if (saju && saju.length > 0 && !freeDone && !loading) {
-      const savedFree = localStorage.getItem(FREE_KEY)
+      const savedFree = sessionStorage.getItem(FREE_KEY)
       if (!savedFree) {
         handleFreeAnalysis()
       }
