@@ -11,7 +11,6 @@ const supabase = createClient(
 // ▼ 지출결의서 자동 생성 기준 금액 (이 숫자만 바꾸면 기준이 바뀜)
 const APPROVAL_THRESHOLD = 500000
 
-// 대분류 → 세부항목 매핑
 const CATEGORIES: Record<string, string[]> = {
   '인건비': ['급여', '상담사 정산금', '상여금·수당', '일용직·아르바이트', '4대보험 사업자부담분', '퇴직급여'],
   '복리후생비': ['식대', '간식·다과', '경조사비', '기타 복리후생'],
@@ -50,11 +49,13 @@ type Expense = {
 
 export default function ExpenseManager() {
   const today = new Date().toISOString().slice(0, 10)
+  const thisYear = String(new Date().getFullYear())
 
   const [list, setList] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
+  // 입력 폼
   const [date, setDate] = useState(today)
   const [category, setCategory] = useState('')
   const [subcategory, setSubcategory] = useState('')
@@ -64,6 +65,10 @@ export default function ExpenseManager() {
   const [evidenceType, setEvidenceType] = useState('카드전표')
   const [isAsset, setIsAsset] = useState(false)
   const [note, setNote] = useState('')
+
+  // 조회 기간 필터
+  const [filterYear, setFilterYear] = useState(thisYear)
+  const [filterMonth, setFilterMonth] = useState('') // '' = 전체
 
   const load = async () => {
     setLoading(true)
@@ -78,21 +83,12 @@ export default function ExpenseManager() {
 
   useEffect(() => { load() }, [])
 
-  const onCategoryChange = (v: string) => {
-    setCategory(v)
-    setSubcategory('')
-  }
+  const onCategoryChange = (v: string) => { setCategory(v); setSubcategory('') }
 
   const resetForm = () => {
-    setDate(today)
-    setCategory('')
-    setSubcategory('')
-    setDescription('')
-    setAmount('')
-    setPaymentMethod('카드')
-    setEvidenceType('카드전표')
-    setIsAsset(false)
-    setNote('')
+    setDate(today); setCategory(''); setSubcategory(''); setDescription('')
+    setAmount(''); setPaymentMethod('카드'); setEvidenceType('카드전표')
+    setIsAsset(false); setNote('')
   }
 
   const amountNum = Number(amount) || 0
@@ -101,27 +97,19 @@ export default function ExpenseManager() {
   const save = async () => {
     if (!category) { alert('대분류를 선택해주세요.'); return }
     if (!amount || amountNum <= 0) { alert('금액을 입력해주세요.'); return }
-
     setSaving(true)
     const needsApproval = amountNum >= APPROVAL_THRESHOLD
     const { error } = await supabase.from('expenses').insert({
-      expense_date: date,
-      category,
-      subcategory: subcategory || null,
-      description: description || null,
-      amount: Math.round(amountNum),
-      payment_method: paymentMethod,
-      evidence_type: evidenceType,
-      is_asset: isAsset,
-      note: note || null,
+      expense_date: date, category, subcategory: subcategory || null,
+      description: description || null, amount: Math.round(amountNum),
+      payment_method: paymentMethod, evidence_type: evidenceType,
+      is_asset: isAsset, note: note || null,
       needs_approval: needsApproval,
       approval_status: needsApproval ? '결재대기' : '자동승인',
     })
     setSaving(false)
-
     if (error) { alert('저장 실패: ' + error.message); return }
-    resetForm()
-    load()
+    resetForm(); load()
   }
 
   const approve = async (id: string) => {
@@ -141,9 +129,52 @@ export default function ExpenseManager() {
 
   const won = (n: number) => n.toLocaleString('ko-KR') + '원'
 
-  const total = list.reduce((sum, e) => sum + (e.is_asset ? 0 : e.amount), 0)
-  const assetTotal = list.reduce((sum, e) => sum + (e.is_asset ? e.amount : 0), 0)
-  const waitingCount = list.filter(e => e.approval_status === '결재대기').length
+  // 기간 필터 적용
+  const filtered = list.filter(e => {
+    if (!e.expense_date) return false
+    const yr = e.expense_date.slice(0, 4)
+    const mo = e.expense_date.slice(5, 7)
+    if (yr !== filterYear) return false
+    if (filterMonth && mo !== filterMonth) return false
+    return true
+  })
+
+  const total = filtered.reduce((s, e) => s + (e.is_asset ? 0 : e.amount), 0)
+  const assetTotal = filtered.reduce((s, e) => s + (e.is_asset ? e.amount : 0), 0)
+  const waitingCount = filtered.filter(e => e.approval_status === '결재대기').length
+
+  // 연도 목록 (데이터에 있는 연도 + 올해)
+  const years = Array.from(new Set([thisYear, ...list.map(e => e.expense_date?.slice(0, 4)).filter(Boolean)]))
+    .sort((a, b) => Number(b) - Number(a)) as string[]
+
+  // 엑셀(CSV) 다운로드
+  const downloadCSV = () => {
+    if (filtered.length === 0) { alert('선택한 기간에 지출 내역이 없습니다.'); return }
+    const headers = ['일련번호', '날짜', '대분류', '세부항목', '내용', '금액', '결제수단', '증빙', '구분', '상태', '비고']
+    const rows = filtered.map(e => [
+      e.seq_no || '', e.expense_date, e.category, e.subcategory || '',
+      e.description || '', String(e.amount), e.payment_method, e.evidence_type || '',
+      e.is_asset ? '자산' : '비용', e.approval_status, e.note || '',
+    ])
+    // 합계 줄 추가
+    rows.push(['', '', '', '', '비용 합계', String(total), '', '', '', '', ''])
+    rows.push(['', '', '', '', '자산성 합계', String(assetTotal), '', '', '', '', ''])
+
+    const escape = (v: string) => {
+      if (/[",\n]/.test(v)) return '"' + v.replace(/"/g, '""') + '"'
+      return v
+    }
+    const csv = [headers, ...rows].map(r => r.map(escape).join(',')).join('\n')
+    const bom = '\uFEFF' // 한글 깨짐 방지
+    const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    const periodLabel = filterMonth ? `${filterYear}-${filterMonth}` : filterYear
+    a.href = url
+    a.download = `명연재_지출내역_${periodLabel}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   const statusBadge = (s: string) => {
     const map: Record<string, { bg: string; color: string }> = {
@@ -156,13 +187,16 @@ export default function ExpenseManager() {
     return <span style={{ background: c.bg, color: c.color, padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 600 }}>{s}</span>
   }
 
+  const MONTHS = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12']
+
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '8px 4px' }}>
-      <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>💰 관리회계 — 지출</h2>
-      <p style={{ color: '#888', fontSize: 13, marginBottom: 20 }}>
-        지출을 항목별로 기재합니다. {won(APPROVAL_THRESHOLD)} 이상은 자동으로 결재대기로 들어갑니다. 매출 집계·엑셀 출력은 다음 단계에서 추가됩니다.
+      <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4, color: '#fff' }}>💰 관리회계 — 지출</h2>
+      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 20 }}>
+        지출을 항목별로 기재합니다. {won(APPROVAL_THRESHOLD)} 이상은 자동으로 결재대기로 들어갑니다. 매출 집계는 결제 연동 후 추가됩니다.
       </p>
 
+      {/* 입력 폼 */}
       <div style={{ border: '1px solid #e5e5e5', borderRadius: 12, padding: 16, marginBottom: 24, background: '#fafafa' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
           <label style={labelStyle}>날짜
@@ -219,6 +253,22 @@ export default function ExpenseManager() {
         </div>
       </div>
 
+      {/* 기간 필터 + 엑셀 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+        <select value={filterYear} onChange={e => setFilterYear(e.target.value)} style={{ ...inputStyle, padding: '8px 12px' }}>
+          {years.map(y => <option key={y} value={y}>{y}년</option>)}
+        </select>
+        <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)} style={{ ...inputStyle, padding: '8px 12px' }}>
+          <option value="">전체(연간)</option>
+          {MONTHS.map(m => <option key={m} value={m}>{Number(m)}월</option>)}
+        </select>
+        <button onClick={downloadCSV}
+          style={{ marginLeft: 'auto', padding: '9px 18px', borderRadius: 8, border: 'none', background: '#047857', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
+          📊 엑셀(CSV) 다운로드
+        </button>
+      </div>
+
+      {/* 합계 요약 */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
         <div style={summaryBox}>
           <div style={{ fontSize: 12, color: '#888' }}>지출 합계 (비용)</div>
@@ -233,12 +283,13 @@ export default function ExpenseManager() {
           <div style={{ fontSize: 20, fontWeight: 700, color: '#c2410c' }}>{waitingCount}건</div>
         </div>
         <div style={summaryBox}>
-          <div style={{ fontSize: 12, color: '#888' }}>전체 건수</div>
-          <div style={{ fontSize: 20, fontWeight: 700 }}>{list.length}건</div>
+          <div style={{ fontSize: 12, color: '#888' }}>건수 (해당 기간)</div>
+          <div style={{ fontSize: 20, fontWeight: 700 }}>{filtered.length}건</div>
         </div>
       </div>
 
-      <div style={{ overflowX: 'auto', border: '1px solid #e5e5e5', borderRadius: 12 }}>
+      {/* 목록 표 */}
+      <div style={{ overflowX: 'auto', border: '1px solid #e5e5e5', borderRadius: 12, background: '#fff' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 950 }}>
           <thead>
             <tr style={{ background: '#f5f5f5', textAlign: 'left' }}>
@@ -257,10 +308,10 @@ export default function ExpenseManager() {
           <tbody>
             {loading ? (
               <tr><td colSpan={10} style={{ padding: 24, textAlign: 'center', color: '#999' }}>불러오는 중…</td></tr>
-            ) : list.length === 0 ? (
-              <tr><td colSpan={10} style={{ padding: 24, textAlign: 'center', color: '#999' }}>아직 입력된 지출이 없어요.</td></tr>
+            ) : filtered.length === 0 ? (
+              <tr><td colSpan={10} style={{ padding: 24, textAlign: 'center', color: '#999' }}>선택한 기간에 지출이 없어요.</td></tr>
             ) : (
-              list.map(e => (
+              filtered.map(e => (
                 <tr key={e.id} style={{ borderTop: '1px solid #eee' }}>
                   <td style={{ ...tdStyle, fontFamily: 'monospace', color: '#666' }}>{e.seq_no || '-'}</td>
                   <td style={tdStyle}>{e.expense_date}</td>
@@ -274,9 +325,7 @@ export default function ExpenseManager() {
                   <td style={tdStyle}>
                     {e.approval_status === '결재대기' && (
                       <button onClick={() => approve(e.id)}
-                        style={{ border: 'none', background: '#047857', color: '#fff', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12, marginRight: 6 }}>
-                        승인
-                      </button>
+                        style={{ border: 'none', background: '#047857', color: '#fff', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12, marginRight: 6 }}>승인</button>
                     )}
                     <button onClick={() => remove(e.id)}
                       style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#dc2626' }}>🗑</button>
