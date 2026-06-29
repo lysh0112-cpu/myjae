@@ -53,15 +53,13 @@ export default function ExpenseApproval() {
 
   const load = async () => {
     setLoading(true)
-    let q = supabase.from('expenses').select('*')
+    const { data, error } = await supabase.from('expenses').select('*')
       .order('expense_date', { ascending: false })
       .order('created_at', { ascending: false })
-    const { data, error } = await q
     if (!error && data) {
       let rows = data as Expense[]
-      // 결재 대상(needs_approval) 위주로. '전체'면 모두, '결재대기'면 대기만.
       if (filter === '결재대기') rows = rows.filter(e => e.approval_status === '결재대기')
-      else rows = rows.filter(e => e.needs_approval) // 전체 = 결재 대상 전체
+      else rows = rows.filter(e => e.needs_approval)
       setList(rows)
     }
     setLoading(false)
@@ -69,7 +67,6 @@ export default function ExpenseApproval() {
 
   useEffect(() => { load() }, [filter])
 
-  // 결의서 열기
   const openDoc = async (e: Expense) => {
     setSelected(e)
     setHandler(e.handler || '')
@@ -80,24 +77,16 @@ export default function ExpenseApproval() {
     setReceipts((data as Receipt[]) || [])
   }
 
-  const closeDoc = () => {
-    setSelected(null)
-    setReceipts([])
-    setViewImg(null)
-  }
+  const closeDoc = () => { setSelected(null); setReceipts([]); setViewImg(null) }
 
-  // 담당/결재권자 저장
   const saveNames = async () => {
     if (!selected) return
     const { error } = await supabase.from('expenses')
-      .update({ handler: handler || null, approver: approver || null })
-      .eq('id', selected.id)
+      .update({ handler: handler || null, approver: approver || null }).eq('id', selected.id)
     if (error) { alert('저장 실패: ' + error.message); return }
-    alert('저장되었습니다.')
-    load()
+    alert('저장되었습니다.'); load()
   }
 
-  // 이미지 여러 장 업로드
   const uploadFiles = async (files: FileList | null) => {
     if (!selected || !files || files.length === 0) return
     setUploading(true)
@@ -108,13 +97,10 @@ export default function ExpenseApproval() {
       if (upErr) { alert('업로드 실패: ' + upErr.message); continue }
       const { data: pub } = supabase.storage.from('receipts').getPublicUrl(path)
       await supabase.from('expense_receipts').insert({
-        expense_id: selected.id,
-        file_url: pub.publicUrl,
-        file_name: file.name,
+        expense_id: selected.id, file_url: pub.publicUrl, file_name: file.name,
       })
     }
     setUploading(false)
-    // 목록 새로고침
     const { data } = await supabase.from('expense_receipts')
       .select('*').eq('expense_id', selected.id).order('created_at', { ascending: true })
     setReceipts((data as Receipt[]) || [])
@@ -123,7 +109,6 @@ export default function ExpenseApproval() {
   const removeReceipt = async (r: Receipt) => {
     if (!confirm('이 증빙을 삭제할까요?')) return
     await supabase.from('expense_receipts').delete().eq('id', r.id)
-    // Storage 파일도 삭제 (URL에서 경로 추출)
     const marker = '/receipts/'
     const idx = r.file_url.indexOf(marker)
     if (idx >= 0) {
@@ -133,22 +118,15 @@ export default function ExpenseApproval() {
     setReceipts(prev => prev.filter(x => x.id !== r.id))
   }
 
-  // 승인 / 반려
   const decide = async (status: '승인' | '반려') => {
     if (!selected) return
     const { error } = await supabase.from('expenses')
       .update({
-        approval_status: status,
-        handler: handler || null,
-        approver: approver || null,
-        approved_by: approver || '관리자',
-        approved_at: new Date().toISOString(),
-      })
-      .eq('id', selected.id)
+        approval_status: status, handler: handler || null, approver: approver || null,
+        approved_by: approver || '관리자', approved_at: new Date().toISOString(),
+      }).eq('id', selected.id)
     if (error) { alert('처리 실패: ' + error.message); return }
-    alert(status + ' 처리되었습니다.')
-    closeDoc()
-    load()
+    alert(status + ' 처리되었습니다.'); closeDoc(); load()
   }
 
   const statusBadge = (s: string) => {
@@ -165,10 +143,9 @@ export default function ExpenseApproval() {
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '8px 4px' }}>
       <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4, color: '#fff' }}>🧾 지출결의서</h2>
       <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 20 }}>
-        결재가 필요한 지출(50만원 이상)을 결재하고, 증빙 이미지를 첨부·보관합니다.
+        결재가 필요한 지출을 결재하고, 증빙 이미지를 첨부·보관합니다.
       </p>
 
-      {/* 필터 */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         {(['결재대기', '전체'] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)}
@@ -176,13 +153,10 @@ export default function ExpenseApproval() {
               padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
               background: filter === f ? '#7c3aed' : 'rgba(255,255,255,0.08)',
               color: filter === f ? '#fff' : 'rgba(255,255,255,0.6)',
-            }}>
-            {f}
-          </button>
+            }}>{f}</button>
         ))}
       </div>
 
-      {/* 목록 */}
       <div style={{ overflowX: 'auto', border: '1px solid #e5e5e5', borderRadius: 12, background: '#fff' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 760 }}>
           <thead>
@@ -212,9 +186,7 @@ export default function ExpenseApproval() {
                   <td style={tdStyle}>{statusBadge(e.approval_status)}</td>
                   <td style={tdStyle}>
                     <button onClick={() => openDoc(e)}
-                      style={{ border: 'none', background: '#7c3aed', color: '#fff', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', fontSize: 12 }}>
-                      열기
-                    </button>
+                      style={{ border: 'none', background: '#7c3aed', color: '#fff', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', fontSize: 12 }}>열기</button>
                   </td>
                 </tr>
               ))
@@ -230,29 +202,28 @@ export default function ExpenseApproval() {
           <div onClick={ev => ev.stopPropagation()}
             style={{ background: '#fff', borderRadius: 16, maxWidth: 760, width: '100%', padding: 28, marginTop: 30 }}>
 
-            {/* 제목줄 */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-              <h3 style={{ fontSize: 22, fontWeight: 800 }}>지 출 결 의 서</h3>
-              <button onClick={closeDoc} style={{ border: 'none', background: 'none', fontSize: 22, cursor: 'pointer', color: '#999' }}>✕</button>
-            </div>
-            <div style={{ marginBottom: 20 }}>{statusBadge(selected.approval_status)}</div>
+            {/* 제목줄 + 우측 작은 결재란 */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div>
+                <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>지 출 결 의 서</h3>
+                {statusBadge(selected.approval_status)}
+              </div>
 
-            {/* 결재란 */}
-            <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
-              <div style={approvalBox}>
-                <div style={approvalLabel}>담당</div>
-                <input value={handler} onChange={e => setHandler(e.target.value)} placeholder="담당자명"
-                  style={approvalInput} />
+              {/* 우측 도장칸 형태의 작은 결재란 */}
+              <div style={{ display: 'flex', alignItems: 'stretch', border: '1px solid #ccc', borderRadius: 6, overflow: 'hidden' }}>
+                <div style={stampCol}>
+                  <div style={stampHead}>담당</div>
+                  <input value={handler} onChange={e => setHandler(e.target.value)} placeholder="-" style={stampInput} />
+                </div>
+                <div style={{ ...stampCol, borderLeft: '1px solid #ccc' }}>
+                  <div style={stampHead}>결재권자</div>
+                  <input value={approver} onChange={e => setApprover(e.target.value)} placeholder="-" style={stampInput} />
+                </div>
+                <button onClick={saveNames} title="이름 저장"
+                  style={{ border: 'none', borderLeft: '1px solid #ccc', background: '#f8f8f8', cursor: 'pointer', padding: '0 10px', fontSize: 11, color: '#555' }}>
+                  저장
+                </button>
               </div>
-              <div style={approvalBox}>
-                <div style={approvalLabel}>결재권자</div>
-                <input value={approver} onChange={e => setApprover(e.target.value)} placeholder="결재권자명"
-                  style={approvalInput} />
-              </div>
-              <button onClick={saveNames}
-                style={{ alignSelf: 'flex-end', padding: '8px 14px', borderRadius: 8, border: '1px solid #ddd', background: '#f8f8f8', cursor: 'pointer', fontSize: 13, height: 38 }}>
-                이름 저장
-              </button>
             </div>
 
             {/* 지출 내용 표 */}
@@ -277,8 +248,7 @@ export default function ExpenseApproval() {
                 <strong style={{ fontSize: 15 }}>증빙 이미지 ({receipts.length}장)</strong>
                 <label style={{ padding: '7px 14px', borderRadius: 8, background: '#7c3aed', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
                   {uploading ? '업로드 중…' : '+ 이미지 추가'}
-                  <input type="file" accept="image/*" multiple hidden
-                    onChange={e => uploadFiles(e.target.files)} disabled={uploading} />
+                  <input type="file" accept="image/*" multiple hidden onChange={e => uploadFiles(e.target.files)} disabled={uploading} />
                 </label>
               </div>
               {receipts.length === 0 ? (
@@ -299,27 +269,24 @@ export default function ExpenseApproval() {
               )}
             </div>
 
-            {/* 결재 버튼 */}
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 24, borderTop: '1px solid #eee', paddingTop: 18 }}>
               <button onClick={() => decide('반려')}
-                style={{ padding: '10px 22px', borderRadius: 8, border: '1px solid #dc2626', background: '#fff', color: '#dc2626', fontWeight: 600, cursor: 'pointer' }}>
-                반려
-              </button>
+                style={{ padding: '10px 22px', borderRadius: 8, border: '1px solid #dc2626', background: '#fff', color: '#dc2626', fontWeight: 600, cursor: 'pointer' }}>반려</button>
               <button onClick={() => decide('승인')}
-                style={{ padding: '10px 28px', borderRadius: 8, border: 'none', background: '#047857', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
-                승인
-              </button>
+                style={{ padding: '10px 28px', borderRadius: 8, border: 'none', background: '#047857', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>승인</button>
             </div>
             {selected.approved_at && (
               <div style={{ marginTop: 10, fontSize: 12, color: '#888', textAlign: 'right' }}>
                 최종 처리: {selected.approved_by} · {new Date(selected.approved_at).toLocaleString('ko-KR')}
               </div>
             )}
+
+            <button onClick={closeDoc}
+              style={{ position: 'absolute' }} aria-hidden />
           </div>
         </div>
       )}
 
-      {/* 이미지 크게 보기 */}
       {viewImg && (
         <div onClick={() => setViewImg(null)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}>
@@ -332,8 +299,9 @@ export default function ExpenseApproval() {
 
 const thStyle: React.CSSProperties = { padding: '10px 12px', fontWeight: 600, color: '#444', whiteSpace: 'nowrap' }
 const tdStyle: React.CSSProperties = { padding: '10px 12px', whiteSpace: 'nowrap' }
-const approvalBox: React.CSSProperties = { flex: 1, border: '1px solid #ddd', borderRadius: 10, overflow: 'hidden' }
-const approvalLabel: React.CSSProperties = { background: '#f5f5f5', padding: '6px 10px', fontSize: 12, fontWeight: 700, color: '#555', borderBottom: '1px solid #eee' }
-const approvalInput: React.CSSProperties = { width: '100%', border: 'none', padding: '10px', fontSize: 14, outline: 'none' }
 const docTh: React.CSSProperties = { background: '#f8f8f8', padding: '8px 10px', fontWeight: 600, color: '#555', border: '1px solid #eee', width: '15%', whiteSpace: 'nowrap' }
 const docTd: React.CSSProperties = { padding: '8px 10px', border: '1px solid #eee' }
+// 우측 작은 결재 도장칸
+const stampCol: React.CSSProperties = { width: 72, display: 'flex', flexDirection: 'column' }
+const stampHead: React.CSSProperties = { background: '#f5f5f5', fontSize: 11, fontWeight: 700, color: '#666', textAlign: 'center', padding: '3px 0', borderBottom: '1px solid #ccc' }
+const stampInput: React.CSSProperties = { border: 'none', width: '100%', textAlign: 'center', padding: '10px 4px', fontSize: 13, outline: 'none', height: 38 }
