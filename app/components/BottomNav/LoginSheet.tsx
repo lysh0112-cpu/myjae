@@ -5,7 +5,7 @@ export default function LoginSheet({ onClose }: { onClose: () => void }) {
   const router = useRouter()
   const go = () => {
     onClose()
-    router.push('/auth')
+    router.push('/auth/login')
   }
   return (
     <>
@@ -16,7 +16,7 @@ export default function LoginSheet({ onClose }: { onClose: () => void }) {
           style={{ background: '#2C2C2A', border: '1px solid rgba(255,255,255,0.1)' }}>
           <p className="text-center text-white font-bold text-base mb-2">로그인 / 회원가입</p>
           <p className="text-center text-xs mb-4" style={{ color: '#8a88a0' }}>
-            카카오·네이버·구글로 간편하게 시작하세요
+            이메일로 간편하게 시작하세요
           </p>
           <button onClick={go}
             className="w-full py-4 rounded-2xl font-bold text-sm"
