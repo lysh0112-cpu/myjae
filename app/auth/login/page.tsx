@@ -8,18 +8,41 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const type = searchParams.get('type') || 'customer'
   const isConsultant = type === 'consultant'
-
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const routeAfterLogin = async (userId: string) => {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('nickname, role, privacy_agreed')
+      .eq('id', userId)
+      .single()
+
+    if (!profile || !profile.nickname || !profile.privacy_agreed) {
+      router.push('/auth/welcome')
+      return
+    }
+    if (profile.role === 'consultant' || profile.role === 'master') {
+      const { data: consultant } = await supabase
+        .from('consultants').select('id').eq('email', email).single()
+      if (consultant) {
+        router.push(`/manseryeok/consultant?consultantId=${consultant.id}`)
+      } else {
+        router.push('/manseryeok/consultant')
+      }
+    } else {
+      router.push('/')
+    }
+  }
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error || !data.user) {
       setError('이메일 또는 비밀번호가 올바르지 않습니다.')
       setLoading(false)
       return
@@ -27,15 +50,13 @@ function LoginForm() {
     if (isConsultant) {
       const { data: consultant } = await supabase
         .from('consultants').select('id').eq('email', email).single()
-      if (consultant) {
-        router.push(`/manseryeok/consultant?consultantId=${consultant.id}`)
-      } else {
+      if (!consultant) {
         setError('상담사 계정이 아닙니다.')
         setLoading(false)
+        return
       }
-    } else {
-      router.push('/')
     }
+    await routeAfterLogin(data.user.id)
   }
 
   return (
@@ -72,8 +93,15 @@ function LoginForm() {
               {loading ? '로그인 중...' : '로그인'}
             </button>
           </form>
+
+          <button onClick={() => router.push(`/auth/signup${isConsultant ? '?type=consultant' : ''}`)}
+            className="w-full mt-3 py-3 rounded-xl text-sm font-bold"
+            style={{ color: '#FAC775', background: 'rgba(250,199,117,0.1)', border: '1px solid rgba(250,199,117,0.25)' }}>
+            처음이세요? 회원가입하기
+          </button>
+
           <button onClick={() => router.back()}
-            className="w-full mt-3 py-3 rounded-xl text-sm"
+            className="w-full mt-2 py-3 rounded-xl text-sm"
             style={{ color: '#8a88a0' }}>
             ← 돌아가기
           </button>
