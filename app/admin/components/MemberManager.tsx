@@ -17,6 +17,15 @@ export default function MemberManager() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [msg, setMsg] = useState('')
 
+  // 회원 추가 폼
+  const [showAdd, setShowAdd] = useState(false)
+  const [newEmail, setNewEmail] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [newNickname, setNewNickname] = useState('')
+  const [newRole, setNewRole] = useState('customer')
+  const [showPw, setShowPw] = useState(false)
+  const [adding, setAdding] = useState(false)
+
   const loadMembers = async () => {
     setLoading(true)
     setMsg('')
@@ -37,6 +46,38 @@ export default function MemberManager() {
   useEffect(() => {
     loadMembers()
   }, [])
+
+  const handleAdd = async () => {
+    if (!newEmail || !newPassword) {
+      setMsg('이메일과 비밀번호를 입력해주세요.')
+      return
+    }
+    if (newPassword.length < 6) {
+      setMsg('비밀번호는 6자 이상으로 정해주세요.')
+      return
+    }
+    setAdding(true)
+    setMsg('')
+    try {
+      const res = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: newEmail, password: newPassword, nickname: newNickname, role: newRole }),
+      })
+      const result = await res.json()
+      if (!res.ok) {
+        setMsg('추가 실패: ' + (result.error || '알 수 없는 오류'))
+      } else {
+        setMsg(`"${newNickname || newEmail}" 회원이 추가되었어요. (이메일·비밀번호를 본인에게 전달해주세요)`)
+        setNewEmail(''); setNewPassword(''); setNewNickname(''); setNewRole('customer')
+        setShowAdd(false)
+        loadMembers()
+      }
+    } catch (e: any) {
+      setMsg('추가 중 오류: ' + (e?.message || '알 수 없음'))
+    }
+    setAdding(false)
+  }
 
   const handleDelete = async (member: Member) => {
     const name = member.nickname || member.email || '(이름 없음)'
@@ -76,7 +117,6 @@ export default function MemberManager() {
   const fmtDateShort = (d: string | null) =>
     d ? new Date(d).toLocaleDateString('ko-KR') : '-'
 
-  // 엑셀(CSV) 다운로드
   const downloadCSV = () => {
     const header = ['닉네임', '이메일', '등급', '가입일', '마지막 로그인']
     const rows = members.map(m => [
@@ -89,7 +129,6 @@ export default function MemberManager() {
     const csv = [header, ...rows]
       .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
       .join('\n')
-    // BOM 추가 (엑셀 한글 깨짐 방지)
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -99,11 +138,20 @@ export default function MemberManager() {
     URL.revokeObjectURL(url)
   }
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%', background: '#1a1a18', color: '#fff', borderRadius: 8,
+    padding: '10px 12px', border: '1px solid rgba(255,255,255,0.15)', fontSize: 14,
+  }
+
   return (
     <div style={{ padding: '8px 4px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <h3 style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>회원 관리</h3>
         <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setShowAdd(!showAdd)}
+            style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(250,199,117,0.5)', background: 'rgba(250,199,117,0.15)', color: '#FAC775', fontSize: 13, cursor: 'pointer', fontWeight: 700 }}>
+            {showAdd ? '✕ 닫기' : '+ 회원 추가'}
+          </button>
           <button onClick={downloadCSV} disabled={members.length === 0}
             style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(126,231,135,0.4)', background: 'rgba(126,231,135,0.1)', color: '#7ee787', fontSize: 13, cursor: 'pointer', opacity: members.length === 0 ? 0.4 : 1 }}>
             📥 엑셀 다운로드
@@ -114,6 +162,47 @@ export default function MemberManager() {
           </button>
         </div>
       </div>
+
+      {/* 회원 추가 폼 */}
+      {showAdd && (
+        <div style={{ marginBottom: 18, padding: 18, borderRadius: 12, background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.2)' }}>
+          <p style={{ color: '#fff', fontWeight: 700, fontSize: 15, marginBottom: 4 }}>회원 직접 추가</p>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginBottom: 14 }}>
+            관리자가 계정을 만들어줍니다. 만든 뒤 이메일·비밀번호를 본인에게 전달하고, 첫 로그인 후 비밀번호를 바꾸도록 안내해주세요.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, display: 'block', marginBottom: 5 }}>닉네임</label>
+              <input style={inputStyle} value={newNickname} onChange={e => setNewNickname(e.target.value)} placeholder="사용할 이름" />
+            </div>
+            <div>
+              <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, display: 'block', marginBottom: 5 }}>등급</label>
+              <select style={inputStyle} value={newRole} onChange={e => setNewRole(e.target.value)}>
+                <option value="customer">👤 일반회원</option>
+                <option value="consultant">🔮 상담사</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, display: 'block', marginBottom: 5 }}>이메일 (아이디)</label>
+              <input style={inputStyle} type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="example@email.com" />
+            </div>
+            <div>
+              <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, display: 'block', marginBottom: 5 }}>임시 비밀번호 (6자 이상)</label>
+              <div style={{ position: 'relative' }}>
+                <input style={{ ...inputStyle, paddingRight: 40 }} type={showPw ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="6자 이상" />
+                <button type="button" onClick={() => setShowPw(!showPw)}
+                  style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16 }}>
+                  {showPw ? '🙈' : '👁️'}
+                </button>
+              </div>
+            </div>
+          </div>
+          <button onClick={handleAdd} disabled={adding}
+            style={{ marginTop: 14, width: '100%', padding: '11px 0', borderRadius: 8, border: 'none', background: '#FAC775', color: '#1a1a18', fontWeight: 700, fontSize: 14, cursor: 'pointer', opacity: adding ? 0.5 : 1 }}>
+            {adding ? '추가 중...' : '회원 추가하기'}
+          </button>
+        </div>
+      )}
 
       <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>
         총 {members.length}명 · 삭제하면 로그인 정보와 프로필이 함께 지워집니다. (비밀번호는 보안상 조회 불가)
