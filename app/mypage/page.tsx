@@ -33,11 +33,20 @@ type Profile = {
   saju_saved: boolean | null
 }
 
+type MyName = {
+  id: string
+  hangul_name: string | null
+  hanja_name: string | null
+  kind: string | null
+  created_at: string | null
+}
+
 export default function MyPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [userId, setUserId] = useState('')
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [myNames, setMyNames] = useState<MyName[]>([])
   const [loading, setLoading] = useState(true)
 
   // 사주 수정 모드
@@ -63,6 +72,13 @@ export default function MyPage() {
           if (p) setProfile(p as Profile)
           setLoading(false)
         })
+      supabase.from('my_names')
+        .select('id, hangul_name, hanja_name, kind, created_at')
+        .eq('user_id', data.user.id)
+        .order('created_at', { ascending: false })
+        .then(({ data: rows }) => {
+          if (rows) setMyNames(rows as MyName[])
+        })
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -74,15 +90,18 @@ export default function MyPage() {
       : r === 'consultant' ? { bg: 'rgba(29,158,117,0.15)', fg: '#5DCAA5' }
         : { bg: 'rgba(255,255,255,0.08)', fg: 'rgba(255,255,255,0.6)' }
 
-  const hourText = (h: string | null) => {
-    if (!h) return '-'
-    if (h === '모름') return '모름'
-    return HOUR_LABELS[h] ? HOUR_LABELS[h].replace(/\(.*\)/, '') + '시'.replace('시시', '시') : h
-  }
   const hourTextFull = (h: string | null) => {
     if (!h) return '-'
     if (h === '모름') return '모름'
     return HOUR_LABELS[h] || h
+  }
+
+  const dateText = (s: string | null) => {
+    if (!s) return ''
+    try {
+      const d = new Date(s)
+      return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`
+    } catch { return '' }
   }
 
   const openEdit = () => {
@@ -126,7 +145,6 @@ export default function MyPage() {
 
   const withdraw = async () => {
     if (!confirm('정말 회원 탈퇴를 진행할까요?\n탈퇴하면 내 정보와 사주가 삭제되며 되돌릴 수 없습니다.')) return
-    // 안전하게: 본인 profiles 정보를 비우고 로그아웃 (Auth 계정 완전삭제는 관리자 처리)
     await supabase.from('profiles').update({
       nickname: null, birth_year: null, birth_month: null, birth_day: null,
       birth_hour: null, cal_type: null, gender: null, saju_saved: false,
@@ -234,13 +252,34 @@ export default function MyPage() {
           )}
         </div>
 
-        {/* 3. 내 상담 내역 (이메일 통일 후 연결 예정 — 자리만) */}
+        {/* 3. 내 이름풀이 기록 */}
+        <div style={card}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#FAC775', marginBottom: 12 }}>✦ 내 이름풀이</div>
+          {myNames.length === 0 ? (
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '8px 0' }}>아직 풀이한 이름이 없습니다.</div>
+          ) : (
+            <div>
+              {myNames.map((n, i) => (
+                <div key={n.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: i < myNames.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>
+                      {n.hanja_name || '-'} <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{n.hangul_name}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{dateText(n.created_at)}{n.kind === 'self' ? ' · 내 이름' : ''}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 4. 내 상담 내역 (이메일 통일 후 연결 예정 — 자리만) */}
         <div style={card}>
           <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginBottom: 10 }}>내 상담 내역</div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '12px 0' }}>상담 내역 연동 준비 중입니다.</div>
         </div>
 
-        {/* 4. 관리 화면 버튼 (상담사·매니저만) */}
+        {/* 5. 관리 화면 버튼 (상담사·매니저만) */}
         {isStaff && (
           <div style={{ border: '1px solid rgba(250,199,117,0.3)', borderRadius: 14, padding: '8px 16px', marginBottom: 12 }}>
             <button onClick={async () => {
@@ -257,7 +296,7 @@ export default function MyPage() {
           </div>
         )}
 
-        {/* 5. 로그아웃 / 탈퇴 */}
+        {/* 6. 로그아웃 / 탈퇴 */}
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={logout} style={{ flex: 1, padding: '12px 0', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', background: 'none', color: 'rgba(255,255,255,0.7)', fontSize: 13, cursor: 'pointer' }}>로그아웃</button>
           <button onClick={withdraw} style={{ flex: 1, padding: '12px 0', borderRadius: 10, border: '1px solid rgba(226,75,74,0.4)', background: 'none', color: '#ff8080', fontSize: 13, cursor: 'pointer' }}>회원 탈퇴</button>
