@@ -94,6 +94,7 @@ function NewHanjaInner() {
 
   // 사주 정보 + 본인 성씨(동일인) + 새 이름(URL) 로딩
   useEffect(() => {
+    let cancelled = false
     let m: Record<string, unknown> = {}
     try {
       m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
@@ -109,20 +110,48 @@ function NewHanjaInner() {
         })
       }
     } catch {}
-    try {
-      const r = JSON.parse(localStorage.getItem(NAMING_RESULT_KEY) || '{}')
-      const pk = personKey(m)
-      const samePerson = r.personKey && r.personKey === pk
-      if (samePerson && Array.isArray(r.chars) && r.chars[0]) {
-        setSurname(r.chars[0] as SavedChar)
-        setPkey(pk)
-      }
-    } catch {}
+
+    const pk = personKey(m)
+
+    async function loadSurname() {
+      // 1) 로그인했으면 my_names(DB)에서 최근 이름풀이의 성씨 먼저
+      try {
+        const { data: u } = await supabase.auth.getUser()
+        if (u?.user) {
+          const { data: rows } = await supabase
+            .from('my_names')
+            .select('chars, person_key')
+            .eq('user_id', u.user.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+          if (!cancelled && rows && rows[0] && Array.isArray(rows[0].chars) && rows[0].chars[0]) {
+            setSurname(rows[0].chars[0] as SavedChar)
+            setPkey((rows[0].person_key as string) || pk)
+            return
+          }
+        }
+      } catch {}
+
+      // 2) (비로그인/없을 때) 기존 localStorage 방식
+      try {
+        const r = JSON.parse(localStorage.getItem(NAMING_RESULT_KEY) || '{}')
+        const samePerson = r.personKey && r.personKey === pk
+        if (!cancelled && samePerson && Array.isArray(r.chars) && r.chars[0]) {
+          setSurname(r.chars[0] as SavedChar)
+          setPkey(pk)
+        }
+      } catch {}
+    }
+
+    loadSurname()
+
     const nameParam = sp.get('name') || ''
     const arr = Array.from(nameParam.trim()).filter(isHangulSyllable)
     setSyllables(arr)
     setActiveIdx(0)
     setRestored(true)
+
+    return () => { cancelled = true }
   }, [sp])
 
   const { saju, dayStem, converting } = useResultSaju(
@@ -170,14 +199,6 @@ function NewHanjaInner() {
     return () => { cancelled = true }
   }, [activeIdx, syllables, restored])
 
-  // 각 글자의 "현재 한자" 결정: 고른 게 있으면 그것, 없으면 그 음의 첫 후보(임시)
-  // — 전체 이름으로 채점하기 위해 빈 글자를 임시 한자로 채운다 (hanja 화면과 동일한 전체 채점 방식)
-  function tempRowFor(idx: number, fallback: HanjaRow[]): HanjaRow | null {
-    if (chosen[idx]) return chosen[idx]
-    if (idx === activeIdx) return fallback[0] ?? null
-    return null
-  }
-
   // 활성 글자 후보들을 채점 → 추천/그외 분리
   const scored = useMemo(() => {
     if (!yongsinReady || !surname || hanjaList.length === 0) return []
@@ -187,7 +208,6 @@ function NewHanjaInner() {
       strokes: surname.strokes,
       resourceOhaeng: ohaengChar(surname.resourceOhaeng),
     }
-    // 활성 글자 외의 다른 글자들의 베이스(고른 것이 있으면 반영, 없으면 빈칸은 추후 자기 차례에 채움)
     return hanjaList.map((row) => {
       const given: NameChar[] = syllables.map((syl, i) => {
         if (i === activeIdx) {
@@ -197,7 +217,6 @@ function NewHanjaInner() {
         if (pick) {
           return { hangul: syl, hanja: pick.hanja, strokes: pick.strokes, resourceOhaeng: ohaengChar(pick.resource_ohaeng) }
         }
-        // 아직 안 고른 다른 글자: 채점 근사를 위해 빈 글자로 둔다 (strokes 0)
         return { hangul: syl, hanja: '', strokes: 0, resourceOhaeng: '' }
       })
       const r = diagnoseName({
@@ -249,7 +268,6 @@ function NewHanjaInner() {
     }
     if (!surname) return
 
-    // 확정된 이름 글자(성 + 이름들)
     const nameChars: SavedChar[] = [
       surname,
       ...syllables.map((syl, i) => {
@@ -260,17 +278,14 @@ function NewHanjaInner() {
     const hangulName = syllables.join('')
     const hanjaKey = nameChars.map((c) => c.hanja).join('')
 
-    // 기존 시도 불러오기 (동일인일 때만)
     let tries: TryItem[] = []
     try {
       const h = JSON.parse(localStorage.getItem(NEWNAME_HISTORY_KEY) || '{}')
       if (h.personKey === pkey && Array.isArray(h.tries)) tries = h.tries
     } catch {}
 
-    // 같은 한자 조합이 이미 있으면 카운트 추가 없이 그대로 (맨 뒤로만 옮겨 최근 표시)
     const existIdx = tries.findIndex((t) => t.chars.map((c) => c.hanja).join('') === hanjaKey)
     if (existIdx === -1) {
-      // 새 이름인데 5회를 이미 다 썼으면 차단
       if (tries.length >= TRY_LIMIT) {
         alert('총 ' + TRY_LIMIT + '회까지 종합 해설이 가능합니다.\n지금까지 본 이름 중에서 골라주세요.')
         router.push('/manseryeok/naming/rename/newresult')
