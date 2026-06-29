@@ -170,6 +170,7 @@ export default function MyPage() {
 
   const logout = async () => {
     await supabase.auth.signOut()
+    try { sessionStorage.clear() } catch {}
     router.push('/')
   }
 
@@ -181,6 +182,7 @@ export default function MyPage() {
     }).eq('id', userId)
     alert('탈퇴 요청이 접수되었습니다. 이용해주셔서 감사합니다.')
     await supabase.auth.signOut()
+    try { sessionStorage.clear() } catch {}
     router.push('/')
   }
 
