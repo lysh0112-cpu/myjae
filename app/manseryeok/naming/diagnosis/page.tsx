@@ -7,7 +7,6 @@ import { supabase } from '@/lib/supabase'
 import type { DiagnoseResult, NameChar } from '@/lib/saju/naming'
 import PageHeader from '@/app/components/common/PageHeader'
 
-const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
 
 // 이름에 잘 쓰지 않는 흉한 뜻 키워드 (rename/hanja와 동일 기준)
@@ -88,23 +87,9 @@ function DiagnosisInner() {
       })
       return
     }
-    const saved = localStorage.getItem(MY_INFO_KEY)
-    if (saved) {
-      try {
-        const m = JSON.parse(saved)
-        if (m.year) {
-          setInfo({
-            gender: m.gender || '남',
-            calType: m.calType || '양력',
-            year: parseInt(m.year),
-            month: parseInt(m.month),
-            day: parseInt(m.day),
-            leapMonth: m.leapMonth || '0',
-            hourIdx: m.hour === '모름' || m.hour == null ? null : parseInt(m.hour),
-          })
-        }
-      } catch {}
-    }
+    // 홈에서 사주를 넣고 넘어온 경우에만 정보를 사용합니다.
+    // (저장된 옛 값을 불러오지 않아, 다른 사람 정보가 남지 않습니다.)
+    setInfo(null)
   }, [sp])
 
   const { saju, dayStem, converting } = useResultSaju(
@@ -266,10 +251,13 @@ function DiagnosisInner() {
       <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto' }}>
         <PageHeader title="내 이름 풀이" onBack={() => router.push('/manseryeok/naming')} />
         <div style={{ padding: '40px 20px', textAlign: 'center', color: '#8a88a0' }}>
-          <p style={{ marginBottom: '20px' }}>먼저 홈에서 사주 정보를 입력해주세요.</p>
+          <p style={{ marginBottom: '12px', fontSize: '15px', color: '#e8e4ff' }}>먼저 사주 정보를 입력해주세요.</p>
+          <p style={{ marginBottom: '24px', fontSize: '13px', lineHeight: 1.7 }}>
+            홈 화면에서 생년월일 · 음양력 · 태어난 시(시주)를<br />입력하시면 이름 풀이를 시작할 수 있어요.
+          </p>
           <button onClick={() => router.push('/')}
             style={{ padding: '12px 24px', borderRadius: '12px', background: 'linear-gradient(135deg,#3C3489,#FAC775)', border: 'none', color: '#1a1a18', fontWeight: 'bold', cursor: 'pointer' }}>
-            홈으로 가기 →
+            홈에서 사주 입력하기 →
           </button>
         </div>
       </main>
@@ -568,9 +556,6 @@ function DiagnosisInner() {
                     </div>
                     <span style={{ fontSize: '13px', fontWeight: 'bold', color: gold, whiteSpace: 'nowrap', marginLeft: '10px' }}>5,000원</span>
                   </button>
-
-                  {/* TODO(나중에): '새 이름 5개 추천' / '새 이름 10개 추천' 버튼 자리.
-                      recommend 화면 만들면 여기에 추가하고 /manseryeok/naming/rename/recommend?count=5(또는 10) 로 연결 */}
                 </div>
 
                 <button onClick={resetAll}
