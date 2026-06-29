@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 const HOURS = [
@@ -15,7 +15,6 @@ const HOUR_INDEX: Record<string, number> = {
 }
 
 export const MY_INFO_KEY = 'myinfo'
-const LAST_RESULT_URL_KEY = 'saju_last_result_url'
 
 export default function AiManseryeokSection() {
   const router = useRouter()
@@ -23,55 +22,6 @@ export default function AiManseryeokSection() {
   const [birthDate, setBirthDate] = useState('')
   const [birthHour, setBirthHour] = useState('')
   const [calType, setCalType] = useState<'양력' | '음력'>('양력')
-  const [hasStored, setHasStored] = useState(false)
-  const [lastResultUrl, setLastResultUrl] = useState('')
-
-  useEffect(() => {
-    const saved = localStorage.getItem(MY_INFO_KEY)
-    if (saved) {
-      const info = JSON.parse(saved)
-      if (info.gender) setGender(info.gender)
-      if (info.calType) setCalType(info.calType)
-      if (info.birthDate) setBirthDate(info.birthDate)
-      if (info.birthHour) setBirthHour(info.birthHour)
-      setHasStored(true)
-    }
-    // 이전 결과 URL 복원
-    const lastUrl = localStorage.getItem(LAST_RESULT_URL_KEY)
-    if (lastUrl) setLastResultUrl(lastUrl)
-  }, [])
-
-  useEffect(() => {
-    if (!birthDate) return
-    const d = birthDate.split('-')
-    const year = d[0] || ''
-    const month = d[1] ? String(parseInt(d[1])) : ''
-    const day = d[2] ? String(parseInt(d[2])) : ''
-    const hourVal = birthHour === '모름' ? '모름'
-      : birthHour ? String(HOUR_INDEX[birthHour]) : '모름'
-
-    const info = { gender, calType, year, month, day, hour: hourVal, birthDate, birthHour }
-    localStorage.setItem(MY_INFO_KEY, JSON.stringify(info))
-    sessionStorage.setItem(MY_INFO_KEY, JSON.stringify(info))
-    setHasStored(true)
-  }, [gender, calType, birthDate, birthHour])
-
-  const handleClear = () => {
-    if (confirm('입력 내용을 초기화할까요?')) {
-      localStorage.removeItem(MY_INFO_KEY)
-      sessionStorage.removeItem(MY_INFO_KEY)
-      localStorage.removeItem('saju_free_analysis')
-      localStorage.removeItem('saju_paid_analysis')
-      localStorage.removeItem('saju_consultant_note')
-      localStorage.removeItem(LAST_RESULT_URL_KEY)
-      setGender('남')
-      setCalType('양력')
-      setBirthDate('')
-      setBirthHour('')
-      setHasStored(false)
-      setLastResultUrl('')
-    }
-  }
 
   function handleStart() {
     if (!birthDate) {
@@ -89,9 +39,6 @@ export default function AiManseryeokSection() {
       : birthHour ? String(HOUR_INDEX[birthHour]) : '모름'
     params.set('hour', hourVal)
     const url = `/manseryeok/result?${params.toString()}`
-    // 결과 URL 저장
-    localStorage.setItem(LAST_RESULT_URL_KEY, url)
-    setLastResultUrl(url)
     router.push(url)
   }
 
@@ -106,12 +53,6 @@ export default function AiManseryeokSection() {
             <h2 className="text-base font-bold text-white">나는 어떤 사주를 타고났을까?</h2>
             <p className="text-xs" style={{ color: '#8a88a0' }}>생년월일과 태어난 시를 입력해주세요</p>
           </div>
-          {hasStored && (
-            <button onClick={handleClear}
-              style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '20px', background: 'rgba(255,80,80,0.1)', color: 'rgba(255,120,120,0.7)', border: '1px solid rgba(255,80,80,0.2)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-              초기화
-            </button>
-          )}
         </div>
         <div className="flex gap-3 mb-4">
           {[
@@ -150,23 +91,12 @@ export default function AiManseryeokSection() {
           </select>
         </div>
 
-        {/* 분석 시작 버튼 */}
         <button onClick={handleStart}
           className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all active:scale-95"
           style={{ background: 'linear-gradient(135deg, #3C3489 0%, #FAC775 100%)', color: '#1a1a18',
             boxShadow: '0 4px 20px rgba(60,52,137,0.4)' }}>
           ✨ 나의 운명을 펼쳐보기
         </button>
-
-        {/* 이전 결과 보기 버튼 — 데이터 있을 때만 표시 */}
-        {hasStored && lastResultUrl && (
-          <button
-            onClick={() => router.push(lastResultUrl)}
-            className="w-full mt-2 py-2.5 rounded-xl text-sm transition-all active:scale-95"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(250,199,117,0.2)', color: '#FAC775', cursor: 'pointer' }}>
-            📋 이전 분석 결과 보기 →
-          </button>
-        )}
 
         <p className="text-center text-xs mt-3" style={{ color: '#8a88a0' }}>
           기본 분석은 무료 · 심층 분석은 전문 상담사와 연결
