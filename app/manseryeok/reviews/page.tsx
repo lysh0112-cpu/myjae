@@ -19,7 +19,6 @@ type Review = {
   created_at: string
 }
 
-// 작성 시각을 'n시간 전' 형태로
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
   const min = Math.floor(diff / 60000)
@@ -39,11 +38,11 @@ export default function ReviewListPage() {
 
   useEffect(() => {
     const load = async () => {
-      // 승인된 후기만 (RLS 정책상 어차피 승인된 것만 읽힘)
-      // 고정(is_pinned) 먼저, 그다음 최신순
+      // 승인된 후기만 (is_approved = true) — 고정 먼저, 그다음 최신순
       const { data, error } = await supabase
         .from('reviews')
         .select('*')
+        .eq('is_approved', true)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
 
