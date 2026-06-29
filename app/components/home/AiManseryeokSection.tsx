@@ -1,6 +1,7 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 
 const HOURS = [
   '모름', '子시(23~01)', '丑시(01~03)', '寅시(03~05)', '卯시(05~07)',
@@ -13,6 +14,11 @@ const HOUR_INDEX: Record<string, number> = {
   '辰시(07~09)': 4, '巳시(09~11)': 5, '午시(11~13)': 6, '未시(13~15)': 7,
   '申시(15~17)': 8, '酉시(17~19)': 9, '戌시(19~21)': 10, '亥시(21~23)': 11,
 }
+const INDEX_TO_HOUR: Record<string, string> = {
+  '0': '子시(23~01)', '1': '丑시(01~03)', '2': '寅시(03~05)', '3': '卯시(05~07)',
+  '4': '辰시(07~09)', '5': '巳시(09~11)', '6': '午시(11~13)', '7': '未시(13~15)',
+  '8': '申시(15~17)', '9': '酉시(17~19)', '10': '戌시(19~21)', '11': '亥시(21~23)',
+}
 
 export const MY_INFO_KEY = 'myinfo'
 
@@ -22,6 +28,33 @@ export default function AiManseryeokSection() {
   const [birthDate, setBirthDate] = useState('')
   const [birthHour, setBirthHour] = useState('')
   const [calType, setCalType] = useState<'양력' | '음력'>('양력')
+  const [hasMine, setHasMine] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) return
+      supabase.from('profiles')
+        .select('birth_year, birth_month, birth_day, birth_hour, cal_type, gender, saju_saved')
+        .eq('id', data.user.id).single()
+        .then(({ data: p }) => {
+          if (p && p.saju_saved && p.birth_year) {
+            const mm = String(p.birth_month).padStart(2, '0')
+            const dd = String(p.birth_day).padStart(2, '0')
+            setBirthDate(`${p.birth_year}-${mm}-${dd}`)
+            setGender(p.gender === '여' ? '여' : '남')
+            setCalType(p.cal_type === '음력' ? '음력' : '양력')
+            if (p.birth_hour === '모름') setBirthHour('모름')
+            else if (p.birth_hour != null) setBirthHour(INDEX_TO_HOUR[String(p.birth_hour)] || '')
+            setHasMine(true)
+          }
+        })
+    })
+  }, [])
+
+  function resetFields() {
+    setGender('남'); setCalType('양력'); setBirthDate(''); setBirthHour('')
+    setHasMine(false)
+  }
 
   function handleStart() {
     if (!birthDate) {
@@ -51,8 +84,17 @@ export default function AiManseryeokSection() {
             style={{ background: 'linear-gradient(135deg, #3C3489, #4e46b0)' }}>✦</div>
           <div style={{ flex: 1 }}>
             <h2 className="text-base font-bold text-white">나는 어떤 사주를 타고났을까?</h2>
-            <p className="text-xs" style={{ color: '#8a88a0' }}>생년월일과 태어난 시를 입력해주세요</p>
+            <p className="text-xs" style={{ color: '#8a88a0' }}>
+              {hasMine ? '내 사주가 자동으로 입력됐어요' : '생년월일과 태어난 시를 입력해주세요'}
+            </p>
           </div>
+          {hasMine && (
+            <button onClick={resetFields}
+              className="text-xs px-3 py-1.5 rounded-lg"
+              style={{ background: 'rgba(255,255,255,0.08)', color: '#b0aec8', border: '1px solid rgba(255,255,255,0.12)' }}>
+              🔄 새로 입력
+            </button>
+          )}
         </div>
         <div className="flex gap-3 mb-4">
           {[
