@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -129,6 +129,67 @@ export default function ExpenseApproval() {
     alert(status + ' 처리되었습니다.'); closeDoc(); load()
   }
 
+  // A4 인쇄 (withReceipts=true면 증빙 이미지까지 포함)
+  const printDoc = (withReceipts: boolean) => {
+    if (!selected) return
+    const e = selected
+    const imgsHtml = withReceipts && receipts.length > 0
+      ? `<div class="receipts"><div class="rcpt-title">증빙 자료 (${receipts.length}장)</div>${
+          receipts.map(r => `<img src="${r.file_url}" />`).join('')
+        }</div>`
+      : (receipts.length > 0 ? `<div class="rcpt-note">※ 증빙 ${receipts.length}장 별첨</div>` : '')
+
+    const html = `
+      <html><head><meta charset="utf-8"><title>지출결의서 ${e.seq_no || ''}</title>
+      <style>
+        @page { size: A4; margin: 18mm; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Malgun Gothic','맑은 고딕',sans-serif; color: #222; }
+        .head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 24px; }
+        h1 { font-size: 26px; letter-spacing: 8px; margin: 0; }
+        .seq { font-size: 12px; color:#666; margin-top:6px; }
+        .stamp { display:flex; border:1px solid #333; }
+        .stamp .col { width:80px; text-align:center; border-left:1px solid #333; }
+        .stamp .col:first-child { border-left:none; }
+        .stamp .h { font-size:11px; font-weight:bold; background:#f0f0f0; padding:4px 0; border-bottom:1px solid #333; }
+        .stamp .v { height:48px; display:flex; align-items:center; justify-content:center; font-size:14px; }
+        table { width:100%; border-collapse:collapse; font-size:14px; }
+        td { border:1px solid #333; padding:9px 10px; }
+        td.th { background:#f0f0f0; font-weight:bold; width:16%; white-space:nowrap; }
+        .receipts { margin-top:28px; }
+        .rcpt-title { font-weight:bold; font-size:14px; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:4px; }
+        .receipts img { width:100%; max-height:240mm; object-fit:contain; margin-bottom:14px; page-break-inside:avoid; }
+        .rcpt-note { margin-top:20px; font-size:13px; color:#555; }
+        .foot { margin-top:30px; font-size:12px; color:#555; text-align:right; }
+      </style></head><body>
+        <div class="head">
+          <div><h1>지 출 결 의 서</h1><div class="seq">${e.seq_no || ''}</div></div>
+          <div class="stamp">
+            <div class="col"><div class="h">담당</div><div class="v">${handler || ''}</div></div>
+            <div class="col"><div class="h">결재권자</div><div class="v">${approver || ''}</div></div>
+          </div>
+        </div>
+        <table><tbody>
+          <tr><td class="th">일련번호</td><td>${e.seq_no || '-'}</td><td class="th">지출일</td><td>${e.expense_date}</td></tr>
+          <tr><td class="th">대분류</td><td>${e.category}</td><td class="th">세부항목</td><td>${e.subcategory || '-'}</td></tr>
+          <tr><td class="th">금액</td><td><b>${won(e.amount)}</b></td><td class="th">결제수단</td><td>${e.payment_method}</td></tr>
+          <tr><td class="th">증빙종류</td><td>${e.evidence_type || '-'}</td><td class="th">구분</td><td>${e.is_asset ? '자산' : '비용'}</td></tr>
+          <tr><td class="th">내용</td><td colspan="3">${e.description || '-'}</td></tr>
+          <tr><td class="th">비고</td><td colspan="3">${e.note || '-'}</td></tr>
+          <tr><td class="th">상태</td><td colspan="3">${e.approval_status}${e.approved_at ? ` (${new Date(e.approved_at).toLocaleString('ko-KR')})` : ''}</td></tr>
+        </tbody></table>
+        ${imgsHtml}
+        <div class="foot">출력일: ${new Date().toLocaleString('ko-KR')}</div>
+      </body></html>`
+
+    const w = window.open('', '_blank')
+    if (!w) { alert('팝업이 차단되었습니다. 팝업을 허용해주세요.'); return }
+    w.document.write(html)
+    w.document.close()
+    // 이미지 로딩 후 인쇄
+    w.onload = () => { setTimeout(() => { w.print() }, 300) }
+  }
+
   const statusBadge = (s: string) => {
     const map: Record<string, { bg: string; color: string }> = {
       '결재대기': { bg: '#fff7ed', color: '#c2410c' },
@@ -143,7 +204,7 @@ export default function ExpenseApproval() {
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '8px 4px' }}>
       <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4, color: '#fff' }}>🧾 지출결의서</h2>
       <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 20 }}>
-        결재가 필요한 지출을 결재하고, 증빙 이미지를 첨부·보관합니다.
+        결재가 필요한 지출을 결재하고, 증빙 이미지를 첨부·보관·인쇄합니다.
       </p>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
@@ -208,8 +269,6 @@ export default function ExpenseApproval() {
                 <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>지 출 결 의 서</h3>
                 {statusBadge(selected.approval_status)}
               </div>
-
-              {/* 우측 도장칸 형태의 작은 결재란 */}
               <div style={{ display: 'flex', alignItems: 'stretch', border: '1px solid #ccc', borderRadius: 6, overflow: 'hidden' }}>
                 <div style={stampCol}>
                   <div style={stampHead}>담당</div>
@@ -220,13 +279,10 @@ export default function ExpenseApproval() {
                   <input value={approver} onChange={e => setApprover(e.target.value)} placeholder="-" style={stampInput} />
                 </div>
                 <button onClick={saveNames} title="이름 저장"
-                  style={{ border: 'none', borderLeft: '1px solid #ccc', background: '#f8f8f8', cursor: 'pointer', padding: '0 10px', fontSize: 11, color: '#555' }}>
-                  저장
-                </button>
+                  style={{ border: 'none', borderLeft: '1px solid #ccc', background: '#f8f8f8', cursor: 'pointer', padding: '0 10px', fontSize: 11, color: '#555' }}>저장</button>
               </div>
             </div>
 
-            {/* 지출 내용 표 */}
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, marginBottom: 20 }}>
               <tbody>
                 <tr><td style={docTh}>일련번호</td><td style={docTd}>{selected.seq_no || '-'}</td>
@@ -242,7 +298,6 @@ export default function ExpenseApproval() {
               </tbody>
             </table>
 
-            {/* 증빙 이미지 */}
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                 <strong style={{ fontSize: 15 }}>증빙 이미지 ({receipts.length}장)</strong>
@@ -269,20 +324,28 @@ export default function ExpenseApproval() {
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 24, borderTop: '1px solid #eee', paddingTop: 18 }}>
-              <button onClick={() => decide('반려')}
-                style={{ padding: '10px 22px', borderRadius: 8, border: '1px solid #dc2626', background: '#fff', color: '#dc2626', fontWeight: 600, cursor: 'pointer' }}>반려</button>
-              <button onClick={() => decide('승인')}
-                style={{ padding: '10px 28px', borderRadius: 8, border: 'none', background: '#047857', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>승인</button>
+            {/* 인쇄 버튼 2개 + 결재 버튼 */}
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 24, borderTop: '1px solid #eee', paddingTop: 18, flexWrap: 'wrap' }}>
+              <button onClick={() => printDoc(false)}
+                style={{ padding: '9px 16px', borderRadius: 8, border: '1px solid #555', background: '#fff', color: '#333', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>
+                🖨 양식만 인쇄
+              </button>
+              <button onClick={() => printDoc(true)}
+                style={{ padding: '9px 16px', borderRadius: 8, border: '1px solid #555', background: '#fff', color: '#333', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>
+                🖨 증빙 포함 인쇄
+              </button>
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
+                <button onClick={() => decide('반려')}
+                  style={{ padding: '10px 22px', borderRadius: 8, border: '1px solid #dc2626', background: '#fff', color: '#dc2626', fontWeight: 600, cursor: 'pointer' }}>반려</button>
+                <button onClick={() => decide('승인')}
+                  style={{ padding: '10px 28px', borderRadius: 8, border: 'none', background: '#047857', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>승인</button>
+              </div>
             </div>
             {selected.approved_at && (
               <div style={{ marginTop: 10, fontSize: 12, color: '#888', textAlign: 'right' }}>
                 최종 처리: {selected.approved_by} · {new Date(selected.approved_at).toLocaleString('ko-KR')}
               </div>
             )}
-
-            <button onClick={closeDoc}
-              style={{ position: 'absolute' }} aria-hidden />
           </div>
         </div>
       )}
@@ -301,7 +364,6 @@ const thStyle: React.CSSProperties = { padding: '10px 12px', fontWeight: 600, co
 const tdStyle: React.CSSProperties = { padding: '10px 12px', whiteSpace: 'nowrap' }
 const docTh: React.CSSProperties = { background: '#f8f8f8', padding: '8px 10px', fontWeight: 600, color: '#555', border: '1px solid #eee', width: '15%', whiteSpace: 'nowrap' }
 const docTd: React.CSSProperties = { padding: '8px 10px', border: '1px solid #eee' }
-// 우측 작은 결재 도장칸
 const stampCol: React.CSSProperties = { width: 72, display: 'flex', flexDirection: 'column' }
 const stampHead: React.CSSProperties = { background: '#f5f5f5', fontSize: 11, fontWeight: 700, color: '#666', textAlign: 'center', padding: '3px 0', borderBottom: '1px solid #ccc' }
 const stampInput: React.CSSProperties = { border: 'none', width: '100%', textAlign: 'center', padding: '10px 4px', fontSize: 13, outline: 'none', height: 38 }
