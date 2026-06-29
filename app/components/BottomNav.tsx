@@ -36,6 +36,8 @@ export default function BottomNav() {
   const handleLogout = async () => {
     if (!confirm('로그아웃 할까요?')) return
     await supabase.auth.signOut()
+    // 임시 데이터(내 사주, AI 분석, 궁합 상대방 등) 모두 비우기 — 공용기기에서 다음 사람에게 안 남도록
+    try { sessionStorage.clear() } catch {}
     setIsLoggedIn(false)
     router.push('/')
   }
