@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
 
 type Member = {
   id: string
+  email: string
   nickname: string | null
   role: string | null
   created_at: string | null
+  last_sign_in_at: string | null
 }
 
 export default function MemberManager() {
@@ -18,14 +19,17 @@ export default function MemberManager() {
 
   const loadMembers = async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, nickname, role, created_at')
-      .order('created_at', { ascending: false })
-    if (error) {
-      setMsg('회원 목록을 불러오지 못했어요: ' + error.message)
-    } else {
-      setMembers(data || [])
+    setMsg('')
+    try {
+      const res = await fetch('/api/admin/list-users')
+      const result = await res.json()
+      if (!res.ok) {
+        setMsg('회원 목록을 불러오지 못했어요: ' + (result.error || '알 수 없음'))
+      } else {
+        setMembers(result.members || [])
+      }
+    } catch (e: any) {
+      setMsg('불러오는 중 오류: ' + (e?.message || '알 수 없음'))
     }
     setLoading(false)
   }
@@ -35,7 +39,7 @@ export default function MemberManager() {
   }, [])
 
   const handleDelete = async (member: Member) => {
-    const name = member.nickname || '(닉네임 없음)'
+    const name = member.nickname || member.email || '(이름 없음)'
     if (!confirm(`정말 "${name}" 회원을 삭제할까요?\n\n로그인 정보와 프로필이 모두 삭제되며 되돌릴 수 없습니다.`)) {
       return
     }
@@ -66,18 +70,53 @@ export default function MemberManager() {
     return '👤 일반회원'
   }
 
+  const fmtDate = (d: string | null) =>
+    d ? new Date(d).toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'
+
+  const fmtDateShort = (d: string | null) =>
+    d ? new Date(d).toLocaleDateString('ko-KR') : '-'
+
+  // 엑셀(CSV) 다운로드
+  const downloadCSV = () => {
+    const header = ['닉네임', '이메일', '등급', '가입일', '마지막 로그인']
+    const rows = members.map(m => [
+      m.nickname || '',
+      m.email || '',
+      roleLabel(m.role).replace(/[👑🔮👤]/g, '').trim(),
+      fmtDateShort(m.created_at),
+      fmtDate(m.last_sign_in_at),
+    ])
+    const csv = [header, ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    // BOM 추가 (엑셀 한글 깨짐 방지)
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `명연재_회원목록_${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div style={{ padding: '8px 4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <h3 style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>회원 관리</h3>
-        <button onClick={loadMembers}
-          style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(250,199,117,0.3)', background: 'transparent', color: '#FAC775', fontSize: 13, cursor: 'pointer' }}>
-          ↻ 새로고침
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={downloadCSV} disabled={members.length === 0}
+            style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(126,231,135,0.4)', background: 'rgba(126,231,135,0.1)', color: '#7ee787', fontSize: 13, cursor: 'pointer', opacity: members.length === 0 ? 0.4 : 1 }}>
+            📥 엑셀 다운로드
+          </button>
+          <button onClick={loadMembers}
+            style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(250,199,117,0.3)', background: 'transparent', color: '#FAC775', fontSize: 13, cursor: 'pointer' }}>
+            ↻ 새로고침
+          </button>
+        </div>
       </div>
 
       <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>
-        총 {members.length}명 · 삭제하면 로그인 정보와 프로필이 함께 지워집니다.
+        총 {members.length}명 · 삭제하면 로그인 정보와 프로필이 함께 지워집니다. (비밀번호는 보안상 조회 불가)
       </p>
 
       {msg && (
@@ -91,27 +130,38 @@ export default function MemberManager() {
       ) : members.length === 0 ? (
         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>아직 가입한 회원이 없어요.</p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {members.map(member => (
-            <div key={member.id}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 10, background: '#2C2C2A', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div>
-                <div style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>
-                  {member.nickname || '(닉네임 없음)'}
-                  <span style={{ marginLeft: 8, fontSize: 12, color: '#FAC775' }}>{roleLabel(member.role)}</span>
-                </div>
-                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 3 }}>
-                  가입: {member.created_at ? new Date(member.created_at).toLocaleDateString('ko-KR') : '-'}
-                </div>
-              </div>
-              <button
-                onClick={() => handleDelete(member)}
-                disabled={deletingId === member.id}
-                style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(255,80,80,0.4)', background: 'rgba(255,80,80,0.1)', color: '#ff8080', fontSize: 13, cursor: 'pointer', opacity: deletingId === member.id ? 0.5 : 1 }}>
-                {deletingId === member.id ? '삭제 중...' : '삭제'}
-              </button>
-            </div>
-          ))}
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 720 }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', textAlign: 'left' }}>
+                <th style={{ padding: '10px 12px' }}>닉네임</th>
+                <th style={{ padding: '10px 12px' }}>이메일</th>
+                <th style={{ padding: '10px 12px' }}>등급</th>
+                <th style={{ padding: '10px 12px' }}>가입일</th>
+                <th style={{ padding: '10px 12px' }}>마지막 로그인</th>
+                <th style={{ padding: '10px 12px', textAlign: 'center' }}>관리</th>
+              </tr>
+            </thead>
+            <tbody>
+              {members.map(member => (
+                <tr key={member.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#fff' }}>
+                  <td style={{ padding: '10px 12px', fontWeight: 600 }}>{member.nickname || '(없음)'}</td>
+                  <td style={{ padding: '10px 12px', color: 'rgba(255,255,255,0.7)' }}>{member.email || '-'}</td>
+                  <td style={{ padding: '10px 12px', color: '#FAC775' }}>{roleLabel(member.role)}</td>
+                  <td style={{ padding: '10px 12px', color: 'rgba(255,255,255,0.6)' }}>{fmtDateShort(member.created_at)}</td>
+                  <td style={{ padding: '10px 12px', color: 'rgba(255,255,255,0.6)' }}>{fmtDate(member.last_sign_in_at)}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                    <button
+                      onClick={() => handleDelete(member)}
+                      disabled={deletingId === member.id}
+                      style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,80,80,0.4)', background: 'rgba(255,80,80,0.1)', color: '#ff8080', fontSize: 12, cursor: 'pointer', opacity: deletingId === member.id ? 0.5 : 1 }}>
+                      {deletingId === member.id ? '삭제 중...' : '삭제'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
