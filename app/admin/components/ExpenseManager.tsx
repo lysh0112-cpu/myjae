@@ -8,8 +8,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-// ▼ 지출결의서 자동 생성 기준 금액 (이 숫자만 바꾸면 기준이 바뀜)
-const APPROVAL_THRESHOLD = 500000
+const DEFAULT_THRESHOLD = 500000 // DB에서 못 불러올 때만 쓰는 기본값
 
 const CATEGORIES: Record<string, string[]> = {
   '인건비': ['급여', '상담사 정산금', '상여금·수당', '일용직·아르바이트', '4대보험 사업자부담분', '퇴직급여'],
@@ -55,6 +54,10 @@ export default function ExpenseManager() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
+  // 결재 기준 금액 (DB에서 불러옴)
+  const [threshold, setThreshold] = useState(DEFAULT_THRESHOLD)
+  const [thresholdInput, setThresholdInput] = useState(String(DEFAULT_THRESHOLD))
+
   // 입력 폼
   const [date, setDate] = useState(today)
   const [category, setCategory] = useState('')
@@ -68,7 +71,17 @@ export default function ExpenseManager() {
 
   // 조회 기간 필터
   const [filterYear, setFilterYear] = useState(thisYear)
-  const [filterMonth, setFilterMonth] = useState('') // '' = 전체
+  const [filterMonth, setFilterMonth] = useState('')
+
+  // 기준 금액 불러오기
+  const loadThreshold = async () => {
+    const { data } = await supabase.from('accounting_settings')
+      .select('value').eq('key', 'approval_threshold').single()
+    if (data?.value) {
+      setThreshold(Number(data.value))
+      setThresholdInput(data.value)
+    }
+  }
 
   const load = async () => {
     setLoading(true)
@@ -81,7 +94,18 @@ export default function ExpenseManager() {
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { loadThreshold(); load() }, [])
+
+  // 기준 금액 저장
+  const saveThreshold = async () => {
+    const v = Math.round(Number(thresholdInput) || 0)
+    if (v <= 0) { alert('0보다 큰 금액을 입력해주세요.'); return }
+    const { error } = await supabase.from('accounting_settings')
+      .upsert({ key: 'approval_threshold', value: String(v), updated_at: new Date().toISOString() })
+    if (error) { alert('저장 실패: ' + error.message); return }
+    setThreshold(v)
+    alert(`결재 기준 금액이 ${v.toLocaleString('ko-KR')}원으로 변경되었습니다.\n(앞으로 입력하는 지출부터 적용됩니다)`)
+  }
 
   const onCategoryChange = (v: string) => { setCategory(v); setSubcategory('') }
 
@@ -92,13 +116,13 @@ export default function ExpenseManager() {
   }
 
   const amountNum = Number(amount) || 0
-  const willNeedApproval = amountNum >= APPROVAL_THRESHOLD
+  const willNeedApproval = amountNum >= threshold
 
   const save = async () => {
     if (!category) { alert('대분류를 선택해주세요.'); return }
     if (!amount || amountNum <= 0) { alert('금액을 입력해주세요.'); return }
     setSaving(true)
-    const needsApproval = amountNum >= APPROVAL_THRESHOLD
+    const needsApproval = amountNum >= threshold
     const { error } = await supabase.from('expenses').insert({
       expense_date: date, category, subcategory: subcategory || null,
       description: description || null, amount: Math.round(amountNum),
@@ -129,7 +153,6 @@ export default function ExpenseManager() {
 
   const won = (n: number) => n.toLocaleString('ko-KR') + '원'
 
-  // 기간 필터 적용
   const filtered = list.filter(e => {
     if (!e.expense_date) return false
     const yr = e.expense_date.slice(0, 4)
@@ -143,11 +166,9 @@ export default function ExpenseManager() {
   const assetTotal = filtered.reduce((s, e) => s + (e.is_asset ? e.amount : 0), 0)
   const waitingCount = filtered.filter(e => e.approval_status === '결재대기').length
 
-  // 연도 목록 (데이터에 있는 연도 + 올해)
   const years = Array.from(new Set([thisYear, ...list.map(e => e.expense_date?.slice(0, 4)).filter(Boolean)]))
     .sort((a, b) => Number(b) - Number(a)) as string[]
 
-  // 엑셀(CSV) 다운로드
   const downloadCSV = () => {
     if (filtered.length === 0) { alert('선택한 기간에 지출 내역이 없습니다.'); return }
     const headers = ['일련번호', '날짜', '대분류', '세부항목', '내용', '금액', '결제수단', '증빙', '구분', '상태', '비고']
@@ -156,17 +177,11 @@ export default function ExpenseManager() {
       e.description || '', String(e.amount), e.payment_method, e.evidence_type || '',
       e.is_asset ? '자산' : '비용', e.approval_status, e.note || '',
     ])
-    // 합계 줄 추가
     rows.push(['', '', '', '', '비용 합계', String(total), '', '', '', '', ''])
     rows.push(['', '', '', '', '자산성 합계', String(assetTotal), '', '', '', '', ''])
-
-    const escape = (v: string) => {
-      if (/[",\n]/.test(v)) return '"' + v.replace(/"/g, '""') + '"'
-      return v
-    }
+    const escape = (v: string) => /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v
     const csv = [headers, ...rows].map(r => r.map(escape).join(',')).join('\n')
-    const bom = '\uFEFF' // 한글 깨짐 방지
-    const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' })
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     const periodLabel = filterMonth ? `${filterYear}-${filterMonth}` : filterYear
@@ -192,9 +207,22 @@ export default function ExpenseManager() {
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '8px 4px' }}>
       <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4, color: '#fff' }}>💰 관리회계 — 지출</h2>
-      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 20 }}>
-        지출을 항목별로 기재합니다. {won(APPROVAL_THRESHOLD)} 이상은 자동으로 결재대기로 들어갑니다. 매출 집계는 결제 연동 후 추가됩니다.
+      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 16 }}>
+        지출을 항목별로 기재합니다. 매출 집계는 결제 연동 후 추가됩니다.
       </p>
+
+      {/* 결재 기준 금액 설정 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, padding: '12px 16px', background: 'rgba(255,255,255,0.06)', borderRadius: 10, flexWrap: 'wrap' }}>
+        <span style={{ color: '#FAC775', fontWeight: 700, fontSize: 14 }}>⚙️ 결재 기준 금액</span>
+        <input type="number" value={thresholdInput} onChange={e => setThresholdInput(e.target.value)}
+          style={{ width: 140, padding: '8px 10px', borderRadius: 6, border: '1px solid #ddd', fontSize: 14, textAlign: 'right' }} />
+        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>원 이상 → 자동 결재대기</span>
+        <button onClick={saveThreshold}
+          style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#FAC775', color: '#1a1a18', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+          기준 저장
+        </button>
+        <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>현재 적용: {won(threshold)}</span>
+      </div>
 
       {/* 입력 폼 */}
       <div style={{ border: '1px solid #e5e5e5', borderRadius: 12, padding: 16, marginBottom: 24, background: '#fafafa' }}>
@@ -237,7 +265,7 @@ export default function ExpenseManager() {
 
         {willNeedApproval && (
           <div style={{ marginTop: 12, padding: '8px 12px', background: '#fff7ed', color: '#c2410c', borderRadius: 8, fontSize: 13 }}>
-            ⚠️ {won(APPROVAL_THRESHOLD)} 이상 지출입니다. 저장 시 <b>결재대기</b>로 등록되며, 목록에서 승인해야 확정됩니다.
+            ⚠️ {won(threshold)} 이상 지출입니다. 저장 시 <b>결재대기</b>로 등록되며, 지출결의서에서 승인해야 확정됩니다.
           </div>
         )}
 
