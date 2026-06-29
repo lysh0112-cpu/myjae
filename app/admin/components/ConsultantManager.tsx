@@ -3,64 +3,60 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import ConsultantForm, { ConsultantFormData, emptyForm } from './ConsultantForm'
 import ConsultantTable from './ConsultantTable'
-
 export default function ConsultantManager() {
   const [list, setList] = useState<ConsultantFormData[]>([])
   const [form, setForm] = useState<ConsultantFormData>(emptyForm)
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(false)
-
   useEffect(() => { fetchList() }, [])
-
   async function fetchList() {
-    const { data } = await supabase.from('consultants').select('*').order('created_at')
+    const { data, error } = await supabase.from('consultants').select('*').order('created_at')
+    if (error) { alert('목록 불러오기 실패: ' + error.message); return }
     if (data) setList(data)
   }
-
   async function handleSave() {
     if (!form.name || !form.phone || !form.email) return alert('이름, 전화번호, 이메일은 필수입니다')
     setLoading(true)
     if (editing) {
-      await supabase.from('consultants').update({
+      const { error } = await supabase.from('consultants').update({
         name: form.name, phone: form.phone, email: form.email,
         specialty: form.specialty, price: form.price,
         bank: form.bank, account: form.account, active: form.active,
         region: form.region, commission_rate: form.commission_rate,
         commission_amount: form.commission_amount,
       }).eq('id', form.id)
+      if (error) { alert('수정 실패: ' + error.message); setLoading(false); return }
     } else {
-      await supabase.from('consultants').insert({
+      const { error } = await supabase.from('consultants').insert({
         name: form.name, phone: form.phone, email: form.email,
         specialty: form.specialty, price: form.price,
         bank: form.bank, account: form.account, active: true,
         region: form.region, commission_rate: form.commission_rate,
         commission_amount: form.commission_amount,
-        password: '123456',
       })
+      if (error) { alert('등록 실패: ' + error.message); setLoading(false); return }
     }
     setForm(emptyForm)
     setEditing(false)
     setLoading(false)
     fetchList()
   }
-
   async function handleDelete(id: string) {
     if (!confirm('정말 삭제하시겠습니까?')) return
-    await supabase.from('consultants').delete().eq('id', id)
+    const { error } = await supabase.from('consultants').delete().eq('id', id)
+    if (error) { alert('삭제 실패: ' + error.message); return }
     fetchList()
   }
-
   async function handleToggleActive(c: ConsultantFormData) {
-    await supabase.from('consultants').update({ active: !c.active }).eq('id', c.id)
+    const { error } = await supabase.from('consultants').update({ active: !c.active }).eq('id', c.id)
+    if (error) { alert('변경 실패: ' + error.message); return }
     fetchList()
   }
-
   function handleEdit(c: ConsultantFormData) {
     setForm(c)
     setEditing(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
-
   return (
     <div>
       <ConsultantForm
