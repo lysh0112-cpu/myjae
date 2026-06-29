@@ -1,24 +1,6 @@
 'use client'
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 
 export default function Header() {
-  const router = useRouter()
-
-  useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (data.user) {
-        const { data: consultant } = await supabase
-          .from('consultants').select('id')
-          .eq('email', data.user.email).single()
-        if (consultant) {
-          router.push(`/manseryeok/consultant?consultantId=${consultant.id}`)
-        }
-      }
-    })
-  }, [])
-
   return (
     <>
       <style>{`
@@ -67,7 +49,6 @@ export default function Header() {
           animation: pulse-glow 2s ease-in-out infinite;
         }
       `}</style>
-
       <header className="fixed top-0 z-50 flex items-center justify-between px-5 py-4"
         style={{ background: 'rgba(44,44,42,0.95)', backdropFilter: 'blur(12px)',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
