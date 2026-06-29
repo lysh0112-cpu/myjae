@@ -229,6 +229,25 @@ function DiagnosisInner() {
         localStorage.removeItem('rename_picks_v1')
         localStorage.removeItem('rename_locked_slot')
       } catch {}
+
+      // 로그인한 사용자면 내 이름풀이 결과를 계정(my_names)에 영구 저장
+      try {
+        const { data: u } = await supabase.auth.getUser()
+        if (u?.user) {
+          const hangulName = chars.filter(Boolean).map((c) => c!.hangul).join('')
+          const hanjaName = chars.filter(Boolean).map((c) => c!.hanja).join('')
+          await supabase.from('my_names').insert({
+            user_id: u.user.id,
+            hangul_name: hangulName,
+            hanja_name: hanjaName,
+            chars,
+            result: data.result ?? null,
+            commentary: data.commentary ?? null,
+            kind: 'self',
+            person_key: personKey(info),
+          })
+        }
+      } catch {}
     } catch (e) {
       console.error(e)
     } finally {
