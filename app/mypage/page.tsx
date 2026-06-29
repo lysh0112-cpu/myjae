@@ -41,12 +41,23 @@ type MyName = {
   created_at: string | null
 }
 
+type Consultation = {
+  id: string
+  status: string | null
+  paid_amount: number | null
+  created_at: string | null
+  booking_date: string | null
+  consultant_id: string | null
+  consultant_name?: string
+}
+
 export default function MyPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [userId, setUserId] = useState('')
   const [profile, setProfile] = useState<Profile | null>(null)
   const [myNames, setMyNames] = useState<MyName[]>([])
+  const [consults, setConsults] = useState<Consultation[]>([])
   const [loading, setLoading] = useState(true)
 
   // 사주 수정 모드
@@ -54,31 +65,44 @@ export default function MyPage() {
   const [eYear, setEYear] = useState('')
   const [eMonth, setEMonth] = useState('')
   const [eDay, setEDay] = useState('')
-  const [eHour, setEHour] = useState('')   // 라벨
+  const [eHour, setEHour] = useState('')
   const [eCal, setECal] = useState<'양력' | '음력'>('양력')
   const [eGender, setEGender] = useState<'남' | '여'>('남')
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) { router.push('/auth/login'); return }
       setEmail(data.user.email || '')
       setUserId(data.user.id)
-      supabase.from('profiles')
+
+      const { data: p } = await supabase.from('profiles')
         .select('nickname, role, birth_year, birth_month, birth_day, birth_hour, cal_type, gender, saju_saved')
         .eq('id', data.user.id).single()
-        .then(({ data: p }) => {
-          if (p) setProfile(p as Profile)
-          setLoading(false)
-        })
+      if (p) setProfile(p as Profile)
+      setLoading(false)
+
       supabase.from('my_names')
         .select('id, hangul_name, hanja_name, kind, created_at')
         .eq('user_id', data.user.id)
         .order('created_at', { ascending: false })
-        .then(({ data: rows }) => {
-          if (rows) setMyNames(rows as MyName[])
-        })
+        .then(({ data: rows }) => { if (rows) setMyNames(rows as MyName[]) })
+
+      // 내 상담 내역 (user_id 기준) + 상담사 이름 붙이기
+      const { data: cs } = await supabase.from('consultations')
+        .select('id, status, paid_amount, created_at, booking_date, consultant_id')
+        .eq('user_id', data.user.id)
+        .order('created_at', { ascending: false })
+      if (cs && cs.length > 0) {
+        const ids = Array.from(new Set(cs.map((c) => c.consultant_id).filter(Boolean)))
+        let nameMap: Record<string, string> = {}
+        if (ids.length > 0) {
+          const { data: cons } = await supabase.from('consultants').select('id, name').in('id', ids as string[])
+          if (cons) nameMap = Object.fromEntries(cons.map((c) => [c.id, c.name]))
+        }
+        setConsults(cs.map((c) => ({ ...c, consultant_name: c.consultant_id ? nameMap[c.consultant_id] : undefined })) as Consultation[])
+      }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -102,6 +126,12 @@ export default function MyPage() {
       const d = new Date(s)
       return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`
     } catch { return '' }
+  }
+
+  const statusInfo = (s: string | null) => {
+    if (s === 'paid' || s === 'done' || s === '완료') return { label: '완료', color: '#5DCAA5' }
+    if (s === 'pending') return { label: '대기중', color: '#FAC775' }
+    return { label: s || '진행중', color: 'rgba(255,255,255,0.5)' }
   }
 
   const openEdit = () => {
@@ -273,10 +303,30 @@ export default function MyPage() {
           )}
         </div>
 
-        {/* 4. 내 상담 내역 (이메일 통일 후 연결 예정 — 자리만) */}
+        {/* 4. 내 상담 내역 (user_id 기준) */}
         <div style={card}>
           <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginBottom: 10 }}>내 상담 내역</div>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '12px 0' }}>상담 내역 연동 준비 중입니다.</div>
+          {consults.length === 0 ? (
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '12px 0' }}>아직 신청한 상담이 없습니다.</div>
+          ) : (
+            <div>
+              {consults.map((c, i) => {
+                const st = statusInfo(c.status)
+                return (
+                  <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: i < consults.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                    <div>
+                      <div style={{ fontSize: 14, color: '#fff' }}>{c.consultant_name || '상담사'}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+                        {dateText(c.booking_date || c.created_at)}
+                        {c.paid_amount ? ` · ${c.paid_amount.toLocaleString()}원` : ''}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 12, color: st.color }}>{st.label}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* 5. 관리 화면 버튼 (상담사·매니저만) */}
