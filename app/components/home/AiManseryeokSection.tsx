@@ -54,6 +54,11 @@ export default function AiManseryeokSection() {
   function resetFields() {
     setGender('남'); setCalType('양력'); setBirthDate(''); setBirthHour('')
     setHasMine(false)
+    // 내 사주 임시정보도 비움 (궁합·개명이 못 읽도록)
+    try {
+      sessionStorage.removeItem(MY_INFO_KEY)
+      localStorage.removeItem(MY_INFO_KEY)
+    } catch {}
   }
 
   function handleStart() {
@@ -61,15 +66,37 @@ export default function AiManseryeokSection() {
       alert('생년월일을 먼저 입력해주세요 😊')
       return
     }
+    const d = birthDate.split('-')
+    const yearStr = d[0] || ''
+    const monthStr = d[1] ? String(parseInt(d[1])) : ''
+    const dayStr = d[2] ? String(parseInt(d[2])) : ''
+    const hourVal = birthHour === '모름' ? '모름'
+      : birthHour ? String(HOUR_INDEX[birthHour]) : '모름'
+
+    // ── 궁합·개명 화면이 읽을 수 있도록 "내 사주(myinfo)"를 임시 저장 ──
+    // 궁합(useCoupleInput)은 sessionStorage, 개명(newname 등)은 localStorage에서 읽으므로 양쪽에 저장.
+    // hour는 궁합 규칙에 맞춰 '모름'이면 '-1'로.
+    const myInfo = {
+      gender,
+      calType,
+      year: yearStr,
+      month: monthStr,
+      day: dayStr,
+      hour: hourVal === '모름' ? '-1' : hourVal,
+    }
+    try {
+      const json = JSON.stringify(myInfo)
+      sessionStorage.setItem(MY_INFO_KEY, json)
+      localStorage.setItem(MY_INFO_KEY, json)
+    } catch {}
+
+    // ── 결과 화면은 기존대로 URL 파라미터로 전달 (계산 로직 그대로) ──
     const params = new URLSearchParams()
     params.set('gender', gender)
     params.set('calType', calType)
-    const d = birthDate.split('-')
-    params.set('year', d[0] || '')
-    params.set('month', d[1] ? String(parseInt(d[1])) : '')
-    params.set('day', d[2] ? String(parseInt(d[2])) : '')
-    const hourVal = birthHour === '모름' ? '모름'
-      : birthHour ? String(HOUR_INDEX[birthHour]) : '모름'
+    params.set('year', yearStr)
+    params.set('month', monthStr)
+    params.set('day', dayStr)
     params.set('hour', hourVal)
     const url = `/manseryeok/result?${params.toString()}`
     router.push(url)
