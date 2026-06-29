@@ -70,23 +70,39 @@ export default function ReviewManager() {
     { key: 'all', label: '전체' },
   ]
 
-  // 엑셀 다운로드 (SheetJS를 동적으로 불러옴)
-  const downloadExcel = async () => {
-    const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs' as any)
-    const rows = filtered.map((r) => ({
-      닉네임: r.nickname,
-      별점: r.rating,
-      서비스: r.service_type ?? '',
-      후기내용: r.content,
-      상태: r.is_approved ? '노출 중' : '대기',
-      고정: r.is_pinned ? 'O' : '',
-      작성일: new Date(r.created_at).toLocaleString('ko-KR'),
-    }))
-    const ws = XLSX.utils.json_to_sheet(rows)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, '후기목록')
+  // 엑셀(CSV) 다운로드 — 외부 라이브러리 없이 작동, 엑셀·구글시트에서 열림
+  const downloadCSV = () => {
+    const header = ['닉네임', '별점', '서비스', '후기내용', '상태', '고정', '작성일']
+    const escape = (v: any) => {
+      const s = String(v ?? '')
+      // 쉼표·따옴표·줄바꿈이 있으면 큰따옴표로 감싸고, 내부 따옴표는 두 번
+      if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"'
+      return s
+    }
+    const lines = [header.join(',')]
+    filtered.forEach((r) => {
+      lines.push([
+        escape(r.nickname),
+        escape(r.rating),
+        escape(r.service_type ?? ''),
+        escape(r.content),
+        escape(r.is_approved ? '노출 중' : '대기'),
+        escape(r.is_pinned ? 'O' : ''),
+        escape(new Date(r.created_at).toLocaleString('ko-KR')),
+      ].join(','))
+    })
+    // 엑셀에서 한글이 깨지지 않도록 BOM 추가
+    const csv = '\uFEFF' + lines.join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
     const today = new Date().toISOString().slice(0, 10)
-    XLSX.writeFile(wb, `명연재_후기목록_${today}.xlsx`)
+    a.href = url
+    a.download = `명연재_후기목록_${today}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
   const th: React.CSSProperties = { textAlign: 'left', padding: '12px 14px', fontSize: 13, color: GOLD, fontWeight: 700, whiteSpace: 'nowrap', borderBottom: `1px solid ${LINE}` }
@@ -102,7 +118,7 @@ export default function ReviewManager() {
             style={{ background: 'rgba(255,255,255,0.05)', color: SUB, border: `1px solid ${LINE}`, borderRadius: 10, padding: '8px 14px', fontSize: 13, cursor: 'pointer' }}>
             🔄 새로고침
           </button>
-          <button onClick={downloadExcel}
+          <button onClick={downloadCSV}
             style={{ background: 'rgba(76,175,80,0.2)', color: '#7ec87e', border: '1px solid rgba(76,175,80,0.3)', borderRadius: 10, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
             📊 엑셀 다운로드
           </button>
