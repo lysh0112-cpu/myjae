@@ -16,33 +16,19 @@ function LoginForm() {
   const routeAfterLogin = async (userId: string) => {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('nickname, role, privacy_agreed')
+      .select('nickname, privacy_agreed')
       .eq('id', userId)
       .single()
 
+    // 가입 직후(닉네임·약관 미완료)면 환영 화면으로
     if (!profile || !profile.nickname || !profile.privacy_agreed) {
       router.push('/auth/welcome')
       return
     }
 
-    // 상담사·관리자: 바로 보내지 않고 먼저 물어본다 (PC·모바일 모두)
-    if (profile.role === 'consultant' || profile.role === 'master') {
-      const go = window.confirm('상담사 관리 화면으로 이동할까요?\n\n[확인] 상담사 화면으로 이동\n[취소] 일반 홈 화면으로 이동')
-      if (!go) {
-        // 취소 → 일반 홈으로
-        router.push('/')
-        return
-      }
-      const { data: consultant } = await supabase
-        .from('consultants').select('id').eq('email', email).single()
-      if (consultant) {
-        router.push(`/manseryeok/consultant?consultantId=${consultant.id}`)
-      } else {
-        router.push('/manseryeok/consultant')
-      }
-    } else {
-      router.push('/')
-    }
+    // 그 외에는 등급과 무관하게 무조건 홈으로.
+    // 상담사·관리자 화면은 로그인 후 '마이페이지'에서 들어간다.
+    router.push('/')
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -55,15 +41,6 @@ function LoginForm() {
       setLoading(false)
       return
     }
-    if (isConsultant) {
-      const { data: consultant } = await supabase
-        .from('consultants').select('id').eq('email', email).single()
-      if (!consultant) {
-        setError('상담사 계정이 아닙니다.')
-        setLoading(false)
-        return
-      }
-    }
     await routeAfterLogin(data.user.id)
   }
 
@@ -74,7 +51,7 @@ function LoginForm() {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold" style={{ color: '#FAC775' }}>명연재</h1>
           <p className="text-sm mt-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
-            {isConsultant ? '🔮 상담사 로그인' : '👤 일반 고객 로그인'}
+            {isConsultant ? '🔮 상담사 로그인' : '👤 로그인'}
           </p>
         </div>
         <div className="rounded-2xl p-8"
