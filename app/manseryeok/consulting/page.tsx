@@ -63,13 +63,17 @@ function ConsultingContent() {
         .from('customers')
         .upsert({ phone: phone.replace(/\D/g, '') }, { onConflict: 'phone' })
 
+      // 로그인한 사용자면 user_id도 함께 저장 (이메일 계정 기준 연결)
+      const { data: u } = await supabase.auth.getUser()
+
       const { data, error } = await supabase
         .from('consultations')
         .insert({
           customer_phone: phone.replace(/\D/g, ''),
           consultant_id: selected.id,
           birth_data: birthData,
-          status: 'pending'
+          status: 'pending',
+          user_id: u?.user?.id ?? null,
         })
         .select('id')
         .single()
