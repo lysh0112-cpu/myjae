@@ -6,18 +6,17 @@ import ConsultationHistory from './components/ConsultationHistory'
 import Dashboard from './components/Dashboard'
 import KnowledgeManager from './components/KnowledgeManager'
 import SiteSettings from './components/SiteSettings'
-
-type Tab = 'dashboard' | 'consultant' | 'settlement' | 'history' | 'knowledge' | 'settings'
-
+import ReviewManager from './components/ReviewManager'
+type Tab = 'dashboard' | 'consultant' | 'settlement' | 'history' | 'knowledge' | 'review' | 'settings'
 const TABS = [
   { key: 'dashboard', label: '📊 대시보드' },
   { key: 'consultant', label: '👤 상담사 관리' },
   { key: 'settlement', label: '💰 정산 관리' },
   { key: 'history', label: '📋 상담 내역' },
   { key: 'knowledge', label: '🧠 연구 자료' },
+  { key: 'review', label: '📝 후기 관리' },
   { key: 'settings', label: '⚙️ 사이트 설정' },
 ]
-
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>('dashboard')
   return (
@@ -48,6 +47,7 @@ export default function AdminPage() {
         {tab === 'settlement' && <SettlementManager />}
         {tab === 'history' && <ConsultationHistory />}
         {tab === 'knowledge' && <KnowledgeManager />}
+        {tab === 'review' && <ReviewManager />}
         {tab === 'settings' && <SiteSettings />}
       </main>
     </div>
