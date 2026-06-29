@@ -89,13 +89,10 @@ export default function BottomNav() {
             )
           }
 
-          // 마이페이지: 로그인 안 했으면 로그인 시트를 띄우고, 했으면 마이페이지로 이동
+          // 마이페이지: 무조건 마이페이지로 이동 (로그인 여부는 마이페이지가 처리)
           if (isMyPage) {
             return (
-              <button key={tab.href} className="flex-1"
-                onClick={() => isLoggedIn ? router.push('/mypage') : setShowLogin(true)}>
-                {inner}
-              </button>
+              <Link key={tab.href} href="/mypage" className="flex-1">{inner}</Link>
             )
           }
 
