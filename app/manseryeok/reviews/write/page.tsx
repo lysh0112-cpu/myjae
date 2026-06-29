@@ -139,7 +139,7 @@ export default function ReviewWritePage() {
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="이용하신 경험을 자유롭게 들려주세요 :)"
+          placeholder="상담·분석 경험이 어떠셨나요? 편하게 적어주세요."
           maxLength={1000}
           rows={6}
           style={{ width: '100%', boxSizing: 'border-box', background: CARD, border: `1px solid ${LINE}`, borderRadius: 12, padding: '14px 16px', color: '#fff', fontSize: 16, lineHeight: 1.6, resize: 'vertical', outline: 'none', marginBottom: 6 }}
