@@ -15,6 +15,7 @@ export default function MemberManager() {
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [roleSavingId, setRoleSavingId] = useState<string | null>(null)
   const [msg, setMsg] = useState('')
 
   // 회원 추가 폼
@@ -79,6 +80,32 @@ export default function MemberManager() {
     setAdding(false)
   }
 
+  const handleRoleChange = async (member: Member, role: string) => {
+    if (role === (member.role || 'customer')) return
+    const name = member.nickname || member.email || '(이름 없음)'
+    const label = role === 'master' ? '매니저' : role === 'consultant' ? '상담사' : '일반회원'
+    if (!confirm(`"${name}" 님의 등급을 "${label}"(으)로 바꿀까요?`)) return
+    setRoleSavingId(member.id)
+    setMsg('')
+    try {
+      const res = await fetch('/api/admin/update-role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: member.id, role }),
+      })
+      const result = await res.json()
+      if (!res.ok) {
+        setMsg('등급 변경 실패: ' + (result.error || '알 수 없는 오류'))
+      } else {
+        setMsg(`"${name}" 님의 등급을 "${label}"(으)로 변경했어요.`)
+        setMembers(members.map(m => m.id === member.id ? { ...m, role } : m))
+      }
+    } catch (e: any) {
+      setMsg('등급 변경 중 오류: ' + (e?.message || '알 수 없음'))
+    }
+    setRoleSavingId(null)
+  }
+
   const handleDelete = async (member: Member) => {
     const name = member.nickname || member.email || '(이름 없음)'
     if (!confirm(`정말 "${name}" 회원을 삭제할까요?\n\n로그인 정보와 프로필이 모두 삭제되며 되돌릴 수 없습니다.`)) {
@@ -105,24 +132,21 @@ export default function MemberManager() {
     setDeletingId(null)
   }
 
-  const roleLabel = (role: string | null) => {
-    if (role === 'master') return '👑 마스터'
-    if (role === 'consultant') return '🔮 상담사'
-    return '👤 일반회원'
-  }
-
   const fmtDate = (d: string | null) =>
     d ? new Date(d).toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'
 
   const fmtDateShort = (d: string | null) =>
     d ? new Date(d).toLocaleDateString('ko-KR') : '-'
 
+  const roleLabelText = (role: string | null) =>
+    role === 'master' ? '매니저' : role === 'consultant' ? '상담사' : '일반회원'
+
   const downloadCSV = () => {
     const header = ['닉네임', '이메일', '등급', '가입일', '마지막 로그인']
     const rows = members.map(m => [
       m.nickname || '',
       m.email || '',
-      roleLabel(m.role).replace(/[👑🔮👤]/g, '').trim(),
+      roleLabelText(m.role),
       fmtDateShort(m.created_at),
       fmtDate(m.last_sign_in_at),
     ])
@@ -180,6 +204,7 @@ export default function MemberManager() {
               <select style={inputStyle} value={newRole} onChange={e => setNewRole(e.target.value)}>
                 <option value="customer">👤 일반회원</option>
                 <option value="consultant">🔮 상담사</option>
+                <option value="master">👑 매니저</option>
               </select>
             </div>
             <div>
@@ -205,7 +230,7 @@ export default function MemberManager() {
       )}
 
       <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>
-        총 {members.length}명 · 삭제하면 로그인 정보와 프로필이 함께 지워집니다. (비밀번호는 보안상 조회 불가)
+        총 {members.length}명 · 등급을 바꾸려면 등급 칸을 누르세요 · 삭제하면 로그인 정보와 프로필이 함께 지워집니다.
       </p>
 
       {msg && (
@@ -236,7 +261,21 @@ export default function MemberManager() {
                 <tr key={member.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#fff' }}>
                   <td style={{ padding: '10px 12px', fontWeight: 600 }}>{member.nickname || '(없음)'}</td>
                   <td style={{ padding: '10px 12px', color: 'rgba(255,255,255,0.7)' }}>{member.email || '-'}</td>
-                  <td style={{ padding: '10px 12px', color: '#FAC775' }}>{roleLabel(member.role)}</td>
+                  <td style={{ padding: '10px 12px' }}>
+                    <select
+                      value={member.role || 'customer'}
+                      disabled={roleSavingId === member.id}
+                      onChange={(e) => handleRoleChange(member, e.target.value)}
+                      style={{
+                        background: '#1a1a18', color: '#FAC775', borderRadius: 8,
+                        padding: '6px 10px', border: '1px solid rgba(250,199,117,0.3)',
+                        fontSize: 13, cursor: 'pointer', opacity: roleSavingId === member.id ? 0.5 : 1,
+                      }}>
+                      <option value="customer">👤 일반회원</option>
+                      <option value="consultant">🔮 상담사</option>
+                      <option value="master">👑 매니저</option>
+                    </select>
+                  </td>
                   <td style={{ padding: '10px 12px', color: 'rgba(255,255,255,0.6)' }}>{fmtDateShort(member.created_at)}</td>
                   <td style={{ padding: '10px 12px', color: 'rgba(255,255,255,0.6)' }}>{fmtDate(member.last_sign_in_at)}</td>
                   <td style={{ padding: '10px 12px', textAlign: 'center' }}>
