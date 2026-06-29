@@ -24,7 +24,15 @@ function LoginForm() {
       router.push('/auth/welcome')
       return
     }
+
+    // 상담사·관리자: 바로 보내지 않고 먼저 물어본다 (PC·모바일 모두)
     if (profile.role === 'consultant' || profile.role === 'master') {
+      const go = window.confirm('상담사 관리 화면으로 이동할까요?\n\n[확인] 상담사 화면으로 이동\n[취소] 일반 홈 화면으로 이동')
+      if (!go) {
+        // 취소 → 일반 홈으로
+        router.push('/')
+        return
+      }
       const { data: consultant } = await supabase
         .from('consultants').select('id').eq('email', email).single()
       if (consultant) {
