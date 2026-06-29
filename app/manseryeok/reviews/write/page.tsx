@@ -149,7 +149,10 @@ export default function ReviewWritePage() {
           <p style={{ color: SUB, fontSize: 11, lineHeight: 1.5, margin: 0, flex: 1 }}>
             운영정책에 따라, 비방·욕설·음란·광고성 등 부적절한 후기는 사전 안내 없이 삭제 또는 비공개 처리될 수 있습니다.
           </p>
-          <span style={{ color: SUB, fontSize: 12, whiteSpace: 'nowrap' }}>{content.length}/1000</span>
+          {/* 글자 수 표시 (네모 박스) */}
+          <span style={{ color: SUB, fontSize: 12, whiteSpace: 'nowrap', background: CARD, border: `1px solid ${LINE}`, borderRadius: 8, padding: '4px 10px' }}>
+            {content.length}/1000
+          </span>
         </div>
 
         {/* 등록 버튼 */}
