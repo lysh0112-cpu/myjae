@@ -159,32 +159,54 @@ function DiagnosisInner() {
   const [commentary, setCommentary] = useState<Commentary | null>(null)
   const [loading, setLoading] = useState(false)
 
+  // 저장된 이전 이름 풀이(불러오기 제안용). null이면 제안 없음.
+  const [savedOffer, setSavedOffer] = useState<{
+    result: DiagnoseResult
+    commentary: Commentary
+    chars: (NameChar | null)[]
+  } | null>(null)
+
+  // 이름 풀이 화면은 들어올 때마다 빈 입력 화면으로 시작한다.
+  // 단, 로그인한 본인의 최근 이름 풀이가 DB(my_names)에 있으면
+  // "불러올까요?" 제안만 띄운다. (자동으로 결과를 보여주지 않음)
+  // 결과 저장(my_names)은 그대로 유지되어 개명 화면이 성씨를 읽을 수 있다.
   useEffect(() => {
     if (!info) return
-    const saved = localStorage.getItem(NAMING_RESULT_KEY)
-    if (!saved) return
-    try {
-      const r = JSON.parse(saved)
-      const sameP = r.personKey && r.personKey === personKey(info)
-      if (sameP && r.result && r.commentary) {
-        setResult(r.result)
-        setCommentary(r.commentary)
-        if (r.chars) {
-          setChars(r.chars)
-          setSyllables((r.chars as (NameChar | null)[]).filter(Boolean).map((c) => c!.hangul))
+    let cancelled = false
+    async function checkSaved() {
+      try {
+        const { data: u } = await supabase.auth.getUser()
+        if (!u?.user) return
+        const { data: rows } = await supabase
+          .from('my_names')
+          .select('chars, result, commentary, person_key')
+          .eq('user_id', u.user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+        if (cancelled) return
+        const row = rows && rows[0]
+        if (row && row.person_key === personKey(info) && row.result && row.commentary && Array.isArray(row.chars)) {
+          setSavedOffer({
+            result: row.result as DiagnoseResult,
+            commentary: row.commentary as Commentary,
+            chars: row.chars as (NameChar | null)[],
+          })
         }
-        setStep('result')
-      } else if (!sameP) {
-        localStorage.removeItem(NAMING_RESULT_KEY)
-        try {
-          localStorage.removeItem('rename_picks_v1')
-          localStorage.removeItem('rename_locked_slot')
-        } catch {}
-        setChars([]); setSyllables([]); setNameInput('')
-        setResult(null); setCommentary(null); setStep('input')
-      }
-    } catch {}
+      } catch {}
+    }
+    checkSaved()
+    return () => { cancelled = true }
   }, [info])
+
+  function loadSavedResult() {
+    if (!savedOffer) return
+    setResult(savedOffer.result)
+    setCommentary(savedOffer.commentary)
+    setChars(savedOffer.chars)
+    setSyllables(savedOffer.chars.filter(Boolean).map((c) => c!.hangul))
+    setStep('result')
+    setSavedOffer(null)
+  }
 
   function applyName() {
     const cleaned = nameInput.trim().replace(/\s/g, '')
@@ -367,6 +389,24 @@ function DiagnosisInner() {
           <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '6px' }}>내 사주</div>
           <div style={{ fontSize: '14px', color: '#e8e4ff' }}>{sajuLine}</div>
         </div>
+
+        {step === 'input' && savedOffer && (
+          <div style={{ background: 'rgba(250,199,117,0.08)', border: `1px solid ${gold}`, borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
+            <div style={{ fontSize: '14px', color: '#e8e4ff', marginBottom: '12px', lineHeight: 1.6 }}>
+              저장된 이름 풀이가 있어요.<br />최종 이름 풀이를 불러올까요?
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={loadSavedResult}
+                style={{ flex: 1, padding: '11px', borderRadius: '10px', background: gold, border: 'none', color: '#1a1a18', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
+                불러오기
+              </button>
+              <button onClick={() => setSavedOffer(null)}
+                style={{ flex: 1, padding: '11px', borderRadius: '10px', background: 'transparent', border, color: '#8a88a0', fontSize: '13px', cursor: 'pointer' }}>
+                새로 입력
+              </button>
+            </div>
+          </div>
+        )}
 
         {step === 'input' && (
           <>
