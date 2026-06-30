@@ -120,7 +120,7 @@ function CandidateCard({ c, note, defaultOpen }: { c: WeddingRecommendation; not
         <span style={{ fontSize: '16px' }}>{rankBadge(c.rank)}</span>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: '14px', color: text, fontWeight: 600 }}>{c.dateLabel}</div>
-          <div style={{ fontSize: '12px', color: sub, marginTop: '2px' }}>일진 {c.ganji} · <span style={{ color: GRADE_COLOR[c.grade] }}>{c.grade}등급</span></div>
+          <div style={{ fontSize: '12px', color: sub, marginTop: '2px' }}>일진 {c.ganji} · <span style={{ color: GRADE_COLOR[c.grade] }}>{c.grade}등급</span>{c.holidayName && <span style={{ color: '#e29b9b' }}> · 🎌 {c.holidayName}</span>}</div>
           {note?.oneLine && (
             <div style={{ fontSize: '12px', color: '#c8b0ff', marginTop: '4px', lineHeight: 1.4 }}>“{note.oneLine}”</div>
           )}
@@ -203,7 +203,7 @@ function WeddingResultInner() {
         const result = await runWeddingTiming({
           startDate: sv.startDate,
           endDate: sv.endDate,
-          dayPref: (sv.dayPref === 'all' ? 'all' : 'weekend'),
+          dayPref: (sv.dayPref === 'all' ? 'all' : sv.dayPref === 'holiday' ? 'holiday' : 'weekend'),
           groom: p1,
           bride: p2,
         })
@@ -246,7 +246,7 @@ function WeddingResultInner() {
         <div style={{ margin: '16px 0', padding: '12px 14px', background: cardBg, borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
           <div style={{ fontSize: '11px', color: sub, marginBottom: '6px' }}>분석 조건</div>
           <div style={{ fontSize: '12px', color: '#b8b4d8', lineHeight: 1.7 }}>
-            기간 {survey?.startDate || '-'} ~ {survey?.endDate || '-'} · {survey?.dayPref === 'all' ? '평일 포함' : '주말만'}<br />
+            기간 {survey?.startDate || '-'} ~ {survey?.endDate || '-'} · {survey?.dayPref === 'all' ? '평일 포함' : survey?.dayPref === 'holiday' ? '공휴일 포함' : '주말만'}<br />
             🤵 {personSummary(groom)}<br />
             👰 {personSummary(bride)}
           </div>
