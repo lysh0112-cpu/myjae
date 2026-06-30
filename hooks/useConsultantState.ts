@@ -4,13 +4,11 @@ import { supabase } from '@/lib/supabase'
 
 export function useConsultantState() {
   const searchParams = useSearchParams()
-
   const [tab, setTab] = useState<'saju' | 'chat'>('saju')
   const [consultationId, setConsultationId] = useState<string | null>(null)
   const [customerPhone, setCustomerPhone] = useState('')
   const [customerName, setCustomerName] = useState('')
   const [selectedConsultation, setSelectedConsultation] = useState<{id:string;customer_phone:string} | null>(null)
-
   const [gender, setGender] = useState(searchParams.get('gender') || '')
   const [calType, setCalType] = useState(searchParams.get('calType') || '')
   const [yearParam, setYearParam] = useState(parseInt(searchParams.get('year') || '0'))
@@ -22,7 +20,28 @@ export function useConsultantState() {
     return h === '모름' || h === null ? null : parseInt(h)
   })
 
-  const consultantId = searchParams.get('consultantId') || ''
+  // consultantId: URL에 있으면 사용, 없으면 로그인 계정에서 자동으로 찾아옴
+  const [consultantId, setConsultantId] = useState(searchParams.get('consultantId') || '')
+
+  useEffect(() => {
+    // URL에 consultantId가 이미 있으면 그대로 사용 (기존 동작 유지)
+    if (searchParams.get('consultantId')) return
+
+    // URL에 없으면 → 로그인한 사람의 profiles.consultant_id를 가져옴
+    async function loadMyConsultantId() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from('profiles')
+        .select('consultant_id')
+        .eq('id', user.id)
+        .single()
+      if (data?.consultant_id) {
+        setConsultantId(data.consultant_id)
+      }
+    }
+    loadMyConsultantId()
+  }, [])
 
   useEffect(() => {
     setConsultationId(searchParams.get('consultationId') || null)
