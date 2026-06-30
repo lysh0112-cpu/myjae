@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 
 export type CalType = '양력' | '음력'
@@ -31,10 +31,14 @@ export function useCoupleInput() {
   const [question, setQuestion] = useState('')
   const [autoLoaded, setAutoLoaded] = useState(false)
 
+  // 복원이 끝나기 전에는 저장하지 않도록 막는 표시
+  // (본인 사주를 profiles에서 읽는 동안 빈 값으로 저장을 덮어쓰는 것을 방지)
+  const restored = useRef(false)
+
   // 초기 로드
   // - 본인(person1): 로그인했으면 profiles(DB)에서 직접 읽어 채운다 (가장 안정적).
   //   profiles로 못 채우면 기존 sessionStorage('myinfo')로 폴백.
-  // - person2(상대방)와 저장된 입력은 기존과 동일하게 localStorage에서 복원.
+  // - person2(상대방)·관계·질문: 기존과 동일하게 localStorage에서 복원.
   useEffect(() => {
     let cancelled = false
 
@@ -102,14 +106,18 @@ export function useCoupleInput() {
           }
         } catch {}
       }
+
+      // 복원이 모두 끝난 뒤에만 저장을 허용
+      if (!cancelled) restored.current = true
     }
 
     loadInitial()
     return () => { cancelled = true }
   }, [])
 
-  // 변경 시 localStorage에 저장
+  // 변경 시 localStorage에 저장 — 단, 복원이 끝난 뒤에만
   useEffect(() => {
+    if (!restored.current) return
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ relation, person1, person2, question }))
   }, [relation, person1, person2, question])
 
