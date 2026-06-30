@@ -96,6 +96,7 @@ export interface WeddingRecommendation {
   badges: string[]
   breakdown: WeddingBreakdown
   y: number; m: number; d: number
+  holidayName?: string
 }
 
 export interface WeddingAvoidDay {
@@ -115,7 +116,7 @@ export interface WeddingResult {
 export interface RunWeddingOptions {
   startDate: string
   endDate: string
-  dayPref?: 'weekend' | 'all' | 'any'
+  dayPref?: 'weekend' | 'holiday' | 'all' | 'any'
   groom: RawPerson | null
   bride: RawPerson | null
 }
@@ -226,6 +227,7 @@ export async function runWeddingTiming(opts: RunWeddingOptions): Promise<Wedding
       badges: s.bd.badges,
       breakdown: s.bd,
       y: s.c.y, m: s.c.m, d: s.c.d,
+      holidayName: s.c.holidayName,
     }
   })
 
