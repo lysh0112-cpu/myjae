@@ -32,15 +32,25 @@ function CoupleInputInner() {
   const handleStart = () => {
     const myInfo = sessionStorage.getItem(MY_INFO_KEY)
     if (!myInfo || !person1.year || !person1.month || !person1.day) {
-      setError('먼저 홈화면에서 나의 생년월일을 입력하고 사주 분석을 해주세요 😊 나의 사주 정보가 있어야 더 정확한 궁합 분석이 가능해요!')
+      setError('먼저 홈화면에서 나의 생년월일을 입력하고 사주 분석을 해주세요 😊 나의 사주 정보가 있어야 더 정확한 분석이 가능해요!')
       return
     }
     if (!person2.year || !person2.month || !person2.day) {
       setError('상대방의 생년월일을 입력해주세요.'); return
     }
     setError('')
+
     const p1 = encodeURIComponent(JSON.stringify(person1))
     const p2 = encodeURIComponent(JSON.stringify(person2))
+
+    // 출산 시기(birth) 모드는 전용 화면(birth-timing)으로 보내고 부모 사주를 넘긴다.
+    // 나머지(연인·부부·예비신혼)는 기존대로 couple-result로.
+    if (relation === 'birth') {
+      const url = `/manseryeok/birth-timing?p1=${p1}&p2=${p2}`
+      router.push(url)
+      return
+    }
+
     const q = encodeURIComponent(question)
     const url = `/manseryeok/couple-result?mode=${relation}&person1=${p1}&person2=${p2}&userQuestion=${q}`
     // 결과 URL 저장 (sessionStorage: 탭 닫으면 사라짐)
@@ -54,6 +64,10 @@ function CoupleInputInner() {
     sessionStorage.removeItem(LAST_COUPLE_RESULT_KEY)
     setLastResultUrl('')
   }
+
+  // 모드에 따라 버튼 문구 변경
+  const isBirth = relation === 'birth'
+  const startLabel = isBirth ? '🍼 좋은 출산일 찾기' : '💑 궁합 분석하기'
 
   return (
     <main style={{ minHeight: '100vh', background: '#0d0d1a', maxWidth: '480px', margin: '0 auto', paddingBottom: '40px' }}>
@@ -77,7 +91,7 @@ function CoupleInputInner() {
             <span style={{ fontSize: '18px' }}>💡</span>
             <div>
               <div style={{ fontSize: '12px', color: '#FAC775', fontWeight: '500', marginBottom: '4px' }}>나의 사주 정보가 없어요</div>
-              <div style={{ fontSize: '11px', color: '#8a88a0', lineHeight: '1.5' }}>홈화면에서 나의 생년월일을 먼저 입력하시면 궁합 분석이 더 정확해져요 😊</div>
+              <div style={{ fontSize: '11px', color: '#8a88a0', lineHeight: '1.5' }}>홈화면에서 나의 생년월일을 먼저 입력하시면 분석이 더 정확해져요 😊</div>
               <button onClick={() => router.push('/')}
                 style={{ marginTop: '8px', fontSize: '11px', padding: '5px 12px', borderRadius: '20px', background: 'rgba(250,199,117,0.15)', color: '#FAC775', border: '1px solid rgba(250,199,117,0.3)', cursor: 'pointer' }}>
                 홈으로 가서 입력하기 →
@@ -89,7 +103,9 @@ function CoupleInputInner() {
         <RelationSelect relation={relation} setRelation={setRelation} />
 
         <div style={{ marginBottom: '16px' }}>
-          <div style={{ fontSize: '11px', color: '#5555aa', marginBottom: '10px' }}>두 사람 정보</div>
+          <div style={{ fontSize: '11px', color: '#5555aa', marginBottom: '10px' }}>
+            {isBirth ? '부모 정보' : '두 사람 정보'}
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <PersonForm
               who={1}
@@ -109,13 +125,22 @@ function CoupleInputInner() {
           </div>
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <div style={{ fontSize: '11px', color: '#5555aa', marginBottom: '8px' }}>가장 궁금한 것 (선택)</div>
-          <textarea value={question} onChange={e => setQuestion(e.target.value)}
-            placeholder="예) 우리 결혼해도 될까요?"
-            rows={2}
-            style={{ width: '100%', background: '#13132a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '10px 14px', color: '#e8e4ff', fontSize: '14px', outline: 'none', resize: 'none', lineHeight: '1.6', boxSizing: 'border-box' }} />
-        </div>
+        {/* 출산 모드에서는 '가장 궁금한 것'을 숨김 — 다음 화면(설문)에서 받음 */}
+        {!isBirth && (
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ fontSize: '11px', color: '#5555aa', marginBottom: '8px' }}>가장 궁금한 것 (선택)</div>
+            <textarea value={question} onChange={e => setQuestion(e.target.value)}
+              placeholder="예) 우리 결혼해도 될까요?"
+              rows={2}
+              style={{ width: '100%', background: '#13132a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '10px 14px', color: '#e8e4ff', fontSize: '14px', outline: 'none', resize: 'none', lineHeight: '1.6', boxSizing: 'border-box' }} />
+          </div>
+        )}
+
+        {isBirth && (
+          <div style={{ marginBottom: '20px', background: 'rgba(119,102,221,0.08)', border: '1px solid rgba(119,102,221,0.25)', borderRadius: '10px', padding: '12px 14px', fontSize: '12px', color: '#b8b4d8', lineHeight: 1.6 }}>
+            👶 부모 두 분의 정보를 입력하시면, 다음 화면에서 출산예정일 등 몇 가지를 여쭤본 뒤 아기에게 좋은 출산일을 찾아드려요.
+          </div>
+        )}
 
         {error && (
           <div style={{ background: 'rgba(255,80,80,0.08)', border: '1px solid rgba(255,80,80,0.2)', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', color: '#ff8888', marginBottom: '12px', lineHeight: '1.6' }}>
@@ -123,14 +148,14 @@ function CoupleInputInner() {
           </div>
         )}
 
-        {/* 궁합 분석하기 버튼 */}
+        {/* 분석 버튼 — 출산 모드면 문구 변경 */}
         <button onClick={handleStart}
           style={{ width: '100%', padding: '16px', borderRadius: '14px', background: 'linear-gradient(135deg, #5544bb, #7766dd)', border: 'none', color: '#e8e4ff', fontSize: '15px', fontWeight: '500', cursor: 'pointer' }}>
-          💑 궁합 분석하기
+          {startLabel}
         </button>
 
-        {/* 이전 결과 보기 버튼 — 데이터 있을 때만 표시 */}
-        {lastResultUrl && (
+        {/* 이전 결과 보기 버튼 — 출산 모드 아닐 때만, 데이터 있을 때만 */}
+        {!isBirth && lastResultUrl && (
           <button
             onClick={() => router.push(lastResultUrl)}
             style={{ width: '100%', marginTop: '8px', padding: '12px', borderRadius: '14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(200,176,255,0.2)', color: '#c8b0ff', fontSize: '13px', cursor: 'pointer' }}>
