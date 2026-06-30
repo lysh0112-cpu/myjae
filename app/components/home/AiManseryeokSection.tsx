@@ -61,7 +61,15 @@ export default function AiManseryeokSection() {
     } catch {}
   }
 
-  function handleStart() {
+  async function handleStart() {
+    // 로그인 확인 — 로그인 안 했으면 안내하고 로그인 화면으로 보낸다.
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      alert('나의 사주를 보려면 먼저 로그인해 주세요 😊')
+      router.push('/auth/login')
+      return
+    }
+
     if (!birthDate) {
       alert('생년월일을 먼저 입력해주세요 😊')
       return
