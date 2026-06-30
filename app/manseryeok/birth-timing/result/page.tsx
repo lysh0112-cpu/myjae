@@ -277,14 +277,12 @@ function BirthResultInner() {
           <div style={{ padding: '48px 0', textAlign: 'center' }}>
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             <div style={{
-              width: '44px', height: '44px', margin: '0 auto 18px',
-              border: '4px solid rgba(200,176,255,0.18)',
-              borderTopColor: '#c8b0ff',
-              borderRadius: '50%',
-              animation: 'spin 0.9s linear infinite',
-            }} />
-            <div style={{ color: '#c8b0ff', fontSize: '15px', fontWeight: 600, marginBottom: '8px' }}>
-              🍼 아기에게 좋은 날을 찾고 있어요
+              fontSize: '34px', color: gold, marginBottom: '16px',
+              display: 'inline-block',
+              animation: 'spin 1.1s linear infinite',
+            }}>✦</div>
+            <div style={{ color: gold, fontSize: '15px', fontWeight: 600, marginBottom: '8px' }}>
+              아기에게 좋은 날을 찾고 있어요
             </div>
             <div style={{ color: sub, fontSize: '12px', lineHeight: 1.7 }}>
               날짜별 사주를 계산하고 해설을 쓰고 있어요.<br />
