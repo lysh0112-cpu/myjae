@@ -7,6 +7,7 @@ import ConsultantChat from './components/ConsultantChat'
 import ConsultantSajuTab from './components/ConsultantSajuTab'
 import CustomerAiAnalysis from './components/CustomerAiAnalysis'
 import ConsultantMulsang from './components/ConsultantMulsang'
+import ConsultantSchedule from './components/ConsultantSchedule'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -256,9 +257,11 @@ function ConsultantContent() {
         )
       case 'schedule':
         return (
-          <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', background:ps.bgColor, flexDirection:'column', gap:'8px'}}>
-            <span style={{fontSize:'24px'}}>📅</span>
-            <span style={{fontSize:'11px', color:'#5555aa'}}>일정관리 준비 중</span>
+          <div style={{flex:1, overflowY:'auto', padding:'12px', background:ps.bgColor, fontSize:ps.fontSize+'px'}}>
+            <ConsultantSchedule
+              consultantId={consultantId}
+              fontSize={ps.fontSize}
+            />
           </div>
         )
       case 'settle':
