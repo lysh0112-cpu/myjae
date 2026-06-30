@@ -49,7 +49,7 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
   return (
     <button onClick={onClick}
       style={{
-        flex: '1 1 auto', minWidth: '64px', padding: '10px 12px', borderRadius: '10px', cursor: 'pointer',
+        flex: '1 1 auto', minWidth: '64px', padding: '10px 8px', borderRadius: '10px', cursor: 'pointer',
         fontSize: '13px', fontWeight: active ? 600 : 400,
         background: active ? 'rgba(119,102,221,0.25)' : 'rgba(255,255,255,0.05)',
         color: active ? '#c8b0ff' : '#7777aa',
@@ -171,13 +171,13 @@ function WeddingFindInner() {
           style={{ width: '100%', boxSizing: 'border-box', background: '#0d0d1a', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', padding: '12px 14px', color: survey.endDate ? '#c8b0ff' : '#5555aa', fontSize: '15px', colorScheme: 'dark', outline: 'none' }} />
 
         <QLabel>요일은 어떻게 할까요?</QLabel>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {[['weekend', '주말만'], ['all', '평일 포함']].map(([val, lab]) => (
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {[['weekend', '주말만'], ['holiday', '공휴일 포함'], ['all', '평일 포함']].map(([val, lab]) => (
             <Chip key={val} label={lab} active={survey.dayPref === val} onClick={() => setField('dayPref', val)} />
           ))}
         </div>
         <div style={{ fontSize: '11px', color: sub, marginTop: '6px', lineHeight: 1.6 }}>
-          기간이 길면 ‘주말만’이 더 빠르게 좋은 날을 찾아드려요.
+          ‘공휴일 포함’은 토·일에 더해 평일에 낀 공휴일·연휴도 함께 찾아드려요.
         </div>
 
         <QLabel>피하고 싶은 날이 있나요? <span style={{ color: sub, fontSize: '11px' }}>(선택)</span></QLabel>
