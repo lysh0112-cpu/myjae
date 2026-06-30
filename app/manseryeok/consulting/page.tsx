@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import ContactStep from './components/ContactStep'
 import PaymentStep from './components/PaymentStep'
+import ScheduleStep from './components/ScheduleStep'
 import ChatRoom from './components/ChatRoom'
 
 type Consultant = {
@@ -15,7 +16,7 @@ type Consultant = {
   active: boolean
 }
 
-type Step = 'phone' | 'pay' | 'chat'
+type Step = 'phone' | 'pay' | 'schedule' | 'chat'
 
 function ConsultingContent() {
   const searchParams = useSearchParams()
@@ -117,7 +118,8 @@ function ConsultingContent() {
     sessionStorage.removeItem('ai_analysis')
     sessionStorage.removeItem('ai_free_analysis')
 
-    setStep('chat')
+    // 결제 후 일정 선택 단계로
+    setStep('schedule')
   }
 
   if (step === 'phone') return (
@@ -139,6 +141,16 @@ function ConsultingContent() {
       setPayMethod={setPayMethod}
       onBack={() => setStep('phone')}
       onComplete={handlePayComplete}
+    />
+  )
+
+  if (step === 'schedule') return (
+    <ScheduleStep
+      consultantId={selected?.id ?? ''}
+      consultantName={selected?.name ?? ''}
+      consultationId={consultationId!}
+      customerPhone={phone}
+      onComplete={() => setStep('chat')}
     />
   )
 
