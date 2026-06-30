@@ -4,11 +4,12 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import PageHeader from '@/app/components/common/PageHeader'
 import { runDiagnose, type DiagnosedDate } from '../lib/diagnose'
 
-const purple = '#7766dd'
 const cardBg = '#13132a'
 const sub = '#5555aa'
 const text = '#e8e4ff'
 const gold = '#FAC775'
+
+const PRICE = 9900
 
 const HOUR_LABELS: Record<string, string> = {
   '-1': '시간 모름',
@@ -117,6 +118,7 @@ function CheckInner() {
   const [results, setResults] = useState<DiagnosedDate[]>([])
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
+  const [payOpen, setPayOpen] = useState(false)
 
   useEffect(() => {
     try {
@@ -137,7 +139,7 @@ function CheckInner() {
     setDates(prev => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== idx)))
   }
 
-  async function handleCheck() {
+  function handleOpenPay() {
     if (!groom || !groom.year || !bride || !bride.year) {
       setError('두 분의 사주 정보가 없어요. 이전 화면에서 신랑·신부 생년월일을 입력해 주세요 😊')
       return
@@ -148,6 +150,12 @@ function CheckInner() {
       return
     }
     setError('')
+    setPayOpen(true)
+  }
+
+  async function runCheck() {
+    setPayOpen(false)
+    const filled = dates.filter(d => d && d.trim())
     setLoading(true)
     setDone(false)
     try {
@@ -223,7 +231,7 @@ function CheckInner() {
           </div>
         )}
 
-        <button onClick={handleCheck} disabled={loading}
+        <button onClick={handleOpenPay} disabled={loading}
           style={{ width: '100%', marginTop: '18px', padding: '16px', borderRadius: '14px', background: 'linear-gradient(135deg,#5544bb,#7766dd)', border: 'none', color: text, fontSize: '15px', fontWeight: 600, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.7 : 1 }}>
           {loading ? '보는 중...' : '📅 이 날이 좋은지 봐주기'}
         </button>
@@ -251,6 +259,48 @@ function CheckInner() {
           <Disclaimer />
         </div>
       </div>
+
+      {payOpen && (
+        <div onClick={() => setPayOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: '480px', background: '#15152e', borderRadius: '20px 20px 0 0', padding: '10px 20px 28px', boxShadow: '0 -8px 30px rgba(0,0,0,0.5)' }}>
+            <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.2)', margin: '0 auto 18px' }} />
+
+            <div style={{ fontSize: '17px', fontWeight: 700, color: text, marginBottom: '4px' }}>📅 정한 날 진단</div>
+            <div style={{ fontSize: '13px', color: sub, marginBottom: '16px', lineHeight: 1.6 }}>
+              생각해 둔 날짜가 두 분께 좋은 날인지 봐드려요
+            </div>
+
+            <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontSize: '12px', color: sub, marginBottom: '8px' }}>분석 내용</div>
+              {['입력한 날짜별 길흉 진단', '길신 풀이(천을귀인·용신·손없는날 등)', '피해야 할 날이면 사유 안내', '두 사람 사주 함께 반영'].map((t, i) => (
+                <div key={i} style={{ fontSize: '13px', color: '#b8b4d8', lineHeight: 1.9 }}>· {t}</div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <span style={{ fontSize: '14px', color: sub }}>결제 금액</span>
+              <span style={{ fontSize: '20px', fontWeight: 700, color: '#c8b0ff' }}>{PRICE.toLocaleString()}원</span>
+            </div>
+
+            <button onClick={runCheck}
+              style={{ width: '100%', padding: '15px', borderRadius: '12px', background: 'linear-gradient(135deg,#5544bb,#7766dd)', border: 'none', color: text, fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginBottom: '8px' }}>
+              💳 {PRICE.toLocaleString()}원 결제하기
+            </button>
+            <div style={{ fontSize: '11px', color: sub, textAlign: 'center', marginBottom: '14px' }}>
+              (결제 시스템 첨부 예정 — 지금은 바로 결과를 봐요)
+            </div>
+
+            <button onClick={() => setPayOpen(false)}
+              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: sub, fontSize: '13px', cursor: 'pointer', marginBottom: '14px' }}>
+              취소
+            </button>
+
+            <Disclaimer />
+          </div>
+        </div>
+      )}
     </main>
   )
 }
