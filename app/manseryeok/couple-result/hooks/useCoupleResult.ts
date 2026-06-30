@@ -1,4 +1,4 @@
-// useCoupleResult v5
+// useCoupleResult v6 — 모드별 성별 기반 호칭 적용
 import { useState, useEffect } from 'react'
 import { buildSajuPillars, analyzeCoupleFromPillars } from '@/lib/saju/coupleAnalysis'
 import { calcYongsin } from '@/lib/saju/yongsin'
@@ -41,6 +41,38 @@ export interface CoupleResultData {
     wolScore: number
     gongmangScore: number
     ohaengScore: number
+  }
+}
+
+// =============================================
+// 모드별 성별 호칭표 — [남자 호칭, 여자 호칭]
+// =============================================
+const ROLE_LABELS: Record<string, { male: string; female: string }> = {
+  married:    { male: '남편분', female: '아내분' },
+  couple:     { male: '남자분', female: '여자분' },
+  prewedding: { male: '신랑분', female: '신부분' },
+  birth:      { male: '아빠',   female: '엄마'   },
+}
+
+// 두 사람의 성별을 보고 각자의 호칭을 정한다.
+// 입력 순서가 아니라 "성별"로 정하므로, 누가 먼저 입력되든 안 꼬인다.
+// 성별이 같거나 비어 있으면 안전하게 '첫 번째 분 / 두 번째 분'.
+function getRoleNames(
+  mode: string,
+  gender1: string,
+  gender2: string
+): { label1: string; label2: string } {
+  const labels = ROLE_LABELS[mode]
+  // 호칭표에 없는 모드거나, 성별이 같거나, 한쪽이 비면 중립 호칭
+  const usable =
+    !!labels &&
+    ((gender1 === '남' && gender2 === '여') || (gender1 === '여' && gender2 === '남'))
+  if (!usable) {
+    return { label1: '첫 번째 분', label2: '두 번째 분' }
+  }
+  return {
+    label1: gender1 === '남' ? labels.male : labels.female,
+    label2: gender2 === '남' ? labels.male : labels.female,
   }
 }
 
@@ -203,11 +235,19 @@ function buildPrompt(
   currentYear: number,
   userQuestion: string,
   candidateDatesStr: string,
-  myPrevAnalysis: string
+  myPrevAnalysis: string,
+  label1: string,
+  label2: string
 ): string {
-  const baseInfo = `
-사람1 (${person1.gender}): 사주 ${saju1Str} · 직업오행: ${person1.job} · MBTI: ${person1.mbti || '미입력'}
-사람2 (${person2.gender}): 사주 ${saju2Str} · 직업오행: ${person2.job} · MBTI: ${person2.mbti || '미입력'}
+  // 호칭 안내 — AI가 분석 텍스트의 '사람1/사람2'를 올바른 호칭으로 바꿔 부르게 한다.
+  const roleGuide = `[호칭 안내 — 매우 중요]
+아래 분석에서 '사람1'은 ${label1}(${person1.gender}), '사람2'는 ${label2}(${person2.gender})를 가리킵니다.
+답변에서는 '사람1', '사람2'라는 표현을 절대 쓰지 말고, 반드시 '${label1}', '${label2}'라고 불러 주세요.`
+
+  const baseInfo = `${roleGuide}
+
+${label1} (${person1.gender}): 사주 ${saju1Str} · 직업오행: ${person1.job} · MBTI: ${person1.mbti || '미입력'}
+${label2} (${person2.gender}): 사주 ${saju2Str} · 직업오행: ${person2.job} · MBTI: ${person2.mbti || '미입력'}
 
 ${analysisStr}
 ${myPrevAnalysis ? `\n[나의 기존 사주 분석 참고]\n${myPrevAnalysis}` : ''}`
@@ -235,7 +275,7 @@ ${candidateDatesStr}
 
 JSON 형식으로만 응답 (다른 텍스트 없이):
 {
-  "sajuMsg": "나의 사주 특성 1문장 + 상대방 사주 특성 1문장",
+  "sajuMsg": "${label1} 사주 특성 1문장 + ${label2} 사주 특성 1문장",
   "jobMsg": "직업 오행 조화 1문장",
   "mbtiMsg": "MBTI 조화 1문장",
   "questionAnswer": "결혼 길일 4~6개 추천 (각 날짜마다 상세 이유 포함)",
@@ -249,7 +289,7 @@ ${baseInfo}
 
 JSON 형식으로만 응답 (다른 텍스트 없이):
 {
-  "sajuMsg": "나의 사주 특성 1문장 + 상대방 사주 특성 1문장",
+  "sajuMsg": "${label1} 사주 특성 1문장 + ${label2} 사주 특성 1문장",
   "jobMsg": "직업 오행 조화 1문장",
   "mbtiMsg": "MBTI 조화 1문장",
   "questionAnswer": "질문에 대한 명리학적 답변 3~4문장",
@@ -268,7 +308,7 @@ ${userQuestion ? `추가 요청: "${userQuestion}"` : ''}
 
 JSON 형식으로만 응답 (다른 텍스트 없이):
 {
-  "sajuMsg": "나의 사주 특성 1문장 + 상대방 사주 특성 1문장",
+  "sajuMsg": "${label1} 사주 특성 1문장 + ${label2} 사주 특성 1문장",
   "jobMsg": "직업 오행 조화 1문장",
   "mbtiMsg": "MBTI 조화 1문장",
   "questionAnswer": "최적 출산 시기 3~4개, 각 시기마다 명리학적 이유 포함",
@@ -285,7 +325,7 @@ ${userQuestion ? `추가 요청: "${userQuestion}"` : ''}
 
 JSON 형식으로만 응답 (다른 텍스트 없이):
 {
-  "sajuMsg": "나의 사주 특성 1문장 + 상대방 사주 특성 1문장",
+  "sajuMsg": "${label1} 사주 특성 1문장 + ${label2} 사주 특성 1문장",
   "jobMsg": "직업 오행 조화 1문장",
   "mbtiMsg": "MBTI 소통 방식 1문장",
   "questionAnswer": "관계 개선을 위한 구체적 방향 3~4문장${userQuestion ? ` + "${userQuestion}" 답변` : ''}",
@@ -300,7 +340,7 @@ ${userQuestion ? `⭐ 핵심 질문: "${userQuestion}" — 이 질문에 가장 
 
 JSON 형식으로만 응답 (다른 텍스트 없이):
 {
-  "sajuMsg": "나의 사주 특성 1문장 + 상대방 사주 특성 1문장",
+  "sajuMsg": "${label1} 사주 특성 1문장 + ${label2} 사주 특성 1문장",
   "jobMsg": "직업 오행 분석 1문장",
   "mbtiMsg": "MBTI 분석 1문장",
   "questionAnswer": "${userQuestion ? '질문 답변 3~4문장' : ''}",
@@ -411,12 +451,16 @@ export function useCoupleResult(
         candidateDatesStr = getHolidayDates(24, yearHint ?? undefined).slice(0, 60).join(', ')
       }
 
+      // 모드 + 성별로 호칭 결정 (입력 순서가 아니라 성별 기준)
+      const { label1, label2 } = getRoleNames(mode, person1.gender, person2.gender)
+
       const prompt = buildPrompt(
         mode, person1, person2,
         saju1Str, saju2Str, analysisStr,
         todayStr, currentYear, userQuestion,
         candidateDatesStr,
-        myPrevAnalysis.slice(0, 500)
+        myPrevAnalysis.slice(0, 500),
+        label1, label2
       )
 
       try {
