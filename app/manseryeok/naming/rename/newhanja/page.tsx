@@ -36,10 +36,9 @@ interface HanjaRow {
   avoid_soft?: boolean
 }
 
-// 종합평가 시도 1건 (newresult가 읽어감)
 interface TryItem {
-  name: string                 // 한글 새 이름 (예: 서연)
-  chars: SavedChar[]           // [성, 이름1, 이름2...] 의 확정 한자
+  name: string
+  chars: SavedChar[]
 }
 
 function ohaengChar(s: string): string {
@@ -57,7 +56,6 @@ function gradeNum(g: Grade): number {
   return g === '좋음' ? 2 : g === '보통' ? 1 : 0
 }
 
-// diagnosis 화면과 동일한 personKey 규칙 (동일인 식별)
 function personKey(m: Record<string, unknown> | null): string {
   if (!m || !m.year) return ''
   const hourIdx = m.hour === '모름' || m.hour == null ? 'x' : m.hour
@@ -85,36 +83,76 @@ function NewHanjaInner() {
   const [activeIdx, setActiveIdx] = useState<number>(0)
   const [restored, setRestored] = useState(false)
 
-  // 글자별 선택한 한자 (key = syllable index)
   const [chosen, setChosen] = useState<Record<number, HanjaRow>>({})
 
-  // 활성 글자의 한자 후보 목록
   const [hanjaList, setHanjaList] = useState<HanjaRow[]>([])
   const [loadingList, setLoadingList] = useState(false)
 
-  // 사주 정보 + 본인 성씨(동일인) + 새 이름(URL) 로딩
   useEffect(() => {
     let cancelled = false
-    let m: Record<string, unknown> = {}
-    try {
-      m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
-      if (m.year) {
-        setInfo({
-          gender: (m.gender as string) || '남',
-          calType: (m.calType as string) || '양력',
-          year: parseInt(String(m.year)),
-          month: parseInt(String(m.month)),
-          day: parseInt(String(m.day)),
-          leapMonth: (m.leapMonth as string) || '0',
-          hourIdx: m.hour === '모름' || m.hour == null ? null : parseInt(String(m.hour)),
-        })
+
+    async function loadAll() {
+      let m: Record<string, unknown> = {}
+      let infoFilled = false
+      try {
+        m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
+        if (m.year) {
+          if (!cancelled) {
+            setInfo({
+              gender: (m.gender as string) || '남',
+              calType: (m.calType as string) || '양력',
+              year: parseInt(String(m.year)),
+              month: parseInt(String(m.month)),
+              day: parseInt(String(m.day)),
+              leapMonth: (m.leapMonth as string) || '0',
+              hourIdx: m.hour === '모름' || m.hour == null ? null : parseInt(String(m.hour)),
+            })
+          }
+          infoFilled = true
+        }
+      } catch {}
+
+      let pk = personKey(m)
+
+      if (!infoFilled) {
+        try {
+          const { data: u } = await supabase.auth.getUser()
+          if (u?.user) {
+            const { data: p } = await supabase
+              .from('profiles')
+              .select('birth_year, birth_month, birth_day, birth_hour, cal_type, gender, saju_saved')
+              .eq('id', u.user.id)
+              .single()
+            if (!cancelled && p && p.saju_saved && p.birth_year) {
+              const bh = p.birth_hour
+              const hourIdx =
+                bh === '모름' || bh == null || bh === '' ? null : parseInt(bh)
+              const profInfo = {
+                gender: p.gender ?? '남',
+                calType: p.cal_type ?? '양력',
+                year: Number(p.birth_year),
+                month: Number(p.birth_month),
+                day: Number(p.birth_day),
+                leapMonth: '0',
+                hourIdx,
+              }
+              setInfo(profInfo)
+              m = {
+                gender: profInfo.gender,
+                calType: profInfo.calType,
+                year: String(profInfo.year),
+                month: String(profInfo.month),
+                day: String(profInfo.day),
+                leapMonth: '0',
+                hour: hourIdx == null ? '모름' : String(hourIdx),
+              }
+              pk = personKey(m)
+            }
+          }
+        } catch {}
       }
-    } catch {}
 
-    const pk = personKey(m)
-
-    async function loadSurname() {
-      // 1) 로그인했으면 my_names(DB)에서 최근 이름풀이의 성씨 먼저
+      let surnameLoaded = false
       try {
         const { data: u } = await supabase.auth.getUser()
         if (u?.user) {
@@ -127,30 +165,32 @@ function NewHanjaInner() {
           if (!cancelled && rows && rows[0] && Array.isArray(rows[0].chars) && rows[0].chars[0]) {
             setSurname(rows[0].chars[0] as SavedChar)
             setPkey((rows[0].person_key as string) || pk)
-            return
+            surnameLoaded = true
           }
         }
       } catch {}
 
-      // 2) (비로그인/없을 때) 기존 localStorage 방식
-      try {
-        const r = JSON.parse(localStorage.getItem(NAMING_RESULT_KEY) || '{}')
-        const samePerson = r.personKey && r.personKey === pk
-        if (!cancelled && samePerson && Array.isArray(r.chars) && r.chars[0]) {
-          setSurname(r.chars[0] as SavedChar)
-          setPkey(pk)
-        }
-      } catch {}
+      if (!surnameLoaded) {
+        try {
+          const r = JSON.parse(localStorage.getItem(NAMING_RESULT_KEY) || '{}')
+          const samePerson = r.personKey && r.personKey === pk
+          if (!cancelled && samePerson && Array.isArray(r.chars) && r.chars[0]) {
+            setSurname(r.chars[0] as SavedChar)
+            setPkey(pk)
+          }
+        } catch {}
+      }
+
+      const nameParam = sp.get('name') || ''
+      const arr = Array.from(nameParam.trim()).filter(isHangulSyllable)
+      if (!cancelled) {
+        setSyllables(arr)
+        setActiveIdx(0)
+        setRestored(true)
+      }
     }
 
-    loadSurname()
-
-    const nameParam = sp.get('name') || ''
-    const arr = Array.from(nameParam.trim()).filter(isHangulSyllable)
-    setSyllables(arr)
-    setActiveIdx(0)
-    setRestored(true)
-
+    loadAll()
     return () => { cancelled = true }
   }, [sp])
 
@@ -175,7 +215,6 @@ function NewHanjaInner() {
   const yongsin = yong.yongsin
   const yongsinReady = !converting && !!yongsin
 
-  // 활성 글자가 바뀌면 그 음의 한자 후보 조회 (avoid_hard 제외)
   useEffect(() => {
     if (!restored || syllables.length === 0) { setHanjaList([]); return }
     const hangul = syllables[activeIdx]
@@ -199,7 +238,6 @@ function NewHanjaInner() {
     return () => { cancelled = true }
   }, [activeIdx, syllables, restored])
 
-  // 활성 글자 후보들을 채점 → 추천/그외 분리
   const scored = useMemo(() => {
     if (!yongsinReady || !surname || hanjaList.length === 0) return []
     const surnameChar: NameChar = {
@@ -258,7 +296,6 @@ function NewHanjaInner() {
     setChosen((prev) => ({ ...prev, [activeIdx]: row }))
   }
 
-  // 다음 글자로 이동 or 종합평가(저장 후 결과로)
   function proceed() {
     if (!chosen[activeIdx]) return
     const next = syllables.findIndex((_, i) => !chosen[i] && i !== activeIdx)
@@ -363,7 +400,6 @@ function NewHanjaInner() {
           : <>새 이름 <b style={{ color: '#fff' }}>{surname!.hanja}{syllables.join('')}</b> · 사주에 필요한 기운은 <b style={{ color: GOLD }}>{yongsin}</b>입니다</>}
       </p>
 
-      {/* 글자 자리 (성씨 + 새 이름 글자들) */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
         <div style={{ flex: 1, padding: '12px 0', borderRadius: 14, textAlign: 'center', background: CARD, border: '1px solid rgba(255,255,255,0.06)' }}>
           <div style={{ fontSize: 22, fontWeight: 700, color: '#cfcdc4' }}>{surname!.hanja}</div>
@@ -386,7 +422,6 @@ function NewHanjaInner() {
         })}
       </div>
 
-      {/* 한자 조회/추천 목록 */}
       {(!yongsinReady || loadingList) && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '40px 0' }}>
           <span style={{ fontSize: 34, color: GOLD, display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span>
@@ -424,7 +459,6 @@ function NewHanjaInner() {
         </>
       )}
 
-      {/* 선택/다음 바 */}
       {yongsinReady && !loadingList && hanjaList.length > 0 && (
         <div style={{ marginTop: 20, borderRadius: 16, padding: '13px 16px',
           background: chosen[activeIdx] ? 'rgba(250,199,117,0.16)' : CARD,
