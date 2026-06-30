@@ -1,8 +1,6 @@
 'use client'
-import { Suspense, useState, type ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
-import { useBirthTiming } from './hooks/useBirthTiming'
-import PersonForm from '../couple-input/components/PersonForm'
+import { Suspense, useState, useEffect, type ReactNode } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import PageHeader from '@/app/components/common/PageHeader'
 
 const PRICE = 10000
@@ -12,7 +10,34 @@ const cardBg = '#13132a'
 const sub = '#5555aa'
 const text = '#e8e4ff'
 
-// 의료 면책 문구 (상·하단 공통)
+const HOUR_LABELS: Record<string, string> = {
+  '-1': '시간 모름',
+  '0': '子시(23~01)', '1': '丑시(01~03)', '2': '寅시(03~05)', '3': '卯시(05~07)',
+  '4': '辰시(07~09)', '5': '巳시(09~11)', '6': '午시(11~13)', '7': '未시(13~15)',
+  '8': '申시(15~17)', '9': '酉시(17~19)', '10': '戌시(19~21)', '11': '亥시(21~23)',
+}
+
+interface PersonInput {
+  year: string; month: string; day: string; hour: string
+  gender: string; calType: string; job: string; mbti: string
+}
+
+interface BirthSurvey {
+  dueDate: string
+  method: string
+  timePref: string
+  babyGender: string
+  wishes: string[]
+  avoidNote: string
+}
+
+const DEFAULT_SURVEY: BirthSurvey = {
+  dueDate: '', method: '제왕절개', timePref: '상관없음',
+  babyGender: '상관없음', wishes: [], avoidNote: '',
+}
+
+const SURVEY_KEY = 'birth-timing-survey'
+
 function Disclaimer({ full }: { full?: boolean }) {
   return (
     <div style={{ background: 'rgba(255,120,120,0.06)', border: '1px solid rgba(255,120,120,0.18)', borderRadius: '10px', padding: '10px 14px', fontSize: '11px', color: '#d88', lineHeight: 1.6 }}>
@@ -23,7 +48,6 @@ function Disclaimer({ full }: { full?: boolean }) {
   )
 }
 
-// 선택 칩 버튼
 function Chip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick}
@@ -46,24 +70,60 @@ function QLabel({ children }: { children: ReactNode }) {
   return <div style={{ fontSize: '13px', color: text, margin: '14px 0 8px' }}>{children}</div>
 }
 
+// 부모 한 줄 요약 텍스트
+function personSummary(p: PersonInput | null): string {
+  if (!p || !p.year) return '정보 없음'
+  const hour = HOUR_LABELS[p.hour] ?? '시간 모름'
+  return `${p.gender} · ${p.calType} ${p.year}.${p.month}.${p.day} · ${hour}`
+}
+
 function BirthTimingInner() {
   const router = useRouter()
-  const {
-    parent1, setParent1,
-    parent2, setParent2,
-    survey, setSurveyField, toggleWish,
-    autoLoaded,
-    handleClearParent2,
-    handleClearAll,
-  } = useBirthTiming()
+  const sp = useSearchParams()
+
+  // 부모 사주는 궁합 입력 화면에서 URL로 넘겨받는다 (여기서 다시 입력받지 않음)
+  const [parent1, setParent1] = useState<PersonInput | null>(null)
+  const [parent2, setParent2] = useState<PersonInput | null>(null)
+  const [survey, setSurvey] = useState<BirthSurvey>(DEFAULT_SURVEY)
 
   const [error, setError] = useState('')
   const [payOpen, setPayOpen] = useState(false)
 
-  // 분석하기 → 검증 후 결제창 열기
+  useEffect(() => {
+    // 부모 사주 파싱
+    try {
+      const p1 = sp.get('p1')
+      const p2 = sp.get('p2')
+      if (p1) setParent1(JSON.parse(decodeURIComponent(p1)))
+      if (p2) setParent2(JSON.parse(decodeURIComponent(p2)))
+    } catch {}
+    // 설문은 직전 입력 복원 (뒤로 갔다 와도 유지)
+    try {
+      const saved = sessionStorage.getItem(SURVEY_KEY)
+      if (saved) setSurvey({ ...DEFAULT_SURVEY, ...JSON.parse(saved) })
+    } catch {}
+  }, [sp])
+
+  function setSurveyField<K extends keyof BirthSurvey>(key: K, value: BirthSurvey[K]) {
+    setSurvey(prev => {
+      const next = { ...prev, [key]: value }
+      try { sessionStorage.setItem(SURVEY_KEY, JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
+
+  function toggleWish(wish: string) {
+    setSurvey(prev => {
+      const has = prev.wishes.includes(wish)
+      const next = { ...prev, wishes: has ? prev.wishes.filter(w => w !== wish) : [...prev.wishes, wish] }
+      try { sessionStorage.setItem(SURVEY_KEY, JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
+
   function handleAnalyze() {
-    if (!parent1.year || !parent1.month || !parent1.day) {
-      setError('먼저 부모1(본인)의 사주 정보가 필요해요. 홈에서 생년월일을 입력해 주세요 😊')
+    if (!parent1 || !parent1.year) {
+      setError('부모 사주 정보가 없어요. 이전 화면에서 부모님 생년월일을 입력해 주세요 😊')
       return
     }
     if (!survey.dueDate) {
@@ -74,7 +134,6 @@ function BirthTimingInner() {
     setPayOpen(true)
   }
 
-  // 결제(임시) → 결과 화면으로. 결과 화면은 다음 단계에서 제작.
   function handlePay() {
     const params = new URLSearchParams()
     params.set('p1', JSON.stringify(parent1))
@@ -91,46 +150,37 @@ function BirthTimingInner() {
         title="출산 시기 택일"
         subtitle="아기에게 좋은 출산일을 찾아드려요"
         onBack={() => router.push('/manseryeok/couple-input')}
-        rightButton={
-          <button onClick={handleClearAll}
-            style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '20px', background: 'rgba(255,80,80,0.1)', color: 'rgba(255,120,120,0.7)', border: '1px solid rgba(255,80,80,0.2)', cursor: 'pointer' }}>
-            전체초기화
-          </button>
-        }
       />
 
       <div style={{ padding: '16px' }}>
         <Disclaimer full />
 
-        {/* 부모 정보 */}
+        {/* 부모 정보 — 두 줄 요약 (입력은 이전 화면에서) */}
         <SectionLabel>부모 정보</SectionLabel>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <PersonForm
-            who={1}
-            relation="birth"
-            person={parent1}
-            onChange={(k, v) => setParent1(prev => ({ ...prev, [k]: v }))}
-            autoLoaded={autoLoaded}
-          />
-          <PersonForm
-            who={2}
-            relation="birth"
-            person={parent2}
-            onChange={(k, v) => setParent2(prev => ({ ...prev, [k]: v }))}
-            onClear={handleClearParent2}
-          />
+        <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+            <span style={{ fontSize: '14px' }}>👨</span>
+            <span style={{ fontSize: '12px', color: sub, width: '44px' }}>부모1</span>
+            <span style={{ fontSize: '13px', color: text }}>{personSummary(parent1)}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '14px' }}>👩</span>
+            <span style={{ fontSize: '12px', color: sub, width: '44px' }}>부모2</span>
+            <span style={{ fontSize: '13px', color: text }}>{personSummary(parent2)}</span>
+          </div>
+        </div>
+        <div style={{ fontSize: '11px', color: sub, marginTop: '6px' }}>
+          수정하려면 ‹ 뒤로 가서 변경해 주세요
         </div>
 
         {/* 출산 정보 설문 */}
         <SectionLabel>출산 정보를 알려주세요</SectionLabel>
 
-        {/* Q1 출산예정일 */}
         <QLabel>출산예정일이 언제인가요? <span style={{ color: purple }}>*</span></QLabel>
         <input type="date" value={survey.dueDate}
           onChange={e => setSurveyField('dueDate', e.target.value)}
           style={{ width: '100%', boxSizing: 'border-box', background: '#0d0d1a', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', padding: '12px 14px', color: survey.dueDate ? '#c8b0ff' : '#5555aa', fontSize: '15px', colorScheme: 'dark', outline: 'none' }} />
 
-        {/* Q2 분만 방식 */}
         <QLabel>분만 방식은 어떻게 예정하고 계세요?</QLabel>
         <div style={{ display: 'flex', gap: '8px' }}>
           {['제왕절개', '유도분만', '미정'].map(v => (
@@ -138,7 +188,6 @@ function BirthTimingInner() {
           ))}
         </div>
 
-        {/* Q3 시간대 */}
         <QLabel>선호하는 수술 시간대가 있나요?</QLabel>
         <div style={{ display: 'flex', gap: '8px' }}>
           {[['평일오전', '평일 오전'], ['평일오후', '평일 오후'], ['상관없음', '상관없음']].map(([val, lab]) => (
@@ -146,7 +195,6 @@ function BirthTimingInner() {
           ))}
         </div>
 
-        {/* Q4 아기 성별 */}
         <QLabel>바라는 아기 성별이 있나요?</QLabel>
         <div style={{ display: 'flex', gap: '8px' }}>
           {['아들', '딸', '상관없음'].map(v => (
@@ -154,7 +202,6 @@ function BirthTimingInner() {
           ))}
         </div>
 
-        {/* Q5 바라는 점 (복수) */}
         <QLabel>아이에게 특히 바라는 점은? <span style={{ color: sub, fontSize: '11px' }}>(여러 개 선택 가능)</span></QLabel>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {wishOptions.map(v => (
@@ -162,7 +209,6 @@ function BirthTimingInner() {
           ))}
         </div>
 
-        {/* Q6 피하고 싶은 날 */}
         <QLabel>피하고 싶은 날이 있나요? <span style={{ color: sub, fontSize: '11px' }}>(선택)</span></QLabel>
         <textarea value={survey.avoidNote}
           onChange={e => setSurveyField('avoidNote', e.target.value)}
@@ -176,7 +222,6 @@ function BirthTimingInner() {
           </div>
         )}
 
-        {/* 분석 버튼 */}
         <button onClick={handleAnalyze}
           style={{ width: '100%', marginTop: '20px', padding: '16px', borderRadius: '14px', background: 'linear-gradient(135deg,#5544bb,#7766dd)', border: 'none', color: text, fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}>
           🍼 좋은 출산일 찾기
@@ -187,7 +232,7 @@ function BirthTimingInner() {
         </div>
       </div>
 
-      {/* ── 결제창 (바텀시트) ── */}
+      {/* 결제창 (바텀시트) */}
       {payOpen && (
         <div onClick={() => setPayOpen(false)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }}>
