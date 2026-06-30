@@ -73,23 +73,68 @@ function DiagnosisInner() {
   } | null>(null)
 
   useEffect(() => {
-    const urlYear = parseInt(sp.get('year') || '0')
-    if (urlYear) {
-      const hourParam = sp.get('hour')
-      setInfo({
-        gender: sp.get('gender') || '남',
-        calType: sp.get('calType') || '양력',
-        year: urlYear,
-        month: parseInt(sp.get('month') || '0'),
-        day: parseInt(sp.get('day') || '0'),
-        leapMonth: sp.get('leapMonth') || '0',
-        hourIdx: hourParam === '모름' || hourParam === null ? null : parseInt(hourParam),
-      })
-      return
+    let cancelled = false
+
+    async function loadInfo() {
+      // 1) URL에 사주가 있으면 그대로 사용
+      //    (홈에서 사주 넣고 넘어온 경우, 비로그인, 궁합 등 — 기존 흐름 유지)
+      const urlYear = parseInt(sp.get('year') || '0')
+      if (urlYear) {
+        const hourParam = sp.get('hour')
+        if (!cancelled) {
+          setInfo({
+            gender: sp.get('gender') || '남',
+            calType: sp.get('calType') || '양력',
+            year: urlYear,
+            month: parseInt(sp.get('month') || '0'),
+            day: parseInt(sp.get('day') || '0'),
+            leapMonth: sp.get('leapMonth') || '0',
+            hourIdx: hourParam === '모름' || hourParam === null ? null : parseInt(hourParam),
+          })
+        }
+        return
+      }
+
+      // 2) URL이 없으면, 로그인한 본인 사주를 profiles(DB)에서 직접 읽는다.
+      //    welcome 화면이 저장한 형식과 동일하게 변환한다:
+      //    - birth_hour 는 인덱스 문자열('0'~'11') 또는 '모름' → 숫자 또는 null
+      //    - 윤달 컬럼이 없으므로 leapMonth 는 항상 '0' 으로 고정 (personKey 일치)
+      try {
+        const { data: u } = await supabase.auth.getUser()
+        if (u?.user) {
+          const { data: p } = await supabase
+            .from('profiles')
+            .select('birth_year, birth_month, birth_day, birth_hour, cal_type, gender, saju_saved')
+            .eq('id', u.user.id)
+            .single()
+          if (p && p.saju_saved && p.birth_year) {
+            const bh = p.birth_hour
+            const hourIdx =
+              bh === '모름' || bh == null || bh === '' ? null : parseInt(bh)
+            if (!cancelled) {
+              setInfo({
+                gender: p.gender ?? '남',
+                calType: p.cal_type ?? '양력',
+                year: Number(p.birth_year),
+                month: Number(p.birth_month),
+                day: Number(p.birth_day),
+                leapMonth: '0',
+                hourIdx,
+              })
+            }
+            return
+          }
+        }
+      } catch (e) {
+        console.error(e)
+      }
+
+      // 3) URL도 없고 로그인 사주도 없으면 안내 화면
+      if (!cancelled) setInfo(null)
     }
-    // 홈에서 사주를 넣고 넘어온 경우에만 정보를 사용합니다.
-    // (저장된 옛 값을 불러오지 않아, 다른 사람 정보가 남지 않습니다.)
-    setInfo(null)
+
+    loadInfo()
+    return () => { cancelled = true }
   }, [sp])
 
   const { saju, dayStem, converting } = useResultSaju(
