@@ -26,7 +26,6 @@ interface SurveyInput {
   babyGender: string; wishes: string[]; avoidNote: string
 }
 
-// AI 해설 구조 (rank → { oneLine, detail })
 interface AiNote { oneLine: string; detail?: string }
 
 function Disclaimer({ full }: { full?: boolean }) {
@@ -74,7 +73,6 @@ async function getParentDayStem(p: PersonInput | null): Promise<string | undefin
   }
 }
 
-// AI 해설 요청 — /api/analyze 로 messages 보내 JSON 받기
 async function fetchAiNotes(recs: Recommendation[], survey: SurveyInput): Promise<Record<number, AiNote>> {
   const wishesText = survey.wishes && survey.wishes.length > 0 ? survey.wishes.join(', ') : '특별히 없음'
   const list = recs.map(r =>
@@ -103,12 +101,10 @@ ${list}
       body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] }),
     })
     const data = await res.json()
-    // Claude 응답에서 텍스트 추출
     let txt = ''
     if (Array.isArray(data?.content)) {
       txt = data.content.filter((b: { type: string }) => b.type === 'text').map((b: { text: string }) => b.text).join('')
     }
-    // JSON만 추출
     const match = txt.match(/\{[\s\S]*\}/)
     if (!match) return {}
     const parsed = JSON.parse(match[0])
@@ -246,7 +242,6 @@ function BirthResultInner() {
         }
         setLoading(false)
 
-        // 계산 결과가 나온 뒤, AI 해설을 추가로 불러온다 (실패해도 결과는 보임)
         setAiLoading(true)
         const notes = await fetchAiNotes(result.recommendations, sv)
         if (!cancelled) { setAiNotes(notes); setAiLoading(false) }
@@ -279,8 +274,22 @@ function BirthResultInner() {
         </div>
 
         {loading && (
-          <div style={{ padding: '40px 0', textAlign: 'center', color: '#c8b0ff', fontSize: '14px' }}>
-            🍼 아기에게 좋은 날을 찾고 있어요...
+          <div style={{ padding: '48px 0', textAlign: 'center' }}>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            <div style={{
+              width: '44px', height: '44px', margin: '0 auto 18px',
+              border: '4px solid rgba(200,176,255,0.18)',
+              borderTopColor: '#c8b0ff',
+              borderRadius: '50%',
+              animation: 'spin 0.9s linear infinite',
+            }} />
+            <div style={{ color: '#c8b0ff', fontSize: '15px', fontWeight: 600, marginBottom: '8px' }}>
+              🍼 아기에게 좋은 날을 찾고 있어요
+            </div>
+            <div style={{ color: sub, fontSize: '12px', lineHeight: 1.7 }}>
+              날짜별 사주를 계산하고 해설을 쓰고 있어요.<br />
+              약 10~20초 정도 걸려요. 잠시만 기다려 주세요 😊
+            </div>
           </div>
         )}
 
