@@ -2,6 +2,7 @@
 import { Suspense, useState, useEffect, type ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import PageHeader from '@/app/components/common/PageHeader'
+import { runBirthTiming, type Recommendation, type AvoidDay } from '../lib/recommend'
 
 const purple = '#7766dd'
 const cardBg = '#13132a'
@@ -21,85 +22,9 @@ interface PersonInput {
   gender: string; calType: string; job: string; mbti: string
 }
 
-// 추천 1건 구조 (나중에 계산 결과가 이 형태로 들어옴)
-interface Candidate {
-  rank: number
-  date: string
-  hour: string
-  score: number
-  saju: string
-  stars: { label: string; n: number; desc: string }[]
-  oneLine: string
-  note: string
-}
-
-// ── 예시(목업) 데이터 — 나중에 실제 계산으로 교체 ──
-const SAMPLE: Candidate[] = [
-  {
-    rank: 1, date: '2027년 3월 9일 (화)', hour: '卯시 (05~07)', score: 92,
-    saju: '己 乙 癸 丁 / 卯 巳 卯 未',
-    stars: [
-      { label: '오행 균형', n: 4, desc: '목·화·수가 고루 있어 안정적이에요.' },
-      { label: '온도(조후)', n: 5, desc: '봄 기운으로 따뜻하고 생기가 돌아요.' },
-      { label: '지지 안정', n: 5, desc: '충·형이 없어 평안한 구조예요.' },
-      { label: '부모와의 관계', n: 4, desc: '아빠의 기운을 살려주는 자식이에요.' },
-    ],
-    oneLine: '집안에 생기를 더하는, 균형 잡힌 봄의 아이',
-    note: '금(金) 기운이 다소 약하니, 훗날 이름에 금을 보완해주면 좋아요.',
-  },
-  {
-    rank: 2, date: '2027년 3월 12일 (금)', hour: '巳시 (09~11)', score: 87,
-    saju: '辛 戊 癸 丁 / 巳 申 卯 未',
-    stars: [
-      { label: '오행 균형', n: 4, desc: '다섯 기운이 비교적 고른 편이에요.' },
-      { label: '온도(조후)', n: 4, desc: '따뜻한 기운이 잘 자리잡았어요.' },
-      { label: '지지 안정', n: 3, desc: '큰 충은 없으나 약한 긴장이 있어요.' },
-      { label: '부모와의 관계', n: 5, desc: '부모 띠와 육합을 이뤄 정이 깊어요.' },
-    ],
-    oneLine: '부모와 인연이 깊은, 다정한 아이',
-    note: '토(土) 기운이 약간 강하니 활동적인 환경이 도움돼요.',
-  },
-  {
-    rank: 3, date: '2027년 3월 7일 (일)', hour: '卯시 (05~07)', score: 81,
-    saju: '己 癸 癸 丁 / 卯 卯 卯 未',
-    stars: [
-      { label: '오행 균형', n: 3, desc: '무난하나 수(水)가 다소 많아요.' },
-      { label: '온도(조후)', n: 4, desc: '봄볕으로 차갑지 않게 균형이 잡혀요.' },
-      { label: '지지 안정', n: 4, desc: '대체로 평안한 흐름이에요.' },
-      { label: '부모와의 관계', n: 3, desc: '무난하게 어울리는 관계예요.' },
-    ],
-    oneLine: '차분하고 안정적인 기질의 아이',
-    note: '화(火) 기운을 더해주는 활동이 좋아요.',
-  },
-  {
-    rank: 4, date: '2027년 3월 11일 (목)', hour: '巳시 (09~11)', score: 78,
-    saju: '辛 丁 癸 丁 / 巳 未 卯 未',
-    stars: [
-      { label: '오행 균형', n: 3, desc: '화(火)가 다소 강한 편이에요.' },
-      { label: '온도(조후)', n: 3, desc: '따뜻하나 약간 건조할 수 있어요.' },
-      { label: '지지 안정', n: 4, desc: '큰 충돌 없이 흐르는 구조예요.' },
-      { label: '부모와의 관계', n: 3, desc: '무난한 조화를 이뤄요.' },
-    ],
-    oneLine: '열정과 생기가 넘치는 아이',
-    note: '수(水) 기운을 보완해주면 균형이 더 좋아져요.',
-  },
-  {
-    rank: 5, date: '2027년 3월 6일 (토)', hour: '卯시 (05~07)', score: 75,
-    saju: '己 庚 癸 丁 / 卯 午 卯 未',
-    stars: [
-      { label: '오행 균형', n: 3, desc: '대체로 무난한 분포예요.' },
-      { label: '온도(조후)', n: 3, desc: '온도가 적당히 유지돼요.' },
-      { label: '지지 안정', n: 3, desc: '약한 긴장이 있으나 무난해요.' },
-      { label: '부모와의 관계', n: 4, desc: '부모를 돕는 기운이 있어요.' },
-    ],
-    oneLine: '성실하고 듬직한 기질의 아이',
-    note: '목(木) 기운을 더하면 유연함이 살아나요.',
-  },
-]
-
-const AVOID_SAMPLE = {
-  dates: '3월 13일 (토) · 3월 14일 (일)',
-  reasons: ['지지에 충(沖)이 겹쳐 전통적으로 피해온 날이에요.', '오행이 한쪽으로 치우치는 구조예요.'],
+interface SurveyInput {
+  dueDate: string; method: string; timePref: string
+  babyGender: string; wishes: string[]; avoidNote: string
 }
 
 function Disclaimer({ full }: { full?: boolean }) {
@@ -130,17 +55,40 @@ function rankBadge(rank: number): string {
   return rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}`
 }
 
-function CandidateCard({ c }: { c: Candidate }) {
-  const [open, setOpen] = useState(c.rank === 1)
+// 부모 일간(dayStem)을 /api/lunar로 구하기
+async function getParentDayStem(p: PersonInput | null): Promise<string | undefined> {
+  if (!p || !p.year || !p.month || !p.day) return undefined
+  try {
+    const url = `/api/lunar?year=${p.year}&month=${p.month}&day=${p.day}&calType=${p.calType}&leapMonth=0`
+    const res = await fetch(url)
+    const data = await res.json()
+    if (data.error) return undefined
+    const g: string = data.dayGanji || ''
+    const m = g.match(/\(([^)]+)\)/)
+    if (m && m[1].length >= 1) return m[1][0]
+    if (g.length >= 1) return g[0]
+    return undefined
+  } catch {
+    return undefined
+  }
+}
 
+function CandidateCard({ c, defaultOpen }: { c: Recommendation; defaultOpen: boolean }) {
+  const [open, setOpen] = useState(defaultOpen)
+  const b = c.breakdown
+  const stars = [
+    { label: '오행 균형', n: b.starOhaeng },
+    { label: '온도(조후)', n: b.starJohu },
+    { label: '지지 안정', n: b.starJiji },
+  ]
   return (
     <div style={{ background: cardBg, borderRadius: '12px', border: '1px solid ' + (c.rank === 1 ? 'rgba(250,199,117,0.35)' : 'rgba(255,255,255,0.06)'), marginBottom: '10px', overflow: 'hidden' }}>
       <button onClick={() => setOpen(o => !o)}
         style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '14px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
         <span style={{ fontSize: '16px' }}>{rankBadge(c.rank)}</span>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '14px', color: text, fontWeight: 600 }}>{c.date}</div>
-          <div style={{ fontSize: '12px', color: sub, marginTop: '2px' }}>{c.hour}</div>
+          <div style={{ fontSize: '14px', color: text, fontWeight: 600 }}>{c.dateLabel}</div>
+          <div style={{ fontSize: '12px', color: sub, marginTop: '2px' }}>{c.hourLabel}</div>
         </div>
         <span style={{ fontSize: '15px', fontWeight: 700, color: c.rank === 1 ? gold : '#c8b0ff' }}>{c.score}점</span>
         <span style={{ fontSize: '12px', color: sub }}>{open ? '▲' : '▼'}</span>
@@ -152,23 +100,24 @@ function CandidateCard({ c }: { c: Candidate }) {
             <div style={{ fontSize: '11px', color: sub, marginBottom: '4px' }}>아기 사주</div>
             <div style={{ fontSize: '15px', color: '#c8b0ff', letterSpacing: '3px', marginBottom: '14px' }}>{c.saju}</div>
 
-            {c.stars.map((s, i) => (
+            {stars.map((s, i) => (
               <div key={i} style={{ marginBottom: '10px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '12px', color: '#b8b4d8' }}>{s.label}</span>
                   <Stars n={s.n} />
                 </div>
-                <div style={{ fontSize: '12px', color: sub, marginTop: '3px', lineHeight: 1.5 }}>{s.desc}</div>
               </div>
             ))}
 
-            <div style={{ background: 'rgba(119,102,221,0.1)', borderRadius: '8px', padding: '10px 12px', margin: '12px 0' }}>
-              <div style={{ fontSize: '11px', color: sub, marginBottom: '3px' }}>한 줄 요약</div>
-              <div style={{ fontSize: '13px', color: text, lineHeight: 1.5 }}>"{c.oneLine}"</div>
-            </div>
+            {c.parentNote && (
+              <div style={{ background: 'rgba(119,102,221,0.1)', borderRadius: '8px', padding: '10px 12px', margin: '12px 0' }}>
+                <div style={{ fontSize: '11px', color: sub, marginBottom: '3px' }}>부모와의 관계</div>
+                <div style={{ fontSize: '13px', color: text, lineHeight: 1.5 }}>♥ {c.parentNote}</div>
+              </div>
+            )}
 
-            <div style={{ fontSize: '12px', color: sub, lineHeight: 1.6 }}>
-              <span style={{ color: gold }}>참고</span> · {c.note}
+            <div style={{ fontSize: '12px', color: sub, lineHeight: 1.6, marginTop: '8px' }}>
+              <span style={{ color: gold }}>오행 분포</span> · 목{b.elementCount['목']} 화{b.elementCount['화']} 토{b.elementCount['토']} 금{b.elementCount['금']} 수{b.elementCount['수']}
             </div>
           </div>
         </div>
@@ -183,20 +132,66 @@ function BirthResultInner() {
 
   const [parent1, setParent1] = useState<PersonInput | null>(null)
   const [parent2, setParent2] = useState<PersonInput | null>(null)
-  const [dueDate, setDueDate] = useState('')
-  const [method, setMethod] = useState('')
+  const [survey, setSurvey] = useState<SurveyInput | null>(null)
+
+  const [loading, setLoading] = useState(true)
+  const [recs, setRecs] = useState<Recommendation[]>([])
+  const [avoidDays, setAvoidDays] = useState<AvoidDay[]>([])
+  const [errMsg, setErrMsg] = useState('')
 
   useEffect(() => {
-    try {
-      const p1 = sp.get('p1'); const p2 = sp.get('p2'); const s = sp.get('survey')
-      if (p1) setParent1(JSON.parse(decodeURIComponent(p1)))
-      if (p2) setParent2(JSON.parse(decodeURIComponent(p2)))
-      if (s) {
-        const survey = JSON.parse(decodeURIComponent(s))
-        setDueDate(survey.dueDate || '')
-        setMethod(survey.method || '')
+    let cancelled = false
+
+    async function run() {
+      let p1: PersonInput | null = null
+      let p2: PersonInput | null = null
+      let sv: SurveyInput | null = null
+      try {
+        const a = sp.get('p1'); const b = sp.get('p2'); const s = sp.get('survey')
+        if (a) p1 = JSON.parse(decodeURIComponent(a))
+        if (b) p2 = JSON.parse(decodeURIComponent(b))
+        if (s) sv = JSON.parse(decodeURIComponent(s))
+      } catch {}
+
+      if (!cancelled) { setParent1(p1); setParent2(p2); setSurvey(sv) }
+
+      if (!sv || !sv.dueDate) {
+        if (!cancelled) { setErrMsg('출산예정일 정보가 없어요. 이전 화면에서 다시 입력해 주세요.'); setLoading(false) }
+        return
       }
-    } catch {}
+
+      try {
+        // 부모 일간 구하기 (가점용)
+        const [ds1, ds2] = await Promise.all([getParentDayStem(p1), getParentDayStem(p2)])
+        const parents = [{ dayStem: ds1 }, { dayStem: ds2 }]
+
+        // 선호 시간대 매핑
+        const timePref =
+          sv.timePref === '평일오전' ? 'morning'
+          : sv.timePref === '평일오후' ? 'afternoon'
+          : 'any'
+
+        const result = await runBirthTiming(sv.dueDate, {
+          timePref: timePref as 'morning' | 'afternoon' | 'any',
+          excludeWeekend: true,
+          parents,
+        })
+
+        if (!cancelled) {
+          setRecs(result.recommendations)
+          setAvoidDays(result.avoidDays)
+          if (result.recommendations.length === 0) {
+            setErrMsg('조건에 맞는 날을 찾지 못했어요. 시간대나 예정일을 바꿔서 다시 시도해 주세요.')
+          }
+          setLoading(false)
+        }
+      } catch (e) {
+        if (!cancelled) { setErrMsg('계산 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.'); setLoading(false) }
+      }
+    }
+
+    run()
+    return () => { cancelled = true }
   }, [sp])
 
   return (
@@ -213,33 +208,54 @@ function BirthResultInner() {
         <div style={{ margin: '16px 0', padding: '12px 14px', background: cardBg, borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
           <div style={{ fontSize: '11px', color: sub, marginBottom: '6px' }}>분석 조건</div>
           <div style={{ fontSize: '12px', color: '#b8b4d8', lineHeight: 1.7 }}>
-            출산예정일 {dueDate || '-'} · {method || '-'}<br />
-            예정일 전후 약 2주 / 부모 {personSummary(parent1) !== '정보 없음' ? '사주 반영' : '-'}
+            출산예정일 {survey?.dueDate || '-'} · {survey?.method || '-'}<br />
+            예정일 전후 1주 / 부모 {personSummary(parent1) !== '정보 없음' ? '사주 반영' : '-'}
           </div>
         </div>
 
-        <div style={{ marginBottom: '14px', padding: '8px 12px', background: 'rgba(250,199,117,0.08)', border: '1px solid rgba(250,199,117,0.2)', borderRadius: '8px', fontSize: '11px', color: gold, lineHeight: 1.5 }}>
-          ⚙️ 아래는 화면 예시예요. 곧 실제 사주 계산 결과로 채워집니다.
-        </div>
+        {loading && (
+          <div style={{ padding: '40px 0', textAlign: 'center', color: '#c8b0ff', fontSize: '14px' }}>
+            🍼 아기에게 좋은 날을 찾고 있어요...
+          </div>
+        )}
 
-        <div style={{ fontSize: '13px', color: '#c8c0ff', fontWeight: 600, margin: '4px 0 12px' }}>
-          ◆ 추천 출산일 <span style={{ fontSize: '11px', color: sub, fontWeight: 400 }}>(탭하면 자세히)</span>
-        </div>
-        {SAMPLE.map(c => <CandidateCard key={c.rank} c={c} />)}
+        {!loading && errMsg && (
+          <div style={{ padding: '20px', textAlign: 'center', color: '#ff8888', fontSize: '13px', lineHeight: 1.7 }}>
+            {errMsg}
+          </div>
+        )}
 
-        <div style={{ fontSize: '13px', color: '#c8c0ff', fontWeight: 600, margin: '22px 0 12px' }}>◆ 피하면 좋은 날</div>
-        <div style={{ background: 'rgba(255,120,120,0.06)', border: '1px solid rgba(255,120,120,0.18)', borderRadius: '12px', padding: '14px' }}>
-          <div style={{ fontSize: '13px', color: '#e0a0a0', fontWeight: 600, marginBottom: '8px' }}>⚠ {AVOID_SAMPLE.dates}</div>
-          {AVOID_SAMPLE.reasons.map((r, i) => (
-            <div key={i} style={{ fontSize: '12px', color: '#c89090', lineHeight: 1.7 }}>· {r}</div>
-          ))}
-        </div>
+        {!loading && !errMsg && recs.length > 0 && (
+          <>
+            <div style={{ fontSize: '13px', color: '#c8c0ff', fontWeight: 600, margin: '4px 0 12px' }}>
+              ◆ 추천 출산일 <span style={{ fontSize: '11px', color: sub, fontWeight: 400 }}>(탭하면 자세히)</span>
+            </div>
+            {recs.map(c => <CandidateCard key={c.rank} c={c} defaultOpen={c.rank === 1} />)}
 
-        <button
-          onClick={() => alert('전문가 상담 연결은 준비 중이에요 😊')}
-          style={{ width: '100%', marginTop: '22px', padding: '15px', borderRadius: '12px', background: 'linear-gradient(135deg,#5544bb,#7766dd)', border: 'none', color: text, fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
-          ✨ 전문가에게 자세히 물어보기
-        </button>
+            {avoidDays.length > 0 && (
+              <>
+                <div style={{ fontSize: '13px', color: '#c8c0ff', fontWeight: 600, margin: '22px 0 12px' }}>◆ 피하면 좋은 날</div>
+                <div style={{ background: 'rgba(255,120,120,0.06)', border: '1px solid rgba(255,120,120,0.18)', borderRadius: '12px', padding: '14px' }}>
+                  {avoidDays.map((a, i) => (
+                    <div key={i} style={{ marginBottom: i < avoidDays.length - 1 ? '10px' : 0 }}>
+                      <div style={{ fontSize: '13px', color: '#e0a0a0', fontWeight: 600, marginBottom: '4px' }}>⚠ {a.dateLabel}</div>
+                      {a.reasons.map((r: string, j: number) => (
+                        <div key={j} style={{ fontSize: '12px', color: '#c89090', lineHeight: 1.6 }}>· {r}</div>
+                      ))}
+                    </div>
+                  ))}
+                  <div style={{ fontSize: '11px', color: sub, marginTop: '8px' }}>전통적으로 이런 날은 피해왔어요.</div>
+                </div>
+              </>
+            )}
+
+            <button
+              onClick={() => alert('전문가 상담 연결은 준비 중이에요 😊')}
+              style={{ width: '100%', marginTop: '22px', padding: '15px', borderRadius: '12px', background: 'linear-gradient(135deg,#5544bb,#7766dd)', border: 'none', color: text, fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
+              ✨ 전문가에게 자세히 물어보기
+            </button>
+          </>
+        )}
 
         <button
           onClick={() => router.push('/manseryeok/couple-input')}
