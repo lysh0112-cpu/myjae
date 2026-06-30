@@ -72,12 +72,12 @@ async function fetchAiNotes(recs: WeddingRecommendation[], survey: WeddingSurvey
 ${list}
 
 각 순위마다 그 날 결혼하면 좋은 점을 따뜻하게 한 줄(20자 내외)로 표현하고,
-1순위는 추가로 2~3문장의 상세 해설을 써 주세요.
+1·2·3순위는 추가로 2~3문장의 상세 해설(detail)을 써 주세요. 4·5순위는 한 줄만.
 - 단정·과장 금지, 부드럽고 희망적인 어조
 - 적용된 길신(천을귀인·용신·손없는날·천희홍란 등)의 의미를 쉬운 말로 풀어 주세요
 - 반드시 아래 JSON 형식으로만 답하세요. 다른 말은 절대 쓰지 마세요.
 
-{"1":{"oneLine":"...","detail":"..."},"2":{"oneLine":"..."},"3":{"oneLine":"..."},"4":{"oneLine":"..."},"5":{"oneLine":"..."}}`
+{"1":{"oneLine":"...","detail":"..."},"2":{"oneLine":"...","detail":"..."},"3":{"oneLine":"...","detail":"..."},"4":{"oneLine":"..."},"5":{"oneLine":"..."}}`
 
   try {
     const res = await fetch('/api/analyze', {
