@@ -67,7 +67,10 @@ function CoupleInputInner() {
 
   // 모드에 따라 버튼 문구 변경
   const isBirth = relation === 'birth'
-  const startLabel = isBirth ? '🍼 좋은 출산일 찾기' : '💑 궁합 분석하기'
+  const isWedding = relation === 'prewedding'
+  const startLabel = isBirth ? '🍼 좋은 출산일 찾기'
+    : isWedding ? '💍 결혼 길일 찾기'
+    : '💑 궁합 분석하기'
 
   return (
     <main style={{ minHeight: '100vh', background: '#0d0d1a', maxWidth: '480px', margin: '0 auto', paddingBottom: '40px' }}>
@@ -148,7 +151,7 @@ function CoupleInputInner() {
           </div>
         )}
 
-        {/* 분석 버튼 — 출산 모드면 문구 변경 */}
+        {/* 분석 버튼 — 모드에 따라 문구 변경 */}
         <button onClick={handleStart}
           style={{ width: '100%', padding: '16px', borderRadius: '14px', background: 'linear-gradient(135deg, #5544bb, #7766dd)', border: 'none', color: '#e8e4ff', fontSize: '15px', fontWeight: '500', cursor: 'pointer' }}>
           {startLabel}
@@ -159,7 +162,7 @@ function CoupleInputInner() {
           <button
             onClick={() => router.push(lastResultUrl)}
             style={{ width: '100%', marginTop: '8px', padding: '12px', borderRadius: '14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(200,176,255,0.2)', color: '#c8b0ff', fontSize: '13px', cursor: 'pointer' }}>
-            📋 이전 궁합 결과 보기 →
+            📋 이전 결과 보기 →
           </button>
         )}
 
