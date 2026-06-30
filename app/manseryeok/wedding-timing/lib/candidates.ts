@@ -5,8 +5,7 @@
 //  - 날짜: 사용자가 지정한 기간(시작~끝). 기간이 길면 KASI 호출↑ → 기본 '주말만'으로 압축.
 //  - 결혼택일은 '예식일(날짜)'이 기준이라 시진(時)은 쓰지 않는다 → 시주 계산 없음.
 //  - 사주: /api/lunar 로 연·월·일 간지(날짜당 1회). useResultSaju 와 동일한 splitGanji 사용.
-//
-// ※ 후보 날짜의 간지를 만드는 방식은 출산택일 candidates.ts 와 100% 동일하게 맞춘다.
+//  - 공휴일 포함 모드: /api/holidays 로 기간 내 공휴일을 받아 '주말 OR 공휴일'을 후보로.
 
 const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -24,6 +23,9 @@ export interface DateCandidate {
   day: Pillar
   // 음력일 (손없는날 판정용). /api/lunar 가 주면 채워지고, 없으면 score 단계에서 보강.
   lunarDay?: number
+  // 공휴일 정보 (공휴일 포함 모드에서 채워짐)
+  isHoliday?: boolean
+  holidayName?: string
 }
 
 // 간지 문자열 → {stem, branch} (괄호 형태 (甲子)도 처리) — useResultSaju.splitGanji 와 동일
@@ -81,8 +83,27 @@ async function fetchDateSaju(y: number, m: number, d: number): Promise<DateCandi
 }
 
 export interface BuildWeddingOptions {
-  // 요일 선호: 'weekend'(토·일만) | 'all'(평일 포함) | 'any'(상관없음=전체)
-  dayPref?: 'weekend' | 'all' | 'any'
+  // 요일 선호: 'weekend'(토·일만) | 'holiday'(토·일+공휴일) | 'all'(평일 포함) | 'any'(상관없음=전체)
+  dayPref?: 'weekend' | 'holiday' | 'all' | 'any'
+}
+
+// 공휴일 목록 조회 (YYYYMMDD → 이름). 실패하면 빈 맵.
+async function fetchHolidayMap(startDate: string, endDate: string): Promise<Map<string, string>> {
+  const map = new Map<string, string>()
+  try {
+    const res = await fetch(`/api/holidays?start=${startDate}&end=${endDate}`)
+    const data = await res.json()
+    if (Array.isArray(data.holidays)) {
+      for (const h of data.holidays) {
+        if (h.date) map.set(h.date, h.name || '공휴일')
+      }
+    }
+  } catch {}
+  return map
+}
+
+function ymd(y: number, m: number, d: number): string {
+  return `${y}${String(m).padStart(2, '0')}${String(d).padStart(2, '0')}`
 }
 
 // 메인: 기간 → 후보 날짜 배열 (각 날의 간지 포함)
@@ -96,11 +117,21 @@ export async function buildWeddingCandidates(
   let dates = buildDateRange(startDate, endDate)
   if (dates.length === 0) return []
 
+  // 공휴일 포함 모드면 먼저 공휴일 맵을 가져온다
+  const holidayMap = dayPref === 'holiday' ? await fetchHolidayMap(startDate, endDate) : new Map<string, string>()
+
   // 요일 선호로 먼저 날짜 수를 줄여서 KASI 호출을 아낀다
   if (dayPref === 'weekend') {
     dates = dates.filter(dt => {
       const wd = new Date(dt.y, dt.m - 1, dt.d).getDay()
       return wd === 0 || wd === 6
+    })
+  } else if (dayPref === 'holiday') {
+    // 주말 OR 공휴일
+    dates = dates.filter(dt => {
+      const wd = new Date(dt.y, dt.m - 1, dt.d).getDay()
+      const isWeekend = wd === 0 || wd === 6
+      return isWeekend || holidayMap.has(ymd(dt.y, dt.m, dt.d))
     })
   }
 
@@ -111,7 +142,13 @@ export async function buildWeddingCandidates(
   for (const c of results) {
     if (!c) continue
     if (c.day.stem === '?') continue // 간지를 못 만든 날 제외
-    // dayPref === 'all' 이면 평일 포함 전체, 'any' 도 전체. weekend 는 위에서 이미 걸렀음.
+    // 공휴일 정보 부착
+    const key = ymd(c.y, c.m, c.d)
+    if (holidayMap.has(key)) {
+      c.isHoliday = true
+      c.holidayName = holidayMap.get(key)
+    }
+    // dayPref === 'all' 이면 평일 포함 전체, 'any' 도 전체. weekend/holiday 는 위에서 이미 걸렀음.
     candidates.push(c)
   }
   return candidates
