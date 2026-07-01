@@ -2,17 +2,18 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { getUnsung, getSinsal, unsungColor, GAN_COLOR, JI_COLOR, SINSAL_HIGHLIGHT } from '@/lib/saju'
-import { calcDayunList } from '@/lib/saju/dayun'
+import type { DayunItem } from '@/lib/saju/dayun'
 
 interface Props {
-  birthYear: number
-  birthMonth: number
-  birthDay: number
+  solarYear: number
+  solarMonth: number
+  solarDay: number
   gender: string
   monthGanji: string
   yearStem: string
   dayStem: string
   currentYear: number
+  birthYear: number   // 나이/연도 표시용 (실제 태어난 해)
   ilgan: string
   yeonjji: string
   iljji: string
@@ -22,14 +23,33 @@ const STEM_ELEMENT: Record<string,string> = {甲:'목',乙:'목',丙:'화',丁:'
 const ELEMENT_COLOR: Record<string,string> = {목:'#4caf50',화:'#f44336',토:'#ff9800',금:'#9e9e9e',수:'#2196f3'}
 
 export default function DayunTable({
-  birthYear, birthMonth, birthDay, gender, monthGanji, yearStem, dayStem, currentYear, ilgan, yeonjji, iljji
+  solarYear, solarMonth, solarDay, gender, monthGanji, yearStem, dayStem, currentYear, birthYear, ilgan, yeonjji, iljji
 }: Props) {
-  const dayunList = calcDayunList(birthYear, birthMonth, birthDay, monthGanji, yearStem, gender, dayStem)
-  const reversedDayunList = [...(dayunList || [])].reverse()
+  const [dayunList, setDayunList] = useState<DayunItem[]>([])
+  const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<number | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const currentAge = currentYear - birthYear
+
+  // 대운 계산 — 서버 API 호출(절기 기반 정확 계산)
+  useEffect(() => {
+    if (!solarYear || !solarMonth || !solarDay || !monthGanji || !yearStem || !dayStem) return
+    let alive = true
+    setLoading(true)
+    fetch('/api/dayun', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ solarYear, solarMonth, solarDay, monthGanji, yearStem, gender, dayStem }),
+    })
+      .then(r => r.json())
+      .then(d => { if (alive) setDayunList(d.dayunList || []) })
+      .catch(e => { console.error('대운 로딩 실패:', e); if (alive) setDayunList([]) })
+      .finally(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
+  }, [solarYear, solarMonth, solarDay, monthGanji, yearStem, gender, dayStem])
+
+  const reversedDayunList = [...(dayunList || [])].reverse()
 
   // 현재 대운 카드로 자동 스크롤 (역순 — 오른쪽이 과거, 왼쪽이 미래)
   useEffect(() => {
@@ -40,6 +60,17 @@ export default function DayunTable({
       scrollRef.current.scrollLeft = Math.max(0, currentIdx * cardWidth - cardWidth)
     }
   }, [dayunList, currentAge])
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl p-4" style={{background:'#2C2C2A',border:'1px solid rgba(255,255,255,0.07)'}}>
+        <div className="flex items-center gap-2 mb-3">
+          <h3 className="text-sm font-semibold" style={{color:'rgba(250,199,117,0.8)'}}>대운</h3>
+        </div>
+        <div className="text-center py-6" style={{color:'#8a88a0',fontSize:'13px'}}>대운을 계산하는 중...</div>
+      </div>
+    )
+  }
 
   if (!dayunList || dayunList.length === 0) return null
 
