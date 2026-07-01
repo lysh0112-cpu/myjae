@@ -10,6 +10,7 @@ export interface PersonInput {
   month: string
   day: string
   hour: string
+  leapMonth: string   // '0'=평달, '1'=윤달 (음력일 때만 의미)
   gender: Gender
   calType: CalType
   job: string
@@ -17,7 +18,7 @@ export interface PersonInput {
 }
 
 export const DEFAULT_PERSON = (gender: Gender): PersonInput => ({
-  year: '', month: '', day: '', hour: '-1',
+  year: '', month: '', day: '', hour: '-1', leapMonth: '0',
   gender, calType: '양력', job: '', mbti: ''
 })
 
@@ -32,25 +33,25 @@ export function useCoupleInput() {
   const [autoLoaded, setAutoLoaded] = useState(false)
 
   // 복원이 끝나기 전에는 저장하지 않도록 막는 표시
-  // (본인 사주를 profiles에서 읽는 동안 빈 값으로 저장을 덮어쓰는 것을 방지)
   const restored = useRef(false)
 
   // 초기 로드
   // - 본인(person1): 로그인했으면 profiles(DB)에서 직접 읽어 채운다 (가장 안정적).
   //   profiles로 못 채우면 기존 sessionStorage('myinfo')로 폴백.
-  // - person2(상대방)·관계·질문: 기존과 동일하게 localStorage에서 복원.
+  // - person2(상대방)·관계·질문: localStorage에서 복원.
+  //   ※ person1(내 사주)은 localStorage에 저장하지 않는다 → 공용기기 잔존 방지.
   useEffect(() => {
     let cancelled = false
 
     async function loadInitial() {
-      // (1) 로그인한 본인 사주를 profiles에서 먼저 시도
+      // (1) 로그인한 본인 사주를 profiles에서 먼저 시도 (leap_month 포함)
       let filledFromProfile = false
       try {
         const { data: u } = await supabase.auth.getUser()
         if (u?.user) {
           const { data: p } = await supabase
             .from('profiles')
-            .select('birth_year, birth_month, birth_day, birth_hour, cal_type, gender, saju_saved')
+            .select('birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, saju_saved')
             .eq('id', u.user.id)
             .single()
           if (!cancelled && p && p.saju_saved && p.birth_year) {
@@ -65,6 +66,7 @@ export function useCoupleInput() {
               month: String(p.birth_month ?? ''),
               day: String(p.birth_day ?? ''),
               hour: hourValue,
+              leapMonth: p.leap_month != null ? String(p.leap_month) : '0',
             }))
             setAutoLoaded(true)
             filledFromProfile = true
@@ -87,6 +89,7 @@ export function useCoupleInput() {
                 month: info.month || '',
                 day: info.day || '',
                 hour: info.hour || '-1',
+                leapMonth: info.leapMonth || '0',
               }))
               setAutoLoaded(true)
             }
@@ -94,14 +97,14 @@ export function useCoupleInput() {
         }
       }
 
-      // (3) 상대방(person2)·관계·질문은 기존과 동일하게 localStorage에서 복원
+      // (3) 상대방(person2)·관계·질문만 localStorage에서 복원 (person1은 복원하지 않음)
       const saved = localStorage.getItem(STORAGE_KEY)
       if (saved) {
         try {
           const data = JSON.parse(saved)
           if (!cancelled) {
             if (data.relation) setRelation(data.relation)
-            if (data.person2) setPerson2(data.person2)
+            if (data.person2) setPerson2({ ...DEFAULT_PERSON('여'), ...data.person2 })
             if (data.question) setQuestion(data.question)
           }
         } catch {}
@@ -116,10 +119,11 @@ export function useCoupleInput() {
   }, [])
 
   // 변경 시 localStorage에 저장 — 단, 복원이 끝난 뒤에만
+  // ※ person1(내 사주)은 저장하지 않는다. relation·person2·question만 저장.
   useEffect(() => {
     if (!restored.current) return
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ relation, person1, person2, question }))
-  }, [relation, person1, person2, question])
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ relation, person2, question }))
+  }, [relation, person2, question])
 
   // 전체 초기화
   const handleClear = () => {
