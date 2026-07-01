@@ -44,6 +44,9 @@ export interface CoupleResultData {
     wolScore: number
     gongmangScore: number
     ohaengScore: number
+    johuScore: number
+    sijuScore: number
+    hasSiju: boolean
   }
 }
 
@@ -410,6 +413,9 @@ export function useCoupleResult(
           wolScore: analysis.scoreNumbers.wolScore,
           gongmangScore: analysis.scoreNumbers.gongmangScore,
           ohaengScore: analysis.scoreNumbers.ohaengScore,
+          johuScore: analysis.scoreNumbers.johuScore,
+          sijuScore: analysis.scoreNumbers.sijuScore,
+          hasSiju: analysis.scoreNumbers.hasSiju,
         }
       }
 
