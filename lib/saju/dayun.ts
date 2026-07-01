@@ -1,7 +1,9 @@
 // lib/saju/dayun.ts
 // 대운/세운/월운 계산 로직
+// [수정] 대운수(첫 대운 나이)를 양력 생일 + 실제 절입일 기준으로 정확히 계산
 
 import { CHEONGAN as STEMS, JIJI as BRANCHES } from './constants'
+import { getSolarTermDay } from './solarterm'
 
 export interface DayunItem {
   age: number
@@ -27,10 +29,18 @@ export interface WolunItem {
   jiYukchin: string
 }
 
-// 육친 계산
+const HEAVENLY_STEMS = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
+const EARTHLY_BRANCHES = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥']
+
+// ─────────────────────────────────────────────
+// 대운수 반올림 규칙 (검수용 상수: 3일 = 1년)
+// 연재 선생님 검수 후 이 값/방식만 조정하면 전체 적용됨
+const DAYS_PER_DAYUN_YEAR = 3
+// ─────────────────────────────────────────────
+
+// 육친(천간) 계산
 function getSipsin(dayStem: string, targetStem: string): string {
   if (!targetStem || targetStem === '?') return ''
-  const HEAVENLY_STEMS = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
   const STEM_ELEMENT: Record<string,string> = {甲:'목',乙:'목',丙:'화',丁:'화',戊:'토',己:'토',庚:'금',辛:'금',壬:'수',癸:'수'}
   const dayIdx = HEAVENLY_STEMS.indexOf(dayStem)
   const targetIdx = HEAVENLY_STEMS.indexOf(targetStem)
@@ -50,9 +60,9 @@ function getSipsin(dayStem: string, targetStem: string): string {
 const BRANCH_ELEMENT: Record<string,string> = {子:'수',丑:'토',寅:'목',卯:'목',辰:'토',巳:'화',午:'화',未:'토',申:'금',酉:'금',戌:'토',亥:'수'}
 const BRANCH_YIN: Record<string,boolean> = {子:true,丑:true,寅:false,卯:true,辰:false,巳:true,午:false,未:true,申:false,酉:true,戌:false,亥:true}
 
+// 육친(지지) 계산
 function getSipsinBranch(dayStem: string, branch: string): string {
   if (!branch || branch === '?') return ''
-  const HEAVENLY_STEMS = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
   const STEM_ELEMENT: Record<string,string> = {甲:'목',乙:'목',丙:'화',丁:'화',戊:'토',己:'토',庚:'금',辛:'금',壬:'수',癸:'수'}
   const branchElement = BRANCH_ELEMENT[branch]
   const dayElement = STEM_ELEMENT[dayStem]
@@ -70,40 +80,87 @@ function getSipsinBranch(dayStem: string, branch: string): string {
   return ''
 }
 
-/**
- * 대운 계산
- * @param birthYear 출생년도
- * @param monthGanji 월주 (예: '壬子')
- * @param yearStem 년간
- * @param gender 성별
- * @param dayStem 일간
- */
-export function calcDayunList(
-  birthYear: number,
-  birthMonth: number,
-  birthDay: number,
-  monthGanji: string,
-  yearStem: string,
-  gender: string,
-  dayStem: string
-): DayunItem[] {
-  const HEAVENLY_STEMS = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
-  const EARTHLY_BRANCHES = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥']
-
+// 순행/역행 판정 (년간 음양 × 성별)
+export function isForwardDayun(yearStem: string, gender: string): boolean {
   const yearStemIdx = HEAVENLY_STEMS.indexOf(yearStem)
   const isYangYear = yearStemIdx % 2 === 0
   const isMale = gender === '남'
-  const isForward = (isYangYear && isMale) || (!isYangYear && !isMale)
+  return (isYangYear && isMale) || (!isYangYear && !isMale)
+}
+
+// 두 양력 날짜 사이의 일수
+function daysBetween(y1:number,m1:number,d1:number, y2:number,m2:number,d2:number): number {
+  const a = Date.UTC(y1, m1-1, d1)
+  const b = Date.UTC(y2, m2-1, d2)
+  return Math.round((b - a) / 86400000)
+}
+
+/**
+ * 대운수(첫 대운 시작 나이) 계산 — 정확판
+ * 반드시 '양력' 생년월일을 넣을 것.
+ * @param solarYear 양력 연
+ * @param solarMonth 양력 월 (1~12)
+ * @param solarDay 양력 일
+ * @param isForward 순행 여부
+ * @param apiKey KASI 절기 API 키 (서버에서 전달)
+ */
+export async function calcDayunStartAge(
+  solarYear: number,
+  solarMonth: number,
+  solarDay: number,
+  isForward: boolean,
+  apiKey: string
+): Promise<number> {
+  let days: number
+  if (isForward) {
+    // 다음 절기(다음 달 절입일)까지
+    let nm = solarMonth + 1
+    let ny = solarYear
+    if (nm > 12) { nm = 1; ny += 1 }
+    const termDay = await getSolarTermDay(ny, nm, apiKey)
+    days = daysBetween(solarYear, solarMonth, solarDay, ny, nm, termDay)
+  } else {
+    // 역행: 이번 달 절입일까지 거슬러. 생일이 절입일 전이면 직전 달 절기로.
+    const termThis = await getSolarTermDay(solarYear, solarMonth, apiKey)
+    const diffThis = daysBetween(solarYear, solarMonth, termThis, solarYear, solarMonth, solarDay)
+    if (diffThis >= 0) {
+      days = diffThis
+    } else {
+      let pm = solarMonth - 1
+      let py = solarYear
+      if (pm < 1) { pm = 12; py -= 1 }
+      const termPrev = await getSolarTermDay(py, pm, apiKey)
+      days = daysBetween(py, pm, termPrev, solarYear, solarMonth, solarDay)
+    }
+  }
+  if (days < 0) days = 0
+  return Math.max(1, Math.round(days / DAYS_PER_DAYUN_YEAR))
+}
+
+/**
+ * 대운 목록 계산 — 정확판(async)
+ * 반드시 '양력' 생년월일을 넣을 것.
+ */
+export async function calcDayunList(
+  solarYear: number,
+  solarMonth: number,
+  solarDay: number,
+  monthGanji: string,
+  yearStem: string,
+  gender: string,
+  dayStem: string,
+  apiKey: string
+): Promise<DayunItem[]> {
+  const isForward = isForwardDayun(yearStem, gender)
 
   const monthStem = monthGanji[0]
   const monthBranch = monthGanji[1]
   let stemIdx = HEAVENLY_STEMS.indexOf(monthStem)
   let branchIdx = EARTHLY_BRANCHES.indexOf(monthBranch)
 
-  const list: DayunItem[] = []
-  // 대운수 계산 (절기까지 남은 일수 / 3)
-  const startAge = calcDayunStartAge(birthYear, birthMonth, birthDay, isForward)
+  const startAge = await calcDayunStartAge(solarYear, solarMonth, solarDay, isForward, apiKey)
 
+  const list: DayunItem[] = []
   for (let i = 0; i < 10; i++) {
     if (isForward) {
       stemIdx = (stemIdx + 1) % 10
@@ -125,35 +182,14 @@ export function calcDayunList(
   return list
 }
 
-// 대운 시작 나이 계산 (절기 기반 간략 버전)
-function calcDayunStartAge(
-  birthYear: number,
-  birthMonth: number,
-  birthDay: number,
-  isForward: boolean
-): number {
-  // 절기까지 남은 일수를 3으로 나눈 값 (반올림)
-  // 간략 계산: 월 중간 기준 약 15일로 근사
-  const termDay = 6 // 절기 평균 6일 근사
-  let daysToTerm: number
-  if (isForward) {
-    daysToTerm = termDay > birthDay ? termDay - birthDay : 30 - birthDay + termDay
-  } else {
-    daysToTerm = birthDay > termDay ? birthDay - termDay : birthDay + 30 - termDay
-  }
-  return Math.max(1, Math.round(daysToTerm / 3))
-}
-
 /**
- * 세운 계산 (현재 기준 ±10년)
+ * 세운 계산 (현재 기준 -5 ~ +20년)
+ * [수정] 기준년을 1984년(甲子年)으로 정정
  */
 export function calcSeyunList(dayStem: string, currentYear: number): SeyunItem[] {
-  const HEAVENLY_STEMS = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
-  const EARTHLY_BRANCHES = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥']
-
   const list: SeyunItem[] = []
   for (let year = currentYear - 5; year <= currentYear + 20; year++) {
-    const offset = ((year - 4) % 60 + 60) % 60
+    const offset = ((year - 1984) % 60 + 60) % 60
     const cheongan = HEAVENLY_STEMS[offset % 10]
     const jiji = EARTHLY_BRANCHES[offset % 12]
     list.push({
@@ -169,13 +205,10 @@ export function calcSeyunList(dayStem: string, currentYear: number): SeyunItem[]
 
 /**
  * 월운 계산 (특정 년도의 12개월)
+ * [수정] 년간 기준을 1984년(甲子年)으로 정정
  */
 export function calcWolunList(dayStem: string, year: number): WolunItem[] {
-  const HEAVENLY_STEMS = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
-  const EARTHLY_BRANCHES = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥']
-
-  // 년간 기준 월간 시작
-  const yearOffset = ((year - 4) % 60 + 60) % 60
+  const yearOffset = ((year - 1984) % 60 + 60) % 60
   const yearStemIdx = yearOffset % 10
   const inMonthStemBase = [2, 4, 6, 8, 0, 2, 4, 6, 8, 0]
   const inMonthStemIdx = inMonthStemBase[yearStemIdx]
