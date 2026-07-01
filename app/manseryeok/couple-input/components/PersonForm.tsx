@@ -46,6 +46,8 @@ export default function PersonForm({ who, relation, person, onChange, autoLoaded
     marginLeft: 'auto',
   }
 
+  const isAutoP1 = autoLoaded && who === 1
+
   return (
     <div style={{ background: '#13132a', borderRadius: '14px', padding: '16px', border: '1px solid rgba(255,255,255,0.06)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
@@ -55,7 +57,7 @@ export default function PersonForm({ who, relation, person, onChange, autoLoaded
         <span style={{ fontSize: '14px', color: '#c8c0ff', fontWeight: '500' }}>{label}</span>
 
         {/* 자동입력 표시 */}
-        {autoLoaded && who === 1 && (
+        {isAutoP1 && (
           <span style={{ fontSize: '10px', color: '#44aa66', background: 'rgba(68,170,102,0.1)', padding: '2px 8px', borderRadius: '20px' }}>
             ✓ 자동입력
           </span>
@@ -69,9 +71,9 @@ export default function PersonForm({ who, relation, person, onChange, autoLoaded
         )}
       </div>
 
-      {autoLoaded && who === 1 ? (
+      {isAutoP1 ? (
         <div style={{ background: 'rgba(68,170,102,0.08)', border: '1px solid rgba(68,170,102,0.2)', borderRadius: '10px', padding: '10px 14px', marginBottom: '12px', fontSize: '13px', color: '#88ccaa' }}>
-          {person.gender} · {person.calType} · {person.year}년 {person.month}월 {person.day}일
+          {person.gender} · {person.calType}{person.calType === '음력' && person.leapMonth === '1' ? ' (윤달)' : ''} · {person.year}년 {person.month}월 {person.day}일
         </div>
       ) : (
         <>
@@ -91,6 +93,20 @@ export default function PersonForm({ who, relation, person, onChange, autoLoaded
               </div>
             </div>
           </div>
+
+          {/* 윤달 — 음력일 때만 표시 */}
+          {person.calType === '음력' && (
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ fontSize: '11px', color: '#5555aa', marginBottom: '5px' }}>
+                윤달 여부 <span style={{ color: '#444466' }}>(음력 생일이 윤달이면 선택)</span>
+              </div>
+              <div style={{ display: 'flex', gap: '5px' }}>
+                <button style={btnStyle(person.leapMonth !== '1')} onClick={() => onChange('leapMonth', '0')}>평달</button>
+                <button style={btnStyle(person.leapMonth === '1')} onClick={() => onChange('leapMonth', '1')}>윤달</button>
+              </div>
+            </div>
+          )}
+
           <div style={{ marginBottom: '12px' }}>
             <div style={{ fontSize: '11px', color: '#5555aa', marginBottom: '5px' }}>생년월일</div>
             <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
