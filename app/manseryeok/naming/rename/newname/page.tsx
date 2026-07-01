@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { fromMyInfo, fromProfile, personKey } from '@/lib/saju/myInfo'
 
 const GOLD = '#FAC775'
 const CARD = '#2C2C2A'
@@ -16,13 +17,6 @@ interface SavedChar {
   hanja: string
   strokes: number
   resourceOhaeng: string
-}
-
-// diagnosis 화면과 동일한 personKey 규칙 (동일인 식별)
-function personKey(m: Record<string, unknown> | null): string {
-  if (!m || !m.year) return ''
-  const hourIdx = m.hour === '모름' || m.hour == null ? 'x' : m.hour
-  return [m.calType || '양력', m.year, m.month, m.day, m.leapMonth || '0', hourIdx, m.gender || '남'].join('|')
 }
 
 // 한글 음절 한 글자만 남기기 (조합 완료 후 정리용)
@@ -73,9 +67,10 @@ export default function NewNamePage() {
       } catch {}
 
       // 2) (비로그인/없을 때) 기존 localStorage 방식 — 이름풀이 결과 성씨
+      //    personKey는 표준 헬퍼로 계산 (과거 '-1' 값도 '모름'으로 흡수)
       try {
         const m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
-        const pk = personKey(m)
+        const pk = personKey(fromMyInfo(m))
 
         const r = JSON.parse(localStorage.getItem(NAMING_RESULT_KEY) || '{}')
         const samePerson = r.personKey && r.personKey === pk
