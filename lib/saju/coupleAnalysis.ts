@@ -16,6 +16,9 @@ export interface ScoreNumbers {
   wolScore: number
   gongmangScore: number
   ohaengScore: number
+  johuScore: number
+  sijuScore: number
+  hasSiju: boolean
 }
 
 export interface CoupleAnalysis {
@@ -128,6 +131,8 @@ export function analyzeCoupleFromPillars(
     `월주관계: ${scoreResult.wolScore}점`,
     `공망: ${scoreResult.gongmangScore}점`,
     `오행균형: ${scoreResult.ohaengScore}점`,
+    `조후(온도): ${scoreResult.johuScore}점`,
+    scoreResult.hasSiju ? `시주(말년): ${scoreResult.sijuScore}점` : `시주: 생략(시간 모름)`,
   ].join(' / ')
 
   const scoreNumbers: ScoreNumbers = {
@@ -137,6 +142,9 @@ export function analyzeCoupleFromPillars(
     wolScore: scoreResult.wolScore,
     gongmangScore: scoreResult.gongmangScore,
     ohaengScore: scoreResult.ohaengScore,
+    johuScore: scoreResult.johuScore,
+    sijuScore: scoreResult.sijuScore,
+    hasSiju: scoreResult.hasSiju,
   }
 
   const summary = `
