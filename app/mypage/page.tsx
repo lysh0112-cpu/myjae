@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useResultSaju } from '@/hooks/useResultSaju'
 
 // 홈/welcome과 동일한 시주 형식 (인덱스 0~11 또는 '모름')
 const HOUR_LABELS: Record<string, string> = {
@@ -51,6 +52,38 @@ type Consultation = {
   consultant_name?: string
 }
 
+// 오늘의 운세 결과 타입 (daily_fortune 테이블 / API 응답 공통)
+type Fortune = {
+  fortune_date: string
+  iljin_gan: string | null
+  iljin_ji: string | null
+  score: number | null
+  summary: string | null
+  love: string | null
+  money: string | null
+  health: string | null
+  lucky_color: string | null
+  lucky_dir: string | null
+  today_insight: string | null
+}
+
+// birth_hour('0'~'11' | '모름' | null) → useResultSaju hourIdx(number | null)
+function toHourIdx(h: string | null): number | null {
+  if (!h || h === '모름') return null
+  const n = parseInt(h, 10)
+  return isNaN(n) ? null : n
+}
+
+// 오늘 날짜(KST) YYYY-MM-DD
+function todayKST(): string {
+  const now = new Date()
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  const y = kst.getUTCFullYear()
+  const m = String(kst.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(kst.getUTCDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 export default function MyPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
@@ -59,6 +92,11 @@ export default function MyPage() {
   const [myNames, setMyNames] = useState<MyName[]>([])
   const [consults, setConsults] = useState<Consultation[]>([])
   const [loading, setLoading] = useState(true)
+
+  // 오늘의 운세 상태
+  const [fortune, setFortune] = useState<Fortune | null>(null)
+  const [fortuneLoading, setFortuneLoading] = useState(false)
+  const [fortuneChecked, setFortuneChecked] = useState(false) // 캐시 조회 끝났는지
 
   // 사주 수정 모드
   const [editMode, setEditMode] = useState(false)
@@ -76,6 +114,16 @@ export default function MyPage() {
   const [eNick, setENick] = useState('')
   const [nickSaving, setNickSaving] = useState(false)
   const [nickMsg, setNickMsg] = useState('')
+
+  // 내 사주 계산 (profiles 값 → 간지). 오늘의 운세에 쓸 dayStem/iljji가 여기서 나옴.
+  const { saju, dayStem, iljji, converting } = useResultSaju(
+    profile?.cal_type || '양력',
+    profile?.birth_year || 0,
+    profile?.birth_month || 0,
+    profile?.birth_day || 0,
+    '0',
+    toHourIdx(profile?.birth_hour ?? null),
+  )
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -109,9 +157,73 @@ export default function MyPage() {
         }
         setConsults(cs.map((c) => ({ ...c, consultant_name: c.consultant_id ? nameMap[c.consultant_id] : undefined })) as Consultation[])
       }
+
+      // 오늘의 운세: 오늘 것이 daily_fortune에 이미 있으면 그대로 사용 (캐시)
+      const { data: fRow } = await supabase.from('daily_fortune')
+        .select('fortune_date, iljin_gan, iljin_ji, score, summary, love, money, health, lucky_color, lucky_dir, today_insight')
+        .eq('user_id', data.user.id)
+        .eq('fortune_date', todayKST())
+        .maybeSingle()
+      if (fRow) setFortune(fRow as Fortune)
+      setFortuneChecked(true)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // 캐시에 오늘 것이 없고, 사주 계산이 끝났으면 → API로 생성 후 저장
+  useEffect(() => {
+    if (!fortuneChecked) return          // 캐시 조회 전
+    if (fortune) return                  // 이미 있음
+    if (fortuneLoading) return           // 생성 중
+    if (converting) return               // 사주 계산 중
+    if (!userId) return
+    if (!profile?.saju_saved || !dayStem || !iljji) return // 사주 미등록
+
+    let cancelled = false
+    ;(async () => {
+      setFortuneLoading(true)
+      try {
+        const res = await fetch('/api/daily-fortune', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            saju, dayStem, iljji,
+            nickname: profile?.nickname || undefined,
+          }),
+        })
+        const data = await res.json()
+        if (data.error) { console.error('운세 생성 오류:', data.error); return }
+        if (cancelled) return
+
+        const row: Fortune = {
+          fortune_date: data.fortune_date,
+          iljin_gan: data.iljin_gan,
+          iljin_ji: data.iljin_ji,
+          score: data.score,
+          summary: data.summary,
+          love: data.love,
+          money: data.money,
+          health: data.health,
+          lucky_color: data.lucky_color,
+          lucky_dir: data.lucky_dir,
+          today_insight: data.today_insight,
+        }
+        setFortune(row)
+
+        // daily_fortune에 저장(캐싱). 하루 1행 UNIQUE라 중복이면 무시.
+        await supabase.from('daily_fortune').upsert({
+          user_id: userId,
+          ...row,
+        }, { onConflict: 'user_id,fortune_date' })
+      } catch (e) {
+        console.error(e)
+      } finally {
+        if (!cancelled) setFortuneLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fortuneChecked, converting, dayStem, iljji, userId, profile?.saju_saved])
 
   const roleLabel = (r: string | null) =>
     r === 'master' ? '매니저' : r === 'consultant' ? '상담사' : '일반회원'
@@ -172,6 +284,8 @@ export default function MyPage() {
 
     setProfile(prev => prev ? { ...prev, birth_year: y, birth_month: m, birth_day: d, birth_hour: hourValue, cal_type: eCal, gender: eGender, saju_saved: true } : prev)
     setEditMode(false)
+    // 사주가 바뀌면 오늘의 운세도 다시 생성되도록 초기화
+    setFortune(null)
   }
 
   // 닉네임 수정 열기
@@ -231,6 +345,11 @@ export default function MyPage() {
   const numInput: React.CSSProperties = { flex: 1, minWidth: 0, padding: '10px 6px', borderRadius: 8, textAlign: 'center', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: 14, outline: 'none' }
   const seg = (on: boolean): React.CSSProperties => ({ flex: 1, padding: '8px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', background: on ? '#3C3489' : 'transparent', color: on ? '#FAC775' : '#8a88a0' })
 
+  const stars = (n: number | null) => {
+    const s = Math.max(0, Math.min(5, n || 0))
+    return '★★★★★'.slice(0, s) + '☆☆☆☆☆'.slice(0, 5 - s)
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#1a1a18', padding: '20px 16px 40px' }}>
       <div style={{ maxWidth: 460, margin: '0 auto' }}>
@@ -269,6 +388,74 @@ export default function MyPage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* ★ 오늘의 운세 (내 정보 바로 아래) */}
+        <div style={{ ...card, border: '1px solid rgba(250,199,117,0.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#FAC775' }}>✦ 오늘의 운세</span>
+            {fortune?.iljin_gan && (
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.06)', padding: '3px 10px', borderRadius: 12 }}>
+                {todayKST().slice(5).replace('-', '.')} · {fortune.iljin_gan}{fortune.iljin_ji}일
+              </span>
+            )}
+          </div>
+
+          {/* 사주 미등록 */}
+          {!profile?.saju_saved ? (
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', textAlign: 'center', padding: '10px 0', lineHeight: 1.7 }}>
+              사주를 등록하면 매일 나만의 운세를 볼 수 있어요.<br />
+              <button onClick={openEdit} style={{ marginTop: 8, fontSize: 12, color: '#FAC775', background: 'none', border: '1px solid rgba(250,199,117,0.4)', borderRadius: 8, padding: '6px 14px', cursor: 'pointer' }}>사주 등록하러 가기</button>
+            </div>
+          ) : (fortuneLoading || (!fortune && !fortuneChecked) || converting) ? (
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '16px 0' }}>오늘의 운세를 준비하는 중…</div>
+          ) : fortune ? (
+            <div>
+              {/* 총운 + 별점 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <span style={{ fontSize: 15, color: '#FAC775', letterSpacing: 2 }}>{stars(fortune.score)}</span>
+              </div>
+              <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.85)', lineHeight: 1.75, margin: '0 0 12px' }}>{fortune.summary}</p>
+
+              {/* 개운 요소 */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                <div style={{ flex: 1, background: 'rgba(250,199,117,0.08)', borderRadius: 8, padding: '8px 4px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>행운의 색</div>
+                  <div style={{ fontSize: 12, color: '#FAC775', marginTop: 2 }}>{fortune.lucky_color || '-'}</div>
+                </div>
+                <div style={{ flex: 1, background: 'rgba(250,199,117,0.08)', borderRadius: 8, padding: '8px 4px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>행운의 방향</div>
+                  <div style={{ fontSize: 12, color: '#FAC775', marginTop: 2 }}>{fortune.lucky_dir || '-'}</div>
+                </div>
+              </div>
+
+              {/* 세부 운 */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: fortune.today_insight ? 12 : 0 }}>
+                <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '8px 6px' }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>❤️ 애정</div>
+                  <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>{fortune.love || '-'}</div>
+                </div>
+                <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '8px 6px' }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>💰 재물</div>
+                  <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>{fortune.money || '-'}</div>
+                </div>
+                <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '8px 6px' }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>🌿 건강</div>
+                  <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>{fortune.health || '-'}</div>
+                </div>
+              </div>
+
+              {/* 오늘의 명리 한 조각 */}
+              {fortune.today_insight && (
+                <div style={{ paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#FAC775', marginBottom: 6 }}>🔥 오늘의 명리 한 조각</div>
+                  <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.75)', lineHeight: 1.7, margin: 0 }}>{fortune.today_insight}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '12px 0' }}>운세를 불러오지 못했어요. 잠시 후 다시 들어와 주세요.</div>
+          )}
         </div>
 
         {/* 2. 내 사주 */}
