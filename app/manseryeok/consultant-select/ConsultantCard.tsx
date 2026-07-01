@@ -6,17 +6,14 @@ type Props = { consultant: Consultant; mode: string }
 
 export default function ConsultantCard({ consultant: c, mode }: Props) {
   const router = useRouter()
-
   return (
     <div className={`mx-5 mb-3 rounded-2xl overflow-hidden border
       ${c.featured ? 'border-[#4433aa]' : 'border-[#252545]'} bg-[#13132a]`}>
-
       {c.featured && (
         <div className="bg-[#2d2060] text-[#b8a9ff] text-[10px] text-center py-[5px]">
           ⭐ {c.featuredLabel}
         </div>
       )}
-
       <div className="p-4">
         {/* 상단 프로필 */}
         <div className="flex items-start gap-3 mb-3">
@@ -39,7 +36,6 @@ export default function ConsultantCard({ consultant: c, mode }: Props) {
             </div>
           </div>
         </div>
-
         {/* 통계 */}
         <div className="grid grid-cols-3 gap-2 mb-3">
           {[
@@ -53,13 +49,11 @@ export default function ConsultantCard({ consultant: c, mode }: Props) {
             </div>
           ))}
         </div>
-
         {/* 후기 */}
         <div className="bg-[#0d0d1a] rounded-lg px-3 py-[10px] mb-3">
           <div className="text-[12px] text-[#7777aa] leading-relaxed">"{c.review}"</div>
           <div className="text-[11px] text-[#4d4480] mt-1">— {c.reviewDate}</div>
         </div>
-
         {/* 가격·버튼 */}
         <div className="flex items-center justify-between">
           <div>
@@ -67,7 +61,7 @@ export default function ConsultantCard({ consultant: c, mode }: Props) {
             <div className="text-[11px] text-[#5544aa] mt-1">{c.priceSub}</div>
           </div>
           <button
-            onClick={() => router.push(`/manseryeok/consulting?consultantId=${c.id}&mode=${mode}`)}
+            onClick={() => router.push(`/manseryeok/consulting?consultantId=${c.id}&consultantName=${encodeURIComponent(c.name)}&consultantPrice=${c.price}&mode=${mode}`)}
             className={`px-5 py-[10px] rounded-xl text-[13px] font-medium
               ${c.available ? 'bg-[#3d2a88] text-[#c8b0ff]' : 'bg-[#1a1a35] text-[#444466]'}`}
           >
