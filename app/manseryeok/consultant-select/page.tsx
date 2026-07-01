@@ -1,8 +1,8 @@
 'use client'
-import { Suspense } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { useState } from 'react'
-import { consultants } from './data'
+import { supabase } from '@/lib/supabase'
+import type { Consultant } from './data'
 import SummaryBand from './SummaryBand'
 import FilterChips from './FilterChips'
 import ConsultantCard from './ConsultantCard'
@@ -13,8 +13,38 @@ function ConsultantSelectInner() {
   const mode  = params.get('mode')  || 'couple'
   const score = params.get('score') || ''
   const names = params.get('names') || ''
-
   const [filter, setFilter] = useState('전체')
+  const [consultants, setConsultants] = useState<Consultant[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // 실제 DB에서 활성 상담사 불러오기
+  useEffect(() => {
+    async function load() {
+      const { data } = await supabase
+        .from('consultants')
+        .select('id, name, specialty, price, active')
+        .eq('active', true)
+        .order('created_at')
+      const rows = (data ?? []).map((c: any): Consultant => ({
+        id: c.id,
+        name: c.name,
+        spec: c.specialty || '명리 상담',
+        tags: [],
+        available: true,
+        featured: false,
+        rating: 0,
+        count: 0,
+        reRate: 0,
+        review: '',
+        reviewDate: '',
+        price: c.price || 0,
+        priceSub: '채팅 상담',
+      }))
+      setConsultants(rows)
+      setLoading(false)
+    }
+    load()
+  }, [])
 
   const filtered = consultants.filter(c => {
     if (filter === '지금 가능')  return c.available
@@ -41,7 +71,6 @@ function ConsultantSelectInner() {
         </button>
         <span className="text-[15px] text-[#e8e4ff] font-medium">상담사 선택</span>
         <div className="ml-auto flex items-center gap-2">
-          {/* AI 채팅으로 돌아가기 */}
           <button
             onClick={() => router.back()}
             style={{
@@ -67,9 +96,15 @@ function ConsultantSelectInner() {
         상담사 {filtered.length}명
       </p>
 
-      {filtered.map(c => (
-        <ConsultantCard key={c.id} consultant={c} mode={mode} />
-      ))}
+      {loading ? (
+        <p className="px-5 text-[13px] text-[#5555aa]">상담사를 불러오는 중...</p>
+      ) : filtered.length === 0 ? (
+        <p className="px-5 text-[13px] text-[#5555aa]">현재 상담 가능한 상담사가 없습니다.</p>
+      ) : (
+        filtered.map(c => (
+          <ConsultantCard key={c.id} consultant={c} mode={mode} />
+        ))
+      )}
 
       {/* 하단 — AI 채팅으로 돌아가기 */}
       <div style={{padding:'20px 16px 10px', textAlign:'center'}}>
