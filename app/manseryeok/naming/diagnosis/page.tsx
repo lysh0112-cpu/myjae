@@ -6,6 +6,7 @@ import { calcYongsin } from '@/lib/saju/yongsin'
 import { supabase } from '@/lib/supabase'
 import type { DiagnoseResult, NameChar } from '@/lib/saju/naming'
 import PageHeader from '@/app/components/common/PageHeader'
+import { fromProfile, fromUrl, personKey, type MyInfo } from '@/lib/saju/myInfo'
 
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
 
@@ -52,11 +53,6 @@ function isAvoidChar(row: HanjaRow): boolean {
   return AVOID_KEYWORDS.some((k) => m.includes(k))
 }
 
-function personKey(info: { gender: string; calType: string; year: number; month: number; day: number; leapMonth: string; hourIdx: number | null } | null): string {
-  if (!info) return ''
-  return [info.calType, info.year, info.month, info.day, info.leapMonth, info.hourIdx ?? 'x', info.gender].join('|')
-}
-
 function isHangulSyllable(ch: string): boolean {
   const code = ch.charCodeAt(0)
   return code >= 0xac00 && code <= 0xd7a3
@@ -66,62 +62,33 @@ function DiagnosisInner() {
   const router = useRouter()
   const sp = useSearchParams()
 
-  const [info, setInfo] = useState<{
-    gender: string; calType: string
-    year: number; month: number; day: number
-    leapMonth: string; hourIdx: number | null
-  } | null>(null)
+  // 표준 MyInfo 형태로 통일 (calType/year/month/day: 문자열, leapMonth:'0'/'1', hour:'0'~'11'|'모름')
+  const [info, setInfo] = useState<MyInfo | null>(null)
 
   useEffect(() => {
     let cancelled = false
 
     async function loadInfo() {
-      // 1) URL에 사주가 있으면 그대로 사용
-      //    (홈에서 사주 넣고 넘어온 경우, 비로그인, 궁합 등 — 기존 흐름 유지)
-      const urlYear = parseInt(sp.get('year') || '0')
-      if (urlYear) {
-        const hourParam = sp.get('hour')
-        if (!cancelled) {
-          setInfo({
-            gender: sp.get('gender') || '남',
-            calType: sp.get('calType') || '양력',
-            year: urlYear,
-            month: parseInt(sp.get('month') || '0'),
-            day: parseInt(sp.get('day') || '0'),
-            leapMonth: sp.get('leapMonth') || '0',
-            hourIdx: hourParam === '모름' || hourParam === null ? null : parseInt(hourParam),
-          })
-        }
+      // 1) URL에 사주가 있으면 그대로 사용 (홈에서 넘어옴, 비로그인, 궁합 등)
+      const urlInfo = fromUrl(sp)
+      if (urlInfo) {
+        if (!cancelled) setInfo(urlInfo)
         return
       }
 
       // 2) URL이 없으면, 로그인한 본인 사주를 profiles(DB)에서 직접 읽는다.
-      //    welcome 화면이 저장한 형식과 동일하게 변환한다:
-      //    - birth_hour 는 인덱스 문자열('0'~'11') 또는 '모름' → 숫자 또는 null
-      //    - 윤달 컬럼이 없으므로 leapMonth 는 항상 '0' 으로 고정 (personKey 일치)
+      //    leap_month 컬럼까지 읽어 윤달 반영 (헬퍼 fromProfile이 표준 변환)
       try {
         const { data: u } = await supabase.auth.getUser()
         if (u?.user) {
           const { data: p } = await supabase
             .from('profiles')
-            .select('birth_year, birth_month, birth_day, birth_hour, cal_type, gender, saju_saved')
+            .select('birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, saju_saved')
             .eq('id', u.user.id)
             .single()
-          if (p && p.saju_saved && p.birth_year) {
-            const bh = p.birth_hour
-            const hourIdx =
-              bh === '모름' || bh == null || bh === '' ? null : parseInt(bh)
-            if (!cancelled) {
-              setInfo({
-                gender: p.gender ?? '남',
-                calType: p.cal_type ?? '양력',
-                year: Number(p.birth_year),
-                month: Number(p.birth_month),
-                day: Number(p.birth_day),
-                leapMonth: '0',
-                hourIdx,
-              })
-            }
+          const profInfo = fromProfile(p)
+          if (profInfo) {
+            if (!cancelled) setInfo(profInfo)
             return
           }
         }
@@ -137,13 +104,19 @@ function DiagnosisInner() {
     return () => { cancelled = true }
   }, [sp])
 
+  // useResultSaju 는 숫자/leapMonth 문자열/hourIdx(number|null)를 받으므로 변환해서 전달
+  const infoYear = info ? parseInt(info.year) : 0
+  const infoMonth = info ? parseInt(info.month) : 0
+  const infoDay = info ? parseInt(info.day) : 0
+  const infoHourIdx = info ? (info.hour === '모름' ? null : parseInt(info.hour)) : null
+
   const { saju, dayStem, converting } = useResultSaju(
     info?.calType || '양력',
-    info?.year || 0,
-    info?.month || 0,
-    info?.day || 0,
+    infoYear,
+    infoMonth,
+    infoDay,
     info?.leapMonth || '0',
-    info?.hourIdx ?? null,
+    infoHourIdx,
   )
 
   const [nameInput, setNameInput] = useState('')
@@ -167,9 +140,7 @@ function DiagnosisInner() {
   } | null>(null)
 
   // 이름 풀이 화면은 들어올 때마다 빈 입력 화면으로 시작한다.
-  // 단, 로그인한 본인의 최근 이름 풀이가 DB(my_names)에 있으면
-  // "불러올까요?" 제안만 띄운다. (자동으로 결과를 보여주지 않음)
-  // 결과 저장(my_names)은 그대로 유지되어 개명 화면이 성씨를 읽을 수 있다.
+  // 단, 로그인한 본인의 최근 이름 풀이가 DB(my_names)에 있으면 "불러올까요?" 제안만 띄운다.
   useEffect(() => {
     if (!info) return
     let cancelled = false
@@ -286,12 +257,13 @@ function DiagnosisInner() {
       const data = await res.json()
       setResult(data.result ?? null)
       setCommentary(data.commentary ?? null)
+      const pkey = personKey(info)
       try {
         localStorage.setItem(NAMING_RESULT_KEY, JSON.stringify({
           result: data.result ?? null,
           commentary: data.commentary ?? null,
           chars,
-          personKey: personKey(info),
+          personKey: pkey,
         }))
         localStorage.removeItem('rename_picks_v1')
         localStorage.removeItem('rename_locked_slot')
@@ -311,7 +283,7 @@ function DiagnosisInner() {
             result: data.result ?? null,
             commentary: data.commentary ?? null,
             kind: 'self',
-            person_key: personKey(info),
+            person_key: pkey,
           })
         }
       } catch {}
@@ -351,7 +323,7 @@ function DiagnosisInner() {
   }
 
   const sajuLine = converting ? '사주 불러오는 중...' :
-    `일간 ${dayStem} · ${info.calType} ${info.year}.${info.month}.${info.day}`
+    `일간 ${dayStem} · ${info.calType} ${info.year}.${info.month}.${info.day}${info.calType === '음력' && info.leapMonth === '1' ? ' (윤달)' : ''}`
 
   const slotLabel = (i: number) => i === 0 ? '성(姓)' : `이름 ${i}글자`
 
