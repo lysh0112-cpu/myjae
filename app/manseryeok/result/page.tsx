@@ -41,6 +41,12 @@ function ResultContent() {
     </div>
   )
 
+  // ✅ 대운 계산용 '양력' 날짜 결정
+  //   음력 입력 → 변환된 양력(solar) 사용 / 양력 입력 → 입력값 그대로
+  const solarYear  = calType === "음력" && solar ? solar.year  : yearParam
+  const solarMonth = calType === "음력" && solar ? solar.month : monthParam
+  const solarDay   = calType === "음력" && solar ? solar.day   : dayParam
+
   // 분석 대상 한 줄 표시: "음력 1966.1.12 (양력 1966.2.2) · 卯시 · 남성"
   const calLabel = `${calType} ${yearParam}.${monthParam}.${dayParam}${calType === "음력" && leapMonth === "1" ? " (윤달)" : ""}`
   const solarLabel = calType === "음력" && solar ? ` (양력 ${solar.year}.${solar.month}.${solar.day})` : ""
@@ -70,9 +76,10 @@ function ResultContent() {
 
         <SajuMyungsik saju={saju} dayStem={dayStem} />
 
-        {dayStem && monthGanji && yearStem && (
+        {dayStem && monthGanji && yearStem && solarYear && (
           <DayunTable
-            birthYear={yearParam} birthMonth={monthParam} birthDay={dayParam}
+            solarYear={solarYear} solarMonth={solarMonth} solarDay={solarDay}
+            birthYear={yearParam}
             gender={gender} monthGanji={monthGanji} yearStem={yearStem}
             dayStem={dayStem} currentYear={currentYear}
             ilgan={dayStem} yeonjji={yeonjji} iljji={iljji}
