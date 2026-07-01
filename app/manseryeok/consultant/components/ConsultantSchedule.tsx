@@ -51,6 +51,13 @@ export default function ConsultantSchedule({
   const [slots, setSlots] = useState<Slot[]>([])
   const [loading, setLoading] = useState(true)
   const [busyHour, setBusyHour] = useState<number | null>(null)
+  const [toast, setToast] = useState('')
+
+  // "저장됨" 팝업 잠깐 띄우기
+  const showToast = useCallback((text: string) => {
+    setToast(text)
+    setTimeout(() => setToast(''), 1500)
+  }, [])
 
   const fetchSlots = useCallback(async () => {
     if (!consultantId) { setLoading(false); return }
@@ -87,6 +94,8 @@ export default function ConsultantSchedule({
       if (existing) {
         // 열려 있던 것 → 닫기 (삭제)
         await supabase.from('consultant_slots').delete().eq('id', existing.id)
+        await fetchSlots()
+        showToast(`${hour}시 닫힘`)
       } else {
         // 닫혀 있던 것 → 열기 (추가)
         await supabase.from('consultant_slots').insert({
@@ -94,8 +103,9 @@ export default function ConsultantSchedule({
           slot_date: selectedDate,
           slot_hour: hour,
         })
+        await fetchSlots()
+        showToast(`${hour}시 저장됨 ✓`)
       }
-      await fetchSlots()
     } catch (e) {
       console.error(e)
       alert('변경 중 문제가 생겼어요. 다시 시도해 주세요.')
@@ -123,11 +133,34 @@ export default function ConsultantSchedule({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontSize: fontSize + 'px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontSize: fontSize + 'px', position: 'relative' }}>
+
+      {/* 저장됨 팝업 (토스트) */}
+      {toast && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          background: 'rgba(26,26,24,0.95)',
+          color: GOLD,
+          border: `1px solid ${GOLD}`,
+          borderRadius: '12px',
+          padding: '12px 22px',
+          fontSize: '14px',
+          fontWeight: 700,
+          zIndex: 100,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+          pointerEvents: 'none',
+          whiteSpace: 'nowrap',
+        }}>
+          {toast}
+        </div>
+      )}
 
       {/* 안내 */}
       <div style={{ fontSize: '11px', color: SUB, marginBottom: '8px', lineHeight: 1.5 }}>
-        날짜를 고른 뒤 시간을 눌러 여세요. 켜둔 시간만 고객에게 보입니다.
+        날짜를 고른 뒤 시간을 눌러 여세요. 누르면 바로 저장돼요. 켜둔 시간만 고객에게 보입니다.
       </div>
 
       {/* 날짜 가로 스크롤 */}
