@@ -4,24 +4,13 @@ import { useRouter } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { supabase } from '@/lib/supabase'
 import PageHeader from '@/app/components/common/PageHeader'
+import { HOURS, HOUR_INDEX, fromInputs, personKey, toMyInfoObject } from '@/lib/saju/myInfo'
 
 const NEWBORN_SURNAME_KEY = 'newborn_surname_v1'
 
 const gold = '#FAC775'
 const cardBg = '#2C2C2A'
 const border = '1px solid rgba(250,199,117,0.15)'
-
-// 홈 입력 화면과 동일한 시(時) 목록 / 인덱스 매핑 (절대 변경 금지)
-const HOURS = [
-  '모름', '子시(23~01)', '丑시(01~03)', '寅시(03~05)', '卯시(05~07)',
-  '辰시(07~09)', '巳시(09~11)', '午시(11~13)', '未시(13~15)',
-  '申시(15~17)', '酉시(17~19)', '戌시(19~21)', '亥시(21~23)',
-]
-const HOUR_INDEX: Record<string, number> = {
-  '子시(23~01)': 0, '丑시(01~03)': 1, '寅시(03~05)': 2, '卯시(05~07)': 3,
-  '辰시(07~09)': 4, '巳시(09~11)': 5, '午시(11~13)': 6, '未시(13~15)': 7,
-  '申시(15~17)': 8, '酉시(17~19)': 9, '戌시(19~21)': 10, '亥시(21~23)': 11,
-}
 
 interface HanjaRow {
   hangul: string
@@ -37,16 +26,6 @@ interface SavedChar {
   hanja: string
   strokes: number
   resourceOhaeng: string
-}
-
-// 개명(newname)이 "같은 사람"을 식별하는 키. myinfo 기반과 글자 단위로 동일해야 한다.
-// 순서: calType | year | month | day | leapMonth | hourIdx('x') | gender
-function personKey(info: {
-  gender: string; calType: string; year: number; month: number; day: number; leapMonth: string; hourIdx: number | null
-} | null): string {
-  if (!info || !info.year) return ''
-  const hourIdx = info.hourIdx == null ? 'x' : info.hourIdx
-  return [info.calType, info.year, info.month, info.day, info.leapMonth, hourIdx, info.gender].join('|')
 }
 
 function isHangulSyllable(ch: string): boolean {
@@ -70,16 +49,13 @@ function NewbornInner() {
   // ── 아기 사주 직접 입력 ──
   const [gender, setGender] = useState<'남' | '여'>('남')
   const [calType, setCalType] = useState<'양력' | '음력'>('양력')
+  const [leap, setLeap] = useState(false)          // 윤달 여부 (음력일 때만)
   const [birthDate, setBirthDate] = useState('')   // 'YYYY-MM-DD'
   const [birthHour, setBirthHour] = useState('')   // HOURS 라벨 또는 '모름'
   const [confirmed, setConfirmed] = useState(false) // 아기 정보 확정 여부
 
-  // 확정된 아기 사주 info
-  const [info, setInfo] = useState<{
-    gender: string; calType: string
-    year: number; month: number; day: number
-    leapMonth: string; hourIdx: number | null
-  } | null>(null)
+  // 확정된 아기 사주 info (표준 MyInfo)
+  const [info, setInfo] = useState<ReturnType<typeof fromInputs>>(null)
 
   // ── 성씨 입력 ──
   const [surInput, setSurInput] = useState('')
@@ -93,13 +69,19 @@ function NewbornInner() {
 
   const pkey = personKey(info)
 
+  // useResultSaju 에 넘길 값들 (info에서 파생)
+  const infoYear = info ? parseInt(info.year) : 0
+  const infoMonth = info ? parseInt(info.month) : 0
+  const infoDay = info ? parseInt(info.day) : 0
+  const infoHourIdx = info ? (info.hour === '모름' ? null : parseInt(info.hour)) : null
+
   const { dayStem, converting } = useResultSaju(
     info?.calType || '양력',
-    info?.year || 0,
-    info?.month || 0,
-    info?.day || 0,
+    infoYear,
+    infoMonth,
+    infoDay,
     info?.leapMonth || '0',
-    info?.hourIdx ?? null,
+    infoHourIdx,
   )
 
   // 아기 정보 확정
@@ -108,16 +90,18 @@ function NewbornInner() {
       alert('아기 생년월일을 입력해주세요 😊')
       return
     }
-    const d = birthDate.split('-')
-    const y = parseInt(d[0] || '0')
-    const m = parseInt(d[1] || '0')
-    const day = parseInt(d[2] || '0')
-    if (!y || !m || !day) {
+    // 표준 헬퍼로 info 구성 (시간 모름='모름', 윤달='0'/'1')
+    const std = fromInputs({
+      gender, calType,
+      birthDate,
+      hourLabel: birthHour,
+      leap: calType === '음력' ? leap : false,
+    })
+    if (!std || !std.month || !std.day) {
       alert('아기 생년월일을 올바르게 입력해주세요 😊')
       return
     }
-    const hourIdx = birthHour === '모름' || birthHour === '' ? null : HOUR_INDEX[birthHour]
-    setInfo({ gender, calType, year: y, month: m, day, leapMonth: '0', hourIdx })
+    setInfo(std)
     setConfirmed(true)
     // 아기 정보를 바꾸면 이전 성씨 선택은 초기화
     setSurInput(''); setSurHangul(''); setSurHanja(null)
@@ -176,22 +160,17 @@ function NewbornInner() {
       // newname이 읽는 성씨 (personKey로 같은 사람 식별)
       localStorage.setItem(NEWBORN_SURNAME_KEY, JSON.stringify({ personKey: pkey, surname: surHanja }))
       // newname이 아기 사주를 읽을 수 있도록 함께 저장 (본인 사주 myinfo는 건드리지 않음)
+      // 표준 형식으로 저장 (hour: '모름'|인덱스, leapMonth: '0'/'1')
       localStorage.setItem('newborn_baby_v1', JSON.stringify({
         personKey: pkey,
-        gender: info.gender,
-        calType: info.calType,
-        year: info.year,
-        month: info.month,
-        day: info.day,
-        leapMonth: info.leapMonth,
-        hour: info.hourIdx == null ? '모름' : String(info.hourIdx),
+        ...toMyInfoObject(info),
       }))
     } catch {}
     router.push('/manseryeok/naming/rename/newname')
   }
 
   const sajuLine = converting ? '사주 불러오는 중...' :
-    `일간 ${dayStem} · ${info?.calType} ${info?.year}.${info?.month}.${info?.day}`
+    `일간 ${dayStem} · ${info?.calType} ${info?.year}.${info?.month}.${info?.day}${info?.calType === '음력' && info?.leapMonth === '1' ? ' (윤달)' : ''}`
 
   return (
     <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
@@ -229,6 +208,24 @@ function NewbornInner() {
                 </div>
               ))}
             </div>
+
+            {/* 윤달 — 음력일 때만 표시 */}
+            {calType === '음력' && (
+              <div style={{ marginBottom: '14px' }}>
+                <div style={{ fontSize: '11px', color: '#b0aec8', marginBottom: '6px' }}>
+                  윤달 여부 <span style={{ color: '#8a88a0' }}>(음력 생일이 윤달이면 선택)</span>
+                </div>
+                <div style={{ display: 'flex', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  {([['평달', false], ['윤달', true]] as const).map(([lbl, val]) => (
+                    <button key={lbl} onClick={() => setLeap(val)}
+                      style={{ flex: 1, padding: '10px 0', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer',
+                        ...(leap === val ? { background: '#3C3489', color: gold, border: 'none' } : { background: 'transparent', color: '#8a88a0', border: 'none' }) }}>
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div style={{ marginBottom: '14px' }}>
               <div style={{ fontSize: '11px', color: '#b0aec8', marginBottom: '6px' }}>생년월일</div>
