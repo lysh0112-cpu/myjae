@@ -10,10 +10,10 @@ type Props = {
 export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive }: Props) {
   return (
     <div style={{ overflowX: 'auto' }}>
-      <table className="w-full text-sm" style={{ borderCollapse: 'collapse', minWidth: '900px' }}>
+      <table className="w-full text-sm" style={{ borderCollapse: 'collapse', minWidth: '1000px' }}>
         <thead>
           <tr style={{ background: 'rgba(60,52,137,0.3)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-            {['이름', '활성', '전화번호', '전문분야', '거주지역', '상담료', '은행', '계좌번호', '수수료율', '수수료금액', '수정', '삭제'].map(h => (
+            {['이름', '이메일', '활성', '전화번호', '전문분야', '거주지역', '상담료', '은행', '계좌번호', '수수료율', '수수료금액', '수정', '삭제'].map(h => (
               <th key={h} className="px-3 py-3 text-left text-xs font-bold whitespace-nowrap"
                 style={{ color: '#FAC775' }}>{h}</th>
             ))}
@@ -25,6 +25,7 @@ export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive
               style={{ background: i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
                 borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
               <td className="px-3 py-3 font-bold text-white whitespace-nowrap">{c.name}</td>
+              <td className="px-3 py-3 whitespace-nowrap" style={{ color: '#b0aec8' }}>{c.email || '-'}</td>
               <td className="px-3 py-3">
                 <button onClick={() => onToggleActive(c)}
                   className="px-2 py-1 rounded-lg text-xs font-bold whitespace-nowrap"
@@ -66,7 +67,7 @@ export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive
           ))}
           {list.length === 0 && (
             <tr>
-              <td colSpan={12} className="text-center py-10 text-sm"
+              <td colSpan={13} className="text-center py-10 text-sm"
                 style={{ color: 'rgba(255,255,255,0.3)' }}>
                 등록된 상담사가 없습니다
               </td>
