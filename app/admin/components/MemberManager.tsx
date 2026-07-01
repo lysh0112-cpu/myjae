@@ -18,6 +18,11 @@ export default function MemberManager() {
   const [roleSavingId, setRoleSavingId] = useState<string | null>(null)
   const [msg, setMsg] = useState('')
 
+  // 닉네임 수정
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editNick, setEditNick] = useState('')
+  const [nickSavingId, setNickSavingId] = useState<string | null>(null)
+
   // 회원 추가 폼
   const [showAdd, setShowAdd] = useState(false)
   const [newEmail, setNewEmail] = useState('')
@@ -104,6 +109,40 @@ export default function MemberManager() {
       setMsg('등급 변경 중 오류: ' + (e?.message || '알 수 없음'))
     }
     setRoleSavingId(null)
+  }
+
+  // 닉네임 수정 시작
+  const startEditNick = (member: Member) => {
+    setEditingId(member.id)
+    setEditNick(member.nickname || '')
+    setMsg('')
+  }
+
+  // 닉네임 저장
+  const saveNick = async (member: Member) => {
+    const name = editNick.trim()
+    if (!name) { setMsg('닉네임을 입력해주세요.'); return }
+    if (name.length > 20) { setMsg('닉네임은 20자 이내로 입력해주세요.'); return }
+    setNickSavingId(member.id)
+    setMsg('')
+    try {
+      const res = await fetch('/api/admin/update-nickname', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: member.id, nickname: name }),
+      })
+      const result = await res.json()
+      if (!res.ok) {
+        setMsg('닉네임 변경 실패: ' + (result.error || '알 수 없는 오류'))
+      } else {
+        setMsg(`닉네임을 "${name}"(으)로 변경했어요.`)
+        setMembers(members.map(m => m.id === member.id ? { ...m, nickname: name } : m))
+        setEditingId(null)
+      }
+    } catch (e: any) {
+      setMsg('닉네임 변경 중 오류: ' + (e?.message || '알 수 없음'))
+    }
+    setNickSavingId(null)
   }
 
   const handleDelete = async (member: Member) => {
@@ -245,7 +284,7 @@ export default function MemberManager() {
         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>아직 가입한 회원이 없어요.</p>
       ) : (
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 720 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 760 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', textAlign: 'left' }}>
                 <th style={{ padding: '10px 12px' }}>닉네임</th>
@@ -259,7 +298,19 @@ export default function MemberManager() {
             <tbody>
               {members.map(member => (
                 <tr key={member.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#fff' }}>
-                  <td style={{ padding: '10px 12px', fontWeight: 600 }}>{member.nickname || '(없음)'}</td>
+                  <td style={{ padding: '10px 12px', fontWeight: 600 }}>
+                    {editingId === member.id ? (
+                      <input
+                        value={editNick}
+                        onChange={e => setEditNick(e.target.value)}
+                        maxLength={20}
+                        placeholder="닉네임"
+                        style={{ width: 120, background: '#1a1a18', color: '#fff', borderRadius: 6, padding: '6px 8px', border: '1px solid rgba(250,199,117,0.4)', fontSize: 13 }}
+                      />
+                    ) : (
+                      member.nickname || '(없음)'
+                    )}
+                  </td>
                   <td style={{ padding: '10px 12px', color: 'rgba(255,255,255,0.7)' }}>{member.email || '-'}</td>
                   <td style={{ padding: '10px 12px' }}>
                     <select
@@ -278,13 +329,36 @@ export default function MemberManager() {
                   </td>
                   <td style={{ padding: '10px 12px', color: 'rgba(255,255,255,0.6)' }}>{fmtDateShort(member.created_at)}</td>
                   <td style={{ padding: '10px 12px', color: 'rgba(255,255,255,0.6)' }}>{fmtDate(member.last_sign_in_at)}</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                    <button
-                      onClick={() => handleDelete(member)}
-                      disabled={deletingId === member.id}
-                      style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,80,80,0.4)', background: 'rgba(255,80,80,0.1)', color: '#ff8080', fontSize: 12, cursor: 'pointer', opacity: deletingId === member.id ? 0.5 : 1 }}>
-                      {deletingId === member.id ? '삭제 중...' : '삭제'}
-                    </button>
+                  <td style={{ padding: '10px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                    {editingId === member.id ? (
+                      <>
+                        <button
+                          onClick={() => saveNick(member)}
+                          disabled={nickSavingId === member.id}
+                          style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: '#FAC775', color: '#1a1a18', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginRight: 6, opacity: nickSavingId === member.id ? 0.5 : 1 }}>
+                          {nickSavingId === member.id ? '저장 중...' : '저장'}
+                        </button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'rgba(255,255,255,0.6)', fontSize: 12, cursor: 'pointer' }}>
+                          취소
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => startEditNick(member)}
+                          style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(250,199,117,0.4)', background: 'rgba(250,199,117,0.1)', color: '#FAC775', fontSize: 12, cursor: 'pointer', marginRight: 6 }}>
+                          수정
+                        </button>
+                        <button
+                          onClick={() => handleDelete(member)}
+                          disabled={deletingId === member.id}
+                          style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,80,80,0.4)', background: 'rgba(255,80,80,0.1)', color: '#ff8080', fontSize: 12, cursor: 'pointer', opacity: deletingId === member.id ? 0.5 : 1 }}>
+                          {deletingId === member.id ? '삭제 중...' : '삭제'}
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}
