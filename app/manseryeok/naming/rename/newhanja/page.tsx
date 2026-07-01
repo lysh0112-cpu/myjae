@@ -5,6 +5,7 @@ import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsin } from '@/lib/saju/yongsin'
 import { supabase } from '@/lib/supabase'
 import { diagnoseName, type NameChar, type Grade } from '@/lib/saju/naming'
+import { fromMyInfo, fromProfile, personKey, type MyInfo } from '@/lib/saju/myInfo'
 
 const GOLD = '#FAC775'
 const CARD = '#2C2C2A'
@@ -56,12 +57,6 @@ function gradeNum(g: Grade): number {
   return g === '좋음' ? 2 : g === '보통' ? 1 : 0
 }
 
-function personKey(m: Record<string, unknown> | null): string {
-  if (!m || !m.year) return ''
-  const hourIdx = m.hour === '모름' || m.hour == null ? 'x' : m.hour
-  return [m.calType || '양력', m.year, m.month, m.day, m.leapMonth || '0', hourIdx, m.gender || '남'].join('|')
-}
-
 function isHangulSyllable(ch: string): boolean {
   const code = ch.charCodeAt(0)
   return code >= 0xac00 && code <= 0xd7a3
@@ -71,11 +66,7 @@ function NewHanjaInner() {
   const router = useRouter()
   const sp = useSearchParams()
 
-  const [info, setInfo] = useState<{
-    gender: string; calType: string
-    year: number; month: number; day: number
-    leapMonth: string; hourIdx: number | null
-  } | null>(null)
+  const [info, setInfo] = useState<MyInfo | null>(null)
 
   const [surname, setSurname] = useState<SavedChar | null>(null)
   const [pkey, setPkey] = useState('')
@@ -92,66 +83,35 @@ function NewHanjaInner() {
     let cancelled = false
 
     async function loadAll() {
-      let m: Record<string, unknown> = {}
-      let infoFilled = false
+      // ── info 구성: localStorage myinfo 우선, 없으면 profiles(DB) ──
+      // 둘 다 표준 헬퍼로 MyInfo로 변환 (과거 '-1' 값도 '모름'으로 흡수)
+      let stdInfo: MyInfo | null = null
       try {
-        m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
-        if (m.year) {
-          if (!cancelled) {
-            setInfo({
-              gender: (m.gender as string) || '남',
-              calType: (m.calType as string) || '양력',
-              year: parseInt(String(m.year)),
-              month: parseInt(String(m.month)),
-              day: parseInt(String(m.day)),
-              leapMonth: (m.leapMonth as string) || '0',
-              hourIdx: m.hour === '모름' || m.hour == null ? null : parseInt(String(m.hour)),
-            })
-          }
-          infoFilled = true
-        }
+        const m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
+        stdInfo = fromMyInfo(m)
       } catch {}
 
-      let pk = personKey(m)
-
-      if (!infoFilled) {
+      if (!stdInfo) {
         try {
           const { data: u } = await supabase.auth.getUser()
           if (u?.user) {
             const { data: p } = await supabase
               .from('profiles')
-              .select('birth_year, birth_month, birth_day, birth_hour, cal_type, gender, saju_saved')
+              .select('birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, saju_saved')
               .eq('id', u.user.id)
               .single()
-            if (!cancelled && p && p.saju_saved && p.birth_year) {
-              const bh = p.birth_hour
-              const hourIdx =
-                bh === '모름' || bh == null || bh === '' ? null : parseInt(bh)
-              const profInfo = {
-                gender: p.gender ?? '남',
-                calType: p.cal_type ?? '양력',
-                year: Number(p.birth_year),
-                month: Number(p.birth_month),
-                day: Number(p.birth_day),
-                leapMonth: '0',
-                hourIdx,
-              }
-              setInfo(profInfo)
-              m = {
-                gender: profInfo.gender,
-                calType: profInfo.calType,
-                year: String(profInfo.year),
-                month: String(profInfo.month),
-                day: String(profInfo.day),
-                leapMonth: '0',
-                hour: hourIdx == null ? '모름' : String(hourIdx),
-              }
-              pk = personKey(m)
-            }
+            stdInfo = fromProfile(p)
           }
         } catch {}
       }
 
+      let pk = ''
+      if (!cancelled && stdInfo) {
+        setInfo(stdInfo)
+        pk = personKey(stdInfo)
+      }
+
+      // ── 성씨: 로그인 my_names 우선, 없으면 localStorage(NAMING_RESULT_KEY) ──
       let surnameLoaded = false
       try {
         const { data: u } = await supabase.auth.getUser()
@@ -194,13 +154,19 @@ function NewHanjaInner() {
     return () => { cancelled = true }
   }, [sp])
 
+  // useResultSaju 에 넘길 값들 (info에서 파생)
+  const infoYear = info ? parseInt(info.year) : 0
+  const infoMonth = info ? parseInt(info.month) : 0
+  const infoDay = info ? parseInt(info.day) : 0
+  const infoHourIdx = info ? (info.hour === '모름' ? null : parseInt(info.hour)) : null
+
   const { saju, dayStem, converting } = useResultSaju(
     info?.calType || '양력',
-    info?.year || 0,
-    info?.month || 0,
-    info?.day || 0,
+    infoYear,
+    infoMonth,
+    infoDay,
     info?.leapMonth || '0',
-    info?.hourIdx ?? null,
+    infoHourIdx,
   )
 
   const yong = useMemo(() => {
