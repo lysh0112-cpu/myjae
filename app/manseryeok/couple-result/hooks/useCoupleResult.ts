@@ -12,6 +12,7 @@ export interface PersonInput {
   month: string
   day: string
   hour: string
+  leapMonth: string
   gender: string
   calType: string
   job: string
@@ -148,7 +149,7 @@ function calcTotalScore(
 async function fetchSajuPillars(person: PersonInput) {
   try {
     const res = await fetch(
-      `/api/lunar?year=${person.year}&month=${person.month}&day=${person.day}&calType=${person.calType}&leapMonth=0`
+      `/api/lunar?year=${person.year}&month=${person.month}&day=${person.day}&calType=${person.calType}&leapMonth=${person.leapMonth || '0'}`
     )
     const d = await res.json()
     if (d.error) return null
