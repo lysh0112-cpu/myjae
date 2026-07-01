@@ -115,33 +115,18 @@ function getGrade(score: number): { grade: string; gradeDesc: string } {
 function calcTotalScore(
   sajuScore: number,
   jobScore: number,
-  mbtiScore: number,
-  hasMbti: boolean,
   mode: string
 ): number {
+  // MBTI는 점수에서 제외한다 (명리와 근거가 다른 체계 → 해설 참고로만 사용).
+  // 연인(couple): 사주 70% + 직업 30%.  그 외(부부/택일/출산): 사주 100%.
   let total = 0
   if (mode === 'couple') {
-    if (hasMbti) {
-      total = Math.round(
-        (sajuScore * 0.6) +
-        (jobScore / 30 * 100 * 0.26) +
-        (mbtiScore / 25 * 100 * 0.14)
-      )
-    } else {
-      total = Math.round(
-        (sajuScore * 0.7) +
-        (jobScore / 30 * 100 * 0.3)
-      )
-    }
+    total = Math.round(
+      (sajuScore * 0.7) +
+      (jobScore / 30 * 100 * 0.3)
+    )
   } else {
-    if (hasMbti) {
-      total = Math.round(
-        (sajuScore * 0.75) +
-        (mbtiScore / 25 * 100 * 0.25)
-      )
-    } else {
-      total = sajuScore
-    }
+    total = sajuScore
   }
   return Math.min(100, Math.max(0, total))
 }
@@ -410,7 +395,7 @@ export function useCoupleResult(
         analysisStr += `\nMBTI 분석: ${mbtiResult.reasons.join(' / ')}`
       }
 
-      const totalScore = calcTotalScore(sajuScore, jobScore, mbtiScore, hasMbti, mode)
+      const totalScore = calcTotalScore(sajuScore, jobScore, mode)
       const { grade, gradeDesc } = getGrade(totalScore)
 
       const saju1Str = pillars1
