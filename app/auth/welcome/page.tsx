@@ -3,28 +3,17 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-
-// 홈 화면(AiManseryeokSection)과 동일한 시주 목록 — 형식을 반드시 일치시킬 것
-const HOURS = [
-  '모름', '子시(23~01)', '丑시(01~03)', '寅시(03~05)', '卯시(05~07)',
-  '辰시(07~09)', '巳시(09~11)', '午시(11~13)', '未시(13~15)',
-  '申시(15~17)', '酉시(17~19)', '戌시(19~21)', '亥시(21~23)',
-]
-
-const HOUR_INDEX: Record<string, number> = {
-  '子시(23~01)': 0, '丑시(01~03)': 1, '寅시(03~05)': 2, '卯시(05~07)': 3,
-  '辰시(07~09)': 4, '巳시(09~11)': 5, '午시(11~13)': 6, '未시(13~15)': 7,
-  '申시(15~17)': 8, '酉시(17~19)': 9, '戌시(19~21)': 10, '亥시(21~23)': 11,
-}
+import { HOURS, HOUR_INDEX } from '@/lib/saju/myInfo'
 
 export default function WelcomePage() {
   const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
   const [nickname, setNickname] = useState('')
 
-  // ── 사주 입력 상태 (신규) ──
+  // ── 사주 입력 상태 ──
   const [gender, setGender] = useState<'남' | '여'>('남')
   const [calType, setCalType] = useState<'양력' | '음력'>('양력')
+  const [leap, setLeap] = useState(false)          // 윤달 여부 (음력일 때만)
   const [birthYear, setBirthYear] = useState('')
   const [birthMonth, setBirthMonth] = useState('')
   const [birthDay, setBirthDay] = useState('')
@@ -71,18 +60,22 @@ export default function WelcomePage() {
     const hourValue =
       birthHour === '모름' ? '모름' : String(HOUR_INDEX[birthHour])
 
+    // 윤달: 음력일 때만 의미. 양력이면 무조건 '0'.
+    const leapValue = calType === '음력' && leap ? '1' : '0'
+
     setLoading(true)
     const now = new Date().toISOString()
     const { error } = await supabase.from('profiles').upsert({
       id: userId,
       nickname: nickname.trim(),
-      // ── 사주 저장 (신규) ──
+      // ── 사주 저장 ──
       birth_year: y,
       birth_month: m,
       birth_day: d,
       birth_hour: hourValue,
       cal_type: calType,
       gender: gender,
+      leap_month: leapValue,        // ★ 윤달 저장 (1단계에서 추가한 컬럼)
       saju_saved: true,
       // ── 기존 약관 ──
       privacy_agreed: true,
@@ -131,7 +124,7 @@ export default function WelcomePage() {
           placeholder="명연재에서 사용할 이름"
           style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: 15, outline: 'none', marginBottom: 20, boxSizing: 'border-box' }} />
 
-        {/* ── 내 사주 정보 (신규) ── */}
+        {/* ── 내 사주 정보 ── */}
         <div style={{ background: 'rgba(60,52,137,0.12)', border: '1px solid rgba(250,199,117,0.25)', borderRadius: 14, padding: 16, marginBottom: 16 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#FAC775', marginBottom: 14 }}>✦ 내 사주 정보</div>
 
@@ -152,6 +145,19 @@ export default function WelcomePage() {
               </div>
             </div>
           </div>
+
+          {/* 윤달 — 음력일 때만 표시 */}
+          {calType === '음력' && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 12, color: '#b0aec8', marginBottom: 6 }}>
+                윤달 여부 <span style={{ color: '#8a88a0' }}>(음력 생일이 윤달이면 선택)</span>
+              </div>
+              <div style={{ display: 'flex', borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <button onClick={() => setLeap(false)} style={segBtn(leap === false)}>평달</button>
+                <button onClick={() => setLeap(true)} style={segBtn(leap === true)}>윤달</button>
+              </div>
+            </div>
+          )}
 
           {/* 생년월일 — 직접 입력 */}
           <div style={{ fontSize: 12, color: '#b0aec8', marginBottom: 6 }}>생년월일 (숫자로 직접 입력)</div>
