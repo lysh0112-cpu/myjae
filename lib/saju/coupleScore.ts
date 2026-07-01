@@ -1,5 +1,7 @@
 // lib/saju/coupleScore.ts
 // 두 사람 궁합 점수 계산 — 명리학 기반 고정값
+// 배점(시 있을 때): 일주28 용신18 년주10 월주8 공망6 오행10 조후8 시주12 = 100
+// 시 모를 때: 시주(12) 제외 → 나머지 88점 만점을 100점으로 비율 환산 (노트북LM 원리)
 
 import { calcYongsin } from './yongsin'
 
@@ -59,11 +61,14 @@ function getElementRelation(e1: string, e2: string): 'same' | 'generates' | 'gen
   return 'neutral'
 }
 
-// 온도 등급: 여름=hot, 겨울=cold, 봄·가을=mild
 function seasonTemp(season: string): 'hot' | 'cold' | 'mild' {
   if (season === '여름') return 'hot'
   if (season === '겨울') return 'cold'
   return 'mild'
+}
+
+function hasValidPillar(stem: string, branch: string): boolean {
+  return !!stem && !!branch && stem !== '?' && branch !== '?'
 }
 
 // =============================================
@@ -78,15 +83,17 @@ export interface ScoreDetail {
 }
 
 export interface CoupleScoreResult {
-  totalScore: number          // 0~100
-  details: ScoreDetail[]      // 항목별 상세
-  iljuScore: number           // 일주 관계 (30점)
-  yongsinScore: number        // 용신 조화 (20점)
-  yeonScore: number           // 년주 관계 (12점)
-  wolScore: number            // 월주 관계 (8점)
-  gongmangScore: number       // 공망 (8점)
-  ohaengScore: number         // 오행 균형 (12점)
-  johuScore: number           // 조후 온도 (10점)
+  totalScore: number
+  details: ScoreDetail[]
+  iljuScore: number       // 28
+  yongsinScore: number    // 18
+  yeonScore: number       // 10
+  wolScore: number        // 8
+  gongmangScore: number   // 6
+  ohaengScore: number     // 10
+  johuScore: number       // 8
+  sijuScore: number       // 12 (시 모를 땐 0)
+  hasSiju: boolean
   grade: string
   gradeDesc: string
 }
@@ -98,7 +105,7 @@ export interface SajuPillarSimple {
 }
 
 // =============================================
-// ① 일주 관계 (30점)
+// ① 일주 관계 (28점)
 // =============================================
 
 function calcIljuScore(
@@ -108,49 +115,33 @@ function calcIljuScore(
 ): number {
   let score = 0
 
-  // 일지 육합
   if (isPair(branch1, branch2, JI_YUKHAP)) {
     score += 20
     details.push({ category: '일주', item: `일지 육합 (${branch1}${branch2})`, score: 20, reason: '일지가 육합으로 천생연분 관계' })
-  }
-  // 일지 삼합
-  else if (isInTrio(branch1, branch2, SAMHAP)) {
+  } else if (isInTrio(branch1, branch2, SAMHAP)) {
     score += 15
     details.push({ category: '일주', item: `일지 삼합 (${branch1}${branch2})`, score: 15, reason: '일지가 삼합으로 강한 인연' })
-  }
-  // 일지 방합
-  else if (isInTrio(branch1, branch2, BANGHAP)) {
+  } else if (isInTrio(branch1, branch2, BANGHAP)) {
     score += 12
     details.push({ category: '일주', item: `일지 방합 (${branch1}${branch2})`, score: 12, reason: '일지가 방합으로 같은 방향' })
-  }
-  // 일지 충
-  else if (isPair(branch1, branch2, CHUNG)) {
+  } else if (isPair(branch1, branch2, CHUNG)) {
     score -= 20
     details.push({ category: '일주', item: `일지 충 (${branch1}${branch2}충)`, score: -20, reason: '일지가 충으로 갈등 주의' })
-  }
-  // 일지 형
-  else if (isPair(branch1, branch2, HYUNG)) {
+  } else if (isPair(branch1, branch2, HYUNG)) {
     score -= 12
     details.push({ category: '일주', item: `일지 형 (${branch1}${branch2}형)`, score: -12, reason: '일지가 형으로 마찰 가능성' })
-  }
-  // 일지 파
-  else if (isPair(branch1, branch2, PA)) {
+  } else if (isPair(branch1, branch2, PA)) {
     score -= 6
     details.push({ category: '일주', item: `일지 파 (${branch1}${branch2}파)`, score: -6, reason: '일지가 파로 소소한 갈등' })
-  }
-  // 일지 해
-  else if (isPair(branch1, branch2, HAE)) {
+  } else if (isPair(branch1, branch2, HAE)) {
     score -= 4
     details.push({ category: '일주', item: `일지 해 (${branch1}${branch2}해)`, score: -4, reason: '일지가 해로 약한 방해' })
   }
 
-  // 일간 천간합
   if (isPair(stem1, stem2, GAN_HAP)) {
-    score += 10
-    details.push({ category: '일주', item: `일간 천간합 (${stem1}${stem2}합)`, score: 10, reason: '일간이 천간합으로 강한 끌림' })
-  }
-  // 일간 상극
-  else {
+    score += 8
+    details.push({ category: '일주', item: `일간 천간합 (${stem1}${stem2}합)`, score: 8, reason: '일간이 천간합으로 강한 끌림' })
+  } else {
     const e1 = STEM_ELEMENT[stem1]
     const e2 = STEM_ELEMENT[stem2]
     const rel = getElementRelation(e1, e2)
@@ -163,11 +154,11 @@ function calcIljuScore(
     }
   }
 
-  return Math.max(-20, Math.min(30, score))
+  return Math.max(-20, Math.min(28, score))
 }
 
 // =============================================
-// ② 용신 조화 (20점)
+// ② 용신 조화 (18점)
 // =============================================
 
 function calcYongsinScore(
@@ -182,40 +173,38 @@ function calcYongsinScore(
     const rel = getElementRelation(y1.yongsin, y2.yongsin)
 
     if (rel === 'same') {
-      score = 20
-      details.push({ category: '용신', item: `용신 동일 (${y1.yongsin})`, score: 20, reason: '두 사람 용신이 같아 완벽한 조화' })
+      score = 18
+      details.push({ category: '용신', item: `용신 동일 (${y1.yongsin})`, score: 18, reason: '두 사람 용신이 같아 완벽한 조화' })
     } else if (rel === 'generates') {
-      score = 15
-      details.push({ category: '용신', item: `용신 상생 (${y1.yongsin}→${y2.yongsin})`, score: 15, reason: '내 용신이 상대 용신을 생해줌' })
+      score = 14
+      details.push({ category: '용신', item: `용신 상생 (${y1.yongsin}→${y2.yongsin})`, score: 14, reason: '내 용신이 상대 용신을 생해줌' })
     } else if (rel === 'generated') {
-      score = 12
-      details.push({ category: '용신', item: `용신 상생 (${y2.yongsin}→${y1.yongsin})`, score: 12, reason: '상대 용신이 내 용신을 생해줌' })
+      score = 11
+      details.push({ category: '용신', item: `용신 상생 (${y2.yongsin}→${y1.yongsin})`, score: 11, reason: '상대 용신이 내 용신을 생해줌' })
     } else if (rel === 'neutral') {
       score = 5
       details.push({ category: '용신', item: `용신 중립 (${y1.yongsin}·${y2.yongsin})`, score: 5, reason: '용신이 중립 관계' })
     } else {
-      score = -15
-      details.push({ category: '용신', item: `용신 상극 (${y1.yongsin}↔${y2.yongsin})`, score: -15, reason: '용신이 상극으로 에너지 충돌' })
+      score = -13
+      details.push({ category: '용신', item: `용신 상극 (${y1.yongsin}↔${y2.yongsin})`, score: -13, reason: '용신이 상극으로 에너지 충돌' })
     }
 
-    // 희신이 상대 용신인 경우 추가 점수
     if (y1.heeksin === y2.yongsin || y2.heeksin === y1.yongsin) {
-      score += 5
-      details.push({ category: '용신', item: '희신-용신 보완', score: 5, reason: '희신이 상대 용신을 보완' })
+      score += 4
+      details.push({ category: '용신', item: '희신-용신 보완', score: 4, reason: '희신이 상대 용신을 보완' })
     }
-    // 기신이 상대 용신인 경우 감점
     if (y1.gisin === y2.yongsin || y2.gisin === y1.yongsin) {
-      score -= 8
-      details.push({ category: '용신', item: '기신-용신 충돌', score: -8, reason: '기신이 상대 용신에 영향' })
+      score -= 7
+      details.push({ category: '용신', item: '기신-용신 충돌', score: -7, reason: '기신이 상대 용신에 영향' })
     }
   } catch {
     score = 5
   }
-  return Math.max(-15, Math.min(20, score))
+  return Math.max(-13, Math.min(18, score))
 }
 
 // =============================================
-// ③ 년주 관계 (12점)
+// ③ 년주 관계 (10점)
 // =============================================
 
 function calcYeonScore(
@@ -225,32 +214,25 @@ function calcYeonScore(
 ): number {
   let score = 0
 
-  // 년간 천간합
   if (isPair(yStem1, yStem2, GAN_HAP)) {
-    score += 10
-    details.push({ category: '년주', item: `년간 천간합 (${yStem1}${yStem2})`, score: 10, reason: '같은 시대적 가치관과 기운' })
+    score += 8
+    details.push({ category: '년주', item: `년간 천간합 (${yStem1}${yStem2})`, score: 8, reason: '같은 시대적 가치관과 기운' })
   } else if (yStem1 === yStem2) {
-    score += 6
-    details.push({ category: '년주', item: `년간 동일 (${yStem1})`, score: 6, reason: '동갑 또는 같은 천간' })
+    score += 5
+    details.push({ category: '년주', item: `년간 동일 (${yStem1})`, score: 5, reason: '동갑 또는 같은 천간' })
   }
 
-  // 년지 삼합
   if (isInTrio(yBranch1, yBranch2, SAMHAP)) {
-    score += 8
-    details.push({ category: '년주', item: `년지 삼합 (${yBranch1}${yBranch2})`, score: 8, reason: '년지 삼합으로 운명적 인연' })
-  }
-  // 년지 육합
-  else if (isPair(yBranch1, yBranch2, JI_YUKHAP)) {
-    score += 8
-    details.push({ category: '년주', item: `년지 육합 (${yBranch1}${yBranch2})`, score: 8, reason: '년지 육합으로 잘 맞는 궁합' })
-  }
-  // 년지 충
-  else if (isPair(yBranch1, yBranch2, CHUNG)) {
+    score += 6
+    details.push({ category: '년주', item: `년지 삼합 (${yBranch1}${yBranch2})`, score: 6, reason: '년지 삼합으로 운명적 인연' })
+  } else if (isPair(yBranch1, yBranch2, JI_YUKHAP)) {
+    score += 6
+    details.push({ category: '년주', item: `년지 육합 (${yBranch1}${yBranch2})`, score: 6, reason: '년지 육합으로 잘 맞는 궁합' })
+  } else if (isPair(yBranch1, yBranch2, CHUNG)) {
     score -= 8
     details.push({ category: '년주', item: `년지 충 (${yBranch1}${yBranch2}충)`, score: -8, reason: '년지 충으로 가치관 충돌' })
   }
 
-  // 년간 상극
   const ye1 = STEM_ELEMENT[yStem1]
   const ye2 = STEM_ELEMENT[yStem2]
   if (getElementRelation(ye1, ye2) === 'controls' || getElementRelation(ye1, ye2) === 'controlled') {
@@ -258,7 +240,7 @@ function calcYeonScore(
     details.push({ category: '년주', item: `년간 상극 (${ye1}↔${ye2})`, score: -5, reason: '년간 오행 상극' })
   }
 
-  return Math.max(-8, Math.min(12, score))
+  return Math.max(-8, Math.min(10, score))
 }
 
 // =============================================
@@ -299,7 +281,7 @@ function calcWolScore(
 }
 
 // =============================================
-// ⑤ 공망 (8점)
+// ⑤ 공망 (6점)
 // =============================================
 
 function calcGongmangScore(
@@ -310,43 +292,39 @@ function calcGongmangScore(
 ): number {
   let score = 0
 
-  // 공망 글자가 상대 일지
   if (gm1.includes(branch2)) {
-    score -= 10
-    details.push({ category: '공망', item: `공망이 상대 일지 (${branch2})`, score: -10, reason: '내 공망이 상대 일지를 공망시킴' })
+    score -= 8
+    details.push({ category: '공망', item: `공망이 상대 일지 (${branch2})`, score: -8, reason: '내 공망이 상대 일지를 공망시킴' })
   }
   if (gm2.includes(branch1)) {
-    score -= 10
-    details.push({ category: '공망', item: `공망이 상대 일지 (${branch1})`, score: -10, reason: '상대 공망이 내 일지를 공망시킴' })
+    score -= 8
+    details.push({ category: '공망', item: `공망이 상대 일지 (${branch1})`, score: -8, reason: '상대 공망이 내 일지를 공망시킴' })
   }
 
-  // 공망 글자가 상대 년지
   if (gm1.includes(yBranch2)) {
-    score -= 6
-    details.push({ category: '공망', item: `공망이 상대 년지 (${yBranch2})`, score: -6, reason: '내 공망이 상대 년지에 영향' })
+    score -= 4
+    details.push({ category: '공망', item: `공망이 상대 년지 (${yBranch2})`, score: -4, reason: '내 공망이 상대 년지에 영향' })
   }
   if (gm2.includes(yBranch1)) {
-    score -= 6
-    details.push({ category: '공망', item: `공망이 상대 년지 (${yBranch1})`, score: -6, reason: '상대 공망이 내 년지에 영향' })
+    score -= 4
+    details.push({ category: '공망', item: `공망이 상대 년지 (${yBranch1})`, score: -4, reason: '상대 공망이 내 년지에 영향' })
   }
 
-  // 공망 동일
   if (gm1[0] === gm2[0] && gm1[1] === gm2[1]) {
-    score -= 5
-    details.push({ category: '공망', item: `공통 공망 (${gm1.join(',')})`, score: -5, reason: '두 사람 공망이 같음' })
+    score -= 3
+    details.push({ category: '공망', item: `공통 공망 (${gm1.join(',')})`, score: -3, reason: '두 사람 공망이 같음' })
   }
 
-  // 공망 영향 없으면 가산
   if (score === 0) {
-    score = 5
-    details.push({ category: '공망', item: '공망 영향 없음', score: 5, reason: '공망으로 인한 부정적 영향 없음' })
+    score = 4
+    details.push({ category: '공망', item: '공망 영향 없음', score: 4, reason: '공망으로 인한 부정적 영향 없음' })
   }
 
-  return Math.max(-8, Math.min(8, score))
+  return Math.max(-6, Math.min(6, score))
 }
 
 // =============================================
-// ⑥ 오행 균형 (12점)
+// ⑥ 오행 균형 (10점)
 // =============================================
 
 function calcOhaengScore(
@@ -368,33 +346,30 @@ function calcOhaengScore(
 
   let score = 0
   if (nonZero === 5) {
-    score = balance <= 2 ? 12 : balance <= 4 ? 8 : 6
+    score = balance <= 2 ? 10 : balance <= 4 ? 7 : 5
     details.push({ category: '오행', item: `5행 균형 (편차 ${balance})`, score, reason: '두 사람 합쳐 5오행 모두 보유' })
   } else if (nonZero === 4) {
-    score = 8
-    details.push({ category: '오행', item: '4행 분포', score: 8, reason: '두 사람 합쳐 4오행 보유' })
+    score = 7
+    details.push({ category: '오행', item: '4행 분포', score: 7, reason: '두 사람 합쳐 4오행 보유' })
   } else {
-    score = 4
-    details.push({ category: '오행', item: `${nonZero}행 분포`, score: 4, reason: '오행 편중 있음' })
+    score = 3
+    details.push({ category: '오행', item: `${nonZero}행 분포`, score: 3, reason: '오행 편중 있음' })
   }
 
-  // 보완 관계 추가 점수
   const elements1 = new Set(saju1.map(p => STEM_ELEMENT[p.stem]).filter(Boolean))
   const elements2 = new Set(saju2.map(p => STEM_ELEMENT[p.stem]).filter(Boolean))
   const complement = [...elements1].filter(e => !elements2.has(e)).length
   if (complement >= 2) {
-    score += 4
-    details.push({ category: '오행', item: '오행 보완 관계', score: 4, reason: '서로 부족한 오행을 채워주는 관계' })
+    score += 3
+    details.push({ category: '오행', item: '오행 보완 관계', score: 3, reason: '서로 부족한 오행을 채워주는 관계' })
   }
 
-  return Math.min(12, score)
+  return Math.min(10, score)
 }
 
 // =============================================
-// ⑦ 조후 (온도 밸런스) (10점)
+// ⑦ 조후 (온도 밸런스) (8점)
 // =============================================
-// 두 사람 월지(계절)의 온도 균형. 여름(hot)↔겨울(cold) 만남이 서로를 중화시켜 가장 좋다.
-// 시주가 없어도 월지만으로 판정 가능 → 시 모름과 무관하게 항상 계산 가능.
 
 function calcJohuScore(
   mBranch1: string, mBranch2: string,
@@ -403,30 +378,63 @@ function calcJohuScore(
   const s1 = BRANCH_SEASON[mBranch1]
   const s2 = BRANCH_SEASON[mBranch2]
   if (!s1 || !s2) {
-    details.push({ category: '조후', item: '온도 정보 부족', score: 5, reason: '월지 정보가 부족해 중립으로 봄' })
-    return 5
+    details.push({ category: '조후', item: '온도 정보 부족', score: 4, reason: '월지 정보가 부족해 중립으로 봄' })
+    return 4
   }
   const t1 = seasonTemp(s1)
   const t2 = seasonTemp(s2)
 
-  // 극단 보완: 더움↔차가움 = 10
   if ((t1 === 'hot' && t2 === 'cold') || (t1 === 'cold' && t2 === 'hot')) {
-    details.push({ category: '조후', item: `온도 보완 (${s1}·${s2})`, score: 10, reason: '한 분은 따뜻하고 한 분은 서늘한 기운이라 서로의 온도를 잘 맞춰줌' })
-    return 10
+    details.push({ category: '조후', item: `온도 보완 (${s1}·${s2})`, score: 8, reason: '한 분은 따뜻하고 한 분은 서늘한 기운이라 서로의 온도를 잘 맞춰줌' })
+    return 8
   }
-  // 한쪽 쏠림: 둘 다 더움 or 둘 다 차가움 = 2
   if ((t1 === 'hot' && t2 === 'hot') || (t1 === 'cold' && t2 === 'cold')) {
     details.push({ category: '조후', item: `온도 쏠림 (${s1}·${s2})`, score: 2, reason: '두 분 기운의 온도가 비슷해 가끔 조절이 필요함' })
     return 2
   }
-  // 온화: 둘 다 중간(봄·가을) = 6
   if (t1 === 'mild' && t2 === 'mild') {
-    details.push({ category: '조후', item: `온화 (${s1}·${s2})`, score: 6, reason: '두 분 다 온화한 기운이라 편안하게 어울림' })
-    return 6
+    details.push({ category: '조후', item: `온화 (${s1}·${s2})`, score: 5, reason: '두 분 다 온화한 기운이라 편안하게 어울림' })
+    return 5
   }
-  // 나머지: 더움/차가움 ↔ 중간 = 6
-  details.push({ category: '조후', item: `무난 (${s1}·${s2})`, score: 6, reason: '한 분의 기운을 다른 한 분이 부드럽게 받쳐줌' })
-  return 6
+  details.push({ category: '조후', item: `무난 (${s1}·${s2})`, score: 5, reason: '한 분의 기운을 다른 한 분이 부드럽게 받쳐줌' })
+  return 5
+}
+
+// =============================================
+// ⑧ 시주 관계 (12점) — 자식운·말년운의 조화
+//    두 사람 모두 시주를 아는 경우에만 계산.
+// =============================================
+
+function calcSijuScore(
+  hStem1: string, hBranch1: string,
+  hStem2: string, hBranch2: string,
+  details: ScoreDetail[]
+): number {
+  let score = 0
+
+  if (isPair(hBranch1, hBranch2, JI_YUKHAP) || isInTrio(hBranch1, hBranch2, SAMHAP)) {
+    score += 12
+    details.push({ category: '시주', item: `시지 합 (${hBranch1}${hBranch2})`, score: 12, reason: '말년까지 서로 잘 맞는 기운' })
+  } else if (isInTrio(hBranch1, hBranch2, BANGHAP)) {
+    score += 9
+    details.push({ category: '시주', item: `시지 방합 (${hBranch1}${hBranch2})`, score: 9, reason: '말년의 방향이 비슷함' })
+  } else if (isPair(hBranch1, hBranch2, CHUNG)) {
+    score -= 8
+    details.push({ category: '시주', item: `시지 충 (${hBranch1}${hBranch2}충)`, score: -8, reason: '말년의 가치관 차이 가능성' })
+  } else if (isPair(hBranch1, hBranch2, HYUNG) || isPair(hBranch1, hBranch2, PA) || isPair(hBranch1, hBranch2, HAE)) {
+    score -= 4
+    details.push({ category: '시주', item: `시지 형·파·해 (${hBranch1}${hBranch2})`, score: -4, reason: '말년에 소소한 마찰 가능성' })
+  } else {
+    score += 4
+    details.push({ category: '시주', item: `시지 중립 (${hBranch1}·${hBranch2})`, score: 4, reason: '말년의 기운이 무난함' })
+  }
+
+  if (isPair(hStem1, hStem2, GAN_HAP)) {
+    score += 3
+    details.push({ category: '시주', item: `시간 천간합 (${hStem1}${hStem2})`, score: 3, reason: '말년까지 마음이 통함' })
+  }
+
+  return Math.max(-8, Math.min(12, score))
 }
 
 // =============================================
@@ -460,13 +468,19 @@ export function calcCoupleScore(
   const yeon2 = saju2.find(p => p.pillar === '년주')
   const wol1  = saju1.find(p => p.pillar === '월주')
   const wol2  = saju2.find(p => p.pillar === '월주')
+  const si1   = saju1.find(p => p.pillar === '시주')
+  const si2   = saju2.find(p => p.pillar === '시주')
 
   const dayStem1 = ilju1?.stem ?? ''
   const dayStem2 = ilju2?.stem ?? ''
   const dayBranch1 = ilju1?.branch ?? ''
   const dayBranch2 = ilju2?.branch ?? ''
 
-  // 각 항목 점수 계산
+  // 두 사람 모두 시주가 유효할 때만 시주 항목을 채점한다.
+  const hasSiju =
+    hasValidPillar(si1?.stem ?? '', si1?.branch ?? '') &&
+    hasValidPillar(si2?.stem ?? '', si2?.branch ?? '')
+
   const iljuScore    = calcIljuScore(dayStem1, dayBranch1, dayStem2, dayBranch2, details)
   const yongsinScore = calcYongsinScore(saju1, saju2, dayStem1, dayStem2, details)
   const yeonScore    = calcYeonScore(
@@ -488,15 +502,29 @@ export function calcCoupleScore(
   const ohaengScore = calcOhaengScore(saju1, saju2, details)
   const johuScore   = calcJohuScore(wol1?.branch ?? '', wol2?.branch ?? '', details)
 
-  // 총점 계산 (각 항목 최대: 30+20+12+8+8+12+10 = 100)
-  const rawTotal = iljuScore + yongsinScore + yeonScore + wolScore + gongmangScore + ohaengScore + johuScore
+  let sijuScore = 0
+  if (hasSiju) {
+    sijuScore = calcSijuScore(
+      si1!.stem, si1!.branch,
+      si2!.stem, si2!.branch,
+      details
+    )
+  } else {
+    details.push({ category: '시주', item: '시주 생략', score: 0, reason: '태어난 시간을 몰라 시주는 빼고, 나머지로 100점 기준으로 맞췄어요' })
+  }
 
-  // 음수 방지 + 0~100 범위로 정규화
-  const baseline = 30 + 20 + 10 // 최저 기준점
-  const maxPossible = 100
-  const normalized = Math.min(100, Math.max(0, rawTotal + baseline))
-  const totalScore = Math.min(maxPossible, Math.round(normalized))
+  // 항목 상한(시 있을 때): 28+18+10+8+6+10+8+12 = 100
+  const rawTotal = iljuScore + yongsinScore + yeonScore + wolScore + gongmangScore + ohaengScore + johuScore + sijuScore
 
+  const baseline = 28 + 18 + 8
+  let normalized = Math.min(100, Math.max(0, rawTotal + baseline))
+
+  // 시 모를 때: 시주(12점) 제외한 88점 만점 → 100점으로 비율 환산
+  if (!hasSiju) {
+    normalized = normalized * (100 / 88)
+  }
+
+  const totalScore = Math.min(100, Math.max(0, Math.round(normalized)))
   const { grade, gradeDesc } = getGrade(totalScore)
 
   return {
@@ -509,6 +537,8 @@ export function calcCoupleScore(
     gongmangScore,
     ohaengScore,
     johuScore,
+    sijuScore,
+    hasSiju,
     grade,
     gradeDesc,
   }
