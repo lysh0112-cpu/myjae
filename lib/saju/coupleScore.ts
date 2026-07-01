@@ -22,6 +22,12 @@ const BRANCH_ELEMENT: Record<string, string> = {
   午:'화',未:'토',申:'금',酉:'금',戌:'토',亥:'수'
 }
 
+// 계절(월지 기준) — 조후 계산용
+const BRANCH_SEASON: Record<string, string> = {
+  寅:'봄',卯:'봄',辰:'봄', 巳:'여름',午:'여름',未:'여름',
+  申:'가을',酉:'가을',戌:'가을', 亥:'겨울',子:'겨울',丑:'겨울'
+}
+
 // 형충회합파해 표
 const JI_YUKHAP = [['子','丑'],['寅','亥'],['卯','戌'],['辰','酉'],['巳','申'],['午','未']]
 const SAMHAP = [['申','子','辰'],['亥','卯','未'],['寅','午','戌'],['巳','酉','丑']]
@@ -53,6 +59,13 @@ function getElementRelation(e1: string, e2: string): 'same' | 'generates' | 'gen
   return 'neutral'
 }
 
+// 온도 등급: 여름=hot, 겨울=cold, 봄·가을=mild
+function seasonTemp(season: string): 'hot' | 'cold' | 'mild' {
+  if (season === '여름') return 'hot'
+  if (season === '겨울') return 'cold'
+  return 'mild'
+}
+
 // =============================================
 // 점수 항목별 인터페이스
 // =============================================
@@ -69,10 +82,11 @@ export interface CoupleScoreResult {
   details: ScoreDetail[]      // 항목별 상세
   iljuScore: number           // 일주 관계 (30점)
   yongsinScore: number        // 용신 조화 (20점)
-  yeonScore: number           // 년주 관계 (15점)
-  wolScore: number            // 월주 관계 (10점)
-  gongmangScore: number       // 공망 (10점)
-  ohaengScore: number         // 오행 균형 (15점)
+  yeonScore: number           // 년주 관계 (12점)
+  wolScore: number            // 월주 관계 (8점)
+  gongmangScore: number       // 공망 (8점)
+  ohaengScore: number         // 오행 균형 (12점)
+  johuScore: number           // 조후 온도 (10점)
   grade: string
   gradeDesc: string
 }
@@ -201,7 +215,7 @@ function calcYongsinScore(
 }
 
 // =============================================
-// ③ 년주 관계 (15점)
+// ③ 년주 관계 (12점)
 // =============================================
 
 function calcYeonScore(
@@ -244,11 +258,11 @@ function calcYeonScore(
     details.push({ category: '년주', item: `년간 상극 (${ye1}↔${ye2})`, score: -5, reason: '년간 오행 상극' })
   }
 
-  return Math.max(-8, Math.min(15, score))
+  return Math.max(-8, Math.min(12, score))
 }
 
 // =============================================
-// ④ 월주 관계 (10점)
+// ④ 월주 관계 (8점)
 // =============================================
 
 function calcWolScore(
@@ -281,11 +295,11 @@ function calcWolScore(
     details.push({ category: '월주', item: `월간 상극 (${me1}↔${me2})`, score: -4, reason: '월간 오행 상극' })
   }
 
-  return Math.max(-6, Math.min(10, score))
+  return Math.max(-6, Math.min(8, score))
 }
 
 // =============================================
-// ⑤ 공망 (10점)
+// ⑤ 공망 (8점)
 // =============================================
 
 function calcGongmangScore(
@@ -328,11 +342,11 @@ function calcGongmangScore(
     details.push({ category: '공망', item: '공망 영향 없음', score: 5, reason: '공망으로 인한 부정적 영향 없음' })
   }
 
-  return Math.max(-10, Math.min(10, score))
+  return Math.max(-8, Math.min(8, score))
 }
 
 // =============================================
-// ⑥ 오행 균형 (15점)
+// ⑥ 오행 균형 (12점)
 // =============================================
 
 function calcOhaengScore(
@@ -354,14 +368,14 @@ function calcOhaengScore(
 
   let score = 0
   if (nonZero === 5) {
-    score = balance <= 2 ? 15 : balance <= 4 ? 10 : 7
+    score = balance <= 2 ? 12 : balance <= 4 ? 8 : 6
     details.push({ category: '오행', item: `5행 균형 (편차 ${balance})`, score, reason: '두 사람 합쳐 5오행 모두 보유' })
   } else if (nonZero === 4) {
-    score = 10
-    details.push({ category: '오행', item: '4행 분포', score: 10, reason: '두 사람 합쳐 4오행 보유' })
+    score = 8
+    details.push({ category: '오행', item: '4행 분포', score: 8, reason: '두 사람 합쳐 4오행 보유' })
   } else {
-    score = 5
-    details.push({ category: '오행', item: `${nonZero}행 분포`, score: 5, reason: '오행 편중 있음' })
+    score = 4
+    details.push({ category: '오행', item: `${nonZero}행 분포`, score: 4, reason: '오행 편중 있음' })
   }
 
   // 보완 관계 추가 점수
@@ -369,11 +383,50 @@ function calcOhaengScore(
   const elements2 = new Set(saju2.map(p => STEM_ELEMENT[p.stem]).filter(Boolean))
   const complement = [...elements1].filter(e => !elements2.has(e)).length
   if (complement >= 2) {
-    score += 5
-    details.push({ category: '오행', item: '오행 보완 관계', score: 5, reason: '서로 부족한 오행을 채워주는 관계' })
+    score += 4
+    details.push({ category: '오행', item: '오행 보완 관계', score: 4, reason: '서로 부족한 오행을 채워주는 관계' })
   }
 
-  return Math.min(15, score)
+  return Math.min(12, score)
+}
+
+// =============================================
+// ⑦ 조후 (온도 밸런스) (10점)
+// =============================================
+// 두 사람 월지(계절)의 온도 균형. 여름(hot)↔겨울(cold) 만남이 서로를 중화시켜 가장 좋다.
+// 시주가 없어도 월지만으로 판정 가능 → 시 모름과 무관하게 항상 계산 가능.
+
+function calcJohuScore(
+  mBranch1: string, mBranch2: string,
+  details: ScoreDetail[]
+): number {
+  const s1 = BRANCH_SEASON[mBranch1]
+  const s2 = BRANCH_SEASON[mBranch2]
+  if (!s1 || !s2) {
+    details.push({ category: '조후', item: '온도 정보 부족', score: 5, reason: '월지 정보가 부족해 중립으로 봄' })
+    return 5
+  }
+  const t1 = seasonTemp(s1)
+  const t2 = seasonTemp(s2)
+
+  // 극단 보완: 더움↔차가움 = 10
+  if ((t1 === 'hot' && t2 === 'cold') || (t1 === 'cold' && t2 === 'hot')) {
+    details.push({ category: '조후', item: `온도 보완 (${s1}·${s2})`, score: 10, reason: '한 분은 따뜻하고 한 분은 서늘한 기운이라 서로의 온도를 잘 맞춰줌' })
+    return 10
+  }
+  // 한쪽 쏠림: 둘 다 더움 or 둘 다 차가움 = 2
+  if ((t1 === 'hot' && t2 === 'hot') || (t1 === 'cold' && t2 === 'cold')) {
+    details.push({ category: '조후', item: `온도 쏠림 (${s1}·${s2})`, score: 2, reason: '두 분 기운의 온도가 비슷해 가끔 조절이 필요함' })
+    return 2
+  }
+  // 온화: 둘 다 중간(봄·가을) = 6
+  if (t1 === 'mild' && t2 === 'mild') {
+    details.push({ category: '조후', item: `온화 (${s1}·${s2})`, score: 6, reason: '두 분 다 온화한 기운이라 편안하게 어울림' })
+    return 6
+  }
+  // 나머지: 더움/차가움 ↔ 중간 = 6
+  details.push({ category: '조후', item: `무난 (${s1}·${s2})`, score: 6, reason: '한 분의 기운을 다른 한 분이 부드럽게 받쳐줌' })
+  return 6
 }
 
 // =============================================
@@ -433,9 +486,10 @@ export function calcCoupleScore(
     details
   )
   const ohaengScore = calcOhaengScore(saju1, saju2, details)
+  const johuScore   = calcJohuScore(wol1?.branch ?? '', wol2?.branch ?? '', details)
 
-  // 총점 계산 (각 항목 최대: 30+20+15+10+10+15 = 100)
-  const rawTotal = iljuScore + yongsinScore + yeonScore + wolScore + gongmangScore + ohaengScore
+  // 총점 계산 (각 항목 최대: 30+20+12+8+8+12+10 = 100)
+  const rawTotal = iljuScore + yongsinScore + yeonScore + wolScore + gongmangScore + ohaengScore + johuScore
 
   // 음수 방지 + 0~100 범위로 정규화
   const baseline = 30 + 20 + 10 // 최저 기준점
@@ -454,6 +508,7 @@ export function calcCoupleScore(
     wolScore,
     gongmangScore,
     ohaengScore,
+    johuScore,
     grade,
     gradeDesc,
   }
