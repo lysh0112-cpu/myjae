@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { buildSajuPillars, analyzeCoupleFromPillars } from '@/lib/saju/coupleAnalysis'
 import { calcHourPillar } from '@/lib/saju/hourPillar'
+import { buildToneBlock, wonjinAdviceBlock, noHourAdviceBlock, mbtiAdviceBlock } from '@/lib/ai/tonePrompt'
 import { calcYongsin } from '@/lib/saju/yongsin'
 import { generateTaegilCandidates } from '@/lib/saju/taegil'
 import { getYeonJi } from '@/lib/saju/samjae'
@@ -133,6 +134,17 @@ function calcTotalScore(
 }
 
 // person.hour: '-1'~'11' 문자열 또는 '모름'. 시를 알면 시주 간지를 만들어 넘긴다.
+// 원진살 6쌍 (일지 기준) — 점수엔 반영 안 하고 해설 조언에만 쓴다.
+const WONJIN_PAIRS = [['子','未'],['丑','午'],['寅','酉'],['卯','申'],['辰','亥'],['巳','戌']]
+function isWonjin(branch1: string, branch2: string): boolean {
+  if (!branch1 || !branch2) return false
+  return WONJIN_PAIRS.some(([a, b]) => (branch1 === a && branch2 === b) || (branch1 === b && branch2 === a))
+}
+// person.hour가 '모름'인지 (시주 없음 판정)
+function isHourUnknown(hour: string): boolean {
+  return hour === '모름' || hour == null || hour === '' || hour === '-1'
+}
+
 function hourIdxOf(hour: string): number | null {
   if (hour === '모름' || hour == null || hour === '' || hour === '-1') return null
   const n = parseInt(String(hour))
@@ -245,14 +257,17 @@ function buildPrompt(
   candidateDatesStr: string,
   myPrevAnalysis: string,
   label1: string,
-  label2: string
+  label2: string,
+  toneAndAdvice: string
 ): string {
   // 호칭 안내 — AI가 분석 텍스트의 '사람1/사람2'를 올바른 호칭으로 바꿔 부르게 한다.
   const roleGuide = `[호칭 안내 — 매우 중요]
 아래 분석에서 '사람1'은 ${label1}(${person1.gender}), '사람2'는 ${label2}(${person2.gender})를 가리킵니다.
 답변에서는 '사람1', '사람2'라는 표현을 절대 쓰지 말고, 반드시 '${label1}', '${label2}'라고 불러 주세요.`
 
-  const baseInfo = `${roleGuide}
+  const baseInfo = `${toneAndAdvice}
+
+${roleGuide}
 
 ${label1} (${person1.gender}): 사주 ${saju1Str} · 직업오행: ${person1.job} · MBTI: ${person1.mbti || '미입력'}
 ${label2} (${person2.gender}): 사주 ${saju2Str} · 직업오행: ${person2.job} · MBTI: ${person2.mbti || '미입력'}
@@ -462,13 +477,28 @@ export function useCoupleResult(
       // 모드 + 성별로 호칭 결정 (입력 순서가 아니라 성별 기준)
       const { label1, label2 } = getRoleNames(mode, person1.gender, person2.gender)
 
+      // 공통 말투 헌법 + 상황별 조언 블록 조립 (원진/시모름/MBTI)
+      let toneAndAdvice = buildToneBlock()
+      const ilji1ForTone = ilju1?.branch ?? ''
+      const ilji2ForTone = ilju2?.branch ?? ''
+      if (isWonjin(ilji1ForTone, ilji2ForTone)) {
+        toneAndAdvice += `\n\n${wonjinAdviceBlock()}`
+      }
+      if (isHourUnknown(person1.hour) || isHourUnknown(person2.hour)) {
+        toneAndAdvice += `\n\n${noHourAdviceBlock()}`
+      }
+      if (person1.mbti && person2.mbti) {
+        toneAndAdvice += `\n\n${mbtiAdviceBlock(person1.mbti, person2.mbti)}`
+      }
+
       const prompt = buildPrompt(
         mode, person1, person2,
         saju1Str, saju2Str, analysisStr,
         todayStr, currentYear, userQuestion,
         candidateDatesStr,
         myPrevAnalysis.slice(0, 500),
-        label1, label2
+        label1, label2,
+        toneAndAdvice
       )
 
       try {
