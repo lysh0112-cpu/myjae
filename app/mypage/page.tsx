@@ -71,6 +71,12 @@ export default function MyPage() {
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
 
+  // 닉네임 수정 모드
+  const [nickEdit, setNickEdit] = useState(false)
+  const [eNick, setENick] = useState('')
+  const [nickSaving, setNickSaving] = useState(false)
+  const [nickMsg, setNickMsg] = useState('')
+
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) { router.push('/auth/login'); return }
@@ -168,6 +174,26 @@ export default function MyPage() {
     setEditMode(false)
   }
 
+  // 닉네임 수정 열기
+  const openNickEdit = () => {
+    setENick(profile?.nickname || '')
+    setNickMsg('')
+    setNickEdit(true)
+  }
+
+  // 닉네임 저장
+  const saveNick = async () => {
+    const name = eNick.trim()
+    if (!name) { setNickMsg('닉네임을 입력해주세요.'); return }
+    if (name.length > 20) { setNickMsg('닉네임은 20자 이내로 입력해주세요.'); return }
+    setNickSaving(true)
+    const { error } = await supabase.from('profiles').update({ nickname: name }).eq('id', userId)
+    setNickSaving(false)
+    if (error) { setNickMsg('저장 실패: ' + error.message); return }
+    setProfile(prev => prev ? { ...prev, nickname: name } : prev)
+    setNickEdit(false)
+  }
+
   const logout = async () => {
     await supabase.auth.signOut()
     try {
@@ -224,6 +250,24 @@ export default function MyPage() {
               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</div>
             </div>
             <span style={{ fontSize: 11, padding: '4px 12px', borderRadius: 12, background: rc.bg, color: rc.fg, fontWeight: 600, flexShrink: 0 }}>{roleLabel(profile?.role || null)}</span>
+          </div>
+
+          {/* 닉네임 수정 영역 */}
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            {!nickEdit ? (
+              <button onClick={openNickEdit} style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', background: 'none', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, padding: '6px 14px', cursor: 'pointer' }}>닉네임 수정</button>
+            ) : (
+              <div>
+                <div style={{ fontSize: 11, color: '#b0aec8', marginBottom: 4 }}>닉네임</div>
+                <input value={eNick} onChange={e => setENick(e.target.value)} placeholder="닉네임을 입력하세요" maxLength={20}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 8 }} />
+                {nickMsg && <div style={{ color: '#ff8080', fontSize: 12, marginBottom: 8 }}>{nickMsg}</div>}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setNickEdit(false)} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', background: 'none', color: 'rgba(255,255,255,0.6)', fontSize: 13, cursor: 'pointer' }}>취소</button>
+                  <button onClick={saveNick} disabled={nickSaving} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #FAC775, #f0a030)', color: '#1a1a18', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: nickSaving ? 0.6 : 1 }}>{nickSaving ? '저장 중…' : '저장'}</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
