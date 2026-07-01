@@ -97,6 +97,7 @@ function ConsultantContent() {
   const [panels, setPanels] = useState<PanelState[]>(initPanels)
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null)
   const [consultantName, setConsultantName] = useState('')
+  const [myNickname, setMyNickname] = useState('')
   const [settings, setSettings] = useState<UiSettings>(DEFAULT_SETTINGS)
   const [openPanelSettings, setOpenPanelSettings] = useState<string | null>(null)
   const [maxZ, setMaxZ] = useState(20)
@@ -113,6 +114,16 @@ function ConsultantContent() {
         if (data?.ui_settings) setSettings({ ...DEFAULT_SETTINGS, ...data.ui_settings })
       })
   }, [consultantId])
+
+  // 로그인한 사람의 닉네임 불러오기 (우측 상단 표시용)
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) return
+      const { data: p } = await supabase.from('profiles')
+        .select('nickname').eq('id', data.user.id).single()
+      if (p?.nickname) setMyNickname(p.nickname)
+    })
+  }, [])
 
   const bringToFront = useCallback((id: string) => {
     setMaxZ(prev => {
@@ -388,7 +399,7 @@ function ConsultantContent() {
 
         {/* 우측 */}
         <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:'8px'}}>
-          <span style={{fontSize:'11px', color:'#7766aa'}}>{consultantName || '상담사'} 님</span>
+          <span style={{fontSize:'11px', color:'#7766aa'}}>{myNickname || consultantName || '상담사'} 님</span>
           <button onClick={handleLogout}
             style={{fontSize:'10px', padding:'2px 8px', borderRadius:'5px', border:'1px solid rgba(255,80,80,0.2)', background:'transparent', color:'rgba(255,100,100,0.7)', cursor:'pointer'}}>
             로그아웃
