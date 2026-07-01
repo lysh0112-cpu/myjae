@@ -2,23 +2,10 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-
-const HOURS = [
-  '모름', '子시(23~01)', '丑시(01~03)', '寅시(03~05)', '卯시(05~07)',
-  '辰시(07~09)', '巳시(09~11)', '午시(11~13)', '未시(13~15)',
-  '申시(15~17)', '酉시(17~19)', '戌시(19~21)', '亥시(21~23)',
-]
-
-const HOUR_INDEX: Record<string, number> = {
-  '子시(23~01)': 0, '丑시(01~03)': 1, '寅시(03~05)': 2, '卯시(05~07)': 3,
-  '辰시(07~09)': 4, '巳시(09~11)': 5, '午시(11~13)': 6, '未시(13~15)': 7,
-  '申시(15~17)': 8, '酉시(17~19)': 9, '戌시(19~21)': 10, '亥시(21~23)': 11,
-}
-const INDEX_TO_HOUR: Record<string, string> = {
-  '0': '子시(23~01)', '1': '丑시(01~03)', '2': '寅시(03~05)', '3': '卯시(05~07)',
-  '4': '辰시(07~09)', '5': '巳시(09~11)', '6': '午시(11~13)', '7': '未시(13~15)',
-  '8': '申시(15~17)', '9': '酉시(17~19)', '10': '戌시(19~21)', '11': '亥시(21~23)',
-}
+import {
+  HOURS, HOUR_INDEX, INDEX_TO_HOUR,
+  fromProfile, fromInputs, toMyInfoObject,
+} from '@/lib/saju/myInfo'
 
 export const MY_INFO_KEY = 'myinfo'
 
@@ -28,23 +15,26 @@ export default function AiManseryeokSection() {
   const [birthDate, setBirthDate] = useState('')
   const [birthHour, setBirthHour] = useState('')
   const [calType, setCalType] = useState<'양력' | '음력'>('양력')
+  const [leap, setLeap] = useState(false)   // 윤달 여부 (음력일 때만 사용)
   const [hasMine, setHasMine] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) return
       supabase.from('profiles')
-        .select('birth_year, birth_month, birth_day, birth_hour, cal_type, gender, saju_saved')
+        .select('birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, saju_saved')
         .eq('id', data.user.id).single()
         .then(({ data: p }) => {
-          if (p && p.saju_saved && p.birth_year) {
-            const mm = String(p.birth_month).padStart(2, '0')
-            const dd = String(p.birth_day).padStart(2, '0')
-            setBirthDate(`${p.birth_year}-${mm}-${dd}`)
-            setGender(p.gender === '여' ? '여' : '남')
-            setCalType(p.cal_type === '음력' ? '음력' : '양력')
-            if (p.birth_hour === '모름') setBirthHour('모름')
-            else if (p.birth_hour != null) setBirthHour(INDEX_TO_HOUR[String(p.birth_hour)] || '')
+          const info = fromProfile(p)
+          if (info) {
+            const mm = String(info.month).padStart(2, '0')
+            const dd = String(info.day).padStart(2, '0')
+            setBirthDate(`${info.year}-${mm}-${dd}`)
+            setGender(info.gender === '여' ? '여' : '남')
+            setCalType(info.calType === '음력' ? '음력' : '양력')
+            setLeap(info.leapMonth === '1')
+            if (info.hour === '모름') setBirthHour('모름')
+            else setBirthHour(INDEX_TO_HOUR[String(info.hour)] || '')
             setHasMine(true)
           }
         })
@@ -53,6 +43,7 @@ export default function AiManseryeokSection() {
 
   function resetFields() {
     setGender('남'); setCalType('양력'); setBirthDate(''); setBirthHour('')
+    setLeap(false)
     setHasMine(false)
     // 내 사주 임시정보도 비움 (궁합·개명이 못 읽도록)
     try {
@@ -74,38 +65,39 @@ export default function AiManseryeokSection() {
       alert('생년월일을 먼저 입력해주세요 😊')
       return
     }
-    const d = birthDate.split('-')
-    const yearStr = d[0] || ''
-    const monthStr = d[1] ? String(parseInt(d[1])) : ''
-    const dayStr = d[2] ? String(parseInt(d[2])) : ''
-    const hourVal = birthHour === '모름' ? '모름'
-      : birthHour ? String(HOUR_INDEX[birthHour]) : '모름'
+
+    // ── 표준 헬퍼로 info 구성 (시간 모름 = '모름', 윤달 = '0'/'1' 통일) ──
+    const info = fromInputs({
+      gender, calType,
+      birthDate,
+      hourLabel: birthHour,
+      leap: calType === '음력' ? leap : false,   // 양력이면 윤달 개념 없음
+    })
+    if (!info) {
+      alert('생년월일을 올바르게 입력해주세요 😊')
+      return
+    }
 
     // ── 궁합·개명 화면이 읽을 수 있도록 "내 사주(myinfo)"를 임시 저장 ──
-    // 궁합(useCoupleInput)은 sessionStorage, 개명(newname 등)은 localStorage에서 읽으므로 양쪽에 저장.
-    // hour는 궁합 규칙에 맞춰 '모름'이면 '-1'로.
-    const myInfo = {
-      gender,
-      calType,
-      year: yearStr,
-      month: monthStr,
-      day: dayStr,
-      hour: hourVal === '모름' ? '-1' : hourVal,
-    }
+    // 표준 형식(hour: '모름' 또는 인덱스 문자열, leapMonth: '0'/'1')으로 저장.
+    // (과거 '-1' 방식은 더 이상 쓰지 않음 — 헬퍼가 표준으로 만들어 줌)
     try {
-      const json = JSON.stringify(myInfo)
+      const json = JSON.stringify(toMyInfoObject(info))
       sessionStorage.setItem(MY_INFO_KEY, json)
       localStorage.setItem(MY_INFO_KEY, json)
     } catch {}
 
     // ── 결과 화면은 기존대로 URL 파라미터로 전달 (계산 로직 그대로) ──
+    // hour는 결과 화면이 기대하는 형식: '모름' 또는 인덱스 문자열
+    const hourParam = info.hour   // '모름' 또는 '0'~'11'
     const params = new URLSearchParams()
-    params.set('gender', gender)
-    params.set('calType', calType)
-    params.set('year', yearStr)
-    params.set('month', monthStr)
-    params.set('day', dayStr)
-    params.set('hour', hourVal)
+    params.set('gender', info.gender)
+    params.set('calType', info.calType)
+    params.set('year', info.year)
+    params.set('month', info.month)
+    params.set('day', info.day)
+    params.set('hour', hourParam)
+    params.set('leapMonth', info.leapMonth)   // ★ 윤달 전달 (계산 정확도)
     const url = `/manseryeok/result?${params.toString()}`
     router.push(url)
   }
@@ -150,6 +142,25 @@ export default function AiManseryeokSection() {
             </div>
           ))}
         </div>
+
+        {/* 윤달 선택 — 음력일 때만 표시 (양력은 윤달 개념 없음) */}
+        {calType === '음력' && (
+          <div className="mb-4">
+            <label className="text-xs font-medium mb-1.5 block" style={{ color: '#b0aec8' }}>
+              윤달 여부 <span style={{ color: '#8a88a0' }}>(음력 생일이 윤달이면 선택)</span>
+            </label>
+            <div className="flex rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+              {([['평달', false], ['윤달', true]] as const).map(([lbl, val]) => (
+                <button key={lbl} onClick={() => setLeap(val)}
+                  className="flex-1 py-2.5 text-sm font-medium transition-all"
+                  style={leap === val ? { background: '#3C3489', color: '#FAC775' } : { background: 'transparent', color: '#8a88a0' }}>
+                  {lbl}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="mb-4">
           <label className="text-xs font-medium mb-1.5 block" style={{ color: '#b0aec8' }}>생년월일</label>
           <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)}
