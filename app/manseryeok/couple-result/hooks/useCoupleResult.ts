@@ -1,6 +1,7 @@
 // useCoupleResult v6 — 모드별 성별 기반 호칭 적용
 import { useState, useEffect } from 'react'
 import { buildSajuPillars, analyzeCoupleFromPillars } from '@/lib/saju/coupleAnalysis'
+import { calcHourPillar } from '@/lib/saju/hourPillar'
 import { calcYongsin } from '@/lib/saju/yongsin'
 import { generateTaegilCandidates } from '@/lib/saju/taegil'
 import { getYeonJi } from '@/lib/saju/samjae'
@@ -131,6 +132,13 @@ function calcTotalScore(
   return Math.min(100, Math.max(0, total))
 }
 
+// person.hour: '-1'~'11' 문자열 또는 '모름'. 시를 알면 시주 간지를 만들어 넘긴다.
+function hourIdxOf(hour: string): number | null {
+  if (hour === '모름' || hour == null || hour === '' || hour === '-1') return null
+  const n = parseInt(String(hour))
+  return Number.isNaN(n) || n < 0 || n > 11 ? null : n
+}
+
 async function fetchSajuPillars(person: PersonInput) {
   try {
     const res = await fetch(
@@ -138,7 +146,21 @@ async function fetchSajuPillars(person: PersonInput) {
     )
     const d = await res.json()
     if (d.error) return null
-    return buildSajuPillars(d.yearGanji, d.monthGanji, d.dayGanji)
+
+    // 일간을 구해 시주 간지를 계산 (시를 아는 경우에만).
+    // dayGanji 예: '갑자(甲子)' 또는 '甲子' → 앞 글자가 일간.
+    const hourIdx = hourIdxOf(person.hour)
+    let hourGanji: string | undefined = undefined
+    if (hourIdx !== null) {
+      const dm = String(d.dayGanji || '').match(/\(([^)]+)\)/)
+      const dayStem = dm && dm[1].length >= 1 ? dm[1][0] : String(d.dayGanji || '')[0]
+      if (dayStem) {
+        const h = calcHourPillar(dayStem, hourIdx)
+        if (h.stem !== '?' && h.branch !== '?') hourGanji = h.stem + h.branch
+      }
+    }
+
+    return buildSajuPillars(d.yearGanji, d.monthGanji, d.dayGanji, hourGanji)
   } catch {
     return null
   }
