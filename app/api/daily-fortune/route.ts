@@ -2,14 +2,14 @@
 // 오늘의 운세 API (B방식: 얇은 계층)
 //  - 하는 일: 내 사주 받음 → 오늘 간지(/api/lunar) → 용신 계산 → 100점 채점(dailyFortune.ts)
 //             → Claude로 위로 톤 통변 + 명리 한 조각 생성 → JSON 반환
-//  - 안 하는 일: DB 접근 없음. 저장(캐싱)은 마이페이지(브라우저)가 Supabase에 직접 함.
+//  - 어투: 관리자 '어투 관리'의 공통 말투 + 오늘운세 전용 지시문을 프롬프트에 반영.
 //  - Claude 호출 방식은 기존 /api/analyze 와 동일(모델·헤더·엔드포인트 통일).
-//
-// ※ 채점 배점·신살은 dailyFortune.ts의 잠정 기준. 연재 선생님 검수 후 조정 전제.
 
 import { NextRequest, NextResponse } from 'next/server'
 import { calcYongsin } from '@/lib/saju/yongsin'
 import { scoreDailyFortune } from '@/lib/saju/dailyFortune'
+import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
+import { createClient } from '@supabase/supabase-js'
 
 // 간지 문자열 → {stem, branch} (기존 splitGanji 방식 동일)
 function splitGanji(ganji: string): { stem: string; branch: string } {
@@ -20,6 +20,26 @@ function splitGanji(ganji: string): { stem: string; branch: string } {
   return { stem: '?', branch: '?' }
 }
 
+// 오늘운세 전용 지시문 읽기 (관리자 화면 B. 오늘의 운세 전용 칸)
+async function loadFortuneGuide(): Promise<string> {
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!url || !key) return ''
+    const supabase = createClient(url, key, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    const { data } = await supabase
+      .from('tone_settings')
+      .select('fortune_guide')
+      .eq('id', 1)
+      .maybeSingle()
+    return (data?.fortune_guide || '').trim()
+  } catch {
+    return ''
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY
@@ -28,9 +48,6 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 마이페이지에서 넘겨주는 값 ──
-    // saju: useResultSaju가 만든 [{pillar,stem,branch}...] 배열 (시·일·월·년주)
-    // dayStem: 내 일간, iljji: 내 일지
-    // nickname, ageGroup(선택): 통변 개인화용
     const body = await req.json()
     const { saju, dayStem, iljji, nickname, ageGroup } = body
 
@@ -40,7 +57,6 @@ export async function POST(req: NextRequest) {
 
     // ── 1) 오늘 간지(일진) 구하기 : /api/lunar 그대로 호출 ──
     const now = new Date()
-    // 한국 날짜 기준 (서버가 UTC일 수 있어 +9h 보정)
     const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
     const y = kst.getUTCFullYear()
     const m = kst.getUTCMonth() + 1
@@ -71,9 +87,18 @@ export async function POST(req: NextRequest) {
       todayBranch: today.branch,
     })
 
+    // ── 3.5) 관리자 어투 읽기 (공통 + 오늘운세 전용) ──
+    const toneBlock = await buildToneBlockFromDB()
+    const fortuneGuide = await loadFortuneGuide()
+
     // ── 4) Claude로 위로 톤 통변 + 명리 한 조각 생성 ──
+    // 프롬프트 = [공통 말투] + [오늘운세 전용 지시문] + [기능 뼈대: 계산 결과·출력형식]
     const f = scored.flags
-    const prompt = `당신은 따뜻하고 지혜로운 명리 상담가입니다. 아래 계산 결과를 바탕으로 "오늘의 운세"를 작성하세요.
+    const prompt = `${toneBlock}
+
+${fortuneGuide}
+
+당신은 따뜻하고 지혜로운 명리 상담가입니다. 아래 계산 결과를 바탕으로 "오늘의 운세"를 작성하세요.
 
 [오늘 날짜] ${fortuneDate}
 [오늘 일진] ${today.stem}${today.branch}
@@ -93,13 +118,11 @@ ${ageGroup ? `[연령대] ${ageGroup}` : ''}
 - 천을귀인일: ${f.isGwiin ? '예(하늘이 돕는 날)' : '아니오'}
 - 공망일: ${f.isGongmang ? '예(헛수고·분실 주의)' : '아니오'}
 
-[작성 규칙]
+[반드시 지킬 기능 규칙]
 1. 반드시 아래 JSON 형식으로만 출력. 앞뒤 설명·마크다운·백틱 금지.
-2. 위로하는 따뜻한 말투. 단정·겁주기 금지("~한다" 대신 "~할 수 있어요/좋겠어요"). 나쁜 날도 대응법으로 마무리.
-3. 매일 다른 문장으로. 뻔한 템플릿 느낌 배제.
-4. 명리 용어는 최소화하되 근거는 위 판정을 따를 것. 이론·방법론은 노출하지 말고 결과만 전할 것.
-5. 각 필드 길이: summary 3~4문장, love/money/health 각 1문장, insight 2~3문장.
-6. lucky_color/lucky_dir는 용신 오행에 맞춰: 목=청록/동, 화=빨강/남, 토=노랑/중앙, 금=흰색/서, 수=검정·파랑/북.
+2. 명리 용어는 최소화하되 근거는 위 판정을 따를 것. 이론·방법론은 노출하지 말고 결과만 전할 것.
+3. 각 필드 길이: summary 3~4문장, love/money/health 각 1문장, insight 2~3문장.
+4. lucky_color/lucky_dir는 용신 오행에 맞춰: 목=청록/동, 화=빨강/남, 토=노랑/중앙, 금=흰색/서, 수=검정·파랑/북.
 
 [출력 JSON 형식]
 {
@@ -137,7 +160,6 @@ ${ageGroup ? `[연령대] ${ageGroup}` : ''}
       const clean = text.replace(/```json|```/g, '').trim()
       parsed = JSON.parse(clean)
     } catch {
-      // 파싱 실패 시 최소한의 폴백
       parsed = {
         summary: text || '오늘의 운세를 준비하는 중 문제가 생겼어요. 잠시 후 다시 확인해 주세요.',
         love: '', money: '', health: '',
@@ -150,8 +172,8 @@ ${ageGroup ? `[연령대] ${ageGroup}` : ''}
       fortune_date: fortuneDate,
       iljin_gan: today.stem,
       iljin_ji: today.branch,
-      score: scored.star,          // 화면 별점 1~5
-      total: scored.total,         // 참고용 100점
+      score: scored.star,
+      total: scored.total,
       grade: scored.grade,
       summary: parsed.summary ?? '',
       love: parsed.love ?? '',
