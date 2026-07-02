@@ -10,7 +10,6 @@ type Props = {
   onSaveSort: (id: string, sort: number) => void
 }
 
-// 토글 가능한 열 정의
 const COLUMNS = [
   { key: 'email', label: '이메일' },
   { key: 'phone', label: '전화번호' },
@@ -22,16 +21,28 @@ const COLUMNS = [
 type ColKey = typeof COLUMNS[number]['key']
 
 export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive, onSaveSort }: Props) {
-  // 기본으로 켜둘 열
   const [cols, setCols] = useState<Record<ColKey, boolean>>({
     email: false, phone: false, specialty: true,
     region: false, bank: false, commission: false,
   })
   const [openId, setOpenId] = useState<string | null>(null)
+  // 순번 입력 중인 값 (id별)
+  const [sortDraft, setSortDraft] = useState<Record<string, string>>({})
 
   const toggleCol = (k: ColKey) => setCols(prev => ({ ...prev, [k]: !prev[k] }))
 
-  // 엑셀(CSV) 다운로드 — 켜진 열만
+  function draftOf(c: ConsultantFormData): string {
+    return sortDraft[c.id!] !== undefined ? sortDraft[c.id!] : String(c.sort ?? 0)
+  }
+  function setDraft(id: string, v: string) {
+    setSortDraft(prev => ({ ...prev, [id]: v.replace(/[^0-9]/g, '') }))
+  }
+  function saveDraft(c: ConsultantFormData) {
+    const n = parseInt(draftOf(c)) || 0
+    onSaveSort(c.id!, n)
+    setSortDraft(prev => { const next = { ...prev }; delete next[c.id!]; return next })
+  }
+
   function downloadCSV() {
     const headers = ['순번', '이름', '활성']
     if (cols.email) headers.push('이메일')
@@ -73,7 +84,6 @@ export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive
 
   return (
     <div className="p-4">
-      {/* 툴바 : 열 토글 + 엑셀 */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         <span className="text-xs" style={{ color: '#8a88a0' }}>보일 열</span>
         {COLUMNS.map(col => (
@@ -90,15 +100,13 @@ export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive
         </button>
       </div>
       <div className="text-xs mb-3" style={{ color: '#6a6880' }}>
-        순번이 작을수록 고객 화면 위로 갑니다 · 비활성은 고객 화면에 안 보여요 · 상담사를 누르면 상세가 펼쳐집니다
+        순번을 고치고 옆의 저장 버튼을 누르세요 · 작을수록 위로 · 비활성은 고객 화면에 안 보여요 · 이름을 누르면 상세가 펼쳐집니다
       </div>
 
-      {/* 목록 */}
       <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
-        {/* 헤더 */}
         <div className="flex items-center gap-3 px-3 py-2 text-xs font-bold"
           style={{ background: 'rgba(60,52,137,0.3)', color: '#FAC775' }}>
-          <span style={{ width: 44, textAlign: 'center' }}>순번</span>
+          <span style={{ width: 92, textAlign: 'center' }}>순번</span>
           <span style={{ width: 34 }}></span>
           <span style={{ flex: 1 }}>이름</span>
           <span style={{ width: 50, textAlign: 'center' }}>활성</span>
@@ -110,33 +118,40 @@ export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive
           {cols.commission && <span style={{ width: 90 }}>수수료</span>}
         </div>
 
-        {list.map((c, i) => (
+        {list.map((c, i) => {
+          const changed = sortDraft[c.id!] !== undefined && (parseInt(draftOf(c)) || 0) !== (c.sort ?? 0)
+          return (
           <div key={c.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-            {/* 한 줄 */}
-            <div className="flex items-center gap-3 px-3 py-2.5 cursor-pointer"
-              style={{ background: openId === c.id ? 'rgba(250,199,117,0.06)' : (i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent') }}
-              onClick={() => setOpenId(openId === c.id ? null : c.id)}>
-              {/* 순번 입력 */}
-              <div style={{ width: 44, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                <input type="text" inputMode="numeric" defaultValue={String(c.sort ?? 0)}
-                  onBlur={e => {
-                    const n = parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0
-                    if (n !== (c.sort ?? 0)) onSaveSort(c.id!, n)
-                  }}
+            <div className="flex items-center gap-3 px-3 py-2.5"
+              style={{ background: openId === c.id ? 'rgba(250,199,117,0.06)' : (i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent') }}>
+              {/* 순번 입력 + 저장 버튼 */}
+              <div style={{ width: 92, display: 'flex', gap: 4, alignItems: 'center', justifyContent: 'center' }}>
+                <input type="text" inputMode="numeric" value={draftOf(c)}
+                  onChange={e => setDraft(c.id!, e.target.value)}
                   className="rounded-lg text-xs text-center outline-none"
-                  style={{ width: 38, padding: '4px 0', background: 'rgba(255,255,255,0.08)', color: '#FAC775',
+                  style={{ width: 40, padding: '5px 0', background: 'rgba(255,255,255,0.08)', color: '#FAC775',
                     border: '1px solid rgba(250,199,117,0.25)' }} />
+                <button onClick={() => saveDraft(c)}
+                  className="rounded-lg text-xs font-bold"
+                  style={{ padding: '5px 7px',
+                    background: changed ? '#FAC775' : 'rgba(255,255,255,0.08)',
+                    color: changed ? '#1a1a18' : '#8a88a0' }}>
+                  저장
+                </button>
               </div>
-              {/* 썸네일 */}
-              <div style={{ width: 34, height: 34, borderRadius: 8, overflow: 'hidden', flexShrink: 0,
+              {/* 썸네일 (누르면 펼침) */}
+              <div onClick={() => setOpenId(openId === c.id ? null : c.id)}
+                style={{ width: 34, height: 34, borderRadius: 8, overflow: 'hidden', flexShrink: 0, cursor: 'pointer',
                 background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {c.photo_url
                   ? <img src={c.photo_url} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : <span style={{ fontSize: 13, color: '#b0aec8' }}>{c.name?.[0] || '?'}</span>}
               </div>
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff' }}>{c.name}</span>
+              {/* 이름 (누르면 펼침) */}
+              <span onClick={() => setOpenId(openId === c.id ? null : c.id)}
+                style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff', cursor: 'pointer' }}>{c.name}</span>
               <span style={{ width: 50, textAlign: 'center' }}>
-                <button onClick={e => { e.stopPropagation(); onToggleActive(c) }}
+                <button onClick={() => onToggleActive(c)}
                   className="px-2 py-0.5 rounded-lg text-xs font-bold"
                   style={c.active
                     ? { background: 'rgba(76,175,80,0.2)', color: '#81c784' }
@@ -152,7 +167,6 @@ export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive
               {cols.commission && <span style={{ width: 90, fontSize: 12, color: '#b0aec8' }}>{c.commission_rate || 0}% / {(c.commission_amount || 0).toLocaleString()}</span>}
             </div>
 
-            {/* 펼친 상세 카드 */}
             {openId === c.id && (
               <div className="px-4 py-4" style={{ background: 'rgba(255,255,255,0.03)' }}>
                 <div className="flex gap-3 mb-3">
@@ -191,12 +205,12 @@ export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive
                 </div>
 
                 <div className="flex gap-2">
-                  <button onClick={e => { e.stopPropagation(); onEdit(c) }}
+                  <button onClick={() => onEdit(c)}
                     className="flex-1 py-2 rounded-lg text-xs font-bold"
                     style={{ background: '#FAC775', color: '#1a1a18' }}>
                     ✏️ 수정
                   </button>
-                  <button onClick={e => { e.stopPropagation(); onDelete(c.id) }}
+                  <button onClick={() => onDelete(c.id!)}
                     className="flex-1 py-2 rounded-lg text-xs font-bold"
                     style={{ background: 'rgba(255,100,100,0.15)', color: '#ff6464' }}>
                     🗑️ 삭제
@@ -205,7 +219,8 @@ export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive
               </div>
             )}
           </div>
-        ))}
+          )
+        })}
 
         {list.length === 0 && (
           <div className="text-center py-10 text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>
