@@ -2,8 +2,7 @@
 import { Suspense, useState, useEffect, type ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import PageHeader from '@/app/components/common/PageHeader'
-
-const PRICE = 19900
+import { supabase } from '@/lib/supabase'
 
 const purple = '#7766dd'
 const cardBg = '#13132a'
@@ -83,6 +82,16 @@ function WeddingFindInner() {
 
   const [error, setError] = useState('')
   const [payOpen, setPayOpen] = useState(false)
+  const [price, setPrice] = useState(19900)
+
+  useEffect(() => {
+    supabase
+      .from('analysis_prices')
+      .select('price')
+      .eq('price_key', 'wedding_pick')
+      .maybeSingle()
+      .then(({ data }) => { if (data) setPrice(data.price) })
+  }, [])
 
   useEffect(() => {
     try {
@@ -224,12 +233,12 @@ function WeddingFindInner() {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <span style={{ fontSize: '14px', color: sub }}>결제 금액</span>
-              <span style={{ fontSize: '20px', fontWeight: 700, color: '#c8b0ff' }}>{PRICE.toLocaleString()}원</span>
+              <span style={{ fontSize: '20px', fontWeight: 700, color: '#c8b0ff' }}>{price.toLocaleString()}원</span>
             </div>
 
             <button onClick={handlePay}
               style={{ width: '100%', padding: '15px', borderRadius: '12px', background: 'linear-gradient(135deg,#5544bb,#7766dd)', border: 'none', color: text, fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginBottom: '8px' }}>
-              💳 {PRICE.toLocaleString()}원 결제하기
+              💳 {price.toLocaleString()}원 결제하기
             </button>
             <div style={{ fontSize: '11px', color: sub, textAlign: 'center', marginBottom: '14px' }}>
               (결제 시스템 첨부 예정 — 지금은 바로 결과를 봐요)
