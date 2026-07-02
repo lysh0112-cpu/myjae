@@ -10,7 +10,7 @@ export default function ConsultantManager() {
   const [loading, setLoading] = useState(false)
   useEffect(() => { fetchList() }, [])
   async function fetchList() {
-    const { data, error } = await supabase.from('consultants').select('*').order('created_at')
+    const { data, error } = await supabase.from('consultants').select('*').order('sort').order('created_at')
     if (error) { alert('목록 불러오기 실패: ' + error.message); return }
     if (data) setList(data)
   }
@@ -52,6 +52,11 @@ export default function ConsultantManager() {
     if (error) { alert('변경 실패: ' + error.message); return }
     fetchList()
   }
+  async function handleSaveSort(id: string, sort: number) {
+    setList(prev => prev.map(c => c.id === id ? { ...c, sort } : c))
+    const { error } = await supabase.from('consultants').update({ sort }).eq('id', id)
+    if (error) { alert('순번 저장 실패: ' + error.message); fetchList(); return }
+  }
   function handleEdit(c: ConsultantFormData) {
     setForm({ ...emptyForm, ...c })
     setEditing(true)
@@ -77,6 +82,7 @@ export default function ConsultantManager() {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onToggleActive={handleToggleActive}
+          onSaveSort={handleSaveSort}
         />
       </div>
     </div>
