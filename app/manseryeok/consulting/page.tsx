@@ -28,6 +28,11 @@ function ConsultingContent() {
   const [error, setError] = useState('')
   const [payMethod, setPayMethod] = useState<string>('계좌이체')
 
+  // 마이페이지에서 "채팅 입장"으로 들어올 때: 기존 상담 건 id
+  const enterConsultationId = searchParams.get('consultationId') ?? ''
+  // consultationId로 들어온 경우, 정보를 다 불러올 때까지 화면을 가려서 깜빡임 방지
+  const [entering, setEntering] = useState(!!enterConsultationId)
+
   const gender = searchParams.get('gender') ?? ''
   const calType = searchParams.get('calType') ?? '양력'
   const year = searchParams.get('year') ?? ''
@@ -37,11 +42,10 @@ function ConsultingContent() {
   const consultantId = searchParams.get('consultantId') ?? ''
   const consultantName = searchParams.get('consultantName') ?? ''
   const consultantPrice = parseInt(searchParams.get('consultantPrice') ?? '0')
-  // 마이페이지에서 "채팅 입장"으로 들어올 때: 기존 상담 건 id
-  const enterConsultationId = searchParams.get('consultationId') ?? ''
   const birthData = { gender, calType, year, month, day, hour }
 
   useEffect(() => {
+    if (enterConsultationId) return // 채팅 입장 모드에서는 아래 useEffect가 처리
     if (consultantId && consultantName && consultantPrice) {
       setSelected({
         id: consultantId,
@@ -51,7 +55,7 @@ function ConsultingContent() {
         active: true,
       })
     }
-  }, [consultantId, consultantName, consultantPrice])
+  }, [consultantId, consultantName, consultantPrice, enterConsultationId])
 
   // consultationId를 URL로 받으면 → 그 상담 건 정보를 불러와 바로 채팅 단계로
   useEffect(() => {
@@ -63,17 +67,20 @@ function ConsultingContent() {
         .select('id, customer_phone, consultant_id')
         .eq('id', enterConsultationId)
         .single()
-      if (cancelled || !c) return
+      if (cancelled) return
+      if (!c) { setEntering(false); return }
       let cname = ''
       if (c.consultant_id) {
         const { data: con } = await supabase
           .from('consultants').select('name').eq('id', c.consultant_id).single()
         cname = con?.name ?? ''
       }
+      if (cancelled) return
       setSelected({ id: c.consultant_id ?? '', name: cname, specialty: '', price: 0, active: true })
       setPhone(c.customer_phone ?? '')
       setConsultationId(c.id)
       setStep('chat')
+      setEntering(false)
     })()
     return () => { cancelled = true }
   }, [enterConsultationId])
@@ -143,6 +150,15 @@ function ConsultingContent() {
     sessionStorage.removeItem('ai_free_analysis')
 
     setStep('schedule')
+  }
+
+  // 채팅 입장 모드: 정보 불러오는 동안 로딩만 보여줌 (중간 화면 깜빡임 방지)
+  if (entering) {
+    return (
+      <div className="min-h-screen bg-stone-950 flex items-center justify-center">
+        <div className="text-amber-400">채팅방을 여는 중...</div>
+      </div>
+    )
   }
 
   if (step === 'phone') return (
