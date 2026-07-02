@@ -1,13 +1,13 @@
 // app/api/naming/route.ts
 // 작명 진단 API — "내 이름 풀이"
 // 흐름: ① 진단 엔진(diagnoseName)으로 4요소 채점
-//       ② Claude로 연재 선생님 톤의 총평 생성
+//       ② Claude로 총평 생성 (공통 어투 + 작명 전용 지시문 반영)
 //       ③ naming_results 테이블에 저장
-// 물상도 API(app/api/mulsang/route.ts) 패턴을 그대로 따름 (그림 생성만 제외).
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { diagnoseName, type NameChar } from '@/lib/saju/naming'
+import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -53,16 +53,37 @@ export async function POST(req: Request) {
       .map((g) => `${g.label} ${g.name}(${g.fortune})`)
       .join(', ')
 
+    // 관리자 '어투 관리'에서 설정한 공통 말투 (비었거나 오류면 기본값 폴백)
+    const toneBlock = await buildToneBlockFromDB()
+
+    // 작명·개명 전용 지시문 읽기 (관리자 화면 B. 작명 전용 칸)
+    let namingGuide = ''
+    if (supabase) {
+      try {
+        const { data } = await supabase
+          .from('tone_settings')
+          .select('naming_guide')
+          .eq('id', 1)
+          .maybeSingle()
+        namingGuide = (data?.naming_guide || '').trim()
+      } catch (e) {
+        console.error('naming_guide load error:', e)
+      }
+    }
+
     // ---------- 2) Claude 총평 생성 ----------
-    const commentaryPrompt = `당신은 따뜻하면서도 정직한 작명·명리학 전문가입니다.
+    // 프롬프트 = [공통 말투] + [작명 전용 지시문] + [기능 뼈대: 채점 결과·출력형식]
+    const commentaryPrompt = `${toneBlock}
+
+${namingGuide}
+
+당신은 따뜻하면서도 정직한 작명·명리학 전문가입니다.
 아래는 한 사람의 이름이 그 사람의 사주에 얼마나 잘 맞는지 분석한 결과입니다.
 이 해설은 고객이 받는 결과물입니다.
 
-[매우 중요한 원칙]
-- 100% 좋은 이름도, 100% 나쁜 이름도 없습니다. 사실(팩트)은 정확하게 설명하되, 그 안에서 강점과 가능성을 찾아 희망적으로 풀어주세요.
-- 무조건 "좋습니다"라고 하지 마세요. 쓸쓸하거나 불안하게 끝내지도 마세요. 사실을 인정하되 나아갈 방향을 제시하는 것이 전문가의 역할입니다.
-- 아쉬운 점이 있으면, 어떤 한자(오행)를 보완하면 더 좋아지는지 구체적으로 짚어주세요.
-- 어려운 한자 용어보다 직관적 표현을 쓰세요. 마크다운 기호(##, **, ---)는 절대 쓰지 마세요.
+[반드시 지킬 기능 규칙]
+- 아래 '분석 결과'의 등급과 근거를 정확히 반영하세요. 결과에 없는 내용을 지어내지 마세요.
+- 마크다운 기호(##, **, ---)는 절대 쓰지 마세요.
 
 [이름]
 ${hangulName} (${hanjaName})
