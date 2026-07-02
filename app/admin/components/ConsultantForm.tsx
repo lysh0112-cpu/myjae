@@ -22,6 +22,7 @@ export type ConsultantFormData = {
   rating: number
   review_count: number
   review_text: string
+  sort: number
 }
 
 export const emptyForm: ConsultantFormData = {
@@ -30,6 +31,7 @@ export const emptyForm: ConsultantFormData = {
   region: '', commission_rate: 0, commission_amount: 0,
   photo_url: '', career: '', intro: '',
   rating: 0, review_count: 0, review_text: '',
+  sort: 0,
 }
 
 type Props = {
@@ -170,7 +172,7 @@ export default function ConsultantForm({ form, editing, loading, onChange, onSav
 
       </div>
 
-      {/* 고객 화면에 보일 정보 (새로 추가) */}
+      {/* 고객 화면에 보일 정보 */}
       <div className="rounded-xl p-4 mt-5"
         style={{ background: 'rgba(60,52,137,0.25)', border: '1px solid rgba(250,199,117,0.25)' }}>
         <div className="text-xs font-bold mb-3" style={{ color: '#FAC775' }}>
