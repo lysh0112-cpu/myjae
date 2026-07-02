@@ -37,6 +37,8 @@ function ConsultingContent() {
   const consultantId = searchParams.get('consultantId') ?? ''
   const consultantName = searchParams.get('consultantName') ?? ''
   const consultantPrice = parseInt(searchParams.get('consultantPrice') ?? '0')
+  // 마이페이지에서 "채팅 입장"으로 들어올 때: 기존 상담 건 id
+  const enterConsultationId = searchParams.get('consultationId') ?? ''
   const birthData = { gender, calType, year, month, day, hour }
 
   useEffect(() => {
@@ -51,6 +53,31 @@ function ConsultingContent() {
     }
   }, [consultantId, consultantName, consultantPrice])
 
+  // consultationId를 URL로 받으면 → 그 상담 건 정보를 불러와 바로 채팅 단계로
+  useEffect(() => {
+    if (!enterConsultationId) return
+    let cancelled = false
+    ;(async () => {
+      const { data: c } = await supabase
+        .from('consultations')
+        .select('id, customer_phone, consultant_id')
+        .eq('id', enterConsultationId)
+        .single()
+      if (cancelled || !c) return
+      let cname = ''
+      if (c.consultant_id) {
+        const { data: con } = await supabase
+          .from('consultants').select('name').eq('id', c.consultant_id).single()
+        cname = con?.name ?? ''
+      }
+      setSelected({ id: c.consultant_id ?? '', name: cname, specialty: '', price: 0, active: true })
+      setPhone(c.customer_phone ?? '')
+      setConsultationId(c.id)
+      setStep('chat')
+    })()
+    return () => { cancelled = true }
+  }, [enterConsultationId])
+
   async function handlePhoneSubmit() {
     if (phone.replace(/\D/g, '').length < 10) {
       setError('올바른 핸드폰 번호를 입력해주세요')
@@ -64,7 +91,6 @@ function ConsultingContent() {
         .from('customers')
         .upsert({ phone: phone.replace(/\D/g, '') }, { onConflict: 'phone' })
 
-      // 로그인한 사용자면 user_id도 함께 저장 (이메일 계정 기준 연결)
       const { data: u } = await supabase.auth.getUser()
 
       const { data, error } = await supabase
@@ -92,7 +118,6 @@ function ConsultingContent() {
   async function handlePayComplete() {
     if (!consultationId || !selected) return
 
-    // sessionStorage에서 AI 분석 결과 가져오기
     const aiAnalysis = sessionStorage.getItem('ai_analysis') ||
                        sessionStorage.getItem('ai_free_analysis') || ''
 
@@ -110,15 +135,13 @@ function ConsultingContent() {
       .update({
         status: 'paid',
         paid_amount: selected.price,
-        ai_analysis: aiAnalysis, // AI 분석 결과 저장
+        ai_analysis: aiAnalysis,
       })
       .eq('id', consultationId)
 
-    // 저장 후 sessionStorage 정리
     sessionStorage.removeItem('ai_analysis')
     sessionStorage.removeItem('ai_free_analysis')
 
-    // 결제 후 일정 선택 단계로
     setStep('schedule')
   }
 
