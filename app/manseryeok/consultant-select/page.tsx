@@ -18,6 +18,7 @@ type Consultant = {
 }
 
 type Slot = {
+  id: string
   consultant_id: string
   slot_date: string
   slot_hour: number
@@ -26,7 +27,6 @@ type Slot = {
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토']
 
-// "2026-07-02" → "7/2 목"
 function fmtDate(key: string): string {
   const [y, m, d] = key.split('-').map(Number)
   const wd = new Date(y, m - 1, d).getDay()
@@ -39,10 +39,26 @@ function ConsultantSelectInner() {
   const mode  = params.get('mode')  || 'couple'
   const score = params.get('score') || ''
   const names = params.get('names') || ''
+
+  const gender = params.get('gender') ?? ''
+  const calType = params.get('calType') ?? '양력'
+  const year = params.get('year') ?? ''
+  const month = params.get('month') ?? ''
+  const day = params.get('day') ?? ''
+  const hour = params.get('hour') ?? ''
+  const birthData = { gender, calType, year, month, day, hour }
+
   const [consultants, setConsultants] = useState<Consultant[]>([])
   const [slots, setSlots] = useState<Slot[]>([])
   const [loading, setLoading] = useState(true)
   const [openId, setOpenId] = useState<string | null>(null)
+
+  // 예약 입력값 (펼친 상담사에 대해)
+  const [custName, setCustName] = useState('')
+  const [custPhone, setCustPhone] = useState('')
+  const [pickedSlotId, setPickedSlotId] = useState<string | null>(null)
+  const [booking, setBooking] = useState(false)
+  const [done, setDone] = useState<{ consultantName: string; date: string; hour: number } | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -50,10 +66,10 @@ function ConsultantSelectInner() {
         .from('consultants')
         .select('id, name, specialty, photo_url, career, intro, rating, review_count, review_text, region')
         .eq('active', true)
+        .order('sort')
         .order('created_at')
       setConsultants((data ?? []) as Consultant[])
 
-      // 오늘 이후의 열린 일정만 읽어오기
       const today = new Date()
       const yyyy = today.getFullYear()
       const mm = String(today.getMonth() + 1).padStart(2, '0')
@@ -62,7 +78,8 @@ function ConsultantSelectInner() {
 
       const { data: slotData } = await supabase
         .from('consultant_slots')
-        .select('consultant_id, slot_date, slot_hour, is_booked')
+        .select('id, consultant_id, slot_date, slot_hour, is_booked')
+        .eq('is_booked', false)
         .gte('slot_date', todayKey)
         .order('slot_date')
         .order('slot_hour')
@@ -73,15 +90,17 @@ function ConsultantSelectInner() {
     load()
   }, [])
 
-  // 상담사별 · 날짜별로 열린 시간 묶기 (예약 안 찬 것만)
-  function scheduleOf(consultantId: string): { date: string; hours: number[] }[] {
-    const mine = slots.filter(s => s.consultant_id === consultantId && !s.is_booked)
-    const byDate: Record<string, number[]> = {}
+  function scheduleOf(consultantId: string): { date: string; slots: Slot[] }[] {
+    const mine = slots.filter(s => s.consultant_id === consultantId)
+    const byDate: Record<string, Slot[]> = {}
     for (const s of mine) {
       if (!byDate[s.slot_date]) byDate[s.slot_date] = []
-      byDate[s.slot_date].push(s.slot_hour)
+      byDate[s.slot_date].push(s)
     }
-    return Object.keys(byDate).sort().map(date => ({ date, hours: byDate[date].sort((a, b) => a - b) }))
+    return Object.keys(byDate).sort().map(date => ({
+      date,
+      slots: byDate[date].sort((a, b) => a.slot_hour - b.slot_hour),
+    }))
   }
 
   const modeLabel: Record<string, string> = {
@@ -92,13 +111,102 @@ function ConsultantSelectInner() {
     personal: '🔮 개인 상담',
   }
 
-  function pick(c: Consultant) {
-    router.push(`/manseryeok/consulting?consultantId=${c.id}&consultantName=${encodeURIComponent(c.name)}&mode=${mode}`)
+  function openConsultant(id: string) {
+    if (openId === id) { setOpenId(null); return }
+    setOpenId(id)
+    setCustName('')
+    setCustPhone('')
+    setPickedSlotId(null)
+  }
+
+  function formatPhone(v: string) {
+    const n = v.replace(/[^0-9]/g, '').slice(0, 11)
+    if (n.length < 4) return n
+    if (n.length < 8) return n.slice(0, 3) + '-' + n.slice(3)
+    return n.slice(0, 3) + '-' + n.slice(3, 7) + '-' + n.slice(7)
+  }
+
+  async function reserve(c: Consultant) {
+    const phoneDigits = custPhone.replace(/\D/g, '')
+    if (!custName.trim()) { alert('이름을 입력해 주세요.'); return }
+    if (phoneDigits.length < 10) { alert('연락처를 정확히 입력해 주세요.'); return }
+    if (!pickedSlotId) { alert('상담 받을 시간을 선택해 주세요.'); return }
+
+    const slot = slots.find(s => s.id === pickedSlotId)
+    if (!slot) { alert('선택한 시간을 찾을 수 없어요. 새로고침 후 다시 시도해 주세요.'); return }
+
+    setBooking(true)
+    try {
+      const { data: u } = await supabase.auth.getUser()
+
+      // 고객 저장
+      await supabase.from('customers').upsert({ phone: phoneDigits }, { onConflict: 'phone' })
+
+      // 상담 건 생성
+      const { data: cons, error: cErr } = await supabase
+        .from('consultations')
+        .insert({
+          customer_phone: phoneDigits,
+          customer_name: custName.trim(),
+          consultant_id: c.id,
+          birth_data: birthData,
+          status: 'booked',
+          user_id: u?.user?.id ?? null,
+          booking_date: slot.slot_date,
+          booking_hour: slot.slot_hour,
+        })
+        .select('id')
+        .single()
+      if (cErr) throw cErr
+
+      // 예약 저장
+      await supabase.from('bookings').insert({
+        slot_id: slot.id,
+        consultant_id: c.id,
+        consultation_id: cons.id,
+        user_id: u?.user?.id ?? null,
+        customer_phone: phoneDigits,
+        status: 'booked',
+      })
+
+      // 슬롯 잠금
+      await supabase.from('consultant_slots').update({ is_booked: true }).eq('id', slot.id)
+
+      setDone({ consultantName: c.name, date: slot.slot_date, hour: slot.slot_hour })
+    } catch (e) {
+      console.error(e)
+      alert('예약 중 문제가 생겼어요. 다시 시도해 주세요.')
+      setBooking(false)
+    }
+  }
+
+  // 예약 완료 화면
+  if (done) {
+    return (
+      <main className="min-h-screen bg-[#0d0d1a] flex flex-col items-center justify-center px-6 text-center">
+        <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
+        <div className="text-[20px] text-[#e8e4ff] font-bold mb-2">예약이 완료됐어요</div>
+        <div className="text-[14px] text-[#b0aec8] mb-1">{done.consultantName} 선생님</div>
+        <div className="text-[14px] text-[#FAC775] mb-8">{fmtDate(done.date)} {done.hour}시</div>
+        <div className="text-[12px] text-[#8888aa] mb-8 leading-relaxed">
+          상담 시간에 마이페이지 → 내 상담 내역에서<br />채팅방으로 입장하실 수 있어요.
+        </div>
+        <button onClick={() => router.push('/mypage')}
+          className="w-full max-w-[300px] py-[14px] rounded-xl text-[15px] font-bold mb-3"
+          style={{ background: 'linear-gradient(135deg,#3C3489,#FAC775)', color: '#1a1a18' }}>
+          마이페이지로 가기
+        </button>
+        <button onClick={() => router.push('/')}
+          className="w-full max-w-[300px] py-[13px] rounded-xl text-[14px]"
+          style={{ background: 'rgba(60,52,137,0.2)', color: '#9977cc', border: '1px solid rgba(119,102,221,0.3)' }}>
+          홈으로
+        </button>
+      </main>
+    )
   }
 
   return (
     <main className="min-h-screen bg-[#0d0d1a] pb-10">
-      {/* 헤더 */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-[#1e1e35] sticky top-0 bg-[#0d0d1a] z-10">
         <button onClick={() => router.back()}
           className="text-[#9d8cff] text-xl w-8 h-8 flex items-center justify-center">
@@ -128,13 +236,11 @@ function ConsultantSelectInner() {
           {consultants.map(c => {
             const open = openId === c.id
             const sched = scheduleOf(c.id)
-            // 접힌 상태에서 보여줄 "가장 빠른 가능"
             const first = sched[0]
             return (
               <div key={c.id} className="mb-2 rounded-2xl overflow-hidden"
                 style={{ border: '1px solid #252545', background: open ? '#13132a' : '#0f0f22' }}>
-                {/* 한 줄 (누르면 펼침) */}
-                <button onClick={() => setOpenId(open ? null : c.id)}
+                <button onClick={() => openConsultant(c.id)}
                   className="w-full flex items-center gap-3 p-3 text-left">
                   <div style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
                     background: '#2d2060', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -147,15 +253,12 @@ function ConsultantSelectInner() {
                       {c.name} <span className="text-[12px] text-[#7766bb]">선생님</span>
                     </div>
                     <div className="text-[12px] text-[#8888bb] mt-0.5">{c.specialty || '명리 상담'}</div>
-                    {/* 접힌 상태 요약: 가장 빠른 가능 시간 */}
                     {first ? (
                       <div className="text-[11px] mt-1" style={{ color: '#7bc86c' }}>
-                        가장 빠른 상담 · {fmtDate(first.date)} {first.hours[0]}시
+                        가장 빠른 상담 · {fmtDate(first.date)} {first.slots[0].slot_hour}시
                       </div>
                     ) : (
-                      <div className="text-[11px] mt-1" style={{ color: '#666688' }}>
-                        열린 일정 없음
-                      </div>
+                      <div className="text-[11px] mt-1" style={{ color: '#666688' }}>열린 일정 없음</div>
                     )}
                   </div>
                   {c.rating ? (
@@ -164,22 +267,19 @@ function ConsultantSelectInner() {
                   <span className="text-[#7766bb] text-lg flex-shrink-0">{open ? '⌃' : '⌄'}</span>
                 </button>
 
-                {/* 펼친 상세 */}
                 {open && (
                   <div className="px-4 pb-4">
+                    {/* 프로필 */}
                     <div className="flex items-center gap-2 mb-3">
                       {c.rating ? <span className="text-[12px] text-[#e0b060]">★ {c.rating}</span> : null}
                       {c.review_count ? <span className="text-[12px] text-[#7777aa]">· 상담 {c.review_count}건</span> : null}
                     </div>
-
                     {c.career && (
                       <div className="text-[12px] text-[#9999cc] mb-2" style={{ whiteSpace: 'pre-line' }}>{c.career}</div>
                     )}
-
                     {c.intro && (
                       <p className="text-[13px] text-[#aaaacc] leading-relaxed mb-3">{c.intro}</p>
                     )}
-
                     {c.review_text && (
                       <div className="rounded-lg px-3 py-[10px] mb-3" style={{ background: '#0d0d1a' }}>
                         <div className="text-[11px] text-[#e0b060] mb-1">★★★★★</div>
@@ -187,13 +287,11 @@ function ConsultantSelectInner() {
                       </div>
                     )}
 
-                    {/* 상담 가능 일정 */}
-                    <div className="mb-3">
-                      <div className="text-[12px] mb-2" style={{ color: '#FAC775' }}>📅 상담 가능한 시간</div>
+                    {/* 상담 가능 시간 (눌러서 선택) */}
+                    <div className="mb-4">
+                      <div className="text-[12px] mb-2" style={{ color: '#FAC775' }}>📅 상담 받을 시간</div>
                       {sched.length === 0 ? (
-                        <div className="text-[12px]" style={{ color: '#666688' }}>
-                          아직 열어둔 시간이 없어요.
-                        </div>
+                        <div className="text-[12px]" style={{ color: '#666688' }}>아직 열어둔 시간이 없어요.</div>
                       ) : (
                         <div className="flex flex-col gap-2">
                           {sched.map(row => (
@@ -201,12 +299,18 @@ function ConsultantSelectInner() {
                               style={{ background: '#0d0d1a', border: '1px solid #1e1e35' }}>
                               <div className="text-[11px] mb-1.5" style={{ color: '#aaaacc' }}>{fmtDate(row.date)}</div>
                               <div className="flex flex-wrap gap-1.5">
-                                {row.hours.map(h => (
-                                  <span key={h} className="text-[12px] px-2.5 py-1 rounded-md"
-                                    style={{ background: 'rgba(250,199,117,0.14)', color: '#FAC775', border: '1px solid rgba(250,199,117,0.3)' }}>
-                                    {h}시
-                                  </span>
-                                ))}
+                                {row.slots.map(s => {
+                                  const on = pickedSlotId === s.id
+                                  return (
+                                    <button key={s.id} onClick={() => setPickedSlotId(s.id)}
+                                      className="text-[12px] px-2.5 py-1 rounded-md"
+                                      style={on
+                                        ? { background: '#FAC775', color: '#1a1a18', border: '1px solid #FAC775', fontWeight: 700 }
+                                        : { background: 'rgba(250,199,117,0.14)', color: '#FAC775', border: '1px solid rgba(250,199,117,0.3)' }}>
+                                      {s.slot_hour}시
+                                    </button>
+                                  )
+                                })}
                               </div>
                             </div>
                           ))}
@@ -214,11 +318,35 @@ function ConsultantSelectInner() {
                       )}
                     </div>
 
-                    <button onClick={() => pick(c)}
-                      className="w-full py-[13px] rounded-xl text-[14px] font-medium"
-                      style={{ background: '#3d2a88', color: '#c8b0ff' }}>
-                      이 선생님으로 시간 고르기
-                    </button>
+                    {/* 이름 · 연락처 */}
+                    {sched.length > 0 && (
+                      <>
+                        <div className="mb-2">
+                          <div className="text-[12px] mb-1" style={{ color: '#8888bb' }}>이름</div>
+                          <input value={custName} onChange={e => setCustName(e.target.value)}
+                            placeholder="홍길동"
+                            className="w-full rounded-lg px-3 py-2 text-[14px] outline-none"
+                            style={{ background: '#0d0d1a', border: '1px solid #252545', color: '#e8e4ff' }} />
+                        </div>
+                        <div className="mb-4">
+                          <div className="text-[12px] mb-1" style={{ color: '#8888bb' }}>휴대폰 번호</div>
+                          <input value={custPhone} onChange={e => setCustPhone(formatPhone(e.target.value))}
+                            placeholder="010-1234-5678" inputMode="numeric"
+                            className="w-full rounded-lg px-3 py-2 text-[14px] outline-none"
+                            style={{ background: '#0d0d1a', border: '1px solid #252545', color: '#e8e4ff' }} />
+                        </div>
+
+                        <button onClick={() => reserve(c)} disabled={booking}
+                          className="w-full py-[13px] rounded-xl text-[14px] font-bold"
+                          style={{ background: booking ? '#2a2a3a' : 'linear-gradient(135deg,#3C3489,#FAC775)',
+                            color: booking ? '#888' : '#1a1a18' }}>
+                          {booking ? '예약 중...' : '이 시간으로 상담 예약하기'}
+                        </button>
+                        <div className="text-[11px] text-center mt-2" style={{ color: '#666688' }}>
+                          예약 후 상담 시간에 마이페이지에서 채팅방으로 입장해요.
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -227,7 +355,6 @@ function ConsultantSelectInner() {
         </div>
       )}
 
-      {/* 하단 — AI 채팅으로 돌아가기 */}
       <div style={{ padding: '20px 16px 10px', textAlign: 'center' }}>
         <button onClick={() => router.back()}
           style={{ fontSize:'13px', padding:'12px 24px', borderRadius:'20px',
