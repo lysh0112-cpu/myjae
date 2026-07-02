@@ -268,7 +268,13 @@ function buildPrompt(
 아래 분석에서 '사람1'은 ${label1}(${person1.gender}), '사람2'는 ${label2}(${person2.gender})를 가리킵니다.
 답변에서는 '사람1', '사람2'라는 표현을 절대 쓰지 말고, 반드시 '${label1}', '${label2}'라고 불러 주세요.`
 
+  const scoreRule = `[중요] 점수 숫자(예: 89점, 71점 등)를 해설에 절대 쓰지 마세요.
+"몇 점"이라는 표현 없이, 두 분이 왜 그런 관계인지·어떤 인연인지를 따뜻하게 풀어주세요.
+등급 표현(소울메이트형 등)도 숫자와 함께 단정하지 말고, 관계의 느낌으로 자연스럽게 녹이세요.`
+
   const baseInfo = `${toneAndAdvice}
+
+${scoreRule}
 
 ${roleGuide}
 
@@ -404,7 +410,8 @@ export function useCoupleResult(
       let scoreDetails: CoupleResultData['scoreDetails'] = undefined
       if (pillars1 && pillars2) {
         const analysis = analyzeCoupleFromPillars(pillars1, pillars2)
-        analysisStr = analysis.summary
+        // 해설에서 점수 숫자를 언급하지 않도록, summary에서 "총점: N점" 줄을 제거해 AI에 넘긴다.
+        analysisStr = analysis.summary.replace(/^총점:.*$/m, '').replace(/\n{3,}/g, '\n\n')
         sajuScore = analysis.sajuScore
         scoreDetails = {
           iljuScore: analysis.scoreNumbers.iljuScore,
