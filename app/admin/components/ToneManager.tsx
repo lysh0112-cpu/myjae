@@ -6,6 +6,7 @@ export default function ToneManager() {
   const [rules, setRules] = useState('')
   const [terms, setTerms] = useState('')
   const [mulsang, setMulsang] = useState('')
+  const [tarot, setTarot] = useState('')
   const [defaultRules, setDefaultRules] = useState('')
   const [defaultTerms, setDefaultTerms] = useState('')
   const [loading, setLoading] = useState(true)
@@ -28,6 +29,7 @@ export default function ToneManager() {
         setRules(d.tone_rules || '')
         setTerms(d.easy_terms || '')
         setMulsang(d.mulsang_guide || '')
+        setTarot(d.tarot_guide || '')
         setDefaultRules(d.default_rules || '')
         setDefaultTerms(d.default_terms || '')
       }
@@ -46,7 +48,7 @@ export default function ToneManager() {
       const res = await fetch('/api/admin/tone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tone_rules: rules, easy_terms: terms, mulsang_guide: mulsang }),
+        body: JSON.stringify({ tone_rules: rules, easy_terms: terms, mulsang_guide: mulsang, tarot_guide: tarot }),
       })
       const d = await res.json()
       if (!res.ok) { setMsg('저장 실패: ' + (d.error || '알 수 없음')) }
@@ -58,7 +60,7 @@ export default function ToneManager() {
   }
 
   const resetToDefault = () => {
-    if (!confirm('공통 말투(①②)를 처음 기본값으로 되돌릴까요? 물상도 칸은 그대로 둡니다. (저장을 눌러야 실제 적용)')) return
+    if (!confirm('공통 말투(①②)를 처음 기본값으로 되돌릴까요? 전용 지시문(물상도·타로)은 그대로 둡니다. (저장을 눌러야 실제 적용)')) return
     setRules(defaultRules)
     setTerms(defaultTerms)
     setMsg('공통 말투 기본값을 불러왔어요. 확인 후 [저장하기]를 눌러야 실제로 적용됩니다.')
@@ -108,7 +110,7 @@ export default function ToneManager() {
       {/* 안내 */}
       <div style={{ background: 'rgba(250,199,117,0.1)', border: '1px solid rgba(250,199,117,0.25)', borderRadius: 10, padding: '12px 14px', marginBottom: 20, fontSize: 13, color: 'rgba(255,255,255,0.8)', lineHeight: 1.7 }}>
         ℹ️ <b style={{ color: gold }}>공통 말투(①②)</b>는 모든 AI 해설에 적용됩니다.<br />
-        <b style={{ color: gold }}>화면별 전용 지시문</b>은 그 화면에만 추가로 적용됩니다. (예: 물상도)<br />
+        <b style={{ color: gold }}>화면별 전용 지시문</b>은 그 화면에만 추가로 적용됩니다. (예: 물상도·타로)<br />
         고친 뒤 맨 아래 <b>[저장하기]</b>를 누르면 한 번에 반영돼요.
       </div>
 
@@ -142,6 +144,12 @@ export default function ToneManager() {
         <textarea value={mulsang} onChange={e => setMulsang(e.target.value)} style={textarea} placeholder="물상도 해설 전용 지침" />
       </div>
 
+      <div style={{ marginBottom: 20 }}>
+        <div style={label}>🔮 타로(카드) 전용</div>
+        <div style={hint}>타로 카드 해석에만 추가로 적용됩니다. 질문에 답하는 톤, 무서운 카드도 따뜻하게 풀기 등.</div>
+        <textarea value={tarot} onChange={e => setTarot(e.target.value)} style={textarea} placeholder="타로 해석 전용 지침" />
+      </div>
+
       {/* 저장 / 되돌리기 */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 30, flexWrap: 'wrap' }}>
         <button onClick={save} disabled={saving}
@@ -159,7 +167,7 @@ export default function ToneManager() {
         <div style={{ fontSize: 15, fontWeight: 700, color: gold, marginBottom: 4 }}>👁 미리보기 (공통 말투 확인)</div>
         <div style={{ ...hint, marginBottom: 12 }}>
           위 공통 말투(①②)로 해설이 어떻게 나오는지 확인합니다. 사주를 자유롭게 적어보세요.<br />
-          (말투 확인용입니다. 물상도 등 실제 해설은 각 화면에서 확인하세요.)
+          (말투 확인용입니다. 물상도·타로 등 실제 해설은 각 화면에서 확인하세요.)
         </div>
         <input
           value={sajuInfo}
