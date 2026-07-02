@@ -61,7 +61,7 @@ export default function WelcomePage() {
       birthHour === '모름' ? '모름' : String(HOUR_INDEX[birthHour])
 
     // 윤달: 음력일 때만 의미. 양력이면 무조건 '0'.
-    const leapValue = calType === '음력' && leap ? '1' : '0'
+    const leapValue = calType === '음력' && leap
 
     setLoading(true)
     const now = new Date().toISOString()
