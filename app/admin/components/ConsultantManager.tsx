@@ -17,23 +17,23 @@ export default function ConsultantManager() {
   async function handleSave() {
     if (!form.name || !form.phone || !form.email) return alert('이름, 전화번호, 이메일은 필수입니다')
     setLoading(true)
+    const payload = {
+      name: form.name, phone: form.phone, email: form.email,
+      specialty: form.specialty, price: form.price,
+      bank: form.bank, account: form.account,
+      region: form.region, commission_rate: form.commission_rate,
+      commission_amount: form.commission_amount,
+      photo_url: form.photo_url, career: form.career, intro: form.intro,
+      rating: form.rating, review_count: form.review_count, review_text: form.review_text,
+    }
     if (editing) {
-      const { error } = await supabase.from('consultants').update({
-        name: form.name, phone: form.phone, email: form.email,
-        specialty: form.specialty, price: form.price,
-        bank: form.bank, account: form.account, active: form.active,
-        region: form.region, commission_rate: form.commission_rate,
-        commission_amount: form.commission_amount,
-      }).eq('id', form.id)
+      const { error } = await supabase.from('consultants')
+        .update({ ...payload, active: form.active })
+        .eq('id', form.id)
       if (error) { alert('수정 실패: ' + error.message); setLoading(false); return }
     } else {
-      const { error } = await supabase.from('consultants').insert({
-        name: form.name, phone: form.phone, email: form.email,
-        specialty: form.specialty, price: form.price,
-        bank: form.bank, account: form.account, active: true,
-        region: form.region, commission_rate: form.commission_rate,
-        commission_amount: form.commission_amount,
-      })
+      const { error } = await supabase.from('consultants')
+        .insert({ ...payload, active: true })
       if (error) { alert('등록 실패: ' + error.message); setLoading(false); return }
     }
     setForm(emptyForm)
@@ -53,7 +53,7 @@ export default function ConsultantManager() {
     fetchList()
   }
   function handleEdit(c: ConsultantFormData) {
-    setForm(c)
+    setForm({ ...emptyForm, ...c })
     setEditing(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
