@@ -7,6 +7,7 @@ type Props = {
   onEdit: (c: ConsultantFormData) => void
   onDelete: (id: string) => void
   onToggleActive: (c: ConsultantFormData) => void
+  onSaveSort: (id: string, sort: number) => void
 }
 
 // 토글 가능한 열 정의
@@ -20,7 +21,7 @@ const COLUMNS = [
 ] as const
 type ColKey = typeof COLUMNS[number]['key']
 
-export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive }: Props) {
+export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive, onSaveSort }: Props) {
   // 기본으로 켜둘 열
   const [cols, setCols] = useState<Record<ColKey, boolean>>({
     email: false, phone: false, specialty: true,
@@ -32,7 +33,7 @@ export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive
 
   // 엑셀(CSV) 다운로드 — 켜진 열만
   function downloadCSV() {
-    const headers = ['이름', '활성']
+    const headers = ['순번', '이름', '활성']
     if (cols.email) headers.push('이메일')
     if (cols.phone) headers.push('전화번호')
     if (cols.specialty) headers.push('전문분야')
@@ -46,7 +47,7 @@ export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive
     }
 
     const rows = list.map(c => {
-      const r = [c.name, c.active ? '활성' : '비활성']
+      const r = [String(c.sort ?? 0), c.name, c.active ? '활성' : '비활성']
       if (cols.email) r.push(c.email || '')
       if (cols.phone) r.push(c.phone || '')
       if (cols.specialty) r.push(c.specialty || '')
@@ -89,7 +90,7 @@ export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive
         </button>
       </div>
       <div className="text-xs mb-3" style={{ color: '#6a6880' }}>
-        켜진 열만 엑셀에 담깁니다 · 상담사를 누르면 상세가 펼쳐집니다
+        순번이 작을수록 고객 화면 위로 갑니다 · 비활성은 고객 화면에 안 보여요 · 상담사를 누르면 상세가 펼쳐집니다
       </div>
 
       {/* 목록 */}
@@ -97,6 +98,7 @@ export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive
         {/* 헤더 */}
         <div className="flex items-center gap-3 px-3 py-2 text-xs font-bold"
           style={{ background: 'rgba(60,52,137,0.3)', color: '#FAC775' }}>
+          <span style={{ width: 44, textAlign: 'center' }}>순번</span>
           <span style={{ width: 34 }}></span>
           <span style={{ flex: 1 }}>이름</span>
           <span style={{ width: 50, textAlign: 'center' }}>활성</span>
@@ -114,6 +116,17 @@ export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive
             <div className="flex items-center gap-3 px-3 py-2.5 cursor-pointer"
               style={{ background: openId === c.id ? 'rgba(250,199,117,0.06)' : (i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent') }}
               onClick={() => setOpenId(openId === c.id ? null : c.id)}>
+              {/* 순번 입력 */}
+              <div style={{ width: 44, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                <input type="text" inputMode="numeric" defaultValue={String(c.sort ?? 0)}
+                  onBlur={e => {
+                    const n = parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0
+                    if (n !== (c.sort ?? 0)) onSaveSort(c.id!, n)
+                  }}
+                  className="rounded-lg text-xs text-center outline-none"
+                  style={{ width: 38, padding: '4px 0', background: 'rgba(255,255,255,0.08)', color: '#FAC775',
+                    border: '1px solid rgba(250,199,117,0.25)' }} />
+              </div>
               {/* 썸네일 */}
               <div style={{ width: 34, height: 34, borderRadius: 8, overflow: 'hidden', flexShrink: 0,
                 background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
