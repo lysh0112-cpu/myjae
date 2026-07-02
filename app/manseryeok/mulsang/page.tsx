@@ -5,6 +5,7 @@ import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsin } from '@/lib/saju/yongsin'
 import { buildMulsangPrompt, STYLE_CONFIGS } from '@/lib/saju/mulsangPrompt'
 import PageHeader from '@/app/components/common/PageHeader'
+import { supabase } from '@/lib/supabase'
 
 interface Commentary {
   title: string
@@ -17,13 +18,11 @@ interface Commentary {
 const MY_INFO_KEY = 'myinfo'
 const MULSANG_RESULT_KEY = 'mulsang_last_result_v3'
 
-// 시지(시간) 한글 설명
 const HOUR_LABEL = [
   '한밤중(子시)', '늦은밤(丑시)', '새벽(寅시)', '이른아침(卯시)',
   '아침(辰시)', '늦은아침(巳시)', '한낮(午시)', '이른오후(未시)',
   '오후(申시)', '저녁무렵(酉시)', '저녁(戌시)', '밤(亥시)',
 ]
-// 월지(계절) 한글 설명
 const SEASON_LABEL: Record<string, string> = {
   寅: '이른 봄', 卯: '봄', 辰: '늦봄',
   巳: '초여름', 午: '여름', 未: '늦여름',
@@ -40,6 +39,23 @@ function MulsangInner() {
     year: number; month: number; day: number
     leapMonth: string; hourIdx: number | null
   } | null>(null)
+
+  // 가격/노출 (그림 생성 = mulsang_ai)
+  const [drawPrice, setDrawPrice] = useState(19900)
+  const [drawActive, setDrawActive] = useState(true)
+  // 결제 팝업
+  const [payOpen, setPayOpen] = useState(false)
+
+  useEffect(() => {
+    supabase
+      .from('analysis_prices')
+      .select('price, active')
+      .eq('price_key', 'mulsang_ai')
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) { setDrawPrice(data.price); setDrawActive(data.active) }
+      })
+  }, [])
 
   useEffect(() => {
     const urlYear = parseInt(sp.get('year') || '0')
@@ -120,7 +136,9 @@ function MulsangInner() {
     )
   }
 
-  async function handleGenerate() {
+  // 실제 그림 생성 (결제 팝업에서 '결제하기' 누르면 호출)
+  async function doGenerate() {
+    setPayOpen(false)
     if (!saju || saju.length === 0 || !dayStem) return
     setLoading(true)
     setImageUrl(null)
@@ -175,6 +193,19 @@ function MulsangInner() {
     }
   }
 
+  // 그림 그리기 버튼 → 결제 팝업 열기
+  function openPay() {
+    if (!saju || saju.length === 0 || !dayStem || converting) return
+    setPayOpen(true)
+  }
+
+  function goConsult() {
+    const params = new URLSearchParams()
+    params.set('mode', 'personal')
+    params.set('priceKey', 'mulsang')
+    router.push('/manseryeok/consultant-select?' + params.toString())
+  }
+
   function handleShare() {
     if (navigator.share) {
       navigator.share({ title: '명카페 사주 풍경화', text: '내 사주를 그림으로 봤어요!', url: window.location.href })
@@ -187,6 +218,40 @@ function MulsangInner() {
 
   const hasResult = commentary && !loading
 
+  // ===== 결제 팝업 (공용) =====
+  const PayPopup = payOpen ? (
+    <div onClick={() => setPayOpen(false)}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }}>
+      <div onClick={e => e.stopPropagation()}
+        style={{ width: '100%', maxWidth: '430px', background: '#15152e', borderRadius: '20px 20px 0 0', padding: '10px 20px 28px', boxShadow: '0 -8px 30px rgba(0,0,0,0.5)' }}>
+        <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.2)', margin: '0 auto 18px' }} />
+        <div style={{ fontSize: '17px', fontWeight: 700, color: '#e8e4ff', marginBottom: '4px' }}>🖼️ 사주 그림 생성</div>
+        <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '16px', lineHeight: 1.6 }}>
+          당신의 사주를 한 폭의 풍경화로 그려드려요
+        </div>
+        <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '8px' }}>포함 내용</div>
+          {['사주 8글자 기반 맞춤 풍경화', '선택한 화풍으로 생성', '그림 해설(주인공·환경·용신·조언)', '저장·공유 가능'].map((t, i) => (
+            <div key={i} style={{ fontSize: '13px', color: '#b8b4d8', lineHeight: 1.9 }}>· {t}</div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <span style={{ fontSize: '14px', color: '#8a88a0' }}>결제 금액</span>
+          <span style={{ fontSize: '20px', fontWeight: 700, color: gold }}>{drawPrice.toLocaleString()}원</span>
+        </div>
+        <button onClick={doGenerate}
+          style={{ width: '100%', padding: '15px', borderRadius: '12px', background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)', border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginBottom: '8px' }}>
+          💳 {drawPrice.toLocaleString()}원 결제하고 그림 그리기
+        </button>
+        <button onClick={() => setPayOpen(false)}
+          style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: '#8a88a0', fontSize: '13px', cursor: 'pointer' }}>
+          취소
+        </button>
+      </div>
+    </div>
+  ) : null
+
+  // ===== 결과 화면 =====
   if (hasResult) {
     return (
       <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto' }}>
@@ -225,29 +290,34 @@ function MulsangInner() {
             </div>
           ))}
 
-          <button onClick={() => router.push('/manseryeok/consulting')}
+          <button onClick={goConsult}
             style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'transparent', border: `1px solid ${gold}`, color: gold, fontSize: '14px', fontWeight: 500, cursor: 'pointer', marginTop: '8px', marginBottom: '12px' }}>
             🔮 이 그림에 대해 전문가와 상담하기 →
           </button>
 
-          <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px' }}>
-            <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '8px' }}>다른 화풍으로 다시 그리기</div>
-            <select value={style} onChange={e => setStyle(e.target.value)}
-              style={{ width: '100%', padding: '10px', borderRadius: '10px', background: '#1a1a18', border: '1px solid rgba(255,255,255,0.15)', color: gold, fontSize: '14px', marginBottom: '10px' }}>
-              {(Object.keys(STYLE_CONFIGS)).map(key => (
-                <option key={key} value={key}>{STYLE_CONFIGS[key].label}</option>
-              ))}
-            </select>
-            <button onClick={handleGenerate}
-              style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)', border: 'none', color: '#1a1a18', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}>
-              ✨ 다시 그리기
-            </button>
-          </div>
+          {drawActive && (
+            <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px' }}>
+              <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '8px' }}>다른 화풍으로 다시 그리기</div>
+              <select value={style} onChange={e => setStyle(e.target.value)}
+                style={{ width: '100%', padding: '10px', borderRadius: '10px', background: '#1a1a18', border: '1px solid rgba(255,255,255,0.15)', color: gold, fontSize: '14px', marginBottom: '10px' }}>
+                {(Object.keys(STYLE_CONFIGS)).map(key => (
+                  <option key={key} value={key}>{STYLE_CONFIGS[key].label}</option>
+                ))}
+              </select>
+              <button onClick={openPay}
+                style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)', border: 'none', color: '#1a1a18', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}>
+                ✨ 다시 그리기 · {drawPrice.toLocaleString()}원
+              </button>
+            </div>
+          )}
         </div>
+
+        {PayPopup}
       </main>
     )
   }
 
+  // ===== 첫 입력 화면 =====
   return (
     <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
@@ -266,21 +336,27 @@ function MulsangInner() {
           ))}
         </select>
 
-        <button onClick={handleGenerate} disabled={loading || converting}
-          style={{
-            width: '100%', padding: '14px', borderRadius: '12px', marginBottom: '20px',
-            background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)',
-            border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 'bold',
-            cursor: loading ? 'default' : 'pointer', opacity: loading || converting ? 0.6 : 1,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-          }}>
-          {loading ? (
-            <>
-              <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>✦</span>
-              그림과 해설을 만드는 중...
-            </>
-          ) : '✨ 나의 사주 그림 그리기'}
-        </button>
+        {drawActive ? (
+          <button onClick={openPay} disabled={loading || converting}
+            style={{
+              width: '100%', padding: '14px', borderRadius: '12px', marginBottom: '20px',
+              background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)',
+              border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 'bold',
+              cursor: loading ? 'default' : 'pointer', opacity: loading || converting ? 0.6 : 1,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            }}>
+            {loading ? (
+              <>
+                <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>✦</span>
+                그림과 해설을 만드는 중...
+              </>
+            ) : `✨ 나의 사주 그림 그리기 · ${drawPrice.toLocaleString()}원`}
+          </button>
+        ) : (
+          <div style={{ textAlign: 'center', color: '#8a88a0', fontSize: '13px', marginBottom: '20px' }}>
+            현재 그림 생성 서비스는 준비 중입니다.
+          </div>
+        )}
 
         {loading && (
           <div style={{ background: cardBg, border, borderRadius: '14px', padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
@@ -292,6 +368,8 @@ function MulsangInner() {
           </div>
         )}
       </div>
+
+      {PayPopup}
     </main>
   )
 }
