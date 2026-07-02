@@ -2,14 +2,13 @@
 import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import PageHeader from '@/app/components/common/PageHeader'
+import { supabase } from '@/lib/supabase'
 import { runDiagnose, type DiagnosedDate } from '../lib/diagnose'
 
 const cardBg = '#13132a'
 const sub = '#5555aa'
 const text = '#e8e4ff'
 const gold = '#FAC775'
-
-const PRICE = 9900
 
 const HOUR_LABELS: Record<string, string> = {
   '-1': '시간 모름',
@@ -119,6 +118,16 @@ function CheckInner() {
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
   const [payOpen, setPayOpen] = useState(false)
+  const [price, setPrice] = useState(9900)
+
+  useEffect(() => {
+    supabase
+      .from('analysis_prices')
+      .select('price')
+      .eq('price_key', 'wedding_check')
+      .maybeSingle()
+      .then(({ data }) => { if (data) setPrice(data.price) })
+  }, [])
 
   useEffect(() => {
     try {
@@ -281,17 +290,14 @@ function CheckInner() {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <span style={{ fontSize: '14px', color: sub }}>결제 금액</span>
-              <span style={{ fontSize: '20px', fontWeight: 700, color: '#c8b0ff' }}>{PRICE.toLocaleString()}원</span>
+              <span style={{ fontSize: '20px', fontWeight: 700, color: '#c8b0ff' }}>{price.toLocaleString()}원</span>
             </div>
 
             <button onClick={runCheck}
               style={{ width: '100%', padding: '15px', borderRadius: '12px', background: 'linear-gradient(135deg,#5544bb,#7766dd)', border: 'none', color: text, fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginBottom: '8px' }}>
-              💳 {PRICE.toLocaleString()}원 결제하기
+              💳 {price.toLocaleString()}원 결제하기
             </button>
-            <div style={{ fontSize: '11px', color: sub, textAlign: 'center', marginBottom: '14px' }}>
-              (결제 시스템 첨부 예정 — 지금은 바로 결과를 봐요)
-            </div>
-
+           
             <button onClick={() => setPayOpen(false)}
               style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: sub, fontSize: '13px', cursor: 'pointer', marginBottom: '14px' }}>
               취소
