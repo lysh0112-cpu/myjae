@@ -5,13 +5,14 @@ import { useState, useEffect } from 'react'
 export default function ToneManager() {
   const [rules, setRules] = useState('')
   const [terms, setTerms] = useState('')
+  const [mulsang, setMulsang] = useState('')
   const [defaultRules, setDefaultRules] = useState('')
   const [defaultTerms, setDefaultTerms] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
 
-  // 미리보기
+  // 미리보기 (공통 톤 확인용)
   const [sajuInfo, setSajuInfo] = useState('')
   const [preview, setPreview] = useState('')
   const [previewing, setPreviewing] = useState(false)
@@ -26,6 +27,7 @@ export default function ToneManager() {
       else {
         setRules(d.tone_rules || '')
         setTerms(d.easy_terms || '')
+        setMulsang(d.mulsang_guide || '')
         setDefaultRules(d.default_rules || '')
         setDefaultTerms(d.default_terms || '')
       }
@@ -38,16 +40,13 @@ export default function ToneManager() {
   useEffect(() => { load() }, [])
 
   const save = async () => {
-    if (!rules.trim() && !terms.trim()) {
-      if (!confirm('두 칸이 모두 비어 있어요. 저장하면 기본 말투가 자동으로 적용됩니다. 계속할까요?')) return
-    }
     setSaving(true)
     setMsg('')
     try {
       const res = await fetch('/api/admin/tone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tone_rules: rules, easy_terms: terms }),
+        body: JSON.stringify({ tone_rules: rules, easy_terms: terms, mulsang_guide: mulsang }),
       })
       const d = await res.json()
       if (!res.ok) { setMsg('저장 실패: ' + (d.error || '알 수 없음')) }
@@ -59,10 +58,10 @@ export default function ToneManager() {
   }
 
   const resetToDefault = () => {
-    if (!confirm('처음 기본 말투로 되돌릴까요? (지금 입력한 내용은 사라집니다. 저장을 눌러야 실제 적용돼요)')) return
+    if (!confirm('공통 말투(①②)를 처음 기본값으로 되돌릴까요? 물상도 칸은 그대로 둡니다. (저장을 눌러야 실제 적용)')) return
     setRules(defaultRules)
     setTerms(defaultTerms)
-    setMsg('기본 말투를 불러왔어요. 확인 후 [저장하기]를 눌러야 실제로 적용됩니다.')
+    setMsg('공통 말투 기본값을 불러왔어요. 확인 후 [저장하기]를 눌러야 실제로 적용됩니다.')
   }
 
   const runPreview = async () => {
@@ -93,6 +92,10 @@ export default function ToneManager() {
     padding: '12px 14px', border: '1px solid rgba(255,255,255,0.15)', fontSize: 14, lineHeight: 1.7,
     boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit',
   }
+  const sectionTitle: React.CSSProperties = {
+    fontSize: 14, fontWeight: 700, color: '#fff', margin: '26px 0 12px',
+    paddingBottom: 8, borderBottom: '1px solid rgba(255,255,255,0.1)',
+  }
 
   if (loading) {
     return <div style={{ padding: 20, color: 'rgba(255,255,255,0.5)' }}>불러오는 중...</div>
@@ -104,8 +107,9 @@ export default function ToneManager() {
 
       {/* 안내 */}
       <div style={{ background: 'rgba(250,199,117,0.1)', border: '1px solid rgba(250,199,117,0.25)', borderRadius: 10, padding: '12px 14px', marginBottom: 20, fontSize: 13, color: 'rgba(255,255,255,0.8)', lineHeight: 1.7 }}>
-        ℹ️ 여기서 고친 말투는 <b style={{ color: gold }}>사주·궁합·개명 등 모든 AI 해설</b>에 똑같이 적용됩니다.<br />
-        고친 뒤 <b>[저장하기]</b>를 누르면 반영돼요. 잘못 고쳤으면 <b>[기본값으로 되돌리기]</b>로 원래대로 돌아갑니다.
+        ℹ️ <b style={{ color: gold }}>공통 말투(①②)</b>는 모든 AI 해설에 적용됩니다.<br />
+        <b style={{ color: gold }}>화면별 전용 지시문</b>은 그 화면에만 추가로 적용됩니다. (예: 물상도)<br />
+        고친 뒤 맨 아래 <b>[저장하기]</b>를 누르면 한 번에 반영돼요.
       </div>
 
       {msg && (
@@ -114,18 +118,28 @@ export default function ToneManager() {
         </div>
       )}
 
-      {/* ① 말투 규칙 */}
+      {/* ===== A. 공통 ===== */}
+      <div style={{ ...sectionTitle, marginTop: 8 }}>A. 공통 말투 (모든 해설에 적용)</div>
+
       <div style={{ marginBottom: 20 }}>
         <div style={label}>① 말투 규칙</div>
         <div style={hint}>AI가 어떤 태도·마음가짐으로 쓸지 정합니다. (예: 겁주지 말기, 따뜻하게, 쉬운 말 우선)</div>
         <textarea value={rules} onChange={e => setRules(e.target.value)} style={textarea} placeholder="말투 규칙을 자유롭게 적어주세요" />
       </div>
 
-      {/* ② 쉬운 말 사전 */}
       <div style={{ marginBottom: 20 }}>
         <div style={label}>② 쉬운 말 사전</div>
         <div style={hint}>어려운 명리 용어를 고객이 이해하기 쉬운 말로 어떻게 바꿀지 정합니다. (예: 용신 → 나에게 꼭 필요한 기운)</div>
         <textarea value={terms} onChange={e => setTerms(e.target.value)} style={textarea} placeholder="어려운 용어 → 쉬운 표현" />
+      </div>
+
+      {/* ===== B. 화면별 전용 ===== */}
+      <div style={sectionTitle}>B. 화면별 전용 지시문</div>
+
+      <div style={{ marginBottom: 20 }}>
+        <div style={label}>🖼️ 물상도(그림) 전용</div>
+        <div style={hint}>물상도(사주 그림) 해설에만 추가로 적용됩니다. 그림을 함께 보며 설명하는 톤, 소장 가치 등.</div>
+        <textarea value={mulsang} onChange={e => setMulsang(e.target.value)} style={textarea} placeholder="물상도 해설 전용 지침" />
       </div>
 
       {/* 저장 / 되돌리기 */}
@@ -136,16 +150,16 @@ export default function ToneManager() {
         </button>
         <button onClick={resetToDefault}
           style={{ padding: '11px 22px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'rgba(255,255,255,0.7)', fontSize: 14, cursor: 'pointer' }}>
-          ↩ 기본값으로 되돌리기
+          ↩ 공통 말투 기본값으로 되돌리기
         </button>
       </div>
 
-      {/* 미리보기 */}
+      {/* 미리보기 (공통 톤 확인용) */}
       <div style={{ background: cardBg, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 18 }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: gold, marginBottom: 4 }}>👁 미리보기</div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: gold, marginBottom: 4 }}>👁 미리보기 (공통 말투 확인)</div>
         <div style={{ ...hint, marginBottom: 12 }}>
-          지금 위에 적은 말투로 해설이 어떻게 나오는지 확인합니다. 사주를 자유롭게 적어보세요.<br />
-          (말투 확인용입니다. 정확한 사주 풀이는 실제 사주 화면에서 확인하세요.)
+          위 공통 말투(①②)로 해설이 어떻게 나오는지 확인합니다. 사주를 자유롭게 적어보세요.<br />
+          (말투 확인용입니다. 물상도 등 실제 해설은 각 화면에서 확인하세요.)
         </div>
         <input
           value={sajuInfo}
