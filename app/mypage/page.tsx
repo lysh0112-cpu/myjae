@@ -552,16 +552,26 @@ export default function MyPage() {
               {consults.map((c, i) => {
                 const st = statusInfo(c.status)
                 return (
-                  <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: i < consults.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                    <div>
-                      <div style={{ fontSize: 14, color: '#fff' }}>{c.consultant_name || '상담사'}</div>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
-                        {dateText(c.booking_date || c.created_at)}
-                        {c.paid_amount ? ` · ${c.paid_amount.toLocaleString()}원` : ''}
+                  <div key={c.id} style={{ padding: '12px 0', borderBottom: i < consults.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: 14, color: '#fff' }}>{c.consultant_name || '상담사'}</div>
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+                          {dateText(c.booking_date || c.created_at)}
+                          {c.paid_amount ? ` · ${c.paid_amount.toLocaleString()}원` : ''}
+                        </div>
                       </div>
+                      <span style={{ fontSize: 12, color: st.color }}>{st.label}</span>
                     </div>
-                    <span style={{ fontSize: 12, color: st.color }}>{st.label}</span>
+                    <button
+                      onClick={() => router.push(`/manseryeok/consulting?consultationId=${c.id}`)}
+                      style={{ marginTop: 8, width: '100%', padding: '9px 0', borderRadius: 10,
+                        background: 'rgba(83,74,183,0.25)', border: '1px solid rgba(119,102,221,0.4)',
+                        color: '#c8b0ff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                      💬 채팅방 입장
+                    </button>
                   </div>
+
                 )
               })}
             </div>
