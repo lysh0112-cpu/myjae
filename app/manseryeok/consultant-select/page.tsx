@@ -17,6 +17,22 @@ type Consultant = {
   region: string
 }
 
+type Slot = {
+  consultant_id: string
+  slot_date: string
+  slot_hour: number
+  is_booked: boolean
+}
+
+const WEEK = ['일', '월', '화', '수', '목', '금', '토']
+
+// "2026-07-02" → "7/2 목"
+function fmtDate(key: string): string {
+  const [y, m, d] = key.split('-').map(Number)
+  const wd = new Date(y, m - 1, d).getDay()
+  return `${m}/${d} ${WEEK[wd]}`
+}
+
 function ConsultantSelectInner() {
   const params = useSearchParams()
   const router = useRouter()
@@ -24,6 +40,7 @@ function ConsultantSelectInner() {
   const score = params.get('score') || ''
   const names = params.get('names') || ''
   const [consultants, setConsultants] = useState<Consultant[]>([])
+  const [slots, setSlots] = useState<Slot[]>([])
   const [loading, setLoading] = useState(true)
   const [openId, setOpenId] = useState<string | null>(null)
 
@@ -35,10 +52,37 @@ function ConsultantSelectInner() {
         .eq('active', true)
         .order('created_at')
       setConsultants((data ?? []) as Consultant[])
+
+      // 오늘 이후의 열린 일정만 읽어오기
+      const today = new Date()
+      const yyyy = today.getFullYear()
+      const mm = String(today.getMonth() + 1).padStart(2, '0')
+      const dd = String(today.getDate()).padStart(2, '0')
+      const todayKey = `${yyyy}-${mm}-${dd}`
+
+      const { data: slotData } = await supabase
+        .from('consultant_slots')
+        .select('consultant_id, slot_date, slot_hour, is_booked')
+        .gte('slot_date', todayKey)
+        .order('slot_date')
+        .order('slot_hour')
+      setSlots((slotData ?? []) as Slot[])
+
       setLoading(false)
     }
     load()
   }, [])
+
+  // 상담사별 · 날짜별로 열린 시간 묶기 (예약 안 찬 것만)
+  function scheduleOf(consultantId: string): { date: string; hours: number[] }[] {
+    const mine = slots.filter(s => s.consultant_id === consultantId && !s.is_booked)
+    const byDate: Record<string, number[]> = {}
+    for (const s of mine) {
+      if (!byDate[s.slot_date]) byDate[s.slot_date] = []
+      byDate[s.slot_date].push(s.slot_hour)
+    }
+    return Object.keys(byDate).sort().map(date => ({ date, hours: byDate[date].sort((a, b) => a - b) }))
+  }
 
   const modeLabel: Record<string, string> = {
     couple: '💑 연인 궁합',
@@ -48,7 +92,6 @@ function ConsultantSelectInner() {
     personal: '🔮 개인 상담',
   }
 
-  // 상담사 선택 → 시간 선택 화면으로 (결제는 이미 했다고 가정하고 뒤 단계에서 처리)
   function pick(c: Consultant) {
     router.push(`/manseryeok/consulting?consultantId=${c.id}&consultantName=${encodeURIComponent(c.name)}&mode=${mode}`)
   }
@@ -84,6 +127,9 @@ function ConsultantSelectInner() {
         <div className="px-4">
           {consultants.map(c => {
             const open = openId === c.id
+            const sched = scheduleOf(c.id)
+            // 접힌 상태에서 보여줄 "가장 빠른 가능"
+            const first = sched[0]
             return (
               <div key={c.id} className="mb-2 rounded-2xl overflow-hidden"
                 style={{ border: '1px solid #252545', background: open ? '#13132a' : '#0f0f22' }}>
@@ -101,6 +147,16 @@ function ConsultantSelectInner() {
                       {c.name} <span className="text-[12px] text-[#7766bb]">선생님</span>
                     </div>
                     <div className="text-[12px] text-[#8888bb] mt-0.5">{c.specialty || '명리 상담'}</div>
+                    {/* 접힌 상태 요약: 가장 빠른 가능 시간 */}
+                    {first ? (
+                      <div className="text-[11px] mt-1" style={{ color: '#7bc86c' }}>
+                        가장 빠른 상담 · {fmtDate(first.date)} {first.hours[0]}시
+                      </div>
+                    ) : (
+                      <div className="text-[11px] mt-1" style={{ color: '#666688' }}>
+                        열린 일정 없음
+                      </div>
+                    )}
                   </div>
                   {c.rating ? (
                     <span className="text-[12px] text-[#e0b060] flex-shrink-0">★ {c.rating}</span>
@@ -130,6 +186,33 @@ function ConsultantSelectInner() {
                         <div className="text-[12px] text-[#8888aa] leading-relaxed">“{c.review_text}”</div>
                       </div>
                     )}
+
+                    {/* 상담 가능 일정 */}
+                    <div className="mb-3">
+                      <div className="text-[12px] mb-2" style={{ color: '#FAC775' }}>📅 상담 가능한 시간</div>
+                      {sched.length === 0 ? (
+                        <div className="text-[12px]" style={{ color: '#666688' }}>
+                          아직 열어둔 시간이 없어요.
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          {sched.map(row => (
+                            <div key={row.date} className="rounded-lg px-3 py-2"
+                              style={{ background: '#0d0d1a', border: '1px solid #1e1e35' }}>
+                              <div className="text-[11px] mb-1.5" style={{ color: '#aaaacc' }}>{fmtDate(row.date)}</div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {row.hours.map(h => (
+                                  <span key={h} className="text-[12px] px-2.5 py-1 rounded-md"
+                                    style={{ background: 'rgba(250,199,117,0.14)', color: '#FAC775', border: '1px solid rgba(250,199,117,0.3)' }}>
+                                    {h}시
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
 
                     <button onClick={() => pick(c)}
                       className="w-full py-[13px] rounded-xl text-[14px] font-medium"
