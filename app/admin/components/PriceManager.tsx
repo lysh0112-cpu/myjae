@@ -11,7 +11,9 @@ type Price = {
   sort: number
 }
 
-// 하나의 가격표(상담/분석 공용) 카드
+type TarotPrice = Price & { free_count: number }
+
+// 상담/분석 공용 표
 function PriceTable({ title, table }: { title: string; table: 'consult_prices' | 'analysis_prices' }) {
   const [rows, setRows] = useState<Price[]>([])
   const [loading, setLoading] = useState(true)
@@ -96,17 +98,119 @@ function PriceTable({ title, table }: { title: string; table: 'consult_prices' |
   )
 }
 
+// 타로 전용 표 (무료횟수 칸 포함)
+function TarotTable() {
+  const [rows, setRows] = useState<TarotPrice[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => { load() }, [])
+
+  async function load() {
+    const { data, error } = await supabase.from('tarot_prices').select('*').order('sort')
+    if (error) { alert('불러오기 실패: ' + error.message); return }
+    setRows((data ?? []) as TarotPrice[])
+    setLoading(false)
+  }
+
+  function setPrice(id: string, raw: string) {
+    const num = parseInt(raw.replace(/[^0-9]/g, '')) || 0
+    setRows(prev => prev.map(r => r.id === id ? { ...r, price: num } : r))
+  }
+  function setFree(id: string, raw: string) {
+    const num = parseInt(raw.replace(/[^0-9]/g, '')) || 0
+    setRows(prev => prev.map(r => r.id === id ? { ...r, free_count: num } : r))
+  }
+  function toggle(id: string) {
+    setRows(prev => prev.map(r => r.id === id ? { ...r, active: !r.active } : r))
+  }
+
+  async function saveAll() {
+    setSaving(true)
+    for (const r of rows) {
+      const { error } = await supabase.from('tarot_prices')
+        .update({ price: r.price, free_count: r.free_count, active: r.active, updated_at: new Date().toISOString() })
+        .eq('id', r.id)
+      if (error) { alert('저장 실패(' + r.label + '): ' + error.message); setSaving(false); return }
+    }
+    setSaving(false)
+    alert('타로 가격 저장되었습니다')
+    load()
+  }
+
+  if (loading) return <div className="text-sm" style={{ color: '#8a88a0' }}>불러오는 중...</div>
+
+  return (
+    <div style={{ flex: 1, minWidth: 320 }}>
+      <div className="text-sm font-bold mb-2" style={{ color: '#FAC775' }}>🃏 타로 가격</div>
+      <div className="rounded-xl overflow-hidden"
+        style={{ background: '#2C2C2A', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="flex items-center px-3 py-2 text-xs font-bold"
+          style={{ background: 'rgba(60,52,137,0.3)', color: '#FAC775',
+            borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <span style={{ flex: 1 }}>종류</span>
+          <span style={{ width: 78, textAlign: 'right' }}>가격</span>
+          <span style={{ width: 58, textAlign: 'center' }}>무료횟수</span>
+          <span style={{ width: 40, textAlign: 'center' }}>노출</span>
+        </div>
+
+        {rows.map(r => (
+          <div key={r.id} className="flex items-center px-3 py-2"
+            style={{ borderTop: '1px solid rgba(255,255,255,0.05)', opacity: r.active ? 1 : 0.45 }}>
+            <span style={{ flex: 1, fontSize: 12, color: '#fff' }}>
+              {r.label}{!r.active && <span style={{ fontSize: 10, color: '#8a88a0' }}> (숨김)</span>}
+            </span>
+            <div style={{ width: 78, textAlign: 'right' }}>
+              <input type="text" inputMode="numeric" value={r.price.toLocaleString()}
+                onChange={e => setPrice(r.id, e.target.value)}
+                className="rounded-lg px-2 py-1 text-xs text-right outline-none"
+                style={{ width: 68, background: 'rgba(255,255,255,0.08)', color: '#fff',
+                  border: '1px solid rgba(255,255,255,0.1)' }} />
+            </div>
+            <div style={{ width: 58, display: 'flex', justifyContent: 'center' }}>
+              <input type="text" inputMode="numeric" value={String(r.free_count)}
+                onChange={e => setFree(r.id, e.target.value)}
+                className="rounded-lg px-2 py-1 text-xs text-center outline-none"
+                style={{ width: 40, background: 'rgba(255,255,255,0.08)', color: '#fff',
+                  border: '1px solid rgba(255,255,255,0.1)' }} />
+            </div>
+            <div style={{ width: 40, display: 'flex', justifyContent: 'center' }}>
+              <button onClick={() => toggle(r.id)}
+                style={{ width: 34, height: 18, borderRadius: 20, position: 'relative',
+                  background: r.active ? '#FAC775' : 'rgba(255,255,255,0.2)' }}>
+                <span style={{ position: 'absolute', top: 2, [r.active ? 'right' : 'left']: 2,
+                  width: 14, height: 14, borderRadius: '50%', background: '#fff' } as any} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="text-xs mt-2" style={{ color: '#8a88a0' }}>
+        💡 무료횟수 = 결제 없이 볼 수 있는 횟수 (0이면 항상 유료)
+      </div>
+
+      <button onClick={saveAll} disabled={saving}
+        className="py-2 px-5 rounded-xl text-sm font-bold mt-2"
+        style={{ background: '#FAC775', color: '#1a1a18' }}>
+        {saving ? '저장중...' : '저장'}
+      </button>
+    </div>
+  )
+}
+
 export default function PriceManager() {
   return (
-    <div style={{ maxWidth: 900 }}>
+    <div style={{ maxWidth: 1200 }}>
       <div className="text-base font-bold mb-1" style={{ color: '#FAC775' }}>💰 가격 관리</div>
       <p className="text-xs mb-4" style={{ color: '#8a88a0', lineHeight: 1.5 }}>
-        왼쪽은 전문가 상담 연결 가격, 오른쪽은 AI 분석 가격입니다. 노출을 끄면 고객 화면에서 해당 버튼이 숨겨집니다.
+        전문가 상담 · AI 분석 · 타로 가격입니다. 노출을 끄면 고객 화면에서 해당 버튼이 숨겨집니다.
       </p>
 
       <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
         <PriceTable title="🔮 전문가 상담 가격" table="consult_prices" />
         <PriceTable title="✨ AI 분석 가격" table="analysis_prices" />
+        <TarotTable />
       </div>
 
       <div className="text-xs mt-4" style={{ color: '#8a88a0' }}>
