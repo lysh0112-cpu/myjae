@@ -5,6 +5,7 @@ import { useCoupleInput } from './hooks/useCoupleInput'
 import RelationSelect from './components/RelationSelect'
 import PersonForm from './components/PersonForm'
 import PageHeader from '@/app/components/common/PageHeader'
+import { supabase } from '@/lib/supabase'
 
 const MY_INFO_KEY = 'myinfo'
 const LAST_COUPLE_RESULT_KEY = 'couple_last_result_url'
@@ -13,6 +14,9 @@ function CoupleInputInner() {
   const router = useRouter()
   const [error, setError] = useState('')
   const [lastResultUrl, setLastResultUrl] = useState('')
+  const [payOpen, setPayOpen] = useState(false)
+  const [pendingUrl, setPendingUrl] = useState('')
+  const [price, setPrice] = useState(10000)
   const {
     relation, setRelation,
     person1, setPerson1,
@@ -26,6 +30,15 @@ function CoupleInputInner() {
   useEffect(() => {
     const lastUrl = sessionStorage.getItem(LAST_COUPLE_RESULT_KEY)
     if (lastUrl) setLastResultUrl(lastUrl)
+  }, [])
+
+  useEffect(() => {
+    supabase
+      .from('analysis_prices')
+      .select('price')
+      .eq('price_key', 'couple_ai')
+      .maybeSingle()
+      .then(({ data }) => { if (data) setPrice(data.price) })
   }, [])
 
   const handleStart = () => {
@@ -42,23 +55,29 @@ function CoupleInputInner() {
     const p1 = encodeURIComponent(JSON.stringify(person1))
     const p2 = encodeURIComponent(JSON.stringify(person2))
 
+    // 출산·결혼택일은 각자 화면(자체 결제 팝업 있음)으로 바로 이동
     if (relation === 'birth') {
-      const url = `/manseryeok/birth-timing?p1=${p1}&p2=${p2}`
-      router.push(url)
+      router.push(`/manseryeok/birth-timing?p1=${p1}&p2=${p2}`)
       return
     }
-
     if (relation === 'prewedding') {
-      const url = `/manseryeok/wedding-timing?p1=${p1}&p2=${p2}`
-      router.push(url)
+      router.push(`/manseryeok/wedding-timing?p1=${p1}&p2=${p2}`)
       return
     }
 
+    // 연인/부부 궁합 → 결제 팝업 먼저
     const q = encodeURIComponent(question)
     const url = `/manseryeok/couple-result?mode=${relation}&person1=${p1}&person2=${p2}&userQuestion=${q}`
-    sessionStorage.setItem(LAST_COUPLE_RESULT_KEY, url)
-    setLastResultUrl(url)
-    router.push(url)
+    setPendingUrl(url)
+    setPayOpen(true)
+  }
+
+  // 결제 팝업에서 '결제하기' 누르면 결과로 이동
+  const goResult = () => {
+    setPayOpen(false)
+    sessionStorage.setItem(LAST_COUPLE_RESULT_KEY, pendingUrl)
+    setLastResultUrl(pendingUrl)
+    router.push(pendingUrl)
   }
 
   const handleClearAll = () => {
@@ -176,6 +195,42 @@ function CoupleInputInner() {
           기본 분석은 무료 · 심층 분석은 전문 상담사와 연결
         </div>
       </div>
+
+      {/* 궁합 분석 결제 팝업 (연인/부부 궁합만) */}
+      {payOpen && (
+        <div onClick={() => setPayOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: '480px', background: '#15152e', borderRadius: '20px 20px 0 0', padding: '10px 20px 28px', boxShadow: '0 -8px 30px rgba(0,0,0,0.5)' }}>
+            <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.2)', margin: '0 auto 18px' }} />
+            <div style={{ fontSize: '17px', fontWeight: 700, color: '#e8e4ff', marginBottom: '4px' }}>💑 궁합 분석</div>
+            <div style={{ fontSize: '13px', color: '#5555aa', marginBottom: '16px', lineHeight: 1.6 }}>
+              두 사람의 사주로 인연의 흐름을 풀어드려요
+            </div>
+
+            <div style={{ background: '#13132a', borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontSize: '12px', color: '#5555aa', marginBottom: '8px' }}>분석 내용</div>
+              {['두 사람 궁합 점수', '사주·직업·소통의 조화', '관계 개선 방향', '함께 걸어갈 길 안내'].map((t, i) => (
+                <div key={i} style={{ fontSize: '13px', color: '#b8b4d8', lineHeight: 1.9 }}>· {t}</div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <span style={{ fontSize: '14px', color: '#5555aa' }}>결제 금액</span>
+              <span style={{ fontSize: '20px', fontWeight: 700, color: '#c8b0ff' }}>{price.toLocaleString()}원</span>
+            </div>
+
+            <button onClick={goResult}
+              style={{ width: '100%', padding: '15px', borderRadius: '12px', background: 'linear-gradient(135deg,#5544bb,#7766dd)', border: 'none', color: '#e8e4ff', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginBottom: '8px' }}>
+              💳 {price.toLocaleString()}원 결제하고 결과 보기
+            </button>
+            <button onClick={() => setPayOpen(false)}
+              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: '#5555aa', fontSize: '13px', cursor: 'pointer' }}>
+              취소
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
