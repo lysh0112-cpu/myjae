@@ -1,6 +1,7 @@
 // app/api/naming-chat/route.ts
 // AI 작명 도우미 채팅 — 개명/새이름 추천 화면용
 import { NextResponse } from 'next/server'
+import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -33,6 +34,11 @@ export async function POST(req: Request) {
       // 화면이 멈추지 않도록 200 + reply 로 응답
       return NextResponse.json({ reply: FAIL_REPLY })
     }
+
+    // 관리자 '어투 관리'의 공통 말투 (비었거나 오류면 기본값 폴백)
+    // 영업비밀 보호 등 기능 규칙(SYSTEM_PROMPT)은 그대로 두고, 공통 어투만 앞에 얹는다.
+    const toneBlock = await buildToneBlockFromDB()
+    const systemPrompt = `${toneBlock}\n\n${SYSTEM_PROMPT}`
 
     let ctxLine = ''
     if (context) {
@@ -69,7 +75,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 600,
-        system: SYSTEM_PROMPT,
+        system: systemPrompt,
         messages: apiMessages,
       }),
     })
