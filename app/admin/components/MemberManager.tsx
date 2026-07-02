@@ -9,6 +9,12 @@ type Member = {
   role: string | null
   created_at: string | null
   last_sign_in_at: string | null
+  birth_year: number | null
+  birth_month: number | null
+  birth_day: number | null
+  birth_hour: string | null
+  cal_type: string | null
+  gender: string | null
 }
 
 export default function MemberManager() {
@@ -180,12 +186,44 @@ export default function MemberManager() {
   const roleLabelText = (role: string | null) =>
     role === 'master' ? '매니저' : role === 'consultant' ? '상담사' : '일반회원'
 
+  // 생년월일 표시 (예: 1990.1.12)
+  const fmtBirth = (m: Member) =>
+    m.birth_year ? `${m.birth_year}.${m.birth_month ?? '-'}.${m.birth_day ?? '-'}` : '-'
+
+  // 음양력 표시
+  const fmtCalType = (c: string | null) => c || '-'
+
+  // 윤/평달 표시 (현재 profiles에 윤달 컬럼 없음 → 사주 등록자는 '평달')
+  const fmtLeap = (m: Member) => (m.birth_year ? '평달' : '-')
+
+  // 남/여 표시
+  const fmtGender = (g: string | null) => g || '-'
+
+  // 생시 표시 (시주 인덱스 → 사람이 읽는 형태)
+  const HOUR_LABELS = [
+    '子시(23~01)', '丑시(01~03)', '寅시(03~05)', '卯시(05~07)',
+    '辰시(07~09)', '巳시(09~11)', '午시(11~13)', '未시(13~15)',
+    '申시(15~17)', '酉시(17~19)', '戌시(19~21)', '亥시(21~23)',
+  ]
+  const fmtHour = (h: string | null) => {
+    if (h === null || h === undefined || h === '') return '-'
+    if (h === '모름') return '모름'
+    const idx = parseInt(h, 10)
+    if (isNaN(idx) || idx < 0 || idx > 11) return h
+    return HOUR_LABELS[idx]
+  }
+
   const downloadCSV = () => {
-    const header = ['닉네임', '이메일', '등급', '가입일', '마지막 로그인']
+    const header = ['등급', '닉네임', '이메일', '생년월일', '음양력', '윤/평달', '남/여', '생시', '가입일', '마지막 로그인']
     const rows = members.map(m => [
+      roleLabelText(m.role),
       m.nickname || '',
       m.email || '',
-      roleLabelText(m.role),
+      fmtBirth(m),
+      fmtCalType(m.cal_type),
+      fmtLeap(m),
+      fmtGender(m.gender),
+      fmtHour(m.birth_hour),
       fmtDateShort(m.created_at),
       fmtDate(m.last_sign_in_at),
     ])
@@ -205,6 +243,9 @@ export default function MemberManager() {
     width: '100%', background: '#1a1a18', color: '#fff', borderRadius: 8,
     padding: '10px 12px', border: '1px solid rgba(255,255,255,0.15)', fontSize: 14,
   }
+
+  const th: React.CSSProperties = { padding: '10px 12px', whiteSpace: 'nowrap' }
+  const td: React.CSSProperties = { padding: '10px 12px', whiteSpace: 'nowrap' }
 
   return (
     <div style={{ padding: '8px 4px' }}>
@@ -284,35 +325,26 @@ export default function MemberManager() {
         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>아직 가입한 회원이 없어요.</p>
       ) : (
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 760 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 1100 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', textAlign: 'left' }}>
-                <th style={{ padding: '10px 12px' }}>닉네임</th>
-                <th style={{ padding: '10px 12px' }}>이메일</th>
-                <th style={{ padding: '10px 12px' }}>등급</th>
-                <th style={{ padding: '10px 12px' }}>가입일</th>
-                <th style={{ padding: '10px 12px' }}>마지막 로그인</th>
-                <th style={{ padding: '10px 12px', textAlign: 'center' }}>관리</th>
+                <th style={th}>등급</th>
+                <th style={th}>닉네임</th>
+                <th style={th}>이메일</th>
+                <th style={th}>생년월일</th>
+                <th style={th}>음양력</th>
+                <th style={th}>윤/평달</th>
+                <th style={th}>남/여</th>
+                <th style={th}>생시</th>
+                <th style={th}>가입일</th>
+                <th style={th}>마지막 로그인</th>
+                <th style={{ ...th, textAlign: 'center' }}>관리</th>
               </tr>
             </thead>
             <tbody>
               {members.map(member => (
                 <tr key={member.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#fff' }}>
-                  <td style={{ padding: '10px 12px', fontWeight: 600 }}>
-                    {editingId === member.id ? (
-                      <input
-                        value={editNick}
-                        onChange={e => setEditNick(e.target.value)}
-                        maxLength={20}
-                        placeholder="닉네임"
-                        style={{ width: 120, background: '#1a1a18', color: '#fff', borderRadius: 6, padding: '6px 8px', border: '1px solid rgba(250,199,117,0.4)', fontSize: 13 }}
-                      />
-                    ) : (
-                      member.nickname || '(없음)'
-                    )}
-                  </td>
-                  <td style={{ padding: '10px 12px', color: 'rgba(255,255,255,0.7)' }}>{member.email || '-'}</td>
-                  <td style={{ padding: '10px 12px' }}>
+                  <td style={td}>
                     <select
                       value={member.role || 'customer'}
                       disabled={roleSavingId === member.id}
@@ -327,9 +359,28 @@ export default function MemberManager() {
                       <option value="master">👑 매니저</option>
                     </select>
                   </td>
-                  <td style={{ padding: '10px 12px', color: 'rgba(255,255,255,0.6)' }}>{fmtDateShort(member.created_at)}</td>
-                  <td style={{ padding: '10px 12px', color: 'rgba(255,255,255,0.6)' }}>{fmtDate(member.last_sign_in_at)}</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                  <td style={{ ...td, fontWeight: 600 }}>
+                    {editingId === member.id ? (
+                      <input
+                        value={editNick}
+                        onChange={e => setEditNick(e.target.value)}
+                        maxLength={20}
+                        placeholder="닉네임"
+                        style={{ width: 120, background: '#1a1a18', color: '#fff', borderRadius: 6, padding: '6px 8px', border: '1px solid rgba(250,199,117,0.4)', fontSize: 13 }}
+                      />
+                    ) : (
+                      member.nickname || '(없음)'
+                    )}
+                  </td>
+                  <td style={{ ...td, color: 'rgba(255,255,255,0.7)' }}>{member.email || '-'}</td>
+                  <td style={{ ...td, color: 'rgba(255,255,255,0.75)' }}>{fmtBirth(member)}</td>
+                  <td style={{ ...td, color: 'rgba(255,255,255,0.75)' }}>{fmtCalType(member.cal_type)}</td>
+                  <td style={{ ...td, color: 'rgba(255,255,255,0.75)' }}>{fmtLeap(member)}</td>
+                  <td style={{ ...td, color: 'rgba(255,255,255,0.75)' }}>{fmtGender(member.gender)}</td>
+                  <td style={{ ...td, color: 'rgba(255,255,255,0.75)' }}>{fmtHour(member.birth_hour)}</td>
+                  <td style={{ ...td, color: 'rgba(255,255,255,0.6)' }}>{fmtDateShort(member.created_at)}</td>
+                  <td style={{ ...td, color: 'rgba(255,255,255,0.6)' }}>{fmtDate(member.last_sign_in_at)}</td>
+                  <td style={{ ...td, textAlign: 'center' }}>
                     {editingId === member.id ? (
                       <>
                         <button
