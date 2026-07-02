@@ -5,6 +5,7 @@ import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsin } from '@/lib/saju/yongsin'
 import { supabase } from '@/lib/supabase'
 import { diagnoseName, type NameChar, type DiagnoseResult, type Grade } from '@/lib/saju/naming'
+import ConsultButton from '@/app/components/common/ConsultButton'
 
 const GOLD = '#FAC775'
 const CARD = '#2C2C2A'
@@ -75,7 +76,6 @@ function NewResultInner() {
 
   const [detailLoading, setDetailLoading] = useState(false)
 
-  // 한자 바꾸기 가격 + 결제 팝업
   const [price, setPrice] = useState(20000)
   const [payOpen, setPayOpen] = useState(false)
 
@@ -165,7 +165,6 @@ function NewResultInner() {
     } catch { return tries.map(() => '') }
   }, [saju, dayStem, tries])
 
-  // 결제 팝업에서 '결제하기' 누르면 해설 생성
   async function loadDetail() {
     setPayOpen(false)
     if (!cur || !saju || !dayStem || detailLoading) return
@@ -319,6 +318,11 @@ function NewResultInner() {
           </div>
         </div>
       )}
+
+      {/* 전문가 상담 연결 (개명 상담) */}
+      <div style={{ marginBottom: 14 }}>
+        <ConsultButton priceKey="naming" mode="personal" />
+      </div>
 
       <div style={{ marginTop: 8, borderTop: '1px solid rgba(250,199,117,0.15)', paddingTop: 18 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
