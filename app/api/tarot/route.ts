@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -70,15 +71,36 @@ export async function POST(req: Request) {
 
     // ---------- AI 모드: Claude 해석 생성 ----------
     if (body.mode === 'ai') {
-      const prompt = `당신은 따뜻하면서도 정직한 타로 상담가입니다.
+      // 관리자 '어투 관리'에서 설정한 공통 말투 (비었거나 오류면 기본값 폴백)
+      const toneBlock = await buildToneBlockFromDB()
+
+      // 타로 전용 지시문 읽기 (관리자 화면 B. 타로 전용 칸)
+      let tarotGuide = ''
+      if (supabase) {
+        try {
+          const { data } = await supabase
+            .from('tone_settings')
+            .select('tarot_guide')
+            .eq('id', 1)
+            .maybeSingle()
+          tarotGuide = (data?.tarot_guide || '').trim()
+        } catch (e) {
+          console.error('tarot_guide load error:', e)
+        }
+      }
+
+      // 프롬프트 = [공통 말투] + [타로 전용 지시문] + [기능 뼈대: 카드 데이터·출력형식]
+      const prompt = `${toneBlock}
+
+${tarotGuide}
+
+당신은 따뜻하면서도 정직한 타로 상담가입니다.
 아래는 고객이 마음속 질문을 떠올리고 직접 뽑은 카드들입니다. 이 해석은 고객이 받는 결과물입니다.
 
-[매우 중요한 원칙]
-- 무조건 좋다고 하지 마세요. 또한 불안하게 겁주지도 마세요. 사실을 짚되, 그 안에서 나아갈 방향을 제시하세요.
-- 고객의 질문에 직접 답하세요. 일반론이 아니라 이 질문에 대한 답으로 각 카드를 풀어주세요.
-- 각 카드의 '자리(위치)'와 '정/역 방향'을 반영하세요. 같은 카드라도 자리와 방향에 따라 의미가 달라집니다.
-- 어려운 용어보다 쉽고 따뜻한 말로. 마크다운 기호(##, **)는 쓰지 마세요.
-- 카드가 많을 때는 각 카드 meaning을 너무 길게 쓰지 말고 2문장 정도로 간결히 쓰세요. (전체가 잘리지 않도록)
+[반드시 지킬 기능 규칙]
+- 고객의 질문에 직접 답하세요. 각 카드의 '자리(위치)'와 '정/역 방향'을 반드시 반영하세요.
+- 마크다운 기호(##, **)는 쓰지 마세요.
+- 카드가 많을 때는 각 카드 meaning을 2문장 정도로 간결히 쓰세요. (전체가 잘리지 않도록)
 
 [고객의 질문]
 ${body.question}
