@@ -12,7 +12,8 @@ import ReviewManager from './components/ReviewManager'
 import ExpenseManager from './components/ExpenseManager'
 import ExpenseApproval from './components/ExpenseApproval'
 import MemberManager from './components/MemberManager'
-type Tab = 'dashboard' | 'consultant' | 'member' | 'settlement' | 'history' | 'knowledge' | 'review' | 'accounting' | 'approval' | 'settings'
+import ToneManager from './components/ToneManager'
+type Tab = 'dashboard' | 'consultant' | 'member' | 'settlement' | 'history' | 'knowledge' | 'review' | 'accounting' | 'approval' | 'tone' | 'settings'
 const TABS = [
   { key: 'dashboard', label: '📊 대시보드' },
   { key: 'consultant', label: '👤 상담사 관리' },
@@ -23,6 +24,7 @@ const TABS = [
   { key: 'review', label: '📝 후기 관리' },
   { key: 'accounting', label: '💳 관리회계' },
   { key: 'approval', label: '🧾 지출결의서' },
+  { key: 'tone', label: '💬 어투 관리' },
   { key: 'settings', label: '⚙️ 사이트 설정' },
 ]
 export default function AdminPage() {
@@ -104,6 +106,7 @@ export default function AdminPage() {
         {tab === 'review' && <ReviewManager />}
         {tab === 'accounting' && <ExpenseManager />}
         {tab === 'approval' && <ExpenseApproval />}
+        {tab === 'tone' && <ToneManager />}
         {tab === 'settings' && <SiteSettings />}
       </main>
     </div>
