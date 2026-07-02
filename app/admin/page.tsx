@@ -54,8 +54,15 @@ export default function AdminPage() {
         style={{ background: 'rgba(26,26,24,0.97)', backdropFilter: 'blur(12px)',
           borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center gap-6">
-          <div className="text-base font-bold whitespace-nowrap" style={{ color: '#FAC775' }}>
-            🔐 명카페 관리자
+          <div className="whitespace-nowrap">
+            <div className="text-base font-bold" style={{ color: '#FAC775' }}>
+              🔐 명카페 관리자
+            </div>
+            {adminName && (
+              <div className="text-xs font-bold mt-1" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                👤 {adminName} 님
+              </div>
+            )}
           </div>
           <div className="flex gap-2 flex-wrap">
             {TABS.map((t) => (
@@ -67,9 +74,6 @@ export default function AdminPage() {
                 {t.label}
               </button>
             ))}
-          </div>
-          <div className="ml-auto text-sm font-bold whitespace-nowrap" style={{ color: 'rgba(255,255,255,0.75)' }}>
-            {adminName ? `👤 ${adminName} 님` : ''}
           </div>
         </div>
       </header>
