@@ -2,16 +2,19 @@
 // ============================================================================
 // 명연재 공통 "말투 헌법" — 모든 AI 해설의 톤·용어를 한 곳에서 제어한다.
 // ----------------------------------------------------------------------------
-// 사용법: 각 화면의 프롬프트 맨 앞에 buildToneBlock()을 붙인다.
-//   const prompt = `${buildToneBlock()}\n\n${화면별_지시}`
-// 말투를 바꾸고 싶으면 이 파일만 고치면 전 화면에 동시 적용된다.
+// 사용법:
+//  - 서버 API에서: const tone = await buildToneBlockFromDB(); (관리자 편집분 반영)
+//  - 그 외/폴백: buildToneBlock() (코드 기본값)
+// 말투는 관리자 화면 '어투 관리' 탭에서 수정 → tone_settings 테이블에 저장된다.
+// DB가 비었거나 오류면 아래 코드 기본값(DEFAULT_*)으로 자동 폴백한다.
 //
 // 근거 문서: docs/해설_톤_원칙.md (사람이 읽는 원칙), 여기는 그 코드 구현.
-// 강도: 중간 — 규칙 + 치환 사전 + 본보기. AI가 상황에 맞게 자연스럽게 변주.
 // ============================================================================
 
-// ── 1. 공통 톤 규칙 (모든 해설 공통) ──
-const TONE_RULES = `[해설 말투 규칙 — 반드시 지킬 것]
+import { createClient } from '@supabase/supabase-js'
+
+// ── 1. 공통 톤 규칙 (코드 기본값 = 폴백) ──
+const DEFAULT_TONE_RULES = `[해설 말투 규칙 — 반드시 지킬 것]
 1. 목적은 "따뜻한 위로와 공감"입니다. 예언·판정이 아니라, 읽는 분이 위로받고 힘을 얻게 쓰세요.
 2. 쉬운 말이 우선입니다. 어려운 명리 용어를 그대로 쓰지 말고, 쉬운 설명을 앞세우세요.
    꼭 필요한 핵심 용어만 괄호로 살짝 곁들입니다. 한 문장에 용어는 하나까지.
@@ -22,8 +25,8 @@ const TONE_RULES = `[해설 말투 규칙 — 반드시 지킬 것]
    그 뜻만 쉬운 말로 풀어 다정한 조언으로 바꿉니다.
 5. 존댓말로, 다정하고 담백하게. 과장된 감탄사 남발은 피합니다. 반드시 따뜻하게 마무리하세요.`
 
-// ── 2. 쉬운 말 치환 사전 (용어 → 쉬운 표현) ──
-const EASY_TERMS = `[어려운 말은 이렇게 풀어서]
+// ── 2. 쉬운 말 치환 사전 (코드 기본값 = 폴백) ──
+const DEFAULT_EASY_TERMS = `[어려운 말은 이렇게 풀어서]
 - 용신 → "나에게 꼭 필요한 기운(용신)"
 - 일간 → "나의 본바탕"
 - 일지 합/육합/삼합 → "서로 잘 맞고 끌리는 기운"
@@ -35,17 +38,45 @@ const EASY_TERMS = `[어려운 말은 이렇게 풀어서]
 - 식신·상관 → "표현력·재능"
 - 재성 → "재물·활동의 기운" / 관성 → "책임감" / 인성 → "배움·마음의 안정"`
 
-// ── 3. 공통 톤 블록 조립 ──
+// ── 3. 코드 기본값 조립 (동기, 폴백용) ──
+// 기존 화면들이 그대로 이 함수를 써도 문제없이 동작한다.
 export function buildToneBlock(): string {
-  return `${TONE_RULES}\n\n${EASY_TERMS}`
+  return `${DEFAULT_TONE_RULES}\n\n${DEFAULT_EASY_TERMS}`
 }
 
+// ── 4. DB에서 관리자 편집분을 읽어 조립 (비동기, 서버 API용) ──
+// tone_settings(id=1)에서 읽는다. 비었거나 오류면 코드 기본값으로 폴백.
+export async function buildToneBlockFromDB(): Promise<string> {
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+    const { data } = await supabase
+      .from('tone_settings')
+      .select('tone_rules, easy_terms')
+      .eq('id', 1)
+      .maybeSingle()
+
+    const rules = (data?.tone_rules || '').trim() || DEFAULT_TONE_RULES
+    const terms = (data?.easy_terms || '').trim() || DEFAULT_EASY_TERMS
+    return `${rules}\n\n${terms}`
+  } catch {
+    // DB 접근 실패 시 코드 기본값으로 폴백
+    return buildToneBlock()
+  }
+}
+
+// 관리자 화면이 초깃값을 채울 때 쓰도록 기본값도 내보낸다.
+export const DEFAULT_TONE_RULES_TEXT = DEFAULT_TONE_RULES
+export const DEFAULT_EASY_TERMS_TEXT = DEFAULT_EASY_TERMS
+
 // ============================================================================
-// 상황별 조언 블록 — 필요한 화면에서 조건부로 프롬프트에 덧붙인다.
+// 상황별 조언 블록 — 필요한 화면에서 조건부로 프롬프트에 덧붙인다. (변경 없음)
 // ============================================================================
 
 // ── 원진 관계일 때: 점수는 안 깎고, 다정한 보완 조언만 ──
-// (용어 '원진살'은 절대 노출 금지. 아래 본보기 톤으로 한 단락.)
 export function wonjinAdviceBlock(): string {
   return `[특별 조언 — 두 분을 위한 다정한 한마디]
 두 분은 가끔 특별한 이유 없이 사소한 일에 마음이 살짝 엇갈릴 수 있는 사이예요.
