@@ -1,24 +1,25 @@
 'use client'
 import { Suspense, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 import PageHeader from '@/app/components/common/PageHeader'
 
 const TAROT_MODE: 'ai' | 'consultant' = 'ai'
 
-// 해석 기법 + 가격 (지금은 화면 표시용. 결제는 아직 미연동 → 실제로는 전부 무료 작동)
+// 해석 기법 (가격·무료횟수는 tarot_prices에서 읽어와 채움)
 const SPREADS = [
-  { id: 'one', count: 1, title: '한 장 뽑기', badge: '1회 무료 · 이후 2,000원',
+  { id: 'one', count: 1, key: 'tarot_1', title: '한 장 뽑기',
     desc: '지금 가장 궁금한 한 가지에, 카드 한 장이 답합니다.',
-    positions: ['오늘의 메시지'], price: 2000, freeFirst: true },
-  { id: 'three', count: 3, title: '세 장 뽑기', badge: '3,000원',
+    positions: ['오늘의 메시지'] },
+  { id: 'three', count: 3, key: 'tarot_3', title: '세 장 뽑기',
     desc: '시간의 흐름을 따라, 일이 어떻게 흘러갈지 읽습니다.',
-    positions: ['과거', '현재', '미래'], price: 3000, freeFirst: false },
-  { id: 'four', count: 4, title: '네 장 뽑기', badge: '5,000원',
+    positions: ['과거', '현재', '미래'] },
+  { id: 'four', count: 4, key: 'tarot_4', title: '네 장 뽑기',
     desc: '지금 상황의 원인부터 나아갈 길까지 짚어봅니다.',
-    positions: ['현재', '원인', '조언', '결과'], price: 5000, freeFirst: false },
-  { id: 'celtic', count: 10, title: '열 장 뽑기', badge: '켈틱 크로스 · 10,000원',
+    positions: ['현재', '원인', '조언', '결과'] },
+  { id: 'celtic', count: 10, key: 'tarot_10', title: '열 장 뽑기',
     desc: '하나의 고민을 열 가지 각도로 깊이 파고듭니다.',
-    positions: ['현재 상황', '장애물', '먼 과거', '가까운 과거', '가능한 미래', '가까운 미래', '나의 태도', '주변 환경', '희망과 두려움', '최종 결과'], price: 10000, freeFirst: false },
+    positions: ['현재 상황', '장애물', '먼 과거', '가까운 과거', '가능한 미래', '가까운 미래', '나의 태도', '주변 환경', '희망과 두려움', '최종 결과'] },
 ]
 
 const CATEGORY_CHIPS = [
@@ -43,6 +44,7 @@ interface Interpretation {
   summary: string; advice: string
 }
 interface HistoryItem { interp: Interpretation; question: string; savedAt: number }
+interface TarotPrice { price_key: string; price: number; free_count: number; active: boolean }
 
 const gold = '#FAC775'
 const cardBg = '#2C2C2A'
@@ -68,6 +70,13 @@ function cardsKey(picked: Picked[]): string {
   return picked.map(p => `${p.card.id}${p.reversed ? 'R' : 'U'}@${p.position}`).join('|')
 }
 
+// 뱃지 문구: 무료횟수 있으면 "N회 무료 · 이후 X원", 없으면 "X원"
+function badgeText(price?: TarotPrice): string {
+  if (!price) return ''
+  if (price.free_count > 0) return `${price.free_count}회 무료 · 이후 ${price.price.toLocaleString()}원`
+  return `${price.price.toLocaleString()}원`
+}
+
 type Step = 'question' | 'deck' | 'spread' | 'draw' | 'reveal' | 'result'
 
 function TarotInner() {
@@ -86,6 +95,9 @@ function TarotInner() {
   const [interpKey, setInterpKey] = useState<string>('')
   const [hasHistory, setHasHistory] = useState(false)
 
+  // 타로 가격/무료횟수
+  const [prices, setPrices] = useState<Record<string, TarotPrice>>({})
+
   const spread = SPREADS.find(s => s.id === spreadId) || SPREADS[1]
   const fullyDrawn = picked.length > 0 && picked.length === spread.count
 
@@ -98,6 +110,17 @@ function TarotInner() {
 
   useEffect(() => {
     setHasHistory(loadHistory().length > 0)
+  }, [])
+
+  useEffect(() => {
+    supabase.from('tarot_prices').select('price_key, price, free_count, active')
+      .then(({ data }) => {
+        if (data) {
+          const map: Record<string, TarotPrice> = {}
+          for (const r of data as TarotPrice[]) map[r.price_key] = r
+          setPrices(map)
+        }
+      })
   }, [])
 
   function showLastReading() {
@@ -178,6 +201,12 @@ function TarotInner() {
   }
 
   const hasCachedInterp = interp !== null && interpKey === cardsKey(picked)
+
+  // 노출된(active) 스프레드만 보이기
+  const visibleSpreads = SPREADS.filter(s => {
+    const p = prices[s.key]
+    return !p || p.active
+  })
 
   return (
     <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
@@ -260,14 +289,19 @@ function TarotInner() {
       {step === 'spread' && (
         <div style={{ padding: '18px 16px' }}>
           <p style={{ color: '#8a88a0', fontSize: '13px', marginBottom: '14px' }}>어떻게 풀어볼까요?</p>
-          {SPREADS.map(s => {
+          {visibleSpreads.map(s => {
             const selected = spreadId === s.id
+            const p = prices[s.key]
+            const isFree = p && p.free_count > 0
+            const badge = badgeText(p)
             return (
               <div key={s.id} onClick={() => setSpreadId(s.id)}
                 style={{ background: cardBg, border: selected ? '1px solid rgba(250,199,117,0.4)' : '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '14px', marginBottom: '10px', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
                   <span style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>{s.title}</span>
-                  <span style={{ background: s.freeFirst ? 'rgba(76,175,80,0.15)' : 'rgba(250,199,117,0.15)', color: s.freeFirst ? '#81c784' : gold, fontSize: '10px', padding: '3px 9px', borderRadius: '20px' }}>{s.badge}</span>
+                  {badge && (
+                    <span style={{ background: isFree ? 'rgba(76,175,80,0.15)' : 'rgba(250,199,117,0.15)', color: isFree ? '#81c784' : gold, fontSize: '10px', padding: '3px 9px', borderRadius: '20px' }}>{badge}</span>
+                  )}
                   {selected && <span style={{ marginLeft: 'auto', color: gold }}>✓</span>}
                 </div>
                 <p style={{ color: '#8a88a0', fontSize: '12px', margin: 0, lineHeight: 1.6 }}>{s.desc}</p>
@@ -389,13 +423,6 @@ function TarotInner() {
               <div style={{ fontSize: '15px', color: '#e8e4f2', lineHeight: 1.9 }}>{interp.advice}</div>
             </div>
           )}
-
-          {/* 나중에 상담사 연결이 필요해지면 아래 주석을 풀어 되살리면 됨
-          <button onClick={() => router.push('/manseryeok/consulting')}
-            style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'transparent', border: `1px solid ${gold}`, color: gold, fontSize: '14px', fontWeight: 500, cursor: 'pointer', marginBottom: '10px' }}>
-            🔮 이 결과로 전문가와 상담하기 →
-          </button>
-          */}
 
           <button onClick={startNew}
             style={{ width: '100%', padding: '13px', borderRadius: '12px', background: cardBg, border, color: '#8a88a0', fontSize: '14px', cursor: 'pointer' }}>
