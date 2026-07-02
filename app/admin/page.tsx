@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import ConsultantManager from './components/ConsultantManager'
 import SettlementManager from './components/SettlementManager'
@@ -25,6 +26,7 @@ const TABS = [
   { key: 'settings', label: '⚙️ 사이트 설정' },
 ]
 export default function AdminPage() {
+  const router = useRouter()
   const [tab, setTab] = useState<Tab>('dashboard')
   const [adminName, setAdminName] = useState<string>('')
 
@@ -47,6 +49,16 @@ export default function AdminPage() {
     loadAdmin()
     return () => { mounted = false }
   }, [])
+
+  const handleLogout = async () => {
+    if (!confirm('로그아웃 할까요?')) return
+    try {
+      await supabase.auth.signOut()
+    } catch {
+      // 무시
+    }
+    router.push('/')
+  }
 
   return (
     <div className="min-h-screen" style={{ background: '#1a1a18' }}>
@@ -75,6 +87,11 @@ export default function AdminPage() {
               </button>
             ))}
           </div>
+          <button onClick={handleLogout}
+            className="ml-auto px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap"
+            style={{ background: 'rgba(255,80,80,0.12)', color: '#ff8080', border: '1px solid rgba(255,80,80,0.4)' }}>
+            로그아웃
+          </button>
         </div>
       </header>
       <main className="max-w-7xl mx-auto px-6 pt-24 pb-10">
