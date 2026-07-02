@@ -10,7 +10,6 @@ import { fromProfile, fromUrl, personKey, type MyInfo } from '@/lib/saju/myInfo'
 
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
 
-// 이름에 잘 쓰지 않는 흉한 뜻 키워드 (rename/hanja와 동일 기준)
 const AVOID_KEYWORDS = [
   '죽을', '죽일', '주검', '시체', '시신', '송장', '애도', '슬플', '슬픔',
   '근심', '걱정', '병', '앓을', '아플', '악할', '흉할', '흉', '재앙', '재난',
@@ -62,22 +61,37 @@ function DiagnosisInner() {
   const router = useRouter()
   const sp = useSearchParams()
 
-  // 표준 MyInfo 형태로 통일 (calType/year/month/day: 문자열, leapMonth:'0'/'1', hour:'0'~'11'|'모름')
   const [info, setInfo] = useState<MyInfo | null>(null)
+
+  // 가격 (이름 풀이 / 한자 바꾸기)
+  const [readPrice, setReadPrice] = useState(5000)
+  const [hanjaPrice, setHanjaPrice] = useState(20000)
+
+  useEffect(() => {
+    supabase
+      .from('analysis_prices')
+      .select('price_key, price')
+      .in('price_key', ['naming_read', 'naming_hanja'])
+      .then(({ data }) => {
+        if (data) {
+          const read = data.find(d => d.price_key === 'naming_read')
+          const hanja = data.find(d => d.price_key === 'naming_hanja')
+          if (read) setReadPrice(read.price)
+          if (hanja) setHanjaPrice(hanja.price)
+        }
+      })
+  }, [])
 
   useEffect(() => {
     let cancelled = false
 
     async function loadInfo() {
-      // 1) URL에 사주가 있으면 그대로 사용 (홈에서 넘어옴, 비로그인, 궁합 등)
       const urlInfo = fromUrl(sp)
       if (urlInfo) {
         if (!cancelled) setInfo(urlInfo)
         return
       }
 
-      // 2) URL이 없으면, 로그인한 본인 사주를 profiles(DB)에서 직접 읽는다.
-      //    leap_month 컬럼까지 읽어 윤달 반영 (헬퍼 fromProfile이 표준 변환)
       try {
         const { data: u } = await supabase.auth.getUser()
         if (u?.user) {
@@ -96,7 +110,6 @@ function DiagnosisInner() {
         console.error(e)
       }
 
-      // 3) URL도 없고 로그인 사주도 없으면 안내 화면
       if (!cancelled) setInfo(null)
     }
 
@@ -104,7 +117,6 @@ function DiagnosisInner() {
     return () => { cancelled = true }
   }, [sp])
 
-  // useResultSaju 는 숫자/leapMonth 문자열/hourIdx(number|null)를 받으므로 변환해서 전달
   const infoYear = info ? parseInt(info.year) : 0
   const infoMonth = info ? parseInt(info.month) : 0
   const infoDay = info ? parseInt(info.day) : 0
@@ -132,15 +144,12 @@ function DiagnosisInner() {
   const [commentary, setCommentary] = useState<Commentary | null>(null)
   const [loading, setLoading] = useState(false)
 
-  // 저장된 이전 이름 풀이(불러오기 제안용). null이면 제안 없음.
   const [savedOffer, setSavedOffer] = useState<{
     result: DiagnoseResult
     commentary: Commentary
     chars: (NameChar | null)[]
   } | null>(null)
 
-  // 이름 풀이 화면은 들어올 때마다 빈 입력 화면으로 시작한다.
-  // 단, 로그인한 본인의 최근 이름 풀이가 DB(my_names)에 있으면 "불러올까요?" 제안만 띄운다.
   useEffect(() => {
     if (!info) return
     let cancelled = false
@@ -269,7 +278,6 @@ function DiagnosisInner() {
         localStorage.removeItem('rename_locked_slot')
       } catch {}
 
-      // 로그인한 사용자면 내 이름풀이 결과를 계정(my_names)에 영구 저장
       try {
         const { data: u } = await supabase.auth.getUser()
         if (u?.user) {
@@ -327,7 +335,6 @@ function DiagnosisInner() {
 
   const slotLabel = (i: number) => i === 0 ? '성(姓)' : `이름 ${i}글자`
 
-  // 팝업 목록: 일반 글자 / 흉한 글자로 분리
   const normalList = hanjaList.filter((r) => !isAvoidChar(r))
   const avoidList = hanjaList.filter((r) => isAvoidChar(r))
 
@@ -487,7 +494,7 @@ function DiagnosisInner() {
                 border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 'bold',
                 cursor: 'pointer', marginBottom: '10px',
               }}>
-              전체 풀이 받기 (9,900원) →
+              전체 풀이 받기 ({readPrice.toLocaleString()}원) →
             </button>
             <button onClick={() => setStep('input')}
               style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#8a88a0', fontSize: '13px', cursor: 'pointer' }}>
@@ -500,16 +507,11 @@ function DiagnosisInner() {
           <>
             <div style={{
               border: '2px dashed rgba(250,199,117,0.4)', borderRadius: '16px',
-              padding: '40px 20px', textAlign: 'center', marginBottom: '20px',
+              padding: '30px 20px', textAlign: 'center', marginBottom: '20px',
             }}>
-              <div style={{ fontSize: '32px', marginBottom: '12px' }}>💳</div>
-              <div style={{ fontSize: '14px', color: gold, marginBottom: '6px', fontWeight: 'bold' }}>
-                결제 시스템 첨부 예정
-              </div>
-              <div style={{ fontSize: '12px', color: '#8a88a0', lineHeight: 1.6 }}>
-                토스페이먼츠 결제가 이 자리에 들어갑니다<br />
-                (지금은 바로 결과를 볼 수 있어요)
-              </div>
+              <div style={{ fontSize: '28px', marginBottom: '10px' }}>💳</div>
+              <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '6px' }}>결제 금액</div>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', color: gold }}>{readPrice.toLocaleString()}원</div>
             </div>
 
             <button onClick={handleFullResult}
@@ -519,7 +521,7 @@ function DiagnosisInner() {
                 border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 'bold',
                 cursor: 'pointer', marginBottom: '10px',
               }}>
-              결과 보기 →
+              💳 {readPrice.toLocaleString()}원 결제하고 결과 보기 →
             </button>
             <button onClick={() => setStep('preview')}
               style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#8a88a0', fontSize: '13px', cursor: 'pointer' }}>
@@ -623,14 +625,13 @@ function DiagnosisInner() {
                       : '지금도 좋은 이름이에요. 다른 가능성도 살펴볼까요?'}
                   </div>
 
-                  {/* 1) 발음은 그대로, 한자 바꾸기 — 작동 */}
                   <button onClick={() => router.push('/manseryeok/naming/rename/newname')}
                     style={{ width: '100%', padding: '14px 16px', borderRadius: '12px', background: 'rgba(250,199,117,0.16)', border: `1px solid ${gold}`, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ textAlign: 'left' }}>
                       <div style={{ fontSize: '14px', fontWeight: 'bold', color: gold }}>발음은 그대로, 한자 바꾸기</div>
                       <div style={{ fontSize: '11px', color: '#cbb890', marginTop: '2px' }}>부르는 이름은 두고, 사주에 맞는 한자로</div>
                     </div>
-                    <span style={{ fontSize: '13px', fontWeight: 'bold', color: gold, whiteSpace: 'nowrap', marginLeft: '10px' }}>5,000원</span>
+                    <span style={{ fontSize: '13px', fontWeight: 'bold', color: gold, whiteSpace: 'nowrap', marginLeft: '10px' }}>{hanjaPrice.toLocaleString()}원</span>
                   </button>
                 </div>
 
