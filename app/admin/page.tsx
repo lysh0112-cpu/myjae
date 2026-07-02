@@ -13,10 +13,12 @@ import ExpenseManager from './components/ExpenseManager'
 import ExpenseApproval from './components/ExpenseApproval'
 import MemberManager from './components/MemberManager'
 import ToneManager from './components/ToneManager'
-type Tab = 'dashboard' | 'consultant' | 'member' | 'settlement' | 'history' | 'knowledge' | 'review' | 'accounting' | 'approval' | 'tone' | 'settings'
+import PriceManager from './components/PriceManager'
+type Tab = 'dashboard' | 'consultant' | 'price' | 'member' | 'settlement' | 'history' | 'knowledge' | 'review' | 'accounting' | 'approval' | 'tone' | 'settings'
 const TABS = [
   { key: 'dashboard', label: '📊 대시보드' },
   { key: 'consultant', label: '👤 상담사 관리' },
+  { key: 'price', label: '💰 가격 관리' },
   { key: 'member', label: '👥 회원 관리' },
   { key: 'settlement', label: '💰 정산 관리' },
   { key: 'history', label: '📋 상담 내역' },
@@ -99,6 +101,7 @@ export default function AdminPage() {
       <main className="max-w-7xl mx-auto px-6 pt-24 pb-10">
         {tab === 'dashboard' && <Dashboard />}
         {tab === 'consultant' && <ConsultantManager />}
+        {tab === 'price' && <PriceManager />}
         {tab === 'member' && <MemberManager />}
         {tab === 'settlement' && <SettlementManager />}
         {tab === 'history' && <ConsultationHistory />}
