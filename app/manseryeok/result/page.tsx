@@ -6,7 +6,7 @@ import DayunTable from "./DayunTable";
 import SeyunTable from "./SeyunTable";
 import SajuMyungsik from "./components/SajuMyungsik";
 import AiAnalysis from "./components/AiAnalysis";
-import ConsultantList from "./components/ConsultantList";
+import ConsultButton from "@/app/components/common/ConsultButton";
 import { useResultSaju } from "@/hooks/useResultSaju";
 import PageHeader from '@/app/components/common/PageHeader'
 
@@ -101,7 +101,7 @@ function ResultContent() {
           onPayRequest={() => setIsPaid(true)}
         />
 
-        <ConsultantList searchParams={searchParams} />
+        <ConsultButton priceKey="saju" mode="personal" searchParams={searchParams} />
       </main>
     </div>
   )
