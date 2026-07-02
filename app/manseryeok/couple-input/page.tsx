@@ -90,7 +90,7 @@ function CoupleInputInner() {
   const isWedding = relation === 'prewedding'
   const startLabel = isBirth ? '🍼 좋은 출산일 찾기'
     : isWedding ? '💍 결혼 길일 찾기'
-    : '💑 궁합 분석하기'
+    : `💑 궁합 분석하기 · ${price.toLocaleString()}원`
 
   const isTiming = isBirth || isWedding
 
@@ -190,10 +190,6 @@ function CoupleInputInner() {
             📋 이전 결과 보기 →
           </button>
         )}
-
-        <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '11px', color: '#333355' }}>
-          기본 분석은 무료 · 심층 분석은 전문 상담사와 연결
-        </div>
       </div>
 
       {/* 궁합 분석 결제 팝업 (연인/부부 궁합만) */}
