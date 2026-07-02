@@ -28,8 +28,10 @@ export default function PriceManager() {
     setLoading(false)
   }
 
-  function setPrice(id: string, val: number) {
-    setRows(prev => prev.map(r => r.id === id ? { ...r, price: val } : r))
+  // 입력값을 숫자만 남겨서 저장 (콤마·문자 제거)
+  function setPrice(id: string, raw: string) {
+    const num = parseInt(raw.replace(/[^0-9]/g, '')) || 0
+    setRows(prev => prev.map(r => r.id === id ? { ...r, price: num } : r))
   }
   function toggle(id: string) {
     setRows(prev => prev.map(r => r.id === id ? { ...r, active: !r.active } : r))
@@ -65,7 +67,7 @@ export default function PriceManager() {
           style={{ background: 'rgba(60,52,137,0.3)', color: '#FAC775',
             borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           <span style={{ flex: 1 }}>상담 종류</span>
-          <span style={{ width: 110, textAlign: 'right' }}>가격 (원)</span>
+          <span style={{ width: 120, textAlign: 'right' }}>가격 (원)</span>
           <span style={{ width: 50, textAlign: 'center' }}>노출</span>
         </div>
 
@@ -75,11 +77,14 @@ export default function PriceManager() {
             <span style={{ flex: 1, fontSize: 13, color: '#fff' }}>
               {r.label}{!r.active && <span style={{ fontSize: 11, color: '#8a88a0' }}> (숨김)</span>}
             </span>
-            <div style={{ width: 110, textAlign: 'right' }}>
-              <input type="number" value={r.price}
-                onChange={e => setPrice(r.id, parseInt(e.target.value) || 0)}
+            <div style={{ width: 120, textAlign: 'right' }}>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={r.price.toLocaleString()}
+                onChange={e => setPrice(r.id, e.target.value)}
                 className="rounded-lg px-2 py-1 text-sm text-right outline-none"
-                style={{ width: 96, background: 'rgba(255,255,255,0.08)', color: '#fff',
+                style={{ width: 106, background: 'rgba(255,255,255,0.08)', color: '#fff',
                   border: '1px solid rgba(255,255,255,0.1)' }} />
             </div>
             <div style={{ width: 50, display: 'flex', justifyContent: 'center' }}>
