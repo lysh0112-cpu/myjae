@@ -1,0 +1,189 @@
+================================================================
+명연재 (明然載) — AI 해설 어투 통합 작업 인계서
+어투 중앙관리 시스템 구축 & 전 화면 연결
+================================================================
+작성일   : 2026년 7월 2일
+저장소   : lysh0112-cpu / myjae  (main 브랜치)
+배포     : myjae.vercel.app
+Supabase : 프로젝트 auvuwytatfcoawdrgunl
+
+
+----------------------------------------------------------------
+1. 이 작업이 무엇인가
+----------------------------------------------------------------
+명연재가 고객에게 내보내는 모든 AI 해설의 "말투(어투)"를, 흩어진
+코드 여기저기에서 꺼내어 관리자 화면 한 곳에서 통제할 수 있게 만든
+작업이다.
+
+이전에는 사주·궁합·물상도·타로·작명 등 각 화면 코드마다 "따뜻하게
+써라", "겁주지 마라" 같은 말투 지시가 따로따로 박혀 있었다. 말투를
+바꾸려면 개발자가 파일마다 찾아 고쳐야 했다.
+
+이제는 관리자 화면의 "💬 어투 관리" 탭에서 말투를 고치고 저장하면,
+고객이 보는 모든 AI 해설이 한꺼번에 그 말투를 따른다.
+
+[구조 — 핵심 개념]
+각 화면의 해설 = 아래를 합쳐서 AI에게 전달한다.
+  A. 공통 말투         : 모든 화면이 공유. 말투 규칙 + 쉬운 말 사전.
+                         (여기서 전체 톤이 통일됨)
+  B. 화면별 전용 지시문 : 그 화면에만 적용. (물상도·타로·작명·오늘운세 등)
+  C. 기능 뼈대         : 코드에 남김. 계산 결과·출력 형식·안전 규칙 등
+                         깨지면 안 되는 부분.
+
+* tone_settings 테이블이 비었거나 오류가 나도, 코드에 심어둔 기본값으로
+  자동 폴백되어 절대 멈추지 않는다.
+
+
+----------------------------------------------------------------
+2. 최종 어투 점검 결과 (전부 완료)
+----------------------------------------------------------------
+
+[AI 해설 — 통합 어투 연결 완료]
+  화면            | 연결 방식             | AI 호출 파일
+  ----------------|-----------------------|--------------------------------------------------
+  사주 기본분석   | 공통                  | app/manseryeok/result/components/prompts.ts
+  궁합            | 공통                  | app/manseryeok/couple-result/hooks/useCoupleResult.ts
+  물상도          | 공통 + 전용           | app/api/mulsang/route.ts
+  타로            | 공통 + 전용           | app/api/tarot/route.ts
+  작명·이름풀이   | 공통 + 전용           | app/api/naming/route.ts
+  오늘의 운세     | 공통 + 전용           | app/api/daily-fortune/route.ts
+  AI 채팅         | 공통                  | app/api/chat-stream/route.ts
+  작명 채팅       | 공통                  | app/api/naming-chat/route.ts
+  출산택일        | 공통 + 안전규칙 유지  | app/manseryeok/birth-timing/result/page.tsx
+  결혼택일        | 공통 + 기능지시 유지  | app/manseryeok/wedding-timing/result/page.tsx
+
+[AI 없음 — 연결 불필요 (점검 완료)]
+  - dayun (대운 계산)          : 순수 계산만, Claude 호출 없음
+  - commentary (상담사 수기저장): DB 저장만, AI 없음
+
+[특수 목적 — 제외 (점검 완료)]
+  - summarize (상담 요약)      : 상담사 관점을 최우선하는 특수 목적이라
+                                 공통 어투 제외
+
+[공통 원칙 추가]
+  "상담사가 직접 작성한 해설·상담 내용이 함께 주어지면 그 관점을
+  최우선으로 존중한다"는 원칙을 공통 말투 규칙(6번)에 심어두었다.
+  앞으로 어느 화면에 상담사 연결을 붙여도, 그 화면 프롬프트에 상담사
+  내용만 실어주면 자동으로 상담사 관점이 우선된다.
+
+
+----------------------------------------------------------------
+3. 오늘 완료한 작업 전체
+----------------------------------------------------------------
+  1. 관리자 화면 — 로그인 관리자 이름 표시 + 로그아웃 버튼
+  2. 회원 관리 표 전면 개편 (사주 정보 전체 표시 + CSV)
+  3. 윤달(leap_month) 컬럼 추가 + 관리자가 회원 사주 직접 수정 기능
+  4. 어투 관리 도구 완성 (공통 2칸 + 화면별 전용 5칸 + 미리보기 + 되돌리기)
+  5. 10개 화면 어투 통합 연결
+  6. 전체 API 철저 점검 (AI 유무·연결 필요 여부 판정)
+
+
+----------------------------------------------------------------
+4. GitHub 파일 URL 총정리
+----------------------------------------------------------------
+* 아래 주소로 들어가면 파일을 바로 볼 수 있다.
+  수정할 때는 주소의 "blob" 을 "edit" 으로 바꾸면 편집 화면이 열린다.
+
+[어투 시스템 핵심 파일 (도구)]
+  말투 엔진(공통 어투 읽기+폴백)
+    https://github.com/lysh0112-cpu/myjae/blob/main/lib/ai/tonePrompt.ts
+  저장/불러오기 API
+    https://github.com/lysh0112-cpu/myjae/blob/main/app/api/admin/tone/route.ts
+  미리보기 API
+    https://github.com/lysh0112-cpu/myjae/blob/main/app/api/admin/tone-preview/route.ts
+  관리자 편집 화면 (ToneManager)
+    https://github.com/lysh0112-cpu/myjae/blob/main/app/admin/components/ToneManager.tsx
+  관리자 페이지 (어투 관리 탭 포함)
+    https://github.com/lysh0112-cpu/myjae/blob/main/app/admin/page.tsx
+
+[어투 연결된 해설 파일 (10개 화면)]
+  사주 기본분석
+    https://github.com/lysh0112-cpu/myjae/blob/main/app/manseryeok/result/components/prompts.ts
+  궁합
+    https://github.com/lysh0112-cpu/myjae/blob/main/app/manseryeok/couple-result/hooks/useCoupleResult.ts
+  물상도
+    https://github.com/lysh0112-cpu/myjae/blob/main/app/api/mulsang/route.ts
+  타로
+    https://github.com/lysh0112-cpu/myjae/blob/main/app/api/tarot/route.ts
+  작명·이름풀이
+    https://github.com/lysh0112-cpu/myjae/blob/main/app/api/naming/route.ts
+  오늘의 운세
+    https://github.com/lysh0112-cpu/myjae/blob/main/app/api/daily-fortune/route.ts
+  AI 채팅
+    https://github.com/lysh0112-cpu/myjae/blob/main/app/api/chat-stream/route.ts
+  작명 채팅
+    https://github.com/lysh0112-cpu/myjae/blob/main/app/api/naming-chat/route.ts
+  출산택일 결과
+    https://github.com/lysh0112-cpu/myjae/blob/main/app/manseryeok/birth-timing/result/page.tsx
+  결혼택일 결과
+    https://github.com/lysh0112-cpu/myjae/blob/main/app/manseryeok/wedding-timing/result/page.tsx
+
+[점검했으나 연결 안 한 파일 (참고)]
+  대운 계산 (AI 없음)
+    https://github.com/lysh0112-cpu/myjae/blob/main/app/api/dayun/route.ts
+  상담사 해설 저장 (AI 없음)
+    https://github.com/lysh0112-cpu/myjae/blob/main/app/api/commentary/route.ts
+  상담 요약 (상담사 관점 우선, 제외)
+    https://github.com/lysh0112-cpu/myjae/blob/main/app/api/summarize/route.ts
+
+
+----------------------------------------------------------------
+5. Supabase tone_settings 테이블 구성
+----------------------------------------------------------------
+어투를 저장하는 단일 행(id=1) 테이블. 관리자가 어투 관리 화면에서
+고치면 이 칸들이 갱신된다.
+
+  칸 이름         | 용도
+  ----------------|--------------------------------------------------
+  tone_rules      | 공통 말투 규칙 (모든 해설). 6번에 "상담사 우선" 포함
+  easy_terms      | 공통 쉬운 말 사전 (모든 해설)
+  mulsang_guide   | 물상도(그림) 전용 지시문
+  tarot_guide     | 타로(카드) 전용 지시문
+  naming_guide    | 작명·이름풀이 전용 지시문
+  fortune_guide   | 오늘의 운세 전용 지시문
+  updated_at      | 마지막 수정 시각
+
+Supabase SQL 편집기:
+  https://supabase.com/dashboard/project/auvuwytatfcoawdrgunl/sql/new
+
+
+----------------------------------------------------------------
+6. 다음에 하면 좋을 것 (급하지 않음)
+----------------------------------------------------------------
+  1. 택일 상담사 연결
+     - 출산택일·결혼택일 결과 화면의 "전문가에게 자세히 물어보기"
+       버튼이 현재 alert("준비 중") 상태. 상담 흐름을 붙일 자리.
+  2. 타로 상담사 연결 닫기
+     - 연재 선생님 방침(타로는 고객 조회만).
+       타로 결과 화면에서 상담사 버튼 숨기기.
+  3. 사주 기본분석·궁합의 옛 함수 재연결 (선택)
+     - buildToneBlock(코드값) → buildToneBlockFromDB(DB값)로.
+       현재도 동작하나, 이걸 하면 관리자 편집분이 이 두 화면에도 완전 반영.
+
+[전체 서비스 흐름 (참고)]
+  1차 (AI 자동): 고객이 인적사항 입력 → 사주풀이·궁합·택일·개명 등
+    조회 → 우리가 정한 어투로 AI 해설 자동 생성. (이번에 연결 완료)
+  2차 (상담사 연결): 더 궁금하면 → 상담 상품 선택·결제 → 상담일에
+    통화/채팅 → 내용 자동 수록 → 버튼으로 정리 → AI 해설 + 상담사
+    설명 함께 요약(summarize) → 상담사 최종 수정 → 고객 발송.
+
+
+----------------------------------------------------------------
+7. 작업 방식 메모 (인계용)
+----------------------------------------------------------------
+  - 코드 수정: GitHub 웹 편집기에서 파일 열기 → Ctrl+A → Delete →
+    새 코드 붙여넣기 → Commit changes(2번). Vercel이 자동 배포.
+  - DB 칸 추가: Supabase SQL 편집기에 SQL 실행. 성공 후 "Untitled
+    query" 메모는 지워도 됨(테이블·칸은 지우면 안 됨).
+  - 새 화면에 어투 붙이는 표준 4단계:
+      (1) SQL로 전용 칸 추가
+      (2) tone API(app/api/admin/tone)에 칸 추가
+      (3) ToneManager에 입력칸 추가
+      (4) 해당 화면/API가 그 칸을 읽어 프롬프트에 반영
+  - 화면(브라우저) 코드는 서버 함수를 직접 못 쓰므로,
+    /api/admin/tone 을 fetch해서 공통 어투를 받아옴 (택일 화면 방식).
+  - 파일은 하나씩 올리고 배포 확인 후 다음으로. 화면이 안 바뀌면 Ctrl+Shift+R.
+
+================================================================
+— 이상 —
+================================================================
