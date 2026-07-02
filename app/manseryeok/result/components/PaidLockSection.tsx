@@ -1,6 +1,27 @@
 'use client'
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
 export default function PaidLockSection({ onPay }: { onPay: () => void }) {
+  const [price, setPrice] = useState<number | null>(null)
+  const [active, setActive] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    supabase
+      .from('analysis_prices')
+      .select('price, active')
+      .eq('price_key', 'saju_deep')
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) { setPrice(data.price); setActive(data.active) }
+        setLoaded(true)
+      })
+  }, [])
+
+  // 노출이 꺼진 분석이면 잠금 섹션 자체를 숨김
+  if (!loaded || !active) return null
+
   return (
     <div style={{
       borderTop: '1px solid rgba(255,255,255,0.07)',
@@ -23,9 +44,9 @@ export default function PaidLockSection({ onPay }: { onPay: () => void }) {
         style={{
           background: 'linear-gradient(135deg, #3C3489 0%, #FAC775 100%)',
           color: '#1a1a18',
-          boxShadow: '0 4px 20px rgba(60,52,137,0.4)',
+          boxShadow: '0 4px 20px rgba(60,52,117,0.4)',
         }}>
-        ✨ 정밀하게 분석하기
+        ✨ 정밀하게 분석하기{price != null && ` · ${price.toLocaleString()}원`}
       </button>
     </div>
   )
