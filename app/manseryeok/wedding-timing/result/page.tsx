@@ -65,16 +65,28 @@ async function fetchAiNotes(recs: WeddingRecommendation[], survey: WeddingSurvey
     `적용 길신: ${r.badges.length ? r.badges.join('·') : '없음'}`
   ).join('\n')
 
+  // 관리자 '어투 관리'의 공통 말투를 불러온다 (화면이라 API로 받음, 실패해도 그냥 진행)
+  let toneBlock = ''
+  try {
+    const tr = await fetch('/api/admin/tone')
+    if (tr.ok) {
+      const td = await tr.json()
+      toneBlock = `${td.tone_rules || ''}\n\n${td.easy_terms || ''}`.trim()
+    }
+  } catch {}
+
+  // 프롬프트 = [공통 어투] + [택일 기능 지시] + [출력 형식]
   const prompt =
-`당신은 따뜻하고 신뢰감 있는 사주명리 전문가입니다. 아래는 두 사람의 결혼택일로 추천된 5개 날짜입니다.
+`${toneBlock ? toneBlock + '\n\n' : ''}아래는 두 사람의 결혼택일로 추천된 5개 날짜입니다.
 희망 기간: ${survey.startDate} ~ ${survey.endDate}
 
 ${list}
 
-각 순위마다 그 날 결혼하면 좋은 점을 따뜻하게 한 줄(20자 내외)로 표현하고,
+각 순위마다 그 날 결혼하면 좋은 점을 한 줄(20자 내외)로 표현하고,
 1·2·3순위는 추가로 2~3문장의 상세 해설(detail)을 써 주세요. 4·5순위는 한 줄만.
-- 단정·과장 금지, 부드럽고 희망적인 어조
-- 적용된 길신(천을귀인·용신·손없는날·천희홍란 등)의 의미를 쉬운 말로 풀어 주세요
+
+[반드시 지킬 규칙]
+- 적용된 길신(천을귀인·용신·손없는날·천희홍란 등)의 의미를 쉬운 말로 풀어 주세요.
 - 반드시 아래 JSON 형식으로만 답하세요. 다른 말은 절대 쓰지 마세요.
 
 {"1":{"oneLine":"...","detail":"..."},"2":{"oneLine":"...","detail":"..."},"3":{"oneLine":"...","detail":"..."},"4":{"oneLine":"..."},"5":{"oneLine":"..."}}`
