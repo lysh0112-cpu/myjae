@@ -2,8 +2,7 @@
 import { Suspense, useState, useEffect, type ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import PageHeader from '@/app/components/common/PageHeader'
-
-const PRICE = 10000
+import { supabase } from '@/lib/supabase'
 
 const purple = '#7766dd'
 const cardBg = '#13132a'
@@ -70,7 +69,6 @@ function QLabel({ children }: { children: ReactNode }) {
   return <div style={{ fontSize: '13px', color: text, margin: '14px 0 8px' }}>{children}</div>
 }
 
-// 부모 한 줄 요약 텍스트
 function personSummary(p: PersonInput | null): string {
   if (!p || !p.year) return '정보 없음'
   const hour = HOUR_LABELS[p.hour] ?? '시간 모름'
@@ -81,23 +79,30 @@ function BirthTimingInner() {
   const router = useRouter()
   const sp = useSearchParams()
 
-  // 부모 사주는 궁합 입력 화면에서 URL로 넘겨받는다 (여기서 다시 입력받지 않음)
   const [parent1, setParent1] = useState<PersonInput | null>(null)
   const [parent2, setParent2] = useState<PersonInput | null>(null)
   const [survey, setSurvey] = useState<BirthSurvey>(DEFAULT_SURVEY)
 
   const [error, setError] = useState('')
   const [payOpen, setPayOpen] = useState(false)
+  const [price, setPrice] = useState(10000)
 
   useEffect(() => {
-    // 부모 사주 파싱
+    supabase
+      .from('analysis_prices')
+      .select('price')
+      .eq('price_key', 'birth_pick')
+      .maybeSingle()
+      .then(({ data }) => { if (data) setPrice(data.price) })
+  }, [])
+
+  useEffect(() => {
     try {
       const p1 = sp.get('p1')
       const p2 = sp.get('p2')
       if (p1) setParent1(JSON.parse(decodeURIComponent(p1)))
       if (p2) setParent2(JSON.parse(decodeURIComponent(p2)))
     } catch {}
-    // 설문은 직전 입력 복원 (뒤로 갔다 와도 유지)
     try {
       const saved = sessionStorage.getItem(SURVEY_KEY)
       if (saved) setSurvey({ ...DEFAULT_SURVEY, ...JSON.parse(saved) })
@@ -155,7 +160,6 @@ function BirthTimingInner() {
       <div style={{ padding: '16px' }}>
         <Disclaimer full />
 
-        {/* 부모 정보 — 두 줄 요약 (입력은 이전 화면에서) */}
         <SectionLabel>부모 정보</SectionLabel>
         <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', border: '1px solid rgba(255,255,255,0.06)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
@@ -173,7 +177,6 @@ function BirthTimingInner() {
           수정하려면 ‹ 뒤로 가서 변경해 주세요
         </div>
 
-        {/* 출산 정보 설문 */}
         <SectionLabel>출산 정보를 알려주세요</SectionLabel>
 
         <QLabel>출산예정일이 언제인가요? <span style={{ color: purple }}>*</span></QLabel>
@@ -232,7 +235,6 @@ function BirthTimingInner() {
         </div>
       </div>
 
-      {/* 결제창 (바텀시트) */}
       {payOpen && (
         <div onClick={() => setPayOpen(false)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }}>
@@ -254,16 +256,13 @@ function BirthTimingInner() {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <span style={{ fontSize: '14px', color: sub }}>결제 금액</span>
-              <span style={{ fontSize: '20px', fontWeight: 700, color: '#c8b0ff' }}>{PRICE.toLocaleString()}원</span>
+              <span style={{ fontSize: '20px', fontWeight: 700, color: '#c8b0ff' }}>{price.toLocaleString()}원</span>
             </div>
 
             <button onClick={handlePay}
               style={{ width: '100%', padding: '15px', borderRadius: '12px', background: 'linear-gradient(135deg,#5544bb,#7766dd)', border: 'none', color: text, fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginBottom: '8px' }}>
-              💳 {PRICE.toLocaleString()}원 결제하기
+              💳 {price.toLocaleString()}원 결제하기
             </button>
-            <div style={{ fontSize: '11px', color: sub, textAlign: 'center', marginBottom: '14px' }}>
-              (결제 시스템 첨부 예정 — 지금은 바로 결과를 봐요)
-            </div>
 
             <button onClick={() => setPayOpen(false)}
               style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: sub, fontSize: '13px', cursor: 'pointer', marginBottom: '14px' }}>
