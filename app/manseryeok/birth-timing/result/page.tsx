@@ -80,16 +80,28 @@ async function fetchAiNotes(recs: Recommendation[], survey: SurveyInput): Promis
     `오행분포 목${r.breakdown.elementCount['목']} 화${r.breakdown.elementCount['화']} 토${r.breakdown.elementCount['토']} 금${r.breakdown.elementCount['금']} 수${r.breakdown.elementCount['수']}, 점수 ${r.score}`
   ).join('\n')
 
+  // 관리자 '어투 관리'의 공통 말투를 불러온다 (화면이라 API로 받음, 실패해도 그냥 진행)
+  let toneBlock = ''
+  try {
+    const tr = await fetch('/api/admin/tone')
+    if (tr.ok) {
+      const td = await tr.json()
+      toneBlock = `${td.tone_rules || ''}\n\n${td.easy_terms || ''}`.trim()
+    }
+  } catch {}
+
+  // 프롬프트 = [공통 어투] + [택일 기능 지시] + [의료 안전 규칙(반드시 유지)]
   const prompt =
-`당신은 따뜻하고 신뢰감 있는 사주명리 전문가입니다. 아래는 출산택일로 추천된 5개 일시와 각 아기의 사주입니다.
+`${toneBlock ? toneBlock + '\n\n' : ''}아래는 출산택일로 추천된 5개 일시와 각 아기의 사주입니다.
 부모가 바라는 점: ${wishesText}
 
 ${list}
 
-각 순위마다 그 날 태어날 아기의 기질을 따뜻하게 한 줄(20자 내외)로 표현하고,
+각 순위마다 그 날 태어날 아기의 기질을 한 줄(20자 내외)로 표현하고,
 1순위는 추가로 2~3문장의 상세 해설을 써 주세요.
-- 단정·과장 금지, 부드럽고 희망적인 어조
-- 의학적 단정이나 건강 예언 금지
+
+[반드시 지킬 안전 규칙]
+- 의학적 단정이나 건강 예언은 절대 하지 마세요. (이것은 의료 조언이 아닙니다)
 - 반드시 아래 JSON 형식으로만 답하세요. 다른 말은 절대 쓰지 마세요.
 
 {"1":{"oneLine":"...","detail":"..."},"2":{"oneLine":"..."},"3":{"oneLine":"..."},"4":{"oneLine":"..."},"5":{"oneLine":"..."}}`
