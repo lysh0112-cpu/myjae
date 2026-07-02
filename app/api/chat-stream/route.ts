@@ -1,3 +1,5 @@
+import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
+
 export async function POST(req: Request) {
   const {
     messages, mode,
@@ -7,9 +9,13 @@ export async function POST(req: Request) {
     userQuestion,
   } = await req.json()
 
+  // 관리자 '어투 관리'의 공통 말투 (비었거나 오류면 기본값 폴백)
+  const toneBlock = await buildToneBlockFromDB()
+
   const systemPrompt = getSystemPrompt({
     mode, saju1, saju2, gender1, gender2,
     yongsin1, yongsin2, userQuestion,
+    toneBlock,
   })
 
   const encoder = new TextEncoder()
@@ -99,6 +105,7 @@ function getSystemPrompt(p: {
   gender1: string, gender2: string
   yongsin1: any, yongsin2: any
   userQuestion?: string
+  toneBlock?: string
 }): string {
 
   const s1 = sajuText(p.saju1)
@@ -107,7 +114,10 @@ function getSystemPrompt(p: {
   const y2 = yongsinText(p.yongsin2)
   const q = p.userQuestion ? `\n고객 주요 질문: ${p.userQuestion}` : ''
 
-  const base = `당신은 자평진전 격국론 기반의 명리학 전문 상담사입니다.
+  // 공통 어투를 맨 앞에 붙인다 (관리자 '어투 관리'에서 조절)
+  const tone = p.toneBlock ? `${p.toneBlock}\n\n` : ''
+
+  const base = `${tone}당신은 자평진전 격국론 기반의 명리학 전문 상담사입니다.
 
 [필수 규칙]
 1. 마크다운 기호(##, **, ---)는 절대 사용하지 마세요.
