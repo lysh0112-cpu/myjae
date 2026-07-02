@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -30,16 +31,37 @@ export async function POST(req: Request) {
       ? createClient(supabaseUrl, supabaseKey)
       : null
 
+    // 관리자 '어투 관리'에서 설정한 공통 말투 (비었거나 오류면 기본값 폴백)
+    const toneBlock = await buildToneBlockFromDB()
+
+    // 물상도 전용 지시문 읽기 (관리자 화면 B. 물상도 전용 칸)
+    let mulsangGuide = ''
+    if (supabase) {
+      try {
+        const { data } = await supabase
+          .from('tone_settings')
+          .select('mulsang_guide')
+          .eq('id', 1)
+          .maybeSingle()
+        mulsangGuide = (data?.mulsang_guide || '').trim()
+      } catch (e) {
+        console.error('mulsang_guide load error:', e)
+      }
+    }
+
     // ---------- 1) Claude 해설 생성 ----------
-    const commentaryPrompt = `당신은 따뜻하면서도 정직한 명리학 전문가입니다.
+    // 프롬프트 = [공통 말투] + [물상도 전용 지시문] + [기능 뼈대: 그림 데이터·출력형식]
+    const commentaryPrompt = `${toneBlock}
+
+${mulsangGuide}
+
+당신은 따뜻하면서도 정직한 명리학 전문가입니다.
 아래 사주를 "자연 풍경 그림"에 빗대어 해설합니다. 이 해설은 고객이 돈을 내고 받는 결과물입니다.
 
-[매우 중요한 원칙]
-- 100% 좋은 사주도, 100% 나쁜 사주도 없습니다. 사실(팩트)은 정확하게 설명하되, 그 안에서 강점과 가능성을 찾아 희망적으로 풀어주세요.
-- 무조건 "좋습니다"라고 하지 마세요. 또한 쓸쓸하거나 처량하게 끝내지도 마세요. 사실을 인정하되 나아갈 방향을 제시하는 것이 전문가의 역할입니다.
+[반드시 지킬 기능 규칙]
 - 아래 '그림에 그려진 풍경'과 반드시 일치하게 설명하세요. 그림에 없는 것(예: 그림은 등불인데 태양이라고 하기, 그림에 없는 소나무를 언급하기)을 지어내지 마세요.
 - 시간과 계절을 혼동하지 마세요. 아래 명시된 계절과 시간대를 정확히 사용하세요.
-- 어려운 한자 용어보다 풍경에 빗댄 직관적 표현을 쓰세요. 마크다운 기호(##, **, ---)는 절대 쓰지 마세요.
+- 마크다운 기호(##, **, ---)는 절대 쓰지 마세요.
 
 [이 사람의 정보]
 사주: ${body.sajuText}
