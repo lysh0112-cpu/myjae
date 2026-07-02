@@ -240,10 +240,7 @@ function WeddingFindInner() {
               style={{ width: '100%', padding: '15px', borderRadius: '12px', background: 'linear-gradient(135deg,#5544bb,#7766dd)', border: 'none', color: text, fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginBottom: '8px' }}>
               💳 {price.toLocaleString()}원 결제하기
             </button>
-            <div style={{ fontSize: '11px', color: sub, textAlign: 'center', marginBottom: '14px' }}>
-              (결제 시스템 첨부 예정 — 지금은 바로 결과를 봐요)
-            </div>
-
+           
             <button onClick={() => setPayOpen(false)}
               style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: sub, fontSize: '13px', cursor: 'pointer', marginBottom: '14px' }}>
               취소
