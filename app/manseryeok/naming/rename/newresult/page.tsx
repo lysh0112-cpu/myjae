@@ -3,6 +3,7 @@ import { Suspense, useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsin } from '@/lib/saju/yongsin'
+import { supabase } from '@/lib/supabase'
 import { diagnoseName, type NameChar, type DiagnoseResult, type Grade } from '@/lib/saju/naming'
 
 const GOLD = '#FAC775'
@@ -33,7 +34,7 @@ interface Commentary {
 interface TryItem {
   name: string
   chars: SavedChar[]
-  commentary?: Commentary   // 자세히 보기로 생성된 해설 (캐시)
+  commentary?: Commentary
 }
 
 function ohaengChar(s: string): string {
@@ -72,8 +73,20 @@ function NewResultInner() {
   const [loaded, setLoaded] = useState(false)
   const [pkey, setPkey] = useState('')
 
-  // 상세 해설 생성 상태
   const [detailLoading, setDetailLoading] = useState(false)
+
+  // 한자 바꾸기 가격 + 결제 팝업
+  const [price, setPrice] = useState(20000)
+  const [payOpen, setPayOpen] = useState(false)
+
+  useEffect(() => {
+    supabase
+      .from('analysis_prices')
+      .select('price')
+      .eq('price_key', 'naming_hanja')
+      .maybeSingle()
+      .then(({ data }) => { if (data) setPrice(data.price) })
+  }, [])
 
   useEffect(() => {
     let m: Record<string, unknown> = {}
@@ -96,7 +109,7 @@ function NewResultInner() {
       const h = JSON.parse(localStorage.getItem(NEWNAME_HISTORY_KEY) || '{}')
       if (h.personKey === pk && Array.isArray(h.tries) && h.tries.length > 0) {
         setTries(h.tries)
-        setActiveTry(h.tries.length - 1) // 가장 최근 이름
+        setActiveTry(h.tries.length - 1)
       }
     } catch {}
     setLoaded(true)
@@ -118,7 +131,6 @@ function NewResultInner() {
     try { return ohaengChar(calcYongsin(saju, dayStem).yongsin) } catch { return '' }
   }, [saju, dayStem])
 
-  // 현재 이름의 진단 결과
   const result = useMemo<DiagnoseResult | null>(() => {
     if (!saju || !dayStem || !cur || cur.chars.length < 2) return null
     try {
@@ -134,7 +146,6 @@ function NewResultInner() {
     } catch { return null }
   }, [saju, dayStem, cur])
 
-  // 시험 이름 목록의 종합 등급(비교용)
   const tryGrades = useMemo(() => {
     if (!saju || !dayStem) return tries.map(() => '')
     try {
@@ -154,10 +165,11 @@ function NewResultInner() {
     } catch { return tries.map(() => '') }
   }, [saju, dayStem, tries])
 
-  // 선택한 이름의 상세 해설 생성 (/api/naming 재사용) + history 캐싱
+  // 결제 팝업에서 '결제하기' 누르면 해설 생성
   async function loadDetail() {
+    setPayOpen(false)
     if (!cur || !saju || !dayStem || detailLoading) return
-    if (cur.commentary) return // 이미 있으면 재호출 안 함
+    if (cur.commentary) return
     setDetailLoading(true)
     try {
       const y = calcYongsin(saju, dayStem)
@@ -183,7 +195,6 @@ function NewResultInner() {
       const data = await res.json()
       const commentary: Commentary = data.commentary ?? { title: '', summary: '', good: '', improve: '', advice: '' }
 
-      // 현재 이름에 commentary 캐싱 → state + localStorage
       setTries((prev) => {
         const nextTries = prev.map((t, i) => (i === activeTry ? { ...t, commentary } : t))
         try {
@@ -233,14 +244,12 @@ function NewResultInner() {
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       <Header router={router} />
 
-      {/* 새로 지은 이름 */}
       <div style={{ textAlign: 'center', margin: '14px 0 6px' }}>
         <div style={{ fontSize: 32, fontWeight: 700, color: GOLD, letterSpacing: 4 }}>{fullName}</div>
         <div style={{ fontSize: 13, color: SUB, marginTop: 4 }}>{hangulName} · 새로 지은 이름</div>
         {yongsin && <div style={{ fontSize: 11, color: SUB, marginTop: 2 }}>사주에 필요한 기운 <b style={{ color: GREEN }}>{yongsin}</b></div>}
       </div>
 
-      {/* 4요소 등급 */}
       {result && (
         <div style={{ background: CARD, border: '1px solid rgba(250,199,117,0.1)', borderRadius: 14, padding: 16, margin: '16px 0 14px' }}>
           <div style={{ fontSize: 12, color: GOLD, marginBottom: 12, fontWeight: 700 }}>이름 분석 (4가지 기준)</div>
@@ -257,7 +266,6 @@ function NewResultInner() {
         </div>
       )}
 
-      {/* 지금까지 지어본 이름 비교 */}
       {tries.length > 1 && (
         <div style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 11, color: SUB, margin: '0 0 8px' }}>지금까지 지어본 이름 (눌러서 비교)</div>
@@ -279,7 +287,6 @@ function NewResultInner() {
         </div>
       )}
 
-      {/* 상세 해설 — 선택한 이름만 생성 (캐싱) */}
       {cur.commentary && cur.commentary.summary ? (
         <div style={{ background: CARD, border: '1px solid rgba(250,199,117,0.15)', borderRadius: 16, padding: 18, marginBottom: 14 }}>
           {cur.commentary.title && (
@@ -301,11 +308,11 @@ function NewResultInner() {
         </div>
       ) : (
         <div style={{ marginBottom: 14 }}>
-          <button onClick={loadDetail} disabled={detailLoading} className="active:scale-95"
+          <button onClick={() => setPayOpen(true)} disabled={detailLoading} className="active:scale-95"
             style={{ width: '100%', background: 'rgba(250,199,117,0.16)', border: '1px solid ' + GOLD, borderRadius: 14, padding: 14, color: GOLD, fontWeight: 700, fontSize: 14, cursor: detailLoading ? 'default' : 'pointer' }}>
             {detailLoading
               ? <><span style={{ display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span> 이름을 정성껏 풀이하는 중…</>
-              : <>✨ 이 이름 자세히 풀이 보기</>}
+              : <>✨ 이 이름 자세히 풀이 보기 · {price.toLocaleString()}원</>}
           </button>
           <div style={{ fontSize: 11, color: SUB, textAlign: 'center', marginTop: 8, lineHeight: 1.6 }}>
             마음에 드는 이름을 고르면, 사주에 맞는지 상세히 풀어드려요.
@@ -313,7 +320,6 @@ function NewResultInner() {
         </div>
       )}
 
-      {/* 작명 도우미 (준비 중 — 비활성) */}
       <div style={{ marginTop: 8, borderTop: '1px solid rgba(250,199,117,0.15)', paddingTop: 18 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: SUB }}>✨ 작명 도우미에게 물어보기</span>
@@ -326,7 +332,6 @@ function NewResultInner() {
         </div>
       </div>
 
-      {/* 또 지어보기 / 카운트 안내 */}
       <div style={{ fontSize: 11, color: SUB, textAlign: 'center', margin: '20px 0 8px' }}>
         총 {TRY_LIMIT}회까지 종합 해설이 가능합니다 · 남은 횟수 {triesLeft > 0 ? triesLeft : 0}회
       </div>
@@ -338,6 +343,42 @@ function NewResultInner() {
       ) : (
         <div style={{ background: CARD, border: '1px solid rgba(250,199,117,0.2)', borderRadius: 14, padding: '13px 16px', fontSize: 12, color: SUB, lineHeight: 1.7, textAlign: 'center' }}>
           {TRY_LIMIT}회를 모두 사용했어요.<br />지금까지 지어본 이름 중에서 골라보세요.
+        </div>
+      )}
+
+      {/* 한자 바꾸기 결제 팝업 */}
+      {payOpen && (
+        <div onClick={() => setPayOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: '480px', background: '#222220', borderRadius: '20px 20px 0 0', padding: '10px 20px 28px', boxShadow: '0 -8px 30px rgba(0,0,0,0.5)' }}>
+            <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.2)', margin: '0 auto 18px' }} />
+            <div style={{ fontSize: '17px', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>✍️ 이름 자세히 풀이</div>
+            <div style={{ fontSize: '13px', color: SUB, marginBottom: '16px', lineHeight: 1.6 }}>
+              새로 지은 이름 <b style={{ color: GOLD }}>{fullName}</b>을 사주 기준으로 상세히 풀어드려요
+            </div>
+
+            <div style={{ background: CARD, borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontSize: '12px', color: SUB, marginBottom: '8px' }}>포함 내용</div>
+              {['사주 보완(용신) 상세 풀이', '한자·소리 기운 분석', '이름 수리 해설', '종합 조언'].map((t, i) => (
+                <div key={i} style={{ fontSize: '13px', color: '#b8b4d8', lineHeight: 1.9 }}>· {t}</div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <span style={{ fontSize: '14px', color: SUB }}>결제 금액</span>
+              <span style={{ fontSize: '20px', fontWeight: 700, color: GOLD }}>{price.toLocaleString()}원</span>
+            </div>
+
+            <button onClick={loadDetail}
+              style={{ width: '100%', padding: '15px', borderRadius: '12px', background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)', border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginBottom: '8px' }}>
+              💳 {price.toLocaleString()}원 결제하고 풀이 보기
+            </button>
+            <button onClick={() => setPayOpen(false)}
+              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: SUB, fontSize: '13px', cursor: 'pointer' }}>
+              취소
+            </button>
+          </div>
         </div>
       )}
     </main>
