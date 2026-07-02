@@ -1,5 +1,6 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
 import ConsultantManager from './components/ConsultantManager'
 import SettlementManager from './components/SettlementManager'
 import ConsultationHistory from './components/ConsultationHistory'
@@ -25,6 +26,28 @@ const TABS = [
 ]
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>('dashboard')
+  const [adminName, setAdminName] = useState<string>('')
+
+  useEffect(() => {
+    let mounted = true
+    async function loadAdmin() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { data } = await supabase
+          .from('profiles')
+          .select('nickname')
+          .eq('id', user.id)
+          .maybeSingle()
+        if (mounted && data?.nickname) setAdminName(data.nickname)
+      } catch {
+        // 무시 (이름 표시는 부가 기능이므로 실패해도 화면은 정상)
+      }
+    }
+    loadAdmin()
+    return () => { mounted = false }
+  }, [])
+
   return (
     <div className="min-h-screen" style={{ background: '#1a1a18' }}>
       <header className="fixed top-0 z-50 w-full"
@@ -44,6 +67,9 @@ export default function AdminPage() {
                 {t.label}
               </button>
             ))}
+          </div>
+          <div className="ml-auto text-sm font-bold whitespace-nowrap" style={{ color: 'rgba(255,255,255,0.75)' }}>
+            {adminName ? `👤 ${adminName} 님` : ''}
           </div>
         </div>
       </header>
