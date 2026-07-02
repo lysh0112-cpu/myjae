@@ -15,7 +15,25 @@ type Member = {
   birth_hour: string | null
   cal_type: string | null
   gender: string | null
+  leap_month: boolean | null
 }
+
+// 사주 편집 상태
+type SajuEdit = {
+  birth_year: string
+  birth_month: string
+  birth_day: string
+  birth_hour: string
+  cal_type: string
+  gender: string
+  leap_month: string // '0'=평달, '1'=윤달
+}
+
+const HOUR_LABELS = [
+  '子시(23~01)', '丑시(01~03)', '寅시(03~05)', '卯시(05~07)',
+  '辰시(07~09)', '巳시(09~11)', '午시(11~13)', '未시(13~15)',
+  '申시(15~17)', '酉시(17~19)', '戌시(19~21)', '亥시(21~23)',
+]
 
 export default function MemberManager() {
   const [members, setMembers] = useState<Member[]>([])
@@ -24,10 +42,11 @@ export default function MemberManager() {
   const [roleSavingId, setRoleSavingId] = useState<string | null>(null)
   const [msg, setMsg] = useState('')
 
-  // 닉네임 수정
+  // 수정 (닉네임 + 사주)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editNick, setEditNick] = useState('')
-  const [nickSavingId, setNickSavingId] = useState<string | null>(null)
+  const [editSaju, setEditSaju] = useState<SajuEdit | null>(null)
+  const [savingId, setSavingId] = useState<string | null>(null)
 
   // 회원 추가 폼
   const [showAdd, setShowAdd] = useState(false)
@@ -117,38 +136,88 @@ export default function MemberManager() {
     setRoleSavingId(null)
   }
 
-  // 닉네임 수정 시작
-  const startEditNick = (member: Member) => {
+  // 수정 시작 (닉네임 + 사주 함께)
+  const startEdit = (member: Member) => {
     setEditingId(member.id)
     setEditNick(member.nickname || '')
+    setEditSaju({
+      birth_year: member.birth_year != null ? String(member.birth_year) : '',
+      birth_month: member.birth_month != null ? String(member.birth_month) : '',
+      birth_day: member.birth_day != null ? String(member.birth_day) : '',
+      birth_hour: member.birth_hour != null ? member.birth_hour : '모름',
+      cal_type: member.cal_type || '양력',
+      gender: member.gender || '남',
+      leap_month: member.leap_month ? '1' : '0',
+    })
     setMsg('')
   }
 
-  // 닉네임 저장
-  const saveNick = async (member: Member) => {
+  const cancelEdit = () => {
+    setEditingId(null)
+    setEditSaju(null)
+  }
+
+  // 저장 (닉네임 + 사주 한번에)
+  const saveEdit = async (member: Member) => {
+    if (!editSaju) return
     const name = editNick.trim()
     if (!name) { setMsg('닉네임을 입력해주세요.'); return }
     if (name.length > 20) { setMsg('닉네임은 20자 이내로 입력해주세요.'); return }
-    setNickSavingId(member.id)
+    setSavingId(member.id)
     setMsg('')
     try {
-      const res = await fetch('/api/admin/update-nickname', {
+      // 1) 닉네임 저장
+      const resNick = await fetch('/api/admin/update-nickname', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: member.id, nickname: name }),
       })
-      const result = await res.json()
-      if (!res.ok) {
-        setMsg('닉네임 변경 실패: ' + (result.error || '알 수 없는 오류'))
-      } else {
-        setMsg(`닉네임을 "${name}"(으)로 변경했어요.`)
-        setMembers(members.map(m => m.id === member.id ? { ...m, nickname: name } : m))
-        setEditingId(null)
+      const rNick = await resNick.json()
+      if (!resNick.ok) {
+        setMsg('닉네임 변경 실패: ' + (rNick.error || '알 수 없는 오류'))
+        setSavingId(null); return
       }
+
+      // 2) 사주 저장
+      const resSaju = await fetch('/api/admin/update-saju', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: member.id,
+          birth_year: editSaju.birth_year ? parseInt(editSaju.birth_year, 10) : null,
+          birth_month: editSaju.birth_month ? parseInt(editSaju.birth_month, 10) : null,
+          birth_day: editSaju.birth_day ? parseInt(editSaju.birth_day, 10) : null,
+          birth_hour: editSaju.birth_hour, // '0'~'11' 또는 '모름'
+          cal_type: editSaju.cal_type,
+          gender: editSaju.gender,
+          leap_month: editSaju.leap_month === '1',
+        }),
+      })
+      const rSaju = await resSaju.json()
+      if (!resSaju.ok) {
+        setMsg('사주 저장 실패: ' + (rSaju.error || '알 수 없는 오류'))
+        setSavingId(null); return
+      }
+
+      // 화면 반영
+      setMembers(members.map(m => m.id === member.id ? {
+        ...m,
+        nickname: name,
+        birth_year: editSaju.birth_year ? parseInt(editSaju.birth_year, 10) : null,
+        birth_month: editSaju.birth_month ? parseInt(editSaju.birth_month, 10) : null,
+        birth_day: editSaju.birth_day ? parseInt(editSaju.birth_day, 10) : null,
+        birth_hour: editSaju.birth_hour,
+        cal_type: editSaju.cal_type,
+        gender: editSaju.gender,
+        leap_month: editSaju.leap_month === '1',
+      } : m))
+      setMsg(`"${name}" 님의 정보를 저장했어요.`)
+      setEditingId(null)
+      setEditSaju(null)
     } catch (e: any) {
-      setMsg('닉네임 변경 중 오류: ' + (e?.message || '알 수 없음'))
+      setMsg('저장 중 오류: ' + (e?.message || '알 수 없음'))
     }
-    setNickSavingId(null)
+    setSavingId(null)
   }
 
   const handleDelete = async (member: Member) => {
@@ -186,25 +255,15 @@ export default function MemberManager() {
   const roleLabelText = (role: string | null) =>
     role === 'master' ? '매니저' : role === 'consultant' ? '상담사' : '일반회원'
 
-  // 생년월일 표시 (예: 1990.1.12)
   const fmtBirth = (m: Member) =>
     m.birth_year ? `${m.birth_year}.${m.birth_month ?? '-'}.${m.birth_day ?? '-'}` : '-'
 
-  // 음양력 표시
   const fmtCalType = (c: string | null) => c || '-'
 
-  // 윤/평달 표시 (현재 profiles에 윤달 컬럼 없음 → 사주 등록자는 '평달')
-  const fmtLeap = (m: Member) => (m.birth_year ? '평달' : '-')
+  const fmtLeap = (m: Member) => (m.birth_year ? (m.leap_month ? '윤달' : '평달') : '-')
 
-  // 남/여 표시
   const fmtGender = (g: string | null) => g || '-'
 
-  // 생시 표시 (시주 인덱스 → 사람이 읽는 형태)
-  const HOUR_LABELS = [
-    '子시(23~01)', '丑시(01~03)', '寅시(03~05)', '卯시(05~07)',
-    '辰시(07~09)', '巳시(09~11)', '午시(11~13)', '未시(13~15)',
-    '申시(15~17)', '酉시(17~19)', '戌시(19~21)', '亥시(21~23)',
-  ]
   const fmtHour = (h: string | null) => {
     if (h === null || h === undefined || h === '') return '-'
     if (h === '모름') return '모름'
@@ -246,6 +305,16 @@ export default function MemberManager() {
 
   const th: React.CSSProperties = { padding: '10px 12px', whiteSpace: 'nowrap' }
   const td: React.CSSProperties = { padding: '10px 12px', whiteSpace: 'nowrap' }
+
+  // 수정 모드용 작은 입력칸 스타일
+  const cellInput: React.CSSProperties = {
+    width: 52, background: '#1a1a18', color: '#fff', borderRadius: 6,
+    padding: '5px 6px', border: '1px solid rgba(250,199,117,0.4)', fontSize: 12, textAlign: 'center',
+  }
+  const cellSelect: React.CSSProperties = {
+    background: '#1a1a18', color: '#fff', borderRadius: 6,
+    padding: '5px 6px', border: '1px solid rgba(250,199,117,0.4)', fontSize: 12,
+  }
 
   return (
     <div style={{ padding: '8px 4px' }}>
@@ -310,7 +379,7 @@ export default function MemberManager() {
       )}
 
       <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>
-        총 {members.length}명 · 등급을 바꾸려면 등급 칸을 누르세요 · 삭제하면 로그인 정보와 프로필이 함께 지워집니다.
+        총 {members.length}명 · 등급 칸은 바로 바꿀 수 있어요 · [수정]을 누르면 닉네임·생년월일·시간 등을 고칠 수 있습니다.
       </p>
 
       {msg && (
@@ -325,7 +394,7 @@ export default function MemberManager() {
         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>아직 가입한 회원이 없어요.</p>
       ) : (
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 1100 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 1200 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', textAlign: 'left' }}>
                 <th style={th}>등급</th>
@@ -342,77 +411,121 @@ export default function MemberManager() {
               </tr>
             </thead>
             <tbody>
-              {members.map(member => (
-                <tr key={member.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#fff' }}>
-                  <td style={td}>
-                    <select
-                      value={member.role || 'customer'}
-                      disabled={roleSavingId === member.id}
-                      onChange={(e) => handleRoleChange(member, e.target.value)}
-                      style={{
-                        background: '#1a1a18', color: '#FAC775', borderRadius: 8,
-                        padding: '6px 10px', border: '1px solid rgba(250,199,117,0.3)',
-                        fontSize: 13, cursor: 'pointer', opacity: roleSavingId === member.id ? 0.5 : 1,
-                      }}>
-                      <option value="customer">👤 일반회원</option>
-                      <option value="consultant">🔮 상담사</option>
-                      <option value="master">👑 매니저</option>
-                    </select>
-                  </td>
-                  <td style={{ ...td, fontWeight: 600 }}>
-                    {editingId === member.id ? (
-                      <input
-                        value={editNick}
-                        onChange={e => setEditNick(e.target.value)}
-                        maxLength={20}
-                        placeholder="닉네임"
-                        style={{ width: 120, background: '#1a1a18', color: '#fff', borderRadius: 6, padding: '6px 8px', border: '1px solid rgba(250,199,117,0.4)', fontSize: 13 }}
-                      />
-                    ) : (
-                      member.nickname || '(없음)'
-                    )}
-                  </td>
-                  <td style={{ ...td, color: 'rgba(255,255,255,0.7)' }}>{member.email || '-'}</td>
-                  <td style={{ ...td, color: 'rgba(255,255,255,0.75)' }}>{fmtBirth(member)}</td>
-                  <td style={{ ...td, color: 'rgba(255,255,255,0.75)' }}>{fmtCalType(member.cal_type)}</td>
-                  <td style={{ ...td, color: 'rgba(255,255,255,0.75)' }}>{fmtLeap(member)}</td>
-                  <td style={{ ...td, color: 'rgba(255,255,255,0.75)' }}>{fmtGender(member.gender)}</td>
-                  <td style={{ ...td, color: 'rgba(255,255,255,0.75)' }}>{fmtHour(member.birth_hour)}</td>
-                  <td style={{ ...td, color: 'rgba(255,255,255,0.6)' }}>{fmtDateShort(member.created_at)}</td>
-                  <td style={{ ...td, color: 'rgba(255,255,255,0.6)' }}>{fmtDate(member.last_sign_in_at)}</td>
-                  <td style={{ ...td, textAlign: 'center' }}>
-                    {editingId === member.id ? (
-                      <>
-                        <button
-                          onClick={() => saveNick(member)}
-                          disabled={nickSavingId === member.id}
-                          style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: '#FAC775', color: '#1a1a18', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginRight: 6, opacity: nickSavingId === member.id ? 0.5 : 1 }}>
-                          {nickSavingId === member.id ? '저장 중...' : '저장'}
-                        </button>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'rgba(255,255,255,0.6)', fontSize: 12, cursor: 'pointer' }}>
-                          취소
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => startEditNick(member)}
-                          style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(250,199,117,0.4)', background: 'rgba(250,199,117,0.1)', color: '#FAC775', fontSize: 12, cursor: 'pointer', marginRight: 6 }}>
-                          수정
-                        </button>
-                        <button
-                          onClick={() => handleDelete(member)}
-                          disabled={deletingId === member.id}
-                          style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,80,80,0.4)', background: 'rgba(255,80,80,0.1)', color: '#ff8080', fontSize: 12, cursor: 'pointer', opacity: deletingId === member.id ? 0.5 : 1 }}>
-                          {deletingId === member.id ? '삭제 중...' : '삭제'}
-                        </button>
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {members.map(member => {
+                const isEdit = editingId === member.id && editSaju
+                return (
+                  <tr key={member.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#fff' }}>
+                    <td style={td}>
+                      <select
+                        value={member.role || 'customer'}
+                        disabled={roleSavingId === member.id}
+                        onChange={(e) => handleRoleChange(member, e.target.value)}
+                        style={{
+                          background: '#1a1a18', color: '#FAC775', borderRadius: 8,
+                          padding: '6px 10px', border: '1px solid rgba(250,199,117,0.3)',
+                          fontSize: 13, cursor: 'pointer', opacity: roleSavingId === member.id ? 0.5 : 1,
+                        }}>
+                        <option value="customer">👤 일반회원</option>
+                        <option value="consultant">🔮 상담사</option>
+                        <option value="master">👑 매니저</option>
+                      </select>
+                    </td>
+
+                    {/* 닉네임 */}
+                    <td style={{ ...td, fontWeight: 600 }}>
+                      {isEdit ? (
+                        <input value={editNick} onChange={e => setEditNick(e.target.value)} maxLength={20} placeholder="닉네임"
+                          style={{ width: 100, background: '#1a1a18', color: '#fff', borderRadius: 6, padding: '6px 8px', border: '1px solid rgba(250,199,117,0.4)', fontSize: 13 }} />
+                      ) : (member.nickname || '(없음)')}
+                    </td>
+
+                    <td style={{ ...td, color: 'rgba(255,255,255,0.7)' }}>{member.email || '-'}</td>
+
+                    {/* 생년월일 */}
+                    <td style={{ ...td, color: 'rgba(255,255,255,0.75)' }}>
+                      {isEdit ? (
+                        <span style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          <input style={{ ...cellInput, width: 60 }} value={editSaju!.birth_year} onChange={e => setEditSaju({ ...editSaju!, birth_year: e.target.value })} placeholder="년" />
+                          <input style={cellInput} value={editSaju!.birth_month} onChange={e => setEditSaju({ ...editSaju!, birth_month: e.target.value })} placeholder="월" />
+                          <input style={cellInput} value={editSaju!.birth_day} onChange={e => setEditSaju({ ...editSaju!, birth_day: e.target.value })} placeholder="일" />
+                        </span>
+                      ) : fmtBirth(member)}
+                    </td>
+
+                    {/* 음양력 */}
+                    <td style={{ ...td, color: 'rgba(255,255,255,0.75)' }}>
+                      {isEdit ? (
+                        <select style={cellSelect} value={editSaju!.cal_type} onChange={e => setEditSaju({ ...editSaju!, cal_type: e.target.value })}>
+                          <option value="양력">양력</option>
+                          <option value="음력">음력</option>
+                        </select>
+                      ) : fmtCalType(member.cal_type)}
+                    </td>
+
+                    {/* 윤/평달 */}
+                    <td style={{ ...td, color: 'rgba(255,255,255,0.75)' }}>
+                      {isEdit ? (
+                        <select style={cellSelect} value={editSaju!.leap_month} onChange={e => setEditSaju({ ...editSaju!, leap_month: e.target.value })}>
+                          <option value="0">평달</option>
+                          <option value="1">윤달</option>
+                        </select>
+                      ) : fmtLeap(member)}
+                    </td>
+
+                    {/* 남/여 */}
+                    <td style={{ ...td, color: 'rgba(255,255,255,0.75)' }}>
+                      {isEdit ? (
+                        <select style={cellSelect} value={editSaju!.gender} onChange={e => setEditSaju({ ...editSaju!, gender: e.target.value })}>
+                          <option value="남">남</option>
+                          <option value="여">여</option>
+                        </select>
+                      ) : fmtGender(member.gender)}
+                    </td>
+
+                    {/* 생시 */}
+                    <td style={{ ...td, color: 'rgba(255,255,255,0.75)' }}>
+                      {isEdit ? (
+                        <select style={cellSelect} value={editSaju!.birth_hour} onChange={e => setEditSaju({ ...editSaju!, birth_hour: e.target.value })}>
+                          <option value="모름">모름</option>
+                          {HOUR_LABELS.map((label, i) => (
+                            <option key={i} value={String(i)}>{label}</option>
+                          ))}
+                        </select>
+                      ) : fmtHour(member.birth_hour)}
+                    </td>
+
+                    <td style={{ ...td, color: 'rgba(255,255,255,0.6)' }}>{fmtDateShort(member.created_at)}</td>
+                    <td style={{ ...td, color: 'rgba(255,255,255,0.6)' }}>{fmtDate(member.last_sign_in_at)}</td>
+
+                    {/* 관리 */}
+                    <td style={{ ...td, textAlign: 'center' }}>
+                      {isEdit ? (
+                        <>
+                          <button onClick={() => saveEdit(member)} disabled={savingId === member.id}
+                            style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: '#FAC775', color: '#1a1a18', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginRight: 6, opacity: savingId === member.id ? 0.5 : 1 }}>
+                            {savingId === member.id ? '저장 중...' : '저장'}
+                          </button>
+                          <button onClick={cancelEdit}
+                            style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'rgba(255,255,255,0.6)', fontSize: 12, cursor: 'pointer' }}>
+                            취소
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={() => startEdit(member)}
+                            style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(250,199,117,0.4)', background: 'rgba(250,199,117,0.1)', color: '#FAC775', fontSize: 12, cursor: 'pointer', marginRight: 6 }}>
+                            수정
+                          </button>
+                          <button onClick={() => handleDelete(member)} disabled={deletingId === member.id}
+                            style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,80,80,0.4)', background: 'rgba(255,80,80,0.1)', color: '#ff8080', fontSize: 12, cursor: 'pointer', opacity: deletingId === member.id ? 0.5 : 1 }}>
+                            {deletingId === member.id ? '삭제 중...' : '삭제'}
+                          </button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
