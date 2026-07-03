@@ -132,11 +132,37 @@ function setCache(key: string, data: CoupleResultData) {
 }
 
 // 궁합 해설을 상담 전달용 키에 저장 (예약 화면이 읽어 감)
-function saveForConsult(data: CoupleResultData, mode: string) {
+//  - ai_analysis: 사람이 읽는 해설 텍스트 (상담사 화면 표시용)
+//  - couple_full: 계산 전체(점수·세부점수·두 사람 사주·해설)를 통째로
+//                 → 예약 확정 시 couples 테이블에 저장됨
+function saveForConsult(
+  data: CoupleResultData,
+  mode: string,
+  person1: PersonInput,
+  person2: PersonInput
+) {
   if (typeof window === 'undefined') return
   try {
     const text = buildConsultText(data, MODE_KO[mode] || '궁합')
     if (text) sessionStorage.setItem('ai_analysis', text)
+
+    const fullPayload = {
+      mode,
+      person_a_birth: {
+        gender: person1.gender, calType: person1.calType,
+        year: person1.year, month: person1.month, day: person1.day,
+        hour: person1.hour, leapMonth: person1.leapMonth,
+        job: person1.job, mbti: person1.mbti,
+      },
+      person_b_birth: {
+        gender: person2.gender, calType: person2.calType,
+        year: person2.year, month: person2.month, day: person2.day,
+        hour: person2.hour, leapMonth: person2.leapMonth,
+        job: person2.job, mbti: person2.mbti,
+      },
+      result: data,
+    }
+    sessionStorage.setItem('couple_full', JSON.stringify(fullPayload))
   } catch {}
 }
 
@@ -428,7 +454,7 @@ export function useCoupleResult(
     const cached = getCache(cacheKey)
     if (cached) {
       setResult(cached)
-      saveForConsult(cached, mode)   // 캐시로 복원돼도 상담 전달용 저장
+      saveForConsult(cached, mode, person1, person2)   // 캐시로 복원돼도 상담 전달용 저장
       return
     }
 
@@ -573,7 +599,7 @@ export function useCoupleResult(
         }
         // ✅ 결과 캐시 저장
         setCache(cacheKey, finalResult)
-        saveForConsult(finalResult, mode)   // 상담 전달용(ai_analysis) 저장
+        saveForConsult(finalResult, mode, person1, person2)   // 상담 전달용(ai_analysis) 저장
         setResult(finalResult)
 
       } catch {
@@ -591,7 +617,7 @@ export function useCoupleResult(
           hasMbti, scoreDetails,
         }
         setCache(cacheKey, fallbackResult)
-        saveForConsult(fallbackResult, mode)   // 실패 폴백도 저장
+        saveForConsult(fallbackResult, mode, person1, person2)   // 실패 폴백도 저장
         setResult(fallbackResult)
       }
     }
