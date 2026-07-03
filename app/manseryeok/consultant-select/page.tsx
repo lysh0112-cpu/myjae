@@ -166,6 +166,25 @@ function ConsultantSelectInner() {
         .single()
       if (cErr) throw cErr
 
+      // 궁합이면: 세션에 담긴 계산 전체를 couples 테이블에 저장 (해설+점수+두 사람 사주원국)
+      if (typeof window !== 'undefined') {
+        const coupleRaw = sessionStorage.getItem('couple_full')
+        if (coupleRaw) {
+          try {
+            const cp = JSON.parse(coupleRaw)
+            await supabase.from('couples').insert({
+              consultation_id: cons.id,
+              person_a_birth: cp.person_a_birth ?? null,
+              person_b_birth: cp.person_b_birth ?? null,
+              mode: cp.mode ?? mode,
+              result: cp.result ?? null,
+            })
+          } catch (e) {
+            console.error('couples 저장 실패', e)
+          }
+        }
+      }
+
       // 예약 저장
       await supabase.from('bookings').insert({
         slot_id: slot.id,
@@ -183,6 +202,7 @@ function ConsultantSelectInner() {
       if (typeof window !== 'undefined') {
         sessionStorage.removeItem('ai_analysis')
         sessionStorage.removeItem('ai_free_analysis')
+        sessionStorage.removeItem('couple_full')
       }
 
       setDone({ consultantName: c.name, date: slot.slot_date, hour: slot.slot_hour })
