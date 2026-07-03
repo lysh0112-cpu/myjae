@@ -40,10 +40,8 @@ function MulsangInner() {
     leapMonth: string; hourIdx: number | null
   } | null>(null)
 
-  // 가격/노출 (그림 생성 = mulsang_ai)
   const [drawPrice, setDrawPrice] = useState(19900)
   const [drawActive, setDrawActive] = useState(true)
-  // 결제 팝업
   const [payOpen, setPayOpen] = useState(false)
 
   useEffect(() => {
@@ -136,7 +134,6 @@ function MulsangInner() {
     )
   }
 
-  // 실제 그림 생성 (결제 팝업에서 '결제하기' 누르면 호출)
   async function doGenerate() {
     setPayOpen(false)
     if (!saju || saju.length === 0 || !dayStem) return
@@ -185,6 +182,20 @@ function MulsangInner() {
           imageUrl: data.imageUrl ?? null,
           style,
         }))
+        // 상담 전달용: 물상도 결과를 세션에 담아둠 (예약 시 상담 건에 연결)
+        const storedUrl = data.storedUrl || data.imageUrl || null
+        sessionStorage.setItem('mulsang_full', JSON.stringify({
+          image_url: storedUrl,
+          prompt: built.prompt,
+          style,
+          commentary: data.commentary ?? null,
+        }))
+        // 상담사 화면 해설 표시용 텍스트도 함께 (ai_analysis)
+        if (data.commentary) {
+          const c = data.commentary
+          const text = `[물상도 · ${c.title || ''}]\n\n· 주인공(나)\n${c.subject || ''}\n\n· 환경\n${c.environment || ''}\n\n· 핵심 에너지(용신)\n${c.yongsin || ''}\n\n· 삶의 조언\n${c.advice || ''}`.trim()
+          sessionStorage.setItem('ai_analysis', text)
+        }
       } catch {}
     } catch (e) {
       console.error(e)
@@ -193,7 +204,6 @@ function MulsangInner() {
     }
   }
 
-  // 그림 그리기 버튼 → 결제 팝업 열기
   function openPay() {
     if (!saju || saju.length === 0 || !dayStem || converting) return
     setPayOpen(true)
@@ -201,7 +211,7 @@ function MulsangInner() {
 
   function goConsult() {
     const params = new URLSearchParams()
-    params.set('mode', 'personal')
+    params.set('mode', 'mulsang')       // 물상도로 구분 (상담사 화면이 그림+해설 표시)
     params.set('priceKey', 'mulsang')
     router.push('/manseryeok/consultant-select?' + params.toString())
   }
@@ -218,7 +228,6 @@ function MulsangInner() {
 
   const hasResult = commentary && !loading
 
-  // ===== 결제 팝업 (공용) =====
   const PayPopup = payOpen ? (
     <div onClick={() => setPayOpen(false)}
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }}>
@@ -251,7 +260,6 @@ function MulsangInner() {
     </div>
   ) : null
 
-  // ===== 결과 화면 =====
   if (hasResult) {
     return (
       <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto' }}>
@@ -317,7 +325,6 @@ function MulsangInner() {
     )
   }
 
-  // ===== 첫 입력 화면 =====
   return (
     <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
