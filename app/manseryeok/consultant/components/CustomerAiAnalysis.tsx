@@ -27,10 +27,10 @@ export default function CustomerAiAnalysis({
   consultationId, saju, gender, calType,
   yearParam, monthParam, dayParam, hourIdx
 }: Props) {
-  const [analysis, setAnalysis] = useState('')
+  const [freeAnalysis, setFreeAnalysis] = useState('')   // 고객이 본 무료 기본 풀이
+  const [paidAnalysis, setPaidAnalysis] = useState('')   // 고객이 본 유료 상세 풀이
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
-  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     if (!consultationId) return
@@ -38,26 +38,27 @@ export default function CustomerAiAnalysis({
       setLoading(true)
       const { data } = await supabase
         .from('consultations')
-        .select('ai_analysis')
+        .select('ai_analysis, ai_free_analysis')
         .eq('id', consultationId)
         .single()
-      if (data?.ai_analysis) {
-        setAnalysis(data.ai_analysis)
-        setOpen(true)
+      if (data) {
+        setFreeAnalysis(data.ai_free_analysis || '')
+        setPaidAnalysis(data.ai_analysis || '')
       }
       setLoading(false)
     }
     load()
   }, [consultationId])
 
+  // 고객이 본 해설이 하나도 없을 때만: 상담사가 직접 10항목 생성 (폴백)
   async function handleGenerate() {
     if (!saju || saju.length === 0) return
     setGenerating(true)
     try {
       const currentYear = new Date().getFullYear()
       const sajuText = saju.map(s => `${s.pillar}: ${s.stem}${s.branch}`).join(', ')
-      const hourText = hourIdx === null ? '모름'
-        : ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][hourIdx ?? 0] + '시'
+      const hourText = hourIdx === null || hourIdx === undefined ? '모름'
+        : ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][hourIdx] + '시'
 
       const prompt = `사주 분석 전문가로서 아래 사주를 10가지 항목으로 분석해주세요.
 마크다운 기호(##, **, ---)는 절대 사용하지 마세요.
@@ -85,8 +86,7 @@ export default function CustomerAiAnalysis({
       const data = await res.json()
       const rawText = data.content?.find((c:{type:string}) => c.type==='text')?.text || ''
       const cleaned = cleanMarkdown(rawText)
-      setAnalysis(cleaned)
-      setOpen(true)
+      setPaidAnalysis(cleaned)
 
       if (consultationId) {
         await supabase
@@ -110,38 +110,57 @@ export default function CustomerAiAnalysis({
     </div>
   )
 
+  const hasAny = !!(freeAnalysis || paidAnalysis)
+
   return (
     <div className="rounded-2xl overflow-hidden"
       style={{background:'#2C2C2A', border:'1px solid rgba(250,199,117,0.15)'}}>
 
+      {/* 헤더 */}
       <div className="flex items-center justify-between px-4 py-3"
-        style={{borderBottom: open ? '1px solid rgba(255,255,255,0.06)' : 'none'}}>
+        style={{borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
         <div className="flex items-center gap-2">
           <span>🤖</span>
-          <span className="text-sm font-bold text-white">AI 전체 분석 (1~10번)</span>
-          {analysis ? (
-            <span className="text-xs px-2 py-0.5 rounded-full"
-              style={{background:'rgba(76,175,80,0.2)', color:'#4caf50'}}>저장됨</span>
-          ) : (
-            <span className="text-xs px-2 py-0.5 rounded-full"
-              style={{background:'rgba(255,100,100,0.2)', color:'#ff8080'}}>미생성</span>
-          )}
+          <span className="text-sm font-bold text-white">고객이 본 사주 풀이</span>
         </div>
-        <div className="flex items-center gap-2">
-          {analysis && (
-            <button onClick={() => setOpen(!open)}
-              className="text-xs px-3 py-1 rounded-lg"
-              style={{background:'rgba(255,255,255,0.06)', color:'#8a88a0'}}>
-              {open ? '접기 ▲' : '펼치기 ▼'}
-            </button>
-          )}
-        </div>
+        {hasAny && (
+          <span className="text-xs px-2 py-0.5 rounded-full"
+            style={{background:'rgba(76,175,80,0.2)', color:'#4caf50'}}>고객 조회분</span>
+        )}
       </div>
 
-      {!analysis && (
+      {/* 고객이 본 해설이 있으면: 무료·유료 가지런히 표시 */}
+      {hasAny ? (
+        <div className="p-4 space-y-3">
+          {freeAnalysis && (
+            <div className="rounded-xl p-4"
+              style={{background:'rgba(60,52,137,0.15)', border:'1px solid rgba(60,52,137,0.3)'}}>
+              <div className="text-xs font-bold mb-2 flex items-center gap-1.5" style={{color:'#b0aec8'}}>
+                <span>📖</span> 기본 풀이 <span style={{color:'#4caf50'}}>(무료로 본 내용)</span>
+              </div>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{color:'#e0dce8'}}>
+                {freeAnalysis}
+              </p>
+            </div>
+          )}
+
+          {paidAnalysis && (
+            <div className="rounded-xl p-4"
+              style={{background:'rgba(250,199,117,0.08)', border:'1px solid rgba(250,199,117,0.2)'}}>
+              <div className="text-xs font-bold mb-2 flex items-center gap-1.5" style={{color:'#FAC775'}}>
+                <span>✨</span> 상세 풀이 <span style={{color:'#FAC775', opacity:0.8}}>(유료 결제분)</span>
+              </div>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{color:'#e0dce8'}}>
+                {paidAnalysis}
+              </p>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* 고객이 본 해설이 없을 때만: 상담사 직접 생성 (폴백) */
         <div className="p-4">
           <p className="text-xs mb-3 text-center" style={{color:'#8a88a0'}}>
-            전화 상담 고객의 AI 전체 분석을 생성합니다
+            이 고객이 조회한 사주 풀이가 없습니다.<br/>전화 상담 등을 위해 직접 생성할 수 있어요.
           </p>
           <button onClick={handleGenerate} disabled={generating || !saju?.length}
             className="w-full py-3 rounded-xl text-sm font-bold disabled:opacity-40 transition-all active:scale-95"
@@ -153,30 +172,6 @@ export default function CustomerAiAnalysis({
               : '✨ AI 전체 분석 생성 (1~10번)'}
           </button>
         </div>
-      )}
-
-      {analysis && (
-        <>
-          <div className="px-4 py-2 flex justify-end"
-            style={{borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
-            <button onClick={handleGenerate} disabled={generating}
-              className="text-xs px-3 py-1.5 rounded-xl font-semibold disabled:opacity-40"
-              style={{background:'rgba(60,52,137,0.3)', color:'#FAC775',
-                border:'1px solid rgba(60,52,137,0.4)'}}>
-              {generating
-                ? <span className="flex items-center gap-1">
-                    <span className="animate-spin">✦</span> 재생성 중...
-                  </span>
-                : '🔄 재생성'}
-            </button>
-          </div>
-          {open && (
-            <div className="p-4">
-              <p className="text-sm leading-relaxed whitespace-pre-wrap"
-                style={{color:'#e0dce8'}}>{analysis}</p>
-            </div>
-          )}
-        </>
       )}
     </div>
   )
