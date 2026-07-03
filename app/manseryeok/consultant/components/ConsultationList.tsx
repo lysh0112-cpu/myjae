@@ -220,6 +220,37 @@ export default function ConsultationList({
     return { name, email, phone, nickname, birth, cal, leap, gender, reqType }
   }
 
+  // [테스트용] 상담 건 하나 삭제 (연결된 couples 등은 cascade로 함께 삭제됨)
+  async function handleDeleteOne(e: React.MouseEvent, c: Consultation) {
+    e.stopPropagation()
+    if (!confirm('이 상담 건을 삭제할까요? 되돌릴 수 없어요. (테스트용)')) return
+    setBusyId(c.id)
+    try {
+      await supabase.from('consultations').delete().eq('id', c.id)
+      await fetchList()
+    } catch (err) {
+      console.error(err)
+      alert('삭제 중 문제가 생겼어요.')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  // [테스트용] 이 상담사의 상담 건 전부 초기화
+  async function handleResetAll() {
+    if (list.length === 0) { alert('삭제할 상담 내역이 없어요.'); return }
+    if (!confirm(`이 상담사의 상담 내역 ${list.length}건을 모두 삭제할까요?\n되돌릴 수 없어요. (테스트용)`)) return
+    if (!confirm('정말 전부 삭제합니다. 계속할까요?')) return
+    try {
+      await supabase.from('consultations').delete().eq('consultant_id', consultantId)
+      await fetchList()
+      alert('테스트 상담 내역을 모두 삭제했어요.')
+    } catch (err) {
+      console.error(err)
+      alert('초기화 중 문제가 생겼어요.')
+    }
+  }
+
   // 엑셀(CSV) 내보내기
   function exportCsv() {
     const headers = ['이름', '이메일', '연락처', '닉네임', '생년월일', '음/양력', '윤/평달', '성별', '상담요청', '상태', '완료일자', '상담시간']
@@ -289,6 +320,11 @@ export default function ConsultationList({
           style={{ marginLeft: 'auto', fontSize: '11px', padding: '5px 12px', borderRadius: '6px', border: '1px solid rgba(97,196,89,0.4)', background: 'rgba(97,196,89,0.12)', color: '#97c459', cursor: 'pointer' }}>
           ⬇ 엑셀로 내보내기
         </button>
+        <button onClick={handleResetAll}
+          title="테스트용: 내 상담 내역 전부 삭제"
+          style={{ fontSize: '11px', padding: '5px 12px', borderRadius: '6px', border: '1px solid rgba(226,75,74,0.4)', background: 'rgba(226,75,74,0.12)', color: '#e57373', cursor: 'pointer' }}>
+          🗑 테스트 초기화
+        </button>
       </div>
 
       {/* 표 (왼쪽 정렬, 오른쪽 여백) */}
@@ -312,6 +348,7 @@ export default function ConsultationList({
                   <th style={{ ...th, textAlign: 'center' }}>상태</th>
                   <th style={{ ...th, textAlign: 'center' }}>완료일자</th>
                   <th style={{ ...th, textAlign: 'center' }}>상담시간</th>
+                  <th style={{ ...th, textAlign: 'center' }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -357,6 +394,13 @@ export default function ConsultationList({
                       <td style={{ ...td, textAlign: 'center' }}>{fmtCompleted(c.completed_at)}</td>
                       <td style={{ ...td, textAlign: 'center', color: c.completed_at ? '#e8e2f5' : c.started_at ? '#64b5f6' : '#66657a', fontWeight: c.completed_at ? 600 : 400 }}>
                         {fmtDuration(c.started_at, c.completed_at)}
+                      </td>
+                      <td style={{ ...td, textAlign: 'center' }}>
+                        <button onClick={e => handleDeleteOne(e, c)} disabled={isBusy}
+                          title="이 건 삭제 (테스트용)"
+                          style={{ fontSize: '11px', width: '22px', height: '22px', borderRadius: '5px', border: '1px solid rgba(226,75,74,0.3)', background: 'transparent', color: '#e57373', cursor: 'pointer', opacity: isBusy ? 0.4 : 1 }}>
+                          ✕
+                        </button>
                       </td>
                     </tr>
                   )
