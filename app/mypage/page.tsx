@@ -301,8 +301,9 @@ export default function MyPage() {
         .eq('id', c.id)
       if (cErr) { alert('취소 실패: ' + cErr.message); setCancelingId(null); return }
 
-      // 5) 화면 즉시 반영
-      setConsults(prev => prev.map(x => x.id === c.id ? { ...x, status: 'cancelled' } : x))
+      // 5) 화면에서 즉시 제거(취소된 건은 목록에 남기지 않음) + 알림
+      setConsults(prev => prev.filter(x => x.id !== c.id))
+      alert('예약이 취소되었습니다.')
     } catch (e: any) {
       alert('취소 중 오류가 발생했어요. 다시 시도해 주세요.')
       console.error(e)
@@ -623,16 +624,17 @@ export default function MyPage() {
         {/* 4. 내 상담 내역 */}
         <div style={card}>
           <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginBottom: 10 }}>내 상담 내역</div>
-          {consults.length === 0 ? (
+          {consults.filter(c => c.status !== 'cancelled' && c.status !== 'canceled').length === 0 ? (
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '12px 0' }}>아직 신청한 상담이 없습니다.</div>
           ) : (
             <div>
-              {consults.map((c, i) => {
+              {consults
+                .filter(c => c.status !== 'cancelled' && c.status !== 'canceled')
+                .map((c, i, arr) => {
                 const st = statusInfo(c.status)
                 const isBooked = c.status === 'booked'
-                const isCancelled = c.status === 'cancelled' || c.status === 'canceled'
                 return (
-                  <div key={c.id} style={{ padding: '12px 0', borderBottom: i < consults.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none', opacity: isCancelled ? 0.55 : 1 }}>
+                  <div key={c.id} style={{ padding: '12px 0', borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <div style={{ fontSize: 14, color: '#fff' }}>{c.consultant_name || '상담사'}</div>
@@ -645,34 +647,25 @@ export default function MyPage() {
                       <span style={{ fontSize: 12, color: st.color }}>{st.label}</span>
                     </div>
 
-                    {/* 취소된 예약: 버튼 없이 안내만 */}
-                    {isCancelled ? (
-                      <div style={{ marginTop: 8, fontSize: 12, color: 'rgba(255,255,255,0.35)', textAlign: 'center', padding: '6px 0' }}>
-                        취소된 예약입니다.
-                      </div>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => router.push(`/manseryeok/consulting?consultationId=${c.id}`)}
-                          style={{ marginTop: 8, width: '100%', padding: '9px 0', borderRadius: 10,
-                            background: 'rgba(83,74,183,0.25)', border: '1px solid rgba(119,102,221,0.4)',
-                            color: '#c8b0ff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                          💬 채팅방 입장
-                        </button>
+                    <button
+                      onClick={() => router.push(`/manseryeok/consulting?consultationId=${c.id}`)}
+                      style={{ marginTop: 8, width: '100%', padding: '9px 0', borderRadius: 10,
+                        background: 'rgba(83,74,183,0.25)', border: '1px solid rgba(119,102,221,0.4)',
+                        color: '#c8b0ff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                      💬 채팅방 입장
+                    </button>
 
-                        {/* 예약 확정(booked) 상태일 때만 취소 버튼 노출 */}
-                        {isBooked && (
-                          <button
-                            onClick={() => cancelBooking(c)}
-                            disabled={cancelingId === c.id}
-                            style={{ marginTop: 6, width: '100%', padding: '9px 0', borderRadius: 10,
-                              background: 'none', border: '1px solid rgba(226,75,74,0.4)',
-                              color: '#ff8080', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                              opacity: cancelingId === c.id ? 0.5 : 1 }}>
-                            {cancelingId === c.id ? '취소 처리 중…' : '예약 취소'}
-                          </button>
-                        )}
-                      </>
+                    {/* 예약 확정(booked) 상태일 때만 취소 버튼 노출 */}
+                    {isBooked && (
+                      <button
+                        onClick={() => cancelBooking(c)}
+                        disabled={cancelingId === c.id}
+                        style={{ marginTop: 6, width: '100%', padding: '9px 0', borderRadius: 10,
+                          background: 'none', border: '1px solid rgba(226,75,74,0.4)',
+                          color: '#ff8080', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                          opacity: cancelingId === c.id ? 0.5 : 1 }}>
+                        {cancelingId === c.id ? '취소 처리 중…' : '예약 취소'}
+                      </button>
                     )}
                   </div>
                 )
