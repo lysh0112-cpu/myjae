@@ -94,6 +94,31 @@ type WeddingRow = {
   ai_notes?: Record<string, { oneLine?: string; detail?: string }> | null
 }
 
+// 출산택일 결과 타입
+type BirthRec = {
+  rank?: number
+  dateLabel?: string
+  hourLabel?: string
+  saju?: string
+  score?: number
+  parentNote?: string | null
+  elementCount?: Record<string, number> | null
+}
+type BirthAvoid = { dateLabel?: string; reasons?: string[] }
+type BirthRow = {
+  kind?: string | null
+  due_date?: string | null
+  method?: string | null
+  time_pref?: string | null
+  baby_gender?: string | null
+  wishes?: string[] | null
+  parent1?: Record<string, string> | null
+  parent2?: Record<string, string> | null
+  recommendations?: BirthRec[] | null
+  avoid_days?: BirthAvoid[] | null
+  ai_notes?: Record<string, { oneLine?: string; detail?: string }> | null
+}
+
 const MODE_KO: Record<string, string> = {
   couple: '연인 궁합',
   married: '부부 궁합',
@@ -144,6 +169,7 @@ export default function CustomerAiAnalysis({
   const [mulsang, setMulsang] = useState<MulsangRow | null>(null)
   const [naming, setNaming] = useState<NamingRow | null>(null)
   const [wedding, setWedding] = useState<WeddingRow | null>(null)
+  const [birth, setBirth] = useState<BirthRow | null>(null)
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
 
@@ -196,6 +222,15 @@ export default function CustomerAiAnalysis({
         .maybeSingle()
       setWedding((wd as WeddingRow) || null)
 
+      const { data: bt } = await supabase
+        .from('births')
+        .select('kind, due_date, method, time_pref, baby_gender, wishes, parent1, parent2, recommendations, avoid_days, ai_notes')
+        .eq('consultation_id', consultationId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      setBirth((bt as BirthRow) || null)
+
       setLoading(false)
     }
     load()
@@ -245,7 +280,7 @@ export default function CustomerAiAnalysis({
     )
   }
 
-  const hasAny = Boolean(freeAnalysis || paidAnalysis || couple || mulsang || naming || wedding)
+  const hasAny = Boolean(freeAnalysis || paidAnalysis || couple || mulsang || naming || wedding || birth)
   const r = couple?.result
   const sd = r?.scoreDetails
   const scoreRows = sd
@@ -256,6 +291,7 @@ export default function CustomerAiAnalysis({
     : couple ? '고객이 본 궁합 분석'
     : naming ? '고객이 본 이름 풀이'
     : wedding ? '고객이 본 결혼 택일'
+    : birth ? '고객이 본 출산 시기'
     : '고객이 본 사주 풀이'
 
   const nr = naming?.result
@@ -264,6 +300,9 @@ export default function CustomerAiAnalysis({
   const wedRecs = (wedding?.recommendations || []).filter(Boolean)
   const wedNotes = wedding?.ai_notes || {}
   const wedAvoid = (wedding?.avoid_days || []).filter(Boolean)
+  const btRecs = (birth?.recommendations || []).filter(Boolean)
+  const btNotes = birth?.ai_notes || {}
+  const btAvoid = (birth?.avoid_days || []).filter(Boolean)
 
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.15)' }}>
@@ -437,6 +476,77 @@ export default function CustomerAiAnalysis({
             </div>
           ) : null}
 
+          {birth ? (
+            <div className="rounded-xl p-4" style={{ background: 'rgba(129,199,132,0.1)', border: '1px solid rgba(129,199,132,0.3)' }}>
+              <div className="text-xs font-bold mb-3 flex items-center gap-1.5" style={{ color: '#9be29b' }}>
+                <span>👶</span>
+                <span>출산 시기 (좋은 날 찾기)</span>
+              </div>
+
+              {/* 조건 · 부모 */}
+              <div className="text-xs space-y-1 mb-3" style={{ color: '#c8c4d8' }}>
+                {birth.due_date ? <div>· 출산예정일: {birth.due_date}{birth.method ? ' · ' + birth.method : ''}</div> : null}
+                {birth.baby_gender ? <div>· 아기 성별: {birth.baby_gender}</div> : null}
+                {birth.wishes && birth.wishes.length > 0 ? <div>· 바라는 점: {birth.wishes.join(', ')}</div> : null}
+                {birth.parent1 ? <div>· 부(父)/모(母)1: {birthText(birth.parent1)}</div> : null}
+                {birth.parent2 ? <div>· 부(父)/모(母)2: {birthText(birth.parent2)}</div> : null}
+              </div>
+
+              {/* 추천 출산일 (5개 전부) */}
+              {btRecs.length > 0 ? (
+                <div className="pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div className="text-xs mb-2" style={{ color: '#9be29b' }}>추천 출산일</div>
+                  {btRecs.map((rec, i) => {
+                    const note = rec.rank != null ? btNotes[String(rec.rank)] : undefined
+                    return (
+                      <div key={i} className="mb-2 pb-2" style={{ borderBottom: i < btRecs.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs" style={{ color: '#FAC775', minWidth: 34 }}>{rec.rank}순위</span>
+                          <span className="text-sm font-bold" style={{ color: '#e0dce8' }}>{rec.dateLabel}</span>
+                          {rec.hourLabel ? <span className="text-xs" style={{ color: '#b0aec8' }}>{rec.hourLabel}</span> : null}
+                          {typeof rec.score === 'number' ? (
+                            <span className="ml-auto text-xs font-bold" style={{ color: '#9be29b' }}>{rec.score}점</span>
+                          ) : null}
+                        </div>
+                        {rec.saju ? (
+                          <div className="text-xs mt-0.5" style={{ color: '#c8b0ff', letterSpacing: '2px' }}>{rec.saju}</div>
+                        ) : null}
+                        {note?.oneLine ? (
+                          <div className="text-xs mt-1" style={{ color: '#c8b0ff' }}>“{note.oneLine}”</div>
+                        ) : null}
+                        {note?.detail ? (
+                          <div className="text-xs mt-1 leading-relaxed" style={{ color: '#e0dce8' }}>{note.detail}</div>
+                        ) : null}
+                        {rec.parentNote ? (
+                          <div className="text-xs mt-1" style={{ color: '#b0aec8' }}>♥ {rec.parentNote}</div>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : null}
+
+              {/* 피하면 좋은 날 */}
+              {btAvoid.length > 0 ? (
+                <div className="pt-2 mt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div className="text-xs mb-1.5" style={{ color: '#e0a0a0' }}>피하면 좋은 날</div>
+                  {btAvoid.map((a, i) => (
+                    <div key={i} className="mb-1">
+                      <span className="text-xs font-bold" style={{ color: '#e0a0a0' }}>⚠ {a.dateLabel}</span>
+                      {a.reasons && a.reasons.length > 0 ? (
+                        <span className="text-xs" style={{ color: '#c89090' }}> · {a.reasons.join(', ')}</span>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              <div className="text-xs mt-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', color: '#8a88a0' }}>
+                ※ 실제 출산일·수술일은 반드시 담당 전문의와 상의해 결정하세요.
+              </div>
+            </div>
+          ) : null}
+
           {couple && r ? (
             <div className="rounded-xl p-4" style={{ background: 'rgba(212,83,126,0.1)', border: '1px solid rgba(212,83,126,0.3)' }}>
               <div className="text-xs font-bold mb-3 flex items-center gap-1.5" style={{ color: '#ED93B1' }}>
@@ -485,7 +595,7 @@ export default function CustomerAiAnalysis({
             </div>
           ) : null}
 
-          {paidAnalysis && !mulsang && !naming && !wedding ? (
+          {paidAnalysis && !mulsang && !naming && !wedding && !birth ? (
             <div className="rounded-xl p-4" style={{ background: 'rgba(250,199,117,0.08)', border: '1px solid rgba(250,199,117,0.2)' }}>
               <div className="text-xs font-bold mb-2 flex items-center gap-1.5" style={{ color: '#FAC775' }}>
                 <span>✨</span>
