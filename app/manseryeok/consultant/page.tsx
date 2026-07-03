@@ -5,6 +5,7 @@ import { useConsultantSaju } from '@/hooks/useConsultantSaju'
 import ConsultationList from './components/ConsultationList'
 import ConsultantChat from './components/ConsultantChat'
 import CustomerAiAnalysis from './components/CustomerAiAnalysis'
+import ConsultantNote from './components/ConsultantNote'
 import ConsultantSchedule from './components/ConsultantSchedule'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -223,23 +224,13 @@ function ConsultantContent() {
         <div style={dividerGrip} />
       </div>
 
-      {/* ③ 오른쪽: 위(내 입력) / 아래(AI 정리) — 3단계에서 실제 연결 */}
+      {/* ③ 오른쪽: 위(내 입력) / 아래(AI 정리) — 저장·요약·카톡복사 연결됨 */}
       <div style={{width:splitRight+'%', minWidth:0, display:'flex', flexDirection:'column'}}>
-        <div style={{flex:1, display:'flex', flexDirection:'column', borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
-          <div style={paneTitleStyle}>✍️ 내 설명 입력</div>
-          <div style={{flex:1, padding:'10px'}}>
-            <textarea placeholder="고객에게 전할 설명을 입력하세요..."
-              style={{width:'100%', height:'100%', background:'transparent', border:'none', outline:'none', resize:'none', color:'#c8c0ff', fontSize:s.fontSize+'px', fontFamily:s.fontFamily, lineHeight:'1.6'}}
-            />
-          </div>
-        </div>
-        <div style={{flex:1, display:'flex', flexDirection:'column'}}>
-          <div style={paneTitleStyle}>📄 AI 정리 결과</div>
-          <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'8px', padding:'12px', textAlign:'center'}}>
-            <span style={{fontSize:'20px'}}>📄</span>
-            <span style={{fontSize:'11px', color:'#5555aa'}}>AI 정리 · 저장 · 복사<br/>다음 단계에서 연결됩니다</span>
-          </div>
-        </div>
+        <ConsultantNote
+          consultationId={selectedConsultation!.id}
+          fontSize={s.fontSize}
+          fontFamily={s.fontFamily}
+        />
       </div>
     </div>
   )
