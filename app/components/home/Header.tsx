@@ -47,13 +47,6 @@ export default function Header() {
           color: #FAC775;
           animation: pulse-glow 2s ease-in-out infinite;
         }
-        .myung-subtitle {
-          font-size: 11px;
-          font-weight: 500;
-          letter-spacing: 0.5px;
-          color: #8a88a0;
-          white-space: nowrap;
-        }
       `}</style>
       <header className="fixed top-0 z-50 flex items-center justify-between px-5 py-4"
         style={{ background: 'rgba(44,44,42,0.95)', backdropFilter: 'blur(12px)',
@@ -66,7 +59,17 @@ export default function Header() {
           </div>
           <span className="myung-text">명카페</span>
         </div>
-        <span className="myung-subtitle">사주 전문 플랫폼</span>
+        <div
+          className="inline-flex items-center gap-1.5 font-semibold px-3 py-1.5 rounded-full"
+          style={{
+            background: 'rgba(250,199,117,0.15)',
+            color: '#FAC775',
+            border: '1px solid rgba(250,199,117,0.3)',
+            fontSize: '11px',
+          }}
+        >
+          ✦ 명리 전문 플랫폼
+        </div>
       </header>
     </>
   )
