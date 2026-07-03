@@ -185,6 +185,25 @@ function ConsultantSelectInner() {
         }
       }
 
+      // 물상도면: 세션에 담긴 그림+해설을 mulsang_images에 상담 건과 연결 저장
+      if (typeof window !== 'undefined') {
+        const mulsangRaw = sessionStorage.getItem('mulsang_full')
+        if (mulsangRaw) {
+          try {
+            const ms = JSON.parse(mulsangRaw)
+            await supabase.from('mulsang_images').insert({
+              consultation_id: cons.id,
+              image_url: ms.image_url ?? null,
+              prompt: ms.prompt ?? null,
+              style: ms.style ?? null,
+              commentary: ms.commentary ?? null,
+            })
+          } catch (e) {
+            console.error('mulsang 저장 실패', e)
+          }
+        }
+      }
+
       // 예약 저장
       await supabase.from('bookings').insert({
         slot_id: slot.id,
@@ -203,6 +222,7 @@ function ConsultantSelectInner() {
         sessionStorage.removeItem('ai_analysis')
         sessionStorage.removeItem('ai_free_analysis')
         sessionStorage.removeItem('couple_full')
+        sessionStorage.removeItem('mulsang_full')
       }
 
       setDone({ consultantName: c.name, date: slot.slot_date, hour: slot.slot_hour })
