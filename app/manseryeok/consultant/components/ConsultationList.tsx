@@ -83,6 +83,35 @@ function fmtDuration(start: string | null | undefined, end: string | null | unde
   return m > 0 ? `${h}시간 ${m}분` : `${h}시간`
 }
 
+// 취소된 상담인지 판정 (마이페이지와 동일 방침)
+function isCancelled(c: Consultation): boolean {
+  return c.status === 'cancelled' || c.status === 'canceled'
+}
+
+// 상담 건에 연결된 슬롯 잠금을 풀어줌 (유령 슬롯 방지)
+// - bookings에서 slot_id를 찾아 consultant_slots.is_booked=false 로 되돌린 뒤 bookings 정리
+async function releaseSlotsFor(consultationIds: string[]) {
+  if (consultationIds.length === 0) return
+  try {
+    const { data: bks } = await supabase
+      .from('bookings')
+      .select('slot_id')
+      .in('consultation_id', consultationIds)
+    const slotIds = (bks ?? []).map(b => b.slot_id).filter(Boolean) as string[]
+    if (slotIds.length > 0) {
+      await supabase.from('consultant_slots')
+        .update({ is_booked: false })
+        .in('id', slotIds)
+    }
+    // 예약 기록도 함께 정리 (남겨두면 유령이 됨)
+    await supabase.from('bookings')
+      .delete()
+      .in('consultation_id', consultationIds)
+  } catch (e) {
+    console.error('슬롯 해제 중 오류', e)
+  }
+}
+
 export default function ConsultationList({
   consultantId,
   onSelect,
@@ -191,7 +220,9 @@ export default function ConsultationList({
   const { from, to } = periodRange()
 
   // 완료일자 기준 필터: 완료된 건 중 기간 안, 그리고 아직 미완료(대기·진행)도 함께 표시
+  // ★ 취소된 건(cancelled)은 상담사 목록에서 숨김
   const filtered = list.filter(c => {
+    if (isCancelled(c)) return false          // 취소된 예약은 표시하지 않음
     if (c.delete_requested_at) return false
     // 완료된 건은 완료일이 기간 안일 때만
     if (c.completed_at) {
@@ -223,13 +254,14 @@ export default function ConsultationList({
     return { name, email, phone, nickname, birth, cal, leap, gender, reqType }
   }
 
-  // [테스트용] 상담 건 하나 삭제 (연결된 couples 등은 cascade로 함께 삭제됨)
+  // [테스트용] 상담 건 하나 삭제 — 삭제 전에 연결된 슬롯을 먼저 풀어 유령 방지
   async function handleDeleteOne(e: React.MouseEvent, c: Consultation) {
     e.stopPropagation()
     if (!confirm('이 상담 건을 삭제할까요? 되돌릴 수 없어요. (테스트용)')) return
     setBusyId(c.id)
     try {
-      await supabase.from('consultations').delete().eq('id', c.id)
+      await releaseSlotsFor([c.id])                                  // 슬롯 잠금 풀기 + bookings 정리
+      await supabase.from('consultations').delete().eq('id', c.id)   // 그다음 상담 건 삭제
       await fetchList()
     } catch (err) {
       console.error(err)
@@ -239,12 +271,14 @@ export default function ConsultationList({
     }
   }
 
-  // [테스트용] 이 상담사의 상담 건 전부 초기화
+  // [테스트용] 이 상담사의 상담 건 전부 초기화 — 전부 슬롯 풀고 삭제
   async function handleResetAll() {
     if (list.length === 0) { alert('삭제할 상담 내역이 없어요.'); return }
     if (!confirm(`이 상담사의 상담 내역 ${list.length}건을 모두 삭제할까요?\n되돌릴 수 없어요. (테스트용)`)) return
     if (!confirm('정말 전부 삭제합니다. 계속할까요?')) return
     try {
+      const ids = list.map(c => c.id)
+      await releaseSlotsFor(ids)                                                  // 모든 슬롯 풀기 + bookings 정리
       await supabase.from('consultations').delete().eq('consultant_id', consultantId)
       await fetchList()
       alert('테스트 상담 내역을 모두 삭제했어요.')
