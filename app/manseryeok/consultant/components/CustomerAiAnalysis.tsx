@@ -36,6 +36,18 @@ type CoupleRow = {
   result?: CoupleResult
 }
 
+type MulsangRow = {
+  image_url?: string | null
+  style?: string | null
+  commentary?: {
+    title?: string
+    subject?: string
+    environment?: string
+    yongsin?: string
+    advice?: string
+  } | null
+}
+
 const MODE_KO: Record<string, string> = {
   couple: '연인 궁합',
   married: '부부 궁합',
@@ -67,6 +79,7 @@ export default function CustomerAiAnalysis({
   const [freeAnalysis, setFreeAnalysis] = useState('')
   const [paidAnalysis, setPaidAnalysis] = useState('')
   const [couple, setCouple] = useState<CoupleRow | null>(null)
+  const [mulsang, setMulsang] = useState<MulsangRow | null>(null)
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
 
@@ -91,6 +104,16 @@ export default function CustomerAiAnalysis({
         .limit(1)
         .maybeSingle()
       setCouple((cp as CoupleRow) || null)
+
+      const { data: ms } = await supabase
+        .from('mulsang_images')
+        .select('image_url, style, commentary')
+        .eq('consultation_id', consultationId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      setMulsang((ms as MulsangRow) || null)
+
       setLoading(false)
     }
     load()
@@ -141,7 +164,7 @@ export default function CustomerAiAnalysis({
     )
   }
 
-  const hasAny = Boolean(freeAnalysis || paidAnalysis || couple)
+  const hasAny = Boolean(freeAnalysis || paidAnalysis || couple || mulsang)
   const r = couple?.result
   const sd = r?.scoreDetails
   const scoreRows = sd
@@ -154,7 +177,7 @@ export default function CustomerAiAnalysis({
       <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="flex items-center gap-2">
           <span>🤖</span>
-          <span className="text-sm font-bold text-white">{couple ? '고객이 본 궁합 분석' : '고객이 본 사주 풀이'}</span>
+          <span className="text-sm font-bold text-white">{mulsang ? '고객이 본 물상도' : couple ? '고객이 본 궁합 분석' : '고객이 본 사주 풀이'}</span>
         </div>
         {hasAny ? (
           <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(76,175,80,0.2)', color: '#4caf50' }}>고객 조회분</span>
@@ -163,6 +186,34 @@ export default function CustomerAiAnalysis({
 
       {hasAny ? (
         <div className="p-4 space-y-3">
+
+          {mulsang ? (
+            <div className="rounded-xl overflow-hidden" style={{ background: 'rgba(97,153,34,0.08)', border: '1px solid rgba(151,196,89,0.3)' }}>
+              {mulsang.image_url ? (
+                <img src={mulsang.image_url} alt="물상도" style={{ width: '100%', display: 'block' }} />
+              ) : null}
+              <div className="p-4">
+                <div className="text-xs font-bold mb-2 flex items-center gap-1.5" style={{ color: '#97c459' }}>
+                  <span>🖼️</span>
+                  <span>물상도 (사주 그림)</span>
+                </div>
+                {mulsang.commentary?.title ? (
+                  <div className="text-sm font-bold mb-2" style={{ color: '#e0dce8' }}>&quot;{mulsang.commentary.title}&quot;</div>
+                ) : null}
+                {[
+                  { label: '주인공(나)', text: mulsang.commentary?.subject },
+                  { label: '환경', text: mulsang.commentary?.environment },
+                  { label: '핵심 에너지(용신)', text: mulsang.commentary?.yongsin },
+                  { label: '삶의 조언', text: mulsang.commentary?.advice },
+                ].filter(x => x.text).map((x, i) => (
+                  <div key={i} className="mb-2">
+                    <div className="text-xs" style={{ color: '#97c459' }}>{x.label}</div>
+                    <div className="text-sm leading-relaxed" style={{ color: '#e0dce8' }}>{x.text}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           {couple && r ? (
             <div className="rounded-xl p-4" style={{ background: 'rgba(212,83,126,0.1)', border: '1px solid rgba(212,83,126,0.3)' }}>
@@ -212,7 +263,7 @@ export default function CustomerAiAnalysis({
             </div>
           ) : null}
 
-          {paidAnalysis ? (
+          {paidAnalysis && !mulsang ? (
             <div className="rounded-xl p-4" style={{ background: 'rgba(250,199,117,0.08)', border: '1px solid rgba(250,199,117,0.2)' }}>
               <div className="text-xs font-bold mb-2 flex items-center gap-1.5" style={{ color: '#FAC775' }}>
                 <span>✨</span>
