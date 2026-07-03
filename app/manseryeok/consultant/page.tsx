@@ -63,6 +63,7 @@ function ConsultantContent() {
   const [consultantName, setConsultantName] = useState('')
   const [myNickname, setMyNickname] = useState('')
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null)
+  const [authState, setAuthState] = useState<'checking' | 'ok' | 'denied'>('checking')
 
   // 왼쪽 큰 영역에 지금 켜져 있는 고정 탭 (기본: 상담목록)
   const [activeTab, setActiveTab] = useState<FixedTab>('list')
@@ -76,13 +77,46 @@ function ConsultantContent() {
   // 고객이 선택되면 = 3분할 모드 ON
   const splitMode = !!selectedConsultation
 
+  // ---------- 권한 체크: 로그인한 사람이 상담사 본인인지 확인 ----------
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const { data: u } = await supabase.auth.getUser()
+      if (cancelled) return
+      // 로그인 안 됨 → 로그인 화면으로
+      if (!u.user) {
+        setAuthState('denied')
+        router.replace('/auth/login')
+        return
+      }
+      const email = u.user.email || ''
+      // 이 사람이 상담사(consultants)로 등록돼 있는지 이메일로 확인
+      const { data: con } = await supabase
+        .from('consultants')
+        .select('id, name')
+        .eq('email', email)
+        .maybeSingle()
+      if (cancelled) return
+      if (con?.id) {
+        // 상담사 본인 확인됨 — 자기 이름·id로 표시
+        setConsultantName(con.name || '')
+        setAuthState('ok')
+      } else {
+        // 상담사가 아님 → 상담사 화면 접근 차단, 홈으로
+        setAuthState('denied')
+        alert('상담사 전용 화면입니다.')
+        router.replace('/')
+      }
+    })()
+    return () => { cancelled = true }
+  }, [router])
+
   // ---------- 설정 불러오기 ----------
   useEffect(() => {
     if (!consultantId) return
     supabase.from('consultants').select('name, ui_settings')
       .eq('id', consultantId).single()
       .then(({ data }) => {
-        if (data?.name) setConsultantName(data.name)
         if (data?.ui_settings) setSettings({ ...DEFAULT_SETTINGS, ...data.ui_settings })
       })
   }, [consultantId])
@@ -235,6 +269,17 @@ function ConsultantContent() {
     </div>
   )
 
+  // 권한 확인 중이거나 거부되면 본 화면을 렌더링하지 않음
+  if (authState !== 'ok') {
+    return (
+      <div style={{width:'100vw', height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#1a1a18'}}>
+        <div style={{color:'#FAC775', fontSize:'14px'}}>
+          {authState === 'checking' ? '상담사 확인 중...' : '접근 권한이 없습니다.'}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={{width:'100vw', height:'100vh', overflow:'hidden', background:s.bgColor, fontFamily:s.fontFamily, position:'relative', display:'flex', flexDirection:'column'}}>
 
@@ -280,7 +325,7 @@ function ConsultantContent() {
 
         {/* 우측: 상담사명 + 로그아웃 */}
         <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:'8px'}}>
-          <span style={{fontSize:'11px', color:'#7766aa'}}>{myNickname || consultantName || '상담사'} 님</span>
+          <span style={{fontSize:'11px', color:'#7766aa'}}>{consultantName || '상담사'} 님</span>
           <button onClick={handleLogout}
             style={{fontSize:'10px', padding:'2px 8px', borderRadius:'5px', border:'1px solid rgba(255,80,80,0.2)', background:'transparent', color:'rgba(255,100,100,0.7)', cursor:'pointer'}}>
             로그아웃
