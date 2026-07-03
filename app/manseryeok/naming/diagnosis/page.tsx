@@ -274,6 +274,16 @@ function DiagnosisInner() {
           chars,
           personKey: pkey,
         }))
+        // ★ 예약 시 상담사 화면으로 넘길 개명 결과 (궁합·물상도와 동일 방식)
+        sessionStorage.setItem('naming_full', JSON.stringify({
+          kind: 'self',
+          hangul_name: chars.filter(Boolean).map((c) => c!.hangul).join(''),
+          hanja_name: chars.filter(Boolean).map((c) => c!.hanja).join(''),
+          chars,
+          result: data.result ?? null,
+          commentary: data.commentary ?? null,
+          target_birth: null,
+        }))
         localStorage.removeItem('rename_picks_v1')
         localStorage.removeItem('rename_locked_slot')
       } catch {}
