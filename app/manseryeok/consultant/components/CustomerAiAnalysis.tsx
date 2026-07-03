@@ -71,6 +71,29 @@ type NamingRow = {
   target_birth?: Record<string, string> | null
 }
 
+// 결혼택일 결과 타입 (좋은날 찾기 find / 정한날 봐주기 check)
+type WeddingRec = {
+  rank?: number
+  dateLabel?: string
+  ganji?: string
+  score?: number
+  grade?: string
+  badges?: string[]
+  holidayName?: string | null
+}
+type WeddingAvoid = { dateLabel?: string; reasons?: string[] }
+type WeddingRow = {
+  kind?: string | null
+  start_date?: string | null
+  end_date?: string | null
+  day_pref?: string | null
+  groom?: Record<string, string> | null
+  bride?: Record<string, string> | null
+  recommendations?: WeddingRec[] | null
+  avoid_days?: WeddingAvoid[] | null
+  ai_notes?: Record<string, { oneLine?: string; detail?: string }> | null
+}
+
 const MODE_KO: Record<string, string> = {
   couple: '연인 궁합',
   married: '부부 궁합',
@@ -87,12 +110,22 @@ const SCORE_LABELS: { key: string; label: string }[] = [
   { key: 'wolScore', label: '월지' },
 ]
 
+const WED_GRADE_COLOR: Record<string, string> = {
+  S: '#FAC775', A: '#9be29b', B: '#9bc0e2', C: '#c8b0ff', D: '#9a98b0',
+}
+
 function birthText(b?: Record<string, string>): string {
   if (!b) return '-'
   const g = b.gender ? b.gender + ' · ' : ''
   const cal = b.calType || '양력'
   const h = b.hour && b.hour !== '모름' ? ' ' + b.hour + '시' : ''
   return g + cal + ' ' + b.year + '.' + b.month + '.' + b.day + h
+}
+
+function dayPrefKo(p?: string | null): string {
+  if (p === 'all') return '평일 포함'
+  if (p === 'holiday') return '공휴일 포함'
+  return '주말만'
 }
 
 function namingGradeColor(g?: string) {
@@ -110,6 +143,7 @@ export default function CustomerAiAnalysis({
   const [couple, setCouple] = useState<CoupleRow | null>(null)
   const [mulsang, setMulsang] = useState<MulsangRow | null>(null)
   const [naming, setNaming] = useState<NamingRow | null>(null)
+  const [wedding, setWedding] = useState<WeddingRow | null>(null)
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
 
@@ -152,6 +186,15 @@ export default function CustomerAiAnalysis({
         .limit(1)
         .maybeSingle()
       setNaming((nm as NamingRow) || null)
+
+      const { data: wd } = await supabase
+        .from('weddings')
+        .select('kind, start_date, end_date, day_pref, groom, bride, recommendations, avoid_days, ai_notes')
+        .eq('consultation_id', consultationId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      setWedding((wd as WeddingRow) || null)
 
       setLoading(false)
     }
@@ -202,7 +245,7 @@ export default function CustomerAiAnalysis({
     )
   }
 
-  const hasAny = Boolean(freeAnalysis || paidAnalysis || couple || mulsang || naming)
+  const hasAny = Boolean(freeAnalysis || paidAnalysis || couple || mulsang || naming || wedding)
   const r = couple?.result
   const sd = r?.scoreDetails
   const scoreRows = sd
@@ -212,10 +255,15 @@ export default function CustomerAiAnalysis({
   const headerLabel = mulsang ? '고객이 본 물상도'
     : couple ? '고객이 본 궁합 분석'
     : naming ? '고객이 본 이름 풀이'
+    : wedding ? '고객이 본 결혼 택일'
     : '고객이 본 사주 풀이'
 
   const nr = naming?.result
   const nc = naming?.commentary
+
+  const wedRecs = (wedding?.recommendations || []).filter(Boolean)
+  const wedNotes = wedding?.ai_notes || {}
+  const wedAvoid = (wedding?.avoid_days || []).filter(Boolean)
 
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.15)' }}>
@@ -321,6 +369,74 @@ export default function CustomerAiAnalysis({
             </div>
           ) : null}
 
+          {wedding ? (
+            <div className="rounded-xl p-4" style={{ background: 'rgba(147,102,221,0.1)', border: '1px solid rgba(147,102,221,0.3)' }}>
+              <div className="text-xs font-bold mb-3 flex items-center gap-1.5" style={{ color: '#c8b0ff' }}>
+                <span>💍</span>
+                <span>{wedding.kind === 'check' ? '결혼 택일 (정한 날 진단)' : '결혼 택일 (좋은 날 찾기)'}</span>
+              </div>
+
+              {/* 조건 · 신랑신부 */}
+              <div className="text-xs space-y-1 mb-3" style={{ color: '#c8c4d8' }}>
+                {(wedding.start_date || wedding.end_date) ? (
+                  <div>· 희망 기간: {wedding.start_date || '-'} ~ {wedding.end_date || '-'} · {dayPrefKo(wedding.day_pref)}</div>
+                ) : null}
+                {wedding.groom ? <div>· 🤵 {birthText(wedding.groom)}</div> : null}
+                {wedding.bride ? <div>· 👰 {birthText(wedding.bride)}</div> : null}
+              </div>
+
+              {/* 추천 길일 (5개 전부) */}
+              {wedRecs.length > 0 ? (
+                <div className="pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div className="text-xs mb-2" style={{ color: '#c8b0ff' }}>추천 길일</div>
+                  {wedRecs.map((rec, i) => {
+                    const note = rec.rank != null ? wedNotes[String(rec.rank)] : undefined
+                    return (
+                      <div key={i} className="mb-2 pb-2" style={{ borderBottom: i < wedRecs.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs" style={{ color: '#FAC775', minWidth: 34 }}>{rec.rank}순위</span>
+                          <span className="text-sm font-bold" style={{ color: '#e0dce8' }}>{rec.dateLabel}</span>
+                          {rec.grade ? (
+                            <span className="text-xs" style={{ color: WED_GRADE_COLOR[rec.grade] || '#9a98b0' }}>{rec.grade}등급</span>
+                          ) : null}
+                          {typeof rec.score === 'number' ? (
+                            <span className="ml-auto text-xs font-bold" style={{ color: '#c8b0ff' }}>{rec.score}점</span>
+                          ) : null}
+                        </div>
+                        <div className="text-xs mt-0.5" style={{ color: '#b0aec8' }}>
+                          일진 {rec.ganji}
+                          {rec.holidayName ? ' · 🎌 ' + rec.holidayName : ''}
+                          {rec.badges && rec.badges.length > 0 ? ' · ' + rec.badges.join('·') : ''}
+                        </div>
+                        {note?.oneLine ? (
+                          <div className="text-xs mt-1" style={{ color: '#c8b0ff' }}>“{note.oneLine}”</div>
+                        ) : null}
+                        {note?.detail ? (
+                          <div className="text-xs mt-1 leading-relaxed" style={{ color: '#e0dce8' }}>{note.detail}</div>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : null}
+
+              {/* 피하면 좋은 날 */}
+              {wedAvoid.length > 0 ? (
+                <div className="pt-2 mt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div className="text-xs mb-1.5" style={{ color: '#e0a0a0' }}>피하면 좋은 날</div>
+                  {wedAvoid.map((a, i) => (
+                    <div key={i} className="mb-1">
+                      <span className="text-xs font-bold" style={{ color: '#e0a0a0' }}>⚠ {a.dateLabel}</span>
+                      {a.reasons && a.reasons.length > 0 ? (
+                        <span className="text-xs" style={{ color: '#c89090' }}> · {a.reasons.join(', ')}</span>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           {couple && r ? (
             <div className="rounded-xl p-4" style={{ background: 'rgba(212,83,126,0.1)', border: '1px solid rgba(212,83,126,0.3)' }}>
               <div className="text-xs font-bold mb-3 flex items-center gap-1.5" style={{ color: '#ED93B1' }}>
@@ -369,7 +485,7 @@ export default function CustomerAiAnalysis({
             </div>
           ) : null}
 
-          {paidAnalysis && !mulsang && !naming ? (
+          {paidAnalysis && !mulsang && !naming && !wedding ? (
             <div className="rounded-xl p-4" style={{ background: 'rgba(250,199,117,0.08)', border: '1px solid rgba(250,199,117,0.2)' }}>
               <div className="text-xs font-bold mb-2 flex items-center gap-1.5" style={{ color: '#FAC775' }}>
                 <span>✨</span>
