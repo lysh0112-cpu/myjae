@@ -1,5 +1,6 @@
 'use client'
-import { Suspense, useEffect, useState } from 'react'
+import { useRef, useState } from 'react'
+import { Suspense, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SummaryBand from './SummaryBand'
@@ -109,6 +110,7 @@ function ConsultantSelectInner() {
     prewedding: '💍 예비 신혼',
     married: '👫 부부 상담',
     birth: '👶 출산 시기',
+    naming: '✏️ 개명 상담',
     personal: '🔮 개인 상담',
   }
 
@@ -204,6 +206,29 @@ function ConsultantSelectInner() {
         }
       }
 
+      // 개명이면: 세션에 담긴 이름풀이 결과를 namings에 상담 건과 연결 저장
+      // (궁합·물상도와 동일 방식. 본인 이름/아기 이름 모두 kind로 구분해 저장)
+      if (typeof window !== 'undefined') {
+        const namingRaw = sessionStorage.getItem('naming_full')
+        if (namingRaw) {
+          try {
+            const nm = JSON.parse(namingRaw)
+            await supabase.from('namings').insert({
+              consultation_id: cons.id,
+              kind: nm.kind ?? 'self',
+              hangul_name: nm.hangul_name ?? null,
+              hanja_name: nm.hanja_name ?? null,
+              chars: nm.chars ?? null,
+              result: nm.result ?? null,
+              commentary: nm.commentary ?? null,
+              target_birth: nm.target_birth ?? null,
+            })
+          } catch (e) {
+            console.error('naming 저장 실패', e)
+          }
+        }
+      }
+
       // 예약 저장
       await supabase.from('bookings').insert({
         slot_id: slot.id,
@@ -223,6 +248,7 @@ function ConsultantSelectInner() {
         sessionStorage.removeItem('ai_free_analysis')
         sessionStorage.removeItem('couple_full')
         sessionStorage.removeItem('mulsang_full')
+        sessionStorage.removeItem('naming_full')
       }
 
       setDone({ consultantName: c.name, date: slot.slot_date, hour: slot.slot_hour })
