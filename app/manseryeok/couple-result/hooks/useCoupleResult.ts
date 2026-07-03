@@ -1,4 +1,4 @@
-// useCoupleResult v6 — 모드별 성별 기반 호칭 적용
+// useCoupleResult v7 — 궁합 해설을 상담 전달용 세션(ai_analysis)에 저장 추가
 import { useState, useEffect } from 'react'
 import { buildSajuPillars, analyzeCoupleFromPillars } from '@/lib/saju/coupleAnalysis'
 import { calcHourPillar } from '@/lib/saju/hourPillar'
@@ -83,6 +83,29 @@ function getRoleNames(
 }
 
 // =============================================
+// 상담 전달용: 궁합 결과를 읽기 좋은 한 덩어리 텍스트로 합침
+//   → 예약 시 consultations.ai_analysis 로 저장되어 상담사 화면에 그대로 표시됨
+// =============================================
+function buildConsultText(r: CoupleResultData, modeLabel: string): string {
+  const parts: string[] = []
+  parts.push(`[${modeLabel} 결과]`)
+  if (r.grade) parts.push(`관계 유형: ${r.grade}${r.gradeDesc ? ` — ${r.gradeDesc}` : ''}`)
+  if (r.sajuMsg) parts.push(`\n· 사주 궁합\n${r.sajuMsg}`)
+  if (r.jobMsg) parts.push(`\n· 직업/삶의 리듬\n${r.jobMsg}`)
+  if (r.hasMbti && r.mbtiMsg) parts.push(`\n· 성향(MBTI)\n${r.mbtiMsg}`)
+  if (r.questionAnswer) parts.push(`\n· 핵심 답변\n${r.questionAnswer}`)
+  if (r.commonMsg) parts.push(`\n${r.commonMsg}`)
+  return parts.join('\n').trim()
+}
+
+const MODE_KO: Record<string, string> = {
+  couple: '연인 궁합',
+  married: '부부 궁합',
+  prewedding: '예비 신혼(결혼 택일)',
+  birth: '출산 시기',
+}
+
+// =============================================
 // sessionStorage 캐시 키 생성
 // =============================================
 function makeCacheKey(
@@ -105,6 +128,15 @@ function getCache(key: string): CoupleResultData | null {
 function setCache(key: string, data: CoupleResultData) {
   try {
     sessionStorage.setItem(key, JSON.stringify(data))
+  } catch {}
+}
+
+// 궁합 해설을 상담 전달용 키에 저장 (예약 화면이 읽어 감)
+function saveForConsult(data: CoupleResultData, mode: string) {
+  if (typeof window === 'undefined') return
+  try {
+    const text = buildConsultText(data, MODE_KO[mode] || '궁합')
+    if (text) sessionStorage.setItem('ai_analysis', text)
   } catch {}
 }
 
@@ -396,6 +428,7 @@ export function useCoupleResult(
     const cached = getCache(cacheKey)
     if (cached) {
       setResult(cached)
+      saveForConsult(cached, mode)   // 캐시로 복원돼도 상담 전달용 저장
       return
     }
 
@@ -540,6 +573,7 @@ export function useCoupleResult(
         }
         // ✅ 결과 캐시 저장
         setCache(cacheKey, finalResult)
+        saveForConsult(finalResult, mode)   // 상담 전달용(ai_analysis) 저장
         setResult(finalResult)
 
       } catch {
@@ -557,6 +591,7 @@ export function useCoupleResult(
           hasMbti, scoreDetails,
         }
         setCache(cacheKey, fallbackResult)
+        saveForConsult(fallbackResult, mode)   // 실패 폴백도 저장
         setResult(fallbackResult)
       }
     }
