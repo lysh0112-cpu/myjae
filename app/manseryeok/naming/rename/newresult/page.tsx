@@ -146,6 +146,29 @@ function NewResultInner() {
     } catch { return null }
   }, [saju, dayStem, cur])
 
+  // ★ 현재 보고 있는 "새 이름"을 예약 시 상담사 화면으로 넘기기 위해 세션에 저장
+  //    (궁합·물상도·이름풀이와 동일 방식. consultant-select가 naming_full을 읽어 namings에 저장)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!cur || !result) return
+    try {
+      sessionStorage.setItem('naming_full', JSON.stringify({
+        kind: 'self',
+        hangul_name: cur.chars.map((c) => c.hangul).join(''),
+        hanja_name: cur.chars.map((c) => c.hanja).join(''),
+        chars: cur.chars.map((c) => ({
+          hangul: c.hangul,
+          hanja: c.hanja,
+          strokes: c.strokes,
+          resourceOhaeng: c.resourceOhaeng,
+        })),
+        result,
+        commentary: cur.commentary ?? null,
+        target_birth: null,
+      }))
+    } catch {}
+  }, [cur, result])
+
   const tryGrades = useMemo(() => {
     if (!saju || !dayStem) return tries.map(() => '')
     try {
