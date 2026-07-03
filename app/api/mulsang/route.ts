@@ -175,26 +175,28 @@ ${body.sceneDesc || body.prompt}
 
     // ---------- 4) Supabase DB 저장 (진짜 image_url + consultation_id) ----------
     let savedId: string | null = null
+    let saveError: string | null = null
     if (supabase) {
-      try {
-        const { data } = await supabase
-          .from('mulsang_images')
-          .insert({
-            consultation_id: body.consultationId ?? null,
-            saju: body.saju,
-            element_scores: body.elementScores,
-            day_master: body.dayStem,
-            yongsin: body.yongsin,
-            style: body.style,
-            prompt: body.prompt,
-            image_url: imageUrl,
-            commentary,
-          })
-          .select('id')
-          .single()
+      const { data, error: insErr } = await supabase
+        .from('mulsang_images')
+        .insert({
+          consultation_id: body.consultationId ?? null,
+          saju: body.saju,
+          element_scores: body.elementScores,
+          day_master: body.dayStem,
+          yongsin: body.yongsin,
+          style: body.style,
+          prompt: body.prompt,
+          image_url: imageUrl,
+          commentary,
+        })
+        .select('id')
+        .single()
+      if (insErr) {
+        saveError = insErr.message
+        console.error('supabase insert error:', insErr)
+      } else {
         savedId = data?.id ?? null
-      } catch (e) {
-        console.error('supabase insert error:', e)
       }
     }
 
@@ -207,6 +209,7 @@ ${body.sceneDesc || body.prompt}
       storedUrl: imageUrl,
       imageNote,
       savedId,
+      saveError,
       prompt: body.prompt,
     })
   } catch (e) {
