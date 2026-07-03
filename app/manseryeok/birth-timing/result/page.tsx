@@ -2,6 +2,7 @@
 import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import PageHeader from '@/app/components/common/PageHeader'
+import ConsultButton from '@/app/components/common/ConsultButton'
 import { runBirthTiming, type Recommendation, type AvoidDay } from '../lib/recommend'
 
 const cardBg = '#13132a'
@@ -80,7 +81,6 @@ async function fetchAiNotes(recs: Recommendation[], survey: SurveyInput): Promis
     `오행분포 목${r.breakdown.elementCount['목']} 화${r.breakdown.elementCount['화']} 토${r.breakdown.elementCount['토']} 금${r.breakdown.elementCount['금']} 수${r.breakdown.elementCount['수']}, 점수 ${r.score}`
   ).join('\n')
 
-  // 관리자 '어투 관리'의 공통 말투를 불러온다 (화면이라 API로 받음, 실패해도 그냥 진행)
   let toneBlock = ''
   try {
     const tr = await fetch('/api/admin/tone')
@@ -90,7 +90,6 @@ async function fetchAiNotes(recs: Recommendation[], survey: SurveyInput): Promis
     }
   } catch {}
 
-  // 프롬프트 = [공통 어투] + [택일 기능 지시] + [의료 안전 규칙(반드시 유지)]
   const prompt =
 `${toneBlock ? toneBlock + '\n\n' : ''}아래는 출산택일로 추천된 5개 일시와 각 아기의 사주입니다.
 부모가 바라는 점: ${wishesText}
@@ -199,6 +198,7 @@ function BirthResultInner() {
   const sp = useSearchParams()
 
   const [parent1, setParent1] = useState<PersonInput | null>(null)
+  const [parent2, setParent2] = useState<PersonInput | null>(null)
   const [survey, setSurvey] = useState<SurveyInput | null>(null)
 
   const [loading, setLoading] = useState(true)
@@ -222,7 +222,7 @@ function BirthResultInner() {
         if (s) sv = JSON.parse(decodeURIComponent(s))
       } catch {}
 
-      if (!cancelled) { setParent1(p1); setSurvey(sv) }
+      if (!cancelled) { setParent1(p1); setParent2(p2); setSurvey(sv) }
 
       if (!sv || !sv.dueDate) {
         if (!cancelled) { setErrMsg('출산예정일 정보가 없어요. 이전 화면에서 다시 입력해 주세요.'); setLoading(false) }
@@ -265,6 +265,34 @@ function BirthResultInner() {
     run()
     return () => { cancelled = true }
   }, [sp])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!survey || recs.length === 0) return
+    try {
+      sessionStorage.setItem('birth_full', JSON.stringify({
+        kind: 'find',
+        due_date: survey.dueDate,
+        method: survey.method,
+        time_pref: survey.timePref,
+        baby_gender: survey.babyGender,
+        wishes: survey.wishes ?? [],
+        parent1,
+        parent2,
+        recommendations: recs.map(r => ({
+          rank: r.rank,
+          dateLabel: r.dateLabel,
+          hourLabel: r.hourLabel,
+          saju: r.saju,
+          score: r.score,
+          parentNote: r.parentNote ?? null,
+          elementCount: r.breakdown?.elementCount ?? null,
+        })),
+        avoid_days: avoidDays.map(a => ({ dateLabel: a.dateLabel, reasons: a.reasons })),
+        ai_notes: aiNotes,
+      }))
+    } catch {}
+  }, [survey, recs, avoidDays, aiNotes, parent1, parent2])
 
   return (
     <main style={{ minHeight: '100vh', background: '#0d0d1a', maxWidth: '480px', margin: '0 auto', paddingBottom: '40px' }}>
@@ -334,11 +362,10 @@ function BirthResultInner() {
               </>
             )}
 
-            <button
-              onClick={() => alert('전문가 상담 연결은 준비 중이에요 😊')}
-              style={{ width: '100%', marginTop: '22px', padding: '15px', borderRadius: '12px', background: 'linear-gradient(135deg,#5544bb,#7766dd)', border: 'none', color: text, fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
-              ✨ 전문가에게 자세히 물어보기
-            </button>
+            {/* 전문가 상담 연결 (출산 택일 상담) — 준비중 alert 대신 실제 예약으로 연결 */}
+            <div style={{ marginTop: '22px' }}>
+              <ConsultButton priceKey="birth" mode="birth" />
+            </div>
           </>
         )}
 
