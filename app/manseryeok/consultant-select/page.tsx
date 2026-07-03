@@ -229,6 +229,31 @@ function ConsultantSelectInner() {
         }
       }
 
+      // 결혼택일이면: 세션에 담긴 택일 결과를 weddings에 상담 건과 연결 저장
+      // (궁합·물상도·개명과 동일 방식. kind로 '좋은날찾기(find)'/'정한날봐주기(check)' 구분)
+      if (typeof window !== 'undefined') {
+        const weddingRaw = sessionStorage.getItem('wedding_full')
+        if (weddingRaw) {
+          try {
+            const wd = JSON.parse(weddingRaw)
+            await supabase.from('weddings').insert({
+              consultation_id: cons.id,
+              kind: wd.kind ?? 'find',
+              start_date: wd.start_date ?? null,
+              end_date: wd.end_date ?? null,
+              day_pref: wd.day_pref ?? null,
+              groom: wd.groom ?? null,
+              bride: wd.bride ?? null,
+              recommendations: wd.recommendations ?? null,
+              avoid_days: wd.avoid_days ?? null,
+              ai_notes: wd.ai_notes ?? null,
+            })
+          } catch (e) {
+            console.error('wedding 저장 실패', e)
+          }
+        }
+      }
+
       // 예약 저장
       await supabase.from('bookings').insert({
         slot_id: slot.id,
@@ -249,6 +274,7 @@ function ConsultantSelectInner() {
         sessionStorage.removeItem('couple_full')
         sessionStorage.removeItem('mulsang_full')
         sessionStorage.removeItem('naming_full')
+        sessionStorage.removeItem('wedding_full')
       }
 
       setDone({ consultantName: c.name, date: slot.slot_date, hour: slot.slot_hour })
