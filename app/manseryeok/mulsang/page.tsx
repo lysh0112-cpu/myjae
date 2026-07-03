@@ -210,6 +210,23 @@ function MulsangInner() {
   }
 
   function goConsult() {
+    // 상담 신청 시점에 현재 물상도(그림+해설)를 세션에 확실히 담는다.
+    // (그림을 새로 뽑았든, 예전 결과를 복원했든 항상 연결되게)
+    try {
+      if (commentary || imageUrl) {
+        sessionStorage.setItem('mulsang_full', JSON.stringify({
+          image_url: imageUrl || null,
+          prompt: '',
+          style,
+          commentary: commentary || null,
+        }))
+        const c = commentary
+        if (c) {
+          const text = `[물상도 · ${c.title || ''}]\n\n· 주인공(나)\n${c.subject || ''}\n\n· 환경\n${c.environment || ''}\n\n· 핵심 에너지(용신)\n${c.yongsin || ''}\n\n· 삶의 조언\n${c.advice || ''}`.trim()
+          sessionStorage.setItem('ai_analysis', text)
+        }
+      }
+    } catch {}
     const params = new URLSearchParams()
     params.set('mode', 'mulsang')       // 물상도로 구분 (상담사 화면이 그림+해설 표시)
     params.set('priceKey', 'mulsang')
