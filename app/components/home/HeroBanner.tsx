@@ -13,17 +13,6 @@ export default function HeroBanner() {
       <div className="absolute bottom-0 -left-10 w-48 h-48 rounded-full opacity-10"
         style={{ background: 'radial-gradient(circle, #3C3489, transparent)' }} />
       <div className="relative z-10">
-        <div
-          className="inline-flex items-center gap-1.5 font-semibold px-3 py-1.5 rounded-full mb-3"
-          style={{
-            background: 'rgba(250,199,117,0.15)',
-            color: '#FAC775',
-            border: '1px solid rgba(250,199,117,0.3)',
-            fontSize: '11px',
-          }}
-        >
-          ✦ 명리 전문 플랫폼
-        </div>
         <p
           className="font-bold leading-relaxed mb-3"
           style={{ fontSize: '15px', color: '#FAC775', letterSpacing: '0.2px' }}
