@@ -2,6 +2,7 @@
 import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import PageHeader from '@/app/components/common/PageHeader'
+import ConsultButton from '@/app/components/common/ConsultButton'
 import { runWeddingTiming, type WeddingRecommendation, type WeddingAvoidDay } from '../lib/recommend'
 
 const cardBg = '#13132a'
@@ -244,6 +245,35 @@ function WeddingResultInner() {
     return () => { cancelled = true }
   }, [sp])
 
+  // ★ 예약 시 상담사 화면으로 넘기기 위해 결과 요약을 세션에 저장
+  //    (개명·궁합·물상도와 동일 방식. consultant-select가 wedding_full을 읽어 weddings에 저장)
+  //    kind='find' (좋은 날 찾기) · 추천 길일 5개 전부 + 조건 + 신랑신부 인적사항
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!survey || recs.length === 0) return
+    try {
+      sessionStorage.setItem('wedding_full', JSON.stringify({
+        kind: 'find',
+        start_date: survey.startDate,
+        end_date: survey.endDate,
+        day_pref: survey.dayPref,
+        groom,
+        bride,
+        recommendations: recs.map(r => ({
+          rank: r.rank,
+          dateLabel: r.dateLabel,
+          ganji: r.ganji,
+          score: r.score,
+          grade: r.grade,
+          badges: r.badges,
+          holidayName: r.holidayName ?? null,
+        })),
+        avoid_days: avoidDays.map(a => ({ dateLabel: a.dateLabel, reasons: a.reasons })),
+        ai_notes: aiNotes,
+      }))
+    } catch {}
+  }, [survey, recs, avoidDays, aiNotes, groom, bride])
+
   return (
     <main style={{ minHeight: '100vh', background: '#0d0d1a', maxWidth: '480px', margin: '0 auto', paddingBottom: '40px' }}>
       <PageHeader
@@ -309,11 +339,10 @@ function WeddingResultInner() {
               </>
             )}
 
-            <button
-              onClick={() => alert('전문가 상담 연결은 준비 중이에요 😊')}
-              style={{ width: '100%', marginTop: '22px', padding: '15px', borderRadius: '12px', background: 'linear-gradient(135deg,#5544bb,#7766dd)', border: 'none', color: text, fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
-              ✨ 전문가에게 자세히 물어보기
-            </button>
+            {/* 전문가 상담 연결 (예비부부 상담) — 준비중 alert 대신 실제 예약으로 연결 */}
+            <div style={{ marginTop: '22px' }}>
+              <ConsultButton priceKey="prewedding" mode="prewedding" />
+            </div>
           </>
         )}
 
