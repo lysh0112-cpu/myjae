@@ -11,14 +11,15 @@ interface Body {
   dayElement: string
   yongsin: string
   season: string
-  seasonKo?: string   // 계절(한글)
-  hourKo?: string     // 시간대(한글) — 예: "한낮(午시)"
-  sceneDesc?: string  // 그림에 실제로 그려진 풍경 요약
+  seasonKo?: string
+  hourKo?: string
+  sceneDesc?: string
   styleLabel: string
   style: string
   sajuText: string
   saju: unknown
   elementScores: unknown
+  consultationId?: string   // 예약된 상담 건과 연결 (있으면)
 }
 
 export async function POST(req: Request) {
@@ -26,15 +27,20 @@ export async function POST(req: Request) {
     const body = (await req.json()) as Body
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    const supabase = supabaseUrl && supabaseKey
-      ? createClient(supabaseUrl, supabaseKey)
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    // 읽기/일반 저장용 (anon)
+    const supabase = supabaseUrl && anonKey
+      ? createClient(supabaseUrl, anonKey)
+      : null
+    // Storage 업로드용 (service role 우선, 없으면 anon)
+    const storageClient = supabaseUrl && (serviceKey || anonKey)
+      ? createClient(supabaseUrl, serviceKey || anonKey!)
       : null
 
-    // 관리자 '어투 관리'에서 설정한 공통 말투 (비었거나 오류면 기본값 폴백)
     const toneBlock = await buildToneBlockFromDB()
 
-    // 물상도 전용 지시문 읽기 (관리자 화면 B. 물상도 전용 칸)
     let mulsangGuide = ''
     if (supabase) {
       try {
@@ -50,7 +56,6 @@ export async function POST(req: Request) {
     }
 
     // ---------- 1) Claude 해설 생성 ----------
-    // 프롬프트 = [공통 말투] + [물상도 전용 지시문] + [기능 뼈대: 그림 데이터·출력형식]
     const commentaryPrompt = `${toneBlock}
 
 ${mulsangGuide}
@@ -59,7 +64,7 @@ ${mulsangGuide}
 아래 사주를 "자연 풍경 그림"에 빗대어 해설합니다. 이 해설은 고객이 돈을 내고 받는 결과물입니다.
 
 [반드시 지킬 기능 규칙]
-- 아래 '그림에 그려진 풍경'과 반드시 일치하게 설명하세요. 그림에 없는 것(예: 그림은 등불인데 태양이라고 하기, 그림에 없는 소나무를 언급하기)을 지어내지 마세요.
+- 아래 '그림에 그려진 풍경'과 반드시 일치하게 설명하세요. 그림에 없는 것을 지어내지 마세요.
 - 시간과 계절을 혼동하지 마세요. 아래 명시된 계절과 시간대를 정확히 사용하세요.
 - 마크다운 기호(##, **, ---)는 절대 쓰지 마세요.
 
@@ -112,7 +117,7 @@ ${body.sceneDesc || body.prompt}
     }
 
     // ---------- 2) gpt-image-1 그림 생성 ----------
-    let imageUrl: string | null = null
+    let imageB64: string | null = null
     let imageNote = ''
     const openaiKey = process.env.OPENAI_API_KEY
 
@@ -132,10 +137,8 @@ ${body.sceneDesc || body.prompt}
           }),
         })
         const imgData = await imgRes.json()
-        const b64 = imgData.data?.[0]?.b64_json ?? null
-        if (b64) {
-          imageUrl = `data:image/png;base64,${b64}`
-        } else {
+        imageB64 = imgData.data?.[0]?.b64_json ?? null
+        if (!imageB64) {
           imageNote = 'image_failed'
           console.error('gpt-image response:', JSON.stringify(imgData).slice(0, 500))
         }
@@ -147,20 +150,44 @@ ${body.sceneDesc || body.prompt}
       imageNote = 'no_openai_key'
     }
 
-    // ---------- 3) Supabase 저장 ----------
+    // ---------- 3) 이미지를 Storage(mulsang 버킷)에 실제 업로드 → 진짜 URL ----------
+    let imageUrl: string | null = null
+    if (imageB64 && storageClient) {
+      try {
+        const bytes = Buffer.from(imageB64, 'base64')
+        const fileName = `mulsang_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.png`
+        const { error: upErr } = await storageClient
+          .storage
+          .from('mulsang')
+          .upload(fileName, bytes, { contentType: 'image/png', upsert: false })
+        if (upErr) {
+          console.error('storage upload error:', upErr)
+          imageNote = 'upload_failed'
+        } else {
+          const { data: pub } = storageClient.storage.from('mulsang').getPublicUrl(fileName)
+          imageUrl = pub?.publicUrl ?? null
+        }
+      } catch (e) {
+        console.error('storage exception:', e)
+        imageNote = 'upload_exception'
+      }
+    }
+
+    // ---------- 4) Supabase DB 저장 (진짜 image_url + consultation_id) ----------
     let savedId: string | null = null
     if (supabase) {
       try {
         const { data } = await supabase
           .from('mulsang_images')
           .insert({
+            consultation_id: body.consultationId ?? null,
             saju: body.saju,
             element_scores: body.elementScores,
             day_master: body.dayStem,
             yongsin: body.yongsin,
             style: body.style,
             prompt: body.prompt,
-            image_url: imageUrl ? '(stored inline)' : null,
+            image_url: imageUrl,
             commentary,
           })
           .select('id')
@@ -171,7 +198,17 @@ ${body.sceneDesc || body.prompt}
       }
     }
 
-    return NextResponse.json({ commentary, imageUrl, imageNote, savedId, prompt: body.prompt })
+    // 화면 표시는 즉시 base64로도 가능하게 함께 반환 (Storage URL이 우선)
+    const displayUrl = imageUrl || (imageB64 ? `data:image/png;base64,${imageB64}` : null)
+
+    return NextResponse.json({
+      commentary,
+      imageUrl: displayUrl,
+      storedUrl: imageUrl,
+      imageNote,
+      savedId,
+      prompt: body.prompt,
+    })
   } catch (e) {
     console.error('mulsang route error:', e)
     return NextResponse.json({ error: 'mulsang_failed' }, { status: 500 })
