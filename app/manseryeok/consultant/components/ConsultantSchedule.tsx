@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const GOLD = '#FAC775'
-const CARD = '#2C2C2A'
 const SUB = '#8a88a0'
 const BLUE = '#378add'
 
@@ -13,6 +12,9 @@ const HOURS = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토']
 
+// 4주 전체에서 권장하는 최대 열림 개수 (막지 않고 안내만)
+const SOFT_LIMIT = 5
+
 type Slot = {
   id: string
   slot_date: string
@@ -20,11 +22,13 @@ type Slot = {
   is_booked: boolean
 }
 
-// 오늘부터 14일치 날짜 생성
-function buildDays(): { key: string; label: string; weekday: string }[] {
-  const out: { key: string; label: string; weekday: string }[] = []
+type Day = { key: string; label: string; weekday: string; weekdayIdx: number }
+
+// 오늘부터 28일(4주)치 날짜 생성
+function buildDays(): Day[] {
+  const out: Day[] = []
   const today = new Date()
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < 28; i++) {
     const d = new Date(today)
     d.setDate(today.getDate() + i)
     const yyyy = d.getFullYear()
@@ -34,6 +38,7 @@ function buildDays(): { key: string; label: string; weekday: string }[] {
       key: `${yyyy}-${mm}-${dd}`,
       label: `${d.getMonth() + 1}/${d.getDate()}`,
       weekday: WEEK[d.getDay()],
+      weekdayIdx: d.getDay(),
     })
   }
   return out
@@ -47,16 +52,18 @@ export default function ConsultantSchedule({
   fontSize?: number
 }) {
   const days = buildDays()
-  const [selectedDate, setSelectedDate] = useState(days[0].key)
+  // 7일씩 4주 = 4행으로 분할
+  const weeks: Day[][] = []
+  for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7))
+
   const [slots, setSlots] = useState<Slot[]>([])
   const [loading, setLoading] = useState(true)
-  const [busyHour, setBusyHour] = useState<number | null>(null)
+  const [busyKey, setBusyKey] = useState<string | null>(null)
   const [toast, setToast] = useState('')
 
-  // "저장됨" 팝업 잠깐 띄우기
   const showToast = useCallback((text: string) => {
     setToast(text)
-    setTimeout(() => setToast(''), 1500)
+    setTimeout(() => setToast(''), 1800)
   }, [])
 
   const fetchSlots = useCallback(async () => {
@@ -74,14 +81,15 @@ export default function ConsultantSchedule({
 
   useEffect(() => { fetchSlots() }, [fetchSlots])
 
-  // 선택한 날짜의 슬롯만
-  const daySlots = slots.filter((s) => s.slot_date === selectedDate)
-  const slotOf = (hour: number) => daySlots.find((s) => s.slot_hour === hour)
+  const slotOf = (date: string, hour: number) =>
+    slots.find((s) => s.slot_date === date && s.slot_hour === hour)
 
-  // 시간 칸 켜기/끄기
-  async function toggleHour(hour: number) {
+  // 4주 전체에서 지금 열려 있는 슬롯 수 (예약 찬 것 포함)
+  const totalOpenCount = slots.length
+
+  async function toggleHour(date: string, hour: number) {
     if (!consultantId) return
-    const existing = slotOf(hour)
+    const existing = slotOf(date, hour)
 
     // 이미 예약 찬 시간은 못 끔
     if (existing?.is_booked) {
@@ -89,7 +97,8 @@ export default function ConsultantSchedule({
       return
     }
 
-    setBusyHour(hour)
+    const key = `${date}-${hour}`
+    setBusyKey(key)
     try {
       if (existing) {
         // 열려 있던 것 → 닫기 (삭제)
@@ -97,32 +106,27 @@ export default function ConsultantSchedule({
         await fetchSlots()
         showToast(`${hour}시 닫힘`)
       } else {
-        // 닫혀 있던 것 → 열기 (추가)
+        // 새로 켤 때: 이미 5개 이상이면 안내만 (막지 않음)
+        if (totalOpenCount >= SOFT_LIMIT) {
+          showToast('최대 5개 정도까지만 선택해 주세요')
+        }
         await supabase.from('consultant_slots').insert({
           consultant_id: consultantId,
-          slot_date: selectedDate,
+          slot_date: date,
           slot_hour: hour,
         })
         await fetchSlots()
-        showToast(`${hour}시 저장됨 ✓`)
+        if (totalOpenCount < SOFT_LIMIT) {
+          showToast(`${hour}시 저장됨 ✓`)
+        }
       }
     } catch (e) {
       console.error(e)
       alert('변경 중 문제가 생겼어요. 다시 시도해 주세요.')
     } finally {
-      setBusyHour(null)
+      setBusyKey(null)
     }
   }
-
-  // 선택 날짜에 열어둔 시간 요약
-  const openHours = daySlots
-    .filter((s) => !s.is_booked)
-    .map((s) => `${s.slot_hour}시`)
-    .join(', ')
-  const bookedHours = daySlots
-    .filter((s) => s.is_booked)
-    .map((s) => `${s.slot_hour}시`)
-    .join(', ')
 
   if (!consultantId) {
     return (
@@ -132,24 +136,26 @@ export default function ConsultantSchedule({
     )
   }
 
+  const overLimit = totalOpenCount > SOFT_LIMIT
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontSize: fontSize + 'px', position: 'relative' }}>
 
-      {/* 저장됨 팝업 (토스트) */}
+      {/* 저장됨 / 안내 팝업 (토스트) */}
       {toast && (
         <div style={{
-          position: 'absolute',
+          position: 'fixed',
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          background: 'rgba(26,26,24,0.95)',
+          background: 'rgba(26,26,24,0.96)',
           color: GOLD,
           border: `1px solid ${GOLD}`,
           borderRadius: '12px',
           padding: '12px 22px',
           fontSize: '14px',
           fontWeight: 700,
-          zIndex: 100,
+          zIndex: 2000,
           boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
           pointerEvents: 'none',
           whiteSpace: 'nowrap',
@@ -159,95 +165,93 @@ export default function ConsultantSchedule({
       )}
 
       {/* 안내 */}
-      <div style={{ fontSize: '11px', color: SUB, marginBottom: '8px', lineHeight: 1.5 }}>
-        날짜를 고른 뒤 시간을 눌러 여세요. 누르면 바로 저장돼요. 켜둔 시간만 고객에게 보입니다.
+      <div style={{ fontSize: '11px', color: SUB, marginBottom: '10px', lineHeight: 1.5, flexShrink: 0 }}>
+        각 날짜 아래 시간을 눌러 여세요. 누르면 바로 저장돼요. 켜둔 시간(노란색)만 고객에게 보입니다.
+        <span style={{ color: GOLD, marginLeft: '6px' }}>· 4주 통틀어 5개 정도 권장</span>
       </div>
 
-      {/* 날짜 가로 스크롤 */}
-      <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '8px', flexShrink: 0 }}>
-        {days.map((d) => {
-          const on = d.key === selectedDate
-          const hasOpen = slots.some((s) => s.slot_date === d.key)
-          return (
-            <button
-              key={d.key}
-              onClick={() => setSelectedDate(d.key)}
-              style={{
-                flexShrink: 0,
-                padding: '6px 10px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                background: on ? GOLD : CARD,
-                color: on ? '#1a1a18' : '#cfcdc7',
-                border: '1px solid ' + (on ? GOLD : 'rgba(250,199,117,0.12)'),
-                fontSize: '11px',
-                lineHeight: 1.3,
-                textAlign: 'center',
-                position: 'relative',
-              }}
-            >
-              <div>{d.label}</div>
-              <div style={{ fontSize: '10px', opacity: 0.8 }}>{d.weekday}</div>
-              {hasOpen && !on && (
-                <span style={{ position: 'absolute', top: 3, right: 4, width: 5, height: 5, borderRadius: '50%', background: GOLD }} />
-              )}
-            </button>
-          )
-        })}
-      </div>
-
-      {/* 시간 격자 */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      {/* 주 단위 달력 그리드 */}
+      <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
         {loading ? (
           <div style={{ padding: 16, textAlign: 'center', fontSize: 12, color: GOLD }}>불러오는 중...</div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '4px' }}>
-            {HOURS.map((h) => {
-              const slot = slotOf(h)
-              const isOpen = !!slot && !slot.is_booked
-              const isBooked = !!slot && slot.is_booked
-              const isBusy = busyHour === h
+          weeks.map((week, wi) => (
+            <div key={wi} style={{ marginBottom: '14px' }}>
+              {/* 주 라벨 */}
+              <div style={{ fontSize: '10px', color: SUB, marginBottom: '5px' }}>{wi + 1}주차</div>
 
-              let bg = CARD
-              let color = SUB
-              let border = '1px solid rgba(250,199,117,0.1)'
-              if (isOpen) { bg = GOLD; color = '#1a1a18'; border = '1px solid ' + GOLD }
-              if (isBooked) { bg = 'rgba(55,138,221,0.18)'; color = BLUE; border = '1px solid ' + BLUE }
+              {/* 이 주의 날짜들: 가로 7칸 */}
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${week.length}, 1fr)`, gap: '5px' }}>
+                {week.map((d) => {
+                  const isSun = d.weekdayIdx === 0
+                  const isSat = d.weekdayIdx === 6
+                  const dayColor = isSun ? '#e57373' : isSat ? '#64b5f6' : '#e8e2f5'
+                  const openCount = slots.filter((s) => s.slot_date === d.key && !s.is_booked).length
 
-              return (
-                <button
-                  key={h}
-                  onClick={() => toggleHour(h)}
-                  disabled={isBusy}
-                  style={{
-                    padding: '10px 0',
-                    borderRadius: '8px',
-                    cursor: isBooked ? 'not-allowed' : 'pointer',
-                    background: bg,
-                    color,
-                    border,
-                    fontSize: '12px',
-                    lineHeight: 1.3,
-                    opacity: isBusy ? 0.5 : 1,
-                  }}
-                >
-                  <div>{h}시</div>
-                  <div style={{ fontSize: '9px' }}>
-                    {isBooked ? '예약참' : isOpen ? '열림' : ''}
-                  </div>
-                </button>
-              )
-            })}
-          </div>
+                  return (
+                    <div key={d.key} style={{ display: 'flex', flexDirection: 'column' }}>
+                      {/* 날짜 헤더 */}
+                      <div style={{ textAlign: 'center', marginBottom: '4px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: dayColor, lineHeight: 1.2 }}>{d.label}</div>
+                        <div style={{ fontSize: '9px', color: dayColor, opacity: 0.75 }}>{d.weekday}</div>
+                        {openCount > 0 && (
+                          <div style={{ fontSize: '8px', color: GOLD }}>{openCount}개</div>
+                        )}
+                      </div>
+
+                      {/* 그 날의 시간들: 세로로 아래 */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        {HOURS.map((h) => {
+                          const slot = slotOf(d.key, h)
+                          const isOpen = !!slot && !slot.is_booked
+                          const isBooked = !!slot && slot.is_booked
+                          const isBusy = busyKey === `${d.key}-${h}`
+
+                          let bg = 'rgba(255,255,255,0.03)'
+                          let color = SUB
+                          let border = '1px solid rgba(255,255,255,0.06)'
+                          if (isOpen) { bg = GOLD; color = '#1a1a18'; border = '1px solid ' + GOLD }
+                          if (isBooked) { bg = 'rgba(55,138,221,0.2)'; color = BLUE; border = '1px solid ' + BLUE }
+
+                          return (
+                            <button
+                              key={h}
+                              onClick={() => toggleHour(d.key, h)}
+                              disabled={isBusy}
+                              title={isBooked ? '예약참' : isOpen ? '열림 (누르면 닫힘)' : '닫힘 (누르면 열림)'}
+                              style={{
+                                padding: '4px 0',
+                                borderRadius: '5px',
+                                cursor: isBooked ? 'not-allowed' : 'pointer',
+                                background: bg,
+                                color,
+                                border,
+                                fontSize: '10px',
+                                fontWeight: isOpen || isBooked ? 600 : 400,
+                                lineHeight: 1.1,
+                                opacity: isBusy ? 0.5 : 1,
+                                textAlign: 'center',
+                              }}
+                            >
+                              {h}{isBooked ? '·예약' : ''}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))
         )}
       </div>
 
-      {/* 요약 */}
-      <div style={{ flexShrink: 0, marginTop: '10px', padding: '9px', borderRadius: '8px', background: 'rgba(250,199,117,0.08)', border: '1px solid rgba(250,199,117,0.25)', fontSize: '11px', color: '#cfcdc7', lineHeight: 1.6 }}>
-        <div>열어둔 시간: <span style={{ color: GOLD }}>{openHours || '없음'}</span></div>
-        {bookedHours && (
-          <div>예약 찬 시간: <span style={{ color: BLUE }}>{bookedHours}</span></div>
-        )}
+      {/* 하단 요약 */}
+      <div style={{ flexShrink: 0, marginTop: '8px', padding: '9px', borderRadius: '8px', background: overLimit ? 'rgba(229,115,115,0.1)' : 'rgba(250,199,117,0.08)', border: '1px solid ' + (overLimit ? 'rgba(229,115,115,0.4)' : 'rgba(250,199,117,0.25)'), fontSize: '11px', color: '#cfcdc7', lineHeight: 1.6 }}>
+        4주 동안 열어둔 시간 <span style={{ color: overLimit ? '#e57373' : GOLD, fontWeight: 700 }}>{totalOpenCount}개</span>
+        {overLimit && <span style={{ color: '#e57373', marginLeft: '6px' }}>· 5개 정도까지만 권장해요</span>}
+        <span style={{ color: SUB, marginLeft: '8px' }}>· 노란색=열림, 파란색=예약참</span>
       </div>
     </div>
   )
