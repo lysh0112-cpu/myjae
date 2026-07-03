@@ -149,7 +149,7 @@ function TarotTable() {
   if (loading) return <div className="text-sm" style={{ color: '#8a88a0' }}>불러오는 중...</div>
 
   return (
-    <div style={{ flex: 1, minWidth: 320 }}>
+    <div>
       <div className="text-sm font-bold mb-2" style={{ color: '#FAC775' }}>🃏 타로 가격</div>
       <div className="rounded-xl overflow-hidden"
         style={{ background: '#2C2C2A', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -207,7 +207,7 @@ function TarotTable() {
   )
 }
 
-// 홈화면 핵심서비스 가격표 (표시 토글 + 가격) — 가로 전체 폭
+// 홈화면 핵심서비스 가격표 (표시 토글 + 가격) — 타로 아래에 배치
 function HomePriceTable() {
   const [rows, setRows] = useState<HomePrice[]>([])
   const [loading, setLoading] = useState(true)
@@ -243,13 +243,13 @@ function HomePriceTable() {
     load()
   }
 
-  if (loading) return <div className="text-sm" style={{ color: '#8a88a0' }}>불러오는 중...</div>
+  if (loading) return <div className="text-sm mt-6" style={{ color: '#8a88a0' }}>불러오는 중...</div>
 
   return (
-    <div style={{ width: '100%', marginTop: 24 }}>
+    <div style={{ marginTop: 20 }}>
       <div className="text-sm font-bold mb-2" style={{ color: '#FAC775' }}>🏠 홈화면 가격표</div>
       <div className="rounded-xl overflow-hidden"
-        style={{ background: '#2C2C2A', border: '1px solid rgba(255,255,255,0.06)', maxWidth: 500 }}>
+        style={{ background: '#2C2C2A', border: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="flex items-center px-3 py-2 text-xs font-bold"
           style={{ background: 'rgba(60,52,137,0.3)', color: '#FAC775',
             borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
@@ -307,10 +307,11 @@ export default function PriceManager() {
       <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
         <PriceTable title="🔮 전문가 상담 가격" table="consult_prices" />
         <PriceTable title="✨ AI 분석 가격" table="analysis_prices" />
-        <TarotTable />
+        <div style={{ flex: 1, minWidth: 320 }}>
+          <TarotTable />
+          <HomePriceTable />
+        </div>
       </div>
-
-      <HomePriceTable />
 
       <div className="text-xs mt-4" style={{ color: '#8a88a0' }}>
         💡 켜짐 = 고객에게 버튼 보임 · 꺼짐 = 숨김 · 각 표는 따로 저장합니다
