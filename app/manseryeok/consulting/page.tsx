@@ -125,8 +125,9 @@ function ConsultingContent() {
   async function handlePayComplete() {
     if (!consultationId || !selected) return
 
-    const aiAnalysis = sessionStorage.getItem('ai_analysis') ||
-                       sessionStorage.getItem('ai_free_analysis') || ''
+    // 고객이 사주 화면에서 본 해설을 무료·유료 각각 그대로 저장
+    const aiFree = sessionStorage.getItem('ai_free_analysis') || ''
+    const aiPaid = sessionStorage.getItem('ai_analysis') || ''
 
     await supabase
       .from('payments')
@@ -142,7 +143,8 @@ function ConsultingContent() {
       .update({
         status: 'paid',
         paid_amount: selected.price,
-        ai_analysis: aiAnalysis,
+        ai_analysis: aiPaid,        // 유료 상세 풀이
+        ai_free_analysis: aiFree,   // 무료 기본 풀이
       })
       .eq('id', consultationId)
 
