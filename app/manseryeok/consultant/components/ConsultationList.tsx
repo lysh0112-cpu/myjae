@@ -40,10 +40,13 @@ type Profile = {
 // 상담요청 구분 라벨
 const TYPE_LABELS: Record<string, string> = {
   personal: '개인상담',
-  couple: '부부궁합',
+  couple: '연인궁합',
+  married: '부부궁합',
+  prewedding: '예비부부',
   love: '연애궁합',
   birth: '출산시기',
   naming: '개명',
+  mulsang: '물상도',
 }
 
 type Period = 'today' | 'week' | 'month' | 'custom'
