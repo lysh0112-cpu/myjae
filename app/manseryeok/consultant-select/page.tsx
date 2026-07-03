@@ -254,6 +254,33 @@ function ConsultantSelectInner() {
         }
       }
 
+      // 출산택일이면: 세션에 담긴 출산시기 결과를 births에 상담 건과 연결 저장
+      // (결혼택일과 동일 방식. 추천일 5개 + 부모 사주 + 피할 날)
+      if (typeof window !== 'undefined') {
+        const birthRaw = sessionStorage.getItem('birth_full')
+        if (birthRaw) {
+          try {
+            const bt = JSON.parse(birthRaw)
+            await supabase.from('births').insert({
+              consultation_id: cons.id,
+              kind: bt.kind ?? 'find',
+              due_date: bt.due_date ?? null,
+              method: bt.method ?? null,
+              time_pref: bt.time_pref ?? null,
+              baby_gender: bt.baby_gender ?? null,
+              wishes: bt.wishes ?? null,
+              parent1: bt.parent1 ?? null,
+              parent2: bt.parent2 ?? null,
+              recommendations: bt.recommendations ?? null,
+              avoid_days: bt.avoid_days ?? null,
+              ai_notes: bt.ai_notes ?? null,
+            })
+          } catch (e) {
+            console.error('birth 저장 실패', e)
+          }
+        }
+      }
+
       // 예약 저장
       await supabase.from('bookings').insert({
         slot_id: slot.id,
@@ -275,6 +302,7 @@ function ConsultantSelectInner() {
         sessionStorage.removeItem('mulsang_full')
         sessionStorage.removeItem('naming_full')
         sessionStorage.removeItem('wedding_full')
+        sessionStorage.removeItem('birth_full')
       }
 
       setDone({ consultantName: c.name, date: slot.slot_date, hour: slot.slot_hour })
