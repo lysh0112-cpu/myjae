@@ -48,6 +48,29 @@ type MulsangRow = {
   } | null
 }
 
+// 개명(이름풀이) 결과 타입
+type NamingGrade = { grade?: string; detail?: string }
+type NamingRow = {
+  kind?: string | null
+  hangul_name?: string | null
+  hanja_name?: string | null
+  result?: {
+    yongsinBohwan?: NamingGrade
+    resourceFlow?: NamingGrade
+    soundFlow?: NamingGrade
+    suri?: { grade?: string; gyeok?: { label: string; name: string; fortune: string }[] }
+    overallGrade?: string
+  } | null
+  commentary?: {
+    title?: string
+    summary?: string
+    good?: string
+    improve?: string
+    advice?: string
+  } | null
+  target_birth?: Record<string, string> | null
+}
+
 const MODE_KO: Record<string, string> = {
   couple: '연인 궁합',
   married: '부부 궁합',
@@ -72,6 +95,12 @@ function birthText(b?: Record<string, string>): string {
   return g + cal + ' ' + b.year + '.' + b.month + '.' + b.day + h
 }
 
+function namingGradeColor(g?: string) {
+  if (g === '좋음') return '#7BC86C'
+  if (g === '아쉬움') return '#E0A04A'
+  return '#9a98b0'
+}
+
 export default function CustomerAiAnalysis({
   consultationId, saju, gender, calType,
   yearParam, monthParam, dayParam, hourIdx,
@@ -80,6 +109,7 @@ export default function CustomerAiAnalysis({
   const [paidAnalysis, setPaidAnalysis] = useState('')
   const [couple, setCouple] = useState<CoupleRow | null>(null)
   const [mulsang, setMulsang] = useState<MulsangRow | null>(null)
+  const [naming, setNaming] = useState<NamingRow | null>(null)
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
 
@@ -114,6 +144,15 @@ export default function CustomerAiAnalysis({
         .maybeSingle()
       setMulsang((ms as MulsangRow) || null)
 
+      const { data: nm } = await supabase
+        .from('namings')
+        .select('kind, hangul_name, hanja_name, result, commentary, target_birth')
+        .eq('consultation_id', consultationId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      setNaming((nm as NamingRow) || null)
+
       setLoading(false)
     }
     load()
@@ -123,7 +162,6 @@ export default function CustomerAiAnalysis({
     if (!saju || saju.length === 0) return
     setGenerating(true)
     try {
-      const currentYear = new Date().getFullYear()
       const sajuText = saju.map(s => s.pillar + ': ' + s.stem + s.branch).join(', ')
       const hourText = hourIdx === null || hourIdx === undefined
         ? '모름'
@@ -164,12 +202,20 @@ export default function CustomerAiAnalysis({
     )
   }
 
-  const hasAny = Boolean(freeAnalysis || paidAnalysis || couple || mulsang)
+  const hasAny = Boolean(freeAnalysis || paidAnalysis || couple || mulsang || naming)
   const r = couple?.result
   const sd = r?.scoreDetails
   const scoreRows = sd
     ? SCORE_LABELS.filter(x => typeof sd[x.key] === 'number')
     : []
+
+  const headerLabel = mulsang ? '고객이 본 물상도'
+    : couple ? '고객이 본 궁합 분석'
+    : naming ? '고객이 본 이름 풀이'
+    : '고객이 본 사주 풀이'
+
+  const nr = naming?.result
+  const nc = naming?.commentary
 
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.15)' }}>
@@ -177,7 +223,7 @@ export default function CustomerAiAnalysis({
       <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="flex items-center gap-2">
           <span>🤖</span>
-          <span className="text-sm font-bold text-white">{mulsang ? '고객이 본 물상도' : couple ? '고객이 본 궁합 분석' : '고객이 본 사주 풀이'}</span>
+          <span className="text-sm font-bold text-white">{headerLabel}</span>
         </div>
         {hasAny ? (
           <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(76,175,80,0.2)', color: '#4caf50' }}>고객 조회분</span>
@@ -212,6 +258,66 @@ export default function CustomerAiAnalysis({
                   </div>
                 ))}
               </div>
+            </div>
+          ) : null}
+
+          {naming ? (
+            <div className="rounded-xl p-4" style={{ background: 'rgba(250,199,117,0.08)', border: '1px solid rgba(250,199,117,0.3)' }}>
+              <div className="text-xs font-bold mb-3 flex items-center gap-1.5" style={{ color: '#FAC775' }}>
+                <span>✏️</span>
+                <span>{naming.kind === 'newborn' ? '아기 이름 풀이' : '이름 풀이'}</span>
+                {nr?.overallGrade ? (
+                  <span className="ml-auto text-sm font-bold" style={{ color: namingGradeColor(nr.overallGrade) }}>{nr.overallGrade}</span>
+                ) : null}
+              </div>
+
+              {/* 이름 (한자 · 한글) */}
+              {(naming.hanja_name || naming.hangul_name) ? (
+                <div className="text-center mb-3">
+                  <div className="text-2xl font-bold" style={{ color: '#FAC775', letterSpacing: '3px' }}>{naming.hanja_name || ''}</div>
+                  <div className="text-xs mt-0.5" style={{ color: '#e0dce8' }}>{naming.hangul_name || ''}</div>
+                </div>
+              ) : null}
+
+              {/* 아기 인적사항(있으면) */}
+              {naming.target_birth ? (
+                <div className="text-xs mb-3" style={{ color: '#c8c4d8' }}>
+                  · 대상: {birthText(naming.target_birth)}
+                </div>
+              ) : null}
+
+              {/* AI 해설 */}
+              {nc?.title ? (
+                <div className="text-sm font-bold mb-2" style={{ color: '#e0dce8' }}>&quot;{nc.title}&quot;</div>
+              ) : null}
+              {[
+                { label: '종합', text: nc?.summary },
+                { label: '좋은 점', text: nc?.good },
+                { label: '더 좋아지려면', text: nc?.improve },
+                { label: '조언', text: nc?.advice },
+              ].filter(x => x.text).map((x, i) => (
+                <div key={i} className="mb-2">
+                  <div className="text-xs" style={{ color: '#FAC775' }}>{x.label}</div>
+                  <div className="text-sm leading-relaxed" style={{ color: '#e0dce8' }}>{x.text}</div>
+                </div>
+              ))}
+
+              {/* 4가지 분석 등급 */}
+              {nr ? (
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs pt-3 mt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', color: '#b0aec8' }}>
+                  {[
+                    { label: '사주 보완(용신)', g: nr.yongsinBohwan?.grade },
+                    { label: '한자 기운', g: nr.resourceFlow?.grade },
+                    { label: '소리 기운', g: nr.soundFlow?.grade },
+                    { label: '이름 수리', g: nr.suri?.grade },
+                  ].filter(x => x.g).map((x, i) => (
+                    <div key={i}>
+                      <span>{x.label} </span>
+                      <span style={{ color: namingGradeColor(x.g) }}>{x.g}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -263,7 +369,7 @@ export default function CustomerAiAnalysis({
             </div>
           ) : null}
 
-          {paidAnalysis && !mulsang ? (
+          {paidAnalysis && !mulsang && !naming ? (
             <div className="rounded-xl p-4" style={{ background: 'rgba(250,199,117,0.08)', border: '1px solid rgba(250,199,117,0.2)' }}>
               <div className="text-xs font-bold mb-2 flex items-center gap-1.5" style={{ color: '#FAC775' }}>
                 <span>✨</span>
