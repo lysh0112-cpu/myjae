@@ -98,8 +98,10 @@ export default function ServiceCards() {
                   cursor: 'pointer',
                 }}
               >
-                <div className="text-2xl mb-2">{s.icon}</div>
-                <div className="text-sm font-bold text-white mb-1" style={{ whiteSpace: 'pre-line', lineHeight: 1.35 }}>{s.name}</div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl" style={{ flexShrink: 0 }}>{s.icon}</span>
+                  <div className="text-sm font-bold text-white" style={{ whiteSpace: 'pre-line', lineHeight: 1.35 }}>{s.name}</div>
+                </div>
                 <div
                   className="inline-block px-2 py-0.5 rounded-full font-semibold mb-2"
                   style={{ fontSize: '10px', ...s.targetStyle }}
