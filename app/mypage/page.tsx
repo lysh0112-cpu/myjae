@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useResultSaju } from '@/hooks/useResultSaju'
 
-// 홈/welcome과 동일한 시주 형식 (인덱스 0~11 또는 '모름')
 const HOUR_LABELS: Record<string, string> = {
   '0': '子시(23~01)', '1': '丑시(01~03)', '2': '寅시(03~05)', '3': '卯시(05~07)',
   '4': '辰시(07~09)', '5': '巳시(09~11)', '6': '午시(11~13)', '7': '未시(13~15)',
@@ -52,7 +51,16 @@ type Consultation = {
   consultant_name?: string
 }
 
-// 오늘의 운세 결과 타입 (daily_fortune 테이블 / API 응답 공통)
+// 내 후기 타입
+type MyReview = {
+  id: string
+  rating: number
+  service_type: string | null
+  content: string
+  is_approved: boolean
+  created_at: string | null
+}
+
 type Fortune = {
   fortune_date: string
   iljin_gan: string | null
@@ -67,14 +75,12 @@ type Fortune = {
   today_insight: string | null
 }
 
-// birth_hour('0'~'11' | '모름' | null) → useResultSaju hourIdx(number | null)
 function toHourIdx(h: string | null): number | null {
   if (!h || h === '모름') return null
   const n = parseInt(h, 10)
   return isNaN(n) ? null : n
 }
 
-// 오늘 날짜(KST) YYYY-MM-DD
 function todayKST(): string {
   const now = new Date()
   const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
@@ -91,14 +97,17 @@ export default function MyPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [myNames, setMyNames] = useState<MyName[]>([])
   const [consults, setConsults] = useState<Consultation[]>([])
+  const [myReviews, setMyReviews] = useState<MyReview[]>([])
+  const [reviewsOpen, setReviewsOpen] = useState(false)         // 아코디언 열림
+  const [rvEditId, setRvEditId] = useState<string | null>(null) // 수정 중인 후기 id
+  const [rvText, setRvText] = useState('')                      // 수정 입력값
+  const [rvSaving, setRvSaving] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  // 오늘의 운세 상태
   const [fortune, setFortune] = useState<Fortune | null>(null)
   const [fortuneLoading, setFortuneLoading] = useState(false)
-  const [fortuneChecked, setFortuneChecked] = useState(false) // 캐시 조회 끝났는지
+  const [fortuneChecked, setFortuneChecked] = useState(false)
 
-  // 사주 수정 모드
   const [editMode, setEditMode] = useState(false)
   const [eYear, setEYear] = useState('')
   const [eMonth, setEMonth] = useState('')
@@ -109,13 +118,11 @@ export default function MyPage() {
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
 
-  // 닉네임 수정 모드
   const [nickEdit, setNickEdit] = useState(false)
   const [eNick, setENick] = useState('')
   const [nickSaving, setNickSaving] = useState(false)
   const [nickMsg, setNickMsg] = useState('')
 
-  // 내 사주 계산 (profiles 값 → 간지). 오늘의 운세에 쓸 dayStem/iljji가 여기서 나옴.
   const { saju, dayStem, iljji, converting } = useResultSaju(
     profile?.cal_type || '양력',
     profile?.birth_year || 0,
@@ -143,7 +150,6 @@ export default function MyPage() {
         .order('created_at', { ascending: false })
         .then(({ data: rows }) => { if (rows) setMyNames(rows as MyName[]) })
 
-      // 내 상담 내역 (user_id 기준) + 상담사 이름 붙이기
       const { data: cs } = await supabase.from('consultations')
         .select('id, status, paid_amount, created_at, booking_date, consultant_id')
         .eq('user_id', data.user.id)
@@ -158,7 +164,13 @@ export default function MyPage() {
         setConsults(cs.map((c) => ({ ...c, consultant_name: c.consultant_id ? nameMap[c.consultant_id] : undefined })) as Consultation[])
       }
 
-      // 오늘의 운세: 오늘 것이 daily_fortune에 이미 있으면 그대로 사용 (캐시)
+      // 내 후기 (user_id 기준)
+      supabase.from('reviews')
+        .select('id, rating, service_type, content, is_approved, created_at')
+        .eq('user_id', data.user.id)
+        .order('created_at', { ascending: false })
+        .then(({ data: rows }) => { if (rows) setMyReviews(rows as MyReview[]) })
+
       const { data: fRow } = await supabase.from('daily_fortune')
         .select('fortune_date, iljin_gan, iljin_ji, score, summary, love, money, health, lucky_color, lucky_dir, today_insight')
         .eq('user_id', data.user.id)
@@ -170,14 +182,13 @@ export default function MyPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 캐시에 오늘 것이 없고, 사주 계산이 끝났으면 → API로 생성 후 저장
   useEffect(() => {
-    if (!fortuneChecked) return          // 캐시 조회 전
-    if (fortune) return                  // 이미 있음
-    if (fortuneLoading) return           // 생성 중
-    if (converting) return               // 사주 계산 중
+    if (!fortuneChecked) return
+    if (fortune) return
+    if (fortuneLoading) return
+    if (converting) return
     if (!userId) return
-    if (!profile?.saju_saved || !dayStem || !iljji) return // 사주 미등록
+    if (!profile?.saju_saved || !dayStem || !iljji) return
 
     let cancelled = false
     ;(async () => {
@@ -210,7 +221,6 @@ export default function MyPage() {
         }
         setFortune(row)
 
-        // daily_fortune에 저장(캐싱). 하루 1행 UNIQUE라 중복이면 무시.
         await supabase.from('daily_fortune').upsert({
           user_id: userId,
           ...row,
@@ -284,18 +294,15 @@ export default function MyPage() {
 
     setProfile(prev => prev ? { ...prev, birth_year: y, birth_month: m, birth_day: d, birth_hour: hourValue, cal_type: eCal, gender: eGender, saju_saved: true } : prev)
     setEditMode(false)
-    // 사주가 바뀌면 오늘의 운세도 다시 생성되도록 초기화
     setFortune(null)
   }
 
-  // 닉네임 수정 열기
   const openNickEdit = () => {
     setENick(profile?.nickname || '')
     setNickMsg('')
     setNickEdit(true)
   }
 
-  // 닉네임 저장
   const saveNick = async () => {
     const name = eNick.trim()
     if (!name) { setNickMsg('닉네임을 입력해주세요.'); return }
@@ -306,6 +313,34 @@ export default function MyPage() {
     if (error) { setNickMsg('저장 실패: ' + error.message); return }
     setProfile(prev => prev ? { ...prev, nickname: name } : prev)
     setNickEdit(false)
+  }
+
+  // 내 후기 수정 열기
+  const openRvEdit = (r: MyReview) => {
+    setRvEditId(r.id)
+    setRvText(r.content)
+  }
+
+  // 내 후기 저장 → 다시 대기(is_approved=false)로 돌려 재승인
+  const saveRv = async (r: MyReview) => {
+    const text = rvText.trim()
+    if (!text) { alert('후기 내용을 입력해 주세요.'); return }
+    setRvSaving(true)
+    const { error } = await supabase.from('reviews')
+      .update({ content: text, is_approved: false })
+      .eq('id', r.id)
+    setRvSaving(false)
+    if (error) { alert('저장 실패: ' + error.message); return }
+    setMyReviews(prev => prev.map(x => x.id === r.id ? { ...x, content: text, is_approved: false } : x))
+    setRvEditId(null)
+  }
+
+  // 내 후기 삭제
+  const deleteRv = async (r: MyReview) => {
+    if (!confirm('이 후기를 삭제할까요?\n삭제하면 되돌릴 수 없습니다.')) return
+    const { error } = await supabase.from('reviews').delete().eq('id', r.id)
+    if (error) { alert('삭제 실패: ' + error.message); return }
+    setMyReviews(prev => prev.filter(x => x.id !== r.id))
   }
 
   const logout = async () => {
@@ -371,7 +406,6 @@ export default function MyPage() {
             <span style={{ fontSize: 11, padding: '4px 12px', borderRadius: 12, background: rc.bg, color: rc.fg, fontWeight: 600, flexShrink: 0 }}>{roleLabel(profile?.role || null)}</span>
           </div>
 
-          {/* 닉네임 수정 영역 */}
           <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
             {!nickEdit ? (
               <button onClick={openNickEdit} style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', background: 'none', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, padding: '6px 14px', cursor: 'pointer' }}>닉네임 수정</button>
@@ -390,7 +424,7 @@ export default function MyPage() {
           </div>
         </div>
 
-        {/* ★ 오늘의 운세 (내 정보 바로 아래) */}
+        {/* ★ 오늘의 운세 */}
         <div style={{ ...card, border: '1px solid rgba(250,199,117,0.25)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: '#FAC775' }}>✦ 오늘의 운세</span>
@@ -401,7 +435,6 @@ export default function MyPage() {
             )}
           </div>
 
-          {/* 사주 미등록 */}
           {!profile?.saju_saved ? (
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', textAlign: 'center', padding: '10px 0', lineHeight: 1.7 }}>
               사주를 등록하면 매일 나만의 운세를 볼 수 있어요.<br />
@@ -411,13 +444,11 @@ export default function MyPage() {
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '16px 0' }}>오늘의 운세를 준비하는 중…</div>
           ) : fortune ? (
             <div>
-              {/* 총운 + 별점 */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                 <span style={{ fontSize: 15, color: '#FAC775', letterSpacing: 2 }}>{stars(fortune.score)}</span>
               </div>
               <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.85)', lineHeight: 1.75, margin: '0 0 12px' }}>{fortune.summary}</p>
 
-              {/* 개운 요소 */}
               <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                 <div style={{ flex: 1, background: 'rgba(250,199,117,0.08)', borderRadius: 8, padding: '8px 4px', textAlign: 'center' }}>
                   <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>행운의 색</div>
@@ -429,7 +460,6 @@ export default function MyPage() {
                 </div>
               </div>
 
-              {/* 세부 운 */}
               <div style={{ display: 'flex', gap: 8, marginBottom: fortune.today_insight ? 12 : 0 }}>
                 <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '8px 6px' }}>
                   <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>❤️ 애정</div>
@@ -445,7 +475,6 @@ export default function MyPage() {
                 </div>
               </div>
 
-              {/* 오늘의 명리 한 조각 */}
               {fortune.today_insight && (
                 <div style={{ paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: '#FAC775', marginBottom: 6 }}>🔥 오늘의 명리 한 조각</div>
@@ -542,7 +571,7 @@ export default function MyPage() {
           )}
         </div>
 
-        {/* 4. 내 상담 내역 (user_id 기준) */}
+        {/* 4. 내 상담 내역 */}
         <div style={card}>
           <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginBottom: 10 }}>내 상담 내역</div>
           {consults.length === 0 ? (
@@ -571,9 +600,69 @@ export default function MyPage() {
                       💬 채팅방 입장
                     </button>
                   </div>
-
                 )
               })}
+            </div>
+          )}
+        </div>
+
+        {/* 4-1. 내 후기 (아코디언) */}
+        <div style={card}>
+          <button
+            onClick={() => setReviewsOpen(v => !v)}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#FAC775' }}>✦ 내 후기 <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 400 }}>{myReviews.length}</span></span>
+            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>{reviewsOpen ? '▲' : '▼'}</span>
+          </button>
+
+          {reviewsOpen && (
+            <div style={{ marginTop: 12 }}>
+              {myReviews.length === 0 ? (
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '8px 0' }}>아직 작성한 후기가 없습니다.</div>
+              ) : (
+                myReviews.map((r, i) => (
+                  <div key={r.id} style={{ padding: '12px 0', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                    {/* 상단: 별점 · 상태 · 서비스 */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                      <span style={{ color: '#FAC775', fontSize: 13 }}>{stars(r.rating)}</span>
+                      {r.is_approved
+                        ? <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: 'rgba(120,200,120,0.15)', color: '#7ec87e' }}>노출 중</span>
+                        : <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: 'rgba(255,180,80,0.15)', color: '#ffb450' }}>대기</span>}
+                      {r.service_type && <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}>{r.service_type}</span>}
+                    </div>
+
+                    {rvEditId === r.id ? (
+                      /* 수정 모드 */
+                      <div>
+                        <textarea
+                          value={rvText}
+                          onChange={e => setRvText(e.target.value)}
+                          maxLength={1000}
+                          rows={4}
+                          style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '10px 12px', color: '#fff', fontSize: 14, lineHeight: 1.6, resize: 'vertical', outline: 'none', marginBottom: 4 }}
+                        />
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 8 }}>수정하면 다시 관리자 승인을 거쳐 노출됩니다.</div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button onClick={() => setRvEditId(null)} style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'none', color: 'rgba(255,255,255,0.6)', fontSize: 13, cursor: 'pointer' }}>취소</button>
+                          <button onClick={() => saveRv(r)} disabled={rvSaving} style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #FAC775, #f0a030)', color: '#1a1a18', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: rvSaving ? 0.6 : 1 }}>{rvSaving ? '저장 중…' : '저장'}</button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* 보기 모드 */
+                      <div>
+                        <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', lineHeight: 1.6, margin: '0 0 6px', whiteSpace: 'pre-wrap' }}>{r.content}</p>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{dateText(r.created_at)}</span>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button onClick={() => openRvEdit(r)} style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', background: 'none', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, padding: '5px 12px', cursor: 'pointer' }}>수정</button>
+                            <button onClick={() => deleteRv(r)} style={{ fontSize: 12, color: '#ff8080', background: 'none', border: '1px solid rgba(226,75,74,0.4)', borderRadius: 8, padding: '5px 12px', cursor: 'pointer' }}>삭제</button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>
