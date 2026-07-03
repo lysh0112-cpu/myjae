@@ -36,7 +36,7 @@ function fmtDate(key: string): string {
 function ConsultantSelectInner() {
   const params = useSearchParams()
   const router = useRouter()
-  const mode  = params.get('mode')  || 'couple'
+  const mode  = params.get('mode')  || 'personal'
   const score = params.get('score') || ''
   const names = params.get('names') || ''
 
@@ -46,7 +46,8 @@ function ConsultantSelectInner() {
   const month = params.get('month') ?? ''
   const day = params.get('day') ?? ''
   const hour = params.get('hour') ?? ''
-  const birthData = { gender, calType, year, month, day, hour }
+  // 상담요청 구분(mode)을 birth_data에 함께 실어, 상담목록 '상담요청' 칸에 정확히 표시
+  const birthData = { gender, calType, year, month, day, hour, consultationType: mode }
 
   const [consultants, setConsultants] = useState<Consultant[]>([])
   const [slots, setSlots] = useState<Slot[]>([])
@@ -139,6 +140,10 @@ function ConsultantSelectInner() {
     try {
       const { data: u } = await supabase.auth.getUser()
 
+      // 고객이 사주 화면에서 본 해설을 무료·유료 각각 그대로 저장
+      const aiFree = typeof window !== 'undefined' ? (sessionStorage.getItem('ai_free_analysis') || '') : ''
+      const aiPaid = typeof window !== 'undefined' ? (sessionStorage.getItem('ai_analysis') || '') : ''
+
       // 고객 저장
       await supabase.from('customers').upsert({ phone: phoneDigits }, { onConflict: 'phone' })
 
@@ -154,6 +159,8 @@ function ConsultantSelectInner() {
           user_id: u?.user?.id ?? null,
           booking_date: slot.slot_date,
           booking_hour: slot.slot_hour,
+          ai_analysis: aiPaid,        // 유료 상세 풀이 (고객이 본 그대로)
+          ai_free_analysis: aiFree,   // 무료 기본 풀이 (고객이 본 그대로)
         })
         .select('id')
         .single()
@@ -171,6 +178,12 @@ function ConsultantSelectInner() {
 
       // 슬롯 잠금
       await supabase.from('consultant_slots').update({ is_booked: true }).eq('id', slot.id)
+
+      // 전달 완료된 해설은 세션에서 정리
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('ai_analysis')
+        sessionStorage.removeItem('ai_free_analysis')
+      }
 
       setDone({ consultantName: c.name, date: slot.slot_date, hour: slot.slot_hour })
     } catch (e) {
@@ -217,7 +230,7 @@ function ConsultantSelectInner() {
           background:'#1a2030', color:'#88aadd',
           fontSize:'11px', padding:'4px 12px', borderRadius:'20px',
         }}>
-          {modeLabel[mode] || '👫 부부 상담'}
+          {modeLabel[mode] || '🔮 개인 상담'}
         </span>
       </div>
 
