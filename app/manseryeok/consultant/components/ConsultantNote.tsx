@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 
 interface Props {
@@ -26,6 +26,30 @@ export default function ConsultantNote({ consultationId, fontSize = 13, fontFami
   const [summarizing, setSummarizing] = useState(false)
   const [summarySaved, setSummarySaved] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [topPct, setTopPct] = useState(50)      // 위(내 설명) 영역 높이 % — 경계선 드래그로 조절
+  const dragRef = useRef<{ startY: number; orig: number } | null>(null)
+  const wrapRef = useRef<HTMLDivElement | null>(null)
+
+  // 위/아래 경계선 드래그
+  function startVDrag(e: React.MouseEvent) {
+    e.preventDefault()
+    dragRef.current = { startY: e.clientY, orig: topPct }
+    window.addEventListener('mousemove', onVDrag)
+    window.addEventListener('mouseup', endVDrag)
+  }
+  const onVDrag = useCallback((e: MouseEvent) => {
+    if (!dragRef.current || !wrapRef.current) return
+    const h = wrapRef.current.clientHeight
+    if (h <= 0) return
+    const delta = ((e.clientY - dragRef.current.startY) / h) * 100
+    const next = Math.min(80, Math.max(20, dragRef.current.orig + delta))
+    setTopPct(next)
+  }, [])
+  function endVDrag() {
+    dragRef.current = null
+    window.removeEventListener('mousemove', onVDrag)
+    window.removeEventListener('mouseup', endVDrag)
+  }
 
   // 기존 저장분 불러오기
   useEffect(() => {
@@ -170,10 +194,10 @@ ${chatText.slice(0, 1500)}
   }
 
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div ref={wrapRef} style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
 
       {/* ③ 위 — 상담사 의견 입력 */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderBottom: '1px solid rgba(255,255,255,0.06)', minHeight: 0 }}>
+      <div style={{ height: topPct + '%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <div style={paneTitle}>
           <span>✍️ 내 설명 입력</span>
           <button onClick={saveNote} style={miniBtn}>{noteSaved ? '✓ 저장됨' : '저장'}</button>
@@ -186,6 +210,15 @@ ${chatText.slice(0, 1500)}
             style={{ width: '100%', height: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', color: '#c8c0ff', fontSize: fontSize + 'px', fontFamily, lineHeight: 1.6 }}
           />
         </div>
+      </div>
+
+      {/* 위/아래 경계선 — 드래그로 높이 조절 */}
+      <div
+        onMouseDown={startVDrag}
+        title="드래그로 위·아래 높이 조절"
+        style={{ height: '10px', flexShrink: 0, cursor: 'row-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.03)', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        <div style={{ width: '40px', height: '3px', borderRadius: '2px', background: 'rgba(250,199,117,0.4)' }} />
       </div>
 
       {/* ③ 아래 — AI 정리 결과 */}
