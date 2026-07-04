@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import DashboardTable from './DashboardTable'
-
 type Stats = {
   totalRevenue: number
   totalConsultations: number
@@ -10,7 +9,6 @@ type Stats = {
   todayConsultations: number
   aiAnalysisCount: number
 }
-
 export default function Dashboard() {
   const [stats, setStats] = useState<Stats>({
     totalRevenue: 0, totalConsultations: 0,
@@ -19,15 +17,14 @@ export default function Dashboard() {
   const [list, setList] = useState<any[]>([])
   const [consultants, setConsultants] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-
   useEffect(() => { fetchAll() }, [])
-
   async function fetchAll() {
     const today = new Date().toISOString().split('T')[0]
+    // ★ 취소된 건(deleted_at 있음)은 대시보드에서 제외 → 정상 예약만 표시
     const [{ data: cons }, { data: todayCons }, { data: allCons }, { data: consultantList }] = await Promise.all([
-      supabase.from('consultations').select('*').order('created_at', { ascending: false }),
-      supabase.from('consultations').select('id').gte('created_at', today),
-      supabase.from('consultations').select('paid_amount, status'),
+      supabase.from('consultations').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
+      supabase.from('consultations').select('id').is('deleted_at', null).gte('created_at', today),
+      supabase.from('consultations').select('paid_amount, status').is('deleted_at', null),
       supabase.from('consultants').select('id, name').eq('active', true),
     ])
     if (cons) setList(cons)
@@ -43,11 +40,9 @@ export default function Dashboard() {
     })
     setLoading(false)
   }
-
   function handleDelete(id: string) {
     fetchAll()
   }
-
   function handleExcel() {
     const headers = ['일자', '상담사', '전화번호', '결제금액', '상태']
     const rows = list.map(c => [
@@ -65,9 +60,7 @@ export default function Dashboard() {
     a.download = `명카페_상담내역_${new Date().toLocaleDateString('ko-KR')}.csv`
     a.click()
   }
-
   if (loading) return <div className="text-center py-10" style={{ color: '#FAC775' }}>불러오는 중...</div>
-
   const cards = [
     { label: '누적 매출', value: `${stats.totalRevenue.toLocaleString()}원`, color: '#FAC775' },
     { label: '총 상담', value: `${stats.totalConsultations}건`, color: '#b0aec8' },
@@ -75,7 +68,6 @@ export default function Dashboard() {
     { label: 'AI 유료', value: `${stats.aiAnalysisCount}건`, color: '#f48fb1' },
     { label: '미정산', value: `${stats.pendingSettlement.toLocaleString()}원`, color: '#ff8080' },
   ]
-
   return (
     <div className="space-y-4">
       <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
