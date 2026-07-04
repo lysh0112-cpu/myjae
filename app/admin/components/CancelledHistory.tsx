@@ -45,10 +45,10 @@ export default function CancelledHistory() {
   async function fetchAll() {
     setLoading(true)
     const [{ data: cons }, { data: consultantList }] = await Promise.all([
-      // 취소된 건(deleted_at 있음)만 모아서 최근 취소 순
+      // 취소된 건: deleted_at이 찍혔거나 status=cancelled인 것 모두
       supabase.from('consultations').select('*')
-        .not('deleted_at', 'is', null)
-        .order('deleted_at', { ascending: false }),
+        .or('deleted_at.not.is.null,status.eq.cancelled')
+        .order('created_at', { ascending: false }),
       supabase.from('consultants').select('id, name'),
     ])
     setList((cons as Cancelled[]) ?? [])
