@@ -225,6 +225,8 @@ function NewbornResultInner() {
           surname, given,
           yongsin: y.yongsin, heeksin: y.heeksin, elementScore: y.score,
           dayStem, sajuText,
+          birthData: baby,
+          saju,
         }),
       })
       const data = await res.json()
