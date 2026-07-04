@@ -1,772 +1,806 @@
 'use client'
-import { Suspense, useState, useEffect } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { useResultSaju } from '@/hooks/useResultSaju'
-import { calcYongsin } from '@/lib/saju/yongsin'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import type { DiagnoseResult, NameChar } from '@/lib/saju/naming'
-import PageHeader from '@/app/components/common/PageHeader'
-import { fromProfile, fromUrl, personKey, type MyInfo } from '@/lib/saju/myInfo'
+import { useResultSaju } from '@/hooks/useResultSaju'
 
-const NAMING_RESULT_KEY = 'naming_last_result_v1'
-
-const AVOID_KEYWORDS = [
-  '죽을', '죽일', '주검', '시체', '시신', '송장', '애도', '슬플', '슬픔',
-  '근심', '걱정', '병', '앓을', '아플', '악할', '흉할', '흉', '재앙', '재난',
-  '천할', '천박', '종', '노예', '놈', '도둑', '도적', '귀신', '미칠', '미치광이',
-  '어리석을', '간사할', '간교', '허물', '꺾을', '무너질', '망할', '멸할',
-  '원수', '저주', '독', '괴로울', '비참', '울', '눈물', '한숨',
+const HOUR_LABELS: Record<string, string> = {
+  '0': '子시(23~01)', '1': '丑시(01~03)', '2': '寅시(03~05)', '3': '卯시(05~07)',
+  '4': '辰시(07~09)', '5': '巳시(09~11)', '6': '午시(11~13)', '7': '未시(13~15)',
+  '8': '申시(15~17)', '9': '酉시(17~19)', '10': '戌시(19~21)', '11': '亥시(21~23)',
+}
+const HOURS = [
+  '모름', '子시(23~01)', '丑시(01~03)', '寅시(03~05)', '卯시(05~07)',
+  '辰시(07~09)', '巳시(09~11)', '午시(11~13)', '未시(13~15)',
+  '申시(15~17)', '酉시(17~19)', '戌시(19~21)', '亥시(21~23)',
 ]
-
-interface HanjaRow {
-  hangul: string
-  hanja: string
-  meaning: string
-  strokes: number
-  resource_ohaeng: string
-  sound_ohaeng: string
-  is_avoid?: boolean
+const HOUR_INDEX: Record<string, number> = {
+  '子시(23~01)': 0, '丑시(01~03)': 1, '寅시(03~05)': 2, '卯시(05~07)': 3,
+  '辰시(07~09)': 4, '巳시(09~11)': 5, '午시(11~13)': 6, '未시(13~15)': 7,
+  '申시(15~17)': 8, '酉시(17~19)': 9, '戌시(19~21)': 10, '亥시(21~23)': 11,
 }
 
-interface Commentary {
-  title: string
-  summary: string
-  good: string
-  improve: string
-  advice: string
+type Profile = {
+  nickname: string | null
+  role: string | null
+  birth_year: number | null
+  birth_month: number | null
+  birth_day: number | null
+  birth_hour: string | null
+  cal_type: string | null
+  gender: string | null
+  saju_saved: boolean | null
 }
 
-const gold = '#FAC775'
-const cardBg = '#2C2C2A'
-const border = '1px solid rgba(250,199,117,0.15)'
-
-function gradeColor(g: string) {
-  if (g === '좋음') return '#7BC86C'
-  if (g === '아쉬움') return '#E0A04A'
-  return '#9a98b0'
+type MyName = {
+  id: string
+  hangul_name: string | null
+  hanja_name: string | null
+  kind: string | null
+  created_at: string | null
 }
 
-function isAvoidChar(row: HanjaRow): boolean {
-  if (row.is_avoid === true) return true
-  const m = row.meaning || ''
-  return AVOID_KEYWORDS.some((k) => m.includes(k))
+type Consultation = {
+  id: string
+  status: string | null
+  paid_amount: number | null
+  created_at: string | null
+  booking_date: string | null
+  booking_hour: number | null
+  consultant_id: string | null
+  consultant_name?: string
 }
 
-function isHangulSyllable(ch: string): boolean {
-  const code = ch.charCodeAt(0)
-  return code >= 0xac00 && code <= 0xd7a3
+// 내 후기 타입
+type MyReview = {
+  id: string
+  rating: number
+  service_type: string | null
+  content: string
+  is_approved: boolean
+  created_at: string | null
 }
 
-function DiagnosisInner() {
+type Fortune = {
+  fortune_date: string
+  iljin_gan: string | null
+  iljin_ji: string | null
+  score: number | null
+  summary: string | null
+  love: string | null
+  money: string | null
+  health: string | null
+  lucky_color: string | null
+  lucky_dir: string | null
+  today_insight: string | null
+}
+
+function toHourIdx(h: string | null): number | null {
+  if (!h || h === '모름') return null
+  const n = parseInt(h, 10)
+  return isNaN(n) ? null : n
+}
+
+function todayKST(): string {
+  const now = new Date()
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  const y = kst.getUTCFullYear()
+  const m = String(kst.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(kst.getUTCDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+export default function MyPage() {
   const router = useRouter()
-  const sp = useSearchParams()
+  const [email, setEmail] = useState('')
+  const [userId, setUserId] = useState('')
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [myNames, setMyNames] = useState<MyName[]>([])
+  const [consults, setConsults] = useState<Consultation[]>([])
+  const [myReviews, setMyReviews] = useState<MyReview[]>([])
+  const [reviewsOpen, setReviewsOpen] = useState(false)         // 아코디언 열림
+  const [rvEditId, setRvEditId] = useState<string | null>(null) // 수정 중인 후기 id
+  const [rvText, setRvText] = useState('')                      // 수정 입력값
+  const [rvSaving, setRvSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [cancelingId, setCancelingId] = useState<string | null>(null) // 취소 처리 중인 예약 id
+  const [deletingNameId, setDeletingNameId] = useState<string | null>(null) // 삭제 처리 중인 이름 id
+  const [namesExpanded, setNamesExpanded] = useState(false) // 이름풀이 더보기(3개째부터 접힘)
 
-  const [info, setInfo] = useState<MyInfo | null>(null)
+  const [fortune, setFortune] = useState<Fortune | null>(null)
+  const [fortuneLoading, setFortuneLoading] = useState(false)
+  const [fortuneChecked, setFortuneChecked] = useState(false)
 
-  // 가격 (이름 풀이 / 한자 바꾸기)
-  const [readPrice, setReadPrice] = useState(5000)
-  const [hanjaPrice, setHanjaPrice] = useState(20000)
+  const [editMode, setEditMode] = useState(false)
+  const [eYear, setEYear] = useState('')
+  const [eMonth, setEMonth] = useState('')
+  const [eDay, setEDay] = useState('')
+  const [eHour, setEHour] = useState('')
+  const [eCal, setECal] = useState<'양력' | '음력'>('양력')
+  const [eGender, setEGender] = useState<'남' | '여'>('남')
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  const [nickEdit, setNickEdit] = useState(false)
+  const [eNick, setENick] = useState('')
+  const [nickSaving, setNickSaving] = useState(false)
+  const [nickMsg, setNickMsg] = useState('')
+
+  const { saju, dayStem, iljji, converting } = useResultSaju(
+    profile?.cal_type || '양력',
+    profile?.birth_year || 0,
+    profile?.birth_month || 0,
+    profile?.birth_day || 0,
+    '0',
+    toHourIdx(profile?.birth_hour ?? null),
+  )
 
   useEffect(() => {
-    supabase
-      .from('analysis_prices')
-      .select('price_key, price')
-      .in('price_key', ['naming_read', 'naming_hanja'])
-      .then(({ data }) => {
-        if (data) {
-          const read = data.find(d => d.price_key === 'naming_read')
-          const hanja = data.find(d => d.price_key === 'naming_hanja')
-          if (read) setReadPrice(read.price)
-          if (hanja) setHanjaPrice(hanja.price)
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) { router.push('/auth/login'); return }
+      setEmail(data.user.email || '')
+      setUserId(data.user.id)
+
+      const { data: p } = await supabase.from('profiles')
+        .select('nickname, role, birth_year, birth_month, birth_day, birth_hour, cal_type, gender, saju_saved')
+        .eq('id', data.user.id).single()
+      if (p) setProfile(p as Profile)
+      setLoading(false)
+
+      supabase.from('my_names')
+        .select('id, hangul_name, hanja_name, kind, created_at')
+        .eq('user_id', data.user.id)
+        .order('created_at', { ascending: false })
+        .then(({ data: rows }) => { if (rows) setMyNames(rows as MyName[]) })
+
+      const { data: cs } = await supabase.from('consultations')
+        .select('id, status, paid_amount, created_at, booking_date, booking_hour, consultant_id')
+        .eq('user_id', data.user.id)
+        .order('created_at', { ascending: false })
+      if (cs && cs.length > 0) {
+        const ids = Array.from(new Set(cs.map((c) => c.consultant_id).filter(Boolean)))
+        let nameMap: Record<string, string> = {}
+        if (ids.length > 0) {
+          const { data: cons } = await supabase.from('consultants').select('id, name').in('id', ids as string[])
+          if (cons) nameMap = Object.fromEntries(cons.map((c) => [c.id, c.name]))
         }
-      })
+        setConsults(cs.map((c) => ({ ...c, consultant_name: c.consultant_id ? nameMap[c.consultant_id] : undefined })) as Consultation[])
+      }
+
+      // 내 후기 (user_id 기준)
+      supabase.from('reviews')
+        .select('id, rating, service_type, content, is_approved, created_at')
+        .eq('user_id', data.user.id)
+        .order('created_at', { ascending: false })
+        .then(({ data: rows }) => { if (rows) setMyReviews(rows as MyReview[]) })
+
+      const { data: fRow } = await supabase.from('daily_fortune')
+        .select('fortune_date, iljin_gan, iljin_ji, score, summary, love, money, health, lucky_color, lucky_dir, today_insight')
+        .eq('user_id', data.user.id)
+        .eq('fortune_date', todayKST())
+        .maybeSingle()
+      if (fRow) setFortune(fRow as Fortune)
+      setFortuneChecked(true)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
+    if (!fortuneChecked) return
+    if (fortune) return
+    if (fortuneLoading) return
+    if (converting) return
+    if (!userId) return
+    if (!profile?.saju_saved || !dayStem || !iljji) return
+
     let cancelled = false
-
-    async function loadInfo() {
-      const urlInfo = fromUrl(sp)
-      if (urlInfo) {
-        if (!cancelled) setInfo(urlInfo)
-        return
-      }
-
+    ;(async () => {
+      setFortuneLoading(true)
       try {
-        const { data: u } = await supabase.auth.getUser()
-        if (u?.user) {
-          const { data: p } = await supabase
-            .from('profiles')
-            .select('birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, saju_saved')
-            .eq('id', u.user.id)
-            .single()
-          const profInfo = fromProfile(p)
-          if (profInfo) {
-            if (!cancelled) setInfo(profInfo)
-            return
-          }
-        }
-      } catch (e) {
-        console.error(e)
-      }
-
-      if (!cancelled) setInfo(null)
-    }
-
-    loadInfo()
-    return () => { cancelled = true }
-  }, [sp])
-
-  const infoYear = info ? parseInt(info.year) : 0
-  const infoMonth = info ? parseInt(info.month) : 0
-  const infoDay = info ? parseInt(info.day) : 0
-  const infoHourIdx = info ? (info.hour === '모름' ? null : parseInt(info.hour)) : null
-
-  const { saju, dayStem, converting } = useResultSaju(
-    info?.calType || '양력',
-    infoYear,
-    infoMonth,
-    infoDay,
-    info?.leapMonth || '0',
-    infoHourIdx,
-  )
-
-  const [nameInput, setNameInput] = useState('')
-  const [syllables, setSyllables] = useState<string[]>([])
-  const [chars, setChars] = useState<(NameChar | null)[]>([])
-
-  const [pickerIdx, setPickerIdx] = useState<number | null>(null)
-  const [hanjaList, setHanjaList] = useState<HanjaRow[]>([])
-  const [searching, setSearching] = useState(false)
-
-  const [step, setStep] = useState<'input' | 'preview' | 'pay' | 'result'>('input')
-  const [result, setResult] = useState<DiagnoseResult | null>(null)
-  const [commentary, setCommentary] = useState<Commentary | null>(null)
-  const [loading, setLoading] = useState(false)
-
-  const [savedOffer, setSavedOffer] = useState<{
-    result: DiagnoseResult
-    commentary: Commentary
-    chars: (NameChar | null)[]
-  } | null>(null)
-
-  // ★ 마이페이지에서 특정 이름풀이 id를 눌러 들어온 경우 (?nameId=xxx)
-  // 저장된 그 1건만 불러와 바로 결과 화면으로. (회원·기록이 많아져도 누른 1건만 조회)
-  const nameId = sp.get('nameId')
-  const [loadingSaved, setLoadingSaved] = useState(false)
-
-  useEffect(() => {
-    if (!nameId) return
-    let cancelled = false
-    async function loadOneById() {
-      setLoadingSaved(true)
-      try {
-        const { data: u } = await supabase.auth.getUser()
-        if (!u?.user) { setLoadingSaved(false); return }
-        const { data: row } = await supabase
-          .from('my_names')
-          .select('hangul_name, hanja_name, chars, result, commentary')
-          .eq('id', nameId)
-          .eq('user_id', u.user.id)   // 본인 것만 (남의 id로 조회 방지)
-          .maybeSingle()
+        const res = await fetch('/api/daily-fortune', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            saju, dayStem, iljji,
+            nickname: profile?.nickname || undefined,
+          }),
+        })
+        const data = await res.json()
+        if (data.error) { console.error('운세 생성 오류:', data.error); return }
         if (cancelled) return
-        if (row && row.result && row.commentary && Array.isArray(row.chars)) {
-          setResult(row.result as DiagnoseResult)
-          setCommentary(row.commentary as Commentary)
-          setChars(row.chars as (NameChar | null)[])
-          setSyllables((row.chars as (NameChar | null)[]).filter(Boolean).map((c) => c!.hangul))
-          setSavedOffer(null)   // 저장건 불러오기 배너는 필요 없음
-          setStep('result')
+
+        const row: Fortune = {
+          fortune_date: data.fortune_date,
+          iljin_gan: data.iljin_gan,
+          iljin_ji: data.iljin_ji,
+          score: data.score,
+          summary: data.summary,
+          love: data.love,
+          money: data.money,
+          health: data.health,
+          lucky_color: data.lucky_color,
+          lucky_dir: data.lucky_dir,
+          today_insight: data.today_insight,
         }
+        setFortune(row)
+
+        await supabase.from('daily_fortune').upsert({
+          user_id: userId,
+          ...row,
+        }, { onConflict: 'user_id,fortune_date' })
       } catch (e) {
         console.error(e)
       } finally {
-        if (!cancelled) setLoadingSaved(false)
+        if (!cancelled) setFortuneLoading(false)
       }
-    }
-    loadOneById()
+    })()
     return () => { cancelled = true }
-  }, [nameId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fortuneChecked, converting, dayStem, iljji, userId, profile?.saju_saved])
 
-  useEffect(() => {
-    if (nameId) return          // id로 들어온 경우는 최근건 배너 안 띄움
-    if (!info) return
-    let cancelled = false
-    async function checkSaved() {
-      try {
-        const { data: u } = await supabase.auth.getUser()
-        if (!u?.user) return
-        const { data: rows } = await supabase
-          .from('my_names')
-          .select('chars, result, commentary, person_key')
-          .eq('user_id', u.user.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-        if (cancelled) return
-        const row = rows && rows[0]
-        if (row && row.person_key === personKey(info) && row.result && row.commentary && Array.isArray(row.chars)) {
-          setSavedOffer({
-            result: row.result as DiagnoseResult,
-            commentary: row.commentary as Commentary,
-            chars: row.chars as (NameChar | null)[],
-          })
-        }
-      } catch {}
-    }
-    checkSaved()
-    return () => { cancelled = true }
-  }, [info, nameId])
+  const roleLabel = (r: string | null) =>
+    r === 'master' ? '매니저' : r === 'consultant' ? '상담사' : '일반회원'
+  const roleColor = (r: string | null) =>
+    r === 'master' ? { bg: 'rgba(83,74,183,0.15)', fg: '#AFA9EC' }
+      : r === 'consultant' ? { bg: 'rgba(29,158,117,0.15)', fg: '#5DCAA5' }
+        : { bg: 'rgba(255,255,255,0.08)', fg: 'rgba(255,255,255,0.6)' }
 
-  function loadSavedResult() {
-    if (!savedOffer) return
-    setResult(savedOffer.result)
-    setCommentary(savedOffer.commentary)
-    setChars(savedOffer.chars)
-    setSyllables(savedOffer.chars.filter(Boolean).map((c) => c!.hangul))
-    setStep('result')
-    setSavedOffer(null)
+  const hourTextFull = (h: string | null) => {
+    if (!h) return '-'
+    if (h === '모름') return '모름'
+    return HOUR_LABELS[h] || h
   }
 
-  function applyName() {
-    const cleaned = nameInput.trim().replace(/\s/g, '')
-    const arr = Array.from(cleaned).filter(isHangulSyllable)
-    if (arr.length < 2) return
-    setSyllables(arr)
-    setChars(arr.map(() => null))
-  }
-
-  async function openPicker(idx: number) {
-    setPickerIdx(idx)
-    const hangul = syllables[idx]
-    if (!hangul) { setHanjaList([]); return }
-    setSearching(true)
+  const dateText = (s: string | null) => {
+    if (!s) return ''
     try {
-      const { data, error } = await supabase
-        .from('hanja')
-        .select('hangul, hanja, meaning, strokes, resource_ohaeng, sound_ohaeng')
-        .eq('hangul', hangul)
-        .order('strokes', { ascending: true })
-      if (error) { console.error(error); setHanjaList([]) }
-      else setHanjaList((data as HanjaRow[]) ?? [])
-    } catch (e) {
-      console.error(e)
-      setHanjaList([])
-    } finally {
-      setSearching(false)
-    }
+      const d = new Date(s)
+      return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`
+    } catch { return '' }
   }
 
-  function pickHanja(row: HanjaRow) {
-    if (pickerIdx === null) return
-    const next = [...chars]
-    next[pickerIdx] = {
-      hangul: row.hangul,
-      hanja: row.hanja,
-      strokes: row.strokes,
-      resourceOhaeng: row.resource_ohaeng,
-    }
-    setChars(next)
-    setPickerIdx(null)
-    setHanjaList([])
+  const statusInfo = (s: string | null) => {
+    if (s === 'paid' || s === 'done' || s === '완료') return { label: '완료', color: '#5DCAA5' }
+    if (s === 'booked') return { label: '예약 확정', color: '#7DA3FF' }
+    if (s === 'pending') return { label: '대기중', color: '#FAC775' }
+    if (s === 'cancelled' || s === 'canceled') return { label: '취소됨', color: 'rgba(255,255,255,0.4)' }
+    return { label: s || '진행중', color: 'rgba(255,255,255,0.5)' }
   }
 
-  const surname = chars[0] ?? null
-  const given = chars.slice(1).filter((c): c is NameChar => c !== null)
-  const allPicked = syllables.length >= 2 && chars.length === syllables.length && chars.every((c) => c !== null)
-  const canSubmit = allPicked
+  // 예약 취소: 상담 상태 → cancelled, 예약(bookings) → cancelled, 잠긴 시간(slot) 풀기
+  const cancelBooking = async (c: Consultation) => {
+    if (c.status !== 'booked') return
+    const when = c.booking_date
+      ? `${dateText(c.booking_date)}${c.booking_hour != null ? ` ${c.booking_hour}시` : ''}`
+      : ''
+    if (!confirm(`이 예약을 취소할까요?\n${c.consultant_name || '상담사'}${when ? ' · ' + when : ''}\n\n취소하면 되돌릴 수 없습니다.`)) return
 
-  function handlePreview() {
-    if (!canSubmit) return
-    setStep('preview')
-  }
-
-  async function handleFullResult() {
-    if (!canSubmit || !surname || !saju || !dayStem) return
-    setStep('result')
-    setLoading(true)
+    setCancelingId(c.id)
     try {
-      const yongsinResult = calcYongsin(saju, dayStem)
-      const sajuText = saju.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(', ')
-      const res = await fetch('/api/naming', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          surname,
-          given,
-          yongsin: yongsinResult.yongsin,
-          heeksin: yongsinResult.heeksin,
-          elementScore: yongsinResult.score,
-          dayStem,
-          sajuText,
-          birthData: info,
-          saju,
-        }),
-      })
-      const data = await res.json()
-      setResult(data.result ?? null)
-      setCommentary(data.commentary ?? null)
-      const pkey = personKey(info)
-      try {
-        localStorage.setItem(NAMING_RESULT_KEY, JSON.stringify({
-          result: data.result ?? null,
-          commentary: data.commentary ?? null,
-          chars,
-          personKey: pkey,
-        }))
-        // ★ 예약 시 상담사 화면으로 넘길 개명 결과 (궁합·물상도와 동일 방식)
-        sessionStorage.setItem('naming_full', JSON.stringify({
-          kind: 'self',
-          hangul_name: chars.filter(Boolean).map((c) => c!.hangul).join(''),
-          hanja_name: chars.filter(Boolean).map((c) => c!.hanja).join(''),
-          chars,
-          result: data.result ?? null,
-          commentary: data.commentary ?? null,
-          target_birth: null,
-        }))
-        localStorage.removeItem('rename_picks_v1')
-        localStorage.removeItem('rename_locked_slot')
-      } catch {}
+      // 1) 이 상담에 연결된 예약(bookings)에서 잠긴 슬롯 id 찾기
+      const { data: bks } = await supabase
+        .from('bookings')
+        .select('id, slot_id')
+        .eq('consultation_id', c.id)
 
-      try {
-        const { data: u } = await supabase.auth.getUser()
-        if (u?.user) {
-          const hangulName = chars.filter(Boolean).map((c) => c!.hangul).join('')
-          const hanjaName = chars.filter(Boolean).map((c) => c!.hanja).join('')
-          await supabase.from('my_names').insert({
-            user_id: u.user.id,
-            hangul_name: hangulName,
-            hanja_name: hanjaName,
-            chars,
-            result: data.result ?? null,
-            commentary: data.commentary ?? null,
-            kind: 'self',
-            person_key: pkey,
-          })
-        }
-      } catch {}
-    } catch (e) {
+      // 2) 잠긴 시간(consultant_slots) 풀기 — 다른 고객이 다시 예약할 수 있게
+      const slotIds = (bks ?? []).map(b => b.slot_id).filter(Boolean)
+      if (slotIds.length > 0) {
+        await supabase.from('consultant_slots')
+          .update({ is_booked: false })
+          .in('id', slotIds as string[])
+      }
+
+      // 3) 예약(bookings) 상태 취소로
+      await supabase.from('bookings')
+        .update({ status: 'cancelled' })
+        .eq('consultation_id', c.id)
+
+      // 4) 상담(consultations) 상태 취소로
+      const { error: cErr } = await supabase.from('consultations')
+        .update({ status: 'cancelled' })
+        .eq('id', c.id)
+      if (cErr) { alert('취소 실패: ' + cErr.message); setCancelingId(null); return }
+
+      // 5) 화면에서 즉시 제거(취소된 건은 목록에 남기지 않음) + 알림
+      setConsults(prev => prev.filter(x => x.id !== c.id))
+      alert('예약이 취소되었습니다.')
+    } catch (e: any) {
+      alert('취소 중 오류가 발생했어요. 다시 시도해 주세요.')
       console.error(e)
     } finally {
-      setLoading(false)
+      setCancelingId(null)
     }
   }
 
-  function resetAll() {
-    setNameInput(''); setSyllables([]); setChars([])
-    setResult(null); setCommentary(null); setStep('input')
+  // 내 이름풀이 삭제 (my_names 테이블에서 완전 삭제)
+  const deleteName = async (n: MyName) => {
+    const label = n.hanja_name || n.hangul_name || '이 이름풀이'
+    if (!confirm(`"${label}" 이름풀이를 삭제할까요?\n삭제하면 되돌릴 수 없습니다.`)) return
+    setDeletingNameId(n.id)
     try {
-      localStorage.removeItem(NAMING_RESULT_KEY)
-      localStorage.removeItem('rename_picks_v1')
-      localStorage.removeItem('rename_locked_slot')
+      const { error } = await supabase.from('my_names').delete().eq('id', n.id)
+      if (error) { alert('삭제 실패: ' + error.message); return }
+      setMyNames(prev => prev.filter(x => x.id !== n.id))
+    } catch (e: any) {
+      alert('삭제 중 오류가 발생했어요. 다시 시도해 주세요.')
+      console.error(e)
+    } finally {
+      setDeletingNameId(null)
+    }
+  }
+
+  const openEdit = () => {
+    if (!profile) return
+    setEYear(profile.birth_year ? String(profile.birth_year) : '')
+    setEMonth(profile.birth_month ? String(profile.birth_month) : '')
+    setEDay(profile.birth_day ? String(profile.birth_day) : '')
+    setEHour(profile.birth_hour ? (profile.birth_hour === '모름' ? '모름' : (HOUR_LABELS[profile.birth_hour] || '')) : '')
+    setECal((profile.cal_type as '양력' | '음력') || '양력')
+    setEGender((profile.gender as '남' | '여') || '남')
+    setMsg('')
+    setEditMode(true)
+  }
+
+  const onlyNum = (v: string, len: number) => v.replace(/[^0-9]/g, '').slice(0, len)
+
+  const saveSaju = async () => {
+    const y = parseInt(eYear, 10), m = parseInt(eMonth, 10), d = parseInt(eDay, 10)
+    if (!y || eYear.length !== 4 || y < 1900 || y > 2200) { setMsg('연도를 4자리로 정확히 입력해주세요.'); return }
+    if (!m || m < 1 || m > 12) { setMsg('월을 1~12로 입력해주세요.'); return }
+    if (!d || d < 1 || d > 31) { setMsg('일을 1~31로 입력해주세요.'); return }
+    if (!eHour) { setMsg('시(시주)를 선택해주세요.'); return }
+
+    const hourValue = eHour === '모름' ? '모름' : String(HOUR_INDEX[eHour])
+    setSaving(true)
+    const { error } = await supabase.from('profiles').update({
+      birth_year: y, birth_month: m, birth_day: d,
+      birth_hour: hourValue, cal_type: eCal, gender: eGender, saju_saved: true,
+    }).eq('id', userId)
+    setSaving(false)
+    if (error) { setMsg('저장 실패: ' + error.message); return }
+
+    setProfile(prev => prev ? { ...prev, birth_year: y, birth_month: m, birth_day: d, birth_hour: hourValue, cal_type: eCal, gender: eGender, saju_saved: true } : prev)
+    setEditMode(false)
+    setFortune(null)
+  }
+
+  const openNickEdit = () => {
+    setENick(profile?.nickname || '')
+    setNickMsg('')
+    setNickEdit(true)
+  }
+
+  const saveNick = async () => {
+    const name = eNick.trim()
+    if (!name) { setNickMsg('닉네임을 입력해주세요.'); return }
+    if (name.length > 20) { setNickMsg('닉네임은 20자 이내로 입력해주세요.'); return }
+    setNickSaving(true)
+    const { error } = await supabase.from('profiles').update({ nickname: name }).eq('id', userId)
+    setNickSaving(false)
+    if (error) { setNickMsg('저장 실패: ' + error.message); return }
+    setProfile(prev => prev ? { ...prev, nickname: name } : prev)
+    setNickEdit(false)
+  }
+
+  // 내 후기 수정 열기
+  const openRvEdit = (r: MyReview) => {
+    setRvEditId(r.id)
+    setRvText(r.content)
+  }
+
+  // 내 후기 저장 → 다시 대기(is_approved=false)로 돌려 재승인
+  const saveRv = async (r: MyReview) => {
+    const text = rvText.trim()
+    if (!text) { alert('후기 내용을 입력해 주세요.'); return }
+    setRvSaving(true)
+    const { error } = await supabase.from('reviews')
+      .update({ content: text, is_approved: false })
+      .eq('id', r.id)
+    setRvSaving(false)
+    if (error) { alert('저장 실패: ' + error.message); return }
+    setMyReviews(prev => prev.map(x => x.id === r.id ? { ...x, content: text, is_approved: false } : x))
+    setRvEditId(null)
+  }
+
+  // 내 후기 삭제
+  const deleteRv = async (r: MyReview) => {
+    if (!confirm('이 후기를 삭제할까요?\n삭제하면 되돌릴 수 없습니다.')) return
+    const { error } = await supabase.from('reviews').delete().eq('id', r.id)
+    if (error) { alert('삭제 실패: ' + error.message); return }
+    setMyReviews(prev => prev.filter(x => x.id !== r.id))
+  }
+
+  const logout = async () => {
+    await supabase.auth.signOut()
+    try {
+      sessionStorage.clear()
+      localStorage.clear()
     } catch {}
+    window.location.href = '/'
   }
 
-  // ★ id로 저장 결과 불러오는 중 로딩 화면
-  if (nameId && loadingSaved && step !== 'result') {
-    return (
-      <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto' }}>
-        <PageHeader title="내 이름 풀이" onBack={() => router.push('/mypage')} />
-        <div style={{ padding: '60px 20px', textAlign: 'center', color: gold, fontSize: '14px' }}>
-          저장된 이름 풀이를 불러오는 중…
-        </div>
-      </main>
-    )
+  const withdraw = async () => {
+    if (!confirm('정말 회원 탈퇴를 진행할까요?\n탈퇴하면 내 정보와 사주가 삭제되며 되돌릴 수 없습니다.')) return
+    await supabase.from('profiles').update({
+      nickname: null, birth_year: null, birth_month: null, birth_day: null,
+      birth_hour: null, cal_type: null, gender: null, saju_saved: false,
+    }).eq('id', userId)
+    alert('탈퇴 요청이 접수되었습니다. 이용해주셔서 감사합니다.')
+    await supabase.auth.signOut()
+    try {
+      sessionStorage.clear()
+      localStorage.clear()
+    } catch {}
+    window.location.href = '/'
   }
 
-  if (!info && !nameId) {
-    return (
-      <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto' }}>
-        <PageHeader title="내 이름 풀이" onBack={() => router.push('/manseryeok/naming')} />
-        <div style={{ padding: '40px 20px', textAlign: 'center', color: '#8a88a0' }}>
-          <p style={{ marginBottom: '12px', fontSize: '15px', color: '#e8e4ff' }}>먼저 사주 정보를 입력해주세요.</p>
-          <p style={{ marginBottom: '24px', fontSize: '13px', lineHeight: 1.7 }}>
-            홈 화면에서 생년월일 · 음양력 · 태어난 시(시주)를<br />입력하시면 이름 풀이를 시작할 수 있어요.
-          </p>
-          <button onClick={() => router.push('/')}
-            style={{ padding: '12px 24px', borderRadius: '12px', background: 'linear-gradient(135deg,#3C3489,#FAC775)', border: 'none', color: '#1a1a18', fontWeight: 'bold', cursor: 'pointer' }}>
-            홈에서 사주 입력하기 →
-          </button>
-        </div>
-      </main>
-    )
+  if (loading) {
+    return <div style={{ minHeight: '100vh', background: '#1a1a18', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)' }}>불러오는 중…</div>
   }
 
-  const sajuLine = converting ? '사주 불러오는 중...' :
-    (dayStem && info
-      ? `일간 ${dayStem} · ${info.calType} ${info.year}.${info.month}.${info.day}${info.calType === '음력' && info.leapMonth === '1' ? ' (윤달)' : ''}`
-      : '저장된 이름 풀이')
+  const rc = roleColor(profile?.role || null)
+  const isStaff = profile?.role === 'consultant' || profile?.role === 'master'
+  const isMaster = profile?.role === 'master'
+  const initial = (profile?.nickname || email || '?').charAt(0)
 
-  const slotLabel = (i: number) => i === 0 ? '성(姓)' : `이름 ${i}글자`
+  const card: React.CSSProperties = { background: '#2C2C2A', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 16, marginBottom: 12 }
+  const numInput: React.CSSProperties = { flex: 1, minWidth: 0, padding: '10px 6px', borderRadius: 8, textAlign: 'center', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: 14, outline: 'none' }
+  const seg = (on: boolean): React.CSSProperties => ({ flex: 1, padding: '8px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', background: on ? '#3C3489' : 'transparent', color: on ? '#FAC775' : '#8a88a0' })
 
-  const normalList = hanjaList.filter((r) => !isAvoidChar(r))
-  const avoidList = hanjaList.filter((r) => isAvoidChar(r))
-
-  const hanjaCard = (row: HanjaRow, i: number, dim: boolean) => (
-    <div key={i}
-      onClick={() => pickHanja(row)}
-      style={{
-        display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
-        borderRadius: '12px', background: '#2C2C2A', cursor: 'pointer',
-        border: '1px solid rgba(255,255,255,0.05)', opacity: dim ? 0.45 : 1,
-      }}>
-      <span style={{ fontSize: '26px', fontWeight: 'bold', color: gold, minWidth: '32px', textAlign: 'center' }}>
-        {row.hanja}
-      </span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '13px', color: '#e8e4ff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.meaning}</div>
-        <div style={{ fontSize: '11px', color: '#8a88a0', marginTop: '2px' }}>
-          {row.resource_ohaeng}·{row.strokes}획
-        </div>
-      </div>
-    </div>
-  )
+  const stars = (n: number | null) => {
+    const s = Math.max(0, Math.min(5, n || 0))
+    return '★★★★★'.slice(0, s) + '☆☆☆☆☆'.slice(0, 5 - s)
+  }
 
   return (
-    <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-      <PageHeader title="내 이름 풀이" onBack={() => router.push(nameId ? '/mypage' : '/manseryeok/naming')} />
+    <div style={{ minHeight: '100vh', background: '#1a1a18', padding: '20px 16px 40px' }}>
+      <div style={{ maxWidth: 460, margin: '0 auto' }}>
 
-      <div style={{ padding: '16px' }}>
-        <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
-          <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '6px' }}>내 사주</div>
-          <div style={{ fontSize: '14px', color: '#e8e4ff' }}>{sajuLine}</div>
+        {/* 헤더 */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, padding: '0 4px' }}>
+          <span style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>마이페이지</span>
+          <button onClick={() => router.push('/')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 14, cursor: 'pointer' }}>← 홈</button>
         </div>
 
-        {step === 'input' && savedOffer && (
-          <div style={{ background: 'rgba(250,199,117,0.08)', border: `1px solid ${gold}`, borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
-            <div style={{ fontSize: '14px', color: '#e8e4ff', marginBottom: '12px', lineHeight: 1.6 }}>
-              저장된 이름 풀이가 있어요.<br />최종 이름 풀이를 불러올까요?
+        {/* 1. 내 정보 */}
+        <div style={card}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(83,74,183,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, color: '#AFA9EC' }}>{initial}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 16, fontWeight: 600, color: '#fff' }}>{profile?.nickname || '(닉네임 없음)'}</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</div>
             </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={loadSavedResult}
-                style={{ flex: 1, padding: '11px', borderRadius: '10px', background: gold, border: 'none', color: '#1a1a18', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
-                불러오기
-              </button>
-              <button onClick={() => setSavedOffer(null)}
-                style={{ flex: 1, padding: '11px', borderRadius: '10px', background: 'transparent', border, color: '#8a88a0', fontSize: '13px', cursor: 'pointer' }}>
-                새로 입력
-              </button>
-            </div>
+            <span style={{ fontSize: 11, padding: '4px 12px', borderRadius: 12, background: rc.bg, color: rc.fg, fontWeight: 600, flexShrink: 0 }}>{roleLabel(profile?.role || null)}</span>
           </div>
-        )}
 
-        {step === 'input' && (
-          <>
-            <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '10px' }}>
-              본인 이름을 한글로 입력하세요
-            </div>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: syllables.length > 0 ? '26px' : '20px' }}>
-              <input
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') applyName() }}
-                placeholder="예: 홍길동"
-                maxLength={5}
-                style={{
-                  flex: 1, padding: '13px', borderRadius: '12px', background: '#1a1a18',
-                  border: '1px solid rgba(255,255,255,0.15)', color: '#e8e4ff', fontSize: '16px',
-                }} />
-              <button onClick={applyName}
-                style={{ padding: '13px 20px', borderRadius: '12px', background: gold, border: 'none', color: '#1a1a18', fontWeight: 'bold', cursor: 'pointer' }}>
-                확인
-              </button>
-            </div>
-
-            {syllables.length >= 2 && (
-              <>
-                <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '16px' }}>
-                  각 글자의 한자를 골라주세요
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            {!nickEdit ? (
+              <button onClick={openNickEdit} style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', background: 'none', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, padding: '6px 14px', cursor: 'pointer' }}>닉네임 수정</button>
+            ) : (
+              <div>
+                <div style={{ fontSize: 11, color: '#b0aec8', marginBottom: 4 }}>닉네임</div>
+                <input value={eNick} onChange={e => setENick(e.target.value)} placeholder="닉네임을 입력하세요" maxLength={20}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 8 }} />
+                {nickMsg && <div style={{ color: '#ff8080', fontSize: 12, marginBottom: 8 }}>{nickMsg}</div>}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setNickEdit(false)} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', background: 'none', color: 'rgba(255,255,255,0.6)', fontSize: 13, cursor: 'pointer' }}>취소</button>
+                  <button onClick={saveNick} disabled={nickSaving} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #FAC775, #f0a030)', color: '#1a1a18', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: nickSaving ? 0.6 : 1 }}>{nickSaving ? '저장 중…' : '저장'}</button>
                 </div>
-                <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', marginBottom: '20px', flexWrap: 'wrap' }}>
-                  {syllables.map((syl, i) => {
-                    const c = chars[i]
-                    return (
-                      <div key={i} style={{ textAlign: 'center' }}>
-                        <button onClick={() => openPicker(i)} className="active:scale-95"
-                          style={{
-                            width: '78px', height: '78px', borderRadius: '50%',
-                            background: c ? 'rgba(250,199,117,0.1)' : cardBg,
-                            border: c ? `2px solid ${gold}` : '1px dashed rgba(250,199,117,0.4)',
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer', transition: 'transform 0.15s ease',
-                          }}>
-                          {c ? (
-                            <>
-                              <span style={{ fontSize: '30px', fontWeight: 'bold', color: gold, lineHeight: 1 }}>{c.hanja}</span>
-                              <span style={{ fontSize: '10px', color: '#8a88a0', marginTop: '3px' }}>{c.hangul}</span>
-                            </>
-                          ) : (
-                            <>
-                              <span style={{ fontSize: '26px', fontWeight: 'bold', color: '#e8e4ff', lineHeight: 1 }}>{syl}</span>
-                              <span style={{ fontSize: '9px', color: gold, marginTop: '4px' }}>한자 고르기</span>
-                            </>
-                          )}
-                        </button>
-                        <div style={{ fontSize: '9px', color: '#8a88a0', marginTop: '5px' }}>
-                          {c ? `${c.resourceOhaeng}·${c.strokes}획` : slotLabel(i)}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ★ 오늘의 운세 */}
+        <div style={{ ...card, border: '1px solid rgba(250,199,117,0.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#FAC775' }}>✦ 오늘의 운세</span>
+            {fortune?.iljin_gan && (
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.06)', padding: '3px 10px', borderRadius: 12 }}>
+                {todayKST().slice(5).replace('-', '.')} · {fortune.iljin_gan}{fortune.iljin_ji}일
+              </span>
+            )}
+          </div>
+
+          {!profile?.saju_saved ? (
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', textAlign: 'center', padding: '10px 0', lineHeight: 1.7 }}>
+              사주를 등록하면 매일 나만의 운세를 볼 수 있어요.<br />
+              <button onClick={openEdit} style={{ marginTop: 8, fontSize: 12, color: '#FAC775', background: 'none', border: '1px solid rgba(250,199,117,0.4)', borderRadius: 8, padding: '6px 14px', cursor: 'pointer' }}>사주 등록하러 가기</button>
+            </div>
+          ) : (fortuneLoading || (!fortune && !fortuneChecked) || converting) ? (
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '16px 0' }}>오늘의 운세를 준비하는 중…</div>
+          ) : fortune ? (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <span style={{ fontSize: 15, color: '#FAC775', letterSpacing: 2 }}>{stars(fortune.score)}</span>
+              </div>
+              <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.85)', lineHeight: 1.75, margin: '0 0 12px' }}>{fortune.summary}</p>
+
+              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                <div style={{ flex: 1, background: 'rgba(250,199,117,0.08)', borderRadius: 8, padding: '8px 4px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>행운의 색</div>
+                  <div style={{ fontSize: 12, color: '#FAC775', marginTop: 2 }}>{fortune.lucky_color || '-'}</div>
+                </div>
+                <div style={{ flex: 1, background: 'rgba(250,199,117,0.08)', borderRadius: 8, padding: '8px 4px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>행운의 방향</div>
+                  <div style={{ fontSize: 12, color: '#FAC775', marginTop: 2 }}>{fortune.lucky_dir || '-'}</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, marginBottom: fortune.today_insight ? 12 : 0 }}>
+                <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '8px 6px' }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>❤️ 애정</div>
+                  <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>{fortune.love || '-'}</div>
+                </div>
+                <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '8px 6px' }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>💰 재물</div>
+                  <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>{fortune.money || '-'}</div>
+                </div>
+                <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '8px 6px' }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>🌿 건강</div>
+                  <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>{fortune.health || '-'}</div>
+                </div>
+              </div>
+
+              {fortune.today_insight && (
+                <div style={{ paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#FAC775', marginBottom: 6 }}>🔥 오늘의 명리 한 조각</div>
+                  <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.75)', lineHeight: 1.7, margin: 0 }}>{fortune.today_insight}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '12px 0' }}>운세를 불러오지 못했어요. 잠시 후 다시 들어와 주세요.</div>
+          )}
+        </div>
+
+        {/* 2. 내 사주 */}
+        <div style={card}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#FAC775' }}>✦ 내 사주</span>
+            {!editMode && (
+              <button onClick={openEdit} style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', background: 'none', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, padding: '4px 12px', cursor: 'pointer' }}>수정</button>
+            )}
+          </div>
+
+          {!editMode ? (
+            profile?.saju_saved && profile?.birth_year ? (
+              <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', lineHeight: 1.9 }}>
+                {profile.cal_type || '양력'} {profile.birth_year}. {profile.birth_month}. {profile.birth_day} · {hourTextFull(profile.birth_hour)}<br />
+                <span style={{ color: 'rgba(255,255,255,0.6)' }}>{profile.gender === '여' ? '여성' : '남성'}</span>
+              </div>
+            ) : (
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>아직 등록된 사주가 없습니다. "수정"을 눌러 등록하세요.</div>
+            )
+          ) : (
+            <div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 11, color: '#b0aec8', marginBottom: 4 }}>성별</div>
+                  <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <button onClick={() => setEGender('남')} style={seg(eGender === '남')}>남</button>
+                    <button onClick={() => setEGender('여')} style={seg(eGender === '여')}>여</button>
+                  </div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 11, color: '#b0aec8', marginBottom: 4 }}>달력</div>
+                  <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <button onClick={() => setECal('양력')} style={seg(eCal === '양력')}>양력</button>
+                    <button onClick={() => setECal('음력')} style={seg(eCal === '음력')}>음력</button>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ fontSize: 11, color: '#b0aec8', marginBottom: 4 }}>생년월일</div>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 10 }}>
+                <input value={eYear} onChange={e => setEYear(onlyNum(e.target.value, 4))} inputMode="numeric" placeholder="1990" style={{ ...numInput, flex: 1.5 }} />
+                <span style={{ fontSize: 12, color: '#8a88a0' }}>년</span>
+                <input value={eMonth} onChange={e => setEMonth(onlyNum(e.target.value, 2))} inputMode="numeric" placeholder="5" style={numInput} />
+                <span style={{ fontSize: 12, color: '#8a88a0' }}>월</span>
+                <input value={eDay} onChange={e => setEDay(onlyNum(e.target.value, 2))} inputMode="numeric" placeholder="12" style={numInput} />
+                <span style={{ fontSize: 12, color: '#8a88a0' }}>일</span>
+              </div>
+
+              <div style={{ fontSize: 11, color: '#b0aec8', marginBottom: 4 }}>태어난 시 (시주)</div>
+              <select value={eHour} onChange={e => setEHour(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.08)', color: eHour ? '#fff' : '#8a88a0', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 12 }}>
+                <option value="">시간 선택</option>
+                {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
+              </select>
+
+              {msg && <div style={{ color: '#ff8080', fontSize: 12, marginBottom: 10 }}>{msg}</div>}
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => setEditMode(false)} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', background: 'none', color: 'rgba(255,255,255,0.6)', fontSize: 13, cursor: 'pointer' }}>취소</button>
+                <button onClick={saveSaju} disabled={saving} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #FAC775, #f0a030)', color: '#1a1a18', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>{saving ? '저장 중…' : '저장'}</button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 3. 내 이름풀이 기록 (최근 2개만 표시, 나머지는 접힘) */}
+        <div style={card}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#FAC775', marginBottom: 12 }}>
+            ✦ 내 이름풀이 {myNames.length > 0 && <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 400 }}>{myNames.length}</span>}
+          </div>
+          {myNames.length === 0 ? (
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '8px 0' }}>아직 풀이한 이름이 없습니다.</div>
+          ) : (
+            <div>
+              {(namesExpanded ? myNames : myNames.slice(0, 2)).map((n, i, arr) => (
+                <div key={n.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '10px 0', borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>
+                      {n.hanja_name || '-'} <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{n.hangul_name}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{dateText(n.created_at)}{n.kind === 'self' ? ' · 내 이름' : ''}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                    <button
+                      onClick={() => router.push(`/manseryeok/naming/diagnosis?nameId=${n.id}`)}
+                      style={{ fontSize: 12, color: '#c8b0ff', background: 'rgba(83,74,183,0.25)', border: '1px solid rgba(119,102,221,0.4)', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      다시보기
+                    </button>
+                    <button
+                      onClick={() => deleteName(n)}
+                      disabled={deletingNameId === n.id}
+                      style={{ fontSize: 12, color: '#ff8080', background: 'none', border: '1px solid rgba(226,75,74,0.4)', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', whiteSpace: 'nowrap', opacity: deletingNameId === n.id ? 0.5 : 1 }}>
+                      {deletingNameId === n.id ? '삭제 중…' : '삭제'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {myNames.length > 2 && (
+                <button
+                  onClick={() => setNamesExpanded(v => !v)}
+                  style={{ width: '100%', marginTop: 10, padding: '9px 0', borderRadius: 10, background: 'none', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)', fontSize: 12, cursor: 'pointer' }}>
+                  {namesExpanded ? '접기 ▲' : `더보기 (${myNames.length - 2}개) ▼`}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 4. 내 상담 내역 */}
+        <div style={card}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginBottom: 10 }}>내 상담 내역</div>
+          {consults.filter(c => c.status !== 'cancelled' && c.status !== 'canceled').length === 0 ? (
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '12px 0' }}>아직 신청한 상담이 없습니다.</div>
+          ) : (
+            <div>
+              {consults
+                .filter(c => c.status !== 'cancelled' && c.status !== 'canceled')
+                .map((c, i, arr) => {
+                const st = statusInfo(c.status)
+                const isBooked = c.status === 'booked'
+                return (
+                  <div key={c.id} style={{ padding: '12px 0', borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: 14, color: '#fff' }}>{c.consultant_name || '상담사'}</div>
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+                          {dateText(c.booking_date || c.created_at)}
+                          {c.booking_hour != null ? ` ${c.booking_hour}시` : ''}
+                          {c.paid_amount ? ` · ${c.paid_amount.toLocaleString()}원` : ''}
                         </div>
                       </div>
-                    )
-                  })}
-                </div>
-                <div style={{ fontSize: '11px', color: '#666', marginBottom: '20px', lineHeight: 1.6 }}>
-                  · 원을 누르면 그 글자의 한자가 자동으로 나와요<br />
-                  · 이름을 바꾸려면 위에 다시 입력하고 확인을 누르세요
-                </div>
+                      <span style={{ fontSize: 12, color: st.color }}>{st.label}</span>
+                    </div>
 
-                <button onClick={handlePreview} disabled={!canSubmit}
-                  style={{
-                    width: '100%', padding: '14px', borderRadius: '12px',
-                    background: canSubmit ? 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)' : '#333',
-                    border: 'none', color: canSubmit ? '#1a1a18' : '#666',
-                    fontSize: '15px', fontWeight: 'bold', cursor: canSubmit ? 'pointer' : 'default',
-                  }}>
-                  {canSubmit ? '이름 풀이 보기 →' : '모든 글자의 한자를 골라주세요'}
-                </button>
-              </>
-            )}
-          </>
-        )}
+                    <button
+                      onClick={() => router.push(`/manseryeok/consulting?consultationId=${c.id}`)}
+                      style={{ marginTop: 8, width: '100%', padding: '9px 0', borderRadius: 10,
+                        background: 'rgba(83,74,183,0.25)', border: '1px solid rgba(119,102,221,0.4)',
+                        color: '#c8b0ff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                      💬 채팅방 입장
+                    </button>
 
-        {step === 'preview' && surname && (
-          <>
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ fontSize: '32px', fontWeight: 'bold', color: gold, letterSpacing: '4px' }}>
-                {chars.filter(Boolean).map(c => c!.hanja).join('')}
-              </div>
-              <div style={{ fontSize: '14px', color: '#e8e4ff', marginTop: '4px' }}>
-                {chars.filter(Boolean).map(c => c!.hangul).join('')}
-              </div>
-            </div>
-
-            <div style={{ background: cardBg, border, borderRadius: '14px', padding: '18px', marginBottom: '16px' }}>
-              <div style={{ fontSize: '13px', color: gold, marginBottom: '12px', fontWeight: 'bold' }}>
-                ✨ 미리보기
-              </div>
-              <div style={{ fontSize: '13px', color: '#c8c4d8', lineHeight: 1.9 }}>
-                이름의 한자 획수와 발음을 분석했어요.<br />
-                이 이름이 <b style={{ color: gold }}>사주에 필요한 기운(용신)</b>을 얼마나 채워주는지,
-                전체적으로 잘 맞는 이름인지는 전체 풀이에서 확인하실 수 있어요.
-              </div>
-            </div>
-
-            <button onClick={() => setStep('pay')}
-              style={{
-                width: '100%', padding: '14px', borderRadius: '12px',
-                background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)',
-                border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 'bold',
-                cursor: 'pointer', marginBottom: '10px',
-              }}>
-              전체 풀이 받기 ({readPrice.toLocaleString()}원) →
-            </button>
-            <button onClick={() => setStep('input')}
-              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#8a88a0', fontSize: '13px', cursor: 'pointer' }}>
-              ← 이름 다시 고르기
-            </button>
-          </>
-        )}
-
-        {step === 'pay' && (
-          <>
-            <div style={{
-              border: '2px dashed rgba(250,199,117,0.4)', borderRadius: '16px',
-              padding: '30px 20px', textAlign: 'center', marginBottom: '20px',
-            }}>
-              <div style={{ fontSize: '28px', marginBottom: '10px' }}>💳</div>
-              <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '6px' }}>결제 금액</div>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: gold }}>{readPrice.toLocaleString()}원</div>
-            </div>
-
-            <button onClick={handleFullResult}
-              style={{
-                width: '100%', padding: '14px', borderRadius: '12px',
-                background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)',
-                border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 'bold',
-                cursor: 'pointer', marginBottom: '10px',
-              }}>
-              💳 {readPrice.toLocaleString()}원 결제하고 결과 보기 →
-            </button>
-            <button onClick={() => setStep('preview')}
-              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#8a88a0', fontSize: '13px', cursor: 'pointer' }}>
-              ← 뒤로
-            </button>
-          </>
-        )}
-
-        {step === 'result' && (
-          <>
-            {loading && (
-              <div style={{ background: cardBg, border, borderRadius: '14px', padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-                <span style={{ fontSize: '40px', display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span>
-                <div style={{ textAlign: 'center', color: gold, fontSize: '13px', lineHeight: 1.7 }}>
-                  이름을 정성껏 풀이하고 있어요<br />
-                  <span style={{ color: '#8a88a0', fontSize: '12px' }}>잠시만 기다려 주세요</span>
-                </div>
-              </div>
-            )}
-
-            {!loading && result && (
-              <>
-                <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                  <div style={{ fontSize: '34px', fontWeight: 'bold', color: gold, letterSpacing: '4px' }}>
-                    {chars.filter(Boolean).map(c => c!.hanja).join('')}
+                    {/* 예약 확정(booked) 상태일 때만 취소 버튼 노출 */}
+                    {isBooked && (
+                      <button
+                        onClick={() => cancelBooking(c)}
+                        disabled={cancelingId === c.id}
+                        style={{ marginTop: 6, width: '100%', padding: '9px 0', borderRadius: 10,
+                          background: 'none', border: '1px solid rgba(226,75,74,0.4)',
+                          color: '#ff8080', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                          opacity: cancelingId === c.id ? 0.5 : 1 }}>
+                        {cancelingId === c.id ? '취소 처리 중…' : '예약 취소'}
+                      </button>
+                    )}
                   </div>
-                  <div style={{ fontSize: '14px', color: '#e8e4ff', marginTop: '4px' }}>
-                    {chars.filter(Boolean).map(c => c!.hangul).join('')}
-                  </div>
-                </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
 
-                {commentary && (
-                  <div style={{ background: cardBg, border, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
-                    {commentary.title && (
-                      <div style={{ fontSize: '16px', fontWeight: 'bold', color: gold, marginBottom: '12px', lineHeight: 1.5 }}>
-                        "{commentary.title}"
+        {/* 4-1. 내 후기 (아코디언) */}
+        <div style={card}>
+          <button
+            onClick={() => setReviewsOpen(v => !v)}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#FAC775' }}>✦ 내 후기 <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 400 }}>{myReviews.length}</span></span>
+            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>{reviewsOpen ? '▲' : '▼'}</span>
+          </button>
+
+          {reviewsOpen && (
+            <div style={{ marginTop: 12 }}>
+              {myReviews.length === 0 ? (
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '8px 0' }}>아직 작성한 후기가 없습니다.</div>
+              ) : (
+                myReviews.map((r, i) => (
+                  <div key={r.id} style={{ padding: '12px 0', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                    {/* 상단: 별점 · 상태 · 서비스 */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                      <span style={{ color: '#FAC775', fontSize: 13 }}>{stars(r.rating)}</span>
+                      {r.is_approved
+                        ? <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: 'rgba(120,200,120,0.15)', color: '#7ec87e' }}>노출 중</span>
+                        : <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: 'rgba(255,180,80,0.15)', color: '#ffb450' }}>대기</span>}
+                      {r.service_type && <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}>{r.service_type}</span>}
+                    </div>
+
+                    {rvEditId === r.id ? (
+                      /* 수정 모드 */
+                      <div>
+                        <textarea
+                          value={rvText}
+                          onChange={e => setRvText(e.target.value)}
+                          maxLength={1000}
+                          rows={4}
+                          style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '10px 12px', color: '#fff', fontSize: 14, lineHeight: 1.6, resize: 'vertical', outline: 'none', marginBottom: 4 }}
+                        />
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 8 }}>수정하면 다시 관리자 승인을 거쳐 노출됩니다.</div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button onClick={() => setRvEditId(null)} style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'none', color: 'rgba(255,255,255,0.6)', fontSize: 13, cursor: 'pointer' }}>취소</button>
+                          <button onClick={() => saveRv(r)} disabled={rvSaving} style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #FAC775, #f0a030)', color: '#1a1a18', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: rvSaving ? 0.6 : 1 }}>{rvSaving ? '저장 중…' : '저장'}</button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* 보기 모드 */
+                      <div>
+                        <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', lineHeight: 1.6, margin: '0 0 6px', whiteSpace: 'pre-wrap' }}>{r.content}</p>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{dateText(r.created_at)}</span>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button onClick={() => openRvEdit(r)} style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', background: 'none', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, padding: '5px 12px', cursor: 'pointer' }}>수정</button>
+                            <button onClick={() => deleteRv(r)} style={{ fontSize: 12, color: '#ff8080', background: 'none', border: '1px solid rgba(226,75,74,0.4)', borderRadius: 8, padding: '5px 12px', cursor: 'pointer' }}>삭제</button>
+                          </div>
+                        </div>
                       </div>
                     )}
-                    {[
-                      { label: '종합', text: commentary.summary },
-                      { label: '좋은 점', text: commentary.good },
-                      { label: '더 좋아지려면', text: commentary.improve },
-                      { label: '조언', text: commentary.advice },
-                    ].filter(s => s.text).map((s, i) => (
-                      <div key={i} style={{ borderLeft: `3px solid ${gold}`, padding: '4px 12px', marginBottom: '14px' }}>
-                        <div style={{ fontSize: '12px', color: gold, marginBottom: '4px' }}>{s.label}</div>
-                        <div style={{ fontSize: '14px', color: '#e0dce8', lineHeight: 1.8 }}>{s.text}</div>
-                      </div>
-                    ))}
                   </div>
-                )}
-
-                <div style={{ background: cardBg, border, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
-                  <div style={{ fontSize: '13px', color: gold, marginBottom: '14px', fontWeight: 'bold' }}>
-                    이름 분석 (4가지 기준)
-                  </div>
-                  {[
-                    { label: '사주 보완 (용신)', f: result.yongsinBohwan },
-                    { label: '한자 기운 (자원오행)', f: result.resourceFlow },
-                    { label: '소리 기운 (발음오행)', f: result.soundFlow },
-                  ].map((row, i) => (
-                    <div key={i} style={{ marginBottom: '14px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '13px', color: '#e8e4ff' }}>{row.label}</span>
-                        <span style={{ fontSize: '13px', fontWeight: 'bold', color: gradeColor(row.f.grade) }}>{row.f.grade}</span>
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#8a88a0', lineHeight: 1.6 }}>{row.f.detail}</div>
-                    </div>
-                  ))}
-
-                  <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                      <span style={{ fontSize: '13px', color: '#e8e4ff' }}>이름 수리 (81수리)</span>
-                      <span style={{ fontSize: '13px', fontWeight: 'bold', color: gradeColor(result.suri.grade) }}>{result.suri.grade}</span>
-                    </div>
-                    {result.suri.gyeok.map((g: { label: string; sum: number; name: string; fortune: string }, i: number) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#8a88a0', marginBottom: '4px' }}>
-                        <span>{g.label}</span>
-                        <span style={{ color: g.fortune === '길' ? '#7BC86C' : g.fortune === '흉' ? '#E0A04A' : '#9a98b0' }}>
-                          {g.name} ({g.fortune})
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{
-                  background: 'rgba(250,199,117,0.08)', border: `1px solid ${gold}`,
-                  borderRadius: '16px', padding: '18px', marginBottom: '16px', textAlign: 'center',
-                }}>
-                  <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '6px' }}>종합</div>
-                  <div style={{ fontSize: '22px', fontWeight: 'bold', color: gradeColor(result.overallGrade) }}>
-                    {result.overallGrade}
-                  </div>
-                </div>
-
-                <div style={{ background: 'linear-gradient(160deg,#34322f 0%,#2C2C2A 100%)', border: `1px solid ${gold}`, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
-                  <div style={{ fontSize: '12px', color: '#f48fb1', fontStyle: 'italic', marginBottom: '14px', lineHeight: 1.5, textAlign: 'center' }}>
-                    {result.overallGrade !== '좋음'
-                      ? '부족한 기운을 채우면 이름이 당신을 받쳐줍니다'
-                      : '지금도 좋은 이름이에요. 다른 가능성도 살펴볼까요?'}
-                  </div>
-
-                  <button onClick={() => router.push('/manseryeok/naming/rename/newname')}
-                    style={{ width: '100%', padding: '14px 16px', borderRadius: '12px', background: 'rgba(250,199,117,0.16)', border: `1px solid ${gold}`, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ textAlign: 'left' }}>
-                      <div style={{ fontSize: '14px', fontWeight: 'bold', color: gold }}>발음은 그대로, 한자 바꾸기</div>
-                      <div style={{ fontSize: '11px', color: '#cbb890', marginTop: '2px' }}>부르는 이름은 두고, 사주에 맞는 한자로</div>
-                    </div>
-                    <span style={{ fontSize: '13px', fontWeight: 'bold', color: gold, whiteSpace: 'nowrap', marginLeft: '10px' }}>{hanjaPrice.toLocaleString()}원</span>
-                  </button>
-                </div>
-
-                <button onClick={() => nameId ? router.push('/mypage') : resetAll()}
-                  style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#8a88a0', fontSize: '13px', cursor: 'pointer' }}>
-                  {nameId ? '← 마이페이지로' : '다른 이름 풀어보기'}
-                </button>
-              </>
-            )}
-          </>
-        )}
-      </div>
-
-      {pickerIdx !== null && (
-        <div
-          onClick={() => { setPickerIdx(null); setHanjaList([]) }}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px',
-          }}>
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: '100%', maxWidth: '400px', background: '#222220',
-              borderRadius: '18px', padding: '20px 16px', boxShadow: '0 16px 40px rgba(0,0,0,0.5)',
-              maxHeight: '80vh', display: 'flex', flexDirection: 'column',
-            }}>
-            <div style={{ fontSize: '15px', fontWeight: 'bold', color: gold, marginBottom: '14px' }}>
-              &lsquo;{syllables[pickerIdx]}&rsquo; 한자 고르기
-            </div>
-
-            <div style={{ overflowY: 'auto', flex: 1 }}>
-              {searching && <div style={{ textAlign: 'center', color: '#8a88a0', padding: '20px' }}>찾는 중...</div>}
-              {!searching && hanjaList.length === 0 && (
-                <div style={{ textAlign: 'center', color: '#8a88a0', padding: '20px', fontSize: '13px' }}>
-                  &lsquo;{syllables[pickerIdx]}&rsquo; 음의 인명용 한자를 찾을 수 없어요
-                </div>
-              )}
-
-              {normalList.length > 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  {normalList.map((row, i) => hanjaCard(row, i, false))}
-                </div>
-              )}
-
-              {avoidList.length > 0 && (
-                <>
-                  <div style={{ fontSize: '11px', color: '#8a88a0', margin: '18px 0 8px', lineHeight: 1.6 }}>
-                    아래 글자들은 일반적으로 이름에 잘 쓰지 않아요.<br />
-                    본인 이름에 쓰는 글자라면 골라주세요.
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    {avoidList.map((row, i) => hanjaCard(row, i + 10000, true))}
-                  </div>
-                </>
+                ))
               )}
             </div>
-          </div>
+          )}
         </div>
-      )}
-    </main>
-  )
-}
 
-export default function DiagnosisPage() {
-  return (
-    <Suspense fallback={
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a18' }}>
-        <div style={{ color: '#FAC775' }}>로딩 중...</div>
+        {/* 5. 관리 화면 버튼 (상담사·매니저만) */}
+        {isStaff && (
+          <div style={{ border: '1px solid rgba(250,199,117,0.3)', borderRadius: 14, padding: '8px 16px', marginBottom: 12 }}>
+            <button onClick={async () => {
+              const { data: c } = await supabase.from('consultants').select('id').eq('email', email).single()
+              router.push(c ? `/manseryeok/consultant?consultantId=${c.id}` : '/manseryeok/consultant')
+            }} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', background: 'none', border: 'none', borderBottom: isMaster ? '1px solid rgba(255,255,255,0.08)' : 'none', color: '#fff', fontSize: 14, cursor: 'pointer' }}>
+              <span>🩺 상담 관리 화면</span><span style={{ color: 'rgba(255,255,255,0.4)' }}>›</span>
+            </button>
+            {isMaster && (
+              <button onClick={() => router.push('/admin')} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', background: 'none', border: 'none', color: '#fff', fontSize: 14, cursor: 'pointer' }}>
+                <span>🔐 관리자 화면</span><span style={{ color: 'rgba(255,255,255,0.4)' }}>›</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* 6. 로그아웃 / 탈퇴 */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={logout} style={{ flex: 1, padding: '12px 0', borderRadius: 10, border: '1px solid rgba(255,255,255,0.2)', background: 'none', color: 'rgba(255,255,255,0.7)', fontSize: 13, cursor: 'pointer' }}>로그아웃</button>
+          <button onClick={withdraw} style={{ flex: 1, padding: '12px 0', borderRadius: 10, border: '1px solid rgba(226,75,74,0.4)', background: 'none', color: '#ff8080', fontSize: 13, cursor: 'pointer' }}>회원 탈퇴</button>
+        </div>
+
       </div>
-    }>
-      <DiagnosisInner />
-    </Suspense>
+    </div>
   )
 }
