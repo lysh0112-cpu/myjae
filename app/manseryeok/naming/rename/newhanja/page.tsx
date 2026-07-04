@@ -13,7 +13,7 @@ const SUB = '#8a88a0'
 const GREEN = '#81c784'
 
 const TOP_N = 6
-const TRY_LIMIT = 5
+const TRY_LIMIT = 3
 
 const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
@@ -69,7 +69,7 @@ function NewHanjaInner() {
   const [info, setInfo] = useState<MyInfo | null>(null)
 
   const [surname, setSurname] = useState<SavedChar | null>(null)
-  const [pkey, setPkey] = useState('')
+  const [uid, setUid] = useState<string>('')   // ★ 로그인 회원 user_id (tries 저장 열쇠)
   const [syllables, setSyllables] = useState<string[]>([])
   const [activeIdx, setActiveIdx] = useState<number>(0)
   const [restored, setRestored] = useState(false)
@@ -79,12 +79,14 @@ function NewHanjaInner() {
   const [hanjaList, setHanjaList] = useState<HanjaRow[]>([])
   const [loadingList, setLoadingList] = useState(false)
 
+  // ★ 최종 저장 확인 팝업
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
   useEffect(() => {
     let cancelled = false
 
     async function loadAll() {
       // ── info 구성: localStorage myinfo 우선, 없으면 profiles(DB) ──
-      // 둘 다 표준 헬퍼로 MyInfo로 변환 (과거 '-1' 값도 '모름'으로 흡수)
       let stdInfo: MyInfo | null = null
       try {
         const m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
@@ -105,26 +107,24 @@ function NewHanjaInner() {
         } catch {}
       }
 
-      let pk = ''
       if (!cancelled && stdInfo) {
         setInfo(stdInfo)
-        pk = personKey(stdInfo)
       }
 
-      // ── 성씨: 로그인 my_names 우선, 없으면 localStorage(NAMING_RESULT_KEY) ──
+      // ── 성씨 + user_id: 로그인 my_names 우선, 없으면 localStorage ──
       let surnameLoaded = false
       try {
         const { data: u } = await supabase.auth.getUser()
         if (u?.user) {
+          if (!cancelled) setUid(u.user.id)   // ★ user_id 저장
           const { data: rows } = await supabase
             .from('my_names')
-            .select('chars, person_key')
+            .select('chars')
             .eq('user_id', u.user.id)
             .order('created_at', { ascending: false })
             .limit(1)
           if (!cancelled && rows && rows[0] && Array.isArray(rows[0].chars) && rows[0].chars[0]) {
             setSurname(rows[0].chars[0] as SavedChar)
-            setPkey((rows[0].person_key as string) || pk)
             surnameLoaded = true
           }
         }
@@ -133,10 +133,8 @@ function NewHanjaInner() {
       if (!surnameLoaded) {
         try {
           const r = JSON.parse(localStorage.getItem(NAMING_RESULT_KEY) || '{}')
-          const samePerson = r.personKey && r.personKey === pk
-          if (!cancelled && samePerson && Array.isArray(r.chars) && r.chars[0]) {
+          if (!cancelled && Array.isArray(r.chars) && r.chars[0]) {
             setSurname(r.chars[0] as SavedChar)
-            setPkey(pk)
           }
         } catch {}
       }
@@ -154,7 +152,6 @@ function NewHanjaInner() {
     return () => { cancelled = true }
   }, [sp])
 
-  // useResultSaju 에 넘길 값들 (info에서 파생)
   const infoYear = info ? parseInt(info.year) : 0
   const infoMonth = info ? parseInt(info.month) : 0
   const infoDay = info ? parseInt(info.day) : 0
@@ -262,6 +259,28 @@ function NewHanjaInner() {
     setChosen((prev) => ({ ...prev, [activeIdx]: row }))
   }
 
+  // 현재 tries 목록 읽기 (user_id 열쇠)
+  function readTries(): TryItem[] {
+    try {
+      const h = JSON.parse(localStorage.getItem(NEWNAME_HISTORY_KEY) || '{}')
+      if (h.userId === uid && Array.isArray(h.tries)) return h.tries
+    } catch {}
+    return []
+  }
+
+  // 완성된 이름의 chars 배열
+  function buildNameChars(): SavedChar[] | null {
+    if (!surname) return null
+    return [
+      surname,
+      ...syllables.map((syl, i) => {
+        const pick = chosen[i]!
+        return { hangul: syl, hanja: pick.hanja, strokes: pick.strokes, resourceOhaeng: pick.resource_ohaeng }
+      }),
+    ]
+  }
+
+  // "이 이름으로 →" : 다음 글자로 넘어가거나, 다 골랐으면 확인 팝업 띄우기
   function proceed() {
     if (!chosen[activeIdx]) return
     const next = syllables.findIndex((_, i) => !chosen[i] && i !== activeIdx)
@@ -270,27 +289,22 @@ function NewHanjaInner() {
       return
     }
     if (!surname) return
+    setConfirmOpen(true)   // ★ 즉시 저장 대신 확인 팝업
+  }
 
-    const nameChars: SavedChar[] = [
-      surname,
-      ...syllables.map((syl, i) => {
-        const pick = chosen[i]!
-        return { hangul: syl, hanja: pick.hanja, strokes: pick.strokes, resourceOhaeng: pick.resource_ohaeng }
-      }),
-    ]
+  // 팝업에서 "확정"을 눌렀을 때만 실제 저장 + 결과로 이동
+  function confirmSave() {
+    const nameChars = buildNameChars()
+    if (!nameChars) return
     const hangulName = syllables.join('')
     const hanjaKey = nameChars.map((c) => c.hanja).join('')
 
-    let tries: TryItem[] = []
-    try {
-      const h = JSON.parse(localStorage.getItem(NEWNAME_HISTORY_KEY) || '{}')
-      if (h.personKey === pkey && Array.isArray(h.tries)) tries = h.tries
-    } catch {}
-
+    let tries = readTries()
     const existIdx = tries.findIndex((t) => t.chars.map((c) => c.hanja).join('') === hanjaKey)
     if (existIdx === -1) {
       if (tries.length >= TRY_LIMIT) {
-        alert('총 ' + TRY_LIMIT + '회까지 종합 해설이 가능합니다.\n지금까지 본 이름 중에서 골라주세요.')
+        alert('총 ' + TRY_LIMIT + '회까지 이름을 지어볼 수 있어요.\n지금까지 본 이름 중에서 골라주세요.')
+        setConfirmOpen(false)
         router.push('/manseryeok/naming/rename/newresult')
         return
       }
@@ -301,9 +315,11 @@ function NewHanjaInner() {
     }
 
     try {
-      localStorage.setItem(NEWNAME_HISTORY_KEY, JSON.stringify({ personKey: pkey, tries }))
+      // ★ user_id 열쇠로 저장 (personKey 안 씀 — 대규모에서도 안 겹침)
+      localStorage.setItem(NEWNAME_HISTORY_KEY, JSON.stringify({ userId: uid, tries }))
     } catch {}
 
+    setConfirmOpen(false)
     router.push('/manseryeok/naming/rename/newresult')
   }
 
@@ -330,6 +346,17 @@ function NewHanjaInner() {
 
   const target = syllables[activeIdx]
   const allChosen = syllables.length > 0 && syllables.every((_, i) => chosen[i])
+
+  // 팝업에 보여줄 정보
+  const previewChars = buildNameChars()
+  const previewHanja = previewChars ? previewChars.map((c) => c.hanja).join('') : ''
+  const previewHangul = surname && syllables.length ? surname.hangul + syllables.join('') : ''
+  const curTries = readTries()
+  const previewHanjaKey = previewChars ? previewChars.map((c) => c.hanja).join('') : ''
+  const alreadyTried = curTries.some((t) => t.chars.map((c) => c.hanja).join('') === previewHanjaKey)
+  const usedCount = curTries.length
+  const willUseCount = alreadyTried ? usedCount : usedCount + 1
+  const leftAfter = TRY_LIMIT - willUseCount
 
   const cell = (x: HanjaRow, fit: boolean, rank?: number) => {
     const on = chosen[activeIdx]?.hanja === x.hanja
@@ -437,6 +464,32 @@ function NewHanjaInner() {
             style={{ fontSize: 13, fontWeight: 600, color: chosen[activeIdx] ? GOLD : '#555', background: 'none', border: 'none', cursor: chosen[activeIdx] ? 'pointer' : 'default' }}>
             {allChosen ? '이 이름으로 →' : '다음 글자 →'}
           </button>
+        </div>
+      )}
+
+      {/* ★ 최종 저장 확인 팝업 */}
+      {confirmOpen && (
+        <div onClick={() => setConfirmOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: 360, background: '#222220', borderRadius: 18, padding: '24px 20px', boxShadow: '0 16px 40px rgba(0,0,0,0.5)', textAlign: 'center' }}>
+            <div style={{ fontSize: 13, color: SUB, marginBottom: 10 }}>이 이름으로 저장할까요?</div>
+            <div style={{ fontSize: 32, fontWeight: 700, color: GOLD, letterSpacing: 4, marginBottom: 2 }}>{previewHanja}</div>
+            <div style={{ fontSize: 13, color: '#e8e4ff', marginBottom: 16 }}>{previewHangul}</div>
+            <div style={{ background: CARD, borderRadius: 12, padding: '12px 14px', marginBottom: 18, fontSize: 12, color: SUB, lineHeight: 1.7 }}>
+              {alreadyTried
+                ? '이미 지어본 이름이에요. 다시 열어봐도 횟수는 줄지 않아요.'
+                : <>저장하면 남은 횟수가 <b style={{ color: GOLD }}>{leftAfter}회</b>가 돼요.<br />(총 {TRY_LIMIT}회까지 지어볼 수 있어요)</>}
+            </div>
+            <button onClick={confirmSave}
+              style={{ width: '100%', padding: 14, borderRadius: 12, background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)', border: 'none', color: '#1a1a18', fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>
+              이 이름으로 저장하기
+            </button>
+            <button onClick={() => setConfirmOpen(false)}
+              style={{ width: '100%', padding: 12, borderRadius: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: SUB, fontSize: 13, cursor: 'pointer' }}>
+              다시 고를게요
+            </button>
+          </div>
         </div>
       )}
     </main>
