@@ -80,6 +80,17 @@ function ConsultantContent() {
   const splitDrag = useRef<{ edge: 'left' | 'mid'; startX: number; origLeft: number; origMid: number } | null>(null)
   const splitWrapRef = useRef<HTMLDivElement | null>(null)
 
+  // 가운데 칸 세로 분할 — 위(재방문 이력) / 아래(채팅) 높이 비율 (%)
+  // 위치를 기억(localStorage)해서 새로고침·다음 고객에도 유지
+  const [midTopPct, setMidTopPct] = useState<number>(() => {
+    if (typeof window === 'undefined') return 35
+    const saved = window.localStorage.getItem('consultant_mid_top_pct')
+    const n = saved ? parseFloat(saved) : NaN
+    return isNaN(n) ? 35 : Math.min(70, Math.max(15, n))
+  })
+  const midDrag = useRef<{ startY: number; origTop: number } | null>(null)
+  const midWrapRef = useRef<HTMLDivElement | null>(null)
+
   // 고객이 선택되면 = 3분할 모드 ON
   const splitMode = !!selectedConsultation
 
@@ -163,6 +174,31 @@ function ConsultantContent() {
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
   }, [])
 
+  // ---------- 가운데 칸 세로 경계선 드래그 (위 이력 / 아래 채팅) ----------
+  const startMidDrag = (e: React.MouseEvent) => {
+    e.preventDefault()
+    midDrag.current = { startY: e.clientY, origTop: midTopPct }
+  }
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!midDrag.current || !midWrapRef.current) return
+      const wrapH = midWrapRef.current.clientHeight || 1
+      const deltaPct = ((e.clientY - midDrag.current.startY) / wrapH) * 100
+      const next = Math.min(70, Math.max(15, midDrag.current.origTop + deltaPct))
+      setMidTopPct(next)
+    }
+    const onUp = () => {
+      if (midDrag.current) {
+        // 놓는 순간 현재 위치를 기억(localStorage)
+        try { window.localStorage.setItem('consultant_mid_top_pct', String(midTopPct)) } catch {}
+      }
+      midDrag.current = null
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+  }, [midTopPct])
+
   async function handleLogout() {
     await supabase.auth.signOut()
     router.push('/auth/login')
@@ -227,12 +263,6 @@ function ConsultantContent() {
       <div style={{width:splitLeft+'%', minWidth:0, display:'flex', flexDirection:'column', borderRight:'1px solid rgba(255,255,255,0.06)'}}>
         <div style={paneTitleStyle}>🔮 AI 해설</div>
         <div style={{flex:1, overflowY:'auto', padding:'12px', fontSize:s.fontSize+'px'}}>
-          {/* ★ 재방문 이력 — 이 고객의 과거 상담을 user_id로 조회해 맨 위에 표시 */}
-          <CustomerHistory
-            userId={selectedUserId}
-            currentConsultationId={selectedConsultation!.id}
-            fontSize={s.fontSize}
-          />
           <CustomerAiAnalysis
             consultationId={selectedConsultation!.id}
             saju={saju} gender={gender} calType={calType}
@@ -247,26 +277,47 @@ function ConsultantContent() {
         <div style={dividerGrip} />
       </div>
 
-      {/* ② 고객 채팅 */}
-      <div style={{width:splitMid+'%', minWidth:0, display:'flex', flexDirection:'column', borderRight:'1px solid rgba(255,255,255,0.06)'}}>
-        <div style={paneTitleStyle}>
-          💬 {customerName || '고객'} 채팅
-          <button onClick={() => setSelectedConsultation(null)}
-            style={{marginLeft:'auto', fontSize:'10px', padding:'2px 8px', borderRadius:'5px', border:'1px solid rgba(255,255,255,0.12)', background:'transparent', color:'#8888bb', cursor:'pointer'}}>
-            ← 목록
-          </button>
+      {/* ② 가운데 칸 — 위(재방문 이력) / 세로 조절바 / 아래(고객 채팅) */}
+      <div ref={midWrapRef} style={{width:splitMid+'%', minWidth:0, display:'flex', flexDirection:'column', borderRight:'1px solid rgba(255,255,255,0.06)'}}>
+
+        {/* 위: 재방문 이력 */}
+        <div style={{height:midTopPct+'%', minHeight:0, display:'flex', flexDirection:'column', borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
+          <div style={paneTitleStyle}>🔁 재방문 이력</div>
+          <div style={{flex:1, overflow:'hidden', fontSize:s.fontSize+'px'}}>
+            <CustomerHistory
+              userId={selectedUserId}
+              currentConsultationId={selectedConsultation!.id}
+              fontSize={s.fontSize}
+            />
+          </div>
         </div>
-        <div style={{flex:1, overflow:'hidden'}}>
-          <ConsultantChat
-            consultationId={selectedConsultation!.id}
-            customerPhone={selectedConsultation!.customer_phone}
-            onBack={() => setSelectedConsultation(null)}
-            onViewSaju={() => setSajuOpen(true)}
-            pcMode={true}
-            myBubbleColor={'#3d3488'}
-            customerBubbleColor={'#2a2a3a'}
-            fontSize={s.fontSize}
-          />
+
+        {/* 세로 경계선 (위 이력 ↕ 아래 채팅) */}
+        <div onMouseDown={startMidDrag} style={vDividerStyle} title="드래그로 높이 조절">
+          <div style={vDividerGrip} />
+        </div>
+
+        {/* 아래: 고객 채팅 */}
+        <div style={{flex:1, minHeight:0, display:'flex', flexDirection:'column'}}>
+          <div style={paneTitleStyle}>
+            💬 {customerName || '고객'} 채팅
+            <button onClick={() => setSelectedConsultation(null)}
+              style={{marginLeft:'auto', fontSize:'10px', padding:'2px 8px', borderRadius:'5px', border:'1px solid rgba(255,255,255,0.12)', background:'transparent', color:'#8888bb', cursor:'pointer'}}>
+              ← 목록
+            </button>
+          </div>
+          <div style={{flex:1, overflow:'hidden'}}>
+            <ConsultantChat
+              consultationId={selectedConsultation!.id}
+              customerPhone={selectedConsultation!.customer_phone}
+              onBack={() => setSelectedConsultation(null)}
+              onViewSaju={() => setSajuOpen(true)}
+              pcMode={true}
+              myBubbleColor={'#3d3488'}
+              customerBubbleColor={'#2a2a3a'}
+              fontSize={s.fontSize}
+            />
+          </div>
         </div>
       </div>
 
@@ -407,6 +458,16 @@ const dividerStyle: React.CSSProperties = {
 }
 const dividerGrip: React.CSSProperties = {
   width:'2px', height:'28px', borderRadius:'2px', background:'rgba(119,102,221,0.4)',
+}
+
+// 세로 경계선 스타일 (가운데 칸 위/아래 조절)
+const vDividerStyle: React.CSSProperties = {
+  height:'6px', flexShrink:0, cursor:'row-resize',
+  background:'rgba(255,255,255,0.04)',
+  display:'flex', alignItems:'center', justifyContent:'center',
+}
+const vDividerGrip: React.CSSProperties = {
+  height:'2px', width:'28px', borderRadius:'2px', background:'rgba(29,158,117,0.5)',
 }
 
 export default function ConsultantPage() {
