@@ -7,6 +7,7 @@ import ConsultantChat from './components/ConsultantChat'
 import CustomerAiAnalysis from './components/CustomerAiAnalysis'
 import ConsultantNote from './components/ConsultantNote'
 import ConsultantSchedule from './components/ConsultantSchedule'
+import SajuFloating from './components/SajuFloating'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -18,7 +19,7 @@ import { useRouter } from 'next/navigation'
 //  - 상담목록에서 고객 클릭 → 전체가 3분할로 덮임
 //       ① AI 해설  ② 고객 채팅  ③ 오른쪽(상: 내 입력 / 하: AI 정리)
 //  - 3분할 경계선은 마우스로 좌우 폭 조절
-//  - 물상도 / 사주명식표 플로팅, 설정 저장은 다음 단계에서 추가
+//  - 🔮 사주명식: 메뉴바 버튼으로 플로팅 창을 자유롭게 열고 닫음 (하늘도마뱀 양식)
 // ============================================================
 
 type UiSettings = {
@@ -55,7 +56,7 @@ function ConsultantContent() {
     handleSelectConsultation,
   } = useConsultantState()
 
-  // 사주명식 계산 (사주명식표 플로팅에서 쓸 예정 — 지금은 흐름만 유지)
+  // 사주명식 계산 (플로팅 명식창에서 사용 — 검증된 계산식 그대로)
   const { saju, dayStem, dayunList, seyunList } =
     useConsultantSaju(calType, yearParam, monthParam, dayParam, leapMonth, hourIdx, gender)
 
@@ -64,6 +65,9 @@ function ConsultantContent() {
   const [myNickname, setMyNickname] = useState('')
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null)
   const [authState, setAuthState] = useState<'checking' | 'ok' | 'denied'>('checking')
+
+  // 🔮 사주명식 플로팅 창 열림 상태
+  const [sajuOpen, setSajuOpen] = useState(false)
 
   // 왼쪽 큰 영역에 지금 켜져 있는 고정 탭 (기본: 상담목록)
   const [activeTab, setActiveTab] = useState<FixedTab>('list')
@@ -176,6 +180,11 @@ function ConsultantContent() {
   const ms = s.menuSize
   const splitRight = Math.max(15, 100 - splitLeft - splitMid)
 
+  // 명식창 표시용 생년월일 문구
+  const birthText = (yearParam && monthParam && dayParam)
+    ? `${calType || '양력'} ${yearParam}-${String(monthParam).padStart(2,'0')}-${String(dayParam).padStart(2,'0')}${hourIdx !== null && hourIdx !== undefined ? ` · ${['子(23-01)','丑(01-03)','寅(03-05)','卯(05-07)','辰(07-09)','巳(09-11)','午(11-13)','未(13-15)','申(15-17)','酉(17-19)','戌(19-21)','亥(21-23)'][hourIdx] || ''}시` : ''}`
+    : ''
+
   // ---------- 왼쪽 큰 영역: 고정 탭 내용 ----------
   const renderFixedTab = () => {
     switch (activeTab) {
@@ -244,7 +253,7 @@ function ConsultantContent() {
             consultationId={selectedConsultation!.id}
             customerPhone={selectedConsultation!.customer_phone}
             onBack={() => setSelectedConsultation(null)}
-            onViewSaju={() => {}}
+            onViewSaju={() => setSajuOpen(true)}
             pcMode={true}
             myBubbleColor={'#3d3488'}
             customerBubbleColor={'#2a2a3a'}
@@ -313,6 +322,24 @@ function ConsultantContent() {
           )
         })}
 
+        {/* 🔮 사주명식 — 플로팅 창 열기/닫기 토글 */}
+        <button
+          onClick={() => setSajuOpen(o => !o)}
+          title="사주명식 (하늘도마뱀 양식) 열기/닫기"
+          style={{
+            fontSize: ms + 'px',
+            padding: ms <= 9 ? '1px 5px' : ms <= 11 ? '2px 7px' : '3px 9px',
+            borderRadius:'5px',
+            border: sajuOpen ? '1px solid rgba(250,199,117,0.6)' : '1px solid rgba(255,255,255,0.08)',
+            background: sajuOpen ? 'rgba(250,199,117,0.18)' : 'rgba(255,255,255,0.03)',
+            color: sajuOpen ? '#FAC775' : '#8888aa',
+            cursor:'pointer', display:'flex', alignItems:'center', gap:'3px', whiteSpace:'nowrap',
+            marginLeft:'2px',
+          }}>
+          <span style={{fontSize:(ms+1)+'px'}}>🔮</span>
+          <span>사주명식</span>
+        </button>
+
         {/* 메뉴 크기 슬라이더 (기존 기능 유지) */}
         <div style={{display:'flex', alignItems:'center', gap:'4px', marginLeft:'8px', borderLeft:'1px solid rgba(255,255,255,0.08)', paddingLeft:'8px'}}>
           <span style={{fontSize:'9px', color:'#444466', whiteSpace:'nowrap'}}>메뉴크기</span>
@@ -345,6 +372,13 @@ function ConsultantContent() {
           </div>
         )}
       </div>
+
+      {/* ===== 🔮 사주명식 계산기 (독립 플로팅 창) ===== */}
+      {/* 창 안에서 직접 입력·계산하는 독립 계산기. 고객 데이터와 무관. */}
+      <SajuFloating
+        open={sajuOpen}
+        onClose={() => setSajuOpen(false)}
+      />
     </div>
   )
 }
