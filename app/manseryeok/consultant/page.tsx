@@ -282,7 +282,7 @@ function ConsultantContent() {
 
         {/* 위: 재방문 이력 */}
         <div style={{height:midTopPct+'%', minHeight:0, display:'flex', flexDirection:'column', borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
-          <div style={paneTitleStyle}>🔁 재방문 이력</div>
+          <div style={paneTitleStyle}>📋 이전 상담 내역</div>
           <div style={{flex:1, overflow:'hidden', fontSize:s.fontSize+'px'}}>
             <CustomerHistory
               userId={selectedUserId}
