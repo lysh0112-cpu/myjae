@@ -1,6 +1,6 @@
 'use client'
 import React from 'react'
-import { Consultation, Consultant, toDateInput } from './useDashboardTable'
+import { Consultation, Consultant, toDateInput, getConsultTypeLabel } from './useDashboardTable'
 
 type Props = {
   c: Consultation
@@ -44,6 +44,7 @@ export default function DashboardRow({
   onEditForm, onToggleAI, onToggleSummary
 }: Props) {
   const isEditing = editingId === c.id
+  const consultTypeLabel = getConsultTypeLabel(c)
 
   return (
     <React.Fragment>
@@ -90,6 +91,17 @@ export default function DashboardRow({
             }}>
             {getConsultantName(c.consultant_id, consultants)}
           </span>
+        </td>
+        {/* 종류 */}
+        <td className="px-3 py-3 whitespace-nowrap">
+          {consultTypeLabel !== '-' ? (
+            <span className="text-xs px-2 py-1 rounded-full"
+              style={{ background: 'rgba(129,199,132,0.15)', color: '#81c784' }}>
+              {consultTypeLabel}
+            </span>
+          ) : (
+            <span className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>-</span>
+          )}
         </td>
         {/* 강제배정 */}
         <td className="px-3 py-3 whitespace-nowrap" style={{ position: 'relative', zIndex: 50 }}>
@@ -185,7 +197,7 @@ export default function DashboardRow({
       </tr>
       {expandedAI === c.id && (
         <tr style={{ background: 'rgba(250,199,117,0.05)' }}>
-          <td colSpan={12} className="px-6 py-3 text-xs"
+          <td colSpan={13} className="px-6 py-3 text-xs"
             style={{ color: '#b0aec8', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
             <div className="font-bold mb-1" style={{ color: '#FAC775' }}>AI 분석 내용</div>
             {typeof c.ai_analysis === 'string'
@@ -196,7 +208,7 @@ export default function DashboardRow({
       )}
       {expandedSummary === c.id && (
         <tr style={{ background: 'rgba(60,52,137,0.1)' }}>
-          <td colSpan={12} className="px-6 py-3 text-xs"
+          <td colSpan={13} className="px-6 py-3 text-xs"
             style={{ color: '#b0aec8', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
             <div className="font-bold mb-1" style={{ color: '#b0aec8' }}>상담 요약</div>
             {c.summary?.slice(0, 500)}{c.summary?.length > 500 ? '...' : ''}
