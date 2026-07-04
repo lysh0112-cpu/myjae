@@ -47,8 +47,26 @@ export default function NewNamePage() {
   useEffect(() => {
     let cancelled = false
 
+    // ★ 저장된 이름 전체(chars)에서 성씨 + 이름 한글을 채운다
+    //   개명은 발음(한글)은 그대로 두고 한자만 바꾸는 것이므로,
+    //   원래 이름의 한글을 미리 채워 보여준다. (사용자가 지우고 새로 쓸 수도 있음)
+    function fillFromChars(chars: SavedChar[]) {
+      if (!Array.isArray(chars) || !chars[0]) return false
+      setSurname(chars[0])
+      const given = chars.slice(1).filter(Boolean)
+      if (given.length === 1) {
+        setCount(1)
+        setC1(given[0].hangul || '')
+      } else if (given.length >= 2) {
+        setCount(2)
+        setC1(given[0].hangul || '')
+        setC2(given[1].hangul || '')
+      }
+      return true
+    }
+
     async function load() {
-      // 1) 로그인했으면 내 계정(my_names)에서 가장 최근 이름풀이의 성씨를 먼저 시도
+      // 1) 로그인했으면 내 계정(my_names)에서 가장 최근 이름풀이 전체를 불러와 채움
       try {
         const { data: u } = await supabase.auth.getUser()
         if (u?.user) {
@@ -59,14 +77,14 @@ export default function NewNamePage() {
             .order('created_at', { ascending: false })
             .limit(1)
           if (!cancelled && rows && rows[0] && Array.isArray(rows[0].chars) && rows[0].chars[0]) {
-            setSurname(rows[0].chars[0] as SavedChar)
+            fillFromChars(rows[0].chars as SavedChar[])
             setLoaded(true)
             return
           }
         }
       } catch {}
 
-      // 2) (비로그인/없을 때) 기존 localStorage 방식 — 이름풀이 결과 성씨
+      // 2) (비로그인/없을 때) 기존 localStorage 방식 — 이름풀이 결과 전체
       //    personKey는 표준 헬퍼로 계산 (과거 '-1' 값도 '모름'으로 흡수)
       try {
         const m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
@@ -75,11 +93,11 @@ export default function NewNamePage() {
         const r = JSON.parse(localStorage.getItem(NAMING_RESULT_KEY) || '{}')
         const samePerson = r.personKey && r.personKey === pk
         if (samePerson && Array.isArray(r.chars) && r.chars[0]) {
-          if (!cancelled) { setSurname(r.chars[0] as SavedChar); setLoaded(true) }
+          if (!cancelled) { fillFromChars(r.chars as SavedChar[]); setLoaded(true) }
           return
         }
 
-        // 3) 신생아 — 아기 이름짓기에서 입력한 성씨
+        // 3) 신생아 — 아기 이름짓기에서 입력한 성씨 (이름은 새로 짓는 것이므로 성씨만)
         const nb = JSON.parse(localStorage.getItem(NEWBORN_SURNAME_KEY) || '{}')
         const sameBaby = nb.personKey && nb.personKey === pk
         if (sameBaby && nb.surname) {
@@ -161,7 +179,7 @@ export default function NewNamePage() {
       <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
         <Header router={router} />
         <div style={{ padding: '40px 8px', textAlign: 'center', color: SUB, lineHeight: 1.8 }}>
-          먼저 &lsquo;내 이름 풀이&rsquo; 또는<br />&lsquo;내 아기 이름짓기&rsquo;에서 시작해 주세요.
+          먼저 &lsquo;내 이름 풀이&rsquo;에서 시작해 주세요.
           <div style={{ marginTop: 20 }}>
             <button onClick={() => router.push('/manseryeok/naming')}
               style={{ padding: '12px 22px', borderRadius: 12, background: 'rgba(250,199,117,0.16)', border: '1px solid ' + GOLD, color: GOLD, fontWeight: 700, cursor: 'pointer' }}>
@@ -179,10 +197,10 @@ export default function NewNamePage() {
     <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
       <Header router={router} />
       <p style={{ fontSize: 12, color: SUB, margin: '0 0 16px', padding: '0 4px' }}>
-        성씨 {surname!.hanja}({surname!.hangul})는 그대로 · 원하는 한글 이름을 적어주세요
+        성씨 {surname!.hanja}({surname!.hangul})는 그대로 · 발음은 두고 한자만 바꿔드려요
       </p>
 
-      <div style={{ fontSize: 12, color: SUB, marginBottom: 8, padding: '0 4px' }}>이름 글자 수를 골라주세요</div>
+      <div style={{ fontSize: 12, color: SUB, marginBottom: 8, padding: '0 4px' }}>이름 글자 수</div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
         {chip(1, '외자 (한 글자)')}
         {chip(2, '두 글자')}
@@ -216,6 +234,9 @@ export default function NewNamePage() {
                 />
               )}
             </div>
+            <div style={{ fontSize: 11, color: SUB, textAlign: 'center', marginTop: 12, lineHeight: 1.6 }}>
+              원래 이름이 채워져 있어요. 그대로 두면 발음은 유지하고 한자만 바꿔드려요.
+            </div>
           </div>
           <button onClick={proceed} disabled={!ready} className="active:scale-95"
             style={{ marginTop: 16, width: '100%', background: ready ? 'rgba(250,199,117,0.16)' : CARD,
@@ -233,7 +254,7 @@ function Header({ router }: { router: ReturnType<typeof useRouter> }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 4px 16px' }}>
       <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: GOLD, fontSize: 20, cursor: 'pointer' }}>{'\u2039'}</button>
-      <span style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>새 이름 직접 정하기</span>
+      <span style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>발음 그대로, 한자 바꾸기</span>
     </div>
   )
 }
