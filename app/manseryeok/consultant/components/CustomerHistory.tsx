@@ -5,11 +5,10 @@ import { supabase } from '@/lib/supabase'
 // ============================================================
 // 재방문 이력 패널 (CustomerHistory) — 2단계 조회 방식
 //  - 1단계(목록): 고객 user_id로 과거 상담의 날짜·종류·짧은 요약(summary)만 가볍게 조회
-//                긴 해설(ai_analysis)은 여기서 불러오지 않음 → 회원 많아져도 목록이 빠름
-//  - 2단계(펼침): 상담사가 항목을 누르는 그 순간에만, 그 1건의 전문을 따로 조회
-//                한 번 불러온 건 화면 보는 동안 기억(캐싱)해서 다시 펴도 재조회 안 함
+//  - 2단계(펼침): 상담사가 항목을 누르는 그 순간에만, 그 1건의 전문을 따로 조회 (캐싱)
 //  - 지금 보고 있는 상담 건 / 취소·삭제 건은 목록에서 제외
-//  - 새로 저장하는 것 없음. 이미 저장된 값을 읽어서 표시만 함
+//  - 가운데 칸 위쪽에 상시 표시. 이력이 없으면 "첫 상담 고객"이라고 알려줌.
+//  - 새로 저장하는 것 없음. 이미 저장된 값을 읽어서 표시만 함.
 // ============================================================
 
 // 종류 라벨 — ConsultationList의 TYPE_LABELS와 동일하게 맞춤 (일관성)
@@ -47,8 +46,8 @@ function dateText(s: string | null): string {
   } catch { return '' }
 }
 
-// 긴 글 미리보기 길이
 const PREVIEW_LEN = 160
+const teal = '#5DCAA5'
 
 export default function CustomerHistory({
   userId,
@@ -60,22 +59,23 @@ export default function CustomerHistory({
   fontSize?: number
 }) {
   const [rows, setRows] = useState<HistoryRow[]>([])
-  const [loading, setLoading] = useState(false)
-  const [open, setOpen] = useState(false)                    // 패널 접힘/펼침
-  const [openId, setOpenId] = useState<string | null>(null)  // 펼쳐진 이력 항목
+  const [loading, setLoading] = useState(true)
+  const [openId, setOpenId] = useState<string | null>(null)
 
-  // 2단계에서 불러온 전문을 기억해두는 캐시 (화면 보는 동안만 유지)
   const [detailCache, setDetailCache] = useState<Record<string, string>>({})
   const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null)
-  // 긴 글을 전체로 펼쳐 본 항목 (더보기 누른 것)
   const [expandedFull, setExpandedFull] = useState<Record<string, boolean>>({})
 
   // ---------- 1단계: 목록 조회 (가벼움) ----------
   useEffect(() => {
-    if (!userId) { setRows([]); return }
     let cancelled = false
     async function loadList() {
       setLoading(true)
+      if (!userId) {
+        // 예외: user_id 없는 상담(정상 흐름엔 없음). 조용히 첫 상담과 동일 처리.
+        if (!cancelled) { setRows([]); setLoading(false) }
+        return
+      }
       try {
         const { data } = await supabase
           .from('consultations')
@@ -97,7 +97,6 @@ export default function CustomerHistory({
       }
     }
     loadList()
-    // 고객이 바뀌면 캐시·펼침 상태 초기화
     setDetailCache({})
     setExpandedFull({})
     setOpenId(null)
@@ -106,19 +105,13 @@ export default function CustomerHistory({
 
   // ---------- 2단계: 항목 펼칠 때만 그 1건 전문 조회 (캐싱) ----------
   async function toggleItem(row: HistoryRow) {
-    // 접혀 있으면 펼치고, 펼쳐 있으면 접기
     if (openId === row.id) { setOpenId(null); return }
     setOpenId(row.id)
-
-    // 이미 불러온 적 있으면(캐시에 있으면) 재조회 안 함
     if (detailCache[row.id] !== undefined) return
-    // 요약이 있으면 그걸 상세로 쓰고, 전문 조회는 생략 (가장 가벼운 경로)
     if (row.summary && row.summary.trim()) {
       setDetailCache(prev => ({ ...prev, [row.id]: row.summary || '' }))
       return
     }
-
-    // 요약이 없을 때만 전문(ai_analysis / ai_free_analysis)을 이 1건만 조회
     setDetailLoadingId(row.id)
     try {
       const { data } = await supabase
@@ -136,36 +129,30 @@ export default function CustomerHistory({
     }
   }
 
-  // 비회원(user_id 없음)이거나 과거 이력이 없으면 패널 자체를 숨김
-  if (!userId) return null
-  if (!loading && rows.length === 0) return null
-
-  const teal = '#5DCAA5'
+  const headerCount = loading ? '' : `${rows.length}건`
 
   return (
-    <div style={{
-      borderRadius: 12, marginBottom: 12, overflow: 'hidden',
-      background: 'rgba(29,158,117,0.08)', border: '1px solid rgba(29,158,117,0.3)',
-    }}>
-      {/* 헤더 (접기/펼치기) */}
-      <button
-        onClick={() => setOpen(v => !v)}
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: 6,
-          padding: '10px 12px', background: 'none', border: 'none', cursor: 'pointer',
-        }}>
+    <div style={{ padding: '12px', height: '100%', overflowY: 'auto' }}>
+      {/* 헤더 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
         <span style={{ fontSize: fontSize, fontWeight: 700, color: teal }}>🔁 재방문 이력</span>
-        <span style={{ fontSize: fontSize - 2, color: 'rgba(255,255,255,0.45)' }}>
-          {loading ? '불러오는 중…' : `${rows.length}건`}
-        </span>
-        <span style={{ marginLeft: 'auto', fontSize: fontSize - 2, color: 'rgba(255,255,255,0.4)' }}>
-          {open ? '▲' : '▼'}
-        </span>
-      </button>
+        <span style={{ fontSize: fontSize - 2, color: 'rgba(255,255,255,0.45)' }}>{headerCount}</span>
+      </div>
 
-      {/* 목록 */}
-      {open && !loading && (
-        <div style={{ padding: '0 12px 12px' }}>
+      {loading ? (
+        <div style={{ fontSize: fontSize - 1, color: 'rgba(255,255,255,0.4)', padding: '8px 0' }}>불러오는 중…</div>
+      ) : rows.length === 0 ? (
+        // 첫 상담 고객 (또는 예외적으로 user_id 없는 경우)
+        <div style={{
+          fontSize: fontSize - 1, color: 'rgba(255,255,255,0.55)',
+          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 10, padding: '12px', lineHeight: 1.6, textAlign: 'center',
+        }}>
+          재방문 이력 없음<br />
+          <span style={{ fontSize: fontSize - 2, color: 'rgba(255,255,255,0.4)' }}>첫 상담 고객입니다</span>
+        </div>
+      ) : (
+        <div>
           {rows.map((row) => {
             const isOpen = openId === row.id
             const cached = detailCache[row.id]
@@ -177,8 +164,8 @@ export default function CustomerHistory({
 
             return (
               <div key={row.id} style={{
-                borderTop: '1px solid rgba(255,255,255,0.06)',
-                paddingTop: 8, marginTop: 8,
+                background: 'rgba(29,158,117,0.06)', border: '1px solid rgba(29,158,117,0.25)',
+                borderRadius: 10, padding: '10px 12px', marginBottom: 8,
               }}>
                 {/* 한 줄 요약: 날짜 · 종류 */}
                 <button
