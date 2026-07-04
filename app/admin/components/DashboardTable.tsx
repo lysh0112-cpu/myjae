@@ -71,7 +71,7 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
               <ColumnFilter label="상태" value={filters.status}
                 options={options.status} onChange={v => setFilter('status', v)}
                 labelMap={STATUS_LABEL} />
-              {['AI분석', '상담내용', '수정', '삭제'].map(h => (
+              {['AI분석', '상담내용', '수정', '취소'].map(h => (
                 <th key={h} className="px-3 py-3 text-left text-xs font-bold whitespace-nowrap"
                   style={{ color: '#FAC775' }}>{h}</th>
               ))}
