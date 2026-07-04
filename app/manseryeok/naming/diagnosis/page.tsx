@@ -6,6 +6,7 @@ import { calcYongsin } from '@/lib/saju/yongsin'
 import { supabase } from '@/lib/supabase'
 import type { DiagnoseResult, NameChar } from '@/lib/saju/naming'
 import PageHeader from '@/app/components/common/PageHeader'
+import ConsultButton from '@/app/components/common/ConsultButton'
 import { fromProfile, fromUrl, personKey, type MyInfo } from '@/lib/saju/myInfo'
 
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
@@ -286,12 +287,15 @@ function DiagnosisInner() {
     return `[이름풀이 · ${hangulName} (${hanjaName})]\n\n· 종합\n${c.summary || ''}\n\n· 좋은 점\n${c.good || ''}\n\n· 더 좋아지려면\n${c.improve || ''}\n\n· 조언\n${c.advice || ''}`.trim()
   }
 
-  // ★ 상담사 연결: 현재 이름풀이 결과를 세션에 담고 consultant-select로 이동 (물상도 goConsult 방식)
-  function goConsult() {
+  // ★ 결과가 표시되면(새로 풀든, 저장결과 불러오든) 상담사 전달용 세션을 저장.
+  //   ConsultButton이 consultant-select로 이동만 하면, 그쪽이 이 세션을 읽어
+  //   namings 저장 + consultations.ai_analysis 표시에 사용.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (step !== 'result' || !result) return
     try {
       const hangulName = chars.filter(Boolean).map((c) => c!.hangul).join('')
       const hanjaName = chars.filter(Boolean).map((c) => c!.hanja).join('')
-      // 상담 건에 연결될 이름풀이 상세 (consultant-select가 namings 테이블에 저장)
       sessionStorage.setItem('naming_full', JSON.stringify({
         kind: 'self',
         hangul_name: hangulName,
@@ -301,15 +305,10 @@ function DiagnosisInner() {
         commentary: commentary ?? null,
         target_birth: null,
       }))
-      // 상담사 화면에 뜰 해설 텍스트 (consultant-select가 consultations.ai_analysis에 저장)
       const text = buildNamingAnalysisText(hanjaName, hangulName, commentary)
       if (text) sessionStorage.setItem('ai_analysis', text)
     } catch {}
-    const params = new URLSearchParams()
-    params.set('mode', 'naming')        // 개명 상담으로 구분 (상담사·관리자 화면에 '개명'으로 표시)
-    params.set('priceKey', 'naming_read')
-    router.push('/manseryeok/consultant-select?' + params.toString())
-  }
+  }, [step, result, commentary, chars])
 
   async function handleFullResult() {
     if (!canSubmit || !surname || !saju || !dayStem) return
@@ -734,11 +733,10 @@ function DiagnosisInner() {
                   </div>
                 </div>
 
-                {/* ★ 전문 상담사 연결 (물상도와 동일 방식 · mode=naming) */}
-                <button onClick={goConsult}
-                  style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'transparent', border: `1px solid ${gold}`, color: gold, fontSize: '14px', fontWeight: 500, cursor: 'pointer', marginBottom: '12px' }}>
-                  🔮 이 이름에 대해 전문가와 상담하기 →
-                </button>
+                {/* ★ 전문가 상담 연결 — 개명·아기와 동일한 ConsultButton (색상 통일 + 가격표 토글 연동) */}
+                <div style={{ marginBottom: '12px' }}>
+                  <ConsultButton priceKey="naming" mode="naming" />
+                </div>
 
                 <div style={{ background: 'linear-gradient(160deg,#34322f 0%,#2C2C2A 100%)', border: `1px solid ${gold}`, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
                   <div style={{ fontSize: '12px', color: '#f48fb1', fontStyle: 'italic', marginBottom: '14px', lineHeight: 1.5, textAlign: 'center' }}>
