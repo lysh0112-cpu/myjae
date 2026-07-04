@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import ConsultantManager from './components/ConsultantManager'
 import SettlementManager from './components/SettlementManager'
-import ConsultationHistory from './components/ConsultationHistory'
 import Dashboard from './components/Dashboard'
 import KnowledgeManager from './components/KnowledgeManager'
 import SiteSettings from './components/SiteSettings'
@@ -14,14 +13,13 @@ import ExpenseApproval from './components/ExpenseApproval'
 import MemberManager from './components/MemberManager'
 import ToneManager from './components/ToneManager'
 import PriceManager from './components/PriceManager'
-type Tab = 'dashboard' | 'consultant' | 'price' | 'member' | 'settlement' | 'history' | 'knowledge' | 'review' | 'accounting' | 'approval' | 'tone' | 'settings'
+type Tab = 'dashboard' | 'consultant' | 'price' | 'member' | 'settlement' | 'knowledge' | 'review' | 'accounting' | 'approval' | 'tone' | 'settings'
 const TABS = [
   { key: 'dashboard', label: '📊 대시보드' },
   { key: 'consultant', label: '👤 상담사 관리' },
   { key: 'price', label: '💰 가격 관리' },
   { key: 'member', label: '👥 회원 관리' },
   { key: 'settlement', label: '💰 정산 관리' },
-  { key: 'history', label: '📋 상담 내역' },
   { key: 'knowledge', label: '🧠 연구 자료' },
   { key: 'review', label: '📝 후기 관리' },
   { key: 'accounting', label: '💳 관리회계' },
@@ -104,7 +102,6 @@ export default function AdminPage() {
         {tab === 'price' && <PriceManager />}
         {tab === 'member' && <MemberManager />}
         {tab === 'settlement' && <SettlementManager />}
-        {tab === 'history' && <ConsultationHistory />}
         {tab === 'knowledge' && <KnowledgeManager />}
         {tab === 'review' && <ReviewManager />}
         {tab === 'accounting' && <ExpenseManager />}
