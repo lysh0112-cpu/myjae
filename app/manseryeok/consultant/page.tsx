@@ -5,6 +5,7 @@ import { useConsultantSaju } from '@/hooks/useConsultantSaju'
 import ConsultationList from './components/ConsultationList'
 import ConsultantChat from './components/ConsultantChat'
 import CustomerAiAnalysis from './components/CustomerAiAnalysis'
+import CustomerHistory from './components/CustomerHistory'
 import ConsultantNote from './components/ConsultantNote'
 import ConsultantSchedule from './components/ConsultantSchedule'
 import SajuFloating from './components/SajuFloating'
@@ -51,6 +52,7 @@ function ConsultantContent() {
     consultationId,
     customerName,
     selectedConsultation, setSelectedConsultation,
+    selectedUserId,
     gender, calType, yearParam, monthParam, dayParam, leapMonth, hourIdx,
     consultantId,
     handleSelectConsultation,
@@ -225,6 +227,12 @@ function ConsultantContent() {
       <div style={{width:splitLeft+'%', minWidth:0, display:'flex', flexDirection:'column', borderRight:'1px solid rgba(255,255,255,0.06)'}}>
         <div style={paneTitleStyle}>🔮 AI 해설</div>
         <div style={{flex:1, overflowY:'auto', padding:'12px', fontSize:s.fontSize+'px'}}>
+          {/* ★ 재방문 이력 — 이 고객의 과거 상담을 user_id로 조회해 맨 위에 표시 */}
+          <CustomerHistory
+            userId={selectedUserId}
+            currentConsultationId={selectedConsultation!.id}
+            fontSize={s.fontSize}
+          />
           <CustomerAiAnalysis
             consultationId={selectedConsultation!.id}
             saju={saju} gender={gender} calType={calType}
