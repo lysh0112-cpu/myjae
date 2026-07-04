@@ -133,11 +133,12 @@ export default function CustomerHistory({
 
   return (
     <div style={{ padding: '12px', height: '100%', overflowY: 'auto' }}>
-      {/* 헤더 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-        <span style={{ fontSize: fontSize, fontWeight: 700, color: teal }}>🔁 재방문 이력</span>
-        <span style={{ fontSize: fontSize - 2, color: 'rgba(255,255,255,0.45)' }}>{headerCount}</span>
-      </div>
+      {/* 건수만 표시 (제목은 위 제목바 "이전 상담 내역"에 있음) */}
+      {!loading && rows.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
+          <span style={{ fontSize: fontSize - 2, color: 'rgba(255,255,255,0.45)' }}>총 {headerCount}</span>
+        </div>
+      )}
 
       {loading ? (
         <div style={{ fontSize: fontSize - 1, color: 'rgba(255,255,255,0.4)', padding: '8px 0' }}>불러오는 중…</div>
@@ -148,7 +149,7 @@ export default function CustomerHistory({
           background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: 10, padding: '12px', lineHeight: 1.6, textAlign: 'center',
         }}>
-          재방문 이력 없음<br />
+          이전 상담 내역이 없습니다<br />
           <span style={{ fontSize: fontSize - 2, color: 'rgba(255,255,255,0.4)' }}>첫 상담 고객입니다</span>
         </div>
       ) : (
