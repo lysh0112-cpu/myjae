@@ -22,9 +22,9 @@ export default function Dashboard() {
     const today = new Date().toISOString().split('T')[0]
     // ★ 취소된 건(deleted_at 있음)은 대시보드에서 제외 → 정상 예약만 표시
     const [{ data: cons }, { data: todayCons }, { data: allCons }, { data: consultantList }] = await Promise.all([
-      supabase.from('consultations').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
-      supabase.from('consultations').select('id').is('deleted_at', null).gte('created_at', today),
-      supabase.from('consultations').select('paid_amount, status').is('deleted_at', null),
+      supabase.from('consultations').select('*').is('deleted_at', null).neq('status', 'cancelled').order('created_at', { ascending: false }),
+      supabase.from('consultations').select('id').is('deleted_at', null).neq('status', 'cancelled').gte('created_at', today),
+      supabase.from('consultations').select('paid_amount, status').is('deleted_at', null).neq('status', 'cancelled'),
       supabase.from('consultants').select('id, name').eq('active', true),
     ])
     if (cons) setList(cons)
