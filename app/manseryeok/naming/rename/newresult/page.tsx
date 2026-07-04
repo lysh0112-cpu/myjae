@@ -360,18 +360,6 @@ function NewResultInner() {
         <ConsultButton priceKey="naming" mode="naming" />
       </div>
 
-      <div style={{ marginTop: 8, borderTop: '1px solid rgba(250,199,117,0.15)', paddingTop: 18 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: SUB }}>✨ 작명 도우미에게 물어보기</span>
-          <span style={{ fontSize: 11, color: SUB }}>준비 중</span>
-        </div>
-        <div style={{ background: CARD, border: '1px dashed rgba(250,199,117,0.25)', borderRadius: 14, padding: '18px 16px', textAlign: 'center' }}>
-          <div style={{ fontSize: 13, color: SUB, lineHeight: 1.7 }}>
-            작명 도우미 채팅은 곧 만나보실 수 있어요.
-          </div>
-        </div>
-      </div>
-
       <div style={{ fontSize: 11, color: SUB, textAlign: 'center', margin: '20px 0 8px' }}>
         총 {TRY_LIMIT}회까지 종합 해설이 가능합니다 · 남은 횟수 {triesLeft > 0 ? triesLeft : 0}회
       </div>
