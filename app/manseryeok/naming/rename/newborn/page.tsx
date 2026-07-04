@@ -6,8 +6,6 @@ import { supabase } from '@/lib/supabase'
 import PageHeader from '@/app/components/common/PageHeader'
 import { HOURS, HOUR_INDEX, fromInputs, personKey, toMyInfoObject } from '@/lib/saju/myInfo'
 
-const NEWBORN_SURNAME_KEY = 'newborn_surname_v1'
-
 const gold = '#FAC775'
 const cardBg = '#2C2C2A'
 const border = '1px solid rgba(250,199,117,0.15)'
@@ -33,7 +31,6 @@ function isHangulSyllable(ch: string): boolean {
   return code >= 0xac00 && code <= 0xd7a3
 }
 
-// 한글 음절 한 글자만 남기기 (조합 완료 후 정리용)
 function firstHangul(s: string): string {
   const arr = Array.from(s)
   for (const ch of arr) {
@@ -49,12 +46,11 @@ function NewbornInner() {
   // ── 아기 사주 직접 입력 ──
   const [gender, setGender] = useState<'남' | '여'>('남')
   const [calType, setCalType] = useState<'양력' | '음력'>('양력')
-  const [leap, setLeap] = useState(false)          // 윤달 여부 (음력일 때만)
-  const [birthDate, setBirthDate] = useState('')   // 'YYYY-MM-DD'
-  const [birthHour, setBirthHour] = useState('')   // HOURS 라벨 또는 '모름'
-  const [confirmed, setConfirmed] = useState(false) // 아기 정보 확정 여부
+  const [leap, setLeap] = useState(false)
+  const [birthDate, setBirthDate] = useState('')
+  const [birthHour, setBirthHour] = useState('')
+  const [confirmed, setConfirmed] = useState(false)
 
-  // 확정된 아기 사주 info (표준 MyInfo)
   const [info, setInfo] = useState<ReturnType<typeof fromInputs>>(null)
 
   // ── 성씨 입력 ──
@@ -63,13 +59,17 @@ function NewbornInner() {
   const [surHanja, setSurHanja] = useState<SavedChar | null>(null)
   const composingSur = useRef(false)
 
+  // ── 지어줄 한글 이름 입력 (아기 부모가 이미 정한 이름) ──
+  const [nameCount, setNameCount] = useState<1 | 2>(2)
+  const [g1, setG1] = useState('')
+  const [g2, setG2] = useState('')
+  const composingG1 = useRef(false)
+  const composingG2 = useRef(false)
+
   const [picker, setPicker] = useState(false)
   const [hanjaList, setHanjaList] = useState<HanjaRow[]>([])
   const [searching, setSearching] = useState(false)
 
-  const pkey = personKey(info)
-
-  // useResultSaju 에 넘길 값들 (info에서 파생)
   const infoYear = info ? parseInt(info.year) : 0
   const infoMonth = info ? parseInt(info.month) : 0
   const infoDay = info ? parseInt(info.day) : 0
@@ -84,13 +84,11 @@ function NewbornInner() {
     infoHourIdx,
   )
 
-  // 아기 정보 확정
   function confirmBaby() {
     if (!birthDate) {
       alert('아기 생년월일을 입력해주세요 😊')
       return
     }
-    // 표준 헬퍼로 info 구성 (시간 모름='모름', 윤달='0'/'1')
     const std = fromInputs({
       gender, calType,
       birthDate,
@@ -103,15 +101,15 @@ function NewbornInner() {
     }
     setInfo(std)
     setConfirmed(true)
-    // 아기 정보를 바꾸면 이전 성씨 선택은 초기화
     setSurInput(''); setSurHangul(''); setSurHanja(null)
+    setG1(''); setG2('')
   }
 
-  // 아기 정보 다시 입력
   function editBaby() {
     setConfirmed(false)
     setInfo(null)
     setSurInput(''); setSurHangul(''); setSurHanja(null)
+    setG1(''); setG2('')
   }
 
   function applySurname(rawVal?: string) {
@@ -153,24 +151,34 @@ function NewbornInner() {
     setHanjaList([])
   }
 
-  // 원하는 발음으로 한자 지어주기 → 성씨 + 아기 사주 저장 후 newname
+  const givenReady =
+    firstHangul(g1).trim().length > 0 &&
+    (nameCount === 1 || firstHangul(g2).trim().length > 0)
+
+  // 원하는 발음으로 한자 지어주기 → 아기 사주+성씨+한글이름을 URL로 실어 아기 한자고르기로
+  // (궁합과 동일 방식: 제3자(아기) 사주를 URL로 전달. localStorage/personKey 안 씀)
   function goDirect() {
-    if (!surHanja || !info) return
-    try {
-      // newname이 읽는 성씨 (personKey로 같은 사람 식별)
-      localStorage.setItem(NEWBORN_SURNAME_KEY, JSON.stringify({ personKey: pkey, surname: surHanja }))
-      // newname이 아기 사주를 읽을 수 있도록 함께 저장 (본인 사주 myinfo는 건드리지 않음)
-      // 표준 형식으로 저장 (hour: '모름'|인덱스, leapMonth: '0'/'1')
-      localStorage.setItem('newborn_baby_v1', JSON.stringify({
-        personKey: pkey,
-        ...toMyInfoObject(info),
-      }))
-    } catch {}
-    router.push('/manseryeok/naming/rename/newname')
+    if (!surHanja || !info || !givenReady) return
+    const givenName = nameCount === 1 ? firstHangul(g1) : firstHangul(g1) + firstHangul(g2)
+    const babyParam = encodeURIComponent(JSON.stringify(toMyInfoObject(info)))
+    const surnameParam = encodeURIComponent(JSON.stringify(surHanja))
+    const nameParam = encodeURIComponent(givenName)
+    router.push(
+      '/manseryeok/naming/rename/newborn-hanja'
+      + '?baby=' + babyParam
+      + '&surname=' + surnameParam
+      + '&name=' + nameParam
+    )
   }
 
   const sajuLine = converting ? '사주 불러오는 중...' :
     `일간 ${dayStem} · ${info?.calType} ${info?.year}.${info?.month}.${info?.day}${info?.calType === '음력' && info?.leapMonth === '1' ? ' (윤달)' : ''}`
+
+  const givenInputStyle = {
+    width: 48, height: 46, textAlign: 'center' as const, fontSize: 18,
+    borderRadius: 10, border: '1px solid ' + gold,
+    background: 'rgba(250,199,117,0.08)', color: '#fff',
+  }
 
   return (
     <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
@@ -209,7 +217,6 @@ function NewbornInner() {
               ))}
             </div>
 
-            {/* 윤달 — 음력일 때만 표시 */}
             {calType === '음력' && (
               <div style={{ marginBottom: '14px' }}>
                 <div style={{ fontSize: '11px', color: '#b0aec8', marginBottom: '6px' }}>
@@ -315,23 +322,63 @@ function NewbornInner() {
               </>
             )}
 
+            {/* ── 지어줄 한글 이름 입력 (성씨 한자 고른 뒤) ── */}
             {surHanja && (
               <div style={{ marginTop: '14px' }}>
-                <div style={{ fontSize: '13px', color: gold, fontWeight: 'bold', marginBottom: '12px', textAlign: 'center' }}>
-                  어떻게 지어드릴까요?
+                <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '10px' }}>
+                  지어줄 한글 이름을 적어주세요 <span style={{ color: '#666' }}>(부를 이름)</span>
                 </div>
 
-                <button onClick={goDirect}
-                  style={{ width: '100%', padding: '14px 16px', borderRadius: '12px', background: 'rgba(250,199,117,0.16)', border: `1px solid ${gold}`, marginBottom: '10px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: gold }}>원하는 발음으로, 한자 지어주기</div>
-                    <div style={{ fontSize: '11px', color: '#cbb890', marginTop: '2px' }}>부를 한글 이름을 정하면, 사주에 맞는 한자로</div>
-                  </div>
-                  <span style={{ fontSize: '13px', fontWeight: 'bold', color: gold, whiteSpace: 'nowrap', marginLeft: '10px' }}>5,000원</span>
-                </button>
+                <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '8px' }}>이름 글자 수</div>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                  {([[1, '외자 (한 글자)'], [2, '두 글자']] as const).map(([n, lbl]) => {
+                    const on = nameCount === n
+                    return (
+                      <button key={n} onClick={() => { setNameCount(n); setG1(''); setG2('') }}
+                        style={{ flex: 1, padding: '12px 0', borderRadius: 12, cursor: 'pointer',
+                          background: on ? 'rgba(250,199,117,0.16)' : cardBg,
+                          border: '1px solid ' + (on ? gold : 'rgba(250,199,117,0.12)'),
+                          color: on ? gold : '#cfcdc4', fontWeight: 700, fontSize: 14 }}>
+                        {lbl}
+                      </button>
+                    )
+                  })}
+                </div>
 
-                {/* TODO(나중에): '새 이름 5개 추천' / '새 이름 10개 추천' 버튼 자리.
-                    recommend 화면 만들면 /manseryeok/naming/rename/recommend?count=5(또는 10) 로 연결 */}
+                <div style={{ background: cardBg, border: '1px solid rgba(250,199,117,0.12)', borderRadius: 16, padding: '18px 16px', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
+                    <span style={{ fontSize: 22, color: '#8a88a0' }}>{surHanja.hanja}</span>
+                    <input
+                      value={g1} maxLength={2} inputMode="text"
+                      onCompositionStart={() => { composingG1.current = true }}
+                      onCompositionEnd={(e) => { composingG1.current = false; setG1(firstHangul(e.currentTarget.value)) }}
+                      onChange={(e) => { const v = e.target.value; if (composingG1.current) setG1(v); else setG1(firstHangul(v)) }}
+                      placeholder="서"
+                      style={givenInputStyle}
+                    />
+                    {nameCount === 2 && (
+                      <input
+                        value={g2} maxLength={2} inputMode="text"
+                        onCompositionStart={() => { composingG2.current = true }}
+                        onCompositionEnd={(e) => { composingG2.current = false; setG2(firstHangul(e.currentTarget.value)) }}
+                        onChange={(e) => { const v = e.target.value; if (composingG2.current) setG2(v); else setG2(firstHangul(v)) }}
+                        placeholder="연"
+                        style={givenInputStyle}
+                      />
+                    )}
+                  </div>
+                </div>
+
+                <button onClick={goDirect} disabled={!givenReady}
+                  style={{ width: '100%', padding: '14px 16px', borderRadius: '12px',
+                    background: givenReady ? 'rgba(250,199,117,0.16)' : cardBg,
+                    border: `1px solid ${givenReady ? gold : 'rgba(250,199,117,0.12)'}`,
+                    cursor: givenReady ? 'pointer' : 'default', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: givenReady ? gold : '#555' }}>사주에 맞는 한자 추천받기 →</div>
+                    <div style={{ fontSize: '11px', color: '#cbb890', marginTop: '2px' }}>정한 한글 이름에, 아기 사주에 맞는 한자로</div>
+                  </div>
+                </button>
               </div>
             )}
           </>
