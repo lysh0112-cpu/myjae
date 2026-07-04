@@ -499,10 +499,10 @@ function DiagnosisInner() {
           </div>
         )}
 
-        {step === 'input' && (
+        {step === 'input' && !savedOffer && (
           <>
             <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '10px' }}>
-              {savedOffer ? '다른 이름을 풀어보려면 아래에 입력하세요' : '본인 이름을 한글로 입력하세요'}
+              본인 이름을 한글로 입력하세요
             </div>
             <div style={{ display: 'flex', gap: '8px', marginBottom: syllables.length > 0 ? '26px' : '20px' }}>
               <input
