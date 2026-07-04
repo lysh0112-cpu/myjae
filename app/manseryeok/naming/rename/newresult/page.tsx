@@ -12,7 +12,7 @@ const CARD = '#2C2C2A'
 const SUB = '#8a88a0'
 const GREEN = '#81c784'
 
-const TRY_LIMIT = 3
+const DEFAULT_TRY_LIMIT = 3
 
 const MY_INFO_KEY = 'myinfo'
 const NEWNAME_HISTORY_KEY = 'newname_history_v1'
@@ -67,6 +67,13 @@ function NewResultInner() {
   const [activeTry, setActiveTry] = useState(0)
   const [loaded, setLoaded] = useState(false)
   const [uid, setUid] = useState('')   // ★ 로그인 회원 user_id (tries 열쇠)
+
+  // ★ 이름 짓기 조회 횟수 (관리자 설정값 · app_settings)
+  const [TRY_LIMIT, setTryLimit] = useState(DEFAULT_TRY_LIMIT)
+  useEffect(() => {
+    supabase.from('app_settings').select('value').eq('key', 'naming_try_limit').maybeSingle()
+      .then(({ data }) => { if (data && typeof data.value === 'number') setTryLimit(data.value) })
+  }, [])
 
   const [detailLoading, setDetailLoading] = useState(false)
 
