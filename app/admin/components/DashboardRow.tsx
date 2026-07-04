@@ -188,11 +188,12 @@ export default function DashboardRow({
               style={{ background: 'rgba(250,199,117,0.15)', color: '#FAC775' }}>수정</button>
           )}
         </td>
-        {/* 삭제 */}
+        {/* 취소 */}
         <td className="px-3 py-3">
           <button onClick={() => onDelete(c.id)}
             className="px-3 py-1 rounded-lg text-xs font-bold"
-            style={{ background: 'rgba(255,100,100,0.15)', color: '#ff6464' }}>삭제</button>
+            title="예약 취소 (슬롯이 다시 열리고 취소 내역으로 이동)"
+            style={{ background: 'rgba(255,100,100,0.15)', color: '#ff6464' }}>취소</button>
         </td>
       </tr>
       {expandedAI === c.id && (
