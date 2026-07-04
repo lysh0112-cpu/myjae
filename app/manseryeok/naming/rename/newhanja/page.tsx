@@ -271,6 +271,9 @@ function NewHanjaInner() {
   // 완성된 이름의 chars 배열
   function buildNameChars(): SavedChar[] | null {
     if (!surname) return null
+    // 아직 모든 글자의 한자를 고르지 않았으면 계산하지 않음 (undefined 방지)
+    if (syllables.length === 0) return null
+    if (!syllables.every((_, i) => chosen[i])) return null
     return [
       surname,
       ...syllables.map((syl, i) => {
