@@ -12,7 +12,7 @@ const CARD = '#2C2C2A'
 const SUB = '#8a88a0'
 const GREEN = '#81c784'
 
-const TRY_LIMIT = 5
+const TRY_LIMIT = 3
 
 const MY_INFO_KEY = 'myinfo'
 const NEWNAME_HISTORY_KEY = 'newname_history_v1'
@@ -55,12 +55,6 @@ function gradeColor(g: Grade | string) {
   return '#9a98b0'
 }
 
-function personKey(m: Record<string, unknown> | null): string {
-  if (!m || !m.year) return ''
-  const hourIdx = m.hour === '모름' || m.hour == null ? 'x' : m.hour
-  return [m.calType || '양력', m.year, m.month, m.day, m.leapMonth || '0', hourIdx, m.gender || '남'].join('|')
-}
-
 function NewResultInner() {
   const router = useRouter()
 
@@ -72,7 +66,7 @@ function NewResultInner() {
   const [tries, setTries] = useState<TryItem[]>([])
   const [activeTry, setActiveTry] = useState(0)
   const [loaded, setLoaded] = useState(false)
-  const [pkey, setPkey] = useState('')
+  const [uid, setUid] = useState('')   // ★ 로그인 회원 user_id (tries 열쇠)
 
   const [detailLoading, setDetailLoading] = useState(false)
 
@@ -89,30 +83,41 @@ function NewResultInner() {
   }, [])
 
   useEffect(() => {
-    let m: Record<string, unknown> = {}
-    try {
-      m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
-      if (m.year) {
-        setInfo({
-          calType: (m.calType as string) || '양력',
-          year: parseInt(String(m.year)),
-          month: parseInt(String(m.month)),
-          day: parseInt(String(m.day)),
-          leapMonth: (m.leapMonth as string) || '0',
-          hourIdx: m.hour === '모름' || m.hour == null ? null : parseInt(String(m.hour)),
-        })
-      }
-    } catch {}
-    try {
-      const pk = personKey(m)
-      setPkey(pk)
-      const h = JSON.parse(localStorage.getItem(NEWNAME_HISTORY_KEY) || '{}')
-      if (h.personKey === pk && Array.isArray(h.tries) && h.tries.length > 0) {
-        setTries(h.tries)
-        setActiveTry(h.tries.length - 1)
-      }
-    } catch {}
-    setLoaded(true)
+    let cancelled = false
+
+    async function load() {
+      // 사주 info는 localStorage myinfo에서 (계산용)
+      try {
+        const m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
+        if (m.year && !cancelled) {
+          setInfo({
+            calType: (m.calType as string) || '양력',
+            year: parseInt(String(m.year)),
+            month: parseInt(String(m.month)),
+            day: parseInt(String(m.day)),
+            leapMonth: (m.leapMonth as string) || '0',
+            hourIdx: m.hour === '모름' || m.hour == null ? null : parseInt(String(m.hour)),
+          })
+        }
+      } catch {}
+
+      // ★ tries는 user_id 열쇠로 읽음 (저장한 newhanja와 동일 규칙)
+      try {
+        const { data: u } = await supabase.auth.getUser()
+        const myUid = u?.user?.id || ''
+        if (!cancelled) setUid(myUid)
+        const h = JSON.parse(localStorage.getItem(NEWNAME_HISTORY_KEY) || '{}')
+        if (!cancelled && h.userId === myUid && Array.isArray(h.tries) && h.tries.length > 0) {
+          setTries(h.tries)
+          setActiveTry(h.tries.length - 1)
+        }
+      } catch {}
+
+      if (!cancelled) setLoaded(true)
+    }
+
+    load()
+    return () => { cancelled = true }
   }, [])
 
   const { saju, dayStem } = useResultSaju(
@@ -166,6 +171,14 @@ function NewResultInner() {
         commentary: cur.commentary ?? null,
         target_birth: null,
       }))
+      // ★ 상담사 화면에 뜰 해설 텍스트 (물상도·이름풀이와 동일 방식)
+      const c = cur.commentary
+      if (c) {
+        const hangulName = cur.chars.map((ch) => ch.hangul).join('')
+        const hanjaName = cur.chars.map((ch) => ch.hanja).join('')
+        const text = `[개명 · ${hangulName} (${hanjaName})]\n\n· 종합\n${c.summary || ''}\n\n· 좋은 점\n${c.good || ''}\n\n· 더 좋아지려면\n${c.improve || ''}\n\n· 조언\n${c.advice || ''}`.trim()
+        sessionStorage.setItem('ai_analysis', text)
+      }
     } catch {}
   }, [cur, result])
 
@@ -220,7 +233,7 @@ function NewResultInner() {
       setTries((prev) => {
         const nextTries = prev.map((t, i) => (i === activeTry ? { ...t, commentary } : t))
         try {
-          localStorage.setItem(NEWNAME_HISTORY_KEY, JSON.stringify({ personKey: pkey, tries: nextTries }))
+          localStorage.setItem(NEWNAME_HISTORY_KEY, JSON.stringify({ userId: uid, tries: nextTries }))
         } catch {}
         return nextTries
       })
@@ -342,9 +355,9 @@ function NewResultInner() {
         </div>
       )}
 
-      {/* 전문가 상담 연결 (개명 상담) */}
+      {/* 전문가 상담 연결 (개명 상담 · mode=naming) */}
       <div style={{ marginBottom: 14 }}>
-        <ConsultButton priceKey="naming" mode="personal" />
+        <ConsultButton priceKey="naming" mode="naming" />
       </div>
 
       <div style={{ marginTop: 8, borderTop: '1px solid rgba(250,199,117,0.15)', paddingTop: 18 }}>
