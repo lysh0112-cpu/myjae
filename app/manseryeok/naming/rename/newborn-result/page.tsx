@@ -11,7 +11,7 @@ const CARD = '#2C2C2A'
 const SUB = '#8a88a0'
 const GREEN = '#81c784'
 
-const TRY_LIMIT = 3
+const DEFAULT_TRY_LIMIT = 3
 const BABY_HISTORY_KEY = 'newborn_history_v1'
 
 interface SavedChar {
@@ -87,6 +87,15 @@ function NewbornResultInner() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [price, setPrice] = useState(20000)
   const [payOpen, setPayOpen] = useState(false)
+
+  // ★ 이름 짓기 조회 횟수 (관리자 설정값 · app_settings)
+  const [TRY_LIMIT, setTryLimit] = useState(DEFAULT_TRY_LIMIT)
+  useEffect(() => {
+    import('@/lib/supabase').then(({ supabase }) => {
+      supabase.from('app_settings').select('value').eq('key', 'naming_try_limit').maybeSingle()
+        .then(({ data }) => { if (data && typeof data.value === 'number') setTryLimit(data.value) })
+    })
+  }, [])
 
   useEffect(() => {
     import('@/lib/supabase').then(({ supabase }) => {
