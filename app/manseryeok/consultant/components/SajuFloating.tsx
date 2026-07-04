@@ -4,7 +4,7 @@ import { calcSeyunList } from '@/lib/saju/dayun'
 import type { DayunItem, SeyunItem } from '@/lib/saju/dayun'
 import {
   sinsal12, guiinFor, guiinSummary, nabeum, gongmang, branchRelations,
-} from '@/lib/saju/sinsal'
+} from '@/lib/saju/sajuDetail'
 
 // ============================================================
 // 사주명식 계산기 (독립 플로팅 창)
