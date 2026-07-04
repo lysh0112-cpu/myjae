@@ -492,6 +492,10 @@ function DiagnosisInner() {
                 한자 바꾸기
               </button>
             </div>
+            <button onClick={() => setSavedOffer(null)}
+              style={{ width: '100%', marginTop: '8px', padding: '12px', borderRadius: '10px', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: '#8a88a0', fontSize: '13px', cursor: 'pointer' }}>
+              🔄 다른 이름 다시 풀기
+            </button>
             <div style={{ fontSize: '11px', color: '#8a88a0', textAlign: 'center', marginTop: '10px', lineHeight: 1.5 }}>
               · 풀이 다시보기는 무료예요<br />
               · 한자 바꾸기(개명)는 {hanjaPrice.toLocaleString()}원이에요
