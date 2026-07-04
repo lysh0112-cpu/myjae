@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import ConsultantManager from './components/ConsultantManager'
 import SettlementManager from './components/SettlementManager'
 import Dashboard from './components/Dashboard'
+import CancelledHistory from './components/CancelledHistory'
 import KnowledgeManager from './components/KnowledgeManager'
 import SiteSettings from './components/SiteSettings'
 import ReviewManager from './components/ReviewManager'
@@ -13,9 +14,10 @@ import ExpenseApproval from './components/ExpenseApproval'
 import MemberManager from './components/MemberManager'
 import ToneManager from './components/ToneManager'
 import PriceManager from './components/PriceManager'
-type Tab = 'dashboard' | 'consultant' | 'price' | 'member' | 'settlement' | 'knowledge' | 'review' | 'accounting' | 'approval' | 'tone' | 'settings'
+type Tab = 'dashboard' | 'cancelled' | 'consultant' | 'price' | 'member' | 'settlement' | 'knowledge' | 'review' | 'accounting' | 'approval' | 'tone' | 'settings'
 const TABS = [
   { key: 'dashboard', label: '📊 대시보드' },
+  { key: 'cancelled', label: '🗑 취소 내역' },
   { key: 'consultant', label: '👤 상담사 관리' },
   { key: 'price', label: '💰 가격 관리' },
   { key: 'member', label: '👥 회원 관리' },
@@ -98,6 +100,7 @@ export default function AdminPage() {
       </header>
       <main className="max-w-7xl mx-auto px-6 pt-24 pb-10">
         {tab === 'dashboard' && <Dashboard />}
+        {tab === 'cancelled' && <CancelledHistory />}
         {tab === 'consultant' && <ConsultantManager />}
         {tab === 'price' && <PriceManager />}
         {tab === 'member' && <MemberManager />}
