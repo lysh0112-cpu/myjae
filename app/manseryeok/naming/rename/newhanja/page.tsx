@@ -13,7 +13,7 @@ const SUB = '#8a88a0'
 const GREEN = '#81c784'
 
 const TOP_N = 6
-const TRY_LIMIT = 3
+const DEFAULT_TRY_LIMIT = 3
 
 const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
@@ -81,6 +81,13 @@ function NewHanjaInner() {
 
   // ★ 최종 저장 확인 팝업
   const [confirmOpen, setConfirmOpen] = useState(false)
+
+  // ★ 이름 짓기 조회 횟수 (관리자 설정값 · app_settings)
+  const [TRY_LIMIT, setTryLimit] = useState(DEFAULT_TRY_LIMIT)
+  useEffect(() => {
+    supabase.from('app_settings').select('value').eq('key', 'naming_try_limit').maybeSingle()
+      .then(({ data }) => { if (data && typeof data.value === 'number') setTryLimit(data.value) })
+  }, [])
 
   useEffect(() => {
     let cancelled = false
