@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Consultation } from './useDashboardTable'
-
+import { Consultation, getConsultType } from './useDashboardTable'
 export type FilterState = {
   consultant: string
   status: string
@@ -10,8 +9,8 @@ export type FilterState = {
   bookingDate: string
   completedDate: string
   date: string
+  consultType: string
 }
-
 export const FILTER_DEFAULTS: FilterState = {
   consultant: 'all',
   status: 'all',
@@ -21,19 +20,16 @@ export const FILTER_DEFAULTS: FilterState = {
   bookingDate: 'all',
   completedDate: 'all',
   date: 'all',
+  consultType: 'all',
 }
-
 export function useTableFilter(list: Consultation[]) {
   const [filters, setFilters] = useState<FilterState>(FILTER_DEFAULTS)
-
   function setFilter(key: keyof FilterState, value: string) {
     setFilters(prev => ({ ...prev, [key]: value }))
   }
-
   function resetFilters() {
     setFilters(FILTER_DEFAULTS)
   }
-
   // 각 컬럼별 고유값 추출
   const options = useMemo(() => {
     const toDateStr = (val: string | null) => {
@@ -51,9 +47,9 @@ export function useTableFilter(list: Consultation[]) {
       bookingDate: [...new Set(list.map(c => toDateStr(c.booking_date)).filter(Boolean))] as string[],
       completedDate: [...new Set(list.map(c => toDateStr(c.completed_date)).filter(Boolean))] as string[],
       date: [...new Set(list.map(c => toDateStr(c.created_at)).filter(Boolean))] as string[],
+      consultType: [...new Set(list.map(c => getConsultType(c) || '없음'))],
     }
   }, [list])
-
   // 필터 적용
   const filtered = useMemo(() => {
     const toDateStr = (val: string | null) => {
@@ -77,9 +73,12 @@ export function useTableFilter(list: Consultation[]) {
       if (filters.bookingDate !== 'all' && toDateStr(c.booking_date) !== filters.bookingDate) return false
       if (filters.completedDate !== 'all' && toDateStr(c.completed_date) !== filters.completedDate) return false
       if (filters.date !== 'all' && toDateStr(c.created_at) !== filters.date) return false
+      if (filters.consultType !== 'all') {
+        const val = getConsultType(c) || '없음'
+        if (val !== filters.consultType) return false
+      }
       return true
     })
   }, [list, filters])
-
   return { filters, setFilter, resetFilters, options, filtered }
 }
