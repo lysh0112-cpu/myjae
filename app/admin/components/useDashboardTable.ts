@@ -13,6 +13,7 @@ export type Consultation = {
   completed_date: string
   ai_analysis: string
   summary: string
+  deleted_at: string | null
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   birth_data: any
 }
@@ -28,7 +29,6 @@ export function toDateInput(val: string | null | undefined) {
 }
 
 // 상담 종류(consultationType/mode) → 사람이 읽는 라벨
-// birth_data.consultationType 에 저장된 값을 표에 예쁘게 표시하기 위한 대조표
 export const CONSULT_TYPE_LABELS: Record<string, string> = {
   personal: '개인 상담',
   couple: '연인 궁합',
@@ -56,6 +56,30 @@ export function getConsultTypeLabel(c: { birth_data?: any }): string {
   const t = getConsultType(c)
   if (!t) return '-'
   return CONSULT_TYPE_LABELS[t] ?? t
+}
+
+// 상담 건에 연결된 슬롯 잠금을 풀어줌 (유령 슬롯 방지)
+// - bookings에서 slot_id를 찾아 consultant_slots.is_booked=false 로 되돌린 뒤 bookings 정리
+// ConsultationList.tsx의 검증된 releaseSlotsFor와 동일한 방식
+export async function releaseSlotsFor(consultationIds: string[]) {
+  if (consultationIds.length === 0) return
+  try {
+    const { data: bks } = await supabase
+      .from('bookings')
+      .select('slot_id')
+      .in('consultation_id', consultationIds)
+    const slotIds = (bks ?? []).map(b => b.slot_id).filter(Boolean) as string[]
+    if (slotIds.length > 0) {
+      await supabase.from('consultant_slots')
+        .update({ is_booked: false })
+        .in('id', slotIds)
+    }
+    await supabase.from('bookings')
+      .delete()
+      .in('consultation_id', consultationIds)
+  } catch (e) {
+    console.error('슬롯 해제 중 오류', e)
+  }
 }
 
 export function useDashboardTable(
@@ -98,14 +122,17 @@ export function useDashboardTable(
     setEditingId(null)
     onRefresh()
   }
+  // 예약 취소 처리 (완전삭제 아님)
+  // - status='cancelled' + deleted_at 기록 → 고객 마이페이지·상담사 목록에서 숨겨짐
+  // - 슬롯 해제 → 그 시간 다시 예약 가능
+  // - 데이터는 남으므로 '취소 내역' 탭에서 되살리기/영구삭제 가능
   async function handleDelete(id: string) {
-    if (!confirm('삭제하시겠습니까?')) return
-    // 연관 테이블 먼저 삭제 (외래키 제약 해제)
-    await supabase.from('payments').delete().eq('consultation_id', id)
-    await supabase.from('chat_messages').delete().eq('consultation_id', id)
-    await supabase.from('commentaries').delete().eq('consultation_id', id)
-    const { error } = await supabase.from('consultations').delete().eq('id', id)
-    if (error) { alert('삭제 실패: ' + error.message); return }
+    if (!confirm('이 예약을 취소할까요?\n\n고객·상담사 화면에서 사라지고 그 시간이 다시 열립니다.\n(취소 내역 탭에서 되살리거나 영구삭제할 수 있어요)')) return
+    await releaseSlotsFor([id])   // 슬롯 잠금 풀기 + bookings 정리
+    const { error } = await supabase.from('consultations')
+      .update({ status: 'cancelled', deleted_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) { alert('취소 실패: ' + error.message); return }
     onDelete(id)
   }
   return {
