@@ -280,6 +280,37 @@ function DiagnosisInner() {
     setStep('preview')
   }
 
+  // ★ 이름풀이 해설(commentary)을 상담사 화면 표시용 텍스트로 변환 (물상도 방식과 동일)
+  function buildNamingAnalysisText(hanjaName: string, hangulName: string, c: Commentary | null): string {
+    if (!c) return ''
+    return `[이름풀이 · ${hangulName} (${hanjaName})]\n\n· 종합\n${c.summary || ''}\n\n· 좋은 점\n${c.good || ''}\n\n· 더 좋아지려면\n${c.improve || ''}\n\n· 조언\n${c.advice || ''}`.trim()
+  }
+
+  // ★ 상담사 연결: 현재 이름풀이 결과를 세션에 담고 consultant-select로 이동 (물상도 goConsult 방식)
+  function goConsult() {
+    try {
+      const hangulName = chars.filter(Boolean).map((c) => c!.hangul).join('')
+      const hanjaName = chars.filter(Boolean).map((c) => c!.hanja).join('')
+      // 상담 건에 연결될 이름풀이 상세 (consultant-select가 namings 테이블에 저장)
+      sessionStorage.setItem('naming_full', JSON.stringify({
+        kind: 'self',
+        hangul_name: hangulName,
+        hanja_name: hanjaName,
+        chars,
+        result: result ?? null,
+        commentary: commentary ?? null,
+        target_birth: null,
+      }))
+      // 상담사 화면에 뜰 해설 텍스트 (consultant-select가 consultations.ai_analysis에 저장)
+      const text = buildNamingAnalysisText(hanjaName, hangulName, commentary)
+      if (text) sessionStorage.setItem('ai_analysis', text)
+    } catch {}
+    const params = new URLSearchParams()
+    params.set('mode', 'naming')        // 개명 상담으로 구분 (상담사·관리자 화면에 '개명'으로 표시)
+    params.set('priceKey', 'naming_read')
+    router.push('/manseryeok/consultant-select?' + params.toString())
+  }
+
   async function handleFullResult() {
     if (!canSubmit || !surname || !saju || !dayStem) return
     setStep('result')
@@ -314,15 +345,21 @@ function DiagnosisInner() {
           personKey: pkey,
         }))
         // ★ 예약 시 상담사 화면으로 넘길 개명 결과 (궁합·물상도와 동일 방식)
+        const hangulName = chars.filter(Boolean).map((c) => c!.hangul).join('')
+        const hanjaName = chars.filter(Boolean).map((c) => c!.hanja).join('')
         sessionStorage.setItem('naming_full', JSON.stringify({
           kind: 'self',
-          hangul_name: chars.filter(Boolean).map((c) => c!.hangul).join(''),
-          hanja_name: chars.filter(Boolean).map((c) => c!.hanja).join(''),
+          hangul_name: hangulName,
+          hanja_name: hanjaName,
           chars,
           result: data.result ?? null,
           commentary: data.commentary ?? null,
           target_birth: null,
         }))
+        // ★ 상담사 화면에 뜰 해설 텍스트도 함께 저장 (물상도 방식과 동일)
+        const analysisText = buildNamingAnalysisText(hanjaName, hangulName, data.commentary ?? null)
+        if (analysisText) sessionStorage.setItem('ai_analysis', analysisText)
+
         localStorage.removeItem('rename_picks_v1')
         localStorage.removeItem('rename_locked_slot')
       } catch {}
@@ -401,6 +438,10 @@ function DiagnosisInner() {
   const normalList = hanjaList.filter((r) => !isAvoidChar(r))
   const avoidList = hanjaList.filter((r) => isAvoidChar(r))
 
+  // 저장된 이름 석 자 (배너 표시용)
+  const savedHangul = savedOffer ? savedOffer.chars.filter(Boolean).map((c) => c!.hangul).join('') : ''
+  const savedHanja = savedOffer ? savedOffer.chars.filter(Boolean).map((c) => c!.hanja).join('') : ''
+
   const hanjaCard = (row: HanjaRow, i: number, dim: boolean) => (
     <div key={i}
       onClick={() => pickHanja(row)}
@@ -433,19 +474,27 @@ function DiagnosisInner() {
         </div>
 
         {step === 'input' && savedOffer && (
-          <div style={{ background: 'rgba(250,199,117,0.08)', border: `1px solid ${gold}`, borderRadius: '14px', padding: '16px', marginBottom: '16px' }}>
-            <div style={{ fontSize: '14px', color: '#e8e4ff', marginBottom: '12px', lineHeight: 1.6 }}>
-              저장된 이름 풀이가 있어요.<br />최종 이름 풀이를 불러올까요?
+          <div style={{ background: 'rgba(250,199,117,0.08)', border: `1px solid ${gold}`, borderRadius: '14px', padding: '18px', marginBottom: '16px' }}>
+            <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '6px', textAlign: 'center' }}>저장된 내 이름</div>
+            <div style={{ fontSize: '30px', fontWeight: 'bold', color: gold, letterSpacing: '4px', textAlign: 'center', lineHeight: 1.2 }}>
+              {savedHanja || savedHangul}
             </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            {savedHanja && (
+              <div style={{ fontSize: '14px', color: '#e8e4ff', textAlign: 'center', marginTop: '4px' }}>{savedHangul}</div>
+            )}
+            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
               <button onClick={loadSavedResult}
-                style={{ flex: 1, padding: '11px', borderRadius: '10px', background: gold, border: 'none', color: '#1a1a18', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
-                불러오기
+                style={{ flex: 1, padding: '12px', borderRadius: '10px', background: gold, border: 'none', color: '#1a1a18', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
+                풀이 다시보기
               </button>
-              <button onClick={() => setSavedOffer(null)}
-                style={{ flex: 1, padding: '11px', borderRadius: '10px', background: 'transparent', border, color: '#8a88a0', fontSize: '13px', cursor: 'pointer' }}>
-                새로 입력
+              <button onClick={() => router.push('/manseryeok/naming/rename/newname')}
+                style={{ flex: 1, padding: '12px', borderRadius: '10px', background: 'rgba(250,199,117,0.16)', border: `1px solid ${gold}`, color: gold, fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
+                한자 바꾸기
               </button>
+            </div>
+            <div style={{ fontSize: '11px', color: '#8a88a0', textAlign: 'center', marginTop: '10px', lineHeight: 1.5 }}>
+              · 풀이 다시보기는 무료예요<br />
+              · 한자 바꾸기(개명)는 {hanjaPrice.toLocaleString()}원이에요
             </div>
           </div>
         )}
@@ -453,7 +502,7 @@ function DiagnosisInner() {
         {step === 'input' && (
           <>
             <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '10px' }}>
-              본인 이름을 한글로 입력하세요
+              {savedOffer ? '다른 이름을 풀어보려면 아래에 입력하세요' : '본인 이름을 한글로 입력하세요'}
             </div>
             <div style={{ display: 'flex', gap: '8px', marginBottom: syllables.length > 0 ? '26px' : '20px' }}>
               <input
@@ -680,6 +729,12 @@ function DiagnosisInner() {
                     {result.overallGrade}
                   </div>
                 </div>
+
+                {/* ★ 전문 상담사 연결 (물상도와 동일 방식 · mode=naming) */}
+                <button onClick={goConsult}
+                  style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'transparent', border: `1px solid ${gold}`, color: gold, fontSize: '14px', fontWeight: 500, cursor: 'pointer', marginBottom: '12px' }}>
+                  🔮 이 이름에 대해 전문가와 상담하기 →
+                </button>
 
                 <div style={{ background: 'linear-gradient(160deg,#34322f 0%,#2C2C2A 100%)', border: `1px solid ${gold}`, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
                   <div style={{ fontSize: '12px', color: '#f48fb1', fontStyle: 'italic', marginBottom: '14px', lineHeight: 1.5, textAlign: 'center' }}>
