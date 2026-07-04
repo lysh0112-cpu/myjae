@@ -12,7 +12,7 @@ const SUB = '#8a88a0'
 const GREEN = '#81c784'
 
 const TOP_N = 6
-const TRY_LIMIT = 3
+const DEFAULT_TRY_LIMIT = 3
 
 const BABY_HISTORY_KEY = 'newborn_history_v1'
 
@@ -108,6 +108,13 @@ function NewbornHanjaInner() {
   const [hanjaList, setHanjaList] = useState<HanjaRow[]>([])
   const [loadingList, setLoadingList] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
+
+  // ★ 이름 짓기 조회 횟수 (관리자 설정값 · app_settings)
+  const [TRY_LIMIT, setTryLimit] = useState(DEFAULT_TRY_LIMIT)
+  useEffect(() => {
+    supabase.from('app_settings').select('value').eq('key', 'naming_try_limit').maybeSingle()
+      .then(({ data }) => { if (data && typeof data.value === 'number') setTryLimit(data.value) })
+  }, [])
 
   // ── 아기 사주 계산 (개명과 동일한 검증된 계산식 재사용) ──
   const infoYear = baby ? parseInt(baby.year) : 0
