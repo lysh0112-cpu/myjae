@@ -150,7 +150,46 @@ function DiagnosisInner() {
     chars: (NameChar | null)[]
   } | null>(null)
 
+  // ★ 마이페이지에서 특정 이름풀이 id를 눌러 들어온 경우 (?nameId=xxx)
+  // 저장된 그 1건만 불러와 바로 결과 화면으로. (회원·기록이 많아져도 누른 1건만 조회)
+  const nameId = sp.get('nameId')
+  const [loadingSaved, setLoadingSaved] = useState(false)
+
   useEffect(() => {
+    if (!nameId) return
+    let cancelled = false
+    async function loadOneById() {
+      setLoadingSaved(true)
+      try {
+        const { data: u } = await supabase.auth.getUser()
+        if (!u?.user) { setLoadingSaved(false); return }
+        const { data: row } = await supabase
+          .from('my_names')
+          .select('hangul_name, hanja_name, chars, result, commentary')
+          .eq('id', nameId)
+          .eq('user_id', u.user.id)   // 본인 것만 (남의 id로 조회 방지)
+          .maybeSingle()
+        if (cancelled) return
+        if (row && row.result && row.commentary && Array.isArray(row.chars)) {
+          setResult(row.result as DiagnoseResult)
+          setCommentary(row.commentary as Commentary)
+          setChars(row.chars as (NameChar | null)[])
+          setSyllables((row.chars as (NameChar | null)[]).filter(Boolean).map((c) => c!.hangul))
+          setSavedOffer(null)   // 저장건 불러오기 배너는 필요 없음
+          setStep('result')
+        }
+      } catch (e) {
+        console.error(e)
+      } finally {
+        if (!cancelled) setLoadingSaved(false)
+      }
+    }
+    loadOneById()
+    return () => { cancelled = true }
+  }, [nameId])
+
+  useEffect(() => {
+    if (nameId) return          // id로 들어온 경우는 최근건 배너 안 띄움
     if (!info) return
     let cancelled = false
     async function checkSaved() {
@@ -176,7 +215,7 @@ function DiagnosisInner() {
     }
     checkSaved()
     return () => { cancelled = true }
-  }, [info])
+  }, [info, nameId])
 
   function loadSavedResult() {
     if (!savedOffer) return
@@ -322,7 +361,19 @@ function DiagnosisInner() {
     } catch {}
   }
 
-  if (!info) {
+  // ★ id로 저장 결과 불러오는 중 로딩 화면
+  if (nameId && loadingSaved && step !== 'result') {
+    return (
+      <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto' }}>
+        <PageHeader title="내 이름 풀이" onBack={() => router.push('/mypage')} />
+        <div style={{ padding: '60px 20px', textAlign: 'center', color: gold, fontSize: '14px' }}>
+          저장된 이름 풀이를 불러오는 중…
+        </div>
+      </main>
+    )
+  }
+
+  if (!info && !nameId) {
     return (
       <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto' }}>
         <PageHeader title="내 이름 풀이" onBack={() => router.push('/manseryeok/naming')} />
@@ -341,7 +392,9 @@ function DiagnosisInner() {
   }
 
   const sajuLine = converting ? '사주 불러오는 중...' :
-    `일간 ${dayStem} · ${info.calType} ${info.year}.${info.month}.${info.day}${info.calType === '음력' && info.leapMonth === '1' ? ' (윤달)' : ''}`
+    (dayStem && info
+      ? `일간 ${dayStem} · ${info.calType} ${info.year}.${info.month}.${info.day}${info.calType === '음력' && info.leapMonth === '1' ? ' (윤달)' : ''}`
+      : '저장된 이름 풀이')
 
   const slotLabel = (i: number) => i === 0 ? '성(姓)' : `이름 ${i}글자`
 
@@ -371,7 +424,7 @@ function DiagnosisInner() {
   return (
     <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-      <PageHeader title="내 이름 풀이" onBack={() => router.push('/manseryeok/naming')} />
+      <PageHeader title="내 이름 풀이" onBack={() => router.push(nameId ? '/mypage' : '/manseryeok/naming')} />
 
       <div style={{ padding: '16px' }}>
         <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
@@ -645,9 +698,9 @@ function DiagnosisInner() {
                   </button>
                 </div>
 
-                <button onClick={resetAll}
+                <button onClick={() => nameId ? router.push('/mypage') : resetAll()}
                   style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#8a88a0', fontSize: '13px', cursor: 'pointer' }}>
-                  다른 이름 풀어보기
+                  {nameId ? '← 마이페이지로' : '다른 이름 풀어보기'}
                 </button>
               </>
             )}
