@@ -1,5 +1,5 @@
 'use client'
-import { Consultation, Consultant, useDashboardTable } from './useDashboardTable'
+import { Consultation, Consultant, useDashboardTable, CONSULT_TYPE_LABELS } from './useDashboardTable'
 import { useTableFilter } from './useTableFilter'
 import DashboardFilter from './DashboardFilter'
 import DashboardRow from './DashboardRow'
@@ -25,6 +25,9 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
     ...consultants.map(c => [c.id, c.name])
   ])
 
+  // 종류 필터 드롭다운 라벨: 저장값(mode) → 사람이 읽는 이름. '없음'은 그대로.
+  const consultTypeLabelMap = { ...CONSULT_TYPE_LABELS, '없음': '없음' }
+
   const {
     assignMap, editingId, editForm, setEditForm,
     expandedAI, setExpandedAI,
@@ -42,7 +45,7 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
         onExcel={onExcel}
       />
       <div style={{ overflowX: 'auto', maxHeight: '60vh', overflowY: 'auto' }}>
-        <table className="w-full text-sm" style={{ borderCollapse: 'collapse', minWidth: '1100px' }}>
+        <table className="w-full text-sm" style={{ borderCollapse: 'collapse', minWidth: '1200px' }}>
           <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
             <tr style={{ background: 'rgba(60,52,137,0.3)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
               <ColumnFilter label="일자" value={filters.date}
@@ -54,6 +57,9 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
               <ColumnFilter label="담당상담사" value={filters.consultant}
                 options={options.consultant} onChange={v => setFilter('consultant', v)}
                 labelMap={consultantNameMap} />
+              <ColumnFilter label="종류" value={filters.consultType}
+                options={options.consultType} onChange={v => setFilter('consultType', v)}
+                labelMap={consultTypeLabelMap} />
               <ColumnFilter label="강제배정" value={filters.assignedConsultant}
                 options={options.assignedConsultant} onChange={v => setFilter('assignedConsultant', v)}
                 labelMap={consultantNameMap} />
@@ -73,7 +79,7 @@ export default function DashboardTable({ list, consultants, onDelete, onExcel, o
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={12} className="text-center py-10 text-sm"
+              <tr><td colSpan={13} className="text-center py-10 text-sm"
                 style={{ color: 'rgba(255,255,255,0.3)' }}>내역 없음</td></tr>
             )}
             {filtered.map((c, i) => (
