@@ -83,9 +83,9 @@ function NewbornInner() {
   // ── 이용권/결제 ──
   const [hanjaPrice, setHanjaPrice] = useState(20000)
   const [tryLimit, setTryLimit] = useState(DEFAULT_TRY_LIMIT)
-  const [payOpen, setPayOpen] = useState(false)
-  const [pendingUrl, setPendingUrl] = useState('')   // 결제 후 이동할 newborn-hanja URL
-  const [pendingBaby, setPendingBaby] = useState<Record<string, string> | null>(null)  // 결제 시 이용권 열쇠용
+  const [remaining, setRemaining] = useState(0)      // ★ 남은 조회 횟수
+  const [surLocked, setSurLocked] = useState(false)  // ★ 성씨 고정(이용권/URL로 이미 정해짐)
+  const [entryLoaded, setEntryLoaded] = useState(false)  // 진입 시 이용권 확인 완료
 
   useEffect(() => {
     supabase.from('analysis_prices').select('price').eq('price_key', 'naming_hanja').maybeSingle()
@@ -94,14 +94,38 @@ function NewbornInner() {
       .then(({ data }) => { if (data && typeof data.value === 'number') setTryLimit(data.value) })
   }, [])
 
-  // ★ '다른 이름 또 지어보기'로 URL에 baby(+surname)가 실려 들어오면
-  //   인적사항·성씨 입력을 건너뛰고 이름 입력부터 시작 (정해진 횟수 안에서는 재입력 불필요)
+  // ★ 진입: 이용권(newborn_pass_v1)이 살아있으면 아기 정보·성씨를 복원해
+  //   정보/성씨 입력을 건너뛰고 이름 입력부터 시작. (정해진 횟수 안에서는 재입력 불필요)
+  //   이용권이 없으면 결제 안내부터.
   useEffect(() => {
-    const babyRaw = sp.get('baby')
-    if (!babyRaw) return
+    // 1) 이용권 먼저 확인
+    let passRemaining = 0
+    let passBaby: Record<string, string> | null = null
+    let passSurname: SavedChar | null = null
     try {
-      const b = JSON.parse(decodeURIComponent(babyRaw))
-      // info를 fromInputs로 복원 (사주 계산용)
+      const p = JSON.parse(localStorage.getItem(NEWBORN_PASS_KEY) || '{}')
+      if (typeof p.remaining === 'number' && p.remaining > 0) {
+        passRemaining = p.remaining
+        passBaby = p.babyInfo || null
+        passSurname = p.surname || null
+      }
+    } catch {}
+
+    // 2) URL 파라미터(다른 이름 또 지어보기)도 확인 — 이용권 정보가 없을 때 보조
+    const babyRaw = sp.get('baby')
+    const surRaw = sp.get('surname')
+    let urlBaby: Record<string, string> | null = null
+    let urlSurname: SavedChar | null = null
+    try { if (babyRaw) urlBaby = JSON.parse(decodeURIComponent(babyRaw)) } catch {}
+    try { if (surRaw) urlSurname = JSON.parse(decodeURIComponent(surRaw)) as SavedChar } catch {}
+
+    const b = passBaby || urlBaby
+    const s = passSurname || urlSurname
+
+    setRemaining(passRemaining)
+
+    // 아기 정보 복원 → 정보 입력 건너뜀
+    if (b && b.year) {
       const restored = fromInputs({
         gender: b.gender, calType: b.calType,
         birthDate: `${b.year}-${String(b.month).padStart(2, '0')}-${String(b.day).padStart(2, '0')}`,
@@ -114,14 +138,16 @@ function NewbornInner() {
         setCalType(b.calType === '음력' ? '음력' : '양력')
         setConfirmed(true)
       }
-      const surRaw = sp.get('surname')
-      if (surRaw) {
-        const s = JSON.parse(decodeURIComponent(surRaw)) as SavedChar
-        setSurHanja(s)
-        setSurHangul(s.hangul)
-        setSurInput(s.hangul)
-      }
-    } catch {}
+    }
+    // 성씨 복원 → 성씨 입력 건너뜀
+    if (s && s.hanja) {
+      setSurHanja(s)
+      setSurHangul(s.hangul)
+      setSurInput(s.hangul)
+      setSurLocked(true)
+    }
+
+    setEntryLoaded(true)
   }, [sp])
 
   const infoYear = info ? parseInt(info.year) : 0
@@ -156,7 +182,16 @@ function NewbornInner() {
     setInfo(std)
     setConfirmed(true)
     setSurInput(''); setSurHangul(''); setSurHanja(null)
+    setSurLocked(false)
     setG1(''); setG2('')
+    // ★ 이용권에 이 아기 정보 저장 (이후 재진입 시 정보 입력 스킵)
+    try {
+      const babyObj = toMyInfoObject(std) as unknown as Record<string, string>
+      const p = JSON.parse(localStorage.getItem(NEWBORN_PASS_KEY) || '{}')
+      if (typeof p.remaining === 'number' && p.remaining > 0) {
+        localStorage.setItem(NEWBORN_PASS_KEY, JSON.stringify({ ...p, babyInfo: babyObj }))
+      }
+    } catch {}
   }
 
   function editBaby() {
@@ -195,14 +230,22 @@ function NewbornInner() {
   }
 
   function pickHanja(row: HanjaRow) {
-    setSurHanja({
+    const sur: SavedChar = {
       hangul: row.hangul,
       hanja: row.hanja,
       strokes: row.strokes,
       resourceOhaeng: row.resource_ohaeng,
-    })
+    }
+    setSurHanja(sur)
     setPicker(false)
     setHanjaList([])
+    // ★ 이용권에 성씨 저장 (이후 재진입 시 성씨 입력 스킵)
+    try {
+      const p = JSON.parse(localStorage.getItem(NEWBORN_PASS_KEY) || '{}')
+      if (typeof p.remaining === 'number' && p.remaining > 0) {
+        localStorage.setItem(NEWBORN_PASS_KEY, JSON.stringify({ ...p, surname: sur }))
+      }
+    } catch {}
   }
 
   const givenReady =
@@ -210,7 +253,7 @@ function NewbornInner() {
     (nameCount === 1 || firstHangul(g2).trim().length > 0)
 
   // 원하는 발음으로 한자 지어주기 → 아기 사주+성씨+한글이름을 URL로 실어 아기 한자고르기로
-  // (궁합과 동일 방식: 제3자(아기) 사주를 URL로 전달. localStorage/personKey 안 씀)
+  // (이용권은 입구에서 이미 결제됨. 여기선 babyKey를 이용권에 확정하고 바로 진입)
   function goDirect() {
     if (!surHanja || !info || !givenReady) return
     const givenName = nameCount === 1 ? firstHangul(g1) : firstHangul(g1) + firstHangul(g2)
@@ -223,35 +266,30 @@ function NewbornInner() {
       + '&surname=' + surnameParam
       + '&name=' + nameParam
 
-    // 남은 이용권 있으면 바로 진입, 없으면 결제 팝업
+    // 이용권에 babyKey를 확정 (result가 이 열쇠로 이용권/기록을 읽음)
     const bkey = babyKeyOf(babyObj as unknown as { gender: string; calType: string; year: string; month: string; day: string; leapMonth: string; hour: string })
-    let remaining = 0
     try {
       const p = JSON.parse(localStorage.getItem(NEWBORN_PASS_KEY) || '{}')
-      if (p.babyKey === bkey && typeof p.remaining === 'number') remaining = p.remaining
+      if (typeof p.remaining === 'number' && p.remaining > 0) {
+        localStorage.setItem(NEWBORN_PASS_KEY, JSON.stringify({ ...p, babyKey: bkey, babyInfo: babyObj, surname: surHanja }))
+        router.push(url)
+        return
+      }
     } catch {}
-
-    if (remaining > 0) {
-      router.push(url)
-    } else {
-      setPendingUrl(url)
-      setPendingBaby(babyObj)
-      setPayOpen(true)
-    }
+    // 이용권이 없으면(직접 URL 진입 등) 결제 안내 화면으로
+    setRemaining(0)
+    setConfirmed(false)
   }
 
-  // 결제(지금은 실제 PG 없이 통과) → 이용권 충전 후 진입
+  // 결제(지금은 실제 PG 없이 통과) → 이용권 충전
   // ★ 나중에 실제 결제 붙일 때 이 함수 안 "결제 통과" 자리에 PG 호출을 넣으면 됨
-  function payAndProceed() {
-    if (!pendingBaby || !pendingUrl) return
-    const bkey = babyKeyOf(pendingBaby as unknown as { gender: string; calType: string; year: string; month: string; day: string; leapMonth: string; hour: string })
+  //   결제는 아기 정보 입력 전에 받으므로, 이 시점엔 babyKey를 아직 모름(정보 확정 시 채움).
+  function payNow() {
     try {
-      localStorage.setItem(NEWBORN_PASS_KEY, JSON.stringify({ babyKey: bkey, remaining: tryLimit }))
-      // 결제하면 새 이용권이므로 지난 시도기록 초기화
+      localStorage.setItem(NEWBORN_PASS_KEY, JSON.stringify({ babyKey: '', remaining: tryLimit, babyInfo: null, surname: null }))
       localStorage.removeItem('newborn_history_v1')
     } catch {}
-    setPayOpen(false)
-    router.push(pendingUrl)
+    setRemaining(tryLimit)
   }
 
   const sajuLine = converting ? '사주 불러오는 중...' :
@@ -269,8 +307,32 @@ function NewbornInner() {
 
       <div style={{ padding: '16px' }}>
 
-        {/* ── 아기 정보 입력 (확정 전) ── */}
-        {!confirmed && (
+        {/* ★ 결제 전: 이용권 안내 (아기 정보 입력 전에 먼저 결제) */}
+        {entryLoaded && remaining <= 0 && (
+          <div style={{ background: cardBg, border, borderRadius: '16px', padding: '22px 18px', marginBottom: '16px', textAlign: 'center' }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>👶</div>
+            <div style={{ fontSize: 17, fontWeight: 'bold', color: '#fff', marginBottom: 8 }}>아기 이름 지어보기</div>
+            <div style={{ fontSize: 13, color: '#b0aec8', marginBottom: 18, lineHeight: 1.8 }}>
+              결제하시면 아기 사주에 맞는 한자로<br />
+              <b style={{ color: gold }}>{tryLimit}개</b>의 이름을 지어보고<br />
+              상세 풀이까지 확인하실 수 있어요.
+            </div>
+            <div style={{ background: '#1a1a18', borderRadius: 12, padding: '14px', marginBottom: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <span style={{ fontSize: 14, color: '#8a88a0' }}>결제 금액</span>
+              <span style={{ fontSize: 20, fontWeight: 'bold', color: gold }}>{hanjaPrice.toLocaleString()}원</span>
+            </div>
+            <button onClick={payNow}
+              style={{ width: '100%', padding: 15, borderRadius: 12, background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)', border: 'none', color: '#1a1a18', fontSize: 15, fontWeight: 'bold', cursor: 'pointer' }}>
+              💳 {hanjaPrice.toLocaleString()}원 결제하고 시작하기
+            </button>
+            <div style={{ fontSize: 11, color: '#8a88a0', marginTop: 10, lineHeight: 1.6 }}>
+              결제 후 아기 정보를 입력하시면, 정해진 횟수 안에서는<br />정보를 다시 넣지 않고 여러 번 지어보실 수 있어요.
+            </div>
+          </div>
+        )}
+
+        {/* ── 아기 정보 입력 (결제 후 · 확정 전) ── */}
+        {entryLoaded && remaining > 0 && !confirmed && (
           <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
               <div style={{ width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: gold, background: 'linear-gradient(135deg,#3C3489,#4e46b0)' }}>✦</div>
@@ -353,27 +415,31 @@ function NewbornInner() {
           </div>
         )}
 
-        {/* ── 성씨 입력 (아기 사주 확정 후에만) ── */}
+        {/* ── 성씨 입력 (아기 사주 확정 후에만 · 성씨 미확정일 때만) ── */}
         {confirmed && info && (
           <>
-            <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '10px' }}>아기 성씨를 한글로 적어주세요</div>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'stretch' }}>
-              <input
-                value={surInput}
-                inputMode="text"
-                maxLength={2}
-                onCompositionStart={() => { composingSur.current = true }}
-                onCompositionEnd={(e) => { composingSur.current = false; setSurInput(firstHangul(e.currentTarget.value)) }}
-                onChange={(e) => { const v = e.target.value; if (composingSur.current) setSurInput(v); else setSurInput(firstHangul(v)) }}
-                onKeyDown={(e) => { if (e.key === 'Enter') applySurname() }}
-                placeholder="예: 김"
-                style={{ flex: 1, minWidth: 0, padding: '13px', borderRadius: '12px', background: '#1a1a18', border: '1px solid rgba(255,255,255,0.15)', color: '#e8e4ff', fontSize: '16px' }}
-              />
-              <button onClick={() => applySurname()}
-                style={{ flexShrink: 0, padding: '0 18px', borderRadius: '12px', background: gold, border: 'none', color: '#1a1a18', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                확인
-              </button>
-            </div>
+            {!surLocked && (
+              <>
+                <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '10px' }}>아기 성씨를 한글로 적어주세요</div>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'stretch' }}>
+                  <input
+                    value={surInput}
+                    inputMode="text"
+                    maxLength={2}
+                    onCompositionStart={() => { composingSur.current = true }}
+                    onCompositionEnd={(e) => { composingSur.current = false; setSurInput(firstHangul(e.currentTarget.value)) }}
+                    onChange={(e) => { const v = e.target.value; if (composingSur.current) setSurInput(v); else setSurInput(firstHangul(v)) }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') applySurname() }}
+                    placeholder="예: 김"
+                    style={{ flex: 1, minWidth: 0, padding: '13px', borderRadius: '12px', background: '#1a1a18', border: '1px solid rgba(255,255,255,0.15)', color: '#e8e4ff', fontSize: '16px' }}
+                  />
+                  <button onClick={() => applySurname()}
+                    style={{ flexShrink: 0, padding: '0 18px', borderRadius: '12px', background: gold, border: 'none', color: '#1a1a18', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    확인
+                  </button>
+                </div>
+              </>
+            )}
 
             {surHangul && (
               <>
@@ -499,35 +565,6 @@ function NewbornInner() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ★ 아기 이름 이용권 결제 팝업 (선결제 → tryLimit회 조회) */}
-      {payOpen && (
-        <div onClick={() => setPayOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
-          <div onClick={(e) => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: 360, background: '#222220', borderRadius: 18, padding: '24px 20px', boxShadow: '0 16px 40px rgba(0,0,0,0.5)', textAlign: 'center' }}>
-            <div style={{ fontSize: 28, marginBottom: 10 }}>👶</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 6 }}>아기 이름 지어보기 이용권</div>
-            <div style={{ fontSize: 13, color: '#8a88a0', marginBottom: 16, lineHeight: 1.7 }}>
-              결제하시면 아기 사주에 맞는 한자로<br />
-              <b style={{ color: gold }}>{tryLimit}개</b>의 이름을 지어보고<br />
-              상세 풀이까지 확인하실 수 있어요.
-            </div>
-            <div style={{ background: cardBg, borderRadius: 12, padding: '14px', marginBottom: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 14, color: '#8a88a0' }}>결제 금액</span>
-              <span style={{ fontSize: 20, fontWeight: 700, color: gold }}>{hanjaPrice.toLocaleString()}원</span>
-            </div>
-            <button onClick={payAndProceed}
-              style={{ width: '100%', padding: 15, borderRadius: 12, background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)', border: 'none', color: '#1a1a18', fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>
-              💳 {hanjaPrice.toLocaleString()}원 결제하고 시작하기
-            </button>
-            <button onClick={() => setPayOpen(false)}
-              style={{ width: '100%', padding: 12, borderRadius: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: '#8a88a0', fontSize: 13, cursor: 'pointer' }}>
-              다음에 할게요
-            </button>
           </div>
         </div>
       )}
