@@ -365,7 +365,7 @@ function ResultNewContent() {
           {ohaeng.map(({el,pct})=>(
             <div key={el} style={{marginBottom:'8px'}}>
               <div style={{display:'flex',justifyContent:'space-between',marginBottom:'3px'}}>
-                <span style={{fontSize:'11px',color:'#555',fontWeight:500}}>{el}(木火土金水'.split('')[['목','화','토','금','수'].indexOf(el)]||el})</span>
+                <span style={{fontSize:'11px',color:'#555',fontWeight:500}}>{el}({({'목':'木','화':'火','토':'土','금':'金','수':'水'})[el]||el})</span>
                 <span style={{fontSize:'11px',fontWeight:700,color:ELEMENT_COLOR[el]}}>{pct}%</span>
               </div>
               <div style={{height:'7px',background:'#f5f3ef',borderRadius:'4px',overflow:'hidden'}}>
