@@ -59,8 +59,8 @@ function ymd(d: Date): string {
   return `${y}-${m}-${dd}`
 }
 
-// 완료 시각 → "7/3 14:35"
-function fmtCompleted(iso: string | null | undefined): string {
+// 시각 → "7/3 14:35"  (시작시각·종료시각 공통)
+function fmtTime(iso: string | null | undefined): string {
   if (!iso) return '—'
   const d = new Date(iso)
   const mo = d.getMonth() + 1
@@ -171,32 +171,6 @@ export default function ConsultationList({
     return () => { supabase.removeChannel(channel) }
   }, [consultantId, fetchList])
 
-  // 시작 버튼 → started_at 기록, status=in_progress
-  async function handleStart(e: React.MouseEvent, c: Consultation) {
-    e.stopPropagation()
-    setBusyId(c.id)
-    try {
-      await supabase.from('consultations')
-        .update({ started_at: new Date().toISOString(), status: 'in_progress' })
-        .eq('id', c.id)
-      await fetchList()
-    } catch (err) { console.error(err); alert('시작 처리 중 문제가 생겼어요.') }
-    finally { setBusyId(null) }
-  }
-
-  // 완료 버튼 → completed_at 기록, status=completed
-  async function handleComplete(e: React.MouseEvent, c: Consultation) {
-    e.stopPropagation()
-    setBusyId(c.id)
-    try {
-      await supabase.from('consultations')
-        .update({ completed_at: new Date().toISOString(), status: 'completed' })
-        .eq('id', c.id)
-      await fetchList()
-    } catch (err) { console.error(err); alert('완료 처리 중 문제가 생겼어요.') }
-    finally { setBusyId(null) }
-  }
-
   // 기간 범위 계산
   function periodRange(): { from: string; to: string } {
     const now = new Date()
@@ -288,16 +262,17 @@ export default function ConsultationList({
     }
   }
 
-  // 엑셀(CSV) 내보내기
+  // 엑셀(CSV) 내보내기 — 시작시각·종료시각 각각 칸으로
   function exportCsv() {
-    const headers = ['이름', '이메일', '연락처', '닉네임', '생년월일', '음/양력', '윤/평달', '성별', '상담요청', '상태', '완료일자', '상담시간']
+    const headers = ['이름', '이메일', '연락처', '닉네임', '생년월일', '음/양력', '윤/평달', '성별', '상담요청', '상태', '시작시각', '종료시각', '상담시간']
     const lines = [headers.join(',')]
     for (const c of filtered) {
       const r = rowData(c)
       const status = c.completed_at ? '완료' : c.started_at ? '진행중' : '대기'
-      const completed = c.completed_at ? fmtCompleted(c.completed_at) : ''
+      const started = c.started_at ? fmtTime(c.started_at) : ''
+      const ended = c.completed_at ? fmtTime(c.completed_at) : ''
       const dur = fmtDuration(c.started_at, c.completed_at)
-      const cells = [r.name, r.email, r.phone, r.nickname, r.birth, r.cal, r.leap, r.gender, r.reqType, status, completed, dur]
+      const cells = [r.name, r.email, r.phone, r.nickname, r.birth, r.cal, r.leap, r.gender, r.reqType, status, started, ended, dur]
       lines.push(cells.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
     }
     const csv = '\uFEFF' + lines.join('\n') // BOM: 엑셀 한글 깨짐 방지
@@ -366,7 +341,7 @@ export default function ConsultationList({
 
       {/* 표 (왼쪽 정렬, 오른쪽 여백) */}
       <div style={{ flex: 1, overflow: 'auto' }}>
-        <div style={{ maxWidth: '1000px' }}>
+        <div style={{ maxWidth: '1050px' }}>
           {filtered.length === 0 ? (
             <div style={{ padding: '20px', textAlign: 'center', fontSize: '12px', color: '#5555aa' }}>해당 기간의 상담 내역이 없습니다</div>
           ) : (
@@ -383,7 +358,8 @@ export default function ConsultationList({
                   <th style={{ ...th, textAlign: 'center' }}>성별</th>
                   <th style={th}>상담요청</th>
                   <th style={{ ...th, textAlign: 'center' }}>상태</th>
-                  <th style={{ ...th, textAlign: 'center' }}>완료일자</th>
+                  <th style={{ ...th, textAlign: 'center' }}>시작시각</th>
+                  <th style={{ ...th, textAlign: 'center' }}>종료시각</th>
                   <th style={{ ...th, textAlign: 'center' }}>상담시간</th>
                   <th style={{ ...th, textAlign: 'center' }}></th>
                 </tr>
@@ -394,6 +370,15 @@ export default function ConsultationList({
                   const isSelected = selectedId === c.id
                   const isBusy = busyId === c.id
                   const gColor = r.gender === '여' ? '#e57373' : r.gender === '남' ? '#64b5f6' : '#8a88a0'
+
+                  // 상태 배지 (버튼 없이 글씨만)
+                  const statusBadge = c.completed_at ? (
+                    <span style={{ fontSize: '10px', padding: '3px 10px', borderRadius: '12px', border: '1px solid rgba(97,196,89,0.4)', background: 'rgba(97,196,89,0.15)', color: '#97c459', fontWeight: 600 }}>✓ 완료</span>
+                  ) : c.started_at ? (
+                    <span style={{ fontSize: '10px', padding: '3px 10px', borderRadius: '12px', border: '1px solid rgba(55,138,221,0.5)', background: 'rgba(55,138,221,0.2)', color: '#64b5f6', fontWeight: 600 }}>진행중</span>
+                  ) : (
+                    <span style={{ fontSize: '10px', padding: '3px 10px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)', color: '#8a88a0', fontWeight: 600 }}>대기</span>
+                  )
 
                   return (
                     <tr key={c.id} onClick={() => onSelect(c)}
@@ -413,22 +398,9 @@ export default function ConsultationList({
                       <td style={td}>
                         <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '10px', background: 'rgba(119,102,221,0.18)', color: '#b8a9ff' }}>{r.reqType}</span>
                       </td>
-                      <td style={{ ...td, textAlign: 'center' }}>
-                        {c.completed_at ? (
-                          <span style={{ fontSize: '10px', padding: '3px 10px', borderRadius: '12px', border: '1px solid rgba(97,196,89,0.4)', background: 'rgba(97,196,89,0.15)', color: '#97c459', fontWeight: 600 }}>✓ 완료</span>
-                        ) : c.started_at ? (
-                          <button onClick={e => handleComplete(e, c)} disabled={isBusy}
-                            style={{ fontSize: '10px', padding: '3px 10px', borderRadius: '12px', border: '1px solid rgba(55,138,221,0.5)', background: 'rgba(55,138,221,0.2)', color: '#64b5f6', cursor: 'pointer', fontWeight: 600, opacity: isBusy ? 0.5 : 1 }}>
-                            ■ 완료
-                          </button>
-                        ) : (
-                          <button onClick={e => handleStart(e, c)} disabled={isBusy}
-                            style={{ fontSize: '10px', padding: '3px 10px', borderRadius: '12px', border: '1px solid rgba(250,199,117,0.5)', background: 'rgba(250,199,117,0.15)', color: '#FAC775', cursor: 'pointer', fontWeight: 600, opacity: isBusy ? 0.5 : 1 }}>
-                            ▶ 시작
-                          </button>
-                        )}
-                      </td>
-                      <td style={{ ...td, textAlign: 'center' }}>{fmtCompleted(c.completed_at)}</td>
+                      <td style={{ ...td, textAlign: 'center' }}>{statusBadge}</td>
+                      <td style={{ ...td, textAlign: 'center', color: c.started_at ? '#FAC775' : '#66657a' }}>{fmtTime(c.started_at)}</td>
+                      <td style={{ ...td, textAlign: 'center', color: c.completed_at ? '#97c459' : '#66657a' }}>{fmtTime(c.completed_at)}</td>
                       <td style={{ ...td, textAlign: 'center', color: c.completed_at ? '#e8e2f5' : c.started_at ? '#64b5f6' : '#66657a', fontWeight: c.completed_at ? 600 : 400 }}>
                         {fmtDuration(c.started_at, c.completed_at)}
                       </td>
