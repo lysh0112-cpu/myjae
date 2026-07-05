@@ -106,6 +106,25 @@ export default function ConsultantChat({
     }
   }
 
+  // [상담 재개] → 종료시각만 지움(시작시각 유지) → 경과시간 이어서 누적
+  async function handleResume() {
+    if (busy) return
+    if (!confirm('상담을 다시 이어서 진행할까요? 종료 시각이 지워지고 시간이 계속 흘러갑니다.')) return
+    setBusy(true)
+    try {
+      await supabase.from('consultations')
+        .update({ completed_at: null, status: 'in_progress' })
+        .eq('id', consultationId)
+      setCompletedAt(null)
+      setNow(Date.now())
+    } catch (err) {
+      console.error(err)
+      alert('재개 처리 중 문제가 생겼어요.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   // 시각 → "14:35"
   const fmtTime = (iso: string | null) =>
     iso ? new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : ''
@@ -176,7 +195,7 @@ export default function ConsultantChat({
           </button>
         )}
 
-        {/* 시작 / 종료 버튼 */}
+        {/* 시작 / 종료 / 재개 버튼 */}
         {!completedAt ? (
           !startedAt ? (
             <button onClick={handleStart} disabled={busy}
@@ -190,9 +209,15 @@ export default function ConsultantChat({
             </button>
           )
         ) : (
-          <span style={{fontSize:'11px',padding:'6px 12px',borderRadius:'8px',border:'1px solid rgba(97,196,89,0.4)',background:'rgba(97,196,89,0.15)',color:'#97c459',fontWeight:600,whiteSpace:'nowrap'}}>
-            ✓ 완료됨
-          </span>
+          <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
+            <span style={{fontSize:'11px',padding:'6px 12px',borderRadius:'8px',border:'1px solid rgba(97,196,89,0.4)',background:'rgba(97,196,89,0.15)',color:'#97c459',fontWeight:600,whiteSpace:'nowrap'}}>
+              ✓ 완료됨
+            </span>
+            <button onClick={handleResume} disabled={busy}
+              style={{fontSize:'11px',padding:'6px 14px',borderRadius:'8px',border:'1px solid rgba(55,138,221,0.5)',background:'rgba(55,138,221,0.18)',color:'#64b5f6',cursor:'pointer',fontWeight:600,opacity:busy?0.5:1,whiteSpace:'nowrap'}}>
+              ↻ 상담 재개
+            </button>
+          </div>
         )}
       </div>
 
