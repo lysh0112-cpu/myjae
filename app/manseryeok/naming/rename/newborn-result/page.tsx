@@ -266,12 +266,29 @@ function NewbornResultInner() {
       }
       const hangulName = t.chars.map((c) => c.hangul).join('')
       const hanjaName = t.chars.map((c) => c.hanja).join('')
+
+      // 저장 시점의 4가지 등급(result)을 박제 → 다시보기는 순수 읽기 전용
+      let savedResult: DiagnoseResult | null = null
+      try {
+        if (saju && dayStem && t.chars.length >= 2) {
+          const y = calcYongsin(saju, dayStem)
+          const surname: NameChar = {
+            hangul: t.chars[0].hangul, hanja: t.chars[0].hanja,
+            strokes: t.chars[0].strokes, resourceOhaeng: ohaengChar(t.chars[0].resourceOhaeng),
+          }
+          const given: NameChar[] = t.chars.slice(1).map((c) => ({
+            hangul: c.hangul, hanja: c.hanja, strokes: c.strokes, resourceOhaeng: ohaengChar(c.resourceOhaeng),
+          }))
+          savedResult = diagnoseName({ surname, given, yongsin: y.yongsin, heeksin: y.heeksin, elementScore: y.score })
+        }
+      } catch {}
+
       await supabase.from('my_names').insert({
         user_id: u.user.id,
         hangul_name: hangulName,
         hanja_name: hanjaName,
         chars: t.chars,
-        result: null,
+        result: savedResult,
         commentary: t.commentary ?? null,
         kind: 'newborn',
         person_key: bkey,
