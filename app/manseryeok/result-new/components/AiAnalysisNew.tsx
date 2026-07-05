@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getFreePrompt, getPaidPrompt } from '../result/components/prompts'
-import PaidLockSection from '../result/components/PaidLockSection'
+import { getFreePrompt, getPaidPrompt } from '@/app/manseryeok/result/components/prompts'
+import PaidLockSection from '@/app/manseryeok/result/components/PaidLockSection'
 
 function cleanMarkdown(text: string): string {
   return text
