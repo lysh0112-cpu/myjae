@@ -11,6 +11,8 @@ const SUB = '#8a88a0'
 const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
 const NEWBORN_SURNAME_KEY = 'newborn_surname_v1'
+const NAMING_PASS_KEY = 'naming_pass_v1'   // 개명 이용권 { userId, remaining }
+const DEFAULT_TRY_LIMIT = 3
 
 interface SavedChar {
   hangul: string
@@ -43,6 +45,30 @@ export default function NewNamePage() {
 
   const [surname, setSurname] = useState<SavedChar | null>(null)
   const [loaded, setLoaded] = useState(false)
+
+  // ── 이용권/결제 ──
+  const [uid, setUid] = useState('')
+  const [hanjaPrice, setHanjaPrice] = useState(20000)   // 한자바꾸기(개명) 가격
+  const [tryLimit, setTryLimit] = useState(DEFAULT_TRY_LIMIT)  // 결제 1회당 조회 횟수
+  const [payOpen, setPayOpen] = useState(false)
+  const [pendingName, setPendingName] = useState('')    // 결제 후 이동할 이름
+
+  useEffect(() => {
+    supabase.from('analysis_prices').select('price').eq('price_key', 'naming_hanja').maybeSingle()
+      .then(({ data }) => { if (data) setHanjaPrice(data.price) })
+    supabase.from('app_settings').select('value').eq('key', 'naming_try_limit').maybeSingle()
+      .then(({ data }) => { if (data && typeof data.value === 'number') setTryLimit(data.value) })
+    supabase.auth.getUser().then(({ data }) => { if (data?.user) setUid(data.user.id) })
+  }, [])
+
+  // 현재 남은 조회 횟수 읽기 (이 user의 이용권)
+  function readRemaining(): number {
+    try {
+      const p = JSON.parse(localStorage.getItem(NAMING_PASS_KEY) || '{}')
+      if (p.userId === uid && typeof p.remaining === 'number') return p.remaining
+    } catch {}
+    return 0
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -152,7 +178,25 @@ export default function NewNamePage() {
     const a = firstHangul(c1)
     const b = firstHangul(c2)
     const name = count === 1 ? a : a + b
-    router.push('/manseryeok/naming/rename/newhanja?name=' + encodeURIComponent(name))
+    // 남은 조회 횟수가 있으면 바로 진입, 없으면 결제 팝업
+    if (readRemaining() > 0) {
+      router.push('/manseryeok/naming/rename/newhanja?name=' + encodeURIComponent(name))
+    } else {
+      setPendingName(name)
+      setPayOpen(true)
+    }
+  }
+
+  // 결제(지금은 실제 PG 없이 통과) → 이용권 충전 후 진입
+  // ★ 나중에 실제 결제 붙일 때 이 함수 안 "결제 통과" 자리에 PG 호출을 넣으면 됨
+  function payAndProceed() {
+    try {
+      localStorage.setItem(NAMING_PASS_KEY, JSON.stringify({ userId: uid, remaining: tryLimit }))
+      // 결제하면 새 이용권이므로 지난 시도기록 초기화
+      localStorage.removeItem('newname_history_v1')
+    } catch {}
+    setPayOpen(false)
+    router.push('/manseryeok/naming/rename/newhanja?name=' + encodeURIComponent(pendingName))
   }
 
   const inputStyle: CSSProperties = {
@@ -245,6 +289,35 @@ export default function NewNamePage() {
             한자 추천받기 {'\u2192'}
           </button>
         </>
+      )}
+
+      {/* ★ 개명 이용권 결제 팝업 (선결제 → tryLimit회 조회) */}
+      {payOpen && (
+        <div onClick={() => setPayOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: 360, background: '#222220', borderRadius: 18, padding: '24px 20px', boxShadow: '0 16px 40px rgba(0,0,0,0.5)', textAlign: 'center' }}>
+            <div style={{ fontSize: 28, marginBottom: 10 }}>✍️</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 6 }}>이름 지어보기 이용권</div>
+            <div style={{ fontSize: 13, color: SUB, marginBottom: 16, lineHeight: 1.7 }}>
+              결제하시면 사주에 맞는 한자로<br />
+              <b style={{ color: GOLD }}>{tryLimit}개</b>의 이름을 지어보고<br />
+              상세 풀이까지 확인하실 수 있어요.
+            </div>
+            <div style={{ background: CARD, borderRadius: 12, padding: '14px', marginBottom: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 14, color: SUB }}>결제 금액</span>
+              <span style={{ fontSize: 20, fontWeight: 700, color: GOLD }}>{hanjaPrice.toLocaleString()}원</span>
+            </div>
+            <button onClick={payAndProceed}
+              style={{ width: '100%', padding: 15, borderRadius: 12, background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)', border: 'none', color: '#1a1a18', fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>
+              💳 {hanjaPrice.toLocaleString()}원 결제하고 시작하기
+            </button>
+            <button onClick={() => setPayOpen(false)}
+              style={{ width: '100%', padding: 12, borderRadius: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: SUB, fontSize: 13, cursor: 'pointer' }}>
+              다음에 할게요
+            </button>
+          </div>
+        </div>
       )}
     </main>
   )
