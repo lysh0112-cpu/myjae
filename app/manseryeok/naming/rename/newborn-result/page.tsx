@@ -437,7 +437,15 @@ function NewbornResultInner() {
         남은 조회 횟수 {remaining > 0 ? remaining : 0}회
       </div>
       {remaining > 0 ? (
-        <button onClick={() => router.push('/manseryeok/naming/rename/newborn?baby=' + (sp.get('baby') || ''))} className="active:scale-95"
+        <button onClick={() => {
+          const babyParam = sp.get('baby') || ''
+          // 현재 이름의 성씨(chars[0])를 그대로 실어 보내 성씨 입력도 건너뜀
+          const sur = cur.chars[0]
+          const surParam = sur ? encodeURIComponent(JSON.stringify({
+            hangul: sur.hangul, hanja: sur.hanja, strokes: sur.strokes, resourceOhaeng: sur.resourceOhaeng,
+          })) : ''
+          router.push('/manseryeok/naming/rename/newborn?baby=' + babyParam + (surParam ? '&surname=' + surParam : ''))
+        }} className="active:scale-95"
           style={{ width: '100%', background: 'rgba(250,199,117,0.16)', border: '1px solid ' + GOLD, borderRadius: 14, padding: 13, color: GOLD, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
           다른 이름 또 지어보기 →
         </button>
