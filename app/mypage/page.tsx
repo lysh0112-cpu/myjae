@@ -634,11 +634,13 @@ export default function MyPage() {
                     <div style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>
                       {n.hanja_name || '-'} <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{n.hangul_name}</span>
                     </div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{dateText(n.created_at)}{n.kind === 'self' ? ' · 내 이름' : ''}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{dateText(n.created_at)}{n.kind === 'self' ? ' · 내 이름' : n.kind === 'newborn' ? ' · 아기 이름' : ''}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                     <button
-                      onClick={() => router.push(`/manseryeok/naming/diagnosis?nameId=${n.id}`)}
+                      onClick={() => router.push(n.kind === 'newborn'
+                        ? `/manseryeok/naming/rename/newborn-view?nameId=${n.id}`
+                        : `/manseryeok/naming/diagnosis?nameId=${n.id}`)}
                       style={{ fontSize: 12, color: '#c8b0ff', background: 'rgba(83,74,183,0.25)', border: '1px solid rgba(119,102,221,0.4)', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                       다시보기
                     </button>
