@@ -28,11 +28,36 @@ export default function ConsultantChat({
   const { sending, sendMessage } = useSendMessage(consultationId, 'consultant')
   const [input, setInput] = useState('')
 
+  // 이 상담 건의 시작·종료 시각
+  const [startedAt, setStartedAt] = useState<string | null>(null)
+  const [completedAt, setCompletedAt] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  // 경과시간 초시계용 — 매초 갱신되는 현재시각
+  const [now, setNow] = useState<number>(Date.now())
+
+  // 채팅창이 열리면 현재 시작·종료 상태를 읽어옴
+  // (자동으로 in_progress 로 바꾸지 않음 — 시작은 반드시 [상담 시작] 버튼으로)
   useEffect(() => {
+    let cancelled = false
     supabase.from('consultations')
-      .update({ status: 'in_progress' })
+      .select('started_at, completed_at')
       .eq('id', consultationId)
+      .single()
+      .then(({ data }) => {
+        if (cancelled || !data) return
+        setStartedAt(data.started_at ?? null)
+        setCompletedAt(data.completed_at ?? null)
+      })
+    return () => { cancelled = true }
   }, [consultationId])
+
+  // 상담 진행 중일 때만 초시계가 매초 흐름 (시작됨 & 아직 종료 안 됨)
+  useEffect(() => {
+    if (!startedAt || completedAt) return
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [startedAt, completedAt])
 
   async function handleSend() {
     if (!input.trim()) return
@@ -40,12 +65,72 @@ export default function ConsultantChat({
     setInput('')
   }
 
+  // [상담 시작] → started_at 기록, status=in_progress
+  async function handleStart() {
+    if (busy) return
+    setBusy(true)
+    try {
+      const iso = new Date().toISOString()
+      await supabase.from('consultations')
+        .update({ started_at: iso, status: 'in_progress' })
+        .eq('id', consultationId)
+      setStartedAt(iso)
+      setNow(Date.now())
+    } catch (err) {
+      console.error(err)
+      alert('시작 처리 중 문제가 생겼어요.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // [상담 종료] → completed_at 기록, status=completed → 목록으로 복귀
+  async function handleEnd() {
+    if (busy) return
+    if (!startedAt) {
+      if (!confirm('아직 [상담 시작]을 누르지 않았어요. 그래도 종료할까요?')) return
+    }
+    if (!confirm('이 상담을 종료할까요? 종료 시각이 기록됩니다.')) return
+    setBusy(true)
+    try {
+      const iso = new Date().toISOString()
+      await supabase.from('consultations')
+        .update({ completed_at: iso, status: 'completed' })
+        .eq('id', consultationId)
+      setCompletedAt(iso)
+      onBack()   // 목록으로 복귀
+    } catch (err) {
+      console.error(err)
+      alert('종료 처리 중 문제가 생겼어요.')
+      setBusy(false)
+    }
+  }
+
+  // 시각 → "14:35"
+  const fmtTime = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : ''
+
+  // 경과시간 → "00:12:34"
+  function elapsedText(): string {
+    if (!startedAt) return '00:00:00'
+    const end = completedAt ? new Date(completedAt).getTime() : now
+    let sec = Math.floor((end - new Date(startedAt).getTime()) / 1000)
+    if (sec < 0) sec = 0
+    const h = String(Math.floor(sec / 3600)).padStart(2, '0')
+    const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0')
+    const s = String(sec % 60).padStart(2, '0')
+    return `${h}:${m}:${s}`
+  }
+
+  // 초시계 배지 색 — 진행중(초록) / 종료됨(회색)
+  const running = !!startedAt && !completedAt
+
   return (
     <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
 
       {/* 헤더 */}
       <div style={{
-        display:'flex', alignItems:'center', gap:'12px',
+        display:'flex', alignItems:'center', gap:'10px',
         padding:'10px 16px', borderBottom:'1px solid rgba(255,255,255,0.06)',
         flexShrink:0,
       }}>
@@ -57,22 +142,57 @@ export default function ConsultantChat({
             </svg>
           </button>
         )}
-        <div style={{flex:1}}>
+        <div style={{flex:1, minWidth:0}}>
           <div style={{fontSize:'14px',fontWeight:'500',color:'#e8e4ff'}}>{customerPhone}</div>
           <div style={{fontSize:'11px',color:'rgba(255,255,255,0.35)',marginTop:'1px'}}>
-            {pcMode ? '채팅 상담 중' : '고객 채팅방'}
+            {completedAt
+              ? `상담 종료 · ${fmtTime(startedAt)}~${fmtTime(completedAt)}`
+              : startedAt
+                ? `상담 중 · ${fmtTime(startedAt)} 시작`
+                : (pcMode ? '대기 중 — 상담 시작을 눌러주세요' : '고객 채팅방')}
           </div>
         </div>
-        {pcMode ? (
-          <button onClick={onBack}
-            style={{fontSize:'11px',padding:'5px 12px',borderRadius:'8px',border:'1px solid rgba(255,80,80,0.2)',background:'transparent',color:'rgba(255,100,100,0.7)',cursor:'pointer'}}>
-            상담 종료
-          </button>
-        ) : (
+
+        {/* ⏱ 경과시간 배지 — 시작 이후에만 표시 */}
+        {startedAt && (
+          <div style={{
+            display:'flex', alignItems:'center', gap:'5px',
+            fontSize:'13px', fontWeight:700, fontVariantNumeric:'tabular-nums',
+            padding:'4px 10px', borderRadius:'8px', whiteSpace:'nowrap',
+            border: running ? '1px solid rgba(97,196,89,0.45)' : '1px solid rgba(255,255,255,0.12)',
+            background: running ? 'rgba(97,196,89,0.12)' : 'rgba(255,255,255,0.04)',
+            color: running ? '#97c459' : '#9a98b0',
+          }}>
+            <span style={{fontSize:'12px'}}>⏱</span>
+            <span>{elapsedText()}</span>
+          </div>
+        )}
+
+        {/* 사주보기 (모바일에서만 기존처럼) */}
+        {!pcMode && (
           <button onClick={onViewSaju}
             style={{fontSize:'11px',padding:'5px 12px',borderRadius:'8px',border:'1px solid rgba(250,199,117,0.3)',background:'rgba(250,199,117,0.1)',color:'#FAC775',cursor:'pointer'}}>
             사주보기
           </button>
+        )}
+
+        {/* 시작 / 종료 버튼 */}
+        {!completedAt ? (
+          !startedAt ? (
+            <button onClick={handleStart} disabled={busy}
+              style={{fontSize:'11px',padding:'6px 14px',borderRadius:'8px',border:'1px solid rgba(250,199,117,0.5)',background:'rgba(250,199,117,0.15)',color:'#FAC775',cursor:'pointer',fontWeight:600,opacity:busy?0.5:1,whiteSpace:'nowrap'}}>
+              ▶ 상담 시작
+            </button>
+          ) : (
+            <button onClick={handleEnd} disabled={busy}
+              style={{fontSize:'11px',padding:'6px 14px',borderRadius:'8px',border:'1px solid rgba(255,80,80,0.35)',background:'rgba(255,80,80,0.12)',color:'rgba(255,120,120,0.95)',cursor:'pointer',fontWeight:600,opacity:busy?0.5:1,whiteSpace:'nowrap'}}>
+              ■ 상담 종료
+            </button>
+          )
+        ) : (
+          <span style={{fontSize:'11px',padding:'6px 12px',borderRadius:'8px',border:'1px solid rgba(97,196,89,0.4)',background:'rgba(97,196,89,0.15)',color:'#97c459',fontWeight:600,whiteSpace:'nowrap'}}>
+            ✓ 완료됨
+          </span>
         )}
       </div>
 
