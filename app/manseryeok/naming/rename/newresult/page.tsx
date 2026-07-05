@@ -16,6 +16,7 @@ const DEFAULT_TRY_LIMIT = 3
 
 const MY_INFO_KEY = 'myinfo'
 const NEWNAME_HISTORY_KEY = 'newname_history_v1'
+const NAMING_PASS_KEY = 'naming_pass_v1'   // 개명 이용권 { userId, remaining }
 
 interface SavedChar {
   hangul: string
@@ -77,17 +78,17 @@ function NewResultInner() {
 
   const [detailLoading, setDetailLoading] = useState(false)
 
-  const [price, setPrice] = useState(20000)
-  const [payOpen, setPayOpen] = useState(false)
+  const [remaining, setRemaining] = useState(0)   // ★ 남은 조회 횟수(이용권)
 
+  // 이용권 남은 횟수 읽기 (uid 확정 후)
   useEffect(() => {
-    supabase
-      .from('analysis_prices')
-      .select('price')
-      .eq('price_key', 'naming_hanja')
-      .maybeSingle()
-      .then(({ data }) => { if (data) setPrice(data.price) })
-  }, [])
+    if (!uid) return
+    try {
+      const p = JSON.parse(localStorage.getItem(NAMING_PASS_KEY) || '{}')
+      if (p.userId === uid && typeof p.remaining === 'number') setRemaining(p.remaining)
+      else setRemaining(0)
+    } catch { setRemaining(0) }
+  }, [uid])
 
   useEffect(() => {
     let cancelled = false
@@ -209,7 +210,6 @@ function NewResultInner() {
   }, [saju, dayStem, tries])
 
   async function loadDetail() {
-    setPayOpen(false)
     if (!cur || !saju || !dayStem || detailLoading) return
     if (cur.commentary) return
     setDetailLoading(true)
@@ -245,6 +245,15 @@ function NewResultInner() {
           localStorage.setItem(NEWNAME_HISTORY_KEY, JSON.stringify({ userId: uid, tries: nextTries }))
         } catch {}
         return nextTries
+      })
+
+      // ★ 이용권 1회 차감 (상세 풀이를 실제로 받은 경우에만)
+      setRemaining((prev) => {
+        const next = Math.max(0, prev - 1)
+        try {
+          localStorage.setItem(NAMING_PASS_KEY, JSON.stringify({ userId: uid, remaining: next }))
+        } catch {}
+        return next
       })
     } catch (e) {
       console.error('detail error:', e)
@@ -352,15 +361,29 @@ function NewResultInner() {
         </div>
       ) : (
         <div style={{ marginBottom: 14 }}>
-          <button onClick={() => setPayOpen(true)} disabled={detailLoading} className="active:scale-95"
-            style={{ width: '100%', background: 'rgba(250,199,117,0.16)', border: '1px solid ' + GOLD, borderRadius: 14, padding: 14, color: GOLD, fontWeight: 700, fontSize: 14, cursor: detailLoading ? 'default' : 'pointer' }}>
-            {detailLoading
-              ? <><span style={{ display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span> 이름을 정성껏 풀이하는 중…</>
-              : <>✨ 이 이름 자세히 풀이 보기 · {price.toLocaleString()}원</>}
-          </button>
-          <div style={{ fontSize: 11, color: SUB, textAlign: 'center', marginTop: 8, lineHeight: 1.6 }}>
-            마음에 드는 이름을 고르면, 사주에 맞는지 상세히 풀어드려요.
-          </div>
+          {remaining > 0 ? (
+            <>
+              <button onClick={loadDetail} disabled={detailLoading} className="active:scale-95"
+                style={{ width: '100%', background: 'rgba(250,199,117,0.16)', border: '1px solid ' + GOLD, borderRadius: 14, padding: 14, color: GOLD, fontWeight: 700, fontSize: 14, cursor: detailLoading ? 'default' : 'pointer' }}>
+                {detailLoading
+                  ? <><span style={{ display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span> 이름을 정성껏 풀이하는 중…</>
+                  : <>✨ 이 이름 자세히 풀이 보기 · 남은 {remaining}회</>}
+              </button>
+              <div style={{ fontSize: 11, color: SUB, textAlign: 'center', marginTop: 8, lineHeight: 1.6 }}>
+                결제하신 이용권으로 상세 풀이를 확인하실 수 있어요.
+              </div>
+            </>
+          ) : (
+            <div style={{ background: CARD, border: '1px solid rgba(250,199,117,0.2)', borderRadius: 14, padding: '16px', textAlign: 'center' }}>
+              <div style={{ fontSize: 13, color: '#e8e4ff', lineHeight: 1.7, marginBottom: 12 }}>
+                이용 가능 횟수를 모두 사용했어요.<br />다시 결제하시면 이어서 이용하실 수 있어요.
+              </div>
+              <button onClick={() => router.push('/manseryeok/naming/rename/newname')} className="active:scale-95"
+                style={{ width: '100%', background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)', border: 'none', borderRadius: 12, padding: 13, color: '#1a1a18', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                다시 결제하고 이어하기 →
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -380,42 +403,6 @@ function NewResultInner() {
       ) : (
         <div style={{ background: CARD, border: '1px solid rgba(250,199,117,0.2)', borderRadius: 14, padding: '13px 16px', fontSize: 12, color: SUB, lineHeight: 1.7, textAlign: 'center' }}>
           {TRY_LIMIT}회를 모두 사용했어요.<br />지금까지 지어본 이름 중에서 골라보세요.
-        </div>
-      )}
-
-      {/* 한자 바꾸기 결제 팝업 */}
-      {payOpen && (
-        <div onClick={() => setPayOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }}>
-          <div onClick={e => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: '480px', background: '#222220', borderRadius: '20px 20px 0 0', padding: '10px 20px 28px', boxShadow: '0 -8px 30px rgba(0,0,0,0.5)' }}>
-            <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.2)', margin: '0 auto 18px' }} />
-            <div style={{ fontSize: '17px', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>✍️ 이름 자세히 풀이</div>
-            <div style={{ fontSize: '13px', color: SUB, marginBottom: '16px', lineHeight: 1.6 }}>
-              새로 지은 이름 <b style={{ color: GOLD }}>{fullName}</b>을 사주 기준으로 상세히 풀어드려요
-            </div>
-
-            <div style={{ background: CARD, borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontSize: '12px', color: SUB, marginBottom: '8px' }}>포함 내용</div>
-              {['사주 보완(용신) 상세 풀이', '한자·소리 기운 분석', '이름 수리 해설', '종합 조언'].map((t, i) => (
-                <div key={i} style={{ fontSize: '13px', color: '#b8b4d8', lineHeight: 1.9 }}>· {t}</div>
-              ))}
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <span style={{ fontSize: '14px', color: SUB }}>결제 금액</span>
-              <span style={{ fontSize: '20px', fontWeight: 700, color: GOLD }}>{price.toLocaleString()}원</span>
-            </div>
-
-            <button onClick={loadDetail}
-              style={{ width: '100%', padding: '15px', borderRadius: '12px', background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)', border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginBottom: '8px' }}>
-              💳 {price.toLocaleString()}원 결제하고 풀이 보기
-            </button>
-            <button onClick={() => setPayOpen(false)}
-              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: SUB, fontSize: '13px', cursor: 'pointer' }}>
-              취소
-            </button>
-          </div>
         </div>
       )}
     </main>
