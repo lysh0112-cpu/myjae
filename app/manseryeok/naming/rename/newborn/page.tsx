@@ -1,6 +1,6 @@
 'use client'
 import { Suspense, useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { supabase } from '@/lib/supabase'
 import PageHeader from '@/app/components/common/PageHeader'
@@ -9,6 +9,9 @@ import { HOURS, HOUR_INDEX, fromInputs, personKey, toMyInfoObject } from '@/lib/
 const gold = '#FAC775'
 const cardBg = '#2C2C2A'
 const border = '1px solid rgba(250,199,117,0.15)'
+
+const NEWBORN_PASS_KEY = 'newborn_pass_v1'   // 아기 이용권 { babyKey, remaining }
+const DEFAULT_TRY_LIMIT = 3
 
 interface HanjaRow {
   hangul: string
@@ -40,8 +43,15 @@ function firstHangul(s: string): string {
   return arr.length > 0 ? arr[arr.length - 1] : ''
 }
 
+// 아기 사주로 이용권 열쇠 만들기 (newborn-hanja/result와 동일해야 함)
+function babyKeyOf(b: { gender: string; calType: string; year: string; month: string; day: string; leapMonth: string; hour: string } | null): string {
+  if (!b || !b.year) return ''
+  return ['baby', b.calType, b.year, b.month, b.day, b.leapMonth, b.hour, b.gender].join('_')
+}
+
 function NewbornInner() {
   const router = useRouter()
+  const sp = useSearchParams()
 
   // ── 아기 사주 직접 입력 ──
   const [gender, setGender] = useState<'남' | '여'>('남')
@@ -69,6 +79,50 @@ function NewbornInner() {
   const [picker, setPicker] = useState(false)
   const [hanjaList, setHanjaList] = useState<HanjaRow[]>([])
   const [searching, setSearching] = useState(false)
+
+  // ── 이용권/결제 ──
+  const [hanjaPrice, setHanjaPrice] = useState(20000)
+  const [tryLimit, setTryLimit] = useState(DEFAULT_TRY_LIMIT)
+  const [payOpen, setPayOpen] = useState(false)
+  const [pendingUrl, setPendingUrl] = useState('')   // 결제 후 이동할 newborn-hanja URL
+  const [pendingBaby, setPendingBaby] = useState<Record<string, string> | null>(null)  // 결제 시 이용권 열쇠용
+
+  useEffect(() => {
+    supabase.from('analysis_prices').select('price').eq('price_key', 'naming_hanja').maybeSingle()
+      .then(({ data }) => { if (data) setHanjaPrice(data.price) })
+    supabase.from('app_settings').select('value').eq('key', 'naming_try_limit').maybeSingle()
+      .then(({ data }) => { if (data && typeof data.value === 'number') setTryLimit(data.value) })
+  }, [])
+
+  // ★ '다른 이름 또 지어보기'로 URL에 baby(+surname)가 실려 들어오면
+  //   인적사항·성씨 입력을 건너뛰고 이름 입력부터 시작 (정해진 횟수 안에서는 재입력 불필요)
+  useEffect(() => {
+    const babyRaw = sp.get('baby')
+    if (!babyRaw) return
+    try {
+      const b = JSON.parse(decodeURIComponent(babyRaw))
+      // info를 fromInputs로 복원 (사주 계산용)
+      const restored = fromInputs({
+        gender: b.gender, calType: b.calType,
+        birthDate: `${b.year}-${String(b.month).padStart(2, '0')}-${String(b.day).padStart(2, '0')}`,
+        hourLabel: b.hour,
+        leap: b.leapMonth === '1',
+      })
+      if (restored) {
+        setInfo(restored)
+        setGender(b.gender === '여' ? '여' : '남')
+        setCalType(b.calType === '음력' ? '음력' : '양력')
+        setConfirmed(true)
+      }
+      const surRaw = sp.get('surname')
+      if (surRaw) {
+        const s = JSON.parse(decodeURIComponent(surRaw)) as SavedChar
+        setSurHanja(s)
+        setSurHangul(s.hangul)
+        setSurInput(s.hangul)
+      }
+    } catch {}
+  }, [sp])
 
   const infoYear = info ? parseInt(info.year) : 0
   const infoMonth = info ? parseInt(info.month) : 0
@@ -160,15 +214,44 @@ function NewbornInner() {
   function goDirect() {
     if (!surHanja || !info || !givenReady) return
     const givenName = nameCount === 1 ? firstHangul(g1) : firstHangul(g1) + firstHangul(g2)
-    const babyParam = encodeURIComponent(JSON.stringify(toMyInfoObject(info)))
+    const babyObj = toMyInfoObject(info) as unknown as Record<string, string>
+    const babyParam = encodeURIComponent(JSON.stringify(babyObj))
     const surnameParam = encodeURIComponent(JSON.stringify(surHanja))
     const nameParam = encodeURIComponent(givenName)
-    router.push(
-      '/manseryeok/naming/rename/newborn-hanja'
+    const url = '/manseryeok/naming/rename/newborn-hanja'
       + '?baby=' + babyParam
       + '&surname=' + surnameParam
       + '&name=' + nameParam
-    )
+
+    // 남은 이용권 있으면 바로 진입, 없으면 결제 팝업
+    const bkey = babyKeyOf(babyObj as unknown as { gender: string; calType: string; year: string; month: string; day: string; leapMonth: string; hour: string })
+    let remaining = 0
+    try {
+      const p = JSON.parse(localStorage.getItem(NEWBORN_PASS_KEY) || '{}')
+      if (p.babyKey === bkey && typeof p.remaining === 'number') remaining = p.remaining
+    } catch {}
+
+    if (remaining > 0) {
+      router.push(url)
+    } else {
+      setPendingUrl(url)
+      setPendingBaby(babyObj)
+      setPayOpen(true)
+    }
+  }
+
+  // 결제(지금은 실제 PG 없이 통과) → 이용권 충전 후 진입
+  // ★ 나중에 실제 결제 붙일 때 이 함수 안 "결제 통과" 자리에 PG 호출을 넣으면 됨
+  function payAndProceed() {
+    if (!pendingBaby || !pendingUrl) return
+    const bkey = babyKeyOf(pendingBaby as unknown as { gender: string; calType: string; year: string; month: string; day: string; leapMonth: string; hour: string })
+    try {
+      localStorage.setItem(NEWBORN_PASS_KEY, JSON.stringify({ babyKey: bkey, remaining: tryLimit }))
+      // 결제하면 새 이용권이므로 지난 시도기록 초기화
+      localStorage.removeItem('newborn_history_v1')
+    } catch {}
+    setPayOpen(false)
+    router.push(pendingUrl)
   }
 
   const sajuLine = converting ? '사주 불러오는 중...' :
@@ -416,6 +499,35 @@ function NewbornInner() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ★ 아기 이름 이용권 결제 팝업 (선결제 → tryLimit회 조회) */}
+      {payOpen && (
+        <div onClick={() => setPayOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: 360, background: '#222220', borderRadius: 18, padding: '24px 20px', boxShadow: '0 16px 40px rgba(0,0,0,0.5)', textAlign: 'center' }}>
+            <div style={{ fontSize: 28, marginBottom: 10 }}>👶</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 6 }}>아기 이름 지어보기 이용권</div>
+            <div style={{ fontSize: 13, color: '#8a88a0', marginBottom: 16, lineHeight: 1.7 }}>
+              결제하시면 아기 사주에 맞는 한자로<br />
+              <b style={{ color: gold }}>{tryLimit}개</b>의 이름을 지어보고<br />
+              상세 풀이까지 확인하실 수 있어요.
+            </div>
+            <div style={{ background: cardBg, borderRadius: 12, padding: '14px', marginBottom: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 14, color: '#8a88a0' }}>결제 금액</span>
+              <span style={{ fontSize: 20, fontWeight: 700, color: gold }}>{hanjaPrice.toLocaleString()}원</span>
+            </div>
+            <button onClick={payAndProceed}
+              style={{ width: '100%', padding: 15, borderRadius: 12, background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)', border: 'none', color: '#1a1a18', fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>
+              💳 {hanjaPrice.toLocaleString()}원 결제하고 시작하기
+            </button>
+            <button onClick={() => setPayOpen(false)}
+              style={{ width: '100%', padding: 12, borderRadius: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: '#8a88a0', fontSize: 13, cursor: 'pointer' }}>
+              다음에 할게요
+            </button>
           </div>
         </div>
       )}
