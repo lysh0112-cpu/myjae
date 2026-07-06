@@ -47,7 +47,7 @@ const SERVICES = [
   { name: '결혼택일',   color: '#96643c', href: '/manseryeok/wedding-timing' },
   { name: '출산택일',   color: '#b45a78', href: '/manseryeok/birth-timing' },
   { name: '내이름개명', color: '#5a825a', href: '/manseryeok/naming' },
-  { name: '아기이름',   color: '#967850', href: '/manseryeok/naming' },
+  { name: '아기이름 짓기',   color: '#967850', href: '/manseryeok/naming' },
   { name: '타로',       color: '#b45a78', href: '/tarot' },
   { name: '물어보살',   color: '#785aaa', href: '/manseryeok/ai-chat' },
 ]
@@ -122,8 +122,14 @@ export default function HomeNew() {
         borderBottom: '0.5px solid #f0e0d5',
         position: 'sticky', top: 0, zIndex: 20,
       }}>
-        <div style={{ fontSize: '16px', fontWeight: 600, color: '#3a2e28' }}>
-          명연재<span style={{ color: '#c8783c', fontSize: '12px' }}>（明然載）</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+          <img
+            src="/logo.png"
+            alt="명카페"
+            style={{ width: '26px', height: '26px', objectFit: 'contain' }}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+          />
+          <span style={{ fontSize: '16px', fontWeight: 600, color: '#3a2e28' }}>명카페</span>
         </div>
         <div style={{ display: 'flex', gap: '16px', fontSize: '18px', color: '#b49080' }}>
           <span style={{ cursor: 'pointer' }}>🔔</span>
@@ -269,7 +275,7 @@ export default function HomeNew() {
         {/* ⑤ 12지신 서비스 그리드 */}
         <div style={{ padding: '6px 16px 20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-            <span style={{ fontSize: '16px', fontWeight: 700, color: '#3a2e28' }}>명연재 서비스</span>
+            <span style={{ fontSize: '16px', fontWeight: 700, color: '#3a2e28' }}>명카페 서비스</span>
             <span style={{ fontSize: '11px', color: '#c8783c' }}>12지신과 함께 ✦</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
