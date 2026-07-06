@@ -2,7 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 
+// 화면 표시용 시간 라벨 (子시 (23:00~01:00) 형식으로 통일)
+// 배열 인덱스 그대로가 저장값이 아님 → 아래 hourLabelToValue로 변환
 const HOURS = [
   '모름',
   '子시 (23:00~01:00)', '丑시 (01:00~03:00)', '寅시 (03:00~05:00)',
@@ -11,408 +14,365 @@ const HOURS = [
   '酉시 (17:00~19:00)', '戌시 (19:00~21:00)', '亥시 (21:00~23:00)',
 ]
 
+// 라벨 → 저장값: '모름' 또는 '0'~'11'
+function hourLabelToValue(label: string): string {
+  if (!label || label === '모름') return '모름'
+  const idx = HOURS.indexOf(label)
+  if (idx <= 0) return '모름'
+  return String(idx - 1)   // 子시(배열 1번) → 저장값 '0'
+}
+
+function genderToValue(g: '여자' | '남자' | ''): '남' | '여' {
+  return g === '여자' ? '여' : '남'
+}
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', height: '48px', padding: '0 14px',
+  border: '0.5px solid #e0ddd6', borderRadius: '12px',
+  background: '#fff', color: '#1a1a1a', fontSize: '14px',
+  outline: 'none', boxSizing: 'border-box',
+}
+
 export default function SignupPage() {
   const router = useRouter()
 
-  const [step, setStep] = useState<1 | 2 | 3>(1)
-
-  // Step 1 — 사주 정보
-  const [name, setName] = useState('')
+  // 사주 정보
+  const [hangulName, setHangulName] = useState('')
+  const [hanjaName, setHanjaName] = useState('')
+  const [nickname, setNickname] = useState('')
   const [gender, setGender] = useState<'여자' | '남자' | ''>('')
   const [calType, setCalType] = useState<'양력' | '음력'>('양력')
+  const [leap, setLeap] = useState(false)
   const [year, setYear] = useState('')
   const [month, setMonth] = useState('')
   const [day, setDay] = useState('')
   const [hour, setHour] = useState('')
   const [city, setCity] = useState('')
 
-  // Step 3 — 계정 정보
+  // 계정 정보
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [agreed, setAgreed] = useState(false)
 
-  const onlyNum = (v: string, len: number) => v.replace(/[^0-9]/g, '').slice(0, len)
-  const step1Valid = name && gender && year.length === 4 && month && day && hour
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState('')
 
-  // 스텝별 인디케이터
-  const totalSteps = 3
-  const stepDots = Array.from({ length: totalSteps }, (_, i) => i + 1)
+  const onlyNum = (v: string, len: number) => v.replace(/[^0-9]/g, '').slice(0, len)
+
+  // 소셜 로그인 (아직 준비 중)
+  const handleSocial = (provider: string) => {
+    setMsg(`${provider} 로그인은 준비 중입니다. 이메일로 가입해주세요.`)
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+  }
+
+  // 회원가입 실행
+  const handleSignup = async () => {
+    setMsg('')
+    if (!hangulName) { setMsg('이름(한글)을 입력해주세요.'); return }
+    if (!gender) { setMsg('성별을 선택해주세요.'); return }
+    if (year.length !== 4 || !month || !day) { setMsg('생년월일을 정확히 입력해주세요.'); return }
+    if (!hour) { setMsg('태어난 시간을 선택해주세요.'); return }
+    if (!email || !email.includes('@')) { setMsg('올바른 이메일을 입력해주세요.'); return }
+    if (password.length < 6) { setMsg('비밀번호는 6자 이상으로 입력해주세요.'); return }
+    if (password !== passwordConfirm) { setMsg('비밀번호가 일치하지 않습니다.'); return }
+    if (!agreed) { setMsg('필수 약관에 동의해주세요.'); return }
+
+    setLoading(true)
+
+    // 1) 계정 생성
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email, password,
+      options: { data: { nickname: nickname || hangulName } },
+    })
+    if (signUpError) {
+      setLoading(false)
+      setMsg('회원가입 실패: ' + signUpError.message)
+      return
+    }
+    const userId = signUpData.user?.id
+    if (!userId) {
+      setLoading(false)
+      setMsg('계정 생성은 됐지만 사용자 정보를 가져오지 못했습니다. 잠시 후 다시 시도해주세요.')
+      return
+    }
+
+    // 2) profiles 저장
+    const hourValue = hourLabelToValue(hour)
+    const genderValue = genderToValue(gender)
+    const leapValue = calType === '음력' && leap
+    const now = new Date().toISOString()
+
+    const { error: profileError } = await supabase.from('profiles').upsert({
+      id: userId,
+      hangul_name: hangulName,
+      hanja_name: hanjaName || null,
+      nickname: nickname || hangulName,
+      email,
+      birth_year: parseInt(year, 10),
+      birth_month: parseInt(month, 10),
+      birth_day: parseInt(day, 10),
+      birth_hour: hourValue,
+      cal_type: calType,
+      gender: genderValue,
+      leap_month: leapValue,
+      birth_city: city || null,
+      saju_saved: true,
+      privacy_agreed: true,
+      privacy_agreed_at: now,
+      terms_agreed: true,
+      marketing_agreed: false,
+    }, { onConflict: 'id' })
+
+    setLoading(false)
+    if (profileError) {
+      setMsg('계정은 생성됐지만 사주 정보 저장에 실패했습니다: ' + profileError.message)
+      return
+    }
+
+    // 3) 만세력 결과로 이동 (저장 확인)
+    const leapMonth = leapValue ? '1' : '0'
+    const params = new URLSearchParams({
+      gender: genderValue, calType, year, month, day, leapMonth, hour: hourValue,
+    })
+    router.push(`/manseryeok/result-new?${params.toString()}`)
+  }
 
   return (
     <div style={{
-      minHeight: '100vh',
-      background: '#FAFAF8',
-      maxWidth: '430px',
-      margin: '0 auto',
+      minHeight: '100vh', background: '#FAFAF8',
+      maxWidth: '430px', margin: '0 auto',
       fontFamily: "'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif",
       color: '#1a1a1a',
     }}>
 
-      {/* 헤더 */}
+      {/* 헤더 (통일용 뒤로가기 버튼) */}
       <div style={{
-        display: 'flex', alignItems: 'center',
-        padding: '14px 18px',
+        display: 'flex', alignItems: 'center', gap: '10px',
+        padding: '14px 16px', background: '#FAFAF8',
         borderBottom: '0.5px solid #f0ede6',
-        background: '#FAFAF8',
         position: 'sticky', top: 0, zIndex: 10,
-        gap: '12px',
       }}>
         <button
-          onClick={() => step > 1 ? setStep((step - 1) as 1 | 2 | 3) : router.back()}
-          style={{ background: 'none', border: 'none', color: '#999', fontSize: '22px', cursor: 'pointer', lineHeight: 1, padding: 0 }}
-        >←</button>
-        <div style={{ flex: 1, fontSize: '15px', fontWeight: 600, color: '#1a1a1a' }}>
-          {step === 1 ? '내 사주 입력' : step === 2 ? '입력 확인' : '계정 만들기'}
-        </div>
-        {/* 스텝 인디케이터 */}
-        <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-          {stepDots.map(s => (
-            <div key={s} style={{
-              height: '4px', borderRadius: '2px',
-              width: s === step ? '20px' : '12px',
-              background: s <= step ? '#1a1a1a' : '#e0ddd6',
-              transition: 'all 0.2s',
-            }} />
-          ))}
-        </div>
+          onClick={() => router.push('/landing')}
+          style={{
+            width: '36px', height: '36px', borderRadius: '50%',
+            border: '0.5px solid #e8e5de', background: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', fontSize: '16px', color: '#555', padding: 0,
+          }}
+          aria-label="뒤로가기"
+        >‹</button>
+        <span style={{ fontSize: '15px', fontWeight: 600 }}>회원가입</span>
       </div>
 
-      <main style={{ padding: '28px 20px 120px' }}>
+      <main style={{ padding: '26px 20px 60px' }}>
+        <div style={{ marginBottom: '28px' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, lineHeight: 1.4, margin: '0 0 6px' }}>
+            나의 사주와<br />계정을 만들어주세요
+          </h1>
+          <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>
+            가입 한 번으로 내 사주를 영구 저장해요
+          </p>
+        </div>
 
-        {/* ══════════════════════════════
-            STEP 1 — 사주 정보 입력
-        ══════════════════════════════ */}
-        {step === 1 && (
-          <>
-            <div style={{ marginBottom: '28px' }}>
-              <p style={{ fontSize: '22px', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.4, margin: '0 0 6px' }}>
-                나의 사주를<br />알려주세요
-              </p>
-              <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>
-                정확한 분석을 위해 생년월일과 태어난 곳이 필요해요
-              </p>
+        {/* 이름(한글) */}
+        <Field label="이름 (한글)">
+          <input value={hangulName} onChange={e => setHangulName(e.target.value.slice(0, 20))}
+            placeholder="성함을 입력하세요" style={inputStyle} />
+        </Field>
+
+        {/* 이름(한자) + 권장 멘트 */}
+        <div style={{ marginBottom: '18px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: '#555', marginBottom: '4px' }}>
+            이름 (한자) <span style={{ fontSize: '10px', color: '#8B6914', fontWeight: 500 }}>선택</span>
+          </div>
+          <div style={{ fontSize: '10px', color: '#999', marginBottom: '8px' }}>
+            정확한 이름풀이를 위해 한자를 함께 입력해 주시면 좋아요
+          </div>
+          <input value={hanjaName} onChange={e => setHanjaName(e.target.value.slice(0, 20))}
+            placeholder="예: 洪吉童 (한자 이름)" style={inputStyle} />
+        </div>
+
+        {/* 닉네임 */}
+        <Field label="닉네임">
+          <input value={nickname} onChange={e => setNickname(e.target.value.slice(0, 12))}
+            placeholder="서비스에서 사용할 이름" style={inputStyle} />
+        </Field>
+
+        {/* 성별 */}
+        <Field label="성별">
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {(['여자', '남자'] as const).map(g => (
+              <button key={g} onClick={() => setGender(g)} style={{
+                flex: 1, height: '46px', borderRadius: '12px',
+                border: gender === g ? '1.5px solid #1a1a1a' : '0.5px solid #e0ddd6',
+                background: gender === g ? '#1a1a1a' : '#fff',
+                color: gender === g ? '#fff' : '#888',
+                fontSize: '14px', fontWeight: gender === g ? 600 : 400, cursor: 'pointer',
+              }}>{g}</button>
+            ))}
+          </div>
+        </Field>
+
+        {/* 생년월일 */}
+        <Field label="생년월일">
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+            {(['양력', '음력'] as const).map(c => (
+              <button key={c} onClick={() => setCalType(c)} style={{
+                padding: '6px 18px', borderRadius: '20px',
+                border: calType === c ? '1.5px solid #1a1a1a' : '0.5px solid #e0ddd6',
+                background: calType === c ? '#1a1a1a' : '#fff',
+                color: calType === c ? '#fff' : '#888',
+                fontSize: '12px', cursor: 'pointer',
+              }}>{c}</button>
+            ))}
+          </div>
+          {calType === '음력' && (
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+              {([['평달', false], ['윤달', true]] as const).map(([lbl, val]) => (
+                <button key={lbl} onClick={() => setLeap(val)} style={{
+                  padding: '6px 18px', borderRadius: '20px',
+                  border: leap === val ? '1.5px solid #8B6914' : '0.5px solid #e0ddd6',
+                  background: leap === val ? '#8B6914' : '#fff',
+                  color: leap === val ? '#fff' : '#888',
+                  fontSize: '12px', cursor: 'pointer',
+                }}>{lbl}</button>
+              ))}
             </div>
+          )}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <input value={year} onChange={e => setYear(onlyNum(e.target.value, 4))}
+              inputMode="numeric" placeholder="1990"
+              style={{ ...inputStyle, flex: 1.5, textAlign: 'center' as const }} />
+            <span style={{ color: '#bbb', fontSize: '13px' }}>년</span>
+            <input value={month} onChange={e => setMonth(onlyNum(e.target.value, 2))}
+              inputMode="numeric" placeholder="01"
+              style={{ ...inputStyle, flex: 1, textAlign: 'center' as const }} />
+            <span style={{ color: '#bbb', fontSize: '13px' }}>월</span>
+            <input value={day} onChange={e => setDay(onlyNum(e.target.value, 2))}
+              inputMode="numeric" placeholder="01"
+              style={{ ...inputStyle, flex: 1, textAlign: 'center' as const }} />
+            <span style={{ color: '#bbb', fontSize: '13px' }}>일</span>
+          </div>
+        </Field>
 
-            <Field label="이름">
-              <input
-                value={name}
-                onChange={e => setName(e.target.value.slice(0, 12))}
-                placeholder="최대 12글자 이내로 입력하세요"
-                style={inputStyle}
-              />
-            </Field>
+        {/* 태어난 시간 */}
+        <Field label="태어난 시간">
+          <select value={hour} onChange={e => setHour(e.target.value)} style={{
+            ...inputStyle, color: hour ? '#1a1a1a' : '#bbb',
+            appearance: 'none' as const,
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23bbb' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+            backgroundRepeat: 'no-repeat', backgroundPosition: 'right 14px center',
+            paddingRight: '36px',
+          }}>
+            <option value="">시간을 선택해주세요</option>
+            {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
+          </select>
+        </Field>
 
-            <Field label="성별">
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {(['여자', '남자'] as const).map(g => (
-                  <button key={g} onClick={() => setGender(g)} style={{
-                    flex: 1, height: '46px', borderRadius: '12px',
-                    border: gender === g ? '1.5px solid #1a1a1a' : '0.5px solid #e0ddd6',
-                    background: gender === g ? '#1a1a1a' : '#fff',
-                    color: gender === g ? '#fff' : '#888',
-                    fontSize: '14px', fontWeight: gender === g ? 600 : 400, cursor: 'pointer',
-                  }}>{g}</button>
-                ))}
-              </div>
-            </Field>
+        {/* 태어난 도시 */}
+        <div style={{ marginBottom: '26px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: '#555', marginBottom: '8px' }}>
+            태어난 도시 <span style={{ fontSize: '10px', color: '#8B6914' }}>일출·일몰 정밀 계산에 사용</span>
+          </div>
+          <input value={city} onChange={e => setCity(e.target.value)}
+            placeholder="도시명을 입력하세요 (예: 서울)" style={inputStyle} />
+        </div>
 
-            <Field label="생년월일">
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
-                {(['양력', '음력'] as const).map(c => (
-                  <button key={c} onClick={() => setCalType(c)} style={{
-                    padding: '6px 18px', borderRadius: '20px',
-                    border: calType === c ? '1.5px solid #1a1a1a' : '0.5px solid #e0ddd6',
-                    background: calType === c ? '#1a1a1a' : '#fff',
-                    color: calType === c ? '#fff' : '#888',
-                    fontSize: '12px', cursor: 'pointer',
-                  }}>{c}</button>
-                ))}
-              </div>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <input value={year} onChange={e => setYear(onlyNum(e.target.value, 4))}
-                  inputMode="numeric" placeholder="1990"
-                  style={{ ...inputStyle, flex: 1.5, textAlign: 'center' as const }} />
-                <span style={{ color: '#bbb', fontSize: '13px' }}>년</span>
-                <input value={month} onChange={e => setMonth(onlyNum(e.target.value, 2))}
-                  inputMode="numeric" placeholder="01"
-                  style={{ ...inputStyle, flex: 1, textAlign: 'center' as const }} />
-                <span style={{ color: '#bbb', fontSize: '13px' }}>월</span>
-                <input value={day} onChange={e => setDay(onlyNum(e.target.value, 2))}
-                  inputMode="numeric" placeholder="01"
-                  style={{ ...inputStyle, flex: 1, textAlign: 'center' as const }} />
-                <span style={{ color: '#bbb', fontSize: '13px' }}>일</span>
-              </div>
-            </Field>
+        {/* 소셜 구분선 */}
+        <Divider text="간편하게 시작하기" />
 
-            <Field label="태어난 시간">
-              <select value={hour} onChange={e => setHour(e.target.value)} style={{
-                ...inputStyle,
-                color: hour ? '#1a1a1a' : '#bbb',
-                appearance: 'none' as const,
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23bbb' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 14px center',
-                paddingRight: '36px',
-              }}>
-                <option value="">시간을 선택해주세요</option>
-                {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
-              </select>
-            </Field>
+        {/* 소셜 버튼 3개 (준비 중) */}
+        <button onClick={() => handleSocial('카카오')} style={{
+          width: '100%', height: '50px', background: '#FEE500', border: 'none',
+          borderRadius: '14px', color: '#3C1E1E', fontSize: '14px', fontWeight: 600,
+          cursor: 'pointer', marginBottom: '10px',
+        }}>💬 카카오로 시작하기</button>
+        <button onClick={() => handleSocial('네이버')} style={{
+          width: '100%', height: '50px', background: '#03C75A', border: 'none',
+          borderRadius: '14px', color: '#fff', fontSize: '14px', fontWeight: 600,
+          cursor: 'pointer', marginBottom: '10px',
+        }}>Ｎ 네이버로 시작하기</button>
+        <button onClick={() => handleSocial('구글')} style={{
+          width: '100%', height: '50px', background: '#fff', border: '0.5px solid #e0ddd6',
+          borderRadius: '14px', color: '#333', fontSize: '14px', fontWeight: 500,
+          cursor: 'pointer', marginBottom: '24px',
+        }}>Ｇ 구글로 시작하기</button>
 
-            <Field label={<>태어난 도시 <span style={{ fontSize: '10px', color: '#8B6914' }}>일출·일몰 정밀 계산에 사용</span></>}>
-              <div style={{ position: 'relative' as const }}>
-                <input value={city} onChange={e => setCity(e.target.value)}
-                  placeholder="도시명을 입력하세요 (예: 서울)"
-                  style={{ ...inputStyle, paddingRight: '42px' }} />
-                <span style={{ position: 'absolute' as const, right: '14px', top: '50%', transform: 'translateY(-50%)', fontSize: '16px', color: '#bbb' }}>🔍</span>
-              </div>
-            </Field>
+        {/* 이메일 구분선 */}
+        <Divider text="또는 이메일로 가입" />
 
-            <button
-              onClick={() => step1Valid && setStep(2)}
-              style={{
-                width: '100%', height: '52px',
-                background: step1Valid ? '#1a1a1a' : '#e0ddd6',
-                border: 'none', borderRadius: '14px',
-                color: step1Valid ? '#fff' : '#bbb',
-                fontSize: '15px', fontWeight: 600,
-                cursor: step1Valid ? 'pointer' : 'default',
-                marginTop: '8px',
-              }}
-            >다음 →</button>
+        {/* 이메일 가입폼 */}
+        <Field label="이메일">
+          <input value={email} onChange={e => setEmail(e.target.value)}
+            type="email" placeholder="이메일 주소를 입력하세요" style={inputStyle} />
+        </Field>
+        <Field label="비밀번호">
+          <input value={password} onChange={e => setPassword(e.target.value)}
+            type="password" placeholder="6자 이상 입력하세요" style={inputStyle} />
+        </Field>
+        <Field label="비밀번호 확인">
+          <input value={passwordConfirm} onChange={e => setPasswordConfirm(e.target.value)}
+            type="password" placeholder="비밀번호를 다시 입력하세요"
+            style={{ ...inputStyle, borderColor: passwordConfirm && password !== passwordConfirm ? '#e24b4a' : '#e0ddd6' }} />
+          {passwordConfirm && password !== passwordConfirm && (
+            <div style={{ fontSize: '11px', color: '#e24b4a', marginTop: '6px' }}>비밀번호가 일치하지 않습니다</div>
+          )}
+        </Field>
 
-            <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '12px', color: '#bbb' }}>
-              이미 계정이 있으신가요?{' '}
-              <span onClick={() => router.push('/auth/login')} style={{ color: '#8B6914', fontWeight: 600, cursor: 'pointer' }}>로그인</span>
-            </div>
-          </>
+        {/* 약관 */}
+        <div onClick={() => setAgreed(!agreed)} style={{
+          display: 'flex', alignItems: 'center', gap: '10px',
+          background: '#fff', border: '0.5px solid #e8e5de',
+          borderRadius: '14px', padding: '16px', marginBottom: '20px', cursor: 'pointer',
+        }}>
+          <div style={{
+            width: '20px', height: '20px', borderRadius: '6px',
+            border: agreed ? 'none' : '1.5px solid #e0ddd6',
+            background: agreed ? '#1a1a1a' : '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>{agreed && <span style={{ color: '#fff', fontSize: '12px' }}>✓</span>}</div>
+          <span style={{ fontSize: '13px', color: '#333' }}>서비스 이용약관 및 개인정보처리방침 동의 (필수)</span>
+        </div>
+
+        {msg && (
+          <div style={{ fontSize: '13px', color: '#e24b4a', textAlign: 'center', marginBottom: '12px', lineHeight: 1.6 }}>{msg}</div>
         )}
 
-        {/* ══════════════════════════════
-            STEP 2 — 입력 확인
-        ══════════════════════════════ */}
-        {step === 2 && (
-          <>
-            <div style={{ marginBottom: '28px' }}>
-              <p style={{ fontSize: '22px', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.4, margin: '0 0 6px' }}>
-                입력하신 프로필을<br />확인해주세요
-              </p>
-              <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>
-                틀린 정보가 있으면 수정할 수 있어요
-              </p>
-            </div>
+        <button onClick={handleSignup} disabled={loading} style={{
+          width: '100%', height: '54px',
+          background: loading ? '#e0ddd6' : '#1a1a1a',
+          border: 'none', borderRadius: '14px',
+          color: loading ? '#bbb' : '#fff',
+          fontSize: '15px', fontWeight: 600,
+          cursor: loading ? 'default' : 'pointer', marginBottom: '14px',
+        }}>{loading ? '가입 처리 중…' : '회원가입 완료'}</button>
 
-            {/* 확인 카드 */}
-            <div style={{
-              background: '#fff',
-              border: '0.5px solid #e8e5de',
-              borderRadius: '16px',
-              overflow: 'hidden',
-              marginBottom: '16px',
-            }}>
-              {/* 이름 · 성별 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 18px', borderBottom: '0.5px solid #f5f3ef' }}>
-                <span style={{ fontSize: '18px', color: '#bbb' }}>👤</span>
-                <span style={{ fontSize: '15px', color: '#1a1a1a' }}>
-                  {name} / {gender}
-                </span>
-              </div>
-
-              {/* 생년월일 · 시간 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 18px', borderBottom: '0.5px solid #f5f3ef' }}>
-                <span style={{ fontSize: '18px', color: '#bbb' }}>📅</span>
-                <span style={{ fontSize: '15px', color: '#1a1a1a' }}>
-                  {calType} {year}/{month.padStart(2,'0')}/{day.padStart(2,'0')} {hour || '시간 모름'}
-                </span>
-              </div>
-
-              {/* 도시 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 18px' }}>
-                <span style={{ fontSize: '18px', color: '#bbb' }}>📍</span>
-                <span style={{ fontSize: '15px', color: '#1a1a1a' }}>
-                  {city || '도시 미입력'}, 대한민국
-                </span>
-              </div>
-            </div>
-
-            {/* 지역 보정 안내 */}
-            {city && (
-              <div style={{
-                background: '#fffbee',
-                border: '0.5px solid #e8d5a0',
-                borderRadius: '10px',
-                padding: '10px 14px',
-                marginBottom: '28px',
-                fontSize: '12px', color: '#8B6914',
-              }}>
-                📌 입력하신 지역 정보에 따라 일출·일몰 시간을 정밀 보정합니다
-              </div>
-            )}
-
-            {/* 버튼 2개 */}
-            <button
-              onClick={() => router.push('/manseryeok')}
-              style={{
-                width: '100%', height: '52px',
-                background: '#1a1a1a', border: 'none', borderRadius: '14px',
-                color: '#fff', fontSize: '15px', fontWeight: 600,
-                cursor: 'pointer', marginBottom: '10px',
-              }}
-            >✦ 나의 만세력 보러가기</button>
-
-            <button
-              onClick={() => setStep(3)}
-              style={{
-                width: '100%', height: '52px',
-                background: '#fff',
-                border: '0.5px solid #e0ddd6',
-                borderRadius: '14px',
-                color: '#555', fontSize: '15px', fontWeight: 500,
-                cursor: 'pointer', marginBottom: '10px',
-              }}
-            >계정 만들고 저장하기 →</button>
-
-            <button
-              onClick={() => setStep(1)}
-              style={{
-                width: '100%', height: '44px',
-                background: 'none', border: 'none',
-                color: '#bbb', fontSize: '13px', cursor: 'pointer',
-              }}
-            >✎ 프로필 수정하기</button>
-          </>
-        )}
-
-        {/* ══════════════════════════════
-            STEP 3 — 계정 만들기
-        ══════════════════════════════ */}
-        {step === 3 && (
-          <>
-            <div style={{ marginBottom: '28px' }}>
-              <p style={{ fontSize: '22px', fontWeight: 700, color: '#1a1a1a', lineHeight: 1.4, margin: '0 0 6px' }}>
-                계정을 만들어<br />내 사주를 저장하세요
-              </p>
-              <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>
-                다음부터 로그인만 하면 바로 확인할 수 있어요
-              </p>
-            </div>
-
-            {/* 소셜 로그인 */}
-            <button style={{
-              width: '100%', height: '50px',
-              background: '#FEE500', border: 'none', borderRadius: '14px',
-              color: '#3C1E1E', fontSize: '14px', fontWeight: 600,
-              cursor: 'pointer', marginBottom: '10px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-            }}>
-              <span style={{ fontSize: '18px' }}>💬</span> 카카오로 시작하기
-            </button>
-            <button style={{
-              width: '100%', height: '50px',
-              background: '#fff', border: '0.5px solid #e0ddd6',
-              borderRadius: '14px',
-              color: '#333', fontSize: '14px', fontWeight: 500,
-              cursor: 'pointer', marginBottom: '20px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-            }}>
-              <span style={{ fontSize: '18px', fontWeight: 700 }}>G</span> 구글로 시작하기
-            </button>
-
-            {/* OR */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-              <div style={{ flex: 1, height: '0.5px', background: '#e8e5de' }} />
-              <span style={{ fontSize: '11px', color: '#ccc' }}>또는 이메일로 가입</span>
-              <div style={{ flex: 1, height: '0.5px', background: '#e8e5de' }} />
-            </div>
-
-            <Field label="이메일">
-              <input value={email} onChange={e => setEmail(e.target.value)}
-                type="email" placeholder="이메일 주소를 입력하세요" style={inputStyle} />
-            </Field>
-
-            <Field label="비밀번호">
-              <input value={password} onChange={e => setPassword(e.target.value)}
-                type="password" placeholder="8자 이상 입력하세요" style={inputStyle} />
-            </Field>
-
-            <Field label="비밀번호 확인">
-              <input value={passwordConfirm} onChange={e => setPasswordConfirm(e.target.value)}
-                type="password" placeholder="비밀번호를 다시 입력하세요"
-                style={{ ...inputStyle, borderColor: passwordConfirm && password !== passwordConfirm ? '#e24b4a' : undefined }} />
-              {passwordConfirm && password !== passwordConfirm && (
-                <div style={{ fontSize: '11px', color: '#e24b4a', marginTop: '6px' }}>비밀번호가 일치하지 않습니다</div>
-              )}
-            </Field>
-
-            {/* 약관 */}
-            <div style={{
-              background: '#fff', border: '0.5px solid #e8e5de',
-              borderRadius: '14px', padding: '16px', marginBottom: '20px',
-            }}>
-              <div onClick={() => setAgreed(!agreed)}
-                style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-                <div style={{
-                  width: '20px', height: '20px', borderRadius: '6px',
-                  border: agreed ? 'none' : '1.5px solid #e0ddd6',
-                  background: agreed ? '#1a1a1a' : '#fff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                }}>
-                  {agreed && <span style={{ color: '#fff', fontSize: '12px' }}>✓</span>}
-                </div>
-                <span style={{ fontSize: '13px', color: '#333' }}>서비스 이용약관 및 개인정보처리방침 동의 (필수)</span>
-              </div>
-              <div style={{ display: 'flex', gap: '12px', marginTop: '10px', paddingLeft: '30px' }}>
-                <span style={{ fontSize: '11px', color: '#8B6914', textDecoration: 'underline', cursor: 'pointer' }}>이용약관</span>
-                <span style={{ fontSize: '11px', color: '#8B6914', textDecoration: 'underline', cursor: 'pointer' }}>개인정보처리방침</span>
-              </div>
-            </div>
-
-            <button style={{
-              width: '100%', height: '52px',
-              background: email && password && password === passwordConfirm && agreed ? '#1a1a1a' : '#e0ddd6',
-              border: 'none', borderRadius: '14px',
-              color: email && password && password === passwordConfirm && agreed ? '#fff' : '#bbb',
-              fontSize: '15px', fontWeight: 600,
-              cursor: email && password && password === passwordConfirm && agreed ? 'pointer' : 'default',
-              marginBottom: '12px',
-            }}>
-              회원가입 완료
-            </button>
-
-            <div style={{ textAlign: 'center', fontSize: '12px', color: '#bbb' }}>
-              이미 계정이 있으신가요?{' '}
-              <span onClick={() => router.push('/auth/login')} style={{ color: '#8B6914', fontWeight: 600, cursor: 'pointer' }}>로그인</span>
-            </div>
-          </>
-        )}
-
+        <div style={{ textAlign: 'center', fontSize: '12px', color: '#bbb' }}>
+          이미 계정이 있으신가요?{' '}
+          <span onClick={() => router.push('/login')} style={{ color: '#8B6914', fontWeight: 600, cursor: 'pointer' }}>로그인</span>
+        </div>
       </main>
     </div>
   )
 }
 
-/* ── 공통 컴포넌트 ── */
-
-const inputStyle: React.CSSProperties = {
-  width: '100%', height: '48px',
-  padding: '0 14px',
-  border: '0.5px solid #e0ddd6',
-  borderRadius: '12px',
-  background: '#fff',
-  color: '#1a1a1a',
-  fontSize: '14px',
-  outline: 'none',
-  boxSizing: 'border-box',
-}
-
-function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: '18px' }}>
-      <div style={{ fontSize: '12px', fontWeight: 600, color: '#555', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-        {label}
-      </div>
+      <div style={{ fontSize: '12px', fontWeight: 600, color: '#555', marginBottom: '8px' }}>{label}</div>
       {children}
+    </div>
+  )
+}
+
+function Divider({ text }: { text: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+      <div style={{ flex: 1, height: '0.5px', background: '#e8e5de' }} />
+      <span style={{ fontSize: '11px', color: '#aaa' }}>{text}</span>
+      <div style={{ flex: 1, height: '0.5px', background: '#e8e5de' }} />
     </div>
   )
 }
