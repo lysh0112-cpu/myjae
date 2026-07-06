@@ -244,6 +244,8 @@ export default function HomeNew() {
                     position: 'relative', aspectRatio: '1 / 1',
                     borderRadius: '18px', overflow: 'hidden',
                     cursor: 'pointer',
+                    // 카테고리 탭과 동일한 테두리 (연한 살구색 가는 선)
+                    border: '0.5px solid #e8d5c5',
                     // 입체 그림자 (떠 있는 느낌)
                     boxShadow: '0 6px 16px rgba(180,110,70,0.18), 0 2px 4px rgba(180,110,70,0.10)',
                     // 각 카드마다 둥실 타이밍 다르게
