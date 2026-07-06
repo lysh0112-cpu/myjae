@@ -25,7 +25,7 @@ export default function RootLayout({
       lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full" style={{ background: "#1a1a18" }}>
+      <body className="min-h-full" style={{ background: "#FDF6F0" }}>
         <AutoLogout />
         {children}
       </body>
