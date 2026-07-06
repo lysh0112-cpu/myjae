@@ -1,10 +1,70 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 import BottomNav from '../components/BottomNav'
+
+interface Profile {
+  hangul_name: string | null
+  hanja_name: string | null
+  nickname: string | null
+  email: string | null
+  birth_year: number | null
+  birth_month: number | null
+  birth_day: number | null
+  birth_hour: string | null
+  cal_type: string | null
+  gender: string | null
+  leap_month: boolean | null
+}
 
 export default function MyPageNew() {
   const router = useRouter()
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      // 1) 로그인 확인
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        // 로그인 안 했으면 로그인 화면으로
+        router.push('/login')
+        return
+      }
+      // 2) 내 프로필 불러오기
+      const { data } = await supabase
+        .from('profiles')
+        .select('hangul_name, hanja_name, nickname, email, birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (mounted) {
+        setProfile({
+          ...(data as Profile),
+          email: data?.email || user.email || null,
+        })
+        setLoading(false)
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [router])
+
+  const handleLogout = async () => {
+    if (!confirm('로그아웃 할까요?')) return
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
+
+  // 표시용 이름 (닉네임 우선, 없으면 한글이름)
+  const displayName = profile?.nickname || profile?.hangul_name || '회원'
+  // 생년월일 표시
+  const birthText = profile?.birth_year
+    ? `${profile.cal_type || '양력'} ${profile.birth_year}.${String(profile.birth_month || '').padStart(2, '0')}.${String(profile.birth_day || '').padStart(2, '0')}`
+    : '생년월일 미등록'
 
   return (
     <div style={{
@@ -24,7 +84,7 @@ export default function MyPageNew() {
         borderBottom: '0.5px solid #e8e5de',
       }}>
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push('/home-new')}
           style={{ background: 'none', border: 'none', color: '#999', fontSize: '22px', cursor: 'pointer', lineHeight: 1 }}
         >←</button>
         <span style={{ fontSize: '16px', fontWeight: 600, color: '#1a1a1a' }}>마이페이지</span>
@@ -33,7 +93,7 @@ export default function MyPageNew() {
 
       <main style={{ paddingBottom: '100px' }}>
 
-        {/* 유저 정보 */}
+        {/* 유저 정보 (실제 데이터) */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: '14px',
           padding: '22px 18px',
@@ -49,17 +109,24 @@ export default function MyPageNew() {
           }}>🌿</div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '16px', fontWeight: 600, color: '#1a1a1a', marginBottom: '3px' }}>
-              홍길동 <span style={{ fontSize: '12px', fontWeight: 400, color: '#bbb' }}>님</span>
+              {loading ? '불러오는 중…' : displayName}
+              <span style={{ fontSize: '12px', fontWeight: 400, color: '#bbb' }}> 님</span>
             </div>
-            <div style={{ fontSize: '11px', color: '#bbb', marginBottom: '4px' }}>카카오로 로그인했습니다</div>
-            <div style={{ fontSize: '11px', color: '#8B6914', fontWeight: 500 }}>乙亥일주 · 용신 丙丁火</div>
+            <div style={{ fontSize: '11px', color: '#bbb', marginBottom: '4px' }}>
+              {profile?.email || ''}
+            </div>
+            <div style={{ fontSize: '11px', color: '#8B6914', fontWeight: 500 }}>
+              {birthText}
+            </div>
           </div>
-          <button style={{
-            padding: '7px 16px',
-            border: '0.5px solid #ddd',
-            borderRadius: '16px', background: '#fff',
-            color: '#888', fontSize: '11px', cursor: 'pointer', flexShrink: 0,
-          }}>편집</button>
+          <button
+            onClick={() => router.push('/mypage-new/edit')}
+            style={{
+              padding: '7px 16px',
+              border: '0.5px solid #ddd',
+              borderRadius: '16px', background: '#fff',
+              color: '#888', fontSize: '11px', cursor: 'pointer', flexShrink: 0,
+            }}>편집</button>
         </div>
 
         {/* 잔액 · 이용권 */}
@@ -106,7 +173,7 @@ export default function MyPageNew() {
         {/* 기타 */}
         <SectionLabel label="기타" />
         <MenuGroup>
-          <MenuItem icon="⚙️" iconBg="#f8f8f8" title="계정 설정" sub="프로필 · 알림 · 개인정보 수정" />
+          <MenuItem icon="⚙️" iconBg="#f8f8f8" title="계정 설정" sub="프로필 · 알림 · 개인정보 수정" onClick={() => router.push('/mypage-new/edit')} />
           <MenuItem icon="❓" iconBg="#fffbee" title="문의하기" sub="고객센터 · 1:1 문의" last />
         </MenuGroup>
 
@@ -117,14 +184,16 @@ export default function MyPageNew() {
           border: '0.5px solid #e8e5de',
           borderRadius: '16px', overflow: 'hidden',
         }}>
-          <button style={{
-            display: 'flex', alignItems: 'center', gap: '10px',
-            width: '100%', padding: '15px 16px',
-            background: 'none', border: 'none',
-            borderBottom: '0.5px solid #f0ede6',
-            color: '#888', fontSize: '13px', cursor: 'pointer',
-            textAlign: 'left',
-          }}>
+          <button
+            onClick={handleLogout}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              width: '100%', padding: '15px 16px',
+              background: 'none', border: 'none',
+              borderBottom: '0.5px solid #f0ede6',
+              color: '#888', fontSize: '13px', cursor: 'pointer',
+              textAlign: 'left',
+            }}>
             🚪 <span>로그아웃</span>
           </button>
           <button style={{
@@ -207,18 +276,20 @@ function MenuGroup({ children }: { children: React.ReactNode }) {
   )
 }
 
-function MenuItem({ icon, iconBg, title, sub, count, badge, last }: {
+function MenuItem({ icon, iconBg, title, sub, count, badge, last, onClick }: {
   icon: string; iconBg: string; title: string; sub: string
-  count?: string; badge?: string; last?: boolean
+  count?: string; badge?: string; last?: boolean; onClick?: () => void
 }) {
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: '12px',
-      padding: '14px 16px',
-      borderBottom: last ? 'none' : '0.5px solid #f5f3ef',
-      cursor: 'pointer',
-      background: '#fff',
-    }}>
+    <div
+      onClick={onClick}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '12px',
+        padding: '14px 16px',
+        borderBottom: last ? 'none' : '0.5px solid #f5f3ef',
+        cursor: 'pointer',
+        background: '#fff',
+      }}>
       <div style={{
         width: '36px', height: '36px', borderRadius: '10px',
         background: iconBg,
