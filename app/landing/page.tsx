@@ -2,6 +2,28 @@
 
 import { useRouter } from 'next/navigation'
 
+// ── 오행 색상 ──
+const STEM_ELEMENT: Record<string, string> = { 甲:'목',乙:'목',丙:'화',丁:'화',戊:'토',己:'토',庚:'금',辛:'금',壬:'수',癸:'수' }
+const BRANCH_ELEMENT: Record<string, string> = { 子:'수',丑:'토',寅:'목',卯:'목',辰:'토',巳:'화',午:'화',未:'토',申:'금',酉:'금',戌:'토',亥:'수' }
+const ELEMENT_COLOR: Record<string, string> = { 목:'#4caf50',화:'#f44336',토:'#ff9800',금:'#9e9e9e',수:'#2196f3' }
+const READ: Record<string, string> = {
+  甲:'갑',乙:'을',丙:'병',丁:'정',戊:'무',己:'기',庚:'경',辛:'신',壬:'임',癸:'계',
+  子:'자',丑:'축',寅:'인',卯:'묘',辰:'진',巳:'사',午:'오',未:'미',申:'신',酉:'유',戌:'술',亥:'해',
+}
+function elemColor(ch: string) {
+  const el = STEM_ELEMENT[ch] || BRANCH_ELEMENT[ch]
+  return ELEMENT_COLOR[el] || '#555'
+}
+
+// ── 랜딩용 예시 사주 (보여주기 전용) ──
+const COLS = ['생시', '생일', '생월', '생년']
+const TOP_STEMS = ['癸', '壬', '己', '乙']
+const TOP_REL = ['아들', '자신', '부친', '조부']
+const TOP_SIPSIN = ['겁재', '비견', '정관', '상관']
+const BOT_BRANCH = ['卯', '辰', '丑', '巳']
+const BOT_REL = ['딸', '배우자', '모친', '조모']
+const BOT_SIPSIN = ['상관', '편관', '정관', '편재']
+
 export default function LandingPage() {
   const router = useRouter()
 
@@ -27,7 +49,7 @@ export default function LandingPage() {
           명연재<span style={{ color: '#8B6914', fontSize: '13px' }}>（明然載）</span>
         </div>
         <button
-          onClick={() => router.push('/auth/login')}
+          onClick={() => router.push('/login')}
           style={{
             padding: '7px 18px',
             border: '1px solid #1a1a1a',
@@ -65,89 +87,85 @@ export default function LandingPage() {
             AI와 전문가가 함께 분석하는 깊이 있는 명리
           </p>
 
-          {/* 사주 카드 미리보기 */}
+          {/* ── 사주 원국 미리보기 표 ── */}
           <div style={{
-            background: '#fff',
-            border: '0.5px solid #e8e5de',
-            borderRadius: '20px',
-            padding: '20px',
-            marginBottom: '24px',
-            textAlign: 'left',
+            background: '#dcd9d3',
+            borderRadius: '16px',
+            padding: '12px',
+            marginBottom: '14px',
           }}>
-            {/* 카드 헤더 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <div style={{
-                width: '44px', height: '44px', borderRadius: '50%',
-                background: '#f0eaff', border: '1.5px solid #d0c5ee',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '20px', flexShrink: 0,
-              }}>🌿</div>
-              <div>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: '#1a1a1a' }}>
-                  홍길동 <span style={{ fontSize: '11px', color: '#999', fontWeight: 400 }}>（을목 일간）</span>
-                </div>
-                <div style={{ fontSize: '11px', color: '#bbb', marginTop: '2px' }}>
-                  1990.03.22 · 서울특별시
-                </div>
+            {/* 상단 바 */}
+            <div style={{
+              background: '#595550', borderRadius: '8px',
+              padding: '10px 14px', marginBottom: '10px',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}>
+              <span style={{ color: '#fff', fontSize: '13px', fontWeight: 600 }}>✦ 사주 원국</span>
+              <span style={{ color: '#fff', fontSize: '13px' }}>∧</span>
+            </div>
+
+            {/* 흰 표 */}
+            <div style={{ background: '#fff', borderRadius: '8px', overflow: 'hidden', padding: '4px 0' }}>
+              {/* 헤더 줄 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '38px repeat(4, 1fr)' }}>
+                <div />
+                {COLS.map(c => (
+                  <div key={c} style={{ textAlign: 'center', fontSize: '11px', color: '#999', padding: '6px 0' }}>{c}</div>
+                ))}
+              </div>
+
+              {/* 천간 (큰 글자 + 관계) */}
+              <div style={{ display: 'grid', gridTemplateColumns: '38px repeat(4, 1fr)', alignItems: 'stretch' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#aaa' }}>천간</div>
+                {TOP_STEMS.map((ch, i) => (
+                  <div key={i} style={{ textAlign: 'center', padding: '6px 0', borderLeft: '1px solid #eee' }}>
+                    <div style={{ fontSize: '20px', fontWeight: 700, color: elemColor(ch), lineHeight: 1.1 }}>
+                      {READ[ch]}{ch}
+                    </div>
+                    <div style={{ fontSize: '9px', color: '#bbb', marginTop: '2px' }}>{TOP_REL[i]}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 십성 줄 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '38px repeat(4, 1fr)', borderTop: '1px solid #f0f0f0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#aaa' }}>십성</div>
+                {TOP_SIPSIN.map((s, i) => (
+                  <div key={i} style={{ textAlign: 'center', fontSize: '11px', color: '#666', padding: '5px 0', borderLeft: '1px solid #eee' }}>{s}</div>
+                ))}
+              </div>
+
+              {/* 지지 (큰 글자 + 관계) */}
+              <div style={{ display: 'grid', gridTemplateColumns: '38px repeat(4, 1fr)', borderTop: '1px solid #f0f0f0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#aaa' }}>지지</div>
+                {BOT_BRANCH.map((ch, i) => (
+                  <div key={i} style={{ textAlign: 'center', padding: '6px 0', borderLeft: '1px solid #eee' }}>
+                    <div style={{ fontSize: '20px', fontWeight: 700, color: elemColor(ch), lineHeight: 1.1 }}>
+                      {READ[ch]}{ch}
+                    </div>
+                    <div style={{ fontSize: '9px', color: '#bbb', marginTop: '2px' }}>{BOT_REL[i]}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 십성 줄 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '38px repeat(4, 1fr)', borderTop: '1px solid #f0f0f0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#aaa' }}>십성</div>
+                {BOT_SIPSIN.map((s, i) => (
+                  <div key={i} style={{ textAlign: 'center', fontSize: '11px', color: '#666', padding: '5px 0', borderLeft: '1px solid #eee' }}>{s}</div>
+                ))}
               </div>
             </div>
+          </div>
 
-            {/* 사주 4주 */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginBottom: '14px' }}>
-              {[
-                { label: '연주', gan: '庚', ji: '午', ganColor: '#c0392b' },
-                { label: '월주', gan: '壬', ji: '子', ganColor: '#2980b9' },
-                { label: '일주 ★', gan: '乙', ji: '亥', ganColor: '#4a2080', highlight: true },
-                { label: '시주', gan: '甲', ji: '寅', ganColor: '#27ae60' },
-              ].map((col) => (
-                <div key={col.label} style={{
-                  background: col.highlight ? '#fffbee' : '#f8f6ff',
-                  border: `0.5px solid ${col.highlight ? '#e8d5a0' : '#e0d8f8'}`,
-                  borderRadius: '10px',
-                  padding: '10px 6px',
-                  textAlign: 'center',
-                }}>
-                  <div style={{ fontSize: '9px', color: col.highlight ? '#8B6914' : '#9b7dcc', marginBottom: '4px' }}>
-                    {col.label}
-                  </div>
-                  <div style={{ fontSize: '22px', fontWeight: 700, color: col.ganColor, lineHeight: 1 }}>
-                    {col.gan}
-                  </div>
-                  <div style={{ fontSize: '13px', color: '#888', marginTop: '4px' }}>{col.ji}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* 용신·희신 */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
-              <div style={{
-                flex: 1, padding: '8px 0', textAlign: 'center',
-                background: '#fffbee', borderRadius: '8px',
-                border: '0.5px solid #e8d5a0',
-                fontSize: '12px', fontWeight: 600, color: '#8B6914',
-              }}>용신 · 丙丁火</div>
-              <div style={{
-                flex: 1, padding: '8px 0', textAlign: 'center',
-                background: '#f5f0ff', borderRadius: '8px',
-                border: '0.5px solid #d0c5ee',
-                fontSize: '12px', fontWeight: 600, color: '#6a40a0',
-              }}>희신 · 戊己土</div>
-            </div>
-
-            {/* 상세보기 버튼 */}
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              gap: '6px', padding: '10px 0',
-              background: '#f8f6ff', borderRadius: '10px',
-              fontSize: '12px', color: '#9b7dcc', fontWeight: 600, cursor: 'pointer',
-            }}>
-              사주 자세히 보기 ▾
-            </div>
+          {/* 안내 문구 */}
+          <div style={{ fontSize: '11px', color: '#9b7dcc', fontWeight: 600, marginBottom: '24px' }}>
+            ▲ 가입하면 나의 실제 사주를 볼 수 있어요
           </div>
 
           {/* CTA 버튼 */}
           <button
-            onClick={() => router.push('/onboarding')}
+            onClick={() => router.push('/signup')}
             style={{
               width: '100%', height: '54px',
               background: '#1a1a1a', border: 'none', borderRadius: '16px',
@@ -158,6 +176,7 @@ export default function LandingPage() {
             ✦ 시작하기
           </button>
           <button
+            onClick={() => router.push('/login')}
             style={{
               width: '100%', height: '46px',
               background: '#f5f5f3', border: '0.5px solid #e0ddd6',
@@ -209,67 +228,74 @@ export default function LandingPage() {
         {/* 구분선 */}
         <div style={{ height: '8px', background: '#f0ede6' }} />
 
-        {/* ③ WHY 명연재 (소개 섹션) */}
-        <div style={{ background: '#1a1a1a', padding: '36px 20px 32px' }}>
-          <div style={{ fontSize: '10px', letterSpacing: '2px', color: '#8B6914', marginBottom: '14px' }}>
-            WHY 명연재
-          </div>
+        {/* ③ WHY 명연재 (밝은 흰색 카드 섹션) */}
+        <div style={{ background: '#FAFAF8', padding: '32px 16px' }}>
+          <div style={{
+            display: 'inline-block',
+            background: '#8B6914', color: '#fff',
+            fontSize: '10px', fontWeight: 700,
+            padding: '3px 10px', borderRadius: '10px',
+            marginBottom: '16px', letterSpacing: '1px',
+          }}>WHY 명연재</div>
           <h2 style={{
             fontSize: '22px', fontWeight: 300, lineHeight: 1.5,
-            color: '#fff', margin: '0 0 8px', letterSpacing: '-0.3px',
+            color: '#1a1a1a', margin: '0 0 8px', letterSpacing: '-0.3px',
           }}>
             비싼 상담, 꼭 필요할까요?<br />
-            <strong style={{ fontWeight: 700, color: '#d4b87a' }}>명연재가 더 깊게 알려드립니다</strong>
+            <strong style={{ fontWeight: 700, color: '#8B6914' }}>명연재가 더 깊게 알려드립니다</strong>
           </h2>
-          <p style={{ fontSize: '12px', color: '#666', lineHeight: 1.8, margin: '0 0 24px' }}>
+          <p style={{ fontSize: '12px', color: '#999', lineHeight: 1.8, margin: '0 0 24px' }}>
             20만원짜리 대면 상담보다 정확하고 세밀하게.<br />
             3대 고전을 바탕으로 AI가 분석하고,<br />
             필요할 때만 전문가와 연결됩니다.
           </p>
 
           {[
-            { icon: '📖', title: '정통 명리 3대 고전 기반', desc: '적천수·자평진전·궁통보감을 학습한 AI가 분석합니다' },
-            { icon: '🔮', title: '사주 · 궁합 · 이름 · 택일 통합', desc: '한 플랫폼에서 명리의 모든 것을 해결하세요' },
-            { icon: '👩‍🏫', title: '검증된 전문가 직접 상담', desc: 'AI 분석 후 더 깊은 해석이 필요할 때만 연결' },
-            { icon: '☁️', title: '내 사주 영구 저장', desc: '매번 입력 없이, 로그인하면 바로 내 분석 확인' },
+            { title: '정통 명리 3대 고전 기반', desc: '적천수·자평진전·궁통보감을 학습한 AI가 분석합니다' },
+            { title: '사주·궁합·이름·택일 통합', desc: '한 플랫폼에서 명리의 모든 것을 해결하세요' },
+            { title: '검증된 전문가 직접 상담', desc: 'AI 분석 후 더 깊은 해석이 필요할 때만 연결' },
+            { title: '내 사주 영구 저장', desc: '매번 입력 없이, 로그인하면 바로 내 분석 확인' },
           ].map((item) => (
             <div key={item.title} style={{
-              display: 'flex', alignItems: 'flex-start', gap: '14px',
-              padding: '14px 0',
-              borderBottom: '0.5px solid rgba(255,255,255,0.06)',
+              display: 'flex', alignItems: 'center', gap: '14px',
+              background: '#fff',
+              border: '0.5px solid #e8e5de',
+              borderRadius: '14px',
+              padding: '14px 16px',
+              marginBottom: '10px',
             }}>
               <div style={{
-                width: '36px', height: '36px', borderRadius: '10px',
-                background: 'rgba(255,255,255,0.06)',
-                border: '0.5px solid rgba(255,255,255,0.1)',
+                width: '36px', height: '36px', borderRadius: '50%',
+                background: '#fffbee',
+                border: '0.5px solid #e8d5a0',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '17px', flexShrink: 0,
-              }}>{item.icon}</div>
+                fontSize: '15px', color: '#8B6914', flexShrink: 0,
+              }}>✦</div>
               <div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#e0e0e0', marginBottom: '3px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#1a1a1a', marginBottom: '3px' }}>
                   {item.title}
                 </div>
-                <div style={{ fontSize: '11px', color: '#666', lineHeight: 1.6 }}>{item.desc}</div>
+                <div style={{ fontSize: '11px', color: '#999', lineHeight: 1.6 }}>{item.desc}</div>
               </div>
             </div>
           ))}
 
-          <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
             <button
-              onClick={() => router.push('/onboarding')}
+              onClick={() => router.push('/signup')}
               style={{
-                flex: 1, height: '48px',
-                background: '#8B6914', border: 'none', borderRadius: '12px',
+                flex: 1, height: '50px',
+                background: '#1a1a1a', border: 'none', borderRadius: '12px',
                 color: '#fff', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
               }}
             >지금 무료로 시작</button>
             <button
               style={{
-                flex: 1, height: '48px',
-                background: 'transparent',
-                border: '1px solid rgba(255,255,255,0.15)',
+                flex: 1, height: '50px',
+                background: '#fff',
+                border: '0.5px solid #e0ddd6',
                 borderRadius: '12px',
-                color: '#888', fontSize: '13px', cursor: 'pointer',
+                color: '#666', fontSize: '13px', cursor: 'pointer',
               }}
             >서비스 더 알아보기</button>
           </div>
