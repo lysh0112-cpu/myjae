@@ -46,7 +46,7 @@ export default function LandingPage() {
         position: 'sticky', top: 0, zIndex: 10,
       }}>
         <div style={{ fontSize: '16px', fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.3px' }}>
-          명연재<span style={{ color: '#8B6914', fontSize: '13px' }}>（明然載）</span>
+          명카페
         </div>
         <button
           onClick={() => router.push('/login')}
@@ -77,7 +77,7 @@ export default function LandingPage() {
             color: '#1a1a1a', letterSpacing: '-0.5px', margin: '0 0 8px',
           }}>
             모두를 위한 사주,<br />
-            <strong style={{ fontWeight: 700 }}>명연재가 밝혀드립니다</strong>
+            <strong style={{ fontWeight: 700 }}>명카페가 밝혀드립니다</strong>
           </h1>
           <p style={{
             fontSize: '13px', color: '#999', lineHeight: 1.8,
@@ -199,13 +199,13 @@ export default function LandingPage() {
             fontSize: '10px', fontWeight: 700,
             padding: '3px 10px', borderRadius: '10px',
             marginBottom: '16px', letterSpacing: '1px',
-          }}>WHY 명연재</div>
+          }}>WHY 명카페</div>
           <h2 style={{
             fontSize: '22px', fontWeight: 300, lineHeight: 1.5,
             color: '#1a1a1a', margin: '0 0 8px', letterSpacing: '-0.3px',
           }}>
             비싼 상담, 꼭 필요할까요?<br />
-            <strong style={{ fontWeight: 700, color: '#8B6914' }}>명연재가 더 깊게 알려드립니다</strong>
+            <strong style={{ fontWeight: 700, color: '#8B6914' }}>명카페가 더 깊게 알려드립니다</strong>
           </h2>
           <p style={{ fontSize: '12px', color: '#999', lineHeight: 1.8, margin: '0 0 24px' }}>
             20만원짜리 대면 상담보다 정확하고 세밀하게.<br />
@@ -291,7 +291,7 @@ export default function LandingPage() {
             ))}
           </div>
           <div style={{ fontSize: '11px', color: '#bbb', lineHeight: 1.9 }}>
-            (주)명연재연구소 &nbsp;|&nbsp; 대표 오연희<br />
+            (주)명연재 &nbsp;|&nbsp; 대표 오연희<br />
             사업자등록번호 000-00-0000<br />
             서울시 강북구 솔매로45길 95, 201호
           </div>
@@ -307,7 +307,7 @@ export default function LandingPage() {
             fontSize: '11px', cursor: 'pointer',
           }}>문의하기</button>
           <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '0.5px solid #eee', fontSize: '10px', color: '#ccc' }}>
-            © 2026 명연재연구소. All rights reserved.
+            © 2026 (주)명연재. All rights reserved.
           </div>
         </div>
 
