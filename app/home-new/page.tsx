@@ -75,6 +75,7 @@ export default function HomeNew() {
   const [slide, setSlide] = useState(0)
   const [cat, setCat] = useState('전체')
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [offset, setOffset] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -84,7 +85,8 @@ export default function HomeNew() {
     let mounted = true
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) { if (mounted) setIsLoggedIn(false); return }
+      if (mounted) setIsLoggedIn(true)
       const { data } = await supabase
         .from('profiles')
         .select('nickname, hangul_name, birth_year, gender')
@@ -174,35 +176,76 @@ export default function HomeNew() {
             background: '#FFFBF7', border: '0.5px solid #f0e0d5',
             borderRadius: '16px', padding: '16px',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-              <div style={{
-                width: '44px', height: '44px', borderRadius: '50%',
-                background: '#fae6d5', border: '1.5px solid #e6be9f',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '20px', flexShrink: 0,
-              }}>🌿</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '3px', color: '#3a2e28' }}>
-                  {displayName}님
-                  {profile?.birth_year && (
-                    <span style={{ fontSize: '11px', fontWeight: 400, color: '#c5a590' }}>
-                      {' '}{profile.birth_year}년생 · {profile.gender || ''}
-                    </span>
-                  )}
+            {isLoggedIn ? (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                  <div style={{
+                    width: '44px', height: '44px', borderRadius: '50%',
+                    background: '#fae6d5', border: '1.5px solid #e6be9f',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '20px', flexShrink: 0,
+                  }}>🌿</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '3px', color: '#3a2e28' }}>
+                      {displayName}님
+                      {profile?.birth_year && (
+                        <span style={{ fontSize: '11px', fontWeight: 400, color: '#c5a590' }}>
+                          {' '}{profile.birth_year}년생 · {profile.gender || ''}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#c8783c' }}>
+                      오늘도 좋은 기운 가득하세요 ✦
+                    </div>
+                  </div>
                 </div>
-                <div style={{ fontSize: '11px', color: '#c8783c' }}>
-                  오늘도 좋은 기운 가득하세요 ✦
+                <button
+                  onClick={() => router.push('/manseryeok')}
+                  style={{
+                    width: '100%', height: '44px',
+                    background: '#b46e46', border: 'none', borderRadius: '10px',
+                    color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                  }}
+                >내 사주 바로 보기 →</button>
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                  <div style={{
+                    width: '44px', height: '44px', borderRadius: '50%',
+                    background: '#f5ebe2', border: '1.5px solid #e6d5c5',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '20px', flexShrink: 0, color: '#c0a898',
+                  }}>👤</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '3px', color: '#3a2e28' }}>
+                      반가워요! ✦
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#c8783c' }}>
+                      로그인하고 내 사주를 확인하세요
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-            <button
-              onClick={() => router.push('/manseryeok')}
-              style={{
-                width: '100%', height: '44px',
-                background: '#b46e46', border: 'none', borderRadius: '10px',
-                color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-              }}
-            >내 사주 바로 보기 →</button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => router.push('/login')}
+                    style={{
+                      flex: 1, height: '44px',
+                      background: '#b46e46', border: 'none', borderRadius: '10px',
+                      color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >로그인</button>
+                  <button
+                    onClick={() => router.push('/signup')}
+                    style={{
+                      flex: 1, height: '44px',
+                      background: '#fff', border: '0.5px solid #e6d0bc', borderRadius: '10px',
+                      color: '#96502e', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >회원가입</button>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
