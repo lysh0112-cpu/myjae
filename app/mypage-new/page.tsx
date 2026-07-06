@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useResultSaju } from '@/hooks/useResultSaju'
-import BottomNav from '../components/BottomNav'
 
 const HOUR_LABELS: Record<string, string> = {
   '0': '子시(23~01)', '1': '丑시(01~03)', '2': '寅시(03~05)', '3': '卯시(05~07)',
@@ -443,11 +442,11 @@ export default function MyPageNew() {
           )}
 
           <div style={{ padding: 14 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#96502e' }}>✦ 내 사주</span>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {!nickEdit && <button onClick={openNickEdit} style={{ fontSize: 11, color: '#b4785a', border: '0.5px solid #e8d5c5', borderRadius: 8, padding: '3px 11px', background: 'none', cursor: 'pointer' }}>닉네임</button>}
-                {!editMode && <button onClick={openEdit} style={{ fontSize: 11, color: '#b4785a', border: '0.5px solid #e8d5c5', borderRadius: 8, padding: '3px 11px', background: 'none', cursor: 'pointer' }}>수정</button>}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#96502e', whiteSpace: 'nowrap' }}>✦ 내 사주</span>
+              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                {!nickEdit && <button onClick={openNickEdit} style={{ fontSize: 11, color: '#b4785a', border: '0.5px solid #e8d5c5', borderRadius: 8, padding: '3px 11px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>닉네임</button>}
+                {!editMode && <button onClick={openEdit} style={{ fontSize: 11, color: '#b4785a', border: '0.5px solid #e8d5c5', borderRadius: 8, padding: '3px 11px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>수정</button>}
               </div>
             </div>
 
@@ -588,7 +587,7 @@ export default function MyPageNew() {
             <div>
               {(namesExpanded ? myNames : myNames.slice(0, 2)).map((n, i, arr) => (
                 <div key={n.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: i < arr.length - 1 ? '0.5px solid #f5e5da' : 'none' }}>
-                  <div style={{ minWidth: 0 }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 500 }}>{n.hanja_name || '-'} <span style={{ fontSize: 11, color: '#b09888' }}>{n.hangul_name}</span></div>
                     <div style={{ fontSize: 10, color: '#c0a898' }}>{dateText(n.created_at)}{n.kind === 'self' ? ' · 내 이름' : n.kind === 'newborn' ? ' · 아기 이름' : ''}</div>
                   </div>
@@ -705,7 +704,27 @@ export default function MyPageNew() {
 
       </main>
 
-      <BottomNav />
+      {/* 하단 고정 네비게이션 (홈과 동일한 피치톤) */}
+      <div style={{
+        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+        width: '100%', maxWidth: 430,
+        display: 'flex', background: '#FFFBF7',
+        borderTop: '0.5px solid #f0e0d5', zIndex: 20,
+      }}>
+        {[
+          { icon: '🏠', label: '홈', href: '/home-new', active: false },
+          { icon: '⊞', label: '서비스', href: '/manseryeok', active: false },
+          { icon: '💬', label: '상담', href: '/manseryeok/consultant-select', active: false },
+          { icon: '♡', label: '찜', href: '/home-new', active: false },
+          { icon: '👤', label: '마이', href: '/mypage-new', active: true },
+        ].map((n) => (
+          <button key={n.label} onClick={() => router.push(n.href)}
+            style={{ flex: 1, padding: '10px 0', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+            <span style={{ fontSize: 18, opacity: n.active ? 1 : 0.4 }}>{n.icon}</span>
+            <span style={{ fontSize: 10, color: n.active ? '#c8783c' : '#c5a590', fontWeight: n.active ? 600 : 400 }}>{n.label}</span>
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
