@@ -239,12 +239,18 @@ export default function HomeNew() {
                 <div
                   key={s.name}
                   onClick={() => router.push(s.href)}
+                  className="zodiac-card"
                   style={{
                     position: 'relative', aspectRatio: '1 / 1',
                     borderRadius: '18px', overflow: 'hidden',
-                    cursor: 'pointer', boxShadow: '0 1px 6px rgba(180,110,70,0.12)',
+                    cursor: 'pointer',
+                    // 입체 그림자 (떠 있는 느낌)
+                    boxShadow: '0 6px 16px rgba(180,110,70,0.18), 0 2px 4px rgba(180,110,70,0.10)',
+                    // 각 카드마다 둥실 타이밍 다르게
+                    animation: `floaty 3.2s ease-in-out ${(idx % 6) * 0.4}s infinite`,
                   }}
                 >
+                  {/* 지신 이미지 */}
                   <img src={ZODIAC_IMAGES[imgIdx]} alt={s.name} style={{
                     width: '100%', height: '100%', objectFit: 'cover', display: 'block',
                   }} />
@@ -261,6 +267,23 @@ export default function HomeNew() {
           </div>
         </div>
       </main>
+
+      {/* 눌림 + 둥실 애니메이션 */}
+      <style>{`
+        @keyframes floaty {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
+        }
+        .zodiac-card:active {
+          transform: scale(0.94) !important;
+          animation-play-state: paused !important;
+          box-shadow: 0 2px 6px rgba(180,110,70,0.15) !important;
+          transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+        .zodiac-card {
+          transition: transform 0.15s ease, box-shadow 0.2s ease;
+        }
+      `}</style>
 
       {/* 하단 고정 네비게이션 */}
       <div style={{
