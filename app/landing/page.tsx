@@ -191,44 +191,7 @@ export default function LandingPage() {
         {/* 구분선 */}
         <div style={{ height: '8px', background: '#f0ede6' }} />
 
-        {/* ② 명연재 특징 박스 */}
-        <div style={{
-          margin: '24px 16px',
-          background: '#fff',
-          border: '0.5px solid #e8e5de',
-          borderRadius: '18px',
-          padding: '20px',
-        }}>
-          <div style={{
-            display: 'inline-block',
-            background: '#8B6914', color: '#fff',
-            fontSize: '10px', fontWeight: 700,
-            padding: '3px 10px', borderRadius: '10px',
-            marginBottom: '14px', letterSpacing: '1px',
-          }}>명연재 특징</div>
-          {[
-            '3대 고전 기반 정통 명리 분석',
-            'AI + 전문 상담사 연계 시스템',
-            '이름풀이·개명·궁합·택일 통합 서비스',
-            '회원가입 한 번으로 내 사주 영구 저장',
-            '검증된 명리 전문가와 직접 상담 가능',
-          ].map((item) => (
-            <div key={item} style={{
-              display: 'flex', alignItems: 'flex-start', gap: '10px',
-              padding: '8px 0',
-              borderBottom: '0.5px solid #f5f3ef',
-              fontSize: '13px', color: '#333', lineHeight: 1.5,
-            }}>
-              <span style={{ color: '#8B6914', fontSize: '14px', flexShrink: 0, marginTop: '1px' }}>✦</span>
-              {item}
-            </div>
-          ))}
-        </div>
-
-        {/* 구분선 */}
-        <div style={{ height: '8px', background: '#f0ede6' }} />
-
-        {/* ③ WHY 명연재 (밝은 흰색 카드 섹션) */}
+        {/* ② WHY 명연재 (밝은 흰색 카드 섹션) */}
         <div style={{ background: '#FAFAF8', padding: '32px 16px' }}>
           <div style={{
             display: 'inline-block',
