@@ -380,30 +380,6 @@ function ResultNewContent() {
               <SipsungTable sipsung={sipsung}/>
             </div>
           </div>
-          {/* 오행 상세표 (판단 등급 포함) */}
-          <table style={{width:'100%',borderCollapse:'collapse',fontSize:'11px'}}>
-            <thead>
-              <tr style={{background:'#f5f3ef'}}>
-                <th style={{padding:'5px 6px',textAlign:'left',fontWeight:600,color:'#555',fontSize:'10px',border:'0.5px solid #eeebe4'}}>오행</th>
-                <th style={{padding:'5px 6px',textAlign:'right',fontWeight:600,color:'#555',fontSize:'10px',border:'0.5px solid #eeebe4'}}>비율</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ohaeng.map(({el,pct})=>{
-                const judge=pct>=30?'과다':pct>=15?'발달':pct>=5?'적정':'부족'
-                const judgeColor=pct>=30?'#f44336':pct>=15?'#4caf50':pct>=5?'#2196f3':'#9e9e9e'
-                return (
-                  <tr key={el} style={{borderBottom:'0.5px solid #f5f3ef'}}>
-                    <td style={{padding:'5px 6px',color:ELEMENT_COLOR[el],fontWeight:600,border:'0.5px solid #eeebe4'}}>{el}({ELEMENT_HAN[el]})</td>
-                    <td style={{padding:'5px 6px',textAlign:'right',border:'0.5px solid #eeebe4'}}>
-                      <span style={{color:ELEMENT_COLOR[el],fontWeight:700}}>{pct}%</span>
-                      <span style={{color:judgeColor,fontSize:'9px',marginLeft:'3px'}}>{judge}</span>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
         </Section>
 
         {/* ④ 신강/신약 */}
