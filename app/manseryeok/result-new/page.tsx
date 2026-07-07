@@ -10,6 +10,7 @@ import DayunTableNew from "./components/DayunTableNew";
 import AiAnalysisNew from "./components/AiAnalysisNew";
 import ConsultButton from "@/app/components/common/ConsultButton";
 import OhaengPentagon from "./OhaengPentagon";
+import SipsungTable from "./SipsungTable";
 
 const BRANCH_LIST = [{char:"子"},{char:"丑"},{char:"寅"},{char:"卯"},{char:"辰"},{char:"巳"},{char:"午"},{char:"未"},{char:"申"},{char:"酉"},{char:"戌"},{char:"亥"}]
 const HEAVENLY_STEMS = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
@@ -370,53 +371,39 @@ function ResultNewContent() {
 
         {/* ③ 오행과 십성 분석 */}
         <Section title="오행과 십성 분석">
-          <div style={{display:'flex',gap:'10px',marginBottom:'14px'}}>
-            {/* 오행 표 */}
-            <table style={{flex:1,borderCollapse:'collapse',fontSize:'11px'}}>
-              <thead>
-                <tr style={{background:'#f5f3ef'}}>
-                  <th style={{padding:'5px 6px',textAlign:'left',fontWeight:600,color:'#555',fontSize:'10px',border:'0.5px solid #eeebe4'}}>오행</th>
-                  <th style={{padding:'5px 6px',textAlign:'right',fontWeight:600,color:'#555',fontSize:'10px',border:'0.5px solid #eeebe4'}}>비율</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ohaeng.map(({el,pct})=>{
-                  const judge=pct>=30?'과다':pct>=15?'발달':pct>=5?'적정':'부족'
-                  const judgeColor=pct>=30?'#f44336':pct>=15?'#4caf50':pct>=5?'#2196f3':'#9e9e9e'
-                  return (
-                    <tr key={el} style={{borderBottom:'0.5px solid #f5f3ef'}}>
-                      <td style={{padding:'5px 6px',color:ELEMENT_COLOR[el],fontWeight:600,border:'0.5px solid #eeebe4'}}>{el}({ELEMENT_HAN[el]})</td>
-                      <td style={{padding:'5px 6px',textAlign:'right',border:'0.5px solid #eeebe4'}}>
-                        <span style={{color:ELEMENT_COLOR[el],fontWeight:700}}>{pct}%</span>
-                        <span style={{color:judgeColor,fontSize:'9px',marginLeft:'3px'}}>{judge}</span>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-            {/* 십성 표 */}
-            <table style={{flex:1,borderCollapse:'collapse',fontSize:'11px'}}>
-              <thead>
-                <tr style={{background:'#f5f3ef'}}>
-                  <th style={{padding:'5px 6px',textAlign:'left',fontWeight:600,color:'#555',fontSize:'10px',border:'0.5px solid #eeebe4'}}>십성</th>
-                  <th style={{padding:'5px 6px',textAlign:'right',fontWeight:600,color:'#555',fontSize:'10px',border:'0.5px solid #eeebe4'}}>비율</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sipsung.filter(s=>s.pct>0).map(({ss,pct})=>(
-                  <tr key={ss} style={{borderBottom:'0.5px solid #f5f3ef'}}>
-                    <td style={{padding:'5px 6px',color:SIPSIN_COLOR[ss]||'#555',fontWeight:600,border:'0.5px solid #eeebe4'}}>{ss}</td>
-                    <td style={{padding:'5px 6px',textAlign:'right',fontWeight:700,color:'#1a1a1a',border:'0.5px solid #eeebe4'}}>{pct}%</td>
+          {/* 오각형 그래프(왼쪽) + 십성표(오른쪽) 나란히 */}
+          <div style={{display:'flex',gap:'6px',alignItems:'center',marginBottom:'12px'}}>
+            <div style={{flex:1.45,minWidth:0}}>
+              <OhaengPentagon ohaeng={ohaeng}/>
+            </div>
+            <div style={{flex:0.55,minWidth:0}}>
+              <SipsungTable sipsung={sipsung}/>
+            </div>
+          </div>
+          {/* 오행 상세표 (판단 등급 포함) */}
+          <table style={{width:'100%',borderCollapse:'collapse',fontSize:'11px'}}>
+            <thead>
+              <tr style={{background:'#f5f3ef'}}>
+                <th style={{padding:'5px 6px',textAlign:'left',fontWeight:600,color:'#555',fontSize:'10px',border:'0.5px solid #eeebe4'}}>오행</th>
+                <th style={{padding:'5px 6px',textAlign:'right',fontWeight:600,color:'#555',fontSize:'10px',border:'0.5px solid #eeebe4'}}>비율</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ohaeng.map(({el,pct})=>{
+                const judge=pct>=30?'과다':pct>=15?'발달':pct>=5?'적정':'부족'
+                const judgeColor=pct>=30?'#f44336':pct>=15?'#4caf50':pct>=5?'#2196f3':'#9e9e9e'
+                return (
+                  <tr key={el} style={{borderBottom:'0.5px solid #f5f3ef'}}>
+                    <td style={{padding:'5px 6px',color:ELEMENT_COLOR[el],fontWeight:600,border:'0.5px solid #eeebe4'}}>{el}({ELEMENT_HAN[el]})</td>
+                    <td style={{padding:'5px 6px',textAlign:'right',border:'0.5px solid #eeebe4'}}>
+                      <span style={{color:ELEMENT_COLOR[el],fontWeight:700}}>{pct}%</span>
+                      <span style={{color:judgeColor,fontSize:'9px',marginLeft:'3px'}}>{judge}</span>
+                    </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {/* 오각형 그래프 */}
-          <div style={{display:'flex',justifyContent:'center',marginBottom:'8px'}}>
-            <OhaengPentagon ohaeng={ohaeng}/>
-          </div>
+                )
+              })}
+            </tbody>
+          </table>
         </Section>
 
         {/* ④ 신강/신약 */}
