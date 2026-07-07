@@ -11,6 +11,7 @@ import AiAnalysisNew from "./components/AiAnalysisNew";
 import ConsultButton from "@/app/components/common/ConsultButton";
 import OhaengPentagon from "./OhaengPentagon";
 import SipsungTable from "./SipsungTable";
+import UnTable from "./UnTable";
 
 const BRANCH_LIST = [{char:"子"},{char:"丑"},{char:"寅"},{char:"卯"},{char:"辰"},{char:"巳"},{char:"午"},{char:"未"},{char:"申"},{char:"酉"},{char:"戌"},{char:"亥"}]
 const HEAVENLY_STEMS = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
@@ -426,128 +427,30 @@ function ResultNewContent() {
 
         {/* ⑦ 세운 */}
         {displaySeyun.length>0&&(
-          <div style={{background:'#fff',border:'0.5px solid #e8e5de',borderRadius:'16px',overflow:'hidden',marginBottom:'10px'}}>
-            <div style={{display:'flex',alignItems:'center',gap:'8px',padding:'12px 16px 10px',borderBottom:'0.5px solid #f5f3ef'}}>
-              <span style={{color:'#8B6914',fontSize:'13px'}}>✦</span>
-              <span style={{fontSize:'13px',fontWeight:700,color:'#1a1a1a'}}>세운 (연운)</span>
-              <span style={{fontSize:'10px',padding:'2px 8px',borderRadius:'8px',background:'#fffbee',border:'0.5px solid #e8d5a0',color:'#8B6914',fontWeight:600}}>{currentYear}년</span>
-            </div>
-            <div style={{padding:'10px 12px',overflowX:'auto'}}>
-              <table style={{borderCollapse:'collapse',whiteSpace:'nowrap' as const}}>
-                <tbody>
-                  <tr>
-                    <td style={{width:'28px',fontSize:'9px',color:'#bbb',paddingRight:'4px'}}></td>
-                    {displaySeyun.map((s,i)=>(
-                      <td key={i} style={{padding:'0 3px',textAlign:'center'}}>
-                        <div style={{fontSize:'9px',color:s.year===currentYear?'#8B6914':'#bbb',fontWeight:600,marginBottom:'1px'}}>{s.year}</div>
-                        <div style={{fontSize:'9px',fontWeight:700,color:SIPSIN_COLOR[s.ganYukchin]||'#bbb',height:'13px'}}>{s.ganYukchin}</div>
-                      </td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td style={{fontSize:'9px',color:'#bbb',paddingRight:'4px',textAlign:'right',fontWeight:500}}>천간</td>
-                    {displaySeyun.map((s,i)=>{
-                      const isCurrent=s.year===currentYear
-                      const el=STEM_ELEMENT[s.cheongan]
-                      return (
-                        <td key={i} style={{padding:'2px 3px',textAlign:'center'}}>
-                          <div style={{display:'inline-block',outline:isCurrent?'2px solid #8B6914':'none',borderRadius:'8px',padding:'1px'}}>
-                            <SmallGanjiBox char={s.cheongan} el={el} isCurrent={false}/>
-                          </div>
-                        </td>
-                      )
-                    })}
-                  </tr>
-                  <tr>
-                    <td style={{fontSize:'9px',color:'#bbb',paddingRight:'4px',textAlign:'right',fontWeight:500}}>지지</td>
-                    {displaySeyun.map((s,i)=>{
-                      const isCurrent=s.year===currentYear
-                      const el=BRANCH_ELEMENT[s.jiji]
-                      return (
-                        <td key={i} style={{padding:'2px 3px',textAlign:'center'}}>
-                          <div style={{display:'inline-block',outline:isCurrent?'2px solid #8B6914':'none',borderRadius:'8px',padding:'1px'}}>
-                            <SmallGanjiBox char={s.jiji} el={el} isCurrent={false}/>
-                          </div>
-                        </td>
-                      )
-                    })}
-                  </tr>
-                  <tr>
-                    <td></td>
-                    {displaySeyun.map((s,i)=>(
-                      <td key={i} style={{padding:'1px 3px',textAlign:'center'}}>
-                        <div style={{fontSize:'9px',color:SIPSIN_COLOR[s.jiYukchin]||'#bbb',height:'13px'}}>{s.jiYukchin}</div>
-                        {s.year===currentYear&&<div style={{fontSize:'8px',fontWeight:700,background:'#8B6914',color:'#fff',padding:'1px 4px',borderRadius:'4px',display:'inline-block'}}>올해</div>}
-                      </td>
-                    ))}
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <UnTable
+            title="세운 (연운)"
+            badge={`${currentYear}년`}
+            items={displaySeyun.map(s=>({
+              label:String(s.year),
+              stem:s.cheongan, branch:s.jiji,
+              stemSipsin:s.ganYukchin, branchSipsin:s.jiYukchin,
+              current:s.year===currentYear,
+            }))}
+          />
         )}
 
         {/* ⑧ 월운 */}
         {wolunList.length>0&&(
-          <div style={{background:'#fff',border:'0.5px solid #e8e5de',borderRadius:'16px',overflow:'hidden',marginBottom:'10px'}}>
-            <div style={{display:'flex',alignItems:'center',gap:'8px',padding:'12px 16px 10px',borderBottom:'0.5px solid #f5f3ef'}}>
-              <span style={{color:'#8B6914',fontSize:'13px'}}>✦</span>
-              <span style={{fontSize:'13px',fontWeight:700,color:'#1a1a1a'}}>월운</span>
-              <span style={{fontSize:'10px',padding:'2px 8px',borderRadius:'8px',background:'#fffbee',border:'0.5px solid #e8d5a0',color:'#8B6914',fontWeight:600}}>{currentYear}년</span>
-            </div>
-            <div style={{padding:'10px 12px',overflowX:'auto'}}>
-              <table style={{borderCollapse:'collapse',whiteSpace:'nowrap' as const}}>
-                <tbody>
-                  <tr>
-                    <td style={{width:'28px',fontSize:'9px',color:'#bbb',paddingRight:'4px'}}></td>
-                    {wolunList.map((w,i)=>(
-                      <td key={i} style={{padding:'0 2px',textAlign:'center'}}>
-                        <div style={{fontSize:'9px',color:new Date().getMonth()+1===w.month?'#8B6914':'#bbb',fontWeight:600,marginBottom:'1px'}}>{w.month}월</div>
-                        <div style={{fontSize:'9px',fontWeight:700,color:SIPSIN_COLOR[w.ganYukchin]||'#bbb',height:'13px'}}>{w.ganYukchin}</div>
-                      </td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td style={{fontSize:'9px',color:'#bbb',paddingRight:'4px',textAlign:'right',fontWeight:500}}>천간</td>
-                    {wolunList.map((w,i)=>{
-                      const isCurrent=new Date().getMonth()+1===w.month
-                      const el=STEM_ELEMENT[w.cheongan]
-                      return (
-                        <td key={i} style={{padding:'2px 2px',textAlign:'center'}}>
-                          <div style={{display:'inline-block',outline:isCurrent?'2px solid #8B6914':'none',borderRadius:'7px',padding:'1px'}}>
-                            <SmallGanjiBox char={w.cheongan} el={el} isCurrent={false} size={32}/>
-                          </div>
-                        </td>
-                      )
-                    })}
-                  </tr>
-                  <tr>
-                    <td style={{fontSize:'9px',color:'#bbb',paddingRight:'4px',textAlign:'right',fontWeight:500}}>지지</td>
-                    {wolunList.map((w,i)=>{
-                      const isCurrent=new Date().getMonth()+1===w.month
-                      const el=BRANCH_ELEMENT[w.jiji]
-                      return (
-                        <td key={i} style={{padding:'2px 2px',textAlign:'center'}}>
-                          <div style={{display:'inline-block',outline:isCurrent?'2px solid #8B6914':'none',borderRadius:'7px',padding:'1px'}}>
-                            <SmallGanjiBox char={w.jiji} el={el} isCurrent={false} size={32}/>
-                          </div>
-                        </td>
-                      )
-                    })}
-                  </tr>
-                  <tr>
-                    <td></td>
-                    {wolunList.map((w,i)=>(
-                      <td key={i} style={{padding:'1px 2px',textAlign:'center'}}>
-                        <div style={{fontSize:'8px',color:SIPSIN_COLOR[w.ganYukchin]||'#bbb',height:'12px'}}>{w.ganYukchin}</div>
-                        {new Date().getMonth()+1===w.month&&<div style={{fontSize:'7px',fontWeight:700,background:'#8B6914',color:'#fff',padding:'1px 3px',borderRadius:'4px',display:'inline-block'}}>이달</div>}
-                      </td>
-                    ))}
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <UnTable
+            title="월운"
+            badge={`${currentYear}년`}
+            items={wolunList.map(w=>({
+              label:`${w.month}월`,
+              stem:w.cheongan, branch:w.jiji,
+              stemSipsin:w.ganYukchin, branchSipsin:w.jiYukchin,
+              current:new Date().getMonth()+1===w.month,
+            }))}
+          />
         )}
 
         {/* ⑨ AI 풀이 */}
