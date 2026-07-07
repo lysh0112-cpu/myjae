@@ -19,7 +19,7 @@ import React from 'react'
  */
 
 const ELEMENT_COLOR: Record<string, string> = {
-  목: '#a5d6a7', 화: '#f0a6ae', 토: '#f5cd76', 금: '#cccccc', 수: '#8ec5f0',
+  목: '#a5d6a7', 화: '#f0a6ae', 토: '#f5cd76', 금: '#cccccc', 수: '#2b2b2b',
 }
 const NAMES: Record<string, string> = {
   수: '수(비겁)', 목: '목(식상)', 화: '화(재성)', 토: '토(관성)', 금: '금(인성)',
@@ -125,16 +125,33 @@ export default function OhaengPentagon({ ohaeng }: { ohaeng: { el: string; pct: 
         return (
           <g key={el}>
             {p > 0 && (
-              <rect x={cx - R} y={ft} width={R * 2} height={fh}
-                fill={ELEMENT_COLOR[el]} clipPath={`url(#ohp-clip-${el})`} />
+              <>
+                <clipPath id={`ohp-fill-${el}`}>
+                  <rect x={cx - R} y={ft} width={R * 2} height={fh} />
+                </clipPath>
+                <rect x={cx - R} y={ft} width={R * 2} height={fh}
+                  fill={ELEMENT_COLOR[el]} clipPath={`url(#ohp-clip-${el})`} />
+              </>
             )}
             <circle cx={cx} cy={cy} r={R} fill="none" stroke="#cfcabf" strokeWidth="1.4" />
+            {/* 기본(어두운) 글자 */}
             <text x={cx} y={cy - 8} textAnchor="middle" fontSize="13.5" fontWeight="700" fill="#333">
               {NAMES[el]}
             </text>
             <text x={cx} y={cy + 14} textAnchor="middle" fontSize="15" fontWeight="700" fill="#222">
               {p}%
             </text>
+            {/* 채움 영역에 걸치는 부분만 흰색으로 덧그림 (검정 채움 위에서도 보이게) */}
+            {p > 0 && (
+              <g clipPath={`url(#ohp-fill-${el})`}>
+                <text x={cx} y={cy - 8} textAnchor="middle" fontSize="13.5" fontWeight="700" fill="#fff">
+                  {NAMES[el]}
+                </text>
+                <text x={cx} y={cy + 14} textAnchor="middle" fontSize="15" fontWeight="700" fill="#fff">
+                  {p}%
+                </text>
+              </g>
+            )}
           </g>
         )
       })}
