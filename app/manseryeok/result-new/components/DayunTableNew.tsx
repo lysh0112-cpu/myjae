@@ -78,7 +78,7 @@ export default function DayunTableNew({solarYear,solarMonth,solarDay,gender,mont
           <tr>{<td style={{width:22}}/>}{rows.map((d,i)=>{
             const c=isCur(d)
             return <td key={i} style={{padding:'0 2px',textAlign:'center',cursor:'pointer'}} onClick={()=>setSel(sel===i?null:i)}>
-              <div style={{fontSize:9,color:c?'#8B6914':'#aaa',lineHeight:1.3}}>{keyFn(d)}</div>
+              <div style={{fontSize:9,color:c?'#c8783c':'#aaa',lineHeight:1.3}}>{keyFn(d)}</div>
               <div style={{fontSize:10,fontWeight:600,color:SS_C[d.ganYukchin]||'#aaa',height:14,lineHeight:'14px'}}>{d.ganYukchin}</div>
             </td>
           })}</tr>
@@ -114,12 +114,12 @@ export default function DayunTableNew({solarYear,solarMonth,solarDay,gender,mont
   )
 
   return (
-    <div style={{background:'#fff',border:'0.5px solid #e8e5de',borderRadius:16,overflow:'hidden',marginBottom:10,fontFamily:"'Apple SD Gothic Neo','Noto Sans KR',sans-serif"}}>
+    <div style={{background:'#fff',border:'0.5px solid #f0e0d5',borderRadius:16,overflow:'hidden',marginBottom:10,fontFamily:"'Apple SD Gothic Neo','Noto Sans KR',sans-serif"}}>
       {/* 헤더 */}
-      <div style={{display:'flex',alignItems:'center',gap:8,padding:'12px 16px 10px',borderBottom:'0.5px solid #f5f3ef'}}>
-        <span style={{color:'#8B6914',fontSize:13}}>✦</span>
+      <div style={{display:'flex',alignItems:'center',gap:8,padding:'12px 16px 10px',borderBottom:'0.5px solid #f7ede4'}}>
+        <span style={{color:'#c8783c',fontSize:13}}>✦</span>
         <span style={{fontSize:13,fontWeight:700,color:'#1a1a1a'}}>대운</span>
-        <span style={{fontSize:11,padding:'2px 8px',borderRadius:10,background:'#fffbee',border:'0.5px solid #e8d5a0',color:'#8B6914',fontWeight:600}}>현재 {age}세</span>
+        <span style={{fontSize:11,padding:'2px 8px',borderRadius:10,background:'#fff3e9',border:'0.5px solid #e8d5c5',color:'#c8783c',fontWeight:600}}>현재 {age}세</span>
         <span style={{fontSize:10,color:'#ccc',marginLeft:'auto'}}>← 미래 · 과거 →</span>
       </div>
 
@@ -134,7 +134,7 @@ export default function DayunTableNew({solarYear,solarMonth,solarDay,gender,mont
             <button onClick={()=>setSel(null)} style={{position:'absolute' as const,top:13,right:13,background:'none',border:'none',fontSize:15,color:'#bbb',cursor:'pointer'}}>✕</button>
             <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3,flexWrap:'wrap' as const}}>
               <span style={{fontSize:20,fontWeight:700,color:'#1a1a1a'}}>{selD.cheongan}{selD.jiji}</span>
-              <span style={{fontSize:10,fontWeight:600,color:'#8B6914',background:'#fffbee',border:'0.5px solid #e8d5a0',borderRadius:7,padding:'2px 6px'}}>{selD.age}~{selD.age+9}세</span>
+              <span style={{fontSize:10,fontWeight:600,color:'#c8783c',background:'#fff3e9',border:'0.5px solid #e8d5c5',borderRadius:7,padding:'2px 6px'}}>{selD.age}~{selD.age+9}세</span>
             </div>
             <div style={{fontSize:10,color:'#aaa',marginBottom:2}}>{birthYear+selD.age}~{birthYear+selD.age+9}년</div>
             <div style={{fontSize:10.5,color:'#c8a86a',marginBottom:12}}>👆 눌러서 뜻풀이 보기</div>
@@ -147,7 +147,7 @@ export default function DayunTableNew({solarYear,solarMonth,solarDay,gender,mont
                 {label:'신살·일지',val:getSinsal(iljji,selD.jiji)||'-',c:SINSAL_HIGHLIGHT[getSinsal(iljji,selD.jiji)]||'#222'},
               ].map((item,i)=>(
                 <div key={i} onClick={()=>SAJU_TERMS[item.val]&&setTerm(item.val)}
-                  style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:'#fafaf8',border:'0.5px solid #eeebe4',borderRadius:9,padding:'8px 11px',cursor:SAJU_TERMS[item.val]?'pointer':'default'}}>
+                  style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:'#faf3ee',border:'0.5px solid #f0e0d5',borderRadius:9,padding:'8px 11px',cursor:SAJU_TERMS[item.val]?'pointer':'default'}}>
                   <span style={{fontSize:10.5,color:'#999'}}>{item.label}</span>
                   <span style={{fontSize:14,fontWeight:700,color:item.c}}>{item.val}</span>
                 </div>
