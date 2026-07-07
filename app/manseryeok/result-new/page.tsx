@@ -12,10 +12,12 @@ import ConsultButton from "@/app/components/common/ConsultButton";
 import OhaengPentagon from "./OhaengPentagon";
 import SipsungTable from "./SipsungTable";
 import UnTable from "./UnTable";
+import SingangTable from "./SingangTable";
 
 const BRANCH_LIST = [{char:"子"},{char:"丑"},{char:"寅"},{char:"卯"},{char:"辰"},{char:"巳"},{char:"午"},{char:"未"},{char:"申"},{char:"酉"},{char:"戌"},{char:"亥"}]
 const HEAVENLY_STEMS = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
 const STEM_ELEMENT: Record<string,string> = {甲:'목',乙:'목',丙:'화',丁:'화',戊:'토',己:'토',庚:'금',辛:'금',壬:'수',癸:'수'}
+const STEM_KOR: Record<string,string> = {甲:'갑목',乙:'을목',丙:'병화',丁:'정화',戊:'무토',己:'기토',庚:'경금',辛:'신금',壬:'임수',癸:'계수'}
 const BRANCH_ELEMENT: Record<string,string> = {子:'수',丑:'토',寅:'목',卯:'목',辰:'토',巳:'화',午:'화',未:'토',申:'금',酉:'금',戌:'토',亥:'수'}
 const BRANCH_YIN: Record<string,boolean> = {子:true,丑:true,寅:false,卯:true,辰:false,巳:true,午:false,未:true,申:false,酉:true,戌:false,亥:true}
 const ELEMENT_COLOR: Record<string,string> = {목:'#4caf50',화:'#f44336',토:'#ff9800',금:'#9e9e9e',수:'#2196f3'}
@@ -384,14 +386,14 @@ function ResultNewContent() {
         </Section>
 
         {/* ④ 신강/신약 */}
-        <Section title="신강/신약 지수">
-          <div style={{overflowX:'auto',paddingBottom:'4px'}}>
-            <SinganChart score={singanScore}/>
-          </div>
-          <div style={{fontSize:'11px',color:'#555',lineHeight:1.7,marginTop:'8px',background:'#fafaf8',borderRadius:'8px',padding:'10px'}}>
-            <span style={{color:'#f44336',fontWeight:600}}>중화 </span>사주입니다.<br/>
-            <span style={{color:'#888',fontSize:'10px'}}>약 16.82%의 사람이 여기에 해당합니다.</span>
-          </div>
+        <Section title="신강 · 신약">
+          {dayStem && (
+            <SingangTable
+              ilganEl={STEM_ELEMENT[dayStem] as '목'|'화'|'토'|'금'|'수'}
+              ilganName={STEM_KOR[dayStem]||dayStem}
+              ohaeng={ohaeng}
+            />
+          )}
         </Section>
 
         {/* ⑤ 용신 */}
