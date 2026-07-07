@@ -1,183 +1,258 @@
-'use client'
+// 사주 용어 쉬운 우리말 설명 사전 (명카페 공용)
+// 십성 10 + 12운성 12 + 신살 12 = 34개
+// 사용: import { SAJU_TERMS } from '@/app/manseryeok/result-new/sajuTerms'
 
-import { useState, useEffect, useRef } from 'react'
-import { getUnsung, getSinsal, unsungColor, SINSAL_HIGHLIGHT } from '@/lib/saju'
-import { GAN_COLOR, JI_COLOR } from '@/lib/saju/constants'
-import type { DayunItem } from '@/lib/saju/dayun'
-import { SAJU_TERMS } from '../sajuTerms'
-
-interface Props {
-  solarYear: number; solarMonth: number; solarDay: number
-  gender: string; monthGanji: string; yearStem: string; dayStem: string
-  currentYear: number; birthYear: number
-  ilgan: string; yeonjji: string; iljji: string
+export interface TermInfo {
+  hanja: string       // 한자
+  category: string    // '십성' | '12운성' | '신살'
+  oneline: string     // 한마디로
+  desc: string        // 쉬운 설명
+  good: string        // 좋을 때
+  caution: string     // 주의할 때
 }
 
-const SE: Record<string,string> = {甲:'목',乙:'목',丙:'화',丁:'화',戊:'토',己:'토',庚:'금',辛:'금',壬:'수',癸:'수'}
-const BE: Record<string,string> = {子:'수',丑:'토',寅:'목',卯:'목',辰:'토',巳:'화',午:'화',未:'토',申:'금',酉:'금',戌:'토',亥:'수'}
-const HAN: Record<string,string> = {목:'木',화:'火',토:'土',금:'金',수:'水'}
-const EL_BG: Record<string,string> = {목:'#e8f5e9',화:'#ffebee',토:'#fff8e1',금:'#f5f5f5',수:'#e3f2fd'}
-const EL_BD: Record<string,string> = {목:'#a5d6a7',화:'#ef9a9a',토:'#ffe082',금:'#bdbdbd',수:'#90caf9'}
-const EL_C: Record<string,string> = {목:'#2e7d32',화:'#c62828',토:'#f57f17',금:'#616161',수:'#1565c0'}
-const SS_C: Record<string,string> = {
-  비견:'#9e9e9e',겁재:'#9e9e9e',식신:'#43a047',상관:'#43a047',
-  편재:'#fb8c00',정재:'#fb8c00',편관:'#e53935',정관:'#e53935',편인:'#1e88e5',정인:'#1e88e5'
-}
+export const SAJU_TERMS: Record<string, TermInfo> = {
+  // ── 십성 10 ──────────────────────────────
+  비견: {
+    hanja: '比肩', category: '십성',
+    oneline: '나와 어깨를 나란히 하는 친구·동료',
+    desc: '나와 같은 기운을 가진 사람이에요. 형제, 친구, 동업자처럼 나와 대등한 관계를 뜻해요.',
+    good: '사람들과 힘을 합쳐 협동하고, 독립심과 자존심이 강해요.',
+    caution: '고집이 세지거나, 경쟁·재물 다툼이 생길 수 있어요.',
+  },
+  겁재: {
+    hanja: '劫財', category: '십성',
+    oneline: '경쟁심 강한 라이벌 기운',
+    desc: '나와 비슷하지만 좀 더 경쟁적인 기운이에요. 승부욕과 추진력을 뜻해요.',
+    good: '과감하게 도전하고, 어려운 일도 밀어붙이는 힘이 있어요.',
+    caution: '욕심이 앞서거나 돈 관리에서 손해를 볼 수 있어요.',
+  },
+  식신: {
+    hanja: '食神', category: '십성',
+    oneline: '즐기고 표현하는 여유의 기운',
+    desc: '내가 만들어내는 기운이에요. 먹고, 즐기고, 표현하는 것과 관련돼요.',
+    good: '느긋하고 낙천적이며, 재주와 표현력이 뛰어나요.',
+    caution: '게을러지거나 현실에 안주할 수 있어요.',
+  },
+  상관: {
+    hanja: '傷官', category: '십성',
+    oneline: '톡톡 튀는 재능과 표현력',
+    desc: '내가 뿜어내는 재능의 기운이에요. 말재주, 예술, 창의력과 관련돼요.',
+    good: '똑똑하고 재치 있으며, 남다른 아이디어가 넘쳐요.',
+    caution: '말이 앞서거나 규칙·윗사람과 부딪칠 수 있어요.',
+  },
+  편재: {
+    hanja: '偏財', category: '십성',
+    oneline: '크게 벌고 크게 쓰는 활동적 재물',
+    desc: '넓게 흐르는 재물의 기운이에요. 사업, 투자, 활동적인 돈벌이를 뜻해요.',
+    good: '수완이 좋고 사교적이며, 기회를 잘 잡아요.',
+    caution: '돈이 들어오고 나감이 크고, 씀씀이가 헤퍼질 수 있어요.',
+  },
+  정재: {
+    hanja: '正財', category: '십성',
+    oneline: '착실하게 모으는 안정된 재물',
+    desc: '꾸준히 쌓이는 재물의 기운이에요. 월급, 저축처럼 성실한 돈을 뜻해요.',
+    good: '성실하고 알뜰하며, 신용을 잘 지켜요.',
+    caution: '지나치게 아끼거나 융통성이 부족할 수 있어요.',
+  },
+  편관: {
+    hanja: '偏官', category: '십성',
+    oneline: '강한 추진력과 카리스마',
+    desc: '나를 강하게 밀어붙이는 기운이에요. 권력, 도전, 강한 책임감을 뜻해요.',
+    good: '결단력 있고 위기에 강하며, 리더십이 뛰어나요.',
+    caution: '급하거나 강압적으로 보일 수 있고, 스트레스를 받기 쉬워요.',
+  },
+  정관: {
+    hanja: '正官', category: '십성',
+    oneline: '반듯하고 책임감 있는 기운',
+    desc: '나를 바르게 다스리는 기운이에요. 명예, 직장, 규칙과 관련돼요.',
+    good: '반듯하고 신뢰가 가며, 조직에서 인정받아요.',
+    caution: '원칙에 매이거나 융통성이 부족할 수 있어요.',
+  },
+  편인: {
+    hanja: '偏印', category: '십성',
+    oneline: '깊이 파고드는 독특한 지혜',
+    desc: '나를 돕는 남다른 지혜의 기운이에요. 직관, 종교, 전문 분야와 관련돼요.',
+    good: '통찰력이 깊고, 남들이 안 하는 분야에서 빛나요.',
+    caution: '생각이 많아 외로워지거나 결정을 미룰 수 있어요.',
+  },
+  정인: {
+    hanja: '正印', category: '십성',
+    oneline: '따뜻하게 돌봐주는 배움의 기운',
+    desc: '나를 길러주는 기운이에요. 어머니, 공부, 문서, 자격증과 관련돼요.',
+    good: '인정 많고 학문적이며, 귀인의 도움을 잘 받아요.',
+    caution: '의존적이 되거나 생각만 하고 실행이 느릴 수 있어요.',
+  },
 
-function GJ({char,el,cur,sz=44}:{char:string;el:string;cur?:boolean;sz?:number}) {
-  const bg=EL_BG[el]||'#f5f5f5', bd=EL_BD[el]||'#ddd', c=EL_C[el]||'#888'
-  const box = (
-    <div style={{width:sz,height:sz,borderRadius:8,background:bg,border:`1px solid ${bd}`,
-      display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-      position:'relative' as const,margin:'1px auto'}}>
-      <span style={{fontSize:sz*0.5,fontWeight:700,color:c,lineHeight:1}}>{char}</span>
-      {el&&<span style={{position:'absolute' as const,bottom:2,right:4,fontSize:8,fontWeight:700,color:c}}>{HAN[el]}</span>}
-    </div>
-  )
-  if(cur) return <div style={{outline:'2px solid #555',borderRadius:10,display:'inline-block',padding:1}}>{box}</div>
-  return box
-}
+  // ── 12운성 12 ────────────────────────────
+  장생: {
+    hanja: '長生', category: '12운성',
+    oneline: '갓 태어난 새싹처럼 순수한 시작',
+    desc: '생명이 막 태어나는 단계예요. 새로운 시작과 순수한 힘을 뜻해요.',
+    good: '순수하고 성장 가능성이 크며, 사람들의 사랑을 받아요.',
+    caution: '아직 여려서 혼자 서기엔 힘이 부족할 수 있어요.',
+  },
+  목욕: {
+    hanja: '沐浴', category: '12운성',
+    oneline: '멋을 아는 감수성 풍부한 단계',
+    desc: '갓 씻고 단장하는 단계예요. 아름다움, 감성, 변화를 뜻해요.',
+    good: '감각이 뛰어나고 매력적이며, 예술적 재능이 있어요.',
+    caution: '기분 변화가 크고, 유혹에 흔들리기 쉬워요.',
+  },
+  관대: {
+    hanja: '冠帶', category: '12운성',
+    oneline: '어른 옷을 갖춰 입은 성장기',
+    desc: '옷을 갖춰 입고 사회에 나서는 단계예요. 성장과 자신감을 뜻해요.',
+    good: '패기 있고 진취적이며, 자기 주관이 뚜렷해요.',
+    caution: '자신감이 지나쳐 고집이나 미숙함이 보일 수 있어요.',
+  },
+  건록: {
+    hanja: '建祿', category: '12운성',
+    oneline: '제 힘으로 우뚝 선 전성기 초입',
+    desc: '스스로 밥벌이를 하는 단단한 단계예요. 자립과 실력을 뜻해요.',
+    good: '성실하고 능력 있으며, 자기 몫을 확실히 해내요.',
+    caution: '독립심이 강해 남과 타협하기 어려울 수 있어요.',
+  },
+  제왕: {
+    hanja: '帝王', category: '12운성',
+    oneline: '기운이 가장 왕성한 절정기',
+    desc: '힘이 최고로 강한 단계예요. 왕처럼 당당한 기운을 뜻해요.',
+    good: '리더십이 강하고 추진력이 최고조예요.',
+    caution: '너무 강해서 주변과 부딪치거나 독선적일 수 있어요.',
+  },
+  쇠: {
+    hanja: '衰', category: '12운성',
+    oneline: '절정을 지나 차분해지는 단계',
+    desc: '왕성함이 한풀 꺾이는 단계예요. 여유와 원숙함을 뜻해요.',
+    good: '노련하고 안정적이며, 뒤에서 조언을 잘해요.',
+    caution: '기운이 살짝 빠져 소극적으로 보일 수 있어요.',
+  },
+  병: {
+    hanja: '病', category: '12운성',
+    oneline: '쉬어가며 돌아보는 단계',
+    desc: '잠시 앓듯 쉬어가는 단계예요. 섬세함과 배려를 뜻해요.',
+    good: '남의 마음을 잘 헤아리고, 정이 많아요.',
+    caution: '예민하거나 걱정이 많아질 수 있어요.',
+  },
+  사: {
+    hanja: '死', category: '12운성',
+    oneline: '조용히 마무리하는 단계',
+    desc: '활동을 멈추고 정리하는 단계예요. 집중과 몰입을 뜻해요.',
+    good: '한 가지에 깊이 파고들어 전문성이 뛰어나요.',
+    caution: '고지식하거나 유연함이 부족할 수 있어요.',
+  },
+  묘: {
+    hanja: '墓', category: '12운성',
+    oneline: '차곡차곡 저장하고 갈무리하는 단계',
+    desc: '창고에 넣어 보관하는 단계예요. 저축, 정리, 인내를 뜻해요.',
+    good: '알뜰하고 끈기 있으며, 모으고 관리하는 데 강해요.',
+    caution: '답답하게 갇힌 느낌이거나 변화를 꺼릴 수 있어요.',
+  },
+  절: {
+    hanja: '絶', category: '12운성',
+    oneline: '끊고 새로 시작하기 직전',
+    desc: '완전히 비워지는 단계예요. 끝과 새 시작의 경계를 뜻해요.',
+    good: '변화에 민감하고, 새 환경 적응이 빨라요.',
+    caution: '마음이 자주 바뀌거나 불안정할 수 있어요.',
+  },
+  태: {
+    hanja: '胎', category: '12운성',
+    oneline: '엄마 뱃속에 새 생명이 잉태된 단계',
+    desc: '새 생명이 막 자리 잡는 단계예요. 가능성과 잠재력을 뜻해요.',
+    good: '상상력이 풍부하고, 새로운 것을 잘 품어요.',
+    caution: '아직 형태가 없어 막연하거나 의존적일 수 있어요.',
+  },
+  양: {
+    hanja: '養', category: '12운성',
+    oneline: '보살핌 받으며 자라는 단계',
+    desc: '뱃속에서 무럭무럭 자라는 단계예요. 성장과 준비를 뜻해요.',
+    good: '온화하고 붙임성이 좋으며, 도움을 잘 받아요.',
+    caution: '홀로서기가 늦거나 남에게 기대기 쉬워요.',
+  },
 
-export default function DayunTableNew({solarYear,solarMonth,solarDay,gender,monthGanji,yearStem,dayStem,currentYear,birthYear,ilgan,yeonjji,iljji}:Props) {
-  const [list,setList]=useState<DayunItem[]>([])
-  const [loading,setLoading]=useState(true)
-  const [sel,setSel]=useState<number|null>(null)
-  const [term,setTerm]=useState<string|null>(null)
-  const ref=useRef<HTMLDivElement>(null)
-  const age=currentYear-birthYear
-
-  useEffect(()=>{
-    if(!solarYear||!monthGanji||!yearStem||!dayStem)return
-    let ok=true; setLoading(true)
-    fetch('/api/dayun',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({solarYear,solarMonth,solarDay,monthGanji,yearStem,gender,dayStem})})
-      .then(r=>r.json()).then(d=>{if(ok)setList(d.dayunList||[])})
-      .catch(()=>{if(ok)setList([])})
-      .finally(()=>{if(ok)setLoading(false)})
-    return()=>{ok=false}
-  },[solarYear,solarMonth,solarDay,monthGanji,yearStem,gender,dayStem])
-
-  const rev=[...(list||[])].reverse()
-  useEffect(()=>{
-    if(!ref.current||!rev.length)return
-    const i=rev.findIndex(d=>d.age<=age&&age<d.age+10)
-    if(i>=0)ref.current.scrollLeft=Math.max(0,i*52-52)
-  },[list,age])
-
-  if(loading)return <div style={{padding:16,textAlign:'center',fontSize:13,color:'#bbb'}}>대운 계산 중...</div>
-  if(!list.length)return null
-
-  const selD=sel!==null?rev[sel]:null
-
-  const tbl=(rows:DayunItem[],keyFn:(d:DayunItem)=>string,isCur:(d:DayunItem)=>boolean,topLabel:(d:DayunItem)=>string,botLabel:(d:DayunItem)=>string)=>(
-    <div style={{overflowX:'auto',scrollbarWidth:'none' as const}} ref={ref}>
-      <table style={{borderCollapse:'collapse',whiteSpace:'nowrap' as const}}>
-        <tbody>
-          {/* 나이/연도 + 십성 상단 */}
-          <tr>{<td style={{width:22}}/>}{rows.map((d,i)=>{
-            const c=isCur(d)
-            return <td key={i} style={{padding:'0 2px',textAlign:'center',cursor:'pointer'}} onClick={()=>setSel(sel===i?null:i)}>
-              <div style={{fontSize:9,color:c?'#8B6914':'#aaa',lineHeight:1.3}}>{keyFn(d)}</div>
-              <div style={{fontSize:10,fontWeight:600,color:SS_C[d.ganYukchin]||'#aaa',height:14,lineHeight:'14px'}}>{d.ganYukchin}</div>
-            </td>
-          })}</tr>
-          {/* 천간 */}
-          <tr>
-            <td style={{fontSize:9,color:'#bbb',textAlign:'right',paddingRight:3}}>천간</td>
-            {rows.map((d,i)=>{
-              const el=SE[d.cheongan], c=isCur(d)
-              return <td key={i} style={{padding:'1px 2px',cursor:'pointer'}} onClick={()=>setSel(sel===i?null:i)}>
-                <GJ char={d.cheongan} el={el} cur={c}/>
-              </td>
-            })}
-          </tr>
-          {/* 지지 */}
-          <tr>
-            <td style={{fontSize:9,color:'#bbb',textAlign:'right',paddingRight:3}}>지지</td>
-            {rows.map((d,i)=>{
-              const el=BE[d.jiji], c=isCur(d)
-              return <td key={i} style={{padding:'1px 2px',cursor:'pointer'}} onClick={()=>setSel(sel===i?null:i)}>
-                <GJ char={d.jiji} el={el} cur={c}/>
-              </td>
-            })}
-          </tr>
-          {/* 십성 하단 + 12운성 */}
-          <tr>{<td/>}{rows.map((d,i)=>(
-            <td key={i} style={{padding:'0 2px',textAlign:'center',fontSize:9,color:SS_C[d.jiYukchin]||'#aaa',lineHeight:1.4}}>
-              {d.jiYukchin}<br/>{dayStem?getUnsung(dayStem,d.jiji):''}
-            </td>
-          ))}</tr>
-        </tbody>
-      </table>
-    </div>
-  )
-
-  return (
-    <div style={{background:'#fff',border:'0.5px solid #e8e5de',borderRadius:16,overflow:'hidden',marginBottom:10,fontFamily:"'Apple SD Gothic Neo','Noto Sans KR',sans-serif"}}>
-      {/* 헤더 */}
-      <div style={{display:'flex',alignItems:'center',gap:8,padding:'12px 16px 10px',borderBottom:'0.5px solid #f5f3ef'}}>
-        <span style={{color:'#8B6914',fontSize:13}}>✦</span>
-        <span style={{fontSize:13,fontWeight:700,color:'#1a1a1a'}}>대운</span>
-        <span style={{fontSize:11,padding:'2px 8px',borderRadius:10,background:'#fffbee',border:'0.5px solid #e8d5a0',color:'#8B6914',fontWeight:600}}>현재 {age}세</span>
-        <span style={{fontSize:10,color:'#ccc',marginLeft:'auto'}}>← 미래 · 과거 →</span>
-      </div>
-
-      <div style={{padding:'10px 12px'}}>
-        {tbl(rev, d=>`${d.age}~${d.age+9}`, d=>d.age<=age&&age<d.age+10, d=>d.ganYukchin, d=>d.jiYukchin)}
-      </div>
-
-      {/* 상세 모달 */}
-      {selD&&(
-        <div onClick={()=>setSel(null)} style={{position:'fixed' as const,inset:0,background:'rgba(0,0,0,0.4)',display:'flex',alignItems:'center',justifyContent:'center',padding:20,zIndex:900}}>
-          <div onClick={e=>e.stopPropagation()} style={{maxWidth:240,width:'100%',background:'#fff',borderRadius:16,padding:'16px 14px',position:'relative' as const}}>
-            <button onClick={()=>setSel(null)} style={{position:'absolute' as const,top:13,right:13,background:'none',border:'none',fontSize:15,color:'#bbb',cursor:'pointer'}}>✕</button>
-            <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3,flexWrap:'wrap' as const}}>
-              <span style={{fontSize:20,fontWeight:700,color:'#1a1a1a'}}>{selD.cheongan}{selD.jiji}</span>
-              <span style={{fontSize:10,fontWeight:600,color:'#8B6914',background:'#fffbee',border:'0.5px solid #e8d5a0',borderRadius:7,padding:'2px 6px'}}>{selD.age}~{selD.age+9}세</span>
-            </div>
-            <div style={{fontSize:10,color:'#aaa',marginBottom:2}}>{birthYear+selD.age}~{birthYear+selD.age+9}년</div>
-            <div style={{fontSize:10.5,color:'#c8a86a',marginBottom:12}}>👆 눌러서 뜻풀이 보기</div>
-            <div style={{display:'flex',flexDirection:'column',gap:6}}>
-              {[
-                {label:'천간',val:selD.ganYukchin,c:SS_C[selD.ganYukchin]||'#222'},
-                {label:'지지',val:selD.jiYukchin,c:SS_C[selD.jiYukchin]||'#222'},
-                {label:'12운성',val:getUnsung(ilgan,selD.jiji),c:unsungColor(getUnsung(ilgan,selD.jiji))},
-                {label:'신살·년지',val:getSinsal(yeonjji,selD.jiji)||'-',c:SINSAL_HIGHLIGHT[getSinsal(yeonjji,selD.jiji)]||'#222'},
-                {label:'신살·일지',val:getSinsal(iljji,selD.jiji)||'-',c:SINSAL_HIGHLIGHT[getSinsal(iljji,selD.jiji)]||'#222'},
-              ].map((item,i)=>(
-                <div key={i} onClick={()=>SAJU_TERMS[item.val]&&setTerm(item.val)}
-                  style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:'#fafaf8',border:'0.5px solid #eeebe4',borderRadius:9,padding:'8px 11px',cursor:SAJU_TERMS[item.val]?'pointer':'default'}}>
-                  <span style={{fontSize:10.5,color:'#999'}}>{item.label}</span>
-                  <span style={{fontSize:14,fontWeight:700,color:item.c}}>{item.val}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 용어 설명 팝업 */}
-      {term&&SAJU_TERMS[term]&&(()=>{const t=SAJU_TERMS[term!];return(
-        <div onClick={()=>setTerm(null)} style={{position:'fixed' as const,inset:0,background:'rgba(0,0,0,0.4)',display:'flex',alignItems:'center',justifyContent:'center',padding:20,zIndex:1000}}>
-          <div onClick={e=>e.stopPropagation()} style={{maxWidth:320,width:'100%',background:'#fff',borderRadius:16,padding:'20px 18px'}}>
-            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:14}}>
-              <span style={{fontSize:20,fontWeight:700,color:'#1a1a1a'}}>{term} <span style={{fontSize:13,color:'#bbb',fontWeight:400}}>({t.hanja})</span></span>
-              <span style={{fontSize:10,color:'#c8a86a',background:'#fdf6ee',padding:'2px 8px',borderRadius:8}}>{t.category}</span>
-              <button onClick={()=>setTerm(null)} style={{marginLeft:'auto',background:'none',border:'none',fontSize:16,color:'#ccc',cursor:'pointer'}}>✕</button>
-            </div>
-            <div style={{background:'#f6f6f3',borderRadius:10,padding:'12px 14px',marginBottom:12}}>
-              <div style={{fontSize:12,color:'#8B6914',fontWeight:700,marginBottom:5}}>한마디로</div>
-              <div style={{fontSize:14,color:'#333',lineHeight:1.6,fontWeight:600}}>{t.oneline}</div>
-            </div>
-            <div style={{fontSize:13,color:'#555',lineHeight:1.85}}>
-              {t.desc}<br/><br/>
-              <span style={{color:'#43a047',fontWeight:700}}>좋을 때</span> — {t.good}<br/><br/>
-              <span style={{color:'#e53935',fontWeight:700}}>주의할 때</span> — {t.caution}
-            </div>
-            <div onClick={()=>setTerm(null)} style={{marginTop:16,background:'#1a1a1a',color:'#fff',textAlign:'center',padding:11,borderRadius:10,fontSize:14,fontWeight:600,cursor:'pointer'}}>확인</div>
-          </div>
-        </div>
-      )})()}
-    </div>
-  )
+  // ── 신살 12 ─────────────────────────────
+  겁살: {
+    hanja: '劫煞', category: '신살',
+    oneline: '갑작스러운 변화·손실을 조심',
+    desc: '예상 못 한 일이 생길 수 있는 기운이에요. 뺏기거나 빼앗는 힘을 뜻해요.',
+    good: '위기 대처가 빠르고, 과감한 결단을 내려요.',
+    caution: '뜻밖의 손해나 다툼을 조심하는 게 좋아요.',
+  },
+  재살: {
+    hanja: '災煞', category: '신살',
+    oneline: '구설·다툼을 조심하는 기운',
+    desc: '갇히거나 얽매이는 상황과 관련된 기운이에요. 수옥살이라고도 해요.',
+    good: '위기 속에서도 지혜롭게 버티는 힘이 있어요.',
+    caution: '관재수(법적 문제)나 사고를 조심하는 게 좋아요.',
+  },
+  천살: {
+    hanja: '天煞', category: '신살',
+    oneline: '하늘이 준 뜻밖의 변수',
+    desc: '내 힘으로 어쩔 수 없는 일과 관련된 기운이에요. 자연재해나 윗사람과 관련돼요.',
+    good: '큰 그림을 보고, 겸손하게 때를 기다릴 줄 알아요.',
+    caution: '억지로 밀어붙이기보다 흐름을 따르는 게 좋아요.',
+  },
+  지살: {
+    hanja: '地煞', category: '신살',
+    oneline: '이동·변동이 많은 기운',
+    desc: '자리를 옮기고 돌아다니는 기운이에요. 이사, 여행, 활동과 관련돼요.',
+    good: '활동적이고 부지런하며, 새 환경을 잘 개척해요.',
+    caution: '자주 옮겨다녀 안정이 부족할 수 있어요.',
+  },
+  년살: {
+    hanja: '年煞', category: '신살',
+    oneline: '매력과 인기의 도화 기운',
+    desc: '사람을 끌어당기는 매력의 기운이에요. 도화살이라고도 해요.',
+    good: '인기가 많고 매력적이며, 예술·연예 분야에 강해요.',
+    caution: '이성 문제나 구설에 휘말리지 않게 주의해요.',
+  },
+  월살: {
+    hanja: '月煞', category: '신살',
+    oneline: '메마르고 위축되기 쉬운 기운',
+    desc: '기운이 마르는 것과 관련된 기운이에요. 고초살이라고도 해요.',
+    good: '어려움 속에서도 참고 견디는 인내심이 있어요.',
+    caution: '의욕이 꺾이거나 일이 지체될 수 있어요.',
+  },
+  망신: {
+    hanja: '亡神', category: '신살',
+    oneline: '드러내고 부딪치는 솔직한 기운',
+    desc: '속을 드러내는 기운이에요. 망신살이라 하지만 나쁜 뜻만은 아니에요.',
+    good: '솔직하고 승부욕이 강하며, 실속을 잘 챙겨요.',
+    caution: '말실수나 구설로 체면을 구길 수 있어요.',
+  },
+  장성: {
+    hanja: '將星', category: '신살',
+    oneline: '장군처럼 이끄는 리더의 기운',
+    desc: '무리를 이끄는 강한 기운이에요. 장성살은 권위와 리더십을 뜻해요.',
+    good: '통솔력이 뛰어나고, 큰 조직을 이끄는 힘이 있어요.',
+    caution: '고집이 세거나 남에게 지기 싫어할 수 있어요.',
+  },
+  반안: {
+    hanja: '攀鞍', category: '신살',
+    oneline: '말안장에 오르는 출세의 기운',
+    desc: '높은 자리에 오르는 기운이에요. 반안살은 승진과 명예를 뜻해요.',
+    good: '출세운이 좋고, 윗사람의 도움으로 지위가 올라가요.',
+    caution: '겉치레나 체면치레에 치우치지 않게 주의해요.',
+  },
+  역마: {
+    hanja: '驛馬', category: '신살',
+    oneline: '끊임없이 움직이는 활동의 기운',
+    desc: '말이 달리듯 돌아다니는 기운이에요. 역마살은 이동과 변화를 뜻해요.',
+    good: '활동 범위가 넓고, 해외·여행·무역에 강해요.',
+    caution: '한곳에 정착하기 어렵고 바쁘게 살 수 있어요.',
+  },
+  육해: {
+    hanja: '六害', category: '신살',
+    oneline: '자잘한 방해를 조심하는 기운',
+    desc: '일이 더디게 풀리는 기운이에요. 육해살은 장애물, 지연과 관련돼요.',
+    good: '눈치가 빠르고, 실속을 챙기며 위기를 넘겨요.',
+    caution: '건강이나 사소한 방해로 일이 늦어질 수 있어요.',
+  },
+  화개: {
+    hanja: '華蓋', category: '신살',
+    oneline: '예술·종교·학문의 고독한 재능',
+    desc: '홀로 빛나는 재능의 기운이에요. 화개살은 예술, 종교, 학문과 관련돼요.',
+    good: '재능이 뛰어나고 깊이가 있으며, 전문가로 성공해요.',
+    caution: '외로움을 느끼거나 세상과 거리를 둘 수 있어요.',
+  },
 }
