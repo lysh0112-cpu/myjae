@@ -17,9 +17,9 @@ interface Props {
 const SE: Record<string,string> = {甲:'목',乙:'목',丙:'화',丁:'화',戊:'토',己:'토',庚:'금',辛:'금',壬:'수',癸:'수'}
 const BE: Record<string,string> = {子:'수',丑:'토',寅:'목',卯:'목',辰:'토',巳:'화',午:'화',未:'토',申:'금',酉:'금',戌:'토',亥:'수'}
 const HAN: Record<string,string> = {목:'木',화:'火',토:'土',금:'金',수:'水'}
-const EL_BG: Record<string,string> = {목:'#e8f5e9',화:'#ffebee',토:'#fff8e1',금:'#f5f5f5',수:'#e3f2fd'}
-const EL_BD: Record<string,string> = {목:'#a5d6a7',화:'#ef9a9a',토:'#ffe082',금:'#bdbdbd',수:'#90caf9'}
-const EL_C: Record<string,string> = {목:'#2e7d32',화:'#c62828',토:'#f57f17',금:'#616161',수:'#1565c0'}
+const EL_BG: Record<string,string> = {목:'#e8f5e9',화:'#ffebee',토:'#fff8e1',금:'#f5f5f5',수:'#2b2b2b'}
+const EL_BD: Record<string,string> = {목:'#a5d6a7',화:'#ef9a9a',토:'#ffe082',금:'#bdbdbd',수:'#2b2b2b'}
+const EL_C: Record<string,string> = {목:'#2e7d32',화:'#c62828',토:'#f57f17',금:'#616161',수:'#ffffff'}
 const SS_C: Record<string,string> = {
   비견:'#9e9e9e',겁재:'#9e9e9e',식신:'#43a047',상관:'#43a047',
   편재:'#fb8c00',정재:'#fb8c00',편관:'#e53935',정관:'#e53935',편인:'#1e88e5',정인:'#1e88e5'
