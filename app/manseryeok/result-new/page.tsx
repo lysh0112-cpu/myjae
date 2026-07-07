@@ -3,6 +3,8 @@
 import { useState, Suspense, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useResultSaju } from "@/hooks/useResultSaju";
+import { supabase } from "@/lib/supabase";
+import { fromProfile, type MyInfo } from "@/lib/saju/myInfo";
 import { getUnsung, getSinsal, unsungColor, getGongmang, SINSAL_HIGHLIGHT } from "@/lib/saju";
 import { GAN_COLOR, JI_COLOR } from "@/lib/saju/constants";
 import { calcSeyunList, calcWolunList } from "@/lib/saju/dayun";
@@ -169,24 +171,61 @@ function ResultNewContent() {
   const router=useRouter()
   const [isPaid,setIsPaid]=useState(false)
 
-  const gender=searchParams.get("gender")||"남"
-  const calType=searchParams.get("calType")||"양력"
-  const yearParam=parseInt(searchParams.get("year")||"0")
-  const monthParam=parseInt(searchParams.get("month")||"0")
-  const dayParam=parseInt(searchParams.get("day")||"0")
-  const leapMonth=searchParams.get("leapMonth")||"0"
-  const hourParam=searchParams.get("hour")
-  const hourIdx=hourParam==="모름"||hourParam===null?null:parseInt(hourParam)
+  // ── ID 통일: URL 있으면 URL, 없으면 로그인한 내 정보(profiles) ──
+  const [info,setInfo]=useState<MyInfo|null>(null)
+  const [loadingInfo,setLoadingInfo]=useState(true)
+
+  useEffect(()=>{
+    let cancelled=false
+    async function loadInfo(){
+      // 마이페이지에서 들어오는 "내 사주" 전용 → 오직 로그인한 내 정보(profiles)
+      try{
+        const {data:u}=await supabase.auth.getUser()
+        if(u?.user){
+          const {data:p}=await supabase.from("profiles")
+            .select("birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, saju_saved")
+            .eq("id",u.user.id).single()
+          const profInfo=fromProfile(p)
+          if(profInfo){ if(!cancelled){setInfo(profInfo);setLoadingInfo(false)} return }
+        }
+      }catch(e){ console.error(e) }
+      if(!cancelled){setInfo(null);setLoadingInfo(false)}
+    }
+    loadInfo()
+    return ()=>{cancelled=true}
+  },[])
+
+  const gender=info?.gender||"남"
+  const calType=info?.calType||"양력"
+  const yearParam=info?parseInt(info.year):0
+  const monthParam=info?parseInt(info.month):0
+  const dayParam=info?parseInt(info.day):0
+  const leapMonth=info?.leapMonth||"0"
+  const hourIdx=info?(info.hour==="모름"?null:parseInt(info.hour)):null
   const currentYear=new Date().getFullYear()
 
-  const {saju,solar,converting,dayStem,monthGanji,yearStem,iljji,yeonjji}=
+  const {saju,solar,converting:converting0,dayStem,monthGanji,yearStem,iljji,yeonjji}=
     useResultSaju(calType,yearParam,monthParam,dayParam,leapMonth,hourIdx)
+  const converting=converting0||loadingInfo
 
   if(converting) return (
     <div style={{minHeight:'100vh',background:'#FDF6F0',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'16px'}}>
       <div style={{fontSize:'32px',animation:'spin 1s linear infinite'}}>✦</div>
       <p style={{color:'#c8783c',fontSize:'14px'}}>사주 정보를 불러오는 중...</p>
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+    </div>
+  )
+
+  // 로그인도 안 했고 URL 정보도 없을 때 → 안내
+  if(!info) return (
+    <div style={{minHeight:'100vh',background:'#FDF6F0',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'16px',padding:'24px',textAlign:'center'}}>
+      <div style={{fontSize:'32px'}}>✦</div>
+      <p style={{color:'#96502e',fontSize:'15px',fontWeight:700}}>사주 정보가 필요해요</p>
+      <p style={{color:'#b4785a',fontSize:'13px',lineHeight:1.7}}>로그인하시면 내 사주가 자동으로 나와요.<br/>또는 홈에서 생년월일을 입력해 주세요.</p>
+      <div style={{display:'flex',gap:'8px',marginTop:'4px'}}>
+        <button onClick={()=>router.push('/login')} style={{background:'#b46e46',color:'#fff',border:'none',borderRadius:'10px',padding:'10px 20px',fontSize:'14px',fontWeight:600,cursor:'pointer'}}>로그인</button>
+        <button onClick={()=>router.push('/home-new')} style={{background:'#fffbf7',color:'#96502e',border:'0.5px solid #f0e0d5',borderRadius:'10px',padding:'10px 20px',fontSize:'14px',fontWeight:600,cursor:'pointer'}}>홈으로</button>
+      </div>
     </div>
   )
 
