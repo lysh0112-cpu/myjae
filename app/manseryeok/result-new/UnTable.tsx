@@ -1,6 +1,8 @@
 'use client'
 
-import React, { CSSProperties } from 'react'
+import React, { CSSProperties, useState } from 'react'
+import TermModal from './TermModal'
+import { SAJU_TERMS } from './sajuTerms'
 
 /**
  * 대운·세운·월운 표 (명카페 공용 부품 · 포스텔러 스타일)
@@ -43,9 +45,9 @@ interface Props {
 type Element = '목' | '화' | '토' | '금' | '수'
 const STEM_ELEMENT: Record<string, Element> = { 甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토', 己: '토', 庚: '금', 辛: '금', 壬: '수', 癸: '수' }
 const BRANCH_ELEMENT: Record<string, Element> = { 子: '수', 丑: '토', 寅: '목', 卯: '목', 辰: '토', 巳: '화', 午: '화', 未: '토', 申: '금', 酉: '금', 戌: '토', 亥: '수' }
-const EL_BG: Record<Element, string> = { 목: '#e8f5e9', 화: '#ffebee', 토: '#fff8e1', 금: '#f5f5f5', 수: '#e3f2fd' }
-const EL_BD: Record<Element, string> = { 목: '#a5d6a7', 화: '#ef9a9a', 토: '#ffe082', 금: '#bdbdbd', 수: '#90caf9' }
-const EL_C: Record<Element, string> = { 목: '#2e7d32', 화: '#c62828', 토: '#f57f17', 금: '#616161', 수: '#1565c0' }
+const EL_BG: Record<Element, string> = { 목: '#e8f5e9', 화: '#ffebee', 토: '#fff8e1', 금: '#f5f5f5', 수: '#2b2b2b' }
+const EL_BD: Record<Element, string> = { 목: '#a5d6a7', 화: '#ef9a9a', 토: '#ffe082', 금: '#bdbdbd', 수: '#2b2b2b' }
+const EL_C: Record<Element, string> = { 목: '#2e7d32', 화: '#c62828', 토: '#f57f17', 금: '#616161', 수: '#ffffff' }
 const EL_HAN: Record<Element, string> = { 목: '木', 화: '火', 토: '土', 금: '金', 수: '水' }
 const SS_C: Record<string, string> = {
   비견: '#9e9e9e', 겁재: '#9e9e9e', 식신: '#43a047', 상관: '#43a047',
@@ -70,6 +72,8 @@ const markStyle = (el: Element | undefined): CSSProperties => ({
 })
 
 export default function UnTable({ title, badge, items }: Props) {
+  const [term, setTerm] = useState<string | null>(null)
+  const open = (v?: string) => v && SAJU_TERMS[v] && setTerm(v)
   return (
     <div style={{ background: '#fff', border: '0.5px solid #f0e0d5', borderRadius: 16, overflow: 'hidden', marginBottom: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px 10px', borderBottom: '0.5px solid #f7ede4' }}>
@@ -81,7 +85,8 @@ export default function UnTable({ title, badge, items }: Props) {
           </span>
         )}
       </div>
-      <div style={{ overflowX: 'auto', padding: '10px 12px' }}>
+      <div style={{ fontSize: 10, color: '#c8a86a', padding: '0 16px 6px' }}>👆 십성을 누르면 뜻풀이가 나와요</div>
+      <div style={{ overflowX: 'auto', padding: '4px 12px 10px' }}>
         <div style={{ display: 'flex', gap: 5 }}>
           {items.map((item, index) => {
             const stemEl = STEM_ELEMENT[item.stem]
@@ -93,7 +98,7 @@ export default function UnTable({ title, badge, items }: Props) {
                 border: item.current ? '2px solid #555' : '2px solid transparent', borderRadius: 10,
               }}>
                 <div style={{ fontSize: 10.5, color: '#9e9e9e', whiteSpace: 'nowrap' }}>{item.label}</div>
-                <div style={{ fontSize: 10.5, fontWeight: 600, color: SS_C[item.stemSipsin] || '#9e9e9e', whiteSpace: 'nowrap' }}>
+                <div onClick={() => open(item.stemSipsin)} style={{ fontSize: 10.5, fontWeight: 600, color: SS_C[item.stemSipsin] || '#9e9e9e', whiteSpace: 'nowrap', cursor: SAJU_TERMS[item.stemSipsin] ? 'pointer' : 'default' }}>
                   {item.stemSipsin || '-'}
                 </div>
                 <div style={blockStyle(stemEl)}>
@@ -105,14 +110,17 @@ export default function UnTable({ title, badge, items }: Props) {
                   {branchEl && <span style={markStyle(branchEl)}>{EL_HAN[branchEl]}</span>}
                 </div>
                 <div style={{ fontSize: 10, color: '#9e9e9e', textAlign: 'center', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
-                  {item.branchSipsin || '-'}
-                  {item.unsung ? <><br />{item.unsung}</> : null}
+                  <span onClick={() => open(item.branchSipsin)} style={{ cursor: SAJU_TERMS[item.branchSipsin] ? 'pointer' : 'default' }}>
+                    {item.branchSipsin || '-'}
+                  </span>
+                  {item.unsung ? <><br /><span onClick={() => open(item.unsung)} style={{ cursor: item.unsung && SAJU_TERMS[item.unsung] ? 'pointer' : 'default' }}>{item.unsung}</span></> : null}
                 </div>
               </div>
             )
           })}
         </div>
       </div>
+      <TermModal term={term} onClose={() => setTerm(null)} />
     </div>
   )
 }
