@@ -29,7 +29,7 @@ const SIPSIN_COLOR: Record<string, string> = {
 
 const th: React.CSSProperties = {
   padding: '3px 2px', textAlign: 'center', fontWeight: 600,
-  color: '#555', fontSize: '9px', border: '0.5px solid #eeebe4',
+  color: '#555', fontSize: '9px', border: '0.5px solid #f0e0d5',
 }
 
 export default function SipsungTable({ sipsung }: { sipsung: { ss: string; pct: number }[] }) {
@@ -41,7 +41,7 @@ export default function SipsungTable({ sipsung }: { sipsung: { ss: string; pct: 
   return (
     <table style={{ borderCollapse: 'collapse', fontSize: '9.5px', width: '100%' }}>
       <thead>
-        <tr style={{ background: '#f5f3ef' }}>
+        <tr style={{ background: '#f7ede4' }}>
           <th style={th}>십성</th>
           <th style={th}>비율</th>
         </tr>
@@ -53,7 +53,7 @@ export default function SipsungTable({ sipsung }: { sipsung: { ss: string; pct: 
             <tr key={ss}>
               <td style={{
                 padding: '3px 2px', textAlign: 'center', fontWeight: 600,
-                color: SIPSIN_COLOR[ss] || '#555', border: '0.5px solid #eeebe4',
+                color: SIPSIN_COLOR[ss] || '#555', border: '0.5px solid #f0e0d5',
               }}>
                 {ss}
               </td>
@@ -61,7 +61,7 @@ export default function SipsungTable({ sipsung }: { sipsung: { ss: string; pct: 
                 padding: '3px 2px', textAlign: 'center',
                 fontWeight: p !== null ? 700 : 400,
                 color: p !== null ? '#1a1a1a' : '#bbb',
-                border: '0.5px solid #eeebe4',
+                border: '0.5px solid #f0e0d5',
               }}>
                 {p !== null ? `${p}%` : '-'}
               </td>
