@@ -80,7 +80,9 @@ function GanjiBox({ char, el, isDay, isGongmang }: { char: string; el: Element |
     <div style={{
       width: 42, height: 42, borderRadius: 8,
       background: el ? EL_BG[el] : '#f5f5f5',
-      border: isDay ? '2px solid #c8783c' : `1px solid ${el ? EL_BD[el] : '#ddd'}`,
+      border: el === '수'
+        ? (isDay ? '3px solid #000000' : '1px solid #2b2b2b')
+        : (isDay ? '2px solid #c8783c' : `1px solid ${el ? EL_BD[el] : '#ddd'}`),
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       margin: '0 auto', position: 'relative', opacity: isGongmang ? 0.45 : 1,
     }}>
