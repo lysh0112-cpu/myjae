@@ -119,8 +119,8 @@ function GanjiBox({char,el,isDay,isGongmang}:{char:string;el:string;isDay?:boole
   return (
     <div style={{
       width:'100%',height:'52px',borderRadius:'8px',
-      background:isDay?'#fffbee':bg,
-      border:isGongmang?'1.5px solid #f44336':isDay?'1.5px solid #e8d5a0':`1px solid ${color}66`,
+      background:isDay?'#fff3e9':bg,
+      border:isGongmang?'1.5px solid #f44336':isDay?'1.5px solid #e8d5c5':`1px solid ${color}66`,
       display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
       position:'relative' as const,gap:'1px',
     }}>
@@ -151,9 +151,9 @@ function SmallGanjiBox({char,el,isCurrent,size=36}:{char:string;el:string;isCurr
 
 function Section({title,children}:{title:string;children:React.ReactNode}) {
   return (
-    <div style={{background:'#fff',border:'0.5px solid #e8e5de',borderRadius:'16px',overflow:'hidden',marginBottom:'10px'}}>
-      <div style={{display:'flex',alignItems:'center',gap:'8px',padding:'12px 16px 10px',borderBottom:'0.5px solid #f5f3ef'}}>
-        <span style={{color:'#8B6914',fontSize:'13px'}}>✦</span>
+    <div style={{background:'#fff',border:'0.5px solid #f0e0d5',borderRadius:'16px',overflow:'hidden',marginBottom:'10px'}}>
+      <div style={{display:'flex',alignItems:'center',gap:'8px',padding:'12px 16px 10px',borderBottom:'0.5px solid #f7ede4'}}>
+        <span style={{color:'#c8783c',fontSize:'13px'}}>✦</span>
         <span style={{fontSize:'13px',fontWeight:700,color:'#1a1a1a'}}>{title}</span>
       </div>
       <div style={{padding:'12px 14px'}}>{children}</div>
@@ -183,9 +183,9 @@ function ResultNewContent() {
     useResultSaju(calType,yearParam,monthParam,dayParam,leapMonth,hourIdx)
 
   if(converting) return (
-    <div style={{minHeight:'100vh',background:'#FAFAF8',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'16px'}}>
+    <div style={{minHeight:'100vh',background:'#FDF6F0',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'16px'}}>
       <div style={{fontSize:'32px',animation:'spin 1s linear infinite'}}>✦</div>
-      <p style={{color:'#8B6914',fontSize:'14px'}}>사주 정보를 불러오는 중...</p>
+      <p style={{color:'#c8783c',fontSize:'14px'}}>사주 정보를 불러오는 중...</p>
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
     </div>
   )
@@ -213,38 +213,28 @@ function ResultNewContent() {
   const singanScore=toEl?Math.round(toEl.pct/100*7):3
 
   return (
-    <div style={{minHeight:'100vh',background:'#FAFAF8',maxWidth:'430px',margin:'0 auto',fontFamily:"'Apple SD Gothic Neo','Noto Sans KR',sans-serif",color:'#1a1a1a'}}>
+    <div style={{minHeight:'100vh',background:'#FDF6F0',maxWidth:'430px',margin:'0 auto',fontFamily:"'Apple SD Gothic Neo','Noto Sans KR',sans-serif",color:'#1a1a1a'}}>
 
       {/* 헤더 */}
-      <div style={{position:'sticky',top:0,zIndex:50,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',background:'rgba(250,250,248,0.96)',backdropFilter:'blur(10px)',borderBottom:'0.5px solid #e8e5de'}}>
+      <div style={{position:'sticky',top:0,zIndex:50,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',background:'rgba(250,250,248,0.96)',backdropFilter:'blur(10px)',borderBottom:'0.5px solid #f0e0d5'}}>
         <button onClick={()=>router.back()} style={{background:'none',border:'none',color:'#999',fontSize:'20px',cursor:'pointer'}}>←</button>
         <div style={{textAlign:'center'}}>
           <div style={{fontSize:'14px',fontWeight:700,color:'#1a1a1a'}}>나의 만세력</div>
-          <div style={{fontSize:'9px',color:'#8B6914'}}>명연재（明然載）</div>
+          <div style={{fontSize:'9px',color:'#c8783c'}}>명연재（明然載）</div>
         </div>
         <div style={{width:'20px'}}/>
       </div>
 
-      {/* 프로필 헤더 */}
-      <div style={{background:'#1a1a1a',padding:'16px'}}>
-        <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'10px'}}>
-          <div style={{width:'40px',height:'40px',borderRadius:'50%',background:'rgba(139,105,20,0.2)',border:'1.5px solid rgba(139,105,20,0.4)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'18px',flexShrink:0}}>🌿</div>
-          <div style={{fontSize:'11px',color:'#666',lineHeight:1.7}}>{calLabel}{solarLabel}· {hourLabel} · {genderLabel}</div>
-        </div>
-        <div style={{background:'rgba(255,255,255,0.06)',border:'0.5px solid rgba(255,255,255,0.1)',borderRadius:'10px',padding:'10px 14px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-          <div>
-            <div style={{fontSize:'9px',color:'#8B6914',letterSpacing:'1px',marginBottom:'3px'}}>일주（日柱）</div>
-            <div style={{fontSize:'28px',fontWeight:700,color:'#fff',lineHeight:1}}>{saju[1]?.stem??'?'}{saju[1]?.branch??'?'}</div>
-            <div style={{fontSize:'10px',color:'#555',marginTop:'2px'}}>{dayStem?`${dayStem} 일간`:''}</div>
-          </div>
-          {gm1&&(
-            <div style={{textAlign:'right'}}>
-              <div style={{fontSize:'9px',color:'#555',marginBottom:'3px'}}>공망</div>
-              <div style={{background:'rgba(244,67,54,0.2)',border:'0.5px solid rgba(244,67,54,0.4)',borderRadius:'7px',padding:'5px 10px'}}>
-                <span style={{fontSize:'16px',fontWeight:700,color:'#ef9a9a'}}>{gm1}·{gm2}</span>
-              </div>
+      {/* 프로필 헤더 (피치톤) */}
+      <div style={{padding:'14px 16px'}}>
+        <div style={{background:'#fffbf7',border:'0.5px solid #f0e0d5',borderRadius:'12px',padding:'16px'}}>
+          <div style={{display:'flex',alignItems:'center',gap:'11px'}}>
+            <div style={{width:'42px',height:'42px',borderRadius:'50%',background:'#f5ebe2',border:'1.5px solid #e8d5c5',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'19px',flexShrink:0}}>🌿</div>
+            <div>
+              <div style={{fontSize:'13px',fontWeight:700,color:'#96502e',marginBottom:'2px'}}>나의 만세력</div>
+              <div style={{fontSize:'11px',color:'#b4785a',lineHeight:1.5}}>{calLabel}{solarLabel} · {hourLabel} · {genderLabel}</div>
             </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -294,7 +284,7 @@ function ResultNewContent() {
               </div>
             ))}
           </div>
-          <div style={{background:'#fafaf8',border:'0.5px solid #eeebe4',borderRadius:'8px',padding:'10px 12px',fontSize:'11px',color:'#666',lineHeight:1.8}}>
+          <div style={{background:'#faf3ee',border:'0.5px solid #f0e0d5',borderRadius:'8px',padding:'10px 12px',fontSize:'11px',color:'#666',lineHeight:1.8}}>
             乙木 일간은 음목(陰木)으로 부드럽고 유연합니다. 화(火)로 건조하게 하고 토(土)로 뿌리를 잡아주는 것이 좋습니다.
           </div>
         </Section>
@@ -347,7 +337,7 @@ function ResultNewContent() {
         />
 
         {/* ⑩ 상담 버튼 */}
-        <div style={{background:'#fff',border:'0.5px solid #e8e5de',borderRadius:'14px',padding:'12px',marginTop:'10px'}}>
+        <div style={{background:'#fff',border:'0.5px solid #f0e0d5',borderRadius:'14px',padding:'12px',marginTop:'10px'}}>
           <ConsultButton priceKey="saju" mode="personal" searchParams={searchParams}/>
         </div>
 
@@ -370,8 +360,8 @@ function ResultNewContent() {
 export default function ResultNewPage() {
   return (
     <Suspense fallback={
-      <div style={{minHeight:'100vh',background:'#FAFAF8',display:'flex',alignItems:'center',justifyContent:'center'}}>
-        <div style={{color:'#8B6914',fontSize:'14px'}}>로딩 중...</div>
+      <div style={{minHeight:'100vh',background:'#FDF6F0',display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <div style={{color:'#c8783c',fontSize:'14px'}}>로딩 중...</div>
       </div>
     }>
       <ResultNewContent/>
