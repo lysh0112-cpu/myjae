@@ -74,7 +74,7 @@ export default function OhaengPentagon({ ohaeng }: { ohaeng: { el: string; pct: 
   }
 
   return (
-    <svg width="100%" viewBox="0 0 440 445" style={{ maxWidth: 400, display: 'block', margin: '0 auto' }}>
+    <svg width="100%" viewBox="-30 -30 500 505" style={{ maxWidth: 400, display: 'block', margin: '0 auto' }}>
       <defs>
         <marker id="ohp-b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M2 1L8 5L2 9" fill="none" stroke="#3f8ae0" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -98,7 +98,7 @@ export default function OhaengPentagon({ ohaeng }: { ohaeng: { el: string; pct: 
         )
       })}
       <text x={CENTER.x} y={GUK_CENTER_Y} textAnchor="middle" dominantBaseline="central"
-        fontSize="24" fontWeight="700" fill="#e8908a">剋</text>
+        fontSize="24" fontWeight="700" fill="#e8908a">극</text>
 
       {/* 상생(生) — 이웃 원끼리 균일 곡선 파란 화살표 */}
       {SAENG.map((from, i) => {
@@ -153,6 +153,23 @@ export default function OhaengPentagon({ ohaeng }: { ohaeng: { el: string; pct: 
               </g>
             )}
           </g>
+        )
+      })}
+
+      {/* 원 바깥 오행 한글 이름표 (나무·불·흙·쇠·물) */}
+      {SAENG.map((el) => {
+        const { cx, cy } = NODE[el]
+        const CX = 220, CY = 222
+        const dx = cx - CX, dy = cy - CY
+        const len = Math.sqrt(dx * dx + dy * dy) || 1
+        const off = R + 20
+        const lx = cx + (dx / len) * off
+        const ly = cy + (dy / len) * off + 5
+        const HANGUL: Record<string, string> = { 목: '나무', 화: '불', 토: '흙', 금: '쇠', 수: '물' }
+        return (
+          <text key={`lbl-${el}`} x={lx} y={ly} textAnchor="middle" fontSize="16" fontWeight="700" fill={ELEMENT_COLOR[el]}>
+            {HANGUL[el]}
+          </text>
         )
       })}
     </svg>
