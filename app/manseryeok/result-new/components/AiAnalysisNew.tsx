@@ -218,10 +218,10 @@ export default function AiAnalysisNew({
         )}
       </div>
 
-      {/* 유료 잠금 섹션 */}
-      {!isFullPaid && freeDone && (
+      {/* 유료 잠금 섹션 — 지금은 숨김. 나중에 유료 기능 켤 때 아래 주석을 풀면 됩니다. */}
+      {/* {!isFullPaid && freeDone && (
         <PaidLockSection onPay={handlePaidAnalysis} />
-      )}
+      )} */}
     </div>
   )
 }
