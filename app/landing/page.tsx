@@ -50,6 +50,9 @@ export default function LandingPage() {
         </div>
         <button
           onClick={() => router.push('/login')}
+          onPointerDown={(e) => { e.currentTarget.style.transform = 'scale(0.94)' }}
+          onPointerUp={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
+          onPointerLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
           style={{
             padding: '7px 18px',
             border: '1px solid #1a1a1a',
@@ -58,6 +61,7 @@ export default function LandingPage() {
             color: '#1a1a1a',
             fontSize: '12px', fontWeight: 500,
             cursor: 'pointer',
+            transition: 'transform 0.1s ease',
           }}
         >로그인</button>
       </div>
@@ -165,12 +169,16 @@ export default function LandingPage() {
 
           {/* CTA 버튼 */}
           <button
-            onClick={() => router.push('/signup')}
+            onClick={() => router.push('/login')}
+            onPointerDown={(e) => { e.currentTarget.style.transform = 'scale(0.97)' }}
+            onPointerUp={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
+            onPointerLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
             style={{
               width: '100%', height: '54px',
               background: '#1a1a1a', border: 'none', borderRadius: '16px',
               color: '#fff', fontSize: '16px', fontWeight: 600,
               cursor: 'pointer', letterSpacing: '0.3px', marginBottom: '12px',
+              transition: 'transform 0.1s ease',
             }}
           >
             ✦ 시작하기
@@ -245,11 +253,15 @@ export default function LandingPage() {
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
             <button
-              onClick={() => router.push('/signup')}
+              onClick={() => router.push('/login')}
+              onPointerDown={(e) => { e.currentTarget.style.transform = 'scale(0.96)' }}
+              onPointerUp={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
+              onPointerLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
               style={{
                 flex: 1, height: '50px',
                 background: '#1a1a1a', border: 'none', borderRadius: '12px',
                 color: '#fff', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+                transition: 'transform 0.1s ease',
               }}
             >지금 무료로 시작</button>
             <button
