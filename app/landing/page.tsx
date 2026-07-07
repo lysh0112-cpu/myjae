@@ -37,6 +37,16 @@ export default function LandingPage() {
       color: '#3a2e28',
     }}>
 
+      <style>{`
+        @keyframes mcCupSway { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+        @keyframes mcSteamA { 0% { opacity:0; transform:translateY(0) scaleX(1);} 15%{opacity:0.6;} 50%{opacity:0.4; transform:translateY(-9px) scaleX(1.3);} 100%{opacity:0; transform:translateY(-18px) scaleX(0.8);} }
+        @keyframes mcSteamB { 0% { opacity:0; transform:translateY(0) scaleX(1);} 20%{opacity:0.5;} 55%{opacity:0.3; transform:translateY(-10px) scaleX(1.4);} 100%{opacity:0; transform:translateY(-20px) scaleX(0.7);} }
+        .mc-cup { animation: mcCupSway 3.5s ease-in-out infinite; transform-origin: bottom center; }
+        .mc-steam-a { animation: mcSteamA 2.8s ease-out infinite; }
+        .mc-steam-b { animation: mcSteamB 2.8s ease-out infinite 0.9s; }
+        .mc-steam-c { animation: mcSteamA 2.8s ease-out infinite 1.6s; }
+      `}</style>
+
       {/* 네비게이션 */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -45,8 +55,23 @@ export default function LandingPage() {
         borderBottom: '0.5px solid #f0ede6',
         position: 'sticky', top: 0, zIndex: 10,
       }}>
-        <div style={{ fontSize: '16px', fontWeight: 600, color: '#3a2e28', letterSpacing: '-0.3px' }}>
-          명카페
+        <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+          <svg width="34" height="38" viewBox="0 0 46 50" style={{ overflow: 'visible' }}>
+            <g>
+              <path className="mc-steam-a" d="M16 14 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
+              <path className="mc-steam-b" d="M23 13 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
+              <path className="mc-steam-c" d="M30 14 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
+            </g>
+            <g className="mc-cup">
+              <path d="M8 20 L38 20 L36 40 Q35 45 30 45 L16 45 Q11 45 10 40 Z" fill="#b46e46" />
+              <path d="M8 20 L38 20 L37.5 24 L8.5 24 Z" fill="#c8783c" />
+              <path d="M38 24 Q45 24 45 30 Q45 36 38 36 L37 32 Q41 32 41 30 Q41 28 37.5 28 Z" fill="#b46e46" />
+              <ellipse cx="23" cy="21" rx="14" ry="2.5" fill="#96502e" />
+            </g>
+          </svg>
+          <span style={{ fontSize: '20px', fontWeight: 900, fontStyle: 'italic' }}>
+            <span style={{ color: '#96502e' }}>Myung</span><span style={{ color: '#b46e46' }}>Cafe</span>
+          </span>
         </div>
         <button
           onClick={() => router.push('/login')}
@@ -76,18 +101,24 @@ export default function LandingPage() {
           }}>
             사주명리 전문 플랫폼
           </div>
-          <h1 style={{
-            fontSize: '28px', fontWeight: 300, lineHeight: 1.4,
-            color: '#3a2e28', letterSpacing: '-0.5px', margin: '0 0 8px',
+          <div style={{
+            background: '#fbf0e6',
+            border: '0.5px solid #f0d9c4',
+            borderRadius: '16px',
+            padding: '22px 18px',
+            margin: '0 0 22px',
           }}>
-            모두를 위한 사주,<br />
-            <strong style={{ fontWeight: 700 }}>명카페가 밝혀드립니다</strong>
-          </h1>
+            <div style={{ fontSize: '17px', fontWeight: 700, lineHeight: 1.7, color: '#8a4a2a', letterSpacing: '-0.3px' }}>
+              운명의 지도를 <span style={{ color: '#c8783c' }}>아는 자</span><br />
+              내 삶의 <span style={{ color: '#c8783c' }}>주인공</span>이고,<br />
+              운명의 지도를 <span style={{ color: '#b09a88' }}>모르는 자</span><br />
+              내 삶의 <span style={{ color: '#b09a88' }}>조연</span>이다
+            </div>
+          </div>
           <p style={{
             fontSize: '13px', color: '#b4785a', lineHeight: 1.8,
             margin: '0 0 28px',
           }}>
-            3대 고전(적천수·자평진전·궁통보감)을 바탕으로<br />
             AI와 전문가가 함께 분석하는 깊이 있는 명리
           </p>
 
@@ -207,13 +238,13 @@ export default function LandingPage() {
             fontSize: '10px', fontWeight: 700,
             padding: '3px 10px', borderRadius: '10px',
             marginBottom: '16px', letterSpacing: '1px',
-          }}>WHY 명카페</div>
+          }}>WHY MyungCafe</div>
           <h2 style={{
             fontSize: '22px', fontWeight: 300, lineHeight: 1.5,
             color: '#3a2e28', margin: '0 0 8px', letterSpacing: '-0.3px',
           }}>
             비싼 상담, 꼭 필요할까요?<br />
-            <strong style={{ fontWeight: 700, color: '#c8783c' }}>명카페가 더 깊게 알려드립니다</strong>
+            <strong style={{ fontWeight: 700, color: '#c8783c' }}>MyungCafe가 더 깊게 알려드립니다</strong>
           </h2>
           <p style={{ fontSize: '12px', color: '#b4785a', lineHeight: 1.8, margin: '0 0 24px' }}>
             20만원짜리 대면 상담보다 정확하고 세밀하게.<br />
