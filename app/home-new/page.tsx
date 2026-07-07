@@ -38,21 +38,21 @@ const ZODIAC_IMAGES = [
 
 // ── 12 서비스 (연재쌤 지정 순서) ──
 const SERVICES = [
-  { name: '사주',       color: '#6e50a0', href: '/manseryeok' },
-  { name: '내사주그림', color: '#b46e46', href: '/manseryeok/mulsang' },
-  { name: '대운',       color: '#3c82a0', href: '/manseryeok' },
-  { name: '연도별운세', color: '#8c783c', href: '/manseryeok' },
-  { name: '연인궁합',   color: '#c85a8c', href: '/manseryeok/couple-input' },
-  { name: '부부궁합',   color: '#c85a6e', href: '/manseryeok/couple-input' },
-  { name: '결혼택일',   color: '#96643c', href: '/manseryeok/wedding-timing' },
-  { name: '출산택일',   color: '#b45a78', href: '/manseryeok/birth-timing' },
-  { name: '내이름개명', color: '#5a825a', href: '/manseryeok/naming' },
-  { name: '아기이름 짓기',   color: '#967850', href: '/manseryeok/naming' },
-  { name: '타로',       color: '#b45a78', href: '/tarot' },
-  { name: '물어보살',   color: '#785aaa', href: '/manseryeok/ai-chat' },
+  { name: '사주',       color: '#6e50a0', href: '/manseryeok', cat: '사주명리' },
+  { name: '내사주그림', color: '#b46e46', href: '/manseryeok/mulsang', cat: '사주명리' },
+  { name: '대운',       color: '#3c82a0', href: '/manseryeok', cat: '사주명리' },
+  { name: '연도별운세', color: '#8c783c', href: '/manseryeok', cat: '사주명리' },
+  { name: '연인궁합',   color: '#c85a8c', href: '/manseryeok/couple-input', cat: '궁합' },
+  { name: '부부궁합',   color: '#c85a6e', href: '/manseryeok/couple-input', cat: '궁합' },
+  { name: '결혼택일',   color: '#96643c', href: '/manseryeok/wedding-timing', cat: '택일' },
+  { name: '출산택일',   color: '#b45a78', href: '/manseryeok/birth-timing', cat: '택일' },
+  { name: '내이름개명', color: '#5a825a', href: '/manseryeok/naming', cat: '개명' },
+  { name: '아기이름 짓기',   color: '#967850', href: '/manseryeok/naming', cat: '개명' },
+  { name: '타로',       color: '#b45a78', href: '/tarot', cat: '기타' },
+  { name: '물어보살',   color: '#785aaa', href: '/manseryeok/ai-chat', cat: '기타' },
 ]
 
-const CATS = ['전체', '사주·명리', '운세·택일', '이름', '상담']
+const CATS = ['메뉴판', '사주명리', '궁합', '택일', '개명', '기타']
 
 // 오늘 날짜 기준 0~11 (매일 이미지가 한 칸씩 돌게)
 function dayOffset(): number {
@@ -73,7 +73,7 @@ interface Profile {
 export default function HomeNew() {
   const router = useRouter()
   const [slide, setSlide] = useState(0)
-  const [cat, setCat] = useState('전체')
+  const [cat, setCat] = useState('메뉴판')
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [offset, setOffset] = useState(0)
@@ -115,6 +115,16 @@ export default function HomeNew() {
       color: '#3a2e28', paddingBottom: '70px',
     }}>
 
+      <style>{`
+        @keyframes mcCupSway { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+        @keyframes mcSteamA { 0% { opacity:0; transform:translateY(0) scaleX(1);} 15%{opacity:0.6;} 50%{opacity:0.4; transform:translateY(-9px) scaleX(1.3);} 100%{opacity:0; transform:translateY(-18px) scaleX(0.8);} }
+        @keyframes mcSteamB { 0% { opacity:0; transform:translateY(0) scaleX(1);} 20%{opacity:0.5;} 55%{opacity:0.3; transform:translateY(-10px) scaleX(1.4);} 100%{opacity:0; transform:translateY(-20px) scaleX(0.7);} }
+        .mc-cup { animation: mcCupSway 3.5s ease-in-out infinite; transform-origin: bottom center; }
+        .mc-steam-a { animation: mcSteamA 2.8s ease-out infinite; }
+        .mc-steam-b { animation: mcSteamB 2.8s ease-out infinite 0.9s; }
+        .mc-steam-c { animation: mcSteamA 2.8s ease-out infinite 1.6s; }
+      `}</style>
+
       {/* ① 네비게이션 */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -122,14 +132,23 @@ export default function HomeNew() {
         borderBottom: '0.5px solid #f0e0d5',
         position: 'sticky', top: 0, zIndex: 20,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-          <img
-            src="/logo.png"
-            alt="명카페"
-            style={{ width: '26px', height: '26px', objectFit: 'contain' }}
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
-          />
-          <span style={{ fontSize: '16px', fontWeight: 600, color: '#3a2e28' }}>명카페</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <svg width="30" height="34" viewBox="0 0 46 50" style={{ overflow: 'visible' }}>
+            <g>
+              <path className="mc-steam-a" d="M16 14 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
+              <path className="mc-steam-b" d="M23 13 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
+              <path className="mc-steam-c" d="M30 14 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
+            </g>
+            <g className="mc-cup">
+              <path d="M8 20 L38 20 L36 40 Q35 45 30 45 L16 45 Q11 45 10 40 Z" fill="#b46e46" />
+              <path d="M8 20 L38 20 L37.5 24 L8.5 24 Z" fill="#c8783c" />
+              <path d="M38 24 Q45 24 45 30 Q45 36 38 36 L37 32 Q41 32 41 30 Q41 28 37.5 28 Z" fill="#b46e46" />
+              <ellipse cx="23" cy="21" rx="14" ry="2.5" fill="#96502e" />
+            </g>
+          </svg>
+          <span style={{ fontSize: '18px', fontWeight: 900, fontStyle: 'italic' }}>
+            <span style={{ color: '#96502e' }}>Myung</span><span style={{ color: '#b46e46' }}>Cafe</span>
+          </span>
         </div>
         <div style={{ display: 'flex', gap: '16px', fontSize: '18px', color: '#b49080' }}>
           <span style={{ cursor: 'pointer' }}>🔔</span>
@@ -261,13 +280,18 @@ export default function HomeNew() {
           overflowX: 'auto' as const, scrollbarWidth: 'none' as const,
         }}>
           {CATS.map(c => (
-            <button key={c} onClick={() => setCat(c)} style={{
+            <button key={c} onClick={() => setCat(c)}
+              onPointerDown={(e) => { e.currentTarget.style.transform = 'scale(0.92)' }}
+              onPointerUp={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
+              onPointerLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
+              style={{
               padding: '6px 16px', borderRadius: '18px',
               border: cat === c ? '1.5px solid #b46e46' : '0.5px solid #e8d5c5',
               background: cat === c ? '#b46e46' : '#FFFBF7',
               color: cat === c ? '#fff' : '#a58575',
               fontSize: '12px', fontWeight: cat === c ? 600 : 400,
               cursor: 'pointer', whiteSpace: 'nowrap' as const, flexShrink: 0,
+              transition: 'transform 0.1s ease',
             }}>{c}</button>
           ))}
         </div>
@@ -275,11 +299,11 @@ export default function HomeNew() {
         {/* ⑤ 12지신 서비스 그리드 */}
         <div style={{ padding: '6px 16px 20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-            <span style={{ fontSize: '16px', fontWeight: 700, color: '#3a2e28' }}>명카페 서비스</span>
+            <span style={{ fontSize: '16px', fontWeight: 700, color: '#3a2e28' }}>MyungCafe 서비스</span>
             <span style={{ fontSize: '11px', color: '#c8783c' }}>12지신과 함께 ✦</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            {SERVICES.map((s, idx) => {
+            {SERVICES.filter(s => cat === '메뉴판' || s.cat === cat).map((s, idx) => {
               // 매일 이미지가 한 칸씩 돌게 (offset)
               const imgIdx = (idx + offset) % ZODIAC_IMAGES.length
               const nameLen = s.name.length
