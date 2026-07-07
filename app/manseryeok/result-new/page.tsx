@@ -16,6 +16,7 @@ import OhaengPentagon from "./OhaengPentagon";
 import SipsungTable from "./SipsungTable";
 import UnTable from "./UnTable";
 import SingangTable from "./SingangTable";
+import YongsinCard from "./YongsinCard";
 import SajuWonguk from "./SajuWonguk";
 
 const BRANCH_LIST = [{char:"子"},{char:"丑"},{char:"寅"},{char:"卯"},{char:"辰"},{char:"巳"},{char:"午"},{char:"未"},{char:"申"},{char:"酉"},{char:"戌"},{char:"亥"}]
@@ -247,13 +248,6 @@ function ResultNewContent() {
 
   // 용신·희신·기신 계산 (이미 있는 계산기 사용)
   const yongsinResult=saju.length>0&&dayStem?calcYongsin(saju,dayStem):null
-  // 오행 → 천간 글자 2개 (같은 오행의 양·음)
-  const EL_TO_STEMS:Record<string,string>={목:'甲乙',화:'丙丁',토:'戊己',금:'庚辛',수:'壬癸'}
-  const yongsinCards=yongsinResult?[
-    {label:'용신',el:yongsinResult.yongsin,role:'가장 좋아요'},
-    {label:'희신',el:yongsinResult.heeksin,role:'도와줘요'},
-    {label:'기신',el:yongsinResult.gisin,role:'조심해요'},
-  ]:[]
   const currentSeyunIdx=seyunList.findIndex(s=>s.year===currentYear)
   const startIdx=Math.max(0,currentSeyunIdx-2)
   const displaySeyun=[...seyunList.slice(startIdx,startIdx+10)].reverse()
@@ -319,26 +313,15 @@ function ResultNewContent() {
           )}
         </Section>
 
-        {/* ⑤ 용신 */}
+        {/* ⑤ 용신 · 희신 · 기신 */}
         {yongsinResult&&(
-        <Section title="용신 · 희신">
-          <div style={{display:'flex',gap:'8px',marginBottom:'10px'}}>
-            {yongsinCards.map(item=>{
-              const el=item.el as keyof typeof ELEMENT_COLOR
-              const color=ELEMENT_COLOR[el]||'#9e9e9e'
-              const bg=ELEMENT_BG[el]||'#f5f5f5'
-              return (
-              <div key={item.label} style={{flex:1,background:bg,border:`0.5px solid ${color}44`,borderRadius:'12px',padding:'12px 4px',textAlign:'center'}}>
-                <div style={{fontSize:'9px',color:color,fontWeight:700,marginBottom:'6px'}}>{item.role}</div>
-                <div style={{fontSize:'22px',fontWeight:700,color:'#1a1a1a',lineHeight:1,marginBottom:'3px'}}>{EL_TO_STEMS[item.el]||'-'}</div>
-                <div style={{fontSize:'10px',color:color,fontWeight:600}}>{item.el}({ELEMENT_HAN[el]})</div>
-              </div>
-              )
-            })}
-          </div>
-          <div style={{background:'#faf3ee',border:'0.5px solid #f0e0d5',borderRadius:'8px',padding:'10px 12px',fontSize:'11px',color:'#666',lineHeight:1.8}}>
-            {yongsinResult.description}
-          </div>
+        <Section title="용신 · 희신 · 기신">
+          <YongsinCard
+            yongsin={yongsinResult.yongsin}
+            heeksin={yongsinResult.heeksin}
+            gisin={yongsinResult.gisin}
+            description={yongsinResult.description}
+          />
         </Section>
         )}
 
