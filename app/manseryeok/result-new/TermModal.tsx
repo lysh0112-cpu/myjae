@@ -43,7 +43,7 @@ export default function TermModal({ term, onClose }: { term: string | null; onCl
         </div>
 
         <div style={{ background: '#f6f6f3', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
-          <div style={{ fontSize: 12, color: '#8B6914', fontWeight: 700, marginBottom: 5 }}>한마디로</div>
+          <div style={{ fontSize: 12, color: '#c8783c', fontWeight: 700, marginBottom: 5 }}>한마디로</div>
           <div style={{ fontSize: 14, color: '#333', lineHeight: 1.6, fontWeight: 600 }}>{t.oneline}</div>
         </div>
 
