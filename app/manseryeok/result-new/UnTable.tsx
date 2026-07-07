@@ -71,12 +71,12 @@ const markStyle = (el: Element | undefined): CSSProperties => ({
 
 export default function UnTable({ title, badge, items }: Props) {
   return (
-    <div style={{ background: '#fff', border: '0.5px solid #e8e5de', borderRadius: 16, overflow: 'hidden', marginBottom: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px 10px', borderBottom: '0.5px solid #f5f3ef' }}>
-        <span style={{ color: '#8B6914', fontSize: 13 }}>✦</span>
+    <div style={{ background: '#fff', border: '0.5px solid #f0e0d5', borderRadius: 16, overflow: 'hidden', marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px 10px', borderBottom: '0.5px solid #f7ede4' }}>
+        <span style={{ color: '#c8783c', fontSize: 13 }}>✦</span>
         <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a' }}>{title}</span>
         {badge && (
-          <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 8, background: '#fffbee', border: '0.5px solid #e8d5a0', color: '#8B6914', fontWeight: 600 }}>
+          <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 8, background: '#fff3e9', border: '0.5px solid #e8d5c5', color: '#c8783c', fontWeight: 600 }}>
             {badge}
           </span>
         )}
