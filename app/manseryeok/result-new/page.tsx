@@ -13,6 +13,7 @@ import OhaengPentagon from "./OhaengPentagon";
 import SipsungTable from "./SipsungTable";
 import UnTable from "./UnTable";
 import SingangTable from "./SingangTable";
+import SajuWonguk from "./SajuWonguk";
 
 const BRANCH_LIST = [{char:"子"},{char:"丑"},{char:"寅"},{char:"卯"},{char:"辰"},{char:"巳"},{char:"午"},{char:"未"},{char:"申"},{char:"酉"},{char:"戌"},{char:"亥"}]
 const HEAVENLY_STEMS = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
@@ -249,127 +250,9 @@ function ResultNewContent() {
 
       <div style={{padding:'10px'}}>
 
-        {/* ① 사주 원국 */}
+        {/* ① 사주 원국 (신살 통합) */}
         <Section title="사주 원국">
-          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'5px',marginBottom:'3px'}}>
-            {PILLAR_SUBLABELS.map((s,i)=>(
-              <div key={i} style={{textAlign:'center',fontSize:'9px',color:'#bbb'}}>{s}</div>
-            ))}
-          </div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'5px',marginBottom:'2px'}}>
-            {saju.map(({pillar,stem},i)=>{
-              const isDay=pillar==='일주'
-              const ss=isDay?'본원':getSipsin(dayStem,stem)
-              return <div key={i} style={{textAlign:'center',fontSize:'10px',fontWeight:700,height:'14px',color:isDay?'#8B6914':(SIPSIN_COLOR[ss]||'transparent')}}>{ss}</div>
-            })}
-          </div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'5px',marginBottom:'4px'}}>
-            {saju.map(({pillar,stem},i)=>(
-              <GanjiBox key={i} char={stem} el={STEM_ELEMENT[stem]} isDay={pillar==='일주'}/>
-            ))}
-          </div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'5px',marginBottom:'2px'}}>
-            {saju.map(({branch},i)=>(
-              <GanjiBox key={i} char={branch} el={BRANCH_ELEMENT[branch]} isGongmang={branch===gm1||branch===gm2}/>
-            ))}
-          </div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'5px',marginBottom:'2px'}}>
-            {saju.map(({branch},i)=>{
-              const u=dayStem?getUnsung(dayStem,branch):''
-              return <div key={i} style={{textAlign:'center',fontSize:'10px',fontWeight:600,height:'14px',color:unsungColor(u)}}>{u}</div>
-            })}
-          </div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'5px',marginBottom:'5px'}}>
-            {saju.map(({pillar,branch},i)=>{
-              const isDay=pillar==='일주'
-              const bs=isDay?'':getSipsinBranch(dayStem,branch)
-              return <div key={i} style={{textAlign:'center',fontSize:'10px',fontWeight:700,height:'14px',color:SIPSIN_COLOR[bs]||'transparent'}}>{bs}</div>
-            })}
-          </div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'5px',marginBottom:'10px'}}>
-            {PILLAR_LABELS.map((l,i)=>(
-              <div key={i} style={{textAlign:'center',fontSize:'9px',color:'#bbb'}}>{l}</div>
-            ))}
-          </div>
-          <div style={{background:'#fafaf8',border:'0.5px solid #eeebe4',borderRadius:'8px',padding:'8px',display:'flex',justifyContent:'space-around'}}>
-            {[
-              {label:'일간',value:dayStem?`${dayStem}(${STEM_ELEMENT[dayStem]||'?'})`:'-'},
-              {label:'격국',value:'건록격'},
-              {label:'신강/약',value:'중화',color:'#4caf50'},
-              {label:'공망',value:gm1?`${gm1}·${gm2}`:'-',color:'#f44336'},
-            ].map(item=>(
-              <div key={item.label} style={{textAlign:'center'}}>
-                <div style={{color:'#bbb',fontSize:'9px',marginBottom:'2px'}}>{item.label}</div>
-                <div style={{color:item.color||'#1a1a1a',fontWeight:700,fontSize:'11px'}}>{item.value}</div>
-              </div>
-            ))}
-          </div>
-        </Section>
-
-        {/* ② 신살과 길성 */}
-        <Section title="신살과 길성">
-          <div style={{overflowX:'auto'}}>
-            <table style={{width:'100%',borderCollapse:'collapse',fontSize:'11px'}}>
-              <thead>
-                <tr style={{borderBottom:'1px solid #f0ede6'}}>
-                  <td style={{padding:'4px 6px',color:'#bbb',fontSize:'9px',width:'32px'}}></td>
-                  {PILLAR_SUBLABELS.map((s,i)=>(
-                    <td key={i} style={{padding:'4px',textAlign:'center',color:'#bbb',fontSize:'9px'}}>{s}</td>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style={{fontSize:'9px',color:'#bbb',fontWeight:500}}>천간</td>
-                  {saju.map(({stem},i)=>{
-                    const el=STEM_ELEMENT[stem]
-                    const color=GAN_COLOR[stem]??(el?ELEMENT_COLOR[el]:'#888')
-                    const bg=el?ELEMENT_BG[el]:'#f5f5f5'
-                    return (
-                      <td key={i} style={{padding:'3px'}}>
-                        <div style={{width:'44px',height:'44px',borderRadius:'8px',background:bg,border:`1px solid ${color}66`,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',margin:'0 auto',position:'relative' as const}}>
-                          <span style={{fontSize:'22px',fontWeight:700,color,lineHeight:1}}>{stem}</span>
-                          {el&&<span style={{position:'absolute' as const,bottom:'2px',right:'3px',fontSize:'8px',fontWeight:700,color}}>{ELEMENT_HAN[el]}</span>}
-                        </div>
-                      </td>
-                    )
-                  })}
-                </tr>
-                <tr>
-                  <td style={{fontSize:'9px',color:'#bbb',fontWeight:500}}>길성</td>
-                  {saju.map(({branch},i)=>{
-                    const sinsal=getSinsal(yeonjji,branch)
-                    const color=SINSAL_HIGHLIGHT[sinsal]
-                    return <td key={i} style={{padding:'4px',textAlign:'center',fontSize:'10px',fontWeight:color?700:400,color:color||'#ddd'}}>{color?sinsal:'×'}</td>
-                  })}
-                </tr>
-                <tr>
-                  <td style={{fontSize:'9px',color:'#bbb',fontWeight:500}}>지지</td>
-                  {saju.map(({branch},i)=>{
-                    const el=BRANCH_ELEMENT[branch]
-                    const color=JI_COLOR[branch]??(el?ELEMENT_COLOR[el]:'#888')
-                    const bg=el?ELEMENT_BG[el]:'#f5f5f5'
-                    return (
-                      <td key={i} style={{padding:'3px'}}>
-                        <div style={{width:'44px',height:'44px',borderRadius:'8px',background:bg,border:`1px solid ${color}66`,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',margin:'0 auto',position:'relative' as const}}>
-                          <span style={{fontSize:'22px',fontWeight:700,color,lineHeight:1}}>{branch}</span>
-                          {el&&<span style={{position:'absolute' as const,bottom:'2px',right:'3px',fontSize:'8px',fontWeight:700,color}}>{ELEMENT_HAN[el]}</span>}
-                        </div>
-                      </td>
-                    )
-                  })}
-                </tr>
-                <tr>
-                  <td style={{fontSize:'9px',color:'#bbb',fontWeight:500}}>길성</td>
-                  {saju.map(({branch},i)=>{
-                    const sinsal=getSinsal(iljji,branch)
-                    const color=SINSAL_HIGHLIGHT[sinsal]
-                    return <td key={i} style={{padding:'4px',textAlign:'center',fontSize:'10px',fontWeight:color?700:400,color:color||'#ddd'}}>{color?sinsal:'×'}</td>
-                  })}
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <SajuWonguk saju={saju} dayStem={dayStem} yeonjji={yeonjji} iljji={iljji} gm1={gm1} gm2={gm2}/>
         </Section>
 
         {/* ③ 오행과 십성 분석 */}
