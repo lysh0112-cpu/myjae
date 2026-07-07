@@ -146,6 +146,15 @@ export default function SignupPage() {
       color: '#1a1a1a',
     }}>
 
+      <style>{`
+        @keyframes mcCupSway { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+        @keyframes mcSteamA { 0% { opacity:0; transform:translateY(0) scaleX(1);} 15%{opacity:0.6;} 50%{opacity:0.4; transform:translateY(-9px) scaleX(1.3);} 100%{opacity:0; transform:translateY(-18px) scaleX(0.8);} }
+        @keyframes mcSteamB { 0% { opacity:0; transform:translateY(0) scaleX(1);} 20%{opacity:0.5;} 55%{opacity:0.3; transform:translateY(-10px) scaleX(1.4);} 100%{opacity:0; transform:translateY(-20px) scaleX(0.7);} }
+        .mc-cup { animation: mcCupSway 3.5s ease-in-out infinite; transform-origin: bottom center; }
+        .mc-steam-a { animation: mcSteamA 2.8s ease-out infinite; }
+        .mc-steam-b { animation: mcSteamB 2.8s ease-out infinite 0.9s; }
+        .mc-steam-c { animation: mcSteamA 2.8s ease-out infinite 1.6s; }
+      `}</style>
       {/* 헤더 (통일용 뒤로가기 버튼) */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: '10px',
@@ -163,7 +172,24 @@ export default function SignupPage() {
           }}
           aria-label="뒤로가기"
         >‹</button>
-        <span style={{ fontSize: '15px', fontWeight: 600 }}>회원가입</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <svg width="28" height="32" viewBox="0 0 46 50" style={{ overflow: 'visible' }}>
+            <g>
+              <path className="mc-steam-a" d="M16 14 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
+              <path className="mc-steam-b" d="M23 13 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
+              <path className="mc-steam-c" d="M30 14 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
+            </g>
+            <g className="mc-cup">
+              <path d="M8 20 L38 20 L36 40 Q35 45 30 45 L16 45 Q11 45 10 40 Z" fill="#b46e46" />
+              <path d="M8 20 L38 20 L37.5 24 L8.5 24 Z" fill="#c8783c" />
+              <path d="M38 24 Q45 24 45 30 Q45 36 38 36 L37 32 Q41 32 41 30 Q41 28 37.5 28 Z" fill="#b46e46" />
+              <ellipse cx="23" cy="21" rx="14" ry="2.5" fill="#96502e" />
+            </g>
+          </svg>
+          <span style={{ fontSize: 17, fontWeight: 900, fontStyle: 'italic' }}>
+            <span style={{ color: '#96502e' }}>Myung</span><span style={{ color: '#b46e46' }}>Cafe</span>
+          </span>
+        </div>
       </div>
 
       <main style={{ padding: '26px 20px 60px' }}>
