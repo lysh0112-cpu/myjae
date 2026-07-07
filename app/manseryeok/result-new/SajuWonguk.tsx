@@ -80,7 +80,7 @@ function GanjiBox({ char, el, isDay, isGongmang }: { char: string; el: Element |
     <div style={{
       width: 42, height: 42, borderRadius: 8,
       background: el ? EL_BG[el] : '#f5f5f5',
-      border: isDay ? '2px solid #8B6914' : `1px solid ${el ? EL_BD[el] : '#ddd'}`,
+      border: isDay ? '2px solid #c8783c' : `1px solid ${el ? EL_BD[el] : '#ddd'}`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       margin: '0 auto', position: 'relative', opacity: isGongmang ? 0.45 : 1,
     }}>
@@ -118,7 +118,7 @@ export default function SajuWonguk({ saju, dayStem, yeonjji, iljji, gm1, gm2 }: 
               const isDay = pillar === '일주'
               const ss = isDay ? '본원' : getSipsin(dayStem, stem)
               return (
-                <td key={i} onClick={() => !isDay && open(ss)} style={{ ...termCell(isDay ? '#8B6914' : (SS_C[ss] || '#ccc')), cursor: isDay ? 'default' : 'pointer' }}>
+                <td key={i} onClick={() => !isDay && open(ss)} style={{ ...termCell(isDay ? '#c8783c' : (SS_C[ss] || '#ccc')), cursor: isDay ? 'default' : 'pointer' }}>
                   {ss || '-'}
                 </td>
               )
@@ -175,7 +175,7 @@ export default function SajuWonguk({ saju, dayStem, yeonjji, iljji, gm1, gm2 }: 
       </table>
 
       {/* 요약 */}
-      <div style={{ background: '#fafaf8', border: '0.5px solid #eeebe4', borderRadius: 8, padding: 9, display: 'flex', justifyContent: 'space-around', marginTop: 12 }}>
+      <div style={{ background: '#faf3ee', border: '0.5px solid #f0e0d5', borderRadius: 8, padding: 9, display: 'flex', justifyContent: 'space-around', marginTop: 12 }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ color: '#bbb', fontSize: 9, marginBottom: 2 }}>일간</div>
           <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: 11 }}>{dayStem ? `${dayStem}(${STEM_ELEMENT[dayStem] || '?'})` : '-'}</div>
