@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { getUnsung, getSinsal, unsungColor, SINSAL_HIGHLIGHT } from '@/lib/saju'
 import { GAN_COLOR, JI_COLOR } from '@/lib/saju/constants'
 import type { DayunItem } from '@/lib/saju/dayun'
+import { SAJU_TERMS } from '../sajuTerms'
 
 interface Props {
   solarYear: number; solarMonth: number; solarDay: number
@@ -41,6 +42,7 @@ export default function DayunTableNew({solarYear,solarMonth,solarDay,gender,mont
   const [list,setList]=useState<DayunItem[]>([])
   const [loading,setLoading]=useState(true)
   const [sel,setSel]=useState<number|null>(null)
+  const [term,setTerm]=useState<string|null>(null)
   const ref=useRef<HTMLDivElement>(null)
   const age=currentYear-birthYear
 
@@ -124,31 +126,58 @@ export default function DayunTableNew({solarYear,solarMonth,solarDay,gender,mont
         {tbl(rev, d=>`${d.age}~${d.age+9}`, d=>d.age<=age&&age<d.age+10, d=>d.ganYukchin, d=>d.jiYukchin)}
       </div>
 
-      {/* 상세 패널 */}
+      {/* 상세 모달 */}
       {selD&&(
-        <div style={{margin:'0 12px 12px',background:'#fafafa',border:'1px solid #eee',borderRadius:10,padding:14,position:'relative' as const}}>
-          <button onClick={()=>setSel(null)} style={{position:'absolute' as const,top:10,right:12,background:'none',border:'none',fontSize:16,color:'#bbb',cursor:'pointer'}}>✕</button>
-          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
-            <span style={{fontSize:20,fontWeight:700,color:'#1a1a1a'}}>{selD.cheongan}{selD.jiji}</span>
-            <span style={{fontSize:12,background:'#f5f5f5',border:'1px solid #ddd',color:'#555',borderRadius:10,padding:'2px 10px'}}>{selD.age}~{selD.age+9}세</span>
-            <span style={{fontSize:11,color:'#bbb'}}>{birthYear+selD.age}~{birthYear+selD.age+9}년</span>
-          </div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-            {[
-              {label:'천간 십성',val:selD.ganYukchin,c:SS_C[selD.ganYukchin]||'#222'},
-              {label:'지지 십성',val:selD.jiYukchin,c:SS_C[selD.jiYukchin]||'#222'},
-              {label:'12운성',val:getUnsung(ilgan,selD.jiji),c:unsungColor(getUnsung(ilgan,selD.jiji))},
-              {label:'신살(년지)',val:getSinsal(yeonjji,selD.jiji)||'-',c:SINSAL_HIGHLIGHT[getSinsal(yeonjji,selD.jiji)]||'#222'},
-              {label:'신살(일지)',val:getSinsal(iljji,selD.jiji)||'-',c:SINSAL_HIGHLIGHT[getSinsal(iljji,selD.jiji)]||'#222'},
-            ].map((item,i)=>(
-              <div key={i} style={{background:'#fff',border:'1px solid #eee',borderRadius:8,padding:'10px 12px',gridColumn:i===4?'1/-1':'auto'}}>
-                <div style={{fontSize:10,color:'#aaa',marginBottom:4}}>{item.label}</div>
-                <div style={{fontSize:14,fontWeight:700,color:item.c}}>{item.val}</div>
-              </div>
-            ))}
+        <div onClick={()=>setSel(null)} style={{position:'fixed' as const,inset:0,background:'rgba(0,0,0,0.4)',display:'flex',alignItems:'center',justifyContent:'center',padding:20,zIndex:900}}>
+          <div onClick={e=>e.stopPropagation()} style={{maxWidth:240,width:'100%',background:'#fff',borderRadius:16,padding:'16px 14px',position:'relative' as const}}>
+            <button onClick={()=>setSel(null)} style={{position:'absolute' as const,top:13,right:13,background:'none',border:'none',fontSize:15,color:'#bbb',cursor:'pointer'}}>✕</button>
+            <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3,flexWrap:'wrap' as const}}>
+              <span style={{fontSize:20,fontWeight:700,color:'#1a1a1a'}}>{selD.cheongan}{selD.jiji}</span>
+              <span style={{fontSize:10,fontWeight:600,color:'#8B6914',background:'#fffbee',border:'0.5px solid #e8d5a0',borderRadius:7,padding:'2px 6px'}}>{selD.age}~{selD.age+9}세</span>
+            </div>
+            <div style={{fontSize:10,color:'#aaa',marginBottom:2}}>{birthYear+selD.age}~{birthYear+selD.age+9}년</div>
+            <div style={{fontSize:10.5,color:'#c8a86a',marginBottom:12}}>👆 눌러서 뜻풀이 보기</div>
+            <div style={{display:'flex',flexDirection:'column',gap:6}}>
+              {[
+                {label:'천간',val:selD.ganYukchin,c:SS_C[selD.ganYukchin]||'#222'},
+                {label:'지지',val:selD.jiYukchin,c:SS_C[selD.jiYukchin]||'#222'},
+                {label:'12운성',val:getUnsung(ilgan,selD.jiji),c:unsungColor(getUnsung(ilgan,selD.jiji))},
+                {label:'신살·년지',val:getSinsal(yeonjji,selD.jiji)||'-',c:SINSAL_HIGHLIGHT[getSinsal(yeonjji,selD.jiji)]||'#222'},
+                {label:'신살·일지',val:getSinsal(iljji,selD.jiji)||'-',c:SINSAL_HIGHLIGHT[getSinsal(iljji,selD.jiji)]||'#222'},
+              ].map((item,i)=>(
+                <div key={i} onClick={()=>SAJU_TERMS[item.val]&&setTerm(item.val)}
+                  style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:'#fafaf8',border:'0.5px solid #eeebe4',borderRadius:9,padding:'8px 11px',cursor:SAJU_TERMS[item.val]?'pointer':'default'}}>
+                  <span style={{fontSize:10.5,color:'#999'}}>{item.label}</span>
+                  <span style={{fontSize:14,fontWeight:700,color:item.c}}>{item.val}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
+
+      {/* 용어 설명 팝업 */}
+      {term&&SAJU_TERMS[term]&&(()=>{const t=SAJU_TERMS[term!];return(
+        <div onClick={()=>setTerm(null)} style={{position:'fixed' as const,inset:0,background:'rgba(0,0,0,0.4)',display:'flex',alignItems:'center',justifyContent:'center',padding:20,zIndex:1000}}>
+          <div onClick={e=>e.stopPropagation()} style={{maxWidth:320,width:'100%',background:'#fff',borderRadius:16,padding:'20px 18px'}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:14}}>
+              <span style={{fontSize:20,fontWeight:700,color:'#1a1a1a'}}>{term} <span style={{fontSize:13,color:'#bbb',fontWeight:400}}>({t.hanja})</span></span>
+              <span style={{fontSize:10,color:'#c8a86a',background:'#fdf6ee',padding:'2px 8px',borderRadius:8}}>{t.category}</span>
+              <button onClick={()=>setTerm(null)} style={{marginLeft:'auto',background:'none',border:'none',fontSize:16,color:'#ccc',cursor:'pointer'}}>✕</button>
+            </div>
+            <div style={{background:'#f6f6f3',borderRadius:10,padding:'12px 14px',marginBottom:12}}>
+              <div style={{fontSize:12,color:'#8B6914',fontWeight:700,marginBottom:5}}>한마디로</div>
+              <div style={{fontSize:14,color:'#333',lineHeight:1.6,fontWeight:600}}>{t.oneline}</div>
+            </div>
+            <div style={{fontSize:13,color:'#555',lineHeight:1.85}}>
+              {t.desc}<br/><br/>
+              <span style={{color:'#43a047',fontWeight:700}}>좋을 때</span> — {t.good}<br/><br/>
+              <span style={{color:'#e53935',fontWeight:700}}>주의할 때</span> — {t.caution}
+            </div>
+            <div onClick={()=>setTerm(null)} style={{marginTop:16,background:'#1a1a1a',color:'#fff',textAlign:'center',padding:11,borderRadius:10,fontSize:14,fontWeight:600,cursor:'pointer'}}>확인</div>
+          </div>
+        </div>
+      )})()}
     </div>
   )
 }
