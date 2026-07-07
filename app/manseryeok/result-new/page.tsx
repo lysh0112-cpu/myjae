@@ -8,6 +8,7 @@ import { fromProfile, type MyInfo } from "@/lib/saju/myInfo";
 import { getUnsung, getSinsal, unsungColor, getGongmang, SINSAL_HIGHLIGHT } from "@/lib/saju";
 import { GAN_COLOR, JI_COLOR } from "@/lib/saju/constants";
 import { calcSeyunList, calcWolunList } from "@/lib/saju/dayun";
+import { calcYongsin } from "@/lib/saju/yongsin";
 import DayunTableNew from "./components/DayunTableNew";
 import AiAnalysisNew from "./components/AiAnalysisNew";
 import ConsultButton from "@/app/components/common/ConsultButton";
@@ -243,6 +244,16 @@ function ResultNewContent() {
 
   const seyunList=dayStem?calcSeyunList(dayStem,currentYear):[]
   const wolunList=dayStem?calcWolunList(dayStem,currentYear):[]
+
+  // 용신·희신·기신 계산 (이미 있는 계산기 사용)
+  const yongsinResult=saju.length>0&&dayStem?calcYongsin(saju,dayStem):null
+  // 오행 → 천간 글자 2개 (같은 오행의 양·음)
+  const EL_TO_STEMS:Record<string,string>={목:'甲乙',화:'丙丁',토:'戊己',금:'庚辛',수:'壬癸'}
+  const yongsinCards=yongsinResult?[
+    {label:'용신',el:yongsinResult.yongsin,role:'가장 좋아요'},
+    {label:'희신',el:yongsinResult.heeksin,role:'도와줘요'},
+    {label:'기신',el:yongsinResult.gisin,role:'조심해요'},
+  ]:[]
   const currentSeyunIdx=seyunList.findIndex(s=>s.year===currentYear)
   const startIdx=Math.max(0,currentSeyunIdx-2)
   const displaySeyun=[...seyunList.slice(startIdx,startIdx+10)].reverse()
@@ -309,24 +320,27 @@ function ResultNewContent() {
         </Section>
 
         {/* ⑤ 용신 */}
+        {yongsinResult&&(
         <Section title="용신 · 희신">
           <div style={{display:'flex',gap:'8px',marginBottom:'10px'}}>
-            {[
-              {label:'용신',char:'丙丁',el:'화',color:'#f44336',bg:'#ffebee',border:'#ffcdd2'},
-              {label:'희신',char:'戊己',el:'토',color:'#ff9800',bg:'#fff3e0',border:'#ffe0b2'},
-              {label:'기신',char:'庚辛',el:'금',color:'#9e9e9e',bg:'#f5f5f5',border:'#e0e0e0'},
-            ].map(item=>(
-              <div key={item.label} style={{flex:1,background:item.bg,border:`0.5px solid ${item.border}`,borderRadius:'12px',padding:'12px 4px',textAlign:'center'}}>
-                <div style={{fontSize:'9px',color:item.color,fontWeight:600,marginBottom:'6px'}}>{item.label}</div>
-                <div style={{fontSize:'22px',fontWeight:700,color:'#1a1a1a',lineHeight:1,marginBottom:'3px'}}>{item.char}</div>
-                <div style={{fontSize:'10px',color:item.color,fontWeight:600}}>{item.el}({ELEMENT_HAN[item.el]})</div>
+            {yongsinCards.map(item=>{
+              const el=item.el as keyof typeof ELEMENT_COLOR
+              const color=ELEMENT_COLOR[el]||'#9e9e9e'
+              const bg=ELEMENT_BG[el]||'#f5f5f5'
+              return (
+              <div key={item.label} style={{flex:1,background:bg,border:`0.5px solid ${color}44`,borderRadius:'12px',padding:'12px 4px',textAlign:'center'}}>
+                <div style={{fontSize:'9px',color:color,fontWeight:700,marginBottom:'6px'}}>{item.role}</div>
+                <div style={{fontSize:'22px',fontWeight:700,color:'#1a1a1a',lineHeight:1,marginBottom:'3px'}}>{EL_TO_STEMS[item.el]||'-'}</div>
+                <div style={{fontSize:'10px',color:color,fontWeight:600}}>{item.el}({ELEMENT_HAN[el]})</div>
               </div>
-            ))}
+              )
+            })}
           </div>
           <div style={{background:'#faf3ee',border:'0.5px solid #f0e0d5',borderRadius:'8px',padding:'10px 12px',fontSize:'11px',color:'#666',lineHeight:1.8}}>
-            乙木 일간은 음목(陰木)으로 부드럽고 유연합니다. 화(火)로 건조하게 하고 토(土)로 뿌리를 잡아주는 것이 좋습니다.
+            {yongsinResult.description}
           </div>
         </Section>
+        )}
 
         {/* ⑥ 대운 */}
         {dayStem&&monthGanji&&yearStem&&solarYear&&(
