@@ -12,7 +12,7 @@ const READ: Record<string, string> = {
 }
 function elemColor(ch: string) {
   const el = STEM_ELEMENT[ch] || BRANCH_ELEMENT[ch]
-  return ELEMENT_COLOR[el] || '#555'
+  return ELEMENT_COLOR[el] || '#8a7868'
 }
 
 // ── 랜딩용 예시 사주 (보여주기 전용) ──
@@ -30,22 +30,22 @@ export default function LandingPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#FAFAF8',
+      background: '#FDF6F0',
       maxWidth: '430px',
       margin: '0 auto',
       fontFamily: "'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif",
-      color: '#1a1a1a',
+      color: '#3a2e28',
     }}>
 
       {/* 네비게이션 */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '14px 20px',
-        background: '#FAFAF8',
+        background: '#FDF6F0',
         borderBottom: '0.5px solid #f0ede6',
         position: 'sticky', top: 0, zIndex: 10,
       }}>
-        <div style={{ fontSize: '16px', fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.3px' }}>
+        <div style={{ fontSize: '16px', fontWeight: 600, color: '#3a2e28', letterSpacing: '-0.3px' }}>
           명카페
         </div>
         <button
@@ -55,10 +55,10 @@ export default function LandingPage() {
           onPointerLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
           style={{
             padding: '7px 18px',
-            border: '1px solid #1a1a1a',
+            border: '1px solid #b46e46',
             borderRadius: '20px',
             background: 'transparent',
-            color: '#1a1a1a',
+            color: '#b46e46',
             fontSize: '12px', fontWeight: 500,
             cursor: 'pointer',
             transition: 'transform 0.1s ease',
@@ -69,22 +69,22 @@ export default function LandingPage() {
       <main>
 
         {/* ① 히어로 */}
-        <div style={{ padding: '36px 20px 28px', background: '#FAFAF8', textAlign: 'center' }}>
+        <div style={{ padding: '36px 20px 28px', background: '#FDF6F0', textAlign: 'center' }}>
           <div style={{
-            fontSize: '10px', letterSpacing: '2.5px', color: '#8B6914',
+            fontSize: '10px', letterSpacing: '2.5px', color: '#c8783c',
             marginBottom: '16px', fontWeight: 500,
           }}>
             사주명리 전문 플랫폼
           </div>
           <h1 style={{
             fontSize: '28px', fontWeight: 300, lineHeight: 1.4,
-            color: '#1a1a1a', letterSpacing: '-0.5px', margin: '0 0 8px',
+            color: '#3a2e28', letterSpacing: '-0.5px', margin: '0 0 8px',
           }}>
             모두를 위한 사주,<br />
             <strong style={{ fontWeight: 700 }}>명카페가 밝혀드립니다</strong>
           </h1>
           <p style={{
-            fontSize: '13px', color: '#999', lineHeight: 1.8,
+            fontSize: '13px', color: '#b4785a', lineHeight: 1.8,
             margin: '0 0 28px',
           }}>
             3대 고전(적천수·자평진전·궁통보감)을 바탕으로<br />
@@ -114,49 +114,49 @@ export default function LandingPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '38px repeat(4, 1fr)' }}>
                 <div />
                 {COLS.map(c => (
-                  <div key={c} style={{ textAlign: 'center', fontSize: '11px', color: '#999', padding: '6px 0' }}>{c}</div>
+                  <div key={c} style={{ textAlign: 'center', fontSize: '11px', color: '#b4785a', padding: '6px 0' }}>{c}</div>
                 ))}
               </div>
 
               {/* 천간 (큰 글자 + 관계) */}
               <div style={{ display: 'grid', gridTemplateColumns: '38px repeat(4, 1fr)', alignItems: 'stretch' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#aaa' }}>천간</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#c0a898' }}>천간</div>
                 {TOP_STEMS.map((ch, i) => (
-                  <div key={i} style={{ textAlign: 'center', padding: '6px 0', borderLeft: '1px solid #eee' }}>
+                  <div key={i} style={{ textAlign: 'center', padding: '6px 0', borderLeft: '1px solid #f0e0d5' }}>
                     <div style={{ fontSize: '20px', fontWeight: 700, color: elemColor(ch), lineHeight: 1.1 }}>
                       {READ[ch]}{ch}
                     </div>
-                    <div style={{ fontSize: '9px', color: '#bbb', marginTop: '2px' }}>{TOP_REL[i]}</div>
+                    <div style={{ fontSize: '9px', color: '#c0a898', marginTop: '2px' }}>{TOP_REL[i]}</div>
                   </div>
                 ))}
               </div>
 
               {/* 십성 줄 */}
-              <div style={{ display: 'grid', gridTemplateColumns: '38px repeat(4, 1fr)', borderTop: '1px solid #f0f0f0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#aaa' }}>십성</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '38px repeat(4, 1fr)', borderTop: '1px solid #f5ebe2' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#c0a898' }}>십성</div>
                 {TOP_SIPSIN.map((s, i) => (
-                  <div key={i} style={{ textAlign: 'center', fontSize: '11px', color: '#666', padding: '5px 0', borderLeft: '1px solid #eee' }}>{s}</div>
+                  <div key={i} style={{ textAlign: 'center', fontSize: '11px', color: '#8a7868', padding: '5px 0', borderLeft: '1px solid #f0e0d5' }}>{s}</div>
                 ))}
               </div>
 
               {/* 지지 (큰 글자 + 관계) */}
-              <div style={{ display: 'grid', gridTemplateColumns: '38px repeat(4, 1fr)', borderTop: '1px solid #f0f0f0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#aaa' }}>지지</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '38px repeat(4, 1fr)', borderTop: '1px solid #f5ebe2' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#c0a898' }}>지지</div>
                 {BOT_BRANCH.map((ch, i) => (
-                  <div key={i} style={{ textAlign: 'center', padding: '6px 0', borderLeft: '1px solid #eee' }}>
+                  <div key={i} style={{ textAlign: 'center', padding: '6px 0', borderLeft: '1px solid #f0e0d5' }}>
                     <div style={{ fontSize: '20px', fontWeight: 700, color: elemColor(ch), lineHeight: 1.1 }}>
                       {READ[ch]}{ch}
                     </div>
-                    <div style={{ fontSize: '9px', color: '#bbb', marginTop: '2px' }}>{BOT_REL[i]}</div>
+                    <div style={{ fontSize: '9px', color: '#c0a898', marginTop: '2px' }}>{BOT_REL[i]}</div>
                   </div>
                 ))}
               </div>
 
               {/* 십성 줄 */}
-              <div style={{ display: 'grid', gridTemplateColumns: '38px repeat(4, 1fr)', borderTop: '1px solid #f0f0f0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#aaa' }}>십성</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '38px repeat(4, 1fr)', borderTop: '1px solid #f5ebe2' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#c0a898' }}>십성</div>
                 {BOT_SIPSIN.map((s, i) => (
-                  <div key={i} style={{ textAlign: 'center', fontSize: '11px', color: '#666', padding: '5px 0', borderLeft: '1px solid #eee' }}>{s}</div>
+                  <div key={i} style={{ textAlign: 'center', fontSize: '11px', color: '#8a7868', padding: '5px 0', borderLeft: '1px solid #f0e0d5' }}>{s}</div>
                 ))}
               </div>
             </div>
@@ -175,7 +175,7 @@ export default function LandingPage() {
             onPointerLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
             style={{
               width: '100%', height: '54px',
-              background: '#1a1a1a', border: 'none', borderRadius: '16px',
+              background: '#b46e46', border: 'none', borderRadius: '16px',
               color: '#fff', fontSize: '16px', fontWeight: 600,
               cursor: 'pointer', letterSpacing: '0.3px', marginBottom: '12px',
               transition: 'transform 0.1s ease',
@@ -188,7 +188,7 @@ export default function LandingPage() {
             style={{
               width: '100%', height: '46px',
               background: '#f5f5f3', border: '0.5px solid #e0ddd6',
-              borderRadius: '16px', color: '#666',
+              borderRadius: '16px', color: '#8a7868',
               fontSize: '14px', cursor: 'pointer',
             }}
           >
@@ -200,22 +200,22 @@ export default function LandingPage() {
         <div style={{ height: '8px', background: '#f0ede6' }} />
 
         {/* ② WHY 명연재 (밝은 흰색 카드 섹션) */}
-        <div style={{ background: '#FAFAF8', padding: '32px 16px' }}>
+        <div style={{ background: '#FDF6F0', padding: '32px 16px' }}>
           <div style={{
             display: 'inline-block',
-            background: '#8B6914', color: '#fff',
+            background: '#c8783c', color: '#fff',
             fontSize: '10px', fontWeight: 700,
             padding: '3px 10px', borderRadius: '10px',
             marginBottom: '16px', letterSpacing: '1px',
           }}>WHY 명카페</div>
           <h2 style={{
             fontSize: '22px', fontWeight: 300, lineHeight: 1.5,
-            color: '#1a1a1a', margin: '0 0 8px', letterSpacing: '-0.3px',
+            color: '#3a2e28', margin: '0 0 8px', letterSpacing: '-0.3px',
           }}>
             비싼 상담, 꼭 필요할까요?<br />
-            <strong style={{ fontWeight: 700, color: '#8B6914' }}>명카페가 더 깊게 알려드립니다</strong>
+            <strong style={{ fontWeight: 700, color: '#c8783c' }}>명카페가 더 깊게 알려드립니다</strong>
           </h2>
-          <p style={{ fontSize: '12px', color: '#999', lineHeight: 1.8, margin: '0 0 24px' }}>
+          <p style={{ fontSize: '12px', color: '#b4785a', lineHeight: 1.8, margin: '0 0 24px' }}>
             20만원짜리 대면 상담보다 정확하고 세밀하게.<br />
             3대 고전을 바탕으로 AI가 분석하고,<br />
             필요할 때만 전문가와 연결됩니다.
@@ -230,7 +230,7 @@ export default function LandingPage() {
             <div key={item.title} style={{
               display: 'flex', alignItems: 'center', gap: '14px',
               background: '#fff',
-              border: '0.5px solid #e8e5de',
+              border: '0.5px solid #f0e0d5',
               borderRadius: '14px',
               padding: '14px 16px',
               marginBottom: '10px',
@@ -240,13 +240,13 @@ export default function LandingPage() {
                 background: '#fffbee',
                 border: '0.5px solid #e8d5a0',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '15px', color: '#8B6914', flexShrink: 0,
+                fontSize: '15px', color: '#c8783c', flexShrink: 0,
               }}>✦</div>
               <div>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#1a1a1a', marginBottom: '3px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#3a2e28', marginBottom: '3px' }}>
                   {item.title}
                 </div>
-                <div style={{ fontSize: '11px', color: '#999', lineHeight: 1.6 }}>{item.desc}</div>
+                <div style={{ fontSize: '11px', color: '#b4785a', lineHeight: 1.6 }}>{item.desc}</div>
               </div>
             </div>
           ))}
@@ -259,7 +259,7 @@ export default function LandingPage() {
               onPointerLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
               style={{
                 flex: 1, height: '50px',
-                background: '#1a1a1a', border: 'none', borderRadius: '12px',
+                background: '#b46e46', border: 'none', borderRadius: '12px',
                 color: '#fff', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
                 transition: 'transform 0.1s ease',
               }}
@@ -270,7 +270,7 @@ export default function LandingPage() {
                 background: '#fff',
                 border: '0.5px solid #e0ddd6',
                 borderRadius: '12px',
-                color: '#666', fontSize: '13px', cursor: 'pointer',
+                color: '#8a7868', fontSize: '13px', cursor: 'pointer',
               }}
             >서비스 더 알아보기</button>
           </div>
@@ -280,45 +280,45 @@ export default function LandingPage() {
         <div style={{ height: '8px', background: '#f0ede6' }} />
 
         {/* ④ 푸터 */}
-        <div style={{ background: '#f8f8f6', padding: '24px 20px 40px', borderTop: '0.5px solid #e8e5de' }}>
+        <div style={{ background: '#f8f8f6', padding: '24px 20px 40px', borderTop: '0.5px solid #f0e0d5' }}>
           <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' as const }}>
             {['회사소개', '이용약관', '개인정보처리방침'].map((t, i) => (
               <span key={t} style={{
                 fontSize: '11px',
-                color: i === 2 ? '#1a1a1a' : '#999',
+                color: i === 2 ? '#c8783c' : '#c0a898',
                 fontWeight: i === 2 ? 700 : 400,
                 cursor: 'pointer',
               }}>{t}</span>
             ))}
           </div>
-          <div style={{ height: '1px', background: '#e8e5de', marginBottom: '16px' }} />
+          <div style={{ height: '1px', background: '#f0e0d5', marginBottom: '16px' }} />
           <div style={{ display: 'flex', gap: '10px', marginBottom: '14px' }}>
             {['IG', 'YT', 'X'].map((s) => (
               <div key={s} style={{
                 width: '28px', height: '28px', borderRadius: '8px',
-                background: '#e8e5de', display: 'flex',
+                background: '#f0e0d5', display: 'flex',
                 alignItems: 'center', justifyContent: 'center',
-                fontSize: '10px', color: '#888', cursor: 'pointer',
+                fontSize: '10px', color: '#b4785a', cursor: 'pointer',
               }}>{s}</div>
             ))}
           </div>
-          <div style={{ fontSize: '11px', color: '#bbb', lineHeight: 1.9 }}>
+          <div style={{ fontSize: '11px', color: '#c0a898', lineHeight: 1.9 }}>
             (주)명연재 &nbsp;|&nbsp; 대표 오연희<br />
             사업자등록번호 000-00-0000<br />
             서울시 강북구 솔매로45길 95, 201호
           </div>
-          <div style={{ marginTop: '12px', fontSize: '11px', color: '#888', lineHeight: 1.9 }}>
-            <strong style={{ color: '#555' }}>고객센터</strong><br />
+          <div style={{ marginTop: '12px', fontSize: '11px', color: '#b4785a', lineHeight: 1.9 }}>
+            <strong style={{ color: '#8a7868' }}>고객센터</strong><br />
             lysh6728@naver.com<br />
             070-0000-0000
           </div>
           <button style={{
             marginTop: '12px', padding: '7px 18px',
             border: '0.5px solid #ddd', borderRadius: '16px',
-            background: '#fff', color: '#666',
+            background: '#fff', color: '#8a7868',
             fontSize: '11px', cursor: 'pointer',
           }}>문의하기</button>
-          <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '0.5px solid #eee', fontSize: '10px', color: '#ccc' }}>
+          <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '0.5px solid #f0e0d5', fontSize: '10px', color: '#ccc' }}>
             © 2026 (주)명연재. All rights reserved.
           </div>
         </div>
