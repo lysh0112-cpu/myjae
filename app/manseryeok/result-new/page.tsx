@@ -226,7 +226,7 @@ function ResultNewContent() {
       </div>
 
       {/* 프로필 헤더 (피치톤) */}
-      <div style={{padding:'14px 16px'}}>
+      <div style={{padding:'12px 16px 0'}}>
         <div style={{background:'#fffbf7',border:'0.5px solid #f0e0d5',borderRadius:'12px',padding:'16px'}}>
           <div style={{display:'flex',alignItems:'center',gap:'11px'}}>
             <div style={{width:'42px',height:'42px',borderRadius:'50%',background:'#f5ebe2',border:'1.5px solid #e8d5c5',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'19px',flexShrink:0}}>🌿</div>
