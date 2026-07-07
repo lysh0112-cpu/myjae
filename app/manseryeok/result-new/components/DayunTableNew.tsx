@@ -72,12 +72,15 @@ export default function DayunTableNew({solarYear,solarMonth,solarDay,gender,mont
 
   const tbl=(rows:DayunItem[],keyFn:(d:DayunItem)=>string,isCur:(d:DayunItem)=>boolean,topLabel:(d:DayunItem)=>string,botLabel:(d:DayunItem)=>string)=>(
     <div style={{overflowX:'auto',scrollbarWidth:'none' as const}} ref={ref}>
-      <table style={{borderCollapse:'collapse',whiteSpace:'nowrap' as const}}>
+      <table style={{borderCollapse:'separate',borderSpacing:0,whiteSpace:'nowrap' as const}}>
         <tbody>
           {/* 나이/연도 + 십성 상단 */}
           <tr>{<td style={{width:22}}/>}{rows.map((d,i)=>{
             const c=isCur(d)
-            return <td key={i} style={{padding:'0 2px',textAlign:'center',cursor:'pointer'}} onClick={()=>setSel(sel===i?null:i)}>
+            return <td key={i} style={{padding:'2px 2px 0',textAlign:'center',cursor:'pointer',
+              borderLeft:c?'2px solid #555':'2px solid transparent',borderRight:c?'2px solid #555':'2px solid transparent',
+              borderTop:c?'2px solid #555':'2px solid transparent',
+              borderTopLeftRadius:c?10:0,borderTopRightRadius:c?10:0}} onClick={()=>setSel(sel===i?null:i)}>
               <div style={{fontSize:9,color:c?'#c8783c':'#aaa',lineHeight:1.3}}>{keyFn(d)}</div>
               <div style={{fontSize:10,fontWeight:600,color:SS_C[d.ganYukchin]||'#aaa',height:14,lineHeight:'14px'}}>{d.ganYukchin}</div>
             </td>
@@ -87,8 +90,9 @@ export default function DayunTableNew({solarYear,solarMonth,solarDay,gender,mont
             <td style={{fontSize:9,color:'#bbb',textAlign:'right',paddingRight:3}}>천간</td>
             {rows.map((d,i)=>{
               const el=SE[d.cheongan], c=isCur(d)
-              return <td key={i} style={{padding:'1px 2px',cursor:'pointer'}} onClick={()=>setSel(sel===i?null:i)}>
-                <GJ char={d.cheongan} el={el} cur={c}/>
+              return <td key={i} style={{padding:'1px 2px',cursor:'pointer',
+                borderLeft:c?'2px solid #555':'2px solid transparent',borderRight:c?'2px solid #555':'2px solid transparent'}} onClick={()=>setSel(sel===i?null:i)}>
+                <GJ char={d.cheongan} el={el}/>
               </td>
             })}
           </tr>
@@ -97,17 +101,22 @@ export default function DayunTableNew({solarYear,solarMonth,solarDay,gender,mont
             <td style={{fontSize:9,color:'#bbb',textAlign:'right',paddingRight:3}}>지지</td>
             {rows.map((d,i)=>{
               const el=BE[d.jiji], c=isCur(d)
-              return <td key={i} style={{padding:'1px 2px',cursor:'pointer'}} onClick={()=>setSel(sel===i?null:i)}>
-                <GJ char={d.jiji} el={el} cur={c}/>
+              return <td key={i} style={{padding:'1px 2px',cursor:'pointer',
+                borderLeft:c?'2px solid #555':'2px solid transparent',borderRight:c?'2px solid #555':'2px solid transparent'}} onClick={()=>setSel(sel===i?null:i)}>
+                <GJ char={d.jiji} el={el}/>
               </td>
             })}
           </tr>
           {/* 십성 하단 + 12운성 */}
-          <tr>{<td/>}{rows.map((d,i)=>(
-            <td key={i} style={{padding:'0 2px',textAlign:'center',fontSize:9,color:SS_C[d.jiYukchin]||'#aaa',lineHeight:1.4}}>
+          <tr>{<td/>}{rows.map((d,i)=>{
+            const c=isCur(d)
+            return <td key={i} style={{padding:'0 2px 2px',textAlign:'center',fontSize:9,color:SS_C[d.jiYukchin]||'#aaa',lineHeight:1.4,
+              borderLeft:c?'2px solid #555':'2px solid transparent',borderRight:c?'2px solid #555':'2px solid transparent',
+              borderBottom:c?'2px solid #555':'2px solid transparent',
+              borderBottomLeftRadius:c?10:0,borderBottomRightRadius:c?10:0}}>
               {d.jiYukchin}<br/>{dayStem?getUnsung(dayStem,d.jiji):''}
             </td>
-          ))}</tr>
+          })}</tr>
         </tbody>
       </table>
     </div>
