@@ -9,6 +9,7 @@ import { calcSeyunList, calcWolunList } from "@/lib/saju/dayun";
 import DayunTableNew from "./components/DayunTableNew";
 import AiAnalysisNew from "./components/AiAnalysisNew";
 import ConsultButton from "@/app/components/common/ConsultButton";
+import OhaengPentagon from "./OhaengPentagon";
 
 const BRANCH_LIST = [{char:"子"},{char:"丑"},{char:"寅"},{char:"卯"},{char:"辰"},{char:"巳"},{char:"午"},{char:"未"},{char:"申"},{char:"酉"},{char:"戌"},{char:"亥"}]
 const HEAVENLY_STEMS = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
@@ -76,56 +77,6 @@ function calcSipsung(saju:{stem:string;branch:string}[],dayStem:string) {
   return Object.entries(cnt).map(([ss,n])=>({ss,pct:total?Math.round(n/total*1000)/10:0})).sort((a,b)=>b.pct-a.pct)
 }
 
-// 오각형 오행 그래프
-function OhaengPentagon({ohaeng}:{ohaeng:{el:string;pct:number}[]}) {
-  const size=160, cx=80, cy=85, r=55
-  const els=['수','목','화','토','금']
-  const names:{[k:string]:string}={수:'수(비겁)',목:'목(식상)',화:'화(재성)',토:'토(관성)',금:'금(인성)'}
-  const angles=els.map((_,i)=>(-Math.PI/2)+(2*Math.PI/5)*i)
-  const pts=angles.map((a,i)=>{
-    const d=ohaeng.find(o=>o.el===els[i])
-    const ratio=d?Math.min(d.pct/50,1):0
-    return {
-      x:cx+r*ratio*Math.cos(a),
-      y:cy+r*ratio*Math.sin(a),
-      ox:cx+r*Math.cos(a),
-      oy:cy+r*Math.sin(a),
-      lx:cx+(r+22)*Math.cos(a),
-      ly:cy+(r+22)*Math.sin(a),
-      el:els[i],
-      pct:d?d.pct:0,
-    }
-  })
-  const polyOuter=pts.map(p=>`${p.ox},${p.oy}`).join(' ')
-  const polyInner=pts.map(p=>`${p.x},${p.y}`).join(' ')
-
-  return (
-    <svg width={size} height={size+10} viewBox={`0 0 ${size} ${size+10}`}>
-      {/* 외곽 오각형 */}
-      <polygon points={polyOuter} fill="none" stroke="#e0e0e0" strokeWidth="1"/>
-      {/* 내부 채운 오각형 */}
-      <polygon points={polyInner} fill="rgba(33,150,243,0.15)" stroke="#2196f3" strokeWidth="1.5"/>
-      {/* 꼭짓점 라벨 */}
-      {pts.map((p,i)=>(
-        <g key={i}>
-          <text x={p.lx} y={p.ly} textAnchor="middle" dominantBaseline="middle"
-            fontSize="9" fill={ELEMENT_COLOR[p.el]} fontWeight="700">
-            {names[p.el]}
-          </text>
-          <text x={p.lx} y={p.ly+10} textAnchor="middle" dominantBaseline="middle"
-            fontSize="9" fill={ELEMENT_COLOR[p.el]}>
-            {p.pct}%
-          </text>
-        </g>
-      ))}
-      {/* 중심 오각별 */}
-      {pts.map((p,i)=>(
-        <line key={i} x1={p.ox} y1={p.oy} x2={pts[(i+2)%5].ox} y2={pts[(i+2)%5].oy}
-          stroke="#ffcdd2" strokeWidth="0.8" opacity="0.6"/>
-      ))}
-    </svg>
-  )
-}
 
 // 신강/신약 꺾은선 그래프
 function SinganChart({score}:{score:number}) {
