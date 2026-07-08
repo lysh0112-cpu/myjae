@@ -253,3 +253,27 @@ export function avatarChar(title: string): string {
   const t = (title ?? '').trim()
   return t ? t[0] : '?'
 }
+
+// ============================================================================
+// 결과 화면 URL 쿼리 생성 — myInfo.fromUrl 이 읽는 키와 정확히 일치시킨다.
+//   fromUrl은 year/month/day/hour/gender/calType/leapMonth 를 읽는다.
+//   사람을 골랐을 때 이 쿼리를 붙여 result-new 등으로 이동하면
+//   그 화면이 "URL 우선" 로직으로 그 사람 명식을 표시한다.
+// 사용: router.push(`/manseryeok/result-new?${toResultQuery(person)}`)
+// ============================================================================
+export function toResultQuery(p: SavedPerson): string {
+  const i = p.input_data
+  const params = new URLSearchParams({
+    year: String(i.year),
+    month: String(i.month),
+    day: String(i.day),
+    gender: i.gender || '남',
+    calType: i.calType || '양력',
+    leapMonth: i.leapMonth || '0',
+  })
+  // 시: '모름'이면 hour 자체를 넣지 않는다 (fromUrl이 없으면 '모름' 처리)
+  if (i.hour && i.hour !== '모름') params.set('hour', String(i.hour))
+  // 이름을 결과 화면 상단에 표시하고 싶을 때 대비 (선택)
+  if (p.title) params.set('name', p.title)
+  return params.toString()
+}
