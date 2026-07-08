@@ -27,7 +27,7 @@
 //   />
 // ============================================================================
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { fromProfile } from '@/lib/saju/myInfo'
 import {
@@ -123,6 +123,11 @@ export default function PersonPickerModal({
   const [confirmDel, setConfirmDel] = useState<SavedPerson | null>(null)
 
   // 열릴 때마다 목록 + "나"(profiles) 로드
+  // onPickMe는 인라인 함수라 매 렌더 새로 생김 → 의존성에 넣으면 입력 중
+  // effect가 재실행돼 폼이 목록으로 리셋된다. ref로 최신값만 참조하고 의존성은 [open].
+  const onPickMeRef = useRef(onPickMe)
+  onPickMeRef.current = onPickMe
+
   useEffect(() => {
     if (!open) return
     let cancelled = false
@@ -135,13 +140,13 @@ export default function PersonPickerModal({
       setPeople(list)
 
       // "나" 표시: onPickMe가 있을 때만 (없으면 "나" 항목 자체를 안 씀)
-      if (onPickMe) {
+      if (onPickMeRef.current) {
         try {
           const { data: u } = await supabase.auth.getUser()
           if (u?.user) {
             const { data: p } = await supabase.from('profiles')
               .select('nickname, hangul_name, birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, saju_saved')
-              .eq('id', u.user.id).single()
+              .eq('id', u.user.id).maybeSingle()
             const info = fromProfile(p)
             if (info && p && !cancelled) {
               const date = `${info.year}.${String(info.month).padStart(2, '0')}.${String(info.day).padStart(2, '0')}`
@@ -158,7 +163,7 @@ export default function PersonPickerModal({
     }
     load()
     return () => { cancelled = true }
-  }, [open, onPickMe])
+  }, [open])
 
   const filtered = useMemo(() => {
     const q = query.trim()
