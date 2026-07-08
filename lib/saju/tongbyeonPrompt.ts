@@ -40,6 +40,8 @@ export interface TongbyeonInput {
   // 용신 계열
   yongsin?: string             // 용신 오행 or 간지
   yongsinElement?: Ohaeng      // 용신 오행
+  // ── 확장 자리(선택) ──────────────────────────────────────────
+  // 기본 통변엔 넣지 않는다. 시기 질문 등에서만 필요 시 채워 씀.
   strongWeak?: string          // 신강약 (예: "중화신강")
   currentDaeun?: string        // 지금 흐르는 대운 (예: "정사 대운")
 }
