@@ -301,9 +301,12 @@ function ResultNewContent() {
   // ── 질문 선택 단계 ───────────────────────────────────────────
   // 아직 질문을 안 골랐으면, 만세력·통변 대신 질문 선택 화면을 먼저 보여준다.
   // (사람 → 질문 → 결과 순서. 질문은 반드시 1개 이상 골라야 다음으로.)
+  // 단, URL에 mode=chart 면 "만세력만 보기"라서 질문 선택을 건너뛴다.
+  //   (마이페이지 "내 사주 보기" 등 순수 조회용 진입)
+  const chartOnly = searchParams.get('mode') === 'chart'
   const ageGroup=birthYearToGroup(yearParam)
   const genderFilter=genderToFilter(gender)
-  if(pickedQuestions===null){
+  if(pickedQuestions===null && !chartOnly){
     return (
       <div style={{minHeight:'100vh',background:'#FDF6F0',maxWidth:'430px',margin:'0 auto',padding:'12px',fontFamily:"'Apple SD Gothic Neo','Noto Sans KR',sans-serif'"}}>
         <QuestionPicker
@@ -352,7 +355,7 @@ function ResultNewContent() {
         </Section>
 
         {/* ③ 오행과 십성 분석 */}
-        <Section title="오행과 십성 분석" collapsible open={openSection==='ohaeng'} onToggle={()=>toggleSection('ohaeng')}>
+        <Section title="오행과 십성 분석" collapsible={!chartOnly} open={openSection==='ohaeng'} onToggle={()=>toggleSection('ohaeng')}>
           {/* 오각형 그래프(왼쪽) + 십성표(오른쪽) 나란히 */}
           <div style={{display:'flex',gap:'6px',alignItems:'center',marginBottom:'12px'}}>
             <div style={{flex:1.45,minWidth:0}}>
@@ -368,7 +371,7 @@ function ResultNewContent() {
         {ohaeng.length>0 && <SchoolCompare ohaeng={ohaeng}/>}
 
         {/* ④ 신강/신약 */}
-        <Section title="신강 · 신약" collapsible open={openSection==='singang'} onToggle={()=>toggleSection('singang')}>
+        <Section title="신강 · 신약" collapsible={!chartOnly} open={openSection==='singang'} onToggle={()=>toggleSection('singang')}>
           {dayStem && (
             <SingangTable
               ilganEl={STEM_ELEMENT[dayStem] as '목'|'화'|'토'|'금'|'수'}
@@ -380,7 +383,7 @@ function ResultNewContent() {
 
         {/* ⑤ 용신 · 희신 · 기신 */}
         {yongsinResult&&(
-        <Section title="용신 · 희신 · 기신" collapsible open={openSection==='yongsin'} onToggle={()=>toggleSection('yongsin')}>
+        <Section title="용신 · 희신 · 기신" collapsible={!chartOnly} open={openSection==='yongsin'} onToggle={()=>toggleSection('yongsin')}>
           <YongsinCard
             yongsin={yongsinResult.yongsin}
             heeksin={yongsinResult.heeksin}
@@ -392,7 +395,7 @@ function ResultNewContent() {
 
         {/* ⑥ 대운 (홈 「대운」 서비스에도 있음) */}
         {dayStem&&monthGanji&&yearStem&&solarYear&&(
-          <Section title="대운 (10년 흐름)" collapsible open={openSection==='daeun'} onToggle={()=>toggleSection('daeun')} hint="홈 「대운」에도 있어요">
+          <Section title="대운 (10년 흐름)" collapsible={!chartOnly} open={openSection==='daeun'} onToggle={()=>toggleSection('daeun')} hint="홈 「대운」에도 있어요">
             <DayunTableNew
               solarYear={solarYear} solarMonth={solarMonth} solarDay={solarDay}
               birthYear={yearParam} gender={gender}
@@ -405,7 +408,7 @@ function ResultNewContent() {
 
         {/* ⑦ 세운 (홈 「연도별운세」에도 있음) */}
         {displaySeyun.length>0&&(
-          <Section title="세운 (연운)" collapsible open={openSection==='seyun'} onToggle={()=>toggleSection('seyun')} hint="홈 「연도별운세」에도 있어요">
+          <Section title="세운 (연운)" collapsible={!chartOnly} open={openSection==='seyun'} onToggle={()=>toggleSection('seyun')} hint="홈 「연도별운세」에도 있어요">
             <UnTable
               title="세운 (연운)"
               badge={`${currentYear}년`}
@@ -421,7 +424,7 @@ function ResultNewContent() {
 
         {/* ⑧ 월운 */}
         {wolunList.length>0&&(
-          <Section title="월운 (이번 해 달별)" collapsible open={openSection==='wolun'} onToggle={()=>toggleSection('wolun')}>
+          <Section title="월운 (이번 해 달별)" collapsible={!chartOnly} open={openSection==='wolun'} onToggle={()=>toggleSection('wolun')}>
             <UnTable
               title="월운"
               badge={`${currentYear}년`}
@@ -435,8 +438,8 @@ function ResultNewContent() {
           </Section>
         )}
 
-        {/* ⑨ AI 통변 (고른 질문 기반) */}
-        {dayStem && ohaeng.length>0 && (
+        {/* ⑨ AI 통변 (고른 질문 기반). mode=chart(만세력만)면 통변 없음 */}
+        {!chartOnly && pickedQuestions && dayStem && ohaeng.length>0 && (
           <div style={{marginTop:'10px'}}>
             <TongbyeonView
               input={toTongbyeonInput({
