@@ -4,7 +4,7 @@ import { useState, Suspense, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useResultSaju } from "@/hooks/useResultSaju";
 import { supabase } from "@/lib/supabase";
-import { fromProfile, type MyInfo } from "@/lib/saju/myInfo";
+import { fromProfile, fromUrl, type MyInfo } from "@/lib/saju/myInfo";
 import { getUnsung, getSinsal, unsungColor, getGongmang, SINSAL_HIGHLIGHT } from "@/lib/saju";
 import { GAN_COLOR, JI_COLOR } from "@/lib/saju/constants";
 import { calcSeyunList, calcWolunList } from "@/lib/saju/dayun";
@@ -166,14 +166,21 @@ function ResultNewContent() {
   const router=useRouter()
   const [isPaid,setIsPaid]=useState(false)
 
-  // ── ID 통일: URL 있으면 URL, 없으면 로그인한 내 정보(profiles) ──
+  // ── ID 통일: URL 우선 + profiles 보조 (diagnosis와 동일한 표준 패턴) ──
+  //   1) URL에 생년월일이 있으면 그 사람(타인·특정인·가족지인 목록에서 선택)
+  //   2) 없으면 로그인한 내 정보(profiles) = 내 사주
+  //   3) 둘 다 없으면 null (로그인/등록 안내)
   const [info,setInfo]=useState<MyInfo|null>(null)
   const [loadingInfo,setLoadingInfo]=useState(true)
 
   useEffect(()=>{
     let cancelled=false
     async function loadInfo(){
-      // 마이페이지에서 들어오는 "내 사주" 전용 → 오직 로그인한 내 정보(profiles)
+      // (1) URL 우선 — 사람 선택 모달/가족지인 목록에서 넘어온 경우
+      const urlInfo=fromUrl(searchParams)
+      if(urlInfo){ if(!cancelled){setInfo(urlInfo);setLoadingInfo(false)} return }
+
+      // (2) URL 없으면 로그인한 내 정보(profiles) = 내 사주
       try{
         const {data:u}=await supabase.auth.getUser()
         if(u?.user){
@@ -184,11 +191,13 @@ function ResultNewContent() {
           if(profInfo){ if(!cancelled){setInfo(profInfo);setLoadingInfo(false)} return }
         }
       }catch(e){ console.error(e) }
+
+      // (3) 둘 다 없음 → 안내
       if(!cancelled){setInfo(null);setLoadingInfo(false)}
     }
     loadInfo()
     return ()=>{cancelled=true}
-  },[])
+  },[searchParams])
 
   const gender=info?.gender||"남"
   const calType=info?.calType||"양력"
