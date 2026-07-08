@@ -208,6 +208,10 @@ function ResultNewContent() {
   const hourIdx=info?(info.hour==="모름"?null:parseInt(info.hour)):null
   const currentYear=new Date().getFullYear()
 
+  // 제목용 이름: URL에 name이 있으면 "OO님의 만세력", 없으면 "나의 만세력"
+  const personName=searchParams.get("name")||""
+  const titleName=personName?`${personName}님의 만세력`:"나의 만세력"
+
   const {saju,solar,converting:converting0,dayStem,monthGanji,yearStem,iljji,yeonjji}=
     useResultSaju(calType,yearParam,monthParam,dayParam,leapMonth,hourIdx)
   const converting=converting0||loadingInfo
@@ -266,7 +270,7 @@ function ResultNewContent() {
       <div style={{position:'sticky',top:0,zIndex:50,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',background:'rgba(250,250,248,0.96)',backdropFilter:'blur(10px)',borderBottom:'0.5px solid #f0e0d5'}}>
         <button onClick={()=>router.back()} style={{background:'none',border:'none',color:'#999',fontSize:'20px',cursor:'pointer'}}>←</button>
         <div style={{textAlign:'center'}}>
-          <div style={{fontSize:'14px',fontWeight:700,color:'#1a1a1a'}}>나의 만세력</div>
+          <div style={{fontSize:'14px',fontWeight:700,color:'#1a1a1a'}}>{titleName}</div>
           <div style={{fontSize:'9px',color:'#c8783c'}}>명연재（明然載）</div>
         </div>
         <div style={{width:'20px'}}/>
@@ -278,7 +282,7 @@ function ResultNewContent() {
           <div style={{display:'flex',alignItems:'center',gap:'11px'}}>
             <div style={{width:'42px',height:'42px',borderRadius:'50%',background:'#f5ebe2',border:'1.5px solid #e8d5c5',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'19px',flexShrink:0}}>🌿</div>
             <div>
-              <div style={{fontSize:'13px',fontWeight:700,color:'#96502e',marginBottom:'2px'}}>나의 만세력</div>
+              <div style={{fontSize:'13px',fontWeight:700,color:'#96502e',marginBottom:'2px'}}>{titleName}</div>
               <div style={{fontSize:'11px',color:'#b4785a',lineHeight:1.5}}>{calLabel}{solarLabel} · {hourLabel} · {genderLabel}</div>
             </div>
           </div>
