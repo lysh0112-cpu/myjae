@@ -9,6 +9,7 @@ import { getUnsung, getSinsal, unsungColor, getGongmang, SINSAL_HIGHLIGHT } from
 import { GAN_COLOR, JI_COLOR } from "@/lib/saju/constants";
 import { calcSeyunList, calcWolunList } from "@/lib/saju/dayun";
 import { calcYongsin } from "@/lib/saju/yongsin";
+import { calcSimsanOhaeng, toPercentList } from "@/lib/saju/simsanOhaeng";
 import DayunTableNew from "./components/DayunTableNew";
 import AiAnalysisNew from "./components/AiAnalysisNew";
 import ConsultButton from "@/app/components/common/ConsultButton";
@@ -65,15 +66,6 @@ function getSipsinBranch(dayStem:string,branch:string):string{
   return''
 }
 
-function calcOhaeng(saju:{stem:string;branch:string}[]) {
-  const cnt:Record<string,number>={목:0,화:0,토:0,금:0,수:0}
-  saju.forEach(({stem,branch})=>{
-    if(STEM_ELEMENT[stem])cnt[STEM_ELEMENT[stem]]+=1
-    if(BRANCH_ELEMENT[branch])cnt[BRANCH_ELEMENT[branch]]+=1
-  })
-  const total=Object.values(cnt).reduce((a,b)=>a+b,0)
-  return Object.entries(cnt).map(([el,n])=>({el,pct:total?Math.round(n/total*1000)/10:0}))
-}
 
 function calcSipsung(saju:{stem:string;branch:string}[],dayStem:string) {
   const cnt:Record<string,number>={}
@@ -236,7 +228,8 @@ function ResultNewContent() {
   const solarDay=calType==="음력"&&solar?solar.day:dayParam
   const ilgan=dayStem
   const [gm1,gm2]=ilgan&&iljji?getGongmang(ilgan,iljji):['','']
-  const ohaeng=saju.length>0?calcOhaeng(saju):[]
+  const hourBranch=saju.find(p=>p.pillar==="시주")?.branch??null
+  const ohaeng=saju.length>0?toPercentList(calcSimsanOhaeng(saju,solarMonth,solarDay,hourBranch)):[]
   const sipsung=saju.length>0&&dayStem?calcSipsung(saju,dayStem):[]
   const calLabel=`${calType} ${yearParam}.${monthParam}.${dayParam}${calType==="음력"&&leapMonth==="1"?" (윤달)":""}`
   const solarLabel=calType==="음력"&&solar?` (양력 ${solar.year}.${solar.month}.${solar.day})`:" "
