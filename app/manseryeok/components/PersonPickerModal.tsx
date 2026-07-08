@@ -28,6 +28,8 @@
 // ============================================================================
 
 import { useEffect, useMemo, useState } from 'react'
+import { supabase } from '@/lib/supabase'
+import { fromProfile } from '@/lib/saju/myInfo'
 import {
   listSavedPeople, addSavedPerson, updateSavedPerson, deleteSavedPerson,
   groupByRelation, avatarChar,
@@ -89,8 +91,16 @@ export interface PersonPickerModalProps {
   serviceType?: string | null   // 저장 시 기록 (예: 'saju')
   presetRelation?: string       // 새 사람 추가 시 관계 미리 지정 (궁합 등)
   submitLabel?: string          // 폼 저장 버튼 문구
-  onPick: (person: SavedPerson) => void   // 사람 선택 시 (결과로 이동)
+  onPick: (person: SavedPerson) => void   // 저장된 사람 선택 시 (결과로 이동)
+  onPickMe?: () => void         // "나"(로그인 회원 본인) 선택 시. 없으면 "나" 항목 숨김
   onClose: () => void
+}
+
+// profiles에서 "나" 표시에 쓸 최소 정보
+interface MeInfo {
+  nickname: string
+  birthLine: string
+  avatarChar: string
 }
 
 type View =
@@ -100,9 +110,10 @@ type View =
 
 export default function PersonPickerModal({
   open, serviceLabel, headline, serviceType, presetRelation, submitLabel = '저장하기',
-  onPick, onClose,
+  onPick, onPickMe, onClose,
 }: PersonPickerModalProps) {
   const [people, setPeople] = useState<SavedPerson[]>([])
+  const [me, setMe] = useState<MeInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<View>({ mode: 'list' })
   const [editing, setEditing] = useState(false)     // 편집 모드 토글
@@ -111,17 +122,43 @@ export default function PersonPickerModal({
   const [submitting, setSubmitting] = useState(false)
   const [confirmDel, setConfirmDel] = useState<SavedPerson | null>(null)
 
-  // 열릴 때마다 목록 로드
+  // 열릴 때마다 목록 + "나"(profiles) 로드
   useEffect(() => {
     if (!open) return
     let cancelled = false
     setLoading(true)
     setView({ mode: 'list' }); setEditing(false); setQuery('')
-    listSavedPeople().then(list => {
-      if (!cancelled) { setPeople(list); setLoading(false) }
-    })
+
+    async function load() {
+      const list = await listSavedPeople()
+      if (cancelled) return
+      setPeople(list)
+
+      // "나" 표시: onPickMe가 있을 때만 (없으면 "나" 항목 자체를 안 씀)
+      if (onPickMe) {
+        try {
+          const { data: u } = await supabase.auth.getUser()
+          if (u?.user) {
+            const { data: p } = await supabase.from('profiles')
+              .select('nickname, hangul_name, birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, saju_saved')
+              .eq('id', u.user.id).single()
+            const info = fromProfile(p)
+            if (info && p && !cancelled) {
+              const date = `${info.year}.${String(info.month).padStart(2, '0')}.${String(info.day).padStart(2, '0')}`
+              const h = info.hour === '모름' ? '시간 모름' : (HOUR_SHORT[info.hour] ?? '')
+              const nick = (p.nickname as string) || (p.hangul_name as string) || '나'
+              setMe({ nickname: nick, birthLine: `${date} · ${h}`, avatarChar: avatarChar(nick) })
+            } else if (!cancelled) {
+              setMe(null)   // 사주 미등록 회원 → "나" 항목 숨김
+            }
+          }
+        } catch (e) { console.error(e) }
+      }
+      if (!cancelled) setLoading(false)
+    }
+    load()
     return () => { cancelled = true }
-  }, [open])
+  }, [open, onPickMe])
 
   const filtered = useMemo(() => {
     const q = query.trim()
@@ -225,49 +262,73 @@ export default function PersonPickerModal({
         <div style={{ overflowY: 'auto', flex: 1, borderTop: `0.5px solid ${C.divider}` }}>
           {loading ? (
             <div style={{ padding: 40, textAlign: 'center', color: C.sub, fontSize: 13 }}>불러오는 중…</div>
-          ) : people.length === 0 ? (
+          ) : (people.length === 0 && !me) ? (
             <div style={{ padding: '36px 24px', textAlign: 'center' }}>
               <div style={{ fontSize: 14, color: C.title, fontWeight: 500, marginBottom: 6 }}>아직 저장한 사람이 없어요</div>
               <div style={{ fontSize: 12, color: C.sub, lineHeight: 1.6 }}>아래 버튼으로 사람을 추가하면<br />다음부터 바로 골라서 볼 수 있어요.</div>
             </div>
-          ) : groups.length === 0 ? (
-            <div style={{ padding: '36px 24px', textAlign: 'center', color: C.sub, fontSize: 13 }}>
-              "{query}"와 일치하는 사람이 없어요.
-            </div>
           ) : (
-            groups.map(g => (
-              <div key={g.key}>
-                <div style={{ fontSize: 11, color: C.point, fontWeight: 500, padding: '12px 18px 6px' }}>{g.label}</div>
-                {g.people.map(p => {
-                  const av = avatarColor(p.title)
-                  return (
-                    <div key={p.id}
-                      onClick={() => { if (!editing) onPick(p) }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 18px', cursor: editing ? 'default' : 'pointer' }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 12, background: av.bg, color: av.fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 500, flexShrink: 0 }}>
-                        {avatarChar(p.title)}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, color: C.title, fontWeight: 500 }}>
-                          {p.title} <span style={{ fontSize: 10, color: C.titleWarm, marginLeft: 3 }}>{p.relation}</span>
-                        </div>
-                        <div style={{ fontSize: 11, color: C.sub }}>{birthLine(p)}</div>
-                      </div>
-                      {editing ? (
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button onClick={(e) => { e.stopPropagation(); setView({ mode: 'edit', person: p }); setFormErr('') }}
-                            style={{ fontSize: 11, color: C.titleWarm, border: `0.5px solid ${C.searchBorder}`, borderRadius: 8, padding: '5px 10px', background: 'none', cursor: 'pointer' }}>수정</button>
-                          <button onClick={(e) => { e.stopPropagation(); setConfirmDel(p) }}
-                            style={{ fontSize: 11, color: C.danger, border: `0.5px solid #f0d0d0`, borderRadius: 8, padding: '5px 10px', background: 'none', cursor: 'pointer' }}>삭제</button>
-                        </div>
-                      ) : (
-                        <span style={{ color: C.chevron, fontSize: 16 }}>›</span>
-                      )}
+            <>
+              {/* "나" — profiles 기반, 맨 위 고정. 검색 중이 아닐 때만 표시 */}
+              {me && onPickMe && !query.trim() && (
+                <div>
+                  <div style={{ fontSize: 11, color: C.point, fontWeight: 500, padding: '12px 18px 6px' }}>나</div>
+                  <div onClick={() => { if (!editing) onPickMe() }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 18px', cursor: editing ? 'default' : 'pointer', background: C.selRow }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 12, background: '#f4c0d1', color: '#72243e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 500, flexShrink: 0 }}>
+                      {me.avatarChar}
                     </div>
-                  )
-                })}
-              </div>
-            ))
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, color: C.title, fontWeight: 500 }}>
+                        {me.nickname} <span style={{ fontSize: 10, color: C.point, background: '#fff3e9', border: `0.5px solid ${C.searchBorder}`, borderRadius: 6, padding: '1px 6px', marginLeft: 3 }}>본인</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: C.sub }}>{me.birthLine}</div>
+                    </div>
+                    {!editing && <span style={{ color: C.chevron, fontSize: 16 }}>›</span>}
+                  </div>
+                </div>
+              )}
+
+              {groups.length === 0 && people.length > 0 && query.trim() ? (
+                <div style={{ padding: '36px 24px', textAlign: 'center', color: C.sub, fontSize: 13 }}>
+                  "{query}"와 일치하는 사람이 없어요.
+                </div>
+              ) : (
+                groups.map(g => (
+                  <div key={g.key}>
+                    <div style={{ fontSize: 11, color: C.point, fontWeight: 500, padding: '12px 18px 6px' }}>{g.label}</div>
+                    {g.people.map(p => {
+                      const av = avatarColor(p.title)
+                      return (
+                        <div key={p.id}
+                          onClick={() => { if (!editing) onPick(p) }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 18px', cursor: editing ? 'default' : 'pointer' }}>
+                          <div style={{ width: 40, height: 40, borderRadius: 12, background: av.bg, color: av.fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 500, flexShrink: 0 }}>
+                            {avatarChar(p.title)}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 14, color: C.title, fontWeight: 500 }}>
+                              {p.title} <span style={{ fontSize: 10, color: C.titleWarm, marginLeft: 3 }}>{p.relation}</span>
+                            </div>
+                            <div style={{ fontSize: 11, color: C.sub }}>{birthLine(p)}</div>
+                          </div>
+                          {editing ? (
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <button onClick={(e) => { e.stopPropagation(); setView({ mode: 'edit', person: p }); setFormErr('') }}
+                                style={{ fontSize: 11, color: C.titleWarm, border: `0.5px solid ${C.searchBorder}`, borderRadius: 8, padding: '5px 10px', background: 'none', cursor: 'pointer' }}>수정</button>
+                              <button onClick={(e) => { e.stopPropagation(); setConfirmDel(p) }}
+                                style={{ fontSize: 11, color: C.danger, border: `0.5px solid #f0d0d0`, borderRadius: 8, padding: '5px 10px', background: 'none', cursor: 'pointer' }}>삭제</button>
+                            </div>
+                          ) : (
+                            <span style={{ color: C.chevron, fontSize: 16 }}>›</span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ))
+              )}
+            </>
           )}
         </div>
 
