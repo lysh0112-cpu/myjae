@@ -32,7 +32,8 @@ export async function POST(req: Request) {
           body: JSON.stringify({
             model: 'claude-sonnet-4-6',
             // 무료는 넉넉히, 프리미엄은 더 길게
-            max_tokens: premium ? 4000 : 2500,
+            // 잘림 방지: 무료도 넉넉히, 프리미엄은 더 길게
+            max_tokens: premium ? 6000 : 3500,
             stream: true,
             system: systemPrompt,
             messages: [
