@@ -14,6 +14,7 @@ import DayunTableNew from "./components/DayunTableNew";
 import AiAnalysisNew from "./components/AiAnalysisNew";
 import ConsultButton from "@/app/components/common/ConsultButton";
 import OhaengPentagon from "./OhaengPentagon";
+import SchoolCompare from "./SchoolCompare";
 import SipsungTable from "./SipsungTable";
 import UnTable from "./UnTable";
 import SingangTable from "./SingangTable";
@@ -294,6 +295,9 @@ function ResultNewContent() {
             </div>
           </div>
         </Section>
+
+        {/* ③-2 유파별 관점 비교 (독립 부품) */}
+        {ohaeng.length>0 && <SchoolCompare ohaeng={ohaeng}/>}
 
         {/* ④ 신강/신약 */}
         <Section title="신강 · 신약">
