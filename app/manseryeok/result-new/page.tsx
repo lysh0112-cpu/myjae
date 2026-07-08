@@ -18,6 +18,10 @@ import SchoolCompare from "./SchoolCompare";
 import SipsungTable from "./SipsungTable";
 import UnTable from "./UnTable";
 import SingangTable from "./SingangTable";
+import QuestionPicker from "../components/QuestionPicker";
+import TongbyeonView from "../components/TongbyeonView";
+import { birthYearToGroup, genderToFilter, type SajuQuestion } from "@/lib/saju/questions";
+import { toTongbyeonInput } from "@/lib/saju/toTongbyeonInput";
 import YongsinCard from "./YongsinCard";
 import SajuWonguk from "./SajuWonguk";
 
@@ -146,14 +150,39 @@ function SmallGanjiBox({char,el,isCurrent,size=36}:{char:string;el:string;isCurr
   )
 }
 
-function Section({title,children}:{title:string;children:React.ReactNode}) {
+// Section: 기본은 항상 펼침(고정). collapsible=true면 접이식(아코디언).
+//   - collapsible 없이 쓰면 예전과 똑같이 항상 펼쳐진 카드 (사주 원국 등)
+//   - collapsible=true면 제목 줄을 눌러 open/onToggle로 펼침·접힘
+function Section({
+  title, children, collapsible, open, onToggle, hint,
+}:{
+  title:string
+  children:React.ReactNode
+  collapsible?:boolean
+  open?:boolean
+  onToggle?:()=>void
+  hint?:string
+}) {
+  const isOpen = collapsible ? !!open : true
   return (
     <div style={{background:'#fff',border:'0.5px solid #f0e0d5',borderRadius:'16px',overflow:'hidden',marginBottom:'10px'}}>
-      <div style={{display:'flex',alignItems:'center',gap:'8px',padding:'12px 16px 10px',borderBottom:'0.5px solid #f7ede4'}}>
+      <div
+        onClick={collapsible?onToggle:undefined}
+        style={{display:'flex',alignItems:'center',gap:'8px',padding:'12px 16px 10px',
+          borderBottom: isOpen?'0.5px solid #f7ede4':'none',
+          cursor: collapsible?'pointer':'default'}}
+      >
         <span style={{color:'#c8783c',fontSize:'13px'}}>✦</span>
-        <span style={{fontSize:'13px',fontWeight:700,color:'#1a1a1a'}}>{title}</span>
+        <span style={{flex:1,fontSize:'13px',fontWeight:700,color:'#1a1a1a'}}>{title}</span>
+        {collapsible && hint && !isOpen &&
+          <span style={{fontSize:'10px',color:'#c5a590'}}>{hint}</span>}
+        {collapsible &&
+          <span style={{color:'#c8783c',fontSize:'12px',transition:'transform .25s',
+            transform:`rotate(${isOpen?'180':'0'}deg)`}}>▾</span>}
       </div>
-      <div style={{padding:'12px 14px'}}>{children}</div>
+      <div style={{maxHeight: isOpen?'2000px':'0',overflow:'hidden',transition:'max-height .3s ease'}}>
+        <div style={{padding:'12px 14px'}}>{children}</div>
+      </div>
     </div>
   )
 }
@@ -165,6 +194,12 @@ function ResultNewContent() {
   const searchParams=useSearchParams()
   const router=useRouter()
   const [isPaid,setIsPaid]=useState(false)
+  // 아코디언: 한 번에 하나만 펼침. 사주 원국은 고정(항상 펼침)이라 대상 아님.
+  const [openSection,setOpenSection]=useState<string|null>(null)
+  const toggleSection=(key:string)=>setOpenSection(prev=>prev===key?null:key)
+  // 질문 선택: 아직 안 골랐으면 QuestionPicker를 먼저, 고르면 만세력+통변 표시.
+  // null이면 질문 선택 화면 단계. 배열이면 결과 화면 단계.
+  const [pickedQuestions,setPickedQuestions]=useState<SajuQuestion[]|null>(null)
 
   // ── ID 통일: URL 우선 + profiles 보조 (diagnosis와 동일한 표준 패턴) ──
   //   1) URL에 생년월일이 있으면 그 사람(타인·특정인·가족지인 목록에서 선택)
@@ -263,6 +298,26 @@ function ResultNewContent() {
   const toEl=ohaeng.find(o=>o.el==='토')
   const singanScore=toEl?Math.round(toEl.pct/100*7):3
 
+  // ── 질문 선택 단계 ───────────────────────────────────────────
+  // 아직 질문을 안 골랐으면, 만세력·통변 대신 질문 선택 화면을 먼저 보여준다.
+  // (사람 → 질문 → 결과 순서. 질문은 반드시 1개 이상 골라야 다음으로.)
+  const ageGroup=birthYearToGroup(yearParam)
+  const genderFilter=genderToFilter(gender)
+  if(pickedQuestions===null){
+    return (
+      <div style={{minHeight:'100vh',background:'#FDF6F0',maxWidth:'430px',margin:'0 auto',padding:'12px',fontFamily:"'Apple SD Gothic Neo','Noto Sans KR',sans-serif'"}}>
+        <QuestionPicker
+          ageGroup={ageGroup}
+          gender={genderFilter}
+          personName={personName||undefined}
+          ageLabel={`${new Date().getFullYear()-yearParam}세`}
+          onSubmit={(qs)=>setPickedQuestions(qs)}
+          onBack={()=>router.back()}
+        />
+      </div>
+    )
+  }
+
   return (
     <div style={{minHeight:'100vh',background:'#FDF6F0',maxWidth:'430px',margin:'0 auto',fontFamily:"'Apple SD Gothic Neo','Noto Sans KR',sans-serif",color:'#1a1a1a'}}>
 
@@ -297,7 +352,7 @@ function ResultNewContent() {
         </Section>
 
         {/* ③ 오행과 십성 분석 */}
-        <Section title="오행과 십성 분석">
+        <Section title="오행과 십성 분석" collapsible open={openSection==='ohaeng'} onToggle={()=>toggleSection('ohaeng')}>
           {/* 오각형 그래프(왼쪽) + 십성표(오른쪽) 나란히 */}
           <div style={{display:'flex',gap:'6px',alignItems:'center',marginBottom:'12px'}}>
             <div style={{flex:1.45,minWidth:0}}>
@@ -313,7 +368,7 @@ function ResultNewContent() {
         {ohaeng.length>0 && <SchoolCompare ohaeng={ohaeng}/>}
 
         {/* ④ 신강/신약 */}
-        <Section title="신강 · 신약">
+        <Section title="신강 · 신약" collapsible open={openSection==='singang'} onToggle={()=>toggleSection('singang')}>
           {dayStem && (
             <SingangTable
               ilganEl={STEM_ELEMENT[dayStem] as '목'|'화'|'토'|'금'|'수'}
@@ -325,7 +380,7 @@ function ResultNewContent() {
 
         {/* ⑤ 용신 · 희신 · 기신 */}
         {yongsinResult&&(
-        <Section title="용신 · 희신 · 기신">
+        <Section title="용신 · 희신 · 기신" collapsible open={openSection==='yongsin'} onToggle={()=>toggleSection('yongsin')}>
           <YongsinCard
             yongsin={yongsinResult.yongsin}
             heeksin={yongsinResult.heeksin}
@@ -335,52 +390,71 @@ function ResultNewContent() {
         </Section>
         )}
 
-        {/* ⑥ 대운 */}
+        {/* ⑥ 대운 (홈 「대운」 서비스에도 있음) */}
         {dayStem&&monthGanji&&yearStem&&solarYear&&(
-          <DayunTableNew
-            solarYear={solarYear} solarMonth={solarMonth} solarDay={solarDay}
-            birthYear={yearParam} gender={gender}
-            monthGanji={monthGanji} yearStem={yearStem}
-            dayStem={dayStem} currentYear={currentYear}
-            ilgan={dayStem} yeonjji={yeonjji} iljji={iljji}
-          />
+          <Section title="대운 (10년 흐름)" collapsible open={openSection==='daeun'} onToggle={()=>toggleSection('daeun')} hint="홈 「대운」에도 있어요">
+            <DayunTableNew
+              solarYear={solarYear} solarMonth={solarMonth} solarDay={solarDay}
+              birthYear={yearParam} gender={gender}
+              monthGanji={monthGanji} yearStem={yearStem}
+              dayStem={dayStem} currentYear={currentYear}
+              ilgan={dayStem} yeonjji={yeonjji} iljji={iljji}
+            />
+          </Section>
         )}
 
-        {/* ⑦ 세운 */}
+        {/* ⑦ 세운 (홈 「연도별운세」에도 있음) */}
         {displaySeyun.length>0&&(
-          <UnTable
-            title="세운 (연운)"
-            badge={`${currentYear}년`}
-            items={displaySeyun.map(s=>({
-              label:String(s.year),
-              stem:s.cheongan, branch:s.jiji,
-              stemSipsin:s.ganYukchin, branchSipsin:s.jiYukchin,
-              current:s.year===currentYear,
-            }))}
-          />
+          <Section title="세운 (연운)" collapsible open={openSection==='seyun'} onToggle={()=>toggleSection('seyun')} hint="홈 「연도별운세」에도 있어요">
+            <UnTable
+              title="세운 (연운)"
+              badge={`${currentYear}년`}
+              items={displaySeyun.map(s=>({
+                label:String(s.year),
+                stem:s.cheongan, branch:s.jiji,
+                stemSipsin:s.ganYukchin, branchSipsin:s.jiYukchin,
+                current:s.year===currentYear,
+              }))}
+            />
+          </Section>
         )}
 
         {/* ⑧ 월운 */}
         {wolunList.length>0&&(
-          <UnTable
-            title="월운"
-            badge={`${currentYear}년`}
-            items={wolunList.map(w=>({
-              label:`${w.month}월`,
-              stem:w.cheongan, branch:w.jiji,
-              stemSipsin:w.ganYukchin, branchSipsin:w.jiYukchin,
-              current:new Date().getMonth()+1===w.month,
-            }))}
-          />
+          <Section title="월운 (이번 해 달별)" collapsible open={openSection==='wolun'} onToggle={()=>toggleSection('wolun')}>
+            <UnTable
+              title="월운"
+              badge={`${currentYear}년`}
+              items={wolunList.map(w=>({
+                label:`${w.month}월`,
+                stem:w.cheongan, branch:w.jiji,
+                stemSipsin:w.ganYukchin, branchSipsin:w.jiYukchin,
+                current:new Date().getMonth()+1===w.month,
+              }))}
+            />
+          </Section>
         )}
 
-        {/* ⑨ AI 풀이 */}
-        <AiAnalysisNew
-          saju={saju} gender={gender} calType={calType}
-          yearParam={yearParam} monthParam={monthParam} dayParam={dayParam}
-          hourIdx={hourIdx} leapMonth={leapMonth} solar={solar}
-          isPaid={isPaid} onPayRequest={()=>setIsPaid(true)}
-        />
+        {/* ⑨ AI 통변 (고른 질문 기반) */}
+        {dayStem && ohaeng.length>0 && (
+          <div style={{marginTop:'10px'}}>
+            <TongbyeonView
+              input={toTongbyeonInput({
+                name: personName || (titleName.includes('나의')?'나':titleName.replace('님의 만세력','')),
+                gender,
+                age: new Date().getFullYear()-yearParam,
+                saju,
+                dayStem,
+                ohaeng,
+                yongsin: yongsinResult,
+                hourBranch,
+              })}
+              questions={pickedQuestions}
+              premium={isPaid}
+              onBack={()=>setPickedQuestions(null)}
+            />
+          </div>
+        )}
 
         {/* ⑩ 상담 버튼 */}
         <div style={{background:'#fff',border:'0.5px solid #f0e0d5',borderRadius:'14px',padding:'12px',marginTop:'10px'}}>
