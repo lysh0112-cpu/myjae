@@ -1,61 +1,44 @@
 'use client'
-// app/manseryeok/components/PersonPickerModal.tsx
+// app/manseryeok/components/PersonFormPitch.tsx
 // ============================================================================
-// 공용 "사람 선택 모달" — 홈의 12서비스가 전부 이 모달을 거친다.
+// "새로운 사람 추가" / "수정" 공용 입력폼 (피치톤, 신버전).
+// 홈의 12서비스가 사람 선택 모달을 거칠 때 공통으로 사용한다.
 // ----------------------------------------------------------------------------
-// 담는 것(전부 확정된 설계):
-//  - 헤드라인: 서비스별 자동 (예: "누구의 사주를 볼까요?")
-//  - 관계별 그룹 목록 (연인·가족 / 친구·지인 / 기타) — 빈 그룹 자동 숨김
-//  - 검색: 저장된 사람 5명 이상일 때만 노출, 이름으로 필터
-//  - 편집 모드 토글: 평소엔 눌러서 바로 결과로 / "편집" 누르면 수정·삭제 노출
-//  - 새로운 사람 추가 / 수정 → PersonFormPitch 재사용
-//  - 삭제 → 확인 후 제거
-//  - 중복이면 "이미 있어요" 알림 (savedPeople.addSavedPerson이 판정)
+// 특징(대표님·목업 확정):
+//  - 아바타 + 이름(별명): 이름 첫 글자가 아바타에 실시간 반영
+//  - 관계 칩 18개 + "직접 입력" (RELATIONS는 savedPeople.ts에서 가져옴)
+//  - 성별·달력 세그먼트 / signup과 동일한 직접입력 생년월일 / 시 드롭다운
+//  - 달력 '음력'이면 윤달 여부(평달/윤달) 블록 노출 (기존 PersonForm 규칙과 동일)
+//  - "태어난 시간을 몰라요" 체크 → 시 선택 비활성 + '모름' 저장
+//  - 추가/수정 겸용: initial이 있으면 수정 모드
 //
-// 이 모달은 "1명 고르기"용(사주·대운·개명 등)이다.
-// 궁합처럼 2명 고르는 흐름은 이 모달을 두 번 띄우거나 별도 래퍼로 감싼다.
-//
-// 부모 사용 예:
-//   <PersonPickerModal
-//     open={open}
-//     serviceLabel="사주해설"
-//     headline="누구의 사주를 볼까요?"
-//     serviceType="saju"
-//     submitLabel="저장하고 사주 보기"
-//     onPick={(person) => { /* 그 사람 결과 화면으로 이동 */ }}
-//     onClose={() => setOpen(false)}
-//   />
+// 저장은 이 컴포넌트가 직접 하지 않고, onSubmit(draft)로 부모(모달)에 넘긴다.
+// 부모가 addSavedPerson/updateSavedPerson을 호출하고 중복 알림을 처리한다.
+// (관심사 분리 — 폼은 값만 모으고, 저장·중복판정은 savedPeople.ts)
 // ============================================================================
 
-import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { fromProfile } from '@/lib/saju/myInfo'
-import {
-  listSavedPeople, addSavedPerson, updateSavedPerson, deleteSavedPerson,
-  groupByRelation, avatarChar,
-  type SavedPerson, type PersonDraft,
-} from '@/lib/saju/savedPeople'
-import PersonFormPitch from './PersonFormPitch'
+import { useState, useMemo } from 'react'
+import { RELATIONS, type PersonDraft, type SavedInputData } from '@/lib/saju/savedPeople'
+import { HOURS, HOUR_INDEX, INDEX_TO_HOUR } from '@/lib/saju/myInfo'
+import { avatarChar } from '@/lib/saju/savedPeople'
 
-// ── 피치톤 색 ──
+// ── 피치톤 색 (인수인계서 3장 디자인 시스템) ──
 const C = {
-  overlay: 'rgba(60,40,30,0.35)',
   cardBg: '#FFFBF7',
-  divider: '#f5e5da',
-  point: '#c8783c',
+  border: '#f0e0d5',
+  borderInput: '#e8d5c5',
   brown: '#b46e46',
+  point: '#c8783c',
   title: '#3a2e28',
   titleWarm: '#96502e',
   sub: '#b4785a',
   subLight: '#c5a590',
-  searchBg: '#faf3ee',
-  searchBorder: '#f0e0d5',
-  selRow: '#faf3ee',
-  chevron: '#d0b299',
-  danger: '#c05a5a',
+  chipText: '#96502e',
+  leapBg: '#fdf3ec',
+  leapBorder: '#eabd97',
 }
 
-// 이름 첫 글자 아바타 배경 (savedPeople와 동일 규칙로 안정 배정)
+// 아바타 배경색 팔레트 (이름에 따라 안정적으로 하나 고름)
 const AVATAR_BG = [
   { bg: '#f4c0d1', fg: '#72243e' },
   { bg: '#f5c4b3', fg: '#712b13' },
@@ -71,307 +54,251 @@ function avatarColor(title: string) {
   return AVATAR_BG[sum % AVATAR_BG.length]
 }
 
-// 시(hour) → 표시용 라벨 (예: '5' → '巳시')
-const HOUR_SHORT: Record<string, string> = {
-  '0': '子시', '1': '丑시', '2': '寅시', '3': '卯시', '4': '辰시', '5': '巳시',
-  '6': '午시', '7': '未시', '8': '申시', '9': '酉시', '10': '戌시', '11': '亥시',
-}
-function birthLine(p: SavedPerson): string {
-  const { calType, year, month, day, hour, leapMonth } = p.input_data
-  const date = `${year}.${String(month).padStart(2, '0')}.${String(day).padStart(2, '0')}`
-  const leap = calType === '음력' && leapMonth === '1' ? '(윤달)' : ''
-  const h = hour === '모름' || hour === '' ? '시간 모름' : (HOUR_SHORT[hour] ?? '')
-  return `${date}${leap} · ${h}`
-}
-
-export interface PersonPickerModalProps {
-  open: boolean
-  serviceLabel: string          // 작은 라벨 예: "사주해설"
-  headline: string              // 큰 카피 예: "누구의 사주를 볼까요?"
-  serviceType?: string | null   // 저장 시 기록 (예: 'saju')
-  presetRelation?: string       // 새 사람 추가 시 관계 미리 지정 (궁합 등)
-  submitLabel?: string          // 폼 저장 버튼 문구
-  onPick: (person: SavedPerson) => void   // 저장된 사람 선택 시 (결과로 이동)
-  onPickMe?: () => void         // "나"(로그인 회원 본인) 선택 시. 없으면 "나" 항목 숨김
-  onClose: () => void
+export interface PersonFormPitchProps {
+  // 수정 모드일 때 초기값 (없으면 추가 모드)
+  initial?: { title: string; relation: string; input: SavedInputData }
+  // 진입 서비스가 관계를 미리 지정할 수 있음 (예: 궁합에서 '연인')
+  presetRelation?: string
+  serviceType?: string | null
+  // 저장 버튼 문구 (서비스별로 다르게 — 예: '저장하고 사주 보기' / '저장하기')
+  submitLabel?: string
+  submitting?: boolean
+  errorMessage?: string   // 부모가 중복/에러 메시지 내려줌
+  onSubmit: (draft: PersonDraft) => void
+  onBack?: () => void
+  onClose?: () => void
 }
 
-// profiles에서 "나" 표시에 쓸 최소 정보
-interface MeInfo {
-  nickname: string
-  birthLine: string
-  avatarChar: string
-}
+export default function PersonFormPitch({
+  initial,
+  presetRelation,
+  serviceType,
+  submitLabel = '저장하기',
+  submitting = false,
+  errorMessage,
+  onSubmit,
+  onBack,
+  onClose,
+}: PersonFormPitchProps) {
+  const isEdit = !!initial
 
-type View =
-  | { mode: 'list' }
-  | { mode: 'add' }
-  | { mode: 'edit'; person: SavedPerson }
+  const [title, setTitle] = useState(initial?.title ?? '')
+  const [relation, setRelation] = useState(initial?.relation ?? presetRelation ?? '')
+  const [customRelation, setCustomRelation] = useState(
+    initial && !RELATIONS.includes(initial.relation as typeof RELATIONS[number]) ? initial.relation : ''
+  )
+  const [useCustom, setUseCustom] = useState(
+    !!initial && !RELATIONS.includes(initial.relation as typeof RELATIONS[number])
+  )
 
-export default function PersonPickerModal({
-  open, serviceLabel, headline, serviceType, presetRelation, submitLabel = '저장하기',
-  onPick, onPickMe, onClose,
-}: PersonPickerModalProps) {
-  const [people, setPeople] = useState<SavedPerson[]>([])
-  const [me, setMe] = useState<MeInfo | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [view, setView] = useState<View>({ mode: 'list' })
-  const [editing, setEditing] = useState(false)     // 편집 모드 토글
-  const [query, setQuery] = useState('')
-  const [formErr, setFormErr] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [confirmDel, setConfirmDel] = useState<SavedPerson | null>(null)
+  const [gender, setGender] = useState(initial?.input.gender ?? '남')
+  const [calType, setCalType] = useState(initial?.input.calType ?? '양력')
+  const [leapMonth, setLeapMonth] = useState(initial?.input.leapMonth ?? '0')
+  const [year, setYear] = useState(initial?.input.year ?? '')
+  const [month, setMonth] = useState(initial?.input.month ?? '')
+  const [day, setDay] = useState(initial?.input.day ?? '')
 
-  // 열릴 때마다 목록 + "나"(profiles) 로드
-  useEffect(() => {
-    if (!open) return
-    let cancelled = false
-    setLoading(true)
-    setView({ mode: 'list' }); setEditing(false); setQuery('')
+  // 시: 수정 모드면 저장값 반영, 새 추가면 '시간 입력'이 기본(몰라요 해제)
+  const initHour = initial?.input.hour
+  const [unknownHour, setUnknownHour] = useState(!!initial && initHour === '모름')
+  const [hourLabel, setHourLabel] = useState(
+    initHour && initHour !== '모름' ? (INDEX_TO_HOUR[initHour] ?? '') : ''
+  )
 
-    async function load() {
-      const list = await listSavedPeople()
-      if (cancelled) return
-      setPeople(list)
+  const [localErr, setLocalErr] = useState('')
 
-      // "나" 표시: onPickMe가 있을 때만 (없으면 "나" 항목 자체를 안 씀)
-      if (onPickMe) {
-        try {
-          const { data: u } = await supabase.auth.getUser()
-          if (u?.user) {
-            const { data: p } = await supabase.from('profiles')
-              .select('nickname, hangul_name, birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, saju_saved')
-              .eq('id', u.user.id).single()
-            const info = fromProfile(p)
-            if (info && p && !cancelled) {
-              const date = `${info.year}.${String(info.month).padStart(2, '0')}.${String(info.day).padStart(2, '0')}`
-              const h = info.hour === '모름' ? '시간 모름' : (HOUR_SHORT[info.hour] ?? '')
-              const nick = (p.nickname as string) || (p.hangul_name as string) || '나'
-              setMe({ nickname: nick, birthLine: `${date} · ${h}`, avatarChar: avatarChar(nick) })
-            } else if (!cancelled) {
-              setMe(null)   // 사주 미등록 회원 → "나" 항목 숨김
-            }
-          }
-        } catch (e) { console.error(e) }
-      }
-      if (!cancelled) setLoading(false)
+  const onlyNum = (v: string, len: number) => v.replace(/[^0-9]/g, '').slice(0, len)
+
+  const avatar = useMemo(() => avatarColor(title), [title])
+  const effectiveRelation = useCustom ? customRelation.trim() : relation
+
+  function handleSubmit() {
+    setLocalErr('')
+    const t = title.trim()
+    if (!t) { setLocalErr('이름을 입력해주세요.'); return }
+    if (!effectiveRelation) { setLocalErr('관계를 선택해주세요.'); return }
+    const y = parseInt(year, 10), m = parseInt(month, 10), d = parseInt(day, 10)
+    if (year.length !== 4 || !y || y < 1900 || y > 2200) { setLocalErr('연도를 4자리로 정확히 입력해주세요.'); return }
+    if (!m || m < 1 || m > 12) { setLocalErr('월을 1~12로 입력해주세요.'); return }
+    if (!d || d < 1 || d > 31) { setLocalErr('일을 1~31로 입력해주세요.'); return }
+    if (!unknownHour && !hourLabel) { setLocalErr('태어난 시를 선택하거나 "시간을 몰라요"를 체크해주세요.'); return }
+
+    const hour = unknownHour ? '모름' : String(HOUR_INDEX[hourLabel] ?? '모름')
+    const input: SavedInputData = {
+      gender, calType,
+      year: String(y), month: String(m), day: String(d),
+      leapMonth: calType === '음력' ? leapMonth : '0',
+      hour,
     }
-    load()
-    return () => { cancelled = true }
-  }, [open, onPickMe])
-
-  const filtered = useMemo(() => {
-    const q = query.trim()
-    if (!q) return people
-    return people.filter(p => p.title.includes(q))
-  }, [people, query])
-
-  const groups = useMemo(() => groupByRelation(filtered), [filtered])
-  const showSearch = people.length >= 5
-
-  if (!open) return null
-
-  // ── 추가/수정 저장 처리 ──
-  async function handleSubmit(draft: PersonDraft) {
-    setSubmitting(true); setFormErr('')
-    if (view.mode === 'add') {
-      const res = await addSavedPerson(draft)
-      setSubmitting(false)
-      if (!res.ok) {
-        if (res.reason === 'duplicate') setFormErr(`이미 있어요 — "${res.existing.title}"와 생년월일이 같아요.`)
-        else if (res.reason === 'not_logged_in') setFormErr('로그인이 필요해요.')
-        else setFormErr(res.message)
-        return
-      }
-      // 저장 성공 → 목록 갱신 + 바로 그 사람 결과로
-      setPeople(prev => [res.person, ...prev])
-      onPick(res.person)
-    } else if (view.mode === 'edit') {
-      const res = await updateSavedPerson(view.person.id, draft)
-      setSubmitting(false)
-      if (!res.ok) {
-        if (res.reason === 'duplicate') setFormErr(`이미 있어요 — "${res.existing.title}"와 생년월일이 같아요.`)
-        else setFormErr(res.message)
-        return
-      }
-      setPeople(prev => prev.map(p => p.id === res.person.id ? res.person : p))
-      setView({ mode: 'list' })
-    }
+    onSubmit({ title: t, relation: effectiveRelation, input, serviceType: serviceType ?? null })
   }
 
-  async function handleDelete(p: SavedPerson) {
-    const res = await deleteSavedPerson(p.id)
-    if (res.ok) {
-      setPeople(prev => prev.filter(x => x.id !== p.id))
-      setConfirmDel(null)
-    }
+  // ── 스타일 헬퍼 ──
+  const label: React.CSSProperties = { fontSize: 11, color: C.sub, marginBottom: 4 }
+  const numInput: React.CSSProperties = {
+    background: '#fff', border: `0.5px solid ${C.borderInput}`, borderRadius: 8,
+    padding: 9, fontSize: 14, color: C.title, textAlign: 'center', outline: 'none',
+    width: '100%', boxSizing: 'border-box',
   }
+  const seg = (active: boolean): React.CSSProperties => ({
+    flex: 1, textAlign: 'center', fontSize: 13, padding: '8px 0', cursor: 'pointer',
+    background: active ? C.brown : '#fff', color: active ? '#fff' : C.chipText,
+    border: 'none',
+  })
 
-  // ── 입력폼 화면 (추가/수정) ──
-  if (view.mode === 'add' || view.mode === 'edit') {
-    const initial = view.mode === 'edit'
-      ? { title: view.person.title, relation: view.person.relation, input: view.person.input_data }
-      : undefined
-    return (
-      <Overlay onClose={onClose}>
-        <PersonFormPitch
-          initial={initial}
-          presetRelation={presetRelation}
-          serviceType={serviceType}
-          submitLabel={submitLabel}
-          submitting={submitting}
-          errorMessage={formErr}
-          onSubmit={handleSubmit}
-          onBack={() => { setView({ mode: 'list' }); setFormErr('') }}
-          onClose={onClose}
-        />
-      </Overlay>
-    )
-  }
-
-  // ── 목록 화면 ──
   return (
-    <Overlay onClose={onClose}>
-      <div style={{ background: C.cardBg, borderRadius: 20, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '82vh' }}>
-        {/* 헤더 */}
-        <div style={{ padding: '20px 18px 14px', position: 'relative', textAlign: 'center', flexShrink: 0 }}>
+    <div style={{ background: C.cardBg, borderRadius: 20, overflow: 'hidden', fontFamily: 'inherit' }}>
+      {/* 헤더 */}
+      <div style={{ padding: '18px 18px 14px', position: 'relative', textAlign: 'center', borderBottom: `0.5px solid #f5e5da` }}>
+        {onBack && (
+          <button onClick={onBack} aria-label="뒤로"
+            style={{ position: 'absolute', top: 16, left: 16, background: 'none', border: 'none', cursor: 'pointer', color: C.subLight, fontSize: 18, lineHeight: 1 }}>‹</button>
+        )}
+        {onClose && (
           <button onClick={onClose} aria-label="닫기"
-            style={{ position: 'absolute', top: 18, right: 18, background: 'none', border: 'none', cursor: 'pointer', color: C.subLight, fontSize: 19, lineHeight: 1 }}>×</button>
-          {people.length > 0 && (
-            <button onClick={() => setEditing(v => !v)}
-              style={{ position: 'absolute', top: 16, left: 16, background: 'none', border: `0.5px solid ${C.searchBorder}`, borderRadius: 7, padding: '4px 10px', cursor: 'pointer', color: C.point, fontSize: 12 }}>
-              {editing ? '완료' : '편집'}
-            </button>
-          )}
-          <div style={{ fontSize: 11, color: C.point, letterSpacing: 1.5, marginBottom: 6 }}>{serviceLabel}</div>
-          <div style={{ fontSize: 18, fontWeight: 500, color: C.title }}>{headline}</div>
+            style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', color: C.subLight, fontSize: 19, lineHeight: 1 }}>×</button>
+        )}
+        <div style={{ fontSize: 17, fontWeight: 500, color: C.title }}>
+          {isEdit ? '사람 정보 수정' : '새로운 사람 추가'}
+        </div>
+      </div>
+
+      <div style={{ padding: '18px 18px 6px' }}>
+        {/* 아바타 + 이름 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: 16 }}>
+          <div style={{
+            width: 52, height: 52, borderRadius: 16, background: avatar.bg, color: avatar.fg,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 20, fontWeight: 500, flexShrink: 0,
+          }}>{avatarChar(title)}</div>
+          <div style={{ flex: 1 }}>
+            <div style={label}>이름 (별명)</div>
+            <input value={title} onChange={e => setTitle(e.target.value.slice(0, 20))}
+              placeholder="예: 아내, 큰딸, 김대표"
+              style={{ ...numInput, textAlign: 'left', color: title ? C.title : C.subLight }} />
+          </div>
         </div>
 
-        {/* 검색 (5명 이상) */}
-        {showSearch && (
-          <div style={{ padding: '0 16px 12px', flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: C.searchBg, border: `0.5px solid ${C.searchBorder}`, borderRadius: 12, padding: '9px 13px' }}>
-              <span style={{ color: C.subLight, fontSize: 14 }}>⌕</span>
-              <input value={query} onChange={e => setQuery(e.target.value)} placeholder="이름으로 찾기"
-                style={{ flex: 1, border: 'none', background: 'none', outline: 'none', fontSize: 13, color: C.title }} />
+        {/* 관계 칩 */}
+        <div style={label}>관계</div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+          {RELATIONS.map(r => {
+            const active = !useCustom && relation === r
+            return (
+              <button key={r}
+                onClick={() => { setUseCustom(false); setRelation(r) }}
+                style={{
+                  fontSize: 12, borderRadius: 8, padding: '7px 13px', cursor: 'pointer',
+                  background: active ? C.brown : '#fff',
+                  color: active ? '#fff' : C.chipText,
+                  border: active ? 'none' : `0.5px solid ${C.borderInput}`,
+                }}>{r}</button>
+            )
+          })}
+          <button
+            onClick={() => setUseCustom(true)}
+            style={{
+              fontSize: 12, borderRadius: 8, padding: '7px 13px', cursor: 'pointer',
+              background: useCustom ? C.brown : '#fff',
+              color: useCustom ? '#fff' : C.point,
+              border: useCustom ? 'none' : `0.5px dashed ${C.leapBorder}`,
+            }}>직접 입력</button>
+        </div>
+
+        {/* 직접 입력 칸 */}
+        {useCustom && (
+          <input value={customRelation} onChange={e => setCustomRelation(e.target.value.slice(0, 20))}
+            placeholder="관계를 직접 입력"
+            style={{ ...numInput, textAlign: 'left', marginBottom: 16, color: customRelation ? C.title : C.subLight }} />
+        )}
+
+        {/* 성별 · 달력 */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+          <div style={{ flex: 1 }}>
+            <div style={label}>성별</div>
+            <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `0.5px solid ${C.borderInput}` }}>
+              <button onClick={() => setGender('남')} style={seg(gender === '남')}>남</button>
+              <button onClick={() => setGender('여')} style={seg(gender === '여')}>여</button>
+            </div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={label}>달력</div>
+            <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `0.5px solid ${C.borderInput}` }}>
+              <button onClick={() => { setCalType('양력'); setLeapMonth('0') }} style={seg(calType === '양력')}>양력</button>
+              <button onClick={() => setCalType('음력')} style={seg(calType === '음력')}>음력</button>
+            </div>
+          </div>
+        </div>
+
+        {/* 윤달 — 음력일 때만 */}
+        {calType === '음력' && (
+          <div style={{ background: C.leapBg, border: `0.5px dashed ${C.leapBorder}`, borderRadius: 10, padding: '11px 12px', marginBottom: 14 }}>
+            <div style={{ ...label, marginBottom: 7 }}>윤달 여부 <span style={{ color: C.subLight }}>(음력 생일이 윤달이면 선택)</span></div>
+            <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `0.5px solid ${C.borderInput}` }}>
+              <button onClick={() => setLeapMonth('0')} style={seg(leapMonth !== '1')}>평달</button>
+              <button onClick={() => setLeapMonth('1')} style={seg(leapMonth === '1')}>윤달</button>
             </div>
           </div>
         )}
 
-        {/* 목록 (스크롤 영역) */}
-        <div style={{ overflowY: 'auto', flex: 1, borderTop: `0.5px solid ${C.divider}` }}>
-          {loading ? (
-            <div style={{ padding: 40, textAlign: 'center', color: C.sub, fontSize: 13 }}>불러오는 중…</div>
-          ) : (people.length === 0 && !me) ? (
-            <div style={{ padding: '36px 24px', textAlign: 'center' }}>
-              <div style={{ fontSize: 14, color: C.title, fontWeight: 500, marginBottom: 6 }}>아직 저장한 사람이 없어요</div>
-              <div style={{ fontSize: 12, color: C.sub, lineHeight: 1.6 }}>아래 버튼으로 사람을 추가하면<br />다음부터 바로 골라서 볼 수 있어요.</div>
-            </div>
-          ) : (
-            <>
-              {/* "나" — profiles 기반, 맨 위 고정. 검색 중이 아닐 때만 표시 */}
-              {me && onPickMe && !query.trim() && (
-                <div>
-                  <div style={{ fontSize: 11, color: C.point, fontWeight: 500, padding: '12px 18px 6px' }}>나</div>
-                  <div onClick={() => { if (!editing) onPickMe() }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 18px', cursor: editing ? 'default' : 'pointer', background: C.selRow }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 12, background: '#f4c0d1', color: '#72243e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 500, flexShrink: 0 }}>
-                      {me.avatarChar}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, color: C.title, fontWeight: 500 }}>
-                        {me.nickname} <span style={{ fontSize: 10, color: C.point, background: '#fff3e9', border: `0.5px solid ${C.searchBorder}`, borderRadius: 6, padding: '1px 6px', marginLeft: 3 }}>본인</span>
-                      </div>
-                      <div style={{ fontSize: 11, color: C.sub }}>{me.birthLine}</div>
-                    </div>
-                    {!editing && <span style={{ color: C.chevron, fontSize: 16 }}>›</span>}
-                  </div>
-                </div>
-              )}
-
-              {groups.length === 0 && people.length > 0 && query.trim() ? (
-                <div style={{ padding: '36px 24px', textAlign: 'center', color: C.sub, fontSize: 13 }}>
-                  "{query}"와 일치하는 사람이 없어요.
-                </div>
-              ) : (
-                groups.map(g => (
-                  <div key={g.key}>
-                    <div style={{ fontSize: 11, color: C.point, fontWeight: 500, padding: '12px 18px 6px' }}>{g.label}</div>
-                    {g.people.map(p => {
-                      const av = avatarColor(p.title)
-                      return (
-                        <div key={p.id}
-                          onClick={() => { if (!editing) onPick(p) }}
-                          style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 18px', cursor: editing ? 'default' : 'pointer' }}>
-                          <div style={{ width: 40, height: 40, borderRadius: 12, background: av.bg, color: av.fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 500, flexShrink: 0 }}>
-                            {avatarChar(p.title)}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 14, color: C.title, fontWeight: 500 }}>
-                              {p.title} <span style={{ fontSize: 10, color: C.titleWarm, marginLeft: 3 }}>{p.relation}</span>
-                            </div>
-                            <div style={{ fontSize: 11, color: C.sub }}>{birthLine(p)}</div>
-                          </div>
-                          {editing ? (
-                            <div style={{ display: 'flex', gap: 6 }}>
-                              <button onClick={(e) => { e.stopPropagation(); setView({ mode: 'edit', person: p }); setFormErr('') }}
-                                style={{ fontSize: 11, color: C.titleWarm, border: `0.5px solid ${C.searchBorder}`, borderRadius: 8, padding: '5px 10px', background: 'none', cursor: 'pointer' }}>수정</button>
-                              <button onClick={(e) => { e.stopPropagation(); setConfirmDel(p) }}
-                                style={{ fontSize: 11, color: C.danger, border: `0.5px solid #f0d0d0`, borderRadius: 8, padding: '5px 10px', background: 'none', cursor: 'pointer' }}>삭제</button>
-                            </div>
-                          ) : (
-                            <span style={{ color: C.chevron, fontSize: 16 }}>›</span>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                ))
-              )}
-            </>
-          )}
+        {/* 생년월일 (년: 손 입력 / 월·일: 드롭다운) */}
+        <div style={label}>생년월일 {calType === '음력' && <span style={{ color: C.subLight }}>(음력)</span>}</div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 14 }}>
+          <input value={year} onChange={e => setYear(onlyNum(e.target.value, 4))} inputMode="numeric" placeholder="1990" style={{ ...numInput, flex: 1.6 }} />
+          <span style={{ fontSize: 12, color: C.sub }}>년</span>
+          <select value={month} onChange={e => setMonth(e.target.value)}
+            style={{ ...numInput, flex: 1, padding: '9px 4px', appearance: 'none', color: month ? C.title : C.subLight, cursor: 'pointer' }}>
+            <option value="">월</option>
+            {Array.from({ length: 12 }, (_, i) => <option key={i + 1} value={String(i + 1)}>{i + 1}</option>)}
+          </select>
+          <span style={{ fontSize: 12, color: C.sub }}>월</span>
+          <select value={day} onChange={e => setDay(e.target.value)}
+            style={{ ...numInput, flex: 1, padding: '9px 4px', appearance: 'none', color: day ? C.title : C.subLight, cursor: 'pointer' }}>
+            <option value="">일</option>
+            {Array.from({ length: 31 }, (_, i) => <option key={i + 1} value={String(i + 1)}>{i + 1}</option>)}
+          </select>
+          <span style={{ fontSize: 12, color: C.sub }}>일</span>
         </div>
 
-        {/* 새로운 사람 추가 */}
-        <div style={{ padding: '12px 16px 16px', borderTop: `0.5px solid ${C.divider}`, flexShrink: 0 }}>
-          <button onClick={() => { setView({ mode: 'add' }); setFormErr('') }}
-            style={{ width: '100%', background: C.brown, borderRadius: 12, padding: 13, border: 'none', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
-            ＋ 새로운 사람 추가
-          </button>
-        </div>
+        {/* 태어난 시 */}
+        <div style={label}>태어난 시 (시주)</div>
+        <select value={hourLabel} disabled={unknownHour}
+          onChange={e => setHourLabel(e.target.value)}
+          style={{
+            width: '100%', padding: '10px 12px', borderRadius: 8, border: `0.5px solid ${C.borderInput}`,
+            background: unknownHour ? '#f7f0ea' : '#fff',
+            color: unknownHour ? C.subLight : (hourLabel ? C.title : C.subLight),
+            fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 10,
+          }}>
+          <option value="">시간 선택</option>
+          {HOURS.filter(h => h !== '모름').map(h => <option key={h} value={h}>{h}</option>)}
+        </select>
+
+        {/* 시간 몰라요 */}
+        <button onClick={() => { setUnknownHour(v => !v); setHourLabel('') }}
+          style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: 6 }}>
+          <span style={{
+            width: 18, height: 18, borderRadius: 5, border: `0.5px solid ${C.borderInput}`,
+            background: unknownHour ? C.brown : '#fff', color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12,
+          }}>{unknownHour ? '✓' : ''}</span>
+          <span style={{ fontSize: 12, color: C.sub }}>태어난 시간을 몰라요</span>
+        </button>
+
+        {(localErr || errorMessage) && (
+          <div style={{ color: '#c05a5a', fontSize: 12, marginTop: 6 }}>{localErr || errorMessage}</div>
+        )}
       </div>
 
-      {/* 삭제 확인 */}
-      {confirmDel && (
-        <div onClick={() => setConfirmDel(null)}
-          style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 20 }}>
-          <div onClick={e => e.stopPropagation()}
-            style={{ background: '#fff', borderRadius: 16, padding: '22px 20px', width: 260, textAlign: 'center' }}>
-            <div style={{ fontSize: 15, fontWeight: 500, color: C.title, marginBottom: 6 }}>삭제할까요?</div>
-            <div style={{ fontSize: 12, color: C.sub, marginBottom: 18, lineHeight: 1.6 }}>"{confirmDel.title}"을(를) 목록에서 지워요.<br />되돌릴 수 없어요.</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setConfirmDel(null)}
-                style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: `0.5px solid ${C.searchBorder}`, background: 'none', color: C.sub, fontSize: 13, cursor: 'pointer' }}>취소</button>
-              <button onClick={() => handleDelete(confirmDel)}
-                style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', background: C.danger, color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>삭제</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </Overlay>
-  )
-}
-
-// ── 오버레이 (모달 바깥 공통) ──
-function Overlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 1000, background: C.overlay,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14,
-      }}>
-      <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 360, position: 'relative' }}>
-        {children}
+      {/* 저장 버튼 */}
+      <div style={{ padding: '10px 16px 16px' }}>
+        <button onClick={handleSubmit} disabled={submitting}
+          style={{
+            width: '100%', background: C.brown, borderRadius: 12, padding: 14, border: 'none',
+            color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer', opacity: submitting ? 0.6 : 1,
+          }}>
+          {submitting ? '저장 중…' : (isEdit ? '수정 완료' : submitLabel)}
+        </button>
       </div>
     </div>
   )
