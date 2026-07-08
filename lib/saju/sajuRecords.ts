@@ -1,0 +1,118 @@
+// lib/saju/sajuRecords.ts
+// ============================================================================
+// "사주 기록" 공용 로직 — 홈의 12개 서비스가 모두 함께 쓴다.
+// ----------------------------------------------------------------------------
+// 사주아이처럼 "○○님의 이 서비스를 언제 봤는지" 기록하고,
+// 다시 들어오면 "지난 해설 다시 보기 / 새로 보기"를 고르게 한다.
+//
+// saju_records 테이블(이미 존재)에 얹는다:
+//   id, user_id, service_type, title, relation, input_data(jsonb),
+//   result_data(jsonb), created_at
+//
+// service_type 으로 서비스를 구분하므로(saju/couple/daeun/…),
+// 이 파일 하나로 모든 서비스의 기록을 다룬다.
+//
+// 이 파일이 다루는 것:
+//   - listRecords     : 특정 사람+서비스의 지난 기록 목록 (최신순)
+//   - latestRecord    : 가장 최근 기록 1건 (없으면 null)
+//   - saveRecord      : 새 기록 저장 (결과 스냅샷 포함)
+//   - daysAgoLabel    : "124일 전" 같은 표시용 문구
+// ============================================================================
+
+import { supabase } from '@/lib/supabase'
+import type { SavedInputData } from '@/lib/saju/savedPeople'
+
+export interface SajuRecord {
+  id: string
+  serviceType: string          // 'saju' | 'couple' | 'daeun' | ...
+  title: string                // 대상 이름/별명
+  relation?: string            // 관계(가족·지인 등)
+  inputData: SavedInputData    // 그때 본 사람의 사주 입력값
+  resultData?: unknown         // 결과 스냅샷(선택) — 지난 해설 다시보기용
+  createdAt: string            // ISO 날짜
+}
+
+// 사람을 식별하는 키: 생년월일시 + 성별 (같은 사람 판별용)
+function personKeyOf(d: SavedInputData): string {
+  return [d.gender, d.calType, d.year, d.month, d.day, d.leapMonth, d.hour].join('|')
+}
+
+// ── 지난 기록 목록 (특정 사람 + 특정 서비스, 최신순) ──
+export async function listRecords(
+  serviceType: string,
+  person: SavedInputData
+): Promise<SajuRecord[]> {
+  const { data: auth } = await supabase.auth.getUser()
+  const uid = auth?.user?.id
+  if (!uid) return []
+
+  const { data, error } = await supabase
+    .from('saju_records')
+    .select('id, service_type, title, relation, input_data, result_data, created_at')
+    .eq('user_id', uid)
+    .eq('service_type', serviceType)
+    .order('created_at', { ascending: false })
+
+  if (error || !data) return []
+
+  const key = personKeyOf(person)
+  return data
+    .filter(r => r.input_data && personKeyOf(r.input_data as SavedInputData) === key)
+    .map(r => ({
+      id: r.id,
+      serviceType: r.service_type,
+      title: r.title,
+      relation: r.relation ?? undefined,
+      inputData: r.input_data as SavedInputData,
+      resultData: r.result_data ?? undefined,
+      createdAt: r.created_at,
+    }))
+}
+
+// ── 가장 최근 기록 1건 ──
+export async function latestRecord(
+  serviceType: string,
+  person: SavedInputData
+): Promise<SajuRecord | null> {
+  const list = await listRecords(serviceType, person)
+  return list.length ? list[0] : null
+}
+
+// ── 새 기록 저장 ──
+export async function saveRecord(args: {
+  serviceType: string
+  title: string
+  relation?: string
+  inputData: SavedInputData
+  resultData?: unknown
+}): Promise<{ ok: boolean; id?: string; message?: string }> {
+  const { data: auth } = await supabase.auth.getUser()
+  const uid = auth?.user?.id
+  if (!uid) return { ok: false, message: '로그인이 필요해요' }
+
+  const { data, error } = await supabase
+    .from('saju_records')
+    .insert({
+      user_id: uid,
+      service_type: args.serviceType,
+      title: args.title,
+      relation: args.relation ?? null,
+      input_data: args.inputData,
+      result_data: args.resultData ?? null,
+    })
+    .select('id')
+    .maybeSingle()
+
+  if (error) return { ok: false, message: error.message }
+  return { ok: true, id: data?.id }
+}
+
+// ── "N일 전" 표시용 ──
+export function daysAgoLabel(iso: string): string {
+  const then = new Date(iso).getTime()
+  const now = Date.now()
+  const days = Math.floor((now - then) / (1000 * 60 * 60 * 24))
+  if (days <= 0) return '오늘'
+  if (days === 1) return '어제'
+  return `${days}일 전`
+}
