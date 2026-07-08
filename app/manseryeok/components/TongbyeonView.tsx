@@ -1,18 +1,17 @@
 // app/manseryeok/components/TongbyeonView.tsx
 // ============================================================================
-// AI 통변 결과 화면.
+// AI 통변 결과 화면 (개선판)
 // ----------------------------------------------------------------------------
-// 선택한 질문 + 사주 데이터를 받아 프롬프트를 조립하고,
-// /api/tongbyeon 을 스트리밍 호출해 통변을 실시간으로 카드에 표시한다.
+// 선택한 질문 + 사주 데이터로 프롬프트를 조립하고, /api/tongbyeon 을 스트리밍
+// 호출해 통변을 실시간으로 카드에 표시한다.
 //
-// "■ 제목" 으로 시작하는 줄을 카드 제목으로, 그 아래 문단을 본문으로 파싱해
-// 사주아이처럼 카드로 나눠 보여준다.
+// 개선점:
+//   - 카드 아코디언: 제목 누르면 펼침(첫 카드만 기본 펼침) — 사주아이 방식
+//   - 제목: 굵은 글씨 + 주제별 개성 아이콘
+//   - 마크다운 기호(#, ##, ---, **) 제거해서 깔끔하게 파싱
+//   - 여백 촘촘하게
 //
-// props:
-//   input      : TongbyeonInput (사주 계산값)
-//   questions  : 사용자가 고른 SajuQuestion[]
-//   premium?   : 프리미엄 여부 (상세해설 주입 + 더 길게)
-//   onBack?    : 뒤로
+// props: input, questions, premium?, onBack?
 // ============================================================================
 
 'use client'
@@ -34,21 +33,60 @@ const C = {
   subLight: '#c5a590',
 }
 
-interface Card { title: string; body: string }
+interface Card { title: string; body: string; icon: string }
 
-// "■ 제목\n본문..." 텍스트를 카드 배열로 파싱
-function parseCards(text: string): { intro: string; cards: Card[]; outro: string } {
-  const parts = text.split(/^■\s*/m)
-  const intro = parts[0]?.trim() ?? ''
+// 카드 제목 키워드 → 개성 아이콘
+function iconFor(title: string): string {
+  const t = title
+  if (t.includes('타고난') || t.includes('당신') || t.includes('본바탕')) return '\u2728'
+  if (t.includes('성격') || t.includes('마음') || t.includes('내면')) return '\uD83C\uDF19'
+  if (t.includes('강점') || t.includes('재능') || t.includes('잠재')) return '\uD83D\uDC8E'
+  if (t.includes('직업') || t.includes('진로') || t.includes('일') || t.includes('적성')) return '\uD83D\uDCBC'
+  if (t.includes('연애') || t.includes('결혼') || t.includes('인연') || t.includes('사랑')) return '\uD83D\uDC97'
+  if (t.includes('관계') || t.includes('사람') || t.includes('인간')) return '\uD83E\uDD1D'
+  if (t.includes('재물') || t.includes('돈') || t.includes('금전') || t.includes('재테크')) return '\uD83D\uDCB0'
+  if (t.includes('건강') || t.includes('몸')) return '\uD83C\uDF3F'
+  if (t.includes('자녀') || t.includes('아이') || t.includes('출산') || t.includes('임신')) return '\uD83D\uDC76'
+  if (t.includes('부모') || t.includes('가족')) return '\uD83C\uDFE1'
+  if (t.includes('노후') || t.includes('노년')) return '\uD83C\uDF75'
+  if (t.includes('개운') || t.includes('살리는')) return '\uD83D\uDD2E'
+  return '\u2726'
+}
+
+// 마크다운 기호 제거 (한 줄 정리)
+function cleanLine(s: string): string {
+  return s
+    .replace(/^#{1,6}\s*/, '')
+    .replace(/^\s*[-*]{3,}\s*$/, '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/^\u25A0\s*/, '')
+    .trim()
+}
+
+// 통변 텍스트를 카드 배열로 파싱
+function parseCards(text: string): { intro: string; cards: Card[] } {
+  const lines = text.split('\n')
+  let intro = ''
   const cards: Card[] = []
-  for (let i = 1; i < parts.length; i++) {
-    const block = parts[i]
-    const nl = block.indexOf('\n')
-    if (nl === -1) { cards.push({ title: block.trim(), body: '' }); continue }
-    cards.push({ title: block.slice(0, nl).trim(), body: block.slice(nl + 1).trim() })
+  let cur: { title: string; bodyLines: string[] } | null = null
+
+  const isHeading = (ln: string) => /^\s*(#{1,6}\s*)?\u25A0/.test(ln) || /^\s*#{2,6}\s+/.test(ln)
+
+  for (const raw of lines) {
+    const ln = raw
+    if (isHeading(ln)) {
+      if (cur) cards.push({ title: cleanLine(cur.title), body: cur.bodyLines.join('\n').trim(), icon: iconFor(cleanLine(cur.title)) })
+      cur = { title: ln, bodyLines: [] }
+    } else if (cur) {
+      cur.bodyLines.push(ln)
+    } else {
+      const c = cleanLine(ln)
+      if (c) intro += (intro ? '\n' : '') + c
+    }
   }
-  // 마지막 카드 본문에 마무리 인사가 붙어 있을 수 있으나, 단순화를 위해 그대로 둔다
-  return { intro, cards, outro: '' }
+  if (cur) cards.push({ title: cleanLine(cur.title), body: cur.bodyLines.join('\n').trim(), icon: iconFor(cleanLine(cur.title)) })
+
+  return { intro, cards: cards.filter(c => c.title || c.body) }
 }
 
 export interface TongbyeonViewProps {
@@ -66,6 +104,7 @@ export default function TongbyeonView({ input, questions, premium, onBack }: Ton
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState('')
+  const [openIdx, setOpenIdx] = useState<number>(0)
   const startedRef = useRef(false)
 
   useEffect(() => {
@@ -113,33 +152,43 @@ export default function TongbyeonView({ input, questions, premium, onBack }: Ton
 
   const { intro, cards } = useMemo(() => parseCards(text), [text])
 
+  const effectiveOpen = loading && cards.length > 0 ? cards.length - 1 : openIdx
+
   return (
     <div style={{ background: C.cardBg, borderRadius: 18, border: `0.5px solid ${C.border}`, overflow: 'hidden' }}>
-      {/* 헤더 */}
-      <div style={{ padding: '14px 18px', borderBottom: `0.5px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-        {onBack && <span onClick={onBack} style={{ color: C.subLight, fontSize: 18, cursor: 'pointer' }}>‹</span>}
+      <div style={{ padding: '13px 16px', borderBottom: `0.5px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+        {onBack && <span onClick={onBack} style={{ color: C.subLight, fontSize: 18, cursor: 'pointer' }}>{'\u2039'}</span>}
         <div style={{ flex: 1, textAlign: 'center' }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: C.title }}>{input.name}님의 사주 이야기</div>
-          <div style={{ fontSize: 10, color: C.point, marginTop: 1 }}>명연재（明然載）</div>
+          <div style={{ fontSize: 10, color: C.point, marginTop: 1 }}>각 제목을 누르면 해설이 펼쳐져요</div>
         </div>
         {onBack && <span style={{ width: 16 }} />}
       </div>
 
-      <div style={{ padding: '14px 16px 20px' }}>
-        {/* 인트로(제목 없는 첫 문단) */}
+      <div style={{ padding: '12px 14px 16px' }}>
         {intro && (
-          <div style={{ fontSize: 13.5, lineHeight: 1.85, color: C.title, whiteSpace: 'pre-wrap', marginBottom: 14 }}>{intro}</div>
+          <div style={{ fontSize: 13.5, lineHeight: 1.8, color: C.title, whiteSpace: 'pre-wrap', marginBottom: 12, padding: '0 2px' }}>{intro}</div>
         )}
 
-        {/* 카드들 */}
-        {cards.map((c, i) => (
-          <div key={i} style={{ background: C.card, border: `0.5px solid ${C.border}`, borderRadius: 12, padding: '14px 16px', marginBottom: 12 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.titleWarm, marginBottom: 8 }}>{c.title}</div>
-            <div style={{ fontSize: 13.5, lineHeight: 1.85, color: C.title, whiteSpace: 'pre-wrap' }}>{c.body}</div>
-          </div>
-        ))}
+        {cards.map((c, i) => {
+          const open = effectiveOpen === i
+          return (
+            <div key={i} style={{ background: C.card, border: `0.5px solid ${C.border}`, borderRadius: 12, marginBottom: 8, overflow: 'hidden' }}>
+              <div
+                onClick={() => setOpenIdx(open ? -1 : i)}
+                style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '13px 14px', cursor: 'pointer' }}
+              >
+                <span style={{ fontSize: 16 }}>{c.icon}</span>
+                <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: C.titleWarm, lineHeight: 1.35 }}>{c.title}</span>
+                <span style={{ color: C.point, fontSize: 12, transition: 'transform .25s', transform: `rotate(${open ? '180' : '0'}deg)` }}>{'\u25BE'}</span>
+              </div>
+              <div style={{ maxHeight: open ? '2000px' : '0', overflow: 'hidden', transition: 'max-height .3s ease' }}>
+                <div style={{ fontSize: 13.5, lineHeight: 1.8, color: C.title, whiteSpace: 'pre-wrap', padding: '0 14px 14px' }}>{c.body}</div>
+              </div>
+            </div>
+          )
+        })}
 
-        {/* 로딩/커서 */}
         {loading && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 4px', color: C.sub, fontSize: 12 }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: C.brown, animation: 'tbpulse 1s infinite' }} />
