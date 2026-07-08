@@ -273,7 +273,7 @@ export default function MyPageNew() {
     const hourIdx = toHourIdx(profile.birth_hour ?? null)
     const hourParam = hourIdx == null ? '' : `&hour=${hourIdx}`
     const leap = profile.leap_month ? '1' : '0'
-    return `/manseryeok/result-new?gender=${g}&calType=${cal}&year=${profile.birth_year}&month=${profile.birth_month}&day=${profile.birth_day}&leapMonth=${leap}${hourParam}`
+    return `/manseryeok/result-new?gender=${g}&calType=${cal}&year=${profile.birth_year}&month=${profile.birth_month}&day=${profile.birth_day}&leapMonth=${leap}${hourParam}&mode=chart`
   }
 
   const cancelBooking = async (c: Consultation) => {
