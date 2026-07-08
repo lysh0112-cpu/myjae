@@ -428,7 +428,7 @@ function ResultNewContent() {
             <UnTable
               title="월운"
               badge={`${currentYear}년`}
-              items={wolunList.map(w=>({
+              items={[...wolunList].reverse().map(w=>({
                 label:`${w.month}월`,
                 stem:w.cheongan, branch:w.jiji,
                 stemSipsin:w.ganYukchin, branchSipsin:w.jiYukchin,
