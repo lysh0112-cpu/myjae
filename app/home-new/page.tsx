@@ -430,6 +430,10 @@ export default function HomeNew() {
             onPick={(person: SavedPerson) => {
               router.push(`${cfg.resultPath}?${toResultQuery(person)}`)
             }}
+            onPickMe={() => {
+              // "나" → URL 없이 이동 → result-new가 profiles(내 사주)를 띄움
+              router.push(cfg.resultPath)
+            }}
             onClose={() => setPickService(null)}
           />
         )
