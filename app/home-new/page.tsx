@@ -3,6 +3,27 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
+
+// ── 사람 선택 모달을 여는 서비스 설정 ──
+// (지금은 "사주"만 연결. 검증 후 다른 서비스로 확장 예정)
+interface PickConfig {
+  serviceLabel: string
+  headline: string
+  serviceType: string
+  submitLabel: string
+  resultPath: string   // 사람 선택 후 이동할 결과 화면
+}
+const PICK_CONFIG: Record<string, PickConfig> = {
+  '사주': {
+    serviceLabel: '사주해설',
+    headline: '누구의 사주를 볼까요?',
+    serviceType: 'saju',
+    submitLabel: '저장하고 사주 보기',
+    resultPath: '/manseryeok/result-new',
+  },
+}
 
 // ── 슬라이드 배너 ──
 const SLIDES = [
@@ -76,6 +97,8 @@ export default function HomeNew() {
   const [cat, setCat] = useState('메뉴판')
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  // 사람 선택 모달: 어떤 서비스로 열렸는지 (null이면 닫힘)
+  const [pickService, setPickService] = useState<string | null>(null)
   const [offset, setOffset] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -311,7 +334,10 @@ export default function HomeNew() {
               return (
                 <div
                   key={s.name}
-                  onClick={() => router.push(s.href)}
+                  onClick={() => {
+                    if (PICK_CONFIG[s.name]) setPickService(s.name)
+                    else router.push(s.href)
+                  }}
                   className="zodiac-card"
                   style={{
                     position: 'relative', aspectRatio: '1 / 1',
@@ -390,6 +416,24 @@ export default function HomeNew() {
           </button>
         ))}
       </div>
+
+      {/* 사람 선택 모달 (공용) */}
+      {pickService && PICK_CONFIG[pickService] && (() => {
+        const cfg = PICK_CONFIG[pickService]
+        return (
+          <PersonPickerModal
+            open={true}
+            serviceLabel={cfg.serviceLabel}
+            headline={cfg.headline}
+            serviceType={cfg.serviceType}
+            submitLabel={cfg.submitLabel}
+            onPick={(person: SavedPerson) => {
+              router.push(`${cfg.resultPath}?${toResultQuery(person)}`)
+            }}
+            onClose={() => setPickService(null)}
+          />
+        )
+      })()}
     </div>
   )
 }
