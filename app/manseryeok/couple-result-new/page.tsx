@@ -197,7 +197,7 @@ function CoupleResultInner() {
       name2={name2}
       pickedQuestions={pickedQuestions}
       recordId={recordId}
-      onBack={() => setSubmitted(recordId ? [] : null)}
+      onBack={() => router.back()}
       onOther={() => router.push(`/manseryeok/couple-input-new?mode=${mode}`)}
     />
   )
