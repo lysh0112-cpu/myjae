@@ -29,6 +29,8 @@ import { calcCoupleScore, type SajuPillarSimple, type CoupleScoreResult } from '
 import { getGongmang } from '@/lib/saju/gongmang'
 import { calcHourPillar } from '@/lib/saju/hourPillar'
 import { buildCoupleTongbyeonPrompt, type CouplePerson } from '@/lib/saju/coupleTongbyeonPrompt'
+import { saveCoupleRecord } from '@/lib/saju/coupleRecords'
+import type { SavedInputData } from '@/lib/saju/savedPeople'
 
 type Mode = 'couple' | 'married'
 
@@ -311,6 +313,7 @@ function CoupleResultView({
   // 통변
   const [tongLoading, setTongLoading] = useState(false)
   const [tongResult, setTongResult] = useState<string | null>(null)
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [openCard, setOpenCard] = useState(0)
   const ranRef = useRef(false)
 
@@ -377,6 +380,35 @@ function CoupleResultView({
     () => (tongResult ? parseTCards(tongResult) : { intro: '', cards: [] }),
     [tongResult],
   )
+
+  // 보관함에 저장 (두 사람 + 등급 + 결과 스냅샷)
+  async function handleSave() {
+    if (!saju1 || !saju2 || !score || saveState !== 'idle') return
+    setSaveState('saving')
+    // person raw → SavedInputData 형태로 정리
+    const toInput = (p: PersonRaw): SavedInputData & { name?: string } => ({
+      gender: p.gender || '', calType: p.calType || '양력',
+      year: p.year || '', month: p.month || '', day: p.day || '',
+      leapMonth: p.leapMonth || '0', hour: p.hour || '모름', name: p.name || '',
+    })
+    // 결과 스냅샷 — 다시보기용(등급·명식·통변). grade는 목록 표시에도 씀.
+    const snapshot = {
+      grade: score.grade, gradeDesc: score.gradeDesc,
+      saju1, saju2,
+      tongResult: tongResult || '',
+      questionIds: pickedQuestions.map(q => q.id),
+    }
+    const res = await saveCoupleRecord({
+      mode,
+      name1, name2,
+      relation: mode === 'married' ? '부부' : '연인',
+      grade: score.grade,
+      input1: toInput(person1),
+      input2: toInput(person2),
+      resultData: snapshot,
+    })
+    setSaveState(res.ok ? 'saved' : 'idle')
+  }
 
   return (
     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
@@ -454,9 +486,17 @@ function CoupleResultView({
           )}
         </div>
 
-        {/* 저장/다시보기 [TODO] saju_records(couple) 저장 + 보관함 */}
+        {/* 저장/다시보기 */}
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-          <button style={{ flex: 1, background: '#fff', border: '0.5px solid #e0c9b8', borderRadius: 11, padding: 12, fontSize: 13, color: '#96502e', cursor: 'pointer' }}>보관함에 저장</button>
+          <button onClick={handleSave} disabled={!score || saveState !== 'idle'}
+            style={{
+              flex: 1, borderRadius: 11, padding: 12, fontSize: 13, cursor: score && saveState === 'idle' ? 'pointer' : 'default',
+              background: saveState === 'saved' ? '#f4ede4' : '#fff',
+              border: '0.5px solid #e0c9b8',
+              color: saveState === 'saved' ? '#96502e' : '#96502e',
+            }}>
+            {saveState === 'saving' ? '저장 중…' : saveState === 'saved' ? '✓ 보관함에 저장됨' : '보관함에 저장'}
+          </button>
           <button onClick={onOther} style={{ flex: 1, background: '#b46e46', border: 'none', borderRadius: 11, padding: 12, fontSize: 13, color: '#fff', cursor: 'pointer' }}>다른 궁합 보기</button>
         </div>
       </div>
