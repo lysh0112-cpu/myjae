@@ -29,7 +29,7 @@ import { calcCoupleScore, type SajuPillarSimple, type CoupleScoreResult } from '
 import { getGongmang } from '@/lib/saju/gongmang'
 import { calcHourPillar } from '@/lib/saju/hourPillar'
 import { buildCoupleTongbyeonPrompt, type CouplePerson } from '@/lib/saju/coupleTongbyeonPrompt'
-import { saveCoupleRecord } from '@/lib/saju/coupleRecords'
+import { saveCoupleRecord, getCoupleRecord } from '@/lib/saju/coupleRecords'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
 
 type Mode = 'couple' | 'married'
@@ -69,6 +69,9 @@ function CoupleResultInner() {
   const name1 = person1.name || '첫 번째'
   const name2 = person2.name || '두 번째'
 
+  // 보관함에서 "다시 보기"로 온 경우: recordId 있으면 질문 선택 건너뛰고 바로 결과(스냅샷)
+  const recordId = searchParams.get('recordId') || undefined
+
   // ── 질문 선택 단계 상태 (사주 QuestionPicker와 동일: 복수선택) ──
   //   submitted === null → 질문 선택 화면
   //   submitted = 질문 배열(빈 배열이면 전체 총평) → 결과 화면
@@ -79,7 +82,7 @@ function CoupleResultInner() {
   const [openCats, setOpenCats] = useState<Set<string>>(
     () => new Set(groups.length ? [groups[0].category] : [])
   )
-  const [submitted, setSubmitted] = useState<string[] | null>(null)
+  const [submitted, setSubmitted] = useState<string[] | null>(recordId ? [] : null)
 
   const toggleQ = (id: string) => setPicked(prev => {
     const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n
@@ -189,7 +192,8 @@ function CoupleResultInner() {
       name1={name1}
       name2={name2}
       pickedQuestions={pickedQuestions}
-      onBack={() => setSubmitted(null)}
+      recordId={recordId}
+      onBack={() => setSubmitted(recordId ? [] : null)}
       onOther={() => router.push(`/manseryeok/couple-input-new?mode=${mode}`)}
     />
   )
@@ -293,7 +297,7 @@ function toCouplePerson(p: PersonRaw, saju: SajuPillarSimple[]): CouplePerson {
 }
 
 function CoupleResultView({
-  mode, info, person1, person2, name1, name2, pickedQuestions, onBack, onOther,
+  mode, info, person1, person2, name1, name2, pickedQuestions, recordId, onBack, onOther,
 }: {
   mode: 'couple' | 'married'
   info: Mode2Info
@@ -302,6 +306,7 @@ function CoupleResultView({
   name1: string
   name2: string
   pickedQuestions: SajuQuestion[]
+  recordId?: string
   onBack: () => void
   onOther: () => void
 }) {
@@ -317,8 +322,30 @@ function CoupleResultView({
   const [openCard, setOpenCard] = useState(0)
   const ranRef = useRef(false)
 
-  // 두 사람 명식 계산 + 등급
+  // 보관함 다시보기: recordId 있으면 저장된 스냅샷을 그대로 로드 (재계산·AI 없음)
   useEffect(() => {
+    if (!recordId) return
+    let cancelled = false
+    getCoupleRecord(recordId).then(rec => {
+      if (cancelled) return
+      const snap = rec?.resultData as {
+        grade?: string; gradeDesc?: string
+        saju1?: SajuPillarSimple[]; saju2?: SajuPillarSimple[]; tongResult?: string
+      } | undefined
+      if (snap?.saju1 && snap?.saju2) {
+        setSaju1(snap.saju1); setSaju2(snap.saju2)
+        setScore({ grade: snap.grade || '', gradeDesc: snap.gradeDesc || '' } as CoupleScoreResult)
+        setTongResult(snap.tongResult || '')
+        ranRef.current = true       // 통변 재호출 막기
+        setSaveState('saved')       // 이미 저장된 것
+      }
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [recordId])
+
+  // 두 사람 명식 계산 + 등급 (새 궁합일 때만 — recordId 있으면 스냅샷 사용)
+  useEffect(() => {
+    if (recordId) return
     let cancelled = false
     async function run() {
       try {
@@ -335,11 +362,11 @@ function CoupleResultView({
     }
     run()
     return () => { cancelled = true }
-  }, [person1, person2])
+  }, [person1, person2, recordId])
 
-  // 통변 스트리밍 (계산 끝나면 자동 1회)
+  // 통변 스트리밍 (새 궁합, 계산 끝나면 자동 1회 — recordId면 스냅샷이라 안 함)
   useEffect(() => {
-    if (!saju1 || !saju2 || !score || ranRef.current) return
+    if (recordId || !saju1 || !saju2 || !score || ranRef.current) return
     ranRef.current = true
     let cancelled = false
     async function runTongbyeon() {
@@ -372,7 +399,7 @@ function CoupleResultView({
     }
     runTongbyeon()
     return () => { cancelled = true }
-  }, [saju1, saju2, score, mode, person1, person2, pickedQuestions])
+  }, [saju1, saju2, score, mode, person1, person2, pickedQuestions, recordId])
 
   const headline = dummyHeadlineSafe(`${name1}님과 ${name2}님, 두 사람의 만남`)
   const isMe1 = person1.isMe === 'true' || person1.isMe === '1'
