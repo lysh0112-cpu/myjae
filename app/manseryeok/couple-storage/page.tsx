@@ -15,7 +15,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
-  listCoupleRecords, daysAgoLabel,
+  listCoupleRecords, daysAgoLabel, deleteCoupleRecord,
   type CoupleRecord, type CoupleMode,
 } from '@/lib/saju/coupleRecords'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
@@ -40,12 +40,29 @@ function CoupleStorageInner() {
   const info = MODE_INFO[mode]
 
   const [records, setRecords] = useState<CoupleRecord[] | null>(null)
+  // 삭제 확인 팝업 대상(카드). null이면 팝업 닫힘.
+  const [confirmDel, setConfirmDel] = useState<CoupleRecord | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     listCoupleRecords(mode).then(list => { if (!cancelled) setRecords(list) })
     return () => { cancelled = true }
   }, [mode])
+
+  // 삭제 실행 (확인 팝업에서 "삭제")
+  async function handleDelete() {
+    if (!confirmDel || deleting) return
+    setDeleting(true)
+    const ok = await deleteCoupleRecord(confirmDel.id)
+    setDeleting(false)
+    if (ok) {
+      setRecords(prev => prev ? prev.filter(x => x.id !== confirmDel.id) : prev)
+      setConfirmDel(null)
+    } else {
+      alert('삭제하지 못했어요. 잠시 후 다시 시도해 주세요.')
+    }
+  }
 
   return (
     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
@@ -108,7 +125,17 @@ function CoupleStorageInner() {
               </div>
             </div>
 
-            <span style={{ color: '#d9b89f', fontSize: 18, flexShrink: 0 }}>›</span>
+            {/* 삭제 버튼 — 카드 클릭(결과 이동)과 겹치지 않게 stopPropagation */}
+            <button
+              onClick={(e) => { e.stopPropagation(); setConfirmDel(r) }}
+              aria-label="삭제"
+              style={{
+                flexShrink: 0, width: 28, height: 28, borderRadius: 8,
+                background: 'none', border: 'none', color: '#c5a590', fontSize: 17,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+              ×
+            </button>
           </div>
         ))}
 
@@ -121,6 +148,54 @@ function CoupleStorageInner() {
           + 새 {info.badge} 궁합 보기
         </button>
       </div>
+
+      {/* 삭제 확인 팝업 */}
+      {confirmDel && (
+        <div
+          onClick={() => !deleting && setConfirmDel(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 50,
+            background: 'rgba(40,28,22,0.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+          }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 320, background: '#FFFBF7',
+              borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
+              boxShadow: '0 8px 30px rgba(90,50,30,0.2)',
+            }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#3a2e28', marginBottom: 8 }}>
+              정말 삭제할까요?
+            </div>
+            <div style={{ fontSize: 13, color: '#96502e', lineHeight: 1.5, marginBottom: 18 }}>
+              {confirmDel.name1} <span style={{ color: '#d4537e' }}>♥</span> {confirmDel.name2} 궁합을 삭제해요.<br />
+              삭제하면 되돌릴 수 없어요.
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => setConfirmDel(null)}
+                disabled={deleting}
+                style={{
+                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+                  background: '#f3e6db', border: 'none', color: '#96502e',
+                  cursor: deleting ? 'default' : 'pointer',
+                }}>
+                취소
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                style={{
+                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+                  background: deleting ? '#d99' : '#c8506e', border: 'none', color: '#fff',
+                  cursor: deleting ? 'default' : 'pointer',
+                }}>
+                {deleting ? '삭제 중…' : '삭제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
