@@ -8,7 +8,6 @@ import { buildMulsangPrompt, STYLE_CONFIGS } from '@/lib/saju/mulsangPrompt'
 import { buildMulsangTongbyeonPrompt, type Ohaeng } from '@/lib/saju/mulsangTongbyeonPrompt'
 import { MULSANG_QUESTIONS, groupMulsangByCategory } from '@/lib/saju/mulsangQuestions'
 import OhaengPentagon from '@/app/manseryeok/result-new/OhaengPentagon'
-import PageHeader from '@/app/components/common/PageHeader'
 import { supabase } from '@/lib/supabase'
 import { fromProfile } from '@/lib/saju/myInfo'
 import type { SajuQuestion } from '@/lib/saju/questions'
@@ -198,7 +197,11 @@ function MulsangInner() {
   if (!info) {
     return (
       <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto' }}>
-        <PageHeader title="내 사주가 그림이 된다면?" onBack={() => router.push('/')} />
+        <div style={{ position: 'sticky', top: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid #f0e0d5' }}>
+          <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#999', fontSize: '20px', cursor: 'pointer' }}>←</button>
+          <span style={{ fontSize: '15px', fontWeight: 500, color: '#3a2e28' }}>내 사주가 그림이 된다면?</span>
+          <button onClick={() => router.push('/')} style={{ background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer' }}>🏠</button>
+        </div>
         <div style={{ padding: '40px 20px', textAlign: 'center', color: '#b4785a' }}>
           <p style={{ marginBottom: '20px' }}>먼저 홈에서 사주 정보를 입력해주세요.</p>
           <button onClick={() => router.push('/')}
@@ -425,10 +428,47 @@ function MulsangInner() {
 
   if (hasResult) {
     return (
-      <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto' }}>
-        <PageHeader title="내 사주가 그림이 된다면?" onBack={() => router.push('/')} />
+      <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
+        {/* 밝은 헤더 (사주 화면과 동일 톤) */}
+        <div style={{ position: 'sticky', top: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid #f0e0d5' }}>
+          <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#999', fontSize: '20px', cursor: 'pointer' }}>←</button>
+          <span style={{ fontSize: '15px', fontWeight: 500, color: '#3a2e28' }}>내 사주가 그림이 된다면?</span>
+          <button onClick={() => router.push('/')} style={{ background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer' }}>🏠</button>
+        </div>
 
-        <div style={{ position: 'sticky', top: 0, zIndex: 10, background: '#1a1a18' }}>
+        <div style={{ padding: '12px 16px 0' }}>
+
+          {/* ① 사주 원국 — 아코디언(접힘 기본) */}
+          <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '12px', marginBottom: '10px', overflow: 'hidden' }}>
+            <div onClick={() => setOpenWonguk(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '13px 14px', cursor: 'pointer' }}>
+              <span style={{ flex: 1, fontSize: '13px', fontWeight: 700, color: '#3a2e28' }}>사주 원국 (내 여덟 글자)</span>
+              <span style={{ color: '#c8783c', fontSize: '12px' }}>{openWonguk ? '▾' : '▸'}</span>
+            </div>
+            {openWonguk && (
+              <div style={{ padding: '4px 14px 14px', display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                {saju.map((p, i) => (
+                  <div key={i} style={{ flex: 1, textAlign: 'center', background: '#fdf6f0', borderRadius: '8px', padding: '8px 4px' }}>
+                    <div style={{ fontSize: '10px', color: '#b4785a', marginBottom: '3px' }}>{p.pillar}</div>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: '#96502e' }}>{p.stem}</div>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: '#6e50a0' }}>{p.branch}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ② 오행 그래프 — 항상 펼침 */}
+          {ohaeng.length > 0 && (
+            <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '12px', padding: '12px', marginBottom: '12px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#96502e', marginBottom: '4px' }}>오행 분석 — 그림이 이렇게 그려진 이유</div>
+              <div style={{ fontSize: '11px', color: '#b4785a', marginBottom: '8px' }}>넘치는 기운은 풍성하게, 부족한 기운은 그림 속 빛으로 채워요</div>
+              <OhaengPentagon ohaeng={ohaeng} />
+            </div>
+          )}
+        </div>
+
+        {/* ③ 그림 — 어두운 액자로 선명하게 */}
+        <div style={{ background: '#1a1a18', margin: '0 0 4px' }}>
           {imageUrl ? (
             <img src={imageUrl} alt="사주 풍경화" style={{ width: '100%', display: 'block' }} />
           ) : (
@@ -438,7 +478,7 @@ function MulsangInner() {
             </div>
           )}
           {imageUrl && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', padding: '8px', background: '#1a1a18', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', padding: '8px', background: '#1a1a18' }}>
               <a href={imageUrl} download="mulsang.png" style={{ fontSize: '13px', color: gold, textDecoration: 'none' }}>⬇ 저장</a>
               <button onClick={handleShare} style={{ fontSize: '13px', color: gold, background: 'none', border: 'none', cursor: 'pointer' }}>↗ 공유</button>
             </div>
@@ -446,6 +486,7 @@ function MulsangInner() {
         </div>
 
         <div style={{ padding: '16px' }}>
+          {/* ④ 그림 기본 해설 (밝은 카드) */}
           <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '16px', padding: '16px', marginBottom: '14px' }}>
             <div style={{ fontSize: '17px', fontWeight: 700, color: '#96502e', marginBottom: '14px', lineHeight: 1.5 }}>
               "{commentary.title}"
@@ -463,41 +504,10 @@ function MulsangInner() {
             ))}
           </div>
 
-          {/* ── 오행표 + 사주원국 + 그림 해설 통변 ── */}
+          {/* ⑤ 그림 해설 통변 (질문 선택) ── */}
           <div style={{ margin: '4px 0 14px', color: '#3a2e28' }}>
-
-            {/* 오행표 — 그림 바로 아래, 항상 펼침 */}
-            {ohaeng.length > 0 && (
-              <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '12px', padding: '12px', marginBottom: '10px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#96502e', marginBottom: '4px' }}>오행 분석 — 그림이 이렇게 그려진 이유</div>
-                <div style={{ fontSize: '11px', color: '#b4785a', marginBottom: '8px' }}>넘치는 기운은 풍성하게, 부족한 기운은 그림 속 빛으로 채워요</div>
-                <OhaengPentagon ohaeng={ohaeng} />
-              </div>
-            )}
-
-            {/* 사주 원국 — 아코디언(접힘 기본) */}
-            <div style={{ background: '#fff', border: '0.5px solid #f0e0d5', borderRadius: '12px', marginBottom: '10px', overflow: 'hidden' }}>
-              <div onClick={() => setOpenWonguk(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 14px', cursor: 'pointer' }}>
-                <span style={{ flex: 1, fontSize: '13px', fontWeight: 700, color: '#3a2e28' }}>사주 원국 (내 여덟 글자)</span>
-                <span style={{ color: '#c8783c', fontSize: '12px' }}>{openWonguk ? '▾' : '▸'}</span>
-              </div>
-              {openWonguk && (
-                <div style={{ padding: '4px 14px 14px', display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                  {saju.map((p, i) => (
-                    <div key={i} style={{ flex: 1, textAlign: 'center', background: '#fdf6f0', borderRadius: '8px', padding: '8px 4px' }}>
-                      <div style={{ fontSize: '10px', color: '#b4785a', marginBottom: '3px' }}>{p.pillar}</div>
-                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#96502e' }}>{p.stem}</div>
-                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#6e50a0' }}>{p.branch}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* 그림 해설 통변 안내 */}
             <div style={{ fontSize: '13px', fontWeight: 700, color: '#96502e', margin: '4px 2px 4px' }}>그림에서 궁금한 걸 골라보세요</div>
             <div style={{ fontSize: '11px', color: '#b4785a', margin: '0 2px 10px' }}>안 고르면 그림 전체를 대략 풀어드려요</div>
-
             {/* 카테고리별 질문 (아코디언) */}
             {groupMulsangByCategory(MULSANG_QUESTIONS).map(({ category, items }) => {
               const gPicked = items.filter(q => pickedQ.has(q.id)).length
@@ -580,7 +590,11 @@ function MulsangInner() {
   return (
     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-      <PageHeader title="내 사주가 그림이 된다면?" onBack={() => router.push('/')} />
+      <div style={{ position: 'sticky', top: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid #f0e0d5' }}>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#999', fontSize: '20px', cursor: 'pointer' }}>←</button>
+        <span style={{ fontSize: '15px', fontWeight: 500, color: '#3a2e28' }}>내 사주가 그림이 된다면?</span>
+        <button onClick={() => router.push('/')} style={{ background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer' }}>🏠</button>
+      </div>
       <div style={{ padding: '16px' }}>
         <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '14px', padding: '14px 16px', marginBottom: '18px' }}>
           <div style={{ fontSize: '12px', color: '#b4785a', marginBottom: '5px' }}>내 사주</div>
