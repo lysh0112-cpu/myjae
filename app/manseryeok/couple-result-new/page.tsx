@@ -22,6 +22,7 @@
 import { Suspense, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import CoupleWonguk from '@/app/manseryeok/couple-result/components/CoupleWonguk'
+import GradeFireworks from '@/app/manseryeok/couple-result/components/GradeFireworks'
 import { COUPLE_QUESTIONS, groupCoupleByCategory } from '@/lib/saju/coupleQuestions'
 
 type Mode = 'couple' | 'married'
@@ -213,14 +214,13 @@ function CoupleResultInner() {
       </div>
 
       <div style={{ padding: '16px 14px' }}>
-        {/* ① 등급 (점수 숨김 · C안) [TODO] 폭죽 연출 */}
-        <div style={{ background: info.accent, borderRadius: 14, padding: '22px 16px', textAlign: 'center', marginBottom: 10 }}>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.9)', lineHeight: 1.5, marginBottom: 12 }}>{dummyHeadlineSafe(dummyHeadline)}</div>
-          <div style={{ fontSize: 22, fontWeight: 500, color: '#fff', lineHeight: 1.3 }}>{dummyGrade}</div>
-          <div style={{ display: 'inline-block', fontSize: 11.5, color: info.accent, background: '#fff', borderRadius: 99, padding: '3px 14px', marginTop: 12 }}>
-            {dummyGradeDesc}
-          </div>
-        </div>
+        {/* ① 등급 + 폭죽 (점수 숨김 · C안, 등급별 강도 차등) */}
+        <GradeFireworks
+          grade={dummyGrade}
+          gradeDesc={dummyGradeDesc}
+          headline={dummyHeadlineSafe(dummyHeadline)}
+          accent={info.accent}
+        />
 
         {/* 고른 질문 표시 (복수) */}
         <div style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: '10px 13px', marginBottom: 10 }}>
