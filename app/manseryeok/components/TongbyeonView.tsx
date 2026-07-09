@@ -50,7 +50,14 @@ function iconFor(title: string): string {
   if (t.includes('부모') || t.includes('가족')) return '\uD83C\uDFE1'
   if (t.includes('노후') || t.includes('노년')) return '\uD83C\uDF75'
   if (t.includes('개운') || t.includes('살리는')) return '\uD83D\uDD2E'
-  return '\u2726'
+  // ── 대운·세운·월운(시간운) 제목 ──
+  if (t.includes('인생') || t.includes('흐름') || t.includes('황금기') || t.includes('대운')) return '\uD83C\uDF1F' // 🌟 인생 흐름
+  if (t.includes('전환') || t.includes('교운') || t.includes('변화')) return '\uD83D\uDD04' // 🔄 전환기
+  if (t.includes('시기') || t.includes('타이밍') || t.includes('달') || t.includes('때')) return '\uD83D\uDCC5' // 📅 타이밍
+  if (t.includes('주의') || t.includes('조심') || t.includes('삼재') || t.includes('충')) return '\u26A0\uFE0F' // ⚠️ 주의
+  if (t.includes('학업') || t.includes('시험') || t.includes('합격')) return '\uD83D\uDCDA' // 📚 학업
+  if (t.includes('종합') || t.includes('총운') || t.includes('올해')) return '\uD83C\uDF3F' // 🌿 종합
+  return '\uD83C\uDF1F' // 기본: 🌟 (로딩 회전 아이콘 ✦ 와 겹치지 않도록)
 }
 
 // 마크다운 기호 제거 (한 줄 정리)
