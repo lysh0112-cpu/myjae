@@ -19,11 +19,16 @@
  * 계산/통변/저장은 [TODO] 자리로 표시. 지금은 화면 흐름만 확정.
  */
 
-import { Suspense, useMemo, useState } from 'react'
+import { Suspense, useMemo, useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import CoupleWonguk from '@/app/manseryeok/couple-result/components/CoupleWonguk'
 import GradeFireworks from '@/app/manseryeok/couple-result/components/GradeFireworks'
 import { COUPLE_QUESTIONS, groupCoupleByCategory } from '@/lib/saju/coupleQuestions'
+import type { SajuQuestion } from '@/lib/saju/questions'
+import { calcCoupleScore, type SajuPillarSimple, type CoupleScoreResult } from '@/lib/saju/coupleScore'
+import { getGongmang } from '@/lib/saju/gongmang'
+import { calcHourPillar } from '@/lib/saju/hourPillar'
+import { buildCoupleTongbyeonPrompt, type CouplePerson } from '@/lib/saju/coupleTongbyeonPrompt'
 
 type Mode = 'couple' | 'married'
 
@@ -46,25 +51,6 @@ const CAT_COLOR: Record<string, string> = {
 }
 const catColor = (c: string) => CAT_COLOR[c] ?? '#b46e46'
 
-// ── 가짜 명식 (껍데기용 고정 예시) ──────────────
-// [TODO] 나중에 buildSajuPillars(person1) 결과로 교체
-const DUMMY_SAJU_1 = [
-  { pillar: '시주', stem: '壬', branch: '寅' },
-  { pillar: '일주', stem: '壬', branch: '子' },
-  { pillar: '월주', stem: '壬', branch: '子' },
-  { pillar: '연주', stem: '丁', branch: '丑' },
-]
-const DUMMY_SAJU_2 = [
-  { pillar: '시주', stem: '庚', branch: '午' },
-  { pillar: '일주', stem: '己', branch: '酉' },
-  { pillar: '월주', stem: '辛', branch: '巳' },
-  { pillar: '연주', stem: '乙', branch: '亥' },
-]
-
-function fmtBirth(p: Record<string, string>): string {
-  if (!p.year) return ''
-  return `${p.year}.${p.month}.${p.day}`
-}
 
 function CoupleResultInner() {
   const router = useRouter()
@@ -188,15 +174,170 @@ function CoupleResultInner() {
   }
 
   // ────────────────────────────────────────────
-  // 결과 단계
+  // 결과 단계 → 자식 컴포넌트에 위임 (명식 계산·등급·통변 훅 사용)
   // ────────────────────────────────────────────
   const pickedQuestions = COUPLE_QUESTIONS.filter(q => submitted.includes(q.id))
-  const isAll = pickedQuestions.length === 0
 
-  // [TODO] 등급: calcCoupleScore(person1, person2, ...).grade 로 교체
-  const dummyGrade = mode === 'couple' ? '서로를 성장시키는 황금 커플' : '오래 함께할 든든한 인연'
-  const dummyGradeDesc = mode === 'couple' ? '함께할수록 더 빛나는 인연이에요' : '서로를 채워주는 사이예요'
-  const dummyHeadline = `${name1}님과 ${name2}님, 두 사람의 만남`
+  return (
+    <CoupleResultView
+      mode={mode}
+      info={info}
+      person1={person1}
+      person2={person2}
+      name1={name1}
+      name2={name2}
+      pickedQuestions={pickedQuestions}
+      onBack={() => setSubmitted(null)}
+      onOther={() => router.push(`/manseryeok/couple-input-new?mode=${mode}`)}
+    />
+  )
+}
+
+// 이름이 비었을 때 카피가 어색해지지 않게 방어
+function dummyHeadlineSafe(s: string): string {
+  return s.replace('undefined', '').replace('님과 님', '두 사람')
+}
+
+// ============================================================================
+// 결과 뷰: 두 사람 명식 계산 → 등급 → 통변 스트리밍
+// ============================================================================
+type PersonRaw = Record<string, string>
+interface Mode2Info { label: string; accent: string }
+const HANGUL_STEM: Record<string, string> = { 甲:'갑',乙:'을',丙:'병',丁:'정',戊:'무',己:'기',庚:'경',辛:'신',壬:'임',癸:'계' }
+const pill = (s: string, b: string) => (s && b && s !== '?' ? `${s}${b}` : '모름')
+
+// 시각 라벨(예: "진시") → hourIdx(0~11, 자시=0). couple-input의 hour는 "0"~"11" 또는 "모름"
+function hourToIdx(hour: string | undefined): number | null {
+  if (!hour || hour === '모름') return null
+  const n = parseInt(hour)
+  return isNaN(n) ? null : n
+}
+
+// /api/lunar 로 한 사람의 4기둥 계산
+async function calcOnePerson(p: PersonRaw): Promise<SajuPillarSimple[] | null> {
+  const calType = p.calType || '양력'
+  const y = parseInt(p.year), m = parseInt(p.month), d = parseInt(p.day)
+  if (!y || !m || !d) return null
+  const leap = p.leapMonth || '0'
+  const url = `/api/lunar?year=${y}&month=${m}&day=${d}&calType=${calType}&leapMonth=${leap}`
+  const res = await fetch(url)
+  const data = await res.json()
+  if (data.error) return null
+  const split = (g: string) => {
+    if (!g) return { stem: '?', branch: '?' }
+    const mt = g.match(/\(([^)]+)\)/)
+    if (mt && mt[1].length >= 2) return { stem: mt[1][0], branch: mt[1][1] }
+    if (g.length >= 2) return { stem: g[0], branch: g[1] }
+    return { stem: '?', branch: '?' }
+  }
+  const year = split(data.yearGanji), month = split(data.monthGanji), day = split(data.dayGanji)
+  const hIdx = hourToIdx(p.hour)
+  const hour = hIdx !== null ? calcHourPillar(day.stem, hIdx) : { stem: '?', branch: '?' }
+  return [
+    { pillar: '시주', stem: hour.stem, branch: hour.branch },
+    { pillar: '일주', stem: day.stem, branch: day.branch },
+    { pillar: '월주', stem: month.stem, branch: month.branch },
+    { pillar: '년주', stem: year.stem, branch: year.branch },
+  ]
+}
+
+function toCouplePerson(p: PersonRaw, saju: SajuPillarSimple[]): CouplePerson {
+  const find = (k: string) => saju.find(s => s.pillar === k)
+  const y = find('년주'), mo = find('월주'), da = find('일주'), h = find('시주')
+  const birth = p.year ? `${p.year}.${p.month}.${p.day}` : ''
+  return {
+    name: p.name || '', gender: p.gender || '', birthLabel: birth,
+    yearPillar: pill(y?.stem ?? '', y?.branch ?? ''),
+    monthPillar: pill(mo?.stem ?? '', mo?.branch ?? ''),
+    dayPillar: pill(da?.stem ?? '', da?.branch ?? ''),
+    hourPillar: pill(h?.stem ?? '', h?.branch ?? ''),
+    dayStem: da?.stem ?? '',
+  }
+}
+
+function CoupleResultView({
+  mode, info, person1, person2, name1, name2, pickedQuestions, onBack, onOther,
+}: {
+  mode: 'couple' | 'married'
+  info: Mode2Info
+  person1: PersonRaw
+  person2: PersonRaw
+  name1: string
+  name2: string
+  pickedQuestions: SajuQuestion[]
+  onBack: () => void
+  onOther: () => void
+}) {
+  const isAll = pickedQuestions.length === 0
+  const [saju1, setSaju1] = useState<SajuPillarSimple[] | null>(null)
+  const [saju2, setSaju2] = useState<SajuPillarSimple[] | null>(null)
+  const [score, setScore] = useState<CoupleScoreResult | null>(null)
+  const [calcErr, setCalcErr] = useState(false)
+
+  // 통변
+  const [tongLoading, setTongLoading] = useState(false)
+  const [tongResult, setTongResult] = useState<string | null>(null)
+  const ranRef = useRef(false)
+
+  // 두 사람 명식 계산 + 등급
+  useEffect(() => {
+    let cancelled = false
+    async function run() {
+      try {
+        const [s1, s2] = await Promise.all([calcOnePerson(person1), calcOnePerson(person2)])
+        if (cancelled) return
+        if (!s1 || !s2) { setCalcErr(true); return }
+        setSaju1(s1); setSaju2(s2)
+        const ilju1 = s1.find(p => p.pillar === '일주')
+        const ilju2 = s2.find(p => p.pillar === '일주')
+        const gm1 = ilju1 ? getGongmang(ilju1.stem, ilju1.branch) : ['', ''] as [string, string]
+        const gm2 = ilju2 ? getGongmang(ilju2.stem, ilju2.branch) : ['', ''] as [string, string]
+        setScore(calcCoupleScore(s1, s2, gm1, gm2))
+      } catch { if (!cancelled) setCalcErr(true) }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [person1, person2])
+
+  // 통변 스트리밍 (계산 끝나면 자동 1회)
+  useEffect(() => {
+    if (!saju1 || !saju2 || !score || ranRef.current) return
+    ranRef.current = true
+    let cancelled = false
+    async function runTongbyeon() {
+      setTongLoading(true); setTongResult(null)
+      try {
+        const prompt = buildCoupleTongbyeonPrompt(
+          { mode, person1: toCouplePerson(person1, saju1!), person2: toCouplePerson(person2, saju2!), score: score! },
+          pickedQuestions,
+        )
+        const res = await fetch('/api/tongbyeon', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ systemPrompt: prompt, premium: false }),
+        })
+        if (!res.ok || !res.body) { if (!cancelled) setTongResult('통변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.'); return }
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let acc = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done || cancelled) break
+          for (const line of decoder.decode(value).split('\n')) {
+            if (!line.startsWith('data: ')) continue
+            const dstr = line.slice(6)
+            if (dstr === '[DONE]') continue
+            try { const parsed = JSON.parse(dstr); if (parsed.text) { acc += parsed.text; if (!cancelled) setTongResult(acc) } } catch {}
+          }
+        }
+      } catch { if (!cancelled) setTongResult('통변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.') }
+      finally { if (!cancelled) setTongLoading(false) }
+    }
+    runTongbyeon()
+    return () => { cancelled = true }
+  }, [saju1, saju2, score, mode, person1, person2, pickedQuestions])
+
+  const headline = dummyHeadlineSafe(`${name1}님과 ${name2}님, 두 사람의 만남`)
+  const isMe1 = person1.isMe === 'true' || person1.isMe === '1'
 
   return (
     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
@@ -205,31 +346,26 @@ function CoupleResultInner() {
         background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
         borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
       }}>
-        <button onClick={() => setSubmitted(null)}
-          style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
         <div style={{ fontSize: 15, fontWeight: 500, color: '#3a2e28' }}>{info.label} 결과</div>
-        <div style={{ marginLeft: 'auto', fontSize: 10, color: '#c8783c', background: '#f9ebe0', borderRadius: 99, padding: '2px 10px' }}>
-          껍데기 · 계산 예정
-        </div>
       </div>
 
       <div style={{ padding: '16px 14px' }}>
-        {/* ① 등급 + 폭죽 (점수 숨김 · C안, 등급별 강도 차등) */}
-        <GradeFireworks
-          grade={dummyGrade}
-          gradeDesc={dummyGradeDesc}
-          headline={dummyHeadlineSafe(dummyHeadline)}
-          accent={info.accent}
-        />
+        {/* ① 등급 + 폭죽 */}
+        {score ? (
+          <GradeFireworks grade={score.grade} gradeDesc={score.gradeDesc} headline={headline} accent={info.accent} />
+        ) : (
+          <div style={{ background: info.accent, borderRadius: 14, padding: '30px 16px', textAlign: 'center', marginBottom: 10, color: '#fff', fontSize: 13 }}>
+            {calcErr ? '두 사람 정보를 다시 확인해 주세요.' : '두 사람의 인연을 살펴보는 중…'}
+          </div>
+        )}
 
-        {/* 고른 질문 표시 (복수) */}
+        {/* 고른 질문 */}
         <div style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: '10px 13px', marginBottom: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: isAll ? 0 : 6 }}>
             <span style={{ color: '#c8783c', fontSize: 13 }}>❝</span>
-            <span style={{ flex: 1, fontSize: 12, color: '#b4785a' }}>
-              {isAll ? '두 사람 궁합 전체 총평' : `고른 질문 ${pickedQuestions.length}개`}
-            </span>
-            <span onClick={() => setSubmitted(null)} style={{ fontSize: 11, color: '#c8783c', cursor: 'pointer' }}>바꾸기</span>
+            <span style={{ flex: 1, fontSize: 12, color: '#b4785a' }}>{isAll ? '두 사람 궁합 전체 총평' : `고른 질문 ${pickedQuestions.length}개`}</span>
+            <span onClick={onBack} style={{ fontSize: 11, color: '#c8783c', cursor: 'pointer' }}>바꾸기</span>
           </div>
           {!isAll && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
@@ -240,46 +376,41 @@ function CoupleResultInner() {
           )}
         </div>
 
-        {/* ②③ 두 사람 정보 + 나란히 명식 (CoupleWonguk) */}
+        {/* ②③ 두 사람 명식 */}
         <CoupleWonguk
-          left={{ name: name1, birth: fmtBirth(person1), isMe: person1.isMe === 'true' || person1.isMe === '1', saju: DUMMY_SAJU_1 }}
-          right={{ name: name2, birth: fmtBirth(person2), saju: DUMMY_SAJU_2 }}
+          left={{ name: name1, birth: person1.year ? `${person1.year}.${person1.month}.${person1.day}` : '', isMe: isMe1, saju: saju1 ?? [] }}
+          right={{ name: name2, birth: person2.year ? `${person2.year}.${person2.month}.${person2.day}` : '', saju: saju2 ?? [] }}
         />
 
-        {/* ④ 통변 카드 (해설 자리) */}
+        {/* ④ 통변 */}
         <div style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: 14, marginTop: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
             <span style={{ color: '#c8783c' }}>✦</span>
             <span style={{ fontSize: 13, fontWeight: 500, color: '#96502e' }}>두 사람의 궁합 이야기</span>
           </div>
-          {/* [TODO] /api/tongbyeon 스트리밍 통변으로 교체.
-              프롬프트 = coupleTongbyeonPrompt(계산값 + 두사람 사주 + pickedQuestions) */}
-          <div style={{ fontSize: 12.5, color: '#b4785a', lineHeight: 1.8, background: '#FDF6F0', borderRadius: 10, padding: '14px 12px', textAlign: 'center' }}>
-            {isAll
-              ? <>두 사람 궁합 전체 총평이 들어갈 자리예요.</>
-              : <>고른 {pickedQuestions.length}개 질문으로<br />두 사람 궁합을 풀어드릴 자리예요.</>}
-            <br />(계산·통변은 다음 단계에서 붙입니다)
-          </div>
+          {tongLoading && !tongResult ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: 24, color: '#b4785a', fontSize: 13 }}>
+              <span style={{ fontSize: 28, display: 'inline-block', animation: 'spin 1.1s linear infinite', color: '#c8783c' }}>✦</span>
+              <span>두 사람의 인연을 찬찬히 살펴보는 중이에요…</span>
+              <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
+            </div>
+          ) : tongResult ? (
+            <div style={{ fontSize: 13, color: '#3a2e28', lineHeight: 1.85, whiteSpace: 'pre-wrap' }}>{tongResult}</div>
+          ) : (
+            <div style={{ fontSize: 12.5, color: '#b4785a', lineHeight: 1.8, background: '#FDF6F0', borderRadius: 10, padding: '14px 12px', textAlign: 'center' }}>
+              두 사람의 명식을 준비하는 중이에요…
+            </div>
+          )}
         </div>
 
-        {/* 저장/다시보기 [TODO] saju_records(service_type='couple') 저장 + 보관함 연결 */}
+        {/* 저장/다시보기 [TODO] saju_records(couple) 저장 + 보관함 */}
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-          <button style={{ flex: 1, background: '#fff', border: '0.5px solid #e0c9b8', borderRadius: 11, padding: 12, fontSize: 13, color: '#96502e', cursor: 'pointer' }}>
-            보관함에 저장
-          </button>
-          <button onClick={() => router.push(`/manseryeok/couple-input-new?mode=${mode}`)}
-            style={{ flex: 1, background: '#b46e46', border: 'none', borderRadius: 11, padding: 12, fontSize: 13, color: '#fff', cursor: 'pointer' }}>
-            다른 궁합 보기
-          </button>
+          <button style={{ flex: 1, background: '#fff', border: '0.5px solid #e0c9b8', borderRadius: 11, padding: 12, fontSize: 13, color: '#96502e', cursor: 'pointer' }}>보관함에 저장</button>
+          <button onClick={onOther} style={{ flex: 1, background: '#b46e46', border: 'none', borderRadius: 11, padding: 12, fontSize: 13, color: '#fff', cursor: 'pointer' }}>다른 궁합 보기</button>
         </div>
       </div>
     </main>
   )
-}
-
-// 이름이 비었을 때 카피가 어색해지지 않게 방어
-function dummyHeadlineSafe(s: string): string {
-  return s.replace('undefined', '').replace('님과 님', '두 사람')
 }
 
 export default function CoupleResultNewPage() {
