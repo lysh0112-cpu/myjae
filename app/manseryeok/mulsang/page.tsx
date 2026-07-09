@@ -10,6 +10,7 @@ import { MULSANG_QUESTIONS, groupMulsangByCategory } from '@/lib/saju/mulsangQue
 import OhaengPentagon from '@/app/manseryeok/result-new/OhaengPentagon'
 import PageHeader from '@/app/components/common/PageHeader'
 import { supabase } from '@/lib/supabase'
+import { fromProfile } from '@/lib/saju/myInfo'
 import type { SajuQuestion } from '@/lib/saju/questions'
 
 interface Commentary {
@@ -62,37 +63,68 @@ function MulsangInner() {
   }, [])
 
   useEffect(() => {
-    const urlYear = parseInt(sp.get('year') || '0')
-    if (urlYear) {
-      const hourParam = sp.get('hour')
-      setInfo({
-        gender: sp.get('gender') || '남',
-        calType: sp.get('calType') || '양력',
-        year: urlYear,
-        month: parseInt(sp.get('month') || '0'),
-        day: parseInt(sp.get('day') || '0'),
-        leapMonth: sp.get('leapMonth') || '0',
-        hourIdx: hourParam === '모름' || hourParam === null ? null : parseInt(hourParam),
-      })
-      return
-    }
-    const saved = localStorage.getItem(MY_INFO_KEY)
-    if (saved) {
+    let cancelled = false
+    async function loadInfo() {
+      // (1) URL 우선 — 다른 사람 선택 / 가족지인 목록에서 넘어온 경우
+      const urlYear = parseInt(sp.get('year') || '0')
+      if (urlYear) {
+        const hourParam = sp.get('hour')
+        if (!cancelled) setInfo({
+          gender: sp.get('gender') || '남',
+          calType: sp.get('calType') || '양력',
+          year: urlYear,
+          month: parseInt(sp.get('month') || '0'),
+          day: parseInt(sp.get('day') || '0'),
+          leapMonth: sp.get('leapMonth') || '0',
+          hourIdx: hourParam === '모름' || hourParam === null ? null : parseInt(hourParam),
+        })
+        return
+      }
+
+      // (2) URL 없으면(="나" 선택) 로그인한 내 정보(profiles) = 내 사주
       try {
-        const m = JSON.parse(saved)
-        if (m.year) {
-          setInfo({
-            gender: m.gender || '남',
-            calType: m.calType || '양력',
-            year: parseInt(m.year),
-            month: parseInt(m.month),
-            day: parseInt(m.day),
-            leapMonth: m.leapMonth || '0',
-            hourIdx: m.hour === '모름' || m.hour == null ? null : parseInt(m.hour),
-          })
+        const { data: u } = await supabase.auth.getUser()
+        if (u?.user) {
+          const { data: p } = await supabase.from('profiles')
+            .select('birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, saju_saved')
+            .eq('id', u.user.id).single()
+          const prof = fromProfile(p)
+          if (prof && !cancelled) {
+            setInfo({
+              gender: prof.gender,
+              calType: prof.calType,
+              year: parseInt(prof.year),
+              month: parseInt(prof.month),
+              day: parseInt(prof.day),
+              leapMonth: prof.leapMonth || '0',
+              hourIdx: prof.hour === '모름' ? null : parseInt(prof.hour),
+            })
+            return
+          }
         }
       } catch {}
+
+      // (3) 그래도 없으면 localStorage myinfo (예전 방식 보조)
+      const saved = localStorage.getItem(MY_INFO_KEY)
+      if (saved) {
+        try {
+          const m = JSON.parse(saved)
+          if (m.year && !cancelled) {
+            setInfo({
+              gender: m.gender || '남',
+              calType: m.calType || '양력',
+              year: parseInt(m.year),
+              month: parseInt(m.month),
+              day: parseInt(m.day),
+              leapMonth: m.leapMonth || '0',
+              hourIdx: m.hour === '모름' || m.hour == null ? null : parseInt(m.hour),
+            })
+          }
+        } catch {}
+      }
     }
+    loadInfo()
+    return () => { cancelled = true }
   }, [sp])
 
   const { saju, dayStem, converting } = useResultSaju(
