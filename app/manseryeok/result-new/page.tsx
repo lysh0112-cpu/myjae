@@ -21,6 +21,7 @@ import SingangTable from "./SingangTable";
 import QuestionPicker from "../components/QuestionPicker";
 import TongbyeonView from "../components/TongbyeonView";
 import { birthYearToGroup, genderToFilter, type SajuQuestion } from "@/lib/saju/questions";
+import { type UnseEntry } from "@/lib/saju/unseQuestions";
 import { toTongbyeonInput } from "@/lib/saju/toTongbyeonInput";
 import YongsinCard from "./YongsinCard";
 import SajuWonguk from "./SajuWonguk";
@@ -244,8 +245,11 @@ function ResultNewContent() {
   const currentYear=new Date().getFullYear()
 
   // 제목용 이름: URL에 name이 있으면 "OO님의 만세력", 없으면 "나의 만세력"
+  // 시간운 진입(?unse=daeun|seyun)이면 "만세력" 대신 "대운/세운"으로.
   const personName=searchParams.get("name")||""
-  const titleName=personName?`${personName}님의 만세력`:"나의 만세력"
+  const _unse=searchParams.get("unse")
+  const _kindLabel=_unse==="daeun"?"대운":_unse==="seyun"?"세운":"만세력"
+  const titleName=personName?`${personName}님의 ${_kindLabel}`:`나의 ${_kindLabel}`
 
   const {saju,solar,converting:converting0,dayStem,monthGanji,yearStem,iljji,yeonjji}=
     useResultSaju(calType,yearParam,monthParam,dayParam,leapMonth,hourIdx)
@@ -304,6 +308,11 @@ function ResultNewContent() {
   // 단, URL에 mode=chart 면 "만세력만 보기"라서 질문 선택을 건너뛴다.
   //   (마이페이지 "내 사주 보기" 등 순수 조회용 진입)
   const chartOnly = searchParams.get('mode') === 'chart'
+  // 시간운 진입: ?unse=daeun | seyun 이면 사주 대신 대운/세운 질문·통변으로.
+  //   없으면(=undefined) 기존 사주 통변 그대로.
+  const unseParam = searchParams.get('unse')
+  const unseEntry: UnseEntry | undefined =
+    unseParam === 'daeun' || unseParam === 'seyun' ? unseParam : undefined
   const ageGroup=birthYearToGroup(yearParam)
   const genderFilter=genderToFilter(gender)
   if(pickedQuestions===null && !chartOnly){
@@ -314,6 +323,7 @@ function ResultNewContent() {
           gender={genderFilter}
           personName={personName||undefined}
           ageLabel={`${new Date().getFullYear()-yearParam}세`}
+          unseEntry={unseEntry}
           onSubmit={(qs)=>setPickedQuestions(qs)}
           onBack={()=>router.back()}
         />
@@ -443,7 +453,7 @@ function ResultNewContent() {
           <div style={{marginTop:'10px'}}>
             <TongbyeonView
               input={toTongbyeonInput({
-                name: personName || (titleName.includes('나의')?'나':titleName.replace('님의 만세력','')),
+                name: personName || '나',
                 gender,
                 age: new Date().getFullYear()-yearParam,
                 saju,
