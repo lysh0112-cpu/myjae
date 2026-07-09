@@ -581,10 +581,13 @@ function MulsangInner() {
             )}
           </div>
 
-          <button onClick={goConsult}
-            style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'transparent', border: '1px solid #c8783c', color: '#96502e', fontSize: '14px', fontWeight: 500, cursor: 'pointer', marginTop: '8px', marginBottom: '12px' }}>
-            🔮 이 그림에 대해 전문가와 상담하기 →
-          </button>
+          {/* 전문가 상담 연결 — 현재 숨김 (되살리려면 false를 true로) */}
+          {false && (
+            <button onClick={goConsult}
+              style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'transparent', border: '1px solid #c8783c', color: '#96502e', fontSize: '14px', fontWeight: 500, cursor: 'pointer', marginTop: '8px', marginBottom: '12px' }}>
+              🔮 이 그림에 대해 전문가와 상담하기 →
+            </button>
+          )}
 
           {drawActive && (
             <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '14px', padding: '14px' }}>
