@@ -7,13 +7,15 @@ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
 import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 
 // ── 사람 선택 모달을 여는 서비스 설정 ──
-// (지금은 "사주"만 연결. 검증 후 다른 서비스로 확장 예정)
+// 사주 + 대운 + 세운(연도별운세) 연결. 셋 다 같은 흐름:
+//   버튼 → 사람 선택 → result-new (사주는 그냥, 대운/세운은 ?unse=로 진입)
 interface PickConfig {
   serviceLabel: string
   headline: string
   serviceType: string
   submitLabel: string
   resultPath: string   // 사람 선택 후 이동할 결과 화면
+  unse?: 'daeun' | 'seyun'   // 시간운 진입이면 지정. 없으면 사주.
 }
 const PICK_CONFIG: Record<string, PickConfig> = {
   '사주': {
@@ -22,6 +24,22 @@ const PICK_CONFIG: Record<string, PickConfig> = {
     serviceType: 'saju',
     submitLabel: '저장하고 사주 보기',
     resultPath: '/manseryeok/result-new',
+  },
+  '대운': {
+    serviceLabel: '대운 (10년 흐름)',
+    headline: '누구의 대운을 볼까요?',
+    serviceType: 'daeun',
+    submitLabel: '저장하고 대운 보기',
+    resultPath: '/manseryeok/result-new',
+    unse: 'daeun',
+  },
+  '연도별운세': {
+    serviceLabel: '세운 (올해·달별)',
+    headline: '누구의 세운을 볼까요?',
+    serviceType: 'seyun',
+    submitLabel: '저장하고 세운 보기',
+    resultPath: '/manseryeok/result-new',
+    unse: 'seyun',
   },
 }
 
@@ -420,6 +438,7 @@ export default function HomeNew() {
       {/* 사람 선택 모달 (공용) */}
       {pickService && PICK_CONFIG[pickService] && (() => {
         const cfg = PICK_CONFIG[pickService]
+        const unseQS = cfg.unse ? `unse=${cfg.unse}` : ''
         return (
           <PersonPickerModal
             open={true}
@@ -428,11 +447,13 @@ export default function HomeNew() {
             serviceType={cfg.serviceType}
             submitLabel={cfg.submitLabel}
             onPick={(person: SavedPerson) => {
-              router.push(`${cfg.resultPath}?${toResultQuery(person)}`)
+              const q = toResultQuery(person)
+              router.push(`${cfg.resultPath}?${q}${unseQS ? `&${unseQS}` : ''}`)
             }}
             onPickMe={() => {
-              // "나" → URL 없이 이동 → result-new가 profiles(내 사주)를 띄움
-              router.push(cfg.resultPath)
+              // "나" → 생년월일 URL 없이 이동 → result-new가 profiles(내 정보)를 띄움.
+              //   시간운이면 unse만 붙인다.
+              router.push(unseQS ? `${cfg.resultPath}?${unseQS}` : cfg.resultPath)
             }}
             onClose={() => setPickService(null)}
           />
