@@ -25,6 +25,13 @@ const PICK_CONFIG: Record<string, PickConfig> = {
     submitLabel: '저장하고 사주 보기',
     resultPath: '/manseryeok/result-new',
   },
+  '내사주그림': {
+    serviceLabel: '내 사주 그림',
+    headline: '누구의 사주를 그릴까요?',
+    serviceType: 'mulsang',
+    submitLabel: '저장하고 그림 보기',
+    resultPath: '/manseryeok/mulsang',
+  },
   '대운': {
     serviceLabel: '대운 (10년 흐름)',
     headline: '누구의 대운을 볼까요?',
