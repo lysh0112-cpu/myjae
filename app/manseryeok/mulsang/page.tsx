@@ -1,11 +1,16 @@
 'use client'
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsin } from '@/lib/saju/yongsin'
+import { calcSimsanOhaeng, toPercentList } from '@/lib/saju/simsanOhaeng'
 import { buildMulsangPrompt, STYLE_CONFIGS } from '@/lib/saju/mulsangPrompt'
+import { buildMulsangTongbyeonPrompt, type Ohaeng } from '@/lib/saju/mulsangTongbyeonPrompt'
+import { MULSANG_QUESTIONS, groupMulsangByCategory } from '@/lib/saju/mulsangQuestions'
+import OhaengPentagon from '@/app/manseryeok/result-new/OhaengPentagon'
 import PageHeader from '@/app/components/common/PageHeader'
 import { supabase } from '@/lib/supabase'
+import type { SajuQuestion } from '@/lib/saju/questions'
 
 interface Commentary {
   title: string
@@ -38,6 +43,7 @@ function MulsangInner() {
     gender: string; calType: string
     year: number; month: number; day: number
     leapMonth: string; hourIdx: number | null
+    name?: string
   } | null>(null)
 
   const [drawPrice, setDrawPrice] = useState(19900)
@@ -102,6 +108,44 @@ function MulsangInner() {
   const [loading, setLoading] = useState(false)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [commentary, setCommentary] = useState<Commentary | null>(null)
+
+  // ── 오행·용신·월지 (그림 해설 통변 재료) ──
+  const monthBranch = saju.find(p => p.pillar === '월주')?.branch ?? ''
+  const hourBranch = saju.find(p => p.pillar === '시주')?.branch ?? null
+  const solarMonth = info?.month ?? 0
+  const solarDay = info?.day ?? 0
+  const ohaeng = useMemo(
+    () => (saju.length > 0 ? toPercentList(calcSimsanOhaeng(saju, solarMonth, solarDay, hourBranch)) : []),
+    [saju, solarMonth, solarDay, hourBranch],
+  )
+  const yongsinResult = useMemo(
+    () => (saju.length > 0 && dayStem ? calcYongsin(saju, dayStem) : null),
+    [saju, dayStem],
+  )
+  // 오행 점수(100점)·최강·결핍 (통변 프롬프트용)
+  const ohaengScore = useMemo(() => {
+    const s: Record<Ohaeng, number> = { 목: 0, 화: 0, 토: 0, 금: 0, 수: 0 }
+    for (const o of ohaeng) s[o.el as Ohaeng] = o.pct
+    return s
+  }, [ohaeng])
+  const topElement = useMemo<Ohaeng>(() => {
+    let top: Ohaeng = '목'; let max = -1
+    for (const k of ['목', '화', '토', '금', '수'] as Ohaeng[]) if (ohaengScore[k] > max) { max = ohaengScore[k]; top = k }
+    return top
+  }, [ohaengScore])
+  const lackElements = useMemo<Ohaeng[]>(
+    () => (['목', '화', '토', '금', '수'] as Ohaeng[]).filter(k => ohaengScore[k] <= 10),
+    [ohaengScore],
+  )
+  const yongsinElement = (yongsinResult?.yongsin ?? '') as Ohaeng | ''
+
+  // ── 통변(그림 해설) 상태 ──
+  const [showTongbyeon, setShowTongbyeon] = useState(false)      // 통변 영역 펼침
+  const [pickedQ, setPickedQ] = useState<Set<string>>(new Set()) // 고른 질문 id
+  const [tongLoading, setTongLoading] = useState(false)
+  const [tongResult, setTongResult] = useState<string | null>(null)
+  const [openCat, setOpenCat] = useState<string | null>(null)   // 아코디언: 열린 대분류
+  const [openWonguk, setOpenWonguk] = useState(false)           // 사주 원국 아코디언
 
   useEffect(() => {
     const saved = localStorage.getItem(MULSANG_RESULT_KEY)
@@ -209,6 +253,76 @@ function MulsangInner() {
     setPayOpen(true)
   }
 
+  // ── 그림 해설 통변 생성 (질문 골라서 or 전체 대략) ──
+  function toggleQ(id: string) {
+    setPickedQ(prev => {
+      const n = new Set(prev)
+      if (n.has(id)) n.delete(id); else n.add(id)
+      return n
+    })
+  }
+  async function runTongbyeon(mode: 'selected' | 'all') {
+    if (!dayStem || saju.length === 0) return
+    const questions: SajuQuestion[] =
+      mode === 'all'
+        ? []
+        : MULSANG_QUESTIONS.filter(q => pickedQ.has(q.id))
+    if (mode === 'selected' && questions.length === 0) return
+
+    setTongLoading(true)
+    setTongResult(null)
+    setShowTongbyeon(true)
+    try {
+      const prompt = buildMulsangTongbyeonPrompt(
+        {
+          name: info?.name || '나',
+          age: info?.year ? new Date().getFullYear() - info.year : 0,
+          gender: info?.gender || '',
+          dayStem,
+          monthBranch,
+          ohaengScore,
+          topElement,
+          lackElements,
+          yongsinElement: (yongsinElement || undefined) as Ohaeng | undefined,
+          styleLabel: STYLE_CONFIGS[style]?.label,
+        },
+        questions,
+      )
+      // 기존 사주 통변과 같은 /api/tongbyeon 재사용 (스트리밍)
+      const res = await fetch('/api/tongbyeon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ systemPrompt: prompt, premium: false }),
+      })
+      if (!res.ok || !res.body) {
+        setTongResult('통변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
+        setTongLoading(false)
+        return
+      }
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let acc = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const chunk = decoder.decode(value)
+        for (const line of chunk.split('\n')) {
+          if (!line.startsWith('data: ')) continue
+          const d = line.slice(6)
+          if (d === '[DONE]') continue
+          try {
+            const parsed = JSON.parse(d)
+            if (parsed.text) { acc += parsed.text; setTongResult(acc) }
+          } catch {}
+        }
+      }
+    } catch {
+      setTongResult('통변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
+    } finally {
+      setTongLoading(false)
+    }
+  }
+
   function goConsult() {
     // 상담 신청 시점에 현재 물상도(그림+해설)를 세션에 확실히 담는다.
     // (그림을 새로 뽑았든, 예전 결과를 복원했든 항상 연결되게)
@@ -314,6 +428,93 @@ function MulsangInner() {
               <div style={{ fontSize: '14px', color: '#e0dce8', lineHeight: 1.8 }}>{s.text}</div>
             </div>
           ))}
+
+          {/* ── 오행표 + 사주원국 + 그림 해설 통변 (밝은 카드) ── */}
+          <div style={{ background: '#FDF6F0', borderRadius: '16px', padding: '14px', margin: '4px 0 14px', color: '#3a2e28' }}>
+
+            {/* 오행표 — 그림 바로 아래, 항상 펼침 */}
+            {ohaeng.length > 0 && (
+              <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '12px', padding: '12px', marginBottom: '10px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#96502e', marginBottom: '4px' }}>오행 분석 — 그림이 이렇게 그려진 이유</div>
+                <div style={{ fontSize: '11px', color: '#b4785a', marginBottom: '8px' }}>넘치는 기운은 풍성하게, 부족한 기운은 그림 속 빛으로 채워요</div>
+                <OhaengPentagon ohaeng={ohaeng} />
+              </div>
+            )}
+
+            {/* 사주 원국 — 아코디언(접힘 기본) */}
+            <div style={{ background: '#fff', border: '0.5px solid #f0e0d5', borderRadius: '12px', marginBottom: '10px', overflow: 'hidden' }}>
+              <div onClick={() => setOpenWonguk(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 14px', cursor: 'pointer' }}>
+                <span style={{ flex: 1, fontSize: '13px', fontWeight: 700, color: '#3a2e28' }}>사주 원국 (내 여덟 글자)</span>
+                <span style={{ color: '#c8783c', fontSize: '12px' }}>{openWonguk ? '▾' : '▸'}</span>
+              </div>
+              {openWonguk && (
+                <div style={{ padding: '4px 14px 14px', display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                  {saju.map((p, i) => (
+                    <div key={i} style={{ flex: 1, textAlign: 'center', background: '#fdf6f0', borderRadius: '8px', padding: '8px 4px' }}>
+                      <div style={{ fontSize: '10px', color: '#b4785a', marginBottom: '3px' }}>{p.pillar}</div>
+                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#96502e' }}>{p.stem}</div>
+                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#6e50a0' }}>{p.branch}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 그림 해설 통변 안내 */}
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#96502e', margin: '4px 2px 4px' }}>그림에서 궁금한 걸 골라보세요</div>
+            <div style={{ fontSize: '11px', color: '#b4785a', margin: '0 2px 10px' }}>안 고르면 그림 전체를 대략 풀어드려요</div>
+
+            {/* 카테고리별 질문 (아코디언) */}
+            {groupMulsangByCategory(MULSANG_QUESTIONS).map(({ category, items }) => {
+              const gPicked = items.filter(q => pickedQ.has(q.id)).length
+              const open = openCat === category
+              return (
+                <div key={category} style={{ border: `0.5px solid ${gPicked > 0 ? '#6e50a055' : '#f0e0d5'}`, borderRadius: '12px', marginBottom: '8px', overflow: 'hidden' }}>
+                  <div onClick={() => setOpenCat(open ? null : category)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '11px 12px', background: gPicked > 0 ? '#6e50a014' : '#fff', cursor: 'pointer' }}>
+                    <span style={{ flex: 1, fontSize: '13px', fontWeight: 700, color: '#6e50a0' }}>{category}</span>
+                    {gPicked > 0 && <span style={{ fontSize: '10px', color: '#fff', background: '#6e50a0', borderRadius: '9px', padding: '2px 7px' }}>{gPicked}</span>}
+                    <span style={{ color: '#6e50a0', fontSize: '12px' }}>{open ? '▾' : '▸'}</span>
+                  </div>
+                  {open && (
+                    <div style={{ padding: '8px 10px' }}>
+                      {items.map(q => {
+                        const on = pickedQ.has(q.id)
+                        return (
+                          <div key={q.id} onClick={() => toggleQ(q.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 8px', borderRadius: '8px', background: on ? '#6e50a014' : 'transparent', marginBottom: '3px', cursor: 'pointer' }}>
+                            <span style={{ width: '18px', height: '18px', borderRadius: '5px', border: `1.5px solid ${on ? '#6e50a0' : '#d8c4b4'}`, background: on ? '#6e50a0' : '#fff', color: '#fff', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{on ? '✓' : ''}</span>
+                            <span style={{ fontSize: '12.5px', color: '#3a2e28' }}>{q.question}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+
+            {/* 통변 실행 버튼 */}
+            <button onClick={() => runTongbyeon('selected')} disabled={pickedQ.size === 0 || tongLoading}
+              style={{ width: '100%', height: '46px', background: pickedQ.size > 0 ? '#b46e46' : '#d8c4b4', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: pickedQ.size > 0 ? 'pointer' : 'not-allowed', marginTop: '4px' }}>
+              {pickedQ.size > 0 ? `${pickedQ.size}개 골라 그림 풀이 받기` : '궁금한 것을 골라주세요'}
+            </button>
+            <button onClick={() => runTongbyeon('all')} disabled={tongLoading}
+              style={{ width: '100%', height: '42px', background: 'transparent', border: '0.5px solid #d8c4b4', borderRadius: '12px', color: '#96502e', fontSize: '13px', cursor: 'pointer', marginTop: '8px' }}>
+              그냥 전체 대략 해설 볼래요
+            </button>
+
+            {/* 통변 결과 */}
+            {showTongbyeon && (
+              <div style={{ marginTop: '14px' }}>
+                {tongLoading ? (
+                  <div style={{ textAlign: 'center', padding: '24px', color: '#b4785a', fontSize: '13px' }}>그림을 찬찬히 살펴보는 중이에요…</div>
+                ) : tongResult ? (
+                  <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '12px', padding: '14px', fontSize: '13.5px', lineHeight: 1.85, color: '#3a2e28', whiteSpace: 'pre-wrap' }}>
+                    {tongResult}
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
 
           <button onClick={goConsult}
             style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'transparent', border: `1px solid ${gold}`, color: gold, fontSize: '14px', fontWeight: 500, cursor: 'pointer', marginTop: '8px', marginBottom: '12px' }}>
