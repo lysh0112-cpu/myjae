@@ -133,7 +133,16 @@ export async function listSavedPeople(): Promise<SavedPerson[]> {
     .order('created_at', { ascending: false })
   if (error) { console.error('listSavedPeople', error); return [] }
   // input_data가 문자열로 올 수도 있어 안전 파싱
-  return (data ?? []).map(normalizeRow)
+  // ⚠️ saju_records는 '사람'과 '궁합 기록'을 함께 담는다.
+  //    궁합 기록(연인=couple / 부부=married)은 두 사람 쌍이라 '한 사람'으로
+  //    쓸 수 없으므로 사람 목록에서 제외한다.
+  //    (service_type이 null이거나 사주/사람인 것은 그대로 사람으로 취급)
+  return (data ?? [])
+    .filter((row) => {
+      const st = row.service_type as string
+      return st !== 'couple' && st !== 'married'
+    })
+    .map(normalizeRow)
 }
 
 function normalizeRow(row: Record<string, unknown>): SavedPerson {
