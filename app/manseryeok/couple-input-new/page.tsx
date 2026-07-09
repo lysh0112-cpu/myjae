@@ -72,9 +72,10 @@ function CoupleInputInner() {
     const pack = (s: Slot) => encodeURIComponent(JSON.stringify({
       ...s.input,
       name: s.name,
+      isMe: s.isMe ? 'true' : 'false',
       ...(mode === 'couple' ? { job: s.job ?? '', mbti: s.mbti ?? '' } : {}),
     }))
-    router.push(`/manseryeok/couple-result?mode=${mode}&person1=${pack(slot1)}&person2=${pack(slot2)}`)
+    router.push(`/manseryeok/couple-result-new?mode=${mode}&person1=${pack(slot1)}&person2=${pack(slot2)}`)
   }
 
   return (
