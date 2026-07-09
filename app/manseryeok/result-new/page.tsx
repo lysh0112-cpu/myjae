@@ -464,6 +464,7 @@ function ResultNewContent() {
               })}
               questions={pickedQuestions}
               premium={isPaid}
+              unseEntry={unseEntry}
               onBack={()=>setPickedQuestions(null)}
             />
           </div>
