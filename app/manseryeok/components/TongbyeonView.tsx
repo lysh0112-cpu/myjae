@@ -101,9 +101,16 @@ export interface TongbyeonViewProps {
   questions: SajuQuestion[]
   premium?: boolean
   onBack?: () => void
+  // 무슨 통변인지: 없으면 사주, 'daeun' 대운, 'seyun' 세운(월운 포함)
+  unseEntry?: 'daeun' | 'seyun'
 }
 
-export default function TongbyeonView({ input, questions, premium, onBack }: TongbyeonViewProps) {
+export default function TongbyeonView({ input, questions, premium, onBack, unseEntry }: TongbyeonViewProps) {
+  // 통변 섹션 제목: 대운/세운/사주에 맞춰. 이름이 '나'면 "나의 ~ 이야기".
+  const kindWord = unseEntry === 'daeun' ? '대운' : unseEntry === 'seyun' ? '세운' : '사주'
+  const storyTitle = input.name === '나'
+    ? `나의 ${kindWord} 이야기`
+    : `${input.name}님의 ${kindWord} 이야기`
   const prompt = useMemo(
     () => buildTongbyeonPrompt(input, questions, { premium }),
     [input, questions, premium]
@@ -166,7 +173,7 @@ export default function TongbyeonView({ input, questions, premium, onBack }: Ton
       <div style={{ padding: '13px 16px', borderBottom: `0.5px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
         {onBack && <span onClick={onBack} style={{ color: C.subLight, fontSize: 18, cursor: 'pointer' }}>{'\u2039'}</span>}
         <div style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.title }}>{input.name}님의 사주 이야기</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.title }}>{storyTitle}</div>
           <div style={{ fontSize: 10, color: C.point, marginTop: 1 }}>각 제목을 누르면 해설이 펼쳐져요</div>
         </div>
         {onBack && <span style={{ width: 16 }} />}
