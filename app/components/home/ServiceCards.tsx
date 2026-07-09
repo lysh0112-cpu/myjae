@@ -71,7 +71,7 @@ const SLIDES = [
     sub: '연인·부부 궁합 정밀 분석', link: '궁합 보러가기 →',
     bg: 'linear-gradient(135deg, #fff0e0, #ffe5cc)',
     tagColor: '#d4843a', titleColor: '#7a4010', subColor: '#a06020',
-    href: '/manseryeok/couple-input-new?mode=couple',
+    href: '/manseryeok/couple-storage?mode=couple',
   },
 ]
 
@@ -88,8 +88,8 @@ const SERVICES = [
   { name: '내사주그림', color: '#b46e46', href: '/manseryeok/mulsang', cat: '사주명리' },
   { name: '대운',       color: '#3c82a0', href: '/manseryeok', cat: '사주명리' },
   { name: '연월운세', color: '#8c783c', href: '/manseryeok', cat: '사주명리' },
-  { name: '연인궁합',   color: '#c85a8c', href: '/manseryeok/couple-input-new?mode=couple', cat: '궁합' },
-  { name: '부부궁합',   color: '#c85a6e', href: '/manseryeok/couple-input-new?mode=married', cat: '궁합' },
+  { name: '연인궁합',   color: '#c85a8c', href: '/manseryeok/couple-storage?mode=couple', cat: '궁합' },
+  { name: '부부궁합',   color: '#c85a6e', href: '/manseryeok/couple-storage?mode=married', cat: '궁합' },
   { name: '결혼택일',   color: '#96643c', href: '/manseryeok/wedding-timing', cat: '택일' },
   { name: '출산택일',   color: '#b45a78', href: '/manseryeok/birth-timing', cat: '택일' },
   { name: '내이름개명', color: '#5a825a', href: '/manseryeok/naming', cat: '개명' },
