@@ -83,7 +83,9 @@ export async function saveCoupleRecord(args: {
     .from('saju_records')
     .insert({
       user_id: uid,
-      service_type: 'couple',
+      // 연인=couple / 부부=married 로 DB에서 분리 저장(대규모 조회 대비).
+      // mode 값('couple'|'married')이 그대로 service_type이 된다.
+      service_type: args.mode,
       title: `${args.name1} ♥ ${args.name2}`,
       relation: args.relation,
       input_data: blob,
@@ -99,7 +101,8 @@ export async function saveCoupleRecord(args: {
 // blob → CoupleRecord 변환
 function toRecord(r: {
   id: string; relation: string | null; title: string;
-  input_data: unknown; result_data: unknown; created_at: string
+  input_data: unknown; result_data: unknown; created_at: string;
+  service_type?: string | null
 }): CoupleRecord | null {
   const blob = r.input_data as CoupleInputBlob | null
   if (!blob || !blob.person1 || !blob.person2) return null
@@ -111,11 +114,16 @@ function toRecord(r: {
   const grade =
     blob.grade ||
     ((r.result_data as { grade?: string } | null)?.grade ?? '')
+  // mode는 DB의 service_type을 우선(couple/married). 없으면 blob.mode로 보조.
+  const mode: CoupleMode =
+    r.service_type === 'married' || r.service_type === 'couple'
+      ? r.service_type
+      : (blob.mode || 'couple')
   return {
     id: r.id,
-    mode: blob.mode || 'couple',
+    mode,
     name1, name2,
-    relation: r.relation || (blob.mode === 'married' ? '부부' : '연인'),
+    relation: r.relation || (mode === 'married' ? '부부' : '연인'),
     grade,
     createdAt: r.created_at,
     input1: blob.person1,
@@ -125,36 +133,43 @@ function toRecord(r: {
   }
 }
 
-// ── 목록 (내 궁합 전체, 최신순) ──
-//   mode 필터('couple'|'married'|undefined=전체)는 화면에서 걸러도 되지만
-//   여기서 옵션으로 받는다.
+// ── 목록 (내 궁합, 최신순) ──
+//   [대규모] service_type이 곧 mode(couple/married)이므로 DB에서 바로 거른다.
+//   mode 지정 → 그 종류만 DB가 반환(연인 보관함은 연인만, 부부는 부부만).
+//   mode 생략(전체) → couple+married 둘 다.
+//   화면 필터(전부 받아 버리는 낭비) 없음 → user_id+service_type 인덱스를 그대로 탄다.
 export async function listCoupleRecords(mode?: CoupleMode): Promise<CoupleRecord[]> {
   const { data: auth } = await supabase.auth.getUser()
   const uid = auth?.user?.id
   if (!uid) return []
 
-  const { data, error } = await supabase
+  const base = supabase
     .from('saju_records')
-    .select('id, relation, title, input_data, result_data, created_at')
+    .select('id, relation, title, input_data, result_data, created_at, service_type')
     .eq('user_id', uid)
-    .eq('service_type', 'couple')
-    .order('created_at', { ascending: false })
+
+  // 재할당 없이 조건에 따라 쿼리를 완성(supabase-js 타입 안전).
+  const filtered = mode
+    ? base.eq('service_type', mode)                    // 연인이면 couple만, 부부면 married만
+    : base.in('service_type', ['couple', 'married'])   // 전체(두 종류)
+
+  const { data, error } = await filtered.order('created_at', { ascending: false })
 
   if (error || !data) return []
 
-  const list = data
+  return data
     .map(toRecord)
     .filter((x): x is CoupleRecord => x !== null)
-
-  return mode ? list.filter(r => r.mode === mode) : list
 }
 
 // ── 특정 쌍의 지난 기록 (다시보기 판단용) ──
+//   mode를 주면 그 종류(연인/부부) 안에서만 찾는다. 같은 두 사람이라도
+//   연인 기록과 부부 기록은 별개이므로 mode로 구분하는 게 정확하다.
 export async function findCoupleRecordByPair(
-  p1: SavedInputData, p2: SavedInputData
+  p1: SavedInputData, p2: SavedInputData, mode?: CoupleMode
 ): Promise<CoupleRecord | null> {
   const key = pairKeyOf(p1, p2)
-  const all = await listCoupleRecords()
+  const all = await listCoupleRecords(mode)
   const found = all.find(r => pairKeyOf(r.input1, r.input2) === key)
   return found ?? null
 }
@@ -167,7 +182,7 @@ export async function getCoupleRecord(id: string): Promise<CoupleRecord | null> 
 
   const { data, error } = await supabase
     .from('saju_records')
-    .select('id, relation, title, input_data, result_data, created_at')
+    .select('id, relation, title, input_data, result_data, created_at, service_type')
     .eq('user_id', uid)
     .eq('id', id)
     .maybeSingle()
