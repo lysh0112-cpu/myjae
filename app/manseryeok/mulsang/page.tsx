@@ -178,6 +178,7 @@ function MulsangInner() {
   const [openCat, setOpenCat] = useState<string | null>(null)   // 아코디언: 열린 대분류
   const [openWonguk, setOpenWonguk] = useState(false)           // 사주 원국 아코디언
   const [openOhaeng, setOpenOhaeng] = useState(false)           // 오행도 아코디언
+  const [openImage, setOpenImage] = useState(true)              // 그림 아코디언 (기본 펼침)
 
   useEffect(() => {
     const saved = localStorage.getItem(MULSANG_RESULT_KEY)
@@ -427,6 +428,7 @@ function MulsangInner() {
   if (hasResult) {
     return (
       <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
         {/* ── 상단 고정 영역: 헤더 + 사주원국 + 오행도 + 그림 (스크롤해도 고정, 그림에 집중) ── */}
         <div style={{ position: 'sticky', top: 0, zIndex: 50, background: '#FDF6F0' }}>
           {/* 밝은 헤더 */}
@@ -472,46 +474,39 @@ function MulsangInner() {
               </div>
             )}
           </div>
+        </div>
+        {/* ── 여기서 상단 고정 끝. 아래는 스크롤 흐름 ── */}
 
-          {/* ③ 그림 — 어두운 액자로 선명하게 (액자만 어둡게, 나머지는 피치) */}
-          <div style={{ background: '#1a1a18' }}>
-            {imageUrl ? (
-              <img src={imageUrl} alt="사주 풍경화" style={{ width: '100%', display: 'block' }} />
-            ) : (
-              <div style={{ aspectRatio: '1/1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#5555aa', background: cardBg }}>
-                <span style={{ fontSize: '40px' }}>🖼️</span>
-                <span style={{ fontSize: '12px' }}>그림 생성은 곧 제공됩니다</span>
-              </div>
+          {/* ③ 그림 — 아코디언(펼침 기본). 접으면 상단이 짧아져 해설 집중, 펼치면 크게 */}
+          <div style={{ background: '#fffbf7', borderTop: '0.5px solid #f0e0d5' }}>
+            <div onClick={() => setOpenImage(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '11px 16px', cursor: 'pointer' }}>
+              <span style={{ flex: 1, fontSize: '13px', fontWeight: 700, color: '#96502e' }}>내 사주 그림</span>
+              <span style={{ fontSize: '11px', color: '#b4785a' }}>{openImage ? '접기' : '크게 보기'}</span>
+              <span style={{ color: '#c8783c', fontSize: '12px' }}>{openImage ? '▾' : '▸'}</span>
+            </div>
+            {openImage && (
+              <>
+                <div style={{ background: '#1a1a18' }}>
+                  {imageUrl ? (
+                    <img src={imageUrl} alt="사주 풍경화" style={{ width: '100%', display: 'block' }} />
+                  ) : (
+                    <div style={{ aspectRatio: '1/1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#5555aa', background: cardBg }}>
+                      <span style={{ fontSize: '40px' }}>🖼️</span>
+                      <span style={{ fontSize: '12px' }}>그림 생성은 곧 제공됩니다</span>
+                    </div>
+                  )}
+                </div>
+                {imageUrl && (
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', padding: '8px', background: '#fffbf7', borderBottom: '0.5px solid #f0e0d5' }}>
+                    <a href={imageUrl} download="mulsang.png" style={{ fontSize: '13px', color: '#96502e', textDecoration: 'none' }}>⬇ 저장</a>
+                    <button onClick={handleShare} style={{ fontSize: '13px', color: '#96502e', background: 'none', border: 'none', cursor: 'pointer' }}>↗ 공유</button>
+                  </div>
+                )}
+              </>
             )}
           </div>
-          {/* 저장/공유 바 — 공통 피치 톤 */}
-          {imageUrl && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', padding: '8px', background: '#fffbf7', borderBottom: '0.5px solid #f0e0d5' }}>
-              <a href={imageUrl} download="mulsang.png" style={{ fontSize: '13px', color: '#96502e', textDecoration: 'none' }}>⬇ 저장</a>
-              <button onClick={handleShare} style={{ fontSize: '13px', color: '#96502e', background: 'none', border: 'none', cursor: 'pointer' }}>↗ 공유</button>
-            </div>
-          )}
-        </div>
 
         <div style={{ padding: '16px' }}>
-          {/* ④ 그림 기본 해설 (밝은 카드) */}
-          <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '16px', padding: '16px', marginBottom: '14px' }}>
-            <div style={{ fontSize: '17px', fontWeight: 700, color: '#96502e', marginBottom: '14px', lineHeight: 1.5 }}>
-              "{commentary.title}"
-            </div>
-            {[
-              { label: '주인공 (나)', text: commentary.subject },
-              { label: '환경', text: commentary.environment },
-              { label: '핵심 에너지 (용신)', text: commentary.yongsin },
-              { label: '삶의 조언', text: commentary.advice },
-            ].filter(s => s.text).map((s, i) => (
-              <div key={i} style={{ borderLeft: '3px solid #c8783c', padding: '2px 12px', marginBottom: '14px' }}>
-                <div style={{ fontSize: '12px', color: '#c8783c', marginBottom: '4px', fontWeight: 500 }}>{s.label}</div>
-                <div style={{ fontSize: '14px', color: '#3a2e28', lineHeight: 1.8 }}>{s.text}</div>
-              </div>
-            ))}
-          </div>
-
           {/* ⑤ 그림 해설 통변 (질문 선택) ── */}
           <div style={{ margin: '4px 0 14px', color: '#3a2e28' }}>
             <div style={{ fontSize: '13px', fontWeight: 700, color: '#96502e', margin: '4px 2px 4px' }}>그림에서 궁금한 걸 골라보세요</div>
@@ -558,7 +553,10 @@ function MulsangInner() {
             {showTongbyeon && (
               <div style={{ marginTop: '14px' }}>
                 {tongLoading ? (
-                  <div style={{ textAlign: 'center', padding: '24px', color: '#b4785a', fontSize: '13px' }}>그림을 찬찬히 살펴보는 중이에요…</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '24px', color: '#b4785a', fontSize: '13px' }}>
+                    <span style={{ fontSize: '28px', display: 'inline-block', animation: 'spin 1.1s linear infinite', color: '#c8783c' }}>✦</span>
+                    <span>그림을 찬찬히 살펴보는 중이에요…</span>
+                  </div>
                 ) : tongResult ? (
                   <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '12px', padding: '14px', fontSize: '13.5px', lineHeight: 1.85, color: '#3a2e28', whiteSpace: 'pre-wrap' }}>
                     {tongResult}
