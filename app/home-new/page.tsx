@@ -7,7 +7,7 @@ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
 import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 
 // ── 사람 선택 모달을 여는 서비스 설정 ──
-// 사주 + 대운 + 세운(연도별운세) 연결. 셋 다 같은 흐름:
+// 사주 + 대운 + 세운(연월운세) 연결. 셋 다 같은 흐름:
 //   버튼 → 사람 선택 → result-new (사주는 그냥, 대운/세운은 ?unse=로 진입)
 interface PickConfig {
   serviceLabel: string
@@ -33,7 +33,7 @@ const PICK_CONFIG: Record<string, PickConfig> = {
     resultPath: '/manseryeok/result-new',
     unse: 'daeun',
   },
-  '연도별운세': {
+  '연월운세': {
     serviceLabel: '세운 (올해·달별)',
     headline: '누구의 세운을 볼까요?',
     serviceType: 'seyun',
@@ -80,7 +80,7 @@ const SERVICES = [
   { name: '사주',       color: '#6e50a0', href: '/manseryeok', cat: '사주명리' },
   { name: '내사주그림', color: '#b46e46', href: '/manseryeok/mulsang', cat: '사주명리' },
   { name: '대운',       color: '#3c82a0', href: '/manseryeok', cat: '사주명리' },
-  { name: '연도별운세', color: '#8c783c', href: '/manseryeok', cat: '사주명리' },
+  { name: '연월운세', color: '#8c783c', href: '/manseryeok', cat: '사주명리' },
   { name: '연인궁합',   color: '#c85a8c', href: '/manseryeok/couple-input', cat: '궁합' },
   { name: '부부궁합',   color: '#c85a6e', href: '/manseryeok/couple-input', cat: '궁합' },
   { name: '결혼택일',   color: '#96643c', href: '/manseryeok/wedding-timing', cat: '택일' },
