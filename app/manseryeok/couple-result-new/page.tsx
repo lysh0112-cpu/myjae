@@ -290,6 +290,9 @@ function toCouplePerson(p: PersonRaw, saju: SajuPillarSimple[]): CouplePerson {
   const find = (k: string) => saju.find(s => s.pillar === k)
   const y = find('년주'), mo = find('월주'), da = find('일주'), h = find('시주')
   const birth = p.year ? `${p.year}.${p.month}.${p.day}` : ''
+  // 부부 궁합 통변의 나이대 톤 조절용 만 나이(대략). 생년만 있으면 계산.
+  const birthYear = parseInt(p.year || '')
+  const age = birthYear ? new Date().getFullYear() - birthYear : undefined
   return {
     name: p.name || '', gender: p.gender || '', birthLabel: birth,
     yearPillar: pill(y?.stem ?? '', y?.branch ?? ''),
@@ -297,6 +300,7 @@ function toCouplePerson(p: PersonRaw, saju: SajuPillarSimple[]): CouplePerson {
     dayPillar: pill(da?.stem ?? '', da?.branch ?? ''),
     hourPillar: pill(h?.stem ?? '', h?.branch ?? ''),
     dayStem: da?.stem ?? '',
+    age,
   }
 }
 
