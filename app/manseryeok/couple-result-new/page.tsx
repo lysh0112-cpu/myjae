@@ -198,6 +198,41 @@ function dummyHeadlineSafe(s: string): string {
   return s.replace('undefined', '').replace('님과 님', '두 사람')
 }
 
+// ── 통변 텍스트 → 카드 아코디언 파싱 (사주/대운/연운 TongbyeonView와 동일 방식) ──
+interface TCard { title: string; body: string; icon: string }
+function tbIcon(t: string): string {
+  if (t.includes('큰 그림') || t.includes('첫인상') || t.includes('만남')) return '✨'
+  if (t.includes('끌림') || t.includes('사랑') || t.includes('인연')) return '💗'
+  if (t.includes('성격') || t.includes('기질') || t.includes('마음')) return '🌙'
+  if (t.includes('소통') || t.includes('대화')) return '🤝'
+  if (t.includes('지속') || t.includes('오래')) return '🌿'
+  if (t.includes('갈등') || t.includes('조심') || t.includes('주의')) return '⚠️'
+  if (t.includes('속궁합') || t.includes('친밀')) return '💞'
+  if (t.includes('결혼') || t.includes('미래') || t.includes('시기')) return '💍'
+  if (t.includes('재물') || t.includes('돈')) return '💰'
+  if (t.includes('개운') || t.includes('조언') || t.includes('살리는') || t.includes('맞춰')) return '🔮'
+  return '🌟'
+}
+function tbClean(s: string): string {
+  return s.replace(/^#{1,6}\s*/, '').replace(/^\s*[-*]{3,}\s*$/, '').replace(/\*\*(.+?)\*\*/g, '$1').replace(/^■\s*/, '').trim()
+}
+function parseTCards(text: string): { intro: string; cards: TCard[] } {
+  const lines = text.split('\n')
+  let intro = ''
+  const cards: TCard[] = []
+  let cur: { title: string; bodyLines: string[] } | null = null
+  const isHeading = (ln: string) => /^\s*(#{1,6}\s*)?■/.test(ln) || /^\s*#{2,6}\s+/.test(ln)
+  for (const ln of lines) {
+    if (isHeading(ln)) {
+      if (cur) cards.push({ title: tbClean(cur.title), body: cur.bodyLines.join('\n').trim(), icon: tbIcon(tbClean(cur.title)) })
+      cur = { title: ln, bodyLines: [] }
+    } else if (cur) { cur.bodyLines.push(ln) }
+    else { const c = tbClean(ln); if (c) intro += (intro ? '\n' : '') + c }
+  }
+  if (cur) cards.push({ title: tbClean(cur.title), body: cur.bodyLines.join('\n').trim(), icon: tbIcon(tbClean(cur.title)) })
+  return { intro, cards: cards.filter(c => c.title || c.body) }
+}
+
 // ============================================================================
 // 결과 뷰: 두 사람 명식 계산 → 등급 → 통변 스트리밍
 // ============================================================================
@@ -277,6 +312,7 @@ function CoupleResultView({
   // 통변
   const [tongLoading, setTongLoading] = useState(false)
   const [tongResult, setTongResult] = useState<string | null>(null)
+  const [openCard, setOpenCard] = useState(0)
   const ranRef = useRef(false)
 
   // 두 사람 명식 계산 + 등급
@@ -338,6 +374,10 @@ function CoupleResultView({
 
   const headline = dummyHeadlineSafe(`${name1}님과 ${name2}님, 두 사람의 만남`)
   const isMe1 = person1.isMe === 'true' || person1.isMe === '1'
+  const { intro: tbIntro, cards: tbCards } = useMemo(
+    () => (tongResult ? parseTCards(tongResult) : { intro: '', cards: [] }),
+    [tongResult],
+  )
 
   return (
     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
@@ -382,22 +422,50 @@ function CoupleResultView({
           right={{ name: name2, birth: person2.year ? `${person2.year}.${person2.month}.${person2.day}` : '', saju: saju2 ?? [] }}
         />
 
-        {/* ④ 통변 */}
-        <div style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: 14, marginTop: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+        {/* ④ 통변 — 질문별 카드 아코디언 (사주/대운/연운과 통일) */}
+        <div style={{ marginTop: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, paddingLeft: 2 }}>
             <span style={{ color: '#c8783c' }}>✦</span>
             <span style={{ fontSize: 13, fontWeight: 500, color: '#96502e' }}>두 사람의 궁합 이야기</span>
           </div>
+
           {tongLoading && !tongResult ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: 24, color: '#b4785a', fontSize: 13 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: 24, color: '#b4785a', fontSize: 13, background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12 }}>
               <span style={{ fontSize: 28, display: 'inline-block', animation: 'spin 1.1s linear infinite', color: '#c8783c' }}>✦</span>
               <span>두 사람의 인연을 찬찬히 살펴보는 중이에요…</span>
               <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
             </div>
           ) : tongResult ? (
-            <div style={{ fontSize: 13, color: '#3a2e28', lineHeight: 1.85, whiteSpace: 'pre-wrap' }}>{tongResult}</div>
+            <>
+              {tbIntro && (
+                <div style={{ fontSize: 12.5, color: '#b4785a', lineHeight: 1.8, marginBottom: 10, paddingLeft: 2 }}>{tbIntro}</div>
+              )}
+              {tbCards.map((c, i) => {
+                const open = tongLoading ? i === tbCards.length - 1 : openCard === i
+                return (
+                  <div key={i} style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, marginBottom: 8, overflow: 'hidden' }}>
+                    <div onClick={() => setOpenCard(open ? -1 : i)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '13px 14px', cursor: 'pointer' }}>
+                      <span style={{ fontSize: 16 }}>{c.icon}</span>
+                      <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: '#96502e', lineHeight: 1.35 }}>{c.title}</span>
+                      <span style={{ color: '#c8783c', fontSize: 12, transition: 'transform .25s', transform: `rotate(${open ? '180' : '0'}deg)` }}>▾</span>
+                    </div>
+                    <div style={{ maxHeight: open ? '3000px' : '0', overflow: 'hidden', transition: 'max-height .3s ease' }}>
+                      <div style={{ fontSize: 13.5, lineHeight: 1.85, color: '#3a2e28', whiteSpace: 'pre-wrap', padding: '0 14px 14px' }}>{c.body}</div>
+                    </div>
+                  </div>
+                )
+              })}
+              {tongLoading && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 4px', color: '#b4785a', fontSize: 12 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#b46e46', animation: 'tbpulse 1s infinite' }} />
+                  정성껏 풀이하고 있어요…
+                  <style>{`@keyframes tbpulse{0%,100%{opacity:.3}50%{opacity:1}}`}</style>
+                </div>
+              )}
+            </>
           ) : (
-            <div style={{ fontSize: 12.5, color: '#b4785a', lineHeight: 1.8, background: '#FDF6F0', borderRadius: 10, padding: '14px 12px', textAlign: 'center' }}>
+            <div style={{ fontSize: 12.5, color: '#b4785a', lineHeight: 1.8, background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: '14px 12px', textAlign: 'center' }}>
               두 사람의 명식을 준비하는 중이에요…
             </div>
           )}
