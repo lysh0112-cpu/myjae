@@ -303,7 +303,6 @@ function CoupleResultView({
   onBack: () => void
   onOther: () => void
 }) {
-  const isAll = pickedQuestions.length === 0
   const [saju1, setSaju1] = useState<SajuPillarSimple[] | null>(null)
   const [saju2, setSaju2] = useState<SajuPillarSimple[] | null>(null)
   const [score, setScore] = useState<CoupleScoreResult | null>(null)
@@ -399,22 +398,6 @@ function CoupleResultView({
             {calcErr ? '두 사람 정보를 다시 확인해 주세요.' : '두 사람의 인연을 살펴보는 중…'}
           </div>
         )}
-
-        {/* 고른 질문 */}
-        <div style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: '10px 13px', marginBottom: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: isAll ? 0 : 6 }}>
-            <span style={{ color: '#c8783c', fontSize: 13 }}>❝</span>
-            <span style={{ flex: 1, fontSize: 12, color: '#b4785a' }}>{isAll ? '두 사람 궁합 전체 총평' : `고른 질문 ${pickedQuestions.length}개`}</span>
-            <span onClick={onBack} style={{ fontSize: 11, color: '#c8783c', cursor: 'pointer' }}>바꾸기</span>
-          </div>
-          {!isAll && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-              {pickedQuestions.map(q => (
-                <span key={q.id} style={{ fontSize: 11, color: '#96502e', background: '#f9ebe0', borderRadius: 8, padding: '3px 8px' }}>{q.question}</span>
-              ))}
-            </div>
-          )}
-        </div>
 
         {/* ②③ 두 사람 명식 */}
         <CoupleWonguk
