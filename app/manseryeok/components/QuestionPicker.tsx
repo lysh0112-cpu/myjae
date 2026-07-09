@@ -22,6 +22,10 @@ import {
   questionsFor, groupByCategory,
   type AgeGroup, type SajuQuestion,
 } from '@/lib/saju/questions'
+import {
+  unseQuestionsForEntry, groupUnseByKind,
+  type UnseEntry, type UnseKind,
+} from '@/lib/saju/unseQuestions'
 
 const C = {
   cardBg: '#FFFBF7',
@@ -64,13 +68,38 @@ export interface QuestionPickerProps {
   ageLabel?: string
   onSubmit: (selected: SajuQuestion[]) => void
   onBack?: () => void
+  // 시간운(대운/세운)일 때만 지정. 없으면 기존 사주 통변 그대로.
+  //   'daeun' → 대운 질문, 'seyun' → 세운+월운 질문(올해/월별 소제목)
+  unseEntry?: UnseEntry
+}
+
+// 화면에 그릴 한 "덩어리" (사주는 1개, 세운은 올해/월별 2개)
+interface Section {
+  kind?: UnseKind          // 시간운일 때만. 소제목 판단용
+  label?: string           // "올해" / "올해 중 몇 월" (시간운일 때만)
+  groups: { category: string; items: SajuQuestion[] }[]
 }
 
 export default function QuestionPicker({
-  ageGroup, gender, personName = '', ageLabel = '', onSubmit, onBack,
+  ageGroup, gender, personName = '', ageLabel = '', onSubmit, onBack, unseEntry,
 }: QuestionPickerProps) {
-  const list = useMemo(() => questionsFor(ageGroup, gender), [ageGroup, gender])
-  const groups = useMemo(() => groupByCategory(list), [list])
+  // 시간운이면 kind별 섹션(올해/월별), 아니면 사주 한 섹션.
+  const sections = useMemo<Section[]>(() => {
+    if (unseEntry) {
+      const list = unseQuestionsForEntry(unseEntry)
+      return groupUnseByKind(list).map(g => ({ kind: g.kind, label: g.label, groups: g.groups }))
+    }
+    const list = questionsFor(ageGroup, gender)
+    return [{ groups: groupByCategory(list) }]
+  }, [unseEntry, ageGroup, gender])
+
+  // 전 섹션의 질문을 평평하게 (전체선택/제출용)
+  const list = useMemo<SajuQuestion[]>(
+    () => sections.flatMap(s => s.groups.flatMap(g => g.items)),
+    [sections],
+  )
+  const groups = useMemo(() => sections.flatMap(s => s.groups), [sections])
+  const isUnse = !!unseEntry
 
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [openCats, setOpenCats] = useState<Set<string>>(
@@ -117,6 +146,37 @@ export default function QuestionPicker({
 
   const n = picked.size
 
+  // 대분류 카드 하나 렌더 (사주·시간운 공용)
+  function renderCategory({ category, items }: { category: string; items: SajuQuestion[] }) {
+    const col = catColor(category)
+    const gPicked = items.filter(q => picked.has(q.id)).length
+    const allOn = gPicked === items.length
+    const open = openCats.has(category)
+    return (
+      <div key={category} style={{ marginBottom: 10, border: `0.5px solid ${gPicked > 0 ? col + '55' : C.border}`, borderRadius: 12, overflow: 'hidden' }}>
+        <div onClick={() => toggleCat(category)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 12px', background: gPicked > 0 ? catBg(category) : '#fff', cursor: 'pointer' }}>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: col }}>{category}</span>
+          {gPicked > 0 && <span style={{ fontSize: 10, color: '#fff', background: col, borderRadius: 9, padding: '2px 7px' }}>{gPicked}</span>}
+          <span onClick={(e) => { e.stopPropagation(); toggleCatAll(category, items) }} style={{ fontSize: 10, color: col, border: `0.5px solid ${col}88`, borderRadius: 8, padding: '3px 8px', background: '#fff' }}>{allOn ? '모두 해제' : '모두 담기'}</span>
+          <span style={{ color: col, fontSize: 12 }}>{open ? '▾' : '▸'}</span>
+        </div>
+        {open && (
+          <div style={{ padding: '8px 10px' }}>
+            {items.map(q => {
+              const on = picked.has(q.id)
+              return (
+                <div key={q.id} onClick={() => toggleQ(q.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 8px', borderRadius: 8, background: on ? catBg(category) : 'transparent', marginBottom: 3, cursor: 'pointer' }}>
+                  <span style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${on ? col : C.disabled}`, background: on ? col : '#fff', color: '#fff', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{on ? '✓' : ''}</span>
+                  <span style={{ fontSize: 12.5, color: C.title }}>{q.question}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div style={{ background: C.cardBg, borderRadius: 18, border: `0.5px solid ${C.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
       {/* 헤더 */}
@@ -144,43 +204,25 @@ export default function QuestionPicker({
             표시할 질문이 없어요.
           </div>
         )}
-        {groups.map(({ category, items }) => {
-          const col = catColor(category)
-          const gPicked = items.filter(q => picked.has(q.id)).length
-          const allOn = gPicked === items.length
-          const open = openCats.has(category)
-          return (
-            <div key={category} style={{ marginBottom: 10, border: `0.5px solid ${gPicked > 0 ? col + '55' : C.border}`, borderRadius: 12, overflow: 'hidden' }}>
-              {/* 헤더 */}
-              <div onClick={() => toggleCat(category)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 12px', background: gPicked > 0 ? catBg(category) : '#fff', cursor: 'pointer' }}>
-                <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: col }}>{category}</span>
-                {gPicked > 0 && <span style={{ fontSize: 10, color: '#fff', background: col, borderRadius: 9, padding: '2px 7px' }}>{gPicked}</span>}
-                <span onClick={(e) => { e.stopPropagation(); toggleCatAll(category, items) }} style={{ fontSize: 10, color: col, border: `0.5px solid ${col}88`, borderRadius: 8, padding: '3px 8px', background: '#fff' }}>{allOn ? '모두 해제' : '모두 담기'}</span>
-                <span style={{ color: col, fontSize: 12 }}>{open ? '▾' : '▸'}</span>
+        {sections.map((sec, si) => (
+          <div key={sec.kind ?? `sec${si}`}>
+            {/* 시간운 소제목 (올해 / 올해 중 몇 월). 사주면 label 없어 안 나옴 */}
+            {isUnse && sec.label && (
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.point, letterSpacing: 0.5, margin: si === 0 ? '2px 2px 8px' : '16px 2px 8px' }}>
+                ━ {sec.label}
               </div>
-              {/* 질문들 */}
-              {open && (
-                <div style={{ padding: '8px 10px' }}>
-                  {items.map(q => {
-                    const on = picked.has(q.id)
-                    return (
-                      <div key={q.id} onClick={() => toggleQ(q.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 8px', borderRadius: 8, background: on ? catBg(category) : 'transparent', marginBottom: 3, cursor: 'pointer' }}>
-                        <span style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${on ? col : C.disabled}`, background: on ? col : '#fff', color: '#fff', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{on ? '✓' : ''}</span>
-                        <span style={{ fontSize: 12.5, color: C.title }}>{q.question}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )
-        })}
+            )}
+            {sec.groups.map(renderCategory)}
+          </div>
+        ))}
       </div>
 
       {/* 하단 버튼 */}
       <div style={{ padding: '11px 14px 15px', borderTop: `0.5px solid ${C.border}`, flexShrink: 0 }}>
         <button onClick={submit} disabled={n === 0} style={{ width: '100%', height: 46, background: n > 0 ? C.brown : C.disabled, border: 'none', borderRadius: 12, color: '#fff', fontSize: 14, fontWeight: 700, cursor: n > 0 ? 'pointer' : 'not-allowed' }}>
-          {n > 0 ? `${n}개 질문으로 사주 풀이 받기` : '궁금한 것을 골라주세요'}
+          {n > 0
+            ? `${n}개 질문으로 ${unseEntry === 'daeun' ? '대운' : unseEntry === 'seyun' ? '세운' : '사주'} 풀이 받기`
+            : '궁금한 것을 골라주세요'}
         </button>
       </div>
     </div>
