@@ -179,6 +179,7 @@ function MulsangInner() {
   const [openWonguk, setOpenWonguk] = useState(false)           // 사주 원국 아코디언
   const [openOhaeng, setOpenOhaeng] = useState(false)           // 오행도 아코디언
   const [openImage, setOpenImage] = useState(true)              // 그림 아코디언 (기본 펼침)
+  const [openPicker, setOpenPicker] = useState(false)           // 질문 고르기 부품 전체 아코디언
 
   useEffect(() => {
     const saved = localStorage.getItem(MULSANG_RESULT_KEY)
@@ -509,39 +510,53 @@ function MulsangInner() {
         <div style={{ padding: '16px' }}>
           {/* ⑤ 그림 해설 통변 (질문 선택) ── */}
           <div style={{ margin: '4px 0 14px', color: '#3a2e28' }}>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: '#96502e', margin: '4px 2px 4px' }}>그림에서 궁금한 걸 골라보세요</div>
-            <div style={{ fontSize: '11px', color: '#b4785a', margin: '0 2px 10px' }}>안 고르면 그림 전체를 대략 풀어드려요</div>
-            {/* 카테고리별 질문 (아코디언, 하나만 선택) */}
-            {groupMulsangByCategory(MULSANG_QUESTIONS).map(({ category, items }) => {
-              const gHasPicked = items.some(q => q.id === pickedQ)
-              const open = openCat === category
-              return (
-                <div key={category} style={{ border: `0.5px solid ${gHasPicked ? '#6e50a055' : '#f0e0d5'}`, borderRadius: '12px', marginBottom: '8px', overflow: 'hidden' }}>
-                  <div onClick={() => setOpenCat(open ? null : category)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '11px 12px', background: gHasPicked ? '#6e50a014' : '#fff', cursor: 'pointer' }}>
-                    <span style={{ flex: 1, fontSize: '13px', fontWeight: 700, color: '#6e50a0' }}>{category}</span>
-                    {gHasPicked && <span style={{ fontSize: '10px', color: '#fff', background: '#6e50a0', borderRadius: '9px', padding: '2px 7px' }}>선택됨</span>}
-                    <span style={{ color: '#6e50a0', fontSize: '12px' }}>{open ? '▾' : '▸'}</span>
-                  </div>
-                  {open && (
-                    <div style={{ padding: '8px 10px' }}>
-                      {items.map(q => {
-                        const on = pickedQ === q.id
-                        return (
-                          <div key={q.id} onClick={() => toggleQ(q.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 8px', borderRadius: '8px', background: on ? '#6e50a014' : 'transparent', marginBottom: '3px', cursor: 'pointer' }}>
-                            <span style={{ width: '18px', height: '18px', borderRadius: '50%', border: `1.5px solid ${on ? '#6e50a0' : '#d8c4b4'}`, background: on ? '#6e50a0' : '#fff', color: '#fff', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{on ? '✓' : ''}</span>
-                            <span style={{ fontSize: '12.5px', color: '#3a2e28' }}>{q.question}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
+            {/* 부품 전체 아코디언 헤더 */}
+            <div onClick={() => setOpenPicker(v => !v)}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '13px 14px', background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: openPicker ? '12px 12px 0 0' : '12px', cursor: 'pointer' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#96502e' }}>그림에서 궁금한 걸 골라보세요</div>
+                <div style={{ fontSize: '11px', color: '#b4785a', marginTop: '2px' }}>
+                  {pickedQ ? MULSANG_QUESTIONS.find(q => q.id === pickedQ)?.question : '안 고르면 그림 전체를 대략 풀어드려요'}
                 </div>
-              )
-            })}
+              </div>
+              <span style={{ color: '#c8783c', fontSize: '12px' }}>{openPicker ? '▾' : '▸'}</span>
+            </div>
+
+            {openPicker && (
+              <div style={{ border: '0.5px solid #f0e0d5', borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '10px' }}>
+                {/* 카테고리별 질문 (아코디언, 하나만 선택) */}
+                {groupMulsangByCategory(MULSANG_QUESTIONS).map(({ category, items }) => {
+                  const gHasPicked = items.some(q => q.id === pickedQ)
+                  const open = openCat === category
+                  return (
+                    <div key={category} style={{ border: `0.5px solid ${gHasPicked ? '#6e50a055' : '#f0e0d5'}`, borderRadius: '12px', marginBottom: '8px', overflow: 'hidden' }}>
+                      <div onClick={() => setOpenCat(open ? null : category)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '11px 12px', background: gHasPicked ? '#6e50a014' : '#fff', cursor: 'pointer' }}>
+                        <span style={{ flex: 1, fontSize: '13px', fontWeight: 700, color: '#6e50a0' }}>{category}</span>
+                        {gHasPicked && <span style={{ fontSize: '10px', color: '#fff', background: '#6e50a0', borderRadius: '9px', padding: '2px 7px' }}>선택됨</span>}
+                        <span style={{ color: '#6e50a0', fontSize: '12px' }}>{open ? '▾' : '▸'}</span>
+                      </div>
+                      {open && (
+                        <div style={{ padding: '8px 10px' }}>
+                          {items.map(q => {
+                            const on = pickedQ === q.id
+                            return (
+                              <div key={q.id} onClick={() => toggleQ(q.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 8px', borderRadius: '8px', background: on ? '#6e50a014' : 'transparent', marginBottom: '3px', cursor: 'pointer' }}>
+                                <span style={{ width: '18px', height: '18px', borderRadius: '50%', border: `1.5px solid ${on ? '#6e50a0' : '#d8c4b4'}`, background: on ? '#6e50a0' : '#fff', color: '#fff', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{on ? '✓' : ''}</span>
+                                <span style={{ fontSize: '12.5px', color: '#3a2e28' }}>{q.question}</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
 
             {/* 통변 실행 버튼 (하나 골라서) */}
             <button onClick={() => runTongbyeon('selected')} disabled={!pickedQ || tongLoading}
-              style={{ width: '100%', height: '46px', background: pickedQ ? '#b46e46' : '#d8c4b4', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: pickedQ ? 'pointer' : 'not-allowed', marginTop: '4px' }}>
+              style={{ width: '100%', height: '46px', background: pickedQ ? '#b46e46' : '#d8c4b4', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: pickedQ ? 'pointer' : 'not-allowed', marginTop: '10px' }}>
               {pickedQ ? '이 질문으로 그림 풀이 받기' : '궁금한 것을 하나 골라주세요'}
             </button>
             <button onClick={() => runTongbyeon('all')} disabled={tongLoading}
