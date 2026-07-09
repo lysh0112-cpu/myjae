@@ -17,6 +17,7 @@
 
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
 import JobSelect from '@/app/manseryeok/couple-input/components/JobSelect'
 import MbtiInput from '@/app/manseryeok/couple-input/components/MbtiInput'
@@ -47,6 +48,7 @@ function CoupleInputInner() {
   const [slot1, setSlot1] = useState<Slot | null>(null)
   const [slot2, setSlot2] = useState<Slot | null>(null)
   const [pickerFor, setPickerFor] = useState<1 | 2 | null>(null)
+  const [meErr, setMeErr] = useState('')
 
   const setSlot = (n: 1 | 2, v: Slot | null) => (n === 1 ? setSlot1(v) : setSlot2(v))
   const getSlot = (n: 1 | 2) => (n === 1 ? slot1 : slot2)
@@ -57,11 +59,35 @@ function CoupleInputInner() {
     setSlot(pickerFor, { name: p.title, input: p.input_data, isMe: false })
     setPickerFor(null)
   }
-  // "나"(로그인 본인) 선택 — 실제 profiles 로드는 나중에. 지금은 자리만.
-  const handlePickMe = () => {
+  // "나"(로그인 본인) 선택 — profiles에서 실제 생년월일을 읽어 슬롯을 채운다.
+  // (검증된 패턴: home-new/result-new와 동일하게 supabase.auth.getUser → profiles)
+  // 못 읽으면(비로그인·미저장) 안내하고 빈 슬롯을 만들지 않는다 → 결과화면 명식 계산 실패 방지.
+  const handlePickMe = async () => {
     if (!pickerFor) return
-    const meInput: SavedInputData = { gender: '', calType: '양력', year: '', month: '', day: '', leapMonth: '0', hour: '모름' }
-    setSlot(pickerFor, { name: '나', input: meInput, isMe: true })
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setMeErr('로그인 후 "나"를 선택할 수 있어요.'); return }
+    const { data: p } = await supabase
+      .from('profiles')
+      .select('birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, nickname, hangul_name')
+      .eq('id', user.id)
+      .maybeSingle()
+    if (!p || !p.birth_year) {
+      setMeErr('내 사주 정보가 없어요. 마이페이지에서 생년월일을 먼저 저장해 주세요.')
+      return
+    }
+    const isUnknownHour = (h: unknown) => h == null || h === '' || h === '모름' || h === '99'
+    const meInput: SavedInputData = {
+      gender: p.gender ?? '',
+      calType: p.cal_type ?? '양력',
+      year: String(p.birth_year),
+      month: String(p.birth_month ?? ''),
+      day: String(p.birth_day ?? ''),
+      leapMonth: p.leap_month != null ? String(p.leap_month) : '0',
+      hour: isUnknownHour(p.birth_hour) ? '모름' : String(p.birth_hour),
+    }
+    const meName = p.nickname || p.hangul_name || '나'
+    setMeErr('')
+    setSlot(pickerFor, { name: meName, input: meInput, isMe: true })
     setPickerFor(null)
   }
 
@@ -111,6 +137,16 @@ function CoupleInputInner() {
           onOpen={() => setPickerFor(2)}
           onJob={v => slot2 && setSlot2({ ...slot2, job: v })}
           onMbti={v => slot2 && setSlot2({ ...slot2, mbti: v })} />
+
+        {meErr && (
+          <div style={{
+            marginTop: 12, padding: '10px 12px', borderRadius: 10,
+            background: '#fbece4', border: '0.5px solid #f0d5c5',
+            color: '#96502e', fontSize: 12.5, lineHeight: 1.5,
+          }}>
+            {meErr}
+          </div>
+        )}
 
         <button onClick={goResult} disabled={!bothReady}
           style={{
