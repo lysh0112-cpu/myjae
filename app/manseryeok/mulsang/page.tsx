@@ -197,12 +197,12 @@ function MulsangInner() {
 
   if (!info) {
     return (
-      <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto' }}>
+      <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto' }}>
         <PageHeader title="내 사주가 그림이 된다면?" onBack={() => router.push('/')} />
-        <div style={{ padding: '40px 20px', textAlign: 'center', color: '#8a88a0' }}>
+        <div style={{ padding: '40px 20px', textAlign: 'center', color: '#b4785a' }}>
           <p style={{ marginBottom: '20px' }}>먼저 홈에서 사주 정보를 입력해주세요.</p>
           <button onClick={() => router.push('/')}
-            style={{ padding: '12px 24px', borderRadius: '12px', background: 'linear-gradient(135deg,#3C3489,#FAC775)', border: 'none', color: '#1a1a18', fontWeight: 'bold', cursor: 'pointer' }}>
+            style={{ padding: '12px 24px', borderRadius: '12px', background: '#b46e46', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
             홈으로 가기 →
           </button>
         </div>
@@ -393,30 +393,30 @@ function MulsangInner() {
 
   const PayPopup = payOpen ? (
     <div onClick={() => setPayOpen(false)}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }}>
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }}>
       <div onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: '430px', background: '#15152e', borderRadius: '20px 20px 0 0', padding: '10px 20px 28px', boxShadow: '0 -8px 30px rgba(0,0,0,0.5)' }}>
-        <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.2)', margin: '0 auto 18px' }} />
-        <div style={{ fontSize: '17px', fontWeight: 700, color: '#e8e4ff', marginBottom: '4px' }}>🖼️ 사주 그림 생성</div>
-        <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '16px', lineHeight: 1.6 }}>
+        style={{ width: '100%', maxWidth: '430px', background: '#fffbf7', borderRadius: '20px 20px 0 0', padding: '10px 20px 28px', boxShadow: '0 -8px 30px rgba(0,0,0,0.15)' }}>
+        <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: '#e4d4be', margin: '0 auto 18px' }} />
+        <div style={{ fontSize: '17px', fontWeight: 700, color: '#96502e', marginBottom: '4px' }}>🖼️ 사주 그림 생성</div>
+        <div style={{ fontSize: '13px', color: '#b4785a', marginBottom: '16px', lineHeight: 1.6 }}>
           당신의 사주를 한 폭의 풍경화로 그려드려요
         </div>
-        <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '8px' }}>포함 내용</div>
-          {['사주 8글자 기반 맞춤 풍경화', '선택한 화풍으로 생성', '그림 해설(주인공·환경·용신·조언)', '저장·공유 가능'].map((t, i) => (
-            <div key={i} style={{ fontSize: '13px', color: '#b8b4d8', lineHeight: 1.9 }}>· {t}</div>
+        <div style={{ background: '#fdf6f0', borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '0.5px solid #f0e0d5' }}>
+          <div style={{ fontSize: '12px', color: '#b4785a', marginBottom: '8px' }}>포함 내용</div>
+          {['사주 8글자 기반 맞춤 풍경화', '선택한 화풍으로 생성', '오행 해설과 궁금한 질문 풀이', '저장·공유 가능'].map((t, i) => (
+            <div key={i} style={{ fontSize: '13px', color: '#3a2e28', lineHeight: 1.9 }}>· {t}</div>
           ))}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <span style={{ fontSize: '14px', color: '#8a88a0' }}>결제 금액</span>
-          <span style={{ fontSize: '20px', fontWeight: 700, color: gold }}>{drawPrice.toLocaleString()}원</span>
+          <span style={{ fontSize: '14px', color: '#b4785a' }}>결제 금액</span>
+          <span style={{ fontSize: '20px', fontWeight: 700, color: '#c8783c' }}>{drawPrice.toLocaleString()}원</span>
         </div>
         <button onClick={doGenerate}
-          style={{ width: '100%', padding: '15px', borderRadius: '12px', background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)', border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginBottom: '8px' }}>
+          style={{ width: '100%', padding: '15px', borderRadius: '12px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginBottom: '8px' }}>
           💳 {drawPrice.toLocaleString()}원 결제하고 그림 그리기
         </button>
         <button onClick={() => setPayOpen(false)}
-          style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: '#8a88a0', fontSize: '13px', cursor: 'pointer' }}>
+          style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: '0.5px solid #e4d4be', color: '#b4785a', fontSize: '13px', cursor: 'pointer' }}>
           취소
         </button>
       </div>
@@ -425,7 +425,7 @@ function MulsangInner() {
 
   if (hasResult) {
     return (
-      <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto' }}>
+      <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto' }}>
         <PageHeader title="내 사주가 그림이 된다면?" onBack={() => router.push('/')} />
 
         <div style={{ position: 'sticky', top: 0, zIndex: 10, background: '#1a1a18' }}>
@@ -446,23 +446,25 @@ function MulsangInner() {
         </div>
 
         <div style={{ padding: '16px' }}>
-          <div style={{ fontSize: '17px', fontWeight: 'bold', color: gold, marginBottom: '14px', lineHeight: 1.5 }}>
-            "{commentary.title}"
-          </div>
-          {[
-            { label: '주인공 (나)', text: commentary.subject },
-            { label: '환경', text: commentary.environment },
-            { label: '핵심 에너지 (용신)', text: commentary.yongsin },
-            { label: '삶의 조언', text: commentary.advice },
-          ].filter(s => s.text).map((s, i) => (
-            <div key={i} style={{ borderLeft: `3px solid ${gold}`, padding: '4px 12px', marginBottom: '16px' }}>
-              <div style={{ fontSize: '12px', color: gold, marginBottom: '4px' }}>{s.label}</div>
-              <div style={{ fontSize: '14px', color: '#e0dce8', lineHeight: 1.8 }}>{s.text}</div>
+          <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '16px', padding: '16px', marginBottom: '14px' }}>
+            <div style={{ fontSize: '17px', fontWeight: 700, color: '#96502e', marginBottom: '14px', lineHeight: 1.5 }}>
+              "{commentary.title}"
             </div>
-          ))}
+            {[
+              { label: '주인공 (나)', text: commentary.subject },
+              { label: '환경', text: commentary.environment },
+              { label: '핵심 에너지 (용신)', text: commentary.yongsin },
+              { label: '삶의 조언', text: commentary.advice },
+            ].filter(s => s.text).map((s, i) => (
+              <div key={i} style={{ borderLeft: '3px solid #c8783c', padding: '2px 12px', marginBottom: '14px' }}>
+                <div style={{ fontSize: '12px', color: '#c8783c', marginBottom: '4px', fontWeight: 500 }}>{s.label}</div>
+                <div style={{ fontSize: '14px', color: '#3a2e28', lineHeight: 1.8 }}>{s.text}</div>
+              </div>
+            ))}
+          </div>
 
-          {/* ── 오행표 + 사주원국 + 그림 해설 통변 (밝은 카드) ── */}
-          <div style={{ background: '#FDF6F0', borderRadius: '16px', padding: '14px', margin: '4px 0 14px', color: '#3a2e28' }}>
+          {/* ── 오행표 + 사주원국 + 그림 해설 통변 ── */}
+          <div style={{ margin: '4px 0 14px', color: '#3a2e28' }}>
 
             {/* 오행표 — 그림 바로 아래, 항상 펼침 */}
             {ohaeng.length > 0 && (
@@ -549,21 +551,21 @@ function MulsangInner() {
           </div>
 
           <button onClick={goConsult}
-            style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'transparent', border: `1px solid ${gold}`, color: gold, fontSize: '14px', fontWeight: 500, cursor: 'pointer', marginTop: '8px', marginBottom: '12px' }}>
+            style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'transparent', border: '1px solid #c8783c', color: '#96502e', fontSize: '14px', fontWeight: 500, cursor: 'pointer', marginTop: '8px', marginBottom: '12px' }}>
             🔮 이 그림에 대해 전문가와 상담하기 →
           </button>
 
           {drawActive && (
-            <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px' }}>
-              <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '8px' }}>다른 화풍으로 다시 그리기</div>
+            <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '14px', padding: '14px' }}>
+              <div style={{ fontSize: '12px', color: '#b4785a', marginBottom: '8px' }}>다른 화풍으로 다시 그리기</div>
               <select value={style} onChange={e => setStyle(e.target.value)}
-                style={{ width: '100%', padding: '10px', borderRadius: '10px', background: '#1a1a18', border: '1px solid rgba(255,255,255,0.15)', color: gold, fontSize: '14px', marginBottom: '10px' }}>
+                style={{ width: '100%', padding: '10px', borderRadius: '10px', background: '#fff', border: '0.5px solid #e4d4be', color: '#96502e', fontSize: '14px', marginBottom: '10px' }}>
                 {(Object.keys(STYLE_CONFIGS)).map(key => (
                   <option key={key} value={key}>{STYLE_CONFIGS[key].label}</option>
                 ))}
               </select>
               <button onClick={openPay}
-                style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)', border: 'none', color: '#1a1a18', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}>
+                style={{ width: '100%', padding: '12px', borderRadius: '10px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>
                 ✨ 다시 그리기 · {drawPrice.toLocaleString()}원
               </button>
             </div>
@@ -576,29 +578,39 @@ function MulsangInner() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
+    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       <PageHeader title="내 사주가 그림이 된다면?" onBack={() => router.push('/')} />
       <div style={{ padding: '16px' }}>
-        <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
-          <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '6px' }}>내 사주</div>
-          <div style={{ fontSize: '14px', color: '#e8e4ff' }}>{sajuLine}</div>
+        <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '14px', padding: '14px 16px', marginBottom: '18px' }}>
+          <div style={{ fontSize: '12px', color: '#b4785a', marginBottom: '5px' }}>내 사주</div>
+          <div style={{ fontSize: '15px', color: '#3a2e28' }}>{sajuLine}</div>
         </div>
 
-        <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '8px' }}>화풍 선택</div>
-        <select value={style} onChange={e => setStyle(e.target.value)} disabled={loading}
-          style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#1a1a18', border: '1px solid rgba(255,255,255,0.15)', color: gold, fontSize: '15px', marginBottom: '16px' }}>
-          {(Object.keys(STYLE_CONFIGS)).map(key => (
-            <option key={key} value={key}>{STYLE_CONFIGS[key].label}</option>
-          ))}
-        </select>
+        <div style={{ width: '100%', height: '150px', borderRadius: '14px', background: 'linear-gradient(160deg,#f0e6d8,#e4d4be)', border: '0.5px solid #f0e0d5', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '18px' }}>
+          <span style={{ fontSize: '34px', opacity: 0.5 }}>🖼️</span>
+          <span style={{ fontSize: '12px', color: '#b4785a' }}>내 사주 여덟 글자로 그리는 나만의 풍경화</span>
+        </div>
+
+        <div style={{ fontSize: '12px', color: '#96502e', fontWeight: 500, marginBottom: '7px' }}>화풍 고르기</div>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '18px' }}>
+          {(Object.keys(STYLE_CONFIGS)).map(key => {
+            const on = style === key
+            return (
+              <div key={key} onClick={() => !loading && setStyle(key)}
+                style={{ flex: 1, background: '#fff', border: `${on ? 1.5 : 0.5}px solid ${on ? '#b46e46' : '#f0e0d5'}`, borderRadius: '12px', padding: '13px', textAlign: 'center', cursor: loading ? 'default' : 'pointer' }}>
+                <div style={{ fontSize: '20px', marginBottom: '4px' }}>{key === 'oriental' ? '🎋' : '🌿'}</div>
+                <div style={{ fontSize: '12px', fontWeight: on ? 700 : 400, color: on ? '#96502e' : '#b4785a' }}>{STYLE_CONFIGS[key].label}</div>
+              </div>
+            )
+          })}
+        </div>
 
         {drawActive ? (
           <button onClick={openPay} disabled={loading || converting}
             style={{
-              width: '100%', padding: '14px', borderRadius: '12px', marginBottom: '20px',
-              background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)',
-              border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 'bold',
+              width: '100%', padding: '15px', borderRadius: '12px', marginBottom: '12px',
+              background: '#b46e46', border: 'none', color: '#fff', fontSize: '15px', fontWeight: 700,
               cursor: loading ? 'default' : 'pointer', opacity: loading || converting ? 0.6 : 1,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
             }}>
@@ -610,17 +622,23 @@ function MulsangInner() {
             ) : `✨ 나의 사주 그림 그리기 · ${drawPrice.toLocaleString()}원`}
           </button>
         ) : (
-          <div style={{ textAlign: 'center', color: '#8a88a0', fontSize: '13px', marginBottom: '20px' }}>
+          <div style={{ textAlign: 'center', color: '#b4785a', fontSize: '13px', marginBottom: '20px' }}>
             현재 그림 생성 서비스는 준비 중입니다.
           </div>
         )}
 
+        {!loading && drawActive && (
+          <div style={{ textAlign: 'center', fontSize: '11px', color: '#c5a590', marginBottom: '8px' }}>
+            그림이 완성되면 오행 해설과 궁금한 질문 풀이가 이어져요
+          </div>
+        )}
+
         {loading && (
-          <div style={{ background: cardBg, border, borderRadius: '14px', padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+          <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '14px', padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
             <span style={{ fontSize: '40px', display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span>
-            <div style={{ textAlign: 'center', color: gold, fontSize: '13px', lineHeight: 1.7 }}>
+            <div style={{ textAlign: 'center', color: '#96502e', fontSize: '13px', lineHeight: 1.7 }}>
               당신의 사주를 풍경으로 그리고 있어요<br />
-              <span style={{ color: '#8a88a0', fontSize: '12px' }}>잠시만 기다려 주세요 (최대 1분)</span>
+              <span style={{ color: '#b4785a', fontSize: '12px' }}>잠시만 기다려 주세요 (최대 1분)</span>
             </div>
           </div>
         )}
