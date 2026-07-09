@@ -24,6 +24,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import CoupleWonguk from '@/app/manseryeok/couple-result/components/CoupleWonguk'
 import GradeFireworks from '@/app/manseryeok/couple-result/components/GradeFireworks'
 import { COUPLE_QUESTIONS, groupCoupleByCategory } from '@/lib/saju/coupleQuestions'
+import { MARRIED_QUESTIONS } from '@/lib/saju/marriedQuestions'
 import type { SajuQuestion } from '@/lib/saju/questions'
 import { calcCoupleScore, type SajuPillarSimple, type CoupleScoreResult } from '@/lib/saju/coupleScore'
 import { getGongmang } from '@/lib/saju/gongmang'
@@ -75,8 +76,11 @@ function CoupleResultInner() {
   // ── 질문 선택 단계 상태 (사주 QuestionPicker와 동일: 복수선택) ──
   //   submitted === null → 질문 선택 화면
   //   submitted = 질문 배열(빈 배열이면 전체 총평) → 결과 화면
-  const groups = useMemo(() => groupCoupleByCategory(COUPLE_QUESTIONS), [])
-  const allIds = useMemo(() => COUPLE_QUESTIONS.map(q => q.id), [])
+  // 부부(married)면 부부 전용 질문, 연인(couple)이면 기존 궁합 질문.
+  // 두 세트 모두 동일한 SajuQuestion 형식이라 아래 로직·부품 그대로 재사용.
+  const QUESTIONS = mode === 'married' ? MARRIED_QUESTIONS : COUPLE_QUESTIONS
+  const groups = useMemo(() => groupCoupleByCategory(QUESTIONS), [QUESTIONS])
+  const allIds = useMemo(() => QUESTIONS.map(q => q.id), [QUESTIONS])
 
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [openCats, setOpenCats] = useState<Set<string>>(
@@ -181,7 +185,7 @@ function CoupleResultInner() {
   // ────────────────────────────────────────────
   // 결과 단계 → 자식 컴포넌트에 위임 (명식 계산·등급·통변 훅 사용)
   // ────────────────────────────────────────────
-  const pickedQuestions = COUPLE_QUESTIONS.filter(q => submitted.includes(q.id))
+  const pickedQuestions = QUESTIONS.filter(q => submitted.includes(q.id))
 
   return (
     <CoupleResultView
