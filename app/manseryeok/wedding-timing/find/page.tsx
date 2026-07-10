@@ -1,13 +1,12 @@
 'use client'
 import { Suspense, useState, useEffect, type ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import PageHeader from '@/app/components/common/PageHeader'
 import { supabase } from '@/lib/supabase'
 
-const purple = '#7766dd'
-const cardBg = '#13132a'
-const sub = '#5555aa'
-const text = '#e8e4ff'
+const purple = '#b46e46'
+const cardBg = '#FFFBF7'
+const sub = '#b4785a'
+const text = '#3a2e28'
 
 const HOUR_LABELS: Record<string, string> = {
   '-1': '시간 모름',
@@ -50,9 +49,9 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
       style={{
         flex: '1 1 auto', minWidth: '64px', padding: '10px 8px', borderRadius: '10px', cursor: 'pointer',
         fontSize: '13px', fontWeight: active ? 600 : 400,
-        background: active ? 'rgba(119,102,221,0.25)' : 'rgba(255,255,255,0.05)',
-        color: active ? '#c8b0ff' : '#7777aa',
-        border: '1px solid ' + (active ? purple : 'rgba(255,255,255,0.08)'),
+        background: active ? '#f6e3d6' : '#FFFBF7',
+        color: active ? '#96502e' : '#b4785a',
+        border: '1px solid ' + (active ? '#c8783c' : '#f0e0d5'),
       }}>
       {label}
     </button>
@@ -60,7 +59,7 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
 }
 
 function SectionLabel({ children }: { children: ReactNode }) {
-  return <div style={{ fontSize: '13px', color: '#c8c0ff', fontWeight: 600, margin: '20px 0 10px' }}>{children}</div>
+  return <div style={{ fontSize: '13px', color: '#96502e', fontWeight: 600, margin: '20px 0 10px' }}>{children}</div>
 }
 function QLabel({ children }: { children: ReactNode }) {
   return <div style={{ fontSize: '13px', color: text, margin: '14px 0 8px' }}>{children}</div>
@@ -140,18 +139,25 @@ function WeddingFindInner() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', background: '#0d0d1a', maxWidth: '480px', margin: '0 auto', paddingBottom: '40px' }}>
-      <PageHeader
-        title="결혼 길일 택일"
-        subtitle="두 분께 좋은 결혼 날짜를 찾아드려요"
-        onBack={() => router.push('/manseryeok/wedding-timing')}
-      />
+    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '480px', margin: '0 auto', paddingBottom: '40px' }}>
+      <div style={{
+        position: 'sticky', top: 0, zIndex: 10,
+        background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
+        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
+      }}>
+        <button onClick={() => router.back()}
+          style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 500, color: '#3a2e28' }}>결혼 길일 택일</div>
+          <div style={{ fontSize: 10.5, color: '#b4785a' }}>두 분께 좋은 결혼 날짜를 찾아드려요</div>
+        </div>
+      </div>
 
       <div style={{ padding: '16px' }}>
         <Disclaimer full />
 
         <SectionLabel>두 사람 정보</SectionLabel>
-        <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', border: '1px solid #f0e0d5' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
             <span style={{ fontSize: '14px' }}>🤵</span>
             <span style={{ fontSize: '12px', color: sub, width: '44px' }}>신랑</span>
@@ -172,12 +178,12 @@ function WeddingFindInner() {
         <QLabel>희망 기간 시작 <span style={{ color: purple }}>*</span></QLabel>
         <input type="date" value={survey.startDate}
           onChange={e => setField('startDate', e.target.value)}
-          style={{ width: '100%', boxSizing: 'border-box', background: '#0d0d1a', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', padding: '12px 14px', color: survey.startDate ? '#c8b0ff' : '#5555aa', fontSize: '15px', colorScheme: 'dark', outline: 'none' }} />
+          style={{ width: '100%', boxSizing: 'border-box', background: '#FDF6F0', border: '1px solid #f0e0d5', borderRadius: '10px', padding: '12px 14px', color: survey.startDate ? '#96502e' : '#b4785a', fontSize: '15px', colorScheme: 'dark', outline: 'none' }} />
 
         <QLabel>희망 기간 끝 <span style={{ color: purple }}>*</span></QLabel>
         <input type="date" value={survey.endDate}
           onChange={e => setField('endDate', e.target.value)}
-          style={{ width: '100%', boxSizing: 'border-box', background: '#0d0d1a', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', padding: '12px 14px', color: survey.endDate ? '#c8b0ff' : '#5555aa', fontSize: '15px', colorScheme: 'dark', outline: 'none' }} />
+          style={{ width: '100%', boxSizing: 'border-box', background: '#FDF6F0', border: '1px solid #f0e0d5', borderRadius: '10px', padding: '12px 14px', color: survey.endDate ? '#96502e' : '#b4785a', fontSize: '15px', colorScheme: 'dark', outline: 'none' }} />
 
         <QLabel>요일은 어떻게 할까요?</QLabel>
         <div style={{ display: 'flex', gap: '6px' }}>
@@ -194,7 +200,7 @@ function WeddingFindInner() {
           onChange={e => setField('avoidNote', e.target.value)}
           placeholder="예) 6월은 양가 제사가 있어 피하고 싶어요"
           rows={2}
-          style={{ width: '100%', boxSizing: 'border-box', background: '#0d0d1a', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', padding: '10px 14px', color: text, fontSize: '14px', outline: 'none', resize: 'none', lineHeight: 1.6 }} />
+          style={{ width: '100%', boxSizing: 'border-box', background: '#FDF6F0', border: '1px solid #f0e0d5', borderRadius: '10px', padding: '10px 14px', color: text, fontSize: '14px', outline: 'none', resize: 'none', lineHeight: 1.6 }} />
 
         {error && (
           <div style={{ marginTop: '14px', background: 'rgba(255,80,80,0.08)', border: '1px solid rgba(255,80,80,0.2)', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', color: '#ff8888', lineHeight: 1.6 }}>
@@ -203,7 +209,7 @@ function WeddingFindInner() {
         )}
 
         <button onClick={handleAnalyze}
-          style={{ width: '100%', marginTop: '20px', padding: '16px', borderRadius: '14px', background: 'linear-gradient(135deg,#5544bb,#7766dd)', border: 'none', color: text, fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}>
+          style={{ width: '100%', marginTop: '20px', padding: '16px', borderRadius: '14px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}>
           💍 좋은 결혼 길일 찾기
         </button>
 
@@ -216,33 +222,33 @@ function WeddingFindInner() {
         <div onClick={() => setPayOpen(false)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }}>
           <div onClick={e => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: '480px', background: '#15152e', borderRadius: '20px 20px 0 0', padding: '10px 20px 28px', boxShadow: '0 -8px 30px rgba(0,0,0,0.5)' }}>
-            <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.2)', margin: '0 auto 18px' }} />
+            style={{ width: '100%', maxWidth: '480px', background: '#FFFBF7', borderRadius: '20px 20px 0 0', padding: '10px 20px 28px', boxShadow: '0 -8px 30px rgba(0,0,0,0.5)' }}>
+            <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: '#e0c9b8', margin: '0 auto 18px' }} />
 
             <div style={{ fontSize: '17px', fontWeight: 700, color: text, marginBottom: '4px' }}>💍 결혼 길일 택일 분석</div>
             <div style={{ fontSize: '13px', color: sub, marginBottom: '16px', lineHeight: 1.6 }}>
               두 분께 좋은 결혼 길일 5곳을 찾아드려요
             </div>
 
-            <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '1px solid #f0e0d5' }}>
               <div style={{ fontSize: '12px', color: sub, marginBottom: '8px' }}>분석 내용</div>
               {['추천 결혼 길일 5순위', '각 날짜의 길신 풀이(천을귀인·용신·손없는날 등)', '피하면 좋은 날 안내', '두 사람 사주 함께 반영'].map((t, i) => (
-                <div key={i} style={{ fontSize: '13px', color: '#b8b4d8', lineHeight: 1.9 }}>· {t}</div>
+                <div key={i} style={{ fontSize: '13px', color: '#6b5d54', lineHeight: 1.9 }}>· {t}</div>
               ))}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <span style={{ fontSize: '14px', color: sub }}>결제 금액</span>
-              <span style={{ fontSize: '20px', fontWeight: 700, color: '#c8b0ff' }}>{price.toLocaleString()}원</span>
+              <span style={{ fontSize: '20px', fontWeight: 700, color: '#96502e' }}>{price.toLocaleString()}원</span>
             </div>
 
             <button onClick={handlePay}
-              style={{ width: '100%', padding: '15px', borderRadius: '12px', background: 'linear-gradient(135deg,#5544bb,#7766dd)', border: 'none', color: text, fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginBottom: '8px' }}>
+              style={{ width: '100%', padding: '15px', borderRadius: '12px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginBottom: '8px' }}>
               💳 {price.toLocaleString()}원 결제하기
             </button>
            
             <button onClick={() => setPayOpen(false)}
-              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: sub, fontSize: '13px', cursor: 'pointer', marginBottom: '14px' }}>
+              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: '1px solid #f0e0d5', color: sub, fontSize: '13px', cursor: 'pointer', marginBottom: '14px' }}>
               취소
             </button>
 
@@ -257,8 +263,8 @@ function WeddingFindInner() {
 export default function WeddingFindPage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d0d1a' }}>
-        <div style={{ color: '#c8b0ff' }}>로딩 중...</div>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FDF6F0' }}>
+        <div style={{ color: '#96502e' }}>로딩 중...</div>
       </div>
     }>
       <WeddingFindInner />
