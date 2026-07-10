@@ -9,7 +9,8 @@ import {
   applyFilters, scoreWedding, gradeOf,
   type PersonSaju, type ScoreInput, type WeddingBreakdown,
 } from './score'
-import { calcYongsin } from '@/lib/saju/yongsin'
+// 용신은 새 억부용신(정확한 100점 계산)을 쓴다. (궁합과 동일 부품으로 통일)
+import { calcYongsinCompat as calcYongsin } from '@/lib/saju/yongsinNew'
 
 const STEMS = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸']
 const BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
