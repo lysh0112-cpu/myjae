@@ -23,7 +23,29 @@ interface Commentary {
 }
 
 const MY_INFO_KEY = 'myinfo'
-const MULSANG_RESULT_KEY = 'mulsang_last_result_v3'
+const MULSANG_IMG_PREFIX = 'mulsang_img_v5:'      // 그림 (사람 + 화풍별로 각각 저장)
+const MULSANG_ANS_PREFIX = 'mulsang_ans_v5:'      // 질문 답 캐시 (사람 + 질문id, 화풍 무관)
+
+// 사람(생년월일시+성별) 식별 문자열
+function personKeyOf(p: {
+  gender: string; calType: string; year: number; month: number; day: number;
+  leapMonth: string; hourIdx: number | null;
+} | null): string | null {
+  if (!p || !p.year) return null
+  return [p.gender, p.calType, p.year, p.month, p.day, p.leapMonth, p.hourIdx ?? '모름'].join('|')
+}
+
+// 그림 저장 키: 사람 + 화풍(oriental/ghibli) → 두 화풍이 각각 보관됨
+function mulsangImgKey(p: Parameters<typeof personKeyOf>[0], style: string): string | null {
+  const pk = personKeyOf(p)
+  return pk ? `${MULSANG_IMG_PREFIX}${pk}::${style}` : null
+}
+
+// 질문 답 캐시 키: 사람 + 질문id (답 내용은 화풍과 무관하므로 화풍 안 넣음)
+function mulsangAnsKey(p: Parameters<typeof personKeyOf>[0], questionId: string): string | null {
+  const pk = personKeyOf(p)
+  return pk ? `${MULSANG_ANS_PREFIX}${pk}::${questionId}` : null
+}
 
 const HOUR_LABEL = [
   '한밤중(子시)', '늦은밤(丑시)', '새벽(寅시)', '이른아침(卯시)',
@@ -187,16 +209,21 @@ function MulsangInner() {
   const [openPicker, setOpenPicker] = useState(false)           // 질문 고르기 부품 전체 아코디언
 
   useEffect(() => {
-    const saved = localStorage.getItem(MULSANG_RESULT_KEY)
+    const key = mulsangImgKey(info, style)
+    if (!key) return
+    // 사람 또는 화풍이 바뀌면 화면을 비우고, 그 사람+그 화풍으로 저장된 그림만 복원.
+    //   (다른 화풍 그림은 그 화풍으로 전환하면 그때 뜬다. 두 화풍 각각 보관됨.)
+    setImageUrl(null)
+    setCommentary(null)
+    const saved = localStorage.getItem(key)
     if (saved) {
       try {
         const r = JSON.parse(saved)
         if (r.commentary) setCommentary(r.commentary)
         if (r.imageUrl) setImageUrl(r.imageUrl)
-        if (r.style) setStyle(r.style)
       } catch {}
     }
-  }, [])
+  }, [info, style])
 
   const gold = '#FAC775'
   const cardBg = '#2C2C2A'
@@ -264,10 +291,10 @@ function MulsangInner() {
       setImageUrl(data.imageUrl ?? null)
       setCommentary(data.commentary ?? null)
       try {
-        localStorage.setItem(MULSANG_RESULT_KEY, JSON.stringify({
+        const key = mulsangImgKey(info, style)
+        if (key) localStorage.setItem(key, JSON.stringify({
           commentary: data.commentary ?? null,
           imageUrl: data.imageUrl ?? null,
-          style,
         }))
         // 상담 전달용: 물상도 결과를 세션에 담아둠 (예약 시 상담 건에 연결)
         const storedUrl = data.storedUrl || data.imageUrl || null
@@ -308,6 +335,19 @@ function MulsangInner() {
         ? []
         : MULSANG_QUESTIONS.filter(q => q.id === pickedQ)
     if (mode === 'selected' && questions.length === 0) return
+
+    // ── 답 캐시: 이미 본 질문이면 저장된 답을 즉시 표시 (API 호출 안 함 = 비용 0) ──
+    //   선택 질문일 때만 캐시(전체 대략은 매번 다르므로 캐시 안 함).
+    const ansKey = mode === 'selected' && pickedQ ? mulsangAnsKey(info, pickedQ) : null
+    if (ansKey) {
+      const cached = localStorage.getItem(ansKey)
+      if (cached) {
+        setShowTongbyeon(true)
+        setTongResult(cached)
+        setTongLoading(false)
+        return
+      }
+    }
 
     setTongLoading(true)
     setTongResult(null)
@@ -355,6 +395,10 @@ function MulsangInner() {
             if (parsed.text) { acc += parsed.text; setTongResult(acc) }
           } catch {}
         }
+      }
+      // ── 생성 완료 → 답 저장(다음엔 캐시에서 즉시). 내용이 있을 때만. ──
+      if (ansKey && acc.trim()) {
+        try { localStorage.setItem(ansKey, acc) } catch {}
       }
     } catch {
       setTongResult('통변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
@@ -427,6 +471,53 @@ function MulsangInner() {
           style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: '0.5px solid #e4d4be', color: '#b4785a', fontSize: '13px', cursor: 'pointer' }}>
           취소
         </button>
+      </div>
+    </div>
+  ) : null
+
+  // ── 질문 고르기 모달 (하단 시트) — 두 화면(결과·생성전)에서 공용 ──
+  const pickerModal = openPicker ? (
+    <div
+      onClick={() => setOpenPicker(false)}
+      style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(40,28,22,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+      <div onClick={(e) => e.stopPropagation()}
+        style={{ width: '100%', maxWidth: '430px', maxHeight: '80vh', background: '#FDF6F0', borderRadius: '18px 18px 0 0', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 -8px 30px rgba(0,0,0,0.15)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', padding: '15px 16px 12px', borderBottom: '0.5px solid #f0e0d5', flexShrink: 0 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '14px', fontWeight: 700, color: '#3a2e28' }}>궁금한 걸 골라보세요</div>
+            <div style={{ fontSize: '11px', color: '#b4785a', marginTop: '2px' }}>하나만 골라주세요</div>
+          </div>
+          <button onClick={() => setOpenPicker(false)} aria-label="닫기"
+            style={{ background: 'none', border: 'none', color: '#c5a590', fontSize: '20px', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
+        </div>
+        <div style={{ padding: '12px', overflowY: 'auto', flex: 1 }}>
+          {groupMulsangByCategory(MULSANG_QUESTIONS).map(({ category, items }) => {
+            const gHasPicked = items.some(q => q.id === pickedQ)
+            const open = openCat === category
+            return (
+              <div key={category} style={{ border: `0.5px solid ${gHasPicked ? '#6e50a055' : '#f0e0d5'}`, borderRadius: '12px', marginBottom: '8px', overflow: 'hidden' }}>
+                <div onClick={() => setOpenCat(open ? null : category)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '11px 12px', background: gHasPicked ? '#6e50a014' : '#fff', cursor: 'pointer' }}>
+                  <span style={{ flex: 1, fontSize: '13px', fontWeight: 700, color: '#6e50a0' }}>{category}</span>
+                  {gHasPicked && <span style={{ fontSize: '10px', color: '#fff', background: '#6e50a0', borderRadius: '9px', padding: '2px 7px' }}>선택됨</span>}
+                  <span style={{ color: '#6e50a0', fontSize: '12px' }}>{open ? '▾' : '▸'}</span>
+                </div>
+                {open && (
+                  <div style={{ padding: '8px 10px' }}>
+                    {items.map(q => {
+                      const on = pickedQ === q.id
+                      return (
+                        <div key={q.id} onClick={() => { toggleQ(q.id); setOpenPicker(false) }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 8px', borderRadius: '8px', background: on ? '#6e50a014' : 'transparent', marginBottom: '3px', cursor: 'pointer' }}>
+                          <span style={{ width: '18px', height: '18px', borderRadius: '50%', border: `1.5px solid ${on ? '#6e50a0' : '#d8c4b4'}`, background: on ? '#6e50a0' : '#fff', color: '#fff', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{on ? '✓' : ''}</span>
+                          <span style={{ fontSize: '12.5px', color: '#3a2e28' }}>{q.question}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   ) : null
@@ -575,6 +666,7 @@ function MulsangInner() {
         </div>
 
         {PayPopup}
+        {pickerModal}
       </main>
     )
   }
@@ -651,56 +743,7 @@ function MulsangInner() {
       </div>
 
       {PayPopup}
-
-      {/* ── 질문 고르기 모달 (하단 시트) ── */}
-      {openPicker && (
-        <div
-          onClick={() => setOpenPicker(false)}
-          style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(40,28,22,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-          <div onClick={(e) => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: '440px', maxHeight: '80vh', background: '#FDF6F0', borderRadius: '18px 18px 0 0', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            {/* 모달 헤더 */}
-            <div style={{ display: 'flex', alignItems: 'center', padding: '15px 16px 12px', borderBottom: '0.5px solid #f0e0d5', flexShrink: 0 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#3a2e28' }}>궁금한 걸 골라보세요</div>
-                <div style={{ fontSize: '11px', color: '#b4785a', marginTop: '2px' }}>하나만 골라주세요</div>
-              </div>
-              <button onClick={() => setOpenPicker(false)} aria-label="닫기"
-                style={{ background: 'none', border: 'none', color: '#c5a590', fontSize: '20px', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
-            </div>
-
-            {/* 카테고리별 질문 (아코디언, 하나만 선택) — 로직 그대로, 모달 안으로 이동 */}
-            <div style={{ padding: '12px', overflowY: 'auto', flex: 1 }}>
-              {groupMulsangByCategory(MULSANG_QUESTIONS).map(({ category, items }) => {
-                const gHasPicked = items.some(q => q.id === pickedQ)
-                const open = openCat === category
-                return (
-                  <div key={category} style={{ border: `0.5px solid ${gHasPicked ? '#6e50a055' : '#f0e0d5'}`, borderRadius: '12px', marginBottom: '8px', overflow: 'hidden' }}>
-                    <div onClick={() => setOpenCat(open ? null : category)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '11px 12px', background: gHasPicked ? '#6e50a014' : '#fff', cursor: 'pointer' }}>
-                      <span style={{ flex: 1, fontSize: '13px', fontWeight: 700, color: '#6e50a0' }}>{category}</span>
-                      {gHasPicked && <span style={{ fontSize: '10px', color: '#fff', background: '#6e50a0', borderRadius: '9px', padding: '2px 7px' }}>선택됨</span>}
-                      <span style={{ color: '#6e50a0', fontSize: '12px' }}>{open ? '▾' : '▸'}</span>
-                    </div>
-                    {open && (
-                      <div style={{ padding: '8px 10px' }}>
-                        {items.map(q => {
-                          const on = pickedQ === q.id
-                          return (
-                            <div key={q.id} onClick={() => { toggleQ(q.id); setOpenPicker(false) }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 8px', borderRadius: '8px', background: on ? '#6e50a014' : 'transparent', marginBottom: '3px', cursor: 'pointer' }}>
-                              <span style={{ width: '18px', height: '18px', borderRadius: '50%', border: `1.5px solid ${on ? '#6e50a0' : '#d8c4b4'}`, background: on ? '#6e50a0' : '#fff', color: '#fff', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{on ? '✓' : ''}</span>
-                              <span style={{ fontSize: '12.5px', color: '#3a2e28' }}>{q.question}</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      {pickerModal}
     </main>
   )
 }
