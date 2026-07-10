@@ -18,35 +18,15 @@ interface PickConfig {
   unse?: 'daeun' | 'seyun'   // 시간운 진입이면 지정. 없으면 사주.
 }
 const PICK_CONFIG: Record<string, PickConfig> = {
-  '사주': {
-    serviceLabel: '사주해설',
-    headline: '누구의 사주를 볼까요?',
-    serviceType: 'saju',
-    submitLabel: '저장하고 사주 보기',
-    resultPath: '/manseryeok/result-new',
-  },
+  // 사주·대운·연월운세는 보관함(saju-storage)을 관문으로 삼으므로 여기서 제거.
+  //   홈 버튼 → 보관함 → [새로 보기]에서 사람 선택. (궁합과 같은 흐름)
+  // 내사주그림은 보관함 없이 바로 사람 선택 모달을 쓴다.
   '내사주그림': {
     serviceLabel: '내 사주 그림',
     headline: '누구의 사주를 그릴까요?',
     serviceType: 'mulsang',
     submitLabel: '저장하고 그림 보기',
     resultPath: '/manseryeok/mulsang',
-  },
-  '대운': {
-    serviceLabel: '대운 (10년 흐름)',
-    headline: '누구의 대운을 볼까요?',
-    serviceType: 'daeun',
-    submitLabel: '저장하고 대운 보기',
-    resultPath: '/manseryeok/result-new',
-    unse: 'daeun',
-  },
-  '연월운세': {
-    serviceLabel: '세운 (올해·달별)',
-    headline: '누구의 세운을 볼까요?',
-    serviceType: 'seyun',
-    submitLabel: '저장하고 세운 보기',
-    resultPath: '/manseryeok/result-new',
-    unse: 'seyun',
   },
 }
 
@@ -84,10 +64,10 @@ const ZODIAC_IMAGES = [
 
 // ── 12 서비스 (연재쌤 지정 순서) ──
 const SERVICES = [
-  { name: '사주',       color: '#6e50a0', href: '/manseryeok', cat: '사주명리' },
+  { name: '사주',       color: '#6e50a0', href: '/manseryeok/saju-storage?service=saju', cat: '사주명리' },
   { name: '내사주그림', color: '#b46e46', href: '/manseryeok/mulsang', cat: '사주명리' },
-  { name: '대운',       color: '#3c82a0', href: '/manseryeok', cat: '사주명리' },
-  { name: '연월운세', color: '#8c783c', href: '/manseryeok', cat: '사주명리' },
+  { name: '대운',       color: '#3c82a0', href: '/manseryeok/saju-storage?service=daeun', cat: '사주명리' },
+  { name: '연월운세', color: '#8c783c', href: '/manseryeok/saju-storage?service=seyun', cat: '사주명리' },
   { name: '연인궁합',   color: '#c85a8c', href: '/manseryeok/couple-storage?mode=couple', cat: '궁합' },
   { name: '부부궁합',   color: '#c85a6e', href: '/manseryeok/couple-storage?mode=married', cat: '궁합' },
   { name: '결혼택일',   color: '#96643c', href: '/manseryeok/wedding-timing', cat: '택일' },
