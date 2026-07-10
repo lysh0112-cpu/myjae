@@ -1,12 +1,11 @@
 'use client'
 import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import PageHeader from '@/app/components/common/PageHeader'
 
-const cardBg = '#13132a'
-const sub = '#5555aa'
-const text = '#e8e4ff'
-const gold = '#FAC775'
+const cardBg = '#FFFBF7'
+const sub = '#b4785a'
+const text = '#3a2e28'
+const gold = '#c8783c'
 
 const HOUR_LABELS: Record<string, string> = {
   '-1': '시간 모름',
@@ -60,18 +59,25 @@ function MenuInner() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', background: '#0d0d1a', maxWidth: '480px', margin: '0 auto', paddingBottom: '40px' }}>
-      <PageHeader
-        title="결혼 택일"
-        subtitle="무엇을 도와드릴까요?"
-        onBack={() => router.push('/manseryeok/couple-input')}
-      />
+    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '480px', margin: '0 auto', paddingBottom: '40px' }}>
+      <div style={{
+        position: 'sticky', top: 0, zIndex: 10,
+        background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
+        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
+      }}>
+        <button onClick={() => router.push('/manseryeok/wedding-timing/input')}
+          style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 500, color: '#3a2e28' }}>결혼택일</div>
+          <div style={{ fontSize: 10.5, color: '#b4785a' }}>무엇을 도와드릴까요?</div>
+        </div>
+      </div>
 
       <div style={{ padding: '16px' }}>
         <Disclaimer />
 
-        <div style={{ fontSize: '13px', color: '#c8c0ff', fontWeight: 600, margin: '20px 0 10px' }}>두 사람 정보</div>
-        <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ fontSize: '13px', color: '#96502e', fontWeight: 600, margin: '20px 0 10px' }}>두 사람 정보</div>
+        <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', border: '1px solid #f0e0d5' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
             <span style={{ fontSize: '14px' }}>🤵</span>
             <span style={{ fontSize: '12px', color: sub, width: '44px' }}>신랑</span>
@@ -87,11 +93,11 @@ function MenuInner() {
           수정하려면 ‹ 뒤로 가서 변경해 주세요
         </div>
 
-        <div style={{ fontSize: '13px', color: '#c8c0ff', fontWeight: 600, margin: '24px 0 10px' }}>무엇을 도와드릴까요?</div>
+        <div style={{ fontSize: '13px', color: '#96502e', fontWeight: 600, margin: '24px 0 10px' }}>무엇을 도와드릴까요?</div>
 
         <button onClick={() => go('check')}
           className="active:scale-95"
-          style={{ width: '100%', textAlign: 'left', background: cardBg, border: '1px solid rgba(119,102,221,0.35)', borderRadius: '14px', padding: '16px', marginBottom: '10px', cursor: 'pointer', transition: 'transform 0.15s ease' }}>
+          style={{ width: '100%', textAlign: 'left', background: cardBg, border: '1px solid #f0e0d5', borderRadius: '14px', padding: '16px', marginBottom: '10px', cursor: 'pointer', transition: 'transform 0.15s ease' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
             <span style={{ fontSize: '18px' }}>📅</span>
             <span style={{ fontSize: '15px', fontWeight: 600, color: text }}>정한 날 봐주기</span>
@@ -103,7 +109,7 @@ function MenuInner() {
 
         <button onClick={() => go('find')}
           className="active:scale-95"
-          style={{ width: '100%', textAlign: 'left', background: cardBg, border: '1px solid rgba(119,102,221,0.35)', borderRadius: '14px', padding: '16px', cursor: 'pointer', transition: 'transform 0.15s ease' }}>
+          style={{ width: '100%', textAlign: 'left', background: cardBg, border: '1px solid #f0e0d5', borderRadius: '14px', padding: '16px', cursor: 'pointer', transition: 'transform 0.15s ease' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
             <span style={{ fontSize: '18px' }}>💍</span>
             <span style={{ fontSize: '15px', fontWeight: 600, color: text }}>좋은 날 찾아주기</span>
@@ -126,8 +132,8 @@ function MenuInner() {
 export default function WeddingMenuPage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d0d1a' }}>
-        <div style={{ color: '#c8b0ff' }}>로딩 중...</div>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FDF6F0' }}>
+        <div style={{ color: '#96502e' }}>로딩 중...</div>
       </div>
     }>
       <MenuInner />
