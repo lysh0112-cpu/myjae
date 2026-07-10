@@ -101,7 +101,7 @@ function ExpertInner() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#FDF6F0', fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 430, margin: '0 auto', fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>
       {/* 헤더 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', background: '#fff', borderBottom: '0.5px solid #f0e0d5' }}>
         <span onClick={() => router.back()} style={{ fontSize: 20, color: '#96502e', cursor: 'pointer' }}>‹</span>
