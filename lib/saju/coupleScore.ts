@@ -9,23 +9,23 @@ import { calcYongsin } from './yongsin'
 // 상수 테이블
 // =============================================
 
-const GENERATES: Record<string, string> = {
+export const GENERATES: Record<string, string> = {
   목: '화', 화: '토', 토: '금', 금: '수', 수: '목'
 }
-const CONTROLS: Record<string, string> = {
+export const CONTROLS: Record<string, string> = {
   목: '토', 화: '금', 토: '수', 금: '목', 수: '화'
 }
-const STEM_ELEMENT: Record<string, string> = {
+export const STEM_ELEMENT: Record<string, string> = {
   甲:'목',乙:'목',丙:'화',丁:'화',戊:'토',
   己:'토',庚:'금',辛:'금',壬:'수',癸:'수'
 }
-const BRANCH_ELEMENT: Record<string, string> = {
+export const BRANCH_ELEMENT: Record<string, string> = {
   子:'수',丑:'토',寅:'목',卯:'목',辰:'토',巳:'화',
   午:'화',未:'토',申:'금',酉:'금',戌:'토',亥:'수'
 }
 
 // 계절(월지 기준) — 조후 계산용
-const BRANCH_SEASON: Record<string, string> = {
+export const BRANCH_SEASON: Record<string, string> = {
   寅:'봄',卯:'봄',辰:'봄', 巳:'여름',午:'여름',未:'여름',
   申:'가을',酉:'가을',戌:'가을', 亥:'겨울',子:'겨울',丑:'겨울'
 }
@@ -44,15 +44,15 @@ const GAN_HAP = [['甲','己'],['乙','庚'],['丙','辛'],['丁','壬'],['戊',
 // 유틸 함수
 // =============================================
 
-function isPair(a: string, b: string, pairs: string[][]): boolean {
+export function isPair(a: string, b: string, pairs: string[][]): boolean {
   return pairs.some(([x, y]) => (a === x && b === y) || (a === y && b === x))
 }
 
-function isInTrio(a: string, b: string, trios: string[][]): boolean {
+export function isInTrio(a: string, b: string, trios: string[][]): boolean {
   return trios.some(trio => trio.includes(a) && trio.includes(b))
 }
 
-function getElementRelation(e1: string, e2: string): 'same' | 'generates' | 'generated' | 'controls' | 'controlled' | 'neutral' {
+export function getElementRelation(e1: string, e2: string): 'same' | 'generates' | 'generated' | 'controls' | 'controlled' | 'neutral' {
   if (e1 === e2) return 'same'
   if (GENERATES[e1] === e2) return 'generates'
   if (GENERATES[e2] === e1) return 'generated'
@@ -61,13 +61,13 @@ function getElementRelation(e1: string, e2: string): 'same' | 'generates' | 'gen
   return 'neutral'
 }
 
-function seasonTemp(season: string): 'hot' | 'cold' | 'mild' {
+export function seasonTemp(season: string): 'hot' | 'cold' | 'mild' {
   if (season === '여름') return 'hot'
   if (season === '겨울') return 'cold'
   return 'mild'
 }
 
-function hasValidPillar(stem: string, branch: string): boolean {
+export function hasValidPillar(stem: string, branch: string): boolean {
   return !!stem && !!branch && stem !== '?' && branch !== '?'
 }
 
@@ -108,7 +108,7 @@ export interface SajuPillarSimple {
 // ① 일주 관계 (28점)
 // =============================================
 
-function calcIljuScore(
+export function calcIljuScore(
   stem1: string, branch1: string,
   stem2: string, branch2: string,
   details: ScoreDetail[]
@@ -161,7 +161,7 @@ function calcIljuScore(
 // ② 용신 조화 (18점)
 // =============================================
 
-function calcYongsinScore(
+export function calcYongsinScore(
   saju1: SajuPillarSimple[], saju2: SajuPillarSimple[],
   dayStem1: string, dayStem2: string,
   details: ScoreDetail[]
@@ -207,7 +207,7 @@ function calcYongsinScore(
 // ③ 년주 관계 (10점)
 // =============================================
 
-function calcYeonScore(
+export function calcYeonScore(
   yStem1: string, yBranch1: string,
   yStem2: string, yBranch2: string,
   details: ScoreDetail[]
@@ -247,7 +247,7 @@ function calcYeonScore(
 // ④ 월주 관계 (8점)
 // =============================================
 
-function calcWolScore(
+export function calcWolScore(
   mStem1: string, mBranch1: string,
   mStem2: string, mBranch2: string,
   details: ScoreDetail[]
@@ -284,7 +284,7 @@ function calcWolScore(
 // ⑤ 공망 (6점)
 // =============================================
 
-function calcGongmangScore(
+export function calcGongmangScore(
   gm1: [string, string], gm2: [string, string],
   branch1: string, branch2: string,
   yBranch1: string, yBranch2: string,
@@ -327,7 +327,7 @@ function calcGongmangScore(
 // ⑥ 오행 균형 (10점)
 // =============================================
 
-function calcOhaengScore(
+export function calcOhaengScore(
   saju1: SajuPillarSimple[], saju2: SajuPillarSimple[],
   details: ScoreDetail[]
 ): number {
@@ -371,7 +371,7 @@ function calcOhaengScore(
 // ⑦ 조후 (온도 밸런스) (8점)
 // =============================================
 
-function calcJohuScore(
+export function calcJohuScore(
   mBranch1: string, mBranch2: string,
   details: ScoreDetail[]
 ): number {
@@ -405,7 +405,7 @@ function calcJohuScore(
 //    두 사람 모두 시주를 아는 경우에만 계산.
 // =============================================
 
-function calcSijuScore(
+export function calcSijuScore(
   hStem1: string, hBranch1: string,
   hStem2: string, hBranch2: string,
   details: ScoreDetail[]
@@ -441,7 +441,7 @@ function calcSijuScore(
 // 등급 계산
 // =============================================
 
-function getGrade(score: number): { grade: string; gradeDesc: string } {
+export function getGrade(score: number): { grade: string; gradeDesc: string } {
   if (score >= 90) return { grade: '운명이 점지한 천생연분 💫', gradeDesc: '이런 조합은 평생 한 번 만나기도 힘들어요' }
   if (score >= 80) return { grade: '소울메이트형 ✨', gradeDesc: '만나기 힘든 최고의 조합이에요' }
   if (score >= 70) return { grade: '서로를 성장시키는 황금 커플 🌟', gradeDesc: '함께할수록 더 빛나는 인연이에요' }
