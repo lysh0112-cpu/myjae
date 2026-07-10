@@ -253,11 +253,13 @@ export default function HomeNew() {
                   style={{
                     width: '100%', height: '44px',
                     background: '#b46e46', border: 'none', borderRadius: '10px',
-                    color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                    color: '#fff', fontSize: '13.5px', fontWeight: 800, cursor: 'pointer',
+                    fontFamily: "var(--font-geist-sans), 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif",
+                    letterSpacing: '0.02em',
                     transition: 'transform 0.12s ease', transform: 'scale(1)',
                     WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation',
                   }}
-                >나만의 사랑방으로 가기 →</button>
+                >나의 운명 아카이브 바로가기 →</button>
               </>
             ) : (
               <>
