@@ -47,6 +47,18 @@ function Stars({ n }: { n: number }) {
   )
 }
 
+// 성별로 신랑/신부 아이콘·라벨 결정 (남=신랑🤵, 여=신부👰)
+function roleIcon(p: PersonInput | null): string {
+  if (p?.gender === '여') return '👰'
+  if (p?.gender === '남') return '🤵'
+  return '💑'
+}
+function roleLabel(p: PersonInput | null, fallback: string): string {
+  if (p?.gender === '여') return '신부'
+  if (p?.gender === '남') return '신랑'
+  return fallback
+}
+
 function personSummary(p: PersonInput | null): string {
   if (!p || !p.year) return '정보 없음'
   const hour = HOUR_LABELS[p.hour] ?? '시간 모름'
@@ -259,13 +271,13 @@ function CheckInner() {
         <div style={{ fontSize: '13px', color: '#96502e', fontWeight: 600, margin: '20px 0 10px' }}>두 사람 정보</div>
         <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', border: '1px solid #f0e0d5' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-            <span style={{ fontSize: '14px' }}>🤵</span>
-            <span style={{ fontSize: '12px', color: sub, width: '44px' }}>신랑</span>
+            <span style={{ fontSize: '14px' }}>{roleIcon(groom)}</span>
+            <span style={{ fontSize: '12px', color: sub, width: '44px' }}>{roleLabel(groom, '신랑')}</span>
             <span style={{ fontSize: '13px', color: text }}>{personSummary(groom)}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '14px' }}>👰</span>
-            <span style={{ fontSize: '12px', color: sub, width: '44px' }}>신부</span>
+            <span style={{ fontSize: '14px' }}>{roleIcon(bride)}</span>
+            <span style={{ fontSize: '12px', color: sub, width: '44px' }}>{roleLabel(bride, '신부')}</span>
             <span style={{ fontSize: '13px', color: text }}>{personSummary(bride)}</span>
           </div>
         </div>
