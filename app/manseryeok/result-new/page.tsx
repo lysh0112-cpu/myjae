@@ -208,6 +208,13 @@ function ResultNewContent() {
   //   service_type은 unse에 따라 saju/daeun/seyun. 다시보기(recordId)면 저장버튼 숨김.
   const recordIdParam = searchParams.get('recordId') || undefined
   const [saveState,setSaveState]=useState<'idle'|'saving'|'saved'>(recordIdParam?'saved':'idle')
+  // ── 통변 스냅샷 ──
+  //   새 조회: TongbyeonView가 완성한 통변을 tongText로 받아 저장에 쓴다.
+  //   다시보기(recordId): getRecord로 저장된 통변(savedTong)·질문을 불러와 그대로 표시.
+  const [tongText,setTongText]=useState('')
+  const [savedTong,setSavedTong]=useState<string|undefined>(undefined)
+  // recordId면 스냅샷 로드가 끝날 때까지 질문선택/결과를 잠깐 보류
+  const [recordLoading,setRecordLoading]=useState(!!recordIdParam)
 
   // ── 사주 원국 아코디언 (기본 펼침. 표가 커서 접을 수 있게) ──
   const [wongukOpen,setWongukOpen]=useState(true)
@@ -246,6 +253,28 @@ function ResultNewContent() {
     return ()=>{cancelled=true}
   },[searchParams])
 
+  // ── 보관함 다시보기: recordId 있으면 저장된 스냅샷(질문+통변) 로드 ──
+  //   질문 선택을 건너뛰고, 저장된 통변을 AI 재호출 없이 그대로 보여준다.
+  useEffect(()=>{
+    if(!recordIdParam){ setRecordLoading(false); return }
+    let cancelled=false
+    getRecord(recordIdParam).then(rec=>{
+      if(cancelled) return
+      const snap = rec?.resultData as { tongText?: string; questions?: SajuQuestion[] } | undefined
+      if(snap?.questions && snap.questions.length>0){
+        setPickedQuestions(snap.questions)   // 질문선택 건너뜀
+      } else {
+        // 예전(구버전) 기록: 스냅샷이 없으면 빈 배열 → 질문선택 없이 만세력만 표시
+        setPickedQuestions([])
+      }
+      setSavedTong(snap?.tongText || '')     // 저장된 통변(없으면 빈 문자열)
+      setSaveState('saved')
+      setRecordLoading(false)
+    }).catch(()=>{ if(!cancelled){ setPickedQuestions([]); setRecordLoading(false) } })
+    return ()=>{cancelled=true}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[recordIdParam])
+
   const gender=info?.gender||"남"
   const calType=info?.calType||"양력"
   const yearParam=info?parseInt(info.year):0
@@ -264,7 +293,7 @@ function ResultNewContent() {
 
   const {saju,solar,converting:converting0,dayStem,monthGanji,yearStem,iljji,yeonjji}=
     useResultSaju(calType,yearParam,monthParam,dayParam,leapMonth,hourIdx)
-  const converting=converting0||loadingInfo
+  const converting=converting0||loadingInfo||recordLoading
 
   if(converting) return (
     <div style={{minHeight:'100vh',background:'#FDF6F0',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'16px'}}>
@@ -341,6 +370,12 @@ function ResultNewContent() {
         year: info.year, month: info.month, day: info.day,
         leapMonth: info.leapMonth || '0', hour: info.hour || '모름',
       },
+      // 결과 스냅샷 — 다시보기용. 통변 텍스트 + 고른 질문을 그대로 저장한다.
+      //   (AI 재호출 없이 예전 통변을 복원하기 위함)
+      resultData: {
+        tongText,
+        questions: pickedQuestions || [],
+      },
     })
     setSaveState(res.ok ? 'saved' : 'idle')
     if(!res.ok) alert(res.message || '저장하지 못했어요.')
@@ -348,7 +383,8 @@ function ResultNewContent() {
 
   const ageGroup=birthYearToGroup(yearParam)
   const genderFilter=genderToFilter(gender)
-  if(pickedQuestions===null && !chartOnly){
+  // recordId(다시보기)면 질문선택을 건너뛴다. (스냅샷 로드가 pickedQuestions를 채움)
+  if(pickedQuestions===null && !chartOnly && !recordIdParam){
     return (
       <div style={{minHeight:'100vh',background:'#FDF6F0',maxWidth:'430px',margin:'0 auto',padding:'12px',fontFamily:"'Apple SD Gothic Neo','Noto Sans KR',sans-serif'"}}>
         <QuestionPicker
@@ -463,8 +499,10 @@ function ResultNewContent() {
           </Section>
         )}
 
-        {/* ⑨ AI 통변 (고른 질문 기반). mode=chart(만세력만)면 통변 없음 */}
-        {!chartOnly && pickedQuestions && dayStem && ohaeng.length>0 && (
+        {/* ⑨ AI 통변 (고른 질문 기반). mode=chart(만세력만)면 통변 없음.
+            다시보기(recordId)면 저장된 통변·질문이 있을 때만(구버전 기록은 통변 숨김). */}
+        {!chartOnly && pickedQuestions && pickedQuestions.length>0 && dayStem && ohaeng.length>0 &&
+          (!recordIdParam || (savedTong && savedTong.length>0)) && (
           <div style={{marginTop:'10px'}}>
             <TongbyeonView
               input={toTongbyeonInput({
@@ -480,6 +518,8 @@ function ResultNewContent() {
               questions={pickedQuestions}
               premium={isPaid}
               unseEntry={unseEntry}
+              savedText={savedTong}
+              onComplete={(t)=>setTongText(t)}
               onBack={()=>setPickedQuestions(null)}
             />
           </div>
