@@ -236,3 +236,50 @@ export function calcWolunList(dayStem: string, year: number): WolunItem[] {
   }
   return list
 }
+
+// ── 일운 (특정 연·월의 날짜별 간지) ──────────────────────────────
+export interface IlunItem {
+  day: number
+  cheongan: string
+  jiji: string
+  ganYukchin: string
+  jiYukchin: string
+}
+
+// 양력 연·월·일 → 일진 간지 (getDayGanji와 동일 산식, 60갑자 순환)
+function dayGanjiIdx(year: number, month: number, day: number): number {
+  function isLeap(y: number): boolean { return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0 }
+  function dim(y: number, m: number): number {
+    return [0, 31, isLeap(y) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m]
+  }
+  let total = 0
+  for (let y = 1900; y < year; y++) total += isLeap(y) ? 366 : 365
+  for (let m = 1; m < month; m++) total += dim(year, m)
+  total += day - 1
+  return ((total + 10) % 60 + 60) % 60
+}
+
+/**
+ * 일운 계산 (특정 양력 연·월의 1일~말일 날짜별 간지)
+ * @param dayStem 일간 (십신 계산용)
+ * @param year 양력 연도
+ * @param month 양력 월 (1~12)
+ */
+export function calcIlunList(dayStem: string, year: number, month: number): IlunItem[] {
+  function isLeap(y: number): boolean { return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0 }
+  const daysInMonth = [0, 31, isLeap(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month]
+  const list: IlunItem[] = []
+  for (let day = 1; day <= daysInMonth; day++) {
+    const idx = dayGanjiIdx(year, month, day)
+    const cheongan = HEAVENLY_STEMS[idx % 10]
+    const jiji = EARTHLY_BRANCHES[idx % 12]
+    list.push({
+      day,
+      cheongan,
+      jiji,
+      ganYukchin: getSipsin(dayStem, cheongan),
+      jiYukchin: getSipsinBranch(dayStem, jiji),
+    })
+  }
+  return list
+}
