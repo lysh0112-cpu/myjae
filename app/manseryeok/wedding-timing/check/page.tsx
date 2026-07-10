@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { runDiagnose, type DiagnosedDate } from '../lib/diagnose'
 import { saveWeddingRecord, getWeddingRecord } from '@/lib/saju/weddingRecords'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
+import WeddingDateField from '../components/WeddingDateField'
 
 const cardBg = '#FFFBF7'
 const sub = '#b4785a'
@@ -273,13 +274,13 @@ function CheckInner() {
           봐드릴 날짜 <span style={{ fontSize: '11px', color: sub, fontWeight: 400 }}>(최대 3개)</span>
         </div>
         {dates.map((d, i) => (
-          <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
-            <input type="date" value={d}
-              onChange={e => setDate(i, e.target.value)}
-              style={{ flex: 1, boxSizing: 'border-box', background: '#FDF6F0', border: '1px solid #f0e0d5', borderRadius: '10px', padding: '12px 14px', color: d ? '#96502e' : '#b4785a', fontSize: '15px', colorScheme: 'dark', outline: 'none' }} />
+          <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
+            <div style={{ flex: 1 }}>
+              <WeddingDateField value={d} onChange={v => setDate(i, v)} />
+            </div>
             {dates.length > 1 && (
               <button onClick={() => removeDate(i)}
-                style={{ background: 'transparent', border: '1px solid #f0e0d5', borderRadius: '10px', padding: '10px 12px', color: sub, fontSize: '13px', cursor: 'pointer' }}>✕</button>
+                style={{ background: 'transparent', border: '0.5px solid #f0e0d5', borderRadius: '10px', padding: '10px 12px', color: sub, fontSize: '13px', cursor: 'pointer' }}>✕</button>
             )}
           </div>
         ))}
