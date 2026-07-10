@@ -27,6 +27,7 @@ import { COUPLE_QUESTIONS, groupCoupleByCategory } from '@/lib/saju/coupleQuesti
 import { MARRIED_QUESTIONS } from '@/lib/saju/marriedQuestions'
 import type { SajuQuestion } from '@/lib/saju/questions'
 import { calcCoupleScore, type SajuPillarSimple, type CoupleScoreResult } from '@/lib/saju/coupleScore'
+import { calcMarriedScore } from '@/lib/saju/marriedScore'
 import { getGongmang } from '@/lib/saju/gongmang'
 import { calcHourPillar } from '@/lib/saju/hourPillar'
 import { buildCoupleTongbyeonPrompt, type CouplePerson } from '@/lib/saju/coupleTongbyeonPrompt'
@@ -365,12 +366,18 @@ function CoupleResultView({
         const ilju2 = s2.find(p => p.pillar === '일주')
         const gm1 = ilju1 ? getGongmang(ilju1.stem, ilju1.branch) : ['', ''] as [string, string]
         const gm2 = ilju2 ? getGongmang(ilju2.stem, ilju2.branch) : ['', ''] as [string, string]
-        setScore(calcCoupleScore(s1, s2, gm1, gm2))
+        // 부부(married)는 부부 전용 계산식(조후·월주 가중 + 원진/귀문/구응),
+        // 연인(couple)은 기존 계산식.
+        setScore(
+          mode === 'married'
+            ? calcMarriedScore(s1, s2, gm1, gm2)
+            : calcCoupleScore(s1, s2, gm1, gm2)
+        )
       } catch { if (!cancelled) setCalcErr(true) }
     }
     run()
     return () => { cancelled = true }
-  }, [person1, person2, recordId])
+  }, [person1, person2, recordId, mode])
 
   // 통변 스트리밍 (새 궁합, 계산 끝나면 자동 1회 — recordId면 스냅샷이라 안 함)
   useEffect(() => {
@@ -533,6 +540,16 @@ function CoupleResultView({
             {saveState === 'saving' ? '저장 중…' : saveState === 'saved' ? '✓ 보관함에 저장됨' : '보관함에 저장'}
           </button>
           <button onClick={onOther} style={{ flex: 1, background: '#b46e46', border: 'none', borderRadius: 11, padding: 12, fontSize: 13, color: '#fff', cursor: 'pointer' }}>다른 궁합 보기</button>
+        </div>
+
+        {/* 참고용 안내 — 결과에 과몰입하지 않도록 다정하게 */}
+        <div style={{
+          marginTop: 18, padding: '13px 14px', borderRadius: 11,
+          background: '#faf3ec', border: '0.5px solid #f0e0d5',
+          fontSize: 11.5, lineHeight: 1.7, color: '#b4785a', textAlign: 'center',
+        }}>
+          이 풀이는 두 분을 더 깊이 이해하기 위한 다정한 참고예요.<br />
+          인연을 정하는 건 사주가 아니라 두 사람의 마음과 노력이랍니다. 🌿
         </div>
       </div>
     </main>
