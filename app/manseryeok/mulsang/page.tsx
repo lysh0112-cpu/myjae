@@ -220,23 +220,30 @@ function MulsangInner() {
   const [openPicker, setOpenPicker] = useState(false)           // 질문 고르기 부품 전체 아코디언
   // 이미 답이 저장된(=본) 질문 id 집합. 모달 열 때 읽어와 체크 표시에 사용.
   const [answeredIds, setAnsweredIds] = useState<Set<string>>(new Set())
+  // 그림 생성 실패 안내 (크레딧 소진 등). null이면 정상.
+  const [imageError, setImageError] = useState<string | null>(null)
 
   useEffect(() => {
     const key = mulsangImgKey(info, style)
     if (!key) return
+    // 그림 생성 중이면 건드리지 않는다 (방금 만든 그림을 지우면 안 됨).
+    if (loading) return
     // 사람 또는 화풍이 바뀌면 화면을 비우고, 그 사람+그 화풍으로 저장된 그림만 복원.
     //   (다른 화풍 그림은 그 화풍으로 전환하면 그때 뜬다. 두 화풍 각각 보관됨.)
-    setImageUrl(null)
-    setCommentary(null)
     const saved = localStorage.getItem(key)
     if (saved) {
       try {
         const r = JSON.parse(saved)
-        if (r.commentary) setCommentary(r.commentary)
-        if (r.imageUrl) setImageUrl(r.imageUrl)
+        setCommentary(r.commentary ?? null)
+        setImageUrl(r.imageUrl ?? null)
+        return
       } catch {}
     }
-  }, [info, style])
+    // 저장된 게 없을 때만 비운다.
+    setImageUrl(null)
+    setCommentary(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [personKeyOf(info), style])
 
   const gold = '#FAC775'
   const cardBg = '#2C2C2A'
@@ -303,6 +310,18 @@ function MulsangInner() {
       const data = await res.json()
       setImageUrl(data.imageUrl ?? null)
       setCommentary(data.commentary ?? null)
+      // 그림이 안 왔으면(=크레딧 소진 등) 이유를 화면에 안내. imageNote로 원인 구분.
+      if (!data.imageUrl) {
+        const note = data.imageNote || ''
+        const detail = data.imageErrorMsg ? ` (사유: ${data.imageErrorMsg})` : ''
+        setImageError(
+          note === 'no_openai_key'
+            ? '그림 생성 설정이 아직 안 돼 있어요. (관리자 확인 필요)'
+            : `지금은 그림을 만들지 못했어요.${detail} 잠시 후 다시 시도하거나 관리자에게 문의해 주세요.`
+        )
+      } else {
+        setImageError(null)
+      }
       try {
         const key = mulsangImgKey(info, style)
         if (key) localStorage.setItem(key, JSON.stringify({
@@ -617,6 +636,11 @@ function MulsangInner() {
                 <div style={{ background: '#1a1a18' }}>
                   {imageUrl ? (
                     <img src={imageUrl} alt="사주 풍경화" style={{ width: '100%', display: 'block' }} />
+                  ) : imageError ? (
+                    <div style={{ aspectRatio: '1/1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#b4785a', background: '#fdf6f0', padding: '20px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '34px' }}>🖼️</span>
+                      <span style={{ fontSize: '13px', lineHeight: 1.6, color: '#96502e' }}>{imageError}</span>
+                    </div>
                   ) : (
                     <div style={{ aspectRatio: '1/1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#5555aa', background: cardBg }}>
                       <span style={{ fontSize: '40px' }}>🖼️</span>
@@ -650,11 +674,13 @@ function MulsangInner() {
             </div>
 
 
-            {/* 통변 실행 버튼 (하나 골라서) */}
-            <button onClick={() => runTongbyeon('selected')} disabled={!pickedQ || tongLoading}
-              style={{ width: '100%', height: '46px', background: pickedQ ? '#b46e46' : '#d8c4b4', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: pickedQ ? 'pointer' : 'not-allowed', marginTop: '10px' }}>
-              {pickedQ ? '이 질문으로 그림 풀이 받기' : '궁금한 것을 하나 골라주세요'}
-            </button>
+            {/* 통변 실행 버튼 — 질문을 골랐을 때만 표시 (안 골랐을 땐 위 트리거와 문구가 겹쳐 숨김) */}
+            {pickedQ && (
+              <button onClick={() => runTongbyeon('selected')} disabled={tongLoading}
+                style={{ width: '100%', height: '46px', background: '#b46e46', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer', marginTop: '10px' }}>
+                이 질문으로 그림 풀이 받기
+              </button>
+            )}
             <button onClick={() => runTongbyeon('all')} disabled={tongLoading}
               style={{ width: '100%', height: '42px', background: 'transparent', border: '0.5px solid #d8c4b4', borderRadius: '12px', color: '#96502e', fontSize: '13px', cursor: 'pointer', marginTop: '8px' }}>
               그냥 전체 대략 해설 볼래요
