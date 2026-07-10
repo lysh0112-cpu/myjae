@@ -46,9 +46,11 @@ export async function listRecords(
   const uid = auth?.user?.id
   if (!uid) return []
 
+  // 목록은 result_data(통변 전체)를 가져오지 않는다 — 대규모에서 가볍게.
+  //   통변 스냅샷은 카드를 눌러 다시보기(getRecord)할 때만 내려받는다.
   const { data, error } = await supabase
     .from('saju_records')
-    .select('id, service_type, title, relation, input_data, result_data, created_at')
+    .select('id, service_type, title, relation, input_data, created_at')
     .eq('user_id', uid)
     .eq('service_type', serviceType)
     .order('created_at', { ascending: false })
@@ -64,7 +66,7 @@ export async function listRecords(
       title: r.title,
       relation: r.relation ?? undefined,
       inputData: r.input_data as SavedInputData,
-      resultData: r.result_data ?? undefined,
+      resultData: undefined,   // 목록에선 안 실음(다시보기 getRecord에서 로드)
       createdAt: r.created_at,
     }))
 }
@@ -87,9 +89,10 @@ export async function listRecordsByService(
   const uid = auth?.user?.id
   if (!uid) return []
 
+  // 목록은 result_data(통변 전체)를 가져오지 않는다 — 대규모에서 가볍게.
   const { data, error } = await supabase
     .from('saju_records')
-    .select('id, service_type, title, relation, input_data, result_data, created_at')
+    .select('id, service_type, title, relation, input_data, created_at')
     .eq('user_id', uid)
     .eq('service_type', serviceType)
     .order('created_at', { ascending: false })
@@ -104,7 +107,7 @@ export async function listRecordsByService(
       title: r.title,
       relation: r.relation ?? undefined,
       inputData: r.input_data as SavedInputData,
-      resultData: r.result_data ?? undefined,
+      resultData: undefined,   // 목록에선 안 실음(다시보기 getRecord에서 로드)
       createdAt: r.created_at,
     }))
 }
