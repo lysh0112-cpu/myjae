@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { getUnsung, getSinsal, unsungColor, SINSAL_HIGHLIGHT } from '@/lib/saju'
+import { getGwiinForBranch, getGwiinForStem, GWIIN_STYLE } from '@/lib/saju/gwiin'
 import TermModal from './TermModal'
 
 /**
@@ -41,7 +42,12 @@ const SS_C: Record<string, string> = {
   편인: '#1e88e5', 정인: '#1e88e5',
 }
 const HEAVENLY_STEMS = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸']
-const BRANCH_YIN: Record<string, boolean> = { 子: false, 丑: true, 寅: false, 卯: true, 辰: false, 巳: true, 午: false, 未: true, 申: false, 酉: true, 戌: false, 亥: true }
+// 지지 십성 계산용 음양 — 표면 음양이 아니라 '지장간 본기(本氣)의 음양'을 쓴다.
+//   (자평진전 원칙: 체용 구분. 子·午·巳·亥는 체와 용이 반대)
+//   子=癸(음) 丑=己(음) 寅=甲(양) 卯=乙(음) 辰=戊(양) 巳=丙(양)
+//   午=丁(음) 未=己(음) 申=庚(양) 酉=辛(음) 戌=戊(양) 亥=壬(양)
+//   true=음(陰), false=양(陽)
+const BRANCH_YIN: Record<string, boolean> = { 子: true, 丑: true, 寅: false, 卯: true, 辰: false, 巳: false, 午: true, 未: true, 申: false, 酉: true, 戌: false, 亥: false }
 
 function getSipsin(dayStem: string, targetStem: string): string {
   if (!targetStem || targetStem === '?') return ''
@@ -173,6 +179,35 @@ export default function SajuWonguk({ saju, dayStem, yeonjji, iljji, gm1, gm2 }: 
               )
             })}
           </tr>
+          {/* 귀인(길신) — 천간귀인(월덕·천덕)+지지귀인(천을·태극·문창·금여·암록)을 칸마다 */}
+          <tr>
+            <td style={rowLabel}>귀인</td>
+            {saju.map(({ stem, branch }, i) => {
+              const monthBranch = saju.find(p => p.pillar === '월주')?.branch ?? ''
+              const gwiins = [
+                ...getGwiinForStem(monthBranch, stem),
+                ...getGwiinForBranch(dayStem, monthBranch, branch),
+              ]
+              if (gwiins.length === 0) {
+                return <td key={i} style={{ ...termCell('#ddd'), cursor: 'default' }}>×</td>
+              }
+              return (
+                <td key={i} style={{ padding: '2px 1px', textAlign: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center' }}>
+                    {gwiins.map((g) => {
+                      const st = GWIIN_STYLE[g]
+                      return (
+                        <span key={g} onClick={() => open(g)}
+                          style={{ fontSize: 8.5, fontWeight: 700, color: st?.color || '#c8783c', cursor: 'pointer', lineHeight: 1.25, whiteSpace: 'nowrap' }}>
+                          {st?.short || g}
+                        </span>
+                      )
+                    })}
+                  </div>
+                </td>
+              )
+            })}
+          </tr>
         </tbody>
       </table>
 
@@ -184,7 +219,10 @@ export default function SajuWonguk({ saju, dayStem, yeonjji, iljji, gm1, gm2 }: 
         </div>
         <div style={{ textAlign: 'center' }}>
           <div style={{ color: '#bbb', fontSize: 9, marginBottom: 2 }}>공망</div>
-          <div style={{ color: '#f44336', fontWeight: 700, fontSize: 11 }}>{gm1 ? `${gm1}·${gm2}` : '-'}</div>
+          <div onClick={() => gm1 && open('공망')}
+            style={{ color: '#f44336', fontWeight: 700, fontSize: 11, cursor: gm1 ? 'pointer' : 'default' }}>
+            {gm1 ? `${gm1}·${gm2}` : '-'}
+          </div>
         </div>
       </div>
 
