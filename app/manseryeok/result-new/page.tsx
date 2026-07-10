@@ -10,6 +10,7 @@ import { getUnsung, getSinsal, unsungColor, getGongmang, SINSAL_HIGHLIGHT } from
 import { GAN_COLOR, JI_COLOR } from "@/lib/saju/constants";
 import { calcSeyunList, calcWolunList } from "@/lib/saju/dayun";
 import { calcYongsin } from "@/lib/saju/yongsin";
+import { calcYongsinNew } from "@/lib/saju/yongsinNew";
 import { calcSimsanOhaeng, toPercentList } from "@/lib/saju/simsanOhaeng";
 import DayunTableNew from "./components/DayunTableNew";
 import AiAnalysisNew from "./components/AiAnalysisNew";
@@ -302,7 +303,8 @@ function ResultNewContent() {
   const seyunList=dayStem?calcSeyunList(dayStem,currentYear):[]
   const wolunList=dayStem?calcWolunList(dayStem,currentYear):[]
 
-  // 용신·희신·기신 계산 (이미 있는 계산기 사용)
+  // 용신 계산 — 화면 표시는 심산 3종 용신(yongsinNew), 통변은 기존 형식(호환)
+  const yongsinNew=saju.length>0&&dayStem?calcYongsinNew(saju,dayStem):null
   const yongsinResult=saju.length>0&&dayStem?calcYongsin(saju,dayStem):null
   const currentSeyunIdx=seyunList.findIndex(s=>s.year===currentYear)
   const startIdx=Math.max(0,currentSeyunIdx-2)
@@ -425,15 +427,10 @@ function ResultNewContent() {
           )}
         </Section>
 
-        {/* ⑤ 용신 · 희신 · 기신 */}
-        {yongsinResult&&(
-        <Section title="용신 · 희신 · 기신" collapsible={!chartOnly} open={openSection==='yongsin'} onToggle={()=>toggleSection('yongsin')}>
-          <YongsinCard
-            yongsin={yongsinResult.yongsin}
-            heeksin={yongsinResult.heeksin}
-            gisin={yongsinResult.gisin}
-            description={yongsinResult.description}
-          />
+        {/* ⑤ 나의 용신 (조후·억부·격국 3종) */}
+        {yongsinNew&&(
+        <Section title="나의 용신" collapsible={!chartOnly} open={openSection==='yongsin'} onToggle={()=>toggleSection('yongsin')}>
+          <YongsinCard result={yongsinNew}/>
         </Section>
         )}
 
