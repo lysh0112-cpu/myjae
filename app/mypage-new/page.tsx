@@ -743,7 +743,6 @@ export default function MyPageNew() {
           { icon: '⊞', label: '서비스', href: '/manseryeok', active: false },
           { icon: '💬', label: '상담', href: '/manseryeok/consultant-select', active: false },
           { icon: '♡', label: '찜', href: '/home-new', active: false },
-          { icon: '👤', label: '마이', href: '/mypage-new', active: true },
         ].map((n) => (
           <button key={n.label} onClick={() => router.push(n.href)}
             style={{ flex: 1, padding: '10px 0', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
