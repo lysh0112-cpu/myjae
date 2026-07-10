@@ -33,8 +33,12 @@ export default function HapchungView({ saju }: Props) {
 
   return (
     <div style={{ fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>
-      <div style={{ fontSize: 11, color: '#96502e', fontWeight: 700, marginBottom: 8 }}>
-        합충 반영 오행 (용신 기준 · 辰戌丑未=土)
+      <div style={{ background: '#fff3e9', border: '0.5px solid #e8d5c5', borderRadius: 10, padding: '11px 13px', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: '#b46e46', borderRadius: 6, padding: '3px 8px' }}>합충 반영됨</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#96502e' }}>합충 반영 오행</span>
+        </div>
+        <div style={{ fontSize: 10.5, color: '#a0836e' }}>용신 기준 · 辰戌丑未=土로 계산</div>
       </div>
 
       {/* 합충 반영 오각형 */}
@@ -82,7 +86,7 @@ export default function HapchungView({ saju }: Props) {
       )}
 
       <div style={{ fontSize: 9.5, color: '#c5a590', marginTop: 8, lineHeight: 1.6 }}>
-        ※ 합충 규칙(방합·삼합·반합·육합·천간합 + 충 + 거리가중치)은 검수 중이에요. 유파에 따라 다를 수 있어요.
+        ※ 합충 규칙(방합·삼합·반합·육합·천간합 + 충 + 거리가중치)을 반영한 결과예요. 유파에 따라 해석이 다를 수 있어요.
       </div>
     </div>
   )
