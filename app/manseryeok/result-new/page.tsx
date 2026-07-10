@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useResultSaju } from "@/hooks/useResultSaju";
 import { supabase } from "@/lib/supabase";
 import { fromProfile, fromUrl, type MyInfo } from "@/lib/saju/myInfo";
+import { saveRecord, getRecord } from "@/lib/saju/sajuRecords";
 import { getUnsung, getSinsal, unsungColor, getGongmang, SINSAL_HIGHLIGHT } from "@/lib/saju";
 import { GAN_COLOR, JI_COLOR } from "@/lib/saju/constants";
 import { calcSeyunList, calcWolunList } from "@/lib/saju/dayun";
@@ -202,6 +203,12 @@ function ResultNewContent() {
   // null이면 질문 선택 화면 단계. 배열이면 결과 화면 단계.
   const [pickedQuestions,setPickedQuestions]=useState<SajuQuestion[]|null>(null)
 
+  // ── 보관함 저장 ──
+  //   결과 화면에서 [보관함에 저장] 누르면 saju_records에 기록.
+  //   service_type은 unse에 따라 saju/daeun/seyun. 다시보기(recordId)면 저장버튼 숨김.
+  const recordIdParam = searchParams.get('recordId') || undefined
+  const [saveState,setSaveState]=useState<'idle'|'saving'|'saved'>(recordIdParam?'saved':'idle')
+
   // ── ID 통일: URL 우선 + profiles 보조 (diagnosis와 동일한 표준 패턴) ──
   //   1) URL에 생년월일이 있으면 그 사람(타인·특정인·가족지인 목록에서 선택)
   //   2) 없으면 로그인한 내 정보(profiles) = 내 사주
@@ -313,6 +320,27 @@ function ResultNewContent() {
   const unseParam = searchParams.get('unse')
   const unseEntry: UnseEntry | undefined =
     unseParam === 'daeun' || unseParam === 'seyun' ? unseParam : undefined
+
+  // ── 보관함 저장 핸들러 ──
+  //   service_type: 대운=daeun, 세운=seyun, 그 외=saju.
+  //   info(사람 사주정보)를 input_data로, 이름을 title로 저장.
+  async function handleSaveRecord(){
+    if(!info || saveState!=='idle') return
+    setSaveState('saving')
+    const serviceType = unseParam==='daeun' ? 'daeun' : unseParam==='seyun' ? 'seyun' : 'saju'
+    const res = await saveRecord({
+      serviceType,
+      title: personName || '나',
+      inputData: {
+        gender: info.gender, calType: info.calType,
+        year: info.year, month: info.month, day: info.day,
+        leapMonth: info.leapMonth || '0', hour: info.hour || '모름',
+      },
+    })
+    setSaveState(res.ok ? 'saved' : 'idle')
+    if(!res.ok) alert(res.message || '저장하지 못했어요.')
+  }
+
   const ageGroup=birthYearToGroup(yearParam)
   const genderFilter=genderToFilter(gender)
   if(pickedQuestions===null && !chartOnly){
@@ -341,7 +369,19 @@ function ResultNewContent() {
           <div style={{fontSize:'14px',fontWeight:700,color:'#1a1a1a'}}>{titleName}</div>
           <div style={{fontSize:'9px',color:'#c8783c'}}>명연재（明然載）</div>
         </div>
-        <div style={{width:'20px'}}/>
+        {/* 보관함 저장 버튼 (다시보기(recordId)면 이미 저장된 것이라 '저장됨' 표시) */}
+        {info && !chartOnly ? (
+          <button onClick={handleSaveRecord} disabled={saveState!=='idle'}
+            style={{
+              background:'none', border:'none', cursor:saveState==='idle'?'pointer':'default',
+              fontSize:'11px', fontWeight:600, color:saveState==='saved'?'#c8783c':'#96502e', padding:0,
+              whiteSpace:'nowrap',
+            }}>
+            {saveState==='saving'?'저장 중…':saveState==='saved'?'✓ 저장됨':'저장'}
+          </button>
+        ) : (
+          <div style={{width:'20px'}}/>
+        )}
       </div>
 
       {/* 프로필 헤더 (피치톤) */}
