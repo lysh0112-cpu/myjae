@@ -10,10 +10,12 @@ import { getUnsung, getSinsal, unsungColor, getGongmang, SINSAL_HIGHLIGHT } from
 import { GAN_COLOR, JI_COLOR } from "@/lib/saju/constants";
 import { calcYongsin } from "@/lib/saju/yongsin";
 import { calcYongsinNew } from "@/lib/saju/yongsinNew";
+import { calcHapchungScore } from "@/lib/saju/hapchungScore";
 import { calcSimsanOhaeng, toPercentList } from "@/lib/saju/simsanOhaeng";
 import AiAnalysisNew from "./components/AiAnalysisNew";
 import ConsultButton from "@/app/components/common/ConsultButton";
 import OhaengPentagon from "./OhaengPentagon";
+import HapchungView from "./HapchungView";
 import SipsungTable from "./SipsungTable";
 import UnseFlow from "./UnseFlow";
 import SingangTable from "./SingangTable";
@@ -209,6 +211,7 @@ function ResultNewContent() {
 
   // ── 사주 원국 아코디언 (기본 펼침. 표가 커서 접을 수 있게) ──
   const [wongukOpen,setWongukOpen]=useState(true)
+  const [hapchungOn,setHapchungOn]=useState(false)
 
   // ── ID 통일: URL 우선 + profiles 보조 (diagnosis와 동일한 표준 패턴) ──
   //   1) URL에 생년월일이 있으면 그 사람(타인·특정인·가족지인 목록에서 선택)
@@ -298,7 +301,13 @@ function ResultNewContent() {
   const genderLabel=gender==="여"?"여성":"남성"
 
   // 용신 계산 — 화면 표시는 심산 3종 용신(yongsinNew), 통변은 기존 형식(호환)
-  const yongsinNew=saju.length>0&&dayStem?calcYongsinNew(saju,dayStem):null
+  const yongsinBase=saju.length>0&&dayStem?calcYongsinNew(saju,dayStem):null
+  // 전문가 모드(?pro=1)에서 합충 토글 ON이면 합충 반영 점수로 재계산
+  const isPro = searchParams.get('pro') === '1'
+  const yongsinHap=isPro&&saju.length>0&&dayStem
+    ? calcYongsinNew(saju,dayStem,calcHapchungScore(saju).score)
+    : null
+  const yongsinNew = (isPro && hapchungOn && yongsinHap) ? yongsinHap : yongsinBase
   const yongsinResult=saju.length>0&&dayStem?calcYongsin(saju,dayStem):null
 
   // 신강/신약 점수 (임시: 토 비율로 계산)
@@ -384,6 +393,20 @@ function ResultNewContent() {
 
       <div style={{padding:'10px'}}>
 
+        {/* 전문가 모드: 합충 반영 토글 (?pro=1일 때만) */}
+        {isPro && (
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:'#fff3e9',border:'0.5px solid #e8d5c5',borderRadius:'12px',padding:'11px 14px',marginBottom:'10px'}}>
+            <div>
+              <span style={{fontSize:'12px',fontWeight:700,color:'#96502e'}}>합충 반영</span>
+              <span style={{fontSize:'10px',color:'#c5a590',marginLeft:'8px'}}>{hapchungOn?'합·충을 반영해 계산 중':'끄면 기본 계산'}</span>
+            </div>
+            <div onClick={()=>setHapchungOn(v=>!v)}
+              style={{width:'42px',height:'24px',borderRadius:'12px',background:hapchungOn?'#b46e46':'#ddd',position:'relative',cursor:'pointer',transition:'background 0.15s',flexShrink:0}}>
+              <div style={{width:'18px',height:'18px',borderRadius:'50%',background:'#fff',position:'absolute',top:'3px',left:hapchungOn?'21px':'3px',transition:'left 0.15s'}}/>
+            </div>
+          </div>
+        )}
+
         {/* ① 사주 원국 (신살 통합) — 표가 커서 아코디언(기본 펼침). */}
         <Section title="사주 원국" collapsible open={wongukOpen} onToggle={()=>setWongukOpen(v=>!v)} hint="펼쳐보기">
           <div style={{background:'#fff',padding:'2px'}}>
@@ -403,6 +426,13 @@ function ResultNewContent() {
             </div>
           </div>
         </Section>
+
+        {/* ③-2 합충 반영 (전문가 모드 + 토글 ON) */}
+        {isPro && hapchungOn && saju.length>0 && (
+          <Section title="합충 반영 오행" collapsible={!chartOnly} open={openSection==='hapchung'} onToggle={()=>toggleSection('hapchung')}>
+            <HapchungView saju={saju}/>
+          </Section>
+        )}
 
         {/* ④ 신강/신약 */}
         <Section title="신강 · 신약" collapsible={!chartOnly} open={openSection==='singang'} onToggle={()=>toggleSection('singang')}>
