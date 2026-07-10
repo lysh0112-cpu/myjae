@@ -111,11 +111,11 @@ function WeddingInputInner() {
           <div style={{ fontSize: 10.5, color: '#b4785a', marginTop: 2 }}>칸을 눌러 사람을 골라주세요</div>
         </div>
 
-        <SlotView role="신랑" slot={groom} onOpen={() => setPickerFor(1)} />
+        <SlotView fallbackRole="신랑" slot={groom} onOpen={() => setPickerFor(1)} />
 
         <div style={{ textAlign: 'center', color: '#d4537e', fontSize: 16, margin: '2px 0 8px' }}>♥</div>
 
-        <SlotView role="신부" slot={bride} onOpen={() => setPickerFor(2)} />
+        <SlotView fallbackRole="신부" slot={bride} onOpen={() => setPickerFor(2)} />
 
         {meErr && (
           <div style={{
@@ -152,11 +152,16 @@ function WeddingInputInner() {
   )
 }
 
-function SlotView({ role, slot, onOpen }: {
-  role: '신랑' | '신부'
+function SlotView({ fallbackRole, slot, onOpen }: {
+  fallbackRole: '신랑' | '신부'   // 빈 슬롯일 때 보여줄 기본 라벨
   slot: Slot | null
   onOpen: () => void
 }) {
+  // 사람이 채워지면 그 사람의 성별로 신랑/신부를 정한다. (남=신랑, 여=신부)
+  //   빈 슬롯이면 자리 안내용 기본 라벨을 쓴다.
+  const role: '신랑' | '신부' =
+    slot ? (slot.input.gender === '여' ? '신부' : slot.input.gender === '남' ? '신랑' : fallbackRole)
+         : fallbackRole
   const emoji = role === '신랑' ? '🤵' : '👰'
   const birthLabel = slot && slot.input.year
     ? `${slot.input.calType} ${slot.input.year}.${slot.input.month}.${slot.input.day}`
