@@ -2,6 +2,7 @@
 import { Suspense, useState, useEffect, type ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import WeddingDateField from '../components/WeddingDateField'
 
 const purple = '#b46e46'
 const cardBg = '#FFFBF7'
@@ -176,14 +177,12 @@ function WeddingFindInner() {
         <SectionLabel>언제쯤 식을 올리고 싶으세요?</SectionLabel>
 
         <QLabel>희망 기간 시작 <span style={{ color: purple }}>*</span></QLabel>
-        <input type="date" value={survey.startDate}
-          onChange={e => setField('startDate', e.target.value)}
-          style={{ width: '100%', boxSizing: 'border-box', background: '#FDF6F0', border: '1px solid #f0e0d5', borderRadius: '10px', padding: '12px 14px', color: survey.startDate ? '#96502e' : '#b4785a', fontSize: '15px', colorScheme: 'dark', outline: 'none' }} />
+        <WeddingDateField value={survey.startDate} onChange={v => setField('startDate', v)} />
+
+        <div style={{ height: 14 }} />
 
         <QLabel>희망 기간 끝 <span style={{ color: purple }}>*</span></QLabel>
-        <input type="date" value={survey.endDate}
-          onChange={e => setField('endDate', e.target.value)}
-          style={{ width: '100%', boxSizing: 'border-box', background: '#FDF6F0', border: '1px solid #f0e0d5', borderRadius: '10px', padding: '12px 14px', color: survey.endDate ? '#96502e' : '#b4785a', fontSize: '15px', colorScheme: 'dark', outline: 'none' }} />
+        <WeddingDateField value={survey.endDate} onChange={v => setField('endDate', v)} />
 
         <QLabel>요일은 어떻게 할까요?</QLabel>
         <div style={{ display: 'flex', gap: '6px' }}>
