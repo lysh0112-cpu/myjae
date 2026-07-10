@@ -1,14 +1,15 @@
 'use client'
 import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import PageHeader from '@/app/components/common/PageHeader'
 import ConsultButton from '@/app/components/common/ConsultButton'
 import { runWeddingTiming, type WeddingRecommendation, type WeddingAvoidDay } from '../lib/recommend'
+import { saveWeddingRecord, getWeddingRecord } from '@/lib/saju/weddingRecords'
+import type { SavedInputData } from '@/lib/saju/savedPeople'
 
-const cardBg = '#13132a'
-const sub = '#5555aa'
-const text = '#e8e4ff'
-const gold = '#FAC775'
+const cardBg = '#FFFBF7'
+const sub = '#b4785a'
+const text = '#3a2e28'
+const gold = '#c8783c'
 
 const HOUR_LABELS: Record<string, string> = {
   '-1': '시간 모름',
@@ -20,6 +21,7 @@ const HOUR_LABELS: Record<string, string> = {
 interface PersonInput {
   year: string; month: string; day: string; hour: string
   gender: string; calType: string; job: string; mbti: string
+  name?: string
 }
 
 interface WeddingSurvey {
@@ -41,7 +43,7 @@ function Disclaimer({ full }: { full?: boolean }) {
 function Stars({ n }: { n: number }) {
   return (
     <span style={{ color: gold, fontSize: '12px', letterSpacing: '1px' }}>
-      {'★'.repeat(n)}<span style={{ color: '#444466' }}>{'★'.repeat(5 - n)}</span>
+      {'★'.repeat(n)}<span style={{ color: '#e8d5c6' }}>{'★'.repeat(5 - n)}</span>
     </span>
   )
 }
@@ -57,7 +59,7 @@ function rankBadge(rank: number): string {
 }
 
 const GRADE_COLOR: Record<string, string> = {
-  S: '#FAC775', A: '#9be29b', B: '#9bc0e2', C: '#c8b0ff', D: '#9a98b0',
+  S: '#c8783c', A: '#5a8c5a', B: '#b46e46', C: '#96502e', D: '#c5a590',
 }
 
 async function fetchAiNotes(recs: WeddingRecommendation[], survey: WeddingSurvey): Promise<Record<number, AiNote>> {
@@ -127,7 +129,7 @@ function CandidateCard({ c, note, defaultOpen }: { c: WeddingRecommendation; not
     { label: '천희·홍란 (혼인 길신)', score: b.cheonhuiHongran, max: 20 },
   ]
   return (
-    <div style={{ background: cardBg, borderRadius: '12px', border: '1px solid ' + (c.rank === 1 ? 'rgba(250,199,117,0.35)' : 'rgba(255,255,255,0.06)'), marginBottom: '10px', overflow: 'hidden' }}>
+    <div style={{ background: cardBg, borderRadius: '12px', border: '1px solid ' + (c.rank === 1 ? 'rgba(250,199,117,0.35)' : '#f0e0d5'), marginBottom: '10px', overflow: 'hidden' }}>
       <button onClick={() => setOpen(o => !o)}
         style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '14px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
         <span style={{ fontSize: '16px' }}>{rankBadge(c.rank)}</span>
@@ -135,20 +137,20 @@ function CandidateCard({ c, note, defaultOpen }: { c: WeddingRecommendation; not
           <div style={{ fontSize: '14px', color: text, fontWeight: 600 }}>{c.dateLabel}</div>
           <div style={{ fontSize: '12px', color: sub, marginTop: '2px' }}>일진 {c.ganji} · <span style={{ color: GRADE_COLOR[c.grade] }}>{c.grade}등급</span>{c.holidayName && <span style={{ color: '#e29b9b' }}> · 🎌 {c.holidayName}</span>}</div>
           {note?.oneLine && (
-            <div style={{ fontSize: '12px', color: '#c8b0ff', marginTop: '4px', lineHeight: 1.4 }}>“{note.oneLine}”</div>
+            <div style={{ fontSize: '12px', color: '#96502e', marginTop: '4px', lineHeight: 1.4 }}>“{note.oneLine}”</div>
           )}
         </div>
-        <span style={{ fontSize: '15px', fontWeight: 700, color: c.rank === 1 ? gold : '#c8b0ff' }}>{c.score}점</span>
+        <span style={{ fontSize: '15px', fontWeight: 700, color: c.rank === 1 ? gold : '#96502e' }}>{c.score}점</span>
         <span style={{ fontSize: '12px', color: sub }}>{open ? '▲' : '▼'}</span>
       </button>
 
       {open && (
         <div style={{ padding: '0 14px 16px' }}>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px' }}>
+          <div style={{ borderTop: '1px solid #f0e0d5', paddingTop: '12px' }}>
             {c.badges.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
                 {c.badges.map((bd, i) => (
-                  <span key={i} style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '20px', background: 'rgba(250,199,117,0.12)', color: gold, border: '1px solid rgba(250,199,117,0.25)' }}>✦ {bd}</span>
+                  <span key={i} style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '20px', background: '#f7ede2', color: gold, border: '1px solid #e8cba8' }}>✦ {bd}</span>
                 ))}
               </div>
             )}
@@ -157,14 +159,14 @@ function CandidateCard({ c, note, defaultOpen }: { c: WeddingRecommendation; not
             {rows.map((r, i) => (
               <div key={i} style={{ marginBottom: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '12px', color: '#b8b4d8' }}>{r.label}</span>
+                  <span style={{ fontSize: '12px', color: '#6b5d54' }}>{r.label}</span>
                   <Stars n={r.score === 0 ? 0 : Math.max(1, Math.round((r.score / r.max) * 5))} />
                 </div>
               </div>
             ))}
 
             {note?.detail && (
-              <div style={{ background: 'rgba(250,199,117,0.08)', borderRadius: '8px', padding: '10px 12px', margin: '12px 0' }}>
+              <div style={{ background: '#faf3ec', borderRadius: '8px', padding: '10px 12px', margin: '12px 0' }}>
                 <div style={{ fontSize: '11px', color: gold, marginBottom: '4px' }}>이 날은</div>
                 <div style={{ fontSize: '13px', color: text, lineHeight: 1.6 }}>{note.detail}</div>
               </div>
@@ -190,11 +192,38 @@ function WeddingResultInner() {
   const [aiNotes, setAiNotes] = useState<Record<number, AiNote>>({})
   const [aiLoading, setAiLoading] = useState(false)
   const [errMsg, setErrMsg] = useState('')
+  // 보관함 저장/다시보기
+  const recordId = sp.get('recordId') || undefined
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>(recordId ? 'saved' : 'idle')
 
   useEffect(() => {
     let cancelled = false
 
     async function run() {
+      // ── 보관함 다시보기: recordId 있으면 저장된 스냅샷을 그대로 로드 (계산·AI 없음) ──
+      if (recordId) {
+        try {
+          const rec = await getWeddingRecord(recordId)
+          const snap = rec?.resultData as {
+            recs?: WeddingRecommendation[]; avoidDays?: WeddingAvoidDay[]
+            aiNotes?: Record<number, AiNote>; survey?: WeddingSurvey
+            groom?: PersonInput; bride?: PersonInput
+          } | undefined
+          if (!cancelled && snap?.recs) {
+            setGroom(snap.groom ?? null); setBride(snap.bride ?? null)
+            setSurvey(snap.survey ?? null)
+            setRecs(snap.recs); setAvoidDays(snap.avoidDays ?? [])
+            setAiNotes(snap.aiNotes ?? {})
+            setLoading(false)
+            return
+          }
+          if (!cancelled) { setErrMsg('저장된 결과를 불러오지 못했어요.'); setLoading(false) }
+        } catch {
+          if (!cancelled) { setErrMsg('저장된 결과를 불러오지 못했어요.'); setLoading(false) }
+        }
+        return
+      }
+
       let p1: PersonInput | null = null
       let p2: PersonInput | null = null
       let sv: WeddingSurvey | null = null
@@ -274,20 +303,50 @@ function WeddingResultInner() {
     } catch {}
   }, [survey, recs, avoidDays, aiNotes, groom, bride])
 
+  // ── 보관함 저장 (추천 결과 스냅샷 — 다시보기용) ──
+  const toInput = (p: PersonInput | null): SavedInputData => ({
+    gender: p?.gender || '', calType: p?.calType || '양력',
+    year: p?.year || '', month: p?.month || '', day: p?.day || '',
+    leapMonth: '0', hour: p?.hour || '모름',
+  })
+  async function handleSave() {
+    if (saveState !== 'idle' || recs.length === 0 || !survey) return
+    setSaveState('saving')
+    const name1 = groom?.name || '신랑'
+    const name2 = bride?.name || '신부'
+    const res = await saveWeddingRecord({
+      kind: 'find',
+      name1, name2,
+      summary: `길일 ${recs.length}개`,
+      input1: { ...toInput(groom), name: name1 },
+      input2: { ...toInput(bride), name: name2 },
+      resultData: { recs, avoidDays, aiNotes, survey, groom, bride },
+    })
+    setSaveState(res.ok ? 'saved' : 'idle')
+    if (!res.ok) alert(res.message || '저장하지 못했어요.')
+  }
+
   return (
-    <main style={{ minHeight: '100vh', background: '#0d0d1a', maxWidth: '480px', margin: '0 auto', paddingBottom: '40px' }}>
-      <PageHeader
-        title="결혼 길일 결과"
-        subtitle="두 분께 좋은 결혼 날짜예요"
-        onBack={() => router.back()}
-      />
+    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '480px', margin: '0 auto', paddingBottom: '40px' }}>
+      <div style={{
+        position: 'sticky', top: 0, zIndex: 10,
+        background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
+        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
+      }}>
+        <button onClick={() => router.back()}
+          style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 500, color: '#3a2e28' }}>결혼 길일 결과</div>
+          <div style={{ fontSize: 10.5, color: '#b4785a' }}>두 분께 좋은 결혼 날짜예요</div>
+        </div>
+      </div>
 
       <div style={{ padding: '16px' }}>
         <Disclaimer full />
 
-        <div style={{ margin: '16px 0', padding: '12px 14px', background: cardBg, borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ margin: '16px 0', padding: '12px 14px', background: cardBg, borderRadius: '10px', border: '1px solid #f0e0d5' }}>
           <div style={{ fontSize: '11px', color: sub, marginBottom: '6px' }}>분석 조건</div>
-          <div style={{ fontSize: '12px', color: '#b8b4d8', lineHeight: 1.7 }}>
+          <div style={{ fontSize: '12px', color: '#6b5d54', lineHeight: 1.7 }}>
             기간 {survey?.startDate || '-'} ~ {survey?.endDate || '-'} · {survey?.dayPref === 'all' ? '평일 포함' : survey?.dayPref === 'holiday' ? '공휴일 포함' : '주말만'}<br />
             🤵 {personSummary(groom)}<br />
             👰 {personSummary(bride)}
@@ -316,7 +375,7 @@ function WeddingResultInner() {
 
         {!loading && !errMsg && recs.length > 0 && (
           <>
-            <div style={{ fontSize: '13px', color: '#c8c0ff', fontWeight: 600, margin: '4px 0 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ fontSize: '13px', color: '#96502e', fontWeight: 600, margin: '4px 0 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               ◆ 추천 결혼 길일 <span style={{ fontSize: '11px', color: sub, fontWeight: 400 }}>(탭하면 자세히)</span>
               {aiLoading && <span style={{ fontSize: '11px', color: gold, fontWeight: 400 }}>✨ 해설 작성 중...</span>}
             </div>
@@ -324,7 +383,7 @@ function WeddingResultInner() {
 
             {avoidDays.length > 0 && (
               <>
-                <div style={{ fontSize: '13px', color: '#c8c0ff', fontWeight: 600, margin: '22px 0 12px' }}>◆ 피하면 좋은 날</div>
+                <div style={{ fontSize: '13px', color: '#96502e', fontWeight: 600, margin: '22px 0 12px' }}>◆ 피하면 좋은 날</div>
                 <div style={{ background: 'rgba(255,120,120,0.06)', border: '1px solid rgba(255,120,120,0.18)', borderRadius: '12px', padding: '14px' }}>
                   {avoidDays.map((a, i) => (
                     <div key={i} style={{ marginBottom: i < avoidDays.length - 1 ? '10px' : 0 }}>
@@ -346,10 +405,22 @@ function WeddingResultInner() {
           </>
         )}
 
+        {!loading && !errMsg && recs.length > 0 && (
+          <button
+            onClick={handleSave}
+            disabled={saveState !== 'idle'}
+            style={{ width: '100%', marginTop: '16px', padding: '13px', borderRadius: '12px',
+              background: saveState === 'saved' ? '#e8f0e0' : gold,
+              border: 'none', color: saveState === 'saved' ? '#5a8c5a' : '#1a1208',
+              fontSize: '14px', fontWeight: 600, cursor: saveState === 'idle' ? 'pointer' : 'default' }}>
+            {saveState === 'saved' ? '✓ 보관함에 저장됨' : saveState === 'saving' ? '저장 중…' : '💾 이 결과 보관함에 저장'}
+          </button>
+        )}
+
         <button
-          onClick={() => router.push('/manseryeok/couple-input')}
-          style={{ width: '100%', marginTop: '8px', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(200,176,255,0.2)', color: '#c8b0ff', fontSize: '13px', cursor: 'pointer' }}>
-          ↩ 다시 분석하기
+          onClick={() => router.push('/manseryeok/wedding-timing/wedding-storage')}
+          style={{ width: '100%', marginTop: '8px', padding: '12px', borderRadius: '12px', background: '#faf3ec', border: '1px solid #f0e0d5', color: '#96502e', fontSize: '13px', cursor: 'pointer' }}>
+          📋 결혼택일 보관함
         </button>
 
         <div style={{ marginTop: '16px' }}>
@@ -363,8 +434,8 @@ function WeddingResultInner() {
 export default function WeddingResultPage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d0d1a' }}>
-        <div style={{ color: '#c8b0ff' }}>로딩 중...</div>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FDF6F0' }}>
+        <div style={{ color: '#96502e' }}>로딩 중...</div>
       </div>
     }>
       <WeddingResultInner />
