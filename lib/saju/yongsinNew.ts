@@ -229,10 +229,10 @@ export interface YongsinNewResult {
   gyeokguk: GyeokgukResult    // 격국용신 (용신만)
 }
 
-export function calcYongsinNew(saju: Pillar[], dayStem: string): YongsinNewResult | null {
+export function calcYongsinNew(saju: Pillar[], dayStem: string, scoreOverride?: Record<Ohaeng, number>): YongsinNewResult | null {
   const dayEl = STEM_EL[dayStem]
   if (!dayEl || saju.length === 0) return null
-  const score = calcYongsinScore(saju)
+  const score = scoreOverride ?? calcYongsinScore(saju)
   const r = relOf(dayEl)
   const inbi = score[r.bigeop] + score[r.insung]
   const status = judgeStrength(inbi)
