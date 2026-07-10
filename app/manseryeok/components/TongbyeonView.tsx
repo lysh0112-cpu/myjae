@@ -103,9 +103,14 @@ export interface TongbyeonViewProps {
   onBack?: () => void
   // 무슨 통변인지: 없으면 사주, 'daeun' 대운, 'seyun' 세운(월운 포함)
   unseEntry?: 'daeun' | 'seyun'
+  // ── 보관함 다시보기용(선택) ──
+  //   savedText가 있으면 AI를 호출하지 않고 그 통변을 그대로 표시한다.
+  savedText?: string
+  //   통변 스트리밍이 끝나면 완성 텍스트를 넘겨준다(부모가 저장에 쓴다).
+  onComplete?: (text: string) => void
 }
 
-export default function TongbyeonView({ input, questions, premium, onBack, unseEntry }: TongbyeonViewProps) {
+export default function TongbyeonView({ input, questions, premium, onBack, unseEntry, savedText, onComplete }: TongbyeonViewProps) {
   // 통변 섹션 제목: 대운/세운/사주에 맞춰. 이름이 '나'면 "나의 ~ 이야기".
   const kindWord = unseEntry === 'daeun' ? '대운' : unseEntry === 'seyun' ? '세운' : '사주'
   const storyTitle = input.name === '나'
@@ -115,19 +120,22 @@ export default function TongbyeonView({ input, questions, premium, onBack, unseE
     () => buildTongbyeonPrompt(input, questions, { premium }),
     [input, questions, premium]
   )
-  const [text, setText] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [text, setText] = useState(savedText || '')
+  const [loading, setLoading] = useState(!savedText)   // 저장본이면 로딩 없이 바로 표시
   const [err, setErr] = useState('')
   const [openIdx, setOpenIdx] = useState<number>(0)
   const startedRef = useRef(false)
 
   useEffect(() => {
     if (startedRef.current) return
+    // 보관함 다시보기: 저장된 통변이 있으면 AI를 호출하지 않고 그대로 쓴다.
+    if (savedText) { startedRef.current = true; setText(savedText); setLoading(false); return }
     startedRef.current = true
     let cancelled = false
 
     async function run() {
       setLoading(true); setErr(''); setText('')
+      let acc = ''   // finally에서 onComplete로 넘기려고 try 밖에 둔다.
       try {
         const res = await fetch('/api/tongbyeon', {
           method: 'POST',
@@ -138,7 +146,6 @@ export default function TongbyeonView({ input, questions, premium, onBack, unseE
 
         const reader = res.body.getReader()
         const decoder = new TextDecoder()
-        let acc = ''
 
         while (true) {
           const { done, value } = await reader.read()
@@ -157,11 +164,16 @@ export default function TongbyeonView({ input, questions, premium, onBack, unseE
       } catch {
         if (!cancelled) setErr('통변을 불러오는 중 문제가 생겼어요.')
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) {
+          setLoading(false)
+          // 완성된 통변을 부모에 전달 (저장용). acc는 스트리밍으로 쌓인 전체 텍스트.
+          if (acc && onComplete) onComplete(acc)
+        }
       }
     }
     run()
     return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prompt, premium])
 
   const { intro, cards } = useMemo(() => parseCards(text), [text])
