@@ -48,6 +48,13 @@ function Stars({ n }: { n: number }) {
   )
 }
 
+// 성별로 신랑/신부 아이콘·라벨 결정 (남=신랑🤵, 여=신부👰)
+function roleIcon(p: PersonInput | null): string {
+  if (p?.gender === '여') return '👰'
+  if (p?.gender === '남') return '🤵'
+  return '💑'
+}
+
 function personSummary(p: PersonInput | null): string {
   if (!p || !p.year) return '정보 없음'
   const hour = HOUR_LABELS[p.hour] ?? '시간 모름'
@@ -348,8 +355,8 @@ function WeddingResultInner() {
           <div style={{ fontSize: '11px', color: sub, marginBottom: '6px' }}>분석 조건</div>
           <div style={{ fontSize: '12px', color: '#6b5d54', lineHeight: 1.7 }}>
             기간 {survey?.startDate || '-'} ~ {survey?.endDate || '-'} · {survey?.dayPref === 'all' ? '평일 포함' : survey?.dayPref === 'holiday' ? '공휴일 포함' : '주말만'}<br />
-            🤵 {personSummary(groom)}<br />
-            👰 {personSummary(bride)}
+            {roleIcon(groom)} {personSummary(groom)}<br />
+            {roleIcon(bride)} {personSummary(bride)}
           </div>
         </div>
 
