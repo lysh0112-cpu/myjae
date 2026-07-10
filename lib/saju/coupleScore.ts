@@ -3,7 +3,9 @@
 // 배점(시 있을 때): 일주28 용신18 년주10 월주8 공망6 오행10 조후8 시주12 = 100
 // 시 모를 때: 시주(12) 제외 → 나머지 88점 만점을 100점으로 비율 환산 (노트북LM 원리)
 
-import { calcYongsin } from './yongsin'
+// 용신은 새 억부용신(정확한 100점 계산)을 쓴다.
+//   calcYongsinCompat = 낡은 calcYongsin과 같은 형태(heeksin 등)를 반환하는 어댑터.
+import { calcYongsinCompat as calcYongsin } from './yongsinNew'
 
 // =============================================
 // 상수 테이블
