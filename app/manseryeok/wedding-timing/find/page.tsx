@@ -2,7 +2,7 @@
 import { Suspense, useState, useEffect, type ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import WeddingDateField from '../components/WeddingDateField'
+import WeddingCalendar from '../components/WeddingCalendar'
 
 const purple = '#b46e46'
 const cardBg = '#FFFBF7'
@@ -177,12 +177,12 @@ function WeddingFindInner() {
         <SectionLabel>언제쯤 식을 올리고 싶으세요?</SectionLabel>
 
         <QLabel>희망 기간 시작 <span style={{ color: purple }}>*</span></QLabel>
-        <WeddingDateField value={survey.startDate} onChange={v => setField('startDate', v)} />
+        <WeddingCalendar value={survey.startDate} onChange={v => setField('startDate', v)} />
 
         <div style={{ height: 14 }} />
 
         <QLabel>희망 기간 끝 <span style={{ color: purple }}>*</span></QLabel>
-        <WeddingDateField value={survey.endDate} onChange={v => setField('endDate', v)} />
+        <WeddingCalendar value={survey.endDate} onChange={v => setField('endDate', v)} />
 
         <QLabel>요일은 어떻게 할까요?</QLabel>
         <div style={{ display: 'flex', gap: '6px' }}>
