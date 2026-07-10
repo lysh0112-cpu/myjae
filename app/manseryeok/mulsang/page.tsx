@@ -10,7 +10,7 @@ import { MULSANG_QUESTIONS, groupMulsangByCategory } from '@/lib/saju/mulsangQue
 import OhaengPentagon from '@/app/manseryeok/result-new/OhaengPentagon'
 import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
 import { getGongmang } from '@/lib/saju'
-import { saveRecord } from '@/lib/saju/sajuRecords'
+import { saveRecord, getRecord } from '@/lib/saju/sajuRecords'
 import { supabase } from '@/lib/supabase'
 import type { SajuQuestion } from '@/lib/saju/questions'
 
@@ -88,6 +88,32 @@ function MulsangInner() {
   useEffect(() => {
     let cancelled = false
     async function loadInfo() {
+      // (0) recordId 우선 — 보관함에서 "다시보기"로 들어온 경우.
+      //   그림은 AI라 재생성 불가 → 저장 스냅샷(그림·해설)을 그대로 복원한다.
+      const recordId = sp.get('recordId')
+      if (recordId) {
+        const rec = await getRecord(recordId)
+        if (rec && !cancelled) {
+          const d = rec.inputData
+          setInfo({
+            gender: d.gender, calType: d.calType,
+            year: parseInt(d.year), month: parseInt(d.month), day: parseInt(d.day),
+            leapMonth: d.leapMonth || '0',
+            hourIdx: d.hour === '모름' ? null : parseInt(d.hour),
+            name: rec.title || undefined,
+          })
+          // 저장 스냅샷의 그림·해설 복원
+          const snap = rec.resultData as { images?: { style: string; imageUrl: string; commentary: unknown }[] } | null
+          const first = snap?.images?.[0]
+          if (first) {
+            setStyle(first.style)
+            setImageUrl(first.imageUrl)
+            setCommentary((first.commentary as Commentary) ?? null)
+          }
+        }
+        return
+      }
+
       // (1) URL 우선 — 다른 사람 선택 / 가족지인 목록에서 넘어온 경우
       const urlYear = parseInt(sp.get('year') || '0')
       if (urlYear) {
@@ -227,6 +253,9 @@ function MulsangInner() {
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
 
   useEffect(() => {
+    // 보관함 다시보기(recordId)로 진입했으면 스냅샷을 loadInfo에서 이미 복원했으므로
+    // localStorage 기반 복원은 건너뛴다 (안 그러면 이 브라우저에 없는 그림을 지워버림).
+    if (sp.get('recordId')) return
     const key = mulsangImgKey(info, style)
     if (!key) return
     // 그림 생성 중이면 건드리지 않는다 (방금 만든 그림을 지우면 안 됨).
