@@ -78,6 +78,71 @@ export async function latestRecord(
   return list.length ? list[0] : null
 }
 
+// ── 보관함용: 특정 서비스의 내 기록 전체 (사람 무관, 최신순) ──
+//   holds saju-storage 화면에서 사용. 한 사람 필터 없이 그 서비스 기록을 다 보여준다.
+export async function listRecordsByService(
+  serviceType: string
+): Promise<SajuRecord[]> {
+  const { data: auth } = await supabase.auth.getUser()
+  const uid = auth?.user?.id
+  if (!uid) return []
+
+  const { data, error } = await supabase
+    .from('saju_records')
+    .select('id, service_type, title, relation, input_data, result_data, created_at')
+    .eq('user_id', uid)
+    .eq('service_type', serviceType)
+    .order('created_at', { ascending: false })
+
+  if (error || !data) return []
+
+  return data
+    .filter(r => r.input_data)   // 사람 정보 있는 것만
+    .map(r => ({
+      id: r.id,
+      serviceType: r.service_type,
+      title: r.title,
+      relation: r.relation ?? undefined,
+      inputData: r.input_data as SavedInputData,
+      resultData: r.result_data ?? undefined,
+      createdAt: r.created_at,
+    }))
+}
+
+// ── 하나 불러오기 (보관함 카드 눌러 다시보기용 — 결과 스냅샷 로드) ──
+export async function getRecord(id: string): Promise<SajuRecord | null> {
+  const { data: auth } = await supabase.auth.getUser()
+  const uid = auth?.user?.id
+  if (!uid) return null
+
+  const { data, error } = await supabase
+    .from('saju_records')
+    .select('id, service_type, title, relation, input_data, result_data, created_at')
+    .eq('user_id', uid)
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error || !data) return null
+  return {
+    id: data.id,
+    serviceType: data.service_type,
+    title: data.title,
+    relation: data.relation ?? undefined,
+    inputData: data.input_data as SavedInputData,
+    resultData: data.result_data ?? undefined,
+    createdAt: data.created_at,
+  }
+}
+
+// ── 삭제 ──
+export async function deleteRecord(id: string): Promise<boolean> {
+  const { data: auth } = await supabase.auth.getUser()
+  const uid = auth?.user?.id
+  if (!uid) return false
+  const { error } = await supabase.from('saju_records').delete().eq('user_id', uid).eq('id', id)
+  return !error
+}
+
 // ── 새 기록 저장 ──
 export async function saveRecord(args: {
   serviceType: string
