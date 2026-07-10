@@ -11,7 +11,6 @@ import OhaengPentagon from '@/app/manseryeok/result-new/OhaengPentagon'
 import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
 import { getGongmang } from '@/lib/saju'
 import { supabase } from '@/lib/supabase'
-import { fromProfile } from '@/lib/saju/myInfo'
 import type { SajuQuestion } from '@/lib/saju/questions'
 
 interface Commentary {
@@ -104,30 +103,42 @@ function MulsangInner() {
         return
       }
 
-      // (2) URL 없으면(="나" 선택) 로그인한 내 정보(profiles) = 내 사주
+      // (2) URL 없음(="나" 선택). 로그인 여부에 따라 갈라진다.
+      //   ⚠️ 중요: 로그인했다면 반드시 "내 profiles"만 신뢰한다.
+      //   예전엔 profiles가 없거나 미저장이면 localStorage(myinfo)로 폴백했는데,
+      //   그 브라우저에 남의 사주(예: 이전에 본 다른 사람)가 캐시돼 있으면
+      //   그게 "내 사주"로 잘못 표시되는 심각한 버그가 있었다. → 폴백 금지.
+      let loggedIn = false
       try {
         const { data: u } = await supabase.auth.getUser()
         if (u?.user) {
+          loggedIn = true
+          // 홈과 동일하게 maybeSingle 사용 (.single()은 행 개수 안 맞으면 에러 → 폴백 오염 원인이었음)
           const { data: p } = await supabase.from('profiles')
             .select('birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, saju_saved')
-            .eq('id', u.user.id).single()
-          const prof = fromProfile(p)
-          if (prof && !cancelled) {
+            .eq('id', u.user.id).maybeSingle()
+          // 홈은 birth_year만 있으면 "나"로 인정하므로, 여기서도 생년월일만 있으면
+          // 내 사주로 쓴다(saju_saved 여부와 무관하게 홈과 동일 기준으로 일관성 유지).
+          if (p && p.birth_year && !cancelled) {
+            const hourStr = (p.birth_hour == null || p.birth_hour === '모름') ? '모름' : String(p.birth_hour)
             setInfo({
-              gender: prof.gender,
-              calType: prof.calType,
-              year: parseInt(prof.year),
-              month: parseInt(prof.month),
-              day: parseInt(prof.day),
-              leapMonth: prof.leapMonth || '0',
-              hourIdx: prof.hour === '모름' ? null : parseInt(prof.hour),
+              gender: p.gender ?? '남',
+              calType: p.cal_type ?? '양력',
+              year: Number(p.birth_year),
+              month: Number(p.birth_month ?? 0),
+              day: Number(p.birth_day ?? 0),
+              leapMonth: p.leap_month != null ? String(p.leap_month) : '0',
+              hourIdx: hourStr === '모름' ? null : parseInt(hourStr),
             })
-            return
           }
+          // 로그인했으나 profiles에 생년월일 없음 → info를 비운 채 둔다.
+          //   (안내 화면이 떠서 "사주 정보를 입력해 주세요"로 유도. 남의 캐시 안 씀.)
+          return
         }
       } catch {}
 
-      // (3) 그래도 없으면 localStorage myinfo (예전 방식 보조)
+      // (3) 비로그인일 때만 localStorage myinfo 보조 (내 브라우저의 내 정보로 간주)
+      if (loggedIn) return
       const saved = localStorage.getItem(MY_INFO_KEY)
       if (saved) {
         try {
@@ -207,6 +218,8 @@ function MulsangInner() {
   const [openOhaeng, setOpenOhaeng] = useState(false)           // 오행도 아코디언
   const [openImage, setOpenImage] = useState(true)              // 그림 아코디언 (기본 펼침)
   const [openPicker, setOpenPicker] = useState(false)           // 질문 고르기 부품 전체 아코디언
+  // 이미 답이 저장된(=본) 질문 id 집합. 모달 열 때 읽어와 체크 표시에 사용.
+  const [answeredIds, setAnsweredIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const key = mulsangImgKey(info, style)
@@ -328,6 +341,23 @@ function MulsangInner() {
     // 하나만 선택 (같은 걸 다시 누르면 해제)
     setPickedQ(prev => (prev === id ? null : id))
   }
+
+  // 질문 모달 열기 — 열기 직전에 이 사람의 "이미 답 있는 질문"을 스캔해 체크 표시 준비.
+  function openQuestionPicker() {
+    const pk = personKeyOf(info)
+    if (pk) {
+      const prefix = `${MULSANG_ANS_PREFIX}${pk}::`
+      const found = new Set<string>()
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i)
+          if (k && k.startsWith(prefix)) found.add(k.slice(prefix.length))
+        }
+      } catch {}
+      setAnsweredIds(found)
+    }
+    setOpenPicker(true)
+  }
   async function runTongbyeon(mode: 'selected' | 'all') {
     if (!dayStem || saju.length === 0) return
     const questions: SajuQuestion[] =
@@ -398,7 +428,10 @@ function MulsangInner() {
       }
       // ── 생성 완료 → 답 저장(다음엔 캐시에서 즉시). 내용이 있을 때만. ──
       if (ansKey && acc.trim()) {
-        try { localStorage.setItem(ansKey, acc) } catch {}
+        try {
+          localStorage.setItem(ansKey, acc)
+          if (pickedQ) setAnsweredIds(prev => new Set(prev).add(pickedQ))
+        } catch {}
       }
     } catch {
       setTongResult('통변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
@@ -505,10 +538,14 @@ function MulsangInner() {
                   <div style={{ padding: '8px 10px' }}>
                     {items.map(q => {
                       const on = pickedQ === q.id
+                      const answered = answeredIds.has(q.id)
                       return (
                         <div key={q.id} onClick={() => { toggleQ(q.id); setOpenPicker(false) }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 8px', borderRadius: '8px', background: on ? '#6e50a014' : 'transparent', marginBottom: '3px', cursor: 'pointer' }}>
                           <span style={{ width: '18px', height: '18px', borderRadius: '50%', border: `1.5px solid ${on ? '#6e50a0' : '#d8c4b4'}`, background: on ? '#6e50a0' : '#fff', color: '#fff', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{on ? '✓' : ''}</span>
-                          <span style={{ fontSize: '12.5px', color: '#3a2e28' }}>{q.question}</span>
+                          <span style={{ flex: 1, fontSize: '12.5px', color: '#3a2e28' }}>{q.question}</span>
+                          {answered && (
+                            <span style={{ flexShrink: 0, fontSize: '10px', fontWeight: 700, color: '#5a8c5a', background: '#eaf4ea', border: '0.5px solid #cfe4cf', borderRadius: '8px', padding: '2px 7px' }}>✓ 본 질문</span>
+                          )}
                         </div>
                       )
                     })}
@@ -601,7 +638,7 @@ function MulsangInner() {
           {/* ⑤ 그림 해설 통변 (질문 선택) ── */}
           <div style={{ margin: '4px 0 14px', color: '#3a2e28' }}>
             {/* 질문 고르기 — 누르면 하단 시트 모달로 (페이지가 길어지지 않게) */}
-            <div onClick={() => setOpenPicker(true)}
+            <div onClick={() => openQuestionPicker()}
               style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '13px 14px', background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '12px', cursor: 'pointer' }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: '#96502e' }}>그림에서 궁금한 걸 골라보세요</div>
