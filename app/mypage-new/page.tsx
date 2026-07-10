@@ -698,8 +698,11 @@ export default function MyPageNew() {
           <div onClick={() => router.push('/mypage-new/edit')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderBottom: '0.5px solid #f5e5da', cursor: 'pointer' }}>
             <span style={{ fontSize: 13, color: '#5a4a3e' }}>⚙️ 계정 설정</span><span style={{ fontSize: 16, color: '#d0b8a5' }}>›</span>
           </div>
-          <div onClick={() => router.push('/manseryeok/reviews/write')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 14, cursor: 'pointer' }}>
+          <div onClick={() => router.push('/manseryeok/reviews/write')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderBottom: '0.5px solid #f5e5da', cursor: 'pointer' }}>
             <span style={{ fontSize: 13, color: '#5a4a3e' }}>❓ 문의하기</span><span style={{ fontSize: 16, color: '#d0b8a5' }}>›</span>
+          </div>
+          <div onClick={() => router.push('/manseryeok/expert')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 14, cursor: 'pointer' }}>
+            <span style={{ fontSize: 13, color: '#5a4a3e' }}>🔎 전문가용 만세력 계산기</span><span style={{ fontSize: 16, color: '#d0b8a5' }}>›</span>
           </div>
         </div>
 
