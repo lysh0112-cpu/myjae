@@ -126,6 +126,7 @@ function MulsangInner() {
           day: parseInt(sp.get('day') || '0'),
           leapMonth: sp.get('leapMonth') || '0',
           hourIdx: hourParam === '모름' || hourParam === null ? null : parseInt(hourParam),
+          name: sp.get('name') || undefined,
         })
         return
       }
