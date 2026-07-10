@@ -9,6 +9,14 @@
 
 import type { TongbyeonInput, Ohaeng } from '@/lib/saju/tongbyeonPrompt'
 import type { YongsinResult } from '@/lib/saju/yongsin'
+import { getUnsung } from '@/lib/saju/unsung'
+import { getSinsal } from '@/lib/saju/sinsal'
+import { getGongmang } from '@/lib/saju/gongmang'
+import { getGwiinForBranch, getGwiinForStem } from '@/lib/saju/gwiin'
+import { UNSUNG_MEANING } from '@/lib/saju/unsungMeaning'
+import { SINSAL_MEANING } from '@/lib/saju/sinsalMeaning'
+import { GWIIN_MEANING, GWIIN_HARMONY } from '@/lib/saju/gwiinMeaning'
+import { GONGMANG_INTRO, GONGMANG_BY_PILLAR } from '@/lib/saju/gongmangMeaning'
 
 // 천간 → 오행
 const STEM_EL: Record<string, Ohaeng> = {
@@ -70,6 +78,71 @@ function pillarKor(p?: PillarInput): string {
   return (STEM_KOR[p.stem] ?? p.stem) + (BRANCH_KOR[p.branch] ?? p.branch)
 }
 
+// 명식 특징(12운성·신살·귀인·공망)을 "해석 포함" 텍스트로 조립.
+//   해당하는 것만 넣어 프롬프트가 길어지지 않게 한다. 계산·해석 사전을 엮음.
+function buildMyeongsikFeatures(
+  saju: PillarInput[],
+  dayStem: string
+): string {
+  const lines: string[] = []
+  const yearBranch = saju.find(p => p.pillar === '년주')?.branch ?? ''
+  const dayBranch = saju.find(p => p.pillar === '일주')?.branch ?? ''
+  const monthBranch = saju.find(p => p.pillar === '월주')?.branch ?? ''
+
+  // ── 12운성 (일주 중심으로 대표 1개 + 각 기둥) ──
+  const iljiUnsung = dayStem && dayBranch ? getUnsung(dayStem, dayBranch) : ''
+  if (iljiUnsung && UNSUNG_MEANING[iljiUnsung]) {
+    const m = UNSUNG_MEANING[iljiUnsung]
+    lines.push(`- 일주 12운성: ${iljiUnsung} — ${m.key}. ${m.tip}`)
+  }
+
+  // ── 신살 (년지 기준, 각 지지) — 대표적인 것만(중복 제거) ──
+  const sinsalSet = new Set<string>()
+  for (const p of saju) {
+    if (!p.branch) continue
+    const s = getSinsal(yearBranch, p.branch)
+    if (s && SINSAL_MEANING[s]) sinsalSet.add(s)
+  }
+  for (const s of sinsalSet) {
+    const m = SINSAL_MEANING[s]
+    lines.push(`- 신살 ${s}: ${m.key}. ${m.tip}`)
+  }
+
+  // ── 귀인 (있는 것만) ──
+  const gwiinSet = new Set<string>()
+  for (const p of saju) {
+    if (p.stem) for (const g of getGwiinForStem(monthBranch, p.stem)) gwiinSet.add(g)
+    if (p.branch) for (const g of getGwiinForBranch(dayStem, monthBranch, p.branch)) gwiinSet.add(g)
+  }
+  for (const g of gwiinSet) {
+    const m = GWIIN_MEANING[g]
+    if (m) lines.push(`- 귀인 ${g}: ${m.bless}. ${m.tip}`)
+  }
+  if (gwiinSet.size >= 2) lines.push(`- 귀인 조화: ${GWIIN_HARMONY}`)
+
+  // ── 공망 (일주 기준, 어느 기둥이 비었는지) ──
+  if (dayStem && dayBranch) {
+    const gm = getGongmang(dayStem, dayBranch)  // [지지, 지지]
+    if (gm && gm[0] && gm[0] !== '?') {
+      const emptyPillars: string[] = []
+      for (const p of saju) {
+        if (p.branch === gm[0] || p.branch === gm[1]) emptyPillars.push(p.pillar)
+      }
+      if (emptyPillars.length) {
+        lines.push(`- 공망: ${gm[0]}·${gm[1]} (${emptyPillars.join('·')}에 해당). ${GONGMANG_INTRO}`)
+        for (const pillar of emptyPillars) {
+          const gp = GONGMANG_BY_PILLAR[pillar]
+          if (gp) lines.push(`  · ${pillar} 공망 — ${gp.title}: ${gp.desc}`)
+        }
+      }
+    }
+  }
+
+  if (!lines.length) return ''
+  return `[명식 특징 — 이 사람에게 실제로 있는 것들(질문에 관련될 때 근거로 쓰되 겁주지 말 것)]\n${lines.join('\n')}`
+}
+
+
 export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
   const find = (name: string) => a.saju.find(p => p.pillar === name)
   const yearP = find('년주'); const monthP = find('월주')
@@ -112,6 +185,8 @@ export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
     lackElements,
     yongsin: yongsinStr || undefined,
     yongsinElement: yongsinEl,
+    // 명식 특징(12운성·신살·귀인·공망) — 해당하는 것만 해석 포함해 조립.
+    myeongsikFeatures: buildMyeongsikFeatures(a.saju, a.dayStem) || undefined,
     // 신강약·대운은 기본 통변에 넣지 않는다 (심플하게).
     // 시기 질문 시에만 확장해서 붙일 예정.
   }
