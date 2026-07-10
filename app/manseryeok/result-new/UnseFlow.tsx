@@ -150,7 +150,7 @@ export default function UnseFlow(props: Props) {
       </div>
       <div style={{ fontSize: 10, color: '#c8a86a', padding: '5px 15px 0' }}>👆 눌러서 자세히 보기</div>
       <div style={{ overflowX: 'auto', padding: '4px 12px 10px' }}>
-        <div style={{ display: 'flex', gap: 4 }}>{cells.map(c => renderCell(c, small))}</div>
+        <div style={{ display: 'flex', gap: 4 }}>{[...cells].reverse().map(c => renderCell(c, small))}</div>
       </div>
     </div>
   )
