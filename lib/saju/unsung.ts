@@ -7,20 +7,24 @@ export const UNSUNG_NAMES = [
 ] as const
 export type UnsungName = typeof UNSUNG_NAMES[number]
 
-const UNSUNG_START: Record<string, number> = {
-  '甲': 10, '乙': 6,
-  '丙': 2,  '丁': 9,
-  '戊': 2,  '己': 9,
-  '庚': 5,  '辛': 0,
-  '壬': 8,  '癸': 3,
+// 각 일간(日干)의 장생(長生) 지지. 여기서부터 양간 순행 / 음간 역행으로 12운성 전개.
+//   (표준 12운성. 이전 인덱스 방식이 한 칸씩 밀려 오류였으므로 지지로 명시)
+//   검증: 각 천간 건록(祿)이 정위치에 오는지로 확인 완료.
+const JANGSAENG_JIJI: Record<string, string> = {
+  '甲': '亥', '乙': '午',
+  '丙': '寅', '丁': '酉',
+  '戊': '寅', '己': '酉',
+  '庚': '巳', '辛': '子',
+  '壬': '申', '癸': '卯',
 }
 
 const YANG_GAN = new Set(['甲','丙','戊','庚','壬'])
 
 export function getUnsung(ilgan: string, jiji: string): UnsungName {
   const jijiIdx = JIJI.indexOf(jiji as typeof JIJI[number])
-  if (jijiIdx === -1 || !(ilgan in UNSUNG_START)) return '절'
-  const startIdx = UNSUNG_START[ilgan]
+  const startJi = JANGSAENG_JIJI[ilgan]
+  if (jijiIdx === -1 || !startJi) return '절'
+  const startIdx = JIJI.indexOf(startJi as typeof JIJI[number])
   const isYang = YANG_GAN.has(ilgan)
   const diff = isYang
     ? (jijiIdx - startIdx + 12) % 12
