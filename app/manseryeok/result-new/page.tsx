@@ -8,16 +8,14 @@ import { fromProfile, fromUrl, type MyInfo } from "@/lib/saju/myInfo";
 import { saveRecord, getRecord } from "@/lib/saju/sajuRecords";
 import { getUnsung, getSinsal, unsungColor, getGongmang, SINSAL_HIGHLIGHT } from "@/lib/saju";
 import { GAN_COLOR, JI_COLOR } from "@/lib/saju/constants";
-import { calcSeyunList, calcWolunList } from "@/lib/saju/dayun";
 import { calcYongsin } from "@/lib/saju/yongsin";
 import { calcYongsinNew } from "@/lib/saju/yongsinNew";
 import { calcSimsanOhaeng, toPercentList } from "@/lib/saju/simsanOhaeng";
-import DayunTableNew from "./components/DayunTableNew";
 import AiAnalysisNew from "./components/AiAnalysisNew";
 import ConsultButton from "@/app/components/common/ConsultButton";
 import OhaengPentagon from "./OhaengPentagon";
 import SipsungTable from "./SipsungTable";
-import UnTable from "./UnTable";
+import UnseFlow from "./UnseFlow";
 import SingangTable from "./SingangTable";
 import QuestionPicker from "../components/QuestionPicker";
 import TongbyeonView from "../components/TongbyeonView";
@@ -299,15 +297,9 @@ function ResultNewContent() {
   const hourLabel=hourIdx===null?"시 미지정":`${BRANCH_LIST[hourIdx]?.char}시`
   const genderLabel=gender==="여"?"여성":"남성"
 
-  const seyunList=dayStem?calcSeyunList(dayStem,currentYear):[]
-  const wolunList=dayStem?calcWolunList(dayStem,currentYear):[]
-
   // 용신 계산 — 화면 표시는 심산 3종 용신(yongsinNew), 통변은 기존 형식(호환)
   const yongsinNew=saju.length>0&&dayStem?calcYongsinNew(saju,dayStem):null
   const yongsinResult=saju.length>0&&dayStem?calcYongsin(saju,dayStem):null
-  const currentSeyunIdx=seyunList.findIndex(s=>s.year===currentYear)
-  const startIdx=Math.max(0,currentSeyunIdx-2)
-  const displaySeyun=[...seyunList.slice(startIdx,startIdx+10)].reverse()
 
   // 신강/신약 점수 (임시: 토 비율로 계산)
   const toEl=ohaeng.find(o=>o.el==='토')
@@ -430,47 +422,13 @@ function ResultNewContent() {
         </Section>
         )}
 
-        {/* ⑥ 대운 (홈 「대운」 서비스에도 있음) */}
+        {/* ⑥ 대운·세운·월운·일운 (연동 흐름) */}
         {dayStem&&monthGanji&&yearStem&&solarYear&&(
-          <Section title="대운 (10년 흐름)" collapsible={!chartOnly} open={openSection==='daeun'} onToggle={()=>toggleSection('daeun')} hint="홈 「대운」에도 있어요">
-            <DayunTableNew
+          <Section title="운의 흐름 (대운·세운·월운·일운)" collapsible={!chartOnly} open={openSection==='daeun'} onToggle={()=>toggleSection('daeun')} hint="눌러서 흐름 보기">
+            <UnseFlow
               solarYear={solarYear} solarMonth={solarMonth} solarDay={solarDay}
-              birthYear={yearParam} gender={gender}
-              monthGanji={monthGanji} yearStem={yearStem}
-              dayStem={dayStem} currentYear={currentYear}
-              ilgan={dayStem} yeonjji={yeonjji} iljji={iljji}
-            />
-          </Section>
-        )}
-
-        {/* ⑦ 세운 (홈 「연도별운세」에도 있음) */}
-        {displaySeyun.length>0&&(
-          <Section title="세운 (연운)" collapsible={!chartOnly} open={openSection==='seyun'} onToggle={()=>toggleSection('seyun')} hint="홈 「연도별운세」에도 있어요">
-            <UnTable
-              title="세운 (연운)"
-              badge={`${currentYear}년`}
-              items={displaySeyun.map(s=>({
-                label:String(s.year),
-                stem:s.cheongan, branch:s.jiji,
-                stemSipsin:s.ganYukchin, branchSipsin:s.jiYukchin,
-                current:s.year===currentYear,
-              }))}
-            />
-          </Section>
-        )}
-
-        {/* ⑧ 월운 */}
-        {wolunList.length>0&&(
-          <Section title="월운 (이번 해 달별)" collapsible={!chartOnly} open={openSection==='wolun'} onToggle={()=>toggleSection('wolun')}>
-            <UnTable
-              title="월운"
-              badge={`${currentYear}년`}
-              items={[...wolunList].reverse().map(w=>({
-                label:`${w.month}월`,
-                stem:w.cheongan, branch:w.jiji,
-                stemSipsin:w.ganYukchin, branchSipsin:w.jiYukchin,
-                current:new Date().getMonth()+1===w.month,
-              }))}
+              monthGanji={monthGanji} yearStem={yearStem} dayStem={dayStem}
+              gender={gender} birthYear={yearParam} currentYear={currentYear}
             />
           </Section>
         )}
