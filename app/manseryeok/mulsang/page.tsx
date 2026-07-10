@@ -8,6 +8,8 @@ import { buildMulsangPrompt, STYLE_CONFIGS } from '@/lib/saju/mulsangPrompt'
 import { buildMulsangTongbyeonPrompt, type Ohaeng } from '@/lib/saju/mulsangTongbyeonPrompt'
 import { MULSANG_QUESTIONS, groupMulsangByCategory } from '@/lib/saju/mulsangQuestions'
 import OhaengPentagon from '@/app/manseryeok/result-new/OhaengPentagon'
+import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
+import { getGongmang } from '@/lib/saju'
 import { supabase } from '@/lib/supabase'
 import { fromProfile } from '@/lib/saju/myInfo'
 import type { SajuQuestion } from '@/lib/saju/questions'
@@ -126,7 +128,7 @@ function MulsangInner() {
     return () => { cancelled = true }
   }, [sp])
 
-  const { saju, dayStem, converting } = useResultSaju(
+  const { saju, dayStem, iljji, yeonjji, converting } = useResultSaju(
     info?.calType || '양력',
     info?.year || 0,
     info?.month || 0,
@@ -134,6 +136,9 @@ function MulsangInner() {
     info?.leapMonth || '0',
     info?.hourIdx ?? null,
   )
+
+  // SajuWonguk(상세 명식 부품)에 넘길 공망 (일간+일지 기준)
+  const [gm1, gm2] = dayStem && iljji ? getGongmang(dayStem, iljji) : ['', '']
 
   const [style, setStyle] = useState<string>('oriental')
   const [loading, setLoading] = useState(false)
@@ -447,14 +452,8 @@ function MulsangInner() {
                 <span style={{ color: '#c8783c', fontSize: '12px' }}>{openWonguk ? '▾' : '▸'}</span>
               </div>
               {openWonguk && (
-                <div style={{ padding: '4px 14px 14px', display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                  {saju.map((p, i) => (
-                    <div key={i} style={{ flex: 1, textAlign: 'center', background: '#fdf6f0', borderRadius: '8px', padding: '8px 4px' }}>
-                      <div style={{ fontSize: '10px', color: '#b4785a', marginBottom: '3px' }}>{p.pillar}</div>
-                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#96502e' }}>{p.stem}</div>
-                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#6e50a0' }}>{p.branch}</div>
-                    </div>
-                  ))}
+                <div style={{ padding: '4px 12px 14px' }}>
+                  <SajuWonguk saju={saju} dayStem={dayStem} yeonjji={yeonjji} iljji={iljji} gm1={gm1} gm2={gm2} />
                 </div>
               )}
             </div>
@@ -510,49 +509,18 @@ function MulsangInner() {
         <div style={{ padding: '16px' }}>
           {/* ⑤ 그림 해설 통변 (질문 선택) ── */}
           <div style={{ margin: '4px 0 14px', color: '#3a2e28' }}>
-            {/* 부품 전체 아코디언 헤더 */}
-            <div onClick={() => setOpenPicker(v => !v)}
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '13px 14px', background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: openPicker ? '12px 12px 0 0' : '12px', cursor: 'pointer' }}>
+            {/* 질문 고르기 — 누르면 하단 시트 모달로 (페이지가 길어지지 않게) */}
+            <div onClick={() => setOpenPicker(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '13px 14px', background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '12px', cursor: 'pointer' }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: '#96502e' }}>그림에서 궁금한 걸 골라보세요</div>
-                <div style={{ fontSize: '11px', color: '#b4785a', marginTop: '2px' }}>
+                <div style={{ fontSize: '11px', color: pickedQ ? '#6e50a0' : '#b4785a', marginTop: '2px' }}>
                   {pickedQ ? MULSANG_QUESTIONS.find(q => q.id === pickedQ)?.question : '안 고르면 그림 전체를 대략 풀어드려요'}
                 </div>
               </div>
-              <span style={{ color: '#c8783c', fontSize: '12px' }}>{openPicker ? '▾' : '▸'}</span>
+              <span style={{ color: '#c8783c', fontSize: '15px' }}>›</span>
             </div>
 
-            {openPicker && (
-              <div style={{ border: '0.5px solid #f0e0d5', borderTop: 'none', borderRadius: '0 0 12px 12px', padding: '10px' }}>
-                {/* 카테고리별 질문 (아코디언, 하나만 선택) */}
-                {groupMulsangByCategory(MULSANG_QUESTIONS).map(({ category, items }) => {
-                  const gHasPicked = items.some(q => q.id === pickedQ)
-                  const open = openCat === category
-                  return (
-                    <div key={category} style={{ border: `0.5px solid ${gHasPicked ? '#6e50a055' : '#f0e0d5'}`, borderRadius: '12px', marginBottom: '8px', overflow: 'hidden' }}>
-                      <div onClick={() => setOpenCat(open ? null : category)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '11px 12px', background: gHasPicked ? '#6e50a014' : '#fff', cursor: 'pointer' }}>
-                        <span style={{ flex: 1, fontSize: '13px', fontWeight: 700, color: '#6e50a0' }}>{category}</span>
-                        {gHasPicked && <span style={{ fontSize: '10px', color: '#fff', background: '#6e50a0', borderRadius: '9px', padding: '2px 7px' }}>선택됨</span>}
-                        <span style={{ color: '#6e50a0', fontSize: '12px' }}>{open ? '▾' : '▸'}</span>
-                      </div>
-                      {open && (
-                        <div style={{ padding: '8px 10px' }}>
-                          {items.map(q => {
-                            const on = pickedQ === q.id
-                            return (
-                              <div key={q.id} onClick={() => toggleQ(q.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 8px', borderRadius: '8px', background: on ? '#6e50a014' : 'transparent', marginBottom: '3px', cursor: 'pointer' }}>
-                                <span style={{ width: '18px', height: '18px', borderRadius: '50%', border: `1.5px solid ${on ? '#6e50a0' : '#d8c4b4'}`, background: on ? '#6e50a0' : '#fff', color: '#fff', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{on ? '✓' : ''}</span>
-                                <span style={{ fontSize: '12.5px', color: '#3a2e28' }}>{q.question}</span>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
 
             {/* 통변 실행 버튼 (하나 골라서) */}
             <button onClick={() => runTongbyeon('selected')} disabled={!pickedQ || tongLoading}
@@ -683,6 +651,56 @@ function MulsangInner() {
       </div>
 
       {PayPopup}
+
+      {/* ── 질문 고르기 모달 (하단 시트) ── */}
+      {openPicker && (
+        <div
+          onClick={() => setOpenPicker(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(40,28,22,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: '440px', maxHeight: '80vh', background: '#FDF6F0', borderRadius: '18px 18px 0 0', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* 모달 헤더 */}
+            <div style={{ display: 'flex', alignItems: 'center', padding: '15px 16px 12px', borderBottom: '0.5px solid #f0e0d5', flexShrink: 0 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: '#3a2e28' }}>궁금한 걸 골라보세요</div>
+                <div style={{ fontSize: '11px', color: '#b4785a', marginTop: '2px' }}>하나만 골라주세요</div>
+              </div>
+              <button onClick={() => setOpenPicker(false)} aria-label="닫기"
+                style={{ background: 'none', border: 'none', color: '#c5a590', fontSize: '20px', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
+            </div>
+
+            {/* 카테고리별 질문 (아코디언, 하나만 선택) — 로직 그대로, 모달 안으로 이동 */}
+            <div style={{ padding: '12px', overflowY: 'auto', flex: 1 }}>
+              {groupMulsangByCategory(MULSANG_QUESTIONS).map(({ category, items }) => {
+                const gHasPicked = items.some(q => q.id === pickedQ)
+                const open = openCat === category
+                return (
+                  <div key={category} style={{ border: `0.5px solid ${gHasPicked ? '#6e50a055' : '#f0e0d5'}`, borderRadius: '12px', marginBottom: '8px', overflow: 'hidden' }}>
+                    <div onClick={() => setOpenCat(open ? null : category)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '11px 12px', background: gHasPicked ? '#6e50a014' : '#fff', cursor: 'pointer' }}>
+                      <span style={{ flex: 1, fontSize: '13px', fontWeight: 700, color: '#6e50a0' }}>{category}</span>
+                      {gHasPicked && <span style={{ fontSize: '10px', color: '#fff', background: '#6e50a0', borderRadius: '9px', padding: '2px 7px' }}>선택됨</span>}
+                      <span style={{ color: '#6e50a0', fontSize: '12px' }}>{open ? '▾' : '▸'}</span>
+                    </div>
+                    {open && (
+                      <div style={{ padding: '8px 10px' }}>
+                        {items.map(q => {
+                          const on = pickedQ === q.id
+                          return (
+                            <div key={q.id} onClick={() => { toggleQ(q.id); setOpenPicker(false) }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 8px', borderRadius: '8px', background: on ? '#6e50a014' : 'transparent', marginBottom: '3px', cursor: 'pointer' }}>
+                              <span style={{ width: '18px', height: '18px', borderRadius: '50%', border: `1.5px solid ${on ? '#6e50a0' : '#d8c4b4'}`, background: on ? '#6e50a0' : '#fff', color: '#fff', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{on ? '✓' : ''}</span>
+                              <span style={{ fontSize: '12.5px', color: '#3a2e28' }}>{q.question}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
