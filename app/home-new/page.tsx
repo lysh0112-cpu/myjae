@@ -246,13 +246,18 @@ export default function HomeNew() {
                   </div>
                 </div>
                 <button
-                  onClick={() => router.push('/manseryeok')}
+                  onClick={() => router.push('/mypage-new')}
+                  onPointerDown={(e) => { e.currentTarget.style.transform = 'scale(0.97)' }}
+                  onPointerUp={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
+                  onPointerLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
                   style={{
                     width: '100%', height: '44px',
                     background: '#b46e46', border: 'none', borderRadius: '10px',
                     color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                    transition: 'transform 0.12s ease', transform: 'scale(1)',
+                    WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation',
                   }}
-                >내 사주 바로 보기 →</button>
+                >나만의 사랑방으로 가기 →</button>
               </>
             ) : (
               <>
@@ -396,7 +401,6 @@ export default function HomeNew() {
           { icon: '⊞', label: '서비스', href: '/manseryeok', active: false },
           { icon: '💬', label: '상담', href: '/manseryeok/consultant-select', active: false },
           { icon: '♡', label: '찜', href: '/home-new', active: false },
-          { icon: '👤', label: '마이', href: '/mypage-new', active: false },
         ].map((n) => (
           <button
             key={n.label}
