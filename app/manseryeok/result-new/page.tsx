@@ -26,6 +26,7 @@ import { type UnseEntry } from "@/lib/saju/unseQuestions";
 import { toTongbyeonInput } from "@/lib/saju/toTongbyeonInput";
 import YongsinCard from "./YongsinCard";
 import SajuWonguk from "./SajuWonguk";
+import { toPng } from "html-to-image";
 
 const BRANCH_LIST = [{char:"子"},{char:"丑"},{char:"寅"},{char:"卯"},{char:"辰"},{char:"巳"},{char:"午"},{char:"未"},{char:"申"},{char:"酉"},{char:"戌"},{char:"亥"}]
 const HEAVENLY_STEMS = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
@@ -209,6 +210,60 @@ function ResultNewContent() {
   const recordIdParam = searchParams.get('recordId') || undefined
   const [saveState,setSaveState]=useState<'idle'|'saving'|'saved'>(recordIdParam?'saved':'idle')
 
+  // ── 사주 원국 아코디언 (기본 펼침. 표가 커서 접을 수 있게) ──
+  const [wongukOpen,setWongukOpen]=useState(true)
+
+  // ── 사주 원국 이미지 저장·공유 ──
+  //   SajuWonguk를 감싼 영역(wongukRef)을 PNG로 캡처 → 다운로드 / 공유.
+  //   html-to-image 사용. 캡처 실패해도 화면은 안 죽게 try/catch.
+  const wongukRef = useRef<HTMLDivElement>(null)
+  const [imgBusy,setImgBusy]=useState(false)
+
+  async function captureWongukPng(): Promise<string|null>{
+    if(!wongukRef.current) return null
+    try{
+      return await toPng(wongukRef.current,{
+        pixelRatio:2, backgroundColor:'#ffffff', cacheBust:true,
+      })
+    }catch{
+      return null
+    }
+  }
+
+  async function handleSaveWongukImage(){
+    if(imgBusy) return
+    setImgBusy(true)
+    const url=await captureWongukPng()
+    setImgBusy(false)
+    if(!url){ alert('이미지를 만들지 못했어요. 잠시 후 다시 시도해 주세요.'); return }
+    const a=document.createElement('a')
+    a.href=url
+    a.download=`${personName||'나'}_사주원국.png`
+    a.click()
+  }
+
+  async function handleShareWongukImage(){
+    if(imgBusy) return
+    setImgBusy(true)
+    const url=await captureWongukPng()
+    if(!url){ setImgBusy(false); alert('이미지를 만들지 못했어요. 잠시 후 다시 시도해 주세요.'); return }
+    try{
+      const blob=await (await fetch(url)).blob()
+      const file=new File([blob],`${personName||'나'}_사주원국.png`,{type:'image/png'})
+      // 파일 공유 가능하면 이미지 자체를 공유, 아니면 다운로드로 대체.
+      const navShare = navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean }
+      if(navShare.share && navShare.canShare && navShare.canShare({files:[file]})){
+        await navShare.share({files:[file],title:'명카페 사주 원국',text:'내 사주 원국이에요'})
+      }else{
+        const a=document.createElement('a'); a.href=url; a.download=file.name; a.click()
+      }
+    }catch{
+      /* 사용자가 공유 취소한 경우 등 — 조용히 무시 */
+    }finally{
+      setImgBusy(false)
+    }
+  }
+
   // ── ID 통일: URL 우선 + profiles 보조 (diagnosis와 동일한 표준 패턴) ──
   //   1) URL에 생년월일이 있으면 그 사람(타인·특정인·가족지인 목록에서 선택)
   //   2) 없으면 로그인한 내 정보(profiles) = 내 사주
@@ -369,19 +424,8 @@ function ResultNewContent() {
           <div style={{fontSize:'14px',fontWeight:700,color:'#1a1a1a'}}>{titleName}</div>
           <div style={{fontSize:'9px',color:'#c8783c'}}>명연재（明然載）</div>
         </div>
-        {/* 보관함 저장 버튼 (다시보기(recordId)면 이미 저장된 것이라 '저장됨' 표시) */}
-        {info && !chartOnly ? (
-          <button onClick={handleSaveRecord} disabled={saveState!=='idle'}
-            style={{
-              background:'none', border:'none', cursor:saveState==='idle'?'pointer':'default',
-              fontSize:'11px', fontWeight:600, color:saveState==='saved'?'#c8783c':'#96502e', padding:0,
-              whiteSpace:'nowrap',
-            }}>
-            {saveState==='saving'?'저장 중…':saveState==='saved'?'✓ 저장됨':'저장'}
-          </button>
-        ) : (
-          <div style={{width:'20px'}}/>
-        )}
+        {/* 저장 버튼은 하단으로 이동. 헤더 균형용 빈 칸. */}
+        <div style={{width:'20px'}}/>
       </div>
 
       {/* 프로필 헤더 (피치톤) */}
@@ -399,9 +443,26 @@ function ResultNewContent() {
 
       <div style={{padding:'10px'}}>
 
-        {/* ① 사주 원국 (신살 통합) */}
-        <Section title="사주 원국">
-          <SajuWonguk saju={saju} dayStem={dayStem} yeonjji={yeonjji} iljji={iljji} gm1={gm1} gm2={gm2}/>
+        {/* ① 사주 원국 (신살 통합) — 표가 커서 아코디언(기본 펼침). */}
+        <Section title="사주 원국" collapsible open={wongukOpen} onToggle={()=>setWongukOpen(v=>!v)} hint="펼쳐보기">
+          {/* 캡처 대상: 이 div 안쪽만 이미지로 뽑는다 (버튼 줄은 제외) */}
+          <div ref={wongukRef} style={{background:'#fff',padding:'2px'}}>
+            <SajuWonguk saju={saju} dayStem={dayStem} yeonjji={yeonjji} iljji={iljji} gm1={gm1} gm2={gm2}/>
+          </div>
+
+          {/* 이미지 저장 · 공유 (사주 원국만 따로 내보내기) */}
+          <div style={{display:'flex',gap:'6px',marginTop:'12px',paddingTop:'10px',borderTop:'0.5px dashed #f0e0d5'}}>
+            <button onClick={handleSaveWongukImage} disabled={imgBusy}
+              style={{flex:1,padding:'9px 0',borderRadius:'8px',background:'#fffbf7',border:'0.5px solid #e8d5c5',
+                color:'#96502e',fontSize:'12px',fontWeight:500,cursor:imgBusy?'default':'pointer'}}>
+              {imgBusy?'만드는 중…':'⬇ 이미지 저장'}
+            </button>
+            <button onClick={handleShareWongukImage} disabled={imgBusy}
+              style={{flex:1,padding:'9px 0',borderRadius:'8px',background:'#fffbf7',border:'0.5px solid #e8d5c5',
+                color:'#96502e',fontSize:'12px',fontWeight:500,cursor:imgBusy?'default':'pointer'}}>
+              ↗ 공유
+            </button>
+          </div>
         </Section>
 
         {/* ③ 오행과 십성 분석 */}
@@ -514,6 +575,24 @@ function ResultNewContent() {
         <div style={{background:'#fff',border:'0.5px solid #f0e0d5',borderRadius:'14px',padding:'12px',marginTop:'10px'}}>
           <ConsultButton priceKey="saju" mode="personal" searchParams={searchParams}/>
         </div>
+
+        {/* ⑪ 하단 저장 버튼 (보관함에 기록. 다시보기(recordId)면 '저장됨') */}
+        {info && !chartOnly && (
+          <div style={{marginTop:'12px',marginBottom:'80px'}}>
+            <button onClick={handleSaveRecord} disabled={saveState!=='idle'}
+              style={{
+                width:'100%',padding:'15px 0',borderRadius:'12px',border:'none',
+                background:saveState==='saved'?'#e8d5c5':'#b46e46',
+                color:saveState==='saved'?'#96502e':'#fff',
+                fontSize:'15px',fontWeight:600,cursor:saveState==='idle'?'pointer':'default',
+              }}>
+              {saveState==='saving'?'저장 중…':saveState==='saved'?'✓ 보관함에 저장됨':'💾 이 결과 보관함에 저장'}
+            </button>
+            <div style={{fontSize:'11px',color:'#c5a590',textAlign:'center',marginTop:'7px'}}>
+              보관함에서 언제든 다시 볼 수 있어요
+            </div>
+          </div>
+        )}
 
       </div>
 
