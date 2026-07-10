@@ -10,6 +10,7 @@ import { MULSANG_QUESTIONS, groupMulsangByCategory } from '@/lib/saju/mulsangQue
 import OhaengPentagon from '@/app/manseryeok/result-new/OhaengPentagon'
 import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
 import { getGongmang } from '@/lib/saju'
+import { saveRecord } from '@/lib/saju/sajuRecords'
 import { supabase } from '@/lib/supabase'
 import type { SajuQuestion } from '@/lib/saju/questions'
 
@@ -222,6 +223,8 @@ function MulsangInner() {
   const [answeredIds, setAnsweredIds] = useState<Set<string>>(new Set())
   // 그림 생성 실패 안내 (크레딧 소진 등). null이면 정상.
   const [imageError, setImageError] = useState<string | null>(null)
+  // 보관함 저장 상태
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
 
   useEffect(() => {
     const key = mulsangImgKey(info, style)
@@ -457,6 +460,56 @@ function MulsangInner() {
     } finally {
       setTongLoading(false)
     }
+  }
+
+  // ── 보관함 저장: 이 사람의 그림(수묵·지브리 그린 것) + 본 질문 해설들을 한 건으로 저장 ──
+  async function handleSaveRecord() {
+    if (saveState !== 'idle' || !info) return
+    const pk = personKeyOf(info)
+    if (!pk) return
+    setSaveState('saving')
+
+    // 1) 두 화풍 그림 모으기 (그린 것만)
+    const images: { style: string; imageUrl: string; commentary: unknown }[] = []
+    for (const st of Object.keys(STYLE_CONFIGS)) {
+      const k = mulsangImgKey(info, st)
+      if (!k) continue
+      const raw = localStorage.getItem(k)
+      if (!raw) continue
+      try {
+        const r = JSON.parse(raw)
+        if (r.imageUrl) images.push({ style: st, imageUrl: r.imageUrl, commentary: r.commentary ?? null })
+      } catch {}
+    }
+
+    // 2) 본 질문 해설들 모으기
+    const answers: { questionId: string; question: string; answer: string }[] = []
+    try {
+      const prefix = `${MULSANG_ANS_PREFIX}${pk}::`
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (!key || !key.startsWith(prefix)) continue
+        const qid = key.slice(prefix.length)
+        const ans = localStorage.getItem(key) || ''
+        const q = MULSANG_QUESTIONS.find(x => x.id === qid)
+        if (ans) answers.push({ questionId: qid, question: q?.question || '', answer: ans })
+      }
+    } catch {}
+
+    // 3) saju_records에 스냅샷 저장 (service_type='mulsang')
+    const res = await saveRecord({
+      serviceType: 'mulsang',
+      title: info.name || '나',
+      inputData: {
+        gender: info.gender, calType: info.calType,
+        year: String(info.year), month: String(info.month), day: String(info.day),
+        leapMonth: info.leapMonth || '0',
+        hour: info.hourIdx == null ? '모름' : String(info.hourIdx),
+      },
+      resultData: { images, answers },
+    })
+    setSaveState(res.ok ? 'saved' : 'idle')
+    if (!res.ok) alert(res.message || '저장하지 못했어요.')
   }
 
   function goConsult() {
@@ -726,6 +779,24 @@ function MulsangInner() {
               </button>
             </div>
           )}
+
+          {/* 하단 액션: 보관함 저장 + 다른 사람 그리기 */}
+          <button onClick={handleSaveRecord} disabled={saveState !== 'idle'}
+            style={{ width: '100%', padding: '15px', borderRadius: '12px', border: 'none', marginTop: '12px',
+              background: saveState === 'saved' ? '#e8d5c5' : '#b46e46',
+              color: saveState === 'saved' ? '#96502e' : '#fff',
+              fontSize: '15px', fontWeight: 700, cursor: saveState === 'idle' ? 'pointer' : 'default' }}>
+            {saveState === 'saving' ? '저장 중…' : saveState === 'saved' ? '✓ 보관함에 저장됨' : '💾 그림·해설 보관함에 저장'}
+          </button>
+          <div style={{ fontSize: '11px', color: '#c5a590', textAlign: 'center', marginTop: '6px' }}>
+            그린 그림과 본 질문 해설이 함께 저장돼요
+          </div>
+
+          <button onClick={() => router.push('/manseryeok/mulsang-storage')}
+            style={{ width: '100%', padding: '13px', borderRadius: '12px', marginTop: '10px', marginBottom: '4px',
+              background: 'transparent', border: '0.5px solid #d8c4b4', color: '#96502e', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
+            👥 다른 사람 그리기
+          </button>
         </div>
 
         {PayPopup}
