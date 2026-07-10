@@ -248,3 +248,58 @@ export function calcYongsinNew(saju: Pillar[], dayStem: string, scoreOverride?: 
     gyeokguk: calcGyeokguk(saju, dayStem),
   }
 }
+
+// ============================================================================
+// 호환 어댑터 — 낡은 calcYongsin(yongsin.ts)을 쓰던 곳을 최소 수정으로
+//   새 억부용신(정확한 100점 계산)으로 옮기기 위한 래퍼.
+//
+//   반환 형태를 낡은 YongsinResult(heeksin 철자 포함)와 똑같이 맞춘다.
+//   → 호출부는 import만 calcYongsin → calcYongsinCompat 로 바꾸면 된다.
+//
+//   억부용신을 쓰는 이유: 궁합·결혼택일은 "이 사람에게 좋은 오행(용신)"이
+//   필요한데, 억부(eokbu)가 5신(용·희·기·구·한)을 다 주므로 딱 맞는다.
+//
+//   [주의] 이 어댑터는 궁합·결혼택일 전용으로 도입. 다른 화면(작명·운세 등)은
+//   기존 calcYongsin을 그대로 쓴다(연재쌤 검수 전까지 결과 안 바꿈).
+// ============================================================================
+
+// 낡은 YongsinResult와 동일한 형태 (heeksin 철자 유지)
+export interface YongsinCompatResult {
+  isStrong: boolean
+  yongsin: string
+  heeksin: string
+  gisin: string
+  gusin: string
+  hansin: string
+  score: Record<string, number>
+  description: string
+}
+
+export function calcYongsinCompat(
+  saju: Pillar[],
+  dayStem: string,
+): YongsinCompatResult {
+  const r = calcYongsinNew(saju, dayStem)
+
+  // 계산 불가(일간 없음·기둥 없음) → 안전한 빈 결과
+  if (!r) {
+    return {
+      isStrong: false,
+      yongsin: '', heeksin: '', gisin: '', gusin: '', hansin: '',
+      score: {}, description: '용신을 계산할 수 없어요.',
+    }
+  }
+
+  const strong = r.status === '신강' || r.status === '중화'
+  return {
+    isStrong: strong,
+    // 억부용신의 5신을 낡은 필드명에 매핑 (heesin → heeksin)
+    yongsin: r.eokbu.yongsin,
+    heeksin: r.eokbu.heesin,
+    gisin: r.eokbu.gisin,
+    gusin: r.eokbu.gusin,
+    hansin: r.eokbu.hansin,
+    score: r.score,
+    description: `일간 ${dayStem}(${r.dayElement})은 ${r.status}. 억부 기준 용신은 ${r.eokbu.yongsin}이에요.`,
+  }
+}
