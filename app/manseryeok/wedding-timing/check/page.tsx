@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { runDiagnose, type DiagnosedDate } from '../lib/diagnose'
 import { saveWeddingRecord, getWeddingRecord } from '@/lib/saju/weddingRecords'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
-import WeddingDateField from '../components/WeddingDateField'
+import WeddingCalendar from '../components/WeddingCalendar'
 
 const cardBg = '#FFFBF7'
 const sub = '#b4785a'
@@ -276,7 +276,7 @@ function CheckInner() {
         {dates.map((d, i) => (
           <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
             <div style={{ flex: 1 }}>
-              <WeddingDateField value={d} onChange={v => setDate(i, v)} />
+              <WeddingCalendar value={d} onChange={v => setDate(i, v)} />
             </div>
             {dates.length > 1 && (
               <button onClick={() => removeDate(i)}
