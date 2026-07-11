@@ -330,7 +330,7 @@ function Header({ router }: { router: ReturnType<typeof useRouter> }) {
       display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px',
       background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid #f0e0d5',
     }}>
-      <button onClick={() => router.back()} aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
+      <button onClick={() => router.push('/manseryeok/naming/diagnosis')} aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
       <span style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>발음 그대로, 한자 바꾸기</span>
     </div>
   )
