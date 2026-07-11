@@ -2,6 +2,7 @@
 import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { getNamingRecord } from '@/lib/saju/namingRecords'
 import ConsultButton from '@/app/components/common/ConsultButton'
 
 const GOLD = '#c8783c'
@@ -52,11 +53,33 @@ function NewbornViewInner() {
   const router = useRouter()
   const sp = useSearchParams()
   const nameId = sp.get('nameId') || ''
+  const recordId = sp.get('recordId') || ''
 
   const [row, setRow] = useState<NameRow | null>(null)
   const [loaded, setLoaded] = useState(false)
 
+  // 뒤로가기 목적지: 보관함(recordId)에서 왔으면 아기 보관함, 아니면 마이페이지
+  const backTo = recordId ? '/manseryeok/naming/rename/newborn-storage' : '/mypage'
+
   useEffect(() => {
+    // ① 보관함(saju_records)에서 온 경우: recordId 로 스냅샷 로드
+    if (recordId) {
+      getNamingRecord(recordId).then(rec => {
+        if (rec) {
+          setRow({
+            hangul_name: rec.hangulName,
+            hanja_name: rec.hanjaName,
+            chars: (rec.chars.filter(Boolean) as SavedChar[]),
+            result: (rec.snapshot?.result as DiagnoseLike) ?? null,
+            commentary: rec.snapshot?.commentary ?? null,
+            kind: 'newborn',
+          })
+        }
+        setLoaded(true)
+      })
+      return
+    }
+    // ② 마이페이지(my_names)에서 온 경우: nameId 로 로드
     if (!nameId) { setLoaded(true); return }
     supabase.from('my_names')
       .select('hangul_name, hanja_name, chars, result, commentary, kind')
@@ -66,16 +89,16 @@ function NewbornViewInner() {
         if (data) setRow(data as NameRow)
         setLoaded(true)
       })
-  }, [nameId])
+  }, [nameId, recordId])
 
   if (!loaded) {
-    return <main style={{ minHeight: '100vh', background: '#1f1e1c' }} />
+    return <main style={{ minHeight: '100vh', background: '#FDF6F0' }} />
   }
 
   if (!row) {
     return (
-      <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
-        <Header router={router} />
+      <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
+        <Header router={router} backTo={backTo} />
         <div style={{ padding: '40px 8px', textAlign: 'center', color: SUB, lineHeight: 1.8 }}>
           저장된 이름을 찾을 수 없어요.
           <div style={{ marginTop: 20 }}>
@@ -103,8 +126,8 @@ function NewbornViewInner() {
   ].filter((x) => x.g) : []
 
   return (
-    <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
-      <Header router={router} />
+    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
+      <Header router={router} backTo={backTo} />
 
       <div style={{ textAlign: 'center', margin: '14px 0 6px' }}>
         <div style={{ fontSize: 32, fontWeight: 700, color: GOLD, letterSpacing: 4 }}>{fullName}</div>
@@ -163,14 +186,14 @@ function NewbornViewInner() {
   )
 }
 
-function Header({ router }: { router: ReturnType<typeof useRouter> }) {
+function Header({ router, backTo }: { router: ReturnType<typeof useRouter>; backTo: string }) {
   return (
     <div style={{
       position: 'sticky', top: 0, zIndex: 50,
       display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px',
       background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid #f0e0d5',
     }}>
-      <button onClick={() => router.push('/mypage')} aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
+      <button onClick={() => router.push(backTo)} aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
       <span style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>아기 이름 다시보기</span>
     </div>
   )
@@ -178,7 +201,7 @@ function Header({ router }: { router: ReturnType<typeof useRouter> }) {
 
 export default function NewbornViewPage() {
   return (
-    <Suspense fallback={<div style={{ background: '#1f1e1c', minHeight: '100vh' }} />}>
+    <Suspense fallback={<div style={{ background: '#FDF6F0', minHeight: '100vh' }} />}>
       <NewbornViewInner />
     </Suspense>
   )
