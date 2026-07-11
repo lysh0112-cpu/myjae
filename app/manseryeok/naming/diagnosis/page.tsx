@@ -229,6 +229,14 @@ function DiagnosisInner() {
     return () => { cancelled = true }
   }, [nameId])
 
+  // ★ 남(가족·지인) 진단으로 들어온 경우: URL의 이름(name)을 입력칸에 자동으로 채운다.
+  //   보관함 > "새 이름 풀이하기" > 사람 선택(오연희 등) 시 그 사람 이름이 실려 온다.
+  //   → 사용자가 다시 타이핑하지 않고 바로 한자 고르기로 넘어갈 수 있다.
+  useEffect(() => {
+    if (nameId || recordId) return    // 저장건 다시보기는 제외
+    if (urlName) setNameInput(urlName)
+  }, [urlName, nameId, recordId])
+
   // ── 보관함(saju_records) 다시보기: recordId 있으면 스냅샷 로드 → 바로 결과 ──
   //   재계산·AI 재호출 없이 저장된 풀이를 그대로 보여준다 (viewOnly).
   useEffect(() => {
