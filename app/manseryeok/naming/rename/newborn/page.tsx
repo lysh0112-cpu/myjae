@@ -321,7 +321,7 @@ function NewbornInner() {
 
   return (
     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
-      <PitchHeader title="내 아기 이름짓기" onBack={() => router.push('/home-new')} onHome={() => router.push('/home-new')} />
+      <PitchHeader title="내 아기 이름짓기" onBack={() => router.push('/manseryeok/naming/rename/newborn-storage')} onHome={() => router.push('/home-new')} />
 
       <div style={{ padding: '16px' }}>
 
