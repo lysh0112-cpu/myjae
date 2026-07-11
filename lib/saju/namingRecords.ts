@@ -110,6 +110,7 @@ export async function saveNamingRecord(args: {
   person: NamingPerson | null
   result: DiagnoseResult
   commentary: NamingResultSnapshot['commentary']
+  serviceType?: string             // 'naming'(개명, 기본) | 'newborn'(아기)
 }): Promise<{ ok: boolean; id?: string; message?: string }> {
   const { data: auth } = await supabase.auth.getUser()
   const uid = auth?.user?.id
@@ -131,7 +132,8 @@ export async function saveNamingRecord(args: {
     .from('saju_records')
     .insert({
       user_id: uid,
-      service_type: 'naming',
+      // 개명='naming' / 아기='newborn' — 보관함이 서비스별로 분리 조회된다.
+      service_type: args.serviceType || 'naming',
       // title 에 이름을 넣어 목록에서 바로 보인다 (한자 우선, 없으면 한글).
       title: hanja || hangul || '무제',
       // relation 칸에 관계를 넣어 목록·트렌드 집계에서 바로 구분.
@@ -174,7 +176,7 @@ function toRecord(r: {
 //   해설 스냅샷은 카드를 눌러 다시보기(getNamingRecord)할 때만 내려받는다.
 //   단, 목록에서 종합등급을 보여주려고 result_data 를 살짝 실으면 무거워지므로,
 //   등급은 저장 시 title 뒤가 아니라 다시보기에서만 확정 표시한다.
-export async function listNamingRecords(): Promise<NamingRecord[]> {
+export async function listNamingRecords(serviceType: string = 'naming'): Promise<NamingRecord[]> {
   const { data: auth } = await supabase.auth.getUser()
   const uid = auth?.user?.id
   if (!uid) return []
@@ -183,7 +185,7 @@ export async function listNamingRecords(): Promise<NamingRecord[]> {
     .from('saju_records')
     .select('id, relation, title, input_data, created_at')
     .eq('user_id', uid)
-    .eq('service_type', 'naming')
+    .eq('service_type', serviceType)
     .order('created_at', { ascending: false })
 
   if (error || !data) return []
