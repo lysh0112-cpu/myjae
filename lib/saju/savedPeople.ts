@@ -123,7 +123,7 @@ export function personToMyInfo(p: SavedPerson): MyInfo {
 // ============================================================================
 // 조회 — 로그인한 내가 저장한 사람들
 // ============================================================================
-export async function listSavedPeople(): Promise<SavedPerson[]> {
+export async function listSavedPeople(serviceType?: string): Promise<SavedPerson[]> {
   const { data: u } = await supabase.auth.getUser()
   if (!u?.user) return []
   const { data, error } = await supabase
@@ -136,13 +136,31 @@ export async function listSavedPeople(): Promise<SavedPerson[]> {
   // ⚠️ saju_records는 '사람'과 '궁합 기록'을 함께 담는다.
   //    궁합 기록(연인=couple / 부부=married)은 두 사람 쌍이라 '한 사람'으로
   //    쓸 수 없으므로 사람 목록에서 제외한다.
-  //    (service_type이 null이거나 사주/사람인 것은 그대로 사람으로 취급)
-  return (data ?? [])
-    .filter((row) => {
-      const st = row.service_type as string
-      return st !== 'couple' && st !== 'married'
-    })
-    .map(normalizeRow)
+  const rows = (data ?? []).filter((row) => {
+    const st = row.service_type as string
+    return st !== 'couple' && st !== 'married'
+  })
+
+  // serviceType 지정 시: 그 서비스에서 저장한 사람만.
+  //   (예: 개명 모달 → service_type='naming' 인, 즉 이름풀이 문의한 사람만)
+  const scoped = serviceType
+    ? rows.filter((row) => (row.service_type as string) === serviceType)
+    : rows
+
+  const people = scoped.map(normalizeRow)
+
+  // 개명 등은 한 사람이 여러 번(다른 한자로) 풀 수 있어 목록에 중복이 생긴다.
+  //   같은 사람(생년월일+성별)은 최신 1건만 남겨 목록을 깔끔히 한다.
+  const seen = new Set<string>()
+  const unique: SavedPerson[] = []
+  for (const p of people) {
+    const i = p.input_data
+    const key = [i.gender, i.calType, i.year, i.month, i.day, i.leapMonth, i.hour].join('_')
+    if (seen.has(key)) continue
+    seen.add(key)
+    unique.push(p)
+  }
+  return unique
 }
 
 function normalizeRow(row: Record<string, unknown>): SavedPerson {
@@ -150,7 +168,12 @@ function normalizeRow(row: Record<string, unknown>): SavedPerson {
   if (typeof input === 'string') {
     try { input = JSON.parse(input) } catch { input = {} }
   }
-  const inp = (input ?? {}) as Record<string, unknown>
+  const raw = (input ?? {}) as Record<string, unknown>
+  // 개명(naming) 기록은 생년월일이 input_data.person 에 중첩돼 있다.
+  //   savedPeople 기록은 input_data 최상위에 바로 있다. → 둘 다 처리.
+  const inp = (raw.person && typeof raw.person === 'object')
+    ? (raw.person as Record<string, unknown>)
+    : raw
   return {
     id: String(row.id),
     user_id: String(row.user_id),
