@@ -61,6 +61,11 @@ function firstHangul(s: string): string {
   return arr.length > 0 ? arr[arr.length - 1] : ''
 }
 
+// 숫자만 남기고 최대 len 자리로 자름 (생년월일 3칸 입력용)
+function onlyNum(s: string, len: number): string {
+  return s.replace(/[^0-9]/g, '').slice(0, len)
+}
+
 // 아기 사주로 이용권 열쇠 만들기 (newborn-hanja/result와 동일해야 함)
 function babyKeyOf(b: { gender: string; calType: string; year: string; month: string; day: string; leapMonth: string; hour: string } | null): string {
   if (!b || !b.year) return ''
@@ -76,6 +81,9 @@ function NewbornInner() {
   const [calType, setCalType] = useState<'양력' | '음력'>('양력')
   const [leap, setLeap] = useState(false)
   const [birthDate, setBirthDate] = useState('')
+  const [birthYear, setBirthYear] = useState('')
+  const [birthMonth, setBirthMonth] = useState('')
+  const [birthDay, setBirthDay] = useState('')
   const [birthHour, setBirthHour] = useState('')
   const [confirmed, setConfirmed] = useState(false)
 
@@ -104,6 +112,17 @@ function NewbornInner() {
   const [remaining, setRemaining] = useState(0)      // ★ 남은 조회 횟수
   const [surLocked, setSurLocked] = useState(false)  // ★ 성씨 고정(이용권/URL로 이미 정해짐)
   const [entryLoaded, setEntryLoaded] = useState(false)  // 진입 시 이용권 확인 완료
+
+  // 연/월/일 3칸 입력 → birthDate("YYYY-MM-DD") 자동 조합 (confirmBaby·fromInputs 그대로 사용)
+  useEffect(() => {
+    if (birthYear.length === 4 && birthMonth && birthDay) {
+      const mm = birthMonth.padStart(2, '0')
+      const dd = birthDay.padStart(2, '0')
+      setBirthDate(`${birthYear}-${mm}-${dd}`)
+    } else {
+      setBirthDate('')
+    }
+  }, [birthYear, birthMonth, birthDay])
 
   useEffect(() => {
     supabase.from('analysis_prices').select('price').eq('price_key', 'naming_hanja').maybeSingle()
@@ -154,6 +173,9 @@ function NewbornInner() {
         setInfo(restored)
         setGender(b.gender === '여' ? '여' : '남')
         setCalType(b.calType === '음력' ? '음력' : '양력')
+        setBirthYear(String(b.year))
+        setBirthMonth(String(b.month))
+        setBirthDay(String(b.day))
         setConfirmed(true)
       }
     }
@@ -399,14 +421,31 @@ function NewbornInner() {
 
             <div style={{ marginBottom: '14px' }}>
               <div style={{ fontSize: '11px', color: '#b4785a', marginBottom: '6px' }}>생년월일</div>
-              <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)}
-                style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '10px', background: '#FDF6F0', border: '0.5px solid #f0e0d5', color: birthDate ? gold : '#b4785a', fontSize: '14px', colorScheme: 'dark' }} />
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  value={birthYear} inputMode="numeric" maxLength={4} placeholder="2027"
+                  onChange={(e) => setBirthYear(onlyNum(e.target.value, 4))}
+                  style={{ flex: 1.4, minWidth: 0, boxSizing: 'border-box', padding: '12px 14px', borderRadius: '10px', background: '#FDF6F0', border: '0.5px solid #f0e0d5', color: birthYear ? '#1a1a1a' : '#b4785a', fontSize: '15px', textAlign: 'center' }} />
+                <input
+                  value={birthMonth} inputMode="numeric" maxLength={2} placeholder="10"
+                  onChange={(e) => setBirthMonth(onlyNum(e.target.value, 2))}
+                  style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', padding: '12px 14px', borderRadius: '10px', background: '#FDF6F0', border: '0.5px solid #f0e0d5', color: birthMonth ? '#1a1a1a' : '#b4785a', fontSize: '15px', textAlign: 'center' }} />
+                <input
+                  value={birthDay} inputMode="numeric" maxLength={2} placeholder="15"
+                  onChange={(e) => setBirthDay(onlyNum(e.target.value, 2))}
+                  style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', padding: '12px 14px', borderRadius: '10px', background: '#FDF6F0', border: '0.5px solid #f0e0d5', color: birthDay ? '#1a1a1a' : '#b4785a', fontSize: '15px', textAlign: 'center' }} />
+              </div>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                <div style={{ flex: 1.4, fontSize: '10px', color: '#b4785a', textAlign: 'center' }}>연도</div>
+                <div style={{ flex: 1, fontSize: '10px', color: '#b4785a', textAlign: 'center' }}>월</div>
+                <div style={{ flex: 1, fontSize: '10px', color: '#b4785a', textAlign: 'center' }}>일</div>
+              </div>
             </div>
 
             <div style={{ marginBottom: '16px' }}>
               <div style={{ fontSize: '11px', color: '#b4785a', marginBottom: '6px' }}>태어난 시 (시주)</div>
               <select value={birthHour} onChange={(e) => setBirthHour(e.target.value)}
-                style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '10px', background: '#FDF6F0', border: '0.5px solid #f0e0d5', color: birthHour ? gold : '#b4785a', fontSize: '14px', colorScheme: 'dark' }}>
+                style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '10px', background: '#FDF6F0', border: '0.5px solid #f0e0d5', color: birthHour ? gold : '#b4785a', fontSize: '14px', colorScheme: 'light' }}>
                 <option value="">시간 선택</option>
                 {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
               </select>
