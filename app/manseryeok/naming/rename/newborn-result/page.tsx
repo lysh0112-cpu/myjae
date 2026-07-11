@@ -255,8 +255,17 @@ function NewbornResultInner() {
 
   // ★ 특정 이름을 "최종 선택" → 부모 계정(user_id)으로 my_names에 저장 (kind='newborn')
   //   확정하면 못 바꿈. 마이페이지·상담사 화면에 이 최종 이름만 뜸.
+  //   ⚠️ 최종 선택 = 확정. 남은 조회 횟수가 있어도 소멸하고 더 이상 지어볼 수 없다.
   async function pickFinal(t: TryItem) {
     if (saving || finalPicked) return
+
+    // 최종 선택 경고 — 남은 횟수가 있으면 "소멸된다" 안내 후 확인
+    const hanjaName0 = t.chars.map((c) => c.hanja).join('')
+    const warn = remaining > 0
+      ? `"${hanjaName0}"(으)로 최종 선택할까요?\n\n최종 선택하면 더 이상 다른 이름을 지어볼 수 없어요.\n(남은 조회 ${remaining}회는 사라져요.)`
+      : `"${hanjaName0}"(으)로 최종 선택할까요?\n\n최종 선택하면 더 이상 다른 이름을 지어볼 수 없어요.`
+    if (!window.confirm(warn)) return
+
     setSaving(true)
     try {
       const { data: u } = await supabase.auth.getUser()
@@ -321,6 +330,14 @@ function NewbornResultInner() {
       } catch (e) { console.error(e) }
 
       setFinalPicked(true)
+
+      // ⚠️ 최종 선택 확정 → 남은 조회 횟수 소멸 (이용권 제거)
+      //   더 이상 이 아기로 이름을 지어볼 수 없다.
+      try {
+        localStorage.setItem(NEWBORN_PASS_KEY, JSON.stringify({ babyKey: bkey, remaining: 0 }))
+        setRemaining(0)
+      } catch {}
+
       // 저장 완료 → 아기 보관함으로 이동 (방금 저장한 이름이 목록 맨 위에 보인다)
       router.push('/manseryeok/naming/rename/newborn-storage')
     } catch (e) {
@@ -402,7 +419,7 @@ function NewbornResultInner() {
                   style={{ padding: '8px 12px', borderRadius: 12, cursor: 'pointer',
                     background: on ? 'rgba(200,120,60,0.12)' : CARD,
                     border: '1px solid ' + (on ? GOLD : 'rgba(200,120,60,0.10)') }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: on ? GOLD : '#fff' }}>{t.chars.map((c) => c.hanja).join('')}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: on ? GOLD : '#1a1a1a' }}>{t.chars.map((c) => c.hanja).join('')}</span>
                   {g && <span style={{ fontSize: 11, color: gradeColor(g), marginLeft: 6 }}>{g}</span>}
                 </button>
               )
