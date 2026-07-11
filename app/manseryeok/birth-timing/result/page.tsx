@@ -140,13 +140,13 @@ async function fetchAiNotes(recs: Recommendation[], survey: SurveyInput): Promis
 ${list}
 
 각 항목마다 그 날 태어날 아기의 기질을 한 줄(20자 내외)로 표현하고,
-1번은 추가로 2~3문장의 상세 해설을 써 주세요.
+각 항목마다 추가로 2~3문장의 상세 해설(detail)도 꼭 함께 써 주세요.
 
 [반드시 지킬 안전 규칙]
 - 의학적 단정이나 건강 예언은 절대 하지 마세요. (이것은 의료 조언이 아닙니다)
 - 반드시 아래 JSON 형식으로만 답하세요. 다른 말은 절대 쓰지 마세요.
 
-{${recs.map(r => r.rank === 1 ? `"${r.rank}":{"oneLine":"...","detail":"..."}` : `"${r.rank}":{"oneLine":"..."}`).join(",")}}`
+{${recs.map(r => `"${r.rank}":{"oneLine":"...","detail":"..."}`).join(",")}}`
 
   try {
     const res = await fetch('/api/analyze', {
