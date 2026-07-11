@@ -217,7 +217,6 @@ function DiagnosisInner() {
           setCommentary(row.commentary as Commentary)
           setChars(row.chars as (NameChar | null)[])
           setSyllables((row.chars as (NameChar | null)[]).filter(Boolean).map((c) => c!.hangul))
-          setSavedOffer(null)   // 저장건 불러오기 배너는 필요 없음
           setStep('result')
         }
       } catch (e) {
