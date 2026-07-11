@@ -4,9 +4,9 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { fromMyInfo, fromProfile, personKey } from '@/lib/saju/myInfo'
 
-const GOLD = '#FAC775'
-const CARD = '#2C2C2A'
-const SUB = '#8a88a0'
+const GOLD = '#c8783c'
+const CARD = '#fffbf7'
+const SUB = '#b4785a'
 
 const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
@@ -202,7 +202,7 @@ export default function NewNamePage() {
   const inputStyle: CSSProperties = {
     width: 48, height: 46, textAlign: 'center', fontSize: 18,
     borderRadius: 10, border: '1px solid ' + GOLD,
-    background: 'rgba(250,199,117,0.08)', color: '#fff',
+    background: 'rgba(200,120,60,0.07)', color: '#1a1a1a',
   }
 
   const chip = (n: 1 | 2, label: string) => {
@@ -210,8 +210,8 @@ export default function NewNamePage() {
     return (
       <button onClick={() => chooseCount(n)} className="active:scale-95"
         style={{ flex: 1, padding: '12px 0', borderRadius: 12, cursor: 'pointer',
-          background: on ? 'rgba(250,199,117,0.16)' : CARD,
-          border: '1px solid ' + (on ? GOLD : 'rgba(250,199,117,0.12)'),
+          background: on ? 'rgba(200,120,60,0.12)' : CARD,
+          border: '1px solid ' + (on ? GOLD : 'rgba(200,120,60,0.10)'),
           color: on ? GOLD : '#cfcdc4', fontWeight: 700, fontSize: 14 }}>
         {label}
       </button>
@@ -226,7 +226,7 @@ export default function NewNamePage() {
           먼저 &lsquo;내 이름 풀이&rsquo;에서 시작해 주세요.
           <div style={{ marginTop: 20 }}>
             <button onClick={() => router.push('/manseryeok/naming')}
-              style={{ padding: '12px 22px', borderRadius: 12, background: 'rgba(250,199,117,0.16)', border: '1px solid ' + GOLD, color: GOLD, fontWeight: 700, cursor: 'pointer' }}>
+              style={{ padding: '12px 22px', borderRadius: 12, background: 'rgba(200,120,60,0.12)', border: '1px solid ' + GOLD, color: GOLD, fontWeight: 700, cursor: 'pointer' }}>
               이름 메뉴로 가기 →
             </button>
           </div>
@@ -252,7 +252,7 @@ export default function NewNamePage() {
 
       {count !== null && (
         <>
-          <div style={{ background: CARD, border: '1px solid rgba(250,199,117,0.12)', borderRadius: 16, padding: '18px 16px' }}>
+          <div style={{ background: CARD, border: '1px solid rgba(200,120,60,0.10)', borderRadius: 16, padding: '18px 16px' }}>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
               <span style={{ fontSize: 22, color: SUB }}>{surname!.hanja}</span>
               <input
@@ -283,8 +283,8 @@ export default function NewNamePage() {
             </div>
           </div>
           <button onClick={proceed} disabled={!ready} className="active:scale-95"
-            style={{ marginTop: 16, width: '100%', background: ready ? 'rgba(250,199,117,0.16)' : CARD,
-              border: '1px solid ' + (ready ? GOLD : 'rgba(250,199,117,0.12)'), borderRadius: 14, padding: 14,
+            style={{ marginTop: 16, width: '100%', background: ready ? 'rgba(200,120,60,0.12)' : CARD,
+              border: '1px solid ' + (ready ? GOLD : 'rgba(200,120,60,0.10)'), borderRadius: 14, padding: 14,
               color: ready ? GOLD : '#555', fontWeight: 700, fontSize: 14, cursor: ready ? 'pointer' : 'default' }}>
             한자 추천받기 {'\u2192'}
           </button>
@@ -296,9 +296,9 @@ export default function NewNamePage() {
         <div onClick={() => setPayOpen(false)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
           <div onClick={(e) => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: 360, background: '#222220', borderRadius: 18, padding: '24px 20px', boxShadow: '0 16px 40px rgba(0,0,0,0.5)', textAlign: 'center' }}>
+            style={{ width: '100%', maxWidth: 360, background: '#fffbf7', borderRadius: 18, padding: '24px 20px', boxShadow: '0 16px 40px rgba(90,50,30,0.2)', textAlign: 'center' }}>
             <div style={{ fontSize: 28, marginBottom: 10 }}>✍️</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 6 }}>이름 지어보기 이용권</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a', marginBottom: 6 }}>이름 지어보기 이용권</div>
             <div style={{ fontSize: 13, color: SUB, marginBottom: 16, lineHeight: 1.7 }}>
               결제하시면 사주에 맞는 한자로<br />
               <b style={{ color: GOLD }}>{tryLimit}개</b>의 이름을 지어보고<br />
@@ -309,11 +309,11 @@ export default function NewNamePage() {
               <span style={{ fontSize: 20, fontWeight: 700, color: GOLD }}>{hanjaPrice.toLocaleString()}원</span>
             </div>
             <button onClick={payAndProceed}
-              style={{ width: '100%', padding: 15, borderRadius: 12, background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)', border: 'none', color: '#1a1a18', fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>
+              style={{ width: '100%', padding: 15, borderRadius: 12, background: '#c8783c', border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>
               💳 {hanjaPrice.toLocaleString()}원 결제하고 시작하기
             </button>
             <button onClick={() => setPayOpen(false)}
-              style={{ width: '100%', padding: 12, borderRadius: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: SUB, fontSize: 13, cursor: 'pointer' }}>
+              style={{ width: '100%', padding: 12, borderRadius: 12, background: 'transparent', border: '0.5px solid #f0e0d5', color: SUB, fontSize: 13, cursor: 'pointer' }}>
               다음에 할게요
             </button>
           </div>
@@ -325,9 +325,13 @@ export default function NewNamePage() {
 
 function Header({ router }: { router: ReturnType<typeof useRouter> }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 4px 16px' }}>
-      <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: GOLD, fontSize: 20, cursor: 'pointer' }}>{'\u2039'}</button>
-      <span style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>발음 그대로, 한자 바꾸기</span>
+    <div style={{
+      position: 'sticky', top: 0, zIndex: 50,
+      display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px',
+      background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid #f0e0d5',
+    }}>
+      <button onClick={() => router.back()} aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
+      <span style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>발음 그대로, 한자 바꾸기</span>
     </div>
   )
 }
