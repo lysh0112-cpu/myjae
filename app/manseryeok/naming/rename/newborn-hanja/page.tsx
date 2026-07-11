@@ -338,7 +338,7 @@ function NewbornHanjaInner() {
           </span>
         )}
         {fit && <span style={{ position: 'absolute', top: 4, right: 6, fontSize: 10, color: GREEN }}>{'\u2713'}</span>}
-        <div style={{ fontSize: 24, fontWeight: 600, color: on ? GOLD : '#fff', lineHeight: 1.1 }}>{x.hanja}</div>
+        <div style={{ fontSize: 24, fontWeight: 600, color: on ? GOLD : '#1a1a1a', lineHeight: 1.1 }}>{x.hanja}</div>
         <div style={{ fontSize: 10, color: SUB, marginTop: 3 }}>{x.meaning}</div>
         <div style={{ fontSize: 9, color: SUB, marginTop: 1 }}>{x.resource_ohaeng}·{x.strokes}획</div>
         {soft && <div style={{ fontSize: 8, color: '#E0A04A', marginTop: 1 }}>주의</div>}
@@ -370,7 +370,7 @@ function NewbornHanjaInner() {
               style={{ flex: 1, padding: '12px 0', borderRadius: 14, textAlign: 'center', cursor: 'pointer',
                 background: on ? 'rgba(200,120,60,0.12)' : done ? 'rgba(129,199,132,0.14)' : CARD,
                 border: '1px solid ' + (on ? GOLD : done ? GREEN : 'rgba(200,120,60,0.10)') }}>
-              <div style={{ fontSize: 22, fontWeight: 700, color: done ? GREEN : on ? GOLD : '#fff' }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color: done ? GREEN : on ? GOLD : '#1a1a1a' }}>
                 {done ? chosen[i].hanja : syl}
               </div>
               <div style={{ fontSize: 10, color: SUB, marginTop: 3 }}>{syl} {done ? '✓' : on ? '고르는 중' : ''}</div>
