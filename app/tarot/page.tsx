@@ -47,7 +47,7 @@ interface TarotPrice { price_key: string; price: number; free_count: number; act
 
 const gold = '#c8783c'
 const rose = '#b45a78'
-const ink = '#3a2e28'
+const ink = '#1a1a1a'
 const sub = '#b4785a'
 const cardBg = '#FFFBF7'
 const border = '1px solid #f0e0d5'
@@ -280,7 +280,7 @@ function TarotInner() {
                   borderRadius: '12px', padding: '14px', marginBottom: '10px',
                   cursor: active ? 'pointer' : 'default', opacity: active ? 1 : 0.5 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ color: selected ? gold : '#3a2e28', fontSize: '14px', fontWeight: 500 }}>{d.name_ko}</span>
+                  <span style={{ color: selected ? gold : ink, fontSize: '14px', fontWeight: 500 }}>{d.name_ko}</span>
                   {!active && <span style={{ background: 'rgba(180,120,90,0.12)', color: sub, fontSize: '10px', padding: '3px 8px', borderRadius: '20px' }}>준비 중</span>}
                   {selected && active && <span style={{ marginLeft: 'auto', color: gold }}>✓</span>}
                 </div>
@@ -359,7 +359,7 @@ function TarotInner() {
                 <div style={{ display: 'flex', gap: '8px', padding: '15px 0', width: 'max-content', animation: 'slideLeft 10s linear infinite' }}>
                   {[...Array(24)].map((_, i) => (
                     <div key={i} onClick={drawOne}
-                      style={{ flex: '0 0 80px', height: '118px', borderRadius: '10px', background: 'linear-gradient(135deg,#f3d9c6,#e8c4a8)', border: '1px solid #e6cbb5', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: gold, fontSize: '26px' }}>✦</div>
+                      style={{ flex: '0 0 80px', height: '118px', borderRadius: '10px', background: 'linear-gradient(150deg,#8a3a56,#5a2440)', border: '1px solid #d8a87e', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#f0c890', fontSize: '26px' }}>✦</div>
                   ))}
                 </div>
               </div>
@@ -385,14 +385,14 @@ function TarotInner() {
               <div key={i} style={{ width: '92px', textAlign: 'center' }}>
                 <div onClick={() => flipCard(i)}
                   style={{ width: '92px', height: '136px', borderRadius: '10px', cursor: p.flipped ? 'default' : 'pointer',
-                    background: p.flipped ? cardBg : 'linear-gradient(135deg,#f3d9c6,#e8c4a8)',
-                    border: '1px solid #e6cbb5', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    background: p.flipped ? cardBg : 'linear-gradient(150deg,#8a3a56,#5a2440)',
+                    border: p.flipped ? '1px solid #e6cbb5' : '1px solid #d8a87e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px',
                     transform: p.flipped && p.reversed ? 'rotate(180deg)' : 'none' }}>
                   {p.flipped
                     ? (p.card.imageUrl
                         ? <img src={p.card.imageUrl} alt={p.card.nameKo} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '10px' }} />
                         : <span style={{ color: gold, fontSize: '13px', fontWeight: 500, padding: '0 4px', lineHeight: 1.3 }}>{p.card.nameKo}</span>)
-                    : <span style={{ color: gold, fontSize: '28px' }}>✦</span>}
+                    : <span style={{ color: '#f0c890', fontSize: '28px' }}>✦</span>}
                 </div>
                 <div style={{ fontSize: '11px', color: sub, marginTop: '5px' }}>{p.position}</div>
                 {p.flipped && <div style={{ fontSize: '10px', color: p.reversed ? '#e57373' : '#81c784', marginTop: '2px' }}>{p.reversed ? '역방향' : '정방향'}</div>}
@@ -417,19 +417,19 @@ function TarotInner() {
           {interp.cards?.map((c, i) => (
             <div key={i} style={{ borderLeft: `3px solid ${gold}`, padding: '4px 14px', marginBottom: '18px' }}>
               <div style={{ fontSize: '14px', color: gold, marginBottom: '6px', fontWeight: 600 }}>{c.position} — {c.name} ({c.direction})</div>
-              <div style={{ fontSize: '15px', color: '#3a2e28', lineHeight: 1.9 }}>{c.meaning}</div>
+              <div style={{ fontSize: '15px', color: ink, lineHeight: 1.9 }}>{c.meaning}</div>
             </div>
           ))}
           {interp.summary && (
             <div style={{ background: cardBg, border, borderRadius: '14px', padding: '16px', marginBottom: '14px' }}>
               <div style={{ fontSize: '14px', color: gold, marginBottom: '8px', fontWeight: 600 }}>전체 흐름</div>
-              <div style={{ fontSize: '15px', color: '#3a2e28', lineHeight: 1.9 }}>{interp.summary}</div>
+              <div style={{ fontSize: '15px', color: ink, lineHeight: 1.9 }}>{interp.summary}</div>
             </div>
           )}
           {interp.advice && (
             <div style={{ background: cardBg, border, borderRadius: '14px', padding: '16px', marginBottom: '18px' }}>
               <div style={{ fontSize: '14px', color: gold, marginBottom: '8px', fontWeight: 600 }}>조언</div>
-              <div style={{ fontSize: '15px', color: '#3a2e28', lineHeight: 1.9 }}>{interp.advice}</div>
+              <div style={{ fontSize: '15px', color: ink, lineHeight: 1.9 }}>{interp.advice}</div>
             </div>
           )}
 
