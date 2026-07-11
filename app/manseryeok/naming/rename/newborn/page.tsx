@@ -426,14 +426,24 @@ function NewbornInner() {
                   value={birthYear} inputMode="numeric" maxLength={4} placeholder="2027"
                   onChange={(e) => setBirthYear(onlyNum(e.target.value, 4))}
                   style={{ flex: 1.4, minWidth: 0, boxSizing: 'border-box', padding: '12px 14px', borderRadius: '10px', background: '#FDF6F0', border: '0.5px solid #f0e0d5', color: birthYear ? '#1a1a1a' : '#b4785a', fontSize: '15px', textAlign: 'center' }} />
-                <input
-                  value={birthMonth} inputMode="numeric" maxLength={2} placeholder="10"
-                  onChange={(e) => setBirthMonth(onlyNum(e.target.value, 2))}
-                  style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', padding: '12px 14px', borderRadius: '10px', background: '#FDF6F0', border: '0.5px solid #f0e0d5', color: birthMonth ? '#1a1a1a' : '#b4785a', fontSize: '15px', textAlign: 'center' }} />
-                <input
-                  value={birthDay} inputMode="numeric" maxLength={2} placeholder="15"
-                  onChange={(e) => setBirthDay(onlyNum(e.target.value, 2))}
-                  style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', padding: '12px 14px', borderRadius: '10px', background: '#FDF6F0', border: '0.5px solid #f0e0d5', color: birthDay ? '#1a1a1a' : '#b4785a', fontSize: '15px', textAlign: 'center' }} />
+                <select
+                  value={birthMonth}
+                  onChange={(e) => setBirthMonth(e.target.value)}
+                  style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', padding: '12px 8px', borderRadius: '10px', background: '#FDF6F0', border: '0.5px solid #f0e0d5', color: birthMonth ? '#1a1a1a' : '#b4785a', fontSize: '15px', textAlign: 'center', colorScheme: 'light' }}>
+                  <option value="">월</option>
+                  {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((m) => (
+                    <option key={m} value={m}>{m}월</option>
+                  ))}
+                </select>
+                <select
+                  value={birthDay}
+                  onChange={(e) => setBirthDay(e.target.value)}
+                  style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', padding: '12px 8px', borderRadius: '10px', background: '#FDF6F0', border: '0.5px solid #f0e0d5', color: birthDay ? '#1a1a1a' : '#b4785a', fontSize: '15px', textAlign: 'center', colorScheme: 'light' }}>
+                  <option value="">일</option>
+                  {Array.from({ length: 31 }, (_, i) => String(i + 1)).map((d) => (
+                    <option key={d} value={d}>{d}일</option>
+                  ))}
+                </select>
               </div>
               <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                 <div style={{ flex: 1.4, fontSize: '10px', color: '#b4785a', textAlign: 'center' }}>연도</div>
