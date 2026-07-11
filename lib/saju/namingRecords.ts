@@ -193,6 +193,15 @@ export async function listNamingRecords(serviceType: string = 'naming'): Promise
   return data
     .map(r => toRecord({ ...r, result_data: undefined }))
     .filter((x): x is NamingRecord => x !== null)
+    // ⚠️ 같은 service_type='naming' 에는 "사람만 등록된 레코드"(새 사람 추가 시,
+    //    한자 없음)와 "실제 이름풀이 결과"(한자 모두 넣어 해설까지 나온 것)가
+    //    함께 담긴다. 보관함에는 한자를 다 넣어 완성된 이름풀이만 보여준다.
+    //    → 한 사람이 여러 한자로 여러 번 풀었으면 그 각각이 다 목록에 뜬다.
+    .filter(r => {
+      const filled = r.chars.filter(Boolean) as NameChar[]
+      // 성+이름 최소 2글자 이상 & 모든 글자에 한자가 채워졌을 때만 = 완성된 이름풀이
+      return filled.length >= 2 && filled.every(c => !!c.hanja)
+    })
 }
 
 // ── 하나 불러오기 (보관함 카드 눌러 다시보기 — 해설 스냅샷 포함) ──
