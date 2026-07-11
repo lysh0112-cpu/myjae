@@ -22,6 +22,8 @@ import {
   NAMING_RELATION_COLOR, namingRelationGroup, namingRelationLabel,
   type NamingRecord,
 } from '@/lib/saju/namingRecords'
+import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 
 const GRADE_COLOR: Record<string, string> = {
   '좋음': '#4a9450',
@@ -35,6 +37,7 @@ function NamingStorageInner() {
   const [records, setRecords] = useState<NamingRecord[] | null>(null)
   const [confirmDel, setConfirmDel] = useState<NamingRecord | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)   // "누구 이름을 볼까요?" 사람 선택
 
   useEffect(() => {
     let cancelled = false
@@ -146,9 +149,9 @@ function NamingStorageInner() {
           )
         })}
 
-        {/* 새로 보기 → 개명 입구 */}
+        {/* 새로 보기 → 누구 이름을 볼지 먼저 선택 (나 / 가족·지인 / 새 사람) */}
         {records && (
-          <button onClick={() => router.push('/manseryeok/naming/diagnosis')}
+          <button onClick={() => setPickerOpen(true)}
             style={{
               width: '100%', marginTop: 8, padding: 14, borderRadius: 12,
               background: '#c8783c', border: 'none', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer',
@@ -205,6 +208,28 @@ function NamingStorageInner() {
           </div>
         </div>
       )}
+
+      {/* 누구 이름을 볼까요? — 나 / 가족·지인 / 새 사람 선택 (사주 보관함과 동일 모달) */}
+      <PersonPickerModal
+        open={pickerOpen}
+        serviceLabel="이름풀이"
+        headline="누구의 이름을 볼까요?"
+        serviceType="naming"
+        submitLabel="이름 풀이하기"
+        onClose={() => setPickerOpen(false)}
+        onPickMe={() => {
+          setPickerOpen(false)
+          // 나(로그인 회원 본인) → URL 없이 진단(내 사주 자동)
+          router.push('/manseryeok/naming/diagnosis')
+        }}
+        onPick={(person: SavedPerson) => {
+          setPickerOpen(false)
+          // 가족·지인(또는 새로 추가한 사람) → 그 사람 생년월일·관계를 실어 진단
+          const q = toResultQuery(person)
+          const rel = person.relation ? `&relation=${encodeURIComponent(person.relation)}` : ''
+          router.push(`/manseryeok/naming/diagnosis?${q}${rel}`)
+        }}
+      />
     </main>
   )
 }
