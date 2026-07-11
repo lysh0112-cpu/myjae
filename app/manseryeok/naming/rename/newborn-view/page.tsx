@@ -4,9 +4,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import ConsultButton from '@/app/components/common/ConsultButton'
 
-const GOLD = '#FAC775'
-const CARD = '#2C2C2A'
-const SUB = '#8a88a0'
+const GOLD = '#c8783c'
+const CARD = '#fffbf7'
+const SUB = '#b4785a'
 const GREEN = '#81c784'
 
 interface SavedChar {
@@ -80,7 +80,7 @@ function NewbornViewInner() {
           저장된 이름을 찾을 수 없어요.
           <div style={{ marginTop: 20 }}>
             <button onClick={() => router.push('/mypage')}
-              style={{ padding: '12px 22px', borderRadius: 12, background: 'rgba(250,199,117,0.16)', border: '1px solid ' + GOLD, color: GOLD, fontWeight: 700, cursor: 'pointer' }}>
+              style={{ padding: '12px 22px', borderRadius: 12, background: 'rgba(200,120,60,0.12)', border: '1px solid ' + GOLD, color: GOLD, fontWeight: 700, cursor: 'pointer' }}>
               마이페이지로 →
             </button>
           </div>
@@ -112,16 +112,16 @@ function NewbornViewInner() {
       </div>
 
       {rows.length > 0 && (
-        <div style={{ background: CARD, border: '1px solid rgba(250,199,117,0.1)', borderRadius: 14, padding: 16, margin: '16px 0 14px' }}>
+        <div style={{ background: CARD, border: '1px solid rgba(200,120,60,0.10)', borderRadius: 14, padding: 16, margin: '16px 0 14px' }}>
           <div style={{ fontSize: 12, color: GOLD, marginBottom: 12, fontWeight: 700 }}>이름 분석 (4가지 기준)</div>
           {rows.map((row, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: i === rows.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)' }}>
-              <span style={{ fontSize: 13, color: '#e8e4ff' }}>{row.label}</span>
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: i === rows.length - 1 ? 'none' : '0.5px solid #f0e0d5' }}>
+              <span style={{ fontSize: 13, color: '#1a1a1a' }}>{row.label}</span>
               <span style={{ fontSize: 13, fontWeight: 700, color: gradeColor(row.g) }}>{row.g}</span>
             </div>
           ))}
           {r?.overallGrade && (
-            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>
+            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '0.5px solid #f0e0d5', textAlign: 'center' }}>
               <span style={{ fontSize: 12, color: SUB }}>종합 </span>
               <span style={{ fontSize: 20, fontWeight: 700, color: gradeColor(r.overallGrade) }}>{r.overallGrade}</span>
             </div>
@@ -130,7 +130,7 @@ function NewbornViewInner() {
       )}
 
       {c && c.summary && (
-        <div style={{ background: CARD, border: '1px solid rgba(250,199,117,0.15)', borderRadius: 16, padding: 18, marginBottom: 14 }}>
+        <div style={{ background: CARD, border: '1px solid rgba(200,120,60,0.12)', borderRadius: 16, padding: 18, marginBottom: 14 }}>
           {c.title && (
             <div style={{ fontSize: 16, fontWeight: 700, color: GOLD, marginBottom: 12, lineHeight: 1.5 }}>
               &ldquo;{c.title}&rdquo;
@@ -144,7 +144,7 @@ function NewbornViewInner() {
           ].filter((s) => s.text).map((s, i) => (
             <div key={i} style={{ borderLeft: '3px solid ' + GOLD, padding: '4px 12px', marginBottom: 14 }}>
               <div style={{ fontSize: 12, color: GOLD, marginBottom: 4 }}>{s.label}</div>
-              <div style={{ fontSize: 14, color: '#e0dce8', lineHeight: 1.8 }}>{s.text}</div>
+              <div style={{ fontSize: 14, color: '#1a1a1a', lineHeight: 1.8 }}>{s.text}</div>
             </div>
           ))}
         </div>
@@ -156,7 +156,7 @@ function NewbornViewInner() {
       </div>
 
       <button onClick={() => router.push('/manseryeok/naming/rename/newborn')} className="active:scale-95"
-        style={{ width: '100%', background: 'rgba(250,199,117,0.16)', border: '1px solid ' + GOLD, borderRadius: 14, padding: 13, color: GOLD, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+        style={{ width: '100%', background: 'rgba(200,120,60,0.12)', border: '1px solid ' + GOLD, borderRadius: 14, padding: 13, color: GOLD, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
         새 아기 이름 지어보기 →
       </button>
     </main>
@@ -165,9 +165,13 @@ function NewbornViewInner() {
 
 function Header({ router }: { router: ReturnType<typeof useRouter> }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 4px 16px' }}>
-      <button onClick={() => router.push('/mypage')} style={{ background: 'none', border: 'none', color: GOLD, fontSize: 20, cursor: 'pointer' }}>{'\u2039'}</button>
-      <span style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>아기 이름 다시보기</span>
+    <div style={{
+      position: 'sticky', top: 0, zIndex: 50,
+      display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px',
+      background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid #f0e0d5',
+    }}>
+      <button onClick={() => router.push('/mypage')} aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
+      <span style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>아기 이름 다시보기</span>
     </div>
   )
 }
