@@ -65,8 +65,8 @@ const SERVICES = [
   { name: '부부궁합',   color: '#c85a6e', href: '/manseryeok/couple-storage?mode=married', cat: '궁합' },
   { name: '결혼택일',   color: '#96643c', href: '/manseryeok/wedding-timing/wedding-storage', cat: '택일' },
   { name: '출산택일',   color: '#b45a78', href: '/manseryeok/birth-timing/birth-storage', cat: '택일' },
-  { name: '내이름개명', color: '#5a825a', href: '/manseryeok/naming/diagnosis', cat: '개명' },
-  { name: '아기이름 짓기',   color: '#967850', href: '/manseryeok/naming/rename/newborn', cat: '개명' },
+  { name: '내이름개명', color: '#5a825a', href: '/manseryeok/naming/diagnosis/storage', cat: '개명' },
+  { name: '아기이름 짓기',   color: '#967850', href: '/manseryeok/naming/rename/newborn-storage', cat: '개명' },
   { name: '타로',       color: '#b45a78', href: '/tarot', cat: '기타' },
   { name: '물어보살',   color: '#785aaa', href: '/manseryeok/ai-chat', cat: '기타' },
 ]
