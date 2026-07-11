@@ -135,7 +135,7 @@ export default function PersonPickerModal({
     setView({ mode: 'list' }); setEditing(false); setQuery('')
 
     async function load() {
-      const list = await listSavedPeople()
+      const list = await listSavedPeople(serviceType ?? undefined)
       if (cancelled) return
       setPeople(list)
 
@@ -163,7 +163,7 @@ export default function PersonPickerModal({
     }
     load()
     return () => { cancelled = true }
-  }, [open])
+  }, [open, serviceType])
 
   const filtered = useMemo(() => {
     const q = query.trim()
