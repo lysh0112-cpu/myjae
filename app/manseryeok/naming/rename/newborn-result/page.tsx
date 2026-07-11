@@ -6,6 +6,7 @@ import { calcYongsinCompat } from '@/lib/saju/yongsinNew'
 import { diagnoseName, type NameChar, type DiagnoseResult, type Grade } from '@/lib/saju/naming'
 import ConsultButton from '@/app/components/common/ConsultButton'
 import { supabase } from '@/lib/supabase'
+import { saveNamingRecord } from '@/lib/saju/namingRecords'
 
 const GOLD = '#c8783c'
 const CARD = '#fffbf7'
@@ -293,6 +294,32 @@ function NewbornResultInner() {
         kind: 'newborn',
         person_key: bkey,
       })
+
+      // ── 신규: 아기 이름 보관함(saju_records, service_type='newborn')에도 병행 저장 ──
+      //   홈 > [아기 이름 짓기] 진입 시 뜨는 보관함이 이 기록을 읽는다.
+      //   (my_names·마이페이지 저장은 위에서 유지 — 병행)
+      try {
+        if (savedResult) {
+          const person = baby ? {
+            gender: baby.gender, calType: baby.calType,
+            year: baby.year, month: baby.month, day: baby.day,
+            leapMonth: baby.leapMonth, hour: baby.hour,
+          } : null
+          const charsForSave: (NameChar | null)[] = t.chars.map((c) => ({
+            hangul: c.hangul, hanja: c.hanja,
+            strokes: c.strokes, resourceOhaeng: ohaengChar(c.resourceOhaeng),
+          }))
+          await saveNamingRecord({
+            chars: charsForSave,
+            relation: 'baby',
+            person,
+            result: savedResult,
+            commentary: t.commentary ?? null,
+            serviceType: 'newborn',
+          })
+        }
+      } catch (e) { console.error(e) }
+
       setFinalPicked(true)
       alert(`최종 이름으로 "${hanjaName} (${hangulName})"을(를) 저장했어요.\n마이페이지에서 확인하실 수 있어요.`)
     } catch (e) {
