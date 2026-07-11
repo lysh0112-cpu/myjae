@@ -191,11 +191,6 @@ function DiagnosisInner() {
   const [commentary, setCommentary] = useState<Commentary | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const [savedOffer, setSavedOffer] = useState<{
-    result: DiagnoseResult
-    commentary: Commentary
-    chars: (NameChar | null)[]
-  } | null>(null)
 
   // ★ 마이페이지에서 특정 이름풀이 id를 눌러 들어온 경우 (?nameId=xxx)
   // 저장된 그 1건만 불러와 바로 결과 화면으로. (회원·기록이 많아져도 누른 1건만 조회)
@@ -235,35 +230,6 @@ function DiagnosisInner() {
     return () => { cancelled = true }
   }, [nameId])
 
-  useEffect(() => {
-    if (nameId) return          // id로 들어온 경우는 최근건 배너 안 띄움
-    if (!info) return
-    let cancelled = false
-    async function checkSaved() {
-      try {
-        const { data: u } = await supabase.auth.getUser()
-        if (!u?.user) return
-        const { data: rows } = await supabase
-          .from('my_names')
-          .select('chars, result, commentary, person_key')
-          .eq('user_id', u.user.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-        if (cancelled) return
-        const row = rows && rows[0]
-        if (row && row.person_key === personKey(info) && row.result && row.commentary && Array.isArray(row.chars)) {
-          setSavedOffer({
-            result: row.result as DiagnoseResult,
-            commentary: row.commentary as Commentary,
-            chars: row.chars as (NameChar | null)[],
-          })
-        }
-      } catch {}
-    }
-    checkSaved()
-    return () => { cancelled = true }
-  }, [info, nameId])
-
   // ── 보관함(saju_records) 다시보기: recordId 있으면 스냅샷 로드 → 바로 결과 ──
   //   재계산·AI 재호출 없이 저장된 풀이를 그대로 보여준다 (viewOnly).
   useEffect(() => {
@@ -293,16 +259,6 @@ function DiagnosisInner() {
     loadByRecordId()
     return () => { cancelled = true }
   }, [recordId])
-
-  function loadSavedResult() {
-    if (!savedOffer) return
-    setResult(savedOffer.result)
-    setCommentary(savedOffer.commentary)
-    setChars(savedOffer.chars)
-    setSyllables(savedOffer.chars.filter(Boolean).map((c) => c!.hangul))
-    setStep('result')
-    setSavedOffer(null)
-  }
 
   function applyName() {
     const cleaned = nameInput.trim().replace(/\s/g, '')
@@ -532,10 +488,6 @@ function DiagnosisInner() {
   const normalList = hanjaList.filter((r) => !isAvoidChar(r))
   const avoidList = hanjaList.filter((r) => isAvoidChar(r))
 
-  // 저장된 이름 석 자 (배너 표시용)
-  const savedHangul = savedOffer ? savedOffer.chars.filter(Boolean).map((c) => c!.hangul).join('') : ''
-  const savedHanja = savedOffer ? savedOffer.chars.filter(Boolean).map((c) => c!.hanja).join('') : ''
-
   const hanjaCard = (row: HanjaRow, i: number, dim: boolean) => (
     <div key={i}
       onClick={() => pickHanja(row)}
@@ -567,37 +519,7 @@ function DiagnosisInner() {
           <div style={{ fontSize: '14px', color: '#1a1a1a' }}>{sajuLine}</div>
         </div>
 
-        {step === 'input' && savedOffer && (
-          <div style={{ background: 'rgba(200,120,60,0.07)', border: `1px solid ${gold}`, borderRadius: '14px', padding: '18px', marginBottom: '16px' }}>
-            <div style={{ fontSize: '12px', color: '#b4785a', marginBottom: '6px', textAlign: 'center' }}>저장된 내 이름</div>
-            <div style={{ fontSize: '30px', fontWeight: 'bold', color: gold, letterSpacing: '4px', textAlign: 'center', lineHeight: 1.2 }}>
-              {savedHanja || savedHangul}
-            </div>
-            {savedHanja && (
-              <div style={{ fontSize: '14px', color: '#1a1a1a', textAlign: 'center', marginTop: '4px' }}>{savedHangul}</div>
-            )}
-            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-              <button onClick={loadSavedResult}
-                style={{ flex: 1, padding: '12px', borderRadius: '10px', background: gold, border: 'none', color: '#fff', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
-                풀이 다시보기
-              </button>
-              <button onClick={() => router.push('/manseryeok/naming/rename/newname')}
-                style={{ flex: 1, padding: '12px', borderRadius: '10px', background: 'rgba(200,120,60,0.12)', border: `1px solid ${gold}`, color: gold, fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
-                한자 바꾸기
-              </button>
-            </div>
-            <button onClick={() => setSavedOffer(null)}
-              style={{ width: '100%', marginTop: '8px', padding: '12px', borderRadius: '10px', background: 'transparent', border: '0.5px solid #f0e0d5', color: '#b4785a', fontSize: '13px', cursor: 'pointer' }}>
-              🔄 다른 이름 다시 풀기
-            </button>
-            <div style={{ fontSize: '11px', color: '#b4785a', textAlign: 'center', marginTop: '10px', lineHeight: 1.5 }}>
-              · 풀이 다시보기는 무료예요<br />
-              · 한자 바꾸기(개명)는 {hanjaPrice.toLocaleString()}원이에요
-            </div>
-          </div>
-        )}
-
-        {step === 'input' && !savedOffer && (
+        {step === 'input' && (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
               <span style={{ fontSize: '13px', color: '#b4785a' }}>
