@@ -321,7 +321,8 @@ function NewbornResultInner() {
       } catch (e) { console.error(e) }
 
       setFinalPicked(true)
-      alert(`최종 이름으로 "${hanjaName} (${hangulName})"을(를) 저장했어요.\n마이페이지에서 확인하실 수 있어요.`)
+      // 저장 완료 → 아기 보관함으로 이동 (방금 저장한 이름이 목록 맨 위에 보인다)
+      router.push('/manseryeok/naming/rename/newborn-storage')
     } catch (e) {
       console.error(e)
       alert('저장에 실패했어요. 다시 시도해주세요.')
@@ -509,7 +510,7 @@ function Header({ router }: { router: ReturnType<typeof useRouter> }) {
       display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px',
       background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid #f0e0d5',
     }}>
-      <button onClick={() => router.push('/home-new')} aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
+      <button onClick={() => router.push('/manseryeok/naming/rename/newborn-hanja')} aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
       <span style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>아기 이름 결과</span>
     </div>
   )
