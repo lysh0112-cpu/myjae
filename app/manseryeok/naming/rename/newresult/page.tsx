@@ -2,14 +2,14 @@
 import { Suspense, useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
-import { calcYongsin } from '@/lib/saju/yongsin'
+import { calcYongsinCompat } from '@/lib/saju/yongsinNew'
 import { supabase } from '@/lib/supabase'
 import { diagnoseName, type NameChar, type DiagnoseResult, type Grade } from '@/lib/saju/naming'
 import ConsultButton from '@/app/components/common/ConsultButton'
 
-const GOLD = '#FAC775'
-const CARD = '#2C2C2A'
-const SUB = '#8a88a0'
+const GOLD = '#c8783c'
+const CARD = '#fffbf7'
+const SUB = '#b4785a'
 const GREEN = '#81c784'
 
 const DEFAULT_TRY_LIMIT = 3
@@ -141,13 +141,13 @@ function NewResultInner() {
 
   const yongsin = useMemo(() => {
     if (!saju || !dayStem) return ''
-    try { return ohaengChar(calcYongsin(saju, dayStem).yongsin) } catch { return '' }
+    try { return ohaengChar(calcYongsinCompat(saju, dayStem).yongsin) } catch { return '' }
   }, [saju, dayStem])
 
   const result = useMemo<DiagnoseResult | null>(() => {
     if (!saju || !dayStem || !cur || cur.chars.length < 2) return null
     try {
-      const y = calcYongsin(saju, dayStem)
+      const y = calcYongsinCompat(saju, dayStem)
       const surname: NameChar = {
         hangul: cur.chars[0].hangul, hanja: cur.chars[0].hanja,
         strokes: cur.chars[0].strokes, resourceOhaeng: ohaengChar(cur.chars[0].resourceOhaeng),
@@ -193,7 +193,7 @@ function NewResultInner() {
   const tryGrades = useMemo(() => {
     if (!saju || !dayStem) return tries.map(() => '')
     try {
-      const y = calcYongsin(saju, dayStem)
+      const y = calcYongsinCompat(saju, dayStem)
       return tries.map((t) => {
         if (t.chars.length < 2) return ''
         const surname: NameChar = {
@@ -214,7 +214,7 @@ function NewResultInner() {
     if (cur.commentary) return
     setDetailLoading(true)
     try {
-      const y = calcYongsin(saju, dayStem)
+      const y = calcYongsinCompat(saju, dayStem)
       const surname: NameChar = {
         hangul: cur.chars[0].hangul, hanja: cur.chars[0].hanja,
         strokes: cur.chars[0].strokes, resourceOhaeng: ohaengChar(cur.chars[0].resourceOhaeng),
@@ -270,7 +270,7 @@ function NewResultInner() {
           아직 지어본 이름이 없어요.
           <div style={{ marginTop: 20 }}>
             <button onClick={() => router.push('/manseryeok/naming/rename/newname')}
-              style={{ padding: '12px 22px', borderRadius: 12, background: 'rgba(250,199,117,0.16)', border: '1px solid ' + GOLD, color: GOLD, fontWeight: 700, cursor: 'pointer' }}>
+              style={{ padding: '12px 22px', borderRadius: 12, background: 'rgba(200,120,60,0.12)', border: '1px solid ' + GOLD, color: GOLD, fontWeight: 700, cursor: 'pointer' }}>
               새 이름 지으러 가기 →
             </button>
           </div>
@@ -304,15 +304,15 @@ function NewResultInner() {
       </div>
 
       {result && (
-        <div style={{ background: CARD, border: '1px solid rgba(250,199,117,0.1)', borderRadius: 14, padding: 16, margin: '16px 0 14px' }}>
+        <div style={{ background: CARD, border: '1px solid rgba(200,120,60,0.10)', borderRadius: 14, padding: 16, margin: '16px 0 14px' }}>
           <div style={{ fontSize: 12, color: GOLD, marginBottom: 12, fontWeight: 700 }}>이름 분석 (4가지 기준)</div>
           {rows.map((row, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: i === rows.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)' }}>
-              <span style={{ fontSize: 13, color: '#e8e4ff' }}>{row.label}</span>
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: i === rows.length - 1 ? 'none' : '0.5px solid #f0e0d5' }}>
+              <span style={{ fontSize: 13, color: '#1a1a1a' }}>{row.label}</span>
               <span style={{ fontSize: 13, fontWeight: 700, color: gradeColor(row.f.grade) }}>{row.f.grade}</span>
             </div>
           ))}
-          <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: '0.5px solid #f0e0d5', textAlign: 'center' }}>
             <span style={{ fontSize: 12, color: SUB }}>종합 </span>
             <span style={{ fontSize: 20, fontWeight: 700, color: gradeColor(result.overallGrade) }}>{result.overallGrade}</span>
           </div>
@@ -329,8 +329,8 @@ function NewResultInner() {
               return (
                 <button key={i} onClick={() => setActiveTry(i)} className="active:scale-95"
                   style={{ padding: '8px 12px', borderRadius: 12, cursor: 'pointer',
-                    background: on ? 'rgba(250,199,117,0.16)' : CARD,
-                    border: '1px solid ' + (on ? GOLD : 'rgba(250,199,117,0.12)') }}>
+                    background: on ? 'rgba(200,120,60,0.12)' : CARD,
+                    border: '1px solid ' + (on ? GOLD : 'rgba(200,120,60,0.10)') }}>
                   <span style={{ fontSize: 14, fontWeight: 700, color: on ? GOLD : '#fff' }}>{t.chars.map((c) => c.hanja).join('')}</span>
                   {g && <span style={{ fontSize: 11, color: gradeColor(g), marginLeft: 6 }}>{g}</span>}
                 </button>
@@ -341,7 +341,7 @@ function NewResultInner() {
       )}
 
       {cur.commentary && cur.commentary.summary ? (
-        <div style={{ background: CARD, border: '1px solid rgba(250,199,117,0.15)', borderRadius: 16, padding: 18, marginBottom: 14 }}>
+        <div style={{ background: CARD, border: '1px solid rgba(200,120,60,0.12)', borderRadius: 16, padding: 18, marginBottom: 14 }}>
           {cur.commentary.title && (
             <div style={{ fontSize: 16, fontWeight: 700, color: GOLD, marginBottom: 12, lineHeight: 1.5 }}>
               &ldquo;{cur.commentary.title}&rdquo;
@@ -355,7 +355,7 @@ function NewResultInner() {
           ].filter((s) => s.text).map((s, i) => (
             <div key={i} style={{ borderLeft: '3px solid ' + GOLD, padding: '4px 12px', marginBottom: 14 }}>
               <div style={{ fontSize: 12, color: GOLD, marginBottom: 4 }}>{s.label}</div>
-              <div style={{ fontSize: 14, color: '#e0dce8', lineHeight: 1.8 }}>{s.text}</div>
+              <div style={{ fontSize: 14, color: '#1a1a1a', lineHeight: 1.8 }}>{s.text}</div>
             </div>
           ))}
         </div>
@@ -364,7 +364,7 @@ function NewResultInner() {
           {remaining > 0 ? (
             <>
               <button onClick={loadDetail} disabled={detailLoading} className="active:scale-95"
-                style={{ width: '100%', background: 'rgba(250,199,117,0.16)', border: '1px solid ' + GOLD, borderRadius: 14, padding: 14, color: GOLD, fontWeight: 700, fontSize: 14, cursor: detailLoading ? 'default' : 'pointer' }}>
+                style={{ width: '100%', background: 'rgba(200,120,60,0.12)', border: '1px solid ' + GOLD, borderRadius: 14, padding: 14, color: GOLD, fontWeight: 700, fontSize: 14, cursor: detailLoading ? 'default' : 'pointer' }}>
                 {detailLoading
                   ? <><span style={{ display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span> 이름을 정성껏 풀이하는 중…</>
                   : <>✨ 이 이름 자세히 풀이 보기 · 남은 {remaining}회</>}
@@ -374,12 +374,12 @@ function NewResultInner() {
               </div>
             </>
           ) : (
-            <div style={{ background: CARD, border: '1px solid rgba(250,199,117,0.2)', borderRadius: 14, padding: '16px', textAlign: 'center' }}>
-              <div style={{ fontSize: 13, color: '#e8e4ff', lineHeight: 1.7, marginBottom: 12 }}>
+            <div style={{ background: CARD, border: '1px solid rgba(200,120,60,0.14)', borderRadius: 14, padding: '16px', textAlign: 'center' }}>
+              <div style={{ fontSize: 13, color: '#1a1a1a', lineHeight: 1.7, marginBottom: 12 }}>
                 이용 가능 횟수를 모두 사용했어요.<br />다시 결제하시면 이어서 이용하실 수 있어요.
               </div>
               <button onClick={() => router.push('/manseryeok/naming/rename/newname')} className="active:scale-95"
-                style={{ width: '100%', background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)', border: 'none', borderRadius: 12, padding: 13, color: '#1a1a18', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                style={{ width: '100%', background: '#c8783c', border: 'none', borderRadius: 12, padding: 13, color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
                 다시 결제하고 이어하기 →
               </button>
             </div>
@@ -397,11 +397,11 @@ function NewResultInner() {
       </div>
       {triesLeft > 0 ? (
         <button onClick={() => router.push('/manseryeok/naming/rename/newname')} className="active:scale-95"
-          style={{ width: '100%', background: 'rgba(250,199,117,0.16)', border: '1px solid ' + GOLD, borderRadius: 14, padding: 13, color: GOLD, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+          style={{ width: '100%', background: 'rgba(200,120,60,0.12)', border: '1px solid ' + GOLD, borderRadius: 14, padding: 13, color: GOLD, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
           다른 이름 또 지어보기 →
         </button>
       ) : (
-        <div style={{ background: CARD, border: '1px solid rgba(250,199,117,0.2)', borderRadius: 14, padding: '13px 16px', fontSize: 12, color: SUB, lineHeight: 1.7, textAlign: 'center' }}>
+        <div style={{ background: CARD, border: '1px solid rgba(200,120,60,0.14)', borderRadius: 14, padding: '13px 16px', fontSize: 12, color: SUB, lineHeight: 1.7, textAlign: 'center' }}>
           {TRY_LIMIT}회를 모두 사용했어요.<br />지금까지 지어본 이름 중에서 골라보세요.
         </div>
       )}
@@ -411,9 +411,13 @@ function NewResultInner() {
 
 function Header({ router }: { router: ReturnType<typeof useRouter> }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 4px 16px' }}>
-      <button onClick={() => router.push('/manseryeok/naming')} style={{ background: 'none', border: 'none', color: GOLD, fontSize: 20, cursor: 'pointer' }}>{'\u2039'}</button>
-      <span style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>새 이름 결과</span>
+    <div style={{
+      position: 'sticky', top: 0, zIndex: 50,
+      display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px',
+      background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid #f0e0d5',
+    }}>
+      <button onClick={() => router.push('/home-new')} aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
+      <span style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>새 이름 결과</span>
     </div>
   )
 }
