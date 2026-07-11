@@ -134,19 +134,19 @@ async function fetchAiNotes(recs: Recommendation[], survey: SurveyInput): Promis
   } catch {}
 
   const prompt =
-`${toneBlock ? toneBlock + '\n\n' : ''}아래는 출산택일로 추천된 5개 일시와 각 아기의 사주입니다.
+`${toneBlock ? toneBlock + '\n\n' : ''}아래는 출산 예정일 전후로 추천된 ${recs.length}개 일시와 각 아기의 사주입니다.
 부모가 바라는 점: ${wishesText}
 
 ${list}
 
-각 순위마다 그 날 태어날 아기의 기질을 한 줄(20자 내외)로 표현하고,
-1순위는 추가로 2~3문장의 상세 해설을 써 주세요.
+각 항목마다 그 날 태어날 아기의 기질을 한 줄(20자 내외)로 표현하고,
+1번은 추가로 2~3문장의 상세 해설을 써 주세요.
 
 [반드시 지킬 안전 규칙]
 - 의학적 단정이나 건강 예언은 절대 하지 마세요. (이것은 의료 조언이 아닙니다)
 - 반드시 아래 JSON 형식으로만 답하세요. 다른 말은 절대 쓰지 마세요.
 
-{"1":{"oneLine":"...","detail":"..."},"2":{"oneLine":"..."},"3":{"oneLine":"..."},"4":{"oneLine":"..."},"5":{"oneLine":"..."}}`
+{${recs.map(r => r.rank === 1 ? `"${r.rank}":{"oneLine":"...","detail":"..."}` : `"${r.rank}":{"oneLine":"..."}`).join(",")}}`
 
   try {
     const res = await fetch('/api/analyze', {
@@ -173,7 +173,7 @@ ${list}
   }
 }
 
-function CandidateCard({ c, note, defaultOpen }: { c: Recommendation; note?: AiNote; defaultOpen: boolean }) {
+function CandidateCard({ c, note, defaultOpen, opWarn }: { c: Recommendation; note?: AiNote; defaultOpen: boolean; opWarn?: string }) {
   const [open, setOpen] = useState(defaultOpen)
   const b = c.breakdown
   const stars = [
@@ -200,6 +200,12 @@ function CandidateCard({ c, note, defaultOpen }: { c: Recommendation; note?: AiN
       {open && (
         <div style={{ padding: '0 14px 16px' }}>
           <div style={{ borderTop: '1px solid #f0e0d5', paddingTop: '12px' }}>
+            {opWarn && (
+              <div style={{ background: '#fdf2e3', border: '0.5px solid #f0d5b8', borderRadius: '8px', padding: '9px 11px', marginBottom: '12px', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '13px', flexShrink: 0 }}>🏥</span>
+                <span style={{ fontSize: '12px', color: '#96502e', lineHeight: 1.5 }}>{opWarn}</span>
+              </div>
+            )}
             <div style={{ fontSize: '11px', color: sub, marginBottom: '4px' }}>아기 사주</div>
             <div style={{ fontSize: '15px', color: '#96502e', letterSpacing: '3px', marginBottom: '14px' }}>{c.saju}</div>
 
@@ -255,6 +261,11 @@ function BirthResultInner() {
   const recordIdParam = sp.get('recordId')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+
+  // 3일 탭: 처음엔 예정일(offset 0). 전날=-1, 다음날=+1
+  const [tabOffset, setTabOffset] = useState(0)
+  // 공휴일 맵 (YYYYMMDD → 이름)
+  const [holidays, setHolidays] = useState<Record<string, string>>({})
 
   useEffect(() => {
     let cancelled = false
@@ -315,7 +326,6 @@ function BirthResultInner() {
 
         const result = await runBirthTiming(sv.dueDate, {
           timePref: timePref as 'morning' | 'afternoon' | 'any',
-          excludeWeekend: true,
           parents,
         })
 
@@ -406,6 +416,25 @@ function BirthResultInner() {
     } catch {}
   }, [survey, recs, avoidDays, aiNotes, parent1, parent2])
 
+  // 3일(추천)의 공휴일 조회 — 병원 운영 안내용
+  useEffect(() => {
+    if (recs.length === 0) return
+    let cancelled = false
+    const keys = recs.map(r => r.dateKey).filter(Boolean).sort()
+    if (keys.length === 0) return
+    const start = keys[0], end = keys[keys.length - 1]
+    fetch(`/api/holidays?start=${start}&end=${end}`)
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled || !Array.isArray(data.holidays)) return
+        const map: Record<string, string> = {}
+        for (const h of data.holidays) if (h.date) map[h.date] = h.name || '공휴일'
+        setHolidays(map)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [recs])
+
   return (
     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '480px', margin: '0 auto', paddingBottom: '40px' }}>
       {/* 피치톤 sticky 헤더 (결혼택일과 통일) + 저장 버튼 */}
@@ -439,7 +468,7 @@ function BirthResultInner() {
           <div style={{ fontSize: '11px', color: sub, marginBottom: '6px' }}>분석 조건</div>
           <div style={{ fontSize: '12px', color: '#96502e', lineHeight: 1.7 }}>
             출산예정일 {survey?.dueDate || '-'} · {survey?.method || '-'}<br />
-            예정일 전후 1주 / 부모 {personSummary(parent1) !== '정보 없음' ? '사주 반영' : '-'}
+            예정일 전날·당일·다음날 / 부모 {personSummary(parent1) !== '정보 없음' ? '사주 반영' : '-'}
           </div>
         </div>
 
@@ -467,13 +496,55 @@ function BirthResultInner() {
           </div>
         )}
 
-        {!loading && !errMsg && recs.length > 0 && (
+        {!loading && !errMsg && recs.length > 0 && (() => {
+          // 탭 라벨 (offset → 라벨)
+          const tabLabel = (off: number) => off === -1 ? '예정일 전날' : off === 1 ? '예정일 다음날' : '예정일'
+          const current = recs.find(r => r.offset === tabOffset) ?? recs.find(r => r.offset === 0) ?? recs[0]
+          // 병원 운영 안내: 공휴일 or 주말
+          const holiName = current ? holidays[current.dateKey] : undefined
+          const opWarn = holiName
+            ? `${holiName}이에요. 담당 병원의 진료·수술 가능 여부를 미리 확인해 주세요.`
+            : current?.isWeekend
+              ? `주말(${current.weekday}요일)이에요. 담당 병원의 진료·수술 가능 여부를 미리 확인해 주세요.`
+              : ''
+          return (
           <>
             <div style={{ fontSize: '13px', color: '#96502e', fontWeight: 600, margin: '4px 0 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              ◆ 추천 출산일 <span style={{ fontSize: '11px', color: sub, fontWeight: 400 }}>(탭하면 자세히)</span>
+              ◆ 예정일 전후 출산일
               {aiLoading && <span style={{ fontSize: '11px', color: gold, fontWeight: 400 }}>✨ 해설 작성 중...</span>}
             </div>
-            {recs.map(c => <CandidateCard key={c.rank} c={c} note={aiNotes[c.rank]} defaultOpen={c.rank === 1} />)}
+
+            {/* 3일 탭 버튼 (전날 · 예정일 · 다음날) */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+              {[-1, 0, 1].map(off => {
+                const r = recs.find(x => x.offset === off)
+                const active = tabOffset === off
+                return (
+                  <button key={off} onClick={() => r && setTabOffset(off)} disabled={!r}
+                    style={{
+                      flex: 1, padding: '11px 6px', borderRadius: '11px', cursor: r ? 'pointer' : 'default',
+                      border: '0.5px solid ' + (active ? accent : '#f0e0d5'),
+                      background: active ? accent : '#fff',
+                      color: active ? '#fff' : (r ? '#96502e' : '#d8c5b8'),
+                      transition: 'all 0.15s ease',
+                    }}>
+                    <div style={{ fontSize: '12.5px', fontWeight: active ? 700 : 500 }}>{tabLabel(off)}</div>
+                    {r && <div style={{ fontSize: '10px', marginTop: '3px', opacity: 0.85 }}>{r.score}점</div>}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* 선택된 날 카드 하나 */}
+            {current && (
+              <CandidateCard
+                key={current.offset}
+                c={current}
+                note={aiNotes[current.rank]}
+                defaultOpen
+                opWarn={opWarn}
+              />
+            )}
 
             {avoidDays.length > 0 && (
               <>
@@ -492,12 +563,13 @@ function BirthResultInner() {
               </>
             )}
 
-            {/* 전문가 상담 연결 (출산 택일 상담) — 준비중 alert 대신 실제 예약으로 연결 */}
+            {/* 전문가 상담 연결 (출산 택일 상담) */}
             <div style={{ marginTop: '22px' }}>
               <ConsultButton priceKey="birth" mode="birth" />
             </div>
           </>
-        )}
+          )
+        })()}
 
         <button
           onClick={() => router.push('/manseryeok/birth-timing/birth-storage')}
