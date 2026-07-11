@@ -294,7 +294,7 @@ function NewbornHanjaInner() {
   // 잘못된 진입 (아기 사주/성씨/이름 없음)
   if (!baby || !surname || syllables.length === 0) {
     return (
-      <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
+      <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
         <Header router={router} />
         <div style={{ padding: '40px 8px', textAlign: 'center', color: SUB, lineHeight: 1.8 }}>
           아기 정보가 전달되지 않았어요.<br />처음부터 다시 시작해 주세요.
@@ -347,7 +347,7 @@ function NewbornHanjaInner() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
+    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       <Header router={router} />
 
@@ -474,7 +474,7 @@ function Header({ router }: { router: ReturnType<typeof useRouter> }) {
 
 export default function NewbornHanjaPage() {
   return (
-    <Suspense fallback={<div style={{ background: '#1f1e1c', minHeight: '100vh' }} />}>
+    <Suspense fallback={<div style={{ background: '#FDF6F0', minHeight: '100vh' }} />}>
       <NewbornHanjaInner />
     </Suspense>
   )
