@@ -3,7 +3,7 @@
 //
 // 설계(docs/출산택일_설계.md, docs/사주계산_메모.md) 기준:
 //  - 날짜: 출산예정일 -7일 ~ +7일 (총 15일)
-//  - 시진: 卯시~申시 (index 3~8, 05~17시) 주간만
+//  - 시진: 辰시~申시 (index 4~8, 07~17시) 주간(의사 근무시간)만
 //  - 사주: /api/lunar 로 연·월·일 간지(날짜당 1회) + calcHourPillar 로 시주(코드)
 //
 // ※ 사주 생성 로직은 기존 useResultSaju 와 동일한 방식을 그대로 사용한다.
@@ -11,8 +11,9 @@
 const HEAVENLY_STEMS = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸']
 const EARTHLY_BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
 
-// 주간 시진: 卯(3)~申(8) — 05~17시
-export const WORK_HOUR_INDICES = [3, 4, 5, 6, 7, 8]
+// 주간(의사 근무·수술 시간) 시진: 辰(4)~申(8) — 07~17시 (오전 8시 ~ 오후 5시 커버)
+//   새벽 卯시(05~07)는 정규 수술 시간이 아니라 제외.
+export const WORK_HOUR_INDICES = [4, 5, 6, 7, 8]
 
 export const HOUR_LABEL: Record<number, string> = {
   0: '子시(23~01)', 1: '丑시(01~03)', 2: '寅시(03~05)', 3: '卯시(05~07)',
@@ -107,7 +108,7 @@ async function fetchDateSaju(y: number, m: number, d: number, offset: number): P
 }
 
 export interface BuildOptions {
-  // 선호 시간대: 'morning'(오전 卯~午) | 'afternoon'(未~申) | 'any'
+  // 선호 시간대: 'morning'(오전 辰~午 07~13) | 'afternoon'(未~申 13~17) | 'any'(辰~申 07~17)
   timePref?: 'morning' | 'afternoon' | 'any'
   // 예정일 기준 며칠 전/후까지 볼지 (출산택일은 전날·당일·다음날 = before1/after1)
   before?: number
@@ -128,7 +129,7 @@ export async function buildCandidates(dueDate: string, opts: BuildOptions = {}):
 
   // 선호 시간대에 따른 시진 필터
   let hours = WORK_HOUR_INDICES
-  if (timePref === 'morning') hours = [3, 4, 5, 6]   // 卯~午 (05~13)
+  if (timePref === 'morning') hours = [4, 5, 6]      // 辰~午 (07~13)
   else if (timePref === 'afternoon') hours = [7, 8]  // 未~申 (13~17)
 
   const candidates: Candidate[] = []
