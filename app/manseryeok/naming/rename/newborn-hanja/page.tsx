@@ -2,13 +2,13 @@
 import { Suspense, useState, useEffect, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
-import { calcYongsin } from '@/lib/saju/yongsin'
+import { calcYongsinCompat } from '@/lib/saju/yongsinNew'
 import { supabase } from '@/lib/supabase'
 import { diagnoseName, type NameChar, type Grade } from '@/lib/saju/naming'
 
-const GOLD = '#FAC775'
-const CARD = '#2C2C2A'
-const SUB = '#8a88a0'
+const GOLD = '#c8783c'
+const CARD = '#fffbf7'
+const SUB = '#b4785a'
 const GREEN = '#81c784'
 
 const TOP_N = 6
@@ -134,7 +134,7 @@ function NewbornHanjaInner() {
   const yong = useMemo(() => {
     if (!saju || !dayStem) return { yongsin: '', heeksin: '', score: {} as Record<string, number> }
     try {
-      const y = calcYongsin(saju, dayStem)
+      const y = calcYongsinCompat(saju, dayStem)
       return { yongsin: ohaengChar(y.yongsin), heeksin: ohaengChar(y.heeksin), score: y.score }
     } catch {
       return { yongsin: '', heeksin: '', score: {} as Record<string, number> }
@@ -300,7 +300,7 @@ function NewbornHanjaInner() {
           아기 정보가 전달되지 않았어요.<br />처음부터 다시 시작해 주세요.
           <div style={{ marginTop: 20 }}>
             <button onClick={() => router.push('/manseryeok/naming/rename/newborn')}
-              style={{ padding: '12px 22px', borderRadius: 12, background: 'rgba(250,199,117,0.16)', border: '1px solid ' + GOLD, color: GOLD, fontWeight: 700, cursor: 'pointer' }}>
+              style={{ padding: '12px 22px', borderRadius: 12, background: 'rgba(200,120,60,0.12)', border: '1px solid ' + GOLD, color: GOLD, fontWeight: 700, cursor: 'pointer' }}>
               아기 이름짓기로 →
             </button>
           </div>
@@ -328,11 +328,11 @@ function NewbornHanjaInner() {
     return (
       <button key={x.hanja + x.strokes} onClick={() => pickHanja(x)} className="active:scale-95"
         style={{ position: 'relative', padding: '10px 4px 8px', textAlign: 'center', borderRadius: 16,
-          background: on ? 'rgba(250,199,117,0.16)' : CARD,
-          border: '1px solid ' + (on ? GOLD : 'rgba(250,199,117,0.12)'),
+          background: on ? 'rgba(200,120,60,0.12)' : CARD,
+          border: '1px solid ' + (on ? GOLD : 'rgba(200,120,60,0.10)'),
           cursor: 'pointer', transition: 'transform 0.15s ease' }}>
         {rank !== undefined && (
-          <span style={{ position: 'absolute', top: 4, left: 6, fontSize: 10, fontWeight: 700, color: '#1a1a18',
+          <span style={{ position: 'absolute', top: 4, left: 6, fontSize: 10, fontWeight: 700, color: '#fff',
             background: GOLD, borderRadius: '50%', width: 16, height: 16, lineHeight: '16px', textAlign: 'center' }}>
             {rank}
           </span>
@@ -354,11 +354,11 @@ function NewbornHanjaInner() {
       <p style={{ fontSize: 12, color: SUB, margin: '0 0 14px', padding: '0 4px', lineHeight: 1.7 }}>
         {!yongsinReady
           ? '아기 사주 불러오는 중…'
-          : <>아기 이름 <b style={{ color: '#fff' }}>{surname.hanja}{syllables.join('')}</b> · 사주에 필요한 기운은 <b style={{ color: GOLD }}>{yongsin}</b>입니다</>}
+          : <>아기 이름 <b style={{ color: '#c8783c' }}>{surname.hanja}{syllables.join('')}</b> · 사주에 필요한 기운은 <b style={{ color: GOLD }}>{yongsin}</b>입니다</>}
       </p>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-        <div style={{ flex: 1, padding: '12px 0', borderRadius: 14, textAlign: 'center', background: CARD, border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ flex: 1, padding: '12px 0', borderRadius: 14, textAlign: 'center', background: CARD, border: '0.5px solid #f0e0d5' }}>
           <div style={{ fontSize: 22, fontWeight: 700, color: '#cfcdc4' }}>{surname.hanja}</div>
           <div style={{ fontSize: 10, color: SUB, marginTop: 3 }}>{surname.hangul} · 성씨</div>
         </div>
@@ -368,8 +368,8 @@ function NewbornHanjaInner() {
           return (
             <button key={i} onClick={() => setActiveIdx(i)} className="active:scale-95"
               style={{ flex: 1, padding: '12px 0', borderRadius: 14, textAlign: 'center', cursor: 'pointer',
-                background: on ? 'rgba(250,199,117,0.16)' : done ? 'rgba(129,199,132,0.14)' : CARD,
-                border: '1px solid ' + (on ? GOLD : done ? GREEN : 'rgba(250,199,117,0.12)') }}>
+                background: on ? 'rgba(200,120,60,0.12)' : done ? 'rgba(129,199,132,0.14)' : CARD,
+                border: '1px solid ' + (on ? GOLD : done ? GREEN : 'rgba(200,120,60,0.10)') }}>
               <div style={{ fontSize: 22, fontWeight: 700, color: done ? GREEN : on ? GOLD : '#fff' }}>
                 {done ? chosen[i].hanja : syl}
               </div>
@@ -418,8 +418,8 @@ function NewbornHanjaInner() {
 
       {yongsinReady && !loadingList && hanjaList.length > 0 && (
         <div style={{ marginTop: 20, borderRadius: 16, padding: '13px 16px',
-          background: chosen[activeIdx] ? 'rgba(250,199,117,0.16)' : CARD,
-          border: '1px solid ' + (chosen[activeIdx] ? GOLD : 'rgba(250,199,117,0.12)'),
+          background: chosen[activeIdx] ? 'rgba(200,120,60,0.12)' : CARD,
+          border: '1px solid ' + (chosen[activeIdx] ? GOLD : 'rgba(200,120,60,0.10)'),
           display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: 13, color: chosen[activeIdx] ? GOLD : SUB }}>
             {chosen[activeIdx] ? '선택 : ' + chosen[activeIdx].hanja : '한자를 선택하세요'}
@@ -435,21 +435,21 @@ function NewbornHanjaInner() {
         <div onClick={() => setConfirmOpen(false)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
           <div onClick={(e) => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: 360, background: '#222220', borderRadius: 18, padding: '24px 20px', boxShadow: '0 16px 40px rgba(0,0,0,0.5)', textAlign: 'center' }}>
+            style={{ width: '100%', maxWidth: 360, background: '#fffbf7', borderRadius: 18, padding: '24px 20px', boxShadow: '0 16px 40px rgba(0,0,0,0.5)', textAlign: 'center' }}>
             <div style={{ fontSize: 13, color: SUB, marginBottom: 10 }}>이 이름으로 저장할까요?</div>
             <div style={{ fontSize: 32, fontWeight: 700, color: GOLD, letterSpacing: 4, marginBottom: 2 }}>{previewHanja}</div>
-            <div style={{ fontSize: 13, color: '#e8e4ff', marginBottom: 16 }}>{previewHangul}</div>
+            <div style={{ fontSize: 13, color: '#1a1a1a', marginBottom: 16 }}>{previewHangul}</div>
             <div style={{ background: CARD, borderRadius: 12, padding: '12px 14px', marginBottom: 18, fontSize: 12, color: SUB, lineHeight: 1.7 }}>
               {alreadyTried
                 ? '이미 지어본 이름이에요. 다시 열어봐도 횟수는 줄지 않아요.'
                 : <>저장하면 남은 횟수가 <b style={{ color: GOLD }}>{leftAfter}회</b>가 돼요.<br />(총 {TRY_LIMIT}회까지 지어볼 수 있어요)</>}
             </div>
             <button onClick={confirmSave}
-              style={{ width: '100%', padding: 14, borderRadius: 12, background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)', border: 'none', color: '#1a1a18', fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>
+              style={{ width: '100%', padding: 14, borderRadius: 12, background: '#c8783c', border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>
               이 이름으로 저장하기
             </button>
             <button onClick={() => setConfirmOpen(false)}
-              style={{ width: '100%', padding: 12, borderRadius: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: SUB, fontSize: 13, cursor: 'pointer' }}>
+              style={{ width: '100%', padding: 12, borderRadius: 12, background: 'transparent', border: '0.5px solid #f0e0d5', color: SUB, fontSize: 13, cursor: 'pointer' }}>
               다시 고를게요
             </button>
           </div>
@@ -461,9 +461,13 @@ function NewbornHanjaInner() {
 
 function Header({ router }: { router: ReturnType<typeof useRouter> }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 4px 16px' }}>
-      <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: GOLD, fontSize: 20, cursor: 'pointer' }}>{'\u2039'}</button>
-      <span style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>아기 이름 한자 고르기</span>
+    <div style={{
+      position: 'sticky', top: 0, zIndex: 50,
+      display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px',
+      background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid #f0e0d5',
+    }}>
+      <button onClick={() => router.back()} aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
+      <span style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>아기 이름 한자 고르기</span>
     </div>
   )
 }
