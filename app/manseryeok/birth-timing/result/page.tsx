@@ -1,14 +1,21 @@
 'use client'
 import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import PageHeader from '@/app/components/common/PageHeader'
 import ConsultButton from '@/app/components/common/ConsultButton'
 import { runBirthTiming, type Recommendation, type AvoidDay } from '../lib/recommend'
+import { supabase } from '@/lib/supabase'
+import {
+  saveBirthRecord, getBirthRecord, type BirthSurvey,
+} from '@/lib/saju/birthRecords'
+import { calcYongsinCompat } from '@/lib/saju/yongsinNew'
+import type { SavedInputData } from '@/lib/saju/savedPeople'
 
-const cardBg = '#13132a'
-const sub = '#5555aa'
-const text = '#e8e4ff'
-const gold = '#FAC775'
+// 피치톤 (신버전 · 결혼택일과 통일)
+const accent = '#b45a78'   // 출산택일 포인트(로즈핑크)
+const cardBg = '#FFFBF7'
+const sub = '#b4785a'
+const text = '#3a2e28'
+const gold = '#c8783c'      // 별점·강조 (피치 브라운오렌지)
 
 const HOUR_LABELS: Record<string, string> = {
   '-1': '시간 모름',
@@ -31,7 +38,7 @@ interface AiNote { oneLine: string; detail?: string }
 
 function Disclaimer({ full }: { full?: boolean }) {
   return (
-    <div style={{ background: 'rgba(255,120,120,0.06)', border: '1px solid rgba(255,120,120,0.18)', borderRadius: '10px', padding: '10px 14px', fontSize: '11px', color: '#d88', lineHeight: 1.6 }}>
+    <div style={{ background: '#fbece4', border: '1px solid #f0d5c5', borderRadius: '10px', padding: '10px 14px', fontSize: '11px', color: '#b06a52', lineHeight: 1.6 }}>
       {full
         ? '※ 본 분석은 전통 사주명리에 기반한 참고 정보입니다. 실제 출산일·수술일 결정은 산모와 아기의 건강을 최우선으로, 반드시 담당 산부인과 전문의와 상의해 결정하세요.'
         : '※ 전통 명리 참고용 · 최종 결정은 전문의와 상의하세요.'}
@@ -42,7 +49,7 @@ function Disclaimer({ full }: { full?: boolean }) {
 function Stars({ n }: { n: number }) {
   return (
     <span style={{ color: gold, fontSize: '12px', letterSpacing: '1px' }}>
-      {'★'.repeat(n)}<span style={{ color: '#444466' }}>{'★'.repeat(5 - n)}</span>
+      {'★'.repeat(n)}<span style={{ color: '#e0cdbf' }}>{'★'.repeat(5 - n)}</span>
     </span>
   )
 }
@@ -57,20 +64,56 @@ function rankBadge(rank: number): string {
   return rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}`
 }
 
-async function getParentDayStem(p: PersonInput | null): Promise<string | undefined> {
-  if (!p || !p.year || !p.month || !p.day) return undefined
+// 천간·지지 (시주 계산용)
+const STEMS = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸']
+const BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
+
+// 부모 사주 → { dayStem, yongsin(억부용신 오행) }
+//   신버전 계산엔진(calcYongsinCompat, 억부용신)을 그대로 사용.
+//   result가 이미 부모 사주를 /api/lunar로 조회하므로, 그 조회에 용신 계산만 얹어 추가 호출 0.
+async function getParentSaju(p: PersonInput | null): Promise<{ dayStem?: string; yongsin?: string }> {
+  if (!p || !p.year || !p.month || !p.day) return {}
   try {
     const url = `/api/lunar?year=${p.year}&month=${p.month}&day=${p.day}&calType=${p.calType}&leapMonth=0`
     const res = await fetch(url)
     const data = await res.json()
-    if (data.error) return undefined
-    const g: string = data.dayGanji || ''
-    const m = g.match(/\(([^)]+)\)/)
-    if (m && m[1].length >= 1) return m[1][0]
-    if (g.length >= 1) return g[0]
-    return undefined
+    if (data.error) return {}
+
+    // "간지(甲子)" 또는 "甲子" → {stem, branch}
+    const split = (g: string): { stem: string; branch: string } => {
+      if (!g) return { stem: '?', branch: '?' }
+      const m = g.match(/\(([^)]+)\)/)
+      if (m && m[1].length >= 2) return { stem: m[1][0], branch: m[1][1] }
+      if (g.length >= 2) return { stem: g[0], branch: g[1] }
+      return { stem: '?', branch: '?' }
+    }
+    const year = split(data.yearGanji)
+    const month = split(data.monthGanji)
+    const day = split(data.dayGanji)
+    if (day.stem === '?') return {}
+
+    // 시주: 시간 알면 계산(용신 정확도↑), 모르면 생략
+    const hourIdx = p.hour === '-1' || p.hour === '' || p.hour == null ? null : parseInt(p.hour)
+    const calcHour = (dayStem: string, hi: number): { stem: string; branch: string } => {
+      const dg = STEMS.indexOf(dayStem)
+      if (dg < 0) return { stem: '?', branch: '?' }
+      const groupBase = [0, 2, 4, 6, 8, 0, 2, 4, 6, 8]
+      return { stem: STEMS[(groupBase[dg] + hi) % 10], branch: BRANCHES[hi] }
+    }
+    const hour = hourIdx !== null && !isNaN(hourIdx) ? calcHour(day.stem, hourIdx) : { stem: '?', branch: '?' }
+
+    // calcYongsinCompat 입력: Pillar[] (시·일·월·년, ? 제외)
+    const sajuPillars = [
+      { pillar: '시주', stem: hour.stem, branch: hour.branch },
+      { pillar: '일주', stem: day.stem, branch: day.branch },
+      { pillar: '월주', stem: month.stem, branch: month.branch },
+      { pillar: '년주', stem: year.stem, branch: year.branch },
+    ].filter(pp => pp.stem !== '?' && pp.branch !== '?')
+
+    const ys = calcYongsinCompat(sajuPillars, day.stem)
+    return { dayStem: day.stem, yongsin: ys.yongsin || undefined }
   } catch {
-    return undefined
+    return {}
   }
 }
 
@@ -139,7 +182,7 @@ function CandidateCard({ c, note, defaultOpen }: { c: Recommendation; note?: AiN
     { label: '지지 안정', n: b.starJiji },
   ]
   return (
-    <div style={{ background: cardBg, borderRadius: '12px', border: '1px solid ' + (c.rank === 1 ? 'rgba(250,199,117,0.35)' : 'rgba(255,255,255,0.06)'), marginBottom: '10px', overflow: 'hidden' }}>
+    <div style={{ background: cardBg, borderRadius: '12px', border: '1px solid ' + (c.rank === 1 ? '#f0d5b8' : '#f0e0d5'), marginBottom: '10px', overflow: 'hidden' }}>
       <button onClick={() => setOpen(o => !o)}
         style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '14px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
         <span style={{ fontSize: '16px' }}>{rankBadge(c.rank)}</span>
@@ -147,39 +190,39 @@ function CandidateCard({ c, note, defaultOpen }: { c: Recommendation; note?: AiN
           <div style={{ fontSize: '14px', color: text, fontWeight: 600 }}>{c.dateLabel}</div>
           <div style={{ fontSize: '12px', color: sub, marginTop: '2px' }}>{c.hourLabel}</div>
           {note?.oneLine && (
-            <div style={{ fontSize: '12px', color: '#c8b0ff', marginTop: '4px', lineHeight: 1.4 }}>“{note.oneLine}”</div>
+            <div style={{ fontSize: '12px', color: '#96502e', marginTop: '4px', lineHeight: 1.4 }}>“{note.oneLine}”</div>
           )}
         </div>
-        <span style={{ fontSize: '15px', fontWeight: 700, color: c.rank === 1 ? gold : '#c8b0ff' }}>{c.score}점</span>
+        <span style={{ fontSize: '15px', fontWeight: 700, color: c.rank === 1 ? gold : '#96502e' }}>{c.score}점</span>
         <span style={{ fontSize: '12px', color: sub }}>{open ? '▲' : '▼'}</span>
       </button>
 
       {open && (
         <div style={{ padding: '0 14px 16px' }}>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px' }}>
+          <div style={{ borderTop: '1px solid #f0e0d5', paddingTop: '12px' }}>
             <div style={{ fontSize: '11px', color: sub, marginBottom: '4px' }}>아기 사주</div>
-            <div style={{ fontSize: '15px', color: '#c8b0ff', letterSpacing: '3px', marginBottom: '14px' }}>{c.saju}</div>
+            <div style={{ fontSize: '15px', color: '#96502e', letterSpacing: '3px', marginBottom: '14px' }}>{c.saju}</div>
 
             {stars.map((s, i) => (
               <div key={i} style={{ marginBottom: '10px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '12px', color: '#b8b4d8' }}>{s.label}</span>
+                  <span style={{ fontSize: '12px', color: '#96502e' }}>{s.label}</span>
                   <Stars n={s.n} />
                 </div>
               </div>
             ))}
 
             {note?.detail && (
-              <div style={{ background: 'rgba(250,199,117,0.08)', borderRadius: '8px', padding: '10px 12px', margin: '12px 0' }}>
+              <div style={{ background: '#fdf2e3', borderRadius: '8px', padding: '10px 12px', margin: '12px 0' }}>
                 <div style={{ fontSize: '11px', color: gold, marginBottom: '4px' }}>이 아이는</div>
                 <div style={{ fontSize: '13px', color: text, lineHeight: 1.6 }}>{note.detail}</div>
               </div>
             )}
 
             {c.parentNote && (
-              <div style={{ background: 'rgba(119,102,221,0.1)', borderRadius: '8px', padding: '10px 12px', margin: '12px 0' }}>
+              <div style={{ background: '#f6e3d6', borderRadius: '8px', padding: '10px 12px', margin: '12px 0' }}>
                 <div style={{ fontSize: '11px', color: sub, marginBottom: '3px' }}>부모와의 관계</div>
-                <div style={{ fontSize: '13px', color: text, lineHeight: 1.5 }}>♥ {c.parentNote}</div>
+                <div style={{ fontSize: '13px', color: text, lineHeight: 1.5 }}>🌿 {c.parentNote}</div>
               </div>
             )}
 
@@ -208,10 +251,39 @@ function BirthResultInner() {
   const [aiLoading, setAiLoading] = useState(false)
   const [errMsg, setErrMsg] = useState('')
 
+  // 저장 + 다시보기(스냅샷)
+  const recordIdParam = sp.get('recordId')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
   useEffect(() => {
     let cancelled = false
 
     async function run() {
+      // ── 다시보기(recordId): 저장된 스냅샷을 그대로 복원 (재계산·AI 재호출 없음, 비용 0) ──
+      if (recordIdParam) {
+        try {
+          const rec = await getBirthRecord(recordIdParam)
+          const snap = rec?.resultData as {
+            recommendations?: Recommendation[]; avoidDays?: AvoidDay[]; aiNotes?: Record<number, AiNote>
+          } | undefined
+          if (rec && snap && snap.recommendations && snap.recommendations.length > 0) {
+            if (!cancelled) {
+              setParent1(rec.input1 as unknown as PersonInput)
+              setParent2(rec.input2 as unknown as PersonInput)
+              setSurvey(rec.survey as unknown as SurveyInput)
+              setRecs(snap.recommendations)
+              setAvoidDays(snap.avoidDays ?? [])
+              setAiNotes(snap.aiNotes ?? {})
+              setSaved(true)
+              setLoading(false)
+            }
+            return
+          }
+          // 스냅샷이 없으면(구기록) 아래 URL 파라미터로 재계산 진행
+        } catch {}
+      }
+
       let p1: PersonInput | null = null
       let p2: PersonInput | null = null
       let sv: SurveyInput | null = null
@@ -230,8 +302,11 @@ function BirthResultInner() {
       }
 
       try {
-        const [ds1, ds2] = await Promise.all([getParentDayStem(p1), getParentDayStem(p2)])
-        const parents = [{ dayStem: ds1 }, { dayStem: ds2 }]
+        const [ps1, ps2] = await Promise.all([getParentSaju(p1), getParentSaju(p2)])
+        const parents = [
+          { dayStem: ps1.dayStem, yongsin: ps1.yongsin },
+          { dayStem: ps2.dayStem, yongsin: ps2.yongsin },
+        ]
 
         const timePref =
           sv.timePref === '평일오전' ? 'morning'
@@ -264,7 +339,44 @@ function BirthResultInner() {
 
     run()
     return () => { cancelled = true }
-  }, [sp])
+  }, [sp, recordIdParam])
+
+  // 결과를 보관함에 저장 (결과 스냅샷 통째로 — 다시보기 시 재계산·AI 없이 복원)
+  async function handleSave() {
+    if (saving || saved) return
+    if (!survey || !survey.dueDate || recs.length === 0) return
+    setSaving(true)
+    const nameOf = (p: PersonInput | null, fallback: string): string => {
+      const nm = (p as unknown as { name?: string } | null)?.name
+      return nm && nm.trim() ? nm : fallback
+    }
+    const toInput = (p: PersonInput | null): SavedInputData & { name?: string } => ({
+      gender: p?.gender ?? '',
+      calType: p?.calType ?? '양력',
+      year: p?.year ?? '',
+      month: p?.month ?? '',
+      day: p?.day ?? '',
+      leapMonth: '0',
+      hour: p?.hour ?? '모름',
+      name: (p as unknown as { name?: string } | null)?.name,
+    })
+    const surveyBlob: BirthSurvey = {
+      dueDate: survey.dueDate, method: survey.method, timePref: survey.timePref,
+      babyGender: survey.babyGender, wishes: survey.wishes ?? [], avoidNote: survey.avoidNote ?? '',
+    }
+    const res = await saveBirthRecord({
+      name1: nameOf(parent1, '부모1'),
+      name2: nameOf(parent2, '부모2'),
+      summary: `${survey.dueDate} 예정 · 길일 ${recs.length}개`,
+      input1: toInput(parent1),
+      input2: toInput(parent2),
+      survey: surveyBlob,
+      resultData: { recommendations: recs, avoidDays, aiNotes },
+    })
+    setSaving(false)
+    if (res.ok) setSaved(true)
+    else alert(res.message || '저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
+  }
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -295,19 +407,37 @@ function BirthResultInner() {
   }, [survey, recs, avoidDays, aiNotes, parent1, parent2])
 
   return (
-    <main style={{ minHeight: '100vh', background: '#0d0d1a', maxWidth: '480px', margin: '0 auto', paddingBottom: '40px' }}>
-      <PageHeader
-        title="출산 시기 결과"
-        subtitle="아기에게 좋은 출산일이에요"
-        onBack={() => router.back()}
-      />
+    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '480px', margin: '0 auto', paddingBottom: '40px' }}>
+      {/* 피치톤 sticky 헤더 (결혼택일과 통일) + 저장 버튼 */}
+      <div style={{
+        position: 'sticky', top: 0, zIndex: 10,
+        background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
+        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
+      }}>
+        <button onClick={() => router.push('/manseryeok/birth-timing/birth-storage')}
+          style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 500, color: '#3a2e28' }}>출산 시기 결과</div>
+          <div style={{ fontSize: 10.5, color: '#b4785a' }}>아기에게 좋은 출산일이에요</div>
+        </div>
+        {!loading && !errMsg && recs.length > 0 && (
+          <button onClick={handleSave} disabled={saving || saved}
+            style={{
+              marginLeft: 'auto', padding: '7px 13px', borderRadius: 9, fontSize: 12.5, fontWeight: 600,
+              border: 'none', cursor: saved ? 'default' : 'pointer',
+              background: saved ? '#f3e6db' : accent, color: saved ? '#96502e' : '#fff',
+            }}>
+            {saved ? '✓ 저장됨' : saving ? '저장 중…' : '저장'}
+          </button>
+        )}
+      </div>
 
       <div style={{ padding: '16px' }}>
         <Disclaimer full />
 
-        <div style={{ margin: '16px 0', padding: '12px 14px', background: cardBg, borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ margin: '16px 0', padding: '12px 14px', background: cardBg, borderRadius: '10px', border: '1px solid #f0e0d5' }}>
           <div style={{ fontSize: '11px', color: sub, marginBottom: '6px' }}>분석 조건</div>
-          <div style={{ fontSize: '12px', color: '#b8b4d8', lineHeight: 1.7 }}>
+          <div style={{ fontSize: '12px', color: '#96502e', lineHeight: 1.7 }}>
             출산예정일 {survey?.dueDate || '-'} · {survey?.method || '-'}<br />
             예정일 전후 1주 / 부모 {personSummary(parent1) !== '정보 없음' ? '사주 반영' : '-'}
           </div>
@@ -332,14 +462,14 @@ function BirthResultInner() {
         )}
 
         {!loading && errMsg && (
-          <div style={{ padding: '20px', textAlign: 'center', color: '#ff8888', fontSize: '13px', lineHeight: 1.7 }}>
+          <div style={{ padding: '20px', textAlign: 'center', color: '#c8506e', fontSize: '13px', lineHeight: 1.7 }}>
             {errMsg}
           </div>
         )}
 
         {!loading && !errMsg && recs.length > 0 && (
           <>
-            <div style={{ fontSize: '13px', color: '#c8c0ff', fontWeight: 600, margin: '4px 0 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ fontSize: '13px', color: '#96502e', fontWeight: 600, margin: '4px 0 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               ◆ 추천 출산일 <span style={{ fontSize: '11px', color: sub, fontWeight: 400 }}>(탭하면 자세히)</span>
               {aiLoading && <span style={{ fontSize: '11px', color: gold, fontWeight: 400 }}>✨ 해설 작성 중...</span>}
             </div>
@@ -347,13 +477,13 @@ function BirthResultInner() {
 
             {avoidDays.length > 0 && (
               <>
-                <div style={{ fontSize: '13px', color: '#c8c0ff', fontWeight: 600, margin: '22px 0 12px' }}>◆ 피하면 좋은 날</div>
-                <div style={{ background: 'rgba(255,120,120,0.06)', border: '1px solid rgba(255,120,120,0.18)', borderRadius: '12px', padding: '14px' }}>
+                <div style={{ fontSize: '13px', color: '#96502e', fontWeight: 600, margin: '22px 0 12px' }}>◆ 피하면 좋은 날</div>
+                <div style={{ background: '#fbece4', border: '1px solid #f0d5c5', borderRadius: '12px', padding: '14px' }}>
                   {avoidDays.map((a, i) => (
                     <div key={i} style={{ marginBottom: i < avoidDays.length - 1 ? '10px' : 0 }}>
-                      <div style={{ fontSize: '13px', color: '#e0a0a0', fontWeight: 600, marginBottom: '4px' }}>⚠ {a.dateLabel}</div>
+                      <div style={{ fontSize: '13px', color: '#c8506e', fontWeight: 600, marginBottom: '4px' }}>⚠ {a.dateLabel}</div>
                       {a.reasons.map((r: string, j: number) => (
-                        <div key={j} style={{ fontSize: '12px', color: '#c89090', lineHeight: 1.6 }}>· {r}</div>
+                        <div key={j} style={{ fontSize: '12px', color: '#b06a52', lineHeight: 1.6 }}>· {r}</div>
                       ))}
                     </div>
                   ))}
@@ -370,9 +500,9 @@ function BirthResultInner() {
         )}
 
         <button
-          onClick={() => router.push('/manseryeok/couple-input')}
-          style={{ width: '100%', marginTop: '8px', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(200,176,255,0.2)', color: '#c8b0ff', fontSize: '13px', cursor: 'pointer' }}>
-          ↩ 다시 분석하기
+          onClick={() => router.push('/manseryeok/birth-timing/birth-storage')}
+          style={{ width: '100%', marginTop: '8px', padding: '12px', borderRadius: '12px', background: '#fff', border: '1px solid #f0e0d5', color: '#96502e', fontSize: '13px', cursor: 'pointer' }}>
+          ↩ 보관함으로
         </button>
 
         <div style={{ marginTop: '16px' }}>
@@ -386,8 +516,8 @@ function BirthResultInner() {
 export default function BirthResultPage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d0d1a' }}>
-        <div style={{ color: '#c8b0ff' }}>로딩 중...</div>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FDF6F0' }}>
+        <div style={{ color: '#96502e' }}>로딩 중...</div>
       </div>
     }>
       <BirthResultInner />
