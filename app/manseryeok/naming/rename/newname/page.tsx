@@ -220,7 +220,7 @@ export default function NewNamePage() {
 
   if (loaded && !surname) {
     return (
-      <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
+      <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
         <Header router={router} />
         <div style={{ padding: '40px 8px', textAlign: 'center', color: SUB, lineHeight: 1.8 }}>
           먼저 &lsquo;내 이름 풀이&rsquo;에서 시작해 주세요.
@@ -235,10 +235,10 @@ export default function NewNamePage() {
     )
   }
 
-  if (!loaded) return <main style={{ minHeight: '100vh', background: '#1f1e1c' }} />
+  if (!loaded) return <main style={{ minHeight: '100vh', background: '#FDF6F0' }} />
 
   return (
-    <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
+    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
       <Header router={router} />
       <p style={{ fontSize: 12, color: SUB, margin: '0 0 16px', padding: '0 4px' }}>
         성씨 {surname!.hanja}({surname!.hangul})는 그대로 · 발음은 두고 한자만 바꿔드려요
