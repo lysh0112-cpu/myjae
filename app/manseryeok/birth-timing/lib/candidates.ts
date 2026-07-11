@@ -27,6 +27,7 @@ export interface Pillar { stem: string; branch: string }
 export interface DateSaju {
   // 그 날짜(양력) 자체 정보
   y: number; m: number; d: number
+  offset: number           // 예정일 기준 -1 / 0 / +1
   weekday: string          // '화'
   isWeekend: boolean
   // 그 날의 연·월·일 간지 (시주 제외)
@@ -37,6 +38,7 @@ export interface DateSaju {
 
 export interface Candidate {
   y: number; m: number; d: number
+  offset: number           // 예정일 기준 -1(전날) / 0(예정일) / +1(다음날)
   hourIdx: number
   weekday: string
   isWeekend: boolean
@@ -68,21 +70,21 @@ export function calcHourPillar(dayStem: string, hourIdx: number): Pillar {
   return { stem, branch }
 }
 
-// 예정일(YYYY-MM-DD) → -7 ~ +7일의 날짜 객체 배열 (양력)
-function buildDateRange(dueDate: string, before = 7, after = 7): { y: number; m: number; d: number }[] {
+// 예정일(YYYY-MM-DD) → -before ~ +after일의 날짜 객체 배열 (양력) + 예정일 기준 offset
+function buildDateRange(dueDate: string, before = 7, after = 7): { y: number; m: number; d: number; offset: number }[] {
   const base = new Date(dueDate + 'T00:00:00')
   if (isNaN(base.getTime())) return []
-  const out: { y: number; m: number; d: number }[] = []
+  const out: { y: number; m: number; d: number; offset: number }[] = []
   for (let offset = -before; offset <= after; offset++) {
     const dt = new Date(base)
     dt.setDate(base.getDate() + offset)
-    out.push({ y: dt.getFullYear(), m: dt.getMonth() + 1, d: dt.getDate() })
+    out.push({ y: dt.getFullYear(), m: dt.getMonth() + 1, d: dt.getDate(), offset })
   }
   return out
 }
 
 // 양력 날짜 하나의 연·월·일 간지를 /api/lunar 에서 가져온다 (날짜당 1회)
-async function fetchDateSaju(y: number, m: number, d: number): Promise<DateSaju | null> {
+async function fetchDateSaju(y: number, m: number, d: number, offset: number): Promise<DateSaju | null> {
   try {
     const url = `/api/lunar?year=${y}&month=${m}&day=${d}&calType=양력&leapMonth=0`
     const res = await fetch(url)
@@ -92,6 +94,7 @@ async function fetchDateSaju(y: number, m: number, d: number): Promise<DateSaju 
     const wd = WEEKDAY[dt.getDay()]
     return {
       y, m, d,
+      offset,
       weekday: wd,
       isWeekend: dt.getDay() === 0 || dt.getDay() === 6,
       year: splitGanji(data.yearGanji),
@@ -106,19 +109,22 @@ async function fetchDateSaju(y: number, m: number, d: number): Promise<DateSaju 
 export interface BuildOptions {
   // 선호 시간대: 'morning'(오전 卯~午) | 'afternoon'(未~申) | 'any'
   timePref?: 'morning' | 'afternoon' | 'any'
-  // 주말 제외 여부 (제왕절개는 보통 평일)
-  excludeWeekend?: boolean
+  // 예정일 기준 며칠 전/후까지 볼지 (출산택일은 전날·당일·다음날 = before1/after1)
+  before?: number
+  after?: number
 }
 
 // 메인: 예정일 → 후보(날짜×시진 + 사주 8글자) 배열
+//   [출산택일 3일 방식] 예정일 전날·당일·다음날 3일만. 공휴일·주말도 그대로 포함
+//   (병원 운영 안내는 화면에서 처리). offset(-1/0/+1)을 실어 화면 탭 구분에 씀.
 export async function buildCandidates(dueDate: string, opts: BuildOptions = {}): Promise<Candidate[]> {
-  const { timePref = 'any', excludeWeekend = true } = opts
+  const { timePref = 'any', before = 1, after = 1 } = opts
 
-  const dates = buildDateRange(dueDate)
+  const dates = buildDateRange(dueDate, before, after)
   if (dates.length === 0) return []
 
-  // 날짜별 연·월·일 간지를 병렬로 가져온다 (KASI 호출 = 날짜 수 = 15회)
-  const dateSajus = await Promise.all(dates.map(dt => fetchDateSaju(dt.y, dt.m, dt.d)))
+  // 날짜별 연·월·일 간지를 병렬로 가져온다
+  const dateSajus = await Promise.all(dates.map(dt => fetchDateSaju(dt.y, dt.m, dt.d, dt.offset)))
 
   // 선호 시간대에 따른 시진 필터
   let hours = WORK_HOUR_INDICES
@@ -128,13 +134,13 @@ export async function buildCandidates(dueDate: string, opts: BuildOptions = {}):
   const candidates: Candidate[] = []
   for (const ds of dateSajus) {
     if (!ds) continue
-    if (excludeWeekend && ds.isWeekend) continue
     if (ds.day.stem === '?') continue // 사주를 못 만든 날은 제외
 
     for (const hourIdx of hours) {
       const hour = calcHourPillar(ds.day.stem, hourIdx)
       candidates.push({
         y: ds.y, m: ds.m, d: ds.d,
+        offset: ds.offset,
         hourIdx,
         weekday: ds.weekday,
         isWeekend: ds.isWeekend,
