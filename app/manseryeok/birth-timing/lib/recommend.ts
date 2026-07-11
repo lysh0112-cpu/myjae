@@ -64,12 +64,17 @@ function parentBonus(
 
 export interface Recommendation {
   rank: number
+  offset: number           // 예정일 기준 -1(전날) / 0(예정일) / +1(다음날)
   dateLabel: string
   hourLabel: string
   score: number
   saju: string
   breakdown: ScoreBreakdown
   parentNote: string
+  weekday: string          // '토'
+  isWeekend: boolean
+  dateKey: string          // 'YYYYMMDD' (공휴일 조회 매칭용)
+  avoidFlags: string[]     // 이 날이 전통적으로 피하는 구성이면 사유 (없으면 빈 배열)
   y: number; m: number; d: number; hourIdx: number
 }
 
@@ -86,15 +91,18 @@ export interface BirthResult {
 
 export interface RunOptions {
   timePref?: 'morning' | 'afternoon' | 'any'
-  excludeWeekend?: boolean
   parents?: ParentLite[]
 }
 
-// 메인: 예정일 → 추천 5개 + 피할 날
+// 메인: 예정일 → 전날·당일·다음날 3일, 각 날 최고 시진 1개 (+ 피할 날 안내)
+//   [출산택일 3일 방식] 예정일이 정해져 있으므로 그 ±1일만 본다.
+//   각 날짜에서 점수가 가장 높은 시진 1개를 뽑고, offset(-1/0/+1) 순서로 정렬.
+//   산액(피하는 구성)에 걸린 날도 3일이면 그대로 보여주되 avoidFlags를 실어 화면서 경고.
 export async function runBirthTiming(dueDate: string, opts: RunOptions = {}): Promise<BirthResult> {
-  const { timePref = 'any', excludeWeekend = true, parents = [] } = opts
+  const { timePref = 'any', parents = [] } = opts
 
-  const candidates = await buildCandidates(dueDate, { timePref, excludeWeekend })
+  // 전날·당일·다음날 (before1/after1)
+  const candidates = await buildCandidates(dueDate, { timePref, before: 1, after: 1 })
   if (candidates.length === 0) {
     return { recommendations: [], avoidDays: [], totalEvaluated: 0 }
   }
@@ -107,49 +115,39 @@ export async function runBirthTiming(dueDate: string, opts: RunOptions = {}): Pr
     return { c, breakdown, parentNote: pb.note, finalScore }
   })
 
-  // 산액 회피 플래그가 있는 후보 → "피할 날" 후보로 분리
-  const avoidByDate = new Map<string, Set<string>>()
+  // 각 offset(-1/0/+1)별로 최고 점수 시진 1개만 선택
+  const bestByOffset = new Map<number, typeof scored[number]>()
   for (const s of scored) {
-    if (s.breakdown.avoidFlags.length > 0) {
-      const key = `${s.c.y}-${s.c.m}-${s.c.d}`
-      if (!avoidByDate.has(key)) avoidByDate.set(key, new Set())
-      s.breakdown.avoidFlags.forEach(f => avoidByDate.get(key)!.add(f))
-    }
+    const cur = bestByOffset.get(s.c.offset)
+    if (!cur || s.finalScore > cur.finalScore) bestByOffset.set(s.c.offset, s)
   }
 
-  // 추천: 산액 회피에 안 걸린 것 중 점수 높은 순 5개
-  const clean = scored.filter(s => s.breakdown.avoidFlags.length === 0)
-  clean.sort((a, b) => b.finalScore - a.finalScore)
+  // offset 순서 고정: -1(전날) → 0(예정일) → +1(다음날)
+  const ordered = [-1, 0, 1]
+    .map(off => bestByOffset.get(off))
+    .filter((s): s is typeof scored[number] => s !== undefined)
 
-  // 같은 날짜는 최고 점수 시진 하나만 (날짜 다양성)
-  const seen = new Set<string>()
-  const top: typeof clean = []
-  for (const s of clean) {
-    const key = `${s.c.y}-${s.c.m}-${s.c.d}`
-    if (seen.has(key)) continue
-    seen.add(key)
-    top.push(s)
-    if (top.length >= 5) break
-  }
-
-  const recommendations: Recommendation[] = top.map((s, i) => ({
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const recommendations: Recommendation[] = ordered.map((s, i) => ({
     rank: i + 1,
+    offset: s.c.offset,
     dateLabel: s.c.dateLabel,
     hourLabel: s.c.hourLabel,
     score: Math.round(s.finalScore),
     saju: sajuString(s.c),
     breakdown: s.breakdown,
     parentNote: s.parentNote,
+    weekday: s.c.weekday,
+    isWeekend: s.c.isWeekend,
+    dateKey: `${s.c.y}${pad(s.c.m)}${pad(s.c.d)}`,
+    avoidFlags: s.breakdown.avoidFlags,
     y: s.c.y, m: s.c.m, d: s.c.d, hourIdx: s.c.hourIdx,
   }))
 
-  // 피할 날 (최대 3개)
-  const avoidDays: AvoidDay[] = []
-  for (const [key, reasons] of avoidByDate) {
-    const [y, m, d] = key.split('-')
-    avoidDays.push({ dateLabel: `${y}년 ${m}월 ${d}일`, reasons: Array.from(reasons) })
-    if (avoidDays.length >= 3) break
-  }
+  // 피할 날: 3일 중 산액 구성이 있는 날 (화면 하단 요약용)
+  const avoidDays: AvoidDay[] = recommendations
+    .filter(r => r.avoidFlags.length > 0)
+    .map(r => ({ dateLabel: r.dateLabel, reasons: r.avoidFlags }))
 
   return { recommendations, avoidDays, totalEvaluated: candidates.length }
 }
