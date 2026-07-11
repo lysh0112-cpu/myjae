@@ -1,7 +1,11 @@
 'use client'
 import { Suspense, useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import {
+  saveTarotRecord, getTarotRecord,
+  type TarotCategory, type TarotSavedCard,
+} from '@/lib/saju/tarotRecords'
 
 const TAROT_MODE: 'ai' | 'consultant' = 'ai'
 
@@ -83,9 +87,13 @@ type Step = 'question' | 'deck' | 'spread' | 'draw' | 'reveal' | 'result'
 
 function TarotInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const [step, setStep] = useState<Step>('question')
   const [question, setQuestion] = useState('')
+  const [category, setCategory] = useState<TarotCategory>('기타')
+  const [savedId, setSavedId] = useState<string | null>(null)
+  const [viewOnly, setViewOnly] = useState(false)
   const [decks, setDecks] = useState<{ code: string; name_ko: string; description: string; is_active: boolean }[]>([])
   const [deckCode, setDeckCode] = useState('universal')
   const [usesReversed, setUsesReversed] = useState(true)
@@ -95,7 +103,6 @@ function TarotInner() {
   const [loading, setLoading] = useState(false)
   const [interp, setInterp] = useState<Interpretation | null>(null)
   const [interpKey, setInterpKey] = useState<string>('')
-  const [hasHistory, setHasHistory] = useState(false)
 
   // 타로 가격/무료횟수
   const [prices, setPrices] = useState<Record<string, TarotPrice>>({})
@@ -110,9 +117,22 @@ function TarotInner() {
       .catch(() => {})
   }, [])
 
+  // 보관함에서 recordId 로 들어오면 그 기록을 그대로 다시보기 (재계산·AI 재호출 없음)
   useEffect(() => {
-    setHasHistory(loadHistory().length > 0)
-  }, [])
+    const rid = searchParams.get('recordId')
+    if (!rid) return
+    let cancelled = false
+    getTarotRecord(rid).then(rec => {
+      if (cancelled || !rec || !rec.resultData) return
+      setQuestion(rec.question || '')
+      setCategory(rec.category)
+      setInterp(rec.resultData)
+      setSavedId(rec.id)
+      setViewOnly(true)
+      setStep('result')
+    })
+    return () => { cancelled = true }
+  }, [searchParams])
 
   useEffect(() => {
     supabase.from('tarot_prices').select('price_key, price, free_count, active')
@@ -124,15 +144,6 @@ function TarotInner() {
         }
       })
   }, [])
-
-  function showLastReading() {
-    const list = loadHistory()
-    if (list.length > 0) {
-      setInterp(list[0].interp)
-      setQuestion(list[0].question || '')
-      setStep('result')
-    }
-  }
 
   async function loadDeckCards(code: string) {
     const res = await fetch(`/api/tarot/cards?deck=${code}`)
@@ -189,7 +200,23 @@ function TarotInner() {
         setInterpKey(key)
         setStep('result')
         saveToHistory({ interp: data.interpretation, question, savedAt: Date.now() })
-        setHasHistory(true)
+        // 로그인 회원이면 보관함(DB)에 자동 저장 — 아이디 기준으로 기록이 이어짐.
+        // 관심사(category)도 함께 저장해 나중에 트렌드 집계에 쓴다.
+        const savedCards: TarotSavedCard[] = picked.map(p => ({
+          cardId: p.card.id,
+          name: p.card.nameKo,
+          nameEn: p.card.nameEn,
+          position: p.position,
+          reversed: p.reversed,
+        }))
+        saveTarotRecord({
+          question,
+          category,
+          spreadId: spread.id,
+          spreadTitle: spread.title,
+          cards: savedCards,
+          resultData: data.interpretation,
+        }).then(res => { if (res.ok && res.id) setSavedId(res.id) })
       }
     } catch (e) {
       console.error(e)
@@ -200,6 +227,7 @@ function TarotInner() {
 
   function startNew() {
     setQuestion(''); setPicked([]); setInterp(null); setInterpKey(''); setStep('question')
+    setCategory('기타'); setSavedId(null); setViewOnly(false)
   }
 
   const hasCachedInterp = interp !== null && interpKey === cardsKey(picked)
@@ -240,8 +268,8 @@ function TarotInner() {
             style={{ width: '100%', minHeight: '80px', padding: '12px', borderRadius: '12px', background: '#FFFBF7', border: '1px solid #f0e0d5', color: ink, fontSize: '14px', lineHeight: 1.6, resize: 'none', boxSizing: 'border-box' }} />
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', justifyContent: 'center', margin: '14px 0 20px' }}>
             {CATEGORY_CHIPS.map(c => (
-              <button key={c.label} onClick={() => setQuestion(c.text)}
-                style={{ background: 'rgba(180,90,120,0.10)', color: rose, fontSize: '12px', padding: '7px 13px', borderRadius: '20px', border: 'none', cursor: 'pointer' }}>
+              <button key={c.label} onClick={() => { setQuestion(c.text); setCategory(c.label as TarotCategory) }}
+                style={{ background: category === c.label ? rose : 'rgba(180,90,120,0.10)', color: category === c.label ? '#fff' : rose, fontSize: '12px', padding: '7px 13px', borderRadius: '20px', border: 'none', cursor: 'pointer' }}>
                 {c.label}
               </button>
             ))}
@@ -258,12 +286,10 @@ function TarotInner() {
               마음속 질문을 먼저 떠올려 주세요.<br />그래야 카드가 더 또렷한 답을 들려줍니다.
             </p>
           )}
-          {hasHistory && (
-            <button onClick={showLastReading}
-              style={{ width: '100%', padding: '12px', borderRadius: '12px', marginTop: '14px', background: 'transparent', border: `1px solid ${gold}`, color: gold, fontSize: '13px', cursor: 'pointer' }}>
-              📜 이전 해석 보기
-            </button>
-          )}
+          <button onClick={() => router.push('/tarot/storage')}
+            style={{ width: '100%', padding: '12px', borderRadius: '12px', marginTop: '14px', background: 'transparent', border: `1px solid ${gold}`, color: gold, fontSize: '13px', cursor: 'pointer' }}>
+            📜 이전 타로 기록 보기
+          </button>
         </div>
       )}
 
@@ -412,6 +438,13 @@ function TarotInner() {
 
       {step === 'result' && interp && (
         <div style={{ padding: '18px 16px' }}>
+          {savedId && (
+            <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+              <span style={{ display: 'inline-block', background: 'rgba(74,148,80,0.12)', color: '#4a9450', fontSize: '11.5px', fontWeight: 600, padding: '5px 12px', borderRadius: '20px' }}>
+                {viewOnly ? '📁 보관함에서 불러온 기록' : '✓ 보관함에 저장됐어요'}
+              </span>
+            </div>
+          )}
           <div style={{ fontSize: '18px', fontWeight: 'bold', color: gold, marginBottom: '18px', lineHeight: 1.6, textAlign: 'center' }}>"{interp.title}"</div>
 
           {interp.cards?.map((c, i) => (
@@ -434,8 +467,12 @@ function TarotInner() {
           )}
 
           <button onClick={startNew}
-            style={{ width: '100%', padding: '13px', borderRadius: '12px', background: cardBg, border, color: sub, fontSize: '14px', cursor: 'pointer' }}>
+            style={{ width: '100%', padding: '13px', borderRadius: '12px', background: cardBg, border, color: sub, fontSize: '14px', cursor: 'pointer', marginBottom: '10px' }}>
             새로운 질문하기
+          </button>
+          <button onClick={() => router.push('/tarot/storage')}
+            style={{ width: '100%', padding: '13px', borderRadius: '12px', background: 'transparent', border: `1px solid ${gold}`, color: gold, fontSize: '14px', cursor: 'pointer' }}>
+            📜 내 타로 보관함
           </button>
         </div>
       )}
