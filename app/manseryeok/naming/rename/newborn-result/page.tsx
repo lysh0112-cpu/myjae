@@ -332,7 +332,7 @@ function NewbornResultInner() {
 
   if (loaded && tries.length === 0) {
     return (
-      <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
+      <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
         <Header router={router} />
         <div style={{ padding: '40px 8px', textAlign: 'center', color: SUB, lineHeight: 1.8 }}>
           아직 지어본 이름이 없어요.
@@ -347,7 +347,7 @@ function NewbornResultInner() {
     )
   }
 
-  if (!loaded || !cur) return <main style={{ minHeight: '100vh', background: '#1f1e1c' }} />
+  if (!loaded || !cur) return <main style={{ minHeight: '100vh', background: '#FDF6F0' }} />
 
   const fullName = cur.chars.map((c) => c.hanja).join('')
   const hangulName = cur.chars.map((c) => c.hangul).join('')
@@ -363,7 +363,7 @@ function NewbornResultInner() {
   const babyParam = sp.get('baby') || ''
 
   return (
-    <main style={{ minHeight: '100vh', background: '#1f1e1c', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
+    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       <Header router={router} />
 
@@ -517,7 +517,7 @@ function Header({ router }: { router: ReturnType<typeof useRouter> }) {
 
 export default function NewbornResultPage() {
   return (
-    <Suspense fallback={<div style={{ background: '#1f1e1c', minHeight: '100vh' }} />}>
+    <Suspense fallback={<div style={{ background: '#FDF6F0', minHeight: '100vh' }} />}>
       <NewbornResultInner />
     </Suspense>
   )
