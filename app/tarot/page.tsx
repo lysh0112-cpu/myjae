@@ -339,7 +339,7 @@ function TarotInner() {
               </p>
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '22px', flexWrap: 'wrap' }}>
                 {picked.map((p, i) => (
-                  <div key={i} style={{ width: '44px', height: '64px', borderRadius: '7px', background: cardBg, border: '1px solid #e6cbb5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: gold, fontSize: '13px' }}>{i + 1}</div>
+                  <div key={i} style={{ width: '44px', height: '64px', borderRadius: '7px', background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FAC775', fontSize: '13px' }}>{i + 1}</div>
                 ))}
               </div>
               <button onClick={() => setStep('reveal')}
@@ -359,16 +359,16 @@ function TarotInner() {
                 <div style={{ display: 'flex', gap: '8px', padding: '15px 0', width: 'max-content', animation: 'slideLeft 10s linear infinite' }}>
                   {[...Array(24)].map((_, i) => (
                     <div key={i} onClick={drawOne}
-                      style={{ flex: '0 0 80px', height: '118px', borderRadius: '10px', background: 'linear-gradient(150deg,#8a3a56,#5a2440)', border: '1px solid #d8a87e', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#f0c890', fontSize: '26px' }}>✦</div>
+                      style={{ flex: '0 0 80px', height: '118px', borderRadius: '10px', background: 'linear-gradient(135deg,#3C3489,#2C2C2A)', border: '1px solid rgba(250,199,117,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#FAC775', fontSize: '26px' }}>✦</div>
                   ))}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '16px', flexWrap: 'wrap' }}>
                 {picked.map((p, i) => (
-                  <div key={i} style={{ width: '44px', height: '64px', borderRadius: '7px', background: cardBg, border: '1px solid #e6cbb5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: gold, fontSize: '13px' }}>{i + 1}</div>
+                  <div key={i} style={{ width: '44px', height: '64px', borderRadius: '7px', background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FAC775', fontSize: '13px' }}>{i + 1}</div>
                 ))}
                 {[...Array(Math.max(0, spread.count - picked.length))].map((_, i) => (
-                  <div key={`e${i}`} style={{ width: '44px', height: '64px', borderRadius: '7px', background: '#FBF3EC', border: '1px dashed #e6cbb5' }} />
+                  <div key={`e${i}`} style={{ width: '44px', height: '64px', borderRadius: '7px', background: '#1f1f1d', border: '1px dashed rgba(255,255,255,0.15)' }} />
                 ))}
               </div>
             </>
@@ -385,14 +385,14 @@ function TarotInner() {
               <div key={i} style={{ width: '92px', textAlign: 'center' }}>
                 <div onClick={() => flipCard(i)}
                   style={{ width: '92px', height: '136px', borderRadius: '10px', cursor: p.flipped ? 'default' : 'pointer',
-                    background: p.flipped ? cardBg : 'linear-gradient(150deg,#8a3a56,#5a2440)',
-                    border: p.flipped ? '1px solid #e6cbb5' : '1px solid #d8a87e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    background: p.flipped ? '#2C2C2A' : 'linear-gradient(135deg,#3C3489,#2C2C2A)',
+                    border: '1px solid rgba(250,199,117,0.3)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px',
                     transform: p.flipped && p.reversed ? 'rotate(180deg)' : 'none' }}>
                   {p.flipped
                     ? (p.card.imageUrl
                         ? <img src={p.card.imageUrl} alt={p.card.nameKo} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '10px' }} />
-                        : <span style={{ color: gold, fontSize: '13px', fontWeight: 500, padding: '0 4px', lineHeight: 1.3 }}>{p.card.nameKo}</span>)
-                    : <span style={{ color: '#f0c890', fontSize: '28px' }}>✦</span>}
+                        : <span style={{ color: '#FAC775', fontSize: '13px', fontWeight: 500, padding: '0 4px', lineHeight: 1.3 }}>{p.card.nameKo}</span>)
+                    : <span style={{ color: '#FAC775', fontSize: '28px' }}>✦</span>}
                 </div>
                 <div style={{ fontSize: '11px', color: sub, marginTop: '5px' }}>{p.position}</div>
                 {p.flipped && <div style={{ fontSize: '10px', color: p.reversed ? '#e57373' : '#81c784', marginTop: '2px' }}>{p.reversed ? '역방향' : '정방향'}</div>}
