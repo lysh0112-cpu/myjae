@@ -194,15 +194,37 @@ function NewbornResultInner() {
   }, [bkey])
 
   // 아기 tries 읽기 (아기 사주 열쇠로)
+  //   ★ [버그수정] 최초 로드뿐 아니라, hanja 화면에서 새 이름을 담고 돌아왔을 때도
+  //   최신 tries를 다시 읽는다. (result 컴포넌트가 안 죽고 재사용되면 state가 stale해져
+  //   이후 통변 조회가 낡은 state로 localStorage를 덮어써 회차 유실시키던 문제 방지)
   useEffect(() => {
-    try {
-      const h = JSON.parse(localStorage.getItem(BABY_HISTORY_KEY) || '{}')
-      if (h.babyKey === bkey && Array.isArray(h.tries) && h.tries.length > 0) {
-        setTries(h.tries)
-        setActiveTry(h.tries.length - 1)
-      }
-    } catch {}
-    setLoaded(true)
+    if (!bkey) { setLoaded(true); return }
+    const syncFromStorage = () => {
+      try {
+        const h = JSON.parse(localStorage.getItem(BABY_HISTORY_KEY) || '{}')
+        if (h.babyKey === bkey && Array.isArray(h.tries) && h.tries.length > 0) {
+          setTries((prev) => {
+            // 저장본이 현재 state보다 항목이 많거나(새 이름 추가됨) 개수가 다르면 최신으로 교체.
+            if (h.tries.length !== prev.length) {
+              setActiveTry(h.tries.length - 1)
+              return h.tries as TryItem[]
+            }
+            return prev
+          })
+        }
+      } catch {}
+      setLoaded(true)
+    }
+    syncFromStorage()
+    const onVisible = () => { if (document.visibilityState === 'visible') syncFromStorage() }
+    window.addEventListener('focus', syncFromStorage)
+    window.addEventListener('pageshow', syncFromStorage)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.removeEventListener('focus', syncFromStorage)
+      window.removeEventListener('pageshow', syncFromStorage)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [bkey])
 
   // ★ 마지막 회차 소진(remaining=0) + 후보 있음 + 아직 최종선택 안 함 → '최종 선택하세요' 팝업
@@ -341,21 +363,41 @@ function NewbornResultInner() {
         alert('풀이를 온전히 받지 못했어요.\n잠시 후 다시 눌러주세요. 회차는 차감되지 않았어요.')
         return
       }
-      setTries((prev) => {
-        const nextTries = prev.map((t, i) => (i === activeTry ? { ...t, commentary } : t))
-        try {
-          localStorage.setItem(BABY_HISTORY_KEY, JSON.stringify({ babyKey: bkey, tries: nextTries }))
-        } catch {}
-        return nextTries
-      })
+      // ★ [버그수정] 통변을 저장할 때, React state(prev)가 아니라 localStorage의 최신
+      //   tries를 다시 읽어 병합한다. (result 화면이 안 죽고 재사용되면 state가 stale해져
+      //   이전에 지은 다른 회차 이름을 덮어써 유실시키던 문제 — "첫 회차 사라짐" 원인)
+      const curHanjaKey = cur.chars.map((c) => c.hanja).join('')
+      let mergedTries: TryItem[] = []
+      try {
+        const h = JSON.parse(localStorage.getItem(BABY_HISTORY_KEY) || '{}')
+        if (h.babyKey === bkey && Array.isArray(h.tries) && h.tries.length > 0) {
+          mergedTries = h.tries as TryItem[]
+        }
+      } catch {}
+      if (mergedTries.length === 0) mergedTries = tries   // 폴백: 저장본 없으면 현재 state
+      // 방금 조회한 이름(hanjaKey 일치)에만 통변을 채운다. (activeTry 인덱스에 의존하지 않음)
+      const savedTries = mergedTries.map((t) =>
+        t.chars.map((c) => c.hanja).join('') === curHanjaKey ? { ...t, commentary } : t
+      )
+      try {
+        localStorage.setItem(BABY_HISTORY_KEY, JSON.stringify({ babyKey: bkey, tries: savedTries }))
+      } catch {}
+      // state도 최신 병합본으로 동기화 (activeTry는 조회한 이름을 계속 가리키게 재정렬)
+      setTries(savedTries)
+      const newActive = savedTries.findIndex((t) => t.chars.map((c) => c.hanja).join('') === curHanjaKey)
+      if (newActive !== -1) setActiveTry(newActive)
       // ★ 이용권 1회 차감 (상세 풀이를 실제로 받은 경우에만)
-      setRemaining((prev) => {
-        const next = Math.max(0, prev - 1)
-        try {
-          localStorage.setItem(NEWBORN_PASS_KEY, JSON.stringify({ babyKey: bkey, remaining: next }))
-        } catch {}
-        return next
-      })
+      //   remaining도 state(prev)가 아닌 localStorage 최신값 기준으로 차감한다.
+      let curRemaining = remaining
+      try {
+        const p = JSON.parse(localStorage.getItem(NEWBORN_PASS_KEY) || '{}')
+        if (p.babyKey === bkey && typeof p.remaining === 'number') curRemaining = p.remaining
+      } catch {}
+      const nextRemaining = Math.max(0, curRemaining - 1)
+      try {
+        localStorage.setItem(NEWBORN_PASS_KEY, JSON.stringify({ babyKey: bkey, remaining: nextRemaining }))
+      } catch {}
+      setRemaining(nextRemaining)
     } catch (e) {
       console.error('detail error:', e)
     } finally {
