@@ -203,6 +203,7 @@ function NewbornResultInner() {
       try {
         const h = JSON.parse(localStorage.getItem(BABY_HISTORY_KEY) || '{}')
         if (h.babyKey === bkey && Array.isArray(h.tries) && h.tries.length > 0) {
+          console.log('[HIST][result.sync] 읽음', h.tries.length, '개 →', (h.tries as TryItem[]).map((t) => t.chars.map((c) => c.hanja).join('')), 'bkey=', bkey)
           setTries((prev) => {
             // 저장본이 현재 state보다 항목이 많거나(새 이름 추가됨) 개수가 다르면 최신으로 교체.
             if (h.tries.length !== prev.length) {
@@ -211,6 +212,9 @@ function NewbornResultInner() {
             }
             return prev
           })
+        }
+        else if (h.babyKey && h.babyKey !== bkey) {
+          console.warn('[HIST][result.sync] ★bkey 불일치★ 저장된=', h.babyKey, '현재=', bkey, '→ 이전 이름 안 읽힘!')
         }
       } catch {}
       setLoaded(true)
@@ -381,6 +385,7 @@ function NewbornResultInner() {
       )
       try {
         localStorage.setItem(BABY_HISTORY_KEY, JSON.stringify({ babyKey: bkey, tries: savedTries }))
+        console.log('[HIST][result.loadDetail] 통변저장', savedTries.length, '개 →', savedTries.map((t) => t.chars.map((c) => c.hanja).join('')), 'bkey=', bkey)
       } catch {}
       // state도 최신 병합본으로 동기화 (activeTry는 조회한 이름을 계속 가리키게 재정렬)
       setTries(savedTries)

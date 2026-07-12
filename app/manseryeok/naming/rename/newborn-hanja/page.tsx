@@ -227,7 +227,13 @@ function NewbornHanjaInner() {
   function readTries(): TryItem[] {
     try {
       const h = JSON.parse(localStorage.getItem(BABY_HISTORY_KEY) || '{}')
-      if (h.babyKey === bkey && Array.isArray(h.tries)) return h.tries
+      if (h.babyKey === bkey && Array.isArray(h.tries)) {
+        console.log('[HIST][hanja.readTries] 읽음', h.tries.length, '개 →', (h.tries as TryItem[]).map((t) => t.chars.map((c) => c.hanja).join('')), 'bkey=', bkey)
+        return h.tries
+      }
+      if (h.babyKey && h.babyKey !== bkey) {
+        console.warn('[HIST][hanja.readTries] ★bkey 불일치★ 저장된=', h.babyKey, '현재=', bkey, '→ 빈 배열 반환(이전 이름 안 보임!)')
+      }
     } catch {}
     return []
   }
@@ -284,6 +290,7 @@ function NewbornHanjaInner() {
       if (tries.length >= TRY_LIMIT) {
         try {
           localStorage.setItem(BABY_HISTORY_KEY, JSON.stringify({ babyKey: bkey, tries }))
+          console.log('[HIST][hanja.마지막회차] 저장', tries.length, '개 →', tries.map((t) => t.chars.map((c) => c.hanja).join('')), 'bkey=', bkey)
         } catch {}
         alert('마지막 회차예요.\n이 이름까지 저장했어요. 이제 후보 중에서 최종 선택해 주세요.')
         setConfirmOpen(false)
@@ -297,6 +304,7 @@ function NewbornHanjaInner() {
 
     try {
       localStorage.setItem(BABY_HISTORY_KEY, JSON.stringify({ babyKey: bkey, tries }))
+      console.log('[HIST][hanja.confirmSave] 저장', tries.length, '개 →', tries.map((t) => t.chars.map((c) => c.hanja).join('')), 'bkey=', bkey)
     } catch {}
 
     setConfirmOpen(false)

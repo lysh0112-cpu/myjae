@@ -160,6 +160,7 @@ function NewbornInner() {
     const s = passSurname || urlSurname
 
     setRemaining(passRemaining)
+    console.log('[HIST][newborn.진입] passRemaining=', passRemaining, '→', passRemaining > 0 ? '이름입력 화면(정상)' : '★결제화면 표시(payNow 누르면 history 삭제됨)★', 'baby복원=', !!b)
 
     // 아기 정보 복원 → 정보 입력 건너뜀
     if (b && b.year) {
@@ -326,6 +327,7 @@ function NewbornInner() {
   //   결제는 아기 정보 입력 전에 받으므로, 이 시점엔 babyKey를 아직 모름(정보 확정 시 채움).
   function payNow() {
     try {
+      console.warn('[HIST][newborn.payNow] ★history 삭제 실행★ remaining을', tryLimit, '로 리셋 — 이전 이름 전부 사라짐!')
       localStorage.setItem(NEWBORN_PASS_KEY, JSON.stringify({ babyKey: '', remaining: tryLimit, babyInfo: null, surname: null }))
       localStorage.removeItem('newborn_history_v1')
     } catch {}
