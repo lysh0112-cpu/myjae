@@ -3,7 +3,6 @@ import { Suspense, useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsin } from '@/lib/saju/yongsin'
-import { calcYongsinNew } from '@/lib/saju/yongsinNew'
 import { supabase } from '@/lib/supabase'
 import type { DiagnoseResult, NameChar } from '@/lib/saju/naming'
 import PageHeader from '@/app/components/common/PageHeader'
@@ -32,12 +31,10 @@ interface HanjaRow {
 
 interface Commentary {
   title: string
-  eumyang: string      // 음양오행
-  baleum: string       // 발음오행
-  suri: string         // 수리오행
-  jawon: string        // 자원오행
-  yongsin: string      // 사주 보완(용신)
-  conclusion: string   // 맺음말
+  summary: string
+  good: string
+  improve: string
+  advice: string
 }
 
 const gold = '#FAC775'
@@ -287,7 +284,7 @@ function DiagnosisInner() {
   // ★ 이름풀이 해설(commentary)을 상담사 화면 표시용 텍스트로 변환 (물상도 방식과 동일)
   function buildNamingAnalysisText(hanjaName: string, hangulName: string, c: Commentary | null): string {
     if (!c) return ''
-    return `[이름풀이 · ${hangulName} (${hanjaName})]\n\n· 음양오행\n${c.eumyang || ''}\n\n· 발음오행\n${c.baleum || ''}\n\n· 수리오행\n${c.suri || ''}\n\n· 자원오행\n${c.jawon || ''}\n\n· 사주 보완(용신)\n${c.yongsin || ''}\n\n· 맺음\n${c.conclusion || ''}`.trim()
+    return `[이름풀이 · ${hangulName} (${hanjaName})]\n\n· 종합\n${c.summary || ''}\n\n· 좋은 점\n${c.good || ''}\n\n· 더 좋아지려면\n${c.improve || ''}\n\n· 조언\n${c.advice || ''}`.trim()
   }
 
   // ★ 결과가 표시되면(새로 풀든, 저장결과 불러오든) 상담사 전달용 세션을 저장.
@@ -318,33 +315,7 @@ function DiagnosisInner() {
     setStep('result')
     setLoading(true)
     try {
-      // 용신 엔진 선택 — 관리자 설정(naming_yongsin_mode) 기준.
-      //   기본 'precise'(정밀 yongsinNew, 억부·조후·병약 → 사주화면과 일치)
-      //   'simple'이면 옛 단순 엔진(yongsin.ts)
-      let yongsinEl = '', heeksinEl: string | undefined, elementScore: Record<string, number> = {}
-      let mode = 'precise'
-      try {
-        const { data: ts } = await supabase
-          .from('tone_settings').select('naming_yongsin_mode').eq('id', 1).maybeSingle()
-        if (ts?.naming_yongsin_mode === 'simple') mode = 'simple'
-      } catch { /* 설정 없으면 정밀 기본 */ }
-
-      if (mode === 'simple') {
-        const r = calcYongsin(saju, dayStem)
-        yongsinEl = r.yongsin; heeksinEl = r.heeksin; elementScore = r.score
-      } else {
-        const r = calcYongsinNew(saju, dayStem)
-        if (r) {
-          yongsinEl = r.eokbu.yongsin
-          heeksinEl = r.eokbu.heesin       // 정밀 엔진은 heesin(철자 주의)
-          elementScore = r.score
-        } else {
-          // 안전 폴백: 정밀 계산 실패 시 단순 엔진
-          const rr = calcYongsin(saju, dayStem)
-          yongsinEl = rr.yongsin; heeksinEl = rr.heeksin; elementScore = rr.score
-        }
-      }
-
+      const yongsinResult = calcYongsin(saju, dayStem)
       const sajuText = saju.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(', ')
       const res = await fetch('/api/naming', {
         method: 'POST',
@@ -352,9 +323,9 @@ function DiagnosisInner() {
         body: JSON.stringify({
           surname,
           given,
-          yongsin: yongsinEl,
-          heeksin: heeksinEl,
-          elementScore,
+          yongsin: yongsinResult.yongsin,
+          heeksin: yongsinResult.heeksin,
+          elementScore: yongsinResult.score,
           dayStem,
           sajuText,
           birthData: info,
@@ -686,14 +657,7 @@ function DiagnosisInner() {
               </div>
             )}
 
-            {!loading && result && (() => {
-              // 옛 저장 데이터 호환: 새 5관점 필드(eumyang 등)가 하나도 없으면 옛 구조로 간주.
-              const c = commentary as (Commentary & { summary?: string; good?: string; improve?: string; advice?: string }) | null
-              const hasNew5 = !!(c && (c.eumyang || c.baleum || c.suri || c.jawon || c.yongsin || c.conclusion))
-              const legacyText = c && !hasNew5
-                ? [c.summary, c.good, c.improve, c.advice].filter(Boolean).join('\n\n')
-                : ''
-              return (
+            {!loading && result && (
               <>
                 <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                   <div style={{ fontSize: '34px', fontWeight: 'bold', color: gold, letterSpacing: '4px' }}>
@@ -704,102 +668,69 @@ function DiagnosisInner() {
                   </div>
                 </div>
 
-                {commentary && commentary.title && (
-                  <div style={{ textAlign: 'center', margin: '4px 0 22px' }}>
-                    <div style={{ fontSize: '17px', fontWeight: 'bold', color: gold, lineHeight: 1.6 }}>
-                      "{commentary.title}"
-                    </div>
+                {commentary && (
+                  <div style={{ background: cardBg, border, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
+                    {commentary.title && (
+                      <div style={{ fontSize: '16px', fontWeight: 'bold', color: gold, marginBottom: '12px', lineHeight: 1.5 }}>
+                        "{commentary.title}"
+                      </div>
+                    )}
+                    {[
+                      { label: '종합', text: commentary.summary },
+                      { label: '좋은 점', text: commentary.good },
+                      { label: '더 좋아지려면', text: commentary.improve },
+                      { label: '조언', text: commentary.advice },
+                    ].filter(s => s.text).map((s, i) => (
+                      <div key={i} style={{ borderLeft: `3px solid ${gold}`, padding: '4px 12px', marginBottom: '14px' }}>
+                        <div style={{ fontSize: '12px', color: gold, marginBottom: '4px' }}>{s.label}</div>
+                        <div style={{ fontSize: '14px', color: '#e0dce8', lineHeight: 1.8 }}>{s.text}</div>
+                      </div>
+                    ))}
                   </div>
                 )}
 
-                {/* 옛 저장 결과(5관점 없음): 예전 형식으로 표시 + 다시풀기 안내 */}
-                {commentary && !hasNew5 && legacyText && (
-                  <div style={{ background: cardBg, border, borderRadius: '16px', padding: '20px', marginBottom: '14px' }}>
-                    <div style={{ fontSize: '14px', color: '#e0dce8', lineHeight: 1.9, whiteSpace: 'pre-line' }}>{legacyText}</div>
-                    <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)', fontSize: '12px', color: '#8a88a0', textAlign: 'center' }}>
-                      새로워진 5관점 상세 풀이는 "다른 이름 다시 풀기"로 다시 풀어보세요.
-                    </div>
+                <div style={{ background: cardBg, border, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '13px', color: gold, marginBottom: '14px', fontWeight: 'bold' }}>
+                    이름 분석 (4가지 기준)
                   </div>
-                )}
-
-                {/* 5관점 겸손 해설 카드 */}
-                {commentary && hasNew5 && [
-                  {
-                    num: '一', label: '음양오행', sub: '획수에 담긴 음과 양',
-                    text: commentary.eumyang,
-                    data: result.yinyang ? (
-                      <span>
-                        {result.yinyang.strokes.map((s, i) => (
-                          <span key={i} style={{ marginRight: '10px' }}>
-                            {(chars.filter(Boolean)[i]?.hanja) ?? ''}
-                            <span style={{ color: result.yinyang.marks[i] === '양' ? '#E0A04A' : '#7BAECF', marginLeft: '3px' }}>
-                              {s}획·{result.yinyang.marks[i]}
-                            </span>
-                          </span>
-                        ))}
-                      </span>
-                    ) : null,
-                  },
-                  {
-                    num: '二', label: '발음오행', sub: '부르는 소리의 기운',
-                    text: commentary.baleum,
-                    data: <span style={{ letterSpacing: '.05em' }}>{chars.filter(Boolean).map(c => c!.hangul).join(' → ')}</span>,
-                  },
-                  {
-                    num: '三', label: '수리오행', sub: '획수가 그리는 인생 네 마디',
-                    text: commentary.suri,
-                    data: (
-                      <span>
-                        {result.suri.gyeok.map((g, i) => (
-                          <span key={i} style={{ marginRight: '10px', fontSize: '11.5px' }}>
-                            {g.label} {g.name}
-                            <span style={{ color: g.fortune === '길' ? '#7BC86C' : g.fortune === '흉' ? '#E0A04A' : '#9a98b0' }}>({g.fortune})</span>
-                          </span>
-                        ))}
-                      </span>
-                    ),
-                  },
-                  {
-                    num: '四', label: '자원오행', sub: '한자에 담긴 기운',
-                    text: commentary.jawon,
-                    data: <span>{chars.filter(Boolean).map((c, i) => (
-                      <span key={i}>{i > 0 ? ' → ' : ''}{c!.hanja}({c!.resourceOhaeng})</span>
-                    ))}</span>,
-                  },
-                  {
-                    num: '五', label: '사주와의 만남', sub: '이름이 사주를 어떻게 돕는가',
-                    text: commentary.yongsin,
-                    data: <span>이 사주가 구하는 기운 · <span style={{ color: gold }}>{result.weakElement}</span></span>,
-                  },
-                ].filter(s => s.text).map((s, i) => (
-                  <div key={i} style={{ background: cardBg, border, borderRadius: '16px', padding: '20px', marginBottom: '14px' }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '15px', color: '#c98668', fontWeight: 'bold' }}>{s.num}</span>
-                      <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#e8e4ff' }}>{s.label}</span>
-                      <span style={{ fontSize: '11px', color: '#8a88a0' }}>{s.sub}</span>
+                  {[
+                    { label: '사주 보완 (용신)', f: result.yongsinBohwan },
+                    { label: '한자 기운 (자원오행)', f: result.resourceFlow },
+                    { label: '소리 기운 (발음오행)', f: result.soundFlow },
+                  ].map((row, i) => (
+                    <div key={i} style={{ marginBottom: '14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '13px', color: '#e8e4ff' }}>{row.label}</span>
+                        <span style={{ fontSize: '13px', fontWeight: 'bold', color: gradeColor(row.f.grade) }}>{row.f.grade}</span>
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#8a88a0', lineHeight: 1.6 }}>{row.f.detail}</div>
                     </div>
-                    <div style={{ fontSize: '12px', color: '#a8a4bc', marginBottom: '12px', paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                      {s.data}
+                  ))}
+
+                  <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <span style={{ fontSize: '13px', color: '#e8e4ff' }}>이름 수리 (81수리)</span>
+                      <span style={{ fontSize: '13px', fontWeight: 'bold', color: gradeColor(result.suri.grade) }}>{result.suri.grade}</span>
                     </div>
-                    <div style={{ fontSize: '14px', color: '#e0dce8', lineHeight: 1.9 }}>{s.text}</div>
+                    {result.suri.gyeok.map((g: { label: string; sum: number; name: string; fortune: string }, i: number) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#8a88a0', marginBottom: '4px' }}>
+                        <span>{g.label}</span>
+                        <span style={{ color: g.fortune === '길' ? '#7BC86C' : g.fortune === '흉' ? '#E0A04A' : '#9a98b0' }}>
+                          {g.name} ({g.fortune})
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
 
-                {/* 맺음 */}
-                {commentary && commentary.conclusion && (
-                  <div style={{
-                    background: 'rgba(250,199,117,0.06)', border: `1px solid ${gold}`,
-                    borderRadius: '16px', padding: '22px', marginBottom: '16px',
-                  }}>
-                    <div style={{ fontSize: '12px', color: gold, letterSpacing: '.3em', textAlign: 'center', marginBottom: '14px' }}>맺 음</div>
-                    <div style={{ fontSize: '14.5px', color: '#e8e4ff', lineHeight: 2 }}>{commentary.conclusion}</div>
+                <div style={{
+                  background: 'rgba(250,199,117,0.08)', border: `1px solid ${gold}`,
+                  borderRadius: '16px', padding: '18px', marginBottom: '16px', textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '6px' }}>종합</div>
+                  <div style={{ fontSize: '22px', fontWeight: 'bold', color: gradeColor(result.overallGrade) }}>
+                    {result.overallGrade}
                   </div>
-                )}
-
-                {/* 학파 안내 (판정이 아님을 명시) */}
-                <div style={{ fontSize: '11px', color: '#8a88a0', textAlign: 'center', lineHeight: 1.8, marginBottom: '18px', fontStyle: 'italic' }}>
-                  성명학은 학파에 따라 발음오행·수리·용신을 달리 보는 여러 견해가 있습니다.<br />
-                  이 풀이는 그 가운데 한 관점으로 이름의 결을 살핀 것으로, 참고 삼아 헤아리시길 바랍니다.
                 </div>
 
                 {/* ★ 전문가 상담 연결 — 개명·아기와 동일한 ConsultButton (색상 통일 + 가격표 토글 연동) */}
@@ -810,8 +741,8 @@ function DiagnosisInner() {
                 <div style={{ background: 'linear-gradient(160deg,#34322f 0%,#2C2C2A 100%)', border: `1px solid ${gold}`, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
                   <div style={{ fontSize: '12px', color: '#f48fb1', fontStyle: 'italic', marginBottom: '14px', lineHeight: 1.5, textAlign: 'center' }}>
                     {result.overallGrade !== '좋음'
-                      ? '사주에 필요한 기운을 더 담고 싶다면, 이런 이름은 어떨까요?'
-                      : '이 이름과 사주는 잘 어우러집니다. 다른 결도 살펴볼까요?'}
+                      ? '부족한 기운을 채우면 이름이 당신을 받쳐줍니다'
+                      : '지금도 좋은 이름이에요. 다른 가능성도 살펴볼까요?'}
                   </div>
 
                   <button onClick={() => router.push('/manseryeok/naming/rename/newname')}
@@ -829,8 +760,7 @@ function DiagnosisInner() {
                   {nameId ? '← 마이페이지로' : '다른 이름 풀어보기'}
                 </button>
               </>
-              )
-            })()}
+            )}
           </>
         )}
       </div>
