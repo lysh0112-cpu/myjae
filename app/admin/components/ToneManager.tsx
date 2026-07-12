@@ -9,6 +9,7 @@ export default function ToneManager() {
   const [tarot, setTarot] = useState('')
   const [naming, setNaming] = useState('')
   const [fortune, setFortune] = useState('')
+  const [yongsinMode, setYongsinMode] = useState<'precise' | 'simple'>('precise') // 작명 용신 엔진
   const [defaultRules, setDefaultRules] = useState('')
   const [defaultTerms, setDefaultTerms] = useState('')
   const [loading, setLoading] = useState(true)
@@ -34,6 +35,7 @@ export default function ToneManager() {
         setTarot(d.tarot_guide || '')
         setNaming(d.naming_guide || '')
         setFortune(d.fortune_guide || '')
+        setYongsinMode(d.naming_yongsin_mode === 'simple' ? 'simple' : 'precise')
         setDefaultRules(d.default_rules || '')
         setDefaultTerms(d.default_terms || '')
       }
@@ -59,6 +61,7 @@ export default function ToneManager() {
           tarot_guide: tarot,
           naming_guide: naming,
           fortune_guide: fortune,
+          naming_yongsin_mode: yongsinMode,
         }),
       })
       const d = await res.json()
@@ -165,6 +168,38 @@ export default function ToneManager() {
         <div style={label}>✏️ 작명·이름풀이 전용</div>
         <div style={hint}>이름풀이·개명 해설에만 추가로 적용됩니다. 이름은 민감하니 좋은 점 먼저, 한자 뜻 살리기 등.</div>
         <textarea value={naming} onChange={e => setNaming(e.target.value)} style={textarea} placeholder="작명·개명 해설 전용 지침" />
+
+        {/* 작명 용신 엔진 선택 토글 */}
+        <div style={{ marginTop: 12, padding: '14px 16px', background: 'rgba(250,199,117,0.06)', border: '1px solid rgba(250,199,117,0.25)', borderRadius: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: gold }}>작명 용신 계산 방식</div>
+              <div style={{ fontSize: 12, color: '#8a8578', marginTop: 4, lineHeight: 1.6 }}>
+                {yongsinMode === 'precise'
+                  ? '정밀 — 억부·조후·병약용신까지 계산 (사주 화면과 동일, 권장)'
+                  : '단순 — 빠른 기본 계산 (사주 화면과 다를 수 있음)'}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setYongsinMode(yongsinMode === 'precise' ? 'simple' : 'precise')}
+              style={{
+                position: 'relative', width: 58, height: 30, borderRadius: 15, border: 'none', cursor: 'pointer',
+                background: yongsinMode === 'precise' ? gold : '#4a4740', transition: 'background .2s', flexShrink: 0,
+              }}
+              aria-label="용신 계산 방식 전환"
+            >
+              <span style={{
+                position: 'absolute', top: 3, left: yongsinMode === 'precise' ? 31 : 3, width: 24, height: 24,
+                borderRadius: '50%', background: '#fff', transition: 'left .2s',
+              }} />
+            </button>
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 10, fontSize: 11 }}>
+            <span style={{ color: yongsinMode === 'precise' ? gold : '#6a665c', fontWeight: yongsinMode === 'precise' ? 700 : 400 }}>● 정밀(기본)</span>
+            <span style={{ color: yongsinMode === 'simple' ? gold : '#6a665c', fontWeight: yongsinMode === 'simple' ? 700 : 400 }}>● 단순</span>
+          </div>
+        </div>
       </div>
 
       <div style={{ marginBottom: 20 }}>
