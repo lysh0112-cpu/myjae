@@ -71,59 +71,43 @@ export async function POST(req: Request) {
       }
     }
 
-    // ---------- 2) Claude 총평 생성 (5관점 겸손 해설) ----------
-    // 관점별 팩트를 근거로 넘기고, "좋다/나쁘다 판정 금지 + 특징 서술"로 생성.
-
-    // 음양 서술용
-    const yy = result.yinyang
-    const yyLine = yy.strokes.map((s, i) => `${(body.given[i - 1]?.hanja) ?? body.surname.hanja}(${s}획·${yy.marks[i] === '양' ? '양' : '음'})`).join(' ')
-    // 발음/자원 흐름 서술용
-    const soundFacts = JSON.stringify(result.soundFlow.facts ?? {})
-    const resourceFacts = JSON.stringify(result.resourceFlow.facts ?? {})
-
+    // ---------- 2) Claude 총평 생성 ----------
+    // 프롬프트 = [공통 말투] + [작명 전용 지시문] + [기능 뼈대: 채점 결과·출력형식]
     const commentaryPrompt = `${toneBlock}
 
 ${namingGuide}
 
-당신은 한국 전통 성명학에 정통한 작명가입니다. 아래 한 사람의 이름을 다섯 관점에서 풀이합니다. 이 글은 고객이 돈을 내고 받는 결과물이니, 품격 있고 정성스럽게 써 주세요.
+당신은 따뜻하면서도 정직한 작명·명리학 전문가입니다.
+아래는 한 사람의 이름이 그 사람의 사주에 얼마나 잘 맞는지 분석한 결과입니다.
+이 해설은 고객이 받는 결과물입니다.
 
-[가장 중요한 원칙 — 반드시 지킬 것]
-- 이름에 "좋다/나쁘다", "좋은 이름/나쁜 이름"으로 판정하지 마세요. 성명학은 학파마다 기준이 달라 단정할 수 없습니다.
-- 대신 각 관점에서 이 이름이 "어떤 특징을 지니는지" 있는 그대로 서술하세요. 아쉬운 점도 "이렇게 보는 견해가 있다", "참고하시면 좋다"처럼 부드럽고 겸손하게 전하세요.
-- 아래 제공된 '분석 데이터'의 사실(오행·획수·흐름·수리)만 근거로 삼고, 없는 내용을 지어내지 마세요.
-- 마크다운 기호(##, **, -)는 절대 쓰지 마세요.
-- 각 관점 해설은 세 부분으로: ①이 관점이 무엇을 보는지 간단히 → ②이 이름은 어떤지(제공된 사실 근거) → ③그것이 어떤 의미인지. 각 관점 3~5문장으로 넉넉히.
+[반드시 지킬 기능 규칙]
+- 아래 '분석 결과'의 등급과 근거를 정확히 반영하세요. 결과에 없는 내용을 지어내지 마세요.
+- 마크다운 기호(##, **, ---)는 절대 쓰지 마세요.
 
 [이름]
 ${hangulName} (${hanjaName})
 ${body.sajuText ? `사주: ${body.sajuText}` : ''}
 사주에 필요한 기운(용신): ${body.yongsin}
 
-[분석 데이터]
-1. 음양오행(획수 음양): ${yyLine} → ${yy.state === '조화' ? '홀수(양)와 짝수(음)가 섞여 조화' : yy.state === '순양' ? '모두 홀수(순양)로 치우침' : '모두 짝수(순음)로 치우침'}
-   (순양·순음은 음양이 섞인 배열을 더 조화롭게 보는 견해가 있음. 좋고 나쁨의 문제가 아니라 특징으로 서술)
-2. 발음오행(소리 기운): ${soundFacts}
-   (각 글자 초성의 오행과 이웃 간 상생 여부. saeng=true는 서로 살려주는 흐름)
-3. 수리오행(81수리 4격): ${suriText}
-   (초년·청년·중년·말년 각 시기의 격과 길흉. 흉이 있어도 단정 말고 '부침이 있다 보는 견해가 있다'로)
-4. 자원오행(한자 기운): ${resourceFacts}
-   (각 한자 자원오행과 이웃 간 상생 여부)
-5. 사주 보완(용신): 이 사주에 필요한 기운은 ${body.yongsin}. ${result.yongsinBohwan.detail}
-   (이름의 자원오행이 용신을 담고 있으면 사주와 어우러진다고, 담지 못하면 그 기운을 담은 한자를 더하면 좋다고 제안형으로)
+[분석 결과]
+용신 보완: ${result.yongsinBohwan.grade} — ${result.yongsinBohwan.detail}
+자원오행 흐름: ${result.resourceFlow.grade} — ${result.resourceFlow.detail}
+발음오행 흐름: ${result.soundFlow.grade} — ${result.soundFlow.detail}
+81수리: ${result.suri.grade} (${suriText})
+종합: ${result.overallGrade}
 
-아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
+위 결과를 바탕으로, 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
 {
-  "title": "이 이름 풀이의 품격 있는 한 줄 제목",
-  "eumyang": "1. 음양오행 관점 해설 (3~5문장)",
-  "baleum": "2. 발음오행 관점 해설 (3~5문장)",
-  "suri": "3. 수리오행 관점 해설 (3~5문장)",
-  "jawon": "4. 자원오행 관점 해설 (3~5문장)",
-  "yongsin": "5. 사주 보완(용신) 관점 해설 (3~5문장)",
-  "conclusion": "다섯 관점을 아우르는 맺음말 3~4문장. 판정하지 말고, 이 이름의 특징을 짚은 뒤 '사주와 어우러진다' 혹은 '보완하고 싶다면 이런 기운을'처럼 따뜻하게 마무리"
+  "title": "이 이름 풀이의 한 줄 제목",
+  "summary": "이름이 사주에 잘 맞는지 종합 평가 2~3문장. 사실대로, 강점 중심으로",
+  "good": "이 이름의 좋은 점 2~3문장",
+  "improve": "더 좋아질 수 있는 부분 1~2문장. 아쉬운 점이 있으면 어떤 오행의 한자를 보완하면 좋은지 구체적으로. 없으면 빈 문자열",
+  "advice": "이름과 함께 살아갈 사람에게 주는 따뜻한 조언 1~2문장"
 }`
 
     let commentary: Record<string, string> = {
-      title: '이름 풀이', eumyang: '', baleum: '', suri: '', jawon: '', yongsin: '', conclusion: '',
+      title: '이름 풀이', summary: '', good: '', improve: '', advice: '',
     }
 
     const anthropicKey = process.env.ANTHROPIC_API_KEY
@@ -138,14 +122,14 @@ ${body.sajuText ? `사주: ${body.sajuText}` : ''}
           },
           body: JSON.stringify({
             model: 'claude-sonnet-4-6',
-            max_tokens: 3500,
+            max_tokens: 1500,
             messages: [{ role: 'user', content: commentaryPrompt }],
           }),
         })
         const cData = await cRes.json()
         const rawText = cData.content?.find((c: { type: string }) => c.type === 'text')?.text || '{}'
         const clean = rawText.replace(/```json|```/g, '').trim()
-        try { commentary = JSON.parse(clean) } catch { commentary.conclusion = clean.slice(0, 300) }
+        try { commentary = JSON.parse(clean) } catch { commentary.summary = clean.slice(0, 300) }
       } catch (e) {
         console.error('claude error:', e)
       }
