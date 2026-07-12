@@ -16,7 +16,7 @@ export async function GET() {
     const supabase = admin()
     const { data } = await supabase
       .from('tone_settings')
-      .select('tone_rules, easy_terms, mulsang_guide, tarot_guide, naming_guide, fortune_guide, updated_at')
+      .select('tone_rules, easy_terms, mulsang_guide, tarot_guide, naming_guide, fortune_guide, naming_yongsin_mode, updated_at')
       .eq('id', 1)
       .maybeSingle()
 
@@ -26,6 +26,7 @@ export async function GET() {
     const tarot_guide = (data?.tarot_guide || '')      // 타로 전용
     const naming_guide = (data?.naming_guide || '')    // 작명·개명 전용
     const fortune_guide = (data?.fortune_guide || '')  // 오늘의 운세 전용
+    const naming_yongsin_mode = (data?.naming_yongsin_mode === 'simple') ? 'simple' : 'precise' // 작명 용신 엔진(기본 정밀)
 
     return NextResponse.json({
       tone_rules,
@@ -34,6 +35,7 @@ export async function GET() {
       tarot_guide,
       naming_guide,
       fortune_guide,
+      naming_yongsin_mode,
       updated_at: data?.updated_at || null,
       default_rules: DEFAULT_TONE_RULES_TEXT,
       default_terms: DEFAULT_EASY_TERMS_TEXT,
@@ -46,7 +48,7 @@ export async function GET() {
 // 저장 — 관리자가 편집한 지시문을 tone_settings(id=1)에 저장(upsert).
 export async function POST(req: Request) {
   try {
-    const { tone_rules, easy_terms, mulsang_guide, tarot_guide, naming_guide, fortune_guide } = await req.json()
+    const { tone_rules, easy_terms, mulsang_guide, tarot_guide, naming_guide, fortune_guide, naming_yongsin_mode } = await req.json()
     const supabase = admin()
 
     // 넘어온 값만 갱신 (undefined면 기존 값 유지)
@@ -57,6 +59,7 @@ export async function POST(req: Request) {
     if (tarot_guide !== undefined) patch.tarot_guide = tarot_guide ?? ''
     if (naming_guide !== undefined) patch.naming_guide = naming_guide ?? ''
     if (fortune_guide !== undefined) patch.fortune_guide = fortune_guide ?? ''
+    if (naming_yongsin_mode !== undefined) patch.naming_yongsin_mode = (naming_yongsin_mode === 'simple') ? 'simple' : 'precise'
 
     const { error } = await supabase
       .from('tone_settings')
