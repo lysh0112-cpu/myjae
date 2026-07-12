@@ -71,7 +71,7 @@ interface NamingInputBlob {
 
 // 결과 해설 스냅샷 (result_data)
 export interface NamingResultSnapshot {
-  result: DiagnoseResult
+  result: DiagnoseResult | null
   // 통변 스냅샷(그대로 저장·복원만; 내부 필드는 화면에서 해석).
   // 구버전(summary/good/improve/advice)·신버전(5관점 yinyang/baleum/…/conclusion) 모두 수용.
   commentary: Record<string, unknown> | null
@@ -104,7 +104,7 @@ export async function saveNamingRecord(args: {
   chars: (NameChar | null)[]
   relation: string                 // self | 관계
   person: NamingPerson | null
-  result: DiagnoseResult
+  result: DiagnoseResult | null
   commentary: NamingResultSnapshot['commentary']
   serviceType?: string             // 'naming'(개명, 기본) | 'newborn'(아기)
 }): Promise<{ ok: boolean; id?: string; message?: string }> {

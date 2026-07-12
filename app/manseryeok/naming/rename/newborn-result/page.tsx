@@ -311,8 +311,20 @@ function NewbornResultInner() {
   async function pickFinal(t: TryItem) {
     if (saving || finalPicked) return
 
+    // ★ 통변 누락 방지: localStorage의 최신 tries에서 같은 이름의 최신 통변을 다시 읽어 보강.
+    //   (state의 t가 stale이어도 저장된 통변을 확실히 가져온다)
+    let picked = t
+    try {
+      const h = JSON.parse(localStorage.getItem(BABY_HISTORY_KEY) || '{}')
+      if (h.babyKey === bkey && Array.isArray(h.tries)) {
+        const key = t.chars.map((c) => c.hanja).join('')
+        const fresh = (h.tries as TryItem[]).find((x) => x.chars.map((c) => c.hanja).join('') === key)
+        if (fresh) picked = fresh
+      }
+    } catch {}
+
     // 최종 선택 경고 — 남은 횟수가 있으면 "소멸된다" 안내 후 확인
-    const hanjaName0 = t.chars.map((c) => c.hanja).join('')
+    const hanjaName0 = picked.chars.map((c) => c.hanja).join('')
     const warn = remaining > 0
       ? `"${hanjaName0}"(으)로 최종 선택할까요?\n\n최종 선택하면 더 이상 다른 이름을 지어볼 수 없어요.\n(남은 조회 ${remaining}회는 사라져요.)`
       : `"${hanjaName0}"(으)로 최종 선택할까요?\n\n최종 선택하면 더 이상 다른 이름을 지어볼 수 없어요.`
@@ -326,19 +338,19 @@ function NewbornResultInner() {
         setSaving(false)
         return
       }
-      const hangulName = t.chars.map((c) => c.hangul).join('')
-      const hanjaName = t.chars.map((c) => c.hanja).join('')
+      const hangulName = picked.chars.map((c) => c.hangul).join('')
+      const hanjaName = picked.chars.map((c) => c.hanja).join('')
 
       // 저장 시점의 4가지 등급(result)을 박제 → 다시보기는 순수 읽기 전용
       let savedResult: DiagnoseResult | null = null
       try {
-        if (saju && dayStem && t.chars.length >= 2) {
+        if (saju && dayStem && picked.chars.length >= 2) {
           const y = calcYongsinCompat(saju, dayStem)
           const surname: NameChar = {
-            hangul: t.chars[0].hangul, hanja: t.chars[0].hanja,
-            strokes: t.chars[0].strokes, resourceOhaeng: ohaengChar(t.chars[0].resourceOhaeng),
+            hangul: picked.chars[0].hangul, hanja: picked.chars[0].hanja,
+            strokes: picked.chars[0].strokes, resourceOhaeng: ohaengChar(picked.chars[0].resourceOhaeng),
           }
-          const given: NameChar[] = t.chars.slice(1).map((c) => ({
+          const given: NameChar[] = picked.chars.slice(1).map((c) => ({
             hangul: c.hangul, hanja: c.hanja, strokes: c.strokes, resourceOhaeng: ohaengChar(c.resourceOhaeng),
           }))
           savedResult = diagnoseName({ surname, given, yongsin: y.yongsin, heeksin: y.heeksin, elementScore: y.score })
@@ -349,36 +361,34 @@ function NewbornResultInner() {
         user_id: u.user.id,
         hangul_name: hangulName,
         hanja_name: hanjaName,
-        chars: t.chars,
+        chars: picked.chars,
         result: savedResult,
-        commentary: t.commentary ?? null,
+        commentary: picked.commentary ?? null,
         kind: 'newborn',
         person_key: bkey,
       })
 
-      // ── 신규: 아기 이름 보관함(saju_records, service_type='newborn')에도 병행 저장 ──
+      // ── 아기 이름 보관함(saju_records, service_type='newborn')에도 병행 저장 ──
       //   홈 > [아기 이름 짓기] 진입 시 뜨는 보관함이 이 기록을 읽는다.
-      //   (my_names·마이페이지 저장은 위에서 유지 — 병행)
+      //   ★ 최종선택했으면 무조건 저장한다 (savedResult 없어도 이름·통변은 저장).
       try {
-        if (savedResult) {
-          const person = baby ? {
-            gender: baby.gender, calType: baby.calType,
-            year: baby.year, month: baby.month, day: baby.day,
-            leapMonth: baby.leapMonth, hour: baby.hour,
-          } : null
-          const charsForSave: (NameChar | null)[] = t.chars.map((c) => ({
-            hangul: c.hangul, hanja: c.hanja,
-            strokes: c.strokes, resourceOhaeng: ohaengChar(c.resourceOhaeng),
-          }))
-          await saveNamingRecord({
-            chars: charsForSave,
-            relation: 'baby',
-            person,
-            result: savedResult,
-            commentary: (t.commentary ?? null) as Record<string, unknown> | null,
-            serviceType: 'newborn',
-          })
-        }
+        const person = baby ? {
+          gender: baby.gender, calType: baby.calType,
+          year: baby.year, month: baby.month, day: baby.day,
+          leapMonth: baby.leapMonth, hour: baby.hour,
+        } : null
+        const charsForSave: (NameChar | null)[] = picked.chars.map((c) => ({
+          hangul: c.hangul, hanja: c.hanja,
+          strokes: c.strokes, resourceOhaeng: ohaengChar(c.resourceOhaeng),
+        }))
+        await saveNamingRecord({
+          chars: charsForSave,
+          relation: 'baby',
+          person,
+          result: savedResult,
+          commentary: (picked.commentary ?? null) as Record<string, unknown> | null,
+          serviceType: 'newborn',
+        })
       } catch (e) { console.error(e) }
 
       setFinalPicked(true)

@@ -271,13 +271,25 @@ function NewbornHanjaInner() {
     let tries = readTries()
     const existIdx = tries.findIndex((t) => t.chars.map((c) => c.hanja).join('') === hanjaKey)
     if (existIdx === -1) {
+      // ★ 마지막 회차 이름도 반드시 저장한다 (담고 나서 안내).
+      //   TRY_LIMIT을 이미 채웠으면(초과) 그때만 담지 않고 안내.
       if (tries.length >= TRY_LIMIT) {
-        alert('총 ' + TRY_LIMIT + '회까지 이름을 지어볼 수 있어요.\n지금까지 본 이름 중에서 골라주세요.')
+        alert('이름을 모두 지어보셨어요.\n지금까지 지어본 이름 중에서 최종 선택해 주세요.')
         setConfirmOpen(false)
         gotoResult()
         return
       }
       tries.push({ name: hangulName, chars: nameChars })
+      // 방금 담은 게 마지막 회차(=TRY_LIMIT번째)라면 안내
+      if (tries.length >= TRY_LIMIT) {
+        try {
+          localStorage.setItem(BABY_HISTORY_KEY, JSON.stringify({ babyKey: bkey, tries }))
+        } catch {}
+        alert('마지막 회차예요.\n이 이름까지 저장했어요. 이제 후보 중에서 최종 선택해 주세요.')
+        setConfirmOpen(false)
+        gotoResult()
+        return
+      }
     } else {
       const item = tries.splice(existIdx, 1)[0]
       tries.push(item)
