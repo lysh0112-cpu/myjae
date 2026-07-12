@@ -2,12 +2,17 @@
 import { Suspense, useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
-import { calcYongsin } from '@/lib/saju/yongsin'
+import { calcYongsinCompat } from '@/lib/saju/yongsinNew'
 import { supabase } from '@/lib/supabase'
 import type { DiagnoseResult, NameChar } from '@/lib/saju/naming'
-import PageHeader from '@/app/components/common/PageHeader'
 import ConsultButton from '@/app/components/common/ConsultButton'
 import { fromProfile, fromUrl, personKey, type MyInfo } from '@/lib/saju/myInfo'
+import {
+  saveNamingRecord, getNamingRecord,
+  type NamingPerson,
+} from '@/lib/saju/namingRecords'
+import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
 
@@ -37,14 +42,20 @@ interface Commentary {
   advice: string
 }
 
-const gold = '#FAC775'
-const cardBg = '#2C2C2A'
-const border = '1px solid rgba(250,199,117,0.15)'
+// ── 신버전 피치톤 팔레트 (result-new / 타로 신버전과 동일) ──
+const PAGE_BG = '#FDF6F0'      // 페이지 배경
+const cardBg = '#fffbf7'       // 카드 표면
+const gold = '#c8783c'         // 강조(구 금색 대체) — 변수명은 유지해 하위 코드 그대로 사용
+const ink = '#1a1a1a'          // 본문 진한 텍스트
+const sub = '#b4785a'          // 보조 텍스트
+const subWarm = '#96502e'      // 따뜻한 강조 텍스트
+const rose = '#c8506e'         // 삭제·경고 포인트
+const border = '0.5px solid #f0e0d5'
 
 function gradeColor(g: string) {
-  if (g === '좋음') return '#7BC86C'
-  if (g === '아쉬움') return '#E0A04A'
-  return '#9a98b0'
+  if (g === '좋음') return '#4a9450'
+  if (g === '아쉬움') return '#c8783c'
+  return '#96502e'
 }
 
 function isAvoidChar(row: HanjaRow): boolean {
@@ -58,11 +69,46 @@ function isHangulSyllable(ch: string): boolean {
   return code >= 0xac00 && code <= 0xd7a3
 }
 
+// ── 신버전 자체 피치 sticky 헤더 (공용 다크 PageHeader 대체) ──
+//   result-new / 타로 신버전과 동일 구조: 반투명 피치 + blur + 하단 보더.
+function PitchHeader({ title, onBack, onHome }: { title: string; onBack: () => void; onHome?: () => void }) {
+  return (
+    <div style={{
+      position: 'sticky', top: 0, zIndex: 50,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '13px 16px', background: 'rgba(250,250,248,0.96)',
+      backdropFilter: 'blur(10px)', borderBottom: '0.5px solid #f0e0d5',
+    }}>
+      <button onClick={onBack} aria-label="뒤로"
+        style={{ background: 'none', border: 'none', color: '#999', fontSize: '20px', cursor: 'pointer', padding: 0, lineHeight: 1 }}>←</button>
+      <span style={{ fontSize: '15px', fontWeight: 500, color: '#1a1a1a' }}>{title}</span>
+      {onHome
+        ? <button onClick={onHome} aria-label="홈" style={{ background: 'none', border: 'none', fontSize: '17px', cursor: 'pointer', padding: 0 }}>🏠</button>
+        : <span style={{ width: 20 }} />}
+    </div>
+  )
+}
+
 function DiagnosisInner() {
   const router = useRouter()
   const sp = useSearchParams()
 
   const [info, setInfo] = useState<MyInfo | null>(null)
+
+  // ── 진단 대상 구분 (내 이름 / 남 이름) ──
+  //   URL에 name·relation 이 있으면 "남(가족·지인)"을 진단하는 중.
+  //   보관함 저장 시 relation('self' 또는 관계)으로 구분해 넣는다.
+  const urlName = sp.get('name') || ''
+  const urlRelation = sp.get('relation') || ''
+  const targetRelation = urlRelation || (urlName ? '지인' : 'self')
+
+  // 사람 선택 모달 (다른 사람 진단하기)
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  // 보관함 다시보기(recordId)로 진입했는지 + saju_records 저장 id
+  const recordId = sp.get('recordId')
+  const [savedRecordId, setSavedRecordId] = useState<string | null>(null)
+  const [viewOnly, setViewOnly] = useState(false)
 
   // 가격 (이름 풀이 / 한자 바꾸기)
   const [readPrice, setReadPrice] = useState(5000)
@@ -145,11 +191,6 @@ function DiagnosisInner() {
   const [commentary, setCommentary] = useState<Commentary | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const [savedOffer, setSavedOffer] = useState<{
-    result: DiagnoseResult
-    commentary: Commentary
-    chars: (NameChar | null)[]
-  } | null>(null)
 
   // ★ 마이페이지에서 특정 이름풀이 id를 눌러 들어온 경우 (?nameId=xxx)
   // 저장된 그 1건만 불러와 바로 결과 화면으로. (회원·기록이 많아져도 누른 1건만 조회)
@@ -176,7 +217,6 @@ function DiagnosisInner() {
           setCommentary(row.commentary as Commentary)
           setChars(row.chars as (NameChar | null)[])
           setSyllables((row.chars as (NameChar | null)[]).filter(Boolean).map((c) => c!.hangul))
-          setSavedOffer(null)   // 저장건 불러오기 배너는 필요 없음
           setStep('result')
         }
       } catch (e) {
@@ -189,44 +229,43 @@ function DiagnosisInner() {
     return () => { cancelled = true }
   }, [nameId])
 
+  // ★ 남(가족·지인) 진단으로 들어온 경우: URL의 이름(name)을 입력칸에 자동으로 채운다.
+  //   보관함 > "새 이름 풀이하기" > 사람 선택(오연희 등) 시 그 사람 이름이 실려 온다.
+  //   → 사용자가 다시 타이핑하지 않고 바로 한자 고르기로 넘어갈 수 있다.
   useEffect(() => {
-    if (nameId) return          // id로 들어온 경우는 최근건 배너 안 띄움
-    if (!info) return
-    let cancelled = false
-    async function checkSaved() {
-      try {
-        const { data: u } = await supabase.auth.getUser()
-        if (!u?.user) return
-        const { data: rows } = await supabase
-          .from('my_names')
-          .select('chars, result, commentary, person_key')
-          .eq('user_id', u.user.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-        if (cancelled) return
-        const row = rows && rows[0]
-        if (row && row.person_key === personKey(info) && row.result && row.commentary && Array.isArray(row.chars)) {
-          setSavedOffer({
-            result: row.result as DiagnoseResult,
-            commentary: row.commentary as Commentary,
-            chars: row.chars as (NameChar | null)[],
-          })
-        }
-      } catch {}
-    }
-    checkSaved()
-    return () => { cancelled = true }
-  }, [info, nameId])
+    if (nameId || recordId) return    // 저장건 다시보기는 제외
+    if (urlName) setNameInput(urlName)
+  }, [urlName, nameId, recordId])
 
-  function loadSavedResult() {
-    if (!savedOffer) return
-    setResult(savedOffer.result)
-    setCommentary(savedOffer.commentary)
-    setChars(savedOffer.chars)
-    setSyllables(savedOffer.chars.filter(Boolean).map((c) => c!.hangul))
-    setStep('result')
-    setSavedOffer(null)
-  }
+  // ── 보관함(saju_records) 다시보기: recordId 있으면 스냅샷 로드 → 바로 결과 ──
+  //   재계산·AI 재호출 없이 저장된 풀이를 그대로 보여준다 (viewOnly).
+  useEffect(() => {
+    if (!recordId) return
+    let cancelled = false
+    async function loadByRecordId() {
+      setLoadingSaved(true)
+      try {
+        const rec = await getNamingRecord(recordId!)
+        if (cancelled || !rec) return
+        const snap = rec.snapshot
+        if (snap?.result) {
+          setResult(snap.result)
+          setCommentary(snap.commentary ?? null)
+          setChars(rec.chars)
+          setSyllables(rec.chars.filter(Boolean).map((c) => c!.hangul))
+          setSavedRecordId(rec.id)
+          setViewOnly(true)
+          setStep('result')
+        }
+      } catch (e) {
+        console.error(e)
+      } finally {
+        if (!cancelled) setLoadingSaved(false)
+      }
+    }
+    loadByRecordId()
+    return () => { cancelled = true }
+  }, [recordId])
 
   function applyName() {
     const cleaned = nameInput.trim().replace(/\s/g, '')
@@ -315,7 +354,7 @@ function DiagnosisInner() {
     setStep('result')
     setLoading(true)
     try {
-      const yongsinResult = calcYongsin(saju, dayStem)
+      const yongsinResult = calcYongsinCompat(saju, dayStem)
       const sajuText = saju.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(', ')
       const res = await fetch('/api/naming', {
         method: 'POST',
@@ -375,11 +414,30 @@ function DiagnosisInner() {
             chars,
             result: data.result ?? null,
             commentary: data.commentary ?? null,
-            kind: 'self',
+            // 남(가족·지인) 진단이면 'other', 내 이름이면 'self'
+            kind: targetRelation === 'self' ? 'self' : 'other',
             person_key: pkey,
           })
         }
       } catch {}
+
+      // ── 신규: saju_records 보관함에도 병행 저장 (service_type='naming') ──
+      //   대량 운영·관계별 트렌드·기기 무관 조회를 위해. (my_names·세션 저장은 위에서 유지)
+      try {
+        const person: NamingPerson | null = info ? {
+          gender: info.gender, calType: info.calType,
+          year: info.year, month: info.month, day: info.day,
+          leapMonth: info.leapMonth, hour: info.hour,
+        } : null
+        const saved = await saveNamingRecord({
+          chars,
+          relation: targetRelation,
+          person,
+          result: data.result as DiagnoseResult,
+          commentary: data.commentary ?? null,
+        })
+        if (saved.ok && saved.id) setSavedRecordId(saved.id)
+      } catch (e) { console.error(e) }
     } catch (e) {
       console.error(e)
     } finally {
@@ -400,8 +458,8 @@ function DiagnosisInner() {
   // ★ id로 저장 결과 불러오는 중 로딩 화면
   if (nameId && loadingSaved && step !== 'result') {
     return (
-      <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto' }}>
-        <PageHeader title="내 이름 풀이" onBack={() => router.push('/mypage')} />
+      <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto' }}>
+        <PitchHeader title="내 이름 풀이" onBack={() => router.push('/mypage')} onHome={() => router.push('/home-new')} />
         <div style={{ padding: '60px 20px', textAlign: 'center', color: gold, fontSize: '14px' }}>
           저장된 이름 풀이를 불러오는 중…
         </div>
@@ -411,15 +469,15 @@ function DiagnosisInner() {
 
   if (!info && !nameId) {
     return (
-      <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto' }}>
-        <PageHeader title="내 이름 풀이" onBack={() => router.push('/manseryeok/naming')} />
-        <div style={{ padding: '40px 20px', textAlign: 'center', color: '#8a88a0' }}>
-          <p style={{ marginBottom: '12px', fontSize: '15px', color: '#e8e4ff' }}>먼저 사주 정보를 입력해주세요.</p>
+      <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto' }}>
+        <PitchHeader title="내 이름 풀이" onBack={() => router.push('/home-new')} onHome={() => router.push('/home-new')} />
+        <div style={{ padding: '40px 20px', textAlign: 'center', color: '#b4785a' }}>
+          <p style={{ marginBottom: '12px', fontSize: '15px', color: '#1a1a1a' }}>먼저 사주 정보를 입력해주세요.</p>
           <p style={{ marginBottom: '24px', fontSize: '13px', lineHeight: 1.7 }}>
             홈 화면에서 생년월일 · 음양력 · 태어난 시(시주)를<br />입력하시면 이름 풀이를 시작할 수 있어요.
           </p>
           <button onClick={() => router.push('/')}
-            style={{ padding: '12px 24px', borderRadius: '12px', background: 'linear-gradient(135deg,#3C3489,#FAC775)', border: 'none', color: '#1a1a18', fontWeight: 'bold', cursor: 'pointer' }}>
+            style={{ padding: '12px 24px', borderRadius: '12px', background: '#c8783c', border: 'none', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>
             홈에서 사주 입력하기 →
           </button>
         </div>
@@ -437,24 +495,20 @@ function DiagnosisInner() {
   const normalList = hanjaList.filter((r) => !isAvoidChar(r))
   const avoidList = hanjaList.filter((r) => isAvoidChar(r))
 
-  // 저장된 이름 석 자 (배너 표시용)
-  const savedHangul = savedOffer ? savedOffer.chars.filter(Boolean).map((c) => c!.hangul).join('') : ''
-  const savedHanja = savedOffer ? savedOffer.chars.filter(Boolean).map((c) => c!.hanja).join('') : ''
-
   const hanjaCard = (row: HanjaRow, i: number, dim: boolean) => (
     <div key={i}
       onClick={() => pickHanja(row)}
       style={{
         display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
-        borderRadius: '12px', background: '#2C2C2A', cursor: 'pointer',
-        border: '1px solid rgba(255,255,255,0.05)', opacity: dim ? 0.45 : 1,
+        borderRadius: '12px', background: '#fffbf7', cursor: 'pointer',
+        border: '0.5px solid #f0e0d5', opacity: dim ? 0.45 : 1,
       }}>
       <span style={{ fontSize: '26px', fontWeight: 'bold', color: gold, minWidth: '32px', textAlign: 'center' }}>
         {row.hanja}
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '13px', color: '#e8e4ff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.meaning}</div>
-        <div style={{ fontSize: '11px', color: '#8a88a0', marginTop: '2px' }}>
+        <div style={{ fontSize: '13px', color: '#1a1a1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.meaning}</div>
+        <div style={{ fontSize: '11px', color: '#b4785a', marginTop: '2px' }}>
           {row.resource_ohaeng}·{row.strokes}획
         </div>
       </div>
@@ -462,50 +516,26 @@ function DiagnosisInner() {
   )
 
   return (
-    <main style={{ minHeight: '100vh', background: '#1a1a18', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
+    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-      <PageHeader title="내 이름 풀이" onBack={() => router.push(nameId ? '/mypage' : '/manseryeok/naming')} />
+      <PitchHeader title="내 이름 풀이" onBack={() => router.push(nameId ? '/mypage' : '/manseryeok/naming/diagnosis/storage')} onHome={() => router.push('/home-new')} />
 
       <div style={{ padding: '16px' }}>
         <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
-          <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '6px' }}>내 사주</div>
-          <div style={{ fontSize: '14px', color: '#e8e4ff' }}>{sajuLine}</div>
+          <div style={{ fontSize: '12px', color: '#b4785a', marginBottom: '6px' }}>내 사주</div>
+          <div style={{ fontSize: '14px', color: '#1a1a1a' }}>{sajuLine}</div>
         </div>
 
-        {step === 'input' && savedOffer && (
-          <div style={{ background: 'rgba(250,199,117,0.08)', border: `1px solid ${gold}`, borderRadius: '14px', padding: '18px', marginBottom: '16px' }}>
-            <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '6px', textAlign: 'center' }}>저장된 내 이름</div>
-            <div style={{ fontSize: '30px', fontWeight: 'bold', color: gold, letterSpacing: '4px', textAlign: 'center', lineHeight: 1.2 }}>
-              {savedHanja || savedHangul}
-            </div>
-            {savedHanja && (
-              <div style={{ fontSize: '14px', color: '#e8e4ff', textAlign: 'center', marginTop: '4px' }}>{savedHangul}</div>
-            )}
-            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-              <button onClick={loadSavedResult}
-                style={{ flex: 1, padding: '12px', borderRadius: '10px', background: gold, border: 'none', color: '#1a1a18', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
-                풀이 다시보기
-              </button>
-              <button onClick={() => router.push('/manseryeok/naming/rename/newname')}
-                style={{ flex: 1, padding: '12px', borderRadius: '10px', background: 'rgba(250,199,117,0.16)', border: `1px solid ${gold}`, color: gold, fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>
-                한자 바꾸기
-              </button>
-            </div>
-            <button onClick={() => setSavedOffer(null)}
-              style={{ width: '100%', marginTop: '8px', padding: '12px', borderRadius: '10px', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: '#8a88a0', fontSize: '13px', cursor: 'pointer' }}>
-              🔄 다른 이름 다시 풀기
-            </button>
-            <div style={{ fontSize: '11px', color: '#8a88a0', textAlign: 'center', marginTop: '10px', lineHeight: 1.5 }}>
-              · 풀이 다시보기는 무료예요<br />
-              · 한자 바꾸기(개명)는 {hanjaPrice.toLocaleString()}원이에요
-            </div>
-          </div>
-        )}
-
-        {step === 'input' && !savedOffer && (
+        {step === 'input' && (
           <>
-            <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '10px' }}>
-              본인 이름을 한글로 입력하세요
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <span style={{ fontSize: '13px', color: '#b4785a' }}>
+                {targetRelation === 'self' ? '본인' : (urlName || '이 분')} 이름을 한글로 입력하세요
+              </span>
+              <button onClick={() => setPickerOpen(true)}
+                style={{ background: 'rgba(200,120,60,0.10)', color: '#96502e', fontSize: '11px', fontWeight: 500, padding: '5px 11px', borderRadius: '16px', border: 'none', cursor: 'pointer' }}>
+                ＋ 다른 사람 진단
+              </button>
             </div>
             <div style={{ display: 'flex', gap: '8px', marginBottom: syllables.length > 0 ? '26px' : '20px' }}>
               <input
@@ -515,18 +545,18 @@ function DiagnosisInner() {
                 placeholder="예: 홍길동"
                 maxLength={5}
                 style={{
-                  flex: 1, padding: '13px', borderRadius: '12px', background: '#1a1a18',
-                  border: '1px solid rgba(255,255,255,0.15)', color: '#e8e4ff', fontSize: '16px',
+                  flex: 1, padding: '13px', borderRadius: '12px', background: '#FDF6F0',
+                  border: '0.5px solid #f0e0d5', color: '#1a1a1a', fontSize: '16px',
                 }} />
               <button onClick={applyName}
-                style={{ padding: '13px 20px', borderRadius: '12px', background: gold, border: 'none', color: '#1a1a18', fontWeight: 'bold', cursor: 'pointer' }}>
+                style={{ padding: '13px 20px', borderRadius: '12px', background: gold, border: 'none', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>
                 확인
               </button>
             </div>
 
             {syllables.length >= 2 && (
               <>
-                <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '16px' }}>
+                <div style={{ fontSize: '13px', color: '#b4785a', marginBottom: '16px' }}>
                   각 글자의 한자를 골라주세요
                 </div>
                 <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -537,31 +567,31 @@ function DiagnosisInner() {
                         <button onClick={() => openPicker(i)} className="active:scale-95"
                           style={{
                             width: '78px', height: '78px', borderRadius: '50%',
-                            background: c ? 'rgba(250,199,117,0.1)' : cardBg,
-                            border: c ? `2px solid ${gold}` : '1px dashed rgba(250,199,117,0.4)',
+                            background: c ? 'rgba(200,120,60,0.10)' : cardBg,
+                            border: c ? `2px solid ${gold}` : '1px dashed #d8a87e',
                             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                             cursor: 'pointer', transition: 'transform 0.15s ease',
                           }}>
                           {c ? (
                             <>
                               <span style={{ fontSize: '30px', fontWeight: 'bold', color: gold, lineHeight: 1 }}>{c.hanja}</span>
-                              <span style={{ fontSize: '10px', color: '#8a88a0', marginTop: '3px' }}>{c.hangul}</span>
+                              <span style={{ fontSize: '10px', color: '#b4785a', marginTop: '3px' }}>{c.hangul}</span>
                             </>
                           ) : (
                             <>
-                              <span style={{ fontSize: '26px', fontWeight: 'bold', color: '#e8e4ff', lineHeight: 1 }}>{syl}</span>
+                              <span style={{ fontSize: '26px', fontWeight: 'bold', color: '#1a1a1a', lineHeight: 1 }}>{syl}</span>
                               <span style={{ fontSize: '9px', color: gold, marginTop: '4px' }}>한자 고르기</span>
                             </>
                           )}
                         </button>
-                        <div style={{ fontSize: '9px', color: '#8a88a0', marginTop: '5px' }}>
+                        <div style={{ fontSize: '9px', color: '#b4785a', marginTop: '5px' }}>
                           {c ? `${c.resourceOhaeng}·${c.strokes}획` : slotLabel(i)}
                         </div>
                       </div>
                     )
                   })}
                 </div>
-                <div style={{ fontSize: '11px', color: '#666', marginBottom: '20px', lineHeight: 1.6 }}>
+                <div style={{ fontSize: '11px', color: '#b4785a', marginBottom: '20px', lineHeight: 1.6 }}>
                   · 원을 누르면 그 글자의 한자가 자동으로 나와요<br />
                   · 이름을 바꾸려면 위에 다시 입력하고 확인을 누르세요
                 </div>
@@ -569,8 +599,8 @@ function DiagnosisInner() {
                 <button onClick={handlePreview} disabled={!canSubmit}
                   style={{
                     width: '100%', padding: '14px', borderRadius: '12px',
-                    background: canSubmit ? 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)' : '#333',
-                    border: 'none', color: canSubmit ? '#1a1a18' : '#666',
+                    background: canSubmit ? '#c8783c' : '#e8ddd0',
+                    border: 'none', color: canSubmit ? '#fff' : '#b4785a',
                     fontSize: '15px', fontWeight: 'bold', cursor: canSubmit ? 'pointer' : 'default',
                   }}>
                   {canSubmit ? '이름 풀이 보기 →' : '모든 글자의 한자를 골라주세요'}
@@ -586,7 +616,7 @@ function DiagnosisInner() {
               <div style={{ fontSize: '32px', fontWeight: 'bold', color: gold, letterSpacing: '4px' }}>
                 {chars.filter(Boolean).map(c => c!.hanja).join('')}
               </div>
-              <div style={{ fontSize: '14px', color: '#e8e4ff', marginTop: '4px' }}>
+              <div style={{ fontSize: '14px', color: '#1a1a1a', marginTop: '4px' }}>
                 {chars.filter(Boolean).map(c => c!.hangul).join('')}
               </div>
             </div>
@@ -595,7 +625,7 @@ function DiagnosisInner() {
               <div style={{ fontSize: '13px', color: gold, marginBottom: '12px', fontWeight: 'bold' }}>
                 ✨ 미리보기
               </div>
-              <div style={{ fontSize: '13px', color: '#c8c4d8', lineHeight: 1.9 }}>
+              <div style={{ fontSize: '13px', color: '#1a1a1a', lineHeight: 1.9 }}>
                 이름의 한자 획수와 발음을 분석했어요.<br />
                 이 이름이 <b style={{ color: gold }}>사주에 필요한 기운(용신)</b>을 얼마나 채워주는지,
                 전체적으로 잘 맞는 이름인지는 전체 풀이에서 확인하실 수 있어요.
@@ -605,14 +635,14 @@ function DiagnosisInner() {
             <button onClick={() => setStep('pay')}
               style={{
                 width: '100%', padding: '14px', borderRadius: '12px',
-                background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)',
-                border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 'bold',
+                background: '#c8783c',
+                border: 'none', color: '#fff', fontSize: '15px', fontWeight: 'bold',
                 cursor: 'pointer', marginBottom: '10px',
               }}>
               전체 풀이 받기 ({readPrice.toLocaleString()}원) →
             </button>
             <button onClick={() => setStep('input')}
-              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#8a88a0', fontSize: '13px', cursor: 'pointer' }}>
+              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#b4785a', fontSize: '13px', cursor: 'pointer' }}>
               ← 이름 다시 고르기
             </button>
           </>
@@ -621,25 +651,25 @@ function DiagnosisInner() {
         {step === 'pay' && (
           <>
             <div style={{
-              border: '2px dashed rgba(250,199,117,0.4)', borderRadius: '16px',
+              border: '2px dashed #d8a87e', borderRadius: '16px',
               padding: '30px 20px', textAlign: 'center', marginBottom: '20px',
             }}>
               <div style={{ fontSize: '28px', marginBottom: '10px' }}>💳</div>
-              <div style={{ fontSize: '13px', color: '#8a88a0', marginBottom: '6px' }}>결제 금액</div>
+              <div style={{ fontSize: '13px', color: '#b4785a', marginBottom: '6px' }}>결제 금액</div>
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: gold }}>{readPrice.toLocaleString()}원</div>
             </div>
 
             <button onClick={handleFullResult}
               style={{
                 width: '100%', padding: '14px', borderRadius: '12px',
-                background: 'linear-gradient(135deg,#3C3489 0%,#FAC775 100%)',
-                border: 'none', color: '#1a1a18', fontSize: '15px', fontWeight: 'bold',
+                background: '#c8783c',
+                border: 'none', color: '#fff', fontSize: '15px', fontWeight: 'bold',
                 cursor: 'pointer', marginBottom: '10px',
               }}>
               💳 {readPrice.toLocaleString()}원 결제하고 결과 보기 →
             </button>
             <button onClick={() => setStep('preview')}
-              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#8a88a0', fontSize: '13px', cursor: 'pointer' }}>
+              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#b4785a', fontSize: '13px', cursor: 'pointer' }}>
               ← 뒤로
             </button>
           </>
@@ -652,18 +682,27 @@ function DiagnosisInner() {
                 <span style={{ fontSize: '40px', display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span>
                 <div style={{ textAlign: 'center', color: gold, fontSize: '13px', lineHeight: 1.7 }}>
                   이름을 정성껏 풀이하고 있어요<br />
-                  <span style={{ color: '#8a88a0', fontSize: '12px' }}>잠시만 기다려 주세요</span>
+                  <span style={{ color: '#b4785a', fontSize: '12px' }}>잠시만 기다려 주세요</span>
                 </div>
               </div>
             )}
 
             {!loading && result && (
               <>
+                {savedRecordId && (
+                  <div style={{
+                    textAlign: 'center', fontSize: '12px', color: subWarm,
+                    background: 'rgba(200,120,60,0.08)', border: '0.5px solid #f0e0d5',
+                    borderRadius: '10px', padding: '8px', marginBottom: '14px',
+                  }}>
+                    {viewOnly ? '📁 보관함에서 불러온 기록' : '📁 보관함에 저장됐어요'}
+                  </div>
+                )}
                 <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                   <div style={{ fontSize: '34px', fontWeight: 'bold', color: gold, letterSpacing: '4px' }}>
                     {chars.filter(Boolean).map(c => c!.hanja).join('')}
                   </div>
-                  <div style={{ fontSize: '14px', color: '#e8e4ff', marginTop: '4px' }}>
+                  <div style={{ fontSize: '14px', color: '#1a1a1a', marginTop: '4px' }}>
                     {chars.filter(Boolean).map(c => c!.hangul).join('')}
                   </div>
                 </div>
@@ -683,7 +722,7 @@ function DiagnosisInner() {
                     ].filter(s => s.text).map((s, i) => (
                       <div key={i} style={{ borderLeft: `3px solid ${gold}`, padding: '4px 12px', marginBottom: '14px' }}>
                         <div style={{ fontSize: '12px', color: gold, marginBottom: '4px' }}>{s.label}</div>
-                        <div style={{ fontSize: '14px', color: '#e0dce8', lineHeight: 1.8 }}>{s.text}</div>
+                        <div style={{ fontSize: '14px', color: '#1a1a1a', lineHeight: 1.8 }}>{s.text}</div>
                       </div>
                     ))}
                   </div>
@@ -700,20 +739,20 @@ function DiagnosisInner() {
                   ].map((row, i) => (
                     <div key={i} style={{ marginBottom: '14px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '13px', color: '#e8e4ff' }}>{row.label}</span>
+                        <span style={{ fontSize: '13px', color: '#1a1a1a' }}>{row.label}</span>
                         <span style={{ fontSize: '13px', fontWeight: 'bold', color: gradeColor(row.f.grade) }}>{row.f.grade}</span>
                       </div>
-                      <div style={{ fontSize: '12px', color: '#8a88a0', lineHeight: 1.6 }}>{row.f.detail}</div>
+                      <div style={{ fontSize: '12px', color: '#b4785a', lineHeight: 1.6 }}>{row.f.detail}</div>
                     </div>
                   ))}
 
-                  <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '0.5px solid #f0e0d5' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                      <span style={{ fontSize: '13px', color: '#e8e4ff' }}>이름 수리 (81수리)</span>
+                      <span style={{ fontSize: '13px', color: '#1a1a1a' }}>이름 수리 (81수리)</span>
                       <span style={{ fontSize: '13px', fontWeight: 'bold', color: gradeColor(result.suri.grade) }}>{result.suri.grade}</span>
                     </div>
                     {result.suri.gyeok.map((g: { label: string; sum: number; name: string; fortune: string }, i: number) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#8a88a0', marginBottom: '4px' }}>
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#b4785a', marginBottom: '4px' }}>
                         <span>{g.label}</span>
                         <span style={{ color: g.fortune === '길' ? '#7BC86C' : g.fortune === '흉' ? '#E0A04A' : '#9a98b0' }}>
                           {g.name} ({g.fortune})
@@ -724,10 +763,10 @@ function DiagnosisInner() {
                 </div>
 
                 <div style={{
-                  background: 'rgba(250,199,117,0.08)', border: `1px solid ${gold}`,
+                  background: 'rgba(200,120,60,0.07)', border: `1px solid ${gold}`,
                   borderRadius: '16px', padding: '18px', marginBottom: '16px', textAlign: 'center',
                 }}>
-                  <div style={{ fontSize: '12px', color: '#8a88a0', marginBottom: '6px' }}>종합</div>
+                  <div style={{ fontSize: '12px', color: '#b4785a', marginBottom: '6px' }}>종합</div>
                   <div style={{ fontSize: '22px', fontWeight: 'bold', color: gradeColor(result.overallGrade) }}>
                     {result.overallGrade}
                   </div>
@@ -738,25 +777,30 @@ function DiagnosisInner() {
                   <ConsultButton priceKey="naming" mode="naming" />
                 </div>
 
-                <div style={{ background: 'linear-gradient(160deg,#34322f 0%,#2C2C2A 100%)', border: `1px solid ${gold}`, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
-                  <div style={{ fontSize: '12px', color: '#f48fb1', fontStyle: 'italic', marginBottom: '14px', lineHeight: 1.5, textAlign: 'center' }}>
+                <div style={{ background: '#fdeee2', border: `1px solid ${gold}`, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '12px', color: '#c8506e', fontStyle: 'italic', marginBottom: '14px', lineHeight: 1.5, textAlign: 'center' }}>
                     {result.overallGrade !== '좋음'
                       ? '부족한 기운을 채우면 이름이 당신을 받쳐줍니다'
                       : '지금도 좋은 이름이에요. 다른 가능성도 살펴볼까요?'}
                   </div>
 
                   <button onClick={() => router.push('/manseryeok/naming/rename/newname')}
-                    style={{ width: '100%', padding: '14px 16px', borderRadius: '12px', background: 'rgba(250,199,117,0.16)', border: `1px solid ${gold}`, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    style={{ width: '100%', padding: '14px 16px', borderRadius: '12px', background: 'rgba(200,120,60,0.12)', border: `1px solid ${gold}`, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ textAlign: 'left' }}>
                       <div style={{ fontSize: '14px', fontWeight: 'bold', color: gold }}>발음은 그대로, 한자 바꾸기</div>
-                      <div style={{ fontSize: '11px', color: '#cbb890', marginTop: '2px' }}>부르는 이름은 두고, 사주에 맞는 한자로</div>
+                      <div style={{ fontSize: '11px', color: '#96502e', marginTop: '2px' }}>부르는 이름은 두고, 사주에 맞는 한자로</div>
                     </div>
                     <span style={{ fontSize: '13px', fontWeight: 'bold', color: gold, whiteSpace: 'nowrap', marginLeft: '10px' }}>{hanjaPrice.toLocaleString()}원</span>
                   </button>
                 </div>
 
+                <button onClick={() => router.push('/manseryeok/naming/diagnosis/storage')}
+                  style={{ width: '100%', padding: '13px', borderRadius: '12px', background: 'rgba(200,120,60,0.10)', border: '0.5px solid #f0e0d5', color: subWarm, fontSize: '13px', fontWeight: 500, cursor: 'pointer', marginBottom: '8px' }}>
+                  📜 내 이름 보관함 보기
+                </button>
+
                 <button onClick={() => nameId ? router.push('/mypage') : resetAll()}
-                  style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#8a88a0', fontSize: '13px', cursor: 'pointer' }}>
+                  style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#b4785a', fontSize: '13px', cursor: 'pointer' }}>
                   {nameId ? '← 마이페이지로' : '다른 이름 풀어보기'}
                 </button>
               </>
@@ -769,14 +813,14 @@ function DiagnosisInner() {
         <div
           onClick={() => { setPickerIdx(null); setHanjaList([]) }}
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+            position: 'fixed', inset: 0, background: 'rgba(40,28,22,0.35)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px',
           }}>
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              width: '100%', maxWidth: '400px', background: '#222220',
-              borderRadius: '18px', padding: '20px 16px', boxShadow: '0 16px 40px rgba(0,0,0,0.5)',
+              width: '100%', maxWidth: '400px', background: '#fffbf7',
+              borderRadius: '18px', padding: '20px 16px', boxShadow: '0 16px 40px rgba(90,50,30,0.2)',
               maxHeight: '80vh', display: 'flex', flexDirection: 'column',
             }}>
             <div style={{ fontSize: '15px', fontWeight: 'bold', color: gold, marginBottom: '14px' }}>
@@ -784,9 +828,9 @@ function DiagnosisInner() {
             </div>
 
             <div style={{ overflowY: 'auto', flex: 1 }}>
-              {searching && <div style={{ textAlign: 'center', color: '#8a88a0', padding: '20px' }}>찾는 중...</div>}
+              {searching && <div style={{ textAlign: 'center', color: '#b4785a', padding: '20px' }}>찾는 중...</div>}
               {!searching && hanjaList.length === 0 && (
-                <div style={{ textAlign: 'center', color: '#8a88a0', padding: '20px', fontSize: '13px' }}>
+                <div style={{ textAlign: 'center', color: '#b4785a', padding: '20px', fontSize: '13px' }}>
                   &lsquo;{syllables[pickerIdx]}&rsquo; 음의 인명용 한자를 찾을 수 없어요
                 </div>
               )}
@@ -799,7 +843,7 @@ function DiagnosisInner() {
 
               {avoidList.length > 0 && (
                 <>
-                  <div style={{ fontSize: '11px', color: '#8a88a0', margin: '18px 0 8px', lineHeight: 1.6 }}>
+                  <div style={{ fontSize: '11px', color: '#b4785a', margin: '18px 0 8px', lineHeight: 1.6 }}>
                     아래 글자들은 일반적으로 이름에 잘 쓰지 않아요.<br />
                     본인 이름에 쓰는 글자라면 골라주세요.
                   </div>
@@ -812,6 +856,25 @@ function DiagnosisInner() {
           </div>
         </div>
       )}
+
+      {/* 다른 사람(가족·지인) 진단 — 사주보기와 동일한 사람 선택 모달 재사용.
+          고른 사람의 생년월일을 URL로 실어 이 화면을 다시 열면(fromUrl 우선),
+          그 사람 사주로 이름풀이를 진행한다. name·relation 도 함께 실어
+          보관함 저장 시 관계로 구분되게 한다. */}
+      <PersonPickerModal
+        open={pickerOpen}
+        serviceLabel="이름풀이"
+        headline="누구의 이름을 볼까요?"
+        serviceType="naming"
+        submitLabel="저장하고 이름 보기"
+        onClose={() => setPickerOpen(false)}
+        onPick={(person: SavedPerson) => {
+          setPickerOpen(false)
+          const q = toResultQuery(person)
+          const rel = person.relation ? `&relation=${encodeURIComponent(person.relation)}` : ''
+          router.push(`/manseryeok/naming/diagnosis?${q}${rel}`)
+        }}
+      />
     </main>
   )
 }
@@ -819,8 +882,8 @@ function DiagnosisInner() {
 export default function DiagnosisPage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a18' }}>
-        <div style={{ color: '#FAC775' }}>로딩 중...</div>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FDF6F0' }}>
+        <div style={{ color: '#c8783c' }}>로딩 중...</div>
       </div>
     }>
       <DiagnosisInner />
