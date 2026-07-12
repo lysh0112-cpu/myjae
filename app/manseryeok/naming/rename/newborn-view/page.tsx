@@ -34,6 +34,24 @@ interface Commentary {
 
 const EMPTY_PERSPECTIVE: Perspective = { intro: '', name: '', meaning: '' }
 
+// ── 방어: 통변 문자열에 "파싱 실패한 원본 JSON"이 섞였는지 감지 → 화면에 안 뿌린다 ──
+//   (기존에 저장돼버린 오염 기록도 이 게이트로 걸러 원본 JSON 노출을 막는다.)
+const RAW_JSON_HINTS = [
+  '{"title"', '"title":', '"intro":', '"name":', '"meaning":',
+  '"yinyang"', '"baleum"', '"suri"', '"jawon"', '"yongsin"', '"conclusion"',
+]
+function looksLikeRawJson(text: string): boolean {
+  if (!text) return false
+  const t = text.trim()
+  if (RAW_JSON_HINTS.some((h) => t.includes(h))) return true
+  if (t.startsWith('{') && t.includes('"')) return true
+  return false
+}
+// 오염된 문자열이면 빈 문자열로 대체 (원본 JSON 노출 차단)
+function clean(text: string): string {
+  return looksLikeRawJson(text) ? '' : text
+}
+
 function normalizeCommentary(raw: unknown): Commentary | null {
   if (!raw || typeof raw !== 'object') return null
   const o = raw as Record<string, unknown>
@@ -41,9 +59,9 @@ function normalizeCommentary(raw: unknown): Commentary | null {
     if (v && typeof v === 'object') {
       const p = v as Record<string, unknown>
       return {
-        intro: typeof p.intro === 'string' ? p.intro : '',
-        name: typeof p.name === 'string' ? p.name : '',
-        meaning: typeof p.meaning === 'string' ? p.meaning : '',
+        intro: clean(typeof p.intro === 'string' ? p.intro : ''),
+        name: clean(typeof p.name === 'string' ? p.name : ''),
+        meaning: clean(typeof p.meaning === 'string' ? p.meaning : ''),
       }
     }
     return { ...EMPTY_PERSPECTIVE }
@@ -51,17 +69,19 @@ function normalizeCommentary(raw: unknown): Commentary | null {
   const hasNew = 'yinyang' in o || 'baleum' in o || 'jawon' in o || 'conclusion' in o
   if (hasNew) {
     return {
-      title: typeof o.title === 'string' ? o.title : '',
+      title: clean(typeof o.title === 'string' ? o.title : ''),
       yinyang: asPersp(o.yinyang), baleum: asPersp(o.baleum), suri: asPersp(o.suri),
       jawon: asPersp(o.jawon), yongsin: asPersp(o.yongsin),
-      conclusion: typeof o.conclusion === 'string' ? o.conclusion : '',
+      conclusion: clean(typeof o.conclusion === 'string' ? o.conclusion : ''),
     }
   }
   const legacy = [o.summary, o.good, o.improve, o.advice]
     .filter((x): x is string => typeof x === 'string' && x.trim() !== '')
+    .map((x) => clean(x))
+    .filter((x) => x !== '')
     .join('\n\n')
   return {
-    title: typeof o.title === 'string' ? o.title : '',
+    title: clean(typeof o.title === 'string' ? o.title : ''),
     yinyang: { ...EMPTY_PERSPECTIVE }, baleum: { ...EMPTY_PERSPECTIVE },
     suri: { ...EMPTY_PERSPECTIVE }, jawon: { ...EMPTY_PERSPECTIVE },
     yongsin: { ...EMPTY_PERSPECTIVE }, conclusion: legacy,

@@ -42,6 +42,23 @@ interface Commentary {
 
 const EMPTY_PERSPECTIVE: Perspective = { intro: '', name: '', meaning: '' }
 
+// ── 방어: 통변 문자열에 "파싱 실패한 원본 JSON"이 섞였는지 감지 ──
+const RAW_JSON_HINTS = [
+  '{"title"', '"title":', '"intro":', '"name":', '"meaning":',
+  '"yinyang"', '"baleum"', '"suri"', '"jawon"', '"yongsin"', '"conclusion"',
+]
+function looksLikeRawJson(text: string): boolean {
+  if (!text) return false
+  const t = text.trim()
+  if (RAW_JSON_HINTS.some((h) => t.includes(h))) return true
+  if (t.startsWith('{') && t.includes('"')) return true
+  return false
+}
+// 오염된 문자열이면 빈 문자열로 대체 (원본 JSON 노출 차단)
+function cleanText(text: string): string {
+  return looksLikeRawJson(text) ? '' : text
+}
+
 // 저장 스냅샷/옛 데이터를 5관점 Commentary로 안전 변환 (이름풀이와 동일 로직)
 function normalizeCommentary(raw: unknown): Commentary | null {
   if (!raw || typeof raw !== 'object') return null
@@ -50,9 +67,9 @@ function normalizeCommentary(raw: unknown): Commentary | null {
     if (v && typeof v === 'object') {
       const p = v as Record<string, unknown>
       return {
-        intro: typeof p.intro === 'string' ? p.intro : '',
-        name: typeof p.name === 'string' ? p.name : '',
-        meaning: typeof p.meaning === 'string' ? p.meaning : '',
+        intro: cleanText(typeof p.intro === 'string' ? p.intro : ''),
+        name: cleanText(typeof p.name === 'string' ? p.name : ''),
+        meaning: cleanText(typeof p.meaning === 'string' ? p.meaning : ''),
       }
     }
     return { ...EMPTY_PERSPECTIVE }
@@ -60,20 +77,22 @@ function normalizeCommentary(raw: unknown): Commentary | null {
   const hasNew = 'yinyang' in o || 'baleum' in o || 'jawon' in o || 'conclusion' in o
   if (hasNew) {
     return {
-      title: typeof o.title === 'string' ? o.title : '',
+      title: cleanText(typeof o.title === 'string' ? o.title : ''),
       yinyang: asPersp(o.yinyang),
       baleum: asPersp(o.baleum),
       suri: asPersp(o.suri),
       jawon: asPersp(o.jawon),
       yongsin: asPersp(o.yongsin),
-      conclusion: typeof o.conclusion === 'string' ? o.conclusion : '',
+      conclusion: cleanText(typeof o.conclusion === 'string' ? o.conclusion : ''),
     }
   }
   const legacy = [o.summary, o.good, o.improve, o.advice]
     .filter((x): x is string => typeof x === 'string' && x.trim() !== '')
+    .map((x) => cleanText(x))
+    .filter((x) => x !== '')
     .join('\n\n')
   return {
-    title: typeof o.title === 'string' ? o.title : '',
+    title: cleanText(typeof o.title === 'string' ? o.title : ''),
     yinyang: { ...EMPTY_PERSPECTIVE }, baleum: { ...EMPTY_PERSPECTIVE },
     suri: { ...EMPTY_PERSPECTIVE }, jawon: { ...EMPTY_PERSPECTIVE },
     yongsin: { ...EMPTY_PERSPECTIVE }, conclusion: legacy,
@@ -84,6 +103,22 @@ function normalizeCommentary(raw: unknown): Commentary | null {
 function hasCommentary(c: Commentary | null | undefined): boolean {
   if (!c) return false
   return !!(c.conclusion || c.yinyang.intro || c.baleum.intro || c.suri.intro || c.jawon.intro || c.yongsin.intro)
+}
+
+// commentary 안의 모든 텍스트 필드를 훑어 오염(원본 JSON)이 하나라도 있으면 true.
+//   (예: conclusion에 {"title":..., "yinyang":{"intro":... 가 통째로 들어간 곽일우 케이스)
+//   looksLikeRawJson은 위(파일 상단)에서 정의됨.
+function commentaryHasRawJson(c: Commentary | null | undefined): boolean {
+  if (!c) return false
+  const fields = [
+    c.title, c.conclusion,
+    c.yinyang.intro, c.yinyang.name, c.yinyang.meaning,
+    c.baleum.intro, c.baleum.name, c.baleum.meaning,
+    c.suri.intro, c.suri.name, c.suri.meaning,
+    c.jawon.intro, c.jawon.name, c.jawon.meaning,
+    c.yongsin.intro, c.yongsin.name, c.yongsin.meaning,
+  ]
+  return fields.some((f) => looksLikeRawJson(f))
 }
 
 interface TryItem {
@@ -301,6 +336,11 @@ function NewbornResultInner() {
         alert('풀이 내용을 받지 못했어요.\n잠시 후 다시 눌러주세요. 회차는 차감되지 않았어요.')
         return
       }
+      // ★ 방어: 파싱 실패한 원본 JSON이 섞였으면 저장·차감하지 않는다 (오염 박제 방지).
+      if (commentaryHasRawJson(commentary)) {
+        alert('풀이를 온전히 받지 못했어요.\n잠시 후 다시 눌러주세요. 회차는 차감되지 않았어요.')
+        return
+      }
       setTries((prev) => {
         const nextTries = prev.map((t, i) => (i === activeTry ? { ...t, commentary } : t))
         try {
@@ -340,6 +380,14 @@ function NewbornResultInner() {
         if (fresh) picked = fresh
       }
     } catch {}
+
+    // ★ 게이트 A(저장 직전 방어): 통변이 파싱 실패한 원본 JSON으로 오염됐으면
+    //   최종선택을 중단한다. 깨진 통변을 보관함에 박제하지 않는다.
+    //   (회차 차감·후보 삭제는 아직 안 했으므로 그대로 유지된다.)
+    if (commentaryHasRawJson(picked.commentary ?? null)) {
+      alert('풀이가 온전하지 않아요. 이 이름은 아직 최종 선택할 수 없어요.\n해당 이름의 풀이를 다시 생성한 뒤 선택해 주세요.')
+      return
+    }
 
     // 최종 선택 경고 — 남은 횟수가 있으면 "소멸된다" 안내 후 확인
     const hanjaName0 = picked.chars.map((c) => c.hanja).join('')
