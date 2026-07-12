@@ -51,6 +51,53 @@ interface Commentary {
   conclusion: string     // 맺음말
 }
 
+const EMPTY_PERSPECTIVE: Perspective = { intro: '', name: '', meaning: '' }
+
+// 보관함 스냅샷의 commentary를 5관점 Commentary로 안전 변환.
+//   - 새 데이터(yinyang 등 보유): 부족한 관점만 빈값 채워 그대로 사용.
+//   - 옛 데이터(summary/good 등): 옛 내용을 맺음말에 모아 5관점 껍데기로 감싼다(화면 안 깨짐).
+//   - null/형식불명: null 반환.
+function normalizeCommentary(raw: unknown): Commentary | null {
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as Record<string, unknown>
+  const asPersp = (v: unknown): Perspective => {
+    if (v && typeof v === 'object') {
+      const p = v as Record<string, unknown>
+      return {
+        intro: typeof p.intro === 'string' ? p.intro : '',
+        name: typeof p.name === 'string' ? p.name : '',
+        meaning: typeof p.meaning === 'string' ? p.meaning : '',
+      }
+    }
+    return { ...EMPTY_PERSPECTIVE }
+  }
+  const hasNew = 'yinyang' in o || 'baleum' in o || 'jawon' in o || 'conclusion' in o
+  if (hasNew) {
+    return {
+      title: typeof o.title === 'string' ? o.title : '',
+      yinyang: asPersp(o.yinyang),
+      baleum: asPersp(o.baleum),
+      suri: asPersp(o.suri),
+      jawon: asPersp(o.jawon),
+      yongsin: asPersp(o.yongsin),
+      conclusion: typeof o.conclusion === 'string' ? o.conclusion : '',
+    }
+  }
+  // 옛 데이터 호환: summary/good/improve/advice → 맺음말로 합쳐 표시
+  const legacy = [o.summary, o.good, o.improve, o.advice]
+    .filter((x): x is string => typeof x === 'string' && x.trim() !== '')
+    .join('\n\n')
+  return {
+    title: typeof o.title === 'string' ? o.title : '',
+    yinyang: { ...EMPTY_PERSPECTIVE },
+    baleum: { ...EMPTY_PERSPECTIVE },
+    suri: { ...EMPTY_PERSPECTIVE },
+    jawon: { ...EMPTY_PERSPECTIVE },
+    yongsin: { ...EMPTY_PERSPECTIVE },
+    conclusion: legacy,
+  }
+}
+
 // ── 신버전 피치톤 팔레트 (result-new / 타로 신버전과 동일) ──
 const PAGE_BG = '#FDF6F0'      // 페이지 배경
 const cardBg = '#fffbf7'       // 카드 표면
@@ -217,7 +264,7 @@ function DiagnosisInner() {
         if (cancelled) return
         if (row && row.result && row.commentary && Array.isArray(row.chars)) {
           setResult(row.result as DiagnoseResult)
-          setCommentary(row.commentary as Commentary)
+          setCommentary(normalizeCommentary(row.commentary))
           setChars(row.chars as (NameChar | null)[])
           setSyllables((row.chars as (NameChar | null)[]).filter(Boolean).map((c) => c!.hangul))
           setStep('result')
@@ -253,7 +300,7 @@ function DiagnosisInner() {
         const snap = rec.snapshot
         if (snap?.result) {
           setResult(snap.result)
-          setCommentary(snap.commentary ?? null)
+          setCommentary(normalizeCommentary(snap.commentary))
           setChars(rec.chars)
           setSyllables(rec.chars.filter(Boolean).map((c) => c!.hangul))
           setSavedRecordId(rec.id)
@@ -387,7 +434,7 @@ function DiagnosisInner() {
       })
       const data = await res.json()
       setResult(data.result ?? null)
-      setCommentary(data.commentary ?? null)
+      setCommentary(normalizeCommentary(data.commentary))
       const pkey = personKey(info)
       try {
         localStorage.setItem(NAMING_RESULT_KEY, JSON.stringify({
