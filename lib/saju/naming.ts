@@ -66,22 +66,33 @@ export interface DiagnoseInput {
 }
 
 // ── 채점 결과 타입 ──
+// grade는 내부용(종합 판정·정렬). 고객 화면은 판정이 아니라 "관점별 팩트+서술"로 노출.
 export type Grade = "좋음" | "보통" | "아쉬움";
 
 export interface FactorResult {
   grade: Grade;
   detail: string;
+  facts?: Record<string, unknown>; // AI 서술용 근거 데이터 (판정 아님)
+}
+
+// 획수 음양 (순양/순음/조화)
+export type YinYangState = "순양" | "순음" | "조화";
+export interface YinYangResult {
+  state: YinYangState;
+  strokes: number[];            // 각 글자 획수
+  marks: ("양" | "음")[];       // 홀=양, 짝=음
 }
 
 export interface DiagnoseResult {
-  yongsinBohwan: FactorResult;   // ① 용신 보완
-  resourceFlow: FactorResult;    // ② 자원오행
-  soundFlow: FactorResult;       // ③ 발음오행
-  suri: {                        // ④ 81수리 (사격)
+  yinyang: YinYangResult;        // ① 음양오행 (획수 음양) — 참고 표시, 점수 미반영
+  soundFlow: FactorResult;       // ② 발음오행
+  suri: {                        // ③ 81수리 (사격)
     grade: Grade;
-    gyeok: { label: string; sum: number; name: string; fortune: SuriFortune }[];
+    gyeok: { label: string; sum: number; name: string; symbol: string; fortune: SuriFortune; desc: string }[];
   };
-  overallGrade: Grade;           // 종합
+  resourceFlow: FactorResult;    // ④ 자원오행
+  yongsinBohwan: FactorResult;   // ⑤ 사주 보완 (용신)
+  overallGrade: Grade;           // 종합 (내부용)
   weakElement: string;           // 채워야 할 오행 (용신)
 }
 
@@ -90,6 +101,18 @@ const GENERATES: Record<string, string> = { 목:"화", 화:"토", 토:"금", 금
 
 function isSaeng(a: string, b: string): boolean {
   return GENERATES[a] === b || GENERATES[b] === a;
+}
+
+// ── ① 음양오행: 획수의 홀짝(양/음) 균형 ──
+//   원전(작명 개명 실전서 86~87쪽): 순양(모두 홀수)·순음(모두 짝수)은 치우침,
+//   섞이면 조화. 점수엔 반영하지 않고 참고로만 표시(감점 없음).
+function scoreYinYang(input: DiagnoseInput): YinYangResult {
+  const strokes = [input.surname.strokes, ...input.given.map((g) => g.strokes)];
+  const marks = strokes.map((s) => (s % 2 === 1 ? "양" : "음") as "양" | "음");
+  const allYang = marks.every((m) => m === "양");
+  const allEum = marks.every((m) => m === "음");
+  const state: YinYangState = allYang ? "순양" : allEum ? "순음" : "조화";
+  return { state, strokes, marks };
 }
 
 // ── ① 용신 보완: 이름 자원오행이 용신(또는 희신)을 포함하는가 ──
@@ -107,42 +130,60 @@ function scoreYongsin(input: DiagnoseInput, mode: "관대" | "엄격"): FactorRe
   return { grade: "아쉬움", detail: `사주에 필요한 ${input.yongsin}을(를) 이름이 보완하지 못합니다.` };
 }
 
-// ── ② 자원오행 흐름: 이름 글자들의 자원오행이 상생으로 흐르는가 ──
+// ── ④ 자원오행 흐름: 이름 글자들의 자원오행이 상생으로 흐르는가 ──
 function scoreResource(input: DiagnoseInput): FactorResult {
-  const seq = [input.surname.resourceOhaeng, ...input.given.map((g) => g.resourceOhaeng)];
+  const chars = [input.surname, ...input.given];
+  const seq = chars.map((c) => c.resourceOhaeng);
+  // 이웃 쌍별 관계 (서술용)
+  const links: { from: string; to: string; saeng: boolean }[] = [];
   let saeng = 0, total = 0;
   for (let i = 0; i < seq.length - 1; i++) {
     total++;
-    if (isSaeng(seq[i], seq[i + 1])) saeng++;
+    const ok = isSaeng(seq[i], seq[i + 1]);
+    if (ok) saeng++;
+    links.push({ from: seq[i], to: seq[i + 1], saeng: ok });
   }
-  if (total === 0) return { grade: "보통", detail: "자원오행 흐름을 평가할 글자가 부족합니다." };
+  const facts = {
+    glyphs: chars.map((c) => ({ hanja: c.hanja, hangul: c.hangul, ohaeng: c.resourceOhaeng })),
+    flow: seq,
+    links,
+  };
+  if (total === 0) return { grade: "보통", detail: "자원오행 흐름을 평가할 글자가 부족합니다.", facts };
   const ratio = saeng / total;
-  if (ratio >= 0.5) return { grade: "좋음", detail: "이름 한자들의 기운이 서로 살려주는 흐름입니다." };
-  if (ratio > 0) return { grade: "보통", detail: "상생과 상극이 섞여 있습니다." };
-  return { grade: "아쉬움", detail: "이름 한자들의 기운이 서로 부딪칩니다." };
+  if (ratio >= 0.5) return { grade: "좋음", detail: "이름 한자들의 기운이 서로 살려주는 흐름입니다.", facts };
+  if (ratio > 0) return { grade: "보통", detail: "상생과 상극이 섞여 있습니다.", facts };
+  return { grade: "아쉬움", detail: "이름 한자들의 기운이 서로 부딪칩니다.", facts };
 }
 
-// ── ③ 발음오행 흐름 ──
+// ── ② 발음오행 흐름 ──
 function scoreSound(input: DiagnoseInput, mode: "토" | "수"): FactorResult {
-  const seq = [input.surname.hangul, ...input.given.map((g) => g.hangul)]
-    .map((h) => soundOhaengOf(h, mode));
+  const hanguls = [input.surname.hangul, ...input.given.map((g) => g.hangul)];
+  const seq = hanguls.map((h) => soundOhaengOf(h, mode));
+  const links: { from: string; to: string; saeng: boolean }[] = [];
   let saeng = 0, total = 0;
   for (let i = 0; i < seq.length - 1; i++) {
     total++;
-    if (isSaeng(seq[i], seq[i + 1])) saeng++;
+    const ok = isSaeng(seq[i], seq[i + 1]);
+    if (ok) saeng++;
+    links.push({ from: seq[i], to: seq[i + 1], saeng: ok });
   }
-  if (total === 0) return { grade: "보통", detail: "발음오행 흐름을 평가할 수 없습니다." };
+  const facts = {
+    syllables: hanguls.map((h, i) => ({ hangul: h, cho: getChoseong(h), ohaeng: seq[i] })),
+    flow: seq,
+    links,
+  };
+  if (total === 0) return { grade: "보통", detail: "발음오행 흐름을 평가할 수 없습니다.", facts };
   const ratio = saeng / total;
-  if (ratio >= 0.5) return { grade: "좋음", detail: "부르는 소리의 기운이 부드럽게 흐릅니다." };
-  if (ratio > 0) return { grade: "보통", detail: "소리의 기운이 일부만 어울립니다." };
-  return { grade: "아쉬움", detail: "소리의 기운이 서로 부딪칩니다." };
+  if (ratio >= 0.5) return { grade: "좋음", detail: "부르는 소리의 기운이 부드럽게 흐릅니다.", facts };
+  if (ratio > 0) return { grade: "보통", detail: "소리의 기운이 일부만 어울립니다.", facts };
+  return { grade: "아쉬움", detail: "소리의 기운이 서로 부딪칩니다.", facts };
 }
 
 // ── ④ 81수리 (작명가식 사격: 두 글자 짝 + 전체합, 태극수 없음) ──
 function scoreSuri(input: DiagnoseInput): DiagnoseResult["suri"] {
   const sur = input.surname.strokes;
   const g = input.given.map((x) => x.strokes);
-  const gyeok: { label: string; sum: number; name: string; fortune: SuriFortune }[] = [];
+  const gyeok: { label: string; sum: number; name: string; symbol: string; fortune: SuriFortune; desc: string }[] = [];
 
   // 이름 2자 기준 (외자/3자는 화면단에서 분기)
   if (g.length === 2) {
@@ -154,7 +195,7 @@ function scoreSuri(input: DiagnoseInput): DiagnoseResult["suri"] {
     ];
     for (const [label, sum] of pairs) {
       const info = getSuriInfo(sum);
-      gyeok.push({ label, sum, name: info.name, fortune: info.fortune });
+      gyeok.push({ label, sum, name: info.name, symbol: info.symbol, fortune: info.fortune, desc: info.desc });
     }
   } else if (g.length === 1) {
     const pairs: [string, number][] = [
@@ -163,7 +204,7 @@ function scoreSuri(input: DiagnoseInput): DiagnoseResult["suri"] {
     ];
     for (const [label, sum] of pairs) {
       const info = getSuriInfo(sum);
-      gyeok.push({ label, sum, name: info.name, fortune: info.fortune });
+      gyeok.push({ label, sum, name: info.name, symbol: info.symbol, fortune: info.fortune, desc: info.desc });
     }
   }
 
@@ -186,12 +227,14 @@ export function diagnoseName(
   mode: "토" | "수" = SOUND_OHAENG_MODE,
   yongsinMode: "관대" | "엄격" = YONGSIN_MODE
 ): DiagnoseResult {
-  const yongsinBohwan = scoreYongsin(input, yongsinMode);
-  const resourceFlow = scoreResource(input);
-  const soundFlow = scoreSound(input, mode);
-  const suri = scoreSuri(input);
+  const yinyang = scoreYinYang(input);          // ① 음양 (참고만, 점수 미반영)
+  const soundFlow = scoreSound(input, mode);    // ② 발음
+  const suri = scoreSuri(input);                // ③ 수리
+  const resourceFlow = scoreResource(input);    // ④ 자원
+  const yongsinBohwan = scoreYongsin(input, yongsinMode); // ⑤ 용신
 
-  // 가중치: 용신 최우선(×3), 자원오행(×2), 81수리(×1.5), 발음오행(×1)
+  // 종합 점수(내부용): 음양은 제외. 용신×3, 자원×2, 수리×1.5, 발음×1
+  //   (원전에 음양 감점 기준이 없어 점수에 넣지 않음 — 어제 확정 원칙)
   const weighted =
     gradeToNum(yongsinBohwan.grade) * 3 +
     gradeToNum(resourceFlow.grade) * 2 +
@@ -205,10 +248,11 @@ export function diagnoseName(
   else if (ratio < 0.4) overallGrade = "아쉬움";
 
   return {
-    yongsinBohwan,
-    resourceFlow,
+    yinyang,
     soundFlow,
     suri,
+    resourceFlow,
+    yongsinBohwan,
     overallGrade,
     weakElement: input.yongsin,
   };
