@@ -686,7 +686,14 @@ function DiagnosisInner() {
               </div>
             )}
 
-            {!loading && result && (
+            {!loading && result && (() => {
+              // 옛 저장 데이터 호환: 새 5관점 필드(eumyang 등)가 하나도 없으면 옛 구조로 간주.
+              const c = commentary as (Commentary & { summary?: string; good?: string; improve?: string; advice?: string }) | null
+              const hasNew5 = !!(c && (c.eumyang || c.baleum || c.suri || c.jawon || c.yongsin || c.conclusion))
+              const legacyText = c && !hasNew5
+                ? [c.summary, c.good, c.improve, c.advice].filter(Boolean).join('\n\n')
+                : ''
+              return (
               <>
                 <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                   <div style={{ fontSize: '34px', fontWeight: 'bold', color: gold, letterSpacing: '4px' }}>
@@ -705,23 +712,33 @@ function DiagnosisInner() {
                   </div>
                 )}
 
+                {/* 옛 저장 결과(5관점 없음): 예전 형식으로 표시 + 다시풀기 안내 */}
+                {commentary && !hasNew5 && legacyText && (
+                  <div style={{ background: cardBg, border, borderRadius: '16px', padding: '20px', marginBottom: '14px' }}>
+                    <div style={{ fontSize: '14px', color: '#e0dce8', lineHeight: 1.9, whiteSpace: 'pre-line' }}>{legacyText}</div>
+                    <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)', fontSize: '12px', color: '#8a88a0', textAlign: 'center' }}>
+                      새로워진 5관점 상세 풀이는 "다른 이름 다시 풀기"로 다시 풀어보세요.
+                    </div>
+                  </div>
+                )}
+
                 {/* 5관점 겸손 해설 카드 */}
-                {commentary && [
+                {commentary && hasNew5 && [
                   {
                     num: '一', label: '음양오행', sub: '획수에 담긴 음과 양',
                     text: commentary.eumyang,
-                    data: (
+                    data: result.yinyang ? (
                       <span>
-                        {[result.yinyang.strokes.map((s, i) => (
+                        {result.yinyang.strokes.map((s, i) => (
                           <span key={i} style={{ marginRight: '10px' }}>
                             {(chars.filter(Boolean)[i]?.hanja) ?? ''}
                             <span style={{ color: result.yinyang.marks[i] === '양' ? '#E0A04A' : '#7BAECF', marginLeft: '3px' }}>
                               {s}획·{result.yinyang.marks[i]}
                             </span>
                           </span>
-                        ))]}
+                        ))}
                       </span>
-                    ),
+                    ) : null,
                   },
                   {
                     num: '二', label: '발음오행', sub: '부르는 소리의 기운',
@@ -812,7 +829,8 @@ function DiagnosisInner() {
                   {nameId ? '← 마이페이지로' : '다른 이름 풀어보기'}
                 </button>
               </>
-            )}
+              )
+            })()}
           </>
         )}
       </div>
