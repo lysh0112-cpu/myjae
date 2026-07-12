@@ -148,7 +148,7 @@ ${JSON.stringify(factsForAI, null, 2)}
           },
           body: JSON.stringify({
             model: 'claude-sonnet-4-6',
-            max_tokens: 2400,
+            max_tokens: 3500,
             messages: [{ role: 'user', content: commentaryPrompt }],
           }),
         })
@@ -158,7 +158,23 @@ ${JSON.stringify(factsForAI, null, 2)}
         try {
           commentary = { ...emptyCommentary(), ...JSON.parse(clean) }
         } catch {
-          commentary = { ...emptyCommentary(), conclusion: clean.slice(0, 500) }
+          // JSON이 중간에 잘린 경우: 마지막 완전한 '}' 까지만 잘라 재파싱 시도
+          let recovered: Record<string, unknown> | null = null
+          const lastBrace = clean.lastIndexOf('}')
+          if (lastBrace > 0) {
+            for (let end = lastBrace; end > 0; end = clean.lastIndexOf('}', end - 1)) {
+              try {
+                recovered = JSON.parse(clean.slice(0, end + 1))
+                break
+              } catch { /* 계속 앞쪽 } 로 시도 */ }
+            }
+          }
+          if (recovered) {
+            commentary = { ...emptyCommentary(), ...recovered }
+          } else {
+            // 복구 불가 → 원본(JSON 텍스트)을 화면에 노출하지 않는다. 빈 통변으로 두고 실패 표시.
+            commentary = emptyCommentary()
+          }
         }
       } catch (e) {
         console.error('claude error:', e)
