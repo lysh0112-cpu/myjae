@@ -148,7 +148,7 @@ ${JSON.stringify(factsForAI, null, 2)}
           },
           body: JSON.stringify({
             model: 'claude-sonnet-4-6',
-            max_tokens: 3500,
+            max_tokens: 2400,
             messages: [{ role: 'user', content: commentaryPrompt }],
           }),
         })

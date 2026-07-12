@@ -277,11 +277,29 @@ function NewbornResultInner() {
           saju,
         }),
       })
-      const data = await res.json()
+
+      // ★ 응답이 실패(504 등)거나 JSON이 아니면 → 후보·회차 건드리지 않고 안내만.
+      if (!res.ok) {
+        alert('풀이를 불러오지 못했어요 (서버 응답 지연).\n잠시 후 다시 눌러주세요. 회차는 차감되지 않았어요.')
+        return
+      }
+      let data: { commentary?: unknown }
+      try {
+        data = await res.json()
+      } catch {
+        alert('풀이를 불러오지 못했어요 (응답 오류).\n잠시 후 다시 눌러주세요. 회차는 차감되지 않았어요.')
+        return
+      }
+
       const commentary: Commentary = normalizeCommentary(data.commentary) ?? {
         title: '', yinyang: { ...EMPTY_PERSPECTIVE }, baleum: { ...EMPTY_PERSPECTIVE },
         suri: { ...EMPTY_PERSPECTIVE }, jawon: { ...EMPTY_PERSPECTIVE },
         yongsin: { ...EMPTY_PERSPECTIVE }, conclusion: '',
+      }
+      // ★ 통변이 실제로 채워졌을 때만 저장·차감 (빈 통변이면 실패로 간주)
+      if (!hasCommentary(commentary)) {
+        alert('풀이 내용을 받지 못했어요.\n잠시 후 다시 눌러주세요. 회차는 차감되지 않았어요.')
+        return
       }
       setTries((prev) => {
         const nextTries = prev.map((t, i) => (i === activeTry ? { ...t, commentary } : t))
