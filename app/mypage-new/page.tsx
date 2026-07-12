@@ -616,7 +616,7 @@ export default function MyPageNew() {
                     <div style={{ fontSize: 10, color: '#c0a898' }}>{dateText(n.created_at)}{n.kind === 'self' ? ' · 내 이름' : n.kind === 'newborn' ? ' · 아기 이름' : ''}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
-                    <button onClick={() => router.push(n.kind === 'newborn' ? `/manseryeok/naming/rename/newborn-view?nameId=${n.id}` : `/manseryeok/naming/diagnosis?nameId=${n.id}`)}
+                    <button onClick={() => router.push(`/manseryeok/naming/diagnosis?nameId=${n.id}`)}
                       style={{ fontSize: 11, color: '#a06a3c', background: '#faede0', border: '0.5px solid #e6d0bc', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap' }}>다시보기</button>
                     <button onClick={() => deleteName(n)} disabled={deletingNameId === n.id}
                       style={{ fontSize: 11, color: '#c05a5a', background: '#fbeaea', border: '0.5px solid #f0d0d0', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap', opacity: deletingNameId === n.id ? 0.5 : 1 }}>{deletingNameId === n.id ? '삭제 중' : '삭제'}</button>
