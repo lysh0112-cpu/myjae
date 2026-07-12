@@ -72,13 +72,9 @@ interface NamingInputBlob {
 // 결과 해설 스냅샷 (result_data)
 export interface NamingResultSnapshot {
   result: DiagnoseResult
-  commentary: {
-    title: string
-    summary: string
-    good: string
-    improve: string
-    advice: string
-  } | null
+  // 통변 스냅샷(그대로 저장·복원만; 내부 필드는 화면에서 해석).
+  // 구버전(summary/good/improve/advice)·신버전(5관점 yinyang/baleum/…/conclusion) 모두 수용.
+  commentary: Record<string, unknown> | null
 }
 
 // 보관함 카드 한 줄에 필요한 요약

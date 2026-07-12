@@ -4,11 +4,11 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { getNamingRecord } from '@/lib/saju/namingRecords'
 import ConsultButton from '@/app/components/common/ConsultButton'
+import PerspectiveAccordion from '@/app/manseryeok/components/PerspectiveAccordion'
 
 const GOLD = '#c8783c'
 const CARD = '#fffbf7'
 const SUB = '#b4785a'
-const GREEN = '#81c784'
 
 interface SavedChar {
   hangul: string
@@ -17,12 +17,60 @@ interface SavedChar {
   resourceOhaeng: string
 }
 
+interface Perspective {
+  intro: string
+  name: string
+  meaning: string
+}
 interface Commentary {
   title: string
-  summary: string
-  good: string
-  improve: string
-  advice: string
+  yinyang: Perspective
+  baleum: Perspective
+  suri: Perspective
+  jawon: Perspective
+  yongsin: Perspective
+  conclusion: string
+}
+
+const EMPTY_PERSPECTIVE: Perspective = { intro: '', name: '', meaning: '' }
+
+function normalizeCommentary(raw: unknown): Commentary | null {
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as Record<string, unknown>
+  const asPersp = (v: unknown): Perspective => {
+    if (v && typeof v === 'object') {
+      const p = v as Record<string, unknown>
+      return {
+        intro: typeof p.intro === 'string' ? p.intro : '',
+        name: typeof p.name === 'string' ? p.name : '',
+        meaning: typeof p.meaning === 'string' ? p.meaning : '',
+      }
+    }
+    return { ...EMPTY_PERSPECTIVE }
+  }
+  const hasNew = 'yinyang' in o || 'baleum' in o || 'jawon' in o || 'conclusion' in o
+  if (hasNew) {
+    return {
+      title: typeof o.title === 'string' ? o.title : '',
+      yinyang: asPersp(o.yinyang), baleum: asPersp(o.baleum), suri: asPersp(o.suri),
+      jawon: asPersp(o.jawon), yongsin: asPersp(o.yongsin),
+      conclusion: typeof o.conclusion === 'string' ? o.conclusion : '',
+    }
+  }
+  const legacy = [o.summary, o.good, o.improve, o.advice]
+    .filter((x): x is string => typeof x === 'string' && x.trim() !== '')
+    .join('\n\n')
+  return {
+    title: typeof o.title === 'string' ? o.title : '',
+    yinyang: { ...EMPTY_PERSPECTIVE }, baleum: { ...EMPTY_PERSPECTIVE },
+    suri: { ...EMPTY_PERSPECTIVE }, jawon: { ...EMPTY_PERSPECTIVE },
+    yongsin: { ...EMPTY_PERSPECTIVE }, conclusion: legacy,
+  }
+}
+
+function hasCommentary(c: Commentary | null): boolean {
+  if (!c) return false
+  return !!(c.conclusion || c.yinyang.intro || c.baleum.intro || c.suri.intro || c.jawon.intro || c.yongsin.intro)
 }
 
 interface GradeItem { grade: string }
@@ -41,12 +89,6 @@ interface NameRow {
   result: DiagnoseLike | null
   commentary: Commentary | null
   kind: string | null
-}
-
-function gradeColor(g: string) {
-  if (g === '좋음') return GREEN
-  if (g === '아쉬움') return '#E0A04A'
-  return '#9a98b0'
 }
 
 function NewbornViewInner() {
@@ -71,7 +113,7 @@ function NewbornViewInner() {
             hanja_name: rec.hanjaName,
             chars: (rec.chars.filter(Boolean) as SavedChar[]),
             result: (rec.snapshot?.result as DiagnoseLike) ?? null,
-            commentary: rec.snapshot?.commentary ?? null,
+            commentary: normalizeCommentary(rec.snapshot?.commentary),
             kind: 'newborn',
           })
         }
@@ -86,7 +128,10 @@ function NewbornViewInner() {
       .eq('id', nameId)
       .maybeSingle()
       .then(({ data }) => {
-        if (data) setRow(data as NameRow)
+        if (data) {
+          const d = data as Record<string, unknown>
+          setRow({ ...(data as NameRow), commentary: normalizeCommentary(d.commentary) })
+        }
         setLoaded(true)
       })
   }, [nameId, recordId])
@@ -115,15 +160,7 @@ function NewbornViewInner() {
   const chars = row.chars || []
   const fullName = row.hanja_name || chars.map((c) => c.hanja).join('')
   const hangulName = row.hangul_name || chars.map((c) => c.hangul).join('')
-  const r = row.result
   const c = row.commentary
-
-  const rows = r ? [
-    { label: '사주 보완 (용신)', g: r.yongsinBohwan?.grade || '' },
-    { label: '한자 기운 (자원오행)', g: r.resourceFlow?.grade || '' },
-    { label: '소리 기운 (발음오행)', g: r.soundFlow?.grade || '' },
-    { label: '이름 수리 (81수리)', g: r.suri?.grade || '' },
-  ].filter((x) => x.g) : []
 
   return (
     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
@@ -134,43 +171,8 @@ function NewbornViewInner() {
         <div style={{ fontSize: 13, color: SUB, marginTop: 4 }}>{hangulName} · 아기 이름</div>
       </div>
 
-      {rows.length > 0 && (
-        <div style={{ background: CARD, border: '1px solid rgba(200,120,60,0.10)', borderRadius: 14, padding: 16, margin: '16px 0 14px' }}>
-          <div style={{ fontSize: 12, color: GOLD, marginBottom: 12, fontWeight: 700 }}>이름 분석 (4가지 기준)</div>
-          {rows.map((row, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: i === rows.length - 1 ? 'none' : '0.5px solid #f0e0d5' }}>
-              <span style={{ fontSize: 13, color: '#1a1a1a' }}>{row.label}</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: gradeColor(row.g) }}>{row.g}</span>
-            </div>
-          ))}
-          {r?.overallGrade && (
-            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '0.5px solid #f0e0d5', textAlign: 'center' }}>
-              <span style={{ fontSize: 12, color: SUB }}>종합 </span>
-              <span style={{ fontSize: 20, fontWeight: 700, color: gradeColor(r.overallGrade) }}>{r.overallGrade}</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {c && c.summary && (
-        <div style={{ background: CARD, border: '1px solid rgba(200,120,60,0.12)', borderRadius: 16, padding: 18, marginBottom: 14 }}>
-          {c.title && (
-            <div style={{ fontSize: 16, fontWeight: 700, color: GOLD, marginBottom: 12, lineHeight: 1.5 }}>
-              &ldquo;{c.title}&rdquo;
-            </div>
-          )}
-          {[
-            { label: '종합', text: c.summary },
-            { label: '좋은 점', text: c.good },
-            { label: '더 좋아지려면', text: c.improve },
-            { label: '조언', text: c.advice },
-          ].filter((s) => s.text).map((s, i) => (
-            <div key={i} style={{ borderLeft: '3px solid ' + GOLD, padding: '4px 12px', marginBottom: 14 }}>
-              <div style={{ fontSize: 12, color: GOLD, marginBottom: 4 }}>{s.label}</div>
-              <div style={{ fontSize: 14, color: '#1a1a1a', lineHeight: 1.8 }}>{s.text}</div>
-            </div>
-          ))}
-        </div>
+      {hasCommentary(c) && c && (
+        <PerspectiveAccordion commentary={c} />
       )}
 
       {/* 전문가 상담 연결 (개명 상담 · mode=naming) */}
