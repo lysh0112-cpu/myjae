@@ -486,10 +486,19 @@ function NewbornResultInner() {
         <>
           {cur.commentary && <PerspectiveAccordion commentary={cur.commentary} />}
 
-          {finalPicked && (
+          {finalPicked ? (
             <div style={{ background: 'rgba(129,199,132,0.12)', border: '1px solid ' + GREEN, borderRadius: 14, padding: '14px', marginBottom: 14, textAlign: 'center' }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: GREEN, marginBottom: 4 }}>✓ 최종 이름으로 저장했어요</div>
               <div style={{ fontSize: 12, color: SUB }}>마이페이지에서 확인하실 수 있어요.</div>
+            </div>
+          ) : (
+            <div style={{ background: 'rgba(129,199,132,0.10)', border: '1px solid ' + GREEN, borderRadius: 14, padding: '13px 16px', marginBottom: 14, textAlign: 'center' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#4a9450', marginBottom: 3 }}>✓ 후보로 임시저장됐어요</div>
+              <div style={{ fontSize: 12, color: SUB, lineHeight: 1.6 }}>
+                {remaining > 0
+                  ? <>위 후보 목록에 담겼어요 · 남은 조회 <b style={{ color: GOLD }}>{remaining}회</b></>
+                  : <>조회 횟수를 모두 사용했어요 · 후보 중에서 최종 선택해 주세요</>}
+              </div>
             </div>
           )}
         </>
@@ -498,13 +507,13 @@ function NewbornResultInner() {
           {remaining > 0 ? (
             <>
               <button onClick={loadDetail} disabled={detailLoading} className="active:scale-95"
-                style={{ width: '100%', background: 'rgba(200,120,60,0.12)', border: '1px solid ' + GOLD, borderRadius: 14, padding: 14, color: GOLD, fontWeight: 700, fontSize: 14, cursor: detailLoading ? 'default' : 'pointer' }}>
+                style={{ width: '100%', background: '#c8783c', border: 'none', borderRadius: 14, padding: 14, color: '#fff', fontWeight: 700, fontSize: 14, cursor: detailLoading ? 'default' : 'pointer' }}>
                 {detailLoading
                   ? <><span style={{ display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span> 이름을 정성껏 풀이하는 중…</>
-                  : <>✨ 이 이름 자세히 풀이 보기 · 남은 {remaining}회</>}
+                  : <>✨ 이 이름 풀이 보고 후보 담기 · 남은 {remaining}회</>}
               </button>
               <div style={{ fontSize: 11, color: SUB, textAlign: 'center', marginTop: 8, lineHeight: 1.6 }}>
-                결제하신 이용권으로 상세 풀이를 확인하실 수 있어요.
+                누르면 5관점 풀이를 보고 이 이름이 후보로 저장돼요 (1회 차감)
               </div>
             </>
           ) : (
