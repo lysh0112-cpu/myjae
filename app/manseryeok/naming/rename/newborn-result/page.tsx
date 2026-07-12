@@ -138,6 +138,7 @@ function NewbornResultInner() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [remaining, setRemaining] = useState(0)        // ★ 남은 조회 횟수(이용권)
   const [finalPicked, setFinalPicked] = useState(false) // ★ 최종 선택 완료 여부
+  const [showFinalPopup, setShowFinalPopup] = useState(false) // ★ '최종 선택하세요' 팝업
   const [saving, setSaving] = useState(false)
 
   // ★ 이름 짓기 조회 횟수 (관리자 설정값 · app_settings)
@@ -168,6 +169,13 @@ function NewbornResultInner() {
     } catch {}
     setLoaded(true)
   }, [bkey])
+
+  // ★ 마지막 회차 소진(remaining=0) + 후보 있음 + 아직 최종선택 안 함 → '최종 선택하세요' 팝업
+  useEffect(() => {
+    if (loaded && remaining === 0 && tries.length > 0 && !finalPicked) {
+      setShowFinalPopup(true)
+    }
+  }, [loaded, remaining, tries.length, finalPicked])
 
   const infoYear = baby ? parseInt(baby.year) : 0
   const infoMonth = baby ? parseInt(baby.month) : 0
@@ -375,10 +383,12 @@ function NewbornResultInner() {
 
       setFinalPicked(true)
 
-      // ⚠️ 최종 선택 확정 → 남은 조회 횟수 소멸 (이용권 제거)
-      //   더 이상 이 아기로 이름을 지어볼 수 없다.
+      // ⚠️ 최종 선택 확정 → 남은 조회 횟수 소멸 + 임시 보관 이름들 삭제
+      //   최종선택 = 이 이름으로 확정. 나머지 지어봤던 이름(임시)은 정리한다.
+      //   (전체 보관함에는 최종선택한 이름만 정식 저장됨)
       try {
         localStorage.setItem(NEWBORN_PASS_KEY, JSON.stringify({ babyKey: bkey, remaining: 0 }))
+        localStorage.removeItem(BABY_HISTORY_KEY)   // ★ 지어봤던 임시 이름들 삭제
         setRemaining(0)
       } catch {}
 
@@ -419,7 +429,17 @@ function NewbornResultInner() {
 
   return (
     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes candSparkle {
+          0%,100% { border-color:#e6be9f; box-shadow:0 0 0 0 rgba(200,120,60,0); }
+          50% { border-color:#c8783c; box-shadow:0 0 10px 2px rgba(200,120,60,0.35); }
+        }
+        @keyframes popIn {
+          from { opacity:0; transform:translateY(8px) scale(0.96); }
+          to { opacity:1; transform:translateY(0) scale(1); }
+        }
+      `}</style>
       <Header router={router} />
 
       <div style={{ textAlign: 'center', margin: '14px 0 6px' }}>
@@ -428,18 +448,33 @@ function NewbornResultInner() {
         {yongsin && <div style={{ fontSize: 11, color: SUB, marginTop: 2 }}>사주에 필요한 기운 <b style={{ color: GREEN }}>{yongsin}</b></div>}
       </div>
 
-      {tries.length > 1 && (
+      {tries.length > 0 && (
         <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 11, color: SUB, margin: '0 0 8px' }}>지금까지 지어본 이름 (눌러서 비교)</div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 11, color: SUB, margin: '0 0 8px' }}>
+            {remaining === 0 && !finalPicked
+              ? '📋 조회한 후보 이름 · 눌러서 최종 선택'
+              : '지금까지 지어본 이름 (눌러서 비교)'}
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             {tries.map((t, i) => {
               const on = i === activeTry
+              const pickMode = remaining === 0 && !finalPicked   // 최종선택 모드
               return (
-                <button key={i} onClick={() => setActiveTry(i)} className="active:scale-95"
-                  style={{ padding: '8px 12px', borderRadius: 12, cursor: 'pointer',
-                    background: on ? 'rgba(200,120,60,0.12)' : CARD,
-                    border: '1px solid ' + (on ? GOLD : 'rgba(200,120,60,0.10)') }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: on ? GOLD : '#1a1a1a' }}>{t.chars.map((c) => c.hanja).join('')}</span>
+                <button key={i}
+                  onClick={() => pickMode ? pickFinal(t) : setActiveTry(i)}
+                  disabled={saving}
+                  className="active:scale-95"
+                  style={{
+                    padding: '10px 16px', borderRadius: 12, cursor: saving ? 'default' : 'pointer',
+                    background: on && !pickMode ? 'rgba(200,120,60,0.12)' : CARD,
+                    border: '2px solid ' + (pickMode ? '#e6be9f' : (on ? GOLD : 'rgba(200,120,60,0.10)')),
+                    animation: pickMode ? 'candSparkle 1.3s ease-in-out infinite' : 'none',
+                    animationDelay: pickMode ? `${i * 0.4}s` : '0s',
+                  }}>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: on && !pickMode ? GOLD : '#1a1a1a' }}>
+                    {t.chars.map((c) => c.hanja).join('')}
+                  </span>
+                  {on && !pickMode && <span style={{ fontSize: 10, color: '#96502e', marginLeft: 5 }}>보는 중</span>}
                 </button>
               )
             })}
@@ -451,17 +486,11 @@ function NewbornResultInner() {
         <>
           {cur.commentary && <PerspectiveAccordion commentary={cur.commentary} />}
 
-          {/* ★ 최종 선택 (확정하면 못 바꿈. 마이페이지·상담사에 이 이름만 저장) */}
-          {finalPicked ? (
+          {finalPicked && (
             <div style={{ background: 'rgba(129,199,132,0.12)', border: '1px solid ' + GREEN, borderRadius: 14, padding: '14px', marginBottom: 14, textAlign: 'center' }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: GREEN, marginBottom: 4 }}>✓ 최종 이름으로 저장했어요</div>
               <div style={{ fontSize: 12, color: SUB }}>마이페이지에서 확인하실 수 있어요.</div>
             </div>
-          ) : (
-            <button onClick={() => cur && pickFinal(cur)} disabled={saving} className="active:scale-95"
-              style={{ width: '100%', background: '#c8783c', border: 'none', borderRadius: 14, padding: 14, color: '#fff', fontWeight: 700, fontSize: 15, cursor: saving ? 'default' : 'pointer', marginBottom: 14 }}>
-              {saving ? '저장 중…' : `💛 "${cur.chars.map((c) => c.hanja).join('')}" 이걸로 최종선택`}
-            </button>
           )}
         </>
       ) : (
@@ -515,7 +544,44 @@ function NewbornResultInner() {
         </button>
       ) : (
         <div style={{ background: CARD, border: '1px solid rgba(200,120,60,0.14)', borderRadius: 14, padding: '13px 16px', fontSize: 12, color: SUB, lineHeight: 1.7, textAlign: 'center' }}>
-          이용 횟수를 모두 사용했어요.<br />지금까지 지어본 이름 중에서 최종 선택해 주세요.
+          위 후보 이름 중에서 하나를 눌러 최종 선택해 주세요.
+        </div>
+      )}
+
+      {/* ★ 마지막 회차 소진 → '최종 선택하세요' 안내 팝업 (하단에서 올라옴) */}
+      {showFinalPopup && !finalPicked && (
+        <div
+          onClick={() => setShowFinalPopup(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 100,
+            background: 'rgba(40,28,22,0.35)',
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+            padding: '0 16px 24px',
+          }}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 400, background: '#fffbf7', borderRadius: 18,
+              padding: '22px 20px', textAlign: 'center',
+              boxShadow: '0 8px 30px rgba(40,28,22,0.25)',
+              animation: 'popIn 0.3s ease-out',
+            }}>
+            <div style={{ fontSize: 30, marginBottom: 8 }}>✨</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#96502e', marginBottom: 8, lineHeight: 1.5 }}>
+              최종 이름을 선택해 주세요
+            </div>
+            <div style={{ fontSize: 13, color: SUB, lineHeight: 1.7, marginBottom: 18 }}>
+              조회 횟수를 모두 사용했어요.<br />
+              선택한 이름만 보관함에 저장되고,<br />
+              나머지 후보는 사라져요.
+            </div>
+            <button
+              onClick={() => setShowFinalPopup(false)}
+              className="active:scale-95"
+              style={{ width: '100%', background: '#c8783c', border: 'none', borderRadius: 12, padding: 13, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+              후보 중에서 고르기
+            </button>
+          </div>
         </div>
       )}
     </main>
