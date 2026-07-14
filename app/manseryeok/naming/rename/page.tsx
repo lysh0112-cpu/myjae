@@ -3,7 +3,7 @@ import { Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import PageHeader from '@/app/components/common/PageHeader'
 
-// 작명 메뉴 (2버튼) — 둘 다 같은 작명 엔진을 쓰되 입구만 구분
+// 작명 메뉴 — 개명(내 이름 풀이) 단일
 const MENUS = [
   {
     key: 'diagnosis',
@@ -13,15 +13,6 @@ const MENUS = [
     desc: '지금 내 이름이 사주에 맞는지 풀어주고, 더 좋은 한자로 바꿔드려요',
     price: '9,900원~',
     href: '/manseryeok/naming/diagnosis',
-  },
-  {
-    key: 'newborn',
-    emoji: '👶',
-    title1: '내 아기',
-    title2: '이름짓기',
-    desc: '사주에 맞는 새 이름을 직접 지어드려요',
-    price: '5,000원~',
-    href: '/manseryeok/naming/rename/newname',
   },
 ]
 
