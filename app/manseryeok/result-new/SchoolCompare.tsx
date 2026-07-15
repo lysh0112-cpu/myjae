@@ -154,7 +154,7 @@ export default function SchoolCompare({ ohaeng }: { ohaeng: Ohaeng[] }) {
       })()}
 
       <div style={{ fontSize: 10.5, color: '#c4a58a', marginTop: 10, textAlign: 'center' }}>
-        ※ 종합 사주 풀이는 수리계산(심산) 관점 기준입니다
+        ※ 종합 사주 풀이는 수리계산 관점 기준입니다
       </div>
     </div>
   )
