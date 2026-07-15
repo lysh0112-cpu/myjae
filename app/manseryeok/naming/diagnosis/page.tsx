@@ -32,7 +32,9 @@ interface HanjaRow {
   strokes: number
   resource_ohaeng: string
   sound_ohaeng: string
-  is_avoid?: boolean
+  avoid_hard?: boolean
+  avoid_soft?: boolean
+  grade?: string
 }
 
 // 5관점 3단 해설(무엇을 보나/이 이름은/어떤 의미인가)
@@ -109,7 +111,8 @@ const rose = '#c8506e'         // 삭제·경고 포인트
 const border = '0.5px solid #f0e0d5'
 
 function isAvoidChar(row: HanjaRow): boolean {
-  if (row.is_avoid === true) return true
+  if (row.avoid_hard === true) return true
+  if (row.grade === '不用') return true
   const m = row.meaning || ''
   return AVOID_KEYWORDS.some((k) => m.includes(k))
 }
@@ -333,7 +336,7 @@ function DiagnosisInner() {
     try {
       const { data, error } = await supabase
         .from('hanja')
-        .select('hangul, hanja, meaning, strokes, resource_ohaeng, sound_ohaeng')
+        .select('hangul, hanja, meaning, strokes, resource_ohaeng, sound_ohaeng, avoid_hard, avoid_soft, grade')
         .eq('hangul', hangul)
         .order('strokes', { ascending: true })
       if (error) { console.error(error); setHanjaList([]) }
