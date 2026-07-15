@@ -523,7 +523,7 @@ function DiagnosisInner() {
   if (nameId && loadingSaved && step !== 'result') {
     return (
       <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto' }}>
-        <PitchHeader title="내 이름 풀이" onBack={() => router.push('/mypage')} onHome={() => router.push('/home-new')} />
+        <PitchHeader title="내 이름 풀이" onBack={() => router.push('/mypage-new')} onHome={() => router.push('/home-new')} />
         <div style={{ padding: '60px 20px', textAlign: 'center', color: gold, fontSize: '14px' }}>
           저장된 이름 풀이를 불러오는 중…
         </div>
@@ -582,7 +582,7 @@ function DiagnosisInner() {
   return (
     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-      <PitchHeader title="내 이름 풀이" onBack={() => router.push(nameId ? '/mypage' : '/manseryeok/naming/diagnosis/storage')} onHome={() => router.push('/home-new')} />
+      <PitchHeader title="내 이름 풀이" onBack={() => router.push(nameId ? '/mypage-new' : '/manseryeok/naming/diagnosis/storage')} onHome={() => router.push('/home-new')} />
 
       <div style={{ padding: '16px' }}>
         <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
@@ -800,7 +800,7 @@ function DiagnosisInner() {
                   📜 내 이름 보관함 보기
                 </button>
 
-                <button onClick={() => nameId ? router.push('/mypage') : resetAll()}
+                <button onClick={() => nameId ? router.push('/mypage-new') : resetAll()}
                   style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#b4785a', fontSize: '13px', cursor: 'pointer' }}>
                   {nameId ? '← 마이페이지로' : '다른 이름 풀어보기'}
                 </button>
