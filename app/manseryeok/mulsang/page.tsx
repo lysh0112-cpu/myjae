@@ -250,8 +250,8 @@ function MulsangInner() {
   const [answeredIds, setAnsweredIds] = useState<Set<string>>(new Set())
   // 그림 생성 실패 안내 (크레딧 소진 등). null이면 정상.
   const [imageError, setImageError] = useState<string | null>(null)
-  // 보관함 저장 상태
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
+  // 보관함 저장 상태 — 다시보기(recordId)로 열었으면 이미 저장된 것이므로 'saved'로 시작(재저장 방지)
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>(sp.get('recordId') ? 'saved' : 'idle')
 
   useEffect(() => {
     // 보관함 다시보기(recordId)로 진입했으면 스냅샷을 loadInfo에서 이미 복원했으므로

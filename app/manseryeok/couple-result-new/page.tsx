@@ -327,7 +327,7 @@ function CoupleResultView({
   // 통변
   const [tongLoading, setTongLoading] = useState(false)
   const [tongResult, setTongResult] = useState<string | null>(null)
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>(recordId ? 'saved' : 'idle')
   const [openCard, setOpenCard] = useState(0)
   const ranRef = useRef(false)
 
