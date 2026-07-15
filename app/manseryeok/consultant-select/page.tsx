@@ -324,7 +324,7 @@ function ConsultantSelectInner() {
         <div className="text-[12px] text-[#8888aa] mb-8 leading-relaxed">
           상담 시간에 마이페이지 → 내 상담 내역에서<br />채팅방으로 입장하실 수 있어요.
         </div>
-        <button onClick={() => router.push('/mypage')}
+        <button onClick={() => router.push('/mypage-new')}
           className="w-full max-w-[300px] py-[14px] rounded-xl text-[15px] font-bold mb-3"
           style={{ background: 'linear-gradient(135deg,#3C3489,#FAC775)', color: '#1a1a18' }}>
           마이페이지로 가기

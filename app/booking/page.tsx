@@ -440,7 +440,7 @@ export default function BookingPage() {
           ))}
         </div>
         <div className="flex gap-3 w-full mt-6">
-          <Link href="/mypage" className="flex-1">
+          <Link href="/mypage-new" className="flex-1">
             <button className="w-full py-3.5 rounded-xl text-sm font-semibold"
               style={{ border: "1px solid rgba(250,199,117,0.3)", color: "#FAC775", background: "rgba(250,199,117,0.08)" }}>
               마이페이지

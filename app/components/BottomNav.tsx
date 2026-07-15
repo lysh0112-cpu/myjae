@@ -64,7 +64,7 @@ export default function BottomNav() {
         {NAV_TABS.map((tab) => {
           const active = tab.href === '/' ? pathname === '/' : pathname.startsWith(tab.href)
           const isAuthTab = tab.icon === 'user'
-          const isMyPage = tab.href === '/mypage'
+          const isMyPage = tab.href === '/mypage-new'
 
           // 로그인 탭은 상태에 따라 반전
           const displayLabel = isAuthTab ? (isLoggedIn ? '로그아웃' : '로그인') : tab.label
@@ -92,7 +92,7 @@ export default function BottomNav() {
           // 마이페이지: 무조건 마이페이지로 이동 (로그인 여부는 마이페이지가 처리)
           if (isMyPage) {
             return (
-              <Link key={tab.href} href="/mypage" className="flex-1">{inner}</Link>
+              <Link key={tab.href} href="/mypage-new" className="flex-1">{inner}</Link>
             )
           }
 
