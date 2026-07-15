@@ -162,7 +162,7 @@ function CoupleInputInner() {
       <PersonPickerModal
         open={pickerFor !== null}
         serviceLabel={info.title}
-        serviceType="couple"
+        serviceType={mode === 'married' ? 'married_person' : 'couple_person'}
         presetRelation={mode === 'married' ? '배우자' : '연인'}
         headline={pickerFor === 1 ? '첫 번째 사람을 골라주세요' : '두 번째 사람을 골라주세요'}
         onPick={handlePick}

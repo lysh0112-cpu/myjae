@@ -134,8 +134,9 @@ export async function listSavedPeople(serviceType?: string): Promise<SavedPerson
   if (error) { console.error('listSavedPeople', error); return [] }
   // input_data가 문자열로 올 수도 있어 안전 파싱
   // ⚠️ saju_records는 '사람'과 '궁합 기록'을 함께 담는다.
-  //    궁합 기록(연인=couple / 부부=married)은 두 사람 쌍이라 '한 사람'으로
+  //    궁합 '결과 기록'(연인=couple / 부부=married)은 두 사람 쌍이라 '한 사람'으로
   //    쓸 수 없으므로 사람 목록에서 제외한다.
+  //    단, 궁합에서 등록한 '사람'(couple_person / married_person)은 한 사람이므로 남긴다.
   const rows = (data ?? []).filter((row) => {
     const st = row.service_type as string
     return st !== 'couple' && st !== 'married'
@@ -214,8 +215,10 @@ export async function addSavedPerson(draft: PersonDraft): Promise<AddResult> {
   const { data: u } = await supabase.auth.getUser()
   if (!u?.user) return { ok: false, reason: 'not_logged_in' }
 
-  // 중복 체크: 같은 생년월일(+달력+윤달+시+성별) 사람이 이미 있으면 막는다.
-  const existingList = await listSavedPeople()
+  // 중복 체크: 같은 화면(serviceType) 명단 안에서만 같은 사람을 막는다.
+  //   화면별로 사람 명단을 따로 관리하므로, 다른 화면에 같은 사람이 있어도
+  //   이 화면에서는 새로 등록할 수 있다. (사주/그림/대운/연월운/궁합 각자 분리)
+  const existingList = await listSavedPeople(draft.serviceType ?? undefined)
   const dup = existingList.find(p => isSamePerson(p.input_data, draft.input))
   if (dup) return { ok: false, reason: 'duplicate', existing: dup }
 
