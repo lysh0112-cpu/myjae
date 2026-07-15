@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
@@ -240,8 +240,7 @@ function TarotInner() {
 
   return (
     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
-      <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-        @keyframes slideLeft{from{transform:translateX(0)}to{transform:translateX(-50%)}}`}</style>
+      <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
       <div style={{
         position: 'sticky', top: 0, zIndex: 10,
         background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
@@ -381,14 +380,7 @@ function TarotInner() {
             <>
               <p style={{ color: gold, fontSize: '14px', textAlign: 'center', marginBottom: '6px' }}>마음이 이끄는 카드를 눌러주세요</p>
               <p style={{ color: sub, fontSize: '12px', textAlign: 'center', marginBottom: '16px' }}>{picked.length} / {spread.count} 장 선택됨</p>
-              <div style={{ position: 'relative', height: '150px', overflow: 'hidden', borderRadius: '14px', background: '#FFFBF7', border }}>
-                <div style={{ display: 'flex', gap: '8px', padding: '15px 0', width: 'max-content', animation: 'slideLeft 10s linear infinite' }}>
-                  {[...Array(24)].map((_, i) => (
-                    <div key={i} onClick={drawOne}
-                      style={{ flex: '0 0 80px', height: '118px', borderRadius: '10px', background: 'linear-gradient(135deg,#3C3489,#2C2C2A)', border: '1px solid rgba(250,199,117,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#FAC775', fontSize: '26px' }}>✦</div>
-                  ))}
-                </div>
-              </div>
+              <FanDraw need={spread.count} pickedCount={picked.length} onDraw={drawOne} />
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '16px', flexWrap: 'wrap' }}>
                 {picked.map((p, i) => (
                   <div key={i} style={{ width: '44px', height: '64px', borderRadius: '7px', background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FAC775', fontSize: '13px' }}>{i + 1}</div>
@@ -485,5 +477,125 @@ export default function TarotPage() {
     <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FDF6F0', color: rose }}>로딩 중...</div>}>
       <TarotInner />
     </Suspense>
+  )
+}
+
+// ── 부채꼴 카드 뽑기 (중심축 고정 · 카드가 우→좌로 흐름 · 누르면 슬롯으로 쏙 · 다 뽑으면 정지) ──
+interface FanDrawProps {
+  need: number          // 뽑아야 할 장수 (spread.count)
+  pickedCount: number   // 이미 뽑은 장수
+  onDraw: () => void    // 카드 하나 뽑기 (부모의 drawOne)
+}
+function FanDraw({ need, pickedCount, onDraw }: FanDrawProps) {
+  const svgRef = useRef<SVGSVGElement | null>(null)
+  const rafRef = useRef<number | null>(null)
+  const tRef = useRef(0)
+  const runningRef = useRef(true)
+  const filledRef = useRef(pickedCount)
+  const cardsRef = useRef<{ g: SVGGElement; phase: number; state: string; prog: number; slot: number; x: number; y: number; ang: number }[]>([])
+
+  // 최신 pickedCount 반영 (다 뽑으면 정지)
+  useEffect(() => {
+    filledRef.current = pickedCount
+    if (pickedCount >= need) runningRef.current = false
+    else runningRef.current = true
+  }, [pickedCount, need])
+
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    const NS = 'http://www.w3.org/2000/svg'
+    const cx = 180, cy = 300, radius = 270
+    const spread = 104, half = spread / 2
+    const w = 46, h = 76
+    const sw = w + 10, sh = h + 10
+    const SLOTS = 13
+    const slotY = 258, slotGap = 58
+    const slotStartX = cx - ((need - 1) / 2) * slotGap
+
+    // 초기화
+    svg.innerHTML = ''
+    const marks = document.createElementNS(NS, 'g')
+    const fan = document.createElementNS(NS, 'g')
+    svg.appendChild(marks); svg.appendChild(fan)
+
+    // 슬롯(카드보다 약간 크게)
+    for (let i = 0; i < need; i++) {
+      const r = document.createElementNS(NS, 'rect')
+      r.setAttribute('x', String(slotStartX + i * slotGap - sw / 2))
+      r.setAttribute('y', String(slotY - sh / 2))
+      r.setAttribute('width', String(sw)); r.setAttribute('height', String(sh)); r.setAttribute('rx', '9')
+      r.setAttribute('fill', '#1f1f1d'); r.setAttribute('stroke', 'rgba(255,255,255,0.18)')
+      r.setAttribute('stroke-dasharray', '4 3'); r.setAttribute('stroke-width', '1')
+      marks.appendChild(r)
+    }
+
+    cardsRef.current = []
+    for (let i = 0; i < SLOTS; i++) {
+      const g = document.createElementNS(NS, 'g') as SVGGElement
+      g.style.cursor = 'pointer'
+      const rect = document.createElementNS(NS, 'rect')
+      rect.setAttribute('x', String(-w / 2)); rect.setAttribute('y', String(-h / 2))
+      rect.setAttribute('width', String(w)); rect.setAttribute('height', String(h)); rect.setAttribute('rx', '7')
+      rect.setAttribute('fill', '#3C3489'); rect.setAttribute('stroke', 'rgba(250,199,117,0.5)'); rect.setAttribute('stroke-width', '1')
+      const star = document.createElementNS(NS, 'text')
+      star.setAttribute('x', '0'); star.setAttribute('y', String(-h / 2 + 16))
+      star.setAttribute('text-anchor', 'middle'); star.setAttribute('fill', '#FAC775'); star.setAttribute('font-size', '14')
+      star.textContent = '✦'
+      g.appendChild(rect); g.appendChild(star)
+      fan.appendChild(g)
+      const c = { g, phase: i / SLOTS, state: 'flow', prog: 0, slot: 0, x: 0, y: 0, ang: 0 }
+      g.addEventListener('click', () => {
+        if (c.state !== 'flow' || filledRef.current >= need) return
+        c.state = 'pull'; c.slot = filledRef.current
+        filledRef.current += 1
+        onDraw()   // 부모에 실제 뽑기 알림 (랜덤 카드 + 슬롯 채움)
+        if (filledRef.current >= need) runningRef.current = false
+      })
+      cardsRef.current.push(c)
+    }
+
+    const frame = () => {
+      if (runningRef.current) tRef.current += 0.0020
+      const t = tRef.current
+      for (const c of cardsRef.current) {
+        if (c.state === 'flow') {
+          const p = (c.phase + t) % 1
+          const ang = half - p * spread
+          const rad = ang * Math.PI / 180
+          c.x = cx + Math.sin(rad) * radius
+          c.y = cy - Math.cos(rad) * radius
+          c.ang = ang
+          const edge = Math.min(p, 1 - p)
+          c.g.setAttribute('opacity', String(edge < 0.06 ? edge / 0.06 : 1))
+          c.g.setAttribute('transform', `translate(${c.x},${c.y}) rotate(${ang})`)
+        } else if (c.state === 'pull') {
+          c.prog += 0.04
+          const sx = slotStartX + c.slot * slotGap
+          const startAng = c.ang
+          let x: number, y: number, rot: number
+          if (c.prog < 0.4) { const k = c.prog / 0.4; x = c.x; y = c.y + 60 * k; rot = startAng * (1 - k) }
+          else {
+            const k = (c.prog - 0.4) / 0.6
+            const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2
+            x = c.x + (sx - c.x) * e; y = (c.y + 60) + (slotY - (c.y + 60)) * e; rot = 0
+          }
+          c.g.setAttribute('opacity', '1')
+          c.g.setAttribute('transform', `translate(${x},${y}) rotate(${rot})`)
+          if (c.prog >= 1) c.state = 'done'
+        }
+      }
+      rafRef.current = requestAnimationFrame(frame)
+    }
+    frame()
+
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [need])
+
+  return (
+    <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '14px', background: '#FFFBF7', border: '1px solid #f0e0d5', padding: '18px 0 6px' }}>
+      <svg ref={svgRef} viewBox="0 0 360 300" width="100%" style={{ display: 'block', margin: '0 auto', maxWidth: '360px', overflow: 'hidden' }} />
+    </div>
   )
 }
