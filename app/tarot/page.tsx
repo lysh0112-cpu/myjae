@@ -492,7 +492,7 @@ function FanDraw({ need, pickedCount, onDraw }: FanDrawProps) {
   const tRef = useRef(0)
   const runningRef = useRef(true)
   const filledRef = useRef(pickedCount)
-  const cardsRef = useRef<{ g: SVGGElement; phase: number; state: string; prog: number; slot: number; x: number; y: number; ang: number }[]>([])
+  const cardsRef = useRef<{ g: SVGGElement; phase: number; state: string; prog: number; x: number; y: number; ang: number }[]>([])
 
   // 최신 pickedCount 반영 (다 뽑으면 정지)
   useEffect(() => {
@@ -508,10 +508,7 @@ function FanDraw({ need, pickedCount, onDraw }: FanDrawProps) {
     const cx = 180, cy = 300, radius = 270
     const spread = 104, half = spread / 2
     const w = 46, h = 76
-    const sw = w + 10, sh = h + 10
     const SLOTS = 13
-    const slotY = 258, slotGap = 58
-    const slotStartX = cx - ((need - 1) / 2) * slotGap
 
     // 초기화
     svg.innerHTML = ''
@@ -519,16 +516,7 @@ function FanDraw({ need, pickedCount, onDraw }: FanDrawProps) {
     const fan = document.createElementNS(NS, 'g')
     svg.appendChild(marks); svg.appendChild(fan)
 
-    // 슬롯(카드보다 약간 크게)
-    for (let i = 0; i < need; i++) {
-      const r = document.createElementNS(NS, 'rect')
-      r.setAttribute('x', String(slotStartX + i * slotGap - sw / 2))
-      r.setAttribute('y', String(slotY - sh / 2))
-      r.setAttribute('width', String(sw)); r.setAttribute('height', String(sh)); r.setAttribute('rx', '9')
-      r.setAttribute('fill', '#1f1f1d'); r.setAttribute('stroke', 'rgba(255,255,255,0.18)')
-      r.setAttribute('stroke-dasharray', '4 3'); r.setAttribute('stroke-width', '1')
-      marks.appendChild(r)
-    }
+    // (슬롯은 SVG 아래의 기존 슬롯 영역을 사용하므로 여기서는 그리지 않는다)
 
     cardsRef.current = []
     for (let i = 0; i < SLOTS; i++) {
@@ -544,10 +532,10 @@ function FanDraw({ need, pickedCount, onDraw }: FanDrawProps) {
       star.textContent = '✦'
       g.appendChild(rect); g.appendChild(star)
       fan.appendChild(g)
-      const c = { g, phase: i / SLOTS, state: 'flow', prog: 0, slot: 0, x: 0, y: 0, ang: 0 }
+      const c = { g, phase: i / SLOTS, state: 'flow', prog: 0, x: 0, y: 0, ang: 0 }
       g.addEventListener('click', () => {
         if (c.state !== 'flow' || filledRef.current >= need) return
-        c.state = 'pull'; c.slot = filledRef.current
+        c.state = 'pull'
         filledRef.current += 1
         onDraw()   // 부모에 실제 뽑기 알림 (랜덤 카드 + 슬롯 채움)
         if (filledRef.current >= need) runningRef.current = false
@@ -570,18 +558,13 @@ function FanDraw({ need, pickedCount, onDraw }: FanDrawProps) {
           c.g.setAttribute('opacity', String(edge < 0.06 ? edge / 0.06 : 1))
           c.g.setAttribute('transform', `translate(${c.x},${c.y}) rotate(${ang})`)
         } else if (c.state === 'pull') {
-          c.prog += 0.04
-          const sx = slotStartX + c.slot * slotGap
-          const startAng = c.ang
-          let x: number, y: number, rot: number
-          if (c.prog < 0.4) { const k = c.prog / 0.4; x = c.x; y = c.y + 60 * k; rot = startAng * (1 - k) }
-          else {
-            const k = (c.prog - 0.4) / 0.6
-            const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2
-            x = c.x + (sx - c.x) * e; y = (c.y + 60) + (slotY - (c.y + 60)) * e; rot = 0
-          }
-          c.g.setAttribute('opacity', '1')
-          c.g.setAttribute('transform', `translate(${x},${y}) rotate(${rot})`)
+          // 누른 카드는 아래로 쓱 내려가며 사라진다 (실제 안착은 아래 슬롯 영역이 담당)
+          c.prog += 0.05
+          const k = c.prog
+          const y = c.y + 150 * k
+          const op = 1 - k
+          c.g.setAttribute('opacity', String(Math.max(0, op)))
+          c.g.setAttribute('transform', `translate(${c.x},${y}) rotate(${c.ang * (1 - k)})`)
           if (c.prog >= 1) c.state = 'done'
         }
       }
@@ -595,7 +578,7 @@ function FanDraw({ need, pickedCount, onDraw }: FanDrawProps) {
 
   return (
     <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '14px', background: '#FFFBF7', border: '1px solid #f0e0d5', padding: '18px 0 6px' }}>
-      <svg ref={svgRef} viewBox="0 0 360 300" width="100%" style={{ display: 'block', margin: '0 auto', maxWidth: '360px', overflow: 'hidden' }} />
+      <svg ref={svgRef} viewBox="0 0 360 200" width="100%" style={{ display: 'block', margin: '0 auto', maxWidth: '360px', overflow: 'hidden' }} />
     </div>
   )
 }
