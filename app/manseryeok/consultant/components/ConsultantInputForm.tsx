@@ -3,18 +3,18 @@ import { useState } from 'react'
 import { useInputForm, formatBirth } from '@/hooks/useInputForm'
 
 const BRANCH_LIST = [
-  {char:'子',label:'子시 (23~01시)'},
-  {char:'丑',label:'丑시 (01~03시)'},
-  {char:'寅',label:'寅시 (03~05시)'},
-  {char:'卯',label:'卯시 (05~07시)'},
-  {char:'辰',label:'辰시 (07~09시)'},
-  {char:'巳',label:'巳시 (09~11시)'},
-  {char:'午',label:'午시 (11~13시)'},
-  {char:'未',label:'未시 (13~15시)'},
-  {char:'申',label:'申시 (15~17시)'},
-  {char:'酉',label:'酉시 (17~19시)'},
-  {char:'戌',label:'戌시 (19~21시)'},
-  {char:'亥',label:'亥시 (21~23시)'},
+  {char:'子',label:'子시 (23:30~01:30시)'},
+  {char:'丑',label:'丑시 (01:30~03:30시)'},
+  {char:'寅',label:'寅시 (03:30~05:30시)'},
+  {char:'卯',label:'卯시 (05:30~07:30시)'},
+  {char:'辰',label:'辰시 (07:30~09:30시)'},
+  {char:'巳',label:'巳시 (09:30~11:30시)'},
+  {char:'午',label:'午시 (11:30~13:30시)'},
+  {char:'未',label:'未시 (13:30~15:30시)'},
+  {char:'申',label:'申시 (15:30~17:30시)'},
+  {char:'酉',label:'酉시 (17:30~19:30시)'},
+  {char:'戌',label:'戌시 (19:30~21:30시)'},
+  {char:'亥',label:'亥시 (21:30~23:30시)'},
 ]
 
 const QUESTION_CATEGORIES = [

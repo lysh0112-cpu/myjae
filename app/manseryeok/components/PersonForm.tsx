@@ -2,18 +2,18 @@
 import { useState } from 'react'
 
 const EARTHLY_BRANCHES = [
-  { char:"子", name:"자시", time:"23~01", animal:"🐭" },
-  { char:"丑", name:"축시", time:"01~03", animal:"🐮" },
-  { char:"寅", name:"인시", time:"03~05", animal:"🐯" },
-  { char:"卯", name:"묘시", time:"05~07", animal:"🐰" },
-  { char:"辰", name:"진시", time:"07~09", animal:"🐲" },
-  { char:"巳", name:"사시", time:"09~11", animal:"🐍" },
-  { char:"午", name:"오시", time:"11~13", animal:"🐴" },
-  { char:"未", name:"미시", time:"13~15", animal:"🐑" },
-  { char:"申", name:"신시", time:"15~17", animal:"🐵" },
-  { char:"酉", name:"유시", time:"17~19", animal:"🐓" },
-  { char:"戌", name:"술시", time:"19~21", animal:"🐶" },
-  { char:"亥", name:"해시", time:"21~23", animal:"🐷" },
+  { char:"子", name:"자시", time:"23:30~01:30", animal:"🐭" },
+  { char:"丑", name:"축시", time:"01:30~03:30", animal:"🐮" },
+  { char:"寅", name:"인시", time:"03:30~05:30", animal:"🐯" },
+  { char:"卯", name:"묘시", time:"05:30~07:30", animal:"🐰" },
+  { char:"辰", name:"진시", time:"07:30~09:30", animal:"🐲" },
+  { char:"巳", name:"사시", time:"09:30~11:30", animal:"🐍" },
+  { char:"午", name:"오시", time:"11:30~13:30", animal:"🐴" },
+  { char:"未", name:"미시", time:"13:30~15:30", animal:"🐑" },
+  { char:"申", name:"신시", time:"15:30~17:30", animal:"🐵" },
+  { char:"酉", name:"유시", time:"17:30~19:30", animal:"🐓" },
+  { char:"戌", name:"술시", time:"19:30~21:30", animal:"🐶" },
+  { char:"亥", name:"해시", time:"21:30~23:30", animal:"🐷" },
 ]
 
 export interface PersonData {
