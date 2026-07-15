@@ -92,7 +92,8 @@ ${body.sceneDesc || body.prompt}
     }
 
     const anthropicKey = process.env.ANTHROPIC_API_KEY
-    if (anthropicKey) {
+    async function runCommentary() {
+      if (!anthropicKey) return
       try {
         const cRes = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
@@ -120,8 +121,8 @@ ${body.sceneDesc || body.prompt}
     let imageB64: string | null = null
     let imageNote = ''
     const openaiKey = process.env.OPENAI_API_KEY
-
-    if (openaiKey) {
+    async function runImage() {
+      if (!openaiKey) { imageNote = 'no_openai_key'; return }
       try {
         const imgRes = await fetch('https://api.openai.com/v1/images/generations', {
           method: 'POST',
@@ -139,16 +140,19 @@ ${body.sceneDesc || body.prompt}
         const imgData = await imgRes.json()
         imageB64 = imgData.data?.[0]?.b64_json ?? null
         if (!imageB64) {
-          imageNote = 'image_failed'
+          // OpenAI가 준 실제 사유를 화면까지 전달 (크레딧·인증·정책 등 구분용)
+          const apiMsg = imgData?.error?.message || imgData?.error?.code || imgData?.error?.type
+          imageNote = apiMsg ? `image_failed: ${String(apiMsg).slice(0, 200)}` : 'image_failed'
           console.error('gpt-image response:', JSON.stringify(imgData).slice(0, 500))
         }
       } catch (e) {
         console.error('gpt-image error:', e)
-        imageNote = 'image_error'
+        imageNote = 'image_error: ' + (e instanceof Error ? e.message.slice(0, 150) : 'unknown')
       }
-    } else {
-      imageNote = 'no_openai_key'
     }
+
+    // 해설(Claude)과 그림(OpenAI)을 동시에 실행 → 순차 대비 시간 절반, 타임아웃 방지
+    await Promise.all([runCommentary(), runImage()])
 
     // ---------- 3) 이미지를 Storage(mulsang 버킷)에 실제 업로드 → 진짜 URL ----------
     let imageUrl: string | null = null

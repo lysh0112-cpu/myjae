@@ -343,10 +343,14 @@ function MulsangInner() {
       const data = await res.json()
       setImageUrl(data.imageUrl ?? null)
       setCommentary(data.commentary ?? null)
-      // 그림이 안 왔으면(=크레딧 소진 등) 이유를 화면에 안내. imageNote로 원인 구분.
+      // 그림이 안 왔으면(=크레딧 소진·타임아웃 등) 이유를 화면에 안내. imageNote로 원인 구분.
       if (!data.imageUrl) {
         const note = data.imageNote || ''
-        const detail = data.imageErrorMsg ? ` (사유: ${data.imageErrorMsg})` : ''
+        // 서버가 담아준 상세 사유(imageNote의 ': ' 뒤, 또는 imageErrorMsg)를 함께 표시
+        const noteDetail = note.includes(':') ? note.split(':').slice(1).join(':').trim() : ''
+        const detail = data.imageErrorMsg
+          ? ` (사유: ${data.imageErrorMsg})`
+          : (noteDetail ? ` (사유: ${noteDetail})` : '')
         setImageError(
           note === 'no_openai_key'
             ? '그림 생성 설정이 아직 안 돼 있어요. (관리자 확인 필요)'
