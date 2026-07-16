@@ -582,7 +582,7 @@ function DiagnosisInner() {
   return (
     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-      <PitchHeader title="내 이름 풀이" onBack={() => router.push(nameId ? '/mypage-new' : '/manseryeok/naming/diagnosis/storage')} onHome={() => router.push('/home-new')} />
+      <PitchHeader title="내 이름 풀이" onBack={() => router.push((sp.get('from') === 'mypage' || nameId) ? '/mypage-new' : '/manseryeok/naming/diagnosis/storage')} onHome={() => router.push('/home-new')} />
 
       <div style={{ padding: '16px' }}>
         <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>

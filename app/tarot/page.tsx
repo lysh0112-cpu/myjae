@@ -248,6 +248,11 @@ function TarotInner() {
         borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <button onClick={() => {
+          if (viewOnly) {
+            const from = searchParams.get('from')
+            router.push(from === 'mypage' ? '/mypage-new' : '/tarot/storage')
+            return
+          }
           if (step === 'result') { setStep('reveal'); return }
           if (step === 'reveal') { setStep('draw'); return }
           if (step === 'draw') { setStep('spread'); return }

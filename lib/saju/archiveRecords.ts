@@ -53,28 +53,29 @@ export function reviewUrl(item: ArchiveItem, inputData?: Record<string, unknown>
   const rid = item.id
   const st = item.serviceType
   const inp = inputData || {}
+  const from = '&from=mypage'   // 뒤로가기 시 마이페이지로 돌아가도록 표시
   switch (st) {
     case 'couple':
     case 'married':
-      return `/manseryeok/couple-result-new?mode=${st === 'married' ? 'married' : 'couple'}&recordId=${rid}`
+      return `/manseryeok/couple-result-new?mode=${st === 'married' ? 'married' : 'couple'}&recordId=${rid}${from}`
     case 'mulsang':
-      return `/manseryeok/mulsang?recordId=${rid}`
+      return `/manseryeok/mulsang?recordId=${rid}${from}`
     case 'tarot':
-      return `/tarot?recordId=${rid}`
+      return `/tarot?recordId=${rid}${from}`
     case 'naming':
     case 'newborn':
-      return `/manseryeok/naming/diagnosis?recordId=${rid}`
+      return `/manseryeok/naming/diagnosis?recordId=${rid}${from}`
     case 'wedding':
-      return `/manseryeok/wedding-timing?recordId=${rid}`
+      return `/manseryeok/wedding-timing?recordId=${rid}${from}`
     case 'birth':
-      return `/manseryeok/birth-timing?recordId=${rid}`
+      return `/manseryeok/birth-timing?recordId=${rid}${from}`
     case 'daeun':
-      return `/manseryeok/result-new?unse=daeun&recordId=${rid}`
+      return `/manseryeok/result-new?unse=daeun&recordId=${rid}${from}`
     case 'seyun':
-      return `/manseryeok/result-new?unse=seyun&recordId=${rid}`
+      return `/manseryeok/result-new?unse=seyun&recordId=${rid}${from}`
     case 'saju':
     default:
-      return `/manseryeok/result-new?recordId=${rid}`
+      return `/manseryeok/result-new?recordId=${rid}${from}`
   }
 }
 
