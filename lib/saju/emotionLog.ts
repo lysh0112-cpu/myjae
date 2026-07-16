@@ -99,3 +99,72 @@ export async function listRecentMoods(days = 14): Promise<EmotionLog[]> {
   if (error || !data) return []
   return data.map((r) => ({ logDate: r.log_date, mood: r.mood as MoodCode, note: r.note }))
 }
+
+// 특정 월(YYYY, MM 1~12)의 감정 기록 — 흐름 그래프용. 날짜순(오름).
+export async function listMonthMoods(year: number, month: number): Promise<EmotionLog[]> {
+  const user_id = await uid()
+  if (!user_id) return []
+  const mm = String(month).padStart(2, '0')
+  const start = `${year}-${mm}-01`
+  const end = `${year}-${mm}-31`
+  const { data, error } = await supabase
+    .from('emotion_logs')
+    .select('log_date, mood, note')
+    .eq('user_id', user_id)
+    .gte('log_date', start)
+    .lte('log_date', end)
+    .order('log_date', { ascending: true })
+  if (error || !data) return []
+  return data.map((r) => ({ logDate: r.log_date, mood: r.mood as MoodCode, note: r.note }))
+}
+
+// 총 기록 수 — 안내/격려 팝업 트리거용 (1·5·10번 → 그 뒤 10번마다)
+export async function countMoods(): Promise<number> {
+  const user_id = await uid()
+  if (!user_id) return 0
+  const { count, error } = await supabase
+    .from('emotion_logs')
+    .select('log_date', { count: 'exact', head: true })
+    .eq('user_id', user_id)
+  if (error || count == null) return 0
+  return count
+}
+
+// 가장 오래된 기록 월 (달력/그래프 과거 넘김 한계) — 없으면 null
+export async function firstMoodMonth(): Promise<{ year: number; month: number } | null> {
+  const user_id = await uid()
+  if (!user_id) return null
+  const { data, error } = await supabase
+    .from('emotion_logs')
+    .select('log_date')
+    .eq('user_id', user_id)
+    .order('log_date', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  if (error || !data) return null
+  const [y, m] = data.log_date.split('-')
+  return { year: Number(y), month: Number(m) }
+}
+
+// 이 횟수에 안내 팝업을 띄울지 (1·5·10 → 그 뒤 10 단위)
+export function shouldShowNotice(count: number): boolean {
+  if (count === 1 || count === 5 || count === 10) return true
+  if (count > 10 && count % 10 === 0) return true
+  return false
+}
+
+// 횟수별 안내 문구
+export function noticeFor(count: number): { emoji: string; title: string; body: string } {
+  if (count === 1) return {
+    emoji: '🌿', title: '감정 기록을 시작해요',
+    body: '오늘의 기분은 하루 한 번 기록되고, 그래프에서 언제든 다시 볼 수 있어요. 회원님만 볼 수 있고, 탈퇴 시 함께 삭제돼요.',
+  }
+  if (count === 5) return {
+    emoji: '✨', title: '벌써 5번째 기록이에요!',
+    body: '한 달 기분 흐름에서 지난 기분들을 돌아볼 수 있어요. 막대를 누르면 그날 기록이 보여요 😊',
+  }
+  return {
+    emoji: '🎉', title: `${count}번 기록 달성!`,
+    body: '꾸준히 마음을 살피고 계시네요. 그 마음이 참 소중해요 🌷',
+  }
+}

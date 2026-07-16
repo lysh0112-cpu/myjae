@@ -10,7 +10,8 @@
 // ----------------------------------------------------------------------------
 
 import { useEffect, useState } from 'react'
-import { MOODS, MoodCode, saveTodayMood, getTodayMood } from '@/lib/saju/emotionLog'
+import { MOODS, MoodCode, saveTodayMood, getTodayMood, countMoods, shouldShowNotice, noticeFor } from '@/lib/saju/emotionLog'
+import MoodHistoryModal from './MoodHistoryModal'
 
 export default function EmotionPicker() {
   const [selected, setSelected] = useState<MoodCode | null>(null)
@@ -18,6 +19,8 @@ export default function EmotionPicker() {
   const [popKey, setPopKey] = useState(0)      // 애니메이션 재실행용
   const [saving, setSaving] = useState(false)
   const [savedMood, setSavedMood] = useState<MoodCode | null>(null)
+  const [showHistory, setShowHistory] = useState(false)
+  const [notice, setNotice] = useState<{ emoji: string; title: string; body: string } | null>(null)
 
   useEffect(() => {
     getTodayMood().then((m) => {
@@ -36,10 +39,18 @@ export default function EmotionPicker() {
 
   const save = async () => {
     if (selected == null || saving) return
+    const firstSaveToday = savedMood == null
     setSaving(true)
     const ok = await saveTodayMood(selected, note.trim() || undefined)
     setSaving(false)
-    if (ok) setSavedMood(selected)
+    if (ok) {
+      setSavedMood(selected)
+      // 오늘 첫 저장일 때만 안내 팝업 확인 (다시 저장은 카운트 안 늘어남)
+      if (firstSaveToday) {
+        const cnt = await countMoods()
+        if (shouldShowNotice(cnt)) setNotice(noticeFor(cnt))
+      }
+    }
   }
 
   const dirty = selected != null && (selected !== savedMood || note.trim().length >= 0)
@@ -55,7 +66,10 @@ export default function EmotionPicker() {
           100%{transform:scale(1.28)}
         }
       `}</style>
-      <div style={{ fontSize: 12, fontWeight: 600, color: '#96502e', marginBottom: 11 }}>오늘 기분은 어떠세요?</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 11 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: '#96502e' }}>오늘 기분은 어떠세요?</span>
+        <span onClick={() => setShowHistory(true)} style={{ fontSize: 10.5, color: '#a06a3c', background: '#faede0', border: '0.5px solid #ecd8c6', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', whiteSpace: 'nowrap' }}>📅 내 감정 기록</span>
+      </div>
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between' }}>
         {MOODS.map((m) => {
@@ -117,6 +131,22 @@ export default function EmotionPicker() {
         >
           {saving ? '저장 중…' : savedMood != null ? '오늘 기분 다시 저장' : '오늘 기분 저장'}
         </button>
+      )}
+
+      <MoodHistoryModal open={showHistory} onClose={() => setShowHistory(false)} />
+
+      {notice && (
+        <div onClick={() => setNotice(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(60,40,30,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, zIndex: 1100 }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: 300, background: '#FFFBF7', border: '0.5px solid #f0d8c0', borderRadius: 16, padding: 20, textAlign: 'center' }}>
+            <div style={{ fontSize: 32, marginBottom: 9 }}>{notice.emoji}</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#96502e', marginBottom: 8 }}>{notice.title}</div>
+            <div style={{ fontSize: 12, color: '#7a6858', lineHeight: 1.7 }}>{notice.body}</div>
+            <button onClick={() => setNotice(null)}
+              style={{ width: '100%', marginTop: 14, padding: '10px 0', borderRadius: 10, border: 'none', background: '#b46e46', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>확인</button>
+          </div>
+        </div>
       )}
     </div>
   )
