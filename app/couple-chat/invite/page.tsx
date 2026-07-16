@@ -49,11 +49,19 @@ function InviteInner() {
             ? crypto.randomUUID().replace(/-/g, '')
             : Math.random().toString(36).slice(2) + Date.now().toString(36)
 
+        // URL에서 궁합 정보 읽기 (궁합 결과 화면에서 넘어온 경우)
+        let compatData: unknown = null
+        try {
+          const compatRaw = new URLSearchParams(window.location.search).get('compat')
+          if (compatRaw) compatData = JSON.parse(decodeURIComponent(compatRaw))
+        } catch { /* 무시 */ }
+
         // 커플방 1개 생성 (상대 가입 대기 = pending)
         const { error } = await supabase.from('couple_rooms').insert({
           inviter_id: uid,
           invite_token: token,
           status: 'pending',
+          compat_data: compatData,
         })
         if (error) throw error
 

@@ -557,31 +557,15 @@ function CoupleResultView({
 
         {/* 커플 채팅 초대 — 연인 궁합에서만 (부부 제외) */}
         {mode !== 'married' && (
-          <>
-            <button
-              onClick={() => {
-                if (saveState !== 'saved') {
-                  alert('먼저 "보관함에 저장"을 눌러주세요.\n저장해야 두 분의 궁합 정보로 커플 채팅을 시작할 수 있어요 💕')
-                  return
-                }
-                onInviteChat(score?.grade)
-              }}
-              style={{
-                width: '100%', marginTop: 10, borderRadius: 11, padding: 13,
-                background: saveState === 'saved' ? '#fbeaf0' : '#f5f0ec',
-                border: saveState === 'saved' ? '0.5px solid #f0c9d8' : '0.5px solid #e5ddd5',
-                color: saveState === 'saved' ? '#993556' : '#b8a99c',
-                fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              }}>
-              💗 이 사람과 커플 채팅 시작하기
-            </button>
-            {saveState !== 'saved' && (
-              <div style={{ fontSize: 11, color: '#b4785a', textAlign: 'center', marginTop: 6, lineHeight: 1.5 }}>
-                먼저 위의 "보관함에 저장"을 누르면 채팅을 시작할 수 있어요
-              </div>
-            )}
-          </>
+          <button onClick={() => onInviteChat(score?.grade)}
+            style={{
+              width: '100%', marginTop: 10, borderRadius: 11, padding: 13,
+              background: '#fbeaf0', border: '0.5px solid #f0c9d8',
+              color: '#993556', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            }}>
+            💗 이 사람과 커플 채팅 시작하기
+          </button>
         )}
 
         {/* 참고용 안내 — 결과에 과몰입하지 않도록 다정하게 */}

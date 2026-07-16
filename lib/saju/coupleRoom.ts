@@ -133,3 +133,59 @@ export async function leaveCoupleRoom(roomId: string): Promise<boolean> {
     return false
   }
 }
+
+// ── AI 조언 기능 ────────────────────────────────────────────
+// 방의 AI 토글 상태 읽기
+export async function getRoomAiOn(roomId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('couple_rooms')
+    .select('ai_on')
+    .eq('id', roomId)
+    .maybeSingle()
+  return !!data?.ai_on
+}
+
+// AI 토글 켜고 끄기
+export async function setRoomAiOn(roomId: string, on: boolean): Promise<void> {
+  await supabase.from('couple_rooms').update({ ai_on: on }).eq('id', roomId)
+}
+
+// AI 조언 메시지 저장 (처음엔 나만 보기 = private)
+export async function saveAiMessage(
+  roomId: string,
+  myUid: string,
+  text: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from('couple_messages')
+    .insert({
+      room_id: roomId,
+      sender_id: myUid, // 부른 사람 = 미리보기 볼 사람
+      kind: 'ai',
+      message: text,
+      visibility: 'private',
+    })
+    .select('id')
+    .maybeSingle()
+  return data?.id || null
+}
+
+// AI 조언을 상대에게 공유 (private → all)
+export async function shareAiMessage(messageId: string): Promise<void> {
+  await supabase.from('couple_messages').update({ visibility: 'all' }).eq('id', messageId)
+}
+
+// AI 조언 숨기기 (내 미리보기 삭제)
+export async function deleteAiMessage(messageId: string): Promise<void> {
+  await supabase.from('couple_messages').delete().eq('id', messageId)
+}
+
+// 방의 궁합 정보(compat_data) 읽기 — AI 조언에 사용
+export async function getRoomCompat(roomId: string): Promise<any | null> {
+  const { data } = await supabase
+    .from('couple_rooms')
+    .select('compat_data')
+    .eq('id', roomId)
+    .maybeSingle()
+  return data?.compat_data || null
+}
