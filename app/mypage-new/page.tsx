@@ -605,6 +605,33 @@ export default function MyPageNew() {
           )}
         </div>
 
+        <div onClick={() => router.push('/tarot')}
+          style={{ background: '#f3eefb', border: '0.5px solid #ddd0f0', borderRadius: 14, padding: '13px 15px', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 11, cursor: 'pointer' }}>
+          <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#e6dbf7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, flexShrink: 0 }}>🔮</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#6a4a9c' }}>오늘의 타로 한 장</div>
+            <div style={{ fontSize: 10.5, color: '#8a7aa8', marginTop: 1 }}>가볍게 뽑아보는 오늘의 기운</div>
+          </div>
+          <span style={{ color: '#a890d0', fontSize: 16 }}>›</span>
+        </div>
+
+        <div onClick={() => {
+            if (!profile?.birth_year) { alert('먼저 내 사주를 등록해 주세요.'); setEditMode(true); return }
+            const p1 = encodeURIComponent(JSON.stringify({
+              year: profile.birth_year, month: profile.birth_month, day: profile.birth_day,
+              hour: profile.birth_hour ?? '0', gender: profile.gender || '남',
+            }))
+            router.push(`/manseryeok/ai-chat?mode=personal&person1=${p1}`)
+          }}
+          style={{ background: '#fef2ec', border: '0.5px solid #f0d0bc', borderRadius: 14, padding: '13px 15px', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 11, cursor: 'pointer' }}>
+          <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#fae0cf', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, flexShrink: 0 }}>💬</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#96502e' }}>AI에게 물어보기</div>
+            <div style={{ fontSize: 10.5, color: '#b4785a', marginTop: 1 }}>내 사주를 바탕으로 편하게 대화해요</div>
+          </div>
+          <span style={{ color: '#d0a890', fontSize: 16 }}>›</span>
+        </div>
+
         <ArchiveList />
 
         <div style={card}>
@@ -668,15 +695,15 @@ export default function MyPageNew() {
           )}
         </div>
 
-        <div style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}>
-          <div onClick={() => router.push('/mypage-new/edit')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderBottom: '0.5px solid #f5e5da', cursor: 'pointer' }}>
-            <span style={{ fontSize: 13, color: '#5a4a3e' }}>⚙️ 계정 설정</span><span style={{ fontSize: 16, color: '#d0b8a5' }}>›</span>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, marginBottom: 12 }}>
+          <div onClick={() => { setEditMode(true); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }) }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 12px', background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, cursor: 'pointer' }}>
+            <span style={{ fontSize: 13, color: '#5a4a3e' }}>⚙️ 계정 설정</span>
           </div>
-          <div onClick={() => router.push('/manseryeok/reviews/write')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderBottom: '0.5px solid #f5e5da', cursor: 'pointer' }}>
-            <span style={{ fontSize: 13, color: '#5a4a3e' }}>❓ 문의하기</span><span style={{ fontSize: 16, color: '#d0b8a5' }}>›</span>
+          <div onClick={() => router.push('/manseryeok/reviews/write')} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 12px', background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, cursor: 'pointer' }}>
+            <span style={{ fontSize: 13, color: '#5a4a3e' }}>❓ 문의하기</span>
           </div>
-          <div onClick={() => router.push('/manseryeok/expert')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 14, cursor: 'pointer' }}>
-            <span style={{ fontSize: 13, color: '#5a4a3e' }}>🔎 전문가용 만세력 계산기</span><span style={{ fontSize: 16, color: '#d0b8a5' }}>›</span>
+          <div onClick={() => router.push('/manseryeok/expert')} style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 8, padding: '13px 12px', background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, cursor: 'pointer' }}>
+            <span style={{ fontSize: 13, color: '#5a4a3e' }}>🔎 전문가용 만세력 계산기</span>
           </div>
         </div>
 
