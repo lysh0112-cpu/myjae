@@ -30,28 +30,42 @@ export default function CoupleChatFab() {
   if (!show) return null
 
   return (
-    <button
-      onClick={() => router.push('/couple-chat/rooms')}
-      aria-label="커플 채팅"
+    <div
       style={{
         position: 'fixed',
-        right: 18,
-        bottom: 84,
-        width: 54,
-        height: 54,
-        borderRadius: '50%',
-        background: '#d4537e',
-        border: 'none',
-        boxShadow: '0 2px 10px rgba(212,83,126,0.45)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: 26,
-        cursor: 'pointer',
+        bottom: 0,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: '100%',
+        maxWidth: 430,
+        height: 0,
         zIndex: 40,
+        pointerEvents: 'none',
       }}
     >
-      💗
-    </button>
+      <button
+        onClick={() => router.push('/couple-chat/rooms')}
+        aria-label="커플 채팅"
+        style={{
+          position: 'absolute',
+          right: 18,
+          bottom: 84,
+          width: 54,
+          height: 54,
+          borderRadius: '50%',
+          background: '#d4537e',
+          border: 'none',
+          boxShadow: '0 2px 10px rgba(212,83,126,0.45)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 26,
+          cursor: 'pointer',
+          pointerEvents: 'auto',
+        }}
+      >
+        💗
+      </button>
+    </div>
   )
 }
