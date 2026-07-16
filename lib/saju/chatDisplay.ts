@@ -11,6 +11,7 @@ export type ChatDisplaySettings = {
   fontKey: string
   bg: string
   textColor: string // 글자색 ('' = 자동)
+  myBubble: string // 내 말풍선 색 ('' = 기본 브라운)
 }
 
 export const FONT_SCALES = [
@@ -83,6 +84,7 @@ export const DEFAULT_DISPLAY: ChatDisplaySettings = {
   fontKey: 'gothic',
   bg: BG_AUTO,
   textColor: '',
+  myBubble: '',
 }
 
 export function loadDisplaySettings(): ChatDisplaySettings {

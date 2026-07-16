@@ -25,7 +25,6 @@ import {
   googleFontsHref,
   loadRecentColors,
   pushRecentColor,
-  FONT_SCALES,
   FONT_POINTS,
   FONTS,
   BG_AUTO,
@@ -64,6 +63,7 @@ function ChatInner() {
   const [disp, setDisp] = useState<ChatDisplaySettings>(DEFAULT_DISPLAY)
   const [showSettings, setShowSettings] = useState(false)
   const [settingsBig, setSettingsBig] = useState(false)
+  const [settingsTab, setSettingsTab] = useState<'bg' | 'font' | 'size' | 'textColor' | 'bubble'>('bg')
   const [showMenu, setShowMenu] = useState(false)
   const [recentColors, setRecentColors] = useState<string[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -183,6 +183,9 @@ function ChatInner() {
   const cardBg = isDark ? '#3a3a3a' : CARD
   const otherBubbleBg = isDark ? '#3a3a3a' : '#fff'
   const otherBubbleText = disp.textColor || (isDark ? '#f0f0f0' : '#3a2e28')
+  // 내 말풍선: 지정색 있으면 그 색, 없으면 기본 브라운. 글자색은 밝기 대비 자동
+  const myBubbleBg = disp.myBubble || BROWN
+  const myBubbleText = disp.myBubble ? (isDarkColor(disp.myBubble) ? '#fff' : '#3a2e28') : '#fff'
 
   return (
     <main
@@ -320,8 +323,8 @@ function ChatInner() {
                     lineHeight: 1.55,
                     padding: '9px 13px',
                     borderRadius: mine ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                    background: mine ? BROWN : otherBubbleBg,
-                    color: mine ? '#fff' : otherBubbleText,
+                    background: mine ? myBubbleBg : otherBubbleBg,
+                    color: mine ? myBubbleText : otherBubbleText,
                     border: mine ? 'none' : (isDark ? 'none' : BORDER),
                     whiteSpace: 'pre-wrap',
                     wordBreak: 'break-word',
@@ -428,237 +431,111 @@ function ChatInner() {
 
             {/* 내용 (스크롤) */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '18px' }}>
-            {/* 글자 크기 — 포인트 콤보 */}
-            <div style={{ marginBottom: 22 }}>
-              <div style={{ fontSize: 13, color: SUB, marginBottom: 10 }}>글자 크기</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <select
-                  value={fontPt}
-                  onChange={(e) => updateDisp({ fontPt: Number(e.target.value) })}
-                  style={{
-                    flex: 1, padding: '11px 12px', borderRadius: 9,
-                    border: BORDER, background: '#fff', color: TITLE,
-                    fontSize: 14, cursor: 'pointer',
-                  }}
-                >
-                  {FONT_POINTS.map((pt) => (
-                    <option key={pt} value={pt}>{pt} 포인트</option>
-                  ))}
-                </select>
-                <span style={{ fontSize: fontPt, color: TITLE, minWidth: 44, textAlign: 'center' }}>가나다</span>
-              </div>
-            </div>
-
-            {/* 폰트 종류 — 콤보상자 */}
-            <div style={{ marginBottom: 22 }}>
-              <div style={{ fontSize: 13, color: SUB, marginBottom: 10 }}>글씨체</div>
-              <select
-                value={disp.fontKey}
-                onChange={(e) => updateDisp({ fontKey: e.target.value })}
-                style={{
-                  width: '100%', padding: '11px 12px', borderRadius: 9,
-                  border: BORDER, background: '#fff', color: TITLE,
-                  fontSize: 14, cursor: 'pointer',
-                  fontFamily: fontCssOf(disp.fontKey),
-                }}
-              >
-                {FONTS.map((f) => (
-                  <option key={f.key} value={f.key} style={{ fontFamily: f.css }}>
-                    {f.label}
-                  </option>
-                ))}
-              </select>
-              <div style={{ marginTop: 8, padding: '8px 12px', background: '#fff', border: BORDER, borderRadius: 9, fontSize: 14, color: '#3a2e28', fontFamily: fontCssOf(disp.fontKey) }}>
-                가나다라 ABC 미리보기 💕
-              </div>
-            </div>
-
-            {/* 글자색 — 엑셀식 팔레트 */}
-            <div style={{ marginBottom: 22 }}>
-              <div style={{ fontSize: 13, color: SUB, marginBottom: 10 }}>글자색</div>
-
-              {/* 자동 */}
-              <button
-                onClick={() => updateDisp({ textColor: '' })}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-                  padding: '8px 10px', marginBottom: 12, borderRadius: 8,
-                  background: disp.textColor === '' ? '#faf3ec' : '#fff',
-                  border: disp.textColor === '' ? '1.5px solid #b46e46' : BORDER,
-                  cursor: 'pointer',
-                }}
-              >
-                <span style={{ fontSize: 14, color: '#3a2e28' }}>가</span>
-                <span style={{ fontSize: 13, color: TITLE }}>자동 (배경에 맞춤)</span>
-              </button>
-
-              {/* 테마 색 */}
-              <div style={{ fontSize: 11, color: '#a0968c', marginBottom: 6 }}>테마 색</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 3, marginBottom: 12 }}>
-                {THEME_COLUMNS.map((col, ci) =>
-                  col.map((c, ri) => {
-                    const on = disp.textColor.toLowerCase() === c.toLowerCase()
-                    return (
-                      <button
-                        key={`t-${ci}-${ri}`}
-                        onClick={() => { updateDisp({ textColor: c }); setRecentColors(pushRecentColor(c)) }}
-                        aria-label={c}
-                        style={{
-                          width: '100%', aspectRatio: '1', borderRadius: 3,
-                          background: c,
-                          border: on ? '2px solid #b46e46' : '0.5px solid #d8ccc2',
-                          cursor: 'pointer', padding: 0,
-                        }}
-                      />
-                    )
-                  }),
-                )}
-              </div>
-
-              {/* 표준 색 */}
-              <div style={{ fontSize: 11, color: '#a0968c', marginBottom: 6 }}>표준 색</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 3, marginBottom: 12 }}>
-                {STANDARD_COLORS.map((c) => {
-                  const on = disp.textColor.toLowerCase() === c.toLowerCase()
+              {/* 탭 버튼 */}
+              <div style={{ display: 'flex', gap: 4, marginBottom: 16, overflowX: 'auto' }}>
+                {([
+                  ['bg', '배경'],
+                  ['font', '글자체'],
+                  ['size', '글자크기'],
+                  ['textColor', '글자색'],
+                  ['bubble', '말풍선'],
+                ] as const).map(([key, label]) => {
+                  const on = settingsTab === key
                   return (
                     <button
-                      key={`ts-${c}`}
-                      onClick={() => { updateDisp({ textColor: c }); setRecentColors(pushRecentColor(c)) }}
-                      aria-label={c}
+                      key={key}
+                      onClick={() => setSettingsTab(key)}
                       style={{
-                        width: '100%', aspectRatio: '1', borderRadius: 3,
-                        background: c,
-                        border: on ? '2px solid #b46e46' : '0.5px solid #d8ccc2',
-                        cursor: 'pointer', padding: 0,
+                        flexShrink: 0, padding: '8px 12px', borderRadius: 8,
+                        background: on ? BROWN : '#f3e6dc',
+                        color: on ? '#fff' : TITLE,
+                        border: 'none', fontSize: 12, fontWeight: on ? 600 : 400,
+                        cursor: 'pointer', whiteSpace: 'nowrap',
                       }}
-                    />
+                    >
+                      {label}
+                    </button>
                   )
                 })}
               </div>
 
-              {/* 다른 색 직접 고르기 */}
-              <label
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-                  padding: '10px', borderRadius: 8, background: '#fff', border: BORDER,
-                  cursor: 'pointer',
-                }}
-              >
-                <span style={{ fontSize: 15 }}>🖍️</span>
-                <span style={{ fontSize: 13, color: TITLE, flex: 1 }}>다른 글자색 고르기…</span>
-                <input
-                  type="color"
-                  value={disp.textColor || '#3a2e28'}
-                  onChange={(e) => { updateDisp({ textColor: e.target.value }); setRecentColors(pushRecentColor(e.target.value)) }}
-                  style={{ width: 28, height: 28, padding: 0, border: BORDER, borderRadius: 6, cursor: 'pointer', background: 'none' }}
-                />
-              </label>
-            </div>
-
-            {/* 배경색 — 엑셀식 팔레트 */}
-            <div>
-              <div style={{ fontSize: 13, color: SUB, marginBottom: 10 }}>배경색</div>
-
-              {/* 자동 */}
-              <button
-                onClick={() => pickBg(BG_AUTO)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-                  padding: '8px 10px', marginBottom: 12, borderRadius: 8,
-                  background: '#fff', border: BORDER, cursor: 'pointer',
-                }}
-              >
-                <span style={{ width: 18, height: 18, borderRadius: 4, background: BG_AUTO, border: '0.5px solid #d0c0b5', display: 'inline-block' }} />
-                <span style={{ fontSize: 13, color: TITLE }}>자동 (기본 피치)</span>
-              </button>
-
-              {/* 테마 색 */}
-              <div style={{ fontSize: 11, color: '#a0968c', marginBottom: 6 }}>테마 색</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 3, marginBottom: 12 }}>
-                {THEME_COLUMNS.map((col, ci) =>
-                  col.map((c, ri) => {
-                    const on = disp.bg.toLowerCase() === c.toLowerCase()
-                    return (
-                      <button
-                        key={`${ci}-${ri}`}
-                        onClick={() => pickBg(c)}
-                        aria-label={c}
-                        style={{
-                          width: '100%', aspectRatio: '1', borderRadius: 3,
-                          background: c,
-                          border: on ? '2px solid #b46e46' : '0.5px solid #d8ccc2',
-                          cursor: 'pointer', padding: 0,
-                        }}
-                      />
-                    )
-                  }),
-                )}
-              </div>
-
-              {/* 표준 색 */}
-              <div style={{ fontSize: 11, color: '#a0968c', marginBottom: 6 }}>표준 색</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 3, marginBottom: 12 }}>
-                {STANDARD_COLORS.map((c) => {
-                  const on = disp.bg.toLowerCase() === c.toLowerCase()
-                  return (
-                    <button
-                      key={c}
-                      onClick={() => pickBg(c)}
-                      aria-label={c}
-                      style={{
-                        width: '100%', aspectRatio: '1', borderRadius: 3,
-                        background: c,
-                        border: on ? '2px solid #b46e46' : '0.5px solid #d8ccc2',
-                        cursor: 'pointer', padding: 0,
-                      }}
-                    />
-                  )
-                })}
-              </div>
-
-              {/* 최근 사용한 색 */}
-              {recentColors.length > 0 && (
-                <>
-                  <div style={{ fontSize: 11, color: '#a0968c', marginBottom: 6 }}>최근 사용한 색</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 3, marginBottom: 12 }}>
-                    {recentColors.map((c) => {
-                      const on = disp.bg.toLowerCase() === c.toLowerCase()
-                      return (
-                        <button
-                          key={c}
-                          onClick={() => pickBg(c)}
-                          aria-label={c}
-                          style={{
-                            width: '100%', aspectRatio: '1', borderRadius: 3,
-                            background: c,
-                            border: on ? '2px solid #b46e46' : '0.5px solid #d8ccc2',
-                            cursor: 'pointer', padding: 0,
-                          }}
-                        />
-                      )
-                    })}
+              {/* 탭 내용 */}
+              {settingsTab === 'size' && (
+                <div>
+                  <div style={{ fontSize: 13, color: SUB, marginBottom: 10 }}>글자 크기</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <select
+                      value={fontPt}
+                      onChange={(e) => updateDisp({ fontPt: Number(e.target.value) })}
+                      style={{ flex: 1, padding: '11px 12px', borderRadius: 9, border: BORDER, background: '#fff', color: TITLE, fontSize: 14, cursor: 'pointer' }}
+                    >
+                      {FONT_POINTS.map((pt) => (<option key={pt} value={pt}>{pt} 포인트</option>))}
+                    </select>
+                    <span style={{ fontSize: fontPt, color: TITLE, minWidth: 44, textAlign: 'center' }}>가나다</span>
                   </div>
-                </>
+                </div>
               )}
 
-              {/* 다른 색 (직접 고르기) */}
-              <label
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-                  padding: '10px', borderRadius: 8, background: '#fff', border: BORDER,
-                  cursor: 'pointer',
-                }}
-              >
-                <span style={{ fontSize: 15 }}>🎨</span>
-                <span style={{ fontSize: 13, color: TITLE, flex: 1 }}>다른 색 직접 고르기…</span>
-                <input
-                  type="color"
-                  value={disp.bg}
-                  onChange={(e) => pickBg(e.target.value)}
-                  style={{ width: 28, height: 28, padding: 0, border: BORDER, borderRadius: 6, cursor: 'pointer', background: 'none' }}
-                />
-              </label>
-            </div>
+              {settingsTab === 'font' && (
+                <div>
+                  <div style={{ fontSize: 13, color: SUB, marginBottom: 10 }}>글씨체</div>
+                  <select
+                    value={disp.fontKey}
+                    onChange={(e) => updateDisp({ fontKey: e.target.value })}
+                    style={{ width: '100%', padding: '11px 12px', borderRadius: 9, border: BORDER, background: '#fff', color: TITLE, fontSize: 14, cursor: 'pointer', fontFamily: fontCssOf(disp.fontKey) }}
+                  >
+                    {FONTS.map((f) => (<option key={f.key} value={f.key} style={{ fontFamily: f.css }}>{f.label}</option>))}
+                  </select>
+                  <div style={{ marginTop: 8, padding: '10px 12px', background: '#fff', border: BORDER, borderRadius: 9, fontSize: 15, color: '#3a2e28', fontFamily: fontCssOf(disp.fontKey) }}>
+                    가나다라 ABC 미리보기 💕
+                  </div>
+                </div>
+              )}
+
+              {settingsTab === 'bg' && (
+                <div>
+                  <div style={{ fontSize: 13, color: SUB, marginBottom: 10 }}>배경색</div>
+                  <ColorPalette
+                    current={disp.bg}
+                    onPick={pickBg}
+                    recent={recentColors}
+                    themeColumns={THEME_COLUMNS}
+                    standardColors={STANDARD_COLORS}
+                    autoLabel={'⬜ 자동 (기본 피치)'}
+                    onAuto={() => pickBg(BG_AUTO)}
+                  />
+                </div>
+              )}
+
+              {settingsTab === 'textColor' && (
+                <div>
+                  <div style={{ fontSize: 13, color: SUB, marginBottom: 10 }}>글자색</div>
+                  <ColorPalette
+                    current={disp.textColor}
+                    onPick={(c) => { updateDisp({ textColor: c }); setRecentColors(pushRecentColor(c)) }}
+                    recent={recentColors}
+                    themeColumns={THEME_COLUMNS}
+                    standardColors={STANDARD_COLORS}
+                    autoLabel={'가 자동 (배경에 맞춤)'}
+                    onAuto={() => updateDisp({ textColor: '' })}
+                  />
+                </div>
+              )}
+
+              {settingsTab === 'bubble' && (
+                <div>
+                  <div style={{ fontSize: 13, color: SUB, marginBottom: 10 }}>내 말풍선 색</div>
+                  <ColorPalette
+                    current={disp.myBubble}
+                    onPick={(c) => { updateDisp({ myBubble: c }); setRecentColors(pushRecentColor(c)) }}
+                    recent={recentColors}
+                    themeColumns={THEME_COLUMNS}
+                    standardColors={STANDARD_COLORS}
+                    autoLabel={'💬 기본 (브라운)'}
+                    onAuto={() => updateDisp({ myBubble: '' })}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -672,5 +549,92 @@ export default function CoupleChatPage() {
     <Suspense>
       <ChatInner />
     </Suspense>
+  )
+}
+
+// ── 색 팔레트 (배경/글자색/말풍선 공통) ──────────────────────
+function ColorPalette({
+  current,
+  onPick,
+  recent,
+  themeColumns,
+  standardColors,
+  autoLabel,
+  onAuto,
+}: {
+  current: string
+  onPick: (hex: string) => void
+  recent: string[]
+  themeColumns: string[][]
+  standardColors: string[]
+  autoLabel?: string
+  onAuto?: () => void
+}) {
+  const BORDER = '0.5px solid #f0e0d5'
+  const TITLE = '#96502e'
+  const cell = (c: string, key: string) => {
+    const on = current.toLowerCase() === c.toLowerCase()
+    return (
+      <button
+        key={key}
+        onClick={() => onPick(c)}
+        aria-label={c}
+        style={{
+          width: '100%', aspectRatio: '1', borderRadius: 3,
+          background: c,
+          border: on ? '2px solid #b46e46' : '0.5px solid #d8ccc2',
+          cursor: 'pointer', padding: 0,
+        }}
+      />
+    )
+  }
+  return (
+    <div>
+      {autoLabel && onAuto && (
+        <button
+          onClick={onAuto}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+            padding: '9px 10px', marginBottom: 12, borderRadius: 8,
+            background: current === '' ? '#faf3ec' : '#fff',
+            border: current === '' ? '1.5px solid #b46e46' : BORDER,
+            cursor: 'pointer',
+          }}
+        >
+          <span style={{ fontSize: 13, color: TITLE }}>{autoLabel}</span>
+        </button>
+      )}
+      <div style={{ fontSize: 11, color: '#a0968c', marginBottom: 6 }}>테마 색</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 3, marginBottom: 12 }}>
+        {themeColumns.map((col, ci) => col.map((c, ri) => cell(c, `t-${ci}-${ri}`)))}
+      </div>
+      <div style={{ fontSize: 11, color: '#a0968c', marginBottom: 6 }}>표준 색</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 3, marginBottom: 12 }}>
+        {standardColors.map((c) => cell(c, `s-${c}`))}
+      </div>
+      {recent.length > 0 && (
+        <>
+          <div style={{ fontSize: 11, color: '#a0968c', marginBottom: 6 }}>최근 사용한 색</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 3, marginBottom: 12 }}>
+            {recent.map((c) => cell(c, `r-${c}`))}
+          </div>
+        </>
+      )}
+      <label
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+          padding: '10px', borderRadius: 8, background: '#fff', border: BORDER, cursor: 'pointer',
+        }}
+      >
+        <span style={{ fontSize: 15 }}>🎨</span>
+        <span style={{ fontSize: 13, color: TITLE, flex: 1 }}>다른 색 직접 고르기…</span>
+        <input
+          type="color"
+          value={current || '#FDF6F0'}
+          onChange={(e) => onPick(e.target.value)}
+          style={{ width: 28, height: 28, padding: 0, border: BORDER, borderRadius: 6, cursor: 'pointer', background: 'none' }}
+        />
+      </label>
+    </div>
   )
 }
