@@ -22,6 +22,7 @@ export interface ArchiveItem {
   serviceType: string
   title: string | null
   relation: string | null       // 카테고리/관심사 (고민 통계용)
+  inputData: Record<string, unknown> | null   // 사람 정보 (다시보기 URL 구성용)
   resultData: unknown           // 저장 스냅샷 (아코디언 펼침용)
   createdAt: string
 }
@@ -49,33 +50,50 @@ export function badgeOf(serviceType: string): Badge {
 
 // 다시보기 URL — 각 서비스가 이미 쓰는 recordId 규칙을 그대로 사용.
 // input_data에서 필요한 값(mode 등)을 꺼내 붙인다.
-export function reviewUrl(item: ArchiveItem, inputData?: Record<string, unknown>): string {
+// 사람 정보(input_data) → result-new가 읽는 URL 쿼리 (saju-storage의 personToQuery와 동일)
+function personToQuery(d: Record<string, unknown> | null, name: string | null): string {
+  if (!d) return name ? `name=${encodeURIComponent(name)}` : ''
+  const p = new URLSearchParams()
+  const g = (k: string) => (d[k] == null ? '' : String(d[k]))
+  if (g('year')) p.set('year', g('year'))
+  if (g('month')) p.set('month', g('month'))
+  if (g('day')) p.set('day', g('day'))
+  if (g('gender')) p.set('gender', g('gender'))
+  if (g('calType')) p.set('calType', g('calType'))
+  p.set('leapMonth', g('leapMonth') || '0')
+  p.set('hour', g('hour') || '모름')
+  if (name) p.set('name', name)
+  return p.toString()
+}
+
+export function reviewUrl(item: ArchiveItem): string {
   const rid = item.id
   const st = item.serviceType
-  const inp = inputData || {}
-  const from = '&from=mypage'   // 뒤로가기 시 마이페이지로 돌아가도록 표시
+  const from = 'from=mypage'   // 뒤로가기 시 마이페이지로
+  const q = personToQuery(item.inputData, item.title)
+  const qs = q ? `${q}&` : ''
   switch (st) {
     case 'couple':
     case 'married':
-      return `/manseryeok/couple-result-new?mode=${st === 'married' ? 'married' : 'couple'}&recordId=${rid}${from}`
+      return `/manseryeok/couple-result-new?mode=${st === 'married' ? 'married' : 'couple'}&recordId=${rid}&${from}`
     case 'mulsang':
-      return `/manseryeok/mulsang?recordId=${rid}${from}`
+      return `/manseryeok/mulsang?recordId=${rid}&${from}`
     case 'tarot':
-      return `/tarot?recordId=${rid}${from}`
+      return `/tarot?recordId=${rid}&${from}`
     case 'naming':
     case 'newborn':
-      return `/manseryeok/naming/diagnosis?recordId=${rid}${from}`
+      return `/manseryeok/naming/diagnosis?recordId=${rid}&${from}`
     case 'wedding':
-      return `/manseryeok/wedding-timing?recordId=${rid}${from}`
+      return `/manseryeok/wedding-timing/result?${qs}recordId=${rid}&${from}`
     case 'birth':
-      return `/manseryeok/birth-timing?recordId=${rid}${from}`
+      return `/manseryeok/birth-timing/result?${qs}recordId=${rid}&${from}`
     case 'daeun':
-      return `/manseryeok/result-new?unse=daeun&recordId=${rid}${from}`
+      return `/manseryeok/result-new?${qs}unse=daeun&recordId=${rid}&${from}`
     case 'seyun':
-      return `/manseryeok/result-new?unse=seyun&recordId=${rid}${from}`
+      return `/manseryeok/result-new?${qs}unse=seyun&recordId=${rid}&${from}`
     case 'saju':
     default:
-      return `/manseryeok/result-new?recordId=${rid}${from}`
+      return `/manseryeok/result-new?${qs}recordId=${rid}&${from}`
   }
 }
 
@@ -97,7 +115,7 @@ export async function listArchive(limit = 50, offset = 0): Promise<ArchiveItem[]
   if (!user_id) return []
   const { data, error } = await supabase
     .from('saju_records')
-    .select('id, service_type, title, relation, result_data, created_at')
+    .select('id, service_type, title, relation, input_data, result_data, created_at')
     .eq('user_id', user_id)
     .in('service_type', ARCHIVE_TYPES)
     .order('created_at', { ascending: false })
@@ -111,6 +129,7 @@ export async function listArchive(limit = 50, offset = 0): Promise<ArchiveItem[]
     serviceType: r.service_type,
     title: r.title,
     relation: r.relation,
+    inputData: (r.input_data as Record<string, unknown>) || null,
     resultData: r.result_data,
     createdAt: r.created_at,
   }))

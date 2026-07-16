@@ -443,7 +443,7 @@ function BirthResultInner() {
         background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
         borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
       }}>
-        <button onClick={() => router.push('/manseryeok/birth-timing/birth-storage')}
+        <button onClick={() => router.push(sp.get('from') === 'mypage' ? '/mypage-new' : '/manseryeok/birth-timing/birth-storage')}
           style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
         <div>
           <div style={{ fontSize: 15, fontWeight: 500, color: '#3a2e28' }}>출산 시기 결과</div>
