@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useResultSaju } from '@/hooks/useResultSaju'
+import EmotionPicker from './EmotionPicker'
+import ArchiveList from './ArchiveList'
 
 const HOUR_LABELS: Record<string, string> = {
   '0': '子시(23:30~01:30)', '1': '丑시(01:30~03:30)', '2': '寅시(03:30~05:30)', '3': '卯시(05:30~07:30)',
@@ -538,6 +540,8 @@ export default function MyPageNew() {
           <span style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>내 사주 자세히 보기 →</span>
         </button>
 
+        <EmotionPicker />
+
         <div style={{ background: '#FFFBF7', border: '0.5px solid #f5d5b8', borderRadius: 14, padding: 15, marginBottom: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: '#96502e' }}>✦ 오늘의 운세</span>
@@ -601,37 +605,7 @@ export default function MyPageNew() {
           )}
         </div>
 
-        <div style={card}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#96502e', marginBottom: 10 }}>
-            ✦ 내 이름풀이 {myNames.length > 0 && <span style={{ color: '#c0a898', fontWeight: 400 }}>{myNames.length}</span>}
-          </div>
-          {myNames.length === 0 ? (
-            <div style={{ fontSize: 13, color: '#b4785a', textAlign: 'center', padding: '8px 0' }}>아직 풀이한 이름이 없습니다.</div>
-          ) : (
-            <div>
-              {(namesExpanded ? myNames : myNames.slice(0, 2)).map((n, i, arr) => (
-                <div key={n.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: i < arr.length - 1 ? '0.5px solid #f5e5da' : 'none' }}>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 500 }}>{n.hanja_name || '-'} <span style={{ fontSize: 11, color: '#b09888' }}>{n.hangul_name}</span></div>
-                    <div style={{ fontSize: 10, color: '#c0a898' }}>{dateText(n.created_at)}{n.kind === 'self' ? ' · 내 이름' : n.kind === 'newborn' ? ' · 아기 이름' : ''}</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
-                    <button onClick={() => router.push(`/manseryeok/naming/diagnosis?nameId=${n.id}`)}
-                      style={{ fontSize: 11, color: '#a06a3c', background: '#faede0', border: '0.5px solid #e6d0bc', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap' }}>다시보기</button>
-                    <button onClick={() => deleteName(n)} disabled={deletingNameId === n.id}
-                      style={{ fontSize: 11, color: '#c05a5a', background: '#fbeaea', border: '0.5px solid #f0d0d0', borderRadius: 7, padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap', opacity: deletingNameId === n.id ? 0.5 : 1 }}>{deletingNameId === n.id ? '삭제 중' : '삭제'}</button>
-                  </div>
-                </div>
-              ))}
-              {myNames.length > 2 && (
-                <button onClick={() => setNamesExpanded(v => !v)}
-                  style={{ width: '100%', marginTop: 10, padding: '9px 0', borderRadius: 10, background: 'none', border: '0.5px solid #e8d5c5', color: '#b4785a', fontSize: 12, cursor: 'pointer' }}>
-                  {namesExpanded ? '접기 ▲' : `더보기 (${myNames.length - 2}개) ▼`}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+        <ArchiveList />
 
         <div style={card}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>내 상담 내역</div>
