@@ -52,6 +52,7 @@ function ChatInner() {
   const [ready, setReady] = useState(false)
   const [disp, setDisp] = useState<ChatDisplaySettings>(DEFAULT_DISPLAY)
   const [showSettings, setShowSettings] = useState(false)
+  const [settingsBig, setSettingsBig] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [recentColors, setRecentColors] = useState<string[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -385,14 +386,37 @@ function ChatInner() {
             onClick={(e) => e.stopPropagation()}
             style={{
               width: '100%', maxWidth: 480, background: '#FDF6F0',
-              borderRadius: '16px 16px 0 0', padding: '20px 18px 28px',
+              borderRadius: '16px 16px 0 0',
+              height: settingsBig ? '85vh' : '42vh',
+              display: 'flex', flexDirection: 'column',
+              transition: 'height 0.2s ease',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-              <span style={{ fontSize: 16, fontWeight: 600, color: TITLE }}>채팅방 설정</span>
-              <button onClick={() => setShowSettings(false)} aria-label="닫기" style={{ background: 'none', border: 'none', fontSize: 20, color: '#c5a590', cursor: 'pointer' }}>✕</button>
+            {/* 상단 고정 바 (크기조절 핸들 + 제목 + 닫기) */}
+            <div style={{ padding: '10px 18px 12px', borderBottom: BORDER, flexShrink: 0 }}>
+              <div
+                onClick={() => setSettingsBig((v) => !v)}
+                style={{ display: 'flex', justifyContent: 'center', paddingBottom: 8, cursor: 'pointer' }}
+              >
+                <div style={{ width: 40, height: 4, borderRadius: 2, background: '#d8ccc2' }} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 16, fontWeight: 600, color: TITLE }}>채팅방 설정</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <button
+                    onClick={() => setSettingsBig((v) => !v)}
+                    aria-label={settingsBig ? '접기' : '펼치기'}
+                    style={{ background: 'none', border: 'none', fontSize: 18, color: '#b4785a', cursor: 'pointer', padding: '2px 6px' }}
+                  >
+                    {settingsBig ? '⌄' : '⌃'}
+                  </button>
+                  <button onClick={() => setShowSettings(false)} aria-label="닫기" style={{ background: 'none', border: 'none', fontSize: 20, color: '#c5a590', cursor: 'pointer' }}>✕</button>
+                </div>
+              </div>
             </div>
 
+            {/* 내용 (스크롤) */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '18px' }}>
             {/* 글자 크기 — 포인트 콤보 */}
             <div style={{ marginBottom: 22 }}>
               <div style={{ fontSize: 13, color: SUB, marginBottom: 10 }}>글자 크기</div>
@@ -623,6 +647,7 @@ function ChatInner() {
                   style={{ width: 28, height: 28, padding: 0, border: BORDER, borderRadius: 6, cursor: 'pointer', background: 'none' }}
                 />
               </label>
+            </div>
             </div>
           </div>
         </div>
