@@ -142,12 +142,12 @@ function ChatInner() {
           {'\u2039'}
         </button>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: TITLE }}>우리만의 공간 🔒</div>
-          <div style={{ fontSize: 10, color: SUB }}>커플 전용 비밀 채팅방</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: TITLE }}>우리만의 공간 🔒</div>
+          <div style={{ fontSize: 12, color: SUB }}>커플 전용 비밀 채팅방</div>
         </div>
         <button
           onClick={() => router.push('/home-new')}
-          style={{ fontSize: 12, color: SUB, background: '#faf3ec', border: BORDER, borderRadius: 14, padding: '5px 12px', cursor: 'pointer' }}
+          style={{ fontSize: 13, color: SUB, background: '#faf3ec', border: BORDER, borderRadius: 14, padding: '6px 14px', cursor: 'pointer' }}
         >
           홈
         </button>
@@ -165,21 +165,21 @@ function ChatInner() {
               padding: '11px 13px',
             }}
           >
-            <div style={{ fontSize: 11, color: '#c85a8c', fontWeight: 600, marginBottom: 4 }}>
+            <div style={{ fontSize: 13, color: '#c85a8c', fontWeight: 600, marginBottom: 4 }}>
               ✦ 오늘의 궁합 운세
             </div>
-            <div style={{ fontSize: 12.5, color: TITLE, lineHeight: 1.6 }}>
+            <div style={{ fontSize: 14, color: TITLE, lineHeight: 1.6 }}>
               <DailyFortune />
             </div>
           </div>
         </div>
 
         {!ready ? (
-          <div style={{ textAlign: 'center', color: SUB, fontSize: 13, padding: '30px 0' }}>
+          <div style={{ textAlign: 'center', color: SUB, fontSize: 15, padding: '30px 0' }}>
             채팅방을 여는 중…
           </div>
         ) : messages.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#c5a590', fontSize: 13, padding: '40px 0', lineHeight: 1.8 }}>
+          <div style={{ textAlign: 'center', color: '#c5a590', fontSize: 15, padding: '40px 0', lineHeight: 1.8 }}>
             아직 메시지가 없어요
             <br />
             첫 번째 메시지를 보내보세요 💕
@@ -199,8 +199,8 @@ function ChatInner() {
                 <div
                   style={{
                     maxWidth: '72%',
-                    fontSize: 13,
-                    lineHeight: 1.5,
+                    fontSize: 15.5,
+                    lineHeight: 1.55,
                     padding: '9px 13px',
                     borderRadius: mine ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
                     background: mine ? BROWN : '#fff',
@@ -239,8 +239,8 @@ function ChatInner() {
               background: '#fff',
               border: BORDER,
               borderRadius: 20,
-              padding: '9px 14px',
-              fontSize: 13,
+              padding: '11px 15px',
+              fontSize: 15,
               color: '#3a2e28',
               outline: 'none',
               maxHeight: 100,
@@ -257,7 +257,7 @@ function ChatInner() {
               background: BROWN,
               border: 'none',
               color: '#fff',
-              fontSize: 16,
+              fontSize: 18,
               cursor: 'pointer',
               flexShrink: 0,
             }}
