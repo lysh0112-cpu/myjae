@@ -200,6 +200,7 @@ function CoupleResultInner() {
       recordId={recordId}
       onBack={() => router.back()}
       onOther={() => router.push(`/manseryeok/couple-input-new?mode=${mode}`)}
+      onInviteChat={() => router.push('/couple-chat/invite')}
     />
   )
 }
@@ -306,7 +307,7 @@ function toCouplePerson(p: PersonRaw, saju: SajuPillarSimple[]): CouplePerson {
 }
 
 function CoupleResultView({
-  mode, info, person1, person2, name1, name2, pickedQuestions, recordId, onBack, onOther,
+  mode, info, person1, person2, name1, name2, pickedQuestions, recordId, onBack, onOther, onInviteChat,
 }: {
   mode: 'couple' | 'married'
   info: Mode2Info
@@ -318,6 +319,7 @@ function CoupleResultView({
   recordId?: string
   onBack: () => void
   onOther: () => void
+  onInviteChat: () => void
 }) {
   const [saju1, setSaju1] = useState<SajuPillarSimple[] | null>(null)
   const [saju2, setSaju2] = useState<SajuPillarSimple[] | null>(null)
@@ -541,6 +543,19 @@ function CoupleResultView({
           </button>
           <button onClick={onOther} style={{ flex: 1, background: '#b46e46', border: 'none', borderRadius: 11, padding: 12, fontSize: 13, color: '#fff', cursor: 'pointer' }}>다른 궁합 보기</button>
         </div>
+
+        {/* 커플 채팅 초대 — 연인 궁합에서만 (부부 제외) */}
+        {mode !== 'married' && (
+          <button onClick={onInviteChat}
+            style={{
+              width: '100%', marginTop: 10, borderRadius: 11, padding: 13,
+              background: '#fbeaf0', border: '0.5px solid #f0c9d8',
+              color: '#993556', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            }}>
+            💗 이 사람과 커플 채팅 시작하기
+          </button>
+        )}
 
         {/* 참고용 안내 — 결과에 과몰입하지 않도록 다정하게 */}
         <div style={{
