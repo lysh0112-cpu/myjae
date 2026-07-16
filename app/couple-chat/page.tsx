@@ -1,138 +1,279 @@
 'use client'
-import { useState, useEffect } from 'react'
+
+// ============================================================================
+// 커플 채팅방 (피치톤 + DB 실시간)
+//   - URL: /couple-chat?room={roomId}
+//   - couple_messages 실시간 구독 (한 명이 보내면 상대 폰에 바로 뜸)
+//   - room 파라미터 없으면 → 내 방 목록으로 보냄
+//   - 상담채팅과 무관한 독립 기능
+// ============================================================================
+
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import ChatHeader from './components/ChatHeader'
+import { supabase } from '@/lib/supabase'
 import DailyFortune from './components/DailyFortune'
-import ChatMessages, { Message } from './components/ChatMessages'
-import ChatInput from './components/ChatInput'
-import SettingsPanel, { ChatSettings } from './components/SettingsPanel'
+import {
+  loadRoomMessages,
+  sendRoomMessage,
+  type CoupleMsg,
+} from '@/lib/saju/coupleRoom'
 
-const FREE_LIMIT = 100
-const CHAT_KEY = 'couple_chat_messages'
-const SETTINGS_KEY = 'couple_chat_settings'
+const PEACH = '#FDF6F0'
+const CARD = '#FFFBF7'
+const BORDER = '0.5px solid #f0e0d5'
+const BROWN = '#b46e46'
+const TITLE = '#96502e'
+const SUB = '#b4785a'
 
-const DEFAULT_SETTINGS: ChatSettings = {
-  bgColor: 'navy',
-  bgImage: '',
-  font: 'pretendard',
-  fontSize: 13,
-  fontWeight: 400,
-  myBubble: 'purple',
-  partnerBubble: 'white10',
-  myNick: '',
-  partnerNick: '',
-  fortuneOn: true,
-  dDayOn: true,
-  lockOn: false,
-  chatHomeOn: false,
-  startDate: '',
-  ddayType: '결혼기념일',
-  ddayTarget: '',
-}
+function ChatInner() {
+  const router = useRouter()
+  const [roomId, setRoomId] = useState<string | null>(null)
+  const [myUid, setMyUid] = useState<string | null>(null)
+  const [messages, setMessages] = useState<CoupleMsg[]>([])
+  const [input, setInput] = useState('')
+  const [ready, setReady] = useState(false)
+  const bottomRef = useRef<HTMLDivElement>(null)
 
-function calcDays(startDate: string): number {
-  if (!startDate) return 0
-  const start = new Date(startDate)
-  const today = new Date()
-  return Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
-}
+  // 초기화: 로그인·room 확인 + 메시지 로드 + 실시간 구독
+  useEffect(() => {
+    let cancelled = false
+    let channel: ReturnType<typeof supabase.channel> | null = null
 
-function getNextMilestone(days: number): { milestone: number; daysLeft: number } | null {
-  const MILESTONES = [30, 50, 100, 200, 300, 365, 500, 1000]
-  for (const m of MILESTONES) {
-    if (days < m) return { milestone: m, daysLeft: m - days }
+    async function init() {
+      const rid =
+        typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search).get('room')
+          : null
+
+      // 방 지정이 없으면 목록으로
+      if (!rid) {
+        router.replace('/couple-chat/rooms')
+        return
+      }
+
+      const { data: auth } = await supabase.auth.getUser()
+      const uid = auth?.user?.id
+      if (!uid) {
+        router.replace('/login')
+        return
+      }
+      if (cancelled) return
+
+      setRoomId(rid)
+      setMyUid(uid)
+
+      const msgs = await loadRoomMessages(rid, uid)
+      if (cancelled) return
+      setMessages(msgs)
+      setReady(true)
+
+      // 실시간 구독 (검증된 상담채팅 패턴 재사용)
+      channel = supabase
+        .channel(`couple-room-${rid}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'couple_messages',
+            filter: `room_id=eq.${rid}`,
+          },
+          (payload) => {
+            const m = payload.new as CoupleMsg
+            // 비공개(private)는 보낸 사람만 화면에 추가
+            if (m.visibility !== 'all' && m.sender_id !== uid) return
+            setMessages((prev) =>
+              prev.some((x) => x.id === m.id) ? prev : [...prev, m],
+            )
+          },
+        )
+        .subscribe()
+    }
+
+    init()
+    return () => {
+      cancelled = true
+      if (channel) supabase.removeChannel(channel)
+    }
+  }, [router])
+
+  // 새 메시지 오면 맨 아래로
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  async function handleSend() {
+    const text = input.trim()
+    if (!text || !roomId || !myUid) return
+    setInput('')
+    await sendRoomMessage(roomId, myUid, text)
   }
-  return null
+
+  return (
+    <main
+      style={{
+        minHeight: '100vh',
+        background: PEACH,
+        maxWidth: 480,
+        margin: '0 auto',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      {/* 헤더 */}
+      <div
+        style={{
+          background: CARD,
+          borderBottom: BORDER,
+          padding: '10px 12px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+        }}
+      >
+        <button
+          onClick={() => router.push('/couple-chat/rooms')}
+          aria-label="방 목록"
+          style={{ background: 'none', border: 'none', color: TITLE, fontSize: 20, cursor: 'pointer', padding: 0 }}
+        >
+          {'\u2039'}
+        </button>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: TITLE }}>우리만의 공간 🔒</div>
+          <div style={{ fontSize: 10, color: SUB }}>커플 전용 비밀 채팅방</div>
+        </div>
+        <button
+          onClick={() => router.push('/home-new')}
+          style={{ fontSize: 12, color: SUB, background: '#faf3ec', border: BORDER, borderRadius: 14, padding: '5px 12px', cursor: 'pointer' }}
+        >
+          홈
+        </button>
+      </div>
+
+      {/* 메시지 영역 */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '14px 12px' }}>
+        {/* 오늘의 궁합운세 */}
+        <div style={{ marginBottom: 14 }}>
+          <div
+            style={{
+              background: '#fbeaf0',
+              border: '0.5px solid #f0c9d8',
+              borderRadius: 12,
+              padding: '11px 13px',
+            }}
+          >
+            <div style={{ fontSize: 11, color: '#c85a8c', fontWeight: 600, marginBottom: 4 }}>
+              ✦ 오늘의 궁합 운세
+            </div>
+            <div style={{ fontSize: 12.5, color: TITLE, lineHeight: 1.6 }}>
+              <DailyFortune />
+            </div>
+          </div>
+        </div>
+
+        {!ready ? (
+          <div style={{ textAlign: 'center', color: SUB, fontSize: 13, padding: '30px 0' }}>
+            채팅방을 여는 중…
+          </div>
+        ) : messages.length === 0 ? (
+          <div style={{ textAlign: 'center', color: '#c5a590', fontSize: 13, padding: '40px 0', lineHeight: 1.8 }}>
+            아직 메시지가 없어요
+            <br />
+            첫 번째 메시지를 보내보세요 💕
+          </div>
+        ) : (
+          messages.map((m) => {
+            const mine = m.sender_id === myUid
+            return (
+              <div
+                key={m.id}
+                style={{
+                  display: 'flex',
+                  justifyContent: mine ? 'flex-end' : 'flex-start',
+                  marginBottom: 8,
+                }}
+              >
+                <div
+                  style={{
+                    maxWidth: '72%',
+                    fontSize: 13,
+                    lineHeight: 1.5,
+                    padding: '9px 13px',
+                    borderRadius: mine ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                    background: mine ? BROWN : '#fff',
+                    color: mine ? '#fff' : '#3a2e28',
+                    border: mine ? 'none' : BORDER,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  {m.message}
+                </div>
+              </div>
+            )
+          })
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* 입력 영역 */}
+      <div style={{ borderTop: BORDER, background: CARD, padding: '10px 12px', position: 'sticky', bottom: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleSend()
+              }
+            }}
+            placeholder="메시지 입력… (Shift+Enter 줄바꿈)"
+            rows={1}
+            style={{
+              flex: 1,
+              resize: 'none',
+              background: '#fff',
+              border: BORDER,
+              borderRadius: 20,
+              padding: '9px 14px',
+              fontSize: 13,
+              color: '#3a2e28',
+              outline: 'none',
+              maxHeight: 100,
+              fontFamily: 'inherit',
+            }}
+          />
+          <button
+            onClick={handleSend}
+            aria-label="보내기"
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: '50%',
+              background: BROWN,
+              border: 'none',
+              color: '#fff',
+              fontSize: 16,
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            {'\u27A4'}
+          </button>
+        </div>
+      </div>
+    </main>
+  )
 }
 
 export default function CoupleChatPage() {
-  const router = useRouter()
-  const [messages, setMessages] = useState<Message[]>([])
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const [usedChars, setUsedChars] = useState(0)
-  const [settings, setSettings] = useState<ChatSettings>(DEFAULT_SETTINGS)
-
-  useEffect(() => {
-    const savedChat = localStorage.getItem(CHAT_KEY)
-    if (savedChat) {
-      const data = JSON.parse(savedChat)
-      setMessages(data.messages || [])
-      setUsedChars(data.usedChars || 0)
-    }
-    const savedSettings = localStorage.getItem(SETTINGS_KEY)
-    if (savedSettings) {
-      setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) })
-    }
-  }, [])
-
-  const handleSend = (text: string) => {
-    if (usedChars + text.length > FREE_LIMIT) return
-    const newMsg: Message = {
-      id: Date.now().toString(),
-      sender: 'me',
-      message: text,
-      created_at: new Date().toISOString(),
-    }
-    const updated = [...messages, newMsg]
-    const newUsed = usedChars + text.length
-    setMessages(updated)
-    setUsedChars(newUsed)
-    localStorage.setItem(CHAT_KEY, JSON.stringify({ messages: updated, usedChars: newUsed }))
-  }
-
-  const handleClearChat = () => {
-    setMessages([])
-    setUsedChars(0)
-    localStorage.removeItem(CHAT_KEY)
-  }
-
-  const handleSaveSettings = (newSettings: ChatSettings) => {
-    setSettings(newSettings)
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings))
-  }
-
-  const freeCharsLeft = FREE_LIMIT - usedChars
-  const days = calcDays(settings.startDate)
-  const next = getNextMilestone(days)
-
   return (
-    <main style={{ minHeight: '100vh', background: '#0d0d1a', maxWidth: '480px', margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
-      <ChatHeader onSettingsOpen={() => setSettingsOpen(true)} />
-
-      {settings.startDate && days > 0 && (
-        <div style={{ textAlign: 'center', padding: '8px 0' }}>
-          <span style={{ background: 'rgba(212,83,126,0.2)', border: '1px solid rgba(212,83,126,0.3)', borderRadius: '20px', padding: '3px 12px', fontSize: '11px', color: '#f48fb1' }}>
-            💕 D+{days} {next ? `· D+${next.milestone}까지 ${next.daysLeft}일` : '· 축하해요! 🎉'}
-          </span>
-        </div>
-      )}
-
-      {settings.fortuneOn && <DailyFortune />}
-
-      <ChatMessages messages={messages} settings={settings} />
-
-      <ChatInput
-        onSend={handleSend}
-        freeCharsLeft={freeCharsLeft}
-        startDate={settings.startDate}
-        ddayType={settings.ddayType}
-        ddayTarget={settings.ddayTarget}
-      />
-
-      <SettingsPanel
-        isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        onClearChat={handleClearChat}
-        onSaveSettings={handleSaveSettings}
-        settings={settings}
-      />
-
-      <div style={{ position: 'fixed', bottom: '80px', right: '20px', zIndex: 30 }}>
-        <button onClick={() => router.push('/manseryeok/couple-result')}
-          style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(60,52,137,0.8)', border: '1px solid rgba(119,102,221,0.4)', color: '#c8b0ff', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          💑
-        </button>
-      </div>
-    </main>
+    <Suspense>
+      <ChatInner />
+    </Suspense>
   )
 }

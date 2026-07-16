@@ -33,6 +33,7 @@ import { calcHourPillar } from '@/lib/saju/hourPillar'
 import { buildCoupleTongbyeonPrompt, type CouplePerson } from '@/lib/saju/coupleTongbyeonPrompt'
 import { saveCoupleRecord, getCoupleRecord } from '@/lib/saju/coupleRecords'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
+import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
 
 type Mode = 'couple' | 'married'
 
@@ -567,6 +568,7 @@ function CoupleResultView({
           인연을 정하는 건 사주가 아니라 두 사람의 마음과 노력이랍니다. 🌿
         </div>
       </div>
+      {mode !== 'married' && <CoupleChatFab />}
     </main>
   )
 }
