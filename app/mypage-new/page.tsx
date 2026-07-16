@@ -262,8 +262,9 @@ export default function MyPageNew() {
     if (s === 'paid' || s === 'done' || s === '완료') return { label: '완료', color: '#1d9e75' }
     if (s === 'booked') return { label: '예약 확정', color: '#3c82a0' }
     if (s === 'pending') return { label: '대기중', color: '#e09030' }
+    if (s === 'in_progress' || s === 'ongoing' || s === '진행중') return { label: '진행 중', color: '#c8783c' }
     if (s === 'cancelled' || s === 'canceled') return { label: '취소됨', color: '#c0a898' }
-    return { label: s || '진행중', color: '#e09030' }
+    return { label: '진행 중', color: '#e09030' }
   }
 
   const dayPillar = saju && saju.length >= 2 ? saju[1] : null
@@ -605,31 +606,30 @@ export default function MyPageNew() {
           )}
         </div>
 
-        <div onClick={() => router.push('/tarot')}
-          style={{ background: '#f3eefb', border: '0.5px solid #ddd0f0', borderRadius: 14, padding: '13px 15px', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 11, cursor: 'pointer' }}>
-          <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#e6dbf7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, flexShrink: 0 }}>🔮</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#6a4a9c' }}>오늘의 타로 한 장</div>
-            <div style={{ fontSize: 10.5, color: '#8a7aa8', marginTop: 1 }}>가볍게 뽑아보는 오늘의 기운</div>
+        <div style={{ display: 'flex', gap: 9, marginBottom: 11 }}>
+          <div onClick={() => router.push('/tarot')}
+            style={{ flex: 1, background: '#f3eefb', border: '0.5px solid #ddd0f0', borderRadius: 14, padding: 12, display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#e6dbf7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🔮</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: '#6a4a9c' }}>오늘의 타로</div>
+              <div style={{ fontSize: 10, color: '#8a7aa8', marginTop: 2 }}>가볍게 한 장</div>
+            </div>
           </div>
-          <span style={{ color: '#a890d0', fontSize: 16 }}>›</span>
-        </div>
-
-        <div onClick={() => {
-            if (!profile?.birth_year) { alert('먼저 내 사주를 등록해 주세요.'); setEditMode(true); return }
-            const p1 = encodeURIComponent(JSON.stringify({
-              year: profile.birth_year, month: profile.birth_month, day: profile.birth_day,
-              hour: profile.birth_hour ?? '0', gender: profile.gender || '남',
-            }))
-            router.push(`/manseryeok/ai-chat?mode=personal&person1=${p1}`)
-          }}
-          style={{ background: '#fef2ec', border: '0.5px solid #f0d0bc', borderRadius: 14, padding: '13px 15px', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 11, cursor: 'pointer' }}>
-          <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#fae0cf', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, flexShrink: 0 }}>💬</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#96502e' }}>AI에게 물어보기</div>
-            <div style={{ fontSize: 10.5, color: '#b4785a', marginTop: 1 }}>내 사주를 바탕으로 편하게 대화해요</div>
+          <div onClick={() => {
+              if (!profile?.birth_year) { alert('먼저 내 사주를 등록해 주세요.'); setEditMode(true); return }
+              const p1 = encodeURIComponent(JSON.stringify({
+                year: profile.birth_year, month: profile.birth_month, day: profile.birth_day,
+                hour: profile.birth_hour ?? '0', gender: profile.gender || '남',
+              }))
+              router.push(`/manseryeok/ai-talk?person1=${p1}`)
+            }}
+            style={{ flex: 1, background: '#fef2ec', border: '0.5px solid #f0d0bc', borderRadius: 14, padding: 12, display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#fae0cf', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>💬</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: '#96502e' }}>AI 물어보기</div>
+              <div style={{ fontSize: 10, color: '#b4785a', marginTop: 2 }}>사주로 대화</div>
+            </div>
           </div>
-          <span style={{ color: '#d0a890', fontSize: 16 }}>›</span>
         </div>
 
         <ArchiveList />
