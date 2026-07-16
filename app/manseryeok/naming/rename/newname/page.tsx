@@ -10,7 +10,6 @@ const SUB = '#b4785a'
 
 const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
-const NEWBORN_SURNAME_KEY = 'newborn_surname_v1'
 const NAMING_PASS_KEY = 'naming_pass_v1'   // 개명 이용권 { userId, remaining }
 const DEFAULT_TRY_LIMIT = 3
 
@@ -120,14 +119,6 @@ export default function NewNamePage() {
         const samePerson = r.personKey && r.personKey === pk
         if (samePerson && Array.isArray(r.chars) && r.chars[0]) {
           if (!cancelled) { fillFromChars(r.chars as SavedChar[]); setLoaded(true) }
-          return
-        }
-
-        // 3) 신생아 — 아기 이름짓기에서 입력한 성씨 (이름은 새로 짓는 것이므로 성씨만)
-        const nb = JSON.parse(localStorage.getItem(NEWBORN_SURNAME_KEY) || '{}')
-        const sameBaby = nb.personKey && nb.personKey === pk
-        if (sameBaby && nb.surname) {
-          if (!cancelled) { setSurname(nb.surname as SavedChar); setLoaded(true) }
           return
         }
       } catch {}

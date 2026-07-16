@@ -40,7 +40,6 @@ const BADGES: Record<string, Badge> = {
   wedding:  { label: '결혼택일',   bg: '#e9f2ea', fg: '#3b6d3b' },
   birth:    { label: '출산택일',   bg: '#e9f2ea', fg: '#3b6d3b' },
   naming:   { label: '개명',       bg: '#f3ecdf', fg: '#8a6a3c' },
-  newborn:  { label: '아기작명',   bg: '#f3ecdf', fg: '#8a6a3c' },
   expert:   { label: '만세력',     bg: '#eceae4', fg: '#6a6258' },
 }
 
@@ -81,7 +80,6 @@ export function reviewUrl(item: ArchiveItem): string {
     case 'tarot':
       return `/tarot?recordId=${rid}&${from}`
     case 'naming':
-    case 'newborn':
       return `/manseryeok/naming/diagnosis?recordId=${rid}&${from}`
     case 'wedding':
       return `/manseryeok/wedding-timing/result?${qs}recordId=${rid}&${from}`
@@ -106,7 +104,7 @@ async function uid(): Promise<string | null> {
 const ARCHIVE_TYPES = [
   'saju', 'daeun', 'seyun', 'mulsang',
   'couple', 'married', 'tarot',
-  'wedding', 'birth', 'naming', 'newborn',
+  'wedding', 'birth', 'naming',
 ]
 
 // 전 서비스 통합 조회 (최신순). limit로 페이지네이션 가능.

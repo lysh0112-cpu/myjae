@@ -296,7 +296,7 @@ function HomePriceTable() {
   )
 }
 
-// 이름 짓기 조회 횟수 (개명·아기 공통) — app_settings 테이블의 naming_try_limit 하나만 저장
+// 이름 짓기 조회 횟수 (개명) — app_settings 테이블의 naming_try_limit 하나만 저장
 function NamingTryLimitBox() {
   const [value, setValue] = useState<number>(3)
   const [loading, setLoading] = useState(true)
@@ -339,7 +339,7 @@ function NamingTryLimitBox() {
       <div style={{ background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.15)', borderRadius: 12, padding: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: 13, color: '#e8e4ff' }}>개명 · 아기 이름 공통</div>
+            <div style={{ fontSize: 13, color: '#e8e4ff' }}>개명 이름 짓기</div>
             <div style={{ fontSize: 11, color: '#8a88a0', marginTop: 3 }}>한 번에 지어볼 수 있는 이름 개수</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -351,7 +351,7 @@ function NamingTryLimitBox() {
         </div>
       </div>
       <div className="text-xs mt-2" style={{ color: '#8a88a0' }}>
-        💡 개명과 아기 이름짓기에서 &quot;다른 이름 또 지어보기&quot;로 만들 수 있는 총 횟수예요.
+        💡 개명에서 &quot;다른 이름 또 지어보기&quot;로 만들 수 있는 총 횟수예요.
       </div>
       <button onClick={save} disabled={saving}
         className="mt-3 px-6 py-2 rounded-lg text-sm font-bold"

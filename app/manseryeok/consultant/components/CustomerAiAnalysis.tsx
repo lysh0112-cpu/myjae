@@ -352,7 +352,7 @@ export default function CustomerAiAnalysis({
             <div className="rounded-xl p-4" style={{ background: 'rgba(250,199,117,0.08)', border: '1px solid rgba(250,199,117,0.3)' }}>
               <div className="text-xs font-bold mb-3 flex items-center gap-1.5" style={{ color: '#FAC775' }}>
                 <span>✏️</span>
-                <span>{naming.kind === 'newborn' ? '아기 이름 풀이' : '이름 풀이'}</span>
+                <span>이름 풀이</span>
                 {nr?.overallGrade ? (
                   <span className="ml-auto text-sm font-bold" style={{ color: namingGradeColor(nr.overallGrade) }}>{nr.overallGrade}</span>
                 ) : null}
