@@ -10,7 +10,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { listMyCoupleRooms, type CoupleRoomSummary } from '@/lib/saju/coupleRoom'
+import { listMyCoupleRooms, leaveCoupleRoom, type CoupleRoomSummary } from '@/lib/saju/coupleRoom'
 
 const PEACH = '#FDF6F0'
 const CARD = '#FFFBF7'
@@ -41,6 +41,16 @@ export default function CoupleRoomsPage() {
     load()
     return () => { cancelled = true }
   }, [router])
+
+  async function handleLeave(roomId: string, partnerName: string) {
+    if (!confirm(`${partnerName}님과의 채팅방에서 나갈까요?\n(내 목록에서 사라져요)`)) return
+    const ok = await leaveCoupleRoom(roomId)
+    if (ok) {
+      setRooms((prev) => prev.filter((r) => r.roomId !== roomId))
+    } else {
+      alert('나가기에 실패했어요. 잠시 후 다시 시도해주세요.')
+    }
+  }
 
   return (
     <main
@@ -109,9 +119,8 @@ export default function CoupleRoomsPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {rooms.map((r) => (
-              <button
+              <div
                 key={r.roomId}
-                onClick={() => router.push(`/couple-chat?room=${r.roomId}`)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -121,35 +130,62 @@ export default function CoupleRoomsPage() {
                   border: BORDER,
                   borderRadius: 12,
                   padding: '14px 16px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
                 }}
               >
-                <div
+                <button
+                  onClick={() => router.push(`/couple-chat?room=${r.roomId}`)}
                   style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: '50%',
-                    background: '#fbeaf0',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 22,
+                    gap: 12,
+                    flex: 1,
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: '50%',
+                      background: '#fbeaf0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 22,
+                      flexShrink: 0,
+                    }}
+                  >
+                    💑
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: TITLE }}>
+                      {r.partnerName}님과의 채팅
+                    </div>
+                    <div style={{ fontSize: 11, color: SUB, marginTop: 2 }}>
+                      {r.status === 'connected' ? '연결됨' : '상대 참여 대기 중'}
+                    </div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => handleLeave(r.roomId, r.partnerName)}
+                  aria-label="나가기"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#c5a590',
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    padding: '6px 4px',
                     flexShrink: 0,
                   }}
                 >
-                  💑
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: TITLE }}>
-                    {r.partnerName}님과의 채팅
-                  </div>
-                  <div style={{ fontSize: 11, color: SUB, marginTop: 2 }}>
-                    {r.status === 'connected' ? '연결됨' : '상대 참여 대기 중'}
-                  </div>
-                </div>
-                <span style={{ color: '#c5a590', fontSize: 18 }}>{'\u203A'}</span>
-              </button>
+                  나가기
+                </button>
+              </div>
             ))}
           </div>
         )}

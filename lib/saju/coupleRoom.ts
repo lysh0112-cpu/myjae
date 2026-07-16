@@ -102,3 +102,34 @@ export async function sendRoomMessage(
     visibility: 'all',
   })
 }
+
+// 방에서 나가기 (나만 빠짐) — 내 멤버십만 삭제.
+// 둘 다 나가서 아무도 안 남으면 방·메시지까지 정리(빈 방 방지).
+export async function leaveCoupleRoom(roomId: string): Promise<boolean> {
+  const { data: auth } = await supabase.auth.getUser()
+  const uid = auth?.user?.id
+  if (!uid) return false
+
+  try {
+    // 1) 내 멤버십 삭제
+    const { error } = await supabase
+      .from('couple_members')
+      .delete()
+      .eq('room_id', roomId)
+      .eq('user_id', uid)
+    if (error) throw error
+
+    // 2) 남은 멤버 확인 — 아무도 없으면 방 통째로 정리(cascade로 메시지도 삭제)
+    const { data: rest } = await supabase
+      .from('couple_members')
+      .select('id')
+      .eq('room_id', roomId)
+    if (!rest || rest.length === 0) {
+      await supabase.from('couple_rooms').delete().eq('id', roomId)
+    }
+    return true
+  } catch (e) {
+    console.error('leaveCoupleRoom error', e)
+    return false
+  }
+}
