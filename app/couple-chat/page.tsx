@@ -11,7 +11,6 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import DailyFortune from './components/DailyFortune'
 import {
   loadRoomMessages,
   sendRoomMessage,
@@ -42,6 +41,18 @@ const BORDER = '0.5px solid #f0e0d5'
 const BROWN = '#b46e46'
 const TITLE = '#96502e'
 const SUB = '#b4785a'
+
+// 오늘의 궁합 운세 문구 (날짜별 고정)
+const FORTUNES = [
+  '서로에게 솔직한 마음을 전해보세요. 작은 말 한마디가 큰 감동이 될 거예요 💫',
+  '오늘은 함께하는 시간이 더욱 빛나는 날이에요. 소소한 일상을 나눠보세요 🌟',
+  '두 분의 오행 기운이 조화롭게 흐르는 날이에요. 서로를 응원해주세요 ✨',
+  '작은 배려가 큰 사랑이 되는 날이에요. 따뜻한 말 한마디를 건네보세요 🌸',
+  '오늘은 새로운 계획을 함께 세워보기 좋은 날이에요 🎯',
+]
+function todayFortune(): string {
+  return FORTUNES[new Date().getDate() % FORTUNES.length]
+}
 
 function ChatInner() {
   const router = useRouter()
@@ -265,17 +276,17 @@ function ChatInner() {
         <div style={{ marginBottom: 14 }}>
           <div
             style={{
-              background: '#fbeaf0',
-              border: '0.5px solid #f0c9d8',
+              background: isDark ? 'rgba(255,255,255,0.10)' : '#fbeaf0',
+              border: isDark ? '0.5px solid rgba(255,255,255,0.15)' : '0.5px solid #f0c9d8',
               borderRadius: 12,
               padding: '11px 13px',
             }}
           >
-            <div style={{ fontSize: 13, color: '#c85a8c', fontWeight: 600, marginBottom: 4 }}>
+            <div style={{ fontSize: 13, color: isDark ? '#f0b0cc' : '#c85a8c', fontWeight: 600, marginBottom: 4 }}>
               ✦ 오늘의 궁합 운세
             </div>
-            <div style={{ fontSize: 14, color: TITLE, lineHeight: 1.6 }}>
-              <DailyFortune />
+            <div style={{ fontSize: 14, color: isDark ? '#f0e0e8' : TITLE, lineHeight: 1.6 }}>
+              {todayFortune()}
             </div>
           </div>
         </div>
