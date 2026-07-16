@@ -100,22 +100,13 @@ function InviteInner() {
     }
   }
 
-  async function handleShare() {
-    // 휴대폰 기본 공유창 (카톡·문자·메일 등). 카톡 전용 버튼은 키 발급 후 추가.
-    const shareData = {
-      title: '커플 채팅 초대',
-      text: '우리 둘만의 채팅방으로 초대할게요 💕',
-      url: inviteUrl,
-    }
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData)
-      } else {
-        handleCopy()
-      }
-    } catch {
-      /* 사용자가 공유창을 닫은 경우 등 — 무시 */
-    }
+  function handleSms() {
+    // 문자앱에 초대 메시지+링크를 담아서 열기 (카카오 키 없이 됨)
+    const body = `우리 둘만의 채팅방으로 초대할게요 💕\n${inviteUrl}`
+    // iOS는 &body, 안드로이드는 ?body — 둘 다 대응
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent : ''
+    const sep = /iphone|ipad|ipod|mac/i.test(ua) ? '&' : '?'
+    window.location.href = `sms:${sep}body=${encodeURIComponent(body)}`
   }
 
   return (
@@ -237,27 +228,44 @@ function InviteInner() {
               </button>
             </div>
 
-            {/* 공유 버튼 */}
-            <button
-              onClick={handleShare}
-              style={{
-                width: '100%',
-                padding: 14,
-                borderRadius: 10,
-                background: BROWN,
-                border: 'none',
-                fontSize: 14,
-                fontWeight: 600,
-                color: '#fff',
-                cursor: 'pointer',
-                marginBottom: 10,
-              }}
-            >
-              링크 공유하기
-            </button>
+            {/* 문자 보내기 + 복사 두 버튼 */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+              <button
+                onClick={handleSms}
+                style={{
+                  flex: 1,
+                  padding: 14,
+                  borderRadius: 10,
+                  background: BROWN,
+                  border: 'none',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: '#fff',
+                  cursor: 'pointer',
+                }}
+              >
+                💬 문자로 보내기
+              </button>
+              <button
+                onClick={handleCopy}
+                style={{
+                  flex: 1,
+                  padding: 14,
+                  borderRadius: 10,
+                  background: '#fff',
+                  border: '0.5px solid #e0c9b8',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: copied ? '#3b8a3b' : '#96502e',
+                  cursor: 'pointer',
+                }}
+              >
+                {copied ? '복사됨 ✓' : '🔗 링크 복사'}
+              </button>
+            </div>
 
             <div style={{ fontSize: 11, color: '#c5a590', lineHeight: 1.6 }}>
-              공유하기를 누르면 카카오톡·문자 등으로 보낼 수 있어요
+              문자로 보내거나, 링크를 복사해서 카카오톡에 붙여넣어 보낼 수 있어요
             </div>
           </>
         )}
