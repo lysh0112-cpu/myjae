@@ -446,13 +446,25 @@ export default function MyPageNew() {
       <main style={{ padding: 16, paddingBottom: 100 }}>
 
         <div style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}>
-          <div style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 12, borderBottom: '0.5px solid #f5e5da' }}>
-            <div style={{ width: 46, height: 46, borderRadius: '50%', background: '#fae6d5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, color: '#c8783c', flexShrink: 0 }}>{initial}</div>
+          <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 11, borderBottom: (nickEdit || editMode) ? '0.5px solid #f5e5da' : 'none' }}>
+            <div style={{ width: 42, height: 42, borderRadius: '50%', background: '#fae6d5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 700, color: '#c8783c', flexShrink: 0 }}>{initial}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 15, fontWeight: 600 }}>{displayName}님</div>
-              <div style={{ fontSize: 11, color: '#c8783c' }}>오늘도 좋은 기운 가득하세요 ✦</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: '#3a2e28' }}>{displayName}님</span>
+                <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 10, background: rc.bg, color: rc.fg, fontWeight: 500, flexShrink: 0 }}>{roleLabel(profile?.role || null)}</span>
+              </div>
+              <div style={{ fontSize: 10.5, color: '#9a8574', marginTop: 2 }}>
+                {profile?.saju_saved && profile?.birth_year
+                  ? `${profile.cal_type || '양력'} ${profile.birth_year}.${profile.birth_month}.${profile.birth_day} · ${hourTextFull(profile.birth_hour).split('(')[0]} · ${profile.gender === '여' ? '여성' : '남성'}`
+                  : '사주 미등록'}
+              </div>
             </div>
-            <span style={{ fontSize: 10, padding: '4px 11px', borderRadius: 12, background: rc.bg, color: rc.fg, fontWeight: 500, flexShrink: 0 }}>{roleLabel(profile?.role || null)}</span>
+            {profile?.saju_saved && dayPillar && dayPillar.stem !== '?' && (
+              <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
+                <GanjiBox char={dayPillar.stem} el={STEM_ELEMENT[dayPillar.stem]} />
+                <GanjiBox char={dayPillar.branch} el={BRANCH_ELEMENT[dayPillar.branch]} />
+              </div>
+            )}
           </div>
 
           {nickEdit && (
@@ -468,34 +480,18 @@ export default function MyPageNew() {
             </div>
           )}
 
-          <div style={{ padding: 14 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#96502e', whiteSpace: 'nowrap' }}>✦ 내 사주</span>
-              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                {!nickEdit && <button onClick={openNickEdit} style={{ fontSize: 11, color: '#b4785a', border: '0.5px solid #e8d5c5', borderRadius: 8, padding: '3px 11px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>닉네임</button>}
-                {!editMode && <button onClick={openEdit} style={{ fontSize: 11, color: '#b4785a', border: '0.5px solid #e8d5c5', borderRadius: 8, padding: '3px 11px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>수정</button>}
+          <div style={{ padding: (nickEdit || editMode) ? 14 : '10px 14px' }}>
+            {!editMode && !nickEdit && (
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={() => router.push(sajuDetailUrl())} style={{ flex: 1, fontSize: 11, color: '#96502e', background: '#faede0', border: '0.5px solid #ecd8c6', borderRadius: 8, padding: '8px 0', cursor: 'pointer', fontWeight: 600 }}>내 사주 자세히 보기 →</button>
+                <button onClick={openNickEdit} style={{ fontSize: 11, color: '#b4785a', border: '0.5px solid #e8d5c5', borderRadius: 8, padding: '8px 12px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>닉네임</button>
+                <button onClick={openEdit} style={{ fontSize: 11, color: '#b4785a', border: '0.5px solid #e8d5c5', borderRadius: 8, padding: '8px 12px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>수정</button>
               </div>
-            </div>
+            )}
 
-            {!editMode ? (
-              profile?.saju_saved && profile?.birth_year ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  {dayPillar && dayPillar.stem !== '?' && (
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      <GanjiBox char={dayPillar.stem} el={STEM_ELEMENT[dayPillar.stem]} />
-                      <GanjiBox char={dayPillar.branch} el={BRANCH_ELEMENT[dayPillar.branch]} />
-                    </div>
-                  )}
-                  <div style={{ fontSize: 12, color: '#7a6858', lineHeight: 1.7 }}>
-                    {profile.cal_type || '양력'} {profile.birth_year}. {profile.birth_month}. {profile.birth_day}<br />
-                    {hourTextFull(profile.birth_hour)} · {profile.gender === '여' ? '여성' : '남성'}
-                  </div>
-                </div>
-              ) : (
-                <div style={{ fontSize: 13, color: '#b4785a' }}>아직 등록된 사주가 없습니다. "수정"을 눌러 등록하세요.</div>
-              )
-            ) : (
+            {editMode && (
               <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#96502e', marginBottom: 8 }}>✦ 내 사주 수정</div>
                 <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 11, color: '#b4785a', marginBottom: 4 }}>성별</div>
@@ -535,11 +531,6 @@ export default function MyPageNew() {
             )}
           </div>
         </div>
-
-        <button onClick={() => router.push(sajuDetailUrl())}
-          style={{ width: '100%', background: '#b46e46', border: 'none', borderRadius: 10, height: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', marginBottom: 14 }}>
-          <span style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>내 사주 자세히 보기 →</span>
-        </button>
 
         <EmotionPicker />
 
