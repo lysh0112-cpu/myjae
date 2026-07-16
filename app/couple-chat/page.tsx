@@ -21,10 +21,17 @@ import {
 import {
   loadDisplaySettings,
   saveDisplaySettings,
-  bgColorOf,
+  fontCssOf,
+  isDarkColor,
+  googleFontsHref,
+  loadRecentColors,
+  pushRecentColor,
   FONT_SCALES,
-  FONT_FAMILIES,
-  BG_OPTIONS,
+  FONT_POINTS,
+  FONTS,
+  BG_AUTO,
+  THEME_COLUMNS,
+  STANDARD_COLORS,
   DEFAULT_DISPLAY,
   type ChatDisplaySettings,
 } from '@/lib/saju/chatDisplay'
@@ -46,11 +53,13 @@ function ChatInner() {
   const [disp, setDisp] = useState<ChatDisplaySettings>(DEFAULT_DISPLAY)
   const [showSettings, setShowSettings] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [recentColors, setRecentColors] = useState<string[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
 
   // 개인 표시설정 로드 (글자·폰트·배경)
   useEffect(() => {
     setDisp(loadDisplaySettings())
+    setRecentColors(loadRecentColors())
   }, [])
 
   function updateDisp(patch: Partial<ChatDisplaySettings>) {
@@ -59,6 +68,12 @@ function ChatInner() {
       saveDisplaySettings(next)
       return next
     })
+  }
+
+  // 배경색 선택 → 적용 + 최근 색에 기록
+  function pickBg(hex: string) {
+    updateDisp({ bg: hex })
+    setRecentColors(pushRecentColor(hex))
   }
 
   async function handleLeave() {
@@ -144,14 +159,18 @@ function ChatInner() {
     await sendRoomMessage(roomId, myUid, text)
   }
 
-  const { color: bgColor, dark: isDark } = bgColorOf(disp.bg)
-  const scale = disp.fontScale
-  const fontFam = disp.fontFamily
-  // 다크 배경이면 카드/글자색을 밝게
+  const bgColor = disp.bg
+  const isDark = isDarkColor(bgColor)
+  const fontPt = disp.fontPt || 15
+  const fontFam = fontCssOf(disp.fontKey)
+  // 다크 배경이면 카드/글자색을 밝게 (자동)
+  const autoText = isDark ? '#f0f0f0' : '#3a2e28'
+  // 사용자가 글자색 지정했으면 그 색, 아니면 자동
+  const userText = disp.textColor || autoText
   const mainText = isDark ? '#f0f0f0' : TITLE
   const cardBg = isDark ? '#3a3a3a' : CARD
   const otherBubbleBg = isDark ? '#3a3a3a' : '#fff'
-  const otherBubbleText = isDark ? '#f0f0f0' : '#3a2e28'
+  const otherBubbleText = disp.textColor || (isDark ? '#f0f0f0' : '#3a2e28')
 
   return (
     <main
@@ -165,6 +184,8 @@ function ChatInner() {
         fontFamily: fontFam,
       }}
     >
+      {/* 구글 웹폰트 로드 (채팅방에서만) */}
+      <link rel="stylesheet" href={googleFontsHref()} />
       {/* 헤더 */}
       <div
         style={{
@@ -283,7 +304,7 @@ function ChatInner() {
                 <div
                   style={{
                     maxWidth: '72%',
-                    fontSize: 15.5 * scale,
+                    fontSize: fontPt,
                     lineHeight: 1.55,
                     padding: '9px 13px',
                     borderRadius: mine ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
@@ -324,7 +345,7 @@ function ChatInner() {
               border: BORDER,
               borderRadius: 20,
               padding: '11px 15px',
-              fontSize: 15 * scale,
+              fontSize: fontPt,
               color: isDark ? '#f0f0f0' : '#3a2e28',
               outline: 'none',
               maxHeight: 100,
@@ -372,82 +393,236 @@ function ChatInner() {
               <button onClick={() => setShowSettings(false)} aria-label="닫기" style={{ background: 'none', border: 'none', fontSize: 20, color: '#c5a590', cursor: 'pointer' }}>✕</button>
             </div>
 
-            {/* 글자 크기 */}
+            {/* 글자 크기 — 포인트 콤보 */}
             <div style={{ marginBottom: 22 }}>
               <div style={{ fontSize: 13, color: SUB, marginBottom: 10 }}>글자 크기</div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {FONT_SCALES.map((f) => {
-                  const on = Math.abs(disp.fontScale - f.scale) < 0.01
-                  return (
-                    <button
-                      key={f.key}
-                      onClick={() => updateDisp({ fontScale: f.scale })}
-                      style={{
-                        flex: 1, padding: '10px 0', borderRadius: 9,
-                        background: on ? BROWN : '#fff',
-                        border: on ? 'none' : BORDER,
-                        color: on ? '#fff' : TITLE,
-                        fontWeight: on ? 600 : 400,
-                        fontSize: 11 + f.scale * 3,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {f.label}
-                    </button>
-                  )
-                })}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <select
+                  value={fontPt}
+                  onChange={(e) => updateDisp({ fontPt: Number(e.target.value) })}
+                  style={{
+                    flex: 1, padding: '11px 12px', borderRadius: 9,
+                    border: BORDER, background: '#fff', color: TITLE,
+                    fontSize: 14, cursor: 'pointer',
+                  }}
+                >
+                  {FONT_POINTS.map((pt) => (
+                    <option key={pt} value={pt}>{pt} 포인트</option>
+                  ))}
+                </select>
+                <span style={{ fontSize: fontPt, color: TITLE, minWidth: 44, textAlign: 'center' }}>가나다</span>
               </div>
             </div>
 
-            {/* 폰트 종류 */}
+            {/* 폰트 종류 — 콤보상자 */}
             <div style={{ marginBottom: 22 }}>
               <div style={{ fontSize: 13, color: SUB, marginBottom: 10 }}>글씨체</div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {FONT_FAMILIES.map((f) => {
-                  const on = disp.fontFamily === f.css
-                  return (
-                    <button
-                      key={f.key}
-                      onClick={() => updateDisp({ fontFamily: f.css })}
-                      style={{
-                        flex: 1, padding: '10px 0', borderRadius: 9,
-                        background: on ? BROWN : '#fff',
-                        border: on ? 'none' : BORDER,
-                        color: on ? '#fff' : TITLE,
-                        fontWeight: on ? 600 : 400,
-                        fontSize: 13,
-                        fontFamily: f.css,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {f.label}
-                    </button>
-                  )
-                })}
+              <select
+                value={disp.fontKey}
+                onChange={(e) => updateDisp({ fontKey: e.target.value })}
+                style={{
+                  width: '100%', padding: '11px 12px', borderRadius: 9,
+                  border: BORDER, background: '#fff', color: TITLE,
+                  fontSize: 14, cursor: 'pointer',
+                  fontFamily: fontCssOf(disp.fontKey),
+                }}
+              >
+                {FONTS.map((f) => (
+                  <option key={f.key} value={f.key} style={{ fontFamily: f.css }}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+              <div style={{ marginTop: 8, padding: '8px 12px', background: '#fff', border: BORDER, borderRadius: 9, fontSize: 14, color: '#3a2e28', fontFamily: fontCssOf(disp.fontKey) }}>
+                가나다라 ABC 미리보기 💕
               </div>
             </div>
 
-            {/* 배경색 */}
-            <div>
-              <div style={{ fontSize: 13, color: SUB, marginBottom: 10 }}>배경색</div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                {BG_OPTIONS.map((b) => {
-                  const on = disp.bg === b.key
+            {/* 글자색 — 엑셀식 팔레트 */}
+            <div style={{ marginBottom: 22 }}>
+              <div style={{ fontSize: 13, color: SUB, marginBottom: 10 }}>글자색</div>
+
+              {/* 자동 */}
+              <button
+                onClick={() => updateDisp({ textColor: '' })}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                  padding: '8px 10px', marginBottom: 12, borderRadius: 8,
+                  background: disp.textColor === '' ? '#faf3ec' : '#fff',
+                  border: disp.textColor === '' ? '1.5px solid #b46e46' : BORDER,
+                  cursor: 'pointer',
+                }}
+              >
+                <span style={{ fontSize: 14, color: '#3a2e28' }}>가</span>
+                <span style={{ fontSize: 13, color: TITLE }}>자동 (배경에 맞춤)</span>
+              </button>
+
+              {/* 테마 색 */}
+              <div style={{ fontSize: 11, color: '#a0968c', marginBottom: 6 }}>테마 색</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 3, marginBottom: 12 }}>
+                {THEME_COLUMNS.map((col, ci) =>
+                  col.map((c, ri) => {
+                    const on = disp.textColor.toLowerCase() === c.toLowerCase()
+                    return (
+                      <button
+                        key={`t-${ci}-${ri}`}
+                        onClick={() => { updateDisp({ textColor: c }); setRecentColors(pushRecentColor(c)) }}
+                        aria-label={c}
+                        style={{
+                          width: '100%', aspectRatio: '1', borderRadius: 3,
+                          background: c,
+                          border: on ? '2px solid #b46e46' : '0.5px solid #d8ccc2',
+                          cursor: 'pointer', padding: 0,
+                        }}
+                      />
+                    )
+                  }),
+                )}
+              </div>
+
+              {/* 표준 색 */}
+              <div style={{ fontSize: 11, color: '#a0968c', marginBottom: 6 }}>표준 색</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 3, marginBottom: 12 }}>
+                {STANDARD_COLORS.map((c) => {
+                  const on = disp.textColor.toLowerCase() === c.toLowerCase()
                   return (
                     <button
-                      key={b.key}
-                      onClick={() => updateDisp({ bg: b.key })}
-                      aria-label={b.label}
+                      key={`ts-${c}`}
+                      onClick={() => { updateDisp({ textColor: c }); setRecentColors(pushRecentColor(c)) }}
+                      aria-label={c}
                       style={{
-                        width: 38, height: 38, borderRadius: '50%',
-                        background: b.color,
-                        border: on ? '2px solid #b46e46' : '0.5px solid #f0e0d5',
-                        cursor: 'pointer',
+                        width: '100%', aspectRatio: '1', borderRadius: 3,
+                        background: c,
+                        border: on ? '2px solid #b46e46' : '0.5px solid #d8ccc2',
+                        cursor: 'pointer', padding: 0,
                       }}
                     />
                   )
                 })}
               </div>
+
+              {/* 다른 색 직접 고르기 */}
+              <label
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                  padding: '10px', borderRadius: 8, background: '#fff', border: BORDER,
+                  cursor: 'pointer',
+                }}
+              >
+                <span style={{ fontSize: 15 }}>🖍️</span>
+                <span style={{ fontSize: 13, color: TITLE, flex: 1 }}>다른 글자색 고르기…</span>
+                <input
+                  type="color"
+                  value={disp.textColor || '#3a2e28'}
+                  onChange={(e) => { updateDisp({ textColor: e.target.value }); setRecentColors(pushRecentColor(e.target.value)) }}
+                  style={{ width: 28, height: 28, padding: 0, border: BORDER, borderRadius: 6, cursor: 'pointer', background: 'none' }}
+                />
+              </label>
+            </div>
+
+            {/* 배경색 — 엑셀식 팔레트 */}
+            <div>
+              <div style={{ fontSize: 13, color: SUB, marginBottom: 10 }}>배경색</div>
+
+              {/* 자동 */}
+              <button
+                onClick={() => pickBg(BG_AUTO)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                  padding: '8px 10px', marginBottom: 12, borderRadius: 8,
+                  background: '#fff', border: BORDER, cursor: 'pointer',
+                }}
+              >
+                <span style={{ width: 18, height: 18, borderRadius: 4, background: BG_AUTO, border: '0.5px solid #d0c0b5', display: 'inline-block' }} />
+                <span style={{ fontSize: 13, color: TITLE }}>자동 (기본 피치)</span>
+              </button>
+
+              {/* 테마 색 */}
+              <div style={{ fontSize: 11, color: '#a0968c', marginBottom: 6 }}>테마 색</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 3, marginBottom: 12 }}>
+                {THEME_COLUMNS.map((col, ci) =>
+                  col.map((c, ri) => {
+                    const on = disp.bg.toLowerCase() === c.toLowerCase()
+                    return (
+                      <button
+                        key={`${ci}-${ri}`}
+                        onClick={() => pickBg(c)}
+                        aria-label={c}
+                        style={{
+                          width: '100%', aspectRatio: '1', borderRadius: 3,
+                          background: c,
+                          border: on ? '2px solid #b46e46' : '0.5px solid #d8ccc2',
+                          cursor: 'pointer', padding: 0,
+                        }}
+                      />
+                    )
+                  }),
+                )}
+              </div>
+
+              {/* 표준 색 */}
+              <div style={{ fontSize: 11, color: '#a0968c', marginBottom: 6 }}>표준 색</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 3, marginBottom: 12 }}>
+                {STANDARD_COLORS.map((c) => {
+                  const on = disp.bg.toLowerCase() === c.toLowerCase()
+                  return (
+                    <button
+                      key={c}
+                      onClick={() => pickBg(c)}
+                      aria-label={c}
+                      style={{
+                        width: '100%', aspectRatio: '1', borderRadius: 3,
+                        background: c,
+                        border: on ? '2px solid #b46e46' : '0.5px solid #d8ccc2',
+                        cursor: 'pointer', padding: 0,
+                      }}
+                    />
+                  )
+                })}
+              </div>
+
+              {/* 최근 사용한 색 */}
+              {recentColors.length > 0 && (
+                <>
+                  <div style={{ fontSize: 11, color: '#a0968c', marginBottom: 6 }}>최근 사용한 색</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 3, marginBottom: 12 }}>
+                    {recentColors.map((c) => {
+                      const on = disp.bg.toLowerCase() === c.toLowerCase()
+                      return (
+                        <button
+                          key={c}
+                          onClick={() => pickBg(c)}
+                          aria-label={c}
+                          style={{
+                            width: '100%', aspectRatio: '1', borderRadius: 3,
+                            background: c,
+                            border: on ? '2px solid #b46e46' : '0.5px solid #d8ccc2',
+                            cursor: 'pointer', padding: 0,
+                          }}
+                        />
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+
+              {/* 다른 색 (직접 고르기) */}
+              <label
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                  padding: '10px', borderRadius: 8, background: '#fff', border: BORDER,
+                  cursor: 'pointer',
+                }}
+              >
+                <span style={{ fontSize: 15 }}>🎨</span>
+                <span style={{ fontSize: 13, color: TITLE, flex: 1 }}>다른 색 직접 고르기…</span>
+                <input
+                  type="color"
+                  value={disp.bg}
+                  onChange={(e) => pickBg(e.target.value)}
+                  style={{ width: 28, height: 28, padding: 0, border: BORDER, borderRadius: 6, cursor: 'pointer', background: 'none' }}
+                />
+              </label>
             </div>
           </div>
         </div>
