@@ -74,7 +74,7 @@ function InviteInner() {
         const origin =
           typeof window !== 'undefined' ? window.location.origin : 'https://myjae.vercel.app'
         if (!cancelled) {
-          setInviteUrl(`${origin}/signup?invite=${token}`)
+          setInviteUrl(`${origin}/couple-chat/join?invite=${token}`)
           setLoading(false)
         }
       } catch (e) {

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { joinCoupleByInvite } from '@/lib/saju/coupleInvite'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -25,6 +26,20 @@ export default function LoginPage() {
       router.push('/auth/welcome')
       return
     }
+    // 초대 링크로 온 로그인(?invite=)이면 → 자동 연결 후 채팅방으로.
+    const inviteToken =
+      typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('invite')
+        : null
+    if (inviteToken) {
+      const joined = await joinCoupleByInvite(inviteToken, userId)
+      if (joined.ok) {
+        router.push(`/couple-chat?room=${joined.roomId}`)
+        return
+      }
+      // 연결 실패해도 로그인은 됐으니 기존 흐름(홈)으로 폴백
+    }
+
     // 등급과 무관하게 신버전 홈으로. 상담사·관리자 화면은 마이페이지에서 진입.
     router.push('/home-new')
   }
