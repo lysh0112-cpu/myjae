@@ -22,26 +22,25 @@ export function maskEmail(email: string): string {
   return `${head}***@${domain}`
 }
 
-// 이름(nickname)으로 회원 검색 (동명이인 여럿 가능)
+// 이름(nickname)으로 회원 검색 — 서버 API 경유 (RLS 우회 + 이메일 가림)
 export async function searchMembersByName(
   name: string,
   excludeUserId?: string,
 ): Promise<MemberHit[]> {
   const q = name.trim()
   if (!q) return []
-  const { data } = await supabase
-    .from('profiles')
-    .select('id, nickname, email, created_at')
-    .ilike('nickname', q) // 정확히 일치(대소문자 무시). 부분검색 원하면 `%${q}%`
-    .limit(10)
-  return (data || [])
-    .filter((p) => p.id !== excludeUserId && p.email)
-    .map((p) => ({
-      userId: p.id,
-      nickname: p.nickname || '회원',
-      maskedEmail: maskEmail(p.email),
-      joinedYear: p.created_at ? new Date(p.created_at).getFullYear().toString() : '',
-    }))
+  try {
+    const res = await fetch('/api/couple/search-members', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: q, excludeUserId }),
+    })
+    if (!res.ok) return []
+    const data = await res.json()
+    return (data.members || []) as MemberHit[]
+  } catch {
+    return []
+  }
 }
 
 // 회원에게 초대 보내기 (방 생성 + invitee_id 지정)
