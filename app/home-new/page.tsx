@@ -240,10 +240,10 @@ export default function HomeNew() {
         {/* ② 슬라이드 배너 */}
         <div style={{ padding: '14px 16px 0' }}>
           <div
-            onClick={() => router.push(SLIDES[slide].href)}
+            onClick={() => { if (!isLoggedIn) router.push('/signup') }}
             style={{
               position: 'relative', borderRadius: '18px', overflow: 'hidden',
-              minHeight: '175px', height: '175px', cursor: 'pointer',
+              minHeight: '175px', height: '175px', cursor: isLoggedIn ? 'default' : 'pointer',
               background: '#0a0a1a',
             }}
           >
@@ -306,11 +306,13 @@ export default function HomeNew() {
                   color: SLIDES[slide].sub2, whiteSpace: 'pre-line',
                 }}>{SLIDES[slide].sub}</div>
               ) : null}
-              <div style={{
-                display: 'inline-block', marginTop: '10px', padding: '6px 14px',
-                borderRadius: '16px', background: 'rgba(255,255,255,0.9)',
-                fontSize: '11px', fontWeight: 600, color: '#1a1a2e',
-              }}>{SLIDES[slide].link}</div>
+              {!isLoggedIn ? (
+                <div style={{
+                  display: 'inline-block', marginTop: '12px', padding: '7px 16px',
+                  borderRadius: '16px', background: 'rgba(255,255,255,0.92)',
+                  fontSize: '12px', fontWeight: 600, color: '#1a1a2e',
+                }}>가입하러 가기 →</div>
+              ) : null}
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '10px 0 4px' }}>
