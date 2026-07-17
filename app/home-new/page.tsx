@@ -509,13 +509,13 @@ export default function HomeNew() {
       }}>
         {[
           { icon: '🏠', label: '홈', href: '/home-new', active: true },
-          { icon: '⊞', label: '서비스', href: '/manseryeok', active: false },
+          { icon: '⊞', label: '서비스', href: '', wip: true, active: false },
           { icon: '💬', label: '상담', href: '/manseryeok/consultant-select', active: false },
           { icon: '♡', label: '찜', href: '/home-new', active: false },
         ].map((n) => (
           <button
             key={n.label}
-            onClick={() => router.push(n.href)}
+            onClick={() => { if (n.wip) { alert('작업 중이에요. 곧 만나요!') } else { router.push(n.href) } }}
             style={{
               flex: 1, padding: '10px 0', background: 'none', border: 'none',
               cursor: 'pointer', display: 'flex', flexDirection: 'column',
