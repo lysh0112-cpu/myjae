@@ -272,7 +272,7 @@ export default function MyPageNew() {
   const dayPillar = saju && saju.length >= 2 ? saju[1] : null
 
   const sajuDetailUrl = () => {
-    if (!profile?.birth_year) return '/manseryeok'
+    if (!profile?.birth_year) return '/home-new'
     const g = profile.gender === '여' ? '여' : '남'
     const cal = profile.cal_type || '양력'
     const hourIdx = toHourIdx(profile.birth_hour ?? null)
@@ -485,7 +485,7 @@ export default function MyPageNew() {
           <div style={{ padding: (nickEdit || editMode) ? 14 : '10px 14px' }}>
             {!editMode && !nickEdit && (
               <div style={{ display: 'flex', gap: 6 }}>
-                <button onClick={() => router.push(sajuDetailUrl())} style={{ flex: 1, fontSize: 11, color: '#96502e', background: '#faede0', border: '0.5px solid #ecd8c6', borderRadius: 8, padding: '8px 0', cursor: 'pointer', fontWeight: 600 }}>내 사주 자세히 보기 →</button>
+                <button onClick={() => { if (!profile?.birth_year) { openEdit() } else { router.push(sajuDetailUrl()) } }} style={{ flex: 1, fontSize: 11, color: '#96502e', background: '#faede0', border: '0.5px solid #ecd8c6', borderRadius: 8, padding: '8px 0', cursor: 'pointer', fontWeight: 600 }}>내 사주 자세히 보기 →</button>
                 <button onClick={openNickEdit} style={{ fontSize: 11, color: '#b4785a', border: '0.5px solid #e8d5c5', borderRadius: 8, padding: '8px 12px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>닉네임</button>
                 <button onClick={openEdit} style={{ fontSize: 11, color: '#b4785a', border: '0.5px solid #e8d5c5', borderRadius: 8, padding: '8px 12px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>수정</button>
               </div>

@@ -61,7 +61,7 @@ const SLIDES = [
     img: '/banner/slide1.jpg', video: '',
     accent: '#ffd97a', sub2: '#c3b49a',
     sparkles: ['#ffe6a0', '#ffd97a', '#fff'],
-    href: '/manseryeok',
+    href: '/home-new',
   },
   {
     tag: '가격 강점', title: '비싼 상담,\n꼭 필요할까요?',
@@ -69,7 +69,7 @@ const SLIDES = [
     img: '/banner/slide2.jpg', video: '',
     accent: '#ffd27a', sub2: '#e8ddc8',
     sparkles: ['#ffe6a0', '#ffd27a', '#fff'],
-    href: '/manseryeok',
+    href: '/home-new',
   },
   {
     tag: '내사주그림', title: '어려운 내 사주,\n이제 그림으로',
@@ -93,7 +93,7 @@ const SLIDES = [
     img: '/banner/slide5.jpg', video: '',
     accent: '#ffe0a0', sub2: '#e8ddc8',
     sparkles: ['#ffe0a0', '#fff', '#ffd97a'],
-    href: '/manseryeok',
+    href: '/home-new',
   },
 ]
 
