@@ -8,7 +8,6 @@ import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
 import InviteNotifier from '@/app/couple-chat/InviteNotifier'
 import { listPinnedServices, togglePinnedService } from '@/lib/saju/pinnedServices'
-import HomeBottomSheet from '@/app/home-new/components/HomeBottomSheet'
 
 // ── 사람 선택 모달을 여는 서비스 설정 ──
 // 사주 + 대운 + 세운(연월운세) 연결. 셋 다 같은 흐름:
@@ -162,42 +161,7 @@ export default function HomeNew() {
   const [svcOpen, setSvcOpen] = useState(false)           // 서비스 리스트 펼침 여부
   const [pinMsg, setPinMsg] = useState('')                // 압핀 안내 메시지
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  // 바텀시트: 고정 영역(네비+배너+유저카드) 높이를 재서 시트 접힘 위치로 사용
-  const fixedRef = useRef<HTMLDivElement | null>(null)
-  const [collapsedTop, setCollapsedTop] = useState(360)   // 기본값(측정 전)
 
-
-  // 홈에서만 body/html 스크롤 잠금 → 페이지 바깥 우측 스크롤바 제거
-  //   (홈을 떠나면 원래대로 복구. 다른 페이지엔 영향 없음)
-  useEffect(() => {
-    const prevBody = document.body.style.overflow
-    const prevHtml = document.documentElement.style.overflow
-    document.body.style.overflow = 'hidden'
-    document.documentElement.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prevBody
-      document.documentElement.style.overflow = prevHtml
-    }
-  }, [])
-
-  // 바텀시트 접힘 위치 = 고정 영역 아래 끝의 화면 y좌표
-  //   (getBoundingClientRect().bottom = 화면 최상단부터 고정영역 끝까지)
-  //   → 네비가 fixedRef 밖에 있어도 bottom 값에 네비 높이가 자연히 포함됨
-  useEffect(() => {
-    function measure() {
-      if (fixedRef.current) {
-        const rect = fixedRef.current.getBoundingClientRect()
-        const bottom = rect.bottom   // 화면 상단 기준 고정영역 끝
-        if (bottom > 120) setCollapsedTop(Math.round(bottom))
-      }
-    }
-    measure()
-    window.addEventListener('resize', measure)
-    // 배너 이미지·유저카드 로드 후 값이 바뀔 수 있어 여러 번 재측정
-    const t1 = setTimeout(measure, 300)
-    const t2 = setTimeout(measure, 900)
-    return () => { window.removeEventListener('resize', measure); clearTimeout(t1); clearTimeout(t2) }
-  }, [isLoggedIn, profile])
 
   // 홈 후기 미리보기: 승인된 후기 중 고정 먼저 → 최신 4개
   useEffect(() => {
@@ -264,10 +228,10 @@ export default function HomeNew() {
 
   return (
     <div style={{
-      height: '100dvh', overflow: 'hidden', background: '#FDF6F0',
+      minHeight: '100vh', background: '#FDF6F0',
       maxWidth: '430px', margin: '0 auto',
       fontFamily: "'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif",
-      color: '#3a2e28', position: 'relative',
+      color: '#3a2e28', paddingBottom: '70px',
     }}>
 
       <style>{`
@@ -322,8 +286,6 @@ export default function HomeNew() {
             [data-bnr-spk] { animation: none !important; }
           }
         `}</style>
-        {/* ═══ 고정 영역 시작: 배너 + 유저카드 (시트가 이 위로 올라옴) ═══ */}
-        <div ref={fixedRef}>
         {/* ② 슬라이드 배너 */}
         <div style={{ padding: '14px 16px 0' }}>
           <div
@@ -497,11 +459,6 @@ export default function HomeNew() {
             )}
           </div>
         </div>
-        {/* ═══ 고정 영역 끝 ═══ */}
-        </div>
-
-        {/* ═══ 바텀시트: 서비스 리스트 + 후기 (끌어올리면 위를 덮음) ═══ */}
-        <HomeBottomSheet collapsedTop={collapsedTop}>
 
         {/* ⑤ 서비스 리스트 (아이콘 + 이름 + 설명 + 📌압핀 / 하단 접기)
             - 압핀: 찜하면 리스트 맨 위로 정렬, 최대 2개 (회원만, 비회원은 로그인 안내)
@@ -652,8 +609,6 @@ export default function HomeNew() {
             </div>
           )}
         </div>
-        {/* ═══ 바텀시트 끝 ═══ */}
-        </HomeBottomSheet>
       </main>
 
       {/* 하단 고정 네비게이션 */}
