@@ -138,6 +138,15 @@ interface Profile {
   gender: string | null
 }
 
+// 홈 미리보기용 후기 (승인된 것 중 고정 먼저 → 최신 2개)
+interface HomeReview {
+  id: string
+  nickname: string
+  rating: number
+  service_type: string | null
+  content: string
+}
+
 export default function HomeNew() {
   const router = useRouter()
   const [slide, setSlide] = useState(0)
@@ -147,9 +156,27 @@ export default function HomeNew() {
   // 사람 선택 모달: 어떤 서비스로 열렸는지 (null이면 닫힘)
   const [pickService, setPickService] = useState<string | null>(null)
   const [offset, setOffset] = useState(0)
+  const [reviews, setReviews] = useState<HomeReview[]>([])
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => { setOffset(dayOffset()) }, [])
+
+  // 홈 후기 미리보기: 승인된 후기 중 고정 먼저 → 최신 2개
+  useEffect(() => {
+    let mounted = true
+    async function loadReviews() {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('id, nickname, rating, service_type, content')
+        .eq('is_approved', true)
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(2)
+      if (mounted && !error && data) setReviews(data as HomeReview[])
+    }
+    loadReviews()
+    return () => { mounted = false }
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -433,53 +460,86 @@ export default function HomeNew() {
           ))}
         </div>
 
-        {/* ⑤ 12지신 서비스 그리드 */}
-        <div style={{ padding: '6px 16px 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+        {/* ⑤ 12지신 서비스
+            - 메뉴판(전체): 2행 가로 자동흐름 + 손으로 밀기(스크롤바 숨김)
+            - 특정 카테고리: 흐름 없이 가만히 2행 그리드 */}
+        <div style={{ padding: '6px 0 20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', padding: '0 16px' }}>
             <span style={{ fontSize: '16px', fontWeight: 700, color: '#3a2e28' }}>MyungCafe 서비스</span>
-            <span style={{ fontSize: '11px', color: '#c8783c' }}>12지신과 함께 ✦</span>
+            <span style={{ fontSize: '11px', color: '#c8783c' }}>
+              {cat === '메뉴판' ? '밀어서 더 보기 →' : '12지신과 함께 ✦'}
+            </span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            {SERVICES.filter(s => cat === '메뉴판' || s.cat === cat).map((s, idx) => {
-              // 매일 이미지가 한 칸씩 돌게 (offset)
-              const imgIdx = (idx + offset) % ZODIAC_IMAGES.length
-              const nameLen = s.name.length
-              const fontSize = nameLen === 2 ? '30px' : nameLen === 3 ? '24px' : nameLen === 4 ? '21px' : '18px'
-              return (
+
+          {cat === '메뉴판' ? (
+            /* 전체: 좌우로 흐르는 2행 마퀴 (드래그 가능 / 스크롤바 없음) */
+            <ServiceMarquee services={SERVICES} images={ZODIAC_IMAGES} offset={offset}
+              onPick={(s) => { if (PICK_CONFIG[s.name]) setPickService(s.name); else router.push(s.href) }} />
+          ) : (
+            /* 특정 카테고리: 멈춰 있는 3열 그리드 (메뉴판과 같은 76px 카드, 왼쪽부터 촘촘히) */
+            <div style={{ padding: '0 16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 76px)', gap: '10px', justifyContent: 'start' }}>
+                {SERVICES.filter(s => s.cat === cat).map((s, idx) => (
+                  <ZodiacCard key={s.name} s={s} img={ZODIAC_IMAGES[(idx + offset) % ZODIAC_IMAGES.length]} floatIdx={idx} noFloat
+                    onPick={() => { if (PICK_CONFIG[s.name]) setPickService(s.name); else router.push(s.href) }} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ⑥ 이용 후기 미리보기 (승인된 후기 2개 → 더보기) */}
+        <div style={{ padding: '0 16px 24px' }}>
+          <div
+            onClick={() => router.push('/manseryeok/reviews')}
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', cursor: 'pointer' }}
+          >
+            <span style={{ fontSize: '16px', fontWeight: 700, color: '#3a2e28' }}>💬 이용 후기</span>
+            <span style={{ fontSize: '12px', color: '#c8783c', fontWeight: 600 }}>더보기 →</span>
+          </div>
+
+          {reviews.length === 0 ? (
+            <div
+              onClick={() => router.push('/manseryeok/reviews/write')}
+              style={{
+                background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: '14px',
+                padding: '22px 16px', textAlign: 'center', cursor: 'pointer',
+              }}
+            >
+              <div style={{ fontSize: '13px', color: '#b4785a', lineHeight: 1.6 }}>
+                아직 등록된 후기가 없어요.<br />첫 후기를 남겨보세요 ✍️
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {reviews.map((r) => (
                 <div
-                  key={s.name}
-                  onClick={() => {
-                    if (PICK_CONFIG[s.name]) setPickService(s.name)
-                    else router.push(s.href)
-                  }}
-                  className="zodiac-card"
+                  key={r.id}
+                  onClick={() => router.push('/manseryeok/reviews')}
                   style={{
-                    position: 'relative', aspectRatio: '1 / 1',
-                    borderRadius: '18px', overflow: 'hidden',
-                    cursor: 'pointer',
-                    // 카테고리 탭과 동일한 테두리 (연한 살구색 가는 선)
-                    border: '0.5px solid #e8d5c5',
-                    // 입체 그림자 (떠 있는 느낌)
-                    boxShadow: '0 6px 16px rgba(180,110,70,0.18), 0 2px 4px rgba(180,110,70,0.10)',
-                    // 각 카드마다 둥실 타이밍 다르게
-                    animation: `floaty 3.2s ease-in-out ${(idx % 6) * 0.4}s infinite`,
+                    background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: '14px',
+                    padding: '14px 16px', cursor: 'pointer',
                   }}
                 >
-                  {/* 지신 이미지 */}
-                  <img src={ZODIAC_IMAGES[imgIdx]} alt={s.name} style={{
-                    width: '100%', height: '100%', objectFit: 'cover', display: 'block',
-                  }} />
-                  {/* 도톰한 글씨 (위쪽) */}
-                  <div style={{
-                    position: 'absolute', top: '16px', left: 0, right: 0,
-                    textAlign: 'center', fontSize, fontWeight: 900, color: s.color,
-                    textShadow: '2px 2px 0 #fff, -2px 2px 0 #fff, 2px -2px 0 #fff, -2px -2px 0 #fff, 0 3px 6px rgba(0,0,0,0.12)',
-                    letterSpacing: '-0.5px',
-                  }}>{s.name}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <span style={{ color: '#f0a020', fontSize: '13px', letterSpacing: '1px' }}>
+                      {'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}
+                    </span>
+                    {r.service_type && (
+                      <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '99px', background: '#f5ede5', color: '#b4785a' }}>
+                        {r.service_type}
+                      </span>
+                    )}
+                  </div>
+                  <p style={{
+                    fontSize: '13px', lineHeight: 1.55, color: '#3a2e28', margin: 0,
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
+                  }}>{r.content}</p>
+                  <p style={{ fontSize: '11px', color: '#c5a590', marginTop: '7px', marginBottom: 0 }}>{r.nickname}</p>
                 </div>
-              )
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </main>
 
@@ -498,6 +558,8 @@ export default function HomeNew() {
         .zodiac-card {
           transition: transform 0.15s ease, box-shadow 0.2s ease;
         }
+        .svc-marquee { scrollbar-width: none; -ms-overflow-style: none; }
+        .svc-marquee::-webkit-scrollbar { display: none; width: 0; height: 0; }
       `}</style>
 
       {/* 하단 고정 네비게이션 */}
@@ -557,6 +619,158 @@ export default function HomeNew() {
 
       <CoupleChatFab />
       <InviteNotifier />
+    </div>
+  )
+}
+
+// ── 12지신 카드 한 장 (이미지 + 글자) ──
+function ZodiacCard({ s, img, floatIdx, onPick, noFloat }: {
+  s: { name: string; color: string }
+  img: string
+  floatIdx: number
+  onPick: () => void
+  noFloat?: boolean
+}) {
+  const nameLen = s.name.length
+  const fontSize = nameLen === 2 ? '30px' : nameLen === 3 ? '24px' : nameLen === 4 ? '21px' : '18px'
+  return (
+    <div
+      onClick={onPick}
+      className="zodiac-card"
+      style={{
+        position: 'relative', aspectRatio: '1 / 1',
+        borderRadius: '18px', overflow: 'hidden', cursor: 'pointer',
+        border: '0.5px solid #e8d5c5',
+        boxShadow: '0 6px 16px rgba(180,110,70,0.18), 0 2px 4px rgba(180,110,70,0.10)',
+        animation: noFloat ? undefined : `floaty 3.2s ease-in-out ${(floatIdx % 6) * 0.4}s infinite`,
+      }}
+    >
+      <img src={img} alt={s.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+      <div style={{
+        position: 'absolute', top: '16px', left: 0, right: 0,
+        textAlign: 'center', fontSize, fontWeight: 900, color: s.color,
+        textShadow: '2px 2px 0 #fff, -2px 2px 0 #fff, 2px -2px 0 #fff, -2px -2px 0 #fff, 0 3px 6px rgba(0,0,0,0.12)',
+        letterSpacing: '-0.5px',
+      }}>{s.name}</div>
+    </div>
+  )
+}
+
+// ── 서비스 2행 가로 마퀴 ──
+//   평소: 오른쪽→왼쪽 천천히 자동 흐름
+//   손으로 잡고 밀면: 손 따라 이동 → 놓으면 1.2초 뒤 다시 자동
+//   스크롤바는 숨김. 카드는 3벌 복제해 무한 순환.
+function ServiceMarquee({ services, images, offset, onPick }: {
+  services: { name: string; color: string; href: string; cat: string }[]
+  images: string[]
+  offset: number
+  onPick: (s: { name: string; color: string; href: string; cat: string }) => void
+}) {
+  const trackRef = useRef<HTMLDivElement | null>(null)
+  const oneSetRef = useRef(0)
+  const autoRef = useRef(true)
+  const dragRef = useRef({ down: false, sx: 0, sl: 0, moved: false })
+  const resumeRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 반은 윗줄, 반은 아랫줄
+  const half = Math.ceil(services.length / 2)
+  const rowTop = services.slice(0, half)
+  const rowBot = services.slice(half)
+
+  useEffect(() => {
+    const tr = trackRef.current
+    if (!tr) return
+    // 한 벌 너비 = 전체의 1/3 (3벌 복제) → 가운데 벌에서 시작
+    const setOne = () => { oneSetRef.current = tr.scrollWidth / 3; tr.scrollLeft = oneSetRef.current }
+    const raf = requestAnimationFrame(setOne)
+
+    const wrap = () => {
+      const one = oneSetRef.current
+      if (one <= 0) return
+      if (tr.scrollLeft >= one * 2) tr.scrollLeft -= one
+      else if (tr.scrollLeft <= 0) tr.scrollLeft += one
+    }
+
+    let anim = 0
+    const loop = () => {
+      if (autoRef.current && !dragRef.current.down) {
+        tr.scrollLeft += 0.5
+        wrap()
+      }
+      anim = requestAnimationFrame(loop)
+    }
+    anim = requestAnimationFrame(loop)
+
+    const onDown = (e: PointerEvent) => {
+      dragRef.current = { down: true, sx: e.clientX, sl: tr.scrollLeft, moved: false }
+      autoRef.current = false
+      tr.style.cursor = 'grabbing'
+      if (resumeRef.current) clearTimeout(resumeRef.current)
+    }
+    const onMove = (e: PointerEvent) => {
+      if (!dragRef.current.down) return
+      const dx = e.clientX - dragRef.current.sx
+      if (Math.abs(dx) > 4) dragRef.current.moved = true
+      tr.scrollLeft = dragRef.current.sl - dx
+      wrap()
+    }
+    const onUp = () => {
+      if (!dragRef.current.down) return
+      dragRef.current.down = false
+      tr.style.cursor = 'grab'
+      resumeRef.current = setTimeout(() => { autoRef.current = true }, 1200)
+    }
+
+    tr.addEventListener('pointerdown', onDown)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    return () => {
+      cancelAnimationFrame(raf)
+      cancelAnimationFrame(anim)
+      if (resumeRef.current) clearTimeout(resumeRef.current)
+      tr.removeEventListener('pointerdown', onDown)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+  }, [services])
+
+  // 3벌 복제
+  const renderRow = (row: typeof services, startIdx: number) => (
+    <div style={{ display: 'flex', gap: '10px', width: 'max-content' }}>
+      {[0, 1, 2].map(dup =>
+        row.map((s, i) => {
+          const gi = startIdx + i
+          return (
+            <div key={`${dup}-${s.name}`} style={{ width: '76px', flexShrink: 0 }}>
+              <ZodiacCard
+                s={s}
+                img={images[(gi + offset) % images.length]}
+                floatIdx={gi}
+                noFloat
+                onPick={() => { if (!dragRef.current.moved) onPick(s) }}
+              />
+            </div>
+          )
+        })
+      )}
+    </div>
+  )
+
+  return (
+    <div
+      ref={trackRef}
+      className="svc-marquee"
+      style={{
+        overflowX: 'auto', overflowY: 'hidden', cursor: 'grab',
+        WebkitMaskImage: 'linear-gradient(to right, transparent, #000 5%, #000 95%, transparent)',
+        maskImage: 'linear-gradient(to right, transparent, #000 5%, #000 95%, transparent)',
+        touchAction: 'pan-y',
+      }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '2px 16px', width: 'max-content' }}>
+        {renderRow(rowTop, 0)}
+        {renderRow(rowBot, half)}
+      </div>
     </div>
   )
 }
