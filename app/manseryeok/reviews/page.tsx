@@ -4,10 +4,14 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-const GOLD = '#FAC775'
-const BG = '#1C1C1A'
-const CARD = '#2C2C2A'
-const SUB = '#8a88a0'
+const GOLD = '#c8783c'       // 포인트(제목·강조)
+const STAR = '#f0a020'       // 별점 색
+const BG = '#FDF6F0'         // 페이지 배경
+const CARD = '#FFFBF7'       // 카드 배경
+const LINE = '#f0e0d5'       // 피치 테두리
+const TITLE = '#3a2e28'      // 본문 텍스트
+const SUB = '#b4785a'        // 서브 텍스트
+const SUB2 = '#c5a590'       // 더 옅은 서브
 
 type Review = {
   id: string
@@ -53,7 +57,7 @@ export default function ReviewListPage() {
   }, [])
 
   return (
-    <div style={{ minHeight: '100vh', background: BG, color: '#fff', padding: '24px 20px 100px' }}>
+    <div style={{ minHeight: '100vh', background: BG, color: TITLE, padding: '24px 20px 100px', fontFamily: "'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif" }}>
       <div style={{ maxWidth: 560, margin: '0 auto' }}>
 
         {/* 헤더 */}
@@ -61,7 +65,7 @@ export default function ReviewListPage() {
           <h1 style={{ color: GOLD, fontSize: 22, fontWeight: 800 }}>추천 후기</h1>
           <button
             onClick={() => router.push('/manseryeok/reviews/write')}
-            style={{ background: GOLD, color: '#000', border: 'none', borderRadius: 12, padding: '10px 16px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+            style={{ background: '#b46e46', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 16px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
           >
             + 후기 작성
           </button>
@@ -86,24 +90,24 @@ export default function ReviewListPage() {
         {/* 후기 목록 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {reviews.map((r) => (
-            <div key={r.id} style={{ background: CARD, border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, padding: 16 }}>
+            <div key={r.id} style={{ background: CARD, border: `0.5px solid ${LINE}`, borderRadius: 16, padding: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <span style={{ color: GOLD, fontSize: 13 }}>
+                <span style={{ color: STAR, fontSize: 13, letterSpacing: 1 }}>
                   {'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}
                 </span>
                 {r.is_pinned && (
-                  <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: 'rgba(250,199,117,0.15)', color: GOLD }}>
+                  <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: '#fbe7d5', color: GOLD }}>
                     📌 고정
                   </span>
                 )}
                 {r.service_type && (
-                  <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: 'rgba(255,255,255,0.06)', color: SUB }}>
+                  <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: '#f5ede5', color: SUB }}>
                     {r.service_type}
                   </span>
                 )}
               </div>
-              <p style={{ fontSize: 15, lineHeight: 1.6, color: '#fff', whiteSpace: 'pre-wrap' }}>{r.content}</p>
-              <p style={{ color: SUB, fontSize: 12, marginTop: 8 }}>
+              <p style={{ fontSize: 15, lineHeight: 1.6, color: TITLE, whiteSpace: 'pre-wrap' }}>{r.content}</p>
+              <p style={{ color: SUB2, fontSize: 12, marginTop: 8 }}>
                 {r.nickname} · {timeAgo(r.created_at)}
               </p>
             </div>

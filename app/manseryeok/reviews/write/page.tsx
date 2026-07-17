@@ -5,11 +5,15 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 // 명연재 색상
-const GOLD = '#FAC775'
-const BG = '#1C1C1A'
-const CARD = '#2C2C2A'
-const SUB = '#8a88a0'
-const LINE = '#3a3a38'
+const GOLD = '#c8783c'       // 라벨·강조
+const STAR = '#f0a020'       // 별점
+const BG = '#FDF6F0'         // 페이지 배경
+const CARD = '#FFFBF7'       // 입력칸·카드 배경
+const SUB = '#b4785a'        // 서브 텍스트
+const SUB2 = '#c5a590'       // 옅은 서브
+const LINE = '#f0e0d5'       // 피치 테두리
+const TITLE = '#3a2e28'      // 본문 텍스트
+const BROWN = '#b46e46'      // 메인 버튼
 
 // 후기 대상 서비스 (칩 선택)
 const SERVICES = ['사주분석', '물상도', '작명', '궁합', '전문가 상담', '기타']
@@ -87,7 +91,7 @@ export default function ReviewWritePage() {
   // 등록 완료 화면
   if (done) {
     return (
-      <div style={{ minHeight: '100vh', background: BG, color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center' }}>
+      <div style={{ minHeight: '100vh', background: BG, color: TITLE, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center', fontFamily: "'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif" }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>🙏</div>
         <h2 style={{ color: GOLD, fontSize: 22, marginBottom: 12 }}>후기가 등록되었어요</h2>
         <p style={{ color: SUB, fontSize: 15, lineHeight: 1.6, marginBottom: 28 }}>
@@ -96,7 +100,7 @@ export default function ReviewWritePage() {
         </p>
         <button
           onClick={() => router.push('/manseryeok/reviews')}
-          style={{ background: GOLD, color: '#000', border: 'none', borderRadius: 12, padding: '14px 28px', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}
+          style={{ background: BROWN, color: '#fff', border: 'none', borderRadius: 12, padding: '14px 28px', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}
         >
           후기 목록 보기
         </button>
@@ -105,7 +109,7 @@ export default function ReviewWritePage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: BG, color: '#fff', padding: '24px 20px 60px' }}>
+    <div style={{ minHeight: '100vh', background: BG, color: TITLE, padding: '24px 20px 60px', fontFamily: "'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif" }}>
       <div style={{ maxWidth: 560, margin: '0 auto' }}>
 
         {/* 헤더 */}
@@ -116,7 +120,7 @@ export default function ReviewWritePage() {
 
         {/* 작성자 (로그인 닉네임 자동 표시) */}
         <label style={{ display: 'block', fontSize: 14, color: GOLD, marginBottom: 8 }}>작성자</label>
-        <div style={{ width: '100%', boxSizing: 'border-box', background: CARD, border: `1px solid ${LINE}`, borderRadius: 12, padding: '14px 16px', color: '#fff', fontSize: 16, marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ width: '100%', boxSizing: 'border-box', background: CARD, border: `0.5px solid ${LINE}`, borderRadius: 12, padding: '14px 16px', color: TITLE, fontSize: 16, marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span>{nickname || '(닉네임 없음)'}</span>
           <span style={{ fontSize: 12, color: SUB }}>내 닉네임</span>
         </div>
@@ -131,7 +135,7 @@ export default function ReviewWritePage() {
             <button
               key={n}
               onClick={() => setRating(n)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 34, lineHeight: 1, padding: 0, color: n <= rating ? GOLD : '#555', transition: 'color .1s' }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 34, lineHeight: 1, padding: 0, color: n <= rating ? STAR : '#e5d3c5', transition: 'color .1s' }}
               aria-label={`${n}점`}
             >
               ★
@@ -148,9 +152,9 @@ export default function ReviewWritePage() {
               key={s}
               onClick={() => setServiceType(s)}
               style={{
-                background: serviceType === s ? GOLD : CARD,
-                color: serviceType === s ? '#000' : '#fff',
-                border: `1px solid ${serviceType === s ? GOLD : LINE}`,
+                background: serviceType === s ? BROWN : CARD,
+                color: serviceType === s ? '#fff' : SUB,
+                border: `0.5px solid ${serviceType === s ? BROWN : LINE}`,
                 borderRadius: 20, padding: '8px 16px', fontSize: 14, cursor: 'pointer', fontWeight: serviceType === s ? 700 : 400,
               }}
             >
@@ -167,7 +171,7 @@ export default function ReviewWritePage() {
           placeholder="상담·분석 경험이 어떠셨나요? 편하게 적어주세요."
           maxLength={1000}
           rows={6}
-          style={{ width: '100%', boxSizing: 'border-box', background: CARD, border: `1px solid ${LINE}`, borderRadius: 12, padding: '14px 16px', color: '#fff', fontSize: 16, lineHeight: 1.6, resize: 'vertical', outline: 'none', marginBottom: 6 }}
+          style={{ width: '100%', boxSizing: 'border-box', background: CARD, border: `0.5px solid ${LINE}`, borderRadius: 12, padding: '14px 16px', color: TITLE, fontSize: 16, lineHeight: 1.6, resize: 'vertical', outline: 'none', marginBottom: 6 }}
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 28 }}>
           {/* 하단 고정 경고 안내문 */}
@@ -184,7 +188,7 @@ export default function ReviewWritePage() {
         <button
           onClick={submit}
           disabled={saving}
-          style={{ width: '100%', background: saving ? '#7a6a45' : GOLD, color: '#000', border: 'none', borderRadius: 12, padding: '16px', fontSize: 17, fontWeight: 800, cursor: saving ? 'default' : 'pointer' }}
+          style={{ width: '100%', background: saving ? '#d0a988' : BROWN, color: '#fff', border: 'none', borderRadius: 12, padding: '16px', fontSize: 17, fontWeight: 800, cursor: saving ? 'default' : 'pointer' }}
         >
           {saving ? '등록 중…' : '후기 등록하기'}
         </button>

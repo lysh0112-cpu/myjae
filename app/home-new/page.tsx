@@ -7,6 +7,7 @@ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
 import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
 import InviteNotifier from '@/app/couple-chat/InviteNotifier'
+import { listPinnedServices, togglePinnedService } from '@/lib/saju/pinnedServices'
 
 // ── 사람 선택 모달을 여는 서비스 설정 ──
 // 사주 + 대운 + 세운(연월운세) 연결. 셋 다 같은 흐름:
@@ -97,39 +98,40 @@ const SLIDES = [
   },
 ]
 
-// ── 12지신 이미지 (파일명 01~12) ──
-const ZODIAC_IMAGES = [
-  '/01-saju.png', '/02-buboo.png', '/03-yeonin.png', '/04-wedding.png',
-  '/05-birth.png', '/06-naming.png', '/07-babyname.png', '/08-sajupic.png',
-  '/09-daeun.png', '/10-seun.png', '/11-wolun.png', '/12-tarot.png',
-]
 
 // ── 12 서비스 (연재쌤 지정 순서) ──
+//   color·href·cat 은 기존 그대로 (연결은 하나도 안 바뀜).
+//   sub  = 리스트 한 줄 설명
+//   bg   = 아이콘 파스텔 배경
+//   icon = SVG 내부 요소 (stroke=color 로 그려짐)
 const SERVICES = [
-  { name: '사주',       color: '#6e50a0', href: '/manseryeok/saju-storage?service=saju', cat: '사주명리' },
-  { name: '내사주그림', color: '#b46e46', href: '/manseryeok/mulsang-storage', cat: '사주명리' },
-  { name: '대운',       color: '#3c82a0', href: '/manseryeok/saju-storage?service=daeun', cat: '사주명리' },
-  { name: '연월운세', color: '#8c783c', href: '/manseryeok/saju-storage?service=seyun', cat: '사주명리' },
-  { name: '연인궁합',   color: '#c85a8c', href: '/manseryeok/couple-storage?mode=couple', cat: '궁합' },
-  { name: '부부궁합',   color: '#c85a6e', href: '/manseryeok/couple-storage?mode=married', cat: '궁합' },
-  { name: '결혼택일',   color: '#96643c', href: '/manseryeok/wedding-timing/wedding-storage', cat: '택일' },
-  { name: '출산택일',   color: '#b45a78', href: '/manseryeok/birth-timing/birth-storage', cat: '택일' },
-  { name: '내이름개명', color: '#5a825a', href: '/manseryeok/naming/diagnosis/storage', cat: '개명' },
-  { name: '아기이름 짓기',   color: '#967850', href: '/manseryeok/naming/rename/newborn', cat: '개명' },
-  { name: '타로',       color: '#b45a78', href: '/tarot', cat: '기타' },
-  { name: '물어보살',   color: '#785aaa', href: '/manseryeok/ai-chat', cat: '기타' },
+  { name: '사주',       color: '#6e50a0', bg: '#efe6f7', href: '/manseryeok/saju-storage?service=saju', cat: '사주명리', sub: '내 팔자 풀이',
+    icon: '<rect x="4" y="3" width="4" height="18" rx="1"/><rect x="10" y="3" width="4" height="18" rx="1"/><rect x="16" y="3" width="4" height="18" rx="1"/>' },
+  { name: '내사주그림', color: '#b46e46', bg: '#f5e9df', href: '/manseryeok/mulsang-storage', cat: '사주명리', sub: '사주를 그림으로',
+    icon: '<path d="M3 21c3-1 5-3 7-7"/><path d="M14 4l6 6-9 5-3-1 1-3z"/><path d="M13 5l6 6"/>' },
+  { name: '대운',       color: '#3c82a0', bg: '#e2eef2', href: '/manseryeok/saju-storage?service=daeun', cat: '사주명리', sub: '10년 큰 흐름',
+    icon: '<path d="M3 8c3-3 6 3 9 0s6-3 9 0"/><path d="M3 15c3-3 6 3 9 0s6-3 9 0"/>' },
+  { name: '연월운세', color: '#8c783c', bg: '#f0ebe0', href: '/manseryeok/saju-storage?service=seyun', cat: '사주명리', sub: '올해·이달 운세',
+    icon: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/><circle cx="12" cy="14" r="2.2"/>' },
+  { name: '연인궁합',   color: '#c85a8c', bg: '#f7e6ee', href: '/manseryeok/couple-storage?mode=couple', cat: '궁합', sub: '우리 사이는',
+    icon: '<path d="M9 8.5a2.5 2.5 0 00-4.5 1.5c0 2 2 3.5 4.5 5 2.5-1.5 4.5-3 4.5-5A2.5 2.5 0 009 8.5z"/><path d="M15 5.5a2 2 0 013.5 1.3c0 1.6-1.6 2.8-3.5 4"/>' },
+  { name: '부부궁합',   color: '#c85a6e', bg: '#f7e5e8', href: '/manseryeok/couple-storage?mode=married', cat: '궁합', sub: '두 사람의 결',
+    icon: '<circle cx="9" cy="13" r="4.5"/><circle cx="15" cy="13" r="4.5"/><path d="M9 5l1.5 2.5M15 5l-1.5 2.5"/>' },
+  { name: '결혼택일',   color: '#96643c', bg: '#f0e8df', href: '/manseryeok/wedding-timing/wedding-storage', cat: '택일', sub: '좋은 날 잡기',
+    icon: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/><path d="M12 12.5c-.8-1-2.5-.6-2.5.8 0 1.2 2.5 2.7 2.5 2.7s2.5-1.5 2.5-2.7c0-1.4-1.7-1.8-2.5-.8z"/>' },
+  { name: '출산택일',   color: '#b45a78', bg: '#f6e5eb', href: '/manseryeok/birth-timing/birth-storage', cat: '택일', sub: '아기 맞을 날',
+    icon: '<circle cx="12" cy="8" r="3.5"/><path d="M5 21c0-4 3-7 7-7s7 3 7 7"/><path d="M10 7.5h.01M14 7.5h.01"/>' },
+  { name: '내이름개명', color: '#5a825a', bg: '#eaf0e6', href: '/manseryeok/naming/diagnosis/storage', cat: '개명', sub: '이름 다시 보기',
+    icon: '<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 10h5M8 14h8"/>' },
+  { name: '아기이름 짓기',   color: '#967850', bg: '#f0eae0', href: '/manseryeok/naming/rename/newborn', cat: '개명', sub: '첫 이름 선물',
+    icon: '<path d="M12 3l2.5 5 5.5.5-4 3.7 1.2 5.3L12 20l-5.2 2.8 1.2-5.3-4-3.7 5.5-.5z"/>' },
+  { name: '타로',       color: '#b45a78', bg: '#f6e5eb', href: '/tarot', cat: '기타', sub: '오늘의 카드',
+    icon: '<rect x="7" y="4" width="10" height="15" rx="1.5" transform="rotate(-8 12 11)"/><circle cx="12" cy="11" r="2"/>' },
+  { name: '물어보살',   color: '#785aaa', bg: '#efeaf7', href: '/manseryeok/ai-chat', cat: '기타', sub: 'AI에게 묻기',
+    icon: '<path d="M4 5h16a1 1 0 011 1v9a1 1 0 01-1 1H9l-4 4v-4H4a1 1 0 01-1-1V6a1 1 0 011-1z"/><path d="M9 10h.01M12 10h.01M15 10h.01"/>' },
 ]
+type Service = typeof SERVICES[number]
 
-const CATS = ['메뉴판', '사주명리', '궁합', '택일', '개명', '기타']
-
-// 오늘 날짜 기준 0~11 (매일 이미지가 한 칸씩 돌게)
-function dayOffset(): number {
-  const now = new Date()
-  const start = new Date(now.getFullYear(), 0, 0)
-  const diff = now.getTime() - start.getTime()
-  const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24))
-  return dayOfYear % 12
-}
 
 interface Profile {
   nickname: string | null
@@ -150,18 +152,18 @@ interface HomeReview {
 export default function HomeNew() {
   const router = useRouter()
   const [slide, setSlide] = useState(0)
-  const [cat, setCat] = useState('메뉴판')
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   // 사람 선택 모달: 어떤 서비스로 열렸는지 (null이면 닫힘)
   const [pickService, setPickService] = useState<string | null>(null)
-  const [offset, setOffset] = useState(0)
   const [reviews, setReviews] = useState<HomeReview[]>([])
+  const [pinned, setPinned] = useState<string[]>([])      // 찜한 서비스 이름들 (찜한 순서)
+  const [svcOpen, setSvcOpen] = useState(false)           // 서비스 리스트 펼침 여부
+  const [pinMsg, setPinMsg] = useState('')                // 압핀 안내 메시지
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  useEffect(() => { setOffset(dayOffset()) }, [])
 
-  // 홈 후기 미리보기: 승인된 후기 중 고정 먼저 → 최신 2개
+  // 홈 후기 미리보기: 승인된 후기 중 고정 먼저 → 최신 4개
   useEffect(() => {
     let mounted = true
     async function loadReviews() {
@@ -171,12 +173,32 @@ export default function HomeNew() {
         .eq('is_approved', true)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
-        .limit(2)
+        .limit(4)
       if (mounted && !error && data) setReviews(data as HomeReview[])
     }
     loadReviews()
     return () => { mounted = false }
   }, [])
+
+  // 찜(고정)한 서비스 목록 로드 (로그인 회원만 값이 있음)
+  useEffect(() => {
+    let mounted = true
+    listPinnedServices().then((list) => { if (mounted) setPinned(list) })
+    return () => { mounted = false }
+  }, [])
+
+  // 압핀 토글 핸들러
+  async function handleTogglePin(name: string) {
+    const res = await togglePinnedService(name)
+    if (!res.ok) {
+      if (res.reason === 'guest') { setPinMsg('로그인 후 이용할 수 있어요'); }
+      else if (res.reason === 'max') { setPinMsg('📌 최대 2개까지 고정할 수 있어요'); }
+      else { setPinMsg('잠시 후 다시 시도해 주세요'); }
+      setTimeout(() => setPinMsg(''), 1800)
+      return
+    }
+    setPinned((prev) => res.pinned ? [...prev, name] : prev.filter((n) => n !== name))
+  }
 
   useEffect(() => {
     let mounted = true
@@ -438,54 +460,100 @@ export default function HomeNew() {
           </div>
         </div>
 
-        {/* ④ 카테고리 탭 */}
-        <div style={{
-          display: 'flex', gap: '8px', padding: '16px 16px 10px',
-          overflowX: 'auto' as const, scrollbarWidth: 'none' as const,
-        }}>
-          {CATS.map(c => (
-            <button key={c} onClick={() => setCat(c)}
-              onPointerDown={(e) => { e.currentTarget.style.transform = 'scale(0.92)' }}
-              onPointerUp={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
-              onPointerLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
-              style={{
-              padding: '6px 16px', borderRadius: '18px',
-              border: cat === c ? '1.5px solid #b46e46' : '0.5px solid #e8d5c5',
-              background: cat === c ? '#b46e46' : '#FFFBF7',
-              color: cat === c ? '#fff' : '#a58575',
-              fontSize: '12px', fontWeight: cat === c ? 600 : 400,
-              cursor: 'pointer', whiteSpace: 'nowrap' as const, flexShrink: 0,
-              transition: 'transform 0.1s ease',
-            }}>{c}</button>
-          ))}
-        </div>
-
-        {/* ⑤ 12지신 서비스
-            - 메뉴판(전체): 2행 가로 자동흐름 + 손으로 밀기(스크롤바 숨김)
-            - 특정 카테고리: 흐름 없이 가만히 2행 그리드 */}
+        {/* ⑤ 서비스 리스트 (아이콘 + 이름 + 설명 + 📌압핀 / 하단 접기)
+            - 압핀: 찜하면 리스트 맨 위로 정렬, 최대 2개 (회원만, 비회원은 로그인 안내)
+            - 접기: 처음 6개만 → [전체 12개 보기]로 펼침 */}
         <div style={{ padding: '6px 0 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', padding: '0 16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', padding: '0 16px' }}>
             <span style={{ fontSize: '16px', fontWeight: 700, color: '#3a2e28' }}>MyungCafe 서비스</span>
-            <span style={{ fontSize: '11px', color: '#c8783c' }}>
-              {cat === '메뉴판' ? '밀어서 더 보기 →' : '12지신과 함께 ✦'}
-            </span>
+            {pinned.length > 0 && (
+              <span style={{ fontSize: '11px', color: '#c8783c' }}>📌 {pinned.length}/2</span>
+            )}
           </div>
 
-          {cat === '메뉴판' ? (
-            /* 전체: 좌우로 흐르는 2행 마퀴 (드래그 가능 / 스크롤바 없음) */
-            <ServiceMarquee services={SERVICES} images={ZODIAC_IMAGES} offset={offset}
-              onPick={(s) => { if (PICK_CONFIG[s.name]) setPickService(s.name); else router.push(s.href) }} />
-          ) : (
-            /* 특정 카테고리: 멈춰 있는 3열 그리드 (메뉴판과 같은 76px 카드, 왼쪽부터 촘촘히) */
-            <div style={{ padding: '0 16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 76px)', gap: '10px', justifyContent: 'start' }}>
-                {SERVICES.filter(s => s.cat === cat).map((s, idx) => (
-                  <ZodiacCard key={s.name} s={s} img={ZODIAC_IMAGES[(idx + offset) % ZODIAC_IMAGES.length]} floatIdx={idx} noFloat
-                    onPick={() => { if (PICK_CONFIG[s.name]) setPickService(s.name); else router.push(s.href) }} />
-                ))}
-              </div>
-            </div>
+          {/* 압핀 안내 메시지 */}
+          {pinMsg && (
+            <div style={{ textAlign: 'center', fontSize: '12px', color: '#c85a6e', marginBottom: '8px' }}>{pinMsg}</div>
           )}
+
+          {(() => {
+            // 찜한 것(찜한 순서) 먼저, 나머지는 원래 순서
+            const pinnedList = pinned
+              .map(nm => SERVICES.find(s => s.name === nm))
+              .filter((s): s is Service => !!s)
+            const rest = SERVICES.filter(s => !pinned.includes(s.name))
+            const full = [...pinnedList, ...rest]
+            const shown = svcOpen ? full : full.slice(0, 6)
+            return (
+              <div>
+                {shown.map((s, idx) => {
+                  const isPinned = pinned.includes(s.name)
+                  const isLastPinned = idx === pinnedList.length - 1 && pinnedList.length > 0
+                  return (
+                    <div key={s.name}>
+                      <div
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '13px', padding: '11px 16px',
+                          background: isPinned ? '#fdf0e4' : 'transparent',
+                        }}
+                      >
+                        <div
+                          onClick={() => { if (PICK_CONFIG[s.name]) setPickService(s.name); else router.push(s.href) }}
+                          style={{
+                            width: '46px', height: '46px', borderRadius: '14px', flexShrink: 0,
+                            background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                          }}
+                        >
+                          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={s.color}
+                            strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"
+                            dangerouslySetInnerHTML={{ __html: s.icon }} />
+                        </div>
+                        <div
+                          onClick={() => { if (PICK_CONFIG[s.name]) setPickService(s.name); else router.push(s.href) }}
+                          style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px', cursor: 'pointer' }}
+                        >
+                          <span style={{ fontSize: '14.5px', color: '#3a2e28', fontWeight: 700 }}>{s.name}</span>
+                          <span style={{ fontSize: '11px', color: '#b4785a' }}>{s.sub}</span>
+                        </div>
+                        <button
+                          onClick={() => handleTogglePin(s.name)}
+                          aria-label={isPinned ? '고정 해제' : '고정'}
+                          style={{
+                            width: '34px', height: '34px', border: 'none', background: 'none', cursor: 'pointer',
+                            fontSize: '17px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            filter: isPinned ? 'none' : 'grayscale(1)', opacity: isPinned ? 1 : 0.32,
+                            transform: isPinned ? 'scale(1.05)' : 'none', transition: 'all 0.12s',
+                          }}
+                        >📌</button>
+                      </div>
+                      {/* 구분선: 찜 끝나는 지점은 진하게, 나머지는 옅게 */}
+                      {idx < shown.length - 1 && (
+                        <div style={{
+                          height: '0.5px',
+                          background: isLastPinned ? '#e8c9ad' : '#f0e2d5',
+                          margin: isLastPinned ? '4px 16px' : '0 16px 0 75px',
+                        }} />
+                      )}
+                    </div>
+                  )
+                })}
+
+                {/* 접기 / 전체보기 버튼 */}
+                <div style={{ padding: '10px 16px 0' }}>
+                  <button
+                    onClick={() => setSvcOpen(o => !o)}
+                    style={{
+                      width: '100%', background: '#FFFBF7', border: '0.5px solid #e8d5c5', borderRadius: '12px',
+                      padding: '11px', fontSize: '13px', color: '#b4785a', fontWeight: 600, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    }}
+                  >
+                    {svcOpen ? '접기 ▲' : '전체 12개 보기 ▼'}
+                  </button>
+                </div>
+              </div>
+            )
+          })()}
         </div>
 
         {/* ⑥ 이용 후기 미리보기 (승인된 후기 2개 → 더보기) */}
@@ -542,25 +610,6 @@ export default function HomeNew() {
           )}
         </div>
       </main>
-
-      {/* 눌림 + 둥실 애니메이션 */}
-      <style>{`
-        @keyframes floaty {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-6px); }
-        }
-        .zodiac-card:active {
-          transform: scale(0.94) !important;
-          animation-play-state: paused !important;
-          box-shadow: 0 2px 6px rgba(180,110,70,0.15) !important;
-          transition: transform 0.1s ease, box-shadow 0.1s ease;
-        }
-        .zodiac-card {
-          transition: transform 0.15s ease, box-shadow 0.2s ease;
-        }
-        .svc-marquee { scrollbar-width: none; -ms-overflow-style: none; }
-        .svc-marquee::-webkit-scrollbar { display: none; width: 0; height: 0; }
-      `}</style>
 
       {/* 하단 고정 네비게이션 */}
       <div style={{
@@ -623,154 +672,3 @@ export default function HomeNew() {
   )
 }
 
-// ── 12지신 카드 한 장 (이미지 + 글자) ──
-function ZodiacCard({ s, img, floatIdx, onPick, noFloat }: {
-  s: { name: string; color: string }
-  img: string
-  floatIdx: number
-  onPick: () => void
-  noFloat?: boolean
-}) {
-  const nameLen = s.name.length
-  const fontSize = nameLen === 2 ? '30px' : nameLen === 3 ? '24px' : nameLen === 4 ? '21px' : '18px'
-  return (
-    <div
-      onClick={onPick}
-      className="zodiac-card"
-      style={{
-        position: 'relative', aspectRatio: '1 / 1',
-        borderRadius: '18px', overflow: 'hidden', cursor: 'pointer',
-        border: '0.5px solid #e8d5c5',
-        boxShadow: '0 6px 16px rgba(180,110,70,0.18), 0 2px 4px rgba(180,110,70,0.10)',
-        animation: noFloat ? undefined : `floaty 3.2s ease-in-out ${(floatIdx % 6) * 0.4}s infinite`,
-      }}
-    >
-      <img src={img} alt={s.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-      <div style={{
-        position: 'absolute', top: '16px', left: 0, right: 0,
-        textAlign: 'center', fontSize, fontWeight: 900, color: s.color,
-        textShadow: '2px 2px 0 #fff, -2px 2px 0 #fff, 2px -2px 0 #fff, -2px -2px 0 #fff, 0 3px 6px rgba(0,0,0,0.12)',
-        letterSpacing: '-0.5px',
-      }}>{s.name}</div>
-    </div>
-  )
-}
-
-// ── 서비스 2행 가로 마퀴 ──
-//   평소: 오른쪽→왼쪽 천천히 자동 흐름
-//   손으로 잡고 밀면: 손 따라 이동 → 놓으면 1.2초 뒤 다시 자동
-//   스크롤바는 숨김. 카드는 3벌 복제해 무한 순환.
-function ServiceMarquee({ services, images, offset, onPick }: {
-  services: { name: string; color: string; href: string; cat: string }[]
-  images: string[]
-  offset: number
-  onPick: (s: { name: string; color: string; href: string; cat: string }) => void
-}) {
-  const trackRef = useRef<HTMLDivElement | null>(null)
-  const oneSetRef = useRef(0)
-  const autoRef = useRef(true)
-  const dragRef = useRef({ down: false, sx: 0, sl: 0, moved: false })
-  const resumeRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // 반은 윗줄, 반은 아랫줄
-  const half = Math.ceil(services.length / 2)
-  const rowTop = services.slice(0, half)
-  const rowBot = services.slice(half)
-
-  useEffect(() => {
-    const tr = trackRef.current
-    if (!tr) return
-    // 한 벌 너비 = 전체의 1/3 (3벌 복제) → 가운데 벌에서 시작
-    const setOne = () => { oneSetRef.current = tr.scrollWidth / 3; tr.scrollLeft = oneSetRef.current }
-    const raf = requestAnimationFrame(setOne)
-
-    const wrap = () => {
-      const one = oneSetRef.current
-      if (one <= 0) return
-      if (tr.scrollLeft >= one * 2) tr.scrollLeft -= one
-      else if (tr.scrollLeft <= 0) tr.scrollLeft += one
-    }
-
-    let anim = 0
-    const loop = () => {
-      if (autoRef.current && !dragRef.current.down) {
-        tr.scrollLeft += 0.5
-        wrap()
-      }
-      anim = requestAnimationFrame(loop)
-    }
-    anim = requestAnimationFrame(loop)
-
-    const onDown = (e: PointerEvent) => {
-      dragRef.current = { down: true, sx: e.clientX, sl: tr.scrollLeft, moved: false }
-      autoRef.current = false
-      tr.style.cursor = 'grabbing'
-      if (resumeRef.current) clearTimeout(resumeRef.current)
-    }
-    const onMove = (e: PointerEvent) => {
-      if (!dragRef.current.down) return
-      const dx = e.clientX - dragRef.current.sx
-      if (Math.abs(dx) > 4) dragRef.current.moved = true
-      tr.scrollLeft = dragRef.current.sl - dx
-      wrap()
-    }
-    const onUp = () => {
-      if (!dragRef.current.down) return
-      dragRef.current.down = false
-      tr.style.cursor = 'grab'
-      resumeRef.current = setTimeout(() => { autoRef.current = true }, 1200)
-    }
-
-    tr.addEventListener('pointerdown', onDown)
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
-    return () => {
-      cancelAnimationFrame(raf)
-      cancelAnimationFrame(anim)
-      if (resumeRef.current) clearTimeout(resumeRef.current)
-      tr.removeEventListener('pointerdown', onDown)
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
-    }
-  }, [services])
-
-  // 3벌 복제
-  const renderRow = (row: typeof services, startIdx: number) => (
-    <div style={{ display: 'flex', gap: '10px', width: 'max-content' }}>
-      {[0, 1, 2].map(dup =>
-        row.map((s, i) => {
-          const gi = startIdx + i
-          return (
-            <div key={`${dup}-${s.name}`} style={{ width: '76px', flexShrink: 0 }}>
-              <ZodiacCard
-                s={s}
-                img={images[(gi + offset) % images.length]}
-                floatIdx={gi}
-                noFloat
-                onPick={() => { if (!dragRef.current.moved) onPick(s) }}
-              />
-            </div>
-          )
-        })
-      )}
-    </div>
-  )
-
-  return (
-    <div
-      ref={trackRef}
-      className="svc-marquee"
-      style={{
-        overflowX: 'auto', overflowY: 'hidden', cursor: 'grab',
-        WebkitMaskImage: 'linear-gradient(to right, transparent, #000 5%, #000 95%, transparent)',
-        maskImage: 'linear-gradient(to right, transparent, #000 5%, #000 95%, transparent)',
-        touchAction: 'pan-y',
-      }}
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '2px 16px', width: 'max-content' }}>
-        {renderRow(rowTop, 0)}
-        {renderRow(rowBot, half)}
-      </div>
-    </div>
-  )
-}
