@@ -7,6 +7,7 @@ import { useResultSaju } from '@/hooks/useResultSaju'
 import EmotionPicker from './EmotionPicker'
 import ArchiveList from './ArchiveList'
 import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
+import InviteNotifier from '@/app/couple-chat/InviteNotifier'
 
 const HOUR_LABELS: Record<string, string> = {
   '0': '子시(23:30~01:30)', '1': '丑시(01:30~03:30)', '2': '寅시(03:30~05:30)', '3': '卯시(05:30~07:30)',
@@ -746,6 +747,7 @@ export default function MyPageNew() {
       </div>
 
       <CoupleChatFab />
+      <InviteNotifier />
     </div>
   )
 }

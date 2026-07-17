@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
 import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
+import InviteNotifier from '@/app/couple-chat/InviteNotifier'
 
 // ── 사람 선택 모달을 여는 서비스 설정 ──
 // 사주 + 대운 + 세운(연월운세) 연결. 셋 다 같은 흐름:
@@ -448,6 +449,7 @@ export default function HomeNew() {
       })()}
 
       <CoupleChatFab />
+      <InviteNotifier />
     </div>
   )
 }
