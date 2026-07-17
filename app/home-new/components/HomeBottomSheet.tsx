@@ -1,73 +1,74 @@
 'use client'
 
 // ============================================================================
-// 홈 바텀시트 (신한은행 방식)
+// 홈 바텀시트 (신한은행 방식) — v2 안정화
 // ----------------------------------------------------------------------------
-//   고정 영역(배너·유저카드·아카이브 버튼) 위로, 아래에서 올라오는 패널.
-//   - 두 단계 스냅: '접힘'(collapsed, 배너 보임) ↔ '펼침'(expanded, 위를 덮음)
-//   - 손잡이(핸들)를 잡고 위/아래로 끌면 이동, 놓으면 가까운 쪽으로 스냅
-//   - 펼친 상태에서 내용은 시트 안에서 스크롤. 스크롤 최상단에서 아래로 끌면 접힘
-//
-//   부모(page.tsx)는 <HomeBottomSheet collapsedTop={...}>children</HomeBottomSheet>
-//   형태로 서비스리스트+후기를 children 으로 넣는다.
-//   collapsedTop = 접힘 상태에서 시트 상단이 놓일 화면 y(px). (고정영역 높이)
+//   고정 영역(배너·유저카드) 위로 아래에서 올라오는 패널.
+//   - 접힘(배너 보임) ↔ 펼침(위를 덮음) 두 단계
+//   - 손잡이를 잡고 위/아래로 끌면 이동, 놓으면 가까운 쪽으로 스냅
+//   - 펼친 상태에서 내용은 시트 안에서 스크롤
+//   collapsedTop = 접힘 시 시트 상단 y(px). (측정 실패 대비 안전 하한선 있음)
 // ============================================================================
 
 import { useEffect, useRef, useState } from 'react'
 
 interface Props {
-  collapsedTop: number      // 접힘 상태에서 시트 top (고정영역 아래)
-  expandedTop?: number      // 펼침 상태 시트 top (기본 8px = 거의 전체화면)
-  bottomNavHeight?: number  // 하단 네비 높이(시트가 그 위에서 끝나도록)
+  collapsedTop: number
+  expandedTop?: number
+  bottomNavHeight?: number
   children: React.ReactNode
 }
 
 export default function HomeBottomSheet({
   collapsedTop,
-  expandedTop = 8,
+  expandedTop = 10,
   bottomNavHeight = 70,
   children,
 }: Props) {
-  const sheetRef = useRef<HTMLDivElement | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
-  const [expanded, setExpanded] = useState(true)   // 홈 들어오면 펼쳐진 상태로 시작
-  // 드래그 중 실시간 top(px). null이면 스냅 위치(CSS transition) 사용.
+  const [expanded, setExpanded] = useState(true)
   const [dragTop, setDragTop] = useState<number | null>(null)
+  const drag = useRef({ active: false, startY: 0, startTop: 0, content: false, moved: false })
 
-  const drag = useRef({ active: false, startY: 0, startTop: 0, content: false })
+  // 측정 실패로 collapsedTop이 비정상이면 안전값 (배너가 안 보이는 것 방지)
+  const safeCollapsed = collapsedTop && collapsedTop > 120 ? collapsedTop : 360
 
-  const snapTop = expanded ? expandedTop : collapsedTop
+  const snapTop = expanded ? expandedTop : safeCollapsed
   const currentTop = dragTop !== null ? dragTop : snapTop
 
-  // 핸들 드래그 시작
   function onHandleDown(e: React.PointerEvent) {
-    drag.current = { active: true, startY: e.clientY, startTop: currentTop, content: false }
+    drag.current = { active: true, startY: e.clientY, startTop: currentTop, content: false, moved: false }
     setDragTop(currentTop)
     e.preventDefault()
   }
 
-  // 시트 내용(스크롤 영역) 위에서의 드래그 — 스크롤이 최상단일 때만 시트를 내림
   function onContentDown(e: React.PointerEvent) {
     const sc = scrollRef.current
     if (!sc || sc.scrollTop > 0) return
-    drag.current = { active: true, startY: e.clientY, startTop: currentTop, content: true }
+    // 버튼·링크 등 인터랙티브 요소 위에서는 드래그 시작하지 않음 (클릭 보장)
+    const target = e.target as HTMLElement
+    if (target.closest('button, a, input, textarea, select, [role="button"]')) return
+    drag.current = { active: true, startY: e.clientY, startTop: currentTop, content: true, moved: false }
   }
 
   useEffect(() => {
     function onMove(e: PointerEvent) {
       if (!drag.current.active) return
       const dy = e.clientY - drag.current.startY
-      // 내용에서 시작한 드래그는 '아래로 내리는' 것만 시트 이동(위로는 스크롤)
+      if (Math.abs(dy) > 5) drag.current.moved = true   // 5px 넘게 움직여야 드래그로 인정
       if (drag.current.content && dy < 0) return
       let next = drag.current.startTop + dy
       if (next < expandedTop) next = expandedTop
-      if (next > collapsedTop) next = collapsedTop
+      if (next > safeCollapsed) next = safeCollapsed
       setDragTop(next)
     }
     function onUp() {
       if (!drag.current.active) return
+      const wasMoved = drag.current.moved
       drag.current.active = false
-      const mid = (expandedTop + collapsedTop) / 2
+      // 실제로 끌지 않았으면(=탭/클릭) 시트 상태 안 건드림 → 버튼 클릭 정상 동작
+      if (!wasMoved) { setDragTop(null); return }
+      const mid = (expandedTop + safeCollapsed) / 2
       const landing = dragTop !== null ? dragTop : currentTop
       setExpanded(landing < mid)
       setDragTop(null)
@@ -78,28 +79,27 @@ export default function HomeBottomSheet({
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
     }
-  }, [dragTop, currentTop, collapsedTop, expandedTop])
+  }, [dragTop, currentTop, safeCollapsed, expandedTop])
 
   return (
     <div
-      ref={sheetRef}
       style={{
         position: 'fixed',
-        top: currentTop,
+        top: 0,
         left: '50%',
-        transform: 'translateX(-50%)',
+        transform: `translateX(-50%) translateY(${currentTop}px)`,
         width: '100%',
         maxWidth: '430px',
-        bottom: 0,
+        height: '100%',
         background: '#FDF6F0',
         borderRadius: '20px 20px 0 0',
         boxShadow: '0 -6px 24px rgba(120,70,40,0.14)',
-        transition: dragTop === null ? 'top 0.28s cubic-bezier(0.4,0,0.2,1)' : 'none',
+        transition: dragTop === null ? 'transform 0.28s cubic-bezier(0.4,0,0.2,1)' : 'none',
         zIndex: 15,
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        touchAction: 'none',
+        willChange: 'transform',
       }}
     >
       {/* 드래그 핸들 */}
@@ -117,18 +117,16 @@ export default function HomeBottomSheet({
         <div style={{ width: '40px', height: '5px', borderRadius: '99px', background: '#e0d0c0' }} />
       </div>
 
-      {/* 스크롤 영역 (펼쳤을 때만 스크롤, 접혔을 땐 넘치는 부분 잘림) */}
+      {/* 스크롤 영역: 하단 여백 = 네비 높이 + 시트가 내려간 만큼(currentTop) */}
       <div
         ref={scrollRef}
-        data-sheet-scroll
         onPointerDown={onContentDown}
         style={{
           flex: 1,
           overflowY: expanded ? 'auto' : 'hidden',
           overflowX: 'hidden',
-          paddingBottom: `${bottomNavHeight + 12}px`,
+          paddingBottom: `${bottomNavHeight + Math.round(currentTop) + 12}px`,
           WebkitOverflowScrolling: 'touch',
-          touchAction: expanded ? 'pan-y' : 'none',
         }}
       >
         {children}

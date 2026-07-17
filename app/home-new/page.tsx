@@ -167,19 +167,23 @@ export default function HomeNew() {
   const [collapsedTop, setCollapsedTop] = useState(360)   // 기본값(측정 전)
 
 
-  // 바텀시트 접힘 위치 = 고정 영역(네비+배너+유저카드) 실제 높이
+  // 바텀시트 접힘 위치 = 고정 영역 아래 끝의 화면 y좌표
+  //   (getBoundingClientRect().bottom = 화면 최상단부터 고정영역 끝까지)
+  //   → 네비가 fixedRef 밖에 있어도 bottom 값에 네비 높이가 자연히 포함됨
   useEffect(() => {
     function measure() {
       if (fixedRef.current) {
-        const h = fixedRef.current.getBoundingClientRect().height
-        if (h > 0) setCollapsedTop(Math.round(h))
+        const rect = fixedRef.current.getBoundingClientRect()
+        const bottom = rect.bottom   // 화면 상단 기준 고정영역 끝
+        if (bottom > 120) setCollapsedTop(Math.round(bottom))
       }
     }
     measure()
     window.addEventListener('resize', measure)
-    // 배너 이미지·유저카드 로드 후 값이 바뀔 수 있어 약간 지연 재측정
-    const t = setTimeout(measure, 400)
-    return () => { window.removeEventListener('resize', measure); clearTimeout(t) }
+    // 배너 이미지·유저카드 로드 후 값이 바뀔 수 있어 여러 번 재측정
+    const t1 = setTimeout(measure, 300)
+    const t2 = setTimeout(measure, 900)
+    return () => { window.removeEventListener('resize', measure); clearTimeout(t1); clearTimeout(t2) }
   }, [isLoggedIn, profile])
 
   // 홈 후기 미리보기: 승인된 후기 중 고정 먼저 → 최신 4개
@@ -247,10 +251,10 @@ export default function HomeNew() {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#FDF6F0',
+      height: '100vh', overflow: 'hidden', background: '#FDF6F0',
       maxWidth: '430px', margin: '0 auto',
       fontFamily: "'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif",
-      color: '#3a2e28', paddingBottom: '70px',
+      color: '#3a2e28', position: 'relative',
     }}>
 
       <style>{`
