@@ -239,7 +239,7 @@ function ChatInner() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          mode: 'personal',
+          mode: (compat?.mode === 'married' ? 'married' : 'couple'),
           saju1, saju2,
           gender1, gender2,
           messages: [
