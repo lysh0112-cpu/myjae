@@ -92,15 +92,16 @@ export async function sendRoomMessage(
   roomId: string,
   myUid: string,
   text: string,
-): Promise<void> {
-  if (!text.trim()) return
-  await supabase.from('couple_messages').insert({
+): Promise<CoupleMsg | null> {
+  if (!text.trim()) return null
+  const { data } = await supabase.from('couple_messages').insert({
     room_id: roomId,
     sender_id: myUid,
     kind: 'user',
     message: text,
     visibility: 'all',
-  })
+  }).select('*').maybeSingle()
+  return (data as CoupleMsg) || null
 }
 
 // 방에서 나가기 (나만 빠짐) — 내 멤버십만 삭제.

@@ -182,7 +182,11 @@ function ChatInner() {
     const text = input.trim()
     if (!text || !roomId || !myUid) return
     setInput('')
-    await sendRoomMessage(roomId, myUid, text)
+    const saved = await sendRoomMessage(roomId, myUid, text)
+    // 내가 보낸 메시지는 실시간을 기다리지 말고 화면에 바로 추가 (중복 방지)
+    if (saved) {
+      setMessages((prev) => prev.some((x) => x.id === saved.id) ? prev : [...prev, saved])
+    }
     // AI 켜져 있고 "AI"로 시작하는 질문이면 AI도 호출
     if (aiOn && /^(ai|에이아이|에이아이야|ai야)\b/i.test(text)) {
       askAi(text)
