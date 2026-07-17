@@ -106,30 +106,18 @@ const SLIDES = [
 //   bg   = 아이콘 파스텔 배경
 //   icon = SVG 내부 요소 (stroke=color 로 그려짐)
 const SERVICES = [
-  { name: '사주',       color: '#6e50a0', bg: '#efe6f7', href: '/manseryeok/saju-storage?service=saju', cat: '사주명리', sub: '내 팔자 풀이',
-    icon: '<rect x="4" y="3" width="4" height="18" rx="1"/><rect x="10" y="3" width="4" height="18" rx="1"/><rect x="16" y="3" width="4" height="18" rx="1"/>' },
-  { name: '내사주그림', color: '#b46e46', bg: '#f5e9df', href: '/manseryeok/mulsang-storage', cat: '사주명리', sub: '사주를 그림으로',
-    icon: '<path d="M3 21c3-1 5-3 7-7"/><path d="M14 4l6 6-9 5-3-1 1-3z"/><path d="M13 5l6 6"/>' },
-  { name: '대운',       color: '#3c82a0', bg: '#e2eef2', href: '/manseryeok/saju-storage?service=daeun', cat: '사주명리', sub: '10년 큰 흐름',
-    icon: '<path d="M3 8c3-3 6 3 9 0s6-3 9 0"/><path d="M3 15c3-3 6 3 9 0s6-3 9 0"/>' },
-  { name: '연월운세', color: '#8c783c', bg: '#f0ebe0', href: '/manseryeok/saju-storage?service=seyun', cat: '사주명리', sub: '올해·이달 운세',
-    icon: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/><circle cx="12" cy="14" r="2.2"/>' },
-  { name: '연인궁합',   color: '#c85a8c', bg: '#f7e6ee', href: '/manseryeok/couple-storage?mode=couple', cat: '궁합', sub: '우리 사이는',
-    icon: '<path d="M9 8.5a2.5 2.5 0 00-4.5 1.5c0 2 2 3.5 4.5 5 2.5-1.5 4.5-3 4.5-5A2.5 2.5 0 009 8.5z"/><path d="M15 5.5a2 2 0 013.5 1.3c0 1.6-1.6 2.8-3.5 4"/>' },
-  { name: '부부궁합',   color: '#c85a6e', bg: '#f7e5e8', href: '/manseryeok/couple-storage?mode=married', cat: '궁합', sub: '두 사람의 결',
-    icon: '<circle cx="9" cy="13" r="4.5"/><circle cx="15" cy="13" r="4.5"/><path d="M9 5l1.5 2.5M15 5l-1.5 2.5"/>' },
-  { name: '결혼택일',   color: '#96643c', bg: '#f0e8df', href: '/manseryeok/wedding-timing/wedding-storage', cat: '택일', sub: '좋은 날 잡기',
-    icon: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/><path d="M12 12.5c-.8-1-2.5-.6-2.5.8 0 1.2 2.5 2.7 2.5 2.7s2.5-1.5 2.5-2.7c0-1.4-1.7-1.8-2.5-.8z"/>' },
-  { name: '출산택일',   color: '#b45a78', bg: '#f6e5eb', href: '/manseryeok/birth-timing/birth-storage', cat: '택일', sub: '아기 맞을 날',
-    icon: '<circle cx="12" cy="8" r="3.5"/><path d="M5 21c0-4 3-7 7-7s7 3 7 7"/><path d="M10 7.5h.01M14 7.5h.01"/>' },
-  { name: '내이름개명', color: '#5a825a', bg: '#eaf0e6', href: '/manseryeok/naming/diagnosis/storage', cat: '개명', sub: '이름 다시 보기',
-    icon: '<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 10h5M8 14h8"/>' },
-  { name: '아기이름 짓기',   color: '#967850', bg: '#f0eae0', href: '/manseryeok/naming/rename/newborn', cat: '개명', sub: '첫 이름 선물',
-    icon: '<path d="M12 3l2.5 5 5.5.5-4 3.7 1.2 5.3L12 20l-5.2 2.8 1.2-5.3-4-3.7 5.5-.5z"/>' },
-  { name: '타로',       color: '#b45a78', bg: '#f6e5eb', href: '/tarot', cat: '기타', sub: '오늘의 카드',
-    icon: '<rect x="7" y="4" width="10" height="15" rx="1.5" transform="rotate(-8 12 11)"/><circle cx="12" cy="11" r="2"/>' },
-  { name: '물어보살',   color: '#785aaa', bg: '#efeaf7', href: '/manseryeok/ai-chat', cat: '기타', sub: 'AI에게 묻기',
-    icon: '<path d="M4 5h16a1 1 0 011 1v9a1 1 0 01-1 1H9l-4 4v-4H4a1 1 0 01-1-1V6a1 1 0 011-1z"/><path d="M9 10h.01M12 10h.01M15 10h.01"/>' },
+  { name: '사주',       color: '#6e50a0', bg: '#efe6f7', href: '/manseryeok/saju-storage?service=saju', cat: '사주명리', sub: '내 팔자 풀이', emoji: '🐭' },
+  { name: '내사주그림', color: '#b46e46', bg: '#f5e9df', href: '/manseryeok/mulsang-storage', cat: '사주명리', sub: '사주를 그림으로', emoji: '🐮' },
+  { name: '대운',       color: '#3c82a0', bg: '#e2eef2', href: '/manseryeok/saju-storage?service=daeun', cat: '사주명리', sub: '10년 큰 흐름', emoji: '🐯' },
+  { name: '연월운세', color: '#8c783c', bg: '#f0ebe0', href: '/manseryeok/saju-storage?service=seyun', cat: '사주명리', sub: '올해·이달 운세', emoji: '🐰' },
+  { name: '연인궁합',   color: '#c85a8c', bg: '#f7e6ee', href: '/manseryeok/couple-storage?mode=couple', cat: '궁합', sub: '우리 사이는', emoji: '🐲' },
+  { name: '부부궁합',   color: '#c85a6e', bg: '#f7e5e8', href: '/manseryeok/couple-storage?mode=married', cat: '궁합', sub: '두 사람의 결', emoji: '🐍' },
+  { name: '결혼택일',   color: '#96643c', bg: '#f0e8df', href: '/manseryeok/wedding-timing/wedding-storage', cat: '택일', sub: '좋은 날 잡기', emoji: '🐴' },
+  { name: '출산택일',   color: '#b45a78', bg: '#f6e5eb', href: '/manseryeok/birth-timing/birth-storage', cat: '택일', sub: '아기 맞을 날', emoji: '🐑' },
+  { name: '이사택일',   color: '#967850', bg: '#f0eae0', href: '/home-new', cat: '택일', sub: '좋은 이사 날', emoji: '🐔' },
+  { name: '내이름 감정', color: '#5a825a', bg: '#eaf0e6', href: '/manseryeok/naming/diagnosis/storage', cat: '개명', sub: '이름 풀이해 보기', emoji: '🐵' },
+  { name: '타로',       color: '#b45a78', bg: '#f6e5eb', href: '/tarot', cat: '기타', sub: '오늘의 카드', emoji: '🐶' },
+  { name: '물어보살',   color: '#785aaa', bg: '#efeaf7', href: '/manseryeok/ai-chat', cat: '기타', sub: 'AI에게 묻기', emoji: '🐷' },
 ]
 type Service = typeof SERVICES[number]
 
@@ -236,6 +224,9 @@ export default function HomeNew() {
     }}>
 
       <style>{`
+        @keyframes zfloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+        .zodiacEmoji { display: inline-block; animation: zfloat 2.6s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) { .zodiacEmoji { animation: none; } }
         @keyframes mcCupSway { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
         @keyframes mcSteamA { 0% { opacity:0; transform:translateY(0) scaleX(1);} 15%{opacity:0.6;} 50%{opacity:0.4; transform:translateY(-9px) scaleX(1.3);} 100%{opacity:0; transform:translateY(-18px) scaleX(0.8);} }
         @keyframes mcSteamB { 0% { opacity:0; transform:translateY(0) scaleX(1);} 20%{opacity:0.5;} 55%{opacity:0.3; transform:translateY(-10px) scaleX(1.4);} 100%{opacity:0; transform:translateY(-20px) scaleX(0.7);} }
@@ -508,9 +499,7 @@ export default function HomeNew() {
                             background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
                           }}
                         >
-                          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={s.color}
-                            strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"
-                            dangerouslySetInnerHTML={{ __html: s.icon }} />
+                          <span className="zodiacEmoji" style={{ fontSize: '32px', lineHeight: 1, animationDelay: `${(idx * 0.18).toFixed(2)}s` }}>{s.emoji}</span>
                         </div>
                         <div
                           onClick={() => { if (PICK_CONFIG[s.name]) setPickService(s.name); else router.push(s.href) }}
