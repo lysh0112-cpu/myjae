@@ -18,7 +18,7 @@
 //             (대략 고정 영역 높이. 정확할 필요 없음 — 넘겨도 자연히 멈춤)
 // ============================================================================
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 
 interface Props {
   maxLift?: number          // 시트가 위로 올라갈 최대 높이(px). 기본 320
@@ -33,38 +33,34 @@ export default function HomeBottomSheet({ maxLift = 320, children }: Props) {
   const targetLift = expanded ? maxLift : 0
   const currentLift = drag.current.active ? lift : targetLift
 
+  // 드래그 시작: 손잡이에 포인터를 캡처 → 손가락/마우스가 손잡이 밖으로 벗어나도
+  //   move/up 이벤트가 끊기지 않고 끝까지 추적됨 (제미나이 제안 반영)
   function onHandleDown(e: React.PointerEvent) {
     drag.current = { active: true, startY: e.clientY, startLift: currentLift, moved: false }
     setLift(currentLift)
+    e.currentTarget.setPointerCapture(e.pointerId)
     e.preventDefault()
   }
 
-  useEffect(() => {
-    function onMove(e: PointerEvent) {
-      if (!drag.current.active) return
-      // 위로 끌면(clientY 감소) lift 증가
-      const dy = drag.current.startY - e.clientY
-      if (Math.abs(dy) > 5) drag.current.moved = true
-      let next = drag.current.startLift + dy
-      if (next < 0) next = 0
-      if (next > maxLift) next = maxLift
-      setLift(next)
-    }
-    function onUp() {
-      if (!drag.current.active) return
-      const wasMoved = drag.current.moved
-      const landing = lift
-      drag.current.active = false
-      if (!wasMoved) { setLift(expanded ? maxLift : 0); return }  // 클릭이면 상태 유지
-      setExpanded(landing > maxLift / 2)
-    }
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
-    return () => {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
-    }
-  }, [lift, expanded, maxLift])
+  function onHandleMove(e: React.PointerEvent) {
+    if (!drag.current.active) return
+    const dy = drag.current.startY - e.clientY   // 위로 끌면(clientY 감소) lift 증가
+    if (Math.abs(dy) > 5) drag.current.moved = true
+    let next = drag.current.startLift + dy
+    if (next < 0) next = 0
+    if (next > maxLift) next = maxLift
+    setLift(next)
+  }
+
+  function onHandleUp(e: React.PointerEvent) {
+    if (!drag.current.active) return
+    const wasMoved = drag.current.moved
+    const landing = lift
+    drag.current.active = false
+    try { e.currentTarget.releasePointerCapture(e.pointerId) } catch {}
+    if (!wasMoved) { setLift(expanded ? maxLift : 0); return }  // 클릭이면 상태 유지
+    setExpanded(landing > maxLift / 2)
+  }
 
   return (
     <div
@@ -81,9 +77,12 @@ export default function HomeBottomSheet({ maxLift = 320, children }: Props) {
         marginBottom: `-${currentLift}px`,
       }}
     >
-      {/* 드래그 핸들 */}
+      {/* 드래그 핸들 (pointerCapture로 안정적 추적) */}
       <div
         onPointerDown={onHandleDown}
+        onPointerMove={onHandleMove}
+        onPointerUp={onHandleUp}
+        onPointerCancel={onHandleUp}
         style={{
           padding: '12px 0 10px',
           cursor: 'grab',
