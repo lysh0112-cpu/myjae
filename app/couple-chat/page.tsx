@@ -529,13 +529,7 @@ function ChatInner() {
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                handleSend()
-              }
-            }}
-            placeholder="메시지 입력… (Shift+Enter 줄바꿈)"
+            placeholder="메시지 입력…"
             rows={1}
             style={{
               flex: 1,
