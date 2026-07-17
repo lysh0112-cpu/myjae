@@ -74,7 +74,7 @@ const SLIDES = [
     href: '/home-new',
   },
   {
-    tag: '내사주그림', title: '어려운 내 사주,\n이제 그림으로',
+    tag: '내사주그림', title: '어려운 내 사주,\n한 장의 그림으로',
     sub: '어려운 명리가 한눈에 들어와요', link: '그림 보러가기 →',
     img: '/banner/slide3.jpg', video: '',
     accent: '#ffd97a', sub2: '#e8ddc8',
@@ -83,14 +83,14 @@ const SLIDES = [
   },
   {
     tag: '커플 채팅', title: '연인과 함께,\nAI 조언까지',
-    sub: '우리 사주를 아는 커플 채팅,\n명카페에만', link: '궁합 보러가기 →',
+    sub: '우리 사주를 아는 커플 채팅,\n명카페에서만', link: '궁합 보러가기 →',
     img: '/banner/slide4.jpg', video: '',
     accent: '#ffc0d8', sub2: '#f0d5e0',
     sparkles: ['#ffb0d0', '#ffd97a', '#fff'],
     href: '/manseryeok/couple-storage?mode=couple',
   },
   {
-    tag: '한 곳에서', title: '내 손안의\n명리 사무소',
+    tag: '한 곳에서', title: '사주 한 잔\n하고 갈래요?',
     sub: '사주·궁합·이름·택일,\n필요한 만큼만', link: '지금 시작하기 →',
     img: '/banner/slide5.jpg', video: '',
     accent: '#ffe0a0', sub2: '#e8ddc8',
