@@ -25,8 +25,8 @@ const PICK_CONFIG: Record<string, PickConfig> = {
   //   → PICK_CONFIG는 현재 비어 있음. (직접 사람 선택 모달을 여는 서비스가 없음)
 }
 
-// ── 슬라이드 배너 ──
-const SLIDES = [
+// ── [보관] 예전 그라데이션 배너 (지우지 말 것. 원복 필요 시 아래 SLIDES를 이걸로 교체) ──
+const SLIDES_OLD = [
   {
     tag: '오늘의 운세', title: '오늘 하루\n어떤 날일까?',
     sub: '매일 내 사주 기반 운세 확인', link: '운세 보기 →',
@@ -47,6 +47,53 @@ const SLIDES = [
     bg: 'linear-gradient(135deg, #fff0e0, #ffe5cc)',
     tagColor: '#d4843a', titleColor: '#7a4010', subColor: '#a06020',
     href: '/manseryeok/couple-storage?mode=couple',
+  },
+]
+
+// ── 슬라이드 배너 (우주·별자리 이미지 5장) ──
+//   배경 이미지는 public/banner/slideN.jpg. 문구는 코드에서 왼쪽에 얹는다.
+//   img=이미지 경로 / (video 필드에 mp4 경로를 넣으면 영상으로도 재생됨 — 나중에 확장용)
+//   sparkles=별 반짝임 색(장별 포인트). accent=태그·강조 글자색.
+const SLIDES = [
+  {
+    tag: '오늘의 명카페', title: '운명의 지도를 아는 자\n내 삶의 주인공이고,\n운명의 지도를 모르는 자\n내 삶의 조연이다',
+    sub: '', link: '지금 무료로 시작 →',
+    img: '/banner/slide1.jpg', video: '',
+    accent: '#ffd97a', sub2: '#c3b49a',
+    sparkles: ['#ffe6a0', '#ffd97a', '#fff'],
+    href: '/manseryeok',
+  },
+  {
+    tag: '가격 강점', title: '비싼 상담,\n꼭 필요할까요?',
+    sub: '20만원짜리 대면 상담보다\n정확하고 세밀하게', link: '지금 확인 →',
+    img: '/banner/slide2.jpg', video: '',
+    accent: '#ffd27a', sub2: '#e8ddc8',
+    sparkles: ['#ffe6a0', '#ffd27a', '#fff'],
+    href: '/manseryeok',
+  },
+  {
+    tag: '내사주그림', title: '어려운 내 사주,\n이제 그림으로',
+    sub: '어려운 명리가 한눈에 들어와요', link: '그림 보러가기 →',
+    img: '/banner/slide3.jpg', video: '',
+    accent: '#ffd97a', sub2: '#e8ddc8',
+    sparkles: ['#ff6a4a', '#ffd23a', '#4a9aff', '#5ad07a', '#fff'],
+    href: '/manseryeok/mulsang-storage',
+  },
+  {
+    tag: '커플 채팅', title: '연인과 함께,\nAI 조언까지',
+    sub: '우리 사주를 아는 커플 채팅,\n명카페에만', link: '궁합 보러가기 →',
+    img: '/banner/slide4.jpg', video: '',
+    accent: '#ffc0d8', sub2: '#f0d5e0',
+    sparkles: ['#ffb0d0', '#ffd97a', '#fff'],
+    href: '/manseryeok/couple-storage?mode=couple',
+  },
+  {
+    tag: '한 곳에서', title: '내 손안의\n명리 사무소',
+    sub: '사주·궁합·이름·택일,\n필요한 만큼만', link: '지금 시작하기 →',
+    img: '/banner/slide5.jpg', video: '',
+    accent: '#ffe0a0', sub2: '#e8ddc8',
+    sparkles: ['#ffe0a0', '#fff', '#ffd97a'],
+    href: '/manseryeok',
   },
 ]
 
@@ -124,7 +171,7 @@ export default function HomeNew() {
   useEffect(() => {
     timerRef.current = setInterval(() => {
       setSlide(s => (s + 1) % SLIDES.length)
-    }, 4000)
+    }, 5000)
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [])
 
@@ -180,39 +227,97 @@ export default function HomeNew() {
       </div>
 
       <main>
+        {/* 배너 별 반짝임 애니메이션 */}
+        <style>{`
+          @keyframes bnrTwinkle {
+            0%, 100% { opacity: 0.35; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.25); }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            [data-bnr-spk] { animation: none !important; }
+          }
+        `}</style>
         {/* ② 슬라이드 배너 */}
         <div style={{ padding: '14px 16px 0' }}>
           <div
             onClick={() => router.push(SLIDES[slide].href)}
             style={{
-              borderRadius: '18px', padding: '28px 22px',
-              background: SLIDES[slide].bg, cursor: 'pointer',
-              minHeight: '150px', transition: 'background 0.4s',
+              position: 'relative', borderRadius: '18px', overflow: 'hidden',
+              minHeight: '175px', height: '175px', cursor: 'pointer',
+              background: '#0a0a1a',
             }}
           >
+            {/* 배경: 이미지 또는 영상 (5장이 교차 페이드) */}
+            {SLIDES.map((s, i) => (
+              <div key={i} style={{
+                position: 'absolute', inset: 0,
+                opacity: i === slide ? 1 : 0,
+                transition: 'opacity 0.8s ease',
+                zIndex: 0,
+              }}>
+                {s.video ? (
+                  <video
+                    src={s.video} autoPlay loop muted playsInline
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={s.img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                )}
+              </div>
+            ))}
+
+            {/* 별 반짝임 (현재 장의 sparkle 색으로) */}
+            {(SLIDES[slide].sparkles || []).map((c, i) => (
+              <span key={`${slide}-${i}`} data-bnr-spk="1" style={{
+                position: 'absolute', zIndex: 1, borderRadius: '50%',
+                width: `${10 + (i % 3) * 3}px`, height: `${10 + (i % 3) * 3}px`,
+                left: `${58 + (i * 9) % 34}%`, top: `${20 + (i * 13) % 46}%`,
+                background: `radial-gradient(circle, #fff 0%, ${c} 42%, transparent 72%)`,
+                animation: `bnrTwinkle ${2.3 + (i % 4) * 0.3}s ease-in-out ${(i * 0.35).toFixed(2)}s infinite`,
+                pointerEvents: 'none',
+              }} />
+            ))}
+
+            {/* 왼쪽 어두운 막 (글자 가독성) */}
             <div style={{
-              display: 'inline-block', padding: '4px 12px', borderRadius: '12px',
-              background: 'rgba(255,255,255,0.65)', fontSize: '11px', fontWeight: 700,
-              color: SLIDES[slide].tagColor, marginBottom: '12px',
-            }}>{SLIDES[slide].tag}</div>
+              position: 'absolute', inset: 0, zIndex: 2,
+              background: 'linear-gradient(90deg, rgba(8,8,20,0.82) 0%, rgba(8,8,20,0.42) 55%, rgba(8,8,20,0) 100%)',
+            }} />
+
+            {/* 카피 (왼쪽 세로 중앙) */}
             <div style={{
-              fontSize: '22px', fontWeight: 700, lineHeight: 1.35,
-              color: SLIDES[slide].titleColor, whiteSpace: 'pre-line', marginBottom: '8px',
-            }}>{SLIDES[slide].title}</div>
-            <div style={{ fontSize: '12px', color: SLIDES[slide].subColor, marginBottom: '14px' }}>
-              {SLIDES[slide].sub}
+              position: 'absolute', left: '20px', top: '50%', transform: 'translateY(-50%)',
+              zIndex: 3, maxWidth: '65%',
+              textShadow: '0 1px 6px rgba(0,0,0,0.85)',
+            }}>
+              <div style={{
+                display: 'inline-block', padding: '3px 10px', borderRadius: '20px',
+                background: 'rgba(255,255,255,0.15)', fontSize: '10px', fontWeight: 600,
+                color: SLIDES[slide].accent, marginBottom: '8px',
+              }}>{SLIDES[slide].tag}</div>
+              <div style={{
+                fontSize: '16px', fontWeight: 600, lineHeight: 1.5,
+                color: '#fff', whiteSpace: 'pre-line',
+              }}>{SLIDES[slide].title}</div>
+              {SLIDES[slide].sub ? (
+                <div style={{
+                  fontSize: '11px', lineHeight: 1.5, marginTop: '6px',
+                  color: SLIDES[slide].sub2, whiteSpace: 'pre-line',
+                }}>{SLIDES[slide].sub}</div>
+              ) : null}
+              <div style={{
+                display: 'inline-block', marginTop: '10px', padding: '6px 14px',
+                borderRadius: '16px', background: 'rgba(255,255,255,0.9)',
+                fontSize: '11px', fontWeight: 600, color: '#1a1a2e',
+              }}>{SLIDES[slide].link}</div>
             </div>
-            <div style={{
-              display: 'inline-block', padding: '7px 16px', borderRadius: '16px',
-              background: 'rgba(255,255,255,0.8)', fontSize: '12px', fontWeight: 600,
-              color: SLIDES[slide].titleColor,
-            }}>{SLIDES[slide].link}</div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', padding: '10px 0 4px' }}>
             {SLIDES.map((_, i) => (
               <div key={i} onClick={() => setSlide(i)} style={{
                 width: i === slide ? '18px' : '6px', height: '6px', borderRadius: '3px',
-                background: i === slide ? '#c8783c' : '#e8d5c5', cursor: 'pointer', transition: 'all 0.3s',
+                background: i === slide ? '#c8783c' : '#e0cdbd', cursor: 'pointer', transition: 'all 0.3s',
               }} />
             ))}
           </div>
