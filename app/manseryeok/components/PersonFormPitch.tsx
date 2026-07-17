@@ -147,9 +147,9 @@ export default function PersonFormPitch({
   })
 
   return (
-    <div style={{ background: C.cardBg, borderRadius: 20, overflow: 'hidden', fontFamily: 'inherit' }}>
-      {/* 헤더 */}
-      <div style={{ padding: '18px 18px 14px', position: 'relative', textAlign: 'center', borderBottom: `0.5px solid #f5e5da` }}>
+    <div style={{ background: C.cardBg, borderRadius: 20, overflow: 'hidden', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', maxHeight: '88vh' }}>
+      {/* 헤더 (고정) */}
+      <div style={{ padding: '18px 18px 14px', position: 'relative', textAlign: 'center', borderBottom: `0.5px solid #f5e5da`, flexShrink: 0 }}>
         {onBack && (
           <button onClick={onBack} aria-label="뒤로"
             style={{ position: 'absolute', top: 16, left: 16, background: 'none', border: 'none', cursor: 'pointer', color: C.subLight, fontSize: 18, lineHeight: 1 }}>‹</button>
@@ -163,7 +163,7 @@ export default function PersonFormPitch({
         </div>
       </div>
 
-      <div style={{ padding: '18px 18px 6px' }}>
+      <div style={{ padding: '18px 18px 6px', overflowY: 'auto', flex: 1 }}>
         {/* 아바타 + 이름 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: 16 }}>
           <div style={{
@@ -284,14 +284,13 @@ export default function PersonFormPitch({
           }}>{unknownHour ? '✓' : ''}</span>
           <span style={{ fontSize: 12, color: C.sub }}>태어난 시간을 몰라요</span>
         </button>
-
-        {(localErr || errorMessage) && (
-          <div style={{ color: '#c05a5a', fontSize: 12, marginTop: 6 }}>{localErr || errorMessage}</div>
-        )}
       </div>
 
-      {/* 저장 버튼 */}
-      <div style={{ padding: '10px 16px 16px' }}>
+      {/* 저장 버튼 (하단 고정 — 항상 보임) */}
+      <div style={{ padding: '10px 16px 16px', flexShrink: 0, borderTop: `0.5px solid #f5e5da`, background: C.cardBg }}>
+        {(localErr || errorMessage) && (
+          <div style={{ color: '#c05a5a', fontSize: 12, marginBottom: 8, textAlign: 'center' }}>{localErr || errorMessage}</div>
+        )}
         <button onClick={handleSubmit} disabled={submitting}
           style={{
             width: '100%', background: C.brown, borderRadius: 12, padding: 14, border: 'none',
