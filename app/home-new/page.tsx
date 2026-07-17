@@ -8,6 +8,7 @@ import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
 import InviteNotifier from '@/app/couple-chat/InviteNotifier'
 import { listPinnedServices, togglePinnedService } from '@/lib/saju/pinnedServices'
+import HomeBottomSheet from '@/app/home-new/components/HomeBottomSheet'
 
 // ── 사람 선택 모달을 여는 서비스 설정 ──
 // 사주 + 대운 + 세운(연월운세) 연결. 셋 다 같은 흐름:
@@ -460,6 +461,9 @@ export default function HomeNew() {
           </div>
         </div>
 
+        {/* ═══ 바텀시트: 서비스 + 후기 (손잡이로 위로 끌면 배너를 덮으며 올라옴) ═══ */}
+        <HomeBottomSheet maxLift={320}>
+
         {/* ⑤ 서비스 리스트 (아이콘 + 이름 + 설명 + 📌압핀 / 하단 접기)
             - 압핀: 찜하면 리스트 맨 위로 정렬, 최대 2개 (회원만, 비회원은 로그인 안내)
             - 접기: 처음 6개만 → [전체 12개 보기]로 펼침 */}
@@ -609,6 +613,8 @@ export default function HomeNew() {
             </div>
           )}
         </div>
+        {/* ═══ 바텀시트 끝 ═══ */}
+        </HomeBottomSheet>
       </main>
 
       {/* 하단 고정 네비게이션 */}
