@@ -42,21 +42,11 @@ export default function HomeBottomSheet({
     e.preventDefault()
   }
 
-  function onContentDown(e: React.PointerEvent) {
-    const sc = scrollRef.current
-    if (!sc || sc.scrollTop > 0) return
-    // 버튼·링크 등 인터랙티브 요소 위에서는 드래그 시작하지 않음 (클릭 보장)
-    const target = e.target as HTMLElement
-    if (target.closest('button, a, input, textarea, select, [role="button"]')) return
-    drag.current = { active: true, startY: e.clientY, startTop: currentTop, content: true, moved: false }
-  }
-
   useEffect(() => {
     function onMove(e: PointerEvent) {
       if (!drag.current.active) return
       const dy = e.clientY - drag.current.startY
-      if (Math.abs(dy) > 5) drag.current.moved = true   // 5px 넘게 움직여야 드래그로 인정
-      if (drag.current.content && dy < 0) return
+      if (Math.abs(dy) > 5) drag.current.moved = true
       let next = drag.current.startTop + dy
       if (next < expandedTop) next = expandedTop
       if (next > safeCollapsed) next = safeCollapsed
@@ -102,25 +92,25 @@ export default function HomeBottomSheet({
         willChange: 'transform',
       }}
     >
-      {/* 드래그 핸들 */}
+      {/* 드래그 핸들 (터치 영역 넉넉하게) */}
       <div
         onPointerDown={onHandleDown}
         style={{
-          padding: '10px 0 8px',
+          padding: '14px 0 12px',
           cursor: 'grab',
           display: 'flex',
           justifyContent: 'center',
           flexShrink: 0,
           touchAction: 'none',
+          userSelect: 'none',
         }}
       >
-        <div style={{ width: '40px', height: '5px', borderRadius: '99px', background: '#e0d0c0' }} />
+        <div style={{ width: '48px', height: '5px', borderRadius: '99px', background: '#e0d0c0' }} />
       </div>
 
-      {/* 스크롤 영역: 하단 여백 = 네비 높이 + 시트가 내려간 만큼(currentTop) */}
+      {/* 스크롤 영역: 시트 드래그는 손잡이로만 → 여기선 순수 스크롤+클릭만 (모바일 충돌 방지) */}
       <div
         ref={scrollRef}
-        onPointerDown={onContentDown}
         style={{
           flex: 1,
           overflowY: expanded ? 'auto' : 'hidden',
