@@ -167,6 +167,19 @@ export default function HomeNew() {
   const [collapsedTop, setCollapsedTop] = useState(360)   // 기본값(측정 전)
 
 
+  // 홈에서만 body/html 스크롤 잠금 → 페이지 바깥 우측 스크롤바 제거
+  //   (홈을 떠나면 원래대로 복구. 다른 페이지엔 영향 없음)
+  useEffect(() => {
+    const prevBody = document.body.style.overflow
+    const prevHtml = document.documentElement.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prevBody
+      document.documentElement.style.overflow = prevHtml
+    }
+  }, [])
+
   // 바텀시트 접힘 위치 = 고정 영역 아래 끝의 화면 y좌표
   //   (getBoundingClientRect().bottom = 화면 최상단부터 고정영역 끝까지)
   //   → 네비가 fixedRef 밖에 있어도 bottom 값에 네비 높이가 자연히 포함됨
@@ -251,7 +264,7 @@ export default function HomeNew() {
 
   return (
     <div style={{
-      height: '100vh', overflow: 'hidden', background: '#FDF6F0',
+      height: '100dvh', overflow: 'hidden', background: '#FDF6F0',
       maxWidth: '430px', margin: '0 auto',
       fontFamily: "'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif",
       color: '#3a2e28', position: 'relative',
