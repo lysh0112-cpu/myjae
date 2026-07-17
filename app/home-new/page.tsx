@@ -8,6 +8,7 @@ import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
 import InviteNotifier from '@/app/couple-chat/InviteNotifier'
 import { listPinnedServices, togglePinnedService } from '@/lib/saju/pinnedServices'
+import HomeBottomSheet from '@/app/home-new/components/HomeBottomSheet'
 
 // ── 사람 선택 모달을 여는 서비스 설정 ──
 // 사주 + 대운 + 세운(연월운세) 연결. 셋 다 같은 흐름:
@@ -161,7 +162,25 @@ export default function HomeNew() {
   const [svcOpen, setSvcOpen] = useState(false)           // 서비스 리스트 펼침 여부
   const [pinMsg, setPinMsg] = useState('')                // 압핀 안내 메시지
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // 바텀시트: 고정 영역(네비+배너+유저카드) 높이를 재서 시트 접힘 위치로 사용
+  const fixedRef = useRef<HTMLDivElement | null>(null)
+  const [collapsedTop, setCollapsedTop] = useState(360)   // 기본값(측정 전)
 
+
+  // 바텀시트 접힘 위치 = 고정 영역(네비+배너+유저카드) 실제 높이
+  useEffect(() => {
+    function measure() {
+      if (fixedRef.current) {
+        const h = fixedRef.current.getBoundingClientRect().height
+        if (h > 0) setCollapsedTop(Math.round(h))
+      }
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    // 배너 이미지·유저카드 로드 후 값이 바뀔 수 있어 약간 지연 재측정
+    const t = setTimeout(measure, 400)
+    return () => { window.removeEventListener('resize', measure); clearTimeout(t) }
+  }, [isLoggedIn, profile])
 
   // 홈 후기 미리보기: 승인된 후기 중 고정 먼저 → 최신 4개
   useEffect(() => {
@@ -286,6 +305,8 @@ export default function HomeNew() {
             [data-bnr-spk] { animation: none !important; }
           }
         `}</style>
+        {/* ═══ 고정 영역 시작: 배너 + 유저카드 (시트가 이 위로 올라옴) ═══ */}
+        <div ref={fixedRef}>
         {/* ② 슬라이드 배너 */}
         <div style={{ padding: '14px 16px 0' }}>
           <div
@@ -459,6 +480,11 @@ export default function HomeNew() {
             )}
           </div>
         </div>
+        {/* ═══ 고정 영역 끝 ═══ */}
+        </div>
+
+        {/* ═══ 바텀시트: 서비스 리스트 + 후기 (끌어올리면 위를 덮음) ═══ */}
+        <HomeBottomSheet collapsedTop={collapsedTop}>
 
         {/* ⑤ 서비스 리스트 (아이콘 + 이름 + 설명 + 📌압핀 / 하단 접기)
             - 압핀: 찜하면 리스트 맨 위로 정렬, 최대 2개 (회원만, 비회원은 로그인 안내)
@@ -609,6 +635,8 @@ export default function HomeNew() {
             </div>
           )}
         </div>
+        {/* ═══ 바텀시트 끝 ═══ */}
+        </HomeBottomSheet>
       </main>
 
       {/* 하단 고정 네비게이션 */}
