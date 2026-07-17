@@ -190,3 +190,19 @@ export async function getRoomCompat(roomId: string): Promise<any | null> {
     .maybeSingle()
   return data?.compat_data || null
 }
+
+// 방에서 상대방(나 아닌 멤버) 닉네임 가져오기 — 채팅방 말풍선 표시용
+export async function getPartnerName(roomId: string, myUid: string): Promise<string> {
+  const { data: members } = await supabase
+    .from('couple_members')
+    .select('user_id')
+    .eq('room_id', roomId)
+  const partner = (members || []).find((m) => m.user_id !== myUid)
+  if (!partner) return '상대'
+  const { data: prof } = await supabase
+    .from('profiles')
+    .select('nickname')
+    .eq('id', partner.user_id)
+    .maybeSingle()
+  return prof?.nickname || '상대'
+}

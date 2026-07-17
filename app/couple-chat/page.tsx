@@ -18,6 +18,7 @@ import {
   getRoomAiOn,
   setRoomAiOn,
   getRoomCompat,
+  getPartnerName,
   saveAiMessage,
   shareAiMessage,
   deleteAiMessage,
@@ -76,6 +77,7 @@ function ChatInner() {
   const [aiOn, setAiOn] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [compat, setCompat] = useState<any | null>(null)
+  const [partnerName, setPartnerName] = useState('상대')
   const bottomRef = useRef<HTMLDivElement>(null)
 
   // 개인 표시설정 로드 (글자·폰트·배경)
@@ -142,6 +144,7 @@ function ChatInner() {
       // AI 토글 상태 + 궁합 정보 로드
       getRoomAiOn(rid).then((on) => { if (!cancelled) setAiOn(on) })
       getRoomCompat(rid).then((c) => { if (!cancelled) setCompat(c) })
+      getPartnerName(rid, uid).then((n) => { if (!cancelled) setPartnerName(n) })
 
       // 실시간 구독 (검증된 상담채팅 패턴 재사용)
       channel = supabase
@@ -486,10 +489,16 @@ function ChatInner() {
                 key={m.id}
                 style={{
                   display: 'flex',
-                  justifyContent: mine ? 'flex-end' : 'flex-start',
+                  flexDirection: 'column',
+                  alignItems: mine ? 'flex-end' : 'flex-start',
                   marginBottom: 8,
                 }}
               >
+                {!mine && (
+                  <div style={{ fontSize: 11, color: isDark ? '#c0c0c0' : SUB, margin: '0 0 3px 4px' }}>
+                    {partnerName}
+                  </div>
+                )}
                 <div
                   style={{
                     maxWidth: '72%',
