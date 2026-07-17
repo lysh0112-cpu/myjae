@@ -233,7 +233,10 @@ function ChatInner() {
       }))
       const question = userQuestion
         ? userQuestion.replace(/^(ai|에이아이|에이아이야|ai야)[\s,:]*/i, '')
-        : '우리 두 사람의 대화 흐름을 보고, 사주와 궁합을 바탕으로 다정한 관계 조언을 해줘.'
+        : '우리 두 사람의 대화 흐름을 보고, 사주와 궁합을 바탕으로 관계 조언을 해줘.'
+
+      // 채팅방이니 짧고 재치있게 답하도록 지시
+      const styleHint = '\n\n(중요: 여기는 커플 채팅방이야. 카톡 대화하듯 1~2문장으로 짧고 재치있고 다정하게 답해줘. 길게 설명하지 말고 핵심만 콕. 이모지 살짝 써도 좋아.)'
 
       const res = await fetch('/api/chat-stream', {
         method: 'POST',
@@ -244,7 +247,7 @@ function ChatInner() {
           gender1, gender2,
           messages: [
             ...recent,
-            { role: 'user', content: `${compatSummary}${question}` },
+            { role: 'user', content: `${compatSummary}${question}${styleHint}` },
           ],
         }),
       })
@@ -465,22 +468,6 @@ function ChatInner() {
                     <div style={{ fontSize: fontPt, color: '#4a3a5a', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                       {m.message}
                     </div>
-                    {isPreview && mine && (
-                      <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-                        <button
-                          onClick={() => handleShareAi(m.id)}
-                          style={{ flex: 1, padding: 7, borderRadius: 8, background: '#7c5aaa', color: '#fff', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                        >
-                          상대에게 공유
-                        </button>
-                        <button
-                          onClick={() => handleHideAi(m.id)}
-                          style={{ padding: '7px 12px', borderRadius: 8, background: '#fff', color: '#7c5aaa', border: '0.5px solid #d5c5e5', fontSize: 12, cursor: 'pointer' }}
-                        >
-                          숨기기
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
               )
