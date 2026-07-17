@@ -110,10 +110,10 @@ export default function CoupleRoomsPage() {
               애인을 초대하면 채팅방이 열려요
             </div>
             <button
-              onClick={() => router.push('/couple-chat/invite')}
+              onClick={() => router.push('/manseryeok/couple-input-new?mode=couple')}
               style={{ padding: '12px 26px', borderRadius: 10, background: BROWN, border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
             >
-              애인 초대하기
+              연인 궁합 보러 가기
             </button>
           </div>
         ) : (

@@ -135,36 +135,46 @@ export async function leaveCoupleRoom(roomId: string): Promise<boolean> {
   }
 }
 
-// ── AI 조언 기능 ────────────────────────────────────────────
-// 방의 AI 토글 상태 읽기
-export async function getRoomAiOn(roomId: string): Promise<boolean> {
+// ── AI 조언 기능 (3단계: off / private(나에게만) / all(같이)) ──
+export type AiMode = 'off' | 'private' | 'all'
+
+// 방의 AI 모드 읽기
+export async function getRoomAiMode(roomId: string): Promise<AiMode> {
   const { data } = await supabase
     .from('couple_rooms')
-    .select('ai_on')
+    .select('ai_on, ai_mode')
     .eq('id', roomId)
     .maybeSingle()
-  return !!data?.ai_on
+  if (!data?.ai_on) return 'off'
+  return data.ai_mode === 'all' ? 'all' : 'private'
 }
 
-// AI 토글 켜고 끄기
-export async function setRoomAiOn(roomId: string, on: boolean): Promise<void> {
-  await supabase.from('couple_rooms').update({ ai_on: on }).eq('id', roomId)
+// 방의 AI 모드 설정
+export async function setRoomAiMode(roomId: string, mode: AiMode): Promise<void> {
+  await supabase
+    .from('couple_rooms')
+    .update({
+      ai_on: mode !== 'off',
+      ai_mode: mode === 'all' ? 'all' : 'private',
+    })
+    .eq('id', roomId)
 }
 
-// AI 조언 메시지 저장 (처음엔 나만 보기 = private)
+// AI 조언 메시지 저장. mode='all'이면 바로 둘 다 보임, 'private'이면 나만 미리보기
 export async function saveAiMessage(
   roomId: string,
   myUid: string,
   text: string,
+  mode: AiMode,
 ): Promise<string | null> {
   const { data } = await supabase
     .from('couple_messages')
     .insert({
       room_id: roomId,
-      sender_id: myUid, // 부른 사람 = 미리보기 볼 사람
+      sender_id: myUid,
       kind: 'ai',
       message: text,
-      visibility: 'private',
+      visibility: mode === 'all' ? 'all' : 'private',
     })
     .select('id')
     .maybeSingle()

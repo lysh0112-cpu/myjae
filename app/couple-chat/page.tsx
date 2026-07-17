@@ -15,13 +15,14 @@ import {
   loadRoomMessages,
   sendRoomMessage,
   leaveCoupleRoom,
-  getRoomAiOn,
-  setRoomAiOn,
+  getRoomAiMode,
+  setRoomAiMode,
   getRoomCompat,
   getPartnerName,
   saveAiMessage,
   shareAiMessage,
   deleteAiMessage,
+  type AiMode,
   type CoupleMsg,
 } from '@/lib/saju/coupleRoom'
 import { calcSaju } from '@/app/manseryeok/ai-chat/useSaju'
@@ -74,7 +75,7 @@ function ChatInner() {
   const [settingsTab, setSettingsTab] = useState<'bg' | 'font' | 'size' | 'textColor' | 'bubble'>('bg')
   const [showMenu, setShowMenu] = useState(false)
   const [recentColors, setRecentColors] = useState<string[]>([])
-  const [aiOn, setAiOn] = useState(false)
+  const [aiMode, setAiMode] = useState<AiMode>('off')
   const [aiLoading, setAiLoading] = useState(false)
   const [compat, setCompat] = useState<any | null>(null)
   const [partnerName, setPartnerName] = useState('상대')
@@ -142,7 +143,7 @@ function ChatInner() {
       setReady(true)
 
       // AI 토글 상태 + 궁합 정보 로드
-      getRoomAiOn(rid).then((on) => { if (!cancelled) setAiOn(on) })
+      getRoomAiMode(rid).then((m) => { if (!cancelled) setAiMode(m) })
       getRoomCompat(rid).then((c) => { if (!cancelled) setCompat(c) })
       getPartnerName(rid, uid).then((n) => { if (!cancelled) setPartnerName(n) })
 
@@ -190,18 +191,18 @@ function ChatInner() {
     if (saved) {
       setMessages((prev) => prev.some((x) => x.id === saved.id) ? prev : [...prev, saved])
     }
-    // AI 켜져 있고 "AI"로 시작하는 질문이면 AI도 호출
-    if (aiOn && /^(ai|에이아이|에이아이야|ai야)\b/i.test(text)) {
+    // AI 켜져 있고(off 아님) "AI"로 시작하는 질문이면 AI도 호출
+    if (aiMode !== 'off' && /^(ai|에이아이|에이아이야|ai야)\b/i.test(text)) {
       askAi(text)
     }
   }
 
-  // AI 토글 켜고 끄기
-  async function toggleAi() {
+  // AI 모드 3단계 순환: off → private(나에게만) → all(같이) → off
+  async function cycleAiMode() {
     if (!roomId) return
-    const next = !aiOn
-    setAiOn(next)
-    await setRoomAiOn(roomId, next)
+    const next: AiMode = aiMode === 'off' ? 'private' : aiMode === 'private' ? 'all' : 'off'
+    setAiMode(next)
+    await setRoomAiMode(roomId, next)
   }
 
   // 두 사람 사주 + 궁합 정보를 프롬프트로 만들어 AI 호출 → 나만 미리보기 저장
@@ -270,7 +271,7 @@ function ChatInner() {
       if (!aiText) aiText = '지금은 조언을 준비하지 못했어요. 잠시 후 다시 시도해주세요.'
 
       // 나만 보기(private)로 저장
-      await saveAiMessage(roomId, myUid, aiText)
+      await saveAiMessage(roomId, myUid, aiText, aiMode === 'off' ? 'private' : aiMode)
     } catch (e) {
       console.error('askAi error', e)
       alert('AI 조언을 불러오지 못했어요. 잠시 후 다시 시도해주세요.')
@@ -346,19 +347,19 @@ function ChatInner() {
           <div style={{ fontSize: 12, color: isDark ? '#b0b0b0' : SUB }}>커플 전용 비밀 채팅방</div>
         </div>
         <button
-          onClick={toggleAi}
-          aria-label="AI 조언"
+          onClick={cycleAiMode}
+          aria-label="AI 조언 모드"
           style={{
             display: 'flex', alignItems: 'center', gap: 4,
-            background: aiOn ? '#7c5aaa' : (isDark ? 'rgba(255,255,255,0.12)' : '#f3ecfa'),
-            border: aiOn ? 'none' : '0.5px solid #d5c5e5',
+            background: aiMode === 'off' ? (isDark ? 'rgba(255,255,255,0.12)' : '#f3ecfa') : (aiMode === 'all' ? '#6a4a99' : '#a888cc'),
+            border: aiMode === 'off' ? '0.5px solid #d5c5e5' : 'none',
             borderRadius: 14, padding: '5px 10px', cursor: 'pointer',
             marginRight: 2,
           }}
         >
-          <span style={{ fontSize: 13 }}>🤖</span>
-          <span style={{ fontSize: 11, fontWeight: 600, color: aiOn ? '#fff' : '#7c5aaa' }}>
-            AI {aiOn ? 'ON' : 'OFF'}
+          <span style={{ fontSize: 13 }}>{aiMode === 'off' ? '🤖' : aiMode === 'private' ? '🙈' : '👀'}</span>
+          <span style={{ fontSize: 11, fontWeight: 600, color: aiMode === 'off' ? '#7c5aaa' : '#fff' }}>
+            {aiMode === 'off' ? 'AI 끄기' : aiMode === 'private' ? '나에게만' : '같이'}
           </span>
         </button>
         <button
@@ -524,20 +525,6 @@ function ChatInner() {
 
       {/* 입력 영역 */}
       <div style={{ borderTop: BORDER, background: cardBg, padding: '10px 12px', position: 'sticky', bottom: 0 }}>
-        {aiOn && (
-          <button
-            onClick={() => askAi()}
-            disabled={aiLoading}
-            style={{
-              width: '100%', marginBottom: 8, padding: 10, borderRadius: 8,
-              background: '#f3ecfa', border: '0.5px solid #d5c5e5',
-              color: '#7c5aaa', fontSize: 13, fontWeight: 600,
-              cursor: aiLoading ? 'default' : 'pointer', opacity: aiLoading ? 0.6 : 1,
-            }}
-          >
-            {aiLoading ? '🤖 AI가 생각하는 중…' : '🤖 AI에게 조언 구하기'}
-          </button>
-        )}
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
           <textarea
             value={input}
@@ -579,6 +566,31 @@ function ChatInner() {
       </div>
 
       {/* 설정 패널 (글자 크기 · 폰트 · 배경) */}
+      {/* help me 플로팅 버튼 (AI 모드가 켜졌을 때만) */}
+      {aiMode !== 'off' && (
+        <button
+          onClick={() => askAi()}
+          disabled={aiLoading}
+          aria-label="AI에게 도움 요청"
+          style={{
+            position: 'fixed',
+            right: 18,
+            bottom: 84,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: 2,
+            width: 64, height: 64, borderRadius: '50%',
+            background: aiLoading ? '#b8a0d8' : '#7c5aaa',
+            border: 'none',
+            boxShadow: '0 2px 12px rgba(124,90,170,0.5)',
+            color: '#fff', cursor: aiLoading ? 'default' : 'pointer',
+            zIndex: 45,
+          }}
+        >
+          <span style={{ fontSize: 20 }}>{aiLoading ? '💭' : '🤖'}</span>
+          <span style={{ fontSize: 9, fontWeight: 600 }}>{aiLoading ? '생각중' : 'help me'}</span>
+        </button>
+      )}
+
       {showSettings && (
         <div
           onClick={() => setShowSettings(false)}
