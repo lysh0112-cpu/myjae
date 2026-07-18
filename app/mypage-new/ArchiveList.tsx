@@ -113,7 +113,7 @@ export default function ArchiveList() {
                 <span style={{ fontSize: 10, padding: '3px 9px', borderRadius: 12, background: b.bg, color: b.fg, flexShrink: 0 }}>{b.label}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12.5, color: '#3a2e28', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.title || b.label}</div>
-                  <div style={{ fontSize: 10, color: '#b09079' }}>{dateText(it.createdAt)}{it.relation ? ` · ${it.relation}` : ''}</div>
+                  <div style={{ fontSize: 10, color: '#b09079' }}>{dateText(it.createdAt)}{it.relation ? ` · ${it.relation === 'self' ? '본인' : it.relation}` : ''}</div>
                 </div>
                 <span style={{ color: '#d0b8a5', fontSize: 12, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .18s' }}>▾</span>
               </div>

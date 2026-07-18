@@ -151,8 +151,9 @@ export async function tagCounts(): Promise<{ tag: string; count: number }[]> {
   const items = await listArchive(300, 0)
   const map = new Map<string, number>()
   for (const it of items) {
-    const tag = (it.relation || '').trim()
+    let tag = (it.relation || '').trim()
     if (!tag) continue
+    if (tag === 'self') tag = '본인'   // 화면 표시용 라벨(저장값은 그대로 self)
     map.set(tag, (map.get(tag) || 0) + 1)
   }
   return Array.from(map.entries())
