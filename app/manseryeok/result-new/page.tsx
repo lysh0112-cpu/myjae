@@ -11,7 +11,7 @@ import { GAN_COLOR, JI_COLOR } from "@/lib/saju/constants";
 import { calcYongsin } from "@/lib/saju/yongsin";
 import { calcYongsinNew } from "@/lib/saju/yongsinNew";
 import { calcHapchungScore } from "@/lib/saju/hapchungScore";
-import { calcSimsanOhaeng, toPercentList } from "@/lib/saju/simsanOhaeng";
+import { calcSimsanOhaeng, toPercentList, seasonConvertNote } from "@/lib/saju/simsanOhaeng";
 import AiAnalysisNew from "./components/AiAnalysisNew";
 import ConsultButton from "@/app/components/common/ConsultButton";
 import OhaengPentagon from "./OhaengPentagon";
@@ -323,6 +323,7 @@ function ResultNewContent() {
   const ilgan=dayStem
   const [gm1,gm2]=ilgan&&iljji?getGongmang(ilgan,iljji):['','']
   const hourBranch=saju.find(p=>p.pillar==="시주")?.branch??null
+  const monthBranchForNote=saju.find(p=>p.pillar==="월주")?.branch??null
   const ohaeng=saju.length>0?toPercentList(calcSimsanOhaeng(saju,solarMonth,solarDay,hourBranch)):[]
   const sipsung=saju.length>0&&dayStem?calcSipsung(saju,dayStem):[]
   const calLabel=`${calType} ${yearParam}.${monthParam}.${dayParam}${calType==="음력"&&leapMonth==="1"?" (윤달)":""}`
@@ -465,6 +466,18 @@ function ResultNewContent() {
           </Section>
         )}
         <Section title="오행과 십성 분석" collapsible={!chartOnly} open={openSection==='ohaeng'} onToggle={()=>toggleSection('ohaeng')}>
+          {/* 계산 기준 안내 — 합충 반영 그래프와 숫자가 다른 이유 */}
+          <div style={{fontSize:'10.5px',color:'#b4785a',background:'#faf3ec',border:'0.5px solid #f0e0d5',borderRadius:'8px',padding:'7px 10px',marginBottom:'10px',lineHeight:1.6}}>
+            진로·적성·성격은 <b style={{color:'#96502e'}}>계절 치환</b>으로, 건강·궁합·용신은 오행 그대로 봐요.
+            {(() => {
+              const note = saju.length>0 && monthBranchForNote
+                ? seasonConvertNote(monthBranchForNote, solarMonth, solarDay, hourBranch ?? '')
+                : null
+              return note ? (
+                <div style={{marginTop:'5px',color:'#c8783c'}}>↳ {note}</div>
+              ) : null
+            })()}
+          </div>
           {/* 오각형 그래프(왼쪽) + 십성표(오른쪽) 나란히 */}
           <div style={{display:'flex',gap:'6px',alignItems:'center',marginBottom:'12px'}}>
             <div style={{flex:1.45,minWidth:0}}>

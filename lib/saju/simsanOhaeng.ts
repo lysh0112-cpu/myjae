@@ -62,7 +62,7 @@ function monthBranchScore(
       const md = solarMonth * 100 + solarDay
       if (md >= 204 && md <= 214) return [['수', 35]]
       if (md >= 215 && md <= 225) return [['수', 25], ['목', 10]]
-      return [['수', 10], ['목', 25]] // 2.26~3.5
+      return [['수', 15], ['목', 20]] // 2.26~3.5
     }
     // 卯월 — 완연한 봄
     case '卯':
@@ -83,7 +83,7 @@ function monthBranchScore(
       const md = solarMonth * 100 + solarDay
       if (md >= 807 && md <= 816) return [['화', 35]]
       if (md >= 817 && md <= 827) return [['화', 25], ['금', 10]]
-      return [['화', 10], ['금', 25]] // 8.28~9.6
+      return [['화', 15], ['금', 20]] // 8.28~9.6
     }
     // 酉월 — 완연한 가을
     case '酉':
@@ -106,32 +106,11 @@ function monthBranchScore(
   }
 }
 
-// ── 시지 계절 보정 (시지 10점을 어느 오행에 주느냐) ───────────────
-//   태어난 계절(월지)에 따라 시지 오행을 보정.
-function hourBranchScore(hourBranch: string, monthBranch: string): [Ohaeng, number] {
+// ── 시지 점수 (시지 10점) ───────────────────────────────────────
+//   ★ 연재쌤 확정(2026-07): 시지 계절 보정은 적용하지 않는다.
+//     시지는 언제나 본래 오행 그대로 계산.
+function hourBranchScore(hourBranch: string, _monthBranch: string): [Ohaeng, number] {
   const S = 10 // 시지 총점
-
-  // 丑시·寅시 + 겨울(丑)·초봄(寅) → 수
-  if ((hourBranch === '丑' || hourBranch === '寅') &&
-      (monthBranch === '丑' || monthBranch === '寅')) {
-    return ['수', S]
-  }
-  // 辰시 + 봄(卯·辰) → 목
-  if (hourBranch === '辰' && (monthBranch === '卯' || monthBranch === '辰')) {
-    return ['목', S]
-  }
-  // 未시 + 여름(巳·未) → 화   /  申·未시 + 申월 → 화
-  if (hourBranch === '未' && (monthBranch === '巳' || monthBranch === '未')) {
-    return ['화', S]
-  }
-  if ((hourBranch === '申' || hourBranch === '未') && monthBranch === '申') {
-    return ['화', S]
-  }
-  // 戌시 + 가을(酉·戌) → 금
-  if (hourBranch === '戌' && (monthBranch === '酉' || monthBranch === '戌')) {
-    return ['금', S]
-  }
-  // 보정 없음 → 본래 오행
   const el = BRANCH_EL[hourBranch]
   return el ? [el, S] : ['목', 0]
 }
@@ -198,4 +177,45 @@ export function grade(points: number): OhaengGrade {
   if (points >= 50) return '과다'
   if (points >= 25) return '발달'
   return '약함'
+}
+
+// ── 계절치환 안내 (화면 표시용) ─────────────────────────────────
+/**
+ * 이 사주의 월지에 계절치환이 적용됐는지 알려준다.
+ *   "오행과 십성 분석"(적성 기준)과 "합충 반영 오행"(용신 기준)의
+ *   숫자가 왜 다른지 사용자에게 설명하기 위한 문구.
+ *
+ * @returns 치환이 일어났으면 설명 문자열, 아니면 null
+ */
+export function seasonConvertNote(
+  monthBranch: string,
+  solarMonth: number,
+  solarDay: number,
+  hourBranch: string,
+): string | null {
+  const md = solarMonth * 100 + solarDay
+  switch (monthBranch) {
+    case '丑':
+      return '월지 丑(토)을 겨울 기운으로 보아 水로 계산했어요.'
+    case '未':
+      return '월지 未(토)를 여름 기운으로 보아 火로 계산했어요.'
+    case '辰':
+      return (hourBranch === '卯' || hourBranch === '辰')
+        ? '월지 辰(토)을 봄 기운으로 보아 木으로 계산했어요.'
+        : null
+    case '戌':
+      return (hourBranch === '酉' || hourBranch === '戌')
+        ? '월지 戌(토)을 가을 기운으로 보아 金으로 계산했어요.'
+        : null
+    case '寅':
+      if (md >= 204 && md <= 214) return '입춘 직후라 월지 寅을 아직 겨울(水)로 계산했어요.'
+      if (md >= 215 && md <= 225) return '월지 寅을 겨울(水)에서 봄(木)으로 넘어가는 중으로 나눠 계산했어요.'
+      return '월지 寅을 봄(木) 기운 위주로 나눠 계산했어요.'
+    case '申':
+      if (md >= 807 && md <= 816) return '입추 직후라 월지 申을 아직 여름(火)으로 계산했어요.'
+      if (md >= 817 && md <= 827) return '월지 申을 여름(火)에서 가을(金)로 넘어가는 중으로 나눠 계산했어요.'
+      return '월지 申을 가을(金) 기운 위주로 나눠 계산했어요.'
+    default:
+      return null
+  }
 }
