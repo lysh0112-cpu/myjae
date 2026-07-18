@@ -40,6 +40,18 @@ function AiTalkInner() {
   const [voiceIdx, setVoiceIdx] = useState(0)
   const [rate, setRate] = useState(1)
 
+  // ── 글자 크기 (localStorage 기억, 기본 15px) ──
+  const [chatFontSize, setChatFontSize] = useState(15)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const saved = Number(window.localStorage.getItem('aitalk_font_v1'))
+    if (saved >= 12 && saved <= 22) setChatFontSize(saved)
+  }, [])
+  const changeFontSize = (n: number) => {
+    setChatFontSize(n)
+    if (typeof window !== 'undefined') window.localStorage.setItem('aitalk_font_v1', String(n))
+  }
+
   useEffect(() => {
     if (typeof window === 'undefined' || !window.speechSynthesis) return
     const load = () => {
@@ -163,6 +175,17 @@ function AiTalkInner() {
         </button>
       </div>
 
+      {/* 글자 크기 조절 */}
+      <div style={{ padding: '9px 16px', background: '#faf3ec', borderBottom: '0.5px solid #f0e0d5', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 11, color: '#96502e', fontWeight: 600, flexShrink: 0 }}>글자 크기</span>
+        <span style={{ fontSize: 10, color: '#b4785a', flexShrink: 0 }}>작게</span>
+        <input type="range" min="12" max="22" step="1" value={chatFontSize}
+          onChange={(e) => changeFontSize(Number(e.target.value))}
+          style={{ flex: 1, accentColor: '#b46e46' }} />
+        <span style={{ fontSize: 10, color: '#b4785a', flexShrink: 0 }}>크게</span>
+        <span style={{ fontSize: 11, color: '#c8783c', flexShrink: 0, width: 30, textAlign: 'right' }}>{chatFontSize}px</span>
+      </div>
+
       {/* 목소리 설정 (켰을 때만) */}
       {voiceOn && (
         <div style={{ padding: '10px 16px', background: '#fef7f1', borderBottom: '0.5px solid #f5e5da', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -183,7 +206,7 @@ function AiTalkInner() {
         {messages.map((m, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start', marginBottom: 10 }}>
             <div style={{
-              maxWidth: '78%', padding: '10px 13px', borderRadius: 14, fontSize: 13.5, lineHeight: 1.6,
+              maxWidth: '78%', padding: '10px 13px', borderRadius: 14, fontSize: chatFontSize, lineHeight: 1.6,
               background: m.role === 'user' ? '#b46e46' : '#FFFBF7',
               color: m.role === 'user' ? '#fff' : '#3a2e28',
               border: m.role === 'user' ? 'none' : '0.5px solid #f0e0d5',
