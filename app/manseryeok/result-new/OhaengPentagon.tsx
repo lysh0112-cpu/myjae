@@ -188,9 +188,9 @@ export default function OhaengPentagon({ ohaeng, dayElement }: { ohaeng: { el: s
         const off = R + 20
         const lx = cx + (dx / len) * off
         const ly = cy + (dy / len) * off + 5
-        const HANGUL: Record<string, string> = { 목: '나무', 화: '불', 토: '흙', 금: '쇠', 수: '물' }
+        const HANGUL: Record<string, string> = { 목: '木', 화: '火', 토: '土', 금: '金', 수: '水' }
         return (
-          <text key={`lbl-${el}`} x={lx} y={ly} textAnchor="middle" fontSize="16" fontWeight="700" fill={ELEMENT_COLOR[el]}>
+          <text key={`lbl-${el}`} x={lx} y={ly} textAnchor="middle" fontSize="12" fontWeight="700" fill={ELEMENT_COLOR[el]}>
             {HANGUL[el]}
           </text>
         )
