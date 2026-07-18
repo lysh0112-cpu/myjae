@@ -7,15 +7,16 @@
  * 흐름: 저장목록 > [+ 새로 등록] > 인적사항 입력 > 저장 > 목록
  *       목록 카드 클릭 > 만세력 조회 (?pro=1&mode=chart — 통변 없음, 합충 토글)
  *
- * 저장/조회는 기존 savedPeople(saju_records) 재사용. service_type='expert'로 구분.
+ * 저장/조회는 전용 테이블 expert_people 사용 (고객용 saju_records와 완전 분리).
  */
 
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  listSavedPeople, addSavedPerson, deleteSavedPerson, avatarChar,
-  type SavedPerson, type SavedInputData,
-} from '@/lib/saju/savedPeople'
+  listExpertPeople, addExpertPerson, deleteExpertPerson,
+  toExpertResultUrl, expertAvatarChar,
+  type ExpertPerson,
+} from '@/lib/saju/expertPeople'
 
 const HOURS = [
   '모름','子시 (23:30~01:30)','丑시 (01:30~03:30)','寅시 (03:30~05:30)','卯시 (05:30~07:30)',
@@ -23,25 +24,11 @@ const HOURS = [
   '申시 (15:30~17:30)','酉시 (17:30~19:30)','戌시 (19:30~21:30)','亥시 (21:30~23:30)',
 ]
 
-// SavedInputData → result-new URL 쿼리 (+ pro·mode)
-function toExpertUrl(p: SavedPerson): string {
-  const d = p.input_data
-  const q = new URLSearchParams()
-  q.set('year', d.year); q.set('month', d.month); q.set('day', d.day)
-  q.set('gender', d.gender); q.set('calType', d.calType)
-  q.set('leapMonth', d.leapMonth || '0')
-  if (d.hour && d.hour !== '모름') q.set('hour', String(d.hour))
-  if (p.title) q.set('name', p.title)
-  q.set('pro', '1')          // 전문가 모드 (합충 토글 표시)
-  q.set('mode', 'chart')     // 통변 없음, 차트만
-  return `/manseryeok/result-new?${q.toString()}`
-}
-
 function ExpertInner() {
   const router = useRouter()
-  const [people, setPeople] = useState<SavedPerson[] | null>(null)
+  const [people, setPeople] = useState<ExpertPerson[] | null>(null)
   const [showForm, setShowForm] = useState(false)
-  const [confirmDel, setConfirmDel] = useState<SavedPerson | null>(null)
+  const [confirmDel, setConfirmDel] = useState<ExpertPerson | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
@@ -55,7 +42,7 @@ function ExpertInner() {
   const [day, setDay] = useState('')
   const [hourIdx, setHourIdx] = useState('0')
 
-  const load = () => { listSavedPeople().then(list => setPeople(list.filter(p => p.service_type === 'expert'))) }
+  const load = () => { listExpertPeople().then(setPeople) }
   useEffect(() => { load() }, [])
 
   const resetForm = () => {
@@ -68,15 +55,16 @@ function ExpertInner() {
     if (!nick.trim()) { setErr('닉네임을 입력해 주세요.'); return }
     if (year.length !== 4 || !month || !day) { setErr('생년월일을 정확히 입력해 주세요.'); return }
     setBusy(true)
-    const input: SavedInputData = {
+    const res = await addExpertPerson({
+      name: nick.trim(),
       gender, calType, year, month, day, leapMonth,
       hour: hourIdx === '0' ? '모름' : String(Number(hourIdx) - 1),
-    }
-    const res = await addSavedPerson({ title: nick.trim(), relation: '전문가조회', input, serviceType: 'expert' })
+    })
     setBusy(false)
     if (!res.ok) {
       if (res.reason === 'duplicate') setErr('이미 같은 사주가 저장되어 있어요.')
       else if (res.reason === 'not_logged_in') { router.push('/login'); return }
+      else if (res.reason === 'invalid') setErr('입력값을 확인해 주세요.')
       else setErr('저장하지 못했어요.')
       return
     }
@@ -86,7 +74,7 @@ function ExpertInner() {
   const del = async () => {
     if (!confirmDel) return
     setBusy(true)
-    await deleteSavedPerson(confirmDel.id)
+    await deleteExpertPerson(confirmDel.id)
     setBusy(false); setConfirmDel(null); load()
   }
 
@@ -180,15 +168,15 @@ function ExpertInner() {
           people.map(p => (
             <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 11, background: '#fff', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: '12px 14px', marginBottom: 8 }}>
               <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#f3ece5', color: '#96502e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, flexShrink: 0 }}>
-                {avatarChar(p.title)}
+                {expertAvatarChar(p.name)}
               </div>
-              <div onClick={() => router.push(toExpertUrl(p))} style={{ flex: 1, cursor: 'pointer', minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a' }}>{p.title}</div>
+              <div onClick={() => router.push(toExpertResultUrl(p))} style={{ flex: 1, cursor: 'pointer', minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a' }}>{p.name}</div>
                 <div style={{ fontSize: 11, color: '#a08e7e' }}>
-                  {p.input_data.calType} {p.input_data.year}.{p.input_data.month}.{p.input_data.day} · {p.input_data.gender === '여' ? '여성' : '남성'}
+                  {p.calType} {p.year}.{p.month}.{p.day} · {p.gender === '여' ? '여성' : '남성'}
                 </div>
               </div>
-              <button onClick={() => router.push(toExpertUrl(p))}
+              <button onClick={() => router.push(toExpertResultUrl(p))}
                 style={{ fontSize: 11, color: '#96502e', border: '0.5px solid #e8d5c5', borderRadius: 8, padding: '5px 11px', background: '#fffbf7', cursor: 'pointer', flexShrink: 0 }}>조회</button>
               <button onClick={() => setConfirmDel(p)}
                 style={{ fontSize: 11, color: '#c09080', border: '0.5px solid #f0e0d5', borderRadius: 8, padding: '5px 9px', background: 'none', cursor: 'pointer', flexShrink: 0 }}>삭제</button>
@@ -202,7 +190,7 @@ function ExpertInner() {
         <div onClick={() => setConfirmDel(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 1000 }}>
           <div onClick={e => e.stopPropagation()} style={{ maxWidth: 300, width: '100%', background: '#fff', borderRadius: 16, padding: 20 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', marginBottom: 6 }}>삭제할까요?</div>
-            <div style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>“{confirmDel.title}”을(를) 목록에서 지웁니다.</div>
+            <div style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>“{confirmDel.name}”을(를) 목록에서 지웁니다.</div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => setConfirmDel(null)} style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: '0.5px solid #e8d5c5', background: 'none', color: '#b4785a', fontSize: 13, cursor: 'pointer' }}>취소</button>
               <button onClick={del} disabled={busy} style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: 'none', background: '#c0392b', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: busy ? 0.6 : 1 }}>{busy ? '삭제 중…' : '삭제'}</button>
