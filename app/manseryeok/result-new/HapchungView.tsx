@@ -30,6 +30,12 @@ export default function HapchungView({ saju }: Props) {
   const base = calcYongsinScore(saju)
   const { score, notes } = calcHapchungScore(saju)
   const changed = ELS.some(e => Math.abs(base[e] - score[e]) > 0.05)
+  // 오각형 육친 라벨용 일간 오행
+  const STEM_EL: Record<string, string> = {
+    甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토',
+    己: '토', 庚: '금', 辛: '금', 壬: '수', 癸: '수',
+  }
+  const dayEl = STEM_EL[saju.find(p => p.pillar === '일주')?.stem ?? '']
 
   return (
     <div style={{ fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>
@@ -43,7 +49,7 @@ export default function HapchungView({ saju }: Props) {
 
       {/* 합충 반영 오각형 */}
       <div style={{ marginBottom: 12 }}>
-        <OhaengPentagon ohaeng={toPct(score)} />
+        <OhaengPentagon ohaeng={toPct(score)} dayElement={dayEl} />
       </div>
 
       {/* 전/후 점수 비교표 */}

@@ -23,6 +23,11 @@ interface Commentary {
 }
 
 const MY_INFO_KEY = 'myinfo'
+// 오각형 육친 라벨용 (일간 → 오행)
+const MULSANG_STEM_EL: Record<string, string> = {
+  甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토',
+  己: '토', 庚: '금', 辛: '금', 壬: '수', 癸: '수',
+}
 const MULSANG_IMG_PREFIX = 'mulsang_img_v5:'      // 그림 (사람 + 화풍별로 각각 저장)
 const MULSANG_ANS_PREFIX = 'mulsang_ans_v5:'      // 질문 답 캐시 (사람 + 질문id, 화풍 무관)
 
@@ -702,7 +707,7 @@ function MulsangInner() {
                 {openOhaeng && (
                   <div style={{ padding: '2px 12px 12px' }}>
                     <div style={{ fontSize: '11px', color: '#b4785a', marginBottom: '8px' }}>넘치는 기운은 풍성하게, 부족한 기운은 그림 속 빛으로 채워요</div>
-                    <OhaengPentagon ohaeng={ohaeng} />
+                    <OhaengPentagon ohaeng={ohaeng} dayElement={dayStem ? MULSANG_STEM_EL[dayStem] : undefined} />
                   </div>
                 )}
               </div>

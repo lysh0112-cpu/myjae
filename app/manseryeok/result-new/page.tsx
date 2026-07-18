@@ -481,7 +481,7 @@ function ResultNewContent() {
           {/* 오각형 그래프(왼쪽) + 십성표(오른쪽) 나란히 */}
           <div style={{display:'flex',gap:'6px',alignItems:'center',marginBottom:'12px'}}>
             <div style={{flex:1.45,minWidth:0}}>
-              <OhaengPentagon ohaeng={ohaeng}/>
+              <OhaengPentagon ohaeng={ohaeng} dayElement={yongsinNew?.dayElement}/>
             </div>
             <div style={{flex:0.55,minWidth:0}}>
               <SipsungTable sipsung={sipsung}/>

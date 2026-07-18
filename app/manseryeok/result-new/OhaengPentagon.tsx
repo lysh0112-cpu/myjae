@@ -21,8 +21,21 @@ import React from 'react'
 const ELEMENT_COLOR: Record<string, string> = {
   목: '#a5d6a7', 화: '#f0a6ae', 토: '#f5cd76', 금: '#cccccc', 수: '#2b2b2b',
 }
-const NAMES: Record<string, string> = {
-  수: '수(비겁)', 목: '목(식상)', 화: '화(재성)', 토: '토(관성)', 금: '금(인성)',
+
+// ── 육친 라벨은 일간(日干) 기준으로 매번 계산해야 한다 ──
+//   ★ 예전엔 '수=비겁' 식으로 하드코딩돼 있어, 일간이 水가 아닌 사람은 전부 틀렸음.
+const GEN: Record<string, string> = { 목: '화', 화: '토', 토: '금', 금: '수', 수: '목' } // A가 B를 생
+const CON: Record<string, string> = { 목: '토', 화: '금', 토: '수', 금: '목', 수: '화' } // A가 B를 극
+
+/** 일간 오행 기준으로 대상 오행의 육친 이름을 구한다 */
+function yukchinOf(dayEl: string | undefined, el: string): string {
+  if (!dayEl) return ''
+  if (el === dayEl) return '비겁'
+  if (GEN[dayEl] === el) return '식상'
+  if (CON[dayEl] === el) return '재성'
+  if (CON[el] === dayEl) return '관성'
+  if (GEN[el] === dayEl) return '인성'
+  return ''
 }
 
 // 오각형 꼭짓점 (viewBox 440 x 445 기준), 원 반지름 52
@@ -67,7 +80,12 @@ function saengArc(from: string, to: string, rad = 0.2) {
   }
 }
 
-export default function OhaengPentagon({ ohaeng }: { ohaeng: { el: string; pct: number }[] }) {
+export default function OhaengPentagon({ ohaeng, dayElement }: { ohaeng: { el: string; pct: number }[]; dayElement?: string }) {
+  // 라벨: 일간을 받으면 '목(비겁)'처럼 육친 병기, 없으면 오행만 표시
+  const label = (el: string) => {
+    const y = yukchinOf(dayElement, el)
+    return y ? `${el}(${y})` : el
+  }
   const pct = (el: string) => {
     const d = ohaeng.find((o) => o.el === el)
     return d ? d.pct : 0
@@ -136,7 +154,7 @@ export default function OhaengPentagon({ ohaeng }: { ohaeng: { el: string; pct: 
             <circle cx={cx} cy={cy} r={R} fill="none" stroke="#cfcabf" strokeWidth="1.4" />
             {/* 기본(어두운) 글자 */}
             <text x={cx} y={cy - 8} textAnchor="middle" fontSize="13.5" fontWeight="700" fill="#333">
-              {NAMES[el]}
+              {label(el)}
             </text>
             <text x={cx} y={cy + 14} textAnchor="middle" fontSize="15" fontWeight="700" fill="#222">
               {p}%
@@ -145,7 +163,7 @@ export default function OhaengPentagon({ ohaeng }: { ohaeng: { el: string; pct: 
             {p > 0 && (
               <g clipPath={`url(#ohp-fill-${el})`}>
                 <text x={cx} y={cy - 8} textAnchor="middle" fontSize="13.5" fontWeight="700" fill="#fff">
-                  {NAMES[el]}
+                  {label(el)}
                 </text>
                 <text x={cx} y={cy + 14} textAnchor="middle" fontSize="15" fontWeight="700" fill="#fff">
                   {p}%
