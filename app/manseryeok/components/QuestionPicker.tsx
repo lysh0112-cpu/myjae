@@ -106,6 +106,11 @@ export default function QuestionPicker({
     () => new Set(groups.length ? [groups[0].category] : [])
   )
 
+  // ── 직접 물어보기 (자유 질문 1개) ──
+  const [directText, setDirectText] = useState('')
+  const [directQ, setDirectQ] = useState<SajuQuestion | null>(null)  // 확정된 직접질문(있으면 잠금)
+  const [directHint, setDirectHint] = useState('')                   // 필터 안내문구
+
   const allIds = useMemo(() => list.map(q => q.id), [list])
 
   function toggleQ(id: string) {
@@ -139,12 +144,42 @@ export default function QuestionPicker({
   }
   function clearAll() { setPicked(new Set()) }
 
-  function submit() {
-    if (picked.size === 0) return
-    onSubmit(list.filter(q => picked.has(q.id)))
+  function confirmDirect() {
+    const text = directText.trim()
+    // 전송 전 가벼운 필터: 너무 짧거나 빈 입력이면 안내만 (비용 0)
+    if (text.length < 5) {
+      setDirectHint('사주에 대해 궁금한 점을 조금 더 자세히 적어주세요.')
+      return
+    }
+    const q: SajuQuestion = {
+      id: 'direct_' + Date.now(),
+      age: ageGroup,
+      ageLabel: ageLabel || '',
+      gender: 'all',
+      category: '직접 질문',
+      sub: '자유 질문',
+      question: text,
+      link: '사용자가 직접 입력한 질문입니다. 이 질문이 사주·운세·명리와 관련되면 이 사람의 사주 명식을 근거로 풀이하세요. 만약 사주와 무관한 질문(일상 잡담, 시사, 계산 등)이라면 억지로 답하지 말고 "사주에 관해 궁금한 점을 물어봐 주세요"라고 정중히 안내하세요.',
+      detail: '사용자가 직접 입력한 자유 질문입니다. 이 질문이 사주·운세·명리와 관련되면 이 사람의 사주 명식과 용신·격국 등을 근거로 깊이 있게 풀이하세요. 사주와 무관한 질문이라면 억지로 답하지 말고 "사주에 관해 궁금한 점을 물어봐 주세요"라고 정중히 안내하세요.',
+      enabled: true,
+    }
+    setDirectQ(q)
+    setDirectHint('')
+  }
+  function cancelDirect() {
+    setDirectQ(null)
+    setDirectText('')
+    setDirectHint('')
   }
 
-  const n = picked.size
+  function submit() {
+    const chosen = list.filter(q => picked.has(q.id))
+    const all = directQ ? [...chosen, directQ] : chosen
+    if (all.length === 0) return
+    onSubmit(all)
+  }
+
+  const n = picked.size + (directQ ? 1 : 0)
 
   // 대분류 카드 하나 렌더 (사주·시간운 공용)
   function renderCategory({ category, items }: { category: string; items: SajuQuestion[] }) {
@@ -215,6 +250,40 @@ export default function QuestionPicker({
             {sec.groups.map(renderCategory)}
           </div>
         ))}
+
+        {/* ── 직접 물어보기 (맨 아래) ── */}
+        <div style={{ marginTop: 6, border: `1px dashed #d8b89a`, borderRadius: 12, background: '#faf3ec', padding: '12px 13px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <span style={{ fontSize: 14 }}>✏️</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#96502e' }}>직접 물어보기</span>
+          </div>
+          {directQ ? (
+            <div>
+              <div style={{ background: '#fff', border: '0.5px solid #e8d5c5', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, color: '#3a2e28', lineHeight: 1.5 }}>
+                {directQ.question}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
+                <span style={{ fontSize: 11, color: '#4a9450', flex: 1 }}>✓ 아래 풀이에 함께 담겨요</span>
+                <span onClick={cancelDirect} style={{ fontSize: 11, color: '#b4785a', border: '0.5px solid #e0c0a8', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', background: '#fff' }}>지우고 다시 쓰기</span>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <textarea
+                value={directText}
+                onChange={(e) => { setDirectText(e.target.value); if (directHint) setDirectHint('') }}
+                placeholder="내 사주에 대해 궁금한 걸 자유롭게 적어보세요"
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 52, background: '#fff', border: '0.5px solid #e8d5c5', borderRadius: 10, padding: '9px 12px', fontSize: 12.5, color: '#3a2e28', resize: 'none', fontFamily: 'inherit', outline: 'none', lineHeight: 1.5 }}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
+                <span style={{ fontSize: 10.5, color: directHint ? '#c8783c' : '#c5a590', flex: 1, lineHeight: 1.5 }}>
+                  {directHint || '위에서 고른 질문들과 함께 풀이돼요.'}
+                </span>
+                <span onClick={confirmDirect} style={{ fontSize: 12, color: '#fff', background: directText.trim() ? '#b46e46' : '#d8bfae', borderRadius: 8, padding: '6px 14px', cursor: directText.trim() ? 'pointer' : 'default', flexShrink: 0 }}>담기</span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 하단 버튼 */}
