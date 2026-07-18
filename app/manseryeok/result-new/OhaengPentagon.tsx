@@ -39,18 +39,20 @@ function yukchinOf(dayEl: string | undefined, el: string): string {
 }
 
 // 오각형 꼭짓점 (viewBox 440 x 445 기준), 원 반지름 52
+//   ★ 배치 순서: 木(맨 위) → 火 → 土 → 金 → 水 시계방향
+//     명리 순서(갑을=목 → 병정=화 → 무기=토 → 경신=금 → 임계=수)와 일치.
 const R = 52
 const NODE: Record<string, { cx: number; cy: number }> = {
-  수: { cx: 220, cy: 92 },
-  목: { cx: 352, cy: 196 },
-  화: { cx: 300, cy: 352 },
-  토: { cx: 140, cy: 352 },
-  금: { cx: 88, cy: 196 },
+  목: { cx: 220, cy: 92 },
+  화: { cx: 352, cy: 196 },
+  토: { cx: 300, cy: 352 },
+  금: { cx: 140, cy: 352 },
+  수: { cx: 88, cy: 196 },
 }
 const CENTER = { x: 220, y: 237.6 }   // 다섯 원점 평균(곡선 방향 기준)
 const GUK_CENTER_Y = 232               // 별 교차점(剋 글자 위치)
 
-const SAENG = ['수', '목', '화', '토', '금']
+const SAENG = ['목', '화', '토', '금', '수']
 const GUK: [string, string][] = [
   ['수', '화'], ['목', '토'], ['화', '금'], ['토', '수'], ['금', '목'],
 ]
@@ -151,7 +153,10 @@ export default function OhaengPentagon({ ohaeng, dayElement }: { ohaeng: { el: s
                   fill={ELEMENT_COLOR[el]} clipPath={`url(#ohp-clip-${el})`} />
               </>
             )}
-            <circle cx={cx} cy={cy} r={R} fill="none" stroke="#cfcabf" strokeWidth="1.4" />
+            {/* 내 일간 오행이면 굵은 갈색 테두리로 강조 ("여기가 나") */}
+            <circle cx={cx} cy={cy} r={R} fill="none"
+              stroke={el === dayElement ? '#b46e46' : '#cfcabf'}
+              strokeWidth={el === dayElement ? 4 : 1.4} />
             {/* 기본(어두운) 글자 */}
             <text x={cx} y={cy - 8} textAnchor="middle" fontSize="13.5" fontWeight="700" fill="#333">
               {label(el)}
