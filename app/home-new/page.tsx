@@ -97,6 +97,22 @@ const SLIDES = [
     sparkles: ['#ffe0a0', '#fff', '#ffd97a'],
     href: '/home-new',
   },
+  {
+    tag: '타로', title: '남이 봐주는 타로는 그만',
+    sub: '이제 내 손으로 직접 뽑아요', link: '타로 보러가기 →',
+    img: '/banner/slide6.jpg', video: '',
+    accent: '#d8b4ff', sub2: '#e8dcf5',
+    sparkles: ['#d8b4ff', '#ffd97a', '#fff'],
+    href: '/tarot',
+  },
+  {
+    tag: '감정 기록부', title: '명리로 보는 나,\n감정으로 쓰는 나',
+    sub: '사주와 마음이 함께 쌓여요', link: '기록하러 가기 →',
+    img: '/banner/slide7.jpg', video: '',
+    accent: '#ffc9a0', sub2: '#f0e0d5',
+    sparkles: ['#ffc9a0', '#ffd97a', '#fff'],
+    href: '/mypage-new',
+  },
 ]
 
 
