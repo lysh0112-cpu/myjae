@@ -16,6 +16,7 @@ import AiAnalysisNew from "./components/AiAnalysisNew";
 import ConsultButton from "@/app/components/common/ConsultButton";
 import OhaengPentagon from "./OhaengPentagon";
 import HapchungView from "./HapchungView";
+import ExpertDetail from "./ExpertDetail";
 import SipsungTable from "./SipsungTable";
 import UnseFlow from "./UnseFlow";
 import SingangTable from "./SingangTable";
@@ -429,12 +430,12 @@ function ResultNewContent() {
 
       <div style={{padding:'10px'}}>
 
-        {/* 전문가 모드: 합충 반영 토글 (?pro=1일 때만) */}
+        {/* 전문가 모드: 전문가 상세 토글 (?pro=1일 때만) */}
         {isPro && (
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:'#fff3e9',border:'0.5px solid #e8d5c5',borderRadius:'12px',padding:'11px 14px',marginBottom:'10px'}}>
             <div>
-              <span style={{fontSize:'12px',fontWeight:700,color:'#96502e'}}>합충 반영</span>
-              <span style={{fontSize:'10px',color:'#c5a590',marginLeft:'8px'}}>{hapchungOn?'합·충을 반영해 계산 중':'끄면 기본 계산'}</span>
+              <span style={{fontSize:'12px',fontWeight:700,color:'#96502e'}}>전문가 상세</span>
+              <span style={{fontSize:'10px',color:'#c5a590',marginLeft:'8px'}}>{hapchungOn?'지장간·납음·신살·형충회합 표시 중':'켜면 상세 정보가 모두 나와요'}</span>
             </div>
             <div onClick={()=>setHapchungOn(v=>!v)}
               style={{width:'42px',height:'24px',borderRadius:'12px',background:hapchungOn?'#b46e46':'#ddd',position:'relative',cursor:'pointer',transition:'background 0.15s',flexShrink:0}}>
@@ -450,7 +451,19 @@ function ResultNewContent() {
           </div>
         </Section>
 
-        {/* ③ 오행과 십성 분석 */}
+        {/* ①-2 전문가 상세 (전문가 모드 + 토글 ON) — 지장간·납음·운성/신살 2기준·귀인·공망·형충회합 */}
+        {isPro && hapchungOn && saju.length>0 && (
+          <Section title="전문가 상세" collapsible={!chartOnly} open={openSection==='expert'} onToggle={()=>toggleSection('expert')}>
+            <ExpertDetail
+              saju={saju}
+              dayStem={dayStem}
+              yearStem={yearStem}
+              yeonjji={yeonjji}
+              iljji={iljji}
+              monthBranch={saju.find(p=>p.pillar==='월주')?.branch || ''}
+            />
+          </Section>
+        )}
         <Section title="오행과 십성 분석" collapsible={!chartOnly} open={openSection==='ohaeng'} onToggle={()=>toggleSection('ohaeng')}>
           {/* 오각형 그래프(왼쪽) + 십성표(오른쪽) 나란히 */}
           <div style={{display:'flex',gap:'6px',alignItems:'center',marginBottom:'12px'}}>
