@@ -258,7 +258,7 @@ function TarotInner() {
           if (step === 'draw') { setStep('spread'); return }
           if (step === 'spread') { setStep('deck'); return }
           if (step === 'deck') { setStep('question'); return }
-          router.push('/')
+          router.push(searchParams.get('from') === 'mypage' ? '/mypage-new' : '/')
         }} style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
         <div style={{ fontSize: 15, fontWeight: 500, color: ink }}>타로 카드 리딩</div>
       </div>

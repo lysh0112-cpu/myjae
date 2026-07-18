@@ -537,7 +537,7 @@ export default function MyPageNew() {
         <EmotionPicker />
 
         <div style={{ display: 'flex', gap: 9, marginBottom: 11 }}>
-          <div onClick={() => router.push('/tarot')}
+          <div onClick={() => router.push('/tarot?from=mypage')}
             style={{ flex: 1, background: '#f3eefb', border: '0.5px solid #ddd0f0', borderRadius: 14, padding: 12, display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
             <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#e6dbf7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🔮</div>
             <div style={{ minWidth: 0 }}>
