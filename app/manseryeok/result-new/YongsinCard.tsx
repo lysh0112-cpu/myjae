@@ -13,6 +13,33 @@ import type { YongsinNewResult, Ohaeng } from '@/lib/saju/yongsinNew'
  *   <YongsinCard result={calcYongsinNew(saju, dayStem)} />
  */
 
+/* 격국별 원리 이름 + 한 줄 설명 (소스 상신표 기반) */
+const GYEOK_PRINCIPLE: Record<string, { name: string; line: string }> = {
+  비견격: { name: '건록용관', line: '관성이 있어야 능력을 제대로 펼쳐요' },
+  건록격: { name: '건록용관', line: '관성이 있어야 능력을 제대로 펼쳐요' },
+  겁재격: { name: '양인용살', line: '관성이 강한 기운을 다스려 줘요' },
+  양인격: { name: '양인용살', line: '관성이 강한 기운을 다스려 줘요' },
+  식신격: { name: '식신생재', line: '내 재능이 재물로 이어져요' },
+  상관격: { name: '상관패인', line: '인성이 넘치는 재주를 다잡아 줘요' },
+  편재격: { name: '식상생재', line: '재능을 써서 재물을 키워요' },
+  정재격: { name: '식상생재', line: '재능을 써서 재물을 키워요' },
+  편관격: { name: '식신제살', line: '식상이 거친 기운을 눌러 줘요' },
+  정관격: { name: '관인상생', line: '관이 인을 살려 나를 키워요' },
+  편인격: { name: '관인상생', line: '관이 인을 살려 나를 키워요' },
+  정인격: { name: '관인상생', line: '관이 인을 살려 나를 키워요' },
+}
+/* 육친 이름 (격국용신 표시용) */
+const YUKCHIN_OF_EL = (dayEl: string, el: string): string => {
+  const GEN: Record<string, string> = { 목: '화', 화: '토', 토: '금', 금: '수', 수: '목' }
+  const CON: Record<string, string> = { 목: '토', 화: '금', 토: '수', 금: '목', 수: '화' }
+  if (el === dayEl) return '비겁'
+  if (GEN[dayEl] === el) return '식상'
+  if (CON[dayEl] === el) return '재성'
+  if (CON[el] === dayEl) return '관성'
+  if (GEN[el] === dayEl) return '인성'
+  return ''
+}
+
 interface Props {
   result: YongsinNewResult
   /** 사주 네 기둥 — 조후용신이 원국에 있는지 세기 위해 사용 */
@@ -56,18 +83,21 @@ export default function YongsinCard({ result, saju }: Props) {
 
   const { johu, eokbu, gyeokguk } = result
 
-  // ── 조후용신이 원국에 실제로 있는지 (천간·지지 모두 확인) ──
-  const johuFound: string[] = (() => {
-    if (!johu.element || !saju?.length) return []
-    const stems = EL_STEMS[johu.element] ?? []
-    const branches = EL_BRANCHES[johu.element] ?? []
+  // ── 특정 오행이 원국(천간·지지)에 있는지 찾기 — 조후·격국 공용 ──
+  const elFoundInSaju = (el: string | null): string[] => {
+    if (!el || !saju?.length) return []
+    const stems = EL_STEMS[el] ?? []
+    const branches = EL_BRANCHES[el] ?? []
     const found: string[] = []
     for (const p of saju) {
-      if (stems.includes(p.stem)) found.push(`${p.stem}${EL_HAN[johu.element]}`)
-      if (branches.includes(p.branch)) found.push(`${p.branch}${EL_HAN[johu.element]}`)
+      if (stems.includes(p.stem)) found.push(`${p.stem}${EL_HAN[el]}`)
+      if (branches.includes(p.branch)) found.push(`${p.branch}${EL_HAN[el]}`)
     }
     return found
-  })()
+  }
+
+  // ── 조후용신이 원국에 실제로 있는지 ──
+  const johuFound: string[] = elFoundInSaju(johu.element)
 
   // 한 칸 렌더 (오행 or 없음)
   const cell = (el: Ohaeng | null, role: string, big: boolean, isYong: boolean) => {
@@ -123,6 +153,43 @@ export default function YongsinCard({ result, saju }: Props) {
     )
   }
 
+  // 격국용신 전용 칸 — 오행(육친) + 원리 설명 + 원국 존재 여부
+  //   연재쌤 지시: "金(인성)" 표기 + 관인상생 같은 원리를 함께 보여줄 것
+  const gyeokCell = () => {
+    const el = gyeokguk.element
+    if (!el) {
+      return (
+        <div style={{ background: '#f7f4f0', border: '0.5px solid #e5dcd2', borderRadius: 10, padding: '14px 6px', textAlign: 'center' }}>
+          <div style={{ fontSize: 15, color: '#8a7360', fontWeight: 600 }}>없음</div>
+        </div>
+      )
+    }
+    const yukchin = YUKCHIN_OF_EL(result.dayElement, el)
+    const pr = GYEOK_PRINCIPLE[gyeokguk.name]
+    const found = elFoundInSaju(el)
+    const has = found.length > 0
+    const isSu = el === '수'
+    return (
+      <div onClick={() => openCard('용신', el)}
+        style={{
+          background: EL_BG[el], border: `1.5px solid ${EL_BD_STRONG[el]}`,
+          borderRadius: 10, padding: '12px 6px', textAlign: 'center', cursor: 'pointer',
+        }}>
+        <div style={{ fontSize: 22, fontWeight: 700, color: isSu ? '#fff' : EL_SUB[el], lineHeight: 1.2 }}>
+          {EL_HAN[el]}({yukchin})
+        </div>
+        {pr && (
+          <div style={{ fontSize: 11, color: isSu ? '#ddd' : '#96502e', marginTop: 5, fontWeight: 600 }}>
+            {pr.name} — {pr.line}
+          </div>
+        )}
+        <div style={{ fontSize: 10.5, marginTop: 3, fontWeight: 600, color: has ? '#3b6d11' : '#c0705a' }}>
+          {has ? `✓ 원국에 ${found.join('·')} ${found.length}개 있음` : '원국에 없음'}
+        </div>
+      </div>
+    )
+  }
+
   const labelBox = (title: string, sub: string) => (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#fff3e9', border: '0.5px solid #e8d5c5', borderRadius: 9, minWidth: 52, padding: '6px 0' }}>
       <span style={{ fontSize: 11, fontWeight: 700, color: '#c8783c' }}>{title}</span>
@@ -164,7 +231,7 @@ export default function YongsinCard({ result, saju }: Props) {
       {/* ③ 격국용신 (용신 1개) */}
       <div style={{ display: 'flex', gap: 7, alignItems: 'stretch', marginBottom: 12 }}>
         {labelBox('격국용신', gyeokguk.name || '직업·명예')}
-        <div style={{ flex: 1 }}>{cell(gyeokguk.element, '용신', true, true)}</div>
+        <div style={{ flex: 1 }}>{gyeokCell()}</div>
       </div>
 
       {/* 안내 문구 */}
