@@ -75,7 +75,7 @@ const SLIDES = [
   },
   {
     tag: '내사주그림', title: '어려운 내 사주,\n한 장의 그림으로',
-    sub: '어려운 명리가 한눈에 들어와요', link: '그림 보러가기 →',
+    sub: '어려운 사주가 한눈에 들어와요', link: '그림 보러가기 →',
     img: '/banner/slide3.jpg', video: '',
     accent: '#ffd97a', sub2: '#e8ddc8',
     sparkles: ['#ff6a4a', '#ffd23a', '#4a9aff', '#5ad07a', '#fff'],
