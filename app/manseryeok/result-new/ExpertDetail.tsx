@@ -16,9 +16,11 @@
  * ※ 복성귀인·홍염살·현침살은 조견표 확정 후 추가 예정.
  */
 
+import { useState } from 'react'
 import { getUnsung, getSinsal, getGongmang, unsungColor, SINSAL_HIGHLIGHT } from '@/lib/saju'
 import { getGwiinForBranch, getGwiinForStem } from '@/lib/saju/gwiin'
 import { nabeum } from '@/lib/saju/sajuDetail'
+import TermModal from './TermModal'
 
 interface Pillar { pillar: string; stem: string; branch: string }
 
@@ -105,6 +107,22 @@ function relationOf(a: string, b: string): string[] {
   return Array.from(new Set(out))
 }
 
+/* ── 지지 오행 색 (명카페 규칙: 수=검정 배경 + 흰 글씨) ── */
+const BRANCH_BG: Record<string, string> = {
+  寅: '#e8f5e9', 卯: '#e8f5e9',                 // 목
+  巳: '#fdeaea', 午: '#fdeaea',                 // 화
+  辰: '#fef6d8', 戌: '#fef6d8', 丑: '#fef6d8', 未: '#fef6d8', // 토
+  申: '#f0f0f0', 酉: '#f0f0f0',                 // 금
+  亥: '#2b2b2b', 子: '#2b2b2b',                 // 수 (검정)
+}
+const BRANCH_FG: Record<string, string> = {
+  寅: '#2e7d32', 卯: '#2e7d32',
+  巳: '#c62828', 午: '#c62828',
+  辰: '#f57f17', 戌: '#f57f17', 丑: '#f57f17', 未: '#f57f17',
+  申: '#616161', 酉: '#616161',
+  亥: '#ffffff', 子: '#ffffff',                 // 수 = 흰 글씨
+}
+
 /* ── 공통 스타일 ── */
 const card: React.CSSProperties = {
   background: '#fff', border: '0.5px solid #f0e0d5', borderRadius: 12,
@@ -146,6 +164,10 @@ export default function ExpertDetail({
   iljji: string
   monthBranch: string
 }) {
+  // 용어 모달 (Hooks 규칙: early return보다 먼저 선언)
+  const [term, setTerm] = useState<string | null>(null)
+  const open = (v: string) => v && v !== '–' && setTerm(v)
+
   if (!saju.length || !dayStem) return null
 
   // 공망 — 일주 기준 / 년주 기준
@@ -169,7 +191,9 @@ export default function ExpertDetail({
     <div>
       {/* ① 지장간 + 십성 */}
       <div style={card}>
-        <div style={ttl}>📋 지장간 · 십성</div>
+        <div style={ttl} onClick={() => open('지장간')} title="지장간 설명 보기">
+          <span style={{ cursor: 'pointer' }}>📋 지장간 · 십성 <span style={{ fontSize: 9, color: '#c5a590' }}>ⓘ</span></span>
+        </div>
         <table style={tb}>
           <tbody>
             <tr>
@@ -178,7 +202,7 @@ export default function ExpertDetail({
             </tr>
             {['여기', '중기', '본기'].map((row, ri) => (
               <tr key={row}>
-                <td style={rl}>{row}</td>
+                <td style={{ ...rl, cursor: 'pointer' }} onClick={() => open(row)}>{row}</td>
                 {saju.map((p, i) => {
                   const hidden = JIJANGAN[p.branch] ?? []
                   // 여기=0, 중기=(3개일 때만 1), 본기=마지막
@@ -196,7 +220,7 @@ export default function ExpertDetail({
                       background: isBongi ? '#fdf9f5' : undefined,
                     }}>
                       <span style={{ color: '#3a2e28' }}>{g}</span>{' '}
-                      <span style={{ color: SS_COLOR[ss] || '#8a7360', fontSize: 9.5 }}>{ss}</span>
+                      <span onClick={() => open(ss)} style={{ color: SS_COLOR[ss] || '#8a7360', fontSize: 9.5, cursor: 'pointer' }}>{ss}</span>
                     </td>
                   )
                 })}
@@ -219,14 +243,14 @@ export default function ExpertDetail({
               <td style={rl}>일간 {dayStem}</td>
               {saju.map((p, i) => {
                 const u = getUnsung(dayStem, p.branch)
-                return <td key={i} style={{ ...td, color: unsungColor(u) || '#3a2e28', fontWeight: 600 }}>{u || '–'}</td>
+                return <td key={i} onClick={() => open(u)} style={{ ...td, color: unsungColor(u) || '#3a2e28', fontWeight: 600, cursor: u ? 'pointer' : 'default' }}>{u || '–'}</td>
               })}
             </tr>
             <tr>
               <td style={rl}>년간 {yearStem}</td>
               {saju.map((p, i) => {
                 const u = yearStem ? getUnsung(yearStem, p.branch) : ''
-                return <td key={i} style={{ ...td, color: unsungColor(u) || '#8a7360' }}>{u || '–'}</td>
+                return <td key={i} onClick={() => open(u)} style={{ ...td, color: unsungColor(u) || '#8a7360', cursor: u ? 'pointer' : 'default' }}>{u || '–'}</td>
               })}
             </tr>
           </tbody>
@@ -246,14 +270,14 @@ export default function ExpertDetail({
               <td style={rl}>년지 {yeonjji}</td>
               {saju.map((p, i) => {
                 const s = getSinsal(yeonjji, p.branch)
-                return <td key={i} style={{ ...td, color: SINSAL_HIGHLIGHT[s] || '#8a7360', fontWeight: 600 }}>{s || '–'}</td>
+                return <td key={i} onClick={() => open(s)} style={{ ...td, color: SINSAL_HIGHLIGHT[s] || '#8a7360', fontWeight: 600, cursor: s ? 'pointer' : 'default' }}>{s || '–'}</td>
               })}
             </tr>
             <tr>
               <td style={rl}>일지 {iljji}</td>
               {saju.map((p, i) => {
                 const s = getSinsal(iljji, p.branch)
-                return <td key={i} style={{ ...td, color: SINSAL_HIGHLIGHT[s] || '#8a7360' }}>{s || '–'}</td>
+                return <td key={i} onClick={() => open(s)} style={{ ...td, color: SINSAL_HIGHLIGHT[s] || '#8a7360', cursor: s ? 'pointer' : 'default' }}>{s || '–'}</td>
               })}
             </tr>
           </tbody>
@@ -275,7 +299,12 @@ export default function ExpertDetail({
                 const g = getGwiinForStem(monthBranch, p.stem)
                 return (
                   <td key={i} style={{ ...td, color: '#7c5aaa', fontSize: 9.5 }}>
-                    {g.length ? g.map(x => x.replace('귀인', '')).join('·') : '–'}
+                    {g.length ? g.map((x, k) => (
+                      <span key={x}>
+                        {k > 0 && '·'}
+                        <span onClick={() => open(x)} style={{ cursor: 'pointer' }}>{x.replace('귀인', '')}</span>
+                      </span>
+                    )) : '–'}
                   </td>
                 )
               })}
@@ -286,7 +315,12 @@ export default function ExpertDetail({
                 const g = getGwiinForBranch(dayStem, monthBranch, p.branch)
                 return (
                   <td key={i} style={{ ...td, color: '#c8783c', fontSize: 9.5 }}>
-                    {g.length ? g.map(x => x.replace('귀인', '')).join('·') : '–'}
+                    {g.length ? g.map((x, k) => (
+                      <span key={x}>
+                        {k > 0 && '·'}
+                        <span onClick={() => open(x)} style={{ cursor: 'pointer' }}>{x.replace('귀인', '')}</span>
+                      </span>
+                    )) : '–'}
                   </td>
                 )
               })}
@@ -297,7 +331,9 @@ export default function ExpertDetail({
 
       {/* ⑤ 납음오행 */}
       <div style={card}>
-        <div style={ttl}>🎵 납음오행</div>
+        <div style={ttl} onClick={() => open('납음')} title="납음 설명 보기">
+          <span style={{ cursor: 'pointer' }}>🎵 납음오행 <span style={{ fontSize: 9, color: '#c5a590' }}>ⓘ</span></span>
+        </div>
         <table style={tb}>
           <tbody>
             <tr>
@@ -314,9 +350,79 @@ export default function ExpertDetail({
         </table>
       </div>
 
-      {/* ⑥ 형충회합 격자표 + 목록 */}
+      {/* ⑥ 형충회합 — 관계선 그림 + 격자표 + 목록 */}
       <div style={card}>
         <div style={ttl}>🔗 형충회합</div>
+
+        {/* (1) 관계선 그림 — 사각 배치 */}
+        <div style={{ marginBottom: 10 }}>
+          <svg width="100%" viewBox="0 0 380 260" xmlns="http://www.w3.org/2000/svg">
+            {/* 관계선 (박스보다 먼저 그려 뒤에 깔리게) */}
+            {(() => {
+              // 사각 배치 좌표: 시(좌상) 일(우상) 월(좌하) 년(우하)
+              const POS = [
+                { x: 105, y: 70 },   // saju[0] 시주
+                { x: 275, y: 70 },   // saju[1] 일주
+                { x: 105, y: 190 },  // saju[2] 월주
+                { x: 275, y: 190 },  // saju[3] 년주
+              ]
+              const lines: React.ReactNode[] = []
+              for (let i = 0; i < saju.length && i < 4; i++) {
+                for (let j = i + 1; j < saju.length && j < 4; j++) {
+                  const rels = relationOf(saju[i].branch, saju[j].branch)
+                  if (!rels.length) continue
+                  const a = POS[i], b = POS[j]
+                  const isBad = rels.some(r => r === '충' || r === '원진')
+                  const color = isBad ? (rels.includes('충') ? '#c62828' : '#993556')
+                    : (rels.includes('삼합') ? '#2e7d32' : rels.includes('방합') ? '#96502e' : '#3c82a0')
+                  const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
+                  const label = rels.join('·')
+                  const w = label.length * 9 + 14
+                  lines.push(
+                    <g key={`${i}-${j}`}>
+                      <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                        stroke={color} strokeWidth={1.8}
+                        strokeDasharray={isBad ? '4 3' : undefined} />
+                      <rect x={mx - w / 2} y={my - 8} width={w} height={16} rx={8}
+                        fill={isBad ? (rels.includes('충') ? '#fdeaea' : '#f7e6ee')
+                          : (rels.includes('삼합') ? '#e8f5e9' : rels.includes('방합') ? '#f3ece2' : '#e8f0fb')} />
+                      <text x={mx} y={my} textAnchor="middle" fontSize={9}
+                        fill={color} fontWeight={600} dominantBaseline="central">{label}</text>
+                    </g>
+                  )
+                }
+              }
+              return lines
+            })()}
+
+            {/* 기둥 박스 */}
+            {saju.slice(0, 4).map((p, i) => {
+              const POS = [
+                { x: 105, y: 70 }, { x: 275, y: 70 },
+                { x: 105, y: 190 }, { x: 275, y: 190 },
+              ]
+              const c = POS[i]
+              const bg = BRANCH_BG[p.branch] ?? '#f5f0ea'
+              const fg = BRANCH_FG[p.branch] ?? '#3a2e28'
+              return (
+                <g key={i}>
+                  <rect x={c.x - 26} y={c.y - 26} width={52} height={52} rx={9}
+                    fill={bg} stroke="#e8d5c5" strokeWidth={0.5} />
+                  <text x={c.x} y={c.y - 4} textAnchor="middle" fontSize={19}
+                    fill={fg} fontWeight={600}>{p.branch}</text>
+                  <text x={c.x} y={c.y + 16} textAnchor="middle" fontSize={9}
+                    fill={fg === '#fff' ? '#ddd' : '#b09079'}>{shortP(p.pillar)}</text>
+                </g>
+              )
+            })}
+          </svg>
+          <div style={{ fontSize: 9.5, color: '#8a7360', textAlign: 'center', lineHeight: 1.8 }}>
+            <span style={{ color: '#2e7d32' }}>━ 합(실선)</span>{'  '}
+            <span style={{ color: '#c62828' }}>┅ 충·원진(점선)</span>
+          </div>
+        </div>
+
+        {/* (2) 격자표 */}
         <table style={{ ...tb, marginBottom: 9 }}>
           <tbody>
             <tr>
@@ -340,7 +446,11 @@ export default function ExpertDetail({
                   return (
                     <td key={ci} style={td}>
                       {rels.length
-                        ? rels.map(r => <Badge key={r} kind={r} />)
+                        ? rels.map(r => (
+                          <span key={r} onClick={() => open(r)} style={{ cursor: 'pointer' }}>
+                            <Badge kind={r} />
+                          </span>
+                        ))
                         : <span style={{ color: '#ddd0c4' }}>–</span>}
                     </td>
                   )
@@ -350,7 +460,7 @@ export default function ExpertDetail({
           </tbody>
         </table>
 
-        {/* 성립한 관계만 목록으로 */}
+        {/* (3) 성립한 관계만 목록으로 */}
         <div style={{
           background: '#fdf9f5', border: '0.5px solid #f5ece2', borderRadius: 10,
           padding: '8px 11px', fontSize: 10.5, lineHeight: 1.9,
@@ -360,7 +470,13 @@ export default function ExpertDetail({
           ) : (
             pairs.map((pr, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ flexShrink: 0 }}>{pr.rels.map(r => <Badge key={r} kind={r} />)}</span>
+                <span style={{ flexShrink: 0 }}>
+                  {pr.rels.map(r => (
+                    <span key={r} onClick={() => open(r)} style={{ cursor: 'pointer' }}>
+                      <Badge kind={r} />
+                    </span>
+                  ))}
+                </span>
                 <span style={{ color: '#3a2e28', fontWeight: 600 }}>
                   {shortP(pr.a.pillar)}{pr.a.branch} · {shortP(pr.b.pillar)}{pr.b.branch}
                 </span>
@@ -372,7 +488,9 @@ export default function ExpertDetail({
 
       {/* ⑦ 공망 두 기준 */}
       <div style={card}>
-        <div style={ttl}>🕳 공망 — 두 기준</div>
+        <div style={ttl} onClick={() => open('공망')} title="공망 설명 보기">
+          <span style={{ cursor: 'pointer' }}>🕳 공망 — 두 기준 <span style={{ fontSize: 9, color: '#c5a590' }}>ⓘ</span></span>
+        </div>
         <div style={{ fontSize: 11, color: '#6a5848', lineHeight: 2 }}>
           <div>
             <span style={{ color: '#c5a590', fontSize: 10 }}>일주 기준</span>{' '}
@@ -384,6 +502,7 @@ export default function ExpertDetail({
           </div>
         </div>
       </div>
+      <TermModal term={term} onClose={() => setTerm(null)} />
     </div>
   )
 }
