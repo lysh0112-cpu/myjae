@@ -468,7 +468,7 @@ function ResultNewContent() {
         <Section title="오행과 십성 분석" collapsible={!chartOnly} open={openSection==='ohaeng'} onToggle={()=>toggleSection('ohaeng')}>
           {/* 계산 기준 안내 — 합충 반영 그래프와 숫자가 다른 이유 */}
           <div style={{fontSize:'10.5px',color:'#b4785a',background:'#faf3ec',border:'0.5px solid #f0e0d5',borderRadius:'8px',padding:'7px 10px',marginBottom:'10px',lineHeight:1.6}}>
-            진로·적성·성격은 <b style={{color:'#96502e'}}>계절 치환</b>으로, 건강·궁합·용신은 오행 그대로 봐요.
+            진로·적성·성격은 <b style={{color:'#96502e'}}>계절 치환</b>으로, 건강·궁합은 오행 그대로 봐요.
             {(() => {
               const note = saju.length>0 && monthBranchForNote
                 ? seasonConvertNote(monthBranchForNote, solarMonth, solarDay, hourBranch ?? '')
