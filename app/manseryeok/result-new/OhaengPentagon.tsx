@@ -21,6 +21,10 @@ import React from 'react'
 const ELEMENT_COLOR: Record<string, string> = {
   목: '#a5d6a7', 화: '#f0a6ae', 토: '#f5cd76', 금: '#cccccc', 수: '#2b2b2b',
 }
+// 원 바깥 한자 라벨용 — 진한 오행색(명카페 규칙)이라야 또렷하게 보인다
+const LABEL_COLOR: Record<string, string> = {
+  목: '#2e7d32', 화: '#c62828', 토: '#f57f17', 금: '#616161', 수: '#2b2b2b',
+}
 
 // ── 육친 라벨은 일간(日干) 기준으로 매번 계산해야 한다 ──
 //   ★ 예전엔 '수=비겁' 식으로 하드코딩돼 있어, 일간이 水가 아닌 사람은 전부 틀렸음.
@@ -190,7 +194,7 @@ export default function OhaengPentagon({ ohaeng, dayElement }: { ohaeng: { el: s
         const ly = cy + (dy / len) * off + 5
         const HANGUL: Record<string, string> = { 목: '木', 화: '火', 토: '土', 금: '金', 수: '水' }
         return (
-          <text key={`lbl-${el}`} x={lx} y={ly} textAnchor="middle" fontSize="12" fontWeight="700" fill={ELEMENT_COLOR[el]}>
+          <text key={`lbl-${el}`} x={lx} y={ly} textAnchor="middle" fontSize="26" fontWeight="900" fill={LABEL_COLOR[el]}>
             {HANGUL[el]}
           </text>
         )
