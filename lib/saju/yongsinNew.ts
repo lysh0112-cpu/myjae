@@ -88,30 +88,17 @@ const WINTER = ['亥', '子', '丑']
 const SUMMER = ['巳', '午', '未']
 
 // ── ① 조후용신 (용신 1개만) ─────────────────────────────────────────────────
+//   ★ 소스 원문(『심산 명리비법 적성노트』151쪽):
+//     "조후용신: 건강, 궁합 판단: 巳午未月 여름생(水), 亥子丑月 겨울생(火)"
+//   → 신강약과 무관하게 계절만 본다. (극신약 유예·가교오행은 소스에 없어 제거)
+//   ※ 소스에 "90%는 이 공식, 10%는 예외"라 적혀 있으나 예외 규칙은 명시돼 있지 않음.
 export interface JohuResult { element: Ohaeng | null; note: string }
-function calcJohu(monthBranch: string, dayEl: Ohaeng, x: number, score: Record<Ohaeng, number>): JohuResult {
+function calcJohu(monthBranch: string, _dayEl: Ohaeng, _x: number, _score: Record<Ohaeng, number>): JohuResult {
   const isWinter = WINTER.includes(monthBranch)
   const isSummer = SUMMER.includes(monthBranch)
-  if (!isWinter && !isSummer) return { element: null, note: '봄·가을생은 조후가 온화해요' }
-
-  const r = relOf(dayEl)
-  const status = judgeStrength(x)
-
-  // 극신약: 조후 유예 → 인성(생명선). 단 토다 등은 억부(병약)에서 다룸
-  if (status === '극신약') {
-    return { element: r.insung, note: '기운이 약해 먼저 나를 돕는 기운이 필요해요' }
-  }
-  // 겨울·여름 신약: 가교오행 (겨울 木 / 여름 金)
-  if (status === '신약') {
-    // 겨울신약이라도 조후오행이 인성/비겁으로 튼튼하면 조후 직행 (딸 케이스)
-    const johuEl: Ohaeng = isWinter ? '화' : '수'
-    if (score[johuEl] >= 15 && (r.insung === johuEl || r.bigeop === johuEl)) {
-      return { element: johuEl, note: isWinter ? '겨울 태생이라 따뜻한 기운이 필요해요' : '여름 태생이라 시원한 기운이 필요해요' }
-    }
-    return { element: isWinter ? '목' : '금', note: '억부와 조후를 잇는 다리 역할의 기운이에요' }
-  }
-  // 중화·신강: 조후우선
-  return { element: isWinter ? '화' : '수', note: isWinter ? '겨울 태생이라 따뜻한 기운이 필요해요' : '여름 태생이라 시원한 기운이 필요해요' }
+  if (isWinter) return { element: '화', note: '겨울 태생이라 따뜻한 기운이 필요해요' }
+  if (isSummer) return { element: '수', note: '여름 태생이라 시원한 기운이 필요해요' }
+  return { element: null, note: '봄·가을생은 조후가 온화해요' }
 }
 
 // ── ② 억부용신 + 5신 ────────────────────────────────────────────────────────
@@ -143,13 +130,11 @@ function calcEokbu(dayEl: Ohaeng, x: number, score: Record<Ohaeng, number>): Eok
   }
 
   // 5신
-  let heesin = saengOf(yongsin)    // 희신 = 용신을 생
-  // 과다 강등: 희신후보 ≥ 30 OR (신강48↑ & ≥25) → 식상으로 대체
-  if (score[heesin] >= 30 || (x >= 48 && score[heesin] >= 25)) {
-    heesin = GEN[yongsin]          // 용신이 생하는 식상으로 대체
-  }
-  const gisin = geukOf(yongsin)    // 기신 = 용신을 극
-  const gusin = saengOf(gisin)     // 구신 = 기신을 생 (연재쌤 완성표 방식)
+  //   ★ 소스 정의: 희신=용신을 생 / 기신=용신을 극 / 구신="희신을 해하는 오행"
+  //   (희신이 과다할 때 식상으로 대체하는 규칙은 소스에 없어 제거함)
+  const heesin = saengOf(yongsin)   // 희신 = 용신을 생
+  const gisin = geukOf(yongsin)     // 기신 = 용신을 극
+  const gusin = geukOf(heesin)      // 구신 = 희신을 극 (소스 원문)
   const hansin = ALL.find(e => ![yongsin, heesin, gisin, gusin].includes(e))!
 
   return { yongsin, heesin, gisin, gusin, hansin, note }
@@ -180,7 +165,7 @@ function sipsinOf(dayStem: string, other: string): string {
 type Yukchin = '비겁' | '식상' | '재성' | '관성' | '인성'
 const GYEOK_SANGSIN: Record<string, Yukchin> = {
   비견격: '관성', 겁재격: '관성', 건록격: '관성', 양인격: '관성',
-  식신격: '재성', 상관격: '재성',      // 상관: 재 또는 인 → 대표 재성
+  식신격: '재성', 상관격: '인성',      // 식신생재 / 상관패인(소스: 상관격→인성)
   편재격: '식상', 정재격: '식상',
   편관격: '식상', 정관격: '인성',      // 편관: 식상(식신제살) / 정관: 인성(관인상생)
   편인격: '관성', 정인격: '관성',      // 관인상생
