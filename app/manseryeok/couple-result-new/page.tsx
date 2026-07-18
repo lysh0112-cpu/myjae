@@ -90,6 +90,25 @@ function CoupleResultInner() {
   )
   const [submitted, setSubmitted] = useState<string[] | null>(recordId ? [] : null)
 
+  // ── 직접 물어보기 (자유 질문 1개) ──
+  const [directText, setDirectText] = useState('')
+  const [directQ, setDirectQ] = useState<SajuQuestion | null>(null)
+  const [directHint, setDirectHint] = useState('')
+  function confirmDirect() {
+    const text = directText.trim()
+    if (text.length < 5) { setDirectHint('궁합에 대해 궁금한 점을 조금 더 자세히 적어주세요.'); return }
+    setDirectQ({
+      id: 'direct_' + Date.now(),
+      age: '30s', ageLabel: '', gender: 'all',
+      category: '직접 질문', sub: '자유 질문', question: text,
+      link: '사용자가 직접 입력한 질문입니다. 이 질문이 두 사람의 궁합·사주·명리와 관련되면 두 사람의 사주 명식을 근거로 풀이하세요. 사주와 무관한 질문이라면 억지로 답하지 말고 "궁합에 관해 궁금한 점을 물어봐 주세요"라고 정중히 안내하세요.',
+      detail: '사용자가 직접 입력한 자유 질문입니다. 이 질문이 두 사람의 궁합·사주·명리와 관련되면 두 사람의 사주 명식을 근거로 깊이 있게 풀이하세요. 사주와 무관한 질문이라면 억지로 답하지 말고 "궁합에 관해 궁금한 점을 물어봐 주세요"라고 정중히 안내하세요.',
+      enabled: true,
+    })
+    setDirectHint('')
+  }
+  function cancelDirect() { setDirectQ(null); setDirectText(''); setDirectHint('') }
+
   const toggleQ = (id: string) => setPicked(prev => {
     const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n
   })
@@ -169,11 +188,41 @@ function CoupleResultInner() {
           })}
         </div>
 
+        {/* ── 직접 물어보기 (맨 아래) ── */}
+        <div style={{ padding: '0 14px' }}>
+          <div style={{ marginTop: 2, marginBottom: 4, border: '1px dashed #d8b89a', borderRadius: 12, background: '#faf3ec', padding: '12px 13px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <span style={{ fontSize: 14 }}>✏️</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#96502e' }}>직접 물어보기</span>
+            </div>
+            {directQ ? (
+              <div>
+                <div style={{ background: '#fff', border: '0.5px solid #e8d5c5', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, color: '#3a2e28', lineHeight: 1.5 }}>{directQ.question}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
+                  <span style={{ fontSize: 11, color: '#4a9450', flex: 1 }}>✓ 아래 풀이에 함께 담겨요</span>
+                  <span onClick={cancelDirect} style={{ fontSize: 11, color: '#b4785a', border: '0.5px solid #e0c0a8', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', background: '#fff' }}>지우고 다시 쓰기</span>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <textarea value={directText}
+                  onChange={(e) => { setDirectText(e.target.value); if (directHint) setDirectHint('') }}
+                  placeholder="두 사람 궁합에 대해 궁금한 걸 자유롭게 적어보세요"
+                  style={{ width: '100%', boxSizing: 'border-box', minHeight: 52, background: '#fff', border: '0.5px solid #e8d5c5', borderRadius: 10, padding: '9px 12px', fontSize: 12.5, color: '#3a2e28', resize: 'none', fontFamily: 'inherit', outline: 'none', lineHeight: 1.5 }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
+                  <span style={{ fontSize: 10.5, color: directHint ? '#c8783c' : '#c5a590', flex: 1, lineHeight: 1.5 }}>{directHint || '위에서 고른 질문들과 함께 풀이돼요.'}</span>
+                  <span onClick={confirmDirect} style={{ fontSize: 12, color: '#fff', background: directText.trim() ? '#b46e46' : '#d8bfae', borderRadius: 8, padding: '6px 14px', cursor: directText.trim() ? 'pointer' : 'default', flexShrink: 0 }}>담기</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* 하단 버튼: 고른 질문으로 / 전체 총평 */}
         <div style={{ padding: '4px 14px 0' }}>
-          <button onClick={() => setSubmitted([...picked])} disabled={nPicked === 0}
-            style={{ width: '100%', height: 46, background: nPicked > 0 ? '#b46e46' : '#d8c4b4', border: 'none', borderRadius: 12, color: '#fff', fontSize: 14, fontWeight: 700, cursor: nPicked > 0 ? 'pointer' : 'not-allowed' }}>
-            {nPicked > 0 ? `${nPicked}개 질문으로 궁합 풀이 받기` : '궁금한 것을 골라주세요'}
+          <button onClick={() => setSubmitted([...picked])} disabled={nPicked === 0 && !directQ}
+            style={{ width: '100%', height: 46, background: (nPicked > 0 || directQ) ? '#b46e46' : '#d8c4b4', border: 'none', borderRadius: 12, color: '#fff', fontSize: 14, fontWeight: 700, cursor: (nPicked > 0 || directQ) ? 'pointer' : 'not-allowed' }}>
+            {(nPicked + (directQ ? 1 : 0)) > 0 ? `${nPicked + (directQ ? 1 : 0)}개 질문으로 궁합 풀이 받기` : '궁금한 것을 골라주세요'}
           </button>
           <button onClick={() => setSubmitted([])}
             style={{ width: '100%', height: 42, background: 'transparent', border: '0.5px solid #d8c4b4', borderRadius: 12, color: '#96502e', fontSize: 13, cursor: 'pointer', marginTop: 8 }}>
@@ -187,7 +236,10 @@ function CoupleResultInner() {
   // ────────────────────────────────────────────
   // 결과 단계 → 자식 컴포넌트에 위임 (명식 계산·등급·통변 훅 사용)
   // ────────────────────────────────────────────
-  const pickedQuestions = QUESTIONS.filter(q => submitted.includes(q.id))
+  const pickedQuestions = [
+    ...QUESTIONS.filter(q => submitted.includes(q.id)),
+    ...(directQ ? [directQ] : []),
+  ]
 
   return (
     <CoupleResultView
@@ -198,6 +250,7 @@ function CoupleResultInner() {
       name1={name1}
       name2={name2}
       pickedQuestions={pickedQuestions}
+      directQ={directQ}
       recordId={recordId}
       onBack={() => router.back()}
       onOther={() => router.push(`/manseryeok/couple-input-new?mode=${mode}`)}
@@ -318,7 +371,7 @@ function toCouplePerson(p: PersonRaw, saju: SajuPillarSimple[]): CouplePerson {
 }
 
 function CoupleResultView({
-  mode, info, person1, person2, name1, name2, pickedQuestions, recordId, onBack, onOther, onInviteChat,
+  mode, info, person1, person2, name1, name2, pickedQuestions, directQ, recordId, onBack, onOther, onInviteChat,
 }: {
   mode: 'couple' | 'married'
   info: Mode2Info
@@ -327,6 +380,7 @@ function CoupleResultView({
   name1: string
   name2: string
   pickedQuestions: SajuQuestion[]
+  directQ?: SajuQuestion | null
   recordId?: string
   onBack: () => void
   onOther: () => void
@@ -451,7 +505,8 @@ function CoupleResultView({
       grade: score.grade, gradeDesc: score.gradeDesc,
       saju1, saju2,
       tongResult: tongResult || '',
-      questionIds: pickedQuestions.map(q => q.id),
+      questionIds: pickedQuestions.filter(q => !q.id.startsWith('direct_')).map(q => q.id),
+      directQuestion: directQ || null,
     }
     const res = await saveCoupleRecord({
       mode,
