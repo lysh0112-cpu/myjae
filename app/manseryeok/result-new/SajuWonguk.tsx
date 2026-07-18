@@ -150,20 +150,20 @@ export default function SajuWonguk({ saju, dayStem, yeonjji, iljji, gm1, gm2 }: 
               </td>
             ))}
           </tr>
-          {/* 12운성 */}
-          <tr>
-            <td style={rowLabel}>12운성</td>
-            {saju.map(({ branch }, i) => {
-              const u = dayStem ? getUnsung(dayStem, branch) : ''
-              return <td key={i} onClick={() => open(u)} style={termCell(unsungColor(u) || '#888')}>{u || '-'}</td>
-            })}
-          </tr>
           {/* 지지 십성 */}
           <tr>
             <td style={rowLabel}>지지십성</td>
             {saju.map(({ pillar, branch }, i) => {
               const bs = pillar === '일주' ? getSipsinBranch(dayStem, branch) : getSipsinBranch(dayStem, branch)
               return <td key={i} onClick={() => open(bs)} style={termCell(SS_C[bs] || '#ccc')}>{bs || '-'}</td>
+            })}
+          </tr>
+          {/* 12운성 */}
+          <tr>
+            <td style={rowLabel}>12운성</td>
+            {saju.map(({ branch }, i) => {
+              const u = dayStem ? getUnsung(dayStem, branch) : ''
+              return <td key={i} onClick={() => open(u)} style={termCell(unsungColor(u) || '#888')}>{u || '-'}</td>
             })}
           </tr>
           {/* 신살 */}
