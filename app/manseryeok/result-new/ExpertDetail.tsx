@@ -107,6 +107,14 @@ function relationOf(a: string, b: string): string[] {
   return Array.from(new Set(out))
 }
 
+/* ── 현침살·곡각살 (글자 자체로 판정 · 천간/지지 공통) ──
+ *   출처: 연재쌤 정리 (심산 명리학 관점)
+ *   현침살: 甲 辛 卯 午 未 申  — 날카로운 바늘 형상. 정밀·기술·활인업
+ *   곡각살: 乙 己 巳 丑        — 굽은 다리/뼈 형상. 재치·변동성
+ */
+const HYEONCHIM = new Set(['甲', '辛', '卯', '午', '未', '申'])
+const GOKGAK = new Set(['乙', '己', '巳', '丑'])
+
 /* ── 지지 오행 색 (명카페 규칙: 수=검정 배경 + 흰 글씨) ── */
 const BRANCH_BG: Record<string, string> = {
   寅: '#e8f5e9', 卯: '#e8f5e9',                 // 목
@@ -282,6 +290,71 @@ export default function ExpertDetail({
             </tr>
           </tbody>
         </table>
+      </div>
+
+      {/* ③-2 현침살 · 곡각살 (글자 자체 판정) */}
+      <div style={card}>
+        <div style={ttl}>
+          <span onClick={() => open('현침살')} style={{ cursor: 'pointer' }}>
+            🪡 현침살 · 곡각살 <span style={{ fontSize: 9, color: '#c5a590' }}>ⓘ</span>
+          </span>
+        </div>
+        <table style={tb}>
+          <tbody>
+            <tr>
+              <td style={rl} />
+              {saju.map((p, i) => <th key={i} style={th}>{shortP(p.pillar)}</th>)}
+            </tr>
+            <tr>
+              <td style={rl}>천간</td>
+              {saju.map((p, i) => {
+                const hc = HYEONCHIM.has(p.stem), gg = GOKGAK.has(p.stem)
+                return (
+                  <td key={i} style={td}>
+                    <span style={{ color: '#3a2e28', fontSize: 11 }}>{p.stem}</span>{' '}
+                    {hc && <span onClick={() => open('현침살')} style={{ color: '#c85a6e', fontSize: 9, cursor: 'pointer', fontWeight: 600 }}>현침</span>}
+                    {gg && <span onClick={() => open('곡각살')} style={{ color: '#7c5aaa', fontSize: 9, cursor: 'pointer', fontWeight: 600 }}>곡각</span>}
+                    {!hc && !gg && <span style={{ color: '#ddd0c4', fontSize: 9 }}>–</span>}
+                  </td>
+                )
+              })}
+            </tr>
+            <tr>
+              <td style={rl}>지지</td>
+              {saju.map((p, i) => {
+                const hc = HYEONCHIM.has(p.branch), gg = GOKGAK.has(p.branch)
+                return (
+                  <td key={i} style={td}>
+                    <span style={{ color: '#3a2e28', fontSize: 11 }}>{p.branch}</span>{' '}
+                    {hc && <span onClick={() => open('현침살')} style={{ color: '#c85a6e', fontSize: 9, cursor: 'pointer', fontWeight: 600 }}>현침</span>}
+                    {gg && <span onClick={() => open('곡각살')} style={{ color: '#7c5aaa', fontSize: 9, cursor: 'pointer', fontWeight: 600 }}>곡각</span>}
+                    {!hc && !gg && <span style={{ color: '#ddd0c4', fontSize: 9 }}>–</span>}
+                  </td>
+                )
+              })}
+            </tr>
+          </tbody>
+        </table>
+        {/* 개수 요약 */}
+        <div style={{ marginTop: 7, fontSize: 10, color: '#8a7360', textAlign: 'center' }}>
+          {(() => {
+            let h = 0, g = 0
+            for (const p of saju) {
+              if (HYEONCHIM.has(p.stem)) h++
+              if (HYEONCHIM.has(p.branch)) h++
+              if (GOKGAK.has(p.stem)) g++
+              if (GOKGAK.has(p.branch)) g++
+            }
+            if (!h && !g) return <span style={{ color: '#c5a590' }}>해당 글자가 없어요</span>
+            return (
+              <>
+                {h > 0 && <span style={{ color: '#c85a6e', fontWeight: 600 }}>현침 {h}개</span>}
+                {h > 0 && g > 0 && ' · '}
+                {g > 0 && <span style={{ color: '#7c5aaa', fontWeight: 600 }}>곡각 {g}개</span>}
+              </>
+            )
+          })()}
+        </div>
       </div>
 
       {/* ④ 귀인 (지지 + 천간) */}

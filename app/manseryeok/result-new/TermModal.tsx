@@ -47,7 +47,7 @@ export default function TermModal({ term, onClose }: { term: string | null; onCl
           <div style={{ fontSize: 14, color: '#333', lineHeight: 1.6, fontWeight: 600 }}>{t.oneline}</div>
         </div>
 
-        <div style={{ fontSize: 13, color: '#555', lineHeight: 1.85 }}>
+        <div style={{ fontSize: 13, color: '#555', lineHeight: 1.85, whiteSpace: 'pre-line' }}>
           {t.desc}<br /><br />
           <span style={{ color: '#43a047', fontWeight: 700 }}>좋을 때</span> — {t.good}<br /><br />
           <span style={{ color: '#e53935', fontWeight: 700 }}>주의할 때</span> — {t.caution}
