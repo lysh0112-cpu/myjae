@@ -15,6 +15,16 @@ import type { YongsinNewResult, Ohaeng } from '@/lib/saju/yongsinNew'
 
 interface Props {
   result: YongsinNewResult
+  /** 사주 네 기둥 — 조후용신이 원국에 있는지 세기 위해 사용 */
+  saju?: Array<{ pillar: string; stem: string; branch: string }>
+}
+
+/* 오행 → 그 오행에 해당하는 천간·지지 글자 */
+const EL_STEMS: Record<string, string[]> = {
+  목: ['甲', '乙'], 화: ['丙', '丁'], 토: ['戊', '己'], 금: ['庚', '辛'], 수: ['壬', '癸'],
+}
+const EL_BRANCHES: Record<string, string[]> = {
+  목: ['寅', '卯'], 화: ['巳', '午'], 토: ['辰', '戌', '丑', '未'], 금: ['申', '酉'], 수: ['亥', '子'],
 }
 
 const EL_TO_STEMS: Record<string, string> = { 목: '甲乙', 화: '丙丁', 토: '戊己', 금: '庚辛', 수: '壬癸' }
@@ -36,7 +46,7 @@ const ROLE_LINE: Record<string, (n: string) => string> = {
 const ROLE_HANJA: Record<string, string> = { 용신: '用神', 희신: '喜神', 기신: '忌神', 구신: '仇神', 한신: '閑神' }
 const ROLE_TAG: Record<string, string> = { 용신: '가장 좋은 기운', 희신: '도와주는 기운', 기신: '조심할 기운', 구신: '어지럽히는 기운', 한신: '중립 기운' }
 
-export default function YongsinCard({ result }: Props) {
+export default function YongsinCard({ result, saju }: Props) {
   const [open, setOpen] = useState<{ role: string; el: string } | null>(null)
   const [detail, setDetail] = useState(false)
 
@@ -45,6 +55,19 @@ export default function YongsinCard({ result }: Props) {
   const info = open ? OHAENG_INFO[open.el] : null
 
   const { johu, eokbu, gyeokguk } = result
+
+  // ── 조후용신이 원국에 실제로 있는지 (천간·지지 모두 확인) ──
+  const johuFound: string[] = (() => {
+    if (!johu.element || !saju?.length) return []
+    const stems = EL_STEMS[johu.element] ?? []
+    const branches = EL_BRANCHES[johu.element] ?? []
+    const found: string[] = []
+    for (const p of saju) {
+      if (stems.includes(p.stem)) found.push(`${p.stem}${EL_HAN[johu.element]}`)
+      if (branches.includes(p.branch)) found.push(`${p.branch}${EL_HAN[johu.element]}`)
+    }
+    return found
+  })()
 
   // 한 칸 렌더 (오행 or 없음)
   const cell = (el: Ohaeng | null, role: string, big: boolean, isYong: boolean) => {
@@ -68,6 +91,38 @@ export default function YongsinCard({ result }: Props) {
     )
   }
 
+  // 조후용신 전용 칸 — 오행 이름 + 원국에 있는지 표시
+  //   연재쌤 지시: 丙丁 같은 천간 나열은 의미 없음. "화(火) / 巳火 1개 있음" 형태로.
+  const johuCell = () => {
+    const el = johu.element
+    if (!el) {
+      return (
+        <div style={{ background: '#f7f4f0', border: '0.5px solid #e5dcd2', borderRadius: 10, padding: '14px 6px', textAlign: 'center' }}>
+          <div style={{ fontSize: 15, color: '#8a7360', fontWeight: 600 }}>해당 없음</div>
+          <div style={{ fontSize: 10.5, color: '#b4785a', marginTop: 3 }}>{johu.note}</div>
+        </div>
+      )
+    }
+    const has = johuFound.length > 0
+    return (
+      <div onClick={() => openCard('용신', el)}
+        style={{
+          background: EL_BG[el],
+          border: `1.5px solid ${EL_BD_STRONG[el]}`,
+          borderRadius: 10, padding: '12px 6px', textAlign: 'center', cursor: 'pointer',
+        }}>
+        <div style={{ fontSize: 22, fontWeight: 700, color: EL_SUB[el], lineHeight: 1.2 }}>
+          {OHAENG_INFO[el]?.name}({EL_HAN[el]})
+        </div>
+        <div style={{ fontSize: 11, marginTop: 4, fontWeight: 600, color: has ? '#3b6d11' : '#c0705a' }}>
+          {has
+            ? `✓ ${johuFound.join('·')} ${johuFound.length}개 있음`
+            : '원국에 없음 · 운에서 와야 해요'}
+        </div>
+      </div>
+    )
+  }
+
   const labelBox = (title: string, sub: string) => (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#fff3e9', border: '0.5px solid #e8d5c5', borderRadius: 9, minWidth: 52, padding: '6px 0' }}>
       <span style={{ fontSize: 11, fontWeight: 700, color: '#c8783c' }}>{title}</span>
@@ -82,7 +137,7 @@ export default function YongsinCard({ result }: Props) {
       {/* ① 조후용신 (용신 1개) */}
       <div style={{ display: 'flex', gap: 7, alignItems: 'stretch', marginBottom: 8 }}>
         {labelBox('조후용신', '건강·마음')}
-        <div style={{ flex: 1 }}>{cell(johu.element, '용신', true, true)}</div>
+        <div style={{ flex: 1 }}>{johuCell()}</div>
       </div>
 
       {/* ② 억부용신 (5신) */}

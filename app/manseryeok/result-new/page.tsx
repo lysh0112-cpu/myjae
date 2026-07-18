@@ -510,7 +510,7 @@ function ResultNewContent() {
         {/* ⑤ 나의 용신 (조후·억부·격국 3종) */}
         {yongsinNew&&(
         <Section title="나의 용신" collapsible={!chartOnly} open={openSection==='yongsin'} onToggle={()=>toggleSection('yongsin')}>
-          <YongsinCard result={yongsinNew}/>
+          <YongsinCard result={yongsinNew} saju={saju}/>
         </Section>
         )}
 
