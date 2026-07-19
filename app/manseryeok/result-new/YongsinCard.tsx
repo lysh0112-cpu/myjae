@@ -28,7 +28,7 @@ const GYEOK_PRINCIPLE: Record<string, { name: string; line: string }> = {
   편인격: { name: '관인상생', line: '관이 인을 살려 나를 키워요' },
   정인격: { name: '관인상생', line: '관이 인을 살려 나를 키워요' },
 }
-/* 육친 이름 (격국용신 표시용) */
+/* 육친 이름 (조후·격국용신 표시용) */
 const YUKCHIN_OF_EL = (dayEl: string, el: string): string => {
   const GEN: Record<string, string> = { 목: '화', 화: '토', 토: '금', 금: '수', 수: '목' }
   const CON: Record<string, string> = { 목: '토', 화: '금', 토: '수', 금: '목', 수: '화' }
@@ -134,6 +134,7 @@ export default function YongsinCard({ result, saju }: Props) {
       )
     }
     const has = johuFound.length > 0
+    const yukchin = YUKCHIN_OF_EL(result.dayElement, el)
     return (
       <div onClick={() => openCard('용신', el)}
         style={{
@@ -142,7 +143,7 @@ export default function YongsinCard({ result, saju }: Props) {
           borderRadius: 10, padding: '12px 6px', textAlign: 'center', cursor: 'pointer',
         }}>
         <div style={{ fontSize: 22, fontWeight: 700, color: EL_SUB[el], lineHeight: 1.2 }}>
-          {EL_HAN[el]}({OHAENG_INFO[el]?.name})
+          {EL_HAN[el]}({yukchin || OHAENG_INFO[el]?.name})
         </div>
         <div style={{ fontSize: 11, marginTop: 4, fontWeight: 600, color: has ? '#3b6d11' : '#c0705a' }}>
           {has
