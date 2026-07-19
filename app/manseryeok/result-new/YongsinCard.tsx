@@ -142,11 +142,11 @@ export default function YongsinCard({ result, saju }: Props) {
           borderRadius: 10, padding: '12px 6px', textAlign: 'center', cursor: 'pointer',
         }}>
         <div style={{ fontSize: 22, fontWeight: 700, color: EL_SUB[el], lineHeight: 1.2 }}>
-          {OHAENG_INFO[el]?.name}({EL_HAN[el]})
+          {EL_HAN[el]}({OHAENG_INFO[el]?.name})
         </div>
         <div style={{ fontSize: 11, marginTop: 4, fontWeight: 600, color: has ? '#3b6d11' : '#c0705a' }}>
           {has
-            ? `✓ ${johuFound.join('·')} ${johuFound.length}개 있음`
+            ? `✓ 원국에 ${johuFound.join('·')} ${johuFound.length}개 있음`
             : '원국에 없음 · 운에서 와야 해요'}
         </div>
       </div>
@@ -184,7 +184,7 @@ export default function YongsinCard({ result, saju }: Props) {
           </div>
         )}
         <div style={{ fontSize: 10.5, marginTop: 3, fontWeight: 600, color: has ? '#3b6d11' : '#c0705a' }}>
-          {has ? `✓ 원국에 ${found.join('·')} ${found.length}개 있음` : '원국에 없음'}
+          {has ? `✓ 원국에 ${found.join('·')} ${found.length}개 있음` : '원국에 없음 · 운에서 와야 해요'}
         </div>
       </div>
     )
@@ -207,8 +207,14 @@ export default function YongsinCard({ result, saju }: Props) {
         <div style={{ flex: 1 }}>{johuCell()}</div>
       </div>
 
-      {/* ② 억부용신 (5신) */}
-      <div style={{ marginBottom: 8 }}>
+      {/* ② 격국용신 (용신 1개) */}
+      <div style={{ display: 'flex', gap: 7, alignItems: 'stretch', marginBottom: 8 }}>
+        {labelBox('격국용신', gyeokguk.name || '직업·명예')}
+        <div style={{ flex: 1 }}>{gyeokCell()}</div>
+      </div>
+
+      {/* ③ 억부용신 (5신) */}
+      <div style={{ marginBottom: 12 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '34px repeat(5,1fr)', gap: 4, marginBottom: 5 }}>
           <div />
           {(['용신', '희신', '기신', '구신', '한신'] as const).map((h, i) => (
@@ -226,12 +232,6 @@ export default function YongsinCard({ result, saju }: Props) {
           {cell(eokbu.gusin, '구신', false, false)}
           {cell(eokbu.hansin, '한신', false, false)}
         </div>
-      </div>
-
-      {/* ③ 격국용신 (용신 1개) */}
-      <div style={{ display: 'flex', gap: 7, alignItems: 'stretch', marginBottom: 12 }}>
-        {labelBox('격국용신', gyeokguk.name || '직업·명예')}
-        <div style={{ flex: 1 }}>{gyeokCell()}</div>
       </div>
 
       {/* 안내 문구 */}
