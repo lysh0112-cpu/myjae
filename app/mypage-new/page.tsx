@@ -31,24 +31,6 @@ const EL_BG: Record<string, string> = { 목:'#e8f5e9',화:'#ffebee',토:'#fff3e0
 const EL_BD: Record<string, string> = { 목:'#a5d6a7',화:'#ef9a9a',토:'#ffe082',금:'#bdbdbd',수:'#90caf9' }
 const EL_HAN: Record<string, string> = { 목:'木',화:'火',토:'土',금:'金',수:'水' }
 
-function luckyColorChip(name: string | null): string {
-  if (!name) return '#ddd'
-  const n = name.replace(/\s/g, '')
-  if (/(아이보리|미색|크림|상아)/.test(n)) return '#f5f0e0'
-  if (/(흰|화이트|백)/.test(n)) return '#ffffff'
-  if (/(검|블랙|흑)/.test(n)) return '#333333'
-  if (/(빨|적|레드|다홍|주홍)/.test(n)) return '#e24b4a'
-  if (/(주황|오렌지)/.test(n)) return '#ff9800'
-  if (/(노랑|노란|옐로|황금|골드|금색)/.test(n)) return '#f5c518'
-  if (/(초록|녹색|그린|연두)/.test(n)) return '#4caf50'
-  if (/(파랑|파란|블루|남색|하늘|스카이)/.test(n)) return '#2196f3'
-  if (/(보라|퍼플|자주|바이올렛)/.test(n)) return '#9c5fc4'
-  if (/(분홍|핑크)/.test(n)) return '#ec87b1'
-  if (/(갈색|브라운|밤색)/.test(n)) return '#8d6e63'
-  if (/(회색|그레이|은색|실버)/.test(n)) return '#9e9e9e'
-  return '#e0c890'
-}
-
 type Profile = {
   nickname: string | null
   role: string | null
@@ -82,33 +64,10 @@ type Consultation = {
   consultant_name?: string
 }
 
-type Fortune = {
-  fortune_date: string
-  iljin_gan: string | null
-  iljin_ji: string | null
-  score: number | null
-  summary: string | null
-  love: string | null
-  money: string | null
-  health: string | null
-  lucky_color: string | null
-  lucky_dir: string | null
-  today_insight: string | null
-}
-
 function toHourIdx(h: string | null): number | null {
   if (!h || h === '모름') return null
   const n = parseInt(h, 10)
   return isNaN(n) ? null : n
-}
-
-function todayKST(): string {
-  const now = new Date()
-  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
-  const y = kst.getUTCFullYear()
-  const m = String(kst.getUTCMonth() + 1).padStart(2, '0')
-  const d = String(kst.getUTCDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
 }
 
 export default function MyPageNew() {
@@ -123,9 +82,6 @@ export default function MyPageNew() {
   const [deletingNameId, setDeletingNameId] = useState<string | null>(null)
   const [namesExpanded, setNamesExpanded] = useState(false)
 
-  const [fortune, setFortune] = useState<Fortune | null>(null)
-  const [fortuneLoading, setFortuneLoading] = useState(false)
-  const [fortuneChecked, setFortuneChecked] = useState(false)
 
   const [editMode, setEditMode] = useState(false)
   const [eYear, setEYear] = useState('')
@@ -146,7 +102,7 @@ export default function MyPageNew() {
   const [cashOpen, setCashOpen] = useState(false)
   const [payOpen, setPayOpen] = useState(false)
 
-  const { saju, dayStem, iljji, converting } = useResultSaju(
+  const { saju } = useResultSaju(
     profile?.cal_type || '양력',
     profile?.birth_year || 0,
     profile?.birth_month || 0,
@@ -186,58 +142,9 @@ export default function MyPageNew() {
         }
         setConsults(cs.map((c) => ({ ...c, consultant_name: c.consultant_id ? nameMap[c.consultant_id] : undefined })) as Consultation[])
       }
-
-      const { data: fRow } = await supabase.from('daily_fortune')
-        .select('fortune_date, iljin_gan, iljin_ji, score, summary, love, money, health, lucky_color, lucky_dir, today_insight')
-        .eq('user_id', data.user.id)
-        .eq('fortune_date', todayKST())
-        .maybeSingle()
-      if (fRow) setFortune(fRow as Fortune)
-      setFortuneChecked(true)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  useEffect(() => {
-    if (!fortuneChecked) return
-    if (fortune) return
-    if (fortuneLoading) return
-    if (converting) return
-    if (!userId) return
-    if (!profile?.saju_saved || !dayStem || !iljji) return
-
-    let cancelled = false
-    ;(async () => {
-      setFortuneLoading(true)
-      try {
-        const res = await fetch('/api/daily-fortune', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ saju, dayStem, iljji, nickname: profile?.nickname || undefined }),
-        })
-        const data = await res.json()
-        if (data.error) { console.error('운세 생성 오류:', data.error); return }
-        if (cancelled) return
-
-        const row: Fortune = {
-          fortune_date: data.fortune_date,
-          iljin_gan: data.iljin_gan, iljin_ji: data.iljin_ji,
-          score: data.score, summary: data.summary,
-          love: data.love, money: data.money, health: data.health,
-          lucky_color: data.lucky_color, lucky_dir: data.lucky_dir,
-          today_insight: data.today_insight,
-        }
-        setFortune(row)
-        await supabase.from('daily_fortune').upsert({ user_id: userId, ...row }, { onConflict: 'user_id,fortune_date' })
-      } catch (e) {
-        console.error(e)
-      } finally {
-        if (!cancelled) setFortuneLoading(false)
-      }
-    })()
-    return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fortuneChecked, converting, dayStem, iljji, userId, profile?.saju_saved])
 
   const roleLabel = (r: string | null) =>
     r === 'master' ? '매니저' : r === 'consultant' ? '상담사' : '일반회원'
@@ -356,7 +263,6 @@ export default function MyPageNew() {
     if (error) { setMsg('저장 실패: ' + error.message); return }
     setProfile(prev => prev ? { ...prev, birth_year: y, birth_month: m, birth_day: d, birth_hour: hourValue, cal_type: eCal, gender: eGender, saju_saved: true } : prev)
     setEditMode(false)
-    setFortune(null)
   }
 
   const openNickEdit = () => { setENick(profile?.nickname || ''); setNickMsg(''); setNickEdit(true) }
@@ -392,10 +298,6 @@ export default function MyPageNew() {
     window.location.href = '/'
   }
 
-  const stars = (n: number | null) => {
-    const s = Math.max(0, Math.min(5, n || 0))
-    return '★★★★★'.slice(0, s) + '☆☆☆☆☆'.slice(0, 5 - s)
-  }
 
   const displayName = profile?.nickname || '회원'
   const initial = (profile?.nickname || email || '?').charAt(0)
@@ -630,69 +532,6 @@ export default function MyPageNew() {
               <div style={{ fontSize: 10, color: '#b4785a', marginTop: 2 }}>사주로 대화</div>
             </div>
           </div>
-        </div>
-
-        <div style={{ background: '#FFFBF7', border: '0.5px solid #f5d5b8', borderRadius: 14, padding: 15, marginBottom: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#96502e' }}>✦ 오늘의 운세</span>
-            {fortune?.iljin_gan && (
-              <span style={{ fontSize: 10, color: '#b4785a', background: '#faede0', padding: '3px 9px', borderRadius: 10 }}>
-                {todayKST().slice(5).replace('-', '.')} · {fortune.iljin_gan}{fortune.iljin_ji}일
-              </span>
-            )}
-          </div>
-
-          {!profile?.saju_saved ? (
-            <div style={{ fontSize: 13, color: '#b4785a', textAlign: 'center', padding: '10px 0', lineHeight: 1.7 }}>
-              사주를 등록하면 매일 나만의 운세를 볼 수 있어요.<br />
-              <button onClick={openEdit} style={{ marginTop: 8, fontSize: 12, color: '#c8783c', background: 'none', border: '0.5px solid #f0d0a0', borderRadius: 8, padding: '6px 14px', cursor: 'pointer' }}>사주 등록하러 가기</button>
-            </div>
-          ) : (fortuneLoading || (!fortune && !fortuneChecked) || converting) ? (
-            <div style={{ fontSize: 13, color: '#c0a898', textAlign: 'center', padding: '16px 0' }}>오늘의 운세를 준비하는 중…</div>
-          ) : fortune ? (
-            <div>
-              <div style={{ color: '#e09030', letterSpacing: 2, fontSize: 15, marginBottom: 10 }}>{stars(fortune.score)}</div>
-              <p style={{ fontSize: 12.5, color: '#6a5848', lineHeight: 1.75, margin: '0 0 12px' }}>{fortune.summary}</p>
-
-              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                <div style={{ flex: 1, background: '#faede0', borderRadius: 8, padding: '9px 7px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 9, color: '#b4785a', marginBottom: 4 }}>행운의 색</div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-                    <span style={{ width: 13, height: 13, borderRadius: '50%', background: luckyColorChip(fortune.lucky_color), border: '1px solid #ddd', display: 'inline-block', flexShrink: 0 }} />
-                    <span style={{ fontSize: 11, color: '#96502e' }}>{fortune.lucky_color || '-'}</span>
-                  </div>
-                </div>
-                <div style={{ flex: 1, background: '#faede0', borderRadius: 8, padding: '9px 7px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 9, color: '#b4785a', marginBottom: 4 }}>행운의 방향</div>
-                  <div style={{ fontSize: 12, color: '#96502e' }}>{fortune.lucky_dir || '-'}</div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: 6, marginBottom: fortune.today_insight ? 12 : 0 }}>
-                <div style={{ flex: 1, background: '#fdf4ec', borderRadius: 8, padding: 8 }}>
-                  <div style={{ fontSize: 9, color: '#c8967a', marginBottom: 3 }}>❤️ 애정</div>
-                  <div style={{ fontSize: 10.5, color: '#8a7868', lineHeight: 1.5 }}>{fortune.love || '-'}</div>
-                </div>
-                <div style={{ flex: 1, background: '#fdf4ec', borderRadius: 8, padding: 8 }}>
-                  <div style={{ fontSize: 9, color: '#c8967a', marginBottom: 3 }}>💰 재물</div>
-                  <div style={{ fontSize: 10.5, color: '#8a7868', lineHeight: 1.5 }}>{fortune.money || '-'}</div>
-                </div>
-                <div style={{ flex: 1, background: '#fdf4ec', borderRadius: 8, padding: 8 }}>
-                  <div style={{ fontSize: 9, color: '#c8967a', marginBottom: 3 }}>🌿 건강</div>
-                  <div style={{ fontSize: 10.5, color: '#8a7868', lineHeight: 1.5 }}>{fortune.health || '-'}</div>
-                </div>
-              </div>
-
-              {fortune.today_insight && (
-                <div style={{ paddingTop: 12, borderTop: '0.5px solid #f0e0d5' }}>
-                  <div style={{ fontSize: 11.5, fontWeight: 600, color: '#c8783c', marginBottom: 6 }}>🔥 오늘의 명리 한 조각</div>
-                  <p style={{ fontSize: 11.5, color: '#7a6858', lineHeight: 1.7, margin: 0 }}>{fortune.today_insight}</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div style={{ fontSize: 13, color: '#c0a898', textAlign: 'center', padding: '12px 0' }}>운세를 불러오지 못했어요. 잠시 후 다시 들어와 주세요.</div>
-          )}
         </div>
 
         <ArchiveList />
