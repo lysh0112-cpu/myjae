@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useResultSaju } from '@/hooks/useResultSaju'
-import ArchiveList from './ArchiveList'
+import ArchiveList from '@/app/manseryeok/components/ArchiveList'
 // 커플채팅 플로팅은 당분간 닫음 (되살리려면 이 줄과 아래 사용처 주석만 풀면 됨)
 // import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
 import AiTalkFab from '@/app/manseryeok/components/AiTalkFab'
@@ -614,8 +614,8 @@ export default function MyPageNew() {
         {[
           { icon: '🏠', label: '홈', href: '/home-new', active: false },
           { icon: '⊞', label: '서비스', href: '', wip: true, active: false },
-          { icon: '💬', label: '상담', href: '', wip: true, active: false },
-          { icon: '♡', label: '찜', href: '/home-new', active: false },
+          { icon: '💬', label: '상담', href: '/manseryeok/reviews', active: false },
+          { icon: '📚', label: '보관함', href: '/archive', active: false },
         ].map((n) => (
           <button key={n.label} onClick={() => { if (n.wip) { alert('작업 중이에요. 곧 만나요!') } else { router.push(n.href) } }}
             style={{ flex: 1, padding: '10px 0', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>

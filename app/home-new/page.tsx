@@ -502,7 +502,7 @@ export default function HomeNew() {
           { icon: '🏠', label: '홈', href: '/home-new', active: true },
           { icon: '⊞', label: '서비스', href: '', wip: true, active: false },
           { icon: '💬', label: '상담', href: '/manseryeok/reviews', active: false },
-          { icon: '♡', label: '찜', href: '/home-new', active: false },
+          { icon: '📚', label: '보관함', href: '/archive', active: false },
         ].map((n) => (
           <button
             key={n.label}
