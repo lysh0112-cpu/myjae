@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { EL_BG, EL_BD, EL_C, EL_C_SUB, EL_HAN } from '@/lib/saju/ohaengColor'
 import { getUnsung, getSinsal, unsungColor, SINSAL_HIGHLIGHT } from '@/lib/saju'
 import { getGwiinForBranch, getGwiinForStem, GWIIN_STYLE } from '@/lib/saju/gwiin'
 import TermModal from './TermModal'
@@ -32,10 +33,6 @@ interface Props {
 type Element = '목' | '화' | '토' | '금' | '수'
 const STEM_ELEMENT: Record<string, Element> = { 甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토', 己: '토', 庚: '금', 辛: '금', 壬: '수', 癸: '수' }
 const BRANCH_ELEMENT: Record<string, Element> = { 子: '수', 丑: '토', 寅: '목', 卯: '목', 辰: '토', 巳: '화', 午: '화', 未: '토', 申: '금', 酉: '금', 戌: '토', 亥: '수' }
-const EL_BG: Record<Element, string> = { 목: '#e8f5e9', 화: '#ffebee', 토: '#fff8e1', 금: '#f5f5f5', 수: '#2b2b2b' }
-const EL_BD: Record<Element, string> = { 목: '#a5d6a7', 화: '#ef9a9a', 토: '#ffe082', 금: '#bdbdbd', 수: '#2b2b2b' }
-const EL_C: Record<Element, string> = { 목: '#2e7d32', 화: '#c62828', 토: '#f57f17', 금: '#616161', 수: '#ffffff' }
-const EL_HAN: Record<Element, string> = { 목: '木', 화: '火', 토: '土', 금: '金', 수: '水' }
 const SS_C: Record<string, string> = {
   비견: '#9e9e9e', 겁재: '#9e9e9e', 식신: '#43a047', 상관: '#43a047',
   편재: '#fb8c00', 정재: '#fb8c00', 편관: '#e53935', 정관: '#e53935',
@@ -93,7 +90,7 @@ function GanjiBox({ char, el, isDay, isGongmang }: { char: string; el: Element |
       margin: '0 auto', position: 'relative', opacity: isGongmang ? 0.45 : 1,
     }}>
       <span style={{ fontSize: 21, fontWeight: 700, color: el ? EL_C[el] : '#888', lineHeight: 1 }}>{char}</span>
-      {el && <span style={{ position: 'absolute', bottom: 2, right: 3, fontSize: 8, fontWeight: 700, color: EL_C[el] }}>{EL_HAN[el]}</span>}
+      {el && <span style={{ position: 'absolute', bottom: 1, right: 3, fontSize: 10.5, fontWeight: 600, color: EL_C_SUB[el] }}>{EL_HAN[el]}</span>}
     </div>
   )
 }

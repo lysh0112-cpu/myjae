@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { EL_BG, EL_BD, EL_C, EL_C_SUB, EL_HAN } from '@/lib/saju/ohaengColor'
 
 /**
  * 궁합 전용 · 두 사람 사주원국 나란히 부품 (방식 A: 좌4 + 우4)
@@ -47,10 +48,6 @@ const BRANCH_ELEMENT: Record<string, Element> = {
 }
 
 // ── SajuWonguk 과 동일한 오행 팔레트 ──
-const EL_BG: Record<Element, string> = { 목: '#e8f5e9', 화: '#ffebee', 토: '#fff8e1', 금: '#f5f5f5', 수: '#2b2b2b' }
-const EL_BD: Record<Element, string> = { 목: '#a5d6a7', 화: '#ef9a9a', 토: '#ffe082', 금: '#bdbdbd', 수: '#2b2b2b' }
-const EL_C:  Record<Element, string> = { 목: '#2e7d32', 화: '#c62828', 토: '#f57f17', 금: '#616161', 수: '#ffffff' }
-const EL_HAN: Record<Element, string> = { 목: '木', 화: '火', 토: '土', 금: '金', 수: '水' }
 
 function GanjiCell({ char, el, isDay }: { char: string; el: Element | undefined; isDay?: boolean }) {
   const isEmpty = !char || char === '?'
@@ -68,7 +65,7 @@ function GanjiCell({ char, el, isDay }: { char: string; el: Element | undefined;
         {isEmpty ? '?' : char}
       </span>
       {el && !isEmpty && (
-        <span style={{ position: 'absolute', bottom: 1, right: 2, fontSize: 7, fontWeight: 700, color: EL_C[el] }}>
+        <span style={{ position: 'absolute', bottom: 0, right: 2, fontSize: 9, fontWeight: 600, color: EL_C_SUB[el] }}>
           {EL_HAN[el]}
         </span>
       )}
