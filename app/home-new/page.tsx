@@ -149,15 +149,6 @@ interface Profile {
   gender: string | null
 }
 
-// 홈 미리보기용 후기 (승인된 것 중 고정 먼저 → 최신 2개)
-interface HomeReview {
-  id: string
-  nickname: string
-  rating: number
-  service_type: string | null
-  content: string
-}
-
 export default function HomeNew() {
   const router = useRouter()
   const [slide, setSlide] = useState(0)
@@ -165,29 +156,11 @@ export default function HomeNew() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   // 사람 선택 모달: 어떤 서비스로 열렸는지 (null이면 닫힘)
   const [pickService, setPickService] = useState<string | null>(null)
-  const [reviews, setReviews] = useState<HomeReview[]>([])
   const [pinned, setPinned] = useState<string[]>([])      // 찜한 서비스 이름들 (찜한 순서)
   const [svcOpen, setSvcOpen] = useState(false)           // 서비스 리스트 펼침 여부
   const [pinMsg, setPinMsg] = useState('')                // 압핀 안내 메시지
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-
-  // 홈 후기 미리보기: 승인된 후기 중 고정 먼저 → 최신 4개
-  useEffect(() => {
-    let mounted = true
-    async function loadReviews() {
-      const { data, error } = await supabase
-        .from('reviews')
-        .select('id, nickname, rating, service_type, content')
-        .eq('is_approved', true)
-        .order('is_pinned', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(4)
-      if (mounted && !error && data) setReviews(data as HomeReview[])
-    }
-    loadReviews()
-    return () => { mounted = false }
-  }, [])
 
   // 찜(고정)한 서비스 목록 로드 (로그인 회원만 값이 있음)
   useEffect(() => {
@@ -462,7 +435,7 @@ export default function HomeNew() {
           </div>
         </div>
 
-        {/* ═══ 바텀시트: 서비스 + 후기 (손잡이로 위로 끌면 배너를 덮으며 올라옴) ═══ */}
+        {/* ═══ 바텀시트: 운세 + 서비스 (손잡이로 위로 끌면 배너를 덮으며 올라옴) ═══ */}
         <HomeBottomSheet maxLift={320}>
 
         {/* ④ 오늘의 운세 (공용 부품 — 프로필 조회·계산·AI호출 전부 부품 안에서) */}
@@ -564,59 +537,6 @@ export default function HomeNew() {
           })()}
         </div>
 
-        {/* ⑥ 이용 후기 미리보기 (승인된 후기 2개 → 더보기) */}
-        <div style={{ padding: '0 16px 24px' }}>
-          <div
-            onClick={() => router.push('/manseryeok/reviews')}
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', cursor: 'pointer' }}
-          >
-            <span style={{ fontSize: '16px', fontWeight: 700, color: '#3a2e28' }}>💬 이용 후기</span>
-            <span style={{ fontSize: '12px', color: '#c8783c', fontWeight: 600 }}>더보기 →</span>
-          </div>
-
-          {reviews.length === 0 ? (
-            <div
-              onClick={() => router.push('/manseryeok/reviews/write')}
-              style={{
-                background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: '14px',
-                padding: '22px 16px', textAlign: 'center', cursor: 'pointer',
-              }}
-            >
-              <div style={{ fontSize: '13px', color: '#b4785a', lineHeight: 1.6 }}>
-                아직 등록된 후기가 없어요.<br />첫 후기를 남겨보세요 ✍️
-              </div>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {reviews.map((r) => (
-                <div
-                  key={r.id}
-                  onClick={() => router.push('/manseryeok/reviews')}
-                  style={{
-                    background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: '14px',
-                    padding: '14px 16px', cursor: 'pointer',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                    <span style={{ color: '#f0a020', fontSize: '13px', letterSpacing: '1px' }}>
-                      {'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}
-                    </span>
-                    {r.service_type && (
-                      <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '99px', background: '#f5ede5', color: '#b4785a' }}>
-                        {r.service_type}
-                      </span>
-                    )}
-                  </div>
-                  <p style={{
-                    fontSize: '13px', lineHeight: 1.55, color: '#3a2e28', margin: 0,
-                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
-                  }}>{r.content}</p>
-                  <p style={{ fontSize: '11px', color: '#c5a590', marginTop: '7px', marginBottom: 0 }}>{r.nickname}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
         {/* ═══ 바텀시트 끝 ═══ */}
         </HomeBottomSheet>
       </main>
