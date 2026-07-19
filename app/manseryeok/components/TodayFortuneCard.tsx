@@ -204,17 +204,6 @@ export default function TodayFortuneCard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fortuneChecked, converting, dayStem, iljji, userId, profile?.saju_saved])
 
-  // 내 사주 상세 화면 주소
-  const sajuDetailUrl = () => {
-    if (!profile?.birth_year) return '/mypage-new'
-    const g = profile.gender === '여' ? '여' : '남'
-    const cal = profile.cal_type || '양력'
-    const hourIdx = toHourIdx(profile.birth_hour ?? null)
-    const hourParam = hourIdx == null ? '' : `&hour=${hourIdx}`
-    const leap = profile.leap_month ? '1' : '0'
-    return `/manseryeok/result-new?gender=${g}&calType=${cal}&year=${profile.birth_year}&month=${profile.birth_month}&day=${profile.birth_day}&leapMonth=${leap}${hourParam}&mode=chart`
-  }
-
   // ── 화면 ──────────────────────────────────────────────────────────────
   const wrap: React.CSSProperties = {
     background: '#FFFBF7', border: '0.5px solid #f5d5b8',
@@ -367,23 +356,13 @@ export default function TodayFortuneCard() {
         </>
       )}
 
-      {/* 펼치기 — 작게 */}
+      {/* 펼치기 (내 사주 자세히 보기 버튼은 유저 카드로 옮겼음) */}
       <div
         onClick={() => setOpen(o => !o)}
         role="button"
         aria-expanded={open}
-        style={{ textAlign: 'center', fontSize: 11.5, color: '#b4785a', padding: '9px 0 11px', cursor: 'pointer' }}
+        style={{ textAlign: 'center', fontSize: 11.5, color: '#b4785a', padding: '9px 0 2px', cursor: 'pointer' }}
       >{open ? '접기 ▲' : '자세히 보기 ▼'}</div>
-
-      {/* 내 사주 자세히 보기 — 크게 */}
-      <button
-        onClick={() => router.push(sajuDetailUrl())}
-        style={{
-          width: '100%', background: '#faede0', border: '0.5px solid #ecd8c6',
-          borderRadius: 9, padding: '10px 0', fontSize: 12, color: '#96502e',
-          fontWeight: 600, cursor: 'pointer',
-        }}
-      >내 사주 자세히 보기 →</button>
     </div>
   )
 }

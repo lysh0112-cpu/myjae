@@ -8,6 +8,7 @@ import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
 import TodayFortuneCard from '@/app/manseryeok/components/TodayFortuneCard'
 import EmotionPicker from '@/app/manseryeok/components/EmotionPicker'
+import UserCard from '@/app/manseryeok/components/UserCard'
 import InviteNotifier from '@/app/couple-chat/InviteNotifier'
 import { listPinnedServices, togglePinnedService, MAX_PINS } from '@/lib/saju/pinnedServices'
 import HomeBottomSheet from '@/app/home-new/components/HomeBottomSheet'
@@ -143,17 +144,9 @@ type Service = typeof SERVICES[number]
 const COLLAPSED_COUNT = 4
 
 
-interface Profile {
-  nickname: string | null
-  hangul_name: string | null
-  birth_year: number | null
-  gender: string | null
-}
-
 export default function HomeNew() {
   const router = useRouter()
   const [slide, setSlide] = useState(0)
-  const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   // 사람 선택 모달: 어떤 서비스로 열렸는지 (null이면 닫힘)
   const [pickService, setPickService] = useState<string | null>(null)
@@ -183,20 +176,12 @@ export default function HomeNew() {
     setPinned((prev) => res.pinned ? [...prev, name] : prev.filter((n) => n !== name))
   }
 
+  // 로그인 여부만 확인 (프로필 내용은 UserCard 부품이 직접 읽는다)
   useEffect(() => {
     let mounted = true
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { if (mounted) setIsLoggedIn(false); return }
-      if (mounted) setIsLoggedIn(true)
-      const { data } = await supabase
-        .from('profiles')
-        .select('nickname, hangul_name, birth_year, gender')
-        .eq('id', user.id)
-        .maybeSingle()
-      if (mounted && data) setProfile(data as Profile)
-    }
-    load()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (mounted) setIsLoggedIn(!!user)
+    })
     return () => { mounted = false }
   }, [])
 
@@ -206,8 +191,6 @@ export default function HomeNew() {
     }, 5000)
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [])
-
-  const displayName = profile?.nickname || profile?.hangul_name || '회원'
 
   return (
     <div style={{
@@ -365,75 +348,20 @@ export default function HomeNew() {
           </div>
         </div>
 
-        {/* ③ 유저 카드 */}
+        {/* ③ 유저 카드 (공용 부품 — 아래에 '내 사주 자세히 보기' 버튼을 붙여 씀) */}
         <div style={{ padding: '8px 16px 0' }}>
-          <div style={{
-            background: '#FFFBF7', border: '0.5px solid #f0e0d5',
-            borderRadius: '16px', padding: '16px',
-          }}>
-            {isLoggedIn ? (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{
-                    width: '44px', height: '44px', borderRadius: '50%',
-                    background: '#fae6d5', border: '1.5px solid #e6be9f',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '20px', flexShrink: 0,
-                  }}>🌿</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '3px', color: '#3a2e28' }}>
-                      {displayName}님
-                      {profile?.birth_year && (
-                        <span style={{ fontSize: '11px', fontWeight: 400, color: '#c5a590' }}>
-                          {' '}{profile.birth_year}년생 · {profile.gender || ''}
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#c8783c' }}>
-                      오늘도 좋은 기운 가득하세요 ✦
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                  <div style={{
-                    width: '44px', height: '44px', borderRadius: '50%',
-                    background: '#f5ebe2', border: '1.5px solid #e6d5c5',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '20px', flexShrink: 0, color: '#c0a898',
-                  }}>👤</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '3px', color: '#3a2e28' }}>
-                      반가워요! ✦
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#c8783c' }}>
-                      로그인하고 내 사주를 확인하세요
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    onClick={() => router.push('/login')}
-                    style={{
-                      flex: 1, height: '44px',
-                      background: '#b46e46', border: 'none', borderRadius: '10px',
-                      color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                    }}
-                  >로그인</button>
-                  <button
-                    onClick={() => router.push('/signup')}
-                    style={{
-                      flex: 1, height: '44px',
-                      background: '#fff', border: '0.5px solid #e6d0bc', borderRadius: '10px',
-                      color: '#96502e', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                    }}
-                  >회원가입</button>
-                </div>
-              </>
+          <UserCard
+            footer={({ hasSaju, sajuDetailUrl }) => (
+              <button
+                onClick={() => router.push(sajuDetailUrl)}
+                style={{
+                  width: '100%', background: '#fffdfb', border: 'none',
+                  padding: '12px 14px', fontSize: '12px', color: '#96502e',
+                  fontWeight: 600, cursor: 'pointer',
+                }}
+              >{hasSaju ? '내 사주 자세히 보기 →' : '내 사주 등록하기 →'}</button>
             )}
-          </div>
+          />
         </div>
 
         {/* ═══ 바텀시트: 운세 + 서비스 + 감정기록 (손잡이로 위로 끌면 배너를 덮으며 올라옴) ═══ */}
