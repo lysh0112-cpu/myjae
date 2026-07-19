@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import ArchiveList from './ArchiveList'
-import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
+// 커플채팅 플로팅은 당분간 닫음 (되살리려면 이 줄과 아래 사용처 주석만 풀면 됨)
+// import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
+import AiTalkFab from '@/app/manseryeok/components/AiTalkFab'
 import InviteNotifier from '@/app/couple-chat/InviteNotifier'
 import {
   hourLabelOf, normalizeHourLabel, toStoredHour,
@@ -505,32 +507,6 @@ export default function MyPageNew() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 9, marginBottom: 11 }}>
-          <div onClick={() => router.push('/tarot?from=mypage')}
-            style={{ flex: 1, background: '#f3eefb', border: '0.5px solid #ddd0f0', borderRadius: 14, padding: 12, display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#e6dbf7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🔮</div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 600, color: '#6a4a9c' }}>오늘의 타로</div>
-              <div style={{ fontSize: 10, color: '#8a7aa8', marginTop: 2 }}>가볍게 한 장</div>
-            </div>
-          </div>
-          <div onClick={() => {
-              if (!profile?.birth_year) { alert('먼저 내 사주를 등록해 주세요.'); setEditMode(true); return }
-              const p1 = encodeURIComponent(JSON.stringify({
-                year: profile.birth_year, month: profile.birth_month, day: profile.birth_day,
-                hour: profile.birth_hour ?? '0', gender: profile.gender || '남',
-              }))
-              router.push(`/manseryeok/ai-talk?person1=${p1}`)
-            }}
-            style={{ flex: 1, background: '#fef2ec', border: '0.5px solid #f0d0bc', borderRadius: 14, padding: 12, display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#fae0cf', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>💬</div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 600, color: '#96502e' }}>AI 물어보기</div>
-              <div style={{ fontSize: 10, color: '#b4785a', marginTop: 2 }}>사주로 대화</div>
-            </div>
-          </div>
-        </div>
-
         <ArchiveList />
 
         <div style={card}>
@@ -649,7 +625,8 @@ export default function MyPageNew() {
         ))}
       </div>
 
-      <CoupleChatFab />
+      {/* <CoupleChatFab /> */}
+      <AiTalkFab />
       <InviteNotifier />
     </div>
   )

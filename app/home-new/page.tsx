@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
 import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
-import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
+// 커플채팅 플로팅은 당분간 닫음 (기능은 살아있음. 되살리려면 아래 2줄의 주석만 풀면 됨)
+// import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
+import AiTalkFab from '@/app/manseryeok/components/AiTalkFab'
 import TodayFortuneCard from '@/app/manseryeok/components/TodayFortuneCard'
 import EmotionPicker from '@/app/manseryeok/components/EmotionPicker'
 import UserCard from '@/app/manseryeok/components/UserCard'
@@ -544,7 +546,8 @@ export default function HomeNew() {
         )
       })()}
 
-      <CoupleChatFab />
+      {/* <CoupleChatFab /> */}
+      <AiTalkFab />
       <InviteNotifier />
     </div>
   )

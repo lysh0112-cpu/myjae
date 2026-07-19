@@ -34,6 +34,10 @@ import { buildCoupleTongbyeonPrompt, type CouplePerson } from '@/lib/saju/couple
 import { saveCoupleRecord, getCoupleRecord } from '@/lib/saju/coupleRecords'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
 import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
+
+// 커플채팅 열림 스위치. 기능·부품은 그대로 살아 있고 입구만 닫아둔 상태.
+// 되살릴 때는 이 한 줄만 true 로 바꾸면 시작 버튼과 플로팅이 함께 돌아온다.
+const COUPLE_CHAT_OPEN = false
 import ConsultButton from '@/app/components/common/ConsultButton'
 
 type Mode = 'couple' | 'married'
@@ -626,8 +630,9 @@ function CoupleResultView({
           </div>
         )}
 
-        {/* 커플 채팅 초대 — 연인 궁합에서만 (부부 제외) */}
-        {mode !== 'married' && (
+        {/* 커플 채팅 초대 — 연인 궁합에서만 (부부 제외)
+            ⚠ 2026-07-19: 커플채팅 당분간 닫음. 되살리려면 위 COUPLE_CHAT_OPEN 을 true 로. */}
+        {COUPLE_CHAT_OPEN && mode !== 'married' && (
           <button onClick={() => onInviteChat(score?.grade)}
             style={{
               width: '100%', marginTop: 10, borderRadius: 11, padding: 13,
@@ -649,7 +654,7 @@ function CoupleResultView({
           인연을 정하는 건 사주가 아니라 두 사람의 마음과 노력이랍니다. 🌿
         </div>
       </div>
-      {mode !== 'married' && <CoupleChatFab />}
+      {COUPLE_CHAT_OPEN && mode !== 'married' && <CoupleChatFab />}
     </main>
   )
 }
