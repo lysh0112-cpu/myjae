@@ -21,8 +21,8 @@
 
 import { Suspense, useMemo, useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import CoupleWonguk from '@/app/manseryeok/couple-result/components/CoupleWonguk'
-import GradeFireworks from '@/app/manseryeok/couple-result/components/GradeFireworks'
+import CoupleWonguk from './components/CoupleWonguk'
+import GradeFireworks from './components/GradeFireworks'
 import { COUPLE_QUESTIONS, groupCoupleByCategory } from '@/lib/saju/coupleQuestions'
 import { MARRIED_QUESTIONS } from '@/lib/saju/marriedQuestions'
 import type { SajuQuestion } from '@/lib/saju/questions'
