@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useResultSaju } from '@/hooks/useResultSaju'
-import EmotionPicker from './EmotionPicker'
 import ArchiveList from './ArchiveList'
 import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
 import InviteNotifier from '@/app/couple-chat/InviteNotifier'
@@ -506,8 +505,6 @@ export default function MyPageNew() {
           </div>
         </div>
 
-        <EmotionPicker />
-
         <div style={{ display: 'flex', gap: 9, marginBottom: 11 }}>
           <div onClick={() => router.push('/tarot?from=mypage')}
             style={{ flex: 1, background: '#f3eefb', border: '0.5px solid #ddd0f0', borderRadius: 14, padding: 12, display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
@@ -603,9 +600,6 @@ export default function MyPageNew() {
           </div>
           <div onClick={() => router.push('/manseryeok/reviews/write')} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 12px', background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, cursor: 'pointer' }}>
             <span style={{ fontSize: 13, color: '#5a4a3e' }}>❓ 문의하기</span>
-          </div>
-          <div onClick={() => router.push('/manseryeok/expert')} style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 8, padding: '13px 12px', background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, cursor: 'pointer' }}>
-            <span style={{ fontSize: 13, color: '#5a4a3e' }}>🔎 전문가용 만세력 계산기</span>
           </div>
         </div>
 

@@ -7,6 +7,7 @@ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
 import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
 import TodayFortuneCard from '@/app/manseryeok/components/TodayFortuneCard'
+import EmotionPicker from '@/app/manseryeok/components/EmotionPicker'
 import InviteNotifier from '@/app/couple-chat/InviteNotifier'
 import { listPinnedServices, togglePinnedService, MAX_PINS } from '@/lib/saju/pinnedServices'
 import HomeBottomSheet from '@/app/home-new/components/HomeBottomSheet'
@@ -435,7 +436,7 @@ export default function HomeNew() {
           </div>
         </div>
 
-        {/* ═══ 바텀시트: 운세 + 서비스 (손잡이로 위로 끌면 배너를 덮으며 올라옴) ═══ */}
+        {/* ═══ 바텀시트: 운세 + 서비스 + 감정기록 (손잡이로 위로 끌면 배너를 덮으며 올라옴) ═══ */}
         <HomeBottomSheet maxLift={320}>
 
         {/* ④ 오늘의 운세 (공용 부품 — 프로필 조회·계산·AI호출 전부 부품 안에서) */}
@@ -537,6 +538,25 @@ export default function HomeNew() {
           })()}
         </div>
 
+        {/* ⑥ 감정 기록부 (공용 부품 — props 없음) */}
+        <div style={{ padding: '0 16px 12px' }}>
+          <EmotionPicker />
+        </div>
+
+        {/* ⑦ 전문가용 만세력 계산기 (서비스 12개와 성격이 달라 별도 카드) */}
+        <div style={{ padding: '0 16px 20px' }}>
+          <div
+            onClick={() => router.push('/manseryeok/expert')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, padding: '13px 12px',
+              background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12,
+              cursor: 'pointer',
+            }}
+          >
+            <span style={{ fontSize: 13, color: '#5a4a3e' }}>🔎 전문가용 만세력 계산기</span>
+          </div>
+        </div>
+
         {/* ═══ 바텀시트 끝 ═══ */}
         </HomeBottomSheet>
       </main>
@@ -551,7 +571,7 @@ export default function HomeNew() {
         {[
           { icon: '🏠', label: '홈', href: '/home-new', active: true },
           { icon: '⊞', label: '서비스', href: '', wip: true, active: false },
-          { icon: '💬', label: '상담', href: '', wip: true, active: false },
+          { icon: '💬', label: '상담', href: '/manseryeok/reviews', active: false },
           { icon: '♡', label: '찜', href: '/home-new', active: false },
         ].map((n) => (
           <button
