@@ -16,6 +16,7 @@
 // ============================================================================
 
 import { ReactNode, useCallback, useEffect, useState } from 'react'
+import { EL_BG, EL_BD, EL_C, EL_C_SUB, EL_HAN } from '@/lib/saju/ohaengColor'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useResultSaju } from '@/hooks/useResultSaju'
@@ -24,10 +25,6 @@ import SajuEditModal from './SajuEditModal'
 
 const STEM_ELEMENT: Record<string, string> = { 甲:'목',乙:'목',丙:'화',丁:'화',戊:'토',己:'토',庚:'금',辛:'금',壬:'수',癸:'수' }
 const BRANCH_ELEMENT: Record<string, string> = { 子:'수',丑:'토',寅:'목',卯:'목',辰:'토',巳:'화',午:'화',未:'토',申:'금',酉:'금',戌:'토',亥:'수' }
-const EL_COLOR: Record<string, string> = { 목:'#4caf50',화:'#f44336',토:'#ff9800',금:'#9e9e9e',수:'#2196f3' }
-const EL_BG: Record<string, string> = { 목:'#e8f5e9',화:'#ffebee',토:'#fff3e0',금:'#f5f5f5',수:'#e3f2fd' }
-const EL_BD: Record<string, string> = { 목:'#a5d6a7',화:'#ef9a9a',토:'#ffe082',금:'#bdbdbd',수:'#90caf9' }
-const EL_HAN: Record<string, string> = { 목:'木',화:'火',토:'土',금:'金',수:'水' }
 
 type CardProfile = {
   nickname: string | null
@@ -58,13 +55,14 @@ function roleColor(r: string | null) {
 }
 
 function GanjiBox({ char, el }: { char: string; el: string }) {
-  const color = el ? EL_COLOR[el] : '#888'
+  const color = el ? EL_C[el] : '#888'
+  const sub = el ? EL_C_SUB[el] : '#888'
   const bg = el ? EL_BG[el] : '#f5f5f5'
   const bd = el ? EL_BD[el] : '#ddd'
   return (
     <div style={{ width: 38, height: 46, borderRadius: 7, background: bg, border: `1px solid ${bd}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-      <span style={{ fontSize: 19, fontWeight: 500, color, lineHeight: 1 }}>{char}</span>
-      {el && <span style={{ fontSize: 8, color, marginTop: 1 }}>{EL_HAN[el]}</span>}
+      <span style={{ fontSize: 19, fontWeight: 600, color, lineHeight: 1 }}>{char}</span>
+      {el && <span style={{ fontSize: 10.5, fontWeight: 600, color: sub, marginTop: 1 }}>{EL_HAN[el]}</span>}
     </div>
   )
 }

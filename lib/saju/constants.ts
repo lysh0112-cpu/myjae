@@ -6,6 +6,11 @@ export const JIJI = ['子','丑','寅','卯','辰','巳','午','未','申','酉'
 export type Cheongan = typeof CHEONGAN[number]
 export type Jiji = typeof JIJI[number]
 
+// ⚠ 2026-07-19: 오행색 통일 작업 때 이 표도 바꾸려 했으나 되돌렸다.
+//   상담사 화면(다크 배경)이 이 색을 글씨색으로 쓰고 있어서,
+//   명리 규칙색(수=검정)으로 바꾸면 글자가 안 보인다.
+//   상담사 화면을 피치톤으로 바꿀 때 함께 정리할 것.
+//   고객 화면은 lib/saju/ohaengColor.ts 를 쓴다.
 export const GAN_COLOR: Record<string, string> = {
   '甲':'#5BA85C','乙':'#5BA85C',
   '丙':'#E85D4A','丁':'#E85D4A',

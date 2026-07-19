@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { EL_BG, EL_C, EL_C_SUB, EL_TEXT as EL_BD_STRONG } from '@/lib/saju/ohaengColor'
 import { OHAENG_INFO } from './ohaengInfo'
 import type { YongsinNewResult, Ohaeng } from '@/lib/saju/yongsinNew'
 
@@ -56,10 +57,6 @@ const EL_BRANCHES: Record<string, string[]> = {
 
 const EL_TO_STEMS: Record<string, string> = { 목: '甲乙', 화: '丙丁', 토: '戊己', 금: '庚辛', 수: '壬癸' }
 const EL_COLOR: Record<string, string> = { 목: '#2e7d32', 화: '#c62828', 토: '#f57f17', 금: '#616161', 수: '#ffffff' }
-const EL_SUB: Record<string, string> = { 목: '#2e7d32', 화: '#c62828', 토: '#f57f17', 금: '#616161', 수: '#dddddd' }
-const EL_BG: Record<string, string> = { 목: '#e8f5e9', 화: '#ffebee', 토: '#fff8e1', 금: '#f5f5f5', 수: '#2b2b2b' }
-const EL_BD: Record<string, string> = { 목: '#a5d6a744', 화: '#c6282844', 토: '#f57f1744', 금: '#61616144', 수: '#2b2b2b' }
-const EL_BD_STRONG: Record<string, string> = { 목: '#2e7d32', 화: '#c62828', 토: '#f57f17', 금: '#616161', 수: '#2b2b2b' }
 const EL_HAN: Record<string, string> = { 목: '木', 화: '火', 토: '土', 금: '金', 수: '水' }
 
 // 5신 역할 → 모달 한 줄 문구
@@ -108,15 +105,16 @@ export default function YongsinCard({ result, saju }: Props) {
         </div>
       )
     }
-    const isSu = el === '수'
+    // 배경이 진한 오행색이라 글씨는 EL_C(흰색, 금만 검정)
     return (
       <div onClick={() => openCard(role, el)}
         style={{
-          background: EL_BG[el], border: `${isYong ? 1.5 : 0.5}px solid ${isYong ? EL_BD_STRONG[el] : EL_BD[el]}`,
+          background: EL_BG[el],
+          border: isYong ? '1.5px solid #c8783c' : `1px solid ${EL_BD_STRONG[el]}`,
           borderRadius: 10, padding: big ? '12px 4px' : '8px 3px', textAlign: 'center', cursor: 'pointer',
         }}>
-        <div style={{ fontSize: big ? 21 : 15, fontWeight: 700, color: isSu ? '#fff' : '#1a1a1a', lineHeight: 1 }}>{EL_TO_STEMS[el]}</div>
-        <div style={{ fontSize: big ? 9.5 : 8.5, color: EL_SUB[el], fontWeight: 600, marginTop: 3 }}>{OHAENG_INFO[el]?.name}({EL_HAN[el]})</div>
+        <div style={{ fontSize: big ? 21 : 15, fontWeight: 700, color: EL_C[el], lineHeight: 1 }}>{EL_TO_STEMS[el]}</div>
+        <div style={{ fontSize: big ? 10.5 : 9.5, color: EL_C_SUB[el], fontWeight: 600, marginTop: 3 }}>{EL_HAN[el]}</div>
       </div>
     )
   }
@@ -135,6 +133,7 @@ export default function YongsinCard({ result, saju }: Props) {
     }
     const has = johuFound.length > 0
     const yukchin = YUKCHIN_OF_EL(result.dayElement, el)
+    // 배경이 진한 오행색이라 글씨는 EL_C(흰색, 금만 검정) / 보조글씨는 EL_C_SUB
     return (
       <div onClick={() => openCard('용신', el)}
         style={{
@@ -142,10 +141,10 @@ export default function YongsinCard({ result, saju }: Props) {
           border: `1.5px solid ${EL_BD_STRONG[el]}`,
           borderRadius: 10, padding: '12px 6px', textAlign: 'center', cursor: 'pointer',
         }}>
-        <div style={{ fontSize: 22, fontWeight: 700, color: EL_SUB[el], lineHeight: 1.2 }}>
+        <div style={{ fontSize: 22, fontWeight: 700, color: EL_C[el], lineHeight: 1.2 }}>
           {EL_HAN[el]}({yukchin || OHAENG_INFO[el]?.name})
         </div>
-        <div style={{ fontSize: 11, marginTop: 4, fontWeight: 600, color: has ? '#3b6d11' : '#c0705a' }}>
+        <div style={{ fontSize: 11, marginTop: 4, fontWeight: 600, color: EL_C_SUB[el] }}>
           {has
             ? `✓ 원국에 ${johuFound.join('·')} ${johuFound.length}개 있음`
             : '원국에 없음 · 운에서 와야 해요'}
@@ -169,22 +168,21 @@ export default function YongsinCard({ result, saju }: Props) {
     const pr = GYEOK_PRINCIPLE[gyeokguk.name]
     const found = elFoundInSaju(el)
     const has = found.length > 0
-    const isSu = el === '수'
     return (
       <div onClick={() => openCard('용신', el)}
         style={{
           background: EL_BG[el], border: `1.5px solid ${EL_BD_STRONG[el]}`,
           borderRadius: 10, padding: '12px 6px', textAlign: 'center', cursor: 'pointer',
         }}>
-        <div style={{ fontSize: 22, fontWeight: 700, color: isSu ? '#fff' : EL_SUB[el], lineHeight: 1.2 }}>
+        <div style={{ fontSize: 22, fontWeight: 700, color: EL_C[el], lineHeight: 1.2 }}>
           {EL_HAN[el]}({yukchin})
         </div>
         {pr && (
-          <div style={{ fontSize: 11, color: isSu ? '#ddd' : '#96502e', marginTop: 5, fontWeight: 600 }}>
+          <div style={{ fontSize: 11, color: EL_C_SUB[el], marginTop: 5, fontWeight: 600 }}>
             {pr.name} — {pr.line}
           </div>
         )}
-        <div style={{ fontSize: 10.5, marginTop: 3, fontWeight: 600, color: has ? '#3b6d11' : '#c0705a' }}>
+        <div style={{ fontSize: 10.5, marginTop: 3, fontWeight: 600, color: EL_C_SUB[el] }}>
           {has ? `✓ 원국에 ${found.join('·')} ${found.length}개 있음` : '원국에 없음 · 운에서 와야 해요'}
         </div>
       </div>

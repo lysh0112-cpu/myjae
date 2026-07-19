@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, Suspense, useEffect } from "react";
+import { EL_BG as ELEMENT_BG, EL_TEXT as ELEMENT_COLOR, EL_C, EL_C_SUB, EL_HAN as OH_HAN } from '@/lib/saju/ohaengColor'
 import { useSearchParams, useRouter } from "next/navigation";
 import { useResultSaju } from "@/hooks/useResultSaju";
 import { supabase } from "@/lib/supabase";
 import { fromProfile, fromUrl, type MyInfo } from "@/lib/saju/myInfo";
 import { saveRecord, getRecord } from "@/lib/saju/sajuRecords";
 import { getUnsung, getSinsal, unsungColor, getGongmang, SINSAL_HIGHLIGHT } from "@/lib/saju";
-import { GAN_COLOR, JI_COLOR } from "@/lib/saju/constants";
 import { calcYongsin } from "@/lib/saju/yongsin";
 import { calcYongsinNew } from "@/lib/saju/yongsinNew";
 import { calcHapchungScore } from "@/lib/saju/hapchungScore";
@@ -34,8 +34,6 @@ const STEM_ELEMENT: Record<string,string> = {甲:'목',乙:'목',丙:'화',丁:'
 const STEM_KOR: Record<string,string> = {甲:'갑목',乙:'을목',丙:'병화',丁:'정화',戊:'무토',己:'기토',庚:'경금',辛:'신금',壬:'임수',癸:'계수'}
 const BRANCH_ELEMENT: Record<string,string> = {子:'수',丑:'토',寅:'목',卯:'목',辰:'토',巳:'화',午:'화',未:'토',申:'금',酉:'금',戌:'토',亥:'수'}
 const BRANCH_YIN: Record<string,boolean> = {子:true,丑:true,寅:false,卯:true,辰:false,巳:false,午:true,未:true,申:false,酉:true,戌:false,亥:false}
-const ELEMENT_COLOR: Record<string,string> = {목:'#4caf50',화:'#f44336',토:'#ff9800',금:'#9e9e9e',수:'#2196f3'}
-const ELEMENT_BG: Record<string,string> = {목:'#e8f5e9',화:'#ffebee',토:'#fff3e0',금:'#f5f5f5',수:'#e3f2fd'}
 const ELEMENT_HAN: Record<string,string> = {목:'木',화:'火',토:'土',금:'金',수:'水'}
 const SIPSIN_COLOR: Record<string,string> = {
   비견:'#9e9e9e',겁재:'#9e9e9e',
@@ -118,37 +116,42 @@ function SinganChart({score}:{score:number}) {
 
 // 간지 박스
 function GanjiBox({char,el,isDay,isGongmang}:{char:string;el:string;isDay?:boolean;isGongmang?:boolean}) {
-  const color=GAN_COLOR[char]??JI_COLOR[char]??(el?ELEMENT_COLOR[el]:'#888')
+  // 배경이 진한 오행색이라 글씨는 EL_C(흰색, 금만 검정)를 쓴다
+  const color=el?EL_C[el]:'#888'
+  const sub=el?EL_C_SUB[el]:'#888'
+  const bd=el?ELEMENT_COLOR[el]:'#ddd'
   const bg=el?ELEMENT_BG[el]:'#f5f5f5'
   return (
     <div style={{
       width:'100%',height:'52px',borderRadius:'8px',
       background:isDay?'#fff3e9':bg,
-      border:isGongmang?'1.5px solid #f44336':isDay?'1.5px solid #e8d5c5':`1px solid ${color}66`,
+      border:isGongmang?'1.5px solid #f44336':isDay?'1.5px solid #e8d5c5':`1px solid ${bd}`,
       display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
       position:'relative' as const,gap:'1px',
     }}>
       {isGongmang&&<span style={{position:'absolute' as const,top:'2px',right:'4px',fontSize:'8px',color:'#f44336',fontWeight:700}}>空</span>}
       <span style={{fontSize:'24px',fontWeight:700,color,lineHeight:1}}>{char}</span>
-      {el&&<span style={{fontSize:'8px',fontWeight:700,color}}>{ELEMENT_HAN[el]}</span>}
+      {el&&<span style={{fontSize:'10.5px',fontWeight:600,color:sub}}>{OH_HAN[el]}</span>}
     </div>
   )
 }
 
 // 세운/월운 간지 박스
 function SmallGanjiBox({char,el,isCurrent,size=36}:{char:string;el:string;isCurrent?:boolean;size?:number}) {
-  const color=GAN_COLOR[char]??JI_COLOR[char]??(el?ELEMENT_COLOR[el]:'#888')
+  const color=el?EL_C[el]:'#888'
+  const sub=el?EL_C_SUB[el]:'#888'
+  const bd=el?ELEMENT_COLOR[el]:'#ddd'
   const bg=el?ELEMENT_BG[el]:'#f5f5f5'
   return (
     <div style={{
       width:`${size}px`,height:`${size}px`,borderRadius:'7px',
       background:isCurrent?'rgba(255,255,255,0.15)':bg,
-      border:`1px solid ${color}66`,
+      border:`1px solid ${bd}`,
       display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
       position:'relative' as const,
     }}>
       <span style={{fontSize:`${size*0.5}px`,fontWeight:700,color:isCurrent?'#fff':color,lineHeight:1}}>{char}</span>
-      {el&&<span style={{fontSize:'7px',fontWeight:700,color:isCurrent?'rgba(255,255,255,0.5)':color,position:'absolute' as const,bottom:'2px',right:'3px'}}>{ELEMENT_HAN[el]}</span>}
+      {el&&<span style={{fontSize:'9px',fontWeight:600,color:isCurrent?'rgba(255,255,255,0.6)':sub,position:'absolute' as const,bottom:'1px',right:'3px'}}>{OH_HAN[el]}</span>}
     </div>
   )
 }

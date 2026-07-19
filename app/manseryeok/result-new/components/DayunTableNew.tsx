@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { EL_BG, EL_BD, EL_C, EL_C_SUB, EL_HAN } from '@/lib/saju/ohaengColor'
 import { getUnsung, getSinsal, unsungColor, SINSAL_HIGHLIGHT } from '@/lib/saju'
-import { GAN_COLOR, JI_COLOR } from '@/lib/saju/constants'
 import type { DayunItem } from '@/lib/saju/dayun'
 import { SAJU_TERMS } from '../sajuTerms'
 import TermModal from '../TermModal'

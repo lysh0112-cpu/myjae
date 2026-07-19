@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { EL_BG as ELEMENT_BG, EL_TEXT as ELEMENT_COLOR, EL_HAN as ELEMENT_HAN, EL_C, EL_C_SUB } from '@/lib/saju/ohaengColor'
 import { getUnsung, getSinsal, unsungColor, SINSAL_HIGHLIGHT } from '@/lib/saju'
-import { GAN_COLOR, JI_COLOR } from '@/lib/saju/constants'
 import { calcSeyunList } from '@/lib/saju/dayun'
 
 interface Props {
@@ -16,9 +16,6 @@ interface Props {
 const CURRENT_YEAR = new Date().getFullYear()
 const STEM_ELEMENT: Record<string,string> = {甲:'목',乙:'목',丙:'화',丁:'화',戊:'토',己:'토',庚:'금',辛:'금',壬:'수',癸:'수'}
 const BRANCH_ELEMENT: Record<string,string> = {子:'수',丑:'토',寅:'목',卯:'목',辰:'토',巳:'화',午:'화',未:'토',申:'금',酉:'금',戌:'토',亥:'수'}
-const ELEMENT_COLOR: Record<string,string> = {목:'#4caf50',화:'#f44336',토:'#ff9800',금:'#9e9e9e',수:'#2196f3'}
-const ELEMENT_BG: Record<string,string> = {목:'#e8f5e9',화:'#ffebee',토:'#fff3e0',금:'#f5f5f5',수:'#e3f2fd'}
-const ELEMENT_HAN: Record<string,string> = {목:'木',화:'火',토:'土',금:'金',수:'水'}
 const SIPSIN_COLOR: Record<string,string> = {
   비견:'#9e9e9e',겁재:'#9e9e9e',
   식신:'#4caf50',상관:'#4caf50',
@@ -28,18 +25,21 @@ const SIPSIN_COLOR: Record<string,string> = {
 }
 
 function GanjiSquare({char,el,isCurrent,isSelected}:{char:string;el:string;isCurrent?:boolean;isSelected?:boolean}) {
-  const color = GAN_COLOR[char]??JI_COLOR[char]??(el?ELEMENT_COLOR[el]:'#888')
+  // 배경이 진한 오행색이라 글씨는 EL_C(흰색, 금만 검정)
+  const color = el?EL_C[el]:'#888'
+  const sub = el?EL_C_SUB[el]:'#888'
+  const bd = el?ELEMENT_COLOR[el]:'#ddd'
   const bg = el?ELEMENT_BG[el]:'#f5f5f5'
   return (
     <div style={{
       width:'40px',height:'40px',borderRadius:'8px',
       background:isSelected?'rgba(255,255,255,0.15)':bg,
-      border:`1px solid ${color}66`,
+      border:`1px solid ${bd}`,
       display:'flex',alignItems:'center',justifyContent:'center',
       position:'relative' as const,
     }}>
       <span style={{fontSize:'22px',fontWeight:700,color:isSelected?'#fff':color,lineHeight:1}}>{char}</span>
-      {el&&<span style={{position:'absolute' as const,bottom:'2px',right:'3px',fontSize:'8px',fontWeight:700,color:isSelected?'rgba(255,255,255,0.5)':color}}>{ELEMENT_HAN[el]}</span>}
+      {el&&<span style={{position:'absolute' as const,bottom:'1px',right:'3px',fontSize:'10px',fontWeight:600,color:isSelected?'rgba(255,255,255,0.6)':sub}}>{ELEMENT_HAN[el]}</span>}
     </div>
   )
 }
