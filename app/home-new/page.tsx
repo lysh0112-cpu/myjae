@@ -282,7 +282,12 @@ export default function HomeNew() {
         </div>
         <div style={{ display: 'flex', gap: '16px', fontSize: '18px', color: '#b49080' }}>
           <span style={{ cursor: 'pointer' }}>🔔</span>
-          <span style={{ cursor: 'pointer' }}>☰</span>
+          <span
+            onClick={() => router.push('/mypage-new')}
+            role="button"
+            aria-label="마이페이지"
+            style={{ cursor: 'pointer' }}
+          >☰</span>
         </div>
       </div>
 
@@ -393,7 +398,7 @@ export default function HomeNew() {
           }}>
             {isLoggedIn ? (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{
                     width: '44px', height: '44px', borderRadius: '50%',
                     background: '#fae6d5', border: '1.5px solid #e6be9f',
@@ -414,21 +419,6 @@ export default function HomeNew() {
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => router.push('/mypage-new')}
-                  onPointerDown={(e) => { e.currentTarget.style.transform = 'scale(0.97)' }}
-                  onPointerUp={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
-                  onPointerLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
-                  style={{
-                    width: '100%', height: '44px',
-                    background: '#b46e46', border: 'none', borderRadius: '10px',
-                    color: '#fff', fontSize: '13.5px', fontWeight: 800, cursor: 'pointer',
-                    fontFamily: "var(--font-geist-sans), 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif",
-                    letterSpacing: '0.02em',
-                    transition: 'transform 0.12s ease', transform: 'scale(1)',
-                    WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation',
-                  }}
-                >나의 운명 아카이브 바로가기 →</button>
               </>
             ) : (
               <>
