@@ -3,24 +3,19 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import {
+  hourLabelOf, normalizeHourLabel, toStoredHour,
+  TIME_BANDS, MONTHS, dayOptions, clampDay, isValidBirthDate,
+  crossesMidnight, type TimeBand,
+} from '@/lib/saju/birthInput'
 
-// 화면 표시용 시간 라벨 (子시 (23:00~01:00) 형식으로 통일)
-// 배열 인덱스 그대로가 저장값이 아님 → 아래 hourLabelToValue로 변환
-const HOURS = [
-  '모름',
-  '子시 (23:00~01:00)', '丑시 (01:00~03:00)', '寅시 (03:00~05:00)',
-  '卯시 (05:00~07:00)', '辰시 (07:00~09:00)', '巳시 (09:00~11:00)',
-  '午시 (11:00~13:00)', '未시 (13:00~15:00)', '申시 (15:00~17:00)',
-  '酉시 (17:00~19:00)', '戌시 (19:00~21:00)', '亥시 (21:00~23:00)',
-]
-
-// 라벨 → 저장값: '모름' 또는 '0'~'11'
-function hourLabelToValue(label: string): string {
-  if (!label || label === '모름') return '모름'
-  const idx = HOURS.indexOf(label)
-  if (idx <= 0) return '모름'
-  return String(idx - 1)   // 子시(배열 1번) → 저장값 '0'
-}
+// 시(時) 목록 — 공용 birthInput.ts 기준 (30분법 · 공백없음).
+//   ★ '모름'은 두지 않는다. 시를 반드시 입력받는다(대표님 확정 2026-07).
+//     정확히 모르는 사람은 아래 시간대 버튼으로 3개까지 좁혀서 고른다.
+const HOUR_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
+  value: String(i),
+  label: hourLabelOf(i),
+}))
 
 function genderToValue(g: '여자' | '남자' | ''): '남' | '여' {
   return g === '여자' ? '여' : '남'
@@ -31,6 +26,17 @@ const inputStyle: React.CSSProperties = {
   border: '0.5px solid #e0ddd6', borderRadius: '12px',
   background: '#fff', color: '#1a1a1a', fontSize: '14px',
   outline: 'none', boxSizing: 'border-box',
+}
+
+// 드롭다운 공통 (기본 화살표 숨기고 직접 그림)
+const selectStyle: React.CSSProperties = {
+  ...inputStyle,
+  appearance: 'none',
+  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23bbb' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+  backgroundRepeat: 'no-repeat',
+  backgroundPosition: 'right 10px center',
+  paddingRight: '28px',
+  cursor: 'pointer',
 }
 
 export default function SignupPage() {
@@ -46,7 +52,8 @@ export default function SignupPage() {
   const [year, setYear] = useState('')
   const [month, setMonth] = useState('')
   const [day, setDay] = useState('')
-  const [hour, setHour] = useState('')
+  const [hour, setHour] = useState('')       // '0'~'11' (인덱스 문자열)
+  const [band, setBand] = useState<TimeBand | null>(null)  // 시간대 보조 필터
   const [city, setCity] = useState('')
 
   // 계정 정보
@@ -60,6 +67,34 @@ export default function SignupPage() {
 
   const onlyNum = (v: string, len: number) => v.replace(/[^0-9]/g, '').slice(0, len)
 
+  // 연/월이 바뀌면 이미 고른 '일'이 범위를 벗어날 수 있다 (3/31 → 2월).
+  const applyYear = (v: string) => {
+    const y = onlyNum(v, 4)
+    setYear(y)
+    if (month && day) setDay(clampDay(day, parseInt(y, 10), parseInt(month, 10), calType))
+  }
+  const applyMonth = (m: string) => {
+    setMonth(m)
+    if (day) setDay(clampDay(day, parseInt(year, 10), parseInt(m, 10), calType))
+  }
+  const applyCalType = (c: '양력' | '음력') => {
+    setCalType(c)
+    if (month && day) setDay(clampDay(day, parseInt(year, 10), parseInt(month, 10), c))
+  }
+
+  // 시간대를 고르면 그 안의 3개 시진만 목록에 남긴다.
+  // 시간대를 고르면 그 안의 3개만. band.hours 순서를 그대로 따른다
+  //   (밤 = 戌·亥·子 순. 인덱스 오름차순으로 뽑으면 子가 앞으로 와서 어색함)
+  const visibleHours = band
+    ? band.hours.map(i => HOUR_OPTIONS[i])
+    : HOUR_OPTIONS
+
+  const pickBand = (b: TimeBand) => {
+    if (band?.key === b.key) { setBand(null); return }   // 다시 누르면 해제
+    setBand(b)
+    if (hour && !b.hours.includes(Number(hour))) setHour('')  // 범위 밖이면 초기화
+  }
+
   // 소셜 로그인 (아직 준비 중)
   const handleSocial = (provider: string) => {
     setMsg(`${provider} 로그인은 준비 중입니다. 이메일로 가입해주세요.`)
@@ -72,7 +107,8 @@ export default function SignupPage() {
     if (!hangulName) { setMsg('이름(한글)을 입력해주세요.'); return }
     if (!gender) { setMsg('성별을 선택해주세요.'); return }
     if (year.length !== 4 || !month || !day) { setMsg('생년월일을 정확히 입력해주세요.'); return }
-    if (!hour) { setMsg('태어난 시간을 선택해주세요.'); return }
+    if (!isValidBirthDate(year, month, day, calType)) { setMsg('생년월일이 올바르지 않아요. 다시 확인해주세요.'); return }
+    if (!hour) { setMsg('태어난 시간을 선택해주세요. 정확히 모르시면 시간대 버튼으로 골라주세요.'); return }
     if (!email || !email.includes('@')) { setMsg('올바른 이메일을 입력해주세요.'); return }
     if (password.length < 6) { setMsg('비밀번호는 6자 이상으로 입력해주세요.'); return }
     if (password !== passwordConfirm) { setMsg('비밀번호가 일치하지 않습니다.'); return }
@@ -98,7 +134,7 @@ export default function SignupPage() {
     }
 
     // 2) profiles 저장
-    const hourValue = hourLabelToValue(hour)
+    const hourValue = toStoredHour(normalizeHourLabel(hour))
     const genderValue = genderToValue(gender)
     const leapValue = calType === '음력' && leap
     const now = new Date().toISOString()
@@ -245,7 +281,7 @@ export default function SignupPage() {
         <Field label="생년월일">
           <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
             {(['양력', '음력'] as const).map(c => (
-              <button key={c} onClick={() => setCalType(c)} style={{
+              <button key={c} onClick={() => applyCalType(c)} style={{
                 padding: '6px 18px', borderRadius: '20px',
                 border: calType === c ? '1.5px solid #1a1a1a' : '0.5px solid #e0ddd6',
                 background: calType === c ? '#1a1a1a' : '#fff',
@@ -267,34 +303,70 @@ export default function SignupPage() {
               ))}
             </div>
           )}
+          {/* 연도는 손 입력, 월·일은 드롭다운 (전 화면 통일 규칙) */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <input value={year} onChange={e => setYear(onlyNum(e.target.value, 4))}
+            <input value={year} onChange={e => applyYear(e.target.value)}
               inputMode="numeric" placeholder="1990"
               style={{ ...inputStyle, flex: 1.5, textAlign: 'center' as const }} />
             <span style={{ color: '#bbb', fontSize: '13px' }}>년</span>
-            <input value={month} onChange={e => setMonth(onlyNum(e.target.value, 2))}
-              inputMode="numeric" placeholder="01"
-              style={{ ...inputStyle, flex: 1, textAlign: 'center' as const }} />
+            <select value={month} onChange={e => applyMonth(e.target.value)}
+              style={{ ...selectStyle, flex: 1, color: month ? '#1a1a1a' : '#bbb' }}>
+              <option value="">월</option>
+              {MONTHS.map(m => <option key={m} value={String(m)}>{m}</option>)}
+            </select>
             <span style={{ color: '#bbb', fontSize: '13px' }}>월</span>
-            <input value={day} onChange={e => setDay(onlyNum(e.target.value, 2))}
-              inputMode="numeric" placeholder="01"
-              style={{ ...inputStyle, flex: 1, textAlign: 'center' as const }} />
+            <select value={day} onChange={e => setDay(e.target.value)}
+              style={{ ...selectStyle, flex: 1, color: day ? '#1a1a1a' : '#bbb' }}>
+              <option value="">일</option>
+              {dayOptions(parseInt(year, 10), parseInt(month, 10), calType)
+                .map(d => <option key={d} value={String(d)}>{d}</option>)}
+            </select>
             <span style={{ color: '#bbb', fontSize: '13px' }}>일</span>
           </div>
         </Field>
 
-        {/* 태어난 시간 */}
+        {/* 태어난 시간 — 반드시 하나 고르게 한다 ('모름' 없음) */}
         <Field label="태어난 시간">
-          <select value={hour} onChange={e => setHour(e.target.value)} style={{
-            ...inputStyle, color: hour ? '#1a1a1a' : '#bbb',
-            appearance: 'none' as const,
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23bbb' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
-            backgroundRepeat: 'no-repeat', backgroundPosition: 'right 14px center',
-            paddingRight: '36px',
-          }}>
+          <select value={hour} onChange={e => setHour(e.target.value)}
+            style={{ ...selectStyle, color: hour ? '#1a1a1a' : '#bbb' }}>
             <option value="">시간을 선택해주세요</option>
-            {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
+            {visibleHours.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
           </select>
+
+          {/* 시를 정확히 모르는 사람용 — 시간대를 고르면 3개로 좁혀진다 */}
+          <div style={{ marginTop: '10px' }}>
+            <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '6px' }}>
+              시를 정확히 모르시나요? 대략 언제쯤인지 골라보세요
+            </div>
+            <div style={{ display: 'flex', gap: '5px' }}>
+              {TIME_BANDS.map(b => {
+                const on = band?.key === b.key
+                return (
+                  <button key={b.key} type="button" onClick={() => pickBand(b)} style={{
+                    flex: 1, padding: '9px 2px', borderRadius: '10px',
+                    border: on ? '1.5px solid #1a1a1a' : '0.5px solid #e0ddd6',
+                    background: on ? '#1a1a1a' : '#fff',
+                    color: on ? '#fff' : '#888',
+                    cursor: 'pointer', lineHeight: 1.35,
+                  }}>
+                    <div style={{ fontSize: '12px' }}>{b.label}</div>
+                    <div style={{ fontSize: '9px', opacity: 0.75 }}>{b.range}</div>
+                  </button>
+                )
+              })}
+            </div>
+            {band && (
+              <div style={{ fontSize: '11px', color: '#8B6914', marginTop: '7px', lineHeight: 1.6 }}>
+                {band.label} 시간대의 3개 중에서 골라주세요. 다시 누르면 전체가 보여요.
+              </div>
+            )}
+            {hour !== '' && crossesMidnight(Number(hour)) && (
+              <div style={{ fontSize: '11px', color: '#c0392b', marginTop: '7px', lineHeight: 1.6 }}>
+                子시는 밤 11시 30분부터 다음 날 새벽 1시 30분까지예요.
+                자정을 넘겨 태어나셨다면 생년월일을 다시 확인해주세요.
+              </div>
+            )}
+          </div>
         </Field>
 
         {/* 태어난 도시 */}
