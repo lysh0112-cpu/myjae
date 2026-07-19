@@ -7,9 +7,11 @@
 // 특징(대표님·목업 확정):
 //  - 아바타 + 이름(별명): 이름 첫 글자가 아바타에 실시간 반영
 //  - 관계 칩 18개 + "직접 입력" (RELATIONS는 savedPeople.ts에서 가져옴)
-//  - 성별·달력 세그먼트 / signup과 동일한 직접입력 생년월일 / 시 드롭다운
+//  - 성별·달력 세그먼트 / 연도는 손입력·월일은 드롭다운 (전 화면 통일 규칙)
 //  - 달력 '음력'이면 윤달 여부(평달/윤달) 블록 노출 (기존 PersonForm 규칙과 동일)
-//  - "태어난 시간을 몰라요" 체크 → 시 선택 비활성 + '모름' 저장
+//  - 시(時)는 반드시 입력받는다 (대표님 확정 2026-07 — 회원가입과 동일 규칙).
+//    예전엔 "태어난 시간을 몰라요" 체크박스가 있었으나 제거.
+//    정확히 모르면 시간대 버튼(새벽/아침낮/오후/밤)으로 3개까지 좁혀서 고른다.
 //  - 추가/수정 겸용: initial이 있으면 수정 모드
 //
 // 저장은 이 컴포넌트가 직접 하지 않고, onSubmit(draft)로 부모(모달)에 넘긴다.
@@ -19,7 +21,17 @@
 
 import { useState, useMemo } from 'react'
 import { RELATIONS, type PersonDraft, type SavedInputData } from '@/lib/saju/savedPeople'
-import { HOURS, HOUR_INDEX, INDEX_TO_HOUR } from '@/lib/saju/myInfo'
+import {
+  hourLabelOf, normalizeHourLabel, toStoredHour,
+  TIME_BANDS, MONTHS, dayOptions, clampDay, isValidBirthDate,
+  crossesMidnight, type TimeBand,
+} from '@/lib/saju/birthInput'
+
+// 시(時) 목록 — 공용 birthInput.ts 기준 (30분법 · 공백없음). '모름' 없음.
+const HOUR_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
+  value: String(i),
+  label: hourLabelOf(i),
+}))
 import { avatarChar } from '@/lib/saju/savedPeople'
 
 // ── 피치톤 색 (인수인계서 3장 디자인 시스템) ──
@@ -98,16 +110,37 @@ export default function PersonFormPitch({
   const [month, setMonth] = useState(initial?.input.month ?? '')
   const [day, setDay] = useState(initial?.input.day ?? '')
 
-  // 시: 수정 모드면 저장값 반영, 새 추가면 '시간 입력'이 기본(몰라요 해제)
-  const initHour = initial?.input.hour
-  const [unknownHour, setUnknownHour] = useState(!!initial && initHour === '모름')
-  const [hourLabel, setHourLabel] = useState(
-    initHour && initHour !== '모름' ? (INDEX_TO_HOUR[initHour] ?? '') : ''
-  )
+  // 시: 수정 모드면 저장값('0'~'11') 그대로. 옛 '모름' 값은 빈칸으로 두어 새로 고르게 한다.
+  const initHourIdx = normalizeHourLabel(initial?.input.hour)
+  const [hour, setHour] = useState(initHourIdx == null ? '' : String(initHourIdx))
+  const [band, setBand] = useState<TimeBand | null>(null)   // 시간대 보조 필터
 
   const [localErr, setLocalErr] = useState('')
 
   const onlyNum = (v: string, len: number) => v.replace(/[^0-9]/g, '').slice(0, len)
+
+  // 연/월/달력을 바꾸면 이미 고른 '일'이 범위를 벗어날 수 있다 (3/31 → 2월)
+  const applyYear = (v: string) => {
+    const y = onlyNum(v, 4)
+    setYear(y)
+    if (month && day) setDay(clampDay(day, parseInt(y, 10), parseInt(month, 10), calType))
+  }
+  const applyMonth = (m: string) => {
+    setMonth(m)
+    if (day) setDay(clampDay(day, parseInt(year, 10), parseInt(m, 10), calType))
+  }
+  const applyCalType = (c: string) => {
+    setCalType(c)
+    if (month && day) setDay(clampDay(day, parseInt(year, 10), parseInt(month, 10), c))
+  }
+
+  // 시간대를 고르면 그 안의 3개만 (band.hours 순서 = 시간 순)
+  const visibleHours = band ? band.hours.map(i => HOUR_OPTIONS[i]) : HOUR_OPTIONS
+  const pickBand = (b: TimeBand) => {
+    if (band?.key === b.key) { setBand(null); return }
+    setBand(b)
+    if (hour && !b.hours.includes(Number(hour))) setHour('')
+  }
 
   const avatar = useMemo(() => avatarColor(title), [title])
   const effectiveRelation = useCustom ? customRelation.trim() : relation
@@ -119,16 +152,17 @@ export default function PersonFormPitch({
     if (!effectiveRelation) { setLocalErr('관계를 선택해주세요.'); return }
     const y = parseInt(year, 10), m = parseInt(month, 10), d = parseInt(day, 10)
     if (year.length !== 4 || !y || y < 1900 || y > 2200) { setLocalErr('연도를 4자리로 정확히 입력해주세요.'); return }
-    if (!m || m < 1 || m > 12) { setLocalErr('월을 1~12로 입력해주세요.'); return }
-    if (!d || d < 1 || d > 31) { setLocalErr('일을 1~31로 입력해주세요.'); return }
-    if (!unknownHour && !hourLabel) { setLocalErr('태어난 시를 선택하거나 "시간을 몰라요"를 체크해주세요.'); return }
+    if (!m || m < 1 || m > 12) { setLocalErr('월을 골라주세요.'); return }
+    if (!d || d < 1) { setLocalErr('일을 골라주세요.'); return }
+    if (!isValidBirthDate(year, month, day, calType)) { setLocalErr('생년월일이 올바르지 않아요. 다시 확인해주세요.'); return }
+    if (!hour) { setLocalErr('태어난 시를 선택해주세요. 정확히 모르시면 시간대 버튼으로 골라주세요.'); return }
 
-    const hour = unknownHour ? '모름' : String(HOUR_INDEX[hourLabel] ?? '모름')
+    const hourValue = toStoredHour(normalizeHourLabel(hour))
     const input: SavedInputData = {
       gender, calType,
       year: String(y), month: String(m), day: String(d),
       leapMonth: calType === '음력' ? leapMonth : '0',
-      hour,
+      hour: hourValue,
     }
     onSubmit({ title: t, relation: effectiveRelation, input, serviceType: serviceType ?? null })
   }
@@ -224,8 +258,8 @@ export default function PersonFormPitch({
           <div style={{ flex: 1 }}>
             <div style={label}>달력</div>
             <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `0.5px solid ${C.borderInput}` }}>
-              <button onClick={() => { setCalType('양력'); setLeapMonth('0') }} style={seg(calType === '양력')}>양력</button>
-              <button onClick={() => setCalType('음력')} style={seg(calType === '음력')}>음력</button>
+              <button onClick={() => { applyCalType('양력'); setLeapMonth('0') }} style={seg(calType === '양력')}>양력</button>
+              <button onClick={() => applyCalType('음력')} style={seg(calType === '음력')}>음력</button>
             </div>
           </div>
         </div>
@@ -244,46 +278,63 @@ export default function PersonFormPitch({
         {/* 생년월일 (년: 손 입력 / 월·일: 드롭다운) */}
         <div style={label}>생년월일 {calType === '음력' && <span style={{ color: C.subLight }}>(음력)</span>}</div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 14 }}>
-          <input value={year} onChange={e => setYear(onlyNum(e.target.value, 4))} inputMode="numeric" placeholder="1990" style={{ ...numInput, flex: 1.6 }} />
+          <input value={year} onChange={e => applyYear(e.target.value)} inputMode="numeric" placeholder="1990" style={{ ...numInput, flex: 1.6 }} />
           <span style={{ fontSize: 12, color: C.sub }}>년</span>
-          <select value={month} onChange={e => setMonth(e.target.value)}
+          <select value={month} onChange={e => applyMonth(e.target.value)}
             style={{ ...numInput, flex: 1, padding: '9px 4px', appearance: 'none', color: month ? C.title : C.subLight, cursor: 'pointer' }}>
             <option value="">월</option>
-            {Array.from({ length: 12 }, (_, i) => <option key={i + 1} value={String(i + 1)}>{i + 1}</option>)}
+            {MONTHS.map(m => <option key={m} value={String(m)}>{m}</option>)}
           </select>
           <span style={{ fontSize: 12, color: C.sub }}>월</span>
           <select value={day} onChange={e => setDay(e.target.value)}
             style={{ ...numInput, flex: 1, padding: '9px 4px', appearance: 'none', color: day ? C.title : C.subLight, cursor: 'pointer' }}>
             <option value="">일</option>
-            {Array.from({ length: 31 }, (_, i) => <option key={i + 1} value={String(i + 1)}>{i + 1}</option>)}
+            {dayOptions(parseInt(year, 10), parseInt(month, 10), calType).map(d => <option key={d} value={String(d)}>{d}</option>)}
           </select>
           <span style={{ fontSize: 12, color: C.sub }}>일</span>
         </div>
 
         {/* 태어난 시 */}
         <div style={label}>태어난 시 (시주)</div>
-        <select value={hourLabel} disabled={unknownHour}
-          onChange={e => setHourLabel(e.target.value)}
+        <select value={hour} onChange={e => setHour(e.target.value)}
           style={{
             width: '100%', padding: '10px 12px', borderRadius: 8, border: `0.5px solid ${C.borderInput}`,
-            background: unknownHour ? '#f7f0ea' : '#fff',
-            color: unknownHour ? C.subLight : (hourLabel ? C.title : C.subLight),
-            fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 10,
+            background: '#fff', color: hour ? C.title : C.subLight,
+            fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 8,
           }}>
           <option value="">시간 선택</option>
-          {HOURS.filter(h => h !== '모름').map(h => <option key={h} value={h}>{h}</option>)}
+          {visibleHours.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
         </select>
 
-        {/* 시간 몰라요 */}
-        <button onClick={() => { setUnknownHour(v => !v); setHourLabel('') }}
-          style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: 6 }}>
-          <span style={{
-            width: 18, height: 18, borderRadius: 5, border: `0.5px solid ${C.borderInput}`,
-            background: unknownHour ? C.brown : '#fff', color: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12,
-          }}>{unknownHour ? '✓' : ''}</span>
-          <span style={{ fontSize: 12, color: C.sub }}>태어난 시간을 몰라요</span>
-        </button>
+        {/* 시를 정확히 모를 때 — 고르면 3개로 좁혀진다 */}
+        <div style={{ fontSize: 10.5, color: C.subLight, marginBottom: 5 }}>정확히 모르시면 대략 언제쯤인지 골라보세요</div>
+        <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+          {TIME_BANDS.map(b => {
+            const on = band?.key === b.key
+            return (
+              <button key={b.key} type="button" onClick={() => pickBand(b)} style={{
+                flex: 1, padding: '7px 2px', borderRadius: 8,
+                border: on ? 'none' : `0.5px solid ${C.borderInput}`,
+                background: on ? C.brown : '#fff',
+                color: on ? '#fff' : C.sub,
+                cursor: 'pointer', lineHeight: 1.3,
+              }}>
+                <div style={{ fontSize: 11.5, fontWeight: 600 }}>{b.label}</div>
+                <div style={{ fontSize: 9, opacity: 0.75 }}>{b.range}</div>
+              </button>
+            )
+          })}
+        </div>
+        {band && (
+          <div style={{ fontSize: 10.5, color: C.titleWarm, marginBottom: 6, lineHeight: 1.6 }}>
+            {band.label} 시간대 3개 중에서 골라주세요. 다시 누르면 전체가 보여요.
+          </div>
+        )}
+        {hour !== '' && crossesMidnight(Number(hour)) && (
+          <div style={{ fontSize: 10.5, color: '#c05a5a', marginBottom: 6, lineHeight: 1.6 }}>
+            子시는 밤 11시 30분부터 다음 날 새벽 1시 30분까지예요. 자정을 넘겨 태어났다면 생년월일을 다시 확인해주세요.
+          </div>
+        )}
       </div>
 
       {/* 저장 버튼 (하단 고정 — 항상 보임) */}
