@@ -67,10 +67,12 @@ export default function ArchivePage() {
                 alignItems: 'center', gap: 3,
               }}
             >
-              <span style={{ fontSize: 18, opacity: active ? 1 : 0.4 }}>{n.icon}</span>
-              <span style={{ fontSize: 10, color: active ? '#c8783c' : '#c5a590', fontWeight: active ? 600 : 400 }}>
+              <span style={{ fontSize: 18 }}>{n.icon}</span>
+              <span style={{ fontSize: 10, color: active ? '#c8783c' : '#b09079', fontWeight: active ? 600 : 400 }}>
                 {n.label}
               </span>
+              {/* 현재 위치 표시 — 아이콘을 흐리게 하는 대신 밑줄로 */}
+              <span style={{ height: 2, width: 22, borderRadius: 2, background: active ? '#c8783c' : 'transparent' }} />
             </button>
           )
         })}

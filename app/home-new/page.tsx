@@ -241,7 +241,6 @@ export default function HomeNew() {
           </span>
         </div>
         <div style={{ display: 'flex', gap: '16px', fontSize: '18px', color: '#b49080' }}>
-          <span style={{ cursor: 'pointer' }}>🔔</span>
           <span
             onClick={() => router.push('/mypage-new')}
             role="button"
@@ -513,10 +512,12 @@ export default function HomeNew() {
               alignItems: 'center', gap: '3px',
             }}
           >
-            <span style={{ fontSize: '18px', opacity: n.active ? 1 : 0.4 }}>{n.icon}</span>
-            <span style={{ fontSize: '10px', color: n.active ? '#c8783c' : '#c5a590', fontWeight: n.active ? 600 : 400 }}>
+            <span style={{ fontSize: '18px' }}>{n.icon}</span>
+            <span style={{ fontSize: '10px', color: n.active ? '#c8783c' : '#b09079', fontWeight: n.active ? 600 : 400 }}>
               {n.label}
             </span>
+            {/* 현재 위치 표시 — 아이콘을 흐리게 하는 대신 밑줄로 */}
+            <span style={{ height: '2px', width: '22px', borderRadius: '2px', background: n.active ? '#c8783c' : 'transparent' }} />
           </button>
         ))}
       </div>

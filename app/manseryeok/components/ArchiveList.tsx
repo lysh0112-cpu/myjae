@@ -4,7 +4,7 @@
 // ----------------------------------------------------------------------------
 // 나의 운명 아카이브 — 저장한 모든 조회물을 시간순 한 리스트로.
 //   - 서비스별 작은 배지(사주/타로/개명/궁합…)로 종류 구분
-//   - 상단: 카테고리(relation) 태그 칩 = 고민 통계
+//   - 상단: 서비스 종류별 거르기 칩 (관계 태그 칩은 2026-07-19 숨김)
 //   - 각 카드 아코디언: 펼치면 요약 스냅샷 + [다시보기](원본 화면) + [삭제]
 //   - 삭제 = saju_records 행 제거 → 각 서비스 보관함과 자동 연동
 // 상담 내역은 여기 없음(별도 영역 유지).
@@ -13,7 +13,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  ArchiveItem, listArchive, countArchive, tagCounts,
+  ArchiveItem, listArchive, countArchive,
   badgeOf, reviewUrl, deleteArchiveRecord,
 } from '@/lib/saju/archiveRecords'
 
@@ -40,17 +40,15 @@ export default function ArchiveList() {
   const router = useRouter()
   const [items, setItems] = useState<ArchiveItem[]>([])
   const [total, setTotal] = useState(0)
-  const [tags, setTags] = useState<{ tag: string; count: number }[]>([])
   const [openId, setOpenId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [filter, setFilter] = useState<string | null>(null)   // null = 전체
 
   const load = async () => {
-    const [rows, cnt, tg] = await Promise.all([listArchive(50, 0), countArchive(), tagCounts()])
+    const [rows, cnt] = await Promise.all([listArchive(50, 0), countArchive()])
     setItems(rows)
     setTotal(cnt)
-    setTags(tg.slice(0, 6))
     setLoading(false)
   }
 
@@ -139,16 +137,6 @@ export default function ArchiveList() {
               >{k.label} {k.count}{on ? ' ✕' : ''}</button>
             )
           })}
-        </div>
-      )}
-
-      {tags.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
-          {tags.map((t) => (
-            <span key={t.tag} style={{ fontSize: 10.5, padding: '5px 11px', borderRadius: 14, background: '#f5ebe2', color: '#8a6a52', border: '0.5px solid #e8d5c5' }}>
-              #{t.tag} {t.count}
-            </span>
-          ))}
         </div>
       )}
 
