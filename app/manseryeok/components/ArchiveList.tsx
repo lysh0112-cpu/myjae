@@ -44,6 +44,7 @@ export default function ArchiveList() {
   const [openId, setOpenId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [filter, setFilter] = useState<string | null>(null)   // null = 전체
 
   const load = async () => {
     const [rows, cnt, tg] = await Promise.all([listArchive(50, 0), countArchive(), tagCounts()])
@@ -62,7 +63,12 @@ export default function ArchiveList() {
     const ok = await deleteArchiveRecord(item.id)
     setDeletingId(null)
     if (ok) {
-      setItems((prev) => prev.filter((x) => x.id !== item.id))
+      setItems((prev) => {
+        const next = prev.filter((x) => x.id !== item.id)
+        // 거르는 중인 종류가 이번 삭제로 다 없어지면 전체로 되돌린다(빈 화면 방지)
+        if (filter && !next.some((x) => x.serviceType === filter)) setFilter(null)
+        return next
+      })
       setTotal((t) => Math.max(0, t - 1))
     } else {
       alert('삭제에 실패했어요. 잠시 후 다시 시도해 주세요.')
@@ -82,12 +88,59 @@ export default function ArchiveList() {
     )
   }
 
+  // ── 종류별 개수 (불러온 목록에서 셈 — DB 추가 조회 없음) ──
+  //    많은 순으로 정렬해 자주 보는 것이 앞에 오게 한다.
+  const kindCounts = (() => {
+    const m = new Map<string, number>()
+    for (const it of items) m.set(it.serviceType, (m.get(it.serviceType) ?? 0) + 1)
+    return Array.from(m.entries())
+      .map(([type, count]) => ({ type, count, label: badgeOf(type).label }))
+      .sort((a, b) => b.count - a.count)
+  })()
+
+  const shown = filter ? items.filter((it) => it.serviceType === filter) : items
+  const filterLabel = filter ? badgeOf(filter).label : null
+
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 3px 9px' }}>
         <span style={{ fontSize: 13, fontWeight: 600, color: '#96502e' }}>나의 운명 아카이브</span>
-        <span style={{ fontSize: 10, color: '#b09079' }}>기록 {total}</span>
+        <span style={{ fontSize: 10, color: '#b09079' }}>
+          {filter ? `${filterLabel} ${shown.length}건` : `기록 ${total}`}
+        </span>
       </div>
+
+      {/* 종류별 거르기 — 누르면 그 종류만, 다시 누르면 전체 */}
+      {kindCounts.length > 1 && (
+        <div style={{ display: 'flex', gap: 5, marginBottom: 10, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setFilter(null)}
+            style={{
+              fontSize: 10.5, padding: '5px 11px', borderRadius: 14, cursor: 'pointer',
+              background: filter === null ? '#b46e46' : '#f5ebe2',
+              color: filter === null ? '#fff' : '#8a6a52',
+              border: filter === null ? 'none' : '0.5px solid #e8d5c5',
+              fontWeight: filter === null ? 600 : 400,
+            }}
+          >전체 {items.length}</button>
+          {kindCounts.map((k) => {
+            const on = filter === k.type
+            return (
+              <button
+                key={k.type}
+                onClick={() => setFilter(on ? null : k.type)}
+                style={{
+                  fontSize: 10.5, padding: '5px 11px', borderRadius: 14, cursor: 'pointer',
+                  background: on ? '#b46e46' : '#f5ebe2',
+                  color: on ? '#fff' : '#8a6a52',
+                  border: on ? 'none' : '0.5px solid #e8d5c5',
+                  fontWeight: on ? 600 : 400,
+                }}
+              >{k.label} {k.count}{on ? ' ✕' : ''}</button>
+            )
+          })}
+        </div>
+      )}
 
       {tags.length > 0 && (
         <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
@@ -100,7 +153,7 @@ export default function ArchiveList() {
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-        {items.map((it) => {
+        {shown.map((it) => {
           const b = badgeOf(it.serviceType)
           const open = openId === it.id
           const sn = snippet(it.resultData)
