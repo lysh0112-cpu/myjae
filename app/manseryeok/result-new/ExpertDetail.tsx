@@ -456,11 +456,14 @@ export default function ExpertDetail({
                       <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
                         stroke={color} strokeWidth={1.8}
                         strokeDasharray={isBad ? '4 3' : undefined} />
-                      <rect x={mx - w / 2} y={my - 8} width={w} height={16} rx={8}
-                        fill={isBad ? (rels.includes('충') ? '#fdeaea' : '#f7e6ee')
-                          : (rels.includes('삼합') ? '#e8f5e9' : rels.includes('방합') ? '#f3ece2' : '#e8f0fb')} />
-                      <text x={mx} y={my} textAnchor="middle" fontSize={9}
-                        fill={color} fontWeight={600} dominantBaseline="central">{label}</text>
+                      {/* 라벨을 누르면 뜻풀이 모달 — 관계가 둘이면(예: 충·원진) 첫 번째 것으로 */}
+                      <g onClick={() => open(rels[0])} style={{ cursor: 'pointer' }}>
+                        <rect x={mx - w / 2} y={my - 8} width={w} height={16} rx={8}
+                          fill={isBad ? (rels.includes('충') ? '#fdeaea' : '#f7e6ee')
+                            : (rels.includes('삼합') ? '#e8f5e9' : rels.includes('방합') ? '#f3ece2' : '#e8f0fb')} />
+                        <text x={mx} y={my} textAnchor="middle" fontSize={9}
+                          fill={color} fontWeight={600} dominantBaseline="central">{label}</text>
+                      </g>
                     </g>
                   )
                 }
@@ -492,6 +495,7 @@ export default function ExpertDetail({
           <div style={{ fontSize: 9.5, color: '#8a7360', textAlign: 'center', lineHeight: 1.8 }}>
             <span style={{ color: '#2e7d32' }}>━ 합(실선)</span>{'  '}
             <span style={{ color: '#c62828' }}>┅ 충·원진(점선)</span>
+            <div style={{ color: '#c8a86a', marginTop: 2 }}>👆 방합·삼합 같은 글씨를 누르면 설명이 나와요</div>
           </div>
         </div>
 
