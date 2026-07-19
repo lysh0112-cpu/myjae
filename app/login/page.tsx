@@ -14,7 +14,12 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // 로그인 후 이동: 가입 직후(닉네임·약관 미완료)면 환영 화면, 아니면 신버전 홈
+  // 로그인 후 이동: 프로필 미완료면 마이페이지(내 사주 수정), 아니면 신버전 홈
+  //   ★ 2026-07: 예전에는 미완료 시 /auth/welcome(구버전 다크 화면)으로 보냈는데,
+  //     피치톤 로그인에서 갑자기 어두운 화면으로 떨어져 흐름이 끊겼다.
+  //     고객 화면은 전부 피치톤이어야 하므로(인수인계서 3부) 연결을 끊고
+  //     마이페이지로 보낸다. 거기서 닉네임·사주를 수정할 수 있다.
+  //     (/auth/* 폴더는 상담사 화면들이 아직 쓰므로 삭제하지 않고 남겨 둠)
   const routeAfterLogin = async (userId: string) => {
     const { data: profile } = await supabase
       .from('profiles')
@@ -23,7 +28,7 @@ export default function LoginPage() {
       .single()
 
     if (!profile || !profile.nickname || !profile.privacy_agreed) {
-      router.push('/auth/welcome')
+      router.push('/mypage-new')
       return
     }
     // 초대 링크로 온 로그인(?invite=)이면 → 자동 연결 후 채팅방으로.
