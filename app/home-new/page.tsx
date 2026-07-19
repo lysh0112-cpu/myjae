@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
 import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
+import TodayFortuneCard from '@/app/manseryeok/components/TodayFortuneCard'
 import InviteNotifier from '@/app/couple-chat/InviteNotifier'
 import { listPinnedServices, togglePinnedService, MAX_PINS } from '@/lib/saju/pinnedServices'
 import HomeBottomSheet from '@/app/home-new/components/HomeBottomSheet'
@@ -463,6 +464,11 @@ export default function HomeNew() {
 
         {/* ═══ 바텀시트: 서비스 + 후기 (손잡이로 위로 끌면 배너를 덮으며 올라옴) ═══ */}
         <HomeBottomSheet maxLift={320}>
+
+        {/* ④ 오늘의 운세 (공용 부품 — 프로필 조회·계산·AI호출 전부 부품 안에서) */}
+        <div style={{ padding: '4px 16px 0' }}>
+          <TodayFortuneCard />
+        </div>
 
         {/* ⑤ 서비스 리스트 (아이콘 + 이름 + 설명 + 📌압핀 / 하단 접기)
             - 압핀: 찜하면 리스트 맨 위로 정렬, 최대 MAX_PINS개 (회원만, 비회원은 로그인 안내)
