@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useResultSaju } from '@/hooks/useResultSaju'
-import ArchiveList from '@/app/manseryeok/components/ArchiveList'
 // 커플채팅 플로팅은 당분간 닫음 (되살리려면 이 줄과 아래 사용처 주석만 풀면 됨)
 // import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
 import AiTalkFab from '@/app/manseryeok/components/AiTalkFab'
@@ -506,8 +505,6 @@ export default function MyPageNew() {
             )}
           </div>
         </div>
-
-        <ArchiveList />
 
         <div style={card}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>내 상담 내역</div>
