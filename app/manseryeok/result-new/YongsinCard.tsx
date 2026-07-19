@@ -55,7 +55,6 @@ const EL_BRANCHES: Record<string, string[]> = {
   목: ['寅', '卯'], 화: ['巳', '午'], 토: ['辰', '戌', '丑', '未'], 금: ['申', '酉'], 수: ['亥', '子'],
 }
 
-const EL_TO_STEMS: Record<string, string> = { 목: '甲乙', 화: '丙丁', 토: '戊己', 금: '庚辛', 수: '壬癸' }
 const EL_COLOR: Record<string, string> = { 목: '#2e7d32', 화: '#c62828', 토: '#f57f17', 금: '#616161', 수: '#ffffff' }
 const EL_HAN: Record<string, string> = { 목: '木', 화: '火', 토: '土', 금: '金', 수: '水' }
 
@@ -106,6 +105,8 @@ export default function YongsinCard({ result, saju }: Props) {
       )
     }
     // 배경이 진한 오행색이라 글씨는 EL_C(흰색, 금만 검정)
+    // 조후·격국과 결을 맞춰 한자 아래 육친을 함께 보여준다 (일간 기준으로 매번 계산)
+    const yukchin = YUKCHIN_OF_EL(result.dayElement, el)
     return (
       <div onClick={() => openCard(role, el)}
         style={{
@@ -113,8 +114,8 @@ export default function YongsinCard({ result, saju }: Props) {
           border: isYong ? '1.5px solid #c8783c' : `1px solid ${EL_BD_STRONG[el]}`,
           borderRadius: 10, padding: big ? '12px 4px' : '8px 3px', textAlign: 'center', cursor: 'pointer',
         }}>
-        <div style={{ fontSize: big ? 21 : 15, fontWeight: 700, color: EL_C[el], lineHeight: 1 }}>{EL_TO_STEMS[el]}</div>
-        <div style={{ fontSize: big ? 10.5 : 9.5, color: EL_C_SUB[el], fontWeight: 600, marginTop: 3 }}>{EL_HAN[el]}</div>
+        <div style={{ fontSize: big ? 21 : 18, fontWeight: 700, color: EL_C[el], lineHeight: 1 }}>{EL_HAN[el]}</div>
+        <div style={{ fontSize: big ? 11 : 10, color: EL_C_SUB[el], fontWeight: 600, marginTop: 2 }}>{yukchin}</div>
       </div>
     )
   }
