@@ -6,7 +6,7 @@
 //   - 로그인 회원만 찜 가능. 비회원이 압핀을 누르면 화면에서 로그인 안내.
 //   - 저장은 saju_records 테이블에 service_type='pinned' 로. (추가 테이블 불필요)
 //       title = 서비스 이름(예: '사주', '연인궁합')  ← 어떤 서비스를 찜했는지
-//   - 최대 2개. 3개째는 막고 false 반환(화면이 안내).
+//   - 최대 MAX_PINS개. 초과분은 막고 false 반환(화면이 안내).
 //
 // saju_records 컬럼(기존): id, user_id, service_type, title, relation,
 //   input_data(jsonb), result_data(jsonb), created_at
@@ -15,7 +15,7 @@
 
 import { supabase } from '@/lib/supabase'
 
-export const MAX_PINS = 2
+export const MAX_PINS = 3
 
 // 찜한 서비스 이름 목록 조회 (오래된 순 = 찜한 순서)
 export async function listPinnedServices(): Promise<string[]> {
@@ -35,7 +35,7 @@ export async function listPinnedServices(): Promise<string[]> {
 //   { ok: true,  pinned: true  }  → 방금 찜함
 //   { ok: true,  pinned: false }  → 방금 해제함
 //   { ok: false, reason: 'guest' }     → 비회원 (로그인 필요)
-//   { ok: false, reason: 'max' }       → 이미 2개라 더 못 함
+//   { ok: false, reason: 'max' }       → 이미 MAX_PINS개라 더 못 함
 export type PinResult =
   | { ok: true; pinned: boolean }
   | { ok: false; reason: 'guest' | 'max' | 'error' }

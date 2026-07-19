@@ -7,7 +7,7 @@ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
 import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
 import InviteNotifier from '@/app/couple-chat/InviteNotifier'
-import { listPinnedServices, togglePinnedService } from '@/lib/saju/pinnedServices'
+import { listPinnedServices, togglePinnedService, MAX_PINS } from '@/lib/saju/pinnedServices'
 import HomeBottomSheet from '@/app/home-new/components/HomeBottomSheet'
 
 // ── 사람 선택 모달을 여는 서비스 설정 ──
@@ -137,6 +137,9 @@ const SERVICES = [
 ]
 type Service = typeof SERVICES[number]
 
+// 서비스 리스트를 접었을 때 보이는 줄 수 (핀이 맨 위로 오므로 핀 3개 + 1개가 보임)
+const COLLAPSED_COUNT = 4
+
 
 interface Profile {
   nickname: string | null
@@ -197,7 +200,7 @@ export default function HomeNew() {
     const res = await togglePinnedService(name)
     if (!res.ok) {
       if (res.reason === 'guest') { setPinMsg('로그인 후 이용할 수 있어요'); }
-      else if (res.reason === 'max') { setPinMsg('📌 최대 2개까지 고정할 수 있어요'); }
+      else if (res.reason === 'max') { setPinMsg(`📌 최대 ${MAX_PINS}개까지 고정할 수 있어요`); }
       else { setPinMsg('잠시 후 다시 시도해 주세요'); }
       setTimeout(() => setPinMsg(''), 1800)
       return
@@ -472,13 +475,13 @@ export default function HomeNew() {
         <HomeBottomSheet maxLift={320}>
 
         {/* ⑤ 서비스 리스트 (아이콘 + 이름 + 설명 + 📌압핀 / 하단 접기)
-            - 압핀: 찜하면 리스트 맨 위로 정렬, 최대 2개 (회원만, 비회원은 로그인 안내)
-            - 접기: 처음 6개만 → [전체 12개 보기]로 펼침 */}
+            - 압핀: 찜하면 리스트 맨 위로 정렬, 최대 MAX_PINS개 (회원만, 비회원은 로그인 안내)
+            - 접기: 처음 COLLAPSED_COUNT개만 → [전체 N개 보기]로 펼침 */}
         <div style={{ padding: '6px 0 20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', padding: '0 16px' }}>
             <span style={{ fontSize: '16px', fontWeight: 700, color: '#3a2e28' }}>MyungCafe 서비스</span>
             {pinned.length > 0 && (
-              <span style={{ fontSize: '11px', color: '#c8783c' }}>📌 {pinned.length}/2</span>
+              <span style={{ fontSize: '11px', color: '#c8783c' }}>📌 {pinned.length}/{MAX_PINS}</span>
             )}
           </div>
 
@@ -494,7 +497,7 @@ export default function HomeNew() {
               .filter((s): s is Service => !!s)
             const rest = SERVICES.filter(s => !pinned.includes(s.name))
             const full = [...pinnedList, ...rest]
-            const shown = svcOpen ? full : full.slice(0, 6)
+            const shown = svcOpen ? full : full.slice(0, COLLAPSED_COUNT)
             return (
               <div>
                 {shown.map((s, idx) => {
@@ -557,7 +560,7 @@ export default function HomeNew() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                     }}
                   >
-                    {svcOpen ? '접기 ▲' : '전체 12개 보기 ▼'}
+                    {svcOpen ? '접기 ▲' : `전체 ${SERVICES.length}개 보기 ▼`}
                   </button>
                 </div>
               </div>
