@@ -67,6 +67,30 @@ export const RELATIONS = [
   '친구', '지인', '직장동료', '상사/부하', '동업자/파트너',
 ] as const
 
+// ── 입력 폼용 카테고리 (관계 칩 17개를 4갈래로 접어 보여준다) ──────────────
+//   칩을 전부 펼치면 화면의 절반을 먹어서, 카테고리 → 세부 2단으로 고른다.
+//   ※ 저장되는 값은 예전과 똑같은 relation 문자열이다. 분류는 화면용일 뿐.
+export interface RelationCategory {
+  key: 'family' | 'love' | 'social' | 'custom'
+  label: string
+  items: readonly string[]   // 'custom'은 비어 있고 직접 입력칸을 쓴다
+}
+
+export const RELATION_CATEGORIES: RelationCategory[] = [
+  { key: 'family', label: '가족', items: ['부모', '자녀', '형제/자매', '조부모', '손주', '며느리/사위', '친척'] },
+  { key: 'love',   label: '연인', items: ['연인', '썸남/썸녀', '전연인', '배우자', '전배우자'] },
+  { key: 'social', label: '지인', items: ['친구', '지인', '직장동료', '상사/부하', '동업자/파트너'] },
+  { key: 'custom', label: '직접 입력', items: [] },
+]
+
+/** 관계 문자열이 속한 카테고리 키. 목록에 없으면(직접 입력한 값) 'custom'. */
+export function categoryOfRelation(relation: string): RelationCategory['key'] {
+  for (const c of RELATION_CATEGORIES) {
+    if (c.items.includes(relation)) return c.key
+  }
+  return 'custom'
+}
+
 // 목록 모달에서 묶을 그룹 정의 (relation → 그룹 라벨)
 const FAMILY_LOVE = new Set<string>([
   '연인', '썸남/썸녀', '전연인', '배우자', '전배우자',

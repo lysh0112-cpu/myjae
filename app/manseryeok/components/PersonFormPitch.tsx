@@ -6,7 +6,9 @@
 // ----------------------------------------------------------------------------
 // 특징(대표님·목업 확정):
 //  - 아바타 + 이름(별명): 이름 첫 글자가 아바타에 실시간 반영
-//  - 관계 칩 18개 + "직접 입력" (RELATIONS는 savedPeople.ts에서 가져옴)
+//  - 관계는 카테고리(가족/연인/지인/직접입력) → 세부 2단으로 고른다.
+//    칩 17개를 전부 펼치면 화면 절반을 먹어서 2026-07에 접었다.
+//    저장되는 relation 문자열은 예전과 동일 (분류는 화면용).
 //  - 성별·달력 세그먼트 / 연도는 손입력·월일은 드롭다운 (전 화면 통일 규칙)
 //  - 달력 '음력'이면 윤달 여부(평달/윤달) 블록 노출 (기존 PersonForm 규칙과 동일)
 //  - 시(時)는 반드시 입력받는다 (대표님 확정 2026-07 — 회원가입과 동일 규칙).
@@ -20,7 +22,10 @@
 // ============================================================================
 
 import { useState, useMemo } from 'react'
-import { RELATIONS, type PersonDraft, type SavedInputData } from '@/lib/saju/savedPeople'
+import {
+  RELATIONS, RELATION_CATEGORIES, categoryOfRelation,
+  type PersonDraft, type SavedInputData,
+} from '@/lib/saju/savedPeople'
 import {
   hourLabelOf, normalizeHourLabel, toStoredHour,
   TIME_BANDS, MONTHS, dayOptions, clampDay, isValidBirthDate,
@@ -102,6 +107,11 @@ export default function PersonFormPitch({
   const [useCustom, setUseCustom] = useState(
     !!initial && !RELATIONS.includes(initial.relation as typeof RELATIONS[number])
   )
+  // 열려 있는 카테고리. 수정 모드면 저장된 관계가 속한 곳을, 새로 추가면 '가족'을 편다.
+  const [relCat, setRelCat] = useState<typeof RELATION_CATEGORIES[number]['key']>(() => {
+    const r = initial?.relation ?? presetRelation
+    return r ? categoryOfRelation(r) : 'family'
+  })
 
   const [gender, setGender] = useState(initial?.input.gender ?? '남')
   const [calType, setCalType] = useState(initial?.input.calType ?? '양력')
@@ -213,37 +223,49 @@ export default function PersonFormPitch({
           </div>
         </div>
 
-        {/* 관계 칩 */}
+        {/* 관계 — ① 카테고리 고르고 ② 그 안에서 세부 관계를 고른다 */}
         <div style={label}>관계</div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
-          {RELATIONS.map(r => {
-            const active = !useCustom && relation === r
+        <div style={{ display: 'flex', gap: 5, marginBottom: 8 }}>
+          {RELATION_CATEGORIES.map(c => {
+            const on = relCat === c.key
             return (
-              <button key={r}
-                onClick={() => { setUseCustom(false); setRelation(r) }}
+              <button key={c.key}
+                onClick={() => {
+                  setRelCat(c.key)
+                  if (c.key === 'custom') { setUseCustom(true) }
+                  else { setUseCustom(false); if (!c.items.includes(relation)) setRelation('') }
+                }}
                 style={{
-                  fontSize: 12, borderRadius: 8, padding: '7px 13px', cursor: 'pointer',
-                  background: active ? C.brown : '#fff',
-                  color: active ? '#fff' : C.chipText,
-                  border: active ? 'none' : `0.5px solid ${C.borderInput}`,
-                }}>{r}</button>
+                  flex: 1, fontSize: 12, borderRadius: 9, padding: '9px 2px', cursor: 'pointer',
+                  background: on ? C.brown : '#fff',
+                  color: on ? '#fff' : C.chipText,
+                  border: on ? 'none' : `0.5px solid ${C.borderInput}`,
+                }}>{c.label}</button>
             )
           })}
-          <button
-            onClick={() => setUseCustom(true)}
-            style={{
-              fontSize: 12, borderRadius: 8, padding: '7px 13px', cursor: 'pointer',
-              background: useCustom ? C.brown : '#fff',
-              color: useCustom ? '#fff' : C.point,
-              border: useCustom ? 'none' : `0.5px dashed ${C.leapBorder}`,
-            }}>직접 입력</button>
         </div>
 
-        {/* 직접 입력 칸 */}
-        {useCustom && (
+        {relCat === 'custom' ? (
           <input value={customRelation} onChange={e => setCustomRelation(e.target.value.slice(0, 20))}
-            placeholder="관계를 직접 입력"
+            placeholder="관계를 직접 입력 (예: 사장님, 은사님)"
             style={{ ...numInput, textAlign: 'left', marginBottom: 16, color: customRelation ? C.title : C.subLight }} />
+        ) : (
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 16 }}>
+            {(RELATION_CATEGORIES.find(c => c.key === relCat)?.items ?? []).map(r => {
+              const active = !useCustom && relation === r
+              return (
+                <button key={r}
+                  onClick={() => { setUseCustom(false); setRelation(r) }}
+                  style={{
+                    fontSize: 12, borderRadius: 8, padding: '7px 13px', cursor: 'pointer',
+                    background: active ? '#f4ede4' : '#fff',
+                    color: active ? C.titleWarm : C.chipText,
+                    border: active ? `0.5px solid ${C.brown}` : `0.5px solid ${C.borderInput}`,
+                    fontWeight: active ? 600 : 400,
+                  }}>{r}</button>
+              )
+            })}
+          </div>
         )}
 
         {/* 성별 · 달력 */}
