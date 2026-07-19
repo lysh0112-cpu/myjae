@@ -17,11 +17,17 @@ import {
   toExpertResultUrl, expertAvatarChar,
   type ExpertPerson,
 } from '@/lib/saju/expertPeople'
+import {
+  hourLabelOf, MONTHS, dayOptions, clampDay, isValidBirthDate,
+} from '@/lib/saju/birthInput'
 
-const HOURS = [
-  '모름','子시 (23:30~01:30)','丑시 (01:30~03:30)','寅시 (03:30~05:30)','卯시 (05:30~07:30)',
-  '辰시 (07:30~09:30)','巳시 (09:30~11:30)','午시 (11:30~13:30)','未시 (13:30~15:30)',
-  '申시 (15:30~17:30)','酉시 (17:30~19:30)','戌시 (19:30~21:30)','亥시 (21:30~23:30)',
+// 시(時) 목록 — 공용 birthInput.ts 기준 (30분법 · 공백없음).
+//   ★ 전문가용은 '모름'을 남긴다.
+//     고객 사주를 대신 등록할 때 시를 모르는 경우가 실제로 있기 때문.
+//     (일반 회원가입은 '모름' 없이 반드시 입력 — 대표님 확정 2026-07)
+const HOUR_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: '모름', label: '모름' },
+  ...Array.from({ length: 12 }, (_, i) => ({ value: String(i), label: hourLabelOf(i) })),
 ]
 
 function ExpertInner() {
@@ -40,25 +46,26 @@ function ExpertInner() {
   const [year, setYear] = useState('')
   const [month, setMonth] = useState('')
   const [day, setDay] = useState('')
-  const [hourIdx, setHourIdx] = useState('0')
+  const [hour, setHour] = useState('모름')   // '모름' 또는 '0'~'11'
 
   const load = () => { listExpertPeople().then(setPeople) }
   useEffect(() => { load() }, [])
 
   const resetForm = () => {
     setNick(''); setGender('남'); setCalType('양력'); setLeapMonth('0')
-    setYear(''); setMonth(''); setDay(''); setHourIdx('0'); setErr('')
+    setYear(''); setMonth(''); setDay(''); setHour('모름'); setErr('')
   }
 
   const save = async () => {
     setErr('')
     if (!nick.trim()) { setErr('닉네임을 입력해 주세요.'); return }
     if (year.length !== 4 || !month || !day) { setErr('생년월일을 정확히 입력해 주세요.'); return }
+    if (!isValidBirthDate(year, month, day, calType)) { setErr('생년월일이 올바르지 않아요. 다시 확인해 주세요.'); return }
     setBusy(true)
     const res = await addExpertPerson({
       name: nick.trim(),
       gender, calType, year, month, day, leapMonth,
-      hour: hourIdx === '0' ? '모름' : String(Number(hourIdx) - 1),
+      hour,   // '모름' 또는 '0'~'11' (그대로 저장)
     })
     setBusy(false)
     if (!res.ok) {
@@ -69,6 +76,21 @@ function ExpertInner() {
       return
     }
     resetForm(); setShowForm(false); load()
+  }
+
+  // 연/월/달력을 바꾸면 이미 고른 '일'이 범위를 벗어날 수 있다 (3/31 → 2월)
+  const applyYear = (v: string) => {
+    const y = v.replace(/\D/g, '').slice(0, 4)
+    setYear(y)
+    if (month && day) setDay(clampDay(day, parseInt(y, 10), parseInt(month, 10), calType))
+  }
+  const applyMonth = (m: string) => {
+    setMonth(m)
+    if (day) setDay(clampDay(day, parseInt(year, 10), parseInt(m, 10), calType))
+  }
+  const applyCalType = (c: string) => {
+    setCalType(c)
+    if (month && day) setDay(clampDay(day, parseInt(year, 10), parseInt(month, 10), c))
   }
 
   const del = async () => {
@@ -86,6 +108,13 @@ function ExpertInner() {
   const inp: React.CSSProperties = {
     flex: 1, background: '#faf7f4', border: '0.5px solid #eaddd2', borderRadius: 8,
     padding: '10px 8px', color: '#5a4a3e', fontSize: 15, outline: 'none', textAlign: 'center', width: '100%',
+  }
+  // 드롭다운 (기본 화살표 숨기고 직접 그림 — 좁은 칸에서 글자가 가려지지 않게)
+  const sel: React.CSSProperties = {
+    ...inp, textAlign: 'left', appearance: 'none', cursor: 'pointer',
+    paddingRight: 22, paddingLeft: 8,
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%23c5a590' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 7px center',
   }
 
   return (
@@ -118,8 +147,8 @@ function ExpertInner() {
               <button onClick={() => setGender('남')} style={seg(gender === '남')}>남성</button>
               <button onClick={() => setGender('여')} style={seg(gender === '여')}>여성</button>
               <div style={{ width: 8 }} />
-              <button onClick={() => setCalType('양력')} style={seg(calType === '양력')}>양력</button>
-              <button onClick={() => setCalType('음력')} style={seg(calType === '음력')}>음력</button>
+              <button onClick={() => applyCalType('양력')} style={seg(calType === '양력')}>양력</button>
+              <button onClick={() => applyCalType('음력')} style={seg(calType === '음력')}>음력</button>
             </div>
 
             {calType === '음력' && (
@@ -129,15 +158,26 @@ function ExpertInner() {
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-              <input value={year} onChange={e => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="년(4자리)" style={inp} />
-              <input value={month} onChange={e => setMonth(e.target.value.replace(/\D/g, '').slice(0, 2))} placeholder="월" style={inp} />
-              <input value={day} onChange={e => setDay(e.target.value.replace(/\D/g, '').slice(0, 2))} placeholder="일" style={inp} />
+            {/* 연도는 손 입력, 월·일은 드롭다운 (전 화면 통일 규칙) */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center' }}>
+              <input value={year} onChange={e => applyYear(e.target.value)}
+                inputMode="numeric" placeholder="년(4자리)" style={{ ...inp, flex: 1.5 }} />
+              <select value={month} onChange={e => applyMonth(e.target.value)}
+                style={{ ...sel, flex: 1, color: month ? '#5a4a3e' : '#c5a590' }}>
+                <option value="">월</option>
+                {MONTHS.map(m => <option key={m} value={String(m)}>{m}월</option>)}
+              </select>
+              <select value={day} onChange={e => setDay(e.target.value)}
+                style={{ ...sel, flex: 1, color: day ? '#5a4a3e' : '#c5a590' }}>
+                <option value="">일</option>
+                {dayOptions(parseInt(year, 10), parseInt(month, 10), calType)
+                  .map(d => <option key={d} value={String(d)}>{d}일</option>)}
+              </select>
             </div>
 
-            <select value={hourIdx} onChange={e => setHourIdx(e.target.value)}
-              style={{ ...inp, textAlign: 'left', marginBottom: 12 }}>
-              {HOURS.map((h, i) => <option key={i} value={String(i)}>{h}</option>)}
+            <select value={hour} onChange={e => setHour(e.target.value)}
+              style={{ ...sel, marginBottom: 12 }}>
+              {HOUR_OPTIONS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
             </select>
 
             {err && <div style={{ fontSize: 12, color: '#c0392b', marginBottom: 10 }}>{err}</div>}
