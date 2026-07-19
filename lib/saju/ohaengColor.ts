@@ -14,8 +14,14 @@
 
 export type Ohaeng = '목' | '화' | '토' | '금' | '수'
 
+// ⚠ 아래 색 표들은 Record<string, string> 으로 둔다.
+//   화면마다 el 을 Element 로 받는 곳과 string 으로 받는 곳이 섞여 있어서
+//   Record<Ohaeng, ...> 로 좁히면 string 을 넘기는 화면에서 타입 에러가 난다.
+//   (2026-07-19 DayunTableNew 배포 실패로 확인)
+//   오행이 아닌 값이 오면 undefined 가 되므로, 쓰는 쪽에서 `|| 기본색` 을 붙인다.
+
 /** 칸 배경색 */
-export const EL_BG: Record<Ohaeng, string> = {
+export const EL_BG: Record<string, string> = {
   목: '#2e7d32',   // 진초록
   화: '#c62828',   // 빨강
   토: '#e8a317',   // 진노랑(주황 기운)
@@ -24,7 +30,7 @@ export const EL_BG: Record<Ohaeng, string> = {
 }
 
 /** 칸 테두리색 — 배경과 같게 두되, 금만 흰 배경이라 회색 테두리로 칸을 드러낸다 */
-export const EL_BD: Record<Ohaeng, string> = {
+export const EL_BD: Record<string, string> = {
   목: '#2e7d32',
   화: '#c62828',
   토: '#e8a317',
@@ -33,7 +39,7 @@ export const EL_BD: Record<Ohaeng, string> = {
 }
 
 /** 큰 글씨(천간·지지 한 글자) 색 */
-export const EL_C: Record<Ohaeng, string> = {
+export const EL_C: Record<string, string> = {
   목: '#ffffff',
   화: '#ffffff',
   토: '#ffffff',
@@ -42,7 +48,7 @@ export const EL_C: Record<Ohaeng, string> = {
 }
 
 /** 칸 안 작은 한자(木·火·土·金·水) 색 — 큰 글씨보다 한 단계 옅게 해서 위계를 준다 */
-export const EL_C_SUB: Record<Ohaeng, string> = {
+export const EL_C_SUB: Record<string, string> = {
   목: '#f0f8ec',
   화: '#ffeaea',
   토: '#fffaf0',
@@ -51,19 +57,19 @@ export const EL_C_SUB: Record<Ohaeng, string> = {
 }
 
 /** 오행 한자 */
-export const EL_HAN: Record<Ohaeng, string> = {
+export const EL_HAN: Record<string, string> = {
   목: '木', 화: '火', 토: '土', 금: '金', 수: '水',
 }
 
 /** 오행 우리말 */
-export const EL_NAME: Record<Ohaeng, string> = {
+export const EL_NAME: Record<string, string> = {
   목: '나무', 화: '불', 토: '흙', 금: '쇠', 수: '물',
 }
 
 // ── 글씨용 진한 색 ──────────────────────────────────────────────
 // 배경 없이 글씨에만 색을 쓸 때(오각형 바깥 라벨, 범례, 표 안 글자 등).
 // 흰 배경 위에 놓이므로 진한 색이어야 읽힌다.
-export const EL_TEXT: Record<Ohaeng, string> = {
+export const EL_TEXT: Record<string, string> = {
   목: '#2e7d32',
   화: '#c62828',
   토: '#f57f17',
@@ -73,7 +79,7 @@ export const EL_TEXT: Record<Ohaeng, string> = {
 
 // ── 오각형 그래프 원 채움색 ──────────────────────────────────────
 // 원 안에 퍼센트 숫자가 들어가므로 배경과 글씨 대비가 필요하다.
-export const EL_PENTAGON: Record<Ohaeng, string> = {
+export const EL_PENTAGON: Record<string, string> = {
   목: '#2e7d32',
   화: '#c62828',
   토: '#e8a317',
@@ -82,7 +88,7 @@ export const EL_PENTAGON: Record<Ohaeng, string> = {
 }
 
 /** 오각형 원 안 글씨색 (채움색 위에 놓임) */
-export const EL_PENTAGON_TEXT: Record<Ohaeng, string> = {
+export const EL_PENTAGON_TEXT: Record<string, string> = {
   목: '#ffffff',
   화: '#ffffff',
   토: '#ffffff',
