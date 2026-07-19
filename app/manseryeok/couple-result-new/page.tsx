@@ -34,6 +34,7 @@ import { buildCoupleTongbyeonPrompt, type CouplePerson } from '@/lib/saju/couple
 import { saveCoupleRecord, getCoupleRecord } from '@/lib/saju/coupleRecords'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
 import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
+import ConsultButton from '@/app/components/common/ConsultButton'
 
 type Mode = 'couple' | 'married'
 
@@ -609,6 +610,21 @@ function CoupleResultView({
           </button>
           <button onClick={onOther} style={{ flex: 1, background: '#b46e46', border: 'none', borderRadius: 11, padding: 12, fontSize: 13, color: '#fff', cursor: 'pointer' }}>다른 궁합 보기</button>
         </div>
+
+        {/* 전문가 상담 — 보관함에 저장된 뒤에만 나타난다.
+            상담사가 저장된 결과를 보고 상담하는 구조라 저장이 먼저다.
+            (보관함에서 다시보기로 들어온 경우 recordId가 있어 처음부터 'saved')
+            ★ 연인/부부가 서로 다른 가격표(price_key)를 쓴다.
+              관리자 > 가격 관리에서 '노출'이 꺼져 있으면 ConsultButton이
+              스스로 null을 돌려주므로 이 영역 전체가 보이지 않는다. */}
+        {saveState === 'saved' && (
+          <div style={{ marginTop: 12 }}>
+            <ConsultButton
+              priceKey={mode === 'married' ? 'married' : 'couple'}
+              mode={mode}
+            />
+          </div>
+        )}
 
         {/* 커플 채팅 초대 — 연인 궁합에서만 (부부 제외) */}
         {mode !== 'married' && (
