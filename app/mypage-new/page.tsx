@@ -8,22 +8,21 @@ import EmotionPicker from './EmotionPicker'
 import ArchiveList from './ArchiveList'
 import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
 import InviteNotifier from '@/app/couple-chat/InviteNotifier'
+import {
+  hourLabelOf, normalizeHourLabel, toStoredHour,
+  TIME_BANDS, MONTHS, dayOptions, clampDay, isValidBirthDate,
+  crossesMidnight, type TimeBand,
+} from '@/lib/saju/birthInput'
 
-const HOUR_LABELS: Record<string, string> = {
-  '0': '子시(23:30~01:30)', '1': '丑시(01:30~03:30)', '2': '寅시(03:30~05:30)', '3': '卯시(05:30~07:30)',
-  '4': '辰시(07:30~09:30)', '5': '巳시(09:30~11:30)', '6': '午시(11:30~13:30)', '7': '未시(13:30~15:30)',
-  '8': '申시(15:30~17:30)', '9': '酉시(17:30~19:30)', '10': '戌시(19:30~21:30)', '11': '亥시(21:30~23:30)',
-}
-const HOURS = [
-  '모름', '子시(23:30~01:30)', '丑시(01:30~03:30)', '寅시(03:30~05:30)', '卯시(05:30~07:30)',
-  '辰시(07:30~09:30)', '巳시(09:30~11:30)', '午시(11:30~13:30)', '未시(13:30~15:30)',
-  '申시(15:30~17:30)', '酉시(17:30~19:30)', '戌시(19:30~21:30)', '亥시(21:30~23:30)',
-]
-const HOUR_INDEX: Record<string, number> = {
-  '子시(23:30~01:30)': 0, '丑시(01:30~03:30)': 1, '寅시(03:30~05:30)': 2, '卯시(05:30~07:30)': 3,
-  '辰시(07:30~09:30)': 4, '巳시(09:30~11:30)': 5, '午시(11:30~13:30)': 6, '未시(13:30~15:30)': 7,
-  '申시(15:30~17:30)': 8, '酉시(17:30~19:30)': 9, '戌시(19:30~21:30)': 10, '亥시(21:30~23:30)': 11,
-}
+// 시(時) 목록 — 공용 birthInput.ts 기준 (30분법 · 공백없음).
+//   ★ '모름'은 두지 않는다. 시를 반드시 고르게 한다(대표님 확정 2026-07).
+//     정확히 모르면 시간대 버튼으로 3개까지 좁혀서 고른다.
+//   ※ 다만 예전에 '모름'으로 저장된 회원이 있을 수 있으므로,
+//     불러올 때는 빈 값으로 두고 새로 고르게 한다(openEdit 참조).
+const HOUR_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
+  value: String(i),
+  label: hourLabelOf(i),
+}))
 
 const STEM_ELEMENT: Record<string, string> = { 甲:'목',乙:'목',丙:'화',丁:'화',戊:'토',己:'토',庚:'금',辛:'금',壬:'수',癸:'수' }
 const BRANCH_ELEMENT: Record<string, string> = { 子:'수',丑:'토',寅:'목',卯:'목',辰:'토',巳:'화',午:'화',未:'토',申:'금',酉:'금',戌:'토',亥:'수' }
@@ -132,7 +131,8 @@ export default function MyPageNew() {
   const [eYear, setEYear] = useState('')
   const [eMonth, setEMonth] = useState('')
   const [eDay, setEDay] = useState('')
-  const [eHour, setEHour] = useState('')
+  const [eHour, setEHour] = useState('')     // '0'~'11' (인덱스 문자열)
+  const [eBand, setEBand] = useState<TimeBand | null>(null)   // 시간대 보조 필터
   const [eCal, setECal] = useState<'양력' | '음력'>('양력')
   const [eGender, setEGender] = useState<'남' | '여'>('남')
   const [saving, setSaving] = useState(false)
@@ -247,9 +247,9 @@ export default function MyPageNew() {
         : { bg: '#f5ebe2', fg: '#b4785a' }
 
   const hourTextFull = (h: string | null) => {
-    if (!h) return '-'
-    if (h === '모름') return '모름'
-    return HOUR_LABELS[h] || h
+    const idx = normalizeHourLabel(h)
+    if (idx == null) return h === '모름' ? '모름' : '-'
+    return hourLabelOf(idx)
   }
 
   const dateText = (s: string | null) => {
@@ -327,7 +327,10 @@ export default function MyPageNew() {
     setEYear(profile.birth_year ? String(profile.birth_year) : '')
     setEMonth(profile.birth_month ? String(profile.birth_month) : '')
     setEDay(profile.birth_day ? String(profile.birth_day) : '')
-    setEHour(profile.birth_hour ? (profile.birth_hour === '모름' ? '모름' : (HOUR_LABELS[profile.birth_hour] || '')) : '')
+    // 저장값('0'~'11')을 그대로 쓴다. 예전 '모름' 값은 빈칸으로 두어 새로 고르게 한다.
+    const hIdx = normalizeHourLabel(profile.birth_hour)
+    setEHour(hIdx == null ? '' : String(hIdx))
+    setEBand(null)
     setECal((profile.cal_type as '양력' | '음력') || '양력')
     setEGender((profile.gender as '남' | '여') || '남')
     setMsg('')
@@ -339,10 +342,11 @@ export default function MyPageNew() {
   const saveSaju = async () => {
     const y = parseInt(eYear, 10), m = parseInt(eMonth, 10), d = parseInt(eDay, 10)
     if (!y || eYear.length !== 4 || y < 1900 || y > 2200) { setMsg('연도를 4자리로 정확히 입력해주세요.'); return }
-    if (!m || m < 1 || m > 12) { setMsg('월을 1~12로 입력해주세요.'); return }
-    if (!d || d < 1 || d > 31) { setMsg('일을 1~31로 입력해주세요.'); return }
-    if (!eHour) { setMsg('시(시주)를 선택해주세요.'); return }
-    const hourValue = eHour === '모름' ? '모름' : String(HOUR_INDEX[eHour])
+    if (!m || m < 1 || m > 12) { setMsg('월을 골라주세요.'); return }
+    if (!d || d < 1) { setMsg('일을 골라주세요.'); return }
+    if (!isValidBirthDate(eYear, eMonth, eDay, eCal)) { setMsg('생년월일이 올바르지 않아요. 다시 확인해주세요.'); return }
+    if (!eHour) { setMsg('시(시주)를 선택해주세요. 정확히 모르시면 시간대 버튼으로 골라주세요.'); return }
+    const hourValue = toStoredHour(normalizeHourLabel(eHour))
     setSaving(true)
     const { error } = await supabase.from('profiles').update({
       birth_year: y, birth_month: m, birth_day: d,
@@ -405,6 +409,36 @@ export default function MyPageNew() {
 
   const card: React.CSSProperties = { background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14, padding: 14, marginBottom: 12 }
   const numInput: React.CSSProperties = { flex: 1, minWidth: 0, padding: '10px 6px', borderRadius: 8, textAlign: 'center', border: '0.5px solid #e8d5c5', background: '#fff', color: '#3a2e28', fontSize: 14, outline: 'none' }
+  // 드롭다운 (좁은 칸에서 글자가 화살표에 가려지지 않게 직접 그림)
+  const selInput: React.CSSProperties = {
+    ...numInput, appearance: 'none', cursor: 'pointer', textAlign: 'left',
+    paddingLeft: 8, paddingRight: 20,
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%23c5a590' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 6px center',
+  }
+
+  // 연/월/달력을 바꾸면 이미 고른 '일'이 범위를 벗어날 수 있다 (3/31 → 2월)
+  const applyEYear = (v: string) => {
+    const y = onlyNum(v, 4)
+    setEYear(y)
+    if (eMonth && eDay) setEDay(clampDay(eDay, parseInt(y, 10), parseInt(eMonth, 10), eCal))
+  }
+  const applyEMonth = (m: string) => {
+    setEMonth(m)
+    if (eDay) setEDay(clampDay(eDay, parseInt(eYear, 10), parseInt(m, 10), eCal))
+  }
+  const applyECal = (c: '양력' | '음력') => {
+    setECal(c)
+    if (eMonth && eDay) setEDay(clampDay(eDay, parseInt(eYear, 10), parseInt(eMonth, 10), c))
+  }
+
+  // 시간대를 고르면 그 안의 3개만 (band.hours 순서 = 시간 순)
+  const eVisibleHours = eBand ? eBand.hours.map(i => HOUR_OPTIONS[i]) : HOUR_OPTIONS
+  const pickEBand = (b: TimeBand) => {
+    if (eBand?.key === b.key) { setEBand(null); return }
+    setEBand(b)
+    if (eHour && !b.hours.includes(Number(eHour))) setEHour('')
+  }
   const seg = (on: boolean): React.CSSProperties => ({ flex: 1, padding: '9px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', background: on ? '#b46e46' : 'transparent', color: on ? '#fff' : '#b4785a' })
 
   return (
@@ -505,25 +539,61 @@ export default function MyPageNew() {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 11, color: '#b4785a', marginBottom: 4 }}>달력</div>
                     <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '0.5px solid #e8d5c5' }}>
-                      <button onClick={() => setECal('양력')} style={seg(eCal === '양력')}>양력</button>
-                      <button onClick={() => setECal('음력')} style={seg(eCal === '음력')}>음력</button>
+                      <button onClick={() => applyECal('양력')} style={seg(eCal === '양력')}>양력</button>
+                      <button onClick={() => applyECal('음력')} style={seg(eCal === '음력')}>음력</button>
                     </div>
                   </div>
                 </div>
                 <div style={{ fontSize: 11, color: '#b4785a', marginBottom: 4 }}>생년월일</div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 10 }}>
-                  <input value={eYear} onChange={e => setEYear(onlyNum(e.target.value, 4))} inputMode="numeric" placeholder="1990" style={{ ...numInput, flex: 1.5 }} />
+                  <input value={eYear} onChange={e => applyEYear(e.target.value)} inputMode="numeric" placeholder="1990" style={{ ...numInput, flex: 1.5 }} />
                   <span style={{ fontSize: 12, color: '#b4785a' }}>년</span>
-                  <input value={eMonth} onChange={e => setEMonth(onlyNum(e.target.value, 2))} inputMode="numeric" placeholder="5" style={numInput} />
+                  <select value={eMonth} onChange={e => applyEMonth(e.target.value)} style={{ ...selInput, color: eMonth ? '#3a2e28' : '#b4785a' }}>
+                    <option value="">월</option>
+                    {MONTHS.map(m => <option key={m} value={String(m)}>{m}</option>)}
+                  </select>
                   <span style={{ fontSize: 12, color: '#b4785a' }}>월</span>
-                  <input value={eDay} onChange={e => setEDay(onlyNum(e.target.value, 2))} inputMode="numeric" placeholder="12" style={numInput} />
+                  <select value={eDay} onChange={e => setEDay(e.target.value)} style={{ ...selInput, color: eDay ? '#3a2e28' : '#b4785a' }}>
+                    <option value="">일</option>
+                    {dayOptions(parseInt(eYear, 10), parseInt(eMonth, 10), eCal).map(d => <option key={d} value={String(d)}>{d}</option>)}
+                  </select>
                   <span style={{ fontSize: 12, color: '#b4785a' }}>일</span>
                 </div>
                 <div style={{ fontSize: 11, color: '#b4785a', marginBottom: 4 }}>태어난 시 (시주)</div>
-                <select value={eHour} onChange={e => setEHour(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #e8d5c5', background: '#fff', color: eHour ? '#3a2e28' : '#b4785a', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 12 }}>
+                <select value={eHour} onChange={e => setEHour(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #e8d5c5', background: '#fff', color: eHour ? '#3a2e28' : '#b4785a', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 8 }}>
                   <option value="">시간 선택</option>
-                  {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
+                  {eVisibleHours.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
                 </select>
+
+                {/* 시를 정확히 모르는 사람용 — 고르면 3개로 좁혀진다 */}
+                <div style={{ fontSize: 10.5, color: '#c5a590', marginBottom: 5 }}>정확히 모르시면 대략 언제쯤인지 골라보세요</div>
+                <div style={{ display: 'flex', gap: 4, marginBottom: eBand || (eHour !== '' && crossesMidnight(Number(eHour))) ? 6 : 12 }}>
+                  {TIME_BANDS.map(b => {
+                    const on = eBand?.key === b.key
+                    return (
+                      <button key={b.key} type="button" onClick={() => pickEBand(b)} style={{
+                        flex: 1, padding: '7px 2px', borderRadius: 8,
+                        border: on ? 'none' : '0.5px solid #e8d5c5',
+                        background: on ? '#b46e46' : '#fff',
+                        color: on ? '#fff' : '#b4785a',
+                        cursor: 'pointer', lineHeight: 1.3,
+                      }}>
+                        <div style={{ fontSize: 11.5, fontWeight: 600 }}>{b.label}</div>
+                        <div style={{ fontSize: 9, opacity: 0.75 }}>{b.range}</div>
+                      </button>
+                    )
+                  })}
+                </div>
+                {eBand && (
+                  <div style={{ fontSize: 10.5, color: '#96502e', marginBottom: 12, lineHeight: 1.6 }}>
+                    {eBand.label} 시간대 3개 중에서 골라주세요. 다시 누르면 전체가 보여요.
+                  </div>
+                )}
+                {eHour !== '' && crossesMidnight(Number(eHour)) && (
+                  <div style={{ fontSize: 10.5, color: '#c05a5a', marginBottom: 12, lineHeight: 1.6 }}>
+                    子시는 밤 11시 30분부터 다음 날 새벽 1시 30분까지예요. 자정을 넘겨 태어나셨다면 생년월일을 다시 확인해주세요.
+                  </div>
+                )}
                 {msg && <div style={{ color: '#c05a5a', fontSize: 12, marginBottom: 10 }}>{msg}</div>}
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={() => setEditMode(false)} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '0.5px solid #e8d5c5', background: 'none', color: '#b4785a', fontSize: 13, cursor: 'pointer' }}>취소</button>
