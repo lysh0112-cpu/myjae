@@ -15,11 +15,12 @@
 //   (마이페이지 편집 로직을 여기 옮기지 않는다 — 되돌리기 어려워짐)
 // ============================================================================
 
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode, useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { normalizeHourLabel, hourLabelOf } from '@/lib/saju/birthInput'
+import SajuEditModal from './SajuEditModal'
 
 const STEM_ELEMENT: Record<string, string> = { 甲:'목',乙:'목',丙:'화',丁:'화',戊:'토',己:'토',庚:'금',辛:'금',壬:'수',癸:'수' }
 const BRANCH_ELEMENT: Record<string, string> = { 子:'수',丑:'토',寅:'목',卯:'목',辰:'토',巳:'화',午:'화',未:'토',申:'금',酉:'금',戌:'토',亥:'수' }
@@ -90,23 +91,22 @@ export default function UserCard({ footer }: { footer?: ReactNode | ((info: User
     toHourIdx(profile?.birth_hour ?? null),
   )
 
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      const { data: u } = await supabase.auth.getUser()
-      if (!u.user) { if (!cancelled) setIsLoggedIn(false); return }
-      if (cancelled) return
-      setIsLoggedIn(true)
-      setEmail(u.user.email || '')
+  const [editOpen, setEditOpen] = useState(false)
 
-      const { data: p } = await supabase.from('profiles')
-        .select('nickname, role, birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, saju_saved')
-        .eq('id', u.user.id)
-        .maybeSingle()
-      if (!cancelled && p) setProfile(p as CardProfile)
-    })()
-    return () => { cancelled = true }
+  const loadProfile = useCallback(async () => {
+    const { data: u } = await supabase.auth.getUser()
+    if (!u.user) { setIsLoggedIn(false); return }
+    setIsLoggedIn(true)
+    setEmail(u.user.email || '')
+
+    const { data: p } = await supabase.from('profiles')
+      .select('nickname, role, birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, saju_saved')
+      .eq('id', u.user.id)
+      .maybeSingle()
+    if (p) setProfile(p as CardProfile)
   }, [])
+
+  useEffect(() => { loadProfile() }, [loadProfile])
 
   const wrap: React.CSSProperties = {
     background: '#FFFBF7', border: '0.5px solid #f0e0d5',
@@ -189,6 +189,15 @@ export default function UserCard({ footer }: { footer?: ReactNode | ((info: User
               fontSize: 9, padding: '2px 8px', borderRadius: 10,
               background: rc.bg, color: rc.fg, fontWeight: 500, flexShrink: 0,
             }}>{roleLabel(profile?.role || null)}</span>
+            <button
+              onClick={() => setEditOpen(true)}
+              style={{
+                marginLeft: 'auto', flexShrink: 0,
+                fontSize: 10, color: '#c5a590',
+                border: '0.5px solid #ecd8c6', borderRadius: 7,
+                padding: '3px 8px', background: 'none', cursor: 'pointer',
+              }}
+            >수정</button>
           </div>
           <div style={{ fontSize: 10.5, color: '#9a8574', marginTop: 3 }}>{subLine}</div>
         </div>
@@ -208,6 +217,12 @@ export default function UserCard({ footer }: { footer?: ReactNode | ((info: User
             : footer}
         </div>
       )}
+
+      <SajuEditModal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        onSaved={loadProfile}
+      />
     </div>
   )
 }
