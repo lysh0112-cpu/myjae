@@ -103,7 +103,7 @@ const termCell = (color: string): React.CSSProperties => ({ fontSize: 10, fontWe
 
 export default function SajuWonguk({ saju, dayStem, yeonjji, iljji, gm1, gm2 }: Props) {
   const [term, setTerm] = useState<string | null>(null)
-  const open = (v: string) => v && v !== '×' && setTerm(v)
+  const open = (v: string) => v && v !== '-' && setTerm(v)
 
   return (
     <div style={{ fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>
@@ -174,7 +174,7 @@ export default function SajuWonguk({ saju, dayStem, yeonjji, iljji, gm1, gm2 }: 
               const color = SINSAL_HIGHLIGHT[sinsal]
               return (
                 <td key={i} onClick={() => color && open(sinsal)} style={{ ...termCell(color || '#ddd'), cursor: color ? 'pointer' : 'default' }}>
-                  {color ? sinsal : '×'}
+                  {color ? sinsal : '-'}
                 </td>
               )
             })}
@@ -189,7 +189,7 @@ export default function SajuWonguk({ saju, dayStem, yeonjji, iljji, gm1, gm2 }: 
                 ...getGwiinForBranch(dayStem, monthBranch, branch),
               ]
               if (gwiins.length === 0) {
-                return <td key={i} style={{ ...termCell('#ddd'), cursor: 'default' }}>×</td>
+                return <td key={i} style={{ ...termCell('#ddd'), cursor: 'default' }}>-</td>
               }
               return (
                 <td key={i} style={{ padding: '2px 1px', textAlign: 'center' }}>

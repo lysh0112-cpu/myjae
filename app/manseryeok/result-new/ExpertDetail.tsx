@@ -174,7 +174,7 @@ export default function ExpertDetail({
 }) {
   // 용어 모달 (Hooks 규칙: early return보다 먼저 선언)
   const [term, setTerm] = useState<string | null>(null)
-  const open = (v: string) => v && v !== '–' && setTerm(v)
+  const open = (v: string) => v && v !== '-' && setTerm(v)
 
   if (!saju.length || !dayStem) return null
 
@@ -218,7 +218,7 @@ export default function ExpertDetail({
                   if (ri === 0) g = hidden[0] ?? ''
                   else if (ri === 1) g = hidden.length === 3 ? hidden[1] : ''
                   else g = hidden[hidden.length - 1] ?? ''
-                  if (!g) return <td key={i} style={{ ...td, color: '#ddd0c4' }}>–</td>
+                  if (!g) return <td key={i} style={{ ...td, color: '#ddd0c4' }}>-</td>
                   const ss = sipsinOf(dayStem, g)
                   const isBongi = ri === 2
                   return (
@@ -251,14 +251,14 @@ export default function ExpertDetail({
               <td style={rl}>일간 {dayStem}</td>
               {saju.map((p, i) => {
                 const u = getUnsung(dayStem, p.branch)
-                return <td key={i} onClick={() => open(u)} style={{ ...td, color: unsungColor(u) || '#3a2e28', fontWeight: 600, cursor: u ? 'pointer' : 'default' }}>{u || '–'}</td>
+                return <td key={i} onClick={() => open(u)} style={{ ...td, color: unsungColor(u) || '#3a2e28', fontWeight: 600, cursor: u ? 'pointer' : 'default' }}>{u || '-'}</td>
               })}
             </tr>
             <tr>
               <td style={rl}>년간 {yearStem}</td>
               {saju.map((p, i) => {
                 const u = yearStem ? getUnsung(yearStem, p.branch) : ''
-                return <td key={i} onClick={() => open(u)} style={{ ...td, color: unsungColor(u) || '#8a7360', cursor: u ? 'pointer' : 'default' }}>{u || '–'}</td>
+                return <td key={i} onClick={() => open(u)} style={{ ...td, color: unsungColor(u) || '#8a7360', cursor: u ? 'pointer' : 'default' }}>{u || '-'}</td>
               })}
             </tr>
           </tbody>
@@ -278,14 +278,14 @@ export default function ExpertDetail({
               <td style={rl}>년지 {yeonjji}</td>
               {saju.map((p, i) => {
                 const s = getSinsal(yeonjji, p.branch)
-                return <td key={i} onClick={() => open(s)} style={{ ...td, color: SINSAL_HIGHLIGHT[s] || '#8a7360', fontWeight: 600, cursor: s ? 'pointer' : 'default' }}>{s || '–'}</td>
+                return <td key={i} onClick={() => open(s)} style={{ ...td, color: SINSAL_HIGHLIGHT[s] || '#8a7360', fontWeight: 600, cursor: s ? 'pointer' : 'default' }}>{s || '-'}</td>
               })}
             </tr>
             <tr>
               <td style={rl}>일지 {iljji}</td>
               {saju.map((p, i) => {
                 const s = getSinsal(iljji, p.branch)
-                return <td key={i} onClick={() => open(s)} style={{ ...td, color: SINSAL_HIGHLIGHT[s] || '#8a7360', cursor: s ? 'pointer' : 'default' }}>{s || '–'}</td>
+                return <td key={i} onClick={() => open(s)} style={{ ...td, color: SINSAL_HIGHLIGHT[s] || '#8a7360', cursor: s ? 'pointer' : 'default' }}>{s || '-'}</td>
               })}
             </tr>
           </tbody>
@@ -314,7 +314,7 @@ export default function ExpertDetail({
                     <span style={{ color: '#3a2e28', fontSize: 11 }}>{p.stem}</span>{' '}
                     {hc && <span onClick={() => open('현침살')} style={{ color: '#c85a6e', fontSize: 9, cursor: 'pointer', fontWeight: 600 }}>현침</span>}
                     {gg && <span onClick={() => open('곡각살')} style={{ color: '#7c5aaa', fontSize: 9, cursor: 'pointer', fontWeight: 600 }}>곡각</span>}
-                    {!hc && !gg && <span style={{ color: '#ddd0c4', fontSize: 9 }}>–</span>}
+                    {!hc && !gg && <span style={{ color: '#ddd0c4', fontSize: 9 }}>-</span>}
                   </td>
                 )
               })}
@@ -328,7 +328,7 @@ export default function ExpertDetail({
                     <span style={{ color: '#3a2e28', fontSize: 11 }}>{p.branch}</span>{' '}
                     {hc && <span onClick={() => open('현침살')} style={{ color: '#c85a6e', fontSize: 9, cursor: 'pointer', fontWeight: 600 }}>현침</span>}
                     {gg && <span onClick={() => open('곡각살')} style={{ color: '#7c5aaa', fontSize: 9, cursor: 'pointer', fontWeight: 600 }}>곡각</span>}
-                    {!hc && !gg && <span style={{ color: '#ddd0c4', fontSize: 9 }}>–</span>}
+                    {!hc && !gg && <span style={{ color: '#ddd0c4', fontSize: 9 }}>-</span>}
                   </td>
                 )
               })}
@@ -377,7 +377,7 @@ export default function ExpertDetail({
                         {k > 0 && '·'}
                         <span onClick={() => open(x)} style={{ cursor: 'pointer' }}>{x.replace('귀인', '')}</span>
                       </span>
-                    )) : '–'}
+                    )) : '-'}
                   </td>
                 )
               })}
@@ -393,7 +393,7 @@ export default function ExpertDetail({
                         {k > 0 && '·'}
                         <span onClick={() => open(x)} style={{ cursor: 'pointer' }}>{x.replace('귀인', '')}</span>
                       </span>
-                    )) : '–'}
+                    )) : '-'}
                   </td>
                 )
               })}
@@ -416,7 +416,7 @@ export default function ExpertDetail({
             <tr>
               <td style={rl}>납음</td>
               {saju.map((p, i) => (
-                <td key={i} style={{ ...td, color: '#6a5848' }}>{nabeum(p.stem, p.branch) || '–'}</td>
+                <td key={i} style={{ ...td, color: '#6a5848' }}>{nabeum(p.stem, p.branch) || '-'}</td>
               ))}
             </tr>
           </tbody>
@@ -524,7 +524,7 @@ export default function ExpertDetail({
                             <Badge kind={r} />
                           </span>
                         ))
-                        : <span style={{ color: '#ddd0c4' }}>–</span>}
+                        : <span style={{ color: '#ddd0c4' }}>-</span>}
                     </td>
                   )
                 })}

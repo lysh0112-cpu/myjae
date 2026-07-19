@@ -15,11 +15,21 @@ const SINSAL_START: Record<string, number> = {
   '巳': 2,  '酉': 2,  '丑': 2,
 }
 
-export function getSinsal(baseJiji: string, targetJiji: string): SinsalName {
+/** 12신살 — 기준지지(년지 또는 일지)에서 대상지지의 신살을 구한다.
+ *
+ *  ★ 지지를 못 찾으면 빈 문자열('')을 돌려준다. (2026-07 수정)
+ *    시(時)를 모르는 사주는 시주가 { stem:'?', branch:'?' }로 들어오는데,
+ *    예전에는 '겁살'(배열 0번)을 돌려줘서 있지도 않은 흉살이 붉게 표시됐다.
+ *    전문가가 이를 근거로 상담하거나, AI 통변 프롬프트에 주입되는 문제가 있었다.
+ *    → 못 찾으면 빈 값. 화면들은 이미 `getSinsal(...) || '-'` 로 받고 있어
+ *      호출부를 고칠 필요가 없다.
+ *    ※ 지지가 정상일 때의 결과는 그대로 (144개 조합 전수 대조 완료).
+ */
+export function getSinsal(baseJiji: string, targetJiji: string): SinsalName | '' {
   const start = SINSAL_START[baseJiji]
-  if (start === undefined) return '겁살'
+  if (start === undefined) return ''
   const targetIdx = JIJI.indexOf(targetJiji as typeof JIJI[number])
-  if (targetIdx === -1) return '겁살'
+  if (targetIdx === -1) return ''
   const diff = (targetIdx - start + 12) % 12
   return SINSAL_NAMES[diff]
 }
