@@ -98,8 +98,8 @@ const SLIDES = [
     href: '/home-new',
   },
   {
-    tag: '타로', title: '남이 봐주는 타로는 그만',
-    sub: '이제 내 손으로 직접 뽑아요', link: '타로 보러가기 →',
+    tag: 'AI 타로 마스터', title: '남이 봐주는 타로는 이제 그만',
+    sub: '내 손으로 뽑고,\nAI가 정확하게 읽어줘요', link: '타로 보러가기 →',
     img: '/banner/slide6.jpg', video: '',
     accent: '#d8b4ff', sub2: '#e8dcf5',
     sparkles: ['#d8b4ff', '#ffd97a', '#fff'],
