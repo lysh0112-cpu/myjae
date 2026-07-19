@@ -373,7 +373,14 @@ export default function PriceManager() {
       <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
         <div style={{ flex: 1, minWidth: 300, display: 'flex', flexDirection: 'column' }}>
           <PriceTable title="🔮 전문가 상담 가격" table="consult_prices" />
-          <NamingTryLimitBox />
+          {/* 이름 짓기 조회 횟수 — 2026-07 화면에서 숨김 (대표님 지시).
+              함수(NamingTryLimitBox)는 그대로 두었으니 되살리려면 아래 한 줄만 풀면 된다.
+              ※ 숨겨도 고객 화면은 그대로 동작한다.
+                app_settings의 naming_try_limit 행이 남아 있고,
+                어른 개명 3화면(newname·newhanja·newresult)이 그 값을 읽는다.
+                행이 없어도 코드 기본값 3회로 떨어지므로 문제없다.
+                값을 바꾸려면 Supabase에서 직접 수정할 것. */}
+          {/* <NamingTryLimitBox /> */}
         </div>
         <PriceTable title="✨ AI 분석 가격" table="analysis_prices" />
         <div style={{ flex: 1, minWidth: 320 }}>
