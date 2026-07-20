@@ -222,7 +222,9 @@ export function scoreDailyFortune(input: DailyFortuneInput): DailyFortuneScore {
   else if (total >= 84) grade = 'A'
   else if (total >= 72) grade = 'B'
   else grade = 'C'
-  const star = total >= 90 ? 5 : total >= 70 ? 4 : total >= 55 ? 3 : total >= 40 ? 2 : 1
+  // 별점 — 등급 경계(90/84/72)와 결을 맞춘다.
+  //   ⚠ 화면은 총점을 쓰고 별점은 구버전 호환용으로만 남겨둔 값이다.
+  const star = total >= 90 ? 5 : total >= 84 ? 4 : total >= 72 ? 3 : total >= 62 ? 2 : 1
 
   const sameYinYang = isYang(myDayStem) === isYang(todayStem)
   const sipseong = calcSipseong(myElement, todayElement, sameYinYang)

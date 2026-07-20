@@ -44,6 +44,17 @@ type Fortune = {
   today_insight: string | null
 }
 
+/** 이달의 운세 AI 해설 (monthly_fortune 테이블) */
+type MonthText = {
+  summary: string | null
+  love: string | null
+  money: string | null
+  health: string | null
+  lucky_color: string | null
+  lucky_dir: string | null
+  insight: string | null
+}
+
 type FortuneProfile = {
   nickname: string | null
   birth_year: number | null
@@ -122,6 +133,11 @@ export default function TodayFortuneCard() {
   const [fortuneLoading, setFortuneLoading] = useState(false)
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<'day' | 'month'>('day')
+
+  // 이달의 운세 AI 해설 (점수는 계산, 글만 AI)
+  const [mText, setMText] = useState<MonthText | null>(null)
+  const [mTextLoading, setMTextLoading] = useState(false)
+  const [mTextChecked, setMTextChecked] = useState(false)
 
   const { saju, dayStem, iljji, converting } = useResultSaju(
     profile?.cal_type || '양력',
@@ -247,8 +263,76 @@ export default function TodayFortuneCard() {
     const days = pickGoodDays(remaining, myDayBranch)
     const prev = trend.find(t => t.month === (month === 1 ? 12 : month - 1))
 
-    return { year, month, ganji: thisMonth, score, trend, days, prev }
+    return { year, month, ganji: thisMonth, score, trend, days, prev, yongsin: ys.yongsin, heeksin: ys.heeksin }
   })()
+
+  // ── 이달의 운세 AI 해설 ───────────────────────────────────────
+  //   탭을 눌렀을 때만 부른다. 저장된 게 있으면 그것을 쓰고, 없을 때만 AI 호출(월 1회).
+  useEffect(() => {
+    if (tab !== 'month') return
+    if (!monthly || !userId) return
+    if (mTextChecked || mTextLoading) return
+
+    let cancelled = false
+    ;(async () => {
+      setMTextLoading(true)
+      try {
+        // ① 저장된 글이 있나
+        const { data: row } = await supabase.from('monthly_fortune')
+          .select('summary, love, money, health, lucky_color, lucky_dir, insight')
+          .eq('user_id', userId)
+          .eq('year', monthly.year)
+          .eq('month', monthly.month)
+          .maybeSingle()
+        if (cancelled) return
+        if (row) { setMText(row as MonthText); setMTextChecked(true); return }
+
+        // ② 없으면 AI로 만든다
+        const ms = monthly.score
+        const same = ms.area.envTag === ms.area.selfTag && ms.area.env === ms.area.self
+        const res = await fetch('/api/monthly-fortune', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            year: monthly.year, month: monthly.month,
+            monthStem: monthly.ganji.cheongan, monthBranch: monthly.ganji.jiji,
+            total: ms.total, gradeLabel: MONTH_GRADE_LABEL[ms.grade],
+            envTag: ms.area.envTag, envDesc: ms.area.envDesc, envGrade: ms.area.envGrade,
+            selfTag: ms.area.selfTag, selfDesc: ms.area.selfDesc, selfGrade: ms.area.selfGrade,
+            sameBranch: same,
+            dayStem,
+            monthBranchMine: saju.find(p => p.pillar === '월주')?.branch ?? '',
+            dayBranchMine: saju.find(p => p.pillar === '일주')?.branch ?? iljji,
+            yongsin: monthly.yongsin, heeksin: monthly.heeksin,
+            sipseong: ms.flags.sipseongName,
+            nickname: profile?.nickname || undefined,
+            prevTotal: monthly.prev?.total ?? null,
+          }),
+        })
+        const data = await res.json()
+        if (cancelled) return
+        if (data.error) { console.error('월운 해설 오류:', data.error); setMTextChecked(true); return }
+
+        const text: MonthText = {
+          summary: data.summary, love: data.love, money: data.money, health: data.health,
+          lucky_color: data.lucky_color, lucky_dir: data.lucky_dir, insight: data.insight,
+        }
+        setMText(text)
+        await supabase.from('monthly_fortune').upsert({
+          user_id: userId,
+          year: monthly.year, month: monthly.month,
+          month_stem: monthly.ganji.cheongan, month_branch: monthly.ganji.jiji,
+          ...text,
+        }, { onConflict: 'user_id,year,month' })
+      } catch (e) {
+        console.error(e)
+      } finally {
+        if (!cancelled) { setMTextLoading(false); setMTextChecked(true) }
+      }
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, monthly, userId])
 
   // ── 화면 ──────────────────────────────────────────────────────────────
   const wrap: React.CSSProperties = {
@@ -369,6 +453,14 @@ export default function TodayFortuneCard() {
           </div>
         )}
 
+        {/* AI가 쓴 총운 — 없으면 이 자리는 비운다 */}
+        {mText?.summary && (
+          <p style={{ fontSize: 12.5, color: '#5c4634', lineHeight: 1.75, margin: '0 0 12px' }}>{mText.summary}</p>
+        )}
+        {mTextLoading && !mText && (
+          <p style={{ fontSize: 12, color: '#8a6a52', margin: '0 0 12px' }}>이달의 이야기를 준비하는 중…</p>
+        )}
+
         {/* 영역별 — 일·환경 / 나·건강
             월지와 일지가 같은 사주(예: 子월 子일)는 두 줄이 똑같이 나오므로 한 줄로 합친다 */}
         <div style={{ background: '#f7e2cc', borderRadius: 9, padding: 11, marginBottom: 11 }}>
@@ -385,6 +477,23 @@ export default function TodayFortuneCard() {
             </>
           )}
         </div>
+
+        {/* 이달의 색·방향 */}
+        {(mText?.lucky_color || mText?.lucky_dir) && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 11 }}>
+            <div style={{ flex: 1, background: '#f7e2cc', borderRadius: 8, padding: '9px 7px', textAlign: 'center' }}>
+              <div style={{ fontSize: 9, color: '#8a6a52', marginBottom: 4 }}>이달의 색</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                <span style={{ width: 12, height: 12, borderRadius: '50%', background: luckyColorChip(mText.lucky_color), border: '1px solid #ddd', display: 'inline-block', flexShrink: 0 }} />
+                <span style={{ fontSize: 11, color: '#7a4520' }}>{mText.lucky_color || '-'}</span>
+              </div>
+            </div>
+            <div style={{ flex: 1, background: '#f7e2cc', borderRadius: 8, padding: '9px 7px', textAlign: 'center' }}>
+              <div style={{ fontSize: 9, color: '#8a6a52', marginBottom: 4 }}>이달의 방향</div>
+              <div style={{ fontSize: 12, color: '#7a4520' }}>{mText.lucky_dir || '-'}</div>
+            </div>
+          </div>
+        )}
 
         {/* 이번 달 좋은 날 */}
         {(days.good.length > 0 || days.bad.length > 0) && (
@@ -427,13 +536,38 @@ export default function TodayFortuneCard() {
               </div>
             </div>
 
+            {(mText?.love || mText?.money || mText?.health) && (
+              <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                <div style={{ flex: 1, background: '#fdf4ec', borderRadius: 8, padding: 9 }}>
+                  <div style={{ fontSize: 9, color: '#a8501e', marginBottom: 4 }}>❤️ 애정</div>
+                  <div style={{ fontSize: 10.5, color: '#5c4634', lineHeight: 1.55 }}>{mText.love || '-'}</div>
+                </div>
+                <div style={{ flex: 1, background: '#fdf4ec', borderRadius: 8, padding: 9 }}>
+                  <div style={{ fontSize: 9, color: '#a8501e', marginBottom: 4 }}>💰 재물</div>
+                  <div style={{ fontSize: 10.5, color: '#5c4634', lineHeight: 1.55 }}>{mText.money || '-'}</div>
+                </div>
+                <div style={{ flex: 1, background: '#fdf4ec', borderRadius: 8, padding: 9 }}>
+                  <div style={{ fontSize: 9, color: '#a8501e', marginBottom: 4 }}>🌿 건강</div>
+                  <div style={{ fontSize: 10.5, color: '#5c4634', lineHeight: 1.55 }}>{mText.health || '-'}</div>
+                </div>
+              </div>
+            )}
+
             <div style={{ paddingTop: 11, borderTop: '0.5px solid #f0e0d5', marginBottom: 11 }}>
               <div style={{ fontSize: 11.5, fontWeight: 600, color: '#c8783c', marginBottom: 6 }}>📖 이달의 명리 한 조각</div>
-              {ms.area.envDesc && (
-                <p style={{ fontSize: 11.5, color: '#7a6858', lineHeight: 1.75, margin: '0 0 6px' }}>{ms.area.envDesc}</p>
-              )}
-              {ms.area.selfDesc && ms.area.selfDesc !== ms.area.envDesc && (
-                <p style={{ fontSize: 11.5, color: '#7a6858', lineHeight: 1.75, margin: 0 }}>{ms.area.selfDesc}</p>
+              {/* AI가 순화한 문장을 먼저 쓴다. 실패했을 때만 소스 원문을 보여준다.
+                  (원문은 상담사용 표현이라 "정신적으로 문제가 발생한다" 같은 문장이 그대로 나온다) */}
+              {mText?.insight ? (
+                <p style={{ fontSize: 11.5, color: '#5c4634', lineHeight: 1.75, margin: '0 0 6px' }}>{mText.insight}</p>
+              ) : (
+                <>
+                  {ms.area.envDesc && (
+                    <p style={{ fontSize: 11.5, color: '#5c4634', lineHeight: 1.75, margin: '0 0 6px' }}>{ms.area.envDesc}</p>
+                  )}
+                  {ms.area.selfDesc && ms.area.selfDesc !== ms.area.envDesc && (
+                    <p style={{ fontSize: 11.5, color: '#5c4634', lineHeight: 1.75, margin: 0 }}>{ms.area.selfDesc}</p>
+                  )}
+                </>
               )}
               <div style={{ fontSize: 9.5, color: '#c5a590', marginTop: 6 }}>
                 명리 근거: {ms.area.envTag}{ms.area.selfTag && ms.area.selfTag !== ms.area.envTag ? ` · ${ms.area.selfTag}` : ''}
