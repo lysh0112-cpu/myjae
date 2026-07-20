@@ -70,7 +70,11 @@ async function fetchPersonSaju(p: RawPerson | null): Promise<PersonSaju | null> 
       { pillar: '년주', stem: year.stem, branch: year.branch },
     ].filter(pp => pp.stem !== '?' && pp.branch !== '?')
 
-    const ys = calcYongsin(sajuPillars, day.stem)
+    // 심산 오행 점수로 용신 계산 (월지 계절 치환 반영).
+    //   /api/lunar 가 돌려주는 양력 월·일을 그대로 쓴다.
+    //   시를 모르면(hour.branch === '?') 시지는 null로 넘긴다.
+    const hb = hour.branch === '?' ? null : hour.branch
+    const ys = calcYongsin(sajuPillars, day.stem, data.solarMonth, data.solarDay, hb)
 
     return {
       dayStem: day.stem,
