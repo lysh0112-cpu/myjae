@@ -64,13 +64,13 @@ export default function MoodHistoryModal({ open, onClose }: { open: boolean; onC
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <span style={{ fontSize: 15, fontWeight: 600, color: '#96502e' }}>내 감정 기록</span>
-          <span onClick={onClose} style={{ fontSize: 18, color: '#6b5340', cursor: 'pointer' }}>✕</span>
+          <button type="button" onClick={onClose} aria-label="닫기" style={{ fontSize: 18, color: '#6b5340', cursor: 'pointer', background: 'none', border: 'none', padding: 0, lineHeight: 1, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>✕</button>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 12, fontSize: 12, color: '#6b5340' }}>
-          <span onClick={prevMonth} style={{ cursor: atFirst ? 'default' : 'pointer', fontSize: 15, opacity: atFirst ? 0.3 : 1 }}>‹</span>
+          <button type="button" onClick={prevMonth} disabled={atFirst} aria-label="이전 달" style={{ cursor: atFirst ? 'default' : 'pointer', fontSize: 15, opacity: atFirst ? 0.3 : 1, background: 'none', border: 'none', padding: '2px 6px', color: 'inherit', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>‹</button>
           <span style={{ color: '#5a4a3e', fontWeight: 600 }}>{year}. {month}</span>
-          <span onClick={nextMonth} style={{ cursor: isThisMonth ? 'default' : 'pointer', fontSize: 15, opacity: isThisMonth ? 0.3 : 1 }}>›</span>
+          <button type="button" onClick={nextMonth} disabled={isThisMonth} aria-label="다음 달" style={{ cursor: isThisMonth ? 'default' : 'pointer', fontSize: 15, opacity: isThisMonth ? 0.3 : 1, background: 'none', border: 'none', padding: '2px 6px', color: 'inherit', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>›</button>
         </div>
 
         {loading ? (

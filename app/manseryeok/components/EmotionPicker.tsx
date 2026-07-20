@@ -68,7 +68,8 @@ export default function EmotionPicker() {
       `}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 11 }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: '#96502e' }}>오늘 기분은 어떠세요?</span>
-        <span onClick={() => setShowHistory(true)} style={{ fontSize: 10.5, color: '#a06a3c', background: '#faede0', border: '0.5px solid #ecd8c6', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', whiteSpace: 'nowrap' }}>📅 내 감정 기록</span>
+        {/* 진짜 button으로 둔다. span이면 손가락이 살짝 밀릴 때 글자 범위만 잡히고 눌리지 않는다. */}
+        <button type="button" onClick={() => setShowHistory(true)} style={{ fontSize: 10.5, color: '#8f3d0e', background: '#faede0', border: '0.5px solid #ecd8c6', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>📅 내 감정 기록</button>
       </div>
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between' }}>
@@ -83,6 +84,8 @@ export default function EmotionPicker() {
                 border: on ? '2px solid #c8783c' : '0.5px solid #eaddd0',
                 background: on ? '#faede0' : '#fff',
                 overflow: 'visible',
+                WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent',
               }}
             >
               <span
