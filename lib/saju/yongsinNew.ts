@@ -110,34 +110,80 @@ export interface EokbuResult {
   hansin: Ohaeng
   note: string
 }
-function calcEokbu(dayEl: Ohaeng, x: number, score: Record<Ohaeng, number>): EokbuResult {
+
+// ★★★ 소스 원문: 『심산 명리비법 적성노트』 p.151 「08 용신 찾는 비법」 표
+//
+//   표는 신강/신약이 아니라 "어떤 육친이 강한가" 5칸으로 나뉜다.
+//     신강한 사주(인비가 강함) : 인성 / 비겁
+//     신약한 사주(식재관이 강함): 식상 / 재성 / 관성
+//
+//   ⚠️ 이전 코드는 "신약이면 무조건 인성, 신강이면 무조건 재성"이었다.
+//      그래서 재다신약(월지가 재성)인데도 인성이 용신으로 나오는 오류가 있었다.
+//      (연재쌤 지적: "월지 재성이면 비겁이 용신이다")
+//
+//   ⚠️ 희신도 "용신을 생하는 오행"이 아니라 표에 직접 적힌 값을 쓴다.
+//      (p.150 정의는 원론이고, 실제 감명은 p.151 표를 따른다)
+//
+//   ※ 표 아래 단서: "90%의 명식은 위 공식을 따르지만 10% 정도는 예외가 있다."
+type Yukchin5 = '비겁' | '식상' | '재성' | '관성' | '인성'
+interface GangTable { yong: Yukchin5; hee: Yukchin5; note: string }
+
+const P151_TABLE: Record<Yukchin5, GangTable> = {
+  // ── 신강한 사주 (인비가 강함) ──
+  인성: { yong: '재성', hee: '식상', note: '인성이 강해 재성으로 눌러 줘요' },
+  비겁: { yong: '식상', hee: '재성', note: '비겁이 강해 식상으로 흘려보내요' },
+  // ── 신약한 사주 (식재관이 강함) ──
+  식상: { yong: '인성', hee: '비겁', note: '식상이 강해 인성으로 다잡아 줘요' },
+  재성: { yong: '비겁', hee: '인성', note: '재성이 강해 비겁으로 힘을 보태요' },
+  관성: { yong: '인성', hee: '비겁', note: '관성이 강해 인성으로 받아 줘요' },
+}
+
+// 월지가 어느 육친인지 — 소스 p.141 "월지가 비겁·인성으로 통근하면 신강,
+// 월지가 식재관이면 신약". 즉 신강약도, 무엇이 강한지도 월지가 기준이다.
+function yukchinOfEl(dayEl: Ohaeng, el: Ohaeng): Yukchin5 {
   const r = relOf(dayEl)
-  const status = judgeStrength(x)
-  let yongsin: Ohaeng
-  let note: string
-
-  // 병약 우선: 특정오행 ≥ 50 AND 억부예정오행(인성) == 0
-  const maxEntry = (Object.entries(score) as [Ohaeng, number][]).sort((a, b) => b[1] - a[1])[0]
-  if (status === '극신약' && maxEntry[1] >= 50 && score[r.insung] === 0) {
-    yongsin = geukOf(maxEntry[0])  // 과다한 병 오행을 극하는 약신
-    note = '특정 기운이 지나치게 강해, 그것을 다스리는 기운을 씁니다'
-  } else if (x < 42) {
-    yongsin = r.insung             // 신약 → 인성
-    note = '기운이 약해 나를 돕는 기운을 용신으로 삼아요'
-  } else {
-    yongsin = r.jaesung            // 신강 → 재성(대표)
-    note = '기운이 강해 눌러주는 기운을 용신으로 삼아요'
+  if (el === r.bigeop) return '비겁'
+  if (el === r.insung) return '인성'
+  if (el === r.siksang) return '식상'
+  if (el === r.jaesung) return '재성'
+  return '관성'
+}
+function yukchin5ToEl(dayEl: Ohaeng, y: Yukchin5): Ohaeng {
+  const r = relOf(dayEl)
+  switch (y) {
+    case '비겁': return r.bigeop
+    case '식상': return r.siksang
+    case '재성': return r.jaesung
+    case '관성': return r.gwansung
+    case '인성': return r.insung
   }
+}
 
-  // 5신
-  //   ★ 소스 정의: 희신=용신을 생 / 기신=용신을 극 / 구신="희신을 해하는 오행"
-  //   (희신이 과다할 때 식상으로 대체하는 규칙은 소스에 없어 제거함)
-  const heesin = saengOf(yongsin)   // 희신 = 용신을 생
-  const gisin = geukOf(yongsin)     // 기신 = 용신을 극
-  const gusin = geukOf(heesin)      // 구신 = 희신을 극 (소스 원문)
+// 억부 5신 계산 — p.151 표 그대로.
+//   "무엇이 강한가"는 육친별 점수 합계로 정한다.
+//   ★ 심산 오행 점수(simsanOhaeng)가 이미 월지 계절 치환을 반영하고 있으므로
+//     (예: 丑월은 土가 아니라 水로 계산), 그 점수를 그대로 쓰면 계절이 자동 반영된다.
+//     연재쌤 확인: "이미 표에 넣어준 것"
+//   기신·구신·한신은 p.150 정의대로 계산한다.
+//     기신 = 용신을 극 / 구신 = 희신을 극 / 한신 = 나머지
+function calcEokbu(dayEl: Ohaeng, score: Record<Ohaeng, number>): EokbuResult {
+  // 오행 점수 → 육친 점수로 합산
+  const byYukchin: Record<Yukchin5, number> = { 비겁: 0, 식상: 0, 재성: 0, 관성: 0, 인성: 0 }
+  for (const el of ALL) byYukchin[yukchinOfEl(dayEl, el)] += score[el] ?? 0
+
+  // 가장 강한 육친 (동점이면 비겁 > 인성 > 관성 > 재성 > 식상 순으로 안정 정렬)
+  const ORDER: Yukchin5[] = ['비겁', '인성', '관성', '재성', '식상']
+  let gang: Yukchin5 = ORDER[0]
+  for (const y of ORDER) if (byYukchin[y] > byYukchin[gang]) gang = y
+
+  const row = P151_TABLE[gang]
+  const yongsin = yukchin5ToEl(dayEl, row.yong)
+  const heesin = yukchin5ToEl(dayEl, row.hee)
+  const gisin = geukOf(yongsin)     // 용신을 극하는 것 (p.150)
+  const gusin = geukOf(heesin)      // 희신을 극하는 것 (p.150)
   const hansin = ALL.find(e => ![yongsin, heesin, gisin, gusin].includes(e))!
 
-  return { yongsin, heesin, gisin, gusin, hansin, note }
+  return { yongsin, heesin, gisin, gusin, hansin, note: row.note }
 }
 
 // ── ③ 격국용신 (용신 1개만) ─────────────────────────────────────────────────
@@ -229,7 +275,7 @@ export function calcYongsinNew(saju: Pillar[], dayStem: string, scoreOverride?: 
     status,
     dayElement: dayEl,
     johu: calcJohu(monthBranch, dayEl, inbi, score),
-    eokbu: calcEokbu(dayEl, inbi, score),
+    eokbu: calcEokbu(dayEl, score),
     gyeokguk: calcGyeokguk(saju, dayStem),
   }
 }
