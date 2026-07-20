@@ -19,13 +19,16 @@ interface Props {
   dayStem: string
   hourIdx: number | null
   customScores?: Record<string,number> | null
+  // 심산 오행 점수(월지 계절 치환)용 양력 월·일
+  solarMonth?: number
+  solarDay?: number
 }
 
-export default function YongsinProBoard({ saju, dayStem, hourIdx, customScores }: Props) {
+export default function YongsinProBoard({ saju, dayStem, hourIdx, customScores, solarMonth, solarDay }: Props) {
   if (!dayStem || saju.length === 0) return null
 
   const { track1, track2, isConflict, conflictAdvice, score } =
-    calcYongsinPro(saju, dayStem, hourIdx, customScores ?? null)
+    calcYongsinPro(saju, dayStem, hourIdx, customScores ?? null, solarMonth, solarDay)
 
   const displayScore = customScores ?? score
   const isCustom = !!customScores && Object.values(customScores).some(v => v > 0)

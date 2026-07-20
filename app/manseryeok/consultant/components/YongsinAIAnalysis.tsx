@@ -23,12 +23,15 @@ interface Props {
   calType: string
   customScores?: Record<string,number> | null
   consultationId: string | null
+  // 심산 오행 점수(월지 계절 치환)용 양력 월·일
+  solarMonth?: number
+  solarDay?: number
   customerPhone: string
 }
 
 export default function YongsinAIAnalysis({
   saju, dayStem, hourIdx, gender, yearParam, monthParam, dayParam,
-  calType, customScores, consultationId, customerPhone
+  calType, customScores, consultationId, customerPhone, solarMonth, solarDay
 }: Props) {
   const [result, setResult] = useState('')
   const [loading, setLoading] = useState(false)
@@ -41,7 +44,7 @@ export default function YongsinAIAnalysis({
     try {
       // 용신 계산
       const { track1, track2, isConflict, score } =
-        calcYongsinPro(saju, dayStem, hourIdx, customScores ?? null)
+        calcYongsinPro(saju, dayStem, hourIdx, customScores ?? null, solarMonth, solarDay)
 
       const sajuText = saju.map(s => `${s.pillar}: ${s.stem}${s.branch}`).join(', ')
       const scoreText = Object.entries(score).map(([k,v]) => `${k}:${v}`).join(' ')

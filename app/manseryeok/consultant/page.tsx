@@ -3,12 +3,17 @@ import { Suspense, useState, useEffect, useRef } from 'react'
 import { useConsultantState } from '@/hooks/useConsultantState'
 import { useConsultantSaju } from '@/hooks/useConsultantSaju'
 import ConsultationList from './components/ConsultationList'
-import ConsultantChat from './components/ConsultantChat'
+// 고객 채팅 — 07-20 연결 끊음(부품은 남겨 둠). 되살리려면 이 줄과 사용처 주석만 풀면 된다.
+// import ConsultantChat from './components/ConsultantChat'
 import CustomerAiAnalysis from './components/CustomerAiAnalysis'
-import CustomerHistory from './components/CustomerHistory'
+// CustomerHistory 는 07-20부터 HistoryFloating(플로팅 창) 안에서 쓴다.
+// import CustomerHistory from './components/CustomerHistory'
 import ConsultantNote from './components/ConsultantNote'
 import ConsultantSchedule from './components/ConsultantSchedule'
-import SajuFloating from './components/SajuFloating'
+// 기존 사주명식 창(십성·신살 탭) — 전문가용으로 교체. 부품은 남겨 둔다.
+// import SajuFloating from './components/SajuFloating'
+import ExpertFloating from './components/ExpertFloating'
+import HistoryFloating from './components/HistoryFloating'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -68,7 +73,10 @@ function ConsultantContent() {
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null)
   const [authState, setAuthState] = useState<'checking' | 'ok' | 'denied'>('checking')
 
-  // 🔮 사주명식 플로팅 창 열림 상태
+  // 📋 상담내역 플로팅 창 열림 상태
+  const [historyOpen, setHistoryOpen] = useState(false)
+
+  // 🔮 만세력 플로팅 창 열림 상태
   const [sajuOpen, setSajuOpen] = useState(false)
 
   // 왼쪽 큰 영역에 지금 켜져 있는 고정 탭 (기본: 상담목록)
@@ -82,6 +90,8 @@ function ConsultantContent() {
 
   // 가운데 칸 세로 분할 — 위(재방문 이력) / 아래(채팅) 높이 비율 (%)
   // 위치를 기억(localStorage)해서 새로고침·다음 고객에도 유지
+  // ⚠️ 가운데 칸 세로 분할(위 이력 / 아래 채팅)은 07-20 개편으로 안 쓴다.
+  //    되살릴 때를 대비해 상태·드래그 로직은 남겨 두었다.
   const [midTopPct, setMidTopPct] = useState<number>(() => {
     if (typeof window === 'undefined') return 35
     const saved = window.localStorage.getItem('consultant_mid_top_pct')
@@ -277,47 +287,32 @@ function ConsultantContent() {
         <div style={dividerGrip} />
       </div>
 
-      {/* ② 가운데 칸 — 위(재방문 이력) / 세로 조절바 / 아래(고객 채팅) */}
+      {/* ② 가운데 칸 — 비워 둔다 (플로팅 창을 끌어다 놓고 쓰는 자리)
+          ─────────────────────────────────────────────────────
+          07-20 개편:
+            · 이전 상담 내역 → 메뉴바 "📋 상담내역" 플로팅으로 옮김
+            · 고객 채팅 → 연결 끊고 숨김 (부품은 남겨 둠)
+              되살리려면 아래 CHAT_OPEN 을 true 로 바꾸고
+              page.tsx 의 ConsultantChat import 주석을 풀면 된다. */}
       <div ref={midWrapRef} style={{width:splitMid+'%', minWidth:0, display:'flex', flexDirection:'column', borderRight:'1px solid rgba(255,255,255,0.06)'}}>
-
-        {/* 위: 재방문 이력 */}
-        <div style={{height:midTopPct+'%', minHeight:0, display:'flex', flexDirection:'column', borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
-          <div style={paneTitleStyle}>📋 이전 상담 내역</div>
-          <div style={{flex:1, overflow:'hidden', fontSize:s.fontSize+'px'}}>
-            <CustomerHistory
-              userId={selectedUserId}
-              currentConsultationId={selectedConsultation!.id}
-              fontSize={s.fontSize}
-            />
+        <div style={{
+          flex:1, minHeight:0, display:'flex', flexDirection:'column',
+          alignItems:'center', justifyContent:'center', gap:'10px',
+          border:'1px dashed rgba(250,199,117,0.25)', margin:'8px', borderRadius:'8px',
+        }}>
+          <div style={{fontSize:'11px', color:'#6a6a8a', textAlign:'center', lineHeight:1.8}}>
+            비어 있는 칸이에요.<br/>
+            위 메뉴바에서 <span style={{color:'#FAC775'}}>🔮 만세력</span> ·
+            <span style={{color:'#FAC775'}}> 📋 상담내역</span> 창을 열어<br/>
+            이 자리로 끌어다 놓고 쓰세요.
           </div>
-        </div>
-
-        {/* 세로 경계선 (위 이력 ↕ 아래 채팅) */}
-        <div onMouseDown={startMidDrag} style={vDividerStyle} title="드래그로 높이 조절">
-          <div style={vDividerGrip} />
-        </div>
-
-        {/* 아래: 고객 채팅 */}
-        <div style={{flex:1, minHeight:0, display:'flex', flexDirection:'column'}}>
-          <div style={paneTitleStyle}>
-            💬 {customerName || '고객'} 채팅
-            <button onClick={() => setSelectedConsultation(null)}
-              style={{marginLeft:'auto', fontSize:'10px', padding:'2px 8px', borderRadius:'5px', border:'1px solid rgba(255,255,255,0.12)', background:'transparent', color:'#8888bb', cursor:'pointer'}}>
-              ← 목록
-            </button>
-          </div>
-          <div style={{flex:1, overflow:'hidden'}}>
-            <ConsultantChat
-              consultationId={selectedConsultation!.id}
-              customerPhone={selectedConsultation!.customer_phone}
-              onBack={() => setSelectedConsultation(null)}
-              onViewSaju={() => setSajuOpen(true)}
-              pcMode={true}
-              myBubbleColor={'#3d3488'}
-              customerBubbleColor={'#2a2a3a'}
-              fontSize={s.fontSize}
-            />
-          </div>
+          <button type="button" onClick={() => setSelectedConsultation(null)}
+            style={{
+              fontSize:'10px', padding:'4px 10px', borderRadius:'5px',
+              border:'1px solid rgba(255,255,255,0.12)', background:'transparent',
+              color:'#8888bb', cursor:'pointer', fontFamily:'inherit',
+              WebkitUserSelect:'none', userSelect:'none', touchAction:'manipulation',
+            }}>← 상담 목록</button>
         </div>
       </div>
 
@@ -396,7 +391,27 @@ function ConsultantContent() {
             marginLeft:'2px',
           }}>
           <span style={{fontSize:(ms+1)+'px'}}>🔮</span>
-          <span>사주명식</span>
+          <span>만세력</span>
+        </button>
+
+        {/* 📋 상담내역 — 플로팅 창 열기/닫기 토글 */}
+        <button
+          type="button"
+          onClick={() => setHistoryOpen(o => !o)}
+          title="이전 상담 내역 열기/닫기"
+          style={{
+            fontSize: ms + 'px',
+            padding: ms <= 9 ? '1px 5px' : ms <= 11 ? '2px 7px' : '3px 9px',
+            borderRadius:'5px',
+            border: historyOpen ? '1px solid rgba(250,199,117,0.6)' : '1px solid rgba(255,255,255,0.08)',
+            background: historyOpen ? 'rgba(250,199,117,0.18)' : 'rgba(255,255,255,0.03)',
+            color: historyOpen ? '#FAC775' : '#8888aa',
+            cursor:'pointer', display:'flex', alignItems:'center', gap:'3px', whiteSpace:'nowrap',
+            marginLeft:'2px', fontFamily:'inherit',
+            WebkitUserSelect:'none', userSelect:'none', touchAction:'manipulation',
+          }}>
+          <span style={{fontSize:(ms+1)+'px'}}>📋</span>
+          <span>상담내역</span>
         </button>
 
         {/* 메뉴 크기 슬라이더 (기존 기능 유지) */}
@@ -432,11 +447,22 @@ function ConsultantContent() {
         )}
       </div>
 
-      {/* ===== 🔮 사주명식 계산기 (독립 플로팅 창) ===== */}
-      {/* 창 안에서 직접 입력·계산하는 독립 계산기. 고객 데이터와 무관. */}
-      <SajuFloating
+      {/* ===== 🔮 만세력 (전문가용 · 독립 플로팅 창) ===== */}
+      {/* 창 안에서 생년월일을 입력하면 전문가용 만세력 화면을 그대로 띄운다.
+          고객 데이터와 무관한 독립 계산기. */}
+      <ExpertFloating
         open={sajuOpen}
         onClose={() => setSajuOpen(false)}
+      />
+
+      {/* ===== 📋 이전 상담 내역 (독립 플로팅 창) ===== */}
+      <HistoryFloating
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        userId={selectedUserId}
+        currentConsultationId={selectedConsultation?.id ?? null}
+        customerName={customerName}
+        fontSize={s.fontSize}
       />
     </div>
   )

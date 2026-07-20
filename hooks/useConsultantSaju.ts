@@ -100,5 +100,6 @@ export function useConsultantSaju(
   const yeangan = saju[3]?.stem ?? ''
   const seyunList = dayStem ? calcSeyunList(dayStem, 2026) : []
 
-  return { saju, dayStem, converting, iljji, yeonjji, yeangan, dayunList, seyunList }
+  // solarDate = 양력 변환 결과. 심산 오행 점수(월지 계절 치환)에 필요해 함께 돌려준다.
+  return { saju, dayStem, converting, iljji, yeonjji, yeangan, dayunList, seyunList, solarDate }
 }

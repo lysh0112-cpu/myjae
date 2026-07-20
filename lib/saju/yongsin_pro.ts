@@ -1,6 +1,7 @@
 // lib/saju/yongsin_pro.ts
 import { SajuPillar, Track1Result, calcTrack1 } from './yongsin_track1'
 import { Track2Result, calcTrack2 } from './yongsin_track2'
+import { calcSimsanOhaeng } from './simsanOhaeng'
 
 export type { Track1Result, Track2Result }
 
@@ -56,11 +57,22 @@ export function calcYongsinPro(
   saju: SajuPillar[],
   dayStem: string,
   hourIdx: number | null,
-  customScores?: Record<string,number> | null
+  customScores?: Record<string,number> | null,
+  // ★ 양력 월·일 — 넘기면 심산 오행 점수(100점)로 계산한다.
+  //   연재쌤 확정: 월지 계절 치환은 심산 표(p.38)를 따르고, 시지 보정은 하지 않는다.
+  //   넘기지 않으면 예전 110점 배점으로 계산한다(호환 유지).
+  solarMonth?: number,
+  solarDay?: number,
 ): YongsinProResult {
+  const useSimsan =
+    typeof solarMonth === 'number' && solarMonth >= 1 && solarMonth <= 12 &&
+    typeof solarDay === 'number' && solarDay >= 1 && solarDay <= 31
+  const hourBranch = saju.find(p => p.pillar === '시주')?.branch ?? null
   const score = customScores && Object.values(customScores).some(v => v > 0)
     ? customScores
-    : calc110Score(saju, hourIdx)
+    : useSimsan
+      ? (calcSimsanOhaeng(saju as never, solarMonth!, solarDay!, hourBranch) as Record<string,number>)
+      : calc110Score(saju, hourIdx)
 
   const track1 = calcTrack1(saju, dayStem, score)
   const track2 = calcTrack2(saju, dayStem)

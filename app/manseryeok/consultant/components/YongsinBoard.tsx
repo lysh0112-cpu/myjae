@@ -1,6 +1,6 @@
 // app/manseryeok/consultant/components/YongsinBoard.tsx
 'use client'
-import { calcYongsin } from '@/lib/saju/yongsin'
+import { calcYongsinCompat as calcYongsin } from '@/lib/saju/yongsinNew'
 
 const ELEMENT_COLOR: Record<string,string> = {
   목:'#4caf50', 화:'#f44336', 토:'#ff9800', 금:'#9e9e9e', 수:'#2196f3'
@@ -12,13 +12,17 @@ const ELEMENT_CHAR: Record<string,string> = {
 interface Props {
   saju: {pillar:string; stem:string; branch:string}[]
   dayStem: string
+  // 심산 오행 점수(월지 계절 치환)용 양력 월·일
+  solarMonth?: number
+  solarDay?: number
 }
 
-export default function YongsinBoard({ saju, dayStem }: Props) {
+export default function YongsinBoard({ saju, dayStem, solarMonth, solarDay }: Props) {
   if (!dayStem || saju.length === 0) return null
 
   const { isStrong, yongsin, heeksin, gisin, gusin, hansin, score, description } =
-    calcYongsin(saju, dayStem)
+    calcYongsin(saju, dayStem, solarMonth, solarDay,
+      saju.find(p => p.pillar === '시주')?.branch ?? null)
 
   const items = [
     { label: '용신', value: yongsin, desc: '가장 필요한 오행' },
