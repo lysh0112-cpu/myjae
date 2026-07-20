@@ -149,7 +149,7 @@ function CoupleResultInner() {
             style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
           <div style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ fontSize: 15, fontWeight: 500, color: '#3a2e28' }}>무엇이 궁금하세요?</div>
-            <div style={{ fontSize: 10.5, color: '#c8783c', marginTop: 1 }}>{name1} ♥ {name2} · 궁금한 걸 마음껏 골라보세요</div>
+            <div style={{ fontSize: 10.5, color: '#8f3d0e', marginTop: 1 }}>{name1} ♥ {name2} · 궁금한 걸 마음껏 골라보세요</div>
           </div>
           <span style={{ width: 16 }} />
         </div>
@@ -157,7 +157,7 @@ function CoupleResultInner() {
         {/* 전체 선택/해제 */}
         <div style={{ padding: '10px 14px', display: 'flex', gap: 8, borderBottom: '0.5px solid #f5e5da' }}>
           <button onClick={selectAll} style={{ flex: 1, height: 34, background: '#fff3e9', border: '0.5px solid #e0c0a8', borderRadius: 9, color: '#96502e', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>✓ 전체 선택</button>
-          <button onClick={clearAll} style={{ flex: 1, height: 34, background: '#fff', border: '0.5px solid #e8d5c5', borderRadius: 9, color: '#b4785a', fontSize: 12, cursor: 'pointer' }}>전체 해제</button>
+          <button onClick={clearAll} style={{ flex: 1, height: 34, background: '#fff', border: '0.5px solid #e8d5c5', borderRadius: 9, color: '#5c3a1e', fontSize: 12, cursor: 'pointer' }}>전체 해제</button>
         </div>
 
         {/* 대분류 목록 */}
@@ -205,7 +205,7 @@ function CoupleResultInner() {
                 <div style={{ background: '#fff', border: '0.5px solid #e8d5c5', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, color: '#3a2e28', lineHeight: 1.5 }}>{directQ.question}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
                   <span style={{ fontSize: 11, color: '#4a9450', flex: 1 }}>✓ 아래 풀이에 함께 담겨요</span>
-                  <span onClick={cancelDirect} style={{ fontSize: 11, color: '#b4785a', border: '0.5px solid #e0c0a8', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', background: '#fff' }}>지우고 다시 쓰기</span>
+                  <span onClick={cancelDirect} style={{ fontSize: 11, color: '#5c3a1e', border: '0.5px solid #e0c0a8', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', background: '#fff' }}>지우고 다시 쓰기</span>
                 </div>
               </div>
             ) : (
@@ -555,20 +555,20 @@ function CoupleResultView({
         {/* ④ 통변 — 질문별 카드 아코디언 (사주/대운/연운과 통일) */}
         <div style={{ marginTop: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, paddingLeft: 2 }}>
-            <span style={{ color: '#c8783c' }}>✦</span>
+            <span style={{ color: '#8f3d0e' }}>✦</span>
             <span style={{ fontSize: 13, fontWeight: 500, color: '#96502e' }}>두 사람의 궁합 이야기</span>
           </div>
 
           {tongLoading && !tongResult ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: 24, color: '#b4785a', fontSize: 13, background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12 }}>
-              <span style={{ fontSize: 28, display: 'inline-block', animation: 'spin 1.1s linear infinite', color: '#c8783c' }}>✦</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: 24, color: '#5c3a1e', fontSize: 13, background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12 }}>
+              <span style={{ fontSize: 28, display: 'inline-block', animation: 'spin 1.1s linear infinite', color: '#8f3d0e' }}>✦</span>
               <span>두 사람의 인연을 찬찬히 살펴보는 중이에요…</span>
               <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
             </div>
           ) : tongResult ? (
             <>
               {tbIntro && (
-                <div style={{ fontSize: 12.5, color: '#b4785a', lineHeight: 1.8, marginBottom: 10, paddingLeft: 2 }}>{tbIntro}</div>
+                <div style={{ fontSize: 12.5, color: '#5c3a1e', lineHeight: 1.8, marginBottom: 10, paddingLeft: 2 }}>{tbIntro}</div>
               )}
               {tbCards.map((c, i) => {
                 const open = tongLoading ? i === tbCards.length - 1 : openCard === i
@@ -578,7 +578,7 @@ function CoupleResultView({
                       style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '13px 14px', cursor: 'pointer' }}>
                       <span style={{ fontSize: 16 }}>{c.icon}</span>
                       <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: '#96502e', lineHeight: 1.35 }}>{c.title}</span>
-                      <span style={{ color: '#c8783c', fontSize: 12, transition: 'transform .25s', transform: `rotate(${open ? '180' : '0'}deg)` }}>▾</span>
+                      <span style={{ color: '#8f3d0e', fontSize: 12, transition: 'transform .25s', transform: `rotate(${open ? '180' : '0'}deg)` }}>▾</span>
                     </div>
                     <div style={{ maxHeight: open ? '3000px' : '0', overflow: 'hidden', transition: 'max-height .3s ease' }}>
                       <div style={{ fontSize: 13.5, lineHeight: 1.85, color: '#3a2e28', whiteSpace: 'pre-wrap', padding: '0 14px 14px' }}>{c.body}</div>
@@ -587,7 +587,7 @@ function CoupleResultView({
                 )
               })}
               {tongLoading && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 4px', color: '#b4785a', fontSize: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 4px', color: '#5c3a1e', fontSize: 12 }}>
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#b46e46', animation: 'tbpulse 1s infinite' }} />
                   정성껏 풀이하고 있어요…
                   <style>{`@keyframes tbpulse{0%,100%{opacity:.3}50%{opacity:1}}`}</style>
@@ -595,7 +595,7 @@ function CoupleResultView({
               )}
             </>
           ) : (
-            <div style={{ fontSize: 12.5, color: '#b4785a', lineHeight: 1.8, background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: '14px 12px', textAlign: 'center' }}>
+            <div style={{ fontSize: 12.5, color: '#5c3a1e', lineHeight: 1.8, background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: '14px 12px', textAlign: 'center' }}>
               두 사람의 명식을 준비하는 중이에요…
             </div>
           )}
@@ -648,7 +648,7 @@ function CoupleResultView({
         <div style={{
           marginTop: 18, padding: '13px 14px', borderRadius: 11,
           background: '#faf3ec', border: '0.5px solid #f0e0d5',
-          fontSize: 11.5, lineHeight: 1.7, color: '#b4785a', textAlign: 'center',
+          fontSize: 11.5, lineHeight: 1.7, color: '#5c3a1e', textAlign: 'center',
         }}>
           이 풀이는 두 분을 더 깊이 이해하기 위한 다정한 참고예요.<br />
           인연을 정하는 건 사주가 아니라 두 사람의 마음과 노력이랍니다. 🌿

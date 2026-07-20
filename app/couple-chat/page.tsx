@@ -438,7 +438,7 @@ function ChatInner() {
             채팅방을 여는 중…
           </div>
         ) : messages.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#c5a590', fontSize: 15, padding: '40px 0', lineHeight: 1.8 }}>
+          <div style={{ textAlign: 'center', color: '#6b5340', fontSize: 15, padding: '40px 0', lineHeight: 1.8 }}>
             아직 메시지가 없어요
             <br />
             첫 번째 메시지를 보내보세요 💕
@@ -610,11 +610,11 @@ function ChatInner() {
                   <button
                     onClick={() => setSettingsBig((v) => !v)}
                     aria-label={settingsBig ? '접기' : '펼치기'}
-                    style={{ background: 'none', border: 'none', fontSize: 18, color: '#b4785a', cursor: 'pointer', padding: '2px 6px' }}
+                    style={{ background: 'none', border: 'none', fontSize: 18, color: '#5c3a1e', cursor: 'pointer', padding: '2px 6px' }}
                   >
                     {settingsBig ? '⌄' : '⌃'}
                   </button>
-                  <button onClick={() => setShowSettings(false)} aria-label="닫기" style={{ background: 'none', border: 'none', fontSize: 20, color: '#c5a590', cursor: 'pointer' }}>✕</button>
+                  <button onClick={() => setShowSettings(false)} aria-label="닫기" style={{ background: 'none', border: 'none', fontSize: 20, color: '#6b5340', cursor: 'pointer' }}>✕</button>
                 </div>
               </div>
             </div>

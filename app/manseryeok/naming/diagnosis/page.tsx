@@ -535,7 +535,7 @@ function DiagnosisInner() {
     return (
       <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto' }}>
         <PitchHeader title="내 이름 풀이" onBack={() => router.push('/home-new')} onHome={() => router.push('/home-new')} />
-        <div style={{ padding: '40px 20px', textAlign: 'center', color: '#b4785a' }}>
+        <div style={{ padding: '40px 20px', textAlign: 'center', color: '#5c3a1e' }}>
           <p style={{ marginBottom: '12px', fontSize: '15px', color: '#1a1a1a' }}>먼저 사주 정보를 입력해주세요.</p>
           <p style={{ marginBottom: '24px', fontSize: '13px', lineHeight: 1.7 }}>
             홈 화면에서 생년월일 · 음양력 · 태어난 시(시주)를<br />입력하시면 이름 풀이를 시작할 수 있어요.
@@ -572,7 +572,7 @@ function DiagnosisInner() {
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: '13px', color: '#1a1a1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.meaning}</div>
-        <div style={{ fontSize: '11px', color: '#b4785a', marginTop: '2px' }}>
+        <div style={{ fontSize: '11px', color: '#5c3a1e', marginTop: '2px' }}>
           {row.resource_ohaeng}·{row.strokes}획
         </div>
       </div>
@@ -586,14 +586,14 @@ function DiagnosisInner() {
 
       <div style={{ padding: '16px' }}>
         <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
-          <div style={{ fontSize: '12px', color: '#b4785a', marginBottom: '6px' }}>내 사주</div>
+          <div style={{ fontSize: '12px', color: '#5c3a1e', marginBottom: '6px' }}>내 사주</div>
           <div style={{ fontSize: '14px', color: '#1a1a1a' }}>{sajuLine}</div>
         </div>
 
         {step === 'input' && (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <span style={{ fontSize: '13px', color: '#b4785a' }}>
+              <span style={{ fontSize: '13px', color: '#5c3a1e' }}>
                 {targetRelation === 'self' ? '본인' : (urlName || '이 분')} 이름을 한글로 입력하세요
               </span>
               <button onClick={() => setPickerOpen(true)}
@@ -620,7 +620,7 @@ function DiagnosisInner() {
 
             {syllables.length >= 2 && (
               <>
-                <div style={{ fontSize: '13px', color: '#b4785a', marginBottom: '16px' }}>
+                <div style={{ fontSize: '13px', color: '#5c3a1e', marginBottom: '16px' }}>
                   각 글자의 한자를 골라주세요
                 </div>
                 <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -639,7 +639,7 @@ function DiagnosisInner() {
                           {c ? (
                             <>
                               <span style={{ fontSize: '30px', fontWeight: 'bold', color: gold, lineHeight: 1 }}>{c.hanja}</span>
-                              <span style={{ fontSize: '10px', color: '#b4785a', marginTop: '3px' }}>{c.hangul}</span>
+                              <span style={{ fontSize: '10px', color: '#5c3a1e', marginTop: '3px' }}>{c.hangul}</span>
                             </>
                           ) : (
                             <>
@@ -648,14 +648,14 @@ function DiagnosisInner() {
                             </>
                           )}
                         </button>
-                        <div style={{ fontSize: '9px', color: '#b4785a', marginTop: '5px' }}>
+                        <div style={{ fontSize: '9px', color: '#5c3a1e', marginTop: '5px' }}>
                           {c ? `${c.resourceOhaeng}·${c.strokes}획` : slotLabel(i)}
                         </div>
                       </div>
                     )
                   })}
                 </div>
-                <div style={{ fontSize: '11px', color: '#b4785a', marginBottom: '20px', lineHeight: 1.6 }}>
+                <div style={{ fontSize: '11px', color: '#5c3a1e', marginBottom: '20px', lineHeight: 1.6 }}>
                   · 원을 누르면 그 글자의 한자가 자동으로 나와요<br />
                   · 이름을 바꾸려면 위에 다시 입력하고 확인을 누르세요
                 </div>
@@ -706,7 +706,7 @@ function DiagnosisInner() {
               전체 풀이 받기 ({readPrice.toLocaleString()}원) →
             </button>
             <button onClick={() => setStep('input')}
-              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#b4785a', fontSize: '13px', cursor: 'pointer' }}>
+              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#5c3a1e', fontSize: '13px', cursor: 'pointer' }}>
               ← 이름 다시 고르기
             </button>
           </>
@@ -719,7 +719,7 @@ function DiagnosisInner() {
               padding: '30px 20px', textAlign: 'center', marginBottom: '20px',
             }}>
               <div style={{ fontSize: '28px', marginBottom: '10px' }}>💳</div>
-              <div style={{ fontSize: '13px', color: '#b4785a', marginBottom: '6px' }}>결제 금액</div>
+              <div style={{ fontSize: '13px', color: '#5c3a1e', marginBottom: '6px' }}>결제 금액</div>
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: gold }}>{readPrice.toLocaleString()}원</div>
             </div>
 
@@ -733,7 +733,7 @@ function DiagnosisInner() {
               💳 {readPrice.toLocaleString()}원 결제하고 결과 보기 →
             </button>
             <button onClick={() => setStep('preview')}
-              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#b4785a', fontSize: '13px', cursor: 'pointer' }}>
+              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#5c3a1e', fontSize: '13px', cursor: 'pointer' }}>
               ← 뒤로
             </button>
           </>
@@ -746,7 +746,7 @@ function DiagnosisInner() {
                 <span style={{ fontSize: '40px', display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span>
                 <div style={{ textAlign: 'center', color: gold, fontSize: '13px', lineHeight: 1.7 }}>
                   이름을 정성껏 풀이하고 있어요<br />
-                  <span style={{ color: '#b4785a', fontSize: '12px' }}>잠시만 기다려 주세요</span>
+                  <span style={{ color: '#5c3a1e', fontSize: '12px' }}>잠시만 기다려 주세요</span>
                 </div>
               </div>
             )}
@@ -801,7 +801,7 @@ function DiagnosisInner() {
                 </button>
 
                 <button onClick={() => nameId ? router.push('/mypage-new') : resetAll()}
-                  style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#b4785a', fontSize: '13px', cursor: 'pointer' }}>
+                  style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#5c3a1e', fontSize: '13px', cursor: 'pointer' }}>
                   {nameId ? '← 마이페이지로' : '다른 이름 풀어보기'}
                 </button>
               </>
@@ -829,9 +829,9 @@ function DiagnosisInner() {
             </div>
 
             <div style={{ overflowY: 'auto', flex: 1 }}>
-              {searching && <div style={{ textAlign: 'center', color: '#b4785a', padding: '20px' }}>찾는 중...</div>}
+              {searching && <div style={{ textAlign: 'center', color: '#5c3a1e', padding: '20px' }}>찾는 중...</div>}
               {!searching && hanjaList.length === 0 && (
-                <div style={{ textAlign: 'center', color: '#b4785a', padding: '20px', fontSize: '13px' }}>
+                <div style={{ textAlign: 'center', color: '#5c3a1e', padding: '20px', fontSize: '13px' }}>
                   &lsquo;{syllables[pickerIdx]}&rsquo; 음의 인명용 한자를 찾을 수 없어요
                 </div>
               )}
@@ -844,7 +844,7 @@ function DiagnosisInner() {
 
               {avoidList.length > 0 && (
                 <>
-                  <div style={{ fontSize: '11px', color: '#b4785a', margin: '18px 0 8px', lineHeight: 1.6 }}>
+                  <div style={{ fontSize: '11px', color: '#5c3a1e', margin: '18px 0 8px', lineHeight: 1.6 }}>
                     아래 글자들은 일반적으로 이름에 잘 쓰지 않아요.<br />
                     본인 이름에 쓰는 글자라면 골라주세요.
                   </div>
@@ -884,7 +884,7 @@ export default function DiagnosisPage() {
   return (
     <Suspense fallback={
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FDF6F0' }}>
-        <div style={{ color: '#c8783c' }}>로딩 중...</div>
+        <div style={{ color: '#8f3d0e' }}>로딩 중...</div>
       </div>
     }>
       <DiagnosisInner />

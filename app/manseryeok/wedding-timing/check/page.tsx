@@ -261,7 +261,7 @@ function CheckInner() {
           style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
         <div>
           <div style={{ fontSize: 15, fontWeight: 500, color: '#3a2e28' }}>정한 날 봐드리기</div>
-          <div style={{ fontSize: 10.5, color: '#b4785a' }}>생각한 날짜가 좋은 날인지 봐드려요</div>
+          <div style={{ fontSize: 10.5, color: '#5c3a1e' }}>생각한 날짜가 좋은 날인지 봐드려요</div>
         </div>
       </div>
 

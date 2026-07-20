@@ -69,20 +69,20 @@ function NamingStorageInner() {
         <button onClick={() => router.push('/home-new')}
           style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
         <div style={{ fontSize: 16, fontWeight: 500, color: '#1a1a1a' }}>내 이름 보관함</div>
-        {records && <div style={{ marginLeft: 'auto', fontSize: 12, color: '#b4785a' }}>{records.length}건</div>}
+        {records && <div style={{ marginLeft: 'auto', fontSize: 12, color: '#5c3a1e' }}>{records.length}건</div>}
       </div>
 
       <div style={{ padding: '16px 14px 0' }}>
         {/* 로딩 */}
         {records === null && (
-          <div style={{ textAlign: 'center', padding: '50px 0', color: '#b4785a', fontSize: 13 }}>
+          <div style={{ textAlign: 'center', padding: '50px 0', color: '#5c3a1e', fontSize: 13 }}>
             보관함을 불러오는 중…
           </div>
         )}
 
         {/* 빈 상태 */}
         {records && records.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '46px 20px', color: '#b4785a' }}>
+          <div style={{ textAlign: 'center', padding: '46px 20px', color: '#5c3a1e' }}>
             <div style={{ fontSize: 30, marginBottom: 10 }}>📜</div>
             <div style={{ fontSize: 14, color: '#96502e', fontWeight: 500, marginBottom: 4 }}>
               아직 저장된 이름 풀이가 없어요
@@ -105,7 +105,7 @@ function NamingStorageInner() {
               }}>
               {/* 이름(한자) */}
               <div style={{ minWidth: 54, textAlign: 'center', flexShrink: 0 }}>
-                <div style={{ fontSize: 22, fontWeight: 500, color: '#c8783c', letterSpacing: 1 }}>
+                <div style={{ fontSize: 22, fontWeight: 500, color: '#8f3d0e', letterSpacing: 1 }}>
                   {r.hanjaName || r.hangulName || '—'}
                 </div>
               </div>
@@ -126,7 +126,7 @@ function NamingStorageInner() {
                     {relLabel}
                   </span>
                 </div>
-                <div style={{ fontSize: 11, color: '#b4785a' }}>
+                <div style={{ fontSize: 11, color: '#5c3a1e' }}>
                   {r.overallGrade ? (
                     <span style={{ color: GRADE_COLOR[r.overallGrade] ?? '#b4785a' }}>종합 {r.overallGrade} · </span>
                   ) : ''}
@@ -140,7 +140,7 @@ function NamingStorageInner() {
                 aria-label="삭제"
                 style={{
                   flexShrink: 0, width: 28, height: 28, borderRadius: 8,
-                  background: 'none', border: 'none', color: '#c5a590', fontSize: 17,
+                  background: 'none', border: 'none', color: '#6b5340', fontSize: 17,
                   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                 ×

@@ -311,7 +311,7 @@ function InviteInner() {
               )}
             </div>
 
-            <div style={{ fontSize: 11, color: '#c5a590', textAlign: 'center', marginBottom: 16 }}>
+            <div style={{ fontSize: 11, color: '#6b5340', textAlign: 'center', marginBottom: 16 }}>
               — 또는 링크로 초대 —
             </div>
 
@@ -393,7 +393,7 @@ function InviteInner() {
               </button>
             </div>
 
-            <div style={{ fontSize: 11, color: '#c5a590', lineHeight: 1.6 }}>
+            <div style={{ fontSize: 11, color: '#6b5340', lineHeight: 1.6 }}>
               문자로 보내거나, 링크를 복사해서 카카오톡에 붙여넣어 보낼 수 있어요
             </div>
           </>

@@ -126,7 +126,7 @@ function ExpertInner() {
       </div>
 
       <div style={{ padding: 14 }}>
-        <div style={{ fontSize: 11, color: '#c5a590', marginBottom: 12 }}>아무 사주나 등록해 만세력을 확인하는 도구예요. (통변 없음)</div>
+        <div style={{ fontSize: 11, color: '#6b5340', marginBottom: 12 }}>아무 사주나 등록해 만세력을 확인하는 도구예요. (통변 없음)</div>
 
         {/* 새로 등록 버튼 */}
         {!showForm && (
@@ -184,7 +184,7 @@ function ExpertInner() {
 
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => { setShowForm(false); resetForm() }}
-                style={{ flex: 1, padding: '12px 0', borderRadius: 10, border: '0.5px solid #e8d5c5', background: 'none', color: '#b4785a', fontSize: 14, cursor: 'pointer' }}>취소</button>
+                style={{ flex: 1, padding: '12px 0', borderRadius: 10, border: '0.5px solid #e8d5c5', background: 'none', color: '#5c3a1e', fontSize: 14, cursor: 'pointer' }}>취소</button>
               <button onClick={save} disabled={busy}
                 style={{ flex: 2, padding: '12px 0', borderRadius: 10, border: 'none', background: '#b46e46', color: '#fff', fontSize: 14, fontWeight: 700, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}>
                 {busy ? '저장 중…' : '저장하고 목록에 추가'}
@@ -199,9 +199,9 @@ function ExpertInner() {
         </div>
 
         {people === null ? (
-          <div style={{ textAlign: 'center', color: '#c5a590', fontSize: 12, padding: 20 }}>불러오는 중…</div>
+          <div style={{ textAlign: 'center', color: '#6b5340', fontSize: 12, padding: 20 }}>불러오는 중…</div>
         ) : people.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#c5a590', fontSize: 12, padding: 24, background: '#fff', border: '0.5px dashed #f0e0d5', borderRadius: 12 }}>
+          <div style={{ textAlign: 'center', color: '#6b5340', fontSize: 12, padding: 24, background: '#fff', border: '0.5px dashed #f0e0d5', borderRadius: 12 }}>
             아직 등록한 사주가 없어요.<br />위 [+ 새로 등록]으로 추가해 보세요.
           </div>
         ) : (
@@ -232,7 +232,7 @@ function ExpertInner() {
             <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', marginBottom: 6 }}>삭제할까요?</div>
             <div style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>“{confirmDel.name}”을(를) 목록에서 지웁니다.</div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setConfirmDel(null)} style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: '0.5px solid #e8d5c5', background: 'none', color: '#b4785a', fontSize: 13, cursor: 'pointer' }}>취소</button>
+              <button onClick={() => setConfirmDel(null)} style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: '0.5px solid #e8d5c5', background: 'none', color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>취소</button>
               <button onClick={del} disabled={busy} style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: 'none', background: '#c0392b', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: busy ? 0.6 : 1 }}>{busy ? '삭제 중…' : '삭제'}</button>
             </div>
           </div>
@@ -246,7 +246,7 @@ export default function ExpertPage() {
   return (
     <Suspense fallback={
       <div style={{ minHeight: '100vh', background: '#FDF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: '#c8783c', fontSize: 14 }}>로딩 중...</div>
+        <div style={{ color: '#8f3d0e', fontSize: 14 }}>로딩 중...</div>
       </div>
     }>
       <ExpertInner />

@@ -39,7 +39,7 @@ export default function NewbornComingSoon() {
         style={{
           fontSize: 16,
           fontWeight: 600,
-          color: '#c8783c',
+          color: '#8f3d0e',
           marginBottom: 10,
         }}
       >
@@ -49,7 +49,7 @@ export default function NewbornComingSoon() {
       <div
         style={{
           fontSize: 14,
-          color: '#b4785a',
+          color: '#5c3a1e',
           lineHeight: 1.7,
           marginBottom: 36,
           maxWidth: 300,

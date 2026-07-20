@@ -64,26 +64,26 @@ export default function MoodHistoryModal({ open, onClose }: { open: boolean; onC
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <span style={{ fontSize: 15, fontWeight: 600, color: '#96502e' }}>내 감정 기록</span>
-          <span onClick={onClose} style={{ fontSize: 18, color: '#b09079', cursor: 'pointer' }}>✕</span>
+          <span onClick={onClose} style={{ fontSize: 18, color: '#6b5340', cursor: 'pointer' }}>✕</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 12, fontSize: 12, color: '#b09079' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 12, fontSize: 12, color: '#6b5340' }}>
           <span onClick={prevMonth} style={{ cursor: atFirst ? 'default' : 'pointer', fontSize: 15, opacity: atFirst ? 0.3 : 1 }}>‹</span>
           <span style={{ color: '#5a4a3e', fontWeight: 600 }}>{year}. {month}</span>
           <span onClick={nextMonth} style={{ cursor: isThisMonth ? 'default' : 'pointer', fontSize: 15, opacity: isThisMonth ? 0.3 : 1 }}>›</span>
         </div>
 
         {loading ? (
-          <div style={{ fontSize: 12, color: '#b4785a', textAlign: 'center', padding: '30px 0' }}>불러오는 중…</div>
+          <div style={{ fontSize: 12, color: '#5c3a1e', textAlign: 'center', padding: '30px 0' }}>불러오는 중…</div>
         ) : rows.length === 0 ? (
           <div style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: '28px 14px', textAlign: 'center' }}>
             <div style={{ fontSize: 13, color: '#8a7360', marginBottom: 4 }}>이 달의 기록이 없어요</div>
-            <div style={{ fontSize: 11, color: '#b09079' }}>오늘의 기분을 기록하면 여기 흐름이 그려져요.</div>
+            <div style={{ fontSize: 11, color: '#6b5340' }}>오늘의 기분을 기록하면 여기 흐름이 그려져요.</div>
           </div>
         ) : (
           <>
             <div style={{ fontSize: 11.5, fontWeight: 600, color: '#96502e', margin: '0 2px 8px' }}>
-              한 달 기분 흐름 <span style={{ fontWeight: 400, color: '#b09079', fontSize: 10 }}>· 막대를 누르면 그날 기록이 보여요</span>
+              한 달 기분 흐름 <span style={{ fontWeight: 400, color: '#6b5340', fontSize: 10 }}>· 막대를 누르면 그날 기록이 보여요</span>
             </div>
             <div style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: '14px 10px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 100 }}>
@@ -100,12 +100,12 @@ export default function MoodHistoryModal({ open, onClose }: { open: boolean; onC
                   )
                 })}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 8, color: '#c0a898' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 8, color: '#6b5340' }}>
                 <span>1일</span><span>{Math.round(daysInMonth / 2)}일</span><span>{daysInMonth}일</span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: 10, margin: '12px 2px 14px', fontSize: 9, color: '#b09079', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', gap: 10, margin: '12px 2px 14px', fontSize: 9, color: '#6b5340', flexWrap: 'wrap', justifyContent: 'center' }}>
               <span>🤩 설렘</span><span>😌 평온</span><span>😐 보통</span><span>😰 불안</span><span>😔 울적</span>
             </div>
 
@@ -113,12 +113,12 @@ export default function MoodHistoryModal({ open, onClose }: { open: boolean; onC
               <div style={{ background: '#faf3ec', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: '14px 15px', display: 'flex', alignItems: 'center', gap: 13 }}>
                 <span style={{ fontSize: 30 }}>{emojiOf(picked.mood)}</span>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 11.5, color: '#b09079' }}>{picked.logDate.replace(/-/g, '.').slice(5)}{isThisMonth && Number(picked.logDate.split('-')[2]) === today.getDate() ? ' (오늘)' : ''}</div>
+                  <div style={{ fontSize: 11.5, color: '#6b5340' }}>{picked.logDate.replace(/-/g, '.').slice(5)}{isThisMonth && Number(picked.logDate.split('-')[2]) === today.getDate() ? ' (오늘)' : ''}</div>
                   <div style={{ fontSize: 13, color: '#4a3e34', marginTop: 2 }}>{labelOf(picked.mood)}{picked.note ? ` · ${picked.note}` : ''}</div>
                 </div>
               </div>
             )}
-            <div style={{ fontSize: 10, color: '#c0a898', textAlign: 'center', marginTop: 9 }}>↑ 그래프에서 막대를 누르면 그날 기록이 여기 나와요</div>
+            <div style={{ fontSize: 10, color: '#6b5340', textAlign: 'center', marginTop: 9 }}>↑ 그래프에서 막대를 누르면 그날 기록이 여기 나와요</div>
           </>
         )}
       </div>

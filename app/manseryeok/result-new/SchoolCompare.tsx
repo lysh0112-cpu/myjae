@@ -74,7 +74,7 @@ export default function SchoolCompare({ ohaeng }: { ohaeng: Ohaeng[] }) {
       <div style={{ fontSize: 14, fontWeight: 600, color: '#96502e', marginBottom: 2 }}>
         다른 관점으로는?
       </div>
-      <div style={{ fontSize: 12, color: '#b4785a', marginBottom: 12 }}>
+      <div style={{ fontSize: 12, color: '#5c3a1e', marginBottom: 12 }}>
         같은 사주도 유파마다 다르게 봅니다
       </div>
 
@@ -119,7 +119,7 @@ export default function SchoolCompare({ ohaeng }: { ohaeng: Ohaeng[] }) {
                 <div style={{ fontSize: 11.5, fontWeight: 600, color: '#3a2e28', whiteSpace: 'nowrap', lineHeight: 1.1 }}>
                   {s.name}
                 </div>
-                <div style={{ fontSize: 9.5, color: '#b4785a', whiteSpace: 'nowrap', lineHeight: 1.1 }}>
+                <div style={{ fontSize: 9.5, color: '#5c3a1e', whiteSpace: 'nowrap', lineHeight: 1.1 }}>
                   {s.formal}
                 </div>
               </div>

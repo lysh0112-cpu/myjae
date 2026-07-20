@@ -74,14 +74,14 @@ export default function ArchiveList() {
   }
 
   if (loading) {
-    return <div style={{ fontSize: 12, color: '#b4785a', textAlign: 'center', padding: '16px 0' }}>불러오는 중…</div>
+    return <div style={{ fontSize: 12, color: '#5c3a1e', textAlign: 'center', padding: '16px 0' }}>불러오는 중…</div>
   }
 
   if (items.length === 0) {
     return (
       <div style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: '20px 14px', textAlign: 'center' }}>
         <div style={{ fontSize: 13, color: '#8a7360', marginBottom: 4 }}>아직 저장한 기록이 없어요</div>
-        <div style={{ fontSize: 11, color: '#b09079' }}>사주·궁합·타로·개명 등을 보고 저장하면 여기 모여요.</div>
+        <div style={{ fontSize: 11, color: '#6b5340' }}>사주·궁합·타로·개명 등을 보고 저장하면 여기 모여요.</div>
       </div>
     )
   }
@@ -103,7 +103,7 @@ export default function ArchiveList() {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 3px 9px' }}>
         <span style={{ fontSize: 13, fontWeight: 600, color: '#96502e' }}>나의 운명 아카이브</span>
-        <span style={{ fontSize: 10, color: '#b09079' }}>
+        <span style={{ fontSize: 10, color: '#6b5340' }}>
           {filter ? `${filterLabel} ${shown.length}건` : `기록 ${total}`}
         </span>
       </div>
@@ -154,7 +154,7 @@ export default function ArchiveList() {
                 <span style={{ fontSize: 10, padding: '3px 9px', borderRadius: 12, background: b.bg, color: b.fg, flexShrink: 0 }}>{b.label}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12.5, color: '#3a2e28', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.title || b.label}</div>
-                  <div style={{ fontSize: 10, color: '#b09079' }}>{dateText(it.createdAt)}{it.relation ? ` · ${it.relation === 'self' ? '본인' : it.relation}` : ''}</div>
+                  <div style={{ fontSize: 10, color: '#6b5340' }}>{dateText(it.createdAt)}{it.relation ? ` · ${it.relation === 'self' ? '본인' : it.relation}` : ''}</div>
                 </div>
                 <span style={{ color: '#d0b8a5', fontSize: 12, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .18s' }}>▾</span>
               </div>

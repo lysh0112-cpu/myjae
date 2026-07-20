@@ -101,14 +101,14 @@ function WeddingInputInner() {
           style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
         <div>
           <div style={{ fontSize: 15, fontWeight: 500, color: '#3a2e28' }}>결혼택일</div>
-          <div style={{ fontSize: 10.5, color: '#b4785a' }}>두 분의 좋은 날을 봐드려요</div>
+          <div style={{ fontSize: 10.5, color: '#5c3a1e' }}>두 분의 좋은 날을 봐드려요</div>
         </div>
       </div>
 
       <div style={{ padding: '16px 14px' }}>
         <div style={{ textAlign: 'center', marginBottom: 16 }}>
           <div style={{ fontSize: 14, fontWeight: 500, color: '#3a2e28' }}>결혼할 두 사람</div>
-          <div style={{ fontSize: 10.5, color: '#b4785a', marginTop: 2 }}>칸을 눌러 사람을 골라주세요</div>
+          <div style={{ fontSize: 10.5, color: '#5c3a1e', marginTop: 2 }}>칸을 눌러 사람을 골라주세요</div>
         </div>
 
         <SlotView fallbackRole="신랑" slot={groom} onOpen={() => setPickerFor(1)} />
@@ -184,14 +184,14 @@ function SlotView({ fallbackRole, slot, onOpen }: {
               {slot.name}
               {slot.isMe && <span style={{ fontSize: 9, color: '#b46e46', background: '#f6e3d6', borderRadius: 99, padding: '0 6px', marginLeft: 3 }}>나</span>}
             </div>
-            {birthLabel && <div style={{ fontSize: 10, color: '#b4785a' }}>{birthLabel}</div>}
+            {birthLabel && <div style={{ fontSize: 10, color: '#5c3a1e' }}>{birthLabel}</div>}
           </div>
-          <span style={{ color: '#c8783c', fontSize: 11 }}>바꾸기</span>
+          <span style={{ color: '#8f3d0e', fontSize: 11 }}>바꾸기</span>
         </div>
       ) : (
         <div onClick={onOpen} style={{
           background: '#FFFBF7', border: '1.5px dashed #e0c9b8', borderRadius: 12, padding: '16px 12px',
-          textAlign: 'center', cursor: 'pointer', color: '#b4785a',
+          textAlign: 'center', cursor: 'pointer', color: '#5c3a1e',
         }}>
           <span style={{ fontSize: 18 }}>{emoji}</span>
           <div style={{ fontSize: 12, marginTop: 4 }}>눌러서 {role} 선택</div>

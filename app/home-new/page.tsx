@@ -380,7 +380,7 @@ export default function HomeNew() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', padding: '0 16px' }}>
             <span style={{ fontSize: '16px', fontWeight: 700, color: '#3a2e28' }}>MyungCafe 서비스</span>
             {pinned.length > 0 && (
-              <span style={{ fontSize: '11px', color: '#c8783c' }}>📌 {pinned.length}/{MAX_PINS}</span>
+              <span style={{ fontSize: '11px', color: '#8f3d0e' }}>📌 {pinned.length}/{MAX_PINS}</span>
             )}
           </div>
 
@@ -424,7 +424,7 @@ export default function HomeNew() {
                           style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px', cursor: 'pointer' }}
                         >
                           <span style={{ fontSize: '14.5px', color: '#3a2e28', fontWeight: 700 }}>{s.name}</span>
-                          <span style={{ fontSize: '11px', color: '#b4785a' }}>{s.sub}</span>
+                          <span style={{ fontSize: '11px', color: '#5c3a1e' }}>{s.sub}</span>
                         </div>
                         <button
                           onClick={() => handleTogglePin(s.name)}
@@ -455,7 +455,7 @@ export default function HomeNew() {
                     onClick={() => setSvcOpen(o => !o)}
                     style={{
                       width: '100%', background: '#FFFBF7', border: '0.5px solid #e8d5c5', borderRadius: '12px',
-                      padding: '11px', fontSize: '13px', color: '#b4785a', fontWeight: 600, cursor: 'pointer',
+                      padding: '11px', fontSize: '13px', color: '#5c3a1e', fontWeight: 600, cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                     }}
                   >

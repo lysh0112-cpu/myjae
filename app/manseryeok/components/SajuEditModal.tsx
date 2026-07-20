@@ -185,7 +185,7 @@ export default function SajuEditModal({
     backgroundRepeat: 'no-repeat', backgroundPosition: 'right 6px center',
   }
   const seg = (on: boolean): React.CSSProperties => ({ flex: 1, padding: '9px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', background: on ? '#b46e46' : 'transparent', color: on ? '#fff' : '#b4785a' })
-  const label: React.CSSProperties = { fontSize: 11, color: '#b4785a', marginBottom: 4 }
+  const label: React.CSSProperties = { fontSize: 11, color: '#5c3a1e', marginBottom: 4 }
 
   return (
     <div
@@ -209,11 +209,11 @@ export default function SajuEditModal({
         {/* 헤더 (고정) */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexShrink: 0 }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: '#96502e' }}>✦ 내 정보 수정</span>
-          <button onClick={onClose} aria-label="닫기" style={{ background: 'none', border: 'none', fontSize: 17, color: '#c5a590', cursor: 'pointer', lineHeight: 1 }}>✕</button>
+          <button onClick={onClose} aria-label="닫기" style={{ background: 'none', border: 'none', fontSize: 17, color: '#6b5340', cursor: 'pointer', lineHeight: 1 }}>✕</button>
         </div>
 
         {loading ? (
-          <div style={{ fontSize: 13, color: '#c0a898', textAlign: 'center', padding: '30px 0' }}>불러오는 중…</div>
+          <div style={{ fontSize: 13, color: '#6b5340', textAlign: 'center', padding: '30px 0' }}>불러오는 중…</div>
         ) : (
           <>
             {/* 가운데만 스크롤 */}
@@ -247,17 +247,17 @@ export default function SajuEditModal({
               <div style={label}>생년월일</div>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 10 }}>
                 <input value={eYear} onChange={e => applyEYear(e.target.value)} inputMode="numeric" placeholder="1990" style={{ ...numInput, flex: 1.5 }} />
-                <span style={{ fontSize: 12, color: '#b4785a' }}>년</span>
+                <span style={{ fontSize: 12, color: '#5c3a1e' }}>년</span>
                 <select value={eMonth} onChange={e => applyEMonth(e.target.value)} style={{ ...selInput, color: eMonth ? '#3a2e28' : '#b4785a' }}>
                   <option value="">월</option>
                   {MONTHS.map(m => <option key={m} value={String(m)}>{m}</option>)}
                 </select>
-                <span style={{ fontSize: 12, color: '#b4785a' }}>월</span>
+                <span style={{ fontSize: 12, color: '#5c3a1e' }}>월</span>
                 <select value={eDay} onChange={e => setEDay(e.target.value)} style={{ ...selInput, color: eDay ? '#3a2e28' : '#b4785a' }}>
                   <option value="">일</option>
                   {dayOptions(parseInt(eYear, 10), parseInt(eMonth, 10), eCal).map(d => <option key={d} value={String(d)}>{d}</option>)}
                 </select>
-                <span style={{ fontSize: 12, color: '#b4785a' }}>일</span>
+                <span style={{ fontSize: 12, color: '#5c3a1e' }}>일</span>
               </div>
 
               <div style={label}>태어난 시 (시주)</div>
@@ -267,7 +267,7 @@ export default function SajuEditModal({
               </select>
 
               {/* 시를 정확히 모르는 사람용 — 고르면 3개로 좁혀진다 */}
-              <div style={{ fontSize: 10.5, color: '#c5a590', marginBottom: 5 }}>정확히 모르시면 대략 언제쯤인지 골라보세요</div>
+              <div style={{ fontSize: 10.5, color: '#6b5340', marginBottom: 5 }}>정확히 모르시면 대략 언제쯤인지 골라보세요</div>
               <div style={{ display: 'flex', gap: 4, marginBottom: eBand || (eHour !== '' && crossesMidnight(Number(eHour))) ? 6 : 12 }}>
                 {TIME_BANDS.map(b => {
                   const on = eBand?.key === b.key
@@ -300,7 +300,7 @@ export default function SajuEditModal({
 
             {/* 저장 버튼 (고정) */}
             <div style={{ display: 'flex', gap: 8, paddingTop: 12, flexShrink: 0 }}>
-              <button onClick={onClose} style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: '0.5px solid #e8d5c5', background: 'none', color: '#b4785a', fontSize: 13, cursor: 'pointer' }}>취소</button>
+              <button onClick={onClose} style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: '0.5px solid #e8d5c5', background: 'none', color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>취소</button>
               <button onClick={save} disabled={saving} style={{ flex: 1.5, padding: '11px 0', borderRadius: 10, border: 'none', background: '#b46e46', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>{saving ? '저장 중…' : '저장'}</button>
             </div>
           </>

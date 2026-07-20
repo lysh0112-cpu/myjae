@@ -95,7 +95,7 @@ export default function SingangTable({ ilganEl, ilganName = '', ohaeng }: Props)
 
       {/* 안내 */}
       <div style={{ background: '#f7f5f0', borderRadius: 10, padding: '11px 13px', fontSize: 11.5, lineHeight: 1.7 }}>
-        <b style={{ color: '#c8783c' }}>💡 신강·신약은 좋고 나쁨이 아니에요.</b><br />
+        <b style={{ color: '#8f3d0e' }}>💡 신강·신약은 좋고 나쁨이 아니에요.</b><br />
         <span style={{ color: '#777' }}>
           나에게 어떤 오행이 도움이 되는지(용신), 어떤 삶의 방식이 맞는지 찾는 기준이에요.
           {verdict.includes('약') && <> 지금은 <b style={{ color: '#1565c0' }}>나를 돕는 {helpNames}</b> 기운이 들어올 때 힘이 나요.</>}

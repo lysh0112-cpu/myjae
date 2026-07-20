@@ -124,11 +124,11 @@ export default function UserCard({ footer }: { footer?: ReactNode | ((info: User
             width: 44, height: 44, borderRadius: '50%',
             background: '#f5ebe2', border: '1.5px solid #e6d5c5',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 20, flexShrink: 0, color: '#c0a898',
+            fontSize: 20, flexShrink: 0, color: '#6b5340',
           }}>👤</div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 3, color: '#3a2e28' }}>반가워요! ✦</div>
-            <div style={{ fontSize: 11, color: '#c8783c' }}>로그인하고 내 사주를 확인하세요</div>
+            <div style={{ fontSize: 11, color: '#8f3d0e' }}>로그인하고 내 사주를 확인하세요</div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -179,7 +179,7 @@ export default function UserCard({ footer }: { footer?: ReactNode | ((info: User
         <div style={{
           width: 42, height: 42, borderRadius: '50%', background: '#fae6d5',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 17, fontWeight: 700, color: '#c8783c', flexShrink: 0,
+          fontSize: 17, fontWeight: 700, color: '#8f3d0e', flexShrink: 0,
         }}>{initial}</div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -193,7 +193,7 @@ export default function UserCard({ footer }: { footer?: ReactNode | ((info: User
               onClick={() => setEditOpen(true)}
               style={{
                 marginLeft: 'auto', flexShrink: 0,
-                fontSize: 10, color: '#c5a590',
+                fontSize: 10, color: '#6b5340',
                 border: '0.5px solid #ecd8c6', borderRadius: 7,
                 padding: '3px 8px', background: 'none', cursor: 'pointer',
               }}

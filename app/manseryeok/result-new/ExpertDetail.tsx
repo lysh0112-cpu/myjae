@@ -148,7 +148,7 @@ const th: React.CSSProperties = {
 }
 const td: React.CSSProperties = { padding: '4px 2px', border: '0.5px solid #f0e0d5' }
 const rl: React.CSSProperties = {
-  ...td, color: '#c5a590', fontSize: 9.5, background: '#fdf9f5', width: 46,
+  ...td, color: '#6b5340', fontSize: 9.5, background: '#fdf9f5', width: 46,
 }
 
 function Badge({ kind }: { kind: string }) {
@@ -200,7 +200,7 @@ export default function ExpertDetail({
       {/* ① 지장간 + 십성 */}
       <div style={card}>
         <div style={ttl} onClick={() => open('지장간')} title="지장간 설명 보기">
-          <span style={{ cursor: 'pointer' }}>📋 지장간 · 십성 <span style={{ fontSize: 9, color: '#c5a590' }}>ⓘ</span></span>
+          <span style={{ cursor: 'pointer' }}>📋 지장간 · 십성 <span style={{ fontSize: 9, color: '#6b5340' }}>ⓘ</span></span>
         </div>
         <table style={tb}>
           <tbody>
@@ -296,7 +296,7 @@ export default function ExpertDetail({
       <div style={card}>
         <div style={ttl}>
           <span onClick={() => open('현침살')} style={{ cursor: 'pointer' }}>
-            🪡 현침살 · 곡각살 <span style={{ fontSize: 9, color: '#c5a590' }}>ⓘ</span>
+            🪡 현침살 · 곡각살 <span style={{ fontSize: 9, color: '#6b5340' }}>ⓘ</span>
           </span>
         </div>
         <table style={tb}>
@@ -345,7 +345,7 @@ export default function ExpertDetail({
               if (GOKGAK.has(p.stem)) g++
               if (GOKGAK.has(p.branch)) g++
             }
-            if (!h && !g) return <span style={{ color: '#c5a590' }}>해당 글자가 없어요</span>
+            if (!h && !g) return <span style={{ color: '#6b5340' }}>해당 글자가 없어요</span>
             return (
               <>
                 {h > 0 && <span style={{ color: '#c85a6e', fontWeight: 600 }}>현침 {h}개</span>}
@@ -387,7 +387,7 @@ export default function ExpertDetail({
               {saju.map((p, i) => {
                 const g = getGwiinForBranch(dayStem, monthBranch, p.branch)
                 return (
-                  <td key={i} style={{ ...td, color: '#c8783c', fontSize: 9.5 }}>
+                  <td key={i} style={{ ...td, color: '#8f3d0e', fontSize: 9.5 }}>
                     {g.length ? g.map((x, k) => (
                       <span key={x}>
                         {k > 0 && '·'}
@@ -405,7 +405,7 @@ export default function ExpertDetail({
       {/* ⑤ 납음오행 */}
       <div style={card}>
         <div style={ttl} onClick={() => open('납음')} title="납음 설명 보기">
-          <span style={{ cursor: 'pointer' }}>🎵 납음오행 <span style={{ fontSize: 9, color: '#c5a590' }}>ⓘ</span></span>
+          <span style={{ cursor: 'pointer' }}>🎵 납음오행 <span style={{ fontSize: 9, color: '#6b5340' }}>ⓘ</span></span>
         </div>
         <table style={tb}>
           <tbody>
@@ -514,7 +514,7 @@ export default function ExpertDetail({
                 {saju.map((col, ci) => {
                   if (ri === ci) {
                     return (
-                      <td key={ci} style={{ ...td, background: '#fdf4ec', color: '#c8783c', fontWeight: 700 }}>
+                      <td key={ci} style={{ ...td, background: '#fdf4ec', color: '#8f3d0e', fontWeight: 700 }}>
                         {row.branch}
                       </td>
                     )
@@ -543,7 +543,7 @@ export default function ExpertDetail({
           padding: '8px 11px', fontSize: 10.5, lineHeight: 1.9,
         }}>
           {pairs.length === 0 ? (
-            <span style={{ color: '#b4785a' }}>성립한 형충회합이 없어요.</span>
+            <span style={{ color: '#5c3a1e' }}>성립한 형충회합이 없어요.</span>
           ) : (
             pairs.map((pr, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -566,15 +566,15 @@ export default function ExpertDetail({
       {/* ⑦ 공망 두 기준 */}
       <div style={card}>
         <div style={ttl} onClick={() => open('공망')} title="공망 설명 보기">
-          <span style={{ cursor: 'pointer' }}>🕳 공망 — 두 기준 <span style={{ fontSize: 9, color: '#c5a590' }}>ⓘ</span></span>
+          <span style={{ cursor: 'pointer' }}>🕳 공망 — 두 기준 <span style={{ fontSize: 9, color: '#6b5340' }}>ⓘ</span></span>
         </div>
         <div style={{ fontSize: 11, color: '#6a5848', lineHeight: 2 }}>
           <div>
-            <span style={{ color: '#c5a590', fontSize: 10 }}>일주 기준</span>{' '}
+            <span style={{ color: '#6b5340', fontSize: 10 }}>일주 기준</span>{' '}
             <b style={{ color: '#c62828', marginLeft: 6 }}>{gmDay[0]}·{gmDay[1]}</b>
           </div>
           <div>
-            <span style={{ color: '#c5a590', fontSize: 10 }}>년주 기준</span>{' '}
+            <span style={{ color: '#6b5340', fontSize: 10 }}>년주 기준</span>{' '}
             <b style={{ color: '#c62828', marginLeft: 6 }}>{gmYear[0]}·{gmYear[1]}</b>
           </div>
         </div>

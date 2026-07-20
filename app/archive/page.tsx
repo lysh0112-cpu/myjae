@@ -39,7 +39,7 @@ export default function ArchivePage() {
         <button
           onClick={() => router.push('/home-new')}
           aria-label="홈으로"
-          style={{ background: 'none', border: 'none', fontSize: 18, color: '#b4785a', cursor: 'pointer', padding: 0, lineHeight: 1 }}
+          style={{ background: 'none', border: 'none', fontSize: 18, color: '#5c3a1e', cursor: 'pointer', padding: 0, lineHeight: 1 }}
         >←</button>
         <span style={{ fontSize: 15, fontWeight: 600, color: '#3a2e28' }}>📚 보관함</span>
       </div>

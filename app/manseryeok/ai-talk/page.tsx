@@ -167,7 +167,7 @@ function AiTalkInner() {
         <button onClick={() => router.back()} style={{ fontSize: 22, color: '#b46e46', background: 'none', border: 'none', cursor: 'pointer' }}>‹</button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#96502e' }}>명카페 AI</div>
-          <div style={{ fontSize: 11, color: '#b4785a' }}>내 사주를 바탕으로 대화해요</div>
+          <div style={{ fontSize: 11, color: '#5c3a1e' }}>내 사주를 바탕으로 대화해요</div>
         </div>
         <button onClick={() => { setVoiceOn(v => !v); if (voiceOn && window.speechSynthesis) window.speechSynthesis.cancel() }}
           style={{ fontSize: 12, padding: '5px 12px', borderRadius: 16, cursor: 'pointer', border: '0.5px solid ' + (voiceOn ? '#c8783c' : '#e8d5c5'), background: voiceOn ? '#faede0' : '#fff', color: voiceOn ? '#96502e' : '#b4785a' }}>
@@ -178,12 +178,12 @@ function AiTalkInner() {
       {/* 글자 크기 조절 */}
       <div style={{ padding: '9px 16px', background: '#faf3ec', borderBottom: '0.5px solid #f0e0d5', display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 11, color: '#96502e', fontWeight: 600, flexShrink: 0 }}>글자 크기</span>
-        <span style={{ fontSize: 10, color: '#b4785a', flexShrink: 0 }}>작게</span>
+        <span style={{ fontSize: 10, color: '#5c3a1e', flexShrink: 0 }}>작게</span>
         <input type="range" min="12" max="22" step="1" value={chatFontSize}
           onChange={(e) => changeFontSize(Number(e.target.value))}
           style={{ flex: 1, accentColor: '#b46e46' }} />
-        <span style={{ fontSize: 10, color: '#b4785a', flexShrink: 0 }}>크게</span>
-        <span style={{ fontSize: 11, color: '#c8783c', flexShrink: 0, width: 30, textAlign: 'right' }}>{chatFontSize}px</span>
+        <span style={{ fontSize: 10, color: '#5c3a1e', flexShrink: 0 }}>크게</span>
+        <span style={{ fontSize: 11, color: '#8f3d0e', flexShrink: 0, width: 30, textAlign: 'right' }}>{chatFontSize}px</span>
       </div>
 
       {/* 목소리 설정 (켰을 때만) */}
@@ -245,7 +245,7 @@ function AiTalkInner() {
 
 export default function AiTalkPage() {
   return (
-    <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#b4785a' }}>불러오는 중…</div>}>
+    <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#5c3a1e' }}>불러오는 중…</div>}>
       <AiTalkInner />
     </Suspense>
   )

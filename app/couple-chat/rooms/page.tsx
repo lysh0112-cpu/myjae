@@ -176,7 +176,7 @@ export default function CoupleRoomsPage() {
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: '#c5a590',
+                    color: '#6b5340',
                     fontSize: 12,
                     cursor: 'pointer',
                     padding: '6px 4px',

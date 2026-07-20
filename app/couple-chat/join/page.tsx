@@ -157,7 +157,7 @@ function JoinInner() {
               이미 회원이에요 · 로그인
             </button>
 
-            <div style={{ fontSize: 11, color: '#c5a590', lineHeight: 1.6, marginTop: 16 }}>
+            <div style={{ fontSize: 11, color: '#6b5340', lineHeight: 1.6, marginTop: 16 }}>
               가입하든 로그인하든
               <br />
               바로 연결돼서 채팅방이 열려요

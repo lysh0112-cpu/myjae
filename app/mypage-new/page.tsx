@@ -168,8 +168,8 @@ export default function MyPageNew() {
     if (s === 'paid' || s === 'done' || s === '완료') return { label: '완료', color: '#1d9e75' }
     if (s === 'booked') return { label: '예약 확정', color: '#3c82a0' }
     if (s === 'pending') return { label: '대기중', color: '#e09030' }
-    if (s === 'in_progress' || s === 'ongoing' || s === '진행중') return { label: '진행 중', color: '#c8783c' }
-    if (s === 'cancelled' || s === 'canceled') return { label: '취소됨', color: '#c0a898' }
+    if (s === 'in_progress' || s === 'ongoing' || s === '진행중') return { label: '진행 중', color: '#8f3d0e' }
+    if (s === 'cancelled' || s === 'canceled') return { label: '취소됨', color: '#6b5340' }
     return { label: '진행 중', color: '#e09030' }
   }
 
@@ -303,7 +303,7 @@ export default function MyPageNew() {
   const isMaster = profile?.role === 'master'
 
   if (loading) {
-    return <div style={{ minHeight: '100vh', background: '#FDF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b4785a', fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>불러오는 중…</div>
+    return <div style={{ minHeight: '100vh', background: '#FDF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5c3a1e', fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>불러오는 중…</div>
   }
 
   const card: React.CSSProperties = { background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14, padding: 14, marginBottom: 12 }
@@ -381,7 +381,7 @@ export default function MyPageNew() {
 
         <div style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}>
           <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 11, borderBottom: (nickEdit || editMode) ? '0.5px solid #f5e5da' : 'none' }}>
-            <div style={{ width: 42, height: 42, borderRadius: '50%', background: '#fae6d5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 700, color: '#c8783c', flexShrink: 0 }}>{initial}</div>
+            <div style={{ width: 42, height: 42, borderRadius: '50%', background: '#fae6d5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 700, color: '#8f3d0e', flexShrink: 0 }}>{initial}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontSize: 14, fontWeight: 600, color: '#3a2e28' }}>{displayName}님</span>
@@ -403,12 +403,12 @@ export default function MyPageNew() {
 
           {nickEdit && (
             <div style={{ padding: '12px 14px', borderBottom: '0.5px solid #f5e5da' }}>
-              <div style={{ fontSize: 11, color: '#b4785a', marginBottom: 4 }}>닉네임</div>
+              <div style={{ fontSize: 11, color: '#5c3a1e', marginBottom: 4 }}>닉네임</div>
               <input value={eNick} onChange={e => setENick(e.target.value)} placeholder="닉네임을 입력하세요" maxLength={20}
                 style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #e8d5c5', background: '#fff', color: '#3a2e28', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 8 }} />
               {nickMsg && <div style={{ color: '#c05a5a', fontSize: 12, marginBottom: 8 }}>{nickMsg}</div>}
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => setNickEdit(false)} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '0.5px solid #e8d5c5', background: 'none', color: '#b4785a', fontSize: 13, cursor: 'pointer' }}>취소</button>
+                <button onClick={() => setNickEdit(false)} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '0.5px solid #e8d5c5', background: 'none', color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>취소</button>
                 <button onClick={saveNick} disabled={nickSaving} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', background: '#b46e46', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', opacity: nickSaving ? 0.6 : 1 }}>{nickSaving ? '저장 중…' : '저장'}</button>
               </div>
             </div>
@@ -418,8 +418,8 @@ export default function MyPageNew() {
             {!editMode && !nickEdit && (
               <div style={{ display: 'flex', gap: 6 }}>
                 <button onClick={() => { if (!profile?.birth_year) { openEdit() } else { router.push(sajuDetailUrl()) } }} style={{ flex: 1, fontSize: 11, color: '#96502e', background: '#faede0', border: '0.5px solid #ecd8c6', borderRadius: 8, padding: '8px 0', cursor: 'pointer', fontWeight: 600 }}>내 사주 자세히 보기 →</button>
-                <button onClick={openNickEdit} style={{ fontSize: 11, color: '#b4785a', border: '0.5px solid #e8d5c5', borderRadius: 8, padding: '8px 12px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>닉네임</button>
-                <button onClick={openEdit} style={{ fontSize: 11, color: '#b4785a', border: '0.5px solid #e8d5c5', borderRadius: 8, padding: '8px 12px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>수정</button>
+                <button onClick={openNickEdit} style={{ fontSize: 11, color: '#5c3a1e', border: '0.5px solid #e8d5c5', borderRadius: 8, padding: '8px 12px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>닉네임</button>
+                <button onClick={openEdit} style={{ fontSize: 11, color: '#5c3a1e', border: '0.5px solid #e8d5c5', borderRadius: 8, padding: '8px 12px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>수정</button>
               </div>
             )}
 
@@ -428,43 +428,43 @@ export default function MyPageNew() {
                 <div style={{ fontSize: 12, fontWeight: 600, color: '#96502e', marginBottom: 8 }}>✦ 내 사주 수정</div>
                 <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, color: '#b4785a', marginBottom: 4 }}>성별</div>
+                    <div style={{ fontSize: 11, color: '#5c3a1e', marginBottom: 4 }}>성별</div>
                     <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '0.5px solid #e8d5c5' }}>
                       <button onClick={() => setEGender('남')} style={seg(eGender === '남')}>남</button>
                       <button onClick={() => setEGender('여')} style={seg(eGender === '여')}>여</button>
                     </div>
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, color: '#b4785a', marginBottom: 4 }}>달력</div>
+                    <div style={{ fontSize: 11, color: '#5c3a1e', marginBottom: 4 }}>달력</div>
                     <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '0.5px solid #e8d5c5' }}>
                       <button onClick={() => applyECal('양력')} style={seg(eCal === '양력')}>양력</button>
                       <button onClick={() => applyECal('음력')} style={seg(eCal === '음력')}>음력</button>
                     </div>
                   </div>
                 </div>
-                <div style={{ fontSize: 11, color: '#b4785a', marginBottom: 4 }}>생년월일</div>
+                <div style={{ fontSize: 11, color: '#5c3a1e', marginBottom: 4 }}>생년월일</div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 10 }}>
                   <input value={eYear} onChange={e => applyEYear(e.target.value)} inputMode="numeric" placeholder="1990" style={{ ...numInput, flex: 1.5 }} />
-                  <span style={{ fontSize: 12, color: '#b4785a' }}>년</span>
+                  <span style={{ fontSize: 12, color: '#5c3a1e' }}>년</span>
                   <select value={eMonth} onChange={e => applyEMonth(e.target.value)} style={{ ...selInput, color: eMonth ? '#3a2e28' : '#b4785a' }}>
                     <option value="">월</option>
                     {MONTHS.map(m => <option key={m} value={String(m)}>{m}</option>)}
                   </select>
-                  <span style={{ fontSize: 12, color: '#b4785a' }}>월</span>
+                  <span style={{ fontSize: 12, color: '#5c3a1e' }}>월</span>
                   <select value={eDay} onChange={e => setEDay(e.target.value)} style={{ ...selInput, color: eDay ? '#3a2e28' : '#b4785a' }}>
                     <option value="">일</option>
                     {dayOptions(parseInt(eYear, 10), parseInt(eMonth, 10), eCal).map(d => <option key={d} value={String(d)}>{d}</option>)}
                   </select>
-                  <span style={{ fontSize: 12, color: '#b4785a' }}>일</span>
+                  <span style={{ fontSize: 12, color: '#5c3a1e' }}>일</span>
                 </div>
-                <div style={{ fontSize: 11, color: '#b4785a', marginBottom: 4 }}>태어난 시 (시주)</div>
+                <div style={{ fontSize: 11, color: '#5c3a1e', marginBottom: 4 }}>태어난 시 (시주)</div>
                 <select value={eHour} onChange={e => setEHour(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #e8d5c5', background: '#fff', color: eHour ? '#3a2e28' : '#b4785a', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 8 }}>
                   <option value="">시간 선택</option>
                   {eVisibleHours.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
                 </select>
 
                 {/* 시를 정확히 모르는 사람용 — 고르면 3개로 좁혀진다 */}
-                <div style={{ fontSize: 10.5, color: '#c5a590', marginBottom: 5 }}>정확히 모르시면 대략 언제쯤인지 골라보세요</div>
+                <div style={{ fontSize: 10.5, color: '#6b5340', marginBottom: 5 }}>정확히 모르시면 대략 언제쯤인지 골라보세요</div>
                 <div style={{ display: 'flex', gap: 4, marginBottom: eBand || (eHour !== '' && crossesMidnight(Number(eHour))) ? 6 : 12 }}>
                   {TIME_BANDS.map(b => {
                     const on = eBand?.key === b.key
@@ -494,7 +494,7 @@ export default function MyPageNew() {
                 )}
                 {msg && <div style={{ color: '#c05a5a', fontSize: 12, marginBottom: 10 }}>{msg}</div>}
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => setEditMode(false)} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '0.5px solid #e8d5c5', background: 'none', color: '#b4785a', fontSize: 13, cursor: 'pointer' }}>취소</button>
+                  <button onClick={() => setEditMode(false)} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '0.5px solid #e8d5c5', background: 'none', color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>취소</button>
                   <button onClick={saveSaju} disabled={saving} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', background: '#b46e46', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>{saving ? '저장 중…' : '저장'}</button>
                 </div>
               </div>
@@ -505,7 +505,7 @@ export default function MyPageNew() {
         <div style={card}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>내 상담 내역</div>
           {consults.filter(c => c.status !== 'cancelled' && c.status !== 'canceled').length === 0 ? (
-            <div style={{ fontSize: 13, color: '#b4785a', textAlign: 'center', padding: '12px 0' }}>아직 신청한 상담이 없습니다.</div>
+            <div style={{ fontSize: 13, color: '#5c3a1e', textAlign: 'center', padding: '12px 0' }}>아직 신청한 상담이 없습니다.</div>
           ) : (
             <div>
               {consults.filter(c => c.status !== 'cancelled' && c.status !== 'canceled').map((c, i, arr) => {
@@ -516,7 +516,7 @@ export default function MyPageNew() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <div style={{ fontSize: 14 }}>{c.consultant_name || '상담사'}</div>
-                        <div style={{ fontSize: 10, color: '#c0a898' }}>
+                        <div style={{ fontSize: 10, color: '#6b5340' }}>
                           {dateText(c.booking_date || c.created_at)}{c.booking_hour != null ? ` ${c.booking_hour}시` : ''}{c.paid_amount ? ` · ${c.paid_amount.toLocaleString()}원` : ''}
                         </div>
                       </div>
@@ -539,12 +539,12 @@ export default function MyPageNew() {
           <button onClick={() => setCashOpen(v => !v)}
             style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 14, background: 'none', border: 'none', cursor: 'pointer' }}>
             <span style={{ fontSize: 13, color: '#5a4a3e' }}>{cashOpen ? '▾' : '▸'} 캐시 · 포인트 · 이용권</span>
-            <span style={{ fontSize: 12, color: '#b4785a' }}>0원 · 0P · 0회</span>
+            <span style={{ fontSize: 12, color: '#5c3a1e' }}>0원 · 0P · 0회</span>
           </button>
           {cashOpen && (
             <div style={{ padding: '0 14px 14px' }}>
               <button style={{ width: '100%', height: 44, background: '#b46e46', border: 'none', borderRadius: 10, color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>☕ 캐시 충전하기</button>
-              <div style={{ fontSize: 10, color: '#c0a898', marginTop: 8, textAlign: 'center' }}>명카페 충전 메뉴는 준비 중이에요</div>
+              <div style={{ fontSize: 10, color: '#6b5340', marginTop: 8, textAlign: 'center' }}>명카페 충전 메뉴는 준비 중이에요</div>
             </div>
           )}
         </div>
@@ -558,7 +558,7 @@ export default function MyPageNew() {
           {payOpen && (
             <div style={{ padding: '0 14px 14px' }}>
               <div style={{ padding: '10px 12px', background: '#faede0', borderRadius: 8, fontSize: 12, color: '#8a7868', textAlign: 'center', marginBottom: 8 }}>결제 내역이 여기에 표시됩니다</div>
-              <button style={{ width: '100%', padding: '10px 0', background: 'none', border: '0.5px solid #e8d5c5', borderRadius: 10, color: '#b4785a', fontSize: 13, cursor: 'pointer' }}>🎁 쿠폰 등록하기</button>
+              <button style={{ width: '100%', padding: '10px 0', background: 'none', border: '0.5px solid #e8d5c5', borderRadius: 10, color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>🎁 쿠폰 등록하기</button>
             </div>
           )}
         </div>
@@ -591,7 +591,7 @@ export default function MyPageNew() {
           <button onClick={withdraw} style={{ flex: 1, textAlign: 'center', background: '#FFFBF7', border: '0.5px solid #f0d0d0', borderRadius: 12, padding: 12, fontSize: 13, color: '#c05a5a', cursor: 'pointer' }}>회원 탈퇴</button>
         </div>
 
-        <div style={{ textAlign: 'center', fontSize: 10, color: '#c0a898', padding: '8px 0' }}>
+        <div style={{ textAlign: 'center', fontSize: 10, color: '#6b5340', padding: '8px 0' }}>
           회사소개 &nbsp;|&nbsp; 이용약관 &nbsp;|&nbsp; 개인정보처리방침
         </div>
 

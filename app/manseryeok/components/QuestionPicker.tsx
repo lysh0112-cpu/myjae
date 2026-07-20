@@ -264,7 +264,7 @@ export default function QuestionPicker({
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
                 <span style={{ fontSize: 11, color: '#4a9450', flex: 1 }}>✓ 아래 풀이에 함께 담겨요</span>
-                <span onClick={cancelDirect} style={{ fontSize: 11, color: '#b4785a', border: '0.5px solid #e0c0a8', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', background: '#fff' }}>지우고 다시 쓰기</span>
+                <span onClick={cancelDirect} style={{ fontSize: 11, color: '#5c3a1e', border: '0.5px solid #e0c0a8', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', background: '#fff' }}>지우고 다시 쓰기</span>
               </div>
             </div>
           ) : (

@@ -400,7 +400,7 @@ function NewHanjaInner() {
       <p style={{ fontSize: 12, color: SUB, margin: '0 0 14px', padding: '0 4px', lineHeight: 1.7 }}>
         {!yongsinReady
           ? '사주 불러오는 중…'
-          : <>새 이름 <b style={{ color: '#c8783c' }}>{surname!.hanja}{syllables.join('')}</b> · 사주에 필요한 기운은 <b style={{ color: GOLD }}>{yongsin}</b>입니다</>}
+          : <>새 이름 <b style={{ color: '#8f3d0e' }}>{surname!.hanja}{syllables.join('')}</b> · 사주에 필요한 기운은 <b style={{ color: GOLD }}>{yongsin}</b>입니다</>}
       </p>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>

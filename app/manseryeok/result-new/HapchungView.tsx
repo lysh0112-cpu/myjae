@@ -55,8 +55,8 @@ export default function HapchungView({ saju }: Props) {
       {/* 전/후 점수 비교표 */}
       <div style={{ background: '#faf3ee', border: '0.5px solid #f0e0d5', borderRadius: 10, padding: '10px 12px', marginBottom: 10 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 1fr', gap: 4, fontSize: 11 }}>
-          <div style={{ color: '#c5a590', fontWeight: 600 }}>오행</div>
-          <div style={{ color: '#c5a590', fontWeight: 600, textAlign: 'right' }}>합충 전</div>
+          <div style={{ color: '#6b5340', fontWeight: 600 }}>오행</div>
+          <div style={{ color: '#6b5340', fontWeight: 600, textAlign: 'right' }}>합충 전</div>
           <div style={{ color: '#96502e', fontWeight: 600, textAlign: 'right' }}>합충 후</div>
           {ELS.map(e => {
             const b = base[e], a = score[e]
@@ -78,7 +78,7 @@ export default function HapchungView({ saju }: Props) {
       {/* 적용된 합충 목록 */}
       <div style={{ fontSize: 11, color: '#96502e', fontWeight: 700, marginBottom: 6 }}>적용된 합·충</div>
       {notes.length === 0 || !changed ? (
-        <div style={{ fontSize: 11, color: '#c5a590', background: '#fff', border: '0.5px dashed #f0e0d5', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
+        <div style={{ fontSize: 11, color: '#6b5340', background: '#fff', border: '0.5px dashed #f0e0d5', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
           이 사주엔 점수를 바꾸는 합·충이 없어요.
         </div>
       ) : (
@@ -91,7 +91,7 @@ export default function HapchungView({ saju }: Props) {
         </div>
       )}
 
-      <div style={{ fontSize: 9.5, color: '#c5a590', marginTop: 8, lineHeight: 1.6 }}>
+      <div style={{ fontSize: 9.5, color: '#6b5340', marginTop: 8, lineHeight: 1.6 }}>
         ※ 합충 규칙(방합·삼합·반합·육합·천간합 + 충 + 거리가중치)을 반영한 결과예요. 유파에 따라 해석이 다를 수 있어요.
       </div>
     </div>

@@ -109,7 +109,7 @@ function gradeOf(total: number): { label: string; color: string; bar: string } {
   if (total >= 90) return { label: '아주 좋은 날', color: '#96502e', bar: '#e09030' }
   if (total >= 84) return { label: '좋은 날', color: '#96502e', bar: '#e09030' }
   if (total >= 72) return { label: '순조로운 날', color: '#96502e', bar: '#d9a878' }
-  return { label: '차분한 날', color: '#b4785a', bar: '#c8a882' }
+  return { label: '차분한 날', color: '#5c3a1e', bar: '#c8a882' }
 }
 
 // 총점 구하기. total 이 있으면 그대로, 없으면 옛 별점을 환산.
@@ -127,7 +127,7 @@ function SpinStar({ size = 13 }: { size?: number }) {
     <>
       <style>{`@keyframes mcFortuneSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       <span style={{
-        fontSize: size, display: 'inline-block', color: '#c8783c',
+        fontSize: size, display: 'inline-block', color: '#8f3d0e',
         animation: 'mcFortuneSpin 1.2s linear infinite',
       }}>✦</span>
     </>
@@ -425,12 +425,12 @@ export default function TodayFortuneCard() {
       <div style={{ display: 'flex', justifyContent: monthly ? 'flex-end' : 'space-between', alignItems: 'center', marginBottom: 12 }}>
         {!monthly && <span style={{ fontSize: 13, fontWeight: 600, color: '#96502e' }}>✦ 오늘의 운세</span>}
         {tab === 'day' && fortuneShown?.iljin_gan && (
-          <span style={{ fontSize: 10, color: '#b4785a', background: '#faede0', padding: '3px 9px', borderRadius: 10 }}>
+          <span style={{ fontSize: 10, color: '#5c3a1e', background: '#faede0', padding: '3px 9px', borderRadius: 10 }}>
             {todayKST().slice(5).replace('-', '.')} · {fortuneShown.iljin_gan}{fortuneShown.iljin_ji}일
           </span>
         )}
         {tab === 'month' && monthly && (
-          <span style={{ fontSize: 10, color: '#b4785a', background: '#faede0', padding: '3px 9px', borderRadius: 10 }}>
+          <span style={{ fontSize: 10, color: '#5c3a1e', background: '#faede0', padding: '3px 9px', borderRadius: 10 }}>
             {monthly.month}월 · {monthly.ganji.cheongan}{monthly.ganji.jiji}월
           </span>
         )}
@@ -443,11 +443,11 @@ export default function TodayFortuneCard() {
     return (
       <div style={wrap}>
         {header}
-        <div style={{ fontSize: 13, color: '#b4785a', textAlign: 'center', padding: '10px 0', lineHeight: 1.7 }}>
+        <div style={{ fontSize: 13, color: '#5c3a1e', textAlign: 'center', padding: '10px 0', lineHeight: 1.7 }}>
           로그인하면 매일 나만의 운세를 볼 수 있어요.<br />
           <button
             onClick={() => router.push('/login')}
-            style={{ marginTop: 8, fontSize: 12, color: '#c8783c', background: 'none', border: '0.5px solid #f0d0a0', borderRadius: 8, padding: '6px 14px', cursor: 'pointer' }}
+            style={{ marginTop: 8, fontSize: 12, color: '#8f3d0e', background: 'none', border: '0.5px solid #f0d0a0', borderRadius: 8, padding: '6px 14px', cursor: 'pointer' }}
           >로그인하기</button>
         </div>
       </div>
@@ -459,11 +459,11 @@ export default function TodayFortuneCard() {
     return (
       <div style={wrap}>
         {header}
-        <div style={{ fontSize: 13, color: '#b4785a', textAlign: 'center', padding: '10px 0', lineHeight: 1.7 }}>
+        <div style={{ fontSize: 13, color: '#5c3a1e', textAlign: 'center', padding: '10px 0', lineHeight: 1.7 }}>
           사주를 등록하면 매일 나만의 운세를 볼 수 있어요.<br />
           <button
             onClick={() => router.push('/mypage-new')}
-            style={{ marginTop: 8, fontSize: 12, color: '#c8783c', background: 'none', border: '0.5px solid #f0d0a0', borderRadius: 8, padding: '6px 14px', cursor: 'pointer' }}
+            style={{ marginTop: 8, fontSize: 12, color: '#8f3d0e', background: 'none', border: '0.5px solid #f0d0a0', borderRadius: 8, padding: '6px 14px', cursor: 'pointer' }}
           >사주 등록하러 가기</button>
         </div>
       </div>
@@ -488,7 +488,7 @@ export default function TodayFortuneCard() {
           {/* 낮은 등급이어도 최소 18%는 채워서 막대가 보이게 한다 */}
           <div style={{ width: `${Math.max(18, pct)}%`, height: '100%', background: pct >= 70 ? '#3b8b3f' : pct >= 45 ? '#c8873c' : '#9a7358', borderRadius: 4 }} />
         </div>
-        <span style={{ fontSize: 9.5, color: '#b4785a', width: 52, textAlign: 'right', flexShrink: 0 }}>{tag || gradeTxt}</span>
+        <span style={{ fontSize: 9.5, color: '#5c3a1e', width: 52, textAlign: 'right', flexShrink: 0 }}>{tag || gradeTxt}</span>
       </div>
     )
 
@@ -498,8 +498,8 @@ export default function TodayFortuneCard() {
 
         {/* 점수 + 지난달 대비 */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 7 }}>
-          <span style={{ fontSize: 30, fontWeight: 700, color: '#c8783c', lineHeight: 1 }}>{ms.total}</span>
-          <span style={{ fontSize: 13, color: '#c5a590' }}>/ 100</span>
+          <span style={{ fontSize: 30, fontWeight: 700, color: '#8f3d0e', lineHeight: 1 }}>{ms.total}</span>
+          <span style={{ fontSize: 13, color: '#6b5340' }}>/ 100</span>
           <span style={{ marginLeft: 'auto', fontSize: 11, color: gc.text, background: '#faede0', padding: '3px 10px', borderRadius: 9 }}>{gl}</span>
         </div>
         <div style={{ height: 7, background: '#f5e6da', borderRadius: 4, marginBottom: 6, overflow: 'hidden' }}>
@@ -558,7 +558,7 @@ export default function TodayFortuneCard() {
         {/* 이번 달 좋은 날 */}
         {(days.good.length > 0 || days.bad.length > 0) && (
           <div style={{ marginBottom: 11 }}>
-            <div style={{ fontSize: 10, color: '#b4785a', marginBottom: 6 }}>📅 이번 달 눈여겨볼 날</div>
+            <div style={{ fontSize: 10, color: '#5c3a1e', marginBottom: 6 }}>📅 이번 달 눈여겨볼 날</div>
             <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
               {days.good.map(d => (
                 <span key={`g${d.day}`} style={{ fontSize: 10.5, background: '#f0f7ec', color: '#3b6d11', padding: '4px 9px', borderRadius: 7, border: '0.5px solid #d8e8cc' }}>
@@ -578,7 +578,7 @@ export default function TodayFortuneCard() {
         {open && (
           <>
             <div style={{ paddingTop: 11, borderTop: '0.5px solid #f0e0d5', marginBottom: 11 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 600, color: '#c8783c', marginBottom: 9 }}>📈 올해 흐름</div>
+              <div style={{ fontSize: 11.5, fontWeight: 600, color: '#8f3d0e', marginBottom: 9 }}>📈 올해 흐름</div>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 58 }}>
                 {trend.map(t => {
                   const on = t.month === month
@@ -614,7 +614,7 @@ export default function TodayFortuneCard() {
             )}
 
             <div style={{ paddingTop: 11, borderTop: '0.5px solid #f0e0d5', marginBottom: 11 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 600, color: '#c8783c', marginBottom: 6 }}>📖 이달의 명리 한 조각</div>
+              <div style={{ fontSize: 11.5, fontWeight: 600, color: '#8f3d0e', marginBottom: 6 }}>📖 이달의 명리 한 조각</div>
               {/* AI가 순화한 문장을 먼저 쓴다. 실패했을 때만 소스 원문을 보여준다.
                   (원문은 상담사용 표현이라 "정신적으로 문제가 발생한다" 같은 문장이 그대로 나온다) */}
               {mTextShown?.insight ? (
@@ -629,7 +629,7 @@ export default function TodayFortuneCard() {
                   )}
                 </>
               )}
-              <div style={{ fontSize: 9.5, color: '#c5a590', marginTop: 6 }}>
+              <div style={{ fontSize: 9.5, color: '#6b5340', marginTop: 6 }}>
                 명리 근거: {ms.area.envTag}{ms.area.selfTag && ms.area.selfTag !== ms.area.envTag ? ` · ${ms.area.selfTag}` : ''}
               </div>
             </div>
@@ -637,7 +637,7 @@ export default function TodayFortuneCard() {
         )}
 
         <div onClick={() => setOpen(o => !o)} role="button" aria-expanded={open}
-          style={{ textAlign: 'center', fontSize: 11.5, color: '#b4785a', padding: '9px 0 2px', cursor: 'pointer' }}>
+          style={{ textAlign: 'center', fontSize: 11.5, color: '#5c3a1e', padding: '9px 0 2px', cursor: 'pointer' }}>
           {open ? '접기 ▲' : '자세히 보기 ▼'}
         </div>
       </div>
@@ -661,7 +661,7 @@ export default function TodayFortuneCard() {
     return (
       <div style={wrap}>
         {header}
-        <div style={{ fontSize: 13, color: '#c0a898', textAlign: 'center', padding: '12px 0' }}>
+        <div style={{ fontSize: 13, color: '#6b5340', textAlign: 'center', padding: '12px 0' }}>
           운세를 불러오지 못했어요. 잠시 후 다시 들어와 주세요.
         </div>
       </div>
@@ -679,8 +679,8 @@ export default function TodayFortuneCard() {
       {total != null && (
         <>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 7 }}>
-            <span style={{ fontSize: 30, fontWeight: 700, color: '#c8783c', lineHeight: 1 }}>{total}</span>
-            <span style={{ fontSize: 13, color: '#c5a590' }}>/ 100</span>
+            <span style={{ fontSize: 30, fontWeight: 700, color: '#8f3d0e', lineHeight: 1 }}>{total}</span>
+            <span style={{ fontSize: 13, color: '#6b5340' }}>/ 100</span>
             <span style={{ marginLeft: 'auto', fontSize: 11, color: g.color, background: '#faede0', padding: '3px 10px', borderRadius: 9 }}>
               {g.label}
             </span>
@@ -705,14 +705,14 @@ export default function TodayFortuneCard() {
       {/* 행운의 색·방향 */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
         <div style={{ flex: 1, background: '#faede0', borderRadius: 8, padding: '9px 7px', textAlign: 'center' }}>
-          <div style={{ fontSize: 9, color: '#b4785a', marginBottom: 4 }}>행운의 색</div>
+          <div style={{ fontSize: 9, color: '#5c3a1e', marginBottom: 4 }}>행운의 색</div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
             <span style={{ width: 13, height: 13, borderRadius: '50%', background: luckyColorChip(fortuneShown.lucky_color), border: '1px solid #ddd', display: 'inline-block', flexShrink: 0 }} />
             <span style={{ fontSize: 11, color: '#96502e' }}>{fortuneShown.lucky_color || '-'}</span>
           </div>
         </div>
         <div style={{ flex: 1, background: '#faede0', borderRadius: 8, padding: '9px 7px', textAlign: 'center' }}>
-          <div style={{ fontSize: 9, color: '#b4785a', marginBottom: 4 }}>행운의 방향</div>
+          <div style={{ fontSize: 9, color: '#5c3a1e', marginBottom: 4 }}>행운의 방향</div>
           <div style={{ fontSize: 12, color: '#96502e' }}>{fortuneShown.lucky_dir || '-'}</div>
         </div>
       </div>
@@ -737,7 +737,7 @@ export default function TodayFortuneCard() {
 
           {fortuneShown.today_insight && (
             <div style={{ paddingTop: 12, borderTop: '0.5px solid #f0e0d5' }}>
-              <div style={{ fontSize: 11.5, fontWeight: 600, color: '#c8783c', marginBottom: 6 }}>🔥 오늘의 명리 한 조각</div>
+              <div style={{ fontSize: 11.5, fontWeight: 600, color: '#8f3d0e', marginBottom: 6 }}>🔥 오늘의 명리 한 조각</div>
               <p style={{ fontSize: 11.5, color: '#7a6858', lineHeight: 1.7, margin: 0 }}>{fortuneShown.today_insight}</p>
             </div>
           )}
@@ -749,7 +749,7 @@ export default function TodayFortuneCard() {
         onClick={() => setOpen(o => !o)}
         role="button"
         aria-expanded={open}
-        style={{ textAlign: 'center', fontSize: 11.5, color: '#b4785a', padding: '9px 0 2px', cursor: 'pointer' }}
+        style={{ textAlign: 'center', fontSize: 11.5, color: '#5c3a1e', padding: '9px 0 2px', cursor: 'pointer' }}
       >{open ? '접기 ▲' : '자세히 보기 ▼'}</div>
     </div>
   )

@@ -447,7 +447,7 @@ function BirthResultInner() {
           style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
         <div>
           <div style={{ fontSize: 15, fontWeight: 500, color: '#3a2e28' }}>출산 시기 결과</div>
-          <div style={{ fontSize: 10.5, color: '#b4785a' }}>아기에게 좋은 출산일이에요</div>
+          <div style={{ fontSize: 10.5, color: '#5c3a1e' }}>아기에게 좋은 출산일이에요</div>
         </div>
         {!loading && !errMsg && recs.length > 0 && (
           <button onClick={handleSave} disabled={saving || saved}

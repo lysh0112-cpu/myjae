@@ -75,20 +75,20 @@ function CoupleStorageInner() {
         <button onClick={() => router.push('/home-new')}
           style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
         <div style={{ fontSize: 16, fontWeight: 500, color: '#3a2e28' }}>{info.title}</div>
-        {records && <div style={{ marginLeft: 'auto', fontSize: 12, color: '#b4785a' }}>{records.length}건</div>}
+        {records && <div style={{ marginLeft: 'auto', fontSize: 12, color: '#5c3a1e' }}>{records.length}건</div>}
       </div>
 
       <div style={{ padding: '16px 14px 0' }}>
         {/* 로딩 */}
         {records === null && (
-          <div style={{ textAlign: 'center', padding: '50px 0', color: '#b4785a', fontSize: 13 }}>
+          <div style={{ textAlign: 'center', padding: '50px 0', color: '#5c3a1e', fontSize: 13 }}>
             보관함을 불러오는 중…
           </div>
         )}
 
         {/* 빈 상태 */}
         {records && records.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '46px 20px', color: '#b4785a' }}>
+          <div style={{ textAlign: 'center', padding: '46px 20px', color: '#5c3a1e' }}>
             <div style={{ fontSize: 30, marginBottom: 10 }}>💝</div>
             <div style={{ fontSize: 14, color: '#96502e', fontWeight: 500, marginBottom: 4 }}>
               아직 저장된 {info.badge} 궁합이 없어요
@@ -119,9 +119,9 @@ function CoupleStorageInner() {
               <div style={{ fontSize: 14, fontWeight: 500, color: '#3a2e28', marginBottom: 4 }}>
                 {r.name1} <span style={{ color: '#d4537e' }}>♥</span> {r.name2}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#b4785a' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#5c3a1e' }}>
                 <span>{daysAgoLabel(r.createdAt)}</span>
-                {r.unsavedCount ? <span style={{ color: '#c5a590' }}>· 미저장 {r.unsavedCount}명</span> : null}
+                {r.unsavedCount ? <span style={{ color: '#6b5340' }}>· 미저장 {r.unsavedCount}명</span> : null}
               </div>
             </div>
 
@@ -131,7 +131,7 @@ function CoupleStorageInner() {
               aria-label="삭제"
               style={{
                 flexShrink: 0, width: 28, height: 28, borderRadius: 8,
-                background: 'none', border: 'none', color: '#c5a590', fontSize: 17,
+                background: 'none', border: 'none', color: '#6b5340', fontSize: 17,
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
               ×

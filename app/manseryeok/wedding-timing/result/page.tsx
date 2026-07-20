@@ -344,7 +344,7 @@ function WeddingResultInner() {
           style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
         <div>
           <div style={{ fontSize: 15, fontWeight: 500, color: '#3a2e28' }}>결혼 길일 결과</div>
-          <div style={{ fontSize: 10.5, color: '#b4785a' }}>두 분께 좋은 결혼 날짜예요</div>
+          <div style={{ fontSize: 10.5, color: '#5c3a1e' }}>두 분께 좋은 결혼 날짜예요</div>
         </div>
       </div>
 

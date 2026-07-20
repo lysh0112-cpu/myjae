@@ -128,7 +128,7 @@ export default function YongsinCard({ result, saju }: Props) {
       return (
         <div style={{ background: '#f7f4f0', border: '0.5px solid #e5dcd2', borderRadius: 10, padding: '14px 6px', textAlign: 'center' }}>
           <div style={{ fontSize: 15, color: '#8a7360', fontWeight: 600 }}>해당 없음</div>
-          <div style={{ fontSize: 10.5, color: '#b4785a', marginTop: 3 }}>{johu.note}</div>
+          <div style={{ fontSize: 10.5, color: '#5c3a1e', marginTop: 3 }}>{johu.note}</div>
         </div>
       )
     }
@@ -192,8 +192,8 @@ export default function YongsinCard({ result, saju }: Props) {
 
   const labelBox = (title: string, sub: string) => (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#fff3e9', border: '0.5px solid #e8d5c5', borderRadius: 9, minWidth: 52, padding: '6px 0' }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color: '#c8783c' }}>{title}</span>
-      <span style={{ fontSize: 8, color: '#c5a590', marginTop: 2 }}>{sub}</span>
+      <span style={{ fontSize: 11, fontWeight: 700, color: '#8f3d0e' }}>{title}</span>
+      <span style={{ fontSize: 8, color: '#6b5340', marginTop: 2 }}>{sub}</span>
     </div>
   )
 
@@ -223,8 +223,8 @@ export default function YongsinCard({ result, saju }: Props) {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '34px repeat(5,1fr)', gap: 4, alignItems: 'stretch' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#fff3e9', border: '0.5px solid #e8d5c5', borderRadius: 8 }}>
-            <span style={{ fontSize: 9.5, fontWeight: 700, color: '#c8783c' }}>억부</span>
-            <span style={{ fontSize: 7, color: '#c5a590' }}>재물</span>
+            <span style={{ fontSize: 9.5, fontWeight: 700, color: '#8f3d0e' }}>억부</span>
+            <span style={{ fontSize: 7, color: '#6b5340' }}>재물</span>
           </div>
           {cell(eokbu.yongsin, '용신', false, true)}
           {cell(eokbu.heesin, '희신', false, false)}
@@ -259,7 +259,7 @@ export default function YongsinCard({ result, saju }: Props) {
             </div>
 
             {!detail && (
-              <div onClick={() => setDetail(true)} style={{ background: '#fff3e9', border: '0.5px solid #e8d5c5', color: '#c8783c', textAlign: 'center', padding: 11, borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              <div onClick={() => setDetail(true)} style={{ background: '#fff3e9', border: '0.5px solid #e8d5c5', color: '#8f3d0e', textAlign: 'center', padding: 11, borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                 {info.name}({info.hanja})의 기운이 뭐예요? →
               </div>
             )}

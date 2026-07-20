@@ -295,7 +295,7 @@ function MulsangInner() {
           <span style={{ fontSize: '15px', fontWeight: 500, color: '#3a2e28' }}>내 사주가 그림이 된다면?</span>
           <button onClick={() => router.push('/')} style={{ background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer' }}>🏠</button>
         </div>
-        <div style={{ padding: '40px 20px', textAlign: 'center', color: '#b4785a' }}>
+        <div style={{ padding: '40px 20px', textAlign: 'center', color: '#5c3a1e' }}>
           <p style={{ marginBottom: '20px' }}>먼저 홈에서 사주 정보를 입력해주세요.</p>
           <button onClick={() => router.push('/')}
             style={{ padding: '12px 24px', borderRadius: '12px', background: '#b46e46', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
@@ -594,25 +594,25 @@ function MulsangInner() {
         style={{ width: '100%', maxWidth: '430px', background: '#fffbf7', borderRadius: '20px 20px 0 0', padding: '10px 20px 28px', boxShadow: '0 -8px 30px rgba(0,0,0,0.15)' }}>
         <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: '#e4d4be', margin: '0 auto 18px' }} />
         <div style={{ fontSize: '17px', fontWeight: 700, color: '#96502e', marginBottom: '4px' }}>🖼️ 사주 그림 생성</div>
-        <div style={{ fontSize: '13px', color: '#b4785a', marginBottom: '16px', lineHeight: 1.6 }}>
+        <div style={{ fontSize: '13px', color: '#5c3a1e', marginBottom: '16px', lineHeight: 1.6 }}>
           당신의 사주를 한 폭의 풍경화로 그려드려요
         </div>
         <div style={{ background: '#fdf6f0', borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '0.5px solid #f0e0d5' }}>
-          <div style={{ fontSize: '12px', color: '#b4785a', marginBottom: '8px' }}>포함 내용</div>
+          <div style={{ fontSize: '12px', color: '#5c3a1e', marginBottom: '8px' }}>포함 내용</div>
           {['사주 8글자 기반 맞춤 풍경화', '선택한 화풍으로 생성', '오행 해설과 궁금한 질문 풀이', '저장·공유 가능'].map((t, i) => (
             <div key={i} style={{ fontSize: '13px', color: '#3a2e28', lineHeight: 1.9 }}>· {t}</div>
           ))}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <span style={{ fontSize: '14px', color: '#b4785a' }}>결제 금액</span>
-          <span style={{ fontSize: '20px', fontWeight: 700, color: '#c8783c' }}>{drawPrice.toLocaleString()}원</span>
+          <span style={{ fontSize: '14px', color: '#5c3a1e' }}>결제 금액</span>
+          <span style={{ fontSize: '20px', fontWeight: 700, color: '#8f3d0e' }}>{drawPrice.toLocaleString()}원</span>
         </div>
         <button onClick={doGenerate}
           style={{ width: '100%', padding: '15px', borderRadius: '12px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginBottom: '8px' }}>
           💳 {drawPrice.toLocaleString()}원 결제하고 그림 그리기
         </button>
         <button onClick={() => setPayOpen(false)}
-          style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: '0.5px solid #e4d4be', color: '#b4785a', fontSize: '13px', cursor: 'pointer' }}>
+          style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: '0.5px solid #e4d4be', color: '#5c3a1e', fontSize: '13px', cursor: 'pointer' }}>
           취소
         </button>
       </div>
@@ -629,10 +629,10 @@ function MulsangInner() {
         <div style={{ display: 'flex', alignItems: 'center', padding: '15px 16px 12px', borderBottom: '0.5px solid #f0e0d5', flexShrink: 0 }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '14px', fontWeight: 700, color: '#3a2e28' }}>궁금한 걸 골라보세요</div>
-            <div style={{ fontSize: '11px', color: '#b4785a', marginTop: '2px' }}>하나만 골라주세요</div>
+            <div style={{ fontSize: '11px', color: '#5c3a1e', marginTop: '2px' }}>하나만 골라주세요</div>
           </div>
           <button onClick={() => setOpenPicker(false)} aria-label="닫기"
-            style={{ background: 'none', border: 'none', color: '#c5a590', fontSize: '20px', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
+            style={{ background: 'none', border: 'none', color: '#6b5340', fontSize: '20px', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
         </div>
         <div style={{ padding: '12px', overflowY: 'auto', flex: 1 }}>
           {groupMulsangByCategory(MULSANG_QUESTIONS).map(({ category, items }) => {
@@ -688,7 +688,7 @@ function MulsangInner() {
             <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '12px', marginBottom: '8px', overflow: 'hidden' }}>
               <div onClick={() => setOpenWonguk(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '11px 14px', cursor: 'pointer' }}>
                 <span style={{ flex: 1, fontSize: '13px', fontWeight: 700, color: '#3a2e28' }}>사주 원국 (내 여덟 글자)</span>
-                <span style={{ color: '#c8783c', fontSize: '12px' }}>{openWonguk ? '▾' : '▸'}</span>
+                <span style={{ color: '#8f3d0e', fontSize: '12px' }}>{openWonguk ? '▾' : '▸'}</span>
               </div>
               {openWonguk && (
                 <div style={{ padding: '4px 12px 14px' }}>
@@ -702,11 +702,11 @@ function MulsangInner() {
               <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '12px', marginBottom: '10px', overflow: 'hidden' }}>
                 <div onClick={() => setOpenOhaeng(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '11px 14px', cursor: 'pointer' }}>
                   <span style={{ flex: 1, fontSize: '13px', fontWeight: 700, color: '#96502e' }}>오행 분석 — 그림이 이렇게 그려진 이유</span>
-                  <span style={{ color: '#c8783c', fontSize: '12px' }}>{openOhaeng ? '▾' : '▸'}</span>
+                  <span style={{ color: '#8f3d0e', fontSize: '12px' }}>{openOhaeng ? '▾' : '▸'}</span>
                 </div>
                 {openOhaeng && (
                   <div style={{ padding: '2px 12px 12px' }}>
-                    <div style={{ fontSize: '11px', color: '#b4785a', marginBottom: '8px' }}>넘치는 기운은 풍성하게, 부족한 기운은 그림 속 빛으로 채워요</div>
+                    <div style={{ fontSize: '11px', color: '#5c3a1e', marginBottom: '8px' }}>넘치는 기운은 풍성하게, 부족한 기운은 그림 속 빛으로 채워요</div>
                     <OhaengPentagon ohaeng={ohaeng} dayElement={dayStem ? MULSANG_STEM_EL[dayStem] : undefined} />
                   </div>
                 )}
@@ -720,8 +720,8 @@ function MulsangInner() {
           <div style={{ background: '#fffbf7', borderTop: '0.5px solid #f0e0d5' }}>
             <div onClick={() => setOpenImage(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '11px 16px', cursor: 'pointer' }}>
               <span style={{ flex: 1, fontSize: '13px', fontWeight: 700, color: '#96502e' }}>내 사주 그림</span>
-              <span style={{ fontSize: '11px', color: '#b4785a' }}>{openImage ? '접기' : '크게 보기'}</span>
-              <span style={{ color: '#c8783c', fontSize: '12px' }}>{openImage ? '▾' : '▸'}</span>
+              <span style={{ fontSize: '11px', color: '#5c3a1e' }}>{openImage ? '접기' : '크게 보기'}</span>
+              <span style={{ color: '#8f3d0e', fontSize: '12px' }}>{openImage ? '▾' : '▸'}</span>
             </div>
             {openImage && (
               <>
@@ -729,7 +729,7 @@ function MulsangInner() {
                   {imageUrl ? (
                     <img src={imageUrl} alt="사주 풍경화" style={{ width: '100%', display: 'block' }} />
                   ) : imageError ? (
-                    <div style={{ aspectRatio: '1/1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#b4785a', background: '#fdf6f0', padding: '20px', textAlign: 'center' }}>
+                    <div style={{ aspectRatio: '1/1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#5c3a1e', background: '#fdf6f0', padding: '20px', textAlign: 'center' }}>
                       <span style={{ fontSize: '34px' }}>🖼️</span>
                       <span style={{ fontSize: '13px', lineHeight: 1.6, color: '#96502e' }}>{imageError}</span>
                     </div>
@@ -762,7 +762,7 @@ function MulsangInner() {
                   {pickedQ ? MULSANG_QUESTIONS.find(q => q.id === pickedQ)?.question : '안 고르면 그림 전체를 대략 풀어드려요'}
                 </div>
               </div>
-              <span style={{ color: '#c8783c', fontSize: '15px' }}>›</span>
+              <span style={{ color: '#8f3d0e', fontSize: '15px' }}>›</span>
             </div>
 
 
@@ -782,8 +782,8 @@ function MulsangInner() {
             {showTongbyeon && (
               <div style={{ marginTop: '14px' }}>
                 {tongLoading ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '24px', color: '#b4785a', fontSize: '13px' }}>
-                    <span style={{ fontSize: '28px', display: 'inline-block', animation: 'spin 1.1s linear infinite', color: '#c8783c' }}>✦</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '24px', color: '#5c3a1e', fontSize: '13px' }}>
+                    <span style={{ fontSize: '28px', display: 'inline-block', animation: 'spin 1.1s linear infinite', color: '#8f3d0e' }}>✦</span>
                     <span>그림을 찬찬히 살펴보는 중이에요…</span>
                   </div>
                 ) : tongResult ? (
@@ -805,7 +805,7 @@ function MulsangInner() {
 
           {drawActive && (
             <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '14px', padding: '14px' }}>
-              <div style={{ fontSize: '12px', color: '#b4785a', marginBottom: '8px' }}>다른 화풍으로 다시 그리기</div>
+              <div style={{ fontSize: '12px', color: '#5c3a1e', marginBottom: '8px' }}>다른 화풍으로 다시 그리기</div>
               <select value={style} onChange={e => setStyle(e.target.value)}
                 style={{ width: '100%', padding: '10px', borderRadius: '10px', background: '#fff', border: '0.5px solid #e4d4be', color: '#96502e', fontSize: '14px', marginBottom: '10px' }}>
                 {(Object.keys(STYLE_CONFIGS)).map(key => (
@@ -827,7 +827,7 @@ function MulsangInner() {
               fontSize: '15px', fontWeight: 700, cursor: saveState === 'idle' ? 'pointer' : 'default' }}>
             {saveState === 'saving' ? '저장 중…' : saveState === 'saved' ? '✓ 보관함에 저장됨' : '💾 그림·해설 보관함에 저장'}
           </button>
-          <div style={{ fontSize: '11px', color: '#c5a590', textAlign: 'center', marginTop: '6px' }}>
+          <div style={{ fontSize: '11px', color: '#6b5340', textAlign: 'center', marginTop: '6px' }}>
             그린 그림과 본 질문 해설이 함께 저장돼요
           </div>
 
@@ -854,13 +854,13 @@ function MulsangInner() {
       </div>
       <div style={{ padding: '16px' }}>
         <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '14px', padding: '14px 16px', marginBottom: '18px' }}>
-          <div style={{ fontSize: '12px', color: '#b4785a', marginBottom: '5px' }}>내 사주</div>
+          <div style={{ fontSize: '12px', color: '#5c3a1e', marginBottom: '5px' }}>내 사주</div>
           <div style={{ fontSize: '15px', color: '#3a2e28' }}>{sajuLine}</div>
         </div>
 
         <div style={{ width: '100%', height: '150px', borderRadius: '14px', background: 'linear-gradient(160deg,#f0e6d8,#e4d4be)', border: '0.5px solid #f0e0d5', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '18px' }}>
           <span style={{ fontSize: '34px', opacity: 0.5 }}>🖼️</span>
-          <span style={{ fontSize: '12px', color: '#b4785a' }}>내 사주 여덟 글자로 그리는 나만의 풍경화</span>
+          <span style={{ fontSize: '12px', color: '#5c3a1e' }}>내 사주 여덟 글자로 그리는 나만의 풍경화</span>
         </div>
 
         <div style={{ fontSize: '12px', color: '#96502e', fontWeight: 500, marginBottom: '7px' }}>화풍 고르기</div>
@@ -893,13 +893,13 @@ function MulsangInner() {
             ) : `✨ 나의 사주 그림 그리기 · ${drawPrice.toLocaleString()}원`}
           </button>
         ) : (
-          <div style={{ textAlign: 'center', color: '#b4785a', fontSize: '13px', marginBottom: '20px' }}>
+          <div style={{ textAlign: 'center', color: '#5c3a1e', fontSize: '13px', marginBottom: '20px' }}>
             현재 그림 생성 서비스는 준비 중입니다.
           </div>
         )}
 
         {!loading && drawActive && (
-          <div style={{ textAlign: 'center', fontSize: '11px', color: '#c5a590', marginBottom: '8px' }}>
+          <div style={{ textAlign: 'center', fontSize: '11px', color: '#6b5340', marginBottom: '8px' }}>
             그림이 완성되면 오행 해설과 궁금한 질문 풀이가 이어져요
           </div>
         )}
@@ -909,7 +909,7 @@ function MulsangInner() {
             <span style={{ fontSize: '40px', display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span>
             <div style={{ textAlign: 'center', color: '#96502e', fontSize: '13px', lineHeight: 1.7 }}>
               당신의 사주를 풍경으로 그리고 있어요<br />
-              <span style={{ color: '#b4785a', fontSize: '12px' }}>잠시만 기다려 주세요 (최대 1분)</span>
+              <span style={{ color: '#5c3a1e', fontSize: '12px' }}>잠시만 기다려 주세요 (최대 1분)</span>
             </div>
           </div>
         )}

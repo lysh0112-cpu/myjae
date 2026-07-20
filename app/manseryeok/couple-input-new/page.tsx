@@ -116,14 +116,14 @@ function CoupleInputInner() {
           style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
         <div>
           <div style={{ fontSize: 15, fontWeight: 500, color: '#3a2e28' }}>{info.title}</div>
-          <div style={{ fontSize: 10.5, color: '#b4785a' }}>{info.sub}</div>
+          <div style={{ fontSize: 10.5, color: '#5c3a1e' }}>{info.sub}</div>
         </div>
       </div>
 
       <div style={{ padding: '16px 14px' }}>
         <div style={{ textAlign: 'center', marginBottom: 16 }}>
           <div style={{ fontSize: 14, fontWeight: 500, color: '#3a2e28' }}>궁합 볼 두 사람</div>
-          <div style={{ fontSize: 10.5, color: '#b4785a', marginTop: 2 }}>칸을 눌러 사람을 골라주세요</div>
+          <div style={{ fontSize: 10.5, color: '#5c3a1e', marginTop: 2 }}>칸을 눌러 사람을 골라주세요</div>
         </div>
 
         <SlotView n={1} slot={slot1} mode={mode} accent={info.accent}
@@ -205,14 +205,14 @@ function SlotView({ n, slot, mode, accent, onOpen, onJob, onMbti }: {
               {slot.name}
               {slot.isMe && <span style={{ fontSize: 9, color: '#b46e46', background: '#f6e3d6', borderRadius: 99, padding: '0 6px', marginLeft: 3 }}>나</span>}
             </div>
-            {birthLabel && <div style={{ fontSize: 10, color: '#b4785a' }}>{birthLabel}</div>}
+            {birthLabel && <div style={{ fontSize: 10, color: '#5c3a1e' }}>{birthLabel}</div>}
           </div>
-          <span style={{ color: '#c8783c', fontSize: 11 }}>바꾸기</span>
+          <span style={{ color: '#8f3d0e', fontSize: 11 }}>바꾸기</span>
         </div>
       ) : (
         <div onClick={onOpen} style={{
           background: '#FFFBF7', border: '1.5px dashed #e0c9b8', borderRadius: 12, padding: '16px 12px',
-          textAlign: 'center', cursor: 'pointer', color: '#b4785a',
+          textAlign: 'center', cursor: 'pointer', color: '#5c3a1e',
         }}>
           <span style={{ fontSize: 18, color: '#c8a086' }}>＋</span>
           <div style={{ fontSize: 12, marginTop: 4 }}>눌러서 {n === 1 ? '첫 번째' : '두 번째'} 사람 선택</div>
@@ -222,9 +222,9 @@ function SlotView({ n, slot, mode, accent, onOpen, onJob, onMbti }: {
       {/* 연인 모드 + 슬롯 채워짐 → 직업·MBTI 추가 입력 */}
       {slot && mode === 'couple' && (
         <div style={{ marginTop: 8, background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: 12 }}>
-          <div style={{ fontSize: 11, color: '#96502e', marginBottom: 6 }}>직업 <span style={{ color: '#c5a590' }}>(궁합 점수에 반영)</span></div>
+          <div style={{ fontSize: 11, color: '#96502e', marginBottom: 6 }}>직업 <span style={{ color: '#6b5340' }}>(궁합 점수에 반영)</span></div>
           <JobSelect value={slot.job ?? ''} onChange={onJob} />
-          <div style={{ fontSize: 11, color: '#96502e', margin: '10px 0 6px' }}>MBTI <span style={{ color: '#c5a590' }}>(해설에만 참고 · 선택)</span></div>
+          <div style={{ fontSize: 11, color: '#96502e', margin: '10px 0 6px' }}>MBTI <span style={{ color: '#6b5340' }}>(해설에만 참고 · 선택)</span></div>
           <MbtiInput value={slot.mbti ?? ''} onChange={onMbti} />
         </div>
       )}

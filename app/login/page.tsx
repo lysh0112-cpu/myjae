@@ -97,7 +97,7 @@ export default function LoginPage() {
         background: '#FFFBF7', borderBottom: '0.5px solid #f0e0d5',
       }}>
         <button onClick={() => router.back()}
-          style={{ background: 'none', border: 'none', color: '#b4785a', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>←</button>
+          style={{ background: 'none', border: 'none', color: '#5c3a1e', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>←</button>
       </div>
 
       <div style={{ padding: '36px 24px 24px' }}>
@@ -122,13 +122,13 @@ export default function LoginPage() {
               <span style={{ color: '#96502e' }}>Myung</span><span style={{ color: '#b46e46' }}>Cafe</span>
             </span>
           </div>
-          <div style={{ fontSize: 13, color: '#b4785a' }}>다시 오신 걸 환영해요 ✦</div>
+          <div style={{ fontSize: 13, color: '#5c3a1e' }}>다시 오신 걸 환영해요 ✦</div>
         </div>
 
         <form onSubmit={handleLogin}>
           {/* 이메일 */}
           <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 11, color: '#b4785a', marginBottom: 6 }}>이메일</div>
+            <div style={{ fontSize: 11, color: '#5c3a1e', marginBottom: 6 }}>이메일</div>
             <div style={inputWrap}>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="name@example.com" style={inputStyle} autoComplete="email" />
@@ -137,12 +137,12 @@ export default function LoginPage() {
 
           {/* 비밀번호 */}
           <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 11, color: '#b4785a', marginBottom: 6 }}>비밀번호</div>
+            <div style={{ fontSize: 11, color: '#5c3a1e', marginBottom: 6 }}>비밀번호</div>
             <div style={inputWrap}>
               <input type={showPw ? 'text' : 'password'} value={pw} onChange={e => setPw(e.target.value)}
                 placeholder="비밀번호 입력" style={inputStyle} autoComplete="current-password" />
               <button type="button" onClick={() => setShowPw(v => !v)}
-                style={{ background: 'none', border: 'none', color: '#c0a898', cursor: 'pointer', fontSize: 15 }}>
+                style={{ background: 'none', border: 'none', color: '#6b5340', cursor: 'pointer', fontSize: 15 }}>
                 {showPw ? '🙈' : '👁'}
               </button>
             </div>
@@ -150,12 +150,12 @@ export default function LoginPage() {
 
           {/* 로그인 유지 / 비번찾기 */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#b4785a', cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#5c3a1e', cursor: 'pointer' }}>
               <input type="checkbox" checked={keepLogin} onChange={e => setKeepLogin(e.target.checked)}
                 style={{ width: 14, height: 14, accentColor: '#b46e46' }} />
               로그인 유지
             </label>
-            <button type="button" style={{ background: 'none', border: 'none', fontSize: 12, color: '#b4785a', cursor: 'pointer' }}>비밀번호 찾기</button>
+            <button type="button" style={{ background: 'none', border: 'none', fontSize: 12, color: '#5c3a1e', cursor: 'pointer' }}>비밀번호 찾기</button>
           </div>
 
           {error && <div style={{ color: '#c05a5a', fontSize: 12, marginBottom: 14, textAlign: 'center' }}>{error}</div>}
@@ -174,7 +174,7 @@ export default function LoginPage() {
         {/* 구분선 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
           <div style={{ flex: 1, height: '0.5px', background: '#e8d5c5' }} />
-          <span style={{ fontSize: 11, color: '#c0a898' }}>간편하게 로그인</span>
+          <span style={{ fontSize: 11, color: '#6b5340' }}>간편하게 로그인</span>
           <div style={{ flex: 1, height: '0.5px', background: '#e8d5c5' }} />
         </div>
 
@@ -185,12 +185,12 @@ export default function LoginPage() {
           style={{ width: '100%', height: 50, background: '#03C75A', border: 'none', borderRadius: 14, color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', marginBottom: 10 }}>Ｎ 네이버로 로그인</button>
         <button onClick={() => handleSocial('구글')}
           style={{ width: '100%', height: 50, background: '#fff', border: '0.5px solid #e0ddd6', borderRadius: 14, color: '#333', fontSize: 14, fontWeight: 500, cursor: 'pointer', marginBottom: 8 }}>Ｇ 구글로 로그인</button>
-        <div style={{ textAlign: 'center', fontSize: 10, color: '#c0a898', marginBottom: 26 }}>소셜 로그인은 준비 중이에요</div>
+        <div style={{ textAlign: 'center', fontSize: 10, color: '#6b5340', marginBottom: 26 }}>소셜 로그인은 준비 중이에요</div>
 
         {/* 회원가입 링크 */}
         <div style={{ textAlign: 'center', fontSize: 13, color: '#8a7868', paddingTop: 18, borderTop: '0.5px solid #f0e0d5' }}>
           아직 회원이 아니신가요?{' '}
-          <span onClick={() => router.push('/signup')} style={{ color: '#c8783c', fontWeight: 600, cursor: 'pointer' }}>회원가입</span>
+          <span onClick={() => router.push('/signup')} style={{ color: '#8f3d0e', fontWeight: 600, cursor: 'pointer' }}>회원가입</span>
         </div>
 
       </div>

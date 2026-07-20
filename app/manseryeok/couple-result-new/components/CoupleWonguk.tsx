@@ -126,7 +126,7 @@ export default function CoupleWonguk({ left, right }: Props) {
             {left.name}
             {left.isMe && <span style={{ fontSize: 9, color: '#b46e46', marginLeft: 3 }}>나</span>}
           </div>
-          {left.birth && <div style={{ fontSize: 10, color: '#b4785a' }}>{left.birth}</div>}
+          {left.birth && <div style={{ fontSize: 10, color: '#5c3a1e' }}>{left.birth}</div>}
         </div>
         <div style={{ color: '#d4537e', fontSize: 15 }}>♥</div>
         <div style={{ textAlign: 'center' }}>
@@ -134,7 +134,7 @@ export default function CoupleWonguk({ left, right }: Props) {
             {right.name}
             {right.isMe && <span style={{ fontSize: 9, color: '#b46e46', marginLeft: 3 }}>나</span>}
           </div>
-          {right.birth && <div style={{ fontSize: 10, color: '#b4785a' }}>{right.birth}</div>}
+          {right.birth && <div style={{ fontSize: 10, color: '#5c3a1e' }}>{right.birth}</div>}
         </div>
       </div>
 

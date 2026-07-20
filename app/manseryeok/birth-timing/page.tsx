@@ -161,7 +161,7 @@ function BirthTimingInner() {
           style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
         <div>
           <div style={{ fontSize: 15, fontWeight: 500, color: '#3a2e28' }}>출산 시기 택일</div>
-          <div style={{ fontSize: 10.5, color: '#b4785a' }}>아기에게 좋은 출산일을 찾아드려요</div>
+          <div style={{ fontSize: 10.5, color: '#5c3a1e' }}>아기에게 좋은 출산일을 찾아드려요</div>
         </div>
       </div>
 
@@ -289,7 +289,7 @@ export default function BirthTimingPage() {
   return (
     <Suspense fallback={
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FDF6F0' }}>
-        <div style={{ color: '#b4785a' }}>로딩 중...</div>
+        <div style={{ color: '#5c3a1e' }}>로딩 중...</div>
       </div>
     }>
       <BirthTimingInner />
