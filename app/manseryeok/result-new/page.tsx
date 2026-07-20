@@ -556,10 +556,13 @@ function ResultNewContent() {
           </div>
         )}
 
-        {/* ⑩ 상담 버튼 */}
-        <div style={{background:'#fff',border:'0.5px solid #f0e0d5',borderRadius:'14px',padding:'12px',marginTop:'10px'}}>
-          <ConsultButton priceKey="saju" mode="personal" searchParams={searchParams}/>
-        </div>
+        {/* ⑩ 상담 버튼 — 홈 "내 사주 자세히 보기"(mode=chart)로 들어온 만세력 화면에서는 감춘다.
+            홈 서비스 목록(사주·대운·연월운세)으로 들어온 경우에는 그대로 보인다. */}
+        {!chartOnly && (
+          <div style={{background:'#fff',border:'0.5px solid #f0e0d5',borderRadius:'14px',padding:'12px',marginTop:'10px'}}>
+            <ConsultButton priceKey="saju" mode="personal" searchParams={searchParams}/>
+          </div>
+        )}
 
         {/* ⑪ 하단 저장 버튼 (보관함에 기록. 다시보기(recordId)면 '저장됨') */}
         {info && !chartOnly && (
