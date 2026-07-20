@@ -2,7 +2,7 @@
 import { Suspense, useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
-import { calcYongsin } from '@/lib/saju/yongsin'
+import { calcYongsinCompat as calcYongsin } from '@/lib/saju/yongsinNew'
 import { supabase } from '@/lib/supabase'
 import { diagnoseName, type NameChar, type Grade } from '@/lib/saju/naming'
 
@@ -121,7 +121,7 @@ function HanjaInner() {
 
   const givenChars = chars.slice(1)
 
-  const { saju, dayStem, converting } = useResultSaju(
+  const { saju, solar, dayStem, converting } = useResultSaju(
     info?.calType || '양력',
     info?.year || 0,
     info?.month || 0,
@@ -133,12 +133,14 @@ function HanjaInner() {
   const yong = useMemo(() => {
     if (!saju || !dayStem) return { yongsin: '', heeksin: '', score: {} as Record<string, number> }
     try {
-      const y = calcYongsin(saju, dayStem)
+      // 심산 오행 점수로 계산 (월지 계절 치환 반영)
+      const y = calcYongsin(saju, dayStem, solar?.month, solar?.day,
+        saju.find(p => p.pillar === '시주')?.branch ?? null)
       return { yongsin: ohaengChar(y.yongsin), heeksin: ohaengChar(y.heeksin), score: y.score }
     } catch {
       return { yongsin: '', heeksin: '', score: {} as Record<string, number> }
     }
-  }, [saju, dayStem])
+  }, [saju, dayStem, solar])
   const yongsin = yong.yongsin
   const yongsinReady = !converting && !!yongsin
 

@@ -2,7 +2,7 @@
 import { Suspense, useState, useEffect, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
-import { calcYongsin } from '@/lib/saju/yongsin'
+import { calcYongsinCompat as calcYongsin } from '@/lib/saju/yongsinNew'
 import { calcSimsanOhaeng, toPercentList } from '@/lib/saju/simsanOhaeng'
 import { buildMulsangPrompt, STYLE_CONFIGS } from '@/lib/saju/mulsangPrompt'
 import { buildMulsangTongbyeonPrompt, type Ohaeng } from '@/lib/saju/mulsangTongbyeonPrompt'
@@ -221,8 +221,12 @@ function MulsangInner() {
     [saju, solarMonth, solarDay, hourBranch],
   )
   const yongsinResult = useMemo(
-    () => (saju.length > 0 && dayStem ? calcYongsin(saju, dayStem) : null),
-    [saju, dayStem],
+    // 심산 오행 점수로 계산 (월지 계절 치환 반영)
+    () => (saju.length > 0 && dayStem
+      ? calcYongsin(saju, dayStem, solarMonth, solarDay,
+          saju.find(p => p.pillar === '시주')?.branch ?? null)
+      : null),
+    [saju, dayStem, solarMonth, solarDay],
   )
   // 오행 점수(100점)·최강·결핍 (통변 프롬프트용)
   const ohaengScore = useMemo(() => {
@@ -314,7 +318,8 @@ function MulsangInner() {
     setCommentary(null)
     try {
       const monthBranch = saju.find(p => p.pillar === '월주')?.branch ?? ''
-      const yongsinResult = calcYongsin(saju, dayStem)
+      const yongsinResult = calcYongsin(saju, dayStem, solarMonth, solarDay,
+        saju.find(p => p.pillar === '시주')?.branch ?? null)
       const built = buildMulsangPrompt({
         dayStem,
         monthBranch,

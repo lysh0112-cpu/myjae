@@ -22,7 +22,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { useFortuneCache } from './FortuneCache'
-import { calcYongsin } from '@/lib/saju/yongsin'
+import { calcYongsinCompat as calcYongsin } from '@/lib/saju/yongsinNew'
 import { calcWolunList, calcIlunList } from '@/lib/saju/dayun'
 import {
   scoreMonthlyFortune, monthTrend, pickGoodDays,
@@ -164,7 +164,7 @@ export default function TodayFortuneCard() {
   const [mTextLoading, setMTextLoading] = useState(false)
   const [mTextChecked, setMTextChecked] = useState(false)
 
-  const { saju, dayStem, iljji, converting } = useResultSaju(
+  const { saju, solar, dayStem, iljji, converting } = useResultSaju(
     profile?.cal_type || '양력',
     profile?.birth_year || 0,
     profile?.birth_month || 0,
@@ -236,7 +236,12 @@ export default function TodayFortuneCard() {
         const res = await fetch('/api/daily-fortune', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ saju, dayStem, iljji, nickname: profile?.nickname || undefined }),
+          body: JSON.stringify({
+            saju, dayStem, iljji, nickname: profile?.nickname || undefined,
+            // 심산 오행 점수(월지 계절 치환)용 — 내 생일의 양력 월·일과 시지
+            solarMonth: solar?.month, solarDay: solar?.day,
+            hourBranch: saju.find(p => p.pillar === '시주')?.branch ?? null,
+          }),
         })
         const data = await res.json()
         if (data.error) { console.error('운세 생성 오류:', data.error); dTriedKey.current = null; return }
@@ -277,7 +282,9 @@ export default function TodayFortuneCard() {
     const myDayBranch = saju.find(p => p.pillar === '일주')?.branch ?? iljji
     if (!myMonthBranch || !myDayBranch || myMonthBranch === '?') return null
 
-    const ys = calcYongsin(saju, dayStem)
+    // 심산 오행 점수로 용신 계산 (월지 계절 치환 반영)
+    const ys = calcYongsin(saju, dayStem, solar?.month, solar?.day,
+      saju.find(p => p.pillar === '시주')?.branch ?? null)
     if (!ys) return null
 
     const now = new Date(Date.now() + 9 * 60 * 60 * 1000)   // KST

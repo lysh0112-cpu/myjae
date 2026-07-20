@@ -6,7 +6,7 @@
 //  - Claude 호출 방식은 기존 /api/analyze 와 동일(모델·헤더·엔드포인트 통일).
 
 import { NextRequest, NextResponse } from 'next/server'
-import { calcYongsin } from '@/lib/saju/yongsin'
+import { calcYongsinCompat as calcYongsin } from '@/lib/saju/yongsinNew'
 import { scoreDailyFortune } from '@/lib/saju/dailyFortune'
 import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
 import { createClient } from '@supabase/supabase-js'
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
     // ── 마이페이지에서 넘겨주는 값 ──
     const body = await req.json()
-    const { saju, dayStem, iljji, nickname, ageGroup } = body
+    const { saju, dayStem, iljji, nickname, ageGroup, solarMonth, solarDay, hourBranch } = body
 
     if (!saju || !dayStem || !iljji) {
       return NextResponse.json({ error: '사주 정보가 부족합니다.' }, { status: 400 })
@@ -76,7 +76,8 @@ export async function POST(req: NextRequest) {
     const today = splitGanji(lunar.dayGanji)
 
     // ── 2) 내 용신 계산 : 기존 엔진 그대로 ──
-    const yongsinResult = calcYongsin(saju, dayStem)
+    //   심산 오행 점수로 계산 (월지 계절 치환 반영). 화면이 생일의 양력 월·일을 넘긴다.
+    const yongsinResult = calcYongsin(saju, dayStem, solarMonth, solarDay, hourBranch ?? null)
 
     // ── 3) 100점 채점 : dailyFortune.ts ──
     const scored = scoreDailyFortune({

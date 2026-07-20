@@ -2,7 +2,7 @@
 import { Suspense, useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
-import { calcYongsin } from '@/lib/saju/yongsin'
+import { calcYongsinCompat as calcYongsin } from '@/lib/saju/yongsinNew'
 import { diagnoseName, type NameChar, type DiagnoseResult, type Grade } from '@/lib/saju/naming'
 
 const GOLD = '#FAC775'
@@ -93,7 +93,7 @@ function ResultInner() {
     setLoaded(true)
   }, [])
 
-  const { saju, dayStem } = useResultSaju(
+  const { saju, solar, dayStem } = useResultSaju(
     info?.calType || '양력',
     info?.year || 0,
     info?.month || 0,
@@ -106,7 +106,9 @@ function ResultInner() {
   const afterResult = useMemo<DiagnoseResult | null>(() => {
     if (!saju || !dayStem || chars.length === 0 || picks.length === 0) return null
     try {
-      const y = calcYongsin(saju, dayStem)
+      // 심산 오행 점수로 계산 (월지 계절 치환 반영)
+      const y = calcYongsin(saju, dayStem, solar?.month, solar?.day,
+        saju.find(p => p.pillar === '시주')?.branch ?? null)
       const surname: NameChar = {
         hangul: chars[0].hangul,
         hanja: chars[0].hanja,
@@ -127,7 +129,7 @@ function ResultInner() {
     } catch {
       return null
     }
-  }, [saju, dayStem, chars, picks])
+  }, [saju, dayStem, solar, chars, picks])
 
   if (loaded && (picks.length === 0 || chars.length === 0)) {
     return (
