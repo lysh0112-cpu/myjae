@@ -159,6 +159,54 @@ function yukchin5ToEl(dayEl: Ohaeng, y: Yukchin5): Ohaeng {
   }
 }
 
+// ── 겁재 개수 세기 ──────────────────────────────────────────────────────────
+//   p.151 표 "비겁" 칸의 예외: "식상(70%), 관성(겁재 2개 이상)"
+//   겁재 = 일간과 같은 오행이면서 음양이 다른 것.
+//   ★ 연재쌤 확정: 원국의 천간·지지에 드러난 것만 센다. (지장간은 보지 않는다)
+// ── 통근(通根) 순위표 ───────────────────────────────────────────────────────
+//   출전: 『심산 명리비법 적성노트』 p.145 「통근 순위」
+//   천간 글자가 어느 지지에 뿌리를 내리는지.
+const TONGGEUN: Record<string, string[]> = {
+  甲: ['卯', '寅', '亥', '辰', '未'], 乙: ['卯', '寅', '亥', '辰', '未'],
+  丙: ['午', '巳', '寅', '未', '戌'], 丁: ['午', '巳', '寅', '未', '戌'],
+  戊: ['午', '巳', '未', '戌', '辰', '丑'], 己: ['午', '巳', '未', '戌', '辰', '丑'],
+  庚: ['酉', '申', '戌', '巳', '丑'], 辛: ['酉', '申', '戌', '巳', '丑'],
+  壬: ['子', '亥', '申', '丑', '辰'], 癸: ['子', '亥', '申', '丑', '辰'],
+}
+
+// 인성이 원국에 "뿌리"를 내리고 있는가 — p.151 관성 칸의 "인성 뿌리 X" 판정용.
+//   원국 천간에 인성 오행 글자가 있고, 그 글자가 지지에 통근했으면 뿌리 있음.
+function hasInsungRoot(saju: Pillar[], dayEl: Ohaeng): boolean {
+  const insungEl = relOf(dayEl).insung
+  const branches = saju.map(p => p.branch).filter(Boolean)
+  for (const p of saju) {
+    if (!p.stem || STEM_EL[p.stem] !== insungEl) continue
+    const roots = TONGGEUN[p.stem] ?? []
+    if (branches.some(b => roots.includes(b))) return true
+  }
+  return false
+}
+
+const YANG_BRANCH = new Set(['子', '寅', '辰', '午', '申', '戌'])
+const YANG_STEM_SET = new Set(['甲', '丙', '戊', '庚', '壬'])
+function countGeopjae(saju: Pillar[], dayStem: string): number {
+  const dayEl = STEM_EL[dayStem]
+  if (!dayEl) return 0
+  const dayIsYang = YANG_STEM_SET.has(dayStem)
+  let n = 0
+  for (const p of saju) {
+    // 천간 — 일간 자신은 제외
+    if (p.stem && p.stem !== dayStem && STEM_EL[p.stem] === dayEl) {
+      if (YANG_STEM_SET.has(p.stem) !== dayIsYang) n++
+    }
+    // 지지
+    if (p.branch && BRANCH_EL[p.branch] === dayEl) {
+      if (YANG_BRANCH.has(p.branch) !== dayIsYang) n++
+    }
+  }
+  return n
+}
+
 // 억부 5신 계산 — p.151 표 그대로.
 //   "무엇이 강한가"는 육친별 점수 합계로 정한다.
 //   ★ 심산 오행 점수(simsanOhaeng)가 이미 월지 계절 치환을 반영하고 있으므로
@@ -166,7 +214,7 @@ function yukchin5ToEl(dayEl: Ohaeng, y: Yukchin5): Ohaeng {
 //     연재쌤 확인: "이미 표에 넣어준 것"
 //   기신·구신·한신은 p.150 정의대로 계산한다.
 //     기신 = 용신을 극 / 구신 = 희신을 극 / 한신 = 나머지
-function calcEokbu(dayEl: Ohaeng, score: Record<Ohaeng, number>): EokbuResult {
+function calcEokbu(dayEl: Ohaeng, score: Record<Ohaeng, number>, saju: Pillar[], dayStem: string): EokbuResult {
   // 오행 점수 → 육친 점수로 합산
   const byYukchin: Record<Yukchin5, number> = { 비겁: 0, 식상: 0, 재성: 0, 관성: 0, 인성: 0 }
   for (const el of ALL) byYukchin[yukchinOfEl(dayEl, el)] += score[el] ?? 0
@@ -177,13 +225,34 @@ function calcEokbu(dayEl: Ohaeng, score: Record<Ohaeng, number>): EokbuResult {
   for (const y of ORDER) if (byYukchin[y] > byYukchin[gang]) gang = y
 
   const row = P151_TABLE[gang]
-  const yongsin = yukchin5ToEl(dayEl, row.yong)
+  let yongYukchin: Yukchin5 = row.yong
+  let note = row.note
+
+  // ★ p.151 표 예외 — 비겁이 강한 사주:
+  //     "식상(70%), 관성(겁재 2개 이상)"
+  //   기본은 식상이지만, 원국에 겁재가 2개 이상이면 관성으로 다스린다.
+  //   연재쌤 확정: 겁재는 원국 천간·지지에 드러난 것만 센다. (지장간은 보지 않는다)
+  if (gang === '비겁' && countGeopjae(saju, dayStem) >= 2) {
+    yongYukchin = '관성'
+    note = '겁재가 둘 이상이라 관성으로 다스려요'
+  }
+
+  // ★ p.151 표 예외 — 관성이 강한 사주:
+  //     "인성(90%), 인성 뿌리 X → 식상"
+  //   기본은 인성이지만, 인성이 원국에 뿌리를 못 내렸으면 식상으로 눌러 준다.
+  //   (뿌리 판정은 p.145 통근 순위표를 따른다)
+  if (gang === '관성' && !hasInsungRoot(saju, dayEl)) {
+    yongYukchin = '식상'
+    note = '인성이 뿌리가 없어 식상으로 눌러 줘요'
+  }
+
+  const yongsin = yukchin5ToEl(dayEl, yongYukchin)
   const heesin = yukchin5ToEl(dayEl, row.hee)
   const gisin = geukOf(yongsin)     // 용신을 극하는 것 (p.150)
   const gusin = geukOf(heesin)      // 희신을 극하는 것 (p.150)
   const hansin = ALL.find(e => ![yongsin, heesin, gisin, gusin].includes(e))!
 
-  return { yongsin, heesin, gisin, gusin, hansin, note: row.note }
+  return { yongsin, heesin, gisin, gusin, hansin, note }
 }
 
 // ── ③ 격국용신 (용신 1개만) ─────────────────────────────────────────────────
@@ -275,7 +344,7 @@ export function calcYongsinNew(saju: Pillar[], dayStem: string, scoreOverride?: 
     status,
     dayElement: dayEl,
     johu: calcJohu(monthBranch, dayEl, inbi, score),
-    eokbu: calcEokbu(dayEl, score),
+    eokbu: calcEokbu(dayEl, score, saju, dayStem),
     gyeokguk: calcGyeokguk(saju, dayStem),
   }
 }
