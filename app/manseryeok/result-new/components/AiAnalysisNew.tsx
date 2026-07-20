@@ -132,7 +132,7 @@ export default function AiAnalysisNew({
         }}>
           {isFullPaid ? '전체 분석' : '기본'}
         </span>
-        <span style={{ fontSize: '11px', color: '#bbb', marginLeft: '4px' }}>
+        <span style={{ fontSize: '11px', color: '#6b5340', marginLeft: '4px' }}>
           {isFullPaid ? '10가지 항목 전체 분석' : '성격·기질 + 건강·체질'}
         </span>
       </div>
@@ -148,7 +148,7 @@ export default function AiAnalysisNew({
             <div style={{ fontSize: '28px', animation: 'spin 1s linear infinite' }}>✦</div>
             <p style={{ fontSize: '13px', color: '#8B6914', textAlign: 'center', lineHeight: 1.7 }}>
               {isFullPaid ? '나머지 8가지를 분석하고 있습니다...' : '사주를 풀이하고 있습니다...'}<br />
-              <span style={{ fontSize: '11px', color: '#bbb' }}>(약 20~30초 소요)</span>
+              <span style={{ fontSize: '11px', color: '#6b5340' }}>(약 20~30초 소요)</span>
             </p>
             <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
           </div>
