@@ -17,7 +17,7 @@
 //   펼치면 애정·재물·건강 + 오늘의 명리 한 조각이 보인다.
 // ============================================================================
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useResultSaju } from '@/hooks/useResultSaju'
@@ -148,6 +148,11 @@ export default function TodayFortuneCard() {
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<'day' | 'month'>('day')
   const cache = useFortuneCache()
+  // ⚠ state 로 "이미 불렀나"를 판단하면, monthly 가 렌더마다 새 객체가 되는 탓에
+  //   setState → 렌더 → 조건에 걸려 return → 로딩이 영영 안 풀리는 일이 생긴다.
+  //   그래서 ref 에 "시도한 달"을 적어둔다. (2026-07-20 수정)
+  const mTriedKey = useRef<string | null>(null)
+  const dTriedKey = useRef<string | null>(null)
 
   // 이달의 운세 AI 해설 (점수는 계산, 글만 AI)
   const [mText, setMText] = useState<MonthText | null>(null)
@@ -211,10 +216,13 @@ export default function TodayFortuneCard() {
   useEffect(() => {
     if (!fortuneChecked) return
     if (fortune) return
-    if (fortuneLoading) return
     if (converting) return
     if (!userId) return
     if (!profile?.saju_saved || !dayStem || !iljji) return
+
+    const dKey = todayKST()
+    if (dTriedKey.current === dKey) return   // 오늘은 이미 시도했다
+    dTriedKey.current = dKey
 
     let cancelled = false
     ;(async () => {
@@ -226,7 +234,7 @@ export default function TodayFortuneCard() {
           body: JSON.stringify({ saju, dayStem, iljji, nickname: profile?.nickname || undefined }),
         })
         const data = await res.json()
-        if (data.error) { console.error('운세 생성 오류:', data.error); return }
+        if (data.error) { console.error('운세 생성 오류:', data.error); dTriedKey.current = null; return }
         if (cancelled) return
 
         const row: Fortune = {
@@ -246,6 +254,7 @@ export default function TodayFortuneCard() {
           .upsert({ user_id: userId, ...row }, { onConflict: 'user_id,fortune_date' })
       } catch (e) {
         console.error(e)
+        dTriedKey.current = null   // 실패했으면 다음에 다시 시도할 수 있게
       } finally {
         if (!cancelled) setFortuneLoading(false)
       }
@@ -298,14 +307,16 @@ export default function TodayFortuneCard() {
   useEffect(() => {
     if (tab !== 'month') return
     if (!monthly || !userId) return
-    if (mTextChecked || mTextLoading) return
+
+    const mKey = `${monthly.year}-${String(monthly.month).padStart(2, '0')}`
+    if (mTriedKey.current === mKey) return   // 이 달은 이미 시도했다
+    mTriedKey.current = mKey
 
     let cancelled = false
     ;(async () => {
       setMTextLoading(true)
       try {
         // 담아둔 게 있으면 DB를 보지 않는다
-        const mKey = `${monthly.year}-${String(monthly.month).padStart(2, '0')}`
         const cachedM = cache.getMonthly(mKey)
         if (cachedM) { setMText(cachedM as MonthText); setMTextChecked(true); return }
 
@@ -343,7 +354,7 @@ export default function TodayFortuneCard() {
         })
         const data = await res.json()
         if (cancelled) return
-        if (data.error) { console.error('월운 해설 오류:', data.error); setMTextChecked(true); return }
+        if (data.error) { console.error('월운 해설 오류:', data.error); mTriedKey.current = null; setMTextChecked(true); return }
 
         const text: MonthText = {
           summary: data.summary, love: data.love, money: data.money, health: data.health,
@@ -359,6 +370,7 @@ export default function TodayFortuneCard() {
         }, { onConflict: 'user_id,year,month' })
       } catch (e) {
         console.error(e)
+        mTriedKey.current = null   // 실패했으면 다음에 다시 시도할 수 있게
       } finally {
         if (!cancelled) { setMTextLoading(false); setMTextChecked(true) }
       }
