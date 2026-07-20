@@ -190,10 +190,14 @@ export default function YongsinCard({ result, saju }: Props) {
     )
   }
 
-  const labelBox = (title: string, sub: string) => (
+  // strongSub=true 면 아랫줄(부제)을 크고 진하게 — 격국 이름처럼 "설명"이 아니라
+  // "정보"인 경우에 쓴다. (연재쌤: 무슨 격인지가 직업·사회활동 판단에 중요)
+  const labelBox = (title: string, sub: string, strongSub = false) => (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#fff3e9', border: '0.5px solid #e8d5c5', borderRadius: 9, minWidth: 52, padding: '6px 0' }}>
       <span style={{ fontSize: 11, fontWeight: 700, color: '#8f3d0e' }}>{title}</span>
-      <span style={{ fontSize: 8, color: '#6b5340', marginTop: 2 }}>{sub}</span>
+      <span style={strongSub
+        ? { fontSize: 12, fontWeight: 700, color: '#8f3d0e', marginTop: 3, whiteSpace: 'nowrap' as const }
+        : { fontSize: 8, color: '#6b5340', marginTop: 2 }}>{sub}</span>
     </div>
   )
 
@@ -209,7 +213,7 @@ export default function YongsinCard({ result, saju }: Props) {
 
       {/* ② 격국용신 (용신 1개) */}
       <div style={{ display: 'flex', gap: 7, alignItems: 'stretch', marginBottom: 8 }}>
-        {labelBox('격국용신', gyeokguk.name || '직업·명예')}
+        {labelBox('격국용신', gyeokguk.name || '직업·명예', !!gyeokguk.name)}
         <div style={{ flex: 1 }}>{gyeokCell()}</div>
       </div>
 
