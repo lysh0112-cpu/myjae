@@ -26,14 +26,15 @@ import { JIJI_GRADE, type JijiGrade } from './jijiGrade'
 
 // ── 조정 가능한 값들 (연재쌤 확정 시 여기만 고친다) ─────────────
 /** 지지 등급 → 점수 (만점 대비 비율). 강의노트 201쪽 A3/B1.5/C0/D−1.5 비율 */
-const GRADE_RATIO: Record<JijiGrade, number> = { A: 1.0, B: 0.75, C: 0.5, D: 0.25 }
+const GRADE_RATIO: Record<JijiGrade, number> = { A: 1.0, B: 0.88, C: 0.76, D: 0.62 }
 /** 지지 30점을 월지·일지에 나누는 비율 (월지가 총사령관) */
 const BRANCH_MAX = { month: 20, day: 10 }
 /** 등급 경계 — 2026-07-19 확정.
- *    "안 좋은 달이 많으면 사람들이 싫어한다"는 판단으로 후하게 잡았다.
- *    시뮬레이션(2000명×12개월): 활짝 8.5% · 순한바람 34.8% · 차곡차곡 54.4% · 숨고르기 2.3%
- *    → 10명 중 7명이 1년에 한 번은 "활짝 열리는 달"을 본다. */
-const CUTS = { S: 75, A: 62, B: 40 }
+ *    배점을 후하게 올린 뒤(최저 67점) 경계도 함께 올렸다.
+ *    "점수가 낮으면 사람들이 기분 나빠한다"는 판단.
+ *    시뮬레이션(3000명×12개월): 평균 83점 · 최저 67점 · 50점 미만 0%
+ *      활짝 2.5% · 순한바람 23% · 차곡차곡 70% · 숨고르기 4.5% */
+const CUTS = { S: 93, A: 87, B: 75 }
 
 const STEM_EL: Record<string, string> = {
   甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토',
@@ -115,10 +116,10 @@ export function scoreMonthlyFortune(input: MonthlyFortuneInput): MonthlyFortuneS
   // 이달의 기운(천간+지지 오행)이 내게 필요한 것인가
   let ohaeng = 0
   const score1 = (el: string): number => {
-    if (el === yongsin) return 15
-    if (el === heeksin) return 11
-    if (el === gisin) return 2
-    return 7   // 한신·구신 등 그 밖 — 나쁘지도 좋지도 않음
+    if (el === yongsin) return 16
+    if (el === heeksin) return 14
+    if (el === gisin) return 10   // 기신이어도 바닥까지 떨어뜨리지 않는다
+    return 12                     // 한신·구신 등 그 밖
   }
   ohaeng = score1(mEl) + score1(mbEl)
 
@@ -126,11 +127,11 @@ export function scoreMonthlyFortune(input: MonthlyFortuneInput): MonthlyFortuneS
   // 일간 기준. 합이면 가장 좋고, 생해주면 좋고, 극하면 낮다.
   let stem: number
   if (STEM_HAP[myDayStem] === monthStem) stem = 20        // 천간합
-  else if (GEN[mEl] === dayEl) stem = 16                  // 이달이 나를 생함
-  else if (mEl === dayEl) stem = 12                       // 같은 오행(비겁)
-  else if (GEN[dayEl] === mEl) stem = 10                  // 내가 이달을 생함
-  else if (CTRL[mEl] === dayEl) stem = 4                  // 이달이 나를 극함
-  else stem = 8                                           // 내가 이달을 극함
+  else if (GEN[mEl] === dayEl) stem = 18                  // 이달이 나를 생함
+  else if (mEl === dayEl) stem = 17                       // 같은 오행(비겁)
+  else if (GEN[dayEl] === mEl) stem = 16                  // 내가 이달을 생함
+  else if (CTRL[mEl] === dayEl) stem = 13                 // 이달이 나를 극함
+  else stem = 15                                          // 내가 이달을 극함
 
   // ── ③ 지지 30점 = 월지 20 + 일지 10 ────────────────
   //    소스: "운을 일단 月支에 대입해라. 月支가 총사령관"
@@ -144,9 +145,9 @@ export function scoreMonthlyFortune(input: MonthlyFortuneInput): MonthlyFortuneS
   // 이달 천간이 나에게 어떤 자리인가. 인성·재성처럼 도움되는 자리에 높은 점수.
   const sipName = sipseongOf(dayEl, mEl)
   const SIPSEONG_PT: Record<string, number> = {
-    인성: 16, 재성: 15, 식상: 13, 비겁: 11, 관성: 9,
+    인성: 18, 재성: 18, 식상: 17, 비겁: 16, 관성: 15,
   }
-  const sipseong = SIPSEONG_PT[sipName] ?? 10
+  const sipseong = SIPSEONG_PT[sipName] ?? 16
 
   const total = Math.round(ohaeng + stem + branch + sipseong)
   const grade: 'S' | 'A' | 'B' | 'C' =

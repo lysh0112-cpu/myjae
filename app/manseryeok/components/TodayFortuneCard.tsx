@@ -92,11 +92,11 @@ function luckyColorChip(name: string | null): string {
 
 // 총점 → 우리말 등급.
 // ⚠ 겁주지 않기 원칙: 낮은 점수도 "나쁨"이라 하지 않는다.
-//   기준은 dailyFortune.ts 의 등급표(90/70/40)와 같게 맞춤.
+//   기준은 dailyFortune.ts 의 등급표(90/84/72)와 같게 맞춤. (2026-07-19 상향)
 function gradeOf(total: number): { label: string; color: string; bar: string } {
   if (total >= 90) return { label: '아주 좋은 날', color: '#96502e', bar: '#e09030' }
-  if (total >= 70) return { label: '좋은 편', color: '#96502e', bar: '#e09030' }
-  if (total >= 40) return { label: '무난한 날', color: '#b4785a', bar: '#d9a878' }
+  if (total >= 84) return { label: '좋은 편', color: '#96502e', bar: '#e09030' }
+  if (total >= 72) return { label: '무난한 날', color: '#b4785a', bar: '#d9a878' }
   return { label: '쉬어가는 날', color: '#b4785a', bar: '#cbb5a0' }
 }
 
@@ -241,7 +241,10 @@ export default function TodayFortuneCard() {
     }
     const score = scoreMonthlyFortune({ ...base, monthStem: thisMonth.cheongan, monthBranch: thisMonth.jiji })
     const trend = monthTrend(base, wolun)
-    const days = pickGoodDays(calcIlunList(dayStem, year, month), myDayBranch)
+    // 오늘 이후 날짜만 (이미 지난 날을 "조심하세요"라고 하면 쓸모없다)
+    const today = now.getUTCDate()
+    const remaining = calcIlunList(dayStem, year, month).filter(d => d.day >= today)
+    const days = pickGoodDays(remaining, myDayBranch)
     const prev = trend.find(t => t.month === (month === 1 ? 12 : month - 1))
 
     return { year, month, ganji: thisMonth, score, trend, days, prev }
@@ -332,13 +335,16 @@ export default function TodayFortuneCard() {
     const gc = MONTH_GRADE_COLOR[ms.grade]
     const diff = prev ? ms.total - prev.total : 0
     const maxTrend = Math.max(...trend.map(t => t.total), 1)
+    // 월지와 일지가 같은 사주면 두 영역 결과가 똑같아진다 → 한 줄로 합쳐 보여준다
+    const sameBranch = ms.area.envTag === ms.area.selfTag && ms.area.env === ms.area.self
 
     const areaRow = (icon: string, label: string, pct: number, gradeTxt: string, tag: string) => (
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <span style={{ fontSize: 14 }}>{icon}</span>
         <span style={{ fontSize: 11.5, color: '#96502e', fontWeight: 600, width: 46, flexShrink: 0 }}>{label}</span>
-        <div style={{ flex: 1, height: 6, background: '#f0ddd0', borderRadius: 3, overflow: 'hidden' }}>
-          <div style={{ width: `${pct}%`, height: '100%', background: pct >= 70 ? '#3b8b3f' : pct >= 45 ? '#d9a878' : '#cbb5a0', borderRadius: 3 }} />
+        <div style={{ flex: 1, height: 7, background: '#ecd9c6', borderRadius: 4, overflow: 'hidden' }}>
+          {/* 낮은 등급이어도 최소 18%는 채워서 막대가 보이게 한다 */}
+          <div style={{ width: `${Math.max(18, pct)}%`, height: '100%', background: pct >= 70 ? '#3b8b3f' : pct >= 45 ? '#c8873c' : '#9a7358', borderRadius: 4 }} />
         </div>
         <span style={{ fontSize: 9.5, color: '#b4785a', width: 52, textAlign: 'right', flexShrink: 0 }}>{tag || gradeTxt}</span>
       </div>
@@ -363,12 +369,21 @@ export default function TodayFortuneCard() {
           </div>
         )}
 
-        {/* 영역별 — 일·환경 / 나·건강 */}
-        <div style={{ background: '#faede0', borderRadius: 9, padding: 11, marginBottom: 11 }}>
-          {areaRow('🏢', '일·환경', ms.area.env, ms.area.envGrade, ms.area.envTag)}
-          <div style={{ marginBottom: -8 }}>
-            {areaRow('🌿', '나·건강', ms.area.self, ms.area.selfGrade, ms.area.selfTag)}
-          </div>
+        {/* 영역별 — 일·환경 / 나·건강
+            월지와 일지가 같은 사주(예: 子월 子일)는 두 줄이 똑같이 나오므로 한 줄로 합친다 */}
+        <div style={{ background: '#f7e2cc', borderRadius: 9, padding: 11, marginBottom: 11 }}>
+          {sameBranch ? (
+            <div style={{ marginBottom: -8 }}>
+              {areaRow('✦', '이번 달', ms.area.env, ms.area.envGrade, ms.area.envTag)}
+            </div>
+          ) : (
+            <>
+              {areaRow('🏢', '일·환경', ms.area.env, ms.area.envGrade, ms.area.envTag)}
+              <div style={{ marginBottom: -8 }}>
+                {areaRow('🌿', '나·건강', ms.area.self, ms.area.selfGrade, ms.area.selfTag)}
+              </div>
+            </>
+          )}
         </div>
 
         {/* 이번 달 좋은 날 */}

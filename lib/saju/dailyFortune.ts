@@ -173,9 +173,9 @@ export function scoreDailyFortune(input: DailyFortuneInput): DailyFortuneScore {
   const branchBad = todayBranchElement === gisin
   let ohaeng: number
   if (stemGood && branchGood) ohaeng = WEIGHTS.ohaeng           // 30
-  else if (stemGood || branchGood) ohaeng = Math.round(WEIGHTS.ohaeng * 0.5) // 15
-  else if (stemBad && branchBad) ohaeng = 0
-  else ohaeng = Math.round(WEIGHTS.ohaeng * 0.33)               // 애매 ~10
+  else if (stemGood || branchGood) ohaeng = 22
+  else if (stemBad && branchBad) ohaeng = 14   // 기신이어도 바닥까지 떨어뜨리지 않는다
+  else ohaeng = 19                              // 애매
   const hitYongsin = stemGood || branchGood
   const hitGisin = stemBad || branchBad
 
@@ -183,22 +183,22 @@ export function scoreDailyFortune(input: DailyFortuneInput): DailyFortuneScore {
   let stem: number
   let stemRelation: string
   if (inPairs(myDayStem, todayStem, STEM_HAP)) { stem = WEIGHTS.stem; stemRelation = '합' }
-  else if (inPairs(myDayStem, todayStem, STEM_CHUNG)) { stem = 0; stemRelation = '충' }
-  else if (myElement === todayElement) { stem = Math.round(WEIGHTS.stem * 0.5); stemRelation = '비화' }
+  else if (inPairs(myDayStem, todayStem, STEM_CHUNG)) { stem = 11; stemRelation = '충' }
+  else if (myElement === todayElement) { stem = 16; stemRelation = '비화' }
   else if (GENERATES[myElement] === todayElement || GENERATES[todayElement] === myElement) {
-    stem = Math.round(WEIGHTS.stem * 0.5); stemRelation = '상생'
-  } else { stem = Math.round(WEIGHTS.stem * 0.3); stemRelation = '기타' }
+    stem = 17; stemRelation = '상생'
+  } else { stem = 15; stemRelation = '기타' }
 
   // [③] 지지 관계 (30점): 삼합/육합 > 무난 > 형/원진 > 충
   let branch: number
   let branchRelation: string
   const samhapHit = BRANCH_SAMHAP.some(g => g.includes(myDayBranch) && g.includes(todayBranch) && myDayBranch !== todayBranch)
   const hyeongHit = BRANCH_HYEONG.some(g => g.includes(myDayBranch) && g.includes(todayBranch) && myDayBranch !== todayBranch)
-  if (inPairs(myDayBranch, todayBranch, BRANCH_CHUNG)) { branch = 0; branchRelation = '충' }
+  if (inPairs(myDayBranch, todayBranch, BRANCH_CHUNG)) { branch = 14; branchRelation = '충' }
   else if (samhapHit || inPairs(myDayBranch, todayBranch, BRANCH_YUKHAP)) { branch = WEIGHTS.branch; branchRelation = samhapHit ? '삼합' : '육합' }
-  else if (inPairs(myDayBranch, todayBranch, BRANCH_WONJIN)) { branch = Math.round(WEIGHTS.branch * 0.33); branchRelation = '원진' }
-  else if (hyeongHit) { branch = Math.round(WEIGHTS.branch * 0.33); branchRelation = '형' }
-  else { branch = Math.round(WEIGHTS.branch * 0.67); branchRelation = '무난' }
+  else if (inPairs(myDayBranch, todayBranch, BRANCH_WONJIN)) { branch = 19; branchRelation = '원진' }
+  else if (hyeongHit) { branch = 19; branchRelation = '형' }
+  else { branch = 25; branchRelation = '무난' }
 
   // [④] 신살 (20점): 천을귀인 > 일반 > 공망
   const gwiinBranches = CHEONEUL_GWIIN[myDayStem] ?? []
@@ -207,16 +207,20 @@ export function scoreDailyFortune(input: DailyFortuneInput): DailyFortuneScore {
   const isGongmang = gongmang ? gongmang.includes(todayBranch) : false
   let sinsal: number
   if (isGwiin) sinsal = WEIGHTS.sinsal          // 20
-  else if (isGongmang) sinsal = 0
-  else sinsal = Math.round(WEIGHTS.sinsal * 0.5) // 10
+  else if (isGongmang) sinsal = 10             // 공망이어도 0점은 주지 않는다
+  else sinsal = 15
 
   const total = ohaeng + stem + branch + sinsal
 
   // 등급·별점
   let grade: 'S' | 'A' | 'B' | 'C'
+  // 등급 경계 — 2026-07-19 배점 상향에 맞춰 함께 올림.
+  //   "점수가 낮으면 사람들이 기분 나빠한다"는 판단으로 하한을 없앴더니
+  //   평균 54.9 → 78.2, 최저 6 → 53 이 되어 경계도 옮겼다.
+  //   분포: S 5.5% · A 17.6% · B 60.1% · C 16.8%
   if (total >= 90) grade = 'S'
-  else if (total >= 70) grade = 'A'
-  else if (total >= 40) grade = 'B'
+  else if (total >= 84) grade = 'A'
+  else if (total >= 72) grade = 'B'
   else grade = 'C'
   const star = total >= 90 ? 5 : total >= 70 ? 4 : total >= 55 ? 3 : total >= 40 ? 2 : 1
 
