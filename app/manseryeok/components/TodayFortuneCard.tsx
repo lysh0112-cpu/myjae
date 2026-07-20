@@ -21,6 +21,12 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useResultSaju } from '@/hooks/useResultSaju'
+import { calcYongsin } from '@/lib/saju/yongsin'
+import { calcWolunList, calcIlunList } from '@/lib/saju/dayun'
+import {
+  scoreMonthlyFortune, monthTrend, pickGoodDays,
+  MONTH_GRADE_LABEL, MONTH_GRADE_COLOR,
+} from '@/lib/saju/monthlyFortune'
 
 type Fortune = {
   fortune_date: string
@@ -115,6 +121,7 @@ export default function TodayFortuneCard() {
   const [fortuneChecked, setFortuneChecked] = useState(false)
   const [fortuneLoading, setFortuneLoading] = useState(false)
   const [open, setOpen] = useState(false)
+  const [tab, setTab] = useState<'day' | 'month'>('day')
 
   const { saju, dayStem, iljji, converting } = useResultSaju(
     profile?.cal_type || '양력',
@@ -204,6 +211,42 @@ export default function TodayFortuneCard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fortuneChecked, converting, dayStem, iljji, userId, profile?.saju_saved])
 
+  // ── 이달의 운세 (계산만 — AI 호출 없음) ───────────────────────
+  //    월지가 필요해서 명식 배열에서 직접 꺼낸다.
+  //    소스 84쪽: "대운이나 세운을 일단 月支에 대입해라. 月支가 총사령관이다"
+  const monthly = (() => {
+    if (!saju || saju.length < 4 || !dayStem) return null
+    const myMonthBranch = saju.find(p => p.pillar === '월주')?.branch ?? ''
+    const myDayBranch = saju.find(p => p.pillar === '일주')?.branch ?? iljji
+    if (!myMonthBranch || !myDayBranch || myMonthBranch === '?') return null
+
+    const ys = calcYongsin(saju, dayStem)
+    if (!ys) return null
+
+    const now = new Date(Date.now() + 9 * 60 * 60 * 1000)   // KST
+    const year = now.getUTCFullYear()
+    const month = now.getUTCMonth() + 1
+
+    const wolun = calcWolunList(dayStem, year)
+    const thisMonth = wolun.find(w => w.month === month)
+    if (!thisMonth) return null
+
+    const base = {
+      myDayStem: dayStem,
+      myDayBranch,
+      myMonthBranch,
+      yongsin: ys.yongsin,
+      heeksin: ys.heeksin,
+      gisin: ys.gisin,
+    }
+    const score = scoreMonthlyFortune({ ...base, monthStem: thisMonth.cheongan, monthBranch: thisMonth.jiji })
+    const trend = monthTrend(base, wolun)
+    const days = pickGoodDays(calcIlunList(dayStem, year, month), myDayBranch)
+    const prev = trend.find(t => t.month === (month === 1 ? 12 : month - 1))
+
+    return { year, month, ganji: thisMonth, score, trend, days, prev }
+  })()
+
   // ── 화면 ──────────────────────────────────────────────────────────────
   const wrap: React.CSSProperties = {
     background: '#FFFBF7', border: '0.5px solid #f5d5b8',
@@ -213,15 +256,41 @@ export default function TodayFortuneCard() {
   // 로그인 확인 전에는 아무것도 그리지 않는다(깜빡임 방지)
   if (isLoggedIn === null) return null
 
-  const header = (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-      <span style={{ fontSize: 13, fontWeight: 600, color: '#96502e' }}>✦ 오늘의 운세</span>
-      {fortune?.iljin_gan && (
-        <span style={{ fontSize: 10, color: '#b4785a', background: '#faede0', padding: '3px 9px', borderRadius: 10 }}>
-          {todayKST().slice(5).replace('-', '.')} · {fortune.iljin_gan}{fortune.iljin_ji}일
-        </span>
-      )}
+  // 탭 (오늘 / 이달) — 월운 계산이 가능할 때만 탭을 띄운다
+  const tabBar = monthly ? (
+    <div style={{ display: 'flex', gap: 4, background: '#f5ebe2', borderRadius: 9, padding: 3, marginBottom: 12 }}>
+      {([['day', '오늘의 운세'], ['month', '이달의 운세']] as const).map(([k, label]) => {
+        const on = tab === k
+        return (
+          <button key={k} onClick={() => { setTab(k); setOpen(false) }}
+            style={{
+              flex: 1, padding: '7px 0', fontSize: 12, cursor: 'pointer', border: 'none',
+              borderRadius: 7, fontWeight: on ? 600 : 400,
+              background: on ? '#b46e46' : 'transparent',
+              color: on ? '#fff' : '#b4785a',
+            }}>{label}</button>
+        )
+      })}
     </div>
+  ) : null
+
+  const header = (
+    <>
+      {tabBar}
+      <div style={{ display: 'flex', justifyContent: monthly ? 'flex-end' : 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        {!monthly && <span style={{ fontSize: 13, fontWeight: 600, color: '#96502e' }}>✦ 오늘의 운세</span>}
+        {tab === 'day' && fortune?.iljin_gan && (
+          <span style={{ fontSize: 10, color: '#b4785a', background: '#faede0', padding: '3px 9px', borderRadius: 10 }}>
+            {todayKST().slice(5).replace('-', '.')} · {fortune.iljin_gan}{fortune.iljin_ji}일
+          </span>
+        )}
+        {tab === 'month' && monthly && (
+          <span style={{ fontSize: 10, color: '#b4785a', background: '#faede0', padding: '3px 9px', borderRadius: 10 }}>
+            {monthly.month}월 · {monthly.ganji.cheongan}{monthly.ganji.jiji}월
+          </span>
+        )}
+      </div>
+    </>
   )
 
   // 비회원
@@ -251,6 +320,116 @@ export default function TodayFortuneCard() {
             onClick={() => router.push('/mypage-new')}
             style={{ marginTop: 8, fontSize: 12, color: '#c8783c', background: 'none', border: '0.5px solid #f0d0a0', borderRadius: 8, padding: '6px 14px', cursor: 'pointer' }}
           >사주 등록하러 가기</button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── 이달의 운세 탭 ───────────────────────────────────────────
+  if (tab === 'month' && monthly) {
+    const { score: ms, trend, days, prev, month } = monthly
+    const gl = MONTH_GRADE_LABEL[ms.grade]
+    const gc = MONTH_GRADE_COLOR[ms.grade]
+    const diff = prev ? ms.total - prev.total : 0
+    const maxTrend = Math.max(...trend.map(t => t.total), 1)
+
+    const areaRow = (icon: string, label: string, pct: number, gradeTxt: string, tag: string) => (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        <span style={{ fontSize: 14 }}>{icon}</span>
+        <span style={{ fontSize: 11.5, color: '#96502e', fontWeight: 600, width: 46, flexShrink: 0 }}>{label}</span>
+        <div style={{ flex: 1, height: 6, background: '#f0ddd0', borderRadius: 3, overflow: 'hidden' }}>
+          <div style={{ width: `${pct}%`, height: '100%', background: pct >= 70 ? '#3b8b3f' : pct >= 45 ? '#d9a878' : '#cbb5a0', borderRadius: 3 }} />
+        </div>
+        <span style={{ fontSize: 9.5, color: '#b4785a', width: 52, textAlign: 'right', flexShrink: 0 }}>{tag || gradeTxt}</span>
+      </div>
+    )
+
+    return (
+      <div style={wrap}>
+        {header}
+
+        {/* 점수 + 지난달 대비 */}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 7 }}>
+          <span style={{ fontSize: 30, fontWeight: 700, color: '#c8783c', lineHeight: 1 }}>{ms.total}</span>
+          <span style={{ fontSize: 13, color: '#c5a590' }}>/ 100</span>
+          <span style={{ marginLeft: 'auto', fontSize: 11, color: gc.text, background: '#faede0', padding: '3px 10px', borderRadius: 9 }}>{gl}</span>
+        </div>
+        <div style={{ height: 7, background: '#f5e6da', borderRadius: 4, marginBottom: 6, overflow: 'hidden' }}>
+          <div style={{ width: `${Math.max(0, Math.min(100, ms.total))}%`, height: '100%', background: gc.bar, borderRadius: 4 }} />
+        </div>
+        {prev && diff !== 0 && (
+          <div style={{ fontSize: 10.5, color: diff > 0 ? '#3b6d11' : '#b4785a', marginBottom: 11, textAlign: 'right' }}>
+            지난달보다 {diff > 0 ? '↑' : '↓'} {Math.abs(diff)}점
+          </div>
+        )}
+
+        {/* 영역별 — 일·환경 / 나·건강 */}
+        <div style={{ background: '#faede0', borderRadius: 9, padding: 11, marginBottom: 11 }}>
+          {areaRow('🏢', '일·환경', ms.area.env, ms.area.envGrade, ms.area.envTag)}
+          <div style={{ marginBottom: -8 }}>
+            {areaRow('🌿', '나·건강', ms.area.self, ms.area.selfGrade, ms.area.selfTag)}
+          </div>
+        </div>
+
+        {/* 이번 달 좋은 날 */}
+        {(days.good.length > 0 || days.bad.length > 0) && (
+          <div style={{ marginBottom: 11 }}>
+            <div style={{ fontSize: 10, color: '#b4785a', marginBottom: 6 }}>📅 이번 달 눈여겨볼 날</div>
+            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+              {days.good.map(d => (
+                <span key={`g${d.day}`} style={{ fontSize: 10.5, background: '#f0f7ec', color: '#3b6d11', padding: '4px 9px', borderRadius: 7, border: '0.5px solid #d8e8cc' }}>
+                  {month}/{d.day}
+                </span>
+              ))}
+              {days.bad.map(d => (
+                <span key={`b${d.day}`} style={{ fontSize: 10.5, background: '#fdf0ec', color: '#c0705a', padding: '4px 9px', borderRadius: 7, border: '0.5px solid #f0d5cc' }}>
+                  {month}/{d.day} 조심
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 펼치면: 1년 흐름 + 명리 근거 */}
+        {open && (
+          <>
+            <div style={{ paddingTop: 11, borderTop: '0.5px solid #f0e0d5', marginBottom: 11 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 600, color: '#c8783c', marginBottom: 9 }}>📈 올해 흐름</div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 58 }}>
+                {trend.map(t => {
+                  const on = t.month === month
+                  return (
+                    <div key={t.month} style={{ flex: 1, textAlign: 'center' }}>
+                      <div style={{
+                        height: Math.max(4, Math.round((t.total / maxTrend) * 42)),
+                        background: on ? '#e09030' : '#f5e0cc',
+                        borderRadius: '3px 3px 0 0',
+                      }} />
+                      <div style={{ fontSize: 8, color: on ? '#c8783c' : '#c5a590', marginTop: 3, fontWeight: on ? 600 : 400 }}>{t.month}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div style={{ paddingTop: 11, borderTop: '0.5px solid #f0e0d5', marginBottom: 11 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 600, color: '#c8783c', marginBottom: 6 }}>📖 이달의 명리 한 조각</div>
+              {ms.area.envDesc && (
+                <p style={{ fontSize: 11.5, color: '#7a6858', lineHeight: 1.75, margin: '0 0 6px' }}>{ms.area.envDesc}</p>
+              )}
+              {ms.area.selfDesc && ms.area.selfDesc !== ms.area.envDesc && (
+                <p style={{ fontSize: 11.5, color: '#7a6858', lineHeight: 1.75, margin: 0 }}>{ms.area.selfDesc}</p>
+              )}
+              <div style={{ fontSize: 9.5, color: '#c5a590', marginTop: 6 }}>
+                명리 근거: {ms.area.envTag}{ms.area.selfTag && ms.area.selfTag !== ms.area.envTag ? ` · ${ms.area.selfTag}` : ''}
+              </div>
+            </div>
+          </>
+        )}
+
+        <div onClick={() => setOpen(o => !o)} role="button" aria-expanded={open}
+          style={{ textAlign: 'center', fontSize: 11.5, color: '#b4785a', padding: '9px 0 2px', cursor: 'pointer' }}>
+          {open ? '접기 ▲' : '자세히 보기 ▼'}
         </div>
       </div>
     )
