@@ -21,6 +21,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useResultSaju } from '@/hooks/useResultSaju'
+import { useFortuneCache } from './FortuneCache'
 import { calcYongsin } from '@/lib/saju/yongsin'
 import { calcWolunList, calcIlunList } from '@/lib/saju/dayun'
 import {
@@ -146,6 +147,7 @@ export default function TodayFortuneCard() {
   const [fortuneLoading, setFortuneLoading] = useState(false)
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<'day' | 'month'>('day')
+  const cache = useFortuneCache()
 
   // 이달의 운세 AI 해설 (점수는 계산, 글만 AI)
   const [mText, setMText] = useState<MonthText | null>(null)
@@ -182,13 +184,24 @@ export default function TodayFortuneCard() {
       if (p) setProfile(p as FortuneProfile)
       setProfileChecked(true)
 
+      // 담아둔 게 있으면 DB를 보지 않는다 (화면을 오갈 때 깜빡임 방지)
+      const cached = cache.getDaily(todayKST())
+      if (cached) {
+        setFortune(cached as Fortune)
+        setFortuneChecked(true)
+        return
+      }
+
       const { data: fRow } = await supabase.from('daily_fortune')
         .select('fortune_date, iljin_gan, iljin_ji, score, total, grade, summary, love, money, health, lucky_color, lucky_dir, today_insight')
         .eq('user_id', u.user.id)
         .eq('fortune_date', todayKST())
         .maybeSingle()
       if (cancelled) return
-      if (fRow) setFortune(fRow as Fortune)
+      if (fRow) {
+        setFortune(fRow as Fortune)
+        cache.setDaily(todayKST(), fRow)
+      }
       setFortuneChecked(true)
     })()
     return () => { cancelled = true }
@@ -228,6 +241,7 @@ export default function TodayFortuneCard() {
           today_insight: data.today_insight,
         }
         setFortune(row)
+        cache.setDaily(todayKST(), row)
         await supabase.from('daily_fortune')
           .upsert({ user_id: userId, ...row }, { onConflict: 'user_id,fortune_date' })
       } catch (e) {
@@ -290,6 +304,11 @@ export default function TodayFortuneCard() {
     ;(async () => {
       setMTextLoading(true)
       try {
+        // 담아둔 게 있으면 DB를 보지 않는다
+        const mKey = `${monthly.year}-${String(monthly.month).padStart(2, '0')}`
+        const cachedM = cache.getMonthly(mKey)
+        if (cachedM) { setMText(cachedM as MonthText); setMTextChecked(true); return }
+
         // ① 저장된 글이 있나
         const { data: row } = await supabase.from('monthly_fortune')
           .select('summary, love, money, health, lucky_color, lucky_dir, insight')
@@ -298,7 +317,7 @@ export default function TodayFortuneCard() {
           .eq('month', monthly.month)
           .maybeSingle()
         if (cancelled) return
-        if (row) { setMText(row as MonthText); setMTextChecked(true); return }
+        if (row) { setMText(row as MonthText); cache.setMonthly(mKey, row); setMTextChecked(true); return }
 
         // ② 없으면 AI로 만든다
         const ms = monthly.score
@@ -331,6 +350,7 @@ export default function TodayFortuneCard() {
           lucky_color: data.lucky_color, lucky_dir: data.lucky_dir, insight: data.insight,
         }
         setMText(text)
+        cache.setMonthly(mKey, text)
         await supabase.from('monthly_fortune').upsert({
           user_id: userId,
           year: monthly.year, month: monthly.month,

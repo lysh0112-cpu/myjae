@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AutoLogout from "./components/AutoLogout";
+import { FortuneCacheProvider } from "./manseryeok/components/FortuneCache";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,7 +28,10 @@ export default function RootLayout({
     >
       <body className="min-h-full" style={{ background: "#FDF6F0" }}>
         <AutoLogout />
-        {children}
+        {/* 운세 담아두기 — 화면을 오갈 때 DB를 다시 안 보도록 (AI 호출 횟수와는 무관) */}
+        <FortuneCacheProvider>
+          {children}
+        </FortuneCacheProvider>
       </body>
     </html>
   );

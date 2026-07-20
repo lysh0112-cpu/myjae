@@ -55,6 +55,10 @@ export default function SajuEditModal({
   const [eCal, setECal] = useState<'양력' | '음력'>('양력')
   const [eGender, setEGender] = useState<'남' | '여'>('남')
   const [saving, setSaving] = useState(false)
+  // 모달을 열 때의 사주 — 저장할 때 "바뀌었나" 비교용
+  const [orig, setOrig] = useState<{ year: number; month: number; day: number; hour: string; cal: string; gender: string }>(
+    { year: 0, month: 0, day: 0, hour: '', cal: '', gender: '' },
+  )
   const [msg, setMsg] = useState('')
 
   // 모달이 열릴 때마다 지금 저장된 값을 불러와 채운다
@@ -86,6 +90,14 @@ export default function SajuEditModal({
       setEBand(null)
       setECal((prof.cal_type as '양력' | '음력') || '양력')
       setEGender((prof.gender as '남' | '여') || '남')
+      setOrig({
+        year: prof.birth_year ?? 0,
+        month: prof.birth_month ?? 0,
+        day: prof.birth_day ?? 0,
+        hour: prof.birth_hour ?? '',
+        cal: prof.cal_type ?? '양력',
+        gender: prof.gender ?? '남',
+      })
       setLoading(false)
     })()
     return () => { cancelled = true }
@@ -128,12 +140,34 @@ export default function SajuEditModal({
     if (!eHour) { setMsg('시(시주)를 선택해주세요. 정확히 모르시면 시간대 버튼으로 골라주세요.'); return }
 
     const hourValue = toStoredHour(normalizeHourLabel(eHour))
+
+    // 사주가 실제로 바뀌었는지 — 닉네임만 고친 경우는 운세를 지울 필요가 없다
+    const sajuChanged =
+      orig.year !== y || orig.month !== m || orig.day !== d ||
+      orig.hour !== hourValue || orig.cal !== eCal || orig.gender !== eGender
+
     setSaving(true)
     const { error } = await supabase.from('profiles').update({
       nickname: name,
       birth_year: y, birth_month: m, birth_day: d,
       birth_hour: hourValue, cal_type: eCal, gender: eGender, saju_saved: true,
     }).eq('id', userId)
+
+    // 사주가 바뀌었으면 이미 만들어둔 운세를 지운다.
+    //   안 지우면 옛 사주로 계산된 오늘·이달 운세가 계속 보인다.
+    //   (날짜·월이 키라서 같은 날 안에서는 자동으로 새로 만들어지지 않는다)
+    if (!error && sajuChanged) {
+      const now = new Date(Date.now() + 9 * 60 * 60 * 1000)   // KST
+      const yy = now.getUTCFullYear()
+      const mm = now.getUTCMonth() + 1
+      const dd = String(now.getUTCDate()).padStart(2, '0')
+      const todayStr = `${yy}-${String(mm).padStart(2, '0')}-${dd}`
+      await Promise.all([
+        supabase.from('daily_fortune').delete().eq('user_id', userId).eq('fortune_date', todayStr),
+        supabase.from('monthly_fortune').delete().eq('user_id', userId).eq('year', yy).eq('month', mm),
+      ])
+    }
+
     setSaving(false)
     if (error) { setMsg('저장 실패: ' + error.message); return }
     onSaved?.()

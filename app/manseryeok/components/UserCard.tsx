@@ -22,6 +22,7 @@ import { supabase } from '@/lib/supabase'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { normalizeHourLabel, hourLabelOf } from '@/lib/saju/birthInput'
 import SajuEditModal from './SajuEditModal'
+import { useFortuneCache } from './FortuneCache'
 
 const STEM_ELEMENT: Record<string, string> = { 甲:'목',乙:'목',丙:'화',丁:'화',戊:'토',己:'토',庚:'금',辛:'금',壬:'수',癸:'수' }
 const BRANCH_ELEMENT: Record<string, string> = { 子:'수',丑:'토',寅:'목',卯:'목',辰:'토',巳:'화',午:'화',未:'토',申:'금',酉:'금',戌:'토',亥:'수' }
@@ -90,6 +91,7 @@ export default function UserCard({ footer }: { footer?: ReactNode | ((info: User
   )
 
   const [editOpen, setEditOpen] = useState(false)
+  const cache = useFortuneCache()
 
   const loadProfile = useCallback(async () => {
     const { data: u } = await supabase.auth.getUser()
@@ -219,7 +221,12 @@ export default function UserCard({ footer }: { footer?: ReactNode | ((info: User
       <SajuEditModal
         open={editOpen}
         onClose={() => setEditOpen(false)}
-        onSaved={loadProfile}
+        onSaved={() => {
+          // 사주가 바뀌었을 수 있으니 담아둔 운세를 버린다.
+          //   (DB 쪽은 SajuEditModal 이 지운다)
+          cache.clear()
+          loadProfile()
+        }}
       />
     </div>
   )
