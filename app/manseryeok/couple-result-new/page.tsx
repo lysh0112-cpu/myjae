@@ -26,7 +26,7 @@ import GradeFireworks from './components/GradeFireworks'
 import { COUPLE_QUESTIONS, groupCoupleByCategory } from '@/lib/saju/coupleQuestions'
 import { MARRIED_QUESTIONS } from '@/lib/saju/marriedQuestions'
 import type { SajuQuestion } from '@/lib/saju/questions'
-import { calcCoupleScore, type SajuPillarSimple, type CoupleScoreResult } from '@/lib/saju/coupleScore'
+import { calcCoupleScore, type SajuPillarSimple, type CoupleScoreResult, type SolarInfo } from '@/lib/saju/coupleScore'
 import { calcMarriedScore } from '@/lib/saju/marriedScore'
 import { getGongmang } from '@/lib/saju/gongmang'
 import { calcHourPillar } from '@/lib/saju/hourPillar'
@@ -331,7 +331,16 @@ function hourToIdx(hour: string | undefined): number | null {
 }
 
 // /api/lunar 로 한 사람의 4기둥 계산
-async function calcOnePerson(p: PersonRaw): Promise<SajuPillarSimple[] | null> {
+// 심산 오행 점수 계산에 필요한 양력 날짜·시지를 명식과 함께 담는다.
+//   (월지 계절 치환 — 丑월=水, 未월=火 등 — 을 적용하려면 양력 날짜가 필요하다)
+export interface PersonCalc {
+  saju: SajuPillarSimple[]
+  solarMonth: number
+  solarDay: number
+  hourBranch: string | null
+}
+
+async function calcOnePerson(p: PersonRaw): Promise<PersonCalc | null> {
   const calType = p.calType || '양력'
   const y = parseInt(p.year), m = parseInt(p.month), d = parseInt(p.day)
   if (!y || !m || !d) return null
@@ -350,12 +359,17 @@ async function calcOnePerson(p: PersonRaw): Promise<SajuPillarSimple[] | null> {
   const year = split(data.yearGanji), month = split(data.monthGanji), day = split(data.dayGanji)
   const hIdx = hourToIdx(p.hour)
   const hour = hIdx !== null ? calcHourPillar(day.stem, hIdx) : { stem: '?', branch: '?' }
-  return [
-    { pillar: '시주', stem: hour.stem, branch: hour.branch },
-    { pillar: '일주', stem: day.stem, branch: day.branch },
-    { pillar: '월주', stem: month.stem, branch: month.branch },
-    { pillar: '년주', stem: year.stem, branch: year.branch },
-  ]
+  return {
+    saju: [
+      { pillar: '시주', stem: hour.stem, branch: hour.branch },
+      { pillar: '일주', stem: day.stem, branch: day.branch },
+      { pillar: '월주', stem: month.stem, branch: month.branch },
+      { pillar: '년주', stem: year.stem, branch: year.branch },
+    ],
+    solarMonth: Number(data.solarMonth) || m,
+    solarDay: Number(data.solarDay) || d,
+    hourBranch: hour.branch === '?' ? null : hour.branch,
+  }
 }
 
 function toCouplePerson(p: PersonRaw, saju: SajuPillarSimple[]): CouplePerson {
@@ -431,20 +445,26 @@ function CoupleResultView({
     let cancelled = false
     async function run() {
       try {
-        const [s1, s2] = await Promise.all([calcOnePerson(person1), calcOnePerson(person2)])
+        const [c1, c2] = await Promise.all([calcOnePerson(person1), calcOnePerson(person2)])
         if (cancelled) return
-        if (!s1 || !s2) { setCalcErr(true); return }
+        if (!c1 || !c2) { setCalcErr(true); return }
+        const s1 = c1.saju, s2 = c2.saju
         setSaju1(s1); setSaju2(s2)
         const ilju1 = s1.find(p => p.pillar === '일주')
         const ilju2 = s2.find(p => p.pillar === '일주')
         const gm1 = ilju1 ? getGongmang(ilju1.stem, ilju1.branch) : ['', ''] as [string, string]
         const gm2 = ilju2 ? getGongmang(ilju2.stem, ilju2.branch) : ['', ''] as [string, string]
+        // 심산 오행 점수(월지 계절 치환)를 쓰도록 두 사람의 양력 날짜·시지를 넘긴다.
+        const dates: [SolarInfo, SolarInfo] = [
+          { month: c1.solarMonth, day: c1.solarDay, hourBranch: c1.hourBranch },
+          { month: c2.solarMonth, day: c2.solarDay, hourBranch: c2.hourBranch },
+        ]
         // 부부(married)는 부부 전용 계산식(조후·월주 가중 + 원진/귀문/구응),
         // 연인(couple)은 기존 계산식.
         setScore(
           mode === 'married'
-            ? calcMarriedScore(s1, s2, gm1, gm2)
-            : calcCoupleScore(s1, s2, gm1, gm2)
+            ? calcMarriedScore(s1, s2, gm1, gm2, dates)
+            : calcCoupleScore(s1, s2, gm1, gm2, dates)
         )
       } catch { if (!cancelled) setCalcErr(true) }
     }

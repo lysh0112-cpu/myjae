@@ -23,7 +23,7 @@ import {
   calcIljuScore, calcYongsinScore, calcYeonScore, calcWolScore,
   calcGongmangScore, calcOhaengScore, calcJohuScore, calcSijuScore,
   isPair, hasValidPillar,
-  type ScoreDetail, type CoupleScoreResult, type SajuPillarSimple,
+  type ScoreDetail, type CoupleScoreResult, type SajuPillarSimple, type SolarInfo,
 } from './coupleScore'
 
 // ── 부부용 항목 배점 상한(가중 목표) ──
@@ -143,7 +143,9 @@ export function calcMarriedScore(
   saju1: SajuPillarSimple[],
   saju2: SajuPillarSimple[],
   gm1: [string, string],
-  gm2: [string, string]
+  gm2: [string, string],
+  // 심산 오행 점수용 양력 날짜·시지 (없으면 예전 방식으로 계산)
+  dates?: [SolarInfo, SolarInfo],
 ): CoupleScoreResult {
   const details: ScoreDetail[] = []
 
@@ -167,7 +169,7 @@ export function calcMarriedScore(
 
   // 재사용: 검증된 항목 판정을 그대로 호출(details도 채워짐) → 부부 가중치로 스케일
   const iljuScore    = scale(calcIljuScore(dayStem1, dayBranch1, dayStem2, dayBranch2, details), CAP.ilju)
-  const yongsinScore = scale(calcYongsinScore(saju1, saju2, dayStem1, dayStem2, details), CAP.yongsin)
+  const yongsinScore = scale(calcYongsinScore(saju1, saju2, dayStem1, dayStem2, details, dates), CAP.yongsin)
   const yeonScore    = scale(calcYeonScore(yeon1?.stem ?? '', yeon1?.branch ?? '', yeon2?.stem ?? '', yeon2?.branch ?? '', details), CAP.yeon)
   const wolScore     = scale(calcWolScore(wol1?.stem ?? '', wol1?.branch ?? '', wol2?.stem ?? '', wol2?.branch ?? '', details), CAP.wol)
   const gongmangScore = scale(calcGongmangScore(gm1, gm2, dayBranch1, dayBranch2, yeon1?.branch ?? '', yeon2?.branch ?? '', details), CAP.gongmang)

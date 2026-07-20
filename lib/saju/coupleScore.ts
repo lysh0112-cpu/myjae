@@ -7,6 +7,10 @@
 //   calcYongsinCompat = 낡은 calcYongsin과 같은 형태(heeksin 등)를 반환하는 어댑터.
 import { calcYongsinCompat as calcYongsin } from './yongsinNew'
 
+// 심산 오행 점수(월지 계절 치환)를 쓰기 위한 양력 날짜·시지.
+//   넘기지 않으면 예전처럼 자체 배점으로 계산한다(호환 유지).
+export interface SolarInfo { month: number; day: number; hourBranch: string | null }
+
 // =============================================
 // 상수 테이블
 // =============================================
@@ -166,12 +170,14 @@ export function calcIljuScore(
 export function calcYongsinScore(
   saju1: SajuPillarSimple[], saju2: SajuPillarSimple[],
   dayStem1: string, dayStem2: string,
-  details: ScoreDetail[]
+  details: ScoreDetail[],
+  dates?: [SolarInfo, SolarInfo],
 ): number {
   let score = 0
   try {
-    const y1 = calcYongsin(saju1, dayStem1)
-    const y2 = calcYongsin(saju2, dayStem2)
+    // 심산 오행 점수로 용신 계산 (월지 계절 치환 반영)
+    const y1 = calcYongsin(saju1, dayStem1, dates?.[0].month, dates?.[0].day, dates?.[0].hourBranch)
+    const y2 = calcYongsin(saju2, dayStem2, dates?.[1].month, dates?.[1].day, dates?.[1].hourBranch)
     const rel = getElementRelation(y1.yongsin, y2.yongsin)
 
     if (rel === 'same') {
@@ -460,7 +466,9 @@ export function calcCoupleScore(
   saju1: SajuPillarSimple[],
   saju2: SajuPillarSimple[],
   gm1: [string, string],
-  gm2: [string, string]
+  gm2: [string, string],
+  // 심산 오행 점수용 양력 날짜·시지 (없으면 예전 방식으로 계산)
+  dates?: [SolarInfo, SolarInfo],
 ): CoupleScoreResult {
   const details: ScoreDetail[] = []
 
@@ -484,7 +492,7 @@ export function calcCoupleScore(
     hasValidPillar(si2?.stem ?? '', si2?.branch ?? '')
 
   const iljuScore    = calcIljuScore(dayStem1, dayBranch1, dayStem2, dayBranch2, details)
-  const yongsinScore = calcYongsinScore(saju1, saju2, dayStem1, dayStem2, details)
+  const yongsinScore = calcYongsinScore(saju1, saju2, dayStem1, dayStem2, details, dates)
   const yeonScore    = calcYeonScore(
     yeon1?.stem ?? '', yeon1?.branch ?? '',
     yeon2?.stem ?? '', yeon2?.branch ?? '',
