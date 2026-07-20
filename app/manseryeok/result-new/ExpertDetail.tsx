@@ -495,7 +495,7 @@ export default function ExpertDetail({
           <div style={{ fontSize: 9.5, color: '#8a7360', textAlign: 'center', lineHeight: 1.8 }}>
             <span style={{ color: '#2e7d32' }}>━ 합(실선)</span>{'  '}
             <span style={{ color: '#c62828' }}>┅ 충·원진(점선)</span>
-            <div style={{ color: '#c8a86a', marginTop: 2 }}>👆 방합·삼합 같은 글씨를 누르면 설명이 나와요</div>
+            <div style={{ color: '#8f3d0e', marginTop: 2 }}>👆 방합·삼합 같은 글씨를 누르면 설명이 나와요</div>
           </div>
         </div>
 

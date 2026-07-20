@@ -100,7 +100,7 @@ export default function YongsinCard({ result, saju }: Props) {
     if (!el) {
       return (
         <div style={{ background: '#f5f5f5', border: '0.5px solid #eee', borderRadius: 10, padding: big ? '12px 4px' : '8px 3px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <div style={{ fontSize: big ? 15 : 13, color: '#bbb' }}>없음</div>
+          <div style={{ fontSize: big ? 15 : 13, color: '#6b5340' }}>없음</div>
         </div>
       )
     }
@@ -199,7 +199,7 @@ export default function YongsinCard({ result, saju }: Props) {
 
   return (
     <div style={{ fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>
-      <div style={{ fontSize: 10, color: '#c8a86a', marginBottom: 12 }}>👆 아래 한자를 누르면 쉬운 설명이 나와요</div>
+      <div style={{ fontSize: 10, color: '#8f3d0e', marginBottom: 12 }}>👆 아래 한자를 누르면 쉬운 설명이 나와요</div>
 
       {/* ① 조후용신 (용신 1개) */}
       <div style={{ display: 'flex', gap: 7, alignItems: 'stretch', marginBottom: 8 }}>
@@ -245,9 +245,9 @@ export default function YongsinCard({ result, saju }: Props) {
           <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: 320, width: '100%', background: '#fff', borderRadius: 16, padding: '20px 18px', maxHeight: '80vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
               <span style={{ fontSize: 19, fontWeight: 700, color: '#1a1a1a' }}>
-                {open.role} <span style={{ fontSize: 12, color: '#bbb', fontWeight: 400 }}>({ROLE_HANJA[open.role]})</span>
+                {open.role} <span style={{ fontSize: 12, color: '#6b5340', fontWeight: 400 }}>({ROLE_HANJA[open.role]})</span>
               </span>
-              <span style={{ fontSize: 10, color: '#c8a86a', background: '#fdf6ee', padding: '2px 8px', borderRadius: 8 }}>{ROLE_TAG[open.role]}</span>
+              <span style={{ fontSize: 10, color: '#8f3d0e', background: '#fdf6ee', padding: '2px 8px', borderRadius: 8 }}>{ROLE_TAG[open.role]}</span>
               <button onClick={close} style={{ marginLeft: 'auto', background: 'none', border: 'none', fontSize: 16, color: '#ccc', cursor: 'pointer' }}>✕</button>
             </div>
 

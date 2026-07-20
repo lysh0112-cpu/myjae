@@ -88,7 +88,7 @@ function OneWonguk({ person }: { person: PersonWonguk }) {
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 3, marginBottom: 3 }}>
         {labels.map((l, i) => (
-          <div key={i} style={{ fontSize: 8, textAlign: 'center', color: '#bbb' }}>{l}</div>
+          <div key={i} style={{ fontSize: 8, textAlign: 'center', color: '#6b5340' }}>{l}</div>
         ))}
       </div>
       {/* 천간 줄 */}

@@ -62,20 +62,20 @@ export default function SingangTable({ ilganEl, ilganName = '', ohaeng }: Props)
 
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 4 }}>
         <span style={{ fontSize: 26, fontWeight: 800, color: vColor }}>{verdict}</span>
-        <span style={{ fontSize: 12, color: '#999' }}>내 에너지 {myEnergy}%</span>
+        <span style={{ fontSize: 12, color: '#6b5340' }}>내 에너지 {myEnergy}%</span>
       </div>
 
       {/* 에너지 바 */}
       <div style={{ position: 'relative', height: 34, margin: '18px 0 6px' }}>
         <div style={{ position: 'absolute', top: 11, left: 0, right: 0, height: 12, borderRadius: 6, background: 'linear-gradient(90deg,#90caf9 0%,#c5e1a5 50%,#ef9a9a 100%)' }} />
         <div style={{ position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)', width: 2, height: 22, background: '#bbb' }} />
-        <div style={{ position: 'absolute', top: 30, left: '50%', transform: 'translateX(-50%)', fontSize: 9, color: '#bbb' }}>중화 50%</div>
+        <div style={{ position: 'absolute', top: 30, left: '50%', transform: 'translateX(-50%)', fontSize: 9, color: '#6b5340' }}>중화 50%</div>
         <div style={{ position: 'absolute', top: 2, left: `${markerLeft}%`, transform: 'translateX(-50%)' }}>
           <div style={{ width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: `7px solid ${vColor}` }} />
         </div>
         <div style={{ position: 'absolute', top: -14, left: `${markerLeft}%`, transform: 'translateX(-50%)', fontSize: 10, fontWeight: 700, color: vColor, whiteSpace: 'nowrap' }}>나 ●</div>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#bbb', marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#6b5340', marginBottom: 16 }}>
         <span>신약 (0%)</span><span>신강 (100%)</span>
       </div>
 

@@ -145,7 +145,7 @@ export default function UnseFlow(props: Props) {
         <span style={{ fontSize: 12.5, fontWeight: 700, color: '#1a1a1a' }}>{title}</span>
         {badge && <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 8, background: '#fff3e9', border: '0.5px solid #e8d5c5', color: '#8f3d0e', fontWeight: 600 }}>{badge}</span>}
       </div>
-      <div style={{ fontSize: 10, color: '#c8a86a', padding: '5px 15px 0' }}>👆 눌러서 자세히 보기</div>
+      <div style={{ fontSize: 10, color: '#8f3d0e', padding: '5px 15px 0' }}>👆 눌러서 자세히 보기</div>
       <div style={{ overflowX: 'auto', padding: '4px 12px 10px' }}>
         <div style={{ display: 'flex', gap: 4 }}>{[...cells].reverse().map(c => renderCell(c, small))}</div>
       </div>

@@ -233,7 +233,7 @@ export default function SignupPage() {
           <h1 style={{ fontSize: '22px', fontWeight: 700, lineHeight: 1.4, margin: '0 0 6px' }}>
             나의 사주와<br />계정을 만들어주세요
           </h1>
-          <p style={{ fontSize: '12px', color: '#bbb', margin: 0 }}>
+          <p style={{ fontSize: '12px', color: '#6b5340', margin: 0 }}>
             가입 한 번으로 내 사주를 영구 저장해요
           </p>
         </div>
@@ -308,20 +308,20 @@ export default function SignupPage() {
             <input value={year} onChange={e => applyYear(e.target.value)}
               inputMode="numeric" placeholder="1990"
               style={{ ...inputStyle, flex: 1.5, textAlign: 'center' as const }} />
-            <span style={{ color: '#bbb', fontSize: '13px' }}>년</span>
+            <span style={{ color: '#6b5340', fontSize: '13px' }}>년</span>
             <select value={month} onChange={e => applyMonth(e.target.value)}
               style={{ ...selectStyle, flex: 1, color: month ? '#1a1a1a' : '#bbb' }}>
               <option value="">월</option>
               {MONTHS.map(m => <option key={m} value={String(m)}>{m}</option>)}
             </select>
-            <span style={{ color: '#bbb', fontSize: '13px' }}>월</span>
+            <span style={{ color: '#6b5340', fontSize: '13px' }}>월</span>
             <select value={day} onChange={e => setDay(e.target.value)}
               style={{ ...selectStyle, flex: 1, color: day ? '#1a1a1a' : '#bbb' }}>
               <option value="">일</option>
               {dayOptions(parseInt(year, 10), parseInt(month, 10), calType)
                 .map(d => <option key={d} value={String(d)}>{d}</option>)}
             </select>
-            <span style={{ color: '#bbb', fontSize: '13px' }}>일</span>
+            <span style={{ color: '#6b5340', fontSize: '13px' }}>일</span>
           </div>
         </Field>
 
@@ -447,7 +447,7 @@ export default function SignupPage() {
           cursor: loading ? 'default' : 'pointer', marginBottom: '14px',
         }}>{loading ? '가입 처리 중…' : '회원가입 완료'}</button>
 
-        <div style={{ textAlign: 'center', fontSize: '12px', color: '#bbb' }}>
+        <div style={{ textAlign: 'center', fontSize: '12px', color: '#6b5340' }}>
           이미 계정이 있으신가요?{' '}
           <span onClick={() => router.push('/login')} style={{ color: '#8B6914', fontWeight: 600, cursor: 'pointer' }}>로그인</span>
         </div>

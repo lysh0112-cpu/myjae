@@ -36,9 +36,9 @@ export default function TermModal({ term, onClose }: { term: string | null; onCl
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
           <span style={{ fontSize: 20, fontWeight: 700, color: '#1a1a1a' }}>
-            {term} <span style={{ fontSize: 13, color: '#bbb', fontWeight: 400 }}>({t.hanja})</span>
+            {term} <span style={{ fontSize: 13, color: '#6b5340', fontWeight: 400 }}>({t.hanja})</span>
           </span>
-          <span style={{ fontSize: 10, color: '#c8a86a', background: '#fdf6ee', padding: '2px 8px', borderRadius: 8 }}>{t.category}</span>
+          <span style={{ fontSize: 10, color: '#8f3d0e', background: '#fdf6ee', padding: '2px 8px', borderRadius: 8 }}>{t.category}</span>
           <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', fontSize: 16, color: '#ccc', cursor: 'pointer' }}>✕</button>
         </div>
 

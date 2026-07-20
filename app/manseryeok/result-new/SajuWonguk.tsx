@@ -95,7 +95,7 @@ function GanjiBox({ char, el, isDay, isGongmang }: { char: string; el: Element |
   )
 }
 
-const rowLabel: React.CSSProperties = { fontSize: 9, color: '#bbb', textAlign: 'right', paddingRight: 5, whiteSpace: 'nowrap' }
+const rowLabel: React.CSSProperties = { fontSize: 9, color: '#6b5340', textAlign: 'right', paddingRight: 5, whiteSpace: 'nowrap' }
 const termCell = (color: string): React.CSSProperties => ({ fontSize: 10, fontWeight: 600, color, cursor: 'pointer', textAlign: 'center' })
 
 export default function SajuWonguk({ saju, dayStem, yeonjji, iljji, gm1, gm2 }: Props) {
@@ -104,14 +104,14 @@ export default function SajuWonguk({ saju, dayStem, yeonjji, iljji, gm1, gm2 }: 
 
   return (
     <div style={{ fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>
-      <div style={{ fontSize: 10.5, color: '#c8a86a', marginBottom: 12 }}>👆 용어를 누르면 쉬운 뜻풀이가 나와요</div>
+      <div style={{ fontSize: 10.5, color: '#8f3d0e', marginBottom: 12 }}>👆 용어를 누르면 쉬운 뜻풀이가 나와요</div>
 
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
             <td style={{ width: 34 }} />
             {saju.map(({ pillar }, i) => (
-              <td key={i} style={{ textAlign: 'center', fontSize: 9, color: '#bbb', paddingBottom: 3 }}>{pillar}</td>
+              <td key={i} style={{ textAlign: 'center', fontSize: 9, color: '#6b5340', paddingBottom: 3 }}>{pillar}</td>
             ))}
           </tr>
         </thead>
@@ -211,11 +211,11 @@ export default function SajuWonguk({ saju, dayStem, yeonjji, iljji, gm1, gm2 }: 
       {/* 요약 */}
       <div style={{ background: '#faf3ee', border: '0.5px solid #f0e0d5', borderRadius: 8, padding: 9, display: 'flex', justifyContent: 'space-around', marginTop: 12 }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ color: '#bbb', fontSize: 9, marginBottom: 2 }}>일간</div>
+          <div style={{ color: '#6b5340', fontSize: 9, marginBottom: 2 }}>일간</div>
           <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: 11 }}>{dayStem ? `${dayStem}(${STEM_ELEMENT[dayStem] || '?'})` : '-'}</div>
         </div>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ color: '#bbb', fontSize: 9, marginBottom: 2 }}>공망</div>
+          <div style={{ color: '#6b5340', fontSize: 9, marginBottom: 2 }}>공망</div>
           <div onClick={() => gm1 && open('공망')}
             style={{ color: '#f44336', fontWeight: 700, fontSize: 11, cursor: gm1 ? 'pointer' : 'default' }}>
             {gm1 ? `${gm1}·${gm2}` : '-'}

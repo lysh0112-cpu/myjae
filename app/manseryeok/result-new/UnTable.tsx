@@ -82,7 +82,7 @@ export default function UnTable({ title, badge, items }: Props) {
           </span>
         )}
       </div>
-      <div style={{ fontSize: 10, color: '#c8a86a', padding: '0 16px 6px' }}>👆 십성을 누르면 뜻풀이가 나와요</div>
+      <div style={{ fontSize: 10, color: '#8f3d0e', padding: '0 16px 6px' }}>👆 십성을 누르면 뜻풀이가 나와요</div>
       <div style={{ overflowX: 'auto', padding: '4px 12px 10px' }}>
         <div style={{ display: 'flex', gap: 5 }}>
           {items.map((item, index) => {
