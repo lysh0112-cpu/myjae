@@ -222,7 +222,7 @@ function DiagnosisInner() {
   const infoDay = info ? parseInt(info.day) : 0
   const infoHourIdx = info ? (info.hour === '모름' ? null : parseInt(info.hour)) : null
 
-  const { saju, dayStem, converting } = useResultSaju(
+  const { saju, solar, dayStem, converting } = useResultSaju(
     info?.calType || '양력',
     infoYear,
     infoMonth,
@@ -418,7 +418,12 @@ function DiagnosisInner() {
     setStep('result')
     setLoading(true)
     try {
-      const yongsinResult = calcYongsinCompat(saju, dayStem)
+      // 심산 오행 점수로 계산 (월지 계절 치환 반영). 시지는 명식의 시주에서 꺼낸다.
+      const yongsinResult = calcYongsinCompat(
+        saju, dayStem,
+        solar?.month, solar?.day,
+        saju.find(p => p.pillar === '시주')?.branch ?? null,
+      )
       const sajuText = saju.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(', ')
       const res = await fetch('/api/naming', {
         method: 'POST',

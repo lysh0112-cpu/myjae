@@ -128,7 +128,7 @@ function NewResultInner() {
     return () => { cancelled = true }
   }, [])
 
-  const { saju, dayStem } = useResultSaju(
+  const { saju, solar, dayStem } = useResultSaju(
     info?.calType || '양력',
     info?.year || 0,
     info?.month || 0,
@@ -139,15 +139,19 @@ function NewResultInner() {
 
   const cur = tries[activeTry]
 
+  // 심산 오행 점수로 용신 계산 (월지 계절 치환 반영). 4곳에서 같이 쓴다.
+  const yongArgs = () => [solar?.month, solar?.day,
+    saju.find(p => p.pillar === '시주')?.branch ?? null] as const
+
   const yongsin = useMemo(() => {
     if (!saju || !dayStem) return ''
-    try { return ohaengChar(calcYongsinCompat(saju, dayStem).yongsin) } catch { return '' }
-  }, [saju, dayStem])
+    try { return ohaengChar(calcYongsinCompat(saju, dayStem, ...yongArgs()).yongsin) } catch { return '' }
+  }, [saju, dayStem, solar])
 
   const result = useMemo<DiagnoseResult | null>(() => {
     if (!saju || !dayStem || !cur || cur.chars.length < 2) return null
     try {
-      const y = calcYongsinCompat(saju, dayStem)
+      const y = calcYongsinCompat(saju, dayStem, ...yongArgs())
       const surname: NameChar = {
         hangul: cur.chars[0].hangul, hanja: cur.chars[0].hanja,
         strokes: cur.chars[0].strokes, resourceOhaeng: ohaengChar(cur.chars[0].resourceOhaeng),
@@ -193,7 +197,7 @@ function NewResultInner() {
   const tryGrades = useMemo(() => {
     if (!saju || !dayStem) return tries.map(() => '')
     try {
-      const y = calcYongsinCompat(saju, dayStem)
+      const y = calcYongsinCompat(saju, dayStem, ...yongArgs())
       return tries.map((t) => {
         if (t.chars.length < 2) return ''
         const surname: NameChar = {
@@ -214,7 +218,7 @@ function NewResultInner() {
     if (cur.commentary) return
     setDetailLoading(true)
     try {
-      const y = calcYongsinCompat(saju, dayStem)
+      const y = calcYongsinCompat(saju, dayStem, ...yongArgs())
       const surname: NameChar = {
         hangul: cur.chars[0].hangul, hanja: cur.chars[0].hanja,
         strokes: cur.chars[0].strokes, resourceOhaeng: ohaengChar(cur.chars[0].resourceOhaeng),

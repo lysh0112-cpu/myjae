@@ -18,6 +18,8 @@
 //    // r.johu.element / r.eokbu.{yongsin,heesin,gisin,gusin,hansin} / r.gyeokguk.{name,element}
 // ============================================================================
 
+import { calcSimsanOhaeng } from './simsanOhaeng'
+
 export type Ohaeng = '목' | '화' | '토' | '금' | '수'
 
 export interface Pillar {
@@ -378,8 +380,21 @@ export interface YongsinCompatResult {
 export function calcYongsinCompat(
   saju: Pillar[],
   dayStem: string,
+  // ★ 양력 월·일·시지 — 넘기면 심산 오행 점수(월지 계절 치환 반영)로 계산한다.
+  //   연재쌤 확정: 丑월=水, 未월=火 등 계절 치환이 맞다.
+  //   넘기지 않으면 예전처럼 자체 배점(지지를 본래 오행으로)으로 계산한다.
+  //   → 호출부를 한 곳씩 옮기는 동안 기존 화면이 깨지지 않게 하기 위함.
+  solarMonth?: number,
+  solarDay?: number,
+  hourBranch?: string | null,
 ): YongsinCompatResult {
-  const r = calcYongsinNew(saju, dayStem)
+  const useSimsan =
+    typeof solarMonth === 'number' && solarMonth >= 1 && solarMonth <= 12 &&
+    typeof solarDay === 'number' && solarDay >= 1 && solarDay <= 31
+  const score = useSimsan
+    ? (calcSimsanOhaeng(saju, solarMonth!, solarDay!, hourBranch ?? null) as Record<Ohaeng, number>)
+    : undefined
+  const r = calcYongsinNew(saju, dayStem, score)
 
   // 계산 불가(일간 없음·기둥 없음) → 안전한 빈 결과
   if (!r) {

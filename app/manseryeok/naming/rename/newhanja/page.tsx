@@ -164,7 +164,7 @@ function NewHanjaInner() {
   const infoDay = info ? parseInt(info.day) : 0
   const infoHourIdx = info ? (info.hour === '모름' ? null : parseInt(info.hour)) : null
 
-  const { saju, dayStem, converting } = useResultSaju(
+  const { saju, solar, dayStem, converting } = useResultSaju(
     info?.calType || '양력',
     infoYear,
     infoMonth,
@@ -176,12 +176,14 @@ function NewHanjaInner() {
   const yong = useMemo(() => {
     if (!saju || !dayStem) return { yongsin: '', heeksin: '', score: {} as Record<string, number> }
     try {
-      const y = calcYongsinCompat(saju, dayStem)
+      // 심산 오행 점수로 계산 (월지 계절 치환 반영)
+      const y = calcYongsinCompat(saju, dayStem, solar?.month, solar?.day,
+        saju.find(p => p.pillar === '시주')?.branch ?? null)
       return { yongsin: ohaengChar(y.yongsin), heeksin: ohaengChar(y.heeksin), score: y.score }
     } catch {
       return { yongsin: '', heeksin: '', score: {} as Record<string, number> }
     }
-  }, [saju, dayStem])
+  }, [saju, dayStem, solar])
   const yongsin = yong.yongsin
   const yongsinReady = !converting && !!yongsin
 

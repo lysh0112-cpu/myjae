@@ -134,8 +134,11 @@ export default function PromptViewer() {
     [saju, solar, hourBranch],
   )
   const yongsinResult = useMemo(
-    () => (saju.length > 0 && dayStem) ? calcYongsinCompat(saju, dayStem) : null,
-    [saju, dayStem],
+    // 심산 오행 점수로 계산 (월지 계절 치환 반영)
+    () => (saju.length > 0 && dayStem)
+      ? calcYongsinCompat(saju, dayStem, solar?.month, solar?.day, hourBranch)
+      : null,
+    [saju, dayStem, solar, hourBranch],
   )
 
   const age = year ? new Date().getFullYear() - Number(year) : 0
