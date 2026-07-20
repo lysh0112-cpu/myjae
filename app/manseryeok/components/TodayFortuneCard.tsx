@@ -95,9 +95,9 @@ function luckyColorChip(name: string | null): string {
 //   기준은 dailyFortune.ts 의 등급표(90/84/72)와 같게 맞춤. (2026-07-19 상향)
 function gradeOf(total: number): { label: string; color: string; bar: string } {
   if (total >= 90) return { label: '아주 좋은 날', color: '#96502e', bar: '#e09030' }
-  if (total >= 84) return { label: '좋은 편', color: '#96502e', bar: '#e09030' }
-  if (total >= 72) return { label: '무난한 날', color: '#b4785a', bar: '#d9a878' }
-  return { label: '쉬어가는 날', color: '#b4785a', bar: '#cbb5a0' }
+  if (total >= 84) return { label: '좋은 날', color: '#96502e', bar: '#e09030' }
+  if (total >= 72) return { label: '순조로운 날', color: '#96502e', bar: '#d9a878' }
+  return { label: '차분한 날', color: '#b4785a', bar: '#c8a882' }
 }
 
 // 총점 구하기. total 이 있으면 그대로, 없으면 옛 별점을 환산.
