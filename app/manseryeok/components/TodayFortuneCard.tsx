@@ -373,12 +373,13 @@ export default function TodayFortuneCard() {
         }
         setMText(text)
         cache.setMonthly(mKey, text)
-        await supabase.from('monthly_fortune').upsert({
+        const { error: mfErr } = await supabase.from('monthly_fortune').upsert({
           user_id: userId,
           year: monthly.year, month: monthly.month,
           month_stem: monthly.ganji.cheongan, month_branch: monthly.ganji.jiji,
           ...text,
         }, { onConflict: 'user_id,year,month' })
+        if (mfErr) console.error('이달의 운세 저장 실패:', mfErr.message)
       } catch (e) {
         console.error(e)
         mTriedKey.current = null   // 실패했으면 다음에 다시 시도할 수 있게

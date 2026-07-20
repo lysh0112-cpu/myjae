@@ -51,11 +51,12 @@ function CoupleChatInner() {
 
   const handleSend = async (text: string) => {
     if (!consultationId) return
-    await supabase.from('couple_chat_messages').insert({
+    const { error } = await supabase.from('couple_chat_messages').insert({
       consultation_id: consultationId,
       sender: myRole,
       message: text,
     })
+    if (error) alert('메시지를 보내지 못했어요. 다시 시도해 주세요.')
   }
 
   const handleSendImage = async (file: File) => {
@@ -73,21 +74,23 @@ function CoupleChatInner() {
       .from('chat-images')
       .getPublicUrl(path)
 
-    await supabase.from('couple_chat_messages').insert({
+    const { error: sendErr } = await supabase.from('couple_chat_messages').insert({
       consultation_id: consultationId,
       sender: myRole,
       message: '[이미지]',
       image_url: urlData.publicUrl,
     })
+    if (sendErr) alert('사진을 보내지 못했어요. 다시 시도해 주세요.')
   }
 
   const handleVoiceText = async (text: string) => {
     if (!text.trim() || !consultationId) return
-    await supabase.from('couple_chat_messages').insert({
+    const { error } = await supabase.from('couple_chat_messages').insert({
       consultation_id: consultationId,
       sender: myRole,
       message: text,
     })
+    if (error) alert('메시지를 보내지 못했어요. 다시 시도해 주세요.')
   }
 
   return (

@@ -72,11 +72,14 @@ export default function ScheduleStep({
       })
       if (bErr) throw bErr
       // 슬롯 잠금
-      await supabase.from('consultant_slots').update({ is_booked: true }).eq('id', pickedSlot.id)
+      // 잠기지 않으면 같은 시간에 다른 손님이 또 예약할 수 있다.
+      const { error: slotErr } = await supabase.from('consultant_slots').update({ is_booked: true }).eq('id', pickedSlot.id)
+      if (slotErr) throw slotErr
       // 상담 건에 예약 시간 기록
-      await supabase.from('consultations')
+      const { error: upErr } = await supabase.from('consultations')
         .update({ booking_date: pickedSlot.slot_date, booking_hour: pickedSlot.slot_hour })
         .eq('id', consultationId)
+      if (upErr) throw upErr
       onComplete()
     } catch (e) {
       console.error(e)

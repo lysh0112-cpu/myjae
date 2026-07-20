@@ -196,9 +196,11 @@ export default function MyPageNew() {
       const { data: bks } = await supabase.from('bookings').select('id, slot_id').eq('consultation_id', c.id)
       const slotIds = (bks ?? []).map(b => b.slot_id).filter(Boolean)
       if (slotIds.length > 0) {
-        await supabase.from('consultant_slots').update({ is_booked: false }).in('id', slotIds as string[])
+        const { error: relErr } = await supabase.from('consultant_slots').update({ is_booked: false }).in('id', slotIds as string[])
+        if (relErr) console.error('슬롯 풀기 실패:', relErr.message)
       }
-      await supabase.from('bookings').update({ status: 'cancelled' }).eq('consultation_id', c.id)
+      const { error: cancelErr } = await supabase.from('bookings').update({ status: 'cancelled' }).eq('consultation_id', c.id)
+      if (cancelErr) { alert('취소 실패: ' + cancelErr.message); setCancelingId(null); return }
       const { error: cErr } = await supabase.from('consultations').update({ status: 'cancelled' }).eq('id', c.id)
       if (cErr) { alert('취소 실패: ' + cErr.message); setCancelingId(null); return }
       setConsults(prev => prev.filter(x => x.id !== c.id))
@@ -286,10 +288,12 @@ export default function MyPageNew() {
 
   const withdraw = async () => {
     if (!confirm('정말 회원 탈퇴를 진행할까요?\n탈퇴하면 내 정보와 사주가 삭제되며 되돌릴 수 없습니다.')) return
-    await supabase.from('profiles').update({
+    const { error: profErr } = await supabase.from('profiles').update({
       nickname: null, birth_year: null, birth_month: null, birth_day: null,
       birth_hour: null, cal_type: null, gender: null, saju_saved: false,
     }).eq('id', userId)
+    // 실패했는데 "접수되었습니다"가 뜨면, 정보가 남았는데 지워진 줄 알게 된다.
+    if (profErr) { alert('탈퇴 처리에 실패했어요: ' + profErr.message); return }
     alert('탈퇴 요청이 접수되었습니다. 이용해주셔서 감사합니다.')
     await supabase.auth.signOut()
     try { sessionStorage.clear(); localStorage.clear() } catch {}

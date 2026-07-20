@@ -173,7 +173,9 @@ ${(cons?.ai_analysis || cons?.ai_free_analysis || '').slice(0, 1500)}
   async function saveSummary() {
     if (!consultationId) return
     try {
-      await supabase.from('consultations').update({ summary }).eq('id', consultationId)
+      // supabase는 실패해도 throw하지 않는다. error를 직접 확인해야 catch가 뜻이 있다.
+      const { error } = await supabase.from('consultations').update({ summary }).eq('id', consultationId)
+      if (error) throw error
       setSummarySaved(true)
       setTimeout(() => setSummarySaved(false), 1500)
     } catch (e) {

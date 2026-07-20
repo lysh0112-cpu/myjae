@@ -261,7 +261,8 @@ export default function CustomerAiAnalysis({
       const cleaned = cleanMarkdown(rawText)
       setPaidAnalysis(cleaned)
       if (consultationId) {
-        await supabase.from('consultations').update({ ai_analysis: cleaned }).eq('id', consultationId)
+        const { error } = await supabase.from('consultations').update({ ai_analysis: cleaned }).eq('id', consultationId)
+        if (error) console.error('분석 저장 실패:', error.message)
       }
     } catch (e) {
       console.error(e)

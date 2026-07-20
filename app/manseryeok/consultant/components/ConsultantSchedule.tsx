@@ -87,14 +87,16 @@ export default function ConsultantSchedule({
     try {
       if (existing) {
         // 열려 있던 것 → 닫기 (삭제)
-        await supabase.from('consultant_slots').delete().eq('id', existing.id)
+        const { error } = await supabase.from('consultant_slots').delete().eq('id', existing.id)
+        if (error) throw error
       } else {
         // 닫혀 있던 것 → 열기 (추가)
-        await supabase.from('consultant_slots').insert({
+        const { error } = await supabase.from('consultant_slots').insert({
           consultant_id: consultantId,
           slot_date: date,
           slot_hour: hour,
         })
+        if (error) throw error
       }
       await fetchSlots()
     } catch (e) {

@@ -86,11 +86,12 @@ function InviteInner() {
           .eq('invite_token', token)
           .maybeSingle()
         if (room?.id) {
-          await supabase.from('couple_members').insert({
+          const { error: cmErr } = await supabase.from('couple_members').insert({
             room_id: room.id,
             user_id: uid,
             role: 'inviter',
           })
+          if (cmErr) console.error('커플방 참가 저장 실패:', cmErr.message)
         }
 
         const origin =

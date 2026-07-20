@@ -96,9 +96,11 @@ export default function ExpenseApproval() {
       const { error: upErr } = await supabase.storage.from('receipts').upload(path, file)
       if (upErr) { alert('업로드 실패: ' + upErr.message); continue }
       const { data: pub } = supabase.storage.from('receipts').getPublicUrl(path)
-      await supabase.from('expense_receipts').insert({
+      // 파일은 올라갔는데 목록 기록이 실패하면 증빙이 사라진 것처럼 보인다.
+      const { error: insErr } = await supabase.from('expense_receipts').insert({
         expense_id: selected.id, file_url: pub.publicUrl, file_name: file.name,
       })
+      if (insErr) { alert('증빙을 목록에 넣지 못했어요: ' + insErr.message); continue }
     }
     setUploading(false)
     const { data } = await supabase.from('expense_receipts')
@@ -108,7 +110,8 @@ export default function ExpenseApproval() {
 
   const removeReceipt = async (r: Receipt) => {
     if (!confirm('이 증빙을 삭제할까요?')) return
-    await supabase.from('expense_receipts').delete().eq('id', r.id)
+    const { error } = await supabase.from('expense_receipts').delete().eq('id', r.id)
+    if (error) { alert('지우지 못했어요: ' + error.message); return }
     const marker = '/receipts/'
     const idx = r.file_url.indexOf(marker)
     if (idx >= 0) {

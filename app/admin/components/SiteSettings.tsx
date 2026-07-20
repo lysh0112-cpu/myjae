@@ -32,11 +32,15 @@ export default function SiteSettings() {
 
   async function handleSave() {
     setSaving(true)
+    // 오류를 받아 확인한다. 안 그러면 막혀도 "저장완료!"가 떠서 원인을 알 수 없다.
+    let failed = ''
     for (const [key, value] of Object.entries(settings)) {
-      await supabase.from('site_settings')
+      const { error } = await supabase.from('site_settings')
         .upsert({ key, value, updated_at: new Date().toISOString() })
+      if (error) { failed = error.message; break }
     }
     setSaving(false)
+    if (failed) { alert('저장하지 못했어요: ' + failed); return }
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }

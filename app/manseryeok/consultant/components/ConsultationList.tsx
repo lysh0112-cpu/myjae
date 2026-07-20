@@ -235,7 +235,8 @@ export default function ConsultationList({
     setBusyId(c.id)
     try {
       await releaseSlotsFor([c.id])                                  // 슬롯 잠금 풀기 + bookings 정리
-      await supabase.from('consultations').delete().eq('id', c.id)   // 그다음 상담 건 삭제
+      const { error } = await supabase.from('consultations').delete().eq('id', c.id)   // 그다음 상담 건 삭제
+      if (error) throw error
       await fetchList()
     } catch (err) {
       console.error(err)
@@ -253,7 +254,8 @@ export default function ConsultationList({
     try {
       const ids = list.map(c => c.id)
       await releaseSlotsFor(ids)                                                  // 모든 슬롯 풀기 + bookings 정리
-      await supabase.from('consultations').delete().eq('consultant_id', consultantId)
+      const { error } = await supabase.from('consultations').delete().eq('consultant_id', consultantId)
+      if (error) throw error
       await fetchList()
       alert('테스트 상담 내역을 모두 삭제했어요.')
     } catch (err) {

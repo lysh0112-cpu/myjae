@@ -147,7 +147,8 @@ function ConsultantSelectInner() {
       const aiPaid = typeof window !== 'undefined' ? (sessionStorage.getItem('ai_analysis') || '') : ''
 
       // 고객 저장
-      await supabase.from('customers').upsert({ phone: phoneDigits }, { onConflict: 'phone' })
+      const { error: custErr } = await supabase.from('customers').upsert({ phone: phoneDigits }, { onConflict: 'phone' })
+      if (custErr) throw custErr
 
       // 상담 건 생성
       const { data: cons, error: cErr } = await supabase
@@ -174,13 +175,14 @@ function ConsultantSelectInner() {
         if (coupleRaw) {
           try {
             const cp = JSON.parse(coupleRaw)
-            await supabase.from('couples').insert({
+            const { error: e_couples } = await supabase.from('couples').insert({
               consultation_id: cons.id,
               person_a_birth: cp.person_a_birth ?? null,
               person_b_birth: cp.person_b_birth ?? null,
               mode: cp.mode ?? mode,
               result: cp.result ?? null,
             })
+            if (e_couples) console.error('궁합 자료 저장 실패:', e_couples.message)
           } catch (e) {
             console.error('couples 저장 실패', e)
           }
@@ -193,13 +195,14 @@ function ConsultantSelectInner() {
         if (mulsangRaw) {
           try {
             const ms = JSON.parse(mulsangRaw)
-            await supabase.from('mulsang_images').insert({
+            const { error: e_mulsang_images } = await supabase.from('mulsang_images').insert({
               consultation_id: cons.id,
               image_url: ms.image_url ?? null,
               prompt: ms.prompt ?? null,
               style: ms.style ?? null,
               commentary: ms.commentary ?? null,
             })
+            if (e_mulsang_images) console.error('물상도 자료 저장 실패:', e_mulsang_images.message)
           } catch (e) {
             console.error('mulsang 저장 실패', e)
           }
@@ -213,7 +216,7 @@ function ConsultantSelectInner() {
         if (namingRaw) {
           try {
             const nm = JSON.parse(namingRaw)
-            await supabase.from('namings').insert({
+            const { error: e_namings } = await supabase.from('namings').insert({
               consultation_id: cons.id,
               kind: nm.kind ?? 'self',
               hangul_name: nm.hangul_name ?? null,
@@ -223,6 +226,7 @@ function ConsultantSelectInner() {
               commentary: nm.commentary ?? null,
               target_birth: nm.target_birth ?? null,
             })
+            if (e_namings) console.error('작명 자료 저장 실패:', e_namings.message)
           } catch (e) {
             console.error('naming 저장 실패', e)
           }
@@ -236,7 +240,7 @@ function ConsultantSelectInner() {
         if (weddingRaw) {
           try {
             const wd = JSON.parse(weddingRaw)
-            await supabase.from('weddings').insert({
+            const { error: e_weddings } = await supabase.from('weddings').insert({
               consultation_id: cons.id,
               kind: wd.kind ?? 'find',
               start_date: wd.start_date ?? null,
@@ -248,6 +252,7 @@ function ConsultantSelectInner() {
               avoid_days: wd.avoid_days ?? null,
               ai_notes: wd.ai_notes ?? null,
             })
+            if (e_weddings) console.error('결혼택일 자료 저장 실패:', e_weddings.message)
           } catch (e) {
             console.error('wedding 저장 실패', e)
           }
@@ -261,7 +266,7 @@ function ConsultantSelectInner() {
         if (birthRaw) {
           try {
             const bt = JSON.parse(birthRaw)
-            await supabase.from('births').insert({
+            const { error: e_births } = await supabase.from('births').insert({
               consultation_id: cons.id,
               kind: bt.kind ?? 'find',
               due_date: bt.due_date ?? null,
@@ -275,6 +280,7 @@ function ConsultantSelectInner() {
               avoid_days: bt.avoid_days ?? null,
               ai_notes: bt.ai_notes ?? null,
             })
+            if (e_births) console.error('출산택일 자료 저장 실패:', e_births.message)
           } catch (e) {
             console.error('birth 저장 실패', e)
           }
@@ -282,7 +288,8 @@ function ConsultantSelectInner() {
       }
 
       // 예약 저장
-      await supabase.from('bookings').insert({
+      // 여기가 실패하면 상담 건만 있고 예약이 없는 상태가 된다. 반드시 확인한다.
+      const { error: bkErr } = await supabase.from('bookings').insert({
         slot_id: slot.id,
         consultant_id: c.id,
         consultation_id: cons.id,
@@ -290,9 +297,13 @@ function ConsultantSelectInner() {
         customer_phone: phoneDigits,
         status: 'booked',
       })
+      if (bkErr) throw bkErr
 
       // 슬롯 잠금
-      await supabase.from('consultant_slots').update({ is_booked: true }).eq('id', slot.id)
+      // 잠기지 않으면 같은 시간에 다른 손님이 또 예약할 수 있다.
+      const { error: slotErr } = await supabase
+        .from('consultant_slots').update({ is_booked: true }).eq('id', slot.id)
+      if (slotErr) throw slotErr
 
       // 전달 완료된 해설은 세션에서 정리
       if (typeof window !== 'undefined') {

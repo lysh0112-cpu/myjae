@@ -471,7 +471,7 @@ function DiagnosisInner() {
         if (u?.user) {
           const hangulName = chars.filter(Boolean).map((c) => c!.hangul).join('')
           const hanjaName = chars.filter(Boolean).map((c) => c!.hanja).join('')
-          await supabase.from('my_names').insert({
+          const { error: nameErr } = await supabase.from('my_names').insert({
             user_id: u.user.id,
             hangul_name: hangulName,
             hanja_name: hanjaName,
@@ -482,6 +482,7 @@ function DiagnosisInner() {
             kind: targetRelation === 'self' ? 'self' : 'other',
             person_key: pkey,
           })
+          if (nameErr) console.error('이름 저장 실패:', nameErr.message)
         }
       } catch {}
 
