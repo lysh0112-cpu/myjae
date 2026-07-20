@@ -449,7 +449,7 @@ export default function SignupPage() {
 
         <div style={{ textAlign: 'center', fontSize: '12px', color: '#6b5340' }}>
           이미 계정이 있으신가요?{' '}
-          <span onClick={() => router.push('/login')} style={{ color: '#8B6914', fontWeight: 600, cursor: 'pointer' }}>로그인</span>
+          <button type="button" onClick={() => router.push('/login')} style={{ color: '#8B6914', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>로그인</button>
         </div>
       </main>
     </div>

@@ -172,7 +172,7 @@ function CoupleResultInner() {
                 <div onClick={() => toggleCat(category)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 12px', background: gPicked > 0 ? col + '14' : '#fff', cursor: 'pointer' }}>
                   <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: col }}>{category}</span>
                   {gPicked > 0 && <span style={{ fontSize: 10, color: '#fff', background: col, borderRadius: 9, padding: '2px 7px' }}>{gPicked}</span>}
-                  <span onClick={(e) => { e.stopPropagation(); toggleCatAll(category, items) }} style={{ fontSize: 10, color: col, border: `0.5px solid ${col}88`, borderRadius: 8, padding: '3px 8px', background: '#fff' }}>{allOn ? '모두 해제' : '모두 담기'}</span>
+                  <button type="button" onClick={(e) => { e.stopPropagation(); toggleCatAll(category, items) }} style={{ fontSize: 10, color: col, border: `0.5px solid ${col}88`, borderRadius: 8, padding: '3px 8px', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>{allOn ? '모두 해제' : '모두 담기'}</button>
                   <span style={{ color: col, fontSize: 12 }}>{open ? '▾' : '▸'}</span>
                 </div>
                 {open && (
@@ -205,7 +205,7 @@ function CoupleResultInner() {
                 <div style={{ background: '#fff', border: '0.5px solid #e8d5c5', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, color: '#3a2e28', lineHeight: 1.5 }}>{directQ.question}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
                   <span style={{ fontSize: 11, color: '#4a9450', flex: 1 }}>✓ 아래 풀이에 함께 담겨요</span>
-                  <span onClick={cancelDirect} style={{ fontSize: 11, color: '#5c3a1e', border: '0.5px solid #e0c0a8', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', background: '#fff' }}>지우고 다시 쓰기</span>
+                  <button type="button" onClick={cancelDirect} style={{ fontSize: 11, color: '#5c3a1e', border: '0.5px solid #e0c0a8', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', background: '#fff', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>지우고 다시 쓰기</button>
                 </div>
               </div>
             ) : (
@@ -216,7 +216,7 @@ function CoupleResultInner() {
                   style={{ width: '100%', boxSizing: 'border-box', minHeight: 52, background: '#fff', border: '0.5px solid #e8d5c5', borderRadius: 10, padding: '9px 12px', fontSize: 12.5, color: '#3a2e28', resize: 'none', fontFamily: 'inherit', outline: 'none', lineHeight: 1.5 }} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
                   <span style={{ fontSize: 10.5, color: directHint ? '#c8783c' : '#c5a590', flex: 1, lineHeight: 1.5 }}>{directHint || '위에서 고른 질문들과 함께 풀이돼요.'}</span>
-                  <span onClick={confirmDirect} style={{ fontSize: 12, color: '#fff', background: directText.trim() ? '#b46e46' : '#d8bfae', borderRadius: 8, padding: '6px 14px', cursor: directText.trim() ? 'pointer' : 'default', flexShrink: 0 }}>담기</span>
+                  <button type="button" onClick={confirmDirect} style={{ fontSize: 12, color: '#fff', background: directText.trim() ? '#b46e46' : '#d8bfae', borderRadius: 8, padding: '6px 14px', cursor: directText.trim() ? 'pointer' : 'default', flexShrink: 0, border: 'none', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>담기</button>
                 </div>
               </div>
             )}

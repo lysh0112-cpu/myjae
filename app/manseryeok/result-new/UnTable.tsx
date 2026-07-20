@@ -107,10 +107,10 @@ export default function UnTable({ title, badge, items }: Props) {
                   {branchEl && <span style={markStyle(branchEl)}>{EL_HAN[branchEl]}</span>}
                 </div>
                 <div style={{ fontSize: 10, color: '#9e9e9e', textAlign: 'center', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
-                  <span onClick={() => open(item.branchSipsin)} style={{ cursor: SAJU_TERMS[item.branchSipsin] ? 'pointer' : 'default' }}>
+                  <button type="button" onClick={() => open(item.branchSipsin)} style={{ cursor: SAJU_TERMS[item.branchSipsin] ? 'pointer' : 'default', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>
                     {item.branchSipsin || '-'}
-                  </span>
-                  {item.unsung ? <><br /><span onClick={() => open(item.unsung)} style={{ cursor: item.unsung && SAJU_TERMS[item.unsung] ? 'pointer' : 'default' }}>{item.unsung}</span></> : null}
+                  </button>
+                  {item.unsung ? <><br /><button type="button" onClick={() => open(item.unsung)} style={{ cursor: item.unsung && SAJU_TERMS[item.unsung] ? 'pointer' : 'default', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>{item.unsung}</button></> : null}
                 </div>
               </div>
             )

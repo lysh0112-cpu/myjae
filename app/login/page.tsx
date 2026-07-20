@@ -190,7 +190,7 @@ export default function LoginPage() {
         {/* 회원가입 링크 */}
         <div style={{ textAlign: 'center', fontSize: 13, color: '#8a7868', paddingTop: 18, borderTop: '0.5px solid #f0e0d5' }}>
           아직 회원이 아니신가요?{' '}
-          <span onClick={() => router.push('/signup')} style={{ color: '#8f3d0e', fontWeight: 600, cursor: 'pointer' }}>회원가입</span>
+          <button type="button" onClick={() => router.push('/signup')} style={{ color: '#8f3d0e', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>회원가입</button>
         </div>
 
       </div>

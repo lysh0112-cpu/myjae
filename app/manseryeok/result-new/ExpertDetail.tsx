@@ -228,7 +228,7 @@ export default function ExpertDetail({
                       background: isBongi ? '#fdf9f5' : undefined,
                     }}>
                       <span style={{ color: '#3a2e28' }}>{g}</span>{' '}
-                      <span onClick={() => open(ss)} style={{ color: SS_COLOR[ss] || '#8a7360', fontSize: 9.5, cursor: 'pointer' }}>{ss}</span>
+                      <button type="button" onClick={() => open(ss)} style={{ color: SS_COLOR[ss] || '#8a7360', fontSize: 9.5, cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>{ss}</button>
                     </td>
                   )
                 })}
@@ -295,9 +295,9 @@ export default function ExpertDetail({
       {/* ③-2 현침살 · 곡각살 (글자 자체 판정) */}
       <div style={card}>
         <div style={ttl}>
-          <span onClick={() => open('현침살')} style={{ cursor: 'pointer' }}>
+          <button type="button" onClick={() => open('현침살')} style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>
             🪡 현침살 · 곡각살 <span style={{ fontSize: 9, color: '#6b5340' }}>ⓘ</span>
-          </span>
+          </button>
         </div>
         <table style={tb}>
           <tbody>
@@ -312,8 +312,8 @@ export default function ExpertDetail({
                 return (
                   <td key={i} style={td}>
                     <span style={{ color: '#3a2e28', fontSize: 11 }}>{p.stem}</span>{' '}
-                    {hc && <span onClick={() => open('현침살')} style={{ color: '#c85a6e', fontSize: 9, cursor: 'pointer', fontWeight: 600 }}>현침</span>}
-                    {gg && <span onClick={() => open('곡각살')} style={{ color: '#7c5aaa', fontSize: 9, cursor: 'pointer', fontWeight: 600 }}>곡각</span>}
+                    {hc && <button type="button" onClick={() => open('현침살')} style={{ color: '#c85a6e', fontSize: 9, cursor: 'pointer', fontWeight: 600, background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>현침</button>}
+                    {gg && <button type="button" onClick={() => open('곡각살')} style={{ color: '#7c5aaa', fontSize: 9, cursor: 'pointer', fontWeight: 600, background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>곡각</button>}
                     {!hc && !gg && <span style={{ color: '#ddd0c4', fontSize: 9 }}>-</span>}
                   </td>
                 )
@@ -326,8 +326,8 @@ export default function ExpertDetail({
                 return (
                   <td key={i} style={td}>
                     <span style={{ color: '#3a2e28', fontSize: 11 }}>{p.branch}</span>{' '}
-                    {hc && <span onClick={() => open('현침살')} style={{ color: '#c85a6e', fontSize: 9, cursor: 'pointer', fontWeight: 600 }}>현침</span>}
-                    {gg && <span onClick={() => open('곡각살')} style={{ color: '#7c5aaa', fontSize: 9, cursor: 'pointer', fontWeight: 600 }}>곡각</span>}
+                    {hc && <button type="button" onClick={() => open('현침살')} style={{ color: '#c85a6e', fontSize: 9, cursor: 'pointer', fontWeight: 600, background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>현침</button>}
+                    {gg && <button type="button" onClick={() => open('곡각살')} style={{ color: '#7c5aaa', fontSize: 9, cursor: 'pointer', fontWeight: 600, background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>곡각</button>}
                     {!hc && !gg && <span style={{ color: '#ddd0c4', fontSize: 9 }}>-</span>}
                   </td>
                 )
@@ -375,7 +375,7 @@ export default function ExpertDetail({
                     {g.length ? g.map((x, k) => (
                       <span key={x}>
                         {k > 0 && '·'}
-                        <span onClick={() => open(x)} style={{ cursor: 'pointer' }}>{x.replace('귀인', '')}</span>
+                        <button type="button" onClick={() => open(x)} style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>{x.replace('귀인', '')}</button>
                       </span>
                     )) : '-'}
                   </td>
@@ -391,7 +391,7 @@ export default function ExpertDetail({
                     {g.length ? g.map((x, k) => (
                       <span key={x}>
                         {k > 0 && '·'}
-                        <span onClick={() => open(x)} style={{ cursor: 'pointer' }}>{x.replace('귀인', '')}</span>
+                        <button type="button" onClick={() => open(x)} style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>{x.replace('귀인', '')}</button>
                       </span>
                     )) : '-'}
                   </td>

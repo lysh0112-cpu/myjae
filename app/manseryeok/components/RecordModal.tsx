@@ -66,7 +66,7 @@ export default function RecordModal({
             <div style={{ fontSize: '15px', fontWeight: 700, color: C.title }}>{personName}님의 {serviceLabel} 기록</div>
             <div style={{ fontSize: '11px', color: C.sub, marginTop: '3px' }}>지난 해설을 다시 보거나, 새로운 고민을 들어보세요</div>
           </div>
-          <span onClick={onClose} style={{ color: C.subLight, fontSize: '17px', cursor: 'pointer', lineHeight: 1 }}>✕</span>
+          <button type="button" onClick={onClose} style={{ color: C.subLight, fontSize: '17px', cursor: 'pointer', lineHeight: 1, background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>✕</button>
         </div>
 
         {/* 지난 기록 목록 */}

@@ -148,8 +148,8 @@ export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive
                   : <span style={{ fontSize: 13, color: '#b0aec8' }}>{c.name?.[0] || '?'}</span>}
               </div>
               {/* 이름 (누르면 펼침) */}
-              <span onClick={() => setOpenId(openId === c.id ? null : c.id)}
-                style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff', cursor: 'pointer' }}>{c.name}</span>
+              <button type="button" onClick={() => setOpenId(openId === c.id ? null : c.id)}
+                style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff', cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}>{c.name}</button>
               <span style={{ width: 50, textAlign: 'center' }}>
                 <button onClick={() => onToggleActive(c)}
                   className="px-2 py-0.5 rounded-lg text-xs font-bold"

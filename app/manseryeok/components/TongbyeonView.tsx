@@ -183,7 +183,7 @@ export default function TongbyeonView({ input, questions, premium, onBack, unseE
   return (
     <div style={{ background: C.cardBg, borderRadius: 18, border: `0.5px solid ${C.border}`, overflow: 'hidden' }}>
       <div style={{ padding: '13px 16px', borderBottom: `0.5px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-        {onBack && <span onClick={onBack} style={{ color: C.subLight, fontSize: 18, cursor: 'pointer' }}>{'\u2039'}</span>}
+        {onBack && <button type="button" onClick={onBack} style={{ color: C.subLight, fontSize: 18, cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>{'\u2039'}</button>}
         <div style={{ flex: 1, textAlign: 'center' }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: C.title }}>{storyTitle}</div>
           <div style={{ fontSize: 10, color: C.point, marginTop: 1 }}>각 제목을 누르면 해설이 펼쳐져요</div>
