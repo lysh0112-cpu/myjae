@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { listMyCoupleRooms, leaveCoupleRoom, type CoupleRoomSummary } from '@/lib/saju/coupleRoom'
+import { withNim } from '@/lib/saju/honorific'
 
 const PEACH = '#FDF6F0'
 const CARD = '#FFFBF7'
@@ -43,7 +44,7 @@ export default function CoupleRoomsPage() {
   }, [router])
 
   async function handleLeave(roomId: string, partnerName: string) {
-    if (!confirm(`${partnerName}님과의 채팅방에서 나갈까요?\n(내 목록에서 사라져요)`)) return
+    if (!confirm(`${withNim(partnerName)}과의 채팅방에서 나갈까요?\n(내 목록에서 사라져요)`)) return
     const ok = await leaveCoupleRoom(roomId)
     if (ok) {
       setRooms((prev) => prev.filter((r) => r.roomId !== roomId))
@@ -163,7 +164,7 @@ export default function CoupleRoomsPage() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 600, color: TITLE }}>
-                      {r.partnerName}님과의 채팅
+                      {withNim(r.partnerName)}과의 채팅
                     </div>
                     <div style={{ fontSize: 11, color: SUB, marginTop: 2 }}>
                       {r.status === 'connected' ? '연결됨' : '상대 참여 대기 중'}

@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
 import { createClient } from '@supabase/supabase-js'
+import { withNim } from '@/lib/saju/honorific'
 
 // 오늘운세 전용 지시문 읽기 (관리자 화면에서 관리)
 async function loadFortuneGuide(): Promise<string> {
@@ -75,7 +76,7 @@ ${fortuneGuide}
 [대상 달] ${year}년 ${month}월 (${monthStem}${monthBranch}월)
 [상담자 일간] ${dayStem} / 월지 ${monthBranchMine} / 일지 ${dayBranchMine}
 [상담자 용신] ${yongsin} / 희신 ${heeksin}
-${nickname ? `[호칭] ${nickname}님` : ''}
+${nickname ? `[호칭] ${withNim(nickname)}` : ''}
 ${ageGroup ? `[연령대] ${ageGroup}` : ''}
 
 [계산된 판정 — 이 사실에 근거해 쓸 것]

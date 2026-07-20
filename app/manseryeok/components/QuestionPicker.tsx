@@ -26,6 +26,7 @@ import {
   unseQuestionsForEntry, groupUnseByKind,
   type UnseEntry, type UnseKind,
 } from '@/lib/saju/unseQuestions'
+import { withNim } from '@/lib/saju/honorific'
 
 const C = {
   cardBg: '#FFFBF7',
@@ -220,7 +221,7 @@ export default function QuestionPicker({
         <div style={{ flex: 1, textAlign: 'center' }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: C.title }}>무엇이 궁금하세요?</div>
           <div style={{ fontSize: 10, color: C.point, marginTop: 1 }}>
-            {personName && `${personName}님 · `}{ageLabel && `${ageLabel} · `}궁금한 걸 마음껏 골라보세요
+            {personName && `${withNim(personName)} · `}{ageLabel && `${ageLabel} · `}궁금한 걸 마음껏 골라보세요
           </div>
         </div>
         {onBack && <span style={{ width: 16 }} />}

@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { getMyPendingInvites, acceptInvite, type PendingInvite } from '@/lib/saju/memberInvite'
+import { withNim } from '@/lib/saju/honorific'
 
 // 짧은 알림음 (웹 오디오로 생성 — 파일 없이)
 function playDing() {
@@ -125,7 +126,7 @@ export default function InviteNotifier() {
       >
         <div style={{ fontSize: 34, marginBottom: 10 }}>💌</div>
         <div style={{ fontSize: 16, fontWeight: 600, color: '#3a2e28', marginBottom: 4 }}>
-          {invite.inviterName}님이 초대했어요
+          {withNim(invite.inviterName)}이 초대했어요
         </div>
         <div style={{ fontSize: 12.5, color: '#7c5aaa', marginBottom: 18, lineHeight: 1.6 }}>
           둘만의 커플 채팅방으로 💕

@@ -39,6 +39,7 @@ import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
 // 되살릴 때는 이 한 줄만 true 로 바꾸면 시작 버튼과 플로팅이 함께 돌아온다.
 const COUPLE_CHAT_OPEN = false
 import ConsultButton from '@/app/components/common/ConsultButton'
+import { withNim } from '@/lib/saju/honorific'
 
 type Mode = 'couple' | 'married'
 
@@ -488,7 +489,7 @@ function CoupleResultView({
     return () => { cancelled = true }
   }, [saju1, saju2, score, mode, person1, person2, pickedQuestions, recordId])
 
-  const headline = dummyHeadlineSafe(`${name1}님과 ${name2}님, 두 사람의 만남`)
+  const headline = dummyHeadlineSafe(`${withNim(name1)}과 ${withNim(name2)}, 두 사람의 만남`)
   const isMe1 = person1.isMe === 'true' || person1.isMe === '1'
   const { intro: tbIntro, cards: tbCards } = useMemo(
     () => (tongResult ? parseTCards(tongResult) : { intro: '', cards: [] }),

@@ -22,6 +22,7 @@
 
 import type { SajuRecord } from '@/lib/saju/sajuRecords'
 import { daysAgoLabel } from '@/lib/saju/sajuRecords'
+import { withNim } from '@/lib/saju/honorific'
 
 const C = {
   overlay: 'rgba(60,40,30,0.35)',
@@ -63,7 +64,7 @@ export default function RecordModal({
         {/* 헤더 */}
         <div style={{ padding: '16px 18px 12px', borderBottom: `0.5px solid ${C.divider}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: '15px', fontWeight: 700, color: C.title }}>{personName}님의 {serviceLabel} 기록</div>
+            <div style={{ fontSize: '15px', fontWeight: 700, color: C.title }}>{withNim(personName)}의 {serviceLabel} 기록</div>
             <div style={{ fontSize: '11px', color: C.sub, marginTop: '3px' }}>지난 해설을 다시 보거나, 새로운 고민을 들어보세요</div>
           </div>
           <button type="button" onClick={onClose} style={{ color: C.subLight, fontSize: '17px', cursor: 'pointer', lineHeight: 1, background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>✕</button>

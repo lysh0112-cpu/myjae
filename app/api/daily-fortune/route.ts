@@ -10,6 +10,7 @@ import { calcYongsin } from '@/lib/saju/yongsin'
 import { scoreDailyFortune } from '@/lib/saju/dailyFortune'
 import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
 import { createClient } from '@supabase/supabase-js'
+import { withNim } from '@/lib/saju/honorific'
 
 // 간지 문자열 → {stem, branch} (기존 splitGanji 방식 동일)
 function splitGanji(ganji: string): { stem: string; branch: string } {
@@ -104,7 +105,7 @@ ${fortuneGuide}
 [오늘 일진] ${today.stem}${today.branch}
 [상담자 일간] ${dayStem} / 일지 ${iljji}
 [상담자 용신] ${yongsinResult.yongsin} / 희신 ${yongsinResult.heeksin}
-${nickname ? `[호칭] ${nickname}님` : ''}
+${nickname ? `[호칭] ${withNim(nickname)}` : ''}
 ${ageGroup ? `[연령대] ${ageGroup}` : ''}
 
 [계산된 판정 — 이 사실에 근거해 쓸 것]

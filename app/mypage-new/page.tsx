@@ -14,6 +14,7 @@ import {
   TIME_BANDS, MONTHS, dayOptions, clampDay, isValidBirthDate,
   crossesMidnight, type TimeBand,
 } from '@/lib/saju/birthInput'
+import { withNim } from '@/lib/saju/honorific'
 
 // 시(時) 목록 — 공용 birthInput.ts 기준 (30분법 · 공백없음).
 //   ★ '모름'은 두지 않는다. 시를 반드시 고르게 한다(대표님 확정 2026-07).
@@ -384,7 +385,7 @@ export default function MyPageNew() {
             <div style={{ width: 42, height: 42, borderRadius: '50%', background: '#fae6d5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 700, color: '#8f3d0e', flexShrink: 0 }}>{initial}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#3a2e28' }}>{displayName}님</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: '#3a2e28' }}>{withNim(displayName)}</span>
                 <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 10, background: rc.bg, color: rc.fg, fontWeight: 500, flexShrink: 0 }}>{roleLabel(profile?.role || null)}</span>
               </div>
               <div style={{ fontSize: 10.5, color: '#9a8574', marginTop: 2 }}>

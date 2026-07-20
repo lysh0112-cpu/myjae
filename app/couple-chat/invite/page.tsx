@@ -17,6 +17,7 @@ import {
   inviteMemberToRoom,
   type MemberHit,
 } from '@/lib/saju/memberInvite'
+import { withNim } from '@/lib/saju/honorific'
 
 const PEACH = '#FDF6F0'
 const CARD = '#FFFBF7'
@@ -243,10 +244,10 @@ function InviteInner() {
           <div style={{ textAlign: 'center', padding: '10px 0' }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>💌</div>
             <div style={{ fontSize: 15, fontWeight: 600, color: TITLE, marginBottom: 6 }}>
-              {invitedName}님에게 초대를 보냈어요!
+              {withNim(invitedName)}에게 초대를 보냈어요!
             </div>
             <div style={{ fontSize: 12, color: SUB, lineHeight: 1.7, marginBottom: 20 }}>
-              {invitedName}님이 명카페 앱에서 수락하면
+              {withNim(invitedName)}이 명카페 앱에서 수락하면
               <br />
               채팅방이 열려요 💕
             </div>

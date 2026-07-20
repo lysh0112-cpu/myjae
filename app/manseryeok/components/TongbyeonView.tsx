@@ -19,6 +19,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { buildTongbyeonPrompt, type TongbyeonInput } from '@/lib/saju/tongbyeonPrompt'
 import type { SajuQuestion } from '@/lib/saju/questions'
+import { withNim } from '@/lib/saju/honorific'
 
 const C = {
   cardBg: '#FFFBF7',
@@ -115,7 +116,7 @@ export default function TongbyeonView({ input, questions, premium, onBack, unseE
   const kindWord = unseEntry === 'daeun' ? '대운' : unseEntry === 'seyun' ? '세운' : '사주'
   const storyTitle = input.name === '나'
     ? `나의 ${kindWord} 이야기`
-    : `${input.name}님의 ${kindWord} 이야기`
+    : `${withNim(input.name)}의 ${kindWord} 이야기`
   const prompt = useMemo(
     () => buildTongbyeonPrompt(input, questions, { premium }),
     [input, questions, premium]

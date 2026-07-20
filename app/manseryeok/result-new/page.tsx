@@ -13,6 +13,7 @@ import { calcYongsinNew } from "@/lib/saju/yongsinNew";
 import { calcHapchungScore } from "@/lib/saju/hapchungScore";
 import { calcSimsanOhaeng, toPercentList, seasonConvertNote } from "@/lib/saju/simsanOhaeng";
 import AiAnalysisNew from "./components/AiAnalysisNew";
+import { withNim, nimEuiTitle } from "@/lib/saju/honorific";
 import ConsultButton from "@/app/components/common/ConsultButton";
 import OhaengPentagon from "./OhaengPentagon";
 import HapchungView from "./HapchungView";
@@ -293,7 +294,9 @@ function ResultNewContent() {
   const personName=searchParams.get("name")||""
   const _unse=searchParams.get("unse")
   const _kindLabel=_unse==="daeun"?"대운":_unse==="seyun"?"세운":"만세력"
-  const titleName=personName?`${personName}님의 ${_kindLabel}`:`나의 ${_kindLabel}`
+  const titleName=nimEuiTitle(personName,_kindLabel)
+  // 프로필 카드에는 제목을 되풀이하지 않고 "누구인지"만 적는다.
+  const cardName=personName?withNim(personName):"나"
 
   const {saju,solar,converting:converting0,dayStem,monthGanji,yearStem,iljji,yeonjji}=
     useResultSaju(calType,yearParam,monthParam,dayParam,leapMonth,hourIdx)
@@ -425,7 +428,7 @@ function ResultNewContent() {
           <div style={{display:'flex',alignItems:'center',gap:'11px'}}>
             <div style={{width:'42px',height:'42px',borderRadius:'50%',background:'#f5ebe2',border:'1.5px solid #e8d5c5',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'19px',flexShrink:0}}>🌿</div>
             <div>
-              <div style={{fontSize:'13px',fontWeight:700,color:'#96502e',marginBottom:'2px'}}>{titleName}</div>
+              <div style={{fontSize:'13px',fontWeight:700,color:'#96502e',marginBottom:'2px'}}>{cardName}</div>
               <div style={{fontSize:'11px',color:'#b4785a',lineHeight:1.5}}>{calLabel}{solarLabel} · {hourLabel} · {genderLabel}</div>
             </div>
           </div>
