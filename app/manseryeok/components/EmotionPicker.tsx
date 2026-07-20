@@ -49,7 +49,17 @@ export default function EmotionPicker() {
       if (firstSaveToday) {
         const cnt = await countMoods()
         if (shouldShowNotice(cnt)) setNotice(noticeFor(cnt))
+        else setNotice({ emoji: '🌿', title: '오늘 기분을 담았어요', body: '「내 감정 기록」에서 한 달 흐름을 볼 수 있어요.' })
+      } else {
+        setNotice({ emoji: '🌿', title: '다시 담았어요', body: '오늘 기분이 새로 저장됐어요.' })
       }
+    } else {
+      // 저장이 조용히 실패하면 원인을 알 수 없다. 반드시 알려준다.
+      setNotice({
+        emoji: '🥲',
+        title: '오늘 기분을 담지 못했어요',
+        body: '잠시 후 다시 눌러 주세요. 계속 안 되면 관리자에게 알려 주세요.',
+      })
     }
   }
 
