@@ -57,7 +57,7 @@ function AiChatInner() {
         <button onClick={() => router.back()}
           style={{fontSize:'20px', color:'#9d8cff', background:'none', border:'none', cursor:'pointer'}}>‹</button>
         <div style={{flex:1}}>
-          <div style={{fontSize:'15px', fontWeight:'500', color:'#e8e4ff'}}>명연재 AI 상담</div>
+          <div style={{fontSize:'15px', fontWeight:'500', color:'#e8e4ff'}}>명카페 AI 상담</div>
           <div style={{fontSize:'11px', color:'#5555aa', marginTop:'1px'}}>{modeLabel[mode]}</div>
         </div>
         <div style={{display:'flex', gap:'6px'}}>

@@ -1,3 +1,4 @@
+import { logAiError } from '@/lib/ai/errorLog'
 // app/api/tongbyeon/route.ts
 // ============================================================================
 // AI 통변 스트리밍 API.
@@ -43,6 +44,12 @@ export async function POST(req: Request) {
         })
 
         if (!res.ok || !res.body) {
+          // 실패한 진짜 이유를 서버 로그에 남긴다.
+          // (크레딧 소진·키 만료 등은 여기 안 남기면 원인을 찾을 길이 없다.)
+          let why = ''
+          try { why = await res.text() } catch { /* 본문을 못 읽어도 status는 남는다 */ }
+          await logAiError('tongbyeon', res.status, why)
+
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({ text: '통변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.' })}\n\n`)
           )

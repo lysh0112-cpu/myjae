@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
 import { createClient } from '@supabase/supabase-js'
 import { withNim } from '@/lib/saju/honorific'
+import { logAiError } from '@/lib/ai/errorLog'
 
 // 오늘운세 전용 지시문 읽기 (관리자 화면에서 관리)
 async function loadFortuneGuide(): Promise<string> {
@@ -136,6 +137,8 @@ ${branchMaterial}
       }),
     })
     const aiData = await aiRes.json()
+    // 호출이 실패하면 content가 없어 조용히 빈 결과가 된다. 이유를 로그에 남긴다.
+    if (!aiRes.ok) await logAiError('monthly-fortune', aiRes.status, aiData?.error || aiData)
 
     let text = ''
     if (Array.isArray(aiData.content)) {

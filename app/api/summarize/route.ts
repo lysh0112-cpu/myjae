@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logAiError } from '@/lib/ai/errorLog'
 
 export async function POST(req: NextRequest) {
   try {
@@ -72,6 +73,8 @@ ${chatText}
     })
 
     const data = await response.json()
+    // 실패하면 content가 없어 빈 요약이 된다. 이유를 남긴다.
+    if (!response.ok) await logAiError('summarize', response.status, data?.error || data)
     return NextResponse.json({ summary: data.content?.[0]?.text ?? '' })
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 })

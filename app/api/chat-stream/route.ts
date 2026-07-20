@@ -1,4 +1,5 @@
 import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
+import { logAiError } from '@/lib/ai/errorLog'
 
 export async function POST(req: Request) {
   const {
@@ -39,7 +40,20 @@ export async function POST(req: Request) {
           }),
         })
 
-        const reader = res.body!.getReader()
+        // 실패해도 확인 없이 res.body!를 쓰면 원인 없이 죽는다. 먼저 확인한다.
+        if (!res.ok || !res.body) {
+          let why = ''
+          try { why = await res.text() } catch {}
+          await logAiError('chat-stream', res.status, why)
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ text: '지금은 답변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.' })}\n\n`)
+          )
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+          controller.close()
+          return
+        }
+
+        const reader = res.body.getReader()
         const decoder = new TextDecoder()
 
         while (true) {

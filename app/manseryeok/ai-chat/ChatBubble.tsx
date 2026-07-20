@@ -37,7 +37,7 @@ export default function ChatBubble({ role, content, isStreaming }: Props) {
         {/* 이름 */}
         {!isUser && (
           <div style={{fontSize: '11px', color: '#7766aa', marginBottom: '4px'}}>
-            명연재 AI
+            명카페 AI
           </div>
         )}
 

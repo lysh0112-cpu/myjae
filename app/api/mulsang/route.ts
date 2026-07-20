@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
+import { logAiError } from '@/lib/ai/errorLog'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -144,6 +145,8 @@ ${body.sceneDesc || body.prompt}
           const apiMsg = imgData?.error?.message || imgData?.error?.code || imgData?.error?.type
           imageNote = apiMsg ? `image_failed: ${String(apiMsg).slice(0, 200)}` : 'image_failed'
           console.error('gpt-image response:', JSON.stringify(imgData).slice(0, 500))
+          // 관리자 화면에서도 원인을 볼 수 있게 남긴다(2026-07-20 그림 멈춤 사고).
+          await logAiError('mulsang-image', imgRes.status, imgData?.error || imgData)
         }
       } catch (e) {
         console.error('gpt-image error:', e)

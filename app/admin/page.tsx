@@ -8,6 +8,7 @@ import Dashboard from './components/Dashboard'
 import CancelledHistory from './components/CancelledHistory'
 import KnowledgeManager from './components/KnowledgeManager'
 import SiteSettings from './components/SiteSettings'
+import AiErrorLog from './components/AiErrorLog'
 import ReviewManager from './components/ReviewManager'
 import ExpenseManager from './components/ExpenseManager'
 import ExpenseApproval from './components/ExpenseApproval'
@@ -15,7 +16,7 @@ import MemberManager from './components/MemberManager'
 import ToneManager from './components/ToneManager'
 import PromptViewer from './components/PromptViewer'
 import PriceManager from './components/PriceManager'
-type Tab = 'dashboard' | 'cancelled' | 'consultant' | 'price' | 'member' | 'settlement' | 'knowledge' | 'review' | 'accounting' | 'approval' | 'tone' | 'prompt' | 'settings'
+type Tab = 'dashboard' | 'cancelled' | 'consultant' | 'price' | 'member' | 'settlement' | 'knowledge' | 'review' | 'accounting' | 'approval' | 'tone' | 'prompt' | 'aierror' | 'settings'
 const TABS = [
   { key: 'dashboard', label: '📊 대시보드' },
   { key: 'cancelled', label: '🗑 취소 내역' },
@@ -29,6 +30,7 @@ const TABS = [
   { key: 'approval', label: '🧾 지출결의서' },
   { key: 'tone', label: '💬 어투 관리' },
   { key: 'prompt', label: '🔍 AI 통변 구조' },
+  { key: 'aierror', label: '🚨 AI 오류' },
   { key: 'settings', label: '⚙️ 사이트 설정' },
 ]
 export default function AdminPage() {
@@ -113,6 +115,7 @@ export default function AdminPage() {
         {tab === 'approval' && <ExpenseApproval />}
         {tab === 'tone' && <ToneManager />}
         {tab === 'prompt' && <PromptViewer />}
+        {tab === 'aierror' && <AiErrorLog />}
         {tab === 'settings' && <SiteSettings />}
       </main>
     </div>

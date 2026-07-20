@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logAiError } from '@/lib/ai/errorLog'
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,6 +22,8 @@ export async function POST(req: NextRequest) {
       }),
     })
     const data = await response.json()
+    // 실패 이유를 서버 로그에 남긴다(크레딧 소진·키 만료 추적용).
+    if (!response.ok) await logAiError('analyze', response.status, data?.error || data)
     return NextResponse.json(data, { status: response.status })
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 })

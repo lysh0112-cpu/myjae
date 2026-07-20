@@ -11,6 +11,7 @@ import { scoreDailyFortune } from '@/lib/saju/dailyFortune'
 import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
 import { createClient } from '@supabase/supabase-js'
 import { withNim } from '@/lib/saju/honorific'
+import { logAiError } from '@/lib/ai/errorLog'
 
 // 간지 문자열 → {stem, branch} (기존 splitGanji 방식 동일)
 function splitGanji(ganji: string): { stem: string; branch: string } {
@@ -150,6 +151,8 @@ ${ageGroup ? `[연령대] ${ageGroup}` : ''}
       }),
     })
     const aiData = await aiRes.json()
+    // 호출이 실패하면 content가 없어 조용히 빈 결과가 된다. 이유를 로그에 남긴다.
+    if (!aiRes.ok) await logAiError('daily-fortune', aiRes.status, aiData?.error || aiData)
 
     // Claude 응답에서 텍스트 추출 → JSON 파싱 (백틱 방어)
     let text = ''
