@@ -8,7 +8,9 @@
 // ============================================================================
 
 import type { TongbyeonInput, Ohaeng } from '@/lib/saju/tongbyeonPrompt'
-import type { YongsinResult } from '@/lib/saju/yongsin'
+// 용신 결과 타입 — 구버전 yongsin.ts 를 없애고 심산 기반 어댑터 타입으로 옮김(07-20).
+//   두 타입은 필드가 완전히 같다(isStrong·yongsin·heeksin·gisin·gusin·hansin·score·description).
+import type { YongsinCompatResult as YongsinResult } from '@/lib/saju/yongsinNew'
 import { getUnsung } from '@/lib/saju/unsung'
 import { getSinsal } from '@/lib/saju/sinsal'
 import { getGongmang } from '@/lib/saju/gongmang'

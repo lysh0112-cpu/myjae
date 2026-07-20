@@ -2,7 +2,6 @@
 // 결혼 택일 계산 로직
 
 import { calcCoupleSamjae } from './samjae'
-import { calcYongsin } from './yongsin'
 
 // =============================================
 // 상수

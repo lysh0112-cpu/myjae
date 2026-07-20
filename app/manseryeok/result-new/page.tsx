@@ -8,8 +8,8 @@ import { supabase } from "@/lib/supabase";
 import { fromProfile, fromUrl, type MyInfo } from "@/lib/saju/myInfo";
 import { saveRecord, getRecord } from "@/lib/saju/sajuRecords";
 import { getUnsung, getSinsal, unsungColor, getGongmang, SINSAL_HIGHLIGHT } from "@/lib/saju";
-import { calcYongsin } from "@/lib/saju/yongsin";
-import { calcYongsinNew } from "@/lib/saju/yongsinNew";
+
+import { calcYongsinNew, calcYongsinCompat } from "@/lib/saju/yongsinNew";
 import { calcHapchungScore } from "@/lib/saju/hapchungScore";
 import { calcSimsanOhaeng, toPercentList, seasonConvertNote } from "@/lib/saju/simsanOhaeng";
 import AiAnalysisNew from "./components/AiAnalysisNew";
@@ -348,7 +348,10 @@ function ResultNewContent() {
     ? calcYongsinNew(saju,dayStem,calcHapchungScore(saju).score)
     : null
   const yongsinNew = (isPro && hapchungOn && yongsinHap) ? yongsinHap : yongsinBase
-  const yongsinResult=saju.length>0&&dayStem?calcYongsin(saju,dayStem):null
+  // 통변에 넘길 용신 — 화면 표시와 같은 심산 점수 기준으로 계산한다.
+  const yongsinResult=saju.length>0&&dayStem
+    ?calcYongsinCompat(saju,dayStem,solarMonth,solarDay,hourBranch)
+    :null
 
   // 신강/신약 점수 (임시: 토 비율로 계산)
   const toEl=ohaeng.find(o=>o.el==='토')
