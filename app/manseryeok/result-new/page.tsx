@@ -416,7 +416,6 @@ function ResultNewContent() {
         <button onClick={()=>router.back()} style={{background:'none',border:'none',color:'#999',fontSize:'20px',cursor:'pointer'}}>←</button>
         <div style={{textAlign:'center'}}>
           <div style={{fontSize:'14px',fontWeight:700,color:'#1a1a1a'}}>{titleName}</div>
-          <div style={{fontSize:'9px',color:'#c8783c'}}>명연재（明然載）</div>
         </div>
         {/* 저장 버튼은 하단으로 이동. 헤더 균형용 빈 칸. */}
         <div style={{width:'20px'}}/>

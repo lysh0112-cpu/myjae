@@ -70,7 +70,9 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen" style={{ background: '#1a1a18' }}>
-      <header className="fixed top-0 z-50 w-full"
+      {/* sticky로 둔다. fixed면 탭이 두 줄이 될 때 아래 본문을 덮어버린다.
+          (2026-07-20 "AI 오류" 탭을 늘리면서 제목이 가려지는 일이 있었음) */}
+      <header className="sticky top-0 z-50 w-full"
         style={{ background: 'rgba(26,26,24,0.97)', backdropFilter: 'blur(12px)',
           borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center gap-6">
@@ -102,7 +104,7 @@ export default function AdminPage() {
           </button>
         </div>
       </header>
-      <main className="max-w-7xl mx-auto px-6 pt-24 pb-10">
+      <main className="max-w-7xl mx-auto px-6 pt-6 pb-10">
         {tab === 'dashboard' && <Dashboard />}
         {tab === 'cancelled' && <CancelledHistory />}
         {tab === 'consultant' && <ConsultantManager />}
