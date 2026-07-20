@@ -338,7 +338,11 @@ function ResultNewContent() {
   const genderLabel=gender==="여"?"여성":"남성"
 
   // 용신 계산 — 화면 표시는 심산 3종 용신(yongsinNew), 통변은 기존 형식(호환)
-  const yongsinBase=saju.length>0&&dayStem?calcYongsinNew(saju,dayStem):null
+  //   ★ 심산 오행 점수를 넘겨 준다. 이래야 월지 계절 치환(丑월=水, 未월=火 등)이
+  //     억부용신 판정에 반영된다. (연재쌤 확정: 표 기준으로 계절 치환이 맞다)
+  //     넘기지 않으면 yongsinNew 자체 배점(지지를 본래 오행으로)이 쓰여 결과가 달라진다.
+  const simsanScore = saju.length>0 ? calcSimsanOhaeng(saju,solarMonth,solarDay,hourBranch) : null
+  const yongsinBase=saju.length>0&&dayStem?calcYongsinNew(saju,dayStem,simsanScore ?? undefined):null
   // 전문가 모드(?pro=1)에서 합충 토글 ON이면 합충 반영 점수로 재계산
   const isPro = searchParams.get('pro') === '1'
   const yongsinHap=isPro&&saju.length>0&&dayStem
