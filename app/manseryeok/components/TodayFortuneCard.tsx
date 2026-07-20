@@ -120,6 +120,19 @@ function totalOf(f: Fortune): number | null {
   return s >= 5 ? 92 : s === 4 ? 78 : s === 3 ? 60 : s === 2 ? 45 : 30
 }
 
+/** 회전하는 ✦ — 개명 진단 화면(naming/diagnosis)과 같은 방식으로 통일 */
+function SpinStar({ size = 13 }: { size?: number }) {
+  return (
+    <>
+      <style>{`@keyframes mcFortuneSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      <span style={{
+        fontSize: size, display: 'inline-block', color: '#c8783c',
+        animation: 'mcFortuneSpin 1.2s linear infinite',
+      }}>✦</span>
+    </>
+  )
+}
+
 export default function TodayFortuneCard() {
   const router = useRouter()
 
@@ -332,7 +345,9 @@ export default function TodayFortuneCard() {
     })()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, monthly, userId])
+    // ⚠ monthly 는 렌더마다 새 객체가 되므로 의존성에 넣으면 무한 반복이 된다.
+    //   연·월과 "계산이 끝났는지"만 본다.
+  }, [tab, userId, monthly?.year, monthly?.month, !!monthly])
 
   // ── 화면 ──────────────────────────────────────────────────────────────
   const wrap: React.CSSProperties = {
@@ -458,7 +473,9 @@ export default function TodayFortuneCard() {
           <p style={{ fontSize: 12.5, color: '#5c4634', lineHeight: 1.75, margin: '0 0 12px' }}>{mText.summary}</p>
         )}
         {mTextLoading && !mText && (
-          <p style={{ fontSize: 12, color: '#8a6a52', margin: '0 0 12px' }}>이달의 이야기를 준비하는 중…</p>
+          <p style={{ fontSize: 12, color: '#8a6a52', margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 7 }}>
+            <SpinStar size={12} /> 이달의 이야기를 준비하는 중…
+          </p>
         )}
 
         {/* 영역별 — 일·환경 / 나·건강
@@ -589,8 +606,8 @@ export default function TodayFortuneCard() {
     return (
       <div style={wrap}>
         {header}
-        <div style={{ fontSize: 13, color: '#c0a898', textAlign: 'center', padding: '16px 0' }}>
-          오늘의 운세를 준비하는 중…
+        <div style={{ fontSize: 13, color: '#8a6a52', textAlign: 'center', padding: '16px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+          <SpinStar /> 오늘의 운세를 준비하는 중…
         </div>
       </div>
     )
