@@ -414,7 +414,7 @@ function CoupleResultView({
   // 통변
   const [tongLoading, setTongLoading] = useState(false)
   const [tongResult, setTongResult] = useState<string | null>(null)
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>(recordId ? 'saved' : 'idle')
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'failed'>(recordId ? 'saved' : 'idle')
   const [openCard, setOpenCard] = useState(0)
   const ranRef = useRef(false)
 
@@ -479,6 +479,7 @@ function CoupleResultView({
     let cancelled = false
     async function runTongbyeon() {
       setTongLoading(true); setTongResult(null)
+      let acc = ''
       try {
         const prompt = buildCoupleTongbyeonPrompt(
           { mode, person1: toCouplePerson(person1, saju1!), person2: toCouplePerson(person2, saju2!), score: score! },
@@ -491,7 +492,6 @@ function CoupleResultView({
         if (!res.ok || !res.body) { if (!cancelled) setTongResult('통변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.'); return }
         const reader = res.body.getReader()
         const decoder = new TextDecoder()
-        let acc = ''
         while (true) {
           const { done, value } = await reader.read()
           if (done || cancelled) break
@@ -503,7 +503,15 @@ function CoupleResultView({
           }
         }
       } catch { if (!cancelled) setTongResult('통변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.') }
-      finally { if (!cancelled) setTongLoading(false) }
+      finally {
+        if (!cancelled) {
+          setTongLoading(false)
+          // ★통변이 끝나면 바로 보관함에 저장한다. (2026-07-21 2차)
+          //   acc 를 인자로 넘기는 이유는 setTongResult 가 아직 state 에 반영되기 전이기 때문.
+          //   다시보기(recordId)면 이미 'saved' 라 handleSave 가 그냥 빠져나온다.
+          if (acc.trim()) handleSave(acc)
+        }
+      }
     }
     runTongbyeon()
     return () => { cancelled = true }
@@ -517,8 +525,11 @@ function CoupleResultView({
   )
 
   // 보관함에 저장 (두 사람 + 등급 + 결과 스냅샷)
-  async function handleSave() {
-    if (!saju1 || !saju2 || !score || saveState !== 'idle') return
+  //   ★2026-07-21 2차: 자동 저장. 통변이 끝나면 스스로 호출된다.
+  //     tongOverride 는 setTongResult 반영 전이라 인자로 받는다.
+  async function handleSave(tongOverride?: string) {
+    if (!saju1 || !saju2 || !score) return
+    if (saveState !== 'idle' && saveState !== 'failed') return
     setSaveState('saving')
     // person raw → SavedInputData 형태로 정리
     const toInput = (p: PersonRaw): SavedInputData & { name?: string } => ({
@@ -530,7 +541,7 @@ function CoupleResultView({
     const snapshot = {
       grade: score.grade, gradeDesc: score.gradeDesc,
       saju1, saju2,
-      tongResult: tongResult || '',
+      tongResult: tongOverride ?? tongResult ?? '',
       questionIds: pickedQuestions.filter(q => !q.id.startsWith('direct_')).map(q => q.id),
       directQuestion: directQ || null,
     }
@@ -543,7 +554,7 @@ function CoupleResultView({
       input2: toInput(person2),
       resultData: snapshot,
     })
-    setSaveState(res.ok ? 'saved' : 'idle')
+    setSaveState(res.ok ? 'saved' : 'failed')
   }
 
   return (
@@ -622,27 +633,38 @@ function CoupleResultView({
           )}
         </div>
 
-        {/* 저장/다시보기 */}
+        {/* 저장 상태 — 자동 저장이라 누르는 버튼이 아니다. (2026-07-21 2차)
+            실패했을 때만 [다시 저장]으로 바뀐다.
+            ⚠️ idle(아직 저장 시작 전 = 통변 실패 등)일 때는 아무것도 안 띄운다.
+               안 그러면 '저장 중…'이 영원히 남는다. */}
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-          <button onClick={handleSave} disabled={!score || saveState !== 'idle'}
-            style={{
-              flex: 1, borderRadius: 11, padding: 12, fontSize: 13, cursor: score && saveState === 'idle' ? 'pointer' : 'default',
-              background: saveState === 'saved' ? '#f4ede4' : '#fff',
-              border: '0.5px solid #e0c9b8',
-              color: saveState === 'saved' ? '#96502e' : '#96502e',
+          {saveState === 'failed' ? (
+            <button onClick={() => handleSave()}
+              style={{
+                flex: 1, borderRadius: 11, padding: 12, fontSize: 13, cursor: 'pointer',
+                background: '#b46e46', border: 'none', color: '#fff',
+              }}>
+              💾 다시 저장하기
+            </button>
+          ) : saveState === 'idle' ? (
+            <div style={{ flex: 1 }} />
+          ) : (
+            <div style={{
+              flex: 1, borderRadius: 11, padding: 12, fontSize: 13, textAlign: 'center',
+              background: saveState === 'saved' ? '#eef5e8' : '#f7f2ec',
+              color: saveState === 'saved' ? '#4a7a3a' : '#6b5340',
             }}>
-            {saveState === 'saving' ? '저장 중…' : saveState === 'saved' ? '✓ 보관함에 저장됨' : '보관함에 저장'}
-          </button>
+              {saveState === 'saved' ? '✓ 보관함에 저장됐어요' : '저장 중…'}
+            </div>
+          )}
           <button onClick={onOther} style={{ flex: 1, background: '#b46e46', border: 'none', borderRadius: 11, padding: 12, fontSize: 13, color: '#fff', cursor: 'pointer' }}>다른 궁합 보기</button>
         </div>
 
-        {/* 전문가 상담 — 보관함에 저장된 뒤에만 나타난다.
-            상담사가 저장된 결과를 보고 상담하는 구조라 저장이 먼저다.
-            (보관함에서 다시보기로 들어온 경우 recordId가 있어 처음부터 'saved')
+        {/* 전문가 상담 — 저장 표시 아래.
             ★ 연인/부부가 서로 다른 가격표(price_key)를 쓴다.
               관리자 > 가격 관리에서 '노출'이 꺼져 있으면 ConsultButton이
               스스로 null을 돌려주므로 이 영역 전체가 보이지 않는다. */}
-        {saveState === 'saved' && (
+        {(
           <div style={{ marginTop: 12 }}>
             <ConsultButton
               priceKey={mode === 'married' ? 'married' : 'couple'}

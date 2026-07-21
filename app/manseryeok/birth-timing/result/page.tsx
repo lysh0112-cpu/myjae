@@ -264,6 +264,8 @@ function BirthResultInner() {
   const recordIdParam = sp.get('recordId')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  // ★2026-07-21 2차: 자동 저장이 실패했을 때만 [다시 저장] 버튼을 보여주기 위한 상태
+  const [saveFailed, setSaveFailed] = useState(false)
 
   // 3일 탭: 처음엔 예정일(offset 0). 전날=-1, 다음날=+1
   const [tabOffset, setTabOffset] = useState(0)
@@ -344,7 +346,12 @@ function BirthResultInner() {
 
         setAiLoading(true)
         const notes = await fetchAiNotes(result.recommendations, sv)
-        if (!cancelled) { setAiNotes(notes); setAiLoading(false) }
+        if (!cancelled) {
+          setAiNotes(notes); setAiLoading(false)
+          // ★결과가 다 갖춰지면 바로 보관함에 저장한다. (2026-07-21 2차)
+          //   state 반영 전이라 인자로 넘긴다. 다시보기면 이미 saved 라 빠져나온다.
+          handleSave(result.recommendations, result.avoidDays, notes)
+        }
       } catch {
         if (!cancelled) { setErrMsg('계산 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.'); setLoading(false) }
       }
@@ -355,10 +362,18 @@ function BirthResultInner() {
   }, [sp, recordIdParam])
 
   // 결과를 보관함에 저장 (결과 스냅샷 통째로 — 다시보기 시 재계산·AI 없이 복원)
-  async function handleSave() {
+  //   ★2026-07-21 2차: 자동 저장. 결과가 갖춰지면 스스로 호출된다.
+  //     state 반영 전이라 값들을 인자로 받는다(안 넘기면 state 를 쓴다).
+  async function handleSave(
+    recsOverride?: Recommendation[],
+    avoidOverride?: AvoidDay[],
+    notesOverride?: Record<number, AiNote>,
+  ) {
     if (saving || saved) return
-    if (!survey || !survey.dueDate || recs.length === 0) return
+    const useRecs = recsOverride ?? recs
+    if (!survey || !survey.dueDate || useRecs.length === 0) return
     setSaving(true)
+    setSaveFailed(false)
     const nameOf = (p: PersonInput | null, fallback: string): string => {
       const nm = (p as unknown as { name?: string } | null)?.name
       return nm && nm.trim() ? nm : fallback
@@ -380,15 +395,20 @@ function BirthResultInner() {
     const res = await saveBirthRecord({
       name1: nameOf(parent1, '부모1'),
       name2: nameOf(parent2, '부모2'),
-      summary: `${survey.dueDate} 예정 · 길일 ${recs.length}개`,
+      summary: `${survey.dueDate} 예정 · 길일 ${useRecs.length}개`,
       input1: toInput(parent1),
       input2: toInput(parent2),
       survey: surveyBlob,
-      resultData: { recommendations: recs, avoidDays, aiNotes },
+      resultData: {
+        recommendations: useRecs,
+        avoidDays: avoidOverride ?? avoidDays,
+        aiNotes: notesOverride ?? aiNotes,
+      },
     })
     setSaving(false)
+    // ★실패해도 alert 로 막지 않는다. 고객이 부른 게 아니라 자동 저장이다.
     if (res.ok) setSaved(true)
-    else alert(res.message || '저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
+    else setSaveFailed(true)
   }
 
   useEffect(() => {
@@ -452,16 +472,8 @@ function BirthResultInner() {
           <div style={{ fontSize: 15, fontWeight: 500, color: '#3a2e28' }}>출산 시기 결과</div>
           <div style={{ fontSize: 10.5, color: '#5c3a1e' }}>아기에게 좋은 출산일이에요</div>
         </div>
-        {!loading && !errMsg && recs.length > 0 && (
-          <button onClick={handleSave} disabled={saving || saved}
-            style={{
-              marginLeft: 'auto', padding: '7px 13px', borderRadius: 9, fontSize: 12.5, fontWeight: 600,
-              border: 'none', cursor: saved ? 'default' : 'pointer',
-              background: saved ? '#f3e6db' : accent, color: saved ? '#96502e' : '#fff',
-            }}>
-            {saved ? '✓ 저장됨' : saving ? '저장 중…' : '저장'}
-          </button>
-        )}
+        {/* ★2026-07-21 2차: 헤더에 있던 저장 버튼을 하단으로 옮겼다.
+            다른 화면(사주·궁합·결혼택일)과 위치를 통일하기 위함. */}
       </div>
 
       <div style={{ padding: '16px' }}>
@@ -566,13 +578,39 @@ function BirthResultInner() {
               </>
             )}
 
-            {/* 전문가 상담 연결 (출산 택일 상담) */}
-            <div style={{ marginTop: '22px' }}>
-              <ConsultButton priceKey="birth" mode="birth" />
-            </div>
           </>
           )
         })()}
+
+        {/* 저장 상태 — 자동 저장이라 누르는 버튼이 아니다. (2026-07-21 2차)
+            실패했을 때만 [다시 저장]으로 바뀐다.
+            ⚠️ 아직 저장이 시작도 안 됐으면 아무것도 안 띄운다.
+               '저장 중…'이 영원히 남지 않게. */}
+        {!loading && !errMsg && recs.length > 0 && (saving || saved || saveFailed) && (
+          saveFailed ? (
+            <button onClick={() => handleSave()}
+              style={{ width: '100%', marginTop: '16px', padding: '13px', borderRadius: '12px',
+                background: accent, border: 'none', color: '#fff',
+                fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
+              💾 다시 저장하기
+            </button>
+          ) : (
+            <div style={{ width: '100%', marginTop: '16px', padding: '13px', borderRadius: '12px',
+              background: saved ? '#eef5e8' : '#f7f2ec',
+              color: saved ? '#4a7a3a' : '#6b5340',
+              fontSize: '14px', fontWeight: 500, textAlign: 'center' }}>
+              {saved ? '✓ 보관함에 저장됐어요' : '저장 중…'}
+            </div>
+          )
+        )}
+
+        {/* 전문가 상담 연결 (출산 택일 상담) — 저장 표시 아래.
+            관리자 > 가격 관리에서 '노출'을 끄면 이 영역이 통째로 사라진다. */}
+        {!loading && !errMsg && recs.length > 0 && (
+          <div style={{ marginTop: '12px' }}>
+            <ConsultButton priceKey="birth" mode="birth" />
+          </div>
+        )}
 
         <button
           onClick={() => router.push('/manseryeok/birth-timing/birth-storage')}

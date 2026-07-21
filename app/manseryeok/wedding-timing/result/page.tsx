@@ -201,7 +201,7 @@ function WeddingResultInner() {
   const [errMsg, setErrMsg] = useState('')
   // 보관함 저장/다시보기
   const recordId = sp.get('recordId') || undefined
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>(recordId ? 'saved' : 'idle')
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'failed'>(recordId ? 'saved' : 'idle')
 
   useEffect(() => {
     let cancelled = false
@@ -271,7 +271,13 @@ function WeddingResultInner() {
 
         setAiLoading(true)
         const notes = await fetchAiNotes(result.recommendations, sv)
-        if (!cancelled) { setAiNotes(notes); setAiLoading(false) }
+        if (!cancelled) {
+          setAiNotes(notes); setAiLoading(false)
+          // ★결과가 다 갖춰지면 바로 보관함에 저장한다. (2026-07-21 2차)
+          //   recs·aiNotes 는 아직 state 반영 전이라 인자로 넘긴다.
+          //   다시보기(recordId)면 이미 'saved' 라 handleSave 가 그냥 빠져나온다.
+          handleSave(result.recommendations, result.avoidDays, notes, sv)
+        }
       } catch {
         if (!cancelled) { setErrMsg('계산 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.'); setLoading(false) }
       }
@@ -316,21 +322,36 @@ function WeddingResultInner() {
     year: p?.year || '', month: p?.month || '', day: p?.day || '',
     leapMonth: '0', hour: p?.hour || '모름',
   })
-  async function handleSave() {
-    if (saveState !== 'idle' || recs.length === 0 || !survey) return
+  //   ★2026-07-21 2차: 자동 저장. 결과가 갖춰지면 스스로 호출된다.
+  //     state 반영 전이라 값들을 인자로 받는다(안 넘기면 state 를 쓴다).
+  async function handleSave(
+    recsOverride?: WeddingRecommendation[],
+    avoidOverride?: WeddingAvoidDay[],
+    notesOverride?: Record<number, AiNote>,
+    surveyOverride?: WeddingSurvey,
+  ) {
+    if (saveState !== 'idle' && saveState !== 'failed') return
+    const useRecs = recsOverride ?? recs
+    const useSurvey = surveyOverride ?? survey
+    if (useRecs.length === 0 || !useSurvey) return
     setSaveState('saving')
     const name1 = groom?.name || '신랑'
     const name2 = bride?.name || '신부'
     const res = await saveWeddingRecord({
       kind: 'find',
       name1, name2,
-      summary: `길일 ${recs.length}개`,
+      summary: `길일 ${useRecs.length}개`,
       input1: { ...toInput(groom), name: name1 },
       input2: { ...toInput(bride), name: name2 },
-      resultData: { recs, avoidDays, aiNotes, survey, groom, bride },
+      resultData: {
+        recs: useRecs,
+        avoidDays: avoidOverride ?? avoidDays,
+        aiNotes: notesOverride ?? aiNotes,
+        survey: useSurvey, groom, bride,
+      },
     })
-    setSaveState(res.ok ? 'saved' : 'idle')
-    if (!res.ok) alert(res.message || '저장하지 못했어요.')
+    // ★실패해도 alert 로 막지 않는다. 고객이 부른 게 아니라 자동 저장이다.
+    setSaveState(res.ok ? 'saved' : 'failed')
   }
 
   return (
@@ -405,23 +426,36 @@ function WeddingResultInner() {
               </>
             )}
 
-            {/* 전문가 상담 연결 (예비부부 상담) — 준비중 alert 대신 실제 예약으로 연결 */}
-            <div style={{ marginTop: '22px' }}>
-              <ConsultButton priceKey="prewedding" mode="prewedding" />
-            </div>
           </>
         )}
 
+        {/* 저장 상태 — 자동 저장이라 누르는 버튼이 아니다. (2026-07-21 2차)
+            실패했을 때만 [다시 저장]으로 바뀐다.
+            ⚠️ idle 일 때는 아무것도 안 띄운다. '저장 중…'이 영원히 남지 않게. */}
+        {!loading && !errMsg && recs.length > 0 && saveState !== 'idle' && (
+          saveState === 'failed' ? (
+            <button onClick={() => handleSave()}
+              style={{ width: '100%', marginTop: '16px', padding: '13px', borderRadius: '12px',
+                background: gold, border: 'none', color: '#1a1208',
+                fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
+              💾 다시 저장하기
+            </button>
+          ) : (
+            <div style={{ width: '100%', marginTop: '16px', padding: '13px', borderRadius: '12px',
+              background: saveState === 'saved' ? '#eef5e8' : '#f7f2ec',
+              color: saveState === 'saved' ? '#4a7a3a' : '#6b5340',
+              fontSize: '14px', fontWeight: 500, textAlign: 'center' }}>
+              {saveState === 'saved' ? '✓ 보관함에 저장됐어요' : '저장 중…'}
+            </div>
+          )
+        )}
+
+        {/* 전문가 상담 연결 (예비부부 상담) — 저장 표시 아래.
+            관리자 > 가격 관리에서 '노출'을 끄면 이 영역이 통째로 사라진다. */}
         {!loading && !errMsg && recs.length > 0 && (
-          <button
-            onClick={handleSave}
-            disabled={saveState !== 'idle'}
-            style={{ width: '100%', marginTop: '16px', padding: '13px', borderRadius: '12px',
-              background: saveState === 'saved' ? '#e8f0e0' : gold,
-              border: 'none', color: saveState === 'saved' ? '#5a8c5a' : '#1a1208',
-              fontSize: '14px', fontWeight: 600, cursor: saveState === 'idle' ? 'pointer' : 'default' }}>
-            {saveState === 'saved' ? '✓ 보관함에 저장됨' : saveState === 'saving' ? '저장 중…' : '💾 이 결과 보관함에 저장'}
-          </button>
+          <div style={{ marginTop: '12px' }}>
+            <ConsultButton priceKey="prewedding" mode="prewedding" />
+          </div>
         )}
 
         <button

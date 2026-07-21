@@ -1,10 +1,11 @@
 'use client'
-import { Suspense, useState, useEffect, useMemo } from 'react'
+import { Suspense, useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsinCompat } from '@/lib/saju/yongsinNew'
 import { supabase } from '@/lib/supabase'
 import { diagnoseName, type NameChar, type DiagnoseResult, type Grade } from '@/lib/saju/naming'
+import { saveNamingRecord } from '@/lib/saju/namingRecords'
 import ConsultButton from '@/app/components/common/ConsultButton'
 
 const GOLD = '#c8783c'
@@ -162,6 +163,62 @@ function NewResultInner() {
       return diagnoseName({ surname, given, yongsin: y.yongsin, heeksin: y.heeksin, elementScore: y.score })
     } catch { return null }
   }, [saju, dayStem, cur])
+
+  // ★2026-07-21 2차: 보관함 자동 저장.
+  //   [왜] 개명은 지금까지 보관함에 남지 않아, 고객이 나가면 결과가 사라졌다.
+  //        다른 화면(사주·궁합·택일·이름풀이)과 같이 자동으로 남긴다.
+  //   ⚠️ 같은 이름을 여러 번 봐도 그대로 쌓는다(대표님 확정).
+  const [savedRecordId, setSavedRecordId] = useState<string | null>(null)
+  const [saveFailed, setSaveFailed] = useState(false)
+  const savingRef = useRef(false)
+  // ★이미 저장한 이름을 기억한다. 후보 탭을 왔다갔다 할 때마다
+  //   같은 이름이 다시 쌓이는 것을 막는다. (한 화면 안에서만 유효)
+  const savedNamesRef = useRef<Set<string>>(new Set())
+
+  async function saveToArchive() {
+    if (!cur || !result) return
+    if (savingRef.current) return
+    const nameKey = cur.chars.map((c) => c.hanja).join('')
+    if (savedNamesRef.current.has(nameKey)) {
+      setSavedRecordId(nameKey)   // 이미 저장한 이름 → 표시만 유지
+      return
+    }
+    savingRef.current = true
+    setSaveFailed(false)
+    try {
+      const res = await saveNamingRecord({
+        chars: cur.chars,
+        relation: 'self',
+        person: null,
+        result,
+        // Commentary 는 이 화면의 로컬 타입이고 저장 함수는 Record 를 받는다.
+        //   담기는 값은 같은 모양이라 캐스팅으로 맞춘다.
+        commentary: (cur.commentary ?? null) as Record<string, unknown> | null,
+        serviceType: 'naming',
+      })
+      // ★실패해도 alert 로 막지 않는다. 고객이 부른 게 아니라 자동 저장이다.
+      if (res.ok && res.id) {
+        savedNamesRef.current.add(nameKey)
+        setSavedRecordId(res.id)
+      } else {
+        setSaveFailed(true)
+      }
+    } catch {
+      setSaveFailed(true)
+    } finally {
+      savingRef.current = false
+    }
+  }
+
+  useEffect(() => {
+    if (!cur || !result) return
+    // 다른 후보 이름을 보면 그것도 새 건으로 저장한다.
+    //   (단, 이미 저장한 이름이면 saveToArchive 안에서 건너뛴다)
+    setSavedRecordId(null)
+    setSaveFailed(false)
+    saveToArchive()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cur, result])
 
   // ★ 현재 보고 있는 "새 이름"을 예약 시 상담사 화면으로 넘기기 위해 세션에 저장
   //    (궁합·물상도·이름풀이와 동일 방식. consultant-select가 naming_full을 읽어 namings에 저장)
@@ -391,7 +448,32 @@ function NewResultInner() {
         </div>
       )}
 
-      {/* 전문가 상담 연결 (개명 상담 · mode=naming) */}
+      {/* 보관함 저장 상태 — 자동 저장이라 누르는 버튼이 아니다. (2026-07-21 2차)
+          실패했을 때만 [다시 저장]으로 바뀐다. */}
+      {cur && result && (
+        saveFailed ? (
+          <button onClick={saveToArchive}
+            style={{ width: '100%', padding: 13, borderRadius: 12, marginBottom: 6,
+              background: GOLD, border: 'none', color: '#fff',
+              fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+            💾 다시 저장하기
+          </button>
+        ) : savedRecordId ? (
+          <>
+            <div style={{ width: '100%', padding: 13, borderRadius: 12, marginBottom: 4,
+              background: '#eef5e8', color: '#4a7a3a',
+              fontSize: 14, fontWeight: 500, textAlign: 'center' }}>
+              ✓ 보관함에 저장됐어요
+            </div>
+            <div style={{ fontSize: 11, color: '#6b5340', textAlign: 'center', marginBottom: 10 }}>
+              보관함에서 언제든 다시 볼 수 있어요
+            </div>
+          </>
+        ) : null
+      )}
+
+      {/* 전문가 상담 연결 (개명 상담 · mode=naming) — 저장 표시 아래.
+          관리자 > 가격 관리에서 '노출'을 끄면 이 영역이 통째로 사라진다. */}
       <div style={{ marginBottom: 14 }}>
         <ConsultButton priceKey="naming" mode="naming" />
       </div>

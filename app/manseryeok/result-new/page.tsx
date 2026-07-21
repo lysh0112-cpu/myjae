@@ -208,11 +208,14 @@ function ResultNewContent() {
   // null이면 질문 선택 화면 단계. 배열이면 결과 화면 단계.
   const [pickedQuestions,setPickedQuestions]=useState<SajuQuestion[]|null>(null)
 
-  // ── 보관함 저장 ──
-  //   결과 화면에서 [보관함에 저장] 누르면 saju_records에 기록.
-  //   service_type은 unse에 따라 saju/daeun/seyun. 다시보기(recordId)면 저장버튼 숨김.
+  // ── 보관함 저장 (2026-07-21 2차: 수동 → 자동) ──
+  //   통변이 완성되면 자동으로 saju_records에 기록한다.
+  //   [왜] 고객이 저장 버튼을 안 누르고 나가면 돈 주고 본 결과가 사라진다.
+  //        결과가 뜨는 순간 남겨두면 그냥 나가도 보관함에서 다시 볼 수 있다.
+  //   service_type은 unse에 따라 saju/daeun/seyun. 다시보기(recordId)면 이미 저장된 것.
+  //   ⚠️ 같은 사주를 여러 번 봐도 그대로 쌓는다(대표님 확정). 중복 제거하지 않는다.
   const recordIdParam = searchParams.get('recordId') || undefined
-  const [saveState,setSaveState]=useState<'idle'|'saving'|'saved'>(recordIdParam?'saved':'idle')
+  const [saveState,setSaveState]=useState<'idle'|'saving'|'saved'|'failed'>(recordIdParam?'saved':'idle')
   // ── 통변 스냅샷 ──
   //   새 조회: TongbyeonView가 완성한 통변을 tongText로 받아 저장에 쓴다.
   //   다시보기(recordId): getRecord로 저장된 통변(savedTong)·질문을 불러와 그대로 표시.
@@ -372,8 +375,10 @@ function ResultNewContent() {
   // ── 보관함 저장 핸들러 ──
   //   service_type: 대운=daeun, 세운=seyun, 그 외=saju.
   //   info(사람 사주정보)를 input_data로, 이름을 title로 저장.
-  async function handleSaveRecord(){
-    if(!info || saveState!=='idle') return
+  //   ★통변 텍스트는 인자로 받는다. 자동 저장 시점에는 setTongText 가 아직
+  //     state 에 반영되기 전이라 tongText 를 읽으면 빈 값이 저장된다.
+  async function handleSaveRecord(tongOverride?: string){
+    if(!info || (saveState!=='idle' && saveState!=='failed')) return
     setSaveState('saving')
     const serviceType = unseParam==='daeun' ? 'daeun' : unseParam==='seyun' ? 'seyun' : 'saju'
     const res = await saveRecord({
@@ -387,12 +392,13 @@ function ResultNewContent() {
       // 결과 스냅샷 — 다시보기용. 통변 텍스트 + 고른 질문을 그대로 저장한다.
       //   (AI 재호출 없이 예전 통변을 복원하기 위함)
       resultData: {
-        tongText,
+        tongText: tongOverride ?? tongText,
         questions: pickedQuestions || [],
       },
     })
-    setSaveState(res.ok ? 'saved' : 'idle')
-    if(!res.ok) alert(res.message || '저장하지 못했어요.')
+    // ★실패해도 alert 로 막지 않는다. 자동 저장이라 고객이 부른 게 아니다.
+    //   화면에 [다시 저장] 버튼으로 알린다. (14부 "조용히 실패하는 코드" 방지)
+    setSaveState(res.ok ? 'saved' : 'failed')
   }
 
   const ageGroup=birthYearToGroup(yearParam)
@@ -556,16 +562,61 @@ function ResultNewContent() {
               premium={isPaid}
               unseEntry={unseEntry}
               savedText={savedTong}
-              onComplete={(t)=>setTongText(t)}
+              onComplete={(t)=>{
+                setTongText(t)
+                // ★통변이 완성되면 바로 보관함에 저장한다. (2026-07-21 2차)
+                //   다시보기(recordId)면 이미 'saved' 라 handleSaveRecord 가 그냥 빠져나온다.
+                //   t 를 인자로 넘기는 이유는 setTongText 가 아직 반영되기 전이기 때문.
+                if (t && t.trim()) handleSaveRecord(t)
+              }}
               onBack={()=>setPickedQuestions(null)}
             />
           </div>
         )}
 
-        {/* ⑩ 상담 버튼 — 홈 "내 사주 자세히 보기"(mode=chart)로 들어온 만세력 화면에서는 감춘다.
-            홈 서비스 목록(사주·대운·연월운세)으로 들어온 경우에는 그대로 보인다. */}
+        {/* ⑩ 보관함 저장 상태 — 자동 저장이라 누르는 버튼이 아니다. (2026-07-21 2차)
+            [왜 자동인가] 고객이 저장을 안 누르고 나가면 돈 주고 본 결과가 사라진다.
+            실패했을 때만 [다시 저장]으로 바뀌어 눌러서 재시도할 수 있다. */}
+        {info && !chartOnly && (saveState==='saved' || saveState==='failed') && (
+          <div style={{marginTop:'12px'}}>
+            {saveState==='saved' ? (
+              <>
+                <div style={{
+                  width:'100%',padding:'13px 0',borderRadius:'12px',
+                  background:'#eef5e8',color:'#4a7a3a',
+                  fontSize:'14px',fontWeight:500,textAlign:'center',
+                }}>
+                  ✓ 보관함에 저장됐어요
+                </div>
+                <div style={{fontSize:'11px',color:'#6b5340',textAlign:'center',marginTop:'7px'}}>
+                  보관함에서 언제든 다시 볼 수 있어요
+                </div>
+              </>
+            ) : (
+              <>
+                <button onClick={()=>handleSaveRecord()}
+                  style={{
+                    width:'100%',padding:'15px 0',borderRadius:'12px',border:'none',
+                    background:'#b46e46',color:'#fff',
+                    fontSize:'15px',fontWeight:600,cursor:'pointer',
+                  }}>
+                  💾 다시 저장하기
+                </button>
+                <div style={{fontSize:'11px',color:'#8f3d0e',textAlign:'center',marginTop:'7px'}}>
+                  보관함에 저장하지 못했어요. 한 번 더 눌러주세요
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ⑪ 상담 버튼 — 홈 "내 사주 자세히 보기"(mode=chart)로 들어온 만세력 화면에서는 감춘다.
+            홈 서비스 목록(사주·대운·연월운세)으로 들어온 경우에는 그대로 보인다.
+            ★2026-07-21 2차: 저장 표시 아래로 옮겼다.
+              ConsultButton 만 감싸므로, 관리자 > 가격 관리에서 '노출'을 끄면
+              버튼이 스스로 null 을 돌려주어 이 영역이 통째로 사라진다. */}
         {!chartOnly && (
-          <div style={{background:'#fff',border:'0.5px solid #f0e0d5',borderRadius:'14px',padding:'12px',marginTop:'10px'}}>
+          <div style={{marginTop:'10px',marginBottom:'80px'}}>
             <ConsultButton priceKey="saju" mode="personal" searchParams={searchParams}
               /* ★고객이 본 통변을 상담사에게 넘긴다 (2026-07-21)
                  새 조회면 tongText, 보관함 다시보기면 savedTong 을 쓴다.
@@ -576,24 +627,6 @@ function ResultNewContent() {
                 return isPaid ? { aiAnalysis: text } : { aiFreeAnalysis: text }
               }}
             />
-          </div>
-        )}
-
-        {/* ⑪ 하단 저장 버튼 (보관함에 기록. 다시보기(recordId)면 '저장됨') */}
-        {info && !chartOnly && (
-          <div style={{marginTop:'12px',marginBottom:'80px'}}>
-            <button onClick={handleSaveRecord} disabled={saveState!=='idle'}
-              style={{
-                width:'100%',padding:'15px 0',borderRadius:'12px',border:'none',
-                background:saveState==='saved'?'#e8d5c5':'#b46e46',
-                color:saveState==='saved'?'#96502e':'#fff',
-                fontSize:'15px',fontWeight:600,cursor:saveState==='idle'?'pointer':'default',
-              }}>
-              {saveState==='saving'?'저장 중…':saveState==='saved'?'✓ 보관함에 저장됨':'💾 이 결과 보관함에 저장'}
-            </button>
-            <div style={{fontSize:'11px',color:'#c5a590',textAlign:'center',marginTop:'7px'}}>
-              보관함에서 언제든 다시 볼 수 있어요
-            </div>
           </div>
         )}
 

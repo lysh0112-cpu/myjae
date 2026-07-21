@@ -161,6 +161,8 @@ function DiagnosisInner() {
   // 보관함 다시보기(recordId)로 진입했는지 + saju_records 저장 id
   const recordId = sp.get('recordId')
   const [savedRecordId, setSavedRecordId] = useState<string | null>(null)
+  // ★2026-07-21 2차: 자동 저장이 실패하면 고객이 알 수 있게 표시한다.
+  const [saveFailed, setSaveFailed] = useState(false)
   const [viewOnly, setViewOnly] = useState(false)
 
   // 가격 (이름 풀이 / 한자 바꾸기)
@@ -507,7 +509,8 @@ function DiagnosisInner() {
           commentary: data.commentary ?? null,
         })
         if (saved.ok && saved.id) setSavedRecordId(saved.id)
-      } catch (e) { console.error(e) }
+        else setSaveFailed(true)
+      } catch (e) { console.error(e); setSaveFailed(true) }
     } catch (e) {
       console.error(e)
     } finally {
@@ -759,15 +762,6 @@ function DiagnosisInner() {
 
             {!loading && result && (
               <>
-                {savedRecordId && (
-                  <div style={{
-                    textAlign: 'center', fontSize: '12px', color: subWarm,
-                    background: 'rgba(200,120,60,0.08)', border: '0.5px solid #f0e0d5',
-                    borderRadius: '10px', padding: '8px', marginBottom: '14px',
-                  }}>
-                    {viewOnly ? '📁 보관함에서 불러온 기록' : '📁 보관함에 저장됐어요'}
-                  </div>
-                )}
                 <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                   <div style={{ fontSize: '34px', fontWeight: 'bold', color: gold, letterSpacing: '4px' }}>
                     {chars.filter(Boolean).map(c => c!.hanja).join('')}
@@ -781,7 +775,34 @@ function DiagnosisInner() {
                   <PerspectiveAccordion commentary={commentary} />
                 )}
 
-                {/* ★ 전문가 상담 연결 — 개명·아기와 동일한 ConsultButton (색상 통일 + 가격표 토글 연동) */}
+                {/* ★2026-07-21 2차: 저장 표시를 상담 버튼 바로 위로 옮겼다.
+                    사주·궁합·택일과 위치를 통일하기 위함. 저장은 원래부터 자동이었다. */}
+                {saveFailed && (
+                  <div style={{
+                    textAlign: 'center', fontSize: '13px',
+                    color: '#8f3d0e', background: '#fdeee2',
+                    borderRadius: '12px', padding: '13px', marginBottom: '12px',
+                  }}>
+                    보관함에 저장하지 못했어요. 이 화면을 닫으면 다시 볼 수 없어요
+                  </div>
+                )}
+                {savedRecordId && (
+                  <div style={{
+                    textAlign: 'center', fontSize: '14px', fontWeight: 500,
+                    color: '#4a7a3a', background: '#eef5e8',
+                    borderRadius: '12px', padding: '13px', marginBottom: '4px',
+                  }}>
+                    {viewOnly ? '📁 보관함에서 불러온 기록' : '✓ 보관함에 저장됐어요'}
+                  </div>
+                )}
+                {savedRecordId && !viewOnly && (
+                  <div style={{ fontSize: '11px', color: '#6b5340', textAlign: 'center', marginBottom: '12px' }}>
+                    보관함에서 언제든 다시 볼 수 있어요
+                  </div>
+                )}
+
+                {/* ★ 전문가 상담 연결 — 저장 표시 아래.
+                    관리자 > 가격 관리에서 '노출'을 끄면 이 영역이 통째로 사라진다. */}
                 <div style={{ marginBottom: '12px' }}>
                   <ConsultButton priceKey="naming" mode="naming" />
                 </div>
