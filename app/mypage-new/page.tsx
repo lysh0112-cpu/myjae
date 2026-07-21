@@ -165,12 +165,18 @@ export default function MyPageNew() {
     } catch { return '' }
   }
 
+  // 상담 상태 → 화면 표시
+  //   ★2026-07-21 2차: 'completed' 가 빠져 있어, 상담사가 [상담 종료]를 눌러도
+  //     고객 마이페이지에는 계속 「진행 중」으로 보였다.
+  //     ConsultTimer 는 종료 시 status='completed' 로 저장한다.
   const statusInfo = (s: string | null) => {
-    if (s === 'paid' || s === 'done' || s === '완료') return { label: '완료', color: '#1d9e75' }
+    if (s === 'completed' || s === 'paid' || s === 'done' || s === '완료') return { label: '상담 완료', color: '#1d9e75' }
     if (s === 'booked') return { label: '예약 확정', color: '#3c82a0' }
     if (s === 'pending') return { label: '대기중', color: '#e09030' }
     if (s === 'in_progress' || s === 'ongoing' || s === '진행중') return { label: '진행 중', color: '#8f3d0e' }
     if (s === 'cancelled' || s === 'canceled') return { label: '취소됨', color: '#6b5340' }
+    // 모르는 값이 오면 「진행 중」으로 두되, 콘솔에 남겨 다음에 찾을 수 있게 한다.
+    if (s) console.warn('알 수 없는 상담 상태:', s)
     return { label: '진행 중', color: '#e09030' }
   }
 
