@@ -11,6 +11,7 @@ import OhaengPentagon from '@/app/manseryeok/result-new/OhaengPentagon'
 import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
 import { getGongmang } from '@/lib/saju'
 import { saveRecord, getRecord, updateRecordResult } from '@/lib/saju/sajuRecords'
+import CopyTextButton from '@/app/components/common/CopyTextButton'
 import { supabase } from '@/lib/supabase'
 import type { SajuQuestion } from '@/lib/saju/questions'
 
@@ -301,7 +302,6 @@ function MulsangInner() {
 
   // 그림 내려받기 / 해설 복사 상태
   const [imgSaving, setImgSaving] = useState(false)
-  const [copied, setCopied] = useState(false)
   // 자동 저장된 보관함 기록 id — 해설이 완성되면 여기에 덧붙인다.
   const savedIdRef = useRef<string | null>(null)
   const [tongTick, setTongTick] = useState(0)
@@ -692,32 +692,6 @@ function MulsangInner() {
     }
   }
 
-  // ── 해설 복사 ──
-  async function handleCopyText() {
-    if (!tongResult?.trim()) return
-    const who = info?.name ? `${info.name}님의 ` : ''
-    const text = `[명카페] ${who}사주 그림 해설\n\n${tongResult.trim()}`
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // clipboard API 가 막힌 경우(구형 브라우저·비 HTTPS) 옛 방식으로
-      try {
-        const ta = document.createElement('textarea')
-        ta.value = text
-        ta.style.position = 'fixed'
-        ta.style.opacity = '0'
-        document.body.appendChild(ta)
-        ta.select()
-        document.execCommand('copy')
-        document.body.removeChild(ta)
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
-      } catch {}
-    }
-  }
-
   // ── 공유 카드 만들기 (그림 + 첫 해설 카드를 한 장 이미지로) ──
   //   ⚠️ 그림은 Supabase Storage(다른 도메인)라 그대로 캡처하면 빈칸이 된다.
   //   먼저 data URL 로 바꿔 넣은 뒤 캡처한다.
@@ -1050,14 +1024,9 @@ function MulsangInner() {
                     {/* ★해설 복사 — 카톡 등에 붙여넣기 */}
                     {!tongLoading && (
                       <div style={{ display: 'flex', gap: '7px', marginTop: '8px' }}>
-                        <button onClick={handleCopyText}
-                          style={{ flex: 1, padding: '11px', borderRadius: '10px',
-                            background: copied ? '#eef5e8' : 'transparent',
-                            border: `0.5px solid ${copied ? '#a8c898' : '#d8c4b4'}`,
-                            color: copied ? '#4a7a3a' : '#96502e',
-                            fontSize: '12.5px', fontWeight: copied ? 700 : 400, cursor: 'pointer' }}>
-                          {copied ? '✓ 복사됐어요' : '📋 해설 복사'}
-                        </button>
+                        <div style={{ flex: 1 }}>
+                          <CopyTextButton text={tongResult} label="사주 그림 해설" name={info?.name} />
+                        </div>
                         {imageUrl && (
                           <button onClick={handleShareCard} disabled={cardBusy}
                             style={{ flex: 1, padding: '11px', borderRadius: '10px', background: '#b46e46',

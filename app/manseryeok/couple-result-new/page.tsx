@@ -39,6 +39,7 @@ import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
 // 되살릴 때는 이 한 줄만 true 로 바꾸면 시작 버튼과 플로팅이 함께 돌아온다.
 const COUPLE_CHAT_OPEN = false
 import ConsultButton from '@/app/components/common/ConsultButton'
+import CopyTextButton from '@/app/components/common/CopyTextButton'
 import { withNim } from '@/lib/saju/honorific'
 
 type Mode = 'couple' | 'married'
@@ -659,6 +660,12 @@ function CoupleResultView({
           )}
           <button onClick={onOther} style={{ flex: 1, background: '#b46e46', border: 'none', borderRadius: 11, padding: 12, fontSize: 13, color: '#fff', cursor: 'pointer' }}>다른 궁합 보기</button>
         </div>
+
+        {/* ★해설 복사 — 카톡 등에 붙여넣기 (공용 부품) */}
+        <CopyTextButton
+          text={tongResult}
+          label={mode === 'married' ? '부부 궁합 분석' : '궁합 분석'}
+        />
 
         {/* 전문가 상담 — 저장 표시 아래.
             ★ 연인/부부가 서로 다른 가격표(price_key)를 쓴다.

@@ -23,6 +23,7 @@ import UnseFlow from "./UnseFlow";
 import SingangTable from "./SingangTable";
 import QuestionPicker from "../components/QuestionPicker";
 import TongbyeonView from "../components/TongbyeonView";
+import CopyTextButton from '@/app/components/common/CopyTextButton';
 import { birthYearToGroup, genderToFilter, type SajuQuestion } from "@/lib/saju/questions";
 import { type UnseEntry } from "@/lib/saju/unseQuestions";
 import { toTongbyeonInput } from "@/lib/saju/toTongbyeonInput";
@@ -577,6 +578,15 @@ function ResultNewContent() {
         {/* ⑩ 보관함 저장 상태 — 자동 저장이라 누르는 버튼이 아니다. (2026-07-21 2차)
             [왜 자동인가] 고객이 저장을 안 누르고 나가면 돈 주고 본 결과가 사라진다.
             실패했을 때만 [다시 저장]으로 바뀌어 눌러서 재시도할 수 있다. */}
+        {/* ★해설 복사 — 카톡 등에 붙여넣기 (공용 부품) */}
+        {!chartOnly && (
+          <CopyTextButton
+            text={tongText || savedTong}
+            label={_unse === 'daeun' ? '대운 풀이' : _unse === 'seyun' ? '연월운세 풀이' : '사주 풀이'}
+            name={personName || undefined}
+          />
+        )}
+
         {info && !chartOnly && (saveState==='saved' || saveState==='failed') && (
           <div style={{marginTop:'12px'}}>
             {saveState==='saved' ? (
