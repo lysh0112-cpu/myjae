@@ -1,8 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { requireMaster } from '../_guard'
 
 export async function POST(request: Request) {
   try {
+    // ★관리자 권한 확인 (2026-07-21) — service_role 을 쓰므로 RLS 가 막아주지 않는다
+    const g = await requireMaster()
+    if (!g.ok) return g.res
+
     const { userId } = await request.json()
 
     if (!userId) {
