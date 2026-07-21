@@ -29,7 +29,7 @@
 
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import { fromProfile } from '@/lib/saju/myInfo'
+import { fromProfile, personKey, type MyInfo } from '@/lib/saju/myInfo'
 import {
   listSavedPeople, addSavedPerson, updateSavedPerson, deleteSavedPerson,
   groupByRelation, avatarChar,
@@ -101,6 +101,9 @@ interface MeInfo {
   nickname: string
   birthLine: string
   avatarChar: string
+  /** ★"기타" 목록의 같은 사람을 걸러내기 위한 키 (2026-07-21 2차 추가)
+   *  listSavedPeople 이 saju_records 안에서 쓰는 키와 같은 형식으로 만든다. */
+  dedupKey: string
 }
 
 type View =
@@ -152,7 +155,9 @@ export default function PersonPickerModal({
               const date = `${info.year}.${String(info.month).padStart(2, '0')}.${String(info.day).padStart(2, '0')}`
               const h = info.hour === '모름' ? '시간 모름' : (HOUR_SHORT[info.hour] ?? '')
               const nick = (p.nickname as string) || (p.hangul_name as string) || '나'
-              setMe({ nickname: nick, birthLine: `${date} · ${h}`, avatarChar: avatarChar(nick) })
+              // ★중복 비교 키 — 공용 personKey 를 쓴다. (직접 만들면 규칙이 어긋난다)
+              setMe({ nickname: nick, birthLine: `${date} · ${h}`, avatarChar: avatarChar(nick),
+                      dedupKey: personKey(info) })
             } else if (!cancelled) {
               setMe(null)   // 사주 미등록 회원 → "나" 항목 숨김
             }
@@ -165,14 +170,24 @@ export default function PersonPickerModal({
     return () => { cancelled = true }
   }, [open, serviceType])
 
+  // ★"나"(본인)와 같은 사람은 아래 목록에서 뺀다. (2026-07-21 2차)
+  //   본인은 맨 위 「나」에 고정으로 한 번만 나오고, 아래는 남들만 나와야 한다.
+  //   「나」는 profiles, 목록은 saju_records 로 출처가 달라 서로 중복 검사가 안 됐다.
+  //   그래서 본인 사주를 조회한 이력이 있으면 같은 사람이 위아래로 두 번 떴다.
+  //   ⚠️ me 가 null 이면(사주 미등록·onPickMe 없음) 아무것도 걸러내지 않는다.
+  const withoutMe = useMemo(() => {
+    if (!me || !me.dedupKey) return people
+    return people.filter(p => personKey(p.input_data as MyInfo) !== me.dedupKey)
+  }, [people, me])
+
   const filtered = useMemo(() => {
     const q = query.trim()
-    if (!q) return people
-    return people.filter(p => p.title.includes(q))
-  }, [people, query])
+    if (!q) return withoutMe
+    return withoutMe.filter(p => p.title.includes(q))
+  }, [withoutMe, query])
 
   const groups = useMemo(() => groupByRelation(filtered), [filtered])
-  const showSearch = people.length >= 5
+  const showSearch = withoutMe.length >= 5
 
   if (!open) return null
 
