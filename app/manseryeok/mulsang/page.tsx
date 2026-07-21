@@ -5,7 +5,7 @@ import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsinCompat as calcYongsin } from '@/lib/saju/yongsinNew'
 import { calcSimsanOhaeng, toPercentList } from '@/lib/saju/simsanOhaeng'
 import { buildMulsangPrompt, STYLE_CONFIGS, ACTIVE_STYLES, STYLE_EMOJI, STYLE_DESC } from '@/lib/saju/mulsangPrompt'
-import { buildMulsangTongbyeonPrompt, type Ohaeng } from '@/lib/saju/mulsangTongbyeonPrompt'
+import { buildMulsangTongbyeonPrompt, buildMulsangCardSummaryPrompt, type Ohaeng } from '@/lib/saju/mulsangTongbyeonPrompt'
 import { MULSANG_QUESTIONS, groupMulsangByCategory } from '@/lib/saju/mulsangQuestions'
 import OhaengPentagon from '@/app/manseryeok/result-new/OhaengPentagon'
 import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
@@ -280,6 +280,25 @@ function MulsangInner() {
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'failed'>(sp.get('recordId') ? 'saved' : 'idle')
   // ★그림 요청이 끝나면 올린다 → 아래 useEffect 가 해설을 자동으로 부른다.
   const wantTongRef = useRef(false)
+  const shareRef = useRef<HTMLDivElement | null>(null)
+  const [cardBusy, setCardBusy] = useState(false)
+  const [cardImg, setCardImg] = useState<string | null>(null)   // 캡처용 data URL
+  const [cardText, setCardText] = useState('')                  // 카드에 담을 요약
+  const [cardStep, setCardStep] = useState('')                  // 진행 안내 문구
+  const cardSummaryRef = useRef<string>('')                     // 만든 요약 보관(재사용)
+
+  // 해설에서 첫 카드(■ ~ 다음 ■ 전까지)만 뽑는다.
+  const firstCard = useMemo(() => {
+    const t = (tongResult || '').trim()
+    if (!t) return { title: '', body: '' }
+    const parts = t.split(/\n(?=■)/)
+    const head = (parts[0] || '').trim()
+    const lines = head.split('\n')
+    const title = (lines[0] || '').replace(/^■\s*/, '').trim()
+    const body = lines.slice(1).join('\n').trim()
+    return { title, body }
+  }, [tongResult])
+
   // 그림 내려받기 / 해설 복사 상태
   const [imgSaving, setImgSaving] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -699,6 +718,85 @@ function MulsangInner() {
     }
   }
 
+  // ── 공유 카드 만들기 (그림 + 첫 해설 카드를 한 장 이미지로) ──
+  //   ⚠️ 그림은 Supabase Storage(다른 도메인)라 그대로 캡처하면 빈칸이 된다.
+  //   먼저 data URL 로 바꿔 넣은 뒤 캡처한다.
+  async function handleShareCard() {
+    if (!imageUrl || !tongResult?.trim() || cardBusy) return
+    setCardBusy(true)
+    try {
+      // 0) 카드에 담을 짧은 요약을 먼저 만든다 (3~4문장).
+      //    이미 만든 게 있으면 다시 부르지 않는다 (비용 절약).
+      let summary = cardSummaryRef.current
+      if (!summary) {
+        setCardStep('요약을 만드는 중…')
+        try {
+          const sres = await fetch('/api/tongbyeon', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              systemPrompt: buildMulsangCardSummaryPrompt(tongResult, info?.name),
+              premium: false,
+            }),
+          })
+          if (sres.ok && sres.body) {
+            const rd = sres.body.getReader()
+            const dec = new TextDecoder()
+            let acc = ''
+            while (true) {
+              const { done, value } = await rd.read()
+              if (done) break
+              for (const line of dec.decode(value).split('\n')) {
+                if (!line.startsWith('data: ')) continue
+                const d = line.slice(6)
+                if (d === '[DONE]') continue
+                try {
+                  const p = JSON.parse(d)
+                  if (p.text) acc += p.text
+                } catch {}
+              }
+            }
+            summary = acc.trim()
+            if (summary) cardSummaryRef.current = summary
+          }
+        } catch { /* 요약 실패해도 카드는 만든다 (첫 카드 본문으로 대체) */ }
+      }
+      setCardText(summary || firstCard.body)
+
+      // 1) 그림을 data URL 로 (다른 도메인 문제 회피)
+      setCardStep('카드를 만드는 중…')
+      const res = await fetch(imageUrl)
+      const blob = await res.blob()
+      const dataUrl: string = await new Promise((ok, no) => {
+        const fr = new FileReader()
+        fr.onload = () => ok(fr.result as string)
+        fr.onerror = no
+        fr.readAsDataURL(blob)
+      })
+      setCardImg(dataUrl)
+      // 2) 화면에 반영될 때까지 한 박자 기다렸다가 캡처
+      await new Promise(r => setTimeout(r, 120))
+      const node = shareRef.current
+      if (!node) throw new Error('no node')
+      const { toPng } = await import('html-to-image')
+      const png = await toPng(node, { pixelRatio: 2, cacheBust: true, backgroundColor: '#FDF6F0' })
+      // 3) 내려받기
+      const a = document.createElement('a')
+      const who = (info?.name || '나').replace(/[\\/:*?"<>|]/g, '')
+      a.href = png
+      a.download = `명카페_사주그림카드_${who}.png`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    } catch (e) {
+      console.error('공유 카드 생성 실패:', e)
+    } finally {
+      setCardImg(null)
+      setCardStep('')
+      setCardBusy(false)
+    }
+  }
+
   function handleShare() {
     if (navigator.share) {
       navigator.share({ title: '명카페 사주 풍경화', text: '내 사주를 그림으로 봤어요!', url: window.location.href })
@@ -951,14 +1049,29 @@ function MulsangInner() {
                     </div>
                     {/* ★해설 복사 — 카톡 등에 붙여넣기 */}
                     {!tongLoading && (
-                      <button onClick={handleCopyText}
-                        style={{ width: '100%', padding: '11px', borderRadius: '10px', marginTop: '8px',
-                          background: copied ? '#eef5e8' : 'transparent',
-                          border: `0.5px solid ${copied ? '#a8c898' : '#d8c4b4'}`,
-                          color: copied ? '#4a7a3a' : '#96502e',
-                          fontSize: '13px', fontWeight: copied ? 700 : 400, cursor: 'pointer' }}>
-                        {copied ? '✓ 복사됐어요 — 붙여넣기 하세요' : '📋 해설 복사하기'}
-                      </button>
+                      <div style={{ display: 'flex', gap: '7px', marginTop: '8px' }}>
+                        <button onClick={handleCopyText}
+                          style={{ flex: 1, padding: '11px', borderRadius: '10px',
+                            background: copied ? '#eef5e8' : 'transparent',
+                            border: `0.5px solid ${copied ? '#a8c898' : '#d8c4b4'}`,
+                            color: copied ? '#4a7a3a' : '#96502e',
+                            fontSize: '12.5px', fontWeight: copied ? 700 : 400, cursor: 'pointer' }}>
+                          {copied ? '✓ 복사됐어요' : '📋 해설 복사'}
+                        </button>
+                        {imageUrl && (
+                          <button onClick={handleShareCard} disabled={cardBusy}
+                            style={{ flex: 1, padding: '11px', borderRadius: '10px', background: '#b46e46',
+                              border: 'none', color: '#fff', fontSize: '12.5px', fontWeight: 700,
+                              cursor: cardBusy ? 'default' : 'pointer' }}>
+                            {cardBusy ? (cardStep || '만드는 중…') : '🖼️ 카드로 저장'}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {!tongLoading && imageUrl && (
+                      <div style={{ fontSize: '10.5px', color: '#6b5340', textAlign: 'center', marginTop: '6px' }}>
+                        카드로 저장하면 그림과 해설이 한 장으로 저장돼요
+                      </div>
                     )}
                   </>
                 ) : null}
@@ -1031,6 +1144,27 @@ function MulsangInner() {
             👥 다른 사람 그리기
           </button>
         </div>
+
+        {/* ★공유 카드 원본 — 화면 밖에 두고 캡처만 한다.
+            display:none 은 캡처가 안 되므로 왼쪽 바깥으로 밀어둔다. */}
+        {cardImg && (
+          <div style={{ position: 'fixed', left: '-9999px', top: 0 }}>
+            <div ref={shareRef} style={{ width: '600px', background: '#FDF6F0', fontFamily: 'inherit' }}>
+              <img src={cardImg} alt="" style={{ width: '600px', height: '600px', display: 'block', objectFit: 'cover' }} />
+              <div style={{ padding: '22px 26px 18px' }}>
+                <div style={{ fontSize: '19px', fontWeight: 700, color: '#96502e', marginBottom: '12px', lineHeight: 1.4 }}>
+                  {firstCard.title || '그림 속 당신'}
+                </div>
+                <div style={{ fontSize: '15.5px', lineHeight: 2.0, color: '#3a2e28', whiteSpace: 'pre-wrap' }}>
+                  {cardText || firstCard.body}
+                </div>
+              </div>
+              <div style={{ borderTop: '1px solid #f0e0d5', padding: '15px 26px 20px', textAlign: 'center' }}>
+                <span style={{ fontSize: '15px', fontWeight: 700, color: '#96502e' }}>☕ 명카페</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {PayPopup}
         {pickerModal}
