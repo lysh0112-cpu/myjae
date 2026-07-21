@@ -61,8 +61,9 @@ export default function ConsultantForm({ form, editing, loading, onChange, onSav
       if (error) { alert('사진 업로드 실패: ' + error.message); setUploading(false); return }
       const { data } = supabase.storage.from('consultant-photos').getPublicUrl(path)
       set('photo_url', data.publicUrl)
-    } catch (e: any) {
-      alert('사진 업로드 오류: ' + (e?.message || e))
+    } catch (e: unknown) {
+      const _m = e instanceof Error ? e.message : ''
+      alert('사진 업로드 오류: ' + (_m || String(e)))
     }
     setUploading(false)
   }

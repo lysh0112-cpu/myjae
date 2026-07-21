@@ -177,7 +177,7 @@ export default function WelcomePage() {
           <div style={{ fontSize: 12, color: '#b0aec8', marginBottom: 6 }}>태어난 시 (시주)</div>
           <select value={birthHour} onChange={e => setBirthHour(e.target.value)}
             style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.08)', color: birthHour ? '#fff' : '#8a88a0', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}>
-            <option value="">시간 선택 (모르면 "모름")</option>
+            <option value="">시간 선택 (모르면 &quot;모름&quot;)</option>
             {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
           </select>
         </div>

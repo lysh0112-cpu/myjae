@@ -96,12 +96,22 @@ export async function POST(req: Request) {
   })
 }
 
-function sajuText(saju: any[]) {
-  if (!saju?.length) return ''
-  return saju.map((s: any) => `${s.pillar}: ${s.stem}${s.branch}`).join(', ')
+// 사주 한 기둥 (프롬프트 조립용 최소 형태)
+interface PillarLite { pillar?: string; stem?: string; branch?: string }
+// 용신 계산 결과 (필요한 칸만 — 호출부가 넘기는 형태가 화면마다 조금씩 다르다)
+interface YongsinLite {
+  track1?: { yongsin?: string; heeksin?: string; gisin?: string }
+  track2?: { yongsin?: string; geok?: string }
+  isConflict?: boolean
+  conflictAdvice?: string
 }
 
-function yongsinText(y: any) {
+function sajuText(saju: PillarLite[]) {
+  if (!saju?.length) return ''
+  return saju.map((s) => `${s.pillar}: ${s.stem}${s.branch}`).join(', ')
+}
+
+function yongsinText(y: YongsinLite | null | undefined) {
   if (!y) return ''
   const parts: string[] = []
   if (y.track1?.yongsin) parts.push(`억부용신: ${y.track1.yongsin}`)
@@ -115,9 +125,9 @@ function yongsinText(y: any) {
 
 function getSystemPrompt(p: {
   mode: string
-  saju1: any[], saju2: any[]
+  saju1: PillarLite[], saju2: PillarLite[]
   gender1: string, gender2: string
-  yongsin1: any, yongsin2: any
+  yongsin1: YongsinLite | null, yongsin2: YongsinLite | null
   userQuestion?: string
   toneBlock?: string
 }): string {

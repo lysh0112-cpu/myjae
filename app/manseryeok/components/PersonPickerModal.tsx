@@ -311,7 +311,7 @@ export default function PersonPickerModal({
 
               {groups.length === 0 && people.length > 0 && query.trim() ? (
                 <div style={{ padding: '36px 24px', textAlign: 'center', color: C.sub, fontSize: 13 }}>
-                  "{query}"와 일치하는 사람이 없어요.
+                  &quot;{query}&quot;와 일치하는 사람이 없어요.
                 </div>
               ) : (
                 groups.map(g => (
@@ -368,7 +368,7 @@ export default function PersonPickerModal({
           <div onClick={e => e.stopPropagation()}
             style={{ background: '#fff', borderRadius: 16, padding: '22px 20px', width: 260, textAlign: 'center' }}>
             <div style={{ fontSize: 15, fontWeight: 500, color: C.title, marginBottom: 6 }}>삭제할까요?</div>
-            <div style={{ fontSize: 12, color: C.sub, marginBottom: 18, lineHeight: 1.6 }}>"{confirmDel.title}"을(를) 목록에서 지워요.<br />되돌릴 수 없어요.</div>
+            <div style={{ fontSize: 12, color: C.sub, marginBottom: 18, lineHeight: 1.6 }}>&quot;{confirmDel.title}&quot;을(를) 목록에서 지워요.<br />되돌릴 수 없어요.</div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => setConfirmDel(null)}
                 style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: `0.5px solid ${C.searchBorder}`, background: 'none', color: C.sub, fontSize: 13, cursor: 'pointer' }}>취소</button>

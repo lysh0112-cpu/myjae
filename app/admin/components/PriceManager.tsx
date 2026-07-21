@@ -284,7 +284,7 @@ function HomePriceTable() {
       </div>
 
       <div className="text-xs mt-2" style={{ color: '#8a88a0' }}>
-        💡 표시 켜짐 = 홈 카드에 "○○원~" 노출 · 꺼짐 = 가격 줄 숨김
+        💡 표시 켜짐 = 홈 카드에 &quot;○○원~&quot; 노출 · 꺼짐 = 가격 줄 숨김
       </div>
 
       <button onClick={saveAll} disabled={saving}

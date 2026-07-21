@@ -147,7 +147,9 @@ function CoupleResultInner() {
           background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
           borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
         }}>
-          <button onClick={() => router.back()}
+          {/* ★질문 고르기 화면의 뒤로가기 — 사람 고르는 입력 화면으로.
+              router.back() 은 진입 경로에 따라 홈으로 튀었다. (2026-07-21) */}
+          <button onClick={() => router.push(`/manseryeok/couple-input-new?mode=${mode}`)}
             style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
           <div style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ fontSize: 15, fontWeight: 500, color: '#3a2e28' }}>무엇이 궁금하세요?</div>

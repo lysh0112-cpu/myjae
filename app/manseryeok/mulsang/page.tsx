@@ -304,6 +304,11 @@ function MulsangInner() {
   const [imgSaving, setImgSaving] = useState(false)
   // 자동 저장된 보관함 기록 id — 해설이 완성되면 여기에 덧붙인다.
   const savedIdRef = useRef<string | null>(null)
+  // 이번 그림의 저장 결과(기록 id·그림 URL·화풍). 해설이 끝나면 여기에 덧붙인다.
+  //   state 가 아니라 ref 인 이유: 화풍을 바꿔 다시 그려도 이전 스트림이
+  //   엉뚱한 기록을 건드리지 않게 "그때의 값"을 그대로 들고 가야 한다.
+  const pendingSaveRef = useRef<{ id: string | null; url: string; style: string } | null>(null)
+  const savingRef = useRef(false)   // 저장 중복 진입 막기 (setSaveState 는 비동기)
   const [tongTick, setTongTick] = useState(0)
 
   // ★그림 뒤 해설 자동 생성.
@@ -313,7 +318,8 @@ function MulsangInner() {
     if (!wantTongRef.current) return
     if (!dayStem || saju.length === 0) return   // 아직 준비 안 됨 → 다음 렌더에서 다시
     wantTongRef.current = false
-    runTongbyeon('all')
+    const p = pendingSaveRef.current
+    runTongbyeon('all', p?.id, p?.url, p?.style)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tongTick, dayStem, saju.length])
 
@@ -387,6 +393,8 @@ function MulsangInner() {
     setTongResult(null)
     setShowTongbyeon(false)
     savedIdRef.current = null
+    savingRef.current = false
+    pendingSaveRef.current = null
     try {
       const monthBranch = saju.find(p => p.pillar === '월주')?.branch ?? ''
       const yongsinResult = calcYongsin(saju, dayStem, solarMonth, solarDay,
@@ -454,8 +462,15 @@ function MulsangInner() {
       } catch {}
 
       // ★그림이 나왔으면 곧바로 보관함에 저장한다 (고객이 누르지 않아도).
-      //   해설은 아직 만드는 중일 수 있어, 완성되면 아래 useEffect 가 덧붙여 갱신한다.
-      if (data.imageUrl) handleSaveRecord(data.imageUrl, '')
+      //   ★저장이 끝날 때까지 기다린다(await). 안 기다리면 해설이 먼저 끝났을 때
+      //     붙일 기록 id 를 몰라 해설이 조용히 누락된다. (14부)
+      if (data.imageUrl) {
+        pendingSaveRef.current = {
+          id: await handleSaveRecord(data.imageUrl, ''),
+          url: data.imageUrl,
+          style,
+        }
+      }
     } catch (e) {
       console.error(e)
     } finally {
@@ -494,7 +509,9 @@ function MulsangInner() {
     }
     setOpenPicker(true)
   }
-  async function runTongbyeon(mode: 'selected' | 'all') {
+  //   ★recId·recUrl 을 인자로 받는 이유: 저장이 끝난 시점의 값을 그대로 들고 가야
+  //     "다른 화풍으로 다시 그리기"로 state 가 바뀌어도 엉뚱한 기록에 덧붙지 않는다.
+  async function runTongbyeon(mode: 'selected' | 'all', recId?: string | null, recUrl?: string | null, recStyle?: string) {
     if (!dayStem || saju.length === 0) return
     const questions: SajuQuestion[] =
       mode === 'all'
@@ -573,9 +590,14 @@ function MulsangInner() {
       if (mode === 'all' && acc.trim()) {
         try { sessionStorage.setItem('ai_analysis', acc) } catch {}
         // 그림은 먼저 저장됐으므로, 그 기록에 해설을 덧붙인다.
-        if (savedIdRef.current && imageUrl) {
-          const ok = await updateRecordResult(savedIdRef.current, {
-            images: [{ style, imageUrl, commentary: acc }],
+        const targetId = recId ?? savedIdRef.current
+        const targetUrl = recUrl ?? imageUrl
+        if (targetId && targetUrl) {
+          // ⚠️ .update 는 통째 교체다. answers 를 함께 넣지 않으면 날아간다.
+          //    지금은 질문 고르기가 꺼져 있어 늘 빈 배열이지만,
+          //    MULSANG_QUESTION_OPEN 을 다시 켜면 여기서 answers 를 보존해야 한다.
+          const ok = await updateRecordResult(targetId, {
+            images: [{ style: recStyle ?? style, imageUrl: targetUrl, commentary: acc }],
             answers: [],
           })
           if (!ok) console.error('보관함 해설 갱신 실패')
@@ -600,11 +622,14 @@ function MulsangInner() {
   // ── 보관함 자동 저장: 그림이 뜨면 바로 저장한다 (고객이 누르지 않아도) ──
   //   ★결제 1회 = 그림 1장 = 보관함 1건. 고객이 저장을 깜빡하고 나가도 남는다.
   //   (19-2부 "고객들이 돈들여 봤는데 그냥 빠져 나가면 아깝잖아")
-  async function handleSaveRecord(imgUrl?: string, tong?: string) {
+  async function handleSaveRecord(imgUrl?: string, tong?: string): Promise<string | null> {
     const url = imgUrl ?? imageUrl
-    if (saveState !== 'idle' || !info || !url) return
+    // ★가드는 ref 로 본다. setSaveState 는 비동기라 같은 틱에 반영되지 않아
+    //   빠르게 두 번 눌리면 중복 저장이 될 수 있다.
+    if (savingRef.current || !info || !url) return null
+    savingRef.current = true
     const pk = personKeyOf(info)
-    if (!pk) return
+    if (!pk) return null
     setSaveState('saving')
 
     // 1) ★지금 그린 화풍 그림 하나만 저장한다.
@@ -642,6 +667,8 @@ function MulsangInner() {
     setSaveState(res.ok ? 'saved' : 'failed')
     if (res.ok && res.id) savedIdRef.current = res.id
     if (!res.ok) console.error('보관함 저장 실패:', res.message)
+    savingRef.current = false
+    return res.ok ? (res.id ?? null) : null
   }
 
   function goConsult() {
@@ -1087,7 +1114,7 @@ function MulsangInner() {
               {saveState === 'failed' ? (
                 <div style={{ background: '#fdf0e8', border: '0.5px solid #f0d5c0', borderRadius: '12px', padding: '13px', textAlign: 'center' }}>
                   <div style={{ fontSize: '13px', color: '#8f3d0e', marginBottom: '8px' }}>보관함에 저장하지 못했어요</div>
-                  <button onClick={() => { setSaveState('idle'); handleSaveRecord() }}
+                  <button onClick={() => { setSaveState('idle'); handleSaveRecord(imageUrl ?? undefined, tongResult ?? undefined) }}
                     style={{ padding: '9px 20px', borderRadius: '9px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
                     다시 저장
                   </button>

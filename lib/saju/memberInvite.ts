@@ -65,8 +65,9 @@ export async function inviteMemberToRoom(args: {
       .maybeSingle()
     if (error || !data) return { ok: false, reason: error?.message || '초대 생성 실패' }
     return { ok: true, roomId: data.id }
-  } catch (e: any) {
-    return { ok: false, reason: e?.message || '오류' }
+  } catch (e: unknown) {
+    const _m = e instanceof Error ? e.message : ''
+    return { ok: false, reason: _m || '오류' }
   }
 }
 

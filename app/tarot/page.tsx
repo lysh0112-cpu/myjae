@@ -450,7 +450,7 @@ function TarotInner() {
               </span>
             </div>
           )}
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: gold, marginBottom: '18px', lineHeight: 1.6, textAlign: 'center' }}>"{interp.title}"</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: gold, marginBottom: '18px', lineHeight: 1.6, textAlign: 'center' }}>&quot;{interp.title}&quot;</div>
 
           {interp.cards?.map((c, i) => (
             <div key={i} style={{ borderLeft: `3px solid ${gold}`, padding: '4px 14px', marginBottom: '18px' }}>

@@ -46,7 +46,8 @@ export async function POST(req: Request) {
       .trim()
 
     return NextResponse.json({ preview: text || '(미리보기 생성 결과가 비어 있어요)' })
-  } catch (e: any) {
-    return NextResponse.json({ error: '미리보기 오류: ' + (e?.message || '알 수 없음') }, { status: 500 })
+  } catch (e: unknown) {
+    const _m = e instanceof Error ? e.message : ''
+    return NextResponse.json({ error: '미리보기 오류: ' + (_m || '알 수 없음') }, { status: 500 })
   }
 }

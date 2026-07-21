@@ -38,8 +38,9 @@ export async function GET() {
       default_rules: DEFAULT_TONE_RULES_TEXT,
       default_terms: DEFAULT_EASY_TERMS_TEXT,
     })
-  } catch (e: any) {
-    return NextResponse.json({ error: '불러오기 오류: ' + (e?.message || '알 수 없음') }, { status: 500 })
+  } catch (e: unknown) {
+    const _m = e instanceof Error ? e.message : ''
+    return NextResponse.json({ error: '불러오기 오류: ' + (_m || '알 수 없음') }, { status: 500 })
   }
 }
 
@@ -66,7 +67,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
     return NextResponse.json({ ok: true })
-  } catch (e: any) {
-    return NextResponse.json({ error: '저장 오류: ' + (e?.message || '알 수 없음') }, { status: 500 })
+  } catch (e: unknown) {
+    const _m = e instanceof Error ? e.message : ''
+    return NextResponse.json({ error: '저장 오류: ' + (_m || '알 수 없음') }, { status: 500 })
   }
 }

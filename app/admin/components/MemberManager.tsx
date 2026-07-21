@@ -68,8 +68,9 @@ export default function MemberManager() {
       } else {
         setMembers(result.members || [])
       }
-    } catch (e: any) {
-      setMsg('불러오는 중 오류: ' + (e?.message || '알 수 없음'))
+    } catch (e: unknown) {
+      const _m = e instanceof Error ? e.message : ''
+      setMsg('불러오는 중 오류: ' + (_m || '알 수 없음'))
     }
     setLoading(false)
   }
@@ -104,8 +105,9 @@ export default function MemberManager() {
         setShowAdd(false)
         loadMembers()
       }
-    } catch (e: any) {
-      setMsg('추가 중 오류: ' + (e?.message || '알 수 없음'))
+    } catch (e: unknown) {
+      const _m = e instanceof Error ? e.message : ''
+      setMsg('추가 중 오류: ' + (_m || '알 수 없음'))
     }
     setAdding(false)
   }
@@ -130,8 +132,9 @@ export default function MemberManager() {
         setMsg(`"${name}" 님의 등급을 "${label}"(으)로 변경했어요.`)
         setMembers(members.map(m => m.id === member.id ? { ...m, role } : m))
       }
-    } catch (e: any) {
-      setMsg('등급 변경 중 오류: ' + (e?.message || '알 수 없음'))
+    } catch (e: unknown) {
+      const _m = e instanceof Error ? e.message : ''
+      setMsg('등급 변경 중 오류: ' + (_m || '알 수 없음'))
     }
     setRoleSavingId(null)
   }
@@ -214,8 +217,9 @@ export default function MemberManager() {
       setMsg(`"${name}" 님의 정보를 저장했어요.`)
       setEditingId(null)
       setEditSaju(null)
-    } catch (e: any) {
-      setMsg('저장 중 오류: ' + (e?.message || '알 수 없음'))
+    } catch (e: unknown) {
+      const _m = e instanceof Error ? e.message : ''
+      setMsg('저장 중 오류: ' + (_m || '알 수 없음'))
     }
     setSavingId(null)
   }
@@ -240,8 +244,9 @@ export default function MemberManager() {
         setMsg(`"${name}" 회원이 삭제되었어요.`)
         setMembers(members.filter(m => m.id !== member.id))
       }
-    } catch (e: any) {
-      setMsg('삭제 중 오류: ' + (e?.message || '알 수 없음'))
+    } catch (e: unknown) {
+      const _m = e instanceof Error ? e.message : ''
+      setMsg('삭제 중 오류: ' + (_m || '알 수 없음'))
     }
     setDeletingId(null)
   }

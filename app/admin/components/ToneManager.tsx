@@ -37,8 +37,9 @@ export default function ToneManager() {
         setDefaultRules(d.default_rules || '')
         setDefaultTerms(d.default_terms || '')
       }
-    } catch (e: any) {
-      setMsg('불러오는 중 오류: ' + (e?.message || '알 수 없음'))
+    } catch (e: unknown) {
+      const _m = e instanceof Error ? e.message : ''
+      setMsg('불러오는 중 오류: ' + (_m || '알 수 없음'))
     }
     setLoading(false)
   }
@@ -64,8 +65,9 @@ export default function ToneManager() {
       const d = await res.json()
       if (!res.ok) { setMsg('저장 실패: ' + (d.error || '알 수 없음')) }
       else { setMsg('✓ 저장했어요. 이제 모든 AI 해설에 이 말투가 적용됩니다. (고객 화면은 새로고침 후 반영)') }
-    } catch (e: any) {
-      setMsg('저장 중 오류: ' + (e?.message || '알 수 없음'))
+    } catch (e: unknown) {
+      const _m = e instanceof Error ? e.message : ''
+      setMsg('저장 중 오류: ' + (_m || '알 수 없음'))
     }
     setSaving(false)
   }
@@ -90,8 +92,9 @@ export default function ToneManager() {
       const d = await res.json()
       if (!res.ok) { setMsg('미리보기 실패: ' + (d.error || '알 수 없음')) }
       else { setPreview(d.preview || '') }
-    } catch (e: any) {
-      setMsg('미리보기 중 오류: ' + (e?.message || '알 수 없음'))
+    } catch (e: unknown) {
+      const _m = e instanceof Error ? e.message : ''
+      setMsg('미리보기 중 오류: ' + (_m || '알 수 없음'))
     }
     setPreviewing(false)
   }
