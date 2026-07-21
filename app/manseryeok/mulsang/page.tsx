@@ -10,7 +10,7 @@ import { MULSANG_QUESTIONS, groupMulsangByCategory } from '@/lib/saju/mulsangQue
 import OhaengPentagon from '@/app/manseryeok/result-new/OhaengPentagon'
 import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
 import { getGongmang } from '@/lib/saju'
-import { saveRecord, getRecord } from '@/lib/saju/sajuRecords'
+import { saveRecord, getRecord, updateRecordResult } from '@/lib/saju/sajuRecords'
 import { supabase } from '@/lib/supabase'
 import type { SajuQuestion } from '@/lib/saju/questions'
 
@@ -277,9 +277,11 @@ function MulsangInner() {
   // 그림 생성 실패 안내 (크레딧 소진 등). null이면 정상.
   const [imageError, setImageError] = useState<string | null>(null)
   // 보관함 저장 상태 — 다시보기(recordId)로 열었으면 이미 저장된 것이므로 'saved'로 시작(재저장 방지)
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>(sp.get('recordId') ? 'saved' : 'idle')
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'failed'>(sp.get('recordId') ? 'saved' : 'idle')
   // ★그림 요청이 끝나면 올린다 → 아래 useEffect 가 해설을 자동으로 부른다.
   const wantTongRef = useRef(false)
+  // 자동 저장된 보관함 기록 id — 해설이 완성되면 여기에 덧붙인다.
+  const savedIdRef = useRef<string | null>(null)
   const [tongTick, setTongTick] = useState(0)
 
   // ★그림 뒤 해설 자동 생성.
@@ -357,6 +359,12 @@ function MulsangInner() {
     setLoading(true)
     setImageUrl(null)
     setCommentary(null)
+    // ★새로 그리는 것이므로 저장 상태·해설도 초기화한다.
+    //   (안 하면 두 번째 그림이 'saved' 로 남아 자동 저장이 안 된다)
+    setSaveState('idle')
+    setTongResult(null)
+    setShowTongbyeon(false)
+    savedIdRef.current = null
     try {
       const monthBranch = saju.find(p => p.pillar === '월주')?.branch ?? ''
       const yongsinResult = calcYongsin(saju, dayStem, solarMonth, solarDay,
@@ -422,6 +430,10 @@ function MulsangInner() {
           commentary: data.commentary ?? null,
         }))
       } catch {}
+
+      // ★그림이 나왔으면 곧바로 보관함에 저장한다 (고객이 누르지 않아도).
+      //   해설은 아직 만드는 중일 수 있어, 완성되면 아래 useEffect 가 덧붙여 갱신한다.
+      if (data.imageUrl) handleSaveRecord(data.imageUrl, '')
     } catch (e) {
       console.error(e)
     } finally {
@@ -535,10 +547,17 @@ function MulsangInner() {
           if (pickedQ) setAnsweredIds(prev => new Set(prev).add(pickedQ))
         } catch {}
       }
-      // ★상담사 화면에 넘길 해설 — 전체 해설을 그대로 넘긴다.
-      //   (예전엔 4칸 해설을 넘겼으나 그 해설을 없앴다)
+      // ★해설이 완성되면: 상담사 전달용 + 그림 기록에 덧붙이기 + 캐시
       if (mode === 'all' && acc.trim()) {
         try { sessionStorage.setItem('ai_analysis', acc) } catch {}
+        // 그림은 먼저 저장됐으므로, 그 기록에 해설을 덧붙인다.
+        if (savedIdRef.current && imageUrl) {
+          const ok = await updateRecordResult(savedIdRef.current, {
+            images: [{ style, imageUrl, commentary: acc }],
+            answers: [],
+          })
+          if (!ok) console.error('보관함 해설 갱신 실패')
+        }
         // ★그림과 같은 칸에 해설도 담아둔다 → 화풍 전환·재방문 때 다시 뜬다.
         try {
           const k = mulsangImgKey(info, style)
@@ -556,25 +575,19 @@ function MulsangInner() {
     }
   }
 
-  // ── 보관함 저장: 이 사람의 그림(수묵·지브리 그린 것) + 본 질문 해설들을 한 건으로 저장 ──
-  async function handleSaveRecord() {
-    if (saveState !== 'idle' || !info) return
+  // ── 보관함 자동 저장: 그림이 뜨면 바로 저장한다 (고객이 누르지 않아도) ──
+  //   ★결제 1회 = 그림 1장 = 보관함 1건. 고객이 저장을 깜빡하고 나가도 남는다.
+  //   (19-2부 "고객들이 돈들여 봤는데 그냥 빠져 나가면 아깝잖아")
+  async function handleSaveRecord(imgUrl?: string, tong?: string) {
+    const url = imgUrl ?? imageUrl
+    if (saveState !== 'idle' || !info || !url) return
     const pk = personKeyOf(info)
     if (!pk) return
     setSaveState('saving')
 
-    // 1) ★지금 보고 있는 화풍 그림 하나만 저장한다.
-    //   결제 1회 = 그림 1장 = 보관함 1건. (예전엔 두 화풍을 1건에 합쳐 저장해
-    //   두 번 결제했는데 다시보기에서 첫 장만 보이는 문제가 있었다)
-    //   그림이 없으면 저장하지 않는다 — 이름만 남는 빈 기록을 막는다.
-    const images: { style: string; imageUrl: string; commentary: unknown }[] = []
-    if (imageUrl) {
-      images.push({ style, imageUrl, commentary: tongResult ?? null })
-    }
-    if (images.length === 0) {
-      setSaveState('idle')
-      return
-    }
+    // 1) ★지금 그린 화풍 그림 하나만 저장한다.
+    //   결제 1회 = 그림 1장 = 보관함 1건.
+    const images = [{ style, imageUrl: url, commentary: (tong ?? tongResult) ?? null }]
 
     // 2) 본 질문 해설들 모으기
     const answers: { questionId: string; question: string; answer: string }[] = []
@@ -603,7 +616,9 @@ function MulsangInner() {
       resultData: { images, answers },
     })
     // 저장 실패는 alert 로 막지 않는다 — 버튼이 'idle' 로 돌아가 다시 누를 수 있다. (19-2부)
-    setSaveState(res.ok ? 'saved' : 'idle')
+    // 자동 저장이라 alert 로 막지 않는다 — 실패하면 화면에 [다시 저장]이 뜬다. (19-2부)
+    setSaveState(res.ok ? 'saved' : 'failed')
+    if (res.ok && res.id) savedIdRef.current = res.id
     if (!res.ok) console.error('보관함 저장 실패:', res.message)
   }
 
@@ -906,22 +921,31 @@ function MulsangInner() {
             )
           })()}
 
-          {/* 하단 액션: 보관함 저장 + 다른 사람 그리기
-              ★그림이 있을 때만 저장 버튼을 띄운다.
-                그림 없이 저장하면 보관함에 이름만 남는 빈 기록이 생긴다. */}
-          {imageUrl && (
-            <>
-              <button onClick={handleSaveRecord} disabled={saveState !== 'idle'}
-                style={{ width: '100%', padding: '15px', borderRadius: '12px', border: 'none', marginTop: '12px',
-                  background: saveState === 'saved' ? '#e8d5c5' : '#b46e46',
-                  color: saveState === 'saved' ? '#96502e' : '#fff',
-                  fontSize: '15px', fontWeight: 700, cursor: saveState === 'idle' ? 'pointer' : 'default' }}>
-                {saveState === 'saving' ? '저장 중…' : saveState === 'saved' ? '✓ 보관함에 저장됨' : '💾 이 그림 보관함에 저장'}
-              </button>
-              <div style={{ fontSize: '11px', color: '#6b5340', textAlign: 'center', marginTop: '6px' }}>
-                {STYLE_CONFIGS[style]?.label} 그림과 해설이 함께 저장돼요
-              </div>
-            </>
+          {/* ★보관함 저장 상태 — 누르는 버튼이 아니라 표시다 (그림이 뜨면 자동 저장).
+              실패했을 때만 [다시 저장]을 눌러 재시도한다. (19-2부) */}
+          {imageUrl && saveState !== 'idle' && (
+            <div style={{ marginTop: '12px' }}>
+              {saveState === 'failed' ? (
+                <div style={{ background: '#fdf0e8', border: '0.5px solid #f0d5c0', borderRadius: '12px', padding: '13px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '13px', color: '#8f3d0e', marginBottom: '8px' }}>보관함에 저장하지 못했어요</div>
+                  <button onClick={() => { setSaveState('idle'); handleSaveRecord() }}
+                    style={{ padding: '9px 20px', borderRadius: '9px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+                    다시 저장
+                  </button>
+                </div>
+              ) : (
+                <div style={{ background: '#eef5e8', borderRadius: '12px', padding: '13px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '13.5px', color: '#4a7a3a', fontWeight: 700 }}>
+                    {saveState === 'saving' ? '보관함에 저장하는 중…' : '✓ 보관함에 저장됐어요'}
+                  </div>
+                  {saveState === 'saved' && (
+                    <div style={{ fontSize: '11px', color: '#5c7a4a', marginTop: '3px' }}>
+                      {STYLE_CONFIGS[style]?.label} · 보관함에서 언제든 다시 보실 수 있어요
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           <button onClick={() => router.push('/manseryeok/mulsang-storage')}

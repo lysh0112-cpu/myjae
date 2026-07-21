@@ -145,6 +145,25 @@ export async function loadMulsangSummaries(
   return out
 }
 
+// ── 이미 저장한 기록의 결과만 갱신 ──
+//   물상도처럼 "그림 먼저 저장 → 해설이 나중에 완성"되는 경우에 쓴다.
+export async function updateRecordResult(
+  id: string,
+  resultData: unknown
+): Promise<boolean> {
+  const { data: auth } = await supabase.auth.getUser()
+  const uid = auth?.user?.id
+  if (!uid) return false
+  const { data, error } = await supabase
+    .from('saju_records')
+    .update({ result_data: resultData })
+    .eq('user_id', uid)
+    .eq('id', id)
+    .select('id')
+  // .update() 는 조건이 안 맞아도 오류를 안 낸다 → 건수로 확인한다 (14부)
+  return !error && !!data && data.length > 0
+}
+
 // ── 하나 불러오기 (보관함 카드 눌러 다시보기용 — 결과 스냅샷 로드) ──
 export async function getRecord(id: string): Promise<SajuRecord | null> {
   const { data: auth } = await supabase.auth.getUser()
