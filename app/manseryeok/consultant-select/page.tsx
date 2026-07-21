@@ -327,22 +327,24 @@ function ConsultantSelectInner() {
   // 예약 완료 화면
   if (done) {
     return (
-      <main className="min-h-screen bg-[#0d0d1a] flex flex-col items-center justify-center px-6 text-center">
+      <main className="min-h-screen flex flex-col items-center justify-center px-6 text-center"
+        style={{ background:'#FDF6F0', maxWidth:'430px', margin:'0 auto',
+          fontFamily:"'Apple SD Gothic Neo','Noto Sans KR',sans-serif", color:'#3a2e28' }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
-        <div className="text-[20px] text-[#e8e4ff] font-bold mb-2">예약이 완료됐어요</div>
-        <div className="text-[14px] text-[#b0aec8] mb-1">{done.consultantName} 선생님</div>
-        <div className="text-[14px] text-[#FAC775] mb-8">{fmtDate(done.date)} {done.hour}시</div>
-        <div className="text-[12px] text-[#8888aa] mb-8 leading-relaxed">
+        <div className="text-[20px] text-[#3a2e28] font-bold mb-2">예약이 완료됐어요</div>
+        <div className="text-[14px] text-[#5c3a1e] mb-1">{done.consultantName} 선생님</div>
+        <div className="text-[14px] text-[#8f3d0e] mb-8">{fmtDate(done.date)} {done.hour}시</div>
+        <div className="text-[12px] text-[#6b5340] mb-8 leading-relaxed">
           상담 시간에 마이페이지 → 내 상담 내역에서<br />채팅방으로 입장하실 수 있어요.
         </div>
         <button onClick={() => router.push('/mypage-new')}
           className="w-full max-w-[300px] py-[14px] rounded-xl text-[15px] font-bold mb-3"
-          style={{ background: 'linear-gradient(135deg,#3C3489,#FAC775)', color: '#1a1a18' }}>
+          style={{ background: '#b46e46', color: '#fff' }}>
           마이페이지로 가기
         </button>
         <button onClick={() => router.push('/')}
           className="w-full max-w-[300px] py-[13px] rounded-xl text-[14px]"
-          style={{ background: 'rgba(60,52,137,0.2)', color: '#9977cc', border: '1px solid rgba(119,102,221,0.3)' }}>
+          style={{ background: '#faede0', color: '#96502e', border: '0.5px solid #f0e0d5' }}>
           홈으로
         </button>
       </main>
@@ -350,15 +352,17 @@ function ConsultantSelectInner() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0d0d1a] pb-10">
-      <div className="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-[#1e1e35] sticky top-0 bg-[#0d0d1a] z-10">
+    <main className="min-h-screen pb-10"
+      style={{ background:'#FDF6F0', maxWidth:'430px', margin:'0 auto',
+        fontFamily:"'Apple SD Gothic Neo','Noto Sans KR',sans-serif", color:'#3a2e28' }}>
+      <div className="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-[#f0e0d5] sticky top-0 bg-[#FDF6F0] z-10">
         <button onClick={() => router.back()}
-          className="text-[#9d8cff] text-xl w-8 h-8 flex items-center justify-center">
+          className="text-[#96502e] text-xl w-8 h-8 flex items-center justify-center">
           ‹
         </button>
-        <span className="text-[15px] text-[#e8e4ff] font-medium">상담사 선택</span>
+        <span className="text-[15px] text-[#3a2e28] font-medium">상담사 선택</span>
         <span className="ml-auto" style={{
-          background:'#1a2030', color:'#88aadd',
+          background:'#faede0', color:'#8f3d0e',
           fontSize:'11px', padding:'4px 12px', borderRadius:'20px',
         }}>
           {modeLabel[mode] || '🔮 개인 상담'}
@@ -367,14 +371,14 @@ function ConsultantSelectInner() {
 
       <SummaryBand mode={mode} score={score} names={names} />
 
-      <p className="px-5 pt-4 pb-2 text-[12px] text-[#7777aa]">
+      <p className="px-5 pt-4 pb-2 text-[12px] text-[#6b5340]">
         상담할 선생님을 골라주세요 · {consultants.length}명
       </p>
 
       {loading ? (
-        <p className="px-5 text-[13px] text-[#5555aa]">상담사를 불러오는 중...</p>
+        <p className="px-5 text-[13px] text-[#6b5340]">상담사를 불러오는 중...</p>
       ) : consultants.length === 0 ? (
-        <p className="px-5 text-[13px] text-[#5555aa]">현재 상담 가능한 상담사가 없습니다.</p>
+        <p className="px-5 text-[13px] text-[#6b5340]">현재 상담 가능한 상담사가 없습니다.</p>
       ) : (
         <div className="px-4">
           {consultants.map(c => {
@@ -383,32 +387,32 @@ function ConsultantSelectInner() {
             const first = sched[0]
             return (
               <div key={c.id} className="mb-2 rounded-2xl overflow-hidden"
-                style={{ border: '1px solid #252545', background: open ? '#13132a' : '#0f0f22' }}>
+                style={{ border: '0.5px solid #f0e0d5', background: open ? '#fff' : '#fffbf7' }}>
                 <button onClick={() => openConsultant(c.id)}
                   className="w-full flex items-center gap-3 p-3 text-left">
                   <div style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
-                    background: '#2d2060', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    background: '#faede0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {c.photo_url
                       ? <img src={c.photo_url} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <span style={{ fontSize: 16, color: '#c8b0ff' }}>{c.name?.[0] || '?'}</span>}
+                      : <span style={{ fontSize: 16, color: '#96502e' }}>{c.name?.[0] || '?'}</span>}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="text-[15px] text-[#e8e4ff] font-medium">
-                      {c.name} <span className="text-[12px] text-[#7766bb]">선생님</span>
+                    <div className="text-[15px] text-[#3a2e28] font-medium">
+                      {c.name} <span className="text-[12px] text-[#96502e]">선생님</span>
                     </div>
-                    <div className="text-[12px] text-[#8888bb] mt-0.5">{c.specialty || '명리 상담'}</div>
+                    <div className="text-[12px] text-[#6b5340] mt-0.5">{c.specialty || '명리 상담'}</div>
                     {first ? (
-                      <div className="text-[11px] mt-1" style={{ color: '#7bc86c' }}>
+                      <div className="text-[11px] mt-1" style={{ color: '#4a7a3a' }}>
                         가장 빠른 상담 · {fmtDate(first.date)} {first.slots[0].slot_hour}시
                       </div>
                     ) : (
-                      <div className="text-[11px] mt-1" style={{ color: '#666688' }}>열린 일정 없음</div>
+                      <div className="text-[11px] mt-1" style={{ color: '#6b5340' }}>열린 일정 없음</div>
                     )}
                   </div>
                   {c.rating ? (
                     <span className="text-[12px] text-[#e0b060] flex-shrink-0">★ {c.rating}</span>
                   ) : null}
-                  <span className="text-[#7766bb] text-lg flex-shrink-0">{open ? '⌃' : '⌄'}</span>
+                  <span className="text-[#96502e] text-lg flex-shrink-0">{open ? '⌃' : '⌄'}</span>
                 </button>
 
                 {open && (
@@ -416,7 +420,7 @@ function ConsultantSelectInner() {
                     {/* 프로필 */}
                     <div className="flex items-center gap-2 mb-3">
                       {c.rating ? <span className="text-[12px] text-[#e0b060]">★ {c.rating}</span> : null}
-                      {c.review_count ? <span className="text-[12px] text-[#7777aa]">· 상담 {c.review_count}건</span> : null}
+                      {c.review_count ? <span className="text-[12px] text-[#6b5340]">· 상담 {c.review_count}건</span> : null}
                     </div>
                     {c.career && (
                       <div className="text-[12px] text-[#9999cc] mb-2" style={{ whiteSpace: 'pre-line' }}>{c.career}</div>
@@ -425,23 +429,23 @@ function ConsultantSelectInner() {
                       <p className="text-[13px] text-[#aaaacc] leading-relaxed mb-3">{c.intro}</p>
                     )}
                     {c.review_text && (
-                      <div className="rounded-lg px-3 py-[10px] mb-3" style={{ background: '#0d0d1a' }}>
+                      <div className="rounded-lg px-3 py-[10px] mb-3" style={{ background: '#fffbf7' }}>
                         <div className="text-[11px] text-[#e0b060] mb-1">★★★★★</div>
-                        <div className="text-[12px] text-[#8888aa] leading-relaxed">“{c.review_text}”</div>
+                        <div className="text-[12px] text-[#6b5340] leading-relaxed">“{c.review_text}”</div>
                       </div>
                     )}
 
                     {/* 상담 가능 시간 (눌러서 선택) */}
                     <div className="mb-4">
-                      <div className="text-[12px] mb-2" style={{ color: '#FAC775' }}>📅 상담 받을 시간</div>
+                      <div className="text-[12px] mb-2" style={{ color: '#8f3d0e' }}>📅 상담 받을 시간</div>
                       {sched.length === 0 ? (
-                        <div className="text-[12px]" style={{ color: '#666688' }}>아직 열어둔 시간이 없어요.</div>
+                        <div className="text-[12px]" style={{ color: '#6b5340' }}>아직 열어둔 시간이 없어요.</div>
                       ) : (
                         <div className="flex flex-col gap-2">
                           {sched.map(row => (
                             <div key={row.date} className="rounded-lg px-3 py-2"
-                              style={{ background: '#0d0d1a', border: '1px solid #1e1e35' }}>
-                              <div className="text-[11px] mb-1.5" style={{ color: '#aaaacc' }}>{fmtDate(row.date)}</div>
+                              style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5' }}>
+                              <div className="text-[11px] mb-1.5" style={{ color: '#5c3a1e' }}>{fmtDate(row.date)}</div>
                               <div className="flex flex-wrap gap-1.5">
                                 {row.slots.map(s => {
                                   const on = pickedSlotId === s.id
@@ -449,8 +453,8 @@ function ConsultantSelectInner() {
                                     <button key={s.id} onClick={() => setPickedSlotId(s.id)}
                                       className="text-[12px] px-2.5 py-1 rounded-md"
                                       style={on
-                                        ? { background: '#FAC775', color: '#1a1a18', border: '1px solid #FAC775', fontWeight: 700 }
-                                        : { background: 'rgba(250,199,117,0.14)', color: '#FAC775', border: '1px solid rgba(250,199,117,0.3)' }}>
+                                        ? { background: '#b46e46', color: '#fff', border: '0.5px solid #b46e46', fontWeight: 600 }
+                                        : { background: '#faede0', color: '#8f3d0e', border: '0.5px solid #f5d5b8' }}>
                                       {s.slot_hour}시
                                     </button>
                                   )
@@ -466,27 +470,27 @@ function ConsultantSelectInner() {
                     {sched.length > 0 && (
                       <>
                         <div className="mb-2">
-                          <div className="text-[12px] mb-1" style={{ color: '#8888bb' }}>이름</div>
+                          <div className="text-[12px] mb-1" style={{ color: '#5c3a1e' }}>이름</div>
                           <input value={custName} onChange={e => setCustName(e.target.value)}
                             placeholder="홍길동"
                             className="w-full rounded-lg px-3 py-2 text-[14px] outline-none"
-                            style={{ background: '#0d0d1a', border: '1px solid #252545', color: '#e8e4ff' }} />
+                            style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', color: '#3a2e28' }} />
                         </div>
                         <div className="mb-4">
-                          <div className="text-[12px] mb-1" style={{ color: '#8888bb' }}>휴대폰 번호</div>
+                          <div className="text-[12px] mb-1" style={{ color: '#5c3a1e' }}>휴대폰 번호</div>
                           <input value={custPhone} onChange={e => setCustPhone(formatPhone(e.target.value))}
                             placeholder="010-1234-5678" inputMode="numeric"
                             className="w-full rounded-lg px-3 py-2 text-[14px] outline-none"
-                            style={{ background: '#0d0d1a', border: '1px solid #252545', color: '#e8e4ff' }} />
+                            style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', color: '#3a2e28' }} />
                         </div>
 
                         <button onClick={() => reserve(c)} disabled={booking}
-                          className="w-full py-[13px] rounded-xl text-[14px] font-bold"
-                          style={{ background: booking ? '#2a2a3a' : 'linear-gradient(135deg,#3C3489,#FAC775)',
-                            color: booking ? '#888' : '#1a1a18' }}>
+                          className="w-full py-[13px] rounded-xl text-[14px]"
+                          style={{ background: booking ? '#e8d5c5' : '#b46e46',
+                            color: booking ? '#96502e' : '#fff', fontWeight: 600, border: 'none' }}>
                           {booking ? '예약 중...' : '이 시간으로 상담 예약하기'}
                         </button>
-                        <div className="text-[11px] text-center mt-2" style={{ color: '#666688' }}>
+                        <div className="text-[11px] text-center mt-2" style={{ color: '#6b5340' }}>
                           예약 후 상담 시간에 마이페이지에서 채팅방으로 입장해요.
                         </div>
                       </>
@@ -502,8 +506,8 @@ function ConsultantSelectInner() {
       <div style={{ padding: '20px 16px 10px', textAlign: 'center' }}>
         <button onClick={() => router.back()}
           style={{ fontSize:'13px', padding:'12px 24px', borderRadius:'20px',
-            background:'rgba(60,52,137,0.2)', color:'#9977cc',
-            border:'1px solid rgba(119,102,221,0.3)', cursor:'pointer' }}>
+            background:'#fffbf7', color:'#96502e',
+            border:'0.5px solid #f0e0d5', cursor:'pointer' }}>
           ← AI 채팅으로 돌아가기
         </button>
       </div>
