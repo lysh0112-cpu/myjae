@@ -960,15 +960,17 @@ function MulsangInner() {
         {ACTIVE_STYLES.length > 1 && (
           <>
             <div style={{ fontSize: '12px', color: '#96502e', fontWeight: 500, marginBottom: '7px' }}>화풍 고르기</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '18px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px', marginBottom: '16px' }}>
               {ACTIVE_STYLES.map(key => {
                 const on = style === key
                 return (
                   <div key={key} onClick={() => !loading && setStyle(key)}
-                    style={{ background: '#fff', border: `${on ? 1.5 : 0.5}px solid ${on ? '#b46e46' : '#f0e0d5'}`, borderRadius: '12px', padding: '12px 8px', textAlign: 'center', cursor: loading ? 'default' : 'pointer' }}>
-                    <div style={{ fontSize: '20px', marginBottom: '4px' }}>{STYLE_EMOJI[key] ?? '🌿'}</div>
-                    <div style={{ fontSize: '12.5px', fontWeight: on ? 700 : 400, color: on ? '#96502e' : '#b4785a' }}>{STYLE_CONFIGS[key].label}</div>
-                    <div style={{ fontSize: '10.5px', color: on ? '#b4785a' : '#c0a898', marginTop: '2px' }}>{STYLE_DESC[key] ?? ''}</div>
+                    style={{ display: 'flex', alignItems: 'center', gap: '7px', background: '#fff', border: `${on ? 1.5 : 0.5}px solid ${on ? '#b46e46' : '#f0e0d5'}`, borderRadius: '10px', padding: '8px 10px', cursor: loading ? 'default' : 'pointer' }}>
+                    <span style={{ fontSize: '17px', flexShrink: 0 }}>{STYLE_EMOJI[key] ?? '🌿'}</span>
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: 'block', fontSize: '12.5px', fontWeight: on ? 700 : 400, color: on ? '#96502e' : '#b4785a', lineHeight: 1.25 }}>{STYLE_CONFIGS[key].label}</span>
+                      <span style={{ display: 'block', fontSize: '10px', color: on ? '#b4785a' : '#c0a898', lineHeight: 1.25 }}>{STYLE_DESC[key] ?? ''}</span>
+                    </span>
                   </div>
                 )
               })}
