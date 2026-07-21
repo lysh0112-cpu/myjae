@@ -647,6 +647,25 @@ function CoupleResultView({
             <ConsultButton
               priceKey={mode === 'married' ? 'married' : 'couple'}
               mode={mode}
+              /* ★고객이 본 궁합 결과를 상담사에게 넘긴다 (2026-07-21)
+                 couples 테이블(점수·두 사람 명식) + ai_analysis(통변) 두 벌을 담는다. */
+              payload={() => {
+                if (!score) return null
+                return {
+                  aiAnalysis: (tongResult || '').trim() || undefined,
+                  coupleFull: {
+                    person_a_birth: person1,
+                    person_b_birth: person2,
+                    mode,
+                    result: {
+                      totalScore: score.totalScore,
+                      grade: score.grade,
+                      gradeDesc: score.gradeDesc,
+                      scoreDetails: score as unknown as Record<string, number | boolean | undefined>,
+                    },
+                  },
+                }
+              }}
             />
           </div>
         )}

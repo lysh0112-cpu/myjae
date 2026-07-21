@@ -566,7 +566,16 @@ function ResultNewContent() {
             홈 서비스 목록(사주·대운·연월운세)으로 들어온 경우에는 그대로 보인다. */}
         {!chartOnly && (
           <div style={{background:'#fff',border:'0.5px solid #f0e0d5',borderRadius:'14px',padding:'12px',marginTop:'10px'}}>
-            <ConsultButton priceKey="saju" mode="personal" searchParams={searchParams}/>
+            <ConsultButton priceKey="saju" mode="personal" searchParams={searchParams}
+              /* ★고객이 본 통변을 상담사에게 넘긴다 (2026-07-21)
+                 새 조회면 tongText, 보관함 다시보기면 savedTong 을 쓴다.
+                 유료 결제분이면 ai_analysis, 아니면 ai_free_analysis 로 담는다. */
+              payload={() => {
+                const text = (tongText || savedTong || '').trim()
+                if (!text) return null
+                return isPaid ? { aiAnalysis: text } : { aiFreeAnalysis: text }
+              }}
+            />
           </div>
         )}
 
