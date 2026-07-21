@@ -280,6 +280,9 @@ function MulsangInner() {
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'failed'>(sp.get('recordId') ? 'saved' : 'idle')
   // ★그림 요청이 끝나면 올린다 → 아래 useEffect 가 해설을 자동으로 부른다.
   const wantTongRef = useRef(false)
+  // 그림 내려받기 / 해설 복사 상태
+  const [imgSaving, setImgSaving] = useState(false)
+  const [copied, setCopied] = useState(false)
   // 자동 저장된 보관함 기록 id — 해설이 완성되면 여기에 덧붙인다.
   const savedIdRef = useRef<string | null>(null)
   const [tongTick, setTongTick] = useState(0)
@@ -643,6 +646,59 @@ function MulsangInner() {
     router.push('/manseryeok/consultant-select?' + params.toString())
   }
 
+  // ── 그림 내려받기 ──
+  //   ⚠️ <a download> 은 같은 도메인일 때만 동작한다. 그림은 Supabase Storage(다른 도메인)라
+  //   그냥 새 탭에서 열려버린다. 그래서 파일을 받아 blob 으로 만들어 내려받는다.
+  async function handleDownloadImage() {
+    if (!imageUrl || imgSaving) return
+    setImgSaving(true)
+    try {
+      const res = await fetch(imageUrl)
+      if (!res.ok) throw new Error('fetch failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      const who = (info?.name || '나').replace(/[\\/:*?"<>|]/g, '')
+      a.href = url
+      a.download = `명카페_사주그림_${who}_${STYLE_CONFIGS[style]?.label ?? ''}.png`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch {
+      // 내려받기가 막히면(브라우저 정책 등) 새 탭으로 열어 직접 저장하게 안내
+      window.open(imageUrl, '_blank')
+    } finally {
+      setImgSaving(false)
+    }
+  }
+
+  // ── 해설 복사 ──
+  async function handleCopyText() {
+    if (!tongResult?.trim()) return
+    const who = info?.name ? `${info.name}님의 ` : ''
+    const text = `[명카페] ${who}사주 그림 해설\n\n${tongResult.trim()}`
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // clipboard API 가 막힌 경우(구형 브라우저·비 HTTPS) 옛 방식으로
+      try {
+        const ta = document.createElement('textarea')
+        ta.value = text
+        ta.style.position = 'fixed'
+        ta.style.opacity = '0'
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      } catch {}
+    }
+  }
+
   function handleShare() {
     if (navigator.share) {
       navigator.share({ title: '명카페 사주 풍경화', text: '내 사주를 그림으로 봤어요!', url: window.location.href })
@@ -828,9 +884,17 @@ function MulsangInner() {
                   )}
                 </div>
                 {imageUrl && (
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', padding: '8px', background: '#fffbf7', borderBottom: '0.5px solid #f0e0d5' }}>
-                    <a href={imageUrl} download="mulsang.png" style={{ fontSize: '13px', color: '#96502e', textDecoration: 'none' }}>⬇ 저장</a>
-                    <button onClick={handleShare} style={{ fontSize: '13px', color: '#96502e', background: 'none', border: 'none', cursor: 'pointer' }}>↗ 공유</button>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', padding: '10px 12px', background: '#fffbf7', borderBottom: '0.5px solid #f0e0d5' }}>
+                    <button onClick={handleDownloadImage} disabled={imgSaving}
+                      style={{ flex: 1, maxWidth: '200px', padding: '10px', borderRadius: '9px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: imgSaving ? 'default' : 'pointer' }}>
+                      {imgSaving ? '내려받는 중…' : '⬇ 그림 저장'}
+                    </button>
+                    {typeof navigator !== 'undefined' && 'share' in navigator && (
+                      <button onClick={handleShare}
+                        style={{ flex: 1, maxWidth: '200px', padding: '10px', borderRadius: '9px', background: 'transparent', border: '0.5px solid #d8c4b4', color: '#96502e', fontSize: '13px', cursor: 'pointer' }}>
+                        ↗ 공유
+                      </button>
+                    )}
                   </div>
                 )}
               </>
@@ -881,9 +945,22 @@ function MulsangInner() {
                     <span>그림을 찬찬히 살펴보는 중이에요…</span>
                   </div>
                 ) : tongResult ? (
-                  <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '12px', padding: '14px', fontSize: '13.5px', lineHeight: 1.85, color: '#3a2e28', whiteSpace: 'pre-wrap' }}>
-                    {tongResult}
-                  </div>
+                  <>
+                    <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '12px', padding: '14px', fontSize: '13.5px', lineHeight: 1.85, color: '#3a2e28', whiteSpace: 'pre-wrap' }}>
+                      {tongResult}
+                    </div>
+                    {/* ★해설 복사 — 카톡 등에 붙여넣기 */}
+                    {!tongLoading && (
+                      <button onClick={handleCopyText}
+                        style={{ width: '100%', padding: '11px', borderRadius: '10px', marginTop: '8px',
+                          background: copied ? '#eef5e8' : 'transparent',
+                          border: `0.5px solid ${copied ? '#a8c898' : '#d8c4b4'}`,
+                          color: copied ? '#4a7a3a' : '#96502e',
+                          fontSize: '13px', fontWeight: copied ? 700 : 400, cursor: 'pointer' }}>
+                        {copied ? '✓ 복사됐어요 — 붙여넣기 하세요' : '📋 해설 복사하기'}
+                      </button>
+                    )}
+                  </>
                 ) : null}
               </div>
             )}
