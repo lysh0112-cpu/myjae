@@ -29,6 +29,7 @@ export interface CouplePerson {
   dayStem: string         // 일간 (본바탕)
   dayStemNature?: string  // 일간 물상 한 줄 (예: "곧게 자라는 큰 나무")
   age?: number            // 만 나이 (있으면 나이대에 맞는 톤 조절에 사용. 부부 궁합용)
+  mbti?: string           // ★MBTI (선택). 점수에는 절대 안 쓰고 해설 참고용으로만.
 }
 
 export type CoupleMode = 'couple' | 'married'
@@ -75,6 +76,10 @@ const SYSTEM_GUIDE = `당신은 "명카페(MyungCafe)"의 궁합 상담가입니
 - 각 질문 카드의 중심축은 "그 질문에 딸린 명리 연결"입니다. 반드시 그 부위로 곧장 들어가세요.
 - 카드끼리 겹치지 않게, 각 카드는 서로 다른 근거·다른 결론을 담으세요.
 - 의료·법률의 확정적 단정은 피하고 참고 조언으로 전합니다.
+- MBTI가 적혀 있으면, 마지막 카드에서 한두 문장만 가볍게 곁들이세요.
+  · 점수·궁합 판정의 근거로 쓰지 마세요. 명리가 중심이고 MBTI는 참고일 뿐입니다.
+  · "안 맞는다"고 판정하지 말고, 다른 점이 서로의 빈 곳을 채워준다는 보완의 말로 푸세요.
+  · MBTI가 없는 사람이 있으면 아예 언급하지 마세요. 억지로 만들어 쓰지 마세요.
 - 이모지는 맨 마지막 인사에 딱 하나만 씁니다.
 
 [형식 규칙 — 매우 중요]
@@ -97,7 +102,7 @@ function personBlock(p: CouplePerson, label: string): string {
   const nature = p.dayStemNature || STEM_NATURE[p.dayStem] || ''
   return `[${label}] ${p.name} · ${p.gender}${p.birthLabel ? ` · ${p.birthLabel}` : ''}
 - 명식(팔자): ${p.yearPillar} ${p.monthPillar} ${p.dayPillar} ${p.hourPillar}
-- 타고난 본바탕: ${p.dayStem}${nature ? ` (${nature})` : ''}`
+- 타고난 본바탕: ${p.dayStem}${nature ? ` (${nature})` : ''}${p.mbti ? `\n- MBTI(참고): ${p.mbti}` : ''}`
 }
 
 // 부부의 나이대에 맞춰 통변의 관심사·톤을 조절하는 지침.

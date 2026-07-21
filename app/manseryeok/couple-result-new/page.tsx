@@ -259,7 +259,9 @@ function CoupleResultInner() {
       pickedQuestions={pickedQuestions}
       directQ={directQ}
       recordId={recordId}
-      onBack={() => router.back()}
+      /* ★2026-07-21: router.back() 은 브라우저 히스토리 한 칸 뒤로라
+         진입 경로에 따라 홈으로 튀었다. 보관함으로 명시적으로 보낸다. */
+      onBack={() => router.push(`/manseryeok/couple-storage?mode=${mode}`)}
       onOther={() => router.push(`/manseryeok/couple-input-new?mode=${mode}`)}
       onInviteChat={(grade?: string) => {
         // 두 사람 사주 + 궁합 등급을 방으로 넘겨 AI가 알게 함
@@ -388,6 +390,8 @@ function toCouplePerson(p: PersonRaw, saju: SajuPillarSimple[]): CouplePerson {
     hourPillar: pill(h?.stem ?? '', h?.branch ?? ''),
     dayStem: da?.stem ?? '',
     age,
+    // ★MBTI — 점수에는 안 쓰고 해설 참고용으로만 넘긴다. (궁합 설계서 3-2b)
+    mbti: (p.mbti || '').trim().toUpperCase() || undefined,
   }
 }
 
