@@ -125,19 +125,32 @@ ${body.sceneDesc || body.prompt}
     async function runImage() {
       if (!openaiKey) { imageNote = 'no_openai_key'; return }
       try {
-        const imgRes = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${openaiKey}`,
-          },
-          body: JSON.stringify({
-            model: 'gpt-image-1',
-            prompt: body.prompt,
-            n: 1,
-            size: '1024x1024',
-          }),
-        })
+        // ★그림에 자체 시간 제한을 둔다 (2026-07-22).
+        //   [왜] 이 route 의 maxDuration 은 60초다. 그림이 그 시간을 통째로 쓰면
+        //   함수가 강제 종료돼 아래 오류 처리가 실행조차 안 된다. 그러면 화면은
+        //   실패 안내(imageError)도 못 받아 "그림이 아직 없어요"로 빠진다.
+        //   45초에서 우리가 먼저 끊으면, 최소한 "실패했다"고 알릴 수 있다.
+        const imgCtl = new AbortController()
+        const imgTimer = setTimeout(() => imgCtl.abort(), 45_000)
+        let imgRes: Response
+        try {
+          imgRes = await fetch('https://api.openai.com/v1/images/generations', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${openaiKey}`,
+            },
+            body: JSON.stringify({
+              model: 'gpt-image-1',
+              prompt: body.prompt,
+              n: 1,
+              size: '1024x1024',
+            }),
+            signal: imgCtl.signal,
+          })
+        } finally {
+          clearTimeout(imgTimer)
+        }
         const imgData = await imgRes.json()
         imageB64 = imgData.data?.[0]?.b64_json ?? null
         if (!imageB64) {
@@ -150,7 +163,13 @@ ${body.sceneDesc || body.prompt}
         }
       } catch (e) {
         console.error('gpt-image error:', e)
-        imageNote = 'image_error: ' + (e instanceof Error ? e.message.slice(0, 150) : 'unknown')
+        // 시간 초과(abort)는 따로 구분한다 — 화면에서 "다시 시도"를 권할 수 있게.
+        const aborted = e instanceof Error && e.name === 'AbortError'
+        imageNote = aborted
+          ? 'image_timeout'
+          : 'image_error: ' + (e instanceof Error ? e.message.slice(0, 150) : 'unknown')
+        await logAiError('mulsang-image', aborted ? 504 : 500,
+          { message: aborted ? '그림 생성 45초 초과 (시간 초과)' : String(e) })
       }
     }
 

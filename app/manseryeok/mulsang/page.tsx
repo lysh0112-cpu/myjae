@@ -469,7 +469,9 @@ function MulsangInner() {
         setImageError(
           note === 'no_openai_key'
             ? '그림 생성 준비가 아직 안 됐어요. 관리자에게 알려주세요.'
-            : '그림 생성이 잠시 어려운 상태예요. 다시 시도해 주세요.'
+            : note === 'image_timeout'
+              ? '그림을 그리는 데 시간이 너무 오래 걸렸어요. 다시 시도해 주세요.'
+              : '그림 생성이 잠시 어려운 상태예요. 다시 시도해 주세요.'
         )
       } else {
         setImageError(null)

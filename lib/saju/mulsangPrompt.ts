@@ -101,10 +101,12 @@ export const STYLE_CONFIGS: Record<string, { label: string; suffix: string }> = 
   },
   shinkai: {
     label: '빛나는 하늘',
+    // ★2026-07-22: 묘사가 무거워 생성이 자주 실패했다(60초 타임아웃 추정).
+    //   'hyper-detailed', 'floating light particles' 같은 요소는 계산이 오래 걸린다.
+    //   느낌을 남기되 무거운 표현을 덜어냈다. 다시 무겁게 하려면 아래를 되돌릴 것.
     suffix:
-      'Cinematic anime background art with a luminous dramatic sky, volumetric god rays, ' +
-      'crisp vivid saturated colors, delicate lens flare and floating light particles, ' +
-      'hyper-detailed clouds, deep cinematic perspective, sharp focus, ' +
+      'Cinematic anime background art with a luminous sky, soft god rays, ' +
+      'crisp vivid colors, gentle lens flare, deep perspective, ' +
       'breathtaking and emotional, high quality. ' +
       'A complete landscape painting, not a diagram, no text or letters.',
   },
