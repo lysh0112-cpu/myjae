@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import ContactStep from './components/ContactStep'
 import PaymentStep from './components/PaymentStep'
@@ -18,7 +18,14 @@ type Consultant = {
 
 type Step = 'phone' | 'pay' | 'schedule' | 'chat'
 
+// ★상담 채팅 개폐 스위치 (2026-07-21)
+//   상담사 화면의 채팅을 끊었으므로 고객이 들어가도 응답할 사람이 없다.
+//   되살리려면 이 한 줄만 true 로 바꾸면 전부 복구된다.
+//   (커플채팅의 COUPLE_CHAT_OPEN 과 같은 방식)
+const CONSULT_CHAT_OPEN = false
+
 function ConsultingContent() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const [step, setStep] = useState<Step>('phone')
   const [selected, setSelected] = useState<Consultant | null>(null)
@@ -29,7 +36,15 @@ function ConsultingContent() {
   const [payMethod, setPayMethod] = useState<string>('계좌이체')
 
   // 마이페이지에서 "채팅 입장"으로 들어올 때: 기존 상담 건 id
-  const enterConsultationId = searchParams.get('consultationId') ?? ''
+  const enterConsultationId = CONSULT_CHAT_OPEN ? (searchParams.get('consultationId') ?? '') : ''
+
+  // 채팅을 닫은 동안에는 URL 로 직접 들어와도 마이페이지로 돌려보낸다.
+  useEffect(() => {
+    if (!CONSULT_CHAT_OPEN && searchParams.get('consultationId')) {
+      router.replace('/mypage-new')
+    }
+  }, [searchParams, router])
+
   // consultationId로 들어온 경우, 정보를 다 불러올 때까지 화면을 가려서 깜빡임 방지
   const [entering, setEntering] = useState(!!enterConsultationId)
 
@@ -191,7 +206,16 @@ function ConsultingContent() {
       consultantName={selected?.name ?? ''}
       consultationId={consultationId!}
       customerPhone={phone}
-      onComplete={() => setStep('chat')}
+      onComplete={() => {
+        // 채팅을 닫은 동안에는 예약 완료 후 채팅방 대신 마이페이지로 보낸다.
+        //   (예약 자체는 정상 완료된 상태다)
+        if (!CONSULT_CHAT_OPEN) {
+          alert('상담 예약이 완료되었습니다.\n상담사가 예약하신 시간에 연락드립니다.')
+          router.push('/mypage-new')
+          return
+        }
+        setStep('chat')
+      }}
     />
   )
 

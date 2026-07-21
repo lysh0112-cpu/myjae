@@ -527,8 +527,12 @@ export default function MyPageNew() {
                       </div>
                       <span style={{ fontSize: 11, color: st.color }}>{st.label}</span>
                     </div>
+                    {/* 채팅방 입장 — 2026-07-21 숨김.
+                        상담사 화면의 채팅을 끊었으므로 고객이 들어가도 응답할 사람이 없다.
+                        되살리려면 아래 주석만 풀면 된다. (예약 내역·취소 기능은 그대로 유지)
                     <button onClick={() => router.push(`/manseryeok/consulting?consultationId=${c.id}`)}
                       style={{ marginTop: 8, width: '100%', padding: '9px 0', borderRadius: 9, background: '#b46e46', border: 'none', color: '#fff', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>💬 채팅방 입장</button>
+                    */}
                     {isBooked && (
                       <button onClick={() => cancelBooking(c)} disabled={cancelingId === c.id}
                         style={{ marginTop: 6, width: '100%', padding: '9px 0', borderRadius: 9, background: 'none', border: '0.5px solid #f0d0d0', color: '#c05a5a', fontSize: 12, fontWeight: 500, cursor: 'pointer', opacity: cancelingId === c.id ? 0.5 : 1 }}>{cancelingId === c.id ? '취소 처리 중…' : '예약 취소'}</button>
