@@ -6,6 +6,10 @@ import ConsultationList from './components/ConsultationList'
 // 고객 채팅 — 07-20 연결 끊음(부품은 남겨 둠). 되살리려면 이 줄과 사용처 주석만 풀면 된다.
 // import ConsultantChat from './components/ConsultantChat'
 import ConsultTimer from './components/ConsultTimer'
+import { useRoleGate, RoleGateScreen, type AppRole } from '@/hooks/useRoleGate'
+
+// 이 화면에 들어올 수 있는 등급 — 상담사 + 매니저
+const STAFF_ROLES: AppRole[] = ['consultant', 'master']
 import CustomerAiAnalysis from './components/CustomerAiAnalysis'
 // CustomerHistory 는 07-20부터 HistoryFloating(플로팅 창) 안에서 쓴다.
 // import CustomerHistory from './components/CustomerHistory'
@@ -509,6 +513,12 @@ const vDividerGrip: React.CSSProperties = {
 }
 
 export default function ConsultantPage() {
+  // ★권한 확인 (2026-07-21)
+  //   고객 사주·상담 내역이 보이는 화면이라 직원만 들어올 수 있어야 한다.
+  //   매니저도 허용한다 (상담사 화면을 점검·대리할 수 있어야 하므로).
+  const gate = useRoleGate(STAFF_ROLES)
+  if (gate.state !== 'ok') return <RoleGateScreen gate={gate} />
+
   return (
     <Suspense fallback={
       <div style={{minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#111118'}}>

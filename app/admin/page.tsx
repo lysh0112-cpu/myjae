@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import ConsultantManager from './components/ConsultantManager'
@@ -16,6 +16,11 @@ import MemberManager from './components/MemberManager'
 import ToneManager from './components/ToneManager'
 import PromptViewer from './components/PromptViewer'
 import PriceManager from './components/PriceManager'
+import { useRoleGate, RoleGateScreen, type AppRole } from '@/hooks/useRoleGate'
+
+// 이 화면에 들어올 수 있는 등급 — 매니저만
+const ADMIN_ROLES: AppRole[] = ['master']
+
 type Tab = 'dashboard' | 'cancelled' | 'consultant' | 'price' | 'member' | 'settlement' | 'knowledge' | 'review' | 'accounting' | 'approval' | 'tone' | 'prompt' | 'aierror' | 'settings'
 const TABS = [
   { key: 'dashboard', label: '📊 대시보드' },
@@ -36,27 +41,10 @@ const TABS = [
 export default function AdminPage() {
   const router = useRouter()
   const [tab, setTab] = useState<Tab>('dashboard')
-  const [adminName, setAdminName] = useState<string>('')
-
-  useEffect(() => {
-    let mounted = true
-    async function loadAdmin() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-        const { data } = await supabase
-          .from('profiles')
-          .select('nickname')
-          .eq('id', user.id)
-          .maybeSingle()
-        if (mounted && data?.nickname) setAdminName(data.nickname)
-      } catch {
-        // 무시 (이름 표시는 부가 기능이므로 실패해도 화면은 정상)
-      }
-    }
-    loadAdmin()
-    return () => { mounted = false }
-  }, [])
+  // ★권한 확인 (2026-07-21)
+  //   이 화면은 지금까지 role 을 전혀 보지 않아 URL 만 알면 누구나 들어왔다.
+  const gate = useRoleGate(ADMIN_ROLES)
+  const adminName = gate.nickname
 
   const handleLogout = async () => {
     if (!confirm('로그아웃 할까요?')) return
@@ -67,6 +55,9 @@ export default function AdminPage() {
     }
     router.push('/')
   }
+
+  // 매니저가 아니면 화면 자체를 그리지 않는다
+  if (gate.state !== 'ok') return <RoleGateScreen gate={gate} />
 
   return (
     <div className="min-h-screen" style={{ background: '#1a1a18' }}>
