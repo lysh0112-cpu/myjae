@@ -14,9 +14,10 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  listRecordsByService, deleteRecord, daysAgoLabel,
-  type SajuRecord,
+  listRecordsByService, deleteRecord, daysAgoLabel, loadMulsangSummaries,
+  type SajuRecord, type MulsangSummary,
 } from '@/lib/saju/sajuRecords'
+import { STYLE_CONFIGS } from '@/lib/saju/mulsangPrompt'
 import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
 import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 
@@ -25,13 +26,22 @@ const ACCENT = '#b46e46'
 function MulsangStorageInner() {
   const router = useRouter()
   const [records, setRecords] = useState<SajuRecord[] | null>(null)
+  const [summaries, setSummaries] = useState<Record<string, MulsangSummary>>({})
   const [confirmDel, setConfirmDel] = useState<SajuRecord | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
-    listRecordsByService('mulsang').then(list => { if (!cancelled) setRecords(list) })
+    listRecordsByService('mulsang').then(async list => {
+      if (cancelled) return
+      setRecords(list)
+      // 화풍·그림 유무는 따로 가볍게 불러온다 (목록엔 result_data 가 없다)
+      if (list.length > 0) {
+        const sums = await loadMulsangSummaries(list.map(r => r.id))
+        if (!cancelled) setSummaries(sums)
+      }
+    })
     return () => { cancelled = true }
   }, [])
 
@@ -113,7 +123,16 @@ function MulsangStorageInner() {
                 {r.relation ? <span style={{ fontSize: 11, color: '#5c3a1e', marginLeft: 6 }}>{r.relation}</span> : null}
               </div>
               <div style={{ fontSize: 11, color: '#5c3a1e' }}>
-                {r.inputData.year}.{r.inputData.month}.{r.inputData.day} · {daysAgoLabel(r.createdAt)}
+                {r.inputData.year}.{r.inputData.month}.{r.inputData.day}
+                {(() => {
+                  const s = summaries[r.id]
+                  if (!s) return null
+                  // 그림이 없는 기록 — 그림 생성에 실패했던 건. 열기 전에 알 수 있게 표시.
+                  if (!s.hasImage) return <> · <span style={{ color: '#8f3d0e' }}>그림 없음</span></>
+                  const label = s.style ? STYLE_CONFIGS[s.style]?.label : null
+                  return label ? <> · {label}</> : null
+                })()}
+                {' · '}{daysAgoLabel(r.createdAt)}
               </div>
             </div>
 

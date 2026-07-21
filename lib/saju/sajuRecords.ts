@@ -112,6 +112,39 @@ export async function listRecordsByService(
     }))
 }
 
+// ── 물상도 목록용 가벼운 요약 (화풍 · 그림 유무만) ──
+//   목록에서 result_data 전체(해설 포함)를 실으면 무거우므로,
+//   물상도 보관함에서만 따로 불러 화풍과 그림 유무를 표시한다.
+export interface MulsangSummary { style: string | null; hasImage: boolean }
+
+export async function loadMulsangSummaries(
+  ids: string[]
+): Promise<Record<string, MulsangSummary>> {
+  const out: Record<string, MulsangSummary> = {}
+  if (ids.length === 0) return out
+  const { data: auth } = await supabase.auth.getUser()
+  const uid = auth?.user?.id
+  if (!uid) return out
+
+  const { data, error } = await supabase
+    .from('saju_records')
+    .select('id, result_data')
+    .eq('user_id', uid)
+    .in('id', ids)
+
+  if (error || !data) return out
+
+  for (const r of data) {
+    const rd = r.result_data as { images?: { style?: string; imageUrl?: string }[] } | null
+    const first = rd?.images?.[0]
+    out[r.id] = {
+      style: first?.style ?? null,
+      hasImage: !!first?.imageUrl,
+    }
+  }
+  return out
+}
+
 // ── 하나 불러오기 (보관함 카드 눌러 다시보기용 — 결과 스냅샷 로드) ──
 export async function getRecord(id: string): Promise<SajuRecord | null> {
   const { data: auth } = await supabase.auth.getUser()

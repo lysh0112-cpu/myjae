@@ -154,8 +154,14 @@ ${body.sceneDesc || body.prompt}
       }
     }
 
-    // 해설(Claude)과 그림(OpenAI)을 동시에 실행 → 순차 대비 시간 절반, 타임아웃 방지
-    await Promise.all([runCommentary(), runImage()])
+    // ★2026-07-21: 4칸 해설(runCommentary)은 화면 어디에도 표시되지 않아 호출을 껐다.
+    //   해설은 /api/tongbyeon 의 "그림 전체 해설" 하나로 통일했다. (장당 약 89원 절약)
+    //   되살리려면 아래 상수를 true 로 — 함수와 프롬프트는 그대로 보존해 뒀다.
+    const RUN_4CARD_COMMENTARY = false
+    await Promise.all([
+      RUN_4CARD_COMMENTARY ? runCommentary() : Promise.resolve(),
+      runImage(),
+    ])
 
     // ---------- 3) 이미지를 Storage(mulsang 버킷)에 실제 업로드 → 진짜 URL ----------
     let imageUrl: string | null = null

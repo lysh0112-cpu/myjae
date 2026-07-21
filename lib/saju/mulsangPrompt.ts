@@ -50,18 +50,18 @@ const BRANCH_SEASON: Record<string, string> = {
 }
 
 export const STYLE_CONFIGS: Record<string, { label: string; suffix: string }> = {
-  oriental: {
-    label: '수묵담채화',
-    suffix:
-      'Traditional Korean oriental ink wash painting (sumukhwa) with soft color tints, ' +
-      'gentle ink gradients, warm hopeful and dignified atmosphere, beautiful and uplifting, high quality. ' +
-      'A complete landscape painting, not a diagram, no text or letters.',
-  },
   ghibli: {
     label: '지브리풍',
     suffix:
       'Studio Ghibli style soft watercolor, warm gentle light, beautiful scenery, ' +
       'healing hopeful and peaceful atmosphere, anime background art, beautiful and uplifting, high quality. ' +
+      'A complete landscape painting, not a diagram, no text or letters.',
+  },
+  oriental: {
+    label: '수묵담채화',
+    suffix:
+      'Traditional Korean oriental ink wash painting (sumukhwa) with soft color tints, ' +
+      'gentle ink gradients, warm hopeful and dignified atmosphere, beautiful and uplifting, high quality. ' +
       'A complete landscape painting, not a diagram, no text or letters.',
   },
 }

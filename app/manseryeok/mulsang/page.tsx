@@ -31,6 +31,11 @@ const MULSANG_STEM_EL: Record<string, string> = {
 const MULSANG_IMG_PREFIX = 'mulsang_img_v5:'      // 그림 (사람 + 화풍별로 각각 저장)
 const MULSANG_ANS_PREFIX = 'mulsang_ans_v5:'      // 질문 답 캐시 (사람 + 질문id, 화풍 무관)
 
+// ★2026-07-21: 질문 고르기 숨김 (연재쌤 지시 — 해설은 전체 해설 하나로 통일).
+//   부품·데이터(mulsangQuestions.ts)는 그대로 보존. 되살리려면 true 로만 바꾸면 된다.
+//   (커플채팅 COUPLE_CHAT_OPEN 과 같은 방식)
+const MULSANG_QUESTION_OPEN = false
+
 // 사람(생년월일시+성별) 식별 문자열
 function personKeyOf(p: {
   gender: string; calType: string; year: number; month: number; day: number;
@@ -206,7 +211,7 @@ function MulsangInner() {
   // SajuWonguk(상세 명식 부품)에 넘길 공망 (일간+일지 기준)
   const [gm1, gm2] = dayStem && iljji ? getGongmang(dayStem, iljji) : ['', '']
 
-  const [style, setStyle] = useState<string>('oriental')
+  const [style, setStyle] = useState<string>('ghibli')
   const [loading, setLoading] = useState(false)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [commentary, setCommentary] = useState<Commentary | null>(null)
@@ -358,16 +363,13 @@ function MulsangInner() {
       setCommentary(data.commentary ?? null)
       // 그림이 안 왔으면(=크레딧 소진·타임아웃 등) 이유를 화면에 안내. imageNote로 원인 구분.
       if (!data.imageUrl) {
+        // ★영어 원문(OpenAI 오류)은 화면에 띄우지 않는다. (2부 화면 문구 원칙 6)
+        //   원인은 관리자 → 🚨 AI 오류 탭에 그대로 기록되므로 추적에 지장 없다.
         const note = data.imageNote || ''
-        // 서버가 담아준 상세 사유(imageNote의 ': ' 뒤, 또는 imageErrorMsg)를 함께 표시
-        const noteDetail = note.includes(':') ? note.split(':').slice(1).join(':').trim() : ''
-        const detail = data.imageErrorMsg
-          ? ` (사유: ${data.imageErrorMsg})`
-          : (noteDetail ? ` (사유: ${noteDetail})` : '')
         setImageError(
           note === 'no_openai_key'
-            ? '그림 생성 설정이 아직 안 돼 있어요. (관리자 확인 필요)'
-            : `지금은 그림을 만들지 못했어요.${detail} 잠시 후 다시 시도하거나 관리자에게 문의해 주세요.`
+            ? '그림 생성 준비가 아직 안 됐어요. 관리자에게 알려주세요.'
+            : '그림 생성이 잠시 어려운 상태예요. 다시 시도해 주세요.'
         )
       } else {
         setImageError(null)
@@ -386,18 +388,17 @@ function MulsangInner() {
           style,
           commentary: data.commentary ?? null,
         }))
-        // 상담사 화면 해설 표시용 텍스트도 함께 (ai_analysis)
-        if (data.commentary) {
-          const c = data.commentary
-          const text = `[물상도 · ${c.title || ''}]\n\n· 주인공(나)\n${c.subject || ''}\n\n· 환경\n${c.environment || ''}\n\n· 핵심 에너지(용신)\n${c.yongsin || ''}\n\n· 삶의 조언\n${c.advice || ''}`.trim()
-          sessionStorage.setItem('ai_analysis', text)
-        }
       } catch {}
     } catch (e) {
       console.error(e)
     } finally {
       setLoading(false)
     }
+
+    // ★그림이 끝나면 해설을 이어서 자동 생성 (예전엔 고객이 버튼을 눌러야 나왔다).
+    //   스트리밍이라 그림이 먼저 뜨고 해설이 이어서 채워진다.
+    //   그림이 실패해도 해설은 만든다 — 고객이 낸 값의 절반은 지켜야 하므로.
+    runTongbyeon('all')
   }
 
   function openPay() {
@@ -502,6 +503,11 @@ function MulsangInner() {
           if (pickedQ) setAnsweredIds(prev => new Set(prev).add(pickedQ))
         } catch {}
       }
+      // ★상담사 화면에 넘길 해설 — 전체 해설을 그대로 넘긴다.
+      //   (예전엔 4칸 해설을 넘겼으나 그 해설을 없앴다)
+      if (mode === 'all' && acc.trim()) {
+        try { sessionStorage.setItem('ai_analysis', acc) } catch {}
+      }
     } catch {
       setTongResult('통변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
     } finally {
@@ -516,17 +522,17 @@ function MulsangInner() {
     if (!pk) return
     setSaveState('saving')
 
-    // 1) 두 화풍 그림 모으기 (그린 것만)
+    // 1) ★지금 보고 있는 화풍 그림 하나만 저장한다.
+    //   결제 1회 = 그림 1장 = 보관함 1건. (예전엔 두 화풍을 1건에 합쳐 저장해
+    //   두 번 결제했는데 다시보기에서 첫 장만 보이는 문제가 있었다)
+    //   그림이 없으면 저장하지 않는다 — 이름만 남는 빈 기록을 막는다.
     const images: { style: string; imageUrl: string; commentary: unknown }[] = []
-    for (const st of Object.keys(STYLE_CONFIGS)) {
-      const k = mulsangImgKey(info, st)
-      if (!k) continue
-      const raw = localStorage.getItem(k)
-      if (!raw) continue
-      try {
-        const r = JSON.parse(raw)
-        if (r.imageUrl) images.push({ style: st, imageUrl: r.imageUrl, commentary: r.commentary ?? null })
-      } catch {}
+    if (imageUrl) {
+      images.push({ style, imageUrl, commentary: tongResult ?? null })
+    }
+    if (images.length === 0) {
+      setSaveState('idle')
+      return
     }
 
     // 2) 본 질문 해설들 모으기
@@ -555,26 +561,24 @@ function MulsangInner() {
       },
       resultData: { images, answers },
     })
+    // 저장 실패는 alert 로 막지 않는다 — 버튼이 'idle' 로 돌아가 다시 누를 수 있다. (19-2부)
     setSaveState(res.ok ? 'saved' : 'idle')
-    if (!res.ok) alert(res.message || '저장하지 못했어요.')
+    if (!res.ok) console.error('보관함 저장 실패:', res.message)
   }
 
   function goConsult() {
     // 상담 신청 시점에 현재 물상도(그림+해설)를 세션에 확실히 담는다.
     // (그림을 새로 뽑았든, 예전 결과를 복원했든 항상 연결되게)
     try {
-      if (commentary || imageUrl) {
+      if (tongResult || imageUrl) {
         sessionStorage.setItem('mulsang_full', JSON.stringify({
           image_url: imageUrl || null,
           prompt: '',
           style,
-          commentary: commentary || null,
+          commentary: tongResult || null,
         }))
-        const c = commentary
-        if (c) {
-          const text = `[물상도 · ${c.title || ''}]\n\n· 주인공(나)\n${c.subject || ''}\n\n· 환경\n${c.environment || ''}\n\n· 핵심 에너지(용신)\n${c.yongsin || ''}\n\n· 삶의 조언\n${c.advice || ''}`.trim()
-          sessionStorage.setItem('ai_analysis', text)
-        }
+        // 상담사가 볼 해설 — 고객이 본 전체 해설을 그대로.
+        if (tongResult?.trim()) sessionStorage.setItem('ai_analysis', tongResult)
       }
     } catch {}
     const params = new URLSearchParams()
@@ -593,7 +597,10 @@ function MulsangInner() {
   const sajuLine = converting ? '사주 불러오는 중...' :
     `일간 ${dayStem} · ${info.calType} ${info.year}.${info.month}.${info.day}${info.hourIdx !== null ? ` ${branchList[info.hourIdx]}시` : ''}`
 
-  const hasResult = commentary && !loading
+  // ★결과 화면 판정 — 예전엔 4칸 해설(commentary)을 봤으나 그 해설을 없앴다.
+  //   지금은 "그림이 있거나 / 해설이 있거나 / 해설을 부르는 중"이면 결과 화면.
+  //   (그림만 실패해도 해설은 보여야 하고, 옛 기록은 commentary만 있을 수 있어 함께 본다)
+  const hasResult = !loading && (!!imageUrl || !!tongResult || tongLoading || !!commentary)
 
   const PayPopup = payOpen ? (
     <div onClick={() => setPayOpen(false)}
@@ -737,9 +744,25 @@ function MulsangInner() {
                   {imageUrl ? (
                     <img src={imageUrl} alt="사주 풍경화" style={{ width: '100%', display: 'block' }} />
                   ) : imageError ? (
-                    <div style={{ aspectRatio: '1/1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#5c3a1e', background: '#fdf6f0', padding: '20px', textAlign: 'center' }}>
+                    <div style={{ aspectRatio: '1/1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', color: '#5c3a1e', background: '#fdf6f0', padding: '24px', textAlign: 'center' }}>
                       <span style={{ fontSize: '34px' }}>🖼️</span>
-                      <span style={{ fontSize: '13px', lineHeight: 1.6, color: '#96502e' }}>{imageError}</span>
+                      <span style={{ fontSize: '14px', fontWeight: 700, color: '#96502e' }}>그림을 그리지 못했어요</span>
+                      <span style={{ fontSize: '13px', lineHeight: 1.7, color: '#5c3a1e' }}>{imageError}</span>
+                      <button onClick={doGenerate} disabled={loading}
+                        style={{ marginTop: '4px', padding: '11px 22px', borderRadius: '10px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: loading ? 'default' : 'pointer' }}>
+                        🔄 다시 그리기
+                      </button>
+                      <span style={{ fontSize: '11px', color: '#6b5340' }}>해설은 아래에서 보실 수 있어요</span>
+                    </div>
+                  ) : sp.get('recordId') ? (
+                    // ★보관함 다시보기인데 그림이 없는 기록 — 그림 생성에 실패했던 건.
+                    //   "곧 제공됩니다"는 사실이 아니므로 있는 그대로 알린다.
+                    <div style={{ aspectRatio: '1/1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', background: '#fdf6f0', padding: '24px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '34px' }}>🖼️</span>
+                      <span style={{ fontSize: '14px', fontWeight: 700, color: '#96502e' }}>이 기록에는 그림이 없어요</span>
+                      <span style={{ fontSize: '13px', lineHeight: 1.7, color: '#5c3a1e' }}>
+                        그림 생성에 실패했던 기록이에요.<br />해설은 아래에서 보실 수 있어요.
+                      </span>
                     </div>
                   ) : (
                     <div style={{ aspectRatio: '1/1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#5555aa', background: cardBg }}>
@@ -761,30 +784,37 @@ function MulsangInner() {
         <div style={{ padding: '16px' }}>
           {/* ⑤ 그림 해설 통변 (질문 선택) ── */}
           <div style={{ margin: '4px 0 14px', color: '#3a2e28' }}>
-            {/* 질문 고르기 — 누르면 하단 시트 모달로 (페이지가 길어지지 않게) */}
-            <div onClick={() => openQuestionPicker()}
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '13px 14px', background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '12px', cursor: 'pointer' }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#96502e' }}>그림에서 궁금한 걸 골라보세요</div>
-                <div style={{ fontSize: '11px', color: pickedQ ? '#6e50a0' : '#b4785a', marginTop: '2px' }}>
-                  {pickedQ ? MULSANG_QUESTIONS.find(q => q.id === pickedQ)?.question : '안 고르면 그림 전체를 대략 풀어드려요'}
+            {/* ★질문 고르기 — 현재 숨김(MULSANG_QUESTION_OPEN).
+                해설은 그림과 함께 자동으로 나오므로 고객이 따로 누를 필요가 없다. */}
+            {MULSANG_QUESTION_OPEN && (
+              <>
+                <div onClick={() => openQuestionPicker()}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '13px 14px', background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '12px', cursor: 'pointer' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#96502e' }}>그림에서 궁금한 걸 골라보세요</div>
+                    <div style={{ fontSize: '11px', color: pickedQ ? '#6e50a0' : '#b4785a', marginTop: '2px' }}>
+                      {pickedQ ? MULSANG_QUESTIONS.find(q => q.id === pickedQ)?.question : '안 고르면 그림 전체를 대략 풀어드려요'}
+                    </div>
+                  </div>
+                  <span style={{ color: '#8f3d0e', fontSize: '15px' }}>›</span>
                 </div>
-              </div>
-              <span style={{ color: '#8f3d0e', fontSize: '15px' }}>›</span>
-            </div>
 
+                {pickedQ && (
+                  <button onClick={() => runTongbyeon('selected')} disabled={tongLoading}
+                    style={{ width: '100%', height: '46px', background: '#b46e46', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer', marginTop: '10px' }}>
+                    이 질문으로 그림 풀이 받기
+                  </button>
+                )}
+              </>
+            )}
 
-            {/* 통변 실행 버튼 — 질문을 골랐을 때만 표시 (안 골랐을 땐 위 트리거와 문구가 겹쳐 숨김) */}
-            {pickedQ && (
-              <button onClick={() => runTongbyeon('selected')} disabled={tongLoading}
-                style={{ width: '100%', height: '46px', background: '#b46e46', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer', marginTop: '10px' }}>
-                이 질문으로 그림 풀이 받기
+            {/* ★해설 다시 받기 — 해설이 실패했을 때만 보인다 (평소엔 자동 생성됨) */}
+            {!tongLoading && !tongResult && (
+              <button onClick={() => runTongbyeon('all')}
+                style={{ width: '100%', height: '42px', background: 'transparent', border: '0.5px solid #d8c4b4', borderRadius: '12px', color: '#96502e', fontSize: '13px', cursor: 'pointer', marginTop: '8px' }}>
+                그림 해설 받기
               </button>
             )}
-            <button onClick={() => runTongbyeon('all')} disabled={tongLoading}
-              style={{ width: '100%', height: '42px', background: 'transparent', border: '0.5px solid #d8c4b4', borderRadius: '12px', color: '#96502e', fontSize: '13px', cursor: 'pointer', marginTop: '8px' }}>
-              그냥 전체 대략 해설 볼래요
-            </button>
 
             {/* 통변 결과 */}
             {showTongbyeon && (
@@ -827,17 +857,23 @@ function MulsangInner() {
             </div>
           )}
 
-          {/* 하단 액션: 보관함 저장 + 다른 사람 그리기 */}
-          <button onClick={handleSaveRecord} disabled={saveState !== 'idle'}
-            style={{ width: '100%', padding: '15px', borderRadius: '12px', border: 'none', marginTop: '12px',
-              background: saveState === 'saved' ? '#e8d5c5' : '#b46e46',
-              color: saveState === 'saved' ? '#96502e' : '#fff',
-              fontSize: '15px', fontWeight: 700, cursor: saveState === 'idle' ? 'pointer' : 'default' }}>
-            {saveState === 'saving' ? '저장 중…' : saveState === 'saved' ? '✓ 보관함에 저장됨' : '💾 그림·해설 보관함에 저장'}
-          </button>
-          <div style={{ fontSize: '11px', color: '#6b5340', textAlign: 'center', marginTop: '6px' }}>
-            그린 그림과 본 질문 해설이 함께 저장돼요
-          </div>
+          {/* 하단 액션: 보관함 저장 + 다른 사람 그리기
+              ★그림이 있을 때만 저장 버튼을 띄운다.
+                그림 없이 저장하면 보관함에 이름만 남는 빈 기록이 생긴다. */}
+          {imageUrl && (
+            <>
+              <button onClick={handleSaveRecord} disabled={saveState !== 'idle'}
+                style={{ width: '100%', padding: '15px', borderRadius: '12px', border: 'none', marginTop: '12px',
+                  background: saveState === 'saved' ? '#e8d5c5' : '#b46e46',
+                  color: saveState === 'saved' ? '#96502e' : '#fff',
+                  fontSize: '15px', fontWeight: 700, cursor: saveState === 'idle' ? 'pointer' : 'default' }}>
+                {saveState === 'saving' ? '저장 중…' : saveState === 'saved' ? '✓ 보관함에 저장됨' : '💾 이 그림 보관함에 저장'}
+              </button>
+              <div style={{ fontSize: '11px', color: '#6b5340', textAlign: 'center', marginTop: '6px' }}>
+                {STYLE_CONFIGS[style]?.label} 그림과 해설이 함께 저장돼요
+              </div>
+            </>
+          )}
 
           <button onClick={() => router.push('/manseryeok/mulsang-storage')}
             style={{ width: '100%', padding: '13px', borderRadius: '12px', marginTop: '10px', marginBottom: '4px',
