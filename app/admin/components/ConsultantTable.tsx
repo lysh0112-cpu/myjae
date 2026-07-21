@@ -2,8 +2,13 @@
 import { useState } from 'react'
 import { ConsultantFormData } from './ConsultantForm'
 
+// 상담사별 "아직 살아 있는 예약"(완료도 취소도 안 된 건)
+type PendingInfo = { count: number; names: string[] }
+
 type Props = {
   list: ConsultantFormData[]
+  /** ★2026-07-21 2차: 진행중 예약을 목록에 미리 보여준다 */
+  pending?: Record<string, PendingInfo>
   onEdit: (c: ConsultantFormData) => void
   onDelete: (id: string) => void
   onToggleActive: (c: ConsultantFormData) => void
@@ -20,7 +25,7 @@ const COLUMNS = [
 ] as const
 type ColKey = typeof COLUMNS[number]['key']
 
-export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive, onSaveSort }: Props) {
+export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, onToggleActive, onSaveSort }: Props) {
   const [cols, setCols] = useState<Record<ColKey, boolean>>({
     email: false, phone: false, specialty: true,
     region: false, bank: false, commission: false,
@@ -100,7 +105,7 @@ export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive
         </button>
       </div>
       <div className="text-xs mb-3" style={{ color: '#6a6880' }}>
-        순번을 고치고 옆의 저장 버튼을 누르세요 · 작을수록 위로 · 비활성은 고객 화면에 안 보여요 · 이름을 누르면 상세가 펼쳐집니다
+        순번을 고치고 옆의 저장 버튼을 누르세요 · 작을수록 위로 · 비활성은 고객 화면에 안 보여요 · 이름을 누르면 상세가 펼쳐집니다 · 진행중 예약이 있으면 삭제할 수 없어요
       </div>
 
       <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -109,6 +114,7 @@ export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive
           <span style={{ width: 92, textAlign: 'center' }}>순번</span>
           <span style={{ width: 34 }}></span>
           <span style={{ flex: 1 }}>이름</span>
+          <span style={{ width: 210 }}>진행중 예약</span>
           <span style={{ width: 50, textAlign: 'center' }}>활성</span>
           {cols.email && <span style={{ width: 130 }}>이메일</span>}
           {cols.phone && <span style={{ width: 100 }}>전화번호</span>}
@@ -150,6 +156,23 @@ export default function ConsultantTable({ list, onEdit, onDelete, onToggleActive
               {/* 이름 (누르면 펼침) */}
               <button type="button" onClick={() => setOpenId(openId === c.id ? null : c.id)}
                 style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff', cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}>{c.name}</button>
+
+              {/* ★진행중 예약 — 완료도 취소도 안 된 건. 있으면 삭제할 수 없다. (2026-07-21 2차) */}
+              <span style={{ width: 210, fontSize: 11.5, lineHeight: 1.4 }}>
+                {(() => {
+                  const p = pending[c.id!]
+                  if (!p || p.count === 0) {
+                    return <span style={{ color: '#6a6880' }}>없음 · 삭제 가능</span>
+                  }
+                  const head = p.names.slice(0, 2).join(' · ')
+                  const rest = p.count - Math.min(2, p.names.length)
+                  return (
+                    <span style={{ color: '#FAC775' }}>
+                      {p.count}건 — {head}{rest > 0 ? ` 외 ${rest}명` : ''}
+                    </span>
+                  )
+                })()}
+              </span>
               <span style={{ width: 50, textAlign: 'center' }}>
                 <button onClick={() => onToggleActive(c)}
                   className="px-2 py-0.5 rounded-lg text-xs font-bold"
