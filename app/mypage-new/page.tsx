@@ -60,6 +60,10 @@ type Consultation = {
   booking_hour: number | null
   consultant_id: string | null
   consultant_name?: string
+  /** ★2026-07-21 2차: 고객이 [삭제]를 누른 건.
+   *  고객 마이페이지에서만 감춘다. 상담사 화면·관리자 정산에는 그대로 남는다.
+   *  (상담 기록은 정산 근거라 고객이 실제로 지울 수 있으면 안 된다) */
+  hidden_by_customer?: boolean | null
 }
 
 function toHourIdx(h: string | null): number | null {
@@ -77,6 +81,9 @@ export default function MyPageNew() {
   const [consults, setConsults] = useState<Consultation[]>([])
   const [loading, setLoading] = useState(true)
   const [cancelingId, setCancelingId] = useState<string | null>(null)
+  // ★2026-07-21 2차: 상담 내역 삭제(숨김) 처리 중인 건 · 삭제한 내역 펼침 여부
+  const [hidingId, setHidingId] = useState<string | null>(null)
+  const [hiddenOpen, setHiddenOpen] = useState(false)
   const [deletingNameId, setDeletingNameId] = useState<string | null>(null)
   const [namesExpanded, setNamesExpanded] = useState(false)
 
@@ -128,7 +135,7 @@ export default function MyPageNew() {
         .then(({ data: rows }) => { if (rows) setMyNames(rows as MyName[]) })
 
       const { data: cs } = await supabase.from('consultations')
-        .select('id, status, paid_amount, created_at, booking_date, booking_hour, consultant_id')
+        .select('id, status, paid_amount, created_at, booking_date, booking_hour, consultant_id, hidden_by_customer')
         .eq('user_id', data.user.id)
         .order('created_at', { ascending: false })
       if (cs && cs.length > 0) {
@@ -216,6 +223,38 @@ export default function MyPageNew() {
       console.error(e)
     } finally {
       setCancelingId(null)
+    }
+  }
+
+  // ★2026-07-21 2차: 상담 내역 [삭제] — 실제로 지우지 않고 내 화면에서만 감춘다.
+  //   [왜] 이 기록은 상담사 정산과 관리자 집계의 근거다.
+  //        고객이 진짜로 지우면 상담사가 일한 내역이 사라진다.
+  //        그래서 hidden_by_customer 만 켜고, 뒤쪽 화면에는 그대로 남긴다.
+  async function hideConsult(c: Consultation) {
+    if (!confirm('이 상담 내역을 삭제할까요?\n\n내 목록에서만 사라지고, 아래 [삭제한 내역 보기]에서 다시 볼 수 있어요.')) return
+    setHidingId(c.id)
+    try {
+      const { data, error } = await supabase.from('consultations')
+        .update({ hidden_by_customer: true }).eq('id', c.id).select('id')
+      // .update() 는 막혀도 오류를 안 내므로 몇 건이 바뀌었는지 확인한다. (14부)
+      if (error) { alert('삭제하지 못했어요.\n\n잠시 후 다시 시도해 주세요.'); return }
+      if (!data || data.length === 0) { alert('삭제하지 못했어요.\n\n잠시 후 다시 시도해 주세요.'); return }
+      setConsults(prev => prev.map(x => x.id === c.id ? { ...x, hidden_by_customer: true } : x))
+    } finally {
+      setHidingId(null)
+    }
+  }
+
+  // 삭제한 내역 되살리기
+  async function unhideConsult(c: Consultation) {
+    setHidingId(c.id)
+    try {
+      const { data, error } = await supabase.from('consultations')
+        .update({ hidden_by_customer: false }).eq('id', c.id).select('id')
+      if (error || !data || data.length === 0) { alert('되살리지 못했어요.\n\n잠시 후 다시 시도해 주세요.'); return }
+      setConsults(prev => prev.map(x => x.id === c.id ? { ...x, hidden_by_customer: false } : x))
+    } finally {
+      setHidingId(null)
     }
   }
 
@@ -515,39 +554,78 @@ export default function MyPageNew() {
 
         <div style={card}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>내 상담 내역</div>
-          {consults.filter(c => c.status !== 'cancelled' && c.status !== 'canceled').length === 0 ? (
-            <div style={{ fontSize: 13, color: '#5c3a1e', textAlign: 'center', padding: '12px 0' }}>아직 신청한 상담이 없습니다.</div>
-          ) : (
-            <div>
-              {consults.filter(c => c.status !== 'cancelled' && c.status !== 'canceled').map((c, i, arr) => {
-                const st = statusInfo(c.status)
-                const isBooked = c.status === 'booked'
-                return (
-                  <div key={c.id} style={{ padding: '10px 0', borderBottom: i < arr.length - 1 ? '0.5px solid #f5e5da' : 'none' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontSize: 14 }}>{c.consultant_name || '상담사'}</div>
-                        <div style={{ fontSize: 10, color: '#6b5340' }}>
-                          {dateText(c.booking_date || c.created_at)}{c.booking_hour != null ? ` ${c.booking_hour}시` : ''}{c.paid_amount ? ` · ${c.paid_amount.toLocaleString()}원` : ''}
+          {(() => {
+            // 취소된 건과 고객이 삭제(숨김)한 건은 목록에서 뺀다.
+            const visible = consults.filter(c =>
+              c.status !== 'cancelled' && c.status !== 'canceled' && !c.hidden_by_customer)
+            const hidden = consults.filter(c =>
+              c.status !== 'cancelled' && c.status !== 'canceled' && c.hidden_by_customer)
+            return (
+              <>
+                {visible.length === 0 ? (
+                  <div style={{ fontSize: 13, color: '#5c3a1e', textAlign: 'center', padding: '12px 0' }}>
+                    {hidden.length > 0 ? '표시할 상담 내역이 없습니다.' : '아직 신청한 상담이 없습니다.'}
+                  </div>
+                ) : (
+                  <div>
+                    {visible.map((c, i, arr) => {
+                      const st = statusInfo(c.status)
+                      const isBooked = c.status === 'booked'
+                      // 끝난 상담(완료)만 삭제할 수 있다. 예약 확정·진행 중은 [예약 취소]를 쓴다.
+                      const canHide = !isBooked && c.status !== 'in_progress'
+                      return (
+                        <div key={c.id} style={{ padding: '10px 0', borderBottom: i < arr.length - 1 ? '0.5px solid #f5e5da' : 'none' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <div style={{ fontSize: 14 }}>{c.consultant_name || '상담사'}</div>
+                              <div style={{ fontSize: 10, color: '#6b5340' }}>
+                                {dateText(c.booking_date || c.created_at)}{c.booking_hour != null ? ` ${c.booking_hour}시` : ''}{c.paid_amount ? ` · ${c.paid_amount.toLocaleString()}원` : ''}
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: 11, color: st.color }}>{st.label}</span>
+                              {canHide && (
+                                <button onClick={() => hideConsult(c)} disabled={hidingId === c.id}
+                                  aria-label="이 상담 내역 삭제"
+                                  style={{ background: 'none', border: 'none', color: '#c5a590', fontSize: 15, cursor: 'pointer', padding: '2px 4px', lineHeight: 1, opacity: hidingId === c.id ? 0.4 : 1 }}>×</button>
+                              )}
+                            </div>
+                          </div>
+                          {isBooked && (
+                            <button onClick={() => cancelBooking(c)} disabled={cancelingId === c.id}
+                              style={{ marginTop: 6, width: '100%', padding: '9px 0', borderRadius: 9, background: 'none', border: '0.5px solid #f0d0d0', color: '#c05a5a', fontSize: 12, fontWeight: 500, cursor: 'pointer', opacity: cancelingId === c.id ? 0.5 : 1 }}>{cancelingId === c.id ? '취소 처리 중…' : '예약 취소'}</button>
+                          )}
                         </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* ★삭제한 내역 — 실수로 지웠을 때 되살릴 수 있게 해둔다 */}
+                {hidden.length > 0 && (
+                  <div style={{ marginTop: 10, borderTop: '0.5px solid #f5e5da', paddingTop: 8 }}>
+                    <button onClick={() => setHiddenOpen(v => !v)}
+                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11.5, color: '#6b5340' }}>
+                      {hiddenOpen ? '▾' : '▸'} 삭제한 내역 {hidden.length}건
+                    </button>
+                    {hiddenOpen && (
+                      <div style={{ marginTop: 6 }}>
+                        {hidden.map(c => (
+                          <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0' }}>
+                            <div style={{ fontSize: 12, color: '#6b5340' }}>
+                              {c.consultant_name || '상담사'} · {dateText(c.booking_date || c.created_at)}
+                            </div>
+                            <button onClick={() => unhideConsult(c)} disabled={hidingId === c.id}
+                              style={{ background: 'none', border: '0.5px solid #e8d5c5', borderRadius: 7, color: '#96502e', fontSize: 11, cursor: 'pointer', padding: '4px 10px', opacity: hidingId === c.id ? 0.4 : 1 }}>되살리기</button>
+                          </div>
+                        ))}
                       </div>
-                      <span style={{ fontSize: 11, color: st.color }}>{st.label}</span>
-                    </div>
-                    {/* 채팅방 입장 — 2026-07-21 숨김.
-                        상담사 화면의 채팅을 끊었으므로 고객이 들어가도 응답할 사람이 없다.
-                        되살리려면 아래 주석만 풀면 된다. (예약 내역·취소 기능은 그대로 유지)
-                    <button onClick={() => router.push(`/manseryeok/consulting?consultationId=${c.id}`)}
-                      style={{ marginTop: 8, width: '100%', padding: '9px 0', borderRadius: 9, background: '#b46e46', border: 'none', color: '#fff', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>💬 채팅방 입장</button>
-                    */}
-                    {isBooked && (
-                      <button onClick={() => cancelBooking(c)} disabled={cancelingId === c.id}
-                        style={{ marginTop: 6, width: '100%', padding: '9px 0', borderRadius: 9, background: 'none', border: '0.5px solid #f0d0d0', color: '#c05a5a', fontSize: 12, fontWeight: 500, cursor: 'pointer', opacity: cancelingId === c.id ? 0.5 : 1 }}>{cancelingId === c.id ? '취소 처리 중…' : '예약 취소'}</button>
                     )}
                   </div>
-                )
-              })}
-            </div>
-          )}
+                )}
+              </>
+            )
+          })()}
         </div>
 
         <div style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}>
