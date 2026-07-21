@@ -77,8 +77,10 @@ export interface RelationCategory {
 }
 
 export const RELATION_CATEGORIES: RelationCategory[] = [
-  { key: 'family', label: '가족', items: ['부모', '자녀', '형제/자매', '조부모', '손주', '며느리/사위', '친척'] },
-  { key: 'love',   label: '연인', items: ['연인', '썸남/썸녀', '전연인', '배우자', '전배우자'] },
+  // ★2026-07-21 2차: 가까운 관계부터, 세대 순으로 정렬.
+  //   배우자를 연인 → 가족으로 옮겼다. (전배우자는 가족이 아니므로 연인에 남긴다)
+  { key: 'family', label: '가족', items: ['배우자', '자녀', '손주', '부모', '조부모', '형제/자매', '며느리/사위', '친척'] },
+  { key: 'love',   label: '연인', items: ['연인', '썸남/썸녀', '전연인', '전배우자'] },
   { key: 'social', label: '지인', items: ['친구', '지인', '직장동료', '상사/부하', '동업자/파트너'] },
   { key: 'custom', label: '직접 입력', items: [] },
 ]

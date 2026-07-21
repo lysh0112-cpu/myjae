@@ -223,9 +223,12 @@ export default function PersonFormPitch({
           </div>
         </div>
 
-        {/* 관계 — ① 카테고리 고르고 ② 그 안에서 세부 관계를 고른다 */}
+        {/* 관계 — ① 탭으로 갈래를 고르고 ② 그 안에서 세부 관계를 고른다
+            ★2026-07-21 2차: 탭과 세부 칩이 같은 모양이라 헷갈린다는 지적을 반영.
+              탭은 홈 「오늘의 운세 / 이달의 운세」와 같은 모양(회색 바탕에 선택만 채움),
+              세부는 둥근 칩으로 바꿔 한눈에 구분되게 했다. */}
         <div style={label}>관계</div>
-        <div style={{ display: 'flex', gap: 5, marginBottom: 8 }}>
+        <div style={{ display: 'flex', gap: 4, background: '#f5ebe2', borderRadius: 9, padding: 3, marginBottom: 10 }}>
           {RELATION_CATEGORIES.map(c => {
             const on = relCat === c.key
             return (
@@ -236,10 +239,10 @@ export default function PersonFormPitch({
                   else { setUseCustom(false); if (!c.items.includes(relation)) setRelation('') }
                 }}
                 style={{
-                  flex: 1, fontSize: 12, borderRadius: 9, padding: '9px 2px', cursor: 'pointer',
-                  background: on ? C.brown : '#fff',
-                  color: on ? '#fff' : C.chipText,
-                  border: on ? 'none' : `0.5px solid ${C.borderInput}`,
+                  flex: 1, fontSize: 12, borderRadius: 7, padding: '7px 2px', cursor: 'pointer',
+                  border: 'none', fontWeight: on ? 600 : 400,
+                  background: on ? C.brown : 'transparent',
+                  color: on ? '#fff' : C.sub,
                 }}>{c.label}</button>
             )
           })}
@@ -250,17 +253,17 @@ export default function PersonFormPitch({
             placeholder="관계를 직접 입력 (예: 사장님, 은사님)"
             style={{ ...numInput, textAlign: 'left', marginBottom: 16, color: customRelation ? C.title : C.subLight }} />
         ) : (
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 16 }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
             {(RELATION_CATEGORIES.find(c => c.key === relCat)?.items ?? []).map(r => {
               const active = !useCustom && relation === r
               return (
                 <button key={r}
                   onClick={() => { setUseCustom(false); setRelation(r) }}
                   style={{
-                    fontSize: 12, borderRadius: 8, padding: '7px 13px', cursor: 'pointer',
-                    background: active ? '#f4ede4' : '#fff',
-                    color: active ? C.titleWarm : C.chipText,
-                    border: active ? `0.5px solid ${C.brown}` : `0.5px solid ${C.borderInput}`,
+                    fontSize: 12, borderRadius: 20, padding: '7px 14px', cursor: 'pointer',
+                    background: active ? '#faede0' : '#fff',
+                    color: active ? '#8f3d0e' : C.chipText,
+                    border: active ? '0.5px solid #f5d5b8' : `0.5px solid ${C.borderInput}`,
                     fontWeight: active ? 600 : 400,
                   }}>{r}</button>
               )
