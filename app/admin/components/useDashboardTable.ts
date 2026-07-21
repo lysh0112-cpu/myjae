@@ -11,6 +11,10 @@ export type Consultation = {
   assigned_consultant_id: string
   booking_date: string
   completed_date: string
+  /** ★2026-07-21 2차 추가 — 실제 DB 칸 이름.
+   *  completed_date 는 이 표에만 있던 이름이라 값이 안 들어와 완료일이 늘 비어 있었다. */
+  started_at: string | null
+  completed_at: string | null
   ai_analysis: string
   summary: string
   deleted_at: string | null
