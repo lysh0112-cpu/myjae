@@ -22,6 +22,17 @@
 // [쓰는 법] 각 route.ts 맨 앞에 두 줄:
 //     const g = await requireMaster()
 //     if (!g.ok) return g.res
+//
+// ----------------------------------------------------------------------------
+// [requireUser — 2026-07-21 2차 추가]
+//   매니저 전용이 아니라 "로그인한 회원이면 누구나" 쓸 수 있어야 하는 API 용.
+//   예: 커플 회원 검색(고객이 직접 쓴다). 여기에 requireMaster 를 붙이면
+//       고객이 기능을 못 쓴다.
+//
+//   막는 것: 로그인 안 한 외부인 (등급은 보지 않는다)
+//
+//     const g = await requireUser()
+//     if (!g.ok) return g.res
 // ============================================================================
 
 import { createServerClient } from '@supabase/ssr'
@@ -82,6 +93,52 @@ export async function requireMaster(): Promise<GuardResult> {
   } catch {
     // 예기치 못한 오류는 "막는 쪽"으로 처리한다.
     //   보안 검사는 실패했을 때 통과시키면 안 된다.
+    return {
+      ok: false,
+      res: NextResponse.json(
+        { error: '권한을 확인하지 못했습니다.' },
+        { status: 401 },
+      ),
+    }
+  }
+}
+
+// ============================================================================
+// requireUser — 로그인만 확인 (등급은 보지 않는다)
+//
+//   requireMaster 와 다른 점은 ③ 등급 확인이 없다는 것뿐이다.
+//   고객이 직접 쓰는 기능인데 service_role 로 Supabase 를 부르는 API 에 쓴다.
+// ============================================================================
+export async function requireUser(): Promise<GuardResult> {
+  try {
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll() {},
+        },
+      }
+    )
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return {
+        ok: false,
+        res: NextResponse.json(
+          { error: '로그인이 필요합니다.' },
+          { status: 401 },
+        ),
+      }
+    }
+
+    return { ok: true, userId: user.id }
+  } catch {
+    // 보안 검사는 실패했을 때 통과시키면 안 된다. (requireMaster 와 동일)
     return {
       ok: false,
       res: NextResponse.json(

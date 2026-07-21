@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { requireUser } from '../../admin/_guard'
 
 // 이메일 가리기: jiyoung@gmail.com → jiy***@gmail.com
 function maskEmail(email: string): string {
@@ -14,6 +15,13 @@ function maskEmail(email: string): string {
 // 반환: { members: [{ userId, nickname, maskedEmail, joinedYear }] }
 export async function POST(req: Request) {
   try {
+    // ★로그인 확인 (2026-07-21 2차)
+    //   고객이 직접 쓰는 기능이라 requireMaster 가 아니라 requireUser 다.
+    //   등급은 보지 않고, 로그인 안 한 외부인만 막는다.
+    //   가드가 없으면 이름 한 글자로 회원 목록을 긁어갈 수 있다.
+    const g = await requireUser()
+    if (!g.ok) return g.res
+
     const { name, excludeUserId } = await req.json()
     const q = (name || '').trim()
     if (!q) return NextResponse.json({ members: [] })

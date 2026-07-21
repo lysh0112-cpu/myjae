@@ -1,7 +1,14 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { requireMaster } from '../_guard'
 export async function GET() {
   try {
+    // ★관리자 권한 확인 (2026-07-21 2차)
+    //   이 API 는 전 회원의 이메일·닉네임·생년월일·출생시·성별을
+    //   한 번에 돌려준다. 가드가 없으면 URL 만 알면 누구나 받아갈 수 있다.
+    const g = await requireMaster()
+    if (!g.ok) return g.res
+
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
