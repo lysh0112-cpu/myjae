@@ -4,7 +4,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsinCompat as calcYongsin } from '@/lib/saju/yongsinNew'
 import { calcSimsanOhaeng, toPercentList } from '@/lib/saju/simsanOhaeng'
-import { buildMulsangPrompt, STYLE_CONFIGS } from '@/lib/saju/mulsangPrompt'
+import { buildMulsangPrompt, STYLE_CONFIGS, ACTIVE_STYLES, STYLE_EMOJI, STYLE_DESC } from '@/lib/saju/mulsangPrompt'
 import { buildMulsangTongbyeonPrompt, type Ohaeng } from '@/lib/saju/mulsangTongbyeonPrompt'
 import { MULSANG_QUESTIONS, groupMulsangByCategory } from '@/lib/saju/mulsangQuestions'
 import OhaengPentagon from '@/app/manseryeok/result-new/OhaengPentagon'
@@ -218,7 +218,9 @@ function MulsangInner() {
   // SajuWonguk(상세 명식 부품)에 넘길 공망 (일간+일지 기준)
   const [gm1, gm2] = dayStem && iljji ? getGongmang(dayStem, iljji) : ['', '']
 
-  const [style, setStyle] = useState<string>('ghibli')
+  const [style, setStyle] = useState<string>(ACTIVE_STYLES[0] ?? 'ghibli')
+  // 다시 그리기 드롭다운에서 고른 화풍 (현재 화풍과 별개로 관리)
+  const [redrawPick, setRedrawPick] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [commentary, setCommentary] = useState<Commentary | null>(null)
@@ -653,7 +655,7 @@ function MulsangInner() {
         </div>
         <div style={{ background: '#fdf6f0', borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '0.5px solid #f0e0d5' }}>
           <div style={{ fontSize: '12px', color: '#5c3a1e', marginBottom: '8px' }}>포함 내용</div>
-          {['사주 8글자 기반 맞춤 풍경화', '선택한 화풍으로 생성', '오행 해설과 궁금한 질문 풀이', '저장·공유 가능'].map((t, i) => (
+          {['사주 8글자 기반 맞춤 풍경화', '그림에 담긴 뜻을 풀어주는 해설', '보관함 저장 · 공유 가능'].map((t, i) => (
             <div key={i} style={{ fontSize: '13px', color: '#3a2e28', lineHeight: 1.9 }}>· {t}</div>
           ))}
         </div>
@@ -880,21 +882,29 @@ function MulsangInner() {
             </button>
           )}
 
-          {drawActive && (
-            <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '14px', padding: '14px' }}>
-              <div style={{ fontSize: '12px', color: '#5c3a1e', marginBottom: '8px' }}>다른 화풍으로 다시 그리기</div>
-              <select value={style} onChange={e => setStyle(e.target.value)}
-                style={{ width: '100%', padding: '10px', borderRadius: '10px', background: '#fff', border: '0.5px solid #e4d4be', color: '#96502e', fontSize: '14px', marginBottom: '10px' }}>
-                {(Object.keys(STYLE_CONFIGS)).map(key => (
-                  <option key={key} value={key}>{STYLE_CONFIGS[key].label}</option>
-                ))}
-              </select>
-              <button onClick={openPay}
-                style={{ width: '100%', padding: '12px', borderRadius: '10px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>
-                ✨ 다시 그리기 · {drawPrice.toLocaleString()}원
-              </button>
-            </div>
-          )}
+          {/* ★다른 화풍으로 다시 그리기 — 지금 화풍을 뺀 나머지만 고르게 한다.
+              (1회 결제 = 그림 1장이므로 다시 그리면 다시 결제된다) */}
+          {(() => {
+            const others = ACTIVE_STYLES.filter(k => k !== style)
+            if (!drawActive || others.length === 0) return null
+            // 고른 값이 없거나 지금 화풍과 겹치면 첫 번째 것으로 본다 (렌더 중 계산 — setState 안 씀)
+            const picked = redrawPick && others.includes(redrawPick) ? redrawPick : others[0]
+            return (
+              <div style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', borderRadius: '14px', padding: '14px' }}>
+                <div style={{ fontSize: '12px', color: '#5c3a1e', marginBottom: '8px' }}>다른 화풍으로 다시 그리기</div>
+                <select value={picked} onChange={e => setRedrawPick(e.target.value)}
+                  style={{ width: '100%', padding: '10px', borderRadius: '10px', background: '#fff', border: '0.5px solid #e4d4be', color: '#96502e', fontSize: '14px', marginBottom: '10px' }}>
+                  {others.map(key => (
+                    <option key={key} value={key}>{STYLE_CONFIGS[key].label}</option>
+                  ))}
+                </select>
+                <button onClick={() => { setStyle(picked); setRedrawPick(null); openPay() }}
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>
+                  ✨ 다시 그리기 · {drawPrice.toLocaleString()}원
+                </button>
+              </div>
+            )
+          })()}
 
           {/* 하단 액션: 보관함 저장 + 다른 사람 그리기
               ★그림이 있을 때만 저장 버튼을 띄운다.
@@ -946,19 +956,25 @@ function MulsangInner() {
           <span style={{ fontSize: '12px', color: '#5c3a1e' }}>내 사주 여덟 글자로 그리는 나만의 풍경화</span>
         </div>
 
-        <div style={{ fontSize: '12px', color: '#96502e', fontWeight: 500, marginBottom: '7px' }}>화풍 고르기</div>
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '18px' }}>
-          {(Object.keys(STYLE_CONFIGS)).map(key => {
-            const on = style === key
-            return (
-              <div key={key} onClick={() => !loading && setStyle(key)}
-                style={{ flex: 1, background: '#fff', border: `${on ? 1.5 : 0.5}px solid ${on ? '#b46e46' : '#f0e0d5'}`, borderRadius: '12px', padding: '13px', textAlign: 'center', cursor: loading ? 'default' : 'pointer' }}>
-                <div style={{ fontSize: '20px', marginBottom: '4px' }}>{key === 'oriental' ? '🎋' : '🌿'}</div>
-                <div style={{ fontSize: '12px', fontWeight: on ? 700 : 400, color: on ? '#96502e' : '#b4785a' }}>{STYLE_CONFIGS[key].label}</div>
-              </div>
-            )
-          })}
-        </div>
+        {/* ★화풍 고르기 — 고를 게 둘 이상일 때만 띄운다. 2줄(2개씩) 배치. */}
+        {ACTIVE_STYLES.length > 1 && (
+          <>
+            <div style={{ fontSize: '12px', color: '#96502e', fontWeight: 500, marginBottom: '7px' }}>화풍 고르기</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '18px' }}>
+              {ACTIVE_STYLES.map(key => {
+                const on = style === key
+                return (
+                  <div key={key} onClick={() => !loading && setStyle(key)}
+                    style={{ background: '#fff', border: `${on ? 1.5 : 0.5}px solid ${on ? '#b46e46' : '#f0e0d5'}`, borderRadius: '12px', padding: '12px 8px', textAlign: 'center', cursor: loading ? 'default' : 'pointer' }}>
+                    <div style={{ fontSize: '20px', marginBottom: '4px' }}>{STYLE_EMOJI[key] ?? '🌿'}</div>
+                    <div style={{ fontSize: '12.5px', fontWeight: on ? 700 : 400, color: on ? '#96502e' : '#b4785a' }}>{STYLE_CONFIGS[key].label}</div>
+                    <div style={{ fontSize: '10.5px', color: on ? '#b4785a' : '#c0a898', marginTop: '2px' }}>{STYLE_DESC[key] ?? ''}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
 
         {drawActive ? (
           <button onClick={openPay} disabled={loading || converting}
@@ -983,7 +999,7 @@ function MulsangInner() {
 
         {!loading && drawActive && (
           <div style={{ textAlign: 'center', fontSize: '11px', color: '#6b5340', marginBottom: '8px' }}>
-            그림이 완성되면 오행 해설과 궁금한 질문 풀이가 이어져요
+            그림이 완성되면 사주 해설이 이어서 나와요
           </div>
         )}
 

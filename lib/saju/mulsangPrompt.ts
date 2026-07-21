@@ -49,12 +49,51 @@ const BRANCH_SEASON: Record<string, string> = {
   丑: 'late winter, still and peaceful, with the first warm hint of coming spring',
 }
 
+// ★화면에 띄울 화풍 — 2026-07-21 확정. 순서가 곧 화면 순서다.
+//   화풍을 늘리려면 STYLE_CONFIGS 에 한 칸 넣고 이 배열에 키를 추가하면 된다.
+//   (일시적으로 감추려면 이 배열에서만 빼면 STYLE_CONFIGS 는 그대로 남는다)
+export const ACTIVE_STYLES: string[] = ['ghibli', 'shinkai', 'citypop', 'oriental']
+
+// 화풍별 이모지 — 화면 카드에 쓴다.
+export const STYLE_EMOJI: Record<string, string> = {
+  ghibli: '🌿', shinkai: '✨', citypop: '🌆', oriental: '🎋',
+}
+
+// 화풍별 한 줄 설명 — 이름만으로 감이 안 오므로 카드에 작게 곁들인다.
+export const STYLE_DESC: Record<string, string> = {
+  ghibli: '따뜻한 수채',
+  shinkai: '빛과 노을',
+  citypop: '80년대 감성',
+  oriental: '전통 한국화',
+}
+
+// ⚠️ 화풍 이름(label)과 아래 suffix 에는 실존 회사·작가 이름을 쓰지 않는다.
+//    상품 화면에 상표를 쓰면 오인 소지가 있고, 프롬프트 쪽도 회색지대라
+//    특징 묘사만으로 같은 결과를 내도록 했다. (2026-07-21 대표님 지시)
 export const STYLE_CONFIGS: Record<string, { label: string; suffix: string }> = {
   ghibli: {
-    label: '지브리풍',
+    label: '포근한 동화',
     suffix:
-      'Studio Ghibli style soft watercolor, warm gentle light, beautiful scenery, ' +
-      'healing hopeful and peaceful atmosphere, anime background art, beautiful and uplifting, high quality. ' +
+      'Hand-painted anime background art in soft watercolor, warm gentle light, ' +
+      'lush nostalgic scenery, healing hopeful and peaceful atmosphere, ' +
+      'nostalgic storybook feeling, beautiful and uplifting, high quality. ' +
+      'A complete landscape painting, not a diagram, no text or letters.',
+  },
+  shinkai: {
+    label: '빛나는 하늘',
+    suffix:
+      'Cinematic anime background art with a luminous dramatic sky, volumetric god rays, ' +
+      'crisp vivid saturated colors, delicate lens flare and floating light particles, ' +
+      'hyper-detailed clouds, deep cinematic perspective, sharp focus, ' +
+      'breathtaking and emotional, high quality. ' +
+      'A complete landscape painting, not a diagram, no text or letters.',
+  },
+  citypop: {
+    label: '레트로 시티팝',
+    suffix:
+      '1980s retro album cover illustration style, nostalgic sunset gradient palette of ' +
+      'peach coral and soft violet, clean bold linework, flat cel shading with subtle film grain, ' +
+      'breezy refreshing nostalgic mood, high quality. ' +
       'A complete landscape painting, not a diagram, no text or letters.',
   },
   oriental: {
