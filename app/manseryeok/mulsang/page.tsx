@@ -585,6 +585,8 @@ function MulsangInner() {
           lackElements,
           yongsinElement: (yongsinElement || undefined) as Ohaeng | undefined,
           styleLabel: STYLE_CONFIGS[style]?.label,
+          // ★그림에 그려진 시간대를 해설도 알아야 한다 (2026-07-22)
+          hourKo: info && info.hourIdx !== null ? HOUR_LABEL[info.hourIdx] : undefined,
         },
         questions,
       )
