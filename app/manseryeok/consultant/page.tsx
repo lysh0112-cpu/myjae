@@ -77,6 +77,9 @@ function ConsultantContent() {
   const [myNickname, setMyNickname] = useState('')
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null)
   const [authState, setAuthState] = useState<'checking' | 'ok' | 'denied'>('checking')
+  // ★2026-07-21 2차: 매니저가 consultantId 없이 들어오면 누구 화면을 볼지 고르게 한다.
+  const [isMaster, setIsMaster] = useState(false)
+  const [pickList, setPickList] = useState<{ id: string; name: string }[]>([])
 
   // 📋 상담내역 플로팅 창 열림 상태
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -110,6 +113,12 @@ function ConsultantContent() {
   const splitMode = !!selectedConsultation
 
   // ---------- 권한 체크: 로그인한 사람이 상담사 본인인지 확인 ----------
+  //   ★2026-07-21 2차: 매니저(master)는 이 검사를 건너뛴다.
+  //   [왜] 이 검사는 useRoleGate 가 생기기 전부터 있던 것으로,
+  //        "로그인 이메일이 consultants 표에 있는가" 만 본다.
+  //        매니저는 상담사 명단에 없는 게 정상이라 늘 막혔다.
+  //        (실제로 관리자 계정을 상담사 목록에서 지우자 본인이 못 들어가게 됐다)
+  //        점검·대리를 위해 매니저는 통과시킨다. — 16-3 권한 설계와 동일한 취지.
   useEffect(() => {
     let cancelled = false
     ;(async () => {
@@ -121,6 +130,20 @@ function ConsultantContent() {
         router.replace('/auth/login')
         return
       }
+
+      // ★매니저 확인 — master 면 상담사 등록 여부와 무관하게 통과
+      const { data: me } = await supabase
+        .from('profiles').select('role, nickname').eq('id', u.user.id).maybeSingle()
+      if (cancelled) return
+      if (me?.role === 'master') {
+        // URL 의 consultantId 로 그 상담사 이름을 표시한다.
+        //   (없으면 아래 '설정 불러오기'가 이름을 채운다)
+        setIsMaster(true)
+        setConsultantName((me.nickname as string) || '매니저')
+        setAuthState('ok')
+        return
+      }
+
       const email = u.user.email || ''
       // 이 사람이 상담사(consultants)로 등록돼 있는지 이메일로 확인
       const { data: con } = await supabase
@@ -142,6 +165,13 @@ function ConsultantContent() {
     })()
     return () => { cancelled = true }
   }, [router])
+
+  // ★매니저가 consultantId 없이 들어온 경우 — 누구 화면을 볼지 고르게 한다
+  useEffect(() => {
+    if (!isMaster || consultantId) return
+    supabase.from('consultants').select('id, name').eq('active', true).order('sort')
+      .then(({ data }) => setPickList(data ?? []))
+  }, [isMaster, consultantId])
 
   // ---------- 설정 불러오기 ----------
   useEffect(() => {
@@ -343,6 +373,34 @@ function ConsultantContent() {
       <div style={{width:'100vw', height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#1a1a18'}}>
         <div style={{color:'#FAC775', fontSize:'14px'}}>
           {authState === 'checking' ? '상담사 확인 중...' : '접근 권한이 없습니다.'}
+        </div>
+      </div>
+    )
+  }
+
+  // ★매니저가 consultantId 없이 들어온 경우 — 누구 화면을 볼지 고른다 (2026-07-21 2차)
+  if (isMaster && !consultantId) {
+    return (
+      <div style={{width:'100vw', height:'100vh', background:'#1a1a18', display:'flex',
+        flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14, padding:24}}>
+        <div style={{color:'#FAC775', fontSize:16, fontWeight:600}}>어느 상담사의 화면을 볼까요?</div>
+        <div style={{color:'#8a88a0', fontSize:12}}>매니저는 점검·대리를 위해 상담사 화면에 들어갈 수 있어요.</div>
+        <div style={{display:'flex', flexDirection:'column', gap:8, width:'100%', maxWidth:320, marginTop:6}}>
+          {pickList.length === 0 ? (
+            <div style={{color:'#8a88a0', fontSize:13, textAlign:'center'}}>등록된 상담사가 없어요.</div>
+          ) : pickList.map(p => (
+            <button key={p.id}
+              onClick={() => router.push(`/manseryeok/consultant?consultantId=${p.id}`)}
+              style={{padding:'13px 0', borderRadius:10, border:'1px solid rgba(255,255,255,0.12)',
+                background:'rgba(255,255,255,0.06)', color:'#e8e2f5', fontSize:14, cursor:'pointer'}}>
+              {p.name} 선생님
+            </button>
+          ))}
+          <button onClick={() => router.push('/admin')}
+            style={{padding:'11px 0', borderRadius:10, border:'none',
+              background:'rgba(250,199,117,0.15)', color:'#FAC775', fontSize:13, cursor:'pointer', marginTop:4}}>
+            ← 관리자 화면으로
+          </button>
         </div>
       </div>
     )

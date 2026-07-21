@@ -233,6 +233,14 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, 
                     style={{ background: '#FAC775', color: '#1a1a18' }}>
                     ✏️ 수정
                   </button>
+                  {/* ★2026-07-21 2차: 매니저가 이 상담사의 화면을 바로 열 수 있게.
+                      예전에는 consultantId 를 알아야 URL 로 들어갈 수 있었다. */}
+                  <button onClick={() => window.open(`/manseryeok/consultant?consultantId=${c.id}`, '_blank')}
+                    className="flex-1 py-2 rounded-lg text-xs font-bold"
+                    title="이 상담사의 화면을 새 탭으로 엽니다 (점검·대리용)"
+                    style={{ background: 'rgba(100,150,255,0.15)', color: '#7fa8ff' }}>
+                    🔮 화면 보기
+                  </button>
                   <button onClick={() => onDelete(c.id!)}
                     className="flex-1 py-2 rounded-lg text-xs font-bold"
                     style={{ background: 'rgba(255,100,100,0.15)', color: '#ff6464' }}>
