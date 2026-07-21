@@ -194,7 +194,7 @@ function MulsangInner() {
     return () => { cancelled = true }
   }, [sp])
 
-  const { saju, dayStem, iljji, yeonjji, converting } = useResultSaju(
+  const { saju, solar, dayStem, iljji, yeonjji, converting } = useResultSaju(
     info?.calType || '양력',
     info?.year || 0,
     info?.month || 0,
@@ -214,8 +214,11 @@ function MulsangInner() {
   // ── 오행·용신·월지 (그림 해설 통변 재료) ──
   const monthBranch = saju.find(p => p.pillar === '월주')?.branch ?? ''
   const hourBranch = saju.find(p => p.pillar === '시주')?.branch ?? null
-  const solarMonth = info?.month ?? 0
-  const solarDay = info?.day ?? 0
+  // ★심산 오행 점수에는 반드시 "양력" 월·일을 넘겨야 한다.
+  //   info 는 입력 원본이라 음력일 수 있다. 훅이 돌려주는 solar(양력)를 쓴다.
+  //   (2026-07-21 수정 — 음력 입력자의 寅·申월 날짜 3분할이 틀어지던 문제)
+  const solarMonth = solar?.month ?? 0
+  const solarDay = solar?.day ?? 0
   const ohaeng = useMemo(
     () => (saju.length > 0 ? toPercentList(calcSimsanOhaeng(saju, solarMonth, solarDay, hourBranch)) : []),
     [saju, solarMonth, solarDay, hourBranch],
