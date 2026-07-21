@@ -311,6 +311,9 @@ function MulsangInner() {
   //   엉뚱한 기록을 건드리지 않게 "그때의 값"을 그대로 들고 가야 한다.
   const pendingSaveRef = useRef<{ id: string | null; url: string; style: string } | null>(null)
   const savingRef = useRef(false)   // 저장 중복 진입 막기 (setSaveState 는 비동기)
+  // "새로 그리기"로 들어왔는가. 첫 그림을 그리고 나면 풀어서
+  //   그 뒤 화풍 전환 시에는 정상적으로 복원되게 한다.
+  const freshRef = useRef(sp.get('fresh') === '1')
 
   // ★명식(saju·dayStem)의 최신값을 ref 로 들고 있는다.
   //   doGenerate 는 오래 걸리는 async 라, 그 안에서 state 를 읽으면
@@ -324,6 +327,11 @@ function MulsangInner() {
     // 보관함 다시보기(recordId)로 진입했으면 스냅샷을 loadInfo에서 이미 복원했으므로
     // localStorage 기반 복원은 건너뛴다 (안 그러면 이 브라우저에 없는 그림을 지워버림).
     if (sp.get('recordId')) return
+    // ★"새로 그리기"로 들어왔으면 예전 그림을 되살리지 않는다.
+    //   [왜] 보관함 [+ 새 그림 그리기] → 사람 선택으로 들어와도 recordId 가
+    //   없다는 이유로 localStorage 의 옛 그림이 복원돼, "새 그림"을 눌렀는데
+    //   예전 그림이 뜨는 문제가 있었다. (2026-07-21)
+    if (freshRef.current) return
     const key = mulsangImgKey(info, style)
     if (!key) return
     // 그림 생성 중이면 건드리지 않는다 (방금 만든 그림을 지우면 안 됨).
@@ -389,6 +397,9 @@ function MulsangInner() {
     setSaveState('idle')
     setTongResult(null)
     setShowTongbyeon(false)
+    // 한 장 그렸으면 "새로 그리기" 상태를 푼다 → 이후 화풍 전환 시엔
+    //   그 화풍으로 그렸던 그림이 정상 복원된다.
+    freshRef.current = false
     savedIdRef.current = null
     savingRef.current = false
     pendingSaveRef.current = null

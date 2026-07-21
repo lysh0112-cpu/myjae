@@ -63,8 +63,11 @@ function MulsangStorageInner() {
     router.push(`/manseryeok/mulsang?recordId=${r.id}`)
   }
 
-  // 새 그림: 사람 선택 → mulsang(생성). "나"면 URL 없이.
-  const goNew = (q: string) => router.push(`/manseryeok/mulsang?${q}`)
+  // 새 그림: 사람 선택 → mulsang(생성). "나"면 사람 정보 없이 fresh 만.
+  //   ★fresh=1 — "새로 그리러 왔다"는 표시. 이게 있으면 mulsang 이
+  //     localStorage 의 예전 그림을 복원하지 않는다. (2026-07-21)
+  //     예전엔 표시가 없어 [+ 새 그림 그리기]로 들어가도 옛 그림이 떴다.
+  const goNew = (q: string) => router.push(`/manseryeok/mulsang?${q}&fresh=1`)
 
   return (
     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
@@ -172,9 +175,10 @@ function MulsangStorageInner() {
           goNew(toResultQuery(person))
         }}
         onPickMe={() => {
-          // "나" → URL 없이 → mulsang이 내 profiles를 읽음
+          // "나" → 사람 정보 없이 → mulsang 이 내 profiles 를 읽는다.
+          //   fresh=1 로 "새로 그리기"임을 알린다(옛 그림 복원 안 함).
           setPickerOpen(false)
-          router.push('/manseryeok/mulsang')
+          router.push('/manseryeok/mulsang?fresh=1')
         }}
         onClose={() => setPickerOpen(false)}
       />
