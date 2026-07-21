@@ -34,6 +34,55 @@ export default function ConsultTimer({ consultationId, onEnded }: Props) {
   const [loading, setLoading] = useState(true)
   const [now, setNow] = useState<number>(Date.now())
 
+  // ── 이 상담이 잡고 있는 시간(슬롯) 찾기 ──────────────────────────────
+  //   bookings 가 consultation_id ↔ slot_id 를 잇는다.
+  async function findSlotIds(): Promise<string[]> {
+    const { data } = await supabase.from('bookings')
+      .select('slot_id').eq('consultation_id', consultationId)
+    return (data ?? []).map(b => b.slot_id).filter(Boolean) as string[]
+  }
+
+  // ★상담 종료 시 그 시간을 다시 연다. (2026-07-21 2차)
+  //   [왜] 상담이 끝났는데 일정표에 계속 「예약참」으로 잠겨 있으면
+  //        상담사가 그 시간에 다른 예약을 받을 수 없다.
+  async function releaseSlots() {
+    const ids = await findSlotIds()
+    if (ids.length === 0) return
+    const { error } = await supabase.from('consultant_slots')
+      .update({ is_booked: false }).in('id', ids)
+    // 슬롯 정리 실패가 상담 종료 자체를 막지는 않는다. (부가 처리)
+    if (error) console.error('슬롯 열기 실패:', error.message)
+  }
+
+  // ★상담 재개 시 그 시간을 다시 잠근다 — 단, 비어 있을 때만.
+  //   [왜 조건이 붙나] 종료 후 그 시간이 열려 있는 동안 다른 고객이
+  //   예약했을 수 있다. 그걸 덮어쓰면 같은 시간에 두 상담이 겹친다.
+  //   (14부 "예약 슬롯 잠금 실패 → 같은 시간에 다른 손님이 또 예약")
+  //   → 이미 찬 시간은 잠그지 않고 안내만 한다.
+  async function relockSlots() {
+    const ids = await findSlotIds()
+    if (ids.length === 0) return
+    const { data: slots } = await supabase.from('consultant_slots')
+      .select('id, is_booked, slot_date, slot_hour').in('id', ids)
+    const taken = (slots ?? []).filter(s => s.is_booked)
+    const free = (slots ?? []).filter(s => !s.is_booked).map(s => s.id)
+
+    if (free.length > 0) {
+      const { error } = await supabase.from('consultant_slots')
+        .update({ is_booked: true }).in('id', free)
+      if (error) console.error('슬롯 다시 잠그기 실패:', error.message)
+    }
+    if (taken.length > 0) {
+      const when = taken.map(s => `${s.slot_date} ${s.slot_hour}시`).join(', ')
+      alert(
+        `상담은 다시 이어집니다.\n\n` +
+        `다만 ${when} 에는 그 사이 다른 예약이 들어와 있어\n` +
+        `일정표는 그대로 두었어요. 시간이 겹치지 않는지 확인해 주세요.`
+      )
+    }
+  }
+
+
   // 현재 시작·종료 상태를 읽어온다
   //   (자동으로 in_progress 로 바꾸지 않는다 — 시작은 반드시 버튼으로)
   useEffect(() => {
@@ -94,6 +143,8 @@ export default function ConsultTimer({ consultationId, onEnded }: Props) {
         .eq('id', consultationId)
       if (error) throw error
       setCompletedAt(iso)
+      // ★상담이 끝났으니 그 시간을 다시 연다 (2026-07-21 2차)
+      await releaseSlots()
       onEnded?.()
     } catch (err) {
       console.error(err)
@@ -115,6 +166,8 @@ export default function ConsultTimer({ consultationId, onEnded }: Props) {
       if (error) throw error
       setCompletedAt(null)
       setNow(Date.now())
+      // ★상담이 다시 이어지니 그 시간을 잠근다 — 비어 있을 때만 (2026-07-21 2차)
+      await relockSlots()
     } catch (err) {
       console.error(err)
       alert('재개 처리 중 문제가 생겼어요. 다시 눌러주세요.')
