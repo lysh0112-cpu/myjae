@@ -129,9 +129,12 @@ ${body.sceneDesc || body.prompt}
         //   [왜] 이 route 의 maxDuration 은 60초다. 그림이 그 시간을 통째로 쓰면
         //   함수가 강제 종료돼 아래 오류 처리가 실행조차 안 된다. 그러면 화면은
         //   실패 안내(imageError)도 못 받아 "그림이 아직 없어요"로 빠진다.
-        //   45초에서 우리가 먼저 끊으면, 최소한 "실패했다"고 알릴 수 있다.
+        //   55초에서 우리가 먼저 끊으면, 남은 5초로 최소한 "실패했다"고 알릴 수 있다.
+        //   ⚠️ 이 값을 maxDuration(60초)보다 크게 하지 말 것 — 의미가 없어진다.
+        //      반대로 너무 작으면 나올 그림을 죽인다. 실제 소요 시간을 보고 조정할 것.
+        const imgStart = Date.now()   // 실제 소요 시간 기록용
         const imgCtl = new AbortController()
-        const imgTimer = setTimeout(() => imgCtl.abort(), 45_000)
+        const imgTimer = setTimeout(() => imgCtl.abort(), 55_000)
         let imgRes: Response
         try {
           imgRes = await fetch('https://api.openai.com/v1/images/generations', {
@@ -152,6 +155,8 @@ ${body.sceneDesc || body.prompt}
           clearTimeout(imgTimer)
         }
         const imgData = await imgRes.json()
+        // ★그림이 실제로 몇 초 걸리는지 남긴다. 제한 시간을 조정할 근거가 된다.
+        console.log(`[mulsang] 그림 생성 ${((Date.now() - imgStart) / 1000).toFixed(1)}초`)
         imageB64 = imgData.data?.[0]?.b64_json ?? null
         if (!imageB64) {
           // OpenAI가 준 실제 사유를 화면까지 전달 (크레딧·인증·정책 등 구분용)
@@ -169,7 +174,7 @@ ${body.sceneDesc || body.prompt}
           ? 'image_timeout'
           : 'image_error: ' + (e instanceof Error ? e.message.slice(0, 150) : 'unknown')
         await logAiError('mulsang-image', aborted ? 504 : 500,
-          { message: aborted ? '그림 생성 45초 초과 (시간 초과)' : String(e) })
+          { message: aborted ? '그림 생성 55초 초과 (시간 초과)' : String(e) })
       }
     }
 
