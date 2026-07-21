@@ -11,6 +11,13 @@ import { logAiError } from '@/lib/ai/errorLog'
 // 응답: text/event-stream (data: {text} ... data: [DONE])
 // ============================================================================
 
+// ★2026-07-21: maxDuration 이 없어 Vercel 기본값(10초)으로 돌고 있었다.
+//   긴 통변(4카드)은 10초를 넘겨 스트리밍이 도중에 끊기고,
+//   글이 문장 중간에서 잘린 채 끝났다("…햇살은 손바" 처럼).
+//   오류도 안 나서 원인을 찾기 어려웠다. (14부 "조용히 실패하는 코드")
+export const runtime = 'nodejs'
+export const maxDuration = 60
+
 export async function POST(req: Request) {
   const { systemPrompt, premium } = await req.json()
 

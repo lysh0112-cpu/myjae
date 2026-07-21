@@ -116,8 +116,15 @@ function MulsangInner() {
           // 저장 스냅샷의 그림·해설 복원
           //   ★해설은 tongResult(화면에 그려지는 자리)로 넣는다.
           //     예전 4칸 해설(객체)로 저장된 옛 기록도 있으므로 문자열일 때만 쓴다.
-          const snap = rec.resultData as { images?: { style: string; imageUrl: string; commentary: unknown }[] } | null
+          const snap = rec.resultData as {
+            images?: { style: string; imageUrl: string; commentary: unknown }[]
+            tong?: string
+          } | null
           const first = snap?.images?.[0]
+          // ★다시보기에서는 해설을 새로 만들지 않는다.
+          //   [왜] 그림이 없는 기록(images: [])은 예전에 이 분기를 통째로 건너뛰어
+          //   저장된 해설조차 복원되지 않았고, 화면이 "해설 없음"으로 보고
+          //   AI 를 다시 불렀다(비용 낭비 + 매번 다른 글). (2026-07-21)
           if (first) {
             setStyle(first.style)
             setImageUrl(first.imageUrl)
@@ -127,6 +134,10 @@ function MulsangInner() {
             } else {
               setCommentary((first.commentary as Commentary) ?? null)
             }
+          } else if (typeof snap?.tong === 'string' && snap.tong.trim()) {
+            // 그림은 없지만 해설만 저장된 기록 — 해설이라도 보여준다.
+            setTongResult(snap.tong)
+            setShowTongbyeon(true)
           }
         }
         return
@@ -314,6 +325,9 @@ function MulsangInner() {
   // "새로 그리기"로 들어왔는가. 첫 그림을 그리고 나면 풀어서
   //   그 뒤 화풍 전환 시에는 정상적으로 복원되게 한다.
   const freshRef = useRef(sp.get('fresh') === '1')
+  // 결제창을 열 때 "이번에 그릴 화풍"을 기억해 둔다.
+  //   (setStyle 이 비동기라 doGenerate 가 예전 값을 읽는 문제를 피한다)
+  const payStyleRef = useRef<string | null>(null)
 
   // ★명식(saju·dayStem)의 최신값을 ref 로 들고 있는다.
   //   doGenerate 는 오래 걸리는 async 라, 그 안에서 state 를 읽으면
@@ -386,7 +400,12 @@ function MulsangInner() {
     )
   }
 
-  async function doGenerate() {
+  // ★styleOverride — "다시 그리기"에서 화풍을 바꿔 부를 때 쓴다.
+  //   [왜] setStyle 은 비동기라, 누른 직후 doGenerate 가 읽는 style 은
+  //   아직 예전 값이다. 그러면 다른 화풍을 골라도 예전 화풍으로 그려진다.
+  //   (2026-07-21 발견) 인자로 받으면 이 문제가 없어진다.
+  async function doGenerate(styleOverride?: string) {
+    const styleNow = styleOverride ?? style
     setPayOpen(false)
     if (!saju || saju.length === 0 || !dayStem) return
     setLoading(true)
@@ -413,7 +432,7 @@ function MulsangInner() {
         stems: saju.map(p => p.stem),
         elementScores: yongsinResult.score,
         yongsin: yongsinResult.yongsin,
-        style,
+        style: styleNow,
       })
       const sajuText = saju.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(', ')
       const seasonKo = SEASON_LABEL[monthBranch] ?? '계절 정보 없음'
@@ -431,7 +450,7 @@ function MulsangInner() {
           hourKo,
           sceneDesc: built.prompt,
           styleLabel: built.styleLabel,
-          style,
+          style: styleNow,
           sajuText,
           saju,
           elementScores: yongsinResult.score,
@@ -454,7 +473,7 @@ function MulsangInner() {
         setImageError(null)
       }
       try {
-        const key = mulsangImgKey(info, style)
+        const key = mulsangImgKey(info, styleNow)
         if (key) localStorage.setItem(key, JSON.stringify({
           commentary: data.commentary ?? null,
           imageUrl: data.imageUrl ?? null,
@@ -464,7 +483,7 @@ function MulsangInner() {
         sessionStorage.setItem('mulsang_full', JSON.stringify({
           image_url: storedUrl,
           prompt: built.prompt,
-          style,
+          style: styleNow,
           commentary: data.commentary ?? null,
         }))
       } catch {}
@@ -476,7 +495,7 @@ function MulsangInner() {
         pendingSaveRef.current = {
           id: await handleSaveRecord(data.imageUrl, ''),
           url: data.imageUrl,
-          style,
+          style: styleNow,
         }
       }
     } catch (e) {
@@ -494,8 +513,9 @@ function MulsangInner() {
     runTongbyeon('all', p2?.id, p2?.url, p2?.style)
   }
 
-  function openPay() {
+  function openPay(styleForThis?: string) {
     if (!saju || saju.length === 0 || !dayStem || converting) return
+    payStyleRef.current = styleForThis ?? null
     setPayOpen(true)
   }
 
@@ -850,7 +870,7 @@ function MulsangInner() {
           <span style={{ fontSize: '14px', color: '#5c3a1e' }}>결제 금액</span>
           <span style={{ fontSize: '20px', fontWeight: 700, color: '#8f3d0e' }}>{drawPrice.toLocaleString()}원</span>
         </div>
-        <button onClick={doGenerate}
+        <button onClick={() => doGenerate(payStyleRef.current ?? undefined)}
           style={{ width: '100%', padding: '15px', borderRadius: '12px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginBottom: '8px' }}>
           💳 {drawPrice.toLocaleString()}원 결제하고 그림 그리기
         </button>
@@ -968,7 +988,7 @@ function MulsangInner() {
             </div>
             {openImage && (
               <>
-                <div style={{ background: '#1a1a18' }}>
+                <div style={{ background: imageUrl ? '#1a1a18' : 'transparent' }}>
                   {imageUrl ? (
                     <img src={imageUrl} alt="사주 풍경화" style={{ width: '100%', display: 'block' }} />
                   ) : imageError ? (
@@ -976,7 +996,7 @@ function MulsangInner() {
                       <span style={{ fontSize: '34px' }}>🖼️</span>
                       <span style={{ fontSize: '14px', fontWeight: 700, color: '#96502e' }}>그림을 그리지 못했어요</span>
                       <span style={{ fontSize: '13px', lineHeight: 1.7, color: '#5c3a1e' }}>{imageError}</span>
-                      <button onClick={doGenerate} disabled={loading}
+                      <button onClick={() => doGenerate(payStyleRef.current ?? undefined)} disabled={loading}
                         style={{ marginTop: '4px', padding: '11px 22px', borderRadius: '10px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: loading ? 'default' : 'pointer' }}>
                         🔄 다시 그리기
                       </button>
@@ -992,10 +1012,23 @@ function MulsangInner() {
                         그림 생성에 실패했던 기록이에요.<br />해설은 아래에서 보실 수 있어요.
                       </span>
                     </div>
+                  ) : loading ? (
+                    // 그리는 중
+                    <div style={{ aspectRatio: '1/1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', background: '#faede0', color: '#96502e' }}>
+                      <span style={{ fontSize: '34px' }}>🖼️</span>
+                      <span style={{ fontSize: '13px' }}>그림을 그리는 중이에요…</span>
+                      <span style={{ fontSize: '11px', color: '#6b5340' }}>최대 1분쯤 걸려요</span>
+                    </div>
                   ) : (
-                    <div style={{ aspectRatio: '1/1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#5555aa', background: cardBg }}>
-                      <span style={{ fontSize: '40px' }}>🖼️</span>
-                      <span style={{ fontSize: '12px' }}>그림 생성은 곧 제공됩니다</span>
+                    // ★그림도 없고 오류 안내도 없는 상태.
+                    //   예전에는 다크톤 배경에 "그림 생성은 곧 제공됩니다"가 떴는데,
+                    //   사실도 아니고(이미 제공 중) 피치톤 화면에서 혼자 튀었다. (2026-07-21)
+                    <div style={{ aspectRatio: '1/1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', background: '#faede0', padding: '24px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '34px' }}>🖼️</span>
+                      <span style={{ fontSize: '14px', fontWeight: 700, color: '#96502e' }}>그림이 아직 없어요</span>
+                      <span style={{ fontSize: '12.5px', lineHeight: 1.7, color: '#5c3a1e' }}>
+                        아래에서 화풍을 골라<br />그림을 그려보세요.
+                      </span>
                     </div>
                   )}
                 </div>
@@ -1116,7 +1149,7 @@ function MulsangInner() {
                     <option key={key} value={key}>{STYLE_CONFIGS[key].label}</option>
                   ))}
                 </select>
-                <button onClick={() => { setStyle(picked); setRedrawPick(null); openPay() }}
+                <button onClick={() => { setStyle(picked); setRedrawPick(null); openPay(picked) }}
                   style={{ width: '100%', padding: '12px', borderRadius: '10px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>
                   ✨ 다시 그리기 · {drawPrice.toLocaleString()}원
                 </button>
@@ -1227,7 +1260,7 @@ function MulsangInner() {
         )}
 
         {drawActive ? (
-          <button onClick={openPay} disabled={loading || converting}
+          <button onClick={() => openPay()} disabled={loading || converting}
             style={{
               width: '100%', padding: '15px', borderRadius: '12px', marginBottom: '12px',
               background: '#b46e46', border: 'none', color: '#fff', fontSize: '15px', fontWeight: 700,
@@ -1273,8 +1306,8 @@ function MulsangInner() {
 export default function MulsangPage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a18' }}>
-        <div style={{ color: '#FAC775' }}>로딩 중...</div>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FDF6F0' }}>
+        <div style={{ color: '#96502e', fontSize: 13 }}>불러오는 중…</div>
       </div>
     }>
       <MulsangInner />

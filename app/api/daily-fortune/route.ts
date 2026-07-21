@@ -42,6 +42,11 @@ async function loadFortuneGuide(): Promise<string> {
   }
 }
 
+// ★2026-07-21: maxDuration 이 없으면 Vercel 기본값(10초)으로 돌아
+//   긴 AI 응답이 도중에 잘린다. 오류도 안 나서 원인을 찾기 어렵다.
+export const runtime = 'nodejs'
+export const maxDuration = 60
+
 export async function POST(req: NextRequest) {
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY
