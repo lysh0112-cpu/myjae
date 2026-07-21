@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useState, useEffect, useMemo } from 'react'
+import { Suspense, useState, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsinCompat as calcYongsin } from '@/lib/saju/yongsinNew'
@@ -113,12 +113,19 @@ function MulsangInner() {
             name: rec.title || undefined,
           })
           // 저장 스냅샷의 그림·해설 복원
+          //   ★해설은 tongResult(화면에 그려지는 자리)로 넣는다.
+          //     예전 4칸 해설(객체)로 저장된 옛 기록도 있으므로 문자열일 때만 쓴다.
           const snap = rec.resultData as { images?: { style: string; imageUrl: string; commentary: unknown }[] } | null
           const first = snap?.images?.[0]
           if (first) {
             setStyle(first.style)
             setImageUrl(first.imageUrl)
-            setCommentary((first.commentary as Commentary) ?? null)
+            if (typeof first.commentary === 'string' && first.commentary.trim()) {
+              setTongResult(first.commentary)
+              setShowTongbyeon(true)
+            } else {
+              setCommentary((first.commentary as Commentary) ?? null)
+            }
           }
         }
         return
@@ -269,6 +276,20 @@ function MulsangInner() {
   const [imageError, setImageError] = useState<string | null>(null)
   // 보관함 저장 상태 — 다시보기(recordId)로 열었으면 이미 저장된 것이므로 'saved'로 시작(재저장 방지)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>(sp.get('recordId') ? 'saved' : 'idle')
+  // ★그림 요청이 끝나면 올린다 → 아래 useEffect 가 해설을 자동으로 부른다.
+  const wantTongRef = useRef(false)
+  const [tongTick, setTongTick] = useState(0)
+
+  // ★그림 뒤 해설 자동 생성.
+  //   doGenerate 안에서 바로 부르지 않는 이유: 그 시점엔 saju·dayStem 이
+  //   아직 준비되지 않았을 수 있어 조용히 건너뛴다. 준비되면 여기서 부른다.
+  useEffect(() => {
+    if (!wantTongRef.current) return
+    if (!dayStem || saju.length === 0) return   // 아직 준비 안 됨 → 다음 렌더에서 다시
+    wantTongRef.current = false
+    runTongbyeon('all')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tongTick, dayStem, saju.length])
 
   useEffect(() => {
     // 보관함 다시보기(recordId)로 진입했으면 스냅샷을 loadInfo에서 이미 복원했으므로
@@ -284,14 +305,24 @@ function MulsangInner() {
     if (saved) {
       try {
         const r = JSON.parse(saved)
-        setCommentary(r.commentary ?? null)
         setImageUrl(r.imageUrl ?? null)
+        // ★해설도 함께 복원 (화풍을 바꿔 예전 그림으로 돌아왔을 때)
+        if (typeof r.tong === 'string' && r.tong.trim()) {
+          setTongResult(r.tong)
+          setShowTongbyeon(true)
+        } else {
+          setTongResult(null)
+          setShowTongbyeon(false)
+        }
+        setCommentary(r.commentary ?? null)
         return
       } catch {}
     }
     // 저장된 게 없을 때만 비운다.
     setImageUrl(null)
     setCommentary(null)
+    setTongResult(null)
+    setShowTongbyeon(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [personKeyOf(info), style])
 
@@ -393,12 +424,11 @@ function MulsangInner() {
       console.error(e)
     } finally {
       setLoading(false)
+      // ★그림 요청이 끝나면 해설을 이어서 자동 생성한다.
+      //   (아래 useEffect 가 감지해서 부른다 — saju·dayStem 이 준비된 시점에 실행)
+      wantTongRef.current = true
+      setTongTick(t => t + 1)
     }
-
-    // ★그림이 끝나면 해설을 이어서 자동 생성 (예전엔 고객이 버튼을 눌러야 나왔다).
-    //   스트리밍이라 그림이 먼저 뜨고 해설이 이어서 채워진다.
-    //   그림이 실패해도 해설은 만든다 — 고객이 낸 값의 절반은 지켜야 하므로.
-    runTongbyeon('all')
   }
 
   function openPay() {
@@ -507,6 +537,15 @@ function MulsangInner() {
       //   (예전엔 4칸 해설을 넘겼으나 그 해설을 없앴다)
       if (mode === 'all' && acc.trim()) {
         try { sessionStorage.setItem('ai_analysis', acc) } catch {}
+        // ★그림과 같은 칸에 해설도 담아둔다 → 화풍 전환·재방문 때 다시 뜬다.
+        try {
+          const k = mulsangImgKey(info, style)
+          if (k) {
+            const prev = k ? localStorage.getItem(k) : null
+            const obj = prev ? JSON.parse(prev) : {}
+            localStorage.setItem(k, JSON.stringify({ ...obj, tong: acc }))
+          }
+        } catch {}
       }
     } catch {
       setTongResult('통변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
