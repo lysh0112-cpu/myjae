@@ -5,6 +5,7 @@ import { useConsultantSaju } from '@/hooks/useConsultantSaju'
 import ConsultationList from './components/ConsultationList'
 // 고객 채팅 — 07-20 연결 끊음(부품은 남겨 둠). 되살리려면 이 줄과 사용처 주석만 풀면 된다.
 // import ConsultantChat from './components/ConsultantChat'
+import ConsultTimer from './components/ConsultTimer'
 import CustomerAiAnalysis from './components/CustomerAiAnalysis'
 // CustomerHistory 는 07-20부터 HistoryFloating(플로팅 창) 안에서 쓴다.
 // import CustomerHistory from './components/CustomerHistory'
@@ -423,6 +424,17 @@ function ConsultantContent() {
           />
           <span style={{fontSize:'9px', color:'#666688'}}>{ms}</span>
         </div>
+
+        {/* ★상담 시작·종료·경과시간 (2026-07-21 복구)
+            원래 ConsultantChat 안에 있었는데 채팅을 빼면서 함께 사라졌다.
+            채팅과 무관한 기능이라 별도 부품으로 떼어내 메뉴바에 두었다.
+            (가운데 칸은 플로팅 창 놓는 자리라 비워 둔다) */}
+        {selectedConsultation && (
+          <ConsultTimer
+            consultationId={selectedConsultation.id}
+            onEnded={() => setSelectedConsultation(null)}
+          />
+        )}
 
         {/* 우측: 상담사명 + 로그아웃 */}
         <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:'8px'}}>
