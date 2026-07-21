@@ -44,7 +44,10 @@ export default function CopyTextButton({
   if (!body) return null
 
   async function handleCopy() {
-    const who = name ? `${name}님의 ` : ''
+    // '나'·'본인'처럼 이름이 아닌 값이면 "나님의"가 되어 어색하다 → 이름 없이 쓴다.
+    const raw = (name ?? '').trim()
+    const usable = raw && !['나', '본인', '나님'].includes(raw) ? raw : ''
+    const who = usable ? `${usable}님의 ` : ''
     const full = `[명카페] ${who}${label}\n\n${body}`
     try {
       await navigator.clipboard.writeText(full)

@@ -161,7 +161,7 @@ function MulsangInner() {
           loggedIn = true
           // 홈과 동일하게 maybeSingle 사용 (.single()은 행 개수 안 맞으면 에러 → 폴백 오염 원인이었음)
           const { data: p } = await supabase.from('profiles')
-            .select('birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, saju_saved')
+            .select('nickname, hangul_name, birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, saju_saved')
             .eq('id', u.user.id).maybeSingle()
           // 홈은 birth_year만 있으면 "나"로 인정하므로, 여기서도 생년월일만 있으면
           // 내 사주로 쓴다(saju_saved 여부와 무관하게 홈과 동일 기준으로 일관성 유지).
@@ -175,6 +175,9 @@ function MulsangInner() {
               day: Number(p.birth_day ?? 0),
               leapMonth: p.leap_month != null ? String(p.leap_month) : '0',
               hourIdx: hourStr === '모름' ? null : parseInt(hourStr),
+              // ★내 이름을 넣는다. 없으면 보관함 제목이 '나'가 되고,
+              //   해설에서도 이름을 못 불러 '나님'처럼 어색해진다. (2026-07-21)
+              name: (p.nickname as string) || (p.hangul_name as string) || undefined,
             })
           }
           // 로그인했으나 profiles에 생년월일 없음 → info를 비운 채 둔다.
@@ -280,7 +283,6 @@ function MulsangInner() {
   // 보관함 저장 상태 — 다시보기(recordId)로 열었으면 이미 저장된 것이므로 'saved'로 시작(재저장 방지)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'failed'>(sp.get('recordId') ? 'saved' : 'idle')
   // ★그림 요청이 끝나면 올린다 → 아래 useEffect 가 해설을 자동으로 부른다.
-  const wantTongRef = useRef(false)
   const shareRef = useRef<HTMLDivElement | null>(null)
   const [cardBusy, setCardBusy] = useState(false)
   const [cardImg, setCardImg] = useState<string | null>(null)   // 캡처용 data URL
@@ -309,19 +311,14 @@ function MulsangInner() {
   //   엉뚱한 기록을 건드리지 않게 "그때의 값"을 그대로 들고 가야 한다.
   const pendingSaveRef = useRef<{ id: string | null; url: string; style: string } | null>(null)
   const savingRef = useRef(false)   // 저장 중복 진입 막기 (setSaveState 는 비동기)
-  const [tongTick, setTongTick] = useState(0)
 
-  // ★그림 뒤 해설 자동 생성.
-  //   doGenerate 안에서 바로 부르지 않는 이유: 그 시점엔 saju·dayStem 이
-  //   아직 준비되지 않았을 수 있어 조용히 건너뛴다. 준비되면 여기서 부른다.
-  useEffect(() => {
-    if (!wantTongRef.current) return
-    if (!dayStem || saju.length === 0) return   // 아직 준비 안 됨 → 다음 렌더에서 다시
-    wantTongRef.current = false
-    const p = pendingSaveRef.current
-    runTongbyeon('all', p?.id, p?.url, p?.style)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tongTick, dayStem, saju.length])
+  // ★명식(saju·dayStem)의 최신값을 ref 로 들고 있는다.
+  //   doGenerate 는 오래 걸리는 async 라, 그 안에서 state 를 읽으면
+  //   호출 시점의 낡은 값(빈 배열)을 보게 된다. ref 는 항상 최신이다.
+  const sajuRef = useRef(saju)
+  const dayStemRef = useRef(dayStem)
+  sajuRef.current = saju
+  dayStemRef.current = dayStem
 
   useEffect(() => {
     // 보관함 다시보기(recordId)로 진입했으면 스냅샷을 loadInfo에서 이미 복원했으므로
@@ -475,11 +472,15 @@ function MulsangInner() {
       console.error(e)
     } finally {
       setLoading(false)
-      // ★그림 요청이 끝나면 해설을 이어서 자동 생성한다.
-      //   (아래 useEffect 가 감지해서 부른다 — saju·dayStem 이 준비된 시점에 실행)
-      wantTongRef.current = true
-      setTongTick(t => t + 1)
     }
+
+    // ★그림이 끝나면 해설을 이어서 자동 생성한다.
+    //   [왜 여기서 직접 부르나] 예전엔 useEffect 로 트리거했는데,
+    //   의존성(saju.length)이 안 바뀌면 effect 가 안 돌아 해설이 통째로
+    //   누락됐다(2026-07-21 실제 발생). 아래는 ref 로 최신 명식을 보므로
+    //   렌더 타이밍과 무관하게 확실히 실행된다.
+    const p2 = pendingSaveRef.current
+    runTongbyeon('all', p2?.id, p2?.url, p2?.style)
   }
 
   function openPay() {
@@ -512,7 +513,10 @@ function MulsangInner() {
   //   ★recId·recUrl 을 인자로 받는 이유: 저장이 끝난 시점의 값을 그대로 들고 가야
   //     "다른 화풍으로 다시 그리기"로 state 가 바뀌어도 엉뚱한 기록에 덧붙지 않는다.
   async function runTongbyeon(mode: 'selected' | 'all', recId?: string | null, recUrl?: string | null, recStyle?: string) {
-    if (!dayStem || saju.length === 0) return
+    // ref 로 본다 — doGenerate 에서 부를 때 state 는 낡았을 수 있다.
+    const sajuNow = sajuRef.current
+    const dayStemNow = dayStemRef.current
+    if (!dayStemNow || sajuNow.length === 0) return
     const questions: SajuQuestion[] =
       mode === 'all'
         ? []
@@ -541,8 +545,8 @@ function MulsangInner() {
           name: info?.name || '나',
           age: info?.year ? new Date().getFullYear() - info.year : 0,
           gender: info?.gender || '',
-          dayStem,
-          monthBranch,
+          dayStem: dayStemNow,
+          monthBranch: sajuNow.find(p => p.pillar === '월주')?.branch ?? monthBranch,
           ohaengScore,
           topElement,
           lackElements,
@@ -555,7 +559,9 @@ function MulsangInner() {
       const res = await fetch('/api/tongbyeon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ systemPrompt: prompt, premium: false }),
+        // ★premium=true → max_tokens 6000. 전체 해설은 4카드라 3500 으로는
+        //   마지막 문장이 잘린다(실제로 잘린 사례 확인, 2026-07-21).
+        body: JSON.stringify({ systemPrompt: prompt, premium: mode === 'all' }),
       })
       if (!res.ok || !res.body) {
         setTongResult('통변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
