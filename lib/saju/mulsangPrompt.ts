@@ -70,6 +70,26 @@ export const STYLE_DESC: Record<string, string> = {
 // ⚠️ 화풍 이름(label)과 아래 suffix 에는 실존 회사·작가 이름을 쓰지 않는다.
 //    상품 화면에 상표를 쓰면 오인 소지가 있고, 프롬프트 쪽도 회색지대라
 //    특징 묘사만으로 같은 결과를 내도록 했다. (2026-07-21 대표님 지시)
+// ★시지(時支) — 그림의 시간대. 태어난 시각을 하늘에 반영한다.
+//   [왜] 예전에는 시간 정보를 그림 프롬프트에 넣지 않아, AI 가 매번 마음대로
+//   시간대를 정했다. 극적인 화면을 좋아해 거의 항상 노을·여명으로 그려졌고,
+//   "한낮에 태어났는데 왜 하늘이 어둡냐"는 지적을 받았다. (2026-07-22 연재쌤)
+//   시지는 사주 여덟 글자 중 하나다. 그림에 없으면 그 사람의 사주가 아니다.
+const BRANCH_HOUR: Record<string, string> = {
+  子: 'deep night, a calm moonlit sky with stars',
+  丑: 'late night before dawn, quiet and still under a dark sky',
+  寅: 'early dawn, the first pale light rising at the horizon',
+  卯: 'early morning, fresh clear light of sunrise',
+  辰: 'mid morning, bright clear daylight',
+  巳: 'late morning, bright open daylight with the sun high',
+  午: 'high noon, the sun at its highest with bright clear daylight',
+  未: 'early afternoon, warm full daylight',
+  申: 'late afternoon, warm slanting daylight',
+  酉: 'sunset hour, the sun low with warm golden light',
+  戌: 'early evening, dusk settling with soft afterglow',
+  亥: 'night, a quiet dark sky with gentle moonlight',
+}
+
 export const STYLE_CONFIGS: Record<string, { label: string; suffix: string }> = {
   ghibli: {
     label: '포근한 동화',
@@ -118,6 +138,7 @@ export interface MulsangPromptInput {
   elementScores: Record<string, number>
   yongsin: string
   style: string
+  hourBranch?: string | null   // ★시지 — 그림의 시간대(낮/밤). 모르면 넘기지 않는다
 }
 
 export interface MulsangPromptResult {
@@ -128,7 +149,7 @@ export interface MulsangPromptResult {
 }
 
 export function buildMulsangPrompt(input: MulsangPromptInput): MulsangPromptResult {
-  const { dayStem, monthBranch, stems, yongsin, style } = input
+  const { dayStem, monthBranch, stems, yongsin, style, hourBranch } = input
   const dayElement = (STEM_ELEMENT[dayStem] ?? '목') as Element
   const season = BRANCH_SEASON[monthBranch] ?? 'a beautiful clear day'
   const styleCfg = STYLE_CONFIGS[style] ?? STYLE_CONFIGS.oriental
@@ -160,8 +181,15 @@ export function buildMulsangPrompt(input: MulsangPromptInput): MulsangPromptResu
     수: 'a clear gentle stream or soft hopeful reflection',
   }
 
+  // ★시간대 — 시지가 있으면 그 시각의 하늘로 그린다.
+  //   계절(월지)과 시각(시지)은 다른 축이다. 겨울 한낮은 "춥지만 밝은 낮"이다.
+  const timeOfDay = hourBranch ? BRANCH_HOUR[hourBranch] : null
+
   const prompt = [
     `A serene and beautiful landscape painting set in ${season}.`,
+    timeOfDay
+      ? `Time of day: ${timeOfDay}. The sky and lighting must clearly match this time of day.`
+      : '',
     `The main subject of the painting: ${subject}.`,
     surroundings,
     `A key warm hopeful touch of ${YONG_LIGHT[yongElement]}.`,

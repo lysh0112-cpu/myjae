@@ -433,6 +433,8 @@ function MulsangInner() {
         elementScores: yongsinResult.score,
         yongsin: yongsinResult.yongsin,
         style: styleNow,
+        // ★시지 — 그림의 시간대를 명식대로 그리게 한다 (2026-07-22)
+        hourBranch: saju.find(p => p.pillar === '시주')?.branch ?? null,
       })
       const sajuText = saju.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(', ')
       const seasonKo = SEASON_LABEL[monthBranch] ?? '계절 정보 없음'
