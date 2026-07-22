@@ -621,8 +621,8 @@ function CoupleResultView({
             <OhaengCompareCard
               aScores={ohaeng1}
               bScores={ohaeng2}
-              aLabel={person1.gender === '남' ? '남편' : person1.gender === '여' ? '아내' : name1}
-              bLabel={person2.gender === '남' ? '남편' : person2.gender === '여' ? '아내' : name2}
+              aLabel={mode === 'married' ? (person1.gender === '남' ? '남편' : person1.gender === '여' ? '아내' : name1) : name1}
+              bLabel={mode === 'married' ? (person2.gender === '남' ? '남편' : person2.gender === '여' ? '아내' : name2) : name2}
             />
           </div>
         )}
