@@ -22,6 +22,8 @@
 import { Suspense, useMemo, useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import CoupleWonguk from './components/CoupleWonguk'
+import OhaengCompareCard from './components/OhaengCompareCard'
+import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
 import GradeFireworks from './components/GradeFireworks'
 import { COUPLE_QUESTIONS, groupCoupleByCategory } from '@/lib/saju/coupleQuestions'
 import { MARRIED_QUESTIONS } from '@/lib/saju/marriedQuestions'
@@ -415,6 +417,9 @@ function CoupleResultView({
 }) {
   const [saju1, setSaju1] = useState<SajuPillarSimple[] | null>(null)
   const [saju2, setSaju2] = useState<SajuPillarSimple[] | null>(null)
+  // 오행 비교 카드용 점수 (계산 시점에 c1/c2의 양력월·시지로 산출해 보관)
+  const [ohaeng1, setOhaeng1] = useState<Record<string, number> | null>(null)
+  const [ohaeng2, setOhaeng2] = useState<Record<string, number> | null>(null)
   const [score, setScore] = useState<CoupleScoreResult | null>(null)
   const [calcErr, setCalcErr] = useState(false)
 
@@ -434,9 +439,11 @@ function CoupleResultView({
       const snap = rec?.resultData as {
         grade?: string; gradeDesc?: string
         saju1?: SajuPillarSimple[]; saju2?: SajuPillarSimple[]; tongResult?: string
+        ohaeng1?: Record<string, number>; ohaeng2?: Record<string, number>
       } | undefined
       if (snap?.saju1 && snap?.saju2) {
         setSaju1(snap.saju1); setSaju2(snap.saju2)
+        if (snap.ohaeng1 && snap.ohaeng2) { setOhaeng1(snap.ohaeng1); setOhaeng2(snap.ohaeng2) }
         setScore({ grade: snap.grade || '', gradeDesc: snap.gradeDesc || '' } as CoupleScoreResult)
         setTongResult(snap.tongResult || '')
         ranRef.current = true       // 통변 재호출 막기
@@ -457,6 +464,9 @@ function CoupleResultView({
         if (!c1 || !c2) { setCalcErr(true); return }
         const s1 = c1.saju, s2 = c2.saju
         setSaju1(s1); setSaju2(s2)
+        // 오행 비교 카드용: c1/c2의 양력월·시지로 심산 오행 점수 산출해 보관
+        setOhaeng1(calcSimsanOhaeng(s1, c1.solarMonth, c1.solarDay, c1.hourBranch))
+        setOhaeng2(calcSimsanOhaeng(s2, c2.solarMonth, c2.solarDay, c2.hourBranch))
         const ilju1 = s1.find(p => p.pillar === '일주')
         const ilju2 = s2.find(p => p.pillar === '일주')
         const gm1 = ilju1 ? getGongmang(ilju1.stem, ilju1.branch) : ['', ''] as [string, string]
@@ -548,6 +558,7 @@ function CoupleResultView({
     const snapshot = {
       grade: score.grade, gradeDesc: score.gradeDesc,
       saju1, saju2,
+      ohaeng1, ohaeng2,   // 오행 비교 카드용 (다시보기 시 재계산 없이 사용)
       tongResult: tongOverride ?? tongResult ?? '',
       questionIds: pickedQuestions.filter(q => !q.id.startsWith('direct_')).map(q => q.id),
       directQuestion: directQ || null,
@@ -590,6 +601,18 @@ function CoupleResultView({
           left={{ name: name1, birth: person1.year ? `${person1.year}.${person1.month}.${person1.day}` : '', isMe: isMe1, saju: saju1 ?? [] }}
           right={{ name: name2, birth: person2.year ? `${person2.year}.${person2.month}.${person2.day}` : '', saju: saju2 ?? [] }}
         />
+
+        {/* ③-b 타고난 오행으로 본 우리의 차이 (닮음·보완 + 좌우 막대) */}
+        {ohaeng1 && ohaeng2 && (
+          <div style={{ marginTop: 10 }}>
+            <OhaengCompareCard
+              aScores={ohaeng1}
+              bScores={ohaeng2}
+              aLabel={person1.gender === '남' ? '남편' : person1.gender === '여' ? '아내' : name1}
+              bLabel={person2.gender === '남' ? '남편' : person2.gender === '여' ? '아내' : name2}
+            />
+          </div>
+        )}
 
         {/* ④ 통변 — 질문별 카드 아코디언 (사주/대운/연운과 통일) */}
         <div style={{ marginTop: 10 }}>
