@@ -6,6 +6,7 @@
 
 import type { DayRecommendation, HourPick } from './recommendV5'
 import type { ScoreV5Breakdown } from './scoreV5'
+import type { DayunItem } from '@/lib/saju/dayun'
 
 export interface HourSnapshot {
   hourIdx: number
@@ -27,6 +28,7 @@ export interface RecV5Snapshot {
   offset: number
   bestScore: number
   hours: HourSnapshot[]
+  dayunList: DayunItem[]
   y: number; m: number; d: number
 }
 
@@ -35,6 +37,7 @@ export function toSnapshot(r: DayRecommendation): RecV5Snapshot {
     rank: r.rank, dateLabel: r.dateLabel, weekday: r.weekday,
     dateKey: r.dateKey, offset: r.offset, bestScore: r.bestScore,
     hours: r.hours.map((h): HourSnapshot => ({ ...h })),
+    dayunList: r.dayunList ?? [],
     y: r.y, m: r.m, d: r.d,
   }
 }
@@ -44,6 +47,7 @@ export function fromSnapshot(s: RecV5Snapshot): DayRecommendation {
     rank: s.rank, dateLabel: s.dateLabel, weekday: s.weekday,
     dateKey: s.dateKey, offset: s.offset, bestScore: s.bestScore,
     hours: s.hours.map((h): HourPick => ({ ...h })),
+    dayunList: s.dayunList ?? [],
     y: s.y, m: s.m, d: s.d,
   }
 }

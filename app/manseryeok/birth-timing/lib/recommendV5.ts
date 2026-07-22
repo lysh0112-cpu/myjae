@@ -38,6 +38,7 @@ export interface DayRecommendation {
   offset: number
   hours: HourPick[]        // 그 날의 좋은 시간들 (점수순, 최대 maxHours)
   bestScore: number        // 날짜 대표 점수(그 날 최고 시각) — 날짜 순위 정렬용
+  dayunList: DayunItem[]   // 대운 10개 (날짜당 동일 — 시각 무관). 대운표 렌더용.
   y: number; m: number; d: number
 }
 
@@ -166,6 +167,7 @@ export async function runBirthTimingV5(
       offset: rep.c.offset,
       hours,
       bestScore: Math.round(rep.finalScore),
+      dayunList: cache.get(key) ?? [],   // 그 날짜의 대운 10개 (대운표 렌더용)
       y: rep.c.y, m: rep.c.m, d: rep.c.d,
     }
   })
@@ -183,6 +185,7 @@ export async function runBirthTimingV5(
     offset: d.offset,
     hours: d.hours,
     bestScore: d.bestScore,
+    dayunList: d.dayunList,
     y: d.y, m: d.m, d: d.d,
   }))
 

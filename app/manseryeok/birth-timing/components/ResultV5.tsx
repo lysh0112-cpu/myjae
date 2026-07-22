@@ -10,7 +10,10 @@ import { useState, useRef } from 'react'
 import type { DayRecommendation, HourPick } from '../lib/recommendV5'
 import { toStarLines } from '../lib/starMapV5'
 import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
+import UnTable from '@/app/manseryeok/result-new/UnTable'
 import { getGongmang } from '@/lib/saju/gongmang'
+import { getUnsung } from '@/lib/saju/unsung'
+import type { DayunItem } from '@/lib/saju/dayun'
 
 interface AiNote { oneLine: string; detail?: string }
 
@@ -199,9 +202,22 @@ function DetailModal({ day, hour, note, onClose, onViewSaju }: {
           </div>
         )}
 
-        {(gm1 || gm2) && (
-          <div style={{ fontSize: 12, color: C.sub, marginBottom: 14 }}>
-            <span style={{ color: C.gold }}>일간 공망</span> · {gm1}{gm2 && `·${gm2}`}
+        {/* 대운표 — 원국 아래. UnTable 공용 부품 재사용(가로 스크롤). */}
+        {day.dayunList && day.dayunList.length > 0 && (
+          <div style={{ margin: '0 -8px 14px' }}>
+            <UnTable
+              title="대운"
+              badge="10년마다 바뀌는 큰 흐름"
+              items={day.dayunList.map((du: DayunItem) => ({
+                label: `${du.age}세`,
+                stem: du.cheongan,
+                branch: du.jiji,
+                stemSipsin: du.ganYukchin,
+                branchSipsin: du.jiYukchin,
+                unsung: getUnsung(dayStem, du.jiji),
+              }))}
+            />
+            <div style={{ fontSize: 10, color: C.sub, margin: '4px 8px 0' }}>← 옆으로 밀면 노년까지 볼 수 있어요</div>
           </div>
         )}
 
