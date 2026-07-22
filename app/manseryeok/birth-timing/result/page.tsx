@@ -125,10 +125,12 @@ async function getParentSaju(p: PersonInput | null): Promise<{ dayStem?: string;
 async function fetchAiNotes(recs: RecommendationV5[], survey: SurveyInput): Promise<Record<number, AiNote>> {
   const wishesText = survey.wishes && survey.wishes.length > 0 ? survey.wishes.join(', ') : '특별히 없음'
   const list = recs.map(r => {
-    const g = r.breakdown.elementGrade
-    return `${r.rank}순위) 날짜 ${r.dateLabel} ${r.hourLabel}, 사주 ${r.saju}, ` +
+    const h = r.hours[0]   // 그 날 대표시각(최고점) 기준으로 해설 생성
+    if (!h) return `${r.rank}순위) ${r.dateLabel}`
+    const g = h.breakdown.elementGrade
+    return `${r.rank}순위) 날짜 ${r.dateLabel} ${h.hourLabel}, 사주 ${h.saju}, ` +
       `오행등급 목${g['목']} 화${g['화']} 토${g['토']} 금${g['금']} 수${g['수']}, ` +
-      `격국 ${r.breakdown.sungpae.gyeokName}(${r.breakdown.sungpae.verdict}), 용신 ${r.breakdown.yongsinEl}`
+      `격국 ${h.breakdown.sungpae.gyeokName}(${h.breakdown.sungpae.verdict}), 용신 ${h.breakdown.yongsinEl}`
   }).join('\n')
 
   let toneBlock = ''
@@ -362,10 +364,12 @@ function BirthResultInner() {
         recommendations: recs.map(r => ({
           rank: r.rank,
           dateLabel: r.dateLabel,
-          hourLabel: r.hourLabel,
-          saju: r.saju,
-          dayunNote: r.dayunNote ?? null,
-          gyeok: r.breakdown?.sungpae?.gyeokName ?? null,
+          hours: r.hours.map(h => ({
+            hourLabel: h.hourLabel,
+            saju: h.saju,
+            dayunNote: h.dayunNote ?? null,
+            gyeok: h.breakdown?.sungpae?.gyeokName ?? null,
+          })),
         })),
         ai_notes: aiNotes,
       }))
@@ -453,13 +457,13 @@ function BirthResultInner() {
             <ResultV5
               recommendations={recs}
               aiNotes={aiNotes}
-              onViewSaju={(r) => {
+              onViewSaju={(day, h) => {
                 // 사주보기 연결 — result-new 는 URL 파라미터(year/month/day/hour/gender/calType)로 사주를 받는다.
                 //   ★ 결제 관문은 프로그램 완성 후 마지막에 전체 서비스 일괄 탑재 예정 → 지금은 자리만.
                 //   (무료 조회 뒷문 방지: 실제 배포 시 여기에 결제 확인을 끼운다)
                 const params = new URLSearchParams({
-                  year: String(r.y), month: String(r.m), day: String(r.d),
-                  hour: String(r.hourIdx), gender: survey?.babyGender ?? '', calType: '양력',
+                  year: String(day.y), month: String(day.m), day: String(day.d),
+                  hour: String(h.hourIdx), gender: survey?.babyGender ?? '', calType: '양력',
                 })
                 router.push(`/manseryeok/result-new?${params.toString()}`)
               }}

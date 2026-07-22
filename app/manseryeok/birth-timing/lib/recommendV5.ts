@@ -16,24 +16,36 @@ import { scoreDayunTiming } from './dayunTiming'
 import { BIRTH_SCORE_CONFIG as CFG } from './birthScoreConfig'
 import type { DayunItem } from '@/lib/saju/dayun'
 
-export interface RecommendationV5 {
-  rank: number
-  dateLabel: string
+// 한 시각(시주) 단위 — 누르면 모달로 열리는 최소 단위
+export interface HourPick {
+  hourIdx: number
   hourLabel: string
-  offset: number
-  weekday: string
-  dateKey: string
   saju: string
   breakdown: ScoreV5Breakdown
   dayunScore: number
   dayunNote: string
   finalScore: number       // 원국 + 대운 (내부용, 화면엔 감춤)
-  needExpert: boolean      // 종격 → 전문가 상담 분기
-  y: number; m: number; d: number; hourIdx: number
+  needExpert: boolean
+  y: number; m: number; d: number
 }
 
+// 한 날짜 = 순위 단위. 그 안에 좋은 시간 여러 개(목업: 날짜마다 시간 3개).
+export interface DayRecommendation {
+  rank: number
+  dateLabel: string
+  weekday: string
+  dateKey: string
+  offset: number
+  hours: HourPick[]        // 그 날의 좋은 시간들 (점수순, 최대 maxHours)
+  bestScore: number        // 날짜 대표 점수(그 날 최고 시각) — 날짜 순위 정렬용
+  y: number; m: number; d: number
+}
+
+// 하위호환 별칭 (기존 import 깨지지 않게)
+export type RecommendationV5 = DayRecommendation
+
 export interface BirthResultV5 {
-  recommendations: RecommendationV5[]
+  recommendations: DayRecommendation[]
   totalEvaluated: number
   excludedWeekend: number
 }
@@ -122,33 +134,56 @@ export async function runBirthTimingV5(
     return { ...s, dayunScore, dayunNote, finalScore: s.bd.total + dayunScore }
   }))
 
-  // ── 날짜별 최고 시진 1개 ──
-  const bestByDate = new Map<string, typeof withDayun[number]>()
+  // ── 날짜별로 그룹핑 (목업: 한 날짜에 좋은 시간 여러 개) ──
+  const byDate = new Map<string, typeof withDayun>()
   for (const s of withDayun) {
     const key = `${s.c.y}${pad(s.c.m)}${pad(s.c.d)}`
-    const cur = bestByDate.get(key)
-    if (!cur || s.finalScore > cur.finalScore) bestByDate.set(key, s)
+    const arr = byDate.get(key) ?? []
+    arr.push(s)
+    byDate.set(key, arr)
   }
 
-  // ── 상위 3개 날짜 (서로 다른 날) ──
-  const top3 = [...bestByDate.values()]
-    .sort((a, b) => b.finalScore - a.finalScore)
-    .slice(0, 3)
+  // 각 날짜: 그 날 시각들을 점수순 정렬 → 상위 maxHours개를 hours 로.
+  //   날짜 대표점수(bestScore)는 그 날 최고 시각 점수 → 날짜 순위 정렬에 씀.
+  const dayList = [...byDate.entries()].map(([key, arr]) => {
+    const sorted = [...arr].sort((a, b) => b.finalScore - a.finalScore)
+    const hours: HourPick[] = sorted.slice(0, CFG.pick.maxHours).map(s => ({
+      hourIdx: s.c.hourIdx,
+      hourLabel: s.c.hourLabel,
+      saju: sajuString(s.c),
+      breakdown: s.bd,
+      dayunScore: s.dayunScore,
+      dayunNote: s.dayunNote,
+      finalScore: Math.round(s.finalScore),
+      needExpert: s.bd.isJonggyeok,
+      y: s.c.y, m: s.c.m, d: s.c.d,
+    }))
+    const rep = sorted[0]
+    return {
+      dateKey: key,
+      dateLabel: rep.c.dateLabel,
+      weekday: rep.c.weekday,
+      offset: rep.c.offset,
+      hours,
+      bestScore: Math.round(rep.finalScore),
+      y: rep.c.y, m: rep.c.m, d: rep.c.d,
+    }
+  })
 
-  const recommendations: RecommendationV5[] = top3.map((s, i) => ({
+  // ── 상위 days개 날짜 (서로 다른 날, 대표점수순) ──
+  const topDays = dayList
+    .sort((a, b) => b.bestScore - a.bestScore)
+    .slice(0, CFG.pick.days)
+
+  const recommendations: DayRecommendation[] = topDays.map((d, i) => ({
     rank: i + 1,
-    dateLabel: s.c.dateLabel,
-    hourLabel: s.c.hourLabel,
-    offset: s.c.offset,
-    weekday: s.c.weekday,
-    dateKey: `${s.c.y}${pad(s.c.m)}${pad(s.c.d)}`,
-    saju: sajuString(s.c),
-    breakdown: s.bd,
-    dayunScore: s.dayunScore,
-    dayunNote: s.dayunNote,
-    finalScore: Math.round(s.finalScore),
-    needExpert: s.bd.isJonggyeok,
-    y: s.c.y, m: s.c.m, d: s.c.d, hourIdx: s.c.hourIdx,
+    dateLabel: d.dateLabel,
+    weekday: d.weekday,
+    dateKey: d.dateKey,
+    offset: d.offset,
+    hours: d.hours,
+    bestScore: d.bestScore,
+    y: d.y, m: d.m, d: d.d,
   }))
 
   return { recommendations, totalEvaluated: candidates.length, excludedWeekend }
