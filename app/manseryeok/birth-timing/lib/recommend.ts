@@ -5,6 +5,7 @@
 
 import { buildCandidates, sajuString, type Candidate } from './candidates'
 import { scoreBaby, type ScoreBreakdown } from './score'
+import { BIRTH_SCORE_CONFIG as CFG } from './birthScoreConfig'
 
 interface ParentLite {
   // 부모 사주에서 가점 계산에 쓰는 정보 (일간 + 억부용신)
@@ -44,21 +45,21 @@ function parentBonus(
     // ① 천간합이면 +5
     const isHap = STEM_HAP.some(([a, b]) =>
       (a === babyDayStem && b === p.dayStem) || (b === babyDayStem && a === p.dayStem))
-    if (isHap) { bonus += 5; if (!note) note = '부모와 천간합 — 인연이 깊어요' }
+    if (isHap) { bonus += CFG.parent.hap; if (!note) note = '부모와 천간합 — 인연이 깊어요' }
     else {
       // ① 아기가 부모를 생(生)해주면 +3 (효자 기운)
       const pEl = STEM_ELEMENT[p.dayStem]
-      if (pEl && SAENG[babyEl] === pEl) { bonus += 3; if (!note) note = '부모를 돕는 기운이 있어요' }
+      if (pEl && SAENG[babyEl] === pEl) { bonus += CFG.parent.saeng; if (!note) note = '부모를 돕는 기운이 있어요' }
     }
 
     // ② 부모 용신 부합 (신버전 억부용신) — 아기 사주가 부모에게 힘이 되는 오행을 갖췄는가
     if (p.yongsin && babyElementCount) {
       const have = babyElementCount[p.yongsin] || 0
-      if (have >= 2) { bonus += 3; if (!note) note = `부모에게 힘이 되는 ${p.yongsin} 기운을 갖춘 아기예요` }
-      else if (have >= 1) { bonus += 1.5; if (!note) note = `부모의 용신(${p.yongsin})을 살려주는 기운이 있어요` }
+      if (have >= 2) { bonus += CFG.parent.yongsin2; if (!note) note = `부모에게 힘이 되는 ${p.yongsin} 기운을 갖춘 아기예요` }
+      else if (have >= 1) { bonus += CFG.parent.yongsin1; if (!note) note = `부모의 용신(${p.yongsin})을 살려주는 기운이 있어요` }
     }
   }
-  if (bonus > 10) bonus = 10
+  if (bonus > CFG.parent.bonusCap) bonus = CFG.parent.bonusCap
   return { bonus, note }
 }
 
@@ -111,7 +112,7 @@ export async function runBirthTiming(dueDate: string, opts: RunOptions = {}): Pr
   const scored = candidates.map(c => {
     const breakdown = scoreBaby(c)
     const pb = parentBonus(c.day.stem, parents, breakdown.elementCount)
-    const finalScore = Math.min(100, breakdown.total + pb.bonus)
+    const finalScore = Math.min(CFG.scoreCap, breakdown.total + pb.bonus)
     return { c, breakdown, parentNote: pb.note, finalScore }
   })
 

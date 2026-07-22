@@ -5,6 +5,7 @@
 // 설계: docs/출산택일_설계.md 참고
 
 import type { Candidate } from './candidates'
+import { BIRTH_SCORE_CONFIG as CFG } from './birthScoreConfig'
 
 // ── 천간·지지 → 오행 매핑 ──
 const STEM_ELEMENT: Record<string, string> = {
@@ -75,15 +76,15 @@ function scoreOhaeng(count: Record<string, number>): { score: number; avoid: str
   // 한 오행 비율
   const maxRatio = max / total
 
-  let score = 30
+  let score = CFG.weights.ohaeng
   // 없는 오행마다 감점
-  score -= missing * 6
+  score -= missing * CFG.ohaeng.missingEach
   // 한 오행 쏠림 감점 (70% 이상이면 큰 감점 = 산액 회피)
-  if (maxRatio >= 0.7) { score -= 12; avoid.push('한 오행이 심하게 치우침') }
-  else if (maxRatio >= 0.5) { score -= 6 }
+  if (maxRatio >= CFG.ohaeng.ratioHigh) { score -= CFG.ohaeng.concentratedHigh; avoid.push('한 오행이 심하게 치우침') }
+  else if (maxRatio >= CFG.ohaeng.ratioMid) { score -= CFG.ohaeng.concentratedMid }
 
   if (score < 0) score = 0
-  if (score > 30) score = 30
+  if (score > CFG.weights.ohaeng) score = CFG.weights.ohaeng
   return { score, avoid }
 }
 
@@ -96,18 +97,18 @@ function scoreJohu(c: Candidate, count: Record<string, number>): number {
   // 여름생: 水가 필요 / 겨울생: 火가 필요
   if (isSummer) {
     const water = count['수']
-    if (water >= 2) return 30
-    if (water === 1) return 20
-    return 8 // 더운데 물이 없음
+    if (water >= 2) return CFG.johu.full
+    if (water === 1) return CFG.johu.half
+    return CFG.johu.lack // 더운데 물이 없음
   }
   if (isWinter) {
     const fire = count['화']
-    if (fire >= 2) return 30
-    if (fire === 1) return 20
-    return 8 // 추운데 불이 없음
+    if (fire >= 2) return CFG.johu.full
+    if (fire === 1) return CFG.johu.half
+    return CFG.johu.lack // 추운데 불이 없음
   }
   // 봄·가을(환절기)생은 대체로 온화 — 기본 점수
-  return 24
+  return CFG.johu.neutral
 }
 
 // ③ 지지 안정 + 산액 회피 (40점)
@@ -121,29 +122,29 @@ function scoreJiji(c: Candidate): { score: number; avoid: string[] } {
   for (const [a, b] of CHUNG_PAIRS) {
     if (branches.includes(a) && branches.includes(b)) chungCount++
   }
-  if (chungCount >= 1) penalty += chungCount * 12
-  if (chungCount >= 2) avoid.push('강한 충(沖)이 겹침')
+  if (chungCount >= 1) penalty += chungCount * CFG.jiji.chungEach
+  if (chungCount >= CFG.jiji.chungAvoidAt) avoid.push('강한 충(沖)이 겹침')
 
   // 형(刑) 검사
   for (const grp of HYEONG_GROUPS) {
     const hit = grp.filter(g => branches.includes(g)).length
-    if (hit >= 2) penalty += 8
+    if (hit >= 2) penalty += CFG.jiji.hyeong
   }
 
   // 원진 검사
   for (const [a, b] of WONJIN_PAIRS) {
-    if (branches.includes(a) && branches.includes(b)) penalty += 6
+    if (branches.includes(a) && branches.includes(b)) penalty += CFG.jiji.wonjin
   }
 
   // 산액 회피 — 子·卯·酉 두 글자 이상 겹침/충
   const jaMyoYu = branches.filter(b => ['子', '卯', '酉'].includes(b))
   const uniqueJMY = new Set(jaMyoYu)
   if (jaMyoYu.length >= 2 && uniqueJMY.size >= 2) {
-    penalty += 14
+    penalty += CFG.jiji.jaMyoYu
     avoid.push('子·卯·酉가 겹쳐 전통적으로 출산 시 피해온 구성')
   }
 
-  let score = 40 - penalty
+  let score = CFG.weights.jiji - penalty
   if (score < 0) score = 0
   return { score, avoid }
 }
@@ -151,10 +152,11 @@ function scoreJiji(c: Candidate): { score: number; avoid: string[] } {
 // 점수(0~상한) → 별점 1~5
 function toStar(score: number, max: number): number {
   const ratio = score / max
-  if (ratio >= 0.9) return 5
-  if (ratio >= 0.72) return 4
-  if (ratio >= 0.54) return 3
-  if (ratio >= 0.36) return 2
+  const [c5, c4, c3, c2] = CFG.starCut
+  if (ratio >= c5) return 5
+  if (ratio >= c4) return 4
+  if (ratio >= c3) return 3
+  if (ratio >= c2) return 2
   return 1
 }
 
@@ -173,9 +175,9 @@ export function scoreBaby(c: Candidate): ScoreBreakdown {
     ohaeng: oh.score,
     johu,
     jiji: jiji.score,
-    starOhaeng: toStar(oh.score, 30),
-    starJohu: toStar(johu, 30),
-    starJiji: toStar(jiji.score, 40),
+    starOhaeng: toStar(oh.score, CFG.weights.ohaeng),
+    starJohu: toStar(johu, CFG.weights.johu),
+    starJiji: toStar(jiji.score, CFG.weights.jiji),
     avoidFlags,
     elementCount: count,
   }

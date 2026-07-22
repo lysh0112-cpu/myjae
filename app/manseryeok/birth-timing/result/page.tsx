@@ -350,7 +350,7 @@ function BirthResultInner() {
           setAiNotes(notes); setAiLoading(false)
           // ★결과가 다 갖춰지면 바로 보관함에 저장한다. (2026-07-21 2차)
           //   state 반영 전이라 인자로 넘긴다. 다시보기면 이미 saved 라 빠져나온다.
-          handleSave(result.recommendations, result.avoidDays, notes)
+          handleSave(result.recommendations, result.avoidDays, notes, sv)
         }
       } catch {
         if (!cancelled) { setErrMsg('계산 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.'); setLoading(false) }
@@ -368,10 +368,12 @@ function BirthResultInner() {
     recsOverride?: Recommendation[],
     avoidOverride?: AvoidDay[],
     notesOverride?: Record<number, AiNote>,
+    surveyOverride?: SurveyInput | null,
   ) {
     if (saving || saved) return
     const useRecs = recsOverride ?? recs
-    if (!survey || !survey.dueDate || useRecs.length === 0) return
+    const useSurvey = surveyOverride ?? survey
+    if (!useSurvey || !useSurvey.dueDate || useRecs.length === 0) return
     setSaving(true)
     setSaveFailed(false)
     const nameOf = (p: PersonInput | null, fallback: string): string => {
@@ -389,13 +391,13 @@ function BirthResultInner() {
       name: (p as unknown as { name?: string } | null)?.name,
     })
     const surveyBlob: BirthSurvey = {
-      dueDate: survey.dueDate, method: survey.method, timePref: survey.timePref,
-      babyGender: survey.babyGender, wishes: survey.wishes ?? [], avoidNote: survey.avoidNote ?? '',
+      dueDate: useSurvey.dueDate, method: useSurvey.method, timePref: useSurvey.timePref,
+      babyGender: useSurvey.babyGender, wishes: useSurvey.wishes ?? [], avoidNote: useSurvey.avoidNote ?? '',
     }
     const res = await saveBirthRecord({
       name1: nameOf(parent1, '부모1'),
       name2: nameOf(parent2, '부모2'),
-      summary: `${survey.dueDate} 예정 · 길일 ${useRecs.length}개`,
+      summary: `${useSurvey.dueDate} 예정 · 길일 ${useRecs.length}개`,
       input1: toInput(parent1),
       input2: toInput(parent2),
       survey: surveyBlob,
