@@ -8,6 +8,7 @@
 // ============================================================================
 'use client'
 
+import { useState } from 'react'
 import { compareOhaeng, OHAENG_ORDER, type Ohaeng } from '@/lib/saju/ohaengCompare'
 import { EL_BG } from '@/lib/saju/ohaengColor'
 
@@ -30,11 +31,14 @@ interface Props {
   bLabel?: string
   /** 해설 문구 (없으면 자동 생성) */
   comment?: string
+  /** 토글 래퍼 안에 들어갈 때 true — 자체 제목·배경·접기를 끄고 내용만 그린다 */
+  embedded?: boolean
 }
 
 export default function OhaengCompareCard({
-  aScores, bScores, aLabel = '남편', bLabel = '아내', comment,
+  aScores, bScores, aLabel = '남편', bLabel = '아내', comment, embedded = false,
 }: Props) {
+  const [open, setOpen] = useState(true)   // 기본 펼침. 제목 누르면 접힘 (embedded면 무시)
   const r = compareOhaeng(aScores, bScores)
   // 막대 길이 정규화: 두 사람 통틀어 가장 큰 값을 100%로
   const maxVal = Math.max(1, ...r.rows.flatMap(row => [row.a, row.b]))
@@ -45,14 +49,8 @@ export default function OhaengCompareCard({
       ? `${EL_LABEL[r.mostSimilar].split(' ')[1]}의 기운으로 깊이 통하는, 결이 비슷한 두 분이에요. 서로 닮아 편안하면서도, 다른 자리는 살며시 채워주는 사이예요.`
       : `서로 없는 기운을 채워주는 두 분이에요. ${aLabel}과 ${bLabel}이 각자 가진 기운으로 상대의 부족한 자리를 메워, 함께라서 더 단단해지는 사이예요.`
 
-  return (
-    <div style={{ background: '#FDF6F0', borderRadius: 16, padding: '18px 15px' }}>
-      <div style={{ textAlign: 'center', marginBottom: 16 }}>
-        <div style={{ fontSize: 15, fontWeight: 500, color: '#96502e' }}>
-          타고난 오행으로 본 우리의 차이
-        </div>
-      </div>
-
+  const body = (
+    <>
       {/* 닮음·보완 수치 + 게이지 (한 줄) */}
       <div style={{ display: 'flex', gap: 9, marginBottom: 16 }}>
         <ScoreCard label="🫧 닮은 정도" value={r.similarity} track="#eaf1fa" fill="#378ADD" />
@@ -99,6 +97,26 @@ export default function OhaengCompareCard({
       <div style={{ marginTop: 16, background: '#fdf3e9', borderRadius: 10, padding: '12px 13px', fontSize: 11.5, color: '#7a5638', lineHeight: 1.65 }}>
         {comment ?? autoComment}
       </div>
+    </>
+  )
+
+  // 토글 래퍼 안에서 쓰일 때 — 자체 제목·배경·접기 없이 내용만
+  if (embedded) return body
+
+  return (
+    <div style={{ background: '#FDF6F0', borderRadius: 16, padding: '18px 15px' }}>
+      {/* 제목 = 접기/펴기 헤더 */}
+      <div
+        onClick={() => setOpen(o => !o)}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', marginBottom: open ? 16 : 0, WebkitTapHighlightColor: 'transparent', WebkitUserSelect: 'none', userSelect: 'none' }}
+      >
+        <span style={{ fontSize: 15, fontWeight: 500, color: '#96502e' }}>
+          타고난 오행으로 본 우리의 차이
+        </span>
+        <span style={{ fontSize: 11, color: '#c0a898', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
+      </div>
+
+      {open && body}
     </div>
   )
 }
