@@ -136,13 +136,8 @@ function scoreJiji(c: Candidate): { score: number; avoid: string[] } {
     if (branches.includes(a) && branches.includes(b)) penalty += CFG.jiji.wonjin
   }
 
-  // 산액 회피 — 子·卯·酉 두 글자 이상 겹침/충
-  const jaMyoYu = branches.filter(b => ['子', '卯', '酉'].includes(b))
-  const uniqueJMY = new Set(jaMyoYu)
-  if (jaMyoYu.length >= 2 && uniqueJMY.size >= 2) {
-    penalty += CFG.jiji.jaMyoYu
-    avoid.push('子·卯·酉가 겹쳐 전통적으로 출산 시 피해온 구성')
-  }
+  // (삭제됨) 子·卯·酉 산액 규칙 — 원문 근거 없음(NotebookLM 과잉추론).
+  //   연재쌤 검수 2번 확정 삭제. 되살리려면 원문 대조 후 재도입할 것.
 
   let score = CFG.weights.jiji - penalty
   if (score < 0) score = 0
