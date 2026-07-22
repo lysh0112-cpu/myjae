@@ -64,7 +64,7 @@ async function fetchDayunForDate(
   gender: string,
   cache: Map<string, DayunItem[]>,
 ): Promise<DayunItem[]> {
-  const key = `${c.y}${c.m}${c.d}`
+  const key = `${c.y}${String(c.m).padStart(2, '0')}${String(c.d).padStart(2, '0')}`
   const hit = cache.get(key)
   if (hit) return hit
   try {
