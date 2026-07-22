@@ -23,6 +23,7 @@ import { Suspense, useMemo, useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import CoupleWonguk from './components/CoupleWonguk'
 import OhaengCompareCard from './components/OhaengCompareCard'
+import CoupleInsightToggle from './components/CoupleInsightToggle'
 import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
 import GradeFireworks from './components/GradeFireworks'
 import { COUPLE_QUESTIONS, groupCoupleByCategory } from '@/lib/saju/coupleQuestions'
@@ -615,15 +616,26 @@ function CoupleResultView({
           right={{ name: name2, birth: person2.year ? `${person2.year}.${person2.month}.${person2.day}` : '', saju: saju2 ?? [] }}
         />
 
-        {/* ③-b 타고난 오행으로 본 우리의 차이 (닮음·보완 + 좌우 막대) */}
+        {/* ③-b 궁합 시각화 — 부부는 오행만, 연인은 오행+MBTI 토글 */}
         {ohaeng1 && ohaeng2 && (
           <div style={{ marginTop: 10 }}>
-            <OhaengCompareCard
-              aScores={ohaeng1}
-              bScores={ohaeng2}
-              aLabel={mode === 'married' ? (person1.gender === '남' ? '남편' : person1.gender === '여' ? '아내' : name1) : name1}
-              bLabel={mode === 'married' ? (person2.gender === '남' ? '남편' : person2.gender === '여' ? '아내' : name2) : name2}
-            />
+            {mode === 'married' ? (
+              <OhaengCompareCard
+                aScores={ohaeng1}
+                bScores={ohaeng2}
+                aLabel={person1.gender === '남' ? '남편' : person1.gender === '여' ? '아내' : name1}
+                bLabel={person2.gender === '남' ? '남편' : person2.gender === '여' ? '아내' : name2}
+              />
+            ) : (
+              <CoupleInsightToggle
+                aScores={ohaeng1}
+                bScores={ohaeng2}
+                name1={name1}
+                name2={name2}
+                mbti1={person1.mbti}
+                mbti2={person2.mbti}
+              />
+            )}
           </div>
         )}
 
