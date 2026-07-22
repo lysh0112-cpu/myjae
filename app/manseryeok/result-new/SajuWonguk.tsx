@@ -176,7 +176,7 @@ export default function SajuWonguk({ saju, dayStem, yeonjji, iljji, gm1, gm2 }: 
               )
             })}
           </tr>
-          {/* 귀인(길신) — 천간귀인(월덕·천덕)+지지귀인(천을·태극·문창·금여·암록)을 칸마다 */}
+          {/* 귀인(길신) 8종 — 천간귀인(월덕·천덕)+지지귀인(천을·태극·문창·문곡·금여·암록)을 칸마다 */}
           <tr>
             <td style={rowLabel}>귀인</td>
             {saju.map(({ stem, branch }, i) => {

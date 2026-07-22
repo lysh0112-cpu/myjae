@@ -379,7 +379,11 @@ async function calcOnePerson(p: PersonRaw): Promise<PersonCalc | null> {
   }
 }
 
-function toCouplePerson(p: PersonRaw, saju: SajuPillarSimple[]): CouplePerson {
+function toCouplePerson(
+  p: PersonRaw,
+  saju: SajuPillarSimple[],
+  solar?: { month: number; day: number; hourBranch: string | null } | null,
+): CouplePerson {
   const find = (k: string) => saju.find(s => s.pillar === k)
   const y = find('년주'), mo = find('월주'), da = find('일주'), h = find('시주')
   const birth = p.year ? `${p.year}.${p.month}.${p.day}` : ''
@@ -396,6 +400,10 @@ function toCouplePerson(p: PersonRaw, saju: SajuPillarSimple[]): CouplePerson {
     age,
     // ★MBTI — 점수에는 안 쓰고 해설 참고용으로만 넘긴다. (궁합 설계서 3-2b)
     mbti: (p.mbti || '').trim().toUpperCase() || undefined,
+    // ★ "서로 채워주는 용신·귀인" 계산용 양력 정보 (있을 때만)
+    solarMonth: solar?.month,
+    solarDay: solar?.day,
+    hourBranch: solar?.hourBranch ?? null,
   }
 }
 
@@ -420,6 +428,9 @@ function CoupleResultView({
   // 오행 비교 카드용 점수 (계산 시점에 c1/c2의 양력월·시지로 산출해 보관)
   const [ohaeng1, setOhaeng1] = useState<Record<string, number> | null>(null)
   const [ohaeng2, setOhaeng2] = useState<Record<string, number> | null>(null)
+  // 해설 "서로 채워주는" 계산용 양력 정보 (c1/c2에서 보관)
+  const [solar1, setSolar1] = useState<{ month: number; day: number; hourBranch: string | null } | null>(null)
+  const [solar2, setSolar2] = useState<{ month: number; day: number; hourBranch: string | null } | null>(null)
   const [score, setScore] = useState<CoupleScoreResult | null>(null)
   const [calcErr, setCalcErr] = useState(false)
 
@@ -467,6 +478,8 @@ function CoupleResultView({
         // 오행 비교 카드용: c1/c2의 양력월·시지로 심산 오행 점수 산출해 보관
         setOhaeng1(calcSimsanOhaeng(s1, c1.solarMonth, c1.solarDay, c1.hourBranch))
         setOhaeng2(calcSimsanOhaeng(s2, c2.solarMonth, c2.solarDay, c2.hourBranch))
+        setSolar1({ month: c1.solarMonth, day: c1.solarDay, hourBranch: c1.hourBranch })
+        setSolar2({ month: c2.solarMonth, day: c2.solarDay, hourBranch: c2.hourBranch })
         const ilju1 = s1.find(p => p.pillar === '일주')
         const ilju2 = s2.find(p => p.pillar === '일주')
         const gm1 = ilju1 ? getGongmang(ilju1.stem, ilju1.branch) : ['', ''] as [string, string]
@@ -499,7 +512,7 @@ function CoupleResultView({
       let acc = ''
       try {
         const prompt = buildCoupleTongbyeonPrompt(
-          { mode, person1: toCouplePerson(person1, saju1!), person2: toCouplePerson(person2, saju2!), score: score! },
+          { mode, person1: toCouplePerson(person1, saju1!, solar1), person2: toCouplePerson(person2, saju2!, solar2), score: score! },
           pickedQuestions,
         )
         const res = await fetch('/api/tongbyeon', {
