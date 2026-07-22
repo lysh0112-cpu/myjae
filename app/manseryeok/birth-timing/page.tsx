@@ -32,7 +32,7 @@ interface BirthSurvey {
 
 const DEFAULT_SURVEY: BirthSurvey = {
   dueDate: '', method: '제왕절개', timePref: '상관없음',
-  babyGender: '상관없음', wishes: [], avoidNote: '',
+  babyGender: '', wishes: [], avoidNote: '',
 }
 
 const SURVEY_KEY = 'birth-timing-survey'
@@ -135,6 +135,10 @@ function BirthTimingInner() {
       setError('출산예정일을 입력해 주세요. 예정일을 기준으로 좋은 날을 찾아드려요 😊')
       return
     }
+    if (!survey.babyGender) {
+      setError('아기 성별을 선택해 주세요. 아기 사주 풀이에 꼭 필요해요 😊')
+      return
+    }
     setError('')
     setPayOpen(true)
   }
@@ -206,9 +210,9 @@ function BirthTimingInner() {
           ))}
         </div>
 
-        <QLabel>바라는 아기 성별이 있나요?</QLabel>
+        <QLabel>아기 성별을 선택해 주세요 <span style={{ color: sub, fontSize: '11px' }}>(필수)</span></QLabel>
         <div style={{ display: 'flex', gap: '8px' }}>
-          {['아들', '딸', '상관없음'].map(v => (
+          {['아들', '딸'].map(v => (
             <Chip key={v} label={v} active={survey.babyGender === v} onClick={() => setSurveyField('babyGender', v)} />
           ))}
         </div>
