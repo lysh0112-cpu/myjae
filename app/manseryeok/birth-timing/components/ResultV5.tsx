@@ -6,7 +6,7 @@
 //   시간 버튼을 누르면 → 그 시각의 모달(원국표·공망·해설·오행·대운).
 //   점수·등급 숫자는 감춤(교훈 A).
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import type { DayRecommendation, HourPick } from '../lib/recommendV5'
 import { toStarLines } from '../lib/starMapV5'
 import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
@@ -137,6 +137,38 @@ function DetailModal({ day, hour, note, onClose, onViewSaju }: {
   const grade = hour.breakdown.elementGrade
   const els = ['목', '화', '토', '금', '수']
 
+  // 카드 캡처용 (mulsang 사주그림과 같은 html-to-image 방식)
+  const captureRef = useRef<HTMLDivElement | null>(null)
+  const [sharing, setSharing] = useState(false)
+
+  async function handleShareCard() {
+    const node = captureRef.current
+    if (!node || sharing) return
+    setSharing(true)
+    try {
+      const { toPng } = await import('html-to-image')
+      const png = await toPng(node, { pixelRatio: 2, cacheBust: true, backgroundColor: C.card })
+      const fileName = `명카페_출산택일_${day.dateLabel.replace(/[^0-9가-힣]/g, '')}.png`
+      // 모바일: 파일 공유(카톡 등) 지원되면 공유 시트, 아니면 다운로드
+      try {
+        const blob = await (await fetch(png)).blob()
+        const file = new File([blob], fileName, { type: 'image/png' })
+        const navAny = navigator as Navigator & { canShare?: (d?: unknown) => boolean }
+        if (navAny.share && navAny.canShare && navAny.canShare({ files: [file] })) {
+          await navAny.share({ files: [file], title: '명카페 출산택일', text: '아기에게 좋은 출산일이에요' })
+          return
+        }
+      } catch { /* 공유 실패 시 다운로드로 폴백 */ }
+      const a = document.createElement('a')
+      a.href = png; a.download = fileName
+      document.body.appendChild(a); a.click(); document.body.removeChild(a)
+    } catch (e) {
+      console.error('카드 공유 실패:', e)
+    } finally {
+      setSharing(false)
+    }
+  }
+
   return (
     <div
       onClick={onClose}
@@ -146,12 +178,13 @@ function DetailModal({ day, hour, note, onClose, onViewSaju }: {
         onClick={(e) => e.stopPropagation()}
         style={{ background: C.card, borderRadius: 16, padding: 20, maxWidth: 380, width: '100%', maxHeight: '86vh', overflow: 'auto' }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>{day.dateLabel}</div>
-            <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{hour.hourLabel}</div>
-          </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: -8 }}>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, color: C.sub, cursor: 'pointer', lineHeight: 1 }}>×</button>
+        </div>
+        <div ref={captureRef} style={{ background: C.card, padding: '4px 2px' }}>
+        <div style={{ marginBottom: 4 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>{day.dateLabel}</div>
+          <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{hour.hourLabel}</div>
         </div>
 
         {note?.oneLine && (
@@ -205,6 +238,22 @@ function DetailModal({ day, hour, note, onClose, onViewSaju }: {
             ))}
           </div>
         </div>
+
+        {/* 카드 하단 로고 (캡처 이미지에 들어감) */}
+        <div style={{ textAlign: 'center', marginBottom: 4 }}>
+          <span style={{ fontSize: 11, color: C.accent, fontWeight: 700 }}>🌸 명카페</span>
+          <span style={{ fontSize: 10, color: C.sub, marginLeft: 6 }}>전통 사주명리 출산택일</span>
+        </div>
+        </div>{/* ← captureRef 끝 */}
+
+        {/* 카톡 공유 (사주그림과 같은 방식: 이 카드를 이미지로) */}
+        <button
+          onClick={handleShareCard}
+          disabled={sharing}
+          style={{ width: '100%', padding: 13, borderRadius: 11, border: `1px solid ${C.lineGold}`, background: '#fdf3e9', color: C.accent, fontSize: 13, fontWeight: 600, cursor: sharing ? 'default' : 'pointer', marginBottom: 6, marginTop: 6 }}
+        >
+          {sharing ? '카드 만드는 중…' : '🖼 이미지로 저장 · 카톡 공유'}
+        </button>
 
         <button
           onClick={() => onViewSaju?.(day, hour)}
