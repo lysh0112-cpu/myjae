@@ -122,42 +122,36 @@ ${body.sceneDesc || body.prompt}
     let imageB64: string | null = null
     let imageNote = ''
     const openaiKey = process.env.OPENAI_API_KEY
+    // ★2026-07-21: 그림 자체 시간 제한. Vercel 함수 상한(maxDuration=60초)에
+    //   그냥 걸리면 오류 처리조차 못 하고 "그림이 아직 없어요"로 빠지던 사고가 있었다.
+    //   그 전에 우리가 55초에 끊어 원인을 imageNote/로그로 남긴다.
+    const IMAGE_TIMEOUT_MS = 55000
     async function runImage() {
       if (!openaiKey) { imageNote = 'no_openai_key'; return }
+      const startedAt = Date.now()
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), IMAGE_TIMEOUT_MS)
       try {
-        // ★그림에 자체 시간 제한을 둔다 (2026-07-22).
-        //   [왜] 이 route 의 maxDuration 은 60초다. 그림이 그 시간을 통째로 쓰면
-        //   함수가 강제 종료돼 아래 오류 처리가 실행조차 안 된다. 그러면 화면은
-        //   실패 안내(imageError)도 못 받아 "그림이 아직 없어요"로 빠진다.
-        //   55초에서 우리가 먼저 끊으면, 남은 5초로 최소한 "실패했다"고 알릴 수 있다.
-        //   ⚠️ 이 값을 maxDuration(60초)보다 크게 하지 말 것 — 의미가 없어진다.
-        //      반대로 너무 작으면 나올 그림을 죽인다. 실제 소요 시간을 보고 조정할 것.
-        const imgStart = Date.now()   // 실제 소요 시간 기록용
-        const imgCtl = new AbortController()
-        const imgTimer = setTimeout(() => imgCtl.abort(), 55_000)
-        let imgRes: Response
-        try {
-          imgRes = await fetch('https://api.openai.com/v1/images/generations', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${openaiKey}`,
-            },
-            body: JSON.stringify({
-              model: 'gpt-image-1',
-              prompt: body.prompt,
-              n: 1,
-              size: '1024x1024',
-            }),
-            signal: imgCtl.signal,
-          })
-        } finally {
-          clearTimeout(imgTimer)
-        }
+        const imgRes = await fetch('https://api.openai.com/v1/images/generations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${openaiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'gpt-image-1',
+            prompt: body.prompt,
+            n: 1,
+            size: '1024x1024',
+          }),
+          signal: controller.signal,
+        })
         const imgData = await imgRes.json()
-        // ★그림이 실제로 몇 초 걸리는지 남긴다. 제한 시간을 조정할 근거가 된다.
-        console.log(`[mulsang] 그림 생성 ${((Date.now() - imgStart) / 1000).toFixed(1)}초`)
         imageB64 = imgData.data?.[0]?.b64_json ?? null
+        // ★소요 시간 로그: Vercel Logs에서 실제 걸린 시간을 확인하기 위한 것.
+        //   (화질 개선/제한시간 조정 판단의 근거. 2026-07-21 C안 미확인 항목)
+        const elapsed = Date.now() - startedAt
+        console.log(`[mulsang-image] elapsed=${elapsed}ms ok=${!!imageB64} style=${body.style ?? '-'}`)
         if (!imageB64) {
           // OpenAI가 준 실제 사유를 화면까지 전달 (크레딧·인증·정책 등 구분용)
           const apiMsg = imgData?.error?.message || imgData?.error?.code || imgData?.error?.type
@@ -167,14 +161,19 @@ ${body.sceneDesc || body.prompt}
           await logAiError('mulsang-image', imgRes.status, imgData?.error || imgData)
         }
       } catch (e) {
-        console.error('gpt-image error:', e)
-        // 시간 초과(abort)는 따로 구분한다 — 화면에서 "다시 시도"를 권할 수 있게.
+        const elapsed = Date.now() - startedAt
+        // AbortError = 우리가 55초에 끊은 것. 그 외는 네트워크·기타 오류.
         const aborted = e instanceof Error && e.name === 'AbortError'
-        imageNote = aborted
-          ? 'image_timeout'
-          : 'image_error: ' + (e instanceof Error ? e.message.slice(0, 150) : 'unknown')
-        await logAiError('mulsang-image', aborted ? 504 : 500,
-          { message: aborted ? '그림 생성 55초 초과 (시간 초과)' : String(e) })
+        if (aborted) {
+          imageNote = 'image_timeout'
+          console.error(`[mulsang-image] TIMEOUT at ${elapsed}ms (limit ${IMAGE_TIMEOUT_MS}ms)`)
+          await logAiError('mulsang-image', 408, { reason: 'self_timeout', elapsed })
+        } else {
+          console.error('gpt-image error:', e)
+          imageNote = 'image_error: ' + (e instanceof Error ? e.message.slice(0, 150) : 'unknown')
+        }
+      } finally {
+        clearTimeout(timer)
       }
     }
 

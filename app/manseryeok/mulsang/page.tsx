@@ -116,15 +116,8 @@ function MulsangInner() {
           // 저장 스냅샷의 그림·해설 복원
           //   ★해설은 tongResult(화면에 그려지는 자리)로 넣는다.
           //     예전 4칸 해설(객체)로 저장된 옛 기록도 있으므로 문자열일 때만 쓴다.
-          const snap = rec.resultData as {
-            images?: { style: string; imageUrl: string; commentary: unknown }[]
-            tong?: string
-          } | null
+          const snap = rec.resultData as { images?: { style: string; imageUrl: string; commentary: unknown }[] } | null
           const first = snap?.images?.[0]
-          // ★다시보기에서는 해설을 새로 만들지 않는다.
-          //   [왜] 그림이 없는 기록(images: [])은 예전에 이 분기를 통째로 건너뛰어
-          //   저장된 해설조차 복원되지 않았고, 화면이 "해설 없음"으로 보고
-          //   AI 를 다시 불렀다(비용 낭비 + 매번 다른 글). (2026-07-21)
           if (first) {
             setStyle(first.style)
             setImageUrl(first.imageUrl)
@@ -134,10 +127,6 @@ function MulsangInner() {
             } else {
               setCommentary((first.commentary as Commentary) ?? null)
             }
-          } else if (typeof snap?.tong === 'string' && snap.tong.trim()) {
-            // 그림은 없지만 해설만 저장된 기록 — 해설이라도 보여준다.
-            setTongResult(snap.tong)
-            setShowTongbyeon(true)
           }
         }
         return
@@ -172,7 +161,7 @@ function MulsangInner() {
           loggedIn = true
           // 홈과 동일하게 maybeSingle 사용 (.single()은 행 개수 안 맞으면 에러 → 폴백 오염 원인이었음)
           const { data: p } = await supabase.from('profiles')
-            .select('nickname, hangul_name, birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, saju_saved')
+            .select('birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, saju_saved')
             .eq('id', u.user.id).maybeSingle()
           // 홈은 birth_year만 있으면 "나"로 인정하므로, 여기서도 생년월일만 있으면
           // 내 사주로 쓴다(saju_saved 여부와 무관하게 홈과 동일 기준으로 일관성 유지).
@@ -186,9 +175,6 @@ function MulsangInner() {
               day: Number(p.birth_day ?? 0),
               leapMonth: p.leap_month != null ? String(p.leap_month) : '0',
               hourIdx: hourStr === '모름' ? null : parseInt(hourStr),
-              // ★내 이름을 넣는다. 없으면 보관함 제목이 '나'가 되고,
-              //   해설에서도 이름을 못 불러 '나님'처럼 어색해진다. (2026-07-21)
-              name: (p.nickname as string) || (p.hangul_name as string) || undefined,
             })
           }
           // 로그인했으나 profiles에 생년월일 없음 → info를 비운 채 둔다.
@@ -294,6 +280,7 @@ function MulsangInner() {
   // 보관함 저장 상태 — 다시보기(recordId)로 열었으면 이미 저장된 것이므로 'saved'로 시작(재저장 방지)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'failed'>(sp.get('recordId') ? 'saved' : 'idle')
   // ★그림 요청이 끝나면 올린다 → 아래 useEffect 가 해설을 자동으로 부른다.
+  const wantTongRef = useRef(false)
   const shareRef = useRef<HTMLDivElement | null>(null)
   const [cardBusy, setCardBusy] = useState(false)
   const [cardImg, setCardImg] = useState<string | null>(null)   // 캡처용 data URL
@@ -317,35 +304,23 @@ function MulsangInner() {
   const [imgSaving, setImgSaving] = useState(false)
   // 자동 저장된 보관함 기록 id — 해설이 완성되면 여기에 덧붙인다.
   const savedIdRef = useRef<string | null>(null)
-  // 이번 그림의 저장 결과(기록 id·그림 URL·화풍). 해설이 끝나면 여기에 덧붙인다.
-  //   state 가 아니라 ref 인 이유: 화풍을 바꿔 다시 그려도 이전 스트림이
-  //   엉뚱한 기록을 건드리지 않게 "그때의 값"을 그대로 들고 가야 한다.
-  const pendingSaveRef = useRef<{ id: string | null; url: string; style: string } | null>(null)
-  const savingRef = useRef(false)   // 저장 중복 진입 막기 (setSaveState 는 비동기)
-  // "새로 그리기"로 들어왔는가. 첫 그림을 그리고 나면 풀어서
-  //   그 뒤 화풍 전환 시에는 정상적으로 복원되게 한다.
-  const freshRef = useRef(sp.get('fresh') === '1')
-  // 결제창을 열 때 "이번에 그릴 화풍"을 기억해 둔다.
-  //   (setStyle 이 비동기라 doGenerate 가 예전 값을 읽는 문제를 피한다)
-  const payStyleRef = useRef<string | null>(null)
+  const [tongTick, setTongTick] = useState(0)
 
-  // ★명식(saju·dayStem)의 최신값을 ref 로 들고 있는다.
-  //   doGenerate 는 오래 걸리는 async 라, 그 안에서 state 를 읽으면
-  //   호출 시점의 낡은 값(빈 배열)을 보게 된다. ref 는 항상 최신이다.
-  const sajuRef = useRef(saju)
-  const dayStemRef = useRef(dayStem)
-  sajuRef.current = saju
-  dayStemRef.current = dayStem
+  // ★그림 뒤 해설 자동 생성.
+  //   doGenerate 안에서 바로 부르지 않는 이유: 그 시점엔 saju·dayStem 이
+  //   아직 준비되지 않았을 수 있어 조용히 건너뛴다. 준비되면 여기서 부른다.
+  useEffect(() => {
+    if (!wantTongRef.current) return
+    if (!dayStem || saju.length === 0) return   // 아직 준비 안 됨 → 다음 렌더에서 다시
+    wantTongRef.current = false
+    runTongbyeon('all')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tongTick, dayStem, saju.length])
 
   useEffect(() => {
     // 보관함 다시보기(recordId)로 진입했으면 스냅샷을 loadInfo에서 이미 복원했으므로
     // localStorage 기반 복원은 건너뛴다 (안 그러면 이 브라우저에 없는 그림을 지워버림).
     if (sp.get('recordId')) return
-    // ★"새로 그리기"로 들어왔으면 예전 그림을 되살리지 않는다.
-    //   [왜] 보관함 [+ 새 그림 그리기] → 사람 선택으로 들어와도 recordId 가
-    //   없다는 이유로 localStorage 의 옛 그림이 복원돼, "새 그림"을 눌렀는데
-    //   예전 그림이 뜨는 문제가 있었다. (2026-07-21)
-    if (freshRef.current) return
     const key = mulsangImgKey(info, style)
     if (!key) return
     // 그림 생성 중이면 건드리지 않는다 (방금 만든 그림을 지우면 안 됨).
@@ -400,12 +375,7 @@ function MulsangInner() {
     )
   }
 
-  // ★styleOverride — "다시 그리기"에서 화풍을 바꿔 부를 때 쓴다.
-  //   [왜] setStyle 은 비동기라, 누른 직후 doGenerate 가 읽는 style 은
-  //   아직 예전 값이다. 그러면 다른 화풍을 골라도 예전 화풍으로 그려진다.
-  //   (2026-07-21 발견) 인자로 받으면 이 문제가 없어진다.
-  async function doGenerate(styleOverride?: string) {
-    const styleNow = styleOverride ?? style
+  async function doGenerate() {
     setPayOpen(false)
     if (!saju || saju.length === 0 || !dayStem) return
     setLoading(true)
@@ -416,12 +386,7 @@ function MulsangInner() {
     setSaveState('idle')
     setTongResult(null)
     setShowTongbyeon(false)
-    // 한 장 그렸으면 "새로 그리기" 상태를 푼다 → 이후 화풍 전환 시엔
-    //   그 화풍으로 그렸던 그림이 정상 복원된다.
-    freshRef.current = false
     savedIdRef.current = null
-    savingRef.current = false
-    pendingSaveRef.current = null
     try {
       const monthBranch = saju.find(p => p.pillar === '월주')?.branch ?? ''
       const yongsinResult = calcYongsin(saju, dayStem, solarMonth, solarDay,
@@ -432,9 +397,12 @@ function MulsangInner() {
         stems: saju.map(p => p.stem),
         elementScores: yongsinResult.score,
         yongsin: yongsinResult.yongsin,
-        style: styleNow,
-        // ★시지 — 그림의 시간대를 명식대로 그리게 한다 (2026-07-22)
-        hourBranch: saju.find(p => p.pillar === '시주')?.branch ?? null,
+        style,
+        // ★시지 전달: 시주 지지 우선, 없으면 hourIdx로. 모르면 null → 그림에서 시간 지시 생략.
+        hourBranch: saju.find(p => p.pillar === '시주')?.branch
+          ?? (info && info.hourIdx !== null
+            ? ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][info.hourIdx]
+            : null),
       })
       const sajuText = saju.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(', ')
       const seasonKo = SEASON_LABEL[monthBranch] ?? '계절 정보 없음'
@@ -452,7 +420,7 @@ function MulsangInner() {
           hourKo,
           sceneDesc: built.prompt,
           styleLabel: built.styleLabel,
-          style: styleNow,
+          style,
           sajuText,
           saju,
           elementScores: yongsinResult.score,
@@ -470,14 +438,14 @@ function MulsangInner() {
           note === 'no_openai_key'
             ? '그림 생성 준비가 아직 안 됐어요. 관리자에게 알려주세요.'
             : note === 'image_timeout'
-              ? '그림을 그리는 데 시간이 너무 오래 걸렸어요. 다시 시도해 주세요.'
+              ? '그림 그리는 데 시간이 조금 오래 걸렸어요. 다시 시도하면 대개 잘 나와요.'
               : '그림 생성이 잠시 어려운 상태예요. 다시 시도해 주세요.'
         )
       } else {
         setImageError(null)
       }
       try {
-        const key = mulsangImgKey(info, styleNow)
+        const key = mulsangImgKey(info, style)
         if (key) localStorage.setItem(key, JSON.stringify({
           commentary: data.commentary ?? null,
           imageUrl: data.imageUrl ?? null,
@@ -487,39 +455,27 @@ function MulsangInner() {
         sessionStorage.setItem('mulsang_full', JSON.stringify({
           image_url: storedUrl,
           prompt: built.prompt,
-          style: styleNow,
+          style,
           commentary: data.commentary ?? null,
         }))
       } catch {}
 
       // ★그림이 나왔으면 곧바로 보관함에 저장한다 (고객이 누르지 않아도).
-      //   ★저장이 끝날 때까지 기다린다(await). 안 기다리면 해설이 먼저 끝났을 때
-      //     붙일 기록 id 를 몰라 해설이 조용히 누락된다. (14부)
-      if (data.imageUrl) {
-        pendingSaveRef.current = {
-          id: await handleSaveRecord(data.imageUrl, ''),
-          url: data.imageUrl,
-          style: styleNow,
-        }
-      }
+      //   해설은 아직 만드는 중일 수 있어, 완성되면 아래 useEffect 가 덧붙여 갱신한다.
+      if (data.imageUrl) handleSaveRecord(data.imageUrl, '')
     } catch (e) {
       console.error(e)
     } finally {
       setLoading(false)
+      // ★그림 요청이 끝나면 해설을 이어서 자동 생성한다.
+      //   (아래 useEffect 가 감지해서 부른다 — saju·dayStem 이 준비된 시점에 실행)
+      wantTongRef.current = true
+      setTongTick(t => t + 1)
     }
-
-    // ★그림이 끝나면 해설을 이어서 자동 생성한다.
-    //   [왜 여기서 직접 부르나] 예전엔 useEffect 로 트리거했는데,
-    //   의존성(saju.length)이 안 바뀌면 effect 가 안 돌아 해설이 통째로
-    //   누락됐다(2026-07-21 실제 발생). 아래는 ref 로 최신 명식을 보므로
-    //   렌더 타이밍과 무관하게 확실히 실행된다.
-    const p2 = pendingSaveRef.current
-    runTongbyeon('all', p2?.id, p2?.url, p2?.style)
   }
 
-  function openPay(styleForThis?: string) {
+  function openPay() {
     if (!saju || saju.length === 0 || !dayStem || converting) return
-    payStyleRef.current = styleForThis ?? null
     setPayOpen(true)
   }
 
@@ -545,13 +501,8 @@ function MulsangInner() {
     }
     setOpenPicker(true)
   }
-  //   ★recId·recUrl 을 인자로 받는 이유: 저장이 끝난 시점의 값을 그대로 들고 가야
-  //     "다른 화풍으로 다시 그리기"로 state 가 바뀌어도 엉뚱한 기록에 덧붙지 않는다.
-  async function runTongbyeon(mode: 'selected' | 'all', recId?: string | null, recUrl?: string | null, recStyle?: string) {
-    // ref 로 본다 — doGenerate 에서 부를 때 state 는 낡았을 수 있다.
-    const sajuNow = sajuRef.current
-    const dayStemNow = dayStemRef.current
-    if (!dayStemNow || sajuNow.length === 0) return
+  async function runTongbyeon(mode: 'selected' | 'all') {
+    if (!dayStem || saju.length === 0) return
     const questions: SajuQuestion[] =
       mode === 'all'
         ? []
@@ -580,15 +531,13 @@ function MulsangInner() {
           name: info?.name || '나',
           age: info?.year ? new Date().getFullYear() - info.year : 0,
           gender: info?.gender || '',
-          dayStem: dayStemNow,
-          monthBranch: sajuNow.find(p => p.pillar === '월주')?.branch ?? monthBranch,
+          dayStem,
+          monthBranch,
           ohaengScore,
           topElement,
           lackElements,
           yongsinElement: (yongsinElement || undefined) as Ohaeng | undefined,
           styleLabel: STYLE_CONFIGS[style]?.label,
-          // ★그림에 그려진 시간대를 해설도 알아야 한다 (2026-07-22)
-          hourKo: info && info.hourIdx !== null ? HOUR_LABEL[info.hourIdx] : undefined,
         },
         questions,
       )
@@ -596,9 +545,7 @@ function MulsangInner() {
       const res = await fetch('/api/tongbyeon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // ★premium=true → max_tokens 6000. 전체 해설은 4카드라 3500 으로는
-        //   마지막 문장이 잘린다(실제로 잘린 사례 확인, 2026-07-21).
-        body: JSON.stringify({ systemPrompt: prompt, premium: mode === 'all' }),
+        body: JSON.stringify({ systemPrompt: prompt, premium: false }),
       })
       if (!res.ok || !res.body) {
         setTongResult('통변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
@@ -633,14 +580,9 @@ function MulsangInner() {
       if (mode === 'all' && acc.trim()) {
         try { sessionStorage.setItem('ai_analysis', acc) } catch {}
         // 그림은 먼저 저장됐으므로, 그 기록에 해설을 덧붙인다.
-        const targetId = recId ?? savedIdRef.current
-        const targetUrl = recUrl ?? imageUrl
-        if (targetId && targetUrl) {
-          // ⚠️ .update 는 통째 교체다. answers 를 함께 넣지 않으면 날아간다.
-          //    지금은 질문 고르기가 꺼져 있어 늘 빈 배열이지만,
-          //    MULSANG_QUESTION_OPEN 을 다시 켜면 여기서 answers 를 보존해야 한다.
-          const ok = await updateRecordResult(targetId, {
-            images: [{ style: recStyle ?? style, imageUrl: targetUrl, commentary: acc }],
+        if (savedIdRef.current && imageUrl) {
+          const ok = await updateRecordResult(savedIdRef.current, {
+            images: [{ style, imageUrl, commentary: acc }],
             answers: [],
           })
           if (!ok) console.error('보관함 해설 갱신 실패')
@@ -665,14 +607,11 @@ function MulsangInner() {
   // ── 보관함 자동 저장: 그림이 뜨면 바로 저장한다 (고객이 누르지 않아도) ──
   //   ★결제 1회 = 그림 1장 = 보관함 1건. 고객이 저장을 깜빡하고 나가도 남는다.
   //   (19-2부 "고객들이 돈들여 봤는데 그냥 빠져 나가면 아깝잖아")
-  async function handleSaveRecord(imgUrl?: string, tong?: string): Promise<string | null> {
+  async function handleSaveRecord(imgUrl?: string, tong?: string) {
     const url = imgUrl ?? imageUrl
-    // ★가드는 ref 로 본다. setSaveState 는 비동기라 같은 틱에 반영되지 않아
-    //   빠르게 두 번 눌리면 중복 저장이 될 수 있다.
-    if (savingRef.current || !info || !url) return null
-    savingRef.current = true
+    if (saveState !== 'idle' || !info || !url) return
     const pk = personKeyOf(info)
-    if (!pk) return null
+    if (!pk) return
     setSaveState('saving')
 
     // 1) ★지금 그린 화풍 그림 하나만 저장한다.
@@ -710,8 +649,6 @@ function MulsangInner() {
     setSaveState(res.ok ? 'saved' : 'failed')
     if (res.ok && res.id) savedIdRef.current = res.id
     if (!res.ok) console.error('보관함 저장 실패:', res.message)
-    savingRef.current = false
-    return res.ok ? (res.id ?? null) : null
   }
 
   function goConsult() {
@@ -876,7 +813,7 @@ function MulsangInner() {
           <span style={{ fontSize: '14px', color: '#5c3a1e' }}>결제 금액</span>
           <span style={{ fontSize: '20px', fontWeight: 700, color: '#8f3d0e' }}>{drawPrice.toLocaleString()}원</span>
         </div>
-        <button onClick={() => doGenerate(payStyleRef.current ?? undefined)}
+        <button onClick={doGenerate}
           style={{ width: '100%', padding: '15px', borderRadius: '12px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginBottom: '8px' }}>
           💳 {drawPrice.toLocaleString()}원 결제하고 그림 그리기
         </button>
@@ -994,7 +931,7 @@ function MulsangInner() {
             </div>
             {openImage && (
               <>
-                <div style={{ background: imageUrl ? '#1a1a18' : 'transparent' }}>
+                <div style={{ background: '#1a1a18' }}>
                   {imageUrl ? (
                     <img src={imageUrl} alt="사주 풍경화" style={{ width: '100%', display: 'block' }} />
                   ) : imageError ? (
@@ -1002,7 +939,7 @@ function MulsangInner() {
                       <span style={{ fontSize: '34px' }}>🖼️</span>
                       <span style={{ fontSize: '14px', fontWeight: 700, color: '#96502e' }}>그림을 그리지 못했어요</span>
                       <span style={{ fontSize: '13px', lineHeight: 1.7, color: '#5c3a1e' }}>{imageError}</span>
-                      <button onClick={() => doGenerate(payStyleRef.current ?? undefined)} disabled={loading}
+                      <button onClick={doGenerate} disabled={loading}
                         style={{ marginTop: '4px', padding: '11px 22px', borderRadius: '10px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: loading ? 'default' : 'pointer' }}>
                         🔄 다시 그리기
                       </button>
@@ -1018,23 +955,10 @@ function MulsangInner() {
                         그림 생성에 실패했던 기록이에요.<br />해설은 아래에서 보실 수 있어요.
                       </span>
                     </div>
-                  ) : loading ? (
-                    // 그리는 중
-                    <div style={{ aspectRatio: '1/1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', background: '#faede0', color: '#96502e' }}>
-                      <span style={{ fontSize: '34px' }}>🖼️</span>
-                      <span style={{ fontSize: '13px' }}>그림을 그리는 중이에요…</span>
-                      <span style={{ fontSize: '11px', color: '#6b5340' }}>최대 1분쯤 걸려요</span>
-                    </div>
                   ) : (
-                    // ★그림도 없고 오류 안내도 없는 상태.
-                    //   예전에는 다크톤 배경에 "그림 생성은 곧 제공됩니다"가 떴는데,
-                    //   사실도 아니고(이미 제공 중) 피치톤 화면에서 혼자 튀었다. (2026-07-21)
-                    <div style={{ aspectRatio: '1/1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', background: '#faede0', padding: '24px', textAlign: 'center' }}>
-                      <span style={{ fontSize: '34px' }}>🖼️</span>
-                      <span style={{ fontSize: '14px', fontWeight: 700, color: '#96502e' }}>그림이 아직 없어요</span>
-                      <span style={{ fontSize: '12.5px', lineHeight: 1.7, color: '#5c3a1e' }}>
-                        아래에서 화풍을 골라<br />그림을 그려보세요.
-                      </span>
+                    <div style={{ aspectRatio: '1/1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#5555aa', background: cardBg }}>
+                      <span style={{ fontSize: '40px' }}>🖼️</span>
+                      <span style={{ fontSize: '12px' }}>그림 생성은 곧 제공됩니다</span>
                     </div>
                   )}
                 </div>
@@ -1155,7 +1079,7 @@ function MulsangInner() {
                     <option key={key} value={key}>{STYLE_CONFIGS[key].label}</option>
                   ))}
                 </select>
-                <button onClick={() => { setStyle(picked); setRedrawPick(null); openPay(picked) }}
+                <button onClick={() => { setStyle(picked); setRedrawPick(null); openPay() }}
                   style={{ width: '100%', padding: '12px', borderRadius: '10px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>
                   ✨ 다시 그리기 · {drawPrice.toLocaleString()}원
                 </button>
@@ -1170,7 +1094,7 @@ function MulsangInner() {
               {saveState === 'failed' ? (
                 <div style={{ background: '#fdf0e8', border: '0.5px solid #f0d5c0', borderRadius: '12px', padding: '13px', textAlign: 'center' }}>
                   <div style={{ fontSize: '13px', color: '#8f3d0e', marginBottom: '8px' }}>보관함에 저장하지 못했어요</div>
-                  <button onClick={() => { setSaveState('idle'); handleSaveRecord(imageUrl ?? undefined, tongResult ?? undefined) }}
+                  <button onClick={() => { setSaveState('idle'); handleSaveRecord() }}
                     style={{ padding: '9px 20px', borderRadius: '9px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
                     다시 저장
                   </button>
@@ -1266,7 +1190,7 @@ function MulsangInner() {
         )}
 
         {drawActive ? (
-          <button onClick={() => openPay()} disabled={loading || converting}
+          <button onClick={openPay} disabled={loading || converting}
             style={{
               width: '100%', padding: '15px', borderRadius: '12px', marginBottom: '12px',
               background: '#b46e46', border: 'none', color: '#fff', fontSize: '15px', fontWeight: 700,
@@ -1312,8 +1236,8 @@ function MulsangInner() {
 export default function MulsangPage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FDF6F0' }}>
-        <div style={{ color: '#96502e', fontSize: 13 }}>불러오는 중…</div>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a18' }}>
+        <div style={{ color: '#FAC775' }}>로딩 중...</div>
       </div>
     }>
       <MulsangInner />
