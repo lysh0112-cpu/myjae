@@ -40,10 +40,10 @@ const BRANCH_SEASON: Record<string, string> = {
   辰: 'late spring, lush and abundant',
   巳: 'early summer, bright and vivid',
   午: 'summer, radiant and full of warmth',
-  未: 'late summer, rich and golden',
+  未: 'late summer, rich and abundant with mellow light',
   申: 'early autumn, clear and serene',
-  酉: 'autumn, with beautiful warm golden tones',
-  戌: 'late autumn, calm with warm amber light',
+  酉: 'autumn, clear and beautiful with gentle seasonal color',
+  戌: 'late autumn, calm and serene with soft light',
   亥: 'early winter, quiet and elegant with soft warm light on the horizon',
   子: 'winter, serene and beautiful, with gentle warm light bringing hope to the calm scene',
   丑: 'late winter, still and peaceful, with the first warm hint of coming spring',
@@ -119,8 +119,11 @@ export const STYLE_CONFIGS: Record<string, { label: string; suffix: string }> = 
   oriental: {
     label: '수묵담채화',
     suffix:
-      'Traditional Korean oriental ink wash painting (sumukhwa) with soft color tints, ' +
-      'gentle ink gradients, warm hopeful and dignified atmosphere, beautiful and uplifting, high quality. ' +
+      'Traditional Korean ink wash painting (sumukhwa / sansuhwa) on white hanji paper: ' +
+      'black ink tones from deep charcoal to pale grey, with restrained light color tints ' +
+      '(soft celadon green, pale blue, gentle earth tones) applied sparingly like watercolor. ' +
+      'Plenty of white paper space, delicate brushwork, calm and dignified. ' +
+      'Natural balanced color — NOT sepia, NOT monochrome yellow, NOT an overall amber or golden tint. ' +
       'A complete landscape painting, not a diagram, no text or letters.',
   },
 }
@@ -175,9 +178,12 @@ export function buildMulsangPrompt(input: MulsangPromptInput): MulsangPromptResu
     : `The surrounding scenery is simple and calm, keeping focus on the main subject.`
 
   const yongElement = (['목', '화', '토', '금', '수'].includes(yongsin) ? yongsin : dayElement) as Element
+  // ⚠️ 여기 문구는 "빛의 의미"지 "색"이 아니다. 이미지 AI가 'warm'을 색온도(노랑)로
+  //    읽어 화면이 세피아로 쏠리던 문제가 있었다(2026-07-22). 색을 미는 말(warm/golden)은
+  //    빼고, 밝기·희망의 느낌만 남긴다. 실제 색은 화풍 suffix에서 통제한다.
   const YONG_LIGHT: Record<Element, string> = {
     목: 'fresh tender new growth bringing vivid hopeful life',
-    화: 'a warm hopeful glow of gentle light',
+    화: 'a gentle hopeful glow of soft light',
     토: 'steady reassuring ground giving a sense of safety',
     금: 'a crisp clear refined gleam of light',
     수: 'a clear gentle stream or soft hopeful reflection',
@@ -189,7 +195,7 @@ export function buildMulsangPrompt(input: MulsangPromptInput): MulsangPromptResu
     timeOfDay ? `Time of day: ${timeOfDay}. The lighting of the whole scene must match this time of day.` : '',
     `The main subject of the painting: ${subject}.`,
     surroundings,
-    `A key warm hopeful touch of ${YONG_LIGHT[yongElement]}.`,
+    `A key hopeful touch of ${YONG_LIGHT[yongElement]}.`,
     // ⬇️ 구도 지시: 정중앙 금지, 멋스러운 동양화 구도
     `Composition: do NOT place the main subject dead-center. Use an artistic, well-balanced layout — ` +
       `place the main subject slightly off to one side following the rule of thirds, ` +
@@ -197,7 +203,8 @@ export function buildMulsangPrompt(input: MulsangPromptInput): MulsangPromptResu
       `and let natural lines (a winding river, path, or shoreline) guide the eye through the scene. ` +
       `The main subject should still be clearly the focal point, beautifully framed.`,
     `Important: depict each element only in the amount described — do not exaggerate or add elements that are not mentioned.`,
-    `The overall mood is hopeful, warm and uplifting, never desolate or lonely, while staying true to the season.`,
+    // "warm"은 색온도(노랑)로 읽히므로 뺀다. 감정 톤은 hopeful/uplifting으로 충분.
+    `The overall mood is hopeful and uplifting, never desolate or lonely, while staying true to the season.`,
     `One single complete scenic view. No people, no text, no letters, no charts or diagrams.`,
     styleCfg.suffix,
   ].filter(Boolean).join(' ')
