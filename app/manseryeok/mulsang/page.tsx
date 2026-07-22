@@ -222,6 +222,8 @@ function MulsangInner() {
   const [style, setStyle] = useState<string>(ACTIVE_STYLES[0] ?? 'ghibli')
   // 다시 그리기 드롭다운에서 고른 화풍 (현재 화풍과 별개로 관리)
   const [redrawPick, setRedrawPick] = useState<string | null>(null)
+  // ★화풍 예시 그림 미리보기 모달 — 버튼 안 🔍 를 누르면 그 화풍 예시가 뜬다.
+  const [previewStyle, setPreviewStyle] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [commentary, setCommentary] = useState<Commentary | null>(null)
@@ -1184,10 +1186,17 @@ function MulsangInner() {
                   <div key={key} onClick={() => !loading && setStyle(key)}
                     style={{ display: 'flex', alignItems: 'center', gap: '7px', background: '#fff', border: `${on ? 1.5 : 0.5}px solid ${on ? '#b46e46' : '#f0e0d5'}`, borderRadius: '10px', padding: '8px 10px', cursor: loading ? 'default' : 'pointer' }}>
                     <span style={{ fontSize: '17px', flexShrink: 0 }}>{STYLE_EMOJI[key] ?? '🌿'}</span>
-                    <span style={{ minWidth: 0 }}>
+                    <span style={{ minWidth: 0, flex: 1 }}>
                       <span style={{ display: 'block', fontSize: '12.5px', fontWeight: on ? 700 : 400, color: on ? '#96502e' : '#b4785a', lineHeight: 1.25 }}>{STYLE_CONFIGS[key].label}</span>
                       <span style={{ display: 'block', fontSize: '10px', color: on ? '#b4785a' : '#c0a898', lineHeight: 1.25 }}>{STYLE_DESC[key] ?? ''}</span>
                     </span>
+                    {/* ★예시 보기 🔍 — 버튼 선택과 겹치지 않게 stopPropagation */}
+                    <button type="button"
+                      onClick={(e) => { e.stopPropagation(); setPreviewStyle(key) }}
+                      title="예시 그림 보기"
+                      style={{ flexShrink: 0, width: '26px', height: '26px', borderRadius: '7px', border: '0.5px solid #f0e0d5', background: '#fdf9f5', color: '#b4785a', fontSize: '13px', cursor: 'pointer', padding: 0, lineHeight: 1, touchAction: 'manipulation' }}>
+                      🔍
+                    </button>
                   </div>
                 )
               })}
@@ -1235,6 +1244,42 @@ function MulsangInner() {
 
       {PayPopup}
       {pickerModal}
+
+      {/* ★화풍 예시 그림 모달 — 🔍 를 누르면 뜬다. 배경을 누르면 닫힘. */}
+      {previewStyle && (
+        <div onClick={() => setPreviewStyle(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{ background: '#fff', borderRadius: '16px', padding: '16px', maxWidth: '360px', width: '100%', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <span style={{ fontSize: '15px', fontWeight: 700, color: '#96502e' }}>
+                {STYLE_EMOJI[previewStyle] ?? '🌿'} {STYLE_CONFIGS[previewStyle]?.label} 예시
+              </span>
+              <button type="button" onClick={() => setPreviewStyle(null)}
+                style={{ background: 'none', border: 'none', fontSize: '20px', color: '#999', cursor: 'pointer', padding: '0 4px', lineHeight: 1, touchAction: 'manipulation' }}>×</button>
+            </div>
+            {/* 예시 그림. public/style-samples/<key>.png 를 보여준다. 없으면 준비중 안내. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/style-samples/${previewStyle}.png`}
+              alt={`${STYLE_CONFIGS[previewStyle]?.label} 예시 그림`}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; const n = e.currentTarget.nextElementSibling as HTMLElement | null; if (n) n.style.display = 'flex' }}
+              style={{ width: '100%', borderRadius: '10px', display: 'block' }}
+            />
+            <div style={{ display: 'none', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '48px 20px', background: '#fdf9f5', borderRadius: '10px', color: '#b4785a', fontSize: '13px', textAlign: 'center' }}>
+              <span style={{ fontSize: '32px' }}>🖼️</span>
+              예시 그림을 준비하고 있어요
+            </div>
+            <div style={{ marginTop: '10px', fontSize: '11.5px', color: '#8a6a52', lineHeight: 1.5, textAlign: 'center' }}>
+              {STYLE_DESC[previewStyle] ?? ''} · 실제 그림은 사주에 따라 달라져요
+            </div>
+            <button type="button" onClick={() => { setStyle(previewStyle); setPreviewStyle(null) }}
+              style={{ width: '100%', marginTop: '12px', padding: '11px', borderRadius: '10px', border: 'none', background: '#b46e46', color: '#fff', fontSize: '13.5px', fontWeight: 700, cursor: 'pointer', touchAction: 'manipulation' }}>
+              이 화풍으로 고르기
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
