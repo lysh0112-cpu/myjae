@@ -452,9 +452,16 @@ function BirthResultInner() {
             </div>
             <ResultV5
               recommendations={recs}
-              onOpenDetail={(r) => {
-                const note = aiNotes[r.rank]
-                if (note?.detail) alert(note.detail)
+              aiNotes={aiNotes}
+              onViewSaju={(r) => {
+                // 사주보기 연결 — result-new 는 URL 파라미터(year/month/day/hour/gender/calType)로 사주를 받는다.
+                //   ★ 결제 관문은 프로그램 완성 후 마지막에 전체 서비스 일괄 탑재 예정 → 지금은 자리만.
+                //   (무료 조회 뒷문 방지: 실제 배포 시 여기에 결제 확인을 끼운다)
+                const params = new URLSearchParams({
+                  year: String(r.y), month: String(r.m), day: String(r.d),
+                  hour: String(r.hourIdx), gender: survey?.babyGender ?? '', calType: '양력',
+                })
+                router.push(`/manseryeok/result-new?${params.toString()}`)
               }}
             />
           </>

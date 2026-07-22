@@ -1,21 +1,28 @@
 'use client'
 // app/manseryeok/birth-timing/components/ResultV5.tsx
 //
-// ★ 출산택일 v5 결과 화면 (설계안 §7)
-//   15일 중 선발된 '좋은 날 3개'를 순위·별점·날짜로 보여준다.
-//   · 점수·등급 숫자는 감춤 (교훈 A). 별점 3줄(건강/성공/재물·명예)만.
-//   · 종격 의심 → 점수 대신 전문가 상담 안내.
-//   · 기존 화면 톤(따뜻한 크림) 유지. 상세 사주풀이는 사주보기로 이관.
+// ★ 출산택일 v5 결과 화면 (설계안 §7 · 21-5 모달 사양)
+//   15일 중 선발된 '좋은 날 3개'를 순위·별점으로. 점수·등급 숫자는 감춤(교훈 A).
+//
+//   [모달 사양] 한줄요약 + 별점3줄 + 원국표(SajuWonguk 재사용) + 일간공망
+//              + 3문장 해설 + 오행분포 + 대운 흐름 + 사주보기 연결(결제 관문)
 
 import { useState } from 'react'
 import type { RecommendationV5 } from '../lib/recommendV5'
 import { toStarLines } from '../lib/starMapV5'
+import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
+import { getGongmang } from '@/lib/saju/gongmang'
 
-// 팔레트 (기존 birth-timing 톤 유지)
+interface AiNote { oneLine: string; detail?: string }
+
 const C = {
   bg: '#fbf6ef', card: '#fffdfa', cardGold: '#fffaf2',
   text: '#4a3728', sub: '#9b8574', gold: '#c8963e',
   line: '#f0e0d5', lineGold: '#f0d5b8', accent: '#96502e',
+}
+
+const GRADE_COLOR: Record<string, string> = {
+  결핍: '#c85a5a', 약함: '#c8963e', 발달: '#5a9e6f', 과다: '#c85a5a',
 }
 
 function Stars({ n }: { n: number }) {
@@ -30,7 +37,16 @@ function rankBadge(rank: number): string {
   return rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉'
 }
 
-function DayCard({ rec, onOpen }: { rec: RecommendationV5; onOpen: (r: RecommendationV5) => void }) {
+// "연 월 일 시" 문자열 → SajuWonguk용 Pillar[](시→일→월→연)
+function parseToWonguk(saju: string): { pillar: string; stem: string; branch: string }[] {
+  const parts = saju.trim().split(/\s+/)
+  if (parts.length < 4) return []
+  const [yr, mo, dy, hr] = parts
+  const mk = (g: string, name: string) => ({ pillar: name, stem: g[0] ?? '', branch: g[1] ?? '' })
+  return [mk(hr, '시주'), mk(dy, '일주'), mk(mo, '월주'), mk(yr, '년주')]
+}
+
+function DayCard({ rec, note, onOpen }: { rec: RecommendationV5; note?: AiNote; onOpen: (r: RecommendationV5) => void }) {
   const stars = toStarLines(rec.breakdown, rec.dayunScore)
   const top = rec.rank === 1
 
@@ -58,7 +74,7 @@ function DayCard({ rec, onOpen }: { rec: RecommendationV5; onOpen: (r: Recommend
         marginBottom: 10, padding: 16,
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <span style={{ fontSize: 18 }}>{rankBadge(rec.rank)}</span>
           <div>
@@ -68,6 +84,11 @@ function DayCard({ rec, onOpen }: { rec: RecommendationV5; onOpen: (r: Recommend
         </div>
         <span style={{ fontSize: 12, color: C.gold }}>자세히 ›</span>
       </div>
+      {note?.oneLine && (
+        <div style={{ fontSize: 12, color: C.accent, lineHeight: 1.5, marginBottom: 10 }}>
+          &ldquo;{note.oneLine}&rdquo;
+        </div>
+      )}
       <div style={{ borderTop: `1px solid ${C.line}`, paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
         {stars.map((s) => (
           <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -80,19 +101,127 @@ function DayCard({ rec, onOpen }: { rec: RecommendationV5; onOpen: (r: Recommend
   )
 }
 
+function DetailModal({
+  rec, note, onClose, onViewSaju,
+}: {
+  rec: RecommendationV5
+  note?: AiNote
+  onClose: () => void
+  onViewSaju?: (r: RecommendationV5) => void
+}) {
+  const stars = toStarLines(rec.breakdown, rec.dayunScore)
+  const pillars = parseToWonguk(rec.saju)
+  const dayStem = pillars.find(p => p.pillar === '일주')?.stem ?? ''
+  const iljji = pillars.find(p => p.pillar === '일주')?.branch ?? ''
+  const yeonjji = pillars.find(p => p.pillar === '년주')?.branch ?? ''
+  const [gm1, gm2] = dayStem && iljji ? getGongmang(dayStem, iljji) : ['', '']
+  const grade = rec.breakdown.elementGrade
+  const els = ['목', '화', '토', '금', '수']
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(40,28,18,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 50 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: C.card, borderRadius: 16, padding: 20, maxWidth: 380, width: '100%', maxHeight: '86vh', overflow: 'auto' }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>
+              {rankBadge(rec.rank)} {rec.dateLabel}
+            </div>
+            <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{rec.hourLabel}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, color: C.sub, cursor: 'pointer', lineHeight: 1 }}>×</button>
+        </div>
+
+        {note?.oneLine && (
+          <div style={{ fontSize: 13, color: C.accent, fontWeight: 600, lineHeight: 1.5, margin: '10px 0 14px' }}>
+            &ldquo;{note.oneLine}&rdquo;
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 16 }}>
+          {stars.map((s) => (
+            <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 12, color: C.accent }}>{s.label}</span>
+              <Stars n={s.stars} />
+            </div>
+          ))}
+        </div>
+
+        {pillars.length === 4 && (
+          <div style={{ margin: '0 -4px 8px', overflowX: 'auto' }}>
+            <SajuWonguk saju={pillars} dayStem={dayStem} yeonjji={yeonjji} iljji={iljji} gm1={gm1} gm2={gm2} />
+          </div>
+        )}
+
+        {(gm1 || gm2) && (
+          <div style={{ fontSize: 12, color: C.sub, marginBottom: 14 }}>
+            <span style={{ color: C.gold }}>일간 공망</span> · {gm1}{gm2 && `·${gm2}`}
+          </div>
+        )}
+
+        {note?.detail && (
+          <div style={{ background: C.cardGold, borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: C.gold, marginBottom: 5 }}>이 아이는</div>
+            <div style={{ fontSize: 13, color: C.text, lineHeight: 1.7 }}>{note.detail}</div>
+          </div>
+        )}
+
+        {rec.dayunNote && (
+          <div style={{ background: '#f2f6f8', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: '#5a8ba0', marginBottom: 5 }}>대운 흐름</div>
+            <div style={{ fontSize: 13, color: C.text, lineHeight: 1.7 }}>🌊 {rec.dayunNote}</div>
+          </div>
+        )}
+
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: C.gold, marginBottom: 6 }}>오행 분포</div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {els.map((e) => (
+              <div key={e} style={{ flex: 1, textAlign: 'center', background: '#faf5ee', borderRadius: 8, padding: '8px 0' }}>
+                <div style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{e}</div>
+                <div style={{ fontSize: 10, color: GRADE_COLOR[grade[e]] ?? C.sub, marginTop: 2 }}>{grade[e]}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <button
+          onClick={() => onViewSaju?.(rec)}
+          style={{ width: '100%', padding: 13, borderRadius: 11, border: 'none', background: C.gold, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}
+        >
+          이 아이 사주 자세히 보기
+        </button>
+        <button
+          onClick={onClose}
+          style={{ width: '100%', padding: 12, borderRadius: 11, border: `1px solid ${C.line}`, background: '#fff', color: C.sub, fontSize: 13, cursor: 'pointer' }}
+        >
+          닫기
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function ResultV5({
   recommendations,
-  excludedWeekend,
+  aiNotes,
   onOpenDetail,
+  onViewSaju,
 }: {
   recommendations: RecommendationV5[]
-  excludedWeekend?: number
+  aiNotes?: Record<number, AiNote>
   onOpenDetail?: (r: RecommendationV5) => void
+  onViewSaju?: (r: RecommendationV5) => void
 }) {
   const [open, setOpen] = useState<RecommendationV5 | null>(null)
   const handleOpen = (r: RecommendationV5) => {
     if (onOpenDetail) onOpenDetail(r)
-    else setOpen(r)
+    setOpen(r)
   }
 
   if (recommendations.length === 0) {
@@ -113,40 +242,16 @@ export default function ResultV5({
       </div>
 
       {recommendations.map((r) => (
-        <DayCard key={r.dateKey} rec={r} onOpen={handleOpen} />
+        <DayCard key={r.dateKey} rec={r} note={aiNotes?.[r.rank]} onOpen={handleOpen} />
       ))}
 
       {open && (
-        <div
-          onClick={() => setOpen(null)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(40,28,18,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 50 }}
-        >
-          <div onClick={(e) => e.stopPropagation()} style={{ background: C.card, borderRadius: 14, padding: 20, maxWidth: 360, width: '100%', maxHeight: '80vh', overflow: 'auto' }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 2 }}>{open.dateLabel}</div>
-            <div style={{ fontSize: 12, color: C.sub, marginBottom: 12 }}>{open.hourLabel}</div>
-            <div style={{ fontSize: 13, color: C.accent, letterSpacing: 2, marginBottom: 14 }}>{open.saju}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
-              {toStarLines(open.breakdown, open.dayunScore).map((s) => (
-                <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 12, color: C.accent }}>{s.label}</span>
-                  <Stars n={s.stars} />
-                </div>
-              ))}
-            </div>
-            {open.dayunNote && (
-              <div style={{ background: C.cardGold, borderRadius: 8, padding: '10px 12px', marginBottom: 12 }}>
-                <div style={{ fontSize: 11, color: C.gold, marginBottom: 3 }}>대운 흐름</div>
-                <div style={{ fontSize: 12, color: C.text, lineHeight: 1.6 }}>🌊 {open.dayunNote}</div>
-              </div>
-            )}
-            <button
-              onClick={() => setOpen(null)}
-              style={{ width: '100%', padding: 12, borderRadius: 10, border: 'none', background: C.gold, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-            >
-              닫기
-            </button>
-          </div>
-        </div>
+        <DetailModal
+          rec={open}
+          note={aiNotes?.[open.rank]}
+          onClose={() => setOpen(null)}
+          onViewSaju={onViewSaju}
+        />
       )}
     </div>
   )
