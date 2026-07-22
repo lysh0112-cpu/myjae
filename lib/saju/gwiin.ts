@@ -1,12 +1,14 @@
 // lib/saju/gwiin.ts
 // ============================================================================
-// 귀인류 길신(吉神) 7가지 — 사주 원국에 매핑해 표시.
-//   천을귀인·태극귀인·문창귀인·금여·암록 : 일간(日干) 기준 → 지지에서 탐색
+// 귀인류 길신(吉神) 8가지 — 사주 원국에 매핑해 표시.
+//   천을귀인·태극귀인·문창귀인·문곡귀인·금여·암록 : 일간(日干) 기준 → 지지에서 탐색
 //   월덕귀인 : 월지 삼합 오행의 양간 → 천간에서 탐색
 //   천덕귀인 : 월지 기준 → 천간 또는 지지에서 탐색
 //
 // 근거: 자평진전·적천수·삼명통회. NotebookLM 조견표(검산 완료: 금여=건록+2,
-//   암록=건록의 육합 규칙과 20/20 일치). ★연재쌤 최종 검수 대상(원칙 12).
+//   암록=건록의 육합 규칙과 20/20 일치). 문곡귀인=문창귀인의 충(沖) 규칙,
+//   온라인 조견표 10/10 일치 검증(2026-07-22). ★연재쌤 최종 검수 대상(원칙 12).
+//   (학당·천주·천록귀인은 조견표 유파차로 보류 → 연재쌤 확인 후 추가 검토)
 //
 // 사용:
 //   getGwiinForBranch(dayStem, monthBranch, branch)  → 그 지지에 붙는 귀인 목록
@@ -25,6 +27,9 @@ const TAE_GEUK: Record<string, string[]> = {  // 태극귀인
 }
 const MUN_CHANG: Record<string, string> = {  // 문창귀인
   甲: '巳', 乙: '午', 丙: '申', 丁: '酉', 戊: '申', 己: '酉', 庚: '亥', 辛: '子', 壬: '寅', 癸: '卯',
+}
+const MUN_GOK: Record<string, string> = {  // 문곡귀인 (문창귀인의 충 = 정반대 지지)
+  甲: '亥', 乙: '子', 丙: '寅', 丁: '卯', 戊: '寅', 己: '卯', 庚: '巳', 辛: '午', 壬: '申', 癸: '酉',
 }
 const GEUM_YEO: Record<string, string> = {  // 금여 (건록+2칸)
   甲: '辰', 乙: '巳', 丙: '未', 丁: '申', 戊: '未', 己: '申', 庚: '戌', 辛: '亥', 壬: '丑', 癸: '寅',
@@ -61,6 +66,7 @@ export function getGwiinForBranch(dayStem: string, monthBranch: string, branch: 
   if (CHEON_EUL[dayStem]?.includes(branch)) result.push('천을귀인')
   if (TAE_GEUK[dayStem]?.includes(branch)) result.push('태극귀인')
   if (MUN_CHANG[dayStem] === branch) result.push('문창귀인')
+  if (MUN_GOK[dayStem] === branch) result.push('문곡귀인')
   if (GEUM_YEO[dayStem] === branch) result.push('금여')
   if (AM_ROK[dayStem] === branch) result.push('암록')
   // 천덕귀인이 지지로 성립하는 경우 (월지에 매핑된 값이 지지이고, 이 자리와 같을 때)
@@ -88,6 +94,7 @@ export const GWIIN_STYLE: Record<string, { short: string; color: string }> = {
   '천을귀인': { short: '천을', color: '#c8783c' },
   '태극귀인': { short: '태극', color: '#7c5aaa' },
   '문창귀인': { short: '문창', color: '#3c82a0' },
+  '문곡귀인': { short: '문곡', color: '#4a6c9a' },
   '금여':     { short: '금여', color: '#b48a3c' },
   '암록':     { short: '암록', color: '#5a8c5a' },
   '월덕귀인': { short: '월덕', color: '#c85a8c' },
