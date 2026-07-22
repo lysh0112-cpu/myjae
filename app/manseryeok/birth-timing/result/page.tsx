@@ -2,7 +2,9 @@
 import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import ConsultButton from '@/app/components/common/ConsultButton'
-import { runBirthTiming, type Recommendation, type AvoidDay } from '../lib/recommend'
+import { runBirthTimingV5, type RecommendationV5 } from '../lib/recommendV5'
+import { toSnapshot, fromSnapshot, type RecV5Snapshot } from '../lib/v5Bridge'
+import ResultV5 from '../components/ResultV5'
 import { supabase } from '@/lib/supabase'
 import {
   saveBirthRecord, getBirthRecord, type BirthSurvey,
@@ -120,12 +122,14 @@ async function getParentSaju(p: PersonInput | null): Promise<{ dayStem?: string;
   }
 }
 
-async function fetchAiNotes(recs: Recommendation[], survey: SurveyInput): Promise<Record<number, AiNote>> {
+async function fetchAiNotes(recs: RecommendationV5[], survey: SurveyInput): Promise<Record<number, AiNote>> {
   const wishesText = survey.wishes && survey.wishes.length > 0 ? survey.wishes.join(', ') : '특별히 없음'
-  const list = recs.map(r =>
-    `${r.rank}순위) 날짜 ${r.dateLabel} ${r.hourLabel}, 사주 ${r.saju}, ` +
-    `오행분포 목${r.breakdown.elementCount['목']} 화${r.breakdown.elementCount['화']} 토${r.breakdown.elementCount['토']} 금${r.breakdown.elementCount['금']} 수${r.breakdown.elementCount['수']}, 점수 ${r.score}`
-  ).join('\n')
+  const list = recs.map(r => {
+    const g = r.breakdown.elementGrade
+    return `${r.rank}순위) 날짜 ${r.dateLabel} ${r.hourLabel}, 사주 ${r.saju}, ` +
+      `오행등급 목${g['목']} 화${g['화']} 토${g['토']} 금${g['금']} 수${g['수']}, ` +
+      `격국 ${r.breakdown.sungpae.gyeokName}(${r.breakdown.sungpae.verdict}), 용신 ${r.breakdown.yongsinEl}`
+  }).join('\n')
 
   let toneBlock = ''
   try {
@@ -176,75 +180,6 @@ ${list}
   }
 }
 
-function CandidateCard({ c, note, defaultOpen, opWarn }: { c: Recommendation; note?: AiNote; defaultOpen: boolean; opWarn?: string }) {
-  const [open, setOpen] = useState(defaultOpen)
-  const b = c.breakdown
-  const stars = [
-    { label: '오행 균형', n: b.starOhaeng },
-    { label: '온도(조후)', n: b.starJohu },
-    { label: '지지 안정', n: b.starJiji },
-  ]
-  return (
-    <div style={{ background: cardBg, borderRadius: '12px', border: '1px solid ' + (c.rank === 1 ? '#f0d5b8' : '#f0e0d5'), marginBottom: '10px', overflow: 'hidden' }}>
-      <button onClick={() => setOpen(o => !o)}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '14px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
-        <span style={{ fontSize: '16px' }}>{rankBadge(c.rank)}</span>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '14px', color: text, fontWeight: 600 }}>{c.dateLabel}</div>
-          <div style={{ fontSize: '12px', color: sub, marginTop: '2px' }}>{c.hourLabel}</div>
-          {note?.oneLine && (
-            <div style={{ fontSize: '12px', color: '#96502e', marginTop: '4px', lineHeight: 1.4 }}>“{note.oneLine}”</div>
-          )}
-        </div>
-        <span style={{ fontSize: '15px', fontWeight: 700, color: c.rank === 1 ? gold : '#96502e' }}>{c.score}점</span>
-        <span style={{ fontSize: '12px', color: sub }}>{open ? '▲' : '▼'}</span>
-      </button>
-
-      {open && (
-        <div style={{ padding: '0 14px 16px' }}>
-          <div style={{ borderTop: '1px solid #f0e0d5', paddingTop: '12px' }}>
-            {opWarn && (
-              <div style={{ background: '#fdf2e3', border: '0.5px solid #f0d5b8', borderRadius: '8px', padding: '9px 11px', marginBottom: '12px', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
-                <span style={{ fontSize: '13px', flexShrink: 0 }}>🏥</span>
-                <span style={{ fontSize: '12px', color: '#96502e', lineHeight: 1.5 }}>{opWarn}</span>
-              </div>
-            )}
-            <div style={{ fontSize: '11px', color: sub, marginBottom: '4px' }}>아기 사주</div>
-            <div style={{ fontSize: '15px', color: '#96502e', letterSpacing: '3px', marginBottom: '14px' }}>{c.saju}</div>
-
-            {stars.map((s, i) => (
-              <div key={i} style={{ marginBottom: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '12px', color: '#96502e' }}>{s.label}</span>
-                  <Stars n={s.n} />
-                </div>
-              </div>
-            ))}
-
-            {note?.detail && (
-              <div style={{ background: '#fdf2e3', borderRadius: '8px', padding: '10px 12px', margin: '12px 0' }}>
-                <div style={{ fontSize: '11px', color: gold, marginBottom: '4px' }}>이 아이는</div>
-                <div style={{ fontSize: '13px', color: text, lineHeight: 1.6 }}>{note.detail}</div>
-              </div>
-            )}
-
-            {c.parentNote && (
-              <div style={{ background: '#f6e3d6', borderRadius: '8px', padding: '10px 12px', margin: '12px 0' }}>
-                <div style={{ fontSize: '11px', color: sub, marginBottom: '3px' }}>부모와의 관계</div>
-                <div style={{ fontSize: '13px', color: text, lineHeight: 1.5 }}>🌿 {c.parentNote}</div>
-              </div>
-            )}
-
-            <div style={{ fontSize: '12px', color: sub, lineHeight: 1.6, marginTop: '8px' }}>
-              <span style={{ color: gold }}>오행 분포</span> · 목{b.elementCount['목']} 화{b.elementCount['화']} 토{b.elementCount['토']} 금{b.elementCount['금']} 수{b.elementCount['수']}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
 function BirthResultInner() {
   const router = useRouter()
   const sp = useSearchParams()
@@ -254,8 +189,7 @@ function BirthResultInner() {
   const [survey, setSurvey] = useState<SurveyInput | null>(null)
 
   const [loading, setLoading] = useState(true)
-  const [recs, setRecs] = useState<Recommendation[]>([])
-  const [avoidDays, setAvoidDays] = useState<AvoidDay[]>([])
+  const [recs, setRecs] = useState<RecommendationV5[]>([])
   const [aiNotes, setAiNotes] = useState<Record<number, AiNote>>({})
   const [aiLoading, setAiLoading] = useState(false)
   const [errMsg, setErrMsg] = useState('')
@@ -281,15 +215,14 @@ function BirthResultInner() {
         try {
           const rec = await getBirthRecord(recordIdParam)
           const snap = rec?.resultData as {
-            recommendations?: Recommendation[]; avoidDays?: AvoidDay[]; aiNotes?: Record<number, AiNote>
+            recommendations?: RecV5Snapshot[]; aiNotes?: Record<number, AiNote>
           } | undefined
           if (rec && snap && snap.recommendations && snap.recommendations.length > 0) {
             if (!cancelled) {
               setParent1(rec.input1 as unknown as PersonInput)
               setParent2(rec.input2 as unknown as PersonInput)
               setSurvey(rec.survey as unknown as SurveyInput)
-              setRecs(snap.recommendations)
-              setAvoidDays(snap.avoidDays ?? [])
+              setRecs(snap.recommendations.map(fromSnapshot))
               setAiNotes(snap.aiNotes ?? {})
               setSaved(true)
               setLoading(false)
@@ -329,14 +262,16 @@ function BirthResultInner() {
           : sv.timePref === '평일오후' ? 'afternoon'
           : 'any'
 
-        const result = await runBirthTiming(sv.dueDate, {
+        // 부모 용신은 v5에서 아직 재관 가중에만 참고(다음 단계). 지금은 아기 원국+대운 중심.
+        void parents
+
+        const result = await runBirthTimingV5(sv.dueDate, {
           timePref: timePref as 'morning' | 'afternoon' | 'any',
-          parents,
+          gender: sv.babyGender,   // 대운 방향(순/역행)에 필수
         })
 
         if (cancelled) return
         setRecs(result.recommendations)
-        setAvoidDays(result.avoidDays)
         if (result.recommendations.length === 0) {
           setErrMsg('조건에 맞는 날을 찾지 못했어요. 시간대나 예정일을 바꿔서 다시 시도해 주세요.')
           setLoading(false)
@@ -350,7 +285,7 @@ function BirthResultInner() {
           setAiNotes(notes); setAiLoading(false)
           // ★결과가 다 갖춰지면 바로 보관함에 저장한다. (2026-07-21 2차)
           //   state 반영 전이라 인자로 넘긴다. 다시보기면 이미 saved 라 빠져나온다.
-          handleSave(result.recommendations, result.avoidDays, notes, sv)
+          handleSave(result.recommendations, notes, sv)
         }
       } catch {
         if (!cancelled) { setErrMsg('계산 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.'); setLoading(false) }
@@ -365,8 +300,7 @@ function BirthResultInner() {
   //   ★2026-07-21 2차: 자동 저장. 결과가 갖춰지면 스스로 호출된다.
   //     state 반영 전이라 값들을 인자로 받는다(안 넘기면 state 를 쓴다).
   async function handleSave(
-    recsOverride?: Recommendation[],
-    avoidOverride?: AvoidDay[],
+    recsOverride?: RecommendationV5[],
     notesOverride?: Record<number, AiNote>,
     surveyOverride?: SurveyInput | null,
   ) {
@@ -402,8 +336,7 @@ function BirthResultInner() {
       input2: toInput(parent2),
       survey: surveyBlob,
       resultData: {
-        recommendations: useRecs,
-        avoidDays: avoidOverride ?? avoidDays,
+        recommendations: useRecs.map(toSnapshot),
         aiNotes: notesOverride ?? aiNotes,
       },
     })
@@ -431,15 +364,13 @@ function BirthResultInner() {
           dateLabel: r.dateLabel,
           hourLabel: r.hourLabel,
           saju: r.saju,
-          score: r.score,
-          parentNote: r.parentNote ?? null,
-          elementCount: r.breakdown?.elementCount ?? null,
+          dayunNote: r.dayunNote ?? null,
+          gyeok: r.breakdown?.sungpae?.gyeokName ?? null,
         })),
-        avoid_days: avoidDays.map(a => ({ dateLabel: a.dateLabel, reasons: a.reasons })),
         ai_notes: aiNotes,
       }))
     } catch {}
-  }, [survey, recs, avoidDays, aiNotes, parent1, parent2])
+  }, [survey, recs, aiNotes, parent1, parent2])
 
   // 3일(추천)의 공휴일 조회 — 병원 운영 안내용
   useEffect(() => {
@@ -513,76 +444,21 @@ function BirthResultInner() {
           </div>
         )}
 
-        {!loading && !errMsg && recs.length > 0 && (() => {
-          // 탭 라벨 (offset → 라벨)
-          const tabLabel = (off: number) => off === -1 ? '예정일 전날' : off === 1 ? '예정일 다음날' : '예정일'
-          const current = recs.find(r => r.offset === tabOffset) ?? recs.find(r => r.offset === 0) ?? recs[0]
-          // 병원 운영 안내: 공휴일 or 주말
-          const holiName = current ? holidays[current.dateKey] : undefined
-          const opWarn = holiName
-            ? `${holiName}이에요. 담당 병원의 진료·수술 가능 여부를 미리 확인해 주세요.`
-            : current?.isWeekend
-              ? `주말(${current.weekday}요일)이에요. 담당 병원의 진료·수술 가능 여부를 미리 확인해 주세요.`
-              : ''
-          return (
+        {!loading && !errMsg && recs.length > 0 && (
           <>
             <div style={{ fontSize: '13px', color: '#96502e', fontWeight: 600, margin: '4px 0 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              ◆ 예정일 전후 출산일
+              ◆ 예정일 전후 좋은 날
               {aiLoading && <span style={{ fontSize: '11px', color: gold, fontWeight: 400 }}>✨ 해설 작성 중...</span>}
             </div>
-
-            {/* 3일 탭 버튼 (전날 · 예정일 · 다음날) */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
-              {[-1, 0, 1].map(off => {
-                const r = recs.find(x => x.offset === off)
-                const active = tabOffset === off
-                return (
-                  <button key={off} onClick={() => r && setTabOffset(off)} disabled={!r}
-                    style={{
-                      flex: 1, padding: '11px 6px', borderRadius: '11px', cursor: r ? 'pointer' : 'default',
-                      border: '0.5px solid ' + (active ? accent : '#f0e0d5'),
-                      background: active ? accent : '#fff',
-                      color: active ? '#fff' : (r ? '#96502e' : '#d8c5b8'),
-                      transition: 'all 0.15s ease',
-                    }}>
-                    <div style={{ fontSize: '12.5px', fontWeight: active ? 700 : 500 }}>{tabLabel(off)}</div>
-                    {r && <div style={{ fontSize: '10px', marginTop: '3px', opacity: 0.85 }}>{r.score}점</div>}
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* 선택된 날 카드 하나 */}
-            {current && (
-              <CandidateCard
-                key={current.offset}
-                c={current}
-                note={aiNotes[current.rank]}
-                defaultOpen
-                opWarn={opWarn}
-              />
-            )}
-
-            {avoidDays.length > 0 && (
-              <>
-                <div style={{ fontSize: '13px', color: '#96502e', fontWeight: 600, margin: '22px 0 12px' }}>◆ 피하면 좋은 날</div>
-                <div style={{ background: '#fbece4', border: '1px solid #f0d5c5', borderRadius: '12px', padding: '14px' }}>
-                  {avoidDays.map((a, i) => (
-                    <div key={i} style={{ marginBottom: i < avoidDays.length - 1 ? '10px' : 0 }}>
-                      <div style={{ fontSize: '13px', color: '#c8506e', fontWeight: 600, marginBottom: '4px' }}>⚠ {a.dateLabel}</div>
-                      {a.reasons.map((r: string, j: number) => (
-                        <div key={j} style={{ fontSize: '12px', color: '#b06a52', lineHeight: 1.6 }}>· {r}</div>
-                      ))}
-                    </div>
-                  ))}
-                  <div style={{ fontSize: '11px', color: sub, marginTop: '8px' }}>전통적으로 이런 날은 피해왔어요.</div>
-                </div>
-              </>
-            )}
-
+            <ResultV5
+              recommendations={recs}
+              onOpenDetail={(r) => {
+                const note = aiNotes[r.rank]
+                if (note?.detail) alert(note.detail)
+              }}
+            />
           </>
-          )
-        })()}
+        )}
 
         {/* 저장 상태 — 자동 저장이라 누르는 버튼이 아니다. (2026-07-21 2차)
             실패했을 때만 [다시 저장]으로 바뀐다.
