@@ -102,18 +102,19 @@ export const STYLE_CONFIGS: Record<string, { label: string; suffix: string }> = 
   shinkai: {
     label: '빛나는 하늘',
     suffix:
-      'Cinematic anime background art with a luminous dramatic sky, volumetric god rays, ' +
-      'crisp vivid saturated colors, delicate lens flare and floating light particles, ' +
-      'hyper-detailed clouds, deep cinematic perspective, sharp focus, ' +
-      'breathtaking and emotional, high quality. ' +
+      'Cinematic anime background art with a luminous sky, soft volumetric light rays, ' +
+      'vivid clear colors, gentle lens flare and a few floating light particles, ' +
+      'soft detailed clouds, deep perspective, sharp focus, emotional and beautiful, high quality. ' +
       'A complete landscape painting, not a diagram, no text or letters.',
   },
   citypop: {
     label: '레트로 시티팝',
     suffix:
-      '1980s retro album cover illustration style, nostalgic sunset gradient palette of ' +
-      'peach coral and soft violet, clean bold linework, flat cel shading with subtle film grain, ' +
-      'breezy refreshing nostalgic mood, high quality. ' +
+      '1980s retro album cover illustration style (city pop / AOR aesthetic): ' +
+      'clean bold linework, flat cel shading with subtle film grain, soft airbrush gradients, ' +
+      'a nostalgic pastel palette with clear separation between sky, water and land — ' +
+      'let each part keep its own natural color (blue water, green land, sky matching the time of day), ' +
+      'not a single overall color wash. Breezy, refreshing, nostalgic mood, high quality. ' +
       'A complete landscape painting, not a diagram, no text or letters.',
   },
   oriental: {

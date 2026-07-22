@@ -96,7 +96,7 @@ index 7b2bfe5..758477c 100644
          questions,
        )
 diff --git a/lib/saju/mulsangPrompt.ts b/lib/saju/mulsangPrompt.ts
-index 8b1861d..a33ff41 100644
+index 8b1861d..694bbfc 100644
 --- a/lib/saju/mulsangPrompt.ts
 +++ b/lib/saju/mulsangPrompt.ts
 @@ -40,15 +40,35 @@ const BRANCH_SEASON: Record<string, string> = {
@@ -138,7 +138,32 @@ index 8b1861d..a33ff41 100644
  // ★화면에 띄울 화풍 — 2026-07-21 확정. 순서가 곧 화면 순서다.
  //   화풍을 늘리려면 STYLE_CONFIGS 에 한 칸 넣고 이 배열에 키를 추가하면 된다.
  //   (일시적으로 감추려면 이 배열에서만 빼면 STYLE_CONFIGS 는 그대로 남는다)
-@@ -99,8 +119,11 @@ export const STYLE_CONFIGS: Record<string, { label: string; suffix: string }> =
+@@ -82,25 +102,29 @@ export const STYLE_CONFIGS: Record<string, { label: string; suffix: string }> =
+   shinkai: {
+     label: '빛나는 하늘',
+     suffix:
+-      'Cinematic anime background art with a luminous dramatic sky, volumetric god rays, ' +
+-      'crisp vivid saturated colors, delicate lens flare and floating light particles, ' +
+-      'hyper-detailed clouds, deep cinematic perspective, sharp focus, ' +
+-      'breathtaking and emotional, high quality. ' +
++      'Cinematic anime background art with a luminous sky, soft volumetric light rays, ' +
++      'vivid clear colors, gentle lens flare and a few floating light particles, ' +
++      'soft detailed clouds, deep perspective, sharp focus, emotional and beautiful, high quality. ' +
+       'A complete landscape painting, not a diagram, no text or letters.',
+   },
+   citypop: {
+     label: '레트로 시티팝',
+     suffix:
+-      '1980s retro album cover illustration style, nostalgic sunset gradient palette of ' +
+-      'peach coral and soft violet, clean bold linework, flat cel shading with subtle film grain, ' +
+-      'breezy refreshing nostalgic mood, high quality. ' +
++      '1980s retro album cover illustration style (city pop / AOR aesthetic): ' +
++      'clean bold linework, flat cel shading with subtle film grain, soft airbrush gradients, ' +
++      'a nostalgic pastel palette with clear separation between sky, water and land — ' +
++      'let each part keep its own natural color (blue water, green land, sky matching the time of day), ' +
++      'not a single overall color wash. Breezy, refreshing, nostalgic mood, high quality. ' +
+       'A complete landscape painting, not a diagram, no text or letters.',
+   },
    oriental: {
      label: '수묵담채화',
      suffix:
@@ -152,7 +177,7 @@ index 8b1861d..a33ff41 100644
        'A complete landscape painting, not a diagram, no text or letters.',
    },
  }
-@@ -118,6 +141,7 @@ export interface MulsangPromptInput {
+@@ -118,6 +142,7 @@ export interface MulsangPromptInput {
    elementScores: Record<string, number>
    yongsin: string
    style: string
@@ -160,7 +185,7 @@ index 8b1861d..a33ff41 100644
  }
  
  export interface MulsangPromptResult {
-@@ -128,10 +152,12 @@ export interface MulsangPromptResult {
+@@ -128,10 +153,12 @@ export interface MulsangPromptResult {
  }
  
  export function buildMulsangPrompt(input: MulsangPromptInput): MulsangPromptResult {
@@ -174,7 +199,7 @@ index 8b1861d..a33ff41 100644
  
    const subject = STEM_SUBJECT[dayStem] ?? STEM_SUBJECT['甲']
  
-@@ -152,9 +178,12 @@ export function buildMulsangPrompt(input: MulsangPromptInput): MulsangPromptResu
+@@ -152,9 +179,12 @@ export function buildMulsangPrompt(input: MulsangPromptInput): MulsangPromptResu
      : `The surrounding scenery is simple and calm, keeping focus on the main subject.`
  
    const yongElement = (['목', '화', '토', '금', '수'].includes(yongsin) ? yongsin : dayElement) as Element
@@ -188,7 +213,7 @@ index 8b1861d..a33ff41 100644
      토: 'steady reassuring ground giving a sense of safety',
      금: 'a crisp clear refined gleam of light',
      수: 'a clear gentle stream or soft hopeful reflection',
-@@ -162,9 +191,11 @@ export function buildMulsangPrompt(input: MulsangPromptInput): MulsangPromptResu
+@@ -162,9 +192,11 @@ export function buildMulsangPrompt(input: MulsangPromptInput): MulsangPromptResu
  
    const prompt = [
      `A serene and beautiful landscape painting set in ${season}.`,
@@ -201,7 +226,7 @@ index 8b1861d..a33ff41 100644
      // ⬇️ 구도 지시: 정중앙 금지, 멋스러운 동양화 구도
      `Composition: do NOT place the main subject dead-center. Use an artistic, well-balanced layout — ` +
        `place the main subject slightly off to one side following the rule of thirds, ` +
-@@ -172,10 +203,11 @@ export function buildMulsangPrompt(input: MulsangPromptInput): MulsangPromptResu
+@@ -172,10 +204,11 @@ export function buildMulsangPrompt(input: MulsangPromptInput): MulsangPromptResu
        `and let natural lines (a winding river, path, or shoreline) guide the eye through the scene. ` +
        `The main subject should still be clearly the focal point, beautifully framed.`,
      `Important: depict each element only in the amount described — do not exaggerate or add elements that are not mentioned.`,
