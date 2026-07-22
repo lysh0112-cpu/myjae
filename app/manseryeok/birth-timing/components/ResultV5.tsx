@@ -149,21 +149,13 @@ function DetailModal({ day, hour, note, onClose, onViewSaju }: {
       const { toPng } = await import('html-to-image')
       const png = await toPng(node, { pixelRatio: 2, cacheBust: true, backgroundColor: C.card })
       const fileName = `명카페_출산택일_${day.dateLabel.replace(/[^0-9가-힣]/g, '')}.png`
-      // 모바일: 파일 공유(카톡 등) 지원되면 공유 시트, 아니면 다운로드
-      try {
-        const blob = await (await fetch(png)).blob()
-        const file = new File([blob], fileName, { type: 'image/png' })
-        const navAny = navigator as Navigator & { canShare?: (d?: unknown) => boolean }
-        if (navAny.share && navAny.canShare && navAny.canShare({ files: [file] })) {
-          await navAny.share({ files: [file], title: '명카페 출산택일', text: '아기에게 좋은 출산일이에요' })
-          return
-        }
-      } catch { /* 공유 실패 시 다운로드로 폴백 */ }
+      // 바로 이미지 파일로 저장(다운로드). 저장한 파일을 카톡 등에 직접 첨부해 보내면 된다.
+      //   (공유 시트는 PC에서 카톡 전송이 잘 안 돼 혼란을 줘서 제거함)
       const a = document.createElement('a')
       a.href = png; a.download = fileName
       document.body.appendChild(a); a.click(); document.body.removeChild(a)
     } catch (e) {
-      console.error('카드 공유 실패:', e)
+      console.error('카드 저장 실패:', e)
     } finally {
       setSharing(false)
     }
@@ -252,8 +244,11 @@ function DetailModal({ day, hour, note, onClose, onViewSaju }: {
           disabled={sharing}
           style={{ width: '100%', padding: 13, borderRadius: 11, border: `1px solid ${C.lineGold}`, background: '#fdf3e9', color: C.accent, fontSize: 13, fontWeight: 600, cursor: sharing ? 'default' : 'pointer', marginBottom: 6, marginTop: 6 }}
         >
-          {sharing ? '카드 만드는 중…' : '🖼 이미지로 저장 · 카톡 공유'}
+          {sharing ? '이미지 만드는 중…' : '🖼 이미지로 저장하기'}
         </button>
+        <div style={{ fontSize: 10, color: C.sub, textAlign: 'center', marginBottom: 6 }}>
+          저장한 이미지를 카톡·문자에 첨부해 보낼 수 있어요
+        </div>
 
         <button
           onClick={() => onViewSaju?.(day, hour)}
