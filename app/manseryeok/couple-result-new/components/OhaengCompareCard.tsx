@@ -8,6 +8,7 @@
 // ============================================================================
 'use client'
 
+import { useState } from 'react'
 import { compareOhaeng, OHAENG_ORDER, type Ohaeng } from '@/lib/saju/ohaengCompare'
 import { EL_BG } from '@/lib/saju/ohaengColor'
 
@@ -35,6 +36,7 @@ interface Props {
 export default function OhaengCompareCard({
   aScores, bScores, aLabel = '남편', bLabel = '아내', comment,
 }: Props) {
+  const [open, setOpen] = useState(true)   // 기본 펼침. 제목 누르면 접힘
   const r = compareOhaeng(aScores, bScores)
   // 막대 길이 정규화: 두 사람 통틀어 가장 큰 값을 100%로
   const maxVal = Math.max(1, ...r.rows.flatMap(row => [row.a, row.b]))
@@ -47,11 +49,18 @@ export default function OhaengCompareCard({
 
   return (
     <div style={{ background: '#FDF6F0', borderRadius: 16, padding: '18px 15px' }}>
-      <div style={{ textAlign: 'center', marginBottom: 16 }}>
-        <div style={{ fontSize: 15, fontWeight: 500, color: '#96502e' }}>
+      {/* 제목 = 접기/펴기 헤더 */}
+      <div
+        onClick={() => setOpen(o => !o)}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', marginBottom: open ? 16 : 0, WebkitTapHighlightColor: 'transparent', WebkitUserSelect: 'none', userSelect: 'none' }}
+      >
+        <span style={{ fontSize: 15, fontWeight: 500, color: '#96502e' }}>
           타고난 오행으로 본 우리의 차이
-        </div>
+        </span>
+        <span style={{ fontSize: 11, color: '#c0a898', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
       </div>
+
+      {open && (<>
 
       {/* 닮음·보완 수치 + 게이지 (한 줄) */}
       <div style={{ display: 'flex', gap: 9, marginBottom: 16 }}>
@@ -99,6 +108,8 @@ export default function OhaengCompareCard({
       <div style={{ marginTop: 16, background: '#fdf3e9', borderRadius: 10, padding: '12px 13px', fontSize: 11.5, color: '#7a5638', lineHeight: 1.65 }}>
         {comment ?? autoComment}
       </div>
+
+      </>)}
     </div>
   )
 }
