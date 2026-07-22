@@ -1,0 +1,248 @@
+diff --git a/app/api/mulsang/route.ts b/app/api/mulsang/route.ts
+index 3b5bcfc..e77281b 100644
+--- a/app/api/mulsang/route.ts
++++ b/app/api/mulsang/route.ts
+@@ -122,8 +122,15 @@ ${body.sceneDesc || body.prompt}
+     let imageB64: string | null = null
+     let imageNote = ''
+     const openaiKey = process.env.OPENAI_API_KEY
++    // ★2026-07-21: 그림 자체 시간 제한. Vercel 함수 상한(maxDuration=60초)에
++    //   그냥 걸리면 오류 처리조차 못 하고 "그림이 아직 없어요"로 빠지던 사고가 있었다.
++    //   그 전에 우리가 55초에 끊어 원인을 imageNote/로그로 남긴다.
++    const IMAGE_TIMEOUT_MS = 55000
+     async function runImage() {
+       if (!openaiKey) { imageNote = 'no_openai_key'; return }
++      const startedAt = Date.now()
++      const controller = new AbortController()
++      const timer = setTimeout(() => controller.abort(), IMAGE_TIMEOUT_MS)
+       try {
+         const imgRes = await fetch('https://api.openai.com/v1/images/generations', {
+           method: 'POST',
+@@ -137,9 +144,14 @@ ${body.sceneDesc || body.prompt}
+             n: 1,
+             size: '1024x1024',
+           }),
++          signal: controller.signal,
+         })
+         const imgData = await imgRes.json()
+         imageB64 = imgData.data?.[0]?.b64_json ?? null
++        // ★소요 시간 로그: Vercel Logs에서 실제 걸린 시간을 확인하기 위한 것.
++        //   (화질 개선/제한시간 조정 판단의 근거. 2026-07-21 C안 미확인 항목)
++        const elapsed = Date.now() - startedAt
++        console.log(`[mulsang-image] elapsed=${elapsed}ms ok=${!!imageB64} style=${body.style ?? '-'}`)
+         if (!imageB64) {
+           // OpenAI가 준 실제 사유를 화면까지 전달 (크레딧·인증·정책 등 구분용)
+           const apiMsg = imgData?.error?.message || imgData?.error?.code || imgData?.error?.type
+@@ -149,8 +161,19 @@ ${body.sceneDesc || body.prompt}
+           await logAiError('mulsang-image', imgRes.status, imgData?.error || imgData)
+         }
+       } catch (e) {
+-        console.error('gpt-image error:', e)
+-        imageNote = 'image_error: ' + (e instanceof Error ? e.message.slice(0, 150) : 'unknown')
++        const elapsed = Date.now() - startedAt
++        // AbortError = 우리가 55초에 끊은 것. 그 외는 네트워크·기타 오류.
++        const aborted = e instanceof Error && e.name === 'AbortError'
++        if (aborted) {
++          imageNote = 'image_timeout'
++          console.error(`[mulsang-image] TIMEOUT at ${elapsed}ms (limit ${IMAGE_TIMEOUT_MS}ms)`)
++          await logAiError('mulsang-image', 408, { reason: 'self_timeout', elapsed })
++        } else {
++          console.error('gpt-image error:', e)
++          imageNote = 'image_error: ' + (e instanceof Error ? e.message.slice(0, 150) : 'unknown')
++        }
++      } finally {
++        clearTimeout(timer)
+       }
+     }
+ 
+diff --git a/app/manseryeok/mulsang/page.tsx b/app/manseryeok/mulsang/page.tsx
+index 7b2bfe5..758477c 100644
+--- a/app/manseryeok/mulsang/page.tsx
++++ b/app/manseryeok/mulsang/page.tsx
+@@ -398,6 +398,11 @@ function MulsangInner() {
+         elementScores: yongsinResult.score,
+         yongsin: yongsinResult.yongsin,
+         style,
++        // ★시지 전달: 시주 지지 우선, 없으면 hourIdx로. 모르면 null → 그림에서 시간 지시 생략.
++        hourBranch: saju.find(p => p.pillar === '시주')?.branch
++          ?? (info && info.hourIdx !== null
++            ? ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][info.hourIdx]
++            : null),
+       })
+       const sajuText = saju.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(', ')
+       const seasonKo = SEASON_LABEL[monthBranch] ?? '계절 정보 없음'
+@@ -432,7 +437,9 @@ function MulsangInner() {
+         setImageError(
+           note === 'no_openai_key'
+             ? '그림 생성 준비가 아직 안 됐어요. 관리자에게 알려주세요.'
+-            : '그림 생성이 잠시 어려운 상태예요. 다시 시도해 주세요.'
++            : note === 'image_timeout'
++              ? '그림 그리는 데 시간이 조금 오래 걸렸어요. 다시 시도하면 대개 잘 나와요.'
++              : '그림 생성이 잠시 어려운 상태예요. 다시 시도해 주세요.'
+         )
+       } else {
+         setImageError(null)
+@@ -531,6 +538,12 @@ function MulsangInner() {
+           lackElements,
+           yongsinElement: (yongsinElement || undefined) as Ohaeng | undefined,
+           styleLabel: STYLE_CONFIGS[style]?.label,
++          // ★태어난 시각 전달 — 해설이 계절(월지)을 밤으로 착각하던 문제 방지.
++          hourBranch: saju.find(p => p.pillar === '시주')?.branch
++            ?? (info && info.hourIdx !== null
++              ? ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][info.hourIdx]
++              : null),
++          hourKo: info && info.hourIdx !== null ? HOUR_LABEL[info.hourIdx] : undefined,
+         },
+         questions,
+       )
+diff --git a/lib/saju/mulsangPrompt.ts b/lib/saju/mulsangPrompt.ts
+index 8b1861d..05b8ca2 100644
+--- a/lib/saju/mulsangPrompt.ts
++++ b/lib/saju/mulsangPrompt.ts
+@@ -49,6 +49,26 @@ const BRANCH_SEASON: Record<string, string> = {
+   丑: 'late winter, still and peaceful, with the first warm hint of coming spring',
+ }
+ 
++// 시지(時支) → 그림의 시간대·빛. ★2026-07-21: 그림 프롬프트에 태어난 시각이
++//   빠져 있어 AI가 매번 노을·여명으로만 그리던 문제를 고치기 위한 표.
++//   해설용 문구(toTongbyeonInput.HOUR_MOOD)는 한글이라 그대로 못 쓴다.
++//   여기서는 gpt-image-1 에 보낼 영어로, "하늘·빛의 시간대"만 지시한다.
++//   계절(BRANCH_SEASON)은 대기·초목의 느낌을, 이 표는 하루 중 빛을 정한다.
++const BRANCH_HOUR: Record<string, string> = {
++  子: 'deep night under a calm starlit sky, gentle moonlight',
++  丑: 'the small hours before dawn, quiet dark sky with soft moonlight',
++  寅: 'first light of dawn, the sky just beginning to brighten at the horizon',
++  卯: 'early morning, the sun rising with soft fresh morning light',
++  辰: 'mid-morning, the sun well up with clear bright daylight',
++  巳: 'late morning, bright and luminous daylight approaching noon',
++  午: 'high noon, the sun at its highest with full bright daylight',
++  未: 'early afternoon, warm full daylight',
++  申: 'late afternoon, the sun lowering with warm slanting light',
++  酉: 'golden hour at sunset, warm amber and rose light across the sky',
++  戌: 'dusk, the last glow fading into early evening blue',
++  亥: 'night has settled, a calm evening sky with soft light',
++}
++
+ // ★화면에 띄울 화풍 — 2026-07-21 확정. 순서가 곧 화면 순서다.
+ //   화풍을 늘리려면 STYLE_CONFIGS 에 한 칸 넣고 이 배열에 키를 추가하면 된다.
+ //   (일시적으로 감추려면 이 배열에서만 빼면 STYLE_CONFIGS 는 그대로 남는다)
+@@ -118,6 +138,7 @@ export interface MulsangPromptInput {
+   elementScores: Record<string, number>
+   yongsin: string
+   style: string
++  hourBranch?: string | null   // ★시지(時支). 시간 모름이면 생략 → 시간 지시를 아예 안 넣는다.
+ }
+ 
+ export interface MulsangPromptResult {
+@@ -128,10 +149,12 @@ export interface MulsangPromptResult {
+ }
+ 
+ export function buildMulsangPrompt(input: MulsangPromptInput): MulsangPromptResult {
+-  const { dayStem, monthBranch, stems, yongsin, style } = input
++  const { dayStem, monthBranch, stems, yongsin, style, hourBranch } = input
+   const dayElement = (STEM_ELEMENT[dayStem] ?? '목') as Element
+   const season = BRANCH_SEASON[monthBranch] ?? 'a beautiful clear day'
+   const styleCfg = STYLE_CONFIGS[style] ?? STYLE_CONFIGS.oriental
++  // 시간대 지시: 시지가 있고 표에 있을 때만. 모르면 빈 문자열 → 프롬프트에서 빠짐.
++  const timeOfDay = hourBranch && BRANCH_HOUR[hourBranch] ? BRANCH_HOUR[hourBranch] : ''
+ 
+   const subject = STEM_SUBJECT[dayStem] ?? STEM_SUBJECT['甲']
+ 
+@@ -162,6 +185,8 @@ export function buildMulsangPrompt(input: MulsangPromptInput): MulsangPromptResu
+ 
+   const prompt = [
+     `A serene and beautiful landscape painting set in ${season}.`,
++    // ★태어난 시각의 하늘·빛. 시간 모름이면 이 줄이 통째로 빠져 AI가 알아서 정한다.
++    timeOfDay ? `Time of day: ${timeOfDay}. The lighting of the whole scene must match this time of day.` : '',
+     `The main subject of the painting: ${subject}.`,
+     surroundings,
+     `A key warm hopeful touch of ${YONG_LIGHT[yongElement]}.`,
+@@ -175,7 +200,7 @@ export function buildMulsangPrompt(input: MulsangPromptInput): MulsangPromptResu
+     `The overall mood is hopeful, warm and uplifting, never desolate or lonely, while staying true to the season.`,
+     `One single complete scenic view. No people, no text, no letters, no charts or diagrams.`,
+     styleCfg.suffix,
+-  ].join(' ')
++  ].filter(Boolean).join(' ')
+ 
+   return { prompt, dayElement, season, styleLabel: styleCfg.label }
+ }
+diff --git a/lib/saju/mulsangTongbyeonPrompt.ts b/lib/saju/mulsangTongbyeonPrompt.ts
+index c91b70c..212a8a9 100644
+--- a/lib/saju/mulsangTongbyeonPrompt.ts
++++ b/lib/saju/mulsangTongbyeonPrompt.ts
+@@ -19,6 +19,25 @@ import {
+ 
+ export type Ohaeng = '목' | '화' | '토' | '금' | '수'
+ 
++// 시지(時支) → 태어난 시각의 실제 기운. ★2026-07-22 신설.
++//   그림에는 이 시각대로 하늘·빛이 그려진다(mulsangPrompt.BRANCH_HOUR와 짝).
++//   해설이 이걸 몰라서, 겨울(월지)을 밤으로 착각해 "한밤중"으로 쓰던 사고를 막는다.
++//   (예: 오연희=午시=한낮인데 해설이 "한겨울 밤"으로 나감)
++const HOUR_MOOD: Record<string, string> = {
++  子: '한밤중 (자정 무렵)',
++  丑: '깊은 새벽 (아직 어두운 시각)',
++  寅: '동틀 무렵 새벽',
++  卯: '아침 해가 떠오르는 시각',
++  辰: '해가 완연히 오른 늦은 아침',
++  巳: '한낮으로 향하는 밝은 오전',
++  午: '해가 가장 높이 뜬 한낮 (정오 무렵)',
++  未: '한낮의 볕이 무르익은 이른 오후',
++  申: '해가 기우는 늦은 오후',
++  酉: '해 질 녘 저녁 무렵',
++  戌: '땅거미 지는 초저녁',
++  亥: '밤이 깊어가는 시각',
++}
++
+ // 그림 통변에 필요한 값 (mulsang 화면이 만들어 넘김)
+ export interface MulsangTongbyeonInput {
+   name: string                       // 이름/별명
+@@ -31,6 +50,8 @@ export interface MulsangTongbyeonInput {
+   lackElements: Ohaeng[]             // 없거나 약한 기운
+   yongsinElement?: Ohaeng            // 용신 오행 (그림 속 빛)
+   styleLabel?: string                // 화풍 (수묵담채화/지브리풍)
++  hourBranch?: string | null         // ★시지(時支) 한자. 태어난 시각 — 계절과 헷갈리지 않게.
++  hourKo?: string                    // ★태어난 시각의 한글 표현 (예: "한낮(午시)"). 없으면 생략.
+ }
+ 
+ const SYSTEM_GUIDE = `당신은 소무승(蘇無僧) 물상론에 통달한 다정한 명리 상담가입니다.
+@@ -48,6 +69,11 @@ const SYSTEM_GUIDE = `당신은 소무승(蘇無僧) 물상론에 통달한 다
+ 
+ [반드시 지킬 규칙]
+ - 아래 제공된 물상 데이터에만 근거하세요. 데이터에 없는 사실을 지어내지 마세요.
++- ★계절(월지)과 시각(시지)은 전혀 다릅니다. 절대 뒤섞지 마세요.
++  · "태어난 계절"은 봄·여름·가을·겨울의 기운이고, "태어난 시각"은 하루 중 아침·낮·저녁·밤입니다.
++  · 예를 들어 겨울에 태어났어도 한낮(午시)에 태어났다면, 그림은 "겨울의 밝은 대낮"입니다. 이런 경우 절대 "한밤중"이나 "밤"으로 묘사하면 안 됩니다.
++  · 아래 '태어난 시각'에 밝은 낮이라고 되어 있으면, 그림의 하늘도 밝습니다. 밤·어둠·네온·달빛으로 묘사하지 마세요.
++  · 반대로 밤 시각이면 낮의 햇살로 묘사하지 마세요. 그림에 그려진 시각의 빛에 맞춰 설명하세요.
+ - 통변의 중심축은 "그림 주인공(일간)"과 "그림 속 빛(용신)", 그리고 "오행의 넘침/부족"입니다.
+ - 각 질문에 딸린 "명리 연결"을 반드시 활용해 해석하세요.
+ - 의료·법률·투자의 확정적 단정은 피하고 참고 조언으로 전합니다.
+@@ -128,6 +154,19 @@ export function buildMulsangTongbyeonPrompt(
+ - 영향: ${wolji.effect}`
+     : ''
+ 
++  // ★태어난 시각(시지) 블록 — 계절과 별개. 그림의 하늘·빛이 이 시각에 맞춰 그려짐.
++  //   hourKo가 오면 그걸 우선, 없으면 시지 한자로 표에서 찾음. 둘 다 없으면 블록 생략.
++  const hourMood = input.hourKo
++    || (input.hourBranch ? HOUR_MOOD[input.hourBranch] : '')
++    || ''
++  const hourBlock = hourMood
++    ? `[그림의 시각 — 태어난 시각(시지). ★계절과 다름, 헷갈리지 말 것]
++- 태어난 시각: ${hourMood}
++- 그림의 하늘·빛은 반드시 이 시각에 맞춰야 합니다. (낮이면 밝게, 밤이면 어둡게)
++- 위 '계절'은 대기·초목의 느낌일 뿐, 하루 중 밤낮은 이 '시각'을 따르세요.`
++    : `[그림의 시각]
++- 태어난 시각을 알 수 없습니다. 밤/낮을 단정하지 말고, 계절의 분위기 위주로 부드럽게 묘사하세요.`
++
+   // 오행 균형 블록 (그림 풍성/치우침 근거)
+   const ohaengBlock = `[그림의 풍성함과 치우침 — 오행 균형(100점 기준)]
+ - 목 ${s.목} · 화 ${s.화} · 토 ${s.토} · 금 ${s.금} · 수 ${s.수}
+@@ -195,6 +234,8 @@ ${questions.map((q) => `■ ${q.category} — (제목)\n   (1~2문단, 각 문
+     '',
+     woljiBlock,
+     '',
++    hourBlock,
++    '',
+     ohaengBlock,
+     '',
+     yongBlock,

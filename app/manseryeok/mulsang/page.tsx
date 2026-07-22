@@ -538,6 +538,12 @@ function MulsangInner() {
           lackElements,
           yongsinElement: (yongsinElement || undefined) as Ohaeng | undefined,
           styleLabel: STYLE_CONFIGS[style]?.label,
+          // ★태어난 시각 전달 — 해설이 계절(월지)을 밤으로 착각하던 문제 방지.
+          hourBranch: saju.find(p => p.pillar === '시주')?.branch
+            ?? (info && info.hourIdx !== null
+              ? ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][info.hourIdx]
+              : null),
+          hourKo: info && info.hourIdx !== null ? HOUR_LABEL[info.hourIdx] : undefined,
         },
         questions,
       )
