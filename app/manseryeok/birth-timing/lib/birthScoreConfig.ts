@@ -58,6 +58,57 @@ export const BIRTH_SCORE_CONFIG = {
 
   // ── 최종 점수 상한 (아기 중심 유지) ──
   scoreCap: 100, // 최종 = min(scoreCap, 아기점수 + 부모가점)
+
+  // ══════════════════════════════════════════════════════════════════
+  // ★ v5 확장 (설계안 §8) — 격국 중심 5단계 산식 + 대운 타이밍
+  //   아래는 score.ts 재작성(4단계) 시 사용. 위쪽 v3 키는 재작성 전까지 병존.
+  //   연재쌤은 이 숫자만 바꾸면 산식 전체가 자동 변경됨.
+  // ══════════════════════════════════════════════════════════════════
+
+  // 5단계 배점 (합 100). 성공축 65 : 건강축 35 : 대운은 별도 가점.
+  weightsV5: {
+    johu: 25,      // 조후
+    gyeok: 35,     // 격국 성패
+    tonggeun: 15,  // 일간 통근·신강약
+    jaegwan: 15,   // 재·관 + 부모소망
+    ohaeng: 10,    // 오행 중화
+  },
+
+  // 격국 성패 점수 (judgeSungpae verdict → 점수)
+  gyeok: {
+    sunggyeok: 35, // 성격(상신 유력)
+    gyeokOnly: 20, // 격만 있고 상신 약함
+    pagyeok: 8,    // 파격
+  },
+
+  // ★ 대운 타이밍 (신규) — 용신 오행이 중요 시기 대운에 오는가
+  //   연재쌤 확정: 용신 우선 / 중요 시기 30~60세.
+  dayun: {
+    minAge: 30,   // 중요 시기 시작
+    maxAge: 60,   // 중요 시기 끝
+    hitBoth: 10,  // 한 대운 천간+지지 모두 용신
+    hitOne: 5,    // 천간 또는 지지 하나만 용신
+    cap: 15,      // 대운 타이밍 가점 상한
+  },
+
+  // 배제·감점 필터 (설계안 §4)
+  filter: {
+    weekendExclude: true,       // 주말·공휴일 배제 (제왕절개 실무)
+    chungWolIl: 12,             // 월지-일지 충 큰 감점
+    chungWolIlMode: 'penalty',  // 'penalty'|'exclude' — 나중에 배제 전환 쉽게
+    johuBulneung: 15,           // 조후 불능(여름 水전무/겨울 火전무) 큰 감점
+    sanaek: 0,                  // 子·卯·酉 — 삭제됨(위 jiji.sanaek 와 동일, 되살리려면 값만)
+  },
+
+  // 통근·재관 세부 (score.ts 재작성 시 사용)
+  tonggeunV5: { sinwang: 15, junghwa: 12, sinyak: 6 },
+  jaegwan: { full: 15, partial: 8 },
+  wish: { weight: 1.3 },  // 부모소망 선택 시 가중 배수
+
+  // 종격 분기 (설계안 §5-3) — 이 이상 편중이면 점수 안 매기고 전문가 상담
+  jonggyeok: { branchDominantRatio: 0.7 },
+
+  parentBonusCap: 10,
 }
 
 export type BirthScoreConfig = typeof BIRTH_SCORE_CONFIG

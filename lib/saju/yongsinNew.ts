@@ -266,7 +266,7 @@ const JIJANGAN: Record<string, string[]> = {
 }
 const YANG_STEM = new Set(['甲', '丙', '戊', '庚', '壬'])
 // 십신 (일간 기준 다른 천간)
-function sipsinOf(dayStem: string, other: string): string {
+export function sipsinOf(dayStem: string, other: string): string {
   const de = STEM_EL[dayStem], oe = STEM_EL[other]
   if (!de || !oe) return ''
   const same = YANG_STEM.has(dayStem) === YANG_STEM.has(other)
@@ -298,7 +298,7 @@ function yukchinToEl(dayEl: Ohaeng, y: Yukchin): Ohaeng {
   }
 }
 export interface GyeokgukResult { name: string; element: Ohaeng | null; note: string }
-function calcGyeokguk(saju: Pillar[], dayStem: string): GyeokgukResult {
+export function calcGyeokguk(saju: Pillar[], dayStem: string): GyeokgukResult {
   const dayEl = STEM_EL[dayStem]
   const month = saju.find(p => p.pillar === '월주')
   if (!month) return { name: '', element: null, note: '' }
