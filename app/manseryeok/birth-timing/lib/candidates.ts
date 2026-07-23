@@ -13,7 +13,10 @@ const EARTHLY_BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未'
 
 // 주간(의사 근무·수술 시간) 시진: 辰(4)~申(8) — 07~17시 (오전 8시 ~ 오후 5시 커버)
 //   새벽 卯시(05:30~07:30)는 정규 수술 시간이 아니라 제외.
-export const WORK_HOUR_INDICES = [4, 5, 6, 7, 8]
+// 수술 가능 시진 (2026-07-23 확정: 09:00~17:30)
+//   辰시(07:30~09:30)는 09시 이전이 걸려 제외. 酉시(17:30~19:30)는 17:30 이후라 제외.
+//   5=巳(09:30~11:30) 6=午(11:30~13:30) 7=未(13:30~15:30) 8=申(15:30~17:30)
+export const WORK_HOUR_INDICES = [5, 6, 7, 8]
 
 export const HOUR_LABEL: Record<number, string> = {
   0: '子시(23:30~01:30)', 1: '丑시(01:30~03:30)', 2: '寅시(03:30~05:30)', 3: '卯시(05:30~07:30)',
@@ -108,7 +111,7 @@ async function fetchDateSaju(y: number, m: number, d: number, offset: number): P
 }
 
 export interface BuildOptions {
-  // 선호 시간대: 'morning'(오전 辰~午 07~13) | 'afternoon'(未~申 13~17) | 'any'(辰~申 07~17)
+  // 선호 시간대: 'morning'(巳~午 09:30~13:30) | 'afternoon'(未~申 13:30~17:30) | 'any'(巳~申 09:30~17:30)
   timePref?: 'morning' | 'afternoon' | 'any'
   // 예정일 기준 며칠 전/후까지 볼지 (출산택일은 전날·당일·다음날 = before1/after1)
   before?: number
@@ -129,8 +132,8 @@ export async function buildCandidates(dueDate: string, opts: BuildOptions = {}):
 
   // 선호 시간대에 따른 시진 필터
   let hours = WORK_HOUR_INDICES
-  if (timePref === 'morning') hours = [4, 5, 6]      // 辰~午 (07~13)
-  else if (timePref === 'afternoon') hours = [7, 8]  // 未~申 (13~17)
+  if (timePref === 'morning') hours = [5, 6]         // 巳~午 (09:30~13:30)
+  else if (timePref === 'afternoon') hours = [7, 8]  // 未~申 (13:30~17:30)
 
   const candidates: Candidate[] = []
   for (const ds of dateSajus) {

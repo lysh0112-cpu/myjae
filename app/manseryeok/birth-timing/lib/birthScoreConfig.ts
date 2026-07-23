@@ -82,7 +82,7 @@ export const BIRTH_SCORE_CONFIG = {
   },
 
   // ★ 대운 타이밍 (신규) — 용신 오행이 중요 시기 대운에 오는가
-  //   연재쌤 확정: 용신 우선 / 중요 시기 30~60세.
+  //   연재쌤 확정: 용신 우선 / 중요 시기 20~60세.
   // 선발 규모 (목업: 좋은 날 3개, 각 날 시간 최대 3개)
   // 선발 규모 (2026-07-23 변경: 선택지가 너무 많아 혼란 → 날짜당 최고 시간 1개만)
   pick: {
@@ -92,11 +92,11 @@ export const BIRTH_SCORE_CONFIG = {
   },
 
   dayun: {
-    minAge: 30,   // 중요 시기 시작
-    maxAge: 60,   // 중요 시기 끝
-    hitBoth: 10,  // 한 대운 천간+지지 모두 용신
-    hitOne: 5,    // 천간 또는 지지 하나만 용신
-    cap: 15,      // 대운 타이밍 가점 상한
+    minAge: 20,     // 중요 시기 시작 (2026-07-23: 30 → 20 으로 확대. 청년기 포함)
+    maxAge: 60,     // 중요 시기 끝
+    jiWeight: 6.5,  // ★지지가 용신 — 뿌리라 영향력이 크다 (연재쌤 확정)
+    ganWeight: 3.5, // 천간이 용신 — 떠 있는 기운
+    cap: 15,        // 대운 타이밍 가점 상한
   },
 
   // 배제·감점 필터 (설계안 §4)
@@ -120,7 +120,7 @@ export const BIRTH_SCORE_CONFIG = {
     gyeok: 15,     // 격 — 성공의 크기(그릇)
     tonggeun: 10,  // 일간 뿌리
     jaegwan: 10,   // 재·관 (+금2화2 부자)
-    dayun: 15,     // 대운 — 용신이 30~60대에 오는가 (recommendV6에서 가산)
+    dayun: 15,     // 대운 — 용신이 20~60대에 오는가 (recommendV6에서 가산)
   },
 
   // 오행(건강) 세부 — 결핍/과다 감점 단위
@@ -149,6 +149,17 @@ export const BIRTH_SCORE_CONFIG = {
 
   tonggeunV6: { sinwang: 10, junghwa: 8, sinyak: 4, extreme: 2 },
   jaegwanV6: { full: 10, partial: 6, none: 3, richBonus: 3 },  // richBonus = 금2·화2
+
+  // 귀인 가점 (연재쌤 확정 2026-07-23: 4점 범위 내)
+  //   천을귀인 = 대표 길신(위기 극복) → 가장 크게
+  //   문창귀인 = 학업·재능 → 그 다음
+  //   자리 가중: 일지·시지(본인·자식궁)에 있으면 더 밀착된 것으로 본다.
+  gwiinV6: {
+    cheoneul: 2.5,      // 천을귀인
+    munchang: 1.5,      // 문창귀인
+    closeSeatBonus: 0.5,// 일지·시지에 있을 때 추가
+    cap: 4,             // 귀인 가점 총 상한
+  },
 
 
   tonggeunV5: { sinwang: 15, junghwa: 12, sinyak: 6 },

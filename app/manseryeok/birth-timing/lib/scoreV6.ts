@@ -31,6 +31,7 @@ import { engineInputs } from './engineAdapter'
 import { judgeSungpae, type SungpaeResult } from './gyeokgukSungpae'
 import { calcSimsanOhaeng, grade } from '@/lib/saju/simsanOhaeng'
 import { calcYongsinNew } from '@/lib/saju/yongsinNew'
+import { getGwiinForBranch } from '@/lib/saju/gwiin'
 import { BIRTH_SCORE_CONFIG as CFG } from './birthScoreConfig'
 
 const W = CFG.weightsV6
@@ -104,6 +105,8 @@ export interface ScoreV6Breakdown {
   elementGrade: Record<string, string>
   hap: HapResult
   isRichPattern: boolean       // 금2·화2 부자 사주
+  gwiin: number                // 귀인 가점 (0~4)
+  gwiinFound: string[]         // 어떤 귀인이 어느 자리에
   notes: string[]
 }
 
@@ -246,6 +249,44 @@ function scoreGyeok(sp: SungpaeResult, branches: string[]): { score: number; pen
   return { score, penalty, notes }
 }
 
+
+// ── 귀인 가점 (연재쌤 확정: 4점 범위) ─────────────────────────────────
+//   천을귀인 = 평생 위기 극복·귀인 도움 (대표 길신)
+//   문창귀인 = 학업·재능
+//   일지·시지(본인·자식궁)에 있으면 더 밀착된 것으로 보아 가산.
+//   ※ gwiin.ts 공용 부품 재사용. 화면 원국표에 이미 표시되던 것을 점수에도 반영.
+function scoreGwiin(
+  dayStem: string,
+  monthBranch: string,
+  seats: { pillar: string; branch: string }[],
+): { score: number; found: string[]; notes: string[] } {
+  const g = CFG.gwiinV6
+  const found: string[] = []
+  const notes: string[] = []
+  let score = 0
+
+  for (const seat of seats) {
+    const list = getGwiinForBranch(dayStem, monthBranch, seat.branch)
+    const isClose = seat.pillar === '일주' || seat.pillar === '시주'
+    if (list.includes('천을귀인')) {
+      score += g.cheoneul + (isClose ? g.closeSeatBonus : 0)
+      found.push(`천을귀인(${seat.pillar})`)
+    }
+    if (list.includes('문창귀인')) {
+      score += g.munchang + (isClose ? g.closeSeatBonus : 0)
+      found.push(`문창귀인(${seat.pillar})`)
+    }
+  }
+
+  if (score > g.cap) score = g.cap
+  score = Math.round(score * 10) / 10
+
+  if (found.some(f => f.startsWith('천을'))) notes.push('천을귀인이 있어 어려울 때 돕는 인연이 따라요')
+  if (found.some(f => f.startsWith('문창'))) notes.push('문창귀인이 있어 배움과 재능이 빛나요')
+
+  return { score, found, notes }
+}
+
 // ── ④ 통근 — W.tonggeun ───────────────────────────────────────────────
 function scoreTonggeun(status: string): number {
   const t = CFG.tonggeunV6
@@ -317,6 +358,12 @@ export function scoreBabyV6(c: Candidate, wish?: string): ScoreV6Breakdown {
   const gk = scoreGyeok(sp, branches)
   const tg = scoreTonggeun(status)
   const jg = scoreJaegwan(sp, count)
+  const gw = scoreGwiin(dayStem, c.month.branch, [
+    { pillar: '년주', branch: c.year.branch },
+    { pillar: '월주', branch: c.month.branch },
+    { pillar: '일주', branch: c.day.branch },
+    { pillar: '시주', branch: c.hour.branch },
+  ])
 
   // 부모 소망 가중
   const w = CFG.wish.weight
@@ -330,11 +377,13 @@ export function scoreBabyV6(c: Candidate, wish?: string): ScoreV6Breakdown {
   }
 
   // 총점 — 상한 없음(점수를 화면에 안 보여주므로 순위 변별력이 우선)
+  //   귀인은 부모소망 가중 대상이 아니다(별도 길신 가점).
   let total = parts.ohaeng + parts.yongsin + parts.gyeok + parts.tonggeun + parts.jaegwan
+            + gw.score
   if (total < 0) total = 0
   total = Math.round(total)
 
-  const notes = [...oh.notes, ...yg.notes, ...gk.notes, ...jg.notes, ...hap.notes]
+  const notes = [...oh.notes, ...yg.notes, ...gk.notes, ...jg.notes, ...gw.notes, ...hap.notes]
 
   return {
     total,
@@ -348,6 +397,8 @@ export function scoreBabyV6(c: Candidate, wish?: string): ScoreV6Breakdown {
     elementGrade: oh.gradeMap,
     hap,
     isRichPattern: jg.isRich,
+    gwiin: gw.score,
+    gwiinFound: gw.found,
     notes,
   }
 }
