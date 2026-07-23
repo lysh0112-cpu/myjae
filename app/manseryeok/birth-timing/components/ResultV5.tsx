@@ -6,7 +6,7 @@
 //   시간 버튼을 누르면 → 그 시각의 모달(원국표·공망·해설·오행·대운).
 //   점수·등급 숫자는 감춤(교훈 A).
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { DayRecommendation, HourPick } from '../lib/recommendV5'
 import { toStarLines } from '../lib/starMapV5'
 import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
@@ -144,6 +144,24 @@ function DetailModal({ day, hour, note, onClose, onViewSaju }: {
 
   // 카드 캡처용 (mulsang 사주그림과 같은 html-to-image 방식)
   const captureRef = useRef<HTMLDivElement | null>(null)
+
+  // 대운표 스크롤: 오른쪽 끝(어릴 때)에서 시작한다.
+  //   대운표를 원국표와 같은 '오른쪽→왼쪽' 흐름으로 뒤집었기 때문에,
+  //   그냥 두면 화면에 노년이 먼저 보인다. 열릴 때 오른쪽 끝으로 밀어준다.
+  const dayunScrollRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const root = dayunScrollRef.current
+    if (!root) return
+    // UnTable 안에서 실제로 가로 스크롤이 생기는 요소를 찾아 오른쪽 끝으로 보낸다.
+    const boxes = root.querySelectorAll('div')
+    for (const el of Array.from(boxes)) {
+      const box = el as HTMLElement
+      if (box.scrollWidth > box.clientWidth + 4) {
+        box.scrollLeft = box.scrollWidth
+        break
+      }
+    }
+  }, [hour.hourIdx, day.dateKey])
   const [sharing, setSharing] = useState(false)
 
   async function handleShareCard() {
@@ -212,22 +230,26 @@ function DetailModal({ day, hour, note, onClose, onViewSaju }: {
           </div>
         )}
 
-        {/* 대운표 — 원국 아래. UnTable 공용 부품 재사용(가로 스크롤). */}
+        {/* 대운표 — 원국 아래. UnTable 공용 부품 재사용(가로 스크롤).
+            ★ 원국표와 같이 '오른쪽 → 왼쪽' 흐름. 오른쪽이 어릴 때, 왼쪽으로 갈수록 노년.
+              그래서 dayunList 를 reverse 하고, 스크롤도 오른쪽 끝에서 시작시킨다. */}
         {day.dayunList && day.dayunList.length > 0 && (
           <div style={{ margin: '0 -8px 14px' }}>
-            <UnTable
-              title="대운"
-              badge="10년마다 바뀌는 큰 흐름"
-              items={day.dayunList.map((du: DayunItem) => ({
-                label: `${du.age}세`,
-                stem: du.cheongan,
-                branch: du.jiji,
-                stemSipsin: du.ganYukchin,
-                branchSipsin: du.jiYukchin,
-                unsung: getUnsung(dayStem, du.jiji),
-              }))}
-            />
-            <div style={{ fontSize: 10, color: C.sub, margin: '4px 8px 0' }}>← 옆으로 밀면 노년까지 볼 수 있어요</div>
+            <div ref={dayunScrollRef}>
+              <UnTable
+                title="대운"
+                badge="10년마다 바뀌는 큰 흐름"
+                items={[...day.dayunList].reverse().map((du: DayunItem) => ({
+                  label: `${du.age}세`,
+                  stem: du.cheongan,
+                  branch: du.jiji,
+                  stemSipsin: du.ganYukchin,
+                  branchSipsin: du.jiYukchin,
+                  unsung: getUnsung(dayStem, du.jiji),
+                }))}
+              />
+            </div>
+            <div style={{ fontSize: 10, color: C.sub, margin: '4px 8px 0' }}>옆으로 밀면 노년까지 볼 수 있어요 →</div>
           </div>
         )}
 
