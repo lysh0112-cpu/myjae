@@ -54,6 +54,30 @@ const INSEONG_OF: Record<string, string> = {
   목: '수', 화: '목', 토: '화', 금: '토', 수: '금',
 }
 
+
+// 지지 지장간 (뿌리 판정용) — 정기·중기·여기를 모두 담는다.
+//   연재쌤: "일간이 지지에 뿌리가 없으면 최저점 가까이 준다"
+//   → 일간 오행이 지지 어딘가에 들어있는지를 직접 본다.
+const JIJANGAN_EL: Record<string, string[]> = {
+  子: ['수'],            丑: ['토', '금', '수'],
+  寅: ['목', '화', '토'], 卯: ['목'],
+  辰: ['토', '수', '목'], 巳: ['화', '토', '금'],
+  午: ['화', '토'],       未: ['토', '목', '화'],
+  申: ['금', '수', '토'], 酉: ['금'],
+  戌: ['토', '화', '금'], 亥: ['수', '목'],
+}
+
+/** 일간이 지지에 뿌리내렸는가. 어느 자리에 몇 개나 있는지도 함께 본다. */
+function checkRoot(dayStem: string, branches: string[]): { has: boolean; count: number } {
+  const el = STEM_EL[dayStem] ?? ''
+  if (!el) return { has: false, count: 0 }
+  let count = 0
+  for (const b of branches) {
+    if ((JIJANGAN_EL[b] ?? []).includes(el)) count++
+  }
+  return { has: count > 0, count }
+}
+
 // 형(刑) — 삼형·상형. 파·해는 안 봄(연재쌤 확정)
 const HYEONG_GROUPS: string[][] = [
   ['寅', '巳', '申'],
@@ -105,6 +129,9 @@ export interface ScoreV6Breakdown {
   elementGrade: Record<string, string>
   hap: HapResult
   isRichPattern: boolean       // 금2·화2 부자 사주
+  hasRoot: boolean             // 일간이 지지에 뿌리내렸나 (연재쌤 중시)
+  rootCount: number            // 뿌리 개수
+  yongsinAbsent: boolean       // ★용신이 원국에 아예 없나 → 대운 보충을 봐야 함
   gwiin: number                // 귀인 가점 (0~4)
   gwiinFound: string[]         // 어떤 귀인이 어느 자리에
   notes: string[]
@@ -201,7 +228,7 @@ function scoreYongsin(
   eokbuEl: string,
   count: Record<string, number>,
   hap: HapResult,
-): { score: number; el: string; kind: '조후' | '억부'; season: '여름' | '겨울' | '봄가을'; notes: string[] } {
+): { score: number; el: string; kind: '조후' | '억부'; season: '여름' | '겨울' | '봄가을'; absent: boolean; notes: string[] } {
   const isSummer = SUMMER.includes(monthBranch)
   const isWinter = WINTER.includes(monthBranch)
   const season: '여름' | '겨울' | '봄가을' = isSummer ? '여름' : isWinter ? '겨울' : '봄가을'
@@ -212,7 +239,7 @@ function scoreYongsin(
   const kind: '조후' | '억부' = useJohu ? '조후' : '억부'
 
   const notes: string[] = []
-  if (!el) return { score: Math.round(W.yongsin * 0.4), el: '', kind, season, notes }
+  if (!el) return { score: Math.round(W.yongsin * 0.4), el: '', kind, season, absent: false, notes }
 
   // 원국에 용신이 몇 개 드러났는가 + 합으로 보강됐는가
   const n = count[el] ?? 0
@@ -226,10 +253,11 @@ function scoreYongsin(
   else score = t.none                                  // 용신이 아예 없음
   if (boosted && n > 0) score = Math.min(W.yongsin, score + t.hapBonus)
 
-  if (n === 0) notes.push(`꼭 필요한 ${el} 기운이 원국에 없어요 (대운에서 와주는지가 중요)`)
+  const absent = n === 0
+  if (absent) notes.push(`꼭 필요한 ${el} 기운이 원국에 없어요 — 대운에서 와주는지가 특히 중요해요`)
   else if (n >= 2) notes.push(`꼭 필요한 ${el} 기운이 잘 갖춰졌어요`)
 
-  return { score, el, kind, season, notes }
+  return { score, el, kind, season, absent, notes }
 }
 
 // ── ③ 격국 — W.gyeok (형충 감점을 여기서 뺀다) ────────────────────────
@@ -309,12 +337,26 @@ function scoreGwiin(
 }
 
 // ── ④ 통근 — W.tonggeun ───────────────────────────────────────────────
-function scoreTonggeun(status: string): number {
+//   ★연재쌤 확정: 일간이 지지에 뿌리가 없으면 최저점 가까이 준다.
+//   뿌리(통근)가 없으면 아무리 좋은 기운이 와도 받아서 쓸 힘이 없다.
+function scoreTonggeun(status: string, root: { has: boolean; count: number }): { score: number; notes: string[] } {
   const t = CFG.tonggeunV6
-  if (status === '신강') return t.sinwang
-  if (status === '중화') return t.junghwa
-  if (status === '신약') return t.sinyak
-  return t.extreme
+  const notes: string[] = []
+
+  // 뿌리가 아예 없으면 신강약과 무관하게 최저점.
+  if (!root.has) {
+    notes.push('일간이 지지에 뿌리를 내리지 못했어요')
+    return { score: t.noRoot, notes }
+  }
+
+  let score = status === '신강' ? t.sinwang
+    : status === '중화' ? t.junghwa
+    : status === '신약' ? t.sinyak
+    : t.extreme
+
+  // 뿌리가 둘 이상이면 든든하다고 보아 소폭 가산(상한 내에서)
+  if (root.count >= 2) score = Math.min(W.tonggeun, score + t.rootBonus)
+  return { score, notes }
 }
 
 // ── ⑤ 재관 — W.jaegwan (+ 금2화2 부자 가점) ───────────────────────────
@@ -377,7 +419,8 @@ export function scoreBabyV6(c: Candidate, wish?: string): ScoreV6Breakdown {
   const oh = scoreOhaeng(ohScore, dayEl, hap)
   const yg = scoreYongsin(c.month.branch, ys?.johu?.element ?? null, ys?.eokbu?.yongsin ?? '', count, hap)
   const gk = scoreGyeok(sp, branches)
-  const tg = scoreTonggeun(status)
+  const rootInfo = checkRoot(dayStem, branches)
+  const tg = scoreTonggeun(status, rootInfo)
   const jg = scoreJaegwan(sp, count)
   const gw = scoreGwiin(dayStem, c.month.branch, [
     { pillar: '년주', branch: c.year.branch },
@@ -393,7 +436,7 @@ export function scoreBabyV6(c: Candidate, wish?: string): ScoreV6Breakdown {
     ohaeng:   t?.ohaeng   ? oh.score * w : oh.score,
     yongsin:  t?.yongsin  ? yg.score * w : yg.score,
     gyeok:    t?.gyeok    ? gk.score * w : gk.score,
-    tonggeun: t?.tonggeun ? tg * w : tg,
+    tonggeun: t?.tonggeun ? tg.score * w : tg.score,
     jaegwan:  t?.jaegwan  ? jg.score * w : jg.score,
   }
 
@@ -404,12 +447,12 @@ export function scoreBabyV6(c: Candidate, wish?: string): ScoreV6Breakdown {
   if (total < 0) total = 0
   total = Math.round(total)
 
-  const notes = [...oh.notes, ...yg.notes, ...gk.notes, ...jg.notes, ...gw.notes, ...hap.notes]
+  const notes = [...oh.notes, ...yg.notes, ...gk.notes, ...tg.notes, ...jg.notes, ...gw.notes, ...hap.notes]
 
   return {
     total,
     ohaeng: oh.score, yongsin: yg.score, gyeok: gk.score,
-    tonggeun: tg, jaegwan: jg.score,
+    tonggeun: tg.score, jaegwan: jg.score,
     penalty: gk.penalty,
     status,
     yongsinEl: yg.el, yongsinKind: yg.kind, seasonKind: yg.season,
@@ -418,6 +461,9 @@ export function scoreBabyV6(c: Candidate, wish?: string): ScoreV6Breakdown {
     elementGrade: oh.gradeMap,
     hap,
     isRichPattern: jg.isRich,
+    hasRoot: rootInfo.has,
+    rootCount: rootInfo.count,
+    yongsinAbsent: yg.absent,
     gwiin: gw.score,
     gwiinFound: gw.found,
     notes,

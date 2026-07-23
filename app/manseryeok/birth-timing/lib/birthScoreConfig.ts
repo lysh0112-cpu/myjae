@@ -97,6 +97,7 @@ export const BIRTH_SCORE_CONFIG = {
     jiWeight: 6.5,  // ★지지가 용신 — 뿌리라 영향력이 크다 (연재쌤 확정)
     ganWeight: 3.5, // 천간이 용신 — 떠 있는 기운
     cap: 15,        // 대운 타이밍 가점 상한
+    absentBoost: 1.5, // ★원국에 용신이 없을 때 대운 점수 배수 (연재쌤 확정)
   },
 
   // 배제·감점 필터 (설계안 §4)
@@ -150,7 +151,7 @@ export const BIRTH_SCORE_CONFIG = {
   yongsinV6: {
     two: 18,       // 2개
     one: 11,       // 1개
-    none: 4,       // 0개 (대운에서 와주는지가 중요해짐)
+    none: 1,       // ★0개 — 연재쌤 확정: 감점하고 대운 보충 여부를 본다 (기존 4점→1점)
     hapBonus: 4,   // 삼합·방국으로 보강되면 가산
   },
 
@@ -163,7 +164,12 @@ export const BIRTH_SCORE_CONFIG = {
     hyeongEach: 4, // 형 1개당
   },
 
-  tonggeunV6: { sinwang: 10, junghwa: 8, sinyak: 4, extreme: 2 },
+  //   ★연재쌤 확정: 일간이 지지에 뿌리 없으면 '최저점 가까이'
+  tonggeunV6: {
+    sinwang: 10, junghwa: 8, sinyak: 4, extreme: 2,
+    noRoot: 1,      // ★뿌리 없음 → 최저점 (신강약과 무관하게 적용)
+    rootBonus: 1,   // 뿌리 2개 이상이면 소폭 가산
+  },
   jaegwanV6: { full: 10, partial: 6, none: 3, richBonus: 3 },  // richBonus = 금2·화2
 
   // 귀인 가점 (연재쌤 확정 2026-07-23: 4점 범위 내)

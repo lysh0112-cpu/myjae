@@ -222,7 +222,9 @@ export async function runBirthTimingV5(
     let dayunScore = 0, dayunNote = ''
     if (gender && !s.bd.isJonggyeok) {
       const dayun = await fetchDayunForDate(s.c, gender, cache)
-      const dt = scoreDayunTiming(dayun, s.bd.yongsinEl, CFG.dayun)
+      // 원국에 용신이 없으면 대운 보충을 더 크게 본다 (연재쌤 확정)
+      const absent = (s.bd as { yongsinAbsent?: boolean }).yongsinAbsent ?? false
+      const dt = scoreDayunTiming(dayun, s.bd.yongsinEl, CFG.dayun, absent)
       dayunScore = dt.score
       dayunNote = dt.note
     }

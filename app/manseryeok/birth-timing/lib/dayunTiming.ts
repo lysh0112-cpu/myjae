@@ -36,6 +36,9 @@ export interface DayunTimingConfig {
   jiWeight: number  // 지지가 용신일 때 점수 (기본 6.5) ★영향력 큼
   ganWeight: number // 천간이 용신일 때 점수 (기본 3.5)
   cap: number       // 이 항목 최대 점수(여러 대운 합산 상한)
+  absentBoost: number  // ★원국에 용신이 아예 없을 때 대운 점수 배수
+                       //   연재쌤: "용신이 원국에 없으면 감점하되, 대운 중요시기에
+                       //   들어오는지를 본다" → 대운이 보충해주면 그만큼 크게 쳐준다.
 }
 
 export interface DayunHit {
@@ -70,6 +73,7 @@ export function scoreDayunTiming(
   dayunList: DayunItem[],
   yongsinEl: string | null | undefined,
   cfg: DayunTimingConfig,
+  yongsinAbsent = false,   // 원국에 용신이 아예 없는가 (있으면 대운을 더 크게 본다)
 ): DayunTimingResult {
   if (!yongsinEl || dayunList.length === 0) {
     return { score: 0, hits: [], hitAges: [], jiHitAges: [], yongsinEl: yongsinEl ?? '', note: '' }
@@ -90,6 +94,10 @@ export function scoreDayunTiming(
     hits.push({ age: du.age, gan: ganHit, ji: jiHit, score: s })
   }
 
+  // ★원국에 용신이 없으면 대운이 보충해주는 값을 더 크게 본다 (연재쌤 확정).
+  //   원국에서 이미 갖춘 아이보다, 대운으로 채워지는 아이를 제대로 평가하기 위함.
+  if (yongsinAbsent) score *= cfg.absentBoost
+
   if (score > cfg.cap) score = cfg.cap
   score = Math.round(score * 10) / 10   // 소수 첫째자리까지
 
@@ -105,7 +113,9 @@ export function scoreDayunTiming(
     const ages = hitAges.map(a => `${a}세`).join('·')
     note = `필요한 ${yongsinEl} 기운이 ${ages} 대운 천간에 들어와요 (지지까지 받쳐주면 더 좋아요)`
   } else {
-    note = `중요 시기(${cfg.minAge}~${cfg.maxAge}세) 대운에 ${yongsinEl} 기운이 약해요`
+    note = yongsinAbsent
+      ? `${yongsinEl} 기운이 원국에도 없고 중요 시기 대운에도 약해요`
+      : `중요 시기(${cfg.minAge}~${cfg.maxAge}세) 대운에 ${yongsinEl} 기운이 약해요`
   }
 
   return { score, hits, hitAges, jiHitAges, yongsinEl, note }
