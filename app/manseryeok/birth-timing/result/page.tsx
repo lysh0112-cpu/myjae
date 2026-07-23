@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import ConsultButton from '@/app/components/common/ConsultButton'
 import { runBirthTimingV5, type RecommendationV5 } from '../lib/recommendV5'
 import { toSnapshot, fromSnapshot, type RecV5Snapshot } from '../lib/v5Bridge'
+import { displayName, pickSaveValue } from '@/lib/saju/personName'
 import ResultV5 from '../components/ResultV5'
 import {
   saveBirthRecord, getBirthRecord, type BirthSurvey,
@@ -296,17 +297,14 @@ function BirthResultInner() {
     const useSurvey = surveyOverride ?? survey
     // ★부모도 인자 우선. 자동저장은 state 반영 전에 호출되므로
     //   parent1/parent2 state 가 아직 null 이라 이름이 '부모1/부모2' 로 떨어졌었다.
-    const useP1 = p1Override !== undefined ? p1Override : parent1
-    const useP2 = p2Override !== undefined ? p2Override : parent2
+    //   ★자동저장은 state 반영 전에 호출된다 → 인자 우선 (공용 부품이 규칙을 강제)
+    const useP1 = pickSaveValue(p1Override, parent1)
+    const useP2 = pickSaveValue(p2Override, parent2)
     if (!useSurvey || !useSurvey.dueDate || useRecs.length === 0) return
     setSaving(true)
     setSaveFailed(false)
-    // 부모 이름. 입력화면에서 넘겨준 name 을 그대로 쓴다.
-    //   (name 이 비어야만 '부모1/부모2' 로 떨어진다 — 이름이 있으면 반드시 이름으로 저장)
-    const nameOf = (p: PersonInput | null, fallback: string): string => {
-      const nm = p?.name
-      return nm && nm.trim() ? nm : fallback
-    }
+    // 부모 이름은 공용 부품 displayName() 을 쓴다.
+    //   (화면 표시와 저장이 같은 함수를 쓰게 해서 서로 어긋나지 않게 한다)
     const toInput = (p: PersonInput | null): SavedInputData & { name?: string } => ({
       gender: p?.gender ?? '',
       calType: p?.calType ?? '양력',
@@ -322,8 +320,8 @@ function BirthResultInner() {
       babyGender: useSurvey.babyGender, wishes: useSurvey.wishes ?? [], avoidNote: useSurvey.avoidNote ?? '',
     }
     const res = await saveBirthRecord({
-      name1: nameOf(useP1, '부모1'),
-      name2: nameOf(useP2, '부모2'),
+      name1: displayName(useP1, '부모1'),
+      name2: displayName(useP2, '부모2'),
       summary: `${useSurvey.dueDate} 예정 · 길일 ${useRecs.length}개`,
       input1: toInput(useP1),
       input2: toInput(useP2),

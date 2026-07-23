@@ -24,6 +24,7 @@
 // ============================================================================
 
 import { supabase } from '@/lib/supabase'
+import { isResultRecord } from './personName'
 import { personKey, type MyInfo } from '@/lib/saju/myInfo'
 
 // ── input_data(jsonb)에 저장하는 사주 정보 형태 ──
@@ -168,13 +169,9 @@ export async function listSavedPeople(serviceType?: string): Promise<SavedPerson
   //    그래서 birth 를 통째로 빼면 부모로 등록한 사람이 목록에서 사라진다.
   //    → '결과 기록'만 골라 빼야 한다. 구분 기준은 result_data 유무.
   //       (사람 = result_data 없음 / 택일 결과 = 추천 스냅샷이 담겨 있음)
-  const rows = (data ?? []).filter((row) => {
-    const st = row.service_type as string
-    if (st === 'couple' || st === 'married') return false
-    // 출산택일 '결과 기록'만 제외. 부모로 등록한 '사람'은 남긴다.
-    if (st === 'birth' && (row as { result_data?: unknown }).result_data) return false
-    return true
-  })
+  //   판별은 공용 부품 isResultRecord() 에 맡긴다.
+  //   (service_type 만으로 거르면 '사람'까지 사라진다 — 2026-07-23 실제로 겪음)
+  const rows = (data ?? []).filter((row) => !isResultRecord(row))
 
   // serviceType 지정 시: 그 서비스에서 저장한 사람만.
   //   (예: 개명 모달 → service_type='naming' 인, 즉 이름풀이 문의한 사람만)

@@ -2,6 +2,7 @@
 import { Suspense, useState, useEffect, type ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { displayName } from '@/lib/saju/personName'
 
 // 피치톤 (신버전 · 결혼택일과 통일)
 const accent = '#b45a78'   // 출산택일 포인트(로즈핑크)
@@ -182,14 +183,14 @@ function BirthTimingInner() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
             <span style={{ fontSize: '14px' }}>🧑</span>
             <span style={{ fontSize: '12px', color: sub, minWidth: '44px', fontWeight: 600 }}>
-              {parent1?.name?.trim() || '부모1'}
+              {displayName(parent1, '부모1')}
             </span>
             <span style={{ fontSize: '13px', color: text }}>{personSummary(parent1)}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '14px' }}>🤱</span>
             <span style={{ fontSize: '12px', color: sub, minWidth: '44px', fontWeight: 600 }}>
-              {parent2?.name?.trim() || '부모2'}
+              {displayName(parent2, '부모2')}
             </span>
             <span style={{ fontSize: '13px', color: text }}>{personSummary(parent2)}</span>
           </div>
