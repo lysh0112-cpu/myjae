@@ -21,13 +21,26 @@ import type { SavedInputData } from '@/lib/saju/savedPeople'
 
 const accent = '#b45a78'   // 출산택일 포인트(로즈핑크 — 홈 카드색과 통일)
 
-// 두 부모 정보 → 결과 화면 URL 쿼리 (recordId로 스냅샷 다시보기)
+// 두 부모 정보 → 다시보기 URL
+//   ★기록이 어느 화면에서 만들어졌는지에 따라 갈라 보낸다. (2026-07-23)
+//     v7  → /detail  고른 하루의 해설 (점수 없음)
+//     그 외 → /result 옛 화면 (점수·순위). 기존 기록이 그대로 열려야 하므로 남겨 둔다.
 function toResultUrl(r: BirthRecord): string {
   const pack = (input: SavedInputData & { name?: string }, name: string) =>
     encodeURIComponent(JSON.stringify({ ...input, name }))
+  const p1 = pack(r.input1, r.name1)
+  const p2 = pack(r.input2, r.name2)
   const survey = encodeURIComponent(JSON.stringify(r.survey))
+
+  if (r.version === 'v7') {
+    // v7 기록은 고른 날짜·시각이 result_data.picked 에 들어 있다.
+    // 목록은 result_data 를 안 실어 오므로(성능), recordId 만 넘기고
+    // 해설 화면이 스스로 불러와 복원한다.
+    return `/manseryeok/birth-timing/detail?recordId=${r.id}` +
+      `&p1=${p1}&p2=${p2}&survey=${survey}`
+  }
   return `/manseryeok/birth-timing/result?recordId=${r.id}` +
-    `&p1=${pack(r.input1, r.name1)}&p2=${pack(r.input2, r.name2)}&survey=${survey}`
+    `&p1=${p1}&p2=${p2}&survey=${survey}`
 }
 
 function BirthStorageInner() {

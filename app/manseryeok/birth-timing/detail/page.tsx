@@ -16,13 +16,23 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import UnTable from '@/app/manseryeok/result-new/UnTable'
 import { getUnsung } from '@/lib/saju/unsung'
-import { saveBirthRecord, type BirthSurvey } from '@/lib/saju/birthRecords'
+import { saveBirthRecord, getBirthRecord, type BirthSurvey } from '@/lib/saju/birthRecords'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
 import { displayName } from '@/lib/saju/personName'
 import { runRecommendV7, type HourOption, type DayOption } from '../lib/recommendV7'
 import { describeBaby, type BabyDescription } from '../lib/babyDescribeV7'
 
 interface PersonInput extends SavedInputData { name?: string }
+
+/** 보관함에 담기는 v7 스냅샷 (다시보기 때 그대로 되살린다) */
+interface V7Snapshot {
+  version?: string
+  picked?: {
+    dateKey: string; y: number; m: number; d: number
+    weekday: string; dayGanji: string
+    hourIdx: number; hourLabel: string; saju: string
+  }
+}
 
 const C = {
   bg: '#FDF6F0', card: '#FFFBF7', line: '#F0E0D5', ink: '#3A2E28',
@@ -129,21 +139,37 @@ function DetailInner() {
 
   const dateKey = sp.get('date') ?? ''
   const hourIdx = Number(sp.get('hour') ?? '-1')
+  const recordId = sp.get('recordId') ?? ''
 
   useEffect(() => {
     let cancelled = false
     async function run() {
-      const survey = parseJson<SurveyInput>(sp.get('survey'))
+      let survey = parseJson<SurveyInput>(sp.get('survey'))
+      let wantDate = dateKey
+      let wantHour = hourIdx
+
+      // ── 보관함 다시보기 — recordId 로 들어오면 저장해 둔 날짜·시각을 되살린다 ──
+      if (recordId) {
+        const rec = await getBirthRecord(recordId)
+        if (cancelled) return
+        const snap = rec?.resultData as V7Snapshot | undefined
+        if (rec?.survey) survey = rec.survey as unknown as SurveyInput
+        if (snap?.picked) {
+          wantDate = snap.picked.dateKey
+          wantHour = snap.picked.hourIdx
+        }
+      }
+
       const gender = toGenderCode(survey?.babyGender ?? '')
-      if (!survey?.dueDate || !gender || !dateKey || hourIdx < 0) {
+      if (!survey?.dueDate || !gender || !wantDate || wantHour < 0) {
         setErrMsg('어떤 날을 고르셨는지 확인하지 못했어요. 이전 화면에서 다시 골라 주세요.')
         setLoading(false); return
       }
       try {
         const r = await runRecommendV7({ dueDate: survey.dueDate, gender })
         if (cancelled) return
-        const d = r.days.find(x => x.dateKey === dateKey)
-        const h = d?.hours.find(x => x.hourIdx === hourIdx)
+        const d = r.days.find(x => x.dateKey === wantDate)
+        const h = d?.hours.find(x => x.hourIdx === wantHour)
         if (!d || !h) {
           setErrMsg('고르신 날짜를 찾지 못했어요. 이전 화면에서 다시 골라 주세요.')
         } else {
@@ -158,7 +184,7 @@ function DetailInner() {
     }
     run()
     return () => { cancelled = true }
-  }, [sp, dateKey, hourIdx])
+  }, [sp, dateKey, hourIdx, recordId])
 
   // 대운표 스크롤을 오른쪽 끝(어릴 때)에서 시작시킨다.
   //   대운표를 원국표와 같은 '오른쪽→왼쪽' 흐름으로 뒤집었기 때문에,
@@ -216,6 +242,8 @@ function DetailInner() {
         // ★같은 부모·같은 예정일이면 옛 기록을 지우고 이것만 남긴다.
         //   여러 날을 눌러보며 저장해도 보관함에는 마지막에 고른 하루만 남는다.
         replaceSamePair: true,
+        // 보관함 '다시보기'가 이 해설 화면으로 되돌아오게 하는 표식
+        version: 'v7',
         resultData: {
           version: 'v7',
           picked: {
@@ -377,13 +405,16 @@ function DetailInner() {
 
         </div>{/* 캡처 영역 끝 */}
 
-        {/* 저장 · 이미지 내려받기 */}
+        {/* 저장 · 이미지 내려받기
+            보관함에서 들어온 경우(recordId)엔 이미 저장된 것이라 저장 버튼을 숨긴다 */}
         <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
+          {!recordId && (
           <button onClick={handleSaveRecord} disabled={saving} style={{
             flex: 1, padding: 13, borderRadius: 12, border: `1px solid ${C.accent}`,
             background: C.soft, color: C.brand, fontSize: 13.5, fontWeight: 700,
             cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit', opacity: saving ? .6 : 1,
           }}>{saving ? '저장 중…' : '보관함에 저장'}</button>
+          )}
           <button onClick={handleSaveImage} disabled={sharing} style={{
             flex: 1, padding: 13, borderRadius: 12, border: `1px solid ${C.accent}`,
             background: C.soft, color: C.brand, fontSize: 13.5, fontWeight: 700,
@@ -417,7 +448,7 @@ function DetailInner() {
           width: '100%', marginTop: 9, padding: 13, borderRadius: 12,
           border: `1px solid ${C.line}`, background: '#fff', color: C.brand,
           fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-        }}>다른 날도 보기</button>
+        }}>{recordId ? '보관함으로' : '다른 날도 보기'}</button>
 
       </div>
     </main>

@@ -49,6 +49,7 @@ export interface BirthRecord {
   input2: SavedInputData & { name?: string }
   survey: BirthSurvey       // 예정일·설문 (다시보기 시 필요)
   resultData?: unknown      // 결과 스냅샷 (다시보기용 — 그대로 렌더)
+  version?: string          // 'v7' 이면 새 해설 화면으로 보낸다
 }
 
 // input_data(jsonb)에 담는 형태
@@ -58,6 +59,13 @@ interface BirthInputBlob {
   survey: BirthSurvey
   pairKey: string
   summary?: string          // 목록 표시용
+  /**
+   * 어느 화면이 만든 기록인가. 보관함 '다시보기'를 어디로 보낼지 가른다.
+   *   없음|'v5' → /result  (점수·순위가 있는 옛 화면)
+   *   'v7'      → /detail  (점수 없는 새 화면. 고른 하루의 해설)
+   * ★input_data 에 둔다. 목록 조회는 result_data 를 안 가져오기 때문이다(성능).
+   */
+  version?: string
 }
 
 // ── 저장 ──
@@ -79,6 +87,8 @@ export async function saveBirthRecord(args: {
    * 기본값 false — v5(옛 화면)는 추천 5개를 한 건으로 저장하므로 종전대로 둔다.
    */
   replaceSamePair?: boolean
+  /** 'v7' 을 넘기면 보관함 다시보기가 새 해설 화면(/detail)으로 간다 */
+  version?: string
 }): Promise<{ ok: boolean; id?: string; message?: string }> {
   const { data: auth } = await supabase.auth.getUser()
   const uid = auth?.user?.id
@@ -90,6 +100,7 @@ export async function saveBirthRecord(args: {
     survey: args.survey,
     pairKey: pairKeyOf(args.input1, args.input2),
     summary: args.summary,
+    version: args.version,
   }
 
   // 같은 부모 쌍 + 같은 예정일의 옛 기록을 먼저 지운다(덮어쓰기).
@@ -156,6 +167,7 @@ function toRecord(r: {
     input2: blob.person2,
     survey,
     resultData: r.result_data ?? undefined,
+    version: blob.version,
   }
 }
 
