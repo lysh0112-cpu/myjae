@@ -153,7 +153,10 @@ function BirthTimingInner() {
     params.set('p1', JSON.stringify(parent1))
     params.set('p2', JSON.stringify(parent2))
     params.set('survey', JSON.stringify(survey))
-    router.push('/manseryeok/birth-timing/result?' + params.toString())
+    // ★v7(점수 없는 '날짜 고르기')로 보낸다. 2026-07-23 구조 전환.
+    //   옛 v5(점수·순위 화면)는 /result 에 그대로 살려 두었다.
+    //   되돌리려면 아래 경로만 '/manseryeok/birth-timing/result' 로 바꾸면 된다.
+    router.push('/manseryeok/birth-timing/pick?' + params.toString())
   }
 
   const wishOptions = ['건강', '공부운', '재물운', '인덕', '부모화목']
