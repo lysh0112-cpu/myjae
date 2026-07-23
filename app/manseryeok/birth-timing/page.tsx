@@ -178,14 +178,19 @@ function BirthTimingInner() {
 
         <SectionLabel>부모 정보</SectionLabel>
         <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', border: '0.5px solid #f0e0d5' }}>
+          {/* 이름이 있으면 이름으로 표시. 없을 때만 '부모1/부모2' 로 떨어진다. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
             <span style={{ fontSize: '14px' }}>🧑</span>
-            <span style={{ fontSize: '12px', color: sub, width: '44px' }}>부모1</span>
+            <span style={{ fontSize: '12px', color: sub, minWidth: '44px', fontWeight: 600 }}>
+              {parent1?.name?.trim() || '부모1'}
+            </span>
             <span style={{ fontSize: '13px', color: text }}>{personSummary(parent1)}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '14px' }}>🤱</span>
-            <span style={{ fontSize: '12px', color: sub, width: '44px' }}>부모2</span>
+            <span style={{ fontSize: '12px', color: sub, minWidth: '44px', fontWeight: 600 }}>
+              {parent2?.name?.trim() || '부모2'}
+            </span>
             <span style={{ fontSize: '13px', color: text }}>{personSummary(parent2)}</span>
           </div>
         </div>

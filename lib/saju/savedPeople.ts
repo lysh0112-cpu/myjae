@@ -154,7 +154,7 @@ export async function listSavedPeople(serviceType?: string): Promise<SavedPerson
   if (!u?.user) return []
   const { data, error } = await supabase
     .from('saju_records')
-    .select('id, user_id, service_type, title, relation, input_data, created_at')
+    .select('id, user_id, service_type, title, relation, input_data, result_data, created_at')
     .eq('user_id', u.user.id)
     .order('created_at', { ascending: false })
   if (error) { console.error('listSavedPeople', error); return [] }
@@ -162,12 +162,18 @@ export async function listSavedPeople(serviceType?: string): Promise<SavedPerson
   // ⚠️ saju_records는 '사람'과 '결과 기록'을 함께 담는다.
   //    두 사람 쌍으로 만든 '결과 기록'은 '한 사람'으로 쓸 수 없으므로 사람 목록에서 제외한다.
   //      · 궁합 결과: couple(연인) / married(부부)
-  //      · 출산택일 결과: birth   ← 2026-07-23 추가
-  //        (제외 안 하면 목록에 "부모1 · 부모2" 같은 항목이 사람처럼 떠서 고를 수 있었다)
-  //    단, 궁합에서 등록한 '사람'(couple_person / married_person)은 한 사람이므로 남긴다.
+  //      · 출산택일 결과: service_type='birth' 이면서 result_data 가 있는 것 ← 2026-07-23
+  //
+  //    ★주의★ 출산택일은 '사람'도 service_type='birth' 로 저장한다(입력화면에서 부모 등록).
+  //    그래서 birth 를 통째로 빼면 부모로 등록한 사람이 목록에서 사라진다.
+  //    → '결과 기록'만 골라 빼야 한다. 구분 기준은 result_data 유무.
+  //       (사람 = result_data 없음 / 택일 결과 = 추천 스냅샷이 담겨 있음)
   const rows = (data ?? []).filter((row) => {
     const st = row.service_type as string
-    return st !== 'couple' && st !== 'married' && st !== 'birth'
+    if (st === 'couple' || st === 'married') return false
+    // 출산택일 '결과 기록'만 제외. 부모로 등록한 '사람'은 남긴다.
+    if (st === 'birth' && (row as { result_data?: unknown }).result_data) return false
+    return true
   })
 
   // serviceType 지정 시: 그 서비스에서 저장한 사람만.
@@ -259,7 +265,7 @@ export async function addSavedPerson(draft: PersonDraft): Promise<AddResult> {
       relation: draft.relation,
       input_data: draft.input,
     })
-    .select('id, user_id, service_type, title, relation, input_data, created_at')
+    .select('id, user_id, service_type, title, relation, input_data, result_data, created_at')
     .single()
 
   if (error || !data) {
@@ -291,7 +297,7 @@ export async function updateSavedPerson(id: string, draft: PersonDraft): Promise
       ...(draft.serviceType !== undefined ? { service_type: draft.serviceType } : {}),
     })
     .eq('id', id)
-    .select('id, user_id, service_type, title, relation, input_data, created_at')
+    .select('id, user_id, service_type, title, relation, input_data, result_data, created_at')
     .single()
 
   if (error || !data) {
