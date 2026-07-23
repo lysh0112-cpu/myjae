@@ -187,17 +187,19 @@ export function judgeCandidate(c: Candidate, opts: JudgeOptions): FilterDetail {
 // ── 선택 필터 메타 (화면이 그대로 읽어 쓴다) ──────────────────────────────
 export type OptKey = 'optDaeun' | 'optFiveEl' | 'optBalance' | 'optFourRoot' | 'optGwiin'
 
-export const OPT_FILTERS: { key: OptKey; label: string; desc: string }[] = [
-  { key: 'optDaeun',    label: '인생 중반의 흐름',
-    desc: '아이에게 필요한 기운이 20대에서 60대 사이에 찾아오는 날이에요.' },
-  { key: 'optFiveEl',   label: '고루 갖춘 기운',
-    desc: '나무·불·흙·쇠·물 다섯 기운이 하나도 빠짐없이 들어 있어요.' },
-  { key: 'optBalance',  label: '한쪽으로 치우치지 않음',
-    desc: '어느 한 기운이 지나치게 몰리지 않아요.' },
-  { key: 'optFourRoot', label: '고르게 단단한 기운',
-    desc: '아이 자신·일·재능·살림살이 네 갈래가 모두 뿌리를 두고 있어요.' },
-  { key: 'optGwiin',    label: '나를 도와주는 귀인',
-    desc: '예로부터 어려울 때 돕는 인연이 따른다고 본 자리가 들어와요.' },
+//   ★버튼명은 연재쌤 안(2026-07-23). 원 명리 개념을 한자로 병기해
+//     "지어낸 말이 아니다"라는 신뢰를 주면서도 뜻은 한글로 읽히게 한다.
+export const OPT_FILTERS: { key: OptKey; label: string; hanja: string; desc: string }[] = [
+  { key: 'optDaeun',    label: '중년 대운',   hanja: '大運',
+    desc: '아이에게 필요한 기운이 20~60대에 찾아와요.' },
+  { key: 'optFiveEl',   label: '오행 구족',   hanja: '五行具足',
+    desc: '나무·불·흙·쇠·물 다섯이 하나도 빠지지 않았어요.' },
+  { key: 'optBalance',  label: '기운의 균형', hanja: '中和',
+    desc: '어느 한 기운이 지나치게 몰리지 않았어요.' },
+  { key: 'optFourRoot', label: '네 기운 착근', hanja: '着根',
+    desc: '자신·일·재능·살림 네 갈래가 모두 뿌리를 두었어요.' },
+  { key: 'optGwiin',    label: '도움 기운',   hanja: '天乙貴人',
+    desc: '어려울 때 돕는 인연이 따른다고 본 자리가 들어와요.' },
 ]
 
 export type OptState = Record<OptKey, boolean>

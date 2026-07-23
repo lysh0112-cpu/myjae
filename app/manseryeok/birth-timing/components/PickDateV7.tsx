@@ -25,68 +25,72 @@ const C = {
 }
 
 // 모달 본문 — 고정 4 + 선택 5
-const HELP: Record<string, { t: string; k: string; w: string; e: string; c: string }> = {
+//   공용 TermModal(app/manseryeok/result-new/TermModal.tsx) 의 규격을 따른다.
+//   제목 옆 한자 병기 · 카테고리 배지 · "한마디로" 라벨 · 닫기는 '확인'.
+//   ★버튼명은 연재쌤 안(2026-07-23) 기준. 원 명리 개념을 괄호로 병기한다.
+interface Help { t: string; hanja: string; cat: string; one: string; body: string; note: string }
+const HELP: Record<string, Help> = {
   fixRoot: {
-    t: '든든한 기운', k: '통근(通根) · 뿌리내림',
-    w: '사주 여덟 글자 가운데 아이 자신을 뜻하는 글자가 하나 있어요. 그 글자와 같은 기운이 아래쪽 땅자리에 들어 있으면 뿌리를 내렸다고 합니다.',
-    e: '나무로 치면 줄기만 서 있는 것과, 흙에 단단히 박힌 것의 차이예요. 뿌리가 있어야 좋은 기운이 찾아와도 받아서 쓸 힘이 생긴다고 봅니다. 그래서 뿌리가 없는 시간은 처음부터 빼 두었어요.',
-    c: '뿌리가 많다고 무조건 좋은 것은 아니에요. 지나치면 고집이 세지거나 융통성이 부족해질 수 있어서, 알맞은 정도가 좋다고 봅니다.',
+    t: '뿌리 기운', hanja: '通根', cat: '고정',
+    one: '아이 자신이 땅에 뿌리를 내린 날이에요.',
+    body: '사주 여덟 글자 가운데 아이 자신을 뜻하는 글자가 하나 있어요. 그 글자와 같은 기운이 아래쪽 땅자리에 들어 있으면 뿌리를 내렸다고 합니다.\n\n나무로 치면 줄기만 서 있는 것과, 흙에 단단히 박힌 것의 차이예요. 뿌리가 있어야 좋은 기운이 찾아와도 받아서 쓸 힘이 생긴다고 봅니다.',
+    note: '뿌리가 많다고 무조건 좋은 것은 아니에요. 지나치면 고집이 세지거나 융통성이 부족해질 수 있어서, 알맞은 정도가 좋다고 봅니다.',
   },
   fixWonjin: {
-    t: '편안한 자리', k: '원진(怨嗔) · 까닭 없이 불편한 사이',
-    w: '특별한 이유가 없는데도 왠지 마음이 맞지 않는 관계가 있어요. 크게 다투지는 않지만 속으로 앙금이 남는 사이입니다.',
-    e: '태어난 달과 날이 이런 사이가 되는 경우를 미리 빼 두었어요. 이 두 자리는 아이가 자라며 가장 오래 머무는 자리로 보기 때문에, 여기만큼은 편안한 쪽으로 잡았습니다.',
-    c: '부딪침이 큰 편은 아니라서 가볍게 보는 분들도 있어요. 다만 굳이 두고 볼 이유도 없다고 판단했습니다.',
+    t: '거슬림 없음', hanja: '怨嗔', cat: '고정',
+    one: '태어난 달과 날이 서로 순한 날이에요.',
+    body: '특별한 이유가 없는데도 왠지 마음이 맞지 않는 관계를 원진이라고 합니다. 크게 다투지는 않지만 속으로 앙금이 남는 사이예요.\n\n태어난 달과 날이 이런 사이가 되는 경우를 미리 빼 두었어요. 이 두 자리는 아이가 자라며 가장 오래 머무는 자리로 봅니다.',
+    note: '부딪침이 큰 편은 아니라서 가볍게 보는 분들도 있어요. 다만 굳이 두고 볼 이유도 없다고 판단했습니다.',
   },
   fixHyeong: {
-    t: '부딪침 없는 자리', k: '형(刑) · 서로 다투는 관계',
-    w: '사람 사이에도 유난히 부딪치는 조합이 있듯, 열두 글자 중에도 만나면 서로를 깎아내리는 짝이 있어요.',
-    e: '태어난 달과 날이 그런 사이인 경우를 빼 두었어요. 옛 책에서는 다치거나 시비에 휘말리기 쉽다고 보았습니다.',
-    c: '남을 다스리는 일에는 오히려 힘이 된다고 보는 견해도 있어요. 반드시 나쁘기만 한 것은 아니지만, 아이 사주에는 두지 않는 쪽으로 잡았습니다.',
+    t: '부딪힘 없음', hanja: '刑', cat: '고정',
+    one: '태어난 달과 날이 서로 모나지 않은 날이에요.',
+    body: '사람 사이에도 유난히 부딪치는 조합이 있듯, 열두 글자 중에도 만나면 서로를 깎아내리는 짝이 있어요. 이것을 형(刑)이라고 합니다.\n\n태어난 달과 날이 그런 사이인 경우를 빼 두었어요. 옛 책에서는 다치거나 시비에 휘말리기 쉽다고 보았습니다.',
+    note: '남을 다스리는 일에는 오히려 힘이 된다고 보는 견해도 있어요. 반드시 나쁘기만 한 것은 아니지만, 아이 사주에는 두지 않는 쪽으로 잡았습니다.',
   },
   fixSamePillar: {
-    t: '겹치지 않는 기둥', k: '일주 · 월주 동일 제외',
-    w: '사주는 네 기둥으로 이루어져요. 그중 태어난 달과 태어난 날의 두 글자가 완전히 똑같이 겹치는 경우가 있습니다.',
-    e: '같은 글자가 겹치면 그 기운만 두 배로 커져서 나머지가 묻히기 쉬워요. 겉으로는 다섯 기운이 다 있어 보여도 실제로는 한쪽으로 쏠린 사주가 됩니다.',
-    c: '같은 기둥이 겹치는 것을 기운이 뚜렷하다고 좋게 보는 견해도 있어요. 다만 균형을 우선으로 보는 쪽을 택했습니다.',
+    t: '중복 없음', hanja: '重複', cat: '고정',
+    one: '같은 글자가 겹쳐 한쪽으로 쏠리지 않은 날이에요.',
+    body: '사주는 네 기둥으로 이루어져요. 그중 태어난 달과 태어난 날의 두 글자가 완전히 똑같이 겹치는 경우가 있습니다.\n\n같은 글자가 겹치면 그 기운만 두 배로 커져서 나머지가 묻히기 쉬워요. 겉으로는 다섯 기운이 다 있어 보여도 실제로는 한쪽으로 쏠린 사주가 됩니다.',
+    note: '같은 기둥이 겹치는 것을 기운이 뚜렷하다고 좋게 보는 견해도 있어요. 다만 균형을 우선으로 보는 쪽을 택했습니다.',
   },
   optDaeun: {
-    t: '인생 중반의 흐름', k: '대운(大運) · 10년마다 바뀌는 큰 흐름',
-    w: '사람에게는 10년 단위로 바뀌는 큰 흐름이 있어요. 이것을 대운이라고 합니다. 아이에게 특히 필요한 기운이 20대에서 60대 사이에 찾아오는지를 봤어요.',
-    e: '이 흐름은 태어난 달에서 정해져요. 예정일이 정해지면 큰 틀은 거의 같지만, 어느 날에 태어나느냐에 따라 그 기운을 무엇으로 받는지가 달라집니다. 같은 시기가 어떤 아이에게는 재물이 붙는 때가 되고, 어떤 아이에게는 배움이 깊어지는 때가 됩니다.',
-    c: '여름·겨울에 태어나면 따뜻함과 서늘함의 균형을, 봄·가을이면 기운의 세기를 기준으로 봐요. 계절에 따라 보는 방식이 다릅니다.',
+    t: '중년 대운', hanja: '大運', cat: '선택',
+    one: '아이에게 필요한 기운이 20~60대에 찾아오는 날이에요.',
+    body: '사람에게는 10년 단위로 바뀌는 큰 흐름이 있어요. 이것을 대운이라고 합니다. 아이에게 특히 필요한 기운(용신)이 20대에서 60대 사이에 찾아오는지를 봤어요.\n\n이 흐름은 태어난 달에서 정해져요. 예정일이 정해지면 큰 틀은 거의 같지만, 어느 날에 태어나느냐에 따라 그 기운을 무엇으로 받는지가 달라집니다. 같은 시기가 어떤 아이에게는 재물이 붙는 때가 되고, 어떤 아이에게는 배움이 깊어지는 때가 됩니다.',
+    note: '여름·겨울에 태어나면 따뜻함과 서늘함의 균형(조후)을, 봄·가을이면 기운의 세기(억부)를 기준으로 봐요. 계절에 따라 보는 방식이 다릅니다.',
   },
   optFiveEl: {
-    t: '고루 갖춘 기운', k: '오행(五行) · 다섯 기운',
-    w: '세상의 기운을 나무·불·흙·쇠·물 다섯으로 나누어 봅니다. 여덟 글자 안에 이 다섯이 하나도 빠짐없이 들어 있는 날만 남겨요.',
-    e: '하나가 아예 없으면 그 부분이 비어 있다고 봅니다. 다만 여덟 글자에 다섯을 모두 담으려면 어느 하나는 한 개뿐이 되기 마련이에요. 그건 자연스러운 일입니다.',
-    c: '다 갖췄다고 좋기만 한 것도, 하나 없다고 나쁘기만 한 것도 아니에요. 없는 기운은 살아가며 채워 간다고 보기도 합니다.',
+    t: '오행 구족', hanja: '五行具足', cat: '선택',
+    one: '나무·불·흙·쇠·물 다섯이 하나도 빠지지 않은 날이에요.',
+    body: '세상의 기운을 다섯으로 나누어 봅니다. 여덟 글자 안에 이 다섯이 모두 들어 있는 날만 남겨요.\n\n하나가 아예 없으면 그 부분이 비어 있다고 봅니다. 다만 여덟 글자에 다섯을 모두 담으려면 어느 하나는 한 개뿐이 되기 마련이에요. 그건 자연스러운 일입니다.',
+    note: '다 갖췄다고 좋기만 한 것도, 하나 없다고 나쁘기만 한 것도 아니에요. 없는 기운은 살아가며 채워 간다고 보기도 합니다.',
   },
   optBalance: {
-    t: '한쪽으로 치우치지 않음', k: '오행 편중 · 쏠림',
-    w: '다섯 기운이 다 있더라도, 그중 하나가 여덟 글자의 절반 가까이를 차지하면 한쪽으로 쏠렸다고 봅니다.',
-    e: '예를 들어 나무 기운이 셋 이상이면 나머지 넷이 다섯 자리를 나눠 갖게 돼요. 겉보기엔 고른데 실제로는 한 기운이 판을 주도합니다.',
-    c: '계절에 따라 자연스러운 쏠림도 있어요. 봄에 태어나면 나무가 많고 가을이면 쇠가 많은 것은 당연한 일입니다. 이걸 흠으로만 볼 필요는 없어요.',
+    t: '기운의 균형', hanja: '中和', cat: '선택',
+    one: '어느 한 기운이 지나치게 몰리지 않은 날이에요.',
+    body: '다섯 기운이 다 있더라도, 그중 하나가 여덟 글자의 절반 가까이를 차지하면 한쪽으로 쏠렸다고 봅니다.\n\n예를 들어 나무 기운이 셋 이상이면 나머지 넷이 다섯 자리를 나눠 갖게 돼요. 겉보기엔 고른데 실제로는 한 기운이 판을 주도합니다.',
+    note: '계절에 따라 자연스러운 쏠림도 있어요. 봄에 태어나면 나무가 많고 가을이면 쇠가 많은 것은 당연한 일입니다. 이걸 흠으로만 볼 필요는 없어요.',
   },
   optFourRoot: {
-    t: '고르게 단단한 기운', k: '신왕 · 관왕 · 식상왕 · 재왕',
-    w: '사주에는 네 갈래 힘이 있어요. 아이 자신, 지켜야 할 일과 규범, 드러내는 재능, 다루는 살림살이입니다. 이 넷이 모두 땅에 뿌리를 두고 있는 날만 남겨요.',
-    e: '하나만 크고 나머지가 비어 있는 것보다, 네 갈래가 고루 자리 잡은 쪽을 고르는 방식이에요. 어느 하나가 뿌리 없이 떠 있으면 그 부분이 실속을 갖기 어렵다고 봅니다.',
-    c: '고르다는 것이 곧 크다는 뜻은 아니에요. 한 가지가 뚜렷하게 강한 사주를 더 좋게 보는 견해도 있습니다.',
+    t: '네 기운 착근', hanja: '着根', cat: '선택',
+    one: '자신·일·재능·살림 네 갈래가 모두 뿌리를 둔 날이에요.',
+    body: '사주에는 네 갈래 힘이 있어요. 아이 자신(신), 지켜야 할 일과 규범(관), 드러내는 재능(식상), 다루는 살림살이(재)입니다. 이 넷이 모두 땅에 뿌리를 두고 있는 날만 남겨요.\n\n하나만 크고 나머지가 비어 있는 것보다, 네 갈래가 고루 자리 잡은 쪽을 고르는 방식이에요. 어느 하나가 뿌리 없이 떠 있으면 그 부분이 실속을 갖기 어렵다고 봅니다.',
+    note: '고르다는 것이 곧 크다는 뜻은 아니에요. 한 가지가 뚜렷하게 강한 사주를 더 좋게 보는 견해도 있습니다.',
   },
   optGwiin: {
-    t: '나를 도와주는 귀인', k: '천을귀인(天乙貴人)',
-    w: '예로부터 어려울 때 돕는 사람이 나타난다고 본 자리입니다. 여러 길한 자리 가운데서도 으뜸으로 쳐 왔어요.',
-    e: '태어난 날의 기준 글자에 따라 어느 자리가 귀인인지 정해져요. 그 자리가 아이 사주 안에 들어오는 날만 남깁니다. 어느 기둥에 들어오는지에 따라 뜻을 달리 보기도 해요.',
-    c: '귀인이 없다고 도움을 받지 못한다는 뜻은 아니에요. 있으면 좋게 보는 자리일 뿐입니다.',
+    t: '도움 기운', hanja: '天乙貴人', cat: '선택',
+    one: '어려울 때 돕는 인연이 따른다고 본 자리가 든 날이에요.',
+    body: '예로부터 어려울 때 돕는 사람이 나타난다고 본 자리입니다. 여러 길한 자리 가운데서도 으뜸으로 쳐 왔어요.\n\n태어난 날의 기준 글자에 따라 어느 자리가 귀인인지 정해져요. 그 자리가 아이 사주 안에 들어오는 날만 남깁니다. 어느 기둥에 들어오는지에 따라 뜻을 달리 보기도 해요.',
+    note: '귀인이 없다고 도움을 받지 못한다는 뜻은 아니에요. 있으면 좋게 보는 자리일 뿐입니다.',
   },
 }
 
-const FIXED_CHIPS: { key: string; label: string }[] = [
-  { key: 'fixRoot', label: '든든한 기운' },
-  { key: 'fixWonjin', label: '편안한 자리' },
-  { key: 'fixHyeong', label: '부딪침 없는 자리' },
-  { key: 'fixSamePillar', label: '겹치지 않는 기둥' },
+const FIXED_CHIPS: { key: string; label: string; hanja: string }[] = [
+  { key: 'fixRoot', label: '뿌리 기운', hanja: '通根' },
+  { key: 'fixWonjin', label: '거슬림 없음', hanja: '怨嗔' },
+  { key: 'fixHyeong', label: '부딪힘 없음', hanja: '刑' },
+  { key: 'fixSamePillar', label: '중복 없음', hanja: '重複' },
 ]
 
 interface Props {
@@ -152,19 +156,25 @@ export default function PickDateV7({ result, onPickHour, onConsult }: Props) {
 
       {/* 고정 4개 */}
       <div style={{ background: C.warm, borderRadius: 13, padding: '14px 15px', marginBottom: 15 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: C.brand }}>✓ 먼저 정리해 둔 것</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.brand, letterSpacing: '-.2px' }}>
+          이미 확인해 둔 것
+        </div>
         <div style={{ fontSize: 12.5, color: C.sub, lineHeight: 1.75, marginTop: 7 }}>
           알려주신 예정일을 기준으로 <b style={{ color: C.brand }}>3주 전부터 예정일 사흘 뒤까지</b>,
           병원이 수술하는 <b style={{ color: C.brand }}>평일 오전 9시 30분 ~ 오후 5시 30분</b> 안에서
           찾았어요. 그중 아래 네 가지는 미리 확인해 두었습니다.
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 10 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 11 }}>
           {FIXED_CHIPS.map(f => (
             <button key={f.key} onClick={() => setHelp(f.key)} style={{
-              background: '#fff', border: `1px solid ${C.line}`, borderRadius: 20,
-              padding: '5px 11px', fontSize: 11.5, color: C.brand, fontWeight: 600,
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}>{f.label}<span style={{ color: C.accent, marginLeft: 3 }}>?</span></button>
+              display: 'flex', alignItems: 'baseline', gap: 4,
+              background: '#fff', border: `1px solid ${C.line}`, borderRadius: 8,
+              padding: '6px 11px', fontSize: 12.5, color: C.brand, fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '-.2px',
+            }}>
+              {f.label}
+              <span style={{ fontSize: 10, color: '#C9AA96', fontWeight: 400 }}>{f.hanja}</span>
+            </button>
           ))}
         </div>
       </div>
@@ -198,44 +208,51 @@ export default function PickDateV7({ result, onPickHour, onConsult }: Props) {
         두 분의 마음에 달렸어요.
       </p>
 
-      {/* 선택 5개 */}
+      {/* 선택 5개 — 카드를 누르면 설명, 스위치를 누르면 켜고 끔 */}
       {OPT_FILTERS.map(f => {
         const p = preview(f.key)
         const active = on[f.key]
         return (
-          <div key={f.key} style={{
-            background: C.card, border: `1px solid ${active ? C.accent : C.line}`,
-            borderRadius: 14, padding: 14, marginBottom: 9,
-            boxShadow: active ? '0 1px 9px rgba(200,120,60,.11)' : 'none',
-            opacity: p.tone === 'zero' ? .55 : 1,
+          <div key={f.key} onClick={() => setHelp(f.key)} style={{
+            background: active ? '#FFF6EE' : C.card,
+            border: `1px solid ${active ? C.accent : C.line}`,
+            borderRadius: 14, padding: '15px 15px 14px', marginBottom: 9, cursor: 'pointer',
+            boxShadow: active ? '0 2px 10px rgba(200,120,60,.10)' : 'none',
+            transition: 'background .2s, border-color .2s, box-shadow .2s',
+            opacity: p.tone === 'zero' ? .5 : 1,
           }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 11 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {f.label}
-                  <button onClick={() => setHelp(f.key)} style={{
-                    border: 'none', background: '#F3E6DC', color: C.brand,
-                    width: 18, height: 18, borderRadius: '50%', fontSize: 11,
-                    fontWeight: 700, cursor: 'pointer', padding: 0, lineHeight: 1, flex: 'none',
-                  }}>?</button>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+                  <span style={{ fontSize: 15.5, fontWeight: 700, letterSpacing: '-.3px' }}>{f.label}</span>
+                  <span style={{ fontSize: 10.5, color: '#C9AA96', fontWeight: 400 }}>{f.hanja}</span>
                 </div>
-                <div style={{ fontSize: 12.5, color: C.sub, lineHeight: 1.6, marginTop: 4 }}>{f.desc}</div>
-                <div style={{ fontSize: 12, marginTop: 7, fontWeight: 600, color: toneColor[p.tone] }}>
-                  {p.tone === 'on' ? '✓ ' : ''}{p.text}
-                </div>
+                <div style={{ fontSize: 12.5, color: C.sub, lineHeight: 1.6, marginTop: 5 }}>{f.desc}</div>
               </div>
-              <button onClick={() => setOn({ ...on, [f.key]: !active })} style={{
-                flex: 'none', width: 47, height: 27, borderRadius: 99,
-                background: active ? C.accent : '#E4D5C8', position: 'relative',
-                cursor: 'pointer', border: 'none', transition: 'background .2s', marginTop: 2,
-              }}>
+              <button
+                onClick={e => { e.stopPropagation(); setOn({ ...on, [f.key]: !active }) }}
+                aria-label={`${f.label} ${active ? '끄기' : '켜기'}`}
+                style={{
+                  flex: 'none', width: 48, height: 28, borderRadius: 99,
+                  background: active ? C.accent : '#E4D5C8', position: 'relative',
+                  cursor: 'pointer', border: 'none', transition: 'background .2s',
+                }}>
                 <span style={{
-                  position: 'absolute', top: 3, left: 3, width: 21, height: 21,
+                  position: 'absolute', top: 3, left: 3, width: 22, height: 22,
                   borderRadius: '50%', background: '#fff',
                   transform: active ? 'translateX(20px)' : 'none',
-                  transition: 'transform .2s', boxShadow: '0 1px 3px rgba(0,0,0,.18)',
+                  transition: 'transform .2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)',
                 }} />
               </button>
+            </div>
+            <div style={{
+              marginTop: 11, paddingTop: 10, borderTop: `1px solid ${active ? '#F2DFCC' : '#F7EDE5'}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+            }}>
+              <span style={{ fontSize: 11.5, fontWeight: 600, color: toneColor[p.tone] }}>
+                {p.tone === 'on' ? '✓ ' : ''}{p.text}
+              </span>
+              <span style={{ fontSize: 11, color: '#C9AA96' }}>눌러서 자세히</span>
             </div>
           </div>
         )
@@ -322,38 +339,59 @@ export default function PickDateV7({ result, onPickHour, onConsult }: Props) {
         )}
       </div>
 
-      {/* 설명 모달 */}
-      {help && HELP[help] && (
-        <div onClick={e => { if (e.target === e.currentTarget) setHelp(null) }} style={{
-          position: 'fixed', inset: 0, background: 'rgba(58,46,40,.44)',
-          display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 60,
-        }}>
-          <div style={{
-            background: C.card, width: '100%', maxWidth: 480, borderRadius: '18px 18px 0 0',
-            padding: '22px 20px 26px', maxHeight: '88vh', overflowY: 'auto',
+      {/* 설명 모달 — 공용 TermModal(result-new/TermModal.tsx) 규격에 맞춤.
+          제목 옆 한자 · 카테고리 배지 · 우상단 ✕ · "한마디로" 라벨 · 닫기는 '확인' */}
+      {help && HELP[help] && (() => {
+        const h = HELP[help]
+        return (
+          <div onClick={() => setHelp(null)} style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 20, zIndex: 1000,
           }}>
-            <h3 style={{ fontSize: 17.5, margin: '0 0 3px' }}>{HELP[help].t}</h3>
-            <div style={{ fontSize: 12, color: C.sub, marginBottom: 15 }}>{HELP[help].k}</div>
-            <div style={{ background: '#F7EFE8', borderRadius: 10, padding: '13px 14px', marginBottom: 12 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: C.brand, marginBottom: 5 }}>쉽게 말하면</div>
-              <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.8 }}>{HELP[help].w}</p>
+            <div onClick={e => e.stopPropagation()} style={{
+              maxWidth: 340, width: '100%', background: '#fff', borderRadius: 16,
+              padding: '20px 18px', maxHeight: '86vh', overflowY: 'auto',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                <span style={{ fontSize: 19, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-.4px' }}>
+                  {h.t}{' '}
+                  <span style={{ fontSize: 13, color: '#6b5340', fontWeight: 400 }}>({h.hanja})</span>
+                </span>
+                <span style={{
+                  fontSize: 10, color: '#8f3d0e', background: '#fdf6ee',
+                  padding: '2px 8px', borderRadius: 8, flex: 'none',
+                }}>{h.cat}</span>
+                <button onClick={() => setHelp(null)} aria-label="닫기" style={{
+                  marginLeft: 'auto', background: 'none', border: 'none',
+                  fontSize: 16, color: '#ccc', cursor: 'pointer', lineHeight: 1,
+                }}>✕</button>
+              </div>
+
+              <div style={{ background: '#f6f6f3', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
+                <div style={{ fontSize: 12, color: '#8f3d0e', fontWeight: 700, marginBottom: 5 }}>한마디로</div>
+                <div style={{ fontSize: 14, color: '#333', lineHeight: 1.6, fontWeight: 600 }}>{h.one}</div>
+              </div>
+
+              <div style={{ fontSize: 13, color: '#555', lineHeight: 1.85, whiteSpace: 'pre-line' }}>
+                {h.body}
+              </div>
+
+              <div style={{
+                marginTop: 14, paddingTop: 12, borderTop: '1px solid #eee',
+                fontSize: 12.5, color: '#8a7a6d', lineHeight: 1.75,
+              }}>
+                <span style={{ color: '#8f3d0e', fontWeight: 700 }}>다만</span> — {h.note}
+              </div>
+
+              <div onClick={() => setHelp(null)} style={{
+                marginTop: 16, background: '#1a1a1a', color: '#fff', textAlign: 'center',
+                padding: 11, borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              }}>확인</div>
             </div>
-            <div style={{
-              fontSize: 13, lineHeight: 1.85, background: '#fff',
-              border: `1px solid ${C.line}`, borderRadius: 10, padding: '13px 14px', marginBottom: 12,
-            }}>{HELP[help].e}</div>
-            <div style={{
-              fontSize: 12, color: C.sub, lineHeight: 1.75,
-              borderTop: `1px solid ${C.line}`, paddingTop: 12, marginBottom: 15,
-            }}>{HELP[help].c}</div>
-            <button onClick={() => setHelp(null)} style={{
-              width: '100%', padding: 13, borderRadius: 12, border: 'none',
-              background: C.brand, color: '#fff', fontSize: 14, fontWeight: 600,
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}>알겠어요</button>
           </div>
-        </div>
-      )}
+        )
+      })()}
     </div>
   )
 }
