@@ -52,6 +52,7 @@ export interface BirthResultV5 {
   excludedHoliday: number
   excludedWonjin: number
   excludedHyeong: number
+  excludedRepeat: number   // 辛2개·丑2개로 배제된 수
 }
 
 export interface RunOptionsV5 {
@@ -124,6 +125,18 @@ function isWolIlHyeong(monthBranch: string, dayBranch: string): boolean {
   return HYEONG_GROUPS.some(g => g.includes(monthBranch) && g.includes(dayBranch))
 }
 
+// ── 특정 글자 중복 배제 ── (연재쌤 확정 2026-07-23)
+//   · 천간에 辛(신금)이 2개 이상 → 고초살(苦草殺)로 보아 배제
+//   · 지지에 丑(축토)이 2개 이상 → 위암 인자로 보아 배제
+//   원국 여덟 글자 전체에서 센다. 감점이 아니라 '배제'.
+function hasBadRepeat(c: Candidate): boolean {
+  const stems = [c.year.stem, c.month.stem, c.day.stem, c.hour.stem]
+  const branches = [c.year.branch, c.month.branch, c.day.branch, c.hour.branch]
+  if (stems.filter(x => x === '辛').length >= 2) return true   // 辛 2개 = 고초살
+  if (branches.filter(x => x === '丑').length >= 2) return true // 丑 2개 = 위암 인자
+  return false
+}
+
 // 후보 기간의 공휴일 조회 (/api/holidays 재사용 — 결혼택일과 같은 API).
 //   반환: Set<'YYYYMMDD'>. dateKey 와 같은 포맷이라 바로 매칭된다.
 //   실패해도 빈 Set 을 돌려줘 '주말만 배제'로 안전하게 동작한다.
@@ -163,7 +176,7 @@ export async function runBirthTimingV5(
   const { timePref = 'any', gender = '', before = 21, after = 3, wish } = opts
 
   const raw = await buildCandidates(dueDate, { timePref, before, after })
-  if (raw.length === 0) return { recommendations: [], totalEvaluated: 0, excludedWeekend: 0, excludedHoliday: 0, excludedWonjin: 0, excludedHyeong: 0 }
+  if (raw.length === 0) return { recommendations: [], totalEvaluated: 0, excludedWeekend: 0, excludedHoliday: 0, excludedWonjin: 0, excludedHyeong: 0, excludedRepeat: 0 }
 
   // ── 배제 필터: 주말 + 공휴일 + 월일 원진 ──
   //   주말·공휴일 = 병원이 쉬어서 수술 불가(실무 제약).
@@ -173,6 +186,7 @@ export async function runBirthTimingV5(
   let excludedHoliday = 0
   let excludedWonjin = 0
   let excludedHyeong = 0
+  let excludedRepeat = 0
 
   // ① 월지-일지 원진 배제 (날짜 단위 — 시간과 무관하므로 먼저 걸러 계산량도 줄인다)
   {
@@ -186,6 +200,13 @@ export async function runBirthTimingV5(
     const beforeH = candidates.length
     candidates = candidates.filter(c => !isWolIlHyeong(c.month.branch, c.day.branch))
     excludedHyeong = beforeH - candidates.length
+  }
+
+  // ②-2 辛 2개(고초살) · 丑 2개(위암 인자) 배제 (연재쌤 확정)
+  {
+    const beforeR = candidates.length
+    candidates = candidates.filter(c => !hasBadRepeat(c))
+    excludedRepeat = beforeR - candidates.length
   }
 
   if (CFG.filter.weekendExclude) {
@@ -211,7 +232,7 @@ export async function runBirthTimingV5(
       }
     }
   }
-  if (candidates.length === 0) return { recommendations: [], totalEvaluated: 0, excludedWeekend, excludedHoliday, excludedWonjin, excludedHyeong }
+  if (candidates.length === 0) return { recommendations: [], totalEvaluated: 0, excludedWeekend, excludedHoliday, excludedWonjin, excludedHyeong, excludedRepeat }
 
   // ── 원국 채점 (동기) ──
   const scored = candidates.map(c => ({ c, bd: scoreBabyV5(c, wish) }))
@@ -269,5 +290,5 @@ export async function runBirthTimingV5(
     }
   })
 
-  return { recommendations, totalEvaluated: candidates.length, excludedWeekend, excludedHoliday, excludedWonjin, excludedHyeong }
+  return { recommendations, totalEvaluated: candidates.length, excludedWeekend, excludedHoliday, excludedWonjin, excludedHyeong, excludedRepeat }
 }
