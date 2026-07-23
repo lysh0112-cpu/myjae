@@ -4,7 +4,10 @@
 //   선택필터는 화면에서 실시간으로 켜고 끄므로 여기서 걸지 않는다.
 //   (부모가 토글할 때마다 서버를 다시 부르면 안 되니, 판정 결과를 다 실어 보낸다)
 //
-//   [후보 기간] 예정일 3주 전 ~ 예정일 +3일 (연재쌤 확정 2026-07-23)
+//   [후보 기간] 예정일 3주 전 ~ 예정일 3일 전 (2026-07-23 정정)
+//     ※ 인수인계서 22-2 에는 "예정일 +3일"로 적혀 있었으나 착오였다.
+//        예정일을 넘기면 산모·아기가 위험하므로 예정일 이전까지만 본다.
+//        buildCandidates(before: 21, after: -3) → offset -21 ~ -3
 //   [요일]     평일만. 주말·공휴일 제외 (제왕절개 실무)
 //   [시진]     巳午未申 4시진 = 09:30~17:30 (병원 수술 시간)
 
@@ -116,8 +119,8 @@ export async function runRecommendV7(opts: RunV7Options): Promise<RecommendV7Res
   if (!dueDate) return empty('출산예정일을 입력해 주세요.')
   if (!gender) return empty('아기 성별을 선택해 주세요. 성별이 있어야 대운을 계산할 수 있어요.')
 
-  // 후보 기간: 예정일 3주 전 ~ +3일
-  const all = await buildCandidates(dueDate, { timePref: 'any', before: 21, after: 3 })
+  // 후보 기간: 예정일 3주 전 ~ 예정일 3일 전
+  const all = await buildCandidates(dueDate, { timePref: 'any', before: 21, after: -3 })
   if (all.length === 0) return empty('후보 날짜를 만들지 못했어요. 예정일을 확인해 주세요.')
 
   // 주말 제외

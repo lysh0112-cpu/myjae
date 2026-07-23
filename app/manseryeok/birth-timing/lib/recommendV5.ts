@@ -171,9 +171,10 @@ export async function runBirthTimingV5(
   dueDate: string,
   opts: RunOptionsV5 = {},
 ): Promise<BirthResultV5> {
-  // 후보 기간 (2026-07-23 확정): 예정일 3주 전 ~ 예정일 +3일.
+  // 후보 기간 (2026-07-23 정정): 예정일 3주 전 ~ 예정일 3일 전.
+  //   ※ 처음엔 "+3일"로 적었으나 착오였다. 예정일을 넘기면 산모·아기가 위험하다.
   //   통상 예정일보다 일찍 나오는 경우가 많아 '이전'을 넓게, '이후'는 3일만.
-  const { timePref = 'any', gender = '', before = 21, after = 3, wish } = opts
+  const { timePref = 'any', gender = '', before = 21, after = -3, wish } = opts
 
   const raw = await buildCandidates(dueDate, { timePref, before, after })
   if (raw.length === 0) return { recommendations: [], totalEvaluated: 0, excludedWeekend: 0, excludedHoliday: 0, excludedWonjin: 0, excludedHyeong: 0, excludedRepeat: 0 }

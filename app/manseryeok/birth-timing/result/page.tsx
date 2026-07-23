@@ -390,7 +390,7 @@ function BirthResultInner() {
           <div style={{ fontSize: '11px', color: sub, marginBottom: '6px' }}>분석 조건</div>
           <div style={{ fontSize: '12px', color: '#96502e', lineHeight: 1.7 }}>
             출산예정일 {survey?.dueDate || '-'} · {survey?.method || '-'}<br />
-            예정일 3주 전 ~ +3일 중 <b>평일</b>만 · 주말·공휴일 제외
+            예정일 3주 전 ~ 사흘 전 중 <b>평일</b>만 · 주말·공휴일 제외
           </div>
         </div>
 

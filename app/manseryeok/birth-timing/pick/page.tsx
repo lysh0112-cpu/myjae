@@ -105,7 +105,7 @@ function PickInner() {
         justifyContent: 'center', background: C.bg, flexDirection: 'column', gap: 10,
       }}>
         <div style={{ fontSize: 15, color: C.brand, fontWeight: 600 }}>좋은 날을 찾고 있어요</div>
-        <div style={{ fontSize: 12.5, color: C.sub }}>예정일 3주 전부터 사흘 뒤까지 살펴보는 중입니다</div>
+        <div style={{ fontSize: 12.5, color: C.sub }}>예정일 3주 전부터 사흘 전까지 살펴보는 중입니다</div>
       </div>
     )
   }

@@ -160,7 +160,7 @@ export default function PickDateV7({ result, onPickHour, onConsult }: Props) {
           이미 확인해 둔 것
         </div>
         <div style={{ fontSize: 12.5, color: C.sub, lineHeight: 1.75, marginTop: 7 }}>
-          알려주신 예정일을 기준으로 <b style={{ color: C.brand }}>3주 전부터 예정일 사흘 뒤까지</b>,
+          알려주신 예정일을 기준으로 <b style={{ color: C.brand }}>3주 전부터 사흘 전까지</b>,
           병원이 수술하는 <b style={{ color: C.brand }}>평일 오전 9시 30분 ~ 오후 5시 30분</b> 안에서
           찾았어요. 그중 아래 네 가지는 미리 확인해 두었습니다.
         </div>
