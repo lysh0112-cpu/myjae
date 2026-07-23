@@ -177,6 +177,14 @@ function DetailModal({ day, hour, note, onClose, onViewSaju }: {
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, color: C.sub, cursor: 'pointer', lineHeight: 1 }}>×</button>
         </div>
         <div ref={captureRef} style={{ background: C.card, padding: '4px 2px' }}>
+        {/* 면책 안내 — 맨 위. 캡처 영역 안이라 카톡 공유 이미지에도 함께 담긴다. */}
+        <div style={{
+          background: '#fbe3d8', border: '1px solid #e8b79f', borderRadius: 10,
+          padding: '11px 13px', fontSize: 11.5, fontWeight: 700, color: '#9a4a30',
+          lineHeight: 1.6, marginBottom: 12,
+        }}>
+          ※ 본 분석은 전통 사주명리에 기반한 참고 정보입니다. 실제 출산일·수술일 결정은 산모와 아기의 건강을 최우선으로, 반드시 담당 산부인과 전문의와 상의해 결정하세요.
+        </div>
         <div style={{ marginBottom: 4 }}>
           <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>{day.dateLabel}</div>
           <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{hour.hourLabel}</div>
