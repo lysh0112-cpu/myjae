@@ -29,7 +29,7 @@
 import type { Candidate } from './candidates'
 import { engineInputs } from './engineAdapter'
 import { judgeSungpae, type SungpaeResult } from './gyeokgukSungpae'
-import { calcSimsanOhaeng, grade } from '@/lib/saju/simsanOhaeng'
+import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
 import { calcYongsinNew } from '@/lib/saju/yongsinNew'
 import { getGwiinForBranch } from '@/lib/saju/gwiin'
 import { BIRTH_SCORE_CONFIG as CFG } from './birthScoreConfig'
@@ -110,6 +110,21 @@ export interface ScoreV6Breakdown {
   notes: string[]
 }
 
+
+// ── 출산택일 전용 오행 등급 ───────────────────────────────────────────
+//   오행 총점은 항상 100점을 다섯이 나눠 갖는다 → 평균 20점.
+//   공용 grade()는 25점부터 '발달'이라, 완벽 균형(20씩)도 전부 '약함'이 됐다.
+//   여기서는 평균(20)을 '보통'으로 보도록 구간을 다시 나눈다.
+export type OhaengGradeV6 = '결핍' | '약함' | '보통' | '발달' | '과다'
+function gradeV6(points: number): OhaengGradeV6 {
+  const cut = CFG.ohaengV6.gradeCut
+  if (points <= 0) return '결핍'
+  if (points < cut.weak) return '약함'
+  if (points < cut.normal) return '보통'
+  if (points < cut.rich) return '발달'
+  return '과다'
+}
+
 // ── 삼합·방국 판정 ────────────────────────────────────────────────────
 function checkHap(branches: string[]): HapResult {
   const samhap: { el: string; full: boolean }[] = []
@@ -152,19 +167,25 @@ function scoreOhaeng(
   const notes: string[] = []
   let lack = 0, over = 0, lackForgiven = 0
 
+  let weak = 0
   for (const e of els) {
-    const g = grade(scoreMap[e] ?? 0)
+    const g = gradeV6(scoreMap[e] ?? 0)
     gradeMap[e] = g
     if (g === '결핍') {
       if (e === inseong) { lackForgiven++; continue }          // 인성은 봐줌
       if (hap.boostedEls.includes(e)) { lackForgiven++; continue } // 합으로 보강됨
       lack++
     }
+    if (g === '약함') {
+      // 약함은 결핍보다 가볍게 본다. 인성·합보강은 여기서도 봐준다.
+      if (e === inseong || hap.boostedEls.includes(e)) continue
+      weak++
+    }
     if (g === '과다') over++
   }
 
   const unit = CFG.ohaengV6
-  let score = W.ohaeng - lack * unit.lackEach - over * unit.overEach
+  let score = W.ohaeng - lack * unit.lackEach - weak * unit.weakEach - over * unit.overEach
   if (score < 0) score = 0
   if (lack === 0) notes.push('다섯 기운이 고루 갖춰졌어요')
   if (lackForgiven > 0) notes.push('부족한 기운이 있지만 크게 문제되지 않아요')

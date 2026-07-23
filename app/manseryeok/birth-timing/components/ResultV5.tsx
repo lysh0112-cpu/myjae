@@ -23,10 +23,6 @@ const C = {
   line: '#f0e0d5', lineGold: '#f0d5b8', accent: '#96502e', rose: '#b45a78',
 }
 
-const GRADE_COLOR: Record<string, string> = {
-  결핍: '#c85a5a', 약함: '#c8963e', 발달: '#5a9e6f', 과다: '#c85a5a',
-}
-
 function Stars({ n }: { n: number }) {
   return (
     <span style={{ letterSpacing: '1px', fontSize: '13px', color: C.gold }}>
@@ -139,8 +135,6 @@ function DetailModal({ day, hour, note, onClose, onViewSaju }: {
   const iljji = pillars.find(p => p.pillar === '일주')?.branch ?? ''
   const yeonjji = pillars.find(p => p.pillar === '년주')?.branch ?? ''
   const [gm1, gm2] = dayStem && iljji ? getGongmang(dayStem, iljji) : ['', '']
-  const grade = hour.breakdown.elementGrade
-  const els = ['목', '화', '토', '금', '수']
 
   // 카드 캡처용 (mulsang 사주그림과 같은 html-to-image 방식)
   const captureRef = useRef<HTMLDivElement | null>(null)
@@ -253,6 +247,11 @@ function DetailModal({ day, hour, note, onClose, onViewSaju }: {
           </div>
         )}
 
+        {/* 택일의 성격 안내 — 연·월은 못 바꾼다는 점을 정직하게 알린다 */}
+        <div style={{ background: '#f7f3ee', borderRadius: 10, padding: '11px 13px', marginBottom: 12, fontSize: 11.5, color: C.sub, lineHeight: 1.65 }}>
+          타고난 연·월은 바꿀 수 없어요. 그 안에서 가장 균형 잡힌 날·시간을 고른 결과입니다.
+        </div>
+
         {note?.detail && (
           <div style={{ background: C.cardGold, borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
             <div style={{ fontSize: 11, color: C.gold, marginBottom: 5 }}>이 아이는</div>
@@ -266,18 +265,6 @@ function DetailModal({ day, hour, note, onClose, onViewSaju }: {
             <div style={{ fontSize: 13, color: C.text, lineHeight: 1.7 }}>🌊 {hour.dayunNote}</div>
           </div>
         )}
-
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, color: C.gold, marginBottom: 6 }}>오행 분포</div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {els.map((e) => (
-              <div key={e} style={{ flex: 1, textAlign: 'center', background: '#faf5ee', borderRadius: 8, padding: '8px 0' }}>
-                <div style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{e}</div>
-                <div style={{ fontSize: 10, color: GRADE_COLOR[grade[e]] ?? C.sub, marginTop: 2 }}>{grade[e]}</div>
-              </div>
-            ))}
-          </div>
-        </div>
 
         {/* 카드 하단 로고 (캡처 이미지에 들어감) */}
         <div style={{ textAlign: 'center', marginBottom: 4 }}>
@@ -340,7 +327,7 @@ export default function ResultV5({
   return (
     <div style={{ background: C.bg, borderRadius: 14, padding: 16 }}>
       <div style={{ fontSize: 13, color: C.accent, fontWeight: 600, marginBottom: 4 }}>
-        예정일 전 3주 중, 평일에서 고른 좋은 날·시간이에요
+        예정일 3주 전 ~ 예정일 +3일 중, 평일에서 고른 좋은 날·시간이에요
       </div>
       <div style={{ fontSize: 11, color: C.sub, marginBottom: 14, lineHeight: 1.5 }}>
         타고난 사주(원국)를 봅니다. 인생의 운은 살면서 정해져요.

@@ -51,6 +51,7 @@ export interface BirthResultV5 {
   excludedWeekend: number
   excludedHoliday: number
   excludedWonjin: number
+  excludedHyeong: number
 }
 
 export interface RunOptionsV5 {
@@ -110,6 +111,19 @@ function isWolIlWonjin(monthBranch: string, dayBranch: string): boolean {
   )
 }
 
+// ── 월지-일지 형(刑) 배제 ── (연재쌤 확정 2026-07-23)
+//   "일지·월지에 축술미 3형 / 인사신 3형 / 자묘형 이 들어가면 탈락"
+//   → 세 글자가 다 모이지 않아도, 월지-일지 두 자리가 같은 형 그룹이면 배제.
+const HYEONG_GROUPS: string[][] = [
+  ['丑', '戌', '未'],  // 축술미 삼형
+  ['寅', '巳', '申'],  // 인사신 삼형
+  ['子', '卯'],        // 자묘형
+]
+function isWolIlHyeong(monthBranch: string, dayBranch: string): boolean {
+  if (monthBranch === dayBranch) return false   // 같은 글자(자형)는 여기서 보지 않음
+  return HYEONG_GROUPS.some(g => g.includes(monthBranch) && g.includes(dayBranch))
+}
+
 // 후보 기간의 공휴일 조회 (/api/holidays 재사용 — 결혼택일과 같은 API).
 //   반환: Set<'YYYYMMDD'>. dateKey 와 같은 포맷이라 바로 매칭된다.
 //   실패해도 빈 Set 을 돌려줘 '주말만 배제'로 안전하게 동작한다.
@@ -144,12 +158,12 @@ export async function runBirthTimingV5(
   dueDate: string,
   opts: RunOptionsV5 = {},
 ): Promise<BirthResultV5> {
-  // 후보 기간 (연재쌤 확정 2026-07-23): 예정일 '이전 3주 ~ 예정일 당일'.
-  //   예정일 이후는 보지 않는다 — 제왕절개는 예정일을 넘기지 않고 미리 하는 게 일반적.
-  const { timePref = 'any', gender = '', before = 21, after = 0, wish } = opts
+  // 후보 기간 (2026-07-23 확정): 예정일 3주 전 ~ 예정일 +3일.
+  //   통상 예정일보다 일찍 나오는 경우가 많아 '이전'을 넓게, '이후'는 3일만.
+  const { timePref = 'any', gender = '', before = 21, after = 3, wish } = opts
 
   const raw = await buildCandidates(dueDate, { timePref, before, after })
-  if (raw.length === 0) return { recommendations: [], totalEvaluated: 0, excludedWeekend: 0, excludedHoliday: 0, excludedWonjin: 0 }
+  if (raw.length === 0) return { recommendations: [], totalEvaluated: 0, excludedWeekend: 0, excludedHoliday: 0, excludedWonjin: 0, excludedHyeong: 0 }
 
   // ── 배제 필터: 주말 + 공휴일 + 월일 원진 ──
   //   주말·공휴일 = 병원이 쉬어서 수술 불가(실무 제약).
@@ -158,12 +172,20 @@ export async function runBirthTimingV5(
   let excludedWeekend = 0
   let excludedHoliday = 0
   let excludedWonjin = 0
+  let excludedHyeong = 0
 
   // ① 월지-일지 원진 배제 (날짜 단위 — 시간과 무관하므로 먼저 걸러 계산량도 줄인다)
   {
     const beforeW = candidates.length
     candidates = candidates.filter(c => !isWolIlWonjin(c.month.branch, c.day.branch))
     excludedWonjin = beforeW - candidates.length
+  }
+
+  // ②-1 월지-일지 형(刑) 배제 — 축술미·인사신·자묘 (연재쌤 확정)
+  {
+    const beforeH = candidates.length
+    candidates = candidates.filter(c => !isWolIlHyeong(c.month.branch, c.day.branch))
+    excludedHyeong = beforeH - candidates.length
   }
 
   if (CFG.filter.weekendExclude) {
@@ -189,7 +211,7 @@ export async function runBirthTimingV5(
       }
     }
   }
-  if (candidates.length === 0) return { recommendations: [], totalEvaluated: 0, excludedWeekend, excludedHoliday, excludedWonjin }
+  if (candidates.length === 0) return { recommendations: [], totalEvaluated: 0, excludedWeekend, excludedHoliday, excludedWonjin, excludedHyeong }
 
   // ── 원국 채점 (동기) ──
   const scored = candidates.map(c => ({ c, bd: scoreBabyV5(c, wish) }))
@@ -245,5 +267,5 @@ export async function runBirthTimingV5(
     }
   })
 
-  return { recommendations, totalEvaluated: candidates.length, excludedWeekend, excludedHoliday, excludedWonjin }
+  return { recommendations, totalEvaluated: candidates.length, excludedWeekend, excludedHoliday, excludedWonjin, excludedHyeong }
 }

@@ -382,7 +382,7 @@ function BirthResultInner() {
           <div style={{ fontSize: '11px', color: sub, marginBottom: '6px' }}>분석 조건</div>
           <div style={{ fontSize: '12px', color: '#96502e', lineHeight: 1.7 }}>
             출산예정일 {survey?.dueDate || '-'} · {survey?.method || '-'}<br />
-            예정일 전 3주 중 <b>평일</b>만 · 주말·공휴일 제외
+            예정일 3주 전 ~ +3일 중 <b>평일</b>만 · 주말·공휴일 제외
           </div>
         </div>
 
@@ -413,7 +413,7 @@ function BirthResultInner() {
         {!loading && !errMsg && recs.length > 0 && (
           <>
             <div style={{ fontSize: '13px', color: '#96502e', fontWeight: 600, margin: '4px 0 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              ◆ 예정일 전 좋은 날
+              ◆ 예정일 앞뒤 좋은 날
               {aiLoading && <span style={{ fontSize: '11px', color: gold, fontWeight: 400 }}>✨ 해설 작성 중...</span>}
             </div>
             <ResultV5
