@@ -12,11 +12,17 @@
 //   ⚠️ 문구는 1차안. 연재쌤 검수 예정(출산택일_성향문구_검수표.xlsx).
 //   ⚠️ [이 아이 사주 자세히 보기] 에 ★결제 관문이 아직 없다 (22-0 최우선 과제).
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import UnTable from '@/app/manseryeok/result-new/UnTable'
+import { getUnsung } from '@/lib/saju/unsung'
+import { saveBirthRecord, type BirthSurvey } from '@/lib/saju/birthRecords'
+import type { SavedInputData } from '@/lib/saju/savedPeople'
+import { displayName } from '@/lib/saju/personName'
 import { runRecommendV7, type HourOption, type DayOption } from '../lib/recommendV7'
 import { describeBaby, type BabyDescription } from '../lib/babyDescribeV7'
+
+interface PersonInput extends SavedInputData { name?: string }
 
 const C = {
   bg: '#FDF6F0', card: '#FFFBF7', line: '#F0E0D5', ink: '#3A2E28',
@@ -110,6 +116,17 @@ function DetailInner() {
   const [hour, setHour] = useState<HourOption | null>(null)
   const [desc, setDesc] = useState<BabyDescription | null>(null)
 
+  // 이미지 저장 — v5(ResultV5) 와 같은 html-to-image 방식
+  const captureRef = useRef<HTMLDivElement | null>(null)
+  const [sharing, setSharing] = useState(false)
+
+  // 대운표 스크롤 — 원국표와 같은 '오른쪽→왼쪽' 흐름이라 열릴 때 오른쪽 끝으로 민다
+  const dayunScrollRef = useRef<HTMLDivElement | null>(null)
+
+  // 보관함 저장
+  const [saving, setSaving] = useState(false)
+  const [savedMsg, setSavedMsg] = useState('')
+
   const dateKey = sp.get('date') ?? ''
   const hourIdx = Number(sp.get('hour') ?? '-1')
 
@@ -143,6 +160,83 @@ function DetailInner() {
     return () => { cancelled = true }
   }, [sp, dateKey, hourIdx])
 
+  // 대운표 스크롤을 오른쪽 끝(어릴 때)에서 시작시킨다.
+  //   대운표를 원국표와 같은 '오른쪽→왼쪽' 흐름으로 뒤집었기 때문에,
+  //   그냥 두면 화면에 노년이 먼저 보인다. (v5 ResultV5 와 동일 처리)
+  useEffect(() => {
+    const root = dayunScrollRef.current
+    if (!root) return
+    const boxes = root.querySelectorAll('div')
+    for (const el of Array.from(boxes)) {
+      const box = el as HTMLElement
+      if (box.scrollWidth > box.clientWidth + 4) {
+        box.scrollLeft = box.scrollWidth
+        break
+      }
+    }
+  }, [day, hour])
+
+  /** 해설 카드를 PNG 로 내려받는다. 저장한 파일을 카톡 등에 첨부해 보내면 된다. */
+  async function handleSaveImage() {
+    const node = captureRef.current
+    if (!node || sharing || !day || !hour) return
+    setSharing(true)
+    try {
+      const { toPng } = await import('html-to-image')
+      const png = await toPng(node, { pixelRatio: 2, cacheBust: true, backgroundColor: C.bg })
+      const label = `${day.m}월${day.d}일_${hour.hourLabel.split('(')[0]}`
+      const a = document.createElement('a')
+      a.href = png
+      a.download = `명카페_출산택일_${label}.png`
+      document.body.appendChild(a); a.click(); document.body.removeChild(a)
+    } catch (e) {
+      console.error('이미지 저장 실패:', e)
+    } finally {
+      setSharing(false)
+    }
+  }
+
+  /** 고른 날짜 하나를 보관함에 저장한다. */
+  async function handleSaveRecord() {
+    if (saving || !day || !hour || !desc) return
+    const p1 = parseJson<PersonInput>(sp.get('p1'))
+    const p2 = parseJson<PersonInput>(sp.get('p2'))
+    const survey = parseJson<SurveyInput>(sp.get('survey'))
+    if (!p1 || !survey) { setSavedMsg('부모 정보가 없어 저장하지 못했어요'); return }
+    setSaving(true); setSavedMsg('')
+    try {
+      const res = await saveBirthRecord({
+        // ★교훈 K — 저장 함수에는 필요한 값을 전부 인자로 넘긴다(state 반영 전일 수 있음)
+        name1: displayName(p1, '부모1'),
+        name2: displayName(p2, '부모2'),
+        summary: `${day.m}월 ${day.d}일 ${hour.hourLabel.split('(')[0]} · ${desc.headline}`,
+        input1: p1,
+        input2: (p2 ?? p1),
+        survey: survey as unknown as BirthSurvey,
+        // ★같은 부모·같은 예정일이면 옛 기록을 지우고 이것만 남긴다.
+        //   여러 날을 눌러보며 저장해도 보관함에는 마지막에 고른 하루만 남는다.
+        replaceSamePair: true,
+        resultData: {
+          version: 'v7',
+          picked: {
+            dateKey: day.dateKey, y: day.y, m: day.m, d: day.d,
+            weekday: day.weekday, dayGanji: day.dayGanji,
+            hourIdx: hour.hourIdx, hourLabel: hour.hourLabel,
+            saju: hour.sajuText,
+          },
+          detail: hour.detail,
+          describe: desc,
+          dayunList: day.dayunList,
+        },
+      })
+      setSavedMsg(res.ok ? '보관함에 저장했어요' : (res.message ?? '저장하지 못했어요'))
+    } catch {
+      setSavedMsg('저장하지 못했어요')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   if (loading) {
     return (
       <div style={{
@@ -170,9 +264,12 @@ function DetailInner() {
     )
   }
 
-  const unItems = day.dayunList.map(d => ({
+  // ★대운표는 원국표와 같은 '오른쪽 → 왼쪽' 흐름으로 본다.
+  //   오른쪽이 어릴 때, 왼쪽으로 갈수록 노년. 그래서 목록을 뒤집는다. (v5 와 동일)
+  const unItems = [...day.dayunList].reverse().map(d => ({
     label: `${d.age}세`, stem: d.cheongan, branch: d.jiji,
     stemSipsin: d.ganYukchin, branchSipsin: d.jiYukchin,
+    unsung: getUnsung(hour.detail.dayStem, d.jiji),
   }))
 
   return (
@@ -183,6 +280,9 @@ function DetailInner() {
           border: 'none', background: 'none', fontSize: 19, color: C.sub,
           cursor: 'pointer', padding: 0, marginBottom: 12,
         }}>←</button>
+
+        {/* 캡처 영역 시작 — 면책 문구를 안에 넣어 이미지에도 담기게 한다 */}
+        <div ref={captureRef} style={{ background: C.bg, padding: '2px 0 8px' }}>
 
         <div style={{
           background: 'rgba(255,120,120,.06)', border: '1px solid rgba(255,120,120,.18)',
@@ -246,10 +346,16 @@ function DetailInner() {
           </Section>
         )}
 
-        {/* 대운표 — 공용 UnTable 재사용 */}
+        {/* 대운표 — 공용 UnTable 재사용.
+            ★원국표와 같이 '오른쪽 → 왼쪽' 흐름. 열릴 때 스크롤을 오른쪽 끝으로 민다. */}
         {unItems.length > 0 && (
           <div style={{ marginTop: 16 }}>
-            <UnTable title="10년마다 바뀌는 큰 흐름" badge="대운" items={unItems} />
+            <div ref={dayunScrollRef}>
+              <UnTable title="10년마다 바뀌는 큰 흐름" badge="대운" items={unItems} />
+            </div>
+            <div style={{ fontSize: 10.5, color: C.sub, margin: '5px 4px 0' }}>
+              옆으로 밀면 노년까지 볼 수 있어요 →
+            </div>
           </div>
         )}
 
@@ -260,6 +366,37 @@ function DetailInner() {
         }}>
           아이가 태어나는 <b style={{ color: C.brand }}>해와 달</b>은 예정일이 정해지면 바꿀 수 없어요.
           그 안에서 <b style={{ color: C.brand }}>날과 시간</b>을 골라 결을 다듬는 것이 택일입니다.
+        </div>
+
+        {/* 로고 — 이미지로 저장했을 때 출처가 남게 */}
+        <div style={{
+          textAlign: 'center', marginTop: 16, fontSize: 11.5, color: C.faint, letterSpacing: '.2px',
+        }}>
+          🌸 <b style={{ color: C.sub }}>명카페</b> 전통 사주명리 출산택일
+        </div>
+
+        </div>{/* 캡처 영역 끝 */}
+
+        {/* 저장 · 이미지 내려받기 */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
+          <button onClick={handleSaveRecord} disabled={saving} style={{
+            flex: 1, padding: 13, borderRadius: 12, border: `1px solid ${C.accent}`,
+            background: C.soft, color: C.brand, fontSize: 13.5, fontWeight: 700,
+            cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit', opacity: saving ? .6 : 1,
+          }}>{saving ? '저장 중…' : '보관함에 저장'}</button>
+          <button onClick={handleSaveImage} disabled={sharing} style={{
+            flex: 1, padding: 13, borderRadius: 12, border: `1px solid ${C.accent}`,
+            background: C.soft, color: C.brand, fontSize: 13.5, fontWeight: 700,
+            cursor: sharing ? 'default' : 'pointer', fontFamily: 'inherit', opacity: sharing ? .6 : 1,
+          }}>{sharing ? '만드는 중…' : '🖼 이미지로 저장'}</button>
+        </div>
+        {savedMsg && (
+          <div style={{
+            marginTop: 8, fontSize: 12.5, color: C.brand, textAlign: 'center', fontWeight: 600,
+          }}>{savedMsg}</div>
+        )}
+        <div style={{ marginTop: 7, fontSize: 11.5, color: C.sub, textAlign: 'center', lineHeight: 1.6 }}>
+          내려받은 이미지를 카카오톡 등에 첨부해 보내실 수 있어요
         </div>
 
         {/* 유료 안내 */}

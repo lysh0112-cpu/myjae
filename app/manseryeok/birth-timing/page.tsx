@@ -237,12 +237,11 @@ function BirthTimingInner() {
           ))}
         </div>
 
-        <QLabel>피하고 싶은 날이 있나요? <span style={{ color: sub, fontSize: '11px' }}>(선택)</span></QLabel>
-        <textarea value={survey.avoidNote}
-          onChange={e => setSurveyField('avoidNote', e.target.value)}
-          placeholder="예) 3월 첫째 주는 가족 행사라 피하고 싶어요"
-          rows={2}
-          style={{ width: '100%', boxSizing: 'border-box', background: '#fff', border: '0.5px solid #f0e0d5', borderRadius: '10px', padding: '10px 14px', color: text, fontSize: '14px', outline: 'none', resize: 'none', lineHeight: 1.6 }} />
+        {/* ★'피하고 싶은 날' 입력 칸을 뺐다 (2026-07-23).
+            받기만 하고 계산에도 화면에도 쓰지 않아, 물어놓고 반영 안 하는 꼴이었다.
+            (교훈 G — 화면에 표시한 것은 실제 동작과 일치시킨다)
+            avoidNote 필드 자체는 저장 스키마 호환을 위해 빈 문자열로 남겨 둔다.
+            나중에 실제로 반영할 때 이 칸을 되살리면 된다. */}
 
         {error && (
           <div style={{ marginTop: '14px', background: '#fbece4', border: '0.5px solid #f0d5c5', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', color: '#c8506e', lineHeight: 1.6 }}>

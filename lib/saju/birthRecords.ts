@@ -69,6 +69,16 @@ export async function saveBirthRecord(args: {
   input2: SavedInputData & { name?: string }
   survey: BirthSurvey
   resultData?: unknown      // 추천 날짜·피할 날·AI 해설 스냅샷
+  /**
+   * ★같은 부모 + 같은 예정일이면 기존 기록을 지우고 새로 넣는다. (v7, 2026-07-23)
+   *
+   * 출산택일은 결국 하루를 고르는 일인데, 부모가 여러 날을 눌러보며 저장하면
+   * 보관함에 "12월 5일 巳시", "12월 7일 午시" … 가 줄줄이 쌓여 어수선해진다.
+   * 최종 선택 하나만 남기는 게 맞다. 마음이 바뀌어 다른 날을 저장하면 그게 결론이다.
+   *
+   * 기본값 false — v5(옛 화면)는 추천 5개를 한 건으로 저장하므로 종전대로 둔다.
+   */
+  replaceSamePair?: boolean
 }): Promise<{ ok: boolean; id?: string; message?: string }> {
   const { data: auth } = await supabase.auth.getUser()
   const uid = auth?.user?.id
@@ -80,6 +90,29 @@ export async function saveBirthRecord(args: {
     survey: args.survey,
     pairKey: pairKeyOf(args.input1, args.input2),
     summary: args.summary,
+  }
+
+  // 같은 부모 쌍 + 같은 예정일의 옛 기록을 먼저 지운다(덮어쓰기).
+  //   pairKey 는 input_data 안에 있어 SQL 로 바로 못 거르므로,
+  //   같은 예정일(relation) 기록만 받아 와서 pairKey 가 맞는 것만 지운다.
+  if (args.replaceSamePair && args.survey.dueDate) {
+    try {
+      const rel = `${args.survey.dueDate} 예정`
+      const { data: olds } = await supabase
+        .from('saju_records')
+        .select('id, input_data')
+        .eq('user_id', uid)
+        .eq('service_type', 'birth')
+        .eq('relation', rel)
+      const targets = (olds ?? [])
+        .filter(r => (r.input_data as BirthInputBlob | null)?.pairKey === blob.pairKey)
+        .map(r => r.id)
+      if (targets.length > 0) {
+        await supabase.from('saju_records').delete().in('id', targets)
+      }
+    } catch {
+      // 지우기에 실패해도 저장은 진행한다(중복이 남을 뿐, 기록을 잃지 않는 쪽이 안전).
+    }
   }
 
   const { data, error } = await supabase
