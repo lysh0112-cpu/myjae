@@ -5,7 +5,6 @@ import ConsultButton from '@/app/components/common/ConsultButton'
 import { runBirthTimingV5, type RecommendationV5 } from '../lib/recommendV5'
 import { toSnapshot, fromSnapshot, type RecV5Snapshot } from '../lib/v5Bridge'
 import ResultV5 from '../components/ResultV5'
-import { supabase } from '@/lib/supabase'
 import {
   saveBirthRecord, getBirthRecord, type BirthSurvey,
 } from '@/lib/saju/birthRecords'
@@ -16,15 +15,7 @@ import type { SavedInputData } from '@/lib/saju/savedPeople'
 const accent = '#b45a78'   // 출산택일 포인트(로즈핑크)
 const cardBg = '#FFFBF7'
 const sub = '#b4785a'
-const text = '#3a2e28'
 const gold = '#c8783c'      // 별점·강조 (피치 브라운오렌지)
-
-const HOUR_LABELS: Record<string, string> = {
-  '-1': '시간 모름',
-  '0': '子시(23:30~01:30)', '1': '丑시(01:30~03:30)', '2': '寅시(03:30~05:30)', '3': '卯시(05:30~07:30)',
-  '4': '辰시(07:30~09:30)', '5': '巳시(09:30~11:30)', '6': '午시(11:30~13:30)', '7': '未시(13:30~15:30)',
-  '8': '申시(15:30~17:30)', '9': '酉시(17:30~19:30)', '10': '戌시(19:30~21:30)', '11': '亥시(21:30~23:30)',
-}
 
 interface PersonInput {
   year: string; month: string; day: string; hour: string
@@ -38,32 +29,23 @@ interface SurveyInput {
 
 interface AiNote { oneLine: string; detail?: string }
 
-function Disclaimer({ full }: { full?: boolean }) {
+function Disclaimer({ full, strong }: { full?: boolean; strong?: boolean }) {
   return (
-    <div style={{ background: '#fbece4', border: '1px solid #f0d5c5', borderRadius: '10px', padding: '10px 14px', fontSize: '11px', color: '#b06a52', lineHeight: 1.6 }}>
-      {full
+    <div style={{
+      background: strong ? '#fbe3d8' : '#fbece4',
+      border: `1px solid ${strong ? '#e8b79f' : '#f0d5c5'}`,
+      borderRadius: '10px',
+      padding: strong ? '13px 16px' : '10px 14px',
+      fontSize: strong ? '13px' : '11px',
+      fontWeight: strong ? 700 : 400,
+      color: strong ? '#9a4a30' : '#b06a52',
+      lineHeight: 1.6,
+    }}>
+      {full || strong
         ? '※ 본 분석은 전통 사주명리에 기반한 참고 정보입니다. 실제 출산일·수술일 결정은 산모와 아기의 건강을 최우선으로, 반드시 담당 산부인과 전문의와 상의해 결정하세요.'
         : '※ 전통 명리 참고용 · 최종 결정은 전문의와 상의하세요.'}
     </div>
   )
-}
-
-function Stars({ n }: { n: number }) {
-  return (
-    <span style={{ color: gold, fontSize: '12px', letterSpacing: '1px' }}>
-      {'★'.repeat(n)}<span style={{ color: '#e0cdbf' }}>{'★'.repeat(5 - n)}</span>
-    </span>
-  )
-}
-
-function personSummary(p: PersonInput | null): string {
-  if (!p || !p.year) return '정보 없음'
-  const hour = HOUR_LABELS[p.hour] ?? '시간 모름'
-  return `${p.gender} · ${p.calType} ${p.year}.${p.month}.${p.day} · ${hour}`
-}
-
-function rankBadge(rank: number): string {
-  return rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}`
 }
 
 // 천간·지지 (시주 계산용)
@@ -204,7 +186,6 @@ function BirthResultInner() {
   const [saveFailed, setSaveFailed] = useState(false)
 
   // 3일 탭: 처음엔 예정일(offset 0). 전날=-1, 다음날=+1
-  const [tabOffset, setTabOffset] = useState(0)
   // 공휴일 맵 (YYYYMMDD → 이름)
   const [holidays, setHolidays] = useState<Record<string, string>>({})
 
@@ -414,7 +395,7 @@ function BirthResultInner() {
       </div>
 
       <div style={{ padding: '16px' }}>
-        <Disclaimer full />
+        <Disclaimer strong />
 
         <div style={{ margin: '16px 0', padding: '12px 14px', background: cardBg, borderRadius: '10px', border: '1px solid #f0e0d5' }}>
           <div style={{ fontSize: '11px', color: sub, marginBottom: '6px' }}>분석 조건</div>
