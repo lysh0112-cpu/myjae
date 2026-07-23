@@ -49,6 +49,7 @@ export interface BirthResultV5 {
   recommendations: DayRecommendation[]
   totalEvaluated: number
   excludedWeekend: number
+  excludedHoliday: number
 }
 
 export interface RunOptionsV5 {
@@ -91,6 +92,28 @@ async function fetchDayunForDate(
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
+// 후보 기간의 공휴일 조회 (/api/holidays 재사용 — 결혼택일과 같은 API).
+//   반환: Set<'YYYYMMDD'>. dateKey 와 같은 포맷이라 바로 매칭된다.
+//   실패해도 빈 Set 을 돌려줘 '주말만 배제'로 안전하게 동작한다.
+async function fetchHolidaySet(
+  first: { y: number; m: number; d: number },
+  last: { y: number; m: number; d: number },
+): Promise<Set<string>> {
+  try {
+    const start = `${first.y}-${pad(first.m)}-${pad(first.d)}`
+    const end = `${last.y}-${pad(last.m)}-${pad(last.d)}`
+    const res = await fetch(`/api/holidays?start=${start}&end=${end}`)
+    const data = await res.json()
+    const set = new Set<string>()
+    if (Array.isArray(data?.holidays)) {
+      for (const h of data.holidays) if (h?.date) set.add(String(h.date))
+    }
+    return set
+  } catch {
+    return new Set<string>()
+  }
+}
+
 function sajuString(c: Candidate): string {
   return `${c.year.stem}${c.year.branch} ${c.month.stem}${c.month.branch} ` +
          `${c.day.stem}${c.day.branch} ${c.hour.stem}${c.hour.branch}`
@@ -106,18 +129,37 @@ export async function runBirthTimingV5(
   const { timePref = 'any', gender = '', before = 7, after = 7 } = opts
 
   const raw = await buildCandidates(dueDate, { timePref, before, after })
-  if (raw.length === 0) return { recommendations: [], totalEvaluated: 0, excludedWeekend: 0 }
+  if (raw.length === 0) return { recommendations: [], totalEvaluated: 0, excludedWeekend: 0, excludedHoliday: 0 }
 
-  // ── 배제 필터: 주말·공휴일 (설계안 §4) ──
+  // ── 배제 필터: 주말 + 공휴일 (설계안 §4) ──
+  //   제왕절개는 병원이 쉬는 날엔 불가 → 명리 이전에 실무 제약.
   let candidates = raw
   let excludedWeekend = 0
+  let excludedHoliday = 0
   if (CFG.filter.weekendExclude) {
-    const before2 = raw.length
+    const beforeCnt = raw.length
     candidates = raw.filter(c => !c.isWeekend)
-    excludedWeekend = before2 - candidates.length
-    // (공휴일은 dateKey 기반 별도 표에서 추가 제외 예정 — 지금은 주말만)
+    excludedWeekend = beforeCnt - candidates.length
+
+    // 공휴일 배제 — /api/holidays 조회 후 dateKey 로 매칭.
+    //   조회 실패 시 빈 Set → 주말만 배제된 상태로 안전하게 진행.
+    const sorted = [...candidates].sort((a, b) =>
+      `${a.y}${pad(a.m)}${pad(a.d)}`.localeCompare(`${b.y}${pad(b.m)}${pad(b.d)}`))
+    if (sorted.length > 0) {
+      const firstC = sorted[0]
+      const lastC = sorted[sorted.length - 1]
+      const holidaySet = await fetchHolidaySet(
+        { y: firstC.y, m: firstC.m, d: firstC.d },
+        { y: lastC.y, m: lastC.m, d: lastC.d },
+      )
+      if (holidaySet.size > 0) {
+        const beforeH = candidates.length
+        candidates = candidates.filter(c => !holidaySet.has(`${c.y}${pad(c.m)}${pad(c.d)}`))
+        excludedHoliday = beforeH - candidates.length
+      }
+    }
   }
-  if (candidates.length === 0) return { recommendations: [], totalEvaluated: 0, excludedWeekend }
+  if (candidates.length === 0) return { recommendations: [], totalEvaluated: 0, excludedWeekend, excludedHoliday }
 
   // ── 원국 채점 (동기) ──
   const scored = candidates.map(c => ({ c, bd: scoreBabyV5(c) }))
@@ -189,5 +231,5 @@ export async function runBirthTimingV5(
     y: d.y, m: d.m, d: d.d,
   }))
 
-  return { recommendations, totalEvaluated: candidates.length, excludedWeekend }
+  return { recommendations, totalEvaluated: candidates.length, excludedWeekend, excludedHoliday }
 }

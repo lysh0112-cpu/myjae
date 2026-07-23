@@ -187,7 +187,6 @@ function BirthResultInner() {
 
   // 3일 탭: 처음엔 예정일(offset 0). 전날=-1, 다음날=+1
   // 공휴일 맵 (YYYYMMDD → 이름)
-  const [holidays, setHolidays] = useState<Record<string, string>>({})
 
   useEffect(() => {
     let cancelled = false
@@ -356,25 +355,6 @@ function BirthResultInner() {
       }))
     } catch {}
   }, [survey, recs, aiNotes, parent1, parent2])
-
-  // 3일(추천)의 공휴일 조회 — 병원 운영 안내용
-  useEffect(() => {
-    if (recs.length === 0) return
-    let cancelled = false
-    const keys = recs.map(r => r.dateKey).filter(Boolean).sort()
-    if (keys.length === 0) return
-    const start = keys[0], end = keys[keys.length - 1]
-    fetch(`/api/holidays?start=${start}&end=${end}`)
-      .then(res => res.json())
-      .then(data => {
-        if (cancelled || !Array.isArray(data.holidays)) return
-        const map: Record<string, string> = {}
-        for (const h of data.holidays) if (h.date) map[h.date] = h.name || '공휴일'
-        setHolidays(map)
-      })
-      .catch(() => {})
-    return () => { cancelled = true }
-  }, [recs])
 
   return (
     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '480px', margin: '0 auto', paddingBottom: '40px' }}>
