@@ -159,13 +159,15 @@ export async function listSavedPeople(serviceType?: string): Promise<SavedPerson
     .order('created_at', { ascending: false })
   if (error) { console.error('listSavedPeople', error); return [] }
   // input_data가 문자열로 올 수도 있어 안전 파싱
-  // ⚠️ saju_records는 '사람'과 '궁합 기록'을 함께 담는다.
-  //    궁합 '결과 기록'(연인=couple / 부부=married)은 두 사람 쌍이라 '한 사람'으로
-  //    쓸 수 없으므로 사람 목록에서 제외한다.
+  // ⚠️ saju_records는 '사람'과 '결과 기록'을 함께 담는다.
+  //    두 사람 쌍으로 만든 '결과 기록'은 '한 사람'으로 쓸 수 없으므로 사람 목록에서 제외한다.
+  //      · 궁합 결과: couple(연인) / married(부부)
+  //      · 출산택일 결과: birth   ← 2026-07-23 추가
+  //        (제외 안 하면 목록에 "부모1 · 부모2" 같은 항목이 사람처럼 떠서 고를 수 있었다)
   //    단, 궁합에서 등록한 '사람'(couple_person / married_person)은 한 사람이므로 남긴다.
   const rows = (data ?? []).filter((row) => {
     const st = row.service_type as string
-    return st !== 'couple' && st !== 'married'
+    return st !== 'couple' && st !== 'married' && st !== 'birth'
   })
 
   // serviceType 지정 시: 그 서비스에서 저장한 사람만.

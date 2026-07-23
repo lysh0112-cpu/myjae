@@ -20,6 +20,8 @@ const gold = '#c8783c'      // 별점·강조 (피치 브라운오렌지)
 interface PersonInput {
   year: string; month: string; day: string; hour: string
   gender: string; calType: string; job: string; mbti: string
+  name?: string        // 입력화면(input/page.tsx)에서 담아 보내는 이름.
+  isMe?: string        // 'true'면 본인
 }
 
 interface SurveyInput {
@@ -293,8 +295,10 @@ function BirthResultInner() {
     if (!useSurvey || !useSurvey.dueDate || useRecs.length === 0) return
     setSaving(true)
     setSaveFailed(false)
+    // 부모 이름. 입력화면에서 넘겨준 name 을 그대로 쓴다.
+    //   (name 이 비어야만 '부모1/부모2' 로 떨어진다 — 이름이 있으면 반드시 이름으로 저장)
     const nameOf = (p: PersonInput | null, fallback: string): string => {
-      const nm = (p as unknown as { name?: string } | null)?.name
+      const nm = p?.name
       return nm && nm.trim() ? nm : fallback
     }
     const toInput = (p: PersonInput | null): SavedInputData & { name?: string } => ({
@@ -305,7 +309,7 @@ function BirthResultInner() {
       day: p?.day ?? '',
       leapMonth: '0',
       hour: p?.hour ?? '모름',
-      name: (p as unknown as { name?: string } | null)?.name,
+      name: p?.name,
     })
     const surveyBlob: BirthSurvey = {
       dueDate: useSurvey.dueDate, method: useSurvey.method, timePref: useSurvey.timePref,

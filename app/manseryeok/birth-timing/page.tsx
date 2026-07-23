@@ -19,6 +19,8 @@ const HOUR_LABELS: Record<string, string> = {
 interface PersonInput {
   year: string; month: string; day: string; hour: string
   gender: string; calType: string; job: string; mbti: string
+  name?: string        // 입력화면(input/page.tsx)에서 담아 보내는 이름.
+  isMe?: string        // 'true'면 본인
 }
 
 interface BirthSurvey {
