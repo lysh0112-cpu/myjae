@@ -50,6 +50,7 @@ export interface BirthResultV5 {
   totalEvaluated: number
   excludedWeekend: number
   excludedHoliday: number
+  excludedWonjin: number
 }
 
 export interface RunOptionsV5 {
@@ -93,6 +94,22 @@ async function fetchDayunForDate(
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
+// ── 원진(怨嗔) 배제 ── (연재쌤 확정 2026-07-23)
+//   "원진이 일지와 월지에 있으면 아예 배제한다."
+//   → 다른 자리(연지·시지)의 원진은 보지 않는다. 월-일 사이만 본다.
+//   → 감점이 아니라 '배제'. 그 날은 후보에서 통째로 뺀다(시간 무관하게 날짜 단위).
+const WONJIN_PAIRS: [string, string][] = [
+  ['子', '未'], ['丑', '午'], ['寅', '酉'],
+  ['卯', '申'], ['辰', '亥'], ['巳', '戌'],
+]
+function isWolIlWonjin(monthBranch: string, dayBranch: string): boolean {
+  return WONJIN_PAIRS.some(
+    ([a, b]) =>
+      (monthBranch === a && dayBranch === b) ||
+      (monthBranch === b && dayBranch === a),
+  )
+}
+
 // 후보 기간의 공휴일 조회 (/api/holidays 재사용 — 결혼택일과 같은 API).
 //   반환: Set<'YYYYMMDD'>. dateKey 와 같은 포맷이라 바로 매칭된다.
 //   실패해도 빈 Set 을 돌려줘 '주말만 배제'로 안전하게 동작한다.
@@ -127,19 +144,31 @@ export async function runBirthTimingV5(
   dueDate: string,
   opts: RunOptionsV5 = {},
 ): Promise<BirthResultV5> {
-  const { timePref = 'any', gender = '', before = 7, after = 7, wish } = opts
+  // 후보 기간 (연재쌤 확정 2026-07-23): 예정일 '이전 3주 ~ 예정일 당일'.
+  //   예정일 이후는 보지 않는다 — 제왕절개는 예정일을 넘기지 않고 미리 하는 게 일반적.
+  const { timePref = 'any', gender = '', before = 21, after = 0, wish } = opts
 
   const raw = await buildCandidates(dueDate, { timePref, before, after })
-  if (raw.length === 0) return { recommendations: [], totalEvaluated: 0, excludedWeekend: 0, excludedHoliday: 0 }
+  if (raw.length === 0) return { recommendations: [], totalEvaluated: 0, excludedWeekend: 0, excludedHoliday: 0, excludedWonjin: 0 }
 
-  // ── 배제 필터: 주말 + 공휴일 (설계안 §4) ──
-  //   제왕절개는 병원이 쉬는 날엔 불가 → 명리 이전에 실무 제약.
+  // ── 배제 필터: 주말 + 공휴일 + 월일 원진 ──
+  //   주말·공휴일 = 병원이 쉬어서 수술 불가(실무 제약).
+  //   월일 원진 = 명리적 배제. 연재쌤 확정: "원진이 일지·월지에 있으면 아예 배제".
   let candidates = raw
   let excludedWeekend = 0
   let excludedHoliday = 0
+  let excludedWonjin = 0
+
+  // ① 월지-일지 원진 배제 (날짜 단위 — 시간과 무관하므로 먼저 걸러 계산량도 줄인다)
+  {
+    const beforeW = candidates.length
+    candidates = candidates.filter(c => !isWolIlWonjin(c.month.branch, c.day.branch))
+    excludedWonjin = beforeW - candidates.length
+  }
+
   if (CFG.filter.weekendExclude) {
-    const beforeCnt = raw.length
-    candidates = raw.filter(c => !c.isWeekend)
+    const beforeCnt = candidates.length
+    candidates = candidates.filter(c => !c.isWeekend)
     excludedWeekend = beforeCnt - candidates.length
 
     // 공휴일 배제 — /api/holidays 조회 후 dateKey 로 매칭.
@@ -160,7 +189,7 @@ export async function runBirthTimingV5(
       }
     }
   }
-  if (candidates.length === 0) return { recommendations: [], totalEvaluated: 0, excludedWeekend, excludedHoliday }
+  if (candidates.length === 0) return { recommendations: [], totalEvaluated: 0, excludedWeekend, excludedHoliday, excludedWonjin }
 
   // ── 원국 채점 (동기) ──
   const scored = candidates.map(c => ({ c, bd: scoreBabyV5(c, wish) }))
@@ -232,5 +261,5 @@ export async function runBirthTimingV5(
     y: d.y, m: d.m, d: d.d,
   }))
 
-  return { recommendations, totalEvaluated: candidates.length, excludedWeekend, excludedHoliday }
+  return { recommendations, totalEvaluated: candidates.length, excludedWeekend, excludedHoliday, excludedWonjin }
 }
