@@ -121,8 +121,38 @@ function checkJonggyeok(scoreMap: Record<string, number>): boolean {
   return max / total >= CFG.jonggyeok.branchDominantRatio
 }
 
+// ── 부모 소망 가중 (설계안 §6) ──
+//   부모가 고른 '바라는 점' 하나에 해당하는 항목만 config wish.weight 배로 친다.
+//   전부 뒤집지 않고 "일부라도" 반영 — 격국이 나쁜 날은 여전히 뒤로 간다.
+//   ※ '부모화목'은 부모 사주 연동 전이라 점수엔 반영 안 함(통변 해설에서만 언급).
+type WishTarget = { johu?: boolean; gyeok?: boolean; tonggeun?: boolean; jaegwan?: boolean; ohaeng?: boolean }
+const WISH_MAP: Record<string, WishTarget> = {
+  재물운: { jaegwan: true },                 // 재성 = 재물
+  공부운: { jaegwan: true, tonggeun: true }, // 관인상생 = 명예·학문
+  건강:   { johu: true, ohaeng: true },      // 조후·오행 = 몸의 균형
+  인덕:   { tonggeun: true },                // 인성·통근 = 사람 덕
+  // 부모화목: 점수 가중 없음 (통변에서만)
+}
+
+function applyWish(
+  parts: { johu: number; gyeok: number; tonggeun: number; jaegwan: number; ohaeng: number },
+  wish?: string,
+): typeof parts {
+  if (!wish) return parts
+  const t = WISH_MAP[wish]
+  if (!t) return parts
+  const w = CFG.wish.weight
+  return {
+    johu: t.johu ? parts.johu * w : parts.johu,
+    gyeok: t.gyeok ? parts.gyeok * w : parts.gyeok,
+    tonggeun: t.tonggeun ? parts.tonggeun * w : parts.tonggeun,
+    jaegwan: t.jaegwan ? parts.jaegwan * w : parts.jaegwan,
+    ohaeng: t.ohaeng ? parts.ohaeng * w : parts.ohaeng,
+  }
+}
+
 /** 원국 5단계 채점 (동기). 대운 타이밍은 scoreWithDayun 에서 별도 합산. */
-export function scoreBabyV5(c: Candidate): ScoreV5Breakdown {
+export function scoreBabyV5(c: Candidate, wish?: string): ScoreV5Breakdown {
   const { saju, solarMonth, solarDay, hourBranch, dayStem } = engineInputs(c)
 
   // 오행 점수(심산) + 간이 카운트(조후용)
@@ -157,9 +187,20 @@ export function scoreBabyV5(c: Candidate): ScoreV5Breakdown {
     notes.push('계절 온도를 풀어줄 기운이 없어요(조후 불능)')
   }
 
-  let total = johu.score + gyeok + tonggeun + jaegwan + oh.score - penalty
+  // 부모 소망 가중 적용 (고른 항목만 배수). 화면 표시용 원점수는 그대로 두고,
+  //   총점(순위 결정)에만 가중을 반영한다.
+  const weighted = applyWish(
+    { johu: johu.score, gyeok, tonggeun, jaegwan, ohaeng: oh.score },
+    wish,
+  )
+
+  // 총점. 상한(100 캡) 없음 — 화면에 점수를 안 보여주므로(별점·순위만),
+  //   캡을 씌우면 만점 날이 여러 개 생겨 오히려 순위 변별력이 사라진다.
+  //   부모소망 가중이 붙으면 100을 넘을 수 있고, 그래도 무방하다.
+  let total = weighted.johu + weighted.gyeok + weighted.tonggeun
+            + weighted.jaegwan + weighted.ohaeng - penalty
   if (total < 0) total = 0
-  if (total > 100) total = 100
+  total = Math.round(total)
 
   return {
     total, johu: johu.score, gyeok, tonggeun, jaegwan, ohaeng: oh.score,

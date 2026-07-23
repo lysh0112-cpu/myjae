@@ -117,10 +117,12 @@ function BirthTimingInner() {
     })
   }
 
+  // 바라는 점은 '하나만' 고른다. (복수 선택이면 가중이 서로 상쇄돼 효과가 사라짐)
+  //   같은 걸 다시 누르면 해제 → 선택 안 함(균등 채점)도 가능.
   function toggleWish(wish: string) {
     setSurvey(prev => {
-      const has = prev.wishes.includes(wish)
-      const next = { ...prev, wishes: has ? prev.wishes.filter(w => w !== wish) : [...prev.wishes, wish] }
+      const already = prev.wishes.includes(wish)
+      const next = { ...prev, wishes: already ? [] : [wish] }
       try { sessionStorage.setItem(SURVEY_KEY, JSON.stringify(next)) } catch {}
       return next
     })
@@ -217,7 +219,7 @@ function BirthTimingInner() {
           ))}
         </div>
 
-        <QLabel>아이에게 특히 바라는 점은? <span style={{ color: sub, fontSize: '11px' }}>(여러 개 선택 가능)</span></QLabel>
+        <QLabel>아이에게 특히 바라는 점은? <span style={{ color: sub, fontSize: '11px' }}>(하나만 · 선택 안 해도 돼요)</span></QLabel>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {wishOptions.map(v => (
             <Chip key={v} label={v} active={survey.wishes.includes(v)} onClick={() => toggleWish(v)} />

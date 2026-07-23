@@ -54,6 +54,7 @@ export interface BirthResultV5 {
 
 export interface RunOptionsV5 {
   timePref?: 'morning' | 'afternoon' | 'any'
+  wish?: string            // 부모가 고른 '바라는 점' 1개 (없으면 균등 채점)
   gender?: string          // 대운 방향(순/역행)에 필수
   before?: number          // 기본 7
   after?: number           // 기본 7
@@ -126,7 +127,7 @@ export async function runBirthTimingV5(
   dueDate: string,
   opts: RunOptionsV5 = {},
 ): Promise<BirthResultV5> {
-  const { timePref = 'any', gender = '', before = 7, after = 7 } = opts
+  const { timePref = 'any', gender = '', before = 7, after = 7, wish } = opts
 
   const raw = await buildCandidates(dueDate, { timePref, before, after })
   if (raw.length === 0) return { recommendations: [], totalEvaluated: 0, excludedWeekend: 0, excludedHoliday: 0 }
@@ -162,7 +163,7 @@ export async function runBirthTimingV5(
   if (candidates.length === 0) return { recommendations: [], totalEvaluated: 0, excludedWeekend, excludedHoliday }
 
   // ── 원국 채점 (동기) ──
-  const scored = candidates.map(c => ({ c, bd: scoreBabyV5(c) }))
+  const scored = candidates.map(c => ({ c, bd: scoreBabyV5(c, wish) }))
 
   // ── 대운 타이밍 (비동기, 날짜별 캐시) ──
   const cache = new Map<string, DayunItem[]>()

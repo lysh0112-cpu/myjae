@@ -250,6 +250,7 @@ function BirthResultInner() {
         const result = await runBirthTimingV5(sv.dueDate, {
           timePref: timePref as 'morning' | 'afternoon' | 'any',
           gender: sv.babyGender,   // 대운 방향(순/역행)에 필수
+          wish: sv.wishes?.[0],    // 부모가 고른 '바라는 점' 1개 (선택 안 하면 undefined)
         })
 
         if (cancelled) return
