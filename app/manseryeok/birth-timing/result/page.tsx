@@ -38,10 +38,19 @@ interface SurveyInput {
 
 interface AiNote { oneLine: string; detail?: string }
 
-function Disclaimer({ full }: { full?: boolean }) {
+function Disclaimer({ full, strong }: { full?: boolean; strong?: boolean }) {
   return (
-    <div style={{ background: '#fbece4', border: '1px solid #f0d5c5', borderRadius: '10px', padding: '10px 14px', fontSize: '11px', color: '#b06a52', lineHeight: 1.6 }}>
-      {full
+    <div style={{
+      background: strong ? '#fbe3d8' : '#fbece4',
+      border: `1px solid ${strong ? '#e8b79f' : '#f0d5c5'}`,
+      borderRadius: '10px',
+      padding: strong ? '13px 16px' : '10px 14px',
+      fontSize: strong ? '13px' : '11px',
+      fontWeight: strong ? 700 : 400,
+      color: strong ? '#9a4a30' : '#b06a52',
+      lineHeight: 1.6,
+    }}>
+      {full || strong
         ? '※ 본 분석은 전통 사주명리에 기반한 참고 정보입니다. 실제 출산일·수술일 결정은 산모와 아기의 건강을 최우선으로, 반드시 담당 산부인과 전문의와 상의해 결정하세요.'
         : '※ 전통 명리 참고용 · 최종 결정은 전문의와 상의하세요.'}
     </div>
@@ -414,7 +423,7 @@ function BirthResultInner() {
       </div>
 
       <div style={{ padding: '16px' }}>
-        <Disclaimer full />
+        <Disclaimer strong />
 
         <div style={{ margin: '16px 0', padding: '12px 14px', background: cardBg, borderRadius: '10px', border: '1px solid #f0e0d5' }}>
           <div style={{ fontSize: '11px', color: sub, marginBottom: '6px' }}>분석 조건</div>
