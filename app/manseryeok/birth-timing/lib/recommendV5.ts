@@ -207,20 +207,21 @@ export async function runBirthTimingV5(
     return { ...s, dayunScore, dayunNote, finalScore: s.bd.total + dayunScore }
   }))
 
-  // ── 날짜별로 그룹핑 (목업: 한 날짜에 좋은 시간 여러 개) ──
-  const byDate = new Map<string, typeof withDayun>()
-  for (const s of withDayun) {
-    const key = `${s.c.y}${pad(s.c.m)}${pad(s.c.d)}`
-    const arr = byDate.get(key) ?? []
-    arr.push(s)
-    byDate.set(key, arr)
-  }
+  // ── 상위 pick.days 개 '시각'을 그대로 뽑는다 (2026-07-23 변경) ──
+  //   [왜 바뀌었나]
+  //   이전엔 날짜로 묶어 '날짜당 1개'만 뽑았다. 그러면 같은 날짜의 2·3위 시각이
+  //   전체 상위권인데도 버려지고, 점수가 낮은 다른 날짜가 대신 올라왔다.
+  //   → 부모에게 손해. 이제는 점수순 상위 3개를 그대로 보여준다.
+  //   → 같은 날짜가 2~3개 들어와도 무방(시간이 다르므로). 대표님 확정.
+  const topPicks = [...withDayun]
+    .sort((a, b) => b.finalScore - a.finalScore)
+    .slice(0, CFG.pick.days)
 
-  // 각 날짜: 그 날 시각들을 점수순 정렬 → 상위 maxHours개를 hours 로.
-  //   날짜 대표점수(bestScore)는 그 날 최고 시각 점수 → 날짜 순위 정렬에 씀.
-  const dayList = [...byDate.entries()].map(([key, arr]) => {
-    const sorted = [...arr].sort((a, b) => b.finalScore - a.finalScore)
-    const hours: HourPick[] = sorted.slice(0, CFG.pick.maxHours).map(s => ({
+  //   화면(ResultV5)은 DayRecommendation(날짜 + hours[]) 구조를 쓰므로
+  //   각 시각을 '카드 하나'로 만들어 넘긴다(hours 에 그 시각 하나만 담음).
+  const recommendations: DayRecommendation[] = topPicks.map((s, i) => {
+    const key = `${s.c.y}${pad(s.c.m)}${pad(s.c.d)}`
+    const hour: HourPick = {
       hourIdx: s.c.hourIdx,
       hourLabel: s.c.hourLabel,
       saju: sajuString(s.c),
@@ -230,36 +231,19 @@ export async function runBirthTimingV5(
       finalScore: Math.round(s.finalScore),
       needExpert: s.bd.isJonggyeok,
       y: s.c.y, m: s.c.m, d: s.c.d,
-    }))
-    const rep = sorted[0]
+    }
     return {
+      rank: i + 1,
+      dateLabel: s.c.dateLabel,
+      weekday: s.c.weekday,
       dateKey: key,
-      dateLabel: rep.c.dateLabel,
-      weekday: rep.c.weekday,
-      offset: rep.c.offset,
-      hours,
-      bestScore: Math.round(rep.finalScore),
-      dayunList: cache.get(key) ?? [],   // 그 날짜의 대운 10개 (대운표 렌더용)
-      y: rep.c.y, m: rep.c.m, d: rep.c.d,
+      offset: s.c.offset,
+      hours: [hour],
+      bestScore: Math.round(s.finalScore),
+      dayunList: cache.get(key) ?? [],
+      y: s.c.y, m: s.c.m, d: s.c.d,
     }
   })
-
-  // ── 상위 days개 날짜 (서로 다른 날, 대표점수순) ──
-  const topDays = dayList
-    .sort((a, b) => b.bestScore - a.bestScore)
-    .slice(0, CFG.pick.days)
-
-  const recommendations: DayRecommendation[] = topDays.map((d, i) => ({
-    rank: i + 1,
-    dateLabel: d.dateLabel,
-    weekday: d.weekday,
-    dateKey: d.dateKey,
-    offset: d.offset,
-    hours: d.hours,
-    bestScore: d.bestScore,
-    dayunList: d.dayunList,
-    y: d.y, m: d.m, d: d.d,
-  }))
 
   return { recommendations, totalEvaluated: candidates.length, excludedWeekend, excludedHoliday, excludedWonjin }
 }

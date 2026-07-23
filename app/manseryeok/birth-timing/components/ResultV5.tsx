@@ -100,7 +100,9 @@ function DayCard({ day, note, onOpenHour }: {
         ))}
       </div>
 
-      <div style={{ fontSize: 11, color: C.sub, marginBottom: 8 }}>눌러서 자세히 보기</div>
+      <div style={{ fontSize: 11, color: C.sub, marginBottom: 8 }}>
+        눌러서 자세히 보기
+      </div>
 
       {/* 좋은 시간 버튼들 */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -316,7 +318,7 @@ export default function ResultV5({
   return (
     <div style={{ background: C.bg, borderRadius: 14, padding: 16 }}>
       <div style={{ fontSize: 13, color: C.accent, fontWeight: 600, marginBottom: 4 }}>
-        예정일 전 3주 중, 평일에서 고른 좋은 날이에요
+        예정일 전 3주 중, 평일에서 고른 좋은 날·시간이에요
       </div>
       <div style={{ fontSize: 11, color: C.sub, marginBottom: 14, lineHeight: 1.5 }}>
         타고난 사주(원국)를 봅니다. 인생의 운은 살면서 정해져요.
@@ -324,7 +326,7 @@ export default function ResultV5({
 
       {recommendations.map((day) => (
         <DayCard
-          key={day.dateKey}
+          key={`${day.dateKey}-${day.rank}`}
           day={day}
           note={aiNotes?.[day.rank]}
           onOpenHour={(d, h) => setOpen({ day: d, hour: h })}
