@@ -32,9 +32,14 @@ interface Props {
 export default function CheckResultV1({ result }: Props) {
   const [help, setHelp] = useState<string | null>(null)
 
+  // 판정에 실제로 쓴 사람. 옛 스냅샷 방어.
+  const people = result.people?.length
+    ? result.people
+    : (result.contractor ? [result.contractor] : [])
+
   const ownerText = result.ownerMode === 'joint'
     ? '공동명의 — 두 분 모두 봤어요'
-    : `단독명의 — ${result.people[0]?.name ?? ''}님 사주로 봤어요`
+    : `단독명의 — ${people[0]?.name ?? ''}님 사주로 봤어요`
 
   /**
    * 한 날짜의 한 줄이 어떻게 보일지.
@@ -93,25 +98,25 @@ export default function CheckResultV1({ result }: Props) {
         이삿짐 업체 사정을 함께 고려해 결정하세요.
       </div>
 
-      {/* 명식 — 두 분이면 궁합 부품, 한 분이면 단독으로.
-          ★배우자가 없을 때 계약자를 양쪽에 넣으면 같은 사람이 두 번 그려진다. */}
-      {result.contractor && (
+      {/* 명식 — ★판정에 실제로 쓴 사람만 그린다(result.people).
+          단독명의면 명의자 한 분만. 배우자를 입력했어도 판정에 안 쓰였으면 안 그린다. */}
+      {people.length > 0 && (
         <div style={{ marginBottom: 15 }}>
-          {result.spouse ? (
+          {people.length >= 2 ? (
             <CoupleWonguk
               left={{
-                name: result.contractor.name,
-                birth: result.contractor.birthLabel,
-                saju: result.contractor.pillars,
+                name: people[0].name,
+                birth: people[0].birthLabel,
+                saju: people[0].pillars,
               }}
               right={{
-                name: result.spouse.name,
-                birth: result.spouse.birthLabel,
-                saju: result.spouse.pillars,
+                name: people[1].name,
+                birth: people[1].birthLabel,
+                saju: people[1].pillars,
               }}
             />
           ) : (
-            <SoloWonguk person={result.contractor} />
+            <SoloWonguk person={people[0]} />
           )}
         </div>
       )}

@@ -188,54 +188,52 @@ function MovingStorageInner() {
 
       {confirmDel && (
         <div
-          onClick={() => setConfirmDel(null)}
+          onClick={() => !deleting && setConfirmDel(null)}
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(40,32,24,.45)',
-            display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 60,
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
+            position: 'fixed', inset: 0, zIndex: 50,
+            background: 'rgba(40,32,24,0.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+          }}>
+          <div onClick={e => e.stopPropagation()}
             style={{
-              background: '#FFFDF9', width: '100%', maxWidth: 480,
-              borderRadius: '18px 18px 0 0', padding: '22px 20px 30px',
-            }}
-          >
-            <div style={{ fontSize: 15.5, fontWeight: 700, color: ink, marginBottom: 8 }}>
-              이 기록을 지울까요?
+              width: '100%', maxWidth: 320, background: '#FFFDF9',
+              borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
+              boxShadow: '0 8px 30px rgba(90,70,40,0.2)',
+            }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: ink, marginBottom: 8 }}>
+              정말 삭제할까요?
             </div>
-            <div style={{ fontSize: 13, color: sub, lineHeight: 1.8, marginBottom: 20 }}>
-              {confirmDel.name1}{confirmDel.name2 ? ` · ${confirmDel.name2}` : ''} ·{' '}
-              {confirmDel.summary}
-              <br />
-              지우면 되돌릴 수 없어요.
+            <div style={{ fontSize: 13, color: '#7A6440', lineHeight: 1.5, marginBottom: 18 }}>
+              {confirmDel.name1}{confirmDel.name2 ? ` · ${confirmDel.name2}` : ''}
+              {' '}이사택일을 삭제해요.<br />
+              삭제하면 되돌릴 수 없어요.
             </div>
-            <div style={{ display: 'flex', gap: 9 }}>
+            <div style={{ display: 'flex', gap: 8 }}>
               <button
                 onClick={() => setConfirmDel(null)}
+                disabled={deleting}
                 style={{
-                  flex: 1, padding: '13px 0', background: '#F2EADA', color: ink,
-                  border: 'none', borderRadius: 11, fontSize: 14, fontWeight: 700,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >
-                그대로 둘게요
+                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+                  background: '#F0EADA', border: 'none', color: '#7A6440',
+                  cursor: deleting ? 'default' : 'pointer', fontFamily: 'inherit',
+                }}>
+                취소
               </button>
               <button
                 onClick={handleDelete}
                 disabled={deleting}
                 style={{
-                  flex: 1, padding: '13px 0', background: '#C0705E', color: '#fff',
-                  border: 'none', borderRadius: 11, fontSize: 14, fontWeight: 700,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >
-                {deleting ? '지우는 중…' : '지울게요'}
+                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+                  background: deleting ? '#d99' : '#c8506e', border: 'none', color: '#fff',
+                  cursor: deleting ? 'default' : 'pointer', fontFamily: 'inherit',
+                }}>
+                {deleting ? '삭제 중…' : '삭제'}
               </button>
             </div>
           </div>
         </div>
       )}
+
     </main>
   )
 }

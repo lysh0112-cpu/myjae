@@ -69,9 +69,14 @@ export default function PickMovingV1({ result, onPickDay }: Props) {
     byYear.get(d.y)!.push(d)
   }
 
+  // 판정에 실제로 쓴 사람. 옛 보관함 스냅샷에 people 이 없으면 계약자로 되살린다.
+  const people = result.people?.length
+    ? result.people
+    : (result.contractor ? [result.contractor] : [])
+
   const ownerText = result.ownerMode === 'joint'
     ? '공동명의 — 두 분 모두 보고 골랐어요'
-    : `단독명의 — ${result.people[0]?.name ?? ''}님 사주로 골랐어요`
+    : `단독명의 — ${people[0]?.name ?? ''}님 사주로 골랐어요`
 
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 16px 60px' }}>
@@ -85,23 +90,24 @@ export default function PickMovingV1({ result, onPickDay }: Props) {
         이삿짐 업체 사정을 함께 고려해 결정하세요.
       </div>
 
-      {/* 명식 — 두 분이면 궁합 부품(CoupleWonguk), 한 분이면 단독으로 그린다.
-          ★2026-07-24 수정 — 전에는 배우자가 없을 때 계약자를 양쪽에 넣어
-            같은 사람이 두 번 그려졌다. 한 분일 때는 CoupleWonguk 을 쓰지 않는다. */}
-      {result.contractor && (
+      {/* 명식 — ★판정에 실제로 쓴 사람만 그린다(result.people).
+          공동명의면 두 분, 단독명의면 명의자 한 분.
+          배우자를 입력했더라도 단독명의면 판정에 안 쓰이므로 그리지 않는다.
+          (2026-07-24 대표님 확인 — "한 사람 명의이면 등록한 그 사람만 나오면 된다") */}
+      {people.length > 0 && (
         <div style={{ marginBottom: 15 }}>
-          {result.spouse ? (
+          {people.length >= 2 ? (
             <>
               <CoupleWonguk
                 left={{
-                  name: result.contractor.name,
-                  birth: result.contractor.birthLabel,
-                  saju: result.contractor.pillars,
+                  name: people[0].name,
+                  birth: people[0].birthLabel,
+                  saju: people[0].pillars,
                 }}
                 right={{
-                  name: result.spouse.name,
-                  birth: result.spouse.birthLabel,
-                  saju: result.spouse.pillars,
+                  name: people[1].name,
+                  birth: people[1].birthLabel,
+                  saju: people[1].pillars,
                 }}
               />
               <div style={{
@@ -109,16 +115,16 @@ export default function PickMovingV1({ result, onPickDay }: Props) {
                 color: C.sub, lineHeight: 1.6,
               }}>
                 <span style={{ flex: 1, textAlign: 'center' }}>
-                  필요한 기운 <b style={{ color: C.brand }}>{result.contractor.yongsin || '—'}</b>
+                  필요한 기운 <b style={{ color: C.brand }}>{people[0].yongsin || '—'}</b>
                 </span>
                 <span style={{ color: '#DDD0BC' }}>·</span>
                 <span style={{ flex: 1, textAlign: 'center' }}>
-                  필요한 기운 <b style={{ color: C.brand }}>{result.spouse.yongsin || '—'}</b>
+                  필요한 기운 <b style={{ color: C.brand }}>{people[1].yongsin || '—'}</b>
                 </span>
               </div>
             </>
           ) : (
-            <SoloWonguk person={result.contractor} />
+            <SoloWonguk person={people[0]} />
           )}
         </div>
       )}
