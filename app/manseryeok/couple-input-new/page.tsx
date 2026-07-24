@@ -12,7 +12,7 @@
  *   couple-result 로 넘기기만 한다. 저장(saju_records)·점수·통변은 나중에 붙임.
  *
  * 재사용(이미 배포된 검증 부품):
- *   PersonPickerModal (나+가족지인+새입력) / JobSelect / MbtiInput / SavedPerson·toResultQuery
+ *   PersonPickerModal (나+가족지인+새입력) / SavedPerson·toResultQuery
  */
 
 import { Suspense, useState } from 'react'
@@ -217,7 +217,7 @@ function SlotView({ n, slot, onOpen }: {
 
       {/* ★2026-07-24 — 직업·MBTI 입력을 없앴다. (대표님 지시)
              심산 판정은 직업·MBTI 를 보지 않고, 자동 통변도 걷어내
-             쓸 자리가 없어졌다. JobSelect·MbtiInput 파일은 지우지 않았다. */}
+             쓸 자리가 없어졌다. ★2026-07-24 JobSelect.tsx·MbtiInput.tsx 파일도 삭제했다. */}
     </div>
   )
 }

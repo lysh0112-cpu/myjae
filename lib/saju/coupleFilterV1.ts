@@ -375,10 +375,27 @@ export function judgeCouple(
   const bStars = starsByScore(bHas)
   const warmWord = (el: Ohaeng) =>
     el === '화' ? '따뜻한 불(火)' : el === '수' ? '시원한 물(水)' : EL_LABEL[el]
-  const seasonLine =
-    a.season === b.season
-      ? `두 분 다 ${a.season}에 태어나 ${warmWord(a.needEl)} 기운이 필요한 사주예요.`
-      : `${a.name}님은 ${a.season}생이라 ${EL_LABEL[a.needEl]}, ${b.name}님은 ${b.season}생이라 ${EL_LABEL[b.needEl]} 기운이 필요해요.`
+
+  // ★2026-07-24 고침 — 계절이 같다고 필요 기운까지 같은 것은 아니다.
+  //
+  //   [무엇이 문제였나]
+  //   전에는 계절만 같으면 a.needEl 하나로 "두 분 다 ○○이 필요하다"고 썼다.
+  //   실제 사례(정준호 봄생·이경아 봄생)에서 이런 문구가 나갔다.
+  //     "두 분 다 봄에 태어나 따뜻한 불(火) 기운이 필요한 사주예요."
+  //   그런데 정준호는 火, 이경아는 金 이 필요했다. 이경아 몫이 통째로 틀렸다.
+  //
+  //   [왜 그런가]
+  //   연재쌤 확정 ⑤ — 여름·겨울생은 조후(水火), 봄·가을생은 억부로 본다.
+  //   조후는 계절이 정하니 같은 계절이면 같지만, 억부는 사주 구성이 정한다.
+  //   그래서 봄생 둘이라도 한 명은 火, 한 명은 金 이 될 수 있다.
+  //
+  //   → 계절이 같은지가 아니라 needEl 이 같은지로 갈린다.
+  const sameNeed = a.needEl === b.needEl
+  const seasonLine = sameNeed
+    ? (a.season === b.season
+        ? `두 분 다 ${a.season}에 태어나 ${warmWord(a.needEl)} 기운이 필요한 사주예요.`
+        : `${a.name}님은 ${a.season}생, ${b.name}님은 ${b.season}생이신데 두 분 다 ${warmWord(a.needEl)} 기운이 필요해요.`)
+    : `${a.name}님은 ${a.season}생이라 ${EL_LABEL[a.needEl]}, ${b.name}님은 ${b.season}생이라 ${EL_LABEL[b.needEl]} 기운이 필요해요.`
   cats.push({
     key: 'need',
     title: '필요한 기운을 채워 주는가',
@@ -390,29 +407,53 @@ export function judgeCouple(
   })
 
   // ② 서로에게 귀인이 되는가 — 연재쌤 지시
+  //
+  //   ★2026-07-24 문구 손질 (대표님 지시)
+  //     [무엇이 문제였나]
+  //     · 두 줄의 주어가 서로 달라 방향이 헷갈렸다.
+  //         "류도이님의 子·子가 홍길동님께 천을귀인이 됩니다."   (주어=글자)
+  //         "홍길동님 사주에는 류도이님의 귀인이 없어요."        (주어=사주)
+  //       뒤 문장이 "홍길동님께 귀인이 없다"로 읽혀 서운하게 들린다.
+  //     · 둘 다 없을 때 "없어요"만 두 번 나와 야박했다.
+  //
+  //     [어떻게 고쳤나]
+  //     · 주어를 사람으로 통일해 "누가 누구에게" 가 분명해지게 했다.
+  //     · 없을 때는 단정 대신 "이 자리로는 맺어지지 않았다"로 눅이고,
+  //       둘 다 없으면 위로 한 줄을 덧붙인다. (238쪽 개운법의 태도)
+  //
+  //   ⚠️ 궁합에서는 천을귀인만 본다. 심산 232·233쪽이 천을귀인만 말하기 때문이다.
+  //      사주 원국 화면은 귀인 8종을 다 보여 주므로, 고객이 "내 사주엔 귀인이
+  //      많던데?" 하고 생각하실 수 있다. 그래서 아래 안내 한 줄을 넣는다.
   const aGetsGwiin = pb.saju.filter(q => a.gwiinChars.includes(q.branch)).map(q => q.branch)
   const bGetsGwiin = pa.saju.filter(q => b.gwiinChars.includes(q.branch)).map(q => q.branch)
   const gwiinLines: string[] = []
+
   if (bGetsGwiin.length)
-    gwiinLines.push(`${a.name}님의 ${iga(bGetsGwiin.join('·'))} ${b.name}님께 천을귀인이 됩니다.`)
+    gwiinLines.push(`${a.name}님은 ${b.name}님께 귀인이 되어 드립니다. (${bGetsGwiin.join('·')})`)
   else
-    gwiinLines.push(`${a.name}님 사주에는 ${b.name}님의 귀인이 없어요.`)
+    gwiinLines.push(`${a.name}님은 ${b.name}님의 귀인 글자를 지니지 않으셨어요.`)
+
   if (aGetsGwiin.length)
-    gwiinLines.push(`${b.name}님의 ${iga(aGetsGwiin.join('·'))} ${a.name}님께 천을귀인이 됩니다.`)
+    gwiinLines.push(`${b.name}님은 ${a.name}님께 귀인이 되어 드립니다. (${aGetsGwiin.join('·')})`)
   else
-    gwiinLines.push(`${b.name}님 사주에는 ${a.name}님의 귀인이 없어요.`)
-  if (a.gwiinMine.length || b.gwiinMine.length) {
-    const mine: string[] = []
-    if (a.gwiinMine.length) mine.push(`${a.name}님 — ${a.gwiinMine.join('·')}`)
-    if (b.gwiinMine.length) mine.push(`${b.name}님 — ${b.gwiinMine.join('·')}`)
-    gwiinLines.push(`각자 사주에도 귀인을 지니고 계세요. (${mine.join(' / ')})`)
-  }
+    gwiinLines.push(`${b.name}님은 ${a.name}님의 귀인 글자를 지니지 않으셨어요.`)
+
   const bothGwiin = aGetsGwiin.length > 0 && bGetsGwiin.length > 0
   const oneGwiin = aGetsGwiin.length > 0 || bGetsGwiin.length > 0
+
+  if (!oneGwiin) {
+    // 둘 다 없을 때 — 여기서 끝내면 야박하다. 뜻을 정확히 전하고 다독인다.
+    gwiinLines.push('궁합에서 보는 귀인은 천을귀인 하나예요. 이 자리로 맺어지지 않았을 뿐, 두 분 사이가 부족하다는 뜻은 아닙니다.')
+    gwiinLines.push('서로를 살펴 주는 마음이 곧 귀인의 자리를 대신합니다.')
+  } else if (!bothGwiin) {
+    gwiinLines.push('한쪽으로 흐르는 자리예요. 받은 분이 먼저 마음을 내어 드리면 두 분 사이가 고르게 됩니다.')
+  }
+
   cats.push({
     key: 'gwiin',
     title: '서로에게 귀인이 되는가',
-    stars: bothGwiin ? 5 : oneGwiin ? 3 : (a.gwiinMine.length || b.gwiinMine.length) ? 2 : 1,
+    // ⚠️ 이 구간은 연재쌤 최종 확인 대상 (8장 ①)
+    stars: bothGwiin ? 5 : oneGwiin ? 3 : 2,
     lines: gwiinLines,
   })
 

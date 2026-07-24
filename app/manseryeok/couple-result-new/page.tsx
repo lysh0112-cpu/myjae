@@ -769,7 +769,7 @@ function CoupleResultView({
 
       <div style={{ padding: '16px 14px' }}>
         {/* ① 머리말 — 등급·폭죽을 걷어냈다. (점수제 폐기 2026-07-24)
-               GradeFireworks.tsx 는 지우지 않았다. 되돌릴 때 필요하다. */}
+               ★2026-07-24 GradeFireworks.tsx 파일도 삭제했다 (참조 0건). */}
         {!judge && (
           <div style={{ background: info.accent, borderRadius: 14, padding: '30px 16px', textAlign: 'center', marginBottom: 10, color: '#fff', fontSize: 13 }}>
             {calcErr ? '두 사람 정보를 다시 확인해 주세요.' : '두 사람의 인연을 살펴보는 중…'}
@@ -787,7 +787,7 @@ function CoupleResultView({
           <div style={{ marginTop: 10 }}>
             {/* ★2026-07-24 — MBTI 토글을 걷어냈다. (대표님 지시)
                    직업·MBTI 입력을 없앴으므로 비교할 값이 없다.
-                   CoupleInsightToggle.tsx 는 지우지 않았다.
+                   ★2026-07-24 CoupleInsightToggle.tsx 파일도 삭제했다 (참조 0건).
                    라벨은 부부면 남편/아내, 아니면 이름을 그대로 쓴다. */}
             <OhaengCompareCard
               aScores={ohaeng1}

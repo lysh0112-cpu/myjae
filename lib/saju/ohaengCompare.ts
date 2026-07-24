@@ -64,11 +64,27 @@ export function compareOhaeng(
   const complement = lackTotal > 0 ? Math.round((fill / lackTotal) * 100) : 0
 
   // ── 해설용: 가장 다른/닮은 오행 ──
+  //   ★2026-07-24 고침 — mostSimilar 가 "둘 다 0" 인 오행을 골라 버렸다.
+  //     실제 화면에 이런 문구가 나갔다.
+  //       "쇠의 기운으로 깊이 통하는, 결이 비슷한 두 분이에요"
+  //       (그런데 두 분 다 金 이 0 이라 막대가 비어 있었다)
+  //     없는 기운을 "통한다"고 말하면 안 된다.
+  //     → 두 분 다 실제로 지닌(0 이 아닌) 오행 중에서 고른다.
+  //       차이가 같으면 많이 가진 쪽을 앞세운다.
+  //     ⚠️ 둘 다 가진 오행이 하나도 없으면 그때만 예전처럼 전체에서 고른다.
   const sorted = [...OHAENG_ORDER].sort(
     (x, y) => Math.abs(a(y) - b(y)) - Math.abs(a(x) - b(x)),
   )
   const mostDifferent = sorted[0]
-  const mostSimilar = sorted[sorted.length - 1]
+
+  const shared = OHAENG_ORDER.filter(el => a(el) > 0 && b(el) > 0)
+  const pickFrom = shared.length ? shared : OHAENG_ORDER
+  const mostSimilar = [...pickFrom].sort((x, y) => {
+    const dx = Math.abs(a(x) - b(x))
+    const dy = Math.abs(a(y) - b(y))
+    if (dx !== dy) return dx - dy                    // 차이가 작은 것 먼저
+    return (a(y) + b(y)) - (a(x) + b(x))             // 같으면 많이 가진 쪽
+  })[0]
 
   return {
     rows,
