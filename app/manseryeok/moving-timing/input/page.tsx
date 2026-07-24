@@ -287,7 +287,11 @@ function MovingInputInner() {
                   border: `1px solid ${direction === d ? accent : line}`,
                   borderRadius: 10, padding: '13px 0', cursor: 'pointer',
                   fontFamily: 'inherit', fontSize: 14, fontWeight: 700,
+                  transition: 'background .12s, color .12s, transform .08s',
                 }}
+                onPointerDown={e => { e.currentTarget.style.transform = 'scale(0.96)' }}
+                onPointerUp={e => { e.currentTarget.style.transform = 'scale(1)' }}
+                onPointerLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
               >
                 {d}
                 <span style={{
@@ -306,6 +310,20 @@ function MovingInputInner() {
             background: canGo ? accent : '#DDD3C0', color: '#fff',
             border: 'none', borderRadius: 13, fontSize: 15, fontWeight: 700,
             cursor: canGo ? 'pointer' : 'default', fontFamily: 'inherit',
+            transition: 'transform .08s, filter .12s',
+          }}
+          onPointerDown={e => {
+            if (!canGo) return
+            e.currentTarget.style.transform = 'scale(0.98)'
+            e.currentTarget.style.filter = 'brightness(0.92)'
+          }}
+          onPointerUp={e => {
+            e.currentTarget.style.transform = 'scale(1)'
+            e.currentTarget.style.filter = 'none'
+          }}
+          onPointerLeave={e => {
+            e.currentTarget.style.transform = 'scale(1)'
+            e.currentTarget.style.filter = 'none'
           }}
         >
           다음

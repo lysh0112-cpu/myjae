@@ -217,6 +217,19 @@ function CheckInner() {
               width: '100%', marginTop: 22, padding: '15px 0',
               background: accent, color: '#fff', border: 'none', borderRadius: 13,
               fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              transition: 'transform .08s, filter .12s',
+            }}
+            onPointerDown={e => {
+              e.currentTarget.style.transform = 'scale(0.98)'
+              e.currentTarget.style.filter = 'brightness(0.92)'
+            }}
+            onPointerUp={e => {
+              e.currentTarget.style.transform = 'scale(1)'
+              e.currentTarget.style.filter = 'none'
+            }}
+            onPointerLeave={e => {
+              e.currentTarget.style.transform = 'scale(1)'
+              e.currentTarget.style.filter = 'none'
             }}
           >
             이 날들 봐주세요

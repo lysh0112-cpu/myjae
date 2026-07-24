@@ -36,11 +36,13 @@ function FindInner() {
   const [start, setStart] = useState(iso(today))
   const [end, setEnd] = useState(iso(in3m))
   const [err, setErr] = useState('')
+  // 어느 프리셋을 골랐는지 — 눌린 것이 보이도록. 직접 고르면 해제된다.
+  const [picked, setPicked] = useState<number | null>(3)
 
   const preset = (months: number) => {
     const s = new Date()
     const e = new Date(); e.setMonth(e.getMonth() + months)
-    setStart(iso(s)); setEnd(iso(e)); setErr('')
+    setStart(iso(s)); setEnd(iso(e)); setErr(''); setPicked(months)
   }
 
   const dayCount = (() => {
@@ -71,7 +73,7 @@ function FindInner() {
       <input
         type="date"
         value={value}
-        onChange={e => { onChange(e.target.value); setErr('') }}
+        onChange={e => { onChange(e.target.value); setErr(''); setPicked(null) }}
         style={{
           width: '100%', padding: '12px 13px', background: '#FFFDF9',
           border: `1px solid ${line}`, borderRadius: 11, fontSize: 14,
@@ -111,19 +113,29 @@ function FindInner() {
           자주 찾으시는 기간
         </div>
         <div style={{ display: 'flex', gap: 7, marginBottom: 20 }}>
-          {([[3, '3개월'], [6, '6개월'], [12, '1년']] as const).map(([m, label]) => (
-            <button
-              key={m}
-              onClick={() => preset(m)}
-              style={{
-                flex: 1, background: '#FFFDF9', border: `1px solid ${line}`,
-                borderRadius: 10, padding: '11px 0', cursor: 'pointer',
-                fontFamily: 'inherit', fontSize: 13, color: ink, fontWeight: 600,
-              }}
-            >
-              앞으로 {label}
-            </button>
-          ))}
+          {([[3, '3개월'], [6, '6개월'], [12, '1년']] as const).map(([m, label]) => {
+            const on = picked === m
+            return (
+              <button
+                key={m}
+                onClick={() => preset(m)}
+                style={{
+                  flex: 1,
+                  background: on ? accent : '#FFFDF9',
+                  color: on ? '#fff' : ink,
+                  border: `1px solid ${on ? accent : line}`,
+                  borderRadius: 10, padding: '11px 0', cursor: 'pointer',
+                  fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
+                  transition: 'background .12s, color .12s, transform .08s',
+                }}
+                onPointerDown={e => { e.currentTarget.style.transform = 'scale(0.96)' }}
+                onPointerUp={e => { e.currentTarget.style.transform = 'scale(1)' }}
+                onPointerLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
+              >
+                앞으로 {label}
+              </button>
+            )
+          })}
         </div>
 
         <div style={{ fontSize: 13, fontWeight: 700, color: '#7A6440', marginBottom: 11 }}>
@@ -153,6 +165,19 @@ function FindInner() {
             width: '100%', marginTop: 26, padding: '15px 0',
             background: accent, color: '#fff', border: 'none', borderRadius: 13,
             fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+            transition: 'transform .08s, filter .12s',
+          }}
+          onPointerDown={e => {
+            e.currentTarget.style.transform = 'scale(0.98)'
+            e.currentTarget.style.filter = 'brightness(0.92)'
+          }}
+          onPointerUp={e => {
+            e.currentTarget.style.transform = 'scale(1)'
+            e.currentTarget.style.filter = 'none'
+          }}
+          onPointerLeave={e => {
+            e.currentTarget.style.transform = 'scale(1)'
+            e.currentTarget.style.filter = 'none'
           }}
         >
           좋은 날 찾기
