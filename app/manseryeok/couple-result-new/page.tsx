@@ -675,7 +675,11 @@ function CoupleResultView({
         body: JSON.stringify({ systemPrompt: prompt, premium: false }),
       })
       if (!res.ok || !res.body) {
-        acc = '풀이를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.'
+        // ⚠️ 교훈 U — 조용히 넘어가면 원인을 못 찾는다. 상태와 본문을 남긴다.
+        let why = ''
+        try { why = (await res.text()).slice(0, 200) } catch {}
+        console.error('[followUp] 응답 실패', res.status, why)
+        acc = `풀이를 불러오지 못했어요. (${res.status}) ${why || '잠시 후 다시 시도해 주세요.'}`
       } else {
         const reader = res.body.getReader()
         const decoder = new TextDecoder()
@@ -693,8 +697,11 @@ function CoupleResultView({
           }
         }
       }
-    } catch {
-      acc = '풀이를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.'
+    } catch (e) {
+      // ⚠️ 교훈 U — 무엇이 터졌는지 남긴다. catch {} 로 삼키면 못 찾는다.
+      console.error('[followUp] 예외', e)
+      const msg = e instanceof Error ? e.message : String(e)
+      acc = `풀이를 불러오지 못했어요. (${msg})`
     } finally {
       const next = [...followUps, { q: question, a: acc }]
       setFollowUps(next)
