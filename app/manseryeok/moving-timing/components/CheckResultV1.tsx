@@ -35,19 +35,24 @@ export default function CheckResultV1({ result }: Props) {
     ? '공동명의 — 두 분 모두 봤어요'
     : `단독명의 — ${result.people[0]?.name ?? ''}님 사주로 봤어요`
 
-  /** 한 날짜의 한 줄이 어떻게 보일지 */
+  /**
+   * 한 날짜의 한 줄이 어떻게 보일지.
+   *
+   * ★걸린 줄은 눈에 확 띄어야 한다. 마크만 굵게 하면 잘 안 보여서
+   *   마크·라벨·근거를 함께 굵게 하고 줄 배경에도 옅은 붉은 기를 준다.
+   */
   function cellOf(day: DayResult, key: keyof MovingFlags, kind: 'fix' | 'opt') {
     const v = day.detail[key] as boolean
     if (kind === 'fix') {
       return v
-        ? { mark: '✓', color: C.good, weight: 400 }
-        : { mark: '✕', color: C.bad, weight: 700 }
+        ? { mark: '✓', color: C.good, weight: 400, hit: false }
+        : { mark: '✕', color: C.bad, weight: 700, hit: true }
     }
     // 선택 조건 — 안 맞아도 흉일이 아니다. 회색 대시로 둔다.
-    if (result.lunarFailed) return { mark: '—', color: '#C9BBA6', weight: 400 }
+    if (result.lunarFailed) return { mark: '—', color: '#C9BBA6', weight: 400, hit: false }
     return v
-      ? { mark: '✓', color: C.good, weight: 400 }
-      : { mark: '—', color: '#C9BBA6', weight: 400 }
+      ? { mark: '✓', color: C.good, weight: 400, hit: false }
+      : { mark: '—', color: '#C9BBA6', weight: 400, hit: false }
   }
 
   /** 걸린 근거 문구 ('戌 ↔ 배우자 丑' 같은) */
@@ -140,11 +145,15 @@ export default function CheckResultV1({ result }: Props) {
         const fixOk = day.detail.passFixed
         return (
           <div key={day.dateKey} style={{
-            background: C.card, border: `1px solid ${fixOk ? C.line : '#E8C8BE'}`,
+            background: C.card,
+            border: fixOk ? `1px solid ${C.line}` : `1.5px solid #E0A99A`,
             borderRadius: 13, padding: '15px 16px', marginBottom: 13,
           }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 3 }}>
-              <span style={{ fontSize: 16, fontWeight: 700, color: C.ink, letterSpacing: '-.3px' }}>
+              <span style={{
+                fontSize: 16, fontWeight: 700,
+                color: fixOk ? C.ink : C.bad, letterSpacing: '-.3px',
+              }}>
                 {day.fullLabel}
               </span>
               <span style={{ fontSize: 12.5, color: C.sub }}>{day.weekday}</span>
@@ -166,23 +175,34 @@ export default function CheckResultV1({ result }: Props) {
                   onClick={() => setHelp(row.key as string)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 9, width: '100%',
-                    padding: '8px 0', background: 'none', border: 'none',
-                    borderTop: `1px solid ${C.line}`, cursor: 'pointer',
-                    fontFamily: 'inherit', textAlign: 'left',
+                    padding: cell.hit ? '9px 8px' : '8px 0',
+                    margin: cell.hit ? '0 -8px' : 0,
+                    background: cell.hit ? '#FBEFEC' : 'none',
+                    border: 'none', borderTop: `1px solid ${C.line}`,
+                    borderRadius: cell.hit ? 8 : 0,
+                    cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
                   }}
                 >
                   <span style={{
-                    fontSize: 14, color: cell.color, fontWeight: cell.weight,
+                    fontSize: cell.hit ? 15 : 14, color: cell.color, fontWeight: cell.weight,
                     width: 16, textAlign: 'center', flex: 'none',
                   }}>
                     {cell.mark}
                   </span>
-                  <span style={{ fontSize: 13, color: C.ink }}>{row.label}</span>
-                  <span style={{ fontSize: 10, color: '#C0AC90' }}>{row.hanja}</span>
+                  <span style={{
+                    fontSize: 13, color: cell.hit ? C.bad : C.ink,
+                    fontWeight: cell.hit ? 700 : 400,
+                  }}>
+                    {row.label}
+                  </span>
+                  <span style={{ fontSize: 10, color: cell.hit ? '#D0A090' : '#C0AC90' }}>
+                    {row.hanja}
+                  </span>
                   {reason && (
                     <span style={{
-                      marginLeft: 'auto', fontSize: 11.5,
-                      color: row.kind === 'fix' ? C.bad : '#BFAE96',
+                      marginLeft: 'auto', fontSize: cell.hit ? 12 : 11.5,
+                      fontWeight: cell.hit ? 700 : 400,
+                      color: cell.hit ? C.bad : '#BFAE96',
                     }}>
                       {reason}
                     </span>
@@ -191,15 +211,25 @@ export default function CheckResultV1({ result }: Props) {
               )
             })}
 
-            <div style={{
-              marginTop: 11, paddingTop: 11, borderTop: `1px solid ${C.line}`,
-              fontSize: 12.5, lineHeight: 1.75,
-              color: fixOk ? C.good : C.bad, fontWeight: 600,
-            }}>
-              {fixOk
-                ? '꼭 봐야 할 네 가지는 모두 지나갔어요.'
-                : '꼭 봐야 할 것 중 걸리는 게 있어요. 다른 날을 보시는 게 좋겠어요.'}
-            </div>
+            {(() => {
+              const hits = [
+                !day.detail.fixMyeongjeol && '명절',
+                !day.detail.fixGongmang && '공망',
+                !day.detail.fixChung && '충',
+                !day.detail.fixHyeong && '형',
+              ].filter(Boolean) as string[]
+              return (
+                <div style={{
+                  marginTop: 11, paddingTop: 11, borderTop: `1px solid ${C.line}`,
+                  fontSize: 12.5, lineHeight: 1.75,
+                  color: fixOk ? C.good : C.bad, fontWeight: 700,
+                }}>
+                  {fixOk
+                    ? '꼭 봐야 할 네 가지는 모두 지나갔어요.'
+                    : `${hits.join('·')}에 걸려요. 다른 날을 보시는 게 좋겠어요.`}
+                </div>
+              )
+            })()}
           </div>
         )
       })}
