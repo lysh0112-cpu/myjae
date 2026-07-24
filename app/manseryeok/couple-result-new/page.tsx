@@ -55,6 +55,17 @@ type Mode = 'couple' | 'married'
 //   화면 코드와 parseTCards 는 지우지 않았다.
 const SHOW_AUTO_TONGBYEON = false
 
+// ★2026-07-24 — "더 궁금한 것"(AI 자유 질문) 섹션을 화면에서 내린다. (대표님 지시)
+//
+//   [무엇이 없어지나]
+//   · "더 궁금한 것" 라벨 · 지난 문답 카드 · "무엇이든 물어보세요" 입력칸
+//   · 새로 물어볼 길이 없으므로 궁합에서 /api/tongbyeon 호출이 0 이 된다.
+//
+//   [코드는 남겨 둔다]
+//   · CoupleFollowUp.tsx · askFollowUp() · followUps 상태·저장 로직
+//   · 이 상수만 true 로 바꾸면 그대로 돌아온다.
+const SHOW_FOLLOWUP = false
+
 const MODE_INFO: Record<Mode, { label: string; accent: string }> = {
   couple:  { label: '연인 궁합', accent: '#c85a8c' },
   married: { label: '부부 궁합', accent: '#c85a6e' },
@@ -849,8 +860,11 @@ function CoupleResultView({
 
         )}
 
-        {/* ⑤ 자유 질문 (최대 3개) — 2026-07-24 신규 */}
-        {judge && (
+        {/* ⑤ 더 궁금한 것 — ★2026-07-24 화면에서 제거 (대표님 지시)
+            섹션 전체(라벨 · 지난 문답 · 입력칸)를 내린다.
+            SHOW_FOLLOWUP 을 true 로 바꾸면 예전처럼 돌아온다.
+            CoupleFollowUp.tsx 와 askFollowUp 은 지우지 않았다. */}
+        {SHOW_FOLLOWUP && judge && (
           <CoupleFollowUp
             items={followUps}
             onAsk={askFollowUp}
@@ -887,8 +901,7 @@ function CoupleResultView({
         </div>
 
         {/* ★해설 복사 — 카톡 등에 붙여넣기 (공용 부품) */}
-        {/* ★2026-07-24 — 자동 총평을 걷어냈으므로 판정 결과를 복사한다.
-               문답이 있으면 함께 담는다. (카톡 등에 붙여넣기용) */}
+        {/* ★2026-07-24 — 판정 결과 + 이미 받은 문답을 함께 담는다. */}
         <CopyTextButton
           text={[
             judge ? judgeToText(judge) : '',
@@ -915,7 +928,7 @@ function CoupleResultView({
                 if (!score) return null
                 // ★2026-07-24 — 자동 총평을 걷어내 tongResult 가 비었다.
                 //   상담사가 "고객이 무엇을 보고 왔는지" 알아야 하므로
-                //   판정 결과와 자유 문답을 글로 풀어 넘긴다.
+                //   판정 결과와 이미 받은 문답을 글로 풀어 넘긴다.
                 const forConsultant = [
                   judge ? judgeToText(judge) : '',
                   followUps.length

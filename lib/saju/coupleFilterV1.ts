@@ -92,6 +92,45 @@ const CHEON_EUL: Record<string, string[]> = {
 const isPair = (a: string, b: string, list: string[][]) =>
   list.some(([x, y]) => (a === x && b === y) || (a === y && b === x))
 
+/** 月支-日支가 봄↔가을인가 — 232쪽 "봄가을은 보통"에 해당하는 자리 */
+const isSpringAutumn = (monthBranch: string, dayBranch: string): boolean => {
+  const sw = SEASON[monthBranch], si = SEASON[dayBranch]
+  return (sw === '봄' && si === '가을') || (sw === '가을' && si === '봄')
+}
+
+/**
+ * ★2026-07-24 — 두 사람 사이의 계절 궁합
+ *
+ *   ⚠️ 전에는 이 판정을 judgePerson 안에서 "내 월지 ↔ 내 일지"로 봤다.
+ *      그러면 한 사람 사주 구조를 보는 것이라 궁합이 아니다.
+ *      대표님 확인(2026-07-24): 부부 궁합이므로 두 사람 관계에서 본다.
+ *      → A님 月支 ↔ B님 日支 로 교차해서 본다. 양방향 둘 다 본다.
+ *
+ *   [남녀 공통 — 233쪽]
+ *     계절이 같으면 부정적 / 반대면 긍정적
+ *   [여자만 — 232쪽 여자 항목]
+ *     반대면 찰떡궁합 / 봄가을은 보통 / 丑丑은 이혼 가능성
+ *
+ *   232쪽 2번 "조후에서는 水火가 가장 중요" → 여름(火)↔겨울(水)만 '반대'.
+ *   봄↔가을은 원문이 "보통"이라 못박았다.
+ *
+ *   ⚠️ 丑丑은 여기서 다루지 않는다. 丑丑은 둘 다 겨울이라 계절로는 '같음'이고,
+ *      "이혼 가능성"이라는 별도 단서는 여자 항목에만 있기 때문이다.
+ *      호출부에서 성별을 보고 isChukChuk() 으로 따로 판정한다.
+ */
+function crossSeason(monthBranch: string, dayBranch: string): SeasonRel {
+  const sw = SEASON[monthBranch], si = SEASON[dayBranch]
+  if (!sw || !si) return '보통'
+  const opposite =
+    (sw === '여름' && si === '겨울') || (sw === '겨울' && si === '여름')
+  if (opposite) return '반대'
+  return sw === si ? '같음' : '보통'
+}
+
+/** 丑丑인가 — 232쪽 여자 항목 "丑丑은 이혼 가능성이 크다" (연재쌤 확정 ②: 未未·午午 등은 해당 없음) */
+const isChukChuk = (monthBranch: string, dayBranch: string): boolean =>
+  monthBranch === '丑' && dayBranch === '丑'
+
 // ── 한글 조사 — 받침 유무로 갈린다. 한자는 우리말 음으로 읽어 판정한다. ──
 const HANJA_SOUND: Record<string, string> = {
   甲:'갑',乙:'을',丙:'병',丁:'정',戊:'무',己:'기',庚:'경',辛:'신',壬:'임',癸:'계',
@@ -118,6 +157,8 @@ const EL_LABEL: Record<Ohaeng, string> = {
 
 // ── 타입 ────────────────────────────────────────────────────────────────────
 export type Gender = '남' | '여'
+/** 月支-日支 계절 관계 (232쪽) — 두 사람 교차로 본다 */
+export type SeasonRel = '반대' | '같음' | '보통'
 export type Stars = 1 | 2 | 3 | 4 | 5
 
 export interface PersonInput {
@@ -160,7 +201,8 @@ export interface PersonJudge {
   /** 일지 십신 — 234·235쪽 해설 열쇠 */
   iljiSipsin: string
   /** 月支-日支 계절 관계 (232·233쪽) */
-  seasonRel: '반대' | '같음' | '보통' | '丑丑'
+  /** ⚠️ 한 사람 안에서 본 참고값. 궁합 판정은 judgeCouple 이 교차로 다시 계산한다. */
+  seasonRel: SeasonRel
   /** 일월 원진 — 연재쌤 확정 ① */
   wonjinIlWol: boolean
   /** 내 천을귀인 글자 */
@@ -284,16 +326,11 @@ export function judgePerson(p: PersonInput): PersonJudge {
   // 일지 십신 (232쪽 4번 — 판단 기준은 日支)
   const iljiSipsin = dayBranch ? sipsinOf(dayStem, HIDDEN[dayBranch]?.[2] ?? '') : ''
 
-  // ── 月支-日支 계절 (232·233쪽) + 丑丑 (연재쌤 확정 ②) ──
-  let seasonRel: PersonJudge['seasonRel']
-  if (monthBranch === '丑' && dayBranch === '丑') seasonRel = '丑丑'
-  else {
-    const sw = SEASON[monthBranch], si = SEASON[dayBranch]
-    const opposite =
-      (sw === '여름' && si === '겨울') || (sw === '겨울' && si === '여름') ||
-      (sw === '봄' && si === '가을') || (sw === '가을' && si === '봄')
-    seasonRel = opposite ? '반대' : sw === si ? '같음' : '보통'
-  }
+  // ── 月支-日支 계절 (한 사람 안에서 본 것) ──
+  //   ⚠️ 이 값은 "내 사주 구조"를 보는 참고값이다.
+  //      궁합 판정(찰떡궁합)은 judgeCouple 에서 두 사람 교차(내 月支 ↔ 상대 日支)로
+  //      다시 계산한다. 이 필드를 궁합 근거로 쓰지 마라. (2026-07-24 대표님 확인)
+  const seasonRel = crossSeason(monthBranch, dayBranch)
 
   // ── 일월 원진 (연재쌤 확정 ①) ──
   const wonjinIlWol = isPair(monthBranch, dayBranch, WONJIN)
@@ -466,16 +503,47 @@ export function judgeCouple(
     lines.push(x.wonjinIlWol
       ? `월지 ${wagwa(x.monthBranch)} 일지 ${iga(x.dayBranch)} 원진으로 얽혀, 마음이 예민해지기 쉬운 구조예요.`
       : `월지 ${wagwa(x.monthBranch)} 일지 ${iga(x.dayBranch)} 원진으로 얽히지 않아 마음이 어지럽지 않은 구조예요.`)
-    if (x.seasonRel === '반대') lines.push('월지와 일지의 계절이 반대라 조후가 잘 맞는 자리입니다.')
-    else if (x.seasonRel === '같음') lines.push('월지와 일지의 계절이 같아 기운이 한쪽으로 쏠려 있어요.')
-    else if (x.seasonRel === '丑丑') lines.push('월지와 일지가 모두 丑이라 각별히 살피셔야 하는 자리입니다.')
+    // ★계절 궁합 — 두 사람 교차 (내 月支 ↔ 상대 日支)
+    //   2026-07-24 대표님 확인: 부부 궁합이므로 두 사람 관계에서 본다.
+    //
+    //   [남녀 공통 — 233쪽]
+    //     » 계절이 같으면 부정적이고 月支의 계절과 日支가 반대면 긍정적이다.
+    //   [여자만 추가 — 232쪽 여자 항목]
+    //     » 月支와 日支 계절이 반대이면 찰떡궁합이다.
+    //        – 봄가을은 보통    – 丑丑은 이혼 가능성이 크다.
+    //
+    //   ⚠️ 봄가을·丑丑 단서는 232쪽 "여자 항목" 아래에만 있다.
+    //      남자에게 붙이면 원문에 없는 판정을 만드는 것이다. (교훈 AA)
+    const mate = x === a ? b : a
+    const isFemale = x.gender === '여'
+    const cs = crossSeason(x.monthBranch, mate.dayBranch)
+    const chukChuk = isFemale && isChukChuk(x.monthBranch, mate.dayBranch)
+    const springAutumn = isFemale && isSpringAutumn(x.monthBranch, mate.dayBranch)
+    const seasonPair = `${x.name}님 월지 ${wagwa(x.monthBranch)} ${mate.name}님 일지 ${iga(mate.dayBranch)}`
 
-    // 별: 배우자 자리 상태 종합 (점수·뿌리·공망·원진)
+    if (chukChuk) {
+      // 232쪽 여자 항목 — 원문은 "이혼 가능성이 크다". 대표님 지시로 순화한다.
+      lines.push(`${seasonPair} 모두 丑이라 각별히 살피셔야 하는 자리예요.`)
+    } else if (cs === '반대') {
+      lines.push(isFemale
+        ? `${seasonPair} 계절이 서로 반대라 배우자와 아주 잘 맞는 자리예요.`
+        : `${seasonPair} 계절이 서로 반대라 배우자와 잘 맞는 자리예요.`)
+    } else if (springAutumn) {
+      // 여자 항목에만 있는 단서 — 봄가을은 보통
+      lines.push(`${seasonPair} 봄·가을로 나뉘어 치우침 없이 무난한 자리예요.`)
+    } else if (cs === '같음') {
+      lines.push(`${seasonPair} 계절이 같아 기운이 한쪽으로 쏠려 있어요.`)
+    }
+
+    // 별: 배우자 자리 상태 종합 (점수·뿌리·공망·원진 + 두 사람 계절)
+    //   ★2026-07-24 대표님 지시 — 별점은 그대로 유지한다.
+    //     계절 문구는 남녀를 갈라 원문대로 고쳤지만, 별 가감은 건드리지 않는다.
+    //     ('같음'·丑丑 에 별을 깎는 안이 있었으나 넣지 않는다)
     let st: Stars = starsByScore(x.spouseScore)
     if (!x.spouseRooted && st > 1) st = (st - 1) as Stars
     if (x.spouseGongmang && st > 1) st = (st - 1) as Stars
     if (x.wonjinIlWol && st > 1) st = (st - 1) as Stars
-    if (x.seasonRel === '반대' && st < 5) st = (st + 1) as Stars
+    if (cs === '반대' && st < 5) st = (st + 1) as Stars
 
     cats.push({
       key: `spouse_${x === a ? 'a' : 'b'}`,
