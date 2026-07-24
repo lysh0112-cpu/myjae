@@ -317,7 +317,16 @@ export function judgePerson(p: PersonInput): PersonJudge {
 }
 
 // ── 두 사람 판정 ────────────────────────────────────────────────────────────
-export function judgeCouple(pa: PersonInput, pb: PersonInput): CoupleJudgeV1 {
+/**
+ * @param spouseTitle 배우자운 카드 제목을 만드는 함수.
+ *   ★2026-07-24 메뉴 통합 — 부부면 "○○님의 배우자운", 그 외는 "○○님의 인연운".
+ *   안 넘기면 예전처럼 '배우자운'으로 둔다.
+ */
+export function judgeCouple(
+  pa: PersonInput,
+  pb: PersonInput,
+  spouseTitle: (name: string) => string = (n) => `${n}님의 배우자운`,
+): CoupleJudgeV1 {
   const a = judgePerson(pa)
   const b = judgePerson(pb)
   const cats: CategoryResult[] = []
@@ -470,7 +479,7 @@ export function judgeCouple(pa: PersonInput, pb: PersonInput): CoupleJudgeV1 {
 
     cats.push({
       key: `spouse_${x === a ? 'a' : 'b'}`,
-      title: `${x.name}님의 배우자운`,
+      title: spouseTitle(x.name),
       stars: st,
       lines,
     })

@@ -83,9 +83,11 @@ export async function saveCoupleRecord(args: {
     .from('saju_records')
     .insert({
       user_id: uid,
-      // 연인=couple / 부부=married 로 DB에서 분리 저장(대규모 조회 대비).
-      // mode 값('couple'|'married')이 그대로 service_type이 된다.
-      service_type: args.mode,
+      // ★2026-07-24 — 메뉴를 하나로 합치면서 service_type 도 'couple' 하나로 통일했다.
+      //   예전에는 couple/married 로 나눠 저장했다(대규모 조회 대비).
+      //   부부/연인 구분은 이제 '관계'로 하므로 나눌 이유가 없어졌다.
+      //   ⚠️ 옛 기록에는 아직 married 가 남아 있다. 조회는 둘 다 받는다.
+      service_type: 'couple',
       title: `${args.name1} ♥ ${args.name2}`,
       relation: args.relation,
       input_data: blob,

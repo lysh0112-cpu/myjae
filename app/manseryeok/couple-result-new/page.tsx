@@ -20,6 +20,7 @@
  */
 
 import { Suspense, useMemo, useState, useEffect, useRef } from 'react'
+import { coupleKindOfPair, coupleTitleOf, spouseFortuneTitle, COUPLE_PRICE_KEY, type CoupleKind } from '@/lib/saju/coupleRelation'
 import { useRouter, useSearchParams } from 'next/navigation'
 import CoupleWonguk from './components/CoupleWonguk'
 import OhaengCompareCard from './components/OhaengCompareCard'
@@ -78,8 +79,7 @@ const catColor = (c: string) => CAT_COLOR[c] ?? '#b46e46'
 function CoupleResultInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const mode = (searchParams.get('mode') === 'married' ? 'married' : 'couple') as Mode
-  const info = MODE_INFO[mode]
+
 
   const parse = (key: string): Record<string, string> => {
     try { return JSON.parse(decodeURIComponent(searchParams.get(key) || '{}')) } catch { return {} }
@@ -89,6 +89,12 @@ function CoupleResultInner() {
 
   const name1 = person1.name || '첫 번째'
   const name2 = person2.name || '두 번째'
+
+  // ★2026-07-24 — 메뉴를 하나로 합쳤다. 부부/연인은 '관계'로 가른다.
+  //   URL 의 mode 는 옛 링크 호환용일 뿐, 관계가 우선이다.
+  const kind = coupleKindOfPair(person1.relation, person2.relation)
+  const mode: Mode = kind === 'married' ? 'married' : 'couple'
+  const info = { ...MODE_INFO[mode], label: coupleTitleOf(kind) }
 
   // 보관함에서 "다시 보기"로 온 경우: recordId 있으면 질문 선택 건너뛰고 바로 결과(스냅샷)
   const recordId = searchParams.get('recordId') || undefined
@@ -280,6 +286,7 @@ function CoupleResultInner() {
   return (
     <CoupleResultView
       mode={mode}
+      kind={kind}
       info={info}
       person1={person1}
       person2={person2}
@@ -450,9 +457,10 @@ function toCouplePerson(
 }
 
 function CoupleResultView({
-  mode, info, person1, person2, name1, name2, pickedQuestions, directQ, recordId, onBack, onOther, onInviteChat,
+  mode, kind, info, person1, person2, name1, name2, pickedQuestions, directQ, recordId, onBack, onOther, onInviteChat,
 }: {
   mode: 'couple' | 'married'
+  kind: CoupleKind
   info: Mode2Info
   person1: PersonRaw
   person2: PersonRaw
@@ -570,6 +578,7 @@ function CoupleResultView({
           setJudge(judgeCouple(
             { name: name1, gender: g1, saju: s1, solarMonth: c1.solarMonth, solarDay: c1.solarDay, hourBranch: c1.hourBranch },
             { name: name2, gender: g2, saju: s2, solarMonth: c2.solarMonth, solarDay: c2.solarDay, hourBranch: c2.hourBranch },
+            (n) => spouseFortuneTitle(n, kind),
           ))
         }
       } catch { if (!cancelled) setCalcErr(true) }
@@ -892,7 +901,7 @@ function CoupleResultView({
               : '',
             (tongResult || '').trim(),
           ].filter(Boolean).join('\n')}
-          label={mode === 'married' ? '부부 궁합 분석' : '궁합 분석'}
+          label={`${coupleTitleOf(kind)} 분석`}
         />
 
         {/* 전문가 상담 — 저장 표시 아래.
@@ -902,7 +911,7 @@ function CoupleResultView({
         {(
           <div style={{ marginTop: 12 }}>
             <ConsultButton
-              priceKey={mode === 'married' ? 'married' : 'couple'}
+              priceKey={COUPLE_PRICE_KEY}
               mode={mode}
               /* ★고객이 본 궁합 결과를 상담사에게 넘긴다 (2026-07-21)
                  couples 테이블(점수·두 사람 명식) + ai_analysis(통변) 두 벌을 담는다. */

@@ -8,10 +8,10 @@ type Props = {
 //   ★2026-07-21 2차: 예전에는 mode 값을 그대로 찍어서 사주 상담인데도
 //     "두 사람 / personal" 이 떴다. 궁합류일 때만 보여주도록 바꿨다.
 const modeLabel: Record<string, string> = {
-  couple:     '💑 연인 사이',
+  couple:     '💑 궁합',
   prewedding: '💍 예비 신혼부부',
   moving: '🏠 이사 택일',
-  married:    '👫 부부',
+  married:    '👫 궁합',
 }
 
 export default function SummaryBand({ mode, score, names }: Props) {

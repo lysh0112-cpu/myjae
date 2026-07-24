@@ -35,8 +35,8 @@ export function toDateInput(val: string | null | undefined) {
 // 상담 종류(consultationType/mode) → 사람이 읽는 라벨
 export const CONSULT_TYPE_LABELS: Record<string, string> = {
   personal: '개인 상담',
-  couple: '연인 궁합',
-  married: '부부 상담',
+  couple: '궁합 상담',
+  married: '궁합 상담',
   prewedding: '예비 신혼',
   moving: '이사 택일',
   birth: '출산 택일',

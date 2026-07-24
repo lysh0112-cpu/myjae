@@ -53,7 +53,7 @@ const SLIDES_OLD = [
     sub: '연인·부부 궁합 정밀 분석', link: '궁합 보러가기 →',
     bg: 'linear-gradient(135deg, #fff0e0, #ffe5cc)',
     tagColor: '#d4843a', titleColor: '#7a4010', subColor: '#a06020',
-    href: '/manseryeok/couple-storage?mode=couple',
+    href: '/manseryeok/couple-storage',
   },
 ]
 
@@ -92,7 +92,7 @@ const SLIDES = [
     img: '/banner/slide4.jpg', video: '',
     accent: '#ffc0d8', sub2: '#f0d5e0',
     sparkles: ['#ffb0d0', '#ffd97a', '#fff'],
-    href: '/manseryeok/couple-storage?mode=couple',
+    href: '/manseryeok/couple-storage',
   },
   {
     tag: '한 곳에서', title: '사주 한 잔\n하고 갈래요?',
@@ -131,8 +131,11 @@ const SERVICES = [
   { name: '내사주그림', color: '#b46e46', bg: '#f5e9df', href: '/manseryeok/mulsang-storage', cat: '사주명리', sub: '사주를 그림으로', emoji: '🐮' },
   { name: '대운',       color: '#3c82a0', bg: '#e2eef2', href: '/manseryeok/saju-storage?service=daeun', cat: '사주명리', sub: '10년 큰 흐름', emoji: '🐯' },
   { name: '연월운세', color: '#8c783c', bg: '#f0ebe0', href: '/manseryeok/saju-storage?service=seyun', cat: '사주명리', sub: '올해·이달 운세', emoji: '🐰' },
-  { name: '연인궁합',   color: '#c85a8c', bg: '#f7e6ee', href: '/manseryeok/couple-storage?mode=couple', cat: '궁합', sub: '우리 사이는', emoji: '🐲' },
-  { name: '부부궁합',   color: '#c85a6e', bg: '#f7e5e8', href: '/manseryeok/couple-storage?mode=married', cat: '궁합', sub: '두 사람의 결', emoji: '🐍' },
+  // ★2026-07-24 — 연인궁합·부부궁합을 하나로 합쳤다. (연재쌤 지시)
+  //   심산 궁합론은 아내와 애인을 구분하지 않고 같은 재성으로 본다.
+  //   판정 산식(coupleFilterV1)도 원래 관계를 가리지 않는다.
+  //   부부/연인 구분은 '사람 추가'에서 고른 관계로 자동 판별한다.
+  { name: '궁합',       color: '#c85a6e', bg: '#f7e5e8', href: '/manseryeok/couple-storage', cat: '궁합', sub: '두 사람의 결', emoji: '🐲' },
   { name: '결혼택일',   color: '#96643c', bg: '#f0e8df', href: '/manseryeok/wedding-timing/wedding-storage', cat: '택일', sub: '좋은 날 잡기', emoji: '🐴' },
   { name: '출산택일',   color: '#b45a78', bg: '#f6e5eb', href: '/manseryeok/birth-timing/birth-storage', cat: '택일', sub: '아기 맞을 날', emoji: '🐑' },
   { name: '이사택일',   color: '#967850', bg: '#f0eae0', href: '/manseryeok/moving-timing/moving-storage', cat: '택일', sub: '좋은 이사 날', emoji: '🐔' },

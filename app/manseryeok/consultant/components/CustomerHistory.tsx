@@ -14,8 +14,8 @@ import { supabase } from '@/lib/supabase'
 // 종류 라벨 — ConsultationList의 TYPE_LABELS와 동일하게 맞춤 (일관성)
 const TYPE_LABELS: Record<string, string> = {
   personal: '개인상담',
-  couple: '연인궁합',
-  married: '부부궁합',
+  couple: '궁합',
+  married: '궁합',
   prewedding: '예비부부',
   moving: '이사택일',
   love: '연애궁합',

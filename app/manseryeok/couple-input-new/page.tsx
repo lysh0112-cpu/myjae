@@ -16,6 +16,7 @@
  */
 
 import { Suspense, useState } from 'react'
+import { coupleKindOfPair, coupleTitleOf } from '@/lib/saju/coupleRelation'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
@@ -35,18 +36,26 @@ interface Slot {
   name: string
   input: SavedInputData
   isMe: boolean
-  job?: string        // 연인 모드에서만 사용
-  mbti?: string       // 연인 모드에서만 사용
+  /** ★2026-07-24 — 관계로 부부/연인을 가른다. (메뉴 통합)
+      본인('나')은 비어 있고, 상대 쪽에만 값이 붙는다. */
+  relation?: string
+  job?: string
+  mbti?: string
 }
 
 function CoupleInputInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const mode = (searchParams.get('mode') === 'married' ? 'married' : 'couple') as Mode
-  const info = MODE_INFO[mode]
+  // ★2026-07-24 — 메뉴를 하나로 합쳤다. URL 의 mode 는 더 이상 안 쓴다.
+  //   부부/연인은 두 사람의 '관계'로 가른다. (옛 링크로 들어와도 무시된다)
 
   const [slot1, setSlot1] = useState<Slot | null>(null)
   const [slot2, setSlot2] = useState<Slot | null>(null)
+
+  // 두 사람의 관계로 갈래를 정한다. 아직 아무도 안 골랐으면 중립('궁합').
+  const kind = coupleKindOfPair(slot1?.relation, slot2?.relation)
+  const mode: Mode = kind === 'married' ? 'married' : 'couple'
+  const info = MODE_INFO[kind === 'married' ? 'married' : 'couple']
   const [pickerFor, setPickerFor] = useState<1 | 2 | null>(null)
   const [meErr, setMeErr] = useState('')
 
@@ -56,7 +65,8 @@ function CoupleInputInner() {
   // 저장된 사람 선택
   const handlePick = (p: SavedPerson) => {
     if (!pickerFor) return
-    setSlot(pickerFor, { name: p.title, input: p.input_data, isMe: false })
+    // ★관계를 함께 담는다 — 부부/연인 판별에 쓴다 (2026-07-24 메뉴 통합)
+    setSlot(pickerFor, { name: p.title, input: p.input_data, isMe: false, relation: p.relation })
     setPickerFor(null)
   }
   // "나"(로그인 본인) 선택 — profiles에서 실제 생년월일을 읽어 슬롯을 채운다.
@@ -99,8 +109,10 @@ function CoupleInputInner() {
       ...s.input,
       name: s.name,
       isMe: s.isMe ? 'true' : 'false',
+      relation: s.relation ?? '',
       ...(mode === 'couple' ? { job: s.job ?? '', mbti: s.mbti ?? '' } : {}),
     }))
+    // mode 는 결과 화면이 관계로 다시 판별한다. 옛 링크 호환을 위해 넘기기만 한다.
     router.push(`/manseryeok/couple-result-new?mode=${mode}&person1=${pack(slot1)}&person2=${pack(slot2)}`)
   }
 
@@ -162,8 +174,7 @@ function CoupleInputInner() {
       <PersonPickerModal
         open={pickerFor !== null}
         serviceLabel={info.title}
-        serviceType={mode === 'married' ? 'married_person' : 'couple_person'}
-        presetRelation={mode === 'married' ? '배우자' : '연인'}
+        serviceType="couple_person"
         headline={pickerFor === 1 ? '첫 번째 사람을 골라주세요' : '두 번째 사람을 골라주세요'}
         onPick={handlePick}
         onPickMe={handlePickMe}

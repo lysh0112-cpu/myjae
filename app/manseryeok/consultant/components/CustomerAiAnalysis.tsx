@@ -120,8 +120,8 @@ type BirthRow = {
 }
 
 const MODE_KO: Record<string, string> = {
-  couple: '연인 궁합',
-  married: '부부 궁합',
+  couple: '궁합',
+  married: '궁합',
   prewedding: '예비부부',
   moving: '이사택일',
   birth: '출산 택일',

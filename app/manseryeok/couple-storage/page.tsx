@@ -29,15 +29,18 @@ const MODE_INFO: Record<CoupleMode, { title: string; accent: string; badge: stri
 function toResultUrl(r: CoupleRecord): string {
   const pack = (input: SavedInputData & { name?: string }, name: string) =>
     encodeURIComponent(JSON.stringify({ ...input, name }))
-  return `/manseryeok/couple-result-new?mode=${r.mode}&recordId=${r.id}` +
+  return `/manseryeok/couple-result-new?recordId=${r.id}` +
     `&person1=${pack(r.input1, r.name1)}&person2=${pack(r.input2, r.name2)}`
 }
 
 function CoupleStorageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const mode = (searchParams.get('mode') === 'married' ? 'married' : 'couple') as CoupleMode
-  const info = MODE_INFO[mode]
+  // ★2026-07-24 — 연인·부부 보관함을 하나로 합쳤다. (메뉴 통합)
+  //   예전에는 ?mode=couple / ?mode=married 로 갈라 각각 보여 줬다.
+  //   이제 궁합은 하나뿐이라 전부 한 곳에 모인다.
+  //   ⚠️ listCoupleRecords(undefined) = 전체(couple+married). 옛 기록도 함께 보인다.
+  const info = { title: '궁합 보관함', accent: '#c85a6e', badge: '궁합' }
 
   const [records, setRecords] = useState<CoupleRecord[] | null>(null)
   // 삭제 확인 팝업 대상(카드). null이면 팝업 닫힘.
@@ -46,9 +49,9 @@ function CoupleStorageInner() {
 
   useEffect(() => {
     let cancelled = false
-    listCoupleRecords(mode).then(list => { if (!cancelled) setRecords(list) })
+    listCoupleRecords().then(list => { if (!cancelled) setRecords(list) })
     return () => { cancelled = true }
-  }, [mode])
+  }, [])
 
   // 삭제 실행 (확인 팝업에서 "삭제")
   async function handleDelete() {
@@ -152,8 +155,8 @@ function CoupleStorageInner() {
           </div>
         ))}
 
-        {/* 새 궁합 보기 (같은 mode로) */}
-        <button onClick={() => router.push(`/manseryeok/couple-input-new?mode=${mode}`)}
+        {/* 새 궁합 보기 — 부부/연인은 사람 고를 때 관계로 갈린다 */}
+        <button onClick={() => router.push('/manseryeok/couple-input-new')}
           style={{
             width: '100%', marginTop: 8, padding: 14, borderRadius: 12,
             background: '#b46e46', border: 'none', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer',

@@ -106,9 +106,9 @@ function ConsultantSelectInner() {
   }
 
   const modeLabel: Record<string, string> = {
-    couple: '💑 연인 궁합',
+    couple: '💑 궁합 상담',
     prewedding: '💍 예비 신혼',
-    married: '👫 부부 상담',
+    married: '👫 궁합 상담',
     birth: '👶 출산 시기',
     naming: '✏️ 개명 상담',
     moving: '🏠 이사 택일',

@@ -34,8 +34,10 @@ const BADGES: Record<string, Badge> = {
   daeun:    { label: '대운',       bg: '#e6eef5', fg: '#2f5f80' },
   seyun:    { label: '연월운세',   bg: '#f3ecdf', fg: '#8a6a3c' },
   mulsang:  { label: '내사주그림', bg: '#fbeee4', fg: '#a55a2c' },
-  couple:   { label: '연애궁합',   bg: '#fbeaf0', fg: '#993556' },
-  married:  { label: '부부궁합',   bg: '#f8e8ee', fg: '#8a3556' },
+  // ★2026-07-24 — 연인·부부궁합을 하나로 합쳤다. 새 기록은 전부 'couple'.
+  //   married 는 옛 기록이 남아 있어 지우지 않는다.
+  couple:   { label: '궁합',       bg: '#fbeaf0', fg: '#993556' },
+  married:  { label: '궁합',       bg: '#f8e8ee', fg: '#8a3556' },
   tarot:    { label: '타로',       bg: '#f0eafa', fg: '#6a4a9c' },
   wedding:  { label: '결혼택일',   bg: '#e9f2ea', fg: '#3b6d3b' },
   birth:    { label: '출산택일',   bg: '#e9f2ea', fg: '#3b6d3b' },
