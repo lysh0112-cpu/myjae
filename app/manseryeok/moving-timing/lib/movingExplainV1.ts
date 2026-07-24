@@ -78,20 +78,48 @@ export function buildDayExplain(a: BuildArgs): DayExplain {
     })
   }
 
-  // 충 — 각자 일지를 짚는다
-  const iljiTxt = people.map(p => `${p.name}님 ${p.dayBranch}`).join(', ')
+  // 충 — 그 사람 일지와 충이 되는 글자를 실제로 짚어 준다.
+  //   "충이 아니에요"보다 "子와 부딪히는 건 午인데 이날은 亥예요"가 낫다.
   if (people.length > 0) {
+    const chungOf: Record<string, string> = {
+      子: '午', 午: '子', 丑: '未', 未: '丑', 寅: '申', 申: '寅',
+      卯: '酉', 酉: '卯', 辰: '戌', 戌: '辰', 巳: '亥', 亥: '巳',
+    }
+    const txt = people
+      .map(p => `${p.name}님 ${p.dayBranch}는 ${chungOf[p.dayBranch] ?? '?'}와 부딪혀요`)
+      .join('. ')
     avoided.push({
       head: '부딪히지 않아요',
-      body: `이날 지지 ${branch}는 ${iljiTxt}와 정면으로 맞부딪히지 않아요.`,
+      body: `${txt}. 이날 지지는 ${branch}라 비껴갑니다.`,
     })
-    avoided.push({
-      head: '어긋나지 않아요',
-      body: `삼형·상형·자형 어느 쪽으로도 걸리지 않아요.`,
-    })
+
+    // 형 — 그 사람 일지가 속한 형 그룹을 알려 준다
+    const groupOf = (b: string): string => {
+      if (['寅', '巳', '申'].includes(b)) return '寅巳申'
+      if (['丑', '戌', '未'].includes(b)) return '丑戌未'
+      if (['子', '卯'].includes(b)) return '子卯'
+      if (['辰', '午', '酉', '亥'].includes(b)) return `${b}${b}`
+      return ''
+    }
+    const hlist = people
+      .map(p => ({ n: p.name, g: groupOf(p.dayBranch) }))
+      .filter(x => x.g)
+    if (hlist.length > 0) {
+      const htxt = hlist.map(x => `${x.n}님은 ${x.g}`).join(', ')
+      avoided.push({
+        head: '어긋나지 않아요',
+        body: `형은 서로 다투는 관계예요. ${htxt}가 형이 되는데 ` +
+              `이날 ${branch}는 거기에 들지 않아요.`,
+      })
+    } else {
+      avoided.push({
+        head: '어긋나지 않아요',
+        body: '삼형·상형·자형 어느 쪽으로도 걸리지 않아요.',
+      })
+    }
   }
 
-  // 명절
+  // 명절 — 그 해 명절이 언제인지까지는 모르니 짧게
   avoided.push({
     head: '명절이 아니에요',
     body: '설·추석 연휴는 이삿짐 업체도 쉬고 길도 막혀 미리 빼 두었어요.',
@@ -127,13 +155,23 @@ export function buildDayExplain(a: BuildArgs): DayExplain {
     })
   }
 
-  // 요일
+  // 요일 — 주말과 '평일 공휴일'은 말이 달라야 한다.
+  //   일요일에 "휴가를 내지 않아도 된다"고 하면 어색하다.
   if (d.optWeekend) {
-    merits.push({
-      head: a.holidayName ? `${a.holidayName}이에요` : `${weekday}요일이에요`,
-      body: '쉬는 날이라 따로 휴가를 내지 않으셔도 돼요. ' +
-            '다만 이삿짐 업체는 주말이 더 비싸고 예약이 빨리 차요.',
-    })
+    const isWeekendDay = weekday === '토' || weekday === '일'
+    if (a.holidayName && !isWeekendDay) {
+      merits.push({
+        head: `${a.holidayName}이라 쉬는 날이에요`,
+        body: '평일이지만 공휴일이라 휴가를 따로 내지 않으셔도 돼요. ' +
+              '연휴가 낀 날은 이삿짐 업체 예약이 빨리 차니 서두르시는 게 좋아요.',
+      })
+    } else {
+      merits.push({
+        head: `${weekday}요일이에요`,
+        body: '주말이라 옮기시기 편하고, 정리할 시간도 하루 더 있어요. ' +
+              '다만 이삿짐 업체는 주말이 더 비싸고 예약도 빨리 차요.',
+      })
+    }
   }
 
   // ── ③ 알아두실 것 ──────────────────────────────────────
