@@ -98,7 +98,11 @@ const SYSTEM_GUIDE = `당신은 "명카페(MyungCafe)"의 궁합 상담가입니
 function splitReasons(score: CoupleScoreResult): { good: string[]; care: string[] } {
   const good: string[] = []
   const care: string[] = []
-  for (const d of score.details) {
+  // ⚠️ 보관함 다시보기는 score 를 { grade, gradeDesc } 만 담아 복원한다.
+  //    (couple-result-new 의 스냅샷 로드부, `as CoupleScoreResult` 캐스팅)
+  //    그래서 details 가 없을 수 있다. 없으면 근거 블록만 비운다.
+  //    2026-07-24: 자유 질문이 다시보기에서도 돌기 시작해 여기서 터졌었다.
+  for (const d of score.details ?? []) {
     if (d.score > 0) good.push(`${d.reason}`)
     else if (d.score < 0) care.push(`${d.reason}`)
   }

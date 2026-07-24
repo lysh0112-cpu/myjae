@@ -510,7 +510,17 @@ function CoupleResultView({
         if (snap.ohaeng1 && snap.ohaeng2) { setOhaeng1(snap.ohaeng1); setOhaeng2(snap.ohaeng2) }
         if (snap.judge) setJudge(snap.judge)   // 옛 기록은 없다 → 판정 카드 생략
         if (snap.followUps) setFollowUps(snap.followUps)
-        setScore({ grade: snap.grade || '', gradeDesc: snap.gradeDesc || '' } as CoupleScoreResult)
+        // ⚠️ 스냅샷에는 등급 문구만 있고 details·항목점수는 없다.
+        //    `as` 로 타입만 속이면 details 를 훑는 곳에서 터진다.
+        //    (2026-07-24 자유 질문이 다시보기에서도 돌면서 실제로 터졌다 — 교훈 U)
+        //    빈 배열·0 을 채워 "없는 것"이 아니라 "비어 있는 것"으로 둔다.
+        setScore({
+          grade: snap.grade || '', gradeDesc: snap.gradeDesc || '',
+          details: [], totalScore: 0,
+          iljuScore: 0, yongsinScore: 0, yeonScore: 0, wolScore: 0,
+          gongmangScore: 0, ohaengScore: 0, johuScore: 0, sijuScore: 0,
+          hasSiju: false,
+        })
         setTongResult(snap.tongResult || '')
         ranRef.current = true       // 통변 재호출 막기
         setSaveState('saved')       // 이미 저장된 것
@@ -666,10 +676,16 @@ function CoupleResultView({
         detail: '사용자가 직접 입력한 자유 질문입니다. 두 사람의 사주 명식을 근거로 깊이 있게 풀이하세요. 사주와 무관하면 억지로 답하지 말고 정중히 안내하세요.',
         enabled: true,
       }
-      const prompt = buildCoupleTongbyeonPrompt(
+      // ★고객이 화면에서 본 판정을 프롬프트에 함께 넣는다.
+      //   안 넣으면 AI 가 화면과 다른 이야기를 할 수 있다.
+      //   (다시보기에서는 score.details 가 비어 있어 근거가 판정뿐이기도 하다)
+      const basePrompt = buildCoupleTongbyeonPrompt(
         { mode, person1: toCouplePerson(person1, saju1, solar1), person2: toCouplePerson(person2, saju2, solar2), score },
         [fq],
       )
+      const prompt = judge
+        ? `${basePrompt}\n\n[이미 고객에게 보여 드린 궁합 판정 — 이 내용과 어긋나지 않게 답하세요]\n${judgeToText(judge)}`
+        : basePrompt
       const res = await fetch('/api/tongbyeon', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ systemPrompt: prompt, premium: false }),
