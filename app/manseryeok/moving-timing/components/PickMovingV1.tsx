@@ -22,6 +22,7 @@ import type { DayResult, MovingV1Result } from '../lib/recommendV1'
 import { DIR_HANJA } from '../lib/movingTables'
 import MovingTermModal from './MovingTermModal'
 import CoupleWonguk from '@/app/manseryeok/couple-result-new/components/CoupleWonguk'
+import SoloWonguk from './SoloWonguk'
 
 // 이사택일 포인트 색 — 홈 메뉴의 #967850 계열(흙빛)
 const C = {
@@ -84,55 +85,41 @@ export default function PickMovingV1({ result, onPickDay }: Props) {
         이삿짐 업체 사정을 함께 고려해 결정하세요.
       </div>
 
-      {/* 두 사람 명식 — 궁합 화면과 같은 부품(CoupleWonguk)을 그대로 쓴다.
-          필터가 무엇을 근거로 도는지 먼저 보여주려는 것.
-          ★단독명의여도 두 분을 다 그린다. 배우자 사주가 판정에 안 쓰였을 뿐,
-            보시는 분은 두 분 명식을 함께 보고 싶어 하시기 때문. */}
+      {/* 명식 — 두 분이면 궁합 부품(CoupleWonguk), 한 분이면 단독으로 그린다.
+          ★2026-07-24 수정 — 전에는 배우자가 없을 때 계약자를 양쪽에 넣어
+            같은 사람이 두 번 그려졌다. 한 분일 때는 CoupleWonguk 을 쓰지 않는다. */}
       {result.contractor && (
         <div style={{ marginBottom: 15 }}>
           {result.spouse ? (
-            <CoupleWonguk
-              left={{
-                name: result.contractor.name,
-                birth: result.contractor.birthLabel,
-                saju: result.contractor.pillars,
-              }}
-              right={{
-                name: result.spouse.name,
-                birth: result.spouse.birthLabel,
-                saju: result.spouse.pillars,
-              }}
-            />
-          ) : (
-            <CoupleWonguk
-              left={{
-                name: result.contractor.name,
-                birth: result.contractor.birthLabel,
-                saju: result.contractor.pillars,
-              }}
-              right={{
-                name: result.contractor.name,
-                birth: result.contractor.birthLabel,
-                saju: result.contractor.pillars,
-              }}
-            />
-          )}
-          <div style={{
-            display: 'flex', gap: 6, marginTop: 7, fontSize: 11.5,
-            color: C.sub, lineHeight: 1.6,
-          }}>
-            <span style={{ flex: 1, textAlign: 'center' }}>
-              필요한 기운 <b style={{ color: C.brand }}>{result.contractor.yongsin || '—'}</b>
-            </span>
-            {result.spouse && (
-              <>
+            <>
+              <CoupleWonguk
+                left={{
+                  name: result.contractor.name,
+                  birth: result.contractor.birthLabel,
+                  saju: result.contractor.pillars,
+                }}
+                right={{
+                  name: result.spouse.name,
+                  birth: result.spouse.birthLabel,
+                  saju: result.spouse.pillars,
+                }}
+              />
+              <div style={{
+                display: 'flex', gap: 6, marginTop: 7, fontSize: 11.5,
+                color: C.sub, lineHeight: 1.6,
+              }}>
+                <span style={{ flex: 1, textAlign: 'center' }}>
+                  필요한 기운 <b style={{ color: C.brand }}>{result.contractor.yongsin || '—'}</b>
+                </span>
                 <span style={{ color: '#DDD0BC' }}>·</span>
                 <span style={{ flex: 1, textAlign: 'center' }}>
                   필요한 기운 <b style={{ color: C.brand }}>{result.spouse.yongsin || '—'}</b>
                 </span>
-              </>
-            )}
-          </div>
+              </div>
+            </>
+          ) : (
+            <SoloWonguk person={result.contractor} />
+          )}
         </div>
       )}
 

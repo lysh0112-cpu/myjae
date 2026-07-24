@@ -17,6 +17,7 @@ import type { DayResult, DiagnoseV1Result } from '../lib/recommendV1'
 import { DIR_HANJA } from '../lib/movingTables'
 import MovingTermModal from './MovingTermModal'
 import CoupleWonguk from '@/app/manseryeok/couple-result-new/components/CoupleWonguk'
+import SoloWonguk from './SoloWonguk'
 
 const C = {
   bg: '#FBF8F2', card: '#FFFDF9', line: '#EAE0CE', ink: '#3A3228',
@@ -92,21 +93,26 @@ export default function CheckResultV1({ result }: Props) {
         이삿짐 업체 사정을 함께 고려해 결정하세요.
       </div>
 
-      {/* 두 사람 명식 */}
+      {/* 명식 — 두 분이면 궁합 부품, 한 분이면 단독으로.
+          ★배우자가 없을 때 계약자를 양쪽에 넣으면 같은 사람이 두 번 그려진다. */}
       {result.contractor && (
         <div style={{ marginBottom: 15 }}>
-          <CoupleWonguk
-            left={{
-              name: result.contractor.name,
-              birth: result.contractor.birthLabel,
-              saju: result.contractor.pillars,
-            }}
-            right={{
-              name: (result.spouse ?? result.contractor).name,
-              birth: (result.spouse ?? result.contractor).birthLabel,
-              saju: (result.spouse ?? result.contractor).pillars,
-            }}
-          />
+          {result.spouse ? (
+            <CoupleWonguk
+              left={{
+                name: result.contractor.name,
+                birth: result.contractor.birthLabel,
+                saju: result.contractor.pillars,
+              }}
+              right={{
+                name: result.spouse.name,
+                birth: result.spouse.birthLabel,
+                saju: result.spouse.pillars,
+              }}
+            />
+          ) : (
+            <SoloWonguk person={result.contractor} />
+          )}
         </div>
       )}
 
