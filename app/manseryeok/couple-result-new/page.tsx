@@ -49,6 +49,12 @@ import { withNim } from '@/lib/saju/honorific'
 
 type Mode = 'couple' | 'married'
 
+// ★2026-07-24 — 자동 총평 통변을 끈다.
+//   판정 카드가 근거를 다 보여 주므로, AI 는 고객이 물어볼 때만 답한다.
+//   true 로 바꾸면 예전처럼 결과 화면에서 AI 총평이 자동으로 돈다.
+//   화면 코드와 parseTCards 는 지우지 않았다.
+const SHOW_AUTO_TONGBYEON = false
+
 const MODE_INFO: Record<Mode, { label: string; accent: string }> = {
   couple:  { label: '연인 궁합', accent: '#c85a8c' },
   married: { label: '부부 궁합', accent: '#c85a6e' },
@@ -301,6 +307,23 @@ function CoupleResultInner() {
   )
 }
 
+// 판정 결과를 상담사용 텍스트로 — 화면과 같은 내용을 글로 풀어 넘긴다.
+//   (자동 통변을 걷어낸 뒤, 상담사가 고객이 본 것을 알 수 있게 하려고 만들었다)
+function judgeToText(j: CoupleJudgeV1): string {
+  const star = (n?: number) => (n ? '★'.repeat(n) + '☆'.repeat(5 - n) : '')
+  const lines: string[] = ['■ 궁합 판정', `한줄: ${j.badge}`, '']
+  for (const c of j.cats) {
+    lines.push(`[${c.title}] ${star(c.stars)}`)
+    c.lines.forEach(l => lines.push(`  - ${l}`))
+    c.dual?.forEach(d => lines.push(`  - ${d.text} ${star(d.stars)}`))
+    lines.push('')
+  }
+  if (j.good.length) { lines.push('· 도움이 되는 자리'); j.good.forEach(t => lines.push(`  - ${t}`)) }
+  if (j.watch.length) { lines.push('· 살피면 좋은 자리'); j.watch.forEach(t => lines.push(`  - ${t}`)) }
+  if (j.note.length) { lines.push('· 알아두면 좋은 점'); j.note.forEach(t => lines.push(`  - ${t}`)) }
+  return lines.join('\n')
+}
+
 // 이름이 비었을 때 카피가 어색해지지 않게 방어
 function dummyHeadlineSafe(s: string): string {
   return s.replace('undefined', '').replace('님과 님', '두 사람')
@@ -545,50 +568,35 @@ function CoupleResultView({
     return () => { cancelled = true }
   }, [person1, person2, recordId, mode])
 
-  // 통변 스트리밍 (새 궁합, 계산 끝나면 자동 1회 — recordId면 스냅샷이라 안 함)
+  // ★2026-07-24 — 자동 통변을 걷어냈다.
+  //
+  //   [왜]
+  //   예전에는 결과 화면에 들어오면 AI 가 무조건 한 번 돌아 총평을 썼다.
+  //   이제는 판정 카드(CoupleJudgeCard)가 근거를 다 보여 주므로,
+  //   AI 는 고객이 실제로 물어볼 때만 답한다. (자유 질문 최대 3개)
+  //   → API 호출이 "무조건 1회 + 질문 3회" 에서 "물어본 만큼만" 으로 줄었다.
+  //
+  //   [저장 시점이 바뀐다]
+  //   예전에는 통변이 끝나면 저장했다. 통변이 없어졌으니
+  //   판정이 나오는 즉시 저장한다. 질문을 안 하셔도 보관함에 남아야 하고,
+  //   나중에 다시 열어 물어보실 수 있어야 하기 때문.
+  //
+  //   ⚠️ 되살리려면: 이 블록을 옛 runTongbyeon 으로 되돌리면 된다.
+  //      통변을 그리는 화면 코드와 parseTCards 는 지우지 않았다.
   useEffect(() => {
     if (recordId || !saju1 || !saju2 || !score || ranRef.current) return
+    // ⚠️ judge 가 들어오기 전에 저장하면 판정이 빈 채로 남아
+    //    보관함 다시보기에서 판정 카드가 안 나온다.
+    //    성별이 없어 judge 를 못 만드는 경우는 기다려도 안 오므로,
+    //    그때는 judge 없이 저장한다. (성별 유무로 갈린다)
+    const needJudge =
+      (person1.gender === '남' || person1.gender === '여') &&
+      (person2.gender === '남' || person2.gender === '여')
+    if (needJudge && !judge) return
     ranRef.current = true
-    let cancelled = false
-    async function runTongbyeon() {
-      setTongLoading(true); setTongResult(null)
-      let acc = ''
-      try {
-        const prompt = buildCoupleTongbyeonPrompt(
-          { mode, person1: toCouplePerson(person1, saju1!, solar1), person2: toCouplePerson(person2, saju2!, solar2), score: score! },
-          pickedQuestions,
-        )
-        const res = await fetch('/api/tongbyeon', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ systemPrompt: prompt, premium: false }),
-        })
-        if (!res.ok || !res.body) { if (!cancelled) setTongResult('통변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.'); return }
-        const reader = res.body.getReader()
-        const decoder = new TextDecoder()
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done || cancelled) break
-          for (const line of decoder.decode(value).split('\n')) {
-            if (!line.startsWith('data: ')) continue
-            const dstr = line.slice(6)
-            if (dstr === '[DONE]') continue
-            try { const parsed = JSON.parse(dstr); if (parsed.text) { acc += parsed.text; if (!cancelled) setTongResult(acc) } } catch {}
-          }
-        }
-      } catch { if (!cancelled) setTongResult('통변을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.') }
-      finally {
-        if (!cancelled) {
-          setTongLoading(false)
-          // ★통변이 끝나면 바로 보관함에 저장한다. (2026-07-21 2차)
-          //   acc 를 인자로 넘기는 이유는 setTongResult 가 아직 state 에 반영되기 전이기 때문.
-          //   다시보기(recordId)면 이미 'saved' 라 handleSave 가 그냥 빠져나온다.
-          if (acc.trim()) handleSave(acc)
-        }
-      }
-    }
-    runTongbyeon()
-    return () => { cancelled = true }
-  }, [saju1, saju2, score, mode, person1, person2, pickedQuestions, recordId])
+    handleSave('')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saju1, saju2, score, judge, recordId])
 
   const headline = dummyHeadlineSafe(`${withNim(name1)}과 ${withNim(name2)}, 두 사람의 만남`)
   const isMe1 = person1.isMe === 'true' || person1.isMe === '1'
@@ -758,7 +766,11 @@ function CoupleResultView({
         {/* ③-c 심산 판정 — 별표 6개 카테고리 + 총평 (2026-07-24 신규) */}
         {judge && <CoupleJudgeCard judge={judge} />}
 
-        {/* ④ 통변 — 질문별 카드 아코디언 (사주/대운/연운과 통일) */}
+        {/* ④ 통변 — 자동 총평을 걷어냈다. (2026-07-24)
+               ★SHOW_AUTO_TONGBYEON 을 true 로 바꾸면 예전처럼 돌아온다.
+                 아래 화면 코드와 parseTCards 는 그대로 살려 두었다.
+               ※ AI 는 이제 아래 '자유 질문' 에서만 답한다. */}
+        {SHOW_AUTO_TONGBYEON && (
         <div style={{ marginTop: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, paddingLeft: 2 }}>
             <span style={{ color: '#8f3d0e' }}>✦</span>
@@ -807,6 +819,8 @@ function CoupleResultView({
           )}
         </div>
 
+        )}
+
         {/* ⑤ 자유 질문 (최대 3개) — 2026-07-24 신규 */}
         {judge && (
           <CoupleFollowUp
@@ -845,8 +859,16 @@ function CoupleResultView({
         </div>
 
         {/* ★해설 복사 — 카톡 등에 붙여넣기 (공용 부품) */}
+        {/* ★2026-07-24 — 자동 총평을 걷어냈으므로 판정 결과를 복사한다.
+               문답이 있으면 함께 담는다. (카톡 등에 붙여넣기용) */}
         <CopyTextButton
-          text={tongResult}
+          text={[
+            judge ? judgeToText(judge) : '',
+            followUps.length
+              ? '\n■ 더 궁금했던 것\n' + followUps.map((f, i) => `Q${i + 1}. ${f.q}\nA. ${f.a}`).join('\n\n')
+              : '',
+            (tongResult || '').trim(),
+          ].filter(Boolean).join('\n')}
           label={mode === 'married' ? '부부 궁합 분석' : '궁합 분석'}
         />
 
@@ -863,8 +885,19 @@ function CoupleResultView({
                  couples 테이블(점수·두 사람 명식) + ai_analysis(통변) 두 벌을 담는다. */
               payload={() => {
                 if (!score) return null
+                // ★2026-07-24 — 자동 총평을 걷어내 tongResult 가 비었다.
+                //   상담사가 "고객이 무엇을 보고 왔는지" 알아야 하므로
+                //   판정 결과와 자유 문답을 글로 풀어 넘긴다.
+                const forConsultant = [
+                  judge ? judgeToText(judge) : '',
+                  followUps.length
+                    ? '\n\n■ 고객이 물어본 것\n' +
+                      followUps.map((f, i) => `Q${i + 1}. ${f.q}\nA. ${f.a}`).join('\n\n')
+                    : '',
+                  (tongResult || '').trim(),
+                ].filter(Boolean).join('\n')
                 return {
-                  aiAnalysis: (tongResult || '').trim() || undefined,
+                  aiAnalysis: forConsultant.trim() || undefined,
                   coupleFull: {
                     person_a_birth: person1,
                     person_b_birth: person2,
