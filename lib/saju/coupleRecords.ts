@@ -200,6 +200,41 @@ export async function deleteCoupleRecord(id: string): Promise<boolean> {
   return !error
 }
 
+// ── 결과만 덮어쓰기 ──
+//   ★2026-07-24 신규. 자유 질문(최대 3개) 답변이 올 때마다 result_data 를 갱신한다.
+//
+//   [왜 필요한가]
+//   기존에는 saveCoupleRecord(insert) 한 번뿐이라, 총평 통변이 끝나고 저장된 뒤에
+//   고객이 추가로 물어본 문답이 어디에도 남지 않았다. 다시 insert 하면 보관함에
+//   같은 궁합이 두 줄로 쌓인다. 그래서 update 를 따로 둔다.
+//
+//   [교훈 K] 호출부는 id 를 반드시 '인자로' 넘겨야 한다.
+//     saveCoupleRecord 직후 setState 한 값을 바로 읽으면 아직 null 이다.
+//       const res = await saveCoupleRecord(...)
+//       const id = res.id            ← 이 지역변수를 쓴다
+//       setSavedId(id)
+//       await updateCoupleRecordResult(id, snapshot)   ← state 아님
+//
+//   user_id 를 함께 걸어 남의 기록을 고치지 못하게 막는다.
+export async function updateCoupleRecordResult(
+  id: string,
+  resultData: unknown,
+): Promise<{ ok: boolean; message?: string }> {
+  const { data: auth } = await supabase.auth.getUser()
+  const uid = auth?.user?.id
+  if (!uid) return { ok: false, message: '로그인이 필요해요' }
+  if (!id) return { ok: false, message: '저장된 기록을 찾지 못했어요' }
+
+  const { error } = await supabase
+    .from('saju_records')
+    .update({ result_data: resultData })
+    .eq('id', id)
+    .eq('user_id', uid)
+
+  if (error) return { ok: false, message: error.message }
+  return { ok: true }
+}
+
 // "N일 전" 표기
 export function daysAgoLabel(iso: string): string {
   const then = new Date(iso).getTime()
