@@ -396,23 +396,26 @@ export function judgeCouple(
         ? `두 분 다 ${a.season}에 태어나 ${warmWord(a.needEl)} 기운이 필요한 사주예요.`
         : `${a.name}님은 ${a.season}생, ${b.name}님은 ${b.season}생이신데 두 분 다 ${warmWord(a.needEl)} 기운이 필요해요.`)
     : `${a.name}님은 ${a.season}생이라 ${EL_LABEL[a.needEl]}, ${b.name}님은 ${b.season}생이라 ${EL_LABEL[b.needEl]} 기운이 필요해요.`
-  cats.push({
-    key: 'need',
-    title: '필요한 기운을 채워 주는가',
-    // ★2026-07-24 — 양방향 두 줄을 없애고 별 하나로 합쳤다. (대표님 지시)
-    //   [왜]
-    //   바로 위 오행 비교 카드(막대 그래프)가 두 사람의 기운 분포를 이미
-    //   그림으로 보여 준다. 같은 이야기를 글로 또 늘어놓으면 화면만 길어진다.
-    //   [별을 어떻게 합쳤나]
-    //   높은 쪽을 쓴다. (대표님 확정)
-    //   한쪽만 채워 줘도 "채워 주는 자리가 있다" 는 것이 이 카드의 뜻이라,
-    //   낮은 쪽으로 깎으면 있는 복을 없는 것처럼 보이게 된다.
-    //   ⚠️ 옛 두 줄 문구는 지우지 않고 아래 주석에 남긴다. 되살릴 때 쓴다.
-    //      { text: `${b.name}님이 ${a.name}님께 ${EL_LABEL[a.needEl]} 기운을 나눠 주세요`, stars: aStars }
-    //      { text: `${a.name}님이 ${b.name}님께 ${EL_LABEL[b.needEl]} 기운을 나눠 주세요`, stars: bStars }
-    stars: (Math.max(aStars, bStars) as Stars),
-    lines: [seasonLine],
-  })
+  // ★2026-07-24 — '필요한 기운을 채워 주는가' 카드를 없앴다. (대표님 지시)
+  //
+  //   [왜]
+  //   ③ '없는 오행을 채워 주는가' 와 하는 이야기가 겹쳤다.
+  //   두 카드가 나란히 서서 같은 말을 반복하니 화면만 길어지고 헷갈렸다.
+  //   → 이 카드의 계절 한 줄(seasonLine)만 ③ 으로 옮기고, 카드 자체는 없앤다.
+  //     오행 비교 그래프도 ③ 안으로 들어간다. (page.tsx 의 needExtra)
+  //
+  //   [옛 코드 — 되살릴 때 쓴다]
+  //     cats.push({
+  //       key: 'need',
+  //       title: '필요한 기운을 채워 주는가',
+  //       stars: (Math.max(aStars, bStars) as Stars),
+  //       lines: [seasonLine],
+  //     })
+  //   그 전에는 별이 두 줄(dual)이었다.
+  //     { text: `${b.name}님이 ${a.name}님께 ${EL_LABEL[a.needEl]} 기운을 나눠 주세요`, stars: aStars }
+  //     { text: `${a.name}님이 ${b.name}님께 ${EL_LABEL[b.needEl]} 기운을 나눠 주세요`, stars: bStars }
+  //
+  //   ⚠️ aStars·bStars 는 아직 총평(good/watch)에서 쓰므로 지우지 않는다.
 
   // ② 서로에게 귀인이 되는가 — 연재쌤 지시
   //
@@ -495,7 +498,10 @@ export function judgeCouple(
     key: 'ohaeng',
     title: '없는 오행을 채워 주는가',
     stars: bothFill ? 5 : oneFill ? 4 : (aZero.length === 0 && bZero.length === 0) ? 3 : 2,
-    lines: ohLines,
+    // ★2026-07-24 — 없앤 '필요한 기운' 카드의 계절 한 줄을 맨 앞에 얹는다.
+    //   두 사람이 각자 어떤 기운을 필요로 하는지 먼저 알려 드린 다음
+    //   "그래서 서로 채워 줄 수 있는가" 로 이어지게 한다.
+    lines: [seasonLine, ...ohLines],
   })
 
   // ④ 두 분 일주가 만나는 자리 (232쪽 + 49쪽 지지 등급)
@@ -642,6 +648,18 @@ export function judgeCouple(
   const tb = b.iljiSipsin ? iljiText(b.gender, b.iljiSipsin) : null
   if (ta) note.push(`${a.name}님은 ${ta.short} 자리예요. (${a.iljiSipsin})`)
   if (tb) note.push(`${b.name}님은 ${tb.short} 자리예요. (${b.iljiSipsin})`)
+
+  // ★2026-07-24 — 화면에 나갈 순서로 정렬한다.
+  //   '없는 오행을 채워 주는가' 를 맨 앞에 둔다. (대표님 지시)
+  //   이 카드가 오행 비교 그래프까지 품고 있어 두 분 관계의 큰 그림을 먼저 보여 준다.
+  //   그다음 귀인 → 일주 → 각자의 배우자운 순으로 좁혀 들어간다.
+  const CARD_ORDER = ['ohaeng', 'gwiin', 'ilju']
+  cats.sort((x, y) => {
+    const ix = CARD_ORDER.indexOf(x.key)
+    const iy = CARD_ORDER.indexOf(y.key)
+    // 목록에 없는 것(spouse_a·spouse_b)은 뒤로 보내되 서로의 순서는 지킨다.
+    return (ix === -1 ? 99 : ix) - (iy === -1 ? 99 : iy)
+  })
 
   return { a, b, cats, badge, good, watch, note }
 }

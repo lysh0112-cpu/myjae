@@ -134,9 +134,10 @@ function Block({ kind, title, items }: {
 
 export default function CoupleJudgeCard({ judge, needExtra }: {
   judge: CoupleJudgeV1
-  /** '필요한 기운을 채워 주는가' 카드 안에 넣을 것 (오행 비교 그래프)
+  /** '없는 오행을 채워 주는가' 카드 안에 넣을 것 (오행 비교 그래프)
    *  ★2026-07-24 — 독립 섹션이던 오행 비교를 이 카드 안으로 넣었다. (대표님 지시)
-   *    같은 이야기를 두 곳에서 하지 않기 위해서다. */
+   *    같은 이야기를 두 곳에서 하지 않기 위해서다.
+   *    '필요한 기운을 채워 주는가' 카드는 내용이 겹쳐 아예 없앴다. */
   needExtra?: React.ReactNode
 }) {
   // 앞 4개 = 두 사람이 만났을 때 / 뒤 2개 = 각자의 배우자 자리
@@ -147,7 +148,7 @@ export default function CoupleJudgeCard({ judge, needExtra }: {
     <div style={{ marginTop: 12 }}>
       <SectLabel text="두 분이 만났을 때" />
       {meet.map(c => (
-        <Card key={c.key} cat={c} extra={c.key === 'need' ? needExtra : undefined} />
+        <Card key={c.key} cat={c} extra={c.key === 'ohaeng' ? needExtra : undefined} />
       ))}
 
       <div style={{ marginTop: 20 }}>
