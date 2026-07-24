@@ -136,6 +136,8 @@ const SERVICES = [
   //   판정 산식(coupleFilterV1)도 원래 관계를 가리지 않는다.
   //   부부/연인 구분은 '사람 추가'에서 고른 관계로 자동 판별한다.
   { name: '궁합',       color: '#c85a6e', bg: '#f7e5e8', href: '/manseryeok/couple-storage', cat: '궁합', sub: '두 사람의 결', emoji: '🐲' },
+  // ★2026-07-24 — 연인궁합 자리를 합격운/취업운으로 바꿨다. (아직 준비 중)
+  { name: '합격운/취업운', color: '#c85a8c', bg: '#f7e6ee', href: '/manseryeok/exam-luck', cat: '기타', sub: '시험과 일자리', emoji: '🐍' },
   { name: '결혼택일',   color: '#96643c', bg: '#f0e8df', href: '/manseryeok/wedding-timing/wedding-storage', cat: '택일', sub: '좋은 날 잡기', emoji: '🐴' },
   { name: '출산택일',   color: '#b45a78', bg: '#f6e5eb', href: '/manseryeok/birth-timing/birth-storage', cat: '택일', sub: '아기 맞을 날', emoji: '🐑' },
   { name: '이사택일',   color: '#967850', bg: '#f0eae0', href: '/manseryeok/moving-timing/moving-storage', cat: '택일', sub: '좋은 이사 날', emoji: '🐔' },

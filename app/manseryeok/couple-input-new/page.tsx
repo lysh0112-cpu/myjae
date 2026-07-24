@@ -20,8 +20,6 @@ import { coupleKindOfPair, coupleTitleOf } from '@/lib/saju/coupleRelation'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
-import JobSelect from './components/JobSelect'
-import MbtiInput from './components/MbtiInput'
 import type { SavedPerson, SavedInputData } from '@/lib/saju/savedPeople'
 
 type Mode = 'couple' | 'married'
@@ -39,8 +37,6 @@ interface Slot {
   /** ★2026-07-24 — 관계로 부부/연인을 가른다. (메뉴 통합)
       본인('나')은 비어 있고, 상대 쪽에만 값이 붙는다. */
   relation?: string
-  job?: string
-  mbti?: string
 }
 
 function CoupleInputInner() {
@@ -110,7 +106,6 @@ function CoupleInputInner() {
       name: s.name,
       isMe: s.isMe ? 'true' : 'false',
       relation: s.relation ?? '',
-      ...(mode === 'couple' ? { job: s.job ?? '', mbti: s.mbti ?? '' } : {}),
     }))
     // mode 는 결과 화면이 관계로 다시 판별한다. 옛 링크 호환을 위해 넘기기만 한다.
     router.push(`/manseryeok/couple-result-new?mode=${mode}&person1=${pack(slot1)}&person2=${pack(slot2)}`)
@@ -138,17 +133,11 @@ function CoupleInputInner() {
           <div style={{ fontSize: 10.5, color: '#5c3a1e', marginTop: 2 }}>칸을 눌러 사람을 골라주세요</div>
         </div>
 
-        <SlotView n={1} slot={slot1} mode={mode} accent={info.accent}
-          onOpen={() => setPickerFor(1)}
-          onJob={v => slot1 && setSlot1({ ...slot1, job: v })}
-          onMbti={v => slot1 && setSlot1({ ...slot1, mbti: v })} />
+        <SlotView n={1} slot={slot1} onOpen={() => setPickerFor(1)} />
 
         <div style={{ textAlign: 'center', color: '#d4537e', fontSize: 16, margin: '2px 0 8px' }}>♥</div>
 
-        <SlotView n={2} slot={slot2} mode={mode} accent={info.accent}
-          onOpen={() => setPickerFor(2)}
-          onJob={v => slot2 && setSlot2({ ...slot2, job: v })}
-          onMbti={v => slot2 && setSlot2({ ...slot2, mbti: v })} />
+        <SlotView n={2} slot={slot2} onOpen={() => setPickerFor(2)} />
 
         {meErr && (
           <div style={{
@@ -184,14 +173,10 @@ function CoupleInputInner() {
   )
 }
 
-function SlotView({ n, slot, mode, accent, onOpen, onJob, onMbti }: {
+function SlotView({ n, slot, onOpen }: {
   n: 1 | 2
   slot: Slot | null
-  mode: Mode
-  accent: string
   onOpen: () => void
-  onJob: (v: string) => void
-  onMbti: (v: string) => void
 }) {
   const birthLabel = slot && slot.input.year
     ? `${slot.input.calType} ${slot.input.year}.${slot.input.month}.${slot.input.day}`
@@ -230,15 +215,9 @@ function SlotView({ n, slot, mode, accent, onOpen, onJob, onMbti }: {
         </div>
       )}
 
-      {/* 연인 모드 + 슬롯 채워짐 → 직업·MBTI 추가 입력 */}
-      {slot && mode === 'couple' && (
-        <div style={{ marginTop: 8, background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: 12 }}>
-          <div style={{ fontSize: 11, color: '#96502e', marginBottom: 6 }}>직업 <span style={{ color: '#6b5340' }}>(궁합 점수에 반영)</span></div>
-          <JobSelect value={slot.job ?? ''} onChange={onJob} />
-          <div style={{ fontSize: 11, color: '#96502e', margin: '10px 0 6px' }}>MBTI <span style={{ color: '#6b5340' }}>(해설에만 참고 · 선택)</span></div>
-          <MbtiInput value={slot.mbti ?? ''} onChange={onMbti} />
-        </div>
-      )}
+      {/* ★2026-07-24 — 직업·MBTI 입력을 없앴다. (대표님 지시)
+             심산 판정은 직업·MBTI 를 보지 않고, 자동 통변도 걷어내
+             쓸 자리가 없어졌다. JobSelect·MbtiInput 파일은 지우지 않았다. */}
     </div>
   )
 }

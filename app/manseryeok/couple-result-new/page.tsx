@@ -24,7 +24,6 @@ import { coupleKindOfPair, coupleTitleOf, spouseFortuneTitle, COUPLE_PRICE_KEY, 
 import { useRouter, useSearchParams } from 'next/navigation'
 import CoupleWonguk from './components/CoupleWonguk'
 import OhaengCompareCard from './components/OhaengCompareCard'
-import CoupleInsightToggle from './components/CoupleInsightToggle'
 import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
 import CoupleJudgeCard from './components/CoupleJudgeCard'
 import CoupleFollowUp, { MAX_FOLLOWUPS, type FollowUp } from './components/CoupleFollowUp'
@@ -775,23 +774,20 @@ function CoupleResultView({
         {/* ③-b 궁합 시각화 — 부부는 오행만, 연인은 오행+MBTI 토글 */}
         {ohaeng1 && ohaeng2 && (
           <div style={{ marginTop: 10 }}>
-            {mode === 'married' ? (
-              <OhaengCompareCard
-                aScores={ohaeng1}
-                bScores={ohaeng2}
-                aLabel={person1.gender === '남' ? '남편' : person1.gender === '여' ? '아내' : name1}
-                bLabel={person2.gender === '남' ? '남편' : person2.gender === '여' ? '아내' : name2}
-              />
-            ) : (
-              <CoupleInsightToggle
-                aScores={ohaeng1}
-                bScores={ohaeng2}
-                name1={name1}
-                name2={name2}
-                mbti1={person1.mbti}
-                mbti2={person2.mbti}
-              />
-            )}
+            {/* ★2026-07-24 — MBTI 토글을 걷어냈다. (대표님 지시)
+                   직업·MBTI 입력을 없앴으므로 비교할 값이 없다.
+                   CoupleInsightToggle.tsx 는 지우지 않았다.
+                   라벨은 부부면 남편/아내, 아니면 이름을 그대로 쓴다. */}
+            <OhaengCompareCard
+              aScores={ohaeng1}
+              bScores={ohaeng2}
+              aLabel={kind === 'married'
+                ? (person1.gender === '남' ? '남편' : person1.gender === '여' ? '아내' : name1)
+                : name1}
+              bLabel={kind === 'married'
+                ? (person2.gender === '남' ? '남편' : person2.gender === '여' ? '아내' : name2)
+                : name2}
+            />
           </div>
         )}
 
