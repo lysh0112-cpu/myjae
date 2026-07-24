@@ -48,6 +48,15 @@ export interface PersonSaju {
   yongsin: string       // 억부용신 오행
   status: string        // 신강/중화/신약/극신약
   monthBranch: string   // 월지 (계절 표시용)
+  /**
+   * 명식 8글자 (시→일→월→연). 화면에 원국표를 그릴 때 쓴다.
+   * 시를 모르면 시주가 빠진 3칸만 들어온다 — CoupleWonguk 이 '?' 로 그린다.
+   */
+  pillars: { pillar: string; stem: string; branch: string }[]
+  /** 표시용 생년월일 (예: '양력 1998.1.5 寅시') */
+  birthLabel: string
+  /** 화면에 띄울 이름. 없으면 호출부가 '신랑'·'신부'를 넣는다 */
+  name: string
 }
 
 /** 후보 하루 */

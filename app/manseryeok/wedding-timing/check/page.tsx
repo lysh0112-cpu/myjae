@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { runDiagnoseV7, type DayResult } from '../lib/recommendV7'
 import CheckResultV7 from '../components/CheckResultV7'
+import type { PersonSaju } from '../lib/weddingFilterV7'
 import { saveWeddingRecord, getWeddingRecord } from '@/lib/saju/weddingRecords'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
 import WeddingCalendar from '../components/WeddingCalendar'
@@ -64,6 +65,8 @@ function CheckInner() {
 
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<DayResult[]>([])
+  // 명식표에 쓸 두 사람 사주 (진단 결과와 함께 받는다)
+  const [pair, setPair] = useState<{ bride: PersonSaju | null; groom: PersonSaju | null }>({ bride: null, groom: null })
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
   const [payOpen, setPayOpen] = useState(false)
@@ -143,6 +146,7 @@ function CheckInner() {
       const result = await runDiagnoseV7({ dates: filled, groom, bride })
       if (result.error) { setError(result.error); setLoading(false); return }
       setResults(result.results)
+      setPair({ bride: result.bride, groom: result.groom })
       setDone(true)
     } catch {
       setError('진단 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.')
@@ -251,7 +255,7 @@ function CheckInner() {
         {done && results.length > 0 && (
           <>
             <div style={{ fontSize: '13px', color: '#96502e', fontWeight: 600, margin: '24px 0 4px' }}>◆ 진단 결과</div>
-            <div style={{ margin: '0 -16px' }}><CheckResultV7 results={results} /></div>
+            <div style={{ margin: '0 -16px' }}><CheckResultV7 results={results} bride={pair.bride} groom={pair.groom} /></div>
 
             {anyAvoid && (
               <div style={{ background: '#FFFBF7', border: `1px solid ${gold}`, borderRadius: '14px', padding: '16px', marginTop: '6px' }}>

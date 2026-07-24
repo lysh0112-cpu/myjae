@@ -23,6 +23,8 @@ const isoDate = (y: number, m: number, d: number) => `${y}-${pad(m)}-${pad(d)}`
 export interface RawPerson {
   year: string; month: string; day: string; hour: string
   gender: string; calType: string
+  /** 앞 화면(input)이 pack 할 때 실어 보낸다. 없으면 '신랑'·'신부'로 대체 */
+  name?: string
 }
 
 export interface DayResult {
@@ -79,7 +81,7 @@ async function fetchHolidayMap(start: string, end: string): Promise<Map<string, 
  * ★용신은 공용 엔진 calcYongsinCompat 을 그대로 호출한다. 우리가 계산하지 않는다.
  *   시를 모르면 시주를 빼고 계산한다(정확도만 떨어지고 계산은 된다).
  */
-async function fetchPersonSaju(p: RawPerson | null): Promise<PersonSaju | null> {
+async function fetchPersonSaju(p: RawPerson | null, roleName: string): Promise<PersonSaju | null> {
   if (!p || !p.year || !p.month || !p.day) return null
   try {
     const url = `/api/lunar?year=${p.year}&month=${p.month}&day=${p.day}` +
@@ -108,6 +110,12 @@ async function fetchPersonSaju(p: RawPerson | null): Promise<PersonSaju | null> 
     const hb = hour.branch === '?' ? null : hour.branch
     const ys = calcYongsin(pillars, day.stem, data.solarMonth, data.solarDay, hb)
 
+    // 화면 원국표용 표시 라벨. 시를 모르면 시각을 빼고 적는다.
+    const HOUR_NAME = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
+    const hourLabel = hourIdx !== null && hourIdx >= 0 && hourIdx < 12
+      ? ` ${HOUR_NAME[hourIdx]}시` : ''
+    const birthLabel = `${p.calType || '양력'} ${p.year}.${p.month}.${p.day}${hourLabel}`
+
     return {
       dayStem: day.stem,
       dayBranch: day.branch,
@@ -115,6 +123,9 @@ async function fetchPersonSaju(p: RawPerson | null): Promise<PersonSaju | null> 
       yongsin: ys.yongsin ?? '',
       status: (ys as { status?: string }).status ?? '',
       monthBranch: month.branch,
+      pillars,
+      birthLabel,
+      name: p.name?.trim() || roleName,
     }
   } catch {
     return null
@@ -167,7 +178,7 @@ export async function runWeddingV7(opts: RunV7Options): Promise<WeddingV7Result>
   const groomRaw = swap ? rawB : rawG
 
   const [bride, groom] = await Promise.all([
-    fetchPersonSaju(brideRaw), fetchPersonSaju(groomRaw),
+    fetchPersonSaju(brideRaw, '신부'), fetchPersonSaju(groomRaw, '신랑'),
   ])
   if (!bride || !groom) {
     return empty('두 분의 사주 정보가 부족해요. 이전 화면에서 생년월일을 확인해 주세요.')
@@ -260,8 +271,8 @@ export async function runDiagnoseV7(opts: {
   // ★성별로 신랑·신부를 확정한다 (runWeddingV7 과 같은 이유)
   const swap = opts.bride?.gender === '남' && opts.groom?.gender === '여'
   const [bride, groom] = await Promise.all([
-    fetchPersonSaju(swap ? opts.groom : opts.bride),
-    fetchPersonSaju(swap ? opts.bride : opts.groom),
+    fetchPersonSaju(swap ? opts.groom : opts.bride, '신부'),
+    fetchPersonSaju(swap ? opts.bride : opts.groom, '신랑'),
   ])
   if (!bride || !groom) {
     return {

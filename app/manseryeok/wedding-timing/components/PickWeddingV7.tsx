@@ -19,6 +19,7 @@ import {
 } from '../lib/weddingFilterV7'
 import type { DayResult, WeddingV7Result } from '../lib/recommendV7'
 import WeddingTermModal from './WeddingTermModal'
+import CoupleWonguk from '@/app/manseryeok/couple-result-new/components/CoupleWonguk'
 
 const C = {
   bg: '#FDF6F0', card: '#FFFBF7', line: '#F0E0D5', ink: '#3A2E28',
@@ -76,6 +77,37 @@ export default function PickWeddingV7({ result, onPickDay }: Props) {
         ※ 본 분석은 전통 사주명리에 기반한 참고 정보입니다. 실제 예식일은 양가·예식장
         사정과 두 분의 형편을 함께 고려해 결정하세요.
       </div>
+
+      {/* 두 사람 명식 — 궁합 화면과 같은 부품(CoupleWonguk)을 그대로 쓴다.
+          필터가 무엇을 근거로 도는지 먼저 보여주려는 것. 신랑이 왼쪽. */}
+      {result.groom && result.bride && (
+        <div style={{ marginBottom: 15 }}>
+          <CoupleWonguk
+            left={{
+              name: result.groom.name,
+              birth: result.groom.birthLabel,
+              saju: result.groom.pillars,
+            }}
+            right={{
+              name: result.bride.name,
+              birth: result.bride.birthLabel,
+              saju: result.bride.pillars,
+            }}
+          />
+          <div style={{
+            display: 'flex', gap: 6, marginTop: 7, fontSize: 11.5,
+            color: C.sub, lineHeight: 1.6,
+          }}>
+            <span style={{ flex: 1, textAlign: 'center' }}>
+              필요한 기운 <b style={{ color: C.brand }}>{result.groom.yongsin || '—'}</b>
+            </span>
+            <span style={{ color: '#E0CDBC' }}>·</span>
+            <span style={{ flex: 1, textAlign: 'center' }}>
+              필요한 기운 <b style={{ color: C.brand }}>{result.bride.yongsin || '—'}</b>
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* 고정 4개 */}
       <div style={{ background: C.warm, borderRadius: 13, padding: '14px 15px', marginBottom: 15 }}>

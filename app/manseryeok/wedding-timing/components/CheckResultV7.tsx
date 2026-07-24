@@ -17,6 +17,8 @@ import { useState } from 'react'
 import { ALL_ROWS, type WeddingFlags } from '../lib/weddingFilterV7'
 import type { DayResult } from '../lib/recommendV7'
 import WeddingTermModal from './WeddingTermModal'
+import CoupleWonguk from '@/app/manseryeok/couple-result-new/components/CoupleWonguk'
+import type { PersonSaju } from '../lib/weddingFilterV7'
 
 const C = {
   card: '#FFFBF7', line: '#F0E0D5', ink: '#3A2E28',
@@ -59,7 +61,13 @@ function summaryOf(d: DayResult['detail']): { tone: 'good' | 'soso' | 'bad'; hea
   return { tone: 'soso', head: '괜찮은 날', msg: '피할 것은 없는 날이에요' }
 }
 
-export default function CheckResultV7({ results }: { results: DayResult[] }) {
+export default function CheckResultV7({
+  results, bride, groom,
+}: {
+  results: DayResult[]
+  bride?: PersonSaju | null
+  groom?: PersonSaju | null
+}) {
   const [help, setHelp] = useState<string | null>(null)
 
   return (
@@ -72,6 +80,28 @@ export default function CheckResultV7({ results }: { results: DayResult[] }) {
         ※ 본 분석은 전통 사주명리에 기반한 참고 정보입니다. 실제 예식일은 양가·예식장
         사정과 두 분의 형편을 함께 고려해 결정하세요.
       </div>
+
+      {/* 두 사람 명식 — 필터 화면과 같은 부품. 무엇을 근거로 봤는지 먼저 보여준다 */}
+      {groom && bride && (
+        <div style={{ marginBottom: 16 }}>
+          <CoupleWonguk
+            left={{ name: groom.name, birth: groom.birthLabel, saju: groom.pillars }}
+            right={{ name: bride.name, birth: bride.birthLabel, saju: bride.pillars }}
+          />
+          <div style={{
+            display: 'flex', gap: 6, marginTop: 7, fontSize: 11.5,
+            color: C.sub, lineHeight: 1.6,
+          }}>
+            <span style={{ flex: 1, textAlign: 'center' }}>
+              필요한 기운 <b style={{ color: C.brand }}>{groom.yongsin || '—'}</b>
+            </span>
+            <span style={{ color: '#E0CDBC' }}>·</span>
+            <span style={{ flex: 1, textAlign: 'center' }}>
+              필요한 기운 <b style={{ color: C.brand }}>{bride.yongsin || '—'}</b>
+            </span>
+          </div>
+        </div>
+      )}
 
       {results.map(r => {
         const s = summaryOf(r.detail)
