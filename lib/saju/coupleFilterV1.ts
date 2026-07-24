@@ -399,11 +399,19 @@ export function judgeCouple(
   cats.push({
     key: 'need',
     title: '필요한 기운을 채워 주는가',
+    // ★2026-07-24 — 양방향 두 줄을 없애고 별 하나로 합쳤다. (대표님 지시)
+    //   [왜]
+    //   바로 위 오행 비교 카드(막대 그래프)가 두 사람의 기운 분포를 이미
+    //   그림으로 보여 준다. 같은 이야기를 글로 또 늘어놓으면 화면만 길어진다.
+    //   [별을 어떻게 합쳤나]
+    //   높은 쪽을 쓴다. (대표님 확정)
+    //   한쪽만 채워 줘도 "채워 주는 자리가 있다" 는 것이 이 카드의 뜻이라,
+    //   낮은 쪽으로 깎으면 있는 복을 없는 것처럼 보이게 된다.
+    //   ⚠️ 옛 두 줄 문구는 지우지 않고 아래 주석에 남긴다. 되살릴 때 쓴다.
+    //      { text: `${b.name}님이 ${a.name}님께 ${EL_LABEL[a.needEl]} 기운을 나눠 주세요`, stars: aStars }
+    //      { text: `${a.name}님이 ${b.name}님께 ${EL_LABEL[b.needEl]} 기운을 나눠 주세요`, stars: bStars }
+    stars: (Math.max(aStars, bStars) as Stars),
     lines: [seasonLine],
-    dual: [
-      { text: `${b.name}님이 ${a.name}님께 ${EL_LABEL[a.needEl]} 기운을 나눠 주세요`, stars: aStars },
-      { text: `${a.name}님이 ${b.name}님께 ${EL_LABEL[b.needEl]} 기운을 나눠 주세요`, stars: bStars },
-    ],
   })
 
   // ② 서로에게 귀인이 되는가 — 연재쌤 지시

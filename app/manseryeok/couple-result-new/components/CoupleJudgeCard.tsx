@@ -32,7 +32,7 @@ function StarRow({ n }: { n: Stars }) {
   )
 }
 
-function Card({ cat }: { cat: CategoryResult }) {
+function Card({ cat, extra }: { cat: CategoryResult; extra?: React.ReactNode }) {
   return (
     <div style={{
       background: '#fff', border: '0.5px solid #eee2d6', borderRadius: 13,
@@ -62,6 +62,9 @@ function Card({ cat }: { cat: CategoryResult }) {
           ))}
         </div>
       )}
+
+      {/* 카테고리에 딸린 추가 내용 (예: 필요한 기운 카드 안의 오행 비교 그래프) */}
+      {extra && <div style={{ marginTop: 10 }}>{extra}</div>}
 
       {/* 양방향 — 두 줄로 나눠 각각 별 */}
       {cat.dual && (
@@ -129,7 +132,13 @@ function Block({ kind, title, items }: {
   )
 }
 
-export default function CoupleJudgeCard({ judge }: { judge: CoupleJudgeV1 }) {
+export default function CoupleJudgeCard({ judge, needExtra }: {
+  judge: CoupleJudgeV1
+  /** '필요한 기운을 채워 주는가' 카드 안에 넣을 것 (오행 비교 그래프)
+   *  ★2026-07-24 — 독립 섹션이던 오행 비교를 이 카드 안으로 넣었다. (대표님 지시)
+   *    같은 이야기를 두 곳에서 하지 않기 위해서다. */
+  needExtra?: React.ReactNode
+}) {
   // 앞 4개 = 두 사람이 만났을 때 / 뒤 2개 = 각자의 배우자 자리
   const meet = judge.cats.filter(c => !c.key.startsWith('spouse_'))
   const solo = judge.cats.filter(c => c.key.startsWith('spouse_'))
@@ -137,7 +146,9 @@ export default function CoupleJudgeCard({ judge }: { judge: CoupleJudgeV1 }) {
   return (
     <div style={{ marginTop: 12 }}>
       <SectLabel text="두 분이 만났을 때" />
-      {meet.map(c => <Card key={c.key} cat={c} />)}
+      {meet.map(c => (
+        <Card key={c.key} cat={c} extra={c.key === 'need' ? needExtra : undefined} />
+      ))}
 
       <div style={{ marginTop: 20 }}>
         <SectLabel text="각자의 배우자 자리" />

@@ -782,28 +782,29 @@ function CoupleResultView({
           right={{ name: name2, birth: person2.year ? `${person2.year}.${person2.month}.${person2.day}` : '', saju: saju2 ?? [] }}
         />
 
-        {/* ③-b 궁합 시각화 — 부부는 오행만, 연인은 오행+MBTI 토글 */}
-        {ohaeng1 && ohaeng2 && (
-          <div style={{ marginTop: 10 }}>
-            {/* ★2026-07-24 — MBTI 토글을 걷어냈다. (대표님 지시)
-                   직업·MBTI 입력을 없앴으므로 비교할 값이 없다.
-                   ★2026-07-24 CoupleInsightToggle.tsx 파일도 삭제했다 (참조 0건).
-                   라벨은 부부면 남편/아내, 아니면 이름을 그대로 쓴다. */}
-            <OhaengCompareCard
-              aScores={ohaeng1}
-              bScores={ohaeng2}
-              aLabel={kind === 'married'
-                ? (person1.gender === '남' ? '남편' : person1.gender === '여' ? '아내' : name1)
-                : name1}
-              bLabel={kind === 'married'
-                ? (person2.gender === '남' ? '남편' : person2.gender === '여' ? '아내' : name2)
-                : name2}
-            />
-          </div>
+        {/* ③-b 심산 판정 — 별표 6개 카테고리 + 총평 (2026-07-24 신규)
+               ★2026-07-24 — 독립 섹션이던 오행 비교 카드를
+                 '필요한 기운을 채워 주는가' 카드 안으로 넣었다. (대표님 지시)
+                 같은 이야기를 두 곳에서 하지 않기 위해서다.
+                 embedded=true 라 자체 제목·배경·접기를 끄고 내용만 그린다. */}
+        {judge && (
+          <CoupleJudgeCard
+            judge={judge}
+            needExtra={ohaeng1 && ohaeng2 ? (
+              <OhaengCompareCard
+                aScores={ohaeng1}
+                bScores={ohaeng2}
+                aLabel={kind === 'married'
+                  ? (person1.gender === '남' ? '남편' : person1.gender === '여' ? '아내' : name1)
+                  : name1}
+                bLabel={kind === 'married'
+                  ? (person2.gender === '남' ? '남편' : person2.gender === '여' ? '아내' : name2)
+                  : name2}
+                embedded
+              />
+            ) : undefined}
+          />
         )}
-
-        {/* ③-c 심산 판정 — 별표 6개 카테고리 + 총평 (2026-07-24 신규) */}
-        {judge && <CoupleJudgeCard judge={judge} />}
 
         {/* ④ 통변 — 자동 총평을 걷어냈다. (2026-07-24)
                ★SHOW_AUTO_TONGBYEON 을 true 로 바꾸면 예전처럼 돌아온다.
