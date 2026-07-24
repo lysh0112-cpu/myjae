@@ -21,6 +21,7 @@ import {
 import type { DayResult, MovingV1Result } from '../lib/recommendV1'
 import { DIR_HANJA } from '../lib/movingTables'
 import MovingTermModal from './MovingTermModal'
+import DayDetailSheet from './DayDetailSheet'
 import CoupleWonguk from '@/app/manseryeok/couple-result-new/components/CoupleWonguk'
 import SoloWonguk from './SoloWonguk'
 
@@ -38,6 +39,9 @@ interface Props {
 export default function PickMovingV1({ result, onPickDay }: Props) {
   const [on, setOn] = useState<OptState>(DEFAULT_OPT)
   const [help, setHelp] = useState<string | null>(null)
+  // 날짜를 누르면 바로 저장하지 않고 설명 시트를 먼저 띄운다.
+  //   (연재쌤 의견 — 날짜만 주면 성의가 없어 보인다)
+  const [detailDay, setDetailDay] = useState<DayResult | null>(null)
 
   const filterBy = useMemo(() => (state: OptState): DayResult[] =>
     result.days.filter(d => passOpt(d.detail, state)), [result.days])
@@ -194,7 +198,10 @@ export default function PickMovingV1({ result, onPickDay }: Props) {
           많이 켤수록 좋은 게 아니에요. 켤수록 고르실 수 있는 날이 줄어들어요.
         </div>
 
-        {OPT_FILTERS.map(f => {
+        {OPT_FILTERS.filter(f =>
+          // '두 분 다 맞는 날'은 판정 대상이 두 분일 때만 뜻이 있다.
+          f.key !== 'optYongsinAll' || people.length > 1
+        ).map(f => {
           const pv = preview(f.key)
           const active = on[f.key]
           // ★주말 토글은 음력과 무관하므로 잠그지 않는다.
@@ -283,7 +290,7 @@ export default function PickMovingV1({ result, onPickDay }: Props) {
               {list.map((d, i) => (
                 <button
                   key={d.dateKey}
-                  onClick={() => onPickDay?.(d)}
+                  onClick={() => setDetailDay(d)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 9, width: '100%',
                     padding: '13px 15px', background: 'none', border: 'none',
@@ -324,9 +331,17 @@ export default function PickMovingV1({ result, onPickDay }: Props) {
 
       {days.length > 0 && (
         <div style={{ fontSize: 11.5, color: '#BFAE96', marginTop: 4, paddingLeft: 2 }}>
-          날짜를 누르면 보관함에 저장돼요.
+          날짜를 누르시면 왜 괜찮은 날인지 설명해 드려요.
         </div>
       )}
+
+      <DayDetailSheet
+        day={detailDay}
+        people={people}
+        direction={result.direction}
+        onClose={() => setDetailDay(null)}
+        onConfirm={d => { setDetailDay(null); onPickDay?.(d) }}
+      />
 
       <MovingTermModal termKey={help} onClose={() => setHelp(null)} />
     </div>

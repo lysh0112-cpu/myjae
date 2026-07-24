@@ -17,8 +17,16 @@
 //   [구조]
 //   고정 4 : 서비스가 항상 적용. 끌 수 없다.
 //            명절 / 공망 / 충 / 형
-//   선택 3 : 본인이 켜고 끈다.
-//            쉬는 날(주말·공휴일) / 손 없는 날 / 가는 방향에 손 없는 날
+//   선택 5 : 본인이 켜고 끈다.
+//            쉬는 날 / 기운이 맞는 날(用神) / 두 분 다 맞는 날 /
+//            손 없는 날 / 가는 방향에 손 없는 날
+//
+//   [용신을 왜 고정이 아니라 토글로 두었나]
+//   연재쌤이 "택일에 용신을 반드시 반영하라"고 하셨다(2026-07-24).
+//   다만 고정으로 걸면 후보가 절반 이하로 준다 — 실측(예시 커플, 2027년):
+//     공동명의 고정4 통과 209일 → 한 분 용신일 100일 → 두 분 모두 6일
+//   0일이 되는 커플도 나올 수 있다. 결혼택일도 용신일을 선택 토글로 두었으므로
+//   같은 구조로 맞췄다. 대신 날짜 설명에서 용신을 반드시 짚어 준다.
 //
 //   [판정 대상]
 //   · 공동명의 — 두 사람 합집합(한 사람이라도 걸리면 배제)
@@ -78,8 +86,10 @@ export interface MovingFlags {
   fixGongmang: boolean    // 공망에 걸리지 않음
   fixChung: boolean       // 일지와 충이 아님
   fixHyeong: boolean      // 일지와 형이 아님
-  // 선택 3
+  // 선택 5
   optWeekend: boolean     // 주말 또는 공휴일
+  optYongsin: boolean     // 한 분이라도 용신이 그날 간지에 들었다
+  optYongsinAll: boolean  // 판정 대상 모두의 용신이 들었다
   optSonEomneun: boolean  // 손 없는 날 (음력 9·10·19·20·29·30)
   optDirection: boolean   // 가는 방향에 손이 없음
 }
@@ -89,6 +99,12 @@ export interface MovingDetail extends MovingFlags {
   chungWho: string[]
   hyeongWho: string[]
   hyeongKind: string
+  /** 용신이 든 사람 이름 */
+  yongsinWho: string[]
+  /** 이름 → 어느 글자가 용신인가 ('乙 = 목') */
+  yongsinHit: Record<string, string>
+  /** 용신이 안 든 사람 이름 */
+  yongsinMiss: string[]
   /** 그날 손이 머무는 방위. null 이면 손 없는 날 */
   sonDir: Direction | null
   /** 음력을 못 받았는가 — 화면에서 안내가 필요하다 */
@@ -144,12 +160,37 @@ export function judgeDay(
     : direction === null ? true
     : sonDir === null || sonDir !== direction
 
+  // ── 용신일 ──
+  //   그날 간지(천간·지지)의 오행 집합에 그 사람 용신이 있는가.
+  //   ★판정 범위: 일간 '또는' 일지. 둘 중 하나만 맞아도 용신일로 본다.
+  //     결혼택일 v7 과 같은 방식이다. 교재에 범위 명시가 없어 그쪽을 따랐다.
+  //     ⚠️ 연재쌤 검수 대상(결혼택일 7장 ②와 같은 항목).
+  const stemEl = STEM_EL[day.dayStem] ?? ''
+  const branchEl = BRANCH_EL[db] ?? ''
+  const dayEls = new Set([stemEl, branchEl].filter(Boolean))
+
+  const yongsinWho: string[] = []
+  const yongsinMiss: string[] = []
+  const yongsinHit: Record<string, string> = {}
+  for (const p of people) {
+    if (p.yongsin && dayEls.has(p.yongsin)) {
+      yongsinWho.push(p.name)
+      yongsinHit[p.name] = stemEl === p.yongsin
+        ? `${day.dayStem} = ${p.yongsin}`
+        : `${db} = ${p.yongsin}`
+    } else {
+      yongsinMiss.push(p.name)
+    }
+  }
+
   const flags: MovingFlags = {
     fixMyeongjeol: !day.isMyeongjeol,
     fixGongmang: gongmangWho.length === 0,
     fixChung: chungWho.length === 0,
     fixHyeong: hyeongWho.length === 0,
     optWeekend: day.isWeekend || day.isHoliday,
+    optYongsin: yongsinWho.length > 0,
+    optYongsinAll: people.length > 0 && yongsinWho.length === people.length,
     optSonEomneun: isSon,
     optDirection: dirOk,
   }
@@ -157,6 +198,7 @@ export function judgeDay(
   return {
     ...flags,
     gongmangWho, chungWho, hyeongWho, hyeongKind,
+    yongsinWho, yongsinHit, yongsinMiss,
     sonDir, lunarUnknown,
     passFixed:
       flags.fixMyeongjeol && flags.fixGongmang && flags.fixChung && flags.fixHyeong,
@@ -164,11 +206,16 @@ export function judgeDay(
 }
 
 // ── 선택 필터 메타 (화면이 그대로 읽어 쓴다) ────────────────────────────
-export type OptKey = 'optWeekend' | 'optSonEomneun' | 'optDirection'
+export type OptKey =
+  | 'optWeekend' | 'optYongsin' | 'optYongsinAll' | 'optSonEomneun' | 'optDirection'
 
 export const OPT_FILTERS: { key: OptKey; label: string; hanja: string; desc: string }[] = [
   { key: 'optWeekend', label: '쉬는 날', hanja: '週末',
     desc: '토·일요일과 공휴일만 봐요. 평일에 휴가를 내기 어려우실 때 켜 보세요.' },
+  { key: 'optYongsin', label: '기운이 맞는 날', hanja: '用神日',
+    desc: '그날 간지에 필요한 기운이 들어 있는 날이에요.' },
+  { key: 'optYongsinAll', label: '두 분 다 맞는 날', hanja: '用神日',
+    desc: '두 분 모두에게 필요한 기운이 든 날이에요. 켜면 크게 줄어들 수 있어요.' },
   { key: 'optSonEomneun', label: '손 없는 날', hanja: '損',
     desc: '음력 9·10·19·20·29·30일이에요. 어느 방향으로 가도 괜찮은 날이에요.' },
   { key: 'optDirection', label: '가는 방향에 손 없는 날', hanja: '方位',
@@ -179,7 +226,8 @@ export type OptState = Record<OptKey, boolean>
 
 /** 기본값 — 둘 다 꺼 둔다. 켜면 후보가 크게 줄기 때문. */
 export const DEFAULT_OPT: OptState = {
-  optWeekend: false, optSonEomneun: false, optDirection: false,
+  optWeekend: false, optYongsin: false, optYongsinAll: false,
+  optSonEomneun: false, optDirection: false,
 }
 
 /** 켜져 있는 선택 필터를 모두 만족하는가 */
@@ -195,13 +243,15 @@ export const FIXED_CHIPS: { key: string; label: string; hanja: string }[] = [
   { key: 'fixHyeong', label: '모남 없음', hanja: '刑' },
 ]
 
-/** 진단 화면이 쓰는 6줄 (고정 4 + 선택 2) */
+/** 진단 화면이 쓰는 9줄 (고정 4 + 선택 5) */
 export const ALL_ROWS: { key: keyof MovingFlags; label: string; hanja: string; kind: 'fix' | 'opt' }[] = [
   { key: 'optWeekend', label: '쉬는 날', hanja: '週末', kind: 'opt' },
   { key: 'fixMyeongjeol', label: '명절 아님', hanja: '名節', kind: 'fix' },
   { key: 'fixGongmang', label: '빈자리 아님', hanja: '空亡', kind: 'fix' },
   { key: 'fixChung', label: '부딪힘 없음', hanja: '沖', kind: 'fix' },
   { key: 'fixHyeong', label: '모남 없음', hanja: '刑', kind: 'fix' },
+  { key: 'optYongsin', label: '기운이 맞는 날', hanja: '用神日', kind: 'opt' },
+  { key: 'optYongsinAll', label: '두 분 다 맞는 날', hanja: '用神日', kind: 'opt' },
   { key: 'optSonEomneun', label: '손 없는 날', hanja: '損', kind: 'opt' },
   { key: 'optDirection', label: '가는 방향에 손 없음', hanja: '方位', kind: 'opt' },
 ]
@@ -232,6 +282,18 @@ export const HELP_TEXT: Record<string, { title: string; hanja: string; body: str
     body: '토·일요일과 공휴일만 봐요.\n' +
           '이삿짐 업체는 주말이 더 비싸고 예약도 빨리 차니 미리 알아보시는 게 좋아요.\n' +
           '설·추석 연휴는 이미 빼 드렸어요.',
+  },
+  optYongsin: {
+    title: '기운이 맞는 날', hanja: '用神日',
+    body: '사주에는 저마다 부족해서 채워야 하는 기운(용신)이 있어요.\n' +
+          '그 기운이 든 날에 큰일을 시작하면 흐름이 순해진다고 봐요.\n' +
+          '그날 천간이나 지지 중 하나만 맞아도 용신일로 봐요.',
+  },
+  optYongsinAll: {
+    title: '두 분 다 맞는 날', hanja: '用神日',
+    body: '두 분께 필요한 기운이 서로 다를 수 있어요.\n' +
+          '둘 다 든 날은 흔치 않아서, 켜시면 남는 날이 크게 줄어요.\n' +
+          '한 분만 맞아도 나쁜 날은 아니에요.',
   },
   optSonEomneun: {
     title: '손 없는 날', hanja: '損',
