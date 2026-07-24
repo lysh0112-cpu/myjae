@@ -41,7 +41,7 @@
 
 import { calcSimsanOhaeng, type Pillar, type Ohaeng } from './simsanOhaeng'
 import { calcYongsinNew } from './yongsinNew'
-import { JIJI_GRADE } from './jijiGrade'
+import { jijiPairText, jijiStars } from './coupleJijiText'
 import { getGongmang } from './gongmang'
 
 // ── 상수 ────────────────────────────────────────────────────────────────────
@@ -410,9 +410,10 @@ export function judgeCouple(pa: PersonInput, pb: PersonInput): CoupleJudgeV1 {
   const ganEl1 = STEM_EL[a.dayStem], ganEl2 = STEM_EL[b.dayStem]
   const ganChung = CON[ganEl1] === ganEl2 || CON[ganEl2] === ganEl1
 
-  const gradeAB = JIJI_GRADE[a.dayBranch]?.[b.dayBranch]
-  const gradeBA = JIJI_GRADE[b.dayBranch]?.[a.dayBranch]
-  const gradeToStars = (g?: string): Stars => g === 'A' ? 4 : g === 'B' ? 3 : g === 'C' ? 2 : 1
+  // ⚠️ 비대칭이다 — 내가 상대를 볼 때와 상대가 나를 볼 때가 다르다.
+  //    (辰→寅 은 C, 寅→辰 은 B) 한쪽만 쓰면 판정이 한쪽으로 기운다.
+  const pairAB = jijiPairText(a.dayBranch, b.dayBranch)
+  const pairBA = jijiPairText(b.dayBranch, a.dayBranch)
 
   const iljuLines: string[] = []
   iljuLines.push(`${a.dayStem}${a.dayBranch} ↔ ${b.dayStem}${b.dayBranch}`)
@@ -421,15 +422,15 @@ export function judgeCouple(pa: PersonInput, pb: PersonInput): CoupleJudgeV1 {
   else if (jiChung) iljuLines.push('일지가 충으로 마주해 서로 다른 방향을 볼 수 있어요.')
   else if (jiHap) iljuLines.push('일지가 육합으로 만나 서로 잘 어울리는 자리예요.')
   else iljuLines.push('충으로 부딪히지도, 강하게 합하지도 않는 중간 자리예요.')
-  if (gradeAB?.desc) iljuLines.push(gradeAB.desc)
+  if (pairAB?.text) iljuLines.push(pairAB.text)
 
   cats.push({
     key: 'ilju',
     title: '두 분 일주가 만나는 자리',
     lines: iljuLines,
     dual: [
-      { text: `${a.name}님 쪽에서 본 자리`, stars: (ganHap && jiHap) ? 5 : gradeToStars(gradeAB?.grade) },
-      { text: `${b.name}님 쪽에서 본 자리`, stars: (ganHap && jiHap) ? 5 : gradeToStars(gradeBA?.grade) },
+      { text: `${a.name}님 쪽에서 본 자리`, stars: (ganHap && jiHap) ? 5 : (pairAB ? jijiStars(pairAB.grade) : 3) },
+      { text: `${b.name}님 쪽에서 본 자리`, stars: (ganHap && jiHap) ? 5 : (pairBA ? jijiStars(pairBA.grade) : 3) },
     ],
   })
 
@@ -482,8 +483,8 @@ export function judgeCouple(pa: PersonInput, pb: PersonInput): CoupleJudgeV1 {
     : (aStars >= 3 || bStars >= 3) ? '기운을 채워 주는 사이'
     : oneGwiin ? '귀인이 되어 주는 사이'
     : oneFill ? '빈자리를 메워 주는 사이'
-    : gradeAB?.grade === 'A' ? '일주가 잘 맞는 사이'
-    : gradeAB?.grade === 'D' ? '서로 다름을 살펴야 할 사이'
+    : pairAB?.grade === 'A' ? '일주가 잘 맞는 사이'
+    : pairAB?.grade === 'D' ? '서로 다름을 살펴야 할 사이'
     : '차분히 살펴볼 사이'
 
   // ── 총평 세 덩어리 ──
@@ -508,7 +509,7 @@ export function judgeCouple(pa: PersonInput, pb: PersonInput): CoupleJudgeV1 {
   if (jiChung) watch.push('두 분 일지가 충으로 마주해, 같은 일을 두고 다르게 보실 수 있습니다.')
   if (a.wonjinIlWol) watch.push(`${a.name}님은 월지와 일지가 원진이라 마음이 예민해지기 쉬워요.`)
   if (b.wonjinIlWol) watch.push(`${b.name}님은 월지와 일지가 원진이라 마음이 예민해지기 쉬워요.`)
-  if (gradeAB?.grade === 'D' || gradeBA?.grade === 'D')
+  if (pairAB?.grade === 'D' || pairBA?.grade === 'D')
     watch.push('일지가 서로 편치 않은 자리라, 다름을 인정하는 연습이 필요합니다.')
 
   const ta = a.iljiSipsin ? iljiText(a.gender, a.iljiSipsin) : null

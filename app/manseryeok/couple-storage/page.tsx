@@ -122,8 +122,18 @@ function CoupleStorageInner() {
               <div style={{ fontSize: 14, fontWeight: 500, color: '#3a2e28', marginBottom: 4 }}>
                 {r.name1} <span style={{ color: '#d4537e' }}>♥</span> {r.name2}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#5c3a1e' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#5c3a1e', flexWrap: 'wrap' }}>
                 <span>{daysAgoLabel(r.createdAt)}</span>
+                {/* 자유 질문 개수 — 물어본 게 있을 때만 (2026-07-24) */}
+                {qaCount(r.resultData) > 0 && (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 3,
+                    background: '#f6ecdf', borderRadius: 7, padding: '1.5px 6px',
+                    fontSize: 10, color: '#8a6a4a',
+                  }}>
+                    💬 질문 {qaCount(r.resultData)}
+                  </span>
+                )}
                 {r.unsavedCount ? <span style={{ color: '#6b5340' }}>· 미저장 {r.unsavedCount}명</span> : null}
               </div>
             </div>
@@ -201,6 +211,12 @@ function CoupleStorageInner() {
       )}
     </main>
   )
+}
+
+// 저장된 자유 질문 개수 (없으면 0)
+function qaCount(resultData: unknown): number {
+  const fu = (resultData as { followUps?: unknown[] } | null | undefined)?.followUps
+  return Array.isArray(fu) ? fu.length : 0
 }
 
 // 카드 왼쪽 배지 문구

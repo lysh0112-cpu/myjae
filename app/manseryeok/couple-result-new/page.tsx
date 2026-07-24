@@ -26,6 +26,7 @@ import OhaengCompareCard from './components/OhaengCompareCard'
 import CoupleInsightToggle from './components/CoupleInsightToggle'
 import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
 import CoupleJudgeCard from './components/CoupleJudgeCard'
+import CoupleFollowUp, { MAX_FOLLOWUPS, type FollowUp } from './components/CoupleFollowUp'
 import { judgeCouple, type CoupleJudgeV1, type Gender } from '@/lib/saju/coupleFilterV1'
 import { COUPLE_QUESTIONS, groupCoupleByCategory } from '@/lib/saju/coupleQuestions'
 import { MARRIED_QUESTIONS } from '@/lib/saju/marriedQuestions'
@@ -35,7 +36,7 @@ import { calcMarriedScore } from '@/lib/saju/marriedScore'
 import { getGongmang } from '@/lib/saju/gongmang'
 import { calcHourPillar } from '@/lib/saju/hourPillar'
 import { buildCoupleTongbyeonPrompt, type CouplePerson } from '@/lib/saju/coupleTongbyeonPrompt'
-import { saveCoupleRecord, getCoupleRecord } from '@/lib/saju/coupleRecords'
+import { saveCoupleRecord, getCoupleRecord, updateCoupleRecordResult } from '@/lib/saju/coupleRecords'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
 import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
 
@@ -455,6 +456,14 @@ function CoupleResultView({
   // 통변
   const [tongLoading, setTongLoading] = useState(false)
   const [judge, setJudge] = useState<CoupleJudgeV1 | null>(null)
+  // ── 자유 질문 (최대 3개) ──
+  //   savedId: 저장된 행 id. 답이 올 때마다 이 id 로 update 한다.
+  //   ⚠️ 교훈 K — setSavedId 직후 state 를 읽으면 아직 null 이다.
+  //      항상 지역변수/인자로 넘긴다.
+  const [savedId, setSavedId] = useState<string | null>(recordId ?? null)
+  const [followUps, setFollowUps] = useState<FollowUp[]>([])
+  const [fuLoading, setFuLoading] = useState(false)
+  const [fuStreaming, setFuStreaming] = useState<FollowUp | null>(null)
   const [tongResult, setTongResult] = useState<string | null>(null)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'failed'>(recordId ? 'saved' : 'idle')
   const [openCard, setOpenCard] = useState(0)
@@ -471,11 +480,13 @@ function CoupleResultView({
         saju1?: SajuPillarSimple[]; saju2?: SajuPillarSimple[]; tongResult?: string
         ohaeng1?: Record<string, number>; ohaeng2?: Record<string, number>
         judge?: CoupleJudgeV1
+        followUps?: FollowUp[]
       } | undefined
       if (snap?.saju1 && snap?.saju2) {
         setSaju1(snap.saju1); setSaju2(snap.saju2)
         if (snap.ohaeng1 && snap.ohaeng2) { setOhaeng1(snap.ohaeng1); setOhaeng2(snap.ohaeng2) }
         if (snap.judge) setJudge(snap.judge)   // 옛 기록은 없다 → 판정 카드 생략
+        if (snap.followUps) setFollowUps(snap.followUps)
         setScore({ grade: snap.grade || '', gradeDesc: snap.gradeDesc || '' } as CoupleScoreResult)
         setTongResult(snap.tongResult || '')
         ranRef.current = true       // 통변 재호출 막기
@@ -610,6 +621,7 @@ function CoupleResultView({
       saju1, saju2,
       ohaeng1, ohaeng2,   // 오행 비교 카드용 (다시보기 시 재계산 없이 사용)
       tongResult: tongOverride ?? tongResult ?? '',
+      followUps,
       questionIds: pickedQuestions.filter(q => !q.id.startsWith('direct_')).map(q => q.id),
       directQuestion: directQ || null,
     }
@@ -622,7 +634,76 @@ function CoupleResultView({
       input2: toInput(person2),
       resultData: snapshot,
     })
+    if (res.ok && res.id) setSavedId(res.id)
     setSaveState(res.ok ? 'saved' : 'failed')
+  }
+
+  // ── 자유 질문 (최대 3개) ──
+  //   총평 통변과 같은 /api/tongbyeon 을 쓰되, 질문 하나만 담아 보낸다.
+  //   답이 끝나면 그 자리에서 result_data 를 덮어써(update) 보관함에 남긴다.
+  //   ⚠️ 교훈 K — 저장 함수에 넘기는 목록·id 는 state 가 아니라 지역변수를 쓴다.
+  async function askFollowUp(question: string) {
+    if (!saju1 || !saju2 || !score) return
+    if (followUps.length >= MAX_FOLLOWUPS || fuLoading) return
+
+    setFuLoading(true)
+    setFuStreaming({ q: question, a: '' })
+    let acc = ''
+    try {
+      const fq: SajuQuestion = {
+        id: 'follow_' + Date.now(),
+        age: '30s', ageLabel: '', gender: 'all',
+        category: '직접 질문', sub: '자유 질문', question,
+        link: '사용자가 직접 입력한 질문입니다. 두 사람의 사주 명식을 근거로 풀이하세요. 사주와 무관하면 정중히 안내하세요.',
+        detail: '사용자가 직접 입력한 자유 질문입니다. 두 사람의 사주 명식을 근거로 깊이 있게 풀이하세요. 사주와 무관하면 억지로 답하지 말고 정중히 안내하세요.',
+        enabled: true,
+      }
+      const prompt = buildCoupleTongbyeonPrompt(
+        { mode, person1: toCouplePerson(person1, saju1, solar1), person2: toCouplePerson(person2, saju2, solar2), score },
+        [fq],
+      )
+      const res = await fetch('/api/tongbyeon', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ systemPrompt: prompt, premium: false }),
+      })
+      if (!res.ok || !res.body) {
+        acc = '풀이를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.'
+      } else {
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        for (;;) {
+          const { done, value } = await reader.read()
+          if (done) break
+          for (const line of decoder.decode(value).split('\n')) {
+            if (!line.startsWith('data: ')) continue
+            const d = line.slice(6)
+            if (d === '[DONE]') continue
+            try {
+              const parsed = JSON.parse(d)
+              if (parsed.text) { acc += parsed.text; setFuStreaming({ q: question, a: acc }) }
+            } catch {}
+          }
+        }
+      }
+    } catch {
+      acc = '풀이를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.'
+    } finally {
+      const next = [...followUps, { q: question, a: acc }]
+      setFollowUps(next)
+      setFuStreaming(null)
+      setFuLoading(false)
+      // 보관함에 덮어쓰기 — next(지역변수)를 넘긴다. state 는 아직 반영 전이다.
+      if (savedId) {
+        await updateCoupleRecordResult(savedId, {
+          grade: judge?.badge || score.grade,
+          gradeDesc: score.gradeDesc,
+          judge,
+          saju1, saju2, ohaeng1, ohaeng2,
+          tongResult: tongResult ?? '',
+          followUps: next,
+        })
+      }
+    }
   }
 
   return (
@@ -725,6 +806,16 @@ function CoupleResultView({
             </div>
           )}
         </div>
+
+        {/* ⑤ 자유 질문 (최대 3개) — 2026-07-24 신규 */}
+        {judge && (
+          <CoupleFollowUp
+            items={followUps}
+            onAsk={askFollowUp}
+            loading={fuLoading}
+            streaming={fuStreaming}
+          />
+        )}
 
         {/* 저장 상태 — 자동 저장이라 누르는 버튼이 아니다. (2026-07-21 2차)
             실패했을 때만 [다시 저장]으로 바뀐다.
