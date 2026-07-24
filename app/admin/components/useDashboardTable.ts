@@ -38,6 +38,7 @@ export const CONSULT_TYPE_LABELS: Record<string, string> = {
   couple: '연인 궁합',
   married: '부부 상담',
   prewedding: '예비 신혼',
+  moving: '이사 택일',
   birth: '출산 택일',
   naming: '개명 상담',
   mulsang: '사주 그림',

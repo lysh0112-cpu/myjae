@@ -84,6 +84,14 @@ export function reviewUrl(item: ArchiveItem): string {
     // ★v7(2026-07-24): 점수제 /result 를 접고 /pick(필터 화면)으로 보낸다.
     case 'wedding':
       return `/manseryeok/wedding-timing/pick?${qs}recordId=${rid}&${from}`
+    // 이사택일 — kind 에 따라 갈린다.
+    //   find(좋은 날 찾기) → /pick,  check(정한 날 봐주기) → /check
+    //   ★교훈 O — 진입로가 여러 개다. 보관함(moving-storage)도 같은 규칙으로 나눈다.
+    case 'moving': {
+      const blob = item.inputData as { kind?: string } | null
+      const dest = blob?.kind === 'check' ? 'check' : 'pick'
+      return `/manseryeok/moving-timing/${dest}?${qs}recordId=${rid}&${from}`
+    }
     case 'birth':
       return `/manseryeok/birth-timing/result?${qs}recordId=${rid}&${from}`
     case 'daeun':

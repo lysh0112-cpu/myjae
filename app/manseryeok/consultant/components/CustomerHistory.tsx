@@ -17,6 +17,7 @@ const TYPE_LABELS: Record<string, string> = {
   couple: '연인궁합',
   married: '부부궁합',
   prewedding: '예비부부',
+  moving: '이사택일',
   love: '연애궁합',
   birth: '출산시기',
   naming: '개명',

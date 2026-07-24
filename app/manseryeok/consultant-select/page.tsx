@@ -111,6 +111,7 @@ function ConsultantSelectInner() {
     married: '👫 부부 상담',
     birth: '👶 출산 시기',
     naming: '✏️ 개명 상담',
+    moving: '🏠 이사 택일',
     personal: '🔮 개인 상담',
   }
 

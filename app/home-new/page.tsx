@@ -135,7 +135,7 @@ const SERVICES = [
   { name: '부부궁합',   color: '#c85a6e', bg: '#f7e5e8', href: '/manseryeok/couple-storage?mode=married', cat: '궁합', sub: '두 사람의 결', emoji: '🐍' },
   { name: '결혼택일',   color: '#96643c', bg: '#f0e8df', href: '/manseryeok/wedding-timing/wedding-storage', cat: '택일', sub: '좋은 날 잡기', emoji: '🐴' },
   { name: '출산택일',   color: '#b45a78', bg: '#f6e5eb', href: '/manseryeok/birth-timing/birth-storage', cat: '택일', sub: '아기 맞을 날', emoji: '🐑' },
-  { name: '이사택일',   color: '#967850', bg: '#f0eae0', href: '/home-new', cat: '택일', sub: '좋은 이사 날', emoji: '🐔' },
+  { name: '이사택일',   color: '#967850', bg: '#f0eae0', href: '/manseryeok/moving-timing/moving-storage', cat: '택일', sub: '좋은 이사 날', emoji: '🐔' },
   { name: '내이름 감정', color: '#5a825a', bg: '#eaf0e6', href: '/manseryeok/naming/diagnosis/storage', cat: '개명', sub: '이름 풀이해 보기', emoji: '🐵' },
   { name: '타로',       color: '#b45a78', bg: '#f6e5eb', href: '/tarot', cat: '기타', sub: '오늘의 카드', emoji: '🐶' },
   { name: '물어보살',   color: '#785aaa', bg: '#efeaf7', href: '/manseryeok/ai-chat', cat: '기타', sub: 'AI에게 묻기', emoji: '🐷' },

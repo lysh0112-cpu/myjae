@@ -13,6 +13,7 @@
 import { judgeDay, type DayInput, type PersonSaju, type WeddingDetail } from './weddingFilterV7'
 import { splitGanji, calcHourPillar, STEMS, BRANCHES } from './weddingTables'
 import { calcYongsinCompat as calcYongsin } from '@/lib/saju/yongsinNew'
+import { getDayGanji } from '@/lib/saju/ganji'
 
 const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토']
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -132,17 +133,34 @@ async function fetchPersonSaju(p: RawPerson | null, roleName: string): Promise<P
   }
 }
 
-/** 양력 날짜 하나의 일주 간지를 가져온다 */
-async function fetchDayGanji(y: number, m: number, d: number): Promise<string | null> {
-  try {
-    const res = await fetch(`/api/lunar?year=${y}&month=${m}&day=${d}&calType=양력&leapMonth=0`)
-    const data = await res.json()
-    if (data.error) return null
-    const g = splitGanji(data.dayGanji)
-    return g.stem === '?' ? null : g.stem + g.branch
-  } catch {
-    return null
-  }
+/**
+ * 양력 날짜 하나의 일주 간지.
+ *
+ * ★2026-07-24 — /api/lunar 호출을 걷어내고 자체 계산으로 바꿨다.
+ *
+ *   [왜]
+ *   전에는 날짜마다 /api/lunar 를 1회씩 불렀다. 1년이면 365회를 Promise.all 로
+ *   한꺼번에 던지는 셈이라, 공공데이터포털 트래픽 한도에 걸리거나 타임아웃이 날 수
+ *   있었다. 게다가 실패하면 null 이 되어 그 날이 조용히 후보에서 빠졌다.
+ *
+ *   [왜 안전한가]
+ *   /api/lunar 가 돌려주던 dayGanji 는 애초에 천문연구원 값이 아니라
+ *   lib/saju/ganji.ts 의 getDayGanji 가 계산한 값이었다(route.ts:44).
+ *   즉 같은 함수를 서버까지 갔다가 받아오고 있었다. 직접 부르면 결과가 같다.
+ *
+ *   [검증] 2026-07-24 실측
+ *   · ganji.ts / taegil.ts / 율리우스적일(JDN) 독립구현 3종을
+ *     1900-01-01 ~ 2100-12-31 (73,414일) 전수 대조 → 불일치 0건
+ *   · 천문연구원 API 실측 대조 — 2027-02-07 丁巳 · 2027-12-31 甲申 → 일치
+ *   · 인수인계서 실측 대조 — 1998-01-05 壬子 · 1997-08-15 己丑 → 일치
+ *   · 60일 주기 연속성 500회, 윤년(2028-02-29) 전후 천간 연속 → 이상 없음
+ *
+ *   ⚠️ 음력(lunarDay)은 이렇게 못 한다. 달의 크기와 윤달은 천문 계산이라
+ *      반드시 /api/lunar 를 거쳐야 한다. 여기서 걷어낸 것은 일주뿐이다.
+ */
+function dayGanjiOf(y: number, m: number, d: number): string | null {
+  const g = getDayGanji(y, m, d)
+  return g && g.length >= 2 ? g : null
 }
 
 export interface RunV7Options {
@@ -201,7 +219,8 @@ export async function runWeddingV7(opts: RunV7Options): Promise<WeddingV7Result>
   )
 
   // 일주 간지 — 날짜별 1회
-  const ganjiList = await Promise.all(dates.map(dt => fetchDayGanji(dt.y, dt.m, dt.d)))
+  // 일주 간지 — 자체 계산(네트워크 호출 없음). 전에는 날짜마다 API 를 불렀다.
+  const ganjiList = dates.map(dt => dayGanjiOf(dt.y, dt.m, dt.d))
 
   const judged: DayResult[] = []
   dates.forEach((dt, i) => {
@@ -290,7 +309,7 @@ export async function runDiagnoseV7(opts: {
     const dt = new Date(ds + 'T00:00:00')
     if (isNaN(dt.getTime())) continue
     const y = dt.getFullYear(), m = dt.getMonth() + 1, d = dt.getDate()
-    const ganji = await fetchDayGanji(y, m, d)
+    const ganji = dayGanjiOf(y, m, d)
     if (!ganji) continue
 
     const key = ymd(y, m, d)

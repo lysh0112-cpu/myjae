@@ -10,6 +10,7 @@ type Props = {
 const modeLabel: Record<string, string> = {
   couple:     '💑 연인 사이',
   prewedding: '💍 예비 신혼부부',
+  moving: '🏠 이사 택일',
   married:    '👫 부부',
 }
 
