@@ -25,7 +25,8 @@ import CoupleWonguk from './components/CoupleWonguk'
 import OhaengCompareCard from './components/OhaengCompareCard'
 import CoupleInsightToggle from './components/CoupleInsightToggle'
 import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
-import GradeFireworks from './components/GradeFireworks'
+import CoupleJudgeCard from './components/CoupleJudgeCard'
+import { judgeCouple, type CoupleJudgeV1, type Gender } from '@/lib/saju/coupleFilterV1'
 import { COUPLE_QUESTIONS, groupCoupleByCategory } from '@/lib/saju/coupleQuestions'
 import { MARRIED_QUESTIONS } from '@/lib/saju/marriedQuestions'
 import type { SajuQuestion } from '@/lib/saju/questions'
@@ -98,7 +99,23 @@ function CoupleResultInner() {
   const [openCats, setOpenCats] = useState<Set<string>>(
     () => new Set(groups.length ? [groups[0].category] : [])
   )
-  const [submitted, setSubmitted] = useState<string[] | null>(recordId ? [] : null)
+  // ★2026-07-24 — 질문 고르기 화면을 건너뛴다. (연재쌤·대표님 지시)
+  //
+  //   [왜]
+  //   질문 12개 카테고리를 미리 고르게 하면, 고객은 결과를 보기도 전에
+  //   무엇이 궁금한지 정해야 한다. 결과(판정 카드)를 먼저 보여 드리고
+  //   그 아래에서 자유 질문을 받는 쪽이 자연스럽다.
+  //
+  //   [어떻게]
+  //   submitted 를 처음부터 [] 로 두면 질문 선택 단계를 지나 바로 결과로 간다.
+  //   ([] = "고른 질문 없음 = 전체 총평". 원래 '그냥 전체 총평 볼래요' 버튼과 같은 값)
+  //
+  //   ⚠️ 화면 코드와 COUPLE_QUESTIONS / MARRIED_QUESTIONS 는 지우지 않았다.
+  //      되살리려면 아래 상수를 true 로만 바꾸면 된다. 아래 로직은 그대로 살아 있다.
+  const SHOW_QUESTION_PICKER = false
+  const [submitted, setSubmitted] = useState<string[] | null>(
+    (recordId || !SHOW_QUESTION_PICKER) ? [] : null
+  )
 
   // ── 직접 물어보기 (자유 질문 1개) ──
   const [directText, setDirectText] = useState('')
@@ -437,6 +454,7 @@ function CoupleResultView({
 
   // 통변
   const [tongLoading, setTongLoading] = useState(false)
+  const [judge, setJudge] = useState<CoupleJudgeV1 | null>(null)
   const [tongResult, setTongResult] = useState<string | null>(null)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'failed'>(recordId ? 'saved' : 'idle')
   const [openCard, setOpenCard] = useState(0)
@@ -452,10 +470,12 @@ function CoupleResultView({
         grade?: string; gradeDesc?: string
         saju1?: SajuPillarSimple[]; saju2?: SajuPillarSimple[]; tongResult?: string
         ohaeng1?: Record<string, number>; ohaeng2?: Record<string, number>
+        judge?: CoupleJudgeV1
       } | undefined
       if (snap?.saju1 && snap?.saju2) {
         setSaju1(snap.saju1); setSaju2(snap.saju2)
         if (snap.ohaeng1 && snap.ohaeng2) { setOhaeng1(snap.ohaeng1); setOhaeng2(snap.ohaeng2) }
+        if (snap.judge) setJudge(snap.judge)   // 옛 기록은 없다 → 판정 카드 생략
         setScore({ grade: snap.grade || '', gradeDesc: snap.gradeDesc || '' } as CoupleScoreResult)
         setTongResult(snap.tongResult || '')
         ranRef.current = true       // 통변 재호출 막기
@@ -497,6 +517,17 @@ function CoupleResultView({
             ? calcMarriedScore(s1, s2, gm1, gm2, dates)
             : calcCoupleScore(s1, s2, gm1, gm2, dates)
         )
+        // ★2026-07-24 — 심산 기준 판정(점수·등급 없음).
+        //   성별이 있어야 남=재성 / 여=관성으로 갈린다. 없으면 판정을 만들지 않는다.
+        //   (조용히 기본값을 넣으면 남녀가 뒤바뀐 판정이 나온다 — 교훈 R·U)
+        const g1 = person1.gender === '남' || person1.gender === '여' ? person1.gender as Gender : null
+        const g2 = person2.gender === '남' || person2.gender === '여' ? person2.gender as Gender : null
+        if (g1 && g2) {
+          setJudge(judgeCouple(
+            { name: name1, gender: g1, saju: s1, solarMonth: c1.solarMonth, solarDay: c1.solarDay, hourBranch: c1.hourBranch },
+            { name: name2, gender: g2, saju: s2, solarMonth: c2.solarMonth, solarDay: c2.solarDay, hourBranch: c2.hourBranch },
+          ))
+        }
       } catch { if (!cancelled) setCalcErr(true) }
     }
     run()
@@ -570,7 +601,12 @@ function CoupleResultView({
     })
     // 결과 스냅샷 — 다시보기용(등급·명식·통변). grade는 목록 표시에도 씀.
     const snapshot = {
-      grade: score.grade, gradeDesc: score.gradeDesc,
+      // ★grade 는 보관함 목록 배지로 쓰인다. 점수제를 버렸으므로
+      //   심산 판정에서 뽑은 상태 문구(judge.badge)를 넣는다.
+      //   판정이 없으면(성별 미입력 등) 옛 등급으로 물러선다.
+      grade: judge?.badge || score.grade,
+      gradeDesc: score.gradeDesc,
+      judge,              // 심산 판정 — 다시보기 시 재계산 없이 그대로 그린다
       saju1, saju2,
       ohaeng1, ohaeng2,   // 오행 비교 카드용 (다시보기 시 재계산 없이 사용)
       tongResult: tongOverride ?? tongResult ?? '',
@@ -581,7 +617,7 @@ function CoupleResultView({
       mode,
       name1, name2,
       relation: mode === 'married' ? '부부' : '연인',
-      grade: score.grade,
+      grade: judge?.badge || score.grade,
       input1: toInput(person1),
       input2: toInput(person2),
       resultData: snapshot,
@@ -601,10 +637,9 @@ function CoupleResultView({
       </div>
 
       <div style={{ padding: '16px 14px' }}>
-        {/* ① 등급 + 폭죽 */}
-        {score ? (
-          <GradeFireworks grade={score.grade} gradeDesc={score.gradeDesc} headline={headline} accent={info.accent} />
-        ) : (
+        {/* ① 머리말 — 등급·폭죽을 걷어냈다. (점수제 폐기 2026-07-24)
+               GradeFireworks.tsx 는 지우지 않았다. 되돌릴 때 필요하다. */}
+        {!judge && (
           <div style={{ background: info.accent, borderRadius: 14, padding: '30px 16px', textAlign: 'center', marginBottom: 10, color: '#fff', fontSize: 13 }}>
             {calcErr ? '두 사람 정보를 다시 확인해 주세요.' : '두 사람의 인연을 살펴보는 중…'}
           </div>
@@ -638,6 +673,9 @@ function CoupleResultView({
             )}
           </div>
         )}
+
+        {/* ③-c 심산 판정 — 별표 6개 카테고리 + 총평 (2026-07-24 신규) */}
+        {judge && <CoupleJudgeCard judge={judge} />}
 
         {/* ④ 통변 — 질문별 카드 아코디언 (사주/대운/연운과 통일) */}
         <div style={{ marginTop: 10 }}>

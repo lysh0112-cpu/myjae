@@ -106,8 +106,11 @@ function CoupleStorageInner() {
               marginBottom: 10, cursor: 'pointer',
             }}>
             {/* 등급 (점수 숨김 · C안) */}
-            <div style={{ textAlign: 'center', minWidth: 54, flexShrink: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 500, color: info.accent, lineHeight: 1.3 }}>
+            <div style={{ textAlign: 'center', width: 62, flexShrink: 0 }}>
+              <div style={{
+                fontSize: 11, fontWeight: 600, color: info.accent,
+                lineHeight: 1.35, letterSpacing: '-.03em', wordBreak: 'keep-all',
+              }}>
                 {gradeShort(r.grade)}
               </div>
             </div>
@@ -200,16 +203,28 @@ function CoupleStorageInner() {
   )
 }
 
-// 등급 문자열을 카드용 짧은 표현으로
+// 카드 왼쪽 배지 문구
+//   ★2026-07-24 — 점수·등급을 버리면서 배지도 바뀌었다.
+//     새 기록: 심산 판정에서 뽑은 상태 문구가 그대로 들어온다.
+//               예) "기운을 채워 주는 사이" · "서로에게 귀인이 되는 사이"
+//     옛 기록: "소울메이트형 ✨" 같은 등급이 남아 있다 → 짧게 줄여서 표시.
+//
+//   ⚠️ 예전에는 마지막에 slice(0,5) 로 잘랐는데, 새 문구는 그러면
+//      "기운을 채워"처럼 말이 끊긴다. 새 문구는 자르지 않는다.
 function gradeShort(grade: string): string {
   if (!grade) return '궁합'
+  // ── 옛 등급 (v1 이전 기록) ──
   if (grade.includes('천생연분')) return '천생연분'
   if (grade.includes('소울메이트')) return '소울메이트'
   if (grade.includes('황금')) return '황금커플'
   if (grade.includes('탐구')) return '탐구커플'
   if (grade.includes('드라마틱')) return '드라마틱'
   if (grade.includes('반전')) return '반전매력'
-  return grade.replace(/[💫✨🌟💡🔥⚡\s]/g, '').slice(0, 5)
+  // ── 새 판정 문구 — "…사이"로 끝난다. 그대로 쓴다. ──
+  const clean = grade.replace(/[💫✨🌟💡🔥⚡]/g, '').trim()
+  if (clean.endsWith('사이')) return clean
+  // 그 외 알 수 없는 값은 예전처럼 줄여서
+  return clean.slice(0, 5)
 }
 
 export default function CoupleStoragePage() {
