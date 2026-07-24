@@ -24,13 +24,9 @@ interface PersonInput {
 interface WeddingSurvey {
   startDate: string
   endDate: string
-  dayPref: string
-  avoidNote: string
 }
 
-const DEFAULT_SURVEY: WeddingSurvey = {
-  startDate: '', endDate: '', dayPref: 'weekend', avoidNote: '',
-}
+const DEFAULT_SURVEY: WeddingSurvey = { startDate: '', endDate: '' }
 
 const SURVEY_KEY = 'wedding-timing-survey'
 
@@ -136,7 +132,9 @@ function WeddingFindInner() {
     params.set('p1', JSON.stringify(groom))
     params.set('p2', JSON.stringify(bride))
     params.set('survey', JSON.stringify(survey))
-    router.push('/manseryeok/wedding-timing/result?' + params.toString())
+    // ★v7: 옛 /result(점수제 화면)를 접고 /pick(필터 화면)으로 보낸다.
+    //   되돌리려면 이 경로만 바꾸면 된다.
+    router.push('/manseryeok/wedding-timing/pick?' + params.toString())
   }
 
   return (
@@ -182,22 +180,10 @@ function WeddingFindInner() {
           onChange={(s, e) => setSurvey(prev => ({ ...prev, startDate: s, endDate: e }))}
         />
 
-        <QLabel>요일은 어떻게 할까요?</QLabel>
-        <div style={{ display: 'flex', gap: '6px' }}>
-          {[['weekend', '주말만'], ['holiday', '공휴일 포함'], ['all', '평일 포함']].map(([val, lab]) => (
-            <Chip key={val} label={lab} active={survey.dayPref === val} onClick={() => setField('dayPref', val)} />
-          ))}
+        <div style={{ fontSize: '11px', color: sub, marginTop: '10px', lineHeight: 1.7 }}>
+          주말만 볼지 평일까지 볼지는 <b style={{ color: '#96502e' }}>다음 화면에서</b> 켜고 끄며
+          바로 확인하실 수 있어요.
         </div>
-        <div style={{ fontSize: '11px', color: sub, marginTop: '6px', lineHeight: 1.6 }}>
-          ‘공휴일 포함’은 토·일에 더해 평일에 낀 공휴일·연휴도 함께 찾아드려요.
-        </div>
-
-        <QLabel>피하고 싶은 날이 있나요? <span style={{ color: sub, fontSize: '11px' }}>(선택)</span></QLabel>
-        <textarea value={survey.avoidNote}
-          onChange={e => setField('avoidNote', e.target.value)}
-          placeholder="예) 6월은 양가 제사가 있어 피하고 싶어요"
-          rows={2}
-          style={{ width: '100%', boxSizing: 'border-box', background: '#FDF6F0', border: '1px solid #f0e0d5', borderRadius: '10px', padding: '10px 14px', color: text, fontSize: '14px', outline: 'none', resize: 'none', lineHeight: 1.6 }} />
 
         {error && (
           <div style={{ marginTop: '14px', background: 'rgba(255,80,80,0.08)', border: '1px solid rgba(255,80,80,0.2)', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', color: '#ff8888', lineHeight: 1.6 }}>
@@ -224,12 +210,12 @@ function WeddingFindInner() {
 
             <div style={{ fontSize: '17px', fontWeight: 700, color: text, marginBottom: '4px' }}>💍 결혼 길일 택일 분석</div>
             <div style={{ fontSize: '13px', color: sub, marginBottom: '16px', lineHeight: 1.6 }}>
-              두 분께 좋은 결혼 길일 5곳을 찾아드려요
+              두 분께 맞는 좋은 날을 모두 찾아드려요
             </div>
 
             <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '1px solid #f0e0d5' }}>
               <div style={{ fontSize: '12px', color: sub, marginBottom: '8px' }}>분석 내용</div>
-              {['추천 결혼 길일 5순위', '각 날짜의 길신 풀이(천을귀인·용신·손없는날 등)', '피하면 좋은 날 안내', '두 사람 사주 함께 반영'].map((t, i) => (
+              {['희망 기간의 모든 날을 하루씩 판정', '공망·충·형을 미리 걸러낸 날짜 목록', '신부·신랑 용신일을 켜고 끄며 고르기', '각 조건이 무슨 뜻인지 설명'].map((t, i) => (
                 <div key={i} style={{ fontSize: '13px', color: '#6b5d54', lineHeight: 1.9 }}>· {t}</div>
               ))}
             </div>

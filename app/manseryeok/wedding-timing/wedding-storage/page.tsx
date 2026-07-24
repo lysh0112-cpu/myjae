@@ -28,11 +28,12 @@ const KIND_BADGE: Record<'check' | 'find', { label: string; color: string; bg: s
   find:  { label: '좋은 날', color: '#b46e46', bg: '#f7ede2' },
 }
 
-// 두 사람 정보 → 결과 화면 URL 쿼리 (kind에 따라 result/check 로 분기)
+// 두 사람 정보 → 결과 화면 URL 쿼리 (kind에 따라 pick/check 로 분기)
+//   ★v7(2026-07-24): 옛 점수제 화면 /result 를 지웠다. find 기록은 /pick 으로 간다.
 function toResultUrl(r: WeddingRecord): string {
   const pack = (input: SavedInputData & { name?: string }, name: string) =>
     encodeURIComponent(JSON.stringify({ ...input, name }))
-  const dest = r.kind === 'find' ? 'result' : 'check'
+  const dest = r.kind === 'find' ? 'pick' : 'check'
   return `/manseryeok/wedding-timing/${dest}?recordId=${r.id}` +
     `&p1=${pack(r.input1, r.name1)}&p2=${pack(r.input2, r.name2)}`
 }

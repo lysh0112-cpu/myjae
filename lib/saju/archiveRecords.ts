@@ -81,8 +81,9 @@ export function reviewUrl(item: ArchiveItem): string {
       return `/tarot?recordId=${rid}&${from}`
     case 'naming':
       return `/manseryeok/naming/diagnosis?recordId=${rid}&${from}`
+    // ★v7(2026-07-24): 점수제 /result 를 접고 /pick(필터 화면)으로 보낸다.
     case 'wedding':
-      return `/manseryeok/wedding-timing/result?${qs}recordId=${rid}&${from}`
+      return `/manseryeok/wedding-timing/pick?${qs}recordId=${rid}&${from}`
     case 'birth':
       return `/manseryeok/birth-timing/result?${qs}recordId=${rid}&${from}`
     case 'daeun':
