@@ -302,7 +302,7 @@ function CheckInner() {
 
             <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '1px solid #f0e0d5' }}>
               <div style={{ fontSize: '12px', color: sub, marginBottom: '8px' }}>분석 내용</div>
-              {['입력한 날짜별 길흉 진단', '길신 풀이(천을귀인·용신·손없는날 등)', '피해야 할 날이면 사유 안내', '두 사람 사주 함께 반영'].map((t, i) => (
+              {['고르신 날짜를 일곱 가지 조건으로 판정', '공망·충·형에 걸리면 어느 분과 걸리는지', '두 분의 용신이 그날에 드는지', '각 조건이 무슨 뜻인지 설명'].map((t, i) => (
                 <div key={i} style={{ fontSize: '13px', color: '#6b5d54', lineHeight: 1.9 }}>· {t}</div>
               ))}
             </div>

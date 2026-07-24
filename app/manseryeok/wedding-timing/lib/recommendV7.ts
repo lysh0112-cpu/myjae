@@ -157,7 +157,18 @@ export async function runWeddingV7(opts: RunV7Options): Promise<WeddingV7Result>
   if (e < s) return empty('종료일이 시작일보다 빠를 수 없어요.')
 
   // 두 사람 사주
-  const [bride, groom] = await Promise.all([fetchPersonSaju(rawB), fetchPersonSaju(rawG)])
+  //   ★2026-07-24 — 성별로 신랑·신부를 확정한다.
+  //     v7 은 교재 231쪽 4번에 따라 '신부 용신'을 기준으로 날짜를 고른다.
+  //     둘이 뒤바뀌면 엉뚱한 사람의 용신으로 필터가 돌아가므로,
+  //     화면 표시 문제가 아니라 결과가 통째로 달라지는 문제다.
+  //     앞 화면에서 정렬해 보내지만 여기서도 마지막으로 한 번 더 본다.
+  const swap = rawB?.gender === '남' && rawG?.gender === '여'
+  const brideRaw = swap ? rawG : rawB
+  const groomRaw = swap ? rawB : rawG
+
+  const [bride, groom] = await Promise.all([
+    fetchPersonSaju(brideRaw), fetchPersonSaju(groomRaw),
+  ])
   if (!bride || !groom) {
     return empty('두 분의 사주 정보가 부족해요. 이전 화면에서 생년월일을 확인해 주세요.')
   }
@@ -246,8 +257,11 @@ export async function runDiagnoseV7(opts: {
     return { results: [], bride: null, groom: null, error: '봐드릴 날짜를 한 개 이상 골라 주세요.' }
   }
 
+  // ★성별로 신랑·신부를 확정한다 (runWeddingV7 과 같은 이유)
+  const swap = opts.bride?.gender === '남' && opts.groom?.gender === '여'
   const [bride, groom] = await Promise.all([
-    fetchPersonSaju(opts.bride), fetchPersonSaju(opts.groom),
+    fetchPersonSaju(swap ? opts.groom : opts.bride),
+    fetchPersonSaju(swap ? opts.bride : opts.groom),
   ])
   if (!bride || !groom) {
     return {

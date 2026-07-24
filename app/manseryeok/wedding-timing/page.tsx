@@ -45,11 +45,17 @@ function MenuInner() {
     try {
       const p1 = sp.get('p1')
       const p2 = sp.get('p2')
-      if (p1) setGroom(JSON.parse(decodeURIComponent(p1)))
-      if (p2) setBride(JSON.parse(decodeURIComponent(p2)))
+      const a = p1 ? JSON.parse(decodeURIComponent(p1)) as PersonInput : null
+      const b = p2 ? JSON.parse(decodeURIComponent(p2)) as PersonInput : null
+      // ★2026-07-24 — p1 을 무조건 신랑으로 읽지 않고 성별로 가린다.
+      //   앞 화면(input)에서 이미 정렬해 보내지만, 옛 보관함 링크처럼
+      //   순서가 뒤바뀐 채 들어오는 경로가 있어 여기서도 한 번 더 본다.
+      const swap = a?.gender === '여' && b?.gender === '남'
+      setGroom(swap ? b : a)
+      setBride(swap ? a : b)
       const q = new URLSearchParams()
-      if (p1) q.set('p1', p1)
-      if (p2) q.set('p2', p2)
+      if (p1) q.set('p1', swap ? p2! : p1)
+      if (p2) q.set('p2', swap ? p1! : p2)
       setQuery(q.toString())
     } catch {}
   }, [sp])
@@ -115,7 +121,7 @@ function MenuInner() {
             <span style={{ fontSize: '15px', fontWeight: 600, color: text }}>좋은 날 찾아주기</span>
           </div>
           <div style={{ fontSize: '12px', color: sub, lineHeight: 1.6, paddingLeft: '28px' }}>
-            희망하는 기간을 주시면 두 분께 좋은 결혼 길일 5개를 찾아드려요
+            희망하는 기간을 주시면 두 분께 맞는 날을 모두 찾아드려요
           </div>
         </button>
 

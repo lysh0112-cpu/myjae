@@ -78,7 +78,14 @@ function WeddingInputInner() {
   const bothReady = !!groom && !!bride
 
   // 두 사람 → 결혼택일 입구(page.tsx)로. 거기서 정한 날/좋은 날 갈래 선택.
-  //   입구가 기대하는 형식: p1, p2 = encodeURIComponent(JSON.stringify(person))
+  //   입구가 기대하는 형식: p1 = 신랑(남), p2 = 신부(여)
+  //
+  //   ★2026-07-24 수정 — 슬롯 순서가 아니라 '성별'로 가려서 넘긴다.
+  //     전에는 첫 슬롯을 무조건 p1(신랑)으로 보냈다. 그래서 첫 칸에 여자를 넣으면
+  //     이 화면에는 SlotView 가 성별을 보고 '신부'라 표시하는데(아래 162행 참고)
+  //     다음 화면은 p1 을 신랑으로 읽어 두 사람이 뒤바뀌어 보였다.
+  //     표시만의 문제가 아니다 — 결혼택일 v7 은 교재 4번에 따라 '신부 용신'을
+  //     기준으로 날짜를 고르므로, 뒤바뀌면 엉뚱한 사람의 용신으로 필터가 돌아간다.
   const goNext = () => {
     if (!groom || !bride) return
     const pack = (s: Slot) => encodeURIComponent(JSON.stringify({
@@ -86,7 +93,16 @@ function WeddingInputInner() {
       name: s.name,
       isMe: s.isMe ? 'true' : 'false',
     }))
-    router.push(`/manseryeok/wedding-timing?p1=${pack(groom)}&p2=${pack(bride)}`)
+    // 성별로 가른다. 둘 다 같은 성별이거나 성별이 없으면 슬롯 순서를 그대로 쓴다.
+    const male = groom.input.gender === '남' ? groom
+      : bride.input.gender === '남' ? bride : null
+    const female = groom.input.gender === '여' ? groom
+      : bride.input.gender === '여' ? bride : null
+    const p1 = male ?? groom     // 신랑 자리
+    const p2 = female ?? bride   // 신부 자리
+    // 같은 사람이 양쪽에 오면(둘 다 남 또는 둘 다 여) 원래 순서로 되돌린다.
+    const [a, b] = p1 === p2 ? [groom, bride] : [p1, p2]
+    router.push(`/manseryeok/wedding-timing?p1=${pack(a)}&p2=${pack(b)}`)
   }
 
   return (
