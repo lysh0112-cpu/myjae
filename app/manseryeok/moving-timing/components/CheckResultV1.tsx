@@ -2,7 +2,7 @@
 // app/manseryeok/moving-timing/components/CheckResultV1.tsx
 //
 // ★ 이사택일 v1 — 정한 날 봐주기 결과.
-//   날짜마다 6줄(고정 4 + 선택 2)을 O/X 로 보여준다. 점수를 매기지 않는다.
+//   날짜마다 7줄(고정 4 + 선택 3)을 O/X 로 보여준다. 점수를 매기지 않는다.
 //   결혼택일 CheckResultV7 과 같은 구조.
 //
 //   [표시 규칙]
@@ -55,7 +55,10 @@ export default function CheckResultV1({ result }: Props) {
         : { mark: '✕', color: C.bad, weight: 700, hit: true }
     }
     // 선택 조건 — 안 맞아도 흉일이 아니다. 회색 대시로 둔다.
-    if (result.lunarFailed) return { mark: '—', color: '#C9BBA6', weight: 400, hit: false }
+    //   ★주말은 음력과 무관하므로 음력을 못 읽어도 정상 판정한다.
+    if (result.lunarFailed && key !== 'optWeekend') {
+      return { mark: '—', color: '#C9BBA6', weight: 400, hit: false }
+    }
     return v
       ? { mark: '✓', color: C.good, weight: 400, hit: false }
       : { mark: '—', color: '#C9BBA6', weight: 400, hit: false }
@@ -76,6 +79,9 @@ export default function CheckResultV1({ result }: Props) {
     }
     if (key === 'fixMyeongjeol' && !d.fixMyeongjeol) {
       return day.holidayName || '명절 연휴'
+    }
+    if (key === 'optWeekend' && !d.optWeekend) {
+      return '평일이에요'
     }
     if (key === 'optSonEomneun' && !d.optSonEomneun && !result.lunarFailed) {
       return d.sonDir ? `${d.sonDir}쪽에 손` : ''

@@ -8,7 +8,7 @@
 //   [화면 구성]
 //   · 두 사람 명식 (CoupleWonguk 재사용) + 명의·방향 표시
 //   · 이미 확인해 둔 것 (고정 4) — 칩. 누르면 설명. 끌 수 없다.
-//   · 더 보고 싶은 것 (선택 2) — 손 없는 날 / 방향에 손 없는 날
+//   · 더 보고 싶은 것 (선택 3) — 쉬는 날 / 손 없는 날 / 방향에 손 없는 날
 //   · 남은 날 목록 — 연도별
 //
 //   [원칙] 조건을 많이 켤수록 좋은 게 아니라는 것을 문구로 알린다.
@@ -197,7 +197,8 @@ export default function PickMovingV1({ result, onPickDay }: Props) {
         {OPT_FILTERS.map(f => {
           const pv = preview(f.key)
           const active = on[f.key]
-          const disabled = result.lunarFailed
+          // ★주말 토글은 음력과 무관하므로 잠그지 않는다.
+          const disabled = result.lunarFailed && f.key !== 'optWeekend'
           return (
             <div key={f.key} style={{
               display: 'flex', alignItems: 'center', gap: 11,
@@ -293,7 +294,13 @@ export default function PickMovingV1({ result, onPickDay }: Props) {
                   <span style={{ fontSize: 14, color: C.ink, fontWeight: 600, minWidth: 76 }}>
                     {d.dateLabel}
                   </span>
-                  <span style={{ fontSize: 12.5, color: C.sub }}>{d.weekday}</span>
+                  <span style={{
+                    fontSize: 12.5,
+                    color: d.detail.optWeekend ? '#B4634A' : C.sub,
+                    fontWeight: d.detail.optWeekend ? 700 : 400,
+                  }}>
+                    {d.weekday}
+                  </span>
                   <span style={{ fontSize: 12, color: '#C0AC90' }}>{d.ganji}</span>
                   {d.detail.optSonEomneun ? (
                     <span style={{

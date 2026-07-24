@@ -163,7 +163,7 @@ function CheckInner() {
         <div style={{ padding: '20px 16px 0' }}>
           <div style={{ fontSize: 12.5, color: sub, lineHeight: 1.8, marginBottom: 16 }}>
             최대 세 개까지 봐드려요. 각 날짜마다 명절·공망·충·형 네 가지와
-            손 관련 두 가지를 하나씩 확인해 드려요.
+            쉬는 날·손 관련 세 가지를 하나씩 확인해 드려요.
           </div>
 
           {dates.map((d, i) => (

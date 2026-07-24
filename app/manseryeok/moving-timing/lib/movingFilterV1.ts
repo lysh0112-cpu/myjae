@@ -17,8 +17,8 @@
 //   [구조]
 //   고정 4 : 서비스가 항상 적용. 끌 수 없다.
 //            명절 / 공망 / 충 / 형
-//   선택 2 : 본인이 켜고 끈다.
-//            손 없는 날 / 가는 방향에 손 없는 날
+//   선택 3 : 본인이 켜고 끈다.
+//            쉬는 날(주말·공휴일) / 손 없는 날 / 가는 방향에 손 없는 날
 //
 //   [판정 대상]
 //   · 공동명의 — 두 사람 합집합(한 사람이라도 걸리면 배제)
@@ -78,7 +78,8 @@ export interface MovingFlags {
   fixGongmang: boolean    // 공망에 걸리지 않음
   fixChung: boolean       // 일지와 충이 아님
   fixHyeong: boolean      // 일지와 형이 아님
-  // 선택 2
+  // 선택 3
+  optWeekend: boolean     // 주말 또는 공휴일
   optSonEomneun: boolean  // 손 없는 날 (음력 9·10·19·20·29·30)
   optDirection: boolean   // 가는 방향에 손이 없음
 }
@@ -148,6 +149,7 @@ export function judgeDay(
     fixGongmang: gongmangWho.length === 0,
     fixChung: chungWho.length === 0,
     fixHyeong: hyeongWho.length === 0,
+    optWeekend: day.isWeekend || day.isHoliday,
     optSonEomneun: isSon,
     optDirection: dirOk,
   }
@@ -162,9 +164,11 @@ export function judgeDay(
 }
 
 // ── 선택 필터 메타 (화면이 그대로 읽어 쓴다) ────────────────────────────
-export type OptKey = 'optSonEomneun' | 'optDirection'
+export type OptKey = 'optWeekend' | 'optSonEomneun' | 'optDirection'
 
 export const OPT_FILTERS: { key: OptKey; label: string; hanja: string; desc: string }[] = [
+  { key: 'optWeekend', label: '쉬는 날', hanja: '週末',
+    desc: '토·일요일과 공휴일만 봐요. 평일에 휴가를 내기 어려우실 때 켜 보세요.' },
   { key: 'optSonEomneun', label: '손 없는 날', hanja: '損',
     desc: '음력 9·10·19·20·29·30일이에요. 어느 방향으로 가도 괜찮은 날이에요.' },
   { key: 'optDirection', label: '가는 방향에 손 없는 날', hanja: '方位',
@@ -175,7 +179,7 @@ export type OptState = Record<OptKey, boolean>
 
 /** 기본값 — 둘 다 꺼 둔다. 켜면 후보가 크게 줄기 때문. */
 export const DEFAULT_OPT: OptState = {
-  optSonEomneun: false, optDirection: false,
+  optWeekend: false, optSonEomneun: false, optDirection: false,
 }
 
 /** 켜져 있는 선택 필터를 모두 만족하는가 */
@@ -193,6 +197,7 @@ export const FIXED_CHIPS: { key: string; label: string; hanja: string }[] = [
 
 /** 진단 화면이 쓰는 6줄 (고정 4 + 선택 2) */
 export const ALL_ROWS: { key: keyof MovingFlags; label: string; hanja: string; kind: 'fix' | 'opt' }[] = [
+  { key: 'optWeekend', label: '쉬는 날', hanja: '週末', kind: 'opt' },
   { key: 'fixMyeongjeol', label: '명절 아님', hanja: '名節', kind: 'fix' },
   { key: 'fixGongmang', label: '빈자리 아님', hanja: '空亡', kind: 'fix' },
   { key: 'fixChung', label: '부딪힘 없음', hanja: '沖', kind: 'fix' },
@@ -221,6 +226,12 @@ export const HELP_TEXT: Record<string, { title: string; hanja: string; body: str
     title: '모남 없음', hanja: '刑',
     body: '형은 서로 어긋나고 다투는 관계예요.\n' +
           '삼형·상형·자형을 모두 봐요.',
+  },
+  optWeekend: {
+    title: '쉬는 날', hanja: '週末',
+    body: '토·일요일과 공휴일만 봐요.\n' +
+          '이삿짐 업체는 주말이 더 비싸고 예약도 빨리 차니 미리 알아보시는 게 좋아요.\n' +
+          '설·추석 연휴는 이미 빼 드렸어요.',
   },
   optSonEomneun: {
     title: '손 없는 날', hanja: '損',

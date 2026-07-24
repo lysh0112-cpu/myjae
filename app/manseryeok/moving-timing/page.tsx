@@ -155,7 +155,7 @@ function MenuInner() {
           fontSize: 11.5, color: '#BFAE96', lineHeight: 1.8, marginTop: 14, paddingLeft: 2,
         }}>
           두 갈래 모두 명절·공망·충·형 네 가지를 먼저 확인해요.
-          손 없는 날은 켜고 끄실 수 있어요.
+          쉬는 날·손 없는 날은 켜고 끄실 수 있어요.
         </div>
       </div>
     </main>
