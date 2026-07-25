@@ -363,20 +363,45 @@ function tbIcon(t: string): string {
 function tbClean(s: string): string {
   return s.replace(/^#{1,6}\s*/, '').replace(/^\s*[-*]{3,}\s*$/, '').replace(/\*\*(.+?)\*\*/g, '$1').replace(/^■\s*/, '').trim()
 }
+// ★2026-07-25 — AI가 제목을 본문 첫 줄에 또 쓰는 경우가 있어, 본문 첫 줄이
+//   제목과 (거의) 같으면 제거한다. (프롬프트 지시만으로 안 걸러져서 코드로 강제)
+function stripEchoedTitle(title: string, body: string): string {
+  const norm = (s: string) => s.replace(/[\s·!?.]/g, '')
+  const t = norm(title)
+  if (!t) return body
+  const lines = body.split('\n')
+  // 앞쪽 빈 줄 건너뛰고 첫 실질 줄을 본다
+  let i = 0
+  while (i < lines.length && !lines[i].trim()) i++
+  if (i < lines.length) {
+    const first = norm(tbClean(lines[i]))
+    if (first === t || (first.length <= t.length + 4 && first.startsWith(t))) {
+      lines.splice(i, 1)
+      // 제거 후 남은 앞쪽 빈 줄도 정리
+      while (lines[i] !== undefined && !lines[i].trim()) lines.splice(i, 1)
+    }
+  }
+  return lines.join('\n').trim()
+}
 function parseTCards(text: string): { intro: string; cards: TCard[] } {
   const lines = text.split('\n')
   let intro = ''
   const cards: TCard[] = []
   let cur: { title: string; bodyLines: string[] } | null = null
   const isHeading = (ln: string) => /^\s*(#{1,6}\s*)?■/.test(ln) || /^\s*#{2,6}\s+/.test(ln)
+  const flush = (c: { title: string; bodyLines: string[] }) => {
+    const title = tbClean(c.title)
+    const body = stripEchoedTitle(title, c.bodyLines.join('\n').trim())
+    cards.push({ title, body, icon: tbIcon(title) })
+  }
   for (const ln of lines) {
     if (isHeading(ln)) {
-      if (cur) cards.push({ title: tbClean(cur.title), body: cur.bodyLines.join('\n').trim(), icon: tbIcon(tbClean(cur.title)) })
+      if (cur) flush(cur)
       cur = { title: ln, bodyLines: [] }
     } else if (cur) { cur.bodyLines.push(ln) }
     else { const c = tbClean(ln); if (c) intro += (intro ? '\n' : '') + c }
   }
-  if (cur) cards.push({ title: tbClean(cur.title), body: cur.bodyLines.join('\n').trim(), icon: tbIcon(tbClean(cur.title)) })
+  if (cur) flush(cur)
   return { intro, cards: cards.filter(c => c.title || c.body) }
 }
 
