@@ -647,7 +647,7 @@ function CoupleResultView({
       }
       if ((t.includes('없는') && (t.includes('오행') || t.includes('기운'))) || t.includes('채워')) return 'ohaeng'
       if (t.includes('귀인')) return 'gwiin'
-      if (t.includes('일주')) return 'ilju'
+      if (t.includes('일주') || t.includes('만나는자리') || t.includes('만나는결')) return 'ilju'
       return null
     }
     const map: Record<string, string> = {}
@@ -655,11 +655,22 @@ function CoupleResultView({
     const outroParts: string[] = []
     const usedSpouse: string[] = []
     let matchedAny = false
+    // 아직 안 채워진 판정 카드를 순서대로 꺼내는 헬퍼 (제목 매칭 실패 시 보완용)
+    const nextUnfilledKey = (): string | null => {
+      for (const k of catKeys) if (!map[k]) return k
+      return null
+    }
     for (const c of tbCards) {
       const body = (c.title ? `${c.title}\n${c.body}` : c.body).trim()
       let k = keyOf(c.title)
       if (!k && (c.title.includes('배우자운') || c.title.includes('배우자 자리'))) {
         k = !usedSpouse.includes('spouse_a') ? 'spouse_a' : 'spouse_b'
+      }
+      // ★제목 매칭 실패 시 — 여는말(첫 문단)이 아니고 아직 채울 판정 카드가 남았으면
+      //   순서대로 그 카드에 채운다. (AI가 제목을 바꿔도 통변이 떠돌지 않게)
+      if ((!k || !catKeys.includes(k) || map[k]) && matchedAny) {
+        const nk = nextUnfilledKey()
+        if (nk) k = nk
       }
       if (k && catKeys.includes(k) && !map[k]) {
         map[k] = body
@@ -669,7 +680,7 @@ function CoupleResultView({
         // 아직 어떤 주제도 매칭 전이면 = 여는말
         intro = (intro ? intro + '\n\n' : '') + body
       } else {
-        // 주제 매칭이 끝난 뒤 = 맺는말·기타
+        // 판정 카드를 다 채운 뒤 남은 것 = 맺는말·기타
         outroParts.push(body)
       }
     }
