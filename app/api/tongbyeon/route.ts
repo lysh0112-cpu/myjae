@@ -70,12 +70,18 @@ export async function POST(req: Request) {
         const reader = res.body.getReader()
         const decoder = new TextDecoder()
 
+        // ★2026-07-25 — 줄 중간에서 잘린 청크 때문에 delta 가 유실되던 버그 수정.
+        //   Anthropic SSE 청크는 줄 경계에서 안 끊길 수 있어, buf 에 모아
+        //   완성된 줄만 처리하고 마지막 미완성 줄은 다음 청크로 넘긴다.
+        //   (이게 없으면 통변이 길 때 뒷부분 delta 가 사라져 통변이 중간에 끊긴다.)
+        let buf = ''
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
 
-          const chunk = decoder.decode(value)
-          const lines = chunk.split('\n')
+          buf += decoder.decode(value, { stream: true })
+          const lines = buf.split('\n')
+          buf = lines.pop() ?? ''   // 마지막(미완성)은 다음 청크로
 
           for (const line of lines) {
             if (line.startsWith('data: ')) {
