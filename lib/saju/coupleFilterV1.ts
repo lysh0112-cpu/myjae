@@ -82,6 +82,10 @@ const WONJIN: string[][] = [
 const GAN_HAP: string[][] = [
   ['甲', '己'], ['乙', '庚'], ['丙', '辛'], ['丁', '壬'], ['戊', '癸'],
 ]
+/** 천간충 — 표준 4충 (甲庚·乙辛·丙壬·丁癸). 戊己土는 충 없음 */
+const GAN_CHUNG: string[][] = [
+  ['甲', '庚'], ['乙', '辛'], ['丙', '壬'], ['丁', '癸'],
+]
 /** 지지 육합 */
 const JI_HAP: string[][] = [
   ['子', '丑'], ['寅', '亥'], ['卯', '戌'], ['辰', '酉'], ['巳', '申'], ['午', '未'],
@@ -95,6 +99,8 @@ const CHEON_EUL: Record<string, string[]> = {
   甲: ['丑', '未'], 乙: ['子', '申'], 丙: ['酉', '亥'], 丁: ['酉', '亥'], 戊: ['丑', '未'],
   己: ['子', '申'], 庚: ['丑', '未'], 辛: ['寅', '午'], 壬: ['巳', '卯'], 癸: ['巳', '卯'],
 }
+/** 냉(찬) 지지 — ⑦ 월일 조후 판정용. (대표님 지시) 나머지 6개는 온(따뜻) */
+const COLD_BRANCH = new Set(['子', '丑', '辰', '申', '酉', '亥'])
 
 const isPair = (a: string, b: string, list: string[][]) =>
   list.some(([x, y]) => (a === x && b === y) || (a === y && b === x))
@@ -212,6 +218,20 @@ export interface PersonJudge {
   seasonRel: SeasonRel
   /** 일월 원진 — 연재쌤 확정 ① */
   wonjinIlWol: boolean
+  /** 여자 丑丑 — 본인 월지·일지가 둘 다 丑 (232쪽: 이혼 가능성). 남자는 항상 false */
+  chukChukSelf: boolean
+  /** 여자: 관성이 용신·희신이면 귀한 남편 (233쪽). 별 +2. 남자는 항상 false */
+  spouseIsYongHee: boolean
+  /** 여자: 정관·편관이 각각 2개 이상이면 관살혼잡 (232쪽). 별 -1. 남자는 항상 false */
+  gwansalHonjap: boolean
+  /** 여자: 관성이 기신이면 부부가 많이 싸운다 (233쪽). 별 -1. 남자는 항상 false */
+  spouseIsGisin: boolean
+  /** 여자: 무관 사주(천간·본기에 관성 없음) — 남편이 무능·덕 없음. 별 -1. 남자는 항상 false */
+  muGwan: boolean
+  /** 배우자 별이 천을귀인이면 배우자 덕이 많다 (233쪽). 별 +1. 남녀 공통 */
+  gwanIsCheonEul: boolean
+  /** 월지·일지가 냉·온 하나씩이면 조후 균형 → 궁합에 좋다. 별 +2. 남녀 공통 */
+  johuBalance: boolean
   /** 내 천을귀인 글자 */
   gwiinChars: string[]
   /** 내 사주 안의 천을귀인 위치 */
@@ -330,6 +350,60 @@ export function judgePerson(p: PersonInput): PersonJudge {
     q => BRANCH_EL[q.branch] === spouseEl && gongmang.includes(q.branch),
   )
 
+  // ── ② 여자: 관성이 용신·희신이면 귀한 남편 (233쪽) ──
+  //   ★여자만. 남자(재성)에는 이 규칙을 적용하지 않는다. (대표님 지시)
+  //     "여자 사주에서 관성이 용신·희신이면 남편이 귀한 사람이 된다"
+  //     용신·희신을 같이 '귀한 것'으로 보고 별 +2.
+  const spouseIsYongHee = p.gender === '여'
+    && (spouseEl === eokbu.yongsin || spouseEl === eokbu.heesin)
+
+  // ── ④ 여자: 관성이 기신이면 부부가 많이 싸운다 (233쪽) ──
+  //   ★여자만. ②의 짝. 233쪽 "관성이 용신·희신이면 좋고 기신이면 불화".
+  //     별 -1.
+  const spouseIsGisin = p.gender === '여' && spouseEl === eokbu.gisin
+
+  // ── ③ 여자: 정관·편관이 각각 2개 이상이면 관살혼잡 (232쪽) ──
+  //   ★여자만. 세는 법은 천간 + 지지 본기(지장간 속기운 제외).
+  //     지장간까지 세면 대부분 사주가 걸려 혼잡이 남발된다.
+  //     판정: 정관 2개 이상 '또는' 편관 2개 이상. 별 -1.
+  let jeonggwan = 0
+  let pyeongwan = 0
+  if (p.gender === '여') {
+    for (const q of p.saju) {
+      for (const g of [q.stem, HIDDEN[q.branch]?.[2] ?? '']) {
+        if (!g) continue
+        const s = sipsinOf(dayStem, g)
+        if (s === '정관') jeonggwan++
+        else if (s === '편관') pyeongwan++
+      }
+    }
+  }
+  const gwansalHonjap = p.gender === '여' && (jeonggwan >= 2 || pyeongwan >= 2)
+
+  // ── ⑤ 여자: 무관(無官) 사주 — 남편이 무능하고 덕이 없다 ──
+  //   ★여자만. 천간·지지 본기에 관성(정관·편관)이 하나도 없는 경우. 별 -1.
+  //     ③과 같은 셈법(천간+본기, 지장간 속기운 제외)을 쓴다.
+  const muGwan = p.gender === '여' && jeonggwan === 0 && pyeongwan === 0
+
+  // ── ⑥ 배우자 별(여=관성·남=재성)이 천을귀인이면 배우자 덕이 많다 (233쪽) ──
+  //   ★남녀 공통. 별 +1. (대표님 지시 — 원래 여자만이었으나 공통으로 확대)
+  //     천을귀인은 지지로만 판정하므로, 배우자 별도 지지 본기로 본다.
+  //     지지 본기가 배우자 별 오행이면서, 그 지지가 천을귀인 글자인 경우.
+  const gwanIsCheonEul = p.saju.some(q => {
+    const bongi = HIDDEN[q.branch]?.[2] ?? ''
+    const isSpouseEl = bongi && STEM_EL[bongi] === spouseEl
+    const isCheonEul = (CHEON_EUL[dayStem] ?? []).includes(q.branch)
+    return isSpouseEl && isCheonEul
+  })
+
+  // ── ⑦ 월지·일지 조후 — 하나는 냉, 하나는 온이면 궁합에 좋다 ──
+  //   ★남녀 공통. 별 +2. (대표님 지시)
+  //     한 사람 사주 안에서 월지·일지가 냉·온 하나씩이면 조후가 균형 잡힘.
+  //       냉: 子 丑 辰 申 酉 亥   온: 寅 卯 巳 午 未 戌
+  const iljiCold = COLD_BRANCH.has(dayBranch)
+  const woljiCold = COLD_BRANCH.has(monthBranch)
+  const johuBalance = (iljiCold && !woljiCold) || (!iljiCold && woljiCold)
+
   // 일지 십신 (232쪽 4번 — 판단 기준은 日支)
   const iljiSipsin = dayBranch ? sipsinOf(dayStem, HIDDEN[dayBranch]?.[2] ?? '') : ''
 
@@ -341,6 +415,10 @@ export function judgePerson(p: PersonInput): PersonJudge {
 
   // ── 일월 원진 (연재쌤 확정 ①) ──
   const wonjinIlWol = isPair(monthBranch, dayBranch, WONJIN)
+
+  // ── 여자 丑丑 (232쪽 여자 항목: 이혼 가능성) ──
+  //   ★여자 본인 사주의 월지·일지가 둘 다 丑. 남자는 보지 않는다. (대표님 지시)
+  const chukChukSelf = p.gender === '여' && isChukChuk(monthBranch, dayBranch)
 
   // ── 천을귀인 ──
   const gwiinChars = CHEON_EUL[dayStem] ?? []
@@ -355,7 +433,8 @@ export function judgePerson(p: PersonInput): PersonJudge {
     ohaeng, season, useJohu, needEl, needFrom, eokbu,
     spouseName, spouseEl, spouseScore, spouseAbsent, spouseWhere,
     spouseRooted, spouseGongmang,
-    iljiSipsin, seasonRel, wonjinIlWol,
+    iljiSipsin, seasonRel, wonjinIlWol, chukChukSelf,
+    spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance,
     gwiinChars, gwiinMine, gongmang,
   }
 }
@@ -515,8 +594,12 @@ export function judgeCouple(
   const ganHap = isPair(a.dayStem, b.dayStem, GAN_HAP)
   const jiHap = isPair(a.dayBranch, b.dayBranch, JI_HAP)
   const jiChung = isPair(a.dayBranch, b.dayBranch, CHUNG)
-  const ganEl1 = STEM_EL[a.dayStem], ganEl2 = STEM_EL[b.dayStem]
-  const ganChung = CON[ganEl1] === ganEl2 || CON[ganEl2] === ganEl1
+  // ★2026-07-24 고침 — 천간충은 오행 극이 아니라 정해진 쌍이다.
+  //   전에는 CON(오행 극)으로 봤는데, 그러면 丙辛(화극금)이 충으로 잡힌다.
+  //   하지만 丙辛은 합(丙辛合)이다. 극과 충은 다르다.
+  //   천간충 7쌍: 甲庚·乙辛·丙壬·丁癸·戊甲·己乙·... 중 표준 4충(甲庚·乙辛·丙壬·丁癸)을 쓴다.
+  //   (戊己土는 충이 없다고 보는 관법을 따른다)
+  const ganChung = isPair(a.dayStem, b.dayStem, GAN_CHUNG)
 
   // ⚠️ 비대칭이다 — 내가 상대를 볼 때와 상대가 나를 볼 때가 다르다.
   //    (辰→寅 은 C, 寅→辰 은 B) 한쪽만 쓰면 판정이 한쪽으로 기운다.
@@ -525,21 +608,26 @@ export function judgeCouple(
 
   const iljuLines: string[] = []
   iljuLines.push(`${a.dayStem}${a.dayBranch} ↔ ${b.dayStem}${b.dayBranch}`)
-  if (ganHap && jiHap) iljuLines.push('천간도 지지도 합이 되는 天合地合이에요. 심산이 좋다고 본 자리입니다.')
+  if (ganHap && jiHap) iljuLines.push('천간도 지지도 합이 되는 天合地合이에요. 서로 깊이 끌리는 좋은 자리입니다.')
   else if (ganChung && jiChung) iljuLines.push('천간도 지지도 충이 되는 天沖地沖이에요. 성격이 부딪히기 쉬운 자리입니다.')
-  else if (jiChung) iljuLines.push('일지가 충으로 마주해 서로 다른 방향을 볼 수 있어요.')
-  else if (jiHap) iljuLines.push('일지가 육합으로 만나 서로 잘 어울리는 자리예요.')
+  else if (ganHap || jiHap) iljuLines.push('두 분 일주가 합으로 이어져, 서로 잘 어울리는 자리예요.')
+  else if (ganChung || jiChung) iljuLines.push('두 분 일주가 충으로 마주해, 서로 다른 방향을 볼 수 있어요.')
   else iljuLines.push('충으로 부딪히지도, 강하게 합하지도 않는 중간 자리예요.')
   if (pairAB?.text) iljuLines.push(pairAB.text)
+
+  // ── ⑧ 일주 합/충 별점 (부부 서로를 놓고 봄, 방향 없음) ──
+  //   ★부부 공통. 대표님 지시: 일주가 합이면 +2, 충이면 -2.
+  //     天合地合·天沖地沖은 합/충이 겹친 것이므로 위 조건에 자연히 포함된다.
+  //     (합과 충이 동시에 성립하긴 어렵지만, 그럴 땐 상쇄되게 둔다)
+  let iljuStar: Stars = 3
+  if (ganHap || jiHap) iljuStar = Math.min(5, iljuStar + 2) as Stars
+  if (ganChung || jiChung) iljuStar = Math.max(1, iljuStar - 2) as Stars
 
   cats.push({
     key: 'ilju',
     title: '두 분 일주가 만나는 자리',
+    stars: iljuStar,
     lines: iljuLines,
-    dual: [
-      { text: `${a.name}님 쪽에서 본 자리`, stars: (ganHap && jiHap) ? 5 : (pairAB ? jijiStars(pairAB.grade) : 3) },
-      { text: `${b.name}님 쪽에서 본 자리`, stars: (ganHap && jiHap) ? 5 : (pairBA ? jijiStars(pairBA.grade) : 3) },
-    ],
   })
 
   // ⑤⑥ 각자의 배우자운 (232쪽 5번 · 233쪽 · 일월 원진)
@@ -579,13 +667,25 @@ export function judgeCouple(
     const mate = x === a ? b : a
     const isFemale = x.gender === '여'
     const cs = crossSeason(x.monthBranch, mate.dayBranch)
-    const chukChuk = isFemale && isChukChuk(x.monthBranch, mate.dayBranch)
+    // ★2026-07-24 고침 — 丑丑은 "여자 자기 사주의 월지-일지"를 본다. (대표님 지시)
+    //
+    //   [무엇이 틀렸었나]
+    //   전에는 isChukChuk(x.monthBranch, mate.dayBranch) 로
+    //   "여자 월지 ↔ 남편 일지" 를 봤다. 계절 판정을 교차로 바꾸면서
+    //   丑丑까지 딸려 교차가 된 것이다.
+    //
+    //   [원문·대표님 규칙]
+    //   232쪽 여자 항목 "丑丑은 이혼 가능성이 크다" 는
+    //   여자 본인 사주의 월지-일지가 둘 다 丑인 경우다. 남편은 보지 않는다.
+    //   → x.dayBranch(자기 일지)로 판정한다.
+    const chukChuk = x.chukChukSelf
     const springAutumn = isFemale && isSpringAutumn(x.monthBranch, mate.dayBranch)
     const seasonPair = `${x.name}님 월지 ${wagwa(x.monthBranch)} ${mate.name}님 일지 ${iga(mate.dayBranch)}`
 
     if (chukChuk) {
       // 232쪽 여자 항목 — 원문은 "이혼 가능성이 크다". 대표님 지시로 순화한다.
-      lines.push(`${seasonPair} 모두 丑이라 각별히 살피셔야 하는 자리예요.`)
+      //   ★여자 본인 월지·일지가 모두 丑인 경우. 상대와 무관하게 이 사람의 자리를 말한다.
+      lines.push(`${x.name}님은 월지와 일지가 모두 丑이라, 배우자 자리를 각별히 살피셔야 하는 자리예요.`)
     } else if (cs === '반대') {
       lines.push(isFemale
         ? `${seasonPair} 계절이 서로 반대라 배우자와 아주 잘 맞는 자리예요.`
@@ -597,14 +697,27 @@ export function judgeCouple(
       lines.push(`${seasonPair} 계절이 같아 기운이 한쪽으로 쏠려 있어요.`)
     }
 
-    // 별: 배우자 자리 상태 종합 (점수·뿌리·공망·원진 + 두 사람 계절)
-    //   ★2026-07-24 대표님 지시 — 별점은 그대로 유지한다.
-    //     계절 문구는 남녀를 갈라 원문대로 고쳤지만, 별 가감은 건드리지 않는다.
-    //     ('같음'·丑丑 에 별을 깎는 안이 있었으나 넣지 않는다)
+    // 별: 배우자 자리 상태 종합 (점수·뿌리·공망·원진·丑丑 + 두 사람 계절)
+    //   ★2026-07-24 대표님 지시 — 계절('같음'·봄가을)에는 별을 깎지 않는다.
+    //     다만 丑丑(여자 이혼 가능성)은 원진과 같은 무게의 감점 요인으로 본다.
     let st: Stars = starsByScore(x.spouseScore)
     if (!x.spouseRooted && st > 1) st = (st - 1) as Stars
     if (x.spouseGongmang && st > 1) st = (st - 1) as Stars
     if (x.wonjinIlWol && st > 1) st = (st - 1) as Stars
+    // ★2026-07-24 — 여자 丑丑은 이혼 가능성이 큰 자리라 원진과 같은 -1. (대표님 지시)
+    if (chukChuk && st > 1) st = (st - 1) as Stars
+    // ★2026-07-24 — 여자 관성이 용신·희신이면 귀한 남편 → +2. (대표님 지시, 233쪽)
+    if (x.spouseIsYongHee) st = Math.min(5, st + 2) as Stars
+    // ★2026-07-24 — 여자 관성이 기신이면 부부가 많이 싸운다 → -1. (대표님 지시, 233쪽)
+    if (x.spouseIsGisin && st > 1) st = (st - 1) as Stars
+    // ★2026-07-24 — 여자 관살혼잡(정관·편관 각 2개↑)이면 -1. (대표님 지시, 232쪽)
+    if (x.gwansalHonjap && st > 1) st = (st - 1) as Stars
+    // ★2026-07-24 — 여자 무관(관성 없음)이면 남편 무능·덕 없음 → -1. (대표님 지시)
+    if (x.muGwan && st > 1) st = (st - 1) as Stars
+    // ★2026-07-24 — 배우자 별이 천을귀인이면 배우자 덕이 많다 → +1. 남녀 공통. (대표님 지시, 233쪽)
+    if (x.gwanIsCheonEul) st = Math.min(5, st + 1) as Stars
+    // ★2026-07-24 — 월지·일지가 냉·온 하나씩이면 조후 균형 → +2. 남녀 공통. (대표님 지시)
+    if (x.johuBalance) st = Math.min(5, st + 2) as Stars
     if (cs === '반대' && st < 5) st = (st + 1) as Stars
 
     cats.push({
@@ -648,6 +761,9 @@ export function judgeCouple(
   if (jiChung) watch.push('두 분 일지가 충으로 마주해, 같은 일을 두고 다르게 보실 수 있습니다.')
   if (a.wonjinIlWol) watch.push(`${a.name}님은 월지와 일지가 원진이라 마음이 예민해지기 쉬워요.`)
   if (b.wonjinIlWol) watch.push(`${b.name}님은 월지와 일지가 원진이라 마음이 예민해지기 쉬워요.`)
+  // ★2026-07-24 — 여자 丑丑 (232쪽: 이혼 가능성). 순화해서 담는다.
+  if (a.chukChukSelf) watch.push(`${a.name}님은 월지와 일지가 모두 丑이라, 배우자 자리를 각별히 살피시면 좋아요.`)
+  if (b.chukChukSelf) watch.push(`${b.name}님은 월지와 일지가 모두 丑이라, 배우자 자리를 각별히 살피시면 좋아요.`)
   if (pairAB?.grade === 'D' || pairBA?.grade === 'D')
     watch.push('일지가 서로 편치 않은 자리라, 다름을 인정하는 연습이 필요합니다.')
 
