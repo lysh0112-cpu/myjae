@@ -631,6 +631,40 @@ function CoupleResultView({
     [tongResult],
   )
 
+  // ★2026-07-25 — 통변을 순서대로 판정 카드 key에 매핑한다.
+  //   통변 뼈대 순서(buildCouplePrompt): 여는말 → 없는오행 → 귀인 → 일주 → 배우자운① → 배우자운② → 맺는말
+  //   판정 카드 순서(judge.cats): ohaeng, gwiin, ilju, spouse_a, spouse_b
+  //   여는말은 intro(카드 위), 맺는말은 outro(카드 아래)로 뺀다.
+  const { tongByKey, tongIntro, tongOutro } = useMemo(() => {
+    if (!tbCards.length) return { tongByKey: {} as Record<string, string>, tongIntro: '', tongOutro: '' }
+    const catKeys = (judge?.cats ?? []).map(c => c.key)   // [ohaeng, gwiin, ilju, spouse_a, spouse_b]
+    // 통변 카드 = [여는말, 없는오행, 귀인, 일주, 배우자운①, 배우자운②, 맺는말]
+    // 첫 카드=여는말, 마지막=맺는말, 가운데가 catKeys와 1:1
+    const bodies = tbCards.map(c => (c.title ? `${c.title}\n${c.body}` : c.body).trim())
+    let intro = tbIntro || ''
+    let outro = ''
+    let middle = bodies
+    // 통변 카드 수가 판정 카드 수 + 2(여는말·맺는말)면 정확히 매칭
+    if (bodies.length >= catKeys.length + 2) {
+      intro = (intro ? intro + '\n\n' : '') + bodies[0]
+      outro = bodies[bodies.length - 1]
+      middle = bodies.slice(1, bodies.length - 1)
+    } else if (bodies.length === catKeys.length + 1) {
+      // 여는말만 있고 맺는말이 카드로 안 잘린 경우
+      intro = (intro ? intro + '\n\n' : '') + bodies[0]
+      middle = bodies.slice(1)
+    }
+    const map: Record<string, string> = {}
+    catKeys.forEach((k, i) => { if (middle[i]) map[k] = middle[i] })
+    // 매핑 후 남는 뒷부분은 맺는말에 합친다
+    if (middle.length > catKeys.length) {
+      const rest = middle.slice(catKeys.length).join('\n\n')
+      outro = outro ? `${rest}\n\n${outro}` : rest
+    }
+    return { tongByKey: map, tongIntro: intro, tongOutro: outro }
+  }, [tbCards, tbIntro, judge])
+
+
   // ★2026-07-25 — 새 궁합 통변 엔진 실행 (심산 판정 재료 → buildCouplePrompt → AI)
   //   옛 coupleScore 기반 통변을 완전히 대체한다. 결제 관문은 아직 붙이지 않았다(바로 시험용).
   const tongRanRef = useRef(false)
@@ -855,6 +889,9 @@ function CoupleResultView({
         {judge && (
           <CoupleJudgeCard
             judge={judge}
+            tongByKey={tongByKey}
+            tongIntro={tongIntro}
+            tongOutro={tongOutro}
             needExtra={ohaeng1 && ohaeng2 ? (
               <OhaengCompareCard
                 aScores={ohaeng1}
@@ -875,55 +912,18 @@ function CoupleResultView({
                ★SHOW_AUTO_TONGBYEON 을 true 로 바꾸면 예전처럼 돌아온다.
                  아래 화면 코드와 parseTCards 는 그대로 살려 두었다.
                ※ AI 는 이제 아래 '자유 질문' 에서만 답한다. */}
-        {SHOW_AUTO_TONGBYEON && (
-        <div style={{ marginTop: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, paddingLeft: 2 }}>
-            <span style={{ color: '#8f3d0e' }}>✦</span>
-            <span style={{ fontSize: 13, fontWeight: 500, color: '#96502e' }}>두 사람의 궁합 이야기</span>
-          </div>
-
-          {tongLoading && !tongResult ? (
+        {/* ④ 통변 — ★2026-07-25 통변을 판정 카드 안으로 넣었다. (대표님 지시)
+               각 판정 카드 안에 그 주제 풀이가 접기로 붙고, 여는말·맺는말은
+               CoupleJudgeCard 가 카드 위·아래에 독립으로 그린다.
+               여기서는 생성 중 로딩 표시만 남긴다. (통변 카드 중복 제거) */}
+        {SHOW_AUTO_TONGBYEON && tongLoading && (
+          <div style={{ marginTop: 10 }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: 24, color: '#5c3a1e', fontSize: 13, background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12 }}>
               <span style={{ fontSize: 28, display: 'inline-block', animation: 'spin 1.1s linear infinite', color: '#8f3d0e' }}>✦</span>
-              <span>두 사람의 인연을 찬찬히 살펴보는 중이에요…</span>
+              <span>두 사람의 인연을 찬찬히 풀이하는 중이에요…</span>
               <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
             </div>
-          ) : tongResult ? (
-            <>
-              {tbIntro && (
-                <div style={{ fontSize: 12.5, color: '#5c3a1e', lineHeight: 1.8, marginBottom: 10, paddingLeft: 2 }}>{tbIntro}</div>
-              )}
-              {tbCards.map((c, i) => {
-                const open = tongLoading ? i === tbCards.length - 1 : openCard === i
-                return (
-                  <div key={i} style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, marginBottom: 8, overflow: 'hidden' }}>
-                    <div onClick={() => setOpenCard(open ? -1 : i)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '13px 14px', cursor: 'pointer' }}>
-                      <span style={{ fontSize: 16 }}>{c.icon}</span>
-                      <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: '#96502e', lineHeight: 1.35 }}>{c.title}</span>
-                      <span style={{ color: '#8f3d0e', fontSize: 12, transition: 'transform .25s', transform: `rotate(${open ? '180' : '0'}deg)` }}>▾</span>
-                    </div>
-                    <div style={{ maxHeight: open ? '3000px' : '0', overflow: 'hidden', transition: 'max-height .3s ease' }}>
-                      <div style={{ fontSize: 13.5, lineHeight: 1.85, color: '#3a2e28', whiteSpace: 'pre-wrap', padding: '0 14px 14px' }}>{c.body}</div>
-                    </div>
-                  </div>
-                )
-              })}
-              {tongLoading && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 4px', color: '#5c3a1e', fontSize: 12 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#b46e46', animation: 'tbpulse 1s infinite' }} />
-                  정성껏 풀이하고 있어요…
-                  <style>{`@keyframes tbpulse{0%,100%{opacity:.3}50%{opacity:1}}`}</style>
-                </div>
-              )}
-            </>
-          ) : (
-            <div style={{ fontSize: 12.5, color: '#5c3a1e', lineHeight: 1.8, background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: '14px 12px', textAlign: 'center' }}>
-              두 사람의 명식을 준비하는 중이에요…
-            </div>
-          )}
-        </div>
-
+          </div>
         )}
 
         {/* ⑤ 더 궁금한 것 — ★2026-07-24 화면에서 제거 (대표님 지시)

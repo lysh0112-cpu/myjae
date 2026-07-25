@@ -21,6 +21,7 @@
 // ============================================================================
 'use client'
 
+import { useState } from 'react'
 import type { CoupleJudgeV1, CategoryResult, Stars } from '@/lib/saju/coupleFilterV1'
 
 const GOLD = '#c08a2e'
@@ -35,7 +36,8 @@ function StarRow({ n }: { n: Stars }) {
   )
 }
 
-function Card({ cat, extra }: { cat: CategoryResult; extra?: React.ReactNode }) {
+function Card({ cat, extra, tong }: { cat: CategoryResult; extra?: React.ReactNode; tong?: string }) {
+  const [open, setOpen] = useState(false)
   return (
     <div style={{
       background: '#fff', border: '0.5px solid #eee2d6', borderRadius: 13,
@@ -88,6 +90,30 @@ function Card({ cat, extra }: { cat: CategoryResult; extra?: React.ReactNode }) 
           ))}
         </div>
       )}
+
+      {/* ★2026-07-25 — 이 주제의 AI 통변 해설 (접기). 판정 아래에 그 주제 풀이가 붙는다. */}
+      {tong && tong.trim() && (
+        <div style={{ marginTop: 10, borderTop: '0.5px solid #f2e8dd', paddingTop: 9 }}>
+          <button
+            onClick={() => setOpen(o => !o)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, width: '100%',
+              background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+              color: '#8f3d0e', fontSize: 12, fontWeight: 600, letterSpacing: '-.01em',
+            }}
+          >
+            <span style={{ fontSize: 12 }}>✦</span>
+            <span>{open ? '풀이 접기' : '이 자리의 풀이 보기'}</span>
+            <span style={{ marginLeft: 'auto', fontSize: 10, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>▾</span>
+          </button>
+          {open && (
+            <div style={{
+              marginTop: 9, fontSize: 12.5, color: '#5c3a1e', lineHeight: 1.85,
+              letterSpacing: '-.01em', whiteSpace: 'pre-wrap',
+            }}>{tong.trim()}</div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -135,13 +161,16 @@ function Block({ kind, title, items }: {
   )
 }
 
-export default function CoupleJudgeCard({ judge, needExtra }: {
+export default function CoupleJudgeCard({ judge, needExtra, tongByKey, tongIntro, tongOutro }: {
   judge: CoupleJudgeV1
-  /** '없는 오행을 채워 주는가' 카드 안에 넣을 것 (오행 비교 그래프)
-   *  ★2026-07-24 — 독립 섹션이던 오행 비교를 이 카드 안으로 넣었다. (대표님 지시)
-   *    같은 이야기를 두 곳에서 하지 않기 위해서다.
-   *    '필요한 기운을 채워 주는가' 카드는 내용이 겹쳐 아예 없앴다. */
+  /** '없는 오행을 채워 주는가' 카드 안에 넣을 것 (오행 비교 그래프) */
   needExtra?: React.ReactNode
+  /** ★2026-07-25 — 주제(카드 key)별 AI 통변 해설. 각 판정 카드 안에 접기로 붙는다. */
+  tongByKey?: Record<string, string>
+  /** 여는말 통변 (카드 위 독립) */
+  tongIntro?: string
+  /** 맺는말 통변 (카드 아래 독립) */
+  tongOutro?: string
 }) {
   // 앞 4개 = 두 사람이 만났을 때 / 뒤 2개 = 각자의 배우자 자리
   const meet = judge.cats.filter(c => !c.key.startsWith('spouse_'))
@@ -149,22 +178,23 @@ export default function CoupleJudgeCard({ judge, needExtra }: {
 
   return (
     <div style={{ marginTop: 12 }}>
-      {/* ⚠️ 임시 — 배포가 반영됐는지 눈으로 확인하기 위한 표시.
-             화면에서 v3 가 보이면 새 코드가 올라간 것입니다.
-             확인 뒤 이 블록만 지우시면 됩니다. */}
-      <div style={{
-        fontSize: 9, color: '#c5a590', textAlign: 'right',
-        marginBottom: 4, letterSpacing: '.05em',
-      }}>v3</div>
+      {/* 여는말 통변 — 두 사람 소개 (카드 위 독립) */}
+      {tongIntro && tongIntro.trim() && (
+        <div style={{
+          background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 13,
+          padding: '14px 15px', marginBottom: 12,
+          fontSize: 12.5, color: '#5c3a1e', lineHeight: 1.85, letterSpacing: '-.01em', whiteSpace: 'pre-wrap',
+        }}>{tongIntro.trim()}</div>
+      )}
 
       <SectLabel text="두 분이 만났을 때" />
       {meet.map(c => (
-        <Card key={c.key} cat={c} extra={c.key === 'ohaeng' ? needExtra : undefined} />
+        <Card key={c.key} cat={c} extra={c.key === 'ohaeng' ? needExtra : undefined} tong={tongByKey?.[c.key]} />
       ))}
 
       <div style={{ marginTop: 20 }}>
         <SectLabel text="각자의 배우자 자리" />
-        {solo.map(c => <Card key={c.key} cat={c} />)}
+        {solo.map(c => <Card key={c.key} cat={c} tong={tongByKey?.[c.key]} />)}
       </div>
 
       <div style={{ marginTop: 20 }}>
@@ -173,6 +203,15 @@ export default function CoupleJudgeCard({ judge, needExtra }: {
         <Block kind="watch" title="함께 살피시면 좋은 자리" items={judge.watch} />
         <Block kind="note" title="알아두시면 좋아요" items={judge.note} />
       </div>
+
+      {/* ★2026-07-25 — 맺는말 통변 (카드 아래 독립) */}
+      {tongOutro && tongOutro.trim() && (
+        <div style={{
+          marginTop: 14, background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 13,
+          padding: '14px 15px',
+          fontSize: 12.5, color: '#5c3a1e', lineHeight: 1.85, letterSpacing: '-.01em', whiteSpace: 'pre-wrap',
+        }}>{tongOutro.trim()}</div>
+      )}
 
       {/* 마무리 — 238쪽 개운법의 태도를 그대로 옮긴 문장 */}
       <div style={{
