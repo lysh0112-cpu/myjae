@@ -647,11 +647,11 @@ function CoupleResultView({
         toCoupleInput(person2, saju2, solar2),
         judge,
       )
-      const { systemPrompt } = buildCouplePrompt(material, { relation: relationKindOf(kind) })
+      const { system, user } = buildCouplePrompt(material, { relation: relationKindOf(kind) })
       const res = await fetch('/api/tongbyeon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ systemPrompt, premium: true }),
+        body: JSON.stringify({ systemPrompt: system, userPrompt: user, premium: false }),
       })
       if (!res.ok || !res.body) {
         let why = ''
@@ -766,13 +766,13 @@ function CoupleResultView({
         toCoupleInput(person2, saju2, solar2),
         judge,
       )
-      const { systemPrompt } = buildCouplePrompt(material, {
+      const { system, user } = buildCouplePrompt(material, {
         relation: relationKindOf(kind),
         question,
       })
       const res = await fetch('/api/tongbyeon', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ systemPrompt, premium: true }),
+        body: JSON.stringify({ systemPrompt: system, userPrompt: user, premium: false }),
       })
       if (!res.ok || !res.body) {
         // ⚠️ 교훈 U — 조용히 넘어가면 원인을 못 찾는다. 상태와 본문을 남긴다.

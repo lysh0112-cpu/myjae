@@ -190,6 +190,23 @@ function judgeBlock(j: CoupleJudgeV1 | null): string {
   out.push('')
   out.push(`한 줄 요약: ${j.badge}`)
   out.push('')
+
+  // ★2026-07-25 — 두 사람 오행 분포 비교표 (화면 막대그래프와 같은 수치).
+  //   "없는 오행을 채워 주는가" 문단을 쓸 때, 두루뭉술하게 넘기지 말고
+  //   이 수치를 실제로 보고 "누가 무엇이 넘치고 모자란지, 상대가 그걸
+  //   얼마나 채워 주는지"를 구체적으로 풀어 쓰라고 준다. (대표님 지시)
+  const EL_ORDER: Ohaeng[] = ['목', '화', '토', '금', '수']
+  const distLine = (name: string, oh: Record<string, number>) =>
+    `  ${name}: ${EL_ORDER.map(e => `${EL_KOR[e]} ${oh[e] ?? 0}`).join(' · ')}`
+  out.push('[두 사람 오행 분포 — 화면 막대그래프의 실제 수치]')
+  out.push('  (0 이면 그 기운이 아예 없는 것. 40 이상이면 크게 치우친 것.')
+  out.push('   한쪽이 0~적은 기운을 상대가 넉넉히 지녔으면 "채워 준다"고 풀어 쓰세요.')
+  out.push('   막연히 "채워 준다"가 아니라, 어떤 기운이 얼마나 모자라고')
+  out.push('   상대가 그것을 얼마나 지녔는지 수치를 근거로 구체적으로 쓰세요.)')
+  out.push(distLine(j.a.name, j.a.ohaeng))
+  out.push(distLine(j.b.name, j.b.ohaeng))
+  out.push('')
+
   j.cats.forEach(c => { out.push(catBlock(c)); out.push('') })
   if (j.good.length) { out.push('· 도움이 되는 자리'); j.good.forEach(t => out.push(`  - ${t}`)) }
   if (j.watch.length) { out.push('· 살피면 좋은 자리'); j.watch.forEach(t => out.push(`  - ${t}`)) }
