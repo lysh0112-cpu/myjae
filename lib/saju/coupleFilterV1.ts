@@ -20,7 +20,8 @@
 //  ★ 근거 (직접 스캔 확인한 원문만 씀)
 //    232쪽 1번  오행 궁합 — 본인에게 없는 오행을 서로 채워 주는지
 //    232쪽 2번  조후 — 水火가 가장 중요
-//    232쪽 3번  원진·형충해파는 보지 않는다  ← 단, 아래 두 예외
+//    232쪽 3번  원진·형충파해까지 모두 보면 복잡해진다 (금지가 아니라 주의)
+//               → 봐도 된다. 예전 해석 "보지 않는다"는 과한 오독이었음. (대표님 정정)
 //    232쪽 4번  배우자 궁합 길흉의 판단 기준은 日支
 //    232쪽 5번  남자=재성(정재·편재) / 여자=관성(정관·편관)
 //    232쪽 6번  무재남·무관녀는 식상 用神이 배우자를 대체
@@ -30,10 +31,10 @@
 //    233쪽      통근·형충공망·태과·비겁에 눌림·천을귀인
 //
 //  ★ 연재쌤 확정 (2026-07-24)
-//    ① 일월(月支-日支) 원진은 안 좋다        ← 232쪽 3번의 예외
+//    ① 일월(月支-日支) 원진은 안 좋다        ← 232쪽 3번에서 봐도 된다고 함
 //    ② 丑丑은 특정. 未未·午午 등은 해당 없음
 //    ③ 성별을 입력받는다 (심산 궁합은 남녀 비대칭이 핵심)
-//    ④ 232쪽 일주 天合地合/天沖地沖은 그대로 반영  ← 232쪽 3번의 예외
+//    ④ 232쪽 일주 天合地合/天沖地沖은 그대로 반영  ← 232쪽 3번에서 봐도 된다고 함
 //    ⑤ 여름·겨울생은 조후 70% 이상 / 봄·가을생은 억부 70%
 //    ⑥ 내게 필요한 용신이 상대에게 있나가 제일 중요
 //    ⑦ 상대가 많이 갖고 있으면 별을 더, 조금이면 덜
@@ -94,6 +95,25 @@ const JI_HAP: string[][] = [
 const CHUNG: string[][] = [
   ['子', '午'], ['丑', '未'], ['寅', '申'], ['卯', '酉'], ['辰', '戌'], ['巳', '亥'],
 ]
+/** 형(刑) — ⑩ 남자 재성 형충공망 판정용. 삼형·상형·자형 모두 (대표님 지시) */
+const SAMHYEONG: string[][] = [
+  ['寅', '巳'], ['巳', '申'], ['寅', '申'],   // 삼형 寅巳申
+  ['丑', '戌'], ['戌', '未'], ['丑', '未'],   // 삼형 丑戌未
+]
+const SANGHYEONG: string[][] = [['子', '卯']]  // 상형 子卯
+const JAHYEONG = ['辰', '午', '酉', '亥']       // 자형 (같은 글자 둘)
+/** 두 지지가 형인가 (삼형·상형·자형) */
+function isHyeong(branches: string[]): boolean {
+  // 삼형·상형: 두 글자 쌍이 사주 안에 함께 있는가
+  for (const pair of [...SAMHYEONG, ...SANGHYEONG]) {
+    if (branches.includes(pair[0]) && branches.includes(pair[1])) return true
+  }
+  // 자형: 같은 글자가 둘 이상
+  for (const j of JAHYEONG) {
+    if (branches.filter(b => b === j).length >= 2) return true
+  }
+  return false
+}
 /** 천을귀인 — 일간 기준 (gwiin.ts와 같은 표) */
 const CHEON_EUL: Record<string, string[]> = {
   甲: ['丑', '未'], 乙: ['子', '申'], 丙: ['酉', '亥'], 丁: ['酉', '亥'], 戊: ['丑', '未'],
@@ -234,6 +254,18 @@ export interface PersonJudge {
   johuBalance: boolean
   /** 배우자 별 없음 (여=무관·남=무재). 두 사람 모두면 전생부부 인연 +5. 성별 무관 */
   spouseStarNone: boolean
+  /** 남자: 재성이 형·충·공망 모두 걸림 — 배우자 덕 없는 사주. 통변 참고용. 여자는 항상 false */
+  jaeHyeongChungGongmang: boolean
+  /** 남자: 재성이 뿌리내림(지장간까지) — 배우자 재물운 좋다. 통변 참고용. 여자는 항상 false */
+  jaeRootedRich: boolean
+  /** 남자: 재성 많음(3개↑ 또는 45%↑) — 고부갈등·백수/악처 소지. 통변 참고용. 여자는 항상 false */
+  jaeExcess: boolean
+  /** 남자: 재성이 기신 — 악처·부부 불화수. 통변 참고용. 여자는 항상 false */
+  jaeIsGisin: boolean
+  /** 남자: 재성이 용신·희신 — 현모양처·미모의 배우자. 통변 참고용. 여자는 항상 false */
+  jaeIsYongHee: boolean
+  /** 남자: 재성이 있음 — 재물운·배우자운·부친운이 있다. 통변 참고용. 여자는 항상 false */
+  jaePresent: boolean
   /** 내 천을귀인 글자 */
   gwiinChars: string[]
   /** 내 사주 안의 천을귀인 위치 */
@@ -248,6 +280,8 @@ export interface CategoryResult {
   stars?: Stars
   dual?: { text: string; stars: Stars }[]
   lines: string[]
+  /** 통변용 사실 문구 (화면 별점 아님) — 통변 엔진이 순화해서 풀어씀 */
+  reasons?: string[]
 }
 
 export interface CoupleJudgeV1 {
@@ -343,14 +377,65 @@ export function judgePerson(p: PersonInput): PersonJudge {
   }
   const spouseAbsent = spouseWhere.length === 0
   const spouseScore = ohaeng[spouseEl] ?? 0
-  // 통근 — 지지 본기가 배우자 오행이면 뿌리 있음 (233쪽 "재성이 뿌리를 내리면")
-  const spouseRooted = p.saju.some(q => BRANCH_EL[q.branch] === spouseEl)
+  // 통근(뿌리) — 배우자 오행이 지지 지장간(여기·중기·정기)에 있으면 뿌리 있음
+  //   ★2026-07-24 고침 — 지지 대표오행만 보던 것을 지장간까지 본다. (대표님 지시)
+  //     통근은 천간 기운이 땅속(지장간)에 뿌리를 두는가이므로, 지장간을 봐야 맞다.
+  //     전에는 BRANCH_EL(대표오행)만 봐서, 申 속 壬水 같은 숨은 뿌리를 놓쳤다.
+  //     233쪽 "재성이 뿌리를 내리면 배우자 재물운이 좋다"
+  const spouseRooted = p.saju.some(
+    q => (HIDDEN[q.branch] ?? []).some(h => h && STEM_EL[h] === spouseEl),
+  )
+
+  // ── ⑪ 남자: 재성이 뿌리내리면 배우자 재물운이 좋다 (233쪽) ──
+  //   ★남자만. 통변 참고자료로만 (별점 안 건드림).
+  //     뿌리 판정은 위 spouseRooted 와 같다(지장간까지). 남자일 때만 "재물운" 의미를 붙인다.
+  //     의미: 배우자(아내)가 재물복이 있다.
+  const jaeRootedRich = p.gender === '남' && spouseRooted
+
+  // ── ⑫ 남자: 재성이 많으면(재다신약·태과) 고부갈등·백수/악처 소지 (233쪽) ──
+  //   ★남자만. 통변 참고자료로만 (별점 안 건드림).
+  //     조건: 재성(정재·편재)이 3개 이상  또는  재성 오행 ≥ 45%. (대표님 지시)
+  //       개수(3개↑)는 재다신약 관점, 점수(45%↑)는 태과 관점 — 둘을 하나로 합쳤다.
+  //     개수 셈법은 ③⑤와 같다(천간 + 지지 본기).
+  //     의미(통변): "고부갈등 소지와, 배우자가 백수이거나 힘든 배우자를 만날 소지가 있다"
+  let jaeCount = 0
+  if (p.gender === '남') {
+    for (const q of p.saju) {
+      for (const g of [q.stem, HIDDEN[q.branch]?.[2] ?? '']) {
+        if (!g) continue
+        const s = sipsinOf(dayStem, g)
+        if (s === '정재' || s === '편재') jaeCount++
+      }
+    }
+  }
+  const jaeExcess = p.gender === '남' && (jaeCount >= 3 || spouseScore >= 45)
+
+  // ── ⑮ 남자: 재성이 있으면 재물운·배우자운·부친운이 있다 (233쪽) ──
+  //   ★남자만. 통변 참고자료로만 (별점 안 건드림).
+  //     재성(정재·편재)이 천간·본기에 하나라도 있으면 성립.
+  //     남자에게 재성은 재물·배우자(아내)·부친을 함께 뜻하므로,
+  //     재성이 있으면 이 세 방면의 기운이 갖춰져 있다고 본다.
+  const jaePresent = p.gender === '남' && jaeCount >= 1
+
 
   // 공망 (233쪽 재성 형충공망)
   const gongmang = ilju ? getGongmang(ilju.stem, ilju.branch) : ['', ''] as [string, string]
   const spouseGongmang = p.saju.some(
     q => BRANCH_EL[q.branch] === spouseEl && gongmang.includes(q.branch),
   )
+
+  // ── ⑩ 남자: 재성이 형·충·공망에 모두 걸리면 배우자 덕이 없다 (233쪽) ──
+  //   ★남자만. 통변 참고자료로만 쓴다 (별점 안 건드림).
+  //     재성이 있는 지지가 ① 형 ② 충 ③ 공망 셋 다 걸릴 때만 성립. (AND)
+  //     의미: "원래 배우자 덕이 없는 사주". 통변에서 순화해서 쓴다.
+  //     형은 삼형·상형·자형 모두 본다. (대표님 지시)
+  const allBranches = p.saju.map(q => q.branch)
+  const spouseBranches = p.saju.filter(q => BRANCH_EL[q.branch] === spouseEl).map(q => q.branch)
+  const jaeChung = spouseBranches.some(sb => allBranches.some(ob => isPair(sb, ob, CHUNG)))
+  const jaeHyeong = spouseBranches.some(sb => isHyeong([sb, ...allBranches.filter(b => b !== sb)]))
+  const jaeHyeongChungGongmang = p.gender === '남'
+    && spouseBranches.length > 0
+    && jaeChung && jaeHyeong && spouseGongmang
 
   // ── ② 여자: 관성이 용신·희신이면 귀한 남편 (233쪽) ──
   //   ★여자만. 남자(재성)에는 이 규칙을 적용하지 않는다. (대표님 지시)
@@ -359,10 +444,22 @@ export function judgePerson(p: PersonInput): PersonJudge {
   const spouseIsYongHee = p.gender === '여'
     && (spouseEl === eokbu.yongsin || spouseEl === eokbu.heesin)
 
+  // ── ⑭ 남자: 재성이 용신·희신이면 현모양처·미모의 배우자 (233쪽) ──
+  //   ★남자만. 통변 참고자료로만 (별점 안 건드림). 여자 ②(관성 용신희신)의 재성 버전.
+  //     의미: 아내(재성)가 나를 살리는 기운이라, 현모양처를 만나거나
+  //           외모가 수려한 배우자를 만난다.
+  const jaeIsYongHee = p.gender === '남'
+    && (spouseEl === eokbu.yongsin || spouseEl === eokbu.heesin)
+
   // ── ④ 여자: 관성이 기신이면 부부가 많이 싸운다 (233쪽) ──
   //   ★여자만. ②의 짝. 233쪽 "관성이 용신·희신이면 좋고 기신이면 불화".
   //     별 -1.
   const spouseIsGisin = p.gender === '여' && spouseEl === eokbu.gisin
+
+  // ── ⑬ 남자: 재성이 기신이면 악처를 만나거나 부부 불화수 (233쪽) ──
+  //   ★남자만. 통변 참고자료로만 (별점 안 건드림). 여자 ④(관성 기신)의 재성 버전.
+  //     의미: 아내(재성)가 부담이 되는 기운이라, 힘든 배우자를 만나거나 다툼이 잦을 소지.
+  const jaeIsGisin = p.gender === '남' && spouseEl === eokbu.gisin
 
   // ── ③ 여자: 정관·편관이 각각 2개 이상이면 관살혼잡 (232쪽) ──
   //   ★여자만. 세는 법은 천간 + 지지 본기(지장간 속기운 제외).
@@ -452,7 +549,7 @@ export function judgePerson(p: PersonInput): PersonJudge {
     spouseRooted, spouseGongmang,
     iljiSipsin, seasonRel, wonjinIlWol, chukChukSelf,
     spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance,
-    spouseStarNone,
+    spouseStarNone, jaeHyeongChungGongmang, jaeRootedRich, jaeExcess, jaeIsGisin, jaeIsYongHee, jaePresent,
     gwiinChars, gwiinMine, gongmang,
   }
 }
@@ -715,46 +812,52 @@ export function judgeCouple(
       lines.push(`${seasonPair} 계절이 같아 기운이 한쪽으로 쏠려 있어요.`)
     }
 
-    // 별: 배우자 자리 상태 종합 (점수·뿌리·공망·원진·丑丑 + 두 사람 계절)
-    //   ★2026-07-24 대표님 지시 — 계절('같음'·봄가을)에는 별을 깎지 않는다.
-    //     다만 丑丑(여자 이혼 가능성)은 원진과 같은 무게의 감점 요인으로 본다.
-    let st: Stars = starsByScore(x.spouseScore)
-    if (!x.spouseRooted && st > 1) st = (st - 1) as Stars
-    if (x.spouseGongmang && st > 1) st = (st - 1) as Stars
-    if (x.wonjinIlWol && st > 1) st = (st - 1) as Stars
-    // ★2026-07-24 — 여자 丑丑은 이혼 가능성이 큰 자리라 원진과 같은 -1. (대표님 지시)
-    if (chukChuk && st > 1) st = (st - 1) as Stars
-    // ★2026-07-24 — 여자 관성이 용신·희신이면 귀한 남편 → +2. (대표님 지시, 233쪽)
-    if (x.spouseIsYongHee) st = Math.min(5, st + 2) as Stars
-    // ★2026-07-24 — 여자 관성이 기신이면 부부가 많이 싸운다 → -1. (대표님 지시, 233쪽)
-    if (x.spouseIsGisin && st > 1) st = (st - 1) as Stars
-    // ★2026-07-24 — 여자 관살혼잡(정관·편관 각 2개↑)이면 -1. (대표님 지시, 232쪽)
-    if (x.gwansalHonjap && st > 1) st = (st - 1) as Stars
-    // ★2026-07-24 — 무재/무관 전생부부 인연을 먼저 판정한다. (대표님 지시)
-    //   두 사람 모두 배우자 별이 없으면(남 무재·여 무관) 진짜 전생부부 인연이다.
-    //   ★이때는 ⑤ 무관(-1)을 적용하지 않는다. 궁합은 두 사람을 같이 보는 것이라,
-    //     상대도 무재/무관이면 "남편 무능" 판정이 "천생연분"으로 뒤집힌다.
+    // ★2026-07-25 대표님 지시 — 배우자운 카드의 별(★)을 없앤다.
+    //   각 규칙을 별점 가감이 아니라 "통변용 사실 문구"로 모은다(reasons).
+    //   통변 엔진이 이 문구들을 받아, 무섭지 않게 순화해서 풀어쓴다.
+    //   별을 매기는 기준은 나중에 따로 정한다.
+    const reasons: string[] = []
+
+    // ── 전생부부(⑨)를 먼저 판정 — ⑤ 무관을 덮기 때문 ──
     const jeonsaengBubu = x.spouseStarNone && mate.spouseStarNone
 
-    // ★2026-07-24 — 여자 무관(관성 없음)이면 남편 무능·덕 없음 → -1. (대표님 지시)
-    //   단, 전생부부(둘 다 무재/무관)이면 적용하지 않는다.
-    if (x.muGwan && !jeonsaengBubu && st > 1) st = (st - 1) as Stars
-    // ★2026-07-24 — 배우자 별이 천을귀인이면 배우자 덕이 많다 → +1. 남녀 공통. (대표님 지시, 233쪽)
-    if (x.gwanIsCheonEul) st = Math.min(5, st + 1) as Stars
-    // ★2026-07-24 — 월지·일지가 냉·온 하나씩이면 조후 균형 → +2. 남녀 공통. (대표님 지시)
-    if (x.johuBalance) st = Math.min(5, st + 2) as Stars
-    // ★2026-07-24 — 전생부부 인연 → +5. "많이 양보하고 가족을 위해 희생하라는 업보". 아주 좋은 자리.
+    // 배우자 자리 기본 상태 (뿌리·공망)
+    if (!x.spouseRooted) reasons.push('배우자 별이 지지에 뿌리를 두지 못해 조금 떠 있는 자리')
+    if (x.spouseGongmang) reasons.push('배우자 자리가 공망과 겹쳐, 마음을 더 기울여야 하는 자리')
+    if (x.wonjinIlWol) reasons.push('월지와 일지가 원진이라 마음이 예민해지기 쉬운 자리')
+
+    // ── 여자 규칙 (①~⑤) — 통변용 사실 문구 ──
+    if (chukChuk) reasons.push('여자 본인 월지·일지가 모두 丑 → 이혼 가능성이 큰 자리이니 각별히 살펴야 함 (순화해서 전할 것)')
+    if (x.spouseIsYongHee) reasons.push('여자 관성이 용신·희신 → 귀한 남편을 만나는 자리, 남편이 복이 됨')
+    if (x.spouseIsGisin) reasons.push('여자 관성이 기신 → 부부가 많이 다툴 소지 (순화해서 전할 것)')
+    if (x.gwansalHonjap) reasons.push('여자 관살혼잡(정관·편관 섞임) → 인연의 폭은 넓으나 마음 둘 곳이 여럿, 한 사람에 집중하는 것이 숙제')
+    if (x.muGwan && !jeonsaengBubu) reasons.push('여자 무관(관성 없음) → 남편 덕이 약할 수 있으니 인연을 스스로 가꿔야 하는 자리 (순화해서 전할 것)')
+
+    // ── 남녀 공통 (⑥⑦) ──
+    if (x.gwanIsCheonEul) reasons.push('배우자 별이 천을귀인 → 배우자 덕이 두터운 자리')
+    if (x.johuBalance) reasons.push('월지·일지가 냉·온으로 어우러져 조후가 균형 잡힌 좋은 자리')
+
+    // ── 전생부부 (⑨) ──
+    if (jeonsaengBubu) reasons.push('두 사람 모두 배우자 별이 비어(남 무재·여 무관) 전생부부 인연 → 아주 귀한 자리, 많이 양보하고 가족 위해 마음 내라는 업보')
+
+    // ── 남자 규칙 (⑩~⑮) — 통변용 사실 문구 ──
+    if (x.jaeHyeongChungGongmang) reasons.push('남자 재성이 형·충·공망 모두 걸림 → 원래 배우자 덕이 약한 자리 (순화해서 전할 것)')
+    if (x.jaeRootedRich) reasons.push('남자 재성이 뿌리내림 → 배우자(아내)의 재물운이 좋은 자리')
+    if (x.jaeExcess) reasons.push('남자 재성이 많음(태과) → 고부갈등 소지와, 배우자가 힘든 배우자를 만날 소지 (순화해서 전할 것)')
+    if (x.jaeIsGisin) reasons.push('남자 재성이 기신 → 부부 불화 소지 (순화해서 전할 것)')
+    if (x.jaeIsYongHee) reasons.push('남자 재성이 용신·희신 → 현모양처이거나 외모가 수려한 배우자를 만나는 자리')
+    if (x.jaePresent) reasons.push('남자 재성이 있음 → 재물운·배우자운·부친운이 갖춰진 자리')
+
+    // 전생부부일 때만 카드 본문에도 특별 문구를 남긴다 (아주 좋은 자리라 눈에 보이게)
     if (jeonsaengBubu) {
-      st = Math.min(5, st + 5) as Stars
       lines.push('두 분 다 배우자 자리가 비어, 오히려 전생부터 이어진 부부 인연으로 봅니다. 많이 양보하고 서로를 위해 마음을 내는 것이 두 분에게 주어진 귀한 몫이에요.')
     }
-    if (cs === '반대' && st < 5) st = (st + 1) as Stars
 
     cats.push({
       key: `spouse_${x === a ? 'a' : 'b'}`,
       title: spouseTitle(x.name),
-      stars: st,
       lines,
+      reasons,
     })
   }
 
