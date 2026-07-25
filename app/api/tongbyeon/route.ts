@@ -40,9 +40,10 @@ export async function POST(req: Request) {
           body: JSON.stringify({
             model: 'claude-sonnet-4-6',
             // 무료는 넉넉히, 프리미엄은 더 길게
-            // ★2026-07-25 — 궁합 통변이 각 주제 400~600자×7 = 최대 4200자라
-            //   6000 토큰으로는 잘렸다. 한글은 토큰이 많이 들어 8192로 올린다.
-            max_tokens: premium ? 8192 : 3500,
+            // ★2026-07-25 — 궁합 통변 7대목이 8192 토큰에서 끊겨(정준호 배우자운에서 멈춤,
+            //   이경아 배우자운 아예 생성 안 됨) 12000으로 올린다.
+            //   Sonnet 4.5 최대 출력은 64000 토큰이라 안전. 실제 출력만큼만 과금된다.
+            max_tokens: premium ? 12000 : 3500,
             stream: true,
             system: systemPrompt,
             messages: [
