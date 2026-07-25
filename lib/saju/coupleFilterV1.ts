@@ -291,6 +291,8 @@ export interface PersonJudge {
   johuBalance: boolean
   /** 격각 — 한 사람 월지-일지가 한 칸 건너뜀. 부부 사이 별로. 통변 참고용 */
   gyeokgak: boolean
+  /** 재성(관성) 약 + 비겁 강 → 의처증·의부증 소지 (233쪽). 통변 참고용 */
+  jaeWeakBigyeopStrong: boolean
   /** 배우자 별 없음 (여=무관·남=무재). 두 사람 모두면 전생부부 인연 +5. 성별 무관 */
   spouseStarNone: boolean
   /** 남자: 재성이 형·충·공망 모두 걸림 — 배우자 덕 없는 사주. 통변 참고용. 여자는 항상 false */
@@ -400,6 +402,15 @@ export function judgePerson(p: PersonInput): PersonJudge {
   // ── 배우자 십신 (232쪽 5번) ──
   const spouseName: '재성' | '관성' = p.gender === '남' ? '재성' : '관성'
   const spouseEl: Ohaeng = p.gender === '남' ? CON[dayEl] : gwansungOf(dayEl)
+
+  // ── 재성(관성) 약 + 비겁 강 → 의처증·의부증 소지 (233쪽 궁합 부정) ──
+  //   ⚠️ 기준(약/강 점수)은 연재쌤 검수 대상. 일단 아래로 잡았다.
+  //     재성(관성) 점수가 낮고(≤15), 비겁(일간 오행)이 높고(≥30),
+  //     비겁이 배우자 오행보다 뚜렷이 많을 때. simsanOhaeng 100점 만점 기준.
+  const spouseElScore = ohaeng[spouseEl] ?? 0
+  const bigyeopScore = ohaeng[dayEl] ?? 0   // 비겁 = 일간과 같은 오행
+  const jaeWeakBigyeopStrong =
+    spouseElScore <= 15 && bigyeopScore >= 30 && bigyeopScore >= spouseElScore * 2
 
   // 배우자 십신이 어디에 있는가 (천간 + 지지 + 지장간)
   const spouseWhere: string[] = []
@@ -591,7 +602,7 @@ export function judgePerson(p: PersonInput): PersonJudge {
     spouseName, spouseEl, spouseScore, spouseAbsent, spouseWhere,
     spouseRooted, spouseGongmang,
     iljiSipsin, seasonRel, wonjinIlWol, chukChukSelf,
-    spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance, gyeokgak,
+    spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance, gyeokgak, jaeWeakBigyeopStrong,
     spouseStarNone, jaeHyeongChungGongmang, jaeRootedRich, jaeExcess, jaeIsGisin, jaeIsYongHee, jaePresent,
     gwiinChars, gwiinMine, gongmang,
   }
@@ -859,6 +870,7 @@ export function judgeCouple(
     if (x.gwanIsCheonEul) reasons.push('배우자 별이 천을귀인 → 배우자 덕이 두터운 자리')
     if (x.johuBalance) reasons.push('월지·일지가 냉·온으로 어우러져 조후가 균형 잡힌 좋은 자리')
     if (x.gyeokgak) reasons.push('월지와 일지가 한 칸 건너뛴 격각이라, 부부 사이에 마음의 결이 어긋나기 쉬운 자리 (순화해서 전할 것)')
+    if (x.jaeWeakBigyeopStrong) reasons.push(`${x.spouseName === '재성' ? '재성' : '관성'}은 옅고 비겁(같은 기운)이 강해, 배우자를 향한 마음이 앞서다 보면 의심이나 조바심으로 흐르기 쉬운 자리 (순화해서 전할 것)`)
 
     // ── 전생부부 (⑨) ──
     if (jeonsaengBubu) reasons.push('두 사람 모두 배우자 별이 비어(남 무재·여 무관) 전생부부 인연 → 아주 귀한 자리, 많이 양보하고 가족 위해 마음 내라는 업보')
