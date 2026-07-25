@@ -232,6 +232,8 @@ export interface PersonJudge {
   gwanIsCheonEul: boolean
   /** 월지·일지가 냉·온 하나씩이면 조후 균형 → 궁합에 좋다. 별 +2. 남녀 공통 */
   johuBalance: boolean
+  /** 배우자 별 없음 (여=무관·남=무재). 두 사람 모두면 전생부부 인연 +5. 성별 무관 */
+  spouseStarNone: boolean
   /** 내 천을귀인 글자 */
   gwiinChars: string[]
   /** 내 사주 안의 천을귀인 위치 */
@@ -385,6 +387,21 @@ export function judgePerson(p: PersonInput): PersonJudge {
   //     ③과 같은 셈법(천간+본기, 지장간 속기운 제외)을 쓴다.
   const muGwan = p.gender === '여' && jeonggwan === 0 && pyeongwan === 0
 
+  // ── ⑨ 배우자 별 없음 (무재/무관) — 전생부부 인연 판정용 ──
+  //   ★성별 무관. 자기 배우자 별(여=관성 정관·편관 / 남=재성 정재·편재)이
+  //     천간·지지 본기에 하나도 없는 경우.
+  //     두 사람이 모두 이러하면 judgeCouple 에서 "전생부부 인연"으로 본다.
+  //     (여자 무재판정은 관성이 아니라 재성 십신을 따로 센다)
+  let spouseStarCount = 0
+  const spouseSipsin = p.gender === '남' ? ['정재', '편재'] : ['정관', '편관']
+  for (const q of p.saju) {
+    for (const g of [q.stem, HIDDEN[q.branch]?.[2] ?? '']) {
+      if (!g) continue
+      if (spouseSipsin.includes(sipsinOf(dayStem, g))) spouseStarCount++
+    }
+  }
+  const spouseStarNone = spouseStarCount === 0
+
   // ── ⑥ 배우자 별(여=관성·남=재성)이 천을귀인이면 배우자 덕이 많다 (233쪽) ──
   //   ★남녀 공통. 별 +1. (대표님 지시 — 원래 여자만이었으나 공통으로 확대)
   //     천을귀인은 지지로만 판정하므로, 배우자 별도 지지 본기로 본다.
@@ -435,6 +452,7 @@ export function judgePerson(p: PersonInput): PersonJudge {
     spouseRooted, spouseGongmang,
     iljiSipsin, seasonRel, wonjinIlWol, chukChukSelf,
     spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance,
+    spouseStarNone,
     gwiinChars, gwiinMine, gongmang,
   }
 }
@@ -712,12 +730,24 @@ export function judgeCouple(
     if (x.spouseIsGisin && st > 1) st = (st - 1) as Stars
     // ★2026-07-24 — 여자 관살혼잡(정관·편관 각 2개↑)이면 -1. (대표님 지시, 232쪽)
     if (x.gwansalHonjap && st > 1) st = (st - 1) as Stars
+    // ★2026-07-24 — 무재/무관 전생부부 인연을 먼저 판정한다. (대표님 지시)
+    //   두 사람 모두 배우자 별이 없으면(남 무재·여 무관) 진짜 전생부부 인연이다.
+    //   ★이때는 ⑤ 무관(-1)을 적용하지 않는다. 궁합은 두 사람을 같이 보는 것이라,
+    //     상대도 무재/무관이면 "남편 무능" 판정이 "천생연분"으로 뒤집힌다.
+    const jeonsaengBubu = x.spouseStarNone && mate.spouseStarNone
+
     // ★2026-07-24 — 여자 무관(관성 없음)이면 남편 무능·덕 없음 → -1. (대표님 지시)
-    if (x.muGwan && st > 1) st = (st - 1) as Stars
+    //   단, 전생부부(둘 다 무재/무관)이면 적용하지 않는다.
+    if (x.muGwan && !jeonsaengBubu && st > 1) st = (st - 1) as Stars
     // ★2026-07-24 — 배우자 별이 천을귀인이면 배우자 덕이 많다 → +1. 남녀 공통. (대표님 지시, 233쪽)
     if (x.gwanIsCheonEul) st = Math.min(5, st + 1) as Stars
     // ★2026-07-24 — 월지·일지가 냉·온 하나씩이면 조후 균형 → +2. 남녀 공통. (대표님 지시)
     if (x.johuBalance) st = Math.min(5, st + 2) as Stars
+    // ★2026-07-24 — 전생부부 인연 → +5. "많이 양보하고 가족을 위해 희생하라는 업보". 아주 좋은 자리.
+    if (jeonsaengBubu) {
+      st = Math.min(5, st + 5) as Stars
+      lines.push('두 분 다 배우자 자리가 비어, 오히려 전생부터 이어진 부부 인연으로 봅니다. 많이 양보하고 서로를 위해 마음을 내는 것이 두 분에게 주어진 귀한 몫이에요.')
+    }
     if (cs === '반대' && st < 5) st = (st + 1) as Stars
 
     cats.push({
@@ -744,6 +774,10 @@ export function judgeCouple(
   const watch: string[] = []
   const note: string[] = []
 
+  // ★2026-07-24 — 무재/무관 전생부부 인연 (대표님 지시). 두 사람 모두 배우자 별이 없을 때.
+  if (a.spouseStarNone && b.spouseStarNone) {
+    good.push('두 분 다 배우자 자리가 비어, 전생부터 이어진 부부 인연으로 봅니다. 아주 귀한 자리예요.')
+  }
   if (aFilled.length) good.push(`${b.name}님이 ${a.name}님께 없는 ${eul(aFilled.map(e => EL_LABEL[e]).join('·'))} 지니고 계세요.`)
   if (bFilled.length) good.push(`${a.name}님이 ${b.name}님께 없는 ${eul(bFilled.map(e => EL_LABEL[e]).join('·'))} 지니고 계세요.`)
   if (bGetsGwiin.length) good.push(`${a.name}님의 ${iga(bGetsGwiin.join('·'))} ${b.name}님께 귀인이 되어 드립니다.`)
