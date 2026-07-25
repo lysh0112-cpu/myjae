@@ -686,7 +686,9 @@ function CoupleResultView({
       return null
     }
     for (const c of tbCards) {
-      const body = (c.title ? `${c.title}\n${c.body}` : c.body).trim()
+      // ★2026-07-25 — 카드 안에 이미 제목이 있으므로, 통변 본문에 제목을 다시 붙이지 않는다.
+      //   (전에는 `${c.title}\n${c.body}` 로 제목을 앞에 붙여, 카드 제목과 겹쳐 중복됐다.)
+      const body = c.body.trim()
       let k = keyOf(c.title)
       if (!k && (c.title.includes('배우자운') || c.title.includes('배우자 자리'))) {
         k = !usedSpouse.includes('spouse_a') ? 'spouse_a' : 'spouse_b'
