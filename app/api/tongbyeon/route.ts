@@ -43,7 +43,7 @@ export async function POST(req: Request) {
             // ★2026-07-25 — 궁합 통변 7대목이 8192 토큰에서 끊겨(정준호 배우자운에서 멈춤,
             //   이경아 배우자운 아예 생성 안 됨) 12000으로 올린다.
             //   Sonnet 4.5 최대 출력은 64000 토큰이라 안전. 실제 출력만큼만 과금된다.
-            max_tokens: premium ? 12000 : 3500,
+            max_tokens: premium ? 16000 : 3500,
             stream: true,
             system: systemPrompt,
             messages: [
