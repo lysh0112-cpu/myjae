@@ -171,6 +171,13 @@ function catBlock(c: CategoryResult): string {
   const out: string[] = [`[${c.title}] ${starStr(c.stars)}`]
   c.lines.forEach(l => out.push(`  - ${l}`))
   c.dual?.forEach(d => out.push(`  - ${d.text} ${starStr(d.stars)}`))
+  // ★2026-07-25 — 배우자운의 통변 재료(reasons). 화면엔 안 보이지만 통변에 꼭 반영한다.
+  //   심산 배우자운 규칙(관성·재성 판정)의 사실을 담은 것.
+  //   "(순화해서 전할 것)" 표시가 붙은 것은 무섭지 않게 부드럽게 풀어써야 한다.
+  if (c.reasons?.length) {
+    out.push('  · 배우자운 통변 재료 (아래 사실을 반드시 녹이되, 순화 표시가 있으면 부드럽게):')
+    c.reasons.forEach(r => out.push(`    · ${r}`))
+  }
   return out.join('\n')
 }
 

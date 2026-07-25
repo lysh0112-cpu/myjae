@@ -35,7 +35,8 @@ import { calcCoupleScore, type SajuPillarSimple, type CoupleScoreResult, type So
 import { calcMarriedScore } from '@/lib/saju/marriedScore'
 import { getGongmang } from '@/lib/saju/gongmang'
 import { calcHourPillar } from '@/lib/saju/hourPillar'
-import { buildCoupleTongbyeonPrompt, type CouplePerson } from '@/lib/saju/coupleTongbyeonPrompt'
+import { toCoupleTongbyeonMaterial, type CouplePersonInput } from '@/lib/saju/toCoupleTongbyeonInput'
+import { buildCouplePrompt, type CoupleRelationKind } from '@/lib/saju/buildCouplePrompt'
 import { saveCoupleRecord, getCoupleRecord, updateCoupleRecordResult } from '@/lib/saju/coupleRecords'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
 import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
@@ -49,11 +50,9 @@ import { withNim } from '@/lib/saju/honorific'
 
 type Mode = 'couple' | 'married'
 
-// ★2026-07-24 — 자동 총평 통변을 끈다.
-//   판정 카드가 근거를 다 보여 주므로, AI 는 고객이 물어볼 때만 답한다.
-//   true 로 바꾸면 예전처럼 결과 화면에서 AI 총평이 자동으로 돈다.
-//   화면 코드와 parseTCards 는 지우지 않았다.
-const SHOW_AUTO_TONGBYEON = false
+// ★2026-07-25 — 새 심산 통변 엔진으로 자동 총평을 켠다. (대표님 지시)
+//   결제 관문만 빼고 새 부품과 완전히 연결. 옛 coupleScore 통변은 차단.
+const SHOW_AUTO_TONGBYEON = true
 
 // ★2026-07-24 — "더 궁금한 것"(AI 자유 질문) 섹션을 화면에서 내린다. (대표님 지시)
 //
@@ -386,8 +385,6 @@ function parseTCards(text: string): { intro: string; cards: TCard[] } {
 // ============================================================================
 type PersonRaw = Record<string, string>
 interface Mode2Info { label: string; accent: string }
-const HANGUL_STEM: Record<string, string> = { 甲:'갑',乙:'을',丙:'병',丁:'정',戊:'무',己:'기',庚:'경',辛:'신',壬:'임',癸:'계' }
-const pill = (s: string, b: string) => (s && b && s !== '?' ? `${s}${b}` : '모름')
 
 // 시각 라벨(예: "진시") → hourIdx(0~11, 자시=0). couple-input의 hour는 "0"~"11" 또는 "모름"
 function hourToIdx(hour: string | undefined): number | null {
@@ -438,33 +435,34 @@ async function calcOnePerson(p: PersonRaw): Promise<PersonCalc | null> {
   }
 }
 
-function toCouplePerson(
+/** ★2026-07-25 — 새 궁합 통변 엔진용 변환.
+ *   toCoupleTongbyeonMaterial 이 받는 CouplePersonInput 형식으로 바꾼다. */
+function toCoupleInput(
   p: PersonRaw,
   saju: SajuPillarSimple[],
   solar?: { month: number; day: number; hourBranch: string | null } | null,
-): CouplePerson {
-  const find = (k: string) => saju.find(s => s.pillar === k)
-  const y = find('년주'), mo = find('월주'), da = find('일주'), h = find('시주')
-  const birth = p.year ? `${p.year}.${p.month}.${p.day}` : ''
-  // 부부 궁합 통변의 나이대 톤 조절용 만 나이(대략). 생년만 있으면 계산.
+): CouplePersonInput {
   const birthYear = parseInt(p.year || '')
   const age = birthYear ? new Date().getFullYear() - birthYear : undefined
   return {
-    name: p.name || '', gender: p.gender || '', birthLabel: birth,
-    yearPillar: pill(y?.stem ?? '', y?.branch ?? ''),
-    monthPillar: pill(mo?.stem ?? '', mo?.branch ?? ''),
-    dayPillar: pill(da?.stem ?? '', da?.branch ?? ''),
-    hourPillar: pill(h?.stem ?? '', h?.branch ?? ''),
-    dayStem: da?.stem ?? '',
-    age,
-    // ★MBTI — 점수에는 안 쓰고 해설 참고용으로만 넘긴다. (궁합 설계서 3-2b)
-    mbti: (p.mbti || '').trim().toUpperCase() || undefined,
-    // ★ "서로 채워주는 용신·귀인" 계산용 양력 정보 (있을 때만)
-    solarMonth: solar?.month,
-    solarDay: solar?.day,
+    name: p.name || '',
+    gender: (p.gender === '남' || p.gender === '여') ? p.gender : '남',
+    saju: saju.map(s => ({ pillar: s.pillar, stem: s.stem, branch: s.branch })),
+    solarMonth: solar?.month ?? 1,
+    solarDay: solar?.day ?? 1,
     hourBranch: solar?.hourBranch ?? null,
+    birthLabel: p.year ? `${p.year}.${p.month}.${p.day}` : undefined,
+    age,
   }
 }
+
+/** 관계(kind) → 통변 호칭 갈래 */
+function relationKindOf(kind: string): CoupleRelationKind {
+  if (kind === 'married' || kind === 'spouse' || kind === 'ex_spouse') return '부부'
+  if (kind === 'lover' || kind === 'some' || kind === 'ex_lover') return '연인'
+  return '일반'
+}
+
 
 function CoupleResultView({
   mode, kind, info, person1, person2, name1, name2, pickedQuestions, directQ, recordId, onBack, onOther, onInviteChat,
@@ -627,12 +625,70 @@ function CoupleResultView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saju1, saju2, score, judge, recordId])
 
-  const headline = dummyHeadlineSafe(`${withNim(name1)}과 ${withNim(name2)}, 두 사람의 만남`)
   const isMe1 = person1.isMe === 'true' || person1.isMe === '1'
   const { intro: tbIntro, cards: tbCards } = useMemo(
     () => (tongResult ? parseTCards(tongResult) : { intro: '', cards: [] }),
     [tongResult],
   )
+
+  // ★2026-07-25 — 새 궁합 통변 엔진 실행 (심산 판정 재료 → buildCouplePrompt → AI)
+  //   옛 coupleScore 기반 통변을 완전히 대체한다. 결제 관문은 아직 붙이지 않았다(바로 시험용).
+  const tongRanRef = useRef(false)
+  async function runCoupleTongbyeon() {
+    if (!saju1 || !saju2 || tongLoading) return
+    // 성별이 있어야 심산 판정이 나온다 (남=재성 / 여=관성)
+    if (!judge) return
+    setTongLoading(true)
+    setTongResult(null)
+    let acc = ''
+    try {
+      const material = toCoupleTongbyeonMaterial(
+        toCoupleInput(person1, saju1, solar1),
+        toCoupleInput(person2, saju2, solar2),
+        judge,
+      )
+      const { system, user } = buildCouplePrompt(material, { relation: relationKindOf(kind) })
+      const res = await fetch('/api/tongbyeon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ systemPrompt: system, userPrompt: user, premium: false }),
+      })
+      if (!res.ok || !res.body) {
+        let why = ''
+        try { why = (await res.text()).slice(0, 200) } catch (e) { console.error('tongbyeon read fail', e) }
+        console.error('궁합 통변 실패', res.status, why)
+        setTongResult('풀이를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
+        return
+      }
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        acc += decoder.decode(value, { stream: true })
+        setTongResult(acc)
+      }
+      // 통변이 끝나면 보관함에 저장 (다시보기용)
+      if (!recordId) handleSave(acc)
+    } catch (e) {
+      console.error('궁합 통변 오류', e)
+      setTongResult('풀이를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
+    } finally {
+      setTongLoading(false)
+    }
+  }
+
+  // 자동 통변 — 명식·판정이 준비되면 한 번 실행 (새 기록일 때만)
+  useEffect(() => {
+    if (!SHOW_AUTO_TONGBYEON || recordId || tongRanRef.current) return
+    if (!saju1 || !saju2 || !judge) return
+    tongRanRef.current = true
+    // setState 동기 호출 경고 회피 — 다음 틱에 실행
+    const t = setTimeout(() => { runCoupleTongbyeon() }, 0)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saju1, saju2, judge, recordId])
+
 
   // 보관함에 저장 (두 사람 + 등급 + 결과 스냅샷)
   //   ★2026-07-21 2차: 자동 저장. 통변이 끝나면 스스로 호출된다.
@@ -680,34 +736,29 @@ function CoupleResultView({
   //   답이 끝나면 그 자리에서 result_data 를 덮어써(update) 보관함에 남긴다.
   //   ⚠️ 교훈 K — 저장 함수에 넘기는 목록·id 는 state 가 아니라 지역변수를 쓴다.
   async function askFollowUp(question: string) {
-    if (!saju1 || !saju2 || !score) return
+    if (!saju1 || !saju2 || !judge) return
     if (followUps.length >= MAX_FOLLOWUPS || fuLoading) return
 
     setFuLoading(true)
     setFuStreaming({ q: question, a: '' })
     let acc = ''
     try {
-      const fq: SajuQuestion = {
-        id: 'follow_' + Date.now(),
-        age: '30s', ageLabel: '', gender: 'all',
-        category: '직접 질문', sub: '자유 질문', question,
-        link: '사용자가 직접 입력한 질문입니다. 두 사람의 사주 명식을 근거로 풀이하세요. 사주와 무관하면 정중히 안내하세요.',
-        detail: '사용자가 직접 입력한 자유 질문입니다. 두 사람의 사주 명식을 근거로 깊이 있게 풀이하세요. 사주와 무관하면 억지로 답하지 말고 정중히 안내하세요.',
-        enabled: true,
-      }
       // ★고객이 화면에서 본 판정을 프롬프트에 함께 넣는다.
       //   안 넣으면 AI 가 화면과 다른 이야기를 할 수 있다.
       //   (다시보기에서는 score.details 가 비어 있어 근거가 판정뿐이기도 하다)
-      const basePrompt = buildCoupleTongbyeonPrompt(
-        { mode, person1: toCouplePerson(person1, saju1, solar1), person2: toCouplePerson(person2, saju2, solar2), score },
-        [fq],
+      // ★2026-07-25 — 자유 질문도 새 심산 통변 엔진으로. 옛 buildCoupleTongbyeonPrompt 차단.
+      const material = toCoupleTongbyeonMaterial(
+        toCoupleInput(person1, saju1, solar1),
+        toCoupleInput(person2, saju2, solar2),
+        judge,
       )
-      const prompt = judge
-        ? `${basePrompt}\n\n[이미 고객에게 보여 드린 궁합 판정 — 이 내용과 어긋나지 않게 답하세요]\n${judgeToText(judge)}`
-        : basePrompt
+      const { system, user } = buildCouplePrompt(material, {
+        relation: relationKindOf(kind),
+        question,
+      })
       const res = await fetch('/api/tongbyeon', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ systemPrompt: prompt, premium: false }),
+        body: JSON.stringify({ systemPrompt: system, userPrompt: user, premium: false }),
       })
       if (!res.ok || !res.body) {
         // ⚠️ 교훈 U — 조용히 넘어가면 원인을 못 찾는다. 상태와 본문을 남긴다.
@@ -745,8 +796,8 @@ function CoupleResultView({
       // 보관함에 덮어쓰기 — next(지역변수)를 넘긴다. state 는 아직 반영 전이다.
       if (savedId) {
         await updateCoupleRecordResult(savedId, {
-          grade: judge?.badge || score.grade,
-          gradeDesc: score.gradeDesc,
+          grade: judge?.badge || score?.grade || "",
+          gradeDesc: score?.gradeDesc || "",
           judge,
           saju1, saju2, ohaeng1, ohaeng2,
           tongResult: tongResult ?? '',
