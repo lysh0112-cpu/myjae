@@ -51,45 +51,13 @@ function Card({ cat, extra, tong }: { cat: CategoryResult; extra?: React.ReactNo
         {cat.stars && <StarRow n={cat.stars} />}
       </div>
 
-      {/* 본문 */}
-      {cat.lines.length > 0 && (
-        <div style={{ marginTop: 7 }}>
-          {cat.lines.map((l, i) => (
-            <div key={i} style={{ display: 'flex', gap: 6, marginTop: i === 0 ? 0 : 4 }}>
-              <span style={{
-                flex: '0 0 3px', height: 3, borderRadius: '50%',
-                background: '#eee2d6', marginTop: 8,
-              }} />
-              <span style={{
-                fontSize: 12, color: '#6b5044', lineHeight: 1.72, letterSpacing: '-.01em',
-              }}>{l}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* ★2026-07-25 — 카드 본문(lines)·양방향(dual) 표시를 껐다. (대표님 지시)
+          같은 내용이 판정 요약과 AI 풀이에 두 번 나오던 중복을 없앤다.
+          lines 는 통변 재료로는 그대로 살아 있고(toCoupleTongbyeonInput),
+          화면에는 제목·별점·그래프·풀이(접기)만 보인다. */}
 
-      {/* 카테고리에 딸린 추가 내용 (예: 필요한 기운 카드 안의 오행 비교 그래프) */}
+      {/* 카테고리에 딸린 추가 내용 (예: 없는 오행 카드의 오행 비교 그래프) */}
       {extra && <div style={{ marginTop: 10 }}>{extra}</div>}
-
-      {/* 양방향 — 두 줄로 나눠 각각 별 */}
-      {cat.dual && (
-        <div style={{
-          marginTop: 9, border: '0.5px solid #f5ece3', borderRadius: 9, overflow: 'hidden',
-        }}>
-          {cat.dual.map((d, i) => (
-            <div key={i} style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-              padding: '8px 10px', background: '#fdfaf7',
-              borderTop: i === 0 ? 'none' : '0.5px solid #f5ece3',
-            }}>
-              <span style={{ fontSize: 11.5, color: '#6b5044', lineHeight: 1.5, letterSpacing: '-.01em' }}>
-                {d.text}
-              </span>
-              <StarRow n={d.stars} />
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* ★2026-07-25 — 이 주제의 AI 통변 해설 (접기). 판정 아래에 그 주제 풀이가 붙는다. */}
       {tong && tong.trim() && (

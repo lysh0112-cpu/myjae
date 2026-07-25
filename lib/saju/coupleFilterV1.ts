@@ -164,6 +164,22 @@ function crossSeason(monthBranch: string, dayBranch: string): SeasonRel {
 const isChukChuk = (monthBranch: string, dayBranch: string): boolean =>
   monthBranch === '丑' && dayBranch === '丑'
 
+/** ★2026-07-25 연재쌤 확정 — 격각(隔角) 판정. 한 사람 원국의 월지-일지로만 본다.
+ *   월지와 일지가 지지 순서에서 한 칸을 건너뛰면 격각.
+ *     예: 子월 寅일 → 가운데 丑이 빠짐 → 격각 → 부부 사이가 별로 안 좋다.
+ *   ⚠️ 궁합에서 두 사람 일지끼리 보는 격각은 틀린 이론이라 쓰지 않는다.
+ *   지지 순서: 子丑寅卯辰巳午未申酉戌亥 (12칸 원형). 두 글자 간격이 정확히 2면 격각. */
+const JIJI_ORDER = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
+function isGyeokgak(monthBranch: string, dayBranch: string): boolean {
+  const mi = JIJI_ORDER.indexOf(monthBranch)
+  const di = JIJI_ORDER.indexOf(dayBranch)
+  if (mi < 0 || di < 0) return false
+  // 원형 거리 (0~6). 정확히 2칸이면 가운데 한 글자가 빠진 격각.
+  let d = Math.abs(mi - di)
+  if (d > 6) d = 12 - d
+  return d === 2
+}
+
 // ── 한글 조사 — 받침 유무로 갈린다. 한자는 우리말 음으로 읽어 판정한다. ──
 const HANJA_SOUND: Record<string, string> = {
   甲:'갑',乙:'을',丙:'병',丁:'정',戊:'무',己:'기',庚:'경',辛:'신',壬:'임',癸:'계',
@@ -252,6 +268,8 @@ export interface PersonJudge {
   gwanIsCheonEul: boolean
   /** 월지·일지가 냉·온 하나씩이면 조후 균형 → 궁합에 좋다. 별 +2. 남녀 공통 */
   johuBalance: boolean
+  /** 격각 — 한 사람 월지-일지가 한 칸 건너뜀. 부부 사이 별로. 통변 참고용 */
+  gyeokgak: boolean
   /** 배우자 별 없음 (여=무관·남=무재). 두 사람 모두면 전생부부 인연 +5. 성별 무관 */
   spouseStarNone: boolean
   /** 남자: 재성이 형·충·공망 모두 걸림 — 배우자 덕 없는 사주. 통변 참고용. 여자는 항상 false */
@@ -518,6 +536,10 @@ export function judgePerson(p: PersonInput): PersonJudge {
   const woljiCold = COLD_BRANCH.has(monthBranch)
   const johuBalance = (iljiCold && !woljiCold) || (!iljiCold && woljiCold)
 
+  // ── 격각(隔角) — 연재쌤 확정. 한 사람 원국의 월지-일지가 한 칸 건너뛰면 격각. ──
+  //   부부 사이가 별로 좋지 않다. (예: 子월 寅일 → 가운데 丑 빠짐)
+  const gyeokgak = isGyeokgak(monthBranch, dayBranch)
+
   // 일지 십신 (232쪽 4번 — 판단 기준은 日支)
   const iljiSipsin = dayBranch ? sipsinOf(dayStem, HIDDEN[dayBranch]?.[2] ?? '') : ''
 
@@ -548,7 +570,7 @@ export function judgePerson(p: PersonInput): PersonJudge {
     spouseName, spouseEl, spouseScore, spouseAbsent, spouseWhere,
     spouseRooted, spouseGongmang,
     iljiSipsin, seasonRel, wonjinIlWol, chukChukSelf,
-    spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance,
+    spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance, gyeokgak,
     spouseStarNone, jaeHyeongChungGongmang, jaeRootedRich, jaeExcess, jaeIsGisin, jaeIsYongHee, jaePresent,
     gwiinChars, gwiinMine, gongmang,
   }
@@ -574,30 +596,11 @@ export function judgeCouple(
   const bHas = a.ohaeng[b.needEl] ?? 0
   const aStars = starsByScore(aHas)
   const bStars = starsByScore(bHas)
-  const warmWord = (el: Ohaeng) =>
-    el === '화' ? '따뜻한 불(火)' : el === '수' ? '시원한 물(水)' : EL_LABEL[el]
 
-  // ★2026-07-24 고침 — 계절이 같다고 필요 기운까지 같은 것은 아니다.
-  //
-  //   [무엇이 문제였나]
-  //   전에는 계절만 같으면 a.needEl 하나로 "두 분 다 ○○이 필요하다"고 썼다.
-  //   실제 사례(정준호 봄생·이경아 봄생)에서 이런 문구가 나갔다.
-  //     "두 분 다 봄에 태어나 따뜻한 불(火) 기운이 필요한 사주예요."
-  //   그런데 정준호는 火, 이경아는 金 이 필요했다. 이경아 몫이 통째로 틀렸다.
-  //
-  //   [왜 그런가]
-  //   연재쌤 확정 ⑤ — 여름·겨울생은 조후(水火), 봄·가을생은 억부로 본다.
-  //   조후는 계절이 정하니 같은 계절이면 같지만, 억부는 사주 구성이 정한다.
-  //   그래서 봄생 둘이라도 한 명은 火, 한 명은 金 이 될 수 있다.
-  //
-  //   → 계절이 같은지가 아니라 needEl 이 같은지로 갈린다.
-  const sameNeed = a.needEl === b.needEl
-  const seasonLine = sameNeed
-    ? (a.season === b.season
-        ? `두 분 다 ${a.season}에 태어나 ${warmWord(a.needEl)} 기운이 필요한 사주예요.`
-        : `${a.name}님은 ${a.season}생, ${b.name}님은 ${b.season}생이신데 두 분 다 ${warmWord(a.needEl)} 기운이 필요해요.`)
-    : `${a.name}님은 ${a.season}생이라 ${EL_LABEL[a.needEl]}, ${b.name}님은 ${b.season}생이라 ${EL_LABEL[b.needEl]} 기운이 필요해요.`
-  // ★2026-07-24 — '필요한 기운을 채워 주는가' 카드를 없앴다. (대표님 지시)
+  // ★2026-07-25 — "봄생이라 ○ 필요" 계절 문구(seasonLine)를 삭제했다. (대표님 지시)
+  //   억부로 보면 봄생 둘이라도 필요 기운이 달라(火·金), "봄생이라"를 이유로
+  //   달면 모순처럼 보였다. 오행 설명은 AI 통변이 막대그래프 수치로 상세히 다룬다.
+
   //
   //   [왜]
   //   ③ '없는 오행을 채워 주는가' 와 하는 이야기가 겹쳤다.
@@ -675,34 +678,17 @@ export function judgeCouple(
   const bZero = ALL.filter(e => (b.ohaeng[e] ?? 0) === 0)
   const aFilled = aZero.filter(e => (b.ohaeng[e] ?? 0) > 0)
   const bFilled = bZero.filter(e => (a.ohaeng[e] ?? 0) > 0)
-  const ohLines: string[] = []
-  if (aFilled.length) {
-    const where = pb.saju
-      .filter(q => STEM_EL[q.stem] === aFilled[0] || BRANCH_EL[q.branch] === aFilled[0])
-      .map(q => (STEM_EL[q.stem] === aFilled[0] ? q.stem : q.branch))
-    ohLines.push(`${a.name}님께 없는 ${eul(aFilled.map(e => EL_LABEL[e]).join('·'))} ${b.name}님이 지니고 계세요.${where.length ? ` (${where.join('·')})` : ''}`)
-  } else if (aZero.length) {
-    ohLines.push(`${a.name}님께 없는 ${aZero.map(e => EL_LABEL[e]).join('·')} 기운은 ${b.name}님께도 없어요.`)
-  } else {
-    ohLines.push(`${a.name}님은 다섯 기운이 고루 있어 따로 채워 받을 자리가 없습니다.`)
-  }
-  if (bFilled.length) {
-    ohLines.push(`${b.name}님께 없는 ${eul(bFilled.map(e => EL_LABEL[e]).join('·'))} ${a.name}님이 지니고 계세요.`)
-  } else if (bZero.length) {
-    ohLines.push(`${b.name}님께 없는 ${bZero.map(e => EL_LABEL[e]).join('·')} 기운은 ${a.name}님께도 없어요.`)
-  } else {
-    ohLines.push(`${b.name}님은 다섯 기운이 고루 있어 따로 채워 받을 자리가 없습니다.`)
-  }
   const bothFill = aFilled.length > 0 && bFilled.length > 0
   const oneFill = aFilled.length > 0 || bFilled.length > 0
   cats.push({
     key: 'ohaeng',
     title: '없는 오행을 채워 주는가',
     stars: bothFill ? 5 : oneFill ? 4 : (aZero.length === 0 && bZero.length === 0) ? 3 : 2,
-    // ★2026-07-24 — 없앤 '필요한 기운' 카드의 계절 한 줄을 맨 앞에 얹는다.
-    //   두 사람이 각자 어떤 기운을 필요로 하는지 먼저 알려 드린 다음
-    //   "그래서 서로 채워 줄 수 있는가" 로 이어지게 한다.
-    lines: [seasonLine, ...ohLines],
+    // ★2026-07-25 — 카드의 설명 문구(계절·채움)를 삭제했다. (대표님 지시)
+    //   "봄생이라 ○ 필요" 문구가 억부와 안 맞아 모순처럼 보였다.
+    //   카드에는 제목·별·오행 막대그래프만 두고, 상세 설명은 AI 통변이 맡는다.
+    //   (오행 분포 수치는 toCoupleTongbyeonInput 이 통변 재료로 넘긴다)
+    lines: [],
   })
 
   // ④ 두 분 일주가 만나는 자리 (232쪽 + 49쪽 지지 등급)
@@ -728,7 +714,10 @@ export function judgeCouple(
   else if (ganHap || jiHap) iljuLines.push('두 분 일주가 합으로 이어져, 서로 잘 어울리는 자리예요.')
   else if (ganChung || jiChung) iljuLines.push('두 분 일주가 충으로 마주해, 서로 다른 방향을 볼 수 있어요.')
   else iljuLines.push('충으로 부딪히지도, 강하게 합하지도 않는 중간 자리예요.')
-  if (pairAB?.text) iljuLines.push(pairAB.text)
+  // ★2026-07-25 — 두 사람 일지끼리 보던 격각·동상이몽 설명(pairAB.text)을 제거했다.
+  //   연재쌤: "궁합에서 일지끼리 맞춰보고 격각을 논하는 것은 맞지 않는 이론이다."
+  //   격각은 한 사람 원국의 월지-일지로만 본다(아래 각자 배우자운에서 처리).
+  //   일주 카드는 두 분 일주의 합·충만 본다.
 
   // ── ⑧ 일주 합/충 별점 (부부 서로를 놓고 봄, 방향 없음) ──
   //   ★부부 공통. 대표님 지시: 일주가 합이면 +2, 충이면 -2.
@@ -836,6 +825,7 @@ export function judgeCouple(
     // ── 남녀 공통 (⑥⑦) ──
     if (x.gwanIsCheonEul) reasons.push('배우자 별이 천을귀인 → 배우자 덕이 두터운 자리')
     if (x.johuBalance) reasons.push('월지·일지가 냉·온으로 어우러져 조후가 균형 잡힌 좋은 자리')
+    if (x.gyeokgak) reasons.push('월지와 일지가 한 칸 건너뛴 격각이라, 부부 사이에 마음의 결이 어긋나기 쉬운 자리 (순화해서 전할 것)')
 
     // ── 전생부부 (⑨) ──
     if (jeonsaengBubu) reasons.push('두 사람 모두 배우자 별이 비어(남 무재·여 무관) 전생부부 인연 → 아주 귀한 자리, 많이 양보하고 가족 위해 마음 내라는 업보')
@@ -987,8 +977,8 @@ const ILJI_FEMALE: Record<string, IljiText> = {
     body: '일지와 월지가 모두 편관이면 배우자가 호랑이처럼 강하고 완고하게 느껴질 수 있는 자리예요. 강단 있고 원칙이 분명한 배우자라 때로 버겁게 느껴지실 수 있으니, 수행하듯 마음을 다스리는 시간을 두시면 큰 도움이 됩니다.' },
   정관: { short: '점잖고 반듯한 현모양처 기질의',
     body: '보수적이고 점잖으며 예의 바른, 현모양처 기질의 배우자가 될 수 있어요. 가정과 자녀를 잘 돌보기에 아주 좋습니다.' },
-  편인: { short: '꼼꼼히 챙기고 따지는 배우자를 만나는',
-    body: '잔소리가 많고 자잘한 것까지 따지는, 좁쌀영감 같은 면이 있는 배우자를 만나는 자리예요. 시시콜콜 관여하면 서로 피곤해지니, 각자의 몫을 정해 두시면 편안해집니다.' },
+  편인: { short: '세심하게 살피고 챙겨 주는 배우자를 만나는',
+    body: '작은 것 하나까지 세심하게 살피고 챙겨 주는 배우자를 만나는 자리예요. 마음이 깊어 그런 것이지만, 그 관심이 지나치면 서로 숨이 막힐 수 있습니다. 시시콜콜한 것까지 함께하려 하기보다, 각자의 몫과 공간을 정해 두시면 두 분 다 한결 편안해집니다. 배우자의 세심함을 잔소리로 여기지 않고 아껴 주는 마음으로 받아 주시면 관계가 부드러워집니다.' },
   정인: { short: '포근하고 든든한 배우자를 만나는',
     body: '포근한 남편이면서 집안일도 잘 챙기는, 일등 남편이라 할 만한 든든한 배우자를 만나는 자리예요.' },
 }
