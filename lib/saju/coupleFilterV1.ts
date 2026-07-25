@@ -160,6 +160,27 @@ function crossSeason(monthBranch: string, dayBranch: string): SeasonRel {
   return sw === si ? '같음' : '보통'
 }
 
+/** ★2026-07-25 연재쌤 정리 — 두 사람이 태어난 계절(월지)로 보는 궁합.
+ *   (앞의 crossSeason 은 월지↔일지 교차였는데, 이건 두 사람 월지↔월지다.)
+ *
+ *   [원문 "궁합이 부정적일 때" + 연재쌤]
+ *     · 겨울(亥子丑)에 태어난 사람 ↔ 여름(巳午未)에 태어난 사람 = 아주 좋다
+ *     · 봄(寅卯辰) ↔ 봄(寅卯辰) = 부정적 (같은 계절)
+ *     · 가을(申酉戌) ↔ 가을(申酉戌) = 부정적 (같은 계절)
+ *   나머지(겨울↔겨울, 여름↔여름, 봄↔가을 등)는 '보통'으로 둔다.
+ *   반환: '아주좋음' | '부정' | '보통'
+ */
+type MonthSeasonRel = '아주좋음' | '부정' | '보통'
+function monthSeasonMatch(monthA: string, monthB: string): MonthSeasonRel {
+  const sa = SEASON[monthA], sb = SEASON[monthB]
+  if (!sa || !sb) return '보통'
+  // 겨울 ↔ 여름 = 아주 좋다
+  if ((sa === '겨울' && sb === '여름') || (sa === '여름' && sb === '겨울')) return '아주좋음'
+  // 봄 ↔ 봄, 가을 ↔ 가을 = 부정적
+  if ((sa === '봄' && sb === '봄') || (sa === '가을' && sb === '가을')) return '부정'
+  return '보통'
+}
+
 /** 丑丑인가 — 232쪽 여자 항목 "丑丑은 이혼 가능성이 크다" (연재쌤 확정 ②: 未未·午午 등은 해당 없음) */
 const isChukChuk = (monthBranch: string, dayBranch: string): boolean =>
   monthBranch === '丑' && dayBranch === '丑'
@@ -719,6 +740,15 @@ export function judgeCouple(
   //   격각은 한 사람 원국의 월지-일지로만 본다(아래 각자 배우자운에서 처리).
   //   일주 카드는 두 분 일주의 합·충만 본다.
 
+  // ── 두 사람 태어난 계절(월지) 궁합 — 연재쌤 정리 ──
+  //   겨울↔여름 = 아주 좋다 / 봄↔봄·가을↔가을 = 부정적
+  const monthRel = monthSeasonMatch(a.monthBranch, b.monthBranch)
+  if (monthRel === '아주좋음') {
+    iljuLines.push('한 분은 겨울, 한 분은 여름에 태어나 계절이 서로를 채워 주는 아주 좋은 자리예요.')
+  } else if (monthRel === '부정') {
+    iljuLines.push('두 분 다 같은 계절(봄 또는 가을)에 태어나, 기운이 한쪽으로 몰려 서로 살펴 주어야 하는 자리예요. (순화해서 전할 것)')
+  }
+
   // ── ⑧ 일주 합/충 별점 (부부 서로를 놓고 봄, 방향 없음) ──
   //   ★부부 공통. 대표님 지시: 일주가 합이면 +2, 충이면 -2.
   //     天合地合·天沖地沖은 합/충이 겹친 것이므로 위 조건에 자연히 포함된다.
@@ -726,6 +756,9 @@ export function judgeCouple(
   let iljuStar: Stars = 3
   if (ganHap || jiHap) iljuStar = Math.min(5, iljuStar + 2) as Stars
   if (ganChung || jiChung) iljuStar = Math.max(1, iljuStar - 2) as Stars
+  // 계절 궁합도 별점에 반영 (아주좋음 +1 / 부정 -1)
+  if (monthRel === '아주좋음') iljuStar = Math.min(5, iljuStar + 1) as Stars
+  else if (monthRel === '부정') iljuStar = Math.max(1, iljuStar - 1) as Stars
 
   cats.push({
     key: 'ilju',
