@@ -1,4 +1,7 @@
 // app/manseryeok/couple-result-new/components/CoupleJudgeCard.tsx
+// ★★★ VERSION: 2026-07-24-v3 ★★★
+//   덮어쓰기가 됐는지 확인하려면 이 줄을 보십시오.
+//   이 판의 변경점: 오행 비교 그래프를 '없는 오행을 채워 주는가' 카드 안으로 넣음
 // ============================================================================
 //  궁합 판정 카드 — 심산 기준 6개 카테고리 (점수·등급 없음)
 //
@@ -146,6 +149,14 @@ export default function CoupleJudgeCard({ judge, needExtra }: {
 
   return (
     <div style={{ marginTop: 12 }}>
+      {/* ⚠️ 임시 — 배포가 반영됐는지 눈으로 확인하기 위한 표시.
+             화면에서 v3 가 보이면 새 코드가 올라간 것입니다.
+             확인 뒤 이 블록만 지우시면 됩니다. */}
+      <div style={{
+        fontSize: 9, color: '#c5a590', textAlign: 'right',
+        marginBottom: 4, letterSpacing: '.05em',
+      }}>v3</div>
+
       <SectLabel text="두 분이 만났을 때" />
       {meet.map(c => (
         <Card key={c.key} cat={c} extra={c.key === 'ohaeng' ? needExtra : undefined} />

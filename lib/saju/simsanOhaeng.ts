@@ -53,8 +53,19 @@ function monthBranchScore(
   solarMonth: number,
   solarDay: number,
   hourBranch: string,
+  forCouple = false,
 ): Array<[Ohaeng, number]> {
   const M = 35 // 월지 총점
+
+  // ★2026-07-24 — 궁합에서는 월지의 土 지지(丑·辰·未·戌)를 계절로 치환하지 않고
+  //   본래 오행인 土로 본다. (대표님 지시)
+  //     일반 사주: 未월 → 火, 丑월 → 水 (계절 기운으로 봄)
+  //     궁합:      未월 → 土, 丑월 → 土 (지지 본래 오행으로 봄)
+  //   ⚠️ 궁합 전용이다. 사주보기(forCouple=false)는 예전 계절 치환을 그대로 쓴다.
+  //   범위: 土 지지 4개(丑·辰·未·戌)만. 나머지(子·寅·巳 등)는 궁합에서도 그대로.
+  if (forCouple && (branch === '丑' || branch === '辰' || branch === '未' || branch === '戌')) {
+    return [['토', M]]
+  }
 
   switch (branch) {
     // 寅월 (2.4~3.5) — 날짜 3분할
@@ -145,7 +156,9 @@ export function calcSimsanOhaeng(
   solarMonth: number,
   solarDay: number,
   hourBranch: string | null,
+  opts: { forCouple?: boolean } = {},
 ): OhaengScore {
+  const forCouple = opts.forCouple ?? false
   const score = emptyScore()
   const monthPillar = saju.find(p => p.pillar === '월주')
   const monthBranch = monthPillar ? monthPillar.branch : ''
@@ -157,7 +170,7 @@ export function calcSimsanOhaeng(
 
     // 지지 점수 (자리별 처리)
     if (pillar === '월주') {
-      for (const [el, pts] of monthBranchScore(branch, solarMonth, solarDay, hourBranch ?? '')) {
+      for (const [el, pts] of monthBranchScore(branch, solarMonth, solarDay, hourBranch ?? '', forCouple)) {
         score[el] += pts
       }
     } else if (pillar === '시주') {

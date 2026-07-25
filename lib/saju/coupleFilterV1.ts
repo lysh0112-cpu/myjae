@@ -1,4 +1,11 @@
 // lib/saju/coupleFilterV1.ts
+// ★★★ VERSION: 2026-07-24-v3 ★★★
+//   덮어쓰기가 됐는지 확인하려면 이 줄을 보십시오.
+//   이 줄이 없으면 옛 파일입니다.
+//   이 판의 변경점:
+//     · '필요한 기운을 채워 주는가' 카드 삭제 → 계절 한 줄만 '없는 오행' 카드로
+//     · 카드 순서 정렬 (없는오행 → 귀인 → 일주 → 각자 배우자운)
+//     · 양방향 두 줄(dual) 제거 — 일주 카드에만 남음
 // ============================================================================
 //  궁합 판정 엔진 v1 — 심산 기준 (점수·등급 없음)
 //
@@ -272,7 +279,7 @@ export function judgePerson(p: PersonInput): PersonJudge {
   const monthBranch = wol?.branch ?? ''
   const dayEl = STEM_EL[dayStem]
 
-  const ohaeng = calcSimsanOhaeng(p.saju, p.solarMonth, p.solarDay, p.hourBranch)
+  const ohaeng = calcSimsanOhaeng(p.saju, p.solarMonth, p.solarDay, p.hourBranch, { forCouple: true })
   const season = SEASON[monthBranch] ?? '봄'
 
   // ── 연재쌤 확정 ⑤ — 여름·겨울생은 조후, 봄·가을생은 억부 ──

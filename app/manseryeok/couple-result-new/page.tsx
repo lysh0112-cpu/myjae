@@ -559,8 +559,8 @@ function CoupleResultView({
         const s1 = c1.saju, s2 = c2.saju
         setSaju1(s1); setSaju2(s2)
         // 오행 비교 카드용: c1/c2의 양력월·시지로 심산 오행 점수 산출해 보관
-        setOhaeng1(calcSimsanOhaeng(s1, c1.solarMonth, c1.solarDay, c1.hourBranch))
-        setOhaeng2(calcSimsanOhaeng(s2, c2.solarMonth, c2.solarDay, c2.hourBranch))
+        setOhaeng1(calcSimsanOhaeng(s1, c1.solarMonth, c1.solarDay, c1.hourBranch, { forCouple: true }))
+        setOhaeng2(calcSimsanOhaeng(s2, c2.solarMonth, c2.solarDay, c2.hourBranch, { forCouple: true }))
         setSolar1({ month: c1.solarMonth, day: c1.solarDay, hourBranch: c1.hourBranch })
         setSolar2({ month: c2.solarMonth, day: c2.solarDay, hourBranch: c2.hourBranch })
         const ilju1 = s1.find(p => p.pillar === '일주')
