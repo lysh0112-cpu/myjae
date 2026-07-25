@@ -95,6 +95,19 @@ function personBlock(p: CouplePersonInput, label: string): string {
   lines.push(`- 명식(팔자): ${pillars}`)
   lines.push(`- 타고난 본바탕(일간): ${dayStem}`)
 
+  // ★2026-07-25 — 태어난 계절의 세부 위치(초·중·말)를 월지로 정확히 넣는다.
+  //   AI 가 "겨울 막 시작" 처럼 세부 시기를 지어내던 문제를 막기 위해,
+  //   재료에 정확한 위치를 준다. (월지 = 절기의 세부 위치)
+  const SEASON_POS: Record<string, string> = {
+    寅: '봄이 시작되는 초봄', 卯: '봄이 무르익는 한봄', 辰: '봄이 저무는 늦봄',
+    巳: '여름이 시작되는 초여름', 午: '여름이 한창인 한여름', 未: '여름이 저무는 늦여름',
+    申: '가을이 시작되는 초가을', 酉: '가을이 무르익는 한가을', 戌: '가을이 저무는 늦가을',
+    亥: '겨울이 시작되는 초겨울', 子: '겨울이 깊어가는 한겨울', 丑: '겨울이 저무는 늦겨울',
+  }
+  if (SEASON_POS[monthBranch]) {
+    lines.push(`- 태어난 때: ${SEASON_POS[monthBranch]} (이 시기 표현만 쓰고, 다른 세부 시기를 지어내지 말 것)`)
+  }
+
   // ── 오행 (심산 38쪽 점수) ──
   const ohaeng = calcSimsanOhaeng(p.saju, p.solarMonth, p.solarDay, p.hourBranch)
   const ALL: Ohaeng[] = ['목', '화', '토', '금', '수']

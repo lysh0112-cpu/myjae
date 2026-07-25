@@ -40,8 +40,9 @@ export async function POST(req: Request) {
           body: JSON.stringify({
             model: 'claude-sonnet-4-6',
             // 무료는 넉넉히, 프리미엄은 더 길게
-            // 잘림 방지: 무료도 넉넉히, 프리미엄은 더 길게
-            max_tokens: premium ? 6000 : 3500,
+            // ★2026-07-25 — 궁합 통변이 각 주제 400~600자×7 = 최대 4200자라
+            //   6000 토큰으로는 잘렸다. 한글은 토큰이 많이 들어 8192로 올린다.
+            max_tokens: premium ? 8192 : 3500,
             stream: true,
             system: systemPrompt,
             messages: [

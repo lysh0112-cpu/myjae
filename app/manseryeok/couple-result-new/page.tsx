@@ -631,37 +631,49 @@ function CoupleResultView({
     [tongResult],
   )
 
-  // ★2026-07-25 — 통변을 순서대로 판정 카드 key에 매핑한다.
-  //   통변 뼈대 순서(buildCouplePrompt): 여는말 → 없는오행 → 귀인 → 일주 → 배우자운① → 배우자운② → 맺는말
-  //   판정 카드 순서(judge.cats): ohaeng, gwiin, ilju, spouse_a, spouse_b
-  //   여는말은 intro(카드 위), 맺는말은 outro(카드 아래)로 뺀다.
+  // ★2026-07-25 — 통변을 판정 카드 key에 매핑한다. (제목 키워드 기반 — 순서보다 안정적)
+  //   통변 제목과 판정 카드를 키워드로 짝짓는다. AI가 순서를 조금 바꿔도 안 밀린다.
   const { tongByKey, tongIntro, tongOutro } = useMemo(() => {
-    if (!tbCards.length) return { tongByKey: {} as Record<string, string>, tongIntro: '', tongOutro: '' }
-    const catKeys = (judge?.cats ?? []).map(c => c.key)   // [ohaeng, gwiin, ilju, spouse_a, spouse_b]
-    // 통변 카드 = [여는말, 없는오행, 귀인, 일주, 배우자운①, 배우자운②, 맺는말]
-    // 첫 카드=여는말, 마지막=맺는말, 가운데가 catKeys와 1:1
-    const bodies = tbCards.map(c => (c.title ? `${c.title}\n${c.body}` : c.body).trim())
-    let intro = tbIntro || ''
-    let outro = ''
-    let middle = bodies
-    // 통변 카드 수가 판정 카드 수 + 2(여는말·맺는말)면 정확히 매칭
-    if (bodies.length >= catKeys.length + 2) {
-      intro = (intro ? intro + '\n\n' : '') + bodies[0]
-      outro = bodies[bodies.length - 1]
-      middle = bodies.slice(1, bodies.length - 1)
-    } else if (bodies.length === catKeys.length + 1) {
-      // 여는말만 있고 맺는말이 카드로 안 잘린 경우
-      intro = (intro ? intro + '\n\n' : '') + bodies[0]
-      middle = bodies.slice(1)
+    const empty = { tongByKey: {} as Record<string, string>, tongIntro: '', tongOutro: '' }
+    if (!tbCards.length) return empty
+    const catKeys = (judge?.cats ?? []).map(c => c.key)
+    const nm = (s: string) => s.replace(/\s/g, '')
+    const keyOf = (title: string): string | null => {
+      const t = nm(title)
+      if (t.includes('배우자운') || t.includes('배우자자리')) {
+        if (judge && t.includes(nm(judge.a.name))) return 'spouse_a'
+        if (judge && t.includes(nm(judge.b.name))) return 'spouse_b'
+        return null
+      }
+      if ((t.includes('없는') && (t.includes('오행') || t.includes('기운'))) || t.includes('채워')) return 'ohaeng'
+      if (t.includes('귀인')) return 'gwiin'
+      if (t.includes('일주')) return 'ilju'
+      return null
     }
     const map: Record<string, string> = {}
-    catKeys.forEach((k, i) => { if (middle[i]) map[k] = middle[i] })
-    // 매핑 후 남는 뒷부분은 맺는말에 합친다
-    if (middle.length > catKeys.length) {
-      const rest = middle.slice(catKeys.length).join('\n\n')
-      outro = outro ? `${rest}\n\n${outro}` : rest
+    let intro = tbIntro || ''
+    const outroParts: string[] = []
+    const usedSpouse: string[] = []
+    let matchedAny = false
+    for (const c of tbCards) {
+      const body = (c.title ? `${c.title}\n${c.body}` : c.body).trim()
+      let k = keyOf(c.title)
+      if (!k && (c.title.includes('배우자운') || c.title.includes('배우자 자리'))) {
+        k = !usedSpouse.includes('spouse_a') ? 'spouse_a' : 'spouse_b'
+      }
+      if (k && catKeys.includes(k) && !map[k]) {
+        map[k] = body
+        matchedAny = true
+        if (k.startsWith('spouse_')) usedSpouse.push(k)
+      } else if (!matchedAny) {
+        // 아직 어떤 주제도 매칭 전이면 = 여는말
+        intro = (intro ? intro + '\n\n' : '') + body
+      } else {
+        // 주제 매칭이 끝난 뒤 = 맺는말·기타
+        outroParts.push(body)
+      }
     }
-    return { tongByKey: map, tongIntro: intro, tongOutro: outro }
+    return { tongByKey: map, tongIntro: intro, tongOutro: outroParts.join('\n\n') }
   }, [tbCards, tbIntro, judge])
 
 
