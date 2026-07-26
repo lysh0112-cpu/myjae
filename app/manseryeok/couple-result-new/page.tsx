@@ -696,9 +696,11 @@ function CoupleResultView({
       if (!k && (c.title.includes('배우자운') || c.title.includes('배우자 자리'))) {
         k = !usedSpouse.includes('spouse_a') ? 'spouse_a' : 'spouse_b'
       }
-      // ★제목 매칭 실패 시 — 여는말(첫 문단)이 아니고 아직 채울 판정 카드가 남았으면
-      //   순서대로 그 카드에 채운다. (AI가 제목을 바꿔도 통변이 떠돌지 않게)
-      if ((!k || !catKeys.includes(k) || map[k]) && matchedAny) {
+      // ★제목 매칭 실패 시 — 아직 채울 판정 카드가 남았을 때만 순서대로 채운다.
+      //   (AI가 제목을 바꿔도 통변이 떠돌지 않게. 단, 판정 카드를 다 채웠으면
+      //    남은 것은 맺는말이므로 억지로 카드에 넣지 않는다 — 자식운 카드에
+      //    맺는말이 잘못 붙던 문제를 막는다.)
+      if ((!k || !catKeys.includes(k) || map[k]) && matchedAny && nextUnfilledKey() !== null) {
         const nk = nextUnfilledKey()
         if (nk) k = nk
       }
