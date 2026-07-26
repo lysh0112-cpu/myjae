@@ -314,6 +314,10 @@ export interface PersonJudge {
   jaengTuHap: boolean
   /** 식상 태과 — 너무 강하면 부정 (233쪽). 남녀 공통. 통변 참고용 */
   siksangExcess: boolean
+  /** 여자 일지 상관 + 재성 없음 → 부정 (233쪽). 통변 참고용 */
+  femaleSanggwanNoJae: boolean
+  /** 인성이 있어 위 상관무재를 잡아 주는가 */
+  insungHelps: boolean
   /** 배우자 별 없음 (여=무관·남=무재). 두 사람 모두면 전생부부 인연 +5. 성별 무관 */
   spouseStarNone: boolean
   /** 남자: 재성이 형·충·공망 모두 걸림 — 배우자 덕 없는 사주. 통변 참고용. 여자는 항상 false */
@@ -433,6 +437,11 @@ export function judgePerson(p: PersonInput): PersonJudge {
   const siksangEl = GEN[dayEl]
   const siksangScore = ohaeng[siksangEl] ?? 0
   const siksangExcess = siksangScore >= 40
+
+  // ── 여자: 일지 상관인데 재성이 없으면 부정 (아래 iljiSipsin 선언 뒤에서 계산) ──
+  const jaeElF = CON[dayEl]          // 재성 오행
+  const insungElF = insungOf(dayEl)  // 인성 오행
+  const insungHelps = (ohaeng[insungElF] ?? 0) >= 10
 
   // ── 재성(관성) 약 + 비겁 강 → 의처증·의부증 소지 (233쪽 궁합 부정) ──
   //   ⚠️ 기준(약/강 점수)은 연재쌤 검수 대상. 일단 아래로 잡았다.
@@ -605,6 +614,9 @@ export function judgePerson(p: PersonInput): PersonJudge {
 
   // 일지 십신 (232쪽 4번 — 판단 기준은 日支)
   const iljiSipsin = dayBranch ? sipsinOf(dayStem, HIDDEN[dayBranch]?.[2] ?? '') : ''
+  // ── 여자: 일지 상관인데 재성이 없으면 부정 (233쪽). 인성이 있으면 잡아 준다 ──
+  const femaleSanggwanNoJae =
+    p.gender === '여' && iljiSipsin === '상관' && (ohaeng[jaeElF] ?? 0) === 0
 
   // ── 月支-日支 계절 (한 사람 안에서 본 것) ──
   //   ⚠️ 이 값은 "내 사주 구조"를 보는 참고값이다.
@@ -633,7 +645,7 @@ export function judgePerson(p: PersonInput): PersonJudge {
     spouseName, spouseEl, spouseScore, spouseAbsent, spouseWhere,
     spouseRooted, spouseGongmang,
     iljiSipsin, seasonRel, wonjinIlWol, chukChukSelf,
-    spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance, gyeokgak, jaeWeakBigyeopStrong, jaengTuHap, siksangExcess,
+    spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance, gyeokgak, jaeWeakBigyeopStrong, jaengTuHap, siksangExcess, femaleSanggwanNoJae, insungHelps,
     spouseStarNone, jaeHyeongChungGongmang, jaeRootedRich, jaeExcess, jaeIsGisin, jaeIsYongHee, jaePresent,
     gwiinChars, gwiinMine, gongmang,
   }
@@ -910,6 +922,10 @@ export function judgeCouple(
     if (x.gyeokgak) reasons.push('월지와 일지가 한 칸 건너뛴 격각이라, 부부 사이에 마음의 결이 어긋나기 쉬운 자리 (순화해서 전할 것)')
     if (x.jaeWeakBigyeopStrong) reasons.push(`${x.spouseName === '재성' ? '재성' : '관성'}은 옅고 비겁(같은 기운)이 강해, 배우자를 향한 마음이 앞서다 보면 의심이나 조바심으로 흐르기 쉬운 자리 (순화해서 전할 것)`)
     if (x.siksangExcess) reasons.push('식상(끼와 표현력의 기운)이 매우 강해, 감정과 매력이 풍부한 만큼 마음이 여러 곳으로 흐르지 않게 한 사람에게 정을 모으는 것이 중요한 자리 (순화해서 전할 것)')
+    if (x.femaleSanggwanNoJae) {
+      if (x.insungHelps) reasons.push('배우자 자리가 상관인데 재성이 옅은 편이나, 인성이 그 기운을 부드럽게 잡아 주어 균형이 맞춰지는 자리')
+      else reasons.push('배우자 자리가 상관인데 재성이 없어, 마음이 곧고 표현이 강한 만큼 배우자를 너그럽게 품는 연습이 도움이 되는 자리 (순화해서 전할 것)')
+    }
 
     // ── 전생부부 (⑨) ──
     if (jeonsaengBubu) reasons.push('두 사람 모두 배우자 별이 비어(남 무재·여 무관) 전생부부 인연 → 아주 귀한 자리, 많이 양보하고 가족 위해 마음 내라는 업보')
