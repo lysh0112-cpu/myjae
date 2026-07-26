@@ -184,11 +184,14 @@ function catBlock(c: CategoryResult): string {
   const out: string[] = [`[${c.title}] ${starStr(c.stars)}`]
   c.lines.forEach(l => out.push(`  - ${l}`))
   c.dual?.forEach(d => out.push(`  - ${d.text} ${starStr(d.stars)}`))
-  // ★2026-07-25 — 배우자운의 통변 재료(reasons). 화면엔 안 보이지만 통변에 꼭 반영한다.
-  //   심산 배우자운 규칙(관성·재성 판정)의 사실을 담은 것.
+  // ★2026-07-25 — 이 대목의 통변 재료(reasons). 화면엔 안 보이지만 통변에 꼭 반영한다.
+  //   심산 판정 규칙(관성·재성·계절·자식운 등)의 사실을 담은 것.
   //   "(순화해서 전할 것)" 표시가 붙은 것은 무섭지 않게 부드럽게 풀어써야 한다.
+  //   ★2026-07-26 — 라벨을 "배우자운 통변 재료"에서 고쳤다.
+  //     자식운·부부운·일주 카드 재료에도 이 라벨이 붙어, AI 가 그 대목에
+  //     배우자 이야기를 섞어 쓰는 빌미가 됐다.
   if (c.reasons?.length) {
-    out.push('  · 배우자운 통변 재료 (아래 사실을 반드시 녹이되, 순화 표시가 있으면 부드럽게):')
+    out.push(`  · 이 대목("${c.title}")의 통변 재료 (아래 사실을 반드시 녹이되, 순화 표시가 있으면 부드럽게):`)
     c.reasons.forEach(r => out.push(`    · ${r}`))
   }
   return out.join('\n')
