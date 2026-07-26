@@ -1156,38 +1156,6 @@ export function judgeCouple(
     })
   }
 
-  // ── 자식운 카드 (229쪽) — 부부 궁합일 때만. 두 사람 통합 1개 ──
-  if (showChild) {
-    const childReasons: string[] = []
-    for (const x of [a, b]) {
-      const who = x.name
-      const parts: string[] = []
-      // 자녀 인연 자리 (남=관성, 여=식상)
-      if (x.childAbsent) {
-        parts.push(`${who}님은 자녀를 뜻하는 ${x.childName} 기운이 원국에 옅어, 자녀 인연은 때를 기다려 천천히 무르익는 편이에요. (무관성·무식상은 오히려 그 기운이 드는 시기에 인연이 열리기도 합니다)`)
-      } else if (x.childStrong) {
-        parts.push(`${who}님은 자녀를 뜻하는 ${x.childName} 기운이 넉넉해 자녀 인연이 든든한 자리예요. 다만 그 기운이 지나치게 겹치는 시기에는 마음을 조금 느슨히 두시면 좋습니다.`)
-      } else if (x.childWeak) {
-        parts.push(`${who}님은 자녀를 뜻하는 ${x.childName} 기운이 다소 옅으나, 정성으로 채워 가면 좋은 자리예요.`)
-      } else {
-        parts.push(`${who}님은 자녀를 뜻하는 ${x.childName} 기운이 알맞게 자리해, 자녀 인연이 순한 편이에요.`)
-      }
-      // 고립
-      if (x.childIsolated) parts.push(`다만 그 기운이 홀로 떠 외로운 편이라, 자녀와 마음을 자주 나누면 좋습니다. (순화해서 전할 것)`)
-      // 여자 인극식
-      if (x.childInseongPressed) parts.push(`인성의 기운이 강해 자녀 기운을 누르는 결이 있으니, 자녀에게 지나치게 간섭하기보다 지켜봐 주는 마음이 도움이 됩니다. (순화해서 전할 것)`)
-      // 시지 형충
-      if (x.childHourChung) parts.push(`자녀 자리(시지)가 충으로 흔들리는 결이 있어, 자녀 일에 마음의 여유를 두면 좋은 자리예요. (순화해서 전할 것)`)
-      childReasons.push(parts.join(' '))
-    }
-    cats.push({
-      key: 'child',
-      title: '두 분의 자식운',
-      lines: [],
-      reasons: childReasons,
-    })
-  }
-
   // ── 배지 (보관함 목록용) ──
   const badge =
     (aStars >= 3 && bStars >= 3) ? '서로 기운을 채워 주는 사이'
@@ -1236,15 +1204,59 @@ export function judgeCouple(
   if (ta) note.push(`${a.name}님은 ${ta.short} 자리예요. (${a.iljiSipsin})`)
   if (tb) note.push(`${b.name}님은 ${tb.short} 자리예요. (${b.iljiSipsin})`)
 
+  // ── ⑥ 두 분의 부부운 (종합·총평) — 부부 궁합일 때만 ──
+  //   개인 배우자운(④⑤) 뒤에서, 두 사람 관계 전체를 아우르는 총평을 담는다.
+  //   good(도움되는 자리)·watch(살피면 좋은 자리)·note(알아두면 좋은 점)를 재료로 넘긴다.
+  if (showChild) {
+    const coupleReasons: string[] = []
+    if (good.length) coupleReasons.push('[도움이 되는 자리] ' + good.join(' '))
+    if (watch.length) coupleReasons.push('[살피면 좋은 자리] ' + watch.join(' '))
+    if (note.length) coupleReasons.push('[알아두면 좋은 점] ' + note.join(' '))
+    cats.push({
+      key: 'couple_overall',
+      title: '두 분의 부부운',
+      lines: [],
+      reasons: coupleReasons,
+    })
+  }
+
+  // ── ⑦ 자식운 카드 (229쪽) — 부부 궁합일 때만. 두 사람 통합 1개 ──
+  if (showChild) {
+    const childReasons: string[] = []
+    for (const x of [a, b]) {
+      const who = x.name
+      const parts: string[] = []
+      if (x.childAbsent) {
+        parts.push(`${who}님은 자녀를 뜻하는 ${x.childName} 기운이 원국에 옅어, 자녀 인연은 때를 기다려 천천히 무르익는 편이에요. (무관성·무식상은 오히려 그 기운이 드는 시기에 인연이 열리기도 합니다)`)
+      } else if (x.childStrong) {
+        parts.push(`${who}님은 자녀를 뜻하는 ${x.childName} 기운이 넉넉해 자녀 인연이 든든한 자리예요.`)
+      } else if (x.childWeak) {
+        parts.push(`${who}님은 자녀를 뜻하는 ${x.childName} 기운이 다소 옅으나, 정성으로 채워 가면 좋은 자리예요.`)
+      } else {
+        parts.push(`${who}님은 자녀를 뜻하는 ${x.childName} 기운이 알맞게 자리해, 자녀 인연이 순한 편이에요.`)
+      }
+      if (x.childIsolated) parts.push(`다만 그 기운이 홀로 떠 외로운 편이라, 자녀와 마음을 자주 나누면 좋습니다. (순화해서 전할 것)`)
+      if (x.childInseongPressed) parts.push(`인성의 기운이 강해 자녀 기운을 누르는 결이 있으니, 자녀에게 지나치게 간섭하기보다 지켜봐 주는 마음이 도움이 됩니다. (순화해서 전할 것)`)
+      if (x.childHourChung) parts.push(`자녀 자리(시지)가 충으로 흔들리는 결이 있어, 자녀 일에 마음의 여유를 두면 좋은 자리예요. (순화해서 전할 것)`)
+      childReasons.push(parts.join(' '))
+    }
+    cats.push({
+      key: 'child',
+      title: '두 분의 자식운',
+      lines: [],
+      reasons: childReasons,
+    })
+  }
+
   // ★2026-07-24 — 화면에 나갈 순서로 정렬한다.
   //   '없는 오행을 채워 주는가' 를 맨 앞에 둔다. (대표님 지시)
   //   이 카드가 오행 비교 그래프까지 품고 있어 두 분 관계의 큰 그림을 먼저 보여 준다.
   //   그다음 귀인 → 일주 → 각자의 배우자운 순으로 좁혀 들어간다.
-  const CARD_ORDER = ['ohaeng', 'gwiin', 'ilju']
+  const CARD_ORDER = ['ohaeng', 'gwiin', 'ilju', 'spouse_a', 'spouse_b', 'couple_overall', 'child']
   cats.sort((x, y) => {
     const ix = CARD_ORDER.indexOf(x.key)
     const iy = CARD_ORDER.indexOf(y.key)
-    // 목록에 없는 것(spouse_a·spouse_b)은 뒤로 보내되 서로의 순서는 지킨다.
+    // 목록에 없는 것은 뒤로 보내되 서로의 순서는 지킨다.
     return (ix === -1 ? 99 : ix) - (iy === -1 ? 99 : iy)
   })
 

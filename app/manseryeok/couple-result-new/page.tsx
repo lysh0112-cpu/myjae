@@ -674,6 +674,7 @@ function CoupleResultView({
       if ((t.includes('없는') && (t.includes('오행') || t.includes('기운'))) || t.includes('채워')) return 'ohaeng'
       if (t.includes('귀인')) return 'gwiin'
       if (t.includes('일주') || t.includes('만나는자리') || t.includes('만나는결')) return 'ilju'
+      if (t.includes('부부운') || t.includes('두분의부부') || t.includes('종합')) return 'couple_overall'
       if (t.includes('자식운') || t.includes('자녀운') || t.includes('자식') || t.includes('자녀')) return 'child'
       return null
     }
