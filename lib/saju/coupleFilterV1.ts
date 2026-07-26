@@ -312,6 +312,8 @@ export interface PersonJudge {
   jaeWeakBigyeopStrong: boolean
   /** 쟁합·투합 — 한 사주 천간에 있으면 궁합 별로. 통변 참고용 */
   jaengTuHap: boolean
+  /** 식상 태과 — 너무 강하면 부정 (233쪽). 남녀 공통. 통변 참고용 */
+  siksangExcess: boolean
   /** 배우자 별 없음 (여=무관·남=무재). 두 사람 모두면 전생부부 인연 +5. 성별 무관 */
   spouseStarNone: boolean
   /** 남자: 재성이 형·충·공망 모두 걸림 — 배우자 덕 없는 사주. 통변 참고용. 여자는 항상 false */
@@ -424,6 +426,13 @@ export function judgePerson(p: PersonInput): PersonJudge {
 
   // ── 쟁합·투합 — 한 사주 원국 천간에서. 있으면 궁합 별로 (연재쌤) ──
   const jaengTuHap = hasJaengTuHap(p.saju.map(q => q.stem))
+
+  // ── 식상(食傷) 태과 — 남녀 공통. 너무 강하면 부정 (233쪽 "식상 강하면 음란") ──
+  //   식상 = 일간이 생(生)하는 오행. simsanOhaeng 100점 기준.
+  //   ⚠️ 기준(태과 점수)은 연재쌤 검수 대상. 일단 40점 이상을 '태과'로 본다.
+  const siksangEl = GEN[dayEl]
+  const siksangScore = ohaeng[siksangEl] ?? 0
+  const siksangExcess = siksangScore >= 40
 
   // ── 재성(관성) 약 + 비겁 강 → 의처증·의부증 소지 (233쪽 궁합 부정) ──
   //   ⚠️ 기준(약/강 점수)은 연재쌤 검수 대상. 일단 아래로 잡았다.
@@ -624,7 +633,7 @@ export function judgePerson(p: PersonInput): PersonJudge {
     spouseName, spouseEl, spouseScore, spouseAbsent, spouseWhere,
     spouseRooted, spouseGongmang,
     iljiSipsin, seasonRel, wonjinIlWol, chukChukSelf,
-    spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance, gyeokgak, jaeWeakBigyeopStrong, jaengTuHap,
+    spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance, gyeokgak, jaeWeakBigyeopStrong, jaengTuHap, siksangExcess,
     spouseStarNone, jaeHyeongChungGongmang, jaeRootedRich, jaeExcess, jaeIsGisin, jaeIsYongHee, jaePresent,
     gwiinChars, gwiinMine, gongmang,
   }
@@ -900,6 +909,7 @@ export function judgeCouple(
     if (x.johuBalance) reasons.push('월지·일지가 냉·온으로 어우러져 조후가 균형 잡힌 좋은 자리')
     if (x.gyeokgak) reasons.push('월지와 일지가 한 칸 건너뛴 격각이라, 부부 사이에 마음의 결이 어긋나기 쉬운 자리 (순화해서 전할 것)')
     if (x.jaeWeakBigyeopStrong) reasons.push(`${x.spouseName === '재성' ? '재성' : '관성'}은 옅고 비겁(같은 기운)이 강해, 배우자를 향한 마음이 앞서다 보면 의심이나 조바심으로 흐르기 쉬운 자리 (순화해서 전할 것)`)
+    if (x.siksangExcess) reasons.push('식상(끼와 표현력의 기운)이 매우 강해, 감정과 매력이 풍부한 만큼 마음이 여러 곳으로 흐르지 않게 한 사람에게 정을 모으는 것이 중요한 자리 (순화해서 전할 것)')
 
     // ── 전생부부 (⑨) ──
     if (jeonsaengBubu) reasons.push('두 사람 모두 배우자 별이 비어(남 무재·여 무관) 전생부부 인연 → 아주 귀한 자리, 많이 양보하고 가족 위해 마음 내라는 업보')
