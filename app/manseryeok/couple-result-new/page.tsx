@@ -21,7 +21,7 @@
  */
 
 import { Suspense, useMemo, useState, useEffect, useRef } from 'react'
-import { coupleKindOfPair, coupleTitleOf, spouseFortuneTitle, COUPLE_PRICE_KEY, type CoupleKind } from '@/lib/saju/coupleRelation'
+import { coupleKindOfPair, coupleTitleOf, spouseFortuneTitle, spouseSectionTitle, COUPLE_PRICE_KEY, type CoupleKind } from '@/lib/saju/coupleRelation'
 import { useRouter, useSearchParams } from 'next/navigation'
 import CoupleWonguk from './components/CoupleWonguk'
 import OhaengCompareCard from './components/OhaengCompareCard'
@@ -1010,6 +1010,7 @@ function CoupleResultView({
             tongByKey={tongByKey}
             tongIntro={tongIntro}
             tongOutro={tongOutro}
+            soloLabel={spouseSectionTitle(kind)}
             needExtra={ohaeng1 && ohaeng2 ? (
               <OhaengCompareCard
                 aScores={ohaeng1}

@@ -129,7 +129,7 @@ function Block({ kind, title, items }: {
   )
 }
 
-export default function CoupleJudgeCard({ judge, needExtra, tongByKey, tongIntro, tongOutro }: {
+export default function CoupleJudgeCard({ judge, needExtra, tongByKey, tongIntro, tongOutro, soloLabel = '각자의 배우자 자리' }: {
   judge: CoupleJudgeV1
   /** '없는 오행을 채워 주는가' 카드 안에 넣을 것 (오행 비교 그래프) */
   needExtra?: React.ReactNode
@@ -139,10 +139,28 @@ export default function CoupleJudgeCard({ judge, needExtra, tongByKey, tongIntro
   tongIntro?: string
   /** 맺는말 통변 (카드 아래 독립) */
   tongOutro?: string
+  /** ★2026-07-26 — 각자의 자리 구분선 글씨. 연인이면 "각자의 인연 자리". */
+  soloLabel?: string
 }) {
-  // 앞 4개 = 두 사람이 만났을 때 / 뒤 2개 = 각자의 배우자 자리
-  const meet = judge.cats.filter(c => !c.key.startsWith('spouse_'))
+  // ★2026-07-26 — 카드를 세 묶음으로 나눈다. (대표님 결정 (가)안)
+  //
+  //   [무엇이 문제였나]
+  //   전에는 spouse_ 인지 아닌지로만 둘로 갈랐다. 그런데 뒤에 새로 붙인
+  //   '두 분의 부부운'·'두 분의 자식운'은 spouse_ 가 아니라서 앞 묶음으로 들어가,
+  //   화면에서 각자의 배우자운보다 '위'에 떴다.
+  //   coupleFilterV1 의 CARD_ORDER 는 배우자운 → 부부운 → 자식운 순으로
+  //   정렬해 두었고, 통변(buildCouplePrompt)도 그 순서로 쓰는데, 화면만 뒤집혀 있었다.
+  //
+  //   [고친 방법]
+  //   ① 두 분이 만났을 때  — 없는오행 · 귀인 · 일주
+  //   ② 각자의 자리        — 배우자운(인연운) 두 사람
+  //   ③ 두 분을 아울러     — 부부운 · 자식운   ← 각자를 본 뒤 두 분 이야기로 모인다
+  //   이제 화면 순서 = 통변 순서가 되어 읽는 흐름이 맞는다.
+  //   ③은 부부 궁합에만 생긴다(showChild). 연인이면 카드가 없어 묶음째 안 그려진다.
+  const TOGETHER = ['couple_overall', 'child']
+  const meet = judge.cats.filter(c => !c.key.startsWith('spouse_') && !TOGETHER.includes(c.key))
   const solo = judge.cats.filter(c => c.key.startsWith('spouse_'))
+  const together = judge.cats.filter(c => TOGETHER.includes(c.key))
 
   return (
     <div style={{ marginTop: 12 }}>
@@ -161,9 +179,17 @@ export default function CoupleJudgeCard({ judge, needExtra, tongByKey, tongIntro
       ))}
 
       <div style={{ marginTop: 20 }}>
-        <SectLabel text="각자의 배우자 자리" />
+        <SectLabel text={soloLabel} />
         {solo.map(c => <Card key={c.key} cat={c} tong={tongByKey?.[c.key]} />)}
       </div>
+
+      {/* ★2026-07-26 — 각자의 자리를 본 뒤, 두 분 이야기로 모인다. (부부 궁합만) */}
+      {together.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <SectLabel text="두 분을 아울러 보면" />
+          {together.map(c => <Card key={c.key} cat={c} tong={tongByKey?.[c.key]} />)}
+        </div>
+      )}
 
       <div style={{ marginTop: 20 }}>
         <SectLabel text="이렇게 읽으시면 좋아요" />

@@ -74,6 +74,16 @@ export function spouseFortuneTitle(name: string, kind: CoupleKind): string {
 }
 
 /**
+ * 판정 카드 화면의 구분선 글씨 — 각자의 자리 묶음.
+ *   ★2026-07-26 — 전에는 CoupleJudgeCard 에 "각자의 배우자 자리"로 박혀 있었다.
+ *     카드 제목은 spouseFortuneTitle 로 "○○님의 인연운"까지 잘 바뀌는데
+ *     그 위 구분선만 연인에게도 "배우자"라고 나와 어긋났다.
+ */
+export function spouseSectionTitle(kind: CoupleKind): string {
+  return kind === 'married' ? '각자의 배우자 자리' : '각자의 인연 자리'
+}
+
+/**
  * 상담 가격 키.
  *   ★2026-07-24 — 'couple' 하나로 통일했다. (대표님 결정)
  *     consult_prices 에 couple(50,000) / married(70,000) 두 행이 있었는데
