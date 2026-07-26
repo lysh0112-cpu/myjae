@@ -5,13 +5,12 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
 import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
-// 커플채팅 플로팅은 당분간 닫음 (기능은 살아있음. 되살리려면 아래 2줄의 주석만 풀면 됨)
-// import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
+// ★2026-07-27 — 커플채팅(CoupleChatFab · InviteNotifier) 제거. 테스트였으므로 전부 삭제.
+//   ⚠️ 상담사–고객 채팅은 별개이며 살아 있다. 함께 지우지 말 것.
 import AiTalkFab from '@/app/manseryeok/components/AiTalkFab'
 import TodayFortuneCard from '@/app/manseryeok/components/TodayFortuneCard'
 import EmotionPicker from '@/app/manseryeok/components/EmotionPicker'
 import UserCard from '@/app/manseryeok/components/UserCard'
-import InviteNotifier from '@/app/couple-chat/InviteNotifier'
 import { listPinnedServices, togglePinnedService, MAX_PINS } from '@/lib/saju/pinnedServices'
 import HomeBottomSheet from '@/app/home-new/components/HomeBottomSheet'
 
@@ -552,9 +551,7 @@ export default function HomeNew() {
         )
       })()}
 
-      {/* <CoupleChatFab /> */}
       <AiTalkFab />
-      <InviteNotifier />
     </div>
   )
 }

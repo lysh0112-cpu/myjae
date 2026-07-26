@@ -5,10 +5,9 @@ import { EL_BG, EL_BD, EL_C, EL_C_SUB, EL_HAN } from '@/lib/saju/ohaengColor'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useResultSaju } from '@/hooks/useResultSaju'
-// 커플채팅 플로팅은 당분간 닫음 (되살리려면 이 줄과 아래 사용처 주석만 풀면 됨)
-// import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
+// ★2026-07-27 — 커플채팅(CoupleChatFab · InviteNotifier) 제거. 테스트였으므로 전부 삭제.
+//   ⚠️ 상담사–고객 채팅은 별개이며 살아 있다. 함께 지우지 말 것.
 import AiTalkFab from '@/app/manseryeok/components/AiTalkFab'
-import InviteNotifier from '@/app/couple-chat/InviteNotifier'
 import {
   hourLabelOf, normalizeHourLabel, toStoredHour,
   TIME_BANDS, MONTHS, dayOptions, clampDay, isValidBirthDate,
@@ -713,9 +712,7 @@ export default function MyPageNew() {
         ))}
       </div>
 
-      {/* <CoupleChatFab /> */}
       <AiTalkFab />
-      <InviteNotifier />
     </div>
   )
 }

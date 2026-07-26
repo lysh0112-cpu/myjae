@@ -8,23 +8,16 @@
 // → 구 홈 요소를 제거하고, 루트에서 새 홈 컴포넌트(HomeNew)를 그대로 렌더한다.
 //   URL은 '/' 유지(깜빡임 없음), 하단 네비 홈버튼(→'/')도 새 홈으로 도착.
 //
-// 참고: 구 홈에 있던 'chatHomeOn' → /couple-chat 자동진입 로직은 보존.
-//   (일부 사용자/설정이 쓰던 흐름일 수 있어 함부로 제거하지 않음)
+// ★2026-07-27 — 'chatHomeOn' → /couple-chat 자동진입 로직을 제거했다.
+//   커플채팅이 테스트였으므로 통째로 삭제되었고, 갈 곳이 사라졌기 때문이다.
+//   예전에 설정을 켜 둔 사용자의 localStorage 에 'chatHomeOn'='true' 가 남아 있을 수
+//   있으나, 읽는 쪽이 없으므로 무해하다. (지우는 코드를 따로 넣지 않는다)
+//
+//   ⚠️ 상담사–고객 채팅은 별개이며 살아 있다. 함께 지우지 말 것.
 // ==========================================================================
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import HomeNew from './home-new/page'
 
 export default function Home() {
-  const router = useRouter()
-
-  useEffect(() => {
-    const chatHomeOn = localStorage.getItem('chatHomeOn')
-    if (chatHomeOn === 'true') {
-      router.replace('/couple-chat')
-    }
-  }, [router])
-
   return <HomeNew />
 }

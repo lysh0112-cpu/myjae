@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { joinCoupleByInvite } from '@/lib/saju/coupleInvite'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -31,19 +30,10 @@ export default function LoginPage() {
       router.push('/mypage-new')
       return
     }
-    // 초대 링크로 온 로그인(?invite=)이면 → 자동 연결 후 채팅방으로.
-    const inviteToken =
-      typeof window !== 'undefined'
-        ? new URLSearchParams(window.location.search).get('invite')
-        : null
-    if (inviteToken) {
-      const joined = await joinCoupleByInvite(inviteToken, userId)
-      if (joined.ok) {
-        router.push(`/couple-chat?room=${joined.roomId}`)
-        return
-      }
-      // 연결 실패해도 로그인은 됐으니 기존 흐름(홈)으로 폴백
-    }
+    // ★2026-07-27 — 커플채팅 초대 링크(?invite=) 자동연결을 제거했다.
+    //   커플채팅이 테스트였으므로 통째로 삭제되었고, 연결할 방이 사라졌다.
+    //   ?invite= 가 붙은 옛 링크로 들어와도 그냥 홈으로 간다(오류 없음).
+    //   ⚠️ 상담사–고객 채팅은 별개이며 살아 있다. 함께 지우지 말 것.
 
     // 등급과 무관하게 신버전 홈으로. 상담사·관리자 화면은 마이페이지에서 진입.
     router.push('/home-new')

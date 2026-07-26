@@ -47,11 +47,14 @@ import { toCoupleTongbyeonMaterial, type CouplePersonInput } from '@/lib/saju/to
 import { buildCouplePrompt, type CoupleRelationKind } from '@/lib/saju/buildCouplePrompt'
 import { saveCoupleRecord, getCoupleRecord, updateCoupleRecordResult } from '@/lib/saju/coupleRecords'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
-import CoupleChatFab from '@/app/couple-chat/CoupleChatFab'
 
-// 커플채팅 열림 스위치. 기능·부품은 그대로 살아 있고 입구만 닫아둔 상태.
-// 되살릴 때는 이 한 줄만 true 로 바꾸면 시작 버튼과 플로팅이 함께 돌아온다.
-const COUPLE_CHAT_OPEN = false
+// ★2026-07-27 — 커플채팅을 걷어냈다. (대표님 지시: 테스트였으므로 전부 삭제)
+//   전에는 COUPLE_CHAT_OPEN=false 스위치로 입구만 닫아 두고 CoupleChatFab 을
+//   그대로 import 하고 있었다. 화면에는 안 보였지만 import 는 살아 있었으므로,
+//   app/couple-chat 을 지우는 순간 이 화면 전체가 "Module not found" 로 깨졌을 것이다.
+//   ★화면에 안 보인다고 참조가 끊긴 것이 아니다. (교훈 AM 의 짝)
+//
+//   ⚠️ 상담사–고객 채팅은 별개이며 살아 있다. 함께 지우지 말 것.
 import ConsultButton from '@/app/components/common/ConsultButton'
 import CopyTextButton from '@/app/components/common/CopyTextButton'
 import { withNim } from '@/lib/saju/honorific'
@@ -316,17 +319,6 @@ function CoupleResultInner() {
          진입 경로에 따라 홈으로 튀었다. 보관함으로 명시적으로 보낸다. */
       onBack={() => router.push(`/manseryeok/couple-storage?mode=${mode}`)}
       onOther={() => router.push(`/manseryeok/couple-input-new?mode=${mode}`)}
-      onInviteChat={(grade?: string) => {
-        // 두 사람 사주 + 궁합 등급을 방으로 넘겨 AI가 알게 함
-        const compat = {
-          person1, person2,
-          name1, name2,
-          grade: grade || '',
-          mode,
-        }
-        const q = encodeURIComponent(JSON.stringify(compat))
-        router.push(`/couple-chat/invite?compat=${q}`)
-      }}
     />
   )
 }
@@ -509,7 +501,7 @@ function relationKindOf(kind: string): CoupleRelationKind {
 
 
 function CoupleResultView({
-  mode, kind, info, person1, person2, name1, name2, pickedQuestions, directQ, recordId, onBack, onOther, onInviteChat,
+  mode, kind, info, person1, person2, name1, name2, pickedQuestions, directQ, recordId, onBack, onOther,
 }: {
   mode: 'couple' | 'married'
   kind: CoupleKind
@@ -523,7 +515,6 @@ function CoupleResultView({
   recordId?: string
   onBack: () => void
   onOther: () => void
-  onInviteChat: (grade?: string) => void
 }) {
   const [saju1, setSaju1] = useState<SajuPillarSimple[] | null>(null)
   const [saju2, setSaju2] = useState<SajuPillarSimple[] | null>(null)
@@ -1140,19 +1131,6 @@ function CoupleResultView({
           </div>
         )}
 
-        {/* 커플 채팅 초대 — 연인 궁합에서만 (부부 제외)
-            ⚠ 2026-07-19: 커플채팅 당분간 닫음. 되살리려면 위 COUPLE_CHAT_OPEN 을 true 로. */}
-        {COUPLE_CHAT_OPEN && mode !== 'married' && (
-          <button onClick={() => onInviteChat(judge?.badge)}
-            style={{
-              width: '100%', marginTop: 10, borderRadius: 11, padding: 13,
-              background: '#fbeaf0', border: '0.5px solid #f0c9d8',
-              color: '#993556', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            }}>
-            💗 이 사람과 커플 채팅 시작하기
-          </button>
-        )}
 
         {/* 참고용 안내 — 결과에 과몰입하지 않도록 다정하게 */}
         <div style={{
@@ -1164,7 +1142,6 @@ function CoupleResultView({
           인연을 정하는 건 사주가 아니라 두 사람의 마음과 노력이랍니다. 🌿
         </div>
       </div>
-      {COUPLE_CHAT_OPEN && mode !== 'married' && <CoupleChatFab />}
     </main>
   )
 }
