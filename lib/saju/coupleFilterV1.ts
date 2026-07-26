@@ -387,6 +387,8 @@ export interface PersonJudge {
   childIsolated: boolean
   childInseongPressed: boolean
   childHourChung: boolean
+  /** ★태어난 시를 모른다 — 자녀 자리(시주)가 비어 있어 자식운을 단정하면 안 된다 */
+  hourUnknown: boolean
   /** 배우자 별 없음 (여=무관·남=무재). 두 사람 모두면 전생부부 인연 +5. 성별 무관 */
   spouseStarNone: boolean
   /** 남자: 재성이 형·충·공망 모두 걸림 — 배우자 덕 없는 사주. 통변 참고용. 여자는 항상 false */
@@ -604,7 +606,13 @@ export function judgePerson(p: PersonInput): PersonJudge {
     p.gender === '여' && childCount > 0 && childWeak && inseongCount >= 2 && inseongRooted
   // 시지(時支) 형충 — 자녀 자리. 시지가 다른 지지와 충하는지
   const hourBr = byPillar['시주']?.branch ?? ''
-  const childHourChung = !!hourBr && p.saju.some(q =>
+  // ★2026-07-26 — 태어난 시를 모르는 경우.
+  //   화면(couple-result-new)은 시를 모르면 시주를 { stem:'?', branch:'?' } 로 채워 넘긴다.
+  //   여기에 방어가 없어서, 자녀 자리(시주)가 빈 채로 개수를 세고
+  //   "자녀 기운이 옅다" 는 판정이 나갈 수 있었다. 자식운은 본래 시주가 핵심 자리다.
+  //   → 모르는 것을 아는 척하지 않는다. 이 값을 통변까지 들고 가서 판정을 눅인다. (교훈 U)
+  const hourUnknown = !hourBr || hourBr === '?'
+  const childHourChung = !hourUnknown && p.saju.some(q =>
     q.pillar !== '시주' && CHUNG.some(([x, y]) => (x === hourBr && y === q.branch) || (y === hourBr && x === q.branch)))
 
   // ── 재성(관성) 약 + 비겁 강 → 의처증·의부증 소지 (233쪽 궁합 부정) ──
@@ -840,7 +848,7 @@ export function judgePerson(p: PersonInput): PersonJudge {
     spouseRooted, spouseIsolated, spouseGongmang,
     iljiSipsin, seasonRel, wonjinIlWol, chukChukSelf,
     spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance, gyeokgak, jaeWeakBigyeopStrong, jaengTuHap, siksangExcess, femaleSanggwanNoJae, insungHelps, bokEum, sanggwanJeonggwanNear, jaeDaBulhwa, spouseIpmyo, spouseIpmyoButRooted, siksangSuStrong, dohwaYeonWol, dohwaIlSi,
-    childName, childCount, childAbsent, childWeak, childStrong, childIsolated, childInseongPressed, childHourChung,
+    childName, childCount, childAbsent, childWeak, childStrong, childIsolated, childInseongPressed, childHourChung, hourUnknown,
     spouseStarNone, jaeHyeongChungGongmang, jaeRootedRich, jaeExcess, jaeIsGisin, jaeIsYongHee, jaePresent,
     gwiinChars, gwiinMine, gongmang,
   }
@@ -990,18 +998,26 @@ export function judgeCouple(
   //   격각은 한 사람 원국의 월지-일지로만 본다(아래 각자 배우자운에서 처리).
   //   일주 카드는 두 분 일주의 합·충만 본다.
 
+  // ★2026-07-26 — "(순화해서 전할 것)" 은 통변 엔진에게만 하는 말이다.
+  //   그런데 이 두 줄은 lines(카드 본문 배열)에 들어 있었고, judgeToText 가
+  //   lines 를 그대로 옮기는 탓에 [해설 복사] 버튼과 상담사 화면으로
+  //   내부 지시문이 새어 나갔다. 게다가 lines 는 v19c 에서 화면 표시를 껐으므로
+  //   고객이 본 적도 없는 문장이 복사됐다.
+  //   → 순화가 필요한 것은 reasons(통변 전용)로 옮기고, lines 에는 담지 않는다.
+  const iljuReasons: string[] = []
+
   // ── 두 사람 태어난 계절(월지) 궁합 — 연재쌤 정리 ──
   //   겨울↔여름 = 아주 좋다 / 봄↔봄·가을↔가을 = 부정적
   const monthRel = monthSeasonMatch(a.monthBranch, b.monthBranch)
   if (monthRel === '아주좋음') {
     iljuLines.push('한 분은 겨울, 한 분은 여름에 태어나 계절이 서로를 채워 주는 아주 좋은 자리예요.')
   } else if (monthRel === '부정') {
-    iljuLines.push('두 분 다 같은 계절(봄 또는 가을)에 태어나, 기운이 한쪽으로 몰려 서로 살펴 주어야 하는 자리예요. (순화해서 전할 것)')
+    iljuReasons.push('두 분 다 같은 계절(봄 또는 가을)에 태어나, 기운이 한쪽으로 몰려 서로 살펴 주어야 하는 자리 (순화해서 전할 것)')
   }
 
   // ── 쟁합·투합 — 부부 어느 쪽이든 있으면 궁합 별로 (연재쌤) ──
   if (a.jaengTuHap || b.jaengTuHap) {
-    iljuLines.push('한 분의 사주에 한 기운을 두고 두 기운이 다투는 쟁합·투합의 결이 있어, 마음이 한곳에 오롯이 모이기 어려운 면이 있는 자리예요. (순화해서 전할 것)')
+    iljuReasons.push('한 분의 사주에 한 기운을 두고 두 기운이 다투는 쟁합·투합의 결이 있어, 마음이 한곳에 오롯이 모이기 어려운 면이 있는 자리 (순화해서 전할 것)')
   }
 
   // ── ⑧ 일주 합/충 별점 (부부 서로를 놓고 봄, 방향 없음) ──
@@ -1022,6 +1038,7 @@ export function judgeCouple(
     title: '두 분 일주가 만나는 자리',
     stars: iljuStar,
     lines: iljuLines,
+    reasons: iljuReasons.length ? iljuReasons : undefined,
   })
 
   // ⑤⑥ 각자의 배우자운 (232쪽 5번 · 233쪽 · 일월 원진)
@@ -1226,6 +1243,19 @@ export function judgeCouple(
     for (const x of [a, b]) {
       const who = x.name
       const parts: string[] = []
+      // ★2026-07-26 — 시를 모르면 자녀 자리(시주)가 비어 있다.
+      //   개수·통근이 실제보다 적게 잡히므로 "옅다·없다"로 단정하지 않는다.
+      //   확실히 넉넉한 경우(2개 이상 + 뿌리)는 시주 없이도 성립하니 그대로 전한다.
+      if (x.hourUnknown) {
+        parts.push(`${who}님은 태어난 시를 몰라 자녀 자리(시주)를 비워 두고 보았습니다. 시를 알면 자녀 인연이 더 또렷해지니, 아래 이야기는 참고로만 전해 주세요.`)
+        if (x.childStrong) {
+          parts.push(`그런 가운데에도 자녀를 뜻하는 ${x.childName} 기운이 넉넉해 자녀 인연이 든든한 자리예요.`)
+        } else {
+          parts.push(`지금 아는 자리만으로는 자녀 기운의 넉넉함을 가늠하기 어려워, 좋다·옅다를 가르지 않고 두었습니다. (이 대목은 단정하지 말고 짧게만 전할 것)`)
+        }
+        childReasons.push(parts.join(' '))
+        continue
+      }
       if (x.childAbsent) {
         parts.push(`${who}님은 자녀를 뜻하는 ${x.childName} 기운이 원국에 옅어, 자녀 인연은 때를 기다려 천천히 무르익는 편이에요. (무관성·무식상은 오히려 그 기운이 드는 시기에 인연이 열리기도 합니다)`)
       } else if (x.childStrong) {
