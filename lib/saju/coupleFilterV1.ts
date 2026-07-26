@@ -83,6 +83,23 @@ const WONJIN: string[][] = [
 const GAN_HAP: string[][] = [
   ['甲', '己'], ['乙', '庚'], ['丙', '辛'], ['丁', '壬'], ['戊', '癸'],
 ]
+
+/** ★2026-07-25 — 쟁합(爭合)·투합(妬合) 판정. (연재쌤: 부부 어느 쪽이든 있으면 궁합 별로)
+ *   한 사주 원국의 네 천간 안에서, 한 글자를 두고 그 합 짝이 둘 이상이면 쟁합/투합.
+ *     예: 甲 둘 + 己 하나 → 己 하나를 甲 둘이 다툼 (쟁합)
+ *         己 둘 + 甲 하나 → 甲 하나를 己 둘이 다툼 (투합)
+ *   양간이 다투면 쟁합, 음간이 다투면 투합이나, 여기선 구분 없이 '있다/없다'만 본다.
+ *   (천간합 기준. 지지합 쟁합은 관법이 갈려 넣지 않는다.) */
+function hasJaengTuHap(stems: string[]): boolean {
+  const count: Record<string, number> = {}
+  for (const s of stems) count[s] = (count[s] ?? 0) + 1
+  for (const [x, y] of GAN_HAP) {
+    // x 가 둘 이상이고 그 합 짝 y 가 하나라도 있으면 → y 를 두고 x 들이 다툼
+    if ((count[x] ?? 0) >= 2 && (count[y] ?? 0) >= 1) return true
+    if ((count[y] ?? 0) >= 2 && (count[x] ?? 0) >= 1) return true
+  }
+  return false
+}
 /** 천간충 — 표준 4충 (甲庚·乙辛·丙壬·丁癸). 戊己土는 충 없음 */
 const GAN_CHUNG: string[][] = [
   ['甲', '庚'], ['乙', '辛'], ['丙', '壬'], ['丁', '癸'],
@@ -293,6 +310,8 @@ export interface PersonJudge {
   gyeokgak: boolean
   /** 재성(관성) 약 + 비겁 강 → 의처증·의부증 소지 (233쪽). 통변 참고용 */
   jaeWeakBigyeopStrong: boolean
+  /** 쟁합·투합 — 한 사주 천간에 있으면 궁합 별로. 통변 참고용 */
+  jaengTuHap: boolean
   /** 배우자 별 없음 (여=무관·남=무재). 두 사람 모두면 전생부부 인연 +5. 성별 무관 */
   spouseStarNone: boolean
   /** 남자: 재성이 형·충·공망 모두 걸림 — 배우자 덕 없는 사주. 통변 참고용. 여자는 항상 false */
@@ -402,6 +421,9 @@ export function judgePerson(p: PersonInput): PersonJudge {
   // ── 배우자 십신 (232쪽 5번) ──
   const spouseName: '재성' | '관성' = p.gender === '남' ? '재성' : '관성'
   const spouseEl: Ohaeng = p.gender === '남' ? CON[dayEl] : gwansungOf(dayEl)
+
+  // ── 쟁합·투합 — 한 사주 원국 천간에서. 있으면 궁합 별로 (연재쌤) ──
+  const jaengTuHap = hasJaengTuHap(p.saju.map(q => q.stem))
 
   // ── 재성(관성) 약 + 비겁 강 → 의처증·의부증 소지 (233쪽 궁합 부정) ──
   //   ⚠️ 기준(약/강 점수)은 연재쌤 검수 대상. 일단 아래로 잡았다.
@@ -602,7 +624,7 @@ export function judgePerson(p: PersonInput): PersonJudge {
     spouseName, spouseEl, spouseScore, spouseAbsent, spouseWhere,
     spouseRooted, spouseGongmang,
     iljiSipsin, seasonRel, wonjinIlWol, chukChukSelf,
-    spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance, gyeokgak, jaeWeakBigyeopStrong,
+    spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance, gyeokgak, jaeWeakBigyeopStrong, jaengTuHap,
     spouseStarNone, jaeHyeongChungGongmang, jaeRootedRich, jaeExcess, jaeIsGisin, jaeIsYongHee, jaePresent,
     gwiinChars, gwiinMine, gongmang,
   }
@@ -760,6 +782,11 @@ export function judgeCouple(
     iljuLines.push('두 분 다 같은 계절(봄 또는 가을)에 태어나, 기운이 한쪽으로 몰려 서로 살펴 주어야 하는 자리예요. (순화해서 전할 것)')
   }
 
+  // ── 쟁합·투합 — 부부 어느 쪽이든 있으면 궁합 별로 (연재쌤) ──
+  if (a.jaengTuHap || b.jaengTuHap) {
+    iljuLines.push('한 분의 사주에 한 기운을 두고 두 기운이 다투는 쟁합·투합의 결이 있어, 마음이 한곳에 오롯이 모이기 어려운 면이 있는 자리예요. (순화해서 전할 것)')
+  }
+
   // ── ⑧ 일주 합/충 별점 (부부 서로를 놓고 봄, 방향 없음) ──
   //   ★부부 공통. 대표님 지시: 일주가 합이면 +2, 충이면 -2.
   //     天合地合·天沖地沖은 합/충이 겹친 것이므로 위 조건에 자연히 포함된다.
@@ -770,6 +797,8 @@ export function judgeCouple(
   // 계절 궁합도 별점에 반영 (아주좋음 +1 / 부정 -1)
   if (monthRel === '아주좋음') iljuStar = Math.min(5, iljuStar + 1) as Stars
   else if (monthRel === '부정') iljuStar = Math.max(1, iljuStar - 1) as Stars
+  // 쟁합·투합 있으면 -1
+  if (a.jaengTuHap || b.jaengTuHap) iljuStar = Math.max(1, iljuStar - 1) as Stars
 
   cats.push({
     key: 'ilju',
