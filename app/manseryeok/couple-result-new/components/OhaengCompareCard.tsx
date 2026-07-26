@@ -21,6 +21,23 @@ const EL_TEXT: Record<Ohaeng, string> = {
   목: '#2e7d32', 화: '#c62828', 토: '#b8801a', 금: '#8a8a8a', 수: '#2b2b2b',
 }
 
+// ★2026-07-26 — 조사(과/와 · 이/가)를 받침으로 가른다.
+//
+//   [왜]
+//   전에는 `${aLabel}과 ${bLabel}이` 로 조사를 박아 놨다.
+//   기본값(남편·아내)일 때만 맞고, 보관함 다시보기처럼 이름이 들어가면
+//   "정준호과 이경아이" 처럼 어색해졌다.
+//   coupleFilterV1 에 같은 헬퍼가 있지만 그 파일 안에서만 쓰는 것이라
+//   여기서는 필요한 두 개만 짧게 둔다. (한자 이름은 들어오지 않는 자리다)
+function hasJong(word: string): boolean {
+  const c = (word || '').trim().slice(-1)
+  const code = c.charCodeAt(0)
+  if (isNaN(code) || code < 0xac00 || code > 0xd7a3) return false
+  return (code - 0xac00) % 28 !== 0
+}
+const wagwa = (w: string) => `${w}${hasJong(w) ? '과' : '와'}`
+const iga = (w: string) => `${w}${hasJong(w) ? '이' : '가'}`
+
 interface Props {
   /** A(남편/첫 번째) 오행 점수 { 목,화,토,금,수 } */
   aScores: Record<string, number>
@@ -47,7 +64,7 @@ export default function OhaengCompareCard({
   const autoComment =
     r.leaning === 'similar'
       ? `${EL_LABEL[r.mostSimilar].split(' ')[1]}의 기운으로 깊이 통하는, 결이 비슷한 두 분이에요. 서로 닮아 편안하면서도, 다른 자리는 살며시 채워주는 사이예요.`
-      : `서로 없는 기운을 채워주는 두 분이에요. ${aLabel}과 ${bLabel}이 각자 가진 기운으로 상대의 부족한 자리를 메워, 함께라서 더 단단해지는 사이예요.`
+      : `서로 없는 기운을 채워주는 두 분이에요. ${wagwa(aLabel)} ${iga(bLabel)} 각자 가진 기운으로 상대의 부족한 자리를 메워, 함께라서 더 단단해지는 사이예요.`
 
   const body = (
     <>

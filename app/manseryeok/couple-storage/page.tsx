@@ -26,11 +26,27 @@ const MODE_INFO: Record<CoupleMode, { title: string; accent: string; badge: stri
 }
 
 // 두 사람 정보 → 결과 화면 URL 쿼리
+//
+// ★2026-07-26 — 관계(relation)를 되살려 넘긴다.
+//
+//   [무엇이 틀렸었나]
+//   결과 화면은 person1·person2 의 relation 으로 부부/연인을 가른다
+//   (coupleKindOfPair). 그런데 보관함이 넘기는 SavedInputData 에는
+//   relation 이 없다(생년월일·성별·시각뿐). 그래서 다시보기로 들어가면
+//   관계가 빈 값이 되어 부부 기록도 '연인 궁합'으로 열렸다.
+//     · 제목이 "부부 궁합 결과" → "궁합 결과"
+//     · 오행 그래프 라벨이 "남편·아내" → 사람 이름
+//   판정 카드는 스냅샷을 그대로 그리므로 내용은 맞았지만, 겉이 달라 보였다.
+//
+//   [고친 방법]
+//   기록에 저장된 mode(couple/married)로 관계를 되살려 person2 에 붙인다.
+//   (관계는 보통 상대 쪽에만 붙는다. 본인은 '나'라 비어 있다)
 function toResultUrl(r: CoupleRecord): string {
-  const pack = (input: SavedInputData & { name?: string }, name: string) =>
-    encodeURIComponent(JSON.stringify({ ...input, name }))
+  const relation = r.mode === 'married' ? '배우자' : '연인'
+  const pack = (input: SavedInputData & { name?: string }, name: string, rel?: string) =>
+    encodeURIComponent(JSON.stringify({ ...input, name, ...(rel ? { relation: rel } : {}) }))
   return `/manseryeok/couple-result-new?recordId=${r.id}` +
-    `&person1=${pack(r.input1, r.name1)}&person2=${pack(r.input2, r.name2)}`
+    `&person1=${pack(r.input1, r.name1)}&person2=${pack(r.input2, r.name2, relation)}`
 }
 
 function CoupleStorageInner() {
