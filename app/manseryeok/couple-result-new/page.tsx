@@ -612,6 +612,7 @@ function CoupleResultView({
             { name: name1, gender: g1, saju: s1, solarMonth: c1.solarMonth, solarDay: c1.solarDay, hourBranch: c1.hourBranch },
             { name: name2, gender: g2, saju: s2, solarMonth: c2.solarMonth, solarDay: c2.solarDay, hourBranch: c2.hourBranch },
             (n) => spouseFortuneTitle(n, kind),
+            kind === 'married',   // ★부부 궁합일 때만 자식운 카드 표시
           ))
         }
       } catch { if (!cancelled) setCalcErr(true) }
@@ -673,6 +674,7 @@ function CoupleResultView({
       if ((t.includes('없는') && (t.includes('오행') || t.includes('기운'))) || t.includes('채워')) return 'ohaeng'
       if (t.includes('귀인')) return 'gwiin'
       if (t.includes('일주') || t.includes('만나는자리') || t.includes('만나는결')) return 'ilju'
+      if (t.includes('자식운') || t.includes('자녀운') || t.includes('자식') || t.includes('자녀')) return 'child'
       return null
     }
     const map: Record<string, string> = {}

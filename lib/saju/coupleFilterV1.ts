@@ -378,6 +378,15 @@ export interface PersonJudge {
   dohwaYeonWol: boolean
   /** 도화살이 일·시에 있음 → 부부 화합 (연재쌤). 통변 참고용 */
   dohwaIlSi: boolean
+  /** 자식운 (229쪽) — 남=관성, 여=식상 */
+  childName: string
+  childCount: number
+  childAbsent: boolean
+  childWeak: boolean
+  childStrong: boolean
+  childIsolated: boolean
+  childInseongPressed: boolean
+  childHourChung: boolean
   /** 배우자 별 없음 (여=무관·남=무재). 두 사람 모두면 전생부부 인연 +5. 성별 무관 */
   spouseStarNone: boolean
   /** 남자: 재성이 형·충·공망 모두 걸림 — 배우자 덕 없는 사주. 통변 참고용. 여자는 항상 false */
@@ -546,6 +555,57 @@ export function judgePerson(p: PersonInput): PersonJudge {
   const jaeElF = CON[dayEl]          // 재성 오행
   const insungElF = insungOf(dayEl)  // 인성 오행
   const insungHelps = (ohaeng[insungElF] ?? 0) >= 10
+
+  // ── 자식운 (229쪽) — 남자: 관성=자식 / 여자: 식상=자식 ──
+  //   원국으로 볼 수 있는 것만 판정한다. "운(대운·세운)"은 통변에서 시기로 안내.
+  //   ★2026-07-26 연재쌤 확정 — "약하다"의 기준:
+  //     · 개수: 자녀 오행(천간 + 지지 본기)이 1개 이하  또는
+  //     · 통근: 자녀 오행이 지지(지장간까지)에 뿌리가 없음
+  const childEl: Ohaeng = p.gender === '남' ? gwansungOf(dayEl) : GEN[dayEl]  // 남=관성, 여=식상
+  const childName = p.gender === '남' ? '관성(자녀)' : '식상(자녀)'
+  // 개수 — 천간 + 지지 본기 (기존 jaeCount 셈법과 동일)
+  let childCount = 0
+  for (const q of p.saju) {
+    if (STEM_EL[q.stem] === childEl) childCount++
+    if (BRANCH_EL[q.branch] === childEl) childCount++
+  }
+  // 통근 — 지지 본기 또는 지장간에 자녀 오행이 있으면 뿌리 있음
+  const childRooted = p.saju.some(q =>
+    BRANCH_EL[q.branch] === childEl || (HIDDEN[q.branch] ?? []).some(h => h && STEM_EL[h] === childEl))
+  const childAbsent = childCount === 0                       // 자녀 인연 자리가 아예 없음
+  const childWeak = childCount <= 1 || !childRooted          // 약함: 1개 이하 또는 뿌리 없음
+  const childStrong = childCount >= 2 && childRooted         // 넉넉: 2개 이상이면서 뿌리 있음
+  // 고립(孤立) — 연재쌤 확정. 자녀 오행이 다음을 다 만족하면 고립:
+  //   가. 그 글자 하나만 딱 있고 (childCount === 1)
+  //   나. 지지에 뿌리(같은 오행)가 없고 (!childRooted)
+  //   다. 생해 주는 오행도 원국에 없어(천간·지지본기·지장간 어디에도) 도움이 전혀 없음
+  //   → 홀로 떠 외톨이인 상태.
+  const childSaengEl = insungOf(childEl)
+  const childSaengExists = p.saju.some(q =>
+    STEM_EL[q.stem] === childSaengEl ||
+    BRANCH_EL[q.branch] === childSaengEl ||
+    (HIDDEN[q.branch] ?? []).some(h => h && STEM_EL[h] === childSaengEl))
+  const childIsolated = childCount === 1 && !childRooted && !childSaengExists
+  // 여자: 식상이 인성에 눌림 (인극식) — 연재쌤 기준(개수·통근)과 일관되게.
+  //   식상(자녀)이 약한데(개수 적거나 뿌리 없음) + 인성이 뿌리내려 강할 때,
+  //   강한 인성이 약한 식상을 눌러 자녀 기운을 극하는 결로 본다.
+  let inseongCount = 0
+  let inseongRooted = false
+  if (p.gender === '여') {
+    const inseongEl = insungOf(dayEl)
+    for (const q of p.saju) {
+      if (STEM_EL[q.stem] === inseongEl) inseongCount++
+      if (BRANCH_EL[q.branch] === inseongEl) inseongCount++
+    }
+    inseongRooted = p.saju.some(q =>
+      BRANCH_EL[q.branch] === inseongEl || (HIDDEN[q.branch] ?? []).some(h => h && STEM_EL[h] === inseongEl))
+  }
+  const childInseongPressed =
+    p.gender === '여' && childCount > 0 && childWeak && inseongCount >= 2 && inseongRooted
+  // 시지(時支) 형충 — 자녀 자리. 시지가 다른 지지와 충하는지
+  const hourBr = byPillar['시주']?.branch ?? ''
+  const childHourChung = !!hourBr && p.saju.some(q =>
+    q.pillar !== '시주' && CHUNG.some(([x, y]) => (x === hourBr && y === q.branch) || (y === hourBr && x === q.branch)))
 
   // ── 재성(관성) 약 + 비겁 강 → 의처증·의부증 소지 (233쪽 궁합 부정) ──
   //   ⚠️ 기준(약/강 점수)은 연재쌤 검수 대상. 일단 아래로 잡았다.
@@ -780,6 +840,7 @@ export function judgePerson(p: PersonInput): PersonJudge {
     spouseRooted, spouseIsolated, spouseGongmang,
     iljiSipsin, seasonRel, wonjinIlWol, chukChukSelf,
     spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance, gyeokgak, jaeWeakBigyeopStrong, jaengTuHap, siksangExcess, femaleSanggwanNoJae, insungHelps, bokEum, sanggwanJeonggwanNear, jaeDaBulhwa, spouseIpmyo, spouseIpmyoButRooted, siksangSuStrong, dohwaYeonWol, dohwaIlSi,
+    childName, childCount, childAbsent, childWeak, childStrong, childIsolated, childInseongPressed, childHourChung,
     spouseStarNone, jaeHyeongChungGongmang, jaeRootedRich, jaeExcess, jaeIsGisin, jaeIsYongHee, jaePresent,
     gwiinChars, gwiinMine, gongmang,
   }
@@ -795,6 +856,7 @@ export function judgeCouple(
   pa: PersonInput,
   pb: PersonInput,
   spouseTitle: (name: string) => string = (n) => `${n}님의 배우자운`,
+  showChild = false,   // ★부부 궁합일 때만 자식운 카드를 붙인다 (연인은 숨김)
 ): CoupleJudgeV1 {
   const a = judgePerson(pa)
   const b = judgePerson(pb)
@@ -1091,6 +1153,38 @@ export function judgeCouple(
       title: spouseTitle(x.name),
       lines,
       reasons,
+    })
+  }
+
+  // ── 자식운 카드 (229쪽) — 부부 궁합일 때만. 두 사람 통합 1개 ──
+  if (showChild) {
+    const childReasons: string[] = []
+    for (const x of [a, b]) {
+      const who = x.name
+      const parts: string[] = []
+      // 자녀 인연 자리 (남=관성, 여=식상)
+      if (x.childAbsent) {
+        parts.push(`${who}님은 자녀를 뜻하는 ${x.childName} 기운이 원국에 옅어, 자녀 인연은 때를 기다려 천천히 무르익는 편이에요. (무관성·무식상은 오히려 그 기운이 드는 시기에 인연이 열리기도 합니다)`)
+      } else if (x.childStrong) {
+        parts.push(`${who}님은 자녀를 뜻하는 ${x.childName} 기운이 넉넉해 자녀 인연이 든든한 자리예요. 다만 그 기운이 지나치게 겹치는 시기에는 마음을 조금 느슨히 두시면 좋습니다.`)
+      } else if (x.childWeak) {
+        parts.push(`${who}님은 자녀를 뜻하는 ${x.childName} 기운이 다소 옅으나, 정성으로 채워 가면 좋은 자리예요.`)
+      } else {
+        parts.push(`${who}님은 자녀를 뜻하는 ${x.childName} 기운이 알맞게 자리해, 자녀 인연이 순한 편이에요.`)
+      }
+      // 고립
+      if (x.childIsolated) parts.push(`다만 그 기운이 홀로 떠 외로운 편이라, 자녀와 마음을 자주 나누면 좋습니다. (순화해서 전할 것)`)
+      // 여자 인극식
+      if (x.childInseongPressed) parts.push(`인성의 기운이 강해 자녀 기운을 누르는 결이 있으니, 자녀에게 지나치게 간섭하기보다 지켜봐 주는 마음이 도움이 됩니다. (순화해서 전할 것)`)
+      // 시지 형충
+      if (x.childHourChung) parts.push(`자녀 자리(시지)가 충으로 흔들리는 결이 있어, 자녀 일에 마음의 여유를 두면 좋은 자리예요. (순화해서 전할 것)`)
+      childReasons.push(parts.join(' '))
+    }
+    cats.push({
+      key: 'child',
+      title: '두 분의 자식운',
+      lines: [],
+      reasons: childReasons,
     })
   }
 
