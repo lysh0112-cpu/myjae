@@ -13,7 +13,8 @@
  *   (대규모 안정: 공용부품 회귀 위험 없음 — 내사주그림과 같은 원칙)
  *
  * 점수 표기: C안 — 숫자 숨기고 "등급"만 노출(상처 방지 + 공유 훅).
- *   [TODO] 실제 등급은 calcCoupleScore(...).grade 로 교체(지금은 가짜 고정).
+ *   ★2026-07-26 — 옛 [TODO] "등급은 calcCoupleScore(...).grade 로 교체" 는 폐기.
+ *     점수제 자체를 버렸다. 등급 자리에는 심산 판정 배지(judge.badge)가 들어간다.
  *   [TODO] 폭죽 연출 등급별 강도 차등(다음 단계).
  *
  * 계산/통변/저장은 [TODO] 자리로 표시. 지금은 화면 흐름만 확정.
@@ -24,16 +25,23 @@ import { coupleKindOfPair, coupleTitleOf, spouseFortuneTitle, COUPLE_PRICE_KEY, 
 import { useRouter, useSearchParams } from 'next/navigation'
 import CoupleWonguk from './components/CoupleWonguk'
 import OhaengCompareCard from './components/OhaengCompareCard'
-import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
+// ★2026-07-26 — 옛 점수제(coupleScore.ts)를 걷어내면서, 거기 있던
+//   SajuPillarSimple 타입을 simsanOhaeng 의 Pillar 로 갈아탄다. (구조가 완전히 같다)
+import { calcSimsanOhaeng, type Pillar as SajuPillarSimple } from '@/lib/saju/simsanOhaeng'
 import CoupleJudgeCard from './components/CoupleJudgeCard'
 import CoupleFollowUp, { MAX_FOLLOWUPS, type FollowUp } from './components/CoupleFollowUp'
 import { judgeCouple, type CoupleJudgeV1, type Gender } from '@/lib/saju/coupleFilterV1'
 import { COUPLE_QUESTIONS, groupCoupleByCategory } from '@/lib/saju/coupleQuestions'
 import { MARRIED_QUESTIONS } from '@/lib/saju/marriedQuestions'
 import type { SajuQuestion } from '@/lib/saju/questions'
-import { calcCoupleScore, type SajuPillarSimple, type CoupleScoreResult, type SolarInfo } from '@/lib/saju/coupleScore'
-import { calcMarriedScore } from '@/lib/saju/marriedScore'
-import { getGongmang } from '@/lib/saju/gongmang'
+// ★2026-07-26 — 옛 점수제 삭제 (대표님 지시)
+//   coupleScore.ts(calcCoupleScore)·marriedScore.ts(calcMarriedScore)를 저장소에서 지웠다.
+//   [왜] 26부에서 화면 판정을 심산(judgeCouple)으로 완전히 바꿨는데도
+//        옛 100점 만점 계산이 뒤에서 계속 돌며 등급·점수를 만들어,
+//        보관함 배지·상담사 화면에 "87점 / 천생연분" 같은 다른 계산이 새어 나갔다.
+//        심산 궁합론에는 종합 점수식이 없다(238쪽). 두 벌을 굴릴 이유가 없다.
+//   [무엇으로 대체] 등급 문구는 judge.badge 하나로 통일한다.
+//   ⚠️ 되살릴 일은 없다고 보지만, 필요하면 git 이력에서 두 파일을 꺼내면 된다.
 import { calcHourPillar } from '@/lib/saju/hourPillar'
 import { toCoupleTongbyeonMaterial, type CouplePersonInput } from '@/lib/saju/toCoupleTongbyeonInput'
 import { buildCouplePrompt, type CoupleRelationKind } from '@/lib/saju/buildCouplePrompt'
@@ -325,18 +333,29 @@ function CoupleResultInner() {
 
 // 판정 결과를 상담사용 텍스트로 — 화면과 같은 내용을 글로 풀어 넘긴다.
 //   (자동 통변을 걷어낸 뒤, 상담사가 고객이 본 것을 알 수 있게 하려고 만들었다)
+//
+// ★2026-07-26 — 내부 지시문 걸러내기.
+//   판정 문구에는 통변 엔진에게만 하는 말("(순화해서 전할 것)")이 섞일 수 있다.
+//   근원(coupleFilterV1)에서 reasons 로 옮겼지만, 앞으로 누가 또 lines 에 적을 수 있으니
+//   내보내는 문 앞에서 한 번 더 훑어낸다. 두 겹으로 막는다.
+//   ⚠️ reasons 는 여기서 아예 쓰지 않는다 — 통변 전용 재료이고, 고객이 볼 글이 아니다.
+function stripInternalMarks(s: string): string {
+  return s.replace(/\s*\((?:순화해서 전할 것|순화)\)\s*/g, ' ').replace(/\s+/g, ' ').trim()
+}
 function judgeToText(j: CoupleJudgeV1): string {
   const star = (n?: number) => (n ? '★'.repeat(n) + '☆'.repeat(5 - n) : '')
   const lines: string[] = ['■ 궁합 판정', `한줄: ${j.badge}`, '']
   for (const c of j.cats) {
-    lines.push(`[${c.title}] ${star(c.stars)}`)
-    c.lines.forEach(l => lines.push(`  - ${l}`))
-    c.dual?.forEach(d => lines.push(`  - ${d.text} ${star(d.stars)}`))
+    // 본문도 별도 없는 카드(부부운·자식운)는 통변 본문에 내용이 담기므로 제목만 남기지 않는다.
+    if (!c.lines.length && !c.dual?.length && !c.stars) continue
+    lines.push(`[${c.title}] ${star(c.stars)}`.trim())
+    c.lines.forEach(l => lines.push(`  - ${stripInternalMarks(l)}`))
+    c.dual?.forEach(d => lines.push(`  - ${stripInternalMarks(d.text)} ${star(d.stars)}`))
     lines.push('')
   }
-  if (j.good.length) { lines.push('· 도움이 되는 자리'); j.good.forEach(t => lines.push(`  - ${t}`)) }
-  if (j.watch.length) { lines.push('· 살피면 좋은 자리'); j.watch.forEach(t => lines.push(`  - ${t}`)) }
-  if (j.note.length) { lines.push('· 알아두면 좋은 점'); j.note.forEach(t => lines.push(`  - ${t}`)) }
+  if (j.good.length) { lines.push('· 도움이 되는 자리'); j.good.forEach(t => lines.push(`  - ${stripInternalMarks(t)}`)) }
+  if (j.watch.length) { lines.push('· 살피면 좋은 자리'); j.watch.forEach(t => lines.push(`  - ${stripInternalMarks(t)}`)) }
+  if (j.note.length) { lines.push('· 알아두면 좋은 점'); j.note.forEach(t => lines.push(`  - ${stripInternalMarks(t)}`)) }
   return lines.join('\n')
 }
 
@@ -514,7 +533,7 @@ function CoupleResultView({
   // 해설 "서로 채워주는" 계산용 양력 정보 (c1/c2에서 보관)
   const [solar1, setSolar1] = useState<{ month: number; day: number; hourBranch: string | null } | null>(null)
   const [solar2, setSolar2] = useState<{ month: number; day: number; hourBranch: string | null } | null>(null)
-  const [score, setScore] = useState<CoupleScoreResult | null>(null)
+  // ★2026-07-26 — score(옛 100점 계산) 상태를 없앴다. 등급은 judge.badge 하나로 본다.
   const [calcErr, setCalcErr] = useState(false)
 
   // 통변
@@ -525,6 +544,11 @@ function CoupleResultView({
   //   ⚠️ 교훈 K — setSavedId 직후 state 를 읽으면 아직 null 이다.
   //      항상 지역변수/인자로 넘긴다.
   const [savedId, setSavedId] = useState<string | null>(recordId ?? null)
+  // ★2026-07-26 — savedId 를 ref 로도 들고 있는다. (교훈 K 의 확장)
+  //   통변은 30초 넘게 흐르는 async 함수라, 시작 시점의 state(그때는 null)를 붙들고 있다.
+  //   그 사이에 자동저장이 끝나 id 가 생겨도 통변 쪽 클로저는 못 본다.
+  //   그래서 "지금 값"을 읽을 통로가 따로 필요하다.
+  const savedIdRef = useRef<string | null>(recordId ?? null)
   const [followUps, setFollowUps] = useState<FollowUp[]>([])
   const [fuLoading, setFuLoading] = useState(false)
   const [fuStreaming, setFuStreaming] = useState<FollowUp | null>(null)
@@ -540,7 +564,9 @@ function CoupleResultView({
     getCoupleRecord(recordId).then(rec => {
       if (cancelled) return
       const snap = rec?.resultData as {
-        grade?: string; gradeDesc?: string
+        // ★grade 는 옛 기록 호환용으로만 읽는다 (판정이 없던 시절 배지 문구).
+        //   새 기록은 judge.badge 를 그대로 grade 에 넣어 저장한다.
+        grade?: string
         saju1?: SajuPillarSimple[]; saju2?: SajuPillarSimple[]; tongResult?: string
         ohaeng1?: Record<string, number>; ohaeng2?: Record<string, number>
         judge?: CoupleJudgeV1
@@ -551,17 +577,9 @@ function CoupleResultView({
         if (snap.ohaeng1 && snap.ohaeng2) { setOhaeng1(snap.ohaeng1); setOhaeng2(snap.ohaeng2) }
         if (snap.judge) setJudge(snap.judge)   // 옛 기록은 없다 → 판정 카드 생략
         if (snap.followUps) setFollowUps(snap.followUps)
-        // ⚠️ 스냅샷에는 등급 문구만 있고 details·항목점수는 없다.
-        //    `as` 로 타입만 속이면 details 를 훑는 곳에서 터진다.
-        //    (2026-07-24 자유 질문이 다시보기에서도 돌면서 실제로 터졌다 — 교훈 U)
-        //    빈 배열·0 을 채워 "없는 것"이 아니라 "비어 있는 것"으로 둔다.
-        setScore({
-          grade: snap.grade || '', gradeDesc: snap.gradeDesc || '',
-          details: [], totalScore: 0,
-          iljuScore: 0, yongsinScore: 0, yeonScore: 0, wolScore: 0,
-          gongmangScore: 0, ohaengScore: 0, johuScore: 0, sijuScore: 0,
-          hasSiju: false,
-        })
+        // ★2026-07-26 — 옛 점수제를 지우면서 setScore 복원 블록도 없앴다.
+        //   (빈 details·0점을 채워 넣어 "터지지 않게" 방어하던 코드였는데,
+        //    점수 자체가 사라져 방어할 대상이 없어졌다 — 교훈 U 의 부담 하나가 줄었다)
         setTongResult(snap.tongResult || '')
         ranRef.current = true       // 통변 재호출 막기
         setSaveState('saved')       // 이미 저장된 것
@@ -586,22 +604,8 @@ function CoupleResultView({
         setOhaeng2(calcSimsanOhaeng(s2, c2.solarMonth, c2.solarDay, c2.hourBranch, { forCouple: true }))
         setSolar1({ month: c1.solarMonth, day: c1.solarDay, hourBranch: c1.hourBranch })
         setSolar2({ month: c2.solarMonth, day: c2.solarDay, hourBranch: c2.hourBranch })
-        const ilju1 = s1.find(p => p.pillar === '일주')
-        const ilju2 = s2.find(p => p.pillar === '일주')
-        const gm1 = ilju1 ? getGongmang(ilju1.stem, ilju1.branch) : ['', ''] as [string, string]
-        const gm2 = ilju2 ? getGongmang(ilju2.stem, ilju2.branch) : ['', ''] as [string, string]
-        // 심산 오행 점수(월지 계절 치환)를 쓰도록 두 사람의 양력 날짜·시지를 넘긴다.
-        const dates: [SolarInfo, SolarInfo] = [
-          { month: c1.solarMonth, day: c1.solarDay, hourBranch: c1.hourBranch },
-          { month: c2.solarMonth, day: c2.solarDay, hourBranch: c2.hourBranch },
-        ]
-        // 부부(married)는 부부 전용 계산식(조후·월주 가중 + 원진/귀문/구응),
-        // 연인(couple)은 기존 계산식.
-        setScore(
-          mode === 'married'
-            ? calcMarriedScore(s1, s2, gm1, gm2, dates)
-            : calcCoupleScore(s1, s2, gm1, gm2, dates)
-        )
+        // ★2026-07-26 — 옛 점수 계산(공망 두 벌·양력 날짜 묶음·calcCoupleScore /
+        //   calcMarriedScore)을 전부 걷어냈다. 이제 이 화면의 유일한 판정은 아래 judgeCouple 이다.
         // ★2026-07-24 — 심산 기준 판정(점수·등급 없음).
         //   성별이 있어야 남=재성 / 여=관성으로 갈린다. 없으면 판정을 만들지 않는다.
         //   (조용히 기본값을 넣으면 남녀가 뒤바뀐 판정이 나온다 — 교훈 R·U)
@@ -637,7 +641,7 @@ function CoupleResultView({
   //   ⚠️ 되살리려면: 이 블록을 옛 runTongbyeon 으로 되돌리면 된다.
   //      통변을 그리는 화면 코드와 parseTCards 는 지우지 않았다.
   useEffect(() => {
-    if (recordId || !saju1 || !saju2 || !score || ranRef.current) return
+    if (recordId || !saju1 || !saju2 || ranRef.current) return
     // ⚠️ judge 가 들어오기 전에 저장하면 판정이 빈 채로 남아
     //    보관함 다시보기에서 판정 카드가 안 나온다.
     //    성별이 없어 judge 를 못 만드는 경우는 기다려도 안 오므로,
@@ -649,7 +653,7 @@ function CoupleResultView({
     ranRef.current = true
     handleSave('')
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saju1, saju2, score, judge, recordId])
+  }, [saju1, saju2, judge, recordId])
 
   const isMe1 = person1.isMe === 'true' || person1.isMe === '1'
   const { intro: tbIntro, cards: tbCards } = useMemo(
@@ -696,7 +700,7 @@ function CoupleResultView({
       //   순서 안전장치가 자식운 등에 잘못 넣지 않도록, 매칭 전에 outro로 보낸다.
       if (nm(c.title).includes('맺는말') || nm(c.title).includes('맺음말')) {
         if (matchedAny) outroParts.push(body)
-        else intro = (intro ? intro + '\\n\\n' : '') + body
+        else intro = (intro ? intro + '\n\n' : '') + body   // ★2026-07-26 '\\n\\n' 오타 고침
         continue
       }
       let k = keyOf(c.title)
@@ -726,6 +730,32 @@ function CoupleResultView({
     return { tongByKey: map, tongIntro: intro, tongOutro: outroParts.join('\n\n') }
   }, [tbCards, tbIntro, judge])
 
+
+  /** ★2026-07-26 — 완성된 통변을 보관함 행에 덮어쓴다.
+   *
+   *  저장 순서가 "판정 저장(insert) → 통변 완성(update)" 두 걸음이라,
+   *  통변이 끝나는 순간 아직 insert 가 안 끝났을 수도 있다(저장이 느릴 때).
+   *  그래서 id 가 생길 때까지 잠깐(최대 5초) 기다렸다가 덮어쓴다.
+   *  그래도 없으면 아직 아무것도 저장되지 않은 것이니 그때는 새로 저장한다.
+   *  ⚠️ 조용히 넘어가지 않는다 — 실패하면 로그를 남긴다. (교훈 U) */
+  async function persistTongbyeon(acc: string) {
+    if (!acc.trim()) return
+    let sid = savedIdRef.current
+    for (let i = 0; i < 10 && !sid; i++) {
+      await new Promise(r => setTimeout(r, 500))
+      sid = savedIdRef.current
+    }
+    if (sid) {
+      const r = await updateCoupleRecordResult(sid, buildSnapshot(acc, followUps))
+      if (!r.ok) console.error('[궁합] 통변 보관함 덮어쓰기 실패', r.message)
+      return
+    }
+    if (!recordId) {
+      // 아직 저장된 행이 없다 → 통변까지 담아 처음부터 저장한다.
+      await handleSave(acc)
+      if (!savedIdRef.current) console.error('[궁합] 통변을 보관함에 남기지 못했어요')
+    }
+  }
 
   // ★2026-07-25 — 새 궁합 통변 엔진 실행 (심산 판정 재료 → buildCouplePrompt → AI)
   //   옛 coupleScore 기반 통변을 완전히 대체한다. 결제 관문은 아직 붙이지 않았다(바로 시험용).
@@ -778,8 +808,21 @@ function CoupleResultView({
           } catch (e) { console.error('tongbyeon parse', e) }
         }
       }
-      // 통변이 끝나면 보관함에 저장 (다시보기용)
-      if (!recordId) handleSave(acc)
+      // ★2026-07-26 — 통변을 보관함에 남긴다. (v19c 까지 여기가 조용히 실패하고 있었다)
+      //
+      //   [무엇이 틀렸었나]
+      //   전에는 `if (!recordId) handleSave(acc)` 였다. 그런데 판정(judge)이 통변보다
+      //   먼저 나오므로 자동저장 effect 가 이미 handleSave('') 로 "빈 통변"을 저장해 둔다.
+      //   그 뒤에 이 줄이 handleSave(acc) 를 불러도, handleSave 첫머리의
+      //   `if (saveState !== 'idle' && saveState !== 'failed') return` 에 걸려 되돌아간다.
+      //   → 통변이 끝나도 보관함에는 tongResult: '' 가 남고,
+      //     다시보기(recordId)로 들어오면 통변을 다시 돌리지도 않으므로(아래 effect)
+      //     돈 들여 뽑은 풀이가 영구히 사라졌다. 오류도 안 났다. (교훈 U)
+      //
+      //   [고친 방법]
+      //   이미 저장된 행이 있으면 새로 저장(insert)하지 말고 그 행을 덮어쓴다(update).
+      //   savedId 는 state 라 이 async 함수의 클로저가 낡았을 수 있어 ref 로 읽는다.
+      await persistTongbyeon(acc)
     } catch (e) {
       console.error('궁합 통변 오류', e)
       setTongResult('풀이를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
@@ -800,11 +843,35 @@ function CoupleResultView({
   }, [saju1, saju2, judge, recordId])
 
 
+  // ★2026-07-26 — 스냅샷 만드는 자리를 하나로 모았다.
+  //
+  //   [왜]
+  //   전에는 handleSave 와 askFollowUp 이 각각 스냅샷을 손으로 지었다.
+  //   그래서 자유 질문으로 덮어쓸 때 questionIds·directQuestion 이 조용히 사라졌다.
+  //   (다시보기에서 "고객이 무엇을 물었나"가 비어 보이던 원인)
+  //   통변 저장까지 세 곳이 되니 더는 손으로 짤 수 없다. 한 함수로 묶는다.
+  function buildSnapshot(tong: string, fups: FollowUp[]) {
+    return {
+      // ★grade 는 보관함 목록 배지로 쓰인다. 심산 판정 문구(judge.badge)를 넣는다.
+      //   ★2026-07-26 — 판정이 없을 때 물러설 옛 등급(score.grade)이 사라졌으므로
+      //     빈 문자열로 둔다. 보관함 목록은 배지가 비면 그냥 안 그린다.
+      //     (성별을 안 넣으면 판정 자체가 없다 — 없는 등급을 지어내지 않는다. 교훈 U)
+      grade: judge?.badge || '',
+      judge,              // 심산 판정 — 다시보기 시 재계산 없이 그대로 그린다
+      saju1, saju2,
+      ohaeng1, ohaeng2,   // 오행 비교 카드용 (다시보기 시 재계산 없이 사용)
+      tongResult: tong,
+      followUps: fups,
+      questionIds: pickedQuestions.filter(q => !q.id.startsWith('direct_')).map(q => q.id),
+      directQuestion: directQ || null,
+    }
+  }
+
   // 보관함에 저장 (두 사람 + 등급 + 결과 스냅샷)
-  //   ★2026-07-21 2차: 자동 저장. 통변이 끝나면 스스로 호출된다.
+  //   ★2026-07-21 2차: 자동 저장. 판정이 나오는 즉시 한 번 저장한다.
   //     tongOverride 는 setTongResult 반영 전이라 인자로 받는다.
   async function handleSave(tongOverride?: string) {
-    if (!saju1 || !saju2 || !score) return
+    if (!saju1 || !saju2) return
     if (saveState !== 'idle' && saveState !== 'failed') return
     setSaveState('saving')
     // person raw → SavedInputData 형태로 정리
@@ -813,31 +880,16 @@ function CoupleResultView({
       year: p.year || '', month: p.month || '', day: p.day || '',
       leapMonth: p.leapMonth || '0', hour: p.hour || '모름', name: p.name || '',
     })
-    // 결과 스냅샷 — 다시보기용(등급·명식·통변). grade는 목록 표시에도 씀.
-    const snapshot = {
-      // ★grade 는 보관함 목록 배지로 쓰인다. 점수제를 버렸으므로
-      //   심산 판정에서 뽑은 상태 문구(judge.badge)를 넣는다.
-      //   판정이 없으면(성별 미입력 등) 옛 등급으로 물러선다.
-      grade: judge?.badge || score.grade,
-      gradeDesc: score.gradeDesc,
-      judge,              // 심산 판정 — 다시보기 시 재계산 없이 그대로 그린다
-      saju1, saju2,
-      ohaeng1, ohaeng2,   // 오행 비교 카드용 (다시보기 시 재계산 없이 사용)
-      tongResult: tongOverride ?? tongResult ?? '',
-      followUps,
-      questionIds: pickedQuestions.filter(q => !q.id.startsWith('direct_')).map(q => q.id),
-      directQuestion: directQ || null,
-    }
     const res = await saveCoupleRecord({
       mode,
       name1, name2,
       relation: mode === 'married' ? '부부' : '연인',
-      grade: judge?.badge || score.grade,
+      grade: judge?.badge || '',
       input1: toInput(person1),
       input2: toInput(person2),
-      resultData: snapshot,
+      resultData: buildSnapshot(tongOverride ?? tongResult ?? '', followUps),
     })
-    if (res.ok && res.id) setSavedId(res.id)
+    if (res.ok && res.id) { setSavedId(res.id); savedIdRef.current = res.id }
     setSaveState(res.ok ? 'saved' : 'failed')
   }
 
@@ -855,7 +907,6 @@ function CoupleResultView({
     try {
       // ★고객이 화면에서 본 판정을 프롬프트에 함께 넣는다.
       //   안 넣으면 AI 가 화면과 다른 이야기를 할 수 있다.
-      //   (다시보기에서는 score.details 가 비어 있어 근거가 판정뿐이기도 하다)
       // ★2026-07-25 — 자유 질문도 새 심산 통변 엔진으로. 옛 buildCoupleTongbyeonPrompt 차단.
       const material = toCoupleTongbyeonMaterial(
         toCoupleInput(person1, saju1, solar1),
@@ -879,17 +930,25 @@ function CoupleResultView({
       } else {
         const reader = res.body.getReader()
         const decoder = new TextDecoder()
+        // ★2026-07-26 — 교훈 AG 를 여기에도 적용한다.
+        //   SSE 청크는 줄 경계에서 안 끊긴다. buf 없이 청크마다 split('\n') 하면
+        //   줄 중간에 잘린 delta 가 통째로 버려져, 답이 길수록 뒷부분이 사라진다.
+        //   (총평 통변에서 실제로 터졌던 그 버그다. 자유 질문 쪽만 안 고쳐져 있었다)
+        let fuBuf = ''
         for (;;) {
           const { done, value } = await reader.read()
           if (done) break
-          for (const line of decoder.decode(value).split('\n')) {
+          fuBuf += decoder.decode(value, { stream: true })
+          const lines = fuBuf.split('\n')
+          fuBuf = lines.pop() ?? ''   // 마지막(미완성)은 다음 청크로
+          for (const line of lines) {
             if (!line.startsWith('data: ')) continue
             const d = line.slice(6)
             if (d === '[DONE]') continue
             try {
               const parsed = JSON.parse(d)
               if (parsed.text) { acc += parsed.text; setFuStreaming({ q: question, a: acc }) }
-            } catch {}
+            } catch (e) { console.error('[followUp] SSE 파싱', e) }
           }
         }
       }
@@ -904,15 +963,12 @@ function CoupleResultView({
       setFuStreaming(null)
       setFuLoading(false)
       // 보관함에 덮어쓰기 — next(지역변수)를 넘긴다. state 는 아직 반영 전이다.
-      if (savedId) {
-        await updateCoupleRecordResult(savedId, {
-          grade: judge?.badge || score?.grade || "",
-          gradeDesc: score?.gradeDesc || "",
-          judge,
-          saju1, saju2, ohaeng1, ohaeng2,
-          tongResult: tongResult ?? '',
-          followUps: next,
-        })
+      //   ★2026-07-26 — 손으로 짜던 스냅샷을 buildSnapshot 으로 바꿨다.
+      //     전에는 questionIds·directQuestion 이 여기서 조용히 지워졌다.
+      const sid = savedIdRef.current || savedId
+      if (sid) {
+        const r = await updateCoupleRecordResult(sid, buildSnapshot(tongResult ?? '', next))
+        if (!r.ok) console.error('[궁합] 자유질문 저장 실패', r.message)
       }
     }
   }
@@ -1051,9 +1107,11 @@ function CoupleResultView({
               priceKey={COUPLE_PRICE_KEY}
               mode={mode}
               /* ★고객이 본 궁합 결과를 상담사에게 넘긴다 (2026-07-21)
-                 couples 테이블(점수·두 사람 명식) + ai_analysis(통변) 두 벌을 담는다. */
+                 couples 테이블(두 사람 명식·판정 배지) + ai_analysis(통변) 두 벌을 담는다.
+                 ★2026-07-26 — 점수제를 지우면서 totalScore·scoreDetails 를 빼고
+                   판정 배지(judge.badge)만 넘긴다. 상담사 화면은 값이 없으면
+                   그 줄을 안 그리도록 이미 방어돼 있다(CustomerAiAnalysis). */
               payload={() => {
-                if (!score) return null
                 // ★2026-07-24 — 자동 총평을 걷어내 tongResult 가 비었다.
                 //   상담사가 "고객이 무엇을 보고 왔는지" 알아야 하므로
                 //   판정 결과와 이미 받은 문답을 글로 풀어 넘긴다.
@@ -1072,10 +1130,7 @@ function CoupleResultView({
                     person_b_birth: person2,
                     mode,
                     result: {
-                      totalScore: score.totalScore,
-                      grade: score.grade,
-                      gradeDesc: score.gradeDesc,
-                      scoreDetails: score as unknown as Record<string, number | boolean | undefined>,
+                      grade: judge?.badge || '',
                     },
                   },
                 }
@@ -1087,7 +1142,7 @@ function CoupleResultView({
         {/* 커플 채팅 초대 — 연인 궁합에서만 (부부 제외)
             ⚠ 2026-07-19: 커플채팅 당분간 닫음. 되살리려면 위 COUPLE_CHAT_OPEN 을 true 로. */}
         {COUPLE_CHAT_OPEN && mode !== 'married' && (
-          <button onClick={() => onInviteChat(score?.grade)}
+          <button onClick={() => onInviteChat(judge?.badge)}
             style={{
               width: '100%', marginTop: 10, borderRadius: 11, padding: 13,
               background: '#fbeaf0', border: '0.5px solid #f0c9d8',
