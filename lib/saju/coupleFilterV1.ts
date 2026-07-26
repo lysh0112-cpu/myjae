@@ -222,6 +222,15 @@ function monthSeasonMatch(monthA: string, monthB: string): MonthSeasonRel {
 }
 
 /** 丑丑인가 — 232쪽 여자 항목 "丑丑은 이혼 가능성이 크다" (연재쌤 확정 ②: 未未·午午 등은 해당 없음) */
+/** ★2026-07-26 연재쌤 — 입묘 완화(일간 통근) 판정용 건록·양인.
+ *   건록(建祿): 일간의 정록 지지. 양인(羊刃): 양간의 제왕 지지(음간은 통상 안 봄). */
+const GEONROK: Record<string, string> = {
+  甲: '寅', 乙: '卯', 丙: '巳', 丁: '午', 戊: '巳', 己: '午', 庚: '申', 辛: '酉', 壬: '亥', 癸: '子',
+}
+const YANGIN: Record<string, string> = {
+  甲: '卯', 丙: '午', 戊: '午', 庚: '酉', 壬: '子',
+}
+
 const isChukChuk = (monthBranch: string, dayBranch: string): boolean =>
   monthBranch === '丑' && dayBranch === '丑'
 
@@ -349,6 +358,8 @@ export interface PersonJudge {
   jaeDaBulhwa: boolean
   /** 배우자 입묘 — 여자 관성입묘 / 남자 재성입묘 (연재쌤 친필표). 통변 참고용 */
   spouseIpmyo: boolean
+  /** 입묘이나 일간이 통근해 완화됨 (연재쌤: 강하게 입묘되면 피해 적음). 통변 참고용 */
+  spouseIpmyoButRooted: boolean
   /** 배우자 별 없음 (여=무관·남=무재). 두 사람 모두면 전생부부 인연 +5. 성별 무관 */
   spouseStarNone: boolean
   /** 남자: 재성이 형·충·공망 모두 걸림 — 배우자 덕 없는 사주. 통변 참고용. 여자는 항상 false */
@@ -468,7 +479,24 @@ export function judgePerson(p: PersonInput): PersonJudge {
   //   ※ 관성입묘 '남자'(자식 인연 박함)는 배우자운이 아니라 궁합에선 제외.
   const gwanIpmyo = hasGanjiInYearMonthHour(p.saju, GWANSUNG_IPMYO[dayEl] ?? [])
   const jaeIpmyo = hasGanjiInYearMonthHour(p.saju, JAESUNG_IPMYO[dayEl] ?? [])
-  const spouseIpmyo = p.gender === '여' ? gwanIpmyo : jaeIpmyo
+  const spouseIpmyoRaw = p.gender === '여' ? gwanIpmyo : jaeIpmyo
+
+  // 입묘 완화 — 연재쌤: "일간(본인)이 지지에 뿌리가 튼튼하면 입묘 피해가 적다"
+  //   튼튼한 경우 = 다음 중 하나:
+  //     ① 일지 간여지동 (일간과 일지가 같은 오행. 甲寅·乙卯 등)
+  //     ② 월지에 건록 또는 양인
+  //     ③ 다른 지지에라도 같은 오행 뿌리 (본기 또는 지장간)
+  const ganyeojidong = !!dayBranch && BRANCH_EL[dayBranch] === dayEl
+  const monthBr = wol?.branch ?? ''
+  const geonrokYangin = monthBr === GEONROK[dayStem] || monthBr === YANGIN[dayStem]
+  const otherRoot = p.saju.some(q => {
+    if (BRANCH_EL[q.branch] === dayEl) return true
+    return (HIDDEN[q.branch] ?? []).some(h => h && STEM_EL[h] === dayEl)
+  })
+  const dayRooted = ganyeojidong || geonrokYangin || otherRoot
+  // 입묘돼도 일간이 튼튼하면(통근) 완화 — 피해 적음
+  const spouseIpmyo = spouseIpmyoRaw && !dayRooted   // 뿌리 튼튼하면 입묘 판정 해제
+  const spouseIpmyoButRooted = spouseIpmyoRaw && dayRooted   // 입묘지만 뿌리로 완화됨
 
   // ── 식상(食傷) 태과 — 남녀 공통. 너무 강하면 부정 (233쪽 "식상 강하면 음란") ──
   //   식상 = 일간이 생(生)하는 오행. simsanOhaeng 100점 기준.
@@ -704,7 +732,7 @@ export function judgePerson(p: PersonInput): PersonJudge {
     spouseName, spouseEl, spouseScore, spouseAbsent, spouseWhere,
     spouseRooted, spouseGongmang,
     iljiSipsin, seasonRel, wonjinIlWol, chukChukSelf,
-    spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance, gyeokgak, jaeWeakBigyeopStrong, jaengTuHap, siksangExcess, femaleSanggwanNoJae, insungHelps, bokEum, sanggwanJeonggwanNear, jaeDaBulhwa, spouseIpmyo,
+    spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance, gyeokgak, jaeWeakBigyeopStrong, jaengTuHap, siksangExcess, femaleSanggwanNoJae, insungHelps, bokEum, sanggwanJeonggwanNear, jaeDaBulhwa, spouseIpmyo, spouseIpmyoButRooted,
     spouseStarNone, jaeHyeongChungGongmang, jaeRootedRich, jaeExcess, jaeIsGisin, jaeIsYongHee, jaePresent,
     gwiinChars, gwiinMine, gongmang,
   }
@@ -989,6 +1017,7 @@ export function judgeCouple(
     if (x.sanggwanJeonggwanNear) reasons.push('상관과 정관이 가까이 있어, 규범과 자유로움이 부딪히기 쉬운 만큼 서로의 방식을 존중하는 마음이 필요한 자리 (순화해서 전할 것)')
     if (x.jaeDaBulhwa) reasons.push('재물의 기운은 넉넉하나 그것을 감당할 기운도 강해, 바깥일에 마음이 쏠리면 집안이 소홀해지기 쉬우니 균형을 살피면 좋은 자리 (순화해서 전할 것)')
     if (x.spouseIpmyo) reasons.push(`${x.spouseName}(배우자 기운)이 창고에 드는 입묘의 결이 있어, 배우자와의 인연을 더 살뜰히 가꾸고 건강을 함께 챙기면 좋은 자리 (순화해서 전할 것)`)
+    if (x.spouseIpmyoButRooted) reasons.push(`${x.spouseName}(배우자 기운)에 입묘의 결이 있으나, 본바탕(일간)이 지지에 튼튼히 뿌리내려 그 기운을 든든히 받치므로 크게 걱정하지 않아도 되는 자리`)
 
     // ── 전생부부 (⑨) ──
     if (jeonsaengBubu) reasons.push('두 사람 모두 배우자 별이 비어(남 무재·여 무관) 전생부부 인연 → 아주 귀한 자리, 많이 양보하고 가족 위해 마음 내라는 업보')
