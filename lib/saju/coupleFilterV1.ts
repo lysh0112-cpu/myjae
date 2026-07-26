@@ -315,6 +315,8 @@ export interface PersonJudge {
   spouseWhere: string[]
   /** 배우자 십신이 통근했는가 (233쪽) */
   spouseRooted: boolean
+  /** 배우자 오행이 고립됨 → 부정 (233쪽). 통변 참고용 */
+  spouseIsolated: boolean
   /** 배우자 십신이 공망에 걸렸는가 (233쪽 형충공망) */
   spouseGongmang: boolean
   /** 일지 십신 — 234·235쪽 해설 열쇠 */
@@ -543,6 +545,14 @@ export function judgePerson(p: PersonInput): PersonJudge {
     q => (HIDDEN[q.branch] ?? []).some(h => h && STEM_EL[h] === spouseEl),
   )
 
+  // ── 배우자 고립 — 재성·관성이 고립되면 부정 (233쪽). ⚠️ 연재쌤 검수 대상 ──
+  //   원문 "고립되거나 통근하지 못한 경우" — 고립과 통근못함은 별개(OR).
+  //   고립: 배우자 오행이 약하게 있으면서(점수 ≤10), 그 오행을 생(生)해 주는
+  //   기운도 옅으면(생하는 오행 ≤10) 홀로 떠 외로운 상태로 본다.
+  const spouseSaengEl = insungOf(spouseEl)   // 배우자 오행을 생하는 오행
+  const spouseIsolated =
+    spouseScore > 0 && spouseScore <= 10 && (ohaeng[spouseSaengEl] ?? 0) <= 10
+
   // ── ⑪ 남자: 재성이 뿌리내리면 배우자 재물운이 좋다 (233쪽) ──
   //   ★남자만. 통변 참고자료로만 (별점 안 건드림).
   //     뿌리 판정은 위 spouseRooted 와 같다(지장간까지). 남자일 때만 "재물운" 의미를 붙인다.
@@ -573,8 +583,10 @@ export function judgePerson(p: PersonInput): PersonJudge {
   //     남자에게 재성은 재물·배우자(아내)·부친을 함께 뜻하므로,
   //     재성이 있으면 이 세 방면의 기운이 갖춰져 있다고 본다.
   const jaePresent = p.gender === '남' && jaeCount >= 1
-  // ⑧ 재다신약(재성 과다) + 비겁 강 → 돈은 벌지만 부부 불화 (비겁=일간 오행 ≥25)
-  const jaeDaBulhwa = jaeExcess && p.gender === '남' && (ohaeng[dayEl] ?? 0) >= 25
+  // ⑧ 남자 재다신약 → 비겁운(대운·세운)이 드는 시기에 돈은 벌지만 부부 불화 (233쪽)
+  //   ★"비겁운"은 대운·세운(시기)이라 궁합(원국)에선 못 본다. 재다신약 성향만 잡고,
+  //     멘트에서 "비겁운이 드는 시기에는~"으로 안내한다. (연재쌤 원문 취지)
+  const jaeDaBulhwa = jaeExcess && p.gender === '남'
 
 
   // 공망 (233쪽 재성 형충공망)
@@ -730,7 +742,7 @@ export function judgePerson(p: PersonInput): PersonJudge {
     dayStem, dayBranch, monthBranch,
     ohaeng, season, useJohu, needEl, needFrom, eokbu,
     spouseName, spouseEl, spouseScore, spouseAbsent, spouseWhere,
-    spouseRooted, spouseGongmang,
+    spouseRooted, spouseIsolated, spouseGongmang,
     iljiSipsin, seasonRel, wonjinIlWol, chukChukSelf,
     spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance, gyeokgak, jaeWeakBigyeopStrong, jaengTuHap, siksangExcess, femaleSanggwanNoJae, insungHelps, bokEum, sanggwanJeonggwanNear, jaeDaBulhwa, spouseIpmyo, spouseIpmyoButRooted,
     spouseStarNone, jaeHyeongChungGongmang, jaeRootedRich, jaeExcess, jaeIsGisin, jaeIsYongHee, jaePresent,
@@ -1014,8 +1026,9 @@ export function judgeCouple(
       else reasons.push('배우자 자리가 상관인데 재성이 없어, 마음이 곧고 표현이 강한 만큼 배우자를 너그럽게 품는 연습이 도움이 되는 자리 (순화해서 전할 것)')
     }
     if (x.bokEum) reasons.push('태어난 해와 날의 기둥이 같은 복음(伏吟)이라, 같은 자리를 두 번 밟는 결이 있어 마음의 매듭을 그때그때 풀어 가는 것이 좋은 자리 (순화해서 전할 것)')
-    if (x.sanggwanJeonggwanNear) reasons.push('상관과 정관이 가까이 있어, 규범과 자유로움이 부딪히기 쉬운 만큼 서로의 방식을 존중하는 마음이 필요한 자리 (순화해서 전할 것)')
-    if (x.jaeDaBulhwa) reasons.push('재물의 기운은 넉넉하나 그것을 감당할 기운도 강해, 바깥일에 마음이 쏠리면 집안이 소홀해지기 쉬우니 균형을 살피면 좋은 자리 (순화해서 전할 것)')
+    if (x.sanggwanJeonggwanNear) reasons.push('상관과 정관이 가까이 있어(또는 그런 기운이 드는 시기가 오면), 규범과 자유로움이 부딪히기 쉬운 만큼 서로의 방식을 존중하는 마음이 필요한 자리 (순화해서 전할 것)')
+    if (x.spouseIsolated) reasons.push(`${x.spouseName}(배우자 기운)이 홀로 떠 생해 주는 기운도 옅어 조금 외로운 자리이니, 서로 곁을 지켜 주고 마음을 자주 나누면 좋은 자리 (순화해서 전할 것)`)
+    if (x.jaeDaBulhwa) reasons.push('재물의 기운이 넉넉한 재다신약이라, 특히 비겁운(같은 기운이 드는 시기)이 오면 재물은 늘어도 바깥일에 마음이 쏠려 집안이 소홀해지기 쉬우니, 그런 때일수록 부부가 서로를 살피면 좋은 자리 (순화해서 전할 것)')
     if (x.spouseIpmyo) reasons.push(`${x.spouseName}(배우자 기운)이 창고에 드는 입묘의 결이 있어, 배우자와의 인연을 더 살뜰히 가꾸고 건강을 함께 챙기면 좋은 자리 (순화해서 전할 것)`)
     if (x.spouseIpmyoButRooted) reasons.push(`${x.spouseName}(배우자 기운)에 입묘의 결이 있으나, 본바탕(일간)이 지지에 튼튼히 뿌리내려 그 기운을 든든히 받치므로 크게 걱정하지 않아도 되는 자리`)
 
