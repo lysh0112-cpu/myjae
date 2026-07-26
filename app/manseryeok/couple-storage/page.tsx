@@ -39,10 +39,16 @@ const MODE_INFO: Record<CoupleMode, { title: string; accent: string; badge: stri
 //   판정 카드는 스냅샷을 그대로 그리므로 내용은 맞았지만, 겉이 달라 보였다.
 //
 //   [고친 방법]
-//   기록에 저장된 mode(couple/married)로 관계를 되살려 person2 에 붙인다.
-//   (관계는 보통 상대 쪽에만 붙는다. 본인은 '나'라 비어 있다)
+//   ⚠️ r.mode 로 가르면 안 된다. 2026-07-24 에 service_type 을 'couple' 하나로
+//      통일했기 때문에(coupleRecords.ts 90줄), 부부 기록도 mode 가 'couple' 로 읽힌다.
+//      input_data 안의 blob.mode 에는 'married' 가 제대로 들어 있지만,
+//      읽는 쪽이 service_type 을 우선하므로 그 값은 쓰이지 않는다.
+//      실제로 부부/연인을 갈라 남아 있는 값은 relation('부부'/'연인') 이다.
+//      (2026-07-26 1차 수정에서 r.mode 를 봤다가 그대로 연인으로 열렸다)
+//   옛 기록(service_type='married')을 위해 mode 도 함께 본다.
 function toResultUrl(r: CoupleRecord): string {
-  const relation = r.mode === 'married' ? '배우자' : '연인'
+  const isMarried = r.relation === '부부' || r.mode === 'married'
+  const relation = isMarried ? '배우자' : '연인'
   const pack = (input: SavedInputData & { name?: string }, name: string, rel?: string) =>
     encodeURIComponent(JSON.stringify({ ...input, name, ...(rel ? { relation: rel } : {}) }))
   return `/manseryeok/couple-result-new?recordId=${r.id}` +
