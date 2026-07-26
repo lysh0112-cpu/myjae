@@ -1124,15 +1124,15 @@ export function judgeCouple(
 
     // ── 여자 규칙 (①~⑤) — 통변용 사실 문구 ──
     if (chukChuk) reasons.push('여자 본인 월지·일지가 모두 丑 → 이혼 가능성이 큰 자리이니 각별히 살펴야 함 (순화해서 전할 것)')
-    if (x.spouseIsYongHee) reasons.push('여자 관성이 용신·희신 → 귀한 남편을 만나는 자리, 남편이 복이 됨')
-    if (x.spouseIsGisin) reasons.push('여자 관성이 기신 → 부부가 많이 다툴 소지 (순화해서 전할 것)')
+    if (x.spouseIsYongHee) reasons.push('여자 관성이 용신·희신 → 귀한 인연을 만나는 자리, 그 인연이 복이 됨')
+    if (x.spouseIsGisin) reasons.push('여자 관성이 기신 → 두 분이 많이 다툴 소지 (순화해서 전할 것)')
     if (x.gwansalHonjap) reasons.push('여자 관살혼잡(정관·편관이 섞여 각 2개 이상) → 여자 사주로서 불리한 자리, 배우자 인연이 복잡하고 안정되기 어려움 (순화해서 전할 것)')
-    if (x.muGwan && !jeonsaengBubu) reasons.push('여자 무관(관성 없음) → 남편 덕이 약할 수 있으니 인연을 스스로 가꿔야 하는 자리 (순화해서 전할 것)')
+    if (x.muGwan && !jeonsaengBubu) reasons.push('여자 무관(관성 없음) → 배우자 덕이 약할 수 있으니 인연을 스스로 가꿔야 하는 자리 (순화해서 전할 것)')
 
     // ── 남녀 공통 (⑥⑦) ──
     if (x.gwanIsCheonEul) reasons.push('배우자 별이 천을귀인 → 배우자 덕이 두터운 자리')
     if (x.johuBalance) reasons.push('월지·일지가 냉·온으로 어우러져 조후가 균형 잡힌 좋은 자리')
-    if (x.gyeokgak) reasons.push('월지와 일지가 한 칸 건너뛴 격각이라, 부부 사이에 마음의 결이 어긋나기 쉬운 자리 (순화해서 전할 것)')
+    if (x.gyeokgak) reasons.push('월지와 일지가 한 칸 건너뛴 격각이라, 두 분 사이에 마음의 결이 어긋나기 쉬운 자리 (순화해서 전할 것)')
     if (x.jaeWeakBigyeopStrong) reasons.push(`${x.spouseName === '재성' ? '재성' : '관성'}은 옅고 비겁(같은 기운)이 강해, 배우자를 향한 마음이 앞서다 보면 의심이나 조바심으로 흐르기 쉬운 자리 (순화해서 전할 것)`)
     if (x.siksangExcess) reasons.push('식상(끼와 표현력의 기운)이 매우 강해, 감정과 매력이 풍부한 만큼 마음이 여러 곳으로 흐르지 않게 한 사람에게 정을 모으는 것이 중요한 자리 (순화해서 전할 것)')
     if (x.femaleSanggwanNoJae) {
@@ -1142,7 +1142,7 @@ export function judgeCouple(
     if (x.bokEum) reasons.push('태어난 해와 날의 기둥이 같은 복음(伏吟)이라, 같은 자리를 두 번 밟는 결이 있어 마음의 매듭을 그때그때 풀어 가는 것이 좋은 자리 (순화해서 전할 것)')
     if (x.sanggwanJeonggwanNear) reasons.push('상관과 정관이 가까이 있어(또는 그런 기운이 드는 시기가 오면), 규범과 자유로움이 부딪히기 쉬운 만큼 서로의 방식을 존중하는 마음이 필요한 자리 (순화해서 전할 것)')
     if (x.spouseIsolated) reasons.push(`${x.spouseName}(배우자 기운)이 홀로 떠 생해 주는 기운도 옅어 조금 외로운 자리이니, 서로 곁을 지켜 주고 마음을 자주 나누면 좋은 자리 (순화해서 전할 것)`)
-    if (x.jaeDaBulhwa) reasons.push('재물의 기운이 넉넉한 재다신약이라, 특히 비겁운(같은 기운이 드는 시기)이 오면 재물은 늘어도 바깥일에 마음이 쏠려 집안이 소홀해지기 쉬우니, 그런 때일수록 부부가 서로를 살피면 좋은 자리 (순화해서 전할 것)')
+    if (x.jaeDaBulhwa) reasons.push('재물의 기운이 넉넉한 재다신약이라, 특히 비겁운(같은 기운이 드는 시기)이 오면 재물은 늘어도 바깥일에 마음이 쏠려 집안이 소홀해지기 쉬우니, 그런 때일수록 두 분이 서로를 살피면 좋은 자리 (순화해서 전할 것)')
     if (x.spouseIpmyo) reasons.push(`${x.spouseName}(배우자 기운)이 창고에 드는 입묘의 결이 있어, 배우자와의 인연을 더 살뜰히 가꾸고 건강을 함께 챙기면 좋은 자리 (순화해서 전할 것)`)
     if (x.spouseIpmyoButRooted) reasons.push(`${x.spouseName}(배우자 기운)에 입묘의 결이 있으나, 본바탕(일간)이 지지에 튼튼히 뿌리내려 그 기운을 든든히 받치므로 크게 걱정하지 않아도 되는 자리`)
     if (x.siksangSuStrong) reasons.push('식상과 물의 기운이 함께 넉넉해 감성과 매력이 풍부하고 정이 많은 자리이니, 그 따뜻함을 한 사람에게 오롯이 기울이면 더없이 좋은 자리 (순화해서 전할 것)')
@@ -1150,19 +1150,19 @@ export function judgeCouple(
     if (x.dohwaIlSi) reasons.push('사람을 끌어당기는 매력(도화)이 가까운 자리(일·시)에 있어, 배우자와 서로 아끼고 화합하는 다정한 자리')
 
     // ── 전생부부 (⑨) ──
-    if (jeonsaengBubu) reasons.push('두 사람 모두 배우자 별이 비어(남 무재·여 무관) 전생부부 인연 → 아주 귀한 자리, 많이 양보하고 가족 위해 마음 내라는 업보')
+    if (jeonsaengBubu) reasons.push('두 사람 모두 배우자 별이 비어(남 무재·여 무관) 전생부터 이어진 인연 → 아주 귀한 자리, 많이 양보하고 서로를 위해 마음 내라는 업보')
 
     // ── 남자 규칙 (⑩~⑮) — 통변용 사실 문구 ──
     if (x.jaeHyeongChungGongmang) reasons.push('남자 재성이 형·충·공망 모두 걸림 → 원래 배우자 덕이 약한 자리 (순화해서 전할 것)')
-    if (x.jaeRootedRich) reasons.push('남자 재성이 뿌리내림 → 배우자(아내)의 재물운이 좋은 자리')
+    if (x.jaeRootedRich) reasons.push('남자 재성이 뿌리내림 → 배우자의 재물운이 좋은 자리')
     if (x.jaeExcess) reasons.push('남자 재성이 많음(태과) → 고부갈등 소지와, 배우자가 힘든 배우자를 만날 소지 (순화해서 전할 것)')
-    if (x.jaeIsGisin) reasons.push('남자 재성이 기신 → 부부 불화 소지 (순화해서 전할 것)')
+    if (x.jaeIsGisin) reasons.push('남자 재성이 기신 → 두 분 사이가 어긋나기 쉬운 소지 (순화해서 전할 것)')
     if (x.jaeIsYongHee) reasons.push('남자 재성이 용신·희신 → 현모양처이거나 외모가 수려한 배우자를 만나는 자리')
     if (x.jaePresent) reasons.push('남자 재성이 있음 → 재물운·배우자운·부친운이 갖춰진 자리')
 
     // 전생부부일 때만 카드 본문에도 특별 문구를 남긴다 (아주 좋은 자리라 눈에 보이게)
     if (jeonsaengBubu) {
-      lines.push('두 분 다 배우자 자리가 비어, 오히려 전생부터 이어진 부부 인연으로 봅니다. 많이 양보하고 서로를 위해 마음을 내는 것이 두 분에게 주어진 귀한 몫이에요.')
+      lines.push('두 분 다 배우자 자리가 비어, 오히려 전생부터 이어진 깊은 인연으로 봅니다. 많이 양보하고 서로를 위해 마음을 내는 것이 두 분에게 주어진 귀한 몫이에요.')
     }
 
     cats.push({
@@ -1191,7 +1191,7 @@ export function judgeCouple(
 
   // ★2026-07-24 — 무재/무관 전생부부 인연 (대표님 지시). 두 사람 모두 배우자 별이 없을 때.
   if (a.spouseStarNone && b.spouseStarNone) {
-    good.push('두 분 다 배우자 자리가 비어, 전생부터 이어진 부부 인연으로 봅니다. 아주 귀한 자리예요.')
+    good.push('두 분 다 배우자 자리가 비어, 전생부터 이어진 깊은 인연으로 봅니다. 아주 귀한 자리예요.')
   }
   if (aFilled.length) good.push(`${b.name}님이 ${a.name}님께 없는 ${eul(aFilled.map(e => EL_LABEL[e]).join('·'))} 지니고 계세요.`)
   if (bFilled.length) good.push(`${a.name}님이 ${b.name}님께 없는 ${eul(bFilled.map(e => EL_LABEL[e]).join('·'))} 지니고 계세요.`)
@@ -1345,7 +1345,7 @@ const ILJI_FEMALE: Record<string, IljiText> = {
   겁재: { short: '생활력이 강하고 스스로 일구는',
     body: '생활력이 강하고 자수성가 스타일이에요. 고집과 자존감, 추진력, 리더십이 있어 이를 좋은 쪽으로 발휘하면 크게 이루십니다. 때로는 말을 줄이고 듣는 쪽에 서 보시면 관계가 한결 부드러워집니다.' },
   식신: { short: '배우자를 아이처럼 살뜰히 챙기는',
-    body: '남편을 아이처럼 여기며 살뜰히 챙기시다 보니 잔소리가 많아지기 쉬운 자리예요. 집에서 잔소리를 줄이시면 가정이 화목해지니, 나무라기보다 가족을 자주 칭찬해 주시면 좋습니다.' },
+    body: '배우자를 아이처럼 여기며 살뜰히 챙기시다 보니 잔소리가 많아지기 쉬운 자리예요. 잔소리를 조금 줄이시면 사이가 더 화목해지니, 나무라기보다 자주 칭찬해 주시면 좋습니다.' },
   상관: { short: '배우자를 감시하고 통제하려는 마음이 강한',
     body: '배우자의 일거수일투족을 살피며, 감시하고 통제하려는 마음이 강한 자리예요. 마음이 쓰여서 그런 것이지만 지나치면 서로 지치니, 기질을 조금 누그러뜨릴 필요가 있습니다. 다툼이 있을 땐 본인 몫이 더 크다고 여기고 한 발 물러서 보시면, 앞세우는 감정과 저항하는 마음을 다스리는 데 도움이 됩니다.' },
   편재: { short: '현실을 야무지게 챙기는',
@@ -1359,7 +1359,7 @@ const ILJI_FEMALE: Record<string, IljiText> = {
   편인: { short: '세심하게 살피고 챙겨 주는 배우자를 만나는',
     body: '작은 것 하나까지 세심하게 살피고 챙겨 주는 배우자를 만나는 자리예요. 마음이 깊어 그런 것이지만, 그 관심이 지나치면 서로 숨이 막힐 수 있습니다. 시시콜콜한 것까지 함께하려 하기보다, 각자의 몫과 공간을 정해 두시면 두 분 다 한결 편안해집니다. 배우자의 세심함을 잔소리로 여기지 않고 아껴 주는 마음으로 받아 주시면 관계가 부드러워집니다.' },
   정인: { short: '포근하고 든든한 배우자를 만나는',
-    body: '포근한 남편이면서 집안일도 잘 챙기는, 일등 남편이라 할 만한 든든한 배우자를 만나는 자리예요.' },
+    body: '포근하면서 살림도 잘 챙기는, 더없이 든든한 배우자를 만나는 자리예요.' },
 }
 
 /** 일지 십신 해설 — 성별에 따라 다른 표를 쓴다 (234·235쪽) */
