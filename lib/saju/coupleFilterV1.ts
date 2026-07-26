@@ -318,6 +318,12 @@ export interface PersonJudge {
   femaleSanggwanNoJae: boolean
   /** 인성이 있어 위 상관무재를 잡아 주는가 */
   insungHelps: boolean
+  /** 년주-일주 복음(같은 간지) → 이혼·재혼 소지 (233쪽). 통변 참고용 */
+  bokEum: boolean
+  /** 상관과 정관이 이웃해 있음 → 이혼 많이 (233쪽). 통변 참고용 */
+  sanggwanJeonggwanNear: boolean
+  /** 남자 재다신약 + 비겁 강 → 돈은 벌지만 불화 (233쪽). 통변 참고용 */
+  jaeDaBulhwa: boolean
   /** 배우자 별 없음 (여=무관·남=무재). 두 사람 모두면 전생부부 인연 +5. 성별 무관 */
   spouseStarNone: boolean
   /** 남자: 재성이 형·충·공망 모두 걸림 — 배우자 덕 없는 사주. 통변 참고용. 여자는 항상 false */
@@ -506,6 +512,8 @@ export function judgePerson(p: PersonInput): PersonJudge {
   //     남자에게 재성은 재물·배우자(아내)·부친을 함께 뜻하므로,
   //     재성이 있으면 이 세 방면의 기운이 갖춰져 있다고 본다.
   const jaePresent = p.gender === '남' && jaeCount >= 1
+  // ⑧ 재다신약(재성 과다) + 비겁 강 → 돈은 벌지만 부부 불화 (비겁=일간 오행 ≥25)
+  const jaeDaBulhwa = jaeExcess && p.gender === '남' && (ohaeng[dayEl] ?? 0) >= 25
 
 
   // 공망 (233쪽 재성 형충공망)
@@ -618,6 +626,24 @@ export function judgePerson(p: PersonInput): PersonJudge {
   const femaleSanggwanNoJae =
     p.gender === '여' && iljiSipsin === '상관' && (ohaeng[jaeElF] ?? 0) === 0
 
+  // ── ⑥ 년주-일주 복음(伏吟) — 같은 간지면 이혼·재혼 소지 (233쪽) ──
+  const yeon = byPillar['년주']
+  const bokEum = !!(yeon && ilju && yeon.stem === ilju.stem && yeon.branch === ilju.branch)
+
+  // ── ⑤ 상관과 정관이 가까이 있으면 이혼 많이 (233쪽) ──
+  //   천간에서 상관과 정관이 이웃(인접 기둥)에 있는 경우를 본다.
+  //   상관 = 일간이 생하고 음양 다른 것 / 정관 = 일간을 극하고 음양 다른 것.
+  const stemsInOrder = ['년주', '월주', '일주', '시주'].map(pil => byPillar[pil]?.stem ?? '')
+  let sanggwanJeonggwanNear = false
+  for (let i = 0; i < stemsInOrder.length - 1; i++) {
+    const s1 = stemsInOrder[i], s2 = stemsInOrder[i + 1]
+    if (!s1 || !s2) continue
+    const t1 = sipsinOf(dayStem, s1), t2 = sipsinOf(dayStem, s2)
+    if ((t1 === '상관' && t2 === '정관') || (t1 === '정관' && t2 === '상관')) sanggwanJeonggwanNear = true
+  }
+
+  // ── ⑧ 남자 재다신약 + 비겁 강 → 위 jaeDaBulhwa 에서 처리함 (재성 과다 AND 비겁≥25) ──
+
   // ── 月支-日支 계절 (한 사람 안에서 본 것) ──
   //   ⚠️ 이 값은 "내 사주 구조"를 보는 참고값이다.
   //      궁합 판정(찰떡궁합)은 judgeCouple 에서 두 사람 교차(내 月支 ↔ 상대 日支)로
@@ -645,7 +671,7 @@ export function judgePerson(p: PersonInput): PersonJudge {
     spouseName, spouseEl, spouseScore, spouseAbsent, spouseWhere,
     spouseRooted, spouseGongmang,
     iljiSipsin, seasonRel, wonjinIlWol, chukChukSelf,
-    spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance, gyeokgak, jaeWeakBigyeopStrong, jaengTuHap, siksangExcess, femaleSanggwanNoJae, insungHelps,
+    spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance, gyeokgak, jaeWeakBigyeopStrong, jaengTuHap, siksangExcess, femaleSanggwanNoJae, insungHelps, bokEum, sanggwanJeonggwanNear, jaeDaBulhwa,
     spouseStarNone, jaeHyeongChungGongmang, jaeRootedRich, jaeExcess, jaeIsGisin, jaeIsYongHee, jaePresent,
     gwiinChars, gwiinMine, gongmang,
   }
@@ -926,6 +952,9 @@ export function judgeCouple(
       if (x.insungHelps) reasons.push('배우자 자리가 상관인데 재성이 옅은 편이나, 인성이 그 기운을 부드럽게 잡아 주어 균형이 맞춰지는 자리')
       else reasons.push('배우자 자리가 상관인데 재성이 없어, 마음이 곧고 표현이 강한 만큼 배우자를 너그럽게 품는 연습이 도움이 되는 자리 (순화해서 전할 것)')
     }
+    if (x.bokEum) reasons.push('태어난 해와 날의 기둥이 같은 복음(伏吟)이라, 같은 자리를 두 번 밟는 결이 있어 마음의 매듭을 그때그때 풀어 가는 것이 좋은 자리 (순화해서 전할 것)')
+    if (x.sanggwanJeonggwanNear) reasons.push('상관과 정관이 가까이 있어, 규범과 자유로움이 부딪히기 쉬운 만큼 서로의 방식을 존중하는 마음이 필요한 자리 (순화해서 전할 것)')
+    if (x.jaeDaBulhwa) reasons.push('재물의 기운은 넉넉하나 그것을 감당할 기운도 강해, 바깥일에 마음이 쏠리면 집안이 소홀해지기 쉬우니 균형을 살피면 좋은 자리 (순화해서 전할 것)')
 
     // ── 전생부부 (⑨) ──
     if (jeonsaengBubu) reasons.push('두 사람 모두 배우자 별이 비어(남 무재·여 무관) 전생부부 인연 → 아주 귀한 자리, 많이 양보하고 가족 위해 마음 내라는 업보')
