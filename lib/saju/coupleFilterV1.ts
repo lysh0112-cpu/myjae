@@ -231,6 +231,16 @@ const YANGIN: Record<string, string> = {
   甲: '卯', 丙: '午', 戊: '午', 庚: '酉', 壬: '子',
 }
 
+/** ★2026-07-26 연재쌤 — 도화살(桃花). 년지 또는 일지의 삼합 기준 도화 지지.
+ *   申子辰 → 酉 / 寅午戌 → 卯 / 巳酉丑 → 午 / 亥卯未 → 子
+ *   도화가 연·월에 있으면 바람기, 일·시에 있으면 부부 화합. */
+const DOHWA_BY_BRANCH: Record<string, string> = {
+  申: '酉', 子: '酉', 辰: '酉',
+  寅: '卯', 午: '卯', 戌: '卯',
+  巳: '午', 酉: '午', 丑: '午',
+  亥: '子', 卯: '子', 未: '子',
+}
+
 const isChukChuk = (monthBranch: string, dayBranch: string): boolean =>
   monthBranch === '丑' && dayBranch === '丑'
 
@@ -362,6 +372,12 @@ export interface PersonJudge {
   spouseIpmyo: boolean
   /** 입묘이나 일간이 통근해 완화됨 (연재쌤: 강하게 입묘되면 피해 적음). 통변 참고용 */
   spouseIpmyoButRooted: boolean
+  /** 식상 + 수 기운이 함께 강함 (233쪽). 남녀 공통. 통변 참고용 */
+  siksangSuStrong: boolean
+  /** 도화살이 연·월에 있음 → 바람기 (연재쌤). 통변 참고용 */
+  dohwaYeonWol: boolean
+  /** 도화살이 일·시에 있음 → 부부 화합 (연재쌤). 통변 참고용 */
+  dohwaIlSi: boolean
   /** 배우자 별 없음 (여=무관·남=무재). 두 사람 모두면 전생부부 인연 +5. 성별 무관 */
   spouseStarNone: boolean
   /** 남자: 재성이 형·충·공망 모두 걸림 — 배우자 덕 없는 사주. 통변 참고용. 여자는 항상 false */
@@ -506,6 +522,25 @@ export function judgePerson(p: PersonInput): PersonJudge {
   const siksangEl = GEN[dayEl]
   const siksangScore = ohaeng[siksangEl] ?? 0
   const siksangExcess = siksangScore >= 40
+
+  // ── 식상 + 수(水) 기운이 함께 강함 (233쪽). 남녀 공통 ──
+  //   ⚠️ 기준은 연재쌤 검수 대상. 식상 ≥35 이면서 수 ≥30 일 때로 잡는다.
+  //   원문 표현("정력·색")은 통변에서 크게 순화한다.
+  const siksangSuStrong = siksangScore >= 35 && (ohaeng['수'] ?? 0) >= 30
+
+  // ── 도화살(桃花) 위치 — 연·월이면 바람기, 일·시면 부부 화합 (연재쌤) ──
+  //   년지·일지의 삼합 기준으로 도화 지지를 찾고, 그 글자가 어느 기둥에 있는지 본다.
+  const yearBr = byPillar['년주']?.branch ?? ''
+  const dohwaTargets = new Set<string>()
+  if (DOHWA_BY_BRANCH[yearBr]) dohwaTargets.add(DOHWA_BY_BRANCH[yearBr])
+  if (dayBranch && DOHWA_BY_BRANCH[dayBranch]) dohwaTargets.add(DOHWA_BY_BRANCH[dayBranch])
+  let dohwaYeonWol = false   // 연·월에 도화 → 바람기
+  let dohwaIlSi = false      // 일·시에 도화 → 부부 화합
+  for (const q of p.saju) {
+    if (!dohwaTargets.has(q.branch)) continue
+    if (q.pillar === '년주' || q.pillar === '월주') dohwaYeonWol = true
+    if (q.pillar === '일주' || q.pillar === '시주') dohwaIlSi = true
+  }
 
   // ── 여자: 일지 상관인데 재성이 없으면 부정 (아래 iljiSipsin 선언 뒤에서 계산) ──
   const jaeElF = CON[dayEl]          // 재성 오행
@@ -744,7 +779,7 @@ export function judgePerson(p: PersonInput): PersonJudge {
     spouseName, spouseEl, spouseScore, spouseAbsent, spouseWhere,
     spouseRooted, spouseIsolated, spouseGongmang,
     iljiSipsin, seasonRel, wonjinIlWol, chukChukSelf,
-    spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance, gyeokgak, jaeWeakBigyeopStrong, jaengTuHap, siksangExcess, femaleSanggwanNoJae, insungHelps, bokEum, sanggwanJeonggwanNear, jaeDaBulhwa, spouseIpmyo, spouseIpmyoButRooted,
+    spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance, gyeokgak, jaeWeakBigyeopStrong, jaengTuHap, siksangExcess, femaleSanggwanNoJae, insungHelps, bokEum, sanggwanJeonggwanNear, jaeDaBulhwa, spouseIpmyo, spouseIpmyoButRooted, siksangSuStrong, dohwaYeonWol, dohwaIlSi,
     spouseStarNone, jaeHyeongChungGongmang, jaeRootedRich, jaeExcess, jaeIsGisin, jaeIsYongHee, jaePresent,
     gwiinChars, gwiinMine, gongmang,
   }
@@ -1031,6 +1066,9 @@ export function judgeCouple(
     if (x.jaeDaBulhwa) reasons.push('재물의 기운이 넉넉한 재다신약이라, 특히 비겁운(같은 기운이 드는 시기)이 오면 재물은 늘어도 바깥일에 마음이 쏠려 집안이 소홀해지기 쉬우니, 그런 때일수록 부부가 서로를 살피면 좋은 자리 (순화해서 전할 것)')
     if (x.spouseIpmyo) reasons.push(`${x.spouseName}(배우자 기운)이 창고에 드는 입묘의 결이 있어, 배우자와의 인연을 더 살뜰히 가꾸고 건강을 함께 챙기면 좋은 자리 (순화해서 전할 것)`)
     if (x.spouseIpmyoButRooted) reasons.push(`${x.spouseName}(배우자 기운)에 입묘의 결이 있으나, 본바탕(일간)이 지지에 튼튼히 뿌리내려 그 기운을 든든히 받치므로 크게 걱정하지 않아도 되는 자리`)
+    if (x.siksangSuStrong) reasons.push('식상과 물의 기운이 함께 넉넉해 감성과 매력이 풍부하고 정이 많은 자리이니, 그 따뜻함을 한 사람에게 오롯이 기울이면 더없이 좋은 자리 (순화해서 전할 것)')
+    if (x.dohwaYeonWol) reasons.push('사람을 끌어당기는 매력(도화)이 이른 자리(연·월)에 있어 인기가 많은 만큼, 그 매력을 배우자에게 향하게 하면 관계가 더 빛나는 자리 (순화해서 전할 것)')
+    if (x.dohwaIlSi) reasons.push('사람을 끌어당기는 매력(도화)이 가까운 자리(일·시)에 있어, 배우자와 서로 아끼고 화합하는 다정한 자리')
 
     // ── 전생부부 (⑨) ──
     if (jeonsaengBubu) reasons.push('두 사람 모두 배우자 별이 비어(남 무재·여 무관) 전생부부 인연 → 아주 귀한 자리, 많이 양보하고 가족 위해 마음 내라는 업보')
