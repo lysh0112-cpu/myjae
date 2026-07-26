@@ -142,7 +142,16 @@ const SERVICES = [
   { name: '이사택일',   color: '#967850', bg: '#f0eae0', href: '/manseryeok/moving-timing/moving-storage', cat: '택일', sub: '좋은 이사 날', emoji: '🐔' },
   { name: '내이름 감정', color: '#5a825a', bg: '#eaf0e6', href: '/manseryeok/naming/diagnosis/storage', cat: '개명', sub: '이름 풀이해 보기', emoji: '🐵' },
   { name: '타로',       color: '#b45a78', bg: '#f6e5eb', href: '/tarot', cat: '기타', sub: '오늘의 카드', emoji: '🐶' },
-  { name: '물어보살',   color: '#785aaa', bg: '#efeaf7', href: '/manseryeok/ai-chat', cat: '기타', sub: 'AI에게 묻기', emoji: '🐷' },
+  // ★2026-07-27 — '물어보살' 자리를 진로적성으로 바꿨다. (대표님 지시)
+  //   물어보살은 /manseryeok/ai-chat 으로 가되 파라미터를 하나도 안 넘겨서,
+  //   사주 없이 AI에게 묻는 빈 문이었다. 같은 일을 홈 우하단 [AI 상담] 동그라미
+  //   (AiTalkFab)가 프로필 사주를 실어 보내며 제대로 하고 있으므로 겹쳤다.
+  //   ⚠️ app/manseryeok/ai-chat 폴더는 지우지 말 것.
+  //      음성상담(ai-talk)이 그 안의 useSaju.ts 를 빌려 쓴다.
+  //   색(#785aaa)과 띠(🐷)는 물어보살 것을 그대로 물려받았다.
+  //   ※ 형제 서비스인 '합격운/취업운'(6번째)과 떨어져 있다.
+  //     나란히 놓으려면 이 배열의 줄 순서만 바꾸면 된다(연재쌤 확인 후).
+  { name: '진로적성',   color: '#785aaa', bg: '#efeaf7', href: '/manseryeok/career', cat: '적성', sub: '내 길과 그릇', emoji: '🐷' },
 ]
 type Service = typeof SERVICES[number]
 
