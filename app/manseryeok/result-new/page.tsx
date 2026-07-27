@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense, useEffect } from "react";
+import { useState, Suspense, useEffect, useMemo } from "react";
 import { EL_BG as ELEMENT_BG, EL_TEXT as ELEMENT_COLOR, EL_C, EL_C_SUB, EL_HAN as OH_HAN } from '@/lib/saju/ohaengColor'
 import { useSearchParams, useRouter } from "next/navigation";
 import { useResultSaju } from "@/hooks/useResultSaju";
@@ -27,7 +27,9 @@ import CopyTextButton from '@/app/components/common/CopyTextButton';
 import { birthYearToGroup, genderToFilter, type SajuQuestion } from "@/lib/saju/questions";
 import { type UnseEntry } from "@/lib/saju/unseQuestions";
 import ByeongjonView from "./ByeongjonView";   // 병존 (교재 74~77쪽)
-import { exactAge } from "@/lib/saju/ageDayun";
+import JijiTraitView from "./JijiTraitView";   // 지지가 말하는 것 (교재 48·50~73쪽)
+import { exactAge, pickCurrentDayun } from "@/lib/saju/ageDayun";
+import { calcSeyunList, type DayunItem } from "@/lib/saju/dayun";
 import { toTongbyeonInput } from "@/lib/saju/toTongbyeonInput";
 import YongsinCard from "./YongsinCard";
 import SajuWonguk from "./SajuWonguk";
@@ -355,6 +357,34 @@ function ResultNewContent() {
   //   ★나이는 lib/saju/ageDayun.ts 하나만 쓴다. 화면마다 다르면 안 된다. (30부 5장)
   const byeongjonTarget: 'student'|'adult' =
     (solarYear && exactAge(solarYear, solarMonth, solarDay) < 20) ? 'student' : 'adult'
+
+  // ★2026-07-27 — 대운을 여기서 한 번만 받아 표(UnseFlow)와 통변 재료에 함께 쓴다.
+  //   전에는 UnseFlow 가 혼자 불렀고, 통변은 대운을 아예 몰랐다.
+  //   (프롬프트의 currentDaeun 자리가 선언만 되고 비어 있었다)
+  const [dayunList, setDayunList] = useState<DayunItem[]>([])
+  useEffect(() => {
+    if (!solarYear || !monthGanji || !yearStem || !dayStem) return
+    let ok = true
+    fetch('/api/dayun', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ solarYear, solarMonth, solarDay, monthGanji, yearStem, gender, dayStem }),
+    }).then(r => r.json())
+      .then(d => { if (ok) setDayunList(d.dayunList || []) })
+      .catch(() => { if (ok) setDayunList([]) })
+    return () => { ok = false }
+  }, [solarYear, solarMonth, solarDay, monthGanji, yearStem, gender, dayStem])
+
+  // 지금 흐르는 대운 — ★만 나이로 고른다. 대운수와 같은 잣대다. (30부 5장)
+  const currentDayun = useMemo(() => {
+    if (!dayunList.length || !solarYear) return null
+    return pickCurrentDayun(dayunList, exactAge(solarYear, solarMonth, solarDay))
+  }, [dayunList, solarYear, solarMonth, solarDay])
+
+  // 올해 세운 — 절기 API 가 필요 없어 바로 계산된다
+  const thisYearSeyun = useMemo(() => {
+    if (!dayStem || dayStem === '?') return null
+    return calcSeyunList(dayStem, currentYear).find(x => x.year === currentYear) ?? null
+  }, [dayStem, currentYear])
   const yongsinHap=isPro&&saju.length>0&&dayStem
     ? calcYongsinNew(saju,dayStem,calcHapchungScore(saju).score)
     : null
@@ -483,6 +513,11 @@ function ResultNewContent() {
           <ByeongjonView saju={saju} target={byeongjonTarget}/>
         )}
 
+        {/* ①-2 지지가 말하는 것 (교재 48쪽·50~73쪽) — 월지·일지를 펼쳐 둔다 */}
+        {saju.length>0 && (
+          <JijiTraitView saju={saju} target={byeongjonTarget}/>
+        )}
+
         {/* ①-2 전문가 상세 (전문가 모드 + 토글 ON) — 지장간·납음·운성/신살 2기준·귀인·공망·형충회합 */}
         {isPro && hapchungOn && saju.length>0 && (
           <Section title="전문가 상세" collapsible={!chartOnly} open={openSection==='expert'} onToggle={()=>toggleSection('expert')}>
@@ -553,6 +588,7 @@ function ResultNewContent() {
               monthGanji={monthGanji} yearStem={yearStem} dayStem={dayStem}
               gender={gender} birthYear={yearParam} currentYear={currentYear}
               myMonthBranch={monthBranchForNote ?? ''} myDayBranch={iljji}
+              list={dayunList}
             />
           </Section>
         )}
@@ -572,6 +608,8 @@ function ResultNewContent() {
                 ohaeng,
                 yongsin: yongsinResult,
                 hourBranch,
+                currentDayun,
+                thisYearSeyun,
               })}
               questions={pickedQuestions}
               premium={isPaid}

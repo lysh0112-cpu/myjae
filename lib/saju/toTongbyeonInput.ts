@@ -19,6 +19,11 @@ import { UNSUNG_MEANING } from '@/lib/saju/unsungMeaning'
 import { SINSAL_MEANING } from '@/lib/saju/sinsalMeaning'
 import { GWIIN_MEANING, GWIIN_HARMONY } from '@/lib/saju/gwiinMeaning'
 import { GONGMANG_INTRO, GONGMANG_BY_PILLAR } from '@/lib/saju/gongmangMeaning'
+// ★2026-07-27 — 교재 48~77쪽 지지 자료를 통변 재료로 넣는다.
+//   지금까지 화면에만 있고 AI 는 몰랐다. (교훈 BF 의 반대편 — 줘야 할 것은 줘야 한다)
+import { traitsInSaju, traitLines, noteLines, isDohwaAt, type Target } from '@/lib/saju/jijiTrait'
+import { findByeongjon, findCombo, findJijiByeongjon, sayOf } from '@/lib/saju/byeongjon'
+import { jijiRelation } from '@/lib/saju/jijiGrade'
 
 // 천간 → 오행
 const STEM_EL: Record<string, Ohaeng> = {
@@ -56,6 +61,15 @@ const HOUR_MOOD: Record<string, string> = {
 // 명식 한 기둥 (result-new의 saju 요소 형태)
 export interface PillarInput { pillar: string; stem: string; branch: string }
 
+/** 지금 흐르는 대운 한 칸 — 화면이 /api/dayun 으로 받아 넘긴다 */
+export interface DayunLite {
+  age: number; cheongan: string; jiji: string; ganYukchin: string; jiYukchin: string
+}
+/** 올해 세운 한 칸 */
+export interface SeyunLite {
+  year: number; cheongan: string; jiji: string; ganYukchin: string; jiYukchin: string
+}
+
 export interface ToTongbyeonArgs {
   name: string
   gender: string                       // '남' | '여'
@@ -65,6 +79,10 @@ export interface ToTongbyeonArgs {
   ohaeng: Array<{ el: Ohaeng; pct: number }>  // 심산 오행 (toPercentList 결과)
   yongsin?: YongsinResult | null       // 용신 계산 결과
   hourBranch?: string | null           // 시지(한자). 없으면 '모름'
+  /** ★지금 흐르는 대운 — 없으면 대운 재료가 빠진다 */
+  currentDayun?: DayunLite | null
+  /** ★올해 세운 */
+  thisYearSeyun?: SeyunLite | null
   // ── 확장 자리 ────────────────────────────────────────────────
   // 대운·세운은 기본 통변에 넣지 않는다. (홈에 별도 서비스가 있음)
   // 사용자가 "언제/내년/몇 살" 같은 시기 질문을 직접입력했을 때만,
@@ -144,6 +162,85 @@ function buildMyeongsikFeatures(
   return `[명식 특징 — 이 사람에게 실제로 있는 것들(질문에 관련될 때 근거로 쓰되 겁주지 말 것)]\n${lines.join('\n')}`
 }
 
+/**
+ * 지지가 말하는 것 — 교재 48쪽 「地支의 종류」 + 50~73쪽 「12地支 심층 분석」 특징 문단
+ *
+ * ★월지·일지는 통째로, 년지·시지는 48쪽 비고만 넣는다.
+ *   교재 72쪽 亥 "月支와 日支에 있을 때 가장 강력하게 작용한다"
+ *   교재 90쪽 신살 작용력도 월지·일지가 가장 크다.
+ *   넷을 다 통째로 넣으면 재료가 프롬프트를 덮어 버린다.
+ *
+ * ⚠️ row.original 은 절대 안 넣는다. 교재 원문이라 화면에 낼 수 없는 말이 섞여 있다. (교훈 BF)
+ */
+function buildJijiTrait(saju: PillarInput[], target: Target): string {
+  const hits = traitsInSaju(saju)
+  if (!hits.length) return ''
+  const lines = hits.map(h => {
+    const strong = h.pillar === '월지' || h.pillar === '일지'
+    const dohwa = isDohwaAt(h.pillar.replace('지', '주'), h.branch) ? ' [도화]' : ''
+    const body = strong
+      ? [...traitLines(h.row, target), ...noteLines(h.row, target)].join(' ')
+      : noteLines(h.row, target).join(' ')
+    const jobs = strong && h.row.jobs?.length ? ` (교재가 든 직업: ${h.row.jobs.join('·')})` : ''
+    return `- ${h.pillar} ${h.branch}(${h.row.ko}·${h.row.tti})${dohwa} — ${body}${jobs}`
+  })
+  return `[지지가 말하는 것 — 교재 48쪽·50~73쪽. 월지와 일지가 가장 세다]\n${lines.join('\n')}`
+}
+
+/** 병존 — 같은 글자가 나란히 (교재 74~77쪽) */
+function buildByeongjon(saju: PillarInput[], target: Target): string {
+  const lines: string[] = []
+  for (const h of findByeongjon(saju)) {
+    const yeok = h.row.yeokma ? ` [역마 ${h.row.yeokma}]` : ''
+    lines.push(`- ${h.key} (${h.pillars.join('·')})${yeok} — ${sayOf(h.row, target)}`)
+  }
+  for (const c of findCombo(saju)) {
+    lines.push(`- ${c.row.need.join('')} ${c.key} (${c.pillars.join('·')}) — ${sayOf(c.row, target)}`)
+  }
+  for (const h of findJijiByeongjon(saju)) {
+    const sal = h.row.sal?.length ? ` [${h.row.sal.join('·')}]` : ''
+    const jobs = h.row.jobs?.length ? ` (교재가 든 직업: ${h.row.jobs.join('·')})` : ''
+    lines.push(`- ${h.key} (${h.pillars.join('·')})${sal} — ${sayOf(h.row, target)}${jobs}`)
+  }
+  if (!lines.length) return ''
+  return `[병존 — 같은 글자가 나란히 있어 그 기운이 짙다 (교재 74~77쪽)]\n${lines.join('\n')}`
+}
+
+/**
+ * 지금 흐름과 내 지지의 어울림 — 교재 49쪽 144칸
+ * ★교재 49쪽 "대운이나 세운을 일단 月支에 대입해라. 月支가 총사령관이다"
+ */
+function buildUnJiji(
+  saju: PillarInput[],
+  target: Target,
+  dayun?: DayunLite | null,
+  seyun?: SeyunLite | null,
+): string {
+  const myMonth = saju.find(p => p.pillar === '월주')?.branch ?? ''
+  const myDay = saju.find(p => p.pillar === '일주')?.branch ?? ''
+  if (!myMonth && !myDay) return ''
+  const lines: string[] = []
+  const one = (label: string, branch: string) => {
+    const e = jijiRelation(myMonth, branch)
+    const f = jijiRelation(myDay, branch)
+    if (!e && !f) return
+    const parts: string[] = []
+    // ★학생에게는 해설(desc)을 주지 않는다.
+    //   144칸 해설은 교재 원문이라 학생/성인 구분이 없고, 병명(조울증·맹장염·감염증)과
+    //   투자 권유(주식·공격적 투자)가 섞여 있다. 재료에 있으면 AI 가 꺼내 쓴다. (교훈 BF)
+    //   등급과 관계 이름까지만 주면 흐름은 짚으면서 위험한 말은 안 나온다.
+    const tail = (r: NonNullable<ReturnType<typeof jijiRelation>>) =>
+      target === 'student' ? '' : ` — ${r.desc}`
+    if (e) parts.push(`환경(월지 ${myMonth}) ${e.grade} ${e.tag}${tail(e)}`)
+    if (f) parts.push(`나(일지 ${myDay}) ${f.grade} ${f.tag}${tail(f)}`)
+    lines.push(`- ${label}: ${parts.join(' / ')}`)
+  }
+  if (dayun) one(`대운 ${dayun.cheongan}${dayun.jiji} (${dayun.age}세부터, 천간 ${dayun.ganYukchin}·지지 ${dayun.jiYukchin})`, dayun.jiji)
+  if (seyun) one(`${seyun.year}년 세운 ${seyun.cheongan}${seyun.jiji} (천간 ${seyun.ganYukchin}·지지 ${seyun.jiYukchin})`, seyun.jiji)
+  if (!lines.length) return ''
+  return `[지금 흐름이 내 지지와 어떻게 어울리나 — 교재 49쪽. 등급 A~D 는 눈금이지 좋고 나쁨의 판정이 아니다]\n${lines.join('\n')}`
+}
+
 
 export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
   const find = (name: string) => a.saju.find(p => p.pillar === name)
@@ -188,7 +285,23 @@ export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
     yongsin: yongsinStr || undefined,
     yongsinElement: yongsinEl,
     // 명식 특징(12운성·신살·귀인·공망) — 해당하는 것만 해석 포함해 조립.
-    myeongsikFeatures: buildMyeongsikFeatures(a.saju, a.dayStem) || undefined,
+    // ★2026-07-27 — 명식 특징에 교재 48~77쪽 지지 자료를 이어 붙인다.
+    //   ① 12운성·신살·귀인·공망 (전부터 있던 것)
+    //   ② 지지가 말하는 것   48쪽·50~73쪽
+    //   ③ 병존               74~77쪽
+    //   ④ 지금 흐름과의 어울림 49쪽 144칸 (대운·세운을 넘겨받았을 때만)
+    //   학생/성인은 나이로 가른다. 아이 사주를 부모가 함께 읽는 자리이기 때문이다.
+    myeongsikFeatures: [
+      buildMyeongsikFeatures(a.saju, a.dayStem),
+      buildJijiTrait(a.saju, a.age < 20 ? 'student' : 'adult'),
+      buildByeongjon(a.saju, a.age < 20 ? 'student' : 'adult'),
+      buildUnJiji(a.saju, a.age < 20 ? 'student' : 'adult', a.currentDayun, a.thisYearSeyun),
+    ].filter(Boolean).join('\n\n') || undefined,
+    // ★대운을 넘겨받았으면 프롬프트의 "지금 흐르는 큰 흐름" 자리도 채운다.
+    //   전에는 이 자리가 선언만 되어 있고 아무도 안 채우고 있었다.
+    currentDaeun: a.currentDayun
+      ? `${a.currentDayun.cheongan}${a.currentDayun.jiji} 대운 (${a.currentDayun.age}세부터)`
+      : undefined,
     // 신강약·대운은 기본 통변에 넣지 않는다 (심플하게).
     // 시기 질문 시에만 확장해서 붙일 예정.
   }

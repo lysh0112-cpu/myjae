@@ -32,6 +32,13 @@ interface Props {
   myMonthBranch?: string
   /** 내 일지 — 나 자신 쪽 반응 */
   myDayBranch?: string
+  /**
+   * ★대운 목록을 밖에서 넘겨받는다 (2026-07-27).
+   *   안 넘기면 전처럼 스스로 /api/dayun 을 부른다. 하위 호환이다.
+   *   page.tsx 가 통변 재료로도 대운이 필요해져서, 한 번만 받아 함께 쓰려고 뚫었다.
+   *   (작업지시 3장 ④ "나" 안 — 넘기면 그걸 쓰고, 안 넘기면 예전대로)
+   */
+  list?: DayunItem[]
 }
 
 /** 등급 배지 색 — 겁주지 않는 결로 (교훈 AX) */
@@ -64,7 +71,7 @@ interface Cell {
 
 export default function UnseFlow(props: Props) {
   const { solarYear, solarMonth, solarDay, monthGanji, yearStem, dayStem, gender, birthYear, currentYear,
-          myMonthBranch = '', myDayBranch = '' } = props
+          myMonthBranch = '', myDayBranch = '', list } = props
 
   const [dayunList, setDayunList] = useState<DayunItem[]>([])
   const [selDaeun, setSelDaeun] = useState<number | null>(null)   // 대운 index
@@ -75,8 +82,18 @@ export default function UnseFlow(props: Props) {
   const [detail, setDetail] = useState<{ label: string; stem: string; branch: string } | null>(null)
   const openTerm = (v?: string) => { if (v && SAJU_TERMS[v]) setTerm(v) }
 
-  // 대운 로드 (API)
+  // 대운 로드 — 밖에서 넘겨받았으면 그걸 쓰고, 아니면 API 를 부른다
   useEffect(() => {
+    if (list && list.length) {
+      setDayunList(list)
+      const age = currentYear - birthYear
+      let idx = list.findIndex((dv, i) => age >= dv.age && (i === list.length - 1 || age < list[i + 1].age))
+      if (idx < 0) idx = 0
+      setSelDaeun(idx)
+      setSelYear(currentYear)
+      setSelMonth(new Date().getMonth() + 1)
+      return
+    }
     if (!solarYear || !monthGanji || !yearStem || !dayStem) return
     let ok = true
     fetch('/api/dayun', {
@@ -99,7 +116,7 @@ export default function UnseFlow(props: Props) {
       .catch(() => { if (ok) setDayunList([]) })
     return () => { ok = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [solarYear, solarMonth, solarDay, monthGanji, yearStem, gender, dayStem])
+  }, [solarYear, solarMonth, solarDay, monthGanji, yearStem, gender, dayStem, list])
 
   if (dayunList.length === 0 || selDaeun === null) return null
 
