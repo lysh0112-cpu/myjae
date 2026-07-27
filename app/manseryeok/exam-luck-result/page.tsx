@@ -222,7 +222,9 @@ function ExamLuckResultInner() {
   if (!calc) return <Msg text="사주를 살펴보는 중이에요…" />
 
   return (
-    <main style={{ minHeight: '100vh', background: BG, maxWidth: 480, margin: '0 auto', paddingBottom: 60 }}>
+    // ★아래 붙박이 메뉴(약 78px)가 글을 덮지 않게 넉넉히 비운다. (2026-07-27)
+    //   60px 만 두었더니 맺음말이 메뉴에 가려 잘렸다.
+    <main style={{ minHeight: '100vh', background: BG, maxWidth: 480, margin: '0 auto', paddingBottom: 110 }}>
       <div style={{
         position: 'sticky', top: 0, zIndex: 5,
         background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
@@ -308,6 +310,25 @@ function ExamLuckResultInner() {
             <p key={i} style={{ margin: i === 0 ? 0 : '6px 0 0' }}>{l}</p>
           ))}
         </div>
+      </div>
+
+      {/* 아래 붙박이 메뉴 — 다른 화면과 같은 모양 (result-new 에서 그대로 가져옴) */}
+      <div style={{
+        position: 'fixed', bottom: 0, zIndex: 50, left: '50%', transform: 'translateX(-50%)',
+        width: '100%', maxWidth: 430, display: 'flex', justifyContent: 'space-around',
+        padding: '10px 0 20px', background: '#fff', borderTop: '0.5px solid #f0ede6',
+      }}>
+        {[{ icon: '🏠', label: '홈', to: '/home-new' },
+          { icon: '⊞', label: '서비스', to: '/home-new' },
+          { icon: '💬', label: '상담', to: '/home-new' },
+          { icon: '🤍', label: '찜', to: '/home-new' },
+          { icon: '👤', label: '마이', to: '/home-new' }].map(item => (
+          <div key={item.label} onClick={() => router.push(item.to)}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer' }}>
+            <span style={{ fontSize: 20 }}>{item.icon}</span>
+            <span style={{ fontSize: 9, color: '#ccc' }}>{item.label}</span>
+          </div>
+        ))}
       </div>
     </main>
   )
