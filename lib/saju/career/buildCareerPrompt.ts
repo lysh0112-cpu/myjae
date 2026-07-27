@@ -28,6 +28,11 @@
 //     궁합에서 "정준호님"이 "준호님"이 되어 누구 이야기인지 헷갈렸다.
 
 import type { CareerCard } from './types'
+// ★2026-07-27 — 교재 48~77쪽 지지 자료를 진로적성 재료에도 넣는다.
+//   ⚠️ 대목(카드)을 새로 만들지 않는다. 이미 있는 카드의 재료에 얹는다.
+//      이 프롬프트는 ■ 제목으로 대목을 나누는 파서와 짝이라, 대목을 늘리면 화면이 깨진다. (30부 2장)
+import { findByeongjon, findCombo, findJijiByeongjon, sayOf } from '../byeongjon'
+import { traitsInSaju, traitLines, noteLines, ctxOf } from '../jijiTrait'
 
 export interface CareerPromptInput {
   name: string
@@ -61,9 +66,46 @@ export function buildCareerPrompt(v: CareerPromptInput): string {
     .map(p => `${p.pillar} ${p.stem === '?' ? '·' : p.stem}${p.branch === '?' ? '·' : p.branch}`)
     .join(' · ')
 
+  // ── 교재 48~77쪽 자료를 어느 카드에 얹을지 ──────────────────────
+  //   병존 → [타고난 신살]      같은 글자가 나란히 있어 기운이 짙다는 이야기라 신살 결이다
+  //   지지 특징 → [어느 자리에서 일할까]  교재가 든 직업이 여기에 붙는다
+  //   ★144칸(jijiGrade)은 안 넣는다. 그건 운(대운·세운)과의 어울림이라 진로적성 주제가 아니다.
+  const extra: Record<string, string[]> = {}
+  {
+    const bj: string[] = []
+    for (const h of findByeongjon(v.saju)) {
+      const yeok = h.row.yeokma ? ` [역마 ${h.row.yeokma}]` : ''
+      bj.push(`병존 ${h.key}(${h.pillars.join('·')})${yeok} — ${sayOf(h.row, v.target)}`)
+    }
+    for (const c of findCombo(v.saju)) {
+      bj.push(`병존 ${c.row.need.join('')} ${c.key}(${c.pillars.join('·')}) — ${sayOf(c.row, v.target)}`)
+    }
+    for (const h of findJijiByeongjon(v.saju)) {
+      const sal = h.row.sal?.length ? ` [${h.row.sal.join('·')}]` : ''
+      const jobs = h.row.jobs?.length ? ` (교재가 든 직업: ${h.row.jobs.join('·')})` : ''
+      bj.push(`병존 ${h.key}(${h.pillars.join('·')})${sal} — ${sayOf(h.row, v.target)}${jobs}`)
+    }
+    if (bj.length) extra['sinsal'] = bj
+  }
+  {
+    const ctx = ctxOf(v.saju)
+    const tr: string[] = []
+    for (const h of traitsInSaju(v.saju)) {
+      // 월지·일지만 통째로. 년지·시지는 48쪽 비고만. (교재 72쪽 "月支와 日支에 있을 때 가장 강력")
+      const strong = h.pillars.includes('월지') || h.pillars.includes('일지')
+      const body = strong
+        ? [...traitLines(h.row, v.target, ctx), ...noteLines(h.row, v.target, ctx)].join(' ')
+        : noteLines(h.row, v.target, ctx).join(' ')
+      const jobs = strong && h.row.jobs?.length ? ` (교재가 든 직업: ${h.row.jobs.join('·')})` : ''
+      tr.push(`${h.pillar} ${h.branch}(${h.row.ko}·${h.row.tti}) — ${body}${jobs}`)
+    }
+    if (tr.length) extra['jobstruct'] = tr
+  }
+
   const material = v.cards.map(c => {
     const o = ORDER.find(x => x.key === c.key)
-    return `[${o?.title ?? c.title}]\n` + c.reasons.map(r => `- ${r}`).join('\n')
+    const rs = [...c.reasons, ...(extra[c.key] ?? [])]
+    return `[${o?.title ?? c.title}]\n` + rs.map(r => `- ${r}`).join('\n')
   }).join('\n\n')
 
   const who = v.target === 'student'
@@ -106,6 +148,12 @@ ${who}
 · 좋은 말만 하지 마세요. 약한 자리도 말하되, 겁을 주지는 마세요.
 · ★건강·질병·사고를 예언처럼 말하지 마세요. 병 이름을 나열하지 마세요.
 · 아래 재료에 없는 것을 지어내지 마세요. 특히 직업과 학과는 재료에 있는 것만 쓰세요.
+· ★오늘은 ${new Date().getFullYear()}년 ${new Date().getMonth() + 1}월입니다.
+  ${new Date().getFullYear() - 1}년처럼 이미 지나간 해를 앞일처럼 말하지 마세요.
+· ★재료에 "병존", "월지 ○(…)" 로 시작하는 줄이 있으면 교재 48~77쪽에서 온 것입니다.
+  그 대목의 이야기로 자연스럽게 녹이되, **목록으로 나열하지 마세요.**
+  한 대목에 서너 가지 넘게 끌어오지 마세요. 안 쓰고 남기는 것이 정상입니다.
+  쪽수·"교재가 든 직업" 같은 표기는 그대로 옮기지 말고 사람 말로 바꾸세요.
 · 재료에 적힌 "…하세요", "…넘기세요" 같은 지시문은 당신에게 하는 말입니다. 옮겨 쓰지 마세요.
 ${guard}
 
