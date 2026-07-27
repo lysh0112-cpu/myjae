@@ -63,8 +63,17 @@ export function cardYears(
 ): ExamCard {
   if (!years.length) return { key: 'years', title: '앞으로의 흐름', lines: [], reasons: [] }
   const best = [...years].sort((a, b) => b.score - a.score)[0]
-  const lines = years.map(y =>
-    `${y.year}년 ${y.stem}${y.branch} — ${y.grade}. ${y.hits[0]?.say ?? '크게 걸리는 것도, 크게 밀어 주는 것도 없는 해입니다.'}`)
+
+  // ★해마다 같은 말이 되풀이되지 않게 (2026-07-27)
+  //   전에는 hits[0] 만 써서 2028·2029·2030 이 모두 "관성과 인성이 서로를 살려 주는 해" 였다.
+  //   이미 나온 말은 건너뛰고 그 해에만 있는 것을 고른다. 다 겹치면 등급만 말한다.
+  const used = new Set<string>()
+  const lines = years.map(y => {
+    const fresh = y.hits.find(h => !used.has(h.key))
+    if (fresh) used.add(fresh.key)
+    const tail = fresh ? ` ${fresh.say}` : ''
+    return `${y.year}년 ${y.stem}${y.branch} — ${y.grade}.${tail}`
+  })
   // ★교재 195쪽 — 「합격운은 인성운이 더 중요하고, 취업운은 관성운이 더 중요하며」
   if (purpose === 'exam') lines.push('합격운은 인성(배움의 기운)이 더 중요합니다. 배운 것이 몸에 붙는 해에 힘이 실려요.')
   else if (purpose === 'job') lines.push('취업운은 관성(자리의 기운)이 더 중요합니다. 자리가 나를 부르는 해에 힘이 실려요.')
@@ -74,9 +83,9 @@ export function cardYears(
       ? `이 가운데 ${best.year}년에 힘이 가장 실립니다. 다만 사주가 말해 줄 수 있는 건 흐름이고, 결과를 만드는 건 준비한 시간이에요.`
       : `이 가운데 ${best.year}년에 힘이 가장 실립니다. 흐름은 거들 뿐, 결과는 준비한 시간이 만듭니다.`)
 
-  // ★교재 195쪽 맺음말 — 반드시 맨 마지막에 붙인다.
-  //   앞에 두면 앞말이 다 변명처럼 들린다.
-  lines.push(...(target === 'student' ? CLOSING_STUDENT : CLOSING))
+  // ★교재 195쪽 맺음말은 카드에 안 넣는다. 화면 맨 아래에 따로 둔다.
+  //   카드마다 붙으면 카드가 길어지고, 손님이 카드를 다 읽기 전에 지친다.
+  //   화면(exam-luck-result)이 마지막에 한 번만 보여 준다. 재료에는 그대로 들어간다.
   return {
     key: 'years',
     title: '앞으로의 흐름',

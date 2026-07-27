@@ -26,7 +26,7 @@ import { judgeJobChangeNatal, judgeJobChangeLuck } from '@/lib/saju/examLuck/job
 import { judgeExamDay } from '@/lib/saju/examLuck/examDay'
 import { buildAllCards } from '@/lib/saju/examLuck/buildCards'
 import { buildExamPrompt, parseExamTongbyeon } from '@/lib/saju/examLuck/buildExamPrompt'
-import { examKindOf } from '@/lib/saju/examLuck/tables/rules'
+import { examKindOf, CLOSING, CLOSING_STUDENT } from '@/lib/saju/examLuck/tables/rules'
 import { saveRecord, updateRecordResult, getRecord } from '@/lib/saju/sajuRecords'
 import { calcSeyunList, type DayunItem } from '@/lib/saju/dayun'
 import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
@@ -264,6 +264,7 @@ function ExamLuckResultInner() {
             background: CARD, border: `0.5px solid ${LINE}`, borderRadius: 14,
             padding: '15px 16px', marginBottom: 12,
             fontSize: 13.5, color: '#3a2e28', lineHeight: 1.85, whiteSpace: 'pre-wrap',
+            wordBreak: 'keep-all', overflowWrap: 'anywhere',
           }}>{parsed.intro}</div>
         )}
 
@@ -286,6 +287,7 @@ function ExamLuckResultInner() {
             background: CARD, border: `0.5px solid ${LINE}`, borderRadius: 14,
             padding: '15px 16px', marginBottom: 12,
             fontSize: 13.5, color: '#3a2e28', lineHeight: 1.85, whiteSpace: 'pre-wrap',
+            wordBreak: 'keep-all', overflowWrap: 'anywhere',
           }}>{parsed.outro}</div>
         )}
 
@@ -295,12 +297,16 @@ function ExamLuckResultInner() {
           </div>
         )}
 
+        {/* ★교재 195쪽 맺음말 — 카드마다 붙이지 않고 여기 한 번만 (2026-07-27)
+             카드에 넣었더니 카드가 길어져 손님이 다 읽기 전에 지쳤다. */}
         <div style={{
           marginTop: 6, background: '#f7e6ee', border: '0.5px solid #f0d8e2', borderRadius: 12,
-          padding: '11px 14px', fontSize: 11.5, color: '#8c4a63', lineHeight: 1.7,
+          padding: '14px 16px', fontSize: 12.5, color: '#8c4a63', lineHeight: 1.85,
+          wordBreak: 'keep-all', overflowWrap: 'anywhere',
         }}>
-          시험의 본질은 마음먹기에 달려 있어, 흉할 것도 길할 것도 없습니다.
-          사주의 아쉬운 점은 노력과 의지로 충분히 넘어설 수 있으니 참고만 하세요.
+          {(target === 'student' ? CLOSING_STUDENT : CLOSING).map((l, i) => (
+            <p key={i} style={{ margin: i === 0 ? 0 : '6px 0 0' }}>{l}</p>
+          ))}
         </div>
       </div>
     </main>
@@ -316,21 +322,27 @@ function YearStrip({ cards }: { cards: ExamCard[] }) {
       background: CARD, border: `0.5px solid ${LINE}`, borderRadius: 14,
       padding: '13px 14px', marginBottom: 12, overflowX: 'auto',
     }}>
-      <div style={{ fontSize: 11.5, color: '#8a7063', marginBottom: 9 }}>← 미래 · 올해 →</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 9 }}>
+        <span style={{ fontSize: 11.5, color: '#8a7063' }}>← 미래 · 올해 →</span>
+        {years.length > 4 && (
+          <span style={{ fontSize: 10.5, color: '#c5a590' }}>옆으로 밀어서 보세요</span>
+        )}
+      </div>
       <div style={{ display: 'flex', gap: 7, flexDirection: 'row-reverse', justifyContent: 'flex-end' }}>
         {years.map(y => {
           const g = GRADE_STYLE[y.grade]
           return (
-            <div key={y.year} style={{ flexShrink: 0, textAlign: 'center', minWidth: 62 }}>
+            <div key={y.year} style={{ flexShrink: 0, textAlign: 'center', width: 66 }}>
               <div style={{ fontSize: 11, color: '#8a7063', marginBottom: 4 }}>{y.year}</div>
               <div style={{
-                fontSize: 15, fontWeight: 700, color: '#3a2e28',
+                fontSize: 16, fontWeight: 700, color: '#3a2e28',
                 background: '#faf6f1', border: `0.5px solid ${LINE}`,
-                borderRadius: 9, padding: '7px 0', marginBottom: 4,
+                borderRadius: 9, padding: '8px 0', marginBottom: 4,
+                letterSpacing: '.04em',
               }}>{y.stem}{y.branch}</div>
               <div style={{
-                fontSize: 10.5, fontWeight: 600, borderRadius: 7, padding: '2px 0',
-                background: g.bg, color: g.fg,
+                fontSize: 10, fontWeight: 600, borderRadius: 7, padding: '3px 0',
+                background: g.bg, color: g.fg, whiteSpace: 'nowrap',
               }}>{y.grade}</div>
             </div>
           )

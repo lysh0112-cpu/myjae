@@ -15,6 +15,16 @@
 import { useState } from 'react'
 import type { ExamCard, Grade } from '@/lib/saju/examLuck/types'
 
+/**
+ * ★긴 낱말이 안 꺾여 오른쪽으로 넘치던 것을 막는다. (2026-07-27)
+ *   "9급·7급·로스쿨·교사 임용고시" 처럼 가운뎃점으로 이어진 말은
+ *   브라우저가 한 덩어리로 보아 줄을 안 바꾼다. 화면 밖으로 잘려 나갔다.
+ */
+const WRAP = {
+  wordBreak: 'keep-all' as const,      // 한글은 낱말 단위로 꺾는다
+  overflowWrap: 'anywhere' as const,   // 그래도 넘치면 어디서든 꺾는다
+}
+
 const CARD = '#FFFBF7'
 const LINE = '#f0e0d5'
 const ACCENT = '#c85a8c'
@@ -42,6 +52,7 @@ export default function ExamJudgeCard({ card, tong }: Props) {
     <div style={{
       background: CARD, border: `0.5px solid ${LINE}`, borderRadius: 14,
       padding: '16px 16px 14px', marginBottom: 12,
+      overflowWrap: 'anywhere', minWidth: 0,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 14.5, fontWeight: 500, color: '#3a2e28' }}>{card.title}</div>
@@ -55,13 +66,13 @@ export default function ExamJudgeCard({ card, tong }: Props) {
 
       {/* 풀이가 있으면 풀이를 본문으로, 판정 문장은 「근거 보기」로 접는다 */}
       {hasTong && (
-        <p style={{ fontSize: 13.5, color: '#3a2e28', lineHeight: 1.85, margin: '0 0 4px', whiteSpace: 'pre-wrap' }}>
+        <p style={{ fontSize: 13.5, color: '#3a2e28', lineHeight: 1.85, margin: '0 0 4px', whiteSpace: 'pre-wrap', ...WRAP }}>
           {tong!.trim()}
         </p>
       )}
 
       {!hasTong && card.lines.map((l, i) => (
-        <p key={i} style={{ fontSize: 13, color: '#4a3a30', lineHeight: 1.75, margin: '0 0 6px' }}>{l}</p>
+        <p key={i} style={{ fontSize: 13, color: '#4a3a30', lineHeight: 1.75, margin: '0 0 6px', ...WRAP }}>{l}</p>
       ))}
 
       {hasTong && card.lines.length > 0 && (
@@ -76,7 +87,7 @@ export default function ExamJudgeCard({ card, tong }: Props) {
           {openWhy && (
             <div style={{ marginTop: 7 }}>
               {card.lines.map((l, i) => (
-                <p key={i} style={{ fontSize: 12.5, color: '#7a6858', lineHeight: 1.7, margin: '0 0 5px' }}>{l}</p>
+                <p key={i} style={{ fontSize: 12.5, color: '#7a6858', lineHeight: 1.7, margin: '0 0 5px', ...WRAP }}>{l}</p>
               ))}
             </div>
           )}
