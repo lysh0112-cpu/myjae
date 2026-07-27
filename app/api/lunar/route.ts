@@ -45,8 +45,12 @@ export async function GET(req: NextRequest) {
 
     // ✅ apiKey를 직접 넘겨서 KASI 절기 API 호출
     const [yearGanji, monthGanji] = await Promise.all([
-      getYearGanji(solarYear, solarMonth, solarDay, apiKey),
-      getMonthGanji(solarYear, solarMonth, solarDay, apiKey),
+      // ★2026-07-27 — 태어난 시각을 넘긴다.
+      //   절기는 하루 중 어느 순간에 든다(2027 입춘 2/4 10:52).
+      //   절입일 당일 태생은 시각을 봐야 년주·월주가 갈린다.
+      //   hour 가 없으면(시 모름) 예전처럼 당일=이전 달·이전 해로 본다.
+      getYearGanji(solarYear, solarMonth, solarDay, apiKey, birthMinute),
+      getMonthGanji(solarYear, solarMonth, solarDay, apiKey, birthMinute),
     ])
     const dayGanji = getDayGanji(solarYear, solarMonth, solarDay)
 
