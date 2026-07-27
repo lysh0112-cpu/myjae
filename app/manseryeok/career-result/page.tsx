@@ -22,10 +22,12 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import {
   judgeOhaengGijil, judgeYukchin, judgeGyeokguk,
   judgeSinsal, judgeGyeyeol, judgeSpecial, judgeYongsin, judgeJobs,
+  judgeIlju, judgeJobStructure,
   type CareerCard, type CareerInput,
 } from '@/lib/saju/career'
-import { calcPerson, type PersonCalc } from '@/lib/saju/career/calcPerson'
-import { saveRecord } from '@/lib/saju/sajuRecords'
+import { calcPerson, ageOf, type PersonCalc } from '@/lib/saju/career/calcPerson'
+import { buildCareerPrompt, parseCareerTongbyeon, keyOfTitle } from '@/lib/saju/career'
+import { saveRecord, updateRecordResult } from '@/lib/saju/sajuRecords'
 import { getGongmang } from '@/lib/saju/gongmang'
 import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
 import CareerJudgeCard from './components/CareerJudgeCard'
@@ -37,9 +39,9 @@ const LINE = '#f0e0d5'
 /** 화면 묶음 — 통변 순서와 1:1 로 맞춘다. (교훈 AS) */
 const GROUPS: Array<{ label: string; keys: string[] }> = [
   { label: '', keys: ['special'] },                       // 경고는 맨 위, 제목 없이
-  { label: '타고난 결', keys: ['ohaeng_gijil', 'yukchin'] },
+  { label: '타고난 결', keys: ['ohaeng_gijil', 'yukchin', 'ilju'] },
   { label: '그릇과 자리', keys: ['gyeokguk', 'sinsal', 'yongsin'] },
-  { label: '어울리는 자리', keys: ['gyeyeol', 'jobs'] },
+  { label: '어울리는 자리', keys: ['jobstruct', 'gyeyeol', 'jobs'] },
 ]
 
 function CareerResultInner() {
@@ -61,7 +63,11 @@ function CareerResultInner() {
 
   const [calc, setCalc] = useState<PersonCalc | null>(null)
   const [err, setErr] = useState('')
-  const savedRef = useRef(false)   // 두 번 저장되지 않게 (교훈 AQ)
+  const savedRef = useRef(false)     // 두 번 저장되지 않게 (교훈 AQ)
+  const savedIdRef = useRef<string>('')  // ★async 가 길어 state 대신 ref 로 읽는다 (교훈 K)
+  const [tong, setTong] = useState('')
+  const [tongState, setTongState] = useState<'idle' | 'loading' | 'done' | 'failed'>('idle')
+  const tongStartedRef = useRef(false)
 
   useEffect(() => {
     let cancelled = false
@@ -91,9 +97,11 @@ function CareerResultInner() {
       judgeSpecial(input),
       judgeOhaengGijil(input),
       judgeYukchin(input),
+      judgeIlju(input),
       judgeGyeokguk(input),
       judgeSinsal(input),
       judgeYongsin(input),
+      judgeJobStructure(input),
       judgeGyeyeol(input),
       judgeJobs(input),
     ].filter(Boolean) as CareerCard[]
@@ -111,8 +119,104 @@ function CareerResultInner() {
         year: person.year, month: person.month, day: person.day,
         leapMonth: person.leapMonth, hour: person.hour,
       },
-    }).catch(e => console.error('진로적성 기록 저장 실패', e))
+    }).then(r => { if (r.ok && r.id) savedIdRef.current = r.id })
+      .catch(e => console.error('진로적성 기록 저장 실패', e))
   }, [calc, recordId, person])
+
+  // ── 통변 ────────────────────────────────────────────────────
+  //   ★다시보기(recordId)로 들어오면 새로 돌리지 않는다. 돈이 든다.
+  //     저장해 둔 풀이를 그대로 보여 준다.
+  useEffect(() => {
+    if (!calc || !cards.length || tongStartedRef.current) return
+    if (recordId) return           // 다시보기 — 아래 effect 가 저장본을 불러온다
+    tongStartedRef.current = true
+    let cancelled = false
+
+    ;(async () => {
+      setTongState('loading')
+      const systemPrompt = buildCareerPrompt({
+        name: person.name, gender: person.gender, age: ageOf(person.year),
+        target, saju: calc.saju, hourUnknown: calc.hourUnknown, cards,
+      })
+      let acc = ''
+      try {
+        const res = await fetch('/api/tongbyeon', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ systemPrompt, premium: true }),
+        })
+        if (!res.ok || !res.body) {
+          console.error('진로적성 통변 실패', res.status)
+          setTongState('failed'); return
+        }
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        // ★청크가 줄 중간에 잘릴 수 있다. buf 로 완성된 줄만 처리한다. (교훈 AG)
+        let buf = ''
+        for (;;) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += decoder.decode(value, { stream: true })
+          const ls = buf.split('\n')
+          buf = ls.pop() ?? ''
+          for (const line of ls) {
+            if (!line.startsWith('data: ')) continue
+            const d = line.slice(6)
+            if (d === '[DONE]') continue
+            try {
+              const parsed = JSON.parse(d)
+              if (parsed.text) { acc += parsed.text; if (!cancelled) setTong(acc) }
+            } catch (e) { console.error('tongbyeon parse', e) }
+          }
+        }
+        if (cancelled) return
+        setTongState('done')
+
+        // ★풀이를 보관함에 남긴다. insert 가 아니라 update 다. (교훈 AQ)
+        //   판정 저장이 먼저 일어나므로, 그 행을 덮어써야 한다.
+        //   id 는 state 가 아니라 ref 로 읽는다. async 가 길어 클로저가 낡는다.
+        for (let i = 0; i < 10 && !savedIdRef.current; i++) {
+          await new Promise(r => setTimeout(r, 500))
+        }
+        if (savedIdRef.current) {
+          const ok = await updateRecordResult(savedIdRef.current, { tong: acc })
+          if (!ok) console.error('진로적성 풀이 저장 실패 (update)')
+        } else {
+          console.error('진로적성 풀이 저장 실패 — 저장된 기록 id 를 찾지 못했습니다')
+        }
+      } catch (e) {
+        console.error('진로적성 통변 오류', e)
+        if (!cancelled) setTongState('failed')
+      }
+    })()
+    return () => { cancelled = true }
+  }, [calc, cards, recordId, person, target])
+
+  // 다시보기 — 저장해 둔 풀이 불러오기
+  useEffect(() => {
+    if (!recordId) return
+    let cancelled = false
+    import('@/lib/saju/sajuRecords').then(({ getRecord }) =>
+      getRecord(recordId).then(r => {
+        if (cancelled || !r) return
+        const t = (r.resultData as { tong?: string } | undefined)?.tong
+        if (t) { setTong(t); setTongState('done') }
+      }),
+    ).catch(e => console.error('저장된 풀이 불러오기 실패', e))
+    return () => { cancelled = true }
+  }, [recordId])
+
+  // 대목별로 갈라 카드에 넣는다
+  const { tongIntro, tongByKey, tongOutro } = useMemo(() => {
+    if (!tong) return { tongIntro: '', tongByKey: {} as Record<string, string>, tongOutro: '' }
+    const { intro, byTitle, outro } = parseCareerTongbyeon(tong)
+    const map: Record<string, string> = {}
+    for (const title of Object.keys(byTitle)) {
+      const k = keyOfTitle(title)
+      if (k) map[k] = byTitle[title]
+    }
+    return { tongIntro: intro, tongByKey: map, tongOutro: outro }
+  }, [tong])
 
   const byKey = (k: string) => cards.find(c => c.key === k)
 
@@ -166,9 +270,19 @@ function CareerResultInner() {
               )}
             </div>
 
-            {/* [통변 붙일 자리 — 여는말]
-                궁합처럼 /api/tongbyeon(SSE)을 붙이면 여기에 여는말이 들어온다.
-                프롬프트 재료는 각 카드의 reasons 를 모아 넘긴다. */}
+            {/* 여는말 */}
+            {tongState === 'loading' && !tongIntro && (
+              <div style={{ textAlign: 'center', padding: '18px 0', color: '#8a7063', fontSize: 12.5 }}>
+                풀이를 쓰고 있어요…
+              </div>
+            )}
+            {tongIntro && (
+              <div style={{
+                background: '#f7f3fb', border: `0.5px solid #e5dcf0`, borderRadius: 14,
+                padding: '15px 16px', marginBottom: 14,
+                fontSize: 13.5, color: '#3a2e28', lineHeight: 1.85, whiteSpace: 'pre-wrap',
+              }}>{tongIntro}</div>
+            )}
 
             {GROUPS.map(g => {
               const list = g.keys.map(byKey).filter(Boolean) as CareerCard[]
@@ -182,13 +296,25 @@ function CareerResultInner() {
                     }}>{g.label}</div>
                   )}
                   {list.map(c => (
-                    <CareerJudgeCard key={c.key} card={c} />
+                    <CareerJudgeCard key={c.key} card={c} tong={tongByKey[c.key]} />
                   ))}
                 </div>
               )
             })}
 
-            {/* [통변 붙일 자리 — 맺는말] */}
+            {/* 맺는말 */}
+            {tongOutro && (
+              <div style={{
+                background: '#f7f3fb', border: `0.5px solid #e5dcf0`, borderRadius: 14,
+                padding: '15px 16px', margin: '4px 0 14px',
+                fontSize: 13.5, color: '#3a2e28', lineHeight: 1.85, whiteSpace: 'pre-wrap',
+              }}>{tongOutro}</div>
+            )}
+            {tongState === 'failed' && (
+              <div style={{ textAlign: 'center', padding: '12px 0', color: '#8a7063', fontSize: 12 }}>
+                풀이를 불러오지 못했어요. 판정은 그대로 보실 수 있습니다.
+              </div>
+            )}
 
             {/* 아직 없는 대목 */}
             <div style={{
@@ -196,9 +322,7 @@ function CareerResultInner() {
               marginTop: 6, color: '#8a7063', fontSize: 12, lineHeight: 1.8,
             }}>
               <div style={{ fontWeight: 500, marginBottom: 4, color: '#6b5340' }}>곧 더해질 대목</div>
-              일주 60갑자 · 직업 구조 8종
-              {target === 'student' && <> · 학과와 대학 · 학업운</>}
-              <br />그리고 이 모두를 사람 말로 엮어 주는 풀이
+              {target === 'student' ? '학과와 대학 · 학업운 · 합격운' : '이직과 창업 시기 · 대운의 흐름'}
             </div>
 
             <div style={{ fontSize: 11, color: '#a08d7d', textAlign: 'center', marginTop: 18, lineHeight: 1.7 }}>

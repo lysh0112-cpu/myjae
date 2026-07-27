@@ -18,6 +18,7 @@
  *    궁합에서 "(순화해서 전할 것)" 같은 지시문이 화면과 복사본으로 샌 적이 있다.
  */
 
+import { useState } from 'react'
 import type { CareerCard } from '@/lib/saju/career'
 
 const CARD = '#FFFBF7'
@@ -48,6 +49,8 @@ interface Bar {
 
 interface Props {
   card: CareerCard
+  /** 이 대목의 AI 풀이. 있으면 판정 문장은 접어 둔다. */
+  tong?: string
 }
 
 function barsOf(card: CareerCard): Bar[] | null {
@@ -77,8 +80,10 @@ function barsOf(card: CareerCard): Bar[] | null {
   return null
 }
 
-export default function CareerJudgeCard({ card }: Props) {
+export default function CareerJudgeCard({ card, tong }: Props) {
   const bars = barsOf(card)
+  const [openWhy, setOpenWhy] = useState(false)
+  const hasTong = !!(tong && tong.trim())
 
   return (
     <div style={{
@@ -131,11 +136,37 @@ export default function CareerJudgeCard({ card }: Props) {
         </div>
       )}
 
-      {card.lines.map((l, i) => (
-        <p key={i} style={{
-          fontSize: 13, color: '#4a3a30', lineHeight: 1.75, margin: '0 0 6px',
-        }}>{l}</p>
+      {/* ★풀이가 있으면 풀이를 본문으로 삼고, 판정 문장은 「근거 보기」로 접는다.
+          같은 내용이 두 번 나오지 않게 하되, 근거는 언제든 펼쳐 볼 수 있다.
+          (궁합은 판정 문장을 아예 껐지만, 진로적성은 "왜 그런지"가 값어치라 남긴다) */}
+      {hasTong && (
+        <p style={{ fontSize: 13.5, color: '#3a2e28', lineHeight: 1.85, margin: '0 0 4px', whiteSpace: 'pre-wrap' }}>
+          {tong!.trim()}
+        </p>
+      )}
+
+      {!hasTong && card.lines.map((l, i) => (
+        <p key={i} style={{ fontSize: 13, color: '#4a3a30', lineHeight: 1.75, margin: '0 0 6px' }}>{l}</p>
       ))}
+
+      {hasTong && card.lines.length > 0 && (
+        <div style={{ marginTop: 10, borderTop: `0.5px solid ${LINE}`, paddingTop: 8 }}>
+          <button onClick={() => setOpenWhy(o => !o)}
+            style={{
+              background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+              color: ACCENT, fontSize: 12, fontFamily: 'inherit',
+            }}>
+            {openWhy ? '근거 접기' : '근거 보기'}
+          </button>
+          {openWhy && (
+            <div style={{ marginTop: 7 }}>
+              {card.lines.map((l, i) => (
+                <p key={i} style={{ fontSize: 12.5, color: '#7a6858', lineHeight: 1.7, margin: '0 0 5px' }}>{l}</p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

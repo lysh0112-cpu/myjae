@@ -35,6 +35,7 @@ import { checkSinsal9 } from './sinsal9'
 import { calcCareerYongsin } from './yongsin'
 import type { CareerCard, CareerInput } from './types'
 import { calcCareerGyeokguk } from './gyeokguk'
+import { ILJU } from './tables/ilju'
 import { OHAENG_JOBS, jobKey, jobLabel } from './tables/jobs'
 import { YUKCHIN_GIJIL, GRID25, YUKCHIN_ORDER, type YukchinGroup } from './tables/yukchin'
 import { GYEOKGUK_INFO } from './tables/gyeokguk'
@@ -60,6 +61,7 @@ function buildFreq(): Map<string, number> {
   for (const g of YUKCHIN_ORDER) for (const e of EL5) lists.push(GRID25[g][e].jobs)
   for (const s of SINSAL9) lists.push(s.jobs)
   for (const k of Object.keys(GYEOKGUK_INFO)) lists.push(GYEOKGUK_INFO[k].jobs)
+  for (const k of Object.keys(ILJU)) lists.push(ILJU[k].jobs)
   for (const e of EL5) lists.push(YONGSIN_OHAENG[e])
   for (const k of Object.keys(YONGSIN_YUKCHIN)) lists.push(YONGSIN_YUKCHIN[k])
   const m = new Map<string, number>()
@@ -148,13 +150,19 @@ export function pickJobs(input: CareerInput): { hits: JobHit[]; pool: number } {
     if (info) add(info.jobs, gk.name, 2)
   }
 
-  // ⑤ 신살 — 작용력이 가장 크면 무겁게
+  // ⑤ 일주 — 60갑자가 가리키는 자리 (교재 100~127쪽)
+  if (day && day.stem !== '?' && day.branch !== '?') {
+    const ij = ILJU[day.stem + day.branch]
+    if (ij) add(ij.jobs, `${ij.ko} 일주`, 2)
+  }
+
+  // ⑥ 신살 — 작용력이 가장 크면 무겁게
   for (const h of checkSinsal9(input.saju)) {
     if (!h.active) continue
     add(h.row.jobs, h.name, h.power >= 3 ? 3 : 2)
   }
 
-  // ⑥ 용신 (30% — 가볍게)
+  // ⑦ 용신 (30% — 가볍게)
   const y = calcCareerYongsin(input)
   if (y?.yongsin) {
     add(y.jobsByEl, `${y.yongsin} 용신`, 1)
@@ -192,7 +200,7 @@ export function judgeJobs(input: CareerInput): CareerCard {
   for (const h of hits.slice(0, 15)) {
     reasons.push(`  ${h.label} ${h.score}점(원 ${h.raw} · ${h.freq}벌) ← ${h.sources.map(s => `${s.label}(${s.weight})`).join(' + ')}`)
   }
-  reasons.push('무게 : 25칸 격자 3 · 육친 2 · 오행 2 · 격국 2 · 신살 2~3 · 용신 1 (교재 133쪽 강점 70 : 용신 30)')
+  reasons.push('무게 : 25칸 격자 3 · 육친 2 · 오행 2 · 격국 2 · 일주 2 · 신살 2~3 · 용신 1 (교재 133쪽 강점 70 : 용신 30)')
   reasons.push('교재 목록 59벌에 두루 나오는 흔한 직업(의사·요식업·상담사 등)은 무게를 덜었습니다.')
   reasons.push('이 대목("어울리는 직업")의 통변 재료입니다. 위에서 서너 개만 골라 왜 어울리는지 풀어 주세요. 목록을 그대로 읊지 마세요.')
   reasons.push('직업은 정해 주는 것이 아니라 권해 보는 것입니다. "이런 자리에서 힘이 납니다" 정도로 말하세요.')
