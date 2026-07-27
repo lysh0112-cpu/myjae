@@ -310,57 +310,17 @@ function ResultNewContent() {
     useResultSaju(calType,yearParam,monthParam,dayParam,leapMonth,hourIdx)
   const converting=converting0||loadingInfo||recordLoading
 
-  if(converting) return (
-    <div style={{minHeight:'100vh',background:'#FDF6F0',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'16px'}}>
-      <div style={{fontSize:'32px',animation:'spin 1s linear infinite'}}>✦</div>
-      <p style={{color:'#c8783c',fontSize:'14px'}}>사주 정보를 불러오는 중...</p>
-      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
-    </div>
-  )
-
-  // 로그인도 안 했고 URL 정보도 없을 때 → 안내
-  if(!info) return (
-    <div style={{minHeight:'100vh',background:'#FDF6F0',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'16px',padding:'24px',textAlign:'center'}}>
-      <div style={{fontSize:'32px'}}>✦</div>
-      <p style={{color:'#96502e',fontSize:'15px',fontWeight:700}}>사주 정보가 필요해요</p>
-      <p style={{color:'#b4785a',fontSize:'13px',lineHeight:1.7}}>로그인하시면 내 사주가 자동으로 나와요.<br/>또는 홈에서 생년월일을 입력해 주세요.</p>
-      <div style={{display:'flex',gap:'8px',marginTop:'4px'}}>
-        <button onClick={()=>router.push('/login')} style={{background:'#b46e46',color:'#fff',border:'none',borderRadius:'10px',padding:'10px 20px',fontSize:'14px',fontWeight:600,cursor:'pointer'}}>로그인</button>
-        <button onClick={()=>router.push('/home-new')} style={{background:'#fffbf7',color:'#96502e',border:'0.5px solid #f0e0d5',borderRadius:'10px',padding:'10px 20px',fontSize:'14px',fontWeight:600,cursor:'pointer'}}>홈으로</button>
-      </div>
-    </div>
-  )
-
+  // ★★★훅은 반드시 아래 조기 return 들보다 위에 있어야 한다★★★
+  //   2026-07-27 — 여기 있던 대운 훅 4개를 조기 return 뒤에 넣었다가 화면이 통째로 죽었다.
+  //   converting 일 때는 훅이 안 돌고 로딩이 끝나면 도니, 렌더마다 훅 개수가 달라져
+  //   React 가 그 자리에서 터진다("This page couldn't load"). 타입 검사로는 안 잡힌다.
+  //   이 파일에는 조기 return 이 둘 있다(converting · !info). 훅을 더할 거면 이 위에 두라.
   const solarYear=calType==="음력"&&solar?solar.year:yearParam
   const solarMonth=calType==="음력"&&solar?solar.month:monthParam
   const solarDay=calType==="음력"&&solar?solar.day:dayParam
-  const ilgan=dayStem
-  const [gm1,gm2]=ilgan&&iljji?getGongmang(ilgan,iljji):['','']
-  const hourBranch=saju.find(p=>p.pillar==="시주")?.branch??null
-  const monthBranchForNote=saju.find(p=>p.pillar==="월주")?.branch??null
-  const ohaeng=saju.length>0?toPercentList(calcSimsanOhaeng(saju,solarMonth,solarDay,hourBranch)):[]
-  const sipsung=saju.length>0&&dayStem?calcSipsung(saju,dayStem):[]
-  const calLabel=`${calType} ${yearParam}.${monthParam}.${dayParam}${calType==="음력"&&leapMonth==="1"?" (윤달)":""}`
-  const solarLabel=calType==="음력"&&solar?` (양력 ${solar.year}.${solar.month}.${solar.day})`:" "
-  const hourLabel=hourIdx===null?"시 미지정":`${BRANCH_LIST[hourIdx]?.char}시`
-  const genderLabel=gender==="여"?"여성":"남성"
 
-  // 용신 계산 — 화면 표시는 심산 3종 용신(yongsinNew), 통변은 기존 형식(호환)
-  //   ★ 심산 오행 점수를 넘겨 준다. 이래야 월지 계절 치환(丑월=水, 未월=火 등)이
-  //     억부용신 판정에 반영된다. (연재쌤 확정: 표 기준으로 계절 치환이 맞다)
-  const simsanScore = saju.length>0 ? calcSimsanOhaeng(saju,solarMonth,solarDay,hourBranch) : null
-  const yongsinBase=saju.length>0&&dayStem?calcYongsinNew(saju,dayStem,simsanScore ?? undefined):null
-  // 전문가 모드(?pro=1)에서 합충 토글 ON이면 합충 반영 점수로 재계산
-  const isPro = searchParams.get('pro') === '1'
-
-  // 병존 문구를 학생용으로 낼지 — 만 나이 20세 미만이면 학생.
-  //   ★나이는 lib/saju/ageDayun.ts 하나만 쓴다. 화면마다 다르면 안 된다. (30부 5장)
-  const byeongjonTarget: 'student'|'adult' =
-    (solarYear && exactAge(solarYear, solarMonth, solarDay) < 20) ? 'student' : 'adult'
-
-  // ★2026-07-27 — 대운을 여기서 한 번만 받아 표(UnseFlow)와 통변 재료에 함께 쓴다.
+  // 대운을 여기서 한 번만 받아 표(UnseFlow)와 통변 재료에 함께 쓴다.
   //   전에는 UnseFlow 가 혼자 불렀고, 통변은 대운을 아예 몰랐다.
-  //   (프롬프트의 currentDaeun 자리가 선언만 되고 비어 있었다)
   const [dayunList, setDayunList] = useState<DayunItem[]>([])
   useEffect(() => {
     if (!solarYear || !monthGanji || !yearStem || !dayStem) return
@@ -385,6 +345,52 @@ function ResultNewContent() {
     if (!dayStem || dayStem === '?') return null
     return calcSeyunList(dayStem, currentYear).find(x => x.year === currentYear) ?? null
   }, [dayStem, currentYear])
+
+  if(converting) return (
+    <div style={{minHeight:'100vh',background:'#FDF6F0',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'16px'}}>
+      <div style={{fontSize:'32px',animation:'spin 1s linear infinite'}}>✦</div>
+      <p style={{color:'#c8783c',fontSize:'14px'}}>사주 정보를 불러오는 중...</p>
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+    </div>
+  )
+
+  // 로그인도 안 했고 URL 정보도 없을 때 → 안내
+  if(!info) return (
+    <div style={{minHeight:'100vh',background:'#FDF6F0',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'16px',padding:'24px',textAlign:'center'}}>
+      <div style={{fontSize:'32px'}}>✦</div>
+      <p style={{color:'#96502e',fontSize:'15px',fontWeight:700}}>사주 정보가 필요해요</p>
+      <p style={{color:'#b4785a',fontSize:'13px',lineHeight:1.7}}>로그인하시면 내 사주가 자동으로 나와요.<br/>또는 홈에서 생년월일을 입력해 주세요.</p>
+      <div style={{display:'flex',gap:'8px',marginTop:'4px'}}>
+        <button onClick={()=>router.push('/login')} style={{background:'#b46e46',color:'#fff',border:'none',borderRadius:'10px',padding:'10px 20px',fontSize:'14px',fontWeight:600,cursor:'pointer'}}>로그인</button>
+        <button onClick={()=>router.push('/home-new')} style={{background:'#fffbf7',color:'#96502e',border:'0.5px solid #f0e0d5',borderRadius:'10px',padding:'10px 20px',fontSize:'14px',fontWeight:600,cursor:'pointer'}}>홈으로</button>
+      </div>
+    </div>
+  )
+
+  const ilgan=dayStem
+  const [gm1,gm2]=ilgan&&iljji?getGongmang(ilgan,iljji):['','']
+  const hourBranch=saju.find(p=>p.pillar==="시주")?.branch??null
+  const monthBranchForNote=saju.find(p=>p.pillar==="월주")?.branch??null
+  const ohaeng=saju.length>0?toPercentList(calcSimsanOhaeng(saju,solarMonth,solarDay,hourBranch)):[]
+  const sipsung=saju.length>0&&dayStem?calcSipsung(saju,dayStem):[]
+  const calLabel=`${calType} ${yearParam}.${monthParam}.${dayParam}${calType==="음력"&&leapMonth==="1"?" (윤달)":""}`
+  const solarLabel=calType==="음력"&&solar?` (양력 ${solar.year}.${solar.month}.${solar.day})`:" "
+  const hourLabel=hourIdx===null?"시 미지정":`${BRANCH_LIST[hourIdx]?.char}시`
+  const genderLabel=gender==="여"?"여성":"남성"
+
+  // 용신 계산 — 화면 표시는 심산 3종 용신(yongsinNew), 통변은 기존 형식(호환)
+  //   ★ 심산 오행 점수를 넘겨 준다. 이래야 월지 계절 치환(丑월=水, 未월=火 등)이
+  //     억부용신 판정에 반영된다. (연재쌤 확정: 표 기준으로 계절 치환이 맞다)
+  const simsanScore = saju.length>0 ? calcSimsanOhaeng(saju,solarMonth,solarDay,hourBranch) : null
+  const yongsinBase=saju.length>0&&dayStem?calcYongsinNew(saju,dayStem,simsanScore ?? undefined):null
+  // 전문가 모드(?pro=1)에서 합충 토글 ON이면 합충 반영 점수로 재계산
+  const isPro = searchParams.get('pro') === '1'
+
+  // 병존 문구를 학생용으로 낼지 — 만 나이 20세 미만이면 학생.
+  //   ★나이는 lib/saju/ageDayun.ts 하나만 쓴다. 화면마다 다르면 안 된다. (30부 5장)
+  const byeongjonTarget: 'student'|'adult' =
+    (solarYear && exactAge(solarYear, solarMonth, solarDay) < 20) ? 'student' : 'adult'
+
   const yongsinHap=isPro&&saju.length>0&&dayStem
     ? calcYongsinNew(saju,dayStem,calcHapchungScore(saju).score)
     : null
