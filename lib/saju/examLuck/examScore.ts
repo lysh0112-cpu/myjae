@@ -205,7 +205,21 @@ export function judgeYear(
   if (n.gwanChars.length && hapedBy(n.gwanChars, yStem, yBranch)) add('용신관인합거')
   if (n.inChars.length && hapedBy(n.inChars, yStem, yBranch)) add('용신관인합거')
   // 재극인 · 식상극관
-  if (both.some(s => s === '정재' || s === '편재') && n.inChars.length) add('재극인')
+  // ★재극인 — 원본 195쪽 「신약한 관살혼잡 사주에 인성이 재성에 의해 재극인을 당하거나」
+  //   교재는 조건을 셋 붙였다. 전에는 "재성운 + 원국에 인성" 만 보고 앞의 둘을 빠뜨렸다.
+  //     ① 신약할 것          ys.status 로 본다
+  //     ② 관살혼잡일 것       정관·편관이 함께 있을 것
+  //     ③ 재성이 인성을 극할 것
+  //   ⚠️ 셋을 다 걸면 아주 드물어진다. 그래서 두 갈래로 나눈다.
+  //      셋 다 맞으면 교재가 말한 그 자리(무게 그대로),
+  //      ③만 맞으면 결은 같으나 약하므로 절반 무게로 본다.
+  if (both.some(x => x === '정재' || x === '편재') && n.inChars.length) {
+    const sinyak = ys ? (ys.status === '신약' || ys.status === '극신약') : false
+    const gwansal = n.gwanChars.some(c => sipsinOfChar(n.dayStem, c) === '정관')
+      && n.gwanChars.some(c => sipsinOfChar(n.dayStem, c) === '편관')
+    if (sinyak && gwansal) add('재극인')
+    else add('재극인약')
+  }
   if (both.some(s => s === '식신' || s === '상관') && n.gwanChars.length) add('식상극관')
 
   // 공망
