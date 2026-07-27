@@ -113,12 +113,35 @@ export async function calcDayunStartAge(
 ): Promise<number> {
   let days: number
   if (isForward) {
-    // 다음 절기(다음 달 절입일)까지
-    let nm = solarMonth + 1
-    let ny = solarYear
-    if (nm > 12) { nm = 1; ny += 1 }
-    const termDay = await getSolarTermDay(ny, nm, apiKey)
-    days = daysBetween(solarYear, solarMonth, solarDay, ny, nm, termDay)
+    // ★2026-07-27 고침 — 순행은 "다음 절입일"까지인데, 그 다음 절입일이
+    //   반드시 다음 달인 것은 아니다.
+    //
+    //   [무엇이 틀렸었나]
+    //     생일이 그 달 절입일보다 앞이면(예: 2/3 생, 입춘 2/4),
+    //     다음 절기는 **이번 달 입춘**이지 다음 달 경칩이 아니다.
+    //     그런데 무조건 solarMonth + 1 을 봐서 한 달을 통째로 더 셌다.
+    //
+    //       1985-02-03 순행   맞는 값 입춘 2/4 까지 1일  → 0
+    //                        틀린 값 경칩 3/6 까지 31일 → 10   (10년 밀림)
+    //
+    //   [어떻게 드러났나]
+    //     하늘도마뱀 앱과 대조하다 찾았다. 명식 네 기둥은 완전히 같은데
+    //     대운 칸만 통째로 밀려 있었다. 1985-02-03(남)·1990-03-05(남) 두 사례에서 재현.
+    //     1950~2020 전수로 재니 순행인 사람의 19.4%, 손님 전체의 약 10% 가 어긋나 있었다.
+    //     가장 크게 벌어진 차이는 11년.
+    //
+    //   [고친 방식]
+    //     이번 달 절입일을 먼저 본다. 생일이 그보다 앞이면 그것이 다음 절기다.
+    const termThis = await getSolarTermDay(solarYear, solarMonth, apiKey)
+    if (solarDay < termThis) {
+      days = daysBetween(solarYear, solarMonth, solarDay, solarYear, solarMonth, termThis)
+    } else {
+      let nm = solarMonth + 1
+      let ny = solarYear
+      if (nm > 12) { nm = 1; ny += 1 }
+      const termDay = await getSolarTermDay(ny, nm, apiKey)
+      days = daysBetween(solarYear, solarMonth, solarDay, ny, nm, termDay)
+    }
   } else {
     // 역행: 이번 달 절입일까지 거슬러. 생일이 절입일 전이면 직전 달 절기로.
     const termThis = await getSolarTermDay(solarYear, solarMonth, apiKey)
@@ -134,6 +157,9 @@ export async function calcDayunStartAge(
     }
   }
   if (days < 0) days = 0
+  // ⚠️ 최소 1 로 올린다. 하늘도마뱀 같은 앱은 대운수 0 을 그대로 쓴다.
+  //    절입일 바로 앞뒤에 태어나면 0 이 나오는데, 여기서는 1 로 올려 왔다.
+  //    바꾸면 손님이 보던 대운 칸이 또 한 살 밀리므로 확정 뒤에 손댈 것. (연재쌤 확인)
   return Math.max(1, Math.round(days / DAYS_PER_DAYUN_YEAR))
 }
 
