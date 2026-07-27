@@ -21,7 +21,7 @@ import { GWIIN_MEANING, GWIIN_HARMONY } from '@/lib/saju/gwiinMeaning'
 import { GONGMANG_INTRO, GONGMANG_BY_PILLAR } from '@/lib/saju/gongmangMeaning'
 // ★2026-07-27 — 교재 48~77쪽 지지 자료를 통변 재료로 넣는다.
 //   지금까지 화면에만 있고 AI 는 몰랐다. (교훈 BF 의 반대편 — 줘야 할 것은 줘야 한다)
-import { traitsInSaju, traitLines, noteLines, isDohwaAt, type Target } from '@/lib/saju/jijiTrait'
+import { traitsInSaju, traitLines, noteLines, isDohwaAt, ctxOf, type Target } from '@/lib/saju/jijiTrait'
 import { findByeongjon, findCombo, findJijiByeongjon, sayOf } from '@/lib/saju/byeongjon'
 import { jijiRelation } from '@/lib/saju/jijiGrade'
 
@@ -175,12 +175,13 @@ function buildMyeongsikFeatures(
 function buildJijiTrait(saju: PillarInput[], target: Target): string {
   const hits = traitsInSaju(saju)
   if (!hits.length) return ''
+  const ctx = ctxOf(saju as never)
   const lines = hits.map(h => {
-    const strong = h.pillar === '월지' || h.pillar === '일지'
-    const dohwa = isDohwaAt(h.pillar.replace('지', '주'), h.branch) ? ' [도화]' : ''
+    const strong = h.pillars.includes('월지') || h.pillars.includes('일지')
+    const dohwa = h.pillars.some(p => isDohwaAt(p.replace('지', '주'), h.branch)) ? ' [도화]' : ''
     const body = strong
-      ? [...traitLines(h.row, target), ...noteLines(h.row, target)].join(' ')
-      : noteLines(h.row, target).join(' ')
+      ? [...traitLines(h.row, target, ctx), ...noteLines(h.row, target, ctx)].join(' ')
+      : noteLines(h.row, target, ctx).join(' ')
     const jobs = strong && h.row.jobs?.length ? ` (교재가 든 직업: ${h.row.jobs.join('·')})` : ''
     return `- ${h.pillar} ${h.branch}(${h.row.ko}·${h.row.tti})${dohwa} — ${body}${jobs}`
   })

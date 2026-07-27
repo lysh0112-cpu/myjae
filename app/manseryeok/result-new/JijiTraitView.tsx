@@ -16,8 +16,8 @@
 import { useState } from 'react'
 import type { Pillar } from '@/lib/saju/simsanOhaeng'
 import {
-  traitsInSaju, traitLines, noteLines, isDohwaAt,
-  type JijiTraitRow, type Target,
+  traitsInSaju, traitLines, noteLines, isDohwaAt, ctxOf,
+  type JijiTraitRow, type Target, type SajuCtx,
 } from '@/lib/saju/jijiTrait'
 
 const LINE = '#f0e0d5'
@@ -40,18 +40,19 @@ function Tag({ text, tone }: { text: string; tone: 'warm' | 'cool' }) {
   )
 }
 
-function One({ pillar, branch, row, target, defaultOpen }: {
-  pillar: string; branch: string; row: JijiTraitRow; target: Target; defaultOpen: boolean
+function One({ pillar, pillars, branch, row, target, ctx, defaultOpen }: {
+  pillar: string; pillars: string[]; branch: string; row: JijiTraitRow
+  target: Target; ctx: SajuCtx; defaultOpen: boolean
 }) {
   const [open, setOpen] = useState(defaultOpen)
-  const lines = [...traitLines(row, target), ...noteLines(row, target)]
-  const dohwa = isDohwaAt(pillar.replace('지', '주'), branch)
+  const lines = [...traitLines(row, target, ctx), ...noteLines(row, target, ctx)]
+  const dohwa = pillars.some(p => isDohwaAt(p.replace('지', '주'), branch))
 
   return (
     <div style={{ borderTop: `0.5px solid #f7ede4` }}>
       <div onClick={() => setOpen(v => !v)}
         style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', padding: '11px 15px 9px', cursor: 'pointer' }}>
-        <span style={{ fontSize: 11, color: '#b4785a', minWidth: 26 }}>{pillar}</span>
+        <span style={{ fontSize: 11, color: '#b4785a', whiteSpace: 'nowrap' }}>{pillar}</span>
         <span style={{ fontSize: 17, fontWeight: 700, color: '#1a1a1a' }}>{branch}</span>
         <span style={{ fontSize: 11.5, color: '#8a7a6c' }}>{row.ko} · {row.tti}</span>
         {dohwa && <Tag text="도화" tone="warm" />}
@@ -91,6 +92,7 @@ function One({ pillar, branch, row, target, defaultOpen }: {
 export default function JijiTraitView({ saju, target = 'adult' }: Props) {
   const [open, setOpen] = useState(true)
   const hits = traitsInSaju(saju)
+  const ctx = ctxOf(saju)
   if (!hits.length) return null
 
   return (
@@ -109,7 +111,7 @@ export default function JijiTraitView({ saju, target = 'adult' }: Props) {
         <span style={{
           fontSize: 10, padding: '2px 8px', borderRadius: 8,
           background: '#fff3e9', border: `0.5px solid #e8d5c5`, color: ACCENT, fontWeight: 600,
-        }}>{hits.length}자리</span>
+        }}>{hits.length}가지</span>
         <span style={{ marginLeft: 'auto', fontSize: 11, color: '#c5a590' }}>{open ? '접기' : '펼쳐보기'}</span>
       </div>
 
@@ -119,8 +121,9 @@ export default function JijiTraitView({ saju, target = 'adult' }: Props) {
             월지와 일지가 가장 세게 작용해요. 그 둘을 먼저 펼쳐 두었습니다.
           </div>
           {hits.map(h => (
-            <One key={h.pillar} pillar={h.pillar} branch={h.branch} row={h.row}
-              target={target} defaultOpen={h.pillar === '월지' || h.pillar === '일지'} />
+            <One key={h.branch} pillar={h.pillar} pillars={h.pillars} branch={h.branch} row={h.row}
+              target={target} ctx={ctx}
+              defaultOpen={h.pillars.includes('월지') || h.pillars.includes('일지')} />
           ))}
           <div style={{ fontSize: 10, color: '#c5a590', padding: '9px 16px 12px', lineHeight: 1.6 }}>
             『명리적성 비법노트』 48쪽 · 50~73쪽. 한 글자만 보고 단정하지 마세요.

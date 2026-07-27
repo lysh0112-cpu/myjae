@@ -47,6 +47,66 @@ import type { Pillar } from './simsanOhaeng'
 
 export type Target = 'student' | 'adult'
 
+/**
+ * ★한 줄에 조건을 달 수 있다 (2026-07-27).
+ *
+ * 교재에는 "~있으면", "~많으면", "~월에 ~시면" 처럼 **조건이 붙은 말**이 많다.
+ * 그런데 화면은 조건을 보지도 않고 그대로 내보내고 있었다.
+ *   보기) 申월생 모두에게 "寅申沖·寅巳刑·寅巳申 三刑에 걸리면 교통사고·소송수가 있습니다"
+ *        — 원국에 寅도 巳도 없는 사람에게 겁주는 말이 나갔다.
+ *
+ * when 이 있으면 그 사주에서 참일 때만 내보낸다. when 이 없으면 늘 내보낸다.
+ */
+export interface CondLine { t: string; when?: (c: SajuCtx) => boolean }
+export type Line = string | CondLine
+
+/** 조건을 재는 데 쓰는 사주 정보 */
+export interface SajuCtx {
+  stems: string[]
+  branches: string[]
+  /** 일간 — 십신을 재려면 이것이 있어야 한다 */
+  dayStem: string
+  monthBranch: string
+  dayBranch: string
+  hourBranch: string
+  yearBranch: string
+}
+
+const STEM_EL: Record<string, string> = {
+  甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토',
+  己: '토', 庚: '금', 辛: '금', 壬: '수', 癸: '수',
+}
+const BRANCH_EL: Record<string, string> = {
+  子: '수', 丑: '토', 寅: '목', 卯: '목', 辰: '토', 巳: '화',
+  午: '화', 未: '토', 申: '금', 酉: '금', 戌: '토', 亥: '수',
+}
+
+/** 사주에서 조건 잴 거리를 뽑는다 */
+export function ctxOf(saju: Pillar[]): SajuCtx {
+  const g = (p: string) => {
+    const x = saju.find(v => v.pillar === p)
+    return { s: x?.stem && x.stem !== '?' ? x.stem : '', b: x?.branch && x.branch !== '?' ? x.branch : '' }
+  }
+  const y = g('년주'), m = g('월주'), d = g('일주'), h = g('시주')
+  return {
+    stems: [y.s, m.s, d.s, h.s].filter(Boolean),
+    branches: [y.b, m.b, d.b, h.b].filter(Boolean),
+    dayStem: d.s,
+    yearBranch: y.b, monthBranch: m.b, dayBranch: d.b, hourBranch: h.b,
+  }
+}
+
+// 조건에 쓰는 잔손
+const cnt = (c: SajuCtx, ch: string) => c.branches.filter(x => x === ch).length + c.stems.filter(x => x === ch).length
+const hasB = (c: SajuCtx, ...ch: string[]) => ch.some(x => c.branches.includes(x))
+const hasS = (c: SajuCtx, ...ch: string[]) => ch.some(x => c.stems.includes(x))
+/** 그 오행이 사주에 있는가 (천간·지지 둘 다 본다) */
+const hasEl = (c: SajuCtx, el: string) =>
+  c.stems.some(x => STEM_EL[x] === el) || c.branches.some(x => BRANCH_EL[x] === el)
+/** 그 오행이 몇 자인가 */
+const elCnt = (c: SajuCtx, el: string) =>
+  c.stems.filter(x => STEM_EL[x] === el).length + c.branches.filter(x => BRANCH_EL[x] === el).length
+
 export interface JijiTraitRow {
   /** 지지 한 글자 */
   key: string
@@ -67,17 +127,17 @@ export interface JijiTraitRow {
   /** 본기 천간 — 교재가 지지 옆 괄호에 적어 둔 것 */
   bongi: string
   /** 48쪽 비고 — 성인·학생 공통 */
-  note: string[]
+  note: Line[]
   /** 48쪽 비고 — 성인에게만 */
-  noteAdult?: string[]
+  noteAdult?: Line[]
   /** ★48쪽 비고 원문 */
   noteOriginal: string
   /** 성인·학생 모두에게 나가는 줄 */
-  say: string[]
+  say: Line[]
   /** 성인에게만 더 나가는 줄 */
-  sayAdult?: string[]
+  sayAdult?: Line[]
   /** 학생에게만 더 나가는 줄 */
-  sayStudent?: string[]
+  sayStudent?: Line[]
   /** 교재가 이름을 대어 준 직업 */
   jobs?: string[]
   /** ★교재 원문 — 화면에도 통변 재료에도 넣지 말 것 */
@@ -91,7 +151,8 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
     tti: '쥐띠', hour: '23:30~01:30', jeolgi: '대설~소한', solarSpan: '양력 12월 초~1월 초', bongi: '癸',
     note: [
       '子午卯酉 도화살에 듭니다.',
-      '다만 년지와 시지에 있으면 도화로 보지 않습니다. 월지와 일지에 있을 때만 도화입니다.',
+      { t: '다만 년지와 시지에 있으면 도화로 보지 않습니다. 월지와 일지에 있을 때만 도화입니다.',
+        when: c => ['子','午','卯','酉'].includes(c.yearBranch) || ['子','午','卯','酉'].includes(c.hourBranch) },
     ],
     noteOriginal: '子午卯酉(도화살). 年支와 時支에 있으면 도화가 아니다. 月支와 日支는 도화에 해당한다.',
     say: [
@@ -102,11 +163,12 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
       '꽁꽁 언 물이라 水生木은 잘 안 되고 水剋火는 잘 됩니다. 그래서 子午沖이 강합니다. 왕지는 생을 잘 하지 않습니다.',
       '미래를 내다보는 눈이 뛰어납니다. 쥐가 지진을 가장 먼저 알아채는 것과 같습니다.',
       '밤의 기운이라 의심이 많고 경계심이 있으며 비밀이 많습니다.',
-      '子水가 정인이면 연구하는 자리에서 빛납니다.',
+      // 子(본기 癸)가 일간에게 정인이 되는 것은 일간이 乙木일 때뿐이다.
+      { t: '子水가 정인이라 연구하는 자리에서 빛납니다.', when: c => c.dayStem === '乙' },
     ],
     sayAdult: [
-      '물이 많으면 의심이 많으면서도 혹세무민에 넘어가기 쉽습니다.',
-      '조후가 안 맞고 水 기운이 지나치면 유흥이나 주색으로 흐르기 쉬우니 스스로 다잡아야 합니다.',
+      { t: '물이 많으면 의심이 많으면서도 혹세무민에 넘어가기 쉽습니다.', when: c => elCnt(c, '수') >= 3 },
+      { t: '水 기운이 지나치면 마음이 밖으로 흐르기 쉬우니 스스로 다잡아야 합니다.', when: c => elCnt(c, '수') >= 4 },
     ],
     jobs: ['학문', '교육', '종교', '연구'],
     original: '亥水는 6陰인데 子月은 陽 1개 바닥에서 싹이 터 오는 것이다. 子水는 天地人 하늘이 열리는 시간이다. 이때 기도를 많이 한다. '
@@ -131,16 +193,19 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
       '경계심이 생기고 팽창하지 못하고 수축해서 마음이 가라앉기 쉽습니다.',
       '몸 쓰는 일보다 정신을 다루는 일이 좋습니다(교육·복지·종교).',
       '업상대체로 난로·난방 같은 보온 사업이 맞습니다. 전문 자격증을 갖추는 것이 좋습니다.',
-      '월지나 일지에 丑土가 있으면 巳酉丑 금(金)의 창고입니다. 한 방이 있습니다.',
-      '土가 많은 사람이 부자가 될 가능성이 큽니다.',
+      { t: '월지나 일지에 丑土가 있으니 巳酉丑 금(金)의 창고입니다. 한 방이 있습니다.',
+        when: c => c.monthBranch === '丑' || c.dayBranch === '丑' },
+      { t: '土가 많은 사람이 부자가 될 가능성이 큽니다.', when: c => elCnt(c, '토') >= 3 },
       '잠재력이 무궁무진한 늦깎이입니다. 말년에라도 한 방이 있습니다.',
-      '지지에 丑土가 있고 조후가 맞으며 천간에 木火가 있으면 아주 좋습니다.',
+      { t: '천간에 木火가 있어 조후가 맞으면 아주 좋습니다.', when: c => hasS(c, '甲', '乙', '丙', '丁') },
       '어려울 때는 학문 공부를 하면서 앞을 준비하십시오.',
     ],
     sayAdult: [
       '丑土가 있으면 위염·위암을 조심해야 합니다.',
-      '원국에 子丑合이 있는데 대운·세운에서 午火가 오면 子午沖·丑未沖이 되어 배신수가 있을 수 있습니다.',
-      '寅午는 탕화살이라 신세를 비관하기 쉽습니다. 조후가 안 맞으면 살기가 뻗칩니다.',
+      { t: '원국에 子丑合이 있는데 대운·세운에서 午火가 오면 子午沖·丑未沖이 되어 배신수가 있을 수 있습니다.',
+        when: c => hasB(c, '子') },
+      { t: '寅午 탕화살이 있어 마음이 가라앉기 쉽습니다. 조후가 맞으면 덜합니다.',
+        when: c => hasB(c, '寅') && hasB(c, '午') },
     ],
     sayStudent: ['속이 예민한 편이니 끼니를 거르지 않게 챙겨 주시면 좋겠습니다.'],
     jobs: ['교육', '복지', '종교', '보온 사업', '전문 자격증'],
@@ -217,7 +282,7 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
     tti: '용띠', hour: '07:30~09:30', jeolgi: '청명~입하', solarSpan: '양력 4월 초~5월 초', bongi: '戊',
     note: [
       '꽃샘추위처럼 감정의 기복이 있습니다.',
-      '辰이 많을수록 고집과 끈기가 있습니다.',
+      { t: '辰이 여럿이라 고집과 끈기가 더 셉니다.', when: c => cnt(c, '辰') >= 2 },
       '감수성이 예민합니다.',
     ],
     noteAdult: [
@@ -236,7 +301,8 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
       '모방에서 창조를 하며 아이디어가 좋습니다. 교재를 쓰는 일이 맞습니다.',
       '완벽주의자이며 확실한 성공의 아이콘입니다.',
       '습토는 巳火를 만나야 합니다. 조열한 土는 戊土·戌土·未土, 습토는 辰土·丑土·己土입니다.',
-      '木火운이 강하면 습토운(辰土·丑土·己土)에 발복하고, 金水운이 강하면 조열한 土운에 좋습니다.',
+      { t: '木火가 강하면 습토(辰·丑·己)에 발복하고, 金水가 강하면 조열한 土(戊·戌·未)에 좋습니다.',
+        when: c => elCnt(c, '목') + elCnt(c, '화') >= 3 || elCnt(c, '금') + elCnt(c, '수') >= 3 },
       '辰 지장간의 癸水는 씨앗이자 샘플이라, 노하우가 있는 사람이 스승을 만나면 발복합니다.',
       '적천수에 火(巳午未)가 강할 때는 용(辰)을 타라 했습니다(화치승룡).',
       '辰戌은 법고(法庫)라 하여 고시에 붙을 만한 큰 인물이며 CEO급입니다.',
@@ -277,10 +343,12 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
       '辰土운이 준비라면 巳火운은 결실입니다. 정열적이고 야망이 큽니다.',
       '巳月(어린이날 전후)은 모내기와 파종의 때라 협동과 단체 활동에 잘 맞습니다.',
       '공적인 마인드, 직관력, 민첩성, 상황 판단력, 임기응변, 효심이 있습니다.',
-      '원국에 巳亥沖이 있으면 공적인 마인드보다 개인적인 마인드입니다.',
-      '巳月 巳時 출생은 재물운과 미래 예측 능력이 있고 건강하게 장수합니다.',
+      { t: '원국에 巳亥沖이 있어 공적인 마인드보다 개인적인 마인드입니다.', when: c => hasB(c, '亥') },
+      { t: '巳월 巳시 출생이라 재물운과 미래를 내다보는 눈이 있고 건강하게 장수합니다.',
+        when: c => c.monthBranch === '巳' && c.hourBranch === '巳' },
       '巳火는 역마성이라 직업이 좋습니다.',
-      '巳酉丑 중 둘 이상이 있으면 마무리 능력이 강하고, 金이 없으면 마무리가 약합니다.',
+      { t: '巳酉丑 중 둘 이상이 있어 마무리 능력이 강합니다.',
+        when: c => ['巳','酉','丑'].filter(x => c.branches.includes(x)).length >= 2 },
       '미래 지향적인 생각을 가지고 있습니다.',
       '사업장은 역 앞·버스 정류장·횡단보도 근처 같은 번화가가 좋습니다.',
     ],
@@ -342,7 +410,7 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
       '木火와 金水를 잇는 금화교역의 역할을 합니다.',
       '매개체를 잇는 역할이 맞습니다(중개업·상담사·활인업).',
       '성급하고 덜 익은 미완성 상태라 인내심이 필요합니다.',
-      '未土가 있고 현침살이 강하면 요리사도 어울립니다. 양(未)은 순수하지만 고집이 있습니다.',
+      { t: '양(未)은 순수하지만 고집이 있습니다. 현침살이 함께 세면 요리사도 어울립니다.' },
       '융통성이 부족하고 고지식하며 간섭받는 것을 싫어합니다.',
       '승부욕이 많고 뒷심이 부족하며 다혈질로 욱하는 기운이 있습니다.',
       '상하 수직, 복종, 위계질서를 중히 여깁니다.',
@@ -367,7 +435,9 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
     key: '申', ko: '신', eumyang: '3陽 3陰', chung: '寅申沖(3陰 3陽)',
     tti: '원숭이띠', hour: '15:30~17:30', jeolgi: '입추~백로', solarSpan: '양력 8월 초~9월 초', bongi: '庚',
     note: [
-      '완전히 火 같은 성향은 아니고 또 다른 성향이 숨어 있습니다.',
+      // ⚠️ 48쪽 원문이 "완전 火 같은 성향이 아니라" 인데 申은 金이다. 오기로 보여 화면에서 뺐다.
+      //    CHECK 4번 확인 뒤에 되살릴 것. 원문은 noteOriginal 에 그대로 있다.
+      { t: '겉으로는 가을이지만 속에는 또 다른 기운이 숨어 있습니다.', when: () => false },
       '장마와 태풍의 영향이 있습니다.',
     ],
     noteOriginal: '완전 火 같은 성향이 아니라 또 다른 성향이 숨겨져 있다. 장마와 태풍의 영향이 있다.',
@@ -384,8 +454,9 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
       '권력 계통·언론·검찰·경찰·정치·세무·기술직이 맞고, 활인업(교육·교사·상담)으로 업상대체가 됩니다.',
     ],
     sayAdult: [
-      '속임수를 쓸 수 있는 자리이니 스스로 경계하십시오.',
-      '寅申沖·寅巳刑·寅巳申 三刑에 걸리면 교통사고·손재수·관재구설수·건강 문제·소송수가 있습니다.',
+      '꾀가 밝은 만큼, 지름길보다 정공법을 택할 때 멀리 갑니다.',
+      { t: '寅申沖·寅巳刑·寅巳申 三刑에 걸려 있습니다. 사고·손재·구설·소송을 미리 살펴 두면 좋습니다.',
+        when: c => hasB(c, '寅') || hasB(c, '巳') },
     ],
     jobs: ['권력 계통', '언론', '검찰', '경찰', '정치', '세무', '기술직', '교육', '교사', '상담'],
     original: '3陰 3陽 천지비괘, 하늘과 땅이 도와주지 않는다. 누구에게 기대지 말고 스스로 해결해라. '
@@ -406,7 +477,8 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
     tti: '닭띠', hour: '17:30~19:30', jeolgi: '백로~한로', solarSpan: '양력 9월 초~10월 초', bongi: '辛',
     note: [
       '金 기운이 아주 강한 때입니다.',
-      '酉월에 酉시면 기계적·이과적 성향이 강합니다.',
+      { t: '酉월 酉시라 기계적·이과적 성향이 강합니다.',
+        when: c => c.monthBranch === '酉' && c.hourBranch === '酉' },
     ],
     noteOriginal: '金 기운이 아주 강할 때이다. 酉月에 酉時면 기계적, 이과적 성향이 강하다.',
     say: [
@@ -444,7 +516,7 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
     tti: '개띠', hour: '19:30~21:30', jeolgi: '한로~입동', solarSpan: '양력 10월 초~11월 초', bongi: '戊',
     note: [
       '화개살과 천문성에 함께 듭니다.',
-      '戌土가 여러 개 있으면 역마에도 듭니다.',
+      { t: '戌土가 여럿이라 역마에도 듭니다.', when: c => cnt(c, '戌') >= 2 },
     ],
     noteOriginal: '명예살, 천문성에 해당한다. 戌土가 여러 개 있으면 역마에도 해당된다.',
     say: [
@@ -457,7 +529,7 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
       '개(戌)의 결이라 고집·자존심·의리·붙임성·친화력이 있고, 감각과 영감이 뛰어나며 명예가 있습니다.',
       '근성이 있으니 구기 운동이나 격투기를 취미로 하면 좋습니다.',
       '시작은 머뭇거리지만 마무리 능력이 뛰어납니다.',
-      '끝맺음이 강하려면 사주에 金이 있어야 합니다.',
+      { t: '사주에 金이 있어 끝맺음이 강합니다.', when: c => hasEl(c, '금') },
       '수행을 깊이 하면 굉장한 내공이 생깁니다.',
     ],
     sayAdult: [
@@ -507,7 +579,7 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
       '수입보다 지출을 줄여야 합니다. 충동구매를 삼가십시오.',
       '손재수가 있으니 주변인·지인과 돈거래를 하지 마십시오.',
       '구설수와 주색을 조심하십시오. 탁한 기운의 사람은 멀리하십시오.',
-      '巳亥沖이 겹충이 될 때 혈압·당뇨·중풍 같은 병을 주의하십시오.',
+      { t: '巳亥沖이 겹충이 될 때 혈압·당뇨 같은 것을 미리 살펴 두면 좋습니다.', when: c => hasB(c, '巳') },
     ],
     original: '천문실이라 한다. 月支와 日支에 있을 때 가장 강력하게 작용한다. 영감이 뛰어나다는 의미이며 명리학을 공부하는 사람이 많다. '
             + '가장 陰의 기운이 강하다. 6陰에 해당한다. 巳火는 6陽이다. '
@@ -593,21 +665,34 @@ export const CHEONMUN_48 = ['卯', '戌', '亥', '未']
 export const IPCHUN_RULE =
   '입춘을 기준으로 새해가 시작됩니다. 입춘 전날 태어났다면 전년도에 태어난 것으로 봅니다.'
 
+/** 조건을 재서 통과한 줄만 남긴다. ctx 를 안 주면 조건 있는 줄은 뺀다(안전한 쪽). */
+function pick(lines: Line[], ctx?: SajuCtx): string[] {
+  const out: string[] = []
+  for (const l of lines) {
+    if (typeof l === 'string') { out.push(l); continue }
+    if (!l.when) { out.push(l.t); continue }
+    if (ctx && l.when(ctx)) out.push(l.t)
+  }
+  return out
+}
+
 /** 48쪽 비고를 화면에 낼 줄들 */
-export function noteLines(row: JijiTraitRow, target: Target): string[] {
-  return target === 'student' ? row.note : [...row.note, ...(row.noteAdult ?? [])]
+export function noteLines(row: JijiTraitRow, target: Target, ctx?: SajuCtx): string[] {
+  return pick(target === 'student' ? row.note : [...row.note, ...(row.noteAdult ?? [])], ctx)
 }
 
 /** 화면에 낼 줄들 — 학생이면 sayAdult 가 빠지고 sayStudent 가 붙는다 */
-export function traitLines(row: JijiTraitRow, target: Target): string[] {
-  return target === 'student'
+export function traitLines(row: JijiTraitRow, target: Target, ctx?: SajuCtx): string[] {
+  return pick(target === 'student'
     ? [...row.say, ...(row.sayStudent ?? [])]
-    : [...row.say, ...(row.sayAdult ?? [])]
+    : [...row.say, ...(row.sayAdult ?? [])], ctx)
 }
 
 export interface TraitHit {
-  /** '월지' | '일지' … */
+  /** '월지' | '월지·일지' — ★같은 글자는 한 칸으로 묶는다 */
   pillar: string
+  /** 묶기 전 자리들 */
+  pillars: string[]
   branch: string
   row: JijiTraitRow
 }
@@ -624,7 +709,12 @@ export function traitsInSaju(saju: Pillar[]): TraitHit[] {
     const b = saju.find(x => x.pillar === p)?.branch
     if (!b || b === '?') continue
     const row = BY_KEY[b]
-    if (row) out.push({ pillar: p.replace('주', '지'), branch: b, row })
+    if (!row) continue
+    // ★2026-07-27 — 같은 글자가 두 자리에 있으면 한 칸으로 묶는다.
+    //   월지·일지가 둘 다 子 인 사람에게 똑같은 열다섯 줄이 두 번 나가고 있었다.
+    const same = out.find(h => h.branch === b)
+    if (same) { same.pillars.push(p.replace('주', '지')); same.pillar = same.pillars.join('·') }
+    else out.push({ pillar: p.replace('주', '지'), pillars: [p.replace('주', '지')], branch: b, row })
   }
   return out
 }
@@ -634,12 +724,13 @@ export function traitsInSaju(saju: Pillar[]): TraitHit[] {
  * ★original 을 절대 섞지 않는다. 재료에 있으면 AI가 꺼내 쓴다. (교훈 BF)
  */
 export function reasonsOf(saju: Pillar[], target: Target): string[] {
+  const ctx = ctxOf(saju)
   return traitsInSaju(saju).map(h => {
     const jobs = h.row.jobs?.length ? ` (교재가 든 직업: ${h.row.jobs.join('·')})` : ''
-    const note = noteLines(h.row, target).join(' ')
+    const note = noteLines(h.row, target, ctx).join(' ')
     // ★도화는 월지·일지에 있을 때만 도화다 (48쪽)
-    const dohwa = isDohwaAt(h.pillar.replace('지', '주'), h.branch) ? ' [도화]' : ''
-    return `${h.pillar} ${h.branch}(${h.row.ko}·${h.row.tti})${dohwa} — ${traitLines(h.row, target).join(' ')} ${note}${jobs}`
+    const dohwa = h.pillars.some(p => isDohwaAt(p.replace('지', '주'), h.branch)) ? ' [도화]' : ''
+    return `${h.pillar} ${h.branch}(${h.row.ko}·${h.row.tti})${dohwa} — ${traitLines(h.row, target, ctx).join(' ')} ${note}${jobs}`
   })
 }
 
