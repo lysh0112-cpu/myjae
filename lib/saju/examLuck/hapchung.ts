@@ -154,6 +154,37 @@ export function chungedBy(chars: string[], yStem: string, yBranch: string): bool
   return chars.some(c => isCheonganChung(c, yStem) || isJijiChung(c, yBranch))
 }
 
+/**
+ * ★형(刑) — 교재 195쪽 「관성과 인성이 형충(刑沖)을 하거나」 (2026-07-27)
+ *
+ * [무엇이 빠져 있었나]
+ *   교재는 "형충" 이라 했는데 chungedBy 는 충(沖)만 봤다.
+ *   교재가 "가장 불리하다" 고 꼽은 자리인데 절반만 재고 있었다.
+ *
+ * [무엇을 형으로 보나]
+ *   삼형  寅巳申 · 丑戌未   (셋이 모여야 삼형. 둘만 있으면 반형)
+ *   상형  子卯              (서로 예의를 잃는다)
+ *   자형  辰辰 · 午午 · 酉酉 · 亥亥
+ */
+const SAMHYEONG_SETS = [['寅', '巳', '申'], ['丑', '戌', '未']]
+const SANGHYEONG: Record<string, string> = { 子: '卯', 卯: '子' }
+const JAHYEONG = ['辰', '午', '酉', '亥']
+
+/** 두 지지가 형(刑) 관계인가 — 자형·상형만 본다 (삼형은 셋을 봐야 한다) */
+export function isJijiHyeong(a: string, b: string): boolean {
+  if (!a || !b || a === '?' || b === '?') return false
+  if (SANGHYEONG[a] === b) return true
+  if (a === b && JAHYEONG.includes(a)) return true
+  // 삼형 짝 가운데 둘 — 반형(半刑)으로 본다
+  return SAMHYEONG_SETS.some(set => set.includes(a) && set.includes(b) && a !== b)
+}
+
+/** 그 글자들이 그해 간지에게 충(沖)이나 형(刑)을 당하는가 */
+export function hyeongChungedBy(chars: string[], yStem: string, yBranch: string): boolean {
+  return chars.some(c =>
+    isCheonganChung(c, yStem) || isJijiChung(c, yBranch) || isJijiHyeong(c, yBranch))
+}
+
 /** 원국의 어떤 글자 무리가 그해 간지와 합으로 묶이는가 (합거) */
 export function hapedBy(chars: string[], yStem: string, yBranch: string): boolean {
   return chars.some(c => isCheonganHap(c, yStem) || isYukhap(c, yBranch))

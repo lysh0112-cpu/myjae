@@ -21,10 +21,14 @@ import { getGongmang } from '../gongmang'
 import { GOOD, BAD, NEUTRAL, STUDY_TREND, PURPOSE_BONUS } from './tables/rules'
 // ★2026-07-27 — 관성의 12운성을 보려면 필요하다. 원본 195쪽 「관성이 12운성 상 관대에 해당하거나」
 import { getUnsung } from '../unsung'
+// ★2026-07-27 — 조후·기신·격국을 얻는다. 셋 다 이 한 번의 호출로 나온다.
+//   ⚠️ yongsinNew.ts 는 손대지 않는다. 부르기만 한다. (작업지시 12장)
+import { calcYongsinNew } from '../yongsinNew'
+import { isCheonganHap } from './hapchung'
 import type { ExamInput, YearLuck, Grade, Pillar } from './types'
 import {
   readNatal, ilganGwanHap, ilganGwanChung, cheonhapJihap, cheongeukJichung,
-  chungedBy, hapedBy, makesGroupHap, makesSamhyeong, isYukhap, isJijiChung,
+  chungedBy, hyeongChungedBy, hapedBy, makesGroupHap, makesSamhyeong, isYukhap, isJijiChung,
 } from './hapchung'
 
 const rule = (key: string) =>
@@ -53,6 +57,16 @@ export const SEYUN_WEIGHT = 0.7
  * ⚠️ 무작위 사주 기준이다. 실제 손님 분포는 다를 수 있다.
  *    한동안 돌려 보고 어느 칸이 쏠리면 여기만 고치면 된다.
  */
+/** 천간·지지 → 오행 (examScore 안에서만 쓰는 잔손) */
+const STEM_EL_: Record<string, string> = {
+  甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토',
+  己: '토', 庚: '금', 辛: '금', 壬: '수', 癸: '수',
+}
+const BRANCH_EL_: Record<string, string> = {
+  子: '수', 丑: '토', 寅: '목', 卯: '목', 辰: '토', 巳: '화',
+  午: '화', 未: '토', 申: '금', 酉: '금', 戌: '토', 亥: '수',
+}
+
 export const GRADE_CUT: Array<{ min: number; grade: Grade }> = [
   { min: 7, grade: '아주 좋음' },
   { min: 3, grade: '좋음' },
@@ -87,6 +101,11 @@ export function judgeYear(
     }
   }
 
+  // ★용신·기신·조후·격국 — 한 번만 계산해 아래 세 규칙이 나눠 쓴다.
+  //   전에는 이 셋(조후해결·기신간합·상관격용신운)이 표에만 있고
+  //   아무도 안 불러서 한 번도 안 걸리는 죽은 규칙이었다. (교훈 BA 의 짝)
+  const ys = n.dayStem && n.dayStem !== '?' ? calcYongsinNew(saju, n.dayStem) : null
+
   const ganSipsin = n.dayStem ? sipsinOfChar(n.dayStem, yStem) : ''
   // ★2026-07-27 — 전에는 sipsinOf 라 지지 십신이 언제나 '' 였다.
   //   정관운·정인운·겁재운 같은 규칙이 천간에서만 걸리고 있었다.
@@ -110,6 +129,61 @@ export function judgeYear(
   if (both.includes('편인')) add('편인운')
   if (both.includes('식신')) add('식신운')
 
+  // ══════════════════════════════════════════════════════════
+  //  원본 195쪽 — 죽어 있던 규칙 셋을 살린다 (2026-07-27)
+  // ══════════════════════════════════════════════════════════
+  if (ys) {
+    // ① 조후 해결 — 「여름생과 겨울생이 조후가 해결되는 운에 유리합니다」
+    //    겨울생(亥子丑月)은 火, 여름생(巳午未月)은 水 가 필요하다.
+    //    그 오행이 그해 간지(천간·지지 어느 쪽이든)로 오면 온도가 채워진다.
+    //    ⚠️ 봄·가을생은 교재가 아예 대상에서 뺐다. johu.element 가 null 이라 자연히 빠진다.
+    if (ys.johu.element) {
+      const need = ys.johu.element
+      if (STEM_EL_[yStem] === need || BRANCH_EL_[yBranch] === need) add('조후해결')
+    }
+
+    // ② 기신 간합 — 「천간에 기신을 세운에서 무계합이나 을경합 등으로 간합을 하면 유리」
+    //    원국 천간(일간 뺀 셋) 가운데 기신 오행인 글자가
+    //    그해 천간과 천간합을 이루면, 거슬리던 기운이 묶인다.
+    //    교재가 든 보기는 戊癸·乙庚 둘이지만 "등" 이라 했으니 다섯 쌍 모두 본다.
+    const gisin = ys.eokbu.gisin
+    for (const p of saju) {
+      if (p.pillar === '일주') continue
+      const c = p.stem
+      if (!c || c === '?') continue
+      if (STEM_EL_[c] === gisin && isCheonganHap(c, yStem)) { add('기신간합'); break }
+    }
+
+    // ③ 상관격 용신운 — 「목화상관이나 금수상관 사주는 두뇌 총명하고 임기응변에 능하여
+    //                     용신운이면 대부분 합격합니다」
+    //    ⚠️ 교재가 든 것은 목화상관(木일간+火상관)·금수상관(金일간+水상관) 둘이다.
+    //       격국이 상관격이면서 그 짜임일 때만 본다.
+    //    ⚠️ gyeokguk.element 는 그 격의 "용신" 오행이지 상관 오행이 아니다.
+    //       상관 오행은 일간이 낳는 것(생하는 것) 가운데 음양이 다른 쪽이다.
+    //       목 일간 → 상관은 화 · 금 일간 → 상관은 수. 그래서 일간만 보면 된다.
+    if (ys.gyeokguk.name.includes('상관격')) {
+      const dayEl = ys.dayElement
+      const mokhwa = dayEl === '목'   // 목 일간의 상관은 화 → 목화상관
+      const geumsu = dayEl === '금'   // 금 일간의 상관은 수 → 금수상관
+      if (mokhwa || geumsu) {
+        const yong = ys.eokbu.yongsin
+        if (STEM_EL_[yStem] === yong || BRANCH_EL_[yBranch] === yong) add('상관격용신운')
+      }
+    }
+  }
+
+  // ★관성·인성이 합과 충을 동시에 받는가 — 원본 195쪽
+  //   「인성과 관성이 합과 충이 동시에 작용하면 합격 가능합니다」
+  //   한쪽은 묶이고 한쪽은 부딪히는, 엇갈리는 자리다. 교재는 여기에 가능성을 열어 뒀다.
+  {
+    const gwanIn = [...n.gwanChars, ...n.inChars]
+    if (gwanIn.length) {
+      const haped = hapedBy(gwanIn, yStem, yBranch)
+      const chunged = hyeongChungedBy(gwanIn, yStem, yBranch)
+      if (haped && chunged) add('관인합충동시')
+    }
+  }
+
   // ★관성이 12운성으로 관대(冠帶)에 드는가 — 원본 195쪽
   //   OCR 이 「상관대지」 로 깨뜨려 오래 빠져 있던 자리다. (CONFLICT ②)
   //   그해 지지를 일간 기준 12운성으로 보아, 관성 자리가 관대면 힘이 실린다.
@@ -122,8 +196,9 @@ export function judgeYear(
   if (both.includes('상관') && (both.includes('정관') || n.gwanChars.length > 0)) add('상관정관')
   if (ilganGwanChung(n, yStem)) add('일간관성충')
   if (cheongeukJichung(n, yStem, yBranch)) add('일주천극지충')
-  if (n.gwanChars.length && chungedBy(n.gwanChars, yStem, yBranch)) add('관인형충')
-  if (n.inChars.length && chungedBy(n.inChars, yStem, yBranch)) add('관인형충')
+  // ★2026-07-27 — 교재는 "형충(刑沖)" 이라 했는데 충만 보고 있었다. 형을 함께 본다.
+  if (n.gwanChars.length && hyeongChungedBy(n.gwanChars, yStem, yBranch)) add('관인형충')
+  if (n.inChars.length && hyeongChungedBy(n.inChars, yStem, yBranch)) add('관인형충')
   if (n.bigyeopChars.length && n.gwanChars.length && chungedBy(n.gwanChars, yStem, yBranch)) add('비겁관성충')
   if (both.includes('겁재')) add('겁재운')
   // 합거 — 기대던 인성·관성이 합에 묶여 자리를 비운다
