@@ -210,16 +210,35 @@ export function judgeGyeyeol(input: CareerInput): CareerCard {
   if (y.arts) lines.push('화(火)가 발달해 예체능 소질이 함께 보입니다.')
 
   // ★학과 — 학생에게만. 표가 비어 있으면 이 묶음이 통째로 건너뛴다.
+  //   ★대표님 지시 2026-07-27 — "특정 대학을 추천하는 것이 아니라,
+  //     이런 전공의 학과들이 있다는 정도로만" 보여 준다.
+  //     그래서 한 줄에 하나씩 점수 근거를 달아 늘어놓지 않는다.
+  //     그렇게 하면 서열표로 읽힌다. 쉼표로 이어 한 줄에 둔다.
+  //     왜 뽑혔는지는 reasons 로만 넘긴다(화면에 안 나감).
   const gwa = input.target === 'student' ? pickGwa(input, y, r).slice(0, GWA_SHOW) : []
   if (gwa.length) {
-    lines.push(`오행을 겹쳐 보니 ${gwa.length}개 학과가 거듭 나옵니다.`)
-    for (const h of gwa) {
-      lines.push(`${h.row.name} — ${h.sources.join(' · ')}`)
-    }
-    lines.push('학과는 정해 주는 것이 아니라 둘러볼 자리를 좁혀 드리는 것입니다.')
+    const leanWord = y.lean === '자연' ? '자연·공학' : y.lean === '인문' ? '인문·사회' : '양쪽'
+    lines.push(`${leanWord} 쪽에서는 이런 전공들이 이 결과 가깝습니다.`)
+    lines.push(gwa.map(h => h.row.name).join(' · '))
+    lines.push('고르시라는 것이 아니라, 이런 자리가 있다는 것을 알려 드리는 것입니다. 이 밖에도 길은 많습니다.')
   }
 
   lines.push('계열 비율은 70%만 적용되고 30%는 예외입니다. 이 비율 하나로 진로를 단정하지 마세요.')
+
+  // ★대학은 짚지 않는다 (대표님 판단 2026-07-27)
+  //   교재 129쪽에 "용신·희신에 해당하는 대학에 지원하면 유리하다"는 대목이 있고
+  //   136~139쪽에 대학 오행 표도 있다(gwa.ts 의 UNIV_136). 붙이려면 붙일 수 있다.
+  //   그러나 화면에 대학 이름을 늘어놓으면 "여기 붙는다"로 읽힌다.
+  //   교재 스스로 사주를 30% 로 두는데 화면은 100% 처럼 보이게 된다.
+  //   표는 남겨 두되(상담사 쪽에서 쓸 값어치는 있다) 화면에는 내보내지 않는다.
+  if (input.target === 'student') {
+    lines.push(
+      '교재는 진로를 셋으로 나누어 봅니다. 환경이 셋, 사주가 셋, 노력이 넷이에요. ' +
+      '사주가 말해 줄 수 있는 건 그중 삼 할뿐입니다. ' +
+      '나머지 일곱은 곁에서 만들어 주시는 자리와 아이가 들이는 시간에 달려 있어요. ' +
+      '여기 적힌 것은 길을 좁혀 드리는 참고이지, 정해진 답이 아닙니다.',
+    )
+  }
 
   reasons.push(`계열 — 목화 ${y.mokhwa} vs 금수 ${y.geumsu} → 인문 ${y.humanities} : 자연 ${y.science}`)
   reasons.push(`토 ${y.to}점 (양토 ${y.toYang}자 · 음토 ${y.toEum}자) — 대표로 삼지 않음`)
@@ -229,11 +248,17 @@ export function judgeGyeyeol(input: CareerInput): CareerCard {
     for (const h of gwa) reasons.push(`  ${h.row.name} ${h.score}점 ← ${h.sources.join(' + ')} (${h.row.src})`)
     reasons.push(`근거 ${GWA_SRC}. 무게 — 대표 오행 1위 3 · 2위 2 · 용신 1 · 계열 일치 1`)
     reasons.push('★학과는 위 목록에 있는 것만 쓰세요. 없는 학과를 지어내지 마세요.')
-    reasons.push('학과는 "이 자리를 둘러보시면 좋겠다" 정도로 권하세요. 정해 주지 마세요.')
+    reasons.push('★학과를 정해 주지 마세요. "이런 전공들이 이 결과 가깝다" 정도로만 쓰고, 이 밖에도 길이 많다고 반드시 덧붙이세요.')
+    reasons.push('★목록을 그대로 읊지 마세요. 두세 개만 골라 왜 이 결과 가까운지 풀어 주세요.')
   } else if (input.target === 'student') {
     reasons.push('학과 표가 아직 없어 학과는 다루지 않습니다. 학과 이름을 지어내지 마세요.')
   }
   reasons.push('근거 : 교재 133쪽 그룹 비교 / 129쪽 "문과=木 이과=金 예체능=火, 70% 적용"')
+  if (input.target === 'student') {
+    reasons.push('★대학 이름을 절대 말하지 마세요. 어느 대학에 붙는다·유리하다는 말도 쓰지 마세요.')
+    reasons.push('★교재는 진로를 환경 30 · 사주 30 · 노력 40 으로 봅니다 (126쪽). 사주는 삼 할이라고 반드시 덧붙이세요.')
+    reasons.push('부모가 함께 읽습니다. 성적이나 형편을 탓하는 말로 들리지 않게 쓰세요. "이렇게 도와주시면 좋겠다"로 쓰세요.')
+  }
   reasons.push('이 대목("계열과 학과")의 통변 재료입니다. 비율은 참고치라고 반드시 덧붙이세요.')
 
   return {
