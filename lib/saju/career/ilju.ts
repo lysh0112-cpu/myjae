@@ -23,12 +23,16 @@ export function judgeIlju(input: CareerInput): CareerCard | null {
   const row = ILJU[key]
   if (!row) return null
 
+  // ★2026-07-27 — 학생이면 다듬은 기질을 쓴다. 없는 일주는 gijil 그대로.
+  //   화면(lines)과 통변 재료(reasons)가 어긋나면 안 되므로 같은 값을 쓴다.
+  const gijil = (input.target === 'student' && row.gijilStudent) || row.gijil
+
   const lines: string[] = []
   lines.push(`${row.ko} 일주(${key})입니다.`)
-  lines.push(row.gijil)
+  lines.push(gijil)
 
   const reasons: string[] = []
-  reasons.push(`일주 ${row.ko}(${key}) — ${row.gijil}`)
+  reasons.push(`일주 ${row.ko}(${key}) — ${gijil}`)
   const jobs = input.target === 'student'
     ? row.jobs.filter(j => okForStudent(jobKey(j)))
     : row.jobs
