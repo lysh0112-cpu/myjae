@@ -199,6 +199,48 @@ export async function calcDayunStartAge(
  * 대운 목록 계산 — 정확판(async)
  * 반드시 '양력' 생년월일을 넣을 것.
  */
+/**
+ * ★열두 시진 각각의 대운수를 한 번에 낸다. (2026-07-27)
+ *
+ * [왜 필요한가]
+ *   출산택일은 후보 날짜 하나에 시진 여럿을 함께 본다.
+ *   예전에는 "대운은 날짜와 성별로만 정해지니 시진이 달라도 같다"고 보고
+ *   날짜당 한 번만 불렀다. 그런데 절입일 당일이면 시진에 따라 대운수가 갈린다.
+ *
+ * [어떻게]
+ *   절입 순간은 날짜마다 하나뿐이니 절기 조회는 한 번(많아야 두 번)만 한다.
+ *   그 값으로 열두 시진을 모두 계산한다. KASI 를 열두 번 부르지 않는다.
+ */
+export async function calcDayunStartAgeByHour(
+  solarYear: number, solarMonth: number, solarDay: number,
+  isForward: boolean, apiKey: string,
+): Promise<number[]> {
+  const termThis = await getSolarTermMoment(solarYear, solarMonth, apiKey)
+  let other: { day: number; hour: number; minute: number }
+  let oy: number, om: number
+  if (isForward) { om = solarMonth + 1; oy = solarYear; if (om > 12) { om = 1; oy += 1 } }
+  else { om = solarMonth - 1; oy = solarYear; if (om < 1) { om = 12; oy -= 1 } }
+  other = await getSolarTermMoment(oy, om, apiKey)
+
+  const termMin = termThis.hour * 60 + termThis.minute
+  return Array.from({ length: 12 }, (_, hourIdx) => {
+    const bMin = (((hourIdx * 120 + 1410) % 1440) + 60) % 1440   // 그 시의 한가운데
+    const passed = solarDay > termThis.day || (solarDay === termThis.day && bMin >= termMin)
+    let days: number
+    if (isForward) {
+      days = passed
+        ? daysBetween(solarYear, solarMonth, solarDay, oy, om, other.day)
+        : daysBetween(solarYear, solarMonth, solarDay, solarYear, solarMonth, termThis.day)
+    } else {
+      days = passed
+        ? daysBetween(solarYear, solarMonth, termThis.day, solarYear, solarMonth, solarDay)
+        : daysBetween(oy, om, other.day, solarYear, solarMonth, solarDay)
+    }
+    if (days < 0) days = 0
+    return Math.max(0, Math.round(days / DAYS_PER_DAYUN_YEAR))
+  })
+}
+
 export async function calcDayunList(
   solarYear: number,
   solarMonth: number,

@@ -73,6 +73,9 @@ function isoDate(y: number, m: number, d: number) { return `${y}-${pad(m)}-${pad
  * 목록 첫 칸의 age 가 곧 대운수(첫 대운 시작 나이)다.
  * 실패하면 빈 배열 → 호출부가 기본값으로 진행한다.
  */
+/** ★날짜별 "시진 12개의 대운수" — 절입일 당일이면 시진마다 다르다 (2026-07-27) */
+const startAgeCache = new Map<string, number[]>()
+
 async function fetchDayunForDate(
   c: Candidate, gender: string, cache: Map<string, DayunItem[]>,
 ): Promise<DayunItem[]> {
@@ -93,6 +96,9 @@ async function fetchDayunForDate(
     })
     const data = await res.json()
     const list: DayunItem[] = data?.dayunList ?? []
+    // ★2026-07-27 — 시진별 대운수를 함께 받아 둔다.
+    //   절입일 당일이면 시진에 따라 대운수가 갈린다. (예전에는 날짜당 하나로 봤다)
+    if (Array.isArray(data?.startAgeByHour)) startAgeCache.set(key, data.startAgeByHour)
     cache.set(key, list)
     return list
   } catch {
@@ -155,7 +161,12 @@ export async function runRecommendV7(opts: RunV7Options): Promise<RecommendV7Res
   // 판정 — 고정필터 통과분만 남긴다
   const judged = cands.map(c => {
     const list = dayunCache.get(ymd(c.y, c.m, c.d)) ?? []
-    const startAge = opts.daeunStartAge ?? (typeof list[0]?.age === 'number' ? list[0].age : undefined)
+    // ★그 후보의 시진에 맞는 대운수를 쓴다. 절입일 당일이면 시진마다 갈린다.
+    //   시진별 값이 없으면(옛 응답) 예전처럼 목록 첫 칸을 쓴다.
+    const byHour = startAgeCache.get(ymd(c.y, c.m, c.d))
+    const startAge = opts.daeunStartAge
+      ?? (byHour && typeof c.hourIdx === 'number' ? byHour[c.hourIdx] : undefined)
+      ?? (typeof list[0]?.age === 'number' ? list[0].age : undefined)
     return { c, detail: judgeCandidate(c, { gender, daeunStartAge: startAge }), dayunList: list }
   })
   const passed = judged.filter(x => x.detail.passFixed)

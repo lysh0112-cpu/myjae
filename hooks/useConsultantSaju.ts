@@ -47,9 +47,12 @@ export function useConsultantSaju(
           const res1 = await fetch(`/api/lunar?year=${yearParam}&month=${monthParam}&day=${dayParam}&calType=음력&leapMonth=${leapMonth}`)
           const d1 = await res1.json()
           sYear = d1.solarYear; sMonth = d1.solarMonth; sDay = d1.solarDay
+          // ★2026-07-27 — 태어난 시를 넘긴다 (절입일 당일 태생의 년주·월주)
           apiUrl = `/api/lunar?year=${sYear}&month=${sMonth}&day=${sDay}&calType=양력`
+            + (hourIdx !== null ? `&hour=${hourIdx}` : '')
         } else {
           apiUrl = `/api/lunar?year=${yearParam}&month=${monthParam}&day=${dayParam}&calType=양력`
+            + (hourIdx !== null ? `&hour=${hourIdx}` : '')
         }
         setSolarDate({ year: sYear, month: sMonth, day: sDay })
 
@@ -87,6 +90,8 @@ export function useConsultantSaju(
       body: JSON.stringify({
         solarYear: solarDate.year, solarMonth: solarDate.month, solarDay: solarDate.day,
         monthGanji, yearStem, gender, dayStem,
+        // ★2026-07-27 — 태어난 시를 넘긴다. 절입일 당일 태생의 대운수가 갈린다.
+        hourIdx,
       }),
     })
       .then(r => r.json())

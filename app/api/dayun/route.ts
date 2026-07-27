@@ -3,7 +3,7 @@
 // 반드시 '양력' 생년월일(solarYear/Month/Day)을 받는다.
 
 import { NextRequest, NextResponse } from 'next/server'
-import { calcDayunList } from '@/lib/saju/dayun'
+import { calcDayunList, calcDayunStartAgeByHour, isForwardDayun } from '@/lib/saju/dayun'
 import { hourRepMinute } from '@/lib/saju/birthInput'
 
 export const runtime = 'nodejs'
@@ -39,7 +39,16 @@ export async function POST(req: NextRequest) {
       hourIdx == null ? null : hourRepMinute(Number(hourIdx)),
     )
 
-    return NextResponse.json({ dayunList })
+    // ★2026-07-27 — 열두 시진 각각의 대운수를 함께 준다.
+    //   출산택일은 후보 날짜 하나에 시진 여럿을 본다. 절입일 당일이면 시진에 따라
+    //   대운수가 갈리는데, 예전에는 날짜당 한 번만 부르고 시진을 안 봤다.
+    //   절기 조회는 여기서 한 번 더 할 뿐이라 KASI 부담이 거의 없다.
+    const startAgeByHour = await calcDayunStartAgeByHour(
+      Number(solarYear), Number(solarMonth), Number(solarDay),
+      isForwardDayun(String(yearStem), String(gender)), apiKey,
+    )
+
+    return NextResponse.json({ dayunList, startAgeByHour })
   } catch (e) {
     console.error('dayun api error:', e)
     return NextResponse.json({ error: 'internal', dayunList: [] }, { status: 200 })

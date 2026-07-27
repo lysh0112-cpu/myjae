@@ -38,7 +38,9 @@ export interface DayRecommendation {
   offset: number
   hours: HourPick[]        // 그 날의 좋은 시간들 (점수순, 최대 maxHours)
   bestScore: number        // 날짜 대표 점수(그 날 최고 시각) — 날짜 순위 정렬용
-  dayunList: DayunItem[]   // 대운 10개 (날짜당 동일 — 시각 무관). 대운표 렌더용.
+  dayunList: DayunItem[]   // 대운 10개. 대운표 렌더용 — v5 는 대운수를 판정에 쓰지 않는다.
+                           //   ⚠️ 2026-07-27부터 절입일 당일이면 시진에 따라 대운수가 갈린다.
+                           //      판정에 쓰게 되면 /api/dayun 의 startAgeByHour 를 받아 쓸 것. (v7 참고)
   y: number; m: number; d: number
 }
 
