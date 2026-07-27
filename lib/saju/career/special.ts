@@ -29,6 +29,9 @@
 
 import { calcCareerScore, gradeAll, EL5, type CareerScoreResult } from './careerScore'
 import type { CareerCard, CareerInput, Pillar } from './types'
+import { iga, wagwa } from '../josa'
+
+const EL_HANJA: Record<string, string> = { 목: '木', 화: '火', 토: '土', 금: '金', 수: '水' }
 
 /** 천간합 (교재·통설) */
 const CHEONGAN_HAP: Array<[string, string, string]> = [
@@ -52,7 +55,7 @@ export function checkSpecial(saju: Pillar[], r: CareerScoreResult): SpecialFlag[
     if (pts >= 65) {
       flags.push({
         key: 'jonwang', label: '한 오행 쏠림',
-        detail: `${el}이(가) ${pts}점으로 사주를 통째로 덮고 있어요. 종격·전왕격 같은 특수격일 수 있습니다.`,
+        detail: `${el}(${EL_HANJA[el]})${iga(el)} ${pts}점으로 사주를 이끌고 있어요. 종격·전왕격 같은 특수격일 수 있습니다.`,
       })
       break
     }
@@ -75,7 +78,7 @@ export function checkSpecial(saju: Pillar[], r: CareerScoreResult): SpecialFlag[
   if (same) {
     flags.push({
       key: 'ilgi', label: '천간 일기격 의심',
-      detail: `천간에 ${same[0]}이(가) ${same[1]}개입니다. 일기격(一氣格)일 수 있습니다.`,
+      detail: `천간에 ${same[0]}${iga(same[0])} ${same[1]}개입니다. 일기격(一氣格)일 수 있습니다.`,
     })
   }
 
@@ -89,7 +92,7 @@ export function checkSpecial(saju: Pillar[], r: CareerScoreResult): SpecialFlag[
       if (hap) {
         flags.push({
           key: 'hwagi', label: '화기격 의심',
-          detail: `일간 ${day}과(와) ${side.replace('주', '간')} ${other}이(가) 천간합(${hap[2]})을 합니다. 화기격(化氣格)일 수 있습니다.`,
+          detail: `일간 ${day}${wagwa(day)} ${side.replace('주', '간')} ${other}${iga(other)} 천간합(${hap[2]})을 합니다. 화기격(化氣格)일 수 있습니다.`,
         })
         break
       }
@@ -106,9 +109,9 @@ export function judgeSpecial(input: CareerInput): CareerCard | null {
   if (!flags.length) return null
 
   const lines = [
-    '이 사주는 한쪽으로 크게 치우쳐 있어, 일반적인 잣대만으로 보기 어려운 구조입니다.',
-    ...flags.map(f => `· ${f.detail}`),
-    '아래 풀이는 일반격 기준으로 본 것입니다. 상담사와 한 번 더 확인해 보시면 좋겠습니다.',
+    '이 사주는 한 기운으로 뚜렷하게 모여 있어요. 흔한 잣대로만 재기 어려운 구조입니다.',
+    ...flags.map(f => f.detail),
+    '아래 풀이는 흔한 기준으로 본 것이니, 상담사와 한 번 더 맞춰 보시면 더 정확해집니다.',
   ]
   const reasons = [
     `특수격 의심 : ${flags.map(f => f.label).join(' · ')}`,

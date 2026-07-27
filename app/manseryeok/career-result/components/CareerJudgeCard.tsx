@@ -8,6 +8,12 @@
  * ★카드가 늘어나도 이 파일은 안 고쳐도 된다.
  *   모든 판정이 같은 모양(key·title·badge·lines·reasons·data)으로 나오기 때문이다.
  *
+ * ★막대그래프는 두 카드에만 붙는다.
+ *     ohaeng_gijil — 오행 이름으로 (목·화·토·금·수)
+ *     yukchin      — 육친 이름으로 (비겁·식상·재성·관성·인성)
+ *   숫자는 한 벌이고 부르는 이름만 다르다. 색을 오행 색으로 통일해
+ *   "아, 같은 것을 다르게 부르는구나"가 눈에 보이게 했다.
+ *
  * ⚠️ reasons 는 절대 그리지 않는다. AI 통변에게만 주는 재료다. (교훈 AV)
  *    궁합에서 "(순화해서 전할 것)" 같은 지시문이 화면과 복사본으로 샌 적이 있다.
  */
@@ -18,20 +24,61 @@ const CARD = '#FFFBF7'
 const LINE = '#f0e0d5'
 const ACCENT = '#785aaa'
 
-/** 오행 막대 색 */
+/** 오행 막대 색 — 육친 막대도 같은 색을 쓴다 */
 const EL_COLOR: Record<string, string> = {
   목: '#639922', 화: '#d85a30', 토: '#ba7517', 금: '#888780', 수: '#378add',
+}
+const EL_ORDER = ['목', '화', '토', '금', '수'] as const
+const YUK_ORDER = ['비겁', '식상', '재성', '관성', '인성'] as const
+
+/** 등급 뱃지 색 */
+const GRADE_STYLE: Record<string, { bg: string; fg: string }> = {
+  과다: { bg: '#f7e6ee', fg: '#993556' },
+  발달: { bg: '#efeaf7', fg: '#5a4a86' },
+  결핍: { bg: '#f0eeea', fg: '#7a6f63' },
+}
+
+interface Bar {
+  label: string
+  el: string
+  points: number
+  count: number
+  grade: string
 }
 
 interface Props {
   card: CareerCard
-  /** 오행 그래프를 그릴지 (카드① 에만 쓴다) */
-  showGraph?: boolean
 }
 
-export default function CareerJudgeCard({ card, showGraph }: Props) {
-  const data = card.data as Record<string, unknown> | undefined
-  const grades = data?.grades as Record<string, { points: number; count: number; grade: string }> | undefined
+function barsOf(card: CareerCard): Bar[] | null {
+  const d = card.data as Record<string, unknown> | undefined
+  if (!d) return null
+
+  if (card.key === 'ohaeng_gijil') {
+    const g = d.grades as Record<string, { points: number; count: number; grade: string }> | undefined
+    if (!g) return null
+    return EL_ORDER.map(el => ({
+      label: el, el, points: g[el]?.points ?? 0,
+      count: g[el]?.count ?? 0, grade: g[el]?.grade ?? '',
+    }))
+  }
+
+  if (card.key === 'yukchin') {
+    const rows = d.rows as Array<{ group: string; el: string; points: number; count: number; grade: string }> | undefined
+    if (!rows) return null
+    return YUK_ORDER.map(gr => {
+      const r = rows.find(x => x.group === gr)
+      return {
+        label: gr, el: r?.el ?? '목', points: r?.points ?? 0,
+        count: r?.count ?? 0, grade: r?.grade ?? '',
+      }
+    })
+  }
+  return null
+}
+
+export default function CareerJudgeCard({ card }: Props) {
+  const bars = barsOf(card)
 
   return (
     <div style={{
@@ -48,21 +95,36 @@ export default function CareerJudgeCard({ card, showGraph }: Props) {
         )}
       </div>
 
-      {showGraph && grades && (
+      {bars && (
         <div style={{ marginBottom: 12 }}>
-          {(['목', '화', '토', '금', '수'] as const).map(el => {
-            const g = grades[el]
-            if (!g) return null
-            const on = g.grade === '발달' || g.grade === '과다'
+          {bars.map(b => {
+            const on = b.grade === '발달' || b.grade === '과다'
+            const gs = GRADE_STYLE[b.grade]
             return (
-              <div key={el} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                <span style={{ width: 16, fontSize: 12, color: on ? '#3a2e28' : '#8a7063', fontWeight: on ? 500 : 400 }}>{el}</span>
+              <div key={b.label} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
+                <span style={{
+                  width: card.key === 'yukchin' ? 30 : 15, flexShrink: 0,
+                  fontSize: 11.5, color: on ? '#3a2e28' : '#9c8a7c', fontWeight: on ? 500 : 400,
+                }}>{b.label}</span>
+                {card.key === 'yukchin' && (
+                  <span style={{ width: 12, flexShrink: 0, fontSize: 10.5, color: '#b0a094' }}>{b.el}</span>
+                )}
                 <div style={{ flex: 1, height: 7, background: '#f5ece5', borderRadius: 4, overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.min(100, g.points)}%`, height: '100%', background: EL_COLOR[el], borderRadius: 4 }} />
+                  <div style={{
+                    width: `${Math.min(100, b.points)}%`, height: '100%',
+                    background: EL_COLOR[b.el] || '#b0a094', borderRadius: 4,
+                    opacity: on ? 1 : 0.45,
+                  }} />
                 </div>
-                <span style={{ width: 62, fontSize: 11.5, color: on ? '#3a2e28' : '#8a7063', textAlign: 'right' }}>
-                  {g.points}점 · {g.count}자
-                </span>
+                <span style={{
+                  width: 52, flexShrink: 0, fontSize: 11, textAlign: 'right',
+                  color: on ? '#3a2e28' : '#9c8a7c',
+                }}>{b.points}점·{b.count}자</span>
+                <span style={{
+                  width: 26, flexShrink: 0, fontSize: 10, textAlign: 'center',
+                  borderRadius: 5, padding: '1px 0',
+                  background: gs ? gs.bg : 'transparent', color: gs ? gs.fg : 'transparent',
+                }}>{gs ? b.grade : ''}</span>
               </div>
             )
           })}

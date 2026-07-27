@@ -75,10 +75,10 @@ export function judgeOhaengGijil(input: CareerInput): CareerCard {
   }
   for (const el of excess) {
     if (strong.slice(0, 2).includes(el)) continue
-    lines.push(`${el}(${OHAENG_GIJIL[el].hanja})도 ${g[el].points}점으로 몰려 있어요. ${OHAENG_GIJIL[el].weak}`)
+    lines.push(`${el}(${OHAENG_GIJIL[el].hanja})에도 ${g[el].points}점으로 힘이 실렸어요. ${OHAENG_GIJIL[el].weak}`)
   }
   for (const el of lack) {
-    lines.push(`${el}(${OHAENG_GIJIL[el].hanja})${iga(el)} 없어요 — ${OHAENG_GIJIL[el].keyword}. ${GRADE_NOTE.결핍}`)
+    lines.push(`${el}(${OHAENG_GIJIL[el].hanja})${iga(el)} 타고나지 않았어요 — ${OHAENG_GIJIL[el].keyword}. ${GRADE_NOTE.결핍}`)
   }
   if (r.hourNote) lines.push(r.hourNote)
   if (monthNote) lines.push(monthNote)

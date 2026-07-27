@@ -76,10 +76,9 @@ export function judgeYukchin(input: CareerInput): CareerCard {
   const lines: string[] = []
   const reasons: string[] = []
 
+  // ★점수 나열은 화면의 막대그래프가 대신한다 (CareerJudgeCard).
+  //   같은 숫자를 글로 또 늘어놓으면 오행 카드와 겹쳐 읽기 나빠진다.
   lines.push(`일간이 ${day!.stem}(${dayEl})이라 오행을 육친으로 바꿔 보면 이렇습니다.`)
-  for (const x of rows) {
-    lines.push(`${x.group}(${x.el}) ${x.points}점 · ${x.count}자 — ${x.grade}`)
-  }
 
   // 강점 지능
   if (strong.length) {
@@ -94,11 +93,11 @@ export function judgeYukchin(input: CareerInput): CareerCard {
   }
   // 과다는 단점을 함께 (교재 40쪽 "50점 이상: 모험적 성향(단점)")
   for (const x of excess) {
-    lines.push(`${x.group}${iga(x.group)} ${x.points}점으로 지나치게 몰려 있어요. ${YUKCHIN_GIJIL[x.group].weak}`)
+    lines.push(`${x.group}${iga(x.group)} ${x.points}점으로 힘이 많이 실렸어요. 그래서 이런 면이 함께 나옵니다. ${YUKCHIN_GIJIL[x.group].weak}`)
   }
   // 없는 육친
   for (const x of lack) {
-    lines.push(`${x.group}(${x.el})${iga(x.group)} 없어요 — ${YUKCHIN_GIJIL[x.group].keyword}. 살면서 따로 길러야 하는 자리입니다.`)
+    lines.push(`${x.group}(${x.el})${iga(x.group)} 타고나지 않았어요 — ${YUKCHIN_GIJIL[x.group].keyword}. 곁에 두거나 살면서 길러 가면 되는 자리입니다.`)
   }
 
   // ── AI 재료 ───────────────────────────────────────────────────
