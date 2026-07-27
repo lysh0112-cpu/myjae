@@ -90,6 +90,10 @@ function buildDateRange(dueDate: string, before = 7, after = 7): { y: number; m:
 // 양력 날짜 하나의 연·월·일 간지를 /api/lunar 에서 가져온다 (날짜당 1회)
 async function fetchDateSaju(y: number, m: number, d: number, offset: number): Promise<DateSaju | null> {
   try {
+    // ⚠️ hour 를 안 넘긴다. 여기서 구하는 것은 후보 "날짜"의 년·월·일 간지이고,
+    //    시주는 뒤에서 시진 후보마다 따로 붙인다.
+    //    다만 절입일 당일이 후보에 들면 시진에 따라 월주가 갈릴 수 있다.
+    //    지금은 날짜당 한 번만 부르는 구조라 그대로 두었다. (2026-07-27 · 연재쌤 확인 항목)
     const url = `/api/lunar?year=${y}&month=${m}&day=${d}&calType=양력&leapMonth=0`
     const res = await fetch(url)
     const data = await res.json()

@@ -61,7 +61,10 @@ const BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申',
 async function getParentSaju(p: PersonInput | null): Promise<{ dayStem?: string; yongsin?: string }> {
   if (!p || !p.year || !p.month || !p.day) return {}
   try {
+    // ★2026-07-27 — 태어난 시를 함께 넘긴다 (절입일 당일 태생 대비)
+    const hIdx0 = p.hour === '-1' || p.hour === '' || p.hour == null ? null : parseInt(p.hour)
     const url = `/api/lunar?year=${p.year}&month=${p.month}&day=${p.day}&calType=${p.calType}&leapMonth=0`
+      + (hIdx0 !== null && !isNaN(hIdx0) && hIdx0 >= 0 ? `&hour=${hIdx0}` : '')
     const res = await fetch(url)
     const data = await res.json()
     if (data.error) return {}

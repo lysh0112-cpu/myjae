@@ -72,6 +72,8 @@ export async function POST(req: NextRequest) {
 
     const origin = req.nextUrl.origin
     const lunarRes = await fetch(
+      // ★hour 를 안 넘긴다. 사람의 명식이 아니라 "오늘 날짜"의 간지를 구하는 것이라
+      //   태어난 시각이라는 개념이 없다. (2026-07-27)
       `${origin}/api/lunar?year=${y}&month=${m}&day=${d}&calType=양력&leapMonth=0`
     )
     const lunar = await lunarRes.json()

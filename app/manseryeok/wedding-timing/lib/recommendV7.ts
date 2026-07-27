@@ -85,8 +85,11 @@ async function fetchHolidayMap(start: string, end: string): Promise<Map<string, 
 async function fetchPersonSaju(p: RawPerson | null, roleName: string): Promise<PersonSaju | null> {
   if (!p || !p.year || !p.month || !p.day) return null
   try {
+    // ★2026-07-27 — 태어난 시를 함께 넘긴다 (절입일 당일 태생 대비)
+    const hIdx0 = p.hour === '-1' || p.hour === '' || p.hour == null ? null : parseInt(p.hour)
     const url = `/api/lunar?year=${p.year}&month=${p.month}&day=${p.day}` +
-                `&calType=${p.calType || '양력'}&leapMonth=0`
+                `&calType=${p.calType || '양력'}&leapMonth=0` +
+                (hIdx0 !== null && hIdx0 >= 0 ? `&hour=${hIdx0}` : '')
     const res = await fetch(url)
     const data = await res.json()
     if (data.error) return null
