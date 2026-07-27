@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react'
 import { EL_BG, EL_BD, EL_C, EL_C_SUB, EL_HAN } from '@/lib/saju/ohaengColor'
 import { calcSeyunList, calcWolunList, calcIlunList, type DayunItem } from '@/lib/saju/dayun'
+// ★144칸 — 운에서 온 지지가 내 월지·일지를 만났을 때 (교재 49쪽 + 50~73쪽)
+import { jijiRelation, type JijiGrade } from '@/lib/saju/jijiGrade'
 import TermModal from './TermModal'
 import { SAJU_TERMS } from './sajuTerms'
 
@@ -26,6 +28,18 @@ interface Props {
   gender: string
   birthYear: number
   currentYear: number
+  /** ★내 월지 — 교재 49쪽 "대운이나 세운을 일단 月支에 대입해라. 月支가 총사령관이다" */
+  myMonthBranch?: string
+  /** 내 일지 — 나 자신 쪽 반응 */
+  myDayBranch?: string
+}
+
+/** 등급 배지 색 — 겁주지 않는 결로 (교훈 AX) */
+const GRADE_C: Record<JijiGrade, { bg: string; fg: string }> = {
+  A: { bg: '#e9f2ea', fg: '#3b6d3b' },
+  B: { bg: '#e6eef5', fg: '#2f5f80' },
+  C: { bg: '#f3ecdf', fg: '#8a6a3c' },
+  D: { bg: '#faeef1', fg: '#8c4a63' },
 }
 
 type Element = '목' | '화' | '토' | '금' | '수'
@@ -49,13 +63,16 @@ interface Cell {
 }
 
 export default function UnseFlow(props: Props) {
-  const { solarYear, solarMonth, solarDay, monthGanji, yearStem, dayStem, gender, birthYear, currentYear } = props
+  const { solarYear, solarMonth, solarDay, monthGanji, yearStem, dayStem, gender, birthYear, currentYear,
+          myMonthBranch = '', myDayBranch = '' } = props
 
   const [dayunList, setDayunList] = useState<DayunItem[]>([])
   const [selDaeun, setSelDaeun] = useState<number | null>(null)   // 대운 index
   const [selYear, setSelYear] = useState<number | null>(null)     // 선택 연도
   const [selMonth, setSelMonth] = useState<number | null>(null)   // 선택 월
   const [term, setTerm] = useState<string | null>(null)
+  /** 144칸 자세히 보기 — 어느 칸을 눌렀나 */
+  const [detail, setDetail] = useState<{ label: string; stem: string; branch: string } | null>(null)
   const openTerm = (v?: string) => { if (v && SAJU_TERMS[v]) setTerm(v) }
 
   // 대운 로드 (API)
@@ -134,6 +151,20 @@ export default function UnseFlow(props: Props) {
           style={{ fontSize: 10, color: SS_C[c.branchSS] || '#9e9e9e', textAlign: 'center', whiteSpace: 'nowrap', cursor: SAJU_TERMS[c.branchSS] ? 'pointer' : 'inherit' }}>
           {c.branchSS || '-'}
         </div>
+        {/* ★144칸 등급 — 월지(총사령관)가 그해 지지를 만났을 때. 누르면 자세히. */}
+        {(() => {
+          const rel = jijiRelation(myMonthBranch, c.branch)
+          if (!rel) return null
+          const g = GRADE_C[rel.grade]
+          return (
+            <div onClick={(e) => { e.stopPropagation(); setDetail({ label: c.label, stem: c.stem, branch: c.branch }) }}
+              style={{
+                fontSize: 9.5, fontWeight: 700, lineHeight: 1.5, cursor: 'pointer',
+                padding: '1px 7px', borderRadius: 7, background: g.bg, color: g.fg,
+                border: `0.5px solid ${g.fg}22`, whiteSpace: 'nowrap',
+              }}>{rel.grade}</div>
+          )
+        })()}
       </div>
     )
   }
@@ -145,7 +176,9 @@ export default function UnseFlow(props: Props) {
         <span style={{ fontSize: 12.5, fontWeight: 700, color: '#1a1a1a' }}>{title}</span>
         {badge && <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 8, background: '#fff3e9', border: '0.5px solid #e8d5c5', color: '#8f3d0e', fontWeight: 600 }}>{badge}</span>}
       </div>
-      <div style={{ fontSize: 10, color: '#8f3d0e', padding: '5px 15px 0' }}>👆 눌러서 자세히 보기</div>
+      <div style={{ fontSize: 10, color: '#8f3d0e', padding: '5px 15px 0' }}>
+        👆 눌러서 자세히 보기{myMonthBranch ? ' · A~D는 내 월지와의 어울림이에요' : ''}
+      </div>
       <div style={{ overflowX: 'auto', padding: '4px 12px 10px' }}>
         <div style={{ display: 'flex', gap: 4 }}>{[...cells].reverse().map(c => renderCell(c, small))}</div>
       </div>
@@ -188,6 +221,50 @@ export default function UnseFlow(props: Props) {
       {section('세운 (연운)', seyunBadge, seyunCells, true)}
       {selYear !== null && wolunCells.length > 0 && section('월운 (달별)', `${selYear}년`, wolunCells, true)}
       {selYear !== null && selMonth !== null && ilunCells.length > 0 && section('일운 (날짜별)', `${selYear}년 ${selMonth}월`, ilunCells, true)}
+      {/* ★144칸 자세히 보기 — 월지 반응(환경)과 일지 반응(나)을 함께 보여 준다 */}
+      {detail && (() => {
+        const env = jijiRelation(myMonthBranch, detail.branch)
+        const self = jijiRelation(myDayBranch, detail.branch)
+        const row = (title: string, mine: string, rel: ReturnType<typeof jijiRelation>) => {
+          if (!rel) return null
+          const g = GRADE_C[rel.grade]
+          return (
+            <div style={{ background: '#faf6f1', border: '0.5px solid #f0e0d5', borderRadius: 10, padding: '10px 12px', marginBottom: 7 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 11, color: '#9e8878' }}>{title}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#5c4a3a' }}>{mine}{detail.branch}</span>
+                <span style={{ fontSize: 10.5, fontWeight: 700, padding: '1px 8px', borderRadius: 7, background: g.bg, color: g.fg }}>{rel.grade}</span>
+                <span style={{ fontSize: 11, color: '#8f3d0e', fontWeight: 600 }}>{rel.tag}</span>
+              </div>
+              <div style={{ fontSize: 12.5, color: '#4a3a30', lineHeight: 1.75 }}>{rel.desc}</div>
+            </div>
+          )
+        }
+        return (
+          <div onClick={() => setDetail(null)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(60,40,30,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 950 }}>
+            <div onClick={e => e.stopPropagation()}
+              style={{ maxWidth: 340, width: '100%', maxHeight: '80vh', overflowY: 'auto', background: '#fff', borderRadius: 16, padding: '16px 15px 14px', position: 'relative' }}>
+              <button onClick={() => setDetail(null)}
+                style={{ position: 'absolute', top: 12, right: 13, background: 'none', border: 'none', fontSize: 15, color: '#c5a590', cursor: 'pointer' }}>✕</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3 }}>
+                <span style={{ fontSize: 19, fontWeight: 700, color: '#1a1a1a' }}>{detail.stem}{detail.branch}</span>
+                <span style={{ fontSize: 11, color: '#b4785a' }}>{detail.label}</span>
+              </div>
+              <div style={{ fontSize: 10.5, color: '#c5a590', marginBottom: 11 }}>내 지지가 이 지지를 만났을 때</div>
+              {row('일·환경 · 월지', myMonthBranch, env)}
+              {row('나 · 일지', myDayBranch, self)}
+              {!env && !self && (
+                <div style={{ fontSize: 12.5, color: '#8a7a6c' }}>월지·일지를 알 수 없어 견줄 수 없어요.</div>
+              )}
+              <div style={{ fontSize: 10, color: '#c5a590', lineHeight: 1.6, marginTop: 4 }}>
+                『명리적성 비법노트』 49쪽 · 50~73쪽. 등급은 흐름을 견주는 눈금이지 좋고 나쁨의 판정이 아닙니다.
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       <TermModal term={term} onClose={() => setTerm(null)} />
     </div>
   )

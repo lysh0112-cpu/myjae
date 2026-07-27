@@ -26,6 +26,8 @@ import TongbyeonView from "../components/TongbyeonView";
 import CopyTextButton from '@/app/components/common/CopyTextButton';
 import { birthYearToGroup, genderToFilter, type SajuQuestion } from "@/lib/saju/questions";
 import { type UnseEntry } from "@/lib/saju/unseQuestions";
+import ByeongjonView from "./ByeongjonView";   // 병존 (교재 74~77쪽)
+import { exactAge } from "@/lib/saju/ageDayun";
 import { toTongbyeonInput } from "@/lib/saju/toTongbyeonInput";
 import YongsinCard from "./YongsinCard";
 import SajuWonguk from "./SajuWonguk";
@@ -348,6 +350,11 @@ function ResultNewContent() {
   const yongsinBase=saju.length>0&&dayStem?calcYongsinNew(saju,dayStem,simsanScore ?? undefined):null
   // 전문가 모드(?pro=1)에서 합충 토글 ON이면 합충 반영 점수로 재계산
   const isPro = searchParams.get('pro') === '1'
+
+  // 병존 문구를 학생용으로 낼지 — 만 나이 20세 미만이면 학생.
+  //   ★나이는 lib/saju/ageDayun.ts 하나만 쓴다. 화면마다 다르면 안 된다. (30부 5장)
+  const byeongjonTarget: 'student'|'adult' =
+    (solarYear && exactAge(solarYear, solarMonth, solarDay) < 20) ? 'student' : 'adult'
   const yongsinHap=isPro&&saju.length>0&&dayStem
     ? calcYongsinNew(saju,dayStem,calcHapchungScore(saju).score)
     : null
@@ -470,6 +477,12 @@ function ResultNewContent() {
           </div>
         </Section>
 
+        {/* ①-1 병존 — 같은 글자가 나란히 있는가 (교재 74~77쪽)
+             걸린 게 없으면 ByeongjonView 가 스스로 null 을 돌려주므로 빈 상자가 안 생긴다. */}
+        {saju.length>0 && (
+          <ByeongjonView saju={saju} target={byeongjonTarget}/>
+        )}
+
         {/* ①-2 전문가 상세 (전문가 모드 + 토글 ON) — 지장간·납음·운성/신살 2기준·귀인·공망·형충회합 */}
         {isPro && hapchungOn && saju.length>0 && (
           <Section title="전문가 상세" collapsible={!chartOnly} open={openSection==='expert'} onToggle={()=>toggleSection('expert')}>
@@ -539,6 +552,7 @@ function ResultNewContent() {
               solarYear={solarYear} solarMonth={solarMonth} solarDay={solarDay}
               monthGanji={monthGanji} yearStem={yearStem} dayStem={dayStem}
               gender={gender} birthYear={yearParam} currentYear={currentYear}
+              myMonthBranch={monthBranchForNote ?? ''} myDayBranch={iljji}
             />
           </Section>
         )}
