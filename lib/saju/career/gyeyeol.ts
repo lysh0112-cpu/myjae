@@ -26,6 +26,8 @@
 
 import { calcCareerScore, gradeAll, pickStrong, EL5, type CareerScoreResult, type Ohaeng } from './careerScore'
 import type { CareerCard, CareerInput } from './types'
+import { calcCareerYongsin } from './yongsin'
+import { GWA, GWA_SHOW, GWA_MIN, GWA_SRC, HAS_GWA, type GwaRow, type GwaLean } from './tables/gwa'
 
 /** 무진술(戊辰戌) 양토 = 인문 쪽 / 기축미(己丑未) 음토 = 자연 쪽 (교재 133쪽) */
 const YANG_TO = ['戊', '辰', '戌']
@@ -90,6 +92,57 @@ export function calcGyeyeol(r: CareerScoreResult): GyeyeolResult {
   }
 }
 
+// ── 학과 추림 ────────────────────────────────────────────────────
+//
+// ★직업(jobs.ts)과 같은 방식이다. 오행을 겹쳐 거듭 나오는 것을 위로 올린다.
+//   다만 학과는 출처가 교재 한 곳뿐이라 무게가 단순하다.
+//     대표 오행 1위 3 · 2위 2 · 용신 1 · 계열(문·이과) 일치 1
+//   교재 133쪽이 "강점 70 : 용신 30" 이라 한 것과 결이 같다.
+//
+// ★학생에게만 내보낸다. 성인에게 학과는 이미 지난 이야기다.
+
+export interface GwaHit {
+  row: GwaRow
+  score: number
+  /** 왜 뽑혔는지 — 화면과 통변 재료에 그대로 쓴다 */
+  sources: string[]
+}
+
+export function pickGwa(input: CareerInput, y: GyeyeolResult, r: CareerScoreResult): GwaHit[] {
+  if (!HAS_GWA()) return []          // ⛔ 표가 비어 있으면 아무것도 안 낸다
+
+  const strong = pickStrong(r, gradeAll(r)).slice(0, 2)
+  const yong = calcCareerYongsin(input)?.yongsin ?? null
+  const lean: GwaLean | null = y.lean === '반반' ? null : (y.lean as GwaLean)
+
+  const hits: GwaHit[] = []
+  for (const row of GWA) {
+    let score = 0
+    const sources: string[] = []
+
+    strong.forEach((el, i) => {
+      if (row.el.includes(el)) {
+        const w = i === 0 ? 3 : 2
+        score += w
+        sources.push(`${el} 오행`)
+      }
+    })
+    if (yong && row.el.includes(yong)) { score += 1; sources.push(`${yong} 용신`) }
+
+    // 교재가 계열을 밝힌 학과만 계열 일치를 얹는다
+    if (lean && row.lean === lean) { score += 1; sources.push(`${lean} 계열`) }
+    // 예체능은 화(火)가 발달 이상일 때만 값어치가 있다 (교재 129쪽)
+    if (row.lean === '예체능') {
+      if (y.arts) { score += 1; sources.push('화 발달(예체능)') }
+      else score -= 1
+    }
+
+    if (score >= GWA_MIN) hits.push({ row, score, sources })
+  }
+
+  return hits.sort((a, b) => (b.score - a.score) || (b.sources.length - a.sources.length))
+}
+
 // ── 카드 ────────────────────────────────────────────────────────
 export function judgeGyeyeol(input: CareerInput): CareerCard {
   const r = calcCareerScore(input.saju, input.solarMonth, input.solarDay, input.hourBranch)
@@ -108,11 +161,31 @@ export function judgeGyeyeol(input: CareerInput): CareerCard {
   }
   if (y.to) lines.push(`토(土)는 음양을 모두 품은 오행이라 계열을 가르는 대표로 보지 않았습니다. (양토 ${y.toYang}자 · 음토 ${y.toEum}자)`)
   if (y.arts) lines.push('화(火)가 발달해 예체능 소질이 함께 보입니다.')
+
+  // ★학과 — 학생에게만. 표가 비어 있으면 이 묶음이 통째로 건너뛴다.
+  const gwa = input.target === 'student' ? pickGwa(input, y, r).slice(0, GWA_SHOW) : []
+  if (gwa.length) {
+    lines.push(`오행을 겹쳐 보니 ${gwa.length}개 학과가 거듭 나옵니다.`)
+    for (const h of gwa) {
+      lines.push(`${h.row.name} — ${h.sources.join(' · ')}`)
+    }
+    lines.push('학과는 정해 주는 것이 아니라 둘러볼 자리를 좁혀 드리는 것입니다.')
+  }
+
   lines.push('계열 비율은 70%만 적용되고 30%는 예외입니다. 이 비율 하나로 진로를 단정하지 마세요.')
 
   reasons.push(`계열 — 목화 ${y.mokhwa} vs 금수 ${y.geumsu} → 인문 ${y.humanities} : 자연 ${y.science}`)
   reasons.push(`토 ${y.to}점 (양토 ${y.toYang}자 · 음토 ${y.toEum}자) — 대표로 삼지 않음`)
   if (y.arts) reasons.push('화(火)가 발달 이상이라 예체능 소질을 함께 짚어 주세요. (교재 129쪽 "예체능 계열 적성=火")')
+  if (gwa.length) {
+    reasons.push(`학과 추림 — ${GWA.length}개 중 문턱(${GWA_MIN}점) 통과 상위 ${gwa.length}개`)
+    for (const h of gwa) reasons.push(`  ${h.row.name} ${h.score}점 ← ${h.sources.join(' + ')} (${h.row.src})`)
+    reasons.push(`근거 ${GWA_SRC}. 무게 — 대표 오행 1위 3 · 2위 2 · 용신 1 · 계열 일치 1`)
+    reasons.push('★학과는 위 목록에 있는 것만 쓰세요. 없는 학과를 지어내지 마세요.')
+    reasons.push('학과는 "이 자리를 둘러보시면 좋겠다" 정도로 권하세요. 정해 주지 마세요.')
+  } else if (input.target === 'student') {
+    reasons.push('학과 표가 아직 없어 학과는 다루지 않습니다. 학과 이름을 지어내지 마세요.')
+  }
   reasons.push('근거 : 교재 133쪽 그룹 비교 / 129쪽 "문과=木 이과=金 예체능=火, 70% 적용"')
   reasons.push('이 대목("계열과 학과")의 통변 재료입니다. 비율은 참고치라고 반드시 덧붙이세요.')
 
