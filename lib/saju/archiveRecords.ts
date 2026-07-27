@@ -43,6 +43,10 @@ const BADGES: Record<string, Badge> = {
   birth:    { label: '출산택일',   bg: '#e9f2ea', fg: '#3b6d3b' },
   naming:   { label: '개명',       bg: '#f3ecdf', fg: '#8a6a3c' },
   expert:   { label: '만세력',     bg: '#eceae4', fg: '#6a6258' },
+  // ★2026-07-27 — 진로적성이 등록돼 있지 않아 배지가 한글 대신 "career" 로 떴다.
+  //   합격운을 넣으면서 함께 채운다. 색은 홈 버튼 색을 그대로 쓴다(home-new).
+  career:   { label: '진로적성',   bg: '#efeaf7', fg: '#785aaa' },
+  examluck: { label: '합격운',     bg: '#f7e6ee', fg: '#c85a8c' },
 }
 
 export function badgeOf(serviceType: string): Badge {
@@ -100,6 +104,10 @@ export function reviewUrl(item: ArchiveItem): string {
       return `/manseryeok/result-new?${qs}unse=daeun&recordId=${rid}&${from}`
     case 'seyun':
       return `/manseryeok/result-new?${qs}unse=seyun&recordId=${rid}&${from}`
+    case 'career':
+      return `/manseryeok/career-result?${qs}recordId=${rid}&${from}`
+    case 'examluck':
+      return `/manseryeok/exam-luck-result?${qs}recordId=${rid}&${from}`
     case 'saju':
     default:
       return `/manseryeok/result-new?${qs}recordId=${rid}&${from}`
@@ -116,6 +124,9 @@ const ARCHIVE_TYPES = [
   'saju', 'daeun', 'seyun', 'mulsang',
   'couple', 'married', 'tarot',
   'wedding', 'birth', 'naming',
+  // ★여기 빠지면 .in() 에 안 걸려 아카이브 목록에 아예 안 나온다.
+  //   BADGES·reviewUrl 만 채우고 이걸 빠뜨리면 조용히 안 보인다. (2026-07-27)
+  'career', 'examluck',
 ]
 
 // 전 서비스 통합 조회 (최신순). limit로 페이지네이션 가능.
