@@ -27,7 +27,6 @@ import CopyTextButton from '@/app/components/common/CopyTextButton';
 import { birthYearToGroup, genderToFilter, type SajuQuestion } from "@/lib/saju/questions";
 import { type UnseEntry } from "@/lib/saju/unseQuestions";
 import ByeongjonView from "./ByeongjonView";   // 병존 (교재 74~77쪽)
-import JijiTraitView from "./JijiTraitView";   // 지지가 말하는 것 (교재 48·50~73쪽)
 import { exactAge, pickCurrentDayun } from "@/lib/saju/ageDayun";
 import { calcSeyunList, type DayunItem } from "@/lib/saju/dayun";
 import { toTongbyeonInput } from "@/lib/saju/toTongbyeonInput";
@@ -513,15 +512,15 @@ function ResultNewContent() {
           </div>
         </Section>
 
-        {/* ①-1 병존 — 같은 글자가 나란히 있는가 (교재 74~77쪽)
-             걸린 게 없으면 ByeongjonView 가 스스로 null 을 돌려주므로 빈 상자가 안 생긴다. */}
+        {/* ①-1 병존 — 명식에 무엇이 있는지 "사실"만 한 줄로 (교재 74~77쪽)
+             ★2026-07-27 — 처음에는 병존과 지지 특징을 해석문까지 통째로 늘어놨다.
+               손님은 자기가 고른 질문의 답만 받으면 되는데, 재료를 화면에 다 편 것이다.
+               (교훈 AV — reasons 는 그리지 않는다. AI 통변에게만 주는 재료다)
+             → 해석은 전부 통변 재료(toTongbyeonInput)로만 가고,
+               화면에는 "이 사주에 이런 게 있다"는 사실만 남긴다.
+               지지 특징(JijiTraitView)은 화면에서 아예 뺐다. 재료로만 쓴다. */}
         {saju.length>0 && (
           <ByeongjonView saju={saju} target={byeongjonTarget}/>
-        )}
-
-        {/* ①-2 지지가 말하는 것 (교재 48쪽·50~73쪽) — 월지·일지를 펼쳐 둔다 */}
-        {saju.length>0 && (
-          <JijiTraitView saju={saju} target={byeongjonTarget}/>
         )}
 
         {/* ①-2 전문가 상세 (전문가 모드 + 토글 ON) — 지장간·납음·운성/신살 2기준·귀인·공망·형충회합 */}
