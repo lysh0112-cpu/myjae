@@ -19,6 +19,7 @@ import type { CareerCard, CareerInput, Ohaeng } from './types'
 import { calcCareerGyeokguk } from './gyeokguk'
 import { iga, eunneun } from '../josa'
 import { YONGSIN_OHAENG, YONGSIN_YUKCHIN, YONGSIN_NOTE, YONGSIN_SRC } from './tables/yongsin'
+import { jobKey, okForStudent } from './tables/jobs'
 
 const EL_HANJA: Record<string, string> = { 목: '木', 화: '火', 토: '土', 금: '金', 수: '水' }
 
@@ -109,8 +110,14 @@ export function judgeYongsin(input: CareerInput): CareerCard {
   reasons.push(`억부용신 ${y} (${v.yukchinName}) · 희신 ${v.heesin ?? '-'} · 기신 ${v.gisin ?? '-'} · 신강약 ${v.status}`)
   if (v.johu) reasons.push(`조후용신 ${v.johu} — ${v.johuNote}`)
   if (v.gyeokYongsin) reasons.push(`격국용신 ${v.gyeokYongsin} (${v.gyeokName})`)
-  reasons.push(`${y} 용신 직업 : ${v.jobsByEl.slice(0, 20).join(', ')} …`)
-  if (v.jobsByYukchin.length) reasons.push(`${v.yukchinName} 용신 직업 : ${v.jobsByYukchin.slice(0, 20).join(', ')} …`)
+  // ★2026-07-27 — 학생이면 어른용 직업을 재료에서도 뺀다.
+  //   수(水) 용신 목록에 유흥업·술집·목욕탕이, 편재 목록에 대부업·투기업·전당포가 있다.
+  const forStudent = input.target === 'student'
+  const sift = (list: string[]) =>
+    (forStudent ? list.filter(j => okForStudent(jobKey(j))) : list).slice(0, 20)
+
+  reasons.push(`${y} 용신 직업 : ${sift(v.jobsByEl).join(', ')} …`)
+  if (v.jobsByYukchin.length) reasons.push(`${v.yukchinName} 용신 직업 : ${sift(v.jobsByYukchin).join(', ')} …`)
   reasons.push(`근거 ${YONGSIN_SRC}`)
   reasons.push('이 대목("기운을 얻는 자리")의 통변 재료입니다. 용신은 3할이라고 반드시 덧붙이세요. 직업 목록은 뒤 대목에서 추립니다.')
 

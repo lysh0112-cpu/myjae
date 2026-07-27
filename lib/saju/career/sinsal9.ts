@@ -26,6 +26,7 @@ import type { CareerCard, CareerInput, Pillar } from './types'
 import { isHourUnknown } from './types'
 import { iga } from '../josa'
 import { SINSAL9, DOHWA_NOTE, POWER_PAIRS, GROUP_RULE, type SinsalRow } from './tables/sinsal'
+import { jobKey, okForStudent } from './tables/jobs'
 
 /** 신살 하나의 판정 결과 */
 export interface SinsalHit {
@@ -210,12 +211,18 @@ export function judgeSinsal(input: CareerInput): CareerCard {
   }
 
   // AI 통변 재료
+  // ★2026-07-27 — 학생이면 어른용 직업을 재료에서도 뺀다.
+  //   도화살 목록에 '유흥업'이 들어 있어 아이 사주 재료로 그대로 나갔다.
+  const forStudent = input.target === 'student'
   for (const h of all) {
     if (!h.active) continue
+    const jobs = forStudent
+      ? h.row.jobs.filter(j => okForStudent(jobKey(j)))
+      : h.row.jobs
     reasons.push(
       `${h.name} ${h.count}개 [${h.marks.map(m => `${m.pillar.replace('주', '')}:${m.ch}`).join(' ')}]` +
       ` 작용력 ${h.power || 0}/3` +
-      ` · 어울리는 일 : ${h.row.jobs.join(', ')}` +
+      ` · 어울리는 일 : ${jobs.join(', ')}` +
       ` · 근거 ${h.row.src}`
     )
   }

@@ -326,7 +326,6 @@ function CareerResultInner() {
             </div>
 
             <div style={{ fontSize: 11, color: '#a08d7d', textAlign: 'center', marginTop: 18, lineHeight: 1.7 }}>
-              출전 『명리적성 비법노트』(심산)<br />
               사주는 참고입니다. 길은 본인의 노력과 의지로 얼마든지 바꿀 수 있어요.
             </div>
           </>

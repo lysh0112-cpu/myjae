@@ -19,6 +19,7 @@ import { calcCareerScore, gradeAll, pickStrong, EL5, type CareerScoreResult, typ
 import type { CareerCard, CareerInput, Pillar } from './types'
 import { iga, eunneun } from '../josa'
 import { YUKCHIN_GIJIL, GRID25, YUKCHIN_ORDER, type YukchinGroup } from './tables/yukchin'
+import { jobKey, okForStudent } from './tables/jobs'
 
 const STEM_EL: Record<string, Ohaeng> = {
   甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토',
@@ -106,10 +107,18 @@ export function judgeYukchin(input: CareerInput): CareerCard {
   reasons.push(`강점 지능 : ${strong.slice(0, 2).map(x => x.group).join('·') || '뚜렷하지 않음'}`)
   if (excess.length) reasons.push(`과다(모험적 성향·단점) : ${excess.map(x => x.group).join('·')}`)
   if (lack.length) reasons.push(`없는 육친 : ${lack.map(x => `${x.group}(${x.el})`).join('·')}`)
+  // ★2026-07-27 — 학생이면 어른용 직업을 재료에서도 뺀다.
+  //   reasons 는 화면에 안 그려지지만 통변 프롬프트의 유일한 재료다.
+  //   재료에 '유흥업'을 넣어 두고 프롬프트로 "쓰지 말라"고 하는 건
+  //   6장 ①(지시 모순 금지)이 경계한 바로 그 형태다.
+  const forStudent = input.target === 'student'
+  const sift = (list: string[]) =>
+    forStudent ? list.filter(j => okForStudent(jobKey(j))) : list
+
   for (const x of strong.slice(0, 2)) {
     const cell = GRID25[x.group][x.el]
-    reasons.push(`${x.el}${x.group} 격자 — ${cell.gijil} 어울리는 일 : ${cell.jobs.join(', ')}`)
-    reasons.push(`${x.group} 어울리는 일 : ${YUKCHIN_GIJIL[x.group].jobs.slice(0, 12).join(', ')} …`)
+    reasons.push(`${x.el}${x.group} 격자 — ${cell.gijil} 어울리는 일 : ${sift(cell.jobs).join(', ')}`)
+    reasons.push(`${x.group} 어울리는 일 : ${sift(YUKCHIN_GIJIL[x.group].jobs).slice(0, 12).join(', ')} …`)
   }
   reasons.push('근거 : 교재 79~81쪽(육친 기질) · 82~89쪽(오행×육친 25칸) · 40쪽(발달·과다 기준)')
   reasons.push('이 대목("육친이 가리키는 곳")의 통변 재료입니다. 성향과 강점만 다루고, 학과·대학 이야기는 뒤 대목으로 넘기세요.')
