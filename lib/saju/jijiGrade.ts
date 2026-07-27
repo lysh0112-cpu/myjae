@@ -228,11 +228,22 @@ export function jijiRelation(mine: string, incoming: string): JijiRelation | und
   return JIJI_GRADE[mine]?.[incoming]
 }
 
-/** 등급 → 배점 비율(0~1). 실제 점수는 부르는 쪽에서 만점을 곱해 쓴다.
- *  ⚠ 이 비율은 아직 연재쌤 확정 전 잠정값이다. */
-export const GRADE_RATIO: Record<JijiGrade, number> = {
-  A: 1.0,
-  B: 0.7,
-  C: 0.4,
-  D: 0.1,
-}
+/**
+ * ── 등급(A~D)을 점수로 바꾸는 표는 여기에 두지 않는다 ──────────────
+ *
+ * ★2026-07-27 — 전에는 이 자리에 GRADE_RATIO = { A:1.0, B:0.7, C:0.4, D:0.1 }
+ *   가 export 되어 있었다. **아무 데서도 안 부르는 값이었다.**
+ *   그런데 이름이 GRADE_RATIO 라 "표준 배점"처럼 보였다. 새 서비스를 만들면서
+ *   `import { GRADE_RATIO } from './jijiGrade'` 하면 월운과 다른 점수가
+ *   조용히 나온다. 오류도 안 난다. (14부 「조용히 실패하는 코드」)
+ *
+ * ★왜 공용으로 둘 수 없나 — 서비스마다 만점도 결도 다르기 때문이다.
+ *     월운   monthlyFortune.ts  MONTH_GRADE_RATIO  A 1.0 / B .88 / C .76 / D .62
+ *            지지 30점(월지 20·일지 10)에 곱한다. "점수가 낮으면 기분 나빠한다"는
+ *            판단으로 후하게 올려 최저 67점이 되게 맞춘 값이다. 여기만의 사정이다.
+ *     궁합   coupleJijiText.ts  jijiStars()        A 4 / B 3 / C 2 / D 1 (별)
+ *
+ * ★그러니 등급→점수는 **쓰는 쪽이 자기 파일 안에서 정하십시오.**
+ *   합격운도 마찬가지입니다. 여기에 다시 만들어 두지 마십시오.
+ *   이 파일이 주는 것은 등급(grade)·관계 이름(tag)·해설(desc)까지입니다.
+ */

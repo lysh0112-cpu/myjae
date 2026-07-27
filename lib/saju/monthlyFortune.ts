@@ -25,8 +25,14 @@
 import { JIJI_GRADE, type JijiGrade } from './jijiGrade'
 
 // ── 조정 가능한 값들 (연재쌤 확정 시 여기만 고친다) ─────────────
-/** 지지 등급 → 점수 (만점 대비 비율). 강의노트 201쪽 A3/B1.5/C0/D−1.5 비율 */
-const GRADE_RATIO: Record<JijiGrade, number> = { A: 1.0, B: 0.88, C: 0.76, D: 0.62 }
+/**
+ * 지지 등급 → 점수 (만점 대비 비율). 강의노트 201쪽 A3/B1.5/C0/D−1.5 비율.
+ * ★2026-07-27 이름을 GRADE_RATIO 에서 바꿨다. 값은 그대로다.
+ *   jijiGrade.ts 에 같은 이름의 죽은 export 가 있어 "표준 배점"처럼 보였다.
+ *   이 값은 월운만의 것이다 — 지지 30점에 곱하고, 최저 67점이 되게 후하게 맞춘 값이다.
+ *   다른 서비스가 가져다 쓰면 안 된다.
+ */
+const MONTH_GRADE_RATIO: Record<JijiGrade, number> = { A: 1.0, B: 0.88, C: 0.76, D: 0.62 }
 /** 지지 30점을 월지·일지에 나누는 비율 (월지가 총사령관) */
 const BRANCH_MAX = { month: 20, day: 10 }
 /** 등급 경계 — 2026-07-19 확정.
@@ -137,8 +143,8 @@ export function scoreMonthlyFortune(input: MonthlyFortuneInput): MonthlyFortuneS
   //    소스: "운을 일단 月支에 대입해라. 月支가 총사령관"
   const relEnv = JIJI_GRADE[myMonthBranch]?.[monthBranch]
   const relSelf = JIJI_GRADE[myDayBranch]?.[monthBranch]
-  const envPt = relEnv ? BRANCH_MAX.month * GRADE_RATIO[relEnv.grade] : BRANCH_MAX.month * 0.5
-  const selfPt = relSelf ? BRANCH_MAX.day * GRADE_RATIO[relSelf.grade] : BRANCH_MAX.day * 0.5
+  const envPt = relEnv ? BRANCH_MAX.month * MONTH_GRADE_RATIO[relEnv.grade] : BRANCH_MAX.month * 0.5
+  const selfPt = relSelf ? BRANCH_MAX.day * MONTH_GRADE_RATIO[relSelf.grade] : BRANCH_MAX.day * 0.5
   const branch = envPt + selfPt
 
   // ── ④ 십성 20점 ──────────────────────────────────
