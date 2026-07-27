@@ -18,7 +18,7 @@ import { exactAge, pickCurrentDayun, dayunOrder, type DayunLike } from '../ageDa
 // ★2026-07-27 — sipsinOf 는 지지를 못 읽는다(조용히 '' 를 준다). ./sipsin.ts 참조
 import { sipsinOfChar } from './sipsin'
 import { getGongmang } from '../gongmang'
-import { GOOD, BAD, NEUTRAL, STUDY_TREND, PURPOSE_BONUS } from './tables/rules'
+import { GOOD, BAD, NEUTRAL, STUDY_TREND, PURPOSE_BONUS, examKindOf } from './tables/rules'
 // ★2026-07-27 — 관성의 12운성을 보려면 필요하다. 원본 195쪽 「관성이 12운성 상 관대에 해당하거나」
 import { getUnsung } from '../unsung'
 // ★2026-07-27 — 조후·기신·격국을 얻는다. 셋 다 이 한 번의 호출로 나온다.
@@ -91,6 +91,8 @@ export function judgeYear(
    *   안 넘기면 어느 쪽에도 힘을 더 싣지 않는다(예전 동작).
    */
   purpose?: 'exam' | 'job',
+  /** 손님이 고른 시험 종류 (EXAM_KINDS 의 key) — 교재 230쪽 */
+  examKind?: string | null,
 ): YearLuck {
   const n = readNatal(saju)
   const hits: YearLuck['hits'] = []
@@ -231,6 +233,20 @@ export function judgeYear(
   // ── 시험과 무관하지만 알려 주는 것 ──────────────────────────
   if (makesSamhyeong(n.branches, yBranch)) add('삼형살')
 
+  // ★고른 시험에 맞는 십신이 드는 해 — 교재 230쪽
+  //   손님이 "어학 시험" 을 골랐으면 편인이 드는 해에, "로스쿨" 이면 정관이 드는 해에 힘이 실린다.
+  //   안 골랐으면(examKind 없음) 이 줄은 걸리지 않는다.
+  if (examKind) {
+    const k = examKindOf(examKind)
+    if (k && k.sipsins.length && both.some(x => (k.sipsins as string[]).includes(x))) {
+      hits.push({
+        key: '고른시험십신',
+        say: `${k.label} 쪽으로 힘이 실리는 해입니다.`,
+        weight: 2, src: k.src || '교재 230쪽',
+      })
+    }
+  }
+
   // ★보러 온 것에 따라 힘을 더 싣는다 (원본 195쪽)
   if (purpose) {
     const pb = PURPOSE_BONUS[purpose]
@@ -284,6 +300,7 @@ export function judgeYears(
   /** 시험을 보러 왔나, 일자리를 보러 왔나 (원본 195쪽) */
   purpose?: 'exam' | 'job',
 ): YearLuck[] {
+  const examKind = input.examKind ?? null
   const span = input.span ?? 3
   const day = input.saju.find(p => p.pillar === '일주')
   const dayStem = day?.stem ?? ''
@@ -303,7 +320,7 @@ export function judgeYears(
   return all
     .filter(s => s.year >= thisYear && s.year < thisYear + span)
     .map(s => {
-      const base = judgeYear(input.saju, s.year, s.cheongan, s.jiji, purpose)
+      const base = judgeYear(input.saju, s.year, s.cheongan, s.jiji, purpose, examKind)
       if (!dayunList?.length) return base
       // 그해에 몇 살이었나 → 그때 흐르던 대운
       const ageThatYear = s.year - input.birthYear

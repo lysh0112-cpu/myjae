@@ -61,6 +61,20 @@ export interface ExamInput {
   /** 몇 해를 볼지 (올해 포함). 기본 5 */
   span?: number
   target?: ExamTarget
+  /**
+   * ★손님이 고른 시험 종류 — EXAM_KINDS 의 key (2026-07-27)
+   *   교재 230쪽이 십신마다 시험을 짝지어 놨다. 고른 시험에 맞는 십신이 드는 해에 힘이 실린다.
+   *   안 고르면 예전처럼 모든 십신을 고루 본다.
+   */
+  examKind?: string | null
+  /**
+   * ★시험 날짜 (양력) — 알면 그 달·그 날까지 짚어 준다. 교재 195쪽
+   *   「세운 > 대운 > 월운 > 일진」 차례 · 「시험일이 공망일이면 불리」
+   *   모르면 안 넘긴다. 세운까지만 본다.
+   */
+  examDate?: { year: number; month: number; day: number } | null
+  /** 그 날짜가 시험일인가 합격자 발표일인가 */
+  examDateLabel?: '시험일' | '합격자 발표일'
 }
 
 /** 카드 한 장 — career/ 의 CareerCard 와 같은 모양으로 맞춘다 */

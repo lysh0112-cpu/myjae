@@ -154,6 +154,9 @@ export const PURPOSE_BONUS: Record<'exam' | 'job', { sipsins: Sipsin[]; bonus: n
 }
 export const PURPOSE_BONUS_SRC = '교재 195쪽'
 
+// ★손님이 고른 시험에 맞는 십신이 드는 해 — 교재 230쪽 (2026-07-27)
+//   EXAM_KINDS 에서 짝을 가져온다. 규칙 표에는 자리만 둔다(무게는 examScore 가 직접 준다).
+
 export const NEUTRAL: RuleRow[] = [
   { key: '삼형살', weight: 0,
     say: '축술미·인사신 삼형은 시험운과는 상관이 없습니다. (관성이 걸릴 때만 따로 봅니다)',
@@ -210,6 +213,46 @@ export const EXAM_BY_SIPSIN: Array<{ sipsin: Sipsin; exams: string[]; src: strin
   { sipsin: '편인', exams: ['어학 시험', '외국어', '기술 자격증'], src: '교재 230쪽' },
   { sipsin: '식신', exams: ['영양사', '조리사', '제조업 관련 시험'], src: '교재 230쪽' },
 ]
+
+// ══════════════════════════════════════════════════════════════
+// 6-2. 손님이 고르는 시험 종류 (2026-07-27 대표님 지시)
+// ══════════════════════════════════════════════════════════════
+//
+// ★교재 230쪽이 십신마다 시험을 짝지어 놨다. 그 짝을 뒤집어 목록으로 만든다.
+//   손님이 "공무원 시험" 을 고르면 정인·정관을, "어학" 을 고르면 편인을 본다.
+//
+// ⚠️ 교재에 없는 시험은 넣지 않는다. 다만 "그 밖" 을 두어 안 막는다.
+//    (교재에 없는 시험을 억지로 십신에 붙이면 지어내는 것이 된다)
+
+export interface ExamKindRow {
+  key: string
+  /** 손님이 보는 이름 */
+  label: string
+  /** 이 시험에 힘을 싣는 십신 — 교재 230쪽 */
+  sipsins: Sipsin[]
+  /** 시험(합격) 쪽인가 취업 쪽인가 — 195쪽 「합격운은 인성, 취업운은 관성」 */
+  purpose: 'exam' | 'job'
+  src: string
+}
+
+export const EXAM_KINDS: ExamKindRow[] = [
+  { key: 'gongmuwon', label: '공무원 시험 (9급·7급)', sipsins: ['정인', '정관'], purpose: 'exam', src: '교재 230쪽' },
+  { key: 'gongsa', label: '공사·공기업 시험', sipsins: ['정관', '정인'], purpose: 'job', src: '교재 230쪽 정관(공적인 자리)' },
+  { key: 'imyong', label: '교사 임용고시', sipsins: ['정관', '정인'], purpose: 'exam', src: '교재 230쪽' },
+  { key: 'daeip', label: '대입 (수시·정시)', sipsins: ['정인', '정관'], purpose: 'exam', src: '교재 230쪽' },
+  { key: 'lawschool', label: '로스쿨·전문대학원', sipsins: ['정관'], purpose: 'exam', src: '교재 230쪽' },
+  { key: 'chwieop', label: '취업 시험 (일반 기업)', sipsins: ['정관', '편관'], purpose: 'job', src: '교재 195쪽 「취업운은 관성운이 더 중요」' },
+  { key: 'eohak', label: '어학 시험 (토익·토플 등)', sipsins: ['편인'], purpose: 'exam', src: '교재 230쪽' },
+  { key: 'gisul', label: '기술 자격증', sipsins: ['편인'], purpose: 'exam', src: '교재 230쪽' },
+  { key: 'josa', label: '영양사·조리사·제조업', sipsins: ['식신'], purpose: 'exam', src: '교재 230쪽' },
+  { key: 'gyoyuk', label: '교육청·교육복지', sipsins: ['정인'], purpose: 'job', src: '교재 230쪽' },
+  { key: 'etc', label: '그 밖의 시험', sipsins: [], purpose: 'exam', src: '' },
+]
+
+export function examKindOf(key?: string | null): ExamKindRow | null {
+  if (!key) return null
+  return EXAM_KINDS.find(k => k.key === key) ?? null
+}
 
 // ══════════════════════════════════════════════════════════════
 // 7. ⚠️ 원문이 어긋나는 곳 — 연재쌤 확인 대기

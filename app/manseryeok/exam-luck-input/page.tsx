@@ -16,6 +16,8 @@
 import { Suspense, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { exactAge } from '@/lib/saju/ageDayun'
+// ★2026-07-27 — 손님이 시험 종류를 고르면 교재 230쪽 짝에 따라 볼 십신이 정해진다.
+import { EXAM_KINDS } from '@/lib/saju/examLuck/tables/rules'
 
 const ACCENT = '#c85a8c'
 const SOFT = '#f7e6ee'
@@ -40,6 +42,10 @@ function ExamLuckInputInner() {
 
   const [kind, setKind] = useState<Kind>(age !== null && age < 20 ? 'exam' : 'job')
   const [target, setTarget] = useState<Target>(age !== null && age < 20 ? 'student' : 'adult')
+  /** ★어떤 시험인가 — 교재 230쪽이 십신마다 시험을 짝지어 놨다 */
+  const [examKind, setExamKind] = useState<string>('')
+  /** ★시험 날짜 — 몰라도 된다. 알면 그 달·그 날까지 짚어 준다 (교재 195쪽) */
+  const [examDate, setExamDate] = useState<string>('')
 
   const query = useMemo(() => {
     const p = new URLSearchParams()
@@ -49,8 +55,10 @@ function ExamLuckInputInner() {
     }
     p.set('kind', kind)
     p.set('target', target)
+    if (examKind) p.set('examKind', examKind)
+    if (examDate) p.set('examDate', examDate)
     return p.toString()
-  }, [sp, kind, target])
+  }, [sp, kind, target, examKind, examDate])
 
   const kinds: Array<{ key: Kind; title: string; sub: string }> = [
     { key: 'exam', title: '시험 · 합격운', sub: '입시 · 자격증 · 공무원 시험을 봅니다' },
@@ -104,6 +112,34 @@ function ExamLuckInputInner() {
         {targets.map(o => (
           <Btn key={o.key} on={target === o.key} title={o.title} sub={o.sub} onClick={() => setTarget(o.key)} />
         ))}
+
+        {/* ★어떤 시험인지 — 고르면 그 시험에 힘을 싣는 십신이 드는 해를 짚어 준다 (교재 230쪽) */}
+        <div style={{ fontSize: 12.5, color: '#8a7063', margin: '18px 2px 9px' }}>
+          어떤 시험인가요? <span style={{ color: '#a3907f' }}>(몰라도 됩니다)</span>
+        </div>
+        <select value={examKind} onChange={e => setExamKind(e.target.value)}
+          style={{
+            width: '100%', padding: '13px 14px', borderRadius: 12, marginBottom: 10,
+            background: CARD, border: `0.5px solid ${LINE}`, color: '#3a2e28',
+            fontSize: 14, fontFamily: 'inherit', appearance: 'none',
+          }}>
+          <option value="">고르지 않을게요</option>
+          {EXAM_KINDS.map(k => <option key={k.key} value={k.key}>{k.label}</option>)}
+        </select>
+
+        {/* ★시험 날짜 — 교재 195쪽 「세운 > 대운 > 월운 > 일진」·「시험일이 공망일이면」 */}
+        <div style={{ fontSize: 12.5, color: '#8a7063', margin: '14px 2px 9px' }}>
+          시험 날짜를 아시나요? <span style={{ color: '#a3907f' }}>(몰라도 됩니다)</span>
+        </div>
+        <input type="date" value={examDate} onChange={e => setExamDate(e.target.value)}
+          style={{
+            width: '100%', padding: '13px 14px', borderRadius: 12,
+            background: CARD, border: `0.5px solid ${LINE}`, color: '#3a2e28',
+            fontSize: 14, fontFamily: 'inherit',
+          }} />
+        <div style={{ fontSize: 11.5, color: '#8a7063', lineHeight: 1.7, margin: '8px 2px 0' }}>
+          날짜를 넣으시면 그해뿐 아니라 그달·그날까지 함께 짚어 드립니다.
+        </div>
 
         <button onClick={() => router.push(`/manseryeok/exam-luck-result?${query}`)}
           style={{
