@@ -153,22 +153,26 @@ function CareerResultInner() {
         const decoder = new TextDecoder()
         // ★청크가 줄 중간에 잘릴 수 있다. buf 로 완성된 줄만 처리한다. (교훈 AG)
         let buf = ''
+        const take = (line: string) => {
+          if (!line.startsWith('data: ')) return
+          const d = line.slice(6)
+          if (d === '[DONE]') return
+          try {
+            const parsed = JSON.parse(d)
+            if (parsed.text) { acc += parsed.text; if (!cancelled) setTong(acc) }
+          } catch (e) { console.error('tongbyeon parse', e) }
+        }
         for (;;) {
           const { done, value } = await reader.read()
           if (done) break
           buf += decoder.decode(value, { stream: true })
           const ls = buf.split('\n')
           buf = ls.pop() ?? ''
-          for (const line of ls) {
-            if (!line.startsWith('data: ')) continue
-            const d = line.slice(6)
-            if (d === '[DONE]') continue
-            try {
-              const parsed = JSON.parse(d)
-              if (parsed.text) { acc += parsed.text; if (!cancelled) setTong(acc) }
-            } catch (e) { console.error('tongbyeon parse', e) }
-          }
+          for (const line of ls) take(line)
         }
+        // ★2026-07-27 — 마지막 줄에 개행이 없으면 여기 남는다. 버리면 끝 문장이 잘린다.
+        buf += decoder.decode()
+        if (buf.trim()) take(buf.trim())
         if (cancelled) return
         setTongState('done')
 
@@ -211,11 +215,17 @@ function CareerResultInner() {
     if (!tong) return { tongIntro: '', tongByKey: {} as Record<string, string>, tongOutro: '' }
     const { intro, byTitle, outro } = parseCareerTongbyeon(tong)
     const map: Record<string, string> = {}
+    // ★2026-07-27 — 짝을 못 찾은 대목을 버리지 않는다.
+    //   전에는 keyOfTitle 이 null 이면 그 글이 화면 어디에도 안 나오고 사라졌다.
+    //   자리가 조금 어긋나더라도 보이는 편이 낫다. 맺는말 앞에 이어 붙인다.
+    const leftover: string[] = []
     for (const title of Object.keys(byTitle)) {
       const k = keyOfTitle(title)
       if (k) map[k] = byTitle[title]
+      else if (byTitle[title]) leftover.push(byTitle[title])
     }
-    return { tongIntro: intro, tongByKey: map, tongOutro: outro }
+    const outroAll = [...leftover, outro].filter(Boolean).join('\n\n')
+    return { tongIntro: intro, tongByKey: map, tongOutro: outroAll }
   }, [tong])
 
   const byKey = (k: string) => cards.find(c => c.key === k)

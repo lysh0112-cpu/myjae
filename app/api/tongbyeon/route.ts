@@ -15,8 +15,16 @@ import { logAiError } from '@/lib/ai/errorLog'
 //   긴 통변(4카드)은 10초를 넘겨 스트리밍이 도중에 끊기고,
 //   글이 문장 중간에서 잘린 채 끝났다("…햇살은 손바" 처럼).
 //   오류도 안 나서 원인을 찾기 어려웠다. (14부 "조용히 실패하는 코드")
+//
+// ★2026-07-27: 같은 병이 또 났다. 진로적성 통변(10대목)이 60초를 넘겨
+//   "…참고치입" 에서 잘리고, 어울리는 직업과 맺는말이 통째로 안 나왔다.
+//   60 은 궁합 4대목 기준으로 잡은 값이었다. 300 으로 올린다.
+//   ⚠️ Fluid compute 가 켜져 있어야 300 이 먹는다 (Hobby·Pro 모두 최대 300s).
+//      Settings → Functions → Fluid Compute 에서 확인할 것.
+//   ⚠️ 이 시간은 대부분 Anthropic 응답을 기다리는 I/O 다.
+//      Active CPU 로 안 잡히므로 올려도 비용은 거의 안 는다.
 export const runtime = 'nodejs'
-export const maxDuration = 60
+export const maxDuration = 300
 
 export async function POST(req: Request) {
   const { systemPrompt, premium } = await req.json()
@@ -75,6 +83,20 @@ export async function POST(req: Request) {
         //   완성된 줄만 처리하고 마지막 미완성 줄은 다음 청크로 넘긴다.
         //   (이게 없으면 통변이 길 때 뒷부분 delta 가 사라져 통변이 중간에 끊긴다.)
         let buf = ''
+        const take = (line: string) => {
+          if (!line.startsWith('data: ')) return
+          const data = line.slice(6)
+          if (data === '[DONE]') return
+          try {
+            const parsed = JSON.parse(data)
+            if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ text: parsed.delta.text })}\n\n`)
+              )
+            }
+          } catch {}
+        }
+
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
@@ -83,21 +105,11 @@ export async function POST(req: Request) {
           const lines = buf.split('\n')
           buf = lines.pop() ?? ''   // 마지막(미완성)은 다음 청크로
 
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6)
-              if (data === '[DONE]') continue
-              try {
-                const parsed = JSON.parse(data)
-                if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-                  controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({ text: parsed.delta.text })}\n\n`)
-                  )
-                }
-              } catch {}
-            }
-          }
+          for (const line of lines) take(line)
         }
+        // ★2026-07-27 — 개행 없이 끝난 마지막 줄을 살린다. 버리면 끝 문장이 잘린다.
+        buf += decoder.decode()
+        if (buf.trim()) take(buf.trim())
 
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()

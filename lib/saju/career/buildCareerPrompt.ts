@@ -106,10 +106,12 @@ ${guard}
 [짜임새]
 아래 대목을 이 순서로 씁니다. **모든 대목은 반드시 ■ 로 시작하는 제목을 답니다.**
 제목은 아래 적힌 글자를 그대로 쓰세요. 화면에서 대목을 찾아 넣는 데 쓰입니다.
+★제목 줄에는 ■ 말고 다른 것을 붙이지 마세요. 번호(1. 2.)도, 별표(**)도, 우물정(#)도 쓰지 마세요.
+★대목 사이에 --- 같은 구분선을 넣지 마세요. 제목만으로 나뉩니다.
 
 여는말 — 제목 없이 2~3문장. 이 사람이 어떤 결을 타고났는지 한마디로.
-${plan.map((o, i) => `${i + 1}. ■ ${o.title} — ${o.len}`).join('\n')}
-${plan.length + 1}. ■ 맺는말 — 3~4문장. 앞을 되풀이하지 말고, 이 사람에게 건네는 말로 닫습니다.
+${plan.map(o => `■ ${o.title} — ${o.len}`).join('\n')}
+■ 맺는말 — 3~4문장. 앞을 되풀이하지 말고, 이 사람에게 건네는 말로 닫습니다.
 
 [대목마다 지킬 것]
 · 그 대목의 재료만 씁니다. 다른 대목 이야기를 끌어오지 마세요.
@@ -122,26 +124,45 @@ ${material}
 이제 위 순서대로 써 주세요.`
 }
 
+// ★2026-07-27 — 제목 줄 앞에 붙는 군더더기를 걷어낸다.
+//   AI가 "**■ 제목**", "1. ■ 제목", "### ■ 제목" 처럼 쓰면
+//   예전 정규식(/^\s*(#{1,6}\s*)?■/)이 못 잡아 그 대목이 앞 대목 본문으로
+//   흡수됐다. 최악의 경우 대목 전부가 여는말 상자 하나로 뭉친다.
+const stripLead = (s: string) =>
+  s.replace(/^[\s#>*\-–—•·]*/, '').replace(/^\d+[.)]\s*/, '').replace(/^[\s#>*]*/, '')
+
+/** ■ 로 시작하는 제목 줄인가 (앞에 무엇이 붙어 있어도) */
+const isHead = (s: string) => stripLead(s).startsWith('■')
+
+/** --- *** ___ === 같은 구분선만 있는 줄인가 */
+const isSep = (s: string) => /^\s*(?:[-–—_*=]{3,}|[·•]{3,})\s*$/.test(s)
+
 /** 통변 글을 대목별로 가른다 (■ 제목 기준) */
 export function parseCareerTongbyeon(text: string): { intro: string; byTitle: Record<string, string>; outro: string } {
   const lines = text.split('\n')
   const byTitle: Record<string, string> = {}
   let intro = '', outro = ''
   let cur: { title: string; body: string[] } | null = null
-  const clean = (s: string) => s.replace(/^\s*#{1,6}\s*/, '').replace(/^\s*■\s*/, '').replace(/\*\*/g, '').trim()
+  const clean = (s: string) => stripLead(s).replace(/^■\s*/, '').replace(/\*\*/g, '').trim()
 
   const flush = () => {
     if (!cur) return
     const t = clean(cur.title)
-    const body = cur.body.join('\n').trim()
-    if (t.includes('맺는말') || t.includes('맺음말')) outro = body
-    else byTitle[t] = body
+    const body = cur.body.filter(l => !isSep(l)).join('\n').trim()
+    // ★맺는말·여는말은 낱말이 흔들려도 잡는다. 못 잡으면 화면에서 사라진다.
+    if (/맺는말|맺음말|마무리|마치며|끝으로|닫는말|정리하며/.test(t)) {
+      outro = outro ? outro + '\n\n' + body : body
+    } else if (/여는말|여는글|들어가며|시작하며|머리말/.test(t)) {
+      intro = intro ? intro + '\n' + body : body
+    } else {
+      byTitle[t] = body
+    }
     cur = null
   }
   for (const ln of lines) {
-    if (/^\s*(#{1,6}\s*)?■/.test(ln)) { flush(); cur = { title: ln, body: [] } }
+    if (isHead(ln)) { flush(); cur = { title: ln, body: [] } }
     else if (cur) cur.body.push(ln)
-    else { const c = clean(ln); if (c) intro += (intro ? '\n' : '') + c }
+    else if (!isSep(ln)) { const c = clean(ln); if (c) intro += (intro ? '\n' : '') + c }
   }
   flush()
   return { intro, byTitle, outro }
@@ -150,15 +171,26 @@ export function parseCareerTongbyeon(text: string): { intro: string; byTitle: Re
 /** 대목 제목 → 카드 key */
 export function keyOfTitle(title: string): string | null {
   const t = title.replace(/\s/g, '')
+
+  // ★2026-07-27 — 먼저 정식 제목과 앞부분을 맞춰 본다.
+  //   AI가 "■ 기운을 얻는 자리 — 용신 수(水) 오행" 처럼 뒤에 말을 붙이면
+  //   아래 낱말 검사가 '오행'을 먼저 집어 오행 카드에 붙여 버렸다.
+  //   "격과 그릇 (일주 기준)" 이 일주 카드로 가던 것도 같은 병이다.
+  //   화면은 멀쩡해 보이고 내용만 뒤바뀌어 눈으로는 못 잡는다.
+  for (const o of ORDER) {
+    if (t.startsWith(o.title.replace(/\s/g, ''))) return o.key
+  }
+
+  // 제목이 많이 흐트러졌을 때의 뒷받침. ★좁은 낱말부터 본다.
   if (t.includes('한번더')) return 'special'
-  if (t.includes('오행')) return 'ohaeng_gijil'
+  if (t.includes('용신') || t.includes('기운')) return 'yongsin'
+  if (t.includes('격과') || t.includes('그릇') || t.includes('격국')) return 'gyeokguk'
+  if (t.includes('신살')) return 'sinsal'
   if (t.includes('육친')) return 'yukchin'
   if (t.includes('일주')) return 'ilju'
-  if (t.includes('격과') || t.includes('그릇')) return 'gyeokguk'
-  if (t.includes('신살')) return 'sinsal'
-  if (t.includes('기운') || t.includes('용신')) return 'yongsin'
-  if (t.includes('어느자리') || t.includes('일할까')) return 'jobstruct'
   if (t.includes('계열') || t.includes('학과')) return 'gyeyeol'
+  if (t.includes('어느자리') || t.includes('일할까') || t.includes('직업구조')) return 'jobstruct'
   if (t.includes('직업')) return 'jobs'
+  if (t.includes('오행')) return 'ohaeng_gijil'
   return null
 }
