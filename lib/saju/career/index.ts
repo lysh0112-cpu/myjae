@@ -9,6 +9,7 @@
 
 export * from './types'
 export * from './careerScore'
+export * from './calcPerson'
 export * from './ohaengGijil'
 export * from './yukchin'
 export * from './sinsal9'
