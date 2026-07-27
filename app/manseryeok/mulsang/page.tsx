@@ -546,6 +546,8 @@ function MulsangInner() {
               ? ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][info.hourIdx]
               : null),
           hourKo: info && info.hourIdx !== null ? HOUR_LABEL[info.hourIdx] : undefined,
+          // ★2026-07-27 — 명식을 넘겨 교재 48~77쪽 지지 자료·병존을 근거로 쓰게 한다.
+          saju,
         },
         questions,
       )

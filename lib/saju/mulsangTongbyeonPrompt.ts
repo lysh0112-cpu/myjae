@@ -13,6 +13,13 @@
 // ============================================================================
 
 import type { SajuQuestion } from '@/lib/saju/questions'
+// ★2026-07-27 — 교재 48~77쪽 지지 자료를 물상 재료에도 넣는다.
+//   물상은 월지로 배경 계절을, 시지로 하루의 빛을 그린다.
+//   교재의 지지 특징이 바로 그 묘사의 근거가 된다.
+//   ⚠️ 대목(■ 제목)을 늘리지 않는다. 이미 있는 블록에 근거로만 얹는다.
+import type { Pillar } from '@/lib/saju/simsanOhaeng'
+import { traitOf, noteLines, ctxOf } from '@/lib/saju/jijiTrait'
+import { findByeongjon, findCombo, findJijiByeongjon, sayOf } from '@/lib/saju/byeongjon'
 import {
   ILGAN, WOLJI, YONGSIN, RELATION, STEM_ELEMENT,
 } from '@/lib/saju/mulsangData'
@@ -52,6 +59,8 @@ export interface MulsangTongbyeonInput {
   styleLabel?: string                // 화풍 (수묵담채화/지브리풍)
   hourBranch?: string | null         // ★시지(時支) 한자. 태어난 시각 — 계절과 헷갈리지 않게.
   hourKo?: string                    // ★태어난 시각의 한글 표현 (예: "한낮(午시)"). 없으면 생략.
+  /** ★명식 네 기둥 — 있으면 교재 지지 자료와 병존을 근거로 얹는다. 없으면 전과 같다. */
+  saju?: Pillar[]
 }
 
 const SYSTEM_GUIDE = `당신은 소무승(蘇無僧) 물상론에 통달한 다정한 명리 상담가입니다.
@@ -69,6 +78,10 @@ const SYSTEM_GUIDE = `당신은 소무승(蘇無僧) 물상론에 통달한 다�
 
 [반드시 지킬 규칙]
 - 아래 제공된 물상 데이터에만 근거하세요. 데이터에 없는 사실을 지어내지 마세요.
+- ★[겹친 기운 — 병존] 과 [곁의 지지] 는 교재에서 온 근거입니다.
+  · 그림을 묘사할 때 근거로만 쓰세요. 이것만 따로 떼어 새 대목을 만들지 마세요.
+  · 목록으로 나열하지 말고 문장 속에 녹이세요. 쪽수는 옮기지 마세요.
+  · 병존은 "그 기운이 두 배로 짙다"는 뜻이니, 그림에서 그 요소를 더 크고 짙게 그릴 근거로 삼으세요.
 - ★계절(월지)과 시각(시지)은 전혀 다릅니다. 절대 뒤섞지 마세요.
   · "태어난 계절"은 봄·여름·가을·겨울의 기운이고, "태어난 시각"은 하루 중 아침·낮·저녁·밤입니다.
   · 예를 들어 겨울에 태어났어도 한낮(午시)에 태어났다면, 그림은 "겨울의 밝은 대낮"입니다. 이런 경우 절대 "한밤중"이나 "밤"으로 묘사하면 안 됩니다.
@@ -146,12 +159,50 @@ export function buildMulsangTongbyeonPrompt(
 - 주의점: ${soften(ilgan.jueui)}`
     : ''
 
+  // ★병존 — 같은 글자가 나란히 있으면 그 기운이 그림에서 짙어진다 (교재 74~77쪽)
+  //   보기) 壬壬 이면 물이 겹쳐 더 깊고 넓게, 子子 면 밤의 결이 두 배로.
+  const byeongjonBlock = (() => {
+    if (!input.saju?.length) return ''
+    const t: 'adult' = 'adult'
+    const out: string[] = []
+    for (const h of findByeongjon(input.saju)) out.push(`- ${h.key}(${h.pillars.join('·')}) — ${sayOf(h.row, t)}`)
+    for (const c of findCombo(input.saju)) out.push(`- ${c.row.need.join('')} ${c.key}(${c.pillars.join('·')}) — ${sayOf(c.row, t)}`)
+    for (const h of findJijiByeongjon(input.saju)) out.push(`- ${h.key}(${h.pillars.join('·')}) — ${sayOf(h.row, t)}`)
+    if (!out.length) return ''
+    return `[겹친 기운 — 병존(竝存), 교재 74~77쪽]
+같은 글자가 나란히 있어 그 기운이 두 배로 짙습니다. 그림에서 그 요소를 더 크고 짙게 그릴 근거입니다.
+${out.join('\n')}`
+  })()
+
+  // ★년지·시지의 교재 비고 — 그림의 곁가지 (교재 48쪽)
+  const jijiNoteBlock = (() => {
+    if (!input.saju?.length) return ''
+    const ctx = ctxOf(input.saju)
+    const out: string[] = []
+    for (const p of ['년주', '시주'] as const) {
+      const b = input.saju.find(x => x.pillar === p)?.branch
+      if (!b || b === '?') continue
+      const row = traitOf(b)
+      if (!row) continue
+      const n = noteLines(row, 'adult', ctx)
+      if (n.length) out.push(`- ${p.replace('주', '지')} ${b}(${row.ko}·${row.tti}): ${n.join(' ')}`)
+    }
+    return out.length ? `[곁의 지지 — 교재 48쪽 비고]\n${out.join('\n')}` : ''
+  })()
+
   // 배경(계절) 블록
+  // ★월지의 교재 근거 — 절기·시각·본기와 48쪽 비고 (교재 48쪽·50~73쪽)
+  const woljiTrait = traitOf(input.monthBranch)
+  const woljiSrc = woljiTrait
+    ? `\n- 교재가 말하는 ${input.monthBranch}(${woljiTrait.ko}·${woljiTrait.tti}): `
+      + `${woljiTrait.jeolgi} (${woljiTrait.solarSpan}) · 본기 ${woljiTrait.bongi} · ${woljiTrait.eumyang}`
+      + `\n  ${woljiTrait.say.slice(0, 4).map(l => typeof l === 'string' ? l : l.t).join(' ')}`
+    : ''
   const woljiBlock = wolji
     ? `[그림 배경 — 태어난 계절(월지)]
 - 계절: ${wolji.season}
 - 의미: ${wolji.meaning}
-- 영향: ${wolji.effect}`
+- 영향: ${wolji.effect}${woljiSrc}`
     : ''
 
   // ★태어난 시각(시지) 블록 — 계절과 별개. 그림의 하늘·빛이 이 시각에 맞춰 그려짐.
@@ -163,7 +214,10 @@ export function buildMulsangTongbyeonPrompt(
     ? `[그림의 시각 — 태어난 시각(시지). ★계절과 다름, 헷갈리지 말 것]
 - 태어난 시각: ${hourMood}
 - 그림의 하늘·빛은 반드시 이 시각에 맞춰야 합니다. (낮이면 밝게, 밤이면 어둡게)
-- 위 '계절'은 대기·초목의 느낌일 뿐, 하루 중 밤낮은 이 '시각'을 따르세요.`
+- 위 '계절'은 대기·초목의 느낌일 뿐, 하루 중 밤낮은 이 '시각'을 따르세요.${
+  input.hourBranch && traitOf(input.hourBranch)
+    ? `\n- 교재가 적은 ${input.hourBranch}시의 폭: ${traitOf(input.hourBranch)!.hour} (${traitOf(input.hourBranch)!.tti})`
+    : ''}`
     : `[그림의 시각]
 - 태어난 시각을 알 수 없습니다. 밤/낮을 단정하지 말고, 계절의 분위기 위주로 부드럽게 묘사하세요.`
 
@@ -236,6 +290,13 @@ ${questions.map((q) => `■ ${q.category} — (제목)\n   (1~2문단, 각 문�
     '',
     hourBlock,
     '',
+    // ★2026-07-27 — 교재 48~77쪽에서 온 근거. 그림 묘사를 단단하게 한다.
+    //   ⚠️ 새 대목(■ 제목)을 만들지 말고, 이미 있는 대목 안에서 근거로만 쓰라고
+    //      아래 SYSTEM_GUIDE 에 적어 두었다.
+    byeongjonBlock,
+    byeongjonBlock ? '' : '',
+    jijiNoteBlock,
+    jijiNoteBlock ? '' : '',
     ohaengBlock,
     '',
     yongBlock,
