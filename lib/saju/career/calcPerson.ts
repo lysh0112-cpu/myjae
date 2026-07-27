@@ -26,6 +26,9 @@ export interface PersonRaw {
 
 export interface PersonCalc {
   saju: Pillar[]
+  /** ★2026-07-27 — 합격운이 대운을 부르려면 양력 연도가 필요하다.
+   *   solarMonth·solarDay 만 있고 연도가 빠져 있었다. 더하기만 해서 기존 화면은 안 바뀐다. */
+  solarYear: number
   solarMonth: number
   solarDay: number
   hourBranch: string | null
@@ -82,6 +85,7 @@ export async function calcPerson(p: PersonRaw): Promise<PersonCalc | null> {
       { pillar: '월주', stem: month.stem, branch: month.branch },
       { pillar: '년주', stem: year.stem, branch: year.branch },
     ],
+    solarYear: Number(data.solarYear) || y,
     solarMonth: Number(data.solarMonth) || m,
     solarDay: Number(data.solarDay) || d,
     hourBranch: hour.branch === '?' ? null : hour.branch,

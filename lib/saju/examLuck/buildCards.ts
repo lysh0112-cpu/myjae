@@ -21,6 +21,9 @@ import {
   CLOSING, CLOSING_STUDENT, CLOSING_SRC,
 } from './tables/rules'
 import { dayunTrend } from './examScore'
+import { verdictOf, jobChangeReasons, type JobChangeHit } from './jobChange'
+import { pickAdvice } from './tables/jobChange'
+import type { ExamDayResult } from './examDay'
 
 type DayunLite = { age: number; cheongan: string; jiji: string; ganYukchin: string; jiYukchin: string }
 
@@ -200,4 +203,79 @@ export function cardSusiJeongsi(input: ExamInput): ExamCard {
     ],
     data: { el, susi },
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+// ⑤ 이직과 직업 변동 (교재 190~191쪽)
+// ══════════════════════════════════════════════════════════════
+
+export function cardJobChange(
+  natal: JobChangeHit[],
+  byYear: Array<{ year: number; hits: JobChangeHit[] }>,
+): ExamCard {
+  const all = [...natal, ...byYear.flatMap(y => y.hits)]
+  const v = verdictOf(all)
+  const moving = byYear.filter(y => y.hits.length).map(y => y.year)
+  const lines = [...v.lines]
+  if (moving.length) {
+    lines.push(`앞으로 몇 해 가운데 ${moving.join('·')}년에 그런 결이 보입니다.`)
+  }
+  // ★교재가 "무엇보다 중요한 것" 이라 못 박은 대목 — 반드시 붙는다
+  for (const a of pickAdvice(all.map(h => h.row.key))) lines.push(a.say)
+  return {
+    key: 'jobchange', title: '이직과 직업 변동',
+    badge: v.count ? `${v.outcomes[0]}` : undefined,
+    lines,
+    reasons: jobChangeReasons(natal, byYear),
+    data: { verdict: v, moving },
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// ⑥ 시험 날짜를 짚어 보면 (교재 195쪽)
+// ══════════════════════════════════════════════════════════════
+
+export function cardExamDay(r: ExamDayResult | null): ExamCard | null {
+  if (!r) return null
+  return {
+    key: 'examday', title: '시험 날짜를 짚어 보면',
+    badge: r.isGongmang ? '공망일' : undefined,
+    lines: r.lines, reasons: r.reasons,
+    data: { isGongmang: r.isGongmang },
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  카드를 한 번에 만든다 — 화면은 이것만 부르면 된다
+// ══════════════════════════════════════════════════════════════
+
+export interface BuildAllArgs {
+  input: ExamInput
+  years: YearLuck[]
+  dayun: DayunLite | null
+  order: number
+  natal: JobChangeHit[]
+  byYear: Array<{ year: number; hits: JobChangeHit[] }>
+  examDay: ExamDayResult | null
+  purpose?: 'exam' | 'job'
+}
+
+export function buildAllCards(a: BuildAllArgs): ExamCard[] {
+  const t = a.input.target ?? 'adult'
+  const out: ExamCard[] = [
+    cardYears(a.years, t, a.purpose),
+    cardDayun(a.dayun, a.order, t),
+    cardExamKind(a.years),
+  ]
+  const day = cardExamDay(a.examDay)
+  if (day) out.push(day)
+  // ★학생에게만 — 고교·수시정시 (교재 130~131쪽)
+  if (t === 'student') {
+    out.push(cardHighschool(a.input))
+    out.push(cardSusiJeongsi(a.input))
+  } else {
+    // ★성인에게만 — 이직·직업 변동 (교재 190~191쪽)
+    out.push(cardJobChange(a.natal, a.byYear))
+  }
+  return out
 }
