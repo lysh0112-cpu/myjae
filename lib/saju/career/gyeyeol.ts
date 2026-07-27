@@ -27,7 +27,15 @@
 import { calcCareerScore, gradeAll, pickStrong, EL5, type CareerScoreResult, type Ohaeng } from './careerScore'
 import type { CareerCard, CareerInput } from './types'
 import { calcCareerYongsin } from './yongsin'
-import { GWA, GWA_SHOW, GWA_MIN, GWA_SRC, HAS_GWA, type GwaRow, type GwaLean } from './tables/gwa'
+import { GWA, GWA_SHOW, GWA_MIN, GWA_SRC, HAS_GWA, PICK_BY, PICK_BY_SRC, type GwaRow } from './tables/gwa'
+import { yukchinOf } from './yukchin'
+
+
+/** 천간 → 오행 (careerScore 의 것과 같다. 공용 파일을 건드리지 않으려고 여기 둔다) */
+const STEM_EL: Record<string, Ohaeng> = {
+  甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토',
+  己: '토', 庚: '금', 辛: '금', 壬: '수', 癸: '수',
+}
 
 /** 무진술(戊辰戌) 양토 = 인문 쪽 / 기축미(己丑未) 음토 = 자연 쪽 (교재 133쪽) */
 const YANG_TO = ['戊', '辰', '戌']
@@ -104,38 +112,77 @@ export function calcGyeyeol(r: CareerScoreResult): GyeyeolResult {
 export interface GwaHit {
   row: GwaRow
   score: number
-  /** 왜 뽑혔는지 — 화면과 통변 재료에 그대로 쓴다 */
+  /** 왜 뽑혔는지 — 화면 근거와 통변 재료에 그대로 쓴다 */
   sources: string[]
 }
 
+/**
+ * 학과 추림.
+ *
+ * ★교재 132쪽이 잣대를 갈라 두었다.
+ *     "인문 계열은 육친을 중심으로 학과를 선택하고,
+ *      자연 계열은 오행을 중심으로 학과 선택을 한다."
+ *   그래서 같은 점수 식을 쓰지 않는다.
+ *     자연 학과 — 대표 오행이 태그와 맞는가
+ *     인문 학과 — 대표 오행이 가리키는 육친이 그 학과 태그의 육친과 맞는가
+ *
+ * ★무게는 교재 133쪽 "강점 지능 70 : 용신 30" 을 따른다.
+ *     대표 1위 3 · 2위 2 · 용신 1 · 계열 일치 1
+ *
+ * ★학생에게만 내보낸다. 성인에게 학과는 이미 지난 이야기다.
+ */
 export function pickGwa(input: CareerInput, y: GyeyeolResult, r: CareerScoreResult): GwaHit[] {
-  if (!HAS_GWA()) return []          // ⛔ 표가 비어 있으면 아무것도 안 낸다
+  if (!HAS_GWA()) return []
 
   const strong = pickStrong(r, gradeAll(r)).slice(0, 2)
   const yong = calcCareerYongsin(input)?.yongsin ?? null
-  const lean: GwaLean | null = y.lean === '반반' ? null : (y.lean as GwaLean)
+  const lean: '인문' | '자연' | null = y.lean === '반반' ? null : (y.lean as '인문' | '자연')
+
+  const day = input.saju.find(p => p.pillar === '일주')
+  const dayEl = day && day.stem !== '?' ? STEM_EL[day.stem] : null
 
   const hits: GwaHit[] = []
   for (const row of GWA) {
     let score = 0
     const sources: string[] = []
 
-    strong.forEach((el, i) => {
-      if (row.el.includes(el)) {
-        const w = i === 0 ? 3 : 2
-        score += w
-        sources.push(`${el} 오행`)
-      }
-    })
-    if (yong && row.el.includes(yong)) { score += 1; sources.push(`${yong} 용신`) }
+    // ★태그가 없는 학과는 그 묶음의 오행으로 본다.
+    //   교재 제목이 "목(木) 오행이 강할 때 적성에 맞는 학과" 이므로
+    //   그 안에 실린 학과는 그 자체가 목 학과다.
+    //   괄호는 다른 오행이 섞인 것만 따로 표시한 것으로 읽는다.
+    //   (그래야 동남아어학과(木)처럼 묶음과 같은 태그가 왜 붙었는지 설명된다)
+    //   ⚠️ 연재쌤 확인 항목. 다르게 읽어야 하면 이 한 줄만 고치면 된다.
+    const els = row.el.length ? row.el : [row.group]
 
-    // 교재가 계열을 밝힌 학과만 계열 일치를 얹는다
-    if (lean && row.lean === lean) { score += 1; sources.push(`${lean} 계열`) }
-    // 예체능은 화(火)가 발달 이상일 때만 값어치가 있다 (교재 129쪽)
-    if (row.lean === '예체능') {
-      if (y.arts) { score += 1; sources.push('화 발달(예체능)') }
-      else score -= 1
+    if (PICK_BY[row.lean] === '오행') {
+      // ── 자연 계열 — 오행으로 고른다
+      strong.forEach((el, i) => {
+        if (els.includes(el)) {
+          score += i === 0 ? 3 : 2
+          sources.push(`${el} 오행`)
+        }
+      })
+    } else {
+      // ── 인문 계열 — 육친으로 고른다
+      //    학과 오행을 일간 기준 육친으로 바꿔 대표 육친과 견준다
+      if (dayEl) {
+        const strongGroups = strong.map(el => yukchinOf(dayEl, el))
+        els.forEach(el => {
+          const g = yukchinOf(dayEl, el)
+          const i = strongGroups.indexOf(g)
+          if (i >= 0) {
+            score += i === 0 ? 3 : 2
+            sources.push(`${g}(${el})`)
+          }
+        })
+      }
     }
+
+    // ★괄호 태그가 붙은 학과는 교재가 따로 짚은 것이라 조금 무겁게 본다
+    if (row.el.length) { score += 1; sources.push('교재가 따로 짚음') }
+
+    if (yong && els.includes(yong)) { score += 1; sources.push(`${yong} 용신`) }
+    if (lean && row.lean === lean) { score += 1; sources.push(`${lean} 계열`) }
 
     if (score >= GWA_MIN) hits.push({ row, score, sources })
   }
