@@ -326,14 +326,10 @@ function CareerResultInner() {
               </div>
             )}
 
-            {/* 아직 없는 대목 */}
-            <div style={{
-              border: `0.5px dashed #d8c6b8`, borderRadius: 14, padding: '14px 16px',
-              marginTop: 6, color: '#8a7063', fontSize: 12, lineHeight: 1.8,
-            }}>
-              <div style={{ fontWeight: 500, marginBottom: 4, color: '#6b5340' }}>곧 더해질 대목</div>
-              {target === 'student' ? '학과와 대학 · 학업운 · 합격운' : '이직과 창업 시기 · 대운의 흐름'}
-            </div>
+            {/* ★2026-07-27 — "곧 더해질 대목" 상자를 뺐다. (대표님 지시)
+                  준비 중이라는 안내는 만드는 쪽 사정이지 읽는 분께 드릴 말이 아니다.
+                  학과도 이제 나오므로 "학과와 대학"이라는 예고 자체가 어긋나 있었다.
+                  학업운·합격운은 홈의 '합격운/취업운'(🐍)에서 따로 들어간다. */}
 
             <div style={{ fontSize: 11, color: '#a08d7d', textAlign: 'center', marginTop: 18, lineHeight: 1.7 }}>
               사주는 참고입니다. 길은 본인의 노력과 의지로 얼마든지 바꿀 수 있어요.
