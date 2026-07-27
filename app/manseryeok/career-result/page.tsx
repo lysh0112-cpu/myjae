@@ -21,24 +21,25 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   judgeOhaengGijil, judgeYukchin, judgeGyeokguk,
-  judgeSinsal, judgeGyeyeol, judgeSpecial,
+  judgeSinsal, judgeGyeyeol, judgeSpecial, judgeYongsin, judgeJobs,
   type CareerCard, type CareerInput,
 } from '@/lib/saju/career'
 import { calcPerson, type PersonCalc } from '@/lib/saju/career/calcPerson'
 import { saveRecord } from '@/lib/saju/sajuRecords'
+import { getGongmang } from '@/lib/saju/gongmang'
+import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
 import CareerJudgeCard from './components/CareerJudgeCard'
 
 const ACCENT = '#785aaa'
 const BG = '#FDF6F0'
-const CARD = '#FFFBF7'
 const LINE = '#f0e0d5'
 
 /** 화면 묶음 — 통변 순서와 1:1 로 맞춘다. (교훈 AS) */
 const GROUPS: Array<{ label: string; keys: string[] }> = [
   { label: '', keys: ['special'] },                       // 경고는 맨 위, 제목 없이
   { label: '타고난 결', keys: ['ohaeng_gijil', 'yukchin'] },
-  { label: '그릇과 자리', keys: ['gyeokguk', 'sinsal'] },
-  { label: '어울리는 자리', keys: ['gyeyeol'] },
+  { label: '그릇과 자리', keys: ['gyeokguk', 'sinsal', 'yongsin'] },
+  { label: '어울리는 자리', keys: ['gyeyeol', 'jobs'] },
 ]
 
 function CareerResultInner() {
@@ -73,6 +74,13 @@ function CareerResultInner() {
     return () => { cancelled = true }
   }, [person])
 
+  // 명식 부품(SajuWonguk)이 요구하는 값들
+  const dayStem = calc?.saju.find(p => p.pillar === '일주')?.stem ?? ''
+  const iljji = calc?.saju.find(p => p.pillar === '일주')?.branch ?? ''
+  const yeonjji = calc?.saju.find(p => p.pillar === '년주')?.branch ?? ''
+  const [gm1, gm2] = (dayStem && iljji && dayStem !== '?' && iljji !== '?')
+    ? getGongmang(dayStem, iljji) : ['', '']
+
   const cards: CareerCard[] = useMemo(() => {
     if (!calc) return []
     const input: CareerInput = {
@@ -85,7 +93,9 @@ function CareerResultInner() {
       judgeYukchin(input),
       judgeGyeokguk(input),
       judgeSinsal(input),
+      judgeYongsin(input),
       judgeGyeyeol(input),
+      judgeJobs(input),
     ].filter(Boolean) as CareerCard[]
   }, [calc, target])
 
@@ -137,18 +147,18 @@ function CareerResultInner() {
 
         {calc && (
           <>
-            {/* 명식 */}
-            <div style={{ background: CARD, border: `0.5px solid ${LINE}`, borderRadius: 14, padding: '13px 16px', marginBottom: 14 }}>
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between' }}>
-                {calc.saju.map(p => (
-                  <div key={p.pillar} style={{ textAlign: 'center', flex: 1 }}>
-                    <div style={{ fontSize: 10.5, color: '#8a7063', marginBottom: 4 }}>{p.pillar}</div>
-                    <div style={{ fontSize: 17, color: '#3a2e28', letterSpacing: 1 }}>
-                      {p.stem === '?' ? '·' : p.stem}{p.branch === '?' ? '·' : p.branch}
-                    </div>
-                  </div>
-                ))}
-              </div>
+            {/* 명식 — 사주보기·출산택일과 같은 공용 부품을 그대로 쓴다.
+                십성·12운성·신살·귀인까지 한 표에 담기고, 용어를 누르면 설명이 뜬다.
+                손으로 다시 그리면 세 화면의 명식이 서로 달라진다. */}
+            <div style={{ marginBottom: 14 }}>
+              <SajuWonguk
+                saju={calc.saju}
+                dayStem={dayStem}
+                yeonjji={yeonjji}
+                iljji={iljji}
+                gm1={gm1}
+                gm2={gm2}
+              />
               {calc.hourUnknown && (
                 <div style={{ fontSize: 11, color: '#8a7063', marginTop: 8, textAlign: 'center' }}>
                   태어난 시(時)를 몰라 시주를 비워 두고 보았어요
@@ -172,7 +182,7 @@ function CareerResultInner() {
                     }}>{g.label}</div>
                   )}
                   {list.map(c => (
-                    <CareerJudgeCard key={c.key} card={c} showGraph={c.key === 'ohaeng_gijil'} />
+                    <CareerJudgeCard key={c.key} card={c} />
                   ))}
                 </div>
               )
@@ -186,7 +196,7 @@ function CareerResultInner() {
               marginTop: 6, color: '#8a7063', fontSize: 12, lineHeight: 1.8,
             }}>
               <div style={{ fontWeight: 500, marginBottom: 4, color: '#6b5340' }}>곧 더해질 대목</div>
-              일주 60갑자 · 용신 · 직업 구조 8종 · 어울리는 직업
+              일주 60갑자 · 직업 구조 8종
               {target === 'student' && <> · 학과와 대학 · 학업운</>}
               <br />그리고 이 모두를 사람 말로 엮어 주는 풀이
             </div>
