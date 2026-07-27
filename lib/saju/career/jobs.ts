@@ -36,7 +36,7 @@ import { calcCareerYongsin } from './yongsin'
 import type { CareerCard, CareerInput } from './types'
 import { calcCareerGyeokguk } from './gyeokguk'
 import { ILJU } from './tables/ilju'
-import { OHAENG_JOBS, jobKey, jobLabel } from './tables/jobs'
+import { OHAENG_JOBS, jobKey, jobLabel, okForStudent } from './tables/jobs'
 import { YUKCHIN_GIJIL, GRID25, YUKCHIN_ORDER, type YukchinGroup } from './tables/yukchin'
 import { GYEOKGUK_INFO } from './tables/gyeokguk'
 import { SINSAL9 } from './tables/sinsal'
@@ -169,8 +169,11 @@ export function pickJobs(input: CareerInput): { hits: JobHit[]; pool: number } {
     if (y.yukchinName) add(y.jobsByYukchin, `${y.yukchinName} 용신`, 1)
   }
 
+  // ★학생 모드에서는 어른용 직업을 걸러 낸다 (유흥·카지노·대부업 등)
+  const forStudent = input.target === 'student'
   const hits = [...bag.values()]
     .filter(x => x.score >= JOB_MIN)
+    .filter(x => !forStudent || okForStudent(x.key))
     .sort((a, b) => (b.score - a.score) || (b.sources.length - a.sources.length))
 
   return { hits, pool: bag.size }
@@ -203,6 +206,7 @@ export function judgeJobs(input: CareerInput): CareerCard {
   reasons.push('무게 : 25칸 격자 3 · 육친 2 · 오행 2 · 격국 2 · 일주 2 · 신살 2~3 · 용신 1 (교재 133쪽 강점 70 : 용신 30)')
   reasons.push('교재 목록 59벌에 두루 나오는 흔한 직업(의사·요식업·상담사 등)은 무게를 덜었습니다.')
   reasons.push('이 대목("어울리는 직업")의 통변 재료입니다. 위에서 서너 개만 골라 왜 어울리는지 풀어 주세요. 목록을 그대로 읊지 마세요.')
+  if (input.target === 'student') reasons.push('★학생입니다. 유흥·도박·대부업 같은 어른용 직업은 목록에서 이미 뺐습니다. 통변에서도 언급하지 마세요.')
   reasons.push('직업은 정해 주는 것이 아니라 권해 보는 것입니다. "이런 자리에서 힘이 납니다" 정도로 말하세요.')
 
   return {

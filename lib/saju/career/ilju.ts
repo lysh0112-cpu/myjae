@@ -13,6 +13,7 @@
 
 import type { CareerCard, CareerInput } from './types'
 import { ILJU, ILJU_SRC } from './tables/ilju'
+import { jobKey, okForStudent } from './tables/jobs'
 
 export function judgeIlju(input: CareerInput): CareerCard | null {
   const day = input.saju.find(p => p.pillar === '일주')
@@ -28,7 +29,10 @@ export function judgeIlju(input: CareerInput): CareerCard | null {
 
   const reasons: string[] = []
   reasons.push(`일주 ${row.ko}(${key}) — ${row.gijil}`)
-  reasons.push(`${row.ko} 일주에 어울리는 일 : ${row.jobs.join(', ')}`)
+  const jobs = input.target === 'student'
+    ? row.jobs.filter(j => okForStudent(jobKey(j)))
+    : row.jobs
+  reasons.push(`${row.ko} 일주에 어울리는 일 : ${jobs.join(', ')}`)
   reasons.push(`근거 ${ILJU_SRC}`)
   reasons.push('이 대목("일주가 말하는 것")의 통변 재료입니다. 이 사람의 결과 성품만 다루세요. 직업 목록은 뒤 대목에서 추립니다.')
   reasons.push('일주는 60가지뿐이라 같은 일주인 사람이 많습니다. "이런 결을 타고났다" 정도로 말하고 단정하지 마세요.')
@@ -36,7 +40,7 @@ export function judgeIlju(input: CareerInput): CareerCard | null {
   return {
     key: 'ilju', title: '일주가 말하는 것', badge: `${row.ko}(${key})`,
     lines, reasons,
-    data: { key, ko: row.ko, jobs: row.jobs } as unknown as Record<string, unknown>,
+    data: { key, ko: row.ko, jobs } as unknown as Record<string, unknown>,
   }
 }
 
