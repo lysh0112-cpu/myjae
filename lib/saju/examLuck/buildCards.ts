@@ -18,6 +18,7 @@ import type { ExamCard, ExamInput, ExamTarget, YearLuck } from './types'
 import {
   EXAM_BY_SIPSIN, HIGHSCHOOL, HIGHSCHOOL_SRC,
   SUSI_JEONGSI, SUSI_JEONGSI_SRC, STUDY_TREND_SRC, HAKMA, HAKMA_SAY,
+  CLOSING, CLOSING_STUDENT, CLOSING_SRC,
 } from './tables/rules'
 import { dayunTrend } from './examScore'
 
@@ -65,23 +66,30 @@ export function cardYears(
   if (purpose === 'exam') lines.push('합격운은 인성(배움의 기운)이 더 중요합니다. 배운 것이 몸에 붙는 해에 힘이 실려요.')
   else if (purpose === 'job') lines.push('취업운은 관성(자리의 기운)이 더 중요합니다. 자리가 나를 부르는 해에 힘이 실려요.')
 
-  // ★교재 195쪽 맺음 — 이분법으로 나누지 말라는 대목. 반드시 붙인다.
-  lines.push('합격과 불합격을 둘로 갈라 보는 건 위험합니다. 사주의 아쉬운 점은 '
-    + '본인의 노력과 의지로 충분히 넘어설 수 있으니, 참고만 하시고 일희일비하지 않으셔도 됩니다.')
-
   lines.push(
     target === 'student'
       ? `이 가운데 ${best.year}년에 힘이 가장 실립니다. 다만 사주가 말해 줄 수 있는 건 흐름이고, 결과를 만드는 건 준비한 시간이에요.`
       : `이 가운데 ${best.year}년에 힘이 가장 실립니다. 흐름은 거들 뿐, 결과는 준비한 시간이 만듭니다.`)
+
+  // ★교재 195쪽 맺음말 — 반드시 맨 마지막에 붙인다.
+  //   앞에 두면 앞말이 다 변명처럼 들린다.
+  lines.push(...(target === 'student' ? CLOSING_STUDENT : CLOSING))
   return {
     key: 'years',
     title: '앞으로의 흐름',
     badge: `${years[0].year}~${years[years.length - 1].year}`,
     lines,
-    reasons: years.map(y =>
+    reasons: [
+      // ★맺음말은 재료에도 넣고 "반드시 담으라" 고 적는다.
+      //   화면에만 두면 통변에서 빠진다. 교재가 이 대목으로 끝맺은 뜻이 사라진다.
+      `[★맺음말 — 교재가 이 대목을 끝맺은 말 (${CLOSING_SRC}). 글 마지막에 반드시 담으세요]`,
+      ...(target === 'student' ? CLOSING_STUDENT : CLOSING).map(l => `  ${l}`),
+      '  ↳ 그대로 옮기지 말고 앞말과 이어지게 풀어 쓰세요. 다만 뜻은 빼지 마세요.',
+      '',
+    ].concat(years.map(y =>
       `${y.year} ${y.stem}${y.branch} [${y.grade}] 세운점수 ${y.seyunScore ?? y.score}`
       + (y.dayunScore != null ? ` · 대운 ${y.dayunGanji} 점수 ${y.dayunScore} · 섞은점수 ${y.score}` : '')
-      + (y.hits.length ? ` — ${y.hits.map(h => h.say).join(' / ')}` : '')),
+      + (y.hits.length ? ` — ${y.hits.map(h => h.say).join(' / ')}` : ''))),
     data: { years },
   }
 }
