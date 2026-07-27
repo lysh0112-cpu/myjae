@@ -33,11 +33,29 @@ export const DAYUN_WEIGHT = 0.3
 export const SEYUN_WEIGHT = 0.7
 
 /** 등급 경계 — ★분포를 재고 다듬을 것 (교훈 BA) */
+/**
+ * ★등급 문턱 — 2026-07-27 대표님 확정.
+ *
+ * [어떻게 정했나]
+ *   무작위 사주 3만 벌에 대운 30 : 세운 70 을 섞어 점수 분포를 먼저 쟀다.
+ *   (교훈 BA — 문턱을 정하기 전에 분포부터 재라)
+ *
+ *     지금 값 7 / 3 / −4 / −9   아주좋음 5.9 · 좋음 21.5 · 보통 51.7 · 조심 16.1 · 많이조심 4.9 %
+ *     전  값 6 / 3 / −2 / −5   아주좋음 9.4 · 좋음 18.0 · 보통 38.7 · 조심 17.7 · 많이조심 16.2 %
+ *
+ * [왜 바꿨나]
+ *   전 값은 여섯에 하나가 "많이 조심" 이었다. 합격운은 겁주기 가장 쉬운 자리다.
+ *   지금은 스무 명에 하나만 그 칸에 든다. "아주 좋음" 도 같은 비율로 드물어
+ *   그 말이 나올 때 값어치가 있다.
+ *
+ * ⚠️ 무작위 사주 기준이다. 실제 손님 분포는 다를 수 있다.
+ *    한동안 돌려 보고 어느 칸이 쏠리면 여기만 고치면 된다.
+ */
 export const GRADE_CUT: Array<{ min: number; grade: Grade }> = [
-  { min: 6, grade: '아주 좋음' },
+  { min: 7, grade: '아주 좋음' },
   { min: 3, grade: '좋음' },
-  { min: -2, grade: '보통' },
-  { min: -5, grade: '조심' },
+  { min: -4, grade: '보통' },
+  { min: -9, grade: '조심' },
   { min: -99, grade: '많이 조심' },
 ]
 
@@ -110,20 +128,75 @@ export function judgeYear(
   if (makesSamhyeong(n.branches, yBranch)) add('삼형살')
 
   const score = hits.reduce((s, h) => s + h.weight, 0)
-  return { year, stem: yStem, branch: yBranch, ganSipsin, jiSipsin, score, hits, grade: gradeOf(score) }
+  return {
+    year, stem: yStem, branch: yBranch, ganSipsin, jiSipsin,
+    score, seyunScore: score, hits, grade: gradeOf(score),
+  }
+}
+
+/**
+ * ★대운 30 : 세운 70 을 섞는다. (2026-07-27)
+ *
+ * [무엇이 문제였나]
+ *   DAYUN_WEIGHT·SEYUN_WEIGHT 를 선언만 해 두고 아무도 안 썼다.
+ *   그래서 지금까지 **세운 100%** 로만 채점하고 있었다.
+ *   교재는 "대운 30%, 세운 70%" 라고 못 박았다(작업지시 4장 · CONFLICT ①).
+ *
+ * [어떻게]
+ *   대운 간지에도 같은 규칙을 돌려 점수를 낸 뒤 무게를 실어 더한다.
+ *   대운은 열 해 내내 같으므로 그 사이 해들의 바닥값 노릇을 한다.
+ *
+ * ⚠️ 대운을 안 넘기면 세운만으로 매긴다. 화면이 /api/dayun 을 못 받았을 때다.
+ *    그때 등급이 달라지므로, 대운을 받은 뒤 다시 매기는 것이 맞다.
+ */
+export function blendWithDayun(
+  seyun: YearLuck,
+  dayunScore: number | null,
+  dayunGanji?: string,
+): YearLuck {
+  if (dayunScore == null) return seyun
+  const mixed = seyun.score * SEYUN_WEIGHT + dayunScore * DAYUN_WEIGHT
+  const score = Math.round(mixed * 10) / 10
+  return { ...seyun, score, dayunScore, dayunGanji, grade: gradeOf(score) }
 }
 
 /** 올해부터 span 해를 판정한다 (기본 3년 — 대표님 지시 2026-07-27) */
-export function judgeYears(input: ExamInput, thisYear: number): YearLuck[] {
+/**
+ * 올해부터 span 해.
+ * @param dayunList 대운 목록. 넘기면 그해에 흐르던 대운을 찾아 30% 를 섞는다.
+ *                  안 넘기면 세운 100% 로 매긴다(예전 동작).
+ */
+export function judgeYears(
+  input: ExamInput, thisYear: number, dayunList?: DayunLike[],
+): YearLuck[] {
   const span = input.span ?? 3
   const day = input.saju.find(p => p.pillar === '일주')
   const dayStem = day?.stem ?? ''
   if (!dayStem || dayStem === '?') return []
 
+  // 대운 점수는 대운마다 한 번만 낸다 (열 해가 같은 간지를 쓴다)
+  const dayunScoreCache = new Map<string, number>()
+  const scoreOfDayun = (gz: string) => {
+    const hit = dayunScoreCache.get(gz)
+    if (hit != null) return hit
+    const v = judgeYear(input.saju, 0, gz[0], gz[1]).score
+    dayunScoreCache.set(gz, v)
+    return v
+  }
+
   const all = calcSeyunList(dayStem, thisYear)
   return all
     .filter(s => s.year >= thisYear && s.year < thisYear + span)
-    .map(s => judgeYear(input.saju, s.year, s.cheongan, s.jiji))
+    .map(s => {
+      const base = judgeYear(input.saju, s.year, s.cheongan, s.jiji)
+      if (!dayunList?.length) return base
+      // 그해에 몇 살이었나 → 그때 흐르던 대운
+      const ageThatYear = s.year - input.birthYear
+      const d = pickCurrentDayun(dayunList, ageThatYear)
+      if (!d) return base
+      const gz = `${d.cheongan}${d.jiji}`
+      return blendWithDayun(base, scoreOfDayun(gz), gz)
+    })
 }
 
 /**

@@ -27,8 +27,18 @@ export interface YearLuck {
   /** 천간·지지의 십신 */
   ganSipsin: string
   jiSipsin: string
-  /** 합산 점수 (유리 + / 불리 −) */
+  /**
+   * 합산 점수 (유리 + / 불리 −)
+   * ★2026-07-27 — 대운 30 : 세운 70 을 섞은 값이다. 등급도 이 값으로 매긴다.
+   *   대운을 안 넘기면 세운만으로 매긴다(그 경우 seyunScore 와 같다).
+   */
   score: number
+  /** 세운만 본 점수 */
+  seyunScore?: number
+  /** 대운만 본 점수 — 대운을 넘겼을 때만 */
+  dayunScore?: number
+  /** 그때 흐르던 대운 간지 — 화면·통변에서 "무엇 때문인지" 밝히는 데 쓴다 */
+  dayunGanji?: string
   /** 걸린 규칙들 — 화면 근거와 통변 재료에 그대로 쓴다 */
   hits: Array<{ key: string; say: string; weight: number; src: string }>
   /** 다섯 칸 등급 */
