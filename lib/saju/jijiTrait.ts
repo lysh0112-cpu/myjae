@@ -55,6 +55,23 @@ export interface JijiTraitRow {
   eumyang: string
   /** 짝이 되는 충 */
   chung: string
+  // ── 여기서부터 교재 48쪽 「05 地支의 종류」 ──────────────────
+  /** 띠 */
+  tti: string
+  /** 시각 (30분법) */
+  hour: string
+  /** 절기 */
+  jeolgi: string
+  /** 양력으로 대략 언제 */
+  solarSpan: string
+  /** 본기 천간 — 교재가 지지 옆 괄호에 적어 둔 것 */
+  bongi: string
+  /** 48쪽 비고 — 성인·학생 공통 */
+  note: string[]
+  /** 48쪽 비고 — 성인에게만 */
+  noteAdult?: string[]
+  /** ★48쪽 비고 원문 */
+  noteOriginal: string
   /** 성인·학생 모두에게 나가는 줄 */
   say: string[]
   /** 성인에게만 더 나가는 줄 */
@@ -71,6 +88,12 @@ export interface JijiTraitRow {
 export const JIJI_TRAIT: JijiTraitRow[] = [
   {
     key: '子', ko: '자', eumyang: '1陽 5陰', chung: '子午沖(1陰 5陽)',
+    tti: '쥐띠', hour: '23:30~01:30', jeolgi: '대설~소한', solarSpan: '양력 12월 초~1월 초', bongi: '癸',
+    note: [
+      '子午卯酉 도화살에 듭니다.',
+      '다만 년지와 시지에 있으면 도화로 보지 않습니다. 월지와 일지에 있을 때만 도화입니다.',
+    ],
+    noteOriginal: '子午卯酉(도화살). 年支와 時支에 있으면 도화가 아니다. 月支와 日支는 도화에 해당한다.',
     say: [
       '한겨울 바닥에서 양(陽) 하나가 싹터 오르는 자리입니다.',
       '하늘이 열리는 시간이라 기도와 정성이 잘 닿습니다.',
@@ -96,6 +119,12 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
   },
   {
     key: '丑', ko: '축', eumyang: '2陽 4陰', chung: '丑未沖(2陰 4陽)',
+    tti: '소띠', hour: '01:30~03:30', jeolgi: '소한~입춘', solarSpan: '양력 1월 초~2월 초', bongi: '己',
+    note: [
+      '辰戌丑未 명예살에 듭니다.',
+      '맡겨 주고 인정해 주는 자리가 좋습니다.',
+    ],
+    noteOriginal: '辰戌丑未(명예살). 맡겨 주고 인정해 주는 직업이 좋다.',
     say: [
       '辰戌丑未는 접목운입니다. 새로운 삶으로 갈아타는 터닝 포인트예요(결혼·이혼·이사·이직).',
       '아주 꽁꽁 언 새벽 1시 30분이라 활동력이 둔해집니다.',
@@ -131,6 +160,12 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
   },
   {
     key: '寅', ko: '인', eumyang: '3陽 3陰', chung: '寅申沖(3陰 3陽)',
+    tti: '호랑이띠', hour: '03:30~05:30', jeolgi: '입춘~경칩', solarSpan: '양력 2월 초~3월 초', bongi: '甲',
+    note: [
+      '입춘을 기준으로 새해가 시작됩니다.',
+      '입춘 전날 태어난 사람은 전년도에 태어난 것으로 봅니다.',
+    ],
+    noteOriginal: '입춘 전날 태어난 사람은 前年度에 태어난 것이다. 입춘을 기준으로 새해가 시작된다.',
     say: [
       '지천태괘 — 땅과 하늘이 편안하다는 뜻입니다. 그 반대가 申(부실함)입니다.',
       '멀리 흐를 연(演), 水生木의 형상이라 대기만성형입니다. 성공 가능성이 큽니다.',
@@ -153,6 +188,12 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
   },
   {
     key: '卯', ko: '묘', eumyang: '4陽 2陰', chung: '卯酉沖(4陰 2陽)',
+    tti: '토끼띠', hour: '05:30~07:30', jeolgi: '경칩~청명', solarSpan: '양력 3월 초~4월 초', bongi: '乙',
+    note: [
+      '木 기운이 가장 강한 때입니다.',
+      '卯戌亥未 천문성에 듭니다.',
+    ],
+    noteOriginal: '木 기운이 가장 강한 때이다. 卯戌亥未(천문성)',
     say: [
       '4양 2음, 경칩의 상승 기운입니다.',
       '위로 뻗는 상향성이 있습니다.',
@@ -173,6 +214,16 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
   },
   {
     key: '辰', ko: '진', eumyang: '5陽 1陰', chung: '辰戌沖(1陰 5陽)',
+    tti: '용띠', hour: '07:30~09:30', jeolgi: '청명~입하', solarSpan: '양력 4월 초~5월 초', bongi: '戊',
+    note: [
+      '꽃샘추위처럼 감정의 기복이 있습니다.',
+      '辰이 많을수록 고집과 끈기가 있습니다.',
+      '감수성이 예민합니다.',
+    ],
+    noteAdult: [
+      '마음이 크게 오르내리는 조울의 기질이 있습니다.',
+    ],
+    noteOriginal: '감정의 기복이 있다(꽃샘추위). 조울증의 기질이 있다. 辰이 많을수록 고집과 끈기가 있다. 감수성이 예민하다.',
     say: [
       '5양 1음, 木에서 火로 넘어가는 매개체입니다(청명~곡우).',
       '辰대운은 인터체인지 운으로 인생의 과도기입니다. 발복도 하는 양날의 칼입니다.',
@@ -215,6 +266,12 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
   },
   {
     key: '巳', ko: '사', eumyang: '6陽', chung: '巳亥沖(6陰)',
+    tti: '뱀띠', hour: '09:30~11:30', jeolgi: '입하~망종', solarSpan: '양력 5월 초~6월 초', bongi: '丙',
+    note: [
+      '寅申巳亥 역마에 듭니다.',
+      '巳火보다 午火에 태어난 사람이 더 열정적입니다.',
+    ],
+    noteOriginal: '巳火보다 午火에 태어난 사람이 더 열정적이다. 寅申巳亥(역마)',
     say: [
       '주역 64괘 중 중천건괘로, 하늘과 땅이 만나 만사형통인 아주 좋은 자리입니다.',
       '辰土운이 준비라면 巳火운은 결실입니다. 정열적이고 야망이 큽니다.',
@@ -248,6 +305,11 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
   },
   {
     key: '午', ko: '오', eumyang: '5陽 1陰', chung: '子午沖(1陽 5陰)',
+    tti: '말띠', hour: '11:30~13:30', jeolgi: '망종~소서', solarSpan: '양력 6월 초~7월 초', bongi: '丁',
+    note: [
+      '정오(正午) 12시의 자리입니다.',
+    ],
+    noteOriginal: '正午 12시',
     say: [
       '子에서 巳까지는 양(陽) 운동, 午에서 亥까지는 음(陰) 운동입니다.',
       '午는 산 정상에서 내려오는 자리라 午대운을 만나면 조심해야 합니다(개점휴업).',
@@ -271,6 +333,11 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
   },
   {
     key: '未', ko: '미', eumyang: '4陽 2陰', chung: '丑未沖(4陰 2陽)',
+    tti: '양띠', hour: '13:30~15:30', jeolgi: '소서~입추', solarSpan: '양력 7월 초~8월 초', bongi: '己',
+    note: [
+      '명예살과 천문성에 함께 듭니다.',
+    ],
+    noteOriginal: '명예살, 천문성에 해당한다.',
     say: [
       '木火와 金水를 잇는 금화교역의 역할을 합니다.',
       '매개체를 잇는 역할이 맞습니다(중개업·상담사·활인업).',
@@ -298,6 +365,12 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
   },
   {
     key: '申', ko: '신', eumyang: '3陽 3陰', chung: '寅申沖(3陰 3陽)',
+    tti: '원숭이띠', hour: '15:30~17:30', jeolgi: '입추~백로', solarSpan: '양력 8월 초~9월 초', bongi: '庚',
+    note: [
+      '완전히 火 같은 성향은 아니고 또 다른 성향이 숨어 있습니다.',
+      '장마와 태풍의 영향이 있습니다.',
+    ],
+    noteOriginal: '완전 火 같은 성향이 아니라 또 다른 성향이 숨겨져 있다. 장마와 태풍의 영향이 있다.',
     say: [
       '3음 3양 천지비괘라 하늘과 땅이 도와주지 않습니다. 누구에게 기대지 말고 스스로 해결하십시오.',
       '사상누각과 같아 불안정합니다. 독립적이고 자유롭고 명예를 지향합니다.',
@@ -330,6 +403,12 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
   },
   {
     key: '酉', ko: '유', eumyang: '2陽 4陰', chung: '卯酉沖(2陰 4陽)',
+    tti: '닭띠', hour: '17:30~19:30', jeolgi: '백로~한로', solarSpan: '양력 9월 초~10월 초', bongi: '辛',
+    note: [
+      '金 기운이 아주 강한 때입니다.',
+      '酉월에 酉시면 기계적·이과적 성향이 강합니다.',
+    ],
+    noteOriginal: '金 기운이 아주 강할 때이다. 酉月에 酉時면 기계적, 이과적 성향이 강하다.',
     say: [
       '酉金은 12지지 가운데 가장 단단합니다. 방국을 이루면 완벽하고 치밀하고 정확합니다.',
       '수확기라 결실이 있습니다. 인생의 갱년기이자 노련함의 때이고, 한가위 무렵이라 재물운과 식복이 있습니다.',
@@ -362,6 +441,12 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
   },
   {
     key: '戌', ko: '술', eumyang: '5陰 1陽', chung: '辰戌沖(1陰 5陽)',
+    tti: '개띠', hour: '19:30~21:30', jeolgi: '한로~입동', solarSpan: '양력 10월 초~11월 초', bongi: '戊',
+    note: [
+      '명예살과 천문성에 함께 듭니다.',
+      '戌土가 여러 개 있으면 역마에도 듭니다.',
+    ],
+    noteOriginal: '명예살, 천문성에 해당한다. 戌土가 여러 개 있으면 역마에도 해당된다.',
     say: [
       '결실의 계절입니다. 오곡백과가 무르익은 재물의 창고입니다.',
       '戌土를 가진 사람은 부자가 될 가능성이 큽니다.',
@@ -397,6 +482,11 @@ export const JIJI_TRAIT: JijiTraitRow[] = [
   },
   {
     key: '亥', ko: '해', eumyang: '6陰', chung: '巳亥沖(6陽)',
+    tti: '돼지띠', hour: '21:30~23:30', jeolgi: '입동~대설', solarSpan: '양력 11월 초~12월 초', bongi: '壬',
+    note: [
+      '역마살과 천문성에 함께 듭니다.',
+    ],
+    noteOriginal: '역마살, 천문성에 해당한다.',
     say: [
       '천문성이라 합니다. 월지와 일지에 있을 때 가장 강하게 작용합니다. 영감이 뛰어나 명리를 공부하는 사람이 많습니다.',
       '가장 음의 기운이 강한 6음입니다. 巳火가 6양입니다.',
@@ -447,6 +537,48 @@ export function traitOf(branch: string): JijiTraitRow | undefined {
   return BY_KEY[branch]
 }
 
+// ══════════════════════════════════════════════════════════════
+//  교재 48쪽이 알려 준 판정 규칙
+// ══════════════════════════════════════════════════════════════
+
+/** 도화 지지 — 子午卯酉 (48쪽 子) */
+export const DOHWA_CHARS = ['子', '午', '卯', '酉']
+
+/**
+ * ★도화는 자리를 본다 — 교재 48쪽 子
+ *   "年支와 時支에 있으면 도화가 아니다. 月支와 日支는 도화에 해당한다."
+ *
+ * ⚠️ career/tables/sinsal.ts 의 도화 판정(94쪽)은 **자리를 안 봅니다.**
+ *    글자 개수만 셉니다. 지금 두 곳이 다르게 셉니다. 아래 CHECK ① 참조.
+ */
+export const DOHWA_PILLARS = ['월주', '일주']
+export function isDohwaAt(pillar: string, branch: string): boolean {
+  return DOHWA_CHARS.includes(branch) && DOHWA_PILLARS.includes(pillar)
+}
+
+/** 명예살 — 辰戌丑未 (48쪽 丑·未·戌) */
+export const MYEONGYE_CHARS = ['辰', '戌', '丑', '未']
+export const MYEONGYE_SAY = '맡겨 주고 인정해 주는 자리가 좋습니다.'
+
+/** 역마 지지 — 寅申巳亥 (48쪽 巳·亥) */
+export const YEOKMA_CHARS = ['寅', '申', '巳', '亥']
+
+/** 천문성 — 48쪽은 네 자만 적었다. 76쪽은 寅酉를 더해 여섯 자다. (CHECK ②) */
+export const CHEONMUN_48 = ['卯', '戌', '亥', '未']
+
+/**
+ * ★입춘이 새해다 — 교재 48쪽 寅
+ *   "입춘 전날 태어난 사람은 前年度에 태어난 것이다. 입춘을 기준으로 새해가 시작된다."
+ *   년주 계산이 이미 이 규칙을 따르고 있는지는 lib/saju/solarterm.ts 쪽에서 봐야 한다.
+ */
+export const IPCHUN_RULE =
+  '입춘을 기준으로 새해가 시작됩니다. 입춘 전날 태어났다면 전년도에 태어난 것으로 봅니다.'
+
+/** 48쪽 비고를 화면에 낼 줄들 */
+export function noteLines(row: JijiTraitRow, target: Target): string[] {
+  return target === 'student' ? row.note : [...row.note, ...(row.noteAdult ?? [])]
+}
+
 /** 화면에 낼 줄들 — 학생이면 sayAdult 가 빠지고 sayStudent 가 붙는다 */
 export function traitLines(row: JijiTraitRow, target: Target): string[] {
   return target === 'student'
@@ -485,6 +617,45 @@ export function traitsInSaju(saju: Pillar[]): TraitHit[] {
 export function reasonsOf(saju: Pillar[], target: Target): string[] {
   return traitsInSaju(saju).map(h => {
     const jobs = h.row.jobs?.length ? ` (교재가 든 직업: ${h.row.jobs.join('·')})` : ''
-    return `${h.pillar} ${h.branch}(${h.row.ko}) — ${traitLines(h.row, target).join(' ')}${jobs}`
+    const note = noteLines(h.row, target).join(' ')
+    // ★도화는 월지·일지에 있을 때만 도화다 (48쪽)
+    const dohwa = isDohwaAt(h.pillar.replace('지', '주'), h.branch) ? ' [도화]' : ''
+    return `${h.pillar} ${h.branch}(${h.row.ko}·${h.row.tti})${dohwa} — ${traitLines(h.row, target).join(' ')} ${note}${jobs}`
   })
 }
+
+// ══════════════════════════════════════════════════════════════
+//  ⚠️ 연재쌤 확인 대기
+// ══════════════════════════════════════════════════════════════
+
+export const CHECK = [
+  {
+    what: '★도화의 자리 조건',
+    now: '48쪽은 "年支와 時支에 있으면 도화가 아니다. 月支와 日支는 도화에 해당한다"고 못 박았습니다. '
+       + '그런데 career/tables/sinsal.ts 의 도화(94쪽)는 자리를 안 보고 글자 수만 셉니다.',
+    why: '지금 년지·시지의 子午卯酉도 도화로 잡히고 있습니다. 48쪽을 따를지 정해 주십시오. '
+       + '따른다면 isDohwaAt() 을 sinsal9.ts 에 이어 붙이면 됩니다.',
+  },
+  {
+    what: '천문성이 네 자인가 여섯 자인가',
+    now: '48쪽 卯 "卯戌亥未(천문성)" 은 네 자, 76쪽 卯卯 "천문성(卯戌亥未 寅酉)" 은 여섯 자입니다. '
+       + '저장소(92쪽)는 짝 세 벌(戌亥·卯未·寅酉)이라 글자로는 여섯 자입니다.',
+    why: '48쪽이 짧게 적힌 것으로 보이나 확인이 필요합니다. 여기서는 CHEONMUN_48 로 따로 두었습니다.',
+  },
+  {
+    what: '辰戌丑未 — 명예살인가 화개살인가',
+    now: '같은 네 글자를 48쪽은 "명예살", 58쪽 辰 특징과 70쪽 戌 특징은 "화개살"이라 부릅니다.',
+    why: '두 이름이 같은 것을 가리키는지, 다른 것인지 확인이 필요합니다. 화면에 두 이름이 같이 나오면 헷갈립니다.',
+  },
+  {
+    what: '48쪽 申 "완전 火 같은 성향이 아니라"',
+    now: '申은 金인데 火라고 적혀 있습니다. 원문 그대로 두었습니다.',
+    why: '66쪽 申 특징 "겉으로는 가을이지만 실제로는 여름이다"와 이어지는 말로 보이나, 원본 확인이 필요합니다.',
+  },
+  {
+    what: '입춘 새해 규칙이 이미 반영돼 있는가',
+    now: 'IPCHUN_RULE 로 적어만 두었습니다. 판정에 쓰지 않았습니다.',
+    why: '년주 계산(solarterm.ts·/api/lunar)이 이미 입춘 기준인지 확인이 필요합니다. '
+       + '이미 그렇다면 이 상수는 화면 설명용으로만 씁니다.',
+  },
+]
