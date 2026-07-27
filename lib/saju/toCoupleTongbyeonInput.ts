@@ -44,6 +44,11 @@ import { SINSAL_MEANING } from './sinsalMeaning'
 import { GWIIN_MEANING } from './gwiinMeaning'
 import { calcSeyunList } from './dayun'
 import type { CoupleJudgeV1, CategoryResult } from './coupleFilterV1'
+// ★2026-07-27 — 병존을 궁합 재료에도 넣는다. (교재 74~77쪽)
+//   사주보기에만 넣어 두면 궁합 통변은 이 사실을 모른다.
+//   ⚠️ 대목(카드)을 새로 만들지 않는다. 두 사람 명식 블록 안에 사실로만 얹는다.
+//      궁합 프롬프트는 대목과 재료가 1:1로 묶여 있어, 대목을 늘리면 글이 뭉친다. (28부)
+import { findByeongjon, findCombo, findJijiByeongjon, sayOf } from './byeongjon'
 
 // ── 표기용 ──────────────────────────────────────────────────────────────
 const EL_KOR: Record<string, string> = {
@@ -94,6 +99,28 @@ function personBlock(p: CouplePersonInput, label: string): string {
   lines.push(`[${label}] ${p.name} · ${p.gender}${p.birthLabel ? ` · ${p.birthLabel}` : ''}`)
   lines.push(`- 명식(팔자): ${pillars}`)
   lines.push(`- 타고난 본바탕(일간): ${dayStem}`)
+
+  // ── 병존 (교재 74~77쪽) — 같은 글자가 나란히 있으면 그 기운이 짙다 ──
+  //   ★여는말에서 "각각 어떤 기운을 타고났는지" 소개할 때 쓰라고 준다.
+  //     새 대목을 만들지 말라는 지시는 buildCouplePrompt 에 적어 두었다.
+  {
+    const bj: string[] = []
+    for (const h of findByeongjon(p.saju)) {
+      const yeok = h.row.yeokma ? ` [역마 ${h.row.yeokma}]` : ''
+      bj.push(`${h.key}(${h.pillars.join('·')})${yeok} — ${sayOf(h.row, 'adult')}`)
+    }
+    for (const c of findCombo(p.saju)) {
+      bj.push(`${c.row.need.join('')} ${c.key}(${c.pillars.join('·')}) — ${sayOf(c.row, 'adult')}`)
+    }
+    for (const h of findJijiByeongjon(p.saju)) {
+      const sal = h.row.sal?.length ? ` [${h.row.sal.join('·')}]` : ''
+      bj.push(`${h.key}(${h.pillars.join('·')})${sal} — ${sayOf(h.row, 'adult')}`)
+    }
+    if (bj.length) {
+      lines.push(`- 병존(같은 글자가 나란히 — 교재 74~77쪽):`)
+      for (const x of bj) lines.push(`  · ${x}`)
+    }
+  }
 
   // ★2026-07-25 — 태어난 계절의 결(무렵)을 월지로 넣는다. AI 가 세부 시기를 지어내는 걸 막는다.
   //   ⚠️ 절기(월지)와 양력 날짜 감각이 다를 수 있어(예: 辰월=음3월이 양력 4월 말),
