@@ -104,6 +104,30 @@ function daysBetween(y1:number,m1:number,d1:number, y2:number,m2:number,d2:numbe
  * @param isForward 순행 여부
  * @param apiKey KASI 절기 API 키 (서버에서 전달)
  */
+/**
+ * ★대운 간지열 — 월주에서 앞뒤로 나아간다. (2026-07-27 꺼냄)
+ *
+ * calcDayunList 안에 묻혀 있던 계산을 밖으로 꺼냈다.
+ * 꺼낸 까닭: 출산택일(babyFilterV7)이 똑같은 것을 따로 만들어 쓰고 있었다.
+ *   부품이 둘이면 한쪽만 고쳐 놓고 다른 쪽이 남는다. 하나로 모은다.
+ *
+ * ⚠️ 절기 API 가 필요 없다. 간지열은 월주와 방향만으로 정해진다.
+ *    그래서 서버·화면 어디서든 부를 수 있다. (대운수는 절기가 필요해 서버 전용)
+ */
+export function dayunGanjiList(
+  monthGanji: string, isForward: boolean, count = 10,
+): Array<{ cheongan: string; jiji: string }> {
+  let stemIdx = HEAVENLY_STEMS.indexOf(monthGanji[0])
+  let branchIdx = EARTHLY_BRANCHES.indexOf(monthGanji[1])
+  const out: Array<{ cheongan: string; jiji: string }> = []
+  for (let i = 0; i < count; i++) {
+    if (isForward) { stemIdx = (stemIdx + 1) % 10; branchIdx = (branchIdx + 1) % 12 }
+    else { stemIdx = (stemIdx - 1 + 10) % 10; branchIdx = (branchIdx - 1 + 12) % 12 }
+    out.push({ cheongan: HEAVENLY_STEMS[stemIdx], jiji: EARTHLY_BRANCHES[branchIdx] })
+  }
+  return out
+}
+
 export async function calcDayunStartAge(
   solarYear: number,
   solarMonth: number,
@@ -189,24 +213,12 @@ export async function calcDayunList(
 ): Promise<DayunItem[]> {
   const isForward = isForwardDayun(yearStem, gender)
 
-  const monthStem = monthGanji[0]
-  const monthBranch = monthGanji[1]
-  let stemIdx = HEAVENLY_STEMS.indexOf(monthStem)
-  let branchIdx = EARTHLY_BRANCHES.indexOf(monthBranch)
-
   const startAge = await calcDayunStartAge(solarYear, solarMonth, solarDay, isForward, apiKey, birthMinute)
 
   const list: DayunItem[] = []
+  const seq = dayunGanjiList(monthGanji, isForward, 10)
   for (let i = 0; i < 10; i++) {
-    if (isForward) {
-      stemIdx = (stemIdx + 1) % 10
-      branchIdx = (branchIdx + 1) % 12
-    } else {
-      stemIdx = (stemIdx - 1 + 10) % 10
-      branchIdx = (branchIdx - 1 + 12) % 12
-    }
-    const cheongan = HEAVENLY_STEMS[stemIdx]
-    const jiji = EARTHLY_BRANCHES[branchIdx]
+    const { cheongan, jiji } = seq[i]
     list.push({
       age: startAge + i * 10,
       cheongan,

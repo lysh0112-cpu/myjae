@@ -30,6 +30,8 @@ import {
   gwanElOf, isWonjin, hyeongOf, rootSeatsOf, countElements,
   SUMMER, WINTER,
 } from './sajuTables'
+// ★2026-07-27 — 대운 부품은 하나만 쓴다. 여기 있던 사본 둘을 걷어냈다.
+import { isForwardDayun, dayunGanjiList } from '@/lib/saju/dayun'
 
 // ── 상수 ────────────────────────────────────────────────────────────────
 //   표는 전부 sajuTables.ts 로 모았다. 여기서 다시 정의하지 않는다.
@@ -39,24 +41,34 @@ import {
 const STEMS = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸']
 const BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
 
-/** 대운 순행 여부 — 년간 음양 × 성별 (lib/saju/dayun.ts 와 동일 규칙) */
+/**
+ * 대운 순행 여부 — ★2026-07-27부터 lib/saju/dayun.ts 의 원본을 그대로 쓴다.
+ *
+ * [무엇이 문제였나]
+ *   여기에 같은 계산을 따로 두고 있었다. 그런데 성별을 받는 폭이 달랐다.
+ *     원본  gender === '남'
+ *     사본  gender === '남' || 'male' || '아들'
+ *   지금은 toGenderCode() 가 '아들'→'남' 으로 바꿔 넘겨 결과가 같지만,
+ *   어디선가 '아들' 을 그대로 넘기면 두 부품이 정반대 방향을 냈다.
+ *
+ * [지금]
+ *   원본 하나만 쓴다. '아들'·'male' 도 받아야 하면 여기서 '남' 으로 바꿔 넘긴다.
+ *   부르는 쪽을 안 고쳐도 되게 이름은 그대로 둔다.
+ */
 export function isForward(yearStem: string, gender: string): boolean {
-  const yangYear = STEMS.indexOf(yearStem) % 2 === 0
-  const male = gender === '남' || gender === 'male' || gender === '아들'
-  return (yangYear && male) || (!yangYear && !male)
+  const g = (gender === 'male' || gender === '아들') ? '남'
+    : (gender === 'female' || gender === '딸') ? '여' : gender
+  return isForwardDayun(yearStem, g)
 }
 
-/** 월주에서 대운 간지 8개를 뽑는다. 대운 간지열은 월주에서만 정해진다. */
+/**
+ * 월주에서 대운 간지를 뽑는다.
+ * ★2026-07-27 — 여기서 따로 만들지 않고 lib/saju/dayun.ts 의 dayunGanjiList 를 쓴다.
+ *   계산이 완전히 같았지만 부품이 둘이면 한쪽만 고쳐 놓고 다른 쪽이 남는다.
+ */
 function daeunList(monthStem: string, monthBranch: string, forward: boolean) {
-  const out: { stem: string; branch: string }[] = []
-  let si = STEMS.indexOf(monthStem)
-  let bi = BRANCHES.indexOf(monthBranch)
-  for (let n = 1; n <= 8; n++) {
-    si = forward ? (si + 1) % 10 : (si + 9) % 10
-    bi = forward ? (bi + 1) % 12 : (bi + 11) % 12
-    out.push({ stem: STEMS[si], branch: BRANCHES[bi] })
-  }
-  return out
+  return dayunGanjiList(monthStem + monthBranch, forward, 8)
+    .map(x => ({ stem: x.cheongan, branch: x.jiji }))
 }
 
 // ── 판정 결과 ────────────────────────────────────────────────────────────
