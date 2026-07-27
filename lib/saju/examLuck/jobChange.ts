@@ -7,12 +7,21 @@
 //   합격운 규칙(GOOD·BAD)과 결이 다르므로 점수에 섞지 않는다. (연재쌤 확인 항목)
 
 import type { Pillar } from './types'
-import { readNatal, isJijiChung, isCheonganChung } from './hapchung'
+import { readNatal, isJijiChung, isCheonganChung, makesSamhyeong } from './hapchung'
 import { sipsinOfChar } from './sipsin'
 import {
   JOB_CHANGE, JEOPMOK_BRANCHES, HONJAP_PAIRS, pickAdvice, OUTCOME_SAY, OUTCOME_JOIN,
   type JobChangeRow, type JobChangeAdvice, type JobChangeOutcome,
 } from './tables/jobChange'
+
+/** 일간별 관성 오행 — 나를 극하는 오행 */
+const GWAN_EL: Record<string, string> = {
+  甲: '금', 乙: '금',   // 목 일간 → 금이 관성
+  丙: '수', 丁: '수',   // 화 일간 → 수
+  戊: '목', 己: '목',   // 토 일간 → 목
+  庚: '화', 辛: '화',   // 금 일간 → 화  ★교재가 말한 "화 관성" 은 금 일간을 뜻할 수 있다
+  壬: '토', 癸: '토',   // 수 일간 → 토
+}
 
 /** 받침에 맞는 조사 */
 function ga(w: string): string {
@@ -48,6 +57,25 @@ export function judgeJobChangeNatal(saju: Pillar[]): JobChangeHit[] {
     인성혼잡: '배움과 자격의 갈래가 갈립니다',
     식상혼잡: '펼칠 재주가 여럿이라 일이 갈립니다',
   }
+  // ★관성 과다 — 교재 191쪽 둘째 뒷부분 "화(火) 관성이 과다한 경우"
+  //   원국의 성질이라 여기서 본다. 해마다 되풀이될 말이 아니다.
+  //   ⚠️ 일간마다 관성 오행이 다른데 교재가 왜 火 로 못 박았는지 갈린다.
+  //      금(金) 일간이면 관성이 화(火)이므로 그 경우를 뜻할 수 있다.
+  //      스캔에 손글씨로 "관살" 이 덧적혀 있어 관살 과다를 뜻할 수도 있다. (CHECK ①)
+  {
+    const gwanEl = GWAN_EL[n.dayStem]
+    const gwanCount = all.filter(x => x === '정관' || x === '편관').length
+    if (gwanEl && gwanCount >= 3) {
+      out.push({
+        row: JOB_CHANGE.find(r => r.key === 'gwanChung')!,
+        why: gwanEl === '화'
+          ? `관성이 화(火)인데 ${gwanCount}자로 과다합니다. 교재가 짚은 그 자리입니다.`
+          : `관성(${gwanEl})이 ${gwanCount}자로 과다합니다.`
+            + ' (교재는 화(火) 관성이라 적었는데 이 사주의 관성은 다른 오행입니다.)',
+      })
+    }
+  }
+
   const found = HONJAP_PAIRS.filter(h => h.sipsins.every(s => all.includes(s)))
   for (const f of found) {
     out.push({
@@ -130,51 +158,140 @@ export function judgeJobChangeLuck(
     if (row && !out.some(o => o.row.key === key)) out.push({ row, why })
   }
 
-  // ② 정관·편관이 충을 맞는가
-  for (const g of n.gwanChars) {
-    if (isJijiChung(g, luckBranch) || isCheonganChung(g, luckStem)) {
-      push('gwanChung', `원국의 관성 ${g}${ga(g)} ${luckStem}${luckBranch} 운에 충을 맞습니다.`)
-      break
+  // ══════════════════════════════════════════════════════════
+  // ② 교재 191쪽 둘째 — "대운이나 세운에서 정관이나 편관이 충(沖)을 하거나
+  //                     화(火) 관성이 과다한 경우"
+  // ══════════════════════════════════════════════════════════
+  //
+  // ★두 가지를 다 본다. 전에는 앞의 것(충)만 보고 뒤의 것(화 관성 과다)이 빠져 있었다.
+  //
+  //   (가) 관성이 충을 맞는가
+  //        · 원국의 관성을 운이 충하는 경우
+  //        · 운에서 온 관성을 원국이 충하는 경우  ← 이것도 "정관이나 편관이 충을 한다"에 든다
+  //   (나) 화(火) 관성이 과다한가
+  //        ⚠️ 일간마다 관성 오행이 다른데 교재가 왜 火 로 못 박았는지 갈린다.
+  //           스캔에 손글씨로 "관살" 이 덧적혀 있어 관살 과다를 뜻할 수도 있다.
+  //           → 둘 다 재되, 어느 쪽인지 밝혀 준다. (JOB_CHANGE_CHECK ①)
+  {
+    // (가-1) 원국 관성 ↔ 운
+    let hit = ''
+    for (const g of n.gwanChars) {
+      if (isJijiChung(g, luckBranch) || isCheonganChung(g, luckStem)) {
+        hit = `원국의 관성 ${g}${ga(g)} ${luckStem}${luckBranch} 운에 충을 맞습니다.`
+        break
+      }
+    }
+    // (가-2) 운에서 온 관성 ↔ 원국
+    if (!hit) {
+      for (const ch of [luckStem, luckBranch]) {
+        const sp = sipsinOfChar(n.dayStem, ch)
+        if (sp !== '정관' && sp !== '편관') continue
+        const clash = [...n.branches, ...saju.map(x => x.stem)]
+          .find(o => !!o && o !== '?' && (isJijiChung(o, ch) || isCheonganChung(o, ch)))
+        if (clash) {
+          const wa = (clash.charCodeAt(0) - 0xac00) % 28 === 0 ? '와' : '과'
+          hit = `운에서 온 관성 ${ch}${ga(ch)} 원국의 ${clash}${wa} 충합니다.`
+          break
+        }
+      }
+    }
+    if (hit) push('gwanChung', hit)
+
+    // (나) 관성 과다는 원국의 성질이라 해마다 되풀이된다.
+    //      → judgeJobChangeNatal 로 옮겼다. 여기서는 안 본다.
+    //         (매년 같은 말이 나오면 "그해 무슨 일이 있나" 를 가릴 수 없다)
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // ③ 교재 191쪽 셋째 — "비견 겁재가 강해지는 운에 직장에 불만이 생기거나
+  //                     친구 선배 동료 지인의 스카우트 제의나 동업 제안으로 이직"
+  // ══════════════════════════════════════════════════════════
+  //
+  // ★"강해지는" 을 실제로 잰다. 전에는 운에 비겁이 하나만 들어도 잡았다.
+  //   원국에 이미 비겁이 많은 사람은 한 자만 더 들어도 확 기울고,
+  //   비겁이 없던 사람은 한 자로는 "강해졌다" 고 하기 어렵다.
+  {
+    const inLuck = both.filter(x => x === '비견' || x === '겁재')
+    if (inLuck.length) {
+      // 원국 비겁 + 운 비겁 = 그해의 비겁 세기
+      const total = n.bigyeopChars.length + inLuck.length
+      // 천간·지지 둘 다 비겁이면 그 해는 확실히 기운다
+      const strong = inLuck.length >= 2 || total >= 3
+      if (strong) {
+        push('bigyeop',
+          `${luckStem}${luckBranch} 운에 ${inLuck.join('·')}${ga(inLuck.join('·'))} 듭니다`
+          + `(원국 비겁 ${n.bigyeopChars.length}자와 더해 ${total}자).`)
+      }
     }
   }
 
-  // ③ 비견·겁재가 강해지는 운
-  if (both.includes('비견') || both.includes('겁재')) {
-    const b = both.filter(s => s === '비견' || s === '겁재').join('·')
-    push('bigyeop', `${luckStem}${luckBranch} 운에 ${b}${ga(b)} 듭니다.`)
+  // ══════════════════════════════════════════════════════════
+  // ④ 교재 191쪽 넷째 — "대운이 바뀔 때나 진술축미 접목운에 직업 변동수"
+  // ══════════════════════════════════════════════════════════
+  //
+  // ★교재는 둘을 "이거나" 로 이었다. 둘 다 걸리면 그만큼 세다.
+  {
+    const isJeopmok = JEOPMOK_BRANCHES.includes(luckBranch)
+    if (isJeopmok && opts.isDayunChange) {
+      push('jeopmok', `대운이 바뀌는 무렵인데 ${luckBranch}${ga(luckBranch) === '가' ? '는' : '은'} 진술축미 접목운이기도 합니다.`)
+    } else if (isJeopmok) {
+      push('jeopmok', `${luckBranch}${ga(luckBranch) === '가' ? '는' : '은'} 진술축미 접목운입니다.`)
+    } else if (opts.isDayunChange) {
+      push('jeopmok', '대운이 바뀌는 무렵입니다.')
+    }
+    // ⚠️ 辰戌丑未 는 열두 지지 중 넷이라 여덟 해를 보면 거의 반드시 걸린다.
+    //    그래서 "몇 해에 걸렸나" 보다 "어느 해인가" 가 값어치다.
+    //    화면에서는 걸린 해를 짚어 주고, 여러 해가 걸렸다고 겁주지 않는다.
   }
 
-  // ④ 접목운 — 진술축미. 대운이 바뀌는 때도 여기에 함께 담는다.
-  if (JEOPMOK_BRANCHES.includes(luckBranch)) {
-    push('jeopmok', `${luckBranch}${ga(luckBranch) === '가' ? '는' : '은'} 진술축미 접목운입니다.`)
-  } else if (opts.isDayunChange) {
-    push('jeopmok', '대운이 바뀌는 무렵입니다.')
-  }
-
-  // ⑤ 원국의 식신이 약한데 편인운
+  // ══════════════════════════════════════════════════════════
+  // ⑤ 교재 191쪽 다섯째 — "사주 원국에 약한 식신이 도식(倒食)되는 편인운에 이직"
+  // ══════════════════════════════════════════════════════════
+  //
+  // ★도식(倒食) — 편인이 식신을 뒤엎는 것. 밥그릇을 엎는다는 뜻이다.
+  //   "약한 식신" 을 재려면 개수를 제대로 세야 한다.
+  //   전에는 p.filter 로 기둥 수를 세어, 한 기둥에 식신이 둘 있어도 하나로 셌다.
   if (both.includes('편인')) {
-    const siksinCount = saju.filter(p =>
-      (p.stem && p.stem !== '?' && p.pillar !== '일주' && sipsinOfChar(n.dayStem, p.stem) === '식신')
-      || (p.branch && p.branch !== '?' && sipsinOfChar(n.dayStem, p.branch) === '식신')).length
-    if (siksinCount > 0 && siksinCount <= 1) {
-      push('pyeoninDosik', `원국의 식신이 하나뿐인데 ${luckStem}${luckBranch} 운에 편인이 듭니다.`)
+    let siksin = 0
+    for (const p of saju) {
+      for (const ch of [p.stem, p.branch]) {
+        if (!ch || ch === '?') continue
+        if (p.pillar === '일주' && ch === p.stem) continue   // 일간은 나 자신이라 안 센다
+        if (sipsinOfChar(n.dayStem, ch) === '식신') siksin++
+      }
+    }
+    // 식신이 아예 없으면 엎을 밥그릇이 없다. 하나뿐일 때가 가장 약하다.
+    if (siksin === 1) {
+      push('pyeoninDosik',
+        `원국의 식신이 하나뿐인데 ${luckStem}${luckBranch} 운에 편인이 들어 도식(倒食)합니다.`)
+    } else if (siksin === 2) {
+      push('pyeoninDosik',
+        `원국의 식신이 둘인데 ${luckStem}${luckBranch} 운에 편인이 듭니다. 하나뿐일 때보다는 덜 흔들립니다.`)
     }
   }
 
   // ⑥ 월지가 충을 맞거나, 원국 인성이 형충을 당할 때
   //   ⚠️ NatalRefs 에 월지가 없어 여기서 뽑는다. 공용 파일(hapchung.ts)은 안 건드린다.
   //      사주보기·궁합·출산택일이 함께 쓰기 때문이다. (작업지시 12장)
+  //   ★교재는 "월지가 충할 때" 와 "인성이 형충당할 때" 를 나란히 두었다.
+  //     전에는 else 로 묶어 앞의 것이 걸리면 뒤를 안 봤다. 둘 다 본다.
   const monthBranch = saju.find(p => p.pillar === '월주')?.branch ?? ''
+  const why6: string[] = []
   if (monthBranch && monthBranch !== '?' && isJijiChung(monthBranch, luckBranch)) {
-    push('woljiChung', `월지 ${monthBranch}${ga(monthBranch)} ${luckBranch} 운에 충을 맞습니다.`)
-  } else {
-    for (const i of n.inChars) {
-      if (isJijiChung(i, luckBranch) || isCheonganChung(i, luckStem)) {
-        push('woljiChung', `원국의 인성 ${i}${ga(i)} ${luckStem}${luckBranch} 운에 충을 맞습니다.`)
-        break
-      }
+    why6.push(`월지 ${monthBranch}${ga(monthBranch)} ${luckBranch} 운에 충을 맞습니다.`)
+  }
+  for (const i of n.inChars) {
+    if (isJijiChung(i, luckBranch) || isCheonganChung(i, luckStem)) {
+      why6.push(`원국의 인성 ${i}${ga(i)} ${luckStem}${luckBranch} 운에 충을 맞습니다.`)
+      break
+    }
+    // 형(刑) — 교재가 "형충" 이라 했으므로 삼형·자형도 본다
+    if (makesSamhyeong([...n.branches, i], luckBranch)) {
+      why6.push(`원국의 인성 ${i}${ga(i)} ${luckBranch} 운과 형(刑)을 이룹니다.`)
+      break
     }
   }
+  if (why6.length) push('woljiChung', why6.join(' '))
 
   return out
 }
