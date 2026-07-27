@@ -33,7 +33,7 @@
 //     계산 경로는 넘기지 않는다. 두 규칙을 통일할지 확인이 필요하다.
 //  ══════════════════════════════════════════════════════════════════════
 
-import { calcSolarTermDay } from './solartermCalc'
+import { calcSolarTermDay, calcSolarTermMoment } from './solartermCalc'
 
 const MONTH_TERM_NAME: Record<number, string> = {
   1:'소한', 2:'입춘', 3:'경칩', 4:'청명',
@@ -88,6 +88,55 @@ async function reportFailure(year: number, monthIdx: number, why: string) {
  * @param monthIdx 양력 월 (1~12)
  * @param apiKey   KASI 절기 API 키 (서버에서 전달). 없으면 계산으로 간다.
  */
+/**
+ * ★2026-07-27 — 절입 "순간"(날짜+시각)을 돌려준다.
+ *
+ * [왜 필요한가]
+ *   절기는 하루 중 어느 순간에 든다. 2026년 대설은 12월 7일 11시 53분이다.
+ *   그날 11시에 태어난 사람은 아직 亥월, 12시 30분에 태어난 사람은 子월이다.
+ *   그런데 지금까지 날짜만 보고 "당일은 이전 월" 로 뭉뚱그려 왔다.
+ *   → 절입일 당일 태생의 월주가 반쯤 틀려 있었다. 월주가 틀리면 명식이 통째로 틀린다.
+ *
+ * [KASI 가 이미 시각을 준다]
+ *   응답에 solHour·solMin 이 들어 있는데 getSolarTermDay 가 버리고 있었다.
+ *   (23시 이후면 다음날로 미는 데만 썼다)
+ *
+ * [실패하면]
+ *   calcSolarTermMoment 로 천문 계산한다. 하늘도마뱀과 분 단위로 맞는 것을 확인했다.
+ *     2026 대설  계산 12/7 11:50   앱 12/7 11:53
+ *     2027 소한  계산  1/5 23:07   앱  1/5 23:19
+ */
+export async function getSolarTermMoment(
+  year: number, monthIdx: number, apiKey: string,
+): Promise<{ day: number; hour: number; minute: number }> {
+  const fallback = () => {
+    const m = calcSolarTermMoment(year, monthIdx)
+    if (m) return { day: m.day, hour: Math.floor(m.hour), minute: Math.round((m.hour % 1) * 60) }
+    return { day: getFallbackDay(year, monthIdx), hour: 0, minute: 0 }
+  }
+  const termName = MONTH_TERM_NAME[monthIdx]
+  if (!termName || !apiKey) return fallback()
+  try {
+    const url = `https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/get24DivisionsInfo?solYear=${year}&solMonth=${String(monthIdx).padStart(2,'0')}&ServiceKey=${apiKey}`
+    const res = await fetch(url)
+    if (!res.ok) return fallback()
+    const xml = await res.text()
+    const items = xml.match(/<item>[\s\S]*?<\/item>/g) || []
+    for (const item of items) {
+      const name = item.match(/<dateName>([\s\S]*?)<\/dateName>/)?.[1]?.trim()
+      if (name !== termName) continue
+      const d = item.match(/<solDay>([\s\S]*?)<\/solDay>/)?.[1]?.trim()
+      if (!d) break
+      const h = item.match(/<solHour>([\s\S]*?)<\/solHour>/)?.[1]?.trim()
+      const mi = item.match(/<solMin>([\s\S]*?)<\/solMin>/)?.[1]?.trim()
+      // ⚠️ getSolarTermDay 의 "23시 이후는 다음날" 규칙은 여기서 쓰지 않는다.
+      //    그건 날짜만 다루던 시절의 어림이다. 여기서는 순간을 그대로 준다.
+      return { day: parseInt(d), hour: parseInt(h || '0'), minute: parseInt(mi || '0') }
+    }
+  } catch { /* 계산으로 간다 */ }
+  return fallback()
+}
+
 export async function getSolarTermDay(
   year: number, monthIdx: number, apiKey: string,
 ): Promise<number> {

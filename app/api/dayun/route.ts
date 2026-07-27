@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { calcDayunList } from '@/lib/saju/dayun'
+import { hourRepMinute } from '@/lib/saju/birthInput'
 
 export const runtime = 'nodejs'
 
@@ -13,6 +14,8 @@ export async function POST(req: NextRequest) {
     const {
       solarYear, solarMonth, solarDay,
       monthGanji, yearStem, gender, dayStem,
+      // ★2026-07-27 — 태어난 시(時) 인덱스(0~11). 절입일 당일 태생의 대운수를 가린다.
+      hourIdx,
     } = body || {}
 
     if (
@@ -32,7 +35,8 @@ export async function POST(req: NextRequest) {
       String(yearStem),
       String(gender),
       String(dayStem),
-      apiKey
+      apiKey,
+      hourIdx == null ? null : hourRepMinute(Number(hourIdx)),
     )
 
     return NextResponse.json({ dayunList })

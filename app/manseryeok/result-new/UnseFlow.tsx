@@ -32,6 +32,8 @@ interface Props {
   myMonthBranch?: string
   /** 내 일지 — 나 자신 쪽 반응 */
   myDayBranch?: string
+  /** ★태어난 시(0~11). 절입일 당일 태생의 대운수를 가리는 데 쓴다. */
+  hourIdx?: number | null
   /**
    * ★대운 목록을 밖에서 넘겨받는다 (2026-07-27).
    *   안 넘기면 전처럼 스스로 /api/dayun 을 부른다. 하위 호환이다.
@@ -71,7 +73,7 @@ interface Cell {
 
 export default function UnseFlow(props: Props) {
   const { solarYear, solarMonth, solarDay, monthGanji, yearStem, dayStem, gender, birthYear, currentYear,
-          myMonthBranch = '', myDayBranch = '', list } = props
+          myMonthBranch = '', myDayBranch = '', list, hourIdx = null } = props
 
   const [dayunList, setDayunList] = useState<DayunItem[]>([])
   const [selDaeun, setSelDaeun] = useState<number | null>(null)   // 대운 index
@@ -98,7 +100,7 @@ export default function UnseFlow(props: Props) {
     let ok = true
     fetch('/api/dayun', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ solarYear, solarMonth, solarDay, monthGanji, yearStem, gender, dayStem }),
+      body: JSON.stringify({ solarYear, solarMonth, solarDay, monthGanji, yearStem, gender, dayStem, hourIdx }),
     })
       .then(r => r.json())
       .then(d => {
@@ -116,7 +118,7 @@ export default function UnseFlow(props: Props) {
       .catch(() => { if (ok) setDayunList([]) })
     return () => { ok = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [solarYear, solarMonth, solarDay, monthGanji, yearStem, gender, dayStem, list])
+  }, [solarYear, solarMonth, solarDay, monthGanji, yearStem, gender, dayStem, list, hourIdx])
 
   if (dayunList.length === 0 || selDaeun === null) return null
 

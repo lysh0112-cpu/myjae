@@ -1,6 +1,7 @@
 // app/api/lunar/route.ts
 import { NextRequest, NextResponse } from "next/server"
 import { getYearGanji, getMonthGanji, getDayGanji } from "@/lib/saju/ganji"
+import { hourRepMinute } from "@/lib/saju/birthInput"
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -9,6 +10,12 @@ export async function GET(req: NextRequest) {
   const day = searchParams.get("day")
   const calType = searchParams.get("calType") || "양력"
   const leapMonth = searchParams.get("leapMonth") || "0"
+  // ★2026-07-27 — 태어난 시(時) 인덱스(0~11). 없으면 모름.
+  //   절입일 당일 태생의 년주·월주를 가리는 데 쓴다.
+  const hourParam = searchParams.get("hour")
+  const hourIdx = hourParam == null || hourParam === '' || hourParam === '모름'
+    ? null : parseInt(hourParam)
+  const birthMinute = hourIdx != null && !isNaN(hourIdx) ? hourRepMinute(hourIdx) : null
   const apiKey = process.env.KASI_API_KEY ?? ""
 
   if (!apiKey || !year || !month || !day) {

@@ -444,7 +444,10 @@ async function calcOnePerson(p: PersonRaw): Promise<PersonCalc | null> {
   const y = parseInt(p.year), m = parseInt(p.month), d = parseInt(p.day)
   if (!y || !m || !d) return null
   const leap = p.leapMonth || '0'
+  const hIdx = hourToIdx(p.hour)
   const url = `/api/lunar?year=${y}&month=${m}&day=${d}&calType=${calType}&leapMonth=${leap}`
+    // ★2026-07-27 — 태어난 시를 함께 넘긴다 (절입일 당일 태생 대비)
+    + (hIdx !== null ? `&hour=${hIdx}` : '')
   const res = await fetch(url)
   const data = await res.json()
   if (data.error) return null
@@ -456,7 +459,6 @@ async function calcOnePerson(p: PersonRaw): Promise<PersonCalc | null> {
     return { stem: '?', branch: '?' }
   }
   const year = split(data.yearGanji), month = split(data.monthGanji), day = split(data.dayGanji)
-  const hIdx = hourToIdx(p.hour)
   const hour = hIdx !== null ? calcHourPillar(day.stem, hIdx) : { stem: '?', branch: '?' }
   return {
     saju: [

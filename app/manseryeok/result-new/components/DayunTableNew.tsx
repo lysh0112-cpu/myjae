@@ -12,6 +12,8 @@ interface Props {
   gender: string; monthGanji: string; yearStem: string; dayStem: string
   currentYear: number; birthYear: number
   ilgan: string; yeonjji: string; iljji: string
+  /** ★태어난 시(0~11). 절입일 당일 태생의 대운수를 가린다. (2026-07-27) */
+  hourIdx?: number | null
 }
 
 const SE: Record<string,string> = {甲:'목',乙:'목',丙:'화',丁:'화',戊:'토',己:'토',庚:'금',辛:'금',壬:'수',癸:'수'}
@@ -36,7 +38,7 @@ function GJ({char,el,cur,sz=44}:{char:string;el:string;cur?:boolean;sz?:number})
   return box
 }
 
-export default function DayunTableNew({solarYear,solarMonth,solarDay,gender,monthGanji,yearStem,dayStem,currentYear,birthYear,ilgan,yeonjji,iljji}:Props) {
+export default function DayunTableNew({solarYear,solarMonth,solarDay,gender,monthGanji,yearStem,dayStem,currentYear,birthYear,ilgan,yeonjji,iljji,hourIdx=null}:Props) {
   const [list,setList]=useState<DayunItem[]>([])
   const [loading,setLoading]=useState(true)
   const [sel,setSel]=useState<number|null>(null)
@@ -48,12 +50,12 @@ export default function DayunTableNew({solarYear,solarMonth,solarDay,gender,mont
     if(!solarYear||!monthGanji||!yearStem||!dayStem)return
     let ok=true; setLoading(true)
     fetch('/api/dayun',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({solarYear,solarMonth,solarDay,monthGanji,yearStem,gender,dayStem})})
+      body:JSON.stringify({solarYear,solarMonth,solarDay,monthGanji,yearStem,gender,dayStem,hourIdx})})
       .then(r=>r.json()).then(d=>{if(ok)setList(d.dayunList||[])})
       .catch(()=>{if(ok)setList([])})
       .finally(()=>{if(ok)setLoading(false)})
     return()=>{ok=false}
-  },[solarYear,solarMonth,solarDay,monthGanji,yearStem,gender,dayStem])
+  },[solarYear,solarMonth,solarDay,monthGanji,yearStem,gender,dayStem,hourIdx])
 
   const rev=[...(list||[])].reverse()
   useEffect(()=>{

@@ -53,7 +53,10 @@ export async function calcPerson(p: PersonRaw): Promise<PersonCalc | null> {
 
   const calType = p.calType || '양력'
   const leap = p.leapMonth || '0'
+  const hIdx = hourToIdx(p.hour)
   const url = `/api/lunar?year=${y}&month=${m}&day=${d}&calType=${calType}&leapMonth=${leap}`
+    // ★2026-07-27 — 태어난 시를 함께 넘긴다 (절입일 당일 태생 대비)
+    + (hIdx !== null ? `&hour=${hIdx}` : '')
 
   let data: Record<string, unknown>
   try {
@@ -68,7 +71,6 @@ export async function calcPerson(p: PersonRaw): Promise<PersonCalc | null> {
   const month = splitGanji(String(data.monthGanji ?? ''))
   const day = splitGanji(String(data.dayGanji ?? ''))
 
-  const hIdx = hourToIdx(p.hour)
   const hour = hIdx !== null
     ? calcHourPillar(day.stem, hIdx)
     : { stem: '?', branch: '?' }

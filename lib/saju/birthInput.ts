@@ -42,6 +42,31 @@ const HOUR_START_MIN: number[] = HOUR_BRANCHES.map((_, i) => {
 const pad = (n: number) => String(n).padStart(2, '0')
 const fmt = (min: number) => `${pad(Math.floor(min / 60))}:${pad(min % 60)}`
 
+/**
+ * ★그 시(時)의 한가운데 시각 — 자정부터 몇 분인가 (2026-07-27)
+ *
+ * 우리는 태어난 시각을 분 단위로 받지 않고 12지지 시(두 시간 폭)로만 받는다.
+ * 그런데 절기는 하루 중 어느 순간에 들기 때문에(예: 대설 11시 53분),
+ * 절입일 당일 태생의 월주를 가리려면 대표 시각이 있어야 한다.
+ *   午시(11:30~13:30) → 12:30    子시(23:30~01:30) → 00:30
+ * 한가운데를 쓰는 이유는 어느 한쪽으로 기울지 않기 때문이다.
+ *
+ * ⚠️ 절입 순간이 그 시 안에 들면(예: 午시생인데 절기가 11:53) 반이 갈린다.
+ *    그때는 태어난 분(分)을 알아야 정확하다. isAmbiguousHour() 로 가려낸다.
+ */
+export function hourRepMinute(idx: number): number | null {
+  if (idx < 0 || idx > 11) return null
+  return (HOUR_START_MIN[idx] + 60) % 1440
+}
+
+/** 절입 순간이 그 시(時) 안에 들어 반이 갈리는가 */
+export function isAmbiguousHour(idx: number, termMinute: number): boolean {
+  if (idx < 0 || idx > 11) return false
+  const s = HOUR_START_MIN[idx]
+  const e = (s + 120) % 1440
+  return s < e ? (termMinute > s && termMinute < e) : (termMinute > s || termMinute < e)
+}
+
 /** '子시(23:30~01:30)' 형태의 표준 라벨 (공백 없음) */
 export function hourLabelOf(idx: number): string {
   const s = HOUR_START_MIN[idx]

@@ -326,7 +326,7 @@ function ResultNewContent() {
     let ok = true
     fetch('/api/dayun', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ solarYear, solarMonth, solarDay, monthGanji, yearStem, gender, dayStem }),
+      body: JSON.stringify({ solarYear, solarMonth, solarDay, monthGanji, yearStem, gender, dayStem, hourIdx }),
     }).then(r => r.json())
       .then(d => { if (ok) setDayunList(d.dayunList || []) })
       .catch(() => { if (ok) setDayunList([]) })
@@ -593,7 +593,7 @@ function ResultNewContent() {
               monthGanji={monthGanji} yearStem={yearStem} dayStem={dayStem}
               gender={gender} birthYear={yearParam} currentYear={currentYear}
               myMonthBranch={monthBranchForNote ?? ''} myDayBranch={iljji}
-              list={dayunList}
+              list={dayunList} hourIdx={hourIdx}
             />
           </Section>
         )}

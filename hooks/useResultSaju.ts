@@ -26,6 +26,8 @@ export function useResultSaju(
       try {
         // ✅ 한 번의 API 호출로 처리
         const apiUrl = `/api/lunar?year=${yearParam}&month=${monthParam}&day=${dayParam}&calType=${calType}&leapMonth=${leapMonth}`
+          // ★2026-07-27 — 태어난 시를 함께 넘긴다. 절입일 당일 태생의 년주·월주가 갈린다.
+          + (hourIdx !== null ? `&hour=${hourIdx}` : '')
         const res = await fetch(apiUrl)
         const d = await res.json()
         if (d.error) { console.error('API 오류:', d.error); return }

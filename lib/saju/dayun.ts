@@ -3,7 +3,7 @@
 // [수정] 대운수(첫 대운 나이)를 양력 생일 + 실제 절입일 기준으로 정확히 계산
 
 import { CHEONGAN as STEMS, JIJI as BRANCHES } from './constants'
-import { getSolarTermDay } from './solarterm'
+import { getSolarTermMoment } from './solarterm'
 
 export interface DayunItem {
   age: number
@@ -109,66 +109,65 @@ export async function calcDayunStartAge(
   solarMonth: number,
   solarDay: number,
   isForward: boolean,
-  apiKey: string
+  apiKey: string,
+  birthMinute?: number | null,
 ): Promise<number> {
-  let days: number
-  if (isForward) {
-    // ★2026-07-27 고침 — 순행은 "다음 절입일"까지인데, 그 다음 절입일이
-    //   반드시 다음 달인 것은 아니다.
-    //
-    //   [무엇이 틀렸었나]
-    //     생일이 그 달 절입일보다 앞이면(예: 2/3 생, 입춘 2/4),
-    //     다음 절기는 **이번 달 입춘**이지 다음 달 경칩이 아니다.
-    //     그런데 무조건 solarMonth + 1 을 봐서 한 달을 통째로 더 셌다.
-    //
-    //       1985-02-03 순행   맞는 값 입춘 2/4 까지 1일  → 0
-    //                        틀린 값 경칩 3/6 까지 31일 → 10   (10년 밀림)
-    //
-    //   [어떻게 드러났나]
-    //     하늘도마뱀 앱과 대조하다 찾았다. 명식 네 기둥은 완전히 같은데
-    //     대운 칸만 통째로 밀려 있었다. 1985-02-03(남)·1990-03-05(남) 두 사례에서 재현.
-    //     1950~2020 전수로 재니 순행인 사람의 19.4%, 손님 전체의 약 10% 가 어긋나 있었다.
-    //     가장 크게 벌어진 차이는 11년.
-    //
-    //   [고친 방식]
-    //     이번 달 절입일을 먼저 본다. 생일이 그보다 앞이면 그것이 다음 절기다.
-    const termThis = await getSolarTermDay(solarYear, solarMonth, apiKey)
-    if (solarDay < termThis) {
-      days = daysBetween(solarYear, solarMonth, solarDay, solarYear, solarMonth, termThis)
-    } else {
-      let nm = solarMonth + 1
-      let ny = solarYear
-      if (nm > 12) { nm = 1; ny += 1 }
-      const termDay = await getSolarTermDay(ny, nm, apiKey)
-      days = daysBetween(solarYear, solarMonth, solarDay, ny, nm, termDay)
-    }
-  } else {
-    // 역행: 이번 달 절입일까지 거슬러. 생일이 절입일 전이면 직전 달 절기로.
-    const termThis = await getSolarTermDay(solarYear, solarMonth, apiKey)
-    const diffThis = daysBetween(solarYear, solarMonth, termThis, solarYear, solarMonth, solarDay)
-    if (diffThis >= 0) {
-      days = diffThis
-    } else {
-      let pm = solarMonth - 1
-      let py = solarYear
-      if (pm < 1) { pm = 12; py -= 1 }
-      const termPrev = await getSolarTermDay(py, pm, apiKey)
-      days = daysBetween(py, pm, termPrev, solarYear, solarMonth, solarDay)
-    }
-  }
-  if (days < 0) days = 0
-  // ★2026-07-27 — 최소값을 1 에서 0 으로 내렸다. (대표님 확정)
+  // ★2026-07-27 — 절입 "시각"까지 본다.
   //
-  //   [무엇이 문제였나]
-  //     절입일 바로 앞뒤에 태어나면 날수가 0~1 일이라 대운수가 0 이 나온다.
-  //     그런데 Math.max(1, …) 로 1 까지 올려 왔다. 한 살씩 밀려 있었다.
+  //   [무엇이 틀렸었나]
+  //     ① 순행일 때 무조건 "다음 달" 절입일을 봤다. 생일이 그 달 절입일보다 앞이면
+  //        다음 절기는 이번 달인데 한 달을 통째로 더 셌다. (손님의 약 9%, 최대 11년)
+  //     ② 절입일 "당일" 을 무조건 지난 것으로 봤다. 절기는 하루 중 어느 순간에 든다.
+  //        2026년 입동은 11월 7일 18시 51분이다. 그날 12시 30분생은 아직 戌월이다.
   //
   //   [어떻게 확인했나]
-  //     하늘도마뱀 앱과 열 사례를 대조했다. 명식·공망·순역은 9/9 완전히 같았고,
-  //     대운수만 여섯 건에서 앱 0 · 우리 1 로 갈렸다. 원인이 전부 이 한 줄이었다.
-  //       1985-02-03 남 · 1990-03-05 남 · 1990-03-07 여 · 2015-09-08 남
-  //       2020-01-05 여 · 2020-05-04 남
-  //     0 으로 내리니 열 사례 전부 앱과 같아졌다.
+  //     하늘도마뱀 앱과 열아홉 사례를 대조했다. 두 건이 이 ② 때문에 어긋났다.
+  //       2026-11-07 12:30 여 · 2027-01-05 12:30 여
+  //
+  //   [지금 — 하늘도마뱀 18사례 전부 일치하는 방식]
+  //     ① 어느 절기가 다음/지난 절기인지는 **시각까지** 보고 가른다.
+  //     ② 날수는 **날짜로만** 센다.
+  //     처음에는 ②도 시분까지 소수로 셌는데, 그러면 두 건이 어긋났다
+  //     (1985-02-05·2002-12-11). 앱이 화면에 적는 소수값(大 9.6 등)과
+  //     우리 값이 최대 0.42 벌어졌고 그 차이가 반올림을 뒤집었다.
+  //     우리 절입 시각은 앱과 12분 이내로 맞으니, 앱이 날수를 날짜로 세는 것으로 본다.
+  //
+  //     birthMinute 이 없으면(시 모름) 예전처럼 당일=아직 안 지난 것으로 본다.
+  const bMin = birthMinute ?? 0
+  /** 그 절기를 이미 지났는가 — 여기만 시각을 본다 */
+  const passed = (t: { day: number; hour: number; minute: number }) =>
+    solarDay > t.day ||
+    (solarDay === t.day && birthMinute != null && bMin >= t.hour * 60 + t.minute)
+  /** 태어난 날에서 그 절입일까지 며칠인가 — 날짜로만 센다 */
+  const gapDays = (
+    ty: number, tm: number, t: { day: number },
+  ) => daysBetween(solarYear, solarMonth, solarDay, ty, tm, t.day)
+
+  const termThis = await getSolarTermMoment(solarYear, solarMonth, apiKey)
+  let days: number
+
+  if (isForward) {
+    // 다음 절입 순간까지. 아직 이번 달 절기를 안 지났으면 그것이 다음 절기다.
+    if (!passed(termThis)) {
+      days = gapDays(solarYear, solarMonth, termThis)
+    } else {
+      let nm = solarMonth + 1, ny = solarYear
+      if (nm > 12) { nm = 1; ny += 1 }
+      days = gapDays(ny, nm, await getSolarTermMoment(ny, nm, apiKey))
+    }
+  } else {
+    // 지난 절입 순간부터. 아직 이번 달 절기를 안 지났으면 직전 달 절기가 지난 절기다.
+    if (passed(termThis)) {
+      days = -gapDays(solarYear, solarMonth, termThis)
+    } else {
+      let pm = solarMonth - 1, py = solarYear
+      if (pm < 1) { pm = 12; py -= 1 }
+      days = -gapDays(py, pm, await getSolarTermMoment(py, pm, apiKey))
+    }
+  }
+
+  if (days < 0) days = 0
+  // 3일 = 1년. 최소 0. (하늘도마뱀과 맞춤 — 2026-07-27 대표님 확정)
   return Math.max(0, Math.round(days / DAYS_PER_DAYUN_YEAR))
 }
 
@@ -184,7 +183,9 @@ export async function calcDayunList(
   yearStem: string,
   gender: string,
   dayStem: string,
-  apiKey: string
+  apiKey: string,
+  /** ★태어난 시각(자정부터 몇 분). 절입일 당일 태생을 가리는 데 쓴다. */
+  birthMinute?: number | null,
 ): Promise<DayunItem[]> {
   const isForward = isForwardDayun(yearStem, gender)
 
@@ -193,7 +194,7 @@ export async function calcDayunList(
   let stemIdx = HEAVENLY_STEMS.indexOf(monthStem)
   let branchIdx = EARTHLY_BRANCHES.indexOf(monthBranch)
 
-  const startAge = await calcDayunStartAge(solarYear, solarMonth, solarDay, isForward, apiKey)
+  const startAge = await calcDayunStartAge(solarYear, solarMonth, solarDay, isForward, apiKey, birthMinute)
 
   const list: DayunItem[] = []
   for (let i = 0; i < 10; i++) {
