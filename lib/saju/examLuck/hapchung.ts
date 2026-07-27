@@ -12,7 +12,9 @@
 //   공용 파일을 고치면 사주보기·궁합·출산택일이 함께 흔들리므로,
 //   career/ 와 같은 방식으로 여기서 감싼다. (29부 5장)
 
-import { sipsinOf } from '../yongsinNew'
+// ★2026-07-27 — sipsinOf 를 직접 부르지 않는다. 지지를 못 읽어 조용히 '' 를 준다.
+//   반드시 sipsinOfChar 를 쓸 것. 까닭은 ./sipsin.ts 머리말에 적어 두었다.
+import { sipsinOfChar } from './sipsin'
 import type { Pillar } from './types'
 
 // ── 표 ──────────────────────────────────────────────────────────
@@ -109,7 +111,9 @@ export function readNatal(saju: Pillar[]): NatalRefs {
     for (const p of saju) {
       for (const ch of [p.stem, p.branch]) {
         if (!ch || ch === '?') continue
-        const s = sipsinOf(dayStem, ch)
+        // ★2026-07-27 — 전에는 sipsinOf 라 지지가 전부 '' 였다.
+        //   관성이 일지·월지에만 있는 사람이 "관성 없는 사람"으로 처리됐다.
+        const s = sipsinOfChar(dayStem, ch)
         if (s === '정관' || s === '편관') gwanChars.push(ch)
         else if (s === '정인' || s === '편인') inChars.push(ch)
         else if (s === '비견' || s === '겁재') bigyeopChars.push(ch)
@@ -122,7 +126,7 @@ export function readNatal(saju: Pillar[]): NatalRefs {
 /** 일간과 그해 관성이 합을 하는가 — 교재가 합격 1순위로 꼽은 자리 */
 export function ilganGwanHap(n: NatalRefs, yStem: string): boolean {
   if (!n.dayStem || !yStem) return false
-  const s = sipsinOf(n.dayStem, yStem)
+  const s = sipsinOfChar(n.dayStem, yStem)   // 천간이라 결과는 전과 같다
   if (s !== '정관' && s !== '편관') return false
   return isCheonganHap(n.dayStem, yStem)
 }
@@ -130,7 +134,7 @@ export function ilganGwanHap(n: NatalRefs, yStem: string): boolean {
 /** 일간과 그해 관성이 충을 하는가 */
 export function ilganGwanChung(n: NatalRefs, yStem: string): boolean {
   if (!n.dayStem || !yStem) return false
-  const s = sipsinOf(n.dayStem, yStem)
+  const s = sipsinOfChar(n.dayStem, yStem)   // 천간이라 결과는 전과 같다
   if (s !== '정관' && s !== '편관') return false
   return isCheonganChung(n.dayStem, yStem)
 }

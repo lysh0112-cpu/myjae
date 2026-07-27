@@ -15,7 +15,8 @@
 
 import { calcSeyunList } from '../dayun'
 import { exactAge, pickCurrentDayun, dayunOrder, type DayunLike } from '../ageDayun'
-import { sipsinOf } from '../yongsinNew'
+// ★2026-07-27 — sipsinOf 는 지지를 못 읽는다(조용히 '' 를 준다). ./sipsin.ts 참조
+import { sipsinOfChar } from './sipsin'
 import { getGongmang } from '../gongmang'
 import { GOOD, BAD, NEUTRAL, STUDY_TREND } from './tables/rules'
 import type { ExamInput, YearLuck, Grade, Pillar } from './types'
@@ -60,8 +61,10 @@ export function judgeYear(
     }
   }
 
-  const ganSipsin = n.dayStem ? sipsinOf(n.dayStem, yStem) : ''
-  const jiSipsin = n.dayStem ? sipsinOf(n.dayStem, yBranch) : ''
+  const ganSipsin = n.dayStem ? sipsinOfChar(n.dayStem, yStem) : ''
+  // ★2026-07-27 — 전에는 sipsinOf 라 지지 십신이 언제나 '' 였다.
+  //   정관운·정인운·겁재운 같은 규칙이 천간에서만 걸리고 있었다.
+  const jiSipsin = n.dayStem ? sipsinOfChar(n.dayStem, yBranch) : ''
   const both = [ganSipsin, jiSipsin]
 
   // ── 유리 ──────────────────────────────────────────────────
