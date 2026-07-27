@@ -240,8 +240,9 @@ export function judgeGyeyeol(input: CareerInput): CareerCard {
   reasons.push(`토 ${y.to}점 (양토 ${y.toYang}자 · 음토 ${y.toEum}자) — 대표로 삼지 않음`)
   if (y.arts) reasons.push('화(火)가 발달 이상이라 예체능 소질을 함께 짚어 주세요. (교재 129쪽 "예체능 계열 적성=火")')
   if (gwa.length) {
-    reasons.push(`학과 추림 — ${GWA.length}개 중 문턱(${GWA_MIN}점) 통과 상위 ${gwa.length}개`)
-    for (const h of gwa) reasons.push(`  ${h.row.name} ${h.score}점 ← ${h.sources.join(' + ')} (${h.row.src})`)
+    reasons.push(`학과 추림 — 표 ${GWA.length}개 중 상위 ${gwa.length}개`)
+    reasons.push('★[내부순위] 는 순서를 고르려고 매긴 수치입니다. 교재에 없습니다. 글에 절대 쓰지 마세요.')
+    for (const h of gwa) reasons.push(`  ${h.row.name} [내부순위 ${h.score}] ← ${h.sources.join(' + ')} (${h.row.src})`)
     reasons.push(`근거 ${GWA_SRC}. 무게 — 대표 오행 1위 3 · 2위 2 · 용신 1 · 계열 일치 1`)
     reasons.push('★학과는 위 목록에 있는 것만 쓰세요. 없는 학과를 지어내지 마세요.')
     reasons.push('★학과를 정해 주지 마세요. "이런 전공들이 이 결과 가깝다" 정도로만 쓰고, 이 밖에도 길이 많다고 반드시 덧붙이세요.')
@@ -250,7 +251,7 @@ export function judgeGyeyeol(input: CareerInput): CareerCard {
     reasons.push('학과 표가 아직 없어 학과는 다루지 않습니다. 학과 이름을 지어내지 마세요.')
   }
   reasons.push('근거 : 교재 133쪽 그룹 비교 / 129쪽 "문과=木 이과=金 예체능=火, 70% 적용"')
-  reasons.push('교재 129쪽 — 계열 비율은 70%만 적용되고 30%는 예외입니다. 화면에서는 숫자가 겹쳐 헷갈려 뺐으니, 단정하지 말라는 결로만 담아 주세요.')
+  reasons.push('교재 129쪽은 계열 비율에 예외가 많다고 합니다. ★단 이 대목에는 이미 비율이 여럿 나오므로, 70%·30% 같은 숫자를 또 쓰지 말고 "단정할 수 없다"는 결로만 담으세요.')
   if (input.target === 'student') {
     // ★대학은 짚지 않는다 (대표님 판단 2026-07-27)
     //   교재 129쪽에 "용신·희신에 해당하는 대학에 지원하면 유리하다"는 대목이 있고

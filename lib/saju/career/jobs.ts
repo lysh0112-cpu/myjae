@@ -199,9 +199,10 @@ export function judgeJobs(input: CareerInput): CareerCard {
     lines.push('여러 자리에서 거듭 나온 순서입니다. 이 안에서 마음이 가는 것을 고르시면 됩니다.')
   }
 
-  reasons.push(`교차 추림 — 후보 ${pool}가지 중 문턱(${JOB_MIN}점) 통과 ${hits.length}가지`)
+  reasons.push(`교차 추림 — 후보 ${pool}가지 중 ${hits.length}가지가 문턱을 넘었습니다.`)
+  reasons.push('★[내부순위] 는 우리가 순서를 고르려고 매긴 수치입니다. 교재에 없습니다. 글에 절대 쓰지 마세요.')
   for (const h of hits.slice(0, 15)) {
-    reasons.push(`  ${h.label} ${h.score}점(원 ${h.raw} · ${h.freq}벌) ← ${h.sources.map(s => `${s.label}(${s.weight})`).join(' + ')}`)
+    reasons.push(`  ${h.label} [내부순위 ${h.score}] ← ${h.sources.map(s => `${s.label}`).join(' + ')}`)
   }
   reasons.push('무게 : 25칸 격자 3 · 육친 2 · 오행 2 · 격국 2 · 일주 2 · 신살 2~3 · 용신 1 (교재 133쪽 강점 70 : 용신 30)')
   reasons.push('교재 목록 59벌에 두루 나오는 흔한 직업(의사·요식업·상담사 등)은 무게를 덜었습니다.')
