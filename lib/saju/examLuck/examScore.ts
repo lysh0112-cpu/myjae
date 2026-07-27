@@ -18,7 +18,9 @@ import { exactAge, pickCurrentDayun, dayunOrder, type DayunLike } from '../ageDa
 // ★2026-07-27 — sipsinOf 는 지지를 못 읽는다(조용히 '' 를 준다). ./sipsin.ts 참조
 import { sipsinOfChar } from './sipsin'
 import { getGongmang } from '../gongmang'
-import { GOOD, BAD, NEUTRAL, STUDY_TREND } from './tables/rules'
+import { GOOD, BAD, NEUTRAL, STUDY_TREND, PURPOSE_BONUS } from './tables/rules'
+// ★2026-07-27 — 관성의 12운성을 보려면 필요하다. 원본 195쪽 「관성이 12운성 상 관대에 해당하거나」
+import { getUnsung } from '../unsung'
 import type { ExamInput, YearLuck, Grade, Pillar } from './types'
 import {
   readNatal, ilganGwanHap, ilganGwanChung, cheonhapJihap, cheongeukJichung,
@@ -69,6 +71,12 @@ export function judgeYear(
   year: number,
   yStem: string,
   yBranch: string,
+  /**
+   * ★무엇을 보러 왔는가 — 원본 195쪽
+   *   「합격운은 인성운이 더 중요하고, 취업운은 관성운이 더 중요하며」
+   *   안 넘기면 어느 쪽에도 힘을 더 싣지 않는다(예전 동작).
+   */
+  purpose?: 'exam' | 'job',
 ): YearLuck {
   const n = readNatal(saju)
   const hits: YearLuck['hits'] = []
@@ -102,6 +110,13 @@ export function judgeYear(
   if (both.includes('편인')) add('편인운')
   if (both.includes('식신')) add('식신운')
 
+  // ★관성이 12운성으로 관대(冠帶)에 드는가 — 원본 195쪽
+  //   OCR 이 「상관대지」 로 깨뜨려 오래 빠져 있던 자리다. (CONFLICT ②)
+  //   그해 지지를 일간 기준 12운성으로 보아, 관성 자리가 관대면 힘이 실린다.
+  if (n.dayStem && (both.includes('정관') || both.includes('편관'))) {
+    if (getUnsung(n.dayStem, yBranch) === '관대') add('관성관대')
+  }
+
   // ── 불리 ──────────────────────────────────────────────────
   // ★상관정관 — 교재가 가장 불리하다고 한 자리
   if (both.includes('상관') && (both.includes('정관') || n.gwanChars.length > 0)) add('상관정관')
@@ -126,6 +141,15 @@ export function judgeYear(
 
   // ── 시험과 무관하지만 알려 주는 것 ──────────────────────────
   if (makesSamhyeong(n.branches, yBranch)) add('삼형살')
+
+  // ★보러 온 것에 따라 힘을 더 싣는다 (원본 195쪽)
+  if (purpose) {
+    const pb = PURPOSE_BONUS[purpose]
+    if (both.some(x => (pb.sipsins as string[]).includes(x))) {
+      hits.push({ key: purpose === 'exam' ? '합격은 인성' : '취업은 관성',
+        say: pb.say, weight: pb.bonus, src: '교재 195쪽' })
+    }
+  }
 
   const score = hits.reduce((s, h) => s + h.weight, 0)
   return {
@@ -168,6 +192,8 @@ export function blendWithDayun(
  */
 export function judgeYears(
   input: ExamInput, thisYear: number, dayunList?: DayunLike[],
+  /** 시험을 보러 왔나, 일자리를 보러 왔나 (원본 195쪽) */
+  purpose?: 'exam' | 'job',
 ): YearLuck[] {
   const span = input.span ?? 3
   const day = input.saju.find(p => p.pillar === '일주')
@@ -188,7 +214,7 @@ export function judgeYears(
   return all
     .filter(s => s.year >= thisYear && s.year < thisYear + span)
     .map(s => {
-      const base = judgeYear(input.saju, s.year, s.cheongan, s.jiji)
+      const base = judgeYear(input.saju, s.year, s.cheongan, s.jiji, purpose)
       if (!dayunList?.length) return base
       // 그해에 몇 살이었나 → 그때 흐르던 대운
       const ageThatYear = s.year - input.birthYear

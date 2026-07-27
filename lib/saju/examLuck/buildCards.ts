@@ -52,11 +52,23 @@ function elementCount(saju: ExamInput['saju']): Record<string, number> {
 // ① 앞으로 몇 해 — 이 서비스의 얼굴
 // ══════════════════════════════════════════════════════════════
 
-export function cardYears(years: YearLuck[], target: ExamTarget): ExamCard {
+export function cardYears(
+  years: YearLuck[], target: ExamTarget,
+  /** 시험을 보러 왔나, 일자리를 보러 왔나 — 원본 195쪽 */
+  purpose?: 'exam' | 'job',
+): ExamCard {
   if (!years.length) return { key: 'years', title: '앞으로의 흐름', lines: [], reasons: [] }
   const best = [...years].sort((a, b) => b.score - a.score)[0]
   const lines = years.map(y =>
     `${y.year}년 ${y.stem}${y.branch} — ${y.grade}. ${y.hits[0]?.say ?? '크게 걸리는 것도, 크게 밀어 주는 것도 없는 해입니다.'}`)
+  // ★교재 195쪽 — 「합격운은 인성운이 더 중요하고, 취업운은 관성운이 더 중요하며」
+  if (purpose === 'exam') lines.push('합격운은 인성(배움의 기운)이 더 중요합니다. 배운 것이 몸에 붙는 해에 힘이 실려요.')
+  else if (purpose === 'job') lines.push('취업운은 관성(자리의 기운)이 더 중요합니다. 자리가 나를 부르는 해에 힘이 실려요.')
+
+  // ★교재 195쪽 맺음 — 이분법으로 나누지 말라는 대목. 반드시 붙인다.
+  lines.push('합격과 불합격을 둘로 갈라 보는 건 위험합니다. 사주의 아쉬운 점은 '
+    + '본인의 노력과 의지로 충분히 넘어설 수 있으니, 참고만 하시고 일희일비하지 않으셔도 됩니다.')
+
   lines.push(
     target === 'student'
       ? `이 가운데 ${best.year}년에 힘이 가장 실립니다. 다만 사주가 말해 줄 수 있는 건 흐름이고, 결과를 만드는 건 준비한 시간이에요.`
