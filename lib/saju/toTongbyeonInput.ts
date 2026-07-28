@@ -32,10 +32,8 @@ import { CHEONGAN_TRAIT } from '@/lib/saju/cheonganTrait'
 import { OHAENG_TRAIT } from '@/lib/saju/ohaengTrait'
 import { OHAENG_NATURE } from '@/lib/saju/ohaengNature'
 import { OHAENG_25 } from '@/lib/saju/ohaengTable25'
-import { findChungByChars } from '@/lib/saju/chungMeaning'
-import { findHap } from '@/lib/saju/hapMeaning'
 import { SAL_TABLE } from '@/lib/saju/sinsalTable'
-import { hyeongPaHaeBrief, needsOf, CATEGORY_NEEDS, type Need } from '@/lib/saju/jaryoPick'
+import { hyeongPaHaeBrief, hapChungBrief, needsOf, CATEGORY_NEEDS, type Need } from '@/lib/saju/jaryoPick'
 import { grade as ohaengGrade } from '@/lib/saju/simsanOhaeng'
 
 // 천간 → 오행
@@ -325,42 +323,21 @@ function buildOhaengGrade(score: Record<Ohaeng, number>, target: Target, need: S
   return `[오행이 넘치거나 모자란 자리 — 교재 20~28쪽. 넘치는 것도 모자란 것도 결이지 흠이 아니다]\n${lines.join('\n')}`
 }
 
-/** 합과 충 — 교재 78~86쪽. 원국에 실제로 선 것만 */
+/**
+ * 합과 충 — 교재 78~86쪽. 원국에 실제로 선 것만.
+ *
+ * ★2026-07-28 — 여기 있던 합·충 반복문을 걷어내고 jaryoPick.hapChungBrief 를 부릅니다.
+ *   같은 계산이 두 벌이면 언젠가 한쪽만 고쳐집니다. (교훈 BQ)
+ *   실제로 沖의 자리(位) 판정을 넣을 때 이 사본이 그대로 남아 있어
+ *   사주보기 통변만 예전 말을 낼 뻔했습니다.
+ */
 function buildHapChung(saju: PillarInput[], target: Target, need: Set<Need>): string {
   const wantHap = need.has('합'); const wantChung = need.has('충') || need.has('건강')
   if (!wantHap && !wantChung) return ''
-  const branches = saju.map(p => p.branch).filter(Boolean)
-  const stems = saju.map(p => p.stem).filter(Boolean)
   const lines: string[] = []
-  const seen = new Set<string>()
-
-  if (wantChung) {
-    for (let i = 0; i < branches.length; i++) {
-      for (let j = i + 1; j < branches.length; j++) {
-        const r = findChungByChars(branches[i], branches[j])
-        if (!r || seen.has(r.key)) continue
-        seen.add(r.key)
-        const say = r.say.filter(t => !isRule(t)).slice(0, 2)
-        // 건강을 물었을 때만 장부 줄까지 준다
-        const extra = need.has('건강') && target === 'adult' ? (r.sayAdult ?? []).slice(0, 2) : []
-        lines.push(`- ${r.key}${r.alias ? `(${r.alias})` : ''} — ${[...say, ...extra].join(' ')}`)
-      }
-    }
-  }
-  if (wantHap) {
-    const PAIRS: [string, string, string][] = [
-      ['甲', '己', '甲己合'], ['乙', '庚', '乙庚合'], ['丙', '辛', '丙辛合'],
-      ['丁', '壬', '丁壬合'], ['戊', '癸', '戊癸合'],
-    ]
-    for (const [a1, b1, key] of PAIRS) {
-      if (!stems.includes(a1) || !stems.includes(b1) || seen.has(key)) continue
-      const r = findHap(key); if (!r) continue
-      seen.add(key)
-      const say = r.say.filter(t => !isRule(t)).slice(0, 2)
-      const extra = target === 'adult' ? (r.sayAdult ?? []).slice(0, 1) : []
-      lines.push(`- ${r.key}${r.name ? `(${r.name})` : ''} — ${[...say, ...extra].join(' ')}`)
-    }
-  }
+  for (const t of hapChungBrief(saju, target, {
+    합: wantHap, 충: wantChung, 건강: need.has('건강'),
+  })) lines.push(`- ${t}`)
   // ★2026-07-28 — 형·파·해·원진 (교재 87~93쪽). 합충과 한 벌이다.
   for (const t of hyeongPaHaeBrief(saju, target).slice(0, 4)) lines.push(`- ${t}`)
   if (!lines.length) return ''

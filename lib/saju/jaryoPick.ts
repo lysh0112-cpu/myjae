@@ -21,6 +21,8 @@ import { findChungByChars } from './chungMeaning'
 import { findHap } from './hapMeaning'
 import { SAL_TABLE } from './sinsalTable'
 import { findRel, findSamhyeong, relLines } from './hyeongPaHae'
+// ★자리별 沖 판정 (교재 121쪽). 표를 두 벌로 두지 않으려고 여기서 부른다. (교훈 BQ)
+import { chungInSaju, toJiName } from './yukchinRule'
 
 export type Pill = { pillar: string; stem: string; branch: string }
 export type Target = 'student' | 'adult'
@@ -75,19 +77,63 @@ export function ohaengBrief(
   return out
 }
 
-/** 원국에 실제로 선 합·충만 */
+/**
+ * 원국에 실제로 선 합·충만.
+ *
+ * ★2026-07-28 — 沖이 **자리(位)** 를 보게 고쳤습니다.
+ *
+ *   [무엇이 문제였나]
+ *     교재(명리적성 121쪽)는 沖을 자리마다 다르게 읽습니다.
+ *       月支沖 긍정 70%(이동·스카우트·사업 시작. "부정적으로 보지 않는다")
+ *       年支沖 긍정 · 日支沖 100% 부정(배우자궁) · 時支沖 50% 긍정
+ *       영향력은 월일 〉 일시 〉 연월
+ *     그런데 이 규칙이 chungMeaning.ts 의 original 칸에만 적혀 있었고
+ *     (original 은 화면·재료에 안 나갑니다),
+ *     여기서는 saju.map(p => p.branch) 로 **자리를 버리고** 글자만 봤습니다.
+ *     그래서 년월沖(좋은 자리)인 손님도 "매매나 계약에 불리합니다" 를 들었습니다.
+ *
+ *   [얼마나 퍼져 있었나 — 지지 네 자리 전수 20,736가지]
+ *     沖이 있는 명식                       8,364 (40.3%)
+ *     「좋게 읽어야 할 沖」이 섞인 명식      4,752 (22.9%)  ← 다섯에 한 명
+ *     沖이 전부 좋은 쪽인데 다 나쁘게 나감  3,600 (17.4%)  ← 여섯에 한 명
+ *     31부에서 고친 대운수 순행 버그(약 9%)보다 큽니다.
+ *
+ *   [어떻게 고쳤나]
+ *     · saju 를 그대로 돌며 pillar 를 살립니다. 부르는 쪽은 한 글자도 안 고쳤습니다.
+ *     · 자리 판정은 yukchinRule.ts 의 CHUNG_POSITION 을 씁니다 (표를 두 벌로 두지 않음).
+ *     · 일지가 끼면 '부정' → 지금까지 쓰던 chungMeaning 의 say 를 그대로 씁니다.
+ *       일지가 안 끼면 '변동' → 교재대로 이동·변동 쪽으로 돌립니다.
+ *     · 영향력이 큰 것부터 냅니다 (월일 〉 일시 〉 연월).
+ *
+ *   ⚠️ 「긍정 70%」를 "좋습니다" 로 못 박지 않았습니다. 나머지 30%가 있습니다.
+ *      방향만 「변화·변동」으로 돌립니다.
+ *   ⚠️ 여기는 **원국 안의 沖**만 봅니다. 대운·세운에서 오는 沖은 잣대가 다릅니다
+ *      (chungMeaning.CHUNG_RULE — "대운·세운은 일단 월지에 먼저 대입한다").
+ */
 export function hapChungBrief(saju: Pill[], target: Target, opt: { 합?: boolean; 충?: boolean; 건강?: boolean } = { 합: true, 충: true }): string[] {
-  const branches = saju.map(p => p.branch).filter(Boolean)
   const stems = saju.map(p => p.stem).filter(Boolean)
   const out: string[] = []; const seen = new Set<string>()
   if (opt.충) {
-    for (let i = 0; i < branches.length; i++) for (let j = i + 1; j < branches.length; j++) {
-      const r = findChungByChars(branches[i], branches[j])
-      if (!r || seen.has(r.key)) continue
-      seen.add(r.key)
-      const say = r.say.filter(t => !isRuleLine(t)).slice(0, 2)
-      const extra = opt.건강 && target === 'adult' ? (r.sayAdult ?? []).slice(0, 2) : []
-      out.push(`${r.key}${r.alias ? `(${r.alias})` : ''} — ${[...say, ...extra].join(' ')}`)
+    // ★자리를 살려서 본다. branches 로 줄이지 않는다.
+    for (const hit of chungInSaju(saju)) {
+      if (seen.has(hit.key)) continue
+      const r = findChungByChars(saju.find(p => p.pillar === hit.a)!.branch,
+                                 saju.find(p => p.pillar === hit.b)!.branch)
+      if (!r) continue
+      seen.add(hit.key)
+      const where = `${toJiName(hit.a)}-${toJiName(hit.b)}`
+      if (hit.rule.tone === '변동') {
+        // 교재 121쪽 — 부정적으로 보지 않는다. 변화·변동으로 읽는다.
+        //   ★다만 沖마다 교재가 따로 매긴 결(원수충·역마충·법고·붕충 등)은 살린다.
+        //     자리 판정으로 덮어 버리면 卯酉沖(원수충)이 그냥 '이동' 이 되어 버린다.
+        //     그래서 자리 줄을 앞에 두고, 그 沖의 첫 줄을 뒤에 붙인다.
+        const own = r.say.filter(t => !isRuleLine(t)).slice(0, 1)
+        out.push(`${r.key}${r.alias ? `(${r.alias})` : ''} · ${where} — ${hit.rule.say}${own.length ? ' ' + own.join(' ') : ''}`)
+      } else {
+        const say = r.say.filter(t => !isRuleLine(t)).slice(0, 2)
+        const extra = opt.건강 && target === 'adult' ? (r.sayAdult ?? []).slice(0, 2) : []
+        out.push(`${r.key}${r.alias ? `(${r.alias})` : ''} · ${where} — ${[...say, ...extra].join(' ')}`)
+      }
     }
   }
   if (opt.합) {
