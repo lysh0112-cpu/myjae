@@ -15,8 +15,9 @@ import { createClient } from '@supabase/supabase-js'
 import { withNim } from '@/lib/saju/honorific'
 // ★2026-07-28 — 교재 41~47쪽 일간, 84~86쪽 충을 재료로 얹는다.
 //   이 화면은 명식 네 기둥이 아니라 일간·월지·일지만 받는다. 있는 것으로만 잰다.
-import { cheonganBrief } from '@/lib/saju/jaryoPick'
+import { cheonganBrief, salBrief, hapChungBrief, ohaengBrief, stage25 } from '@/lib/saju/jaryoPick'
 import { findChungByChars } from '@/lib/saju/chungMeaning'
+import { findRel, relLines } from '@/lib/saju/hyeongPaHae'
 import { logAiError } from '@/lib/ai/errorLog'
 
 // 오늘운세 전용 지시문 읽기 (관리자 화면에서 관리)
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
       envTag, envDesc, envGrade,
       selfTag, selfDesc, selfGrade,
       sameBranch,          // 월지·일지가 같은 사주인가
-      dayStem, monthBranchMine, dayBranchMine,
+      dayStem, monthBranchMine, dayBranchMine, saju, ohaengScore,
       yongsin, heeksin,
       sipseong,
       nickname, ageGroup,
@@ -86,6 +87,38 @@ export async function POST(req: NextRequest) {
       if (!r) return ''
       return `\n- 타고난 충 ${r.key}(월지-일지, 교재 84~86쪽): ${r.say.slice(0, 2).join(' ')}`
     })()
+    // ★2026-07-28 — 형·파·해·원진 (교재 87~93쪽). 월지-일지, 그리고 이달 지지와의 관계.
+    const relMaterial = (() => {
+      const out: string[] = []
+      for (const [a, b, label] of [
+        [monthBranchMine, dayBranchMine, '타고난'],
+        [monthBranch, monthBranchMine, '이달과 내 월지'],
+        [monthBranch, dayBranchMine, '이달과 내 일지'],
+      ] as [string, string, string][]) {
+        for (const r of findRel(a, b)) {
+          out.push(`- ${label} ${r.key}(교재 87~93쪽): ${relLines(r, '성인').slice(0, 2).join(' ')}`)
+        }
+      }
+      return out.length ? '\n' + out.slice(0, 3).join('\n') : ''
+    })()
+
+    // ★2026-07-28 — 명식이 오면 살과 합충도 재료에 얹는다.
+    //   안 오면 그 줄만 빠진다. (조용히 틀린 값을 지어내지 않는다 — 교훈 U)
+    const sajuMaterial = (() => {
+      if (!Array.isArray(saju) || !saju.length) return ''
+      const out = [
+        ...salBrief(saju, 'adult', false).slice(0, 3),
+        ...hapChungBrief(saju, 'adult').slice(0, 2),
+        // ★오행 과다·부족과 개운법 (교재 20~28쪽). 100점 계산기 값이 올 때만.
+        ...(ohaengScore ? ohaengBrief(ohaengScore, 'adult', { 결: true, 개운: true }) : []),
+        // ★가장 센 기운의 결 (교재 25쪽)
+        ...(ohaengScore ? [stage25(
+          (['목','화','토','금','수'] as const).slice()
+            .sort((a, b) => (ohaengScore[b] ?? 0) - (ohaengScore[a] ?? 0))[0],
+        )].filter(Boolean) : []),
+      ]
+      return out.length ? '\n' + out.map((t: string) => `- ${t}`).join('\n') : ''
+    })()
 
     const prompt = `${toneBlock}
 
@@ -95,7 +128,7 @@ ${fortuneGuide}
 
 [대상 달] ${year}년 ${month}월 (${monthStem}${monthBranch}월)
 [상담자 일간] ${dayStem} / 월지 ${monthBranchMine} / 일지 ${dayBranchMine}
-${ilganMaterial}${bornChung}
+${ilganMaterial}${bornChung}${relMaterial}${sajuMaterial}
 [상담자 용신] ${yongsin} / 희신 ${heeksin}
 ${nickname ? `[호칭] ${withNim(nickname)}` : ''}
 ${ageGroup ? `[연령대] ${ageGroup}` : ''}

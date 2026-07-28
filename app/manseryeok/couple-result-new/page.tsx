@@ -765,6 +765,9 @@ function CoupleResultView({
         toCoupleInput(person1, saju1, solar1),
         toCoupleInput(person2, saju2, solar2),
         judge,
+        // ★2026-07-28 — 손님이 고른 질문의 갈래를 재료 쪽에도 넘긴다.
+        //   갈래가 없거나 모르는 갈래(자유질문)면 교재 자료가 다 나간다.
+        { questionCategories: pickedQuestions?.map(q => q.category) },
       )
       const { systemPrompt } = buildCouplePrompt(material, { relation: relationKindOf(kind) })
       const res = await fetch('/api/tongbyeon', {

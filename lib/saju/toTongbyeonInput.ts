@@ -35,7 +35,7 @@ import { OHAENG_25 } from '@/lib/saju/ohaengTable25'
 import { findChungByChars } from '@/lib/saju/chungMeaning'
 import { findHap } from '@/lib/saju/hapMeaning'
 import { SAL_TABLE } from '@/lib/saju/sinsalTable'
-import { hyeongPaHaeBrief } from '@/lib/saju/jaryoPick'
+import { hyeongPaHaeBrief, needsOf, CATEGORY_NEEDS, type Need } from '@/lib/saju/jaryoPick'
 import { grade as ohaengGrade } from '@/lib/saju/simsanOhaeng'
 
 // 천간 → 오행
@@ -273,41 +273,6 @@ function buildUnJiji(
 //  ★갈래를 안 넘기면(대운·세운 화면 등) 밑바탕만 나간다.
 // ═══════════════════════════════════════════════════════════
 
-/** 질문 대분류 → 어떤 자료를 꺼낼까 */
-type Need = '일간' | '오행' | '건강' | '개운' | '합' | '충' | '살' | '직업' | '다루는법' | '인생단계'
-
-const CATEGORY_NEEDS: Record<string, Need[]> = {
-  '건강':      ['건강', '충', '개운'],
-  '건강·자기':  ['건강', '오행', '개운', '일간'],
-  '재물':      ['오행', '충', '일간'],
-  '노후·재물':  ['오행', '충', '인생단계'],
-  '진로·적성':  ['일간', '오행', '살', '직업'],
-  '직업·진로':  ['일간', '오행', '살', '직업'],
-  '직업·사업':  ['일간', '살', '직업', '충'],
-  '취업':      ['일간', '살', '직업'],
-  '연애':      ['합', '살', '일간'],
-  '연애·결혼':  ['합', '충', '일간'],
-  '관계·마음':  ['일간', '다루는법', '합'],
-  '인간관계':   ['일간', '다루는법', '합'],
-  '가정':      ['충', '일간', '다루는법'],
-  '가족':      ['충', '다루는법'],
-  '부모':      ['충', '다루는법'],
-  '자녀':      ['충', '오행'],
-  '출산·자녀':  ['충', '오행'],
-  '노후':      ['인생단계', '오행', '건강'],
-  '인생후반':   ['인생단계', '오행', '충'],
-}
-
-/** 갈래가 없을 때의 밑바탕 — 일간 몇 줄만 */
-const BASE_NEEDS: Need[] = ['일간']
-
-function needsOf(cats?: string[]): Set<Need> {
-  // ★일간은 늘 넣는다. AI 가 "이 사람이 누구인가"를 모르면 어떤 답도 흐려진다.
-  const out = new Set<Need>(BASE_NEEDS)
-  for (const c of cats ?? []) for (const n of CATEGORY_NEEDS[c] ?? []) out.add(n)
-  return out
-}
-
 /** 판정 조건을 적은 줄은 재료에서 뺀다. AI 에게 줄 것은 뜻이지 잣대가 아니다. */
 const isRule = (t: string) =>
   /개 이상|포함해|되풀이|섞여 있어도|차례로 작용력|일 때 봅니다|해당하며/.test(t)
@@ -488,7 +453,8 @@ export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
     ? (yongsinStr as Ohaeng)
     : undefined
 
-  const need = needsOf(a.questionCategories)
+  // ★공용 고르개를 쓴다. 갈래가 없거나 모르는 갈래면 자료가 다 나간다.
+  const need = needsOf(a.questionCategories, CATEGORY_NEEDS)
 
   return {
     name: a.name || '이 분',

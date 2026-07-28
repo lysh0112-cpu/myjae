@@ -32,7 +32,7 @@ import type { CareerCard } from './types'
 //   ⚠️ 대목(카드)을 새로 만들지 않는다. 이미 있는 카드의 재료에 얹는다.
 //      이 프롬프트는 ■ 제목으로 대목을 나누는 파서와 짝이라, 대목을 늘리면 화면이 깨진다. (30부 2장)
 import { findByeongjon, findCombo, findJijiByeongjon, sayOf } from '../byeongjon'
-import { cheonganBrief, salBrief } from '../jaryoPick'
+import { cheonganBrief, salBrief, hyeongPaHaeBrief, munYiBrief, ohaengBrief, hapChungBrief } from '../jaryoPick'
 import { traitsInSaju, traitLines, noteLines, ctxOf } from '../jijiTrait'
 
 export interface CareerPromptInput {
@@ -43,6 +43,8 @@ export interface CareerPromptInput {
   saju: Array<{ pillar: string; stem: string; branch: string }>
   hourUnknown: boolean
   cards: CareerCard[]
+  /** ★2026-07-28 — 오행 점수. 있으면 문이과 비율과 과다·부족 자료를 얹는다 */
+  ohaengScore?: Record<string, number>
 }
 
 /** 화면 묶음과 같은 순서. 통변도 이 순서로 쓴다. (교훈 AS) */
@@ -84,6 +86,17 @@ export function buildCareerPrompt(v: CareerPromptInput): string {
     push('ilju', cheonganBrief(v.saju.find(p => p.pillar === '일주')?.stem ?? '', 4))
     push('sinsal', salBrief(v.saju, v.target, false))
     push('jobs', salBrief(v.saju, v.target, true))
+    // ★형·파·해는 업상대체(그 기운을 직업으로 쓰는 것)를 말하는 자리라 직업 카드에 붙인다.
+    push('jobstruct', hyeongPaHaeBrief(v.saju, v.target).slice(0, 3))
+    // ★합·충 (교재 78~86쪽) — 격과 그릇을 말하는 카드에 붙인다. 합충이 격을 흔든다.
+    push('gyeokguk', hapChungBrief(v.saju, v.target).slice(0, 3))
+    // ★문과:이과 비율 (교재 25쪽) — 계열·학과 카드에 붙인다.
+    //   31부 §9 에 "木만 있고 나머지 넷은 없다" 고 남기신 그 자료다. 25쪽에 다섯이 다 있다.
+    if (v.ohaengScore) {
+      const my = munYiBrief(v.ohaengScore)
+      if (my) push('gyeyeol', [my])
+      push('ohaeng_gijil', ohaengBrief(v.ohaengScore, v.target, { 결: true, 개운: true }))
+    }
   }
   {
     const bj: string[] = []

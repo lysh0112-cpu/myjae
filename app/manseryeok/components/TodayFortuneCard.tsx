@@ -23,6 +23,9 @@ import { supabase } from '@/lib/supabase'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { useFortuneCache } from './FortuneCache'
 import { calcYongsinCompat as calcYongsin } from '@/lib/saju/yongsinNew'
+// ★2026-07-28 — 오행 점수는 100점 계산기(simsanOhaeng)를 그대로 부른다.
+//   여기서 새로 세지 않는다. 같은 계산이 두 벌이면 언젠가 갈린다. (교훈 BQ)
+import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
 import { calcWolunList, calcIlunList } from '@/lib/saju/dayun'
 import {
   scoreMonthlyFortune, monthTrend, pickGoodDays,
@@ -286,6 +289,9 @@ export default function TodayFortuneCard() {
     const ys = calcYongsin(saju, dayStem, solar?.month, solar?.day,
       saju.find(p => p.pillar === '시주')?.branch ?? null)
     if (!ys) return null
+    // ★연월운세 통변 재료용 오행 점수 — calcYongsin 과 같은 인자로 100점 계산기를 부른다.
+    const ohaengScore = calcSimsanOhaeng(saju, solar?.month ?? 0, solar?.day ?? 0,
+      saju.find(p => p.pillar === '시주')?.branch ?? null)
 
     const now = new Date(Date.now() + 9 * 60 * 60 * 1000)   // KST
     const year = now.getUTCFullYear()
@@ -311,7 +317,7 @@ export default function TodayFortuneCard() {
     const days = pickGoodDays(remaining, myDayBranch)
     const prev = trend.find(t => t.month === (month === 1 ? 12 : month - 1))
 
-    return { year, month, ganji: thisMonth, score, trend, days, prev, yongsin: ys.yongsin, heeksin: ys.heeksin }
+    return { year, month, ganji: thisMonth, score, trend, days, prev, yongsin: ys.yongsin, heeksin: ys.heeksin, ohaengScore }
   })()
 
   // ── 이달의 운세 AI 해설 ───────────────────────────────────────
@@ -362,6 +368,9 @@ export default function TodayFortuneCard() {
             selfTag: ms.area.selfTag, selfDesc: ms.area.selfDesc, selfGrade: ms.area.selfGrade,
             sameBranch: same,
             dayStem,
+            // ★2026-07-28 — 명식 네 기둥을 넘긴다. 살·합충·형파해 재료를 만들려면 필요하다.
+            saju,
+            ohaengScore: monthly.ohaengScore,
             monthBranchMine: saju.find(p => p.pillar === '월주')?.branch ?? '',
             dayBranchMine: saju.find(p => p.pillar === '일주')?.branch ?? iljji,
             yongsin: monthly.yongsin, heeksin: monthly.heeksin,

@@ -15,7 +15,7 @@ import type { ExamCard, ExamTarget } from './types'
 import { CLOSING, CLOSING_STUDENT, CLOSING_SRC } from './tables/rules'
 
 /** 대목 차례 — 화면 카드와 1:1 */
-import { salBrief } from '../jaryoPick'
+import { salBrief, cheonganBrief, ohaengBrief, hyeongPaHaeBrief, hapChungBrief, munYiBrief } from '../jaryoPick'
 
 export const ORDER: Array<{ key: string; title: string; len: string }> = [
   { key: 'years', title: '앞으로의 흐름', len: '4~6문장' },
@@ -30,6 +30,8 @@ export const ORDER: Array<{ key: string; title: string; len: string }> = [
 export interface BuildExamPromptArgs {
   /** ★2026-07-28 — 명식 네 기둥. 있으면 학문 관련 살을 재료에 얹는다 */
   saju?: Array<{ pillar: string; stem: string; branch: string }>
+  /** ★2026-07-28 — 오행 점수. 있으면 과다·부족 자료를 얹는다 */
+  ohaengScore?: Record<string, number>
   name: string
   gender: string
   age: number
@@ -57,6 +59,23 @@ export function buildExamPrompt(v: BuildExamPromptArgs): string {
   const salBlock = salLines.length
     ? `\n\n[타고난 살 — 교재 94~97쪽. 학문에 닿는 것만 골랐습니다]\n` +
       salLines.map(t => `- ${t}`).join('\n')
+    : ''
+
+  // ★2026-07-28 — 일간·오행·형을 재료에 얹는다.
+  //   일간은 "이 사람이 누구인가" 라 어떤 답에도 밑바탕이 된다.
+  //   오행 과다·부족은 공부를 어떻게 밀고 가야 하는지에 닿는다.
+  //   형(刑)은 업상대체를 말하는 자리라 시험 종류를 고를 때 쓸모가 있다.
+  const dayStem = v.saju?.find(p => p.pillar === '일주')?.stem ?? ''
+  const bookLines = [
+    ...cheonganBrief(dayStem, 3),
+    ...(v.ohaengScore ? ohaengBrief(v.ohaengScore, v.target, { 결: true }) : []),
+    // ★문과:이과 비율 (교재 25쪽) — 어떤 시험에 힘이 실리는지 짚을 때 쓴다.
+    ...(v.ohaengScore ? [munYiBrief(v.ohaengScore)].filter(Boolean) : []),
+    ...(v.saju?.length ? hyeongPaHaeBrief(v.saju, v.target).slice(0, 2) : []),
+    ...(v.saju?.length ? hapChungBrief(v.saju, v.target).slice(0, 2) : []),
+  ]
+  const bookBlock = bookLines.length
+    ? `\n\n[타고난 결 — 교재 20~47·87~93쪽]\n` + bookLines.map(t => `- ${t}`).join('\n')
     : ''
 
   const closing = (v.target === 'student' ? CLOSING_STUDENT : CLOSING).join(' ')
@@ -99,7 +118,7 @@ ${plan.map(o => `■ ${o.title} — ${o.len}`).join('\n')}
 ■ 맺는말 — 3~4문장
 
 [판정 재료]
-${material}${salBlock}
+${material}${salBlock}${bookBlock}
 
 이제 위 순서대로 써 주세요.`
 }

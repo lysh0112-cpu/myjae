@@ -52,7 +52,7 @@ import { findByeongjon, findCombo, findJijiByeongjon, sayOf } from './byeongjon'
 // ★2026-07-28 — 교재 자료를 궁합 재료에도 넣는다.
 //   ⚠️ 성별 줄은 넘기지 않는다. 상대방 사주에 성별을 두고 한 말이 뜨면 곤란하다.
 //   ★가장 값진 것은 "다루는 법"(교재 20~24쪽) — 상대를 어떻게 대할 것인가.
-import { cheonganBrief, ohaengBrief, hapChungBrief } from './jaryoPick'
+import { needsOf, pickLines, COUPLE_CATEGORY_NEEDS, type Need } from './jaryoPick'
 
 // ── 표기용 ──────────────────────────────────────────────────────────────
 const EL_KOR: Record<string, string> = {
@@ -87,7 +87,7 @@ export interface CoupleTongbyeonMaterial {
 }
 
 // ── 한 사람 재료 ────────────────────────────────────────────────────────
-function personBlock(p: CouplePersonInput, label: string): string {
+function personBlock(p: CouplePersonInput, label: string, need?: Set<Need>): string {
   const find = (k: string) => p.saju.find(x => x.pillar === k)
   const year = find('년주'), month = find('월주')
   const day = find('일주'), hour = find('시주')
@@ -103,8 +103,7 @@ function personBlock(p: CouplePersonInput, label: string): string {
   lines.push(`[${label}] ${p.name} · ${p.gender}${p.birthLabel ? ` · ${p.birthLabel}` : ''}`)
   lines.push(`- 명식(팔자): ${pillars}`)
   lines.push(`- 타고난 본바탕(일간): ${dayStem}`)
-  // ★일간이 어떤 사람인가 (교재 41~47쪽). 성별 줄은 넘기지 않는다.
-  for (const t of cheonganBrief(dayStem, 3)) lines.push(`  · ${t}`)
+  // ★교재 자료는 오행 점수가 나온 뒤 아래에서 한꺼번에 얹는다 (pickLines).
 
   // ── 병존 (교재 74~77쪽) — 같은 글자가 나란히 있으면 그 기운이 짙다 ──
   //   ★여는말에서 "각각 어떤 기운을 타고났는지" 소개할 때 쓰라고 준다.
@@ -146,9 +145,12 @@ function personBlock(p: CouplePersonInput, label: string): string {
   // ★2026-07-28 — 이 사람을 어떻게 대하면 좋은가 (교재 20~24쪽).
   //   궁합에서 가장 쓸모 있는 자리다. "그 사람이 어떤가" 가 아니라
   //   "그 사람을 어떻게 대할 것인가" 를 말하는 유일한 자료다.
-  for (const t of ohaengBrief(ohaeng, 'adult', { 결: true, 다루는법: true })) lines.push(`- ${t}`)
-  // ★원국의 합·충 (교재 78~86쪽)
-  for (const t of hapChungBrief(p.saju, 'adult')) lines.push(`- ${t}`)
+  // ★2026-07-28 — 교재 자료를 질문 갈래에 맞게 골라 얹는다.
+  //   갈래가 없거나 모르는 갈래면 다 나간다. (자유질문 대비)
+  //   ⚠️ 성별 줄은 넘기지 않는다. 상대방 사주에 성별을 두고 한 말이 뜨면 곤란하다.
+  for (const t of pickLines(need ?? needsOf(undefined, COUPLE_CATEGORY_NEEDS), {
+    saju: p.saju, dayStem, score: ohaeng, target: 'adult',
+  })) lines.push(`- ${t}`)
   const ALL: Ohaeng[] = ['목', '화', '토', '금', '수']
   const sorted = [...ALL].sort((a, b) => (ohaeng[b] ?? 0) - (ohaeng[a] ?? 0))
   const lack = ALL.filter(e => (ohaeng[e] ?? 0) === 0)
@@ -335,11 +337,17 @@ export function toCoupleTongbyeonMaterial(
   a: CouplePersonInput,
   b: CouplePersonInput,
   judge: CoupleJudgeV1 | null,
-  opts: { fromYear?: number; flowYears?: number } = {},
+  opts: {
+    fromYear?: number; flowYears?: number
+    /** ★2026-07-28 — 손님이 고른 질문의 대분류. 없거나 모르는 갈래면 자료가 다 나간다. */
+    questionCategories?: string[]
+  } = {},
 ): CoupleTongbyeonMaterial {
+  // ★질문 갈래로 자료를 고른다. 없거나 모르는 갈래면 다 나간다.
+  const need = needsOf(opts.questionCategories, COUPLE_CATEGORY_NEEDS)
   const fromYear = opts.fromYear ?? new Date().getFullYear()
   return {
-    personBlocks: [personBlock(a, '첫 번째 사람'), personBlock(b, '두 번째 사람')],
+    personBlocks: [personBlock(a, '첫 번째 사람', need), personBlock(b, '두 번째 사람', need)],
     judgeBlock: judgeBlock(judge),
     flowBlock: flowBlock(a, b, fromYear, opts.flowYears ?? 8),
   }

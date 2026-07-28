@@ -186,3 +186,98 @@ export function hyeongPaHaeBrief(saju: Pill[], target: Target): string[] {
   }
   return out
 }
+
+// ═══════════════════════════════════════════════════════════
+//  질문 갈래로 자료를 고르는 공용 잣대
+//    ★모르는 갈래거나 갈래가 안 오면 **다 내보낸다.**
+//      자유질문란이 생겨도 재료가 비지 않게 하기 위함이다. (2026-07-28 대표님 지시)
+// ═══════════════════════════════════════════════════════════
+
+export type Need = '일간' | '오행' | '건강' | '개운' | '합' | '충' | '형파해' | '살' | '직업' | '다루는법' | '인생단계' | '문이과'
+
+const ALL_NEEDS: Need[] = ['일간','오행','건강','개운','합','충','형파해','살','직업','다루는법','인생단계','문이과']
+
+/** 사주보기·대운·세운 질문 대분류 (questions.ts) */
+export const CATEGORY_NEEDS: Record<string, Need[]> = {
+  '건강': ['건강','충','형파해','개운'],
+  '건강·자기': ['건강','오행','개운','일간'],
+  '재물': ['오행','충','형파해','일간'],
+  '노후·재물': ['오행','충','인생단계'],
+  '진로·적성': ['일간','오행','살','직업','문이과'],
+  '직업·진로': ['일간','오행','살','직업','문이과'],
+  '직업·사업': ['일간','살','직업','충','형파해'],
+  '취업': ['일간','살','직업','문이과'],
+  '연애': ['합','살','일간'],
+  '연애·결혼': ['합','충','형파해','일간'],
+  '관계·마음': ['일간','다루는법','합','형파해'],
+  '인간관계': ['일간','다루는법','합','형파해'],
+  '가정': ['충','형파해','일간','다루는법'],
+  '가족': ['충','형파해','다루는법'],
+  '부모': ['충','형파해','다루는법'],
+  '자녀': ['충','오행'],
+  '출산·자녀': ['충','오행'],
+  '노후': ['인생단계','오행','건강'],
+  '인생후반': ['인생단계','오행','충','형파해'],
+}
+
+/** 궁합 질문 대분류 (coupleQuestions.ts) */
+export const COUPLE_CATEGORY_NEEDS: Record<string, Need[]> = {
+  '끌림·첫인상': ['일간','합','살'],
+  '성격·기질': ['일간','오행','다루는법'],
+  '소통·감정': ['일간','다루는법','합'],
+  '관계 지속성': ['합','충','형파해'],
+  '갈등·주의점': ['충','형파해','다루는법'],
+  '속궁합·친밀감': ['합','살','일간'],
+  '결혼·미래운': ['합','충','형파해','인생단계'],
+  '관계 조언·개운': ['다루는법','개운','오행'],
+  '종합': ALL_NEEDS,
+}
+
+/**
+ * 갈래 → 무엇을 꺼낼까.
+ *   ★갈래가 없거나 표에 없는 갈래(자유질문 등)면 **전부** 돌려준다.
+ *     "모르면 다 준다" 가 "모르면 안 준다" 보다 낫다. AI 가 고르면 된다.
+ */
+export function needsOf(cats?: string[], table: Record<string, Need[]> = CATEGORY_NEEDS): Set<Need> {
+  if (!cats?.length) return new Set(ALL_NEEDS)
+  const out = new Set<Need>(['일간'])   // 일간은 늘 밑바탕
+  let unknown = false
+  for (const c of cats) {
+    const n = table[c]
+    if (!n) { unknown = true; continue }
+    for (const x of n) out.add(x)
+  }
+  // 모르는 갈래가 하나라도 있으면 다 준다
+  return unknown ? new Set(ALL_NEEDS) : out
+}
+
+/** 고른 need 로 재료 줄을 만든다 — 여섯 서비스가 함께 쓴다 */
+export function pickLines(
+  need: Set<Need>,
+  a: { saju?: Pill[]; dayStem?: string; score?: Record<Ohaeng, number>; target?: Target; gender?: string },
+): string[] {
+  const t: Target = a.target ?? 'adult'
+  const out: string[] = []
+  if (need.has('일간') && a.dayStem) out.push(...cheonganBrief(a.dayStem, need.size >= 8 ? 3 : 5, a.gender))
+  if (a.score) {
+    if (need.has('오행') || need.has('건강') || need.has('개운') || need.has('다루는법')) {
+      out.push(...ohaengBrief(a.score, t, {
+        결: need.has('오행'), 건강: need.has('건강'),
+        개운: need.has('개운'), 다루는법: need.has('다루는법'),
+      }))
+    }
+    if (need.has('인생단계')) {
+      const top = (['목','화','토','금','수'] as Ohaeng[]).slice().sort((x, y) => (a.score![y] ?? 0) - (a.score![x] ?? 0))[0]
+      const st = stage25(top); if (st) out.push(st)
+    }
+    if (need.has('문이과')) { const m = munYiBrief(a.score); if (m) out.push(m) }
+  }
+  if (a.saju?.length) {
+    if (need.has('합') || need.has('충')) {
+      out.push(...hapChungBrief(a.saju, t, { 합: need.has('합'), 충: need.has('충'), 건강: need.has('건강') }))
+    }
+    if (need.has('형파해')) out.push(...hyeongPaHaeBrief(a.saju, t).slice(0, 4))
+    if (need.has('살')) out.push(...salBrief(a.saju, t, need.has('직업')))
+  }
+  return out
+}

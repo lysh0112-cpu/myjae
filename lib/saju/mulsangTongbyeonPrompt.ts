@@ -46,7 +46,7 @@ const HOUR_MOOD: Record<string, string> = {
 }
 
 // 그림 통변에 필요한 값 (mulsang 화면이 만들어 넘김)
-import { cheonganImage, stage25 } from './jaryoPick'
+import { cheonganImage, stage25, needsOf, pickLines } from './jaryoPick'
 
 export interface MulsangTongbyeonInput {
   name: string                       // 이름/별명
@@ -139,6 +139,17 @@ export function buildMulsangTongbyeonPrompt(
   //   물상도는 "무엇에 빗대는가" 가 알맹이라 교재 41쪽 풀이가 그대로 쓰인다.
   const bookImage = cheonganImage(input.dayStem)
   const bookStage = stage25(input.topElement)
+  // ★2026-07-28 — 그림의 넘침·모자람과 물상들 사이의 관계를 교재로 받친다.
+  //   물상도는 "무엇이 넘치고 무엇이 비었나" 가 곧 그림의 짜임이다.
+  // ★2026-07-28 — 손님이 고른 질문의 갈래로 고른다.
+  //   갈래가 없거나 모르는 갈래(자유질문)면 다 나간다. 재료가 비지 않게.
+  const need = needsOf(questions.map(q => q.category))
+  const bookLines = pickLines(need, {
+    saju: input.saju, dayStem: input.dayStem,
+    score: input.ohaengScore, target: 'adult',
+  })
+  const bookOhaeng = bookLines.slice(0, 4)
+  const bookRel = bookLines.slice(4, 10)
   const wolji = WOLJI[input.monthBranch]
   const yong = input.yongsinElement ? YONGSIN[input.yongsinElement] : null
   const rel = RELATION[input.dayStem]
@@ -164,7 +175,9 @@ export function buildMulsangTongbyeonPrompt(
 - 강점·매력: ${soften(ilgan.gangjeom)}
 - 주의점: ${soften(ilgan.jueui)}${bookImage ? `
 - 교재 41~47쪽이 말하는 이 일간: ${soften(bookImage)}` : ''}${bookStage ? `
-- 교재 25쪽이 말하는 가장 센 기운: ${bookStage}` : ''}`
+- 교재 25쪽이 말하는 가장 센 기운: ${bookStage}` : ''}${bookOhaeng.length ? `
+- 교재가 말하는 넘침·모자람: ${bookOhaeng.join(' / ')}` : ''}${bookRel.length ? `
+- 물상들 사이의 관계(교재 78~97쪽): ${bookRel.join(' / ')}` : ''}`
     : ''
 
   // ★병존 — 같은 글자가 나란히 있으면 그 기운이 그림에서 짙어진다 (교재 74~77쪽)
