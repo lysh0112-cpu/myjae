@@ -35,6 +35,7 @@ import { OHAENG_25 } from '@/lib/saju/ohaengTable25'
 import { findChungByChars } from '@/lib/saju/chungMeaning'
 import { findHap } from '@/lib/saju/hapMeaning'
 import { SAL_TABLE } from '@/lib/saju/sinsalTable'
+import { hyeongPaHaeBrief } from '@/lib/saju/jaryoPick'
 import { grade as ohaengGrade } from '@/lib/saju/simsanOhaeng'
 
 // 천간 → 오행
@@ -395,8 +396,10 @@ function buildHapChung(saju: PillarInput[], target: Target, need: Set<Need>): st
       lines.push(`- ${r.key}${r.name ? `(${r.name})` : ''} — ${[...say, ...extra].join(' ')}`)
     }
   }
+  // ★2026-07-28 — 형·파·해·원진 (교재 87~93쪽). 합충과 한 벌이다.
+  for (const t of hyeongPaHaeBrief(saju, target).slice(0, 4)) lines.push(`- ${t}`)
   if (!lines.length) return ''
-  return `[합과 충 — 교재 78~86쪽. 천간은 합을 중히 보고 지지는 충을 중히 본다]\n${lines.join('\n')}`
+  return `[합·충·형·파·해 — 교재 78~93쪽. 천간은 합을 중히 보고 지지는 충을 중히 본다]\n${lines.join('\n')}`
 }
 
 /**

@@ -20,6 +20,7 @@ import { OHAENG_25 } from './ohaengTable25'
 import { findChungByChars } from './chungMeaning'
 import { findHap } from './hapMeaning'
 import { SAL_TABLE } from './sinsalTable'
+import { findRel, findSamhyeong, relLines } from './hyeongPaHae'
 
 export type Pill = { pillar: string; stem: string; branch: string }
 export type Target = 'student' | 'adult'
@@ -157,4 +158,31 @@ export function munYiBrief(score: Record<Ohaeng, number>): string {
 export function stage25(el: Ohaeng): string {
   const r = OHAENG_25[el]
   return r ? `${el}(${r.hanja}) — 계절은 ${r.season}, 하루로는 ${r.timeOfDay}, 인생으로는 ${r.lifeStage}, 색은 ${r.color}, 맛은 ${r.taste}입니다.` : ''
+}
+
+/**
+ * 형·파·해·원진 — 교재 87~93쪽. 원국에 실제로 선 것만.
+ *   ⚠️ 판정은 하지 않는다. 두 글자가 함께 있는지만 본다.
+ *      세기는 hapchungScore.ts 가 잰다.
+ */
+export function hyeongPaHaeBrief(saju: Pill[], target: Target): string[] {
+  // hyeongPaHae.ts 는 '성인'|'학생' 으로 받는다. 여기서 이어 준다.
+  const who = target === 'adult' ? '성인' : '학생'
+  const b = saju.map(p => p.branch).filter(Boolean)
+  const out: string[] = []
+  const seen = new Set<string>()
+  // 삼형은 세 글자가 다 있어야 선다
+  for (const r of findSamhyeong(b)) {
+    if (seen.has(r.key)) continue
+    seen.add(r.key)
+    out.push(`${r.key}${r.alias ? `(${r.alias})` : ''} — ${relLines(r, who).slice(0, 3).join(' ')}`)
+  }
+  for (let i = 0; i < b.length; i++) for (let j = i + 1; j < b.length; j++) {
+    for (const r of findRel(b[i], b[j])) {
+      if (seen.has(r.key)) continue
+      seen.add(r.key)
+      out.push(`${r.key}${r.alias ? `(${r.alias})` : ''} — ${relLines(r, who).slice(0, 2).join(' ')}`)
+    }
+  }
+  return out
 }
