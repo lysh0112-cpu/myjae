@@ -686,7 +686,13 @@ export function groupsInSaju(saju: Pillar[]): GroupHit[] {
 export function groupBrief(
   saju: Pillar[],
   target: Target,
-  opt: { cap?: number; 보완?: boolean; 개운?: boolean; 직업?: boolean; withClosing?: boolean } = {},
+  opt: {
+    cap?: number; 보완?: boolean; 개운?: boolean; 직업?: boolean; withClosing?: boolean
+    /** ★과다한 짝만. 「없는 짝」은 빼서 재료를 줄인다 (재료가 넓을 때 씀) */
+    onlyGwada?: boolean
+    /** ★몇 짝까지 낼까 (기본 다섯 전부) */
+    maxKeys?: number
+  } = {},
 ): string[] {
   const { cap = 3 } = opt
   const c = ctxOf(saju)
@@ -694,10 +700,13 @@ export function groupBrief(
   const hits = groupsInSaju(saju)
   const out: string[] = []
   let usedPyeonjung = false
+  let shown = 0
 
   for (const h of hits) {
+    if (opt.maxKeys != null && shown >= opt.maxKeys) break
     if (h.gwada) {
       usedPyeonjung = true
+      shown++
       const bad = [
         ...pick(h.row.manyBad, c),
         ...(target === 'adult' ? pick(h.row.manyBadAdult, c) : []),
@@ -719,7 +728,8 @@ export function groupBrief(
         if (g.length) out.push(`  · 개운: ${g.join(' ')}`)
       }
       if (opt.직업 && h.row.jobs?.length) out.push(`  · 교재가 든 자리: ${h.row.jobs.slice(0, 6).join(' · ')}`)
-    } else if (h.none) {
+    } else if (h.none && !opt.onlyGwada) {
+      shown++
       const n = [
         ...pick(h.row.none, c),
         ...(target === 'adult' ? pick(h.row.noneAdult, c) : []),

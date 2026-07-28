@@ -33,6 +33,9 @@ import type { CareerCard } from './types'
 //      이 프롬프트는 ■ 제목으로 대목을 나누는 파서와 짝이라, 대목을 늘리면 화면이 깨진다. (30부 2장)
 import { findByeongjon, findCombo, findJijiByeongjon, sayOf } from '../byeongjon'
 import { cheonganBrief, salBrief, hyeongPaHaeBrief, munYiBrief, ohaengBrief, hapChungBrief } from '../jaryoPick'
+// ★육친(십성) — 명리적성 3장 106~131쪽 (2026-07-28)
+import { yukchinBrief } from '../yukchinTable'
+import { groupBrief, PYEONJUNG_CLOSING } from '../yukchinGroup'
 import { traitsInSaju, traitLines, noteLines, ctxOf } from '../jijiTrait'
 
 export interface CareerPromptInput {
@@ -96,6 +99,18 @@ export function buildCareerPrompt(v: CareerPromptInput): string {
       const my = munYiBrief(v.ohaengScore)
       if (my) push('gyeyeol', [my])
       push('ohaeng_gijil', ohaengBrief(v.ohaengScore, v.target, { 결: true, 개운: true }))
+    }
+    // ★육친 (명리적성 3장 106~131쪽) — 2026-07-28
+    //   교재 40쪽: "육친으로 판단 = 진로와 직업적성 (강점 지능 찾기)"
+    //   ⚠️ 이미 있는 [육친이 가리키는 곳] 카드에 얹는다. 카드를 새로 만들지 않는다.
+    //   ⚠️ career/tables/yukchin.ts 는 **짝 다섯**만 다룬다(다른 출전).
+    //      여기 얹는 것은 **십성 열 개**라 결이 다르다. 겹치지 않는다.
+    push('yukchin', yukchinBrief(v.saju, v.target, { keys: 2, cap: 3, 직업: true }))
+    {
+      const g = groupBrief(v.saju, v.target, { cap: 2, maxKeys: 2, 보완: true, 직업: true })
+      push('yukchin', g)
+      // ★편중 이야기가 나갔으면 맺음말을 함께 (교재 123·126·129쪽)
+      if (g.some(t => t.includes('과다'))) push('yukchin', PYEONJUNG_CLOSING)
     }
   }
   {

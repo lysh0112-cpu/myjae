@@ -16,6 +16,8 @@ import { withNim } from '@/lib/saju/honorific'
 // ★2026-07-28 — 교재 41~47쪽 일간, 84~86쪽 충을 재료로 얹는다.
 //   이 화면은 명식 네 기둥이 아니라 일간·월지·일지만 받는다. 있는 것으로만 잰다.
 import { cheonganBrief, salBrief, hapChungBrief, ohaengBrief, stage25 } from '@/lib/saju/jaryoPick'
+// ★육친(십성) — 명리적성 3장 106~131쪽 (2026-07-28)
+import { yukchinBrief } from '@/lib/saju/yukchinTable'
 import { findChungByChars } from '@/lib/saju/chungMeaning'
 import { findRel, relLines } from '@/lib/saju/hyeongPaHae'
 import { logAiError } from '@/lib/ai/errorLog'
@@ -109,6 +111,8 @@ export async function POST(req: NextRequest) {
       const out = [
         ...salBrief(saju, 'adult', false).slice(0, 3),
         ...hapChungBrief(saju, 'adult').slice(0, 2),
+        // ★육친 — 센 십성 둘만. 이달 운세는 짧아야 하므로 짝(편중) 이야기는 안 넣는다.
+        ...yukchinBrief(saju, 'adult', { keys: 2, cap: 2 }),
         // ★오행 과다·부족과 개운법 (교재 20~28쪽). 100점 계산기 값이 올 때만.
         ...(ohaengScore ? ohaengBrief(ohaengScore, 'adult', { 결: true, 개운: true }) : []),
         // ★가장 센 기운의 결 (교재 25쪽)
