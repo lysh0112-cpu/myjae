@@ -1,0 +1,298 @@
+diff --git a/app/manseryeok/result-new/page.tsx b/app/manseryeok/result-new/page.tsx
+index ea5f4ac..e7b577e 100644
+--- a/app/manseryeok/result-new/page.tsx
++++ b/app/manseryeok/result-new/page.tsx
+@@ -618,6 +618,9 @@ function ResultNewContent() {
+                 // ★2026-07-28 — 손님이 고른 질문의 갈래를 재료 쪽에도 넘긴다.
+                 //   교재 자료는 다 들어 있고, 물어본 것에 맞는 것만 꺼내 쓴다.
+                 questionCategories: pickedQuestions?.map(q => q.category),
++                // ★대운·세운 갈래는 이름이 사주보기와 다른 벌이라 표를 갈라 쓴다.
++                //   안 넘기면 갈래를 못 찾아 재료가 통째로 나간다.
++                unseEntry,
+               })}
+               questions={pickedQuestions}
+               premium={isPaid}
+diff --git a/lib/saju/jaryoPick.ts b/lib/saju/jaryoPick.ts
+index 2226464..1db8fed 100644
+--- a/lib/saju/jaryoPick.ts
++++ b/lib/saju/jaryoPick.ts
+@@ -21,6 +21,8 @@ import { findChungByChars } from './chungMeaning'
+ import { findHap } from './hapMeaning'
+ import { SAL_TABLE } from './sinsalTable'
+ import { findRel, findSamhyeong, relLines } from './hyeongPaHae'
++// ★자리별 沖 판정 (교재 121쪽). 표를 두 벌로 두지 않으려고 여기서 부른다. (교훈 BQ)
++import { chungInSaju, toJiName } from './yukchinRule'
+ 
+ export type Pill = { pillar: string; stem: string; branch: string }
+ export type Target = 'student' | 'adult'
+@@ -75,19 +77,63 @@ export function ohaengBrief(
+   return out
+ }
+ 
+-/** 원국에 실제로 선 합·충만 */
++/**
++ * 원국에 실제로 선 합·충만.
++ *
++ * ★2026-07-28 — 沖이 **자리(位)** 를 보게 고쳤습니다.
++ *
++ *   [무엇이 문제였나]
++ *     교재(명리적성 121쪽)는 沖을 자리마다 다르게 읽습니다.
++ *       月支沖 긍정 70%(이동·스카우트·사업 시작. "부정적으로 보지 않는다")
++ *       年支沖 긍정 · 日支沖 100% 부정(배우자궁) · 時支沖 50% 긍정
++ *       영향력은 월일 〉 일시 〉 연월
++ *     그런데 이 규칙이 chungMeaning.ts 의 original 칸에만 적혀 있었고
++ *     (original 은 화면·재료에 안 나갑니다),
++ *     여기서는 saju.map(p => p.branch) 로 **자리를 버리고** 글자만 봤습니다.
++ *     그래서 년월沖(좋은 자리)인 손님도 "매매나 계약에 불리합니다" 를 들었습니다.
++ *
++ *   [얼마나 퍼져 있었나 — 지지 네 자리 전수 20,736가지]
++ *     沖이 있는 명식                       8,364 (40.3%)
++ *     「좋게 읽어야 할 沖」이 섞인 명식      4,752 (22.9%)  ← 다섯에 한 명
++ *     沖이 전부 좋은 쪽인데 다 나쁘게 나감  3,600 (17.4%)  ← 여섯에 한 명
++ *     31부에서 고친 대운수 순행 버그(약 9%)보다 큽니다.
++ *
++ *   [어떻게 고쳤나]
++ *     · saju 를 그대로 돌며 pillar 를 살립니다. 부르는 쪽은 한 글자도 안 고쳤습니다.
++ *     · 자리 판정은 yukchinRule.ts 의 CHUNG_POSITION 을 씁니다 (표를 두 벌로 두지 않음).
++ *     · 일지가 끼면 '부정' → 지금까지 쓰던 chungMeaning 의 say 를 그대로 씁니다.
++ *       일지가 안 끼면 '변동' → 교재대로 이동·변동 쪽으로 돌립니다.
++ *     · 영향력이 큰 것부터 냅니다 (월일 〉 일시 〉 연월).
++ *
++ *   ⚠️ 「긍정 70%」를 "좋습니다" 로 못 박지 않았습니다. 나머지 30%가 있습니다.
++ *      방향만 「변화·변동」으로 돌립니다.
++ *   ⚠️ 여기는 **원국 안의 沖**만 봅니다. 대운·세운에서 오는 沖은 잣대가 다릅니다
++ *      (chungMeaning.CHUNG_RULE — "대운·세운은 일단 월지에 먼저 대입한다").
++ */
+ export function hapChungBrief(saju: Pill[], target: Target, opt: { 합?: boolean; 충?: boolean; 건강?: boolean } = { 합: true, 충: true }): string[] {
+-  const branches = saju.map(p => p.branch).filter(Boolean)
+   const stems = saju.map(p => p.stem).filter(Boolean)
+   const out: string[] = []; const seen = new Set<string>()
+   if (opt.충) {
+-    for (let i = 0; i < branches.length; i++) for (let j = i + 1; j < branches.length; j++) {
+-      const r = findChungByChars(branches[i], branches[j])
+-      if (!r || seen.has(r.key)) continue
+-      seen.add(r.key)
+-      const say = r.say.filter(t => !isRuleLine(t)).slice(0, 2)
+-      const extra = opt.건강 && target === 'adult' ? (r.sayAdult ?? []).slice(0, 2) : []
+-      out.push(`${r.key}${r.alias ? `(${r.alias})` : ''} — ${[...say, ...extra].join(' ')}`)
++    // ★자리를 살려서 본다. branches 로 줄이지 않는다.
++    for (const hit of chungInSaju(saju)) {
++      if (seen.has(hit.key)) continue
++      const r = findChungByChars(saju.find(p => p.pillar === hit.a)!.branch,
++                                 saju.find(p => p.pillar === hit.b)!.branch)
++      if (!r) continue
++      seen.add(hit.key)
++      const where = `${toJiName(hit.a)}-${toJiName(hit.b)}`
++      if (hit.rule.tone === '변동') {
++        // 교재 121쪽 — 부정적으로 보지 않는다. 변화·변동으로 읽는다.
++        //   ★다만 沖마다 교재가 따로 매긴 결(원수충·역마충·법고·붕충 등)은 살린다.
++        //     자리 판정으로 덮어 버리면 卯酉沖(원수충)이 그냥 '이동' 이 되어 버린다.
++        //     그래서 자리 줄을 앞에 두고, 그 沖의 첫 줄을 뒤에 붙인다.
++        const own = r.say.filter(t => !isRuleLine(t)).slice(0, 1)
++        out.push(`${r.key}${r.alias ? `(${r.alias})` : ''} · ${where} — ${hit.rule.say}${own.length ? ' ' + own.join(' ') : ''}`)
++      } else {
++        const say = r.say.filter(t => !isRuleLine(t)).slice(0, 2)
++        const extra = opt.건강 && target === 'adult' ? (r.sayAdult ?? []).slice(0, 2) : []
++        out.push(`${r.key}${r.alias ? `(${r.alias})` : ''} · ${where} — ${[...say, ...extra].join(' ')}`)
++      }
+     }
+   }
+   if (opt.합) {
+@@ -233,17 +279,86 @@ export const COUPLE_CATEGORY_NEEDS: Record<string, Need[]> = {
+   '종합': ALL_NEEDS,
+ }
+ 
++/**
++ * ★대운·세운·월운 질문 대분류 (unseQuestions.ts) — 2026-07-28 추가
++ *
++ *   [무엇이 문제였나]
++ *     CATEGORY_NEEDS 는 **사주보기 갈래 19개만** 담고 있었습니다.
++ *     그런데 대운·세운·월운은 갈래 이름이 아예 다른 벌입니다.
++ *       사주보기   직업·진로 · 직업·사업 · 관계·마음 · 인간관계 · 인생후반 …
++ *       대운·세운   직업 ·      학업 ·      관계 ·      주의 ·      인생 흐름 …
++ *     이름이 안 맞으니 needsOf 가 못 찾고 「모르면 다 준다」(교훈 BV)로 빠졌습니다.
++ *     안전망이라 통변이 비지는 않았으나, 손님이 「직업」 하나만 골라도
++ *     열두 Need 가 전부 실려 재료가 늘 통째로 나갔습니다.
++ *
++ *   [실측] 대운·세운·월운 갈래 13개 중 **9개가 표에 없었습니다.**
++ *     있던 것  건강 · 재물 · 연애 · 연애·결혼   (사주보기와 이름이 같아 우연히 걸림)
++ *     없던 것  인생 흐름 · 전환기 · 타이밍 · 직업 · 주의 · 종합 · 관계 · 학업 · 마음
++ *
++ *   [왜 표를 둘로 나눴나]
++ *     같은 「재물」이라도 묻는 결이 다릅니다.
++ *       대운 재물   "돈이 크게 모이는 시기는 언제쯤인가요"   → 10년 단위. 인생단계
++ *       세운 재물   "올해 돈 흐름은 어떤가요"              → 한 해. 그해 합충
++ *       월운 재물   "돈이 들어오거나 나가기 쉬운 달은"      → 달. 합충
++ *     대운은 **시기**를 묻고 세운·월운은 **그때 무슨 일**을 묻습니다.
++ *     그래서 대운은 인생단계를 앞세우고, 세운·월운은 합·충을 앞세웁니다.
++ *
++ *   ⚠️ 세운 진입이면 세운과 월운 질문이 섞입니다(groupUnseByKind).
++ *      둘은 결이 가까워 한 표로 묶었습니다.
++ */
++export const DAEUN_CATEGORY_NEEDS: Record<string, Need[]> = {
++  // 대운 11문 — 「언제」를 묻는 자리라 인생단계를 늘 깝니다
++  '인생 흐름': ['인생단계','오행','일간','합','충'],
++  '전환기':    ['충','형파해','인생단계','개운'],
++  '재물':      ['오행','인생단계','충'],
++  '직업':      ['일간','오행','직업','살','인생단계'],
++  '관계':      ['일간','다루는법','합','충'],
++  '건강':      ['건강','오행','충','형파해'],
++  '마음':      ['일간','오행','다루는법','개운'],
++}
++
++export const SEYUN_CATEGORY_NEEDS: Record<string, Need[]> = {
++  // 세운 10문 — 「올해 무슨 일」을 묻는 자리라 합·충을 앞세웁니다
++  '종합':      ALL_NEEDS,
++  '재물':      ['오행','충','형파해','일간'],
++  '연애·결혼': ['합','충','형파해','일간'],
++  '직업':      ['일간','살','직업','충','형파해'],
++  '건강':      ['건강','충','형파해','개운'],
++  '관계':      ['일간','다루는법','합','형파해'],
++  '학업':      ['일간','오행','문이과','살'],
++  '주의':      ['충','형파해','살','개운'],
++  '타이밍':    ['합','충','인생단계'],
++  // 월운 6문 — 세운 진입이면 함께 섞여 나옵니다
++  '연애':      ['합','살','일간'],
++}
++
++/** 대운 진입인지 세운 진입인지로 표를 고른다 (unseQuestions.UnseEntry) */
++export function unseTableOf(entry?: 'daeun' | 'seyun' | null): Record<string, Need[]> {
++  return entry === 'daeun' ? DAEUN_CATEGORY_NEEDS : SEYUN_CATEGORY_NEEDS
++}
++
+ /**
+  * 갈래 → 무엇을 꺼낼까.
+  *   ★갈래가 없거나 표에 없는 갈래(자유질문 등)면 **전부** 돌려준다.
+  *     "모르면 다 준다" 가 "모르면 안 준다" 보다 낫다. AI 가 고르면 된다.
++ *
++ *   ★2026-07-28 — fallback 을 더했다.
++ *     대운·세운·월운은 갈래 이름이 사주보기와 다른 벌이라
++ *     table(CATEGORY_NEEDS)에서 못 찾고 늘 「전부」로 빠지고 있었다.
++ *     table 에서 못 찾으면 fallback 을 한 번 더 본다.
++ *     사주보기·궁합 갈래와 이름이 겹치는 넷(건강·재물·연애·연애·결혼)은
++ *     table 이 먼저라 예전 그대로 나간다. 손님 화면이 안 바뀐다.
+  */
+-export function needsOf(cats?: string[], table: Record<string, Need[]> = CATEGORY_NEEDS): Set<Need> {
++export function needsOf(
++  cats?: string[],
++  table: Record<string, Need[]> = CATEGORY_NEEDS,
++  fallback?: Record<string, Need[]>,
++): Set<Need> {
+   if (!cats?.length) return new Set(ALL_NEEDS)
+   const out = new Set<Need>(['일간'])   // 일간은 늘 밑바탕
+   let unknown = false
+   for (const c of cats) {
+-    const n = table[c]
++    const n = table[c] ?? fallback?.[c]
+     if (!n) { unknown = true; continue }
+     for (const x of n) out.add(x)
+   }
+diff --git a/lib/saju/toTongbyeonInput.ts b/lib/saju/toTongbyeonInput.ts
+index 5cb1e08..9230af0 100644
+--- a/lib/saju/toTongbyeonInput.ts
++++ b/lib/saju/toTongbyeonInput.ts
+@@ -32,10 +32,8 @@ import { CHEONGAN_TRAIT } from '@/lib/saju/cheonganTrait'
+ import { OHAENG_TRAIT } from '@/lib/saju/ohaengTrait'
+ import { OHAENG_NATURE } from '@/lib/saju/ohaengNature'
+ import { OHAENG_25 } from '@/lib/saju/ohaengTable25'
+-import { findChungByChars } from '@/lib/saju/chungMeaning'
+-import { findHap } from '@/lib/saju/hapMeaning'
+ import { SAL_TABLE } from '@/lib/saju/sinsalTable'
+-import { hyeongPaHaeBrief, needsOf, CATEGORY_NEEDS, type Need } from '@/lib/saju/jaryoPick'
++import { hyeongPaHaeBrief, hapChungBrief, needsOf, unseTableOf, CATEGORY_NEEDS, type Need } from '@/lib/saju/jaryoPick'
+ import { grade as ohaengGrade } from '@/lib/saju/simsanOhaeng'
+ 
+ // 천간 → 오행
+@@ -102,6 +100,14 @@ export interface ToTongbyeonArgs {
+    *   교재 자료를 다 넣어 두되, 물어본 것에 맞는 것만 꺼내 쓰기 위함이다.
+    */
+   questionCategories?: string[]
++  /**
++   * ★2026-07-28 — 대운·세운 진입 여부 (unseQuestions.UnseEntry).
++   *   대운·세운·월운은 갈래 이름이 사주보기와 다른 벌이라
++   *   CATEGORY_NEEDS 에서 못 찾고 재료가 늘 통째로 나가고 있었다.
++   *   이 값으로 대운 표와 세운·월운 표를 갈라 쓴다.
++   *   안 넘기면 세운·월운 표를 fallback 으로 쓴다(예전과 같이 동작).
++   */
++  unseEntry?: 'daeun' | 'seyun' | null
+   // ── 확장 자리 ────────────────────────────────────────────────
+   // 대운·세운은 기본 통변에 넣지 않는다. (홈에 별도 서비스가 있음)
+   // 사용자가 "언제/내년/몇 살" 같은 시기 질문을 직접입력했을 때만,
+@@ -325,42 +331,21 @@ function buildOhaengGrade(score: Record<Ohaeng, number>, target: Target, need: S
+   return `[오행이 넘치거나 모자란 자리 — 교재 20~28쪽. 넘치는 것도 모자란 것도 결이지 흠이 아니다]\n${lines.join('\n')}`
+ }
+ 
+-/** 합과 충 — 교재 78~86쪽. 원국에 실제로 선 것만 */
++/**
++ * 합과 충 — 교재 78~86쪽. 원국에 실제로 선 것만.
++ *
++ * ★2026-07-28 — 여기 있던 합·충 반복문을 걷어내고 jaryoPick.hapChungBrief 를 부릅니다.
++ *   같은 계산이 두 벌이면 언젠가 한쪽만 고쳐집니다. (교훈 BQ)
++ *   실제로 沖의 자리(位) 판정을 넣을 때 이 사본이 그대로 남아 있어
++ *   사주보기 통변만 예전 말을 낼 뻔했습니다.
++ */
+ function buildHapChung(saju: PillarInput[], target: Target, need: Set<Need>): string {
+   const wantHap = need.has('합'); const wantChung = need.has('충') || need.has('건강')
+   if (!wantHap && !wantChung) return ''
+-  const branches = saju.map(p => p.branch).filter(Boolean)
+-  const stems = saju.map(p => p.stem).filter(Boolean)
+   const lines: string[] = []
+-  const seen = new Set<string>()
+-
+-  if (wantChung) {
+-    for (let i = 0; i < branches.length; i++) {
+-      for (let j = i + 1; j < branches.length; j++) {
+-        const r = findChungByChars(branches[i], branches[j])
+-        if (!r || seen.has(r.key)) continue
+-        seen.add(r.key)
+-        const say = r.say.filter(t => !isRule(t)).slice(0, 2)
+-        // 건강을 물었을 때만 장부 줄까지 준다
+-        const extra = need.has('건강') && target === 'adult' ? (r.sayAdult ?? []).slice(0, 2) : []
+-        lines.push(`- ${r.key}${r.alias ? `(${r.alias})` : ''} — ${[...say, ...extra].join(' ')}`)
+-      }
+-    }
+-  }
+-  if (wantHap) {
+-    const PAIRS: [string, string, string][] = [
+-      ['甲', '己', '甲己合'], ['乙', '庚', '乙庚合'], ['丙', '辛', '丙辛合'],
+-      ['丁', '壬', '丁壬合'], ['戊', '癸', '戊癸合'],
+-    ]
+-    for (const [a1, b1, key] of PAIRS) {
+-      if (!stems.includes(a1) || !stems.includes(b1) || seen.has(key)) continue
+-      const r = findHap(key); if (!r) continue
+-      seen.add(key)
+-      const say = r.say.filter(t => !isRule(t)).slice(0, 2)
+-      const extra = target === 'adult' ? (r.sayAdult ?? []).slice(0, 1) : []
+-      lines.push(`- ${r.key}${r.name ? `(${r.name})` : ''} — ${[...say, ...extra].join(' ')}`)
+-    }
+-  }
++  for (const t of hapChungBrief(saju, target, {
++    합: wantHap, 충: wantChung, 건강: need.has('건강'),
++  })) lines.push(`- ${t}`)
+   // ★2026-07-28 — 형·파·해·원진 (교재 87~93쪽). 합충과 한 벌이다.
+   for (const t of hyeongPaHaeBrief(saju, target).slice(0, 4)) lines.push(`- ${t}`)
+   if (!lines.length) return ''
+@@ -454,7 +439,8 @@ export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
+     : undefined
+ 
+   // ★공용 고르개를 쓴다. 갈래가 없거나 모르는 갈래면 자료가 다 나간다.
+-  const need = needsOf(a.questionCategories, CATEGORY_NEEDS)
++  //   대운·세운 갈래는 이름이 다른 벌이라 fallback 으로 한 번 더 본다. (2026-07-28)
++  const need = needsOf(a.questionCategories, CATEGORY_NEEDS, unseTableOf(a.unseEntry))
+ 
+   return {
+     name: a.name || '이 분',
+diff --git a/tsconfig.strict.json b/tsconfig.strict.json
+index daf6ebd..15bbad1 100644
+--- a/tsconfig.strict.json
++++ b/tsconfig.strict.json
+@@ -31,6 +31,9 @@
+     "lib/saju/jaryoPick.ts",
+     "lib/saju/hyeongPaHae.ts",
+     "lib/saju/jijiTrait.ts",
++    "lib/saju/yukchinTable.ts",
++    "lib/saju/yukchinRule.ts",
++    "lib/saju/yukchinGroup.ts",
+     "lib/saju/examLuck/**/*.ts",
+     "app/manseryeok/exam-luck/page.tsx",
+     "app/manseryeok/exam-luck-input/page.tsx",

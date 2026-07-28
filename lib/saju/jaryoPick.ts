@@ -280,16 +280,85 @@ export const COUPLE_CATEGORY_NEEDS: Record<string, Need[]> = {
 }
 
 /**
+ * ★대운·세운·월운 질문 대분류 (unseQuestions.ts) — 2026-07-28 추가
+ *
+ *   [무엇이 문제였나]
+ *     CATEGORY_NEEDS 는 **사주보기 갈래 19개만** 담고 있었습니다.
+ *     그런데 대운·세운·월운은 갈래 이름이 아예 다른 벌입니다.
+ *       사주보기   직업·진로 · 직업·사업 · 관계·마음 · 인간관계 · 인생후반 …
+ *       대운·세운   직업 ·      학업 ·      관계 ·      주의 ·      인생 흐름 …
+ *     이름이 안 맞으니 needsOf 가 못 찾고 「모르면 다 준다」(교훈 BV)로 빠졌습니다.
+ *     안전망이라 통변이 비지는 않았으나, 손님이 「직업」 하나만 골라도
+ *     열두 Need 가 전부 실려 재료가 늘 통째로 나갔습니다.
+ *
+ *   [실측] 대운·세운·월운 갈래 13개 중 **9개가 표에 없었습니다.**
+ *     있던 것  건강 · 재물 · 연애 · 연애·결혼   (사주보기와 이름이 같아 우연히 걸림)
+ *     없던 것  인생 흐름 · 전환기 · 타이밍 · 직업 · 주의 · 종합 · 관계 · 학업 · 마음
+ *
+ *   [왜 표를 둘로 나눴나]
+ *     같은 「재물」이라도 묻는 결이 다릅니다.
+ *       대운 재물   "돈이 크게 모이는 시기는 언제쯤인가요"   → 10년 단위. 인생단계
+ *       세운 재물   "올해 돈 흐름은 어떤가요"              → 한 해. 그해 합충
+ *       월운 재물   "돈이 들어오거나 나가기 쉬운 달은"      → 달. 합충
+ *     대운은 **시기**를 묻고 세운·월운은 **그때 무슨 일**을 묻습니다.
+ *     그래서 대운은 인생단계를 앞세우고, 세운·월운은 합·충을 앞세웁니다.
+ *
+ *   ⚠️ 세운 진입이면 세운과 월운 질문이 섞입니다(groupUnseByKind).
+ *      둘은 결이 가까워 한 표로 묶었습니다.
+ */
+export const DAEUN_CATEGORY_NEEDS: Record<string, Need[]> = {
+  // 대운 11문 — 「언제」를 묻는 자리라 인생단계를 늘 깝니다
+  '인생 흐름': ['인생단계','오행','일간','합','충'],
+  '전환기':    ['충','형파해','인생단계','개운'],
+  '재물':      ['오행','인생단계','충'],
+  '직업':      ['일간','오행','직업','살','인생단계'],
+  '관계':      ['일간','다루는법','합','충'],
+  '건강':      ['건강','오행','충','형파해'],
+  '마음':      ['일간','오행','다루는법','개운'],
+}
+
+export const SEYUN_CATEGORY_NEEDS: Record<string, Need[]> = {
+  // 세운 10문 — 「올해 무슨 일」을 묻는 자리라 합·충을 앞세웁니다
+  '종합':      ALL_NEEDS,
+  '재물':      ['오행','충','형파해','일간'],
+  '연애·결혼': ['합','충','형파해','일간'],
+  '직업':      ['일간','살','직업','충','형파해'],
+  '건강':      ['건강','충','형파해','개운'],
+  '관계':      ['일간','다루는법','합','형파해'],
+  '학업':      ['일간','오행','문이과','살'],
+  '주의':      ['충','형파해','살','개운'],
+  '타이밍':    ['합','충','인생단계'],
+  // 월운 6문 — 세운 진입이면 함께 섞여 나옵니다
+  '연애':      ['합','살','일간'],
+}
+
+/** 대운 진입인지 세운 진입인지로 표를 고른다 (unseQuestions.UnseEntry) */
+export function unseTableOf(entry?: 'daeun' | 'seyun' | null): Record<string, Need[]> {
+  return entry === 'daeun' ? DAEUN_CATEGORY_NEEDS : SEYUN_CATEGORY_NEEDS
+}
+
+/**
  * 갈래 → 무엇을 꺼낼까.
  *   ★갈래가 없거나 표에 없는 갈래(자유질문 등)면 **전부** 돌려준다.
  *     "모르면 다 준다" 가 "모르면 안 준다" 보다 낫다. AI 가 고르면 된다.
+ *
+ *   ★2026-07-28 — fallback 을 더했다.
+ *     대운·세운·월운은 갈래 이름이 사주보기와 다른 벌이라
+ *     table(CATEGORY_NEEDS)에서 못 찾고 늘 「전부」로 빠지고 있었다.
+ *     table 에서 못 찾으면 fallback 을 한 번 더 본다.
+ *     사주보기·궁합 갈래와 이름이 겹치는 넷(건강·재물·연애·연애·결혼)은
+ *     table 이 먼저라 예전 그대로 나간다. 손님 화면이 안 바뀐다.
  */
-export function needsOf(cats?: string[], table: Record<string, Need[]> = CATEGORY_NEEDS): Set<Need> {
+export function needsOf(
+  cats?: string[],
+  table: Record<string, Need[]> = CATEGORY_NEEDS,
+  fallback?: Record<string, Need[]>,
+): Set<Need> {
   if (!cats?.length) return new Set(ALL_NEEDS)
   const out = new Set<Need>(['일간'])   // 일간은 늘 밑바탕
   let unknown = false
   for (const c of cats) {
-    const n = table[c]
+    const n = table[c] ?? fallback?.[c]
     if (!n) { unknown = true; continue }
     for (const x of n) out.add(x)
   }

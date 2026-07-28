@@ -618,6 +618,9 @@ function ResultNewContent() {
                 // ★2026-07-28 — 손님이 고른 질문의 갈래를 재료 쪽에도 넘긴다.
                 //   교재 자료는 다 들어 있고, 물어본 것에 맞는 것만 꺼내 쓴다.
                 questionCategories: pickedQuestions?.map(q => q.category),
+                // ★대운·세운 갈래는 이름이 사주보기와 다른 벌이라 표를 갈라 쓴다.
+                //   안 넘기면 갈래를 못 찾아 재료가 통째로 나간다.
+                unseEntry,
               })}
               questions={pickedQuestions}
               premium={isPaid}

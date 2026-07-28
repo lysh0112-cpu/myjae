@@ -33,7 +33,7 @@ import { OHAENG_TRAIT } from '@/lib/saju/ohaengTrait'
 import { OHAENG_NATURE } from '@/lib/saju/ohaengNature'
 import { OHAENG_25 } from '@/lib/saju/ohaengTable25'
 import { SAL_TABLE } from '@/lib/saju/sinsalTable'
-import { hyeongPaHaeBrief, hapChungBrief, needsOf, CATEGORY_NEEDS, type Need } from '@/lib/saju/jaryoPick'
+import { hyeongPaHaeBrief, hapChungBrief, needsOf, unseTableOf, CATEGORY_NEEDS, type Need } from '@/lib/saju/jaryoPick'
 import { grade as ohaengGrade } from '@/lib/saju/simsanOhaeng'
 
 // 천간 → 오행
@@ -100,6 +100,14 @@ export interface ToTongbyeonArgs {
    *   교재 자료를 다 넣어 두되, 물어본 것에 맞는 것만 꺼내 쓰기 위함이다.
    */
   questionCategories?: string[]
+  /**
+   * ★2026-07-28 — 대운·세운 진입 여부 (unseQuestions.UnseEntry).
+   *   대운·세운·월운은 갈래 이름이 사주보기와 다른 벌이라
+   *   CATEGORY_NEEDS 에서 못 찾고 재료가 늘 통째로 나가고 있었다.
+   *   이 값으로 대운 표와 세운·월운 표를 갈라 쓴다.
+   *   안 넘기면 세운·월운 표를 fallback 으로 쓴다(예전과 같이 동작).
+   */
+  unseEntry?: 'daeun' | 'seyun' | null
   // ── 확장 자리 ────────────────────────────────────────────────
   // 대운·세운은 기본 통변에 넣지 않는다. (홈에 별도 서비스가 있음)
   // 사용자가 "언제/내년/몇 살" 같은 시기 질문을 직접입력했을 때만,
@@ -431,7 +439,8 @@ export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
     : undefined
 
   // ★공용 고르개를 쓴다. 갈래가 없거나 모르는 갈래면 자료가 다 나간다.
-  const need = needsOf(a.questionCategories, CATEGORY_NEEDS)
+  //   대운·세운 갈래는 이름이 다른 벌이라 fallback 으로 한 번 더 본다. (2026-07-28)
+  const need = needsOf(a.questionCategories, CATEGORY_NEEDS, unseTableOf(a.unseEntry))
 
   return {
     name: a.name || '이 분',
