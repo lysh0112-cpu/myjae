@@ -1,0 +1,14 @@
+diff --git a/tsconfig.strict.json b/tsconfig.strict.json
+index daf6ebd..15bbad1 100644
+--- a/tsconfig.strict.json
++++ b/tsconfig.strict.json
+@@ -31,6 +31,9 @@
+     "lib/saju/jaryoPick.ts",
+     "lib/saju/hyeongPaHae.ts",
+     "lib/saju/jijiTrait.ts",
++    "lib/saju/yukchinTable.ts",
++    "lib/saju/yukchinRule.ts",
++    "lib/saju/yukchinGroup.ts",
+     "lib/saju/examLuck/**/*.ts",
+     "app/manseryeok/exam-luck/page.tsx",
+     "app/manseryeok/exam-luck-input/page.tsx",
