@@ -11,6 +11,7 @@ import type { TongbyeonInput, Ohaeng } from '@/lib/saju/tongbyeonPrompt'
 // 용신 결과 타입 — 구버전 yongsin.ts 를 없애고 심산 기반 어댑터 타입으로 옮김(07-20).
 //   두 타입은 필드가 완전히 같다(isStrong·yongsin·heeksin·gisin·gusin·hansin·score·description).
 import type { YongsinCompatResult as YongsinResult } from '@/lib/saju/yongsinNew'
+import { calcYongsinNew, checkAgree } from '@/lib/saju/yongsinNew'
 import { getUnsung } from '@/lib/saju/unsung'
 import { getSinsal } from '@/lib/saju/sinsal'
 import { getGongmang } from '@/lib/saju/gongmang'
@@ -295,6 +296,20 @@ export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
     lackElements,
     yongsin: yongsinStr || undefined,
     yongsinElement: yongsinEl,
+    // ★2026-07-28 — 격국과 세 용신 일치를 통변 재료에 넣는다. (교재 147·157쪽)
+    //   전에는 화면 카드(YongsinCard)에만 있고 AI 는 격을 모른 채 썼다.
+    //   ⚠️ 여기서 다시 계산하지 않는다. yongsinNew 한 곳에서만 잰다. (교훈 BQ)
+    ...(() => {
+      const r = a.dayStem && a.dayStem !== '?' ? calcYongsinNew(a.saju as never, a.dayStem, score as never) : null
+      if (!r) return {}
+      const ag = checkAgree(r)
+      return {
+        gyeokguk: r.gyeokguk.name || undefined,
+        gyeokgukYongsin: r.gyeokguk.element ?? undefined,
+        johuYongsin: r.johu.element ?? undefined,
+        yongsinAgree: ag.title + ' — ' + ag.note,
+      }
+    })(),
     // 명식 특징(12운성·신살·귀인·공망) — 해당하는 것만 해석 포함해 조립.
     // ★2026-07-27 — 명식 특징에 교재 48~77쪽 지지 자료를 이어 붙인다.
     //   ① 12운성·신살·귀인·공망 (전부터 있던 것)

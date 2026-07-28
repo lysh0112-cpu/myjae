@@ -111,7 +111,23 @@ export async function getSolarTermMoment(
 ): Promise<{ day: number; hour: number; minute: number }> {
   const fallback = () => {
     const m = calcSolarTermMoment(year, monthIdx)
-    if (m) return { day: m.day, hour: Math.floor(m.hour), minute: Math.round((m.hour % 1) * 60) }
+    if (m) {
+      // ★2026-07-28 — 반올림해서 분이 60이 되는 자리를 올려 준다.
+      //   m.hour 는 소수 시각이다(예: 15.9989).
+      //     Math.floor(15.9989) = 15 · Math.round(0.9989*60) = 60  →  "15:60"
+      //   실측 1930~2050 · 12절 1,452개 중 14개(0.96%)에서 났다.
+      //     1959 청명 21:60 · 1988 입하 15:60 · 1991 입춘 16:60 …
+      //   ⚠️ 명식 계산에는 영향이 없었다. 쓰는 쪽이 hour*60+minute 으로 분을 합치기
+      //      때문에 15*60+60 = 960 = 16:00 으로 옳게 나온다.
+      //      다만 값 자체가 시각이 아니므로 화면·로그에 그대로 실으면 이상하다.
+      let hour = Math.floor(m.hour)
+      let minute = Math.round((m.hour % 1) * 60)
+      if (minute >= 60) { minute -= 60; hour += 1 }
+      // 23:60 → 24:00 은 다음날 00:00 이다.
+      let day = m.day
+      if (hour >= 24) { hour -= 24; day += 1 }
+      return { day, hour, minute }
+    }
     return { day: getFallbackDay(year, monthIdx), hour: 0, minute: 0 }
   }
   const termName = MONTH_TERM_NAME[monthIdx]

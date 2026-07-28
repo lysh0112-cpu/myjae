@@ -18,7 +18,7 @@ import { OHAENG_TRAIT } from './ohaengTrait'
 import { OHAENG_NATURE } from './ohaengNature'
 import { OHAENG_25 } from './ohaengTable25'
 import { findChungByChars } from './chungMeaning'
-import { findHap } from './hapMeaning'
+import { findHap, YUKHAP, SAMHAP, BANGHAP } from './hapMeaning'
 import { SAL_TABLE } from './sinsalTable'
 import { findRel, findSamhyeong, relLines } from './hyeongPaHae'
 // ★병존·지지특징 — 네 서비스가 따로 갖고 있던 것을 여기로 올렸다 (2026-07-28, 교훈 BQ)
@@ -365,6 +365,68 @@ export function ohaengBrief(
  *   ⚠️ 여기는 **원국 안의 沖**만 봅니다. 대운·세운에서 오는 沖은 잣대가 다릅니다
  *      (chungMeaning.CHUNG_RULE — "대운·세운은 일단 월지에 먼저 대입한다").
  */
+/**
+ * ★2026-07-28 — 지지 합(육합·삼합·방합)을 재료에 넣습니다.
+ *
+ * [무엇이 빠져 있었나]
+ *   합 쪽이 **천간합 다섯 짝만** 보고 있었습니다.
+ *   `hapMeaning.ts` 에 육합(80쪽)·삼합(80~81쪽)·방합(82쪽) 자료가 다 들어 있는데
+ *   꺼내는 곳이 없었습니다. 33-3장의 沖과 똑같은 자리입니다.
+ *     교훈 BO — 표에만 있는 규칙은 없는 규칙이다.
+ *
+ *   실측 — 지지 합이 있는 명식이 **49.3%** 입니다. 두 명에 한 명이 못 듣고 있었습니다.
+ *
+ * [어떤 차례로 내는가 — 교재가 매긴 세기]
+ *   교재 261쪽 "삼합은 천간합이나 육합에 견주어 강력합니다"
+ *   교재 340쪽 "세기는 삼합보다 방국이 더 강합니다"
+ *     → 방합 〉 삼합 〉 육합 〉 천간합
+ *
+ * [월지 조건 — 교재 259·343쪽]
+ *   "세 지지 중 하나는 반드시 월지에 있어야 삼합(방국)이 강하게 섭니다"
+ *   ★성립을 막지는 않습니다. 월지에 안 걸리면 「힘이 덜하다」고 덧붙입니다.
+ *     막아 버리면 손님이 자기 명식의 합을 아예 못 듣습니다. (교훈 BV)
+ *
+ * ⚠️ 준삼합·반합(교재 81쪽 SAMHAP_PARTIAL)은 넣지 않았습니다.
+ *    두 글자만으로도 서는 것이라 걸리는 명식이 크게 늘어 재료가 넘칩니다.
+ *    넣으실 거라면 걸림 비율부터 재십시오. (교훈 BO)
+ */
+function jijiHapBrief(saju: Pill[]): string[] {
+  const out: string[] = []
+  const brs = saju.map(p => p.branch).filter(Boolean)
+  const monthB = saju.find(p => p.pillar === '월주')?.branch ?? ''
+  /** 그 글자들이 어느 자리에 있는가 — 33-3장 沖과 같은 결로 자리를 살린다 */
+  const whereOf = (chars: string[]) =>
+    chars.map(c => toJiName(saju.find(p => p.branch === c)?.pillar ?? '')).filter(Boolean).join('-')
+
+  // ── 방합 (교재 82쪽) — 셋이 다 있어야 선다 ──
+  for (const r of BANGHAP) {
+    if (!r.chars.every(c => brs.includes(c))) continue
+    const say = r.say.filter(t => !isRuleLine(t)).slice(0, 2)
+    const weak = r.chars.includes(monthB) ? '' : ' 다만 월지에 걸치지 않아 힘이 덜합니다.'
+    out.push(`${r.key} ${r.name ?? ''}(방합) · ${whereOf(r.chars)} — ${say.join(' ')}${weak}`)
+  }
+  // ── 삼합 (교재 80~81쪽) ──
+  for (const r of SAMHAP) {
+    if (!r.chars.every(c => brs.includes(c))) continue
+    const say = r.say.filter(t => !isRuleLine(t)).slice(0, 2)
+    const weak = r.chars.includes(monthB) ? '' : ' 다만 월지에 걸치지 않아 힘이 덜합니다.'
+    out.push(`${r.key} ${r.name ?? ''}(삼합) · ${whereOf(r.chars)} — ${say.join(' ')}${weak}`)
+  }
+  // ── 육합 (교재 80쪽) — 두 글자 ──
+  //   ★방합·삼합에 이미 삼킨 짝은 겹쳐 내지 않는다. 같은 말이 두 번 나가면 무거워진다.
+  const eaten = new Set<string>()
+  for (const l of out) for (const c of l.slice(0, 3)) eaten.add(c)
+  for (const r of YUKHAP) {
+    if (!r.chars.every(c => brs.includes(c))) continue
+    if (r.chars.every(c => eaten.has(c))) continue
+    const say = r.say.filter(t => !isRuleLine(t)).slice(0, 1)
+    if (!say.length) continue
+    const nm = r.name ?? r.alias ?? ''
+    out.push(`${r.key}${nm ? `(${nm})` : ''} · ${whereOf(r.chars)} — ${say.join(' ')}`)
+  }
+  return out
+}
+
 export function hapChungBrief(saju: Pill[], target: Target, opt: { 합?: boolean; 충?: boolean; 건강?: boolean } = { 합: true, 충: true }): string[] {
   const stems = saju.map(p => p.stem).filter(Boolean)
   const out: string[] = []; const seen = new Set<string>()
@@ -392,6 +454,9 @@ export function hapChungBrief(saju: Pill[], target: Target, opt: { 합?: boolean
     }
   }
   if (opt.합) {
+    // ── 지지 합이 먼저 — 교재가 매긴 세기대로 (방합 〉 삼합 〉 육합 〉 천간합) ──
+    out.push(...jijiHapBrief(saju))
+    // ── 천간합 다섯 짝 ──
     const P: [string, string, string][] = [['甲','己','甲己合'],['乙','庚','乙庚合'],['丙','辛','丙辛合'],['丁','壬','丁壬合'],['戊','癸','戊癸合']]
     for (const [a, b, key] of P) {
       if (!stems.includes(a) || !stems.includes(b) || seen.has(key)) continue

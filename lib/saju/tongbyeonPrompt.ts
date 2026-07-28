@@ -38,8 +38,20 @@ export interface TongbyeonInput {
   topElement: Ohaeng           // 가장 강한 기운
   lackElements: Ohaeng[]       // 없거나 약한 기운(들)
   // 용신 계열
-  yongsin?: string             // 용신 오행 or 간지
+  yongsin?: string             // 용신 오행 or 간지 (억부용신)
   yongsinElement?: Ohaeng      // 용신 오행
+  /**
+   * ★2026-07-28 — 격국과 세 용신 일치 여부. (교재 147·157쪽)
+   *   147쪽 "격국용신은 사회적 성공 여부와 관련이 있다"
+   *   157쪽 "격으로 그 사람의 직업과 사주의 크기를 알 수 있다(60~70%)"
+   *   ⚠️ 전에는 화면 카드에만 있고 통변 재료에는 없었습니다.
+   *      AI 가 격을 모른 채 직업·사회 이야기를 써 왔습니다.
+   */
+  gyeokguk?: string            // 격 이름 (예: '편인격' · '무격')
+  gyeokgukYongsin?: string     // 격국용신 오행
+  johuYongsin?: string         // 조후용신 오행 (봄·가을생은 없음)
+  /** 조후·억부·격국이 한 기운을 가리키는가 — yongsinNew.checkAgree 결과 */
+  yongsinAgree?: string
   // ── 확장 자리(선택) ──────────────────────────────────────────
   // 기본 통변엔 넣지 않는다. 시기 질문 등에서만 필요 시 채워 씀.
   strongWeak?: string          // 신강약 (예: "중화신강")
@@ -150,7 +162,11 @@ export function buildTongbyeonPrompt(
   → 가장 강한 기운: ${input.topElement} (${OHAENG_MULSANG[input.topElement]})
   → 없거나 약한 기운: ${input.lackElements.length ? input.lackElements.join(', ') : '뚜렷한 결핍 없음'}${
     input.strongWeak ? `\n- 기운의 세기: ${input.strongWeak}` : ''
-  }${input.yongsin ? `\n- 나를 살려주는 고마운 기운: ${input.yongsin}` : ''}${
+  }${input.yongsin ? `\n- 나를 살려주는 고마운 기운(억부): ${input.yongsin}` : ''}${
+    input.johuYongsin ? `\n- 계절이 바라는 기운(조후): ${input.johuYongsin}` : ''
+  }${input.gyeokguk ? `\n- 사회에서 쓰는 그릇(격): ${input.gyeokguk}${input.gyeokgukYongsin ? ` · 그 격이 바라는 기운 ${input.gyeokgukYongsin}` : ''}` : ''}${
+    input.yongsinAgree ? `\n- 세 기운이 모이는가: ${input.yongsinAgree}` : ''
+  }${
     input.currentDaeun ? `\n- 지금 흐르는 큰 흐름: ${input.currentDaeun}` : ''
   }${input.myeongsikFeatures ? `\n${input.myeongsikFeatures}` : ''}`
 
