@@ -15,9 +15,13 @@ import { createClient } from '@supabase/supabase-js'
 import { withNim } from '@/lib/saju/honorific'
 // ★2026-07-28 — 교재 41~47쪽 일간, 84~86쪽 충을 재료로 얹는다.
 //   이 화면은 명식 네 기둥이 아니라 일간·월지·일지만 받는다. 있는 것으로만 잰다.
-import { cheonganBrief, salBrief, hapChungBrief, ohaengBrief, stage25 } from '@/lib/saju/jaryoPick'
-// ★육친(십성) — 명리적성 3장 106~131쪽 (2026-07-28)
-import { yukchinBrief } from '@/lib/saju/yukchinTable'
+// ★2026-07-28 — 교재 자료는 jaryoPick 단일 창구에서만 받는다. (교훈 BQ)
+import { pick } from '@/lib/saju/jaryoPick'
+// ★2026-07-28 — 교재 자료는 jaryoPick 단일 창구에서 받는 것이 원칙입니다.
+//   여기만 예외로 둘을 직접 씁니다. 까닭:
+//     이달 지지와 내 지지의 관계는 **운(運)** 이지 원국 재료가 아닙니다.
+//     창구는 원국 안에 선 것만 봅니다.
+//   ⚠️ 원국 재료(일간·오행·살·합충·육친)는 pick() 에서 받으십시오.
 import { findChungByChars } from '@/lib/saju/chungMeaning'
 import { findRel, relLines } from '@/lib/saju/hyeongPaHae'
 import { logAiError } from '@/lib/ai/errorLog'
@@ -80,9 +84,7 @@ export async function POST(req: NextRequest) {
 - 이달 지지(${monthBranch})와 내 일지(${dayBranchMine}) = 개인·건강: 등급 ${selfGrade}, 관계 "${selfTag}"
   원문: ${selfDesc}`
 
-    // ★일간이 어떤 사람인가 (교재 41~47쪽) — 세 줄만
-    const ilganMaterial = cheonganBrief(dayStem, 2)
-      .map((t: string) => `- ${t}`).join('\n')
+    // ★일간은 jaryoPick.pick() 이 함께 준다. 여기서 따로 만들면 두 벌이 된다. (2026-07-28)
     // ★타고난 월지-일지 충 (교재 84~86쪽)
     const bornChung = (() => {
       const r = findChungByChars(monthBranchMine, dayBranchMine)
@@ -108,19 +110,12 @@ export async function POST(req: NextRequest) {
     //   안 오면 그 줄만 빠진다. (조용히 틀린 값을 지어내지 않는다 — 교훈 U)
     const sajuMaterial = (() => {
       if (!Array.isArray(saju) || !saju.length) return ''
-      const out = [
-        ...salBrief(saju, 'adult', false).slice(0, 3),
-        ...hapChungBrief(saju, 'adult').slice(0, 2),
-        // ★육친 — 센 십성 둘만. 이달 운세는 짧아야 하므로 짝(편중) 이야기는 안 넣는다.
-        ...yukchinBrief(saju, 'adult', { keys: 2, cap: 2 }),
-        // ★오행 과다·부족과 개운법 (교재 20~28쪽). 100점 계산기 값이 올 때만.
-        ...(ohaengScore ? ohaengBrief(ohaengScore, 'adult', { 결: true, 개운: true }) : []),
-        // ★가장 센 기운의 결 (교재 25쪽)
-        ...(ohaengScore ? [stage25(
-          (['목','화','토','금','수'] as const).slice()
-            .sort((a, b) => (ohaengScore[b] ?? 0) - (ohaengScore[a] ?? 0))[0],
-        )].filter(Boolean) : []),
-      ]
+      const out = pick({
+        serviceType: 'monthly',
+        // 이달의 운세는 질문을 고르는 화면이 아니라 한 덩어리라 갈래를 안 넘긴다.
+        // 창구가 기본 재료(DEFAULT_NEEDS)로 골라 준다.
+        ctx: { saju, dayStem, score: ohaengScore ?? undefined, target: 'adult' },
+      }).lines
       return out.length ? '\n' + out.map((t: string) => `- ${t}`).join('\n') : ''
     })()
 
@@ -132,7 +127,7 @@ ${fortuneGuide}
 
 [대상 달] ${year}년 ${month}월 (${monthStem}${monthBranch}월)
 [상담자 일간] ${dayStem} / 월지 ${monthBranchMine} / 일지 ${dayBranchMine}
-${ilganMaterial}${bornChung}${relMaterial}${sajuMaterial}
+${bornChung}${relMaterial}${sajuMaterial}
 [상담자 용신] ${yongsin} / 희신 ${heeksin}
 ${nickname ? `[호칭] ${withNim(nickname)}` : ''}
 ${ageGroup ? `[연령대] ${ageGroup}` : ''}

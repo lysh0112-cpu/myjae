@@ -21,20 +21,14 @@ import { GWIIN_MEANING, GWIIN_HARMONY } from '@/lib/saju/gwiinMeaning'
 import { GONGMANG_INTRO, GONGMANG_BY_PILLAR } from '@/lib/saju/gongmangMeaning'
 // ★2026-07-27 — 교재 48~77쪽 지지 자료를 통변 재료로 넣는다.
 //   지금까지 화면에만 있고 AI 는 몰랐다. (교훈 BF 의 반대편 — 줘야 할 것은 줘야 한다)
-import { traitsInSaju, traitLines, noteLines, isDohwaAt, ctxOf, type Target } from '@/lib/saju/jijiTrait'
-import { findByeongjon, findCombo, findJijiByeongjon, sayOf } from '@/lib/saju/byeongjon'
+import { type Target } from '@/lib/saju/jijiTrait'
 import { jijiRelation } from '@/lib/saju/jijiGrade'
 // ★2026-07-28 — 교재 20~28·41~47·78~86·94~97쪽 자료를 통변 재료로 넣는다.
 //   ⚠️ 통째로 넣지 않는다. 걸린 것만 골라 넣는다. (교훈 BS · 31부 §6)
 //      일곱 파일의 나가는 문장을 다 합치면 33,000자다. 조건으로 거르면
 //      한 사람당 1,500~2,000자로 떨어진다.
-import { CHEONGAN_TRAIT } from '@/lib/saju/cheonganTrait'
-import { OHAENG_TRAIT } from '@/lib/saju/ohaengTrait'
-import { OHAENG_NATURE } from '@/lib/saju/ohaengNature'
-import { OHAENG_25 } from '@/lib/saju/ohaengTable25'
-import { SAL_TABLE } from '@/lib/saju/sinsalTable'
-import { hyeongPaHaeBrief, hapChungBrief, needsOf, unseTableOf, CATEGORY_NEEDS, type Need } from '@/lib/saju/jaryoPick'
-import { grade as ohaengGrade } from '@/lib/saju/simsanOhaeng'
+// ★2026-07-28 — 교재 자료는 jaryoPick 단일 창구에서만 받는다. (교훈 BQ)
+import { pick } from '@/lib/saju/jaryoPick'
 
 // 천간 → 오행
 const STEM_EL: Record<string, Ohaeng> = {
@@ -187,50 +181,7 @@ function buildMyeongsikFeatures(
   return `[명식 특징 — 이 사람에게 실제로 있는 것들(질문에 관련될 때 근거로 쓰되 겁주지 말 것)]\n${lines.join('\n')}`
 }
 
-/**
- * 지지가 말하는 것 — 교재 48쪽 「地支의 종류」 + 50~73쪽 「12地支 심층 분석」 특징 문단
- *
- * ★월지·일지는 통째로, 년지·시지는 48쪽 비고만 넣는다.
- *   교재 72쪽 亥 "月支와 日支에 있을 때 가장 강력하게 작용한다"
- *   교재 90쪽 신살 작용력도 월지·일지가 가장 크다.
- *   넷을 다 통째로 넣으면 재료가 프롬프트를 덮어 버린다.
- *
- * ⚠️ row.original 은 절대 안 넣는다. 교재 원문이라 화면에 낼 수 없는 말이 섞여 있다. (교훈 BF)
- */
-function buildJijiTrait(saju: PillarInput[], target: Target): string {
-  const hits = traitsInSaju(saju)
-  if (!hits.length) return ''
-  const ctx = ctxOf(saju as never)
-  const lines = hits.map(h => {
-    const strong = h.pillars.includes('월지') || h.pillars.includes('일지')
-    const dohwa = h.pillars.some(p => isDohwaAt(p.replace('지', '주'), h.branch)) ? ' [도화]' : ''
-    const body = strong
-      ? [...traitLines(h.row, target, ctx), ...noteLines(h.row, target, ctx)].join(' ')
-      : noteLines(h.row, target, ctx).join(' ')
-    const jobs = strong && h.row.jobs?.length ? ` (교재가 든 직업: ${h.row.jobs.join('·')})` : ''
-    return `- ${h.pillar} ${h.branch}(${h.row.ko}·${h.row.tti})${dohwa} — ${body}${jobs}`
-  })
-  return `[지지가 말하는 것 — 교재 48쪽·50~73쪽. 월지와 일지가 가장 세다]\n${lines.join('\n')}`
-}
 
-/** 병존 — 같은 글자가 나란히 (교재 74~77쪽) */
-function buildByeongjon(saju: PillarInput[], target: Target): string {
-  const lines: string[] = []
-  for (const h of findByeongjon(saju)) {
-    const yeok = h.row.yeokma ? ` [역마 ${h.row.yeokma}]` : ''
-    lines.push(`- ${h.key} (${h.pillars.join('·')})${yeok} — ${sayOf(h.row, target)}`)
-  }
-  for (const c of findCombo(saju)) {
-    lines.push(`- ${c.row.need.join('')} ${c.key} (${c.pillars.join('·')}) — ${sayOf(c.row, target)}`)
-  }
-  for (const h of findJijiByeongjon(saju)) {
-    const sal = h.row.sal?.length ? ` [${h.row.sal.join('·')}]` : ''
-    const jobs = h.row.jobs?.length ? ` (교재가 든 직업: ${h.row.jobs.join('·')})` : ''
-    lines.push(`- ${h.key} (${h.pillars.join('·')})${sal} — ${sayOf(h.row, target)}${jobs}`)
-  }
-  if (!lines.length) return ''
-  return `[병존 — 같은 글자가 나란히 있어 그 기운이 짙다 (교재 74~77쪽)]\n${lines.join('\n')}`
-}
 
 /**
  * 지금 흐름과 내 지지의 어울림 — 교재 49쪽 144칸
@@ -283,134 +234,10 @@ function buildUnJiji(
 const isRule = (t: string) =>
   /개 이상|포함해|되풀이|섞여 있어도|차례로 작용력|일 때 봅니다|해당하며/.test(t)
 
-/** 일간이 말하는 것 — 교재 41~47쪽 */
-function buildCheongan(dayStem: string, target: Target, gender: string, need: Set<Need>): string {
-  if (!need.has('일간')) return ''
-  const r = CHEONGAN_TRAIT[dayStem]
-  if (!r) return ''
-  // 갈래가 많이 걸릴수록 짧게. 물어본 것이 넓으면 일간은 밑그림만 준다.
-  const cap = need.size >= 4 ? 3 : 5
-  const lines = [`- ${dayStem}(${r.ko}) ${r.image} — ${r.tendency}, ${r.keyword}. ${r.nature41}`]
-  for (const t of r.traits.slice(0, cap)) lines.push(`- ${t}`)
-  for (const t of r.advice.slice(0, 2)) lines.push(`- ${t}`)
-  // ★성별 줄은 본인이 자기 명식을 보는 자리에서만. 궁합에서는 넘기지 말 것.
-  if (target === 'adult' && (gender === '남' || gender === '여')) {
-    for (const t of r.sayByGender?.[gender] ?? []) lines.push(`- ${t}`)
-  }
-  return `[일간이 말하는 것 — 교재 41~47쪽. 이 사람의 본바탕이다]\n${lines.join('\n')}`
-}
 
-/** 오행이 넘치거나 모자란 자리 — 교재 20~28쪽 */
-function buildOhaengGrade(score: Record<Ohaeng, number>, target: Target, need: Set<Need>): string {
-  if (!need.has('오행') && !need.has('건강') && !need.has('개운') && !need.has('다루는법')) return ''
-  const lines: string[] = []
-  const EL: Ohaeng[] = ['목', '화', '토', '금', '수']
-  for (const el of EL) {
-    const g = ohaengGrade(score[el] ?? 0)
-    if (g !== '과다' && g !== '결핍') continue
-    const t = OHAENG_TRAIT[el]; const n = OHAENG_NATURE[el]
-    if (!t) continue
-    const parts: string[] = []
-    if (g === '과다') {
-      if (need.has('오행')) parts.push(...t.excess.slice(0, 2))
-      if (need.has('건강') && target === 'adult') parts.push(...(t.excessAdult ?? []).slice(0, 2))
-      if (target === 'student') parts.push(...(t.excessStudent ?? []).slice(0, 1))
-      lines.push(`- ${el}(${t.hanja}) 과다 ${score[el]}점 — ${parts.join(' ')}`)
-      if (need.has('다루는법') && n?.handling?.length) {
-        lines.push(`  · 곁의 사람이 대할 때: ${n.handling.slice(0, 2).join(' ')}`)
-      }
-    } else {
-      if (need.has('오행')) parts.push(...t.lack.slice(0, 2))
-      if (need.has('건강') && target === 'adult') parts.push(...(t.lackAdult ?? []).slice(0, 2))
-      if (target === 'student') parts.push(...(t.lackStudent ?? []).slice(0, 1))
-      lines.push(`- ${el}(${t.hanja}) 결핍 — ${parts.join(' ')}`)
-      if (need.has('개운') && t.gaeun?.length) lines.push(`  · 개운법: ${t.gaeun.slice(0, 3).join(' ')}`)
-    }
-  }
-  if (!lines.length) return ''
-  return `[오행이 넘치거나 모자란 자리 — 교재 20~28쪽. 넘치는 것도 모자란 것도 결이지 흠이 아니다]\n${lines.join('\n')}`
-}
 
-/**
- * 합과 충 — 교재 78~86쪽. 원국에 실제로 선 것만.
- *
- * ★2026-07-28 — 여기 있던 합·충 반복문을 걷어내고 jaryoPick.hapChungBrief 를 부릅니다.
- *   같은 계산이 두 벌이면 언젠가 한쪽만 고쳐집니다. (교훈 BQ)
- *   실제로 沖의 자리(位) 판정을 넣을 때 이 사본이 그대로 남아 있어
- *   사주보기 통변만 예전 말을 낼 뻔했습니다.
- */
-function buildHapChung(saju: PillarInput[], target: Target, need: Set<Need>): string {
-  const wantHap = need.has('합'); const wantChung = need.has('충') || need.has('건강')
-  if (!wantHap && !wantChung) return ''
-  const lines: string[] = []
-  for (const t of hapChungBrief(saju, target, {
-    합: wantHap, 충: wantChung, 건강: need.has('건강'),
-  })) lines.push(`- ${t}`)
-  // ★2026-07-28 — 형·파·해·원진 (교재 87~93쪽). 합충과 한 벌이다.
-  for (const t of hyeongPaHaeBrief(saju, target).slice(0, 4)) lines.push(`- ${t}`)
-  if (!lines.length) return ''
-  return `[합·충·형·파·해 — 교재 78~93쪽. 천간은 합을 중히 보고 지지는 충을 중히 본다]\n${lines.join('\n')}`
-}
 
-/**
- * 살 — 교재 94~97쪽. 걸린 것만.
- *   ★교재가 개수·자리 조건을 적어 둔 살만 잰다.
- *     역마·화개·천문성·천라·지망은 조건이 없어 거의 모두에게 걸린다. (교훈 BO)
- *   ⚠️ 양인살은 96쪽 표(다섯, 일간 기준 월지)로 잰다.
- *      career/tables/sinsal.ts(93쪽)는 셋이다. 연재쌤 확인 항목.
- */
-function buildSal(saju: PillarInput[], target: Target, need: Set<Need>): string {
-  if (!need.has('살')) return ''
-  const at = (n: string) => saju.find(p => p.pillar === n)
-  const branches = saju.map(p => p.branch).filter(Boolean)
-  const stems = saju.map(p => p.stem).filter(Boolean)
-  const pillars = saju.map(p => `${p.stem}${p.branch}`)
-  const monthB = at('월주')?.branch ?? ''
-  const dayB = at('일주')?.branch ?? ''
-  const dayStem = at('일주')?.stem ?? ''
-  const hits: string[] = []
 
-  const DOHWA = ['子', '午', '卯', '酉']
-  if (branches.filter(b => DOHWA.includes(b)).length >= 2 &&
-      (DOHWA.includes(monthB) || DOHWA.includes(dayB))) hits.push('dohwa')
-
-  const HC = ['甲', '午', '未', '申', '辛']
-  if ([...stems, ...branches].filter(c => HC.includes(c)).length >= 3 ||
-      (HC.includes(dayStem) && HC.includes(dayB))) hits.push('hyeonchim')
-
-  if (['甲辰','乙未','丙戌','丁丑','戊辰','壬戌','癸丑'].some(x => pillars.includes(x))) hits.push('baekho')
-  if (['庚辰','庚戌','壬辰','壬戌','戊辰','戊戌'].some(x => pillars.includes(x))) hits.push('goegang')
-
-  const YANGIN: Record<string, string> = { 甲: '卯', 丙: '午', 戊: '午', 庚: '酉', 壬: '子' }
-  if (dayStem && YANGIN[dayStem] && monthB === YANGIN[dayStem]) hits.push('yangin')
-
-  for (const key of ['cheoneulgwiin', 'munchang']) {
-    const r = SAL_TABLE.find(x => x.key === key)
-    if ((r?.byDayStem?.[dayStem] ?? []).some(b => branches.includes(b))) hits.push(key)
-  }
-
-  const lines: string[] = []
-  for (const key of hits) {
-    const r = SAL_TABLE.find(x => x.key === key); if (!r) continue
-    const mean = r.say.filter(t => !isRule(t))
-    const say = [...mean.slice(0, 2), ...(target === 'adult' ? (r.sayAdult ?? []).slice(0, 1) : [])]
-    // 직업을 물었을 때만 직업 목록을 준다
-    const jobs = need.has('직업') && r.jobs?.length ? ` (교재가 든 일: ${r.jobs.slice(0, 5).join('·')})` : ''
-    lines.push(`- ${r.name} — ${say.join(' ')}${jobs}`)
-  }
-  if (!lines.length) return ''
-  return `[살(殺) — 교재 94~97쪽. 살은 겁줄 이름이 아니라 결을 가리키는 말이다]\n${lines.join('\n')}`
-}
-
-/** 인생의 어느 때인가 — 교재 25쪽. 노후·인생후반을 물었을 때만 */
-function buildLifeStage(score: Record<Ohaeng, number>, need: Set<Need>): string {
-  if (!need.has('인생단계')) return ''
-  const EL: Ohaeng[] = ['목', '화', '토', '금', '수']
-  const top = EL.slice().sort((a, b) => (score[b] ?? 0) - (score[a] ?? 0))[0]
-  const r = OHAENG_25[top]
-  if (!r) return ''
-  return `[인생의 결 — 교재 25쪽]\n- 가장 센 기운은 ${top}(${r.hanja})입니다. 계절로는 ${r.season}, 하루로는 ${r.timeOfDay}, 인생으로는 ${r.lifeStage}의 자리입니다.`
-}
 
 
 export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
@@ -438,10 +265,6 @@ export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
     ? (yongsinStr as Ohaeng)
     : undefined
 
-  // ★공용 고르개를 쓴다. 갈래가 없거나 모르는 갈래면 자료가 다 나간다.
-  //   대운·세운 갈래는 이름이 다른 벌이라 fallback 으로 한 번 더 본다. (2026-07-28)
-  const need = needsOf(a.questionCategories, CATEGORY_NEEDS, unseTableOf(a.unseEntry))
-
   return {
     name: a.name || '이 분',
     age: a.age,
@@ -466,19 +289,41 @@ export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
     //   ③ 병존               74~77쪽
     //   ④ 지금 흐름과의 어울림 49쪽 144칸 (대운·세운을 넘겨받았을 때만)
     //   학생/성인은 나이로 가른다. 아이 사주를 부모가 함께 읽는 자리이기 때문이다.
-    myeongsikFeatures: [
-      buildMyeongsikFeatures(a.saju, a.dayStem),
-      buildJijiTrait(a.saju, a.age < 20 ? 'student' : 'adult'),
-      buildByeongjon(a.saju, a.age < 20 ? 'student' : 'adult'),
-      buildUnJiji(a.saju, a.age < 20 ? 'student' : 'adult', a.currentDayun, a.thisYearSeyun),
-      // ★2026-07-28 — 손님이 고른 질문의 갈래에 맞는 것만 꺼낸다.
-      //   갈래를 안 넘기면 일간 몇 줄만 나간다.
-      buildCheongan(a.dayStem, a.age < 20 ? 'student' : 'adult', a.gender, need),
-      buildOhaengGrade(score, a.age < 20 ? 'student' : 'adult', need),
-      buildHapChung(a.saju, a.age < 20 ? 'student' : 'adult', need),
-      buildSal(a.saju, a.age < 20 ? 'student' : 'adult', need),
-      buildLifeStage(score, need),
-    ].filter(Boolean).join('\n\n') || undefined,
+    myeongsikFeatures: (() => {
+      // ★2026-07-28 — 교재 자료는 jaryoPick.pick() 단일 창구에서만 받는다. (교훈 BQ)
+      //   예전에는 여기서 CHEONGAN_TRAIT·OHAENG_*·SAL_TABLE 등을 직접 뒤져
+      //   buildCheongan·buildSal 같은 빌더를 따로 갖고 있었다.
+      //   병존은 네 벌, 지지특징은 세 벌, 살은 두 벌이었다.
+      //   ★블록 이름과 교재 쪽 표기는 그대로 지킨다. AI 가 출전을 알아야 한다.
+      const target: Target = a.age < 20 ? 'student' : 'adult'
+      const picked = pick({
+        serviceType: 'saju',
+        questionCategories: a.questionCategories,
+        // 지지특징·병존은 명식 소개라 질문을 안 가린다
+        forceNeeds: ['지지특징', '병존'],
+        ctx: {
+          saju: a.saju, dayStem: a.dayStem, score, target, gender: a.gender,
+          unseKind: a.unseEntry ?? null,
+        },
+      })
+      const B = picked.byNeed
+      const blk = (title: string, arr?: string[]) =>
+        arr?.length ? `${title}\n${arr.map(t => `- ${t}`).join('\n')}` : ''
+      const hapChung = [...(B['충'] ?? []), ...(B['합'] ?? []), ...(B['형파해'] ?? [])]
+      return [
+        buildMyeongsikFeatures(a.saju, a.dayStem),
+        blk('[지지가 말하는 것 — 교재 48쪽·50~73쪽. 월지와 일지가 가장 세다]', B['지지특징']),
+        blk('[병존 — 교재 74~77쪽. 같은 글자가 나란히 있어 기운이 짙다]', B['병존']),
+        buildUnJiji(a.saju, target, a.currentDayun, a.thisYearSeyun),
+        blk('[일간이 말하는 것 — 교재 41~47쪽. 이 사람의 본바탕이다]', B['일간']),
+        blk('[오행이 넘치거나 모자란 자리 — 교재 20~28쪽. 넘치는 것도 모자란 것도 결이지 흠이 아니다]', B['오행']),
+        blk('[합·충·형·파·해 — 교재 78~93쪽. 천간은 합을 중히 보고 지지는 충을 중히 본다]', hapChung),
+        blk('[살 — 교재 94~97쪽. 걸린 것만]', B['살']),
+        blk('[육친이 말하는 것 — 교재 106~131쪽. 십성과 다섯 짝]', B['육친']),
+        blk('[타고난 결의 단계 — 교재 25쪽]', B['인생단계']),
+        blk('[문과·이과 — 교재 25쪽]', B['문이과']),
+      ].filter(Boolean).join('\n\n') || undefined
+    })(),
     // ★대운을 넘겨받았으면 프롬프트의 "지금 흐르는 큰 흐름" 자리도 채운다.
     //   전에는 이 자리가 선언만 되어 있고 아무도 안 채우고 있었다.
     currentDaeun: a.currentDayun

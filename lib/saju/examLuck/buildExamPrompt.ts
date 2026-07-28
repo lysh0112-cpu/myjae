@@ -15,10 +15,8 @@ import type { ExamCard, ExamTarget } from './types'
 import { CLOSING, CLOSING_STUDENT, CLOSING_SRC } from './tables/rules'
 
 /** 대목 차례 — 화면 카드와 1:1 */
-import { salBrief, cheonganBrief, ohaengBrief, hyeongPaHaeBrief, hapChungBrief, munYiBrief } from '../jaryoPick'
-// ★육친(십성) — 명리적성 3장 106~131쪽 (2026-07-28)
-import { yukchinBrief } from '../yukchinTable'
-import { groupBrief } from '../yukchinGroup'
+// ★2026-07-28 — 교재 자료는 jaryoPick 단일 창구에서만 받는다. (교훈 BQ)
+import { salBrief, pick } from '../jaryoPick'
 
 export const ORDER: Array<{ key: string; title: string; len: string }> = [
   { key: 'years', title: '앞으로의 흐름', len: '4~6문장' },
@@ -69,21 +67,15 @@ export function buildExamPrompt(v: BuildExamPromptArgs): string {
   //   오행 과다·부족은 공부를 어떻게 밀고 가야 하는지에 닿는다.
   //   형(刑)은 업상대체를 말하는 자리라 시험 종류를 고를 때 쓸모가 있다.
   const dayStem = v.saju?.find(p => p.pillar === '일주')?.stem ?? ''
-  const bookLines = [
-    ...cheonganBrief(dayStem, 3),
-    ...(v.ohaengScore ? ohaengBrief(v.ohaengScore, v.target, { 결: true }) : []),
-    // ★문과:이과 비율 (교재 25쪽) — 어떤 시험에 힘이 실리는지 짚을 때 쓴다.
-    ...(v.ohaengScore ? [munYiBrief(v.ohaengScore)].filter(Boolean) : []),
-    ...(v.saju?.length ? hyeongPaHaeBrief(v.saju, v.target).slice(0, 2) : []),
-    ...(v.saju?.length ? hapChungBrief(v.saju, v.target).slice(0, 2) : []),
-    // ★육친 (명리적성 3장 106~131쪽) — 2026-07-28
-    //   교재 117쪽: "관성이 많으면 남을 많이 의식한다. 합격운, 취업운에도 유리하다"
-    //   교재 130쪽: 학업 상승운은 인성운·식상운, 하락운은 비겁운·재성운
-    //   시험은 관성·인성·식상이 핵심이라 십성을 짚어 주면 통변이 또렷해진다.
-    ...(v.saju?.length ? yukchinBrief(v.saju, v.target, { keys: 2, cap: 2 }) : []),
-    // 과다한 짝만 (없는 짝은 오행 결핍과 결이 겹쳐 뺀다)
-    ...(v.saju?.length ? groupBrief(v.saju, v.target, { cap: 2, maxKeys: 1, onlyGwada: true }) : []),
-  ]
+  // ★2026-07-28 — 교재 자료는 jaryoPick 단일 창구에서만 받는다.
+  //   교재 117쪽: "관성이 많으면 남을 많이 의식한다. 합격운, 취업운에도 유리하다"
+  //   교재 130쪽: 학업 상승운은 인성운·식상운, 하락운은 비겁운·재성운
+  const bookLines = pick({
+    serviceType: 'exam',
+    questionCategories: ['취업'],   // 시험·취업 결로 골라 달라는 뜻
+    ctx: { saju: v.saju, dayStem, score: v.ohaengScore ?? undefined, target: v.target },
+  }).lines
+
   const bookBlock = bookLines.length
     ? `\n\n[타고난 결 — 교재 20~47·87~93쪽]\n` + bookLines.map(t => `- ${t}`).join('\n')
     : ''

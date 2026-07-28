@@ -48,11 +48,10 @@ import type { CoupleJudgeV1, CategoryResult } from './coupleFilterV1'
 //   사주보기에만 넣어 두면 궁합 통변은 이 사실을 모른다.
 //   ⚠️ 대목(카드)을 새로 만들지 않는다. 두 사람 명식 블록 안에 사실로만 얹는다.
 //      궁합 프롬프트는 대목과 재료가 1:1로 묶여 있어, 대목을 늘리면 글이 뭉친다. (28부)
-import { findByeongjon, findCombo, findJijiByeongjon, sayOf } from './byeongjon'
 // ★2026-07-28 — 교재 자료를 궁합 재료에도 넣는다.
 //   ⚠️ 성별 줄은 넘기지 않는다. 상대방 사주에 성별을 두고 한 말이 뜨면 곤란하다.
 //   ★가장 값진 것은 "다루는 법"(교재 20~24쪽) — 상대를 어떻게 대할 것인가.
-import { needsOf, pickLines, COUPLE_CATEGORY_NEEDS, type Need } from './jaryoPick'
+import { needsOf, pickLines, byeongjonBrief, COUPLE_CATEGORY_NEEDS, type Need } from './jaryoPick'
 
 // ── 표기용 ──────────────────────────────────────────────────────────────
 const EL_KOR: Record<string, string> = {
@@ -108,19 +107,10 @@ function personBlock(p: CouplePersonInput, label: string, need?: Set<Need>): str
   // ── 병존 (교재 74~77쪽) — 같은 글자가 나란히 있으면 그 기운이 짙다 ──
   //   ★여는말에서 "각각 어떤 기운을 타고났는지" 소개할 때 쓰라고 준다.
   //     새 대목을 만들지 말라는 지시는 buildCouplePrompt 에 적어 두었다.
+  //   ★2026-07-28 — jaryoPick 단일 창구에서 받는다. 손으로 만들지 않는다. (교훈 BQ)
+  //     궁합·사주보기·물상·진로적성 넷이 똑같은 병존 코드를 따로 갖고 있었다.
   {
-    const bj: string[] = []
-    for (const h of findByeongjon(p.saju)) {
-      const yeok = h.row.yeokma ? ` [역마 ${h.row.yeokma}]` : ''
-      bj.push(`${h.key}(${h.pillars.join('·')})${yeok} — ${sayOf(h.row, 'adult')}`)
-    }
-    for (const c of findCombo(p.saju)) {
-      bj.push(`${c.row.need.join('')} ${c.key}(${c.pillars.join('·')}) — ${sayOf(c.row, 'adult')}`)
-    }
-    for (const h of findJijiByeongjon(p.saju)) {
-      const sal = h.row.sal?.length ? ` [${h.row.sal.join('·')}]` : ''
-      bj.push(`${h.key}(${h.pillars.join('·')})${sal} — ${sayOf(h.row, 'adult')}`)
-    }
+    const bj = byeongjonBrief(p.saju, 'adult')
     if (bj.length) {
       lines.push(`- 병존(같은 글자가 나란히 — 교재 74~77쪽):`)
       for (const x of bj) lines.push(`  · ${x}`)

@@ -21,6 +21,9 @@ import { findChungByChars } from './chungMeaning'
 import { findHap } from './hapMeaning'
 import { SAL_TABLE } from './sinsalTable'
 import { findRel, findSamhyeong, relLines } from './hyeongPaHae'
+// ★병존·지지특징 — 네 서비스가 따로 갖고 있던 것을 여기로 올렸다 (2026-07-28, 교훈 BQ)
+import { findByeongjon, findCombo, findJijiByeongjon, sayOf } from './byeongjon'
+import { traitsInSaju, traitLines, noteLines, isDohwaAt, ctxOf as jijiCtxOf } from './jijiTrait'
 // ★자리별 沖 판정 (교재 121쪽). 표를 두 벌로 두지 않으려고 여기서 부른다. (교훈 BQ)
 import { chungInSaju, toJiName } from './yukchinRule'
 // ★육친(십성) 자료 — 명리적성 3장 106~131쪽 (2026-07-28)
@@ -39,6 +42,245 @@ export type Target = 'student' | 'adult'
  *   ⚠️ 여기만 고치면 여섯 서비스가 함께 움직입니다. 서비스마다 따로 두지 마십시오.
  */
 export const YUKCHIN_CAP = { wide: 300, narrow: 450 }
+
+/**
+ * ★병존 — 교재 74~77쪽 (2026-07-28 여기로 올림)
+ *   궁합·사주보기·물상·진로적성 넷이 똑같은 코드를 따로 갖고 있었다. (교훈 BQ)
+ */
+export function byeongjonBrief(saju: Pill[], target: Target): string[] {
+  const out: string[] = []
+  for (const h of findByeongjon(saju as never)) {
+    const yeok = h.row.yeokma ? ` [역마 ${h.row.yeokma}]` : ''
+    out.push(`${h.key}(${h.pillars.join('·')})${yeok} — ${sayOf(h.row, target)}`)
+  }
+  for (const h of findJijiByeongjon(saju as never)) {
+    out.push(`${h.key}(${h.pillars.join('·')}) — ${sayOf(h.row, target)}`)
+  }
+  for (const h of findCombo(saju as never)) {
+    out.push(`${h.key} — ${sayOf(h.row, target)}`)
+  }
+  return out
+}
+
+/**
+ * ★지지 특징 — 교재 48·50~73쪽 (2026-07-28 여기로 올림)
+ *   사주보기·물상·진로적성 셋이 똑같은 코드를 따로 갖고 있었다. (교훈 BQ)
+ *   ⚠️ row.original 은 절대 안 넣는다. 화면에 낼 수 없는 말이 섞여 있다. (교훈 BF)
+ */
+export function jijiTraitBrief(saju: Pill[], target: Target, withJobs = false): string[] {
+  const hits = traitsInSaju(saju as never)
+  if (!hits.length) return []
+  const ctx = jijiCtxOf(saju as never)
+  return hits.map(h => {
+    const strong = h.pillars.includes('월지') || h.pillars.includes('일지')
+    const dohwa = h.pillars.some(p => isDohwaAt(p.replace('지', '주'), h.branch)) ? ' [도화]' : ''
+    const body = strong
+      ? [...traitLines(h.row, target, ctx), ...noteLines(h.row, target, ctx)].join(' ')
+      : noteLines(h.row, target, ctx).join(' ')
+    const jobs = withJobs && strong && h.row.jobs?.length ? ` (교재가 든 직업: ${h.row.jobs.join('·')})` : ''
+    return `${h.pillar} ${h.branch}(${h.row.ko}·${h.row.tti})${dohwa} — ${body}${jobs}`
+  })
+}
+
+/**
+ * ★단일 창구 — 여섯 서비스가 여기로만 재료를 받는다 (2026-07-28)
+ *
+ *   [무엇이 문제였나]
+ *     서비스마다 교재 테이블을 직접 import 해서 제 손으로 재료를 만들고 있었다.
+ *       toTongbyeonInput      jijiTrait byeongjon jijiGrade cheonganTrait ohaeng… 여덟
+ *       toCoupleTongbyeonInput byeongjon
+ *       mulsangTongbyeonPrompt jijiTrait byeongjon
+ *       buildCareerPrompt      byeongjon jijiTrait yukchin…
+ *       buildExamPrompt        yukchin…
+ *       api/monthly-fortune    yukchin chungMeaning hyeongPaHae
+ *     병존 만드는 코드가 네 벌, 지지특징이 세 벌이었다. (교훈 BQ)
+ *     교재를 한 쪽 더 넣을 때마다 여섯 곳을 따로 고쳐야 했다.
+ *
+ *   [어떻게 바꿨나]
+ *     · 재료를 고르는 일은 여기서만 한다. 서비스는 결과만 받는다.
+ *     · byNeed 로 갈라 돌려주므로, 진로적성처럼 **카드마다 얹어야 하는**
+ *       서비스도 제자리에 붙일 수 있다. (32-3장 "대목을 새로 만들지 않는다")
+ *     · 글자 상한을 창구에서 건다. 서비스마다 slice 숫자를 따로 두지 않는다.
+ *
+ *   ⚠️ 서비스가 교재 테이블을 직접 import 하면 이 창구가 다시 갈라진다.
+ *      새 교재 자료는 **여기에만** 얹으십시오.
+ */
+export type ServiceType = 'saju' | 'unse' | 'couple' | 'career' | 'exam' | 'monthly' | 'mulsang'
+
+export interface PickContext {
+  saju?: Pill[]
+  dayStem?: string
+  score?: Record<Ohaeng, number>
+  target?: Target
+  gender?: string
+  /** 대운·세운·월운 가운데 무엇으로 들어왔나 (serviceType 이 'unse' 일 때) */
+  unseKind?: 'daeun' | 'seyun' | 'wolun' | null
+}
+
+export interface PickArgs {
+  serviceType: ServiceType
+  questionCategories?: string[]
+  ctx: PickContext
+  /** 글자 상한. 안 주면 서비스 기본값 */
+  budget?: number
+  /**
+   * ★질문 갈래와 무관하게 늘 넣을 것.
+   *   사주보기의 「지지가 말하는 것」·「병존」은 명식 소개라 질문을 안 가린다.
+   */
+  forceNeeds?: Need[]
+}
+
+export interface PickResult {
+  /** 평평한 줄 — 대부분의 서비스가 이걸 쓴다 */
+  lines: string[]
+  /** need 별로 나눈 것 — 카드마다 얹어야 하는 서비스가 쓴다 */
+  byNeed: Partial<Record<Need, string[]>>
+  needs: Need[]
+  chars: number
+  /** 상한에 걸려 잘렸는가 */
+  truncated: boolean
+  /** 갈래를 몰라 기본 재료로 갔는가 */
+  fellBack: boolean
+}
+
+/**
+ * ★갈래를 모를 때 내보낼 기본 재료 (2026-07-28)
+ *
+ *   ⚠️⚠️ 32부 교훈 BV 와 어긋나는 결정입니다. 반드시 읽어 주십시오.
+ *     교훈 BV — "모르면 다 준다. 재료가 조금 무거워지는 것보다 재료가 비는 것이
+ *               훨씬 나쁘다. 고르는 일은 AI 가 한다."
+ *     32-4장 — "앞으로 자유질문란을 만드실 것이라 하셨습니다.
+ *               표에 없는 갈래가 하나라도 섞이면 자료를 통째로 내보냅니다."
+ *
+ *   2026-07-28 대표님 지시로 **「모르면 기본 재료 + 상한」** 으로 바꿨습니다.
+ *   재료가 통째로 나가면 프롬프트가 무거워지기 때문입니다.
+ *
+ *   ★되돌리려면 FALLBACK_MODE 만 'all' 로 고치면 됩니다.
+ *     자유질문란을 여신 뒤 통변이 얕아지면 이것부터 의심하십시오.
+ */
+export const FALLBACK_MODE: 'default' | 'all' = 'default'
+
+/** 갈래를 몰라도 이만큼은 준다 — 사람을 말하는 데 밑바탕이 되는 것들 */
+export const DEFAULT_NEEDS: Need[] = ['일간', '오행', '합', '충', '살', '육친']
+
+/** 서비스별 글자 상한 */
+export const SERVICE_BUDGET: Record<ServiceType, number> = {
+  saju: 1400, unse: 1200, couple: 1300, career: 1600, exam: 1200, monthly: 900, mulsang: 1200,
+}
+
+/** 상한에 걸렸을 때 뒤에서 자를 순서 — 뒤쪽이 먼저 잘린다 */
+const NEED_PRIORITY: Need[] = [
+  '일간', '오행', '육친', '충', '합', '살', '형파해',
+  '병존', '지지특징', '건강', '개운', '다루는법', '직업', '문이과', '인생단계',
+]
+
+/** 갈래 표를 서비스로 고른다 */
+function tableOf(t: ServiceType, unseKind?: PickContext['unseKind']): Record<string, Need[]> {
+  if (t === 'couple') return COUPLE_CATEGORY_NEEDS
+  if (t === 'unse') return unseKind === 'daeun' ? DAEUN_CATEGORY_NEEDS
+    : unseKind === 'wolun' ? WOLUN_CATEGORY_NEEDS : SEYUN_CATEGORY_NEEDS
+  return CATEGORY_NEEDS
+}
+
+export function pick(args: PickArgs): PickResult {
+  const { serviceType, questionCategories, ctx } = args
+  const table = tableOf(serviceType, ctx.unseKind)
+  const fb = serviceType === 'couple' ? undefined
+    : serviceType === 'unse' ? undefined
+    : unseTableOf(null)      // 사주보기는 대운·세운 갈래도 한 번 더 본다
+
+  // 갈래를 아는가
+  let known = !!questionCategories?.length
+  if (known) {
+    known = questionCategories!.every(c => !!(table[c] ?? fb?.[c]))
+  }
+  const fellBack = !known
+  const need = known
+    ? needsOf(questionCategories, table, fb)
+    : new Set<Need>(FALLBACK_MODE === 'all' ? ALL_NEEDS : DEFAULT_NEEDS)
+  for (const n of args.forceNeeds ?? []) need.add(n)
+
+  const byNeed = buildByNeed(need, ctx)
+  const budget = args.budget ?? SERVICE_BUDGET[serviceType]
+
+  // 상한 — 우선순위가 낮은 need 부터 덜어 낸다
+  let chars = 0
+  const lines: string[] = []
+  let truncated = false
+  const order = NEED_PRIORITY.filter(n => byNeed[n]?.length)
+  for (const n of order) {
+    for (const t of byNeed[n]!) {
+      if (chars + t.length > budget) { truncated = true; continue }
+      lines.push(t); chars += t.length
+    }
+  }
+  if (truncated) {
+    // 잘린 need 는 byNeed 에서도 덜어 내 서비스가 헷갈리지 않게 한다
+    for (const n of order) {
+      byNeed[n] = byNeed[n]!.filter(t => lines.includes(t))
+      if (!byNeed[n]!.length) delete byNeed[n]
+    }
+  }
+  return { lines, byNeed, needs: [...need], chars, truncated, fellBack }
+}
+
+/** need 별로 재료를 만든다 (pick 의 알맹이) */
+function buildByNeed(need: Set<Need>, a: PickContext): Partial<Record<Need, string[]>> {
+  const t: Target = a.target ?? 'adult'
+  const r: Partial<Record<Need, string[]>> = {}
+  const put = (n: Need, arr: string[]) => { if (arr.length) r[n] = [...(r[n] ?? []), ...arr] }
+
+  if (need.has('일간') && a.dayStem) put('일간', cheonganBrief(a.dayStem, need.size >= 8 ? 3 : 5, a.gender))
+  if (a.score) {
+    if (need.has('오행') || need.has('건강') || need.has('개운') || need.has('다루는법')) {
+      put('오행', ohaengBrief(a.score, t, {
+        결: need.has('오행'), 건강: need.has('건강'),
+        개운: need.has('개운'), 다루는법: need.has('다루는법'),
+      }))
+    }
+    if (need.has('인생단계')) {
+      const top = (['목','화','토','금','수'] as Ohaeng[]).slice()
+        .sort((x, y) => (a.score![y] ?? 0) - (a.score![x] ?? 0))[0]
+      const st = stage25(top); if (st) put('인생단계', [st])
+    }
+    if (need.has('문이과')) { const m = munYiBrief(a.score); if (m) put('문이과', [m]) }
+  }
+  if (a.saju?.length) {
+    if (need.has('합') || need.has('충')) {
+      const hc = hapChungBrief(a.saju, t, { 합: need.has('합'), 충: need.has('충'), 건강: need.has('건강') })
+      put(need.has('충') ? '충' : '합', hc)
+    }
+    if (need.has('형파해')) put('형파해', hyeongPaHaeBrief(a.saju, t).slice(0, 4))
+    if (need.has('살')) put('살', salBrief(a.saju, t, need.has('직업')))
+    if (need.has('병존')) put('병존', byeongjonBrief(a.saju, t))
+    if (need.has('지지특징')) put('지지특징', jijiTraitBrief(a.saju, t, need.has('직업')))
+    if (need.has('육친')) {
+      const wide = need.size >= 10
+      const yuk = [
+        ...yukchinBrief(a.saju, t, {
+          keys: wide ? 1 : 2, cap: wide ? 2 : 3,
+          다루는법: !wide && need.has('다루는법'),
+          개운: !wide && need.has('개운'),
+          직업: !wide && need.has('직업'),
+        }),
+      ]
+      const g = groupBrief(a.saju, t, {
+        cap: wide ? 1 : 2, onlyGwada: wide, maxKeys: wide ? 1 : 3,
+        보완: !wide && need.has('개운'), 개운: !wide && need.has('개운'), 직업: !wide && need.has('직업'),
+      })
+      yuk.push(...g)
+      const CAP = wide ? YUKCHIN_CAP.wide : YUKCHIN_CAP.narrow
+      let used = 0; const cut: string[] = []
+      for (const line of yuk) {
+        if (used + line.length > CAP && cut.length) break
+        cut.push(line); used += line.length
+      }
+      if (cut.some(x => x.includes('과다'))) cut.push(...PYEONJUNG_CLOSING)
+      put('육친', cut)
+    }
+  }
+  return r
+}
 
 /** 판정 조건을 적은 줄은 재료에서 뺀다. AI 에게 줄 것은 뜻이지 잣대가 아니다. */
 export const isRuleLine = (t: string) =>
@@ -252,9 +494,9 @@ export function hyeongPaHaeBrief(saju: Pill[], target: Target): string[] {
 //      자유질문란이 생겨도 재료가 비지 않게 하기 위함이다. (2026-07-28 대표님 지시)
 // ═══════════════════════════════════════════════════════════
 
-export type Need = '일간' | '오행' | '건강' | '개운' | '합' | '충' | '형파해' | '살' | '직업' | '다루는법' | '인생단계' | '문이과' | '육친'
+export type Need = '일간' | '오행' | '건강' | '개운' | '합' | '충' | '형파해' | '살' | '직업' | '다루는법' | '인생단계' | '문이과' | '육친' | '병존' | '지지특징'
 
-const ALL_NEEDS: Need[] = ['일간','오행','건강','개운','합','충','형파해','살','직업','다루는법','인생단계','문이과','육친']
+const ALL_NEEDS: Need[] = ['일간','오행','건강','개운','합','충','형파해','살','직업','다루는법','인생단계','문이과','육친','병존','지지특징']
 
 /** 사주보기·대운·세운 질문 대분류 (questions.ts) */
 export const CATEGORY_NEEDS: Record<string, Need[]> = {
@@ -343,6 +585,18 @@ export const SEYUN_CATEGORY_NEEDS: Record<string, Need[]> = {
   '타이밍':    ['합','충','인생단계'],
   // 월운 6문 — 세운 진입이면 함께 섞여 나옵니다
   '연애':      ['합','살','일간'],
+}
+
+/**
+ * ★월운 6문 — 「몇 월인가」를 묻는 자리라 가장 좁습니다 (2026-07-28)
+ *   달 단위는 원국을 길게 풀 자리가 아니라 합·충과 타이밍만 봅니다.
+ */
+export const WOLUN_CATEGORY_NEEDS: Record<string, Need[]> = {
+  '종합':   ['일간','오행','합','충'],
+  '타이밍': ['합','충'],
+  '재물':   ['오행','충'],
+  '연애':   ['합','살','일간'],
+  '주의':   ['충','형파해','살'],
 }
 
 /** 대운 진입인지 세운 진입인지로 표를 고른다 (unseQuestions.UnseEntry) */

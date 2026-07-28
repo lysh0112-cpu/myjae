@@ -18,8 +18,13 @@ import type { SajuQuestion } from '@/lib/saju/questions'
 //   교재의 지지 특징이 바로 그 묘사의 근거가 된다.
 //   ⚠️ 대목(■ 제목)을 늘리지 않는다. 이미 있는 블록에 근거로만 얹는다.
 import type { Pillar } from '@/lib/saju/simsanOhaeng'
+// ★2026-07-28 — 교재 자료는 jaryoPick 단일 창구에서 받는 것이 원칙입니다.
+//   여기만 예외로 jijiTrait 를 직접 씁니다. 까닭:
+//     물상은 **자리를 콕 집어** 쓰기 때문입니다.
+//       년지·시지만 48쪽 비고 / 월지는 절기·계절 / 시지는 시각의 폭
+//     창구는 "명식 전체에서 걸린 것"을 주므로 이 쓰임과 결이 다릅니다.
+//   ⚠️ 성향 서술(traitLines)은 창구에서 받으십시오. 여기서 만들지 마십시오.
 import { traitOf, noteLines, ctxOf } from '@/lib/saju/jijiTrait'
-import { findByeongjon, findCombo, findJijiByeongjon, sayOf } from '@/lib/saju/byeongjon'
 import {
   ILGAN, WOLJI, YONGSIN, RELATION, STEM_ELEMENT,
 } from '@/lib/saju/mulsangData'
@@ -46,7 +51,7 @@ const HOUR_MOOD: Record<string, string> = {
 }
 
 // 그림 통변에 필요한 값 (mulsang 화면이 만들어 넘김)
-import { cheonganImage, stage25, needsOf, pickLines } from './jaryoPick'
+import { cheonganImage, stage25, needsOf, pickLines, byeongjonBrief } from './jaryoPick'
 
 export interface MulsangTongbyeonInput {
   name: string                       // 이름/별명
@@ -185,10 +190,8 @@ export function buildMulsangTongbyeonPrompt(
   const byeongjonBlock = (() => {
     if (!input.saju?.length) return ''
     const t: 'adult' = 'adult'
-    const out: string[] = []
-    for (const h of findByeongjon(input.saju)) out.push(`- ${h.key}(${h.pillars.join('·')}) — ${sayOf(h.row, t)}`)
-    for (const c of findCombo(input.saju)) out.push(`- ${c.row.need.join('')} ${c.key}(${c.pillars.join('·')}) — ${sayOf(c.row, t)}`)
-    for (const h of findJijiByeongjon(input.saju)) out.push(`- ${h.key}(${h.pillars.join('·')}) — ${sayOf(h.row, t)}`)
+    // ★2026-07-28 — jaryoPick 단일 창구에서 받는다. 손으로 만들지 않는다. (교훈 BQ)
+    const out = byeongjonBrief(input.saju, t).map(x => `- ${x}`)
     if (!out.length) return ''
     return `[겹친 기운 — 병존(竝存), 교재 74~77쪽]
 같은 글자가 나란히 있어 그 기운이 두 배로 짙습니다. 그림에서 그 요소를 더 크고 짙게 그릴 근거입니다.

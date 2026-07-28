@@ -31,12 +31,10 @@ import type { CareerCard } from './types'
 // ★2026-07-27 — 교재 48~77쪽 지지 자료를 진로적성 재료에도 넣는다.
 //   ⚠️ 대목(카드)을 새로 만들지 않는다. 이미 있는 카드의 재료에 얹는다.
 //      이 프롬프트는 ■ 제목으로 대목을 나누는 파서와 짝이라, 대목을 늘리면 화면이 깨진다. (30부 2장)
-import { findByeongjon, findCombo, findJijiByeongjon, sayOf } from '../byeongjon'
-import { cheonganBrief, salBrief, hyeongPaHaeBrief, munYiBrief, ohaengBrief, hapChungBrief } from '../jaryoPick'
-// ★육친(십성) — 명리적성 3장 106~131쪽 (2026-07-28)
-import { yukchinBrief } from '../yukchinTable'
-import { groupBrief, PYEONJUNG_CLOSING } from '../yukchinGroup'
-import { traitsInSaju, traitLines, noteLines, ctxOf } from '../jijiTrait'
+// ★2026-07-28 — 교재 자료는 jaryoPick 단일 창구에서만 받는다.
+//   예전에는 byeongjon·jijiTrait·yukchin* 을 여기서 직접 import 해 손으로 만들었다.
+//   병존 코드가 네 벌, 지지특징이 세 벌이었다. (교훈 BQ)
+import { pick, type Need } from '../jaryoPick'
 
 export interface CareerPromptInput {
   name: string
@@ -72,76 +70,51 @@ export function buildCareerPrompt(v: CareerPromptInput): string {
     .map(p => `${p.pillar} ${p.stem === '?' ? '·' : p.stem}${p.branch === '?' ? '·' : p.branch}`)
     .join(' · ')
 
-  // ── 교재 48~77쪽 자료를 어느 카드에 얹을지 ──────────────────────
-  //   병존 → [타고난 신살]      같은 글자가 나란히 있어 기운이 짙다는 이야기라 신살 결이다
-  //   지지 특징 → [어느 자리에서 일할까]  교재가 든 직업이 여기에 붙는다
-  //   ★144칸(jijiGrade)은 안 넣는다. 그건 운(대운·세운)과의 어울림이라 진로적성 주제가 아니다.
+  // ── 교재 자료를 어느 카드에 얹을지 ─────────────────────────────
+  //   ★2026-07-28 — jaryoPick.pick() 단일 창구에서 받아 카드에 나눠 붙인다.
+  //     재료를 **고르는 일**은 창구가 하고, **어느 카드에 놓을지**만 여기서 정한다.
+  //     그래서 교재를 한 쪽 더 넣어도 이 파일은 안 고쳐도 된다.
+  //   ⚠️ 대목(카드)을 새로 만들지 않는다. 이미 있는 카드의 재료에 얹는다. (32-3장)
+  //   ★144칸(jijiGrade)은 안 넣는다. 운(대운·세운)과의 어울림이라 진로적성 주제가 아니다.
   const extra: Record<string, string[]> = {}
-  // ★2026-07-28 — 교재 20~28·41~47·94~97쪽 자료를 카드마다 나눠 얹는다.
-  //   ⚠️ 대목(카드)을 새로 만들지 않는다. 이미 있는 카드의 재료에 얹는다.
   {
-    const push = (k: string, arr: string[]) => {
-      if (!arr.length) return
-      extra[k] = [...(extra[k] ?? []), ...arr]
+    const picked = pick({
+      serviceType: 'career',
+      // 진로적성은 손님이 질문을 고르는 화면이 아니라 카드로 보여 주는 서비스라
+      // 갈래를 안 넘긴다. 진로에 필요한 것을 창구가 골라 준다.
+      questionCategories: ['진로·적성'],
+      ctx: {
+        saju: v.saju, dayStem: v.saju.find(p => p.pillar === '일주')?.stem,
+        score: v.ohaengScore ?? undefined, target: v.target,
+      },
+    })
+    // need → 어느 카드에 놓을까
+    const PLACE: Partial<Record<Need, string>> = {
+      일간: 'ilju',            // [일주가 말하는 것]
+      살: 'sinsal',            // [타고난 신살]
+      병존: 'sinsal',          // 같은 글자가 나란히 있어 기운이 짙다 — 신살 결
+      형파해: 'jobstruct',     // 업상대체 — 그 기운을 직업으로 쓰는 자리
+      지지특징: 'jobstruct',   // 교재가 든 직업이 여기 붙는다
+      충: 'gyeokguk',          // 합충이 격을 흔든다
+      합: 'gyeokguk',
+      문이과: 'gyeyeol',       // [계열과 학과]
+      오행: 'ohaeng_gijil',    // [타고난 오행의 결]
+      육친: 'yukchin',         // ★이미 있는 [육친이 가리키는 곳] 카드
+      직업: 'jobs',
+      개운: 'ohaeng_gijil',
+      다루는법: 'ohaeng_gijil',
+      인생단계: 'ohaeng_gijil',
+      건강: 'ohaeng_gijil',
     }
-    // 오행 점수는 카드 재료(ohaeng_gijil)에 이미 있으므로 여기서 다시 세지 않는다.
-    // 명식 글자로만 잴 수 있는 것 — 일간과 살 — 만 얹는다.
-    push('ilju', cheonganBrief(v.saju.find(p => p.pillar === '일주')?.stem ?? '', 4))
-    push('sinsal', salBrief(v.saju, v.target, false))
-    push('jobs', salBrief(v.saju, v.target, true))
-    // ★형·파·해는 업상대체(그 기운을 직업으로 쓰는 것)를 말하는 자리라 직업 카드에 붙인다.
-    push('jobstruct', hyeongPaHaeBrief(v.saju, v.target).slice(0, 3))
-    // ★합·충 (교재 78~86쪽) — 격과 그릇을 말하는 카드에 붙인다. 합충이 격을 흔든다.
-    push('gyeokguk', hapChungBrief(v.saju, v.target).slice(0, 3))
-    // ★문과:이과 비율 (교재 25쪽) — 계열·학과 카드에 붙인다.
-    //   31부 §9 에 "木만 있고 나머지 넷은 없다" 고 남기신 그 자료다. 25쪽에 다섯이 다 있다.
-    if (v.ohaengScore) {
-      const my = munYiBrief(v.ohaengScore)
-      if (my) push('gyeyeol', [my])
-      push('ohaeng_gijil', ohaengBrief(v.ohaengScore, v.target, { 결: true, 개운: true }))
+    for (const [need, arr] of Object.entries(picked.byNeed) as Array<[Need, string[]]>) {
+      const card = PLACE[need]
+      if (!card || !arr?.length) continue
+      extra[card] = [...(extra[card] ?? []), ...arr]
     }
-    // ★육친 (명리적성 3장 106~131쪽) — 2026-07-28
-    //   교재 40쪽: "육친으로 판단 = 진로와 직업적성 (강점 지능 찾기)"
-    //   ⚠️ 이미 있는 [육친이 가리키는 곳] 카드에 얹는다. 카드를 새로 만들지 않는다.
-    //   ⚠️ career/tables/yukchin.ts 는 **짝 다섯**만 다룬다(다른 출전).
-    //      여기 얹는 것은 **십성 열 개**라 결이 다르다. 겹치지 않는다.
-    push('yukchin', yukchinBrief(v.saju, v.target, { keys: 2, cap: 3, 직업: true }))
-    {
-      const g = groupBrief(v.saju, v.target, { cap: 2, maxKeys: 2, 보완: true, 직업: true })
-      push('yukchin', g)
-      // ★편중 이야기가 나갔으면 맺음말을 함께 (교재 123·126·129쪽)
-      if (g.some(t => t.includes('과다'))) push('yukchin', PYEONJUNG_CLOSING)
+    // 살은 직업 카드에도 붙인다 (교재가 살마다 직업을 대어 준다)
+    if (picked.byNeed['살']?.length) {
+      extra['jobs'] = [...(extra['jobs'] ?? []), ...picked.byNeed['살']]
     }
-  }
-  {
-    const bj: string[] = []
-    for (const h of findByeongjon(v.saju)) {
-      const yeok = h.row.yeokma ? ` [역마 ${h.row.yeokma}]` : ''
-      bj.push(`병존 ${h.key}(${h.pillars.join('·')})${yeok} — ${sayOf(h.row, v.target)}`)
-    }
-    for (const c of findCombo(v.saju)) {
-      bj.push(`병존 ${c.row.need.join('')} ${c.key}(${c.pillars.join('·')}) — ${sayOf(c.row, v.target)}`)
-    }
-    for (const h of findJijiByeongjon(v.saju)) {
-      const sal = h.row.sal?.length ? ` [${h.row.sal.join('·')}]` : ''
-      const jobs = h.row.jobs?.length ? ` (교재가 든 직업: ${h.row.jobs.join('·')})` : ''
-      bj.push(`병존 ${h.key}(${h.pillars.join('·')})${sal} — ${sayOf(h.row, v.target)}${jobs}`)
-    }
-    if (bj.length) extra['sinsal'] = bj
-  }
-  {
-    const ctx = ctxOf(v.saju)
-    const tr: string[] = []
-    for (const h of traitsInSaju(v.saju)) {
-      // 월지·일지만 통째로. 년지·시지는 48쪽 비고만. (교재 72쪽 "月支와 日支에 있을 때 가장 강력")
-      const strong = h.pillars.includes('월지') || h.pillars.includes('일지')
-      const body = strong
-        ? [...traitLines(h.row, v.target, ctx), ...noteLines(h.row, v.target, ctx)].join(' ')
-        : noteLines(h.row, v.target, ctx).join(' ')
-      const jobs = strong && h.row.jobs?.length ? ` (교재가 든 직업: ${h.row.jobs.join('·')})` : ''
-      tr.push(`${h.pillar} ${h.branch}(${h.row.ko}·${h.row.tti}) — ${body}${jobs}`)
-    }
-    if (tr.length) extra['jobstruct'] = tr
   }
 
   const material = v.cards.map(c => {
