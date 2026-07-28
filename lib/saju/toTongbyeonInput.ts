@@ -29,6 +29,8 @@ import { jijiRelation } from '@/lib/saju/jijiGrade'
 //      한 사람당 1,500~2,000자로 떨어진다.
 // ★2026-07-28 — 교재 자료는 jaryoPick 단일 창구에서만 받는다. (교훈 BQ)
 import { pick } from '@/lib/saju/jaryoPick'
+// ★운(대운·세운)이 원국을 치는 沖 — 교재 84쪽·121쪽 (2026-07-28)
+import { unChungInSaju, unChungLine } from '@/lib/saju/yukchinRule'
 
 // 천간 → 오행
 const STEM_EL: Record<string, Ohaeng> = {
@@ -215,6 +217,17 @@ function buildUnJiji(
   if (dayun) one(`대운 ${dayun.cheongan}${dayun.jiji} (${dayun.age}세부터, 천간 ${dayun.ganYukchin}·지지 ${dayun.jiYukchin})`, dayun.jiji)
   // ★"(올해)"를 붙인다. 이게 없으면 AI 가 연도를 몰라 지난 해를 앞일처럼 쓴다.
   if (seyun) one(`${seyun.year}년(올해) 세운 ${seyun.cheongan}${seyun.jiji} (천간 ${seyun.ganYukchin}·지지 ${seyun.jiYukchin})`, seyun.jiji)
+
+  // ★2026-07-28 — 운이 원국을 치는 沖 (교재 84쪽 CHUNG_RULE · 121쪽 자리별 뜻)
+  //   "대운과 세운은 일단 월지에 먼저 대입한다" 를 따라 月支를 앞세운다.
+  //   ⚠️ 원국 안의 沖과 잣대가 다르다. 원국은 자리 짝으로 보고, 운은 어느 자리를 치는지로 본다.
+  //   ⚠️ 겹충(원국에 이미 선 沖을 운이 또 치는 것)은 교재가 따로 무겁게 본다.
+  for (const [lab, br] of [
+    dayun ? ['지금 대운', dayun.jiji] as const : null,
+    seyun ? [`${seyun.year}년(올해) 세운`, seyun.jiji] as const : null,
+  ].filter(Boolean) as Array<readonly [string, string]>) {
+    for (const h of unChungInSaju(saju as never, br)) lines.push(`- ${unChungLine(h, lab)}`)
+  }
   if (!lines.length) return ''
   return `[지금 흐름이 내 지지와 어떻게 어울리나 — 교재 49쪽. 등급 A~D 는 눈금이지 좋고 나쁨의 판정이 아니다]\n${lines.join('\n')}`
 }

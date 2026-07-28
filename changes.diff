@@ -75,6 +75,19 @@ index ea5f4ac..e7b577e 100644
                })}
                questions={pickedQuestions}
                premium={isPaid}
+diff --git a/lib/saju/byeongjon.ts b/lib/saju/byeongjon.ts
+index 5ff505a..0aa5c10 100644
+--- a/lib/saju/byeongjon.ts
++++ b/lib/saju/byeongjon.ts
+@@ -191,7 +191,7 @@ export const BYEONGJON: ByeongjonRow[] = [
+   {
+     key: '辛辛', chars: ['辛', '辛'], ko: '신신',
+     say: '섬세하고 예리한 결입니다. 작은 것도 놓치지 않고 봅니다. '
+-       + '어려운 일을 한 번은 겪게 되니 건강과 교통사고를 조심하십시오. '
++       + '살면서 한 번은 크게 겪는 일이 있으니 몸과 바깥일을 함께 살펴 주십시오. '
+        + '말이 많아지기 쉬우니 한 번 걸러 말하면 좋습니다.',
+     sayStudent: '섬세하고 예리한 결이에요. 작은 것도 놓치지 않고 보는 눈이 있습니다. '
+               + '몰아서 하기보다 쉬어 가며 하는 쪽이 잘 맞습니다.',
 diff --git a/lib/saju/career/buildCareerPrompt.ts b/lib/saju/career/buildCareerPrompt.ts
 index a409409..10cf340 100644
 --- a/lib/saju/career/buildCareerPrompt.ts
@@ -236,6 +249,19 @@ index a2046aa..1174418 100644
    const bookBlock = bookLines.length
      ? `\n\n[타고난 결 — 교재 20~47·87~93쪽]\n` + bookLines.map(t => `- ${t}`).join('\n')
      : ''
+diff --git a/lib/saju/hyeongPaHae.ts b/lib/saju/hyeongPaHae.ts
+index ddf009a..ffb2cab 100644
+--- a/lib/saju/hyeongPaHae.ts
++++ b/lib/saju/hyeongPaHae.ts
+@@ -350,7 +350,7 @@ export const HAE: RelRow[] = [
+       '업상대체나 개운법으로 막아 주는 게 좋습니다.',
+     ],
+     sayAdult: [
+-      '원국에 寅亥합이 있는데 申년이나 巳년이 오면 寅申충·巳亥충이 되면서 수술수·배신수·송사가 있을 수 있습니다.',
++      '원국에 寅亥합이 있는데 申년이나 巳년이 오면 寅申충·巳亥충이 되면서 몸을 크게 쓰는 일이나 믿던 자리에서 어긋나는 일, 시비가 따를 수 있습니다.',
+       // ★교재의 구체적인 시술 이름은 뺐습니다 (대표님 지시)
+       '입춘부터 4월 사이에 피를 보면 개운이 된다고 봅니다.',
+     ],
 diff --git a/lib/saju/jaryoPick.ts b/lib/saju/jaryoPick.ts
 index 2226464..0b2bc62 100644
 --- a/lib/saju/jaryoPick.ts
@@ -793,6 +819,79 @@ index 2226464..0b2bc62 100644
    }
    return out
  }
+diff --git a/lib/saju/jijiGrade.ts b/lib/saju/jijiGrade.ts
+index d811a5a..b8f5e98 100644
+--- a/lib/saju/jijiGrade.ts
++++ b/lib/saju/jijiGrade.ts
+@@ -97,7 +97,7 @@ export const JIJI_GRADE: Record<string, Record<string, JijiRelation>> = {
+     巳: { grade: 'D', tag: '寅巳刑', desc: '寅巳刑을 이룬다. 부정적이다. 조후 해결이 안 된다.' },
+     午: { grade: 'A', tag: '寅午合', desc: '寅午合, 寅午戌三合으로 확실한 재성운이 온다. 생지가 왕지를 만나므로 사회적 활동이 활발해져 준비하고 계획한 일이 성사된다. 급격한 발전과 확장으로 승진, 취업, 합격 등 원하는 일이 성사된다.' },
+     未: { grade: 'C', tag: '寅未귀문', desc: '寅未귀문관살로 감각은 좋으나 예민해진다. 후각이 발달함. 지장간에서 암합을 한다. 木剋土를 안 한다.' },
+-    申: { grade: 'D', tag: '寅申沖', desc: '寅申沖을 한다. 교통사고, 수술수, 배우자 불화수, 관재수 등 사건 사고. 月支의 寅申沖은 변화, 변동이라 괜찮다. 日支가 沖을 당할 때 안 좋다.' },
++    申: { grade: 'D', tag: '寅申沖', desc: '寅申沖을 한다. 몸을 크게 쓰는 일과 시비수를 살펴야 하고 가까운 사이가 팽팽해지기 쉽다. 月支의 寅申沖은 변화, 변동이라 괜찮다. 日支가 沖을 당할 때 안 좋다.' },
+     酉: { grade: 'D', tag: '寅酉천문·寅酉원진', desc: '寅酉천문, 寅酉원진으로 불리하다.' },
+     戌: { grade: 'B', tag: '가합', desc: '가합을 한다. 午火가 빠짐, 마무리가 부족하다. 시작은 잘하나 실천을 잘 안 하고 마무리 능력이 부족하다.' },
+     亥: { grade: 'A', tag: '寅亥合', desc: '寅亥合은 좋으나 六害나 破가 되는 경우가 있다(조후가 안 맞을 경우). 조열한 사주에서는 亥水가 와서 조후를 다 해결해 준다.' },
+@@ -109,10 +109,10 @@ export const JIJI_GRADE: Record<string, Record<string, JijiRelation>> = {
+     卯: { grade: 'B', tag: '손재주', desc: '왕지끼리의 접전이다(왕지: 子午卯酉).' },
+     辰: { grade: 'B', tag: '卯辰木', desc: '卯辰木은 동반자 관계이다. 동반자를 만나 협조하여 세력을 형성하여 큰일을 이룬다(상승운).' },
+     巳: { grade: 'C', tag: '격각', desc: '격각(동상이몽) 卯는 木으로 巳는 火로 가려 해서 서로 다른 생각을 한다. 마음이 성급해진다.' },
+-    午: { grade: 'C', tag: '午卯破', desc: '午卯破로 부부간의 이혼수, 불화수가 있다. 日支에 卯를 깔면 파궁이라고 한다. 잉꼬부부가 별로 없다. 주식 투자는 완전 우량주를 투자해야 한다. 투자하면 손실을 본다.' },
++    午: { grade: 'C', tag: '午卯破', desc: '午卯破로 부부 사이가 어긋나기 쉽다. 日支에 卯를 깔면 파궁이라고 한다. 투자는 안정적인 쪽이 낫다.' },
+     未: { grade: 'C', tag: '卯未木', desc: '卯木이 未土를 만나면 좌절을 한다. 合이 된다고 다 좋은 건 아니다. 하던 일을 중단하게 되니 새로운 일을 오픈하지 마라. 왕성하게 하던 일에 대해 보수적이고 소극적으로 변한다.' },
+     申: { grade: 'D', tag: '卯申귀문', desc: '卯申귀문: 성격이 예민해진다. 암합을 하는 것은 긍정적으로 본다. 주식 투자를 하지 마라. 소극적으로 투자해라. 다 된 밥에 재 뿌린다.' },
+-    酉: { grade: 'D', tag: '卯酉沖', desc: '卯酉沖 왕지끼리의 싸움으로 하극상이 일어난다. 배신, 구설수에 시달린다. 건강 조심(목 디스크, 허리 디스크). 오행이 한쪽으로 기울어져 있으면 약한 쪽이 손실을 입는다.' },
++    酉: { grade: 'D', tag: '卯酉沖', desc: '卯酉沖 왕지끼리의 싸움으로 하극상이 일어난다. 믿던 자리에서 어긋나거나 구설이 따르기 쉽다. 목과 허리 쪽을 살펴 주십시오. 오행이 한쪽으로 기울어져 있으면 약한 쪽이 손실을 입는다.' },
+     戌: { grade: 'A', tag: '卯戌火', desc: '卯戌火는 戊癸合과 비슷하다. 六合이다. 명리학에 천부적 재능이 있다.' },
+     亥: { grade: 'A', tag: '亥卯木', desc: '水生木이 잘됨, 발복 상승운이다. 인생의 터닝 포인트, 좋은 운으로 변화, 발복을 한다.' },
+   },
+@@ -121,7 +121,7 @@ export const JIJI_GRADE: Record<string, Record<string, JijiRelation>> = {
+     丑: { grade: 'D', tag: '辰丑破', desc: '辰丑破가 되어 잘못된 만남이다. 소외감이 들 뿐만 아니라 신경이 예민해지고 과민 증상으로 스트레스를 많이 받아서 안절부절못한다. 소화기와 위장 쪽이 약해지고 마음이 가라앉기 쉽다.' },
+     寅: { grade: 'C', tag: '격각', desc: '격각(동상이몽) 寅木이 있는데 운에서 辰土가 오면 卯를 건너뛰고 급성장을 하려는 욕망이 강하게 나타난다.' },
+     卯: { grade: 'B', tag: '卯辰木', desc: '寅卯辰月이면 方局이고 寅卯辰月이 아니면 六害가 된다. 六害가 되면 가까운 사이에서 배신수가 생기고 후원자가 없어지는 등 인덕이 없게 된다.' },
+-    辰: { grade: 'D', tag: '辰辰自刑', desc: '辰辰은 自刑으로 三合과 方局 사이에 갈등이 생겨서 스스로 힘들게 한다. 스트레스를 많이 받아 정신적으로 피곤하고 피부병과 위장병을 잘 관리해야 한다.' },
++    辰: { grade: 'D', tag: '辰辰自刑', desc: '辰辰은 自刑으로 三合과 方局 사이에 갈등이 생겨서 스스로 힘들게 한다. 마음이 쉬 지치기 쉬우니 피부와 위장 쪽을 살펴 주십시오.' },
+     巳: { grade: 'B', tag: '천라지망 土多일 때', desc: '辰과 巳는 서로 도움을 주고받는 이익 관계이다. 辰巳가 있고 土가 많으면 천라지망으로 변해 걸림돌로 작용해 부정적이다.' },
+     午: { grade: 'C', tag: '격각', desc: '격각으로 동상이몽. 巳午未月 출생자에게 辰土가 있으면 좋으며 木火가 없으면 손상을 입는다. 辰土는 습토이다.' },
+     未: { grade: 'B', tag: '辰未刑', desc: '辰土는 습토이고 未土는 조토이므로 조습 작용의 균형이 잘 맞아서 긍정적이다.' },
+@@ -133,7 +133,7 @@ export const JIJI_GRADE: Record<string, Record<string, JijiRelation>> = {
+   巳: {
+     子: { grade: 'A', tag: '암합', desc: '긍정적이다. 조후가 해결되며 상호 보완의 관계이다. 암합: 戊癸合되어 애정사로 불륜이 발생할 수 있다.' },
+     丑: { grade: 'B', tag: '가합', desc: '가합, 부정적 일의 지체(70% 부정, 30%는 긍정), 巳酉丑 되면 발복.' },
+-    寅: { grade: 'D', tag: '寅巳刑', desc: '木生火로 상생의 관계이다. 寅巳刑(조후가 안 맞으면) 반드시 水가 있어야 하고 습토가 있어야 한다. 六合이 깨져서 巳亥沖, 寅申沖이 되면 배신수, 관재수가 있다. 활인업으로 업상대체하면 유리하다.' },
++    寅: { grade: 'D', tag: '寅巳刑', desc: '木生火로 상생의 관계이다. 寅巳刑(조후가 안 맞으면) 반드시 水가 있어야 하고 습토가 있어야 한다. 六合이 깨져서 巳亥沖, 寅申沖이 되면 믿던 자리에서 어긋나거나 시비가 따르기 쉽다. 활인업으로 업상대체하면 유리하다.' },
+     卯: { grade: 'C', tag: '격각', desc: '木生火 안 됨(왕지는 생하지 않는다), 水와 火가 적절하면 무난하다. 年이나 時에 있으면 별 작용이 없고 月이나 日에 있으면 작용한다.' },
+     辰: { grade: 'B', tag: '천라지망', desc: '巳는 조열하고 辰은 촉촉하다. 水보다 더 좋다. 수평적 동반자이다. 화치승룡(조열하면 辰), 수탕기호(축축하면 寅).' },
+     巳: { grade: 'B', tag: '두뇌 총명', desc: '머리 회전 능력이 아주 좋다. 생지끼리라 성급, 협동, 보신탕 금물이고 말조심해라. 원국에 辰土나 丑土가 있으면 발복한다.' },
+@@ -169,7 +169,7 @@ export const JIJI_GRADE: Record<string, Record<string, JijiRelation>> = {
+     未: { grade: 'C', tag: '현침', desc: '조열하다. 분리, 독립, 투잡, 현침살로 요식업이나 손재주를 이용하면 좋다.' },
+     申: { grade: 'B', tag: '금화교역', desc: '未申酉는 준방국이다. 전문가, 금화교역으로 결실이 있다.' },
+     酉: { grade: 'B', tag: '격각', desc: '상생이면서 격각(동상이몽)이며 전문, 특기, 기술직이 좋다.' },
+-    戌: { grade: 'D', tag: '戌未刑', desc: '刑과 破에 해당하며 지장간에서 乙辛沖이 일어나 배신수, 누명수가 있다. 디스크, 신경성 질환을 조심해라.' },
++    戌: { grade: 'D', tag: '戌未刑', desc: '刑과 破에 해당하며 지장간에서 乙辛沖이 일어나 믿던 자리에서 어긋나거나 억울한 일이 생기기 쉽다. 허리와 신경 쪽을 살펴 주십시오.' },
+     亥: { grade: 'B', tag: '가합', desc: '가합 긍정적, 정신적 직업이 어울린다(교육, 상담, 예술).' },
+   },
+   申: {
+@@ -187,16 +187,16 @@ export const JIJI_GRADE: Record<string, Record<string, JijiRelation>> = {
+     亥: { grade: 'B', tag: '申亥害', desc: '한습한 사주에 丙火나 巳午未가 있으면 좋다. 한습한 사주에 亥가 들어오면 부정적이다.' },
+   },
+   酉: {
+-    子: { grade: 'D', tag: '子酉귀문', desc: '子酉귀문, 子酉破 조후가 안 맞으면 정신 질환이 온다.' },
++    子: { grade: 'D', tag: '子酉귀문', desc: '子酉귀문, 子酉破 조후가 안 맞으면 마음이 크게 눌리기 쉽다.' },
+     丑: { grade: 'A', tag: '酉丑合', desc: '결실, 실속이 있다. 상승, 발복을 한다.' },
+     寅: { grade: 'C', tag: '寅酉원진', desc: '寅酉원진 귀문, 천문살이다. 코드가 안 맞다.' },
+-    卯: { grade: 'D', tag: '卯酉沖', desc: '卯酉沖은 왕지끼리의 沖이다. 불안하고 지체가 된다. 디스크 조심.' },
++    卯: { grade: 'D', tag: '卯酉沖', desc: '卯酉沖은 왕지끼리의 沖이다. 마음이 불안하고 일이 더뎌지기 쉽다. 허리 쪽을 살펴 주십시오.' },
+     辰: { grade: 'A', tag: '辰酉合金', desc: '辰酉合金 六合이며 상생 관계이다. 명분이 있고 사제 간이다.' },
+     巳: { grade: 'B', tag: '巳酉金', desc: '巳酉金 터닝 포인트가 되며 적극적이다.' },
+     午: { grade: 'C', tag: '도화', desc: '왕지끼리는 상생을 하지 않는다. 火剋金 조후가 중요하다.' },
+     未: { grade: 'C', tag: '격각', desc: '격각(동상이몽)하는 일이 지체된다.' },
+     申: { grade: 'B', tag: '申酉方局', desc: '申酉方局이며 완벽을 추구하며 마무리한다.' },
+-    酉: { grade: 'D', tag: '自刑', desc: '自刑 스스로 괴롭힌다. 酉金이 2개가 오면 감염증에 조심해라. 酉金은 몸 도화다. 게임 중독, 주색잡기, 미투를 조심해라.' },
++    酉: { grade: 'D', tag: '自刑', desc: '自刑 스스로 괴롭힌다. 酉金이 2개면 몸을 살펴야 한다. 酉金은 몸 도화다. 즐길 거리에 마음이 크게 쏠리지 않도록 스스로 다잡아야 한다.' },
+     戌: { grade: 'D', tag: '酉戌方局', desc: '酉戌方局 辰戌沖운이 오면 합이 깨지고 六害가 된다. 합이 깨지고 원진이 될 때 사기수, 배신수, 관재구설수가 있다. 卯酉戌이 있으면 활인업에 잘 맞는다. 2글자만 있어도 도사다.' },
+     亥: { grade: 'C', tag: '격각', desc: '酉亥 사이에 戌土가 빠져서 격각(동상이몽)이다. 상생도 안 되고 생지는 잘 생하는데 왕지는 생하지 않는다. 코드가 안 맞는다.' },
+   },
 diff --git a/lib/saju/mulsangTongbyeonPrompt.ts b/lib/saju/mulsangTongbyeonPrompt.ts
 index f261c11..08cc593 100644
 --- a/lib/saju/mulsangTongbyeonPrompt.ts
@@ -875,10 +974,10 @@ index 7f07b19..322c789 100644
        lines.push(`- 병존(같은 글자가 나란히 — 교재 74~77쪽):`)
        for (const x of bj) lines.push(`  · ${x}`)
 diff --git a/lib/saju/toTongbyeonInput.ts b/lib/saju/toTongbyeonInput.ts
-index 5cb1e08..24b7328 100644
+index 5cb1e08..5b81a74 100644
 --- a/lib/saju/toTongbyeonInput.ts
 +++ b/lib/saju/toTongbyeonInput.ts
-@@ -21,22 +21,14 @@ import { GWIIN_MEANING, GWIIN_HARMONY } from '@/lib/saju/gwiinMeaning'
+@@ -21,22 +21,16 @@ import { GWIIN_MEANING, GWIIN_HARMONY } from '@/lib/saju/gwiinMeaning'
  import { GONGMANG_INTRO, GONGMANG_BY_PILLAR } from '@/lib/saju/gongmangMeaning'
  // ★2026-07-27 — 교재 48~77쪽 지지 자료를 통변 재료로 넣는다.
  //   지금까지 화면에만 있고 AI 는 몰랐다. (교훈 BF 의 반대편 — 줘야 할 것은 줘야 한다)
@@ -901,10 +1000,12 @@ index 5cb1e08..24b7328 100644
 -import { grade as ohaengGrade } from '@/lib/saju/simsanOhaeng'
 +// ★2026-07-28 — 교재 자료는 jaryoPick 단일 창구에서만 받는다. (교훈 BQ)
 +import { pick } from '@/lib/saju/jaryoPick'
++// ★운(대운·세운)이 원국을 치는 沖 — 교재 84쪽·121쪽 (2026-07-28)
++import { unChungInSaju, unChungLine } from '@/lib/saju/yukchinRule'
  
  // 천간 → 오행
  const STEM_EL: Record<string, Ohaeng> = {
-@@ -102,6 +94,14 @@ export interface ToTongbyeonArgs {
+@@ -102,6 +96,14 @@ export interface ToTongbyeonArgs {
     *   교재 자료를 다 넣어 두되, 물어본 것에 맞는 것만 꺼내 쓰기 위함이다.
     */
    questionCategories?: string[]
@@ -919,7 +1020,7 @@ index 5cb1e08..24b7328 100644
    // ── 확장 자리 ────────────────────────────────────────────────
    // 대운·세운은 기본 통변에 넣지 않는다. (홈에 별도 서비스가 있음)
    // 사용자가 "언제/내년/몇 살" 같은 시기 질문을 직접입력했을 때만,
-@@ -181,50 +181,7 @@ function buildMyeongsikFeatures(
+@@ -181,50 +183,7 @@ function buildMyeongsikFeatures(
    return `[명식 특징 — 이 사람에게 실제로 있는 것들(질문에 관련될 때 근거로 쓰되 겁주지 말 것)]\n${lines.join('\n')}`
  }
  
@@ -970,7 +1071,25 @@ index 5cb1e08..24b7328 100644
  
  /**
   * 지금 흐름과 내 지지의 어울림 — 교재 49쪽 144칸
-@@ -277,155 +234,10 @@ function buildUnJiji(
+@@ -258,6 +217,17 @@ function buildUnJiji(
+   if (dayun) one(`대운 ${dayun.cheongan}${dayun.jiji} (${dayun.age}세부터, 천간 ${dayun.ganYukchin}·지지 ${dayun.jiYukchin})`, dayun.jiji)
+   // ★"(올해)"를 붙인다. 이게 없으면 AI 가 연도를 몰라 지난 해를 앞일처럼 쓴다.
+   if (seyun) one(`${seyun.year}년(올해) 세운 ${seyun.cheongan}${seyun.jiji} (천간 ${seyun.ganYukchin}·지지 ${seyun.jiYukchin})`, seyun.jiji)
++
++  // ★2026-07-28 — 운이 원국을 치는 沖 (교재 84쪽 CHUNG_RULE · 121쪽 자리별 뜻)
++  //   "대운과 세운은 일단 월지에 먼저 대입한다" 를 따라 月支를 앞세운다.
++  //   ⚠️ 원국 안의 沖과 잣대가 다르다. 원국은 자리 짝으로 보고, 운은 어느 자리를 치는지로 본다.
++  //   ⚠️ 겹충(원국에 이미 선 沖을 운이 또 치는 것)은 교재가 따로 무겁게 본다.
++  for (const [lab, br] of [
++    dayun ? ['지금 대운', dayun.jiji] as const : null,
++    seyun ? [`${seyun.year}년(올해) 세운`, seyun.jiji] as const : null,
++  ].filter(Boolean) as Array<readonly [string, string]>) {
++    for (const h of unChungInSaju(saju as never, br)) lines.push(`- ${unChungLine(h, lab)}`)
++  }
+   if (!lines.length) return ''
+   return `[지금 흐름이 내 지지와 어떻게 어울리나 — 교재 49쪽. 등급 A~D 는 눈금이지 좋고 나쁨의 판정이 아니다]\n${lines.join('\n')}`
+ }
+@@ -277,155 +247,10 @@ function buildUnJiji(
  const isRule = (t: string) =>
    /개 이상|포함해|되풀이|섞여 있어도|차례로 작용력|일 때 봅니다|해당하며/.test(t)
  
@@ -1021,7 +1140,7 @@ index 5cb1e08..24b7328 100644
 -  if (!lines.length) return ''
 -  return `[오행이 넘치거나 모자란 자리 — 교재 20~28쪽. 넘치는 것도 모자란 것도 결이지 흠이 아니다]\n${lines.join('\n')}`
 -}
--
+ 
 -/** 합과 충 — 교재 78~86쪽. 원국에 실제로 선 것만 */
 -function buildHapChung(saju: PillarInput[], target: Target, need: Set<Need>): string {
 -  const wantHap = need.has('합'); const wantChung = need.has('충') || need.has('건강')
@@ -1063,7 +1182,7 @@ index 5cb1e08..24b7328 100644
 -  if (!lines.length) return ''
 -  return `[합·충·형·파·해 — 교재 78~93쪽. 천간은 합을 중히 보고 지지는 충을 중히 본다]\n${lines.join('\n')}`
 -}
--
+ 
 -/**
 - * 살 — 교재 94~97쪽. 걸린 것만.
 - *   ★교재가 개수·자리 조건을 적어 둔 살만 잰다.
@@ -1081,18 +1200,18 @@ index 5cb1e08..24b7328 100644
 -  const dayB = at('일주')?.branch ?? ''
 -  const dayStem = at('일주')?.stem ?? ''
 -  const hits: string[] = []
- 
+-
 -  const DOHWA = ['子', '午', '卯', '酉']
 -  if (branches.filter(b => DOHWA.includes(b)).length >= 2 &&
 -      (DOHWA.includes(monthB) || DOHWA.includes(dayB))) hits.push('dohwa')
- 
+-
 -  const HC = ['甲', '午', '未', '申', '辛']
 -  if ([...stems, ...branches].filter(c => HC.includes(c)).length >= 3 ||
 -      (HC.includes(dayStem) && HC.includes(dayB))) hits.push('hyeonchim')
- 
+-
 -  if (['甲辰','乙未','丙戌','丁丑','戊辰','壬戌','癸丑'].some(x => pillars.includes(x))) hits.push('baekho')
 -  if (['庚辰','庚戌','壬辰','壬戌','戊辰','戊戌'].some(x => pillars.includes(x))) hits.push('goegang')
- 
+-
 -  const YANGIN: Record<string, string> = { 甲: '卯', 丙: '午', 戊: '午', 庚: '酉', 壬: '子' }
 -  if (dayStem && YANGIN[dayStem] && monthB === YANGIN[dayStem]) hits.push('yangin')
 -
@@ -1100,7 +1219,7 @@ index 5cb1e08..24b7328 100644
 -    const r = SAL_TABLE.find(x => x.key === key)
 -    if ((r?.byDayStem?.[dayStem] ?? []).some(b => branches.includes(b))) hits.push(key)
 -  }
--
+ 
 -  const lines: string[] = []
 -  for (const key of hits) {
 -    const r = SAL_TABLE.find(x => x.key === key); if (!r) continue
@@ -1113,7 +1232,7 @@ index 5cb1e08..24b7328 100644
 -  if (!lines.length) return ''
 -  return `[살(殺) — 교재 94~97쪽. 살은 겁줄 이름이 아니라 결을 가리키는 말이다]\n${lines.join('\n')}`
 -}
--
+ 
 -/** 인생의 어느 때인가 — 교재 25쪽. 노후·인생후반을 물었을 때만 */
 -function buildLifeStage(score: Record<Ohaeng, number>, need: Set<Need>): string {
 -  if (!need.has('인생단계')) return ''
@@ -1126,7 +1245,7 @@ index 5cb1e08..24b7328 100644
  
  
  export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
-@@ -453,9 +265,6 @@ export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
+@@ -453,9 +278,6 @@ export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
      ? (yongsinStr as Ohaeng)
      : undefined
  
@@ -1136,7 +1255,7 @@ index 5cb1e08..24b7328 100644
    return {
      name: a.name || '이 분',
      age: a.age,
-@@ -480,19 +289,41 @@ export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
+@@ -480,19 +302,41 @@ export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
      //   ③ 병존               74~77쪽
      //   ④ 지금 흐름과의 어울림 49쪽 144칸 (대운·세운을 넘겨받았을 때만)
      //   학생/성인은 나이로 가른다. 아이 사주를 부모가 함께 읽는 자리이기 때문이다.
@@ -1192,13 +1311,14 @@ index 5cb1e08..24b7328 100644
      //   전에는 이 자리가 선언만 되어 있고 아무도 안 채우고 있었다.
      currentDaeun: a.currentDayun
 diff --git a/tsconfig.strict.json b/tsconfig.strict.json
-index daf6ebd..15bbad1 100644
+index daf6ebd..a5543c3 100644
 --- a/tsconfig.strict.json
 +++ b/tsconfig.strict.json
-@@ -31,6 +31,9 @@
+@@ -31,6 +31,10 @@
      "lib/saju/jaryoPick.ts",
      "lib/saju/hyeongPaHae.ts",
      "lib/saju/jijiTrait.ts",
++    "lib/saju/SOURCE_INDEX.ts",
 +    "lib/saju/yukchinTable.ts",
 +    "lib/saju/yukchinRule.ts",
 +    "lib/saju/yukchinGroup.ts",

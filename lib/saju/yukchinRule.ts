@@ -418,6 +418,97 @@ export const ORIGINAL_121: string =
   + '때는 刑, 沖이 될 때 가능성이 있다.'
 
 // ══════════════════════════════════════════════════════════════
+// 5. 운(대운·세운·월운)에서 오는 沖
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * ★원국 안의 沖과 잣대가 다릅니다 (2026-07-28)
+ *
+ *   원국 沖 (4장)   자리 짝으로 본다. 일지가 끼면 부정, 아니면 변동
+ *   운 沖 (여기)    **운이 원국의 어느 자리를 치는가**로 본다
+ *
+ *   교재 근거 —
+ *     chungMeaning.CHUNG_RULE (84쪽)
+ *       "대운과 세운에서 들어오는 운이 원국과 합이나 충이 될 때,
+ *        천간보다 지지가 더 크게 작용합니다.
+ *        천간은 합을 중히 보고 지지는 충을 중히 봅니다."
+ *       "대운과 세운은 일단 **월지에 먼저 대입**합니다."
+ *     121쪽 자리별 뜻 — 月支는 직업궁, 日支는 배우자궁, 時支는 미래의 직업궁
+ *
+ *   그래서 —
+ *     운이 月支를 치면   직업·자리가 움직인다 (교재는 이것을 먼저 본다)
+ *     운이 日支를 치면   배우자 자리가 흔들린다 (교재 121쪽 "100% 부정")
+ *     운이 年支를 치면   뿌리·윗대 쪽 변화
+ *     운이 時支를 치면   미래의 자리·자식 쪽 변화
+ *
+ *   ⚠️ 겹충(원국에 이미 선 沖을 운이 또 치는 것)은 교재가 따로 무겁게 봅니다.
+ *      chungMeaning 의 여러 칸에 "대운이나 세운에서 겹충이 되면 더 조심해라" 가 있습니다.
+ */
+export interface UnChungHit {
+  /** 沖 이름 */
+  key: string
+  /** 운 쪽 지지 */
+  unBranch: string
+  /** 원국에서 맞은 자리 */
+  at: PillarName
+  /** 교재가 먼저 보라고 한 자리인가 (月支) */
+  primary: boolean
+  /** 원국에도 이미 같은 沖이 서 있는가 (겹충) */
+  doubled: boolean
+  say: string
+}
+
+/** 운이 원국의 어느 자리를 치는지 — 교재는 月支부터 본다 */
+const UN_CHUNG_SAY: Record<PillarName, string> = {
+  월주: '일자리와 사는 자리가 움직이는 때입니다. 이동·스카우트·직업 변동으로 봅니다.',
+  일주: '배우자 자리가 흔들립니다. 가까운 사이에서 부딪히는 일이 있을 수 있습니다.',
+  년주: '뿌리 쪽에서 변화가 옵니다. 집안일이나 오래된 자리가 움직입니다.',
+  시주: '앞으로 갈 자리가 움직입니다. 유학·이민·이직 같은 일이 생길 수 있습니다. 다만 자식 일은 따로 살펴야 합니다.',
+}
+
+/**
+ * 대운·세운·월운의 지지가 원국을 치는 沖.
+ *
+ * @param saju      원국 네 기둥
+ * @param unBranch  운의 지지 (대운지·세운지·월운지)
+ * @returns 月支를 친 것이 맨 앞. 겹충이면 그 다음.
+ */
+export function unChungInSaju(saju: Pillar[], unBranch: string): UnChungHit[] {
+  if (!unBranch || unBranch === '?') return []
+  // 원국 안에 이미 선 沖 (겹충 판정용)
+  const natal = new Set(chungInSaju(saju).map(h => h.key.replace('沖', '')))
+  const out: UnChungHit[] = []
+  for (const p of saju) {
+    if (!p?.branch || p.branch === '?') continue
+    if (!isChung(p.branch, unBranch)) continue
+    const at = p.pillar as PillarName
+    if (!PILLAR_ORDER.includes(at)) continue
+    const pairKeyChars = [p.branch, unBranch]
+    const doubled = natal.has(pairKeyChars.join('')) || natal.has([unBranch, p.branch].join(''))
+    out.push({
+      key: `${p.branch}${unBranch}沖`,
+      unBranch, at,
+      primary: at === '월주',
+      doubled,
+      say: UN_CHUNG_SAY[at],
+    })
+  }
+  // 교재: 대운·세운은 일단 월지에 먼저 대입한다 → 月支를 앞에
+  const rank = (h: UnChungHit) => (h.primary ? 0 : h.at === '일주' ? 1 : h.at === '시주' ? 2 : 3)
+  return out.sort((a, b) => rank(a) - rank(b))
+}
+
+/**
+ * 손님에게 나갈 한 줄.
+ *   ⚠️ unLabel 은 짧게 넘기십시오("대운"·"올해 세운"). 긴 이름을 넣으면 줄이 늘어집니다.
+ */
+export function unChungLine(hit: UnChungHit, unLabel: string): string {
+  const where = toJiName(hit.at)
+  const dbl = hit.doubled ? ' 원국에도 같은 충이 서 있어 겹충이 됩니다. 더 크게 움직입니다.' : ''
+  return `${hit.key} — ${unLabel}이 ${where}를 칩니다. ${hit.say}${dbl}`
+}
+
+// ══════════════════════════════════════════════════════════════
 // 검사
 // ══════════════════════════════════════════════════════════════
 
