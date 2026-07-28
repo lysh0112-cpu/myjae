@@ -95,15 +95,44 @@ const TAG: Record<string, RelTag> = {
   원진: { label: '원진', bg: '#f7e6ee', fg: '#993556' },
 }
 
-/** 두 지지 사이의 관계 목록 */
-function relationOf(a: string, b: string): string[] {
+/**
+ * 두 지지 사이의 관계 목록
+ *
+ * ★2026-07-28 — 삼합·방합을 **세 글자가 다 있을 때만** 잡습니다.
+ *
+ *   [무엇이 어긋났었나]
+ *     전에는 `s.includes(a) && s.includes(b)` 만 보아, 두 글자만 있어도 방합이라 띄웠습니다.
+ *     보기) 壬辰 丙寅 乙酉 乙亥 명식에서 辰-寅 을 「방합」으로 이어 놓았는데,
+ *           寅卯辰 의 卯 가 없어 실은 반방합입니다.
+ *     그런데 통변 재료(jaryoPick.jijiHapBrief)는 셋이 다 있어야 잡습니다.
+ *     → **화면은 「방합 있음」, AI 는 「방합 없음」** 으로 갈렸습니다.
+ *        손님이 도표를 보고 물으면 AI 가 모르는 채 답합니다.
+ *
+ *   [무엇을 따랐나]
+ *     ★2026-07-28 대표님 확정 — 준삼합·반합은 넣지 않는다.
+ *       "재료가 너무 비대해지는 것을 막고 core 합 위주로 통변하는 게 더 깔끔하다."
+ *     그 방침에 화면을 맞췄습니다. 이제 양쪽이 같은 잣대를 씁니다.
+ *     교재 82쪽도 寅卯辰·巳午未·申酉戌·亥子丑 을 세 글자로 적습니다.
+ *
+ *   ⚠️ 삼합도 같이 고쳤습니다. 준삼합(두 글자)이 곧 삼합의 반합이라 결이 같습니다.
+ *      방합만 고치면 삼합 쪽에 같은 어긋남이 그대로 남습니다.
+ *
+ *   ⚠️ 되돌리시려면 `every(has)` 두 군데만 지우면 됩니다.
+ *      다만 그때는 jaryoPick.jijiHapBrief 도 함께 풀어야 합니다. 한쪽만 고치지 마십시오.
+ *
+ * @param all 명식 네 지지 전부. 안 넘기면 두 글자만으로 보아
+ *            삼합·방합이 아예 안 잡힙니다(거짓 표시를 내느니 안 내는 쪽).
+ */
+function relationOf(a: string, b: string, all?: string[]): string[] {
   const out: string[] = []
   if (!a || !b) return out
   if (YUKHAP[a] === b) out.push('육합')
   if (CHUNG[a] === b) out.push('충')
   if (WONJIN[a] === b) out.push('원진')
-  for (const s of SAMHAP) if (s.includes(a) && s.includes(b)) out.push('삼합')
-  for (const s of BANGHAP) if (s.includes(a) && s.includes(b)) out.push('방합')
+  const pool = all ?? [a, b]
+  const has = (c: string) => pool.includes(c)
+  for (const s of SAMHAP) if (s.includes(a) && s.includes(b) && s.every(has)) out.push('삼합')
+  for (const s of BANGHAP) if (s.includes(a) && s.includes(b) && s.every(has)) out.push('방합')
   return Array.from(new Set(out))
 }
 
@@ -185,10 +214,12 @@ export default function ExpertDetail({
   const gmYear = yearPillar ? getGongmang(yearPillar.stem, yearPillar.branch) : ['', '']
 
   // 형충회합 — 성립한 쌍 목록 (중복 제거: i<j 만)
+  //   ★삼합·방합은 세 글자가 다 있어야 하므로 명식 네 지지를 함께 넘긴다.
+  const allBranches = saju.map(p => p.branch).filter(Boolean)
   const pairs: { a: Pillar; b: Pillar; rels: string[] }[] = []
   for (let i = 0; i < saju.length; i++) {
     for (let j = i + 1; j < saju.length; j++) {
-      const rels = relationOf(saju[i].branch, saju[j].branch)
+      const rels = relationOf(saju[i].branch, saju[j].branch, allBranches)
       if (rels.length) pairs.push({ a: saju[i], b: saju[j], rels })
     }
   }
@@ -442,7 +473,7 @@ export default function ExpertDetail({
               const lines: React.ReactNode[] = []
               for (let i = 0; i < saju.length && i < 4; i++) {
                 for (let j = i + 1; j < saju.length && j < 4; j++) {
-                  const rels = relationOf(saju[i].branch, saju[j].branch)
+                  const rels = relationOf(saju[i].branch, saju[j].branch, allBranches)
                   if (!rels.length) continue
                   const a = POS[i], b = POS[j]
                   const isBad = rels.some(r => r === '충' || r === '원진')
@@ -519,7 +550,7 @@ export default function ExpertDetail({
                       </td>
                     )
                   }
-                  const rels = relationOf(row.branch, col.branch)
+                  const rels = relationOf(row.branch, col.branch, allBranches)
                   return (
                     <td key={ci} style={td}>
                       {rels.length
