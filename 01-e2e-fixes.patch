@@ -1,0 +1,222 @@
+diff --git a/lib/saju/jaryoPick.ts b/lib/saju/jaryoPick.ts
+index 0b2bc62..7334601 100644
+--- a/lib/saju/jaryoPick.ts
++++ b/lib/saju/jaryoPick.ts
+@@ -18,7 +18,7 @@ import { OHAENG_TRAIT } from './ohaengTrait'
+ import { OHAENG_NATURE } from './ohaengNature'
+ import { OHAENG_25 } from './ohaengTable25'
+ import { findChungByChars } from './chungMeaning'
+-import { findHap } from './hapMeaning'
++import { findHap, YUKHAP, SAMHAP, BANGHAP } from './hapMeaning'
+ import { SAL_TABLE } from './sinsalTable'
+ import { findRel, findSamhyeong, relLines } from './hyeongPaHae'
+ // ★병존·지지특징 — 네 서비스가 따로 갖고 있던 것을 여기로 올렸다 (2026-07-28, 교훈 BQ)
+@@ -365,6 +365,68 @@ export function ohaengBrief(
+  *   ⚠️ 여기는 **원국 안의 沖**만 봅니다. 대운·세운에서 오는 沖은 잣대가 다릅니다
+  *      (chungMeaning.CHUNG_RULE — "대운·세운은 일단 월지에 먼저 대입한다").
+  */
++/**
++ * ★2026-07-28 — 지지 합(육합·삼합·방합)을 재료에 넣습니다.
++ *
++ * [무엇이 빠져 있었나]
++ *   합 쪽이 **천간합 다섯 짝만** 보고 있었습니다.
++ *   `hapMeaning.ts` 에 육합(80쪽)·삼합(80~81쪽)·방합(82쪽) 자료가 다 들어 있는데
++ *   꺼내는 곳이 없었습니다. 33-3장의 沖과 똑같은 자리입니다.
++ *     교훈 BO — 표에만 있는 규칙은 없는 규칙이다.
++ *
++ *   실측 — 지지 합이 있는 명식이 **49.3%** 입니다. 두 명에 한 명이 못 듣고 있었습니다.
++ *
++ * [어떤 차례로 내는가 — 교재가 매긴 세기]
++ *   교재 261쪽 "삼합은 천간합이나 육합에 견주어 강력합니다"
++ *   교재 340쪽 "세기는 삼합보다 방국이 더 강합니다"
++ *     → 방합 〉 삼합 〉 육합 〉 천간합
++ *
++ * [월지 조건 — 교재 259·343쪽]
++ *   "세 지지 중 하나는 반드시 월지에 있어야 삼합(방국)이 강하게 섭니다"
++ *   ★성립을 막지는 않습니다. 월지에 안 걸리면 「힘이 덜하다」고 덧붙입니다.
++ *     막아 버리면 손님이 자기 명식의 합을 아예 못 듣습니다. (교훈 BV)
++ *
++ * ⚠️ 준삼합·반합(교재 81쪽 SAMHAP_PARTIAL)은 넣지 않았습니다.
++ *    두 글자만으로도 서는 것이라 걸리는 명식이 크게 늘어 재료가 넘칩니다.
++ *    넣으실 거라면 걸림 비율부터 재십시오. (교훈 BO)
++ */
++function jijiHapBrief(saju: Pill[]): string[] {
++  const out: string[] = []
++  const brs = saju.map(p => p.branch).filter(Boolean)
++  const monthB = saju.find(p => p.pillar === '월주')?.branch ?? ''
++  /** 그 글자들이 어느 자리에 있는가 — 33-3장 沖과 같은 결로 자리를 살린다 */
++  const whereOf = (chars: string[]) =>
++    chars.map(c => toJiName(saju.find(p => p.branch === c)?.pillar ?? '')).filter(Boolean).join('-')
++
++  // ── 방합 (교재 82쪽) — 셋이 다 있어야 선다 ──
++  for (const r of BANGHAP) {
++    if (!r.chars.every(c => brs.includes(c))) continue
++    const say = r.say.filter(t => !isRuleLine(t)).slice(0, 2)
++    const weak = r.chars.includes(monthB) ? '' : ' 다만 월지에 걸치지 않아 힘이 덜합니다.'
++    out.push(`${r.key} ${r.name ?? ''}(방합) · ${whereOf(r.chars)} — ${say.join(' ')}${weak}`)
++  }
++  // ── 삼합 (교재 80~81쪽) ──
++  for (const r of SAMHAP) {
++    if (!r.chars.every(c => brs.includes(c))) continue
++    const say = r.say.filter(t => !isRuleLine(t)).slice(0, 2)
++    const weak = r.chars.includes(monthB) ? '' : ' 다만 월지에 걸치지 않아 힘이 덜합니다.'
++    out.push(`${r.key} ${r.name ?? ''}(삼합) · ${whereOf(r.chars)} — ${say.join(' ')}${weak}`)
++  }
++  // ── 육합 (교재 80쪽) — 두 글자 ──
++  //   ★방합·삼합에 이미 삼킨 짝은 겹쳐 내지 않는다. 같은 말이 두 번 나가면 무거워진다.
++  const eaten = new Set<string>()
++  for (const l of out) for (const c of l.slice(0, 3)) eaten.add(c)
++  for (const r of YUKHAP) {
++    if (!r.chars.every(c => brs.includes(c))) continue
++    if (r.chars.every(c => eaten.has(c))) continue
++    const say = r.say.filter(t => !isRuleLine(t)).slice(0, 1)
++    if (!say.length) continue
++    const nm = r.name ?? r.alias ?? ''
++    out.push(`${r.key}${nm ? `(${nm})` : ''} · ${whereOf(r.chars)} — ${say.join(' ')}`)
++  }
++  return out
++}
++
+ export function hapChungBrief(saju: Pill[], target: Target, opt: { 합?: boolean; 충?: boolean; 건강?: boolean } = { 합: true, 충: true }): string[] {
+   const stems = saju.map(p => p.stem).filter(Boolean)
+   const out: string[] = []; const seen = new Set<string>()
+@@ -392,6 +454,9 @@ export function hapChungBrief(saju: Pill[], target: Target, opt: { 합?: boolean
+     }
+   }
+   if (opt.합) {
++    // ── 지지 합이 먼저 — 교재가 매긴 세기대로 (방합 〉 삼합 〉 육합 〉 천간합) ──
++    out.push(...jijiHapBrief(saju))
++    // ── 천간합 다섯 짝 ──
+     const P: [string, string, string][] = [['甲','己','甲己合'],['乙','庚','乙庚合'],['丙','辛','丙辛合'],['丁','壬','丁壬合'],['戊','癸','戊癸合']]
+     for (const [a, b, key] of P) {
+       if (!stems.includes(a) || !stems.includes(b) || seen.has(key)) continue
+diff --git a/lib/saju/sinsalTable.ts b/lib/saju/sinsalTable.ts
+index 1cfcbee..95ea690 100644
+--- a/lib/saju/sinsalTable.ts
++++ b/lib/saju/sinsalTable.ts
+@@ -222,7 +222,7 @@ export const SAL_TABLE: SalRow[] = [
+       '업상대체로는 살생대권직(군인·경찰·간호사·운전사), 활인업, 명리, 타로가 좋습니다.',
+     ],
+     sayAdult: [
+-      '양인(戊午·壬子·丙午)은 카리스마와 자존심, 고집, 추진력, 봉사심이 있고 속은 순수합니다. 다만 배우자에게 고집을 부리면 괴강은 사이가 나빠집니다.',
++      '양인일주(丙午·戊午·壬子)는 카리스마와 자존심, 고집, 추진력, 봉사심이 있고 속은 순수합니다. 다만 배우자에게 고집을 부리면 괴강은 사이가 나빠집니다.',
+     ],
+     jobs: ['군인', '경찰', '간호사', '운전사', '활인업', '명리', '타로'],
+     original:
+@@ -238,7 +238,14 @@ export const SAL_TABLE: SalRow[] = [
+   },
+ 
+   {
+-    key: 'yangin', name: '양인살', hanja: '羊刃殺',
++    // ★2026-07-28 이름 정정 — 이 항목은 「일주」가 아니라 「격」입니다.
++    //   교재 178쪽 "月支가 겁재면 양인격, 日柱가 겁재면 양인 일주"
++    //   판정은 jaryoPick.salHits 가 **일간 + 월지**로 잽니다(Y[dayStem] === monthB).
++    //   그것이 곧 양인격이고, yongsinNew.YANGIN_MONTH 와 같은 다섯입니다.
++    //   ⚠️ 아래 pillars 다섯 중 甲卯·庚酉는 60갑자에 없는 짝이라 일주로는 안 걸립니다.
++    //      기둥 매칭용이 아니라 「일간-월지」 짝을 적어 둔 것입니다. 일주로 읽지 마십시오.
++    //   ★양인일주(丙午·戊午·壬子)는 yongsinNew.isYanginIlju 가 따로 잡습니다.
++    key: 'yangin', name: '양인격', hanja: '羊刃格',
+     // ⚠️ 교재 96쪽은 다섯입니다. career/tables/sinsal.ts(93쪽)는 셋입니다. 머리말 참고.
+     pillars: ['甲卯', '丙午', '戊午', '庚酉', '壬子'],
+     say: [
+diff --git a/lib/saju/solarterm.ts b/lib/saju/solarterm.ts
+index 413bf71..24f6da2 100644
+--- a/lib/saju/solarterm.ts
++++ b/lib/saju/solarterm.ts
+@@ -111,7 +111,23 @@ export async function getSolarTermMoment(
+ ): Promise<{ day: number; hour: number; minute: number }> {
+   const fallback = () => {
+     const m = calcSolarTermMoment(year, monthIdx)
+-    if (m) return { day: m.day, hour: Math.floor(m.hour), minute: Math.round((m.hour % 1) * 60) }
++    if (m) {
++      // ★2026-07-28 — 반올림해서 분이 60이 되는 자리를 올려 준다.
++      //   m.hour 는 소수 시각이다(예: 15.9989).
++      //     Math.floor(15.9989) = 15 · Math.round(0.9989*60) = 60  →  "15:60"
++      //   실측 1930~2050 · 12절 1,452개 중 14개(0.96%)에서 났다.
++      //     1959 청명 21:60 · 1988 입하 15:60 · 1991 입춘 16:60 …
++      //   ⚠️ 명식 계산에는 영향이 없었다. 쓰는 쪽이 hour*60+minute 으로 분을 합치기
++      //      때문에 15*60+60 = 960 = 16:00 으로 옳게 나온다.
++      //      다만 값 자체가 시각이 아니므로 화면·로그에 그대로 실으면 이상하다.
++      let hour = Math.floor(m.hour)
++      let minute = Math.round((m.hour % 1) * 60)
++      if (minute >= 60) { minute -= 60; hour += 1 }
++      // 23:60 → 24:00 은 다음날 00:00 이다.
++      let day = m.day
++      if (hour >= 24) { hour -= 24; day += 1 }
++      return { day, hour, minute }
++    }
+     return { day: getFallbackDay(year, monthIdx), hour: 0, minute: 0 }
+   }
+   const termName = MONTH_TERM_NAME[monthIdx]
+diff --git a/lib/saju/toTongbyeonInput.ts b/lib/saju/toTongbyeonInput.ts
+index 5b81a74..168a273 100644
+--- a/lib/saju/toTongbyeonInput.ts
++++ b/lib/saju/toTongbyeonInput.ts
+@@ -11,6 +11,7 @@ import type { TongbyeonInput, Ohaeng } from '@/lib/saju/tongbyeonPrompt'
+ // 용신 결과 타입 — 구버전 yongsin.ts 를 없애고 심산 기반 어댑터 타입으로 옮김(07-20).
+ //   두 타입은 필드가 완전히 같다(isStrong·yongsin·heeksin·gisin·gusin·hansin·score·description).
+ import type { YongsinCompatResult as YongsinResult } from '@/lib/saju/yongsinNew'
++import { calcYongsinNew, checkAgree } from '@/lib/saju/yongsinNew'
+ import { getUnsung } from '@/lib/saju/unsung'
+ import { getSinsal } from '@/lib/saju/sinsal'
+ import { getGongmang } from '@/lib/saju/gongmang'
+@@ -295,6 +296,20 @@ export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
+     lackElements,
+     yongsin: yongsinStr || undefined,
+     yongsinElement: yongsinEl,
++    // ★2026-07-28 — 격국과 세 용신 일치를 통변 재료에 넣는다. (교재 147·157쪽)
++    //   전에는 화면 카드(YongsinCard)에만 있고 AI 는 격을 모른 채 썼다.
++    //   ⚠️ 여기서 다시 계산하지 않는다. yongsinNew 한 곳에서만 잰다. (교훈 BQ)
++    ...(() => {
++      const r = a.dayStem && a.dayStem !== '?' ? calcYongsinNew(a.saju as never, a.dayStem, score as never) : null
++      if (!r) return {}
++      const ag = checkAgree(r)
++      return {
++        gyeokguk: r.gyeokguk.name || undefined,
++        gyeokgukYongsin: r.gyeokguk.element ?? undefined,
++        johuYongsin: r.johu.element ?? undefined,
++        yongsinAgree: ag.title + ' — ' + ag.note,
++      }
++    })(),
+     // 명식 특징(12운성·신살·귀인·공망) — 해당하는 것만 해석 포함해 조립.
+     // ★2026-07-27 — 명식 특징에 교재 48~77쪽 지지 자료를 이어 붙인다.
+     //   ① 12운성·신살·귀인·공망 (전부터 있던 것)
+diff --git a/lib/saju/tongbyeonPrompt.ts b/lib/saju/tongbyeonPrompt.ts
+index 3a709a1..8468724 100644
+--- a/lib/saju/tongbyeonPrompt.ts
++++ b/lib/saju/tongbyeonPrompt.ts
+@@ -38,8 +38,20 @@ export interface TongbyeonInput {
+   topElement: Ohaeng           // 가장 강한 기운
+   lackElements: Ohaeng[]       // 없거나 약한 기운(들)
+   // 용신 계열
+-  yongsin?: string             // 용신 오행 or 간지
++  yongsin?: string             // 용신 오행 or 간지 (억부용신)
+   yongsinElement?: Ohaeng      // 용신 오행
++  /**
++   * ★2026-07-28 — 격국과 세 용신 일치 여부. (교재 147·157쪽)
++   *   147쪽 "격국용신은 사회적 성공 여부와 관련이 있다"
++   *   157쪽 "격으로 그 사람의 직업과 사주의 크기를 알 수 있다(60~70%)"
++   *   ⚠️ 전에는 화면 카드에만 있고 통변 재료에는 없었습니다.
++   *      AI 가 격을 모른 채 직업·사회 이야기를 써 왔습니다.
++   */
++  gyeokguk?: string            // 격 이름 (예: '편인격' · '무격')
++  gyeokgukYongsin?: string     // 격국용신 오행
++  johuYongsin?: string         // 조후용신 오행 (봄·가을생은 없음)
++  /** 조후·억부·격국이 한 기운을 가리키는가 — yongsinNew.checkAgree 결과 */
++  yongsinAgree?: string
+   // ── 확장 자리(선택) ──────────────────────────────────────────
+   // 기본 통변엔 넣지 않는다. 시기 질문 등에서만 필요 시 채워 씀.
+   strongWeak?: string          // 신강약 (예: "중화신강")
+@@ -150,7 +162,11 @@ export function buildTongbyeonPrompt(
+   → 가장 강한 기운: ${input.topElement} (${OHAENG_MULSANG[input.topElement]})
+   → 없거나 약한 기운: ${input.lackElements.length ? input.lackElements.join(', ') : '뚜렷한 결핍 없음'}${
+     input.strongWeak ? `\n- 기운의 세기: ${input.strongWeak}` : ''
+-  }${input.yongsin ? `\n- 나를 살려주는 고마운 기운: ${input.yongsin}` : ''}${
++  }${input.yongsin ? `\n- 나를 살려주는 고마운 기운(억부): ${input.yongsin}` : ''}${
++    input.johuYongsin ? `\n- 계절이 바라는 기운(조후): ${input.johuYongsin}` : ''
++  }${input.gyeokguk ? `\n- 사회에서 쓰는 그릇(격): ${input.gyeokguk}${input.gyeokgukYongsin ? ` · 그 격이 바라는 기운 ${input.gyeokgukYongsin}` : ''}` : ''}${
++    input.yongsinAgree ? `\n- 세 기운이 모이는가: ${input.yongsinAgree}` : ''
++  }${
+     input.currentDaeun ? `\n- 지금 흐르는 큰 흐름: ${input.currentDaeun}` : ''
+   }${input.myeongsikFeatures ? `\n${input.myeongsikFeatures}` : ''}`
+ 
