@@ -21,6 +21,7 @@ import { getUnsung, getSinsal, getGongmang, unsungColor, SINSAL_HIGHLIGHT } from
 import { getGwiinForBranch, getGwiinForStem } from '@/lib/saju/gwiin'
 import { nabeum } from '@/lib/saju/sajuDetail'
 import TermModal from './TermModal'
+import { branchRelationLabels } from '@/lib/saju/hapJudge'
 
 interface Pillar { pillar: string; stem: string; branch: string }
 
@@ -70,21 +71,11 @@ const SS_COLOR: Record<string, string> = {
   편인: '#3c82a0', 정인: '#3c82a0',
 }
 
-/* ── 지지 관계 (형충회합) ── */
-const YUKHAP: Record<string, string> = {
-  子: '丑', 丑: '子', 寅: '亥', 亥: '寅', 卯: '戌', 戌: '卯',
-  辰: '酉', 酉: '辰', 巳: '申', 申: '巳', 午: '未', 未: '午',
-}
-const CHUNG: Record<string, string> = {
-  子: '午', 午: '子', 丑: '未', 未: '丑', 寅: '申', 申: '寅',
-  卯: '酉', 酉: '卯', 辰: '戌', 戌: '辰', 巳: '亥', 亥: '巳',
-}
-const WONJIN: Record<string, string> = {
-  子: '未', 未: '子', 丑: '午', 午: '丑', 寅: '酉', 酉: '寅',
-  卯: '申', 申: '卯', 辰: '亥', 亥: '辰', 巳: '戌', 戌: '巳',
-}
-const SAMHAP = [['申', '子', '辰'], ['寅', '午', '戌'], ['亥', '卯', '未'], ['巳', '酉', '丑']]
-const BANGHAP = [['寅', '卯', '辰'], ['巳', '午', '未'], ['申', '酉', '戌'], ['亥', '子', '丑']]
+/* ── 지지 관계 (형충회합) ──
+ *   ★2026-07-29 — 육합·충·원진·삼합·방합 표를 여기서 걷어냈습니다.
+ *     lib/saju/hapJudge.branchRelationLabels 한 곳에 있습니다.
+ *     표를 두 곳에 두면 반드시 갈립니다. (교훈 CJ)
+ */
 
 interface RelTag { label: string; bg: string; fg: string }
 const TAG: Record<string, RelTag> = {
@@ -124,16 +115,12 @@ const TAG: Record<string, RelTag> = {
  *            삼합·방합이 아예 안 잡힙니다(거짓 표시를 내느니 안 내는 쪽).
  */
 function relationOf(a: string, b: string, all?: string[]): string[] {
-  const out: string[] = []
-  if (!a || !b) return out
-  if (YUKHAP[a] === b) out.push('육합')
-  if (CHUNG[a] === b) out.push('충')
-  if (WONJIN[a] === b) out.push('원진')
-  const pool = all ?? [a, b]
-  const has = (c: string) => pool.includes(c)
-  for (const s of SAMHAP) if (s.includes(a) && s.includes(b) && s.every(has)) out.push('삼합')
-  for (const s of BANGHAP) if (s.includes(a) && s.includes(b) && s.every(has)) out.push('방합')
-  return Array.from(new Set(out))
+  // ★2026-07-29 — 판정을 lib/saju/hapJudge 한 곳으로 옮겼습니다.
+  //   전에는 이 파일과 lib/saju/sajuDetail.ts 가 표를 따로 갖고 있었고,
+  //   sajuDetail 쪽은 **두 글자만으로 삼합**이라 불렀습니다(죽은 코드였지만).
+  //   표를 여기 두지 않으면 두 벌이 될 수가 없습니다. (교훈 CJ · CL)
+  //   ⚠️ 딱지 이름·차례(육합·충·원진·삼합·방합)는 그대로입니다. 화면은 안 바뀝니다.
+  return branchRelationLabels(a, b, all)
 }
 
 /* ── 현침살·곡각살 (글자 자체로 판정 · 천간/지지 공통) ──

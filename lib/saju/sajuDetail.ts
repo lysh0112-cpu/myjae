@@ -10,6 +10,8 @@
 //   명식·대운·세운 전체에 자동 반영됩니다. (표시부 수정 불필요)
 // ─────────────────────────────────────────────────────────────
 
+// ★2026-07-29 — 지지 관계 판정은 hapJudge 한 곳에서만. 표를 여기 두지 않는다.
+import { branchRelationLabels } from './hapJudge'
 const STEMS = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']
 const BRANCHES = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥']
 
@@ -123,28 +125,32 @@ export function gongmang(dayStem: string, dayBranch: string): string[] {
 }
 
 // ── 지지 합충 관계 ────────────────────────────────────────────
-const YUKHAP: Record<string, string> = {
-  子:'丑',丑:'子',寅:'亥',亥:'寅',卯:'戌',戌:'卯',
-  辰:'酉',酉:'辰',巳:'申',申:'巳',午:'未',未:'午',
-}
-const SAMHAP = [['申','子','辰'],['寅','午','戌'],['亥','卯','未'],['巳','酉','丑']]
-const BANGHAP = [['寅','卯','辰'],['巳','午','未'],['申','酉','戌'],['亥','子','丑']]
-
-// 명식 지지 배열에서 각 지지가 가진 관계 라벨 반환 (기둥별)
+/**
+ * 명식 지지 배열에서 각 지지가 가진 관계 딱지를 돌려준다 (기둥별)
+ *
+ * 🔴 2026-07-29 — 여기 **2글자 삼합 버그**가 있었습니다.
+ *
+ *   [무엇이 틀려 있었나]
+ *       s.filter(x => branches.includes(x)).length >= 2   ← 두 글자만 있어도 「삼합」
+ *     34부에 ExpertDetail 에서 고친 바로 그 버그가 여기 그대로 남아 있었습니다.
+ *     지금은 부르는 곳이 0건이라 손님에게 안 나가지만, 누가 되살려 쓰는 순간
+ *     화면이 통변 재료와 다시 갈립니다.
+ *
+ *   [어떻게 막았나]
+ *     표와 판정을 **hapJudge.branchRelationLabels 한 곳으로 옮겼습니다.**
+ *     여기서 표를 따로 갖고 있지 않으므로 이제 갈릴 수가 없습니다. (교훈 CJ · CL)
+ *     ★2026-07-29 대표님 확정 — 완전 3글자 삼합·방합만 인정. 준삼합·반합은 제외.
+ *
+ *   ⚠️ 참조 0건이지만 지우지 않았습니다. (교훈 AM — 참조 0건이어도 함부로 지우지 말 것)
+ *      되살려 쓰실 때 그대로 쓰시면 화면·재료가 같은 잣대로 돕니다.
+ */
 export function branchRelations(branches: string[]): string[][] {
   return branches.map((b, i) => {
     const labels: string[] = []
     branches.forEach((other, j) => {
       if (i === j) return
-      if (YUKHAP[b] === other) labels.push('육합')
-      if (CHUNG[b] === other) labels.push('충')
+      labels.push(...branchRelationLabels(b, other, branches))
     })
-    for (const s of SAMHAP) {
-      if (s.includes(b) && s.filter(x => branches.includes(x)).length >= 2) labels.push('삼합')
-    }
-    for (const s of BANGHAP) {
-      if (s.includes(b) && s.filter(x => branches.includes(x)).length >= 2) labels.push('방합')
-    }
     return Array.from(new Set(labels))
   })
 }

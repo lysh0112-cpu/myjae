@@ -36,9 +36,12 @@
 //     다만 **재료와 화면은 같은 잣대여야 합니다** (교훈 CL). 3글자 규칙은 맞춰 두었습니다.
 //
 // ── ⚠️ 넣지 않은 것 ───────────────────────────────────────────────
-//   ① 준삼합·반합·가합 (교재 81쪽) — 대표님 확정 "넣지 않는다" (34-4장)
+//   ① 준삼합·반합·가합 (교재 81쪽) — ★★2026-07-29 대표님 재확정 "전부 제외"
+//        "오직 완벽한 3글자가 모두 모였을 때의 완전 삼합만 재료로 추출한다."
 //      ★교재 81쪽은 "가합(申辰만)에 천간 癸수가 뜨면 申子辰 삼합이 성립된다"고
-//        적지만, 이를 넣으면 삼합이 4.8% → 18.5% 로 뜁니다. 확정과 부딪혀 보류합니다.
+//        적지만, 넣으면 삼합이 4.8% → 18.5% 로 뜁니다. **넣지 않습니다.**
+//      ⚠️ 화면(ExpertDetail)·죽은 코드(sajuDetail)도 같은 3글자 잣대로 맞춰 두었습니다.
+//         판정은 branchRelationLabels 한 곳입니다. (아래 8장)
 //   ② 합화된 오행으로 점수를 옮기는 일 — `hapchungScore.ts` 의 몫입니다.
 //      여기서 또 옮기면 두 벌이 됩니다. 이 파일은 **말만** 정합니다.
 
@@ -81,6 +84,11 @@ const HYEONG_PAIR: Array<[string, string]> = [
 ]
 const TOJI = new Set(['辰', '戌', '丑', '未'])
 
+/** 육합 짝 — hapMeaning.YUKHAP 의 chars 에서 만든다. 표를 손으로 또 적지 않는다. */
+const YUKHAP_PAIR: Record<string, string> = Object.fromEntries(
+  YUKHAP.flatMap(r => [[r.chars[0], r.chars[1]], [r.chars[1], r.chars[0]]]),
+)
+
 const ORDER = ['년주', '월주', '일주', '시주']
 const GAN_NAME: Record<string, string> = { 년주: '년간', 월주: '월간', 일주: '일간', 시주: '시간' }
 const JI_NAME: Record<string, string> = { 년주: '년지', 월주: '월지', 일주: '일지', 시주: '시지' }
@@ -118,8 +126,11 @@ export interface CheonganHapHit {
  *       甲乙己 — 사이의 乙이 끼어 방해하여 불성립
  *     그래서 사이에 글자가 하나라도 있으면 못 이루는 것으로 봅니다.
  *
- *   ⚠️ 이 잣대로 천간합이 46.3% → 23.3% 로 줄어듭니다. 크게 바뀌는 자리입니다.
- *      막지 않고 **까닭을 붙여 내보냅니다.** 손님이 "합이 사라졌다" 고 느끼지 않도록. (교훈 BV)
+ *   ★★2026-07-29 대표님 확정 — 이웃한 자리(년-월 · 월-일 · 일-시)의 천간합만 인정.
+ *      "교재 78쪽에 중간에 다른 글자가 끼어들면 합이 방해받는다고 명시되어 있으므로."
+ *      ⚠️ 이 잣대로 천간합이 47.0% → 27.6% 로 줄어듭니다. 손님 다섯에 한 명이 바뀝니다.
+ *      막지 않고 **까닭을 붙여 내보냅니다.** "합이 사라졌다" 고 느끼지 않도록. (교훈 BV)
+ *      ⚠️ 되돌리시려면 아래 `hi - lo > 1` 을 `false` 로 두면 옛 방식입니다.
  */
 export function judgeCheonganHap(saju: Pill[]): CheonganHapHit[] {
   const ps = sorted(saju)
@@ -211,7 +222,12 @@ export function judgeJijiHap(saju: Pill[], score?: Record<Ohaeng, number>): Jiji
   const monthB = ps.find(p => p.pillar === '월주')?.branch ?? ''
   const whereOf = (chars: string[]) =>
     chars.map(c => JI_NAME[ps.find(p => p.branch === c)?.pillar ?? ''] ?? '').filter(Boolean).join('-')
-  /** 교재에 "세력이 왕성하면" 이라고만 적힌 자리의 잣대 — simsanOhaeng 의 「발달」(25점) */
+  /**
+   * 교재에 "세력이 왕성하면" 이라고만 적힌 자리의 잣대.
+   *   ★★2026-07-29 대표님 확정 — simsanOhaeng 의 「발달」(25점 이상)을 그대로 쓴다.
+   *     "교재에 세부 수치가 없으므로 엔진의 기준점을 쓰는 것이 깔끔하고 명확하다."
+   *   ⚠️ 새 숫자를 만들지 않았습니다. 34부의 30/42/47 과 달리 **기존 잣대를 빌린 것**입니다.
+   */
   const strong = (el: Ohaeng) => (score?.[el] ?? 0) >= 25
 
   const out: JijiHapHit[] = []
@@ -327,6 +343,11 @@ function ganhapBetween(a: string, b: string): string[] {
  *       卯(甲乙)-申(戊壬庚)    겉은 金剋木 이고 卯申 귀문이지만 乙庚合
  *   辰戌丑未가 낀 짝은 **개고(형충)가 되었을 때만** 인정합니다.
  *       교재 예) 丑과 寅 — 丑未沖이나 丑戌刑으로 창고 문이 열려야 한다
+ *
+ *   ★★2026-07-29 대표님 확정 — 교재가 이름 든 둘(亥午·卯申) 말고도
+ *     지장간끼리 甲己·乙庚·丙辛·丁壬·戊癸 합이 서는 짝을 **엔진이 원리대로 계산해 낸다.**
+ *     "그것이 맞다. 현행 계산된 암합 목록을 그대로 사용하라."
+ *     실측 — 35.0%에 걸립니다(개고로 인정된 것 23.2% 포함). 줄 수는 둘로 막아 둡니다.
  */
 export function judgeAmhap(saju: Pill[]): AmhapHit[] {
   const ps = sorted(saju)
@@ -396,4 +417,41 @@ export function countHap(saju: Pill[], score?: Record<Ohaeng, number>): HapCount
 export function isCheonjiHapdeok(saju: Pill[], score?: Record<Ohaeng, number>): boolean {
   const c = countHap(saju, score)
   return c.cheongan >= 2 && c.jiji >= 1
+}
+
+// ═══════════════════════════════════════════════════════════
+// 8. ★두 지지 사이의 관계 딱지 — 화면과 재료가 갈리지 않게 하는 한 곳
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * 지지 두 글자 사이의 관계를 딱지로 돌려준다. (형충회합 도표용)
+ *
+ * ★2026-07-29 대표님 확정 — **세 글자가 다 모인 완전 삼합·방합만** 잡는다.
+ *   준삼합·반합·가합은 넣지 않는다. (34-4장 확정의 연장)
+ *
+ * [왜 여기로 옮겼나]
+ *   같은 판정이 두 곳에 손으로 적혀 있었습니다.
+ *       app/.../result-new/ExpertDetail.tsx   34부에 3글자로 고침
+ *       lib/saju/sajuDetail.ts                🔴 2글자를 삼합이라 부르고 있었음
+ *   sajuDetail 쪽은 참조 0건인 죽은 코드였지만, 되살아나는 순간 화면이 다시 갈립니다.
+ *   **한 곳에 두면 갈릴 수가 없습니다.** (교훈 CJ · CL)
+ *
+ * @param all 명식 네 지지 전부. 안 넘기면 두 글자만 보게 되어
+ *            삼합·방합은 아예 안 잡습니다(거짓 표시를 내느니 안 내는 쪽).
+ */
+export function branchRelationLabels(a: string, b: string, all?: string[]): string[] {
+  const out: string[] = []
+  if (!a || !b) return out
+  if (YUKHAP_PAIR[a] === b) out.push('육합')
+  if (JIJI_CHUNG[a] === b) out.push('충')
+  if (WONJIN[a] === b) out.push('원진')
+  const pool = all ?? [a, b]
+  const has = (c: string) => pool.includes(c)
+  for (const r of SAMHAP) {
+    if (r.chars.includes(a) && r.chars.includes(b) && r.chars.every(has)) out.push('삼합')
+  }
+  for (const r of BANGHAP) {
+    if (r.chars.includes(a) && r.chars.includes(b) && r.chars.every(has)) out.push('방합')
+  }
+  return Array.from(new Set(out))
 }
