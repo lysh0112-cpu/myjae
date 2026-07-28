@@ -46,6 +46,8 @@ const HOUR_MOOD: Record<string, string> = {
 }
 
 // 그림 통변에 필요한 값 (mulsang 화면이 만들어 넘김)
+import { cheonganImage, stage25 } from './jaryoPick'
+
 export interface MulsangTongbyeonInput {
   name: string                       // 이름/별명
   age: number
@@ -133,6 +135,10 @@ export function buildMulsangTongbyeonPrompt(
   opts: { premium?: boolean } = {},
 ): string {
   const ilgan = ILGAN[input.dayStem]
+  // ★2026-07-28 — 교재 41~47쪽의 일간 물상과 25쪽의 계절·하루·색을 얹는다.
+  //   물상도는 "무엇에 빗대는가" 가 알맹이라 교재 41쪽 풀이가 그대로 쓰인다.
+  const bookImage = cheonganImage(input.dayStem)
+  const bookStage = stage25(input.topElement)
   const wolji = WOLJI[input.monthBranch]
   const yong = input.yongsinElement ? YONGSIN[input.yongsinElement] : null
   const rel = RELATION[input.dayStem]
@@ -156,7 +162,9 @@ export function buildMulsangTongbyeonPrompt(
 - 물상: ${soften(ilgan.mulsang)}
 - 성정: ${soften(ilgan.seongjeong)}
 - 강점·매력: ${soften(ilgan.gangjeom)}
-- 주의점: ${soften(ilgan.jueui)}`
+- 주의점: ${soften(ilgan.jueui)}${bookImage ? `
+- 교재 41~47쪽이 말하는 이 일간: ${soften(bookImage)}` : ''}${bookStage ? `
+- 교재 25쪽이 말하는 가장 센 기운: ${bookStage}` : ''}`
     : ''
 
   // ★병존 — 같은 글자가 나란히 있으면 그 기운이 그림에서 짙어진다 (교재 74~77쪽)

@@ -28,6 +28,7 @@
   },
   "include": [
     "lib/saju/byeongjon.ts",
+    "lib/saju/jaryoPick.ts",
     "lib/saju/jijiTrait.ts",
     "lib/saju/examLuck/**/*.ts",
     "app/manseryeok/exam-luck/page.tsx",

@@ -13,6 +13,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
 import { createClient } from '@supabase/supabase-js'
 import { withNim } from '@/lib/saju/honorific'
+// ★2026-07-28 — 교재 41~47쪽 일간, 84~86쪽 충을 재료로 얹는다.
+//   이 화면은 명식 네 기둥이 아니라 일간·월지·일지만 받는다. 있는 것으로만 잰다.
+import { cheonganBrief } from '@/lib/saju/jaryoPick'
+import { findChungByChars } from '@/lib/saju/chungMeaning'
 import { logAiError } from '@/lib/ai/errorLog'
 
 // 오늘운세 전용 지시문 읽기 (관리자 화면에서 관리)
@@ -73,6 +77,16 @@ export async function POST(req: NextRequest) {
 - 이달 지지(${monthBranch})와 내 일지(${dayBranchMine}) = 개인·건강: 등급 ${selfGrade}, 관계 "${selfTag}"
   원문: ${selfDesc}`
 
+    // ★일간이 어떤 사람인가 (교재 41~47쪽) — 세 줄만
+    const ilganMaterial = cheonganBrief(dayStem, 2)
+      .map((t: string) => `- ${t}`).join('\n')
+    // ★타고난 월지-일지 충 (교재 84~86쪽)
+    const bornChung = (() => {
+      const r = findChungByChars(monthBranchMine, dayBranchMine)
+      if (!r) return ''
+      return `\n- 타고난 충 ${r.key}(월지-일지, 교재 84~86쪽): ${r.say.slice(0, 2).join(' ')}`
+    })()
+
     const prompt = `${toneBlock}
 
 ${fortuneGuide}
@@ -81,6 +95,7 @@ ${fortuneGuide}
 
 [대상 달] ${year}년 ${month}월 (${monthStem}${monthBranch}월)
 [상담자 일간] ${dayStem} / 월지 ${monthBranchMine} / 일지 ${dayBranchMine}
+${ilganMaterial}${bornChung}
 [상담자 용신] ${yongsin} / 희신 ${heeksin}
 ${nickname ? `[호칭] ${withNim(nickname)}` : ''}
 ${ageGroup ? `[연령대] ${ageGroup}` : ''}

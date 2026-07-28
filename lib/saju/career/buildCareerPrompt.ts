@@ -32,6 +32,7 @@ import type { CareerCard } from './types'
 //   ⚠️ 대목(카드)을 새로 만들지 않는다. 이미 있는 카드의 재료에 얹는다.
 //      이 프롬프트는 ■ 제목으로 대목을 나누는 파서와 짝이라, 대목을 늘리면 화면이 깨진다. (30부 2장)
 import { findByeongjon, findCombo, findJijiByeongjon, sayOf } from '../byeongjon'
+import { cheonganBrief, salBrief } from '../jaryoPick'
 import { traitsInSaju, traitLines, noteLines, ctxOf } from '../jijiTrait'
 
 export interface CareerPromptInput {
@@ -71,6 +72,19 @@ export function buildCareerPrompt(v: CareerPromptInput): string {
   //   지지 특징 → [어느 자리에서 일할까]  교재가 든 직업이 여기에 붙는다
   //   ★144칸(jijiGrade)은 안 넣는다. 그건 운(대운·세운)과의 어울림이라 진로적성 주제가 아니다.
   const extra: Record<string, string[]> = {}
+  // ★2026-07-28 — 교재 20~28·41~47·94~97쪽 자료를 카드마다 나눠 얹는다.
+  //   ⚠️ 대목(카드)을 새로 만들지 않는다. 이미 있는 카드의 재료에 얹는다.
+  {
+    const push = (k: string, arr: string[]) => {
+      if (!arr.length) return
+      extra[k] = [...(extra[k] ?? []), ...arr]
+    }
+    // 오행 점수는 카드 재료(ohaeng_gijil)에 이미 있으므로 여기서 다시 세지 않는다.
+    // 명식 글자로만 잴 수 있는 것 — 일간과 살 — 만 얹는다.
+    push('ilju', cheonganBrief(v.saju.find(p => p.pillar === '일주')?.stem ?? '', 4))
+    push('sinsal', salBrief(v.saju, v.target, false))
+    push('jobs', salBrief(v.saju, v.target, true))
+  }
   {
     const bj: string[] = []
     for (const h of findByeongjon(v.saju)) {

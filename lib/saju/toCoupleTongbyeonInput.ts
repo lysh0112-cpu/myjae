@@ -49,6 +49,10 @@ import type { CoupleJudgeV1, CategoryResult } from './coupleFilterV1'
 //   ⚠️ 대목(카드)을 새로 만들지 않는다. 두 사람 명식 블록 안에 사실로만 얹는다.
 //      궁합 프롬프트는 대목과 재료가 1:1로 묶여 있어, 대목을 늘리면 글이 뭉친다. (28부)
 import { findByeongjon, findCombo, findJijiByeongjon, sayOf } from './byeongjon'
+// ★2026-07-28 — 교재 자료를 궁합 재료에도 넣는다.
+//   ⚠️ 성별 줄은 넘기지 않는다. 상대방 사주에 성별을 두고 한 말이 뜨면 곤란하다.
+//   ★가장 값진 것은 "다루는 법"(교재 20~24쪽) — 상대를 어떻게 대할 것인가.
+import { cheonganBrief, ohaengBrief, hapChungBrief } from './jaryoPick'
 
 // ── 표기용 ──────────────────────────────────────────────────────────────
 const EL_KOR: Record<string, string> = {
@@ -99,6 +103,8 @@ function personBlock(p: CouplePersonInput, label: string): string {
   lines.push(`[${label}] ${p.name} · ${p.gender}${p.birthLabel ? ` · ${p.birthLabel}` : ''}`)
   lines.push(`- 명식(팔자): ${pillars}`)
   lines.push(`- 타고난 본바탕(일간): ${dayStem}`)
+  // ★일간이 어떤 사람인가 (교재 41~47쪽). 성별 줄은 넘기지 않는다.
+  for (const t of cheonganBrief(dayStem, 3)) lines.push(`  · ${t}`)
 
   // ── 병존 (교재 74~77쪽) — 같은 글자가 나란히 있으면 그 기운이 짙다 ──
   //   ★여는말에서 "각각 어떤 기운을 타고났는지" 소개할 때 쓰라고 준다.
@@ -137,6 +143,12 @@ function personBlock(p: CouplePersonInput, label: string): string {
 
   // ── 오행 (심산 38쪽 점수) ──
   const ohaeng = calcSimsanOhaeng(p.saju, p.solarMonth, p.solarDay, p.hourBranch)
+  // ★2026-07-28 — 이 사람을 어떻게 대하면 좋은가 (교재 20~24쪽).
+  //   궁합에서 가장 쓸모 있는 자리다. "그 사람이 어떤가" 가 아니라
+  //   "그 사람을 어떻게 대할 것인가" 를 말하는 유일한 자료다.
+  for (const t of ohaengBrief(ohaeng, 'adult', { 결: true, 다루는법: true })) lines.push(`- ${t}`)
+  // ★원국의 합·충 (교재 78~86쪽)
+  for (const t of hapChungBrief(p.saju, 'adult')) lines.push(`- ${t}`)
   const ALL: Ohaeng[] = ['목', '화', '토', '금', '수']
   const sorted = [...ALL].sort((a, b) => (ohaeng[b] ?? 0) - (ohaeng[a] ?? 0))
   const lack = ALL.filter(e => (ohaeng[e] ?? 0) === 0)

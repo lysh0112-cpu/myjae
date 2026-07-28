@@ -15,6 +15,8 @@ import type { ExamCard, ExamTarget } from './types'
 import { CLOSING, CLOSING_STUDENT, CLOSING_SRC } from './tables/rules'
 
 /** 대목 차례 — 화면 카드와 1:1 */
+import { salBrief } from '../jaryoPick'
+
 export const ORDER: Array<{ key: string; title: string; len: string }> = [
   { key: 'years', title: '앞으로의 흐름', len: '4~6문장' },
   { key: 'dayun', title: '지금의 흐름', len: '3~4문장' },
@@ -26,6 +28,8 @@ export const ORDER: Array<{ key: string; title: string; len: string }> = [
 ]
 
 export interface BuildExamPromptArgs {
+  /** ★2026-07-28 — 명식 네 기둥. 있으면 학문 관련 살을 재료에 얹는다 */
+  saju?: Array<{ pillar: string; stem: string; branch: string }>
   name: string
   gender: string
   age: number
@@ -43,6 +47,17 @@ export function buildExamPrompt(v: BuildExamPromptArgs): string {
     const o = ORDER.find(x => x.key === c.key)
     return `[${o?.title ?? c.title}]\n` + c.reasons.map(r => `- ${r}`).join('\n')
   }).join('\n\n')
+
+  // ★2026-07-28 — 학문에 관계된 살만 재료로 얹는다 (교재 96~97쪽).
+  //   문창성·천을귀인은 학문과 인복의 자리라 합격운에 바로 닿는다.
+  //   ⚠️ 대목(카드)을 새로 만들지 않는다. 재료 뒤에 사실로만 붙인다.
+  const salLines = v.saju?.length
+    ? salBrief(v.saju, v.target, false, ['munchang', 'cheoneulgwiin', 'hyeonchim'])
+    : []
+  const salBlock = salLines.length
+    ? `\n\n[타고난 살 — 교재 94~97쪽. 학문에 닿는 것만 골랐습니다]\n` +
+      salLines.map(t => `- ${t}`).join('\n')
+    : ''
 
   const closing = (v.target === 'student' ? CLOSING_STUDENT : CLOSING).join(' ')
 
@@ -84,7 +99,7 @@ ${plan.map(o => `■ ${o.title} — ${o.len}`).join('\n')}
 ■ 맺는말 — 3~4문장
 
 [판정 재료]
-${material}
+${material}${salBlock}
 
 이제 위 순서대로 써 주세요.`
 }
