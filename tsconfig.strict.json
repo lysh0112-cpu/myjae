@@ -29,6 +29,7 @@
   "include": [
     "lib/saju/byeongjon.ts",
     "lib/saju/jaryoPick.ts",
+    "lib/saju/hapJudge.ts",
     "lib/saju/hyeongPaHae.ts",
     "lib/saju/jijiTrait.ts",
     "lib/saju/SOURCE_INDEX.ts",

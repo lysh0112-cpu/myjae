@@ -18,7 +18,13 @@ import { OHAENG_TRAIT } from './ohaengTrait'
 import { OHAENG_NATURE } from './ohaengNature'
 import { OHAENG_25 } from './ohaengTable25'
 import { findChungByChars } from './chungMeaning'
-import { findHap, YUKHAP, SAMHAP, BANGHAP } from './hapMeaning'
+import { findHap, CHEONGAN_HAP_BLOCK, AMHAP_NOTE, HAP_MANY, CHEONJI_HAPDEOK } from './hapMeaning'
+// ★2026-07-29 — 합의 성립 판정은 hapJudge 한 곳에서만 한다. (교훈 CJ)
+//   교재 78~83쪽이 적어 둔 조건(방해·쟁합·투합·합화·子丑水土·巳申水金·개고)이
+//   여기 흩어져 있으면 또 두 벌이 된다.
+import {
+  judgeCheonganHap, judgeJijiHap, judgeJahwa, judgeAmhap, isCheonjiHapdeok,
+} from './hapJudge'
 import { SAL_TABLE } from './sinsalTable'
 import { findRel, findSamhyeong, relLines } from './hyeongPaHae'
 // ★병존·지지특징 — 네 서비스가 따로 갖고 있던 것을 여기로 올렸다 (2026-07-28, 교훈 BQ)
@@ -260,7 +266,7 @@ function buildByNeed(need: Set<Need>, a: PickContext): Partial<Record<Need, stri
   }
   if (a.saju?.length) {
     if (need.has('합') || need.has('충')) {
-      const hc = hapChungBrief(a.saju, t, { 합: need.has('합'), 충: need.has('충'), 건강: need.has('건강') })
+      const hc = hapChungBrief(a.saju, t, { 합: need.has('합'), 충: need.has('충'), 건강: need.has('건강') }, a.score)
       put(need.has('충') ? '충' : '합', hc)
     }
     if (need.has('형파해')) put('형파해', hyeongPaHaeBrief(a.saju, t).slice(0, 4))
@@ -405,45 +411,72 @@ export function ohaengBrief(
  *    두 글자만으로도 서는 것이라 걸리는 명식이 크게 늘어 재료가 넘칩니다.
  *    나중에 넣으실 거라면 걸림 비율부터 재십시오. (교훈 BO)
  */
-function jijiHapBrief(saju: Pill[]): string[] {
+function jijiHapBrief(saju: Pill[], score?: Record<Ohaeng, number>): string[] {
   const out: string[] = []
-  const brs = saju.map(p => p.branch).filter(Boolean)
-  const monthB = saju.find(p => p.pillar === '월주')?.branch ?? ''
-  /** 그 글자들이 어느 자리에 있는가 — 33-3장 沖과 같은 결로 자리를 살린다 */
-  const whereOf = (chars: string[]) =>
-    chars.map(c => toJiName(saju.find(p => p.branch === c)?.pillar ?? '')).filter(Boolean).join('-')
-
-  // ── 방합 (교재 82쪽) — 셋이 다 있어야 선다 ──
-  for (const r of BANGHAP) {
-    if (!r.chars.every(c => brs.includes(c))) continue
-    const say = r.say.filter(t => !isRuleLine(t)).slice(0, 2)
-    const weak = r.chars.includes(monthB) ? '' : ' 다만 월지에 걸치지 않아 힘이 덜합니다.'
-    out.push(`${r.key} ${r.name ?? ''}(방합) · ${whereOf(r.chars)} — ${say.join(' ')}${weak}`)
-  }
-  // ── 삼합 (교재 80~81쪽) ──
-  for (const r of SAMHAP) {
-    if (!r.chars.every(c => brs.includes(c))) continue
-    const say = r.say.filter(t => !isRuleLine(t)).slice(0, 2)
-    const weak = r.chars.includes(monthB) ? '' : ' 다만 월지에 걸치지 않아 힘이 덜합니다.'
-    out.push(`${r.key} ${r.name ?? ''}(삼합) · ${whereOf(r.chars)} — ${say.join(' ')}${weak}`)
-  }
-  // ── 육합 (교재 80쪽) — 두 글자 ──
-  //   ★방합·삼합에 이미 삼킨 짝은 겹쳐 내지 않는다. 같은 말이 두 번 나가면 무거워진다.
-  const eaten = new Set<string>()
-  for (const l of out) for (const c of l.slice(0, 3)) eaten.add(c)
-  for (const r of YUKHAP) {
-    if (!r.chars.every(c => brs.includes(c))) continue
-    if (r.chars.every(c => eaten.has(c))) continue
-    const say = r.say.filter(t => !isRuleLine(t)).slice(0, 1)
+  // ★2026-07-29 — 성립 판정은 hapJudge 가 한다. 여기서는 말만 짓는다. (교훈 CJ)
+  for (const h of judgeJijiHap(saju, score)) {
+    const r = findHap(h.key)
+    if (!r) continue
+    const say = r.say.filter(t => !isRuleLine(t)).slice(0, h.kind === '육합' ? 1 : 2)
     if (!say.length) continue
-    const nm = r.name ?? r.alias ?? ''
-    out.push(`${r.key}${nm ? `(${nm})` : ''} · ${whereOf(r.chars)} — ${say.join(' ')}`)
+    const nm = r.name ?? ''
+    const head = h.kind === '육합'
+      ? `${h.key}${nm ? `(${nm})` : ''}`
+      : `${h.key} ${nm}(${h.kind})`
+    // 월지 조건 — 교재 80·82쪽. 막지 않고 단서만 붙인다 (교훈 BV)
+    const weak = h.kind === '육합' || h.monthTied
+      ? '' : ' 다만 월지에 걸치지 않아 힘이 덜합니다.'
+    // 子丑·巳申 처럼 갈리는 합은 이번 명식이 어느 쪽인지 밝힌다 (교재 80쪽)
+    const hwa = h.hwaEl ? ` 이 명식은 ${h.hwaWhy} ${h.hwaEl}로 봅니다.` : ''
+    // 午未合이 깨지는 자리 (교재 80쪽)
+    const broken = h.broken ? ` ${h.broken} 가까운 사이가 팍팍해지기 쉬우니 살펴 주십시오.` : ''
+    out.push(`${head} · ${h.where} — ${say.join(' ')}${hwa}${weak}${broken}`)
   }
   return out
 }
 
-export function hapChungBrief(saju: Pill[], target: Target, opt: { 합?: boolean; 충?: boolean; 건강?: boolean } = { 합: true, 충: true }): string[] {
-  const stems = saju.map(p => p.stem).filter(Boolean)
+/**
+ * ★2026-07-29 — 자화간합(82쪽) · 암합(83쪽) · 합이 많음(83쪽)
+ *
+ *   [무엇이 빠져 있었나]
+ *     `hapMeaning.ts` 에 자료가 다 있는데 **꺼내는 곳이 0건**이었습니다.
+ *       JAHWA_GANHAP · AMHAP_NOTE · HAP_MANY · CHEONJI_HAPDEOK · CHEONGAN_HAP_BLOCK
+ *     34부의 지지 합과 똑같은 자리입니다. (교훈 BO)
+ *
+ *   [실측] 자화간합 8.3% · 암합(亥午) 6.9% · 암합(卯申) 7.1% · 합이 많음 2.2%
+ */
+function jahwaAmhapBrief(saju: Pill[], score?: Record<Ohaeng, number>): string[] {
+  const out: string[] = []
+  const day = saju.find(p => p.pillar === '일주')
+
+  // ── 자화간합 (82쪽) — 다섯 일주 ──
+  if (day) {
+    const j = judgeJahwa(day.stem, day.branch)
+    if (j) {
+      const say = j.say.filter(t => !isRuleLine(t))
+      out.push(`자화간합 ${j.key}(${j.keyword ?? ''}) · 일주 — ${say.join(' ')} 복록이 있고 총명하며 부부 인연이 좋은 고품격 일주로 봅니다.`)
+    }
+  }
+
+  // ── 암합 (83쪽) — 겉으로 안 드러나는 지장간끼리의 합 ──
+  //    ★두 줄까지만. 개고 조건에 걸린 것이 여럿일 수 있어 재료가 불어납니다.
+  for (const a of judgeAmhap(saju).slice(0, 2)) {
+    const open = a.needsOpen && a.openedBy ? ` ${a.openedBy}으로 창고 문이 열려 인정됩니다.` : ''
+    // ★말은 교재 자료(AMHAP_NOTE)에서 가져온다. 여기서 새로 짓지 않는다.
+    out.push(`암합 ${a.chars.join('')}(${a.ganhap.join('·')}) · ${a.where} — ${AMHAP_NOTE[0]} ${AMHAP_NOTE[1]}${open}`)
+  }
+
+  // ── 합이 많은가 · 천지합덕 (83쪽) ──
+  //    ★교재는 이 대목을 남녀로 갈라 적습니다. hapMeaning 이 이미 성별을 떼어 두었습니다.
+  if (isCheonjiHapdeok(saju, score)) {
+    out.push(`천지합덕 — ${CHEONJI_HAPDEOK.slice(1).join(' ')}`)
+  } else if (judgeJijiHap(saju, score).length + judgeCheonganHap(saju).filter(h => h.seongrip).length >= 3) {
+    out.push(HAP_MANY.join(' '))
+  }
+  return out
+}
+
+export function hapChungBrief(saju: Pill[], target: Target, opt: { 합?: boolean; 충?: boolean; 건강?: boolean } = { 합: true, 충: true }, score?: Record<Ohaeng, number>): string[] {
   const out: string[] = []; const seen = new Set<string>()
   if (opt.충) {
     // ★자리를 살려서 본다. branches 로 줄이지 않는다.
@@ -470,17 +503,49 @@ export function hapChungBrief(saju: Pill[], target: Target, opt: { 합?: boolean
   }
   if (opt.합) {
     // ── 지지 합이 먼저 — 교재가 매긴 세기대로 (방합 〉 삼합 〉 육합 〉 천간합) ──
-    out.push(...jijiHapBrief(saju))
-    // ── 천간합 다섯 짝 ──
-    const P: [string, string, string][] = [['甲','己','甲己合'],['乙','庚','乙庚合'],['丙','辛','丙辛合'],['丁','壬','丁壬合'],['戊','癸','戊癸合']]
-    for (const [a, b, key] of P) {
-      if (!stems.includes(a) || !stems.includes(b) || seen.has(key)) continue
-      const r = findHap(key); if (!r) continue
-      seen.add(key)
+    out.push(...jijiHapBrief(saju, score))
+
+    // ── 천간합 다섯 짝 (교재 78~79쪽) ────────────────────────────────
+    //   ★2026-07-29 — 전에는 `stems.includes(a) && stems.includes(b)` 뿐이라
+    //     **자리를 아예 안 봤습니다.** 교재 78쪽이 든 두 예가 모두 자리 이야기입니다.
+    //         甲庚己 — 사이의 庚이 甲을 극해 합이 이루어지지 않는다
+    //         甲乙己 — 사이의 乙이 끼어 합을 방해한다
+    //     실측 — 천간합이 있는 명식의 절반(전수 23.0%)이 방해받는 자리인데
+    //            그대로 「합이 있습니다」로 나가고 있었습니다.
+    //   ⚠️ 막지 않고 **까닭을 붙여** 내보냅니다. (교훈 BV)
+    for (const h of judgeCheonganHap(saju)) {
+      if (seen.has(h.key)) continue
+      const r = findHap(h.key); if (!r) continue
+      seen.add(h.key)
+
+      if (!h.seongrip) {
+        const why = h.block?.kind === '극'
+          ? `사이에 ${h.block.by}이(가) 있어 극하니`
+          : `사이에 ${h.block?.by ?? '다른 글자'}이(가) 끼어`
+        out.push(`${h.key}${r.name ? `(${r.name})` : ''} · ${h.where} — ${why} 합이 이루어지지 않습니다. 끌어당기는 마음은 있으나 맺어지기까지 한 번 걸러집니다.`)
+        continue
+      }
+
       const say = r.say.filter(t => !isRuleLine(t)).slice(0, 2)
       const extra = target === 'adult' ? (r.sayAdult ?? []).slice(0, 1) : []
-      out.push(`${r.key}${r.name ? `(${r.name})` : ''} — ${[...say, ...extra].join(' ')}`)
+      // 합화 — 교재 78쪽 "지지에 합화된 세력이 있을 경우에 합화된다"
+      const hwa = h.hwa
+        ? ` 지지에 ${h.hwaEl} 세력이 있어 합화됩니다.`
+        : ' 다만 지지에 받쳐 줄 세력이 없어 합하되 다른 오행으로 변하지는 않습니다.'
+      out.push(`${h.key}${r.name ? `(${r.name})` : ''} · ${h.where} — ${[...say, ...extra].join(' ')}${hwa}`)
     }
+
+    // ── 쟁합·투합 (교재 78쪽) ──
+    //   ★교재는 이 둘을 남녀로 갈라 적습니다. hapMeaning 이 이미 성별을 떼어 두었습니다.
+    for (const h of judgeCheonganHap(saju)) {
+      if (!h.dispute) continue
+      const line = CHEONGAN_HAP_BLOCK.find(t => t.includes(h.dispute!))
+      if (line) out.push(`${h.key} — ${line.split('—')[1]?.trim() ?? line}`)
+      break   // 한 줄이면 넉넉합니다
+    }
+
+    // ── 자화간합 · 암합 · 합이 많음 (교재 82~83쪽) ──
+    out.push(...jahwaAmhapBrief(saju, score))
   }
   return out
 }
@@ -582,10 +647,17 @@ const ALL_NEEDS: Need[] = ['일간','오행','건강','개운','합','충','형�
 export const CATEGORY_NEEDS: Record<string, Need[]> = {
   '건강': ['건강','충','형파해','개운'],
   '건강·자기': ['건강','오행','개운','일간','육친'],
-  '재물': ['오행','충','형파해','일간','육친'],
-  '노후·재물': ['오행','충','인생단계','육친'],
+  // ★2026-07-29 — 「합」을 넣었습니다.
+  //   교재 82쪽 "사주에 方局이나 三合이 있으면 크게 성공하는 경우가 많다"
+  //   재물이야말로 합이 중요한 자리인데 34부까지 합이 안 나가고 있었습니다.
+  '재물': ['오행','합','충','형파해','일간','육친'],
+  '노후·재물': ['오행','합','충','인생단계','육친'],
   '진로·적성': ['일간','오행','살','직업','문이과','육친'],
   '직업·진로': ['일간','오행','살','직업','문이과','육친'],
+  // ⚠️ 2026-07-29 — 「직업·사업」·「취업」에도 합을 넣어 봤으나 **되돌렸습니다.**
+  //   실측: 직업·사업 잘림 0.2% → 5.8%, 그때 빠지는 것이 하필 「직업」이었습니다.
+  //   NEED_PRIORITY 에서 '직업'이 뒤에서 셋째라 가장 먼저 잘립니다.
+  //   ★고칠 곳은 CATEGORY_NEEDS 가 아니라 NEED_PRIORITY 입니다. 35-3장에 올려 두었습니다.
   '직업·사업': ['일간','살','직업','충','형파해','육친'],
   '취업': ['일간','살','직업','문이과','육친'],
   '연애': ['합','살','일간'],
@@ -736,7 +808,7 @@ export function pickLines(
   }
   if (a.saju?.length) {
     if (need.has('합') || need.has('충')) {
-      out.push(...hapChungBrief(a.saju, t, { 합: need.has('합'), 충: need.has('충'), 건강: need.has('건강') }))
+      out.push(...hapChungBrief(a.saju, t, { 합: need.has('합'), 충: need.has('충'), 건강: need.has('건강') }, a.score))
     }
     if (need.has('형파해')) out.push(...hyeongPaHaeBrief(a.saju, t).slice(0, 4))
     if (need.has('살')) out.push(...salBrief(a.saju, t, need.has('직업')))
