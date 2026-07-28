@@ -277,15 +277,67 @@ export function sipsinOf(dayStem: string, other: string): string {
   if (GEN[oe] === de) return same ? '편인' : '정인'   // oe가 de를 생 = 인
   return ''
 }
-// 12격 → 격국용신(상신) 오행 방향 (일간 기준 육친)
+// 10정격 → 격국용신(상신) 오행 방향 (일간 기준 육친)
 // 반환은 '육친종류'가 아니라 dayEl 기준 실제 오행으로 변환해서 씀
+//
+// ★2026-07-28 — 비견격·겁재격을 없앴습니다.
+//   교재 157쪽 "비견과 겁재는 투간해도 格으로 잡지 않는다(건록격과 양인격으로 잡는다)"
+//   교재 178쪽 "비견겁, 겁재격은 없다. 비견격이라 하지 않고 건록격이라 하며,
+//               겁재가 있을 때는 겁재격이 아니라 양인격이라고 하는 것이다"
 type Yukchin = '비겁' | '식상' | '재성' | '관성' | '인성'
 const GYEOK_SANGSIN: Record<string, Yukchin> = {
-  비견격: '관성', 겁재격: '관성', 건록격: '관성', 양인격: '관성',
-  식신격: '재성', 상관격: '인성',      // 식신생재 / 상관패인(소스: 상관격→인성)
+  건록격: '관성', 양인격: '관성',
+  //   건록격 — 181쪽 "제1用神은 정관이고 제2用神은 편관"
+  //   양인격 — 179쪽 "양인격은 무조건 관성이 用神이다"
+  식신격: '재성', 상관격: '인성',      // 식신생재(159쪽) / 상관패인(162쪽)
   편재격: '식상', 정재격: '식상',
-  편관격: '식상', 정관격: '인성',      // 편관: 식상(식신제살) / 정관: 인성(관인상생)
+  편관격: '식상', 정관격: '인성',      // 식신제살(171쪽) / 관인상생(169쪽)
   편인격: '관성', 정인격: '관성',      // 관인상생
+  //   ⚠️ 편인격은 176쪽 본문이 "재성에 의해 제화되는 것이 중요"라 하여 151쪽 표(관성)와
+  //      다릅니다. 연재쌤 확인 대기 중이라 표(관성)를 그대로 둡니다.
+}
+
+// ── ★건록격·양인격 = 월지가 일간의 록왕지(祿旺支)인가 ──────────────────────
+//   출전: 교재 157쪽 ③ · 178쪽 · 181쪽
+//   투간과 무관하게 월지 하나로 결정됩니다. 그래서 지장간을 보기 전에 먼저 봅니다.
+//
+//   ★2026-07-28 대표님 확정 — 火土同法
+//     戊  건록 巳 · 양인 午          己  건록 午 · 양인 巳
+//     (丙의 록이 巳·양인이 午이고, 丁은 음간이라 록 午·양인 巳. 戊己가 이를 따릅니다)
+//
+//   ⚠️⚠️ 己(음일간)의 양인격은 교재 178쪽과 부딪힙니다.
+//        178쪽 "양인격은 陽日干만 해당한다(甲丙戊庚壬). 음일간은 음인격이 없다(乙丁己辛癸)"
+//        162쪽 "陰日干은 月支에 겁재가 있어도 양인격이 될 수 없다"
+//        ★대표님 지시로 己-巳를 넣었습니다. 연재쌤 확인이 오면 여기 한 줄만 지우면 됩니다.
+//        같은 논리라면 乙-寅 · 丁-巳 · 辛-申 · 癸-亥 도 양인격이 되어야 하나,
+//        교재 162쪽 사례(甲辰 丁未 丁巳 戊戌)를 「상관격」으로 풀이하고 있어 넣지 않았습니다.
+//
+//   ⚠️ 록왕지가 아닌데 월지 본기가 비견·겁재인 자리는 「무격(無格)」이 됩니다.
+//      (乙寅 丁巳 戊丑 戊辰 戊未 戊戌 己丑 己辰 己未 己戌 辛申 癸亥 — 열두 칸)
+//      교재 158쪽 "십정격 중에 격이 없는 無格과 破格이 많다" 를 따른 것입니다.
+const GEONROK_MONTH: Record<string, string> = {
+  甲: '寅', 乙: '卯', 丙: '巳', 丁: '午', 戊: '巳',
+  己: '午', 庚: '申', 辛: '酉', 壬: '亥', 癸: '子',
+}
+const YANGIN_MONTH: Record<string, string> = {
+  甲: '卯', 丙: '午', 戊: '午', 庚: '酉', 壬: '子',
+  己: '巳',   // ★대표님 확정. 교재 178쪽과 부딪히는 자리 (위 주석)
+}
+
+/** 격을 잡지 못한 경우의 이름 — 교재 158쪽 「無格」 */
+export const NO_GYEOK = '무격'
+
+// ── ★양인일주(羊刃日柱) — 격이 아니라 일주의 성질입니다 ────────────────────
+//   교재 178쪽 "月支가 겁재면 양인격, 日柱가 겁재면 양인 일주"
+//              "겁재를 깔고 있는 일주: 丙午, 戊午, 壬子 일주이다"
+//   ★B책 93쪽이 「양인살」로 싣고 있던 셋이 바로 이것입니다. 격이 아닙니다. (33-9장 ㉓)
+//   ⚠️ 己巳는 대표님이 己의 양인을 巳로 정하시면서 새로 들어온 넷째입니다.
+//      교재 178쪽은 셋만 듭니다. 연재쌤 확인 대기.
+const YANG_BRANCH_SET = new Set(['子', '寅', '辰', '午', '申', '戌'])
+export function isYanginIlju(dayStem: string, dayBranch: string): boolean {
+  if (YANGIN_MONTH[dayStem] !== dayBranch) return false
+  // 60갑자에 실재하는 짝만 (양간-양지 / 음간-음지)
+  return YANG_STEM.has(dayStem) === YANG_BRANCH_SET.has(dayBranch)
 }
 function yukchinToEl(dayEl: Ohaeng, y: Yukchin): Ohaeng {
   const r = relOf(dayEl)
@@ -302,6 +354,23 @@ export function calcGyeokguk(saju: Pillar[], dayStem: string): GyeokgukResult {
   const dayEl = STEM_EL[dayStem]
   const month = saju.find(p => p.pillar === '월주')
   if (!month) return { name: '', element: null, note: '' }
+
+  // ★① 록왕지 특례를 먼저 본다 — 교재 157쪽 ③ (투간과 무관하게 월지로 결정된다)
+  if (YANGIN_MONTH[dayStem] === month.branch) {
+    return {
+      name: '양인격',
+      element: yukchinToEl(dayEl, GYEOK_SANGSIN['양인격']),
+      note: '월지가 일간의 양인 자리라 양인격이에요',
+    }
+  }
+  if (GEONROK_MONTH[dayStem] === month.branch) {
+    return {
+      name: '건록격',
+      element: yukchinToEl(dayEl, GYEOK_SANGSIN['건록격']),
+      note: '월지가 일간의 록 자리라 건록격이에요',
+    }
+  }
+
   const hidden = JIJANGAN[month.branch] ?? []
   const others = saju.filter(p => p.pillar !== '일주').map(p => p.stem)  // 일간 제외
   const bongi = hidden[hidden.length - 1]
@@ -314,7 +383,22 @@ export function calcGyeokguk(saju: Pillar[], dayStem: string): GyeokgukResult {
   else if (others.includes(yeogi)) gyeokStem = yeogi
   else gyeokStem = bongi  // 미투출 → 본기
 
-  const name = sipsinOf(dayStem, gyeokStem) + '격'
+  const sipsin = sipsinOf(dayStem, gyeokStem)
+
+  // ★② 비견·겁재는 격으로 잡지 않는다 — 교재 157쪽 ③ · 178쪽
+  //    록왕지였다면 위 ①에서 이미 건록격·양인격으로 나갔다.
+  //    여기까지 왔다는 것은 록왕지가 아니면서 본기가 비견·겁재라는 뜻이므로 無格이다.
+  //    ⚠️ 교재 162쪽 "陰日干의 겁재는 성격·기질·적성은 판단할 수 있지만
+  //       직업을 판단할 수는 없다" — 그래서 격국용신도 두지 않는다.
+  if (sipsin === '비견' || sipsin === '겁재') {
+    return {
+      name: NO_GYEOK,
+      element: null,
+      note: '월지가 격을 이루지 않아요. 격보다 사주 전체의 세력으로 봅니다',
+    }
+  }
+
+  const name = sipsin + '격'
   const sangsin = GYEOK_SANGSIN[name]
   const element = sangsin ? yukchinToEl(dayEl, sangsin) : null
   return { name, element, note: sangsin ? `${name}이라 ${sangsin}이 격국용신이에요` : name }
@@ -348,6 +432,80 @@ export function calcYongsinNew(saju: Pillar[], dayStem: string, scoreOverride?: 
     johu: calcJohu(monthBranch, dayEl, inbi, score),
     eokbu: calcEokbu(dayEl, score, saju, dayStem),
     gyeokguk: calcGyeokguk(saju, dayStem),
+  }
+}
+
+// ── ★세 용신이 일치하는가 (교재 146·147·148쪽) ───────────────────────────
+//   146쪽 "격국, 억부, 조후까지 用神이 같으면 좋은데, 각각의 用神이 다르면
+//          보기 쉽지 않다. 用神이 다 같으면 유리하다."
+//   147쪽 "한 가지 用神만 고집하면 안 된다(억부와 격국, 조후를 다 고려해야 한다)."
+//   148쪽 "억부용신과 조후용신이 일치해야 진정한 用神 역할을 할 수 있다."
+//
+//   ⚠️ 교재가 견주는 셋은 「억부·조후·격국」입니다. 통관용신은 151쪽 표의 딴 줄이고
+//      아직 계산기가 없습니다. 통관이 들어오면 여기에 넷째로 더하십시오.
+//   ⚠️ 조후는 봄·가을생이면 없습니다(151쪽은 여름·겨울생만 답니다).
+//      그때는 「해당 없음」이지 「어긋남」이 아닙니다. 셋을 강제로 맞추지 마십시오.
+export type AgreeLevel = 'all3' | 'eokbuJohu' | 'eokbuGyeok' | 'none' | 'noJohu'
+
+export interface YongsinAgree {
+  level: AgreeLevel
+  /** 화면 강조 카드를 띄울지 — 세 용신이 모두 같을 때만 */
+  highlight: boolean
+  title: string
+  note: string
+}
+
+export function checkAgree(r: YongsinNewResult): YongsinAgree {
+  const johu = r.johu.element
+  const eokbu = r.eokbu.yongsin
+  const gyeok = r.gyeokguk.element
+
+  // 봄·가을생 — 조후가 없다
+  if (!johu) {
+    const eg = !!gyeok && gyeok === eokbu
+    return {
+      level: 'noJohu',
+      highlight: false,
+      title: eg ? '억부와 격국이 같아요' : '봄·가을 태생이에요',
+      note: eg
+        ? '봄·가을 태생이라 조후는 따지지 않아요. 억부와 격국이 같은 기운을 가리키니 마음과 사회 활동이 한 방향입니다.'
+        : '봄·가을 태생이라 조후는 따지지 않아요. 억부와 격국을 견주어 보시면 됩니다.',
+    }
+  }
+
+  const ej = johu === eokbu
+  const eg = !!gyeok && gyeok === eokbu
+
+  if (ej && eg) {
+    return {
+      level: 'all3',
+      highlight: true,
+      title: '세 용신이 하나로 모였어요',
+      note: '조후·억부·격국이 모두 같은 기운을 가리킵니다. 격이 매우 순수하고 길한 짜임이에요. '
+        + '몸과 마음이 바라는 것과 사회에서 쓰는 것이 어긋나지 않으니, 이 기운을 꾸준히 채우시면 크게 힘을 받습니다.',
+    }
+  }
+  if (ej) {
+    return {
+      level: 'eokbuJohu',
+      highlight: false,
+      title: '억부와 조후가 같아요',
+      note: '몸과 마음이 바라는 기운이 같습니다. 다만 사회에서 쓰는 기운은 다른 쪽이라, 일터에서는 결을 달리 잡으셔야 해요.',
+    }
+  }
+  if (eg) {
+    return {
+      level: 'eokbuGyeok',
+      highlight: false,
+      title: '억부와 격국이 같아요',
+      note: '사회에서 쓰는 기운과 내가 바라는 기운이 같습니다. 다만 건강·궁합으로 보는 조후는 다른 쪽이에요.',
+    }
+  }
+  return {
+    level: 'none',
+    highlight: false,
+    title: '자리마다 바라는 기운이 달라요',
+    note: '조후·억부·격국이 서로 다른 기운을 가리킵니다. 한 가지만 붙들지 마시고 때와 자리에 맞게 나누어 쓰셔야 해요.',
   }
 }
 

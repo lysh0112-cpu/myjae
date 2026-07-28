@@ -6,35 +6,23 @@
 // │        「16. 격국(格局)과 십정격(十正格)」                          │
 // └───────────────────────────────────────────────────────────────┘
 //
-// [왜 감싸개를 따로 두는가]
-//   lib/saju/yongsinNew.ts 의 calcGyeokguk() 은 **월지 지장간의 투간**만 본다.
-//   그런데 교재 62쪽의 건록격·양인격은 **투간과 무관**하게 성립한다.
+// [왜 감싸개를 따로 두는가]  ★2026-07-28 까닭이 바뀌었습니다
+//   전에는 공용 엔진이 건록·양인을 못 잡아서 여기서 특례를 걸렀습니다.
+//   이제 **엔진(yongsinNew.calcGyeokguk)이 록왕지 표로 직접 잡습니다.**
+//   그래서 여기 특례는 걷어냈고, 이 파일에는 **격의 자리(位)** 만 남았습니다.
+//     A책 152·157쪽 — 年干 국가·정부 / 月干 사회·단체 / 時干 개인·가정
+//   자리 규칙은 진로적성에서만 쓰므로 감싸개에 두는 것이 맞습니다.
 //
-//     건록격 = 일간과 월지가 같은 오행이고 음양도 같다 (월지에 비견)
-//     양인격 = 일간과 월지가 같은 오행이고 음양이 다르다 (월지에 겁재)
-//
-//   실제로 1998.1.5 寅시 사주(壬 일간 · 子월)를 넣으면
-//     교재 기준 → 양인격
-//     calcGyeokguk → 비견격   ← 여기 壬이 투간했다고 봄
-//   으로 어긋난다.
-//
-//   ⚠️ calcGyeokguk 자체는 건드리지 않는다. 궁합·사주보기가 함께 쓴다.
-//      여기서 특례만 먼저 걸러 내고, 아니면 그대로 넘긴다.
+//   ⚠️ 격 이름·상신은 엔진 것을 그대로 씁니다. 사본을 만들지 마십시오. (교훈 BQ)
 //
 // [격의 자리 — 교재 62쪽]
 //   년 천간에 격이 있으면 국가·정부와 관련된 일
 //   월 천간에 격이 있으면 사회·단체와 관련된 일
 //   시 천간이나 월지에 격이 있으면 개인·가정적인 일
 
-import { calcGyeokguk, sipsinOf, type GyeokgukResult } from '../yongsinNew'
+import { calcGyeokguk, sipsinOf, NO_GYEOK, type GyeokgukResult } from '../yongsinNew'
 import type { CareerCard, CareerInput, Pillar } from './types'
 import { GYEOKGUK_INFO, GYEOK_POSITION } from './tables/gyeokguk'
-
-/** 지지의 본기(本氣) — 그 지지의 본래 기운이 되는 천간 */
-const BONGI: Record<string, string> = {
-  子: '癸', 丑: '己', 寅: '甲', 卯: '乙', 辰: '戊', 巳: '丙',
-  午: '丁', 未: '己', 申: '庚', 酉: '辛', 戌: '戊', 亥: '壬',
-}
 
 export interface CareerGyeokguk extends GyeokgukResult {
   /** 건록·양인 특례로 잡혔는가 */
@@ -53,21 +41,24 @@ export function calcCareerGyeokguk(saju: Pillar[], dayStem: string): CareerGyeok
   const month = saju.find(p => p.pillar === '월주')
   const base = calcGyeokguk(saju, dayStem)
 
-  let name = base.name
-  let special = false
-
-  if (month) {
-    const bongi = BONGI[month.branch]
-    if (bongi) {
-      const s = sipsinOf(dayStem, bongi)
-      if (s === '비견') { name = '건록격'; special = true }
-      else if (s === '겁재') { name = '양인격'; special = true }
-    }
-  }
+  // ★2026-07-28 — 여기 있던 건록·양인 특례를 걷어냈습니다.
+  //   공용 엔진 calcGyeokguk 이 록왕지 표로 직접 잡습니다. 사본을 두지 않습니다. (교훈 BQ)
+  //   ⚠️ 전에는 「월지 본기가 겁재면 양인격」이라 음일간까지 잡았는데,
+  //      교재 178쪽이 "양인격은 陽日干만"이라 하여 그때 틀렸습니다.
+  //      실제로 162쪽 사례(甲辰 丁未 丁巳 戊戌)를 양인격으로 잘못 냈습니다.
+  const name = base.name
+  const special = name === '건록격' || name === '양인격'
 
   // 격이 어느 자리에 드러났는가 — 격의 오행과 같은 천간을 찾는다
+  //   교재 152·157쪽: 年干 국가·정부 / 月干 사회·단체 / 時干 개인·가정
+  //   ★건록·양인은 월지로 정해지므로 자리를 따로 찾지 않는다.
+  //   ★무격은 격이 없으니 자리도 없다.
   let position: string | null = null
-  if (!special && month) {
+  if (name === NO_GYEOK) {
+    position = null
+  } else if (special) {
+    position = '월지'
+  } else if (month) {
     const target = name.replace('격', '')
     for (const p of ['년주', '월주', '시주']) {
       const pil = saju.find(x => x.pillar === p)
@@ -76,14 +67,11 @@ export function calcCareerGyeokguk(saju: Pillar[], dayStem: string): CareerGyeok
       }
     }
     if (!position) position = '월지'
-  } else if (special) {
-    position = '월지'
   }
 
   return {
     ...base,
     name,
-    note: special ? `월지가 일간과 같은 오행이라 ${name}이에요` : base.note,
     special,
     position,
     positionNote: (position && GYEOK_POSITION[position]) || '',

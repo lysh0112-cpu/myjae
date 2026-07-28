@@ -13,7 +13,7 @@
 //
 //   [원칙] 공용 엔진(yongsinNew) 계산은 안 건드림. sipsinOf·calcGyeokguk 를 가져다 씀.
 
-import { sipsinOf, calcGyeokguk } from '@/lib/saju/yongsinNew'
+import { sipsinOf, calcGyeokguk, NO_GYEOK } from '@/lib/saju/yongsinNew'
 import type { EnginePillar } from './engineAdapter'
 
 export type SungpaeVerdict = 'sunggyeok' | 'gyeokOnly' | 'pagyeok'
@@ -113,12 +113,22 @@ export function judgeSungpae(
     case '편인격':
       if (재성 > 0 && 인성 > 0 && 재성 >= 인성) reasons.push('재성이 인성을 극해요(탐재괴인 우려)')
       break
+    // ★2026-07-28 — '비견격'·'겁재격' 두 case 를 지웠습니다.
+    //   공용 엔진이 더 이상 그 이름을 만들지 않습니다. (교재 157·178쪽)
+    //   월지가 록왕지면 건록격·양인격, 아니면 무격으로 옵니다.
     case '건록격':
-    case '양인격':
-    case '비견격':
-    case '겁재격':
+      // 181쪽 "건록격이나 양인격이 관성이 없으면 능력 발휘가 잘되지 않는다"
+      //       "건록격은 정관이 있어야 능력 발휘가 뛰어나며"
       if (관성 === 0) reasons.push('힘을 조절할 관성이 없어요')
       break
+    case '양인격':
+      // 178쪽 "양인격은 관성이 없으면 破格이다" · "양인격은 편관이 오는 것이 좋다"
+      if (관성 === 0) reasons.push('양인격인데 관성이 없어요(파격)')
+      break
+    case NO_GYEOK:
+      // 교재 158쪽 "십정격 중에 격이 없는 無格과 破格이 많다"
+      //   ★격이 없는 것은 파격이 아닙니다. 성패를 매기지 않고 보류합니다.
+      return { gyeokName, verdict: 'gyeokOnly', reasons: ['월지가 격을 이루지 않아 세력으로 봅니다'], sipsinCount: c }
     default:
       // 격 미상 → 판정 보류
       break

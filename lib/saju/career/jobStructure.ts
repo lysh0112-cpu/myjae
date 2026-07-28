@@ -21,6 +21,7 @@ import { calcCareerYongsin } from './yongsin'
 import { checkSinsal9 } from './sinsal9'
 import type { CareerCard, CareerInput } from './types'
 import { JOB_STRUCT, STRUCT_SRC } from './tables/jobStructure'
+import { NO_GYEOK } from '../yongsinNew'
 
 const STEM_EL: Record<string, Ohaeng> = {
   甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토',
@@ -96,7 +97,10 @@ export function pickStructure(input: CareerInput): StructHit[] {
   {
     const w: string[] = []; let s = 0
     if (byYuk['재성'] < 20 && byYuk['관성'] < 20) { s += 3; w.push('재성과 관성이 센 편은 아니에요') }
-    if (!gk.special && (gname === '비견격' || gname === '겁재격')) { s += 1; w.push('격이 또렷하지 않아요') }
+    // ★2026-07-28 — 전에는 '비견격'·'겁재격' 을 「격이 흐릿함」으로 봤습니다.
+    //   교재 178쪽대로 그 두 이름을 없애면서, 그 자리는 이제 무격(無格)으로 옵니다.
+    //   (A책 158쪽 "십정격 중에 격이 없는 無格과 破格이 많다")
+    if (gname === NO_GYEOK) { s += 1; w.push('격이 또렷하지 않아요') }
     if (s >= 4) push('hoesawon', s, w)
   }
   // ④ 전문 연구직 — ★인성이 격을 이루거나 넉넉해야 한다

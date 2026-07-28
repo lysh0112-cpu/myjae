@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { EL_BG, EL_C, EL_C_SUB, EL_TEXT as EL_BD_STRONG } from '@/lib/saju/ohaengColor'
 import { OHAENG_INFO } from './ohaengInfo'
 import type { YongsinNewResult, Ohaeng } from '@/lib/saju/yongsinNew'
+import { checkAgree, isYanginIlju } from '@/lib/saju/yongsinNew'
 
 /**
  * 용신 카드 (심산 3종 용신 · 명카페)
@@ -14,11 +15,14 @@ import type { YongsinNewResult, Ohaeng } from '@/lib/saju/yongsinNew'
  *   <YongsinCard result={calcYongsinNew(saju, dayStem)} />
  */
 
-/* 격국별 원리 이름 + 한 줄 설명 (소스 상신표 기반) */
+/* 격국별 원리 이름 + 한 줄 설명 (소스 상신표 기반)
+ * ★2026-07-28 — 「비견격」「겁재격」 두 줄을 지웠습니다.
+ *   교재 178쪽 "비견겁, 겁재격은 없다. 비견격이라 하지 않고 건록격이라 하며,
+ *               겁재가 있을 때는 겁재격이 아니라 양인격이라고 하는 것이다"
+ *   ⚠️ 이 표는 yongsinNew.GYEOK_SANGSIN 의 사본입니다. 한쪽만 고치지 마십시오. (교훈 BQ)
+ */
 const GYEOK_PRINCIPLE: Record<string, { name: string; line: string }> = {
-  비견격: { name: '건록용관', line: '관성이 있어야 능력을 제대로 펼쳐요' },
   건록격: { name: '건록용관', line: '관성이 있어야 능력을 제대로 펼쳐요' },
-  겁재격: { name: '양인용살', line: '관성이 강한 기운을 다스려 줘요' },
   양인격: { name: '양인용살', line: '관성이 강한 기운을 다스려 줘요' },
   식신격: { name: '식신생재', line: '내 재능이 재물로 이어져요' },
   상관격: { name: '상관패인', line: '인성이 넘치는 재주를 다잡아 줘요' },
@@ -78,6 +82,14 @@ export default function YongsinCard({ result, saju }: Props) {
   const info = open ? OHAENG_INFO[open.el] : null
 
   const { johu, eokbu, gyeokguk } = result
+
+  // ── ★세 용신이 일치하는가 (교재 146·147·148쪽) ──
+  //   계산은 yongsinNew.checkAgree 한 곳에서만 한다. 여기서 다시 재지 않는다.
+  const agree = checkAgree(result)
+
+  // ── ★양인일주 (교재 178쪽) — 격이 아니라 일주의 성질 ──
+  const ilju = saju?.find(p => p.pillar === '일주')
+  const yanginIlju = !!ilju && isYanginIlju(ilju.stem, ilju.branch)
 
   // ── 특정 오행이 원국(천간·지지)에 있는지 찾기 — 조후·격국 공용 ──
   const elFoundInSaju = (el: string | null): string[] => {
@@ -237,6 +249,53 @@ export default function YongsinCard({ result, saju }: Props) {
           {cell(eokbu.hansin, '한신', false, false)}
         </div>
       </div>
+
+      {/* ★세 용신 일치 — 교재 146·147·148쪽
+          "격국, 억부, 조후까지 用神이 같으면 좋은데 (…) 用神이 다 같으면 유리하다"
+          셋이 모두 같을 때만 강조 카드를 띄우고, 그 밖에는 한 줄로만 알려 준다. */}
+      {agree.highlight ? (
+        <div style={{
+          background: 'linear-gradient(135deg,#fff8ec 0%,#fdf0e0 100%)',
+          border: '1.5px solid #d9a55f', borderRadius: 12,
+          padding: '14px 14px 13px', marginBottom: 10,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+            <span style={{ fontSize: 15 }}>✨</span>
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: '#8f3d0e' }}>{agree.title}</span>
+            <span style={{
+              marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#fff',
+              background: '#c58a3d', padding: '2px 8px', borderRadius: 8,
+            }}>
+              {EL_HAN[eokbu.yongsin]} 하나로
+            </span>
+          </div>
+          <div style={{ fontSize: 11.5, color: '#6b5340', lineHeight: 1.8 }}>{agree.note}</div>
+        </div>
+      ) : (
+        <div style={{
+          background: '#fdf9f4', border: '0.5px solid #eee0d0', borderRadius: 8,
+          padding: '9px 12px', marginBottom: 10, fontSize: 11, color: '#7a6350', lineHeight: 1.75,
+        }}>
+          <b style={{ color: '#96502e' }}>{agree.title}</b> — {agree.note}
+        </div>
+      )}
+
+      {/* ★양인일주 — 격이 아니라 일주의 성질 (교재 178쪽) */}
+      {yanginIlju && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 7,
+          background: '#fbf2f2', border: '0.5px solid #e8cfcf', borderRadius: 8,
+          padding: '9px 12px', marginBottom: 10,
+        }}>
+          <span style={{
+            fontSize: 10, fontWeight: 700, color: '#fff', background: '#b06060',
+            padding: '2px 8px', borderRadius: 7, whiteSpace: 'nowrap',
+          }}>양인일주</span>
+          <span style={{ fontSize: 11, color: '#7a5a5a', lineHeight: 1.7 }}>
+            일지에 겁재를 깔고 있어요. 격(格)은 아니고 타고난 기질이 세다는 뜻입니다.
+          </span>
+        </div>
+      )}
 
       {/* 안내 문구 */}
       <div style={{ background: '#faf3ee', border: '0.5px solid #f0e0d5', borderRadius: 8, padding: '10px 12px', fontSize: 11, color: '#666', lineHeight: 1.75 }}>
