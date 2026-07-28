@@ -9,6 +9,23 @@
      ③ DAYUN_WEIGHT      대문자 상수를 안 봤다
      ④ counter = 5       쓰기만 해도 "썼다" 고 셌다
      ⑤ 두 함수에 같은 이름  개수가 2가 되어 통과했다
+
+   [2판의 빈틈 — 2026-07-28]
+     ⑥ 템플릿 문자열을 통째로 비워, `...${x}...` 안에서만 쓰이는 값을
+        전부 "안 쓴다" 고 신고했다.  lib/saju 75 + app/api 55 = 130건.
+        → ${...} 안의 쓰임만 살려 10건으로 줄었다.
+
+   ⚠️ 아직 남은 빈틈 — 중첩 템플릿
+        `${plan.map(o => `■ ${o.title}`)}` 처럼 백틱 안에 백틱이 있으면
+        정규식이 짝을 못 맞춘다. 남은 오탐 7건이 전부 이것이다.
+        제대로 고치려면 토큰 단위로 읽어야 한다.
+
+   ★이 검사기는 거들 뿐이다. 진짜 그물은
+        npx tsc -p tsconfig.strict.json
+     새 파일은 unused.py 를 다듬지 말고 tsconfig.strict.json 의
+     include 에 넣으십시오. 컴파일러는 오탐이 없습니다.
+
+   ⚠️ 저장소 밖에 두십시오 (check-imports.js 와 같은 이유).
 """
 import re, sys, os
 
@@ -91,8 +108,11 @@ for dp, _, fs in os.walk(root):
             continue
         p = os.path.join(dp, fn)
         s = open(p, encoding='utf-8', errors='ignore').read()
-        body = re.sub(r'//[^\n]*|/\*[\s\S]*?\*/', '', s)          # 주석 제거
-        body = re.sub(r'`(?:[^`\\]|\\.)*`', '``', body)           # 템플릿 문자열은 통째로
+        # ★템플릿 문자열: 글자는 버리되 ${...} 안의 쓰임은 살린다 (2026-07-28)
+        def _tpl(m):
+            return ' ' + ' '.join(re.findall(r'\$\{([^{}]*)\}', m.group(0))) + ' '
+        body = re.sub(r'`(?:[^`\\]|\\.)*`', _tpl, s)
+        body = re.sub(r'//[^\n]*|/\*[\s\S]*?\*/', '', body)       #   그 다음 주석 제거
         scopes = split_scopes(body)
         seen = set()
         for nm, blk in scopes:
