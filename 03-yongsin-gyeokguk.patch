@@ -1,0 +1,539 @@
+diff --git a/app/manseryeok/birth-timing/lib/gyeokgukSungpae.ts b/app/manseryeok/birth-timing/lib/gyeokgukSungpae.ts
+index db2d812..d54a17e 100644
+--- a/app/manseryeok/birth-timing/lib/gyeokgukSungpae.ts
++++ b/app/manseryeok/birth-timing/lib/gyeokgukSungpae.ts
+@@ -13,7 +13,7 @@
+ //
+ //   [원칙] 공용 엔진(yongsinNew) 계산은 안 건드림. sipsinOf·calcGyeokguk 를 가져다 씀.
+ 
+-import { sipsinOf, calcGyeokguk } from '@/lib/saju/yongsinNew'
++import { sipsinOf, calcGyeokguk, NO_GYEOK } from '@/lib/saju/yongsinNew'
+ import type { EnginePillar } from './engineAdapter'
+ 
+ export type SungpaeVerdict = 'sunggyeok' | 'gyeokOnly' | 'pagyeok'
+@@ -113,12 +113,22 @@ export function judgeSungpae(
+     case '편인격':
+       if (재성 > 0 && 인성 > 0 && 재성 >= 인성) reasons.push('재성이 인성을 극해요(탐재괴인 우려)')
+       break
++    // ★2026-07-28 — '비견격'·'겁재격' 두 case 를 지웠습니다.
++    //   공용 엔진이 더 이상 그 이름을 만들지 않습니다. (교재 157·178쪽)
++    //   월지가 록왕지면 건록격·양인격, 아니면 무격으로 옵니다.
+     case '건록격':
+-    case '양인격':
+-    case '비견격':
+-    case '겁재격':
++      // 181쪽 "건록격이나 양인격이 관성이 없으면 능력 발휘가 잘되지 않는다"
++      //       "건록격은 정관이 있어야 능력 발휘가 뛰어나며"
+       if (관성 === 0) reasons.push('힘을 조절할 관성이 없어요')
+       break
++    case '양인격':
++      // 178쪽 "양인격은 관성이 없으면 破格이다" · "양인격은 편관이 오는 것이 좋다"
++      if (관성 === 0) reasons.push('양인격인데 관성이 없어요(파격)')
++      break
++    case NO_GYEOK:
++      // 교재 158쪽 "십정격 중에 격이 없는 無格과 破格이 많다"
++      //   ★격이 없는 것은 파격이 아닙니다. 성패를 매기지 않고 보류합니다.
++      return { gyeokName, verdict: 'gyeokOnly', reasons: ['월지가 격을 이루지 않아 세력으로 봅니다'], sipsinCount: c }
+     default:
+       // 격 미상 → 판정 보류
+       break
+diff --git a/app/manseryeok/result-new/YongsinCard.tsx b/app/manseryeok/result-new/YongsinCard.tsx
+index b9efd26..69eb133 100644
+--- a/app/manseryeok/result-new/YongsinCard.tsx
++++ b/app/manseryeok/result-new/YongsinCard.tsx
+@@ -4,6 +4,7 @@ import React, { useState } from 'react'
+ import { EL_BG, EL_C, EL_C_SUB, EL_TEXT as EL_BD_STRONG } from '@/lib/saju/ohaengColor'
+ import { OHAENG_INFO } from './ohaengInfo'
+ import type { YongsinNewResult, Ohaeng } from '@/lib/saju/yongsinNew'
++import { checkAgree, isYanginIlju } from '@/lib/saju/yongsinNew'
+ 
+ /**
+  * 용신 카드 (심산 3종 용신 · 명카페)
+@@ -14,11 +15,14 @@ import type { YongsinNewResult, Ohaeng } from '@/lib/saju/yongsinNew'
+  *   <YongsinCard result={calcYongsinNew(saju, dayStem)} />
+  */
+ 
+-/* 격국별 원리 이름 + 한 줄 설명 (소스 상신표 기반) */
++/* 격국별 원리 이름 + 한 줄 설명 (소스 상신표 기반)
++ * ★2026-07-28 — 「비견격」「겁재격」 두 줄을 지웠습니다.
++ *   교재 178쪽 "비견겁, 겁재격은 없다. 비견격이라 하지 않고 건록격이라 하며,
++ *               겁재가 있을 때는 겁재격이 아니라 양인격이라고 하는 것이다"
++ *   ⚠️ 이 표는 yongsinNew.GYEOK_SANGSIN 의 사본입니다. 한쪽만 고치지 마십시오. (교훈 BQ)
++ */
+ const GYEOK_PRINCIPLE: Record<string, { name: string; line: string }> = {
+-  비견격: { name: '건록용관', line: '관성이 있어야 능력을 제대로 펼쳐요' },
+   건록격: { name: '건록용관', line: '관성이 있어야 능력을 제대로 펼쳐요' },
+-  겁재격: { name: '양인용살', line: '관성이 강한 기운을 다스려 줘요' },
+   양인격: { name: '양인용살', line: '관성이 강한 기운을 다스려 줘요' },
+   식신격: { name: '식신생재', line: '내 재능이 재물로 이어져요' },
+   상관격: { name: '상관패인', line: '인성이 넘치는 재주를 다잡아 줘요' },
+@@ -79,6 +83,14 @@ export default function YongsinCard({ result, saju }: Props) {
+ 
+   const { johu, eokbu, gyeokguk } = result
+ 
++  // ── ★세 용신이 일치하는가 (교재 146·147·148쪽) ──
++  //   계산은 yongsinNew.checkAgree 한 곳에서만 한다. 여기서 다시 재지 않는다.
++  const agree = checkAgree(result)
++
++  // ── ★양인일주 (교재 178쪽) — 격이 아니라 일주의 성질 ──
++  const ilju = saju?.find(p => p.pillar === '일주')
++  const yanginIlju = !!ilju && isYanginIlju(ilju.stem, ilju.branch)
++
+   // ── 특정 오행이 원국(천간·지지)에 있는지 찾기 — 조후·격국 공용 ──
+   const elFoundInSaju = (el: string | null): string[] => {
+     if (!el || !saju?.length) return []
+@@ -238,6 +250,53 @@ export default function YongsinCard({ result, saju }: Props) {
+         </div>
+       </div>
+ 
++      {/* ★세 용신 일치 — 교재 146·147·148쪽
++          "격국, 억부, 조후까지 用神이 같으면 좋은데 (…) 用神이 다 같으면 유리하다"
++          셋이 모두 같을 때만 강조 카드를 띄우고, 그 밖에는 한 줄로만 알려 준다. */}
++      {agree.highlight ? (
++        <div style={{
++          background: 'linear-gradient(135deg,#fff8ec 0%,#fdf0e0 100%)',
++          border: '1.5px solid #d9a55f', borderRadius: 12,
++          padding: '14px 14px 13px', marginBottom: 10,
++        }}>
++          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
++            <span style={{ fontSize: 15 }}>✨</span>
++            <span style={{ fontSize: 13.5, fontWeight: 700, color: '#8f3d0e' }}>{agree.title}</span>
++            <span style={{
++              marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#fff',
++              background: '#c58a3d', padding: '2px 8px', borderRadius: 8,
++            }}>
++              {EL_HAN[eokbu.yongsin]} 하나로
++            </span>
++          </div>
++          <div style={{ fontSize: 11.5, color: '#6b5340', lineHeight: 1.8 }}>{agree.note}</div>
++        </div>
++      ) : (
++        <div style={{
++          background: '#fdf9f4', border: '0.5px solid #eee0d0', borderRadius: 8,
++          padding: '9px 12px', marginBottom: 10, fontSize: 11, color: '#7a6350', lineHeight: 1.75,
++        }}>
++          <b style={{ color: '#96502e' }}>{agree.title}</b> — {agree.note}
++        </div>
++      )}
++
++      {/* ★양인일주 — 격이 아니라 일주의 성질 (교재 178쪽) */}
++      {yanginIlju && (
++        <div style={{
++          display: 'flex', alignItems: 'center', gap: 7,
++          background: '#fbf2f2', border: '0.5px solid #e8cfcf', borderRadius: 8,
++          padding: '9px 12px', marginBottom: 10,
++        }}>
++          <span style={{
++            fontSize: 10, fontWeight: 700, color: '#fff', background: '#b06060',
++            padding: '2px 8px', borderRadius: 7, whiteSpace: 'nowrap',
++          }}>양인일주</span>
++          <span style={{ fontSize: 11, color: '#7a5a5a', lineHeight: 1.7 }}>
++            일지에 겁재를 깔고 있어요. 격(格)은 아니고 타고난 기질이 세다는 뜻입니다.
++          </span>
++        </div>
++      )}
++
+       {/* 안내 문구 */}
+       <div style={{ background: '#faf3ee', border: '0.5px solid #f0e0d5', borderRadius: 8, padding: '10px 12px', fontSize: 11, color: '#666', lineHeight: 1.75 }}>
+         <b style={{ color: '#96502e' }}>조후</b>는 건강·마음, <b style={{ color: '#96502e' }}>억부</b>는 재물·현실, <b style={{ color: '#96502e' }}>격국</b>은 직업·명예를 도와주는 기운이에요.
+diff --git a/lib/saju/career/gyeokguk.ts b/lib/saju/career/gyeokguk.ts
+index bbff11c..ff19c35 100644
+--- a/lib/saju/career/gyeokguk.ts
++++ b/lib/saju/career/gyeokguk.ts
+@@ -6,36 +6,24 @@
+ // │        「16. 격국(格局)과 십정격(十正格)」                          │
+ // └───────────────────────────────────────────────────────────────┘
+ //
+-// [왜 감싸개를 따로 두는가]
+-//   lib/saju/yongsinNew.ts 의 calcGyeokguk() 은 **월지 지장간의 투간**만 본다.
+-//   그런데 교재 62쪽의 건록격·양인격은 **투간과 무관**하게 성립한다.
++// [왜 감싸개를 따로 두는가]  ★2026-07-28 까닭이 바뀌었습니다
++//   전에는 공용 엔진이 건록·양인을 못 잡아서 여기서 특례를 걸렀습니다.
++//   이제 **엔진(yongsinNew.calcGyeokguk)이 록왕지 표로 직접 잡습니다.**
++//   그래서 여기 특례는 걷어냈고, 이 파일에는 **격의 자리(位)** 만 남았습니다.
++//     A책 152·157쪽 — 年干 국가·정부 / 月干 사회·단체 / 時干 개인·가정
++//   자리 규칙은 진로적성에서만 쓰므로 감싸개에 두는 것이 맞습니다.
+ //
+-//     건록격 = 일간과 월지가 같은 오행이고 음양도 같다 (월지에 비견)
+-//     양인격 = 일간과 월지가 같은 오행이고 음양이 다르다 (월지에 겁재)
+-//
+-//   실제로 1998.1.5 寅시 사주(壬 일간 · 子월)를 넣으면
+-//     교재 기준 → 양인격
+-//     calcGyeokguk → 비견격   ← 여기 壬이 투간했다고 봄
+-//   으로 어긋난다.
+-//
+-//   ⚠️ calcGyeokguk 자체는 건드리지 않는다. 궁합·사주보기가 함께 쓴다.
+-//      여기서 특례만 먼저 걸러 내고, 아니면 그대로 넘긴다.
++//   ⚠️ 격 이름·상신은 엔진 것을 그대로 씁니다. 사본을 만들지 마십시오. (교훈 BQ)
+ //
+ // [격의 자리 — 교재 62쪽]
+ //   년 천간에 격이 있으면 국가·정부와 관련된 일
+ //   월 천간에 격이 있으면 사회·단체와 관련된 일
+ //   시 천간이나 월지에 격이 있으면 개인·가정적인 일
+ 
+-import { calcGyeokguk, sipsinOf, type GyeokgukResult } from '../yongsinNew'
++import { calcGyeokguk, sipsinOf, NO_GYEOK, type GyeokgukResult } from '../yongsinNew'
+ import type { CareerCard, CareerInput, Pillar } from './types'
+ import { GYEOKGUK_INFO, GYEOK_POSITION } from './tables/gyeokguk'
+ 
+-/** 지지의 본기(本氣) — 그 지지의 본래 기운이 되는 천간 */
+-const BONGI: Record<string, string> = {
+-  子: '癸', 丑: '己', 寅: '甲', 卯: '乙', 辰: '戊', 巳: '丙',
+-  午: '丁', 未: '己', 申: '庚', 酉: '辛', 戌: '戊', 亥: '壬',
+-}
+-
+ export interface CareerGyeokguk extends GyeokgukResult {
+   /** 건록·양인 특례로 잡혔는가 */
+   special: boolean
+@@ -53,21 +41,24 @@ export function calcCareerGyeokguk(saju: Pillar[], dayStem: string): CareerGyeok
+   const month = saju.find(p => p.pillar === '월주')
+   const base = calcGyeokguk(saju, dayStem)
+ 
+-  let name = base.name
+-  let special = false
+-
+-  if (month) {
+-    const bongi = BONGI[month.branch]
+-    if (bongi) {
+-      const s = sipsinOf(dayStem, bongi)
+-      if (s === '비견') { name = '건록격'; special = true }
+-      else if (s === '겁재') { name = '양인격'; special = true }
+-    }
+-  }
++  // ★2026-07-28 — 여기 있던 건록·양인 특례를 걷어냈습니다.
++  //   공용 엔진 calcGyeokguk 이 록왕지 표로 직접 잡습니다. 사본을 두지 않습니다. (교훈 BQ)
++  //   ⚠️ 전에는 「월지 본기가 겁재면 양인격」이라 음일간까지 잡았는데,
++  //      교재 178쪽이 "양인격은 陽日干만"이라 하여 그때 틀렸습니다.
++  //      실제로 162쪽 사례(甲辰 丁未 丁巳 戊戌)를 양인격으로 잘못 냈습니다.
++  const name = base.name
++  const special = name === '건록격' || name === '양인격'
+ 
+   // 격이 어느 자리에 드러났는가 — 격의 오행과 같은 천간을 찾는다
++  //   교재 152·157쪽: 年干 국가·정부 / 月干 사회·단체 / 時干 개인·가정
++  //   ★건록·양인은 월지로 정해지므로 자리를 따로 찾지 않는다.
++  //   ★무격은 격이 없으니 자리도 없다.
+   let position: string | null = null
+-  if (!special && month) {
++  if (name === NO_GYEOK) {
++    position = null
++  } else if (special) {
++    position = '월지'
++  } else if (month) {
+     const target = name.replace('격', '')
+     for (const p of ['년주', '월주', '시주']) {
+       const pil = saju.find(x => x.pillar === p)
+@@ -76,14 +67,11 @@ export function calcCareerGyeokguk(saju: Pillar[], dayStem: string): CareerGyeok
+       }
+     }
+     if (!position) position = '월지'
+-  } else if (special) {
+-    position = '월지'
+   }
+ 
+   return {
+     ...base,
+     name,
+-    note: special ? `월지가 일간과 같은 오행이라 ${name}이에요` : base.note,
+     special,
+     position,
+     positionNote: (position && GYEOK_POSITION[position]) || '',
+diff --git a/lib/saju/career/jobStructure.ts b/lib/saju/career/jobStructure.ts
+index 9bef76d..fa19834 100644
+--- a/lib/saju/career/jobStructure.ts
++++ b/lib/saju/career/jobStructure.ts
+@@ -21,6 +21,7 @@ import { calcCareerYongsin } from './yongsin'
+ import { checkSinsal9 } from './sinsal9'
+ import type { CareerCard, CareerInput } from './types'
+ import { JOB_STRUCT, STRUCT_SRC } from './tables/jobStructure'
++import { NO_GYEOK } from '../yongsinNew'
+ 
+ const STEM_EL: Record<string, Ohaeng> = {
+   甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토',
+@@ -96,7 +97,10 @@ export function pickStructure(input: CareerInput): StructHit[] {
+   {
+     const w: string[] = []; let s = 0
+     if (byYuk['재성'] < 20 && byYuk['관성'] < 20) { s += 3; w.push('재성과 관성이 센 편은 아니에요') }
+-    if (!gk.special && (gname === '비견격' || gname === '겁재격')) { s += 1; w.push('격이 또렷하지 않아요') }
++    // ★2026-07-28 — 전에는 '비견격'·'겁재격' 을 「격이 흐릿함」으로 봤습니다.
++    //   교재 178쪽대로 그 두 이름을 없애면서, 그 자리는 이제 무격(無格)으로 옵니다.
++    //   (A책 158쪽 "십정격 중에 격이 없는 無格과 破格이 많다")
++    if (gname === NO_GYEOK) { s += 1; w.push('격이 또렷하지 않아요') }
+     if (s >= 4) push('hoesawon', s, w)
+   }
+   // ④ 전문 연구직 — ★인성이 격을 이루거나 넉넉해야 한다
+diff --git a/lib/saju/career/tables/gyeokguk.ts b/lib/saju/career/tables/gyeokguk.ts
+index 4e7c009..31f1d85 100644
+--- a/lib/saju/career/tables/gyeokguk.ts
++++ b/lib/saju/career/tables/gyeokguk.ts
+@@ -37,19 +37,17 @@ export const GYEOKGUK_INFO: Record<string, GyeokgukRow> = {
+     caution: '★관성의 힘이 있느냐에 따라 성공과 실패가 뚜렷이 갈립니다. 자신을 다스려 줄 틀(자격증·소속·규율)을 스스로 갖추는 것이 평생 과제입니다.',
+     src: '63쪽 (2) 양인격(羊刃格)',
+   },
+-  비견격: {
+-    hanja: '比肩格',
+-    gijil: '자기 색이 뚜렷하고 독립심이 강해요.',
+-    jobs: ['전문 자유직', '소규모 자영업'],
+-    caution: '',
+-    src: '62쪽 (십정격 총론)',
+-  },
+-  겁재격: {
+-    hanja: '劫財格',
+-    gijil: '경쟁심과 승부욕이 강하고 추진력이 있어요.',
+-    jobs: ['전문 자유직', '독립 사업'],
+-    caution: '',
+-    src: '62쪽 (십정격 총론)',
++  // ★2026-07-28 — 「비견격」「겁재격」 두 항목을 지웠습니다.
++  //   A책 178쪽 "비견겁, 겁재격은 없다. 비견격이라 하지 않고 건록격이라 하며,
++  //              겁재가 있을 때는 겁재격이 아니라 양인격이라고 하는 것이다"
++  //   A책 157쪽 "비견과 겁재는 투간해도 格으로 잡지 않는다"
++  무격: {
++    hanja: '無格',
++    gijil: '월지가 뚜렷한 격을 이루지 않았어요. 정해진 틀이 없는 만큼 길이 여러 갈래로 열려 있습니다.',
++    jobs: [],
++    caution: '격이 없을 때는 격보다 사주 전체의 세력(강점 지능)을 앞세워 보십시오. '
++      + '어느 한 직업으로 못박기보다 발달한 오행과 육친 쪽으로 넓게 권하는 편이 맞습니다.',
++    src: 'A책 158쪽 「십정격 중에 격이 없는 無格과 破格이 많다」',
+   },
+   식신격: {
+     hanja: '食神格',
+diff --git a/lib/saju/career/tables/sinsal.ts b/lib/saju/career/tables/sinsal.ts
+index af0707e..509b2c8 100644
+--- a/lib/saju/career/tables/sinsal.ts
++++ b/lib/saju/career/tables/sinsal.ts
+@@ -134,14 +134,20 @@ export const SINSAL9: SinsalRow[] = [
+     src: '93쪽 (5) 괴강살 — 무진·무술·경진·경술·임진·임술',
+   },
+   {
+-    key: 'yangin', group: 'gangsal', name: '양인살', hanja: '羊刃殺',
++    // ★2026-07-28 이름 정정 — 「양인살」이 아니라 「양인일주」입니다. (33-9장 ㉓ 닫힘)
++    //   A책 178쪽 "月支가 겁재면 양인격, 日柱가 겁재면 양인 일주"
++    //             "겁재를 깔고 있는 일주: 丙午, 戊午, 壬子 일주이다"
++    //   ★여기 셋은 A책 96쪽 양인살 다섯(甲卯·丙午·戊午·庚酉·壬子)과 다른 것이고,
++    //     A책 107쪽 양인격(양일간+월지 겁재)과도 다릅니다. 셋이 다 달랐던 까닭입니다.
++    //   ⚠️ 격(格)이 아닙니다. 격은 yongsinNew.calcGyeokguk 이 잡습니다.
++    key: 'yangin', group: 'gangsal', name: '양인일주', hanja: '羊刃日柱',
+     kind: ['pillar'],
+     pillars: ['丙午','戊午','壬子'],
+     threshold: 1,
+     gijil: '기운이 크고 남에게 지는 것을 싫어해요. 맡겨 주면 두 배 이상 해냅니다.',
+     jobs: ['의사','약사','한의사','간호사','검찰','경찰','교도관','군인','운동선수','법조인','요리사','침구사','중장비','용접','가스설비업'],
+     caution: '자기 이름으로 하는 일에서 힘이 납니다. 조직에 매이면 답답해할 수 있어요.',
+-    src: '93쪽 (5) 양인살 — 병오·무오·임자',
++    src: 'B책 93쪽 (5) — A책 178쪽에서 「양인 일주」로 확인 (2026-07-28)',
+   },
+   {
+     key: 'yeokma', name: '역마살', hanja: '驛馬殺',
+@@ -172,7 +178,7 @@ export const SINSAL9: SinsalRow[] = [
+  * 교재 93쪽 "사주에 백호살, 괴강살, 양인살이 2~3개 이상 있으면"
+  */
+ export const GROUP_RULE: Record<string, { name: string; threshold: number }> = {
+-  gangsal: { name: '백호·괴강·양인', threshold: 2 },
++  gangsal: { name: '백호·괴강·양인일주', threshold: 2 },
+ }
+ 
+ /** 도화 글자별 별칭 (교재 94쪽) */
+diff --git a/lib/saju/yongsinNew.ts b/lib/saju/yongsinNew.ts
+index 3a29f83..3db2997 100644
+--- a/lib/saju/yongsinNew.ts
++++ b/lib/saju/yongsinNew.ts
+@@ -277,15 +277,67 @@ export function sipsinOf(dayStem: string, other: string): string {
+   if (GEN[oe] === de) return same ? '편인' : '정인'   // oe가 de를 생 = 인
+   return ''
+ }
+-// 12격 → 격국용신(상신) 오행 방향 (일간 기준 육친)
++// 10정격 → 격국용신(상신) 오행 방향 (일간 기준 육친)
+ // 반환은 '육친종류'가 아니라 dayEl 기준 실제 오행으로 변환해서 씀
++//
++// ★2026-07-28 — 비견격·겁재격을 없앴습니다.
++//   교재 157쪽 "비견과 겁재는 투간해도 格으로 잡지 않는다(건록격과 양인격으로 잡는다)"
++//   교재 178쪽 "비견겁, 겁재격은 없다. 비견격이라 하지 않고 건록격이라 하며,
++//               겁재가 있을 때는 겁재격이 아니라 양인격이라고 하는 것이다"
+ type Yukchin = '비겁' | '식상' | '재성' | '관성' | '인성'
+ const GYEOK_SANGSIN: Record<string, Yukchin> = {
+-  비견격: '관성', 겁재격: '관성', 건록격: '관성', 양인격: '관성',
+-  식신격: '재성', 상관격: '인성',      // 식신생재 / 상관패인(소스: 상관격→인성)
++  건록격: '관성', 양인격: '관성',
++  //   건록격 — 181쪽 "제1用神은 정관이고 제2用神은 편관"
++  //   양인격 — 179쪽 "양인격은 무조건 관성이 用神이다"
++  식신격: '재성', 상관격: '인성',      // 식신생재(159쪽) / 상관패인(162쪽)
+   편재격: '식상', 정재격: '식상',
+-  편관격: '식상', 정관격: '인성',      // 편관: 식상(식신제살) / 정관: 인성(관인상생)
++  편관격: '식상', 정관격: '인성',      // 식신제살(171쪽) / 관인상생(169쪽)
+   편인격: '관성', 정인격: '관성',      // 관인상생
++  //   ⚠️ 편인격은 176쪽 본문이 "재성에 의해 제화되는 것이 중요"라 하여 151쪽 표(관성)와
++  //      다릅니다. 연재쌤 확인 대기 중이라 표(관성)를 그대로 둡니다.
++}
++
++// ── ★건록격·양인격 = 월지가 일간의 록왕지(祿旺支)인가 ──────────────────────
++//   출전: 교재 157쪽 ③ · 178쪽 · 181쪽
++//   투간과 무관하게 월지 하나로 결정됩니다. 그래서 지장간을 보기 전에 먼저 봅니다.
++//
++//   ★2026-07-28 대표님 확정 — 火土同法
++//     戊  건록 巳 · 양인 午          己  건록 午 · 양인 巳
++//     (丙의 록이 巳·양인이 午이고, 丁은 음간이라 록 午·양인 巳. 戊己가 이를 따릅니다)
++//
++//   ⚠️⚠️ 己(음일간)의 양인격은 교재 178쪽과 부딪힙니다.
++//        178쪽 "양인격은 陽日干만 해당한다(甲丙戊庚壬). 음일간은 음인격이 없다(乙丁己辛癸)"
++//        162쪽 "陰日干은 月支에 겁재가 있어도 양인격이 될 수 없다"
++//        ★대표님 지시로 己-巳를 넣었습니다. 연재쌤 확인이 오면 여기 한 줄만 지우면 됩니다.
++//        같은 논리라면 乙-寅 · 丁-巳 · 辛-申 · 癸-亥 도 양인격이 되어야 하나,
++//        교재 162쪽 사례(甲辰 丁未 丁巳 戊戌)를 「상관격」으로 풀이하고 있어 넣지 않았습니다.
++//
++//   ⚠️ 록왕지가 아닌데 월지 본기가 비견·겁재인 자리는 「무격(無格)」이 됩니다.
++//      (乙寅 丁巳 戊丑 戊辰 戊未 戊戌 己丑 己辰 己未 己戌 辛申 癸亥 — 열두 칸)
++//      교재 158쪽 "십정격 중에 격이 없는 無格과 破格이 많다" 를 따른 것입니다.
++const GEONROK_MONTH: Record<string, string> = {
++  甲: '寅', 乙: '卯', 丙: '巳', 丁: '午', 戊: '巳',
++  己: '午', 庚: '申', 辛: '酉', 壬: '亥', 癸: '子',
++}
++const YANGIN_MONTH: Record<string, string> = {
++  甲: '卯', 丙: '午', 戊: '午', 庚: '酉', 壬: '子',
++  己: '巳',   // ★대표님 확정. 교재 178쪽과 부딪히는 자리 (위 주석)
++}
++
++/** 격을 잡지 못한 경우의 이름 — 교재 158쪽 「無格」 */
++export const NO_GYEOK = '무격'
++
++// ── ★양인일주(羊刃日柱) — 격이 아니라 일주의 성질입니다 ────────────────────
++//   교재 178쪽 "月支가 겁재면 양인격, 日柱가 겁재면 양인 일주"
++//              "겁재를 깔고 있는 일주: 丙午, 戊午, 壬子 일주이다"
++//   ★B책 93쪽이 「양인살」로 싣고 있던 셋이 바로 이것입니다. 격이 아닙니다. (33-9장 ㉓)
++//   ⚠️ 己巳는 대표님이 己의 양인을 巳로 정하시면서 새로 들어온 넷째입니다.
++//      교재 178쪽은 셋만 듭니다. 연재쌤 확인 대기.
++const YANG_BRANCH_SET = new Set(['子', '寅', '辰', '午', '申', '戌'])
++export function isYanginIlju(dayStem: string, dayBranch: string): boolean {
++  if (YANGIN_MONTH[dayStem] !== dayBranch) return false
++  // 60갑자에 실재하는 짝만 (양간-양지 / 음간-음지)
++  return YANG_STEM.has(dayStem) === YANG_BRANCH_SET.has(dayBranch)
+ }
+ function yukchinToEl(dayEl: Ohaeng, y: Yukchin): Ohaeng {
+   const r = relOf(dayEl)
+@@ -302,6 +354,23 @@ export function calcGyeokguk(saju: Pillar[], dayStem: string): GyeokgukResult {
+   const dayEl = STEM_EL[dayStem]
+   const month = saju.find(p => p.pillar === '월주')
+   if (!month) return { name: '', element: null, note: '' }
++
++  // ★① 록왕지 특례를 먼저 본다 — 교재 157쪽 ③ (투간과 무관하게 월지로 결정된다)
++  if (YANGIN_MONTH[dayStem] === month.branch) {
++    return {
++      name: '양인격',
++      element: yukchinToEl(dayEl, GYEOK_SANGSIN['양인격']),
++      note: '월지가 일간의 양인 자리라 양인격이에요',
++    }
++  }
++  if (GEONROK_MONTH[dayStem] === month.branch) {
++    return {
++      name: '건록격',
++      element: yukchinToEl(dayEl, GYEOK_SANGSIN['건록격']),
++      note: '월지가 일간의 록 자리라 건록격이에요',
++    }
++  }
++
+   const hidden = JIJANGAN[month.branch] ?? []
+   const others = saju.filter(p => p.pillar !== '일주').map(p => p.stem)  // 일간 제외
+   const bongi = hidden[hidden.length - 1]
+@@ -314,7 +383,22 @@ export function calcGyeokguk(saju: Pillar[], dayStem: string): GyeokgukResult {
+   else if (others.includes(yeogi)) gyeokStem = yeogi
+   else gyeokStem = bongi  // 미투출 → 본기
+ 
+-  const name = sipsinOf(dayStem, gyeokStem) + '격'
++  const sipsin = sipsinOf(dayStem, gyeokStem)
++
++  // ★② 비견·겁재는 격으로 잡지 않는다 — 교재 157쪽 ③ · 178쪽
++  //    록왕지였다면 위 ①에서 이미 건록격·양인격으로 나갔다.
++  //    여기까지 왔다는 것은 록왕지가 아니면서 본기가 비견·겁재라는 뜻이므로 無格이다.
++  //    ⚠️ 교재 162쪽 "陰日干의 겁재는 성격·기질·적성은 판단할 수 있지만
++  //       직업을 판단할 수는 없다" — 그래서 격국용신도 두지 않는다.
++  if (sipsin === '비견' || sipsin === '겁재') {
++    return {
++      name: NO_GYEOK,
++      element: null,
++      note: '월지가 격을 이루지 않아요. 격보다 사주 전체의 세력으로 봅니다',
++    }
++  }
++
++  const name = sipsin + '격'
+   const sangsin = GYEOK_SANGSIN[name]
+   const element = sangsin ? yukchinToEl(dayEl, sangsin) : null
+   return { name, element, note: sangsin ? `${name}이라 ${sangsin}이 격국용신이에요` : name }
+@@ -351,6 +435,80 @@ export function calcYongsinNew(saju: Pillar[], dayStem: string, scoreOverride?:
+   }
+ }
+ 
++// ── ★세 용신이 일치하는가 (교재 146·147·148쪽) ───────────────────────────
++//   146쪽 "격국, 억부, 조후까지 用神이 같으면 좋은데, 각각의 用神이 다르면
++//          보기 쉽지 않다. 用神이 다 같으면 유리하다."
++//   147쪽 "한 가지 用神만 고집하면 안 된다(억부와 격국, 조후를 다 고려해야 한다)."
++//   148쪽 "억부용신과 조후용신이 일치해야 진정한 用神 역할을 할 수 있다."
++//
++//   ⚠️ 교재가 견주는 셋은 「억부·조후·격국」입니다. 통관용신은 151쪽 표의 딴 줄이고
++//      아직 계산기가 없습니다. 통관이 들어오면 여기에 넷째로 더하십시오.
++//   ⚠️ 조후는 봄·가을생이면 없습니다(151쪽은 여름·겨울생만 답니다).
++//      그때는 「해당 없음」이지 「어긋남」이 아닙니다. 셋을 강제로 맞추지 마십시오.
++export type AgreeLevel = 'all3' | 'eokbuJohu' | 'eokbuGyeok' | 'none' | 'noJohu'
++
++export interface YongsinAgree {
++  level: AgreeLevel
++  /** 화면 강조 카드를 띄울지 — 세 용신이 모두 같을 때만 */
++  highlight: boolean
++  title: string
++  note: string
++}
++
++export function checkAgree(r: YongsinNewResult): YongsinAgree {
++  const johu = r.johu.element
++  const eokbu = r.eokbu.yongsin
++  const gyeok = r.gyeokguk.element
++
++  // 봄·가을생 — 조후가 없다
++  if (!johu) {
++    const eg = !!gyeok && gyeok === eokbu
++    return {
++      level: 'noJohu',
++      highlight: false,
++      title: eg ? '억부와 격국이 같아요' : '봄·가을 태생이에요',
++      note: eg
++        ? '봄·가을 태생이라 조후는 따지지 않아요. 억부와 격국이 같은 기운을 가리키니 마음과 사회 활동이 한 방향입니다.'
++        : '봄·가을 태생이라 조후는 따지지 않아요. 억부와 격국을 견주어 보시면 됩니다.',
++    }
++  }
++
++  const ej = johu === eokbu
++  const eg = !!gyeok && gyeok === eokbu
++
++  if (ej && eg) {
++    return {
++      level: 'all3',
++      highlight: true,
++      title: '세 용신이 하나로 모였어요',
++      note: '조후·억부·격국이 모두 같은 기운을 가리킵니다. 격이 매우 순수하고 길한 짜임이에요. '
++        + '몸과 마음이 바라는 것과 사회에서 쓰는 것이 어긋나지 않으니, 이 기운을 꾸준히 채우시면 크게 힘을 받습니다.',
++    }
++  }
++  if (ej) {
++    return {
++      level: 'eokbuJohu',
++      highlight: false,
++      title: '억부와 조후가 같아요',
++      note: '몸과 마음이 바라는 기운이 같습니다. 다만 사회에서 쓰는 기운은 다른 쪽이라, 일터에서는 결을 달리 잡으셔야 해요.',
++    }
++  }
++  if (eg) {
++    return {
++      level: 'eokbuGyeok',
++      highlight: false,
++      title: '억부와 격국이 같아요',
++      note: '사회에서 쓰는 기운과 내가 바라는 기운이 같습니다. 다만 건강·궁합으로 보는 조후는 다른 쪽이에요.',
++    }
++  }
++  return {
++    level: 'none',
++    highlight: false,
++    title: '자리마다 바라는 기운이 달라요',
++    note: '조후·억부·격국이 서로 다른 기운을 가리킵니다. 한 가지만 붙들지 마시고 때와 자리에 맞게 나누어 쓰셔야 해요.',
++  }
++}
++
+ // ============================================================================
+ // 호환 어댑터 — 낡은 calcYongsin(yongsin.ts)을 쓰던 곳을 최소 수정으로
+ //   새 억부용신(정확한 100점 계산)으로 옮기기 위한 래퍼.
