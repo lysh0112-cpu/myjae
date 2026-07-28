@@ -1,5 +1,5 @@
-myjae - 2026-07-28 전달분
-==========================
+myjae - 2026-07-28 전달분  (2차 - 잣대 설명 고침)
+==================================================
 
 파일 두 개입니다. 폴더 없이 그대로 들어 있습니다.
 
@@ -18,6 +18,16 @@ myjae - 2026-07-28 전달분
        "lib/saju/ohaengTrait.ts",
    넣고  npx tsc -p tsconfig.strict.json  ->  0건 확인했습니다.
 
+ * 1차에서 고친 곳 - 머리말의 잣대 설명
+       [잘못] "판정을 하나로 모으십시오. 아니면 화면마다 등급이 다릅니다"
+       [사실] 잣대가 둘인 것이 맞습니다. 교재를 따른 것입니다.
+                사주분석/궁합/물상/대운/세운/월운  -> 점수제
+                진로적성                          -> 점수 + 글자 개수
+              그리고 진로적성은 두 잣대가 어긋나는 경우를 이미 처리합니다.
+                careerScore.gradeOf() 가 byPoint/byCount/disagree 를 냅니다.
+                ohaengGijil.ts 94~95줄이 통변 근거에 적어 보냅니다.
+              통일하지 마십시오. 이미 돌고 있습니다.
+
  * 주의 - 火(화), 水(수) 의 original 은 교재와 글자가 다릅니다.
    병명을 저장소에 두지 않기로 정한 자리입니다 (대표님 지시).
    OCR 사고가 아니니 되살리지 마십시오. 파일 안 세 곳에 적어 두었습니다.
@@ -26,7 +36,7 @@ myjae - 2026-07-28 전달분
 
 [2] unused.py   ->   저장소 밖, hookcheck.py 와 같은 폴더에
 ------------------------------------------------------------------
-3판입니다.
+3판입니다. (1차 전달분과 같은 파일입니다)
 
  * 2판이 지금 저장소 루트에 커밋돼 있습니다. 빼셔야 합니다.
        git rm --cached unused.py
@@ -36,7 +46,6 @@ myjae - 2026-07-28 전달분
        3판   lib/saju  7건 + app/api  3건 =  10건
    그중 진짜는 셋입니다
        samjae.ts BRANCHES / hapchungScore.ts STEM_EL / career/gyeyeol.ts toS
-   나머지 일곱은 중첩 템플릿(백틱 안의 백틱)을 못 가려서 나는 거짓입니다.
 
  * 이 검사기는 거들 뿐입니다. 진짜 그물은
        npx tsc -p tsconfig.strict.json
@@ -44,16 +53,17 @@ myjae - 2026-07-28 전달분
 
 다음에 할 일
 ------------------------------------------------------------------
-1. 잣대 통일 - 글자 개수 잣대(과다 4개, 월지 끼면 3개)가 지금
-   career/careerScore.ts 안에만 있습니다. simsanOhaeng.ts 로 올리십시오.
-   이걸 먼저 하지 않고 표를 여섯 서비스에 이으면, 같은 사람이
-   진로적성에서는 "화 과다", 사주분석에서는 "화 발달" 로 나옵니다.
+1. ohaengGijil.ts 가 새 표를 함께 부르게
+   (지금은 GRADE_NOTE 한 줄만 나가서, 목/화/토/금/수 과다에
+    똑같은 문장이 뜹니다)
 
-2. ohaengGijil.ts 가 새 표를 함께 부르게 (지금은 GRADE_NOTE 한 줄만 나감)
+2. 나머지 다섯 서비스의 재료 조립 파일에 잇기
+   toTongbyeonInput / toCoupleTongbyeonInput / mulsangTongbyeonPrompt
+   buildExamPrompt / monthlyFortune
 
-3. 여섯 서비스에 잇기
-   toTongbyeonInput / toCoupleTongbyeonInput / buildCareerPrompt
-   mulsangTongbyeonPrompt / buildExamPrompt / monthlyFortune
+   * 과다인지 아닌지는 부르는 쪽이 정해서 넘깁니다.
+       사주분석 쪽 :  grade(pts) === '과다'          -> excessLines(el, who)
+       진로적성 쪽 :  gradeOf(r, el).grade === '과다' -> excessLines(el, who)
 
 
 연재쌤 확인
