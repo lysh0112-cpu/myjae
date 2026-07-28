@@ -1,0 +1,179 @@
+diff --git a/app/manseryeok/result-new/ExpertDetail.tsx b/app/manseryeok/result-new/ExpertDetail.tsx
+index a15cd51..ebae4e3 100644
+--- a/app/manseryeok/result-new/ExpertDetail.tsx
++++ b/app/manseryeok/result-new/ExpertDetail.tsx
+@@ -95,15 +95,44 @@ const TAG: Record<string, RelTag> = {
+   원진: { label: '원진', bg: '#f7e6ee', fg: '#993556' },
+ }
+ 
+-/** 두 지지 사이의 관계 목록 */
+-function relationOf(a: string, b: string): string[] {
++/**
++ * 두 지지 사이의 관계 목록
++ *
++ * ★2026-07-28 — 삼합·방합을 **세 글자가 다 있을 때만** 잡습니다.
++ *
++ *   [무엇이 어긋났었나]
++ *     전에는 `s.includes(a) && s.includes(b)` 만 보아, 두 글자만 있어도 방합이라 띄웠습니다.
++ *     보기) 壬辰 丙寅 乙酉 乙亥 명식에서 辰-寅 을 「방합」으로 이어 놓았는데,
++ *           寅卯辰 의 卯 가 없어 실은 반방합입니다.
++ *     그런데 통변 재료(jaryoPick.jijiHapBrief)는 셋이 다 있어야 잡습니다.
++ *     → **화면은 「방합 있음」, AI 는 「방합 없음」** 으로 갈렸습니다.
++ *        손님이 도표를 보고 물으면 AI 가 모르는 채 답합니다.
++ *
++ *   [무엇을 따랐나]
++ *     ★2026-07-28 대표님 확정 — 준삼합·반합은 넣지 않는다.
++ *       "재료가 너무 비대해지는 것을 막고 core 합 위주로 통변하는 게 더 깔끔하다."
++ *     그 방침에 화면을 맞췄습니다. 이제 양쪽이 같은 잣대를 씁니다.
++ *     교재 82쪽도 寅卯辰·巳午未·申酉戌·亥子丑 을 세 글자로 적습니다.
++ *
++ *   ⚠️ 삼합도 같이 고쳤습니다. 준삼합(두 글자)이 곧 삼합의 반합이라 결이 같습니다.
++ *      방합만 고치면 삼합 쪽에 같은 어긋남이 그대로 남습니다.
++ *
++ *   ⚠️ 되돌리시려면 `every(has)` 두 군데만 지우면 됩니다.
++ *      다만 그때는 jaryoPick.jijiHapBrief 도 함께 풀어야 합니다. 한쪽만 고치지 마십시오.
++ *
++ * @param all 명식 네 지지 전부. 안 넘기면 두 글자만으로 보아
++ *            삼합·방합이 아예 안 잡힙니다(거짓 표시를 내느니 안 내는 쪽).
++ */
++function relationOf(a: string, b: string, all?: string[]): string[] {
+   const out: string[] = []
+   if (!a || !b) return out
+   if (YUKHAP[a] === b) out.push('육합')
+   if (CHUNG[a] === b) out.push('충')
+   if (WONJIN[a] === b) out.push('원진')
+-  for (const s of SAMHAP) if (s.includes(a) && s.includes(b)) out.push('삼합')
+-  for (const s of BANGHAP) if (s.includes(a) && s.includes(b)) out.push('방합')
++  const pool = all ?? [a, b]
++  const has = (c: string) => pool.includes(c)
++  for (const s of SAMHAP) if (s.includes(a) && s.includes(b) && s.every(has)) out.push('삼합')
++  for (const s of BANGHAP) if (s.includes(a) && s.includes(b) && s.every(has)) out.push('방합')
+   return Array.from(new Set(out))
+ }
+ 
+@@ -185,10 +214,12 @@ export default function ExpertDetail({
+   const gmYear = yearPillar ? getGongmang(yearPillar.stem, yearPillar.branch) : ['', '']
+ 
+   // 형충회합 — 성립한 쌍 목록 (중복 제거: i<j 만)
++  //   ★삼합·방합은 세 글자가 다 있어야 하므로 명식 네 지지를 함께 넘긴다.
++  const allBranches = saju.map(p => p.branch).filter(Boolean)
+   const pairs: { a: Pillar; b: Pillar; rels: string[] }[] = []
+   for (let i = 0; i < saju.length; i++) {
+     for (let j = i + 1; j < saju.length; j++) {
+-      const rels = relationOf(saju[i].branch, saju[j].branch)
++      const rels = relationOf(saju[i].branch, saju[j].branch, allBranches)
+       if (rels.length) pairs.push({ a: saju[i], b: saju[j], rels })
+     }
+   }
+@@ -442,7 +473,7 @@ export default function ExpertDetail({
+               const lines: React.ReactNode[] = []
+               for (let i = 0; i < saju.length && i < 4; i++) {
+                 for (let j = i + 1; j < saju.length && j < 4; j++) {
+-                  const rels = relationOf(saju[i].branch, saju[j].branch)
++                  const rels = relationOf(saju[i].branch, saju[j].branch, allBranches)
+                   if (!rels.length) continue
+                   const a = POS[i], b = POS[j]
+                   const isBad = rels.some(r => r === '충' || r === '원진')
+@@ -519,7 +550,7 @@ export default function ExpertDetail({
+                       </td>
+                     )
+                   }
+-                  const rels = relationOf(row.branch, col.branch)
++                  const rels = relationOf(row.branch, col.branch, allBranches)
+                   return (
+                     <td key={ci} style={td}>
+                       {rels.length
+diff --git a/lib/saju/jijiGrade.ts b/lib/saju/jijiGrade.ts
+index b8f5e98..ce3fca1 100644
+--- a/lib/saju/jijiGrade.ts
++++ b/lib/saju/jijiGrade.ts
+@@ -50,6 +50,26 @@
+ 
+ export type JijiGrade = 'A' | 'B' | 'C' | 'D'
+ 
++// ── ★2026-07-28 — A등급 여섯 자리 순화 (교훈 BR · 33-8장의 짝) ──────
++//   33-8장에서 D등급의 병명·센 말 아홉 자리를 다듬었는데,
++//   **A등급의 단정하는 말은 그대로 남아 있었습니다.**
++//   실제 통변에서 "재물의 결실이 확실하게 온다"는 문장이 나가는 것을 보고 찾았습니다.
++//
++//   ★뜻은 하나도 빼지 않았습니다. 어투만 옮겼습니다.
++//     子辰合   "묘지가 되면 죽는다"        → 기운이 크게 가라앉는다
++//     亥卯木   "공격적으로 투자해도 된다"   → 평소 잣대로 살펴 결정
++//     午戌火   "午火가 올 때 해라"          → 午火가 드는 때가 결이 맞다
++//     寅午合   "확실한 재성운" · "성사된다"  → 기운이 모이는 때 · 열매를 맺기 쉽다
++//     巳酉金局 "횡재운"                    → 뜻밖의 결실이 따르기 쉽다
++//     암합     "불륜이 발생할 수 있다"      → 마음이 밖으로 향하기 쉽다
++//     午未合   "배신수를 조심해라"          → 믿던 자리에서 어긋나는 일이 없도록
++//
++//   ⚠️ 되살리지 마십시오. 이 표는 대운·세운 재료로 AI 에게 그대로 나갑니다.
++//      "확실하다"·"투자해도 된다"를 손님이 믿고 움직였다가 안 되면 다칩니다.
++//      沖 쪽은 33-3장에서 이미 같은 잣대로 다듬었습니다.
++//        [안 씀] "좋은 일이 생깁니다"   [씀] "자리가 움직이는 때로 봅니다"
++//   ⚠️ B·C 등급은 아직 훑지 않았습니다. 다음에 같은 눈으로 보십시오.
++
+ export interface JijiRelation {
+   /** 등급 A(가장 좋음) ~ D(주의) */
+   grade: JijiGrade
+@@ -95,7 +115,7 @@ export const JIJI_GRADE: Record<string, Record<string, JijiRelation>> = {
+     卯: { grade: 'B', tag: '寅卯方局', desc: '방국을 이룬다. A 학점이 안 되는 이유는 혼잡을 이룬다. 같은 자리 다른 생각을 한다.' },
+     辰: { grade: 'B', tag: '격각', desc: '무난하다. 격각이다(寅과 辰 사이에 卯가 있다. 동상이몽). 적천수에 화치승룡, 수탕기호라는 말이 나온다. 불이 치성하면 용을 타야 하고 물이 흘러넘치면 호랑이를 타야 한다는 의미이다.' },
+     巳: { grade: 'D', tag: '寅巳刑', desc: '寅巳刑을 이룬다. 부정적이다. 조후 해결이 안 된다.' },
+-    午: { grade: 'A', tag: '寅午合', desc: '寅午合, 寅午戌三合으로 확실한 재성운이 온다. 생지가 왕지를 만나므로 사회적 활동이 활발해져 준비하고 계획한 일이 성사된다. 급격한 발전과 확장으로 승진, 취업, 합격 등 원하는 일이 성사된다.' },
++    午: { grade: 'A', tag: '寅午合', desc: '寅午合, 寅午戌三合으로 재물 쪽에 기운이 모이는 때로 봅니다. 생지가 왕지를 만나 사회 활동이 활발해지니, 준비하고 계획해 온 일이 열매를 맺기 쉽습니다. 발전과 확장의 폭이 커서 승진·취업·합격 쪽으로 문이 열리기 쉬운 때입니다.' },
+     未: { grade: 'C', tag: '寅未귀문', desc: '寅未귀문관살로 감각은 좋으나 예민해진다. 후각이 발달함. 지장간에서 암합을 한다. 木剋土를 안 한다.' },
+     申: { grade: 'D', tag: '寅申沖', desc: '寅申沖을 한다. 몸을 크게 쓰는 일과 시비수를 살펴야 하고 가까운 사이가 팽팽해지기 쉽다. 月支의 寅申沖은 변화, 변동이라 괜찮다. 日支가 沖을 당할 때 안 좋다.' },
+     酉: { grade: 'D', tag: '寅酉천문·寅酉원진', desc: '寅酉천문, 寅酉원진으로 불리하다.' },
+@@ -117,7 +137,7 @@ export const JIJI_GRADE: Record<string, Record<string, JijiRelation>> = {
+     亥: { grade: 'A', tag: '亥卯木', desc: '水生木이 잘됨, 발복 상승운이다. 인생의 터닝 포인트, 좋은 운으로 변화, 발복을 한다.' },
+   },
+   辰: {
+-    子: { grade: 'A', tag: '子辰合', desc: '침체기에서 벗어나서 활기를 띠는 상승운으로 바뀐다. 고지가 되면 발복하지만 묘지가 되면 죽는다.' },
++    子: { grade: 'A', tag: '子辰合', desc: '침체기에서 벗어나 활기를 띠는 쪽으로 바뀝니다. 다만 같은 합이라도 고지(庫地)로 서면 힘을 받고 묘지(墓地)로 서면 기운이 크게 가라앉으니, 어느 쪽인지 함께 보셔야 합니다.' },
+     丑: { grade: 'D', tag: '辰丑破', desc: '辰丑破가 되어 잘못된 만남이다. 소외감이 들 뿐만 아니라 신경이 예민해지고 과민 증상으로 스트레스를 많이 받아서 안절부절못한다. 소화기와 위장 쪽이 약해지고 마음이 가라앉기 쉽다.' },
+     寅: { grade: 'C', tag: '격각', desc: '격각(동상이몽) 寅木이 있는데 운에서 辰土가 오면 卯를 건너뛰고 급성장을 하려는 욕망이 강하게 나타난다.' },
+     卯: { grade: 'B', tag: '卯辰木', desc: '寅卯辰月이면 方局이고 寅卯辰月이 아니면 六害가 된다. 六害가 되면 가까운 사이에서 배신수가 생기고 후원자가 없어지는 등 인덕이 없게 된다.' },
+@@ -131,7 +151,7 @@ export const JIJI_GRADE: Record<string, Record<string, JijiRelation>> = {
+     亥: { grade: 'D', tag: '辰亥원진', desc: '원진과 귀문 관계로 시기, 질투, 증오, 이별 등을 의미하므로 부정적이다.' },
+   },
+   巳: {
+-    子: { grade: 'A', tag: '암합', desc: '긍정적이다. 조후가 해결되며 상호 보완의 관계이다. 암합: 戊癸合되어 애정사로 불륜이 발생할 수 있다.' },
++    子: { grade: 'A', tag: '암합', desc: '긍정적입니다. 조후가 풀리며 서로를 채워 주는 관계입니다. 다만 지장간에서 戊癸合 암합이 되어 마음이 밖으로 향하기 쉬우니, 인연의 선을 스스로 정해 두시면 좋습니다.' },
+     丑: { grade: 'B', tag: '가합', desc: '가합, 부정적 일의 지체(70% 부정, 30%는 긍정), 巳酉丑 되면 발복.' },
+     寅: { grade: 'D', tag: '寅巳刑', desc: '木生火로 상생의 관계이다. 寅巳刑(조후가 안 맞으면) 반드시 水가 있어야 하고 습토가 있어야 한다. 六合이 깨져서 巳亥沖, 寅申沖이 되면 믿던 자리에서 어긋나거나 시비가 따르기 쉽다. 활인업으로 업상대체하면 유리하다.' },
+     卯: { grade: 'C', tag: '격각', desc: '木生火 안 됨(왕지는 생하지 않는다), 水와 火가 적절하면 무난하다. 年이나 時에 있으면 별 작용이 없고 月이나 日에 있으면 작용한다.' },
+@@ -140,7 +160,7 @@ export const JIJI_GRADE: Record<string, Record<string, JijiRelation>> = {
+     午: { grade: 'B', tag: '巳午方局', desc: '巳午未方局(긍정적) 혼잡(부정적, 성급), 未가 와야 긍정적이다.' },
+     未: { grade: 'C', tag: '격각', desc: '격각, 동상이몽, 巳午未方局이 되면 긍정적이다.' },
+     申: { grade: 'B', tag: '巳申合水 巳申合金', desc: '巳申刑이 와도 조후가 맞으면 문제가 없다. 六合이 破가 되는 경우는 조후가 안 맞을 경우이다.' },
+-    酉: { grade: 'A', tag: '巳酉金局', desc: '三合, 결속력, 금화교역(재물운). 巳酉丑은 합격, 승진, 당선, 부동산 횡재운으로 대단히 긍정적이다.' },
++    酉: { grade: 'A', tag: '巳酉金局', desc: '三合이라 결속력이 있고 금화교역(재물의 흐름)이 일어납니다. 巳酉丑은 합격·승진·당선·부동산 쪽으로 뜻밖의 결실이 따르기 쉬워 대단히 긍정적으로 봅니다.' },
+     戌: { grade: 'D', tag: '巳戌원진', desc: '팽창과 수축, 원진(정신적 갈등, 불평, 불만 등이 많다). 水가 있으면 무난하다. 巳戌 자체는 조열하다.' },
+     亥: { grade: 'C', tag: '巳亥沖', desc: '巳亥沖이지만 巳亥沖은 沖 중에 부작용이 가장 약한 충이다. 木이 있으면 아주 좋다(寅亥合). 바다에서 나는 것 섭취, 나물류 섭취.' },
+   },
+@@ -165,7 +185,7 @@ export const JIJI_GRADE: Record<string, Record<string, JijiRelation>> = {
+     卯: { grade: 'A', tag: '卯未合', desc: '상승운, 발복운으로 개업을 하거나 확장을 해도 좋다.' },
+     辰: { grade: 'B', tag: '辰未刑', desc: '조후가 맞다. 조토와 습토가 만나서 안정적이다.' },
+     巳: { grade: 'C', tag: '격각', desc: '격각(동상이몽)은 부정이고 方局은 긍정이다. 方局은 결속력이 강해진다.' },
+-    午: { grade: 'A', tag: '午未合', desc: '午未合으로 六合이다. 긍정적이며 친화력이 있다. 六合이 子午沖, 丑未沖으로 깨지면 六害운이 온다. 그럴 때 배신수를 조심해라.' },
++    午: { grade: 'A', tag: '午未合', desc: '午未合으로 六合입니다. 긍정적이며 친화력이 있습니다. 다만 이 六合이 子午沖·丑未沖으로 깨지면 六害의 결로 흐르니, 그때는 믿던 자리에서 어긋나는 일이 없도록 살펴 주십시오.' },
+     未: { grade: 'C', tag: '현침', desc: '조열하다. 분리, 독립, 투잡, 현침살로 요식업이나 손재주를 이용하면 좋다.' },
+     申: { grade: 'B', tag: '금화교역', desc: '未申酉는 준방국이다. 전문가, 금화교역으로 결실이 있다.' },
+     酉: { grade: 'B', tag: '격각', desc: '상생이면서 격각(동상이몽)이며 전문, 특기, 기술직이 좋다.' },
+@@ -207,7 +227,7 @@ export const JIJI_GRADE: Record<string, Record<string, JijiRelation>> = {
+     卯: { grade: 'A', tag: '卯戌合', desc: '卯戌合 六合으로 아주 긍정적이다. 친화력이 있다. 활인업에 종사하면 좋다.' },
+     辰: { grade: 'B', tag: '辰戌沖', desc: '기운이 아주 크다. 辰戌沖을 하면 숨기고 있던 비밀이 누설된다. 丁癸沖, 乙辛沖이 일어난다. 누가 더 강한가를 봐라. 대등하면 좋다. 대운과 세운에서 어떤 오행이 보완되는가도 봐야 한다.' },
+     巳: { grade: 'C', tag: '巳戌원진', desc: '巳戌귀문원진, 신경이 예민해진다. 감각은 좋다. 심리가 불안정하다.' },
+-    午: { grade: 'A', tag: '午戌火', desc: '午戌合火 재건축, 재개발을 통한 큰 수익, 비약적 발전이 있다. 창업, 부동산에 투자할 때는 午火가 올 때 해라.' },
++    午: { grade: 'A', tag: '午戌火', desc: '午戌合火. 낡은 것을 다시 세우는 쪽(재건축·재개발)으로 결실이 나기 쉽고 발전의 폭이 큰 때로 봅니다. 창업이나 부동산을 살피신다면 午火가 드는 때가 결이 맞습니다.' },
+     未: { grade: 'C', tag: '戌未刑', desc: '부정적이다. 戌未刑이 된다. 배신수, 소송수, 안티가 있다. 沖은 개고가 되지만 刑은 개고가 안 된다. 개고되면 금은보화가 튀어나온다. 戌未刑, 丑戌未三刑이 될 때는 기미, 주근깨, 쌍꺼풀 수술해서 액땜한다.' },
+     申: { grade: 'C', tag: '격각', desc: '격각(동상이몽) 土生金을 해서 상생 관계는 된다.' },
+     酉: { grade: 'A', tag: '酉戌金', desc: '酉戌金 친화력이 좋다. 내실이 튼튼, 결실이 있다.' },
+@@ -218,7 +238,7 @@ export const JIJI_GRADE: Record<string, Record<string, JijiRelation>> = {
+     子: { grade: 'A', tag: '亥子方局', desc: '方局이 된다. 혼잡이 되면 다소 불리하다. 혼잡이 안 되고 方局이 되면 亥水의 경험을 子水에게 준다. 융합이나 시너지 효과가 있다.' },
+     丑: { grade: 'C', tag: '격각', desc: '격각(동상이몽) 기토탁임, 亥水가 하려는 일을 己土가 방해를 한다.' },
+     寅: { grade: 'B', tag: '寅亥合木', desc: '寅亥合木, 水生木 상생이 된다. 寅亥破가 되는 경우와 원국에 火가 없는 경우는 합이 아니라 破가 된다. 조후가 중요하다.' },
+-    卯: { grade: 'A', tag: '亥卯木', desc: '금상첨화이다. 상승운으로 발복을 한다. 승진이나 합격, 주식 투자, 이사, 재테크에 유리하다. 공격적으로 투자해도 된다. 기분 좋은 조합이다.' },
++    卯: { grade: 'A', tag: '亥卯木', desc: '금상첨화입니다. 기운이 올라서는 때로 봅니다. 승진·합격·이사·재물 쪽으로 문이 열리기 쉽습니다. 다만 투자는 이 시기라 해서 크게 벌이기보다, 평소 잣대로 살펴 결정하시는 편이 낫습니다.' },
+     辰: { grade: 'D', tag: '辰亥원진', desc: '辰亥원진(조후가 맞지 않아 안 좋다), 陰의 기운이 만나 예민해진다. 木火 기운이 부족하면 아주 불리하다.' },
+     巳: { grade: 'C', tag: '巳亥沖', desc: '巳亥沖이 발생한다. 水火 중간에 木이 있으면 좋다. 巳亥沖이 있는 사람은 寅卯辰으로 가면 좋다.' },
+     午: { grade: 'B', tag: '암합', desc: '겉으로는 水剋火의 관계처럼 보이지만 암합(甲己合, 丁壬合)을 한다. 오해가 아니라 이해를 하는 관계이다.' },
