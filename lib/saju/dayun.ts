@@ -2,7 +2,6 @@
 // 대운/세운/월운 계산 로직
 // [수정] 대운수(첫 대운 나이)를 양력 생일 + 실제 절입일 기준으로 정확히 계산
 
-import { CHEONGAN as STEMS, JIJI as BRANCHES } from './constants'
 import { getSolarTermMoment } from './solarterm'
 
 export interface DayunItem {

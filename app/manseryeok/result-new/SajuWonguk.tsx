@@ -98,7 +98,9 @@ function GanjiBox({ char, el, isDay, isGongmang }: { char: string; el: Element |
 const rowLabel: React.CSSProperties = { fontSize: 9, color: '#6b5340', textAlign: 'right', paddingRight: 5, whiteSpace: 'nowrap' }
 const termCell = (color: string): React.CSSProperties => ({ fontSize: 10, fontWeight: 600, color, cursor: 'pointer', textAlign: 'center' })
 
-export default function SajuWonguk({ saju, dayStem, yeonjji, iljji, gm1, gm2 }: Props) {
+// ⚠️ iljji 는 지금 안 쓴다. 부르는 곳 여덟 군데가 넘기고 있어 인자는 그대로 두고
+//    이름만 _iljji 로 바꿨다. (_ 로 시작하면 "일부러 안 쓴다" 는 뜻 — 2026-07-27)
+export default function SajuWonguk({ saju, dayStem, yeonjji, iljji: _iljji, gm1, gm2 }: Props) {
   const [term, setTerm] = useState<string | null>(null)
   const open = (v: string) => v && v !== '-' && setTerm(v)
 

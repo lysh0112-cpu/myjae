@@ -28,7 +28,7 @@ import { isCheonganHap } from './hapchung'
 import type { ExamInput, YearLuck, Grade, Pillar } from './types'
 import {
   readNatal, ilganGwanHap, ilganGwanChung, cheonhapJihap, cheongeukJichung,
-  chungedBy, hyeongChungedBy, hapedBy, makesGroupHap, makesSamhyeong, isYukhap, isJijiChung,
+  chungedBy, hyeongChungedBy, hapedBy, makesGroupHap, makesSamhyeong, isYukhap,
 } from './hapchung'
 
 const rule = (key: string) =>

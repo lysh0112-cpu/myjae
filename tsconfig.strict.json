@@ -1,0 +1,39 @@
+{
+  "//": [
+    "★새로 만드는 파일만 엄격하게 본다 (2026-07-27)",
+    "",
+    "왜 만들었나 —",
+    "  unused.py(정규식 검사기)가 다섯 가지를 못 잡는 것이 드러났다.",
+    "    const { a } = b   구조분해를 아예 안 봄",
+    "    const min = 5     3자 이하를 안 봄",
+    "    DAYUN_WEIGHT      대문자 상수를 안 봄",
+    "    counter = 5       대입도 '썼다' 로 셈",
+    "    두 함수에 같은 이름  개수가 2가 되어 통과",
+    "  정규식으로는 여기까지가 한계다. 컴파일러는 코드를 진짜로 이해한다.",
+    "",
+    "  ⚠️ tsconfig.json 에 바로 켜면 예전 코드에서 수백 건이 쏟아진다.",
+    "     그래서 새 파일만 여기에 담는다. 예전 파일은 손볼 때마다 옮겨 오면 된다.",
+    "",
+    "돌리는 법 —  npx tsc -p tsconfig.strict.json",
+    "  기준선 0건. 여기 담긴 파일을 고쳤으면 반드시 돌릴 것.",
+    "",
+    "⚠️ Next 빌드는 tsconfig.json 만 본다. 이 파일은 빌드에 영향이 없다."
+  ],
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noEmit": true,
+    "incremental": false
+  },
+  "include": [
+    "lib/saju/byeongjon.ts",
+    "lib/saju/jijiTrait.ts",
+    "lib/saju/examLuck/**/*.ts",
+    "app/manseryeok/exam-luck/page.tsx",
+    "app/manseryeok/exam-luck-input/page.tsx",
+    "app/manseryeok/exam-luck-result/**/*.tsx",
+    "app/manseryeok/result-new/ByeongjonView.tsx",
+    "app/manseryeok/result-new/JijiTraitView.tsx"
+  ]
+}
