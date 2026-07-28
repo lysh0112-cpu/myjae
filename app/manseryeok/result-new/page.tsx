@@ -615,6 +615,9 @@ function ResultNewContent() {
                 hourBranch,
                 currentDayun,
                 thisYearSeyun,
+                // ★2026-07-28 — 손님이 고른 질문의 갈래를 재료 쪽에도 넘긴다.
+                //   교재 자료는 다 들어 있고, 물어본 것에 맞는 것만 꺼내 쓴다.
+                questionCategories: pickedQuestions?.map(q => q.category),
               })}
               questions={pickedQuestions}
               premium={isPaid}
