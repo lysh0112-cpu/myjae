@@ -358,34 +358,9 @@ function ExamLuckResultInner() {
           </div>
         ))}
 
-        {/* ★2026-07-29 — 시험 당일 실전 준비. (대표님 지시)
-             판정 카드가 없는 «통변만 있는» 대목이라 여기서 따로 그립니다.
-             ⚠️ ORDER 에 dday 를 등재해 두었기에 parsed.byKey 로 옵니다. */}
-        {parsed?.byKey?.dday && (
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(253,238,244,0.9) 0%, rgba(255,251,247,0.95) 100%)',
-            border: `1.5px solid ${ACCENT}44`, borderRadius: 15,
-            padding: '16px 16px', marginBottom: 12,
-            boxShadow: `0 3px 14px -8px ${ACCENT}55`,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <span style={{ fontSize: 17, lineHeight: 1 }}>⏰</span>
-              <span style={{ fontSize: 13.5, fontWeight: 700, color: '#8c4a63' }}>
-                시험 당일 실전 준비
-              </span>
-              {examDateRaw && (
-                <span style={{
-                  fontSize: 10.5, color: '#fff', background: ACCENT,
-                  padding: '2px 8px', borderRadius: 20, fontWeight: 600,
-                }}>{examDateRaw}</span>
-              )}
-            </div>
-            <div style={{
-              fontSize: 13, color: '#3a2e28', lineHeight: 1.9,
-              whiteSpace: 'pre-wrap', wordBreak: 'keep-all', overflowWrap: 'anywhere',
-            }}>{parsed.byKey.dday}</div>
-          </div>
-        )}
+        {/* ★2026-07-29 — 따로 두었던 「시험 당일 실전 준비」 블록을 없앴습니다.
+             「시험 날짜를 짚어 보면」 카드와 대목이 겹쳐 AI 가 둘 중 하나에만 썼습니다.
+             → 그 카드를 「시험 날짜와 실전 준비」로 키우고 실전 전략을 그 안에 담습니다. */}
 
         {/* 맺는말 */}
         {parsed?.outro && (

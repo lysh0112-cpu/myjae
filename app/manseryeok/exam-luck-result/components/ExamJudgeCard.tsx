@@ -44,9 +44,36 @@ interface Props {
   tong?: string
 }
 
+/**
+ * ★2026-07-29 — 통변에서 [한줄]·[태그]·[실천] 을 갈라 낸다. (대표님 지시)
+ *
+ *   [무엇이 문제였나] 프롬프트에 카드 형식을 심어 두었는데 화면이 몰라서
+ *     «[한줄] …» 이 본문에 글자 그대로 나오거나, 통짜 글로만 보였습니다.
+ *     사주풀이(TongbyeonView)는 이미 갈라 그리는데 합격운만 안 했습니다.
+ *   ⚠️ 형식이 없으면 예전처럼 통짜로 그립니다. 옛 통변도 안 깨집니다.
+ */
+function splitTong(raw: string) {
+  let summary: string | undefined
+  let action: string | undefined
+  let tags: string[] | undefined
+  const rest: string[] = []
+  for (const ln of raw.split('\n')) {
+    const t = ln.trim()
+    const mS = t.match(/^\[한줄\]\s*(.+)$/)
+    const mT = t.match(/^\[태그\]\s*(.+)$/)
+    const mA = t.match(/^\[실천\]\s*(.+)$/)
+    if (mS) { summary = mS[1].trim(); continue }
+    if (mT) { tags = mT[1].split(/[·,]/).map(x => x.trim()).filter(Boolean).slice(0, 4); continue }
+    if (mA) { action = mA[1].trim(); continue }
+    rest.push(ln)
+  }
+  return { summary, tags, action, body: rest.join('\n').trim() }
+}
+
 export default function ExamJudgeCard({ card, tong }: Props) {
   const [openWhy, setOpenWhy] = useState(false)
   const hasTong = !!(tong && tong.trim())
+  const parsed = hasTong ? splitTong(tong!) : null
 
   return (
     <div style={{
@@ -65,10 +92,50 @@ export default function ExamJudgeCard({ card, tong }: Props) {
       </div>
 
       {/* 풀이가 있으면 풀이를 본문으로, 판정 문장은 「근거 보기」로 접는다 */}
-      {hasTong && (
-        <p style={{ fontSize: 13.5, color: '#3a2e28', lineHeight: 1.85, margin: '0 0 4px', whiteSpace: 'pre-wrap', ...WRAP }}>
-          {tong!.trim()}
-        </p>
+      {parsed && (
+        <>
+          {/* ★핵심 요약 한 줄 */}
+          {parsed.summary && (
+            <p style={{
+              fontSize: 13, color: ACCENT, lineHeight: 1.6, fontWeight: 600,
+              margin: '0 0 9px', ...WRAP,
+            }}>{parsed.summary}</p>
+          )}
+
+          {/* ★키워드 태그 */}
+          {parsed.tags && parsed.tags.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, margin: '0 0 10px' }}>
+              {parsed.tags.map((t, i) => (
+                <span key={i} style={{
+                  fontSize: 10.5, color: '#8c4a63', background: '#fdeef4',
+                  border: '1px solid #f5dbe6', padding: '3px 9px', borderRadius: 20, fontWeight: 600,
+                }}>{t}</span>
+              ))}
+            </div>
+          )}
+
+          {/* ★단락으로 나눠 그린다 */}
+          {parsed.body.split(/\n\s*\n/).filter(t => t.trim()).map((para, i) => (
+            <p key={i} style={{
+              fontSize: 13.5, color: '#3a2e28', lineHeight: 1.85,
+              margin: '0 0 10px', whiteSpace: 'pre-wrap', ...WRAP,
+            }}>{para.trim()}</p>
+          ))}
+
+          {/* ★실천 — 강조 상자 */}
+          {parsed.action && (
+            <div style={{
+              marginTop: 2, marginBottom: 4, padding: '11px 12px', borderRadius: 11,
+              background: '#fdf6ee', border: '1px solid rgba(200,120,60,0.26)',
+              display: 'flex', gap: 8, alignItems: 'flex-start',
+            }}>
+              <span style={{ fontSize: 13, lineHeight: 1.4, flexShrink: 0 }}>✅</span>
+              <span style={{ fontSize: 12.5, lineHeight: 1.75, color: '#6b4a2e', ...WRAP }}>
+                {parsed.action}
+              </span>
+            </div>
+          )}
+        </>
       )}
 
       {!hasTong && card.lines.map((l, i) => (
