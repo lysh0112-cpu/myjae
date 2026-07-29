@@ -29,6 +29,7 @@ import { buildExamPrompt, parseExamTongbyeon } from '@/lib/saju/examLuck/buildEx
 import { examKindOf, CLOSING, CLOSING_STUDENT } from '@/lib/saju/examLuck/tables/rules'
 import { saveRecord, updateRecordResult, getRecord } from '@/lib/saju/sajuRecords'
 import { calcSeyunList, type DayunItem } from '@/lib/saju/dayun'
+import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
 import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
 import ExamJudgeCard, { GRADE_STYLE } from './components/ExamJudgeCard'
 import type { ExamCard, ExamInput, ExamTarget, YearLuck } from '@/lib/saju/examLuck/types'
@@ -131,6 +132,30 @@ function ExamLuckResultInner() {
     })
   }, [input, calc, dayunList, thisYear, kind, examDateRaw])
 
+  // ★2026-07-29 — 시험 날짜의 «그날 기운» 을 프롬프트에도 실어 보냅니다.
+  //   위 useMemo 안에서 만든 examDay 는 카드용이라 밖에서 못 씁니다.
+  //   ⚠️ judgeExamDay 는 순수 함수라 두 번 불러도 같은 답이 나옵니다. (재계산 아님)
+  const examDayForPrompt = useMemo(() => {
+    if (!examDateRaw || !calc?.saju?.length) return null
+    const [yy, mm, dd] = examDateRaw.split('-').map(Number)
+    if (!yy || !mm || !dd) return null
+    const r = judgeExamDay(calc.saju, yy, mm, dd, '시험일', kind)
+    if (!r) return null
+    // 공망이면 반드시 알린다 — 대표님 지시
+    return [
+      `일진 ${r.dayGanji} · 월운 ${r.monthGanji}`,
+      // ★공망이면 반드시 알립니다. 「기운이 비는 날」이라 대비책을 함께 줘야 합니다.
+      r.isGongmang ? '★시험일이 공망에 듭니다 — 기운이 비는 날이니 대비책을 함께 주세요' : '',
+      ...(r.reasons ?? []).slice(0, 3),
+    ].filter(Boolean).join(' · ')
+  }, [examDateRaw, calc, kind])
+
+  /** 오행 점수 — 프롬프트 재료용 */
+  const ohaengScore = useMemo(
+    () => (calc?.saju?.length ? calcSimsanOhaeng(calc.saju, calc.solarMonth, calc.solarDay, calc.hourBranch) : null),
+    [calc],
+  )
+
   // ── ④ 판정을 먼저 저장한다 (교훈 AQ) ──────────────────────
   useEffect(() => {
     if (!calc || !cards.length || recordId || savedRef.current) return
@@ -154,10 +179,17 @@ function ExamLuckResultInner() {
 
     ;(async () => {
       setTongState('loading')
+      // ★2026-07-29 — 초입 폼에서 고른 넷을 프롬프트까지 실어 보냅니다. (대표님 지시)
+      //   [무엇이 문제였나] kind·examKind·examDate 가 URL 에는 있는데
+      //     여기서 안 넘겨 프롬프트가 못 봤습니다. 그래서 학생에게도
+      //     공무원·이직 이야기가 나갔습니다. 폼과 리포트가 끊겨 있던 자리입니다.
       const systemPrompt = buildExamPrompt({
         name: person.name, gender: person.gender,
         age: exactAge(calc.solarYear, calc.solarMonth, calc.solarDay),
         target, cards, hourUnknown: person.hour === '모름',
+        saju: calc.saju, ohaengScore: ohaengScore ?? undefined,
+        kind, examKind, examDate: examDateRaw || null,
+        examDayNote: examDayForPrompt,
       })
       let acc = ''
       try {
