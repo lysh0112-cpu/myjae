@@ -31,6 +31,11 @@ import { saveRecord, updateRecordResult } from '@/lib/saju/sajuRecords'
 import { calcSajuMbti, compareMbti } from '@/lib/saju/career/sajuMbti'
 import { type CareerStatus, STATUS_LABEL } from '@/lib/saju/career/status'
 import MbtiCard from './components/MbtiCard'
+// ★2026-07-29 — 프리미엄 진로적성&MBTI 리포트 (모듈2)
+import { buildCareerMbtiPrompt } from '@/lib/saju/premium/buildCareerMbtiPrompt'
+import { isPremium } from '@/lib/saju/premium/config'
+import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
+import { calcYongsinNew } from '@/lib/saju/yongsinNew'
 import { getGongmang } from '@/lib/saju/gongmang'
 import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
 import CareerJudgeCard from './components/CareerJudgeCard'
@@ -85,6 +90,10 @@ function CareerResultInner() {
   const savedIdRef = useRef<string>('')  // ★async 가 길어 state 대신 ref 로 읽는다 (교훈 K)
   const [tong, setTong] = useState('')
   const [tongState, setTongState] = useState<'idle' | 'loading' | 'done' | 'failed'>('idle')
+  // ★2026-07-29 — 프리미엄 리포트로 받았는가.
+  //   프리미엄은 «카드에 붙이는 주석»이 아니라 «여섯 장짜리 통짜 리포트»라
+  //   렌더링을 갈라야 합니다. 섹션 이름이 판정 카드와 아예 다릅니다.
+  const [isPremiumTong, setIsPremiumTong] = useState(false)
   const tongStartedRef = useRef(false)
 
   useEffect(() => {
@@ -171,10 +180,27 @@ function CareerResultInner() {
 
     ;(async () => {
       setTongState('loading')
-      const systemPrompt = buildCareerPrompt({
+      // ★2026-07-29 — 프리미엄이면 모듈2(6섹션), 아니면 예전 카드형 프롬프트.
+      //   ⚠️ 결제 관문이 붙기 전까지 isPremium() 이 true 를 돌려줍니다.
+      //      결제가 붙으면 lib/saju/premium/config.ts 한 곳만 고치면 됩니다.
+      const age = ageOf(person.year) ?? 30
+      const score = calcSimsanOhaeng(calc.saju, calc.solarMonth, calc.solarDay, calc.hourBranch)
+      const dayStem = calc.saju.find(p => p.pillar === '일주')?.stem ?? ''
+      const prem = isPremium() && !!dayStem && dayStem !== '?'
+        ? buildCareerMbtiPrompt({
+            name: person.name, gender: person.gender, age,
+            saju: calc.saju, dayStem, score,
+            yongsin: calcYongsinNew(calc.saju, dayStem, score),
+            solarMonth: calc.solarMonth, solarDay: calc.solarDay,
+            hourBranch: calc.hourBranch,
+            status, realMbti, hourUnknown: calc.hourUnknown,
+          })
+        : null
+      setIsPremiumTong(!!prem)
+
+      const systemPrompt = prem?.system ?? buildCareerPrompt({
         name: person.name, gender: person.gender, age: ageOf(person.year),
         target, saju: calc.saju, hourUnknown: calc.hourUnknown, cards,
-        // ★2026-07-29 — 신분과 MBTI 를 실어 보냅니다. (대표님 지시)
         status,
         sajuMbti: sajuMbti?.code,
         realMbti: realMbti || undefined,
@@ -184,7 +210,7 @@ function CareerResultInner() {
         const res = await fetch('/api/tongbyeon', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ systemPrompt, premium: true }),
+          body: JSON.stringify({ systemPrompt, userPrompt: prem?.user, premium: true }),
         })
         if (!res.ok || !res.body) {
           console.error('진로적성 통변 실패', res.status)
@@ -252,8 +278,15 @@ function CareerResultInner() {
   }, [recordId])
 
   // 대목별로 갈라 카드에 넣는다
+  /** ★프리미엄 리포트 — ■ 제목별로 통째로 뽑는다 (판정 카드와 별개) */
+  const premiumSections = useMemo(() => {
+    if (!isPremiumTong || !tong) return []
+    const { byTitle } = parseCareerTongbyeon(tong)
+    return Object.entries(byTitle).map(([title, body]) => ({ title, body }))
+  }, [isPremiumTong, tong])
+
   const { tongIntro, tongByKey, tongOutro } = useMemo(() => {
-    if (!tong) return { tongIntro: '', tongByKey: {} as Record<string, string>, tongOutro: '' }
+    if (!tong || isPremiumTong) return { tongIntro: '', tongByKey: {} as Record<string, string>, tongOutro: '' }
     const { intro, byTitle, outro } = parseCareerTongbyeon(tong)
     const map: Record<string, string> = {}
     // ★2026-07-27 — 짝을 못 찾은 대목을 버리지 않는다.
@@ -267,7 +300,7 @@ function CareerResultInner() {
     }
     const outroAll = [...leftover, outro].filter(Boolean).join('\n\n')
     return { tongIntro: intro, tongByKey: map, tongOutro: outroAll }
-  }, [tong])
+  }, [tong, isPremiumTong])
 
   const byKey = (k: string) => cards.find(c => c.key === k)
 
@@ -359,6 +392,33 @@ function CareerResultInner() {
                 }}
               >바꾸기</button>
             </div>
+
+            {/* ★2026-07-29 — 프리미엄 리포트 (모듈2 · 여섯 섹션).
+                판정 카드와 별개로 통짜 리포트를 먼저 보여 줍니다.
+                ⚠️ 판정 카드는 그대로 남깁니다. 근거를 눈으로 볼 수 있어야 하기 때문입니다. */}
+            {premiumSections.length > 0 && (
+              <div style={{ marginBottom: 18 }}>
+                {premiumSections.map((sec, i) => (
+                  <div key={i} style={{
+                    background: '#fff', border: '1px solid rgba(120,53,15,0.15)',
+                    borderRadius: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                    padding: '16px 15px', marginBottom: 10,
+                  }}>
+                    <div style={{
+                      fontSize: 14.5, fontWeight: 700, color: '#1e293b',
+                      marginBottom: 9, letterSpacing: '-0.2px',
+                    }}>{sec.title}</div>
+                    <div style={{
+                      fontSize: 13.5, color: '#3a2e28', lineHeight: 1.85,
+                      whiteSpace: 'pre-wrap',
+                    }}>{sec.body}</div>
+                  </div>
+                ))}
+                <div style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center', margin: '4px 0 2px' }}>
+                  아래는 위 풀이의 근거가 된 판정입니다
+                </div>
+              </div>
+            )}
 
             {GROUPS.map(g => {
               // ★2026-07-29 — lines 가 빈 카드는 안 그립니다.

@@ -366,6 +366,12 @@ export interface DaeunFlag {
 export function flagDaeunList(
   list: Array<{ age: number; cheongan: string; jiji: string }>,
   saju: Pill[], dayStem: string,
+  /**
+   * ★2026-07-29 — 학생에게는 «결혼·이직» 같은 어른 말을 쓰지 않습니다.
+   *   접목운 설명에 그 말이 있어 17세 리포트 재료로 그대로 새어 나갔습니다.
+   *   재료에 있으면 AI 가 꺼내 씁니다. (교훈 BF)
+   */
+  target: 'student' | 'adult' = 'adult',
 ): DaeunFlag[] {
   const dayEl = STEM_EL[dayStem] ?? '토'
   const dayBranch = saju.find(p => p.pillar === '일주')?.branch ?? ''
@@ -390,7 +396,9 @@ export function flagDaeunList(
       notes.push('내 자리(일주)를 위아래로 치는 대운입니다. 가까운 사이와 몸 쪽에서 변화가 크니 살펴 주십시오.')
     }
     if (interchange) {
-      notes.push('접목운 — 辰戌丑未 대운입니다. 새 삶으로 갈아타는 인터체인지 같은 때입니다(결혼·이사·이직·전직).')
+      notes.push(target === 'student'
+        ? '접목운 — 辰戌丑未 대운입니다. 사는 자리나 배우는 자리가 바뀌기 쉬운 때입니다(전학·진학·이사).'
+        : '접목운 — 辰戌丑未 대운입니다. 새 삶으로 갈아타는 인터체인지 같은 때입니다(결혼·이사·이직·전직).')
     }
     return { age: d.age, ganji: `${d.cheongan}${d.jiji}`, cheongeukJichung, dayClash, interchange, note: notes.join(' ') }
   })
@@ -459,10 +467,13 @@ export function buildDeep(a: {
   daeunList?: Array<{ age: number; cheongan: string; jiji: string }>
   age?: number
   gisin?: Ohaeng | null
+  /** 학생이면 어른 말(결혼·이직)을 빼고 냅니다 */
+  target?: 'student' | 'adult'
 }): DeepResult {
+  const target = a.target ?? (a.age != null && a.age < 20 ? 'student' : 'adult')
   const extremes = judgeExtremes(a.score, a.dayStem)
   const daeunFlags = a.daeunList?.length
-    ? flagDaeunList(a.daeunList, a.saju, a.dayStem) : []
+    ? flagDaeunList(a.daeunList, a.saju, a.dayStem, target) : []
   const now = a.age != null
     ? [...daeunFlags].reverse().find(d => a.age! >= d.age) : undefined
   return {
@@ -478,4 +489,114 @@ export function buildDeep(a: {
       excessiveEl: extremes.excessiveEl,
     }),
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// [모듈2 5-2] 재물관 — 정재(안정) vs 편재(큰 재물·투자)
+// ═══════════════════════════════════════════════════════════════
+
+export interface WealthStyle {
+  jeongJae: number
+  pyeonJae: number
+  /** 정재 쪽이 차지하는 비율 0~100 */
+  jeongPct: number
+  label: '안정형' | '확장형' | '균형형' | '무재'
+  say: string
+  guide: string
+}
+
+/**
+ * ★재성의 «결»을 가른다. (기획 모듈2 5-2)
+ *   정재 = 매달 들어오는 돈. 월급·임대·계약처럼 예측되는 수익.
+ *   편재 = 한 번에 크게 움직이는 돈. 사업·투자·수수료처럼 진폭이 큰 수익.
+ *   ⚠️ 어느 쪽이 낫다는 뜻이 아닙니다. «내가 편한 방식»을 아는 것이 요점입니다.
+ *   ⚠️ 투자 권유로 읽히지 않게 문구를 짰습니다. (교훈 CM — 좋은 말이 더 위험하다)
+ */
+export function judgeWealthStyle(
+  saju: Pill[], dayStem: string, score: Record<Ohaeng, number>,
+): WealthStyle {
+  const dayEl = STEM_EL[dayStem] ?? '토'
+  let jc = 0, pc = 0
+  for (const c of chars(saju)) {
+    const el = c.isStem ? STEM_EL[c.ch] : BRANCH_EL[c.ch]
+    if (!el || yukchinOf(dayEl, el) !== '재성') continue
+    if (jeongPyeon(dayStem, c.ch, c.isStem) === '정') jc++; else pc++
+  }
+  const total = jc + pc
+  let jaeScore = 0
+  for (const el of EL5) if (yukchinOf(dayEl, el) === '재성') jaeScore += score[el] ?? 0
+
+  if (!total || jaeScore === 0) {
+    return {
+      jeongJae: 0, pyeonJae: 0, jeongPct: 50, label: '무재',
+      say: '재성이 드러나 있지 않습니다. 돈을 «쫓는» 결이 아니라 «따라오게 하는» 결입니다.',
+      guide: '수치를 눈으로 확인하는 습관이 특히 도움이 됩니다. 통장을 나누고 달마다 한 번 들여다보는 것만으로도 불안이 크게 줄어듭니다.',
+    }
+  }
+  const jeong = (jaeScore * jc) / total
+  const pyeon = (jaeScore * pc) / total
+  const jeongPct = Math.round((jeong / Math.max(1, jeong + pyeon)) * 100)
+  const label: WealthStyle['label'] =
+    jeongPct >= 65 ? '안정형' : jeongPct <= 35 ? '확장형' : '균형형'
+
+  const SAY: Record<string, { say: string; guide: string }> = {
+    안정형: {
+      say: '정재가 우세합니다. 예측되는 수입에서 마음이 편해지는 결입니다. 크게 벌기보다 새지 않게 지키는 데 강합니다.',
+      guide: '고정 수입을 축으로 삼고, 변동이 큰 쪽은 감당할 수 있는 만큼만 곁에 두십시오. 남이 크게 버는 이야기에 흔들릴 때가 이 결의 약한 자리입니다.',
+    },
+    확장형: {
+      say: '편재가 우세합니다. 한 번에 크게 움직이는 돈에 감각이 있습니다. 기회를 알아보는 눈이 빠릅니다.',
+      guide: '벌이의 진폭이 큰 만큼 «잃어도 되는 선»을 미리 정해 두셔야 합니다. 정해 두지 않으면 좋은 감각이 오히려 독이 됩니다. 투자 판단은 늘 평소 잣대로 하십시오.',
+    },
+    균형형: {
+      say: '정재와 편재가 반반입니다. 안정된 축 하나와 벌이는 축 하나를 함께 굴릴 수 있는 결입니다.',
+      guide: '축을 둘로 나눠 두십시오. 하나가 흔들려도 다른 하나가 받쳐 주면 이 결이 가장 잘 삽니다.',
+    },
+  }
+  return {
+    jeongJae: Math.round(jeong), pyeonJae: Math.round(pyeon), jeongPct, label,
+    say: SAY[label].say, guide: SAY[label].guide,
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// [모듈2 6-1] 커리어 발복 대운
+// ═══════════════════════════════════════════════════════════════
+
+export interface CareerDaeun {
+  age: number
+  ganji: string
+  /** 용신·희신이 드는 대운인가 */
+  favorable: boolean
+  /** 기신·구신이 드는 대운인가 */
+  unfavorable: boolean
+  /** 관성(자리·명예)이 드는 대운인가 */
+  gwanseong: boolean
+  note: string
+}
+
+/**
+ * ★커리어가 크는 대운을 고른다. (기획 모듈2 6-1)
+ *   용신·희신이 들면 «힘이 붙는 때», 관성이 들면 «자리와 이름이 오는 때».
+ *   ⚠️ 좋고 나쁨의 판정이 아니라 «어느 때 밀어 볼 만한가» 입니다.
+ */
+export function flagCareerDaeun(
+  list: Array<{ age: number; cheongan: string; jiji: string }>,
+  dayStem: string,
+  yong?: { yongsin?: Ohaeng; heesin?: Ohaeng; gisin?: Ohaeng; gusin?: Ohaeng } | null,
+): CareerDaeun[] {
+  const dayEl = STEM_EL[dayStem] ?? '토'
+  const good = new Set([yong?.yongsin, yong?.heesin].filter(Boolean) as Ohaeng[])
+  const bad = new Set([yong?.gisin, yong?.gusin].filter(Boolean) as Ohaeng[])
+  return list.map(d => {
+    const els = [STEM_EL[d.cheongan], BRANCH_EL[d.jiji]].filter(Boolean) as Ohaeng[]
+    const favorable = els.some(e => good.has(e))
+    const unfavorable = els.some(e => bad.has(e))
+    const gwanseong = els.some(e => yukchinOf(dayEl, e) === '관성')
+    const notes: string[] = []
+    if (favorable) notes.push('나를 살리는 기운이 드는 때 — 밀어 볼 만합니다')
+    if (gwanseong) notes.push('자리와 이름이 오는 때 — 승진·이직·자격에 힘이 붙습니다')
+    if (unfavorable) notes.push('힘이 덜 실리는 때 — 벌이기보다 다지는 쪽이 이롭습니다')
+    return { age: d.age, ganji: `${d.cheongan}${d.jiji}`, favorable, unfavorable, gwanseong, note: notes.join(' · ') }
+  })
 }

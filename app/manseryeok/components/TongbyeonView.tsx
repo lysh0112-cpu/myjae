@@ -101,6 +101,11 @@ export interface TongbyeonViewProps {
   input: TongbyeonInput
   questions: SajuQuestion[]
   premium?: boolean
+  /**
+   * ★2026-07-29 — 프리미엄 리포트 프롬프트 (lib/saju/premium).
+   *   있으면 이걸 쓰고, 없으면 예전 buildTongbyeonPrompt 로 갑니다.
+   */
+  premiumPrompt?: { system: string; user: string } | null
   onBack?: () => void
   // 무슨 통변인지: 없으면 사주, 'daeun' 대운, 'seyun' 세운(월운 포함)
   unseEntry?: 'daeun' | 'seyun'
@@ -111,15 +116,19 @@ export interface TongbyeonViewProps {
   onComplete?: (text: string) => void
 }
 
-export default function TongbyeonView({ input, questions, premium, onBack, unseEntry, savedText, onComplete }: TongbyeonViewProps) {
+export default function TongbyeonView({ input, questions, premium, premiumPrompt, onBack, unseEntry, savedText, onComplete }: TongbyeonViewProps) {
   // 통변 섹션 제목: 대운/세운/사주에 맞춰. 이름이 '나'면 "나의 ~ 이야기".
   const kindWord = unseEntry === 'daeun' ? '대운' : unseEntry === 'seyun' ? '세운' : '사주'
   const storyTitle = input.name === '나'
     ? `나의 ${kindWord} 이야기`
     : `${withNim(input.name)}의 ${kindWord} 이야기`
+  // ★2026-07-29 — 프리미엄 프롬프트를 밖에서 받으면 그걸 씁니다.
+  //   [왜 밖에서 받나] 프리미엄은 원국·격국·대운·세운 원자료가 다 필요한데
+  //     이 부품은 이미 조립된 input 만 갖고 있습니다.
+  //     원자료를 쥔 화면(result-new)이 만들어 넘기는 것이 맞습니다. (교훈 BQ)
   const prompt = useMemo(
-    () => buildTongbyeonPrompt(input, questions, { premium }),
-    [input, questions, premium]
+    () => premiumPrompt?.system ?? buildTongbyeonPrompt(input, questions, { premium }),
+    [input, questions, premium, premiumPrompt]
   )
   const [text, setText] = useState(savedText || '')
   const [loading, setLoading] = useState(!savedText)   // 저장본이면 로딩 없이 바로 표시
@@ -141,7 +150,11 @@ export default function TongbyeonView({ input, questions, premium, onBack, unseE
         const res = await fetch('/api/tongbyeon', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ systemPrompt: prompt, premium: !!premium }),
+          body: JSON.stringify({
+            systemPrompt: prompt,
+            userPrompt: premiumPrompt?.user,
+            premium: !!premium,
+          }),
         })
         if (!res.ok || !res.body) { setErr('통변을 불러오지 못했어요.'); setLoading(false); return }
 

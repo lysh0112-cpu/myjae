@@ -30,6 +30,9 @@ import ByeongjonView from "./ByeongjonView";   // 병존 (교재 74~77쪽)
 import { exactAge, pickCurrentDayun } from "@/lib/saju/ageDayun";
 import { calcSeyunList, type DayunItem } from "@/lib/saju/dayun";
 import { toTongbyeonInput } from "@/lib/saju/toTongbyeonInput";
+// ★2026-07-29 — 프리미엄 종합 사주 리포트 (모듈1)
+import { buildGeneralSajuPrompt } from "@/lib/saju/premium/buildGeneralSajuPrompt";
+import { isPremium } from "@/lib/saju/premium/config";
 import YongsinCard from "./YongsinCard";
 import SajuWonguk from "./SajuWonguk";
 
@@ -394,12 +397,38 @@ function ResultNewContent() {
     ? calcYongsinNew(saju,dayStem,calcHapchungScore(saju).score)
     : null
   const yongsinNew = (isPro && hapchungOn && yongsinHap) ? yongsinHap : yongsinBase
+
+  // ★2026-07-29 — 프리미엄 종합 사주 리포트 프롬프트 (모듈1)
+  //
+  //   ⚠️⚠️ **useMemo 를 쓰지 않았습니다.** 일부러입니다.
+  //     이 값은 saju·yongsinNew 에 기대는데, 그 둘이 조기 return(converting·!info)
+  //     «아래»에서 만들어집니다. 그래서 훅으로 감싸면 렌더마다 훅 개수가 달라져
+  //     화면이 통째로 죽습니다. 윗줄 315~319 경고가 가리키는 바로 그 병입니다.
+  //     (2026-07-27 에 대운 훅 4개로 같은 사고가 났습니다)
+  //   → 훅 없이 그냥 계산합니다. 렌더마다 다시 돌지만 순수 함수이고
+  //     이 화면은 자주 다시 그리지 않아 부담이 적습니다.
+  //   ⚠️ 나중에 memo 로 감싸고 싶으면 **saju 를 만드는 자리 자체를 조기 return 위로**
+  //     올린 뒤에 하십시오. 여기서 훅만 올리면 안 됩니다.
+  const premiumPrompt = (isPremium() && saju.length > 0 && dayStem && dayStem !== '?')
+    ? buildGeneralSajuPrompt({
+        name: personName || '나',
+        gender,
+        age: new Date().getFullYear() - yearParam,
+        saju, dayStem,
+        score: calcSimsanOhaeng(saju, solarMonth, solarDay, hourBranch),
+        yongsin: yongsinNew ?? null,
+        daeunList: dayunList,
+        seyun: thisYearSeyun,
+        hourUnknown: !hourBranch || hourBranch === '?',
+      })
+    : null
   // 통변에 넘길 용신 — 화면 표시와 같은 심산 점수 기준으로 계산한다.
   const yongsinResult=saju.length>0&&dayStem
     ?calcYongsinCompat(saju,dayStem,solarMonth,solarDay,hourBranch)
     :null
 
   // 신강/신약 점수 (임시: 토 비율로 계산)
+
   const toEl=ohaeng.find(o=>o.el==='토')
   const singanScore=toEl?Math.round(toEl.pct/100*7):3
 
@@ -634,8 +663,11 @@ function ResultNewContent() {
                 dayunList,
               })}
               questions={pickedQuestions}
-              premium={isPaid}
+              // ★2026-07-29 — 결제 관문이 붙기 전까지는 isPremium() 이 true 를 돌려줍니다.
+              //   결제가 붙으면 lib/saju/premium/config.ts 한 곳만 고치면 됩니다.
+              premium={isPremium(isPaid)}
               unseEntry={unseEntry}
+              premiumPrompt={premiumPrompt}
               savedText={savedTong}
               onComplete={(t)=>{
                 setTongText(t)

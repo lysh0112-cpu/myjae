@@ -27,7 +27,11 @@ export const runtime = 'nodejs'
 export const maxDuration = 300
 
 export async function POST(req: Request) {
-  const { systemPrompt, premium } = await req.json()
+  // ★2026-07-29 — userPrompt 를 열었습니다. (프리미엄 리포트)
+  //   [왜] 프리미엄 프롬프트는 «지시(system)»와 «이 사람의 재료(user)»를 나눠 보냅니다.
+  //        한 덩이로 붙여 system 에 다 넣으면 모델이 지시와 자료를 구분하기 어렵습니다.
+  //   ⚠️ 안 보내면 예전 그대로 돕니다. 기존 화면은 하나도 안 고쳐도 됩니다.
+  const { systemPrompt, userPrompt, premium } = await req.json()
 
   if (!systemPrompt || typeof systemPrompt !== 'string') {
     return new Response('systemPrompt가 필요해요', { status: 400 })
@@ -55,7 +59,12 @@ export async function POST(req: Request) {
             stream: true,
             system: systemPrompt,
             messages: [
-              { role: 'user', content: '위 안내에 따라 통변을 작성해 주세요.' },
+              {
+                role: 'user',
+                content: typeof userPrompt === 'string' && userPrompt.trim()
+                  ? userPrompt
+                  : '위 안내에 따라 통변을 작성해 주세요.',
+              },
             ],
           }),
         })
