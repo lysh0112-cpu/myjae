@@ -56,6 +56,32 @@ function ExamLuckInputInner() {
   const [targetType, setTargetType] = useState<string>('')
   const [targetCustomText, setTargetCustomText] = useState<string>('')
 
+  /**
+   * ★2026-07-29 — 목표와 날짜를 «필수» 로 돌렸습니다. (대표님 지시)
+   *
+   *   [왜] 목표와 D-Day 가 없으면 리포트가 «뜬구름» 이 됩니다.
+   *     «어느 해가 좋다» 까지만 말할 수 있고, «그 학교에 이 힘이 쓰인다»·
+   *     «그날 일진이 이러니 이렇게 하라» 는 못 합니다.
+   *   ⚠️ 필수로 막으면 손님이 떠날 수도 있습니다. 그래서 **모를 때 고를 길**을 함께 둡니다.
+   *     날짜는 [상반기]·[하반기]·[연말] 단추로, 목표는 «그 밖의 시험» 으로.
+   */
+  const targetOk = target === 'student'
+    ? !!examCategory && !!targetType && (targetType !== 'custom' || !!targetCustomText.trim())
+    : !!examKind
+  const dateOk = !!examDate
+  const canGo = targetOk && dateOk
+
+  /** 모르는 손님을 위한 빠른 날짜 — 그 달의 대표 하루 */
+  const quickDates = useMemo(() => {
+    const y = new Date().getFullYear()
+    const next = new Date() > new Date(y, 10, 15) ? y + 1 : y
+    return [
+      { label: '상반기 (6월경)', v: `${next}-06-15` },
+      { label: '하반기 (11월경)', v: `${next}-11-15` },
+      { label: '연말 (12월경)', v: `${next}-12-15` },
+    ]
+  }, [])
+
   const query = useMemo(() => {
     const p = new URLSearchParams()
     for (const k of ['year', 'month', 'day', 'gender', 'calType', 'leapMonth', 'hour', 'name']) {
@@ -135,7 +161,7 @@ function ExamLuckInputInner() {
         {target === 'student' && (
           <>
             <div style={{ fontSize: 12.5, color: '#8a7063', margin: '18px 2px 9px' }}>
-              어디를 목표로 하나요? <span style={{ color: '#a3907f' }}>(몰라도 됩니다)</span>
+              어디를 목표로 하나요? <span style={{ color: ACCENT, fontWeight: 600 }}>*</span>
             </div>
             <select
               value={examCategory}
@@ -164,6 +190,10 @@ function ExamLuckInputInner() {
               </select>
             )}
 
+            <div style={{ fontSize: 11.5, color: '#8a7063', lineHeight: 1.7, margin: '2px 2px 4px' }}>
+              * 목표를 정해 주셔야 사주와 그 목표 사이를 짚어 드릴 수 있습니다.
+            </div>
+
             {/* 직접 입력 */}
             {targetType === 'custom' && (
               <input
@@ -184,7 +214,8 @@ function ExamLuckInputInner() {
 
         {/* ★어떤 시험인지 — 고르면 그 시험에 힘을 싣는 십신이 드는 해를 짚어 준다 (교재 230쪽) */}
         <div style={{ fontSize: 12.5, color: '#8a7063', margin: '18px 2px 9px' }}>
-          어떤 시험인가요? <span style={{ color: '#a3907f' }}>(몰라도 됩니다)</span>
+          {target === 'student' ? '어떤 시험인가요?' : '목표 시험·직종'}
+          {target !== 'student' && <span style={{ color: ACCENT, fontWeight: 600 }}> *</span>}
         </div>
         <select value={examKind} onChange={e => setExamKind(e.target.value)}
           style={{
@@ -192,31 +223,63 @@ function ExamLuckInputInner() {
             background: CARD, border: `0.5px solid ${LINE}`, color: '#3a2e28',
             fontSize: 14, fontFamily: 'inherit', appearance: 'none',
           }}>
-          <option value="">고르지 않을게요</option>
+          <option value="">{target === 'student' ? '고르지 않을게요' : '골라 주세요'}</option>
           {EXAM_KINDS.map(k => <option key={k.key} value={k.key}>{k.label}</option>)}
         </select>
 
-        {/* ★시험 날짜 — 교재 195쪽 「세운 > 대운 > 월운 > 일진」·「시험일이 공망일이면」 */}
+        {/* ★시험 날짜 — 교재 195쪽 「세운 > 대운 > 월운 > 일진」·「시험일이 공망일이면」
+             ★2026-07-29 «필수» 로 돌렸습니다. 대신 모를 때 고를 단추를 함께 둡니다. */}
         <div style={{ fontSize: 12.5, color: '#8a7063', margin: '14px 2px 9px' }}>
-          시험 날짜를 아시나요? <span style={{ color: '#a3907f' }}>(몰라도 됩니다)</span>
+          시험(또는 발표) 날짜 <span style={{ color: ACCENT, fontWeight: 600 }}>*</span>
         </div>
         <input type="date" value={examDate} onChange={e => setExamDate(e.target.value)}
           style={{
             width: '100%', padding: '13px 14px', borderRadius: 12,
-            background: CARD, border: `0.5px solid ${LINE}`, color: '#3a2e28',
-            fontSize: 14, fontFamily: 'inherit',
+            background: CARD,
+            border: examDate ? `0.5px solid ${LINE}` : `1.5px solid ${ACCENT}55`,
+            color: '#3a2e28', fontSize: 14, fontFamily: 'inherit',
           }} />
+
+        {/* 모르는 손님을 위한 빠른 선택 */}
+        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+          {quickDates.map(q => (
+            <button key={q.v} onClick={() => setExamDate(q.v)}
+              style={{
+                flex: 1, padding: '9px 4px', borderRadius: 10, cursor: 'pointer',
+                background: examDate === q.v ? '#fdeef4' : CARD,
+                border: examDate === q.v ? `1.5px solid ${ACCENT}` : `0.5px solid ${LINE}`,
+                color: examDate === q.v ? ACCENT : '#8a7063',
+                fontSize: 11.5, fontFamily: 'inherit', fontWeight: examDate === q.v ? 600 : 400,
+              }}>{q.label}</button>
+          ))}
+        </div>
         <div style={{ fontSize: 11.5, color: '#8a7063', lineHeight: 1.7, margin: '8px 2px 0' }}>
-          날짜를 넣으시면 그해뿐 아니라 그달·그날까지 함께 짚어 드립니다.
+          * 그날의 일진(日辰)과 월운을 짚어 드리려면 날짜가 필요합니다.
+          정확히 모르시면 위 단추로 어림잡아 고르셔도 됩니다.
         </div>
 
-        <button onClick={() => router.push(`/manseryeok/exam-luck-result?${query}`)}
+        {/* ★못 넘어가는 까닭을 알려 준다. 단추만 흐리면 손님이 왜 안 되는지 모릅니다. */}
+        {!canGo && (
+          <div style={{
+            marginTop: 13, padding: '11px 13px', borderRadius: 11,
+            background: '#fdf4f7', border: `1px solid ${ACCENT}33`,
+            fontSize: 11.5, color: '#8c4a63', lineHeight: 1.7,
+          }}>
+            {!targetOk && <div>· {target === 'student' ? '가고자 하는 목표' : '목표 시험·직종'}를 골라 주세요.</div>}
+            {!dateOk && <div>· 시험(또는 발표) 날짜를 골라 주세요.</div>}
+          </div>
+        )}
+
+        <button
+          onClick={() => { if (canGo) router.push(`/manseryeok/exam-luck-result?${query}`) }}
+          disabled={!canGo}
           style={{
             width: '100%', marginTop: 14, padding: 15, borderRadius: 12,
-            background: ACCENT, border: 'none', color: '#fff',
-            fontSize: 14.5, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+            background: canGo ? ACCENT : '#e5d5cd', border: 'none', color: '#fff',
+            fontSize: 14.5, fontWeight: 500, fontFamily: 'inherit',
+            cursor: canGo ? 'pointer' : 'not-allowed',
           }}>
-          합격운 보기
+          {kind === 'job' ? '취업운 보기' : '합격운 보기'}
         </button>
 
         {/* ★이직·직업 변동은 교재 190~191쪽 자료를 아직 못 받았다. (작업지시 5장)
