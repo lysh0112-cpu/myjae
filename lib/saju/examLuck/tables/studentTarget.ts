@@ -188,3 +188,97 @@ export function gradeMismatch(age: number | null, g?: string | null): boolean {
   const r = R[g]
   return !!r && (age < r[0] || age > r[1])
 }
+
+// ══════════════════════════════════════════════════════════════
+// 학년에 따라 «어떤 카드를 낼지»
+// ══════════════════════════════════════════════════════════════
+//
+// ★2026-07-29 대표님 지적 —
+//   고3에게 「고교 선택」 카드가 떴습니다. 이미 지나간 이야기입니다.
+//   대입을 앞둔 아이에게 «어느 고등학교가 맞나» 를 말하면 리포트를 못 믿게 됩니다.
+//
+//   [어떻게] 학년으로 가릅니다.
+//     초·중학생   고교 선택 O · 수시정시 X   (아직 고교를 고르는 때)
+//     고1~2       고교 선택 X · 수시정시 O   (이미 다니는 중, 전형을 저울질)
+//     고3·N수생   고교 선택 X · 수시정시 O   (전형이 눈앞)
+//   ⚠️ 학년을 안 골랐으면 예전처럼 둘 다 냅니다. 갑자기 사라지면 더 이상합니다.
+
+/** 「고교 선택」 카드를 낼 학년인가 */
+export function showsHighschoolCard(grade?: string | null): boolean {
+  if (!grade) return true                       // 안 골랐으면 예전대로
+  return grade === 'elementary' || grade === 'middle'
+}
+
+/** 「수시와 정시」 카드를 낼 학년인가 */
+export function showsSusiCard(grade?: string | null): boolean {
+  if (!grade) return true
+  return grade !== 'elementary'                 // 초등학생에게는 아직 이릅니다
+}
+
+// ══════════════════════════════════════════════════════════════
+// 고교 재학·N수생 — 지금 성적대와 희망 계열
+// ══════════════════════════════════════════════════════════════
+//
+// ★2026-07-29 대표님 지시 —
+//   «고교 선택» 을 물을 자리가 아니라면, 대신 **지금 어디쯤 서 있는지**를 묻습니다.
+//   성적대와 희망 계열을 알면 «그 자리에서 무엇을 하면 되는가» 를 말할 수 있습니다.
+//
+//   ⚠️ 성적은 «등급» 이 아니라 «대략의 자리» 로 묻습니다.
+//      숫자를 받으면 리포트가 «몇 등급이면 어디» 같은 입시 상담이 됩니다.
+//      우리는 사주를 봅니다. 성적은 «지금 어디쯤인지» 를 알기 위한 것뿐입니다.
+
+export const GRADE_LEVELS: Array<{ key: string; label: string }> = [
+  { key: '', label: '골라 주세요' },
+  { key: 'top', label: '상위권 (1~2등급대)' },
+  { key: 'mid', label: '중상위권 (3~4등급대)' },
+  { key: 'middle', label: '중위권 (5~6등급대)' },
+  { key: 'low', label: '중하위권 이하 (7등급~)' },
+  { key: 'unknown', label: '아직 잘 모르겠어요' },
+]
+
+export const TRACKS: Array<{ key: string; label: string; needs: string[]; note: string }> = [
+  { key: '', label: '골라 주세요', needs: [], note: '' },
+  { key: 'humanities', label: '인문 · 사회 · 어학', needs: ['인성', '식상'],
+    note: '읽고 쓰고 말하는 일이라, 받아들이는 힘과 꺼내는 힘이 함께 쓰입니다.' },
+  { key: 'natural', label: '자연 · 공학', needs: ['편인', '인성'],
+    note: '파고들어 원리를 잡는 자리라, 안으로 깊이 들어가는 힘이 크게 쓰입니다.' },
+  { key: 'medical', label: '의학 · 보건', needs: ['관성', '인성', '편관'],
+    note: '오래 버티며 기준을 지켜야 하는 자리라, 눌러 세우는 힘이 함께 필요합니다.' },
+  { key: 'business', label: '경영 · 경제 · 상경', needs: ['재성', '관성'],
+    note: '숫자와 사람을 함께 다루는 자리라, 굴리는 힘과 지키는 힘이 같이 쓰입니다.' },
+  { key: 'edu', label: '교육 · 사범', needs: ['인성', '관성'],
+    note: '가르치고 이끄는 자리라, 쌓아 두는 힘과 틀을 지키는 힘이 쓰입니다.' },
+  { key: 'arts', label: '예체능', needs: ['식상'],
+    note: '꺼내 보이는 것이 곧 실력이 되는 자리라, 표현하는 힘이 가장 크게 쓰입니다.' },
+  { key: 'undecided', label: '아직 못 정했어요', needs: [], note: '' },
+]
+
+export function levelLabel(k?: string | null): string {
+  return GRADE_LEVELS.find(x => x.key === k)?.label ?? ''
+}
+export function trackOf(k?: string | null) {
+  return TRACKS.find(x => x.key === k && x.key) ?? null
+}
+
+/**
+ * 성적대·희망 계열을 프롬프트 한 덩이로.
+ *   ⚠️ 성적을 «부족하다» 는 뜻으로 쓰지 않습니다.
+ *      «지금 여기서 무엇을 하면 되는가» 를 말하기 위한 좌표일 뿐입니다.
+ */
+export function levelTrackBlock(level?: string | null, track?: string | null): string {
+  const lines: string[] = []
+  if (level && level !== 'unknown') {
+    lines.push(`· 지금 성적대: ${levelLabel(level)}`)
+    lines.push('· ★성적을 두고 나무라거나 «부족하다»고 하지 마세요. 지금 자리에서 할 수 있는 것만 말합니다.')
+  } else if (level === 'unknown') {
+    lines.push('· 성적대는 아직 모른다고 하셨습니다. 성적 이야기를 앞세우지 마세요.')
+  }
+  const t = trackOf(track)
+  if (t && t.key !== 'undecided') {
+    lines.push(`· 희망 계열: ${t.label}`)
+    if (t.needs.length) lines.push(`· 그 계열에 쓰이는 힘: ${t.needs.join(' · ')} — ${t.note}`)
+  } else if (track === 'undecided') {
+    lines.push('· 계열을 아직 못 정했다고 하셨습니다. 사주에서 읽히는 결로 «어느 쪽이 편한지» 를 짚어 주세요.')
+  }
+  return lines.join('\n')
+}

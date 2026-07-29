@@ -16,6 +16,7 @@
 
 import type { ExamCard, ExamInput, ExamTarget, YearLuck } from './types'
 import { exactAge } from '../ageDayun'
+import { showsHighschoolCard, showsSusiCard } from './tables/studentTarget'
 import {
   EXAM_BY_SIPSIN, EXAM_BY_SIPSIN_STUDENT, YEAR_SAY_STUDENT, hasStudentBan,
   HIGHSCHOOL, HIGHSCHOOL_SRC,
@@ -305,6 +306,8 @@ export interface BuildAllArgs {
   byYear: Array<{ year: number; hits: JobChangeHit[] }>
   examDay: ExamDayResult | null
   purpose?: 'exam' | 'job'
+  /** ★학년·신분 — 어떤 카드를 낼지 가리는 데 쓴다 */
+  grade?: string | null
 }
 
 export function buildAllCards(a: BuildAllArgs): ExamCard[] {
@@ -319,9 +322,13 @@ export function buildAllCards(a: BuildAllArgs): ExamCard[] {
   const day = cardExamDay(a.examDay)
   if (day) out.push(day)
   // ★학생에게만 — 고교·수시정시 (교재 130~131쪽)
+  //   ★2026-07-29 — 학년으로 한 번 더 가릅니다. (대표님 지적)
+  //     고3에게 「고교 선택」이 떴습니다. 이미 지나간 이야기라 리포트를 못 믿게 됩니다.
+  //     초·중학생만 고교를 고르는 때이고, 고1 이상은 전형(수시·정시)이 관심사입니다.
+  //   ⚠️ 학년을 안 골랐으면 예전처럼 둘 다 냅니다. 갑자기 사라지면 더 이상합니다.
   if (t === 'student') {
-    out.push(cardHighschool(a.input))
-    out.push(cardSusiJeongsi(a.input))
+    if (showsHighschoolCard(a.grade)) out.push(cardHighschool(a.input))
+    if (showsSusiCard(a.grade)) out.push(cardSusiJeongsi(a.input))
   } else {
     // ★성인에게만 — 이직·직업 변동 (교재 190~191쪽)
     out.push(cardJobChange(a.natal, a.byYear))

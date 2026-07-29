@@ -72,6 +72,8 @@ export interface BuildExamPromptArgs {
   gradeBlock?: string | null
   /** 나이와 고른 학년이 어긋나는가 — 어긋나면 학년을 따르라고 알린다 */
   gradeMismatch?: boolean
+  /** ★고1 이상에게 물은 «지금 성적대·희망 계열» */
+  levelTrack?: string | null
 }
 
 export function buildExamPrompt(v: BuildExamPromptArgs): string {
@@ -135,6 +137,7 @@ export function buildExamPrompt(v: BuildExamPromptArgs): string {
     v.examDate ? `· 시험(또는 발표) 날짜: ${v.examDate}` : '',
     v.examDayNote ? `· 그날의 기운: ${v.examDayNote}` : '',
     v.targetBlock || '',
+    v.levelTrack || '',
   ].filter(Boolean).join('\n')
 
   return `당신은 사주 상담을 오래 해 온 따뜻한 어른입니다.

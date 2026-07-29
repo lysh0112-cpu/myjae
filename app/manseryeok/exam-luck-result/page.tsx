@@ -27,7 +27,7 @@ import { judgeExamDay } from '@/lib/saju/examLuck/examDay'
 import { buildAllCards } from '@/lib/saju/examLuck/buildCards'
 import { buildExamPrompt, parseExamTongbyeon } from '@/lib/saju/examLuck/buildExamPrompt'
 import { examKindOf, CLOSING, CLOSING_STUDENT } from '@/lib/saju/examLuck/tables/rules'
-import { targetPromptBlock, GRADE_PROMPT, gradeMismatch } from '@/lib/saju/examLuck/tables/studentTarget'
+import { targetPromptBlock, GRADE_PROMPT, gradeMismatch, levelTrackBlock } from '@/lib/saju/examLuck/tables/studentTarget'
 import { saveRecord, updateRecordResult, getRecord } from '@/lib/saju/sajuRecords'
 import { calcSeyunList, calcWolunList, type DayunItem } from '@/lib/saju/dayun'
 import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
@@ -61,6 +61,8 @@ function ExamLuckResultInner() {
   const targetType = sp.get('targetType') || ''
   const targetCustomText = sp.get('targetCustomText') || ''
   const studentGrade = sp.get('studentGrade') || ''
+  const gradeLevel = sp.get('gradeLevel') || ''
+  const trackSel = sp.get('track') || ''
 
   const [calc, setCalc] = useState<PersonCalc | null>(null)
   const [err, setErr] = useState('')
@@ -135,8 +137,9 @@ function ExamLuckResultInner() {
     return buildAllCards({
       input, years, dayun: cur.dayun as never, order: cur.order ?? 0,
       natal, byYear, examDay, purpose: kind,
+      grade: studentGrade,
     })
-  }, [input, calc, dayunList, thisYear, kind, examDateRaw])
+  }, [input, calc, dayunList, thisYear, kind, examDateRaw, studentGrade])
 
   /** 시험이 있는 해·달 — 달별 흐름표에 표시할 자리 */
   const examMonth = useMemo(() => {
@@ -216,6 +219,8 @@ function ExamLuckResultInner() {
           ? GRADE_PROMPT[studentGrade as keyof typeof GRADE_PROMPT] ?? null : null,
         gradeMismatch: target === 'student'
           ? gradeMismatch(exactAge(calc.solarYear, calc.solarMonth, calc.solarDay), studentGrade) : false,
+        // ★고1 이상에게만 물은 것 — 없으면 빈 문자열이라 안 실립니다
+        levelTrack: target === 'student' ? levelTrackBlock(gradeLevel, trackSel) : null,
       })
       let acc = ''
       try {

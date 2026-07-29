@@ -18,7 +18,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { exactAge } from '@/lib/saju/ageDayun'
 // ★2026-07-27 — 손님이 시험 종류를 고르면 교재 230쪽 짝에 따라 볼 십신이 정해진다.
 import { EXAM_KINDS } from '@/lib/saju/examLuck/tables/rules'
-import { EXAM_CATEGORIES, TARGETS, STUDENT_GRADES } from '@/lib/saju/examLuck/tables/studentTarget'
+import { EXAM_CATEGORIES, TARGETS, STUDENT_GRADES, GRADE_LEVELS, TRACKS } from '@/lib/saju/examLuck/tables/studentTarget'
 
 const ACCENT = '#c85a8c'
 const SOFT = '#f7e6ee'
@@ -41,8 +41,25 @@ function ExamLuckInputInner() {
   const day = parseInt(sp.get('day') || '') || 1
   const age = useMemo(() => (year ? exactAge(year, month, day) : null), [year, month, day])
 
-  const [kind, setKind] = useState<Kind>(age !== null && age < 20 ? 'exam' : 'job')
-  const [target, setTarget] = useState<Target>(age !== null && age < 20 ? 'student' : 'adult')
+  /**
+   * ★2026-07-29 — [진학] / [취업] 두 탭으로 묶었습니다. (대표님 지시)
+   *
+   *   [무엇이 문제였나] 전에는 «무엇을 볼까(kind)» 와 «누구인가(target)» 를
+   *     따로 골랐습니다. 넷을 다 고를 수 있는데 «학생 + 취업운» 은 뜻이 거의 안 맞고,
+   *     학생인데 화면에 취업 항목이 보이고 그 반대도 마찬가지였습니다.
+   *   [어떻게] 탭이 둘을 «함께» 정합니다.
+   *     진학 = 학생 + 시험      취업 = 성인 + (시험 준비 또는 일자리)
+   *   ★성인이 공무원·자격증을 준비하는 경우는 취업 탭 «안에서» 갈래를 둡니다.
+   *     그분들이 갈 곳이 없어지면 안 되기 때문입니다. (EXAM_KINDS 를 그대로 씁니다)
+   */
+  const [tab, setTab] = useState<'jinhak' | 'chwieop'>(
+    age !== null && age < 20 ? 'jinhak' : 'chwieop',
+  )
+  /** 취업 탭 안의 갈래 — 시험 준비냐 일자리 구하기냐 */
+  const [jobMode, setJobMode] = useState<Kind>('job')
+
+  const target: Target = tab === 'jinhak' ? 'student' : 'adult'
+  const kind: Kind = tab === 'jinhak' ? 'exam' : jobMode
   /** ★어떤 시험인가 — 교재 230쪽이 십신마다 시험을 짝지어 놨다 */
   const [examKind, setExamKind] = useState<string>('')
   /** ★시험 날짜 — 몰라도 된다. 알면 그 달·그 날까지 짚어 준다 (교재 195쪽) */
@@ -54,6 +71,11 @@ function ExamLuckInputInner() {
    */
   /** ★2026-07-29 — 학년·신분. 같은 학생이라도 초등과 N수생은 결이 완전히 다릅니다. */
   const [studentGrade, setStudentGrade] = useState<string>('')
+  /** ★2026-07-29 — 고1 이상에게 묻는 «지금 어디쯤». (대표님 지시)
+   *   고교를 이미 다니는 아이에게 «어느 고교가 맞나» 는 지난 이야기입니다.
+   *   대신 지금 성적대와 희망 계열을 물어 «여기서 무엇을 하면 되는가» 를 말합니다. */
+  const [gradeLevel, setGradeLevel] = useState<string>('')
+  const [track, setTrack] = useState<string>('')
   const [examCategory, setExamCategory] = useState<string>('')
   const [targetType, setTargetType] = useState<string>('')
   const [targetCustomText, setTargetCustomText] = useState<string>('')
@@ -67,6 +89,8 @@ function ExamLuckInputInner() {
    *   ⚠️ 필수로 막으면 손님이 떠날 수도 있습니다. 그래서 **모를 때 고를 길**을 함께 둡니다.
    *     날짜는 [상반기]·[하반기]·[연말] 단추로, 목표는 «그 밖의 시험» 으로.
    */
+  /** 고교를 이미 다니거나 마친 학년인가 — 성적·계열을 묻는 자리 */
+  const needsLevel = ['high12', 'high3', 'nsu'].includes(studentGrade)
   const gradeOk = target !== 'student' || !!studentGrade
   const targetOk = target === 'student'
     ? !!examCategory && !!targetType && (targetType !== 'custom' || !!targetCustomText.trim())
@@ -97,6 +121,10 @@ function ExamLuckInputInner() {
     if (examDate) p.set('examDate', examDate)
     // ★학생 목표 — 학생일 때만 싣는다
     if (target === 'student' && studentGrade) p.set('studentGrade', studentGrade)
+    if (target === 'student' && needsLevel) {
+      if (gradeLevel) p.set('gradeLevel', gradeLevel)
+      if (track) p.set('track', track)
+    }
     if (target === 'student' && examCategory) {
       p.set('examCategory', examCategory)
       if (targetType) p.set('targetType', targetType)
@@ -105,16 +133,8 @@ function ExamLuckInputInner() {
       }
     }
     return p.toString()
-  }, [sp, kind, target, examKind, examDate, studentGrade, examCategory, targetType, targetCustomText])
+  }, [sp, kind, target, examKind, examDate, studentGrade, needsLevel, gradeLevel, track, examCategory, targetType, targetCustomText])
 
-  const kinds: Array<{ key: Kind; title: string; sub: string }> = [
-    { key: 'exam', title: '시험 · 합격운', sub: '입시 · 자격증 · 공무원 시험을 봅니다' },
-    { key: 'job', title: '취업운', sub: '일자리를 구하고 자리를 잡는 흐름을 봅니다' },
-  ]
-  const targets: Array<{ key: Target; title: string; sub: string }> = [
-    { key: 'student', title: '학생이에요', sub: '학업 흐름, 특목고, 수시·정시까지 함께 봅니다' },
-    { key: 'adult', title: '성인이에요', sub: '시험과 일자리를 중심으로 봅니다' },
-  ]
 
   const Btn = ({ on, title, sub, onClick }: { on: boolean; title: string; sub: string; onClick: () => void }) => (
     <button onClick={onClick}
@@ -151,14 +171,56 @@ function ExamLuckInputInner() {
           {age !== null && <><br />생년월일로 보아 만 {age}세로 잡았습니다. 다르면 아래에서 바꿔 주세요.</>}
         </div>
 
-        {kinds.map(o => (
-          <Btn key={o.key} on={kind === o.key} title={o.title} sub={o.sub} onClick={() => setKind(o.key)} />
-        ))}
+        {/* ★진학 / 취업 두 탭 — 이 하나로 «누구인가»와 «무엇을 볼까»가 함께 정해집니다 */}
+        <div style={{
+          display: 'flex', gap: 6, padding: 4, marginBottom: 16,
+          background: '#f6ebe3', borderRadius: 14,
+        }}>
+          {([
+            { key: 'jinhak' as const, label: '진학', sub: '학생 · 입시' },
+            { key: 'chwieop' as const, label: '취업', sub: '성인 · 시험 · 일자리' },
+          ]).map(t => {
+            const on = tab === t.key
+            return (
+              <button key={t.key} onClick={() => {
+                  setTab(t.key)
+                  // ★탭을 바꾸면 반대쪽 값을 비웁니다.
+                  //   안 비우면 진학에서 고른 «과학고» 가 취업 결과에 실려 갑니다.
+                  setExamKind(''); setStudentGrade(''); setGradeLevel(''); setTrack('')
+                  setExamCategory(''); setTargetType(''); setTargetCustomText('')
+                }}
+                style={{
+                  flex: 1, padding: '11px 6px', borderRadius: 11, cursor: 'pointer',
+                  background: on ? '#fff' : 'transparent',
+                  border: on ? `1.5px solid ${ACCENT}` : '1.5px solid transparent',
+                  boxShadow: on ? '0 2px 8px rgba(0,0,0,0.05)' : 'none',
+                  fontFamily: 'inherit',
+                }}>
+                <span style={{
+                  display: 'block', fontSize: 14.5, fontWeight: on ? 700 : 500,
+                  color: on ? ACCENT : '#8a7063',
+                }}>{t.label}</span>
+                <span style={{ display: 'block', fontSize: 10.5, color: on ? '#a3707f' : '#a3907f', marginTop: 2 }}>
+                  {t.sub}
+                </span>
+              </button>
+            )
+          })}
+        </div>
 
-        <div style={{ fontSize: 12.5, color: '#8a7063', margin: '18px 2px 9px' }}>어느 쪽인가요?</div>
-        {targets.map(o => (
-          <Btn key={o.key} on={target === o.key} title={o.title} sub={o.sub} onClick={() => setTarget(o.key)} />
-        ))}
+        {/* 취업 탭 안의 갈래 — 시험 준비인가 일자리인가 */}
+        {tab === 'chwieop' && (
+          <>
+            <div style={{ fontSize: 12.5, color: '#8a7063', margin: '2px 2px 9px' }}>어느 쪽인가요?</div>
+            {([
+              { key: 'exam' as Kind, title: '시험 준비 중이에요', sub: '공무원 · 자격증 · 임용 · 어학 시험' },
+              { key: 'job' as Kind, title: '일자리를 구해요', sub: '취업 · 이직 · 면접' },
+            ]).map(o => (
+              <Btn key={o.key} on={jobMode === o.key} title={o.title} sub={o.sub}
+                onClick={() => { setJobMode(o.key); setExamKind('') }} />
+            ))}
+          </>
+        )}
 
         {/* ★2026-07-29 — 학생 목표 2단 드롭다운. (대표님 지시)
              학생일 때만 뜹니다. 성인에게는 «자사고·수시» 가 뜻이 안 맞습니다. */}
@@ -180,6 +242,38 @@ function ExamLuckInputInner() {
             <div style={{ fontSize: 11.5, color: '#8a7063', lineHeight: 1.7, margin: '4px 2px 4px' }}>
               * 같은 학생이라도 학년에 따라 필요한 이야기가 달라집니다.
             </div>
+
+            {/* ★고1 이상에게만 — 지금 성적대와 희망 계열 */}
+            {needsLevel && (
+              <>
+                <div style={{ fontSize: 12.5, color: '#8a7063', margin: '16px 2px 9px' }}>
+                  지금 성적대 <span style={{ color: '#a3907f' }}>(몰라도 됩니다)</span>
+                </div>
+                <select value={gradeLevel} onChange={e => setGradeLevel(e.target.value)}
+                  style={{
+                    width: '100%', padding: '13px 14px', borderRadius: 12, marginBottom: 9,
+                    background: CARD, border: `0.5px solid ${LINE}`, color: '#3a2e28',
+                    fontSize: 14, fontFamily: 'inherit', appearance: 'none',
+                  }}>
+                  {GRADE_LEVELS.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
+                </select>
+
+                <div style={{ fontSize: 12.5, color: '#8a7063', margin: '2px 2px 9px' }}>
+                  희망 계열 <span style={{ color: '#a3907f' }}>(몰라도 됩니다)</span>
+                </div>
+                <select value={track} onChange={e => setTrack(e.target.value)}
+                  style={{
+                    width: '100%', padding: '13px 14px', borderRadius: 12, marginBottom: 4,
+                    background: CARD, border: `0.5px solid ${LINE}`, color: '#3a2e28',
+                    fontSize: 14, fontFamily: 'inherit', appearance: 'none',
+                  }}>
+                  {TRACKS.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+                </select>
+                <div style={{ fontSize: 11.5, color: '#8a7063', lineHeight: 1.7, margin: '4px 2px 4px' }}>
+                  성적은 나무라려고 묻는 것이 아니라, 지금 자리에서 무엇을 하면 좋을지 짚어 드리려는 것입니다.
+                </div>
+              </>
+            )}
 
             <div style={{ fontSize: 12.5, color: '#8a7063', margin: '16px 2px 9px' }}>
               어디를 목표로 하나요? <span style={{ color: ACCENT, fontWeight: 600 }}>*</span>
@@ -245,7 +339,12 @@ function ExamLuckInputInner() {
             fontSize: 14, fontFamily: 'inherit', appearance: 'none',
           }}>
           <option value="">{target === 'student' ? '고르지 않을게요' : '골라 주세요'}</option>
-          {EXAM_KINDS.map(k => <option key={k.key} value={k.key}>{k.label}</option>)}
+          {/* ★취업 탭에서는 고른 갈래에 맞는 것만 보여 줍니다.
+               «일자리를 구해요» 를 골랐는데 「로스쿨」이 목록에 있으면 어수선합니다.
+               ⚠️ '그 밖의 시험'(etc)은 어느 쪽에서든 남깁니다. 빠져나갈 길이 있어야 합니다. */}
+          {EXAM_KINDS
+            .filter(k => target === 'student' || k.key === 'etc' || k.purpose === kind)
+            .map(k => <option key={k.key} value={k.key}>{k.label}</option>)}
         </select>
 
         {/* ★시험 날짜 — 교재 195쪽 「세운 > 대운 > 월운 > 일진」·「시험일이 공망일이면」
