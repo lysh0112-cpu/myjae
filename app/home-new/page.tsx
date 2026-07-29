@@ -13,6 +13,7 @@ import EmotionPicker from '@/app/manseryeok/components/EmotionPicker'
 import UserCard from '@/app/manseryeok/components/UserCard'
 import { listPinnedServices, togglePinnedService, MAX_PINS } from '@/lib/saju/pinnedServices'
 import HomeBottomSheet from '@/app/home-new/components/HomeBottomSheet'
+import ServiceSection from '@/app/home-new/components/ServiceSection'
 
 // ── 사람 선택 모달을 여는 서비스 설정 ──
 // 사주 + 대운 + 세운(연월운세) 연결. 셋 다 같은 흐름:
@@ -153,10 +154,10 @@ const SERVICES = [
   //     나란히 놓으려면 이 배열의 줄 순서만 바꾸면 된다(연재쌤 확인 후).
   { name: '진로적성',   color: '#785aaa', bg: '#efeaf7', href: '/manseryeok/career', cat: '적성', sub: '내 길과 그릇', emoji: '🐷' },
 ]
-type Service = typeof SERVICES[number]
-
-// 서비스 리스트를 접었을 때 보이는 줄 수 (핀이 맨 위로 오므로 핀 3개 + 1개가 보임)
-const COLLAPSED_COUNT = 4
+// ★2026-07-29 — `type Service` 와 `COLLAPSED_COUNT` 를 걷어냈습니다.
+//   서비스 목록이 [접기/전체보기] 한 줄에서 갈래 여닫이로 바뀌어 접는 줄 수가 없어졌고,
+//   목록의 타입은 components/ServiceSection 의 `HomeService` 가 들고 있습니다.
+//   ⚠️ 바로 위 SLIDES_OLD 는 "지우지 말 것"으로 남겨 둔 것이라 그대로 둡니다.
 
 
 export default function HomeNew() {
@@ -166,7 +167,6 @@ export default function HomeNew() {
   // 사람 선택 모달: 어떤 서비스로 열렸는지 (null이면 닫힘)
   const [pickService, setPickService] = useState<string | null>(null)
   const [pinned, setPinned] = useState<string[]>([])      // 찜한 서비스 이름들 (찜한 순서)
-  const [svcOpen, setSvcOpen] = useState(false)           // 서비스 리스트 펼침 여부
   const [pinMsg, setPinMsg] = useState('')                // 압핀 안내 메시지
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -386,99 +386,21 @@ export default function HomeNew() {
           <TodayFortuneCard />
         </div>
 
-        {/* ⑤ 서비스 리스트 (아이콘 + 이름 + 설명 + 📌압핀 / 하단 접기)
-            - 압핀: 찜하면 리스트 맨 위로 정렬, 최대 MAX_PINS개 (회원만, 비회원은 로그인 안내)
-            - 접기: 처음 COLLAPSED_COUNT개만 → [전체 N개 보기]로 펼침 */}
-        <div style={{ padding: '6px 0 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', padding: '0 16px' }}>
-            <span style={{ fontSize: '16px', fontWeight: 700, color: '#3a2e28' }}>MyungCafe 서비스</span>
-            {pinned.length > 0 && (
-              <span style={{ fontSize: '11px', color: '#8f3d0e' }}>📌 {pinned.length}/{MAX_PINS}</span>
-            )}
-          </div>
-
-          {/* 압핀 안내 메시지 */}
-          {pinMsg && (
-            <div style={{ textAlign: 'center', fontSize: '12px', color: '#c85a6e', marginBottom: '8px' }}>{pinMsg}</div>
-          )}
-
-          {(() => {
-            // 찜한 것(찜한 순서) 먼저, 나머지는 원래 순서
-            const pinnedList = pinned
-              .map(nm => SERVICES.find(s => s.name === nm))
-              .filter((s): s is Service => !!s)
-            const rest = SERVICES.filter(s => !pinned.includes(s.name))
-            const full = [...pinnedList, ...rest]
-            const shown = svcOpen ? full : full.slice(0, COLLAPSED_COUNT)
-            return (
-              <div>
-                {shown.map((s, idx) => {
-                  const isPinned = pinned.includes(s.name)
-                  const isLastPinned = idx === pinnedList.length - 1 && pinnedList.length > 0
-                  return (
-                    <div key={s.name}>
-                      <div
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '13px', padding: '11px 16px',
-                          background: isPinned ? '#fdf0e4' : 'transparent',
-                        }}
-                      >
-                        <div
-                          onClick={() => { if (PICK_CONFIG[s.name]) setPickService(s.name); else router.push(s.href) }}
-                          style={{
-                            width: '46px', height: '46px', borderRadius: '14px', flexShrink: 0,
-                            background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                          }}
-                        >
-                          <span className="zodiacEmoji" style={{ fontSize: '32px', lineHeight: 1, animationDelay: `${(idx * 0.18).toFixed(2)}s` }}>{s.emoji}</span>
-                        </div>
-                        <div
-                          onClick={() => { if (PICK_CONFIG[s.name]) setPickService(s.name); else router.push(s.href) }}
-                          style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px', cursor: 'pointer' }}
-                        >
-                          <span style={{ fontSize: '14.5px', color: '#3a2e28', fontWeight: 700 }}>{s.name}</span>
-                          <span style={{ fontSize: '11px', color: '#5c3a1e' }}>{s.sub}</span>
-                        </div>
-                        <button
-                          onClick={() => handleTogglePin(s.name)}
-                          aria-label={isPinned ? '고정 해제' : '고정'}
-                          style={{
-                            width: '34px', height: '34px', border: 'none', background: 'none', cursor: 'pointer',
-                            fontSize: '17px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            filter: isPinned ? 'none' : 'grayscale(1)', opacity: isPinned ? 1 : 0.32,
-                            transform: isPinned ? 'scale(1.05)' : 'none', transition: 'all 0.12s',
-                          }}
-                        >📌</button>
-                      </div>
-                      {/* 구분선: 찜 끝나는 지점은 진하게, 나머지는 옅게 */}
-                      {idx < shown.length - 1 && (
-                        <div style={{
-                          height: '0.5px',
-                          background: isLastPinned ? '#e8c9ad' : '#f0e2d5',
-                          margin: isLastPinned ? '4px 16px' : '0 16px 0 75px',
-                        }} />
-                      )}
-                    </div>
-                  )
-                })}
-
-                {/* 접기 / 전체보기 버튼 */}
-                <div style={{ padding: '10px 16px 0' }}>
-                  <button
-                    onClick={() => setSvcOpen(o => !o)}
-                    style={{
-                      width: '100%', background: '#FFFBF7', border: '0.5px solid #e8d5c5', borderRadius: '12px',
-                      padding: '11px', fontSize: '13px', color: '#5c3a1e', fontWeight: 600, cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                    }}
-                  >
-                    {svcOpen ? '접기 ▲' : `전체 ${SERVICES.length}개 보기 ▼`}
-                  </button>
-                </div>
-              </div>
-            )
-          })()}
-        </div>
+        {/* ⑤ 서비스 영역 — BEST 2개 + 갈래 4묶음
+            ★2026-07-29 대표님 지시로 다시 짰습니다. (부품: components/ServiceSection)
+              전  열두 개가 한 줄로 늘어서고 [전체 12개 보기]로 접힘
+              후  🔥BEST 둘(내사주그림·진로적성) + 📂네 갈래 여닫이
+            ⚠️ 연결(href)은 하나도 안 바뀌었습니다. SERVICES 배열도 그대로입니다.
+            ⚠️ 압핀(📌)은 살렸습니다. 회원 설정이라 말없이 없애면 안 됩니다.
+                고정한 것은 BEST 아래 「고정한 서비스」 줄로 따로 뜹니다. */}
+        <ServiceSection
+          services={SERVICES}
+          pinned={pinned}
+          pinMsg={pinMsg}
+          maxPins={MAX_PINS}
+          onTogglePin={handleTogglePin}
+          onOpen={(s) => { if (PICK_CONFIG[s.name]) setPickService(s.name); else router.push(s.href) }}
+        />
 
         {/* ⑥ 감정 기록부 (공용 부품 — props 없음) */}
         <div style={{ padding: '0 16px 12px' }}>
