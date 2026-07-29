@@ -64,6 +64,14 @@ export interface BuildExamPromptArgs {
    *   ⚠️ 여기서 다시 표를 뒤지지 않습니다. 짜는 곳은 studentTarget 한 곳입니다.
    */
   targetBlock?: string | null
+  /**
+   * ★2026-07-29 — 학년·신분에 따른 결. (대표님 지시)
+   *   GRADE_PROMPT 가 이미 문장으로 짜 준 것을 받습니다.
+   *   ⚠️ 초등학생에게 «수능 당일 멘탈» 을 말하지 않게 하는 자리입니다.
+   */
+  gradeBlock?: string | null
+  /** 나이와 고른 학년이 어긋나는가 — 어긋나면 학년을 따르라고 알린다 */
+  gradeMismatch?: boolean
 }
 
 export function buildExamPrompt(v: BuildExamPromptArgs): string {
@@ -139,7 +147,12 @@ ${formBlock ? `\n[손님이 고른 것 — 반드시 반영하세요]\n${formBlo
     ${BAN}
 · «합격» 은 오직 시험 합격을 뜻합니다. 일자리 이야기가 아닙니다.
 · 부모가 함께 읽습니다. 성적이나 형편을 탓하는 말로 들리지 않게 하세요.
-` : `
+${v.gradeBlock ? `
+[★학년·신분에 맞춰]
+${v.gradeBlock}${v.gradeMismatch ? `
+· ⚠️ 만 나이와 고른 학년이 어긋납니다. **손님이 고른 학년을 따르세요.**
+  조기 입학·유예·검정고시 등 사정이 있을 수 있습니다. 나이를 들먹이지 마세요.` : ''}
+` : ''}` : `
 [★이 손님은 «성인»입니다]
 · 대기업·공기업·공무원 시험, 승진, 전문 자격, 이직, 면접, 커리어 관리를 중심으로 쓰세요.
 · 입시·내신·수시정시 같은 학생 이야기는 쓰지 마세요.

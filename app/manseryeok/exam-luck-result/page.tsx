@@ -27,7 +27,7 @@ import { judgeExamDay } from '@/lib/saju/examLuck/examDay'
 import { buildAllCards } from '@/lib/saju/examLuck/buildCards'
 import { buildExamPrompt, parseExamTongbyeon } from '@/lib/saju/examLuck/buildExamPrompt'
 import { examKindOf, CLOSING, CLOSING_STUDENT } from '@/lib/saju/examLuck/tables/rules'
-import { targetPromptBlock } from '@/lib/saju/examLuck/tables/studentTarget'
+import { targetPromptBlock, GRADE_PROMPT, gradeMismatch } from '@/lib/saju/examLuck/tables/studentTarget'
 import { saveRecord, updateRecordResult, getRecord } from '@/lib/saju/sajuRecords'
 import { calcSeyunList, calcWolunList, type DayunItem } from '@/lib/saju/dayun'
 import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
@@ -60,6 +60,7 @@ function ExamLuckResultInner() {
   const examCategory = sp.get('examCategory') || ''
   const targetType = sp.get('targetType') || ''
   const targetCustomText = sp.get('targetCustomText') || ''
+  const studentGrade = sp.get('studentGrade') || ''
 
   const [calc, setCalc] = useState<PersonCalc | null>(null)
   const [err, setErr] = useState('')
@@ -210,6 +211,11 @@ function ExamLuckResultInner() {
         // ★학생이 고른 목표 — 학생일 때만 실립니다
         targetBlock: target === 'student'
           ? targetPromptBlock(examCategory, targetType, targetCustomText) : null,
+        // ★학년·신분 — 초등학생에게 «수능 멘탈» 을 말하지 않게 하는 자리
+        gradeBlock: target === 'student' && studentGrade
+          ? GRADE_PROMPT[studentGrade as keyof typeof GRADE_PROMPT] ?? null : null,
+        gradeMismatch: target === 'student'
+          ? gradeMismatch(exactAge(calc.solarYear, calc.solarMonth, calc.solarDay), studentGrade) : false,
       })
       let acc = ''
       try {

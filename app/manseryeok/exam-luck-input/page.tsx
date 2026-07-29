@@ -18,7 +18,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { exactAge } from '@/lib/saju/ageDayun'
 // ★2026-07-27 — 손님이 시험 종류를 고르면 교재 230쪽 짝에 따라 볼 십신이 정해진다.
 import { EXAM_KINDS } from '@/lib/saju/examLuck/tables/rules'
-import { EXAM_CATEGORIES, TARGETS } from '@/lib/saju/examLuck/tables/studentTarget'
+import { EXAM_CATEGORIES, TARGETS, STUDENT_GRADES } from '@/lib/saju/examLuck/tables/studentTarget'
 
 const ACCENT = '#c85a8c'
 const SOFT = '#f7e6ee'
@@ -52,6 +52,8 @@ function ExamLuckInputInner() {
    *   [왜] «어디를 목표로 하는지» 를 알면 그 자리에 쓰이는 힘을 짚어 줄 수 있습니다.
    *   ⚠️ 학생일 때만 씁니다. 성인에게는 뜻이 안 맞습니다.
    */
+  /** ★2026-07-29 — 학년·신분. 같은 학생이라도 초등과 N수생은 결이 완전히 다릅니다. */
+  const [studentGrade, setStudentGrade] = useState<string>('')
   const [examCategory, setExamCategory] = useState<string>('')
   const [targetType, setTargetType] = useState<string>('')
   const [targetCustomText, setTargetCustomText] = useState<string>('')
@@ -65,11 +67,12 @@ function ExamLuckInputInner() {
    *   ⚠️ 필수로 막으면 손님이 떠날 수도 있습니다. 그래서 **모를 때 고를 길**을 함께 둡니다.
    *     날짜는 [상반기]·[하반기]·[연말] 단추로, 목표는 «그 밖의 시험» 으로.
    */
+  const gradeOk = target !== 'student' || !!studentGrade
   const targetOk = target === 'student'
     ? !!examCategory && !!targetType && (targetType !== 'custom' || !!targetCustomText.trim())
     : !!examKind
   const dateOk = !!examDate
-  const canGo = targetOk && dateOk
+  const canGo = gradeOk && targetOk && dateOk
 
   /** 모르는 손님을 위한 빠른 날짜 — 그 달의 대표 하루 */
   const quickDates = useMemo(() => {
@@ -93,6 +96,7 @@ function ExamLuckInputInner() {
     if (examKind) p.set('examKind', examKind)
     if (examDate) p.set('examDate', examDate)
     // ★학생 목표 — 학생일 때만 싣는다
+    if (target === 'student' && studentGrade) p.set('studentGrade', studentGrade)
     if (target === 'student' && examCategory) {
       p.set('examCategory', examCategory)
       if (targetType) p.set('targetType', targetType)
@@ -101,7 +105,7 @@ function ExamLuckInputInner() {
       }
     }
     return p.toString()
-  }, [sp, kind, target, examKind, examDate, examCategory, targetType, targetCustomText])
+  }, [sp, kind, target, examKind, examDate, studentGrade, examCategory, targetType, targetCustomText])
 
   const kinds: Array<{ key: Kind; title: string; sub: string }> = [
     { key: 'exam', title: '시험 · 합격운', sub: '입시 · 자격증 · 공무원 시험을 봅니다' },
@@ -160,7 +164,24 @@ function ExamLuckInputInner() {
              학생일 때만 뜹니다. 성인에게는 «자사고·수시» 가 뜻이 안 맞습니다. */}
         {target === 'student' && (
           <>
+            {/* ★학년·신분 — 목표보다 «먼저» 묻습니다. 학년에 따라 목표의 결이 달라집니다. */}
             <div style={{ fontSize: 12.5, color: '#8a7063', margin: '18px 2px 9px' }}>
+              학년 · 신분 <span style={{ color: ACCENT, fontWeight: 600 }}>*</span>
+            </div>
+            <select value={studentGrade} onChange={e => setStudentGrade(e.target.value)}
+              style={{
+                width: '100%', padding: '13px 14px', borderRadius: 12, marginBottom: 4,
+                background: CARD,
+                border: studentGrade ? `0.5px solid ${LINE}` : `1.5px solid ${ACCENT}55`,
+                color: '#3a2e28', fontSize: 14, fontFamily: 'inherit', appearance: 'none',
+              }}>
+              {STUDENT_GRADES.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
+            </select>
+            <div style={{ fontSize: 11.5, color: '#8a7063', lineHeight: 1.7, margin: '4px 2px 4px' }}>
+              * 같은 학생이라도 학년에 따라 필요한 이야기가 달라집니다.
+            </div>
+
+            <div style={{ fontSize: 12.5, color: '#8a7063', margin: '16px 2px 9px' }}>
               어디를 목표로 하나요? <span style={{ color: ACCENT, fontWeight: 600 }}>*</span>
             </div>
             <select
@@ -265,6 +286,7 @@ function ExamLuckInputInner() {
             background: '#fdf4f7', border: `1px solid ${ACCENT}33`,
             fontSize: 11.5, color: '#8c4a63', lineHeight: 1.7,
           }}>
+            {!gradeOk && <div>· 학년·신분을 골라 주세요.</div>}
             {!targetOk && <div>· {target === 'student' ? '가고자 하는 목표' : '목표 시험·직종'}를 골라 주세요.</div>}
             {!dateOk && <div>· 시험(또는 발표) 날짜를 골라 주세요.</div>}
           </div>
