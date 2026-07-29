@@ -25,12 +25,12 @@ import { judgeYears, currentDayunOf } from '@/lib/saju/examLuck/examScore'
 import { judgeJobChangeNatal, judgeJobChangeLuck } from '@/lib/saju/examLuck/jobChange'
 import { judgeExamDay } from '@/lib/saju/examLuck/examDay'
 import { buildAllCards } from '@/lib/saju/examLuck/buildCards'
-import { buildExamPrompt, buildExamDetailPrompt, parseExamTongbyeon, type BuildExamPromptArgs } from '@/lib/saju/examLuck/buildExamPrompt'
+import { parseExamTongbyeon } from '@/lib/saju/examLuck/buildExamPrompt'
+import { buildSevenPrompt, SEVEN, SEVEN_GROUPS, sevenKeyOf } from '@/lib/saju/examLuck/buildExamSeven'
 import { examKindOf, CLOSING, CLOSING_STUDENT } from '@/lib/saju/examLuck/tables/rules'
-import { targetPromptBlock, GRADE_PROMPT, gradeMismatch, levelTrackBlock, conditionalRules } from '@/lib/saju/examLuck/tables/studentTarget'
+import { GRADE_PROMPT, gradeLabel, levelLabel, trackOf, categoryLabel, targetOf } from '@/lib/saju/examLuck/tables/studentTarget'
 import { saveRecord, updateRecordResult, getRecord } from '@/lib/saju/sajuRecords'
 import { calcSeyunList, calcWolunList, type DayunItem } from '@/lib/saju/dayun'
-import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
 import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
 import ExamJudgeCard, { GRADE_STYLE } from './components/ExamJudgeCard'
 import type { ExamCard, ExamInput, ExamTarget, YearLuck } from '@/lib/saju/examLuck/types'
@@ -171,12 +171,6 @@ function ExamLuckResultInner() {
     ].filter(Boolean).join(' · ')
   }, [examDateRaw, calc, kind])
 
-  /** 오행 점수 — 프롬프트 재료용 */
-  const ohaengScore = useMemo(
-    () => (calc?.saju?.length ? calcSimsanOhaeng(calc.saju, calc.solarMonth, calc.solarDay, calc.hourBranch) : null),
-    [calc],
-  )
-
   // ── ④ 판정을 먼저 저장한다 (교훈 AQ) ──────────────────────
   useEffect(() => {
     if (!calc || !cards.length || recordId || savedRef.current) return
@@ -204,111 +198,79 @@ function ExamLuckResultInner() {
       //   [무엇이 문제였나] kind·examKind·examDate 가 URL 에는 있는데
       //     여기서 안 넘겨 프롬프트가 못 봤습니다. 그래서 학생에게도
       //     공무원·이직 이야기가 나갔습니다. 폼과 리포트가 끊겨 있던 자리입니다.
-      const promptArgs: BuildExamPromptArgs = {
+      // ★2026-07-29 — 입시 전문 «7대 카테고리» 로 다시 짰습니다. (대표님 기획)
+      //
+      //   [왜 세 번 나눠 부르나] 한 번에 여러 갈래를 시키면 AI 가 앞 두셋만 쓰고 뒤를 안 씁니다.
+      //     여섯 대목 한 번 → 두셋만 · 세 대목 한 번 → 첫 하나만.
+      //     프롬프트를 네 번 다듬어도 같은 자리에서 실패했습니다.
+      //   → 일곱을 «2+2+3» 으로 나눕니다. 한 묶음이 둘셋이면 다 씁니다.
+      //   ⚠️ 세 묶음을 «나란히» 부릅니다. 차례로 부르면 세 배 걸립니다.
+      const sevenArgs = {
         name: person.name, gender: person.gender,
         age: exactAge(calc.solarYear, calc.solarMonth, calc.solarDay),
-        target, cards, hourUnknown: person.hour === '모름',
-        saju: calc.saju, ohaengScore: ohaengScore ?? undefined,
-        kind, examKind, examDate: examDateRaw || null,
-        examDayNote: examDayForPrompt,
-        // ★학생이 고른 목표 — 학생일 때만 실립니다
-        targetBlock: target === 'student'
-          ? targetPromptBlock(examCategory, targetType, targetCustomText) : null,
-        // ★학년·신분 — 초등학생에게 «수능 멘탈» 을 말하지 않게 하는 자리
+        target, cards, saju: calc.saju, hourUnknown: person.hour === '모름',
+        studentGrade: studentGrade ? gradeLabel(studentGrade) : null,
         gradeBlock: target === 'student' && studentGrade
           ? GRADE_PROMPT[studentGrade as keyof typeof GRADE_PROMPT] ?? null : null,
-        gradeMismatch: target === 'student'
-          ? gradeMismatch(exactAge(calc.solarYear, calc.solarMonth, calc.solarDay), studentGrade) : false,
-        // ★고1 이상에게만 물은 것 — 없으면 빈 문자열이라 안 실립니다
-        levelTrack: target === 'student' ? levelTrackBlock(gradeLevel, trackSel) : null,
-        // ★조건이 겹칠 때만 붙는 지시 — «이 사람만의» 문장을 만드는 자리
-        conditional: target === 'student'
-          ? conditionalRules({
-              grade: studentGrade, level: gradeLevel, track: trackSel,
-              category: examCategory, target: targetType,
-              year: thisYear, name: person.name || '이분',
-            })
-          : null,
+        scoreRange: gradeLevel ? levelLabel(gradeLevel) : null,
+        targetMajor: trackSel ? trackOf(trackSel)?.label ?? null : null,
+        targetType: examCategory ? categoryLabel(examCategory) : null,
+        targetAcademic: targetType === 'custom'
+          ? (targetCustomText || null)
+          : (targetOf(examCategory, targetType)?.label ?? null),
+        examDate: examDateRaw || null,
+        examDayNote: examDayForPrompt,
+        year: thisYear,
       }
-      const systemPrompt = buildExamPrompt(promptArgs)
-      let acc = ''
-      try {
-        const res = await fetch('/api/tongbyeon', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ systemPrompt, premium: true }),
-        })
-        if (!res.ok || !res.body) { setTongState('failed'); return }
-        const reader = res.body.getReader()
-        const decoder = new TextDecoder()
-        let buf = ''
-        const take = (line: string) => {
-          if (!line.startsWith('data: ')) return
-          const d = line.slice(6)
-          if (d === '[DONE]') return
-          try {
-            const parsed = JSON.parse(d)
-            if (parsed.text) { acc += parsed.text; if (!cancelled) setTong(acc) }
-          } catch { /* 부서진 줄은 흘려보낸다 */ }
-        }
-        for (;;) {
-          const { done, value } = await reader.read()
-          if (done) break
-          buf += decoder.decode(value, { stream: true })
-          const ls = buf.split('\n')
-          buf = ls.pop() ?? ''
-          for (const line of ls) take(line)
-        }
-        buf += decoder.decode()
-        if (buf.trim()) take(buf.trim())
-        if (cancelled) return
 
-        // ★2026-07-29 — 뒤쪽 세 대목을 «두 번째로» 부릅니다. (대표님 지시)
-        //
-        //   [왜 나눴나] 한 번에 여섯 대목을 시키면 AI 가 앞을 길게 쓰고 뒤를 흐지부지 맺습니다.
-        //     「시험 날짜와 실전 준비」·「어떤 시험에 힘이 실리나」·「수시와 정시」 셋이
-        //     계속 안 써져서, 프롬프트를 네 번 고쳐도 같은 자리에서 실패했습니다.
-        //     → 프롬프트로는 못 고칩니다. 일을 나눠야 합니다.
-        //   ⚠️ 첫 호출이 실패해도 이건 따로 돕니다. 둘 다 실패해야 카드가 빕니다.
-        const detailPrompt = buildExamDetailPrompt(promptArgs)
-        if (detailPrompt) {
-          try {
-            const r2 = await fetch('/api/tongbyeon', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ systemPrompt: detailPrompt, premium: true }),
-            })
-            if (r2.ok && r2.body) {
-              const rd = r2.body.getReader()
-              const dec = new TextDecoder()
-              let b2 = ''
-              let acc2 = ''
-              const take2 = (line: string) => {
-                if (!line.startsWith('data: ')) return
-                const d = line.slice(6)
-                if (d === '[DONE]') return
-                try {
-                  const j = JSON.parse(d)
-                  if (j.text) { acc2 += j.text; if (!cancelled) setTong(acc + '\n\n' + acc2) }
-                } catch { /* 부서진 줄은 흘려보낸다 */ }
-              }
-              for (;;) {
-                const { done, value } = await rd.read()
-                if (done) break
-                b2 += dec.decode(value, { stream: true })
-                const ls2 = b2.split('\n')
-                b2 = ls2.pop() ?? ''
-                for (const l of ls2) take2(l)
-              }
-              b2 += dec.decode()
-              if (b2.trim()) take2(b2.trim())
-              if (acc2.trim()) acc = acc + '\n\n' + acc2
-            }
-          } catch (e) {
-            // ★두 번째가 실패해도 첫 호출 결과는 살립니다.
-            console.error('합격운 상세 통변 실패', e)
+      /** 한 묶음을 받아 온다 — 실패해도 다른 묶음은 살린다 */
+      const runGroup = async (g: typeof SEVEN_GROUPS[number]): Promise<string> => {
+        const sp = buildSevenPrompt(sevenArgs, g)
+        if (!sp) return ''
+        try {
+          const r = await fetch('/api/tongbyeon', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ systemPrompt: sp, premium: true }),
+          })
+          if (!r.ok || !r.body) return ''
+          const rd = r.body.getReader()
+          const dec = new TextDecoder()
+          let buf2 = ''
+          let out = ''
+          const take2 = (line: string) => {
+            if (!line.startsWith('data: ')) return
+            const d = line.slice(6)
+            if (d === '[DONE]') return
+            try { const j = JSON.parse(d); if (j.text) out += j.text } catch { /* 부서진 줄 */ }
           }
+          for (;;) {
+            const { done, value } = await rd.read()
+            if (done) break
+            buf2 += dec.decode(value, { stream: true })
+            const ls2 = buf2.split('\n')
+            buf2 = ls2.pop() ?? ''
+            for (const l of ls2) take2(l)
+          }
+          buf2 += dec.decode()
+          if (buf2.trim()) take2(buf2.trim())
+          return out
+        } catch (e) {
+          console.error('합격운 묶음 실패', g, e)
+          return ''
         }
+      }
 
+      // ★나란히 부르고, 돌아오는 대로 차례를 맞춰 이어 붙인다
+      try {
+        const parts: string[] = ['', '', '']
+        await Promise.all(SEVEN_GROUPS.map(async (g, i) => {
+          parts[i] = await runGroup(g)
+          if (!cancelled) setTong(parts.filter(Boolean).join('\n\n'))
+        }))
+        const acc = parts.filter(Boolean).join('\n\n')
+        if (!acc.trim()) { if (!cancelled) setTongState('failed'); return }
         if (cancelled) return
+        setTong(acc)
         setTongState('done')
 
         for (let i = 0; i < 10 && !savedIdRef.current; i++) {
@@ -320,7 +282,10 @@ function ExamLuckResultInner() {
       }
     })()
     return () => { cancelled = true }
-  }, [calc, cards, recordId, person, target])
+    // ★2026-07-29 — 폼에서 고른 값이 바뀌면 통변을 다시 받아야 합니다.
+    //   빠뜨리면 «학년을 바꿨는데 리포트는 그대로» 가 됩니다.
+  }, [calc, cards, recordId, person, target, studentGrade, gradeLevel, trackSel,
+      examCategory, targetType, targetCustomText, examDateRaw, examDayForPrompt, thisYear])
 
   // ── ⑥ 다시보기 — 저장본 불러오기 ──────────────────────────
   useEffect(() => {
@@ -335,6 +300,20 @@ function ExamLuckResultInner() {
   }, [recordId])
 
   const parsed = useMemo(() => (tong ? parseExamTongbyeon(tong) : null), [tong])
+  /**
+   * ★2026-07-29 — 통변을 일곱 갈래로 가른다.
+   *   parseExamTongbyeon 은 ■ 로 자르기만 합니다. 갈래 열쇠는 sevenKeyOf 가 붙입니다.
+   *   ⚠️ AI 가 제목을 조금 바꿔 써도 낱말로 잡습니다. 못 잡으면 그 갈래는 안 그립니다.
+   */
+  const sevenBody = useMemo(() => {
+    const out: Record<string, string> = {}
+    if (!parsed) return out
+    for (const [title, body] of Object.entries(parsed.byTitle)) {
+      const k = sevenKeyOf(title)
+      if (k && body.trim()) out[k] = body
+    }
+    return out
+  }, [parsed])
   const kindLabel = examKindOf(examKind)?.label
 
   // ★훅은 여기까지. 아래부터 조기 return.
@@ -402,25 +381,62 @@ function ExamLuckResultInner() {
           </div>
         )}
 
-        {cards.map(c => (
-          <div key={c.key}>
-            {/* ★도표를 그 카드 «바로 위» 에 얹습니다.
-                 years  → 연도별 흐름표 (앞으로 몇 해)
-                 examday→ 시험일 표는 카드 안에 이미 있어 따로 안 붙입니다. */}
-            {c.key === 'years' && <YearStrip cards={cards} />}
-            {c.key === 'examday' && examMonth && (
-              <MonthStrip dayStem={dayStemForStrip} year={examMonth.y} mark={examMonth.m} />
-            )}
-            <ExamJudgeCard card={c} tong={parsed?.byKey[c.key]} />
-          </div>
-        ))}
+        {/* ★2026-07-29 — 입시 7대 카테고리로 그립니다. (대표님 기획)
+             [무엇이 바뀌었나] 전에는 «판정 카드» 가 곧 «풀이 카드» 였습니다.
+               판정이 없는 갈래(과목 전략·12개월·지원 전략)는 낼 자리가 없었습니다.
+             → 이제 풀이는 일곱 갈래로 그리고, 판정 카드는 아래 「근거」로 접어 둡니다.
+             ⚠️ 도표는 결이 맞는 갈래 «바로 위» 에 얹습니다. (샌드위치)
+                subject → 연도별 흐름표 · dday → 달별 흐름표 */}
+        {SEVEN.map(sec => {
+          const body = sevenBody[sec.key]
+          if (!body) return null
+          return (
+            <div key={sec.key}>
+              {sec.key === 'subject' && <YearStrip cards={cards} />}
+              {sec.key === 'dday' && examMonth && (
+                <MonthStrip dayStem={dayStemForStrip} year={examMonth.y} mark={examMonth.m} />
+              )}
+              <ExamJudgeCard
+                card={{ key: sec.key, title: sec.title, lines: [], reasons: [] }}
+                tong={body}
+              />
+            </div>
+          )
+        })}
+
+        {/* ★판정 카드 — 위 풀이의 «근거» 로 접어 둡니다.
+             지우지 않았습니다. 상담사분들과 손님이 «왜 그런가» 를 볼 자리입니다. */}
+        {cards.length > 0 && (
+          <details style={{
+            background: CARD, border: `0.5px solid ${LINE}`, borderRadius: 14,
+            padding: '12px 14px', marginBottom: 12,
+          }}>
+            <summary style={{ fontSize: 12.5, color: '#8a7063', cursor: 'pointer' }}>
+              위 풀이의 근거가 된 판정 보기
+            </summary>
+            <div style={{ marginTop: 10 }}>
+              {cards.map(c => (
+                <div key={c.key} style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: '#5c3a1e', marginBottom: 5 }}>
+                    {c.title}
+                  </div>
+                  {c.lines.map((l, i) => (
+                    <p key={i} style={{ fontSize: 12, color: '#6b5a50', lineHeight: 1.75, margin: '0 0 4px' }}>{l}</p>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
 
         {/* ★2026-07-29 — 따로 두었던 「시험 당일 실전 준비」 블록을 없앴습니다.
              「시험 날짜를 짚어 보면」 카드와 대목이 겹쳐 AI 가 둘 중 하나에만 썼습니다.
              → 그 카드를 「시험 날짜와 실전 준비」로 키우고 실전 전략을 그 안에 담습니다. */}
 
-        {/* 맺는말 */}
-        {parsed?.outro && (
+        {/* 맺는말 — ★7갈래의 「수험생과 부모님께」가 그 자리를 대신합니다.
+             그래도 AI 가 따로 맺는말을 쓰면 여기 뜹니다. 버리지 않기 위해서입니다.
+             ⚠️ mentor 갈래가 잡혔으면 안 그립니다. 두 번 나오면 어색합니다. */}
+        {!sevenBody.mentor && parsed?.outro && (
           <div style={{
             background: CARD, border: `0.5px solid ${LINE}`, borderRadius: 14,
             padding: '15px 16px', marginBottom: 12,
