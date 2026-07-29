@@ -36,7 +36,10 @@ export interface HomeService {
   href: string
   cat: string
   sub: string
-  emoji: string
+  /** ★2026-07-29 — 3D 결의 아이콘. 12지신 동물을 대신합니다. */
+  icon: string
+  /** 타일 그라데이션 [시작, 끝] */
+  grad: [string, string] | string[]
 }
 
 interface Props {
@@ -123,17 +126,33 @@ export default function ServiceSection({
   return (
     <div style={{ padding: '6px 0 20px' }}>
       <style>{`
-        .svcRow { transition: background 0.12s; }
+        /* ★2026-07-29 — 스프링 바운스(터치 시 튕김) · 글로시 결
+           ⚠️ 이 파일은 인라인 스타일 방식이라 Tailwind 클래스를 섞지 않고
+              같은 효과를 CSS 로 냈습니다. active:scale-95 에 해당합니다. */
+        .svcRow { transition: background 0.14s ease; }
         .svcRow:active { background: #f7ece2; }
-        .svcBest { transition: transform 0.12s; }
-        .svcBest:active { transform: scale(0.985); }
+        .svcBest { transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .svcBest:active { transform: scale(0.95); }
+        .svcChip { transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .svcChip:active { transform: scale(0.94); }
+        .svcTile {
+          display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0; position: relative;
+          box-shadow: 0 3px 10px -2px var(--glow, rgba(0,0,0,0.18));
+        }
+        /* 유리 하이라이트 — 타일 위쪽에 얹히는 빛 */
+        .svcTile::after {
+          content: ''; position: absolute; inset: 0; border-radius: inherit;
+          background: linear-gradient(160deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 52%);
+          pointer-events: none;
+        }
         .svcHead:focus-visible, .svcRow:focus-visible, .svcBest:focus-visible,
         .svcChip:focus-visible, .svcPin:focus-visible {
           outline: 2px solid #c8783c; outline-offset: 2px;
         }
         .svcChev { transition: transform 0.18s ease; }
         @media (prefers-reduced-motion: reduce) {
-          .svcRow, .svcBest, .svcChev { transition: none; }
+          .svcRow, .svcBest, .svcChip, .svcChev { transition: none; }
         }
       `}</style>
 
@@ -177,25 +196,33 @@ export default function ServiceSection({
               style={{
                 display: 'flex', alignItems: 'center', gap: '13px',
                 width: '100%', textAlign: 'left', cursor: 'pointer',
-                padding: '14px 14px', borderRadius: '16px',
-                border: `0.5px solid ${s.color}33`,
-                background: `linear-gradient(105deg, ${s.bg} 0%, #FFFBF7 78%)`,
+                padding: '15px 14px', borderRadius: '18px',
+                // ★글래스모피즘 — 반투명 유리 + 흰 테두리 (지시대로)
+                border: '1px solid rgba(255,255,255,0.8)',
+                background: `linear-gradient(120deg, ${s.grad[0]}1f 0%, ${s.grad[1]}1a 48%, rgba(255,255,255,0.72) 100%)`,
+                backdropFilter: 'blur(14px)',
+                WebkitBackdropFilter: 'blur(14px)',
+                boxShadow: `0 6px 20px -8px ${s.grad[0]}59`,
               }}
             >
-              <span style={{
-                width: '52px', height: '52px', borderRadius: '15px', flexShrink: 0,
-                background: '#fffdfb', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: `0.5px solid ${s.color}22`,
-              }}>
-                <span className="zodiacEmoji" style={{ fontSize: '34px', lineHeight: 1 }}>{s.emoji}</span>
+              <span
+                className="svcTile"
+                style={{
+                  width: '54px', height: '54px', borderRadius: '17px',
+                  background: `linear-gradient(140deg, ${s.grad[0]} 0%, ${s.grad[1]} 100%)`,
+                  ['--glow' as string]: `${s.grad[0]}66`,
+                }}
+              >
+                <span style={{ fontSize: '30px', lineHeight: 1, position: 'relative', zIndex: 1 }}>{s.icon}</span>
               </span>
 
               <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ fontSize: '15.5px', fontWeight: 700, color: '#3a2e28' }}>{s.name}</span>
                   <span style={{
-                    fontSize: '9.5px', fontWeight: 700, color: '#fff', background: s.color,
-                    padding: '2px 6px', borderRadius: '20px', letterSpacing: '0.2px',
+                    fontSize: '9.5px', fontWeight: 700, color: '#fff',
+                    background: `linear-gradient(100deg, ${s.grad[0]}, ${s.grad[1]})`,
+                    padding: '2px 7px', borderRadius: '20px', letterSpacing: '0.2px',
                   }}>BEST</span>
                 </span>
                 <span style={{ fontSize: '11.5px', color: '#6b4a33', lineHeight: 1.45 }}>
@@ -203,7 +230,7 @@ export default function ServiceSection({
                 </span>
               </span>
 
-              <span style={{ fontSize: '15px', color: s.color, flexShrink: 0 }}>›</span>
+              <span style={{ fontSize: '15px', color: s.grad[0], flexShrink: 0 }}>›</span>
             </button>
           ))}
         </div>
@@ -223,11 +250,12 @@ export default function ServiceSection({
                 onClick={() => onOpen(s)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '5px',
-                  padding: '7px 11px 7px 8px', borderRadius: '20px', cursor: 'pointer',
-                  background: s.bg, border: `0.5px solid ${s.color}33`,
+                  padding: '7px 12px 7px 9px', borderRadius: '20px', cursor: 'pointer',
+                  background: `linear-gradient(115deg, ${s.grad[0]}26, ${s.grad[1]}1c)`,
+                  border: '1px solid rgba(255,255,255,0.75)',
                 }}
               >
-                <span style={{ fontSize: '15px', lineHeight: 1 }}>{s.emoji}</span>
+                <span style={{ fontSize: '14px', lineHeight: 1 }}>{s.icon}</span>
                 <span style={{ fontSize: '12px', fontWeight: 600, color: '#3a2e28' }}>{s.name}</span>
               </button>
             ))}
@@ -288,7 +316,16 @@ export default function ServiceSection({
                       textAlign: 'left', padding: 0, minWidth: 0,
                     }}
                   >
-                    <span style={{ fontSize: '17px', lineHeight: 1, flexShrink: 0 }}>{g.icon}</span>
+                    <span
+                      className="svcTile"
+                      style={{
+                        width: '40px', height: '40px', borderRadius: '13px',
+                        background: `linear-gradient(140deg, ${s.grad[0]} 0%, ${s.grad[1]} 100%)`,
+                        ['--glow' as string]: `${s.grad[0]}59`,
+                      }}
+                    >
+                      <span style={{ fontSize: '21px', lineHeight: 1, position: 'relative', zIndex: 1 }}>{s.icon}</span>
+                    </span>
                     <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
                       <span style={{ fontSize: '14px', fontWeight: 700, color: '#3a2e28' }}>{s.name}</span>
                       <span style={{ fontSize: '10.5px', color: '#8a6a52' }}>{s.sub}</span>
@@ -370,14 +407,15 @@ export default function ServiceSection({
                               textAlign: 'left', padding: 0, minWidth: 0,
                             }}
                           >
-                            <span style={{
-                              width: '42px', height: '42px', borderRadius: '13px', flexShrink: 0,
-                              background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>
-                              <span
-                                className="zodiacEmoji"
-                                style={{ fontSize: '28px', lineHeight: 1, animationDelay: `${(idx * 0.18).toFixed(2)}s` }}
-                              >{s.emoji}</span>
+                            <span
+                              className="svcTile"
+                              style={{
+                                width: '40px', height: '40px', borderRadius: '13px',
+                                background: `linear-gradient(140deg, ${s.grad[0]} 0%, ${s.grad[1]} 100%)`,
+                                ['--glow' as string]: `${s.grad[0]}59`,
+                              }}
+                            >
+                              <span style={{ fontSize: '21px', lineHeight: 1, position: 'relative', zIndex: 1 }}>{s.icon}</span>
                             </span>
                             <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
                               <span style={{ fontSize: '14px', color: '#3a2e28', fontWeight: 700 }}>{s.name}</span>

@@ -126,38 +126,38 @@ const SLIDES = [
 //   sub  = 리스트 한 줄 설명
 //   bg   = 아이콘 파스텔 배경
 //   icon = SVG 내부 요소 (stroke=color 로 그려짐)
+// ── 10 서비스 ──
+//   ★2026-07-29 — 12지신 동물 이모지를 **전면 제거**했습니다. (대표님 지시)
+//     [왜] 띠 동물 매핑이 올드한 명리 앱 느낌을 만들고 있었습니다.
+//          토스·애플 같은 산뜻한 결로 갑니다.
+//     ⚠️ 앞서 "12지신은 앱의 정체성"이라 판단해 지켰던 것을 대표님 지시로 뒤집었습니다.
+//        되살리시려면 이 표의 icon 만 옛 동물로 되돌리면 됩니다. 다른 코드는 안 봐도 됩니다.
+//
+//   icon = 3D 결의 이모지 · grad = [시작색, 끝색] 타일 그라데이션
+//   ⚠️ color·bg 는 그대로 둡니다. 다른 화면(보관함 배지 등)이 아직 씁니다.
+//   ⚠️ 그라데이션 색은 Tailwind 이름과 짝을 맞춘 실제 hex 입니다.
+//      이 파일은 인라인 스타일로 되어 있어 클래스를 섞지 않았습니다.
 const SERVICES = [
-  // ★2026-07-29 — 사주·대운·연월운세 셋을 하나로 합쳤습니다. (대표님 확정)
-  //   [왜] 손님이 같은 명식을 세 번 조회해야 흐름을 알 수 있었습니다.
-  //        이제 한 번 들어가면 [원국 + 대운 + 세운]을 엮은 리포트가 나옵니다.
-  //   ⚠️ 서비스가 12개 → 10개가 됐습니다. ServiceSection 의 GROUPS 도 함께 고쳤습니다.
-  //   ⚠️ 띠 동물은 사주가 쓰던 🐭를 그대로 물려받습니다.
-  //      🐯(대운)·🐰(연월운세) 자리는 비었습니다. 새 서비스가 생기면 쓰십시오.
-  { name: '내 사주 & 운세', color: '#6e50a0', bg: '#efe6f7', href: '/manseryeok/saju-storage', cat: '사주명리', sub: '원국·10년 흐름·올해를 한 번에', emoji: '🐭' },
-  { name: '내사주그림', color: '#b46e46', bg: '#f5e9df', href: '/manseryeok/mulsang-storage', cat: '사주명리', sub: '사주를 그림으로', emoji: '🐮' },
-  // ★2026-07-24 — 연인궁합·부부궁합을 하나로 합쳤다. (연재쌤 지시)
-  //   심산 궁합론은 아내와 애인을 구분하지 않고 같은 재성으로 본다.
-  //   판정 산식(coupleFilterV1)도 원래 관계를 가리지 않는다.
-  //   부부/연인 구분은 '사람 추가'에서 고른 관계로 자동 판별한다.
-  { name: '궁합',       color: '#c85a6e', bg: '#f7e5e8', href: '/manseryeok/couple-storage', cat: '궁합', sub: '두 사람의 결', emoji: '🐲' },
-  // ★2026-07-24 — 연인궁합 자리를 합격운/취업운으로 바꿨다. (아직 준비 중)
-  { name: '합격운/취업운', color: '#c85a8c', bg: '#f7e6ee', href: '/manseryeok/exam-luck', cat: '기타', sub: '시험과 일자리', emoji: '🐍' },
-  { name: '결혼택일',   color: '#96643c', bg: '#f0e8df', href: '/manseryeok/wedding-timing/wedding-storage', cat: '택일', sub: '좋은 날 잡기', emoji: '🐴' },
-  { name: '출산택일',   color: '#b45a78', bg: '#f6e5eb', href: '/manseryeok/birth-timing/birth-storage', cat: '택일', sub: '아기 맞을 날', emoji: '🐑' },
-  { name: '이사택일',   color: '#967850', bg: '#f0eae0', href: '/manseryeok/moving-timing/moving-storage', cat: '택일', sub: '좋은 이사 날', emoji: '🐔' },
-  { name: '내이름 감정', color: '#5a825a', bg: '#eaf0e6', href: '/manseryeok/naming/diagnosis/storage', cat: '개명', sub: '이름 풀이해 보기', emoji: '🐵' },
-  { name: '타로',       color: '#b45a78', bg: '#f6e5eb', href: '/tarot', cat: '기타', sub: '오늘의 카드', emoji: '🐶' },
-  // ★2026-07-27 — '물어보살' 자리를 진로적성으로 바꿨다. (대표님 지시)
-  //   물어보살은 /manseryeok/ai-chat 으로 가되 파라미터를 하나도 안 넘겨서,
-  //   사주 없이 AI에게 묻는 빈 문이었다. 같은 일을 홈 우하단 [AI 상담] 동그라미
-  //   (AiTalkFab)가 프로필 사주를 실어 보내며 제대로 하고 있으므로 겹쳤다.
-  //   ⚠️ app/manseryeok/ai-chat 폴더는 지우지 말 것.
-  //      음성상담(ai-talk)이 그 안의 useSaju.ts 를 빌려 쓴다.
-  //   색(#785aaa)과 띠(🐷)는 물어보살 것을 그대로 물려받았다.
-  //   ※ 형제 서비스인 '합격운/취업운'(6번째)과 떨어져 있다.
-  //     나란히 놓으려면 이 배열의 줄 순서만 바꾸면 된다(연재쌤 확인 후).
-  { name: '진로적성',   color: '#785aaa', bg: '#efeaf7', href: '/manseryeok/career', cat: '적성', sub: '내 길과 그릇', emoji: '🐷' },
+  // 🔮 통합 리포트 — 은은한 후광 (indigo-500 → violet-400)
+  { name: '내 사주 & 운세', color: '#6e50a0', bg: '#efe6f7', href: '/manseryeok/saju-storage', cat: '사주명리', sub: '원국·10년 흐름·올해를 한 번에', icon: '🔮', grad: ['#6366f1', '#a78bfa'] },
+  // 🎨 BEST — rose-400 → amber-300
+  { name: '내사주그림', color: '#b46e46', bg: '#f5e9df', href: '/manseryeok/mulsang-storage', cat: '사주명리', sub: '사주를 그림으로', icon: '🎨', grad: ['#fb7185', '#fcd34d'] },
+  // 💖 rose-400 → pink-300
+  { name: '궁합',       color: '#c85a6e', bg: '#f7e5e8', href: '/manseryeok/couple-storage', cat: '궁합', sub: '두 사람의 결', icon: '💖', grad: ['#fb7185', '#f9a8d4'] },
+  // 🎯 emerald-400 → teal-300
+  { name: '합격운/취업운', color: '#c85a8c', bg: '#f7e6ee', href: '/manseryeok/exam-luck', cat: '기타', sub: '시험과 일자리', icon: '🎯', grad: ['#34d399', '#5eead4'] },
+  // ★택일 셋은 지시에 없어 제가 골랐습니다. 바꾸실 자리입니다.
+  { name: '결혼택일',   color: '#96643c', bg: '#f0e8df', href: '/manseryeok/wedding-timing/wedding-storage', cat: '택일', sub: '좋은 날 잡기', icon: '💍', grad: ['#fbbf24', '#fda4af'] },
+  { name: '출산택일',   color: '#b45a78', bg: '#f6e5eb', href: '/manseryeok/birth-timing/birth-storage', cat: '택일', sub: '아기 맞을 날', icon: '🍼', grad: ['#f9a8d4', '#fed7aa'] },
+  { name: '이사택일',   color: '#967850', bg: '#f0eae0', href: '/manseryeok/moving-timing/moving-storage', cat: '택일', sub: '좋은 이사 날', icon: '🏡', grad: ['#a3e635', '#6ee7b7'] },
+  // 📇 sky-400 → cyan-300
+  { name: '내이름 감정', color: '#5a825a', bg: '#eaf0e6', href: '/manseryeok/naming/diagnosis/storage', cat: '개명', sub: '이름 풀이해 보기', icon: '📇', grad: ['#38bdf8', '#67e8f9'] },
+  // 🃏 violet-500 → fuchsia-400
+  { name: '타로',       color: '#b45a78', bg: '#f6e5eb', href: '/tarot', cat: '기타', sub: '오늘의 카드', icon: '🃏', grad: ['#8b5cf6', '#e879f9'] },
+  // 🧭 BEST — purple-500 → pink-400
+  { name: '진로적성',   color: '#785aaa', bg: '#efeaf7', href: '/manseryeok/career', cat: '적성', sub: '내 길과 그릇', icon: '🧭', grad: ['#a855f7', '#f472b6'] },
 ]
+
 // ★2026-07-29 — `type Service` 와 `COLLAPSED_COUNT` 를 걷어냈습니다.
 //   서비스 목록이 [접기/전체보기] 한 줄에서 갈래 여닫이로 바뀌어 접는 줄 수가 없어졌고,
 //   목록의 타입은 components/ServiceSection 의 `HomeService` 가 들고 있습니다.
@@ -238,9 +238,8 @@ export default function HomeNew() {
     }}>
 
       <style>{`
-        @keyframes zfloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
-        .zodiacEmoji { display: inline-block; animation: zfloat 2.6s ease-in-out infinite; }
-        @media (prefers-reduced-motion: reduce) { .zodiacEmoji { animation: none; } }
+        /* ★2026-07-29 — 띠 동물 둥실 애니메이션(zfloat·zodiacEmoji)을 걷어냈습니다.
+           아이콘이 3D 결로 바뀌면서 흔들 이유가 없어졌습니다. */
         @keyframes mcCupSway { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
         @keyframes mcSteamA { 0% { opacity:0; transform:translateY(0) scaleX(1);} 15%{opacity:0.6;} 50%{opacity:0.4; transform:translateY(-9px) scaleX(1.3);} 100%{opacity:0; transform:translateY(-18px) scaleX(0.8);} }
         @keyframes mcSteamB { 0% { opacity:0; transform:translateY(0) scaleX(1);} 20%{opacity:0.5;} 55%{opacity:0.3; transform:translateY(-10px) scaleX(1.4);} 100%{opacity:0; transform:translateY(-20px) scaleX(0.7);} }

@@ -80,6 +80,24 @@ import {
  */
 export const INTEGRATED_TOTAL_CAP = 2000
 
+/**
+ * ★2026-07-29 — 서비스별 «총량» 상한. (대표님 지시 — 타 서비스도 같은 방식으로)
+ *
+ *   [무엇이 문제였나]
+ *     `SERVICE_BUDGET` 은 pick() 이 고른 «줄»에만 걸립니다.
+ *     블록 제목과 buildMyeongsikFeatures(12운성·신살·귀인·공망)는 세지 않습니다.
+ *     실측 — 사주보기가 상한 1,600 인데 실제로는 3,135~3,538자를 보내고 있었습니다.
+ *            선언된 값의 **2.2배**입니다.
+ *
+ *   [어떻게 잡았나]
+ *     나가는 문자열을 직접 재서 이 상한 안에 들어오게 자릅니다.
+ *     ⚠️ 이 숫자는 교재가 아니라 우리가 정한 것입니다.
+ */
+export const TOTAL_CAP: Record<'saju' | 'integrated', number> = {
+  saju: 2000,
+  integrated: INTEGRATED_TOTAL_CAP,
+}
+
 export interface PillarInput { pillar: string; stem: string; branch: string }
 
 /** 지금 흐르는 대운 한 칸 — 화면이 /api/dayun 으로 받아 넘긴다 */
@@ -404,7 +422,10 @@ export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
         arr?.length ? `${title}\n${arr.map(t => `- ${t}`).join('\n')}` : ''
       const hapChung = [...(B['충'] ?? []), ...(B['합'] ?? []), ...(B['형파해'] ?? [])]
       const blocks: Array<[string, string]> = [
-        ['명식특징', buildMyeongsikFeatures(a.saju, a.dayStem, !!a.integrated)],
+        // ★2026-07-29 — 짧은 판을 **모든 서비스에** 씁니다. (대표님 지시)
+        //   긴 판은 1,223자로 총량의 6할을 혼자 먹습니다.
+        //   이름은 살아남으므로 "제 귀인이 뭔가요" 에는 계속 답할 수 있습니다.
+        ['명식특징', buildMyeongsikFeatures(a.saju, a.dayStem, true)],
         ['지지특징', blk('[지지가 말하는 것 — 교재 48쪽·50~73쪽. 월지와 일지가 가장 세다]', B['지지특징'])],
         ['병존', blk('[병존 — 교재 74~77쪽. 같은 글자가 나란히 있어 기운이 짙다]', B['병존'])],
         // ★통합 모드에서는 이 줄을 넣지 않는다.
@@ -419,11 +440,7 @@ export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
         ['인생단계', blk('[타고난 결의 단계 — 교재 25쪽]', B['인생단계'])],
         ['문이과', blk('[문과·이과 — 교재 25쪽]', B['문이과'])],
       ]
-      if (!a.integrated) {
-        return blocks.map(([, t]) => t).filter(Boolean).join('\n\n') || undefined
-      }
-
-      // ── 통합 모드 총량 조절 ────────────────────────────────────────
+      // ── 총량 조절 ────────────────────────────────────────────────
       //
       //   [무엇을 몰랐나]
       //     SERVICE_BUDGET 은 pick() 이 고른 «줄»에만 걸립니다.
@@ -435,9 +452,12 @@ export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
       //     대표님 지시 1,800~2,000자에 맞춰 **흐름 재료가 먼저 자리를 잡고**
       //     남는 만큼만 원국 계열을 싣습니다. 흐름은 통합 리포트의 알맹이라 안 자릅니다.
       //     ★자를 차례 — 뒤쪽이 먼저 잘립니다. 긴 소개 블록(명식특징·지지특징)이 뒤입니다.
-      const KEEP = ['일간', '오행', '명식특징', '육친', '합충', '살',
+      //   ★자를 차례 — 뒤쪽이 먼저 잘립니다.
+      //     '운어울림'은 사주보기에서만 값이 있습니다(통합은 unseBlock 이 대신함).
+      //     흐름 이야기라 앞쪽에 둡니다.
+      const KEEP = ['일간', '오행', '운어울림', '명식특징', '육친', '합충', '살',
                     '인생단계', '문이과', '병존', '지지특징']
-      const room = INTEGRATED_TOTAL_CAP - (unse?.chars ?? 0)
+      const room = (a.integrated ? TOTAL_CAP.integrated : TOTAL_CAP.saju) - (unse?.chars ?? 0)
       const out: string[] = []
       let used = 0
       for (const key of KEEP) {
