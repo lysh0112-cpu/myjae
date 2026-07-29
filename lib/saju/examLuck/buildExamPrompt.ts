@@ -325,10 +325,30 @@ const OUTRO_WORDS = ['맺는말', '맺음말', '마무리', '마치며', '끝으
 const INTRO_WORDS = ['여는말', '들어가며', '시작하며']
 
 /** 제목 → 카드 key */
+/**
+ * ★2026-07-29 — 제목을 «지어냈을 때» 도 잡는 낱말 그물. (대표님 지적)
+ *   AI 가 「타고난 공부 결」 처럼 없는 제목을 써서 카드에 안 붙고 맨 아래로 갔습니다.
+ *   ⚠️ 차례가 중요합니다. 위에 있는 것부터 맞춰 봅니다.
+ */
+const TITLE_HINTS: Array<[string, string[]]> = [
+  ['examday', ['시험 날짜', '시험일', '당일', '실전 준비', 'D-Day']],
+  ['examkind', ['어떤 시험', '어떤 공부', '힘이 실리', '시험 유형', '공부 결', '학습 성향', '공부 스타일']],
+  ['susi', ['수시', '정시', '전형']],
+  ['highschool', ['고교', '고등학교 선택']],
+  ['years', ['앞으로', '흐름', '연표']],
+  ['dayun', ['지금의 흐름', '대운']],
+  ['jobchange', ['이직', '직업 변동']],
+]
+
 export function keyOfTitle(title: string): string | null {
   const t = stripLead(title).replace(/^■\s*/, '').trim()
   // ★정식 제목을 먼저 맞춘다. 뒤에 덧말이 붙어도 잡힌다. (30부 2장)
   for (const o of ORDER) if (t.startsWith(o.title)) return o.key
+  // ★그래도 못 잡으면 낱말로 — 지어낸 제목을 버리지 않기 위해서
+  const n = t.replace(/\s/g, '')
+  for (const [key, words] of TITLE_HINTS) {
+    if (words.some(w => n.includes(w.replace(/\s/g, '')))) return key
+  }
   // 낱말 검사는 좁은 것부터
   if (t.includes('시험 날짜') || t.includes('시험일')) return 'examday'
   if (t.includes('이직') || t.includes('직업 변동')) return 'jobchange'
@@ -375,10 +395,24 @@ export function parseExamTongbyeon(full: string): ParsedExamTongbyeon {
     const body = b.body.join('\n').trim()
     if (OUTRO_WORDS.some(w => b.title.includes(w))) { outro = body; continue }
     if (INTRO_WORDS.some(w => b.title.includes(w))) { intro.push(body); continue }
-    byTitle[b.title] = body
+    // ★끝이 문장부호가 아니면 마지막 완결 문장까지만. (여는말과 같은 그물)
+    //   AI 가 «자리의 기운(» 에서 멈춘 채 나간 적이 있습니다.
+    const cut = (t: string) => {
+      const x = t.trim()
+      if (!x || /[.!?…”"』」)\]]$/.test(x)) return x
+      const i = Math.max(x.lastIndexOf('.'), x.lastIndexOf('!'), x.lastIndexOf('?'), x.lastIndexOf('…'))
+      // ★잘라 낸 뒤에도 «읽을 만한 길이» 가 남을 때만 자릅니다.
+      //   너무 낮게 잡으면 첫 문장만 남기고 다 버릴 수 있습니다.
+      //   ⚠️ 자를 조각이 «전체의 3분의 1» 을 넘으면 자르지 않습니다.
+      //      그건 끊긴 게 아니라 원래 그런 글일 수 있습니다.
+      if (i < 8) return x
+      const dropped = x.length - (i + 1)
+      return dropped <= x.length / 3 ? x.slice(0, i + 1) : x
+    }
+    byTitle[b.title] = cut(body)
     const k = keyOfTitle(b.title)
     // ⑤ 짝 못 찾은 대목을 소리 없이 버리지 않는다 (30부 2장)
-    if (k) byKey[k] = body
+    if (k) byKey[k] = cut(body)
     else orphan.push(`■ ${b.title}\n${body}`)
   }
   if (orphan.length) outro = [outro, ...orphan].filter(Boolean).join('\n\n')
@@ -456,26 +490,31 @@ ${isStudent ? `
 [재료 — 이것만 근거로 쓰세요]
 ${material}
 
-════════════════════════════════════════
-[쓸 대목 — 셋뿐입니다. 각각 넉넉히 쓰세요]
-════════════════════════════════════════
-${plan.map(o => `■ ${o.title} — ${o.len}\n${cardHint(o.key, v)}`).join('\n\n')}
-
 [말투]
 · 존댓말로 다정하되 담담하게. 겁주지 마세요.
 · "불합격"·"떨어진다"·"안 된다" 를 쓰지 마세요.
 · 어려운 한자말은 풀어 쓰세요. (관성 → 자리의 기운, 인성 → 배움의 기운)
 · 재료의 점수·등급 표기를 그대로 옮기지 말고 사람 말로 푸세요.
-
-[형식]
 · 마크다운(#, **, ---)을 쓰지 마세요.
-· 제목은 "■ 제목" 한 줄로 시작하고 줄을 바꿔 본문을 쓰세요.
-· 각 대목마다 아래 셋을 제목 바로 아래에 먼저 쓰세요.
-    [한줄] 가장 하고 싶은 말 한 문장 (스무 자 안팎)
-    [태그] 낱말 · 낱말 · 낱말 (두셋, 쉬운 말로)
-  그리고 본문을 단락으로 나눠 쓰고, 끝에
-    [실천] 지금 바로 해볼 수 있는 일 한 문장
-· ★대괄호까지 그대로 적으세요. 화면이 그것으로 갈라 그립니다.
 
-세 대목만 쓰고 끝내세요. 여는말·맺는말은 쓰지 마세요.`
+════════════════════════════════════════
+★아래 «뼈대» 를 그대로 옮겨 쓰고 괄호 안만 채우세요.
+  ■ 로 시작하는 제목 줄은 **한 글자도 바꾸지 마세요.**
+  제목을 새로 지어내거나, 대목을 더하거나, 빼지 마세요.
+  [한줄]·[태그]·[실천] 도 대괄호까지 그대로 적으세요.
+════════════════════════════════════════
+
+${plan.map(o => `■ ${o.title}
+[한줄] (가장 하고 싶은 말 한 문장. 스무 자 안팎)
+[태그] (낱말 · 낱말 · 낱말 — 두셋, 쉬운 말로)
+
+(본문 ${o.len}. 단락마다 빈 줄로 나눠 쓰세요.)
+${cardHint(o.key, v).replace(/^   /gm, '  ')}
+
+[실천] (지금 바로 해볼 수 있는 일 한 문장)`).join('\n\n')}
+
+════════════════════════════════════════
+· 위 ${plan.length}개 대목만 쓰고 끝내세요. 여는말·맺는말은 쓰지 마세요.
+· 괄호 ( ) 는 채워 넣으라는 뜻입니다. 괄호 자체는 답에 쓰지 마세요.
+· ★문장을 반드시 마침표로 맺으세요. 중간에서 끊지 마세요.`
 }
