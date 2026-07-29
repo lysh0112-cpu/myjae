@@ -27,6 +27,7 @@
 //  ⑤ 이름은 성까지 부른다
 //     궁합에서 "정준호님"이 "준호님"이 되어 누구 이야기인지 헷갈렸다.
 
+import { STATUS_PROMPT, type CareerStatus } from './status'
 import type { CareerCard } from './types'
 // ★2026-07-27 — 교재 48~77쪽 지지 자료를 진로적성 재료에도 넣는다.
 //   ⚠️ 대목(카드)을 새로 만들지 않는다. 이미 있는 카드의 재료에 얹는다.
@@ -46,6 +47,15 @@ export interface CareerPromptInput {
   cards: CareerCard[]
   /** ★2026-07-28 — 오행 점수. 있으면 문이과 비율과 과다·부족 자료를 얹는다 */
   ohaengScore?: Record<string, number>
+  /**
+   * ★2026-07-29 — 지금 신분·직업. (대표님 지시)
+   *   target(학생/성인) 만으로는 취준생과 직장인이 한 덩이라 답이 두루뭉술했습니다.
+   *   AI 가 «누구에게 말하는지» 를 알아야 이직 이야기를 할지 지원 이야기를 할지 갈립니다.
+   */
+  status?: CareerStatus
+  /** ★사주 추정 MBTI 와 실제 MBTI — 성향 이야기를 곁들일 때만 씁니다 */
+  sajuMbti?: string
+  realMbti?: string
 }
 
 /** 화면 묶음과 같은 순서. 통변도 이 순서로 쓴다. (교훈 AS) */
@@ -123,9 +133,23 @@ export function buildCareerPrompt(v: CareerPromptInput): string {
     return `[${o?.title ?? c.title}]\n` + rs.map(r => `- ${r}`).join('\n')
   }).join('\n\n')
 
-  const who = v.target === 'student'
-    ? '학생입니다. 학부모가 함께 읽습니다. 진학과 공부 이야기가 중심입니다.'
-    : '성인입니다. 일하는 자리와 앞으로의 길이 중심입니다.'
+  // ★2026-07-29 — 신분을 알면 그 결로, 모르면 예전처럼 학생/성인으로.
+  const who = v.status
+    ? STATUS_PROMPT[v.status]
+    : v.target === 'student'
+      ? '학생입니다. 학부모가 함께 읽습니다. 진학과 공부 이야기가 중심입니다.'
+      : '성인입니다. 일하는 자리와 앞으로의 길이 중심입니다.'
+
+  /** ★사주 MBTI — 참고로만 쓰라고 못박는다 */
+  const mbtiBlock = v.sajuMbti ? `
+[성향 참고 — 단정하지 말 것]
+· 사주로 추정한 결: ${v.sajuMbti}${v.realMbti ? ` · 본인이 밝힌 실제 성향: ${v.realMbti}` : ''}
+· ★이것은 명리와 다른 체계라 «맞혔다»고 쓰지 마세요. "이런 결에 가깝다" 정도로만 곁들이세요.
+· MBTI 네 글자를 문장마다 반복하지 마세요. 한 번이면 충분합니다.${
+  v.realMbti && v.sajuMbti !== v.realMbti
+    ? '\n· 타고난 결과 실제가 다릅니다. 틀렸다고 하지 말고, 살아오며 길러 낸 결로 읽어 주세요.'
+    : ''
+}` : ''
 
   // ★미성년일 수 있는 자리에서 반드시 지킬 것
   const guard = v.target === 'student'
@@ -147,7 +171,7 @@ export function buildCareerPrompt(v: CareerPromptInput): string {
 [누구를 보는가]
 이름 ${v.name || '이분'} · ${v.gender}자${v.age ? ` · ${v.age}세` : ''}
 ${who}
-명식 ${myeongsik}${v.hourUnknown ? '\n★태어난 시(時)를 모릅니다. 시주를 비워 두고 보았습니다. 시주가 필요한 이야기는 단정하지 마세요.' : ''}
+명식 ${myeongsik}${mbtiBlock}${v.hourUnknown ? '\n★태어난 시(時)를 모릅니다. 시주를 비워 두고 보았습니다. 시주가 필요한 이야기는 단정하지 마세요.' : ''}
 
 [쓰는 법]
 · 존댓말로, 다정하되 담담하게. "~해요"와 "~합니다"를 섞습니다.

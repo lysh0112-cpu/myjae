@@ -17,6 +17,8 @@
 import { Suspense, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ageOf } from '@/lib/saju/career/calcPerson'
+import MbtiSelect from '@/app/manseryeok/components/MbtiSelect'
+import { STATUS_OPTIONS, statusToTarget, type CareerStatus } from '@/lib/saju/career/status'
 
 const ACCENT = '#785aaa'
 const BG = '#FDF6F0'
@@ -32,7 +34,16 @@ function CareerInputInner() {
   const name = sp.get('name') || ''
   const year = sp.get('year') || ''
   const age = useMemo(() => ageOf(year), [year])
-  const [target, setTarget] = useState<Target>(age !== null && age < 20 ? 'student' : 'adult')
+  // ★2026-07-29 — 「학생/성인」 둘에서 «신분·직업 여섯»으로 넓혔습니다. (대표님 지시)
+  //   [왜] 취업준비생과 직장인은 둘 다 '성인'이지만 묻는 것이 다릅니다.
+  //        취준생은 «어디로 들어갈까», 직장인은 «여기 남을까 옮길까» 입니다.
+  //   ⚠️ target(student|adult) 은 없애지 않았습니다. 카드 판정 부품 열 개가
+  //      이미 그 값을 받고 있어, 신분에서 자동으로 뽑아 그대로 넘깁니다.
+  const [status, setStatus] = useState<CareerStatus>(
+    age !== null && age < 20 ? 'middle_high' : 'worker',
+  )
+  const target: Target = statusToTarget(status)
+  const [mbti, setMbti] = useState('')
 
   const query = useMemo(() => {
     const p = new URLSearchParams()
@@ -41,13 +52,12 @@ function CareerInputInner() {
       if (v) p.set(k, v)
     }
     p.set('target', target)
+    p.set('status', status)
+    if (mbti) p.set('mbti', mbti)
     return p.toString()
-  }, [sp, target])
+  }, [sp, target, status, mbti])
 
-  const opts: Array<{ key: Target; title: string; sub: string }> = [
-    { key: 'student', title: '학생이에요', sub: '문·이과와 학과, 고교 선택, 학업운까지 함께 봅니다' },
-    { key: 'adult', title: '성인이에요', sub: '어울리는 직업과 일하는 자리를 중심으로 봅니다' },
-  ]
+
 
   return (
     <main style={{ minHeight: '100vh', background: BG, maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
@@ -64,30 +74,41 @@ function CareerInputInner() {
 
       <div style={{ padding: '22px 16px 0' }}>
         <div style={{ fontSize: 17, fontWeight: 500, color: '#3a2e28', marginBottom: 6 }}>
-          {name ? `${name}님은 어느 쪽인가요?` : '어느 쪽인가요?'}
+          {name ? `${name}님은 지금 어느 쪽인가요?` : '지금 어느 쪽인가요?'}
         </div>
         <div style={{ fontSize: 12.5, color: '#5c3a1e', lineHeight: 1.7, marginBottom: 20 }}>
-          학생과 성인은 보는 것이 다릅니다. 고르시면 그에 맞춰 풀어 드려요.
+          신분에 따라 보는 것이 달라집니다. 학생은 계열·학과를, 성인은 직무와 조직을 중심으로 풀어 드려요.
           {age !== null && <><br />생년으로 보아 {age}세로 잡았습니다. 다르면 바꿔 주세요.</>}
         </div>
 
-        {opts.map(o => {
-          const on = target === o.key
+        {STATUS_OPTIONS.map(o => {
+          const on = status === o.key
           return (
-            <button key={o.key} onClick={() => setTarget(o.key)}
+            <button key={o.key} onClick={() => setStatus(o.key)}
               style={{
-                width: '100%', textAlign: 'left', marginBottom: 10, padding: '16px 16px',
+                width: '100%', textAlign: 'left', marginBottom: 9, padding: '14px 15px',
                 background: on ? '#efeaf7' : CARD,
-                border: on ? `1.5px solid ${ACCENT}` : `0.5px solid ${LINE}`,
+                border: on ? `1.5px solid ${ACCENT}` : `1px solid rgba(120,53,15,0.15)`,
                 borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit',
+                display: 'flex', alignItems: 'center', gap: 11,
               }}>
-              <div style={{ fontSize: 14.5, fontWeight: 500, color: on ? ACCENT : '#3a2e28', marginBottom: 4 }}>
-                {o.title}
-              </div>
-              <div style={{ fontSize: 12, color: '#5c3a1e', lineHeight: 1.6 }}>{o.sub}</div>
+              <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>{o.icon}</span>
+              <span style={{ flex: 1 }}>
+                <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: on ? ACCENT : '#3a2e28' }}>
+                  {o.title}
+                </span>
+                <span style={{ display: 'block', fontSize: 11.5, color: '#5c3a1e', lineHeight: 1.55, marginTop: 3 }}>
+                  {o.sub}
+                </span>
+              </span>
             </button>
           )
         })}
+
+        {/* ★MBTI — 있으면 사주와 견주고, 없으면 사주 추정만 보여 줍니다 */}
+        <div style={{ marginTop: 20 }}>
+          <MbtiSelect value={mbti} onChange={setMbti} accent={ACCENT} />
+        </div>
 
         <button onClick={() => router.push(`/manseryeok/career-result?${query}`)}
           style={{

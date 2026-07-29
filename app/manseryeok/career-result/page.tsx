@@ -22,12 +22,15 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import {
   judgeOhaengGijil, judgeYukchin, judgeGyeokguk,
   judgeSinsal, judgeGyeyeol, judgeSpecial, judgeYongsin, judgeJobs,
-  judgeIlju, judgeJobStructure,
+  judgeIlju, judgeJobStructure, judgeJobFit,
   type CareerCard, type CareerInput,
 } from '@/lib/saju/career'
 import { calcPerson, ageOf, type PersonCalc } from '@/lib/saju/career/calcPerson'
 import { buildCareerPrompt, parseCareerTongbyeon, keyOfTitle } from '@/lib/saju/career'
 import { saveRecord, updateRecordResult } from '@/lib/saju/sajuRecords'
+import { calcSajuMbti, compareMbti } from '@/lib/saju/career/sajuMbti'
+import { type CareerStatus, STATUS_LABEL } from '@/lib/saju/career/status'
+import MbtiCard from './components/MbtiCard'
 import { getGongmang } from '@/lib/saju/gongmang'
 import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
 import CareerJudgeCard from './components/CareerJudgeCard'
@@ -41,7 +44,7 @@ const GROUPS: Array<{ label: string; keys: string[] }> = [
   { label: '', keys: ['special'] },                       // 경고는 맨 위, 제목 없이
   { label: '타고난 결', keys: ['ohaeng_gijil', 'yukchin', 'ilju'] },
   { label: '그릇과 자리', keys: ['gyeokguk', 'sinsal', 'yongsin'] },
-  { label: '어울리는 자리', keys: ['jobstruct', 'gyeyeol', 'jobs'] },
+  { label: '어울리는 자리', keys: ['jobstruct', 'gyeyeol', 'jobfit', 'jobs'] },
 ]
 
 function CareerResultInner() {
@@ -59,6 +62,19 @@ function CareerResultInner() {
     hour: sp.get('hour') || '모름',
   }), [sp])
   const target = (sp.get('target') === 'student' ? 'student' : 'adult') as 'student' | 'adult'
+  // ★2026-07-29 — 신분·직업과 실제 MBTI. (대표님 지시)
+  //   status 가 없으면 target 으로 미뤄 잡습니다. 예전 링크가 깨지지 않게.
+  const status = (sp.get('status') as CareerStatus | null)
+    ?? (target === 'student' ? 'middle_high' : 'worker')
+  const realMbti = (sp.get('mbti') || '').toUpperCase()
+  /** 입력 화면으로 되돌아갈 때 쓸 쿼리 — 사람 정보는 그대로 들고 간다 */
+  const backQuery = useMemo(() => {
+    const p = new URLSearchParams()
+    for (const k of ['year', 'month', 'day', 'gender', 'calType', 'leapMonth', 'hour', 'name']) {
+      const v = sp.get(k); if (v) p.set(k, v)
+    }
+    return p.toString()
+  }, [sp])
   const recordId = sp.get('recordId') || ''
 
   const [calc, setCalc] = useState<PersonCalc | null>(null)
@@ -102,10 +118,24 @@ function CareerResultInner() {
       judgeSinsal(input),
       judgeYongsin(input),
       judgeJobStructure(input),
+      // ★학생이면 「계열과 학과」, 성인이면 「잘 맞는 직무 & 조직 성향」.
+      //   둘 중 하나만 lines 를 채우고 나머지는 빈 카드를 돌려줍니다.
+      //   빈 카드는 아래 GROUPS 렌더에서 걸러집니다.
       judgeGyeyeol(input),
+      judgeJobFit(input),
       judgeJobs(input),
     ].filter(Boolean) as CareerCard[]
   }, [calc, target])
+
+  // ★사주 추정 MBTI — 카드 판정과 별개로 한 번만 잰다
+  const sajuMbti = useMemo(
+    () => (calc ? calcSajuMbti(calc.saju, calc.solarMonth, calc.solarDay, calc.hourBranch) : null),
+    [calc],
+  )
+  const mbtiCmp = useMemo(
+    () => (sajuMbti && realMbti ? compareMbti(sajuMbti, realMbti) : null),
+    [sajuMbti, realMbti],
+  )
 
   // 기록 남기기 — 다시보기로 들어온 경우(recordId)에는 저장하지 않는다
   useEffect(() => {
@@ -137,6 +167,10 @@ function CareerResultInner() {
       const systemPrompt = buildCareerPrompt({
         name: person.name, gender: person.gender, age: ageOf(person.year),
         target, saju: calc.saju, hourUnknown: calc.hourUnknown, cards,
+        // ★2026-07-29 — 신분과 MBTI 를 실어 보냅니다. (대표님 지시)
+        status,
+        sajuMbti: sajuMbti?.code,
+        realMbti: realMbti || undefined,
       })
       let acc = ''
       try {
@@ -194,7 +228,7 @@ function CareerResultInner() {
       }
     })()
     return () => { cancelled = true }
-  }, [calc, cards, recordId, person, target])
+  }, [calc, cards, recordId, person, target, status, sajuMbti?.code, realMbti])
 
   // 다시보기 — 저장해 둔 풀이 불러오기
   useEffect(() => {
@@ -294,8 +328,37 @@ function CareerResultInner() {
               }}>{tongIntro}</div>
             )}
 
+            {/* ★2026-07-29 — 어느 신분으로 본 리포트인지 밝힙니다.
+                손님이 잘못 골랐을 때 바로 알아채고 되돌아갈 수 있어야 합니다. */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap',
+              margin: '2px 2px 10px',
+            }}>
+              <span style={{
+                fontSize: 11, color: '#4a3b60', background: '#f3eefa',
+                border: '1px solid #785aaa26', padding: '4px 10px', borderRadius: 20, fontWeight: 600,
+              }}>{STATUS_LABEL[status]} 기준</span>
+              {realMbti && (
+                <span style={{
+                  fontSize: 11, color: '#64748b', background: '#f8fafc',
+                  border: '1px solid rgba(120,53,15,0.11)', padding: '4px 10px', borderRadius: 20,
+                }}>MBTI {realMbti}</span>
+              )}
+              <button
+                onClick={() => router.push(`/manseryeok/career-input?${backQuery}`)}
+                style={{
+                  fontSize: 11, color: '#94a3b8', background: 'none', border: 'none',
+                  cursor: 'pointer', textDecoration: 'underline', padding: '4px 2px',
+                }}
+              >바꾸기</button>
+            </div>
+
             {GROUPS.map(g => {
-              const list = g.keys.map(byKey).filter(Boolean) as CareerCard[]
+              // ★2026-07-29 — lines 가 빈 카드는 안 그립니다.
+              //   「계열과 학과」(학생)와 「직무 & 조직」(성인)이 서로 자리를 바꾸는데,
+              //   해당 없는 쪽은 빈 카드를 돌려주기 때문입니다.
+              const list = g.keys.map(byKey)
+                .filter((c): c is CareerCard => !!c && c.lines.length > 0)
               if (!list.length) return null
               return (
                 <div key={g.label || 'top'}>
@@ -308,6 +371,16 @@ function CareerResultInner() {
                   {list.map(c => (
                     <CareerJudgeCard key={c.key} card={c} tong={tongByKey[c.key]} />
                   ))}
+                  {/* ★사주 MBTI — 「타고난 결」 묶음 끝에 붙입니다.
+                      성향 이야기라 오행·육친·일주 바로 뒤가 결이 맞습니다. */}
+                  {g.label === '타고난 결' && sajuMbti && (
+                    <MbtiCard
+                      result={sajuMbti}
+                      realMbti={realMbti}
+                      compare={mbtiCmp}
+                      onWantInput={() => router.push(`/manseryeok/career-input?${backQuery}`)}
+                    />
+                  )}
                 </div>
               )
             })}
