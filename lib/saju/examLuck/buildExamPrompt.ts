@@ -54,6 +54,12 @@ export interface BuildExamPromptArgs {
   examDate?: string | null
   /** 시험 당일 판정 (일진·공망) — examDay.ts 가 낸 것 */
   examDayNote?: string | null
+  /**
+   * ★2026-07-29 — 학생이 고른 목표 (2단 드롭다운). 대표님 지시.
+   *   targetPromptBlock() 이 이미 문장으로 짜 준 것을 받습니다.
+   *   ⚠️ 여기서 다시 표를 뒤지지 않습니다. 짜는 곳은 studentTarget 한 곳입니다.
+   */
+  targetBlock?: string | null
 }
 
 export function buildExamPrompt(v: BuildExamPromptArgs): string {
@@ -116,6 +122,7 @@ export function buildExamPrompt(v: BuildExamPromptArgs): string {
     v.examKind ? `· 손님이 고른 시험: ${v.examKind}` : '',
     v.examDate ? `· 시험(또는 발표) 날짜: ${v.examDate}` : '',
     v.examDayNote ? `· 그날의 기운: ${v.examDayNote}` : '',
+    v.targetBlock || '',
   ].filter(Boolean).join('\n')
 
   return `당신은 사주 상담을 오래 해 온 따뜻한 어른입니다.

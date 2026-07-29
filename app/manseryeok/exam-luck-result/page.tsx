@@ -27,6 +27,7 @@ import { judgeExamDay } from '@/lib/saju/examLuck/examDay'
 import { buildAllCards } from '@/lib/saju/examLuck/buildCards'
 import { buildExamPrompt, parseExamTongbyeon } from '@/lib/saju/examLuck/buildExamPrompt'
 import { examKindOf, CLOSING, CLOSING_STUDENT } from '@/lib/saju/examLuck/tables/rules'
+import { targetPromptBlock } from '@/lib/saju/examLuck/tables/studentTarget'
 import { saveRecord, updateRecordResult, getRecord } from '@/lib/saju/sajuRecords'
 import { calcSeyunList, calcWolunList, type DayunItem } from '@/lib/saju/dayun'
 import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
@@ -55,6 +56,10 @@ function ExamLuckResultInner() {
   const examKind = sp.get('examKind') || null
   const examDateRaw = sp.get('examDate') || ''
   const recordId = sp.get('recordId') || ''
+  // ★2026-07-29 — 학생이 고른 목표 (2단 드롭다운)
+  const examCategory = sp.get('examCategory') || ''
+  const targetType = sp.get('targetType') || ''
+  const targetCustomText = sp.get('targetCustomText') || ''
 
   const [calc, setCalc] = useState<PersonCalc | null>(null)
   const [err, setErr] = useState('')
@@ -202,6 +207,9 @@ function ExamLuckResultInner() {
         saju: calc.saju, ohaengScore: ohaengScore ?? undefined,
         kind, examKind, examDate: examDateRaw || null,
         examDayNote: examDayForPrompt,
+        // ★학생이 고른 목표 — 학생일 때만 실립니다
+        targetBlock: target === 'student'
+          ? targetPromptBlock(examCategory, targetType, targetCustomText) : null,
       })
       let acc = ''
       try {

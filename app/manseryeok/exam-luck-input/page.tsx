@@ -18,6 +18,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { exactAge } from '@/lib/saju/ageDayun'
 // ★2026-07-27 — 손님이 시험 종류를 고르면 교재 230쪽 짝에 따라 볼 십신이 정해진다.
 import { EXAM_KINDS } from '@/lib/saju/examLuck/tables/rules'
+import { EXAM_CATEGORIES, TARGETS } from '@/lib/saju/examLuck/tables/studentTarget'
 
 const ACCENT = '#c85a8c'
 const SOFT = '#f7e6ee'
@@ -46,6 +47,14 @@ function ExamLuckInputInner() {
   const [examKind, setExamKind] = useState<string>('')
   /** ★시험 날짜 — 몰라도 된다. 알면 그 달·그 날까지 짚어 준다 (교재 195쪽) */
   const [examDate, setExamDate] = useState<string>('')
+  /**
+   * ★2026-07-29 — 학생 목표 (2단 드롭다운). 대표님 지시.
+   *   [왜] «어디를 목표로 하는지» 를 알면 그 자리에 쓰이는 힘을 짚어 줄 수 있습니다.
+   *   ⚠️ 학생일 때만 씁니다. 성인에게는 뜻이 안 맞습니다.
+   */
+  const [examCategory, setExamCategory] = useState<string>('')
+  const [targetType, setTargetType] = useState<string>('')
+  const [targetCustomText, setTargetCustomText] = useState<string>('')
 
   const query = useMemo(() => {
     const p = new URLSearchParams()
@@ -57,8 +66,16 @@ function ExamLuckInputInner() {
     p.set('target', target)
     if (examKind) p.set('examKind', examKind)
     if (examDate) p.set('examDate', examDate)
+    // ★학생 목표 — 학생일 때만 싣는다
+    if (target === 'student' && examCategory) {
+      p.set('examCategory', examCategory)
+      if (targetType) p.set('targetType', targetType)
+      if (targetType === 'custom' && targetCustomText.trim()) {
+        p.set('targetCustomText', targetCustomText.trim())
+      }
+    }
     return p.toString()
-  }, [sp, kind, target, examKind, examDate])
+  }, [sp, kind, target, examKind, examDate, examCategory, targetType, targetCustomText])
 
   const kinds: Array<{ key: Kind; title: string; sub: string }> = [
     { key: 'exam', title: '시험 · 합격운', sub: '입시 · 자격증 · 공무원 시험을 봅니다' },
@@ -112,6 +129,58 @@ function ExamLuckInputInner() {
         {targets.map(o => (
           <Btn key={o.key} on={target === o.key} title={o.title} sub={o.sub} onClick={() => setTarget(o.key)} />
         ))}
+
+        {/* ★2026-07-29 — 학생 목표 2단 드롭다운. (대표님 지시)
+             학생일 때만 뜹니다. 성인에게는 «자사고·수시» 가 뜻이 안 맞습니다. */}
+        {target === 'student' && (
+          <>
+            <div style={{ fontSize: 12.5, color: '#8a7063', margin: '18px 2px 9px' }}>
+              어디를 목표로 하나요? <span style={{ color: '#a3907f' }}>(몰라도 됩니다)</span>
+            </div>
+            <select
+              value={examCategory}
+              onChange={e => { setExamCategory(e.target.value); setTargetType(''); setTargetCustomText('') }}
+              style={{
+                width: '100%', padding: '13px 14px', borderRadius: 12, marginBottom: 9,
+                background: CARD, border: `0.5px solid ${LINE}`, color: '#3a2e28',
+                fontSize: 14, fontFamily: 'inherit', appearance: 'none',
+              }}>
+              {EXAM_CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+            </select>
+
+            {/* 2차 — 1차를 골랐을 때만 */}
+            {examCategory && (
+              <select
+                value={targetType}
+                onChange={e => { setTargetType(e.target.value); if (e.target.value !== 'custom') setTargetCustomText('') }}
+                style={{
+                  width: '100%', padding: '13px 14px', borderRadius: 12, marginBottom: 9,
+                  background: CARD, border: `0.5px solid ${LINE}`, color: '#3a2e28',
+                  fontSize: 14, fontFamily: 'inherit', appearance: 'none',
+                }}>
+                <option value="">목표 학교·계열을 고르세요</option>
+                {(TARGETS[examCategory as keyof typeof TARGETS] ?? [])
+                  .map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+              </select>
+            )}
+
+            {/* 직접 입력 */}
+            {targetType === 'custom' && (
+              <input
+                type="text"
+                value={targetCustomText}
+                onChange={e => setTargetCustomText(e.target.value)}
+                placeholder="예: 서울대 의예과, 상산고 등"
+                maxLength={40}
+                style={{
+                  width: '100%', padding: '13px 14px', borderRadius: 12, marginBottom: 10,
+                  background: CARD, border: `0.5px solid ${LINE}`, color: '#3a2e28',
+                  fontSize: 14, fontFamily: 'inherit',
+                }}
+              />
+            )}
+          </>
+        )}
 
         {/* ★어떤 시험인지 — 고르면 그 시험에 힘을 싣는 십신이 드는 해를 짚어 준다 (교재 230쪽) */}
         <div style={{ fontSize: 12.5, color: '#8a7063', margin: '18px 2px 9px' }}>
