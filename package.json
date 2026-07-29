@@ -4,17 +4,23 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run verify",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "verify": "tsx 13-verify-18-daeun.ts",
+    "verify:daeun": "tsx 13-verify-18-daeun.ts",
+    "verify:gyeokguk": "python3 04-verify-19-cases.py",
+    "verify:hap": "python3 05-verify-hap-78-83.py",
+    "verify:all": "npm run verify:daeun && npm run verify:gyeokguk && npm run verify:hap"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.6.1",
+    "@supabase/supabase-js": "^2.49.0",
+    "html-to-image": "^1.11.13",
     "next": "16.2.9",
     "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "@supabase/supabase-js": "^2.49.0",
-    "@supabase/ssr": "^0.6.1",
-    "html-to-image": "^1.11.13"
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -24,6 +30,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
+    "tsx": "^4.23.1",
     "typescript": "^5"
   }
 }
