@@ -28,7 +28,7 @@ import { buildAllCards } from '@/lib/saju/examLuck/buildCards'
 import { buildExamPrompt, parseExamTongbyeon } from '@/lib/saju/examLuck/buildExamPrompt'
 import { examKindOf, CLOSING, CLOSING_STUDENT } from '@/lib/saju/examLuck/tables/rules'
 import { saveRecord, updateRecordResult, getRecord } from '@/lib/saju/sajuRecords'
-import { calcSeyunList, type DayunItem } from '@/lib/saju/dayun'
+import { calcSeyunList, calcWolunList, type DayunItem } from '@/lib/saju/dayun'
 import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
 import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
 import ExamJudgeCard, { GRADE_STYLE } from './components/ExamJudgeCard'
@@ -131,6 +131,18 @@ function ExamLuckResultInner() {
       natal, byYear, examDay, purpose: kind,
     })
   }, [input, calc, dayunList, thisYear, kind, examDateRaw])
+
+  /** 시험이 있는 해·달 — 달별 흐름표에 표시할 자리 */
+  const examMonth = useMemo(() => {
+    if (!examDateRaw) return null
+    const [y, m] = examDateRaw.split('-').map(Number)
+    return y && m ? { y, m } : null
+  }, [examDateRaw])
+  /** 달별 흐름표에 쓸 일간 */
+  const dayStemForStrip = useMemo(
+    () => calc?.saju?.find(p => p.pillar === '일주')?.stem ?? '',
+    [calc],
+  )
 
   // ★2026-07-29 — 시험 날짜의 «그날 기운» 을 프롬프트에도 실어 보냅니다.
   //   위 useMemo 안에서 만든 examDay 는 카드용이라 밖에서 못 씁니다.
@@ -303,7 +315,10 @@ function ExamLuckResultInner() {
         )}
 
         {/* 세 해 연표 — 이 서비스의 얼굴 */}
-        <YearStrip cards={cards} />
+        {/* ★2026-07-29 — 연도별 흐름표를 여기서 걷어냈습니다. (대표님 지시 — 샌드위치)
+             전에는 카드 «전부보다 위» 에 홀로 떠 있어, 아래 「앞으로의 흐름」 풀이와
+             멀리 떨어져 손님이 스스로 이어 붙여야 했습니다.
+             → 아래 카드 반복문에서 그 카드 «바로 위» 로 옮겼습니다. */}
 
         {tongState === 'loading' && !tong && (
           <div style={{ textAlign: 'center', padding: '18px 0', color: ACCENT, fontSize: 13 }}>
@@ -312,7 +327,16 @@ function ExamLuckResultInner() {
         )}
 
         {cards.map(c => (
-          <ExamJudgeCard key={c.key} card={c} tong={parsed?.byKey[c.key]} />
+          <div key={c.key}>
+            {/* ★도표를 그 카드 «바로 위» 에 얹습니다.
+                 years  → 연도별 흐름표 (앞으로 몇 해)
+                 examday→ 시험일 표는 카드 안에 이미 있어 따로 안 붙입니다. */}
+            {c.key === 'years' && <YearStrip cards={cards} />}
+            {c.key === 'examday' && examMonth && (
+              <MonthStrip dayStem={dayStemForStrip} year={examMonth.y} mark={examMonth.m} />
+            )}
+            <ExamJudgeCard card={c} tong={parsed?.byKey[c.key]} />
+          </div>
         ))}
 
         {/* 맺는말 */}
@@ -332,15 +356,41 @@ function ExamLuckResultInner() {
         )}
 
         {/* ★교재 195쪽 맺음말 — 카드마다 붙이지 않고 여기 한 번만 (2026-07-27)
-             카드에 넣었더니 카드가 길어져 손님이 다 읽기 전에 지쳤다. */}
+             카드에 넣었더니 카드가 길어져 손님이 다 읽기 전에 지쳤다.
+
+             ★2026-07-29 — «멘토링 강조 박스» 로 다듬었습니다. (대표님 지시)
+               [왜] 리포트 맨 끝은 손님이 «그래서 나는 어떻게 하지» 하고 덮는 자리입니다.
+                    운에 일희일비하지 말라는 말이 여기서 가장 힘이 있습니다.
+                    전에는 다른 카드와 같은 결이라 그냥 지나쳤습니다.
+             ⚠️ 문구는 교재 195쪽 그대로입니다. 손대지 마십시오. (CLOSING·CLOSING_STUDENT) */}
         <div style={{
-          marginTop: 6, background: '#f7e6ee', border: '0.5px solid #f0d8e2', borderRadius: 12,
-          padding: '14px 16px', fontSize: 12.5, color: '#8c4a63', lineHeight: 1.85,
-          wordBreak: 'keep-all', overflowWrap: 'anywhere',
+          marginTop: 14,
+          background: 'linear-gradient(135deg, rgba(253,238,244,0.95) 0%, rgba(250,244,238,0.9) 100%)',
+          border: '1.5px solid rgba(200,90,140,0.3)',
+          borderRadius: 16,
+          padding: '18px 17px',
+          boxShadow: '0 4px 18px -8px rgba(200,90,140,0.28)',
         }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 11 }}>
+            <span style={{ fontSize: 18, lineHeight: 1 }}>🌱</span>
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: '#8c4a63', letterSpacing: '-0.2px' }}>
+              마지막으로 드리고 싶은 말
+            </span>
+          </div>
           {(target === 'student' ? CLOSING_STUDENT : CLOSING).map((l, i) => (
-            <p key={i} style={{ margin: i === 0 ? 0 : '6px 0 0' }}>{l}</p>
+            <p key={i} style={{
+              margin: i === 0 ? 0 : '8px 0 0',
+              fontSize: 12.8, color: '#7a4055', lineHeight: 1.9,
+              wordBreak: 'keep-all', overflowWrap: 'anywhere',
+            }}>{l}</p>
           ))}
+          <div style={{
+            marginTop: 13, paddingTop: 12, borderTop: '1px solid rgba(200,90,140,0.18)',
+            fontSize: 12, color: '#96607a', lineHeight: 1.8,
+          }}>
+            사주는 지도일 뿐, 걷는 것은 {target === 'student' ? '학생' : '본인'} 자신입니다.
+            좋은 때라도 손을 놓으면 지나가고, 더딘 때라도 쌓아 두면 다음 때에 터집니다.
+          </div>
         </div>
       </div>
 
@@ -367,6 +417,50 @@ function ExamLuckResultInner() {
 }
 
 /** 앞으로 몇 해를 한눈에 — 오른쪽에서 왼쪽으로 흐른다 */
+/**
+ * ★2026-07-29 — 시험이 있는 해의 «달별 흐름». (대표님 지시 — 타임라인 샌드위치)
+ *   시험 날짜를 넣었을 때만 뜹니다. 「시험 날짜를 짚어 보면」 카드 바로 위에 옵니다.
+ *   ⚠️ 월운 계산은 lib/saju/dayun.calcWolunList 한 곳에서만 합니다. (교훈 BQ)
+ */
+function MonthStrip({ dayStem, year, mark }: { dayStem: string; year: number; mark: number | null }) {
+  const list = useMemo(() => (dayStem ? calcWolunList(dayStem, year) : []), [dayStem, year])
+  if (!list.length) return null
+  return (
+    <div style={{
+      background: CARD, border: `0.5px solid ${LINE}`, borderRadius: 14,
+      padding: '13px 14px', marginBottom: 10,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 9 }}>
+        <span style={{ fontSize: 12.5, fontWeight: 700, color: '#8c4a63' }}>{year}년 달별 흐름</span>
+        <span style={{ fontSize: 10.5, color: '#c5a590' }}>옆으로 밀어서 보세요</span>
+      </div>
+      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+        {list.map(w => {
+          const on = mark === w.month
+          return (
+            <div key={w.month} style={{ flexShrink: 0, textAlign: 'center', width: 50 }}>
+              <div style={{ fontSize: 10.5, color: on ? '#c85a8c' : '#8a7063', marginBottom: 4, fontWeight: on ? 700 : 400 }}>
+                {w.month}월
+              </div>
+              <div style={{
+                fontSize: 14, fontWeight: 700, color: '#3a2e28',
+                background: on ? '#fdeef4' : '#faf6f1',
+                border: on ? '1.5px solid #c85a8c' : `0.5px solid ${LINE}`,
+                borderRadius: 9, padding: '7px 0', letterSpacing: '.03em',
+              }}>{w.cheongan}{w.jiji}</div>
+            </div>
+          )
+        })}
+      </div>
+      {mark != null && (
+        <div style={{ fontSize: 11, color: '#8c4a63', marginTop: 8 }}>
+          ★{mark}월이 시험이 있는 달입니다.
+        </div>
+      )}
+    </div>
+  )
+}
+
 function YearStrip({ cards }: { cards: ExamCard[] }) {
   const years = (cards.find(c => c.key === 'years')?.data?.years ?? []) as YearLuck[]
   if (!years.length) return null
