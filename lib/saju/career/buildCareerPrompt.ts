@@ -68,13 +68,31 @@ const ORDER: Array<{ key: string; title: string; len: string }> = [
   { key: 'sinsal',      title: '타고난 신살',         len: '3~4문장' },
   { key: 'yongsin',     title: '기운을 얻는 자리',     len: '2~3문장' },
   { key: 'jobstruct',   title: '어느 자리에서 일할까', len: '3~4문장' },
-  { key: 'gyeyeol',     title: '계열과 학과',         len: '3~4문장' },
+  // ★2026-07-29 — 학생/성인에 따라 자리를 바꿉니다. (대표님 지시)
+  { key: 'gyeyeol',     title: '계열과 학과',         len: '3~4문장' },   // 학생만
+  { key: 'jobfit',      title: '잘 맞는 직무 & 조직 성향', len: '4~5문장' }, // 성인만
+  { key: 'rolefit',     title: '핵심 직무 & 전문 분야',   len: '4~6문장' }, // 성인만
   { key: 'jobs',        title: '어울리는 직업',        len: '4~6문장' },
 ]
 
+/**
+ * ★2026-07-29 — 학업(계열·학과) 대목을 낼 신분인가. (대표님 지시)
+ *   중·고등학생 · 대학(원)생만 냅니다.
+ *   취업준비생·직장인·자영업/사업가에게 «어느 학과가 맞습니다» 는 쓸모가 없습니다.
+ */
+export function showsAcademicSection(status?: CareerStatus, target?: 'student' | 'adult'): boolean {
+  if (status) return status === 'middle_high' || status === 'university'
+  return target === 'student'
+}
+
 export function buildCareerPrompt(v: CareerPromptInput): string {
+  const academic = showsAcademicSection(v.status, v.target)
   const have = new Set(v.cards.map(c => c.key))
-  const plan = ORDER.filter(o => have.has(o.key))
+  // ★학업 대목을 안 낼 신분이면 계획에서 **통째로 뺍니다.**
+  //   카드가 비어 있어도 계획에 남아 있으면 AI 가 «학과 이야기를 써야 하나» 하고 헤맵니다.
+  const plan = ORDER
+    .filter(o => have.has(o.key))
+    .filter(o => academic || o.key !== 'gyeyeol')
 
   const myeongsik = v.saju
     .map(p => `${p.pillar} ${p.stem === '?' ? '·' : p.stem}${p.branch === '?' ? '·' : p.branch}`)
@@ -87,6 +105,8 @@ export function buildCareerPrompt(v: CareerPromptInput): string {
   //   ⚠️ 대목(카드)을 새로 만들지 않는다. 이미 있는 카드의 재료에 얹는다. (32-3장)
   //   ★144칸(jijiGrade)은 안 넣는다. 운(대운·세운)과의 어울림이라 진로적성 주제가 아니다.
   const extra: Record<string, string[]> = {}
+  /** 학업 대목을 안 낼 때 재료에서도 빼야 할 카드 열쇠 */
+  const dropKeys = academic ? [] : ['gyeyeol']
   {
     const picked = pick({
       serviceType: 'career',
@@ -127,11 +147,16 @@ export function buildCareerPrompt(v: CareerPromptInput): string {
     }
   }
 
-  const material = v.cards.map(c => {
-    const o = ORDER.find(x => x.key === c.key)
-    const rs = [...c.reasons, ...(extra[c.key] ?? [])]
-    return `[${o?.title ?? c.title}]\n` + rs.map(r => `- ${r}`).join('\n')
-  }).join('\n\n')
+  const material = v.cards
+    // ★학업 대목을 안 낼 신분이면 재료에서도 뺍니다.
+    //   재료에 남겨 두고 «쓰지 말라» 고만 하면 AI 가 꺼내 씁니다. (교훈 BF)
+    .filter(c => !dropKeys.includes(c.key))
+    .filter(c => c.reasons.length > 0)
+    .map(c => {
+      const o = ORDER.find(x => x.key === c.key)
+      const rs = [...c.reasons, ...(extra[c.key] ?? [])]
+      return `[${o?.title ?? c.title}]\n` + rs.map(r => `- ${r}`).join('\n')
+    }).join('\n\n')
 
   // ★2026-07-29 — 신분을 알면 그 결로, 모르면 예전처럼 학생/성인으로.
   const who = v.status

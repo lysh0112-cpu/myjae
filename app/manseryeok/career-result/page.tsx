@@ -22,7 +22,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import {
   judgeOhaengGijil, judgeYukchin, judgeGyeokguk,
   judgeSinsal, judgeGyeyeol, judgeSpecial, judgeYongsin, judgeJobs,
-  judgeIlju, judgeJobStructure, judgeJobFit,
+  judgeIlju, judgeJobStructure, judgeJobFit, judgeRoleFit,
   type CareerCard, type CareerInput,
 } from '@/lib/saju/career'
 import { calcPerson, ageOf, type PersonCalc } from '@/lib/saju/career/calcPerson'
@@ -44,7 +44,9 @@ const GROUPS: Array<{ label: string; keys: string[] }> = [
   { label: '', keys: ['special'] },                       // 경고는 맨 위, 제목 없이
   { label: '타고난 결', keys: ['ohaeng_gijil', 'yukchin', 'ilju'] },
   { label: '그릇과 자리', keys: ['gyeokguk', 'sinsal', 'yongsin'] },
-  { label: '어울리는 자리', keys: ['jobstruct', 'gyeyeol', 'jobfit', 'jobs'] },
+  // ★성인은 jobfit·rolefit 이 메인, 학생은 gyeyeol·jobs 가 메인.
+  //   해당 없는 카드는 빈 카드로 와서 아래 렌더에서 걸러집니다.
+  { label: '어울리는 자리', keys: ['jobfit', 'rolefit', 'gyeyeol', 'jobstruct', 'jobs'] },
 ]
 
 function CareerResultInner() {
@@ -123,6 +125,11 @@ function CareerResultInner() {
       //   빈 카드는 아래 GROUPS 렌더에서 걸러집니다.
       judgeGyeyeol(input),
       judgeJobFit(input),
+      // ★2026-07-29 — 성인에게는 「어울리는 직업」 대신 「핵심 직무 & 전문 분야」.
+      //   교재 직업 목록에 유흥업·목욕탕·사채업 같은 옛 어휘가 있어
+      //   직장인 리포트에 그대로 나가면 리포트 전체를 못 믿게 됩니다.
+      //   ⚠️ 교재 표는 안 고쳤습니다. 성인 출력만 바꾼 것입니다. (roleFit 머리말)
+      judgeRoleFit(input),
       judgeJobs(input),
     ].filter(Boolean) as CareerCard[]
   }, [calc, target])
