@@ -103,6 +103,9 @@ export default function ServiceSection({
   )
 
   const byName = new Map(services.map(s => [s.name, s]))
+  const pinnedSvcs = pinned
+    .map(n => byName.get(n))
+    .filter((s): s is HomeService => !!s)
   const best = BEST_NAMES.map(n => byName.get(n)).filter((s): s is HomeService => !!s)
 
   // ── 안전망 — GROUPS 에 못 적은 서비스가 있어도 사라지지 않게 ──
@@ -116,10 +119,6 @@ export default function ServiceSection({
         names: orphans.map(s => s.name),
       }]
     : GROUPS
-
-  const pinnedSvcs = pinned
-    .map(n => byName.get(n))
-    .filter((s): s is HomeService => !!s)
 
   return (
     <div style={{ padding: '6px 0 20px' }}>
@@ -144,8 +143,10 @@ export default function ServiceSection({
         marginBottom: '10px', padding: '0 16px',
       }}>
         <span style={{ fontSize: '16px', fontWeight: 700, color: '#3a2e28' }}>MyungCafe 서비스</span>
-        {pinned.length > 0 && (
-          <span style={{ fontSize: '11px', color: '#8f3d0e' }}>📌 {pinned.length}/{maxPins}</span>
+        {/* ★2026-07-29 — 살아 있는 핀만 셉니다.
+            없어진 서비스의 핀은 부모가 홈에 들어올 때 걷어냅니다. */}
+        {pinnedSvcs.length > 0 && (
+          <span style={{ fontSize: '11px', color: '#8f3d0e' }}>📌 {pinnedSvcs.length}/{maxPins}</span>
         )}
       </div>
 
@@ -251,6 +252,66 @@ export default function ServiceSection({
               .filter((s): s is HomeService => !!s)
             if (!list.length) return null
             const isOpen = !!open[g.key]
+
+            // ★2026-07-29 — 갈래 안에 서비스가 **하나뿐이면 여닫이를 쓰지 않습니다.**
+            //
+            //   [무엇이 어색했나]
+            //     사주·대운·연월운세를 하나로 합치면서 「내 사주 & 운세」 갈래에
+            //     같은 이름의 서비스 하나만 남았습니다. 화면에 이렇게 떴습니다.
+            //         🧭 내 사주 & 운세   1        ← 갈래 머리
+            //            내 사주 & 운세            ← 그 안의 서비스
+            //     같은 말이 두 줄로 겹쳐 보이고, 한 번 더 눌러야 들어갑니다.
+            //
+            //   [어떻게 고쳤나]
+            //     하나뿐이면 갈래 머리 자체를 **바로 들어가는 줄**로 만듭니다.
+            //     ⚠️ 「오늘의 라이프(타로)」도 하나라 같이 적용됩니다. 그쪽도 한 번에 들어갑니다.
+            //     ⚠️ 서비스가 둘 이상으로 늘면 자동으로 여닫이로 돌아갑니다.
+            if (list.length === 1) {
+              const s = list[0]
+              const isPinned = pinned.includes(s.name)
+              return (
+                <div
+                  key={g.key}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    padding: '12px 14px',
+                    borderTop: gi === 0 ? 'none' : '0.5px solid #f4e7db',
+                    background: isPinned ? '#fdf0e4' : 'transparent',
+                  }}
+                >
+                  <button
+                    className="svcRow"
+                    onClick={() => onOpen(s)}
+                    style={{
+                      flex: 1, display: 'flex', alignItems: 'center', gap: '10px',
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      textAlign: 'left', padding: 0, minWidth: 0,
+                    }}
+                  >
+                    <span style={{ fontSize: '17px', lineHeight: 1, flexShrink: 0 }}>{g.icon}</span>
+                    <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
+                      <span style={{ fontSize: '14px', fontWeight: 700, color: '#3a2e28' }}>{s.name}</span>
+                      <span style={{ fontSize: '10.5px', color: '#8a6a52' }}>{s.sub}</span>
+                    </span>
+                    <span style={{ fontSize: '13px', color: '#b09079', flexShrink: 0 }}>›</span>
+                  </button>
+                  <button
+                    className="svcPin"
+                    onClick={() => onTogglePin(s.name)}
+                    aria-label={isPinned ? `${s.name} 고정 해제` : `${s.name} 고정`}
+                    aria-pressed={isPinned}
+                    style={{
+                      width: '32px', height: '32px', border: 'none', background: 'none',
+                      cursor: 'pointer', fontSize: '16px', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      filter: isPinned ? 'none' : 'grayscale(1)',
+                      opacity: isPinned ? 1 : 0.32,
+                      transform: isPinned ? 'scale(1.05)' : 'none',
+                    }}
+                  >📌</button>
+                </div>
+              )
+            }
 
             return (
               <div key={g.key} style={{ borderTop: gi === 0 ? 'none' : '0.5px solid #f4e7db' }}>

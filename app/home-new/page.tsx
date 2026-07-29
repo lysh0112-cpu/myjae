@@ -176,9 +176,27 @@ export default function HomeNew() {
 
 
   // 찜(고정)한 서비스 목록 로드 (로그인 회원만 값이 있음)
+  //
+  // ★2026-07-29 — 없어진 서비스의 핀을 자동으로 걷어냅니다.
+  //
+  //   [무엇이 막혀 있었나]
+  //     사주·대운·연월운세를 「내 사주 & 운세」 하나로 합치면서 두 이름이 사라졌는데,
+  //     그 둘을 고정해 둔 회원의 saju_records 에는 핀이 그대로 남았습니다.
+  //     화면에는 안 뜨지만 **자리는 계속 먹습니다.**
+  //     → 「📌 3/3」 인데 보이는 칩은 하나. 새로 고정하려 하면 "최대 3개"라고 막힙니다.
+  //
+  //   [어떻게 고쳤나]
+  //     지금 SERVICES 에 없는 이름은 홈에 들어올 때 조용히 해제합니다.
+  //     ⚠️ 이름이 «영영 사라진» 것만 지웁니다. 잠깐 감춘 서비스가 있다면
+  //        SERVICES 에 남겨 두십시오. 여기서 지워 버립니다.
   useEffect(() => {
     let mounted = true
-    listPinnedServices().then((list) => { if (mounted) setPinned(list) })
+    listPinnedServices().then(async (list) => {
+      const alive = new Set(SERVICES.map(s => s.name))
+      const dead = list.filter(n => !alive.has(n))
+      for (const n of dead) await togglePinnedService(n)   // 해제
+      if (mounted) setPinned(list.filter(n => alive.has(n)))
+    })
     return () => { mounted = false }
   }, [])
 
