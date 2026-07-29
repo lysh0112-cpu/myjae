@@ -436,6 +436,54 @@ function ResultNewContent() {
         hourUnknown: !hourBranch || hourBranch === '?',
       })
     : null
+
+  /**
+   * ★2026-07-29 — 샌드위치 렌더링용 도표 슬롯. (대표님 지시)
+   *
+   *   [무엇이 문제였나] 도표가 전부 화면 위에 몰리고 풀이는 전부 아래에 있어,
+   *     손님이 «이 설명이 어느 표 이야기인지» 를 스스로 이어 붙여야 했습니다.
+   *   [어떻게] 프리미엄 여덟 섹션의 «자리»에 맞춰 도표를 끼워 넣습니다.
+   *     아래 배열의 자리(index)가 곧 섹션 번호(0부터)입니다.
+   *
+   *   ⚠️ 프리미엄일 때만 씁니다. 무료는 예전처럼 위에 몰아 둡니다(질문 기반이라 결이 다름).
+   *   ⚠️ 슬롯에 넣은 도표는 위쪽에서 **감춥니다.** 안 감추면 같은 표가 두 번 나옵니다.
+   */
+  const premiumSlots: Array<React.ReactNode | null> = premiumPrompt ? [
+    // 섹션1 강점 지능과 오행·십성
+    ohaeng.length > 0 ? (
+      <div key="s1" style={{ background: '#fff', border: '1px solid rgba(120,53,15,0.15)', borderRadius: 14, padding: 12 }}>
+        <OhaengPentagon ohaeng={ohaeng} dayElement={yongsinNew?.dayElement} />
+      </div>
+    ) : null,
+    // 섹션2 격국과 용신
+    yongsinNew ? (
+      <div key="s2" style={{ background: '#fff', border: '1px solid rgba(120,53,15,0.15)', borderRadius: 14, padding: 12 }}>
+        <YongsinCard result={yongsinNew} saju={saju} />
+      </div>
+    ) : null,
+    null,   // 섹션3 일주·지장간 — 원국표가 맨 위에 이미 있음
+    null,   // 섹션4 무자·다자 — 오행 그래프(섹션1)와 겹쳐 따로 안 둠
+    // 섹션5 고립과 건강 — 합충 반영 오행
+    saju.length > 0 ? (
+      <div key="s5" style={{ background: '#fff', border: '1px solid rgba(120,53,15,0.15)', borderRadius: 14, padding: 12 }}>
+        <HapchungView saju={saju} />
+      </div>
+    ) : null,
+    // 섹션6 대운 흐름
+    (dayStem && monthGanji && yearStem && solarYear) ? (
+      <div key="s6" style={{ background: '#fff', border: '1px solid rgba(120,53,15,0.15)', borderRadius: 14, padding: 12 }}>
+        <UnseFlow
+          solarYear={solarYear} solarMonth={solarMonth} solarDay={solarDay}
+          monthGanji={monthGanji} yearStem={yearStem} dayStem={dayStem}
+          gender={gender} birthYear={yearParam} currentYear={currentYear}
+          myMonthBranch={monthBranchForNote ?? ''} myDayBranch={iljji}
+          list={dayunList} hourIdx={hourIdx}
+        />
+      </div>
+    ) : null,
+    null,   // 섹션7 합충 — 섹션5 도표와 겹침
+    null,   // 섹션8 개운 — 도표 없음
+  ] : []
   // 통변에 넘길 용신 — 화면 표시와 같은 심산 점수 기준으로 계산한다.
   const yongsinResult=saju.length>0&&dayStem
     ?calcYongsinCompat(saju,dayStem,solarMonth,solarDay,hourBranch)
@@ -584,6 +632,7 @@ function ResultNewContent() {
             />
           </Section>
         )}
+        {!premiumPrompt && (
         <Section title="오행과 십성 분석" collapsible={!chartOnly} open={openSection==='ohaeng'} onToggle={()=>toggleSection('ohaeng')}>
           {/* 계산 기준 안내 — 합충 반영 그래프와 숫자가 다른 이유 */}
           <div style={{fontSize:'10.5px',color:'#b4785a',background:'#faf3ec',border:'0.5px solid #f0e0d5',borderRadius:'8px',padding:'7px 10px',marginBottom:'10px',lineHeight:1.6}}>
@@ -607,6 +656,7 @@ function ResultNewContent() {
             </div>
           </div>
         </Section>
+        )}
 
         {/* ③-2 합충 반영 (전문가 모드 + 토글 ON) */}
         {isPro && hapchungOn && saju.length>0 && (
@@ -627,14 +677,16 @@ function ResultNewContent() {
         </Section>
 
         {/* ⑤ 나의 용신 (조후·억부·격국 3종) */}
-        {yongsinNew&&(
+        {/* ★2026-07-29 — 프리미엄은 이 표를 «섹션2 풀이 바로 위»로 옮겨 그립니다.
+            여기서 또 그리면 같은 표가 두 번 나옵니다. */}
+        {!premiumPrompt && yongsinNew&&(
         <Section title="나의 용신" collapsible={!chartOnly} open={openSection==='yongsin'} onToggle={()=>toggleSection('yongsin')}>
           <YongsinCard result={yongsinNew} saju={saju}/>
         </Section>
         )}
 
         {/* ⑥ 대운·세운·월운·일운 (연동 흐름) */}
-        {dayStem&&monthGanji&&yearStem&&solarYear&&(
+        {!premiumPrompt && dayStem&&monthGanji&&yearStem&&solarYear&&(
           <Section title="운의 흐름 (대운·세운·월운·일운)" collapsible={!chartOnly} open={openSection==='daeun'} onToggle={()=>toggleSection('daeun')} hint="눌러서 흐름 보기">
             <UnseFlow
               solarYear={solarYear} solarMonth={solarMonth} solarDay={solarDay}
@@ -684,6 +736,7 @@ function ResultNewContent() {
               premium={isPremium(isPaid)}
               unseEntry={unseEntry}
               premiumPrompt={premiumPrompt}
+              slots={premiumSlots}
               savedText={savedTong}
               onComplete={(t)=>{
                 setTongText(t)

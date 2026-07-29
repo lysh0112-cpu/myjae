@@ -34,7 +34,10 @@
 
 import type { Ohaeng } from '../simsanOhaeng'
 import type { YongsinNewResult } from '../yongsinNew'
-import { buildDeep, type Pill } from './deepJudge'
+import {
+  buildDeep, judgeHealth, judgeMokhwaGeumsu, judgeEarlyDaeun, interchangeFlavor,
+  type Pill,
+} from './deepJudge'
 import { buildDaeunContext, buildSeyunContext } from '../unseContext'
 import { judgeCheonganHap, judgeJijiHap } from '../hapJudge'
 import { pick } from '../jaryoPick'
@@ -76,6 +79,12 @@ function buildSections(v: GeneralSajuInput): Section[] {
     gisin: v.yongsin?.eokbu?.gisin ?? null,
   })
   const target = v.age < 20 ? 'student' : 'adult'
+  // ★2026-07-29 — 심산 17단계 감명에 필요한 판정들
+  const mokhwa = judgeMokhwaGeumsu(v.score)
+  const health = judgeHealth(v.score)
+  const school: import('./deepJudge').EarlyDaeun[] = v.daeunList?.length
+    ? judgeEarlyDaeun(v.daeunList.map(d => ({ age: d.age, cheongan: d.cheongan, jiji: d.jiji })), v.dayStem)
+    : []
   const S = v.score
   const y = v.yongsin
 
@@ -108,20 +117,29 @@ function buildSections(v: GeneralSajuInput): Section[] {
 
   return [
     {
-      no: 1, title: '사주 원국 및 음양·오행의 균형',
+      no: 1, title: '강점 지능과 오행·십성의 세력',
       blocks: [
-        ['1-1 음양 비율', [
+        // ★17단계 ① — 25~45점을 «내 무기»로, 50점 이상을 «과유불급»으로 본다
+        ['1-1 강점 지능(25~45점)', deep.extremes.strengthLines.length
+          ? [
+              ...deep.extremes.strengthLines,
+              '이 구간이 «가장 오래, 가장 힘 안 들이고» 쓰는 자리입니다. 넘치지도 모자라지도 않아 스스로는 잘 못 느끼지만 남들이 먼저 알아봅니다.',
+            ]
+          : ['25~45점 구간에 든 기운이 없습니다. 한쪽으로 몰린 결이라 강점과 약점이 둘 다 뚜렷합니다.']],
+        ['1-2 과유불급(50점 이상)', deep.extremes.manyLines.length
+          ? [...deep.extremes.manyLines, '넘치는 기운은 «없는 것»보다 다루기 어렵습니다. 살리면 무기가 되고, 놓치면 그대로 흠이 됩니다.']
+          : ['50점을 넘는 기운이 없습니다. 넘쳐서 탈이 나는 자리는 아닙니다.']],
+        ['1-3 오행 세력도', [
+          EL5Line(S),
+          `${mokhwa.label} — 목화 ${mokhwa.mokhwa} : 금수 ${mokhwa.geumsu} (목화 ${mokhwa.mokhwaPct}%)`,
+          mokhwa.say,
+          ...(B['오행'] ?? []).slice(0, 2),
+        ]],
+        ['1-4 음양 비율', [
           `${deep.eumyang.label} — 양 ${deep.eumyang.yang} : 음 ${deep.eumyang.eum} (양 ${deep.eumyang.yangPct}%)`,
           deep.eumyang.say,
         ]],
-        ['1-2 오행 세력과 고립', [
-          EL5Line(S),
-          ...(deep.extremes.lackingEl.length
-            ? [`0점(고립) — ${deep.extremes.lackingEl.map(e => `${e}(${EL_HAN[e]})`).join(' · ')}`] : []),
-          ...(B['오행'] ?? []).slice(0, 3),
-          ...(B['건강'] ?? []).slice(0, 2),
-        ]],
-        ['1-3 정신(천간 40%) vs 현실(지지 60%)', [
+        ['1-5 정신(천간 40%) vs 현실(지지 60%)', [
           `천간이 가리키는 곳 ${deep.mindReality.topGan} · 지지가 가리키는 곳 ${deep.mindReality.topJi}`,
           deep.mindReality.say,
         ]],
@@ -176,44 +194,62 @@ function buildSections(v: GeneralSajuInput): Section[] {
         ['참고 · 가장 고르게 쓰이는 자리(25~45점)', deep.extremes.strengthLines],
       ],
     },
+
     {
-      no: 5, title: '대운의 흐름과 인생 곡선',
+      no: 5, title: '천간·지지의 합충형파해와 건강',
       blocks: [
-        ['5-1 지금 대운의 가중치', [
-          ...daeun.lines.slice(0, 4),
-          now?.note ? `지금 대운 표시 — ${now.note}` : '',
-          y?.eokbu && daeun.current
-            ? `※ 대운은 천간 30~40%, 지지 60~70%로 봅니다. 지지 ${daeun.current.jiji} 쪽을 더 무겁게 읽으십시오.` : '',
-        ].filter(Boolean)],
-        ['5-2 천극지충 변곡점', turning.length
-          ? turning.map(d => `${d.age}세 ${d.ganji} — ${d.note}`)
-          : ['이 표에 담긴 범위에서는 천극지충 대운이 보이지 않습니다.']],
-        ['5-3 접목운(辰戌丑未)', interchange.length
-          ? interchange.slice(0, 3).map(d => `${d.age}세 ${d.ganji} — 갈아타는 자리입니다(결혼·이사·이직·전직).`)
-          : ['접목운 대운이 표 범위에 없습니다.']],
-      ],
-    },
-    {
-      no: 6, title: '원국과 운의 합충 — 발복 타이밍',
-      blocks: [
-        ['6-1 합(合)과 묶임', [
+        ['7-1 합(合)과 묶임', [
           ...ganHap.map(h => h.seongrip
             ? `${h.key} ${h.where} — 성립. ${h.hwa ? `지지에 ${h.hwaEl} 세력이 있어 합화됩니다.` : '합하되 다른 기운으로 변하지는 않습니다.'}`
             : `${h.key} ${h.where} — 사이에 ${h.block?.by ?? '다른 글자'}가 있어 합이 이루어지지 않습니다.`),
           ...jiHap.map(h => `${h.key}(${h.kind}) ${h.where}${h.monthTied ? ' · 월지에 걸려 강합니다' : ''}`),
         ]],
-        ['6-2 충(沖)을 통한 해소', [
+        ['7-2 충(沖)을 통한 해소', [
           ...seyun.lines.filter(t => t.includes('沖') || t.includes('견줌')),
           ...daeun.lines.filter(t => t.includes('沖')),
           '※ 묶여 있던 기운은 충이 들어올 때 풀립니다. 답답하던 자리가 그때 움직입니다.',
         ]],
+        // ★기획 섹션5 — 합충과 건강을 한 자리에 둡니다.
+        //   충·형이 몸으로 드러나는 자리라 결이 이어집니다.
+        ['5-3 비거나 넘치는 기운과 몸', [
+          ...health.lines,
+          ...(B['건강'] ?? []).slice(0, 2),
+        ]],
       ],
     },
     {
-      no: 7, title: '맞춤 개운 솔루션',
+      no: 6, title: '대운의 흐름과 인생 곡선',
       blocks: [
-        ['7-1 액땜 솔루션', deep.remedy.lines],
-        ['7-2 일상 개운법', [
+        ['6-0 학창시절 대운(1~2대운)', school.length
+          ? school.map(x => `${x.age}세 ${x.ganji} · ${x.group}${x.hakma ? '(학마운)' : ''} — ${x.say}`)
+          : []],
+        ['6-1 지금 대운의 가중치', [
+          ...daeun.lines.slice(0, 4),
+          now?.note ? `지금 대운 표시 — ${now.note}` : '',
+          y?.eokbu && daeun.current
+            ? `※ 대운은 천간 30~40%, 지지 60~70%로 봅니다. 지지 ${daeun.current.jiji} 쪽을 더 무겁게 읽으십시오.` : '',
+        ].filter(Boolean)],
+        ['6-2 천극지충 변곡점(5대운)', turning.length
+          ? turning.map(d => `${d.age}세 ${d.ganji} — ${d.note}`)
+          : ['이 표에 담긴 범위에서는 천극지충 대운이 보이지 않습니다.']],
+        ['6-3 접목운(辰戌丑未) · 조토와 습토', interchange.length
+          ? interchange.slice(0, 3).map(d => {
+              const kind = interchangeFlavor(d.ganji.slice(-1)) ?? ''
+              const how = kind === '조토'
+                ? '마른 흙(조토)이라 «말리고 정리하는» 결로 바뀝니다. 벌여 둔 것을 거두는 때입니다.'
+                : kind === '습토'
+                  ? '젖은 흙(습토)이라 «품고 기다리는» 결로 바뀝니다. 서둘러 벌이기보다 다지는 때입니다.'
+                  : ''
+              return `${d.age}세 ${d.ganji}(${kind}) — 갈아타는 자리입니다. ${how}`
+            })
+          : ['접목운 대운이 표 범위에 없습니다.']],
+      ],
+    },
+    {
+      no: 7, title: '심산 맞춤 개운 솔루션',
+      blocks: [
+        ['8-1 액땜 솔루션', deep.remedy.lines],
+        ['8-2 일상 개운법', [
           ...(B['개운'] ?? []).slice(0, 4),
           y?.eokbu ? `${y.eokbu.yongsin} 기운을 늘리는 쪽으로 색·방향·자리를 두십시오.` : '',
         ].filter(Boolean)],

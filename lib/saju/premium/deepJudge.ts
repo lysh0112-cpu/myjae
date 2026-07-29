@@ -440,9 +440,14 @@ export function buildRemedy(a: {
     }
     lines.push(`${el} 과다 — ${how[el]}`)
   }
-  if (!lines.length) {
-    lines.push('지금은 크게 눌러야 할 자리가 없습니다. 하던 결을 유지하시되, 잠과 끼니를 지키는 것이 가장 큰 개운입니다.')
-  }
+  // ★2026-07-29 — 기획 ⑧ «단순 조언이 아닌 구체적 액션».
+  //   전에는 대운이 험할 때만 헌혈·봉사가 나갔습니다. 평온한 대운이면
+  //   «하던 대로 하십시오» 한 줄로 끝나 개운 섹션이 비었습니다.
+  //   ★항상 나가는 기본 액션 셋을 깔아 둡니다. (교재가 드는 액땜의 결)
+  lines.push('몸에서 덜어 내는 일 — 헌혈이나 부항처럼 묵은 것을 빼는 일이 교재가 드는 액땜입니다. 몸 상태에 맞게, 필요하면 전문가와 상의해 정하십시오.')
+  lines.push('밖으로 내보내는 일 — 봉사나 기부처럼 남에게 흘려보내면 안으로 뭉친 것이 풀립니다. 액수보다 꾸준함이 힘입니다.')
+  lines.push('안을 다스리는 일 — 하루 십 분이라도 숨을 고르거나 걷는 시간을 두십시오. 마음 수련은 기신운을 넘기는 가장 값싼 방법입니다.')
+  lines.push('자리를 바꾸는 일 — 잠자리 방향, 책상 위치, 자주 입는 색을 바꾸는 것만으로도 기운의 결이 달라집니다.')
   return { lines }
 }
 
@@ -599,4 +604,127 @@ export function flagCareerDaeun(
     if (unfavorable) notes.push('힘이 덜 실리는 때 — 벌이기보다 다지는 쪽이 이롭습니다')
     return { age: d.age, ganji: `${d.cheongan}${d.jiji}`, favorable, unfavorable, gwanseong, note: notes.join(' · ') }
   })
+}
+
+// ═══════════════════════════════════════════════════════════════
+// [17단계 ④] 목화(외향) vs 금수(내성) — 음양과 «다른 축»
+// ═══════════════════════════════════════════════════════════════
+
+export interface MokhwaResult {
+  mokhwa: number
+  geumsu: number
+  mokhwaPct: number
+  label: string
+  say: string
+}
+
+/**
+ * ★음양 비율과 헷갈리지 마십시오. 다른 축입니다.
+ *   음양   글자 하나하나의 陰陽 — 기운을 밖으로 내미는가 안으로 접는가
+ *   목화금수  오행의 방향 — 뻗고 타오르는가(목화) 거두고 가라앉는가(금수)
+ *   ★둘이 어긋나는 사람이 있습니다. «양인데 금수»면 겉은 활달한데 속은 차분합니다.
+ *     그 어긋남이 이 사람을 설명하는 가장 좋은 재료가 됩니다.
+ */
+export function judgeMokhwaGeumsu(score: Record<Ohaeng, number>): MokhwaResult {
+  const mokhwa = (score['목'] ?? 0) + (score['화'] ?? 0)
+  const geumsu = (score['금'] ?? 0) + (score['수'] ?? 0)
+  const mokhwaPct = Math.round((mokhwa / Math.max(1, mokhwa + geumsu)) * 100)
+  const label = mokhwaPct >= 65 ? '목화 우세' : mokhwaPct <= 35 ? '금수 우세' : '목화금수 균형'
+  const SAY: Record<string, string> = {
+    '목화 우세': '뻗어 나가고 드러내는 기운이 셉니다. 사람 앞에 서고 새로 벌이는 일에서 살아납니다. 다만 벌인 것을 거두는 힘은 따로 길러야 합니다.',
+    '금수 우세': '거두고 가라앉히는 기운이 셉니다. 살피고 파고들며 마무리하는 데 강합니다. 다만 먼저 나서고 알리는 일은 애써 연습해야 합니다.',
+    '목화금수 균형': '뻗는 기운과 거두는 기운이 고릅니다. 벌이는 일과 마무리하는 일을 다 감당할 수 있는 결입니다.',
+  }
+  return { mokhwa: Math.round(mokhwa), geumsu: Math.round(geumsu), mokhwaPct, label, say: SAY[label] }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// [17단계 ⑥] 고립 오행과 오장육부
+// ═══════════════════════════════════════════════════════════════
+
+/** 오행 ↔ 몸 — 교재가 오행마다 대어 주는 자리 */
+const ORGAN: Record<Ohaeng, { organ: string; care: string }> = {
+  목: { organ: '간·쓸개, 그리고 눈과 힘줄', care: '늦게까지 깨어 있는 습관이 가장 크게 깎습니다. 술을 줄이고 잠을 앞당기는 것이 첫 걸음입니다.' },
+  화: { organ: '심장·소장, 그리고 혈압과 잠', care: '마음이 급해질 때 몸이 먼저 반응합니다. 카페인을 줄이고 숨을 고르는 시간을 하루 한 번 두십시오.' },
+  토: { organ: '비장·위장, 그리고 소화', care: '끼니를 거르거나 급히 먹는 것이 가장 해롭습니다. 때를 정해 천천히 드십시오.' },
+  금: { organ: '폐·대장, 그리고 피부와 코', care: '건조하고 탁한 공기가 특히 부담입니다. 환기와 물 마시기를 챙기십시오.' },
+  수: { organ: '신장·방광, 그리고 뼈와 귀', care: '몸을 차게 두는 것이 가장 나쁩니다. 허리와 발을 따뜻하게 하고 물을 자주 드십시오.' },
+}
+
+export interface HealthResult { lines: string[] }
+
+/**
+ * 고립·결핍 오행에서 몸 이야기를 낸다. (17단계 ⑥)
+ *   ⚠️ 병을 단정하지 않습니다. «살펴 주십시오» 까지만 말합니다. (교훈 AX·병명 정리)
+ */
+export function judgeHealth(score: Record<Ohaeng, number>): HealthResult {
+  const lines: string[] = []
+  for (const el of EL5) {
+    const v = score[el] ?? 0
+    const o = ORGAN[el]
+    if (v === 0) {
+      lines.push(`${el}이 아예 없습니다 — ${o.organ} 쪽을 평소에 살펴 주십시오. ${o.care}`)
+    } else if (v >= EXCESS_MIN) {
+      lines.push(`${el}이 넘칩니다(${Math.round(v)}점) — ${o.organ} 쪽에 부담이 몰리기 쉽습니다. ${o.care}`)
+    }
+  }
+  if (!lines.length) lines.push('크게 비거나 넘치는 기운이 없어, 몸 쪽으로 특별히 몰리는 자리는 보이지 않습니다.')
+  return { lines }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// [17단계 ⑦] 대운 정밀 — 학창시절 · 조토/습토
+// ═══════════════════════════════════════════════════════════════
+
+/** 辰丑은 습토(축축한 흙), 戌未는 조토(마른 흙) — 접목운의 결이 다르다 */
+const WET_TOJI = new Set(['辰', '丑'])
+const DRY_TOJI = new Set(['戌', '未'])
+
+export interface EarlyDaeun {
+  age: number
+  ganji: string
+  /** 그 대운의 육친 (지지 기준) */
+  group: YukchinGroup
+  /** 학마운 — 재성이 인성을 극해 배움이 흔들리는 때 */
+  hakma: boolean
+  say: string
+}
+
+/**
+ * 1~2대운(학창시절)을 본다. (17단계 ⑦)
+ *   인성운 = 배움이 붙는 때 · 식상운 = 표현이 트이는 때
+ *   ★재성운 = «학마운». 재성이 인성을 극해 공부에서 마음이 뜨는 때로 봅니다.
+ */
+export function judgeEarlyDaeun(
+  list: Array<{ age: number; cheongan: string; jiji: string }>,
+  dayStem: string,
+): EarlyDaeun[] {
+  const dayEl = STEM_EL[dayStem] ?? '토'
+  const SAY: Record<YukchinGroup, string> = {
+    인성: '배움이 붙는 때입니다. 공부한 것이 그대로 쌓입니다.',
+    식상: '표현이 트이는 때입니다. 말과 글, 만드는 일에서 두각이 납니다.',
+    재성: '★학마운 — 손에 잡히는 것에 마음이 쏠려 공부에서 마음이 뜨기 쉽습니다. 나무라기보다 «왜 지금 딴 데를 보는지»를 함께 살펴 주십시오.',
+    관성: '틀과 규율이 들어오는 때입니다. 성적보다 태도가 먼저 잡힙니다.',
+    비겁: '또래와 어울리는 힘이 커지는 때입니다. 친구가 성적을 좌우합니다.',
+  }
+  return list.slice(0, 2).map(d => {
+    const el = BRANCH_EL[d.jiji] ?? '토'
+    const group = yukchinOf(dayEl, el)
+    return {
+      age: d.age, ganji: `${d.cheongan}${d.jiji}`, group,
+      hakma: group === '재성',
+      say: SAY[group],
+    }
+  })
+}
+
+/** 접목운의 결 — 습토냐 조토냐 */
+export function interchangeFlavor(jiji: string): string {
+  if (WET_TOJI.has(jiji)) {
+    return `${jiji}는 습토(축축한 흙)입니다. 젖은 땅이라 갈아타는 일이 더디게, 그러나 깊게 일어납니다. 서두르지 않아도 됩니다.`
+  }
+  if (DRY_TOJI.has(jiji)) {
+    return `${jiji}는 조토(마른 흙)입니다. 마른 땅이라 갈아타는 일이 급하게 옵니다. 미리 준비해 두지 않으면 떠밀리듯 바뀝니다.`
+  }
+  return ''
 }

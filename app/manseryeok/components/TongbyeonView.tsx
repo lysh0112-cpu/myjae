@@ -106,6 +106,16 @@ export interface TongbyeonViewProps {
    *   있으면 이걸 쓰고, 없으면 예전 buildTongbyeonPrompt 로 갑니다.
    */
   premiumPrompt?: { system: string; user: string } | null
+  /**
+   * ★2026-07-29 — 섹션마다 그 자리에 얹을 도표. (대표님 지시 — 샌드위치 렌더링)
+   *
+   *   [무엇이 문제였나] 도표가 전부 화면 위쪽에 몰려 있고 풀이는 전부 아래에 있어,
+   *     손님이 «이 설명이 어느 표 이야기인지» 를 스스로 이어 붙여야 했습니다.
+   *   [어떻게] 풀이 카드 i 를 그리기 «직전»에 slots[i] 를 그립니다.
+   *     ⚠️ 개수가 안 맞아도 안전합니다. 없으면 그냥 안 그립니다.
+   *     ⚠️ 어떤 도표를 어느 자리에 둘지는 **부모가 정합니다.** 이 부품은 모릅니다.
+   */
+  slots?: Array<React.ReactNode | null>
   onBack?: () => void
   // 무슨 통변인지: 없으면 사주, 'daeun' 대운, 'seyun' 세운(월운 포함)
   unseEntry?: 'daeun' | 'seyun'
@@ -116,7 +126,7 @@ export interface TongbyeonViewProps {
   onComplete?: (text: string) => void
 }
 
-export default function TongbyeonView({ input, questions, premium, premiumPrompt, onBack, unseEntry, savedText, onComplete }: TongbyeonViewProps) {
+export default function TongbyeonView({ input, questions, premium, premiumPrompt, slots, onBack, unseEntry, savedText, onComplete }: TongbyeonViewProps) {
   // 통변 섹션 제목: 대운/세운/사주에 맞춰. 이름이 '나'면 "나의 ~ 이야기".
   const kindWord = unseEntry === 'daeun' ? '대운' : unseEntry === 'seyun' ? '세운' : '사주'
   const storyTitle = input.name === '나'
@@ -213,7 +223,10 @@ export default function TongbyeonView({ input, questions, premium, premiumPrompt
         {cards.map((c, i) => {
           const open = effectiveOpen === i
           return (
-            <div key={i} style={{ background: C.card, border: `0.5px solid ${C.border}`, borderRadius: 12, marginBottom: 8, overflow: 'hidden' }}>
+            <div key={i}>
+            {/* ★그 섹션의 도표를 풀이 «바로 위»에 얹는다 */}
+            {slots?.[i] ? <div style={{ marginBottom: 8 }}>{slots[i]}</div> : null}
+            <div style={{ background: C.card, border: `0.5px solid ${C.border}`, borderRadius: 12, marginBottom: 8, overflow: 'hidden' }}>
               <div
                 onClick={() => setOpenIdx(open ? -1 : i)}
                 style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '13px 14px', cursor: 'pointer' }}
@@ -225,6 +238,7 @@ export default function TongbyeonView({ input, questions, premium, premiumPrompt
               <div style={{ maxHeight: open ? '2000px' : '0', overflow: 'hidden', transition: 'max-height .3s ease' }}>
                 <div style={{ fontSize: 13.5, lineHeight: 1.8, color: C.title, whiteSpace: 'pre-wrap', padding: '0 14px 14px' }}>{c.body}</div>
               </div>
+            </div>
             </div>
           )
         })}
