@@ -12,6 +12,7 @@
 //    [화면] 그날이 공망에 듭니다. 시험날 실수하지 않도록 미리 다져 두면 됩니다.
 
 import { calcWolunList, calcIlunList } from '../dayun'
+import { sipsinOfChar } from './sipsin'
 import { getGongmang } from '../gongmang'
 import { judgeYear } from './examScore'
 import type { Pillar, YearLuck } from './types'
@@ -79,17 +80,42 @@ export function judgeExamDay(
   lines.push('교재는 세운이 가장 중요하고 그다음이 대운·월운·일진이라 합니다. '
     + '날짜 하나로 단정하지 마시고 흐름을 크게 보십시오.')
 
+  // ★2026-07-29 — 그날의 «십성» 을 재료로 낸다. (대표님 지시)
+  //
+  //   [왜] 전에는 «그날은 癸巳일입니다» 로 간지만 줬습니다.
+  //     AI 는 그 글자가 이 사람에게 무엇인지 모릅니다. 그래서 날짜 나열로 끝났습니다.
+  //     일간을 기준으로 십성을 계산해 주면 «겁재와 편재가 교차하는 날» 이라고 쓸 수 있습니다.
+  //   ⚠️ 십성 계산은 examLuck/sipsin.sipsinOfChar 한 곳만 씁니다. (교훈 BQ)
+  const dayStemSipsin = il ? sipsinOfChar(dayStem, il.cheongan) : ''
+  const dayBranchSipsin = il ? sipsinOfChar(dayStem, il.jiji) : ''
+  const monthStemSipsin = wol ? sipsinOfChar(dayStem, wol.cheongan) : ''
+  const monthBranchSipsin = wol ? sipsinOfChar(dayStem, wol.jiji) : ''
+
   return {
     year, monthGanji, dayGanji, isGongmang, lines,
     reasons: [
       `${label} ${y}-${m}-${d} · 세운 ${seyun[0]}${seyun[1]}(${year.grade}, 점수 ${year.score})`,
-      monthGanji ? `월운 ${monthGanji}` : '',
-      dayGanji ? `일진 ${dayGanji}` : '',
+      monthGanji ? `월운 ${monthGanji}${monthStemSipsin ? ` — 천간 ${monthStemSipsin}` : ''}${monthBranchSipsin ? ` · 지지 ${monthBranchSipsin}` : ''}` : '',
+      dayGanji ? `일진 ${dayGanji}${dayStemSipsin ? ` — 천간 ${dayStemSipsin}` : ''}${dayBranchSipsin ? ` · 지지 ${dayBranchSipsin}` : ''}` : '',
+      // ★이 줄이 실전 가이드의 뼈대입니다. 십성이 있어야 «그날 무엇을 조심할지» 를 씁니다.
+      dayStemSipsin && dayBranchSipsin
+        // ★받침에 따라 «과/와»·«이/가» 를 가린다. 「겁재과 편재이」 처럼 나가면 안 됩니다.
+        ? `★시험 당일은 일간 ${dayStem} 기준으로 ${dayStemSipsin}${josaGwa(dayStemSipsin)} ${dayBranchSipsin}${josaI(dayBranchSipsin)} 겹치는 날입니다`
+        : '',
       isGongmang ? '★그날이 공망에 든다 (교재 195쪽)' : '',
       '교재 195쪽 — 세운 > 대운 > 월운 > 일진 차례',
     ].filter(Boolean),
   }
 }
+
+/** 받침이 있으면 true — 조사를 가리는 데 쓴다 */
+function hasBatchim(w: string): boolean {
+  const c = w.charCodeAt(w.length - 1)
+  if (c < 0xac00 || c > 0xd7a3) return false
+  return (c - 0xac00) % 28 !== 0
+}
+const josaGwa = (w: string) => (hasBatchim(w) ? '과' : '와')
+const josaI = (w: string) => (hasBatchim(w) ? '이' : '가')
 
 /** 그해 세운 간지 — calcSeyunList 를 쓰지 않고 바로 구한다 */
 function calcSeyunGanji(_dayStem: string, year: number): [string, string] | null {

@@ -286,7 +286,8 @@ export function cardJobChange(
 export function cardExamDay(r: ExamDayResult | null): ExamCard | null {
   if (!r) return null
   return {
-    key: 'examday', title: '시험 날짜를 짚어 보면',
+    // ★2026-07-29 — ORDER 와 이름을 맞췄습니다. 어긋나면 화면 제목과 프롬프트가 달라집니다.
+    key: 'examday', title: '시험 날짜와 실전 준비',
     badge: r.isGongmang ? '공망일' : undefined,
     lines: r.lines, reasons: r.reasons,
     data: { isGongmang: r.isGongmang },

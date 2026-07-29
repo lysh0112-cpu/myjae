@@ -75,6 +75,12 @@ export interface BuildExamPromptArgs {
   gradeMismatch?: boolean
   /** ★고1 이상에게 물은 «지금 성적대·희망 계열» */
   levelTrack?: string | null
+  /**
+   * ★2026-07-29 — 조건이 겹칠 때만 붙는 지시. (대표님 지시)
+   *   [N수생 + 상위권 + 성적대 + 계열] 같은 조합에서만 나오는 말을 만드는 자리입니다.
+   *   ⚠️ 안 걸리면 빈 문자열이라 프롬프트가 안 길어집니다.
+   */
+  conditional?: string | null
 }
 
 export function buildExamPrompt(v: BuildExamPromptArgs): string {
@@ -199,7 +205,7 @@ ${v.examDate ? `[★「시험 날짜와 실전 준비」 카드는 이렇게 쓰
   ⚠️ «있으니 붙는다»·«없으니 어렵다» 로 단정하지 마세요.
      «이 힘을 이렇게 쓰면 좋겠다» 로 말합니다. 결과를 점치는 자리가 아닙니다.
 
-[★「어떤 공부·시험에 힘이 실리나」 카드는 이렇게 맺으세요]
+${v.conditional ? v.conditional + '\n\n' : ''}[★「어떤 공부·시험에 힘이 실리나」 카드는 이렇게 맺으세요]
 · 십성마다 «이런 시험에 힘이 실린다» 를 나열하는 것으로 끝내지 마세요.
   그건 누구에게나 같은 일반론이라 읽어도 남는 것이 없습니다.
 · **마지막에 반드시 이 사람의 결론을 한 문장 더 붙이세요.**

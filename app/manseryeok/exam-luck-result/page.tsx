@@ -27,7 +27,7 @@ import { judgeExamDay } from '@/lib/saju/examLuck/examDay'
 import { buildAllCards } from '@/lib/saju/examLuck/buildCards'
 import { buildExamPrompt, parseExamTongbyeon } from '@/lib/saju/examLuck/buildExamPrompt'
 import { examKindOf, CLOSING, CLOSING_STUDENT } from '@/lib/saju/examLuck/tables/rules'
-import { targetPromptBlock, GRADE_PROMPT, gradeMismatch, levelTrackBlock } from '@/lib/saju/examLuck/tables/studentTarget'
+import { targetPromptBlock, GRADE_PROMPT, gradeMismatch, levelTrackBlock, conditionalRules } from '@/lib/saju/examLuck/tables/studentTarget'
 import { saveRecord, updateRecordResult, getRecord } from '@/lib/saju/sajuRecords'
 import { calcSeyunList, calcWolunList, type DayunItem } from '@/lib/saju/dayun'
 import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
@@ -221,6 +221,14 @@ function ExamLuckResultInner() {
           ? gradeMismatch(exactAge(calc.solarYear, calc.solarMonth, calc.solarDay), studentGrade) : false,
         // ★고1 이상에게만 물은 것 — 없으면 빈 문자열이라 안 실립니다
         levelTrack: target === 'student' ? levelTrackBlock(gradeLevel, trackSel) : null,
+        // ★조건이 겹칠 때만 붙는 지시 — «이 사람만의» 문장을 만드는 자리
+        conditional: target === 'student'
+          ? conditionalRules({
+              grade: studentGrade, level: gradeLevel, track: trackSel,
+              category: examCategory, target: targetType,
+              year: thisYear, name: person.name || '이분',
+            })
+          : null,
       })
       let acc = ''
       try {
