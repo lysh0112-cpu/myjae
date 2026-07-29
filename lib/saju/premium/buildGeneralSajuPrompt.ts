@@ -79,7 +79,7 @@ function buildSections(v: GeneralSajuInput): Section[] {
     gisin: v.yongsin?.eokbu?.gisin ?? null,
   })
   const target = v.age < 20 ? 'student' : 'adult'
-  // ★2026-07-29 — 심산 17단계 감명에 필요한 판정들
+  // ★2026-07-29 — 17단계 감명에 필요한 판정들
   const mokhwa = judgeMokhwaGeumsu(v.score)
   const health = judgeHealth(v.score)
   const school: import('./deepJudge').EarlyDaeun[] = v.daeunList?.length
@@ -246,7 +246,7 @@ function buildSections(v: GeneralSajuInput): Section[] {
       ],
     },
     {
-      no: 7, title: '심산 맞춤 개운 솔루션',
+      no: 7, title: '맞춤 개운 솔루션',
       blocks: [
         ['8-1 액땜 솔루션', deep.remedy.lines],
         ['8-2 일상 개운법', [
@@ -268,7 +268,11 @@ function EL5Line(S: Record<Ohaeng, number>): string {
 // ═══════════════════════════════════════════════════════════════
 
 const SYSTEM = `당신은 삼십 년 넘게 사주를 봐 온 명리 상담가입니다.
-『명리적성 비법노트』(심산)의 감명법으로 봅니다.
+교재의 감명법으로 봅니다.
+
+[★이름을 밝히지 말 것]
+· 교재 이름과 지은이를 손님에게 말하지 마세요. 어느 책·누구의 방식인지 밝히지 않습니다.
+· 근거를 대야 하면 "명리에서는", "예로부터" 정도로만 말합니다.
 
 [가장 중요한 것 — 말의 층]
 · 당신은 속으로 월지·지장간·억부용신·천극지충·격국 같은 술어로 생각합니다.

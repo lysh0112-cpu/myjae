@@ -476,16 +476,38 @@ function ResultNewContent() {
         </div>
       ),
     } : null,
-    // 섹션5 합충형파해와 건강 — ★대표님 지적: 합충 이야기 «바로 위»에 와야 합니다
+    // 섹션5 합충형파해와 건강 — 합충 이야기 «바로 위»에 옵니다
+    //   ★세운(연운) 표를 함께 얹습니다. 이 섹션이 「올해 어떻게 풀리나」를 말하는 자리라
+    //     연운 표가 옆에 있어야 손님이 이어 읽습니다.
+    //   ⚠️ 슬롯은 제목으로 찾으므로 **한 제목에 하나만** 두어야 합니다.
+    //      따로 두면 먼저 걸린 것만 나오고 뒤엣것은 영영 안 보입니다.
     saju.length > 0 ? {
       match: ['합충', '합·충', '발복'],
       node: (
-        <div key="s5" style={{ background: '#fff', border: '1px solid rgba(120,53,15,0.15)', borderRadius: 14, padding: 12 }}>
-          <HapchungView saju={saju} />
+        <div key="s5" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ background: '#fff', border: '1px solid rgba(120,53,15,0.15)', borderRadius: 14, padding: 12 }}>
+            <HapchungView saju={saju} />
+          </div>
+          {(dayStem && monthGanji && yearStem && solarYear) ? (
+            <div style={{ background: '#fff', border: '1px solid rgba(120,53,15,0.15)', borderRadius: 14, padding: 12 }}>
+              <UnseFlow
+                solarYear={solarYear} solarMonth={solarMonth} solarDay={solarDay}
+                monthGanji={monthGanji} yearStem={yearStem} dayStem={dayStem}
+                gender={gender} birthYear={yearParam} currentYear={currentYear}
+                myMonthBranch={monthBranchForNote ?? ''} myDayBranch={iljji}
+                list={dayunList} hourIdx={hourIdx}
+                mode="seyunOnly"
+              />
+            </div>
+          ) : null}
         </div>
       ),
     } : null,
-    // 섹션6 대운 흐름
+    // 섹션6 대운 흐름 — ★대운 한 줄만. (대표님 지시)
+    //   전에는 넉 줄(대운·세운·월운·일운)이 통째로 들어가 리포트가 세로로 너무 길었습니다.
+    //   ⚠️ mode 는 «그리는 범위»만 가릅니다. 계산은 하나도 안 바뀝니다.
+    //   ⚠️ list={dayunList} — 최상단에서 한 번 받은 것을 그대로 넘깁니다(SSoT).
+    //      안 넘기면 부품이 /api/dayun 을 또 불러 값이 갈릴 수 있습니다.
     (dayStem && monthGanji && yearStem && solarYear) ? {
       match: ['대운', '인생 곡선', '흐름'],
       node: (
@@ -496,6 +518,7 @@ function ResultNewContent() {
             gender={gender} birthYear={yearParam} currentYear={currentYear}
             myMonthBranch={monthBranchForNote ?? ''} myDayBranch={iljji}
             list={dayunList} hourIdx={hourIdx}
+            mode="daeunOnly"
           />
         </div>
       ),

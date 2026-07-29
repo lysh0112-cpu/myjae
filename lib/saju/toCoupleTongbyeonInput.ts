@@ -79,7 +79,7 @@ export interface CouplePersonInput {
 export interface CoupleTongbyeonMaterial {
   /** [첫 번째 사람] / [두 번째 사람] 블록 */
   personBlocks: string[]
-  /** [심산 판정] 블록 — 있으면 이것을 우선하라고 지시한다 */
+  /** [명리 판정] 블록 — 있으면 이것을 우선하라고 지시한다 */
   judgeBlock: string
   /** [흐름] 세운·대운 블록 (시기 질문용) */
   flowBlock: string
@@ -231,7 +231,10 @@ function catBlock(c: CategoryResult): string {
 function judgeBlock(j: CoupleJudgeV1 | null): string {
   if (!j) return ''
   const out: string[] = []
-  out.push('[심산 판정 — ★가장 중요한 근거★]')
+  // ★2026-07-29 — 블록 이름에서 지은이 이름을 뺐습니다. (대표님 지시)
+  //   AI 가 읽는 자리라 «심산» 을 그대로 손님 글에 옮겨 쓸 수 있었습니다.
+  //   ⚠️ 이 이름은 buildCouplePrompt 의 지시문 세 곳과 짝입니다. 한쪽만 고치지 마십시오.
+  out.push('[명리 판정 — ★가장 중요한 근거★]')
   out.push('아래는 고객이 화면에서 이미 본 내용입니다.')
   out.push('위 [기본 재료]와 어긋나는 대목이 있으면 반드시 이 판정을 따르세요.')
   out.push('')

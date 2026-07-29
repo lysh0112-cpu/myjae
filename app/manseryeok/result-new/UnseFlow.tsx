@@ -41,6 +41,21 @@ interface Props {
    *   (작업지시 3장 ④ "나" 안 — 넘기면 그걸 쓰고, 안 넘기면 예전대로)
    */
   list?: DayunItem[]
+  /**
+   * ★2026-07-29 — 어느 줄까지 그릴지. (대표님 지시)
+   *
+   *   all         대운 + 세운 + 월운 + 일운 넉 줄   ← 만세력·전문가 화면 (기본값)
+   *   daeunOnly   대운(10년 흐름) 한 줄만          ← 사주풀이 리포트 [대운 섹션]
+   *   seyunOnly   세운(연운) 한 줄만               ← 사주풀이 리포트 [연운 섹션]
+   *
+   *   ⚠️⚠️ **이것은 «그리는 범위»만 가릅니다. 계산은 하나도 안 바뀝니다.**
+   *     대운 산출은 /api/dayun 한 곳, 세운·월운·일운은 dayun.ts 의 calc* 함수가
+   *     예전 그대로 돕니다. 어느 mode 로 부르든 «같은 값»이 나옵니다.
+   *     (31부에서 대운 부품을 통일하며 사본을 걷어낸 자리입니다. 되돌리지 마십시오)
+   *
+   *   ⚠️ 기본값이 'all' 이라 이 prop 을 안 넘기는 기존 화면은 하나도 안 바뀝니다.
+   */
+  mode?: 'all' | 'daeunOnly' | 'seyunOnly'
 }
 
 /** 등급 배지 색 — 겁주지 않는 결로 (교훈 AX) */
@@ -73,7 +88,7 @@ interface Cell {
 
 export default function UnseFlow(props: Props) {
   const { solarYear, solarMonth, solarDay, monthGanji, yearStem, dayStem, gender, birthYear, currentYear,
-          myMonthBranch = '', myDayBranch = '', list, hourIdx = null } = props
+          myMonthBranch = '', myDayBranch = '', list, hourIdx = null, mode = 'all' } = props
 
   const [dayunList, setDayunList] = useState<DayunItem[]>([])
   const [selDaeun, setSelDaeun] = useState<number | null>(null)   // 대운 index
@@ -236,10 +251,11 @@ export default function UnseFlow(props: Props) {
 
   return (
     <div style={{ fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>
-      {section('대운 (10년 흐름)', daeunBadge, daeunCells, false)}
-      {section('세운 (연운)', seyunBadge, seyunCells, true)}
-      {selYear !== null && wolunCells.length > 0 && section('월운 (달별)', `${selYear}년`, wolunCells, true)}
-      {selYear !== null && selMonth !== null && ilunCells.length > 0 && section('일운 (날짜별)', `${selYear}년 ${selMonth}월`, ilunCells, true)}
+      {/* ★mode 는 «그리는 범위»만 가립니다. 위쪽 계산은 mode 와 무관하게 늘 같습니다. */}
+      {mode !== 'seyunOnly' && section('대운 (10년 흐름)', daeunBadge, daeunCells, false)}
+      {mode !== 'daeunOnly' && section('세운 (연운)', seyunBadge, seyunCells, true)}
+      {mode === 'all' && selYear !== null && wolunCells.length > 0 && section('월운 (달별)', `${selYear}년`, wolunCells, true)}
+      {mode === 'all' && selYear !== null && selMonth !== null && ilunCells.length > 0 && section('일운 (날짜별)', `${selYear}년 ${selMonth}월`, ilunCells, true)}
       {/* ★144칸 자세히 보기 — 월지 반응(환경)과 일지 반응(나)을 함께 보여 준다 */}
       {detail && (() => {
         const env = jijiRelation(myMonthBranch, detail.branch)
