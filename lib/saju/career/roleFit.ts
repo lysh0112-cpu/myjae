@@ -30,6 +30,7 @@ import type { CareerCard, CareerInput, Ohaeng } from './types'
 import { calcCareerScore, gradeAll } from './careerScore'
 import { yukchinOf } from './yukchin'
 import { checkSinsal9 } from './sinsal9'
+import { getSinsal } from '../sinsal'   // 12신살 — 화개를 여기서 본다
 import { calcYongsinNew } from '../yongsinNew'
 
 const STEM_EL: Record<string, Ohaeng> = {
@@ -46,9 +47,16 @@ const EL5: Ohaeng[] = ['목', '화', '토', '금', '수']
  */
 export const ADULT_JOB_BLOCKLIST = [
   '유흥업', '유흥업소', '목욕탕', '사채업', '당구장', '쌀가게', '완구점',
-  '도축업', '장의사', '무속인', '안마', '지압', '지압사', '철물점', '정육점',
+  '도축업', '장의사', '안마', '지압', '지압사', '철물점', '정육점',
   '수산물', '농수산물', '수도사업', '수도 사업', '생수업', '냉동업', '양어장',
   '세차장', '문구점', '가구점', '화원', '공원묘지', '골동품', '이발사',
+  // ★2026-07-29 대표님 지시 추가 — 종교·무속 계열
+  //   [사유] 사주 서비스에서 「당신에게 어울리는 직업: 종교인」 이 나가면
+  //          손님이 서비스 전체의 전문성을 의심하게 됩니다.
+  //   ⚠️ 그 길이 나쁘다는 뜻이 절대 아닙니다. 커리어 리포트의 결에 안 맞는 것입니다.
+  //   ★대신 그 기운(화개·천문성·귀문·편인)은 아래 「의미·마음을 다루는 일」 묶음으로
+  //     현대적으로 옮겨 냅니다. 기운을 버리는 것이 아니라 오늘의 말로 바꾸는 것입니다.
+  '무속인', '종교인', '사찰', '역술인', '활인업',
 ]
 
 /** 걸러야 할 말인가 */
@@ -121,7 +129,22 @@ const G_TECH: RoleGroup = {
   why: '자르고 다듬어 완성하는 데 강한 결입니다',
 }
 
-const ALL_GROUPS = [G_INDEPENDENT, G_INSIGHT, G_PEOPLE, G_SYSTEM, G_MARKET, G_TECH]
+/**
+ * ⑦ 의미·마음을 다루는 일 — ★2026-07-29 대표님 지시로 새로 둔 묶음.
+ *
+ *   [왜 필요한가]
+ *     화개살·천문성·귀문관살·편인 과다는 교재에서 «종교·무속·역학» 으로 이어집니다.
+ *     그 기운 자체는 진짜입니다. 다만 그대로 «종교인» 이라 부르면 손님이 받아들이지 못합니다.
+ *     ★기운을 버리는 것이 아니라 **오늘의 직무 이름으로 옮기는 것**입니다.
+ *       사람의 마음을 읽고 뜻을 다루는 결  →  인문·철학 / 상담 / 코칭 / 멘토링 / 치유 컨설팅
+ */
+const G_MEANING: RoleGroup = {
+  key: 'meaning', title: '의미 · 마음을 다루는 일',
+  roles: ['인문·철학 연구', '심리 상담·치료', '멘토링·코칭', '조직 문화·마음 건강 컨설팅', '교육 콘텐츠·강연'],
+  why: '사람의 속을 읽고 뜻을 세우는 데 힘이 붙는 결입니다',
+}
+
+const ALL_GROUPS = [G_INDEPENDENT, G_INSIGHT, G_PEOPLE, G_MEANING, G_SYSTEM, G_MARKET, G_TECH]
 
 /**
  * 성인용 「핵심 직무 & 전문 분야」 카드.
@@ -176,6 +199,32 @@ export function judgeRoleFit(input: CareerInput): CareerCard {
   if (has('도화')) add('people', 30, '도화', bag('people'))
   add('people', (r.score['수'] ?? 0) * 0.5, `수 ${Math.round(r.score['수'] ?? 0)}점`, bag('people'))
   add('people', Y['식상'] * 0.5, `식상 ${Math.round(Y['식상'])}점`, bag('people'))
+
+  // ⑦ 의미·마음 — 화개 · 천문성 · 귀문관살 · 편인 · 戌亥(술해천문)
+  //   ★교재가 «종교·무속·역학» 으로 잇는 기운을 오늘의 직무로 옮기는 자리입니다.
+  {
+    const yearB = saju.find(p => p.pillar === '년주')?.branch ?? ''
+    const brs = saju.map(p => p.branch).filter(b => b && b !== '?')
+    // 화개 — 12신살. 년지를 기준으로 네 지지를 훑는다.
+    const hwagae = yearB ? brs.some(b => getSinsal(yearB, b) === '화개') : false
+    if (hwagae) add('meaning', 22, '화개', bag('meaning'))
+    if (has('천문성')) add('meaning', 20, '천문성', bag('meaning'))
+    if (has('귀문')) add('meaning', 18, '귀문관살', bag('meaning'))
+    // 술해천문 — 戌·亥가 함께 있으면
+    if (brs.includes('戌') && brs.includes('亥')) add('meaning', 15, '戌亥 천문', bag('meaning'))
+    // 편인 — 인성 가운데 일간과 음양이 같은 쪽
+    const dayYang = ['甲', '丙', '戊', '庚', '壬'].includes(dayStem)
+    let pyeonIn = 0, jeongIn = 0
+    for (const p of saju) {
+      const el = STEM_EL[p.stem]
+      if (!el || yukchinOf(dayEl, el) !== '인성') continue
+      const chYang = ['甲', '丙', '戊', '庚', '壬'].includes(p.stem)
+      if (chYang === dayYang) pyeonIn++; else jeongIn++
+    }
+    const inTotal = Math.max(1, pyeonIn + jeongIn)
+    const pyeonInPt = (Y['인성'] * pyeonIn) / inTotal
+    if (pyeonInPt >= 25) add('meaning', pyeonInPt * 0.8, `편인 ${Math.round(pyeonInPt)}점`, bag('meaning'))
+  }
 
   // ④ 체계 — 관성
   add('system', Y['관성'], `관성 ${Math.round(Y['관성'])}점`, bag('system'))
