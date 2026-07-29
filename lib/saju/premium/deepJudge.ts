@@ -80,6 +80,22 @@ function jeongPyeon(dayStem: string, ch: string, isStem: boolean): '정' | '편'
   const chYang = isStem ? YANG_STEM.has(ch) : YANG_BRANCH.has(ch)
   return chYang === dayYang ? '편' : '정'
 }
+
+/**
+ * 육친 묶음 + 정/편 → 십성 제 이름.
+ *   ★"정식상" 같은 말이 나오지 않게 하려고 둡니다.
+ *     음양이 같으면 비견·식신·편재·편관·편인, 다르면 겁재·상관·정재·정관·정인입니다.
+ */
+const SIPSIN_NAME: Record<YukchinGroup, { 편: string; 정: string }> = {
+  비겁: { 편: '비견', 정: '겁재' },
+  식상: { 편: '식신', 정: '상관' },
+  재성: { 편: '편재', 정: '정재' },
+  관성: { 편: '편관', 정: '정관' },
+  인성: { 편: '편인', 정: '정인' },
+}
+export function sipsinName(grp: YukchinGroup, jp: '정' | '편'): string {
+  return SIPSIN_NAME[grp][jp]
+}
 const chars = (saju: Pill[]) =>
   saju.flatMap(p => [
     { ch: p.stem, isStem: true, pillar: p.pillar },
@@ -260,11 +276,12 @@ export function judgeSisangIlwi(saju: Pill[], dayStem: string): SisangResult {
     if (yukchinOf(dayEl, e) === grp) count++
   }
   const alone = count === 1
+  const name = sipsinName(grp, jp)
   return {
     isSisangIlwi: alone,
-    sipsin: grp,
+    sipsin: name,
     say: alone
-      ? `시간(時干)에 ${jp}${grp === '비겁' ? '' : ''}${grp}이 홀로 서 있습니다. 교재는 이런 자리를 «시상일위»라 하여 귀하게 봅니다. 늦게 드러나는 자리라 젊을 때보다 중년 이후에 빛납니다.`
+      ? `시간(時干)에 ${name}이 홀로 서 있습니다. 교재는 이런 자리를 «시상일위»라 하여 귀하게 봅니다. 늦게 드러나는 자리라 젊을 때보다 중년 이후에 빛납니다.`
       : '',
   }
 }
