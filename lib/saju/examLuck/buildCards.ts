@@ -16,7 +16,8 @@
 
 import type { ExamCard, ExamInput, ExamTarget, YearLuck } from './types'
 import {
-  EXAM_BY_SIPSIN, HIGHSCHOOL, HIGHSCHOOL_SRC,
+  EXAM_BY_SIPSIN, EXAM_BY_SIPSIN_STUDENT, YEAR_SAY_STUDENT, hasStudentBan,
+  HIGHSCHOOL, HIGHSCHOOL_SRC,
   SUSI_JEONGSI, SUSI_JEONGSI_SRC, STUDY_TREND_SRC, HAKMA, HAKMA_SAY,
   CLOSING, CLOSING_STUDENT, CLOSING_SRC,
 } from './tables/rules'
@@ -71,12 +72,22 @@ export function cardYears(
   const lines = years.map(y => {
     const fresh = y.hits.find(h => !used.has(h.key))
     if (fresh) used.add(fresh.key)
-    const tail = fresh ? ` ${fresh.say}` : ''
+    // ★2026-07-29 — 학생에게는 교재 문구 대신 «학생 말» 을 씁니다. (대표님 지시)
+    //   [왜] 교재 230쪽이 «정인운 → 공무원·입시·취업 시험» 이라 적습니다.
+    //        열세 살 아이 리포트에 그 말이 그대로 나갔습니다.
+    //        프롬프트 금지어는 AI 에게만 닿고, 이 카드에는 안 닿습니다.
+    //   ⚠️ 교재 표(SCORE_RULES)는 안 고쳤습니다. 성인·상담사 화면이 그대로 씁니다.
+    const say = fresh
+      ? (target === 'student' ? (YEAR_SAY_STUDENT[fresh.key] ?? fresh.say) : fresh.say)
+      : ''
+    // 그래도 금지어가 남으면 그 문구는 아예 뺍니다 (마지막 그물)
+    const tail = say && !(target === 'student' && hasStudentBan(say)) ? ` ${say}` : ''
     return `${y.year}년 ${y.stem}${y.branch} — ${y.grade}.${tail}`
   })
   // ★교재 195쪽 — 「합격운은 인성운이 더 중요하고, 취업운은 관성운이 더 중요하며」
-  if (purpose === 'exam') lines.push('합격운은 인성(배움의 기운)이 더 중요합니다. 배운 것이 몸에 붙는 해에 힘이 실려요.')
-  else if (purpose === 'job') lines.push('취업운은 관성(자리의 기운)이 더 중요합니다. 자리가 나를 부르는 해에 힘이 실려요.')
+  if (purpose === 'exam') lines.push('시험운은 인성(배움의 기운)이 더 중요합니다. 배운 것이 몸에 붙는 해에 힘이 실려요.')
+  // ★학생에게는 이 줄을 아예 내지 않습니다. «취업운» 이라는 말이 들어가기 때문입니다.
+  else if (purpose === 'job' && target !== 'student') lines.push('취업운은 관성(자리의 기운)이 더 중요합니다. 자리가 나를 부르는 해에 힘이 실려요.')
 
   lines.push(
     target === 'student'
@@ -158,16 +169,29 @@ export function cardDayun(
 // ③ 어떤 시험에 힘이 실리나
 // ══════════════════════════════════════════════════════════════
 
-export function cardExamKind(years: YearLuck[]): ExamCard {
+/**
+ * @param target ★2026-07-29 — 학생이면 «학생 전용 표» 로 통째로 갈아 끼웁니다. (대표님 지시)
+ *   [왜] 교재 230쪽이 «정인 → 공무원·대입·취업 / 식신 → 영양사·조리사» 라 적습니다.
+ *        학생 리포트에 그대로 나가면 아이가 읽을 말이 아닙니다.
+ *   ⚠️ 교재 표(EXAM_BY_SIPSIN)는 안 고쳤습니다. 성인 리포트가 그대로 씁니다.
+ *      학생 표(EXAM_BY_SIPSIN_STUDENT)는 같은 십성을 «학생의 말» 로 옮긴 것입니다.
+ *   ⚠️ reasons(AI 재료)도 함께 갈아야 합니다. 재료에 남으면 AI 가 꺼내 씁니다. (교훈 BF)
+ */
+export function cardExamKind(years: YearLuck[], target: ExamTarget = 'adult'): ExamCard {
   const sipsins = new Set<string>()
   for (const y of years) { if (y.ganSipsin) sipsins.add(y.ganSipsin); if (y.jiSipsin) sipsins.add(y.jiSipsin) }
-  const hit = EXAM_BY_SIPSIN.filter(e => sipsins.has(e.sipsin))
+  const isStudent = target === 'student'
+  const table = isStudent ? EXAM_BY_SIPSIN_STUDENT : EXAM_BY_SIPSIN
+  const hit = table.filter(e => sipsins.has(e.sipsin))
   const lines = hit.length
-    ? hit.map(e => `${e.sipsin}의 기운이 드는 해에는 ${e.exams.join(' · ')} 쪽으로 힘이 실립니다.`)
+    ? hit.map(e => `${e.sipsin}의 기운이 드는 해에는 ${e.exams.join(' · ')} 쪽에 힘이 실립니다.`)
     : ['앞으로 몇 해에는 특정 시험으로 힘이 쏠리는 결이 뚜렷하지 않아요. 준비하시는 쪽에 그대로 힘을 쓰시면 됩니다.']
   return {
-    key: 'examkind', title: '어떤 시험에 힘이 실리나', lines,
-    reasons: hit.map(e => `${e.sipsin} → ${e.exams.join('·')} (${e.src})`),
+    key: 'examkind',
+    title: isStudent ? '어떤 공부·시험에 힘이 실리나' : '어떤 시험에 힘이 실리나',
+    lines,
+    reasons: hit.map(e =>
+      `${e.sipsin} → ${e.exams.join('·')}${'src' in e ? ` (${(e as { src: string }).src})` : ' (교재 230쪽을 학생 말로)'}`),
     data: { hit },
   }
 }
@@ -274,7 +298,7 @@ export function buildAllCards(a: BuildAllArgs): ExamCard[] {
   const out: ExamCard[] = [
     cardYears(a.years, t, a.purpose),
     cardDayun(a.dayun, a.order, t),
-    cardExamKind(a.years),
+    cardExamKind(a.years, t),
   ]
   const day = cardExamDay(a.examDay)
   if (day) out.push(day)
