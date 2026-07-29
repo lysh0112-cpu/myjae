@@ -15,6 +15,7 @@
 //      [화면] 상관이 정관을 흔드는 해라 시험 쪽으로는 힘이 가장 덜 실립니다.
 
 import type { ExamCard, ExamInput, ExamTarget, YearLuck } from './types'
+import { exactAge } from '../ageDayun'
 import {
   EXAM_BY_SIPSIN, EXAM_BY_SIPSIN_STUDENT, YEAR_SAY_STUDENT, hasStudentBan,
   HIGHSCHOOL, HIGHSCHOOL_SRC,
@@ -121,8 +122,15 @@ export function cardYears(
 // ② 지금의 흐름 — 대운
 // ══════════════════════════════════════════════════════════════
 
+/**
+ * @param age ★2026-07-29 — 지금 나이. 대운 «어디쯤» 인지 밝히려고 받습니다. (대표님 지적)
+ *   [무엇이 어색했나] 만 13세 아이에게 «지금은 丙午 대운입니다(13세부터)» 만 나갔습니다.
+ *     숫자는 맞지만, 막 들어선 것인지 한참 지난 것인지를 알 수 없습니다.
+ *     대운은 10년이라 «초입» 과 «끝물» 의 결이 아주 다릅니다.
+ *   ⚠️ 대운 산출은 하나도 안 건드렸습니다. 말만 덧붙입니다.
+ */
 export function cardDayun(
-  dayun: DayunLite | null, order: number, target: ExamTarget,
+  dayun: DayunLite | null, order: number, target: ExamTarget, age?: number,
 ): ExamCard {
   if (!dayun) {
     return { key: 'dayun', title: '지금의 흐름', lines: ['대운을 아직 못 받아왔어요.'], reasons: [] }
@@ -132,8 +140,14 @@ export function cardDayun(
   //   dayunTrend 는 상승을 먼저 보므로 '상승' 을 주는데, 화면에서는 그 사실을 밝힌다.
   const both = t.sipsins.some(x => (['정인', '편인', '식신', '상관'] as string[]).includes(x))
     && t.sipsins.some(x => (['비견', '겁재', '정재', '편재'] as string[]).includes(x))
+  // ★대운 «어디쯤» 인지 — 초입·한가운데·끝물
+  const inYear = age != null ? age - dayun.age : null
+  const where = inYear == null ? ''
+    : inYear <= 1 ? ' 이제 막 들어선 참입니다.'
+    : inYear >= 8 ? ' 이 대운도 끝자락에 와 있어요.'
+    : ` 들어선 지 ${inYear}년째입니다.`
   const lines: string[] = [
-    `지금은 ${dayun.cheongan}${dayun.jiji} 대운입니다(${dayun.age}세부터). `
+    `지금은 ${dayun.cheongan}${dayun.jiji} 대운입니다(${dayun.age}세부터 열 해).${where} `
     + `천간은 ${dayun.ganYukchin}, 지지는 ${dayun.jiYukchin}${ieyo(dayun.jiYukchin)}.`,
   ]
   if (target === 'student') {
@@ -297,7 +311,9 @@ export function buildAllCards(a: BuildAllArgs): ExamCard[] {
   const t = a.input.target ?? 'adult'
   const out: ExamCard[] = [
     cardYears(a.years, t, a.purpose),
-    cardDayun(a.dayun, a.order, t),
+    cardDayun(a.dayun, a.order, t,
+      // ★나이는 lib/saju/ageDayun.exactAge 한 곳만 씁니다. 화면마다 다르면 안 됩니다. (30부 5장)
+      exactAge(a.input.birthYear, a.input.birthMonth, a.input.birthDay)),
     cardExamKind(a.years, t),
   ]
   const day = cardExamDay(a.examDay)

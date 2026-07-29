@@ -172,6 +172,9 @@ ${v.target === 'student' ? `· 이 사람은 미성년일 수 있고, 부모가 
 
 [형식]
 · 여는말로 시작하세요. 제목이나 "여는말" 라벨을 붙이지 마세요.
+· ★여는말은 **2~3문장으로 끝내고 반드시 마침표로 맺으세요.**
+  길게 늘이다 중간에서 멈추면 손님이 첫 문장부터 잘린 글을 봅니다.
+  (실제로 «…타고났» 에서 끊긴 채 나간 적이 있습니다)
 · 이어서 아래 대목을 차례대로 쓰세요. 제목 줄에는 ■ 말고 다른 것을 붙이지 마세요.
   번호도, 별표도, 우물정도 붙이지 마세요.
 · 마지막에 "■ 맺는말" 로 끝맺으세요.
@@ -285,5 +288,22 @@ export function parseExamTongbyeon(full: string): ParsedExamTongbyeon {
   }
   if (orphan.length) outro = [outro, ...orphan].filter(Boolean).join('\n\n')
 
-  return { intro: intro.join('\n').trim(), outro, byKey, byTitle }
+  /**
+   * ★2026-07-29 — 끊긴 여는말을 다듬습니다. (대표님 지적)
+   *
+   *   [무엇이 있었나] 여는말이 «…기운을 타고났» 에서 멈춘 채 화면에 나갔습니다.
+   *     뒤 카드들은 멀쩡했으니 응답이 통째로 끊긴 것이 아니라,
+   *     AI 가 여는말을 길게 늘이다 스스로 문장을 못 맺은 것입니다.
+   *   [어떻게] 마지막 글자가 문장 부호가 아니면, 마지막 «완결된 문장»까지만 씁니다.
+   *     ⚠️ 지어내서 채우지 않습니다. 잘린 조각을 버릴 뿐입니다.
+   *     ⚠️ 프롬프트에도 «2~3문장으로 맺으라» 고 적었습니다. 여기는 그물입니다.
+   */
+  const trimTail = (t: string): string => {
+    const s2 = t.trim()
+    if (!s2 || /[.!?…”"』」)\]]$/.test(s2)) return s2
+    const cut = Math.max(s2.lastIndexOf('.'), s2.lastIndexOf('!'), s2.lastIndexOf('?'), s2.lastIndexOf('…'))
+    return cut > 20 ? s2.slice(0, cut + 1) : s2
+  }
+
+  return { intro: trimTail(intro.join('\n')), outro, byKey, byTitle }
 }
