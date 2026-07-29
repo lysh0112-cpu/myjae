@@ -30,6 +30,10 @@ export interface ArchiveItem {
 // service_type → 배지 라벨·색 (피치톤 계열 + 서비스별 포인트)
 interface Badge { label: string; bg: string; fg: string }
 const BADGES: Record<string, Badge> = {
+  // ★2026-07-29 — 통합 리포트 (대표님 확정: 사주·대운·연월운세 단권화)
+  integrated_saju: { label: '사주 & 운세', bg: '#f0eafa', fg: '#6a4a9c' },
+  // ⚠️ 아래 셋은 **읽기 전용으로 남겨 둡니다.** 새로 저장되지는 않습니다.
+  //    혹시 남아 있는 행이 보관함에서 이름 없이 뜨는 것을 막기 위해서입니다.
   saju:     { label: '사주',       bg: '#f0eafa', fg: '#6a4a9c' },
   daeun:    { label: '대운',       bg: '#e6eef5', fg: '#2f5f80' },
   seyun:    { label: '연월운세',   bg: '#f3ecdf', fg: '#8a6a3c' },
@@ -108,6 +112,7 @@ export function reviewUrl(item: ArchiveItem): string {
       return `/manseryeok/career-result?${qs}recordId=${rid}&${from}`
     case 'examluck':
       return `/manseryeok/exam-luck-result?${qs}recordId=${rid}&${from}`
+    case 'integrated_saju':
     case 'saju':
     default:
       return `/manseryeok/result-new?${qs}recordId=${rid}&${from}`
@@ -121,7 +126,7 @@ async function uid(): Promise<string | null> {
 
 // 아카이브 리스트에 표시할 service_type (혼자 조회·저장한 것만; 상담 제외)
 const ARCHIVE_TYPES = [
-  'saju', 'daeun', 'seyun', 'mulsang',
+  'integrated_saju', 'saju', 'daeun', 'seyun', 'mulsang',
   'couple', 'married', 'tarot',
   'wedding', 'birth', 'naming',
   // ★여기 빠지면 .in() 에 안 걸려 아카이브 목록에 아예 안 나온다.

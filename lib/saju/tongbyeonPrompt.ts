@@ -59,6 +59,17 @@ export interface TongbyeonInput {
   // ── 명식 특징(선택) — 12운성·신살·귀인·공망. toTongbyeonInput이 채운다.
   //   있는 것만 문자열로 미리 만들어 넣는다(해석 힌트 포함). 없으면 생략.
   myeongsikFeatures?: string   // 이미 조립된 "명식 특징" 블록 텍스트
+  /**
+   * ★2026-07-29 — 통합 리포트의 흐름 재료. (lib/saju/unseContext)
+   *   [① 원국] [② 지금 대운] [③ 올해 세운] 세 덩이가 이미 짜여 들어옵니다.
+   *   이 값이 있으면 프롬프트가 **스토리텔링 모드**로 바뀝니다.
+   *   ⚠️ 여기서 다시 계산하지 않습니다. unseContext 한 곳에서만 잽니다. (교훈 BQ)
+   */
+  unseBlock?: string
+  /** 올해가 몇 년인가 — 스토리텔링 지시문에 박아 넣는다 */
+  seyunYear?: number
+  /** 지금 대운 표기 (예: '丁巳 대운 (35~44세)') */
+  daeunLabel?: string
 }
 
 // 오행별 개운 색/방향/숫자 (용신·보완 오행 기준)
@@ -168,7 +179,36 @@ export function buildTongbyeonPrompt(
     input.yongsinAgree ? `\n- 세 기운이 모이는가: ${input.yongsinAgree}` : ''
   }${
     input.currentDaeun ? `\n- 지금 흐르는 큰 흐름: ${input.currentDaeun}` : ''
-  }${input.myeongsikFeatures ? `\n${input.myeongsikFeatures}` : ''}`
+  }${input.myeongsikFeatures ? `\n${input.myeongsikFeatures}` : ''}${
+    input.unseBlock ? `\n\n${input.unseBlock}` : ''
+  }`
+
+  /**
+   * ★2026-07-29 — 통합 리포트 스토리텔링 지시.
+   *
+   *   [무엇이 문제였나]
+   *     전에는 사주 / 대운 / 연월운세가 각각 다른 화면이라, AI 도 셋 중 하나만
+   *     보고 답을 썼습니다. 손님은 "타고난 나"와 "지금의 나"를 스스로 이어 붙여야 했습니다.
+   *
+   *   [어떻게 잡았나]
+   *     대운은 **길**, 세운은 그 길 위의 **날씨**로 못박습니다.
+   *     이 비유를 지시문에 박아 두지 않으면 AI 가 둘을 나란한 사건처럼 늘어놓습니다.
+   *     ⚠️ 다만 비유를 **손님 글에 그대로 쓰라는 뜻이 아닙니다.** 결만 잡아 주는 것입니다.
+   */
+  const storyBlock = input.unseBlock ? `[흐름을 엮는 법 — 매우 중요]
+당신에게는 세 덩이의 재료가 있습니다. ① 타고난 그릇(원국) ② 지금 지나는 10년(대운) ③ 올해(세운).
+이 셋을 **따로따로 나열하지 마세요.** 하나의 이야기로 엮으세요.
+
+- 엮는 차례는 늘 이렇습니다: **타고난 결 → 지금 놓인 자리 → 올해 할 일.**
+- 대운은 앞으로 십 년 걷는 **길의 상태**입니다. 세운은 그 길 위에 내리는 **올해 날씨**입니다.
+  같은 비가 와도 포장된 길과 진흙길에서 다르게 겪습니다. 이 관계를 답에 살리세요.
+  ⚠️ 다만 '길'·'날씨'라는 말을 그대로 쓰지는 마세요. 결만 가져가고 표현은 손님 이야기로 푸세요.
+- 카드마다 반드시 **지금 대운${input.daeunLabel ? `(${input.daeunLabel})` : ''}을 배경으로 깔고,
+  그 위에서 ${input.seyunYear ?? new Date().getFullYear()}년이 어떻게 작용하는지**를 이어서 말하세요.
+- 마지막은 반드시 **올해 안에 해볼 수 있는 실천 한두 가지**로 맺으세요.
+  "언젠가"가 아니라 "올해"로 좁혀야 손님이 움직입니다.
+- ★재료에 없는 달(月)·날짜를 지어내지 마세요. 월운·일운은 당신에게 주지 않았습니다.
+  "몇 월에"를 묻는 질문이 있어도, 해 단위(올해 전반·후반)까지만 말하고 달을 못박지 마세요.` : ''
 
   // 선택 질문 블록
   const qBlock = questions
@@ -204,7 +244,8 @@ ${questions.map((q) => `■ ${q.category} — (제목)\n   (3~4문단. 이 카�
     qBlock,
     '',
     gaeunBlock,
+    ...(storyBlock ? ['', storyBlock] : []),
     '',
     formatBlock,
-  ].join('\n')
+  ].filter(t => t !== undefined).join('\n')
 }

@@ -9,12 +9,12 @@
  * 흐름: 이 목록 > 카드 선택(그때 본 사람으로 다시보기)
  *                > [+ 새로 보기] > 사람 선택 모달 > 결과 화면
  *
- * 데이터: listRecordsByService(service) — 해당 서비스 기록만. (saju_records)
+ * 데이터: listRecordsByService('integrated_saju') — 해당 서비스 기록만. (saju_records)
  * 궁합 보관함(couple-storage)과 같은 패턴. 단 사주는 "한 사람"이라 더 단순.
  */
 
 import { Suspense, useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import {
   listRecordsByService, deleteRecord, daysAgoLabel,
   type SajuRecord,
@@ -24,14 +24,23 @@ import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
 
 // 서비스별 정보 (제목·색·결과경로·unse 파라미터)
-type Service = 'saju' | 'daeun' | 'seyun'
+// ★2026-07-29 — 보관함 단권화 (대표님 확정)
+//   전에는 ?service=saju|daeun|seyun 으로 보관함이 셋이었습니다.
+//   같은 사람을 세 곳에 따로 저장해야 했고, 손님은 흐름을 보려고 세 번 들어와야 했습니다.
+//   이제 하나입니다. 리포트가 [원국 + 대운 + 세운]을 한 번에 풀어 줍니다.
+//   ⚠️ ?service= 파라미터는 **받기만 하고 무시**합니다. 예전 링크·북마크가 깨지지 않게
+//      두는 것입니다. 어느 값이 와도 통합 보관함으로 옵니다.
+type Service = 'integrated'
 const SERVICE_INFO: Record<Service, {
   title: string; badge: string; accent: string;
   resultPath: string; unse?: 'daeun' | 'seyun'; headline: string; submitLabel: string;
 }> = {
-  saju:  { title: '사주 보관함',       badge: '사주',   accent: '#6e50a0', resultPath: '/manseryeok/result-new', headline: '누구의 사주를 볼까요?',   submitLabel: '저장하고 사주 보기' },
-  daeun: { title: '대운 보관함',       badge: '대운',   accent: '#3c82a0', resultPath: '/manseryeok/result-new', unse: 'daeun', headline: '누구의 대운을 볼까요?', submitLabel: '저장하고 대운 보기' },
-  seyun: { title: '연월운세 보관함',   badge: '연월운세', accent: '#8c783c', resultPath: '/manseryeok/result-new', unse: 'seyun', headline: '누구의 세운을 볼까요?', submitLabel: '저장하고 세운 보기' },
+  integrated: {
+    title: '내 사주 & 운세 보관함', badge: '사주 & 운세', accent: '#6e50a0',
+    resultPath: '/manseryeok/result-new',
+    headline: '누구의 사주와 운세를 볼까요?',
+    submitLabel: '저장하고 리포트 보기',
+  },
 }
 
 // 저장된 사람(input_data) → 결과 화면 URL. recordId를 실어 다시보기.
@@ -54,9 +63,9 @@ function personToQuery(d: SavedInputData, name: string): string {
 
 function SajuStorageInner() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const svcParam = searchParams.get('service')
-  const service: Service = (svcParam === 'daeun' || svcParam === 'seyun') ? svcParam : 'saju'
+  // ★2026-07-29 — ?service= 를 더 안 읽습니다. 보관함이 하나로 합쳐졌습니다.
+  // ★예전 링크(?service=daeun 등)가 와도 통합 보관함 하나로 받는다.
+  const service: Service = 'integrated'
   const info = SERVICE_INFO[service]
 
   const [records, setRecords] = useState<SajuRecord[] | null>(null)
@@ -66,7 +75,7 @@ function SajuStorageInner() {
 
   useEffect(() => {
     let cancelled = false
-    listRecordsByService(service).then(list => { if (!cancelled) setRecords(list) })
+    listRecordsByService('integrated_saju').then(list => { if (!cancelled) setRecords(list) })
     return () => { cancelled = true }
   }, [service])
 
@@ -178,7 +187,7 @@ function SajuStorageInner() {
       <PersonPickerModal
         open={pickerOpen}
         serviceLabel={info.title}
-        serviceType={service}
+        serviceType={'integrated_saju'}
         headline={info.headline}
         submitLabel={info.submitLabel}
         onPick={(person: SavedPerson) => {

@@ -17,6 +17,7 @@
 
 'use client'
 
+import { TIME_QUESTIONS } from '@/lib/saju/integratedQuestions'
 import { useMemo, useState } from 'react'
 import {
   questionsFor, groupByCategory,
@@ -90,7 +91,12 @@ export default function QuestionPicker({
       const list = unseQuestionsForEntry(unseEntry)
       return groupUnseByKind(list).map(g => ({ kind: g.kind, label: g.label, groups: g.groups }))
     }
-    const list = questionsFor(ageGroup, gender)
+    // ★2026-07-29 — 통합 리포트 질문 세트. (대표님 확정)
+    //   사주 질문(나이·성별로 거른 것) + 사주에 없던 「시기」 갈래 일곱.
+    //   ⚠️ 「시기」 질문은 나이·성별을 안 가립니다. 대운·세운은 누구에게나 흐르기 때문입니다.
+    //   ⚠️ 월운 질문 둘은 담기지 않습니다 — 리포트에 월운 재료를 안 싣기 때문입니다.
+    //      재료 없이 질문만 띄우면 AI 가 달을 지어냅니다. (integratedQuestions 머리말 참고)
+    const list = [...questionsFor(ageGroup, gender), ...TIME_QUESTIONS]
     return [{ groups: groupByCategory(list) }]
   }, [unseEntry, ageGroup, gender])
 

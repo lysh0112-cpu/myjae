@@ -67,6 +67,19 @@ const HOUR_MOOD: Record<string, string> = {
 }
 
 // 명식 한 기둥 (result-new의 saju 요소 형태)
+// ★2026-07-29 — 흐름 재료는 unseContext 한 곳에서만 짠다. (교훈 CJ)
+import {
+  buildWongukContext, buildDaeunContext, buildSeyunContext, buildUnseContext,
+} from './unseContext'
+
+/**
+ * ★2026-07-29 — 통합 리포트가 AI 에게 보내는 재료의 **총량** 상한.
+ *   대표님 지시: 1,800~2,000자. 넉넉한 쪽 끝을 잡되 흐름 재료를 먼저 확보한다.
+ *   ⚠️ jaryoPick.SERVICE_BUDGET.integrated(2000) 와 다릅니다.
+ *      그쪽은 «고른 줄»만, 이쪽은 제목·명식특징까지 **다 세는 총량**입니다.
+ */
+export const INTEGRATED_TOTAL_CAP = 2000
+
 export interface PillarInput { pillar: string; stem: string; branch: string }
 
 /** 지금 흐르는 대운 한 칸 — 화면이 /api/dayun 으로 받아 넘긴다 */
@@ -105,6 +118,15 @@ export interface ToTongbyeonArgs {
    *   안 넘기면 세운·월운 표를 fallback 으로 쓴다(예전과 같이 동작).
    */
   unseEntry?: 'daeun' | 'seyun' | null
+  /**
+   * ★2026-07-29 — 통합 리포트 모드. (대표님 확정: 사주·대운·연월운세 단권화)
+   *   켜면 [원국 + 대운 + 세운] 세 덩이를 unseContext 로 짜서 프롬프트에 얹고,
+   *   AI 에게 스토리텔링으로 엮으라고 지시합니다.
+   *   ⚠️ 이때 재료 상한이 saju(1600) 이 아니라 integrated(2000) 가 됩니다.
+   */
+  integrated?: boolean
+  /** 통합 모드에서 쓰는 대운 목록 — 화면이 /api/dayun 으로 받아 둔 것을 넘긴다 */
+  dayunList?: DayunLite[]
   // ── 확장 자리 ────────────────────────────────────────────────
   // 대운·세운은 기본 통변에 넣지 않는다. (홈에 별도 서비스가 있음)
   // 사용자가 "언제/내년/몇 살" 같은 시기 질문을 직접입력했을 때만,
@@ -122,9 +144,19 @@ function pillarKor(p?: PillarInput): string {
 
 // 명식 특징(12운성·신살·귀인·공망)을 "해석 포함" 텍스트로 조립.
 //   해당하는 것만 넣어 프롬프트가 길어지지 않게 한다. 계산·해석 사전을 엮음.
+/**
+ * @param compact ★2026-07-29 — 통합 리포트용 짧은 판.
+ *   이름과 한 마디(key)만 남기고 긴 조언(tip)·공망 자리별 해설을 뺍니다.
+ *   [왜] 통합 리포트는 대운·세운까지 실어야 해서 자리가 빠듯합니다.
+ *        긴 판(1,200자 남짓)을 그대로 실으면 총량에 안 들어가 **통째로 잘립니다.**
+ *        그러면 손님이 "제 귀인이 뭔가요" 라고 물어도 AI 가 답할 근거가 없습니다.
+ *        짧은 판(400자 남짓)으로 두면 **이름은 살아남아** 답할 수 있습니다.
+ *   ⚠️ 뜻을 빼는 것이 아니라 조언만 접는 것입니다. (교훈 BR)
+ */
 function buildMyeongsikFeatures(
   saju: PillarInput[],
-  dayStem: string
+  dayStem: string,
+  compact = false,
 ): string {
   const lines: string[] = []
   const yearBranch = saju.find(p => p.pillar === '년주')?.branch ?? ''
@@ -135,7 +167,7 @@ function buildMyeongsikFeatures(
   const iljiUnsung = dayStem && dayBranch ? getUnsung(dayStem, dayBranch) : ''
   if (iljiUnsung && UNSUNG_MEANING[iljiUnsung]) {
     const m = UNSUNG_MEANING[iljiUnsung]
-    lines.push(`- 일주 12운성: ${iljiUnsung} — ${m.key}. ${m.tip}`)
+    lines.push(compact ? `- 일주 12운성: ${iljiUnsung} — ${m.key}` : `- 일주 12운성: ${iljiUnsung} — ${m.key}. ${m.tip}`)
   }
 
   // ── 신살 (년지 기준, 각 지지) — 대표적인 것만(중복 제거) ──
@@ -147,7 +179,7 @@ function buildMyeongsikFeatures(
   }
   for (const s of sinsalSet) {
     const m = SINSAL_MEANING[s]
-    lines.push(`- 신살 ${s}: ${m.key}. ${m.tip}`)
+    lines.push(compact ? `- 신살 ${s}: ${m.key}` : `- 신살 ${s}: ${m.key}. ${m.tip}`)
   }
 
   // ── 귀인 (있는 것만) ──
@@ -158,9 +190,9 @@ function buildMyeongsikFeatures(
   }
   for (const g of gwiinSet) {
     const m = GWIIN_MEANING[g]
-    if (m) lines.push(`- 귀인 ${g}: ${m.bless}. ${m.tip}`)
+    if (m) lines.push(compact ? `- 귀인 ${g}: ${m.bless}` : `- 귀인 ${g}: ${m.bless}. ${m.tip}`)
   }
-  if (gwiinSet.size >= 2) lines.push(`- 귀인 조화: ${GWIIN_HARMONY}`)
+  if (gwiinSet.size >= 2 && !compact) lines.push(`- 귀인 조화: ${GWIIN_HARMONY}`)
 
   // ── 공망 (일주 기준, 어느 기둥이 비었는지) ──
   if (dayStem && dayBranch) {
@@ -171,10 +203,14 @@ function buildMyeongsikFeatures(
         if (p.branch === gm[0] || p.branch === gm[1]) emptyPillars.push(p.pillar)
       }
       if (emptyPillars.length) {
-        lines.push(`- 공망: ${gm[0]}·${gm[1]} (${emptyPillars.join('·')}에 해당). ${GONGMANG_INTRO}`)
-        for (const pillar of emptyPillars) {
-          const gp = GONGMANG_BY_PILLAR[pillar]
-          if (gp) lines.push(`  · ${pillar} 공망 — ${gp.title}: ${gp.desc}`)
+        lines.push(compact
+          ? `- 공망: ${gm[0]}·${gm[1]} (${emptyPillars.join('·')}에 해당)`
+          : `- 공망: ${gm[0]}·${gm[1]} (${emptyPillars.join('·')}에 해당). ${GONGMANG_INTRO}`)
+        if (!compact) {
+          for (const pillar of emptyPillars) {
+            const gp = GONGMANG_BY_PILLAR[pillar]
+            if (gp) lines.push(`  · ${pillar} 공망 — ${gp.title}: ${gp.desc}`)
+          }
         }
       }
     }
@@ -279,6 +315,34 @@ export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
     ? (yongsinStr as Ohaeng)
     : undefined
 
+  // ★2026-07-29 — 통합 리포트의 흐름 재료를 **먼저** 짓는다.
+  //   크기를 알아야 원국 계열을 얼마나 실을지 정할 수 있기 때문이다. (교훈 CF)
+  //   ⚠️ 산출은 unseContext 안에서 대운·세운을 따로 끝냅니다. (대표님 지시 — 엔진은 분리)
+  const unse = (() => {
+    if (!a.integrated) return null
+    const tgt: Target = a.age < 20 ? 'student' : 'adult'
+    const yr = a.dayStem && a.dayStem !== '?'
+      ? calcYongsinNew(a.saju as never, a.dayStem, score as never) : null
+    const wonguk = buildWongukContext({
+      saju: a.saju, dayStem: a.dayStem,
+      strongWeak: yr?.status ?? null,
+      eokbu: yr?.eokbu?.yongsin ?? null,
+      johu: yr?.johu?.element ?? null,
+      gyeokguk: yr?.gyeokguk?.name ?? null,
+      gyeokgukYongsin: yr?.gyeokguk?.element ?? null,
+    })
+    const daeun = buildDaeunContext({
+      saju: a.saju,
+      list: a.dayunList ?? (a.currentDayun ? [a.currentDayun] : []),
+      age: a.age, target: tgt,
+    })
+    const seyun = buildSeyunContext({
+      saju: a.saju, current: a.thisYearSeyun ?? null,
+      daeun: daeun.current, target: tgt,
+    })
+    return buildUnseContext({ wonguk, daeun, seyun })
+  })()
+
   return {
     name: a.name || '이 분',
     age: a.age,
@@ -325,7 +389,8 @@ export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
       //   ★블록 이름과 교재 쪽 표기는 그대로 지킨다. AI 가 출전을 알아야 한다.
       const target: Target = a.age < 20 ? 'student' : 'adult'
       const picked = pick({
-        serviceType: 'saju',
+        // ★2026-07-29 — 통합이면 상한이 2000, 갈래 표도 「시기」 셋이 얹힌 것을 쓴다
+        serviceType: a.integrated ? 'integrated' : 'saju',
         questionCategories: a.questionCategories,
         // 지지특징·병존은 명식 소개라 질문을 안 가린다
         forceNeeds: ['지지특징', '병존'],
@@ -338,26 +403,64 @@ export function toTongbyeonInput(a: ToTongbyeonArgs): TongbyeonInput {
       const blk = (title: string, arr?: string[]) =>
         arr?.length ? `${title}\n${arr.map(t => `- ${t}`).join('\n')}` : ''
       const hapChung = [...(B['충'] ?? []), ...(B['합'] ?? []), ...(B['형파해'] ?? [])]
-      return [
-        buildMyeongsikFeatures(a.saju, a.dayStem),
-        blk('[지지가 말하는 것 — 교재 48쪽·50~73쪽. 월지와 일지가 가장 세다]', B['지지특징']),
-        blk('[병존 — 교재 74~77쪽. 같은 글자가 나란히 있어 기운이 짙다]', B['병존']),
-        buildUnJiji(a.saju, target, a.currentDayun, a.thisYearSeyun),
-        blk('[일간이 말하는 것 — 교재 41~47쪽. 이 사람의 본바탕이다]', B['일간']),
-        blk('[오행이 넘치거나 모자란 자리 — 교재 20~28쪽. 넘치는 것도 모자란 것도 결이지 흠이 아니다]', B['오행']),
-        blk('[합·충·형·파·해 — 교재 78~93쪽. 천간은 합을 중히 보고 지지는 충을 중히 본다]', hapChung),
-        blk('[살 — 교재 94~97쪽. 걸린 것만]', B['살']),
-        blk('[육친이 말하는 것 — 교재 106~131쪽. 십성과 다섯 짝]', B['육친']),
-        blk('[타고난 결의 단계 — 교재 25쪽]', B['인생단계']),
-        blk('[문과·이과 — 교재 25쪽]', B['문이과']),
-      ].filter(Boolean).join('\n\n') || undefined
+      const blocks: Array<[string, string]> = [
+        ['명식특징', buildMyeongsikFeatures(a.saju, a.dayStem, !!a.integrated)],
+        ['지지특징', blk('[지지가 말하는 것 — 교재 48쪽·50~73쪽. 월지와 일지가 가장 세다]', B['지지특징'])],
+        ['병존', blk('[병존 — 교재 74~77쪽. 같은 글자가 나란히 있어 기운이 짙다]', B['병존'])],
+        // ★통합 모드에서는 이 줄을 넣지 않는다.
+        //   unseContext 가 [대운]·[세운] 덩이에서 같은 것을 이미 말하기 때문이다.
+        //   둘 다 넣으면 144칸과 운충이 두 번씩 나간다. (압축의 핵심)
+        ['운어울림', a.integrated ? '' : buildUnJiji(a.saju, target, a.currentDayun, a.thisYearSeyun)],
+        ['일간', blk('[일간이 말하는 것 — 교재 41~47쪽. 이 사람의 본바탕이다]', B['일간'])],
+        ['오행', blk('[오행이 넘치거나 모자란 자리 — 교재 20~28쪽. 넘치는 것도 모자란 것도 결이지 흠이 아니다]', B['오행'])],
+        ['합충', blk('[합·충·형·파·해 — 교재 78~93쪽. 천간은 합을 중히 보고 지지는 충을 중히 본다]', hapChung)],
+        ['살', blk('[살 — 교재 94~97쪽. 걸린 것만]', B['살'])],
+        ['육친', blk('[육친이 말하는 것 — 교재 106~131쪽. 십성과 다섯 짝]', B['육친'])],
+        ['인생단계', blk('[타고난 결의 단계 — 교재 25쪽]', B['인생단계'])],
+        ['문이과', blk('[문과·이과 — 교재 25쪽]', B['문이과'])],
+      ]
+      if (!a.integrated) {
+        return blocks.map(([, t]) => t).filter(Boolean).join('\n\n') || undefined
+      }
+
+      // ── 통합 모드 총량 조절 ────────────────────────────────────────
+      //
+      //   [무엇을 몰랐나]
+      //     SERVICE_BUDGET 은 pick() 이 고른 «줄»에만 걸립니다.
+      //     블록 제목과 buildMyeongsikFeatures(12운성·신살·귀인·공망)는 세지 않습니다.
+      //     그래서 상한이 1,600인데 실제로 나가던 재료는 3,500자였습니다.
+      //     ⚠️ 사주보기(비통합)도 같습니다. 이번에는 손대지 않고 기록만 합니다.
+      //
+      //   [어떻게 잡았나]
+      //     대표님 지시 1,800~2,000자에 맞춰 **흐름 재료가 먼저 자리를 잡고**
+      //     남는 만큼만 원국 계열을 싣습니다. 흐름은 통합 리포트의 알맹이라 안 자릅니다.
+      //     ★자를 차례 — 뒤쪽이 먼저 잘립니다. 긴 소개 블록(명식특징·지지특징)이 뒤입니다.
+      const KEEP = ['일간', '오행', '명식특징', '육친', '합충', '살',
+                    '인생단계', '문이과', '병존', '지지특징']
+      const room = INTEGRATED_TOTAL_CAP - (unse?.chars ?? 0)
+      const out: string[] = []
+      let used = 0
+      for (const key of KEEP) {
+        const t = blocks.find(([k]) => k === key)?.[1]
+        if (!t) continue
+        if (used + t.length + 2 > room) continue
+        out.push(t); used += t.length + 2
+      }
+      return out.join('\n\n') || undefined
     })(),
     // ★대운을 넘겨받았으면 프롬프트의 "지금 흐르는 큰 흐름" 자리도 채운다.
     //   전에는 이 자리가 선언만 되어 있고 아무도 안 채우고 있었다.
     currentDaeun: a.currentDayun
       ? `${a.currentDayun.cheongan}${a.currentDayun.jiji} 대운 (${a.currentDayun.age}세부터)`
       : undefined,
-    // 신강약·대운은 기본 통변에 넣지 않는다 (심플하게).
-    // 시기 질문 시에만 확장해서 붙일 예정.
+
+    // ★2026-07-29 — 통합 리포트의 흐름 재료 (위에서 이미 지어 둔 것)
+    ...(unse ? {
+      unseBlock: unse.block,
+      seyunYear: unse.seyun.year || undefined,
+      daeunLabel: unse.daeun.current
+        ? `${unse.daeun.current.cheongan}${unse.daeun.current.jiji} 대운${unse.daeun.span ? ` (${unse.daeun.span})` : ''}`
+        : undefined,
+    } : {}),
   }
 }

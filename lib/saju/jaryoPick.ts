@@ -111,7 +111,10 @@ export function jijiTraitBrief(saju: Pill[], target: Target, withJobs = false): 
  *   ⚠️ 서비스가 교재 테이블을 직접 import 하면 이 창구가 다시 갈라진다.
  *      새 교재 자료는 **여기에만** 얹으십시오.
  */
-export type ServiceType = 'saju' | 'unse' | 'couple' | 'career' | 'exam' | 'monthly' | 'mulsang'
+// ★2026-07-29 — 'integrated' 추가 (대표님 확정: 사주·대운·연월운세 단권화)
+//   ⚠️ 'saju'·'unse' 는 지우지 않았습니다. 궁합·출산택일 등 다른 서비스가
+//      여전히 'saju' 로 재료를 받아 갑니다. 통합 리포트만 'integrated' 를 씁니다.
+export type ServiceType = 'saju' | 'unse' | 'integrated' | 'couple' | 'career' | 'exam' | 'monthly' | 'mulsang'
 
 export interface PickContext {
   saju?: Pill[]
@@ -185,6 +188,12 @@ export const DEFAULT_NEEDS: Need[] = ['일간', '오행', '합', '충', '살', '
  */
 export const SERVICE_BUDGET: Record<ServiceType, number> = {
   saju: 1600, unse: 1200, couple: 1300, career: 1600, exam: 1200, monthly: 900, mulsang: 1200,
+  // ★2026-07-29 통합 리포트 — 대표님 지시 1,800~2,000자.
+  //   단순 합(saju 1600 + unse 1200 = 2800)이 아닙니다.
+  //   원국에서 이미 말한 오행·일간·육친을 대운·세운에서 되풀이하지 않고,
+  //   unseContext 가 세 덩이로 나눠 압축한 뒤 얹기 때문입니다.
+  //   ⚠️ 이 숫자는 **교재가 아니라 우리가 정한 것**입니다. (34부 30/42/47 과 같은 성격)
+  integrated: 2000,
 }
 
 /**
@@ -285,8 +294,10 @@ function tableOf(t: ServiceType, unseKind?: PickContext['unseKind']): Record<str
   if (t === 'couple') return COUPLE_CATEGORY_NEEDS
   if (t === 'unse') return unseKind === 'daeun' ? DAEUN_CATEGORY_NEEDS
     : unseKind === 'wolun' ? WOLUN_CATEGORY_NEEDS : SEYUN_CATEGORY_NEEDS
+  if (t === 'integrated') return INTEGRATED_CATEGORY_NEEDS
   return CATEGORY_NEEDS
 }
+
 
 export function pick(args: PickArgs): PickResult {
   const { serviceType, questionCategories, ctx } = args
@@ -838,6 +849,22 @@ export const WOLUN_CATEGORY_NEEDS: Record<string, Need[]> = {
   '재물':   ['오행','충'],
   '연애':   ['합','살','일간'],
   '주의':   ['충','형파해','살'],
+}
+
+/**
+ * ★2026-07-29 — 통합 리포트의 갈래 표.
+ *
+ *   사주 갈래(CATEGORY_NEEDS) 전부에, 사주에 없던 「시기」 셋을 얹습니다.
+ *   시기 갈래는 대운 표에서 그대로 가져옵니다 — 묻는 결이 같기 때문입니다.
+ *
+ *   ⚠️ 표를 새로 베껴 적지 않고 **펼쳐서 얹습니다.**
+ *      베끼면 CATEGORY_NEEDS 를 고칠 때 한쪽만 고쳐져 갈립니다. (교훈 CJ)
+ */
+const INTEGRATED_CATEGORY_NEEDS: Record<string, Need[]> = {
+  ...CATEGORY_NEEDS,
+  '인생 흐름': DAEUN_CATEGORY_NEEDS['인생 흐름'],
+  '전환기':    DAEUN_CATEGORY_NEEDS['전환기'],
+  '타이밍':    SEYUN_CATEGORY_NEEDS['타이밍'],
 }
 
 /** 대운 진입인지 세운 진입인지로 표를 고른다 (unseQuestions.UnseEntry) */

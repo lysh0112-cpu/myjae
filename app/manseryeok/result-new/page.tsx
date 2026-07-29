@@ -423,7 +423,12 @@ function ResultNewContent() {
   async function handleSaveRecord(tongOverride?: string){
     if(!info || (saveState!=='idle' && saveState!=='failed')) return
     setSaveState('saving')
-    const serviceType = unseParam==='daeun' ? 'daeun' : unseParam==='seyun' ? 'seyun' : 'saju'
+    // ★2026-07-29 — 통합 리포트 단권화 (대표님 확정)
+    //   전에는 saju / daeun / seyun 셋으로 나뉘어 저장됐습니다.
+    //   손님이 같은 명식을 세 번 조회해야 흐름을 알 수 있었습니다.
+    //   ⚠️ 기존 daeun·seyun 행은 전부 테스트 데이터라 마이그레이션이 필요 없습니다.
+    //      (대표님 확인 — 삭제 SQL 은 11-cleanup-unse-records.sql 참고)
+    const serviceType = 'integrated_saju'
     const res = await saveRecord({
       serviceType,
       title: personName || '나',
@@ -621,6 +626,12 @@ function ResultNewContent() {
                 // ★대운·세운 갈래는 이름이 사주보기와 다른 벌이라 표를 갈라 쓴다.
                 //   안 넘기면 갈래를 못 찾아 재료가 통째로 나간다.
                 unseEntry,
+                // ★2026-07-29 — 통합 리포트 모드. (대표님 확정)
+                //   [원국 + 대운 + 세운]을 unseContext 가 세 덩이로 짜서 얹고,
+                //   AI 에게 스토리텔링으로 엮으라고 지시합니다.
+                //   ⚠️ 대운 목록을 함께 넘겨야 「다음 10년」·「교운기」를 말할 수 있습니다.
+                integrated: true,
+                dayunList,
               })}
               questions={pickedQuestions}
               premium={isPaid}

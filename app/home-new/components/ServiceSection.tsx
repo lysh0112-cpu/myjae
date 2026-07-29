@@ -57,6 +57,9 @@ const BEST_COPY: Record<string, string> = {
   '진로적성': '타고난 직무 역량과 사주 MBTI',
 }
 
+/** 갈래 안에 하나뿐이어도 접지 않고 바로 보여 줄 갈래 */
+const ALWAYS_OPEN = ['saju']
+
 interface Group {
   key: string
   icon: string
@@ -68,9 +71,11 @@ interface Group {
 /** 네 갈래 (대표님 지정) */
 const GROUPS: Group[] = [
   {
+    // ★2026-07-29 — 사주·대운·연월운세가 하나로 합쳐졌습니다. (대표님 확정)
+    //   갈래 안에 하나뿐이라 심심해 보이지만, 그 하나가 셋을 다 담고 있습니다.
     key: 'saju', icon: '🧭', title: '내 사주 & 운세',
-    desc: '타고난 그릇과 10년 큰 흐름',
-    names: ['사주', '대운'],
+    desc: '원국·10년 흐름·올해를 한 번에',
+    names: ['내 사주 & 운세'],
   },
   {
     key: 'timing', icon: '🎯', title: '특화 목적 & 타이밍',
@@ -78,9 +83,9 @@ const GROUPS: Group[] = [
     names: ['합격운/취업운', '결혼택일', '출산택일', '이사택일'],
   },
   {
-    key: 'life', icon: '📅', title: '연월 운세 & 라이프',
-    desc: '올해와 이달, 그리고 오늘의 카드',
-    names: ['연월운세', '타로'],
+    key: 'life', icon: '📅', title: '오늘의 라이프',
+    desc: '오늘의 카드 한 장',
+    names: ['타로'],
   },
   {
     key: 'etc', icon: '💞', title: '궁합 & 기타',
@@ -93,7 +98,9 @@ export default function ServiceSection({
   services, pinned, pinMsg, maxPins, onTogglePin, onOpen,
 }: Props) {
   // 첫 갈래만 열어 둔다 — 다 접혀 있으면 빈 화면처럼 보이고, 다 열면 예전과 같아진다.
-  const [open, setOpen] = useState<Record<string, boolean>>({ saju: true })
+  const [open, setOpen] = useState<Record<string, boolean>>(
+    Object.fromEntries(ALWAYS_OPEN.map(k => [k, true])),
+  )
 
   const byName = new Map(services.map(s => [s.name, s]))
   const best = BEST_NAMES.map(n => byName.get(n)).filter((s): s is HomeService => !!s)

@@ -127,10 +127,14 @@ const SLIDES = [
 //   bg   = 아이콘 파스텔 배경
 //   icon = SVG 내부 요소 (stroke=color 로 그려짐)
 const SERVICES = [
-  { name: '사주',       color: '#6e50a0', bg: '#efe6f7', href: '/manseryeok/saju-storage?service=saju', cat: '사주명리', sub: '내 팔자 풀이', emoji: '🐭' },
+  // ★2026-07-29 — 사주·대운·연월운세 셋을 하나로 합쳤습니다. (대표님 확정)
+  //   [왜] 손님이 같은 명식을 세 번 조회해야 흐름을 알 수 있었습니다.
+  //        이제 한 번 들어가면 [원국 + 대운 + 세운]을 엮은 리포트가 나옵니다.
+  //   ⚠️ 서비스가 12개 → 10개가 됐습니다. ServiceSection 의 GROUPS 도 함께 고쳤습니다.
+  //   ⚠️ 띠 동물은 사주가 쓰던 🐭를 그대로 물려받습니다.
+  //      🐯(대운)·🐰(연월운세) 자리는 비었습니다. 새 서비스가 생기면 쓰십시오.
+  { name: '내 사주 & 운세', color: '#6e50a0', bg: '#efe6f7', href: '/manseryeok/saju-storage', cat: '사주명리', sub: '원국·10년 흐름·올해를 한 번에', emoji: '🐭' },
   { name: '내사주그림', color: '#b46e46', bg: '#f5e9df', href: '/manseryeok/mulsang-storage', cat: '사주명리', sub: '사주를 그림으로', emoji: '🐮' },
-  { name: '대운',       color: '#3c82a0', bg: '#e2eef2', href: '/manseryeok/saju-storage?service=daeun', cat: '사주명리', sub: '10년 큰 흐름', emoji: '🐯' },
-  { name: '연월운세', color: '#8c783c', bg: '#f0ebe0', href: '/manseryeok/saju-storage?service=seyun', cat: '사주명리', sub: '올해·이달 운세', emoji: '🐰' },
   // ★2026-07-24 — 연인궁합·부부궁합을 하나로 합쳤다. (연재쌤 지시)
   //   심산 궁합론은 아내와 애인을 구분하지 않고 같은 재성으로 본다.
   //   판정 산식(coupleFilterV1)도 원래 관계를 가리지 않는다.
