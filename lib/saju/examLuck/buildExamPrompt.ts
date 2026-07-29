@@ -35,6 +35,9 @@ export const ORDER: Array<{ key: string; title: string; len: string }> = [
   { key: 'jobchange', title: '이직과 직업 변동', len: '4~5문장' },
 ]
 
+/** ★두 번째 호출로 쓸 대목 — 첫 호출에서는 뺍니다 */
+export const DETAIL_KEYS = ['examkind', 'examday', 'susi'] as const
+
 export interface BuildExamPromptArgs {
   /** ★2026-07-28 — 명식 네 기둥. 있으면 학문 관련 살을 재료에 얹는다 */
   saju?: Array<{ pillar: string; stem: string; branch: string }>
@@ -124,11 +127,17 @@ function cardHint(key: string, v: BuildExamPromptArgs): string {
 }
 
 export function buildExamPrompt(v: BuildExamPromptArgs): string {
+  // ★2026-07-29 — 뒤쪽 세 대목은 «두 번째 호출» 이 씁니다. 여기서는 뺍니다.
+  //   한 번에 여섯을 시키면 AI 가 앞을 길게 쓰고 뒤를 흐지부지 맺습니다.
+  //   ⚠️ 재료(material)에서도 함께 빼야 합니다. 남겨 두면 여기서 다뤄 버립니다.
   const plan = v.cards
+    .filter(c => !(DETAIL_KEYS as readonly string[]).includes(c.key))
     .map(c => ORDER.find(o => o.key === c.key))
     .filter(Boolean) as typeof ORDER
 
-  const material = v.cards.map(c => {
+  const material = v.cards
+    .filter(c => !(DETAIL_KEYS as readonly string[]).includes(c.key))
+    .map(c => {
     const o = ORDER.find(x => x.key === c.key)
     return `[${o?.title ?? c.title}]\n` + c.reasons.map(r => `- ${r}`).join('\n')
   }).join('\n\n')
@@ -392,4 +401,81 @@ export function parseExamTongbyeon(full: string): ParsedExamTongbyeon {
   }
 
   return { intro: trimTail(intro.join('\n')), outro, byKey, byTitle }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ★뒤쪽 세 대목만 따로 쓰게 하는 «두 번째 호출»
+// ══════════════════════════════════════════════════════════════
+//
+// ★2026-07-29 대표님 지적 —
+//   「시험 날짜와 실전 준비」·「어떤 시험에 힘이 실리나」·「수시와 정시」 셋이
+//   계속 옛 템플릿(판정 카드의 lines)으로 나왔습니다.
+//
+//   [무엇을 네 번 해 봤나]
+//     ① 지시를 강하게      ② 지시를 대목 아래로
+//     ③ 재료를 앞으로       ④ 분량을 늘려
+//   전부 같은 자리에서 실패했습니다.
+//
+//   [무엇이 원인인가]
+//     한 번에 여섯 대목을 쓰라고 하면 AI 는 앞의 두셋을 길게 쓰고 뒤를 흐지부지 맺습니다.
+//     대목이 많을수록, 프롬프트가 길수록 뒤가 얇아집니다.
+//     ★프롬프트를 더 다듬는 것으로는 못 고칩니다. **일을 나눠야 합니다.**
+//
+//   [어떻게]
+//     뒤쪽 세 대목만 «따로» 부릅니다. 짧은 프롬프트에 그 셋만 쓰라고 하면
+//     AI 가 딴 데 힘을 뺄 자리가 없습니다.
+//   ⚠️ 재료는 그 셋에 필요한 것만 싣습니다. 다 실으면 또 길어집니다.
+
+export function buildExamDetailPrompt(v: BuildExamPromptArgs): string | null {
+  const plan = ORDER.filter(o => (DETAIL_KEYS as readonly string[]).includes(o.key))
+    .filter(o => v.cards.some(c => c.key === o.key))
+  if (!plan.length) return null
+
+  const isStudent = v.target === 'student'
+  const material = v.cards
+    .filter(c => (DETAIL_KEYS as readonly string[]).includes(c.key))
+    .map(c => `[${ORDER.find(x => x.key === c.key)?.title ?? c.title}]\n`
+      + c.reasons.map(r => `- ${r}`).join('\n'))
+    .join('\n\n')
+
+  const who = [
+    `${v.name}님 · ${v.age}세 · ${v.gender}`,
+    v.targetBlock || '',
+    v.levelTrack || '',
+    v.examDayNote ? `· 시험 당일 기운: ${v.examDayNote}` : '',
+  ].filter(Boolean).join('\n')
+
+  return `당신은 사주로 진학·시험을 봐 온 상담가입니다.
+아래 «세 대목만» 써 주세요. 다른 대목은 이미 다른 곳에서 썼습니다.
+
+[누구를 보는가]
+${who}
+${isStudent ? `
+★이 손님은 학생입니다. 이직·취업·직장·회사·공무원·승진·면접 같은 말을 쓰지 마세요.` : ''}
+
+[재료 — 이것만 근거로 쓰세요]
+${material}
+
+════════════════════════════════════════
+[쓸 대목 — 셋뿐입니다. 각각 넉넉히 쓰세요]
+════════════════════════════════════════
+${plan.map(o => `■ ${o.title} — ${o.len}\n${cardHint(o.key, v)}`).join('\n\n')}
+
+[말투]
+· 존댓말로 다정하되 담담하게. 겁주지 마세요.
+· "불합격"·"떨어진다"·"안 된다" 를 쓰지 마세요.
+· 어려운 한자말은 풀어 쓰세요. (관성 → 자리의 기운, 인성 → 배움의 기운)
+· 재료의 점수·등급 표기를 그대로 옮기지 말고 사람 말로 푸세요.
+
+[형식]
+· 마크다운(#, **, ---)을 쓰지 마세요.
+· 제목은 "■ 제목" 한 줄로 시작하고 줄을 바꿔 본문을 쓰세요.
+· 각 대목마다 아래 셋을 제목 바로 아래에 먼저 쓰세요.
+    [한줄] 가장 하고 싶은 말 한 문장 (스무 자 안팎)
+    [태그] 낱말 · 낱말 · 낱말 (두셋, 쉬운 말로)
+  그리고 본문을 단락으로 나눠 쓰고, 끝에
+    [실천] 지금 바로 해볼 수 있는 일 한 문장
+· ★대괄호까지 그대로 적으세요. 화면이 그것으로 갈라 그립니다.
+
+세 대목만 쓰고 끝내세요. 여는말·맺는말은 쓰지 마세요.`
 }

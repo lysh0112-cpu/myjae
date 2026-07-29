@@ -25,7 +25,7 @@ import { judgeYears, currentDayunOf } from '@/lib/saju/examLuck/examScore'
 import { judgeJobChangeNatal, judgeJobChangeLuck } from '@/lib/saju/examLuck/jobChange'
 import { judgeExamDay } from '@/lib/saju/examLuck/examDay'
 import { buildAllCards } from '@/lib/saju/examLuck/buildCards'
-import { buildExamPrompt, parseExamTongbyeon } from '@/lib/saju/examLuck/buildExamPrompt'
+import { buildExamPrompt, buildExamDetailPrompt, parseExamTongbyeon, type BuildExamPromptArgs } from '@/lib/saju/examLuck/buildExamPrompt'
 import { examKindOf, CLOSING, CLOSING_STUDENT } from '@/lib/saju/examLuck/tables/rules'
 import { targetPromptBlock, GRADE_PROMPT, gradeMismatch, levelTrackBlock, conditionalRules } from '@/lib/saju/examLuck/tables/studentTarget'
 import { saveRecord, updateRecordResult, getRecord } from '@/lib/saju/sajuRecords'
@@ -204,7 +204,7 @@ function ExamLuckResultInner() {
       //   [무엇이 문제였나] kind·examKind·examDate 가 URL 에는 있는데
       //     여기서 안 넘겨 프롬프트가 못 봤습니다. 그래서 학생에게도
       //     공무원·이직 이야기가 나갔습니다. 폼과 리포트가 끊겨 있던 자리입니다.
-      const systemPrompt = buildExamPrompt({
+      const promptArgs: BuildExamPromptArgs = {
         name: person.name, gender: person.gender,
         age: exactAge(calc.solarYear, calc.solarMonth, calc.solarDay),
         target, cards, hourUnknown: person.hour === '모름',
@@ -229,7 +229,8 @@ function ExamLuckResultInner() {
               year: thisYear, name: person.name || '이분',
             })
           : null,
-      })
+      }
+      const systemPrompt = buildExamPrompt(promptArgs)
       let acc = ''
       try {
         const res = await fetch('/api/tongbyeon', {
@@ -259,6 +260,54 @@ function ExamLuckResultInner() {
         }
         buf += decoder.decode()
         if (buf.trim()) take(buf.trim())
+        if (cancelled) return
+
+        // ★2026-07-29 — 뒤쪽 세 대목을 «두 번째로» 부릅니다. (대표님 지시)
+        //
+        //   [왜 나눴나] 한 번에 여섯 대목을 시키면 AI 가 앞을 길게 쓰고 뒤를 흐지부지 맺습니다.
+        //     「시험 날짜와 실전 준비」·「어떤 시험에 힘이 실리나」·「수시와 정시」 셋이
+        //     계속 안 써져서, 프롬프트를 네 번 고쳐도 같은 자리에서 실패했습니다.
+        //     → 프롬프트로는 못 고칩니다. 일을 나눠야 합니다.
+        //   ⚠️ 첫 호출이 실패해도 이건 따로 돕니다. 둘 다 실패해야 카드가 빕니다.
+        const detailPrompt = buildExamDetailPrompt(promptArgs)
+        if (detailPrompt) {
+          try {
+            const r2 = await fetch('/api/tongbyeon', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ systemPrompt: detailPrompt, premium: true }),
+            })
+            if (r2.ok && r2.body) {
+              const rd = r2.body.getReader()
+              const dec = new TextDecoder()
+              let b2 = ''
+              let acc2 = ''
+              const take2 = (line: string) => {
+                if (!line.startsWith('data: ')) return
+                const d = line.slice(6)
+                if (d === '[DONE]') return
+                try {
+                  const j = JSON.parse(d)
+                  if (j.text) { acc2 += j.text; if (!cancelled) setTong(acc + '\n\n' + acc2) }
+                } catch { /* 부서진 줄은 흘려보낸다 */ }
+              }
+              for (;;) {
+                const { done, value } = await rd.read()
+                if (done) break
+                b2 += dec.decode(value, { stream: true })
+                const ls2 = b2.split('\n')
+                b2 = ls2.pop() ?? ''
+                for (const l of ls2) take2(l)
+              }
+              b2 += dec.decode()
+              if (b2.trim()) take2(b2.trim())
+              if (acc2.trim()) acc = acc + '\n\n' + acc2
+            }
+          } catch (e) {
+            // ★두 번째가 실패해도 첫 호출 결과는 살립니다.
+            console.error('합격운 상세 통변 실패', e)
+          }
+        }
+
         if (cancelled) return
         setTongState('done')
 
