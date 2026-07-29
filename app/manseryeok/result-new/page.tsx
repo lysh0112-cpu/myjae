@@ -213,7 +213,21 @@ function ResultNewContent() {
   const toggleSection=(key:string)=>setOpenSection(prev=>prev===key?null:key)
   // 질문 선택: 아직 안 골랐으면 QuestionPicker를 먼저, 고르면 만세력+통변 표시.
   // null이면 질문 선택 화면 단계. 배열이면 결과 화면 단계.
-  const [pickedQuestions,setPickedQuestions]=useState<SajuQuestion[]|null>(null)
+  //
+  // ★2026-07-29 — 프리미엄이면 질문 선택 단계를 **건너뜁니다.** (대표님 지시)
+  //
+  //   [왜] 프리미엄 리포트(모듈1)는 원국 전체를 일곱 섹션으로 종합 감명합니다.
+  //        buildGeneralSajuPrompt 는 questions 를 **한 번도 안 씁니다.**
+  //        그러니 손님이 28개를 골라도 결과가 하나도 안 바뀝니다.
+  //        고르게 해 놓고 버리는 셈이라, 화면을 아예 건너뜁니다.
+  //
+  //   ⚠️ 결제가 붙어 프리미엄이 꺼지면(config.ts) 예전처럼 질문 화면이 다시 뜹니다.
+  //      그때 무료 통변은 여전히 «고른 질문»으로 답하기 때문입니다.
+  //   ⚠️ 이 화면에만 있던 「직접 물어보기」(자유 질문 한 줄)도 함께 사라집니다.
+  //      되살리려면 프리미엄 입력 폼에 한 줄 칸을 두고 프롬프트에 실어야 합니다.
+  const [pickedQuestions,setPickedQuestions]=useState<SajuQuestion[]|null>(
+    isPremium() ? [] : null,
+  )
 
   // ── 보관함 저장 (2026-07-21 2차: 수동 → 자동) ──
   //   통변이 완성되면 자동으로 saju_records에 기록한다.
@@ -634,7 +648,9 @@ function ResultNewContent() {
 
         {/* ⑨ AI 통변 (고른 질문 기반). mode=chart(만세력만)면 통변 없음.
             다시보기(recordId)면 저장된 통변·질문이 있을 때만(구버전 기록은 통변 숨김). */}
-        {!chartOnly && pickedQuestions && pickedQuestions.length>0 && dayStem && ohaeng.length>0 &&
+        {/* ★2026-07-29 — 프리미엄은 고른 질문이 없어도(빈 배열) 리포트를 그립니다.
+            일곱 섹션이 이미 정해져 있어 질문이 필요 없기 때문입니다. */}
+        {!chartOnly && pickedQuestions && (pickedQuestions.length>0 || !!premiumPrompt) && dayStem && ohaeng.length>0 &&
           (!recordIdParam || (savedTong && savedTong.length>0)) && (
           <div style={{marginTop:'10px'}}>
             <TongbyeonView
