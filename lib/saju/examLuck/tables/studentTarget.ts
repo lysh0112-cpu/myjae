@@ -282,3 +282,22 @@ export function levelTrackBlock(level?: string | null, track?: string | null): s
   }
   return lines.join('\n')
 }
+
+/**
+ * ★진학 탭의 목표를 EXAM_KINDS 의 열쇠로 옮긴다. (2026-07-29)
+ *
+ *   [왜] 진학 탭에서는 「어떤 시험인가요?」 드롭다운을 뺐습니다.
+ *     목표 2단 드롭다운이 이미 같은 것을 묻고 있었기 때문입니다.
+ *     그런데 점수 계산(examScore)은 examKind 로 «고른 시험에 맞는 십신» 을 봅니다.
+ *     그대로 두면 학생만 그 가산점을 못 받습니다.
+ *   → 목표에서 자동으로 이어 줍니다. 손님이 두 번 고를 일이 없습니다.
+ *
+ *   ⚠️ 교재 230쪽 표(EXAM_KINDS)의 열쇠를 그대로 씁니다. 새 열쇠를 만들지 않습니다.
+ */
+export function examKindFromTarget(category?: string | null): string {
+  // 대입(수시·정시) → 교재의 'daeip'. 정인·정관이 드는 해에 힘이 실립니다.
+  if (category === 'susi' || category === 'jeongsi') return 'daeip'
+  // ⚠️ 고교 입시는 교재 230쪽 표에 짝이 없습니다. 억지로 붙이지 않습니다.
+  //    없는 것을 만들어 붙이면 «교재에 있는 것»처럼 보여 근거가 흐려집니다.
+  return ''
+}

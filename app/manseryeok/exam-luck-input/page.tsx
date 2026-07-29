@@ -18,7 +18,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { exactAge } from '@/lib/saju/ageDayun'
 // ★2026-07-27 — 손님이 시험 종류를 고르면 교재 230쪽 짝에 따라 볼 십신이 정해진다.
 import { EXAM_KINDS } from '@/lib/saju/examLuck/tables/rules'
-import { EXAM_CATEGORIES, TARGETS, STUDENT_GRADES, GRADE_LEVELS, TRACKS } from '@/lib/saju/examLuck/tables/studentTarget'
+import { EXAM_CATEGORIES, TARGETS, STUDENT_GRADES, GRADE_LEVELS, TRACKS, examKindFromTarget } from '@/lib/saju/examLuck/tables/studentTarget'
 
 const ACCENT = '#c85a8c'
 const SOFT = '#f7e6ee'
@@ -117,7 +117,9 @@ function ExamLuckInputInner() {
     }
     p.set('kind', kind)
     p.set('target', target)
-    if (examKind) p.set('examKind', examKind)
+    // ★진학 탭이면 목표에서 자동으로 이어 줍니다. 손님이 두 번 고를 일이 없습니다.
+    const autoKind = target === 'student' ? examKindFromTarget(examCategory) : examKind
+    if (autoKind) p.set('examKind', autoKind)
     if (examDate) p.set('examDate', examDate)
     // ★학생 목표 — 학생일 때만 싣는다
     if (target === 'student' && studentGrade) p.set('studentGrade', studentGrade)
@@ -327,25 +329,34 @@ function ExamLuckInputInner() {
           </>
         )}
 
-        {/* ★어떤 시험인지 — 고르면 그 시험에 힘을 싣는 십신이 드는 해를 짚어 준다 (교재 230쪽) */}
-        <div style={{ fontSize: 12.5, color: '#8a7063', margin: '18px 2px 9px' }}>
-          {target === 'student' ? '어떤 시험인가요?' : '목표 시험·직종'}
-          {target !== 'student' && <span style={{ color: ACCENT, fontWeight: 600 }}> *</span>}
-        </div>
-        <select value={examKind} onChange={e => setExamKind(e.target.value)}
-          style={{
-            width: '100%', padding: '13px 14px', borderRadius: 12, marginBottom: 10,
-            background: CARD, border: `0.5px solid ${LINE}`, color: '#3a2e28',
-            fontSize: 14, fontFamily: 'inherit', appearance: 'none',
-          }}>
-          <option value="">{target === 'student' ? '고르지 않을게요' : '골라 주세요'}</option>
-          {/* ★취업 탭에서는 고른 갈래에 맞는 것만 보여 줍니다.
-               «일자리를 구해요» 를 골랐는데 「로스쿨」이 목록에 있으면 어수선합니다.
-               ⚠️ '그 밖의 시험'(etc)은 어느 쪽에서든 남깁니다. 빠져나갈 길이 있어야 합니다. */}
-          {EXAM_KINDS
-            .filter(k => target === 'student' || k.key === 'etc' || k.purpose === kind)
-            .map(k => <option key={k.key} value={k.key}>{k.label}</option>)}
-        </select>
+        {/* ★어떤 시험인지 — 고르면 그 시험에 힘을 싣는 십신이 드는 해를 짚어 준다 (교재 230쪽)
+             ★★2026-07-29 — «취업 탭에서만» 뜹니다. (대표님 지적)
+               [무엇이 이상했나] 탭으로 나눈 뒤에도 이 드롭다운이 진학 탭에 남아 있었습니다.
+                 진학 탭에서 이미 「대입 수시 → 메디컬」로 목표를 골랐는데
+                 바로 아래에 또 「어떤 시험인가요?」가 떠서 같은 것을 두 번 물었습니다.
+                 게다가 목록이 성인용이라 중학생에게 «공무원 시험·로스쿨·영양사» 가 보였습니다.
+               → 진학 탭은 위 «목표 2단 드롭다운» 이 이 역할을 이미 합니다. 여기서는 뺍니다. */}
+        {target !== 'student' && (
+          <>
+            <div style={{ fontSize: 12.5, color: '#8a7063', margin: '18px 2px 9px' }}>
+              목표 시험·직종 <span style={{ color: ACCENT, fontWeight: 600 }}>*</span>
+            </div>
+            <select value={examKind} onChange={e => setExamKind(e.target.value)}
+              style={{
+                width: '100%', padding: '13px 14px', borderRadius: 12, marginBottom: 10,
+                background: CARD,
+                border: examKind ? `0.5px solid ${LINE}` : `1.5px solid ${ACCENT}55`,
+                color: '#3a2e28', fontSize: 14, fontFamily: 'inherit', appearance: 'none',
+              }}>
+              <option value="">골라 주세요</option>
+              {/* ★고른 갈래에 맞는 것만. «일자리를 구해요» 인데 「로스쿨」이 있으면 어수선합니다.
+                   ⚠️ '그 밖의 시험'(etc)은 어느 쪽에든 남깁니다. 빠져나갈 길이 있어야 합니다. */}
+              {EXAM_KINDS
+                .filter(k => k.key === 'etc' || k.purpose === kind)
+                .map(k => <option key={k.key} value={k.key}>{k.label}</option>)}
+            </select>
+          </>
+        )}
 
         {/* ★시험 날짜 — 교재 195쪽 「세운 > 대운 > 월운 > 일진」·「시험일이 공망일이면」
              ★2026-07-29 «필수» 로 돌렸습니다. 대신 모를 때 고를 단추를 함께 둡니다. */}
