@@ -448,41 +448,60 @@ function ResultNewContent() {
    *   ⚠️ 프리미엄일 때만 씁니다. 무료는 예전처럼 위에 몰아 둡니다(질문 기반이라 결이 다름).
    *   ⚠️ 슬롯에 넣은 도표는 위쪽에서 **감춥니다.** 안 감추면 같은 표가 두 번 나옵니다.
    */
-  const premiumSlots: Array<React.ReactNode | null> = premiumPrompt ? [
-    // 섹션1 강점 지능과 오행·십성
-    ohaeng.length > 0 ? (
-      <div key="s1" style={{ background: '#fff', border: '1px solid rgba(120,53,15,0.15)', borderRadius: 14, padding: 12 }}>
-        <OhaengPentagon ohaeng={ohaeng} dayElement={yongsinNew?.dayElement} />
-      </div>
-    ) : null,
+  // ★2026-07-29 — 섹션마다 그 자리에 얹을 도표. (샌드위치 렌더링)
+  //
+  //   ⚠️⚠️ **자리(index)가 아니라 «제목»으로 붙입니다.**
+  //     전에는 배열 순서대로 slots[i] 를 붙였는데, AI 가 카드를 하나만 덜 쓰거나
+  //     차례를 바꾸면 그 뒤 도표가 통째로 한 칸씩 밀렸습니다.
+  //     실제로 「합충 반영 오행」 표가 엉뚱한 풀이 위에 붙는 일이 있었습니다.
+  //     AI 출력은 우리가 통제할 수 없으니 자리로 맞추면 안 됩니다.
+  //   ★match 에 그 섹션 제목의 특징 낱말을 두엇 적어 두십시오.
+  //     프롬프트의 섹션 이름을 바꾸면 여기 낱말도 함께 보셔야 합니다.
+  const premiumSlots: Array<{ match: string[]; node: React.ReactNode } | null> = premiumPrompt ? [
+    // 섹션1 강점 지능과 오행·십성의 세력
+    ohaeng.length > 0 ? {
+      match: ['강점', '오행'],
+      node: (
+        <div key="s1" style={{ background: '#fff', border: '1px solid rgba(120,53,15,0.15)', borderRadius: 14, padding: 12 }}>
+          <OhaengPentagon ohaeng={ohaeng} dayElement={yongsinNew?.dayElement} />
+        </div>
+      ),
+    } : null,
     // 섹션2 격국과 용신
-    yongsinNew ? (
-      <div key="s2" style={{ background: '#fff', border: '1px solid rgba(120,53,15,0.15)', borderRadius: 14, padding: 12 }}>
-        <YongsinCard result={yongsinNew} saju={saju} />
-      </div>
-    ) : null,
-    null,   // 섹션3 일주·지장간 — 원국표가 맨 위에 이미 있음
-    null,   // 섹션4 무자·다자 — 오행 그래프(섹션1)와 겹쳐 따로 안 둠
-    // 섹션5 고립과 건강 — 합충 반영 오행
-    saju.length > 0 ? (
-      <div key="s5" style={{ background: '#fff', border: '1px solid rgba(120,53,15,0.15)', borderRadius: 14, padding: 12 }}>
-        <HapchungView saju={saju} />
-      </div>
-    ) : null,
+    yongsinNew ? {
+      match: ['격국', '용신', '그릇'],
+      node: (
+        <div key="s2" style={{ background: '#fff', border: '1px solid rgba(120,53,15,0.15)', borderRadius: 14, padding: 12 }}>
+          <YongsinCard result={yongsinNew} saju={saju} />
+        </div>
+      ),
+    } : null,
+    // 섹션5 합충형파해와 건강 — ★대표님 지적: 합충 이야기 «바로 위»에 와야 합니다
+    saju.length > 0 ? {
+      match: ['합충', '합·충', '발복'],
+      node: (
+        <div key="s5" style={{ background: '#fff', border: '1px solid rgba(120,53,15,0.15)', borderRadius: 14, padding: 12 }}>
+          <HapchungView saju={saju} />
+        </div>
+      ),
+    } : null,
     // 섹션6 대운 흐름
-    (dayStem && monthGanji && yearStem && solarYear) ? (
-      <div key="s6" style={{ background: '#fff', border: '1px solid rgba(120,53,15,0.15)', borderRadius: 14, padding: 12 }}>
-        <UnseFlow
-          solarYear={solarYear} solarMonth={solarMonth} solarDay={solarDay}
-          monthGanji={monthGanji} yearStem={yearStem} dayStem={dayStem}
-          gender={gender} birthYear={yearParam} currentYear={currentYear}
-          myMonthBranch={monthBranchForNote ?? ''} myDayBranch={iljji}
-          list={dayunList} hourIdx={hourIdx}
-        />
-      </div>
-    ) : null,
-    null,   // 섹션7 합충 — 섹션5 도표와 겹침
-    null,   // 섹션8 개운 — 도표 없음
+    (dayStem && monthGanji && yearStem && solarYear) ? {
+      match: ['대운', '인생 곡선', '흐름'],
+      node: (
+        <div key="s6" style={{ background: '#fff', border: '1px solid rgba(120,53,15,0.15)', borderRadius: 14, padding: 12 }}>
+          <UnseFlow
+            solarYear={solarYear} solarMonth={solarMonth} solarDay={solarDay}
+            monthGanji={monthGanji} yearStem={yearStem} dayStem={dayStem}
+            gender={gender} birthYear={yearParam} currentYear={currentYear}
+            myMonthBranch={monthBranchForNote ?? ''} myDayBranch={iljji}
+            list={dayunList} hourIdx={hourIdx}
+          />
+        </div>
+      ),
+    } : null,
+    // ⚠️ 섹션3(일주·지장간)·4(무자다자)·7(개운)은 도표를 안 붙입니다.
+    //    3은 맨 위 원국표, 4는 섹션1 오행 그래프와 겹칩니다. 7은 그림으로 낼 것이 없습니다.
   ] : []
   // 통변에 넘길 용신 — 화면 표시와 같은 심산 점수 기준으로 계산한다.
   const yongsinResult=saju.length>0&&dayStem

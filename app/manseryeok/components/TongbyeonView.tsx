@@ -111,11 +111,17 @@ export interface TongbyeonViewProps {
    *
    *   [무엇이 문제였나] 도표가 전부 화면 위쪽에 몰려 있고 풀이는 전부 아래에 있어,
    *     손님이 «이 설명이 어느 표 이야기인지» 를 스스로 이어 붙여야 했습니다.
-   *   [어떻게] 풀이 카드 i 를 그리기 «직전»에 slots[i] 를 그립니다.
-   *     ⚠️ 개수가 안 맞아도 안전합니다. 없으면 그냥 안 그립니다.
-   *     ⚠️ 어떤 도표를 어느 자리에 둘지는 **부모가 정합니다.** 이 부품은 모릅니다.
+   *   [어떻게] 풀이 카드를 그리기 «직전»에 그 카드의 도표를 그립니다.
+   *
+   *   ★2026-07-29 (2차) — «자리(index)»가 아니라 «제목»으로 찾습니다.
+   *     [왜 바꿨나] 전에는 slots[i] 였습니다. AI 가 카드를 하나만 덜 쓰거나
+   *       차례를 바꾸면 그 뒤 도표가 **통째로 한 칸씩 밀립니다.**
+   *       실제로 「합충 반영 오행」 표가 엉뚱한 풀이 위에 붙는 일이 있었습니다.
+   *       AI 출력은 우리가 통제할 수 없으니 자리로 맞추면 안 됩니다.
+   *     [어떻게] 카드 제목에 match 낱말이 하나라도 들어 있으면 그 도표를 얹습니다.
+   *     ⚠️ 못 찾으면 그냥 안 그립니다. 엉뚱한 자리에 붙는 것보다 낫습니다.
    */
-  slots?: Array<React.ReactNode | null>
+  slots?: Array<{ match: string[]; node: React.ReactNode } | null>
   onBack?: () => void
   // 무슨 통변인지: 없으면 사주, 'daeun' 대운, 'seyun' 세운(월운 포함)
   unseEntry?: 'daeun' | 'seyun'
@@ -224,8 +230,12 @@ export default function TongbyeonView({ input, questions, premium, premiumPrompt
           const open = effectiveOpen === i
           return (
             <div key={i}>
-            {/* ★그 섹션의 도표를 풀이 «바로 위»에 얹는다 */}
-            {slots?.[i] ? <div style={{ marginBottom: 8 }}>{slots[i]}</div> : null}
+            {/* ★그 카드의 도표를 풀이 «바로 위»에 얹는다 — 제목으로 찾는다 */}
+            {(() => {
+              const hit = slots?.find(s2 =>
+                s2 && s2.match.some(w => c.title.replace(/\s/g, '').includes(w.replace(/\s/g, ''))))
+              return hit ? <div style={{ marginBottom: 8 }}>{hit.node}</div> : null
+            })()}
             <div style={{ background: C.card, border: `0.5px solid ${C.border}`, borderRadius: 12, marginBottom: 8, overflow: 'hidden' }}>
               <div
                 onClick={() => setOpenIdx(open ? -1 : i)}
