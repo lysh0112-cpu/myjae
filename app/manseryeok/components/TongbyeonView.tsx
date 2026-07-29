@@ -34,7 +34,26 @@ const C = {
   subLight: '#c5a590',
 }
 
-interface Card { title: string; body: string; icon: string }
+/**
+ * ★2026-07-29 — 카드에 «요약 한 줄 · 태그 · 실천» 자리를 두었습니다. (대표님 지시)
+ *
+ *   [무엇이 문제였나] 사주풀이 카드는 본문이 통짜 글(pre-wrap) 하나뿐이었습니다.
+ *     진로적성 카드는 제목 옆에 태그가 있고 결론이 앞에 나와 눈에 잘 들어오는데,
+ *     사주풀이는 어디가 핵심인지 스스로 찾아 읽어야 했습니다.
+ *   [어떻게] AI 가 [한줄]·[태그]·[실천] 을 붙여 쓰게 하고, 여기서 갈라 그립니다.
+ *   ⚠️ 없으면 예전처럼 통짜로 그립니다. 옛 통변(보관함)도 안 깨집니다.
+ */
+interface Card {
+  title: string
+  body: string
+  icon: string
+  /** 핵심 요약 한 줄 — 카드 맨 위에 굵게 */
+  summary?: string
+  /** 키워드 태그 — 제목 아래 알약으로 */
+  tags?: string[]
+  /** 실천 — 강조 상자로 따로 뺀다 */
+  action?: string
+}
 
 // 카드 제목 키워드 → 개성 아이콘
 function iconFor(title: string): string {
@@ -80,10 +99,32 @@ function parseCards(text: string): { intro: string; cards: Card[] } {
 
   const isHeading = (ln: string) => /^\s*(#{1,6}\s*)?\u25A0/.test(ln) || /^\s*#{2,6}\s+/.test(ln)
 
+  /**
+   * 본문에서 [한줄]·[태그]·[실천] 을 뽑아낸다.
+   *   ⚠️ 없으면 그대로 둡니다. 옛 통변이 깨지지 않게 하려는 것입니다.
+   */
+  const split = (bodyRaw: string) => {
+    let summary: string | undefined
+    let action: string | undefined
+    let tags: string[] | undefined
+    const rest: string[] = []
+    for (const ln of bodyRaw.split('\n')) {
+      const t = ln.trim()
+      const mS = t.match(/^\[한줄\]\s*(.+)$/)
+      const mT = t.match(/^\[태그\]\s*(.+)$/)
+      const mA = t.match(/^\[실천\]\s*(.+)$/)
+      if (mS) { summary = mS[1].trim(); continue }
+      if (mT) { tags = mT[1].split(/[·,]/).map(x => x.trim()).filter(Boolean).slice(0, 4); continue }
+      if (mA) { action = mA[1].trim(); continue }
+      rest.push(ln)
+    }
+    return { summary, tags, action, body: rest.join('\n').trim() }
+  }
+
   for (const raw of lines) {
     const ln = raw
     if (isHeading(ln)) {
-      if (cur) cards.push({ title: cleanLine(cur.title), body: cur.bodyLines.join('\n').trim(), icon: iconFor(cleanLine(cur.title)) })
+      if (cur) { const t = cleanLine(cur.title); cards.push({ title: t, icon: iconFor(t), ...split(cur.bodyLines.join('\n')) }) }
       cur = { title: ln, bodyLines: [] }
     } else if (cur) {
       cur.bodyLines.push(ln)
@@ -92,7 +133,7 @@ function parseCards(text: string): { intro: string; cards: Card[] } {
       if (c) intro += (intro ? '\n' : '') + c
     }
   }
-  if (cur) cards.push({ title: cleanLine(cur.title), body: cur.bodyLines.join('\n').trim(), icon: iconFor(cleanLine(cur.title)) })
+  if (cur) { const t = cleanLine(cur.title); cards.push({ title: t, icon: iconFor(t), ...split(cur.bodyLines.join('\n')) }) }
 
   return { intro, cards: cards.filter(c => c.title || c.body) }
 }
@@ -242,11 +283,52 @@ export default function TongbyeonView({ input, questions, premium, premiumPrompt
                 style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '13px 14px', cursor: 'pointer' }}
               >
                 <span style={{ fontSize: 16 }}>{c.icon}</span>
-                <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: C.titleWarm, lineHeight: 1.35 }}>{c.title}</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: C.titleWarm, lineHeight: 1.35 }}>{c.title}</span>
+                  {/* ★핵심 요약 한 줄 — 접혀 있어도 보입니다. 스크롤하며 훑어 읽으라고 둔 것입니다. */}
+                  {c.summary && (
+                    <span style={{ display: 'block', fontSize: 12, color: C.point, lineHeight: 1.5, marginTop: 3 }}>
+                      {c.summary}
+                    </span>
+                  )}
+                </span>
                 <span style={{ color: C.point, fontSize: 12, transition: 'transform .25s', transform: `rotate(${open ? '180' : '0'}deg)` }}>{'\u25BE'}</span>
               </div>
-              <div style={{ maxHeight: open ? '2000px' : '0', overflow: 'hidden', transition: 'max-height .3s ease' }}>
-                <div style={{ fontSize: 13.5, lineHeight: 1.8, color: C.title, whiteSpace: 'pre-wrap', padding: '0 14px 14px' }}>{c.body}</div>
+
+              {/* ★키워드 태그 — 접혀 있어도 보입니다 */}
+              {c.tags && c.tags.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, padding: '0 14px 11px' }}>
+                  {c.tags.map((t, ti) => (
+                    <span key={ti} style={{
+                      fontSize: 10.5, color: '#5a4a86', background: '#f2eefa',
+                      border: '1px solid #e2d9f2', padding: '3px 9px', borderRadius: 20, fontWeight: 600,
+                    }}>{t}</span>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ maxHeight: open ? '4000px' : '0', overflow: 'hidden', transition: 'max-height .3s ease' }}>
+                <div style={{ padding: '0 14px 14px' }}>
+                  {/* ★단락으로 나눠 그립니다. 통짜 pre-wrap 이면 눈이 쉴 곳이 없습니다. */}
+                  {c.body.split(/\n\s*\n/).filter(t => t.trim()).map((para, pi) => (
+                    <p key={pi} style={{
+                      fontSize: 13.5, lineHeight: 1.85, color: C.title,
+                      whiteSpace: 'pre-wrap', margin: pi === 0 ? '0 0 11px' : '0 0 11px',
+                    }}>{para.trim()}</p>
+                  ))}
+
+                  {/* ★실천 — 강조 상자로 따로 뺍니다 */}
+                  {c.action && (
+                    <div style={{
+                      marginTop: 4, padding: '12px 13px', borderRadius: 12,
+                      background: '#fdf6ee', border: '1px solid rgba(200,120,60,0.28)',
+                      display: 'flex', gap: 9, alignItems: 'flex-start',
+                    }}>
+                      <span style={{ fontSize: 14, lineHeight: 1.4, flexShrink: 0 }}>✅</span>
+                      <span style={{ fontSize: 12.5, lineHeight: 1.75, color: '#6b4a2e' }}>{c.action}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             </div>
