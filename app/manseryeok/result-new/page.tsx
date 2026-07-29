@@ -476,30 +476,32 @@ function ResultNewContent() {
         </div>
       ),
     } : null,
-    // 섹션5 합충형파해와 건강 — 합충 이야기 «바로 위»에 옵니다
-    //   ★세운(연운) 표를 함께 얹습니다. 이 섹션이 「올해 어떻게 풀리나」를 말하는 자리라
-    //     연운 표가 옆에 있어야 손님이 이어 읽습니다.
+    // 섹션5 합충형파해와 건강 — 세운(연운) 표만 얹습니다.
+    //   이 섹션이 「올해 어떻게 풀리나」를 말하는 자리라 연운 표가 옆에 있어야 이어 읽힙니다.
+    //
+    //   ⚠️ 2026-07-29 — 「합충 반영 오행」 도표를 여기서 뺐습니다. (대표님 지시)
+    //     [왜] 오각형에 «子(수) → 토 17.5점 이동» 같은 계산 과정이 그대로 드러나
+    //          일반 손님에게는 너무 전문적이었습니다. 게다가 오행 점수가 «합충 전/후»
+    //          두 벌로 보여 「어느 게 내 오행이지」 하고 헷갈립니다.
+    //          리포트 글이 이미 같은 것을 쉬운 말로 설명하고 있어 표가 읽기를 막았습니다.
+    //     ★**지우지 않았습니다.** 전문가 모드(?pro=1 + 합충 토글)에는 그대로 있습니다.
+    //        아래 「③-2 합충 반영」 절입니다. 상담사분들이 쓰시는 자리입니다.
+    //     ⚠️ 되살리시려면 아래 node 안에 <HapchungView saju={saju} /> 를 넣으면 됩니다.
+    //
     //   ⚠️ 슬롯은 제목으로 찾으므로 **한 제목에 하나만** 두어야 합니다.
     //      따로 두면 먼저 걸린 것만 나오고 뒤엣것은 영영 안 보입니다.
-    saju.length > 0 ? {
+    (dayStem && monthGanji && yearStem && solarYear) ? {
       match: ['합충', '합·충', '발복'],
       node: (
-        <div key="s5" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ background: '#fff', border: '1px solid rgba(120,53,15,0.15)', borderRadius: 14, padding: 12 }}>
-            <HapchungView saju={saju} />
-          </div>
-          {(dayStem && monthGanji && yearStem && solarYear) ? (
-            <div style={{ background: '#fff', border: '1px solid rgba(120,53,15,0.15)', borderRadius: 14, padding: 12 }}>
-              <UnseFlow
-                solarYear={solarYear} solarMonth={solarMonth} solarDay={solarDay}
-                monthGanji={monthGanji} yearStem={yearStem} dayStem={dayStem}
-                gender={gender} birthYear={yearParam} currentYear={currentYear}
-                myMonthBranch={monthBranchForNote ?? ''} myDayBranch={iljji}
-                list={dayunList} hourIdx={hourIdx}
-                mode="seyunOnly"
-              />
-            </div>
-          ) : null}
+        <div key="s5" style={{ background: '#fff', border: '1px solid rgba(120,53,15,0.15)', borderRadius: 14, padding: 12 }}>
+          <UnseFlow
+            solarYear={solarYear} solarMonth={solarMonth} solarDay={solarDay}
+            monthGanji={monthGanji} yearStem={yearStem} dayStem={dayStem}
+            gender={gender} birthYear={yearParam} currentYear={currentYear}
+            myMonthBranch={monthBranchForNote ?? ''} myDayBranch={iljji}
+            list={dayunList} hourIdx={hourIdx}
+            mode="seyunOnly"
+          />
         </div>
       ),
     } : null,
@@ -656,8 +658,16 @@ function ResultNewContent() {
                (교훈 AV — reasons 는 그리지 않는다. AI 통변에게만 주는 재료다)
              → 해석은 전부 통변 재료(toTongbyeonInput)로만 가고,
                화면에는 "이 사주에 이런 게 있다"는 사실만 남긴다.
-               지지 특징(JijiTraitView)은 화면에서 아예 뺐다. 재료로만 쓴다. */}
-        {saju.length>0 && (
+               지지 특징(JijiTraitView)은 화면에서 아예 뺐다. 재료로만 쓴다.
+
+             ⚠️ 2026-07-29 — 프리미엄 리포트 화면에서는 감춥니다. (대표님 지시)
+               [왜] «壬壬 월간·일간 / 子子 일지·시지(도화 도화)» 처럼 글자와 술어가
+                    그대로 드러나, 일반 손님에게는 무슨 말인지 알기 어렵습니다.
+                    리포트 글이 이미 같은 것을 쉬운 말로 풀고 있어 겹치기도 합니다.
+               ★지우지 않았습니다. 프리미엄이 아닐 때(무료·기본)와
+                 전문가 모드에서는 예전 그대로 보입니다.
+               ⚠️ 되살리시려면 아래 `!premiumPrompt &&` 만 지우면 됩니다. */}
+        {!premiumPrompt && saju.length>0 && (
           <ByeongjonView saju={saju} target={byeongjonTarget}/>
         )}
 
