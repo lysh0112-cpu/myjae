@@ -13,6 +13,7 @@
 // 검증: 류승현(柳承炫) 사례에서 작명왕·작명가 실제 화면값과 일치 확인 완료.
 
 import { getSuriInfo, type SuriFortune } from "./suri81";
+import { getSuriGuide, SURI_TONE_GUIDE } from "./suriGuide";
 
 // ── 발음오행 기준 (초성) ──
 // 명연재 표준: ㅇㅎ = 토(土). 작명가는 ㅇㅎ=수(水) 학파 — 연재 선생님 검수 때 최종 확정.
@@ -60,6 +61,9 @@ export interface NameChar {
 
 export interface DiagnoseInput {
   surname: NameChar;
+  /** ★2026-07-31 복성(남궁·황보·선우 …) 둘째 글자. 단성이면 비웁니다.
+   *  성 획수는 두 글자의 합으로 셉니다. 가르는 것은 lib/saju/surname.ts 의 splitSurname */
+  surname2?: NameChar | null;
   given: NameChar[];
   yongsin: string;
   heeksin?: string;
@@ -88,6 +92,10 @@ export interface SuriGyeok {
   name: string;     // 격 이름 (예: 용진격)
   un: string;       // ★2026-07-31 운 이름 (예: 건창운) — 교재는 «격, 운» 두 낱말입니다
   fortune: SuriFortune; // 길/흉/미정 (내부 참고 — 화면엔 격 이름 중심)
+  /** ★2026-07-31 순화 주제어 — 교재 155~170쪽 해설에서 (AI 재료) */
+  theme: string;
+  /** ★2026-07-31 순화 해설 한 문장 — AI 가 이 어조로 풀어 씁니다 */
+  gentle: string;
 }
 
 export interface DiagnoseResult {
@@ -129,7 +137,7 @@ function relationOf(a: string, b: string): { kind: RelKind; text: string } {
 // ── ① 음양오행: 획수 홀짝 → 양/음 배열 ──
 // 원전에 감점 기준 없음. 순양(모두 홀)/순음(모두 짝)은 "섞인 배열을 더 조화롭게 보는 견해"만 서술.
 function scoreYinYang(input: DiagnoseInput): FactorResult {
-  const chars = [input.surname, ...input.given];
+  const chars = allChars(input);
   const seq = chars.map((c) => ({
     hanja: c.hanja, strokes: c.strokes,
     yin: c.strokes % 2 === 0,               // 짝=음
@@ -160,7 +168,7 @@ function scoreYinYang(input: DiagnoseInput): FactorResult {
 
 // ── ② 발음오행 흐름 ──
 function scoreSound(input: DiagnoseInput, mode: "토" | "수"): FactorResult {
-  const chars = [input.surname, ...input.given];
+  const chars = allChars(input);
   const seq = chars.map((c) => ({
     hangul: c.hangul,
     cho: getChoseong(c.hangul),
@@ -189,32 +197,62 @@ function scoreSound(input: DiagnoseInput, mode: "토" | "수"): FactorResult {
   };
 }
 
+/** 성(복성이면 두 글자)과 이름을 이은 전체 글자. ★[surname, ...given] 을 직접 쓰지 마십시오 */
+function allChars(input: DiagnoseInput): NameChar[] {
+  return input.surname2
+    ? [input.surname, input.surname2, ...input.given]
+    : [input.surname, ...input.given];
+}
+
+/** 성 획수 — 복성이면 두 글자의 합 */
+function surnameStrokes(input: DiagnoseInput): number {
+  return input.surname.strokes + (input.surname2?.strokes ?? 0);
+}
+
 // ── ③ 수리오행 (작명가식 사격: 태극수 없음, 원획 기준) ──
 //
 // ★2026-07-31 2차 — 등급 판정을 «개수 세기» 에서 «주운 가중치» 로 바꿨습니다.
-//   교재 135~136쪽: 형격 = 「네 격 중 가장 강하게 작용」· 정격 = 「인생 전반을 아우르는 전체운」
-//   따라서 정격·형격(주운)이 흉인 것과 원격·이격(부운)이 흉인 것을 같이 세지 않습니다.
+// ★2026-07-31 3차 — 교재 136쪽 「성명 숫자별 수리4격의 구성 방법」 으로 사격을 재작성했습니다.
+//
+//   교재 136쪽 표 (성 = 복성이면 두 글자 합)
+//     원격 元 = 이름 전체 획수 합       (외자면 이름 한 글자)
+//     형격 亨 = 성 + 이름 첫 글자        ★주운
+//     이격 利 = 성 + 이름 나머지 글자    (외자면 성 + 가상수 1)
+//     정격 貞 = 성 + 이름 전체 합        ★주운 · 총운
+//
+//   두 글자 이름은 예전 식과 결과가 같습니다. 외자·3글자 이상만 달라집니다.
 function scoreSuri(input: DiagnoseInput): DiagnoseResult["suri"] {
-  const sur = input.surname.strokes;
+  const sur = surnameStrokes(input);          // ★복성이면 두 글자 합
   const g = input.given.map((x) => x.strokes);
   const gyeok: SuriGyeok[] = [];
 
   const push = (key: GyeokKey, label: string, sum: number) => {
     const info = getSuriInfo(sum);
-    gyeok.push({ key, label, sum, name: info.name, un: info.un, fortune: info.fortune });
+    const guide = getSuriGuide(sum > 0 ? (sum <= 81 ? sum : ((sum % 80) || 81)) : 0);
+    gyeok.push({
+      key, label, sum,
+      name: info.name, un: info.un, fortune: info.fortune,
+      theme: guide.theme, gentle: guide.gentle,
+    });
   };
 
-  if (g.length === 2) {
-    push("won",    "초년운", g[0] + g[1]);      // 원격 元
-    push("hyeong", "청년운", sur + g[0]);       // 형격 亨  ★주운
-    push("i",      "중년운", sur + g[1]);       // 이격 利
-    push("jeong",  "말년운", sur + g[0] + g[1]); // 정격 貞  ★주운·총운
-  } else if (g.length === 1) {
-    // ⚠️ 외자는 두 격이 같은 식(성+g0)입니다 — 3-3장 ③ 미해결. 이번 차수에서 안 건드렸습니다.
-    push("hyeong", "전반운", sur + g[0]);
-    push("jeong",  "전체운", sur + g[0]);
+  const givenSum = g.reduce((a, b) => a + b, 0);
+
+  if (g.length === 1) {
+    // ⚠️ 외자 — 교재 136쪽 「성1 이름1」. 이격에 가상수 1 을 씁니다.
+    push("won",    "초년운", g[0]);
+    push("hyeong", "청년운", sur + g[0]);
+    push("i",      "중년운", sur + 1);
+    push("jeong",  "말년운", sur + g[0]);
+  } else if (g.length >= 2) {
+    // 두 글자 · 세 글자 이상 모두 같은 식입니다 (교재 136쪽의 일반형)
+    const restSum = givenSum - g[0];
+    push("won",    "초년운", givenSum);
+    push("hyeong", "청년운", sur + g[0]);
+    push("i",      "중년운", sur + restSum);
+    push("jeong",  "말년운", sur + givenSum);
   }
-  // ⚠️ 3글자 이상·0글자는 여전히 격 0개입니다 — 3-3장 ② 미해결
+  // 이름 0글자만 격이 없습니다 (아래에서 판정 보류)
 
   const isHeung = (k: GyeokKey) =>
     gyeok.some((x) => x.key === k && x.fortune === "흉");
@@ -229,39 +267,38 @@ function scoreSuri(input: DiagnoseInput): DiagnoseResult["suri"] {
   let grade: Grade = "보통";
 
   if (gyeok.length === 0) {
-    // 🔴 격을 하나도 못 낸 것을 «좋음» 이라 부르던 자리입니다 (3-3장 ①).
-    //    판정 보류로 둡니다. ★이 세 줄만 지우면 지시서 원문 그대로가 됩니다.
+    // 🔴 격을 하나도 못 낸 것을 «좋음» 이라 부르던 자리입니다 (3-3장 ①). 판정 보류.
     grade = "보통";
   } else if ((isJeongHeung && isHyeongHeung) || totalHeungCount >= 3) {
-    // 주운 둘 다 흉이거나, 전체 흉이 셋 이상
-    grade = "아쉬움";
+    grade = "아쉬움";                 // 주운 둘 다 흉이거나, 전체 흉이 셋 이상
   } else if (
     totalHeungCount === 0 ||
     (!isJeongHeung && !isHyeongHeung && subHeungCount <= 1)
   ) {
-    // 주운이 모두 길이고 부운 흉이 하나 이하
-    grade = "좋음";
+    grade = "좋음";                   // 주운이 모두 길이고 부운 흉이 하나 이하
   } else {
-    // 주운 중 하나만 흉이거나, 부운 둘이 흉
-    grade = "보통";
+    grade = "보통";                   // 주운 중 하나만 흉이거나, 부운 둘이 흉
   }
 
   return {
     grade,
     gyeok,
     facts: {
-      gyeok,                                    // 4격 전체 (격키/라벨/합/격이름/운/길흉)
+      gyeok,                                    // 사격 전체 (격키/라벨/합/격·운/길흉/주제/안내)
       heungCount: totalHeungCount, gilCount: gil,
-      jeongHeung: isJeongHeung,                 // ★AI 재료 — 총운이 흉인가
-      hyeongHeung: isHyeongHeung,               // ★AI 재료 — 주운이 흉인가
-      subHeungCount,                            // ★AI 재료 — 부운 흉 개수
+      jeongHeung: isJeongHeung,                 // ★총운이 흉인가
+      hyeongHeung: isHyeongHeung,               // ★주운이 흉인가
+      subHeungCount,                            // ★부운 흉 개수
+      성획수: sur,
+      복성여부: !!input.surname2,
+      서술지침: SURI_TONE_GUIDE,                 // ★AI 어조 가이드 (교재 155~170쪽 순화)
     },
   };
 }
 
 // ── ④ 자원오행 흐름 ──
 function scoreResource(input: DiagnoseInput): FactorResult {
-  const chars = [input.surname, ...input.given];
+  const chars = allChars(input);
   const seq = chars.map((c) => ({
     hanja: c.hanja,
     meaning: c.meaning ?? "",
@@ -297,7 +334,7 @@ function scoreYongsin(input: DiagnoseInput, mode: "관대" | "엄격"): FactorRe
   const hasYongsin = nameOhaengs.includes(input.yongsin);
   const hasHeeksin = input.heeksin ? nameOhaengs.includes(input.heeksin) : false;
   // 용신을 담은 글자들 (서술용)
-  const yongsinChars = [input.surname, ...input.given]
+  const yongsinChars = allChars(input)
     .filter((c) => c.resourceOhaeng === input.yongsin)
     .map((c) => ({ hanja: c.hanja, hangul: c.hangul }));
 

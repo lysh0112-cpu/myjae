@@ -10,6 +10,7 @@
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { splitSurname } from '@/lib/saju/surname'
 import { diagnoseName, type NameChar } from '@/lib/saju/naming'
 // ★2026-07-30 (2단계) — 자원오행 통합 판정
 import {
@@ -93,9 +94,13 @@ export async function POST(req: Request) {
       : null
 
     // ---------- 1) 진단 엔진으로 5관점 사실 산출 ----------
+    // ★2026-07-31 복성 안전망 — 화면이 «남궁민수» 를 성「남」+이름「궁민수」로
+    //   갈라 보내도 여기서 성「남궁」+이름「민수」로 되돌립니다.
+    const sp = splitSurname([body.surname, ...body.given])
     const result = diagnoseName({
-      surname: body.surname,
-      given: body.given,
+      surname: sp.surname[0] ?? body.surname,
+      surname2: sp.surname[1] ?? null,
+      given: sp.given,
       yongsin: body.yongsin,
       heeksin: body.heeksin,
       elementScore: body.elementScore,
@@ -180,6 +185,7 @@ ${namingGuide}
 - 흉/부침이 있는 부분도 숨기지 말되, 단정하지 말고 "이런 견해가 있어 참고하시라"는 정도로 담담히 전합니다.
 - 상생 관계(예: 土生金, 木生火)는 근거로 정확히 제시합니다. 사실 데이터에 없는 내용은 지어내지 마세요.
 - 전문적이되 따뜻하고 담백하게. 마크다운 기호(##, **, ---)는 쓰지 마세요.
+- 수리오행을 쓸 때는 사실 데이터의 「수리오행.서술지침」과 각 격의 「gentle」 문장을 근거로 삼고, 그 어조를 그대로 유지하세요.
 
 [각 관점은 3단 구조로]
 - intro(무엇을 보나): 이 관점이 성명학에서 무엇을, 왜 보는지 원리를 2~4문장으로 교양있게 설명. (이름마다 크게 달라지지 않는 일반 설명)

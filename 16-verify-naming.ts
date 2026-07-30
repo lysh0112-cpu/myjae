@@ -59,6 +59,8 @@ import {
 } from './lib/saju/specialAvoidData'
 import { diagnoseName, type NameChar } from './lib/saju/naming'
 import { getSuriInfo, SURI_81, SURI_81_APP, diffSuriSources } from './lib/saju/suri81'
+import { SURI_81_GUIDE, SURI_TONE_GUIDE } from './lib/saju/suriGuide'
+import { COMPOUND_SURNAMES, splitSurname } from './lib/saju/surname'
 
 // ── 자잘한 도구 ────────────────────────────────────────────────
 let pass = 0, fail = 0
@@ -810,8 +812,75 @@ head('⑧-c ★수리 등급 — 주운 가중치 판정 (2026-07-31 2차)')
   // ⚠️ 외자 — 두 격이 같은 식이라 «보통» 이 나올 수 없습니다 (3-3장 ③ 미해결)
   const r1 = diagnoseName({ surname: SUR, given: [CH('인', '仁', 4, '木')] as NameChar[], ...base })
   check(r1.suri.gyeok.length === 2, `외자 — 격 2개 (형·정)`)
-  check(r1.suri.gyeok[0].sum === r1.suri.gyeok[1].sum,
-    `⚠️ 외자 두 격이 아직 같은 식입니다 — 3-3장 ③ 미해결`)
+  check(r1.suri.gyeok.map(x => x.key).join(',') === 'won,hyeong,i,jeong', `외자도 사격 넷`)
+  // 교재 136쪽 「성1 이름1」 — 원격 = 이름 · 이격 = 성 + 가상수 1
+  check(r1.suri.gyeok[0].sum === 4, `외자 원격 = 이름 획수 (仁 4)`)
+  check(r1.suri.gyeok[2].sum === 10, `외자 이격 = 성 + 가상수 1 (9+1)`)
+  check(r1.suri.gyeok[1].sum === r1.suri.gyeok[3].sum, `외자 형격 = 정격 = 성 + 이름 (교재 산식)`)
+}
+
+// ══════════════════════════════════════════════════════════════════
+head('⑧-d ★복성 · 3글자 이상 · 순화 해설 (2026-07-31 3차)')
+{
+  const CH = (h: string, j: string, st: number, o: string) =>
+    ({ hangul: h, hanja: j, strokes: st, resourceOhaeng: ohaengOrEmpty(o) })
+  const base = { yongsin: '화', elementScore: { 목: 20, 화: 20, 토: 20, 금: 20, 수: 20 } }
+
+  // ── 복성 목록
+  check(COMPOUND_SURNAMES.length === 19, `교재 139~150쪽 복성 ${COMPOUND_SURNAMES.length}개`)
+  check(COMPOUND_SURNAMES.every(x => x.hangul.length === 2 && x.hanja.length === 2),
+    `복성은 전부 두 글자입니다`)
+  check(!!COMPOUND_SURNAMES.find(x => x.hangul === '남궁' && x.hanja === '南宮'), `남궁(南宮) 등재`)
+  check(!!COMPOUND_SURNAMES.find(x => x.hangul === '황보'), `황보(皇甫) 등재`)
+  check(!!COMPOUND_SURNAMES.find(x => x.hangul === '제갈'), `제갈(諸葛) 등재`)
+
+  // ── splitSurname
+  const nm = [CH('남', '南', 9, '火'), CH('궁', '宮', 10, '土'),
+              CH('민', '民', 5, '水'), CH('수', '秀', 7, '木')]
+  const sp = splitSurname(nm)
+  check(sp.surname.length === 2 && sp.given.length === 2, `남궁민수 → 성 2 · 이름 2`)
+  check(sp.compound?.hangul === '남궁', `복성으로 잡힙니다`)
+  const sp2 = splitSurname([CH('류', '柳', 9, '木'), CH('승', '承', 8, '金'), CH('현', '炫', 9, '火')])
+  check(sp2.surname.length === 1 && sp2.given.length === 2, `류승현 → 성 1 · 이름 2 (단성)`)
+  // ★두 글자만 있으면 복성으로 보지 않습니다 — 이름이 0글자가 되기 때문
+  check(splitSurname([CH('남', '南', 9, '火'), CH('궁', '宮', 10, '土')]).surname.length === 1,
+    `두 글자뿐이면 복성으로 가르지 않습니다`)
+
+  // ── 복성 사격 (성 획수 = 9 + 10 = 19)
+  const rNG = diagnoseName({
+    surname: sp.surname[0], surname2: sp.surname[1], given: sp.given as NameChar[], ...base })
+  check(rNG.suri.gyeok.length === 4, `남궁민수 — 사격 4개 (예전엔 0개)`)
+  check((rNG.suri.facts as Record<string, unknown>).성획수 === 19, `성 획수 = 南9 + 宮10 = 19`)
+  check(rNG.suri.gyeok[3].sum === 31, `정격 = 19 + 5 + 7 = 31`)
+  check(rNG.suri.grade !== '좋음', `격을 낸 뒤의 등급입니다 (${rNG.suri.grade})`)
+
+  // ── 3글자 이름 (박하늘별)
+  const r3 = diagnoseName({ surname: CH('박', '朴', 6, '木'),
+    given: [CH('하', '夏', 10, '火'), CH('늘', '訥', 11, '金'), CH('별', '別', 7, '金')] as NameChar[], ...base })
+  check(r3.suri.gyeok.length === 4, `세 글자 이름 — 사격 4개 (예전엔 0개)`)
+  check(r3.suri.gyeok[0].sum === 28, `원격 = 이름 전체 합 (10+11+7)`)
+  check(r3.suri.gyeok[2].sum === 24, `이격 = 성 + 나머지 (6+11+7)`)
+  check(r3.suri.gyeok[3].sum === 34, `정격 = 성 + 이름 전체 (6+28)`)
+
+  // ── 두 글자 이름은 회귀가 없어야 합니다
+  const rS = diagnoseName({ surname: CH('류', '柳', 9, '木'),
+    given: [CH('승', '承', 8, '金'), CH('현', '炫', 9, '火')] as NameChar[], ...base })
+  check(rS.suri.gyeok.map(x => x.sum).join(',') === '17,17,18,26',
+    `류승현 사격 17·17·18·26 — 3차 개편 뒤에도 그대로`)
+
+  // ── 순화 해설
+  const missing: number[] = []
+  for (let i = 1; i <= 81; i++) if (!SURI_81_GUIDE[i]) missing.push(i)
+  check(missing.length === 0, `순화 해설 81칸 — 빠진 수 ${missing.join(',') || '없음'}`)
+  check(Object.values(SURI_81_GUIDE).every(x => !!x.theme && !!x.gentle), `주제·안내가 전부 채워짐`)
+  // 🔴 손님에게 나갈 문장에 자극적인 말이 섞이지 않았는가 (교훈 EG)
+  const HARSH = ['자살', '요절', '단명', '사별', '패가망신', '불구', '횡사', '병약', '과부', '홀아비']
+  const dirty = Object.entries(SURI_81_GUIDE)
+    .filter(([, v]) => HARSH.some(w => v.gentle.includes(w))).map(([k]) => k)
+  check(dirty.length === 0, `★순화 해설에 자극적 표현 없음 — ${dirty.join(',') || '0건'}`)
+  check(!HARSH.some(w => SURI_TONE_GUIDE.includes(w)), `어조 지침에도 금지어를 예시로 적지 않았습니다`)
+  check(rS.suri.gyeok.every(x => !!x.gentle), `사격 넷 모두 안내 문장을 싣고 나갑니다`)
+  check(String((rS.suri.facts as Record<string, unknown>).서술지침).length > 0, `AI 재료에 어조 지침 포함`)
 }
 
 // ══════════════════════════════════════════════════════════════════
