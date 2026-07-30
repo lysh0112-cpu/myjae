@@ -96,7 +96,20 @@ function ExamLuckStorageInner() {
 
         {records && records.map(r => (
           <div key={r.id}
-            onClick={() => router.push(`/manseryeok/exam-luck-result?${personToQuery(r.inputData, r.title)}&recordId=${r.id}`)}
+            onClick={() => {
+              /**
+               * ★2026-07-30 — 저장할 때 함께 남긴 target 으로 «되돌아갈 화면» 을 가릅니다.
+               *   ⚠️ 옛 기록에는 target 이 없습니다. 그때는 진학 화면으로 보냅니다.
+               *      진학 화면이 저장본을 그대로 보여 주므로 글이 사라지지는 않습니다.
+               *      (성인 기록이면 화면 제목과 맺음말만 학생 결로 보입니다 — 새로 발행하면 맞아집니다)
+               */
+              const d = r.inputData as { target?: string; kind?: string }
+              const to = d?.target === 'adult'
+                ? '/manseryeok/job-luck-result'
+                : '/manseryeok/exam-luck-result'
+              const extra = d?.kind ? `&kind=${d.kind}` : ''
+              router.push(`${to}?${personToQuery(r.inputData, r.title)}&recordId=${r.id}${extra}`)
+            }}
             style={{
               display: 'flex', alignItems: 'center', gap: 13, padding: 15,
               background: CARD, border: `0.5px solid ${LINE}`, borderRadius: 14,

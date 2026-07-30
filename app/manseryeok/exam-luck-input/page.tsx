@@ -4,7 +4,9 @@
  * 합격운 · 취업운 입력 — 무엇을 볼지 고르기
  * ─────────────────────────────────────────────
  * 진입: exam-luck(보관함) > 사람 선택 모달 > 이 화면
- * 다음: exam-luck-result
+ * 다음: ★2026-07-30 — 탭에 따라 «다른 화면» 으로 보냅니다. (대표님 지시)
+ *         진학 탭 → exam-luck-result   (학생 전용)
+ *         취업 탭 → job-luck-result    (성인 전용)
  *
  * 사람은 이미 정해져서 URL 로 넘어온다. 여기서는 "무엇을 볼지"만 고른다.
  * ★진로적성 career-input 과 같은 모양(큰 버튼 목록). 새로 설계하지 않는다.
@@ -403,7 +405,19 @@ function ExamLuckInputInner() {
         )}
 
         <button
-          onClick={() => { if (canGo) router.push(`/manseryeok/exam-luck-result?${query}`) }}
+          onClick={() => {
+            if (!canGo) return
+            // ★2026-07-30 — 학생과 성인을 «다른 화면» 으로 보냅니다.
+            //   [왜] 갈래 이름과 개수 자체가 다릅니다. 학생에게 「수시:정시 비율」을,
+            //     성인에게 「시험 준비:실무 경력 비율」을 묻습니다. 한 화면에 둘을 담으면
+            //     어느 한쪽 손님에게는 늘 어긋난 제목이 보입니다.
+            //   ⚠️ query 에 target 이 이미 실려 있습니다. 두 화면이 그 값으로
+            //      «잘못 들어온 손님» 을 서로에게 되돌려 줍니다. (옛 링크 보호)
+            const to = target === 'student'
+              ? '/manseryeok/exam-luck-result'
+              : '/manseryeok/job-luck-result'
+            router.push(`${to}?${query}`)
+          }}
           disabled={!canGo}
           style={{
             width: '100%', marginTop: 14, padding: 15, borderRadius: 12,

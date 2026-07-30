@@ -59,6 +59,26 @@ function elementCount(saju: ExamInput['saju']): Record<string, number> {
 // ① 앞으로 몇 해 — 이 서비스의 얼굴
 // ══════════════════════════════════════════════════════════════
 
+/**
+ * 걸린 규칙 하나를 «이 손님에게 할 말» 로 바꾼다.
+ *
+ * ★2026-07-30 신설 — 화면줄과 재료줄이 **같은 그물** 을 쓰게 하려고 뽑았습니다.
+ *   전에는 이 논리가 lines 안에만 인라인으로 있었고, reasons 는 h.say 를 날것으로
+ *   썼습니다. 그래서 화면은 깨끗한데 AI 재료에는 교재 원문이 실려 나갔습니다.
+ *
+ *   ⚠️ 앞으로 hits 를 «세 번째 곳» 에서 쓰게 되면 그곳도 이 함수를 부르십시오.
+ *      날것 h.say 를 다시 쓰면 같은 사고가 되풀이됩니다.
+ *
+ * @returns 학생에게 낼 수 없는 문구면 빈 문자열 — 부르는 쪽에서 빼십시오.
+ */
+export function sayFor(h: { key: string; say: string }, target: ExamTarget): string {
+  if (target !== 'student') return h.say
+  // ① 학생 말이 따로 있으면 그것을 쓴다 (교재 230쪽을 학생 말로 옮긴 표)
+  const say = YEAR_SAY_STUDENT[h.key] ?? h.say
+  // ② 그래도 금지어가 남으면 그 문구는 아예 뺀다 (마지막 그물)
+  return hasStudentBan(say) ? '' : say
+}
+
 export function cardYears(
   years: YearLuck[], target: ExamTarget,
   /** 시험을 보러 왔나, 일자리를 보러 왔나 — 원본 195쪽 */
@@ -79,11 +99,10 @@ export function cardYears(
     //        열세 살 아이 리포트에 그 말이 그대로 나갔습니다.
     //        프롬프트 금지어는 AI 에게만 닿고, 이 카드에는 안 닿습니다.
     //   ⚠️ 교재 표(SCORE_RULES)는 안 고쳤습니다. 성인·상담사 화면이 그대로 씁니다.
-    const say = fresh
-      ? (target === 'student' ? (YEAR_SAY_STUDENT[fresh.key] ?? fresh.say) : fresh.say)
-      : ''
-    // 그래도 금지어가 남으면 그 문구는 아예 뺍니다 (마지막 그물)
-    const tail = say && !(target === 'student' && hasStudentBan(say)) ? ` ${say}` : ''
+    // ★2026-07-30 — 그 논리를 sayFor() 로 뽑았습니다. 아래 reasons 도 같은 것을 씁니다.
+    //   ⚠️ 여기에 다시 인라인으로 적지 마십시오. 두 벌이 되면 반드시 갈립니다. (교훈 CJ)
+    const say = fresh ? sayFor(fresh, target) : ''
+    const tail = say ? ` ${say}` : ''
     return `${y.year}년 ${y.stem}${y.branch} — ${y.grade}.${tail}`
   })
   // ★교재 195쪽 — 「합격운은 인성운이 더 중요하고, 취업운은 관성운이 더 중요하며」
@@ -114,7 +133,25 @@ export function cardYears(
     ].concat(years.map(y =>
       `${y.year} ${y.stem}${y.branch} [${y.grade}] 세운점수 ${y.seyunScore ?? y.score}`
       + (y.dayunScore != null ? ` · 대운 ${y.dayunGanji} 점수 ${y.dayunScore} · 섞은점수 ${y.score}` : '')
-      + (y.hits.length ? ` — ${y.hits.map(h => h.say).join(' / ')}` : ''))),
+      // ★★2026-07-30 — 재료줄에도 «학생 말» 그물을 걸었습니다. (교훈 CZ 의 거울)
+      //
+      //   [무엇이 틀려 있었나]
+      //     35부에서 위 lines(화면줄)에는 YEAR_SAY_STUDENT 그물을 걸었는데,
+      //     **여기 reasons(AI 재료줄)에는 안 걸었습니다.**
+      //     같은 hits 를 쓰면서 한쪽만 걸러 놓은 것입니다. 그래서 고3 학생 프롬프트에
+      //     교재 원문이 그대로 실려 나갔습니다 —
+      //         「정인이 드는 해예요. 공무원·입시·취업 시험에 힘이 실립니다」
+      //         「정관이 드는 해예요. 9급·7급·로스쿨·임용, …」
+      //         「편인이 드는 해예요. 어학·외국어와 기술 자격증 …」
+      //     프롬프트에 «쓰지 마세요» 를 적어도 소용없습니다. 재료에 있으면 꺼내 씁니다. (교훈 BF)
+      //
+      //   [왜 못 봤나] 35부의 교훈 CZ 는 «프롬프트를 막았는데 화면이 뿌린다» 였습니다.
+      //     이번은 그 **거울** 입니다 — «화면을 막았는데 재료가 나른다».
+      //     ★같은 hits 를 두 곳에서 쓰면 그물도 두 곳에 걸어야 합니다.
+      //
+      //   ⚠️ 교재 표(SCORE_RULES·EXAM_BY_SIPSIN)는 한 글자도 안 고쳤습니다.
+      //      성인 리포트와 상담사 화면이 그 원문을 그대로 씁니다.
+      + (y.hits.length ? ` — ${y.hits.map(h => sayFor(h, target)).join(' / ')}` : ''))),
     data: { years },
   }
 }
