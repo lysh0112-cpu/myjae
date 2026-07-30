@@ -58,7 +58,7 @@ import {
   LONELY_COLD_SET, SACRED_OVERLOAD_SET, SEASON_CHANGE_SET, BODY_PART_SET,
 } from './lib/saju/specialAvoidData'
 import { diagnoseName, type NameChar } from './lib/saju/naming'
-import { getSuriInfo, SURI_81 } from './lib/saju/suri81'
+import { getSuriInfo, SURI_81, SURI_81_APP, diffSuriSources } from './lib/saju/suri81'
 
 // ── 자잘한 도구 ────────────────────────────────────────────────
 let pass = 0, fail = 0
@@ -726,6 +726,42 @@ head('⑧ 1단계 회귀 — 표준이 무너지지 않았는가')
   check(missing.length === 0, `81수리표 81칸 — 빠진 수 ${missing.join(',') || '없음'}`)
   check(getSuriInfo(82).name === getSuriInfo(2).name, `환원 정상 (82 → 2)`)
   check(getSuriInfo(163).name === getSuriInfo(3).name, `환원 정상 (163 → 3)`)
+
+  // ★2026-07-31 정본 교체 — 교재(『작명개운법』 5장)가 원본입니다
+  const gil = Object.values(SURI_81).filter(x => x.fortune === '길').length
+  const hyung = Object.values(SURI_81).filter(x => x.fortune === '흉').length
+  check(gil === 41 && hyung === 40, `교재 분포 — 길 ${gil}(41) · 흉 ${hyung}(40)`)
+  check(Object.values(SURI_81).every(x => (x.fortune as string) !== '평'),
+    `교재에는 «평» 이 없습니다`)
+  check(Object.values(SURI_81).every(x => !!x.name && !!x.un),
+    `81칸 전부 격·운 두 낱말이 채워져 있습니다`)
+
+  // 교재 152쪽 「한 장으로 정리한 81수리 길흉표」와 153~154쪽 전사가 맞는가 (독립 대조)
+  const P152_GIL = new Set([1,3,5,6,7,8,11,13,15,16,17,18,21,23,24,25,29,31,32,33,35,
+    37,38,39,41,45,47,48,52,57,58,61,63,65,67,68,71,73,75,77,81])
+  const p152bad: number[] = []
+  for (let i = 1; i <= 81; i++) {
+    const want = P152_GIL.has(i) ? '길' : '흉'
+    if (SURI_81[i].fortune !== want) p152bad.push(i)
+  }
+  check(p152bad.length === 0, `152쪽 목록 ↔ 153~154쪽 전사 대조 — 어긋남 ${p152bad.join(',') || '없음'}`)
+
+  // 교재 표본 세 자리 (17·18·26수)
+  check(SURI_81[17].name === '용진격' && SURI_81[17].un === '건창운' && SURI_81[17].fortune === '길',
+    `17수 = 용진격, 건창운 (길)`)
+  check(SURI_81[18].name === '발전격' && SURI_81[18].fortune === '길', `18수 = 발전격 (길)`)
+  check(SURI_81[26].name === '만달격' && SURI_81[26].fortune === '흉', `26수 = 만달격 (흉)`)
+
+  // 표 밖의 수 방어 — 0·음수·NaN 은 «미정» 이지 «길» 이 아닙니다
+  check(getSuriInfo(0).fortune === '미정', `0 획 → 미정`)
+  check(getSuriInfo(-5).fortune === '미정', `음수 → 미정`)
+  check(getSuriInfo(NaN).fortune === '미정', `NaN → 미정`)
+
+  // 부본이 그대로 남아 있는가 · 대조 함수가 도는가
+  check(Object.keys(SURI_81_APP).length === 81, `부본(작명왕·작명가) 81칸 보존`)
+  const d = diffSuriSources()
+  check(d.fortuneDiff.length === 14, `원본↔부본 길흉 어긋남 ${d.fortuneDiff.length}건 (14)`)
+  check(d.nameDiff.length === 53, `원본↔부본 격 이름 어긋남 ${d.nameDiff.length}건 (53)`)
 }
 
 // ══════════════════════════════════════════════════════════════════

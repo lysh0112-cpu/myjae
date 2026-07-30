@@ -80,8 +80,9 @@ export interface FactorResult {
 export interface SuriGyeok {
   label: string;    // 초년운/청년운/중년운/말년운
   sum: number;      // 획수 합
-  name: string;     // 격 이름 (예: 두령격)
-  fortune: SuriFortune; // 길/평/흉 (내부 참고 — 화면엔 격 이름 중심)
+  name: string;     // 격 이름 (예: 용진격)
+  un: string;       // ★2026-07-31 운 이름 (예: 건창운) — 교재는 «격, 운» 두 낱말입니다
+  fortune: SuriFortune; // 길/흉/미정 (내부 참고 — 화면엔 격 이름 중심)
 }
 
 export interface DiagnoseResult {
@@ -198,7 +199,7 @@ function scoreSuri(input: DiagnoseInput): DiagnoseResult["suri"] {
     ];
     for (const [label, sum] of pairs) {
       const info = getSuriInfo(sum);
-      gyeok.push({ label, sum, name: info.name, fortune: info.fortune });
+      gyeok.push({ label, sum, name: info.name, un: info.un, fortune: info.fortune });
     }
   } else if (g.length === 1) {
     const pairs: [string, number][] = [
@@ -207,7 +208,7 @@ function scoreSuri(input: DiagnoseInput): DiagnoseResult["suri"] {
     ];
     for (const [label, sum] of pairs) {
       const info = getSuriInfo(sum);
-      gyeok.push({ label, sum, name: info.name, fortune: info.fortune });
+      gyeok.push({ label, sum, name: info.name, un: info.un, fortune: info.fortune });
     }
   }
 
