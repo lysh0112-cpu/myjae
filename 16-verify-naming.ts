@@ -765,6 +765,56 @@ head('⑧ 1단계 회귀 — 표준이 무너지지 않았는가')
 }
 
 // ══════════════════════════════════════════════════════════════════
+head('⑧-c ★수리 등급 — 주운 가중치 판정 (2026-07-31 2차)')
+{
+  // 지시서 로직을 그대로 옮긴 참조 구현. scoreSuri 와 어긋나면 둘 중 하나가 틀린 것입니다.
+  const ref = (jH: boolean, hH: boolean, sub: number) => {
+    const tot = (jH ? 1 : 0) + (hH ? 1 : 0) + sub
+    if ((jH && hH) || tot >= 3) return '아쉬움'
+    if (tot === 0 || (!jH && !hH && sub <= 1)) return '좋음'
+    return '보통'
+  }
+  check(ref(false, false, 0) === '좋음',   `주운 길 · 부운 0흉 → 좋음`)
+  check(ref(false, false, 1) === '좋음',   `주운 길 · 부운 1흉 → 좋음`)
+  check(ref(false, false, 2) === '보통',   `주운 길 · 부운 2흉 → 보통`)
+  check(ref(true,  false, 0) === '보통',   `정격만 흉 → 보통`)
+  check(ref(false, true,  0) === '보통',   `형격만 흉 → 보통`)
+  check(ref(true,  false, 1) === '보통',   `정격 흉 + 부운 1흉 → 보통`)
+  check(ref(true,  false, 2) === '아쉬움', `정격 흉 + 부운 2흉 → 아쉬움 (전체 3)`)
+  check(ref(true,  true,  0) === '아쉬움', `주운 둘 다 흉 → 아쉬움`)
+
+  // ★부운만 흉해서는 아쉬움이 될 수 없습니다 — 주운 가중치의 핵심
+  check(ref(false, false, 2) !== '아쉬움', `부운 둘이 흉이어도 아쉬움이 아닙니다`)
+
+  // 🔴 격 0개 방어 (3-3장 ①) — 지시서 원문에는 없는 자리입니다
+  const SUR = { hangul: '류', hanja: '柳', strokes: 9, resourceOhaeng: ohaengOrEmpty('木') }
+  const CH = (h: string, j: string, st: number, o: string) =>
+    ({ hangul: h, hanja: j, strokes: st, resourceOhaeng: ohaengOrEmpty(o) })
+  const base = { yongsin: '화', elementScore: { 목: 20, 화: 20, 토: 20, 금: 20, 수: 20 } }
+
+  // 류승현 — 원17길 · 형17길 · 이18길 · 정26흉  →  정격만 흉이므로 «보통»
+  const rSeung = diagnoseName({ surname: SUR,
+    given: [CH('승', '承', 8, '金'), CH('현', '炫', 9, '火')] as NameChar[], ...base })
+  check(rSeung.suri.gyeok.length === 4, `두 글자 이름 — 사격 4개`)
+  check(rSeung.suri.gyeok.map(x => x.key).join(',') === 'won,hyeong,i,jeong',
+    `격 순서가 원·형·이·정입니다`)
+  check(rSeung.suri.gyeok[3].name === '만달격' && rSeung.suri.gyeok[3].fortune === '흉',
+    `류승현 정격 26수 = 만달격(흉) — 교재 기준`)
+  check(rSeung.suri.grade === '보통', `류승현 — 정격만 흉 → 보통 (${rSeung.suri.grade})`)
+
+  // 🔴 격 0개 방어 (3-3장 ①) — 지시서 원문에는 없는 자리입니다
+  const r0 = diagnoseName({ surname: SUR, given: [] as NameChar[], ...base })
+  check(r0.suri.gyeok.length === 0, `이름 0글자 — 격 0개`)
+  check(r0.suri.grade !== '좋음', `★격 0개를 «좋음» 이라 부르지 않습니다 (현재 ${r0.suri.grade})`)
+
+  // ⚠️ 외자 — 두 격이 같은 식이라 «보통» 이 나올 수 없습니다 (3-3장 ③ 미해결)
+  const r1 = diagnoseName({ surname: SUR, given: [CH('인', '仁', 4, '木')] as NameChar[], ...base })
+  check(r1.suri.gyeok.length === 2, `외자 — 격 2개 (형·정)`)
+  check(r1.suri.gyeok[0].sum === r1.suri.gyeok[1].sum,
+    `⚠️ 외자 두 격이 아직 같은 식입니다 — 3-3장 ③ 미해결`)
+}
+
+// ══════════════════════════════════════════════════════════════════
 head('⑧-2 ★새 DB 컬럼 바인딩 — 마이그레이션 전/후 모두 (3단계)')
 // ══════════════════════════════════════════════════════════════════
 //
