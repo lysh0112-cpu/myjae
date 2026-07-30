@@ -115,30 +115,107 @@ export const CLASH_EXEMPT_INCLUDES_HEEKSIN = true
 //  ① 사주 오행 프로필 — 버려지던 값을 모읍니다
 // ══════════════════════════════════════════════════════════════════
 
+/**
+ * 오행 등급. 저장소 표준은 `simsanOhaeng.grade()` 의 네 단계입니다.
+ * ⚠️ `'보통'` 은 **밖에서 손으로 만든 프로필** 을 받기 위해 넓혀 둔 값입니다.
+ *    결핍도 과다도 발달도 아닌 자리로 봅니다(감점·가산 없음).
+ *    ★새 코드에서 '보통' 을 만들어 쓰지 마십시오 — grade() 를 부르십시오. (교훈 CJ)
+ */
+export type OhaengLevel = OhaengGrade | '보통'
+
+/**
+ * 사주 오행 프로필.
+ *
+ * ⚠️ `yongsin`·`level` 만 있으면 돕니다. 나머지는 선택값이고
+ *    `ensureProfile()` 이 안전한 기본값을 채웁니다.
+ *    → 손으로 만든 프로필(용신 + 등급만)도 judgeResource 에 바로 넣을 수 있습니다.
+ */
 export interface SajuOhaengProfile {
   yongsin: Ohaeng | null
+  heeksin?: Ohaeng | null
+  /** ★지금까지 naming 이 받지 않던 값 */
+  gisin?: Ohaeng | null
+  /** ★지금까지 naming 이 받지 않던 값 */
+  gusin?: Ohaeng | null
+  /** ★지금까지 naming 이 받지 않던 값 */
+  hansin?: Ohaeng | null
+  isStrong?: boolean
+  /** 오행별 점수 (심산 100점 만점). 없으면 0 으로 봅니다 */
+  score?: Partial<Record<Ohaeng, number>>
+  /** 결핍 / 약함 / 발달 / 과다 (또는 보통) */
+  level: Record<Ohaeng, OhaengLevel>
+  /** 여덟 글자 가운데 그 오행이 몇 자리인가 */
+  count?: Partial<Record<Ohaeng, number>>
+  /** 글자 수를 셀 수 있었는가 */
+  hasCount?: boolean
+  /** 과다로 본 오행. 없으면 level·score 에서 뽑습니다 */
+  excess?: Ohaeng[]
+  /** 결핍 오행. 없으면 level·score 에서 뽑습니다 */
+  lacking?: Ohaeng[]
+  /** ★고립으로 본 오행 — 우리가 정한 잣대입니다 */
+  isolated?: Ohaeng[]
+}
+
+/**
+ * 빈 자리가 없는 «다 채워진» 프로필.
+ * `buildSajuOhaengProfile()` 이 이것을 돌려줍니다 — 부르는 쪽이 `?.` 를 안 써도 됩니다.
+ * ⚠️ judgeResource 는 더 느슨한 `SajuOhaengProfile` 도 받습니다(ensureProfile 이 채웁니다).
+ */
+export interface SajuOhaengProfileFull {
+  yongsin: Ohaeng | null
   heeksin: Ohaeng | null
-  /** ★지금까지 naming 이 받지 않던 값 */
   gisin: Ohaeng | null
-  /** ★지금까지 naming 이 받지 않던 값 */
   gusin: Ohaeng | null
-  /** ★지금까지 naming 이 받지 않던 값 */
   hansin: Ohaeng | null
   isStrong: boolean
-  /** 오행별 점수 (심산 100점 만점) */
   score: Record<Ohaeng, number>
-  /** 결핍 / 약함 / 발달 / 과다 — simsanOhaeng.grade() 를 그대로 부릅니다 */
-  level: Record<Ohaeng, OhaengGrade>
-  /** 여덟 글자 가운데 그 오행이 몇 자리인가 (saju 를 넘겼을 때만) */
+  level: Record<Ohaeng, OhaengLevel>
   count: Record<Ohaeng, number>
-  /** 글자 수를 셀 수 있었는가 — false 면 count 는 전부 0 입니다 */
   hasCount: boolean
-  /** 과다로 본 오행 (점수 50+ «또는» 글자 4개+) */
   excess: Ohaeng[]
-  /** 결핍(0점) 오행 */
   lacking: Ohaeng[]
-  /** ★고립으로 본 오행 — 우리가 정한 잣대입니다 (아래 주의) */
   isolated: Ohaeng[]
+}
+
+/**
+ * ★안전한 기본값 채우기.
+ *
+ *   [왜 필요한가]  프로필을 «손으로» 만들어 넣는 자리가 생깁니다 —
+ *     검사기·후보 정렬·연재쌤 검증용 시늉 자료 등.
+ *     그때 excess·lacking 이 없으면 judgeResource 가 터집니다.
+ *     ⚠️ 조용히 빈 배열로 두면 «과다가 없는 사주» 로 오판합니다.
+ *        그래서 level·score 에서 «뽑아» 냅니다.
+ */
+export function ensureProfile(p: SajuOhaengProfile): SajuOhaengProfileFull {
+  const score = {} as Record<Ohaeng, number>
+  const count = {} as Record<Ohaeng, number>
+  const level = {} as Record<Ohaeng, OhaengLevel>
+  for (const el of OHAENG_ALL) {
+    score[el] = Number(p.score?.[el] ?? 0) || 0
+    count[el] = Number(p.count?.[el] ?? 0) || 0
+    level[el] = p.level?.[el] ?? '보통'
+  }
+  const hasCount = p.hasCount ?? OHAENG_ALL.some(el => count[el] > 0)
+
+  // 넘겨받은 것이 있으면 그대로, 없으면 level·score·글자수에서 뽑습니다
+  const excess = p.excess ?? OHAENG_ALL.filter(el =>
+    level[el] === '과다'
+    || score[el] >= EXCESS_POINT_MIN
+    || (hasCount && count[el] >= EXCESS_COUNT_MIN))
+  const lacking = p.lacking ?? OHAENG_ALL.filter(el =>
+    level[el] === '결핍' || (p.score !== undefined && score[el] === 0))
+
+  return {
+    yongsin: p.yongsin ?? null,
+    heeksin: p.heeksin ?? null,
+    gisin: p.gisin ?? null,
+    gusin: p.gusin ?? null,
+    hansin: p.hansin ?? null,
+    isStrong: p.isStrong ?? false,
+    score, level, count, hasCount,
+    excess, lacking,
+    isolated: p.isolated ?? [],
+  }
 }
 
 /** calcYongsinCompat 이 주는 모양 — 필요한 것만 받습니다 */
@@ -187,9 +264,9 @@ function judgeIsolated(score: Record<Ohaeng, number>): Ohaeng[] {
 export function buildSajuOhaengProfile(
   y: YongsinLike,
   saju?: PillarLike[] | null,
-): SajuOhaengProfile {
+): SajuOhaengProfileFull {
   const score = {} as Record<Ohaeng, number>
-  const level = {} as Record<Ohaeng, OhaengGrade>
+  const level = {} as Record<Ohaeng, OhaengLevel>
   const count = {} as Record<Ohaeng, number>
 
   for (const el of OHAENG_ALL) {
@@ -279,11 +356,6 @@ export function josaOf(word: string, pair: Parameters<typeof josa>[1]): string {
 
 /** 오행 이름 + 조사 */
 function oj(el: Ohaeng, pair: Parameters<typeof josa>[1]): string { return josa(el, pair) }
-/** 한자 글자를 «한글 음» 기준으로 조사 붙이기 — 한자 뒤에 조사가 오면 음으로 판단합니다 */
-function cj(c: JudgeChar, pair: Parameters<typeof josa>[1]): string {
-  return c.hanja + josa(c.hangul, pair).slice(c.hangul.length)
-}
-
 export interface ResourceVerdict {
   /** ★내부 점수 0~100. 손님 화면에 쓰지 마십시오. 후보 정렬 전용 */
   score: number
@@ -361,8 +433,10 @@ function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min
 export function judgeResource(
   surname: JudgeChar,
   given: JudgeChar[],
-  P: SajuOhaengProfile,
+  profile: SajuOhaengProfile,
 ): ResourceVerdict {
+  // ★손으로 만든 프로필(용신 + 등급만)도 받습니다. 빈 자리는 안전한 기본값으로.
+  const P = ensureProfile(profile)
   const warnings: string[] = []
   const problems: string[] = []
 
@@ -446,6 +520,14 @@ export function judgeResource(
 
   // ─────────────────────────────────────────────────────────────
   // ③ 균형 — ★옛 로직에 «전혀 없던» 판정입니다
+  //
+  //   ⚠️⚠️ 글자마다 돌지 말고 «오행별로» 묶습니다. (2026-07-30 대표님 지적)
+  //     [왜]  이름 두 글자가 같은 오행이면 —
+  //             · excessAdded 가 ['화','화'] 로 중복되고
+  //             · 같은 경고가 두 줄 나가고 (AI 가 되풀이해 씁니다)
+  //             · ★감점이 두 배로 들어갔습니다 (기신 −15 가 −30)
+  //     ★대신 «어느 글자들» 인지는 버리지 않고 경고 문장에 함께 적습니다.
+  //       감점은 한 번, 정보는 그대로 — 둘 다 지킵니다.
   // ─────────────────────────────────────────────────────────────
   let balance = W_BALANCE
   const excessAdded: Ohaeng[] = []
@@ -453,19 +535,30 @@ export function judgeResource(
   const isolatedFilled: Ohaeng[] = []
   const gisinAdded: Ohaeng[] = []
 
+  /** 오행 → 그 오행을 담은 이름 글자들 */
+  const byOhaeng = new Map<Ohaeng, JudgeChar[]>()
   for (let k = 0; k < given.length; k++) {
     const o = givenO[k]
     if (!o) continue
-    const ch = given[k]
+    const arr = byOhaeng.get(o)
+    if (arr) arr.push(given[k])
+    else byOhaeng.set(o, [given[k]])
+  }
+
+  for (const [o, chars] of byOhaeng) {
+    /** 그 오행을 담은 글자를 「炫·炡」 처럼 묶어 적습니다 */
+    const chLabel = chars.map(c => c.hanja).join('·')
+    const chJosa = josaOf(chars[chars.length - 1].hangul, '이/가')
 
     // (a) ★과다 오행을 또 보탰다 — 가장 중요한 경고
     if (P.excess.includes(o)) {
       excessAdded.push(o)
       balance -= PENALTY_EXCESS
       const cnt = P.hasCount ? ` · 여덟 글자 가운데 ${P.count[o]}자리` : ''
+      const many = chars.length > 1 ? ` (${chars.length}자리)` : ''
       warnings.push(
         `사주에 ${o} 기운이 이미 넉넉한 편인데(${P.score[o]}점${cnt}) `
-        + `이름의 ${ch.hanja}도 ${oj(o, '을/를')} 더합니다`)
+        + `이름의 ${chLabel}도 ${oj(o, '을/를')} 더합니다${many}`)
     } else if (P.level[o] === '발달') {
       balance -= PENALTY_DEVELOPED
     }
@@ -477,31 +570,30 @@ export function judgeResource(
     //     ★2026-07-30 실기기에서 드러났습니다 — 기신(금)이 결핍인 사주에
     //       AI 가 「금의 기운을 의식적으로 가꾸어 나가십시오」 라고 권했습니다.
     //       재료가 «금이 비어 있다» 만 말하고 «금이 기신이다» 를 말하지 않았기 때문입니다.
-    const isDisliked = (P.gisin && o === P.gisin) || (P.gusin && o === P.gusin)
+    const isDisliked = (P.gisin !== null && o === P.gisin) || (P.gusin !== null && o === P.gusin)
     if (!isDisliked) {
       if (P.lacking.includes(o)) {
         lackFilled.push(o)
         balance += BONUS_LACK
       } else if (P.isolated.includes(o)) {
-        // (b-2) 고립으로 본 오행을 채웠다 — 가산 (잣대는 judgeIsolated 주석 참고)
         isolatedFilled.push(o)
         balance += BONUS_ISOLATED
       }
     }
 
     // (c) ★기신·구신을 보탰다 — 지금까지 재료조차 안 받던 판정
-    if (P.gisin && o === P.gisin) {
+    if (P.gisin !== null && o === P.gisin) {
       gisinAdded.push(o)
       balance -= PENALTY_GISIN
       warnings.push(
         `${oj(o, '은/는')} 이 사주가 꺼리는 기운(기신)으로 봅니다. `
-        + `이름의 ${cj(ch, '이/가')} ${o}입니다`)
-    } else if (P.gusin && o === P.gusin) {
+        + `이름의 ${chLabel}${chJosa} ${o}입니다`)
+    } else if (P.gusin !== null && o === P.gusin) {
       gisinAdded.push(o)
       balance -= PENALTY_GUSIN
       warnings.push(
         `${oj(o, '은/는')} 이 사주에 도움이 덜 되는 기운(구신)으로 봅니다. `
-        + `이름의 ${cj(ch, '이/가')} ${o}입니다`)
+        + `이름의 ${chLabel}${chJosa} ${o}입니다`)
     }
   }
   balance = clamp(balance, 0, W_BALANCE)
@@ -566,7 +658,8 @@ export function judgeResource(
  * ⚠️ 걸린 것이 없으면 그 줄을 «아예 넣지 않습니다».
  *    「해당 없음」이라 적으면 AI 가 그 말을 손님에게 옮겨 씁니다. (교훈 BF)
  */
-export function resourceFactsBlock(v: ResourceVerdict, P: SajuOhaengProfile): string {
+export function resourceFactsBlock(v: ResourceVerdict, profile: SajuOhaengProfile): string {
+  const P = ensureProfile(profile)
   const L: string[] = []
   const f = v.facts
 

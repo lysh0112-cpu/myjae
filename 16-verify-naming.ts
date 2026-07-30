@@ -29,9 +29,10 @@ import {
   isOhaeng, OHAENG_ALL, type Ohaeng,
 } from './lib/saju/ohaeng'
 import {
-  buildSajuOhaengProfile, judgeResource, relationDirected, resourceFactsBlock, josa,
+  buildSajuOhaengProfile, ensureProfile, judgeResource, relationDirected,
+  resourceFactsBlock, josa,
   EXCESS_POINT_MIN, W_FLOW, W_YONGSIN, W_BALANCE,
-  type JudgeChar,
+  type JudgeChar, type SajuOhaengProfile,
 } from './lib/saju/resourceJudge'
 import { diagnoseName, type NameChar } from './lib/saju/naming'
 import { getSuriInfo, SURI_81 } from './lib/saju/suri81'
@@ -376,6 +377,87 @@ check(W_FLOW + W_YONGSIN + W_BALANCE === 100, `배점 합이 100 (${W_FLOW}+${W_
 }
 
 // ══════════════════════════════════════════════════════════════════
+head('⑥-2 ★같은 오행 중복 투입 — Set 처리 (2026-07-30 대표님 지적)')
+// ══════════════════════════════════════════════════════════════════
+//
+// ⚠️ 무엇이 있었나 — 균형 판정이 «글자마다» 돌고 있었습니다. 그래서 이름 두 글자가
+//    같은 오행이면 excessAdded 가 ['화','화'] 로 중복되고, 같은 경고가 두 줄 나가고,
+//    ★감점이 두 배로 들어갔습니다 (기신 −15 가 −30).
+//    → 오행별로 묶고, «어느 글자들» 인지는 경고 문장에 함께 적습니다.
+{
+  const P = buildSajuOhaengProfile(
+    { yongsin: '수', gisin: '토', gusin: '금', score: { 목: 10, 화: 60, 토: 10, 금: 10, 수: 10 } })
+
+  // 같은 과다 오행(화)을 두 글자에
+  const twoFire = judgeResource(C('柳', '류', '목'), [C('炫', '현', '화'), C('炡', '정', '화')], P)
+  const oneFire = judgeResource(C('柳', '류', '목'), [C('炫', '현', '화')], P)
+  check(twoFire.facts.excessAdded.length === 1,
+    `★excessAdded 중복 없음 — ${JSON.stringify(twoFire.facts.excessAdded)}`)
+  check(twoFire.warnings.filter(w => w.includes('넉넉')).length === 1,
+    `★과다 경고가 한 줄만 (두 글자여도)`)
+  check(twoFire.warnings.some(w => w.includes('炫·炡')),
+    `★대신 «어느 글자들» 인지는 경고에 함께 적습니다`)
+  check(twoFire.breakdown.balance === oneFire.breakdown.balance,
+    `★감점이 두 배로 들어가지 않습니다 — 두 글자 ${twoFire.breakdown.balance} = 한 글자 ${oneFire.breakdown.balance}`)
+
+  // 같은 기신(토)을 두 글자에
+  const twoGisin = judgeResource(C('柳', '류', '목'), [C('垈', '대', '토'), C('圭', '규', '토')], P)
+  const oneGisin = judgeResource(C('柳', '류', '목'), [C('垈', '대', '토')], P)
+  check(twoGisin.facts.gisinAdded.length === 1, `★gisinAdded 중복 없음`)
+  check(twoGisin.warnings.filter(w => w.includes('꺼리는')).length === 1, `★기신 경고 한 줄만`)
+  check(twoGisin.breakdown.balance === oneGisin.breakdown.balance,
+    `★기신 감점도 한 번만 (${twoGisin.breakdown.balance})`)
+
+  // 서로 «다른» 오행이면 각각 잡아야 합니다 — 뭉개면 안 됩니다
+  const mixed = judgeResource(C('柳', '류', '목'), [C('炫', '현', '화'), C('垈', '대', '토')], P)
+  check(mixed.facts.excessAdded.length === 1 && mixed.facts.gisinAdded.length === 1,
+    `다른 오행은 각각 잡습니다 (과다 화 · 기신 토)`)
+  check(mixed.warnings.length >= 2, `경고도 각각 (${mixed.warnings.length}줄)`)
+
+  // 상극 경고도 중복되지 않는가 — 같은 오행 두 글자가 성과 상극일 때
+  const clash = judgeResource(C('柳', '류', '목'), [C('垈', '대', '토'), C('圭', '규', '토')], P)
+  check(clash.facts.links.length === 3, `관계는 글자별로 그대로 셉니다 (${clash.facts.links.length})`)
+}
+
+// ══════════════════════════════════════════════════════════════════
+head('⑥-3 ★손으로 만든 프로필 — 안전한 기본값 (ensureProfile)')
+// ══════════════════════════════════════════════════════════════════
+//
+// ⚠️ 검사기·시늉 자료·연재쌤 검증에서 프로필을 손으로 만들어 넣게 됩니다.
+//    그때 excess·lacking 이 없으면 터지거나(크래시) «과다가 없는 사주» 로 오판합니다.
+{
+  // 용신 + 등급만 있는 «최소» 프로필
+  const bare: SajuOhaengProfile = {
+    yongsin: '수',
+    level: { 목: '보통', 화: '과다', 토: '보통', 금: '결핍', 수: '보통' },
+  }
+  const full = ensureProfile(bare)
+  check(full.excess.includes('화'), `★level='과다' 에서 excess 를 뽑습니다`)
+  check(full.lacking.includes('금'), `★level='결핍' 에서 lacking 을 뽑습니다`)
+  check(full.gisin === null && full.gusin === null && full.hansin === null,
+    `없는 값은 null 로 (undefined 가 새지 않습니다)`)
+  check(full.isolated.length === 0 && full.hasCount === false, `고립·글자수는 안전한 기본값`)
+  check(OHAENG_ALL.every(el => full.score[el] === 0), `점수가 없으면 0`)
+
+  // ★그 프로필로 judgeResource 가 «터지지 않고» 제대로 판정하는가
+  const v = judgeResource(C('柳', '류', '목'), [C('炫', '현', '화')], bare)
+  check(v.facts.excessAdded.includes('화'),
+    `★최소 프로필로도 과다(화)를 잡습니다`)
+  check(v.warnings.some(w => w.includes('넉넉')), `경고도 나옵니다`)
+  check(v.score >= 0 && v.score <= 100, `점수가 범위 안 (${v.score})`)
+
+  // '보통' 등급은 감점도 가산도 아닙니다
+  const neutral = judgeResource(C('柳', '류', '목'), [C('沐', '목', '수')], bare)
+  check(neutral.facts.excessAdded.length === 0 && neutral.facts.lackFilled.length === 0,
+    `'보통' 등급은 감점·가산 없음`)
+
+  // 넘겨받은 excess 가 있으면 «그것을» 씁니다 (다시 뽑지 않습니다)
+  const forced = ensureProfile({ ...bare, excess: ['목'] })
+  check(forced.excess.length === 1 && forced.excess[0] === '목',
+    `넘겨받은 excess 를 그대로 씁니다`)
+}
+
+// ══════════════════════════════════════════════════════════════════
 head('⑦ 프롬프트 재료 — AI 에게 나가는 «사실»')
 // ══════════════════════════════════════════════════════════════════
 {
@@ -396,7 +478,12 @@ head('⑦ 프롬프트 재료 — AI 에게 나가는 «사실»')
   const block = resourceFactsBlock(v, P)
 
   // ★방침 — 「좋다/나쁘다」 를 쓰지 않습니다 (naming.ts:8 · 대표님 지시)
-  const BAN = ['좋은 이름', '나쁜 이름', '좋다', '나쁘다', '나쁜', '흉하', '불길']
+  //   ⚠️ 비유적 단정도 «판정» 입니다. 「불난 집에 부채질」 같은 표현을 재료에 두면
+  //      AI 가 그 비유를 손님에게 그대로 옮겨 씁니다. (2026-07-30 명세 대조에서 걸렀습니다)
+  const BAN = [
+    '좋은 이름', '나쁜 이름', '좋다', '나쁘다', '나쁜', '흉하', '불길',
+    '부채질', '불난 집', '격입니다', '치명', '위험', '망하', '실패',
+  ]
   const hit = BAN.filter(w => block.includes(w))
   check(hit.length === 0, `판정 어휘 0건 — 걸린 말: ${hit.join(', ') || '없음'}`)
 
