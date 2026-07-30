@@ -410,7 +410,10 @@ function NewHanjaInner() {
         <div style={{ fontSize: 10, color: SUB, marginTop: 3 }}>{x.meaning}</div>
         <div style={{ fontSize: 9, color: SUB, marginTop: 1 }}>{rowOhaeng(x) ?? x.resource_ohaeng}·{rowStrokes(x)}획</div>
         {pol.badge && <div style={{ fontSize: 8, color: '#C87C6A', marginTop: 1 }}>{pol.badge}</div>}
-        {!pol.badge && soft && <div style={{ fontSize: 8, color: '#E0A04A', marginTop: 1 }}>주의</div>}
+        {/* ★2026-07-30 (3단계-e) — 특수 규칙 배지(숫자·간지·동자이음).
+            不用 배지와 «다른 축» 이라 둘 다 붙을 수 있습니다. */}
+        {pol.specialBadge && <div style={{ fontSize: 8, color: '#9A8FB0', marginTop: 1 }}>{pol.specialBadge}</div>}
+        {!pol.badge && !pol.specialBadge && soft && <div style={{ fontSize: 8, color: '#E0A04A', marginTop: 1 }}>주의</div>}
       </button>
     )
   }

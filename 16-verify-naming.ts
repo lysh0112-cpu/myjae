@@ -49,6 +49,14 @@ import {
   starOf, starRaw, applyYongsinFloor, perspectiveStars, overallStar,
   starGlyphs, starText, STAR_BANDS, STAR_FLOOR, YONGSIN_FLOOR,
 } from './lib/saju/starRating'
+// ★3단계-e — 특수 피함 규칙
+import { checkSpecialAvoidRules, checkSpecialAvoidForName } from './lib/saju/checkSpecialAvoidRules'
+import { GENTLE_AVOID_REASONS } from './lib/saju/gentleAvoidReasons'
+import {
+  NUMBER_HANJA_SET, GANJI_HANJA_SET, MULTI_SOUND_HANJA_MAP,
+  SPECIAL_PENALTY_CAP, SPECIAL_RULES_ENABLED,
+  LONELY_COLD_SET, SACRED_OVERLOAD_SET, SEASON_CHANGE_SET, BODY_PART_SET,
+} from './lib/saju/specialAvoidData'
 import { diagnoseName, type NameChar } from './lib/saju/naming'
 import { getSuriInfo, SURI_81 } from './lib/saju/suri81'
 
@@ -876,6 +884,110 @@ head('⑧-5 ★목록 정책 — «거르기» 가 아니라 «표시하기» (3
 
   const noPen = { fitsYongsin: true, avoidSoft: false, score: 50, strokes: 9 }
   check(compareCandidates(noPen, mkc(true, 50, 40)) < 0, `softPenalty 없으면 0 으로 봅니다`)
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+head('⑧-6 ★특수 피함 규칙 (3단계-e · 숫자·간지·동자이음·서열)')
+// ══════════════════════════════════════════════════════════════════
+{
+  check(SPECIAL_RULES_ENABLED === true, `특수 규칙이 켜져 있습니다 (끄려면 상수 하나)`)
+
+  // ★말투 — 해설 열 개 전부에 단정적 부정어가 없어야 합니다
+  const BANW = ['단명', '이별', '탕진', '흉', '불길', '나쁨', '나쁜', '재앙', '망하', '실패', '죽']
+  const allText = Object.values(GENTLE_AVOID_REASONS)
+    .flatMap(r => [r.badgeLabel, r.summary, r.gentleDescription]).join(' ')
+  const hitw = BANW.filter(w => allText.includes(w))
+  check(hitw.length === 0, `순화 해설에 단정적 부정어 0건 — 걸린 말: ${hitw.join(',') || '없음'}`)
+  check(Object.keys(GENTLE_AVOID_REASONS).length === 10, `해설 열 갈래`)
+  check(Object.values(GENTLE_AVOID_REASONS).every(r => r.badgeLabel.length <= 12),
+    `배지가 짧습니다 (카드에 들어가야 합니다)`)
+
+  // ① 숫자·간지
+  check(checkSpecialAvoidRules('三').badgeLabel === '수리 충돌 주의', `숫자 — 三`)
+  check(checkSpecialAvoidRules('辰').badgeLabel === '사주 충돌 주의', `간지 — 辰`)
+  check(checkSpecialAvoidRules('柳').penalty === 0, `평범한 글자는 0`)
+
+  // ② 동자이음 — 읽는 음을 배지에 함께
+  const m = checkSpecialAvoidRules('樂')
+  check(m.badgeLabel === '다음자(낙/락/악/요)', `동자이음 배지에 음이 붙습니다 — ${m.badgeLabel}`)
+  check(m.penalty === 5, `동자이음은 감점이 작습니다 (안내에 가깝습니다)`)
+
+  // ③ ★겹침 — 원안은 첫 번째에서 return 해 하나만 잡았습니다
+  const both = checkSpecialAvoidRules('參', { birthOrder: 1 })
+  check(both.hits.length >= 2,
+    `★한 글자가 둘에 걸리면 «전부» 잡습니다 (參 = 숫자 + 서열, ${both.hits.length}건)`)
+  check(both.penalty <= SPECIAL_PENALTY_CAP, `합친 감점에 상한(${SPECIAL_PENALTY_CAP})이 걸립니다`)
+
+  // ④ 서열 — birthOrder 가 없으면 «안 걸립니다»
+  check(checkSpecialAvoidRules('元').penalty === 0,
+    `★서열은 birthOrder 가 없으면 건너뜁니다 (폼이 «몇째» 를 안 묻습니다)`)
+  check(checkSpecialAvoidRules('元', { birthOrder: 2 }).penalty === 25, `둘째가 元 을 쓰면 걸립니다`)
+  check(checkSpecialAvoidRules('元', { birthOrder: 1 }).penalty === 0, `첫째가 元 을 쓰면 안 걸립니다`)
+
+  // ⑤ ★여섯 분류는 «비어 있습니다» — 켜면 덕암 판정을 뒤집습니다
+  check(LONELY_COLD_SET.size === 0 && SACRED_OVERLOAD_SET.size === 0
+     && SEASON_CHANGE_SET.size === 0 && BODY_PART_SET.size === 0,
+    `★여섯 분류의 글자 목록이 비어 있습니다 (연재쌤 확정 대기)`)
+  check(checkSpecialAvoidRules('夏').penalty === 0,
+    `★夏(하) — 덕암 中吉. 계절 분류를 켜지 않아 감점 0`)
+  check(checkSpecialAvoidRules('聖').penalty === 0, `★聖(성) — 덕암 中吉. 감점 0`)
+  check(checkSpecialAvoidRules('靜').penalty === 0, `★靜(정) — 덕암 中吉. 감점 0`)
+
+  // ⑥ 공백·비가시문자가 붙어도 잡히는가
+  check(checkSpecialAvoidRules(' 三').badgeLabel === '수리 충돌 주의', `앞 공백이 붙어도 잡습니다`)
+  check(checkSpecialAvoidRules('').penalty === 0, `빈 값은 0`)
+
+  // ⑦ 자료 온전성
+  check(NUMBER_HANJA_SET.size === 25 && GANJI_HANJA_SET.size === 22,
+    `숫자 25자 · 간지 22자`)
+  check(Object.values(MULTI_SOUND_HANJA_MAP).every(v => v.length > 1),
+    `동자이음은 음이 둘 이상이어야 합니다`)
+
+  // ⑧ 이름 전체 검사
+  const nm = checkSpecialAvoidForName(['柳', '辰', '三'])
+  check(nm.length === 2, `이름 전체 검사 — 걸린 글자만 돌려줍니다 (${nm.length}건)`)
+  check(nm.every(x => x.result.descriptions.length > 0), `해설이 함께 옵니다`)
+}
+
+// ══════════════════════════════════════════════════════════════════
+head('⑧-7 ★특수 규칙 ↔ listPolicy 연결 (3단계-e)')
+// ══════════════════════════════════════════════════════════════════
+{
+  const hr = (h: string, g = '中吉', m = ''): HanjaRow =>
+    ({ hangul: 'x', hanja: h, meaning: m, strokes: 5, resource_ohaeng: '木', grade: g })
+
+  // ★덕암이 «쓸 수 있다» 고 본 글자는 «흐리게 하지 않습니다»
+  const jin = listPolicy(hr('辰', '中吉'))
+  check(jin.show && !jin.dim, `★辰(진) 덕암 中吉 — 보이고 흐리지 않습니다`)
+  check(jin.badge === null && jin.specialBadge === '사주 충돌 주의',
+    `不用 배지는 없고 특수 배지만 붙습니다`)
+  check(jin.softPenalty === 12, `정렬에서 조금만 뒤로 (${jin.softPenalty})`)
+
+  // ★不用 + 특수 — 감점이 «합쳐집니다»
+  const sal = listPolicy(hr('殺', '不用'))
+  check(sal.show && sal.dim, `殺 — 不用 이라 흐리게`)
+  check(sal.badge === '인명 권장 안 함' && sal.specialBadge === '다음자(살/쇄)',
+    `★배지 둘이 «다른 축» 이라 함께 붙습니다`)
+  check(sal.softPenalty === 45, `40(不用) + 5(동자이음) = ${sal.softPenalty}`)
+
+  // 평범한 글자
+  const ryu = listPolicy(hr('柳', '中吉', '버들'))
+  check(ryu.show && !ryu.dim && ryu.badge === null && ryu.specialBadge === null && ryu.softPenalty === 0,
+    `평범한 글자는 그대로`)
+
+  // 막는 것은 여전히 둘뿐
+  check(listPolicy({ ...hr('辰'), avoid_hard: true }).show === false, `avoid_hard 는 막습니다`)
+  check(listPolicy({ ...hr('辰'), is_active: false }).show === false, `쉬는 줄도 막습니다`)
+
+  // ★특수 규칙만으로는 «절대» 막지 않습니다
+  const anySpecialBlocks = ['三', '辰', '樂', '參'].some(h => !listPolicy(hr(h)).show)
+  check(!anySpecialBlocks, `★특수 규칙은 «막지» 않습니다 — 감점과 배지만`)
+
+  // 서열 문맥이 listPolicy 로 전달되는가
+  const won2 = listPolicy(hr('元'), { birthOrder: 2 })
+  check(won2.specialBadge === '서열 관계 확인', `birthOrder 를 listPolicy 가 넘겨받습니다`)
+  check(listPolicy(hr('元')).specialBadge === null, `안 넘기면 안 걸립니다`)
 }
 
 // ══════════════════════════════════════════════════════════════════

@@ -29,6 +29,8 @@
 // ══════════════════════════════════════════════════════════════════
 
 import { normalizeOhaeng, cleanHanja, type Ohaeng } from './ohaeng'
+// ★2026-07-30 (3단계-e) — 특수 피함 규칙 (숫자·간지·동자이음·서열)
+import { checkSpecialAvoidRules, type UserContext } from './checkSpecialAvoidRules'
 
 /**
  * `hanja` 표 한 줄.
@@ -217,6 +219,15 @@ export interface ListPolicy {
   softPenalty: number
   /** 진단용 */
   why: AvoidReason['why']
+  /**
+   * ★2026-07-30 (3단계-e) — 특수 규칙 배지(숫자·간지·동자이음).
+   *   [왜 따로 두나]  不用 배지와 «다른 축» 입니다. 한 글자가 둘 다일 수 있습니다.
+   *     예) 辰(진)은 덕암 中吉(쓸 수 있음)인데 «간지» 라 사주 충돌 주의가 붙습니다.
+   *   화면은 badge 를 먼저 그리고, 없으면 specialBadge 를 그리면 됩니다.
+   */
+  specialBadge: string | null
+  /** 특수 규칙 해설들 — 감정서용 */
+  specialNotes: string[]
 }
 
 /**
@@ -225,14 +236,20 @@ export interface ListPolicy {
  *   const rows = data.filter(r => listPolicy(r).show)
  *   // 그리고 그릴 때 dim·badge 를 함께 씁니다
  */
-export function listPolicy(row: HanjaRow): ListPolicy {
+export function listPolicy(row: HanjaRow, ctx?: UserContext): ListPolicy {
+  const blocked = (why: AvoidReason['why']): ListPolicy => ({
+    show: false, dim: true, badge: null, note: null, softPenalty: 100, why,
+    specialBadge: null, specialNotes: [],
+  })
+
   // ── 정말로 막는 것 ──
-  if (row.avoid_hard === true) {
-    return { show: false, dim: true, badge: null, note: null, softPenalty: 100, why: 'avoid_hard' }
-  }
-  if (!rowActive(row)) {
-    return { show: false, dim: true, badge: null, note: null, softPenalty: 100, why: 'inactive' }
-  }
+  if (row.avoid_hard === true) return blocked('avoid_hard')
+  if (!rowActive(row)) return blocked('inactive')
+
+  // ── ★특수 규칙 (숫자·간지·동자이음·서열) — «다른 축» 이라 함께 봅니다 ──
+  //   예) 辰(진)은 덕암 中吉(쓸 수 있음)인데 간지라 「사주 충돌 주의」가 붙습니다.
+  //   ⚠️ 막지 않습니다. 감점과 배지만 더합니다.
+  const sp = checkSpecialAvoidRules(rowHanja(row), ctx)
 
   // ── 보여 주되 표시하는 것 ──
   if (!rowNameUse(row)) {
@@ -240,7 +257,8 @@ export function listPolicy(row: HanjaRow): ListPolicy {
       show: true, dim: true,
       badge: '인명 권장 안 함',
       note: '이름에 잘 쓰지 않는 글자로 봅니다. 이미 쓰고 계신 이름이라면 그대로 풀이해 드립니다.',
-      softPenalty: 40, why: 'not_name_use',
+      softPenalty: 40 + sp.penalty, why: 'not_name_use',
+      specialBadge: sp.badgeLabel, specialNotes: sp.descriptions,
     }
   }
   const m = row.meaning || ''
@@ -249,10 +267,24 @@ export function listPolicy(row: HanjaRow): ListPolicy {
       show: true, dim: true,
       badge: '뜻 확인',
       note: '뜻에 무거운 낱말이 들어 있습니다. 한 번 살펴보시면 좋겠습니다.',
-      softPenalty: 25, why: 'meaning',
+      softPenalty: 25 + sp.penalty, why: 'meaning',
+      specialBadge: sp.badgeLabel, specialNotes: sp.descriptions,
     }
   }
-  return { show: true, dim: false, badge: null, note: null, softPenalty: 0, why: null }
+  // ── 특수 규칙에만 걸린 글자 — ★막지도 흐리게 하지도 않습니다 ──
+  //   덕암이 «쓸 수 있다» 고 본 글자입니다(辰·丁·寅·元 …). 배지로 알리기만 합니다.
+  if (sp.penalty > 0) {
+    return {
+      show: true, dim: false,
+      badge: null, note: null,
+      softPenalty: sp.penalty, why: null,
+      specialBadge: sp.badgeLabel, specialNotes: sp.descriptions,
+    }
+  }
+  return {
+    show: true, dim: false, badge: null, note: null, softPenalty: 0, why: null,
+    specialBadge: null, specialNotes: [],
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════
