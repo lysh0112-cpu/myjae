@@ -12,9 +12,9 @@
 //   → 이 책과 «책 A(명리적성 비법노트)» 는 **같은 저자** 입니다.
 //     인수인계서 33부부터 미결이던 「B책 이름 확인」에 실마리가 됩니다.
 //
-// ⚠️⚠️ **스캔 판독이 흐린 자리를 표시해 두었습니다** (`uncertain: true`).
-//    115쪽(ㄴ~ㅂ)과 동자이음표 일부가 특히 흐립니다.
-//    ★손으로 확정하시기 전에는 그 줄을 판정에 쓰지 마십시오.
+// ★115쪽(ㄴ~ㅂ)은 2026-07-30 에 선명한 스캔으로 **확정했습니다.**
+//   ⚠️ 남은 불확실 항목은 동자이음표의 便(속될 리/이) 한 자뿐입니다 (`uncertain: true`).
+//      便 은 보통 편/변으로 읽으므로 俚 의 오식일 수 있습니다.
 
 // ══════════════════════════════════════════════════════════════════
 //  01. 자원오행의 의미 (104쪽)
@@ -180,30 +180,51 @@ export const BUYONG_G: BuyongEntry[] = [
 
 /**
  * ㄴ~ㅂ (115쪽)
- * ⚠️⚠️ **이 쪽은 스캔이 흐려 판독이 불확실합니다.** 전부 uncertain 으로 두었습니다.
- *    ★대표님이 원본을 보고 확정해 주시기 전에는 판정에 쓰지 마십시오.
+ * ★2026-07-30 — 대표님이 선명한 스캔을 다시 주셔서 **확정했습니다.**
+ *   처음 전사에서 일곱 군데가 틀렸습니다 —
+ *     · 男  「배우자덕이 «좋으나»」  →  「배우자덕이 «없으며»」   ★뜻이 정반대였습니다
+ *     · 大  「부모, 형제의 덕이 없고…」 줄은 실제로 **德**(덕) 이었습니다
+ *     · 蘭  「손재가 심하고」        →  「변덕이 심하고」
+ *     · 了  「끝났다는 의미로」      →  「끝낸다는 의미로」
+ *     · 梅  「쓰고, 고독, 부덕…」 줄은 실제로 **未**(미) 이고, 梅 는 따로 있었습니다
+ *     · 富  「빈천하다」 줄은 실제로 **福**(복) 이었습니다
+ *     · 美(미) · 分粉芬紛(분) 넉 자는 통째로 빠져 있었습니다
+ *   ⚠️ 흐린 스캔으로 추정 전사하면 이렇게 «뜻이 반대» 로도 들어갑니다. (교훈 BI)
  */
 export const BUYONG_N_TO_B: BuyongEntry[] = [
-  { eum: '남', hanja: '男', rawReason: '배우자덕이 좋으나 가정불화가 잦다.', uncertain: true },
-  { eum: '남', hanja: '南', rawReason: '허영심이 많고 배우자복이 박하다.', uncertain: true },
-  { eum: '녀', hanja: '女', rawReason: '천하고 고독하고 부모, 형제의 덕과 배우자복이 없다.', uncertain: true },
-  { eum: '대', hanja: '大', rawReason: '부모, 형제의 덕이 없고 여성은 부부간 불화가 발생한다.', uncertain: true },
-  { eum: '동', hanja: '冬', rawReason: '관재구설, 파직, 이성 문제가 발생한다.', uncertain: true },
-  { eum: '돌', hanja: '乭', rawReason: '천한 느낌을 주며 단명의 암시가 있다.', uncertain: true },
-  { eum: '동', hanja: '童', rawReason: '도모하는 일이 잘 이루어지지 않는다.', uncertain: true },
-  { eum: '대', hanja: '大', rawReason: '동생이 쓰면 형을 극한다.', uncertain: true },
-  { eum: '도', hanja: '桃', rawReason: '배신을 당하고 배우자덕이 박하다.', uncertain: true },
-  { eum: '란', hanja: '蘭', rawReason: '손재가 심하고 배우자복이 없다.', uncertain: true },
-  { eum: '룡', hanja: '龍', rawReason: '허상을 좇고 허망한 일이 많이 발생한다.', uncertain: true },
-  { eum: '료', hanja: '了', rawReason: '끝났다는 의미로 사물의 종말을 뜻한다.', uncertain: true },
-  { eum: '마', hanja: '馬', rawReason: '짐승처럼 비천함을 내포한다.', uncertain: true },
-  { eum: '명', hanja: '命', rawReason: '재액이 따르며 고독하다.', uncertain: true },
-  { eum: '명', hanja: '明', rawReason: '인덕이 없으며 구설이 따르고 질병이 있다.', uncertain: true },
-  { eum: '매', hanja: '梅', rawReason: '쓰고, 고독, 부덕을 초래하기 쉽고 부부운이 박하다.', uncertain: true },
-  { eum: '만', hanja: '滿', rawReason: '먼저는 부유하나 후에 빈곤하게 된다.', uncertain: true },
-  { eum: '민', hanja: '敏', rawReason: '성질이 날카로워 불화를 초래한다.', uncertain: true },
-  { eum: '부', hanja: '富', rawReason: '빈천하다.', uncertain: true },
-  { eum: '봉', hanja: '鳳', rawReason: '가정불화, 독수공방을 할 수 있다.', uncertain: true },
+  // ㄴ
+  { eum: '남', hanja: '男', rawReason: '배우자덕이 없으며 가정불화가 잦다.' },
+  { eum: '남', hanja: '南', rawReason: '허영심이 많고 배우자복이 박하다.' },
+  { eum: '녀', hanja: '女', rawReason: '천하고 고독하고 부모, 형제의 덕과 배우자복이 없다.' },
+  // ㄷ
+  { eum: '덕', hanja: '德', rawReason: '부모, 형제의 덕이 없고 여성은 부부간 불화가 발생한다.' },
+  { eum: '동', hanja: '冬', rawReason: '관재구설, 파직, 이성 문제가 발생한다.' },
+  { eum: '돌', hanja: '乭', rawReason: '천한 느낌을 주며 단명의 암시가 있다.' },
+  { eum: '동', hanja: '童', rawReason: '도모하는 일이 잘 이루어지지 않는다.' },
+  { eum: '대', hanja: '大', rawReason: '동생이 쓰면 형을 극한다.' },
+  { eum: '도', hanja: '桃', rawReason: '배신을 당하고 배우자덕이 박하다.' },
+  // ㄹ
+  { eum: '란', hanja: '蘭', rawReason: '변덕이 심하고 배우자복이 없다.' },
+  { eum: '룡', hanja: '龍', rawReason: '허상을 좇고 허망한 일이 많이 발생한다.' },
+  { eum: '료', hanja: '了', rawReason: '끝낸다는 의미로 사물의 종말을 뜻한다.' },
+  // ㅁ
+  { eum: '마', hanja: '馬', rawReason: '짐승처럼 비천함을 내포한다.' },
+  { eum: '명', hanja: '命', rawReason: '재액이 따르며 고독하다.' },
+  { eum: '명', hanja: '明', rawReason: '인덕이 없으며 구설이 따르고 질병이 있다.' },
+  { eum: '미', hanja: '未', rawReason: '신고, 고독, 무덕을 초래하기 쉽고 부부운이 박약하다.' },
+  { eum: '미', hanja: '美', rawReason: '부모덕이 없고 사업 실패, 형액을 당한다.' },
+  { eum: '만', hanja: '滿', rawReason: '먼저는 부유하나 후에 빈곤하게 된다.' },
+  { eum: '매', hanja: '梅', rawReason: '과부 또는 화류계 여성이 되기 쉽다.' },
+  { eum: '민', hanja: '敏', rawReason: '성질이 날카로워 불화를 초래한다.' },
+  // ㅂ
+  { eum: '복', hanja: '福', rawReason: '빈천하다.' },
+  // ⚠️ 교재가 한 줄에 넉 자를 묶어 적었습니다 — 분(分, 粉, 芬, 紛)
+  { eum: '분', hanja: '分', rawReason: '과부가 될 흉한 암시가 있다.' },
+  { eum: '분', hanja: '粉', rawReason: '과부가 될 흉한 암시가 있다.' },
+  { eum: '분', hanja: '芬', rawReason: '과부가 될 흉한 암시가 있다.' },
+  { eum: '분', hanja: '紛', rawReason: '과부가 될 흉한 암시가 있다.' },
+  { eum: '부', hanja: '富', rawReason: '배신을 당하거나 관재구설이 따른다.' },
+  { eum: '봉', hanja: '鳳', rawReason: '가정불화, 독수공방을 할 수 있다.' },
 ]
 
 /** ㅅ (116쪽) */
