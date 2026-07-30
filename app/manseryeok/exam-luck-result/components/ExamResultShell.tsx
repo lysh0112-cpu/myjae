@@ -106,6 +106,13 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
    *   ⚠️ 손님에게는 접혀 있고 «개발용» 이라 적혀 있습니다. 눌러야 보입니다.
    *   ⚠️ 안정되면 지우거나 ?debug=1 로 가려도 됩니다.
    */
+  /**
+   * ★2026-07-30 — 지금 «흐르고 있는» 갈래 자리들.
+   * ⚠️ 둘씩 부르면 늦게 시작한 것이 먼저 끝날 수 있습니다. 그때 «지금 쓰는 중» 을
+   *    한 자리만 표시하면, 이미 다 나온 갈래 위에 그 표시가 남아 이상해집니다.
+   *    실제로 «1번은 쓰고 있어요, 2번은 완성» 이 함께 뜬 캡처가 있었습니다.
+   */
+  const [running, setRunning] = useState<Set<number>>(new Set())
   const [diag, setDiag] = useState<Array<{
     n: number; key: string; status: number | null; ms: number; chars: number; note: string
   }>>([])
@@ -379,9 +386,9 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       // ══════════════════════════════════════════════════════════
 
       /** 조각이 이만큼(밀리초) 안 오면 그 묶음은 멈춘 것으로 본다 */
-      const STALL_MS = 60000
+      const STALL_MS = 35000
       /** 한 묶음이 아무리 길어도 이 시간을 넘기지 않는다 */
-      const HARD_MS = 180000
+      const HARD_MS = 90000
 
       /** ★진로적성과 같이 «하나의 글» 로 쌓습니다. 묶음별로 나누지 않습니다. */
       let acc = ''
@@ -501,20 +508,25 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         /**
          * ★2026-07-30 — 한 번에 몇 개를 부를까.
          *
-         *   1 = 완전히 차례로 (가장 안전 · 2~3분)
-         *   2 = 둘씩       (기본값 · 1~1.5분)
+         *   ★1 = 한 번에 하나씩 (지금 값 · 2026-07-30 대표님 지시)
+         *     2 = 둘씩
          *
-         *   [왜 둘까지는 안전한가]
-         *     전에 막혔던 것은 «나란히» 자체가 아니라 상한이 컸기 때문입니다.
-         *         전   2,400 + 2,400 + 3,600 = 8,400 토큰을 한꺼번에 잡아 둠
-         *         후   1,600 × 2 = 3,200 토큰   ← 절반도 안 됩니다
-         *     갈래 하나에 호출 하나가 되면서 한 호출이 작아졌습니다.
-         *   ⚠️ **끊김이 다시 보이면 이 숫자를 1 로 바꾸십시오.** 그 한 줄이 전부입니다.
-         *      3 이상으로 올리지 마십시오. 예전 문제로 돌아갑니다.
+         *   ⚠️⚠️ 2 로 올리지 마십시오. 실기기에서 이렇게 됐습니다 —
+         *     한 물결(둘)이 **다 끝나야** 다음 물결이 시작합니다(Promise.all).
+         *     그래서 1번이 늦으면 2번이 이미 다 나왔는데도 3·4번은 시작조차 못 했습니다.
+         *     화면에는 «1번 지금 쓰고 있어요 / 2번 완성 / 3~7번 대기» 로 굳어 보였고,
+         *     대표님이 «왜 안 넘어가냐» 고 하신 자리입니다.
+         *   ★하나씩 부르면 늦은 것이 하나여도 그 하나만 기다립니다.
+         *     그리고 아래 STALL_MS(60초)가 걸려 다음으로 넘어갑니다.
+         *
+         *   ⚠️⚠️ **1 에서 올리지 마십시오.** 대표님이 «하나의 주제가 끝나면 다음 주제»
+         *        로 정하셨습니다(2026-07-30). 올리면 위에 적은 어긋남이 그대로 돌아옵니다.
+         *        ★올리고 싶어지면, 올리는 대신 STALL_MS 를 줄이십시오.
+         *          느린 하나를 빨리 포기하고 다음으로 넘어가는 쪽이 안전합니다.
          *   ⚠️ 결과 순서는 이 숫자와 관계없이 언제나 1→7 입니다.
          *      partsRef 자리에 넣고 자리 순서대로 이어 붙이기 때문입니다.
          */
-        const CONCURRENCY = 2
+        const CONCURRENCY = 1
 
         /** 갈래별로 받은 글 — ★자리 순서를 지키려고 따로 둡니다 */
         const partsRef: string[] = SEVEN_GROUPS.map(() => '')
@@ -525,13 +537,35 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
           setTong(acc)
         }
 
-        for (let i = 0; i < SEVEN_GROUPS.length; i += CONCURRENCY) {
-          if (cancelled) return
-          setDoneGroups(i)
-          const wave = SEVEN_GROUPS.slice(i, i + CONCURRENCY)
-          await Promise.all(wave.map((g, k) => runGroup(g, i + k, partsRef, joinParts)))
-          joinParts()
+        // ★★2026-07-30 (2차) — «물결(wave)» 을 버리고 «굴러가는 창» 으로 바꿨습니다.
+        //
+        //   [무엇이 문제였나 — 대표님이 «왜 안 넘어가» 하신 자리]
+        //     전에는 둘을 부르고 `Promise.all` 로 **둘 다** 끝나기를 기다렸습니다.
+        //     그러니 1번이 늦으면 2번이 다 나왔어도 3·4번은 시작조차 못 합니다.
+        //     화면에는 «1번 쓰고 있어요 / 2번 완성 / 3~7 차례 기다림» 이 뜨고
+        //     아무것도 안 움직입니다. 실제로 캡처가 그 모양이었습니다.
+        //   [어떻게] 하나가 끝나는 즉시 다음 것을 밀어 넣습니다.
+        //     언제나 둘이 흐르고, 늦은 하나가 뒤를 막지 않습니다.
+        //   ⚠️ 결과 순서는 여전히 1→7 입니다. 자기 «자리» 에 쌓고 자리 순서로 붙입니다.
+        let next = 0
+        const inFlight = new Set<number>()
+        const pump = async (): Promise<void> => {
+          while (next < SEVEN_GROUPS.length) {
+            if (cancelled) return
+            const idx = next++
+            inFlight.add(idx)
+            setRunning(new Set(inFlight))
+            await runGroup(SEVEN_GROUPS[idx], idx, partsRef, joinParts)
+            inFlight.delete(idx)
+            if (cancelled) return
+            setRunning(new Set(inFlight))
+            setDoneGroups(partsRef.filter(Boolean).length)
+            joinParts()
+          }
         }
+        // ★일꾼 CONCURRENCY 명이 각자 «다음 것» 을 집어 갑니다
+        await Promise.all(Array.from({ length: Math.min(CONCURRENCY, SEVEN_GROUPS.length) }, pump))
+        if (!cancelled) setRunning(new Set())
         if (cancelled) return
         setDoneGroups(SEVEN_GROUPS.length)
 
@@ -682,9 +716,10 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
             <div style={{ fontSize: 11, color: '#b08a9a', marginTop: 7 }}>
               {/* ★2026-07-30 — 갈래 하나에 호출 하나이니 «지금 무엇을 쓰는지» 를 말해 줍니다.
                    묶음 번호보다 이게 손님에게 뜻이 있습니다. */}
-              {doneGroups < sections.length
-                ? `${doneGroups + 1}번째 갈래 · ${sections[doneGroups]?.title.replace(/^\S+\s*\d+\.\s*/, '') ?? ''}`
-                : '거의 다 됐어요'}
+              {/* ★2026-07-30 (2차) — «몇 번째» 가 아니라 «몇 개 왔나» 입니다.
+                   둘씩 부르면 «1번째 갈래» 표시가 2번이 다 나온 뒤에도 남아 어긋납니다. */}
+              {`${doneGroups}/${sections.length} 갈래`}
+              {running.size > 0 && ` · ${running.size}개 쓰는 중`}
               {tong.length > 0 && ` · ${tong.length.toLocaleString()}자`}
             </div>
           </div>
@@ -722,7 +757,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
           // 통변이 끝났는데도 안 온 갈래 — 자리만 남기고 조용히 알립니다
           const stillWriting = tongState === 'loading'
           if (!stillWriting) return null
-          const isNow = i === doneGroups
+          const isNow = running.has(i)
           return (
             <div key={sec.key} style={{
               background: CARD, border: `0.5px dashed ${LINE}`, borderRadius: 14,
@@ -732,7 +767,11 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
                 {sec.title}
               </div>
               <div style={{ fontSize: 11.5, color: '#b08a9a', marginTop: 5 }}>
-                {isNow ? '지금 쓰고 있어요…' : '차례를 기다리고 있어요'}
+                {/* ★차례가 이미 지났는데 글이 없는 갈래를 «기다리는 중» 이라 하면 거짓말입니다.
+                     하나씩 부르므로 i < doneGroups 면 그 갈래는 이미 끝난 것입니다. */}
+                {isNow ? '지금 쓰고 있어요…'
+                  : i < doneGroups ? '이 갈래는 받지 못했어요'
+                  : '차례를 기다리고 있어요'}
               </div>
             </div>
           )
