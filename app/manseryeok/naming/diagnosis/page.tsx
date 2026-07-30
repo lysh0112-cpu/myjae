@@ -448,6 +448,14 @@ function DiagnosisInner() {
           given,
           yongsin: yongsinResult.yongsin,
           heeksin: yongsinResult.heeksin,
+          // ★2026-07-30 (2단계) — 지금까지 «버리던» 값을 함께 보냅니다.
+          //   calcYongsinCompat 이 이미 계산해 주고 있었는데
+          //   naming 은 yongsin·heeksin·score 셋만 받아 쓰고 넷을 버렸습니다.
+          //   → 과다 억제·기신 회피 판정을 할 재료가 손안에 있는데 안 쓰던 자리입니다.
+          gisin: yongsinResult.gisin,
+          gusin: yongsinResult.gusin,
+          hansin: yongsinResult.hansin,
+          isStrong: yongsinResult.isStrong,
           elementScore: yongsinResult.score,
           dayStem,
           sajuText,

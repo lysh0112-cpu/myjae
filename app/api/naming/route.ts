@@ -11,7 +11,23 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { diagnoseName, type NameChar } from '@/lib/saju/naming'
+// ★2026-07-30 (2단계) — 자원오행 통합 판정
+import {
+  buildSajuOhaengProfile, judgeResource, resourceFactsBlock,
+  type JudgeChar, type PillarLike,
+} from '@/lib/saju/resourceJudge'
+import { normalizeOhaeng, cleanHanja } from '@/lib/saju/ohaeng'
 import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
+
+/** NameChar(문자열 오행) → JudgeChar(정규화된 Ohaeng|null) */
+function toJudgeChar(c: NameChar): JudgeChar {
+  return {
+    hanja: cleanHanja(c.hanja) || c.hanja,
+    hangul: c.hangul,
+    primary: normalizeOhaeng(c.resourceOhaeng),
+    secondary: null,   // ★2단계 DB 컬럼(resource_ohaeng_secondary)이 들어오면 여기 채웁니다
+  }
+}
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -22,6 +38,13 @@ interface Body {
   yongsin: string
   heeksin?: string
   elementScore: Record<string, number>
+  // ★2026-07-30 (2단계) — 지금까지 «버리던» 값들을 받습니다.
+  //   calcYongsinCompat 이 이미 주고 있었는데 naming 만 안 받았습니다.
+  //   ⚠️ 모두 선택값입니다. 안 보내면 예전과 똑같이 돕니다(옛 화면이 안 깨집니다).
+  gisin?: string
+  gusin?: string
+  hansin?: string
+  isStrong?: boolean
   dayStem?: string
   sajuText?: string
   birthData?: unknown
@@ -87,12 +110,44 @@ export async function POST(req: Request) {
 
     // ---------- 2) Claude 5관점 3단 겸손 통변 ----------
     // AI에는 "사실(facts)"만 근거로 주고, 판정 대신 겸손한 서술을 시킨다.
+
+    // ★★2026-07-30 (2단계) — 자원오행 통합 판정을 «덧붙입니다».
+    //   [무엇이 달라지나] 옛 facts 는 «이웃 글자끼리 상생인가» 뿐이었습니다.
+    //     여기서 더해지는 것 —
+    //       · 상극을 «방향까지» 가림 (순극/역극)
+    //       · 과다 오행 중복 투입 경고        ← 옛 로직에 아예 없던 판정
+    //       · 결핍·고립 오행 보충 가산        ← 없던 판정
+    //       · 기신·구신 투입 경고             ← 재료조차 안 받던 값
+    //       · 보완하는 글자가 만든 상극은 예외 (대표님 지시 ④)
+    //   ⚠️ 옛 5관점 facts 는 «지우지 않았습니다». 화면·파서가 그대로 돕니다.
+    //      새 판정은 자원오행/사주보완 두 관점의 «근거를 넓히는» 역할입니다.
+    //   ⚠️ 점수(score·breakdown)는 프롬프트에 넣지 않습니다.
+    //      숫자를 주면 AI 가 「85점입니다」 처럼 판정해 버립니다. (대표님 방침)
+    const profile = buildSajuOhaengProfile(
+      {
+        isStrong: body.isStrong,
+        yongsin: body.yongsin, heeksin: body.heeksin,
+        gisin: body.gisin, gusin: body.gusin, hansin: body.hansin,
+        score: body.elementScore,
+      },
+      Array.isArray(body.saju) ? (body.saju as PillarLike[]) : null,
+    )
+    const verdict = judgeResource(
+      toJudgeChar(body.surname),
+      body.given.map(toJudgeChar),
+      profile,
+    )
+
     const factsForAI = {
       음양오행: result.yinYang.facts,
       발음오행: result.soundFlow.facts,
       수리오행: result.suri.facts,
       자원오행: result.resourceFlow.facts,
       사주보완: result.yongsinBohwan.facts,
+      // ★2단계 신설 — 위 둘(자원오행·사주보완)의 «근거를 넓힌» 것
+      자원오행_정밀: verdict.facts,
+      참고할자리: verdict.warnings,
+      판정못한자리: verdict.problems,
     }
 
     const commentaryPrompt = `${toneBlock}
@@ -119,6 +174,16 @@ ${namingGuide}
 ${hangulName} (${hanjaName})
 ${body.sajuText ? `사주: ${body.sajuText}` : ''}
 사주에 필요한 기운(용신): ${body.yongsin}
+
+[★자원오행과 사주의 관계 — 사람이 읽는 정리]
+${resourceFactsBlock(verdict, profile)}
+
+[★위 «참고하실 자리» 를 다루는 법]
+- 숨기지 마세요. 다만 «좋다/나쁘다» 로 가르지 말고 "이런 견해가 있어 참고하시라"는 정도로 담담히 전하세요.
+- 특히 「이미 넉넉한 기운」과 「꺼리는 기운」은 자원오행 또는 사주보완 대목에서 한 번은 짚어 주세요.
+- 서로 누르는 자리가 있으나 «사주를 보완하는 글자» 라 흠으로 보지 않는다고 적혀 있으면, 그 사정을 함께 전하세요.
+- ⚠️ 「점수」·「등급」·「몇 점」 같은 말을 쓰지 마세요. 손님에게 점수를 보여 주지 않습니다.
+- ⚠️ 위에 적히지 않은 오행·글자·관계를 지어내지 마세요.
 
 [5관점 사실 데이터(JSON)]
 ${JSON.stringify(factsForAI, null, 2)}
