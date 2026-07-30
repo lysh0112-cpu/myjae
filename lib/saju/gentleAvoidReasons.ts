@@ -26,7 +26,7 @@ export interface GentleAvoidReason {
 export type AvoidReasonKey =
   | 'LONELY_COLD' | 'SACRED_OVERLOAD' | 'ENERGY_DECLINE' | 'SEASON_CHANGE'
   | 'ANIMAL_INSECT' | 'BODY_PART' | 'NUMBER_CHAR' | 'GANJI_CHAR'
-  | 'MULTI_SOUND' | 'ORDER_MISMATCH'
+  | 'MULTI_SOUND' | 'ORDER_MISMATCH' | 'ILJI_CHUNG'
 
 export const GENTLE_AVOID_REASONS: Record<AvoidReasonKey, GentleAvoidReason> = {
   // 1. 고독 / 쓸쓸함 (霜 雪 萍 菊 蘭 …)
@@ -100,6 +100,14 @@ export const GENTLE_AVOID_REASONS: Record<AvoidReasonKey, GentleAvoidReason> = {
     gentleDescription:
       '문맥이나 쓰임에 따라 읽는 발음이 달라질 수 있습니다. '
       + '사회생활에서 정확하고 명확하게 불리기 위해 신중히 선택해야 하는 글자입니다.',
+  },
+  // 11. ★일주(월지·일지) 충 — 『작명개운법』 122쪽
+  ILJI_CHUNG: {
+    badgeLabel: '충(沖) 주의',
+    summary: '사주의 월지·일지와 부딪히는 글자',
+    gentleDescription:
+      '월지는 태어난 기운과 부모·직업의 자리이고, 일지는 자신과 배우자를 나타내는 자리로 봅니다. '
+      + '그 자리와 정면으로 부딪히는 글자는 기운이 흔들릴 수 있어 되도록 다른 글자를 살펴보시길 권합니다.',
   },
   // 10. 서열 불일치
   ORDER_MISMATCH: {

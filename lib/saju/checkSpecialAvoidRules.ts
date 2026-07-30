@@ -27,10 +27,14 @@ import {
   SEASON_CHANGE_SET, ANIMAL_INSECT_SET, BODY_PART_SET,
   PENALTY_MULTI_SOUND, PENALTY_NUMBER, PENALTY_GANJI,
   PENALTY_ORDER_MISMATCH, PENALTY_CATEGORY,
+  PENALTY_ILJI_CHUNG, PENALTY_WOLJI_CHUNG,
   SPECIAL_PENALTY_CAP, SPECIAL_RULES_ENABLED,
 } from './specialAvoidData'
 import { GENTLE_AVOID_REASONS, type GentleAvoidReason, type AvoidReasonKey } from './gentleAvoidReasons'
-import { cleanHanja } from './ohaeng'
+import { cleanHanja, type Ohaeng } from './ohaeng'
+// ★2026-07-30 (4단계) — 『작명개운법』 4장 122쪽
+import { ILJI_CHUNG_MAP } from './tables/jakmyeongGaeunbeop'
+import { ohaengOfChar } from './ohaengNature'
 
 export interface SpecialAvoidHit {
   key: AvoidReasonKey
@@ -54,6 +58,20 @@ export interface SpecialAvoidResult {
 export interface UserContext {
   /** 1:첫째 2:둘째 3:셋째 4:막내. ⚠️ 지금은 폼이 안 묻습니다 */
   birthOrder?: number
+  /**
+   * ★2026-07-30 (4단계) — 월지·일지. 『작명개운법』 122쪽 「일주에 따라 피해야 하는 한자」
+   *   충(沖)하는 글자를 이름에 쓰면 불리하다고 봅니다.
+   *   월지 = 부모·직업·가치관 자리 · 일지 = 자신·배우자 자리
+   */
+  monthBranch?: string
+  dayBranch?: string
+  /**
+   * ★용신 — 『작명개운법』 122쪽의 «예외 조항» 에 씁니다.
+   *   「사주에 甲木이 필요하면 甲 자를 과감히 사용하면 오히려 더 좋아진다」
+   *   → 간지 글자라도 그 오행이 용신이면 감점하지 않습니다.
+   */
+  yongsin?: Ohaeng | null
+  heeksin?: Ohaeng | null
 }
 
 const EMPTY: SpecialAvoidResult = { hits: [], penalty: 0, badgeLabel: null, descriptions: [] }
@@ -122,13 +140,48 @@ export function checkSpecialAvoidRules(
     })
   }
 
-  // ④ 간지
+  // ④ 간지 — ★★『작명개운법』 122쪽의 «예외 조항» 을 넣었습니다
+  //   「그러나 예외적인 경우도 있는데 사주에 甲木이 필요하면
+  //     甲 자를 과감히 사용하면 오히려 더 좋아진다」
+  //   → 간지 글자라도 그 오행이 «용신·희신» 이면 감점하지 않습니다.
+  //   ⚠️ 이것이 없으면 「甲木이 필요한 사주」에 甲 을 권하면서 동시에 감점하는
+  //      앞뒤가 안 맞는 일이 생깁니다.
   if (GANJI_HANJA_SET.has(ch)) {
+    const el = ohaengOfChar(ch)
+    const isNeeded = !!el && (el === context?.yongsin || el === context?.heeksin)
+    if (!isNeeded) {
+      hits.push({
+        key: 'GANJI_CHAR',
+        badgeLabel: GENTLE_AVOID_REASONS.GANJI_CHAR.badgeLabel,
+        penalty: PENALTY_GANJI,
+        reason: GENTLE_AVOID_REASONS.GANJI_CHAR,
+      })
+    }
+  }
+
+  // ⑥ ★일주에 따라 피해야 하는 한자 (『작명개운법』 122쪽)
+  //   월지·일지를 «충» 하는 글자입니다. 일지가 더 무겁습니다(자신·배우자 자리).
+  const chungHits: string[] = []
+  let chungName = '충'
+  for (const [br, label] of [[context?.dayBranch, '일지'], [context?.monthBranch, '월지']] as const) {
+    if (!br) continue
+    const r = ILJI_CHUNG_MAP[br]
+    if (r && r.avoid === ch) {
+      chungHits.push(`${label} ${br}`)
+      chungName = r.chungName   // ★걸린 «그 자리» 의 충 이름을 씁니다
+    }
+  }
+  if (chungHits.length > 0) {
     hits.push({
-      key: 'GANJI_CHAR',
-      badgeLabel: GENTLE_AVOID_REASONS.GANJI_CHAR.badgeLabel,
-      penalty: PENALTY_GANJI,
-      reason: GENTLE_AVOID_REASONS.GANJI_CHAR,
+      key: 'ILJI_CHUNG',
+      badgeLabel: '충(沖) 주의',
+      penalty: chungHits.some(x => x.startsWith('일지')) ? PENALTY_ILJI_CHUNG : PENALTY_WOLJI_CHUNG,
+      reason: {
+        ...GENTLE_AVOID_REASONS.ILJI_CHUNG,
+        gentleDescription:
+          `사주의 ${chungHits.join('·')}와 ${chungName} 관계를 이루는 글자입니다. `
+          + GENTLE_AVOID_REASONS.ILJI_CHUNG.gentleDescription,
+      },
     })
   }
 

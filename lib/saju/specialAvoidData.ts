@@ -116,6 +116,13 @@ export const PENALTY_NUMBER = 12        // 숫자
 export const PENALTY_GANJI = 12         // 간지
 export const PENALTY_ORDER_MISMATCH = 25 // 서열 불일치 (지금은 안 걸립니다)
 export const PENALTY_CATEGORY = 15      // 위 여섯 분류 (지금은 비어 있습니다)
+/**
+ * ★일주 충 — 『작명개운법』 122쪽
+ *   일지는 «자신·배우자» 자리라 월지보다 무겁게 봅니다.
+ *   ⚠️ 이 규칙은 사주 정보(월지·일지)가 있어야 돕니다. 없으면 건너뜁니다.
+ */
+export const PENALTY_ILJI_CHUNG = 20
+export const PENALTY_WOLJI_CHUNG = 15
 
 /** 특수 규칙에서 나오는 감점의 상한 */
 export const SPECIAL_PENALTY_CAP = 30

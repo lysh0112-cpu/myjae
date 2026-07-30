@@ -899,7 +899,8 @@ head('⑧-6 ★특수 피함 규칙 (3단계-e · 숫자·간지·동자이음·
     .flatMap(r => [r.badgeLabel, r.summary, r.gentleDescription]).join(' ')
   const hitw = BANW.filter(w => allText.includes(w))
   check(hitw.length === 0, `순화 해설에 단정적 부정어 0건 — 걸린 말: ${hitw.join(',') || '없음'}`)
-  check(Object.keys(GENTLE_AVOID_REASONS).length === 10, `해설 열 갈래`)
+  // ★2026-07-30 (4단계) — ILJI_CHUNG 이 늘어 열하나입니다 (『작명개운법』 122쪽)
+  check(Object.keys(GENTLE_AVOID_REASONS).length === 11, `해설 열한 갈래`)
   check(Object.values(GENTLE_AVOID_REASONS).every(r => r.badgeLabel.length <= 12),
     `배지가 짧습니다 (카드에 들어가야 합니다)`)
 
