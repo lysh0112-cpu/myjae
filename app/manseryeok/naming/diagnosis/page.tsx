@@ -6,7 +6,12 @@ import { calcYongsinCompat } from '@/lib/saju/yongsinNew'
 import { supabase } from '@/lib/supabase'
 import type { DiagnoseResult, NameChar } from '@/lib/saju/naming'
 // ★2026-07-30 (1단계) — 오행 정규화 단일 창구. 자원오행을 날것으로 쓰지 않습니다.
-import { ohaengOrEmpty, cleanHanja } from '@/lib/saju/ohaeng'
+// ★2026-07-30 (3단계) — 오행·한자 정제는 hanjaRow 의 읽기 함수가 안에서 부릅니다
+// ★2026-07-30 (3단계) — hanja 표 읽기 단일 창구. 2단계 DB 컬럼을 하위호환으로 읽습니다.
+import {
+  HANJA_SELECT, isAvoidChar as isAvoidCharShared,
+  rowOhaeng, rowStrokes, rowHanja, type HanjaRow,
+} from '@/lib/saju/hanjaRow'
 import ConsultButton from '@/app/components/common/ConsultButton'
 import { fromProfile, fromUrl, personKey, type MyInfo } from '@/lib/saju/myInfo'
 import {
@@ -19,25 +24,8 @@ import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
 
-const AVOID_KEYWORDS = [
-  '죽을', '죽일', '주검', '시체', '시신', '송장', '애도', '슬플', '슬픔',
-  '근심', '걱정', '병', '앓을', '아플', '악할', '흉할', '흉', '재앙', '재난',
-  '천할', '천박', '종', '노예', '놈', '도둑', '도적', '귀신', '미칠', '미치광이',
-  '어리석을', '간사할', '간교', '허물', '꺾을', '무너질', '망할', '멸할',
-  '원수', '저주', '독', '괴로울', '비참', '울', '눈물', '한숨',
-]
-
-interface HanjaRow {
-  hangul: string
-  hanja: string
-  meaning: string
-  strokes: number
-  resource_ohaeng: string
-  sound_ohaeng: string
-  avoid_hard?: boolean
-  avoid_soft?: boolean
-  grade?: string
-}
+// ★2026-07-30 (3단계) — HanjaRow 정의를 lib/saju/hanjaRow.ts 로 옮겼습니다.
+//   세 화면에 세 벌이 있었고 select 문도 서로 달랐습니다. (교훈 CJ)
 
 // 5관점 3단 해설(무엇을 보나/이 이름은/어떤 의미인가)
 interface Perspective {
@@ -112,12 +100,8 @@ const subWarm = '#96502e'      // 따뜻한 강조 텍스트
 const rose = '#c8506e'         // 삭제·경고 포인트
 const border = '0.5px solid #f0e0d5'
 
-function isAvoidChar(row: HanjaRow): boolean {
-  if (row.avoid_hard === true) return true
-  if (row.grade === '不用') return true
-  const m = row.meaning || ''
-  return AVOID_KEYWORDS.some((k) => m.includes(k))
-}
+// ★isAvoidChar 는 lib/saju/hanjaRow.ts 의 것을 씁니다 (AVOID_KEYWORDS 도 함께 옮겼습니다)
+function isAvoidChar(row: HanjaRow): boolean { return isAvoidCharShared(row) }
 
 function isHangulSyllable(ch: string): boolean {
   const code = ch.charCodeAt(0)
@@ -246,6 +230,8 @@ function DiagnosisInner() {
   const [step, setStep] = useState<'input' | 'preview' | 'pay' | 'result'>('input')
   const [result, setResult] = useState<DiagnoseResult | null>(null)
   const [commentary, setCommentary] = useState<Commentary | null>(null)
+  // ★2026-07-30 (3단계) — 실패 이유. 없으면 null. 빈 화면 대신 이것을 보여 줍니다.
+  const [failWhy, setFailWhy] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
 
@@ -340,7 +326,7 @@ function DiagnosisInner() {
     try {
       const { data, error } = await supabase
         .from('hanja')
-        .select('hangul, hanja, meaning, strokes, resource_ohaeng, sound_ohaeng, avoid_hard, avoid_soft, grade')
+        .select(HANJA_SELECT)   // ★'*' — 마이그레이션 전에도 안 깨집니다
         .eq('hangul', hangul)
         .order('strokes', { ascending: true })
       if (error) { console.error(error); setHanjaList([]) }
@@ -359,8 +345,9 @@ function DiagnosisInner() {
     next[pickerIdx] = {
       hangul: row.hangul,
       // ★2026-07-30 (1단계) — 원자료에 ' 熺' 처럼 앞에 공백이 붙은 한자가 있습니다.
-      hanja: cleanHanja(row.hanja) || row.hanja,
-      strokes: row.strokes,
+      hanja: rowHanja(row),
+      // ★2026-07-30 (3단계) — 원획법. strokes_kangxi 가 있으면 그것을 씁니다.
+      strokes: rowStrokes(row),
       // ★★2026-07-30 (1단계) — 여기가 「내이름 감정」이 틀리던 자리입니다.
       //   [무엇이 문제였나] DB 의 자원오행은 «한자»(木火土金水)로 들어 있는데
       //     이 줄이 날것으로 넘겼습니다. naming.ts 의 상생표(GENERATES)는 «한글» 키라
@@ -371,7 +358,7 @@ function DiagnosisInner() {
       //     대신 AI 에게 「상생 0건·용신 없음」이라는 «틀린 사실» 이 나갔습니다.
       //   ⚠️ 개명 화면 넷은 각자 ohaengChar() 사본으로 이미 막고 있었습니다.
       //      다섯 창구 가운데 이 한 곳만 빠져 있었습니다. (교훈 CZ·DA 의 세 번째 거울)
-      resourceOhaeng: ohaengOrEmpty(row.resource_ohaeng),
+      resourceOhaeng: rowOhaeng(row) ?? '',
     }
     setChars(next)
     setPickerIdx(null)
@@ -432,6 +419,7 @@ function DiagnosisInner() {
     if (!canSubmit || !surname || !saju || !dayStem) return
     setStep('result')
     setLoading(true)
+    setFailWhy(null)
     try {
       // 심산 오행 점수로 계산 (월지 계절 치환 반영). 시지는 명식의 시주에서 꺼낸다.
       const yongsinResult = calcYongsinCompat(
@@ -463,9 +451,29 @@ function DiagnosisInner() {
           saju,
         }),
       })
+      // ★★2026-07-30 (3단계) — res.ok 를 «봅니다».
+      //   [무엇이 문제였나] 전에는 곧바로 .json() 을 해서, 라우트가 500 을 줘도
+      //     그냥 통과했습니다. 그러면 result 가 null 이 되고 화면의
+      //     `{!loading && result && (…)}` 가 false 라 **손님이 빈 화면을 봤습니다.**
+      //     실패 문구도 [다시 시도] 단추도 없었습니다.
+      if (!res.ok) {
+        let why = ''
+        try { why = (await res.text()).slice(0, 200) } catch { /* status 만이라도 남긴다 */ }
+        setFailWhy(`풀이를 받지 못했어요 (HTTP ${res.status})${why ? ` — ${why}` : ''}`)
+        setResult(null)
+        return
+      }
       const data = await res.json()
       setResult(data.result ?? null)
       setCommentary(normalizeCommentary(data.commentary))
+      // ★AI 가 실패했으면 «왜» 인지 알려 줍니다. 빈 통변을 조용히 보여 주지 않습니다.
+      if (data.aiOk === false) {
+        setFailWhy(data.aiFailHint
+          ? `${data.aiFailHint} (풀이 문장을 받지 못했어요)`
+          : '풀이 문장을 받지 못했어요. 잠시 뒤 다시 시도해 주세요')
+      } else {
+        setFailWhy(null)
+      }
       const pkey = personKey(info)
       try {
         localStorage.setItem(NAMING_RESULT_KEY, JSON.stringify({
@@ -534,6 +542,8 @@ function DiagnosisInner() {
       } catch (e) { console.error(e); setSaveFailed(true) }
     } catch (e) {
       console.error(e)
+      // ★2026-07-30 (3단계) — 망 오류·예외도 «빈 화면» 이 아니라 이유로 알립니다.
+      setFailWhy('풀이를 받는 중 문제가 있었어요. 잠시 뒤 다시 시도해 주세요')
     } finally {
       setLoading(false)
     }
@@ -606,7 +616,7 @@ function DiagnosisInner() {
           {/* ★2026-07-30 (1단계) — 목록도 같은 창구를 씁니다.
               전에는 DB 날것을 그려서 손님이 «木» 을, 판정은 «목» 을 보는 어긋남이 있었습니다.
               ⚠️ 못 읽은 값이면 빈칸이 되므로 원값을 그대로 보여 줍니다(정보를 숨기지 않습니다). */}
-          {ohaengOrEmpty(row.resource_ohaeng) || row.resource_ohaeng}·{row.strokes}획
+          {rowOhaeng(row) ?? row.resource_ohaeng}·{rowStrokes(row)}획
         </div>
       </div>
     </div>
@@ -781,6 +791,26 @@ function DiagnosisInner() {
                   이름을 정성껏 풀이하고 있어요<br />
                   <span style={{ color: '#5c3a1e', fontSize: '12px' }}>잠시만 기다려 주세요</span>
                 </div>
+              </div>
+            )}
+
+            {/* ★2026-07-30 (3단계) — 실패했을 때 «빈 화면» 대신 이유와 [다시 시도] 를 냅니다 */}
+            {!loading && failWhy && (
+              <div style={{
+                background: cardBg, border: '1px solid #f0c9c9', borderRadius: '14px',
+                padding: '22px 18px', textAlign: 'center', marginBottom: '16px',
+              }}>
+                <div style={{ fontSize: '26px', marginBottom: '8px' }}>🌧️</div>
+                <div style={{ fontSize: '13px', color: rose, lineHeight: 1.8, marginBottom: '14px' }}>
+                  {failWhy}
+                </div>
+                <button onClick={handleFullResult}
+                  style={{
+                    padding: '11px 22px', borderRadius: '12px', background: gold,
+                    border: 'none', color: '#fff', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer',
+                  }}>
+                  다시 시도
+                </button>
               </div>
             )}
 

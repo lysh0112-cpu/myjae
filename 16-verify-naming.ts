@@ -34,6 +34,16 @@ import {
   EXCESS_POINT_MIN, W_FLOW, W_YONGSIN, W_BALANCE,
   type JudgeChar, type SajuOhaengProfile,
 } from './lib/saju/resourceJudge'
+import {
+  candidateScore, compareCandidates,
+  CAND_W_RESOURCE, CAND_W_SURI, CAND_W_SOUND,
+} from './lib/saju/resourceJudge'
+// ★3단계 — 새 DB 컬럼 바인딩
+import {
+  HANJA_SELECT, rowOhaeng, rowOhaengSecondary, rowStrokes, rowNameUse, rowHanja,
+  isAvoidChar, avoidReason, toJudgeChar, toNameChar, describeRowSource,
+  type HanjaRow,
+} from './lib/saju/hanjaRow'
 import { diagnoseName, type NameChar } from './lib/saju/naming'
 import { getSuriInfo, SURI_81 } from './lib/saju/suri81'
 
@@ -604,8 +614,141 @@ head('⑧ 1단계 회귀 — 표준이 무너지지 않았는가')
 }
 
 // ══════════════════════════════════════════════════════════════════
-head('⑨ 무작위 관통 — 조용히 깨지지 않는가')
+head('⑧-2 ★새 DB 컬럼 바인딩 — 마이그레이션 전/후 모두 (3단계)')
 // ══════════════════════════════════════════════════════════════════
+//
+// ⚠️⚠️ 왜 «전/후 둘 다» 를 검사하나
+//    Supabase 는 없는 컬럼을 select 하면 **400 으로 통째로 실패** 합니다.
+//    그래서 HANJA_SELECT 를 `*` 로 두고, 읽기 함수가 «새 컬럼이 있으면 그것을,
+//    없으면 옛 컬럼을» 씁니다. → SQL 을 먼저 돌려도, 코드를 먼저 올려도 안 깨집니다.
+//    ★이 구획이 그 하위호환을 잠급니다.
+{
+  check(HANJA_SELECT === '*',
+    `★HANJA_SELECT 가 '*' 입니다 — 컬럼 이름을 나열하면 마이그레이션 전에 400 으로 죽습니다`)
+
+  // ── 마이그레이션 «전» 의 줄 (옛 컬럼만) ──
+  const before: HanjaRow = {
+    hangul: '류', hanja: '柳', meaning: '버들', strokes: 9,
+    resource_ohaeng: '木',            // ★덕암 자료는 한자입니다
+    grade: '中吉', avoid_hard: false, avoid_soft: false,
+  }
+  check(rowOhaeng(before) === '목', `마이그레이션 전 — resource_ohaeng('木') → '목'`)
+  check(rowStrokes(before) === 9, `마이그레이션 전 — strokes(9)`)
+  check(rowNameUse(before) === true, `마이그레이션 전 — grade('中吉') → 쓸 수 있음`)
+  check(rowOhaengSecondary(before) === null, `마이그레이션 전 — 부 자원오행 없음`)
+
+  // ── 마이그레이션 «뒤» 의 줄 (새 컬럼이 있음) ──
+  const after: HanjaRow = {
+    ...before,
+    resource_ohaeng_primary: '목',
+    resource_ohaeng_secondary: '수',
+    strokes_kangxi: 10,              // ★일부러 strokes(9) 와 다르게 둡니다
+    is_name_use: true,
+  }
+  check(rowOhaeng(after) === '목', `마이그레이션 뒤 — resource_ohaeng_primary`)
+  check(rowStrokes(after) === 10,
+    `★마이그레이션 뒤 — strokes_kangxi(10) «가» 이깁니다 (strokes 9 아님 · 원획법)`)
+  check(rowOhaengSecondary(after) === '수', `부 자원오행을 읽습니다`)
+  check(rowNameUse(after) === true, `is_name_use 를 읽습니다`)
+
+  // ── 새 컬럼이 «있지만 비어 있을» 때 — 가장 위험한 자리 ──
+  //   SQL STEP 4 가 컬럼만 만들고 UPDATE 를 안 하면 strokes_kangxi 가 NULL 입니다.
+  //   그때 0 으로 읽으면 수리 4격이 통째로 깨집니다.
+  const half: HanjaRow = { ...before, strokes_kangxi: null, is_name_use: null, resource_ohaeng_primary: null }
+  check(rowStrokes(half) === 9,
+    `★strokes_kangxi 가 NULL 이면 strokes 로 돌아갑니다 (0 으로 읽지 않습니다)`)
+  check(rowOhaeng(half) === '목', `resource_ohaeng_primary 가 NULL 이면 원본으로`)
+  check(rowNameUse(half) === true, `is_name_use 가 NULL 이면 grade 로`)
+  const zero: HanjaRow = { ...before, strokes_kangxi: 0 }
+  check(rowStrokes(zero) === 9, `★strokes_kangxi 가 0 이어도 믿지 않습니다`)
+
+  // ── 불용한자 — ★개명 화면 둘이 «전혀 거르지 않던» 자리 ──
+  const bu: HanjaRow = { ...before, grade: '不用' }
+  check(rowNameUse(bu) === false, `grade='不用' → 쓸 수 없음`)
+  check(isAvoidChar(bu) === true, `★isAvoidChar 가 不用 을 거릅니다`)
+  check(avoidReason(bu).why === 'not_name_use', `걸른 이유를 남깁니다`)
+  const buNew: HanjaRow = { ...before, grade: '中吉', is_name_use: false }
+  check(isAvoidChar(buNew) === true, `is_name_use=false 도 거릅니다 (grade 가 中吉 이어도)`)
+  check(isAvoidChar({ ...before, grade: ' 不用 ' }) === true,
+    `★앞뒤 공백이 붙은 '不用' 도 거릅니다 (문자열 비교의 함정)`)
+
+  // ── 뜻으로 거르기 — diagnosis 에만 있던 그물 ──
+  check(isAvoidChar({ ...before, meaning: '죽을, 주검' }) === true,
+    `★뜻으로 거르는 그물이 개명 화면에도 옵니다 (AVOID_KEYWORDS)`)
+  check(avoidReason({ ...before, meaning: '죽을' }).why === 'meaning', `이유가 'meaning'`)
+
+  // ── 쉬는 줄(중복 격리) ──
+  check(isAvoidChar({ ...before, is_active: false }) === true, `is_active=false 는 목록에 안 냅니다`)
+  check(isAvoidChar({ ...before, is_active: true }) === false, `is_active=true 는 정상`)
+  check(isAvoidChar(before) === false, `평범한 글자는 거르지 않습니다`)
+
+  // ── 한자 공백 정제 ──
+  check(rowHanja({ ...before, hanja: ' 熺' }) === '熺',
+    `★' 熺' → '熺' (덕암 자료 행 5002)`)
+
+  // ── 변환 ──
+  const jc = toJudgeChar(after)
+  check(jc.primary === '목' && jc.secondary === '수' && jc.hanja === '柳',
+    `toJudgeChar — 주·부 자원오행을 함께 넘깁니다`)
+  const nc = toNameChar(after)
+  check(nc.strokes === 10 && nc.resourceOhaeng === '목',
+    `toNameChar — 원획법 + 표준 표기`)
+
+  // ── 진단 문구 ──
+  check(describeRowSource(before).includes('resource_ohaeng('),
+    `describeRowSource — 마이그레이션 전을 알려 줍니다`)
+  check(describeRowSource(after).includes('strokes_kangxi'),
+    `describeRowSource — 마이그레이션 뒤를 알려 줍니다`)
+}
+
+// ══════════════════════════════════════════════════════════════════
+head('⑧-3 ★개명 후보 정렬 이관 (3단계)')
+// ══════════════════════════════════════════════════════════════════
+{
+  check(Math.abs(CAND_W_RESOURCE + CAND_W_SURI + CAND_W_SOUND - 1) < 1e-9,
+    `배점 비율 합이 1 (${CAND_W_RESOURCE.toFixed(3)}+${CAND_W_SURI.toFixed(3)}+${CAND_W_SOUND.toFixed(3)})`)
+  check(Math.abs(CAND_W_RESOURCE - 5 / 7.5) < 1e-9,
+    `★자원+용신 비율이 옛 가중치(5/7.5)와 같습니다 — 관점의 무게를 바꾸지 않았습니다`)
+
+  const P = flat('화')
+  const good = judgeResource(C('柳', '류', '목'), [C('炫', '현', '화')], P)   // 용신 충족
+  const bad = judgeResource(C('柳', '류', '목'), [C('垈', '대', '토')], P)    // 상극 + 미충족
+
+  check(candidateScore(good, '좋음', '좋음') > candidateScore(bad, '좋음', '좋음'),
+    `같은 수리·발음이면 자원오행이 좋은 쪽이 앞 (${candidateScore(good, '좋음', '좋음')} > ${candidateScore(bad, '좋음', '좋음')})`)
+  check(candidateScore(good, '좋음', '좋음') > candidateScore(good, '아쉬움', '아쉬움'),
+    `자원오행이 같으면 수리·발음이 좋은 쪽이 앞`)
+  const s1 = candidateScore(good, '좋음', '좋음')
+  check(s1 >= 0 && s1 <= 100, `점수가 0~100 (${s1})`)
+
+  // ★옛 로직이 «구별 못 하던» 자리를 새 로직이 가르는가
+  //   옛 weighted 는 3단 등급이라 상극·과다·기신이 안 보였습니다.
+  const Pex = buildSajuOhaengProfile(
+    { yongsin: '화', gisin: '토', score: { 목: 10, 화: 20, 토: 60, 금: 10, 수: 10 } })
+  const withGisin = judgeResource(C('柳', '류', '목'), [C('炫', '현', '화'), C('垈', '대', '토')], Pex)
+  const noGisin = judgeResource(C('柳', '류', '목'), [C('炫', '현', '화'), C('東', '동', '목')], Pex)
+  check(candidateScore(noGisin, '좋음', '좋음') > candidateScore(withGisin, '좋음', '좋음'),
+    `★기신(토)·과다 투입이 «추천 순서» 에 반영됩니다 (${candidateScore(noGisin, '좋음', '좋음')} > ${candidateScore(withGisin, '좋음', '좋음')})`)
+
+  // ── 비교 함수 ──
+  const mk = (fy: boolean, soft: boolean, sc: number, st: number) =>
+    ({ fitsYongsin: fy, avoidSoft: soft, score: sc, strokes: st })
+  check(compareCandidates(mk(true, false, 10, 9), mk(false, false, 99, 9)) < 0,
+    `★용신 충족이 하드 게이트 — 점수가 낮아도 앞 (대표님이 두신 순서)`)
+  check(compareCandidates(mk(true, false, 50, 9), mk(true, true, 50, 9)) < 0,
+    `avoid_soft 가 아닌 쪽이 앞`)
+  check(compareCandidates(mk(true, false, 60, 9), mk(true, false, 50, 9)) < 0, `점수 높은 쪽이 앞`)
+  check(compareCandidates(mk(true, false, 50, 8), mk(true, false, 50, 12)) < 0, `같으면 획수 적은 쪽이 앞`)
+  check(compareCandidates(mk(true, false, 50, 9), mk(true, false, 50, 9)) === 0, `완전히 같으면 0`)
+
+  // 정렬이 안정적인가 (같은 입력 → 같은 순서)
+  const rows = [mk(false, false, 30, 5), mk(true, false, 30, 5), mk(true, false, 90, 20), mk(true, true, 90, 5)]
+  const a1 = [...rows].sort(compareCandidates).map(r => r.score).join(',')
+  const a2 = [...rows].sort(compareCandidates).map(r => r.score).join(',')
+  check(a1 === a2, `정렬이 되돌릴 수 있습니다 (${a1})`)
+}
+
+
 const RAW = ['목', '화', '토', '금', '수', '木', '火', '土', '金', '水', ' 木 ', '木(목)', '', 'zzz']
 const HANJA = ['柳', '承', '炫', '沐', '垈', '鐘', '夏', '訥', '別', ' 熺', '琳', '潤']
 const dist = {

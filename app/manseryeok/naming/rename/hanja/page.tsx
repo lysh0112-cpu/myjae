@@ -4,8 +4,16 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsinCompat as calcYongsin } from '@/lib/saju/yongsinNew'
 import { supabase } from '@/lib/supabase'
-import { diagnoseName, type NameChar, type Grade } from '@/lib/saju/naming'
+import { diagnoseName, type NameChar } from '@/lib/saju/naming'
 import { ohaengOrEmpty } from '@/lib/saju/ohaeng'
+// ★2026-07-30 (3단계) — hanja 표 단일 창구 + 후보 정렬 이관
+import {
+  HANJA_SELECT, isAvoidChar, rowOhaeng, rowStrokes, rowHanja,
+  type HanjaRow as SharedHanjaRow,
+} from '@/lib/saju/hanjaRow'
+import {
+  buildSajuOhaengProfile, judgeResource, candidateScore, compareCandidates,
+} from '@/lib/saju/resourceJudge'
 
 const GOLD = '#FAC775'
 const CARD = '#2C2C2A'
@@ -19,16 +27,8 @@ const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
 const LOCKED_SLOT_KEY = 'rename_locked_slot'
 
-interface HanjaRow {
-  hangul: string
-  hanja: string
-  meaning: string
-  strokes: number
-  resource_ohaeng: string
-  sound_ohaeng: string
-  avoid_hard?: boolean
-  avoid_soft?: boolean
-}
+// ★2026-07-30 (3단계) — 지역 정의를 걷어내고 lib/saju/hanjaRow.ts 를 씁니다. (교훈 CJ)
+type HanjaRow = SharedHanjaRow
 
 interface SavedChar {
   hangul: string
@@ -44,9 +44,7 @@ interface ChatMsg { role: 'user' | 'assistant'; content: string }
 //   (naming/diagnosis/page.tsx)에는 없었습니다. 창구를 하나로 모았습니다. (교훈 CJ)
 //   ⚠️ 여기에 다시 사본을 만들지 마십시오. lib/saju/ohaeng.ts 를 부르십시오.
 
-function gradeNum(g: Grade): number {
-  return g === '좋음' ? 2 : g === '보통' ? 1 : 0
-}
+// ★2026-07-30 (3단계) — gradeNum 을 걷어냈습니다. candidateScore 가 대신합니다.
 
 function HanjaInner() {
   const router = useRouter()
@@ -126,14 +124,21 @@ function HanjaInner() {
   )
 
   const yong = useMemo(() => {
-    if (!saju || !dayStem) return { yongsin: '', heeksin: '', score: {} as Record<string, number> }
+    if (!saju || !dayStem) return { yongsin: '', heeksin: '', gisin: '', gusin: '', hansin: '', isStrong: false, score: {} as Record<string, number> }
     try {
       // 심산 오행 점수로 계산 (월지 계절 치환 반영)
       const y = calcYongsin(saju, dayStem, solar?.month, solar?.day,
         saju.find(p => p.pillar === '시주')?.branch ?? null)
-      return { yongsin: ohaengOrEmpty(y.yongsin), heeksin: ohaengOrEmpty(y.heeksin), score: y.score }
+      // ★2026-07-30 (3단계) — 버려지던 기신·구신·한신·isStrong 을 함께 받습니다.
+      //   과다 억제·기신 회피 판정의 재료입니다.
+      return {
+        yongsin: ohaengOrEmpty(y.yongsin), heeksin: ohaengOrEmpty(y.heeksin),
+        gisin: ohaengOrEmpty(y.gisin), gusin: ohaengOrEmpty(y.gusin),
+        hansin: ohaengOrEmpty(y.hansin), isStrong: y.isStrong,
+        score: y.score,
+      }
     } catch {
-      return { yongsin: '', heeksin: '', score: {} as Record<string, number> }
+      return { yongsin: '', heeksin: '', gisin: '', gusin: '', hansin: '', isStrong: false, score: {} as Record<string, number> }
     }
   }, [saju, dayStem, solar])
   const yongsin = yong.yongsin
@@ -155,14 +160,17 @@ function HanjaInner() {
     setLoadingList(true)
     supabase
       .from('hanja')
-      .select('hangul, hanja, meaning, strokes, resource_ohaeng, sound_ohaeng, avoid_hard, avoid_soft')
+      .select(HANJA_SELECT)   // ★'*' — 마이그레이션 전에도 안 깨집니다
       .eq('hangul', target.hangul)
       .order('strokes', { ascending: true })
       .then(({ data, error }) => {
         if (cancelled) return
         if (error) { console.error(error); setHanjaList([]) }
         else {
-          const filtered = ((data as HanjaRow[]) ?? []).filter((row) => !row.avoid_hard)
+          // ★2026-07-30 (3단계) — 전에는 avoid_hard «만» 보았습니다.
+          //   그래서 不用(불용한자 947건)이 손님 목록에 그대로 나갔습니다.
+          //   이제 diagnosis 와 «같은» 잣대를 씁니다 (avoid_hard · 不用 · 뜻 · 쉬는 줄).
+          const filtered = ((data as HanjaRow[]) ?? []).filter((row) => !isAvoidChar(row))
           setHanjaList(filtered)
         }
         setLoadingList(false)
@@ -182,7 +190,7 @@ function HanjaInner() {
       const idx = gi + 1
       const pick = chosen[idx]
       const src = pick
-        ? { hangul: chars[idx].hangul, hanja: pick.hanja, strokes: pick.strokes, resourceOhaeng: pick.resource_ohaeng }
+        ? { hangul: chars[idx].hangul, hanja: rowHanja(pick), strokes: rowStrokes(pick), resourceOhaeng: rowOhaeng(pick) ?? '' }
         : chars[idx]
       return {
         hangul: src.hangul,
@@ -192,15 +200,21 @@ function HanjaInner() {
       }
     })
 
+    // ★사주 프로필 — 후보마다 다시 만들지 않습니다 (버려지던 기신·구신·한신 포함)
+    const profile = buildSajuOhaengProfile({
+      isStrong: yong.isStrong, yongsin: yong.yongsin, heeksin: yong.heeksin,
+      gisin: yong.gisin, gusin: yong.gusin, hansin: yong.hansin, score: yong.score,
+    }, saju)
+
     return hanjaList.map((row) => {
       const given = baseGiven.map((g, gi) => {
         const idx = gi + 1
         if (idx !== activeIdx) return g
         return {
           hangul: row.hangul,
-          hanja: row.hanja,
-          strokes: row.strokes,
-          resourceOhaeng: ohaengOrEmpty(row.resource_ohaeng),
+          hanja: rowHanja(row),
+          strokes: rowStrokes(row),          // ★원획법 (strokes_kangxi 우선)
+          resourceOhaeng: rowOhaeng(row) ?? '',
         }
       })
       const r = diagnoseName({
@@ -210,33 +224,38 @@ function HanjaInner() {
         heeksin: yong.heeksin,
         elementScore: yong.score,
       })
-      const weighted =
-        gradeNum(r.yongsinBohwan.grade) * 3 +
-        gradeNum(r.resourceFlow.grade) * 2 +
-        gradeNum(r.suri.grade) * 1.5 +
-        gradeNum(r.soundFlow.grade) * 1
-      const fitsYongsin = ohaengOrEmpty(row.resource_ohaeng) === yongsin
-      return { row, weighted, fitsYongsin }
+      // ★★2026-07-30 (3단계) — 자원오행+사주보완 칸을 judgeResource 로 갈아 끼웁니다.
+      //   [무엇이 달라지나]  옛 weighted 는 다섯 관점을 3단 등급(2/1/0)으로 뭉갰습니다.
+      //     그래서 상극·과다 오행·기신·구신이 «추천 순서에 닿지 않았습니다».
+      //     ★수리·발음의 무게는 그대로입니다 (66.7 : 20 : 13.3 — 옛 비율 그대로).
+      //   ⚠️ 점수는 내부용입니다. 화면에 쓰지 마십시오.
+      const verdict = judgeResource(
+        { hanja: surname.hanja, hangul: surname.hangul,
+          primary: ohaengOrEmpty(surname.resourceOhaeng) || null, secondary: null },
+        given.map(g => ({ hanja: g.hanja, hangul: g.hangul,
+          primary: ohaengOrEmpty(g.resourceOhaeng) || null, secondary: null })),
+        profile,
+      )
+      const weighted = candidateScore(verdict, r.suri.grade, r.soundFlow.grade)
+      const fitsYongsin = rowOhaeng(row) === yongsin
+      return { row, weighted, fitsYongsin, verdict }
     })
-  }, [yongsinReady, activeIdx, hanjaList, chars, givenChars, chosen, yong, yongsin])
+  }, [yongsinReady, activeIdx, hanjaList, chars, givenChars, chosen, yong, saju])
 
   const { recommend, others } = useMemo(() => {
     if (scored.length === 0) return { recommend: [] as { row: HanjaRow; rank: number }[], others: [] as HanjaRow[] }
-    const sorted = [...scored].sort((a, b) => {
-      const aSoft = a.row.avoid_soft ? 1 : 0
-      const bSoft = b.row.avoid_soft ? 1 : 0
-      if (a.fitsYongsin !== b.fitsYongsin) return a.fitsYongsin ? -1 : 1
-      if (aSoft !== bSoft) return aSoft - bSoft
-      if (b.weighted !== a.weighted) return b.weighted - a.weighted
-      return a.row.strokes - b.row.strokes
-    })
+    // ★2026-07-30 (3단계) — 비교 함수를 공용으로. 두 화면이 각자 두면 반드시 갈립니다. (교훈 CJ)
+    const sorted = [...scored].sort((a, b) => compareCandidates(
+      { fitsYongsin: a.fitsYongsin, avoidSoft: !!a.row.avoid_soft, score: a.weighted, strokes: rowStrokes(a.row) },
+      { fitsYongsin: b.fitsYongsin, avoidSoft: !!b.row.avoid_soft, score: b.weighted, strokes: rowStrokes(b.row) },
+    ))
     const fitSorted = sorted.filter((s) => s.fitsYongsin)
     const recSrc = (fitSorted.length > 0 ? fitSorted : sorted).slice(0, TOP_N)
     const rec = recSrc.map((s, i) => ({ row: s.row, rank: i + 1 }))
     const recSet = new Set(rec.map((r) => r.row.hanja + r.row.strokes))
     const oth = sorted.map((s) => s.row).filter((r) => !recSet.has(r.hanja + r.strokes))
     return { recommend: rec, others: oth }
-  }, [scored, yongsin])
+  }, [scored])
 
   const lockedByPick = count === 1 && activeIdx !== null
 

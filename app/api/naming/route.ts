@@ -18,6 +18,8 @@ import {
 } from '@/lib/saju/resourceJudge'
 import { normalizeOhaeng, cleanHanja } from '@/lib/saju/ohaeng'
 import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
+// ★2026-07-30 (3단계) — 관리자 🚨 AI 오류 탭에 남깁니다. naming 만 이것을 안 불렀습니다.
+import { logAiError, guessHint } from '@/lib/ai/errorLog'
 
 /** NameChar(문자열 오행) → JudgeChar(정규화된 Ohaeng|null) */
 function toJudgeChar(c: NameChar): JudgeChar {
@@ -203,8 +205,17 @@ ${JSON.stringify(factsForAI, null, 2)}
 }`
 
     let commentary: Record<string, unknown> = emptyCommentary()
+    // ★실패 이유를 «버리지 않습니다». 화면이 «빈 칸» 과 «실패» 를 구별할 수 있게 돌려줍니다.
+    let aiFailStatus: number | null = null
+    let aiFailHint: string | null = null
 
     const anthropicKey = process.env.ANTHROPIC_API_KEY
+    if (!anthropicKey) {
+      // ★전에는 조용히 빈 통변을 내보냈습니다. 키 미설정과 «잘 됐는데 비었다» 가 구별이 안 됐습니다.
+      console.error('naming: ANTHROPIC_API_KEY 가 없습니다')
+      aiFailStatus = 0
+      aiFailHint = 'AI 열쇠(ANTHROPIC_API_KEY)가 설정되지 않았어요'
+    }
     if (anthropicKey) {
       try {
         const cRes = await fetch('https://api.anthropic.com/v1/messages', {
@@ -216,10 +227,44 @@ ${JSON.stringify(factsForAI, null, 2)}
           },
           body: JSON.stringify({
             model: 'claude-sonnet-4-6',
-            max_tokens: 3500,
+            // ★★2026-07-30 (3단계) — 3,500 → 12,000.
+            //
+            //   [무엇이 문제였나]  5관점 × 3단(intro/name/meaning) + 맺음말 JSON 입니다.
+            //     우리말 한 대목이 200~300자면 5관점만 3,000~4,500자 ≒ 4,500~6,500 토큰이고,
+            //     JSON 따옴표·키까지 더하면 3,500 으로는 «뒤가 잘립니다».
+            //     ★아래에 «JSON 이 잘렸을 때 되살리는» 복구 코드가 있다는 것이
+            //       곧 실제로 잘리고 있었다는 증거입니다.
+            //     그리고 2단계가 자원오행 재료를 늘렸으므로 잘림 위험이 더 커졌습니다.
+            //
+            //   ⚠️ 상한으로 자르지 말고 «분량 지시» 로 줄이십시오. (교훈 DS)
+            //      상한으로 자르면 문장 중간에서 끊기고, 분량 지시로 줄이면 말이 온전합니다.
+            //      느리다고 느껴지면 프롬프트의 «2~4문장» 을 줄이는 쪽입니다.
+            //   ⚠️ maxDuration = 60 입니다. 스트리밍이 아니므로 한 방에 받습니다.
+            //      12,000 토큰이 60초를 넘기면 요금제 상한이 원인입니다(코드가 아님).
+            max_tokens: 12000,
             messages: [{ role: 'user', content: commentaryPrompt }],
           }),
         })
+        // ★★2026-07-30 (3단계) — 상태코드를 «버리지 않습니다».
+        //
+        //   [무엇이 문제였나]  전에는 cRes.ok 를 보지 않고 바로 .json() 을 했습니다.
+        //     401(키)·429(한도)·529(붐빔)·크레딧 부족이 와도 cData.content 가 없어
+        //     rawText 가 '{}' 가 되고 → emptyCommentary() → **200 OK 로 빈 통변**이 나갔습니다.
+        //     손님 화면은 «빈 칸» 이고, 원인을 갈라볼 방법이 없었습니다.
+        //
+        //   [그리고 관리자 🚨 AI 오류 탭에 안 남았습니다]
+        //     tongbyeon·mulsang·analyze·summarize·chat-stream·daily·monthly 일곱 라우트는
+        //     logAiError 를 부르는데 naming 만 0건이었습니다.
+        //     → 개명 실패는 /admin 어디에도 흔적이 없었습니다.
+        if (!cRes.ok) {
+          let why = ''
+          try { why = (await cRes.text()).slice(0, 400) } catch { /* 본문을 못 읽어도 status 는 남는다 */ }
+          console.error('naming claude error:', cRes.status, why)
+          await logAiError('naming', cRes.status, why || { status: cRes.status })
+          aiFailStatus = cRes.status
+          aiFailHint = guessHint(cRes.status, why)
+          throw new Error(`claude ${cRes.status}`)
+        }
         const cData = await cRes.json()
         const rawText = cData.content?.find((c: { type: string }) => c.type === 'text')?.text || '{}'
         const clean = rawText.replace(/```json|```/g, '').trim()
@@ -285,6 +330,11 @@ ${JSON.stringify(factsForAI, null, 2)}
       result,
       commentary,
       savedId,
+      // ★2026-07-30 (3단계) — 통변이 비었을 때 «왜» 인지 화면이 알 수 있게.
+      //   ⚠️ aiFailHint 는 우리말 안내입니다(guessHint). 손님에게 보여도 됩니다.
+      aiOk: aiFailStatus === null,
+      aiFailStatus,
+      aiFailHint,
     })
   } catch (e) {
     console.error('naming route error:', e)

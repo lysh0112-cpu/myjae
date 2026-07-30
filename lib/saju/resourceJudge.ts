@@ -648,7 +648,82 @@ export function judgeResource(
 }
 
 // ══════════════════════════════════════════════════════════════════
-//  ③ 프롬프트 재료 — AI 에게 «사실» 로 나갑니다
+//  ④ 개명 후보 정렬 점수 — ★두 화면이 «같은» 잣대를 쓰게 합니다
+// ══════════════════════════════════════════════════════════════════
+//
+//  [무엇이 달라지나]  옛 정렬은 다섯 관점을 «3단 등급(2/1/0)» 으로 뭉개 더했습니다.
+//
+//      옛  weighted = 용신×3 + 자원×2 + 수리×1.5 + 발음×1     (만점 15)
+//          → 자원오행 관점의 ratio 0.5 와 1.0 이 같은 «좋음» 이라 정보가 사라졌고,
+//            상극·과다·기신이 점수에 닿지 않았습니다.
+//
+//      새  자원+용신 칸만 judgeResource 의 0~100 으로 갈아 끼웁니다.
+//          ★비율은 옛 가중치를 «그대로» 옮겼습니다 —
+//              (3+2)/7.5 = 66.7%   1.5/7.5 = 20%   1/7.5 = 13.3%
+//          → 바뀌는 것은 «정밀도» 뿐이고 관점의 무게는 그대로입니다.
+//
+//  ⚠️ 수리·발음은 아직 3단 등급입니다. 그것까지 정밀하게 하려면
+//     scoreSuri·scoreSound 를 고쳐야 하고, 그건 4단계 일입니다.
+//     ★한 번에 다 바꾸면 무엇 때문에 순서가 바뀐 건지 갈라볼 수 없습니다. (교훈 DU)
+
+/** 옛 가중치에서 뽑은 비율 — ★바꾸면 개명 추천 순서가 바뀝니다 */
+export const CAND_W_RESOURCE = 5 / 7.5    // 0.667  자원오행 + 사주보완
+export const CAND_W_SURI = 1.5 / 7.5      // 0.200  수리
+export const CAND_W_SOUND = 1 / 7.5       // 0.133  발음
+
+/** 3단 등급 → 0~100 */
+function gradeTo100(g: '좋음' | '보통' | '아쉬움'): number {
+  return g === '좋음' ? 100 : g === '보통' ? 50 : 0
+}
+
+/**
+ * 개명 후보 하나의 정렬 점수 (0~100).
+ *
+ * @param v          judgeResource 결과 (자원오행 + 사주보완)
+ * @param suriGrade  diagnoseName().suri.grade
+ * @param soundGrade diagnoseName().soundFlow.grade
+ *
+ * ⚠️ ★내부 점수입니다. 손님 화면에 쓰지 마십시오. 줄 세우기 전용입니다.
+ */
+export function candidateScore(
+  v: ResourceVerdict,
+  suriGrade: '좋음' | '보통' | '아쉬움',
+  soundGrade: '좋음' | '보통' | '아쉬움',
+): number {
+  const s = v.score * CAND_W_RESOURCE
+    + gradeTo100(suriGrade) * CAND_W_SURI
+    + gradeTo100(soundGrade) * CAND_W_SOUND
+  return Math.round(clamp(s, 0, 100) * 10) / 10
+}
+
+/**
+ * 후보 둘을 견주는 비교 함수 — `sort()` 에 그대로 넣습니다.
+ *
+ * 순서
+ *   ① 용신을 담았는가        ★하드 게이트 (대표님이 두신 것 — 바꾸지 않았습니다)
+ *   ② avoid_soft 가 아닌가   (권장 회피자를 뒤로)
+ *   ③ candidateScore 높은 쪽
+ *   ④ 획수 적은 쪽
+ *
+ * ⚠️ 두 화면이 각자 비교 함수를 쓰면 반드시 갈립니다. 이 하나만 부르십시오. (교훈 CJ)
+ */
+export interface CandidateLike {
+  fitsYongsin: boolean
+  avoidSoft: boolean
+  score: number
+  strokes: number
+}
+export function compareCandidates(a: CandidateLike, b: CandidateLike): number {
+  if (a.fitsYongsin !== b.fitsYongsin) return a.fitsYongsin ? -1 : 1
+  const aSoft = a.avoidSoft ? 1 : 0
+  const bSoft = b.avoidSoft ? 1 : 0
+  if (aSoft !== bSoft) return aSoft - bSoft
+  if (b.score !== a.score) return b.score - a.score
+  return a.strokes - b.strokes
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  ⑤ 프롬프트 재료 — AI 에게 «사실» 로 나갑니다
 // ══════════════════════════════════════════════════════════════════
 
 /**
