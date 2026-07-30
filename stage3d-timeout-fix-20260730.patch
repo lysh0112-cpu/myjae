@@ -1,0 +1,562 @@
+diff --git a/app/api/naming/route.ts b/app/api/naming/route.ts
+index 7968c60..2cca8f5 100644
+--- a/app/api/naming/route.ts
++++ b/app/api/naming/route.ts
+@@ -11,10 +11,39 @@
+ import { NextResponse } from 'next/server'
+ import { createClient } from '@supabase/supabase-js'
+ import { diagnoseName, type NameChar } from '@/lib/saju/naming'
++// ★2026-07-30 (2단계) — 자원오행 통합 판정
++import {
++  buildSajuOhaengProfile, judgeResource, resourceFactsBlock,
++  type JudgeChar, type PillarLike,
++} from '@/lib/saju/resourceJudge'
++import { normalizeOhaeng, cleanHanja } from '@/lib/saju/ohaeng'
++// ★2026-07-30 (3단계-b) — 화면 표시용 별점 (대표님 지시)
++import { perspectiveStars, overallStar } from '@/lib/saju/starRating'
++import { W_FLOW, W_YONGSIN, W_BALANCE } from '@/lib/saju/resourceJudge'
+ import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
++// ★2026-07-30 (3단계) — 관리자 🚨 AI 오류 탭에 남깁니다. naming 만 이것을 안 불렀습니다.
++import { logAiError, guessHint } from '@/lib/ai/errorLog'
++
++/** NameChar(문자열 오행) → JudgeChar(정규화된 Ohaeng|null) */
++function toJudgeChar(c: NameChar): JudgeChar {
++  return {
++    hanja: cleanHanja(c.hanja) || c.hanja,
++    hangul: c.hangul,
++    primary: normalizeOhaeng(c.resourceOhaeng),
++    secondary: null,   // ★2단계 DB 컬럼(resource_ohaeng_secondary)이 들어오면 여기 채웁니다
++  }
++}
+ 
+ export const runtime = 'nodejs'
+-export const maxDuration = 60
++// ★★2026-07-30 (3단계-d) — 60 → 300.
++//   [무엇이 있었나]  max_tokens 를 12,000 으로 올린 뒤 실기기에서
++//     HTTP 504 FUNCTION_INVOCATION_TIMEOUT 이 났습니다.
++//     3,500 일 때는 «잘리면서» 60초 안에 끝났고, 상한을 올리자 끝까지 쓰느라 넘겼습니다.
++//   [왜 300 인가]  형제 라우트 /api/tongbyeon 이 300 입니다. 같은 Anthropic 호출인데
++//     naming 만 60 이었습니다. (교훈 DT — 잘 되는 형제와 «보내는 값» 을 대조하라)
++//   ⚠️ Vercel 은 요금제 상한까지만 줍니다. Hobby 면 300 을 적어도 60초에서 끊깁니다.
++//      그때는 아래 max_tokens 를 더 줄이거나 관점을 나눠 부르는 쪽입니다(4단계).
++export const maxDuration = 300
+ 
+ interface Body {
+   surname: NameChar
+@@ -22,6 +51,13 @@ interface Body {
+   yongsin: string
+   heeksin?: string
+   elementScore: Record<string, number>
++  // ★2026-07-30 (2단계) — 지금까지 «버리던» 값들을 받습니다.
++  //   calcYongsinCompat 이 이미 주고 있었는데 naming 만 안 받았습니다.
++  //   ⚠️ 모두 선택값입니다. 안 보내면 예전과 똑같이 돕니다(옛 화면이 안 깨집니다).
++  gisin?: string
++  gusin?: string
++  hansin?: string
++  isStrong?: boolean
+   dayStem?: string
+   sajuText?: string
+   birthData?: unknown
+@@ -87,12 +123,44 @@ export async function POST(req: Request) {
+ 
+     // ---------- 2) Claude 5관점 3단 겸손 통변 ----------
+     // AI에는 "사실(facts)"만 근거로 주고, 판정 대신 겸손한 서술을 시킨다.
++
++    // ★★2026-07-30 (2단계) — 자원오행 통합 판정을 «덧붙입니다».
++    //   [무엇이 달라지나] 옛 facts 는 «이웃 글자끼리 상생인가» 뿐이었습니다.
++    //     여기서 더해지는 것 —
++    //       · 상극을 «방향까지» 가림 (순극/역극)
++    //       · 과다 오행 중복 투입 경고        ← 옛 로직에 아예 없던 판정
++    //       · 결핍·고립 오행 보충 가산        ← 없던 판정
++    //       · 기신·구신 투입 경고             ← 재료조차 안 받던 값
++    //       · 보완하는 글자가 만든 상극은 예외 (대표님 지시 ④)
++    //   ⚠️ 옛 5관점 facts 는 «지우지 않았습니다». 화면·파서가 그대로 돕니다.
++    //      새 판정은 자원오행/사주보완 두 관점의 «근거를 넓히는» 역할입니다.
++    //   ⚠️ 점수(score·breakdown)는 프롬프트에 넣지 않습니다.
++    //      숫자를 주면 AI 가 「85점입니다」 처럼 판정해 버립니다. (대표님 방침)
++    const profile = buildSajuOhaengProfile(
++      {
++        isStrong: body.isStrong,
++        yongsin: body.yongsin, heeksin: body.heeksin,
++        gisin: body.gisin, gusin: body.gusin, hansin: body.hansin,
++        score: body.elementScore,
++      },
++      Array.isArray(body.saju) ? (body.saju as PillarLike[]) : null,
++    )
++    const verdict = judgeResource(
++      toJudgeChar(body.surname),
++      body.given.map(toJudgeChar),
++      profile,
++    )
++
+     const factsForAI = {
+       음양오행: result.yinYang.facts,
+       발음오행: result.soundFlow.facts,
+       수리오행: result.suri.facts,
+       자원오행: result.resourceFlow.facts,
+       사주보완: result.yongsinBohwan.facts,
++      // ★2단계 신설 — 위 둘(자원오행·사주보완)의 «근거를 넓힌» 것
++      자원오행_정밀: verdict.facts,
++      참고할자리: verdict.warnings,
++      판정못한자리: verdict.problems,
+     }
+ 
+     const commentaryPrompt = `${toneBlock}
+@@ -120,6 +188,19 @@ ${hangulName} (${hanjaName})
+ ${body.sajuText ? `사주: ${body.sajuText}` : ''}
+ 사주에 필요한 기운(용신): ${body.yongsin}
+ 
++[★자원오행과 사주의 관계 — 사람이 읽는 정리]
++${resourceFactsBlock(verdict, profile)}
++
++[★위 «참고하실 자리» 를 다루는 법]
++- 숨기지 마세요. 다만 «좋다/나쁘다» 로 가르지 말고 "이런 견해가 있어 참고하시라"는 정도로 담담히 전하세요.
++- 특히 「이미 넉넉한 기운」과 「꺼리는 기운」은 자원오행 또는 사주보완 대목에서 한 번은 짚어 주세요.
++- 서로 누르는 자리가 있으나 «사주를 보완하는 글자» 라 흠으로 보지 않는다고 적혀 있으면, 그 사정을 함께 전하세요.
++- ⚠️⚠️ **「사주가 꺼리는 기운(기신)」과 「도움이 덜 되는 기운(구신)」을 «채우라·보태라·가꾸라» 고 권하지 마세요.**
++  그 기운이 사주에 비어 있다면 그것은 아쉬움이 아니라 편한 자리입니다.
++  비어 있는 기운을 «가꾸라» 고 권하는 것은 «바라는 기운(용신·희신)» 에만 해당합니다.
++- ⚠️ 「점수」·「등급」·「몇 점」 같은 말을 쓰지 마세요. 손님에게 점수를 보여 주지 않습니다.
++- ⚠️ 위에 적히지 않은 오행·글자·관계를 지어내지 마세요.
++
+ [5관점 사실 데이터(JSON)]
+ ${JSON.stringify(factsForAI, null, 2)}
+ 
+@@ -135,8 +216,17 @@ ${JSON.stringify(factsForAI, null, 2)}
+ }`
+ 
+     let commentary: Record<string, unknown> = emptyCommentary()
++    // ★실패 이유를 «버리지 않습니다». 화면이 «빈 칸» 과 «실패» 를 구별할 수 있게 돌려줍니다.
++    let aiFailStatus: number | null = null
++    let aiFailHint: string | null = null
+ 
+     const anthropicKey = process.env.ANTHROPIC_API_KEY
++    if (!anthropicKey) {
++      // ★전에는 조용히 빈 통변을 내보냈습니다. 키 미설정과 «잘 됐는데 비었다» 가 구별이 안 됐습니다.
++      console.error('naming: ANTHROPIC_API_KEY 가 없습니다')
++      aiFailStatus = 0
++      aiFailHint = 'AI 열쇠(ANTHROPIC_API_KEY)가 설정되지 않았어요'
++    }
+     if (anthropicKey) {
+       try {
+         const cRes = await fetch('https://api.anthropic.com/v1/messages', {
+@@ -148,10 +238,48 @@ ${JSON.stringify(factsForAI, null, 2)}
+           },
+           body: JSON.stringify({
+             model: 'claude-sonnet-4-6',
+-            max_tokens: 3500,
++            // ★★2026-07-30 (3단계) — 3,500 → 12,000.
++            //
++            //   [무엇이 문제였나]  5관점 × 3단(intro/name/meaning) + 맺음말 JSON 입니다.
++            //     우리말 한 대목이 200~300자면 5관점만 3,000~4,500자 ≒ 4,500~6,500 토큰이고,
++            //     JSON 따옴표·키까지 더하면 3,500 으로는 «뒤가 잘립니다».
++            //     ★아래에 «JSON 이 잘렸을 때 되살리는» 복구 코드가 있다는 것이
++            //       곧 실제로 잘리고 있었다는 증거입니다.
++            //     그리고 2단계가 자원오행 재료를 늘렸으므로 잘림 위험이 더 커졌습니다.
++            //
++            //   ⚠️ 상한으로 자르지 말고 «분량 지시» 로 줄이십시오. (교훈 DS)
++            //      상한으로 자르면 문장 중간에서 끊기고, 분량 지시로 줄이면 말이 온전합니다.
++            //      느리다고 느껴지면 프롬프트의 «2~4문장» 을 줄이는 쪽입니다.
++            //   ★2026-07-30 (3단계-d) — 12,000 → 7,000 으로 내렸습니다.
++            //     [실측]  5관점 × 3단 + 맺음말 ≒ 39문장 ≒ 2,150자 ≒ 3,200~4,300 토큰.
++            //       3,500 은 «딱 경계» 라 잘렸고(그래서 복구 코드가 있었습니다),
++            //       12,000 은 세 배라 끝까지 쓰느라 60초를 넘겼습니다.
++            //       7,000 이면 두 배 여유이고 시간도 넉넉합니다.
++            //   ⚠️ 그래도 느리면 상한이 아니라 «분량 지시»(아래 2~4문장)를 줄이십시오. (교훈 DS)
++            max_tokens: 7000,
+             messages: [{ role: 'user', content: commentaryPrompt }],
+           }),
+         })
++        // ★★2026-07-30 (3단계) — 상태코드를 «버리지 않습니다».
++        //
++        //   [무엇이 문제였나]  전에는 cRes.ok 를 보지 않고 바로 .json() 을 했습니다.
++        //     401(키)·429(한도)·529(붐빔)·크레딧 부족이 와도 cData.content 가 없어
++        //     rawText 가 '{}' 가 되고 → emptyCommentary() → **200 OK 로 빈 통변**이 나갔습니다.
++        //     손님 화면은 «빈 칸» 이고, 원인을 갈라볼 방법이 없었습니다.
++        //
++        //   [그리고 관리자 🚨 AI 오류 탭에 안 남았습니다]
++        //     tongbyeon·mulsang·analyze·summarize·chat-stream·daily·monthly 일곱 라우트는
++        //     logAiError 를 부르는데 naming 만 0건이었습니다.
++        //     → 개명 실패는 /admin 어디에도 흔적이 없었습니다.
++        if (!cRes.ok) {
++          let why = ''
++          try { why = (await cRes.text()).slice(0, 400) } catch { /* 본문을 못 읽어도 status 는 남는다 */ }
++          console.error('naming claude error:', cRes.status, why)
++          await logAiError('naming', cRes.status, why || { status: cRes.status })
++          aiFailStatus = cRes.status
++          aiFailHint = guessHint(cRes.status, why)
++          throw new Error(`claude ${cRes.status}`)
++        }
+         const cData = await cRes.json()
+         const rawText = cData.content?.find((c: { type: string }) => c.type === 'text')?.text || '{}'
+         const clean = rawText.replace(/```json|```/g, '').trim()
+@@ -211,12 +339,33 @@ ${JSON.stringify(factsForAI, null, 2)}
+       }
+     }
+ 
++    // ★2026-07-30 (3단계-b) — 관점별 별점 (대표님 지시)
++    //   ⚠️ 별을 «만드는» 것은 여기이고, «보여 줄지» 는 화면이 정합니다.
++    //      AI 프롬프트는 건드리지 않았습니다 — AI 는 여전히 점수·등급을 말하지 않습니다.
++    //      화면은 별을 보여 주고 글은 담담히 서술합니다. 둘이 어긋나지 않습니다.
++    const stars = perspectiveStars({
++      flowScore: verdict.breakdown.flow, flowMax: W_FLOW,
++      matchScore: verdict.breakdown.yongsin + verdict.breakdown.balance,
++      matchMax: W_YONGSIN + W_BALANCE,
++      hasYongsin: verdict.facts.hasYongsin,
++      yinYangGrade: result.yinYang.grade,
++      soundGrade: result.soundFlow.grade,
++      suriGrade: result.suri.grade,
++    })
++
+     return NextResponse.json({
+       hangulName,
+       hanjaName,
+       result,
+       commentary,
+       savedId,
++      stars,
++      overallStar: overallStar(stars, verdict.facts.hasYongsin),
++      // ★2026-07-30 (3단계) — 통변이 비었을 때 «왜» 인지 화면이 알 수 있게.
++      //   ⚠️ aiFailHint 는 우리말 안내입니다(guessHint). 손님에게 보여도 됩니다.
++      aiOk: aiFailStatus === null,
++      aiFailStatus,
++      aiFailHint,
+     })
+   } catch (e) {
+     console.error('naming route error:', e)
+diff --git a/app/manseryeok/naming/diagnosis/page.tsx b/app/manseryeok/naming/diagnosis/page.tsx
+index 172abb7..f99b888 100644
+--- a/app/manseryeok/naming/diagnosis/page.tsx
++++ b/app/manseryeok/naming/diagnosis/page.tsx
+@@ -5,6 +5,13 @@ import { useResultSaju } from '@/hooks/useResultSaju'
+ import { calcYongsinCompat } from '@/lib/saju/yongsinNew'
+ import { supabase } from '@/lib/supabase'
+ import type { DiagnoseResult, NameChar } from '@/lib/saju/naming'
++// ★2026-07-30 (1단계) — 오행 정규화 단일 창구. 자원오행을 날것으로 쓰지 않습니다.
++// ★2026-07-30 (3단계) — 오행·한자 정제는 hanjaRow 의 읽기 함수가 안에서 부릅니다
++// ★2026-07-30 (3단계) — hanja 표 읽기 단일 창구. 2단계 DB 컬럼을 하위호환으로 읽습니다.
++import {
++  HANJA_SELECT, isAvoidChar as isAvoidCharShared,
++  rowOhaeng, rowStrokes, rowHanja, type HanjaRow,
++} from '@/lib/saju/hanjaRow'
+ import ConsultButton from '@/app/components/common/ConsultButton'
+ import { fromProfile, fromUrl, personKey, type MyInfo } from '@/lib/saju/myInfo'
+ import {
+@@ -13,29 +20,14 @@ import {
+ } from '@/lib/saju/namingRecords'
+ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+ import PerspectiveAccordion from '@/app/manseryeok/components/PerspectiveAccordion'
++// ★2026-07-30 (3단계-b) — 관점별 별점
++import type { PerspectiveStar, StarResult } from '@/lib/saju/starRating'
+ import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
+ 
+ const NAMING_RESULT_KEY = 'naming_last_result_v1'
+ 
+-const AVOID_KEYWORDS = [
+-  '죽을', '죽일', '주검', '시체', '시신', '송장', '애도', '슬플', '슬픔',
+-  '근심', '걱정', '병', '앓을', '아플', '악할', '흉할', '흉', '재앙', '재난',
+-  '천할', '천박', '종', '노예', '놈', '도둑', '도적', '귀신', '미칠', '미치광이',
+-  '어리석을', '간사할', '간교', '허물', '꺾을', '무너질', '망할', '멸할',
+-  '원수', '저주', '독', '괴로울', '비참', '울', '눈물', '한숨',
+-]
+-
+-interface HanjaRow {
+-  hangul: string
+-  hanja: string
+-  meaning: string
+-  strokes: number
+-  resource_ohaeng: string
+-  sound_ohaeng: string
+-  avoid_hard?: boolean
+-  avoid_soft?: boolean
+-  grade?: string
+-}
++// ★2026-07-30 (3단계) — HanjaRow 정의를 lib/saju/hanjaRow.ts 로 옮겼습니다.
++//   세 화면에 세 벌이 있었고 select 문도 서로 달랐습니다. (교훈 CJ)
+ 
+ // 5관점 3단 해설(무엇을 보나/이 이름은/어떤 의미인가)
+ interface Perspective {
+@@ -59,6 +51,48 @@ const EMPTY_PERSPECTIVE: Perspective = { intro: '', name: '', meaning: '' }
+ //   - 새 데이터(yinyang 등 보유): 부족한 관점만 빈값 채워 그대로 사용.
+ //   - 옛 데이터(summary/good 등): 옛 내용을 맺음말에 모아 5관점 껍데기로 감싼다(화면 안 깨짐).
+ //   - null/형식불명: null 반환.
++/**
++ * ★2026-07-30 (3단계-b) — 저장본에서 별점을 꺼냅니다.
++ *
++ *   ⚠️ normalizeCommentary 는 «아는 키만» 골라 새 객체를 만듭니다.
++ *      그래서 _stars 를 그대로 두면 되읽을 때 버려집니다. 따로 꺼냅니다.
++ *   ⚠️ 옛 저장본에는 이 키가 없습니다 → null. 화면은 별을 안 그립니다.
++ */
++/**
++ * ★2026-07-30 (3단계-d) — 실패를 손님 말로 옮깁니다.
++ *
++ *   ⚠️ 「어떻게 하면 되는지」 를 함께 적습니다. 「오류가 발생했습니다」만으로는
++ *      손님이 무엇을 할지 모릅니다.
++ */
++function friendlyFail(status: number, raw: string): string {
++  const r = raw || ''
++  if (status === 504 || /TIMEOUT/i.test(r)) {
++    return '풀이를 쓰는 데 시간이 오래 걸려 도중에 끊겼어요. 잠시 뒤 다시 시도해 주세요.'
++  }
++  if (status === 429 || /rate_limit/i.test(r)) {
++    return '지금 이용이 많아 잠시 기다려야 해요. 1~2분 뒤에 다시 시도해 주세요.'
++  }
++  if (status === 401 || status === 403) {
++    return '풀이 서비스에 연결하지 못했어요. 잠시 뒤 다시 시도해 주시고, 계속 안 되면 알려 주세요.'
++  }
++  if (status === 529 || status >= 500) {
++    return '풀이 서비스가 잠시 붐비고 있어요. 잠시 뒤 다시 시도해 주세요.'
++  }
++  if (status === 400) {
++    return '이름 정보를 다시 확인해 주세요. 글자를 다시 고른 뒤 시도해 주시면 좋겠습니다.'
++  }
++  return '풀이를 받지 못했어요. 잠시 뒤 다시 시도해 주세요.'
++}
++
++function extractStars(raw: unknown): { stars: PerspectiveStar[] | null; overall: StarResult | null } {
++  if (!raw || typeof raw !== 'object') return { stars: null, overall: null }
++  const o = raw as Record<string, unknown>
++  const stars = Array.isArray(o._stars) ? (o._stars as PerspectiveStar[]) : null
++  const overall = o._overallStar && typeof o._overallStar === 'object'
++    ? (o._overallStar as StarResult) : null
++  return { stars, overall }
++}
++
+ function normalizeCommentary(raw: unknown): Commentary | null {
+   if (!raw || typeof raw !== 'object') return null
+   const o = raw as Record<string, unknown>
+@@ -110,12 +144,8 @@ const subWarm = '#96502e'      // 따뜻한 강조 텍스트
+ const rose = '#c8506e'         // 삭제·경고 포인트
+ const border = '0.5px solid #f0e0d5'
+ 
+-function isAvoidChar(row: HanjaRow): boolean {
+-  if (row.avoid_hard === true) return true
+-  if (row.grade === '不用') return true
+-  const m = row.meaning || ''
+-  return AVOID_KEYWORDS.some((k) => m.includes(k))
+-}
++// ★isAvoidChar 는 lib/saju/hanjaRow.ts 의 것을 씁니다 (AVOID_KEYWORDS 도 함께 옮겼습니다)
++function isAvoidChar(row: HanjaRow): boolean { return isAvoidCharShared(row) }
+ 
+ function isHangulSyllable(ch: string): boolean {
+   const code = ch.charCodeAt(0)
+@@ -244,6 +274,11 @@ function DiagnosisInner() {
+   const [step, setStep] = useState<'input' | 'preview' | 'pay' | 'result'>('input')
+   const [result, setResult] = useState<DiagnoseResult | null>(null)
+   const [commentary, setCommentary] = useState<Commentary | null>(null)
++  // ★2026-07-30 (3단계) — 실패 이유. 없으면 null. 빈 화면 대신 이것을 보여 줍니다.
++  const [failWhy, setFailWhy] = useState<string | null>(null)
++  // ★2026-07-30 (3단계-b) — 관점별 별점. 옛 저장본에는 없으므로 null 로 둡니다.
++  const [stars, setStars] = useState<PerspectiveStar[] | null>(null)
++  const [overallStar, setOverallStar] = useState<StarResult | null>(null)
+   const [loading, setLoading] = useState(false)
+ 
+ 
+@@ -270,6 +305,7 @@ function DiagnosisInner() {
+         if (row && row.result && row.commentary && Array.isArray(row.chars)) {
+           setResult(row.result as DiagnoseResult)
+           setCommentary(normalizeCommentary(row.commentary))
++          { const e = extractStars(row.commentary); setStars(e.stars); setOverallStar(e.overall) }
+           setChars(row.chars as (NameChar | null)[])
+           setSyllables((row.chars as (NameChar | null)[]).filter(Boolean).map((c) => c!.hangul))
+           setStep('result')
+@@ -306,6 +342,7 @@ function DiagnosisInner() {
+         if (snap?.result) {
+           setResult(snap.result)
+           setCommentary(normalizeCommentary(snap.commentary))
++          { const e = extractStars(snap.commentary); setStars(e.stars); setOverallStar(e.overall) }
+           setChars(rec.chars)
+           setSyllables(rec.chars.filter(Boolean).map((c) => c!.hangul))
+           setSavedRecordId(rec.id)
+@@ -338,7 +375,7 @@ function DiagnosisInner() {
+     try {
+       const { data, error } = await supabase
+         .from('hanja')
+-        .select('hangul, hanja, meaning, strokes, resource_ohaeng, sound_ohaeng, avoid_hard, avoid_soft, grade')
++        .select(HANJA_SELECT)   // ★'*' — 마이그레이션 전에도 안 깨집니다
+         .eq('hangul', hangul)
+         .order('strokes', { ascending: true })
+       if (error) { console.error(error); setHanjaList([]) }
+@@ -356,9 +393,21 @@ function DiagnosisInner() {
+     const next = [...chars]
+     next[pickerIdx] = {
+       hangul: row.hangul,
+-      hanja: row.hanja,
+-      strokes: row.strokes,
+-      resourceOhaeng: row.resource_ohaeng,
++      // ★2026-07-30 (1단계) — 원자료에 ' 熺' 처럼 앞에 공백이 붙은 한자가 있습니다.
++      hanja: rowHanja(row),
++      // ★2026-07-30 (3단계) — 원획법. strokes_kangxi 가 있으면 그것을 씁니다.
++      strokes: rowStrokes(row),
++      // ★★2026-07-30 (1단계) — 여기가 「내이름 감정」이 틀리던 자리입니다.
++      //   [무엇이 문제였나] DB 의 자원오행은 «한자»(木火土金水)로 들어 있는데
++      //     이 줄이 날것으로 넘겼습니다. naming.ts 의 상생표(GENERATES)는 «한글» 키라
++      //     GENERATES['木'] 이 undefined 가 되어 —
++      //         · 자원오행 상생 판정이 언제나 0건  → grade 언제나 '아쉬움'
++      //         · 용신('목')과 대조도 언제나 false → 사주보완 언제나 '아쉬움'
++      //     이 되었습니다. 등급은 화면에 안 나오는 것이 방침이라 눈에 안 띄었고,
++      //     대신 AI 에게 「상생 0건·용신 없음」이라는 «틀린 사실» 이 나갔습니다.
++      //   ⚠️ 개명 화면 넷은 각자 ohaengChar() 사본으로 이미 막고 있었습니다.
++      //      다섯 창구 가운데 이 한 곳만 빠져 있었습니다. (교훈 CZ·DA 의 세 번째 거울)
++      resourceOhaeng: rowOhaeng(row) ?? '',
+     }
+     setChars(next)
+     setPickerIdx(null)
+@@ -419,6 +468,8 @@ function DiagnosisInner() {
+     if (!canSubmit || !surname || !saju || !dayStem) return
+     setStep('result')
+     setLoading(true)
++    setFailWhy(null)
++    setStars(null); setOverallStar(null)
+     try {
+       // 심산 오행 점수로 계산 (월지 계절 치환 반영). 시지는 명식의 시주에서 꺼낸다.
+       const yongsinResult = calcYongsinCompat(
+@@ -435,6 +486,14 @@ function DiagnosisInner() {
+           given,
+           yongsin: yongsinResult.yongsin,
+           heeksin: yongsinResult.heeksin,
++          // ★2026-07-30 (2단계) — 지금까지 «버리던» 값을 함께 보냅니다.
++          //   calcYongsinCompat 이 이미 계산해 주고 있었는데
++          //   naming 은 yongsin·heeksin·score 셋만 받아 쓰고 넷을 버렸습니다.
++          //   → 과다 억제·기신 회피 판정을 할 재료가 손안에 있는데 안 쓰던 자리입니다.
++          gisin: yongsinResult.gisin,
++          gusin: yongsinResult.gusin,
++          hansin: yongsinResult.hansin,
++          isStrong: yongsinResult.isStrong,
+           elementScore: yongsinResult.score,
+           dayStem,
+           sajuText,
+@@ -442,14 +501,43 @@ function DiagnosisInner() {
+           saju,
+         }),
+       })
++      // ★★2026-07-30 (3단계) — res.ok 를 «봅니다».
++      //   [무엇이 문제였나] 전에는 곧바로 .json() 을 해서, 라우트가 500 을 줘도
++      //     그냥 통과했습니다. 그러면 result 가 null 이 되고 화면의
++      //     `{!loading && result && (…)}` 가 false 라 **손님이 빈 화면을 봤습니다.**
++      //     실패 문구도 [다시 시도] 단추도 없었습니다.
++      if (!res.ok) {
++        // ★2026-07-30 (3단계-d) — Vercel 의 영문 오류를 손님에게 그대로 보여 주지 않습니다.
++        //   전에는 「An error occurred with your deployment FUNCTION_INVOCATION_TIMEOUT
++        //   icn1::t5sd2-…」 가 그대로 화면에 나왔습니다. 손님이 읽을 말이 아닙니다.
++        //   ⚠️ 원문은 버리지 않고 console 에 남깁니다 — 우리가 볼 것은 남아야 합니다.
++        let raw = ''
++        try { raw = (await res.text()).slice(0, 300) } catch { /* status 만이라도 남긴다 */ }
++        console.error('naming 실패:', res.status, raw)
++        setFailWhy(friendlyFail(res.status, raw))
++        setResult(null)
++        return
++      }
+       const data = await res.json()
+       setResult(data.result ?? null)
+       setCommentary(normalizeCommentary(data.commentary))
++      setStars(Array.isArray(data.stars) ? data.stars : null)
++      setOverallStar(data.overallStar ?? null)
++      // ★AI 가 실패했으면 «왜» 인지 알려 줍니다. 빈 통변을 조용히 보여 주지 않습니다.
++      if (data.aiOk === false) {
++        setFailWhy(data.aiFailHint
++          ? `${data.aiFailHint} (풀이 문장을 받지 못했어요)`
++          : '풀이 문장을 받지 못했어요. 잠시 뒤 다시 시도해 주세요')
++      } else {
++        setFailWhy(null)
++      }
+       const pkey = personKey(info)
+       try {
+         localStorage.setItem(NAMING_RESULT_KEY, JSON.stringify({
+           result: data.result ?? null,
+           commentary: data.commentary ?? null,
++          stars: data.stars ?? null,
++          overallStar: data.overallStar ?? null,
+           chars,
+           personKey: pkey,
+         }))
+@@ -463,6 +551,8 @@ function DiagnosisInner() {
+           chars,
+           result: data.result ?? null,
+           commentary: data.commentary ?? null,
++          stars: data.stars ?? null,
++          overallStar: data.overallStar ?? null,
+           target_birth: null,
+         }))
+         // ★ 상담사 화면에 뜰 해설 텍스트도 함께 저장 (물상도 방식과 동일)
+@@ -485,6 +575,8 @@ function DiagnosisInner() {
+             chars,
+             result: data.result ?? null,
+             commentary: data.commentary ?? null,
++            stars: data.stars ?? null,
++            overallStar: data.overallStar ?? null,
+             // 남(가족·지인) 진단이면 'other', 내 이름이면 'self'
+             kind: targetRelation === 'self' ? 'self' : 'other',
+             person_key: pkey,
+@@ -506,13 +598,22 @@ function DiagnosisInner() {
+           relation: targetRelation,
+           person,
+           result: data.result as DiagnoseResult,
+-          commentary: data.commentary ?? null,
++          // ★2026-07-30 (3단계-b) — 별점을 commentary 안에 함께 담습니다.
++          //   [왜]  saveNamingRecord 의 타입을 넓히면 lib/saju/namingRecords.ts 와
++          //         그것을 읽는 다른 화면(보관함·상담사)까지 손대야 합니다.
++          //         commentary 는 Record<string, unknown> 이라 그대로 들어갑니다.
++          //   ⚠️ 되읽을 때 normalizeCommentary 가 모르는 키를 버리지 않는지 확인하십시오.
++          commentary: data.commentary
++            ? { ...data.commentary, _stars: data.stars ?? null, _overallStar: data.overallStar ?? null }
++            : null,
+         })
+         if (saved.ok && saved.id) setSavedRecordId(saved.id)
+         else setSaveFailed(true)
+       } catch (e) { console.error(e); setSaveFailed(true) }
+     } catch (e) {
+       console.error(e)
++      // ★2026-07-30 (3단계) — 망 오류·예외도 «빈 화면» 이 아니라 이유로 알립니다.
++      setFailWhy('풀이를 받는 중 문제가 있었어요. 잠시 뒤 다시 시도해 주세요')
+     } finally {
+       setLoading(false)
+     }
+@@ -582,7 +683,10 @@ function DiagnosisInner() {
+       <div style={{ flex: 1, minWidth: 0 }}>
+         <div style={{ fontSize: '13px', color: '#1a1a1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.meaning}</div>
+         <div style={{ fontSize: '11px', color: '#5c3a1e', marginTop: '2px' }}>
+-          {row.resource_ohaeng}·{row.strokes}획
++          {/* ★2026-07-30 (1단계) — 목록도 같은 창구를 씁니다.
++              전에는 DB 날것을 그려서 손님이 «木» 을, 판정은 «목» 을 보는 어긋남이 있었습니다.
++              ⚠️ 못 읽은 값이면 빈칸이 되므로 원값을 그대로 보여 줍니다(정보를 숨기지 않습니다). */}
++          {rowOhaeng(row) ?? row.resource_ohaeng}·{rowStrokes(row)}획
+         </div>
+       </div>
+     </div>
+@@ -760,6 +864,26 @@ function DiagnosisInner() {
+               </div>
+             )}
+ 
++            {/* ★2026-07-30 (3단계) — 실패했을 때 «빈 화면» 대신 이유와 [다시 시도] 를 냅니다 */}
++            {!loading && failWhy && (
++              <div style={{
++                background: cardBg, border: '1px solid #f0c9c9', borderRadius: '14px',
++                padding: '22px 18px', textAlign: 'center', marginBottom: '16px',
++              }}>
++                <div style={{ fontSize: '26px', marginBottom: '8px' }}>🌧️</div>
++                <div style={{ fontSize: '13px', color: rose, lineHeight: 1.8, marginBottom: '14px' }}>
++                  {failWhy}
++                </div>
++                <button onClick={handleFullResult}
++                  style={{
++                    padding: '11px 22px', borderRadius: '12px', background: gold,
++                    border: 'none', color: '#fff', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer',
++                  }}>
++                  다시 시도
++                </button>
++              </div>
++            )}
++
+             {!loading && result && (
+               <>
+                 <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+@@ -772,7 +896,7 @@ function DiagnosisInner() {
+                 </div>
+ 
+                 {commentary && (
+-                  <PerspectiveAccordion commentary={commentary} />
++                  <PerspectiveAccordion commentary={commentary} stars={stars} overallStar={overallStar} />
+                 )}
+ 
+                 {/* ★2026-07-21 2차: 저장 표시를 상담 버튼 바로 위로 옮겼다.

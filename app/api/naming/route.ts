@@ -35,7 +35,15 @@ function toJudgeChar(c: NameChar): JudgeChar {
 }
 
 export const runtime = 'nodejs'
-export const maxDuration = 60
+// ★★2026-07-30 (3단계-d) — 60 → 300.
+//   [무엇이 있었나]  max_tokens 를 12,000 으로 올린 뒤 실기기에서
+//     HTTP 504 FUNCTION_INVOCATION_TIMEOUT 이 났습니다.
+//     3,500 일 때는 «잘리면서» 60초 안에 끝났고, 상한을 올리자 끝까지 쓰느라 넘겼습니다.
+//   [왜 300 인가]  형제 라우트 /api/tongbyeon 이 300 입니다. 같은 Anthropic 호출인데
+//     naming 만 60 이었습니다. (교훈 DT — 잘 되는 형제와 «보내는 값» 을 대조하라)
+//   ⚠️ Vercel 은 요금제 상한까지만 줍니다. Hobby 면 300 을 적어도 60초에서 끊깁니다.
+//      그때는 아래 max_tokens 를 더 줄이거나 관점을 나눠 부르는 쪽입니다(4단계).
+export const maxDuration = 300
 
 interface Body {
   surname: NameChar
@@ -242,9 +250,13 @@ ${JSON.stringify(factsForAI, null, 2)}
             //   ⚠️ 상한으로 자르지 말고 «분량 지시» 로 줄이십시오. (교훈 DS)
             //      상한으로 자르면 문장 중간에서 끊기고, 분량 지시로 줄이면 말이 온전합니다.
             //      느리다고 느껴지면 프롬프트의 «2~4문장» 을 줄이는 쪽입니다.
-            //   ⚠️ maxDuration = 60 입니다. 스트리밍이 아니므로 한 방에 받습니다.
-            //      12,000 토큰이 60초를 넘기면 요금제 상한이 원인입니다(코드가 아님).
-            max_tokens: 12000,
+            //   ★2026-07-30 (3단계-d) — 12,000 → 7,000 으로 내렸습니다.
+            //     [실측]  5관점 × 3단 + 맺음말 ≒ 39문장 ≒ 2,150자 ≒ 3,200~4,300 토큰.
+            //       3,500 은 «딱 경계» 라 잘렸고(그래서 복구 코드가 있었습니다),
+            //       12,000 은 세 배라 끝까지 쓰느라 60초를 넘겼습니다.
+            //       7,000 이면 두 배 여유이고 시간도 넉넉합니다.
+            //   ⚠️ 그래도 느리면 상한이 아니라 «분량 지시»(아래 2~4문장)를 줄이십시오. (교훈 DS)
+            max_tokens: 7000,
             messages: [{ role: 'user', content: commentaryPrompt }],
           }),
         })

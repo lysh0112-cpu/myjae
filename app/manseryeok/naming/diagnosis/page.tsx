@@ -58,6 +58,32 @@ const EMPTY_PERSPECTIVE: Perspective = { intro: '', name: '', meaning: '' }
  *      그래서 _stars 를 그대로 두면 되읽을 때 버려집니다. 따로 꺼냅니다.
  *   ⚠️ 옛 저장본에는 이 키가 없습니다 → null. 화면은 별을 안 그립니다.
  */
+/**
+ * ★2026-07-30 (3단계-d) — 실패를 손님 말로 옮깁니다.
+ *
+ *   ⚠️ 「어떻게 하면 되는지」 를 함께 적습니다. 「오류가 발생했습니다」만으로는
+ *      손님이 무엇을 할지 모릅니다.
+ */
+function friendlyFail(status: number, raw: string): string {
+  const r = raw || ''
+  if (status === 504 || /TIMEOUT/i.test(r)) {
+    return '풀이를 쓰는 데 시간이 오래 걸려 도중에 끊겼어요. 잠시 뒤 다시 시도해 주세요.'
+  }
+  if (status === 429 || /rate_limit/i.test(r)) {
+    return '지금 이용이 많아 잠시 기다려야 해요. 1~2분 뒤에 다시 시도해 주세요.'
+  }
+  if (status === 401 || status === 403) {
+    return '풀이 서비스에 연결하지 못했어요. 잠시 뒤 다시 시도해 주시고, 계속 안 되면 알려 주세요.'
+  }
+  if (status === 529 || status >= 500) {
+    return '풀이 서비스가 잠시 붐비고 있어요. 잠시 뒤 다시 시도해 주세요.'
+  }
+  if (status === 400) {
+    return '이름 정보를 다시 확인해 주세요. 글자를 다시 고른 뒤 시도해 주시면 좋겠습니다.'
+  }
+  return '풀이를 받지 못했어요. 잠시 뒤 다시 시도해 주세요.'
+}
+
 function extractStars(raw: unknown): { stars: PerspectiveStar[] | null; overall: StarResult | null } {
   if (!raw || typeof raw !== 'object') return { stars: null, overall: null }
   const o = raw as Record<string, unknown>
@@ -481,9 +507,14 @@ function DiagnosisInner() {
       //     `{!loading && result && (…)}` 가 false 라 **손님이 빈 화면을 봤습니다.**
       //     실패 문구도 [다시 시도] 단추도 없었습니다.
       if (!res.ok) {
-        let why = ''
-        try { why = (await res.text()).slice(0, 200) } catch { /* status 만이라도 남긴다 */ }
-        setFailWhy(`풀이를 받지 못했어요 (HTTP ${res.status})${why ? ` — ${why}` : ''}`)
+        // ★2026-07-30 (3단계-d) — Vercel 의 영문 오류를 손님에게 그대로 보여 주지 않습니다.
+        //   전에는 「An error occurred with your deployment FUNCTION_INVOCATION_TIMEOUT
+        //   icn1::t5sd2-…」 가 그대로 화면에 나왔습니다. 손님이 읽을 말이 아닙니다.
+        //   ⚠️ 원문은 버리지 않고 console 에 남깁니다 — 우리가 볼 것은 남아야 합니다.
+        let raw = ''
+        try { raw = (await res.text()).slice(0, 300) } catch { /* status 만이라도 남긴다 */ }
+        console.error('naming 실패:', res.status, raw)
+        setFailWhy(friendlyFail(res.status, raw))
         setResult(null)
         return
       }
