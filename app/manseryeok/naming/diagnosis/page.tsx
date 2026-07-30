@@ -20,6 +20,8 @@ import {
 } from '@/lib/saju/namingRecords'
 import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
 import PerspectiveAccordion from '@/app/manseryeok/components/PerspectiveAccordion'
+// ★2026-07-30 (3단계-b) — 관점별 별점
+import type { PerspectiveStar, StarResult } from '@/lib/saju/starRating'
 import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
@@ -49,6 +51,22 @@ const EMPTY_PERSPECTIVE: Perspective = { intro: '', name: '', meaning: '' }
 //   - 새 데이터(yinyang 등 보유): 부족한 관점만 빈값 채워 그대로 사용.
 //   - 옛 데이터(summary/good 등): 옛 내용을 맺음말에 모아 5관점 껍데기로 감싼다(화면 안 깨짐).
 //   - null/형식불명: null 반환.
+/**
+ * ★2026-07-30 (3단계-b) — 저장본에서 별점을 꺼냅니다.
+ *
+ *   ⚠️ normalizeCommentary 는 «아는 키만» 골라 새 객체를 만듭니다.
+ *      그래서 _stars 를 그대로 두면 되읽을 때 버려집니다. 따로 꺼냅니다.
+ *   ⚠️ 옛 저장본에는 이 키가 없습니다 → null. 화면은 별을 안 그립니다.
+ */
+function extractStars(raw: unknown): { stars: PerspectiveStar[] | null; overall: StarResult | null } {
+  if (!raw || typeof raw !== 'object') return { stars: null, overall: null }
+  const o = raw as Record<string, unknown>
+  const stars = Array.isArray(o._stars) ? (o._stars as PerspectiveStar[]) : null
+  const overall = o._overallStar && typeof o._overallStar === 'object'
+    ? (o._overallStar as StarResult) : null
+  return { stars, overall }
+}
+
 function normalizeCommentary(raw: unknown): Commentary | null {
   if (!raw || typeof raw !== 'object') return null
   const o = raw as Record<string, unknown>
@@ -232,6 +250,9 @@ function DiagnosisInner() {
   const [commentary, setCommentary] = useState<Commentary | null>(null)
   // ★2026-07-30 (3단계) — 실패 이유. 없으면 null. 빈 화면 대신 이것을 보여 줍니다.
   const [failWhy, setFailWhy] = useState<string | null>(null)
+  // ★2026-07-30 (3단계-b) — 관점별 별점. 옛 저장본에는 없으므로 null 로 둡니다.
+  const [stars, setStars] = useState<PerspectiveStar[] | null>(null)
+  const [overallStar, setOverallStar] = useState<StarResult | null>(null)
   const [loading, setLoading] = useState(false)
 
 
@@ -258,6 +279,7 @@ function DiagnosisInner() {
         if (row && row.result && row.commentary && Array.isArray(row.chars)) {
           setResult(row.result as DiagnoseResult)
           setCommentary(normalizeCommentary(row.commentary))
+          { const e = extractStars(row.commentary); setStars(e.stars); setOverallStar(e.overall) }
           setChars(row.chars as (NameChar | null)[])
           setSyllables((row.chars as (NameChar | null)[]).filter(Boolean).map((c) => c!.hangul))
           setStep('result')
@@ -294,6 +316,7 @@ function DiagnosisInner() {
         if (snap?.result) {
           setResult(snap.result)
           setCommentary(normalizeCommentary(snap.commentary))
+          { const e = extractStars(snap.commentary); setStars(e.stars); setOverallStar(e.overall) }
           setChars(rec.chars)
           setSyllables(rec.chars.filter(Boolean).map((c) => c!.hangul))
           setSavedRecordId(rec.id)
@@ -420,6 +443,7 @@ function DiagnosisInner() {
     setStep('result')
     setLoading(true)
     setFailWhy(null)
+    setStars(null); setOverallStar(null)
     try {
       // 심산 오행 점수로 계산 (월지 계절 치환 반영). 시지는 명식의 시주에서 꺼낸다.
       const yongsinResult = calcYongsinCompat(
@@ -466,6 +490,8 @@ function DiagnosisInner() {
       const data = await res.json()
       setResult(data.result ?? null)
       setCommentary(normalizeCommentary(data.commentary))
+      setStars(Array.isArray(data.stars) ? data.stars : null)
+      setOverallStar(data.overallStar ?? null)
       // ★AI 가 실패했으면 «왜» 인지 알려 줍니다. 빈 통변을 조용히 보여 주지 않습니다.
       if (data.aiOk === false) {
         setFailWhy(data.aiFailHint
@@ -479,6 +505,8 @@ function DiagnosisInner() {
         localStorage.setItem(NAMING_RESULT_KEY, JSON.stringify({
           result: data.result ?? null,
           commentary: data.commentary ?? null,
+          stars: data.stars ?? null,
+          overallStar: data.overallStar ?? null,
           chars,
           personKey: pkey,
         }))
@@ -492,6 +520,8 @@ function DiagnosisInner() {
           chars,
           result: data.result ?? null,
           commentary: data.commentary ?? null,
+          stars: data.stars ?? null,
+          overallStar: data.overallStar ?? null,
           target_birth: null,
         }))
         // ★ 상담사 화면에 뜰 해설 텍스트도 함께 저장 (물상도 방식과 동일)
@@ -514,6 +544,8 @@ function DiagnosisInner() {
             chars,
             result: data.result ?? null,
             commentary: data.commentary ?? null,
+            stars: data.stars ?? null,
+            overallStar: data.overallStar ?? null,
             // 남(가족·지인) 진단이면 'other', 내 이름이면 'self'
             kind: targetRelation === 'self' ? 'self' : 'other',
             person_key: pkey,
@@ -535,7 +567,14 @@ function DiagnosisInner() {
           relation: targetRelation,
           person,
           result: data.result as DiagnoseResult,
-          commentary: data.commentary ?? null,
+          // ★2026-07-30 (3단계-b) — 별점을 commentary 안에 함께 담습니다.
+          //   [왜]  saveNamingRecord 의 타입을 넓히면 lib/saju/namingRecords.ts 와
+          //         그것을 읽는 다른 화면(보관함·상담사)까지 손대야 합니다.
+          //         commentary 는 Record<string, unknown> 이라 그대로 들어갑니다.
+          //   ⚠️ 되읽을 때 normalizeCommentary 가 모르는 키를 버리지 않는지 확인하십시오.
+          commentary: data.commentary
+            ? { ...data.commentary, _stars: data.stars ?? null, _overallStar: data.overallStar ?? null }
+            : null,
         })
         if (saved.ok && saved.id) setSavedRecordId(saved.id)
         else setSaveFailed(true)
@@ -826,7 +865,7 @@ function DiagnosisInner() {
                 </div>
 
                 {commentary && (
-                  <PerspectiveAccordion commentary={commentary} />
+                  <PerspectiveAccordion commentary={commentary} stars={stars} overallStar={overallStar} />
                 )}
 
                 {/* ★2026-07-21 2차: 저장 표시를 상담 버튼 바로 위로 옮겼다.
