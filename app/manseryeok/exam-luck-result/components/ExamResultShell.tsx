@@ -112,6 +112,23 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
    */
   const isPro = sp.get('pro') === '1'
 
+  /**
+   * ★★2026-07-30 (9차) — 개발 중에는 진단 상자가 «저절로» 보이게 합니다.
+   *
+   *   [무엇이 오늘 저를 눈뜬장님으로 만들었나]
+   *     낮에 🔧 상자를 ?pro=1 뒤로 감췄습니다. 손님에게는 옳은 결정이었습니다.
+   *     그런데 저녁에 «또 안 넘어간다» 는 화면을 받고 보니,
+   *     제가 판단할 근거를 제 손으로 치운 상태였습니다.
+   *     대표님께 «URL 에 &pro=1 을 붙여 다시 해 보십시오» 를 매번 부탁해야 했습니다.
+   *
+   *   → localhost 에서는 언제나 보입니다. 배포된 화면(손님)에는 그대로 안 보입니다.
+   *   ⚠️ `window` 는 서버에서 없습니다. 그래서 typeof 로 먼저 가립니다.
+   *      이 줄을 `window.location` 으로 줄이면 빌드가 깨집니다.
+   */
+  const isLocal = typeof window !== 'undefined'
+    && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)
+  const showDiag = isPro || isLocal
+
   const [calc, setCalc] = useState<PersonCalc | null>(null)
   const [err, setErr] = useState('')
   const [dayunList, setDayunList] = useState<DayunItem[]>([])
@@ -575,7 +592,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
          *     화면에는 «1번 지금 쓰고 있어요 / 2번 완성 / 3~7번 대기» 로 굳어 보였고,
          *     대표님이 «왜 안 넘어가냐» 고 하신 자리입니다.
          *   ★하나씩 부르면 늦은 것이 하나여도 그 하나만 기다립니다.
-         *     그리고 아래 STALL_MS(60초)가 걸려 다음으로 넘어갑니다.
+         *     그리고 아래 STALL_MS(90초)가 걸려 다음으로 넘어갑니다.
          *
          *   ⚠️⚠️ **1 에서 올리지 마십시오.** 대표님이 «하나의 주제가 끝나면 다음 주제»
          *        로 정하셨습니다(2026-07-30). 올리면 위에 적은 어긋남이 그대로 돌아옵니다.
@@ -787,7 +804,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
                    [왜 글자수는 감추나] 우리가 잘림을 재던 눈금입니다.
                      손님은 3,000자가 많은지 적은지 알 수 없고, 알 필요도 없습니다. */}
               {`${Object.keys(sevenBody).length}/${sections.length} 갈래`}
-              {isPro && tong.length > 0 && ` · ${tong.length.toLocaleString()}자`}
+              {showDiag && tong.length > 0 && ` · ${tong.length.toLocaleString()}자`}
             </div>
           </div>
         )}
@@ -976,7 +993,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
                  사주 리포트를 읽고 내려온 손님이 마지막에 보는 것이
                  «HTTP 429 · Vercel 시간 제한» 이면 안 됩니다.
                → ?pro=1 에서만 그립니다. 지우지는 않았습니다. */}
-        {isPro && diag.length > 0 && (
+        {showDiag && diag.length > 0 && (
           <details style={{
             background: '#f7f4f0', border: '0.5px dashed #d8c8b8', borderRadius: 12,
             padding: '10px 12px', marginBottom: 12,
