@@ -38,7 +38,7 @@ import { judgeJobChangeNatal, judgeJobChangeLuck } from '@/lib/saju/examLuck/job
 import { judgeExamDay } from '@/lib/saju/examLuck/examDay'
 import { buildAllCards } from '@/lib/saju/examLuck/buildCards'
 import { parseExamTongbyeon } from '@/lib/saju/examLuck/buildExamPrompt'
-import { buildSevenPrompt, sevenOf, SEVEN_GROUPS, sevenKeyOf } from '@/lib/saju/examLuck/buildExamSeven'
+import { buildSevenPrompt, sevenOf, SEVEN_GROUPS, sevenKeyOf, CALL_MAX_TOKENS } from '@/lib/saju/examLuck/buildExamSeven'
 // ★2026-07-30 — 지시서 2장 «사정 평가 로직» 을 재료로 만들어 싣습니다. (교훈 CU)
 import { judgePassSignal, passSignalBlock } from '@/lib/saju/examLuck/passSignal'
 import { upsangBlock as buildUpsangBlock } from '@/lib/saju/examLuck/tables/upsang'
@@ -98,13 +98,25 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
   const [tong, setTong] = useState('')
   const [tongState, setTongState] = useState<'idle' | 'loading' | 'done' | 'failed'>('idle')
   /**
+   * ★2026-07-30 — 호출마다 무슨 일이 있었나. **다음 캡처 한 장으로 원인이 드러나게.**
+   *
+   *   [왜 넣었나] 하루 동안 Vercel 로그·관리자 오류탭을 뒤지느라 시간을 다 썼습니다.
+   *     로그를 찾아 옮기는 일을 대표님께 계속 부탁할 수 없습니다.
+   *     → 화면 맨 아래 접힌 상자에 넣습니다. 펴서 캡처 한 장만 주시면 됩니다.
+   *   ⚠️ 손님에게는 접혀 있고 «개발용» 이라 적혀 있습니다. 눌러야 보입니다.
+   *   ⚠️ 안정되면 지우거나 ?debug=1 로 가려도 됩니다.
+   */
+  const [diag, setDiag] = useState<Array<{
+    n: number; key: string; status: number | null; ms: number; chars: number; note: string
+  }>>([])
+
+  /**
    * 몇 번째 묶음까지 받았나.
    * ⚠️ ★2026-07-30 (2차) — **화면에는 안 씁니다.** 손님에게 «묶음» 은 우리 사정입니다.
    *    개발 중에 «어디까지 왔나» 를 보려고 남겨 둔 값입니다.
    *    지우지 마십시오 — 묶음이 몇 번째에서 막히는지 확인할 때 씁니다.
    */
   const [doneGroups, setDoneGroups] = useState(0)
-  void doneGroups
   /**
    * ★2026-07-30 — 왜 실패했는지. 전에는 상태코드를 버려서 아무도 몰랐습니다.
    * ⚠️ 손님에게는 부드럽게 보여 주고, 개발자용 자세한 말은 title 속성에 담습니다.
@@ -394,6 +406,15 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
           stallTimer = setTimeout(() => ac.abort('stall'), STALL_MS)
         }
         const before = acc.length
+        const t0 = Date.now()
+        /** ★이 호출에 무슨 일이 있었나를 남긴다 (화면 맨 아래 진단 상자) */
+        const record = (status: number | null, note: string) => {
+          if (cancelled) return
+          setDiag(d => [...d, {
+            n: idx + 1, key: g.join('+'), status,
+            ms: Date.now() - t0, chars: acc.length - before, note,
+          }])
+        }
 
         try {
           const res = await fetch('/api/tongbyeon', {
@@ -403,7 +424,8 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
             //   상한을 크게 잡으면 모델이 그만큼 여유를 두고 생성해 느려집니다.
             body: JSON.stringify({
               systemPrompt: sp, premium: true,
-              maxTokens: g.length * 1200,
+              // ★2026-07-30 — 갈래 하나에 호출 하나이므로 상한도 하나짜리입니다.
+              maxTokens: CALL_MAX_TOKENS,
             }),
           })
           // ★실패 이유를 버리지 않습니다. 401·429·529 는 대응이 전혀 다릅니다.
@@ -412,9 +434,14 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
             try { why = (await res.text()).slice(0, 160) } catch { /* 본문을 못 읽어도 status 는 남는다 */ }
             failNotes.push(`${idx + 1}묶음 HTTP ${res.status}${why ? ` — ${why}` : ''}`)
             console.error('합격운 묶음 실패', g, res.status, why)
+            record(res.status, why || 'HTTP 오류')
             return false
           }
-          if (!res.body) { failNotes.push(`${idx + 1}묶음 — 응답 본문이 비었습니다`); return false }
+          if (!res.body) {
+            failNotes.push(`${idx + 1}묶음 — 응답 본문이 비었습니다`)
+            record(res.status, '본문이 비었음')
+            return false
+          }
 
           const reader = res.body.getReader()
           const decoder = new TextDecoder()
@@ -444,6 +471,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
           // ★마지막 줄에 개행이 없으면 여기 남는다. 버리면 끝 문장이 잘린다. (2026-07-27)
           buf += decoder.decode()
           if (buf.trim()) take(buf.trim())
+          record(res.status, acc.length > before ? '정상' : '★200 인데 글이 안 왔음')
           return acc.length > before
         } catch (e) {
           // ★중간까지 받은 것은 acc 에 이미 들어가 있습니다. 버리지 않습니다.
@@ -455,6 +483,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
           const got = acc.length - before
           failNotes.push(`${idx + 1}묶음 — ${why}${got > 0 ? ` (${got}자는 살렸습니다)` : ''}`)
           console.error('합격운 묶음 실패', g, why)
+          record(null, why)
           return got > 0
         } finally {
           clearTimeout(hardTimer)
@@ -619,9 +648,12 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
               풀이를 쓰는 중이에요… 조금만 기다려 주세요
             </div>
             <div style={{ fontSize: 11, color: '#b08a9a', marginTop: 7 }}>
-              {tong.length > 0
-                ? `${tong.length.toLocaleString()}자 · 계속 이어서 쓰고 있어요`
-                : '첫 문장을 기다리고 있어요'}
+              {/* ★2026-07-30 — 갈래 하나에 호출 하나이니 «지금 무엇을 쓰는지» 를 말해 줍니다.
+                   묶음 번호보다 이게 손님에게 뜻이 있습니다. */}
+              {doneGroups < sections.length
+                ? `${doneGroups + 1}번째 갈래 · ${sections[doneGroups]?.title.replace(/^\S+\s*\d+\.\s*/, '') ?? ''}`
+                : '거의 다 됐어요'}
+              {tong.length > 0 && ` · ${tong.length.toLocaleString()}자`}
             </div>
           </div>
         )}
@@ -769,6 +801,37 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
           </div>
         </div>
       </div>
+
+        {/* ★★2026-07-30 — 개발용 진단 상자.
+             [왜] 하루 동안 «어디서 막혔나» 를 찾느라 Vercel 로그와 관리자 오류탭을
+               오갔습니다. 그 일을 대표님께 계속 부탁할 수 없습니다.
+             → 호출마다 상태코드·걸린 시간·받은 글자수를 여기 남깁니다.
+               펴서 캡처 한 장만 주시면 원인이 그 자리에서 드러납니다.
+             ⚠️ 접혀 있고 «개발용» 이라 적혀 있어 손님이 눌러야 보입니다.
+             ⚠️ 안정되면 이 블록만 지우면 됩니다. 다른 곳과 얽혀 있지 않습니다. */}
+        {diag.length > 0 && (
+          <details style={{
+            background: '#f7f4f0', border: '0.5px dashed #d8c8b8', borderRadius: 12,
+            padding: '10px 12px', marginBottom: 12,
+          }}>
+            <summary style={{ fontSize: 11.5, color: '#8a7063', cursor: 'pointer' }}>
+              🔧 개발용 — 호출 기록 {diag.length}/{sections.length}
+            </summary>
+            <div style={{ marginTop: 9, fontSize: 11, color: '#6b5a50', lineHeight: 1.9, fontFamily: 'monospace' }}>
+              {diag.map((d, i) => (
+                <div key={i} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                  {`${d.n}. ${d.key.padEnd(8)} HTTP ${d.status ?? '—'} · ${(d.ms / 1000).toFixed(1)}s · ${d.chars}자 · ${d.note}`}
+                </div>
+              ))}
+              <div style={{ marginTop: 7, paddingTop: 7, borderTop: '1px solid #e5dcd2' }}>
+                {`총 ${tong.length}자 · 상한 ${CALL_MAX_TOKENS} 토큰/호출 · 상태 ${tongState}`}
+              </div>
+              <div style={{ marginTop: 5, color: '#a08878' }}>
+                {'★걸린 시간이 60s·300s 에 몰리면 Vercel 시간 제한 · HTTP 429 면 한도'}
+              </div>
+            </div>
+          </details>
+        )}
 
       {/* 아래 붙박이 메뉴 — 다른 화면과 같은 모양 (result-new 에서 그대로 가져옴) */}
       <div style={{

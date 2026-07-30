@@ -18,6 +18,7 @@ import {
   SEVEN_STUDENT, SEVEN_ADULT, type SevenKey, type SevenArgs,
 } from './lib/saju/examLuck/buildExamSeven'
 import { judgePassSignal, passSignalBlock } from './lib/saju/examLuck/passSignal'
+import { CALL_MAX_TOKENS } from './lib/saju/examLuck/buildExamSeven'
 import { upsangBlock, UPSANG } from './lib/saju/examLuck/tables/upsang'
 import { hasStudentBan, STUDENT_BAN_WORDS } from './lib/saju/examLuck/tables/rules'
 import { parseExamTongbyeon } from './lib/saju/examLuck/buildExamPrompt'
@@ -178,7 +179,7 @@ for (const target of ['student', 'adult'] as ExamTarget[]) {
   console.log('   묶음별 크기 —')
   SEVEN_GROUPS.forEach((g, i) => {
     const n = prompts[i].length
-    console.log(`     ${i + 1}묶음 [${g.join('+')}]  ${String(n).padStart(5)}자  · maxTokens ${g.length * 1200}`)
+    console.log(`     ${i + 1}묶음 [${g.join('+')}]  ${String(n).padStart(5)}자  · maxTokens ${CALL_MAX_TOKENS}`)
   })
 
   // ④ 제목 왕복

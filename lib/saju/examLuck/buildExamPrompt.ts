@@ -11,6 +11,7 @@
 //   ④ 재료에 넣어 두고 "쓰지 마세요" 라고 하면 새어 나온다. 못 쓰게 하려면 재료에서 뺀다. (교훈 BF)
 //   ⑤ 내부 점수를 "9.8점" 으로 주면 그대로 화면에 나간다. 쓸 수 없게 생기게 한다. (교훈 BG)
 
+import { sevenKeyOf } from './buildExamSeven'
 import type { ExamCard, ExamTarget } from './types'
 import { CLOSING, CLOSING_STUDENT, CLOSING_SRC } from './tables/rules'
 
@@ -413,7 +414,18 @@ export function parseExamTongbyeon(full: string): ParsedExamTongbyeon {
     const k = keyOfTitle(b.title)
     // ⑤ 짝 못 찾은 대목을 소리 없이 버리지 않는다 (30부 2장)
     if (k) byKey[k] = cut(body)
-    else orphan.push(`■ ${b.title}\n${body}`)
+    // ★★2026-07-30 — 7대 카테고리 제목을 orphan 으로 보내지 않습니다.
+    //
+    //   [무엇이 있었나] 화면에 같은 글이 «두 번» 나왔습니다.
+    //     위에는 카드로, 아래에는 ■ 와 [한줄] 까지 붙은 날것으로.
+    //   [까닭] keyOfTitle 은 **옛 카드 제목만** 압니다(years·dayun·susi…).
+    //     7대 카테고리 제목(「🧬 1. 타고난 공부 DNA와 적성」)은 못 잡습니다.
+    //     → orphan 으로 떨어져 outro 에 날것으로 실렸고,
+    //       화면은 그 outro 를 그대로 그렸습니다.
+    //     한편 sevenKeyOf 는 같은 제목을 잡아 카드로도 그렸습니다. 그래서 두 번.
+    //   ⚠️ orphan 그물 자체는 지우지 않았습니다. 30부에 «지어낸 제목을 버리지 말라» 고
+    //      넣은 것입니다. 7대 카테고리만 예외로 뺍니다.
+    else if (!sevenKeyOf(b.title)) orphan.push(`■ ${b.title}\n${body}`)
   }
   if (orphan.length) outro = [outro, ...orphan].filter(Boolean).join('\n\n')
 

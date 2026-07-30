@@ -1,0 +1,305 @@
+diff --git a/14-verify-exam-seven.ts b/14-verify-exam-seven.ts
+index 51209f6..1e3da8c 100644
+--- a/14-verify-exam-seven.ts
++++ b/14-verify-exam-seven.ts
+@@ -18,6 +18,7 @@ import {
+   SEVEN_STUDENT, SEVEN_ADULT, type SevenKey, type SevenArgs,
+ } from './lib/saju/examLuck/buildExamSeven'
+ import { judgePassSignal, passSignalBlock } from './lib/saju/examLuck/passSignal'
++import { CALL_MAX_TOKENS } from './lib/saju/examLuck/buildExamSeven'
+ import { upsangBlock, UPSANG } from './lib/saju/examLuck/tables/upsang'
+ import { hasStudentBan, STUDENT_BAN_WORDS } from './lib/saju/examLuck/tables/rules'
+ import { parseExamTongbyeon } from './lib/saju/examLuck/buildExamPrompt'
+@@ -178,7 +179,7 @@ for (const target of ['student', 'adult'] as ExamTarget[]) {
+   console.log('   묶음별 크기 —')
+   SEVEN_GROUPS.forEach((g, i) => {
+     const n = prompts[i].length
+-    console.log(`     ${i + 1}묶음 [${g.join('+')}]  ${String(n).padStart(5)}자  · maxTokens ${g.length * 1200}`)
++    console.log(`     ${i + 1}묶음 [${g.join('+')}]  ${String(n).padStart(5)}자  · maxTokens ${CALL_MAX_TOKENS}`)
+   })
+ 
+   // ④ 제목 왕복
+diff --git a/15-e2e-exam-live.ts b/15-e2e-exam-live.ts
+index 01a788e..9de451a 100644
+--- a/15-e2e-exam-live.ts
++++ b/15-e2e-exam-live.ts
+@@ -27,7 +27,7 @@ import { judgeExamDay } from './lib/saju/examLuck/examDay'
+ import { buildAllCards } from './lib/saju/examLuck/buildCards'
+ import { judgePassSignal, passSignalBlock } from './lib/saju/examLuck/passSignal'
+ import { upsangBlock } from './lib/saju/examLuck/tables/upsang'
+-import { buildSevenPrompt, sevenOf, SEVEN_GROUPS, sevenKeyOf } from './lib/saju/examLuck/buildExamSeven'
++import { buildSevenPrompt, sevenOf, SEVEN_GROUPS, sevenKeyOf, CALL_MAX_TOKENS } from './lib/saju/examLuck/buildExamSeven'
+ import { gradeLabel, levelLabel, trackOf, categoryLabel, targetOf, GRADE_PROMPT } from './lib/saju/examLuck/tables/studentTarget'
+ import { STUDENT_BAN_WORDS } from './lib/saju/examLuck/tables/rules'
+ import { calcSeyunList } from './lib/saju/dayun'
+@@ -185,9 +185,9 @@ async function main() {
+   let total = 0
+   SEVEN_GROUPS.forEach((g, i) => {
+     total += prompts[i].length
+-    console.log(`   ${i + 1}묶음 [${g.join('+')}]  ${String(prompts[i].length).padStart(5)}자 · maxTokens ${g.length * 1200}`)
++    console.log(`   ${i + 1}묶음 [${g.join('+')}]  ${String(prompts[i].length).padStart(5)}자 · maxTokens ${CALL_MAX_TOKENS}`)
+   })
+-  console.log(`   합계 ${total}자 · 출력 상한 합계 ${SEVEN_GROUPS.reduce((s, g) => s + g.length * 1200, 0)} 토큰`)
++  console.log(`   합계 ${total}자 · 출력 상한 합계 ${SEVEN_GROUPS.length * CALL_MAX_TOKENS} 토큰`)
+   if (prompts.some(p => !p)) bad('프롬프트가 안 나온 묶음이 있음')
+   else ok('세 묶음 전부 생성')
+ 
+diff --git a/app/manseryeok/exam-luck-result/components/ExamResultShell.tsx b/app/manseryeok/exam-luck-result/components/ExamResultShell.tsx
+index fa8944a..9afd498 100644
+--- a/app/manseryeok/exam-luck-result/components/ExamResultShell.tsx
++++ b/app/manseryeok/exam-luck-result/components/ExamResultShell.tsx
+@@ -38,7 +38,7 @@ import { judgeJobChangeNatal, judgeJobChangeLuck } from '@/lib/saju/examLuck/job
+ import { judgeExamDay } from '@/lib/saju/examLuck/examDay'
+ import { buildAllCards } from '@/lib/saju/examLuck/buildCards'
+ import { parseExamTongbyeon } from '@/lib/saju/examLuck/buildExamPrompt'
+-import { buildSevenPrompt, sevenOf, SEVEN_GROUPS, sevenKeyOf } from '@/lib/saju/examLuck/buildExamSeven'
++import { buildSevenPrompt, sevenOf, SEVEN_GROUPS, sevenKeyOf, CALL_MAX_TOKENS } from '@/lib/saju/examLuck/buildExamSeven'
+ // ★2026-07-30 — 지시서 2장 «사정 평가 로직» 을 재료로 만들어 싣습니다. (교훈 CU)
+ import { judgePassSignal, passSignalBlock } from '@/lib/saju/examLuck/passSignal'
+ import { upsangBlock as buildUpsangBlock } from '@/lib/saju/examLuck/tables/upsang'
+@@ -97,6 +97,19 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
+   const [dayunList, setDayunList] = useState<DayunItem[]>([])
+   const [tong, setTong] = useState('')
+   const [tongState, setTongState] = useState<'idle' | 'loading' | 'done' | 'failed'>('idle')
++  /**
++   * ★2026-07-30 — 호출마다 무슨 일이 있었나. **다음 캡처 한 장으로 원인이 드러나게.**
++   *
++   *   [왜 넣었나] 하루 동안 Vercel 로그·관리자 오류탭을 뒤지느라 시간을 다 썼습니다.
++   *     로그를 찾아 옮기는 일을 대표님께 계속 부탁할 수 없습니다.
++   *     → 화면 맨 아래 접힌 상자에 넣습니다. 펴서 캡처 한 장만 주시면 됩니다.
++   *   ⚠️ 손님에게는 접혀 있고 «개발용» 이라 적혀 있습니다. 눌러야 보입니다.
++   *   ⚠️ 안정되면 지우거나 ?debug=1 로 가려도 됩니다.
++   */
++  const [diag, setDiag] = useState<Array<{
++    n: number; key: string; status: number | null; ms: number; chars: number; note: string
++  }>>([])
++
+   /**
+    * 몇 번째 묶음까지 받았나.
+    * ⚠️ ★2026-07-30 (2차) — **화면에는 안 씁니다.** 손님에게 «묶음» 은 우리 사정입니다.
+@@ -104,7 +117,6 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
+    *    지우지 마십시오 — 묶음이 몇 번째에서 막히는지 확인할 때 씁니다.
+    */
+   const [doneGroups, setDoneGroups] = useState(0)
+-  void doneGroups
+   /**
+    * ★2026-07-30 — 왜 실패했는지. 전에는 상태코드를 버려서 아무도 몰랐습니다.
+    * ⚠️ 손님에게는 부드럽게 보여 주고, 개발자용 자세한 말은 title 속성에 담습니다.
+@@ -394,6 +406,15 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
+           stallTimer = setTimeout(() => ac.abort('stall'), STALL_MS)
+         }
+         const before = acc.length
++        const t0 = Date.now()
++        /** ★이 호출에 무슨 일이 있었나를 남긴다 (화면 맨 아래 진단 상자) */
++        const record = (status: number | null, note: string) => {
++          if (cancelled) return
++          setDiag(d => [...d, {
++            n: idx + 1, key: g.join('+'), status,
++            ms: Date.now() - t0, chars: acc.length - before, note,
++          }])
++        }
+ 
+         try {
+           const res = await fetch('/api/tongbyeon', {
+@@ -403,7 +424,8 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
+             //   상한을 크게 잡으면 모델이 그만큼 여유를 두고 생성해 느려집니다.
+             body: JSON.stringify({
+               systemPrompt: sp, premium: true,
+-              maxTokens: g.length * 1200,
++              // ★2026-07-30 — 갈래 하나에 호출 하나이므로 상한도 하나짜리입니다.
++              maxTokens: CALL_MAX_TOKENS,
+             }),
+           })
+           // ★실패 이유를 버리지 않습니다. 401·429·529 는 대응이 전혀 다릅니다.
+@@ -412,9 +434,14 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
+             try { why = (await res.text()).slice(0, 160) } catch { /* 본문을 못 읽어도 status 는 남는다 */ }
+             failNotes.push(`${idx + 1}묶음 HTTP ${res.status}${why ? ` — ${why}` : ''}`)
+             console.error('합격운 묶음 실패', g, res.status, why)
++            record(res.status, why || 'HTTP 오류')
++            return false
++          }
++          if (!res.body) {
++            failNotes.push(`${idx + 1}묶음 — 응답 본문이 비었습니다`)
++            record(res.status, '본문이 비었음')
+             return false
+           }
+-          if (!res.body) { failNotes.push(`${idx + 1}묶음 — 응답 본문이 비었습니다`); return false }
+ 
+           const reader = res.body.getReader()
+           const decoder = new TextDecoder()
+@@ -444,6 +471,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
+           // ★마지막 줄에 개행이 없으면 여기 남는다. 버리면 끝 문장이 잘린다. (2026-07-27)
+           buf += decoder.decode()
+           if (buf.trim()) take(buf.trim())
++          record(res.status, acc.length > before ? '정상' : '★200 인데 글이 안 왔음')
+           return acc.length > before
+         } catch (e) {
+           // ★중간까지 받은 것은 acc 에 이미 들어가 있습니다. 버리지 않습니다.
+@@ -455,6 +483,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
+           const got = acc.length - before
+           failNotes.push(`${idx + 1}묶음 — ${why}${got > 0 ? ` (${got}자는 살렸습니다)` : ''}`)
+           console.error('합격운 묶음 실패', g, why)
++          record(null, why)
+           return got > 0
+         } finally {
+           clearTimeout(hardTimer)
+@@ -619,9 +648,12 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
+               풀이를 쓰는 중이에요… 조금만 기다려 주세요
+             </div>
+             <div style={{ fontSize: 11, color: '#b08a9a', marginTop: 7 }}>
+-              {tong.length > 0
+-                ? `${tong.length.toLocaleString()}자 · 계속 이어서 쓰고 있어요`
+-                : '첫 문장을 기다리고 있어요'}
++              {/* ★2026-07-30 — 갈래 하나에 호출 하나이니 «지금 무엇을 쓰는지» 를 말해 줍니다.
++                   묶음 번호보다 이게 손님에게 뜻이 있습니다. */}
++              {doneGroups < sections.length
++                ? `${doneGroups + 1}번째 갈래 · ${sections[doneGroups]?.title.replace(/^\S+\s*\d+\.\s*/, '') ?? ''}`
++                : '거의 다 됐어요'}
++              {tong.length > 0 && ` · ${tong.length.toLocaleString()}자`}
+             </div>
+           </div>
+         )}
+@@ -770,6 +802,37 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
+         </div>
+       </div>
+ 
++        {/* ★★2026-07-30 — 개발용 진단 상자.
++             [왜] 하루 동안 «어디서 막혔나» 를 찾느라 Vercel 로그와 관리자 오류탭을
++               오갔습니다. 그 일을 대표님께 계속 부탁할 수 없습니다.
++             → 호출마다 상태코드·걸린 시간·받은 글자수를 여기 남깁니다.
++               펴서 캡처 한 장만 주시면 원인이 그 자리에서 드러납니다.
++             ⚠️ 접혀 있고 «개발용» 이라 적혀 있어 손님이 눌러야 보입니다.
++             ⚠️ 안정되면 이 블록만 지우면 됩니다. 다른 곳과 얽혀 있지 않습니다. */}
++        {diag.length > 0 && (
++          <details style={{
++            background: '#f7f4f0', border: '0.5px dashed #d8c8b8', borderRadius: 12,
++            padding: '10px 12px', marginBottom: 12,
++          }}>
++            <summary style={{ fontSize: 11.5, color: '#8a7063', cursor: 'pointer' }}>
++              🔧 개발용 — 호출 기록 {diag.length}/{sections.length}
++            </summary>
++            <div style={{ marginTop: 9, fontSize: 11, color: '#6b5a50', lineHeight: 1.9, fontFamily: 'monospace' }}>
++              {diag.map((d, i) => (
++                <div key={i} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
++                  {`${d.n}. ${d.key.padEnd(8)} HTTP ${d.status ?? '—'} · ${(d.ms / 1000).toFixed(1)}s · ${d.chars}자 · ${d.note}`}
++                </div>
++              ))}
++              <div style={{ marginTop: 7, paddingTop: 7, borderTop: '1px solid #e5dcd2' }}>
++                {`총 ${tong.length}자 · 상한 ${CALL_MAX_TOKENS} 토큰/호출 · 상태 ${tongState}`}
++              </div>
++              <div style={{ marginTop: 5, color: '#a08878' }}>
++                {'★걸린 시간이 60s·300s 에 몰리면 Vercel 시간 제한 · HTTP 429 면 한도'}
++              </div>
++            </div>
++          </details>
++        )}
++
+       {/* 아래 붙박이 메뉴 — 다른 화면과 같은 모양 (result-new 에서 그대로 가져옴) */}
+       <div style={{
+         position: 'fixed', bottom: 0, zIndex: 50, left: '50%', transform: 'translateX(-50%)',
+diff --git a/lib/saju/examLuck/buildExamPrompt.ts b/lib/saju/examLuck/buildExamPrompt.ts
+index d840828..12f12e4 100644
+--- a/lib/saju/examLuck/buildExamPrompt.ts
++++ b/lib/saju/examLuck/buildExamPrompt.ts
+@@ -11,6 +11,7 @@
+ //   ④ 재료에 넣어 두고 "쓰지 마세요" 라고 하면 새어 나온다. 못 쓰게 하려면 재료에서 뺀다. (교훈 BF)
+ //   ⑤ 내부 점수를 "9.8점" 으로 주면 그대로 화면에 나간다. 쓸 수 없게 생기게 한다. (교훈 BG)
+ 
++import { sevenKeyOf } from './buildExamSeven'
+ import type { ExamCard, ExamTarget } from './types'
+ import { CLOSING, CLOSING_STUDENT, CLOSING_SRC } from './tables/rules'
+ 
+@@ -413,7 +414,18 @@ export function parseExamTongbyeon(full: string): ParsedExamTongbyeon {
+     const k = keyOfTitle(b.title)
+     // ⑤ 짝 못 찾은 대목을 소리 없이 버리지 않는다 (30부 2장)
+     if (k) byKey[k] = cut(body)
+-    else orphan.push(`■ ${b.title}\n${body}`)
++    // ★★2026-07-30 — 7대 카테고리 제목을 orphan 으로 보내지 않습니다.
++    //
++    //   [무엇이 있었나] 화면에 같은 글이 «두 번» 나왔습니다.
++    //     위에는 카드로, 아래에는 ■ 와 [한줄] 까지 붙은 날것으로.
++    //   [까닭] keyOfTitle 은 **옛 카드 제목만** 압니다(years·dayun·susi…).
++    //     7대 카테고리 제목(「🧬 1. 타고난 공부 DNA와 적성」)은 못 잡습니다.
++    //     → orphan 으로 떨어져 outro 에 날것으로 실렸고,
++    //       화면은 그 outro 를 그대로 그렸습니다.
++    //     한편 sevenKeyOf 는 같은 제목을 잡아 카드로도 그렸습니다. 그래서 두 번.
++    //   ⚠️ orphan 그물 자체는 지우지 않았습니다. 30부에 «지어낸 제목을 버리지 말라» 고
++    //      넣은 것입니다. 7대 카테고리만 예외로 뺍니다.
++    else if (!sevenKeyOf(b.title)) orphan.push(`■ ${b.title}\n${body}`)
+   }
+   if (orphan.length) outro = [outro, ...orphan].filter(Boolean).join('\n\n')
+ 
+diff --git a/lib/saju/examLuck/buildExamSeven.ts b/lib/saju/examLuck/buildExamSeven.ts
+index 30af763..7db5b29 100644
+--- a/lib/saju/examLuck/buildExamSeven.ts
++++ b/lib/saju/examLuck/buildExamSeven.ts
+@@ -101,31 +101,51 @@ export function sevenOf(target: ExamTarget): SevenSection[] {
+ }
+ 
+ /**
+- * 갈래를 묶음으로 나눈다 — 한 번에 «둘까지» 만 시킵니다.
++ * 호출 차례 — ★갈래 하나에 호출 하나 (1 : 1).
+  *
+- * ── ⚠️ 왜 «한 번에 일곱» 이 안 되는가 (교훈 CV — 35부가 실측한 것) ────
+- *   여섯 대목 한 번  →  앞 두셋만 씀
+- *   세 대목 한 번    →  첫 하나만 씀
+- *   프롬프트를 네 번 다듬어도 같은 자리에서 실패했습니다.
+- *   ★대목 수가 문제가 아니라 «여러 대목을 한 번에» 가 문제입니다.
++ * ── ⚠️⚠️ 왜 «묶지 않는가» (2026-07-30 대표님 지시) ──────────────────
++ *   인수인계서 교훈 CV 에는 이렇게 적혀 있었습니다.
++ *       「대목 수가 아니라 «한 번에» 가 문제다. 일을 나눠라. (묶음 둘셋이면 다 쓴다)」
++ *   ★뒤 괄호가 틀렸습니다. 저는 그 문장을 믿고 재보지 않았습니다.
+  *
+- * ── ★2026-07-30 — 셋에서 넷으로 쪼갰습니다 (대표님 지시로 «순차» 로 바꾸면서) ──
+- *   전   2 + 2 + 3   (나란히 호출)   ← 3묶음이 3,600 토큰으로 가장 길었습니다
+- *   후   2 + 2 + 2 + 1 (차례로 호출)
+- *   [왜] 이제 한 번에 하나만 부릅니다. 묶음을 잘게 쪼개면
+- *        ① 한 번의 함수 호출이 짧아져 Vercel 시간 제한에 안 걸립니다
+- *        ② 한 묶음이 실패해도 잃는 것이 적습니다
+- *        ③ 한 번에 둘뿐이니 교훈 CV 로부터 더 안전합니다
+- *   ⚠️ 차례로 부르니 전체 시간은 늘어납니다. 대표님이
+- *      «속도보다 끊기지 않는 것이 최우선» 이라 정하셨습니다.
++ *   실기기에서 드러난 것 —
++ *       묶음 [1,2] [3,4] [5,6,7] 로 부르니 뜬 갈래가 **1, 3, 5** 였습니다.
++ *       ★묶음마다 «첫 갈래만» 쓰고 끝냈습니다.
++ *       둘로 줄여도 마찬가지였습니다. «둘셋이면 다 쓴다» 는 사실이 아닙니다.
++ *
++ *   그래서 하나에 하나입니다. 이러면 —
++ *       ① AI 가 «빼먹을 갈래» 가 없습니다. 쓸 것이 하나뿐입니다
++ *       ② 한 호출이 짧아(1,600 토큰) Vercel 시간 제한에 걸릴 여지가 없습니다
++ *       ③ 하나가 실패해도 그 갈래만 빕니다. 나머지는 멀쩡합니다
++ *       ④ 관리가 쉽습니다 — 갈래 하나 = 프롬프트 하나 = 호출 하나
++ *
++ * ── ⚠️ 대신 치르는 값 ────────────────────────────────────────────
++ *   재료(판정 카드 ~2,900자)를 일곱 번 되풀이해 보냅니다.
++ *   입력 토큰이 묶음 넷일 때보다 대략 두 배입니다.
++ *   ★줄이려면 갈래마다 «그 갈래에 필요한 재료만» 골라 보내면 됩니다.
++ *     (D-Day 는 일진만, 열두 달은 월운만 — 3-x 할 일에 적었습니다)
++ *
++ * ⚠️ 이름을 SEVEN_GROUPS 로 그대로 두었습니다. 화면과 검사기가 이 이름을 부릅니다.
++ *    «묶음» 이라는 말이 남아 있지만 이제 한 묶음에 하나뿐입니다.
+  */
+ export const SEVEN_GROUPS: SevenKey[][] = [
+-  ['dna', 'subject'],
+-  ['ratio', 'monthly'],
+-  ['dday', 'apply'],
++  ['dna'],
++  ['subject'],
++  ['ratio'],
++  ['monthly'],
++  ['dday'],
++  ['apply'],
+   ['mentor'],
+ ]
+ 
++/**
++ * 한 호출에 줄 출력 상한.
++ * ⚠️ 갈래 하나가 6~8문장 + [한줄]·[태그]·[실천] 입니다. 우리말 400~600자면
++ *    넉넉히 800 토큰쯤입니다. 1,600 은 «잘리지 않을» 여유입니다.
++ *    ★더 키우지 마십시오. 상한이 크면 모델이 여유를 두고 생성해 느려집니다. (교훈 CX)
++ */
++export const CALL_MAX_TOKENS = 1600
++
+ // ══════════════════════════════════════════════════════════════════
+ //  ★지시서 2-A-1 «현실적 가중치 법칙» — 성적·환경 60 : 사주 40
+ // ══════════════════════════════════════════════════════════════════

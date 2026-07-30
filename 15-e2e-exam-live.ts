@@ -27,7 +27,7 @@ import { judgeExamDay } from './lib/saju/examLuck/examDay'
 import { buildAllCards } from './lib/saju/examLuck/buildCards'
 import { judgePassSignal, passSignalBlock } from './lib/saju/examLuck/passSignal'
 import { upsangBlock } from './lib/saju/examLuck/tables/upsang'
-import { buildSevenPrompt, sevenOf, SEVEN_GROUPS, sevenKeyOf } from './lib/saju/examLuck/buildExamSeven'
+import { buildSevenPrompt, sevenOf, SEVEN_GROUPS, sevenKeyOf, CALL_MAX_TOKENS } from './lib/saju/examLuck/buildExamSeven'
 import { gradeLabel, levelLabel, trackOf, categoryLabel, targetOf, GRADE_PROMPT } from './lib/saju/examLuck/tables/studentTarget'
 import { STUDENT_BAN_WORDS } from './lib/saju/examLuck/tables/rules'
 import { calcSeyunList } from './lib/saju/dayun'
@@ -185,9 +185,9 @@ async function main() {
   let total = 0
   SEVEN_GROUPS.forEach((g, i) => {
     total += prompts[i].length
-    console.log(`   ${i + 1}묶음 [${g.join('+')}]  ${String(prompts[i].length).padStart(5)}자 · maxTokens ${g.length * 1200}`)
+    console.log(`   ${i + 1}묶음 [${g.join('+')}]  ${String(prompts[i].length).padStart(5)}자 · maxTokens ${CALL_MAX_TOKENS}`)
   })
-  console.log(`   합계 ${total}자 · 출력 상한 합계 ${SEVEN_GROUPS.reduce((s, g) => s + g.length * 1200, 0)} 토큰`)
+  console.log(`   합계 ${total}자 · 출력 상한 합계 ${SEVEN_GROUPS.length * CALL_MAX_TOKENS} 토큰`)
   if (prompts.some(p => !p)) bad('프롬프트가 안 나온 묶음이 있음')
   else ok('세 묶음 전부 생성')
 
