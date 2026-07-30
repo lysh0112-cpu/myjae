@@ -470,14 +470,23 @@ export function judgeResource(
       balance -= PENALTY_DEVELOPED
     }
 
-    // (b) 결핍 오행을 채웠다 — 가산
-    if (P.lacking.includes(o)) {
-      lackFilled.push(o)
-      balance += BONUS_LACK
-    } else if (P.isolated.includes(o)) {
-      // (b-2) 고립으로 본 오행을 채웠다 — 가산 (잣대는 judgeIsolated 주석 참고)
-      isolatedFilled.push(o)
-      balance += BONUS_ISOLATED
+    // (b) 결핍·고립 오행을 채웠다 — 가산
+    //   ⚠️⚠️ 단, «기신·구신» 이면 가산하지 않습니다.
+    //     [왜]  꺼리는 기운이 비어 있는 것은 «아쉬움» 이 아니라 오히려 편한 자리입니다.
+    //           그것을 채우면 사주가 꺼리는 기운을 보태는 것이므로 상 줄 일이 아닙니다.
+    //     ★2026-07-30 실기기에서 드러났습니다 — 기신(금)이 결핍인 사주에
+    //       AI 가 「금의 기운을 의식적으로 가꾸어 나가십시오」 라고 권했습니다.
+    //       재료가 «금이 비어 있다» 만 말하고 «금이 기신이다» 를 말하지 않았기 때문입니다.
+    const isDisliked = (P.gisin && o === P.gisin) || (P.gusin && o === P.gusin)
+    if (!isDisliked) {
+      if (P.lacking.includes(o)) {
+        lackFilled.push(o)
+        balance += BONUS_LACK
+      } else if (P.isolated.includes(o)) {
+        // (b-2) 고립으로 본 오행을 채웠다 — 가산 (잣대는 judgeIsolated 주석 참고)
+        isolatedFilled.push(o)
+        balance += BONUS_ISOLATED
+      }
     }
 
     // (c) ★기신·구신을 보탰다 — 지금까지 재료조차 안 받던 판정
@@ -569,6 +578,12 @@ export function resourceFactsBlock(v: ResourceVerdict, P: SajuOhaengProfile): st
   L.push('[사주와의 관계]')
   if (P.yongsin) L.push(`사주가 바라는 기운(용신)   ${P.yongsin}`)
   if (P.heeksin) L.push(`그다음으로 좋은 기운(희신)  ${P.heeksin}`)
+  // ★★2026-07-30 — 기신·구신을 «언제나» 적습니다.
+  //   [왜]  전에는 «이름에 들어 있을 때만» 적었습니다. 그래서 기신이 결핍인 사주에서
+  //         AI 가 그 기운을 «가꾸라» 고 권하는 일이 실기기에서 나왔습니다.
+  //         꺼리는 기운은 이름에 없어도 AI 가 «알아야» 합니다.
+  if (P.gisin) L.push(`사주가 꺼리는 기운(기신)    ${P.gisin}  ★이 기운을 «채우라·가꾸라» 고 권하지 마세요`)
+  if (P.gusin) L.push(`도움이 덜 되는 기운(구신)   ${P.gusin}`)
   L.push(`이름에 담긴 기운            ${f.givenOhaengs.map(o => o ?? '?').join(' · ')}`)
   L.push(f.yongsinChars.length
     ? `용신을 담은 글자            ${f.yongsinChars.map(c => c.hanja).join(' · ')}`
@@ -592,9 +607,19 @@ export function resourceFactsBlock(v: ResourceVerdict, P: SajuOhaengProfile): st
       L.push(`${which.padEnd(20, ' ')} ${o} — 이름에 들어 있습니다`)
     }
   }
-  // 아직 채우지 않은 결핍 — 「없다」가 아니라 「비어 있다」로 적습니다
+  // ★채우지 않은 결핍 — «꺼리는 기운» 과 «바라는 기운» 을 갈라 적습니다.
+  //   전에는 뭉쳐서 「채우지 않았습니다」 로만 적어, 기신이 결핍일 때
+  //   AI 가 그것을 아쉬움으로 읽고 «가꾸라» 고 권했습니다.
   const lackUnfilled = P.lacking.filter(o => !f.lackFilled.includes(o))
-  if (lackUnfilled.length) L.push(`비어 있는 기운              ${lackUnfilled.join(' · ')} — 이름이 채우지 않았습니다`)
+  const lackWanted = lackUnfilled.filter(o => o !== P.gisin && o !== P.gusin)
+  const lackDisliked = lackUnfilled.filter(o => o === P.gisin || o === P.gusin)
+  if (lackWanted.length) {
+    L.push(`비어 있는 기운              ${lackWanted.join(' · ')} — 이름이 채우지 않았습니다`)
+  }
+  if (lackDisliked.length) {
+    L.push(`비어 있으나 꺼리는 기운      ${lackDisliked.join(' · ')} — 비어 있는 것이 편한 자리로 봅니다`)
+    L.push(`                            ★«채우라·보태라·가꾸라» 고 권하지 마세요`)
+  }
 
   if (v.warnings.length) {
     L.push('')
