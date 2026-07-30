@@ -160,10 +160,8 @@ export interface AvoidReason {
 /**
  * 이 글자를 손님에게 내지 않을 것인가.
  *
- * ★세 화면이 이 함수 하나를 씁니다. 전에는 —
- *     diagnosis        avoid_hard + 不用 + 뜻
- *     rename/hanja     avoid_hard 만          ← 不用 947건이 그대로 나갔습니다
- *     rename/newhanja  avoid_hard 만          ← 같음
+ * ⚠️⚠️ **목록을 만들 때는 이 함수를 쓰지 마십시오.** `listPolicy()` 를 쓰십시오.
+ *    까닭 — 아래 「왜 거르지 않고 표시하나」 를 보십시오.
  */
 export function avoidReason(row: HanjaRow): AvoidReason {
   if (row.avoid_hard === true) return { avoid: true, why: 'avoid_hard' }
@@ -177,6 +175,84 @@ export function avoidReason(row: HanjaRow): AvoidReason {
 /** 짧은 형태 */
 export function isAvoidChar(row: HanjaRow): boolean {
   return avoidReason(row).avoid
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  ★목록 정책 — «거르기» 가 아니라 «표시하기»
+// ══════════════════════════════════════════════════════════════════
+//
+//  [왜 거르지 않고 표시하나]  2026-07-30 실측
+//
+//    不用(인명 불가)을 목록에서 «빼면» 어떻게 되는지 DB 로 재봤습니다.
+//        전체 8,650자 중 不用 4,486자 (51.9%)
+//        485개 음(音) 가운데 —
+//            A. 후보 0개   ★50개 음   겁 곪 곯 괴 굄 굅 궤 긱 깁 넉 넘 넣 늠 …
+//            B. 1~2개       101개 음
+//            C. 3~5개       110개 음
+//            D. 6개 이상    224개 음
+//
+//    ★「괴」·「겁」 같은 음은 그 음의 한자가 «전부» 不用 입니다.
+//      (겁 5자 전부 · 괴 15자 전부 · 늠 5자 전부)
+//      덕암 자료가 틀린 것이 아니라 그 음의 글자들이 인명에 안 맞는 뜻인 것입니다.
+//
+//    ⚠️ 그런데 「내 이름 풀이」는 **이미 그 이름을 가진 분이 오는 화면** 입니다.
+//       거르면 그분은 한자를 하나도 못 골라 «이름 풀이 보기» 단추가 영영 안 눌립니다.
+//       손님 열 명 중 한 명꼴로 화면이 막힙니다.
+//
+//  [그래서]
+//       막는 것    avoid_hard · 쉬는 줄(is_active=false)   — 아주 좁게
+//       표시하는 것 不用 · 뜻이 좋지 않은 글자              — 목록엔 남기고 흐리게 + 배지
+//       미루는 것   추천 목록에서는 뒤로                    (compareCandidates 의 softPenalty)
+
+export interface ListPolicy {
+  /** 목록에 낼 것인가. false 는 «정말로 막는» 것뿐입니다 */
+  show: boolean
+  /** 흐리게 그릴 것인가 */
+  dim: boolean
+  /** 배지 문구. 없으면 null */
+  badge: string | null
+  /** 손님에게 보여 줄 짧은 안내. 없으면 null */
+  note: string | null
+  /** 추천 정렬에서 뒤로 미는 정도 (0=평범, 클수록 뒤) */
+  softPenalty: number
+  /** 진단용 */
+  why: AvoidReason['why']
+}
+
+/**
+ * ★목록을 만들 때는 이 함수를 쓰십시오.
+ *
+ *   const rows = data.filter(r => listPolicy(r).show)
+ *   // 그리고 그릴 때 dim·badge 를 함께 씁니다
+ */
+export function listPolicy(row: HanjaRow): ListPolicy {
+  // ── 정말로 막는 것 ──
+  if (row.avoid_hard === true) {
+    return { show: false, dim: true, badge: null, note: null, softPenalty: 100, why: 'avoid_hard' }
+  }
+  if (!rowActive(row)) {
+    return { show: false, dim: true, badge: null, note: null, softPenalty: 100, why: 'inactive' }
+  }
+
+  // ── 보여 주되 표시하는 것 ──
+  if (!rowNameUse(row)) {
+    return {
+      show: true, dim: true,
+      badge: '인명 권장 안 함',
+      note: '이름에 잘 쓰지 않는 글자로 봅니다. 이미 쓰고 계신 이름이라면 그대로 풀이해 드립니다.',
+      softPenalty: 40, why: 'not_name_use',
+    }
+  }
+  const m = row.meaning || ''
+  if (AVOID_KEYWORDS.some(k => m.includes(k))) {
+    return {
+      show: true, dim: true,
+      badge: '뜻 확인',
+      note: '뜻에 무거운 낱말이 들어 있습니다. 한 번 살펴보시면 좋겠습니다.',
+      softPenalty: 25, why: 'meaning',
+    }
+  }
+  return { show: true, dim: false, badge: null, note: null, softPenalty: 0, why: null }
 }
 
 // ══════════════════════════════════════════════════════════════════

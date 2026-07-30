@@ -17,6 +17,9 @@ import {
   type JudgeChar, type PillarLike,
 } from '@/lib/saju/resourceJudge'
 import { normalizeOhaeng, cleanHanja } from '@/lib/saju/ohaeng'
+// ★2026-07-30 (3단계-b) — 화면 표시용 별점 (대표님 지시)
+import { perspectiveStars, overallStar } from '@/lib/saju/starRating'
+import { W_FLOW, W_YONGSIN, W_BALANCE } from '@/lib/saju/resourceJudge'
 import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
 // ★2026-07-30 (3단계) — 관리자 🚨 AI 오류 탭에 남깁니다. naming 만 이것을 안 불렀습니다.
 import { logAiError, guessHint } from '@/lib/ai/errorLog'
@@ -324,12 +327,28 @@ ${JSON.stringify(factsForAI, null, 2)}
       }
     }
 
+    // ★2026-07-30 (3단계-b) — 관점별 별점 (대표님 지시)
+    //   ⚠️ 별을 «만드는» 것은 여기이고, «보여 줄지» 는 화면이 정합니다.
+    //      AI 프롬프트는 건드리지 않았습니다 — AI 는 여전히 점수·등급을 말하지 않습니다.
+    //      화면은 별을 보여 주고 글은 담담히 서술합니다. 둘이 어긋나지 않습니다.
+    const stars = perspectiveStars({
+      flowScore: verdict.breakdown.flow, flowMax: W_FLOW,
+      matchScore: verdict.breakdown.yongsin + verdict.breakdown.balance,
+      matchMax: W_YONGSIN + W_BALANCE,
+      hasYongsin: verdict.facts.hasYongsin,
+      yinYangGrade: result.yinYang.grade,
+      soundGrade: result.soundFlow.grade,
+      suriGrade: result.suri.grade,
+    })
+
     return NextResponse.json({
       hangulName,
       hanjaName,
       result,
       commentary,
       savedId,
+      stars,
+      overallStar: overallStar(stars, verdict.facts.hasYongsin),
       // ★2026-07-30 (3단계) — 통변이 비었을 때 «왜» 인지 화면이 알 수 있게.
       //   ⚠️ aiFailHint 는 우리말 안내입니다(guessHint). 손님에게 보여도 됩니다.
       aiOk: aiFailStatus === null,

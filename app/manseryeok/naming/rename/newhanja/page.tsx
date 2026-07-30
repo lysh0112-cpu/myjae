@@ -9,7 +9,7 @@ import { fromMyInfo, fromProfile, personKey, type MyInfo } from '@/lib/saju/myIn
 import { ohaengOrEmpty } from '@/lib/saju/ohaeng'
 // ★2026-07-30 (3단계) — hanja 표 단일 창구 + 후보 정렬 이관
 import {
-  HANJA_SELECT, isAvoidChar, rowOhaeng, rowStrokes, rowHanja,
+  HANJA_SELECT, listPolicy, rowOhaeng, rowStrokes, rowHanja,
   type HanjaRow as SharedHanjaRow,
 } from '@/lib/saju/hanjaRow'
 import {
@@ -205,7 +205,11 @@ function NewHanjaInner() {
           // ★2026-07-30 (3단계) — 전에는 avoid_hard «만» 보았습니다.
           //   그래서 不用(불용한자 947건)이 손님 목록에 그대로 나갔습니다.
           //   이제 diagnosis 와 «같은» 잣대를 씁니다 (avoid_hard · 不用 · 뜻 · 쉬는 줄).
-          const filtered = ((data as HanjaRow[]) ?? []).filter((row) => !isAvoidChar(row))
+          // ★2026-07-30 (3단계-b) — «거르기» 가 아니라 «표시하기» 입니다.
+          //   不用 을 목록에서 빼면 50개 음(겁·괴·늠 …)이 후보 0개가 되어
+          //   그 음을 이름에 가진 손님이 한자를 하나도 못 고르게 됩니다.
+          //   → 막는 것은 avoid_hard·쉬는 줄뿐이고, 나머지는 흐리게 + 배지로 냅니다.
+          const filtered = ((data as HanjaRow[]) ?? []).filter((row) => listPolicy(row).show)
           setHanjaList(filtered)
         }
         setLoadingList(false)
@@ -264,8 +268,8 @@ function NewHanjaInner() {
     if (scored.length === 0) return { recommend: [] as { row: HanjaRow; rank: number }[], others: [] as HanjaRow[] }
     // ★2026-07-30 (3단계) — 공용 비교 함수 (교훈 CJ)
     const sorted = [...scored].sort((a, b) => compareCandidates(
-      { fitsYongsin: a.fitsYongsin, avoidSoft: !!a.row.avoid_soft, score: a.weighted, strokes: rowStrokes(a.row) },
-      { fitsYongsin: b.fitsYongsin, avoidSoft: !!b.row.avoid_soft, score: b.weighted, strokes: rowStrokes(b.row) },
+      { fitsYongsin: a.fitsYongsin, avoidSoft: !!a.row.avoid_soft, score: a.weighted, strokes: rowStrokes(a.row), softPenalty: listPolicy(a.row).softPenalty },
+      { fitsYongsin: b.fitsYongsin, avoidSoft: !!b.row.avoid_soft, score: b.weighted, strokes: rowStrokes(b.row), softPenalty: listPolicy(b.row).softPenalty },
     ))
     const fitSorted = sorted.filter((s) => s.fitsYongsin)
     const recSrc = (fitSorted.length > 0 ? fitSorted : sorted).slice(0, TOP_N)
@@ -387,6 +391,8 @@ function NewHanjaInner() {
   const cell = (x: HanjaRow, fit: boolean, rank?: number) => {
     const on = chosen[activeIdx]?.hanja === x.hanja
     const soft = !!x.avoid_soft
+    // ★2026-07-30 (3단계-b) — 不用·무거운 뜻은 «막지 않고» 흐리게 + 배지로 알립니다.
+    const pol = listPolicy(x)
     return (
       <button key={x.hanja + x.strokes} onClick={() => pickHanja(x)} className="active:scale-95"
         style={{ position: 'relative', padding: '10px 4px 8px', textAlign: 'center', borderRadius: 16,
@@ -402,8 +408,9 @@ function NewHanjaInner() {
         {fit && <span style={{ position: 'absolute', top: 4, right: 6, fontSize: 10, color: GREEN }}>{'\u2713'}</span>}
         <div style={{ fontSize: 24, fontWeight: 600, color: on ? GOLD : '#1a1a1a', lineHeight: 1.1 }}>{x.hanja}</div>
         <div style={{ fontSize: 10, color: SUB, marginTop: 3 }}>{x.meaning}</div>
-        <div style={{ fontSize: 9, color: SUB, marginTop: 1 }}>{x.resource_ohaeng}·{x.strokes}획</div>
-        {soft && <div style={{ fontSize: 8, color: '#E0A04A', marginTop: 1 }}>주의</div>}
+        <div style={{ fontSize: 9, color: SUB, marginTop: 1 }}>{rowOhaeng(x) ?? x.resource_ohaeng}·{rowStrokes(x)}획</div>
+        {pol.badge && <div style={{ fontSize: 8, color: '#C87C6A', marginTop: 1 }}>{pol.badge}</div>}
+        {!pol.badge && soft && <div style={{ fontSize: 8, color: '#E0A04A', marginTop: 1 }}>주의</div>}
       </button>
     )
   }

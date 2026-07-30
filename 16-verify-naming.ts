@@ -41,9 +41,14 @@ import {
 // ★3단계 — 새 DB 컬럼 바인딩
 import {
   HANJA_SELECT, rowOhaeng, rowOhaengSecondary, rowStrokes, rowNameUse, rowHanja,
-  isAvoidChar, avoidReason, toJudgeChar, toNameChar, describeRowSource,
+  isAvoidChar, avoidReason, listPolicy, toJudgeChar, toNameChar, describeRowSource,
   type HanjaRow,
 } from './lib/saju/hanjaRow'
+// ★3단계-b — 별점 · 목록 정책
+import {
+  starOf, starRaw, applyYongsinFloor, perspectiveStars, overallStar,
+  starGlyphs, starText, STAR_BANDS, STAR_FLOOR, YONGSIN_FLOOR,
+} from './lib/saju/starRating'
 import { diagnoseName, type NameChar } from './lib/saju/naming'
 import { getSuriInfo, SURI_81 } from './lib/saju/suri81'
 
@@ -748,7 +753,134 @@ head('⑧-3 ★개명 후보 정렬 이관 (3단계)')
   check(a1 === a2, `정렬이 되돌릴 수 있습니다 (${a1})`)
 }
 
+// ══════════════════════════════════════════════════════════════════
+head('⑧-4 ★별점 변환 (3단계-b · 대표님 지시)')
+// ══════════════════════════════════════════════════════════════════
+{
+  check(STAR_FLOOR === 2.5, `하한이 ★2.5 — 손님 화면에 ★1.0·★2.0 이 나올 수 없습니다`)
+  check(STAR_BANDS.length === 6, `칸 여섯 (5.0/4.5/4.0/3.5/3.0/2.5)`)
 
+  // 지시서 라벨표와 한 칸씩 대조
+  const want: Array<[number, number, string]> = [
+    [100, 5.0, '매우 조화로움'], [90, 5.0, '매우 조화로움'],
+    [89, 4.5, '우수함'], [75, 4.5, '우수함'],
+    [74, 4.0, '좋음'], [60, 4.0, '좋음'],
+    [59, 3.5, '보통 · 살펴볼 자리'], [45, 3.5, '보통 · 살펴볼 자리'],
+    [44, 3.0, '참고 · 보완 권장'], [30, 3.0, '참고 · 보완 권장'],
+    [29, 2.5, '살펴볼 자리가 여럿'], [0, 2.5, '살펴볼 자리가 여럿'],
+  ]
+  let bandBad = 0
+  for (const [sc, st2, lb] of want) {
+    const r = starOf(sc)
+    if (r.star !== st2 || r.label !== lb) bandBad++
+  }
+  check(bandBad === 0, `라벨표 12칸이 지시서와 일치 (어긋남 ${bandBad})`)
+
+  // 단조성 — 점수가 오르는데 별이 내려가면 안 됩니다
+  let mono = true
+  for (let sc = 0; sc < 100; sc++) if (starOf(sc + 1).star < starOf(sc).star) mono = false
+  check(mono, `★점수가 오르면 별도 오르거나 같습니다 (단조)`)
+
+  check(starOf(-50).star === 2.5 && starOf(999).star === 5.0, `범위 밖도 안전하게 잡힙니다`)
+  check(starOf(NaN).star === 2.5, `NaN 도 하한으로`)
+
+  // ★용신 하한
+  check(YONGSIN_FLOOR === 3.5, `용신 하한이 ★3.5`)
+  check(applyYongsinFloor(starOf(10), true).star === 3.5,
+    `★용신을 담으면 10점이어도 ★3.5 로 올라갑니다`)
+  check(applyYongsinFloor(starOf(10), true).lifted === true, `올라간 것을 표시합니다(lifted)`)
+  check(applyYongsinFloor(starOf(10), false).star === 2.5, `용신이 없으면 그대로`)
+  check(applyYongsinFloor(starOf(95), true).star === 5.0, `이미 높으면 내리지 않습니다`)
+  check(applyYongsinFloor(starOf(95), true).lifted === false, `그때는 lifted=false`)
+
+  // ★판정 어휘 — 별 라벨에도 «흉·나쁨» 이 없어야 합니다
+  const BANWORD = ['흉', '나쁨', '나쁜', '불길', '최악', '위험', '실패', '망']
+  const hitw = STAR_BANDS.flatMap(b => BANWORD.filter(w => b.label.includes(w)))
+  check(hitw.length === 0, `별 라벨에 단정적 부정어 0건 — 걸린 말: ${hitw.join(',') || '없음'}`)
+
+  // 지시서의 «원 공식» 은 라벨표와 다릅니다 — 그 사실을 잠급니다
+  check(starRaw(60) !== starOf(60).star,
+    `★원 공식과 라벨표가 다릅니다 — 60점: 공식 ★${starRaw(60)} vs 표 ★${starOf(60).star}`)
+
+  // 다섯 관점
+  const st = perspectiveStars({
+    flowScore: 27, flowMax: 30, matchScore: 40, matchMax: 70, hasYongsin: true,
+    yinYangGrade: '좋음', soundGrade: '보통', suriGrade: '아쉬움',
+  })
+  check(st.length === 5, `관점 다섯`)
+  check(st.map(x => x.key).join() === 'yinyang,baleum,suri,jawon,yongsin', `순서가 화면과 같습니다`)
+  check(st.find(x => x.key === 'jawon')!.precise === true, `자원오행은 정밀 점수`)
+  check(st.find(x => x.key === 'suri')!.precise === false, `수리는 아직 3단 등급 (4단계 대상)`)
+  check(st.every(x => x.star >= 2.5 && x.star <= 5.0), `다섯 관점 전부 범위 안`)
+
+  // 용신 하한이 «사주와의 만남» 에만 걸리는가
+  const low = perspectiveStars({
+    flowScore: 0, flowMax: 30, matchScore: 5, matchMax: 70, hasYongsin: true,
+    yinYangGrade: '아쉬움', soundGrade: '아쉬움', suriGrade: '아쉬움',
+  })
+  check(low.find(x => x.key === 'yongsin')!.star === 3.5,
+    `★용신을 담으면 «사주와의 만남» 이 ★3.5 아래로 안 내려갑니다`)
+  check(low.find(x => x.key === 'jawon')!.star === 2.5,
+    `★자원오행에는 하한을 걸지 않습니다 (지시서는 사주와의 만남에만)`)
+
+  const ov = overallStar(st, true)
+  check(ov.star >= 2.5 && ov.star <= 5.0, `종합 별점도 범위 안 (★${ov.star})`)
+  check(starGlyphs(4.5).full === 4 && starGlyphs(4.5).half === 1 && starGlyphs(4.5).empty === 0,
+    `별 글자 — ★4.5 = 꽉 4 + 반 1`)
+  check(starText(starOf(80)).startsWith('★4.5'), `짧은 말 — ${starText(starOf(80))}`)
+}
+
+// ══════════════════════════════════════════════════════════════════
+head('⑧-5 ★목록 정책 — «거르기» 가 아니라 «표시하기» (3단계-b)')
+// ══════════════════════════════════════════════════════════════════
+//
+// ⚠️⚠️ 이 구획을 지우지 마십시오. 실제로 손님이 막힐 뻔한 자리입니다.
+//   [무엇이 있었나]  3단계가 不用 을 목록에서 «뺐습니다».
+//     DB 실측 — 8,650자 중 不用 4,486자(51.9%). 485개 음 가운데
+//       ★후보 0개가 되는 음이 50개 (겁 곪 곯 괴 굄 굅 궤 긱 깁 넉 넘 넣 늠 …)
+//       1~2개뿐인 음이 101개
+//     「겁」은 5자 전부, 「괴」는 15자 전부, 「늠」은 5자 전부가 不用 입니다.
+//     → 그 음을 이름에 가진 손님은 한자를 하나도 못 골라 화면이 막힙니다.
+//   [고침]  막는 것은 avoid_hard·쉬는 줄뿐. 나머지는 흐리게 + 배지 + 정렬 뒤로.
+{
+  const base: HanjaRow = {
+    hangul: '괴', hanja: '傀', meaning: '허수아비', strokes: 12,
+    resource_ohaeng: '火', grade: '不用',
+  }
+  const pol = listPolicy(base)
+  check(pol.show === true, `★不用 이어도 목록에 «보여 줍니다» — 막지 않습니다`)
+  check(pol.dim === true && pol.badge === '인명 권장 안 함', `흐리게 + 배지로 알립니다`)
+  check(pol.softPenalty === 40, `추천 정렬에서는 뒤로 (${pol.softPenalty})`)
+  check(!!pol.note && !/흉|나쁨|불길|위험/.test(pol.note ?? ''), `안내 문구에 단정적 부정어 0건`)
+
+  check(listPolicy({ ...base, avoid_hard: true }).show === false, `avoid_hard 는 막습니다`)
+  check(listPolicy({ ...base, is_active: false }).show === false, `쉬는 줄(중복 격리)도 막습니다`)
+
+  const mm = listPolicy({ ...base, grade: '中吉', meaning: '죽을, 주검' })
+  check(mm.show === true && mm.badge === '뜻 확인', `무거운 뜻도 «보여 주되» 배지`)
+  check(mm.softPenalty === 25, `不用(40)보다는 가볍게 뒤로 (${mm.softPenalty})`)
+
+  const okp = listPolicy({ ...base, grade: '中吉', meaning: '버들' })
+  check(okp.show && !okp.dim && okp.badge === null && okp.softPenalty === 0, `평범한 글자는 그대로`)
+
+  // ★정렬 — 不用 이 «뒤로» 가되 목록에는 있는가
+  const mkc = (fy: boolean, sc: number, pen: number) =>
+    ({ fitsYongsin: fy, avoidSoft: false, score: sc, strokes: 9, softPenalty: pen })
+  check(compareCandidates(mkc(true, 50, 0), mkc(true, 99, 40)) < 0,
+    `★不用(40)은 점수가 훨씬 높아도 뒤로 갑니다`)
+  check(compareCandidates(mkc(true, 50, 25), mkc(true, 50, 40)) < 0,
+    `뜻(25)이 不用(40)보다 앞`)
+  check(compareCandidates(mkc(true, 50, 0), mkc(false, 99, 0)) < 0,
+    `용신 하드 게이트는 여전히 가장 먼저`)
+  check(compareCandidates(mkc(true, 50, 0), mkc(true, 50, 0)) === 0, `같으면 0`)
+
+  const noPen = { fitsYongsin: true, avoidSoft: false, score: 50, strokes: 9 }
+  check(compareCandidates(noPen, mkc(true, 50, 40)) < 0, `softPenalty 없으면 0 으로 봅니다`)
+}
+
+// ══════════════════════════════════════════════════════════════════
+head('⑨ 무작위 관통 — 조용히 깨지지 않는가')
+// ══════════════════════════════════════════════════════════════════
 const RAW = ['목', '화', '토', '금', '수', '木', '火', '土', '金', '水', ' 木 ', '木(목)', '', 'zzz']
 const HANJA = ['柳', '承', '炫', '沐', '垈', '鐘', '夏', '訥', '別', ' 熺', '琳', '潤']
 const dist = {

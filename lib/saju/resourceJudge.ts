@@ -712,9 +712,20 @@ export interface CandidateLike {
   avoidSoft: boolean
   score: number
   strokes: number
+  /**
+   * ★2026-07-30 (3단계-b) — «막지 않고 뒤로 미는» 정도. hanjaRow.listPolicy 가 줍니다.
+   *   不用 40 · 뜻 25 · 평범 0. 없으면 0 으로 봅니다.
+   *   [왜]  不用 을 목록에서 빼면 50개 음이 후보 0개가 되어 손님이 막힙니다.
+   *         그래서 «보여 주되 뒤로» 두는 것입니다.
+   */
+  softPenalty?: number
 }
 export function compareCandidates(a: CandidateLike, b: CandidateLike): number {
   if (a.fitsYongsin !== b.fitsYongsin) return a.fitsYongsin ? -1 : 1
+  // ★不用·뜻으로 미룬 글자를 먼저 뒤로 보냅니다 (avoid_soft 보다 무겁게 봅니다)
+  const aPen = a.softPenalty ?? 0
+  const bPen = b.softPenalty ?? 0
+  if (aPen !== bPen) return aPen - bPen
   const aSoft = a.avoidSoft ? 1 : 0
   const bSoft = b.avoidSoft ? 1 : 0
   if (aSoft !== bSoft) return aSoft - bSoft
