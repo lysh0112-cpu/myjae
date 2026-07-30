@@ -1,0 +1,272 @@
+diff --git a/app/manseryeok/exam-luck-result/components/ExamResultShell.tsx b/app/manseryeok/exam-luck-result/components/ExamResultShell.tsx
+index 9afd498..3db80eb 100644
+--- a/app/manseryeok/exam-luck-result/components/ExamResultShell.tsx
++++ b/app/manseryeok/exam-luck-result/components/ExamResultShell.tsx
+@@ -393,7 +393,10 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
+        * ★career-result/page.tsx 178~245줄과 같은 얼개입니다. 새로 설계하지 않았습니다.
+        * @returns 한 글자라도 받았는가
+        */
+-      const runGroup = async (g: typeof SEVEN_GROUPS[number], idx: number): Promise<boolean> => {
++      const runGroup = async (
++        g: typeof SEVEN_GROUPS[number], idx: number,
++        parts: string[], onChunk: () => void,
++      ): Promise<boolean> => {
+         const sp = buildSevenPrompt(sevenArgs, g)
+         if (!sp) return false
+ 
+@@ -405,14 +408,14 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
+           if (stallTimer) clearTimeout(stallTimer)
+           stallTimer = setTimeout(() => ac.abort('stall'), STALL_MS)
+         }
+-        const before = acc.length
++        const before = (parts[idx] ?? '').length
+         const t0 = Date.now()
+         /** ★이 호출에 무슨 일이 있었나를 남긴다 (화면 맨 아래 진단 상자) */
+         const record = (status: number | null, note: string) => {
+           if (cancelled) return
+           setDiag(d => [...d, {
+             n: idx + 1, key: g.join('+'), status,
+-            ms: Date.now() - t0, chars: acc.length - before, note,
++            ms: Date.now() - t0, chars: (parts[idx] ?? '').length - before, note,
+           }])
+         }
+ 
+@@ -453,8 +456,9 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
+             if (d === '[DONE]') return
+             try {
+               const parsed = JSON.parse(d)
+-              // ★★진로적성 229줄과 같은 한 줄 — 조각마다 화면을 갱신합니다
+-              if (parsed.text) { acc += parsed.text; if (!cancelled) setTong(acc) }
++              // ★★진로적성 229줄과 같은 결 — 조각마다 화면을 갱신합니다.
++              //   ⚠️ 다만 자기 «자리» 에 쌓습니다. 그래야 둘씩 불러도 순서가 1→7 로 지켜집니다.
++              if (parsed.text) { parts[idx] = (parts[idx] ?? '') + parsed.text; onChunk() }
+             } catch { /* 부서진 줄 — SSE 는 조각으로 오므로 정상입니다 */ }
+           }
+ 
+@@ -471,8 +475,9 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
+           // ★마지막 줄에 개행이 없으면 여기 남는다. 버리면 끝 문장이 잘린다. (2026-07-27)
+           buf += decoder.decode()
+           if (buf.trim()) take(buf.trim())
+-          record(res.status, acc.length > before ? '정상' : '★200 인데 글이 안 왔음')
+-          return acc.length > before
++          const got = (parts[idx] ?? '').length > before
++          record(res.status, got ? '정상' : '★200 인데 글이 안 왔음')
++          return got
+         } catch (e) {
+           // ★중간까지 받은 것은 acc 에 이미 들어가 있습니다. 버리지 않습니다.
+           const why = ac.signal.aborted
+@@ -480,7 +485,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
+                 ? `${STALL_MS / 1000}초 동안 글이 안 와서 멈췄습니다`
+                 : `${HARD_MS / 1000}초를 넘겨 끊었습니다`)
+             : String(e)
+-          const got = acc.length - before
++          const got = (parts[idx] ?? '').length - before
+           failNotes.push(`${idx + 1}묶음 — ${why}${got > 0 ? ` (${got}자는 살렸습니다)` : ''}`)
+           console.error('합격운 묶음 실패', g, why)
+           record(null, why)
+@@ -493,12 +498,39 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
+ 
+       // ★차례로 부릅니다 — 한 번에 하나. 화면에는 한 흐름으로 이어집니다.
+       try {
+-        for (let i = 0; i < SEVEN_GROUPS.length; i++) {
++        /**
++         * ★2026-07-30 — 한 번에 몇 개를 부를까.
++         *
++         *   1 = 완전히 차례로 (가장 안전 · 2~3분)
++         *   2 = 둘씩       (기본값 · 1~1.5분)
++         *
++         *   [왜 둘까지는 안전한가]
++         *     전에 막혔던 것은 «나란히» 자체가 아니라 상한이 컸기 때문입니다.
++         *         전   2,400 + 2,400 + 3,600 = 8,400 토큰을 한꺼번에 잡아 둠
++         *         후   1,600 × 2 = 3,200 토큰   ← 절반도 안 됩니다
++         *     갈래 하나에 호출 하나가 되면서 한 호출이 작아졌습니다.
++         *   ⚠️ **끊김이 다시 보이면 이 숫자를 1 로 바꾸십시오.** 그 한 줄이 전부입니다.
++         *      3 이상으로 올리지 마십시오. 예전 문제로 돌아갑니다.
++         *   ⚠️ 결과 순서는 이 숫자와 관계없이 언제나 1→7 입니다.
++         *      partsRef 자리에 넣고 자리 순서대로 이어 붙이기 때문입니다.
++         */
++        const CONCURRENCY = 2
++
++        /** 갈래별로 받은 글 — ★자리 순서를 지키려고 따로 둡니다 */
++        const partsRef: string[] = SEVEN_GROUPS.map(() => '')
++        /** 자리 순서대로 이어 붙여 화면에 올린다 */
++        const joinParts = () => {
++          if (cancelled) return
++          acc = partsRef.filter(Boolean).join('\n\n')
++          setTong(acc)
++        }
++
++        for (let i = 0; i < SEVEN_GROUPS.length; i += CONCURRENCY) {
+           if (cancelled) return
+           setDoneGroups(i)
+-          // 묶음 사이에 빈 줄을 둡니다 — 파서가 ■ 로 자르므로 앞에 개행이 있어야 합니다
+-          if (acc && !acc.endsWith('\n\n')) { acc += '\n\n'; setTong(acc) }
+-          await runGroup(SEVEN_GROUPS[i], i)
++          const wave = SEVEN_GROUPS.slice(i, i + CONCURRENCY)
++          await Promise.all(wave.map((g, k) => runGroup(g, i + k, partsRef, joinParts)))
++          joinParts()
+         }
+         if (cancelled) return
+         setDoneGroups(SEVEN_GROUPS.length)
+@@ -664,47 +696,62 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
+              → 이제 풀이는 일곱 갈래로 그리고, 판정 카드는 아래 「근거」로 접어 둡니다.
+              ⚠️ 도표는 결이 맞는 갈래 «바로 위» 에 얹습니다. (샌드위치)
+                 subject → 연도별 흐름표 · dday → 달별 흐름표 */}
+-        {sections.map(sec => {
++        {/* ★★2026-07-30 — 일곱 «자리» 를 처음부터 다 만들어 둡니다. (대표님 지적)
++             [무엇이 답답했나] 전에는 «온 것만» 그렸습니다. 그래서 2번까지 왔을 때
++               화면에 1·2 만 있고 3~7 이 있을 자리가 아예 없었습니다.
++               그 바로 아래에 다른 블록이 붙어 «리포트가 여기서 끝났다» 처럼 보였습니다.
++             → 이제 1~7 제목이 처음부터 순서대로 서 있고, 글이 그 안에 채워집니다.
++               손님이 «몇 개가 남았는지» 를 눈으로 압니다.
++             ⚠️ 아직 안 온 자리는 흐린 제목 + «쓰고 있어요» 로 둡니다. 빈 카드를 그리지 않습니다. */}
++        {sections.map((sec, i) => {
+           const body = sevenBody[sec.key]
+-          if (!body) return null
++          if (body) {
++            return (
++              <div key={sec.key}>
++                {sec.key === 'subject' && <YearStrip cards={cards} />}
++                {sec.key === 'dday' && examMonth && (
++                  <MonthStrip dayStem={dayStemForStrip} year={examMonth.y} mark={examMonth.m} />
++                )}
++                <ExamJudgeCard
++                  card={{ key: sec.key, title: sec.title, lines: [], reasons: [] }}
++                  tong={body}
++                />
++              </div>
++            )
++          }
++          // 통변이 끝났는데도 안 온 갈래 — 자리만 남기고 조용히 알립니다
++          const stillWriting = tongState === 'loading'
++          if (!stillWriting) return null
++          const isNow = i === doneGroups
+           return (
+-            <div key={sec.key}>
+-              {sec.key === 'subject' && <YearStrip cards={cards} />}
+-              {sec.key === 'dday' && examMonth && (
+-                <MonthStrip dayStem={dayStemForStrip} year={examMonth.y} mark={examMonth.m} />
+-              )}
+-              <ExamJudgeCard
+-                card={{ key: sec.key, title: sec.title, lines: [], reasons: [] }}
+-                tong={body}
+-              />
++            <div key={sec.key} style={{
++              background: CARD, border: `0.5px dashed ${LINE}`, borderRadius: 14,
++              padding: '13px 15px', marginBottom: 10, opacity: isNow ? 1 : 0.5,
++            }}>
++              <div style={{ fontSize: 13.5, fontWeight: 600, color: isNow ? ACCENT : '#b09a8a' }}>
++                {sec.title}
++              </div>
++              <div style={{ fontSize: 11.5, color: '#b08a9a', marginTop: 5 }}>
++                {isNow ? '지금 쓰고 있어요…' : '차례를 기다리고 있어요'}
++              </div>
+             </div>
+           )
+         })}
+ 
+-        {/* ★판정 카드 — 위 풀이의 «근거» 로 접어 둡니다.
+-             지우지 않았습니다. 상담사분들과 손님이 «왜 그런가» 를 볼 자리입니다. */}
+-        {cards.length > 0 && (
+-          <details style={{
+-            background: CARD, border: `0.5px solid ${LINE}`, borderRadius: 14,
+-            padding: '12px 14px', marginBottom: 12,
+-          }}>
+-            <summary style={{ fontSize: 12.5, color: '#8a7063', cursor: 'pointer' }}>
+-              위 풀이의 근거가 된 판정 보기
+-            </summary>
+-            <div style={{ marginTop: 10 }}>
+-              {cards.map(c => (
+-                <div key={c.key} style={{ marginBottom: 12 }}>
+-                  <div style={{ fontSize: 12.5, fontWeight: 700, color: '#5c3a1e', marginBottom: 5 }}>
+-                    {c.title}
+-                  </div>
+-                  {c.lines.map((l, i) => (
+-                    <p key={i} style={{ fontSize: 12, color: '#6b5a50', lineHeight: 1.75, margin: '0 0 4px' }}>{l}</p>
+-                  ))}
+-                </div>
+-              ))}
+-            </div>
+-          </details>
+-        )}
++        {/* ★★2026-07-30 — «위 풀이의 근거가 된 판정 보기» 블록을 걷어냈습니다. (대표님 지시)
++             [왜] 일반 손님에게는 화면만 길어지고 «판정 원문» 이 복잡해 보여 피로합니다.
++               게다가 갈래가 아직 쓰이는 중일 때 그 아래 붙어
++               «리포트가 여기서 끝났다» 처럼 보였습니다.
++               위 일곱 카드만으로 전달이 충분하다고 정하셨습니다.
++
++             ⚠️ **판정 자체는 지우지 않았습니다.** cards 는 그대로 계산되고 있고
++                AI 재료로도 계속 나갑니다. 화면에만 안 그립니다.
++             ★되살리는 법 — 여기에 이 얼개를 다시 넣으면 됩니다.
++                  details 안에서 cards.map 으로 c.title 과 c.lines 를 그렸습니다.
++                  (c.reasons 는 절대 그리지 마십시오 — AI 전용 재료입니다. 교훈 AV)
++                git 이력 390ede6 판에 원본이 그대로 있습니다.
++             ★전문가 모드(?pro=1)에서만 보이게 하는 것도 한 방법입니다.
++                상담사분들에게는 «왜 그런가» 가 필요할 수 있습니다. */}
+ 
+         {/* ★2026-07-29 — 따로 두었던 「시험 당일 실전 준비」 블록을 없앴습니다.
+              「시험 날짜를 짚어 보면」 카드와 대목이 겹쳐 AI 가 둘 중 하나에만 썼습니다.
+diff --git a/lib/saju/examLuck/buildExamSeven.ts b/lib/saju/examLuck/buildExamSeven.ts
+index 7db5b29..6cc0a05 100644
+--- a/lib/saju/examLuck/buildExamSeven.ts
++++ b/lib/saju/examLuck/buildExamSeven.ts
+@@ -173,6 +173,40 @@ const TONE = `[말투]
+ /** 학생에게 쓰면 안 되는 말 — ★예시로 쓰지 마십시오. 예시로 넣으면 AI 가 끌어 씁니다 */
+ const STUDENT_BAN = '이직, 취업, 취준, 직장, 회사, 공무원, 사업, 승진, 전직, 팀 단위 근무, 조리사, 영양사, 로스쿨'
+ 
++// ══════════════════════════════════════════════════════════════════
++//  갈래마다 필요한 판정 카드
++// ══════════════════════════════════════════════════════════════════
++//
++// ⚠️ buildCards.ts 가 만드는 카드 열쇠입니다. 새 카드를 만들면 여기에도 넣으십시오.
++//    넣지 않으면 «알 수 없는 열쇠» 로 보아 모든 갈래에 실립니다(안전한 쪽).
++export const ALL_CARD_KEYS = [
++  'years', 'dayun', 'examkind', 'examday', 'susi', 'highschool', 'jobchange',
++]
++
++/**
++ * 갈래 → 실을 카드 열쇠.
++ *
++ * ⚠️ «없으면 안 되는 것» 만 넣었습니다. 넉넉히 넣으면 프롬프트가 다시 커집니다.
++ *    ★어느 갈래의 글이 얄팍하면 그 줄에 카드를 하나 더해 보십시오.
++ *      고칠 곳이 여기 한 줄입니다.
++ */
++const MATERIAL_NEEDS: Record<SevenKey, string[]> = {
++  // 공부 결 — 원국과 지금 대운이면 됩니다. 연도별 흐름은 필요 없습니다.
++  dna: ['dayun', 'examkind'],
++  // 과목 — 그해 세운이 핵심입니다.
++  subject: ['years', 'examkind', 'dayun'],
++  // 수시:정시 비율 — 전형 판정과 세운.
++  ratio: ['susi', 'highschool', 'years'],
++  // 열두 달 — 세운과 그달 흐름.
++  monthly: ['years', 'examday'],
++  // D-Day — 그날 일진이 알맹이입니다.
++  dday: ['examday', 'years'],
++  // 지원 전략 — 올해가 밀 때인지 지킬 때인지.
++  apply: ['years', 'susi', 'jobchange'],
++  // 맺음말 — 흐름의 큰 결만. ★교재 맺음말이 years 카드 reasons 에 실려 있어 꼭 필요합니다.
++  mentor: ['years', 'dayun'],
++}
++
+ // ══════════════════════════════════════════════════════════════════
+ //  갈래마다 «그 자리에서» 읽을 지시 (교훈 CW)
+ //    ★멀리 있는 훈계보다 곁에 있는 한 줄이 셉니다.
+@@ -336,7 +370,18 @@ export function buildSevenPrompt(v: SevenArgs, group: SevenKey[]): string | null
+   const isStudent = v.target === 'student'
+   const hint = isStudent ? hintStudent : hintAdult
+ 
++  // ★★2026-07-30 — 갈래마다 «그 갈래에 필요한 재료만» 보냅니다.
++  //
++  //   [왜] 1:1 로 바꾸면서 같은 재료(판정 카드 ~2,900자)를 일곱 번 되풀이해
++  //     보내게 됐습니다. 프롬프트가 크면 ①첫 문장이 늦게 오고 ②입력 토큰이 곱해집니다.
++  //   [어떻게] 카드 열쇠로 고릅니다. 필요 없는 카드를 안 실을 뿐,
++  //     카드 자체는 그대로 계산되고 화면·다른 갈래에서 쓰입니다.
++  //   ⚠️ 목록에 없는 카드 열쇠가 새로 생기면 **어느 갈래에도 안 갑니다.**
++  //      카드를 새로 만들면 아래 표에 그 열쇠를 넣어 주십시오.
++  //      (그래서 알 수 없는 열쇠는 «전부에게» 주는 쪽으로 두었습니다 — 아래 fallback)
++  const need = MATERIAL_NEEDS[plan[0].key]
+   const material = v.cards
++    .filter(c => !need || need.includes(c.key) || !ALL_CARD_KEYS.includes(c.key))
+     .map(c => `[${c.title}]\n` + c.reasons.map(r => `- ${r}`).join('\n'))
+     .join('\n\n')
+ 

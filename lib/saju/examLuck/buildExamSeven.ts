@@ -174,6 +174,40 @@ const TONE = `[말투]
 const STUDENT_BAN = '이직, 취업, 취준, 직장, 회사, 공무원, 사업, 승진, 전직, 팀 단위 근무, 조리사, 영양사, 로스쿨'
 
 // ══════════════════════════════════════════════════════════════════
+//  갈래마다 필요한 판정 카드
+// ══════════════════════════════════════════════════════════════════
+//
+// ⚠️ buildCards.ts 가 만드는 카드 열쇠입니다. 새 카드를 만들면 여기에도 넣으십시오.
+//    넣지 않으면 «알 수 없는 열쇠» 로 보아 모든 갈래에 실립니다(안전한 쪽).
+export const ALL_CARD_KEYS = [
+  'years', 'dayun', 'examkind', 'examday', 'susi', 'highschool', 'jobchange',
+]
+
+/**
+ * 갈래 → 실을 카드 열쇠.
+ *
+ * ⚠️ «없으면 안 되는 것» 만 넣었습니다. 넉넉히 넣으면 프롬프트가 다시 커집니다.
+ *    ★어느 갈래의 글이 얄팍하면 그 줄에 카드를 하나 더해 보십시오.
+ *      고칠 곳이 여기 한 줄입니다.
+ */
+const MATERIAL_NEEDS: Record<SevenKey, string[]> = {
+  // 공부 결 — 원국과 지금 대운이면 됩니다. 연도별 흐름은 필요 없습니다.
+  dna: ['dayun', 'examkind'],
+  // 과목 — 그해 세운이 핵심입니다.
+  subject: ['years', 'examkind', 'dayun'],
+  // 수시:정시 비율 — 전형 판정과 세운.
+  ratio: ['susi', 'highschool', 'years'],
+  // 열두 달 — 세운과 그달 흐름.
+  monthly: ['years', 'examday'],
+  // D-Day — 그날 일진이 알맹이입니다.
+  dday: ['examday', 'years'],
+  // 지원 전략 — 올해가 밀 때인지 지킬 때인지.
+  apply: ['years', 'susi', 'jobchange'],
+  // 맺음말 — 흐름의 큰 결만. ★교재 맺음말이 years 카드 reasons 에 실려 있어 꼭 필요합니다.
+  mentor: ['years', 'dayun'],
+}
+
+// ══════════════════════════════════════════════════════════════════
 //  갈래마다 «그 자리에서» 읽을 지시 (교훈 CW)
 //    ★멀리 있는 훈계보다 곁에 있는 한 줄이 셉니다.
 // ══════════════════════════════════════════════════════════════════
@@ -336,7 +370,18 @@ export function buildSevenPrompt(v: SevenArgs, group: SevenKey[]): string | null
   const isStudent = v.target === 'student'
   const hint = isStudent ? hintStudent : hintAdult
 
+  // ★★2026-07-30 — 갈래마다 «그 갈래에 필요한 재료만» 보냅니다.
+  //
+  //   [왜] 1:1 로 바꾸면서 같은 재료(판정 카드 ~2,900자)를 일곱 번 되풀이해
+  //     보내게 됐습니다. 프롬프트가 크면 ①첫 문장이 늦게 오고 ②입력 토큰이 곱해집니다.
+  //   [어떻게] 카드 열쇠로 고릅니다. 필요 없는 카드를 안 실을 뿐,
+  //     카드 자체는 그대로 계산되고 화면·다른 갈래에서 쓰입니다.
+  //   ⚠️ 목록에 없는 카드 열쇠가 새로 생기면 **어느 갈래에도 안 갑니다.**
+  //      카드를 새로 만들면 아래 표에 그 열쇠를 넣어 주십시오.
+  //      (그래서 알 수 없는 열쇠는 «전부에게» 주는 쪽으로 두었습니다 — 아래 fallback)
+  const need = MATERIAL_NEEDS[plan[0].key]
   const material = v.cards
+    .filter(c => !need || need.includes(c.key) || !ALL_CARD_KEYS.includes(c.key))
     .map(c => `[${c.title}]\n` + c.reasons.map(r => `- ${r}`).join('\n'))
     .join('\n\n')
 
