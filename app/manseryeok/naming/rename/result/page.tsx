@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsinCompat as calcYongsin } from '@/lib/saju/yongsinNew'
 import { diagnoseName, type NameChar, type DiagnoseResult, type Grade } from '@/lib/saju/naming'
+import { ohaengOrEmpty } from '@/lib/saju/ohaeng'
 
 const GOLD = '#FAC775'
 const CARD = '#2C2C2A'
@@ -34,16 +35,10 @@ interface SavedChar {
   resourceOhaeng: string
 }
 
-function ohaengChar(s: string): string {
-  if (!s) return ''
-  const t = s.trim()
-  if (t.includes('木') || t.includes('목')) return '목'
-  if (t.includes('火') || t.includes('화')) return '화'
-  if (t.includes('土') || t.includes('토')) return '토'
-  if (t.includes('金') || t.includes('금')) return '금'
-  if (t.includes('水') || t.includes('수')) return '수'
-  return t
-}
+// ★2026-07-30 (1단계) — 이 자리에 있던 ohaengChar 사본을 걷어냈습니다.
+//   네 화면에 한 글자도 다르지 않은 사본이 넷 있었고, 정작 «내이름 감정»
+//   (naming/diagnosis/page.tsx)에는 없었습니다. 창구를 하나로 모았습니다. (교훈 CJ)
+//   ⚠️ 여기에 다시 사본을 만들지 마십시오. lib/saju/ohaeng.ts 를 부르십시오.
 
 function gradeColor(g: Grade | string) {
   if (g === '좋음') return GREEN
@@ -68,7 +63,7 @@ function ResultInner() {
     try {
       const p = JSON.parse(localStorage.getItem(PICKS_KEY) || '{}')
       if (Array.isArray(p.picks)) setPicks(p.picks)
-      if (p.yongsin) setYongsin(ohaengChar(p.yongsin))
+      if (p.yongsin) setYongsin(ohaengOrEmpty(p.yongsin))
     } catch {}
     try {
       const r = JSON.parse(localStorage.getItem(NAMING_RESULT_KEY) || '{}')
@@ -113,14 +108,14 @@ function ResultInner() {
         hangul: chars[0].hangul,
         hanja: chars[0].hanja,
         strokes: chars[0].strokes,
-        resourceOhaeng: ohaengChar(chars[0].resourceOhaeng),
+        resourceOhaeng: ohaengOrEmpty(chars[0].resourceOhaeng),
       }
       const given: NameChar[] = chars.slice(1).map((c, gi) => {
         const idx = gi + 1
         const p = picks.find((pp) => pp.idx === idx)
         return p
-          ? { hangul: c.hangul, hanja: p.toHanja, strokes: p.toStrokes, resourceOhaeng: ohaengChar(p.toOhaeng) }
-          : { hangul: c.hangul, hanja: c.hanja, strokes: c.strokes, resourceOhaeng: ohaengChar(c.resourceOhaeng) }
+          ? { hangul: c.hangul, hanja: p.toHanja, strokes: p.toStrokes, resourceOhaeng: ohaengOrEmpty(p.toOhaeng) }
+          : { hangul: c.hangul, hanja: c.hanja, strokes: c.strokes, resourceOhaeng: ohaengOrEmpty(c.resourceOhaeng) }
       })
       return diagnoseName({
         surname, given,
@@ -183,7 +178,7 @@ function ResultInner() {
       {/* 동그라미 전후 비교 */}
       <div style={{ fontSize: 11, color: SUB, margin: '18px 0 8px' }}>바뀌는 글자</div>
       {picks.map((p) => {
-        const fit = ohaengChar(p.toOhaeng) === yongsin
+        const fit = ohaengOrEmpty(p.toOhaeng) === yongsin
         return (
           <div key={p.idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, background: CARD, border: '1px solid rgba(250,199,117,0.1)', borderRadius: 14, padding: '18px 8px', marginBottom: 8 }}>
             <div style={{ textAlign: 'center', minWidth: 84 }}>

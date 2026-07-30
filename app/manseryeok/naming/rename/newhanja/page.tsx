@@ -6,6 +6,7 @@ import { calcYongsinCompat } from '@/lib/saju/yongsinNew'
 import { supabase } from '@/lib/supabase'
 import { diagnoseName, type NameChar, type Grade } from '@/lib/saju/naming'
 import { fromMyInfo, fromProfile, personKey, type MyInfo } from '@/lib/saju/myInfo'
+import { ohaengOrEmpty } from '@/lib/saju/ohaeng'
 
 const GOLD = '#c8783c'
 const CARD = '#fffbf7'
@@ -42,16 +43,10 @@ interface TryItem {
   chars: SavedChar[]
 }
 
-function ohaengChar(s: string): string {
-  if (!s) return ''
-  const t = s.trim()
-  if (t.includes('木') || t.includes('목')) return '목'
-  if (t.includes('火') || t.includes('화')) return '화'
-  if (t.includes('土') || t.includes('토')) return '토'
-  if (t.includes('金') || t.includes('금')) return '금'
-  if (t.includes('水') || t.includes('수')) return '수'
-  return t
-}
+// ★2026-07-30 (1단계) — 이 자리에 있던 ohaengChar 사본을 걷어냈습니다.
+//   네 화면에 한 글자도 다르지 않은 사본이 넷 있었고, 정작 «내이름 감정»
+//   (naming/diagnosis/page.tsx)에는 없었습니다. 창구를 하나로 모았습니다. (교훈 CJ)
+//   ⚠️ 여기에 다시 사본을 만들지 마십시오. lib/saju/ohaeng.ts 를 부르십시오.
 
 function gradeNum(g: Grade): number {
   return g === '좋음' ? 2 : g === '보통' ? 1 : 0
@@ -179,7 +174,7 @@ function NewHanjaInner() {
       // 심산 오행 점수로 계산 (월지 계절 치환 반영)
       const y = calcYongsinCompat(saju, dayStem, solar?.month, solar?.day,
         saju.find(p => p.pillar === '시주')?.branch ?? null)
-      return { yongsin: ohaengChar(y.yongsin), heeksin: ohaengChar(y.heeksin), score: y.score }
+      return { yongsin: ohaengOrEmpty(y.yongsin), heeksin: ohaengOrEmpty(y.heeksin), score: y.score }
     } catch {
       return { yongsin: '', heeksin: '', score: {} as Record<string, number> }
     }
@@ -216,16 +211,16 @@ function NewHanjaInner() {
       hangul: surname.hangul,
       hanja: surname.hanja,
       strokes: surname.strokes,
-      resourceOhaeng: ohaengChar(surname.resourceOhaeng),
+      resourceOhaeng: ohaengOrEmpty(surname.resourceOhaeng),
     }
     return hanjaList.map((row) => {
       const given: NameChar[] = syllables.map((syl, i) => {
         if (i === activeIdx) {
-          return { hangul: row.hangul, hanja: row.hanja, strokes: row.strokes, resourceOhaeng: ohaengChar(row.resource_ohaeng) }
+          return { hangul: row.hangul, hanja: row.hanja, strokes: row.strokes, resourceOhaeng: ohaengOrEmpty(row.resource_ohaeng) }
         }
         const pick = chosen[i]
         if (pick) {
-          return { hangul: syl, hanja: pick.hanja, strokes: pick.strokes, resourceOhaeng: ohaengChar(pick.resource_ohaeng) }
+          return { hangul: syl, hanja: pick.hanja, strokes: pick.strokes, resourceOhaeng: ohaengOrEmpty(pick.resource_ohaeng) }
         }
         return { hangul: syl, hanja: '', strokes: 0, resourceOhaeng: '' }
       })
@@ -241,7 +236,7 @@ function NewHanjaInner() {
         gradeNum(r.resourceFlow.grade) * 2 +
         gradeNum(r.suri.grade) * 1.5 +
         gradeNum(r.soundFlow.grade) * 1
-      const fitsYongsin = ohaengChar(row.resource_ohaeng) === yongsin
+      const fitsYongsin = ohaengOrEmpty(row.resource_ohaeng) === yongsin
       return { row, weighted, fitsYongsin }
     })
   }, [yongsinReady, surname, hanjaList, syllables, activeIdx, chosen, yong, yongsin])
@@ -287,7 +282,10 @@ function NewHanjaInner() {
       surname,
       ...syllables.map((syl, i) => {
         const pick = chosen[i]!
-        return { hangul: syl, hanja: pick.hanja, strokes: pick.strokes, resourceOhaeng: pick.resource_ohaeng }
+        // ★2026-07-30 (1단계) — 보관함에 «표준 표기» 로 남깁니다.
+        //   판정 경로(위 useMemo)는 이미 정규화했지만 이 줄은 저장용이라 날것이었습니다.
+        //   날것으로 저장하면 다시보기 때 그 값이 다시 흘러 들어옵니다.
+        return { hangul: syl, hanja: pick.hanja, strokes: pick.strokes, resourceOhaeng: ohaengOrEmpty(pick.resource_ohaeng) }
       }),
     ]
   }

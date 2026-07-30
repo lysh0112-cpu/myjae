@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { diagnoseName, type NameChar, type DiagnoseResult, type Grade } from '@/lib/saju/naming'
 import { saveNamingRecord } from '@/lib/saju/namingRecords'
 import ConsultButton from '@/app/components/common/ConsultButton'
+import { ohaengOrEmpty } from '@/lib/saju/ohaeng'
 
 const GOLD = '#c8783c'
 const CARD = '#fffbf7'
@@ -40,16 +41,10 @@ interface TryItem {
   commentary?: Commentary
 }
 
-function ohaengChar(s: string): string {
-  if (!s) return ''
-  const t = s.trim()
-  if (t.includes('木') || t.includes('목')) return '목'
-  if (t.includes('火') || t.includes('화')) return '화'
-  if (t.includes('土') || t.includes('토')) return '토'
-  if (t.includes('金') || t.includes('금')) return '금'
-  if (t.includes('水') || t.includes('수')) return '수'
-  return t
-}
+// ★2026-07-30 (1단계) — 이 자리에 있던 ohaengChar 사본을 걷어냈습니다.
+//   네 화면에 한 글자도 다르지 않은 사본이 넷 있었고, 정작 «내이름 감정»
+//   (naming/diagnosis/page.tsx)에는 없었습니다. 창구를 하나로 모았습니다. (교훈 CJ)
+//   ⚠️ 여기에 다시 사본을 만들지 마십시오. lib/saju/ohaeng.ts 를 부르십시오.
 
 function gradeColor(g: Grade | string) {
   if (g === '좋음') return GREEN
@@ -146,7 +141,7 @@ function NewResultInner() {
 
   const yongsin = useMemo(() => {
     if (!saju || !dayStem) return ''
-    try { return ohaengChar(calcYongsinCompat(saju, dayStem, ...yongArgs()).yongsin) } catch { return '' }
+    try { return ohaengOrEmpty(calcYongsinCompat(saju, dayStem, ...yongArgs()).yongsin) } catch { return '' }
   }, [saju, dayStem, solar])
 
   const result = useMemo<DiagnoseResult | null>(() => {
@@ -155,10 +150,10 @@ function NewResultInner() {
       const y = calcYongsinCompat(saju, dayStem, ...yongArgs())
       const surname: NameChar = {
         hangul: cur.chars[0].hangul, hanja: cur.chars[0].hanja,
-        strokes: cur.chars[0].strokes, resourceOhaeng: ohaengChar(cur.chars[0].resourceOhaeng),
+        strokes: cur.chars[0].strokes, resourceOhaeng: ohaengOrEmpty(cur.chars[0].resourceOhaeng),
       }
       const given: NameChar[] = cur.chars.slice(1).map((c) => ({
-        hangul: c.hangul, hanja: c.hanja, strokes: c.strokes, resourceOhaeng: ohaengChar(c.resourceOhaeng),
+        hangul: c.hangul, hanja: c.hanja, strokes: c.strokes, resourceOhaeng: ohaengOrEmpty(c.resourceOhaeng),
       }))
       return diagnoseName({ surname, given, yongsin: y.yongsin, heeksin: y.heeksin, elementScore: y.score })
     } catch { return null }
@@ -234,7 +229,9 @@ function NewResultInner() {
           hangul: c.hangul,
           hanja: c.hanja,
           strokes: c.strokes,
-          resourceOhaeng: c.resourceOhaeng,
+          // ★2026-07-30 (1단계) — 상담사 화면에도 «표준 표기» 로 넘깁니다.
+          //   전에는 상담사가 '木' 을 보고 판정은 '목' 으로 돌아 두 화면이 어긋났습니다.
+          resourceOhaeng: ohaengOrEmpty(c.resourceOhaeng),
         })),
         result,
         commentary: cur.commentary ?? null,
@@ -259,10 +256,10 @@ function NewResultInner() {
         if (t.chars.length < 2) return ''
         const surname: NameChar = {
           hangul: t.chars[0].hangul, hanja: t.chars[0].hanja,
-          strokes: t.chars[0].strokes, resourceOhaeng: ohaengChar(t.chars[0].resourceOhaeng),
+          strokes: t.chars[0].strokes, resourceOhaeng: ohaengOrEmpty(t.chars[0].resourceOhaeng),
         }
         const given: NameChar[] = t.chars.slice(1).map((c) => ({
-          hangul: c.hangul, hanja: c.hanja, strokes: c.strokes, resourceOhaeng: ohaengChar(c.resourceOhaeng),
+          hangul: c.hangul, hanja: c.hanja, strokes: c.strokes, resourceOhaeng: ohaengOrEmpty(c.resourceOhaeng),
         }))
         try { return diagnoseName({ surname, given, yongsin: y.yongsin, heeksin: y.heeksin, elementScore: y.score }).overallGrade }
         catch { return '' }
@@ -278,10 +275,10 @@ function NewResultInner() {
       const y = calcYongsinCompat(saju, dayStem, ...yongArgs())
       const surname: NameChar = {
         hangul: cur.chars[0].hangul, hanja: cur.chars[0].hanja,
-        strokes: cur.chars[0].strokes, resourceOhaeng: ohaengChar(cur.chars[0].resourceOhaeng),
+        strokes: cur.chars[0].strokes, resourceOhaeng: ohaengOrEmpty(cur.chars[0].resourceOhaeng),
       }
       const given: NameChar[] = cur.chars.slice(1).map((c) => ({
-        hangul: c.hangul, hanja: c.hanja, strokes: c.strokes, resourceOhaeng: ohaengChar(c.resourceOhaeng),
+        hangul: c.hangul, hanja: c.hanja, strokes: c.strokes, resourceOhaeng: ohaengOrEmpty(c.resourceOhaeng),
       }))
       const sajuText = Array.isArray(saju)
         ? (saju as { pillar: string; stem: string; branch: string }[]).map((p) => `${p.pillar}:${p.stem}${p.branch}`).join(', ')

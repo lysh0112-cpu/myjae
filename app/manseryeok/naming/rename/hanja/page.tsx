@@ -5,6 +5,7 @@ import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsinCompat as calcYongsin } from '@/lib/saju/yongsinNew'
 import { supabase } from '@/lib/supabase'
 import { diagnoseName, type NameChar, type Grade } from '@/lib/saju/naming'
+import { ohaengOrEmpty } from '@/lib/saju/ohaeng'
 
 const GOLD = '#FAC775'
 const CARD = '#2C2C2A'
@@ -38,16 +39,10 @@ interface SavedChar {
 
 interface ChatMsg { role: 'user' | 'assistant'; content: string }
 
-function ohaengChar(s: string): string {
-  if (!s) return ''
-  const t = s.trim()
-  if (t.includes('木') || t.includes('목')) return '목'
-  if (t.includes('火') || t.includes('화')) return '화'
-  if (t.includes('土') || t.includes('토')) return '토'
-  if (t.includes('金') || t.includes('금')) return '금'
-  if (t.includes('水') || t.includes('수')) return '수'
-  return t
-}
+// ★2026-07-30 (1단계) — 이 자리에 있던 ohaengChar 사본을 걷어냈습니다.
+//   네 화면에 한 글자도 다르지 않은 사본이 넷 있었고, 정작 «내이름 감정»
+//   (naming/diagnosis/page.tsx)에는 없었습니다. 창구를 하나로 모았습니다. (교훈 CJ)
+//   ⚠️ 여기에 다시 사본을 만들지 마십시오. lib/saju/ohaeng.ts 를 부르십시오.
 
 function gradeNum(g: Grade): number {
   return g === '좋음' ? 2 : g === '보통' ? 1 : 0
@@ -136,7 +131,7 @@ function HanjaInner() {
       // 심산 오행 점수로 계산 (월지 계절 치환 반영)
       const y = calcYongsin(saju, dayStem, solar?.month, solar?.day,
         saju.find(p => p.pillar === '시주')?.branch ?? null)
-      return { yongsin: ohaengChar(y.yongsin), heeksin: ohaengChar(y.heeksin), score: y.score }
+      return { yongsin: ohaengOrEmpty(y.yongsin), heeksin: ohaengOrEmpty(y.heeksin), score: y.score }
     } catch {
       return { yongsin: '', heeksin: '', score: {} as Record<string, number> }
     }
@@ -181,7 +176,7 @@ function HanjaInner() {
       hangul: chars[0].hangul,
       hanja: chars[0].hanja,
       strokes: chars[0].strokes,
-      resourceOhaeng: ohaengChar(chars[0].resourceOhaeng),
+      resourceOhaeng: ohaengOrEmpty(chars[0].resourceOhaeng),
     }
     const baseGiven: NameChar[] = givenChars.map((c, gi) => {
       const idx = gi + 1
@@ -193,7 +188,7 @@ function HanjaInner() {
         hangul: src.hangul,
         hanja: src.hanja,
         strokes: src.strokes,
-        resourceOhaeng: ohaengChar(src.resourceOhaeng),
+        resourceOhaeng: ohaengOrEmpty(src.resourceOhaeng),
       }
     })
 
@@ -205,7 +200,7 @@ function HanjaInner() {
           hangul: row.hangul,
           hanja: row.hanja,
           strokes: row.strokes,
-          resourceOhaeng: ohaengChar(row.resource_ohaeng),
+          resourceOhaeng: ohaengOrEmpty(row.resource_ohaeng),
         }
       })
       const r = diagnoseName({
@@ -220,7 +215,7 @@ function HanjaInner() {
         gradeNum(r.resourceFlow.grade) * 2 +
         gradeNum(r.suri.grade) * 1.5 +
         gradeNum(r.soundFlow.grade) * 1
-      const fitsYongsin = ohaengChar(row.resource_ohaeng) === yongsin
+      const fitsYongsin = ohaengOrEmpty(row.resource_ohaeng) === yongsin
       return { row, weighted, fitsYongsin }
     })
   }, [yongsinReady, activeIdx, hanjaList, chars, givenChars, chosen, yong, yongsin])
@@ -288,11 +283,11 @@ function HanjaInner() {
         hangul: cur?.hangul ?? '',
         fromHanja: cur?.hanja ?? '',
         fromMeaning: '',
-        fromOhaeng: ohaengChar(cur?.resourceOhaeng ?? ''),
+        fromOhaeng: ohaengOrEmpty(cur?.resourceOhaeng ?? ''),
         fromStrokes: cur?.strokes ?? 0,
         toHanja: sel?.hanja ?? '',
         toMeaning: sel?.meaning ?? '',
-        toOhaeng: ohaengChar(sel?.resource_ohaeng ?? ''),
+        toOhaeng: ohaengOrEmpty(sel?.resource_ohaeng ?? ''),
         toStrokes: sel?.strokes ?? 0,
       }
     })

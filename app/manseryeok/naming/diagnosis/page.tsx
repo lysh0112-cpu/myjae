@@ -5,6 +5,8 @@ import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsinCompat } from '@/lib/saju/yongsinNew'
 import { supabase } from '@/lib/supabase'
 import type { DiagnoseResult, NameChar } from '@/lib/saju/naming'
+// ★2026-07-30 (1단계) — 오행 정규화 단일 창구. 자원오행을 날것으로 쓰지 않습니다.
+import { ohaengOrEmpty, cleanHanja } from '@/lib/saju/ohaeng'
 import ConsultButton from '@/app/components/common/ConsultButton'
 import { fromProfile, fromUrl, personKey, type MyInfo } from '@/lib/saju/myInfo'
 import {
@@ -356,9 +358,20 @@ function DiagnosisInner() {
     const next = [...chars]
     next[pickerIdx] = {
       hangul: row.hangul,
-      hanja: row.hanja,
+      // ★2026-07-30 (1단계) — 원자료에 ' 熺' 처럼 앞에 공백이 붙은 한자가 있습니다.
+      hanja: cleanHanja(row.hanja) || row.hanja,
       strokes: row.strokes,
-      resourceOhaeng: row.resource_ohaeng,
+      // ★★2026-07-30 (1단계) — 여기가 「내이름 감정」이 틀리던 자리입니다.
+      //   [무엇이 문제였나] DB 의 자원오행은 «한자»(木火土金水)로 들어 있는데
+      //     이 줄이 날것으로 넘겼습니다. naming.ts 의 상생표(GENERATES)는 «한글» 키라
+      //     GENERATES['木'] 이 undefined 가 되어 —
+      //         · 자원오행 상생 판정이 언제나 0건  → grade 언제나 '아쉬움'
+      //         · 용신('목')과 대조도 언제나 false → 사주보완 언제나 '아쉬움'
+      //     이 되었습니다. 등급은 화면에 안 나오는 것이 방침이라 눈에 안 띄었고,
+      //     대신 AI 에게 「상생 0건·용신 없음」이라는 «틀린 사실» 이 나갔습니다.
+      //   ⚠️ 개명 화면 넷은 각자 ohaengChar() 사본으로 이미 막고 있었습니다.
+      //      다섯 창구 가운데 이 한 곳만 빠져 있었습니다. (교훈 CZ·DA 의 세 번째 거울)
+      resourceOhaeng: ohaengOrEmpty(row.resource_ohaeng),
     }
     setChars(next)
     setPickerIdx(null)
@@ -582,7 +595,10 @@ function DiagnosisInner() {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: '13px', color: '#1a1a1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.meaning}</div>
         <div style={{ fontSize: '11px', color: '#5c3a1e', marginTop: '2px' }}>
-          {row.resource_ohaeng}·{row.strokes}획
+          {/* ★2026-07-30 (1단계) — 목록도 같은 창구를 씁니다.
+              전에는 DB 날것을 그려서 손님이 «木» 을, 판정은 «목» 을 보는 어긋남이 있었습니다.
+              ⚠️ 못 읽은 값이면 빈칸이 되므로 원값을 그대로 보여 줍니다(정보를 숨기지 않습니다). */}
+          {ohaengOrEmpty(row.resource_ohaeng) || row.resource_ohaeng}·{row.strokes}획
         </div>
       </div>
     </div>
