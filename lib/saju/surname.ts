@@ -11,41 +11,61 @@
 // 출처   『타고난 운명을 보완하는 작명개운법』 139~150쪽 「성씨 획수별 좋은 수리 배열」
 //        위 표의 성씨 목록에서 두 글자 성만 뽑았습니다.
 //
-// ⚠️ 25획 성 항목 중 한 자리는 스캔이 흐려 판독하지 못했습니다.
-//    추정해서 넣지 않았습니다 (교훈 EJ). 확인되면 추가하십시오.
-// ⚠️ 교재에 없는 복성(어금·강전·망절·소봉·순우 등)은 넣지 않았습니다.
-//    쓰실 것인지 확인이 필요합니다.
+// ★2026-07-31 4차 — 교재 밖 복성도 넣었습니다 (대표님 확정)
+//    실사용자의 예외 성씨를 막는 것이 이점이라는 판단입니다.
+//    source 로 출처를 갈라 두었으니 나중에 되짚을 수 있습니다.
+//
+// ⚠️ 25획 성 항목 중 한 자리는 스캔이 흐려 «끝내» 판독하지 못했습니다.
+//    추정해서 넣지 않았습니다 (교훈 EJ). 원본을 다시 보시면 알려 주십시오.
+// ⚠️ 교재는 「영고(令孤)」로 적었으나 통용 표기는 「영호(令狐)」입니다.
+//    어느 쪽으로 오셔도 걸리도록 둘 다 넣었습니다. ★연재쌤 확인이 필요합니다.
 
 export interface CompoundSurname {
   /** 한글 두 글자 — 예: "남궁" */
   hangul: string;
   /** 한자 두 글자 — 예: "南宮" */
   hanja: string;
-  /** 교재가 적어 둔 성 획수(원획법) — ★참고용입니다. 실제 계산은 DB 획수를 씁니다 */
-  bookStrokes: number;
+  /** 교재가 적어 둔 성 획수(원획법) — ★참고용. 실제 계산은 DB 획수를 씁니다 */
+  bookStrokes: number | null;
+  /** book = 교재 139~150쪽 · extra = 교재 밖 (2026-07-31 대표님 확정) */
+  source: "book" | "extra";
+  /** ★표기가 갈리거나 확인이 필요한 자리 */
+  note?: string;
 }
 
 /** 교재 139~150쪽에서 뽑은 두 글자 성씨 */
 export const COMPOUND_SURNAMES: CompoundSurname[] = [
-  { hangul: "을지", hanja: "乙支", bookStrokes: 5 },
-  { hangul: "대실", hanja: "大室", bookStrokes: 12 },
-  { hangul: "동방", hanja: "東方", bookStrokes: 12 },
-  { hangul: "소실", hanja: "小室", bookStrokes: 12 },
-  { hangul: "이선", hanja: "以先", bookStrokes: 12 },
-  { hangul: "영고", hanja: "令孤", bookStrokes: 13 },
-  { hangul: "사공", hanja: "司空", bookStrokes: 13 },
-  { hangul: "공손", hanja: "公孫", bookStrokes: 14 },
-  { hangul: "서문", hanja: "西門", bookStrokes: 14 },
-  { hangul: "사마", hanja: "司馬", bookStrokes: 15 },
-  { hangul: "장곡", hanja: "長谷", bookStrokes: 15 },
-  { hangul: "중실", hanja: "仲室", bookStrokes: 15 },
-  { hangul: "황보", hanja: "皇甫", bookStrokes: 16 },
-  { hangul: "남궁", hanja: "南宮", bookStrokes: 19 },
-  { hangul: "재회", hanja: "再會", bookStrokes: 19 },
-  { hangul: "선우", hanja: "鮮于", bookStrokes: 20 },
-  { hangul: "부정", hanja: "負鼎", bookStrokes: 22 },
-  { hangul: "독고", hanja: "獨孤", bookStrokes: 25 },
-  { hangul: "제갈", hanja: "諸葛", bookStrokes: 31 },
+  // ── 교재 139~150쪽에서 뽑은 것 (19)
+  { hangul: "을지", hanja: "乙支", bookStrokes: 5,  source: "book" },
+  { hangul: "대실", hanja: "大室", bookStrokes: 12, source: "book" },
+  { hangul: "동방", hanja: "東方", bookStrokes: 12, source: "book" },
+  { hangul: "소실", hanja: "小室", bookStrokes: 12, source: "book" },
+  { hangul: "이선", hanja: "以先", bookStrokes: 12, source: "book" },
+  { hangul: "영고", hanja: "令孤", bookStrokes: 13, source: "book", note: "교재 표기. 통용은 영호(令狐)" },
+  { hangul: "사공", hanja: "司空", bookStrokes: 13, source: "book" },
+  { hangul: "공손", hanja: "公孫", bookStrokes: 14, source: "book" },
+  { hangul: "서문", hanja: "西門", bookStrokes: 14, source: "book" },
+  { hangul: "사마", hanja: "司馬", bookStrokes: 15, source: "book" },
+  { hangul: "장곡", hanja: "長谷", bookStrokes: 15, source: "book" },
+  { hangul: "중실", hanja: "仲室", bookStrokes: 15, source: "book" },
+  { hangul: "황보", hanja: "皇甫", bookStrokes: 16, source: "book" },
+  { hangul: "남궁", hanja: "南宮", bookStrokes: 19, source: "book" },
+  { hangul: "재회", hanja: "再會", bookStrokes: 19, source: "book" },
+  { hangul: "선우", hanja: "鮮于", bookStrokes: 20, source: "book" },
+  { hangul: "부정", hanja: "負鼎", bookStrokes: 22, source: "book" },
+  { hangul: "독고", hanja: "獨孤", bookStrokes: 25, source: "book" },
+  { hangul: "제갈", hanja: "諸葛", bookStrokes: 31, source: "book" },
+
+  // ── 교재 밖 — 실제 쓰이는 복성 (8)
+  //    ★bookStrokes 를 비웠습니다. 획수는 DB 원획을 씁니다.
+  { hangul: "영호", hanja: "令狐", bookStrokes: null, source: "extra", note: "교재의 영고(令孤)와 같은 성으로 보입니다" },
+  { hangul: "어금", hanja: "魚金", bookStrokes: null, source: "extra" },
+  { hangul: "강전", hanja: "岡田", bookStrokes: null, source: "extra" },
+  { hangul: "망절", hanja: "網切", bookStrokes: null, source: "extra" },
+  { hangul: "소봉", hanja: "小峰", bookStrokes: null, source: "extra" },
+  { hangul: "순우", hanja: "淳于", bookStrokes: null, source: "extra" },
+  { hangul: "즙수", hanja: "汁水", bookStrokes: null, source: "extra" },
+  { hangul: "부여", hanja: "扶餘", bookStrokes: null, source: "extra" },
 ];
 
 const BY_HANGUL = new Map(COMPOUND_SURNAMES.map((s) => [s.hangul, s]));

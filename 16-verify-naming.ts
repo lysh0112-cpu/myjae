@@ -811,7 +811,8 @@ head('⑧-c ★수리 등급 — 주운 가중치 판정 (2026-07-31 2차)')
 
   // ⚠️ 외자 — 두 격이 같은 식이라 «보통» 이 나올 수 없습니다 (3-3장 ③ 미해결)
   const r1 = diagnoseName({ surname: SUR, given: [CH('인', '仁', 4, '木')] as NameChar[], ...base })
-  check(r1.suri.gyeok.length === 2, `외자 — 격 2개 (형·정)`)
+  // ★3차에서 외자도 사격 넷이 되었습니다 (교재 136쪽 「성1 이름1」)
+  check(r1.suri.gyeok.length === 4, `외자 — 격 4개 (원·형·이·정)`)
   check(r1.suri.gyeok.map(x => x.key).join(',') === 'won,hyeong,i,jeong', `외자도 사격 넷`)
   // 교재 136쪽 「성1 이름1」 — 원격 = 이름 · 이격 = 성 + 가상수 1
   check(r1.suri.gyeok[0].sum === 4, `외자 원격 = 이름 획수 (仁 4)`)
@@ -827,7 +828,15 @@ head('⑧-d ★복성 · 3글자 이상 · 순화 해설 (2026-07-31 3차)')
   const base = { yongsin: '화', elementScore: { 목: 20, 화: 20, 토: 20, 금: 20, 수: 20 } }
 
   // ── 복성 목록
-  check(COMPOUND_SURNAMES.length === 19, `교재 139~150쪽 복성 ${COMPOUND_SURNAMES.length}개`)
+  const bookCnt = COMPOUND_SURNAMES.filter(x => x.source === 'book').length
+  const extraCnt = COMPOUND_SURNAMES.filter(x => x.source === 'extra').length
+  check(bookCnt === 19, `교재 139~150쪽 복성 ${bookCnt}개 (19)`)
+  check(extraCnt === 8, `교재 밖 복성 ${extraCnt}개 (8)`)
+  check(COMPOUND_SURNAMES.length === 27, `복성 합계 ${COMPOUND_SURNAMES.length}개 (27)`)
+  check(new Set(COMPOUND_SURNAMES.map(x => x.hangul)).size === 27, `한글 표기 겹침 없음`)
+  check(new Set(COMPOUND_SURNAMES.map(x => x.hanja)).size === 27, `한자 표기 겹침 없음`)
+  check(!!COMPOUND_SURNAMES.find(x => x.hangul === '망절'), `교재 밖 — 망절(網切) 등재`)
+  check(!!COMPOUND_SURNAMES.find(x => x.hangul === '순우'), `교재 밖 — 순우(淳于) 등재`)
   check(COMPOUND_SURNAMES.every(x => x.hangul.length === 2 && x.hanja.length === 2),
     `복성은 전부 두 글자입니다`)
   check(!!COMPOUND_SURNAMES.find(x => x.hangul === '남궁' && x.hanja === '南宮'), `남궁(南宮) 등재`)
