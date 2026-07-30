@@ -889,6 +889,27 @@ head('⑧-d ★복성 · 3글자 이상 · 순화 해설 (2026-07-31 3차)')
   check(dirty.length === 0, `★순화 해설에 자극적 표현 없음 — ${dirty.join(',') || '0건'}`)
   check(!HARSH.some(w => SURI_TONE_GUIDE.includes(w)), `어조 지침에도 금지어를 예시로 적지 않았습니다`)
   check(rS.suri.gyeok.every(x => !!x.gentle), `사격 넷 모두 안내 문장을 싣고 나갑니다`)
+
+  // ── 🔴 복성 경계가 AI 재료에 실리는가 (2026-07-31 5차)
+  const sf = rNG.soundFlow.facts as Record<string, unknown>
+  const rf2 = rNG.resourceFlow.facts as Record<string, unknown>
+  check(sf.복성여부 === true && rf2.복성여부 === true, `복성 표시가 두 관점 재료에 실립니다`)
+  check(String(sf.성씨).split('·').length === 2, `발음오행 — 성씨가 두 글자로 묶입니다 (${sf.성씨})`)
+  check(String(rf2.성씨).split('·').length === 2, `자원오행 — 성씨가 두 글자로 묶입니다 (${rf2.성씨})`)
+  check(String(sf.이름).split('→').length === 2, `발음오행 — 이름은 두 글자 (${sf.이름})`)
+  check(String(sf.경계표시).startsWith('['), `경계표시가 성씨를 대괄호로 감쌉니다 — ${sf.경계표시}`)
+  const zones = (rf2.links as { 구간: string }[]).map(x => x.구간)
+  check(zones.join(',') === '성씨 안,성씨→이름,이름 안',
+    `자원오행 구간이 성씨안→성씨→이름→이름안 순 (${zones.join(',')})`)
+  const yf2 = rNG.yongsinBohwan.facts as Record<string, unknown>
+  check((yf2.surnameOhaengs as string[]).length === 2, `복성이면 성 오행이 둘로 나갑니다`)
+
+  // 단성은 예전과 같아야 합니다 (회귀 방지)
+  const sfS = rS.soundFlow.facts as Record<string, unknown>
+  check(sfS.복성여부 === false, `단성은 복성여부 false`)
+  check(String(sfS.성씨).split('·').length === 1, `단성 — 성씨 한 글자 (${sfS.성씨})`)
+  check((rS.resourceFlow.facts as Record<string, unknown> & { links: { 구간: string }[] })
+    .links.every(x => x.구간 !== '성씨 안'), `단성은 «성씨 안» 구간이 없습니다`)
   check(String((rS.suri.facts as Record<string, unknown>).서술지침).length > 0, `AI 재료에 어조 지침 포함`)
 }
 

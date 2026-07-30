@@ -169,16 +169,20 @@ function scoreYinYang(input: DiagnoseInput): FactorResult {
 // ── ② 발음오행 흐름 ──
 function scoreSound(input: DiagnoseInput, mode: "토" | "수"): FactorResult {
   const chars = allChars(input);
-  const seq = chars.map((c) => ({
+  const roles = charRoles(input);
+  const seq = chars.map((c, i) => ({
     hangul: c.hangul,
     cho: getChoseong(c.hangul),
     ohaeng: soundOhaengOf(c.hangul, mode),
+    역할: roles[i],                             // ★2026-07-31 성/이름 경계
   }));
-  const links: { from: string; to: string; rel: RelKind; text: string }[] = [];
+  const links: { from: string; to: string; rel: RelKind; text: string;
+    구간: "성씨 안" | "성씨→이름" | "이름 안" }[] = [];
   let saeng = 0, total = 0;
   for (let i = 0; i < seq.length - 1; i++) {
     const r = relationOf(seq[i].ohaeng, seq[i + 1].ohaeng);
-    links.push({ from: seq[i].ohaeng, to: seq[i + 1].ohaeng, rel: r.kind, text: r.text });
+    links.push({ from: seq[i].ohaeng, to: seq[i + 1].ohaeng, rel: r.kind, text: r.text,
+      구간: linkZone(roles, i) });
     total++;
     if (isSaeng(seq[i].ohaeng, seq[i + 1].ohaeng)) saeng++;
   }
@@ -189,10 +193,16 @@ function scoreSound(input: DiagnoseInput, mode: "토" | "수"): FactorResult {
     grade,
     detail: `발음오행: ${seq.map((s) => s.ohaeng).join("→")}`,
     facts: {
-      sequence: seq,                            // 글자별 초성·오행
+      sequence: seq,                            // 글자별 초성·오행·역할
       chain: seq.map((s) => `${s.hangul}(${s.ohaeng})`).join("→"),
-      links,                                    // 이웃 간 상생/상극 관계
+      links,                                    // 이웃 간 상생/상극 관계 + 구간
       saengCount: saeng, total,
+      // ★2026-07-31 복성 경계 — 「남궁」을 「남 + 궁순임」으로 읽지 않도록
+      복성여부: !!input.surname2,
+      성씨: seq.filter((x) => x.역할 === "성").map((x) => `${x.hangul}(${x.ohaeng})`).join("·"),
+      이름: seq.filter((x) => x.역할 === "이름").map((x) => `${x.hangul}(${x.ohaeng})`).join("→"),
+      경계표시: `[${seq.filter((x) => x.역할 === "성").map((x) => `${x.hangul}(${x.ohaeng})`).join("·")}]`
+        + `→` + seq.filter((x) => x.역할 === "이름").map((x) => `${x.hangul}(${x.ohaeng})`).join("→"),
     },
   };
 }
@@ -202,6 +212,20 @@ function allChars(input: DiagnoseInput): NameChar[] {
   return input.surname2
     ? [input.surname, input.surname2, ...input.given]
     : [input.surname, ...input.given];
+}
+
+/** 글자별 역할 — allChars 와 순서가 같습니다. ★복성이면 앞 두 글자가 "성" 입니다 */
+function charRoles(input: DiagnoseInput): ("성" | "이름")[] {
+  const surCount = input.surname2 ? 2 : 1;
+  return allChars(input).map((_, i) => (i < surCount ? "성" : "이름"));
+}
+
+/** 이웃 관계가 어느 구간에 놓였는가 — AI 가 «성씨 안» 과 «성→이름» 을 섞지 않도록 */
+function linkZone(roles: ("성" | "이름")[], i: number): "성씨 안" | "성씨→이름" | "이름 안" {
+  const a = roles[i], b = roles[i + 1];
+  if (a === "성" && b === "성") return "성씨 안";
+  if (a === "성" && b === "이름") return "성씨→이름";
+  return "이름 안";
 }
 
 /** 성 획수 — 복성이면 두 글자의 합 */
@@ -299,16 +323,20 @@ function scoreSuri(input: DiagnoseInput): DiagnoseResult["suri"] {
 // ── ④ 자원오행 흐름 ──
 function scoreResource(input: DiagnoseInput): FactorResult {
   const chars = allChars(input);
-  const seq = chars.map((c) => ({
+  const roles = charRoles(input);
+  const seq = chars.map((c, i) => ({
     hanja: c.hanja,
     meaning: c.meaning ?? "",
     ohaeng: c.resourceOhaeng,
+    역할: roles[i],                             // ★2026-07-31 성/이름 경계
   }));
-  const links: { from: string; to: string; rel: RelKind; text: string }[] = [];
+  const links: { from: string; to: string; rel: RelKind; text: string;
+    구간: "성씨 안" | "성씨→이름" | "이름 안" }[] = [];
   let saeng = 0, total = 0;
   for (let i = 0; i < seq.length - 1; i++) {
     const r = relationOf(seq[i].ohaeng, seq[i + 1].ohaeng);
-    links.push({ from: seq[i].ohaeng, to: seq[i + 1].ohaeng, rel: r.kind, text: r.text });
+    links.push({ from: seq[i].ohaeng, to: seq[i + 1].ohaeng, rel: r.kind, text: r.text,
+      구간: linkZone(roles, i) });
     total++;
     if (isSaeng(seq[i].ohaeng, seq[i + 1].ohaeng)) saeng++;
   }
@@ -319,10 +347,16 @@ function scoreResource(input: DiagnoseInput): FactorResult {
     grade,
     detail: `자원오행: ${seq.map((s) => s.ohaeng).join("→")}`,
     facts: {
-      sequence: seq,                            // 글자별 한자·뜻·오행
+      sequence: seq,                            // 글자별 한자·뜻·오행·역할
       chain: seq.map((s) => `${s.hanja}(${s.ohaeng})`).join("→"),
       links,
       saengCount: saeng, total,
+      // ★2026-07-31 복성 경계 — 성씨는 「南穹」 두 글자입니다
+      복성여부: !!input.surname2,
+      성씨: seq.filter((x) => x.역할 === "성").map((x) => `${x.hanja}(${x.ohaeng})`).join("·"),
+      이름: seq.filter((x) => x.역할 === "이름").map((x) => `${x.hanja}(${x.ohaeng})`).join("→"),
+      경계표시: `[${seq.filter((x) => x.역할 === "성").map((x) => `${x.hanja}(${x.ohaeng})`).join("·")}]`
+        + `→` + seq.filter((x) => x.역할 === "이름").map((x) => `${x.hanja}(${x.ohaeng})`).join("→"),
     },
   };
 }
@@ -331,6 +365,10 @@ function scoreResource(input: DiagnoseInput): FactorResult {
 function scoreYongsin(input: DiagnoseInput, mode: "관대" | "엄격"): FactorResult {
   const nameOhaengs = input.given.map((g) => g.resourceOhaeng);
   const surnameOhaeng = input.surname.resourceOhaeng;
+  // ★2026-07-31 복성이면 성 오행이 둘입니다
+  const surnameOhaengs = input.surname2
+    ? [input.surname.resourceOhaeng, input.surname2.resourceOhaeng]
+    : [input.surname.resourceOhaeng];
   const hasYongsin = nameOhaengs.includes(input.yongsin);
   const hasHeeksin = input.heeksin ? nameOhaengs.includes(input.heeksin) : false;
   // 용신을 담은 글자들 (서술용)
@@ -351,6 +389,8 @@ function scoreYongsin(input: DiagnoseInput, mode: "관대" | "엄격"): FactorRe
       heeksin: input.heeksin ?? null,
       nameOhaengs,                              // 이름 글자 자원오행들
       surnameOhaeng,
+      surnameOhaengs,                           // ★복성이면 둘
+      복성여부: !!input.surname2,
       hasYongsin, hasHeeksin,
       yongsinChars,                             // 용신을 담은 글자
       elementScore: input.elementScore,         // 사주 오행 분포 (계절/한난 서술용)
