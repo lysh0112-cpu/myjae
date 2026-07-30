@@ -129,20 +129,42 @@ export function sevenOf(target: ExamTarget): SevenSection[] {
  *    «묶음» 이라는 말이 남아 있지만 이제 한 묶음에 하나뿐입니다.
  */
 export const SEVEN_GROUPS: SevenKey[][] = [
-  ['dna'],
-  ['subject'],
-  ['ratio'],
-  ['monthly'],
-  ['dday'],
-  ['apply'],
-  ['mentor'],
+  // ★★2026-07-30 (7차) — 한 호출에 일곱 전부. 진로적성과 «같은 방식» 입니다.
+  //
+  //   [무엇이 진짜 원인이었나 — 하루를 쓴 끝에]
+  //     합격운은 /api/tongbyeon 에 maxTokens 를 «보내고» 있었습니다.
+  //         묶음 셋일 때  2,400 / 2,400 / 3,600
+  //         1:1 일 때     1,600
+  //     진로적성은 **안 보냅니다.** 그러면 라우트가 premium ? 16000 을 씁니다.
+  //         app/api/tongbyeon/route.ts:66
+  //         max_tokens: maxTokens > 0 ? Math.min(maxTokens, 16000) : (premium ? 16000 : 3500)
+  //
+  //     한 갈래가 700~800자(우리말)면 1,000 토큰을 넘습니다.
+  //     묶음당 2,400 이면 두 번째 갈래가 상한에 걸려 잘립니다.
+  //     ★그래서 화면에 1, 3, 5 만 남았습니다. AI 가 «건너뛴» 것이 아니라 «잘린» 것입니다.
+  //
+  //   [35부 교훈 CV·CX 가 어긋나 있었습니다]
+  //     CV 「여섯 대목 한 번 → 두셋만 씀」  ← 상한이 좁은 채로 재서 «잘림» 을 «불복» 으로 읽음
+  //     CX 「상한을 좁혀라」                ← 그래서 더 조여 잘림을 굳혔음
+  //     ★증거는 처음부터 저장소 안에 있었습니다 —
+  //       lib/saju/premium/buildCareerMbtiPrompt.ts 는 섹션 **여섯 개** 를
+  //       한 호출로 씁니다. 그 화면은 하루 종일 잘 됐습니다.
+  //
+  //   ⚠️ 그래서 maxTokens 를 **보내지 않습니다.** ExamResultShell 의 fetch 를 보십시오.
+  //      다시 보내기 시작하면 같은 문제가 그대로 돌아옵니다.
+  ['dna', 'subject', 'ratio', 'monthly', 'dday', 'apply', 'mentor'],
 ]
 
 /**
- * 한 호출에 줄 출력 상한.
- * ⚠️ 갈래 하나가 6~8문장 + [한줄]·[태그]·[실천] 입니다. 우리말 400~600자면
- *    넉넉히 800 토큰쯤입니다. 1,600 은 «잘리지 않을» 여유입니다.
- *    ★더 키우지 마십시오. 상한이 크면 모델이 여유를 두고 생성해 느려집니다. (교훈 CX)
+ * ⚠️⚠️ **이 값을 쓰지 마십시오.** 남겨 둔 까닭만 적습니다.
+ *
+ *   합격운이 이 값을 /api/tongbyeon 에 보내고 있었고, 그것이
+ *   「갈래가 중간에 잘린다」 의 원인이었습니다. 지금은 **안 보냅니다.**
+ *   보내지 않으면 라우트가 premium 기본값 16,000 을 씁니다(진로적성과 같음).
+ *
+ *   ★출력이 길어 느리다고 느껴지면 이 값을 되살리지 말고
+ *     프롬프트의 «분량 지시»(SEVEN 표의 len)를 줄이십시오.
+ *     상한으로 자르면 문장 중간에서 끊기고, 분량 지시로 줄이면 말이 온전합니다.
  */
 export const CALL_MAX_TOKENS = 1600
 
@@ -379,9 +401,12 @@ export function buildSevenPrompt(v: SevenArgs, group: SevenKey[]): string | null
   //   ⚠️ 목록에 없는 카드 열쇠가 새로 생기면 **어느 갈래에도 안 갑니다.**
   //      카드를 새로 만들면 아래 표에 그 열쇠를 넣어 주십시오.
   //      (그래서 알 수 없는 열쇠는 «전부에게» 주는 쪽으로 두었습니다 — 아래 fallback)
-  const need = MATERIAL_NEEDS[plan[0].key]
+  // ★갈래가 여럿이면 그 갈래들이 필요한 카드를 «합집합» 으로 실어야 합니다.
+  //   ⚠️ plan[0] 것만 쓰면 뒤 갈래들이 재료 없이 글을 씁니다(지어냅니다).
+  const needSet = new Set<string>()
+  for (const sec of plan) for (const k of MATERIAL_NEEDS[sec.key] ?? []) needSet.add(k)
   const material = v.cards
-    .filter(c => !need || need.includes(c.key) || !ALL_CARD_KEYS.includes(c.key))
+    .filter(c => needSet.has(c.key) || !ALL_CARD_KEYS.includes(c.key))
     .map(c => `[${c.title}]\n` + c.reasons.map(r => `- ${r}`).join('\n'))
     .join('\n\n')
 

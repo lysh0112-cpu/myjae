@@ -38,7 +38,7 @@ import { judgeJobChangeNatal, judgeJobChangeLuck } from '@/lib/saju/examLuck/job
 import { judgeExamDay } from '@/lib/saju/examLuck/examDay'
 import { buildAllCards } from '@/lib/saju/examLuck/buildCards'
 import { parseExamTongbyeon } from '@/lib/saju/examLuck/buildExamPrompt'
-import { buildSevenPrompt, sevenOf, SEVEN_GROUPS, sevenKeyOf, CALL_MAX_TOKENS } from '@/lib/saju/examLuck/buildExamSeven'
+import { buildSevenPrompt, sevenOf, SEVEN_GROUPS, sevenKeyOf } from '@/lib/saju/examLuck/buildExamSeven'
 // ★2026-07-30 — 지시서 2장 «사정 평가 로직» 을 재료로 만들어 싣습니다. (교훈 CU)
 import { judgePassSignal, passSignalBlock } from '@/lib/saju/examLuck/passSignal'
 import { upsangBlock as buildUpsangBlock } from '@/lib/saju/examLuck/tables/upsang'
@@ -432,11 +432,17 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
             signal: ac.signal,
             // ★묶음이 실제로 쓰는 양에 맞춰 상한을 좁힙니다. (교훈 CX)
             //   상한을 크게 잡으면 모델이 그만큼 여유를 두고 생성해 느려집니다.
-            body: JSON.stringify({
-              systemPrompt: sp, premium: true,
-              // ★2026-07-30 — 갈래 하나에 호출 하나이므로 상한도 하나짜리입니다.
-              maxTokens: CALL_MAX_TOKENS,
-            }),
+            // ★★2026-07-30 (7차) — maxTokens 를 **보내지 않습니다.**
+            //
+            //   [이것이 하루의 원인이었습니다]
+            //     보내면 라우트가 그 값으로 자릅니다. 안 보내면 premium 기본값 16,000 입니다.
+            //         app/api/tongbyeon/route.ts:66
+            //     진로적성(career-result:213)은 처음부터 안 보냈고, 그래서 섹션 여섯 개를
+            //     한 호출에 다 썼습니다. 합격운만 1,600~3,600 으로 스스로를 막고 있었습니다.
+            //     한 갈래가 700~800자면 1,000 토큰이 넘으니, 두 번째 갈래부터 잘렸습니다.
+            //   ⚠️ **다시 넣지 마십시오.** 넣는 순간 갈래가 중간에서 끊깁니다.
+            //      길어서 느리면 상한이 아니라 SEVEN 표의 len(분량 지시)을 줄이십시오.
+            body: JSON.stringify({ systemPrompt: sp, premium: true }),
           })
           // ★실패 이유를 버리지 않습니다. 401·429·529 는 대응이 전혀 다릅니다.
           if (!res.ok) {
@@ -910,7 +916,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
                 </div>
               ))}
               <div style={{ marginTop: 7, paddingTop: 7, borderTop: '1px solid #e5dcd2' }}>
-                {`총 ${tong.length}자 · 상한 ${CALL_MAX_TOKENS} 토큰/호출 · 상태 ${tongState}`}
+                {`총 ${tong.length}자 · 상한 없음(라우트 기본 16,000) · 상태 ${tongState}`}
               </div>
               <div style={{ marginTop: 5, color: '#a08878' }}>
                 {'★걸린 시간이 60s·300s 에 몰리면 Vercel 시간 제한 · HTTP 429 면 한도'}

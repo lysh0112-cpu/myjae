@@ -1,0 +1,164 @@
+diff --git a/14-verify-exam-seven.ts b/14-verify-exam-seven.ts
+index 1e3da8c..15a3df5 100644
+--- a/14-verify-exam-seven.ts
++++ b/14-verify-exam-seven.ts
+@@ -18,7 +18,6 @@ import {
+   SEVEN_STUDENT, SEVEN_ADULT, type SevenKey, type SevenArgs,
+ } from './lib/saju/examLuck/buildExamSeven'
+ import { judgePassSignal, passSignalBlock } from './lib/saju/examLuck/passSignal'
+-import { CALL_MAX_TOKENS } from './lib/saju/examLuck/buildExamSeven'
+ import { upsangBlock, UPSANG } from './lib/saju/examLuck/tables/upsang'
+ import { hasStudentBan, STUDENT_BAN_WORDS } from './lib/saju/examLuck/tables/rules'
+ import { parseExamTongbyeon } from './lib/saju/examLuck/buildExamPrompt'
+@@ -179,7 +178,7 @@ for (const target of ['student', 'adult'] as ExamTarget[]) {
+   console.log('   묶음별 크기 —')
+   SEVEN_GROUPS.forEach((g, i) => {
+     const n = prompts[i].length
+-    console.log(`     ${i + 1}묶음 [${g.join('+')}]  ${String(n).padStart(5)}자  · maxTokens ${CALL_MAX_TOKENS}`)
++    console.log(`     ${i + 1}묶음 [${g.join('+')}]  ${String(n).padStart(5)}자  · 출력 상한 없음(라우트 기본 16,000)`)
+   })
+ 
+   // ④ 제목 왕복
+diff --git a/15-e2e-exam-live.ts b/15-e2e-exam-live.ts
+index 9de451a..52208c2 100644
+--- a/15-e2e-exam-live.ts
++++ b/15-e2e-exam-live.ts
+@@ -27,7 +27,7 @@ import { judgeExamDay } from './lib/saju/examLuck/examDay'
+ import { buildAllCards } from './lib/saju/examLuck/buildCards'
+ import { judgePassSignal, passSignalBlock } from './lib/saju/examLuck/passSignal'
+ import { upsangBlock } from './lib/saju/examLuck/tables/upsang'
+-import { buildSevenPrompt, sevenOf, SEVEN_GROUPS, sevenKeyOf, CALL_MAX_TOKENS } from './lib/saju/examLuck/buildExamSeven'
++import { buildSevenPrompt, sevenOf, SEVEN_GROUPS, sevenKeyOf } from './lib/saju/examLuck/buildExamSeven'
+ import { gradeLabel, levelLabel, trackOf, categoryLabel, targetOf, GRADE_PROMPT } from './lib/saju/examLuck/tables/studentTarget'
+ import { STUDENT_BAN_WORDS } from './lib/saju/examLuck/tables/rules'
+ import { calcSeyunList } from './lib/saju/dayun'
+@@ -185,9 +185,9 @@ async function main() {
+   let total = 0
+   SEVEN_GROUPS.forEach((g, i) => {
+     total += prompts[i].length
+-    console.log(`   ${i + 1}묶음 [${g.join('+')}]  ${String(prompts[i].length).padStart(5)}자 · maxTokens ${CALL_MAX_TOKENS}`)
++    console.log(`   ${i + 1}묶음 [${g.join('+')}]  ${String(prompts[i].length).padStart(5)}자 · 출력 상한 없음(라우트 기본 16,000)`)
+   })
+-  console.log(`   합계 ${total}자 · 출력 상한 합계 ${SEVEN_GROUPS.length * CALL_MAX_TOKENS} 토큰`)
++  console.log(`   합계 ${total}자 · 출력 상한 라우트 기본 16,000 토큰`)
+   if (prompts.some(p => !p)) bad('프롬프트가 안 나온 묶음이 있음')
+   else ok('세 묶음 전부 생성')
+ 
+diff --git a/app/manseryeok/exam-luck-result/components/ExamResultShell.tsx b/app/manseryeok/exam-luck-result/components/ExamResultShell.tsx
+index 1781230..4c86558 100644
+--- a/app/manseryeok/exam-luck-result/components/ExamResultShell.tsx
++++ b/app/manseryeok/exam-luck-result/components/ExamResultShell.tsx
+@@ -38,7 +38,7 @@ import { judgeJobChangeNatal, judgeJobChangeLuck } from '@/lib/saju/examLuck/job
+ import { judgeExamDay } from '@/lib/saju/examLuck/examDay'
+ import { buildAllCards } from '@/lib/saju/examLuck/buildCards'
+ import { parseExamTongbyeon } from '@/lib/saju/examLuck/buildExamPrompt'
+-import { buildSevenPrompt, sevenOf, SEVEN_GROUPS, sevenKeyOf, CALL_MAX_TOKENS } from '@/lib/saju/examLuck/buildExamSeven'
++import { buildSevenPrompt, sevenOf, SEVEN_GROUPS, sevenKeyOf } from '@/lib/saju/examLuck/buildExamSeven'
+ // ★2026-07-30 — 지시서 2장 «사정 평가 로직» 을 재료로 만들어 싣습니다. (교훈 CU)
+ import { judgePassSignal, passSignalBlock } from '@/lib/saju/examLuck/passSignal'
+ import { upsangBlock as buildUpsangBlock } from '@/lib/saju/examLuck/tables/upsang'
+@@ -432,11 +432,17 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
+             signal: ac.signal,
+             // ★묶음이 실제로 쓰는 양에 맞춰 상한을 좁힙니다. (교훈 CX)
+             //   상한을 크게 잡으면 모델이 그만큼 여유를 두고 생성해 느려집니다.
+-            body: JSON.stringify({
+-              systemPrompt: sp, premium: true,
+-              // ★2026-07-30 — 갈래 하나에 호출 하나이므로 상한도 하나짜리입니다.
+-              maxTokens: CALL_MAX_TOKENS,
+-            }),
++            // ★★2026-07-30 (7차) — maxTokens 를 **보내지 않습니다.**
++            //
++            //   [이것이 하루의 원인이었습니다]
++            //     보내면 라우트가 그 값으로 자릅니다. 안 보내면 premium 기본값 16,000 입니다.
++            //         app/api/tongbyeon/route.ts:66
++            //     진로적성(career-result:213)은 처음부터 안 보냈고, 그래서 섹션 여섯 개를
++            //     한 호출에 다 썼습니다. 합격운만 1,600~3,600 으로 스스로를 막고 있었습니다.
++            //     한 갈래가 700~800자면 1,000 토큰이 넘으니, 두 번째 갈래부터 잘렸습니다.
++            //   ⚠️ **다시 넣지 마십시오.** 넣는 순간 갈래가 중간에서 끊깁니다.
++            //      길어서 느리면 상한이 아니라 SEVEN 표의 len(분량 지시)을 줄이십시오.
++            body: JSON.stringify({ systemPrompt: sp, premium: true }),
+           })
+           // ★실패 이유를 버리지 않습니다. 401·429·529 는 대응이 전혀 다릅니다.
+           if (!res.ok) {
+@@ -910,7 +916,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
+                 </div>
+               ))}
+               <div style={{ marginTop: 7, paddingTop: 7, borderTop: '1px solid #e5dcd2' }}>
+-                {`총 ${tong.length}자 · 상한 ${CALL_MAX_TOKENS} 토큰/호출 · 상태 ${tongState}`}
++                {`총 ${tong.length}자 · 상한 없음(라우트 기본 16,000) · 상태 ${tongState}`}
+               </div>
+               <div style={{ marginTop: 5, color: '#a08878' }}>
+                 {'★걸린 시간이 60s·300s 에 몰리면 Vercel 시간 제한 · HTTP 429 면 한도'}
+diff --git a/lib/saju/examLuck/buildExamSeven.ts b/lib/saju/examLuck/buildExamSeven.ts
+index 6cc0a05..2e122b9 100644
+--- a/lib/saju/examLuck/buildExamSeven.ts
++++ b/lib/saju/examLuck/buildExamSeven.ts
+@@ -129,20 +129,42 @@ export function sevenOf(target: ExamTarget): SevenSection[] {
+  *    «묶음» 이라는 말이 남아 있지만 이제 한 묶음에 하나뿐입니다.
+  */
+ export const SEVEN_GROUPS: SevenKey[][] = [
+-  ['dna'],
+-  ['subject'],
+-  ['ratio'],
+-  ['monthly'],
+-  ['dday'],
+-  ['apply'],
+-  ['mentor'],
++  // ★★2026-07-30 (7차) — 한 호출에 일곱 전부. 진로적성과 «같은 방식» 입니다.
++  //
++  //   [무엇이 진짜 원인이었나 — 하루를 쓴 끝에]
++  //     합격운은 /api/tongbyeon 에 maxTokens 를 «보내고» 있었습니다.
++  //         묶음 셋일 때  2,400 / 2,400 / 3,600
++  //         1:1 일 때     1,600
++  //     진로적성은 **안 보냅니다.** 그러면 라우트가 premium ? 16000 을 씁니다.
++  //         app/api/tongbyeon/route.ts:66
++  //         max_tokens: maxTokens > 0 ? Math.min(maxTokens, 16000) : (premium ? 16000 : 3500)
++  //
++  //     한 갈래가 700~800자(우리말)면 1,000 토큰을 넘습니다.
++  //     묶음당 2,400 이면 두 번째 갈래가 상한에 걸려 잘립니다.
++  //     ★그래서 화면에 1, 3, 5 만 남았습니다. AI 가 «건너뛴» 것이 아니라 «잘린» 것입니다.
++  //
++  //   [35부 교훈 CV·CX 가 어긋나 있었습니다]
++  //     CV 「여섯 대목 한 번 → 두셋만 씀」  ← 상한이 좁은 채로 재서 «잘림» 을 «불복» 으로 읽음
++  //     CX 「상한을 좁혀라」                ← 그래서 더 조여 잘림을 굳혔음
++  //     ★증거는 처음부터 저장소 안에 있었습니다 —
++  //       lib/saju/premium/buildCareerMbtiPrompt.ts 는 섹션 **여섯 개** 를
++  //       한 호출로 씁니다. 그 화면은 하루 종일 잘 됐습니다.
++  //
++  //   ⚠️ 그래서 maxTokens 를 **보내지 않습니다.** ExamResultShell 의 fetch 를 보십시오.
++  //      다시 보내기 시작하면 같은 문제가 그대로 돌아옵니다.
++  ['dna', 'subject', 'ratio', 'monthly', 'dday', 'apply', 'mentor'],
+ ]
+ 
+ /**
+- * 한 호출에 줄 출력 상한.
+- * ⚠️ 갈래 하나가 6~8문장 + [한줄]·[태그]·[실천] 입니다. 우리말 400~600자면
+- *    넉넉히 800 토큰쯤입니다. 1,600 은 «잘리지 않을» 여유입니다.
+- *    ★더 키우지 마십시오. 상한이 크면 모델이 여유를 두고 생성해 느려집니다. (교훈 CX)
++ * ⚠️⚠️ **이 값을 쓰지 마십시오.** 남겨 둔 까닭만 적습니다.
++ *
++ *   합격운이 이 값을 /api/tongbyeon 에 보내고 있었고, 그것이
++ *   「갈래가 중간에 잘린다」 의 원인이었습니다. 지금은 **안 보냅니다.**
++ *   보내지 않으면 라우트가 premium 기본값 16,000 을 씁니다(진로적성과 같음).
++ *
++ *   ★출력이 길어 느리다고 느껴지면 이 값을 되살리지 말고
++ *     프롬프트의 «분량 지시»(SEVEN 표의 len)를 줄이십시오.
++ *     상한으로 자르면 문장 중간에서 끊기고, 분량 지시로 줄이면 말이 온전합니다.
+  */
+ export const CALL_MAX_TOKENS = 1600
+ 
+@@ -379,9 +401,12 @@ export function buildSevenPrompt(v: SevenArgs, group: SevenKey[]): string | null
+   //   ⚠️ 목록에 없는 카드 열쇠가 새로 생기면 **어느 갈래에도 안 갑니다.**
+   //      카드를 새로 만들면 아래 표에 그 열쇠를 넣어 주십시오.
+   //      (그래서 알 수 없는 열쇠는 «전부에게» 주는 쪽으로 두었습니다 — 아래 fallback)
+-  const need = MATERIAL_NEEDS[plan[0].key]
++  // ★갈래가 여럿이면 그 갈래들이 필요한 카드를 «합집합» 으로 실어야 합니다.
++  //   ⚠️ plan[0] 것만 쓰면 뒤 갈래들이 재료 없이 글을 씁니다(지어냅니다).
++  const needSet = new Set<string>()
++  for (const sec of plan) for (const k of MATERIAL_NEEDS[sec.key] ?? []) needSet.add(k)
+   const material = v.cards
+-    .filter(c => !need || need.includes(c.key) || !ALL_CARD_KEYS.includes(c.key))
++    .filter(c => needSet.has(c.key) || !ALL_CARD_KEYS.includes(c.key))
+     .map(c => `[${c.title}]\n` + c.reasons.map(r => `- ${r}`).join('\n'))
+     .join('\n\n')
+ 
