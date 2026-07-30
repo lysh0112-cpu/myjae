@@ -14,6 +14,7 @@ import { diagnoseName, type NameChar } from '@/lib/saju/naming'
 // ★2026-07-30 (2단계) — 자원오행 통합 판정
 import {
   buildSajuOhaengProfile, judgeResource, resourceFactsBlock,
+  birthOrderCautionBlock,
   type JudgeChar, type PillarLike,
 } from '@/lib/saju/resourceJudge'
 import { normalizeOhaeng, cleanHanja } from '@/lib/saju/ohaeng'
@@ -145,11 +146,12 @@ export async function POST(req: Request) {
       },
       Array.isArray(body.saju) ? (body.saju as PillarLike[]) : null,
     )
-    const verdict = judgeResource(
-      toJudgeChar(body.surname),
-      body.given.map(toJudgeChar),
-      profile,
-    )
+    const givenJudge = body.given.map(toJudgeChar)
+    const verdict = judgeResource(toJudgeChar(body.surname), givenJudge, profile)
+    // ★2026-07-30 (4단계) — 형제 서열을 가려 쓰는 글자가 있으면 «참고» 로만 안내합니다.
+    //   ⚠️ 감점하지 않습니다. 폼이 «몇째» 를 묻지 않고, 교재 표의 해석도 갈립니다.
+    //   ⚠️ 걸린 글자가 없으면 빈 문자열이라 프롬프트에 블록이 «아예» 안 들어갑니다. (교훈 BF)
+    const birthOrderCaution = birthOrderCautionBlock(givenJudge)
 
     const factsForAI = {
       음양오행: result.yinYang.facts,
@@ -159,6 +161,7 @@ export async function POST(req: Request) {
       사주보완: result.yongsinBohwan.facts,
       // ★2단계 신설 — 위 둘(자원오행·사주보완)의 «근거를 넓힌» 것
       자원오행_정밀: verdict.facts,
+      형제서열_참고: birthOrderCaution || undefined,
       참고할자리: verdict.warnings,
       판정못한자리: verdict.problems,
     }
@@ -190,6 +193,7 @@ ${body.sajuText ? `사주: ${body.sajuText}` : ''}
 
 [★자원오행과 사주의 관계 — 사람이 읽는 정리]
 ${resourceFactsBlock(verdict, profile)}
+${birthOrderCaution ? `\n${birthOrderCaution}` : ''}
 
 [★위 «참고하실 자리» 를 다루는 법]
 - 숨기지 마세요. 다만 «좋다/나쁘다» 로 가르지 말고 "이런 견해가 있어 참고하시라"는 정도로 담담히 전하세요.

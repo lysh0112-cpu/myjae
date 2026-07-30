@@ -462,6 +462,60 @@ export const BIRTH_ORDER_BOOK = {
   conflict: '우리 BIRTH_ORDER_HANJA_MAP 은 元·長 을 «첫째» 로 두었으나 교재는 元 을 «둘째» 칸에 둡니다.',
 } as const
 
+/**
+ * ★★표의 애매함을 «불용 목록» 이 풀어 줍니다 (114~118쪽)
+ *
+ *   120쪽 표는 「첫째 칸 / 둘째 칸」이 «쓸 글자» 인지 «피할 글자» 인지 갈리지 않습니다.
+ *   그런데 불용 목록에 같은 글자들이 **문장으로** 실려 있고, 여섯 줄이 «한 방향» 입니다 —
+ *
+ *     完  맏이가 쓰는 것은 무방하나 차자가 쓰면 형을 극한다
+ *     元  맏이가 쓰면 무방하나 차자가 쓰면 불길하다
+ *     泰  장자는 무방하나 차자는 삶에 역경이 많고 잔병치레를 겪는다
+ *     長  동생이 쓰면 형이 망하고 자신도 좋지 않다
+ *     大  동생이 쓰면 형을 극한다
+ *     輝  성품이 강하여 모든 일에 실수가 잦다. 동생이 쓰면 안 좋다
+ *
+ *   ★여섯 자 모두 «맏이는 무방 · 동생(차자)이 쓰면 문제» 입니다.
+ *     즉 표의 「둘째 칸(大 元 初 太 上 高 先)」은 «둘째가 쓸 글자» 가 아니라
+ *     «둘째가 피할 글자» 로 읽는 것이 문맥에 맞습니다.
+ *     본문의 「동생이 大를 사용하게 되면 … 동생이 첫째를 누를 수 있고」와도 맞습니다.
+ *
+ *   ⚠️ 다만 이것은 «저희 해석» 입니다. 표 자체가 그렇게 적혀 있지는 않습니다.
+ *      ★연재쌤 확인이 필요합니다. 그때까지는 «감점 없이 안내만» 합니다.
+ */
+export interface BirthOrderCaution {
+  hanja: string
+  eum: string
+  /** 교재가 문장으로 밝힌 것인가, 표에만 있는가 */
+  source: '불용목록' | '표'
+  /** 원문 그대로 */
+  rawNote: string
+}
+
+export const BIRTH_ORDER_CAUTION: BirthOrderCaution[] = [
+  // ── 불용 목록에 «문장» 으로 실린 것 — 방향이 분명합니다 ──
+  { hanja: '完', eum: '완', source: '불용목록', rawNote: '맏이가 쓰는 것은 무방하나 차자가 쓰면 형을 극한다.' },
+  { hanja: '元', eum: '원', source: '불용목록', rawNote: '맏이가 쓰면 무방하나 차자가 쓰면 불길하다.' },
+  { hanja: '泰', eum: '태', source: '불용목록', rawNote: '장자는 무방하나 차자는 삶에 역경이 많고 잔병치레를 겪는다.' },
+  { hanja: '長', eum: '장', source: '불용목록', rawNote: '동생이 쓰면 형이 망하고 자신도 좋지 않다.' },
+  { hanja: '大', eum: '대', source: '불용목록', rawNote: '동생이 쓰면 형을 극한다.' },
+  { hanja: '輝', eum: '휘', source: '불용목록', rawNote: '동생이 쓰면 안 좋다.' },
+  // ── 120쪽 표에만 있는 것 — 방향이 불분명합니다 ──
+  { hanja: '少', eum: '소', source: '표', rawNote: '첫째 칸에 실려 있습니다.' },
+  { hanja: '弟', eum: '제', source: '표', rawNote: '첫째 칸에 실려 있습니다.' },
+  { hanja: '下', eum: '하', source: '표', rawNote: '첫째 칸에 실려 있습니다.' },
+  { hanja: '後', eum: '후', source: '표', rawNote: '첫째 칸에 실려 있습니다.' },
+  { hanja: '低', eum: '저', source: '표', rawNote: '첫째 칸에 실려 있습니다.' },
+  { hanja: '初', eum: '초', source: '표', rawNote: '둘째 칸에 실려 있습니다.' },
+  { hanja: '太', eum: '태', source: '표', rawNote: '둘째 칸에 실려 있습니다.' },
+  { hanja: '上', eum: '상', source: '표', rawNote: '둘째 칸에 실려 있습니다.' },
+  { hanja: '高', eum: '고', source: '표', rawNote: '둘째 칸에 실려 있습니다.' },
+  { hanja: '先', eum: '선', source: '표', rawNote: '둘째 칸에 실려 있습니다.' },
+]
+
+export const BIRTH_ORDER_CAUTION_MAP: Record<string, BirthOrderCaution> =
+  Object.fromEntries(BIRTH_ORDER_CAUTION.map(e => [e.hanja, e]))
+
 // ══════════════════════════════════════════════════════════════════
 //  13-4 ~ 13-11. 그 밖의 고려 사항 (120~122쪽)
 // ══════════════════════════════════════════════════════════════════

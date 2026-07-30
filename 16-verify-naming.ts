@@ -30,7 +30,7 @@ import {
 } from './lib/saju/ohaeng'
 import {
   buildSajuOhaengProfile, ensureProfile, judgeResource, relationDirected,
-  resourceFactsBlock, josa,
+  resourceFactsBlock, josa, birthOrderCautionBlock,
   EXCESS_POINT_MIN, W_FLOW, W_YONGSIN, W_BALANCE,
   type JudgeChar, type SajuOhaengProfile,
 } from './lib/saju/resourceJudge'
@@ -642,6 +642,60 @@ head('⑦-3 ★상극을 보는 두 견해 (4단계 · 『작명개운법』 107
   const BAN2 = ['흉하', '나쁜 이름', '불길', '망하', '재앙']
   const hit2 = BAN2.filter(w => bLeft.includes(w))
   check(hit2.length === 0, `두 견해 문구에 단정적 부정어 0건 — ${hit2.join(',') || '없음'}`)
+}
+
+// ══════════════════════════════════════════════════════════════════
+head('⑦-4 ★형제 서열 안내 (4단계 · 감점 없이 참고만)')
+// ══════════════════════════════════════════════════════════════════
+//
+// ⚠️ 왜 «감점하지 않나» — 『작명개운법』 120쪽 표는 「첫째 칸 / 둘째 칸」이
+//    «쓸 글자» 인지 «피할 글자» 인지 원문으로 갈리지 않습니다.
+//    그리고 이름 풀이 폼이 «몇째» 를 묻지 않아 판정할 근거가 없습니다.
+//    ★대표님 확정 — 안내만 합니다.
+{
+  const CB = (h: string, g: string): JudgeChar =>
+    ({ hanja: h, hangul: g, primary: '목', secondary: null })
+
+  // ① 불용 목록에 «문장» 으로 실린 여섯 자 — 방향이 분명합니다
+  const won = birthOrderCautionBlock([CB('元', '원'), CB('炫', '현')])
+  check(won.includes('元(원)'), `元 이 걸립니다`)
+  check(won.includes('맏이가 쓰면 무방하나 아래 형제가 쓰면'),
+    `★불용 목록 여섯 자는 방향을 밝혀 적습니다 (完 元 泰 長 大 輝)`)
+
+  // ② 표에만 있는 글자 — 방향을 말하지 않습니다
+  const cho = birthOrderCautionBlock([CB('初', '초')])
+  check(cho.includes('태어난 순서에 맞추어 가려 쓰는 것이 좋다고 보는 견해'),
+    `★표에만 있는 글자는 «순서에 맞추어» 정도로만 적습니다`)
+  check(!cho.includes('맏이'), `방향을 단정하지 않습니다`)
+
+  // ③ 걸린 글자가 «없으면» 빈 문자열 (교훈 BF)
+  check(birthOrderCautionBlock([CB('柳', '류'), CB('炫', '현')]) === '',
+    `★해당 글자가 없으면 블록을 아예 만들지 않습니다`)
+
+  // ④ 성은 보지 않습니다 — 성은 서열과 무관합니다
+  //    (birthOrderCautionBlock 은 given 만 받습니다)
+  check(birthOrderCautionBlock([CB('炫', '현')]) === '', `이름에만 없으면 빈 문자열`)
+
+  // ⑤ ★원문 사유를 그대로 내보내지 않습니다 (교훈 BR)
+  const RAWWORD = ['형을 극한다', '불길하다', '형이 망하고', '역경이 많고', '잔병치레']
+  const leaked = RAWWORD.filter(w => won.includes(w) || cho.includes(w))
+  check(leaked.length === 0, `원문 사유가 새지 않습니다 — 걸린 말: ${leaked.join(',') || '없음'}`)
+
+  // ⑥ 판정 어휘도 없어야 합니다
+  const BAN3 = ['나쁘', '흉하', '불길', '단명', '극한다']
+  const hit3 = BAN3.filter(w => won.includes(w) || cho.includes(w))
+  check(hit3.length === 0, `단정적 부정어 0건 — ${hit3.join(',') || '없음'}`)
+
+  // ⑦ AI 에게 «단정하지 말라» 를 명시하는가
+  check(won.includes('맞다 / 틀리다') && won.includes('이 한 가지로 이름 전체를 판단하지 마세요'),
+    `★서열을 모르므로 판정하지 말라고 못 박습니다`)
+
+  // ⑧ 여섯 자가 모두 «불용목록» 갈래인가
+  for (const h of ['完', '元', '泰', '長', '大', '輝']) {
+    const b = birthOrderCautionBlock([CB(h, 'x')])
+    if (!b.includes('맏이가 쓰면 무방하나')) no(`${h} 가 불용목록 갈래가 아닙니다`)
+  }
+  ok(`불용 목록 여섯 자(完 元 泰 長 大 輝)가 모두 잡힙니다`)
 }
 
 // ══════════════════════════════════════════════════════════════════
