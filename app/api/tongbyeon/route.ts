@@ -31,7 +31,7 @@ export async function POST(req: Request) {
   //   [왜] 프리미엄 프롬프트는 «지시(system)»와 «이 사람의 재료(user)»를 나눠 보냅니다.
   //        한 덩이로 붙여 system 에 다 넣으면 모델이 지시와 자료를 구분하기 어렵습니다.
   //   ⚠️ 안 보내면 예전 그대로 돕니다. 기존 화면은 하나도 안 고쳐도 됩니다.
-  const { systemPrompt, userPrompt, premium } = await req.json()
+  const { systemPrompt, userPrompt, premium, maxTokens } = await req.json()
 
   if (!systemPrompt || typeof systemPrompt !== 'string') {
     return new Response('systemPrompt가 필요해요', { status: 400 })
@@ -55,7 +55,15 @@ export async function POST(req: Request) {
             // ★2026-07-25 — 궁합 통변 7대목이 8192 토큰에서 끊겨(정준호 배우자운에서 멈춤,
             //   이경아 배우자운 아예 생성 안 됨) 12000으로 올린다.
             //   Sonnet 4.5 최대 출력은 64000 토큰이라 안전. 실제 출력만큼만 과금된다.
-            max_tokens: premium ? 16000 : 3500,
+            // ★2026-07-29 — 부르는 쪽이 상한을 정할 수 있게 열었습니다.
+            //   [왜] 합격운을 세 묶음으로 나눠 부르는데, 묶음마다 16000 을 잡아 두니
+            //     한 묶음이 실제로 쓰는 양(1,500~2,500 토큰)보다 여섯 배 넉넉했습니다.
+            //     상한이 크면 모델이 그만큼 여유를 두고 생성해 느려집니다.
+            //     셋을 나란히 불러도 «가장 느린 하나» 를 기다리므로 체감이 큽니다.
+            //   ⚠️ 안 보내면 예전 그대로입니다. 다른 화면은 하나도 안 바뀝니다.
+            max_tokens: typeof maxTokens === 'number' && maxTokens > 0
+              ? Math.min(maxTokens, 16000)
+              : (premium ? 16000 : 3500),
             stream: true,
             system: systemPrompt,
             messages: [

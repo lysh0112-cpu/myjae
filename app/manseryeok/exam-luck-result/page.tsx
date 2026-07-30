@@ -69,6 +69,8 @@ function ExamLuckResultInner() {
   const [dayunList, setDayunList] = useState<DayunItem[]>([])
   const [tong, setTong] = useState('')
   const [tongState, setTongState] = useState<'idle' | 'loading' | 'done' | 'failed'>('idle')
+  /** ★2026-07-29 — 세 묶음 가운데 몇이 왔나. 기다리는 손님에게 보여 줍니다. */
+  const [doneGroups, setDoneGroups] = useState(0)
   const savedIdRef = useRef<string>('')
   const savedRef = useRef(false)
   const tongStartedRef = useRef(false)
@@ -230,7 +232,13 @@ function ExamLuckResultInner() {
         try {
           const r = await fetch('/api/tongbyeon', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ systemPrompt: sp, premium: true }),
+            // ★묶음이 실제로 쓰는 양에 맞춰 상한을 좁힙니다.
+            //   한 갈래가 5~8문장이니 갈래당 1,200 토큰이면 넉넉합니다.
+            //   상한을 크게 잡으면 모델이 그만큼 여유를 두고 생성해 느려집니다.
+            body: JSON.stringify({
+              systemPrompt: sp, premium: true,
+              maxTokens: g.length * 1200,
+            }),
           })
           if (!r.ok || !r.body) return ''
           const rd = r.body.getReader()
@@ -265,7 +273,10 @@ function ExamLuckResultInner() {
         const parts: string[] = ['', '', '']
         await Promise.all(SEVEN_GROUPS.map(async (g, i) => {
           parts[i] = await runGroup(g)
-          if (!cancelled) setTong(parts.filter(Boolean).join('\n\n'))
+          if (!cancelled) {
+            setTong(parts.filter(Boolean).join('\n\n'))
+            setDoneGroups(parts.filter(Boolean).length)
+          }
         }))
         const acc = parts.filter(Boolean).join('\n\n')
         if (!acc.trim()) { if (!cancelled) setTongState('failed'); return }
@@ -375,9 +386,27 @@ function ExamLuckResultInner() {
              멀리 떨어져 손님이 스스로 이어 붙여야 했습니다.
              → 아래 카드 반복문에서 그 카드 «바로 위» 로 옮겼습니다. */}
 
-        {tongState === 'loading' && !tong && (
-          <div style={{ textAlign: 'center', padding: '18px 0', color: ACCENT, fontSize: 13 }}>
-            풀이를 쓰는 중이에요… 조금만 기다려 주세요
+        {/* ★2026-07-29 — 어디까지 왔는지 보여 줍니다.
+             빈 화면에 «기다려 주세요» 만 있으면 손님은 멈춘 줄 압니다. */}
+        {tongState === 'loading' && (
+          <div style={{
+            textAlign: 'center', padding: '16px 0 18px', color: ACCENT, fontSize: 13,
+          }}>
+            <div>풀이를 쓰는 중이에요… 조금만 기다려 주세요</div>
+            <div style={{
+              display: 'flex', gap: 5, justifyContent: 'center', marginTop: 10,
+            }}>
+              {[0, 1, 2].map(i => (
+                <span key={i} style={{
+                  width: 30, height: 4, borderRadius: 20,
+                  background: i < doneGroups ? ACCENT : '#f0dbe4',
+                  transition: 'background .3s',
+                }} />
+              ))}
+            </div>
+            <div style={{ fontSize: 11, color: '#b08a9a', marginTop: 7 }}>
+              {doneGroups}/3 묶음 · 일곱 갈래를 나눠 쓰고 있어요
+            </div>
           </div>
         )}
 
