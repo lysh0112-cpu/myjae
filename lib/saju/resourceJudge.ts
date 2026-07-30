@@ -454,21 +454,24 @@ function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min
 /**
  * ★자원오행 통합 판정.
  *
- * @param surname 성 한 글자 (바꿀 수 없는 글자)
+ * @param surname 성 (바꿀 수 없는 글자). ★복성이면 두 글자 배열로 주십시오 (2026-07-31)
  * @param given   이름 글자들 (한 자 이상)
  * @param P       사주 프로필
  */
 export function judgeResource(
-  surname: JudgeChar,
+  surname: JudgeChar | JudgeChar[],
   given: JudgeChar[],
   profile: SajuOhaengProfile,
 ): ResourceVerdict {
+  // ★2026-07-31 복성 — 성이 두 글자면 둘 다 «성» 입니다.
+  //   예전에는 남궁순임이 성「南」+ 이름「穹淳荏」로 들어와 穹 이 이름 글자로 채점됐습니다.
+  const surArr: JudgeChar[] = Array.isArray(surname) ? surname : [surname]
   // ★손으로 만든 프로필(용신 + 등급만)도 받습니다. 빈 자리는 안전한 기본값으로.
   const P = ensureProfile(profile)
   const warnings: string[] = []
   const problems: string[] = []
 
-  const seq = [surname, ...given]
+  const seq = [...surArr, ...given]
   const O = seq.map(c => c.primary)
   const givenO = given.map(c => c.primary)
   const givenAll = given.flatMap(c => [c.primary, c.secondary ?? null]).filter(Boolean) as Ohaeng[]
@@ -522,7 +525,9 @@ export function judgeResource(
 
   // ★옛 로직이 «건너뛰던» 관계 하나 — 성과 마지막 글자.
   //   세 글자 이상에서 의미가 큽니다. 무게는 절반으로 둡니다(이웃보다 멉니다).
-  if (O.length >= 3) addLink(0, O.length - 1, 0.5, ' [성↔끝]')
+  //   ★2026-07-31 조건을 «이름 두 글자 이상» 으로 바로잡았습니다.
+  //   예전 O.length >= 3 은 복성 + 외자(남궁민)에서도 걸렸습니다.
+  if (given.length >= 2) addLink(0, O.length - 1, 0.5, ' [성↔끝]')
 
   const flowAvg = relCount > 0 ? relSum / relCount : 0            // -2.0 ~ +2.0
   const flowScore = clamp((flowAvg + 2) / 4, 0, 1) * W_FLOW        // 0 ~ 30
@@ -666,7 +671,7 @@ export function judgeResource(
       yongsinChars: given
         .filter(c => c.primary === P.yongsin)
         .map(c => ({ hanja: c.hanja, hangul: c.hangul })),
-      surnameOhaeng: surname.primary,
+      surnameOhaeng: surArr[0].primary,
       givenOhaengs: givenO,
       excessAdded, lackFilled, isolatedFilled, gisinAdded,
       sajuScore: P.score, sajuLevel: HANLEVEL, sajuCount: P.count,

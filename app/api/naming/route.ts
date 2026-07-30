@@ -151,8 +151,10 @@ export async function POST(req: Request) {
       },
       Array.isArray(body.saju) ? (body.saju as PillarLike[]) : null,
     )
-    const givenJudge = body.given.map(toJudgeChar)
-    const verdict = judgeResource(toJudgeChar(body.surname), givenJudge, profile)
+    // ★2026-07-31 복성 — 위에서 갈라 둔 sp 를 그대로 씁니다.
+    //   body.given 을 쓰면 복성 둘째 글자(穹)가 이름 글자로 채점됩니다.
+    const givenJudge = sp.given.map(toJudgeChar)
+    const verdict = judgeResource(sp.surname.map(toJudgeChar), givenJudge, profile)
     // ★2026-07-30 (4단계) — 형제 서열을 가려 쓰는 글자가 있으면 «참고» 로만 안내합니다.
     //   ⚠️ 감점하지 않습니다. 폼이 «몇째» 를 묻지 않고, 교재 표의 해석도 갈립니다.
     //   ⚠️ 걸린 글자가 없으면 빈 문자열이라 프롬프트에 블록이 «아예» 안 들어갑니다. (교훈 BF)

@@ -910,6 +910,28 @@ head('⑧-d ★복성 · 3글자 이상 · 순화 해설 (2026-07-31 3차)')
   check(String(sfS.성씨).split('·').length === 1, `단성 — 성씨 한 글자 (${sfS.성씨})`)
   check((rS.resourceFlow.facts as Record<string, unknown> & { links: { 구간: string }[] })
     .links.every(x => x.구간 !== '성씨 안'), `단성은 «성씨 안» 구간이 없습니다`)
+
+  // ── 🔴 judgeResource 도 복성을 알아야 합니다 (2026-07-31 5차)
+  const JC = (h: string, g: string, o: string) =>
+    ({ hanja: h, hangul: g, primary: o as never, secondary: null })
+  const Pj = buildSajuOhaengProfile({ yongsin: '수', heeksin: '금', gisin: '토',
+    gusin: undefined, hansin: undefined, score: { 목: 10, 화: 15, 토: 25, 금: 45, 수: 5 } }, null)
+  const N南 = JC('南', '남', '화'), N穹 = JC('穹', '궁', '수')
+  const N淳 = JC('淳', '순', '수'), N荏 = JC('荏', '임', '목')
+
+  const vBad = judgeResource(N南, [N穹, N淳, N荏], Pj)          // 옛 방식 — 성 한 글자
+  const vOk  = judgeResource([N南, N穹], [N淳, N荏], Pj)        // 복성
+  const yc = (v: typeof vOk) =>
+    ((v.facts as Record<string, unknown>).yongsinChars as { hanja: string }[] ?? []).map(x => x.hanja)
+  check(yc(vBad).join('') === '穹淳', `(재현) 성을 한 글자로 보면 穹 이 이름 글자로 셉니다`)
+  check(yc(vOk).join('') === '淳', `★복성이면 용신을 담은 이름 글자는 淳 하나입니다`)
+  check(!yc(vOk).includes('穹'), `★성씨 글자가 «이름이 채운 기운» 에 섞이지 않습니다`)
+
+  // 단성 회귀 — 배열로 줘도 한 글자면 예전과 같아야 합니다
+  const J류 = JC('柳', '류', '목'), J承 = JC('承', '승', '금'), J炫 = JC('炫', '현', '화')
+  const vOne = judgeResource(J류, [J承, J炫], Pj)
+  const vArr = judgeResource([J류], [J承, J炫], Pj)
+  check(vOne.score === vArr.score, `단성 — 한 글자로 주나 배열로 주나 같은 점수 (${vOne.score})`)
   check(String((rS.suri.facts as Record<string, unknown>).서술지침).length > 0, `AI 재료에 어조 지침 포함`)
 }
 
