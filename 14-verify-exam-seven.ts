@@ -138,7 +138,11 @@ for (const target of ['student', 'adult'] as ExamTarget[]) {
   const table = sevenOf(target)
   console.log(`\n──────── ${label} ────────`)
 
-  const prompts = SEVEN_GROUPS.map(g => buildSevenPrompt(v, g) ?? '')
+  // ★2026-07-30 (8차) — buildSevenPrompt 가 {system,user} 를 돌려줍니다.
+  //   검사는 «AI 에게 실제로 나가는 전부» 를 봐야 하므로 두 덩이를 이어 붙여 잽니다.
+  //   ⚠️ 화면에서는 절대 이어 붙이지 마십시오. 나눠 보내는 것이 핵심입니다.
+  const pairs = SEVEN_GROUPS.map(g => buildSevenPrompt(v, g))
+  const prompts = pairs.map(p => (p ? p.system + '\n' + p.user : ''))
   if (prompts.some(p => !p)) bad('묶음 가운데 프롬프트가 안 나온 것이 있음')
 
   // ② 폼 여섯 변수 (지시서 1장)

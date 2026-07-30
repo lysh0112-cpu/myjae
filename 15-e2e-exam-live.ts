@@ -181,7 +181,11 @@ async function main() {
   console.log('      이 카드들은 buildAllCards 가 만든 것이라 그 상한 밖입니다. (교훈 CQ 와 같은 자리)')
 
   console.log('\n⑧ 프롬프트 셋 (AI 에게 실제로 나가는 것)')
-  const prompts = SEVEN_GROUPS.map(g => buildSevenPrompt(v, g) ?? '')
+  // ★2026-07-30 (8차) — buildSevenPrompt 가 {system,user} 를 돌려줍니다.
+  //   검사는 «AI 에게 실제로 나가는 전부» 를 봐야 하므로 두 덩이를 이어 붙여 잽니다.
+  //   ⚠️ 화면에서는 절대 이어 붙이지 마십시오. 나눠 보내는 것이 핵심입니다.
+  const pairs = SEVEN_GROUPS.map(g => buildSevenPrompt(v, g))
+  const prompts = pairs.map(p => (p ? p.system + '\n' + p.user : ''))
   let total = 0
   SEVEN_GROUPS.forEach((g, i) => {
     total += prompts[i].length

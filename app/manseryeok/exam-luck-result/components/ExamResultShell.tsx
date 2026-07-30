@@ -92,6 +92,26 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
   const gradeLevel = sp.get('gradeLevel') || ''
   const trackSel = sp.get('track') || ''
 
+  /**
+   * ★2026-07-30 — 전문가 모드. (대표님 지시 — 「재료는 고객이 볼 필요가 없다」)
+   *
+   *   [무엇이 새고 있었나]
+   *     ① 🔧 개발용 호출 기록 상자   HTTP 상태·초·글자수·●○·묶음 수
+   *     ② 로딩 줄의 «1,234자»       몇 자 왔나
+   *   둘 다 «우리 사정» 입니다. 손님에게는 뜻이 없고, 되레 리포트가
+   *   기계 장치처럼 보여 신뢰를 깎습니다.
+   *
+   *   → **지우지 않고** ?pro=1 뒤로 옮겼습니다.
+   *     result-new 가 합충·용신을 감출 때 쓰던 것과 같은 잣대입니다.
+   *     (searchParams.get('pro') === '1' — result-new/page.tsx 403줄)
+   *
+   *   ⚠️ 막힐 때 대표님께 부탁할 주소는 이렇습니다.
+   *      지금 결과 화면 URL 끝에 **&pro=1** 만 붙이면 상자가 다시 뜹니다.
+   *   ⚠️ 판정(cards)·재료는 예전처럼 그대로 계산되어 AI 에게 갑니다.
+   *      화면에만 안 그립니다. (교훈 AV)
+   */
+  const isPro = sp.get('pro') === '1'
+
   const [calc, setCalc] = useState<PersonCalc | null>(null)
   const [err, setErr] = useState('')
   const [dayunList, setDayunList] = useState<DayunItem[]>([])
@@ -103,8 +123,11 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
    *   [왜 넣었나] 하루 동안 Vercel 로그·관리자 오류탭을 뒤지느라 시간을 다 썼습니다.
    *     로그를 찾아 옮기는 일을 대표님께 계속 부탁할 수 없습니다.
    *     → 화면 맨 아래 접힌 상자에 넣습니다. 펴서 캡처 한 장만 주시면 됩니다.
-   *   ⚠️ 손님에게는 접혀 있고 «개발용» 이라 적혀 있습니다. 눌러야 보입니다.
-   *   ⚠️ 안정되면 지우거나 ?debug=1 로 가려도 됩니다.
+   *   ★2026-07-30 (고침) — 이제 **손님에게는 아예 안 보입니다.**
+   *     `?pro=1` 에서만 그립니다. (isPro — 위쪽 `sp.get('pro')` 자리)
+   *     기록 자체는 손님 화면에서도 계속 쌓입니다. 그리지만 않습니다.
+   *     그래서 손님이 «안 나온다» 고 하셨을 때, 같은 URL 에 &pro=1 만 붙여
+   *     다시 부르면 그 자리에서 까닭이 보입니다.
    */
   /**
    * ★2026-07-30 — 지금 «흐르고 있는» 갈래 자리들.
@@ -385,10 +408,31 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       //      Promise.all 로 바꾸면 되지만, 위에 적은 세 위험이 함께 돌아옵니다.
       // ══════════════════════════════════════════════════════════
 
-      /** 조각이 이만큼(밀리초) 안 오면 그 묶음은 멈춘 것으로 본다 */
-      const STALL_MS = 35000
-      /** 한 묶음이 아무리 길어도 이 시간을 넘기지 않는다 */
-      const HARD_MS = 90000
+      // ══════════════════════════════════════════════════════════
+      //  ★★2026-07-30 (8차) — 90초 «단두대» 를 걷어냈습니다.
+      //
+      //   [무엇이 문제였나] 7차에서 한 호출로 일곱 갈래를 쓰게 바꿨는데,
+      //     이 시계는 «묶음 셋» 시절 값(한 묶음 2~3갈래)이 그대로 남아 있었습니다.
+      //       일곱 갈래 = 우리말 5,000~6,000자 ≒ 출력 4,500~5,500 토큰
+      //       실제 걸리는 시간 70~140초  >  HARD_MS 90초
+      //     → 90초에서 스트림을 «우리 손으로» 끊고 있었습니다.
+      //       뒤 갈래가 안 온 것이 아니라, 오는 중에 잘랐던 것입니다. (교훈 DS)
+      //
+      //   [진로적성은 어떤가] career-result/page.tsx 에는 이 시계가 **없습니다.**
+      //     라우트가 maxDuration = 300 이니 그때까지 기다립니다.
+      //     그래서 섹션 여섯을 끝까지 받습니다.
+      //
+      //   ⚠️ 그래도 «영원히 매달림» 은 막아야 하므로 두 가지만 남겼습니다 —
+      //       · STALL  : 글이 한 조각도 안 오는 침묵만 잡습니다(느린 것은 안 잡습니다)
+      //       · HARD   : 라우트 상한(300초) 바로 아래. 여기 걸리면 라우트가 이미 끝난 뒤입니다.
+      //   ⚠️⚠️ **이 두 값을 다시 내리지 마십시오.** 내리면 긴 갈래가 중간에서 잘립니다.
+      //         느려서 줄이고 싶으면 시계가 아니라 SEVEN 표의 len(분량 지시)을 줄이십시오.
+      // ══════════════════════════════════════════════════════════
+
+      /** 조각이 이만큼(밀리초) 안 오면 «멈춘 것» 으로 본다 — 느린 것과 다릅니다 */
+      const STALL_MS = 90000
+      /** 라우트 maxDuration(300초) 바로 아래. 사실상 안 걸립니다. */
+      const HARD_MS = 290000
 
       /** ★진로적성과 같이 «하나의 글» 로 쌓습니다. 묶음별로 나누지 않습니다. */
       let acc = ''
@@ -442,7 +486,15 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
             //     한 갈래가 700~800자면 1,000 토큰이 넘으니, 두 번째 갈래부터 잘렸습니다.
             //   ⚠️ **다시 넣지 마십시오.** 넣는 순간 갈래가 중간에서 끊깁니다.
             //      길어서 느리면 상한이 아니라 SEVEN 표의 len(분량 지시)을 줄이십시오.
-            body: JSON.stringify({ systemPrompt: sp, premium: true }),
+            //
+            // ★★2026-07-30 (8차) — systemPrompt 와 userPrompt 를 «나눠» 보냅니다.
+            //   진로적성 career-result/page.tsx:213 과 같은 모양입니다 —
+            //       body: { systemPrompt, userPrompt: prem?.user, premium: true }
+            //   전에는 systemPrompt 하나만 보냈고, 그러면 라우트가 user 자리에
+            //   "위 안내에 따라 통변을 작성해 주세요." 한 줄을 넣습니다(route.ts:72~75).
+            //   모델이 «마지막에 본 것» 이 그 한 줄이어서 뼈대의 힘이 약했습니다. (교훈 CW)
+            //   ⚠️ 한 덩이로 합쳐 보내지 마십시오.
+            body: JSON.stringify({ systemPrompt: sp.system, userPrompt: sp.user, premium: true }),
           })
           // ★실패 이유를 버리지 않습니다. 401·429·529 는 대응이 전혀 다릅니다.
           if (!res.ok) {
@@ -724,9 +776,18 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
                    묶음 번호보다 이게 손님에게 뜻이 있습니다. */}
               {/* ★2026-07-30 (2차) — «몇 번째» 가 아니라 «몇 개 왔나» 입니다.
                    둘씩 부르면 «1번째 갈래» 표시가 2번이 다 나온 뒤에도 남아 어긋납니다. */}
-              {`${doneGroups}/${sections.length} 갈래`}
-              {running.size > 0 && ` · ${running.size}개 쓰는 중`}
-              {tong.length > 0 && ` · ${tong.length.toLocaleString()}자`}
+              {/* ★★2026-07-30 (8차) — doneGroups(«묶음» 수) 가 아니라 «실제로 화면에 앉은 갈래» 수입니다.
+                   [왜] 7차에서 묶음이 하나로 합쳐졌습니다. 그러니 doneGroups 는 0 아니면 1 뿐이고,
+                     일곱 갈래가 차오르는 동안 «0/7» 에 붙어 있다가 끝에 «1/7» 로 뛰었습니다.
+                     손님도 대표님도 «하나만 나왔다» 고 읽을 수밖에 없는 표시였습니다.
+                   → 파싱된 갈래를 그대로 셉니다. 글이 차오르는 대로 1/7 … 7/7 로 올라갑니다. */}
+              {/* ★2026-07-30 — «갈래» 는 남기고 «글자수» 만 감췄습니다.
+                   [왜 갈래는 남기나] 손님에게 뜻이 있는 숫자입니다.
+                     일곱 중 몇이 왔는지는 «얼마나 더 기다리나» 를 알려 줍니다.
+                   [왜 글자수는 감추나] 우리가 잘림을 재던 눈금입니다.
+                     손님은 3,000자가 많은지 적은지 알 수 없고, 알 필요도 없습니다. */}
+              {`${Object.keys(sevenBody).length}/${sections.length} 갈래`}
+              {isPro && tong.length > 0 && ` · ${tong.length.toLocaleString()}자`}
             </div>
           </div>
         )}
@@ -760,10 +821,20 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
               </div>
             )
           }
-          // 통변이 끝났는데도 안 온 갈래 — 자리만 남기고 조용히 알립니다
+          // ★★2026-07-30 (8차) — 한 호출로 일곱을 쓰는 구조에 맞게 고쳤습니다.
+          //
+          //   [무엇이 어긋났나]
+          //     ① running 은 «묶음» 집합입니다. 묶음이 하나뿐이니 running.has(0) 만 참이고,
+          //        2~7번은 이미 글이 오는 중인데도 «차례를 기다리고 있어요» 로 굳어 있었습니다.
+          //     ② doneGroups 도 0/1 뿐이라 i < doneGroups 는 1번에만 맞습니다.
+          //     ③ ★끝났는데 안 온 갈래를 return null 로 «없애» 버렸습니다.
+          //        그래서 뒤 갈래가 잘렸을 때 화면에는 온 것만 남고, 무엇이 빠졌는지
+          //        손님도 우리도 알 수 없었습니다. (교훈 DS — 잘림과 안 씀이 똑같이 보임)
+          //   → 이제 «쓰는 중이면 곧 이어서, 끝났는데 없으면 받지 못했다» 로만 가릅니다.
+          //     자리는 언제나 일곱 개 그대로 서 있습니다.
           const stillWriting = tongState === 'loading'
-          if (!stillWriting) return null
-          const isNow = running.has(i)
+          // 글이 이미 오고 있는 중이면 바로 다음 자리가 «지금 쓰는 곳» 입니다
+          const isNow = stillWriting && i === Object.keys(sevenBody).length
           return (
             <div key={sec.key} style={{
               background: CARD, border: `0.5px dashed ${LINE}`, borderRadius: 14,
@@ -773,11 +844,9 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
                 {sec.title}
               </div>
               <div style={{ fontSize: 11.5, color: '#b08a9a', marginTop: 5 }}>
-                {/* ★차례가 이미 지났는데 글이 없는 갈래를 «기다리는 중» 이라 하면 거짓말입니다.
-                     하나씩 부르므로 i < doneGroups 면 그 갈래는 이미 끝난 것입니다. */}
                 {isNow ? '지금 쓰고 있어요…'
-                  : i < doneGroups ? '이 갈래는 받지 못했어요'
-                  : '차례를 기다리고 있어요'}
+                  : stillWriting ? '곧 이어서 써요'
+                  : '이 갈래는 받지 못했어요'}
               </div>
             </div>
           )
@@ -899,9 +968,15 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
                오갔습니다. 그 일을 대표님께 계속 부탁할 수 없습니다.
              → 호출마다 상태코드·걸린 시간·받은 글자수를 여기 남깁니다.
                펴서 캡처 한 장만 주시면 원인이 그 자리에서 드러납니다.
-             ⚠️ 접혀 있고 «개발용» 이라 적혀 있어 손님이 눌러야 보입니다.
-             ⚠️ 안정되면 이 블록만 지우면 됩니다. 다른 곳과 얽혀 있지 않습니다. */}
-        {diag.length > 0 && (
+             ⚠️ 안정되면 이 블록만 지우면 됩니다. 다른 곳과 얽혀 있지 않습니다.
+
+             ★★2026-07-30 (고침) — «접혀 있으니 괜찮다» 고 여겼던 것이 틀렸습니다.
+               [무엇이 틀렸나] 접혀 있어도 손님 화면에 🔧 상자가 «있습니다».
+                 리포트 맨 아래, 맺음말 바로 뒤라 오히려 눈에 걸립니다.
+                 사주 리포트를 읽고 내려온 손님이 마지막에 보는 것이
+                 «HTTP 429 · Vercel 시간 제한» 이면 안 됩니다.
+               → ?pro=1 에서만 그립니다. 지우지는 않았습니다. */}
+        {isPro && diag.length > 0 && (
           <details style={{
             background: '#f7f4f0', border: '0.5px dashed #d8c8b8', borderRadius: 12,
             padding: '10px 12px', marginBottom: 12,
@@ -917,6 +992,18 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
               ))}
               <div style={{ marginTop: 7, paddingTop: 7, borderTop: '1px solid #e5dcd2' }}>
                 {`총 ${tong.length}자 · 상한 없음(라우트 기본 16,000) · 상태 ${tongState}`}
+              </div>
+              {/* ★★2026-07-30 (8차) — «잘림» 과 «안 씀» 을 여기서 눈으로 가릅니다. (교훈 DS)
+                   갈래별로 ●(왔음)·○(없음) 을 찍고, ■ 제목이 몇 개 왔는지도 같이 셉니다.
+                     · ■ 7개인데 ● 가 모자라면  → 제목을 못 잡은 것(sevenKeyOf 문제)
+                     · ■ 자체가 모자라면        → AI 가 거기까지 안 쓴 것(또는 잘린 것)
+                   ⚠️ 이 상자를 지우지 마십시오. 다음에 같은 일이 나면 1분에 가려집니다. */}
+              <div style={{ marginTop: 5 }}>
+                {sections.map(s => (sevenBody[s.key] ? '●' : '○')).join(' ')}
+                {` (${Object.keys(sevenBody).length}/${sections.length} 갈래 · ■ 제목 ${(tong.match(/^\s*■/gm) ?? []).length}개)`}
+              </div>
+              <div style={{ marginTop: 5, color: '#a08878' }}>
+                {`묶음 ${doneGroups}/${SEVEN_GROUPS.length} 끝 · 진행 중 ${running.size}`}
               </div>
               <div style={{ marginTop: 5, color: '#a08878' }}>
                 {'★걸린 시간이 60s·300s 에 몰리면 Vercel 시간 제한 · HTTP 429 면 한도'}
