@@ -20,6 +20,7 @@ import {
 import { judgePassSignal, passSignalBlock } from './lib/saju/examLuck/passSignal'
 import { upsangBlock, UPSANG } from './lib/saju/examLuck/tables/upsang'
 import { hasStudentBan, STUDENT_BAN_WORDS } from './lib/saju/examLuck/tables/rules'
+import { parseExamTongbyeon } from './lib/saju/examLuck/buildExamPrompt'
 import { calcSimsanOhaeng } from './lib/saju/simsanOhaeng'
 import { buildAllCards } from './lib/saju/examLuck/buildCards'
 import { judgeYears, currentDayunOf } from './lib/saju/examLuck/examScore'
@@ -333,6 +334,48 @@ console.log('\n──────── 진짜 카드(buildAllCards)의 학생 �
   if (keys.length) {
     for (const k of keys.sort()) bad(`금지어 누수 — ${k}  (${leaks[k]}건)`)
   } else ok(`무작위 학생 ${checked}명 · 카드 전부 · 화면줄+재료줄 금지어 0건`)
+}
+
+// ── ★2026-07-30 신설 — «부분 도착» 글이 갈래로 잡히는가 ──────────
+//
+//   ⚠️⚠️ 왜 이 검사가 생겼나 (대표님이 실기기에서 잡아 주신 것)
+//     「0/3 묶음」에서 멈춘 것처럼 보이던 일이 있었습니다. 타임아웃도 한도도
+//     아니었고, runGroup 이 **조각을 제 안에만 쌓고 화면에 안 알렸기** 때문입니다.
+//     한 묶음이 통째로 끝나야 처음 나타나니 1~2분간 0/3 이 그대로 떠 있었습니다.
+//   → 이제 조각이 올 때마다 화면을 갱신합니다(진로적성과 같은 방식).
+//     그러면 **반쪽만 온 글** 이 파서에 들어갑니다. 그래도 갈래를 놓치지 않아야
+//     화면이 튀지 않습니다. 아래가 그것을 지킵니다.
+console.log('\n──────── 부분 도착(스트리밍) 글이 갈래로 잡히는가 ────────')
+{
+  const sample = (t: string[]) => t.map(x => `■ ${x}\n[한줄] 한 문장.\n[태그] 가 · 나\n\n본문입니다.\n\n[실천] 해보세요.`).join('\n\n')
+  let miss = 0
+  for (const target of ['student', 'adult'] as ExamTarget[]) {
+    const table = sevenOf(target)
+    // 세 묶음이 각각 쓸 글을 흉내 낸다
+    for (const g of SEVEN_GROUPS) {
+      const full = sample(table.filter(x => g.includes(x.key)).map(x => x.title))
+      // 1자씩 늘려 가며 — 잡힌 갈래가 «그 묶음 안» 것이어야 합니다
+      for (let n = 1; n <= full.length; n++) {
+        const parsed = parseExamTongbyeon(full.slice(0, n))
+        for (const [title, body] of Object.entries(parsed.byTitle)) {
+          if (!body.trim()) continue
+          const k = sevenKeyOf(title, target)
+          if (!k) { miss++; continue }
+          // ★엉뚱한 갈래로 잡히면 도표가 딴 곳에 붙습니다 (교훈 CY)
+          if (!g.includes(k)) {
+            bad(`부분 도착 «${title.slice(0, 20)}» → ${k} (이 묶음에 없는 갈래)`)
+            n = full.length
+            break
+          }
+        }
+      }
+    }
+  }
+  if (miss > 0) {
+    // 제목이 «■ 🧬» 까지만 온 구간은 미상이 정상입니다. 비율만 봅니다.
+    ok(`갈래를 아직 못 읽는 구간 ${miss}회 — 제목 앞토막만 온 때이니 정상입니다`)
+  }
+  ok('부분 도착 전 구간에서 «엉뚱한 갈래» 로 잡히는 일 0건')
 }
 
 console.log('\n════════════════════════════════════════════════════════')
