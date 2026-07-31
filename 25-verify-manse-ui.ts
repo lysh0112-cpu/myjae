@@ -25,23 +25,22 @@ const check = (ok: boolean, msg: string) => {
 const PAGE = 'app/manseryeok/result-new/page.tsx'
 const src = readFileSync(PAGE, 'utf8')
 
-console.log('\n━━ ⑯-a 🔴 「도표만 보기」에서 표가 숨지 않는가 ━━')
+console.log('\n━━ ⑯-a 🔴 만세력 표가 «어떤 길로 와도» 나오는가 ━━')
 {
-  // ★`!premiumPrompt &&` 만 걸린 자리가 «없어야» 합니다.
-  //   있으면 mode=chart 에서 그 표가 사라집니다.
-  const bare = src.split('\n')
-    .map((l, i) => ({ l, n: i + 1 }))
-    .filter(({ l }) => /\{!premiumPrompt\s*&&/.test(l))
+  // ★2026-07-31 대표님 확정 — 프리미엄 «샌드위치» 는 진로적성 화면에 하는 것입니다.
+  //   만세력 화면(홈에서 들어가는 두 길)은 표가 «전부» 나와야 합니다.
+  //   그래서 표를 감추는 조건이 «하나도 없어야» 합니다.
+  const lines = src.split('\n').map((l, i) => ({ l, n: i + 1 }))
+  const bare = lines.filter(({ l }) => /\{[^/]*!premiumPrompt\s*&&/.test(l))
   check(bare.length === 0,
-    `«!premiumPrompt &&» 만 걸린 자리 ${bare.length}곳`
+    `★표를 감추는 «!premiumPrompt &&» 자리 ${bare.length}곳`
     + (bare.length ? ` — ${bare.map((b) => b.n + '행').join(', ')}` : ''))
   if (bare.length) {
-    console.log('     ⚠️ 고치는 법 — `(!premiumPrompt || chartOnly) &&` 로 바꾸십시오.')
-    console.log('        mode=chart 는 AI 풀이를 안 그리므로 «중복될 일이 없습니다».')
+    console.log('     ⚠️ 만세력 표는 감추면 안 됩니다. 그 조건을 «지우십시오».')
+    console.log('        샌드위치는 app/manseryeok/career-result 에서 합니다.')
   }
-
-  const guarded = (src.match(/\(!premiumPrompt \|\| chartOnly\)/g) ?? []).length
-  check(guarded >= 4, `«(!premiumPrompt || chartOnly)» 로 지킨 자리 ${guarded}곳 (4곳 이상)`)
+  check(!/\(!premiumPrompt \|\| chartOnly\)/.test(src),
+    `«|| chartOnly» 로 절반만 고친 자리도 없습니다`)
 }
 
 console.log('\n━━ ⑯-b 표 섹션이 «전부 있는가» ━━')
@@ -60,15 +59,20 @@ console.log('\n━━ ⑯-c 홈 「나의 만세력」 버튼이 어느 길로 �
     `★홈 버튼이 mode=chart 로 들어갑니다 — ⑯-a 가 지키는 그 길입니다`)
 }
 
-console.log('\n━━ ⑯-d 프리미엄 샌드위치 슬롯이 살아 있는가 ━━')
+console.log('\n━━ ⑯-d ★진로적성에 만세력 표가 «쪼개져» 붙는가 ━━')
 {
-  check(/premiumSlots/.test(src), `premiumSlots 가 있습니다`)
-  for (const m of ['강점', '격국', '대운']) {
-    check(new RegExp(`match: \\[[^\\]]*'${m}'`).test(src), `슬롯 match 에 «${m}» 이 있습니다`)
+  const career = readFileSync('app/manseryeok/career-result/page.tsx', 'utf8')
+  check(/SajuTableSlot/.test(career), `진로적성이 SajuTableSlot 을 씁니다`)
+  check(/TABLE_AFTER/.test(career), `카드 뒤에 붙일 표 지도(TABLE_AFTER)가 있습니다`)
+  for (const k of ['ohaeng_gijil', 'yukchin', 'yongsin']) {
+    check(new RegExp(`${k}:\\s*\\{ kinds`).test(career), `「${k}」 카드 뒤에 표가 붙습니다`)
   }
-  // ⚠️ 십성표·월운·일운은 슬롯에 «없습니다» — 알고 두는 것입니다
-  check(!/node:[\s\S]{0,200}SipsungTable/.test(src),
-    `⚠️ 십성표는 샌드위치 슬롯에 없습니다 (프리미엄에서는 안 나옵니다 — 알고 두는 것)`)
+  const slot = readFileSync('app/manseryeok/components/SajuTableSlot.tsx', 'utf8')
+  for (const c of ['OhaengPentagon', 'SipsungTable', 'SingangTable', 'YongsinCard']) {
+    check(slot.includes(c), `${c} 를 떼어다 씁니다`)
+  }
+  // ⚠️ 색을 «지어내지» 않았는가 — 오행 색은 명리 규칙입니다
+  check(!/목:\s*'#/.test(slot), `★오행 색을 여기서 지어내지 않았습니다 (ohaengColor 한 곳만)`)
 }
 
 console.log(`\n━━ 만세력 화면 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)

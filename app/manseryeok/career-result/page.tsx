@@ -39,10 +39,30 @@ import { calcYongsinNew } from '@/lib/saju/yongsinNew'
 import { getGongmang } from '@/lib/saju/gongmang'
 import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
 import CareerJudgeCard from './components/CareerJudgeCard'
+// ★2026-07-31 — 만세력 표를 «떼어다» 통변 사이에 끼웁니다 (대표님 지시)
+import SajuTableSlot, { type SajuTableKind } from '@/app/manseryeok/components/SajuTableSlot'
 
 const ACCENT = '#785aaa'
 const BG = '#FDF6F0'
 const LINE = '#f0e0d5'
+
+/**
+ * ★2026-07-31 — 카드 «뒤» 에 끼울 만세력 표. (대표님 지시)
+ *
+ *   「만세력에 나와 있는 표들을 따로 떼어내서, 고객들이 보기 쉽게
+ *     통변별로 잘게 가독성 있게 쪼개 놓으라」
+ *
+ *   ⚠️ 만세력 화면(result-new)은 «건드리지 않습니다». 그쪽은 표가 다 나와야 합니다.
+ *   ⚠️ 카드가 없으면(lines 가 빈 카드) 표도 안 그립니다 — 아래 렌더에서 함께 걸러집니다.
+ */
+const TABLE_AFTER: Record<string, { kinds: SajuTableKind[]; caption: string }> = {
+  // 오행 기질 이야기 바로 뒤 — 그 이야기의 «근거 표» 입니다
+  ohaeng_gijil: { kinds: ['ohaeng', 'sipsung'], caption: '이 이야기의 바탕 — 오행과 십성의 세력' },
+  // 육친 이야기 뒤 — 내 힘이 얼마나 받쳐지는가
+  yukchin: { kinds: ['singang'], caption: '내 힘이 얼마나 받쳐지는가' },
+  // 용신 이야기 뒤 — 조후·억부·격국 세 갈래
+  yongsin: { kinds: ['yongsin'], caption: '어떤 기운이 나를 돕는가' },
+}
 
 /** 화면 묶음 — 통변 순서와 1:1 로 맞춘다. (교훈 AS) */
 const GROUPS: Array<{ label: string; keys: string[] }> = [
@@ -435,9 +455,26 @@ function CareerResultInner() {
                       margin: '18px 2px 8px', letterSpacing: '.02em',
                     }}>{g.label}</div>
                   )}
-                  {list.map(c => (
-                    <CareerJudgeCard key={c.key} card={c} tong={tongByKey[c.key]} />
-                  ))}
+                  {list.map(c => {
+                    const slot = TABLE_AFTER[c.key]
+                    return (
+                      <div key={c.key}>
+                        <CareerJudgeCard card={c} tong={tongByKey[c.key]} />
+                        {/* ★그 카드의 이야기에 딸린 표를 «바로 뒤» 에 붙입니다 */}
+                        {slot && calc && (
+                          <SajuTableSlot
+                            saju={calc.saju}
+                            solarMonth={calc.solarMonth}
+                            solarDay={calc.solarDay}
+                            hourBranch={calc.hourBranch}
+                            dayStem={dayStem}
+                            kinds={slot.kinds}
+                            caption={slot.caption}
+                          />
+                        )}
+                      </div>
+                    )
+                  })}
                   {/* ★사주 MBTI — 「타고난 결」 묶음 끝에 붙입니다.
                       성향 이야기라 오행·육친·일주 바로 뒤가 결이 맞습니다. */}
                   {g.label === '타고난 결' && sajuMbti && (

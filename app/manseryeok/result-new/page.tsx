@@ -12,6 +12,7 @@ import { getUnsung, getSinsal, unsungColor, getGongmang, SINSAL_HIGHLIGHT } from
 import { calcYongsinNew, calcYongsinCompat } from "@/lib/saju/yongsinNew";
 import { calcHapchungScore } from "@/lib/saju/hapchungScore";
 import { calcSimsanOhaeng, toPercentList, seasonConvertNote } from "@/lib/saju/simsanOhaeng";
+import { calcSipsungDist, getSipsin, getSipsinBranch } from "@/lib/saju/sipsungDist";
 import AiAnalysisNew from "./components/AiAnalysisNew";
 import { withNim, nimEuiTitle } from "@/lib/saju/honorific";
 import ConsultButton from "@/app/components/common/ConsultButton";
@@ -51,46 +52,13 @@ const SIPSIN_COLOR: Record<string,string> = {
   편인:'#2196f3',정인:'#2196f3',
 }
 
-function getSipsin(dayStem:string,targetStem:string):string{
-  if(!targetStem||targetStem==='?')return''
-  const dayIdx=HEAVENLY_STEMS.indexOf(dayStem),targetIdx=HEAVENLY_STEMS.indexOf(targetStem)
-  const de=STEM_ELEMENT[dayStem],te=STEM_ELEMENT[targetStem]
-  const sameYin=(dayIdx%2)===(targetIdx%2)
-  const gen:Record<string,string>={목:'화',화:'토',토:'금',금:'수',수:'목'}
-  const ctl:Record<string,string>={목:'토',화:'금',토:'수',금:'목',수:'화'}
-  if(de===te)return sameYin?'비견':'겁재'
-  if(gen[de]===te)return sameYin?'식신':'상관'
-  if(ctl[de]===te)return sameYin?'편재':'정재'
-  if(ctl[te]===de)return sameYin?'편관':'정관'
-  if(gen[te]===de)return sameYin?'편인':'정인'
-  return''
-}
-function getSipsinBranch(dayStem:string,branch:string):string{
-  if(!branch||branch==='?')return''
-  const be=BRANCH_ELEMENT[branch],de=STEM_ELEMENT[dayStem]
-  const dayYin=HEAVENLY_STEMS.indexOf(dayStem)%2===1
-  const sameYin=dayYin===BRANCH_YIN[branch]
-  const gen:Record<string,string>={목:'화',화:'토',토:'금',금:'수',수:'목'}
-  const ctl:Record<string,string>={목:'토',화:'금',토:'수',금:'목',수:'화'}
-  if(de===be)return sameYin?'비견':'겁재'
-  if(gen[de]===be)return sameYin?'식신':'상관'
-  if(ctl[de]===be)return sameYin?'편재':'정재'
-  if(ctl[be]===de)return sameYin?'편관':'정관'
-  if(gen[be]===de)return sameYin?'편인':'정인'
-  return''
-}
+// ★2026-07-31 — getSipsin·getSipsinBranch 도 lib/saju/sipsungDist.ts 로 옮겼습니다.
 
 
-function calcSipsung(saju:{stem:string;branch:string}[],dayStem:string) {
-  const cnt:Record<string,number>={}
-  saju.forEach(({stem,branch},i)=>{
-    const isDay=i===1
-    if(!isDay){const ss=getSipsin(dayStem,stem);if(ss)cnt[ss]=(cnt[ss]||0)+1}
-    const bs=getSipsinBranch(dayStem,branch);if(bs)cnt[bs]=(cnt[bs]||0)+1
-  })
-  const total=Object.values(cnt).reduce((a,b)=>a+b,0)
-  return Object.entries(cnt).map(([ss,n])=>({ss,pct:total?Math.round(n/total*1000)/10:0})).sort((a,b)=>b.pct-a.pct)
-}
+// ★2026-07-31 — 이 함수를 lib/saju/sipsungDist.ts 로 «옮겼습니다».
+//   진로적성 화면도 십성표를 얹게 되어, 화면 안에 두면 «복사» 하게 됩니다.
+//   값도 로직도 그대로입니다. (교훈 CJ)
+const calcSipsung = calcSipsungDist
 
 
 // 신강/신약 꺾은선 그래프
@@ -676,7 +644,13 @@ function ResultNewContent() {
               홈의 「나의 만세력」 버튼(UserCard.tsx:170)이 바로 이 mode=chart 입니다.
             [고침] chartOnly 면 프리미엄이라도 위에 그대로 그립니다.
               ⚠️ AI 풀이가 없는 모드라 «중복될 일이 없습니다». */}
-        {(!premiumPrompt || chartOnly) && saju.length>0 && (
+        {/* ★2026-07-31 — 「!premiumPrompt &&」 를 «걷어냈습니다». (대표님 확정)
+            [왜]  프리미엄 «샌드위치» 는 «진로적성 화면» 에 하려던 것이었습니다.
+                  만세력 화면에 붙는 바람에 표가 위에서 숨고, 「도표만 보기(mode=chart)」
+                  에서는 아래 풀이도 안 그려져 ★표가 통째로 사라졌습니다.
+            ⚠️ 만세력 두 화면(홈에서 들어가는 두 길)은 «원래대로» 표가 다 나와야 합니다.
+               되돌릴 일이 아닙니다. 25-verify-manse-ui.ts 가 이 자리를 지킵니다. */}
+        {saju.length>0 && (
           <ByeongjonView saju={saju} target={byeongjonTarget}/>
         )}
 
@@ -693,7 +667,7 @@ function ResultNewContent() {
             />
           </Section>
         )}
-        {(!premiumPrompt || chartOnly) && (
+        {(
         <Section title="오행과 십성 분석" collapsible={!chartOnly} open={openSection==='ohaeng'} onToggle={()=>toggleSection('ohaeng')}>
           {/* 계산 기준 안내 — 합충 반영 그래프와 숫자가 다른 이유 */}
           <div style={{fontSize:'10.5px',color:'#b4785a',background:'#faf3ec',border:'0.5px solid #f0e0d5',borderRadius:'8px',padding:'7px 10px',marginBottom:'10px',lineHeight:1.6}}>
@@ -740,14 +714,14 @@ function ResultNewContent() {
         {/* ⑤ 나의 용신 (조후·억부·격국 3종) */}
         {/* ★2026-07-29 — 프리미엄은 이 표를 «섹션2 풀이 바로 위»로 옮겨 그립니다.
             여기서 또 그리면 같은 표가 두 번 나옵니다. */}
-        {(!premiumPrompt || chartOnly) && yongsinNew&&(
+        {yongsinNew&&(
         <Section title="나의 용신" collapsible={!chartOnly} open={openSection==='yongsin'} onToggle={()=>toggleSection('yongsin')}>
           <YongsinCard result={yongsinNew} saju={saju}/>
         </Section>
         )}
 
         {/* ⑥ 대운·세운·월운·일운 (연동 흐름) */}
-        {(!premiumPrompt || chartOnly) && dayStem&&monthGanji&&yearStem&&solarYear&&(
+        {dayStem&&monthGanji&&yearStem&&solarYear&&(
           <Section title="운의 흐름 (대운·세운·월운·일운)" collapsible={!chartOnly} open={openSection==='daeun'} onToggle={()=>toggleSection('daeun')} hint="눌러서 흐름 보기">
             <UnseFlow
               solarYear={solarYear} solarMonth={solarMonth} solarDay={solarDay}
