@@ -365,7 +365,8 @@ ${JSON.stringify(factsForAI, null, 2)}
       matchMax: W_YONGSIN + W_BALANCE,
       hasYongsin: verdict.facts.hasYongsin,
       yinYangGrade: result.yinYang.grade,
-      soundGrade: result.soundFlow.grade,
+      // ★2026-07-31 (40부) — 교재 125칸 정밀 점수. 화면도 «같은 값» 을 씁니다
+      soundScore: result.soundFlow.score,
       suriGrade: result.suri.grade,
     })
 

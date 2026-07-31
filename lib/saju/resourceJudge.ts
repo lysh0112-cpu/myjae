@@ -769,18 +769,24 @@ function gradeTo100(g: '좋음' | '보통' | '아쉬움'): number {
  *
  * @param v          judgeResource 결과 (자원오행 + 사주보완)
  * @param suriGrade  diagnoseName().suri.grade
- * @param soundGrade diagnoseName().soundFlow.grade
+ * @param soundScore diagnoseName().soundFlow.score  ★0~100 «점수» 입니다 (등급 아님)
  *
  * ⚠️ ★내부 점수입니다. 손님 화면에 쓰지 마십시오. 줄 세우기 전용입니다.
  */
 export function candidateScore(
   v: ResourceVerdict,
   suriGrade: '좋음' | '보통' | '아쉬움',
-  soundGrade: '좋음' | '보통' | '아쉬움',
+  soundScore: number,
 ): number {
   const s = v.score * CAND_W_RESOURCE
     + gradeTo100(suriGrade) * CAND_W_SURI
-    + gradeTo100(soundGrade) * CAND_W_SOUND
+    // ★2026-07-31 (40부) — 발음은 «등급→100/50/0» 이 아니라 «점수 그대로» 입니다.
+    //   [왜]  3글자 이름은 「보통」이 구조적으로 없어서, 옛 방식은 이 13.3점이
+    //         «0 아니면 13.3» 두 값으로만 붙었습니다. 계단처럼 작동해
+    //         자원오행 13점 차이를 통째로 덮었습니다.
+    //   ⚠️ 교재표로 바뀌며 발음의 평균 기여가 7.94 → 4.10점으로 내려갑니다.
+    //      후보 정렬이 달라지므로 «걸림 비율을 다시 재십시오» (교훈 BO).
+    + clamp(soundScore, 0, 100) * CAND_W_SOUND
   return Math.round(clamp(s, 0, 100) * 10) / 10
 }
 

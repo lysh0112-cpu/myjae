@@ -832,6 +832,21 @@ head('⑧-c ★수리 등급 — 주운 가중치 판정 (2026-07-31 2차)')
       `★복성 — 화면과 서버의 사격이 같습니다 (${screen.suri.gyeok.map(x => x.sum).join('·')})`)
     check(screen.overallGrade === server.overallGrade,
       `★복성 — 화면과 서버의 종합 등급이 같습니다 (${screen.overallGrade})`)
+    // ★2026-07-31 (40부) — 발음오행이 «정밀 점수» 로 바뀌었습니다.
+    //   등급만 맞춰서는 부족합니다 — 점수가 갈리면 개명 후보 «순서» 가 갈립니다.
+    check(screen.soundFlow.score === server.soundFlow.score,
+      `★복성 — 화면과 서버의 발음 «점수» 가 같습니다 (${screen.soundFlow.score})`)
+    // ★후보 정렬 점수까지 같아야 «화면에서 고른 이름» 과 «결과지» 가 안 갈립니다 (2-10장)
+    const PROF = buildSajuOhaengProfile({ yongsin: '화',
+      score: { 목: 20, 화: 20, 토: 20, 금: 20, 수: 20 } })
+    const JC2 = (c: NameChar) =>
+      ({ hanja: c.hanja, hangul: c.hangul, primary: c.resourceOhaeng as never, secondary: null })
+    const vr2 = judgeResource(sp2.surname.map(JC2), sp2.given.map(JC2), PROF)
+    const vr3 = judgeResource(sp3.surname.map(JC2), sp3.given.map(JC2), PROF)
+    check(candidateScore(vr2, screen.suri.grade, screen.soundFlow.score)
+          === candidateScore(vr3, server.suri.grade, server.soundFlow.score),
+      `★복성 — 화면과 서버의 «후보 정렬 점수» 가 같습니다 `
+      + `(${candidateScore(vr2, screen.suri.grade, screen.soundFlow.score)})`)
     // 성씨 두 글자는 «바꿀 수 있는 글자» 가 아닙니다 (대표님 확정)
     check(sp2.given.length === raw.length - sp2.surname.length,
       `후보로 바뀌는 글자 수 = 전체 − 성 글자 수 (${sp2.given.length})`)
@@ -1138,11 +1153,11 @@ head('⑧-3 ★개명 후보 정렬 이관 (3단계)')
   const good = judgeResource(C('柳', '류', '목'), [C('炫', '현', '화')], P)   // 용신 충족
   const bad = judgeResource(C('柳', '류', '목'), [C('垈', '대', '토')], P)    // 상극 + 미충족
 
-  check(candidateScore(good, '좋음', '좋음') > candidateScore(bad, '좋음', '좋음'),
-    `같은 수리·발음이면 자원오행이 좋은 쪽이 앞 (${candidateScore(good, '좋음', '좋음')} > ${candidateScore(bad, '좋음', '좋음')})`)
-  check(candidateScore(good, '좋음', '좋음') > candidateScore(good, '아쉬움', '아쉬움'),
+  check(candidateScore(good, '좋음', 90) > candidateScore(bad, '좋음', 90),
+    `같은 수리·발음이면 자원오행이 좋은 쪽이 앞 (${candidateScore(good, '좋음', 90)} > ${candidateScore(bad, '좋음', 90)})`)
+  check(candidateScore(good, '좋음', 90) > candidateScore(good, '아쉬움', 35),
     `자원오행이 같으면 수리·발음이 좋은 쪽이 앞`)
-  const s1 = candidateScore(good, '좋음', '좋음')
+  const s1 = candidateScore(good, '좋음', 90)
   check(s1 >= 0 && s1 <= 100, `점수가 0~100 (${s1})`)
 
   // ★옛 로직이 «구별 못 하던» 자리를 새 로직이 가르는가
@@ -1151,8 +1166,8 @@ head('⑧-3 ★개명 후보 정렬 이관 (3단계)')
     { yongsin: '화', gisin: '토', score: { 목: 10, 화: 20, 토: 60, 금: 10, 수: 10 } })
   const withGisin = judgeResource(C('柳', '류', '목'), [C('炫', '현', '화'), C('垈', '대', '토')], Pex)
   const noGisin = judgeResource(C('柳', '류', '목'), [C('炫', '현', '화'), C('東', '동', '목')], Pex)
-  check(candidateScore(noGisin, '좋음', '좋음') > candidateScore(withGisin, '좋음', '좋음'),
-    `★기신(토)·과다 투입이 «추천 순서» 에 반영됩니다 (${candidateScore(noGisin, '좋음', '좋음')} > ${candidateScore(withGisin, '좋음', '좋음')})`)
+  check(candidateScore(noGisin, '좋음', 90) > candidateScore(withGisin, '좋음', 90),
+    `★기신(토)·과다 투입이 «추천 순서» 에 반영됩니다 (${candidateScore(noGisin, '좋음', 90)} > ${candidateScore(withGisin, '좋음', 90)})`)
 
   // ── 비교 함수 ──
   const mk = (fy: boolean, soft: boolean, sc: number, st: number) =>
@@ -1224,18 +1239,20 @@ head('⑧-4 ★별점 변환 (3단계-b · 대표님 지시)')
   // 다섯 관점
   const st = perspectiveStars({
     flowScore: 27, flowMax: 30, matchScore: 40, matchMax: 70, hasYongsin: true,
-    yinYangGrade: '좋음', soundGrade: '보통', suriGrade: '아쉬움',
+    yinYangGrade: '좋음', soundScore: 62, suriGrade: '아쉬움',
   })
   check(st.length === 5, `관점 다섯`)
   check(st.map(x => x.key).join() === 'yinyang,baleum,suri,jawon,yongsin', `순서가 화면과 같습니다`)
   check(st.find(x => x.key === 'jawon')!.precise === true, `자원오행은 정밀 점수`)
   check(st.find(x => x.key === 'suri')!.precise === false, `수리는 아직 3단 등급 (4단계 대상)`)
+  // ★2026-07-31 (40부) — 발음이 «정밀» 로 바뀌었습니다 (교재 125칸 · 별 5칸)
+  check(st.find(x => x.key === 'baleum')!.precise === true, `발음오행은 정밀 점수 (40부)`)
   check(st.every(x => x.star >= 2.5 && x.star <= 5.0), `다섯 관점 전부 범위 안`)
 
   // 용신 하한이 «사주와의 만남» 에만 걸리는가
   const low = perspectiveStars({
     flowScore: 0, flowMax: 30, matchScore: 5, matchMax: 70, hasYongsin: true,
-    yinYangGrade: '아쉬움', soundGrade: '아쉬움', suriGrade: '아쉬움',
+    yinYangGrade: '아쉬움', soundScore: 35, suriGrade: '아쉬움',
   })
   check(low.find(x => x.key === 'yongsin')!.star === 3.5,
     `★용신을 담으면 «사주와의 만남» 이 ★3.5 아래로 안 내려갑니다`)

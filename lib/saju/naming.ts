@@ -10,44 +10,54 @@
 //   - 엔진은 "사실(facts)"만 정확히 산출해 AI에 근거로 넘긴다. 문장은 AI가 쓴다.
 //   - grade는 내부 종합점수 계산용으로만 유지(하위호환). 화면 표시 금지.
 //
-// 검증: 류승현(柳承炫) 사례에서 작명왕·작명가 실제 화면값과 일치 확인 완료.
+// ⚠️⚠️ 옛 주석 — 「검증: 류승현(柳承炫) 사례에서 작명왕·작명가 실제 화면값과 일치 확인 완료」
+//
+//  ★2026-07-31 (40부) — 이 «검증» 은 «부본» 에 맞춘 것이었습니다.
+//    류승현 = 화·금·토.
+//      옛 비율식        상생1 + 상극1 → ratio 0.5 → 「좋음」 ★4.5   (작명왕·작명가와 일치)
+//      교재 60쪽 火金土  «凶» — 선고후길격                          (정본)
+//    → 작명왕·작명가 앱과 교재가 «다릅니다». 우리는 교재를 정본으로 삼기로 했으므로
+//      이 사례는 이제 「아쉬움」 ★3.5 입니다.
+//
+//    ⚠️ 2-1장(81수리표)에서 저장소가 «작명왕 부본» 을 쓰고 있던 것과 «같은 일» 입니다.
+//       발음오행에도 부본이 섞여 있었습니다.
+//    ⚠️ 앱 화면값과 대조해 「맞다」고 확인하지 마십시오. 교재와 대조하십시오. (교훈 ER)
 
 import { getSuriInfo, type SuriFortune } from "./suri81";
 import { getSuriGuide, SURI_TONE_GUIDE } from "./suriGuide";
+// ★2026-07-31 (40부) 발음오행 — 교재 125칸 표로 갈아끼웠습니다
+import { evaluateSoundOhaeng, type SoundVerdict } from "./soundEngine";
+import {
+  type SoundBook,
+  soundOhaengOf as normSoundOhaengOf,
+} from "./sound/normalize";
 
-// ── 발음오행 기준 (초성) ──
-// 명연재 표준: ㅇㅎ = 토(土). 작명가는 ㅇㅎ=수(水) 학파 — 연재 선생님 검수 때 최종 확정.
+// ── 발음오행 기준 ──
+// ★2026-07-31 (40부) — 교재 3장 대조로 «학설이 확정» 되었습니다.
+//   57쪽  자음 배당은 «운해본» — ㅇㅎ = 土 (해례본은 土/水 가 서로 반대)
+//         「필자는 운해본을 따르고 있으며 이 책에 수록된 모든 사례는 운해본에 의한 작명이다」
+//   ⚠️ 아래 상수의 "토" 가 운해본, "수" 가 해례본입니다. 이름을 바꾸지 않은 것은
+//      부르는 쪽(diagnoseName 의 mode 인자)을 깨지 않기 위해서입니다.
 export const SOUND_OHAENG_MODE: "토" | "수" = "토";
+
+/** "토"/"수" → 교재의 본 이름. ★새 코드는 SoundBook 을 직접 쓰십시오 */
+export function modeToBook(mode: "토" | "수"): SoundBook {
+  return mode === "토" ? "운해본" : "해례본";
+}
 
 // 용신 보완 판정 모드.
 //   "관대" = 희신도 보충으로 인정 / "엄격" = 용신만 인정
 export const YONGSIN_MODE: "관대" | "엄격" = "관대";
 
-function soundOhaengTable(mode: "토" | "수"): Record<string, string> {
-  const oh = mode;
-  return {
-    ㄱ: "목", ㅋ: "목", ㄲ: "목",
-    ㄴ: "화", ㄷ: "화", ㄹ: "화", ㅌ: "화", ㄸ: "화",
-    ㅅ: "금", ㅈ: "금", ㅊ: "금", ㅆ: "금", ㅉ: "금",
-    ㅁ: "수", ㅂ: "수", ㅍ: "수", ㅃ: "수",
-    ㅇ: oh, ㅎ: oh,
-  };
-}
-
-const CHOSEONG = [
-  "ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ",
-  "ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ",
-];
-
-function getChoseong(han: string): string {
-  const code = han.charCodeAt(0) - 0xac00;
-  if (code < 0 || code > 11171) return "";
-  return CHOSEONG[Math.floor(code / 588)];
-}
-
+/**
+ * 한 글자의 발음오행.
+ * ★2026-07-31 — 표를 이 파일에서 «걷어내고» lib/saju/sound/normalize.ts 로 옮겼습니다.
+ *   된소리(ㄲㄸㅃㅆㅉ)가 교재 표에 없다는 것, 두음법칙을 표기음 그대로 쓴다는 것이
+ *   전부 그 파일 머리말에 근거와 함께 적혀 있습니다.
+ * ⚠️ 판정할 수 없으면 '' 를 냅니다(하위호환). «까닭» 이 필요하면 parseSoundChar 를 쓰십시오.
+ */
 export function soundOhaengOf(han: string, mode: "토" | "수" = SOUND_OHAENG_MODE): string {
-  const cho = getChoseong(han);
-  return soundOhaengTable(mode)[cho] ?? "";
+  return normSoundOhaengOf(han, modeToBook(mode));
 }
 
 // ── 입력 타입 ──
@@ -81,6 +91,27 @@ export interface FactorResult {
   facts: Record<string, unknown>; // AI 통변용 근거 데이터
 }
 
+/**
+ * ★2026-07-31 (40부) 발음오행 전용 — «정밀 점수» 를 함께 싣습니다.
+ *
+ * [왜 grade 만으로는 안 되나]
+ *   교재 125칸은 길/반길반흉/흉 3단인데, 손님 분포가 길 29.7 · 반 2.2 · 흉 68.1 입니다.
+ *   3단을 그대로 별로 옮기면 평균이 ★3.894 → ★3.456 으로 떨어집니다.
+ *   그래서 «교재 판정은 그대로 두고» 흉 안에서 상극 1개와 2개를 갈라 별 칸을 늘렸습니다.
+ *   → 그 갈래가 score 에 담깁니다. 평균 ★3.796 (실측 6,859).
+ *
+ * ⚠️⚠️ 화면과 서버가 «둘 다» 이 score 를 써야 합니다.
+ *    한쪽만 grade 로 계산하면 2-10장(화면↔결과지 54.4% 어긋남)이 그대로 재발합니다.
+ *    ★그래서 candidateScore 의 인자를 «등급» 에서 «점수» 로 바꿔 두었습니다 —
+ *      타입이 안 맞으면 컴파일이 막히므로, 고쳐야 할 자리를 사람이 찾지 않아도 됩니다. (교훈 ET)
+ */
+export interface SoundFactorResult extends FactorResult {
+  /** 0~100. ★별점은 이 값으로 만드십시오 */
+  score: number;
+  /** 판정의 «날것» — 교재표에서 나왔는지, problems 가 있는지 */
+  verdict: SoundVerdict;
+}
+
 /** 사격 식별자 — ★한글 라벨은 이름 길이에 따라 달라지므로 판정에 쓰지 않습니다 */
 export type GyeokKey = "won" | "hyeong" | "i" | "jeong";
 
@@ -100,7 +131,7 @@ export interface SuriGyeok {
 
 export interface DiagnoseResult {
   yinYang: FactorResult;         // ① 음양오행
-  soundFlow: FactorResult;       // ② 발음오행
+  soundFlow: SoundFactorResult;  // ② 발음오행 ★정밀 점수를 함께 실습니다
   suri: {                        // ③ 수리오행 (81수리 사격)
     grade: Grade;
     gyeok: SuriGyeok[];
@@ -166,43 +197,74 @@ function scoreYinYang(input: DiagnoseInput): FactorResult {
   };
 }
 
-// ── ② 발음오행 흐름 ──
-function scoreSound(input: DiagnoseInput, mode: "토" | "수"): FactorResult {
+// ── ② 발음오행 — ★2026-07-31 (40부) 교재 125칸 표 조회로 갈아끼웠습니다 ──
+//
+//   [옛 방식]  상생 개수 / 이웃 개수 = ratio → 0.5 이상이면 「좋음」
+//              🔴 상극을 «세지 않았습니다». 상생1+상극1 이 상생2 와 같은 등급이었습니다.
+//              🔴 3글자에서 「보통」이 «구조적으로» 나올 수 없었습니다 (실측 0.0%).
+//
+//   [새 방식]  교재 60쪽 125칸을 그대로 조회 + 61~98쪽 격 이름을 재료로
+//              실측 — 옛 방식과 교재가 어긋나던 30.8% 가 사라집니다
+//                     (어긋남의 거의 전부가 «교재 흉인데 옛 방식 좋음» 1,936건이었습니다)
+//
+//   ⚠️ 판정 알맹이는 lib/saju/soundEngine.ts 에 있습니다. 여기는 «껍데기» 입니다 —
+//      DiagnoseInput 을 SoundInputChar 로 옮기고 facts 모양만 옛것과 맞춥니다.
+function scoreSound(input: DiagnoseInput, mode: "토" | "수"): SoundFactorResult {
   const chars = allChars(input);
   const roles = charRoles(input);
-  const seq = chars.map((c, i) => ({
+  const v = evaluateSoundOhaeng(
+    chars.map((c, i) => ({ hangul: c.hangul, 역할: roles[i] })),
+    modeToBook(mode),
+  );
+
+  const seq = v.chars.map((c, i) => ({
     hangul: c.hangul,
-    cho: getChoseong(c.hangul),
-    ohaeng: soundOhaengOf(c.hangul, mode),
-    역할: roles[i],                             // ★2026-07-31 성/이름 경계
+    cho: c.cho,
+    ohaeng: c.ohaeng ?? "",
+    역할: roles[i],
   }));
-  const links: { from: string; to: string; rel: RelKind; text: string;
-    구간: "성씨 안" | "성씨→이름" | "이름 안" }[] = [];
-  let saeng = 0, total = 0;
-  for (let i = 0; i < seq.length - 1; i++) {
-    const r = relationOf(seq[i].ohaeng, seq[i + 1].ohaeng);
-    links.push({ from: seq[i].ohaeng, to: seq[i + 1].ohaeng, rel: r.kind, text: r.text,
-      구간: linkZone(roles, i) });
-    total++;
-    if (isSaeng(seq[i].ohaeng, seq[i + 1].ohaeng)) saeng++;
-  }
-  const ratio = total ? saeng / total : 0;
-  const grade: Grade = ratio >= 0.5 ? "좋음" : ratio > 0 ? "보통" : "아쉬움";
+
+  // ★facts 의 «키 이름» 은 옛것을 그대로 둡니다 — AI 프롬프트와 검사 그물이 이 이름을 봅니다
+  const links = v.links.map((l) => ({
+    from: l.from ?? "",
+    to: l.to ?? "",
+    rel: l.relation === "상생" ? "생" : l.relation === "상극" ? "극"
+       : l.relation === "비화" ? "비화" : "기타",
+    text: l.text,
+    구간: l.구간,
+  }));
+
+  const 성씨 = seq.filter((x) => x.역할 === "성").map((x) => `${x.hangul}(${x.ohaeng})`).join("·");
+  const 이름 = seq.filter((x) => x.역할 === "이름").map((x) => `${x.hangul}(${x.ohaeng})`).join("→");
 
   return {
-    grade,
-    detail: `발음오행: ${seq.map((s) => s.ohaeng).join("→")}`,
+    grade: v.grade,
+    score: v.score,
+    verdict: v,
+    detail: `발음오행: ${v.elements.map((e) => e ?? "?").join("→")}`,
     facts: {
-      sequence: seq,                            // 글자별 초성·오행·역할
+      sequence: seq,
       chain: seq.map((s) => `${s.hangul}(${s.ohaeng})`).join("→"),
-      links,                                    // 이웃 간 상생/상극 관계 + 구간
-      saengCount: saeng, total,
-      // ★2026-07-31 복성 경계 — 「남궁」을 「남 + 궁순임」으로 읽지 않도록
+      links,
+      saengCount: v.saengCount,
+      total: v.links.length,
+      // ★2026-07-31 (40부) 교재에서 온 것들 — AI 가 이 이름으로 풀어 씁니다
+      배열: v.combinationKey,                 // 예: '토금수'
+      길흉: v.fortune,                        // 길 / 반길반흉 / 흉 / 모름
+      격: v.gyeok,                            // 예: '금상유문격'
+      상극수: v.geukCount,
+      비화수: v.bihwaCount,
+      // ★«교재표에서 직접 나온 것인가» — 외자·복성은 '규칙유추' 입니다
+      근거: v.basis,
+      본: v.book,
+      출처: "작명개운법 3장 60·61~98쪽",
+      // ★조용히 넘기지 않습니다. resourceJudge 의 problems 와 같은 잣대입니다
+      problems: v.problems,
+      // 복성 경계 (39부 5차에서 넣은 것 — 그대로 둡니다)
       복성여부: !!input.surname2,
-      성씨: seq.filter((x) => x.역할 === "성").map((x) => `${x.hangul}(${x.ohaeng})`).join("·"),
-      이름: seq.filter((x) => x.역할 === "이름").map((x) => `${x.hangul}(${x.ohaeng})`).join("→"),
-      경계표시: `[${seq.filter((x) => x.역할 === "성").map((x) => `${x.hangul}(${x.ohaeng})`).join("·")}]`
-        + `→` + seq.filter((x) => x.역할 === "이름").map((x) => `${x.hangul}(${x.ohaeng})`).join("→"),
+      성씨,
+      이름,
+      경계표시: `[${성씨}]→${이름}`,
     },
   };
 }

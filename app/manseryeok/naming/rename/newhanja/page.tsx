@@ -269,7 +269,9 @@ function NewHanjaInner() {
           primary: ohaengOrEmpty(g.resourceOhaeng) || null, secondary: null })),
         profile,
       )
-      const weighted = candidateScore(verdict, r.suri.grade, r.soundFlow.grade)
+      // ★2026-07-31 (40부) — 발음은 «등급» 이 아니라 «정밀 점수» 를 넘깁니다.
+      //   서버(/api/naming)도 같은 값을 씁니다. 한쪽만 등급으로 가면 갈립니다 (2-10장·교훈 ET)
+      const weighted = candidateScore(verdict, r.suri.grade, r.soundFlow.score)
       const fitsYongsin = rowOhaeng(row) === yongsin
       return { row, weighted, fitsYongsin, verdict }
     })

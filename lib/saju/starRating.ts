@@ -133,8 +133,8 @@ export interface PerspectiveStar extends StarResult {
   /**
    * ★점수가 «정밀» 한가.
    *   false 면 3단 등급(좋음/보통/아쉬움)에서 옮긴 값이라 별이 세 가지뿐입니다.
-   *   음양·발음·수리는 아직 3단입니다 — 정밀하게 하려면 scoreSuri·scoreSound 를
-   *   고쳐야 하고 그건 4단계 일입니다.
+   *   ★2026-07-31 (40부) — 발음은 «정밀» 로 바뀌었습니다 (교재 125칸 · 별 5칸).
+   *   음양·수리는 아직 3단입니다.
    */
   precise: boolean
 }
@@ -155,8 +155,15 @@ export interface StarInput {
   hasYongsin: boolean
   /** diagnoseName 의 3단 등급들 */
   yinYangGrade: '좋음' | '보통' | '아쉬움'
-  soundGrade: '좋음' | '보통' | '아쉬움'
   suriGrade: '좋음' | '보통' | '아쉬움'
+  /**
+   * ★2026-07-31 (40부) — 발음오행은 «등급» 이 아니라 «점수» 를 받습니다.
+   *   diagnoseName().soundFlow.score (0~100) 를 그대로 넣으십시오.
+   *
+   * ⚠️ 옛 `soundGrade` 를 지운 것은 «일부러» 입니다 — 남겨 두면 어느 화면이
+   *    옛 길로 가도 컴파일이 통과해 버립니다. 2-10장이 그렇게 갈렸습니다. (교훈 ET)
+   */
+  soundScore: number
 }
 
 /**
@@ -175,7 +182,8 @@ export function perspectiveStars(v: StarInput): PerspectiveStar[] {
 
   return [
     { key: 'yinyang', title: '음양오행', precise: false, ...starOf(gradeToScore(v.yinYangGrade)) },
-    { key: 'baleum', title: '발음오행', precise: false, ...starOf(gradeToScore(v.soundGrade)) },
+    // ★2026-07-31 (40부) — 교재 125칸 조회로 바뀌며 «정밀» 해졌습니다 (별 5칸)
+    { key: 'baleum', title: '발음오행', precise: true, ...starOf(v.soundScore) },
     { key: 'suri', title: '수리오행', precise: false, ...starOf(gradeToScore(v.suriGrade)) },
     { key: 'jawon', title: '자원오행', precise: true, ...jawon },
     { key: 'yongsin', title: '사주와의 만남', precise: true, ...yongsin },
