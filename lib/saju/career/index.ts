@@ -25,3 +25,6 @@ export * from './sajuMbti'
 export * from './status'
 export * from './jobFit'
 export * from './roleFit'
+// ★2026-07-31 (41부 Step 3) — 잇기 두 겹. 기존 값은 하나도 안 바뀝니다
+export * from './jijangganBridge'
+export * from './namingBridge'

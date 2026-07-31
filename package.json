@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "verify": "tsx 13-verify-18-daeun.ts && tsx 14-verify-exam-seven.ts && tsx 16-verify-naming.ts && tsx 18-verify-sound.ts && tsx 19-verify-eumyang.ts && tsx 20-verify-resource.ts && tsx 21-verify-lunar.ts",
+    "verify": "tsx 13-verify-18-daeun.ts && tsx 14-verify-exam-seven.ts && tsx 16-verify-naming.ts && tsx 18-verify-sound.ts && tsx 19-verify-eumyang.ts && tsx 20-verify-resource.ts && tsx 21-verify-lunar.ts && tsx 22-verify-jijanggan.ts && tsx 23-verify-career-bridge.ts",
     "verify:daeun": "tsx 13-verify-18-daeun.ts",
     "verify:gyeokguk": "python3 04-verify-19-cases.py",
     "verify:hap": "python3 05-verify-hap-78-83.py",
@@ -19,7 +19,9 @@
     "verify:sound": "tsx 18-verify-sound.ts",
     "verify:eumyang": "tsx 19-verify-eumyang.ts",
     "verify:resource": "tsx 20-verify-resource.ts",
-    "verify:lunar": "tsx 21-verify-lunar.ts"
+    "verify:lunar": "tsx 21-verify-lunar.ts",
+    "verify:jijanggan": "tsx 22-verify-jijanggan.ts",
+    "verify:career": "tsx 23-verify-career-bridge.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
