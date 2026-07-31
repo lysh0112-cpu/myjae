@@ -1,5 +1,6 @@
 'use client'
 import { Suspense, useState, useEffect, useMemo } from 'react'
+import { splitSurname } from '@/lib/saju/surname'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsinCompat } from '@/lib/saju/yongsinNew'
@@ -61,7 +62,10 @@ function NewHanjaInner() {
 
   const [info, setInfo] = useState<MyInfo | null>(null)
 
-  const [surname, setSurname] = useState<SavedChar | null>(null)
+  // ★2026-07-31 복성 — 성이 두 글자일 수 있어 배열로 둡니다.
+  //   예전에는 저장 레코드의 chars[0] 만 집어서 남궁민수의 «궁» 이 통째로 사라졌습니다.
+  const [surnameChars, setSurnameChars] = useState<SavedChar[]>([])
+  const surname: SavedChar | null = surnameChars[0] ?? null
   const [uid, setUid] = useState<string>('')   // ★ 로그인 회원 user_id (tries 저장 열쇠)
   const [syllables, setSyllables] = useState<string[]>([])
   const [activeIdx, setActiveIdx] = useState<number>(0)
@@ -124,7 +128,8 @@ function NewHanjaInner() {
             .order('created_at', { ascending: false })
             .limit(1)
           if (!cancelled && rows && rows[0] && Array.isArray(rows[0].chars) && rows[0].chars[0]) {
-            setSurname(rows[0].chars[0] as SavedChar)
+            // ★복성이면 앞 두 글자가 성입니다. 가르는 것은 splitSurname 하나뿐입니다.
+            setSurnameChars(splitSurname(rows[0].chars as SavedChar[]).surname)
             surnameLoaded = true
           }
         }
@@ -134,7 +139,7 @@ function NewHanjaInner() {
         try {
           const r = JSON.parse(localStorage.getItem(NAMING_RESULT_KEY) || '{}')
           if (!cancelled && Array.isArray(r.chars) && r.chars[0]) {
-            setSurname(r.chars[0] as SavedChar)
+            setSurnameChars(splitSurname(r.chars as SavedChar[]).surname)
           }
         } catch {}
       }
@@ -244,6 +249,11 @@ function NewHanjaInner() {
       })
       const r = diagnoseName({
         surname: surnameChar,
+        surname2: surnameChars[1]
+          ? { hangul: surnameChars[1].hangul, hanja: surnameChars[1].hanja,
+              strokes: surnameChars[1].strokes,
+              resourceOhaeng: ohaengOrEmpty(surnameChars[1].resourceOhaeng) }
+          : null,
         given,
         yongsin: yong.yongsin,
         heeksin: yong.heeksin,
@@ -252,8 +262,9 @@ function NewHanjaInner() {
       // ★★2026-07-30 (3단계) — rename/hanja 와 «같은» 잣대로 갈아 끼웁니다.
       //   자원오행+사주보완 칸만 judgeResource 의 0~100 으로. 수리·발음 무게는 그대로.
       const verdict = judgeResource(
-        { hanja: surnameChar.hanja, hangul: surnameChar.hangul,
-          primary: ohaengOrEmpty(surnameChar.resourceOhaeng) || null, secondary: null },
+        // ★복성이면 성 두 글자를 배열로 — 둘째 글자가 이름 글자로 채점되지 않도록
+        surnameChars.map(c => ({ hanja: c.hanja, hangul: c.hangul,
+          primary: ohaengOrEmpty(c.resourceOhaeng) || null, secondary: null })),
         given.map(g => ({ hanja: g.hanja, hangul: g.hangul,
           primary: ohaengOrEmpty(g.resourceOhaeng) || null, secondary: null })),
         profile,
@@ -299,7 +310,7 @@ function NewHanjaInner() {
     if (syllables.length === 0) return null
     if (!syllables.every((_, i) => chosen[i])) return null
     return [
-      surname,
+      ...surnameChars,          // ★복성이면 두 글자 모두
       ...syllables.map((syl, i) => {
         const pick = chosen[i]!
         // ★2026-07-30 (1단계) — 보관함에 «표준 표기» 로 남깁니다.

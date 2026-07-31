@@ -1,5 +1,6 @@
 'use client'
 import { Suspense, useState, useEffect, useMemo, useRef } from 'react'
+import { splitSurname } from '@/lib/saju/surname'
 import { useRouter } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsinCompat } from '@/lib/saju/yongsinNew'
@@ -148,14 +149,8 @@ function NewResultInner() {
     if (!saju || !dayStem || !cur || cur.chars.length < 2) return null
     try {
       const y = calcYongsinCompat(saju, dayStem, ...yongArgs())
-      const surname: NameChar = {
-        hangul: cur.chars[0].hangul, hanja: cur.chars[0].hanja,
-        strokes: cur.chars[0].strokes, resourceOhaeng: ohaengOrEmpty(cur.chars[0].resourceOhaeng),
-      }
-      const given: NameChar[] = cur.chars.slice(1).map((c) => ({
-        hangul: c.hangul, hanja: c.hanja, strokes: c.strokes, resourceOhaeng: ohaengOrEmpty(c.resourceOhaeng),
-      }))
-      return diagnoseName({ surname, given, yongsin: y.yongsin, heeksin: y.heeksin, elementScore: y.score })
+      const { surname, surname2, given } = toDiagnoseParts(cur.chars)
+      return diagnoseName({ surname, surname2, given, yongsin: y.yongsin, heeksin: y.heeksin, elementScore: y.score })
     } catch { return null }
   }, [saju, dayStem, cur])
 
@@ -254,14 +249,8 @@ function NewResultInner() {
       const y = calcYongsinCompat(saju, dayStem, ...yongArgs())
       return tries.map((t) => {
         if (t.chars.length < 2) return ''
-        const surname: NameChar = {
-          hangul: t.chars[0].hangul, hanja: t.chars[0].hanja,
-          strokes: t.chars[0].strokes, resourceOhaeng: ohaengOrEmpty(t.chars[0].resourceOhaeng),
-        }
-        const given: NameChar[] = t.chars.slice(1).map((c) => ({
-          hangul: c.hangul, hanja: c.hanja, strokes: c.strokes, resourceOhaeng: ohaengOrEmpty(c.resourceOhaeng),
-        }))
-        try { return diagnoseName({ surname, given, yongsin: y.yongsin, heeksin: y.heeksin, elementScore: y.score }).overallGrade }
+        const { surname, surname2, given } = toDiagnoseParts(t.chars)
+        try { return diagnoseName({ surname, surname2, given, yongsin: y.yongsin, heeksin: y.heeksin, elementScore: y.score }).overallGrade }
         catch { return '' }
       })
     } catch { return tries.map(() => '') }
@@ -273,6 +262,10 @@ function NewResultInner() {
     setDetailLoading(true)
     try {
       const y = calcYongsinCompat(saju, dayStem, ...yongArgs())
+      // ⚠️★서버로는 «가르지 않고» 통째로 보냅니다.
+      //   Body 에 surname2 를 실을 자리가 없어서, 여기서 갈라 보내면
+      //   복성 둘째 글자(궁)가 통째로 사라집니다.
+      //   서버가 splitSurname 안전망으로 다시 가릅니다 — 그쪽이 정본입니다.
       const surname: NameChar = {
         hangul: cur.chars[0].hangul, hanja: cur.chars[0].hanja,
         strokes: cur.chars[0].strokes, resourceOhaeng: ohaengOrEmpty(cur.chars[0].resourceOhaeng),
@@ -503,6 +496,26 @@ function Header({ router }: { router: ReturnType<typeof useRouter> }) {
       <span style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>새 이름 결과</span>
     </div>
   )
+}
+
+
+/**
+ * ★2026-07-31 복성 — 글자 배열을 diagnoseName 이 받을 꼴로 가릅니다.
+ *   남궁민수 → 성 [남,궁] · 이름 [민,수].  가르는 것은 splitSurname 하나뿐입니다.
+ *   ⚠️ 화면마다 chars[0] 으로 자르면 복성 손님의 점수가 서버 결과와 어긋납니다.
+ */
+function toDiagnoseParts(chars: { hangul: string; hanja: string; strokes: number; resourceOhaeng?: string | null }[]) {
+  const sp = splitSurname(chars)
+  const toName = (c: typeof chars[number]): NameChar => ({
+    hangul: c.hangul, hanja: c.hanja, strokes: c.strokes,
+    resourceOhaeng: ohaengOrEmpty(c.resourceOhaeng ?? ''),
+  })
+  return {
+    surname: toName(sp.surname[0]),
+    surname2: sp.surname[1] ? toName(sp.surname[1]) : null,
+    given: sp.given.map(toName),
+    surCount: sp.surname.length,
+  }
 }
 
 export default function NewResultPage() {

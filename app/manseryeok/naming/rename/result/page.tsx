@@ -1,5 +1,6 @@
 'use client'
 import { Suspense, useEffect, useState, useMemo } from 'react'
+import { splitSurname } from '@/lib/saju/surname'
 import { useRouter } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsinCompat as calcYongsin } from '@/lib/saju/yongsinNew'
@@ -104,21 +105,26 @@ function ResultInner() {
       // 심산 오행 점수로 계산 (월지 계절 치환 반영)
       const y = calcYongsin(saju, dayStem, solar?.month, solar?.day,
         saju.find(p => p.pillar === '시주')?.branch ?? null)
-      const surname: NameChar = {
-        hangul: chars[0].hangul,
-        hanja: chars[0].hanja,
-        strokes: chars[0].strokes,
-        resourceOhaeng: ohaengOrEmpty(chars[0].resourceOhaeng),
-      }
-      const given: NameChar[] = chars.slice(1).map((c, gi) => {
-        const idx = gi + 1
+      // ★2026-07-31 복성 — 성을 첫 글자 하나로 자르지 않습니다.
+      //   남궁민수 → 성 [남,궁] · 이름 [민,수].  가르는 것은 splitSurname 하나뿐입니다.
+      const sp = splitSurname(chars)
+      const toName = (c: typeof chars[number]): NameChar => ({
+        hangul: c.hangul, hanja: c.hanja, strokes: c.strokes,
+        resourceOhaeng: ohaengOrEmpty(c.resourceOhaeng),
+      })
+      const surname: NameChar = toName(sp.surname[0])
+      const surname2: NameChar | null = sp.surname[1] ? toName(sp.surname[1]) : null
+      const surCount = sp.surname.length
+      const given: NameChar[] = sp.given.map((c, gi) => {
+        // ⚠️ picks.idx 는 «chars 배열» 의 자리입니다. 복성이면 2 부터 시작합니다.
+        const idx = surCount + gi
         const p = picks.find((pp) => pp.idx === idx)
         return p
           ? { hangul: c.hangul, hanja: p.toHanja, strokes: p.toStrokes, resourceOhaeng: ohaengOrEmpty(p.toOhaeng) }
           : { hangul: c.hangul, hanja: c.hanja, strokes: c.strokes, resourceOhaeng: ohaengOrEmpty(c.resourceOhaeng) }
       })
       return diagnoseName({
-        surname, given,
+        surname, surname2, given,
         yongsin: y.yongsin, heeksin: y.heeksin, elementScore: y.score,
       })
     } catch {

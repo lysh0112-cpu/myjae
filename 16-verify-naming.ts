@@ -810,6 +810,37 @@ head('⑧-c ★수리 등급 — 주운 가중치 판정 (2026-07-31 2차)')
   check(r0.suri.gyeok.length === 0, `이름 0글자 — 격 0개`)
   check(r0.suri.grade !== '좋음', `★격 0개를 «좋음» 이라 부르지 않습니다 (현재 ${r0.suri.grade})`)
 
+  // ── ★2단계 — 개명 화면이 서버와 «같은 답» 을 내는가 (2026-07-31)
+  //    화면은 diagnoseName 을 직접 부르고, 서버는 splitSurname 으로 다시 가릅니다.
+  //    둘이 다르면 손님이 고른 별점과 결과지 별점이 어긋납니다.
+  {
+    const raw = [CH('남', '南', 9, '火'), CH('궁', '宮', 10, '土'),
+                 CH('민', '民', 5, '水'), CH('수', '秀', 7, '木')]
+    // (a) 화면 방식 — splitSurname 을 거친 뒤 diagnoseName
+    const sp2 = splitSurname(raw)
+    const screen = diagnoseName({
+      surname: sp2.surname[0], surname2: sp2.surname[1] ?? null,
+      given: sp2.given as NameChar[], ...base })
+    // (b) 서버 방식 — 통째로 받아 서버가 다시 가름
+    const sp3 = splitSurname([raw[0], ...raw.slice(1)])
+    const server = diagnoseName({
+      surname: sp3.surname[0], surname2: sp3.surname[1] ?? null,
+      given: sp3.given as NameChar[], ...base })
+    check(screen.suri.grade === server.suri.grade,
+      `★복성 — 화면과 서버의 수리 등급이 같습니다 (${screen.suri.grade})`)
+    check(screen.suri.gyeok.map(x => x.sum).join(',') === server.suri.gyeok.map(x => x.sum).join(','),
+      `★복성 — 화면과 서버의 사격이 같습니다 (${screen.suri.gyeok.map(x => x.sum).join('·')})`)
+    check(screen.overallGrade === server.overallGrade,
+      `★복성 — 화면과 서버의 종합 등급이 같습니다 (${screen.overallGrade})`)
+    // 성씨 두 글자는 «바꿀 수 있는 글자» 가 아닙니다 (대표님 확정)
+    check(sp2.given.length === raw.length - sp2.surname.length,
+      `후보로 바뀌는 글자 수 = 전체 − 성 글자 수 (${sp2.given.length})`)
+    // 단성 회귀
+    const rawS = [CH('류', '柳', 9, '木'), CH('승', '承', 8, '金'), CH('현', '炫', 9, '火')]
+    const spS = splitSurname(rawS)
+    check(spS.surname.length === 1 && spS.given.length === 2, `단성 — 성 1 · 이름 2 (회귀 없음)`)
+  }
+
   // ⚠️ 외자 — 두 격이 같은 식이라 «보통» 이 나올 수 없습니다 (3-3장 ③ 미해결)
   const r1 = diagnoseName({ surname: SUR, given: [CH('인', '仁', 4, '木')] as NameChar[], ...base })
   // ★3차에서 외자도 사격 넷이 되었습니다 (교재 136쪽 「성1 이름1」)

@@ -1,5 +1,6 @@
 'use client'
 import { Suspense, useState, useEffect, useMemo, useRef } from 'react'
+import { splitSurname } from '@/lib/saju/surname'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsinCompat as calcYongsin } from '@/lib/saju/yongsinNew'
@@ -112,7 +113,11 @@ function HanjaInner() {
     setRestored(true)
   }, [count])
 
-  const givenChars = chars.slice(1)
+  // ★2026-07-31 복성 — 성씨는 개명 대상이 아닙니다 (대표님 확정: 기본 중의 기본).
+  //   예전에는 chars.slice(1) 이라 남궁민수의 «궁» 이 바꿀 수 있는 글자로 떴습니다.
+  const nameSplit = splitSurname(chars)
+  const surCount = nameSplit.surname.length          // 단성 1 · 복성 2
+  const givenChars = nameSplit.given
 
   const { saju, solar, dayStem, converting } = useResultSaju(
     info?.calType || '양력',
@@ -146,11 +151,11 @@ function HanjaInner() {
 
   useEffect(() => {
     if (count === 2 && givenChars.length >= 2 && targetIdxs.length === 0) {
-      const idxs = givenChars.map((_, i) => i + 1)
+      const idxs = givenChars.map((_, i) => surCount + i)   // ★복성이면 2 부터
       setTargetIdxs(idxs)
       setActiveIdx(idxs[0])
     }
-  }, [count, givenChars.length, targetIdxs.length])
+  }, [count, givenChars.length, targetIdxs.length, surCount])
 
   useEffect(() => {
     if (activeIdx === null) { setHanjaList([]); return }
@@ -184,14 +189,15 @@ function HanjaInner() {
 
   const scored = useMemo(() => {
     if (!yongsinReady || activeIdx === null || hanjaList.length === 0 || !chars[0]) return []
-    const surname: NameChar = {
-      hangul: chars[0].hangul,
-      hanja: chars[0].hanja,
-      strokes: chars[0].strokes,
-      resourceOhaeng: ohaengOrEmpty(chars[0].resourceOhaeng),
-    }
+    const toName = (c: { hangul: string; hanja: string; strokes: number; resourceOhaeng?: string | null }): NameChar => ({
+      hangul: c.hangul, hanja: c.hanja, strokes: c.strokes,
+      resourceOhaeng: ohaengOrEmpty(c.resourceOhaeng ?? ''),
+    })
+    const surname: NameChar = toName(nameSplit.surname[0])
+    const surname2: NameChar | null = nameSplit.surname[1] ? toName(nameSplit.surname[1]) : null
     const baseGiven: NameChar[] = givenChars.map((c, gi) => {
-      const idx = gi + 1
+      // ⚠️ chosen·chars 는 «전체 배열» 자리입니다. 복성이면 2 부터 시작합니다.
+      const idx = surCount + gi
       const pick = chosen[idx]
       const src = pick
         ? { hangul: chars[idx].hangul, hanja: rowHanja(pick), strokes: rowStrokes(pick), resourceOhaeng: rowOhaeng(pick) ?? '' }
@@ -212,7 +218,7 @@ function HanjaInner() {
 
     return hanjaList.map((row) => {
       const given = baseGiven.map((g, gi) => {
-        const idx = gi + 1
+        const idx = surCount + gi   // ★복성이면 chars 자리가 2 부터
         if (idx !== activeIdx) return g
         return {
           hangul: row.hangul,
@@ -223,6 +229,7 @@ function HanjaInner() {
       })
       const r = diagnoseName({
         surname,
+        surname2,
         given,
         yongsin: yong.yongsin,
         heeksin: yong.heeksin,
@@ -234,8 +241,9 @@ function HanjaInner() {
       //     ★수리·발음의 무게는 그대로입니다 (66.7 : 20 : 13.3 — 옛 비율 그대로).
       //   ⚠️ 점수는 내부용입니다. 화면에 쓰지 마십시오.
       const verdict = judgeResource(
-        { hanja: surname.hanja, hangul: surname.hangul,
-          primary: ohaengOrEmpty(surname.resourceOhaeng) || null, secondary: null },
+        // ★복성이면 성 두 글자를 배열로 넘깁니다 — 둘째 글자가 이름 글자로 채점되지 않도록
+        nameSplit.surname.map(c => ({ hanja: c.hanja, hangul: c.hangul,
+          primary: ohaengOrEmpty(c.resourceOhaeng ?? '') || null, secondary: null })),
         given.map(g => ({ hanja: g.hanja, hangul: g.hangul,
           primary: ohaengOrEmpty(g.resourceOhaeng) || null, secondary: null })),
         profile,
@@ -428,7 +436,7 @@ function HanjaInner() {
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
             {givenChars.map((c, gi) => {
-              const idx = gi + 1
+              const idx = surCount + gi   // ★복성이면 chars 자리가 2 부터
               const isActive = activeIdx === idx
               const locked = lockedByPick && !isActive
               const picked = chosen[idx] !== undefined

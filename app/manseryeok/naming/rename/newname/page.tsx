@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef, CSSProperties } from 'react'
+import { splitSurname } from '@/lib/saju/surname'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { fromMyInfo, fromProfile, personKey } from '@/lib/saju/myInfo'
@@ -42,7 +43,13 @@ export default function NewNamePage() {
   const composing1 = useRef(false)
   const composing2 = useRef(false)
 
-  const [surname, setSurname] = useState<SavedChar | null>(null)
+  // ★2026-07-31 복성 — 성이 두 글자일 수 있습니다.
+  //   예전에는 남궁민수가 성「남」 + 이름「궁·민」 으로 채워져 «수» 가 사라졌습니다.
+  const [surnameChars, setSurnameChars] = useState<SavedChar[]>([])
+  const surname: SavedChar | null = surnameChars[0] ?? null
+  /** 화면에 보일 성씨 — 복성이면 두 글자를 붙입니다 */
+  const surnameHanja = surnameChars.map(c => c.hanja).join('')
+  const surnameHangul = surnameChars.map(c => c.hangul).join('')
   const [loaded, setLoaded] = useState(false)
 
   // ── 이용권/결제 ──
@@ -77,8 +84,10 @@ export default function NewNamePage() {
     //   원래 이름의 한글을 미리 채워 보여준다. (사용자가 지우고 새로 쓸 수도 있음)
     function fillFromChars(chars: SavedChar[]) {
       if (!Array.isArray(chars) || !chars[0]) return false
-      setSurname(chars[0])
-      const given = chars.slice(1).filter(Boolean)
+      // ★가르는 것은 splitSurname 하나뿐입니다 (복성이면 앞 두 글자가 성)
+      const sp = splitSurname(chars)
+      setSurnameChars(sp.surname)
+      const given = sp.given.filter(Boolean)
       if (given.length === 1) {
         setCount(1)
         setC1(given[0].hangul || '')
@@ -232,7 +241,7 @@ export default function NewNamePage() {
     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
       <Header router={router} />
       <p style={{ fontSize: 12, color: SUB, margin: '0 0 16px', padding: '0 4px' }}>
-        성씨 {surname!.hanja}({surname!.hangul})는 그대로 · 발음은 두고 한자만 바꿔드려요
+        성씨 {surnameHanja}({surnameHangul})는 그대로 · 발음은 두고 한자만 바꿔드려요
       </p>
 
       <div style={{ fontSize: 12, color: SUB, marginBottom: 8, padding: '0 4px' }}>이름 글자 수</div>
@@ -245,7 +254,7 @@ export default function NewNamePage() {
         <>
           <div style={{ background: CARD, border: '1px solid rgba(200,120,60,0.10)', borderRadius: 16, padding: '18px 16px' }}>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
-              <span style={{ fontSize: 22, color: SUB }}>{surname!.hanja}</span>
+              <span style={{ fontSize: 22, color: SUB }}>{surnameHanja}</span>
               <input
                 value={c1}
                 maxLength={2}
