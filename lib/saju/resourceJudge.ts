@@ -66,7 +66,12 @@ export function relationText(a: Ohaeng | null, b: Ohaeng | null, rel: RelKind): 
 /** 관계 하나의 값. ★합이 아니라 «평균» 으로 씁니다 (이름 길이에 등급이 흔들리지 않게) */
 const REL_SCORE: Record<RelKind, number> = {
   순생: 2.0,
-  비화: 1.0,   // 같은 기운 — 나쁘지 않으나 흐름이 없습니다
+  // ★2026-07-31 (41부) 1.0 → 0.5 — 역생과 «갈랐습니다».
+  //   [왜]  둘이 같은 1.0 이면 관계가 전부 비화·역생인 이름의 flowAvg 가 «정확히 1.0» 이 되고,
+  //         (1.0+2)/4 = 0.75 → 22.5/30 → 75% 로 ★4.5 «경계» 에 40.5% 가 쌓였습니다.
+  //         실측 — 자원오행 별점이 ★4.5 한 칸에 71%, 외자는 칸이 셋뿐이었습니다.
+  //   ★같은 기운이 겹치는 것과 거꾸로 흐르는 상생은 «다릅니다». 값도 달라야 합니다.
+  비화: 0.5,   // 같은 기운 — 흠은 아니나 흐름이 «없습니다»
   역생: 1.0,   // 상생이지만 방향이 거꾸로
   역극: -1.0,
   순극: -2.0,  // ★성이 이름을 누르는 자리
@@ -107,7 +112,40 @@ const REL_SCORE: Record<RelKind, number> = {
 //    ★대신 ①(상극을 흠으로 보지 말라)은 «감점» 이 아니라 «AI 재료» 로 전합니다.
 //      resourceFactsBlock 아래쪽 BOOK_CLASH_VIEW 를 보십시오.
 //      그리고 ④ 예외(용신·희신 보완이면 감점 면제)가 이미 49.2% 를 덮고 있습니다.
-export const W_FLOW = 30      // ① 배치(흐름)
+export const W_FLOW = 30      // ① 자원오행 축 — ★2026-07-31 (41부) «두 몫» 으로 나눴습니다
+//
+// ══════════════════════════════════════════════════════════════════
+//  ★2026-07-31 (41부) — 「四 자원오행」 축을 둘로 나눴습니다 (대표님 확정)
+//
+//   [왜]  ① 교재 2장 51쪽 — 「상극을 하는 관계는 나쁘다고 할 수 없다」
+//            그러나 「과다한 기운을 더 살리는 것」은 부정적이라 합니다.
+//         ② 교재 4장 107쪽 — 자원오행이 «경계» 하는 것은 이름 글자끼리의 상극이 아니라
+//            «사주의 약한 기운을 이름이 누르는 것» 입니다.
+//         → 그래서 «사주 상극» 을 자원 축 안으로 들였습니다.
+//
+//   [그런데 그것만 두면]  실측 — 사주 상극이 0개인 이름이 55.9% 라
+//         절반 넘는 이름이 «만점» 을 받고 별점이 두세 칸으로 무너집니다.
+//         ⚠️ 「대부분이 만점」 = 「점수가 높다」 = 「별이 한 칸에 몰린다」 는 «같은 말» 입니다.
+//
+//   [그래서 둘을 합칩니다]  둘 다 총점에도 «별점에도» 들어갑니다 —
+//         starRating.ts 의 「화면의 두 대목과 점수의 두 칸이 같은 것을 가리킨다」를 지킵니다.
+//
+//   실측 (세 글자 12,000 · 외자 4,000)
+//         별점 몰림   71% → 31%      ·  외자 칸  3 → 5
+//         총점 평균   61.1 → 62.4    ·  아쉬움  25.1% → 23.9%
+//
+//   ⚠️ 바꿀 때는 무작위 표본으로 «별점 칸» 과 «걸림 비율» 을 함께 재십시오 (교훈 BO).
+// ══════════════════════════════════════════════════════════════════
+
+/** 자원 축 가운데 «사주 상극» 몫 — 이름 오행이 사주의 약한 기운을 누르는가 */
+export const W_FLOW_SAJU_CLASH = 7.5
+/** 자원 축 가운데 «글자 흐름» 몫 */
+export const W_FLOW_LINK = W_FLOW - W_FLOW_SAJU_CLASH   // 22.5
+/**
+ * ★평균 보정 — 배점을 갈라 놓으면 평균이 내려갑니다. 그것만 되돌립니다.
+ *   「평균은 두고 칸만 늘린다」 — 수리 정밀점수에서 정하신 원칙과 같습니다.
+ */
+export const FLOW_SCALE = 1.20
 export const W_YONGSIN = 40   // ② 용신 충족 — 가장 무겁게
 export const W_BALANCE = 30   // ③ 균형 (과다 억제 · 결핍 충족 · 기신 회피)
 
@@ -124,7 +162,11 @@ const BONUS_ISOLATED = 4    // 고립으로 본 오행을 채울 때
 // ★2026-07-31 (5단계) ③ — 교재 107쪽 「사주에 목이 약한데 이름에 강한 금을 넣으면
 //   건강상의 문제가 생길 수 있다」. 이름 오행이 «사주의 약한 기운» 을 극하는 자리입니다.
 //   ⚠️ 이름 «글자끼리» 의 상극(flowScore)과는 다른 것입니다. 이쪽이 교재가 경계한 쪽입니다.
-const PENALTY_WEAK_CLASH = 7  // 사주의 약한 기운(결핍·고립)을 이름 오행이 극할 때
+// ★2026-07-31 (41부) PENALTY_WEAK_CLASH = 7 을 «지웠습니다».
+//   사주 상극은 이제 «균형» 이 아니라 «자원 축(W_FLOW_SAJU_CLASH)» 에서 셉니다.
+//   ⚠️ 두 곳에서 세면 같은 흠을 두 번 깎습니다 — 되살리지 마십시오.
+//   ⚠️ 개수(7점씩)가 아니라 «깊이» 로 잽니다. 개수만 세면 55.9% 가 만점이 되어
+//      별점이 두세 칸으로 무너집니다 (2026-07-31 실측).
 
 /**
  * ★③이 걸렸을 때 붙는 «고정» 문구 (2026-07-31 대표님 확정)
@@ -553,7 +595,8 @@ export function judgeResource(
   if (given.length >= 2) addLink(0, O.length - 1, 0.5, ' [성↔끝]')
 
   const flowAvg = relCount > 0 ? relSum / relCount : 0            // -2.0 ~ +2.0
-  const flowScore = clamp((flowAvg + 2) / 4, 0, 1) * W_FLOW        // 0 ~ 30
+  // ★글자 흐름 몫 (0 ~ W_FLOW_LINK). 사주 상극 몫은 ③ 을 센 «뒤» 아래에서 더합니다
+  const flowLinkPart = clamp((flowAvg + 2) / 4, 0, 1) * W_FLOW_LINK
 
   // ─────────────────────────────────────────────────────────────
   // ② 용신 충족 — ★성은 제외합니다 (바꿀 수 없는 글자이므로)
@@ -668,6 +711,8 @@ export function judgeResource(
   //       꺼리는 기운이 눌리는 것은 흠이 아니라 오히려 편한 자리입니다.
   //       → 위 BONUS_LACK 이 기신·구신을 가산에서 뺀 것과 같은 잣대입니다.
   const weakClashed: { name: Ohaeng; weak: Ohaeng }[] = []
+  /** 사주 상극의 «깊이» 0~ — 약한 기운일수록 큽니다. 1 에서 자릅니다 */
+  let weakDepth = 0
   const weakSet = [...new Set([...P.lacking, ...P.isolated])]
   for (const [o, chars] of byOhaeng) {
     const target = GEUK_OF[o]
@@ -675,7 +720,10 @@ export function judgeResource(
     const disliked = (P.gisin !== null && target === P.gisin) || (P.gusin !== null && target === P.gusin)
     if (disliked) continue                       // 꺼리는 기운이 눌리는 것은 흠이 아닙니다
     weakClashed.push({ name: o, weak: target })
-    balance -= PENALTY_WEAK_CLASH
+    // ★2026-07-31 (41부) — «균형» 에서 빼던 것을 «자원 축» 으로 옮겼습니다.
+    //   두 곳에서 세면 같은 흠을 두 번 깎습니다.
+    //   ⚠️ 얼마나 약한 기운을 눌렀는가(깊이)로 잽니다 — 개수만 세면 별점이 뭉칩니다.
+    weakDepth += Math.max(0, (EXCESS_POINT_MIN - (P.score[target] ?? 0))) / EXCESS_POINT_MIN
     const chLabel = chars.map(c => c.hanja).join('·')
     warnings.push(
       `사주에 ${target} 기운이 약한 편인데(${P.score[target]}점) `
@@ -684,6 +732,12 @@ export function judgeResource(
   }
 
   balance = clamp(balance, 0, W_BALANCE)
+
+  // ─────────────────────────────────────────────────────────────
+  //  ★자원 축 조립 — 사주 상극 몫 + 글자 흐름 몫 (2026-07-31 · 41부)
+  // ─────────────────────────────────────────────────────────────
+  const sajuClashPart = W_FLOW_SAJU_CLASH * (1 - clamp(weakDepth, 0, 1))
+  const flowScore = clamp((sajuClashPart + flowLinkPart) * FLOW_SCALE, 0, W_FLOW)
 
   // ─────────────────────────────────────────────────────────────
   //  합산 · 판정 불가 처리
