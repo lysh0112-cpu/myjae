@@ -37,7 +37,7 @@ import { isPremium } from '@/lib/saju/premium/config'
 import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
 import { calcYongsinNew } from '@/lib/saju/yongsinNew'
 import { getGongmang } from '@/lib/saju/gongmang'
-import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
+import SajuWonguk from '@/app/manseryeok/components/SajuWonguk'
 import CareerJudgeCard from './components/CareerJudgeCard'
 // ★2026-07-31 — 만세력 표를 «떼어다» 통변 사이에 끼웁니다 (대표님 지시)
 import SajuTableSlot, { type SajuTableKind } from '@/app/manseryeok/components/SajuTableSlot'

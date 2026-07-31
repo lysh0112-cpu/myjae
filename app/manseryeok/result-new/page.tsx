@@ -35,7 +35,7 @@ import { toTongbyeonInput } from "@/lib/saju/toTongbyeonInput";
 import { buildGeneralSajuPrompt } from "@/lib/saju/premium/buildGeneralSajuPrompt";
 import { isPremium } from "@/lib/saju/premium/config";
 import YongsinCard from "./YongsinCard";
-import SajuWonguk from "./SajuWonguk";
+import SajuWonguk from "@/app/manseryeok/components/SajuWonguk";
 
 const BRANCH_LIST = [{char:"子"},{char:"丑"},{char:"寅"},{char:"卯"},{char:"辰"},{char:"巳"},{char:"午"},{char:"未"},{char:"申"},{char:"酉"},{char:"戌"},{char:"亥"}]
 const HEAVENLY_STEMS = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']

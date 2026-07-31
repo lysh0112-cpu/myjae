@@ -47,7 +47,7 @@ import { examKindOf, CLOSING, CLOSING_STUDENT } from '@/lib/saju/examLuck/tables
 import { GRADE_PROMPT, gradeLabel, levelLabel, trackOf, categoryLabel, targetOf } from '@/lib/saju/examLuck/tables/studentTarget'
 import { saveRecord, updateRecordResult, getRecord } from '@/lib/saju/sajuRecords'
 import { calcSeyunList, calcWolunList, type DayunItem } from '@/lib/saju/dayun'
-import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
+import SajuWonguk from '@/app/manseryeok/components/SajuWonguk'
 import ExamJudgeCard, { GRADE_STYLE } from './ExamJudgeCard'
 import type { ExamCard, ExamInput, ExamTarget, YearLuck } from '@/lib/saju/examLuck/types'
 

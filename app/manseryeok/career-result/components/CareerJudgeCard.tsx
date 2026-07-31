@@ -20,15 +20,22 @@
 
 import { useState } from 'react'
 import type { CareerCard } from '@/lib/saju/career'
+import { EL_CHART } from '@/lib/saju/ohaengColor'
 
 const CARD = '#FFFBF7'
 const LINE = '#f0e0d5'
 const ACCENT = '#785aaa'
 
-/** 오행 막대 색 — 육친 막대도 같은 색을 쓴다 */
-const EL_COLOR: Record<string, string> = {
-  목: '#639922', 화: '#d85a30', 토: '#ba7517', 금: '#888780', 수: '#378add',
-}
+/**
+ * 오행 막대 색 — 육친 막대도 같은 색을 쓴다.
+ *
+ * ★2026-08-01 — «오행도포표» 색으로 통일했습니다. (대표님 지시)
+ *   전에는 이 파일이 자기 색을 갖고 있어 사주보기 도포표와 «달랐습니다» —
+ *     목 #639922 · 화 #d85a30 · 토 #ba7517 · 금 #888780 · 수 #378add
+ *   같은 오행인데 화면마다 색이 다르면 손님이 이어 보지 못합니다.
+ *   ⚠️ 여기서 색을 정하지 마십시오. lib/saju/ohaengColor.ts 한 곳만 씁니다.
+ */
+const EL_COLOR = EL_CHART
 const EL_ORDER = ['목', '화', '토', '금', '수'] as const
 const YUK_ORDER = ['비겁', '식상', '재성', '관성', '인성'] as const
 

@@ -9,7 +9,7 @@
 import { useState, useRef, useEffect } from 'react'
 import type { DayRecommendation, HourPick } from '../lib/recommendV5'
 import { toStarLines } from '../lib/starMapV5'
-import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
+import SajuWonguk from '@/app/manseryeok/components/SajuWonguk'
 import UnTable from '@/app/manseryeok/result-new/UnTable'
 import { getGongmang } from '@/lib/saju/gongmang'
 import { getUnsung } from '@/lib/saju/unsung'

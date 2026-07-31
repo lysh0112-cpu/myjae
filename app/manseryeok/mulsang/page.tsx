@@ -8,7 +8,7 @@ import { buildMulsangPrompt, STYLE_CONFIGS, ACTIVE_STYLES, STYLE_EMOJI, STYLE_DE
 import { buildMulsangTongbyeonPrompt, buildMulsangCardSummaryPrompt, type Ohaeng } from '@/lib/saju/mulsangTongbyeonPrompt'
 import { MULSANG_QUESTIONS, groupMulsangByCategory } from '@/lib/saju/mulsangQuestions'
 import OhaengPentagon from '@/app/manseryeok/result-new/OhaengPentagon'
-import SajuWonguk from '@/app/manseryeok/result-new/SajuWonguk'
+import SajuWonguk from '@/app/manseryeok/components/SajuWonguk'
 import { getGongmang } from '@/lib/saju'
 import { saveRecord, getRecord, updateRecordResult } from '@/lib/saju/sajuRecords'
 import CopyTextButton from '@/app/components/common/CopyTextButton'

@@ -1,32 +1,33 @@
 'use client'
+
 // app/manseryeok/moving-timing/components/SoloWonguk.tsx
 //
-// ★ 한 사람 명식표 — 배우자 없이 계약자만 있을 때 쓴다.
+// ┌───────────────────────────────────────────────────────────────┐
+// │  이사택일 — 한 사람 사주 원국                                     │
+// └───────────────────────────────────────────────────────────────┘
 //
-//   [왜 만들었나]
-//   처음에는 배우자가 없어도 CoupleWonguk 에 계약자를 양쪽에 넣었다.
-//   그러니 같은 사람이 두 번 그려졌다(2026-07-24 대표님 확인).
-//   CoupleWonguk 은 두 사람 전용이고 가운데 하트도 있어 이 자리엔 맞지 않는다.
+// ══════════════════════════════════════════════════════════════════
+//  ★2026-08-01 — «정본 부품» 으로 갈아끼웠습니다. (대표님 지시)
 //
-//   [원칙]
-//   · 공용 부품(CoupleWonguk·SajuWonguk)은 건드리지 않는다.
-//     궁합·사주보기·결혼택일이 함께 쓰기 때문이다.
-//   · 대신 오행 팔레트는 공용 lib/saju/ohaengColor 를 그대로 쓴다.
-//     CoupleWonguk 과 나란히 놓아도 색이 어긋나지 않는다.
-//   · 4칸(시·일·월·연) 배치와 일주 강조 테두리도 CoupleWonguk 과 같게 맞췄다.
+//   [전에는]
+//     이 파일이 원국 표를 «스스로» 그렸습니다 (131줄).
+//     천간·지지 여덟 칸만 있고
+//       ✖ 십성 · 지지십성 · 12운성 · 신살 · 귀인 · 공망 이 «없었습니다»
+//       ✖ 용어를 눌러도 «뜻풀이 모달» 이 안 떴습니다
+//     같은 원국인데 화면마다 다른 표를 보여 주고 있었습니다.
+//
+//   [이제는]
+//     app/manseryeok/components/SajuWonguk.tsx 를 «가져다» 씁니다.
+//     ★계산이 정확하고 해설 모달이 들어 있는 «그 표» 입니다.
+//     사주보기·진로적성·출산택일·합격운·물상이 쓰는 것과 «같은 부품» 입니다.
+//
+//   ⚠️ 이 파일은 이제 «껍데기» 입니다 — 이름·생일·용신 줄만 감쌉니다.
+//      표 자체를 여기서 다시 그리지 마십시오. 그러면 또 갈립니다. (교훈 CJ)
+// ══════════════════════════════════════════════════════════════════
 
-import { EL_BG, EL_BD, EL_C, EL_C_SUB, EL_HAN } from '@/lib/saju/ohaengColor'
-
-type Element = '목' | '화' | '토' | '금' | '수'
-
-const STEM_ELEMENT: Record<string, Element> = {
-  甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토',
-  己: '토', 庚: '금', 辛: '금', 壬: '수', 癸: '수',
-}
-const BRANCH_ELEMENT: Record<string, Element> = {
-  子: '수', 丑: '토', 寅: '목', 卯: '목', 辰: '토', 巳: '화',
-  午: '화', 未: '토', 申: '금', 酉: '금', 戌: '토', 亥: '수',
-}
+import React from 'react'
+import SajuWonguk from '@/app/manseryeok/components/SajuWonguk'
+import { getGongmang } from '@/lib/saju'
 
 interface SajuPillar { pillar: string; stem: string; branch: string }
 
@@ -37,45 +38,28 @@ interface PersonLike {
   yongsin?: string
 }
 
-function GanjiCell({ char, el, isDay }: { char: string; el: Element | undefined; isDay?: boolean }) {
-  const isEmpty = !char || char === '?'
-  return (
-    <div style={{
-      borderRadius: 7,
-      background: isEmpty ? '#f5f5f5' : (el ? EL_BG[el] : '#f5f5f5'),
-      border: el === '수'
-        ? (isDay ? '3px solid #000000' : '1px solid #2b2b2b')
-        : (isDay ? '2px solid #c8783c' : `1px solid ${el ? EL_BD[el] : '#ddd'}`),
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      position: 'relative', aspectRatio: '1 / 1',
-    }}>
-      <span style={{
-        fontSize: 16, fontWeight: 700,
-        color: isEmpty ? '#ccc' : (el ? EL_C[el] : '#888'), lineHeight: 1,
-      }}>
-        {isEmpty ? '?' : char}
-      </span>
-      {el && !isEmpty && (
-        <span style={{
-          position: 'absolute', bottom: 0, right: 2, fontSize: 9,
-          fontWeight: 600, color: EL_C_SUB[el],
-        }}>
-          {EL_HAN[el]}
-        </span>
-      )}
-    </div>
-  )
-}
+/** 정본 표가 바라는 차례 — 시 → 일 → 월 → 연 */
+const ORDER = ['시주', '일주', '월주', '연주'] as const
 
 export default function SoloWonguk({ person }: { person: PersonLike }) {
   const byPillar: Record<string, SajuPillar> = {}
-  person.pillars.forEach(p => { byPillar[p.pillar] = p })
+  person.pillars.forEach((p) => { byPillar[p.pillar] = p })
 
-  // 화면은 항상 시·일·월·연 4칸. 없는 기둥은 ? 로.
-  const order = ['시주', '일주', '월주', '연주']
-  const pick = (label: string) =>
-    byPillar[label] || (label === '연주' ? byPillar['년주'] : undefined)
-  const labels = ['시', '일', '월', '연']
+  // ⚠️ 어떤 화면은 «연주», 어떤 화면은 «년주» 로 넘깁니다. 둘 다 받습니다.
+  const pick = (label: string): SajuPillar =>
+    byPillar[label]
+    ?? (label === '연주' ? byPillar['년주'] : undefined)
+    ?? { pillar: label, stem: '?', branch: '?' }
+
+  const saju = ORDER.map((l) => pick(l))
+  const ilju = saju.find((p) => p.pillar === '일주')
+  const dayStem = ilju?.stem ?? ''
+  const iljji = ilju?.branch ?? ''
+  const yeonjji = saju[3]?.branch ?? ''
+
+  // 공망 — 정본 표가 그 칸을 흐리게 그리는 데 씁니다
+  const [gm1, gm2] = (dayStem && iljji && dayStem !== '?' && iljji !== '?')
+    ? getGongmang(dayStem, iljji) : ['', '']
 
   return (
     <div style={{
@@ -92,32 +76,15 @@ export default function SoloWonguk({ person }: { person: PersonLike }) {
         )}
       </div>
 
-      {/* 4칸 — 가운데 정렬. 한 사람이라 폭을 절반쯤으로 잡는다 */}
-      <div style={{ maxWidth: 220, margin: '0 auto' }}>
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 3, marginBottom: 3,
-        }}>
-          {labels.map((l, i) => (
-            <div key={i} style={{ fontSize: 8, textAlign: 'center', color: '#6b5340' }}>{l}</div>
-          ))}
-        </div>
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 3, marginBottom: 3,
-        }}>
-          {order.map((label, i) => {
-            const p = pick(label)
-            const stem = p?.stem ?? '?'
-            return <GanjiCell key={i} char={stem} el={STEM_ELEMENT[stem]} isDay={label === '일주'} />
-          })}
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 3 }}>
-          {order.map((label, i) => {
-            const p = pick(label)
-            const branch = p?.branch ?? '?'
-            return <GanjiCell key={i} char={branch} el={BRANCH_ELEMENT[branch]} isDay={label === '일주'} />
-          })}
-        </div>
-      </div>
+      {/* ★정본 부품 — 십성·12운성·신살·귀인·공망 + 용어 뜻풀이 모달까지 그대로 */}
+      <SajuWonguk
+        saju={saju}
+        dayStem={dayStem}
+        yeonjji={yeonjji}
+        iljji={iljji}
+        gm1={gm1}
+        gm2={gm2}
+      />
 
       {person.yongsin && (
         <div style={{

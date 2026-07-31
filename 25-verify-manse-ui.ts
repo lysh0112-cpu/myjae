@@ -16,7 +16,7 @@
 //      그래서 «조건이 겹치는 자리» 를 검사로 못 박습니다.
 // ══════════════════════════════════════════════════════════════════
 
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 
 let pass = 0, fail = 0
 const check = (ok: boolean, msg: string) => {
@@ -73,6 +73,49 @@ console.log('\n━━ ⑯-d ★진로적성에 만세력 표가 «쪼개져» �
   }
   // ⚠️ 색을 «지어내지» 않았는가 — 오행 색은 명리 규칙입니다
   check(!/목:\s*'#/.test(slot), `★오행 색을 여기서 지어내지 않았습니다 (ohaengColor 한 곳만)`)
+}
+
+console.log('\n━━ ⑯-e ★부품이 «한 벌» 인가 (2026-08-01 통합) ━━')
+{
+  const { execSync } = require('child_process') as typeof import('child_process')
+  const sh = (c: string) => { try { return execSync(c, { encoding: 'utf8' }) } catch { return '' } }
+
+  // ① 사주 원국 — 정본이 공용 자리에 있는가
+  check(existsSync('app/manseryeok/components/SajuWonguk.tsx'),
+    `★정본 원국이 공용 자리(components/)에 있습니다`)
+  check(!existsSync('app/manseryeok/result-new/SajuWonguk.tsx'),
+    `옛 자리(result-new/)에 남아 있지 않습니다`)
+  // ⚠️ «import» 만 봅니다. 주석에 옛 경로를 적어 둔 것까지 잡으면 안 됩니다
+  const oldPath = sh(`grep -rln "^import.*result-new/SajuWonguk" --include=*.tsx app/ 2>/dev/null`).trim()
+  check(oldPath === '', `옛 경로로 «부르는» 화면이 없습니다 — ${oldPath.split('\n').filter(Boolean).join(', ') || '0곳'}`)
+
+  // ② 이사택일이 «정본을 가져다» 쓰는가 (스스로 그리지 않는가)
+  const solo = readFileSync('app/manseryeok/moving-timing/components/SoloWonguk.tsx', 'utf8')
+  check(/import SajuWonguk from '@\/app\/manseryeok\/components\/SajuWonguk'/.test(solo),
+    `★이사택일이 정본 원국을 가져다 씁니다`)
+  check(!/gridTemplateColumns: 'repeat\(4,1fr\)'/.test(solo),
+    `이사택일이 원국을 «스스로 그리지» 않습니다`)
+
+  // ③ 오행 색 — 화면이 자기 색표를 갖고 있지 않은가
+  const dirty = sh(`grep -rln "목: *'#\|목:'#" --include=*.tsx app/manseryeok/ 2>/dev/null`).trim()
+  const files = dirty ? dirty.split('\n').filter(Boolean) : []
+  check(files.length === 0,
+    `★화면이 «자기 오행 색표» 를 갖고 있지 않습니다 — ${files.join(', ') || '0곳'}`)
+  if (files.length) {
+    console.log('     ⚠️ 오행 색은 «명리 규칙» 입니다. lib/saju/ohaengColor.ts 한 곳만 쓰십시오.')
+    console.log('        그래프·막대는 EL_CHART, 글씨는 EL_TEXT, 칸 배경은 EL_BG 입니다.')
+  }
+  const oc = readFileSync('lib/saju/ohaengColor.ts', 'utf8')
+  check(/EL_CHART/.test(oc) && /금: '#b8b8b8'/.test(oc),
+    `정본에 EL_CHART 가 있고 금(金) 예외가 지켜집니다`)
+  for (const f of ['app/manseryeok/result-new/OhaengPentagon.tsx',
+                   'app/manseryeok/career-result/components/CareerJudgeCard.tsx']) {
+    check(readFileSync(f, 'utf8').includes('EL_CHART'), `${f.split('/').pop()} 가 EL_CHART 를 씁니다`)
+  }
+
+  // ⚠️ 궁합 원국은 «그대로» 둡니다 (좌4+우4 배치) — 대표님 확정
+  check(existsSync('app/manseryeok/couple-result-new/components/CoupleWonguk.tsx'),
+    `⚠️ 궁합 원국은 그대로 둡니다 (배치가 달라 — 대표님 확정)`)
 }
 
 console.log(`\n━━ 만세력 화면 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
