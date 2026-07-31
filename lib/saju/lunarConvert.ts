@@ -28,7 +28,47 @@
 //     ⚠️ 그래도 «부본» 입니다. KASI 를 이기지 않습니다.
 // ══════════════════════════════════════════════════════════════════
 
-import { Solar, Lunar } from 'lunar-javascript'
+// ══════════════════════════════════════════════════════════════════
+//  🔴 2026-07-31 긴급 수정 — «부본이 정본을 죽이지 않도록»
+//
+//   [무슨 일이 있었나]
+//     처음에는 `import { Solar, Lunar } from 'lunar-javascript'` 로 «정적» 하게 불렀습니다.
+//     그러면 그 꾸러미가 없을 때 «이 파일 전체가 로드에 실패» 하고,
+//     /api/lunar 가 통째로 죽습니다 → 사주가 안 와서 만세력 표가 «전부» 사라집니다.
+//
+//   ⚠️⚠️ 폴백은 «정본이 안 될 때 쓰는 것» 입니다.
+//        그 폴백이 없다고 정본(KASI)까지 못 쓰게 되면 폴백을 둔 뜻이 없습니다.
+//
+//   [어떻게 고쳤나]
+//     ★필요한 순간에만 «게으르게» 불러옵니다. 없으면 부본만 못 쓰고 KASI 는 그대로 돕니다.
+// ══════════════════════════════════════════════════════════════════
+
+interface LunarLike { getYear(): number; getMonth(): number; getDay(): number; getSolar(): SolarLike }
+interface SolarLike { getYear(): number; getMonth(): number; getDay(): number; getLunar(): LunarLike }
+interface LunarLib {
+  Solar: { fromYmd(y: number, m: number, d: number): SolarLike }
+  Lunar: { fromYmd(y: number, m: number, d: number): LunarLike }
+}
+
+let _lib: LunarLib | null | undefined = undefined   // undefined = 아직 안 해 봄
+
+/** ★부본 꾸러미를 «있으면» 씁니다. 없으면 null — 정본은 계속 돕니다 */
+function lunarLib(): LunarLib | null {
+  if (_lib !== undefined) return _lib
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    _lib = require('lunar-javascript') as LunarLib
+  } catch {
+    _lib = null
+    console.warn('[lunarConvert] lunar-javascript 를 찾지 못했습니다 — 부본 없이 KASI 만 씁니다')
+  }
+  return _lib
+}
+
+/** 부본을 쓸 수 있는가 — 검사·진단용 */
+export function hasFallbackLib(): boolean {
+  return lunarLib() !== null
+}
 
 /** 이 값이 어디서 나왔는가 */
 export type LunarSource = 'KASI' | 'FALLBACK_LUNAR_JS'
@@ -58,9 +98,11 @@ export const KASI_TIMEOUT_MS = 3000
 
 /** 부본 — 음력 → 양력 */
 export function fallbackLunarToSolar(l: LunarYmd): SolarYmd | null {
+  const lib = lunarLib()
+  if (!lib) return null
   try {
     const m = l.isLeap ? -Math.abs(l.month) : Math.abs(l.month)
-    const s = Lunar.fromYmd(l.year, m, l.day).getSolar()
+    const s = lib.Lunar.fromYmd(l.year, m, l.day).getSolar()
     return { year: s.getYear(), month: s.getMonth(), day: s.getDay() }
   } catch {
     return null
@@ -69,8 +111,10 @@ export function fallbackLunarToSolar(l: LunarYmd): SolarYmd | null {
 
 /** 부본 — 양력 → 음력 */
 export function fallbackSolarToLunar(s: SolarYmd): LunarYmd | null {
+  const lib = lunarLib()
+  if (!lib) return null
   try {
-    const l = Solar.fromYmd(s.year, s.month, s.day).getLunar()
+    const l = lib.Solar.fromYmd(s.year, s.month, s.day).getLunar()
     const m = l.getMonth()
     return { year: l.getYear(), month: Math.abs(m), day: l.getDay(), isLeap: m < 0 }
   } catch {
@@ -131,7 +175,11 @@ export async function lunarToSolar(l: LunarYmd, apiKey: string): Promise<Convert
   const backup = fallbackLunarToSolar(l)
 
   if (!apiKey) {
-    return { value: backup, source: 'FALLBACK_LUNAR_JS', reason: 'KASI 키가 없습니다', mismatch: null }
+    return {
+      value: backup, source: 'FALLBACK_LUNAR_JS',
+      reason: backup ? 'KASI 키가 없습니다' : 'KASI 키가 없고 부본 꾸러미도 없습니다',
+      mismatch: null,
+    }
   }
   try {
     const url = `${KASI_BASE}/getSolCalInfo`
@@ -164,7 +212,11 @@ export async function solarToLunar(s: SolarYmd, apiKey: string): Promise<Convert
   const backup = fallbackSolarToLunar(s)
 
   if (!apiKey) {
-    return { value: backup, source: 'FALLBACK_LUNAR_JS', reason: 'KASI 키가 없습니다', mismatch: null }
+    return {
+      value: backup, source: 'FALLBACK_LUNAR_JS',
+      reason: backup ? 'KASI 키가 없습니다' : 'KASI 키가 없고 부본 꾸러미도 없습니다',
+      mismatch: null,
+    }
   }
   try {
     const url = `${KASI_BASE}/getLunCalInfo`
