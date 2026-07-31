@@ -20,6 +20,66 @@ function check(ok: boolean, msg: string) {
 }
 const OH = ['목', '화', '토', '금', '수'] as const
 
+console.log('\n━━ ⑩-0 ★[확정된 개발 정책] 대조 — 2026-07-31 대표님 지침 ━━')
+// ⚠️ docs/음양오행-개발명세.md 의 «확정 표(1-1 ~ 4)» 를 코드에서 되짚습니다.
+//    문서와 코드가 갈리면 여기서 걸립니다. (교훈 CJ — 같은 값을 두 곳에 두면 언젠가 갈립니다)
+{
+  const CH = (n: number): NameChar => ({ hangul: '가', hanja: 'X', strokes: n, resourceOhaeng: '목' })
+  const base = { yongsin: '화', elementScore: { 목: 20, 화: 20, 토: 20, 금: 20, 수: 20 } }
+  const yy = (a: number, b: number, c: number) =>
+    diagnoseName({ surname: CH(a), given: [CH(b), CH(c)], ...base }).yinYang
+
+  // 1-1  모음 축 «미반영» · 원획 홀짝 100% 정본
+  check(eumyangOfStrokes(9) === '양' && eumyangOfStrokes(12) === '음',
+    `[1-1] 원획 홀짝이 정본입니다`)
+  check(eumyangOfVowel('개') === null && eumyangOfVowel('과') === null,
+    `[1-1] 교재 표에 없는 모음은 null — 규칙을 늘리지 않았습니다 (교훈 EJ)`)
+
+  // 1-2  글자 수 무관 «단일 식» — 순양·순음만 치우침
+  const lens: [number[], boolean][] = [
+    [[1, 3], true], [[1, 2], false],
+    [[1, 3, 5], true], [[1, 2, 3], false],
+  ]
+  let ok12 = true
+  for (const [ns, lean] of lens) {
+    const r = ns.length === 2
+      ? diagnoseName({ surname: CH(ns[0]), given: [CH(ns[1])], ...base }).yinYang
+      : yy(ns[0], ns[1], ns[2])
+    if ((r.facts as Record<string, unknown>).allSame !== lean) ok12 = false
+  }
+  check(ok12, `[1-2] 2자·3자가 «같은 식» 으로 판정됩니다 (해석 ②)`)
+
+  // 1-3  치우침 = 아쉬움 ★3.0
+  check(yy(1, 3, 5).grade === '아쉬움' && starOf(gradeToScore('아쉬움')).star === 3.0,
+    `[1-3] 치우침 → 아쉬움 ★3.0`)
+
+  // 1-4  종합 별점에서 음양 «계속 제외»
+  const ov = (g: '좋음' | '아쉬움') => overallStar(perspectiveStars({
+    flowScore: 20, flowMax: 30, matchScore: 40, matchMax: 70, hasYongsin: true,
+    yinYangGrade: g, soundScore: 70, suriGrade: '보통' }), true).star
+  check(ov('좋음') === ov('아쉬움'), `[1-4] 음양이 종합 별점을 «움직이지 않습니다»`)
+
+  // 1-5  46쪽 순화 — 정해진 한 줄
+  check((yy(1, 3, 5).facts as Record<string, unknown>).안내 === EUMYANG_LEAN_NOTE,
+    `[1-5] 치우침에 «개운 안내» 한 줄이 나갑니다`)
+
+  // 2    발음오행 125칸 정본 «완전 유지»
+  check(Object.keys(SOUND_ARRANGEMENT).length === 125, `[2] 125칸 정본 그대로`)
+
+  // 3-1  예외 아홉 칸 «표 기반» 유지
+  const NINE: [string, string][] = [
+    ['목화화', '반길반흉'], ['화목토', '길'], ['토목화', '반길반흉'], ['수토금', '반길반흉'],
+    ['목목목', '길'], ['화화화', '흉'], ['토토토', '반길반흉'], ['금금금', '흉'], ['수수수', '흉'],
+  ]
+  const nineBad = NINE.filter(([k, f]) => SOUND_ARRANGEMENT[k]?.fortune !== f)
+  check(nineBad.length === 0,
+    `[3-1] 계산으로 안 나오는 아홉 칸이 표 그대로 — 어긋남 ${nineBad.map(x => x[0]).join(',') || '0건'}`)
+
+  // 4    자원 상극 해설 «연동» · 감점은 그대로
+  check(CLASH_VIEW_BOOK.page.includes('51쪽') && !!clashGloss('토', '수'),
+    `[4] 교재 51쪽 근거가 연동되어 있습니다`)
+}
+
 console.log('\n━━ ⑩-a 음양 — 교재 46쪽 홀짝 ━━')
 for (const n of [1, 3, 5, 7, 9]) check(eumyangOfStrokes(n) === '양', `${n}획 → 양`)
 for (const n of [2, 4, 6, 8, 10]) check(eumyangOfStrokes(n) === '음', `${n}획 → 음`)
