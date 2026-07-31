@@ -667,7 +667,16 @@ function ResultNewContent() {
                ★지우지 않았습니다. 프리미엄이 아닐 때(무료·기본)와
                  전문가 모드에서는 예전 그대로 보입니다.
                ⚠️ 되살리시려면 아래 `!premiumPrompt &&` 만 지우면 됩니다. */}
-        {!premiumPrompt && saju.length>0 && (
+        {/* ★2026-07-31 긴급 — 「도표만 보기(mode=chart)」에서는 «언제나» 그립니다.
+            [무슨 일이 있었나]
+              2026-07-29 에 프리미엄 도표를 «AI 풀이 안 샌드위치» 로 옮기면서
+              위쪽 표에 `!premiumPrompt &&` 를 걸었습니다.
+              그런데 mode=chart 는 AI 풀이 블록 자체를 «안 그립니다»(!chartOnly 조건).
+              ★그래서 위에서도 숨고 아래 샌드위치도 없어 «표가 전부 사라졌습니다».
+              홈의 「나의 만세력」 버튼(UserCard.tsx:170)이 바로 이 mode=chart 입니다.
+            [고침] chartOnly 면 프리미엄이라도 위에 그대로 그립니다.
+              ⚠️ AI 풀이가 없는 모드라 «중복될 일이 없습니다». */}
+        {(!premiumPrompt || chartOnly) && saju.length>0 && (
           <ByeongjonView saju={saju} target={byeongjonTarget}/>
         )}
 
@@ -684,7 +693,7 @@ function ResultNewContent() {
             />
           </Section>
         )}
-        {!premiumPrompt && (
+        {(!premiumPrompt || chartOnly) && (
         <Section title="오행과 십성 분석" collapsible={!chartOnly} open={openSection==='ohaeng'} onToggle={()=>toggleSection('ohaeng')}>
           {/* 계산 기준 안내 — 합충 반영 그래프와 숫자가 다른 이유 */}
           <div style={{fontSize:'10.5px',color:'#b4785a',background:'#faf3ec',border:'0.5px solid #f0e0d5',borderRadius:'8px',padding:'7px 10px',marginBottom:'10px',lineHeight:1.6}}>
@@ -731,14 +740,14 @@ function ResultNewContent() {
         {/* ⑤ 나의 용신 (조후·억부·격국 3종) */}
         {/* ★2026-07-29 — 프리미엄은 이 표를 «섹션2 풀이 바로 위»로 옮겨 그립니다.
             여기서 또 그리면 같은 표가 두 번 나옵니다. */}
-        {!premiumPrompt && yongsinNew&&(
+        {(!premiumPrompt || chartOnly) && yongsinNew&&(
         <Section title="나의 용신" collapsible={!chartOnly} open={openSection==='yongsin'} onToggle={()=>toggleSection('yongsin')}>
           <YongsinCard result={yongsinNew} saju={saju}/>
         </Section>
         )}
 
         {/* ⑥ 대운·세운·월운·일운 (연동 흐름) */}
-        {!premiumPrompt && dayStem&&monthGanji&&yearStem&&solarYear&&(
+        {(!premiumPrompt || chartOnly) && dayStem&&monthGanji&&yearStem&&solarYear&&(
           <Section title="운의 흐름 (대운·세운·월운·일운)" collapsible={!chartOnly} open={openSection==='daeun'} onToggle={()=>toggleSection('daeun')} hint="눌러서 흐름 보기">
             <UnseFlow
               solarYear={solarYear} solarMonth={solarMonth} solarDay={solarDay}
