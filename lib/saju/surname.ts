@@ -16,10 +16,12 @@
 //    source 로 출처를 갈라 두었으니 나중에 되짚을 수 있습니다.
 //
 // ★2026-07-31 6차 — 두 자리를 대표님이 원본으로 확인해 주셨습니다.
-//    · 25획 성 = 명위(明衛)   ← 제 스캔으로는 못 읽던 자리
+//    · 25획 성 = 명림(明臨)   ← 明8 + 臨17 = 25. 획수가 맞아떨어집니다
 //    · 13획 성 = 영고(令孤)   ← 교재에 「영호(令狐)」는 없습니다. 영고로 확정
-//    ⚠️ 명위(明衛)는 제가 눈으로 확인한 것이 아니라 대표님 판독을 받은 것입니다.
-//       DB 획수와 교재 25획이 어긋나면 알려 주십시오.
+//
+//    ⚠️ 제가 스캔에서 「남입(南臨)」으로 흐리게 읽던 자리입니다.
+//       臨 은 맞았고 앞 글자를 南 으로 잘못 봤습니다. 대표님 판독으로 明 확정.
+//       한글 읽기가 명림/명임으로 갈릴 수 있어 altHangul 로 둘 다 받습니다.
 
 export interface CompoundSurname {
   /** 한글 두 글자 — 예: "남궁" */
@@ -30,6 +32,8 @@ export interface CompoundSurname {
   bookStrokes: number | null;
   /** book = 교재 139~150쪽 · extra = 교재 밖 (2026-07-31 대표님 확정) */
   source: "book" | "extra";
+  /** 한글 읽기가 갈리는 성씨의 다른 표기 — 예: 명림 ↔ 명임 */
+  altHangul?: string[];
   /** ★표기가 갈리거나 확인이 필요한 자리 */
   note?: string;
 }
@@ -55,7 +59,8 @@ export const COMPOUND_SURNAMES: CompoundSurname[] = [
   { hangul: "선우", hanja: "鮮于", bookStrokes: 20, source: "book" },
   { hangul: "부정", hanja: "負鼎", bookStrokes: 22, source: "book" },
   { hangul: "독고", hanja: "獨孤", bookStrokes: 25, source: "book" },
-  { hangul: "명위", hanja: "明衛", bookStrokes: 25, source: "book" },
+  { hangul: "명림", hanja: "明臨", bookStrokes: 25, source: "book",
+    altHangul: ["명임"], note: "明8 + 臨17 = 25획 — 교재 25획 성과 맞습니다" },
   { hangul: "제갈", hanja: "諸葛", bookStrokes: 31, source: "book" },
 
   // ── 교재 밖 — 실제 쓰이는 복성 (8)
@@ -69,7 +74,11 @@ export const COMPOUND_SURNAMES: CompoundSurname[] = [
   { hangul: "부여", hanja: "扶餘", bookStrokes: null, source: "extra" },
 ];
 
-const BY_HANGUL = new Map(COMPOUND_SURNAMES.map((s) => [s.hangul, s]));
+const BY_HANGUL = new Map<string, CompoundSurname>();
+for (const c of COMPOUND_SURNAMES) {
+  BY_HANGUL.set(c.hangul, c);
+  for (const alt of c.altHangul ?? []) BY_HANGUL.set(alt, c);   // 명림 ↔ 명임
+}
 const BY_HANJA = new Map(COMPOUND_SURNAMES.map((s) => [s.hanja, s]));
 
 /** 한글 두 글자(또는 한자 두 글자)가 복성인가 */

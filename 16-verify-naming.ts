@@ -839,15 +839,22 @@ head('⑧-d ★복성 · 3글자 이상 · 순화 해설 (2026-07-31 3차)')
   check(!!COMPOUND_SURNAMES.find(x => x.hangul === '망절'), `교재 밖 — 망절(網切) 등재`)
   check(!!COMPOUND_SURNAMES.find(x => x.hangul === '순우'), `교재 밖 — 순우(淳于) 등재`)
   // ★6차 대표님 확정
-  check(!!COMPOUND_SURNAMES.find(x => x.hangul === '명위' && x.hanja === '明衛' && x.bookStrokes === 25),
-    `25획 성 — 명위(明衛) 등재`)
+  check(!!COMPOUND_SURNAMES.find(x => x.hangul === '명림' && x.hanja === '明臨' && x.bookStrokes === 25),
+    `25획 성 — 명림(明臨) 등재`)
+  check(!COMPOUND_SURNAMES.find(x => x.hanja === '明衛'), `★명위(明衛)는 제 오독이라 뺐습니다`)
+  // 한글 읽기가 갈려도 잡혀야 합니다
+  const mkc = (h: string, j: string) => ({ hangul: h, hanja: j })
+  check(splitSurname([mkc('명', '明'), mkc('림', '臨'), mkc('가', '佳')]).surname.length === 2,
+    `명림 — 복성으로 잡힘`)
+  check(splitSurname([mkc('명', '?'), mkc('임', '?'), mkc('가', '?')]).surname.length === 2,
+    `★명임으로 읽어도 잡힙니다 (altHangul)`)
   check(!!COMPOUND_SURNAMES.find(x => x.hanja === '令孤'), `13획 성 — 영고(令孤)`)
   check(!COMPOUND_SURNAMES.find(x => x.hanja === '令狐'), `★영호(令狐)는 교재에 없어 뺐습니다`)
 
   // ── 복성 + 외자 (교재 136쪽 「성2 이름1」) — 대표님 예시 검산
   //    25획 성 + 7획 외자 → 원 7 · 형 32 · 이 25 · 정 32  전부 길
   const rC1 = diagnoseName({
-    surname: CH('명', '明', 9, '火'), surname2: CH('위', '衛', 16, '土'),
+    surname: CH('명', '明', 8, '火'), surname2: CH('림', '臨', 17, '火'),
     given: [CH('칠', '七', 7, '金')] as NameChar[], ...base })
   check(rC1.suri.gyeok[0].sum === 7,  `복성 외자 원격 = 이름 1자 (7)`)
   check(rC1.suri.gyeok[1].sum === 32, `복성 외자 형격 = 성 2자 + 이름 (25+7)`)
