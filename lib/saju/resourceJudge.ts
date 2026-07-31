@@ -125,6 +125,19 @@ const BONUS_ISOLATED = 4    // 고립으로 본 오행을 채울 때
 //   건강상의 문제가 생길 수 있다」. 이름 오행이 «사주의 약한 기운» 을 극하는 자리입니다.
 //   ⚠️ 이름 «글자끼리» 의 상극(flowScore)과는 다른 것입니다. 이쪽이 교재가 경계한 쪽입니다.
 const PENALTY_WEAK_CLASH = 7  // 사주의 약한 기운(결핍·고립)을 이름 오행이 극할 때
+
+/**
+ * ★③이 걸렸을 때 붙는 «고정» 문구 (2026-07-31 대표님 확정)
+ *
+ *   [왜 고정인가]  교재 원문은 「건강상의 문제가 발생할 수 있다」 입니다.
+ *     그 말을 재료로 넣으면 AI 가 씨앗 삼아 늘립니다 — 어느 장기가 약하다는 식으로
+ *     사실 데이터에 없는 말을 지어냅니다 (교훈 EG).
+ *     그래서 «AI 가 쓰는 문장» 이 아니라 «정해진 한 줄» 로 둡니다.
+ *
+ *   ⚠️ 이 문장을 늘리거나 바꿔 쓰지 못하도록 프롬프트에서 못을 박습니다.
+ *      app/api/naming/route.ts 의 [반드시 지킬 원칙] 을 함께 보십시오.
+ */
+export const WEAK_CLASH_NOTE = '평소 생활에서 건강에 유의하기 바랍니다.'
 /** 극(克)하는 상대 — 목극토 · 토극수 · 수극화 · 화극금 · 금극목 */
 const GEUK_OF: Record<Ohaeng, Ohaeng> = { 목: '토', 토: '수', 수: '화', 화: '금', 금: '목' }
 
@@ -444,6 +457,8 @@ export interface ResourceVerdict {
     gisinAdded: Ohaeng[]
     /** ★③ 이름 오행이 사주의 약한 기운(결핍·고립)을 누른 자리 (2026-07-31) */
     weakClashed: { name: Ohaeng; weak: Ohaeng }[]
+    /** ★③이 걸렸을 때만 채워지는 «고정» 문구. 빈 문자열이면 아무 말도 하지 마십시오 */
+    weakClashNote: string
     /** 오행별 점수·등급·글자수 */
     sajuScore: Record<Ohaeng, number>
     sajuLevel: Record<Ohaeng, string>
@@ -713,6 +728,7 @@ export function judgeResource(
       surnameOhaeng: surArr[0].primary,
       givenOhaengs: givenO,
       excessAdded, lackFilled, isolatedFilled, gisinAdded, weakClashed,
+      weakClashNote: weakClashed.length > 0 ? WEAK_CLASH_NOTE : '',   // ★고정 문구 — 늘려 쓰지 마십시오
       sajuScore: P.score, sajuLevel: HANLEVEL, sajuCount: P.count,
       clashExemptCount,
     },

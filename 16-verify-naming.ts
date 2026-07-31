@@ -60,6 +60,7 @@ import {
 import { diagnoseName, type NameChar } from './lib/saju/naming'
 import { getSuriInfo, SURI_81, SURI_81_APP, diffSuriSources } from './lib/saju/suri81'
 import { SURI_81_GUIDE, SURI_TONE_GUIDE } from './lib/saju/suriGuide'
+import { WEAK_CLASH_NOTE } from './lib/saju/resourceJudge'
 import { COMPOUND_SURNAMES, splitSurname } from './lib/saju/surname'
 
 // ── 자잘한 도구 ────────────────────────────────────────────────
@@ -988,6 +989,20 @@ head('⑧-d ★복성 · 3글자 이상 · 순화 해설 (2026-07-31 3차)')
   // ★글자끼리 상극(flow)과 «다른» 축인가 — 경고 문구가 섞이지 않아야 합니다
   check(!vClash.warnings.some(w => w.includes('서로 누르는')),
     `★③ 경고가 글자끼리 상극 경고와 섞이지 않습니다`)
+
+  // ── ★건강 문구는 «고정» 입니다 (2026-07-31 대표님 확정 · 교훈 EG)
+  const note = (v: ReturnType<typeof judgeResource>) =>
+    String((v.facts as Record<string, unknown>).weakClashNote ?? '')
+  check(note(vClash) === WEAK_CLASH_NOTE, `③이 걸리면 고정 문구가 붙습니다`)
+  check(note(vSafe) === '', `★안 걸리면 건강 이야기가 아예 안 나갑니다`)
+  check(note(vGisin) === '', `기신이면 감점도 건강 문구도 없습니다`)
+  // 🔴 재료 어디에도 몸·질병 이야기가 «씨앗» 으로 들어가면 안 됩니다
+  const BODY = ['질병', '병약', '장기', '간', '신장', '수명', '단명', '발병', '위험']
+  const blob = JSON.stringify(vClash.facts) + vClash.warnings.join(' ')
+  const seeded = BODY.filter(w => blob.includes(w))
+  check(seeded.length === 0, `★재료에 몸·질병 낱말이 씨앗으로 없습니다 — ${seeded.join(',') || '0건'}`)
+  check(!WEAK_CLASH_NOTE.includes('때문') && !WEAK_CLASH_NOTE.includes('탓'),
+    `고정 문구가 인과를 단정하지 않습니다`)
   check(String((rS.suri.facts as Record<string, unknown>).서술지침).length > 0, `AI 재료에 어조 지침 포함`)
 }
 
