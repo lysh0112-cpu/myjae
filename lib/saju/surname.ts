@@ -15,10 +15,11 @@
 //    실사용자의 예외 성씨를 막는 것이 이점이라는 판단입니다.
 //    source 로 출처를 갈라 두었으니 나중에 되짚을 수 있습니다.
 //
-// ⚠️ 25획 성 항목 중 한 자리는 스캔이 흐려 «끝내» 판독하지 못했습니다.
-//    추정해서 넣지 않았습니다 (교훈 EJ). 원본을 다시 보시면 알려 주십시오.
-// ⚠️ 교재는 「영고(令孤)」로 적었으나 통용 표기는 「영호(令狐)」입니다.
-//    어느 쪽으로 오셔도 걸리도록 둘 다 넣었습니다. ★연재쌤 확인이 필요합니다.
+// ★2026-07-31 6차 — 두 자리를 대표님이 원본으로 확인해 주셨습니다.
+//    · 25획 성 = 명위(明衛)   ← 제 스캔으로는 못 읽던 자리
+//    · 13획 성 = 영고(令孤)   ← 교재에 「영호(令狐)」는 없습니다. 영고로 확정
+//    ⚠️ 명위(明衛)는 제가 눈으로 확인한 것이 아니라 대표님 판독을 받은 것입니다.
+//       DB 획수와 교재 25획이 어긋나면 알려 주십시오.
 
 export interface CompoundSurname {
   /** 한글 두 글자 — 예: "남궁" */
@@ -41,7 +42,7 @@ export const COMPOUND_SURNAMES: CompoundSurname[] = [
   { hangul: "동방", hanja: "東方", bookStrokes: 12, source: "book" },
   { hangul: "소실", hanja: "小室", bookStrokes: 12, source: "book" },
   { hangul: "이선", hanja: "以先", bookStrokes: 12, source: "book" },
-  { hangul: "영고", hanja: "令孤", bookStrokes: 13, source: "book", note: "교재 표기. 통용은 영호(令狐)" },
+  { hangul: "영고", hanja: "令孤", bookStrokes: 13, source: "book" },
   { hangul: "사공", hanja: "司空", bookStrokes: 13, source: "book" },
   { hangul: "공손", hanja: "公孫", bookStrokes: 14, source: "book" },
   { hangul: "서문", hanja: "西門", bookStrokes: 14, source: "book" },
@@ -54,11 +55,11 @@ export const COMPOUND_SURNAMES: CompoundSurname[] = [
   { hangul: "선우", hanja: "鮮于", bookStrokes: 20, source: "book" },
   { hangul: "부정", hanja: "負鼎", bookStrokes: 22, source: "book" },
   { hangul: "독고", hanja: "獨孤", bookStrokes: 25, source: "book" },
+  { hangul: "명위", hanja: "明衛", bookStrokes: 25, source: "book" },
   { hangul: "제갈", hanja: "諸葛", bookStrokes: 31, source: "book" },
 
   // ── 교재 밖 — 실제 쓰이는 복성 (8)
   //    ★bookStrokes 를 비웠습니다. 획수는 DB 원획을 씁니다.
-  { hangul: "영호", hanja: "令狐", bookStrokes: null, source: "extra", note: "교재의 영고(令孤)와 같은 성으로 보입니다" },
   { hangul: "어금", hanja: "魚金", bookStrokes: null, source: "extra" },
   { hangul: "강전", hanja: "岡田", bookStrokes: null, source: "extra" },
   { hangul: "망절", hanja: "網切", bookStrokes: null, source: "extra" },

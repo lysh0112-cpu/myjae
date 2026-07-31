@@ -816,7 +816,8 @@ head('⑧-c ★수리 등급 — 주운 가중치 판정 (2026-07-31 2차)')
   check(r1.suri.gyeok.map(x => x.key).join(',') === 'won,hyeong,i,jeong', `외자도 사격 넷`)
   // 교재 136쪽 「성1 이름1」 — 원격 = 이름 · 이격 = 성 + 가상수 1
   check(r1.suri.gyeok[0].sum === 4, `외자 원격 = 이름 획수 (仁 4)`)
-  check(r1.suri.gyeok[2].sum === 10, `외자 이격 = 성 + 가상수 1 (9+1)`)
+  // ★6차 — 교재 136쪽은 이격을 「성 1자」로 적습니다. 가상수를 더하지 않습니다.
+  check(r1.suri.gyeok[2].sum === 9, `외자 이격 = 성 그 자체 (柳 9)`)
   check(r1.suri.gyeok[1].sum === r1.suri.gyeok[3].sum, `외자 형격 = 정격 = 성 + 이름 (교재 산식)`)
 }
 
@@ -830,13 +831,30 @@ head('⑧-d ★복성 · 3글자 이상 · 순화 해설 (2026-07-31 3차)')
   // ── 복성 목록
   const bookCnt = COMPOUND_SURNAMES.filter(x => x.source === 'book').length
   const extraCnt = COMPOUND_SURNAMES.filter(x => x.source === 'extra').length
-  check(bookCnt === 19, `교재 139~150쪽 복성 ${bookCnt}개 (19)`)
-  check(extraCnt === 8, `교재 밖 복성 ${extraCnt}개 (8)`)
+  check(bookCnt === 20, `교재 139~150쪽 복성 ${bookCnt}개 (20)`)
+  check(extraCnt === 7, `교재 밖 복성 ${extraCnt}개 (7)`)
   check(COMPOUND_SURNAMES.length === 27, `복성 합계 ${COMPOUND_SURNAMES.length}개 (27)`)
   check(new Set(COMPOUND_SURNAMES.map(x => x.hangul)).size === 27, `한글 표기 겹침 없음`)
   check(new Set(COMPOUND_SURNAMES.map(x => x.hanja)).size === 27, `한자 표기 겹침 없음`)
   check(!!COMPOUND_SURNAMES.find(x => x.hangul === '망절'), `교재 밖 — 망절(網切) 등재`)
   check(!!COMPOUND_SURNAMES.find(x => x.hangul === '순우'), `교재 밖 — 순우(淳于) 등재`)
+  // ★6차 대표님 확정
+  check(!!COMPOUND_SURNAMES.find(x => x.hangul === '명위' && x.hanja === '明衛' && x.bookStrokes === 25),
+    `25획 성 — 명위(明衛) 등재`)
+  check(!!COMPOUND_SURNAMES.find(x => x.hanja === '令孤'), `13획 성 — 영고(令孤)`)
+  check(!COMPOUND_SURNAMES.find(x => x.hanja === '令狐'), `★영호(令狐)는 교재에 없어 뺐습니다`)
+
+  // ── 복성 + 외자 (교재 136쪽 「성2 이름1」) — 대표님 예시 검산
+  //    25획 성 + 7획 외자 → 원 7 · 형 32 · 이 25 · 정 32  전부 길
+  const rC1 = diagnoseName({
+    surname: CH('명', '明', 9, '火'), surname2: CH('위', '衛', 16, '土'),
+    given: [CH('칠', '七', 7, '金')] as NameChar[], ...base })
+  check(rC1.suri.gyeok[0].sum === 7,  `복성 외자 원격 = 이름 1자 (7)`)
+  check(rC1.suri.gyeok[1].sum === 32, `복성 외자 형격 = 성 2자 + 이름 (25+7)`)
+  check(rC1.suri.gyeok[2].sum === 25, `★복성 외자 이격 = 성 2자 합 그 자체 (25)`)
+  check(rC1.suri.gyeok[3].sum === 32, `복성 외자 정격 = 3자 모두 합 (32)`)
+  check(rC1.suri.gyeok.every(x => x.fortune === '길'), `네 격 모두 길 — 대표님 예시와 일치`)
+  check(rC1.suri.grade === '좋음', `등급 좋음 (${rC1.suri.grade})`)
   check(COMPOUND_SURNAMES.every(x => x.hangul.length === 2 && x.hanja.length === 2),
     `복성은 전부 두 글자입니다`)
   check(!!COMPOUND_SURNAMES.find(x => x.hangul === '남궁' && x.hanja === '南宮'), `남궁(南宮) 등재`)
