@@ -121,6 +121,12 @@ const PENALTY_GISIN = 15    // 기신을 보탤 때 ★가장 무겁게
 const PENALTY_GUSIN = 8     // 구신을 보탤 때
 const BONUS_LACK = 6        // 결핍(0점) 오행을 채울 때
 const BONUS_ISOLATED = 4    // 고립으로 본 오행을 채울 때
+// ★2026-07-31 (5단계) ③ — 교재 107쪽 「사주에 목이 약한데 이름에 강한 금을 넣으면
+//   건강상의 문제가 생길 수 있다」. 이름 오행이 «사주의 약한 기운» 을 극하는 자리입니다.
+//   ⚠️ 이름 «글자끼리» 의 상극(flowScore)과는 다른 것입니다. 이쪽이 교재가 경계한 쪽입니다.
+const PENALTY_WEAK_CLASH = 7  // 사주의 약한 기운(결핍·고립)을 이름 오행이 극할 때
+/** 극(克)하는 상대 — 목극토 · 토극수 · 수극화 · 화극금 · 금극목 */
+const GEUK_OF: Record<Ohaeng, Ohaeng> = { 목: '토', 토: '수', 수: '화', 화: '금', 금: '목' }
 
 /**
  * ★④ 예외 인정 — 이름 안에서 상극이 나더라도 «보완» 이면 감점하지 않습니다.
@@ -436,6 +442,8 @@ export interface ResourceVerdict {
     isolatedFilled: Ohaeng[]
     /** 기신·구신을 보탠 오행 */
     gisinAdded: Ohaeng[]
+    /** ★③ 이름 오행이 사주의 약한 기운(결핍·고립)을 누른 자리 (2026-07-31) */
+    weakClashed: { name: Ohaeng; weak: Ohaeng }[]
     /** 오행별 점수·등급·글자수 */
     sajuScore: Record<Ohaeng, number>
     sajuLevel: Record<Ohaeng, string>
@@ -629,6 +637,37 @@ export function judgeResource(
         + `이름의 ${chLabel}${chJosa} ${o}입니다`)
     }
   }
+  // ─────────────────────────────────────────────────────────────
+  //  ③ ★2026-07-31 (5단계) — 이름 오행이 «사주의 약한 기운» 을 극하는가
+  //
+  //    교재 107쪽: 「사주에 목이 약한데 이름에 강한 금 기운을 넣으면
+  //                 건강상의 문제가 발생할 수 있다」
+  //
+  //    ⚠️ 이름 «글자끼리» 의 상극이 아닙니다. 그건 교재가 «무시하라» 한 쪽입니다(flowScore).
+  //       여기는 이름 오행 ↔ 사주 오행 의 상극입니다. 교재가 «경계하라» 한 쪽입니다.
+  //
+  //    [범위]  약한 기운 = 결핍(lacking) + 고립(isolated)   ★대표님 확정 (가·나)
+  //            용신까지 넓히는 안(다)은 고르지 않으셨습니다.
+  //
+  //    ⚠️ 그 약한 기운이 «기신·구신» 이면 감점하지 않습니다.
+  //       꺼리는 기운이 눌리는 것은 흠이 아니라 오히려 편한 자리입니다.
+  //       → 위 BONUS_LACK 이 기신·구신을 가산에서 뺀 것과 같은 잣대입니다.
+  const weakClashed: { name: Ohaeng; weak: Ohaeng }[] = []
+  const weakSet = [...new Set([...P.lacking, ...P.isolated])]
+  for (const [o, chars] of byOhaeng) {
+    const target = GEUK_OF[o]
+    if (!weakSet.includes(target)) continue
+    const disliked = (P.gisin !== null && target === P.gisin) || (P.gusin !== null && target === P.gusin)
+    if (disliked) continue                       // 꺼리는 기운이 눌리는 것은 흠이 아닙니다
+    weakClashed.push({ name: o, weak: target })
+    balance -= PENALTY_WEAK_CLASH
+    const chLabel = chars.map(c => c.hanja).join('·')
+    warnings.push(
+      `사주에 ${target} 기운이 약한 편인데(${P.score[target]}점) `
+      + `이름의 ${chLabel}가 담은 ${oj(o, '이/가')} 그 ${target} 기운을 `
+      + `더 여리게 하는 자리로 봅니다`)
+  }
+
   balance = clamp(balance, 0, W_BALANCE)
 
   // ─────────────────────────────────────────────────────────────
@@ -673,7 +712,7 @@ export function judgeResource(
         .map(c => ({ hanja: c.hanja, hangul: c.hangul })),
       surnameOhaeng: surArr[0].primary,
       givenOhaengs: givenO,
-      excessAdded, lackFilled, isolatedFilled, gisinAdded,
+      excessAdded, lackFilled, isolatedFilled, gisinAdded, weakClashed,
       sajuScore: P.score, sajuLevel: HANLEVEL, sajuCount: P.count,
       clashExemptCount,
     },

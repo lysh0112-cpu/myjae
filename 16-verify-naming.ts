@@ -957,6 +957,37 @@ head('⑧-d ★복성 · 3글자 이상 · 순화 해설 (2026-07-31 3차)')
   const vOne = judgeResource(J류, [J承, J炫], Pj)
   const vArr = judgeResource([J류], [J承, J炫], Pj)
   check(vOne.score === vArr.score, `단성 — 한 글자로 주나 배열로 주나 같은 점수 (${vOne.score})`)
+
+  // ── ★③ 사주의 약한 기운을 이름이 극하는가 (2026-07-31 5단계 · 교재 107쪽)
+  //    「사주에 목이 약한데 이름에 강한 금을 넣으면 건강 문제」 — 교재가 든 그 예로 셉니다
+  const mkP = (yong: string, weak: string, gisin?: string) => {
+    const sc: Record<string, number> = { 목: 25, 화: 25, 토: 25, 금: 25, 수: 25 }
+    sc[weak] = 0
+    return buildSajuOhaengProfile({ yongsin: yong as never, heeksin: undefined,
+      gisin: (gisin ?? undefined) as never, gusin: undefined, hansin: undefined,
+      score: sc as never }, null)
+  }
+  const wc = (v: ReturnType<typeof judgeResource>) =>
+    (v.facts as Record<string, unknown>).weakClashed as { name: string; weak: string }[]
+
+  // 목이 결핍인 사주 + 이름에 금 → 금극목
+  const vClash = judgeResource(JC('X', '엑', '토'), [JC('金', '금', '금'), JC('Y', '와', '토')], mkP('토', '목'))
+  check(wc(vClash).length === 1, `목 결핍 사주에 금을 넣으면 ③이 걸립니다`)
+  check(wc(vClash)[0].name === '금' && wc(vClash)[0].weak === '목', `금 → 목 으로 기록됩니다`)
+  check(vClash.warnings.some(w => w.includes('여리게')), `«여리게 하는 자리» 경고가 남습니다`)
+
+  // 같은 사주에 극하지 않는 오행이면 안 걸립니다
+  const vSafe = judgeResource(JC('X', '엑', '토'), [JC('水', '수', '수'), JC('Y', '와', '토')], mkP('토', '목'))
+  check(wc(vSafe).length === 0, `수는 목을 극하지 않으므로 ③에 안 걸립니다`)
+
+  // ⚠️ 약한 기운이 기신이면 감점하지 않습니다 (BONUS_LACK 과 같은 잣대)
+  const vGisin = judgeResource(JC('X', '엑', '토'), [JC('金', '금', '금'), JC('Y', '와', '토')], mkP('토', '목', '목'))
+  check(wc(vGisin).length === 0, `★결핍 오행이 기신이면 눌러도 감점하지 않습니다`)
+  check(vGisin.score >= vClash.score, `그래서 기신인 쪽 점수가 낮지 않습니다`)
+
+  // ★글자끼리 상극(flow)과 «다른» 축인가 — 경고 문구가 섞이지 않아야 합니다
+  check(!vClash.warnings.some(w => w.includes('서로 누르는')),
+    `★③ 경고가 글자끼리 상극 경고와 섞이지 않습니다`)
   check(String((rS.suri.facts as Record<string, unknown>).서술지침).length > 0, `AI 재료에 어조 지침 포함`)
 }
 
