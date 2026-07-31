@@ -9,6 +9,9 @@ import { SOUND_ARRANGEMENT } from './lib/saju/tables/soundArrangement'
 import { evaluateSoundOhaeng, soundRelation } from './lib/saju/soundEngine'
 import { parseSoundChar } from './lib/saju/sound/normalize'
 import { hasJong } from './lib/saju/josa'
+import {
+  SOUND_125_GUIDE, SOUND_TONE_GUIDE, GYEOK_HIDDEN_KEYS, isGyeokPublishable,
+} from './lib/saju/soundGuide'
 
 let pass = 0, fail = 0
 function check(ok: boolean, msg: string) {
@@ -87,6 +90,46 @@ for (const bad of ['A', '漢', 'ㄱ', '']) {
     `'${bad}' 가 problems 에 잡힙니다 — ${v.problems[0]?.slice(0, 34)}…`)
 }
 check(!S('한지민').links.some(l => l.text.includes('()')), `정상 이름에는 빈 괄호가 없습니다`)
+
+console.log('\n━━ ⑨-h 🔴 순화 해설 125칸 (교훈 EG · BR) ━━')
+check(Object.keys(SOUND_125_GUIDE).length === 125, `순화 해설 125칸 (${Object.keys(SOUND_125_GUIDE).length})`)
+const missGuide = OH.flatMap(a => OH.flatMap(b => OH.map(c => a + b + c))).filter(k => !SOUND_125_GUIDE[k])
+check(missGuide.length === 0, `빠진 칸 ${missGuide.join(',') || '없음'}`)
+check(Object.values(SOUND_125_GUIDE).every(v => !!v.theme && !!v.gentle), `주제·안내가 전부 채워짐`)
+
+// 🔴 손님에게 나갈 문장에 자극적인 말이 섞이지 않았는가 (교훈 EG)
+//    ★교재 원문에 있던 말입니다. 여기서 «한 건이라도» 나오면 순화가 덜 된 것입니다.
+const HARSH2 = ['자살', '요절', '단명', '사별', '패가망신', '불구', '횡사', '병약', '과부', '홀아비',
+  '급사', '생이별', '반신불수', '병고', '골육상쟁', '재난', '몰락', '탕진', '뇌출혈', '이별수',
+  '질환', '질병', '암', '중풍', '수술', '죽']
+const dirtyG = Object.entries(SOUND_125_GUIDE)
+  .filter(([, v]) => HARSH2.some(w => v.gentle.includes(w) || v.theme.includes(w))).map(([k]) => k)
+check(dirtyG.length === 0, `★순화 해설에 자극적 표현 없음 — ${dirtyG.join(',') || '0건'}`)
+check(!HARSH2.some(w => SOUND_TONE_GUIDE.join(' ').includes(w)),
+  `어조 지침에도 금지어를 예시로 적지 않았습니다 (교훈 EG)`)
+
+// 🔴 격 이름을 «가려서» 내보내는가 (교훈 BF)
+check(GYEOK_HIDDEN_KEYS.length === 12, `격 이름을 가린 칸 12 (${GYEOK_HIDDEN_KEYS.length})`)
+check(Object.values(SOUND_125_GUIDE).every(v => v.gyeokPublic === null || isGyeokPublishable(v.gyeokPublic)),
+  `★내보내는 격 이름에는 자극적인 말이 없습니다`)
+for (const k of ['화화화', '목화금', '금금목']) {
+  const v = SOUND_125_GUIDE[k]
+  check(v.gyeokPublic === null, `${k} — 격 이름을 가렸습니다 (${SOUND_ARRANGEMENT[k].gyeok})`)
+}
+check(SOUND_125_GUIDE['토토화'].gyeokPublic === '금상유문격', `자극적이지 않은 격 이름은 그대로 나갑니다`)
+
+console.log('\n━━ ⑨-i 🔴 AI 재료 전체를 훑습니다 ━━')
+{
+  const bad: string[] = []
+  for (const a of OH) for (const b of OH) for (const c of OH) {
+    const ch = (o: string) => o === '목' ? '가' : o === '화' ? '나' : o === '토' ? '아' : o === '금' ? '사' : '마'
+    const v = evaluateSoundOhaeng([
+      { hangul: ch(a), 역할: '성' }, { hangul: ch(b), 역할: '이름' }, { hangul: ch(c), 역할: '이름' }])
+    const blob = JSON.stringify({ g: v.gyeokPublic, t: v.theme, s: v.gentle, l: v.links.map(x => x.text) })
+    for (const w of HARSH2) if (blob.includes(w)) bad.push(`${a}${b}${c}:${w}`)
+  }
+  check(bad.length === 0, `★125칸 전부의 AI 재료에 금지어 0건 — ${bad.slice(0, 3).join(',') || '0건'}`)
+}
 
 console.log('\n━━ ⑨-g 외자·복성 — 교재에 없다는 것을 «밝히는가» ━━')
 const oeja = evaluateSoundOhaeng([{ hangul: '박', 역할: '성' }, { hangul: '준', 역할: '이름' }])

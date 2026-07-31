@@ -31,6 +31,8 @@ import { iga, eulreul } from './josa'          // ★교훈 AU — 조사를 문
 import {
   SOUND_ARRANGEMENT, type SoundArrangement, type SoundFortune,
 } from './tables/soundArrangement'
+// ★2026-07-31 (40부 2차) 순화 해설 — 교재 61~98쪽. 원문은 싣지 않습니다 (교훈 EG)
+import { getSoundGuide, type SoundGuide } from './soundGuide'
 import {
   parseSoundChars, type SoundBook, type SoundChar, SOUND_BOOK_DEFAULT,
 } from './sound/normalize'
@@ -93,8 +95,17 @@ export interface SoundVerdict {
   fortune: SoundFortune | '모름'
   /** ★이 판정이 교재표에서 «직접» 나온 것인가 */
   basis: '교재표' | '규칙유추' | '판정불가'
-  /** 격 이름 — 교재표에서 나온 경우에만 */
+  /** ⚠️ 교재 원문 격 이름. ★AI 프롬프트에 넣지 마십시오 — 자극적인 것이 12칸 있습니다 */
   gyeok: string | null
+  /**
+   * ★손님·AI 에게 내보내도 되는 격 이름. 자극적이면 null 입니다 (교훈 BF).
+   *   null 이면 AI 는 이름을 «지어내지 말고» theme·gentle 로만 풀어야 합니다.
+   */
+  gyeokPublic: string | null
+  /** 순화 주제어 — 교재 61~98쪽에서 (AI 재료) */
+  theme: string | null
+  /** 순화 해설 한 문장 — AI 가 이 어조로 풀어 씁니다 */
+  gentle: string | null
   /** 0~100 정밀 점수 */
   score: number
   links: SoundLink[]
@@ -217,6 +228,12 @@ export function evaluateSoundOhaeng(
     problems.push('오행을 알 수 없는 글자가 있어 배열을 판정하지 못했습니다')
   }
 
+  // ★순화 해설 — 교재표에서 나온 칸만. 유추한 칸은 없습니다(지어내지 않습니다)
+  const guide: SoundGuide | null = basis === '교재표' ? getSoundGuide(combinationKey) : null
+  if (basis === '교재표' && !guide) {
+    problems.push(`'${combinationKey}' 의 순화 해설이 없습니다 — soundGuide.ts 를 확인하십시오`)
+  }
+
   const score = scoreOf(fortune, saeng, geuk, links.length)
   const grade: SoundVerdict['grade'] =
     fortune === '길' ? '좋음' : fortune === '반길반흉' ? '보통' : fortune === '흉' ? '아쉬움' : '보통'
@@ -224,6 +241,9 @@ export function evaluateSoundOhaeng(
   return {
     elements, combinationKey, fortune, basis,
     gyeok: arrangement?.gyeok ?? null,
+    gyeokPublic: guide?.gyeokPublic ?? null,
+    theme: guide?.theme ?? null,
+    gentle: guide?.gentle ?? null,
     score, links,
     saengCount: saeng, geukCount: geuk, bihwaCount: bihwa,
     problems, book, grade, chars: parsed,

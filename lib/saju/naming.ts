@@ -251,7 +251,10 @@ function scoreSound(input: DiagnoseInput, mode: "토" | "수"): SoundFactorResul
       // ★2026-07-31 (40부) 교재에서 온 것들 — AI 가 이 이름으로 풀어 씁니다
       배열: v.combinationKey,                 // 예: '토금수'
       길흉: v.fortune,                        // 길 / 반길반흉 / 흉 / 모름
-      격: v.gyeok,                            // 예: '금상유문격'
+      // ★2026-07-31 (40부 2차) — «가려서» 내보냅니다. 자극적인 격 이름 12칸은 null 입니다
+      격: v.gyeokPublic,                      // 예: '금상유문격' · 가린 칸은 null
+      주제: v.theme,                          // 예: '재덕'
+      안내: v.gentle,                         // ★AI 가 이 어조로 풀어 씁니다
       상극수: v.geukCount,
       비화수: v.bihwaCount,
       // ★«교재표에서 직접 나온 것인가» — 외자·복성은 '규칙유추' 입니다
