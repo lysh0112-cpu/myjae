@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "verify": "tsx 13-verify-18-daeun.ts && tsx 14-verify-exam-seven.ts && tsx 16-verify-naming.ts && tsx 18-verify-sound.ts",
+    "verify": "tsx 13-verify-18-daeun.ts && tsx 14-verify-exam-seven.ts && tsx 16-verify-naming.ts && tsx 18-verify-sound.ts && tsx 19-verify-eumyang.ts",
     "verify:daeun": "tsx 13-verify-18-daeun.ts",
     "verify:gyeokguk": "python3 04-verify-19-cases.py",
     "verify:hap": "python3 05-verify-hap-78-83.py",
@@ -16,7 +16,8 @@
     "verify:seven": "tsx 14-verify-exam-seven.ts",
     "verify:live": "tsx 15-e2e-exam-live.ts",
     "verify:naming": "tsx 16-verify-naming.ts",
-    "verify:sound": "tsx 18-verify-sound.ts"
+    "verify:sound": "tsx 18-verify-sound.ts",
+    "verify:eumyang": "tsx 19-verify-eumyang.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
