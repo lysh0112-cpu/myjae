@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsinCompat } from '@/lib/saju/yongsinNew'
@@ -15,6 +15,12 @@ import {
 } from '@/lib/saju/hanjaRow'
 // ★2026-07-31 (40부 3차) 두음법칙 안내 — «판정은 바꾸지 않습니다» (교재는 표기음 그대로)
 import { dueumPairIfReal, dueumNotice } from '@/lib/saju/sound/dueum'
+// ★2026-08-01 (41부 Step 3 · UI) — 사주 요약 · 이름에 담을 기운 · 명리적성
+import NamingSajuSummary from './components/NamingSajuSummary'
+import NamingAptitude from './components/NamingAptitude'
+import { calcCareerScore, gradeAll } from '@/lib/saju/career/careerScore'
+import { calcNamingBridge } from '@/lib/saju/career/namingBridge'
+import type { Ohaeng } from '@/lib/saju/ohaeng'
 import ConsultButton from '@/app/components/common/ConsultButton'
 import { fromProfile, fromUrl, personKey, type MyInfo } from '@/lib/saju/myInfo'
 import {
@@ -279,6 +285,61 @@ function DiagnosisInner() {
   const [step, setStep] = useState<'input' | 'preview' | 'pay' | 'result'>('input')
   const [result, setResult] = useState<DiagnoseResult | null>(null)
   const [commentary, setCommentary] = useState<Commentary | null>(null)
+
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-01 (41부 Step 3 · UI) — 새 두 자리에 넘길 값
+  // ══════════════════════════════════════════════════════════════
+  //
+  //  ⚠️ 판정을 «여기서 다시 하지 않습니다». 이미 있는 계산을 가져다 씁니다.
+  //     용신은 calcYongsinCompat (아래 handleFullResult 가 쓰는 것과 같은 것),
+  //     오행 등급은 career/careerScore, 담을 기운은 namingBridge 가 냅니다.
+
+  /** 용신·희신·기신 — 「이름에 담을 기운」과 명리적성이 함께 씁니다 */
+  const aptYongsin = useMemo(() => {
+    if (saju.length === 0 || !dayStem || dayStem === '?') {
+      return { yongsin: null as Ohaeng | null, heeksin: null as Ohaeng | null, gisin: null as Ohaeng | null }
+    }
+    try {
+      const y = calcYongsinCompat(
+        saju, dayStem, solar?.month ?? 1, solar?.day ?? 1,
+        saju.find(p => p.pillar === '시주')?.branch ?? null,
+      )
+      return {
+        yongsin: (y?.yongsin ?? null) as Ohaeng | null,
+        heeksin: (y?.heeksin ?? null) as Ohaeng | null,
+        gisin: (y?.gisin ?? null) as Ohaeng | null,
+      }
+    } catch {
+      return { yongsin: null as Ohaeng | null, heeksin: null as Ohaeng | null, gisin: null as Ohaeng | null }
+    }
+  }, [saju, dayStem, solar])
+
+  /** 상단 칩에 보일 «이름에 담을 기운» — namingBridge 가 낸 것 */
+  const namingFill = useMemo(() => {
+    if (saju.length === 0 || !dayStem || dayStem === '?' || !solar) return undefined
+    try {
+      const sc = calcCareerScore(saju, solar.month, solar.day,
+        saju.find(p => p.pillar === '시주')?.branch ?? null)
+      const r = calcNamingBridge({
+        grades: gradeAll(sc),
+        yongsin: aptYongsin.yongsin, heeksin: aptYongsin.heeksin, gisin: aptYongsin.gisin,
+      })
+      return r.fill.slice(0, 2)
+    } catch {
+      return undefined
+    }
+  }, [saju, dayStem, solar, aptYongsin])
+
+  /** 「상세 진로·적성 분석 보러가기」 — 진로적성 화면으로 그대로 넘깁니다 */
+  const careerHref = useMemo(() => {
+    if (!info) return '/manseryeok/career-input'
+    const q = new URLSearchParams({
+      name: '', gender: info.gender, calType: info.calType,
+      year: info.year, month: info.month, day: info.day,
+      leapMonth: info.leapMonth, hour: info.hour,
+    })
+    return `/manseryeok/career-result?${q.toString()}`
+  }, [info])
   // ★2026-07-30 (3단계) — 실패 이유. 없으면 null. 빈 화면 대신 이것을 보여 줍니다.
   const [failWhy, setFailWhy] = useState<string | null>(null)
   // ★2026-07-30 (3단계-b) — 관점별 별점. 옛 저장본에는 없으므로 null 로 둡니다.
@@ -926,8 +987,39 @@ function DiagnosisInner() {
                   </div>
                 </div>
 
+                {/* ★2026-08-01 — 「내 사주 한눈에」. 대표님 확정: «펼친 채» 둡니다.
+                    이름에 필요한 기운을 설득하려면 손님이 원국과 오행 점수를
+                    먼저 보는 것이 낫습니다. */}
+                {saju.length > 0 && solar && dayStem && (
+                  <NamingSajuSummary
+                    saju={saju}
+                    solarYear={solar.year}
+                    solarMonth={solar.month}
+                    solarDay={solar.day}
+                    hourBranch={saju.find(pp => pp.pillar === '시주')?.branch ?? null}
+                    dayStem={dayStem}
+                    fillElements={namingFill}
+                  />
+                )}
+
                 {commentary && (
                   <PerspectiveAccordion commentary={commentary} stars={stars} overallStar={overallStar} />
+                )}
+
+                {/* ★五. 이름에 담을 기운 · 六. 사주 명리적성 (六 은 «접힌 채» 시작) */}
+                {saju.length > 0 && solar && dayStem && (
+                  <NamingAptitude
+                    saju={saju}
+                    solarYear={solar.year}
+                    solarMonth={solar.month}
+                    solarDay={solar.day}
+                    hourBranch={saju.find(pp => pp.pillar === '시주')?.branch ?? null}
+                    dayStem={dayStem}
+                    yongsin={aptYongsin.yongsin}
+                    heeksin={aptYongsin.heeksin}
+                    gisin={aptYongsin.gisin}
+                    careerHref={careerHref}
+                  />
                 )}
 
                 {/* ★2026-07-21 2차: 저장 표시를 상담 버튼 바로 위로 옮겼다.

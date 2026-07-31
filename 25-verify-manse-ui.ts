@@ -118,5 +118,41 @@ console.log('\n━━ ⑯-e ★부품이 «한 벌» 인가 (2026-08-01 통합) 
     `⚠️ 궁합 원국은 그대로 둡니다 (배치가 달라 — 대표님 확정)`)
 }
 
+console.log('\n━━ ⑯-f ★내이름 감정 화면 (41부 Step 3 · UI) ━━')
+{
+  const page = readFileSync('app/manseryeok/naming/diagnosis/page.tsx', 'utf8')
+  const sum = readFileSync('app/manseryeok/naming/diagnosis/components/NamingSajuSummary.tsx', 'utf8')
+  const apt = readFileSync('app/manseryeok/naming/diagnosis/components/NamingAptitude.tsx', 'utf8')
+
+  check(/NamingSajuSummary/.test(page) && /NamingAptitude/.test(page), `두 부품이 화면에 얹혀 있습니다`)
+
+  // ① 상단 요약 — «펼친 채» (대표님 확정). 접는 상태가 없어야 합니다
+  check(!/useState\([^)]*\)\s*(?:\/\/[^\n]*)?\n[\s\S]{0,200}접/.test(sum) && !/open/.test(sum.split('export default')[1] ?? ''),
+    `★상단 요약은 «펼친 채» 입니다 (접기 없음)`)
+  check(/SajuWonguk/.test(sum), `상단 요약이 정본 원국표를 «가져다» 씁니다`)
+
+  // ② 六 — «접힌 채» 시작
+  check(/useState\(false\)/.test(apt), `★六 명리적성이 «접힌 채» 시작합니다`)
+  check(/aria-expanded/.test(apt), `접기·펼치기에 aria-expanded 가 있습니다`)
+
+  // ③ 상세 진로적성 링크
+  check(/careerHref/.test(apt) && /career-result/.test(page),
+    `★「상세 진로·적성 분석 보러가기」 링크가 있습니다`)
+
+  // ④ 색을 지어내지 않았는가 — 오행 색은 명리 규칙입니다
+  for (const [n, src] of [['NamingSajuSummary', sum], ['NamingAptitude', apt]] as const) {
+    check(!/목:\s*'#/.test(src), `${n} 이 «자기 오행 색표» 를 갖고 있지 않습니다`)
+    check(/EL_CHART/.test(src), `${n} 이 정본 색(EL_CHART)을 씁니다`)
+  }
+
+  // ⑤ 🔴 reasons 를 «그리지 않는가» (교훈 AV)
+  check(!/\.reasons/.test(apt), `★AI 통변 재료(reasons)를 화면에 그리지 않습니다 (교훈 AV)`)
+  check(/\.lines/.test(apt), `손님 문장(lines)만 그립니다`)
+
+  // ⑥ 문턱 — 2026-07-31 대표님 확정 «현행 유지»
+  check(/25~45/.test(sum) && !/0~14/.test(sum),
+    `★문턱 안내가 현행(25~45 강점 · 50↑ 넘침)입니다 — 철회된 환산값(0~14)이 없습니다`)
+}
+
 console.log(`\n━━ 만세력 화면 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail > 0) process.exit(1)
