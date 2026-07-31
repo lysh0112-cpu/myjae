@@ -345,3 +345,43 @@ export function describeRowSource(row: HanjaRow): string {
     : `불용=grade('${row.grade ?? ''}')`)
   return parts.join(' · ')
 }
+
+
+// ══════════════════════════════════════════════════════════════════
+//  ★2026-07-31 (40부 3차) — 같은 한자가 «몇 가지 음» 으로 실려 있는가
+// ══════════════════════════════════════════════════════════════════
+//
+//  [왜 필요한가]  두음법칙 안내를 «정말 두 음으로 쓰이는 한자» 에만 띄우려고 합니다.
+//    글자만 보면 「양」이 梁(량→양)인지 楊(본래 양)인지 알 수 없고,
+//    「이」는 李 지만 「리」로 적는 분은 사실상 없습니다.
+//    → 글자만 보고 띄우면 이씨·양씨 손님 «전원» 이 쓸모없는 안내를 봅니다.
+//
+//  ★목록을 새로 만들지 않았습니다. hanja 표가 정답을 갖고 있습니다.
+//    표가 좋아지면 안내도 저절로 정확해집니다.
+
+/**
+ * `hanja` 표에서 같은 한자의 한글 음을 전부 모읍니다. 실패하면 빈 배열.
+ *
+ * ⚠️ Supabase 클라이언트 «타입» 을 받지 않습니다 — 흉내 내면 버전마다 깨집니다.
+ *    부르는 쪽이 «조회 그 자체» 를 넘기십시오.
+ *
+ *    const readings = await fetchHanjaReadings(
+ *      (h) => supabase.from('hanja').select('hangul').eq('hanja', h), '柳')
+ */
+export async function fetchHanjaReadings(
+  query: (hanja: string) => PromiseLike<{ data: unknown; error: unknown }>,
+  hanja: string,
+): Promise<string[]> {
+  try {
+    const { data, error } = await query(hanja)
+    if (error || !Array.isArray(data)) return []
+    const out = new Set<string>()
+    for (const r of data as { hangul?: string }[]) {
+      const h = r?.hangul?.trim()
+      if (h) out.add(h)
+    }
+    return [...out]
+  } catch {
+    return []
+  }
+}

@@ -9,6 +9,9 @@ import { SOUND_ARRANGEMENT } from './lib/saju/tables/soundArrangement'
 import { evaluateSoundOhaeng, soundRelation } from './lib/saju/soundEngine'
 import { parseSoundChar } from './lib/saju/sound/normalize'
 import { hasJong } from './lib/saju/josa'
+import { dueumPair, dueumPairIfReal, dueumNotice, dueumNoticeForName } from './lib/saju/sound/dueum'
+import { DONGJA_IEUM } from './lib/saju/tables/jakmyeongGaeunbeop'
+import { fetchHanjaReadings } from './lib/saju/hanjaRow'
 import {
   SOUND_125_GUIDE, SOUND_TONE_GUIDE, GYEOK_HIDDEN_KEYS, isGyeokPublishable,
 } from './lib/saju/soundGuide'
@@ -130,6 +133,77 @@ console.log('\n━━ ⑨-i 🔴 AI 재료 전체를 훑습니다 ━━')
   }
   check(bad.length === 0, `★125칸 전부의 AI 재료에 금지어 0건 — ${bad.slice(0, 3).join(',') || '0건'}`)
 }
+
+console.log('\n━━ ⑨-k links 에 «어느 글자 사이인가» 가 실리는가 (40부 4차) ━━')
+{
+  const v = S('최수라')
+  check(v.links.every(l => !!l.fromChar && !!l.toChar), `링크마다 앞뒤 글자가 실립니다`)
+  check(v.links[0].fromChar === '최' && v.links[0].toChar === '수', `첫 링크는 최→수 (${v.links[0].fromChar}→${v.links[0].toChar})`)
+  check(v.links[1].fromChar === '수' && v.links[1].toChar === '라', `둘째 링크는 수→라 (${v.links[1].fromChar}→${v.links[1].toChar})`)
+  // ★글자와 오행이 어긋나면 AI 가 뒤집어 씁니다 — sequence 와 대조합니다
+  const bad: string[] = []
+  for (const a of OH) for (const b of OH) for (const c of OH) {
+    const ch = (o: string) => o === '목' ? '가' : o === '화' ? '나' : o === '토' ? '아' : o === '금' ? '사' : '마'
+    const w = evaluateSoundOhaeng([
+      { hangul: ch(a), 역할: '성' }, { hangul: ch(b), 역할: '이름' }, { hangul: ch(c), 역할: '이름' }])
+    const seq = [ch(a), ch(b), ch(c)]
+    for (let i = 0; i < w.links.length; i++) {
+      if (w.links[i].fromChar !== seq[i] || w.links[i].toChar !== seq[i + 1]) bad.push(`${a}${b}${c}`)
+    }
+  }
+  check(bad.length === 0, `★125칸 전부에서 링크의 글자가 배열 순서와 맞습니다 — ${bad.slice(0, 3).join(',') || '0건'}`)
+}
+
+console.log('\n━━ ⑨-j 두음법칙 안내 — ★판정은 «바꾸지 않습니다» ━━')
+// 교재 43자와 규칙이 맞는가 (교훈 EO — 바깥의 정답표와 대조)
+{
+  const book = DONGJA_IEUM.filter(x => x.kind === '두음법칙')
+  let hit = 0; const miss: string[] = []
+  for (const e of book) {
+    const m = e.reading.match(/([가-힣])\/([가-힣])\s*$/)
+    if (!m) continue
+    const p = dueumPair(m[1])
+    if (p && p.alternate === m[2]) hit++; else miss.push(e.hanja)
+  }
+  check(hit === book.length, `교재 두음법칙 ${book.length}자와 규칙이 일치 (${hit}) — 못 잡음 ${miss.join(',') || '없음'}`)
+}
+// ★오행이 «갈리지 않는» 자리는 알리지 않습니다 (라/나 는 둘 다 화)
+for (const h of ['라', '로', '뢰', '나', '노']) check(dueumPair(h) === null, `${h} — 오행이 같아 알리지 않습니다`)
+for (const h of ['류', '리', '량', '려', '례']) check(dueumPair(h) !== null, `${h} — 오행이 갈려 알림 대상`)
+// ★«정말 두 음으로 실린 한자» 일 때만
+check(dueumPairIfReal('류', ['류', '유'], '柳') !== null, `柳 는 두 음이 실려 있어 알립니다`)
+check(dueumPairIfReal('이', ['이'], '李') === null, `李 는 «리» 가 표에 없으면 알리지 않습니다 (손님 15% 를 지킵니다)`)
+check(dueumPairIfReal('양', ['양'], '楊') === null, `楊 은 본래 «양» 이라 알리지 않습니다`)
+// 🔴 조사 — ★제가 여기서 두 번 틀렸습니다. 못을 박습니다 (교훈 AU)
+{
+  const bad: string[] = []
+  for (const [hj, w, alt] of [['柳', '류', '유'], ['梁', '양', '량'], ['呂', '여', '려'],
+                              ['禮', '예', '례'], ['龍', '용', '룡'], ['李', '이', '리']] as const) {
+    const t = dueumNotice(dueumPairIfReal(w, [w, alt], hj)!)
+    // 「梁는」(X) / 「梁은」(O) — 조사는 «한자» 가 아니라 «읽는 음» 으로 골라야 합니다
+    const want = hasJong(w) ? `${hj}은 ` : `${hj}는 `
+    if (!t.startsWith(want)) bad.push(`${hj}${w}`)
+    if (/」로도/.test(t) && hasJong(w)) bad.push(`${hj}:로도`)
+    if (/」으로도/.test(t) && !hasJong(w)) bad.push(`${hj}:으로도`)
+  }
+  check(bad.length === 0, `★안내 문장의 조사 — 틀린 곳 ${bad.join(',') || '0건'}`)
+}
+check(!dueumNotice(dueumPairIfReal('류', ['류', '유'], '柳')!).includes('틀'),
+  `안내가 «틀렸다» 로 읽히지 않습니다 — 둘 다 맞습니다`)
+// 성씨 자리만 봅니다 — 諒(량)은 이름 끝이라 걸리면 안 됩니다
+check(dueumNoticeForName(
+  [{ hangul: '류', hanja: '柳', 역할: '성' }, { hangul: '길', hanja: '吉', 역할: '이름' },
+   { hangul: '량', hanja: '諒', 역할: '이름' }], { 柳: ['류', '유'], 諒: ['량', '양'] }) !== null,
+  `성씨 자리에서 잡습니다`)
+check(dueumNoticeForName(
+  [{ hangul: '김', hanja: '金', 역할: '성' }, { hangul: '량', hanja: '諒', 역할: '이름' }],
+  { 諒: ['량', '양'] }) === null, `★이름 글자는 두음 자리가 아니라 알리지 않습니다`)
+// 조회가 깨져도 화면이 죽지 않는가
+void (async () => {
+  const a = await fetchHanjaReadings(() => Promise.reject(new Error('x')) as never, '柳')
+  const b = await fetchHanjaReadings(() => Promise.resolve({ data: null, error: 'boom' }), '柳')
+  check(a.length === 0 && b.length === 0, `조회가 실패해도 빈 배열 — 화면이 죽지 않습니다`)
+})()
 
 console.log('\n━━ ⑨-g 외자·복성 — 교재에 없다는 것을 «밝히는가» ━━')
 const oeja = evaluateSoundOhaeng([{ hangul: '박', 역할: '성' }, { hangul: '준', 역할: '이름' }])

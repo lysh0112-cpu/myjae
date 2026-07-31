@@ -80,6 +80,17 @@ export type SoundZone = '성씨 안' | '성씨→이름' | '이름 안'
 export interface SoundLink {
   from: Ohaeng | null
   to: Ohaeng | null
+  /**
+   * ★2026-07-31 (40부 4차) — 이 관계가 «어느 글자와 어느 글자» 사이인가.
+   *
+   * [왜 넣었나]  실기기에서 AI 가 이렇게 썼습니다 —
+   *     앞:  「최(ㅊ·금)→수(ㅅ·금)→라(ㄹ·화)」   글자 밖 · 오행 안
+   *     뒤:  「금(수)에서 화(라)로 넘어가는 자리」  ★괄호가 뒤집혔습니다
+   *   links 에 오행만 있어 AI 가 sequence 와 «스스로 이어 붙이다» 헷갈린 것입니다.
+   *   → 링크마다 글자를 함께 실어 이어 붙일 일이 없게 합니다.
+   */
+  fromChar: string
+  toChar: string
   relation: SoundRel
   /** josa 가 붙은 온전한 문장 — AI 재료로 그대로 나갑니다 */
   text: string
@@ -196,7 +207,9 @@ export function evaluateSoundOhaeng(
   for (let i = 0; i < parsed.length - 1; i++) {
     const rel = soundRelation(elements[i], elements[i + 1])
     links.push({
-      from: elements[i], to: elements[i + 1], relation: rel,
+      from: elements[i], to: elements[i + 1],
+      fromChar: parsed[i].hangul, toChar: parsed[i + 1].hangul,
+      relation: rel,
       text: soundRelationText(elements[i], elements[i + 1]),
       구간: zoneOf(chars[i].역할, chars[i + 1].역할),
     })

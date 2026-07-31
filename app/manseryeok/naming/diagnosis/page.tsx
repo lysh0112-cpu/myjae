@@ -11,7 +11,10 @@ import type { DiagnoseResult, NameChar } from '@/lib/saju/naming'
 import {
   HANJA_SELECT, isAvoidChar as isAvoidCharShared,
   rowOhaeng, rowStrokes, rowHanja, type HanjaRow,
+  fetchHanjaReadings,
 } from '@/lib/saju/hanjaRow'
+// ★2026-07-31 (40부 3차) 두음법칙 안내 — «판정은 바꾸지 않습니다» (교재는 표기음 그대로)
+import { dueumPairIfReal, dueumNotice } from '@/lib/saju/sound/dueum'
 import ConsultButton from '@/app/components/common/ConsultButton'
 import { fromProfile, fromUrl, personKey, type MyInfo } from '@/lib/saju/myInfo'
 import {
@@ -266,6 +269,8 @@ function DiagnosisInner() {
   const [nameInput, setNameInput] = useState('')
   const [syllables, setSyllables] = useState<string[]>([])
   const [chars, setChars] = useState<(NameChar | null)[]>([])
+  /** ★2026-07-31 (40부 3차) 두음법칙 안내 — 판정은 «바꾸지 않습니다». 알려 주기만 합니다 */
+  const [dueumMsg, setDueumMsg] = useState<string | null>(null)
 
   const [pickerIdx, setPickerIdx] = useState<number | null>(null)
   const [hanjaList, setHanjaList] = useState<HanjaRow[]>([])
@@ -365,6 +370,7 @@ function DiagnosisInner() {
     if (arr.length < 2) return
     setSyllables(arr)
     setChars(arr.map(() => null))
+    setDueumMsg(null)          // ★이름이 바뀌면 안내도 지웁니다
   }
 
   async function openPicker(idx: number) {
@@ -410,6 +416,16 @@ function DiagnosisInner() {
       resourceOhaeng: rowOhaeng(row) ?? '',
     }
     setChars(next)
+    // ★성씨 자리(첫 글자)만 봅니다. 이름 가운데·끝 글자는 두음 자리가 아닙니다
+    if (pickerIdx === 0) {
+      const written = row.hangul
+      void (async () => {
+        const readings = await fetchHanjaReadings(
+          (h) => supabase.from('hanja').select('hangul').eq('hanja', h), rowHanja(row))
+        const p = dueumPairIfReal(written, readings, rowHanja(row))
+        setDueumMsg(p ? dueumNotice(p) : null)
+      })()
+    }
     setPickerIdx(null)
     setHanjaList([])
   }
@@ -620,7 +636,7 @@ function DiagnosisInner() {
   }
 
   function resetAll() {
-    setNameInput(''); setSyllables([]); setChars([])
+    setNameInput(''); setSyllables([]); setChars([]); setDueumMsg(null)
     setResult(null); setCommentary(null); setStep('input')
     try {
       localStorage.removeItem(NAMING_RESULT_KEY)
@@ -772,6 +788,21 @@ function DiagnosisInner() {
                   · 원을 누르면 그 글자의 한자가 자동으로 나와요<br />
                   · 이름을 바꾸려면 위에 다시 입력하고 확인을 누르세요
                 </div>
+
+                {/* ★2026-07-31 (40부 3차) 두음법칙 안내
+                    ⚠️ «판정을 바꾸는 것이 아닙니다» — 교재는 표기음 그대로 봅니다(이재명=토,금,수).
+                       손님이 「류/유」 어느 쪽으로 적느냐로 발음오행이 달라지는 것을 «알려만» 줍니다.
+                    ★정말 두 음으로 실려 있는 한자에만 뜹니다 (hanja 표를 보고 판단) */}
+                {dueumMsg && (
+                  <div style={{
+                    fontSize: '11px', lineHeight: 1.7, color: '#5c3a1e',
+                    background: 'rgba(200,120,60,0.07)', border: '1px solid rgba(200,120,60,0.25)',
+                    borderRadius: '10px', padding: '10px 12px', marginBottom: '20px',
+                  }}>
+                    <span style={{ color: gold, fontWeight: 600 }}>알려 드립니다 · </span>
+                    {dueumMsg}
+                  </div>
+                )}
 
                 <button onClick={handlePreview} disabled={!canSubmit}
                   style={{

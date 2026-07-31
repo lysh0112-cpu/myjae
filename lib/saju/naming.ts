@@ -228,6 +228,10 @@ function scoreSound(input: DiagnoseInput, mode: "토" | "수"): SoundFactorResul
   const links = v.links.map((l) => ({
     from: l.from ?? "",
     to: l.to ?? "",
+    // ★2026-07-31 (40부 4차) — 어느 글자 사이인가. AI 가 괄호를 뒤집지 않도록
+    앞글자: `${l.fromChar}(${l.from ?? "?"})`,
+    뒷글자: `${l.toChar}(${l.to ?? "?"})`,
+    자리: `${l.fromChar}(${l.from ?? "?"})→${l.toChar}(${l.to ?? "?"})`,
     rel: l.relation === "상생" ? "생" : l.relation === "상극" ? "극"
        : l.relation === "비화" ? "비화" : "기타",
     text: l.text,
