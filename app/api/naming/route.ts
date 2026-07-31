@@ -166,8 +166,43 @@ export async function POST(req: Request) {
       수리오행: result.suri.facts,
       자원오행: result.resourceFlow.facts,
       사주보완: result.yongsinBohwan.facts,
-      // ★2단계 신설 — 위 둘(자원오행·사주보완)의 «근거를 넓힌» 것
-      자원오행_정밀: verdict.facts,
+      // ══════════════════════════════════════════════════════════════
+      //  ★2026-08-01 — 재료를 «두 바구니로 갈랐습니다». (대표님 지시)
+      //
+      //   [무엇이 문제였나]
+      //     verdict.facts 를 통째로 「자원오행_정밀」이라는 «이름» 으로 넘겼습니다.
+      //     그 안에는 사주와의 관계(약한 기운을 누르는가·넘치는가·기신인가)가
+      //     대부분인데, 이름이 「자원오행」이라 AI 가 그것을 «四 자원오행» 대목에 썼습니다.
+      //     → 四 에 사주 이야기가 섞이고, 五 와 같은 말을 두 번 했습니다.
+      //
+      //   ★재료의 «이름» 이 곧 AI 에게 주는 지시입니다. 이름을 바로잡습니다.
+      //     四 는 «한자끼리», 五 는 «사주와 이름» — 바구니가 갈리면 섞이지 않습니다.
+      // ══════════════════════════════════════════════════════════════
+      자원오행_글자끼리: {
+        chain: verdict.facts.chain,
+        links: verdict.facts.links,
+        flowAvg: verdict.facts.flowAvg,
+        surnameOhaeng: verdict.facts.surnameOhaeng,
+        givenOhaengs: verdict.facts.givenOhaengs,
+        clashExemptCount: verdict.facts.clashExemptCount,
+      },
+      사주와의만남_정밀: {
+        yongsin: verdict.facts.yongsin,
+        heeksin: verdict.facts.heeksin,
+        gisin: verdict.facts.gisin,
+        hasYongsin: verdict.facts.hasYongsin,
+        hasYongsinSecondary: verdict.facts.hasYongsinSecondary,
+        hasHeeksin: verdict.facts.hasHeeksin,
+        yongsinChars: verdict.facts.yongsinChars,
+        excessAdded: verdict.facts.excessAdded,
+        lackFilled: verdict.facts.lackFilled,
+        isolatedFilled: verdict.facts.isolatedFilled,
+        gisinAdded: verdict.facts.gisinAdded,
+        weakClashed: verdict.facts.weakClashed,
+        // ★이 문장은 «누르는 자리를 말하는 그 대목» 에서만 씁니다 (위 원칙 참고)
+        weakClashNote: verdict.facts.weakClashNote,
+        sajuLevel: verdict.facts.sajuLevel,
+      },
       형제서열_참고: birthOrderCaution || undefined,
       참고할자리: verdict.warnings,
       판정못한자리: verdict.problems,
@@ -190,7 +225,34 @@ ${namingGuide}
 - 수리오행을 쓸 때는 사실 데이터의 「수리오행.서술지침」과 각 격의 「gentle」 문장을 근거로 삼고, 그 어조를 그대로 유지하세요.
 - ★성씨가 몇 글자인지는 사실 데이터의 「역할」·「복성여부」·「성씨」·「이름」 항목으로 확인하세요. 복성(두 글자 성씨)이면 두 글자를 묶어 하나의 성씨로 부르고, 성씨의 둘째 글자를 이름 글자처럼 다루지 마세요.
 - 오행이 이어지는 자리를 말할 때는 「links」의 「구간」(성씨 안 / 성씨→이름 / 이름 안)을 그대로 따르세요. 어느 글자에서 어느 글자로 가는지 사실 데이터와 다르게 적지 마세요.
-- ★사실 데이터에 「weakClashNote」가 채워져 있으면, 그 문장을 «있는 그대로 한 번만» 옮겨 적고 끝내세요. 늘리거나 바꿔 쓰지 마세요. 비어 있으면 건강을 아예 언급하지 마세요.
+- ★사실 데이터에 「weakClashNote」가 채워져 있으면, 그 문장을 «있는 그대로 한 번만» 옮겨 적으세요. 늘리거나 바꿔 쓰지 마세요. 비어 있으면 건강을 아예 언급하지 마세요.
+- ★★그 문장을 «어디에» 두는지가 중요합니다. (2026-08-01 대표님 지시)
+  · 「이름의 어느 글자가 사주의 약한 기운을 누른다」고 말한 «바로 그 자리» 에 붙이세요.
+  · ⚠️ 관점의 «마지막 문장» 으로 쓰지 마세요. 좋은 이야기 끝에 갑자기 건강 당부가 붙으면
+    앞뒤가 이어지지 않아 손님이 놀랍니다.
+  · 누르는 자리를 말하지 않는 대목에서는 그 문장을 «꺼내지 마세요».
+
+[★관점끼리 역할을 나눕니다 — 2026-08-01 대표님 지시]
+- jawon(자원오행)에는 «한자끼리» 의 이야기만 담으세요.
+  글자에 담긴 자원오행이 서로 어떻게 잇고 누르는지, 그 결이 어떤지.
+  ⚠️ 「사주에 무엇이 약한데 이 글자가 그것을 누른다」 같은 «사주와의» 이야기를 여기 섞지 마세요.
+- yongsin(사주와의 만남)에 «사주와 이름의» 이야기를 모으세요.
+  용신·희신을 담았는가, 사주의 약하거나 넘치는 기운과 어떻게 만나는가, weakClashNote.
+- ★두 관점이 같은 이야기를 두 번 하지 않게 하세요.
+
+[★yongsin(사주와의 만남)의 맺음]
+- 마지막 문장은 «개운» 의 말로 맺으세요. 이름이 사주를 어떻게 돕는지에 초점을 둡니다.
+  예) "사주에 부족한 기운을 보완하여 삶의 흐름을 한층 윤택하게 돕는 이름으로 볼 수 있습니다."
+  ⚠️ 다만 사실 데이터가 «용신을 담지 못했다» 고 하면 이렇게 쓰지 마세요.
+     그때는 무엇을 더 살피면 좋을지로 담담히 맺으세요.
+
+[★어투 — 비문을 막습니다]
+- 「~로 봅니다」와 「~는 견해」를 «겹쳐 쓰지» 마세요.
+  ✖ "…여리게 하는 자리로 봅니다는 견해가 있어"     ← 말이 어긋납니다
+  ○ "…여리게 하는 자리로 본다는 견해가 있어"
+  ○ "…여리게 하는 자리로 보는 견해가 있어"
+  ○ "…여리게 하는 자리로 봅니다."
+- 문장을 끝맺기 전에 «어미가 두 번 겹치지 않았는지» 한 번 살피세요.
 - ★몸·질병·장기·수명에 대해서는 위 문장 밖의 어떤 말도 덧붙이지 마세요. 어느 부위가 약하다는 식의 이야기는 사실 데이터에 없습니다.
 
 [각 관점은 3단 구조로]

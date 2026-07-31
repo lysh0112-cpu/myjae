@@ -139,8 +139,12 @@ export default function NamingSajuSummary({
               </div>
               <span style={{ width: 26, fontSize: 11, fontWeight: 600, color: INK, textAlign: 'right' }}>{pt}</span>
               <span style={{
-                fontSize: 9.5, fontWeight: 600, padding: '2px 6px', borderRadius: 8,
-                background: tone.bg, color: tone.fg, width: 44, textAlign: 'center', flexShrink: 0,
+                // ⚠️ 「비어 있음」이 «비어 있 / 음» 으로 갈리던 자리입니다.
+                //    글자 수가 넷이라 44px 안에서 줄이 바뀌었습니다.
+                //    ★nowrap 을 걸고 width 를 없앴습니다 — 글자 길이에 맞춰 늘어납니다.
+                fontSize: 9.5, fontWeight: 600, padding: '2px 7px', borderRadius: 8,
+                background: tone.bg, color: tone.fg, textAlign: 'center',
+                flexShrink: 0, whiteSpace: 'nowrap',
               }}>{GRADE_WORD[g] ?? g}</span>
             </div>
           )

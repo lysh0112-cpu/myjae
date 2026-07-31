@@ -83,8 +83,25 @@ console.log('\n━━ ⑯-e ★부품이 «한 벌» 인가 (2026-08-01 통합) 
   // ① 사주 원국 — 정본이 공용 자리에 있는가
   check(existsSync('app/manseryeok/components/SajuWonguk.tsx'),
     `★정본 원국이 공용 자리(components/)에 있습니다`)
-  check(!existsSync('app/manseryeok/result-new/SajuWonguk.tsx'),
-    `옛 자리(result-new/)에 남아 있지 않습니다`)
+  {
+    const stale = existsSync('app/manseryeok/result-new/SajuWonguk.tsx')
+    check(!stale, `옛 자리(result-new/SajuWonguk.tsx)에 «남아 있지 않습니다»`)
+    if (stale) {
+      // ⚠️ 꾸러미를 «덮어쓰는» 것만으로는 옛 파일이 안 지워집니다.
+      //    그래서 빌드 로그만 보고는 무엇을 해야 할지 알 수 없습니다. 여기 적어 둡니다.
+      console.log('')
+      console.log('     ┌──────────────────────────────────────────────────────────┐')
+      console.log('     │  고치는 법 — 옛 파일을 «지우십시오»                          │')
+      console.log('     │                                                          │')
+      console.log('     │    git rm app/manseryeok/result-new/SajuWonguk.tsx        │')
+      console.log('     │    git commit -m "옛 원국 부품 삭제 (공용 자리로 옮김)"       │')
+      console.log('     │                                                          │')
+      console.log('     │  ★정본은 app/manseryeok/components/SajuWonguk.tsx 입니다.  │')
+      console.log('     │    둘을 함께 두면 언젠가 갈립니다. (교훈 CJ)                 │')
+      console.log('     └──────────────────────────────────────────────────────────┘')
+      console.log('')
+    }
+  }
   // ⚠️ «import» 만 봅니다. 주석에 옛 경로를 적어 둔 것까지 잡으면 안 됩니다
   const oldPath = sh(`grep -rln "^import.*result-new/SajuWonguk" --include=*.tsx app/ 2>/dev/null`).trim()
   check(oldPath === '', `옛 경로로 «부르는» 화면이 없습니다 — ${oldPath.split('\n').filter(Boolean).join(', ') || '0곳'}`)
@@ -152,6 +169,36 @@ console.log('\n━━ ⑯-f ★내이름 감정 화면 (41부 Step 3 · UI) ━�
   // ⑥ 문턱 — 2026-07-31 대표님 확정 «현행 유지»
   check(/25~45/.test(sum) && !/0~14/.test(sum),
     `★문턱 안내가 현행(25~45 강점 · 50↑ 넘침)입니다 — 철회된 환산값(0~14)이 없습니다`)
+}
+
+console.log('\n━━ ⑯-g ★이름 풀이 재료·프롬프트 (2026-08-01 교정) ━━')
+{
+  const api = readFileSync('app/api/naming/route.ts', 'utf8')
+  const sum = readFileSync('app/manseryeok/naming/diagnosis/components/NamingSajuSummary.tsx', 'utf8')
+
+  // ① 배지가 «줄바꿈» 되지 않는가 — 「비어 있음」이 두 줄로 갈리던 자리
+  check(/whiteSpace: 'nowrap'/.test(sum), `★오행 등급 배지가 줄바꿈되지 않습니다 (nowrap)`)
+  check(!/background: tone\.bg[\s\S]{0,80}width: 44/.test(sum), `배지에 고정 폭이 걸려 있지 않습니다`)
+
+  // ② 재료가 «두 바구니» 로 갈렸는가 — 四 와 五 가 섞이던 자리
+  check(/자원오행_글자끼리/.test(api), `★재료에 「자원오행_글자끼리」 바구니가 있습니다`)
+  check(/사주와의만남_정밀/.test(api), `★재료에 「사주와의만남_정밀」 바구니가 있습니다`)
+  check(!/자원오행_정밀: verdict\.facts/.test(api),
+    `옛 「자원오행_정밀: verdict.facts」 통짜 넘기기가 없습니다`)
+  // 사주 관계 항목이 «글자끼리» 바구니에 섞이지 않았는가
+  const jaBucket = (api.match(/자원오행_글자끼리: \{[\s\S]*?\n      \},/) ?? [''])[0]
+  const leaked = ['weakClash', 'gisinAdded', 'excessAdded', 'lackFilled', 'yongsinChars']
+    .filter(k => jaBucket.includes(k))
+  check(leaked.length === 0, `★「글자끼리」 바구니에 사주 항목이 섞이지 않았습니다 — ${leaked.join(',') || '0건'}`)
+
+  // ③ 건강 문구를 «맺음으로 쓰지 말라» 는 지시가 있는가
+  check(/마지막 문장» 으로 쓰지 마세요|마지막 문장»으로 쓰지 마세요/.test(api),
+    `★건강 문구를 «관점의 마지막 문장» 으로 쓰지 말라는 지시가 있습니다`)
+  check(/개운/.test(api), `五 의 맺음을 «개운» 의 말로 하라는 지시가 있습니다`)
+
+  // ④ 비문 막는 예시가 있는가
+  check(/봅니다는/.test(api), `★「봅니다는」 비문 예시가 프롬프트에 있습니다`)
+  check(/본다는|보는 견해/.test(api), `바른 어투 예시가 함께 있습니다`)
 }
 
 console.log(`\n━━ 만세력 화면 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
