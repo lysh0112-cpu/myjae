@@ -63,10 +63,42 @@ export interface NamingPerson {
 }
 
 // input_data(jsonb)에 담는 형태
+// ══════════════════════════════════════════════════════════════════
+//  ★2026-08-01 — 보관함에서 «풀이» 와 «작명» 을 가르기 위한 표시
+//
+//   [무엇이 문제였나]
+//     이름 풀이(diagnosis)와 개명 작명(rename/newresult)이 «둘 다»
+//     service_type='naming' 으로 저장하고 있었습니다. 보관함에서 구분할 길이 없었습니다.
+//
+//   [왜 service_type 을 안 나눴나]
+//     ⚠️ 나누면 «이미 쌓인 기록» 이 목록에서 사라집니다.
+//        listNamingRecords 가 service_type 으로 거르기 때문입니다.
+//     ★그래서 input_data(jsonb) 안에 표시를 넣습니다.
+//       옛 기록에는 이 값이 없고, 없으면 «풀이» 로 봅니다. 하나도 안 사라집니다.
+// ══════════════════════════════════════════════════════════════════
+
+/** 이 기록이 «무엇» 인가 */
+export type NamingKind = '풀이' | '개명' | '신생아'
+
+/** 옛 기록에는 kind 가 없습니다 — 그때는 «풀이» 로 봅니다 */
+export const DEFAULT_NAMING_KIND: NamingKind = '풀이'
+
+export const NAMING_KIND_LABEL: Record<NamingKind, string> = {
+  풀이: '이름 풀이', 개명: '개명', 신생아: '신생아',
+}
+
 interface NamingInputBlob {
   person: NamingPerson | null   // 진단한 사람의 사주 입력값 (내 것이면 profiles 값)
   relation: string              // self | 관계
   chars: (NameChar | null)[]    // 뽑은 한자 글자들 (성 + 이름)
+  /** ★2026-08-01 — 없으면 «풀이». 옛 기록을 깨뜨리지 않습니다 */
+  kind?: NamingKind
+  /** 작명일 때 — 몇 순위로 뽑힌 이름인가 (1 = 1순위). 없으면 안 보여 줍니다 */
+  rank?: number
+  /** 작명일 때 — 종합 적합도 0~100. 헤더 배지에 씁니다 */
+  score?: number
+  /** 작명일 때 — 어느 기운을 채운 이름인가 (예: ['목','화']) */
+  filled?: string[]
 }
 
 // 결과 해설 스냅샷 (result_data)
@@ -88,6 +120,11 @@ export interface NamingRecord {
   person: NamingPerson | null
   createdAt: string            // ISO
   snapshot?: NamingResultSnapshot   // 다시보기 시 로드
+  /** ★없으면 «풀이» — 옛 기록도 목록에 그대로 뜹니다 */
+  kind: NamingKind
+  rank?: number
+  score?: number
+  filled?: string[]
 }
 
 // chars → 한글/한자 이름 문자열
@@ -107,6 +144,11 @@ export async function saveNamingRecord(args: {
   result: DiagnoseResult | null
   commentary: NamingResultSnapshot['commentary']
   serviceType?: string             // 'naming'(개명, 기본) | 'newborn'(아기)
+  /** ★2026-08-01 — 보관함에서 가릅니다. 안 주면 «풀이» */
+  kind?: NamingKind
+  rank?: number
+  score?: number
+  filled?: string[]
 }): Promise<{ ok: boolean; id?: string; message?: string }> {
   const { data: auth } = await supabase.auth.getUser()
   const uid = auth?.user?.id
@@ -118,6 +160,10 @@ export async function saveNamingRecord(args: {
     person: args.person,
     relation: args.relation || 'self',
     chars: args.chars,
+    kind: args.kind ?? DEFAULT_NAMING_KIND,
+    ...(args.rank != null ? { rank: args.rank } : {}),
+    ...(args.score != null ? { score: args.score } : {}),
+    ...(args.filled?.length ? { filled: args.filled } : {}),
   }
   const snapshot: NamingResultSnapshot = {
     result: args.result,
@@ -164,6 +210,11 @@ function toRecord(r: {
     person: blob?.person ?? null,
     createdAt: r.created_at,
     snapshot: snap ?? undefined,
+    // ★옛 기록에는 kind 가 없습니다 — 그때는 «풀이»
+    kind: blob?.kind ?? DEFAULT_NAMING_KIND,
+    rank: blob?.rank,
+    score: blob?.score,
+    filled: blob?.filled,
   }
 }
 

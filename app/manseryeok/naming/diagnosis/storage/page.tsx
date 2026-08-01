@@ -20,10 +20,35 @@ import { useRouter } from 'next/navigation'
 import {
   listNamingRecords, deleteNamingRecord, daysAgoLabel,
   NAMING_RELATION_COLOR, namingRelationGroup, namingRelationLabel,
-  type NamingRecord,
+  type NamingRecord, type NamingKind,
 } from '@/lib/saju/namingRecords'
 import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
 import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
+
+// ══════════════════════════════════════════════════════════════════
+//  ★2026-08-01 — 보관함에 «풀이» 와 «작명» 을 가르는 탭을 넣습니다
+//
+//   ⚠️ 옛 기록에는 kind 가 없어 «풀이» 로 들어옵니다. 하나도 안 사라집니다.
+//   ⚠️ 색은 «작명» 만 도드라지게 둡니다 —
+//      풀이는 지금처럼 관계 배지(은은한 톤)를 그대로 씁니다.
+// ══════════════════════════════════════════════════════════════════
+
+type FilterKey = '전체' | '풀이' | '작명'
+const FILTERS: FilterKey[] = ['전체', '풀이', '작명']
+const FILTER_LABEL: Record<FilterKey, string> = {
+  전체: '전체', 풀이: '이름 풀이', 작명: '작명 보관함',
+}
+
+/** 작명 기록에만 붙는 도드라지는 태그 */
+const KIND_TAG: Partial<Record<NamingKind, { label: string; bg: string; fg: string }>> = {
+  개명: { label: '개명', bg: '#8f3d0e', fg: '#fff' },
+  신생아: { label: '신생아', bg: '#4a7c59', fg: '#fff' },
+}
+
+/** ★손맛 — 눌림 모션 (요청 6번) */
+const PRESS = {
+  transition: 'all .12s cubic-bezier(.4,0,.2,1)',
+} as const
 
 const GRADE_COLOR: Record<string, string> = {
   '좋음': '#4a9450',
@@ -36,6 +61,11 @@ function NamingStorageInner() {
 
   const [records, setRecords] = useState<NamingRecord[] | null>(null)
   const [confirmDel, setConfirmDel] = useState<NamingRecord | null>(null)
+  const [filter, setFilter] = useState<FilterKey>('전체')
+
+  /** ★탭에 맞춰 거릅니다. «작명» 은 풀이가 아닌 것 전부 (개명·신생아) */
+  const shownRecords = (records ?? []).filter(r =>
+    filter === '전체' ? true : filter === '풀이' ? r.kind === '풀이' : r.kind !== '풀이')
   const [deleting, setDeleting] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)   // "누구 이름을 볼까요?" 사람 선택
 
@@ -91,11 +121,51 @@ function NamingStorageInner() {
           </div>
         )}
 
+        {/* ★필터 탭 — 전체 / 이름 풀이 / 작명 보관함 */}
+        {records && records.length > 0 && (
+          <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+            {FILTERS.map(k => {
+              const on = filter === k
+              const n = k === '전체' ? records.length
+                : k === '풀이' ? records.filter(x => x.kind === '풀이').length
+                : records.filter(x => x.kind !== '풀이').length
+              return (
+                <button key={k} onClick={() => setFilter(k)}
+                  aria-pressed={on}
+                  style={{
+                    ...PRESS,
+                    flex: 1, padding: '9px 6px', borderRadius: 11, cursor: 'pointer',
+                    fontSize: 12, fontWeight: on ? 600 : 400,
+                    background: on ? '#c8783c' : '#FFFBF7',
+                    color: on ? '#fff' : '#6b5340',
+                    border: `0.5px solid ${on ? '#c8783c' : '#f0e0d5'}`,
+                  }}>
+                  {FILTER_LABEL[k]}
+                  <span style={{ fontSize: 10, opacity: .75, marginLeft: 4 }}>{n}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {/* ★고른 탭에 아무것도 없을 때 — «전체가 비었을 때» 와 다릅니다 */}
+        {records && records.length > 0 && shownRecords.length === 0 && (
+          <div style={{
+            textAlign: 'center', padding: '30px 16px', color: '#8a7063',
+            fontSize: 12, lineHeight: 1.7,
+          }}>
+            {filter === '작명'
+              ? '아직 작명 기록이 없어요. 아래에서 새로 지어 보세요.'
+              : '이 갈래에는 아직 기록이 없어요.'}
+          </div>
+        )}
+
         {/* 카드 목록 */}
-        {records && records.map(r => {
+        {records && shownRecords.map(r => {
           const group = namingRelationGroup(r.relation)
           const relColor = NAMING_RELATION_COLOR[group]
           const relLabel = namingRelationLabel(r.relation)
+          const kindTag = KIND_TAG[r.kind]
           return (
             <div key={r.id} onClick={() => router.push(`/manseryeok/naming/diagnosis?recordId=${r.id}`)}
               style={{
@@ -119,16 +189,32 @@ function NamingStorageInner() {
                   }}>
                     {r.hangulName || '이름'}
                   </span>
-                  <span style={{
-                    fontSize: 10, color: relColor, background: `${relColor}1A`,
-                    padding: '2px 8px', borderRadius: 10, flexShrink: 0,
-                  }}>
-                    {relLabel}
-                  </span>
+                  {/* ★작명이면 도드라지는 태그, 풀이면 지금처럼 은은한 관계 태그 */}
+                  {kindTag ? (
+                    <span style={{
+                      fontSize: 10, fontWeight: 600, color: kindTag.fg, background: kindTag.bg,
+                      padding: '2px 8px', borderRadius: 10, flexShrink: 0,
+                    }}>
+                      {kindTag.label}
+                    </span>
+                  ) : (
+                    <span style={{
+                      fontSize: 10, color: relColor, background: `${relColor}1A`,
+                      padding: '2px 8px', borderRadius: 10, flexShrink: 0,
+                    }}>
+                      {relLabel}
+                    </span>
+                  )}
                 </div>
                 <div style={{ fontSize: 11, color: '#5c3a1e' }}>
-                  {r.overallGrade ? (
+                  {/* ★작명이면 순위·보완 기운을, 풀이면 지금처럼 종합 등급을 */}
+                  {kindTag && r.rank ? (
+                    <span style={{ color: '#8f3d0e', fontWeight: 600 }}>{r.rank}순위 추천 · </span>
+                  ) : r.overallGrade ? (
                     <span style={{ color: GRADE_COLOR[r.overallGrade] ?? '#b4785a' }}>종합 {r.overallGrade} · </span>
+                  ) : ''}
+                  {kindTag && r.filled?.length ? (
+                    <span style={{ color: '#4a7c59' }}>{r.filled.join('·')} 보완 · </span>
                   ) : ''}
                   {daysAgoLabel(r.createdAt)}
                 </div>
@@ -153,10 +239,12 @@ function NamingStorageInner() {
         {records && (
           <button onClick={() => setPickerOpen(true)}
             style={{
+              ...PRESS,
               width: '100%', marginTop: 8, padding: 14, borderRadius: 12,
               background: '#c8783c', border: 'none', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer',
             }}>
-            + 새 이름 풀이하기
+            {/* ★2026-08-01 — 버튼을 하나로 모았습니다 (요청 1-3) */}
+            + 새 이름 풀이 / 작명하기
           </button>
         )}
       </div>

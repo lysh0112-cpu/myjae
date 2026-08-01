@@ -672,6 +672,9 @@ function DiagnosisInner() {
         } : null
         const saved = await saveNamingRecord({
           chars,
+          // ★2026-08-01 — 보관함 필터용. 기본값과 같지만 «적어 둡니다» —
+          //   나중에 기본값이 바뀌어도 이 화면의 뜻이 안 흔들립니다
+          kind: '풀이',
           relation: targetRelation,
           person,
           result: data.result as DiagnoseResult,

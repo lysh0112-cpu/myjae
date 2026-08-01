@@ -201,5 +201,45 @@ console.log('\n━━ ⑯-g ★이름 풀이 재료·프롬프트 (2026-08-01 �
   check(/본다는|보는 견해/.test(api), `바른 어투 예시가 함께 있습니다`)
 }
 
+console.log('\n━━ ⑯-h ★보관함 — 풀이와 작명을 가르는가 (Phase 1 A) ━━')
+{
+  const rec = readFileSync('lib/saju/namingRecords.ts', 'utf8')
+  const sto = readFileSync('app/manseryeok/naming/diagnosis/storage/page.tsx', 'utf8')
+  const newres = readFileSync('app/manseryeok/naming/rename/newresult/page.tsx', 'utf8')
+  const diag = readFileSync('app/manseryeok/naming/diagnosis/page.tsx', 'utf8')
+
+  // ① 종류 표시가 «input_data 안» 에 들어가는가
+  check(/export type NamingKind/.test(rec), `NamingKind 타입이 있습니다`)
+  check(/kind\?: NamingKind/.test(rec), `input_data 블롭에 kind 가 «선택값» 으로 들어갑니다`)
+  // ⚠️ service_type 을 나누면 «이미 쌓인 기록» 이 목록에서 사라집니다. 나누지 않았는지 봅니다
+  check(/\.eq\('service_type', serviceType\)/.test(rec),
+    `목록 조회가 여전히 service_type 하나로 봅니다 (옛 기록이 안 사라집니다)`)
+  check(/DEFAULT_NAMING_KIND: NamingKind = '풀이'/.test(rec),
+    `★kind 가 없는 «옛 기록» 은 «풀이» 로 봅니다`)
+  check(/kind: blob\?\.kind \?\? DEFAULT_NAMING_KIND/.test(rec),
+    `읽을 때 기본값으로 메웁니다`)
+
+  // ② 두 화면이 «자기 종류» 를 적는가
+  check(/kind: '개명'/.test(newres), `개명 결과가 «개명» 으로 저장합니다`)
+  check(/kind: '풀이'/.test(diag), `이름 풀이가 «풀이» 로 저장합니다`)
+
+  // ③ 화면 — 필터 탭 · 태그 · 통합 버튼
+  check(/FILTERS/.test(sto) && /shownRecords/.test(sto), `필터 탭과 걸러진 목록이 있습니다`)
+  for (const t of ['전체', '이름 풀이', '작명 보관함']) {
+    check(sto.includes(t), `탭 「${t}」 가 있습니다`)
+  }
+  check(/KIND_TAG/.test(sto), `작명에 붙는 «도드라지는» 태그가 있습니다`)
+  check(/aria-pressed/.test(sto), `탭에 aria-pressed 가 있습니다`)
+  check(/새 이름 풀이 \/ 작명하기/.test(sto), `★하단 버튼이 «하나» 로 모였습니다`)
+  check(!/\+ 새 이름 풀이하기</.test(sto), `옛 버튼 문구가 남아 있지 않습니다`)
+
+  // ④ 손맛 — 눌림 모션 (요청 6)
+  check(/cubic-bezier\(\.4,0,\.2,1\)/.test(sto), `누를 때 반응하는 모션이 걸려 있습니다`)
+
+  // ⑤ ⚠️ 옛 기록이 «안 사라지는가» — 가장 중요한 검사
+  check(!/\.eq\('service_type', 'renaming'\)/.test(rec) && !/serviceType: 'renaming'/.test(newres),
+    `★service_type 을 새로 나누지 «않았습니다» (나누면 옛 기록이 목록에서 사라집니다)`)
+}
+
 console.log(`\n━━ 만세력 화면 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail > 0) process.exit(1)

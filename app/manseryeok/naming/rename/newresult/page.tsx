@@ -185,6 +185,8 @@ function NewResultInner() {
         //   담기는 값은 같은 모양이라 캐스팅으로 맞춘다.
         commentary: (cur.commentary ?? null) as Record<string, unknown> | null,
         serviceType: 'naming',
+        // ★2026-08-01 — 보관함에서 «작명» 으로 갈립니다 (옛 기록은 «풀이» 로 남습니다)
+        kind: '개명',
       })
       // ★실패해도 alert 로 막지 않는다. 고객이 부른 게 아니라 자동 저장이다.
       if (res.ok && res.id) {
