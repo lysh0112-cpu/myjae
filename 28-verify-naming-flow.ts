@@ -214,6 +214,38 @@ console.log('\n━━ ⑲-h ⚠️ 옛 개명 손님이 «안 깨지는가» ━
   }
 }
 
+console.log('\n━━ ⑲-H 🔴 보관함에서 선명장을 «다시» 뽑을 수 있는가 (43부 26차) ━━')
+{
+  const diag = read('app/manseryeok/naming/diagnosis/page.tsx')
+  const dCode = codeOf(diag)
+  const rec = read('lib/saju/namingRecords.ts')
+
+  // ① 🔴 저장이 «안 된 것이 아니라» 뽑을 길이 없었습니다
+  check(/NamingCertificateButton/.test(dCode),
+    `★★보관함 다시보기에 선명장 버튼이 있습니다`)
+  check(/recKind && recKind !== '풀이'/.test(dCode),
+    `★작명 기록에만 답니다 (풀이 기록에는 안 답니다)`)
+  check(/setRecKind\(rec\.kind/.test(dCode), `기록의 갈래를 읽습니다`)
+
+  // ② 필요한 값이 «기록에» 다 있는가 — 없으면 종이가 빕니다
+  check(/result: DiagnoseResult \| null/.test(rec), `기록에 판정(4격 포함)이 담깁니다`)
+  check(/commentary: NamingResultSnapshot\['commentary'\]/.test(rec),
+    `기록에 풀이(요약 총평 포함)가 담깁니다`)
+  check(/chars: \(NameChar \| null\)\[\]/.test(rec), `기록에 글자(획수·오행·훈)가 담깁니다`)
+  check(/chongpyeong\?: string/.test(dCode) || /chongpyeong/.test(dCode),
+    `★저장된 «요약 총평» 을 그대로 씁니다`)
+
+  // ③ ⚠️ AI 를 «다시 부르지» 않는가 — 다시 부르면 돈이 나가고 글도 달라집니다
+  check(/재계산·AI 재호출 없이 저장된 풀이를 그대로/.test(diag),
+    `★기록을 그대로 씁니다 — AI 를 다시 부르지 않습니다`)
+  check(/result\.suri\.gyeok/.test(dCode),
+    `★4격도 저장된 값에서 꺼냅니다 (다시 재지 않습니다)`)
+
+  // ④ 배지 규칙이 결과 화면과 «같은가»
+  check(/\['self', '본인', '나'\]/.test(dCode),
+    `⚠️ 「나 작명」이 되지 않게 막았습니다 (결과 화면과 같은 규칙)`)
+}
+
 console.log('\n━━ ⑲-G 🔴 성씨는 «가문 선택» 이지 «사주 추천» 이 아니다 (43부 23차) ━━')
 {
   const nh = codeOf(S.nh)

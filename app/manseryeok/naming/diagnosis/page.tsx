@@ -33,6 +33,11 @@ import PerspectiveAccordion from '@/app/manseryeok/components/PerspectiveAccordi
 // ★2026-07-30 (3단계-b) — 관점별 별점
 import type { PerspectiveStar, StarResult } from '@/lib/saju/starRating'
 import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
+// ★2026-08-01 (43부 26차) — 보관함에서도 A4 선명장을 뽑습니다
+import NamingCertificateButton, {
+  type CertChar, type CertGyeok,
+} from '@/app/manseryeok/naming/components/NamingCertificate'
+import { soundOhaengOf } from '@/lib/saju/sound/normalize'
 
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
 
@@ -276,6 +281,17 @@ function DiagnosisInner() {
   const [nameInput, setNameInput] = useState('')
   const [syllables, setSyllables] = useState<string[]>([])
   const [chars, setChars] = useState<(NameChar | null)[]>([])
+  /**
+   * ★2026-08-01 (43부 26차) — 보관함에서 열었을 때 «작명 기록인가» (대표님 지적)
+   *
+   *  🔴 [무엇이 있었나]  선명장은 결과 화면에서만 뽑을 수 있었습니다.
+   *    보관함에서 다시 열면 «버튼이 없어» 매번 새로 지어야 했습니다.
+   *    ⚠️ 저장이 «안 된 것이 아닙니다» — 필요한 값(글자·풀이·4격)은 전부 기록에
+   *       들어 있었는데, 그것으로 종이를 뽑는 «길» 이 없었습니다.
+   *  ★그래서 보관함 다시보기에도 선명장 버튼을 답니다. 다시 짓지 않습니다.
+   */
+  const [recKind, setRecKind] = useState<string | null>(null)
+  const [recRelation, setRecRelation] = useState<string | null>(null)
   /** ★2026-07-31 (40부 3차) 두음법칙 안내 — 판정은 «바꾸지 않습니다». 알려 주기만 합니다 */
   const [dueumMsg, setDueumMsg] = useState<string | null>(null)
 
@@ -413,6 +429,9 @@ function DiagnosisInner() {
           setChars(rec.chars)
           setSyllables(rec.chars.filter(Boolean).map((c) => c!.hangul))
           setSavedRecordId(rec.id)
+          // ★작명 기록이면 선명장을 뽑을 수 있습니다 (풀이 기록에는 안 답니다)
+          setRecKind(rec.kind ?? null)
+          setRecRelation(rec.relation ?? null)
           setViewOnly(true)
           setStep('result')
         }
@@ -1002,6 +1021,63 @@ function DiagnosisInner() {
                   fillElements={namingFill}
                   careerHref={careerHref}
                 />
+
+                {/* ══════════════════════════════════════════════════════
+                    ★2026-08-01 (43부 26차) — 보관함에서도 A4 선명장 (대표님 지적)
+
+                     🔴 전에는 결과 화면에서만 뽑을 수 있었습니다.
+                        보관함에서 다시 열면 버튼이 없어 «매번 새로 지어야» 했습니다.
+                     ★기록에 든 값 그대로 뽑습니다 — AI 를 다시 부르지 «않습니다».
+                     ⚠️ 「풀이」 기록에는 달지 않습니다 — 그건 작명이 아닙니다.
+                    ══════════════════════════════════════════════════════ */}
+                {result && recKind && recKind !== '풀이' && chars.filter(Boolean).length > 0 && (
+                  <div style={{ marginTop: 14 }}>
+                    <NamingCertificateButton
+                      // ★관계까지 배지에 담습니다 — 결과 화면과 «같은 규칙» 입니다
+                      //   ⚠️ 「나 작명」이 되지 않게 self·본인·나는 뺍니다
+                      kind={recKind === '신생아'
+                        && recRelation && !['self', '본인', '나'].includes(recRelation)
+                        ? (recRelation as '신생아')
+                        : recKind === '신생아' ? '신생아' : '개명'}
+                      hangulName={chars.filter(Boolean).map(c => c!.hangul).join('')}
+                      hanjaName={chars.filter(Boolean).map(c => c!.hanja).join('')}
+                      chars={chars.filter(Boolean).map((c, i, arr): CertChar => ({
+                        hangul: c!.hangul, hanja: c!.hanja,
+                        strokes: c!.strokes,
+                        resourceOhaeng: String(c!.resourceOhaeng ?? ''),
+                        soundOhaeng: soundOhaengOf(c!.hangul) || '',
+                        meaning: (c as unknown as { meaning?: string })?.meaning || '',
+                        role: i < arr.length - (arr.length >= 3 ? 2 : 1) ? '성' : '이름',
+                      }))}
+                      gyeok={(result.suri.gyeok ?? []).map((g): CertGyeok => ({
+                        mark: g.key, label: g.label, sum: g.sum, name: g.name, un: g.un,
+                      }))}
+                      saju={saju.map(x => ({ pillar: x.pillar, stem: x.stem, branch: x.branch }))}
+                      birthText={info ? `${info.calType} ${infoYear}년 ${infoMonth}월 ${infoDay}일` : ''}
+                      birthHanja={info
+                        ? `${info.calType === '음력' ? '陰' : '陽'} ${infoYear}年 `
+                          + `${String(infoMonth).padStart(2, '0')}月 ${String(infoDay).padStart(2, '0')}日`
+                        : ''}
+                      gender={info?.gender === '여' ? '坤命' : info?.gender === '남' ? '乾命' : ''}
+                      yongsin={aptYongsin.yongsin ?? ''}
+                      lines={[
+                        ['음양', result.yinYang.grade],
+                        ['발음오행', result.soundFlow.grade],
+                        ['수리 4격', result.suri.grade],
+                        ['자원오행', result.resourceFlow.grade],
+                        ['사주와의 만남', result.yongsinBohwan.grade],
+                      ]}
+                      chongpyeong={(commentary as { chongpyeong?: string })?.chongpyeong || ''}
+                      yongsinLine={commentary?.yongsin?.name || ''}
+                      yongsinMeaning={commentary?.yongsin?.meaning || ''}
+                      conclusion={commentary?.conclusion || ''}
+                      issuedAt={(() => {
+                        const d = new Date()
+                        return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`
+                      })()}
+                    />
+                  </div>
+                )}
 
                 {/* ★2026-07-21 2차: 저장 표시를 상담 버튼 바로 위로 옮겼다.
                     사주·궁합·택일과 위치를 통일하기 위함. 저장은 원래부터 자동이었다. */}
