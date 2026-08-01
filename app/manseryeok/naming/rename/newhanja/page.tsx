@@ -15,9 +15,11 @@ import {
 } from '@/lib/saju/namingSession'
 // ★2026-07-30 (3단계) — hanja 표 단일 창구 + 후보 정렬 이관
 import {
-  HANJA_SELECT, listPolicy, rowOhaeng, rowStrokes, rowHanja,
+  HANJA_SELECT, listPolicy, rowOhaeng, rowStrokes, rowHanja, fetchHanjaReadings,
   type HanjaRow as SharedHanjaRow,
 } from '@/lib/saju/hanjaRow'
+// ★2026-08-01 (43부) 두음법칙 안내 — «판정은 바꾸지 않습니다» (교재는 표기음 그대로)
+import { dueumPairIfReal, dueumNotice } from '@/lib/saju/sound/dueum'
 import {
   buildSajuOhaengProfile, judgeResource, candidateScore, compareCandidates,
 } from '@/lib/saju/resourceJudge'
@@ -81,6 +83,21 @@ function NewHanjaInner() {
   //      ★기존 개명 손님의 화면은 한 글자도 달라지지 않습니다. (교훈 [폴백])
   // ══════════════════════════════════════════════════════════════
   const [target, setTarget] = useState<NamingTarget | null>(null)
+
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-01 (43부) 두음법칙 안내 — 감정 화면에만 있던 것을 이리로도
+  //
+  //   [무엇이 빠져 있었나]  40부에 넣은 안내가 «이름 감정» 에만 있었습니다.
+  //     그런데 두음이 갈리는 자리는 «성씨» 이고, 성씨 한자를 고르는 곳이 여기입니다.
+  //     ⚠️ 신생아는 여기서 «처음» 성씨 한자를 고릅니다 — 안내가 가장 필요한 자리인데
+  //        정작 없었습니다.
+  //
+  //   ⚠️⚠️ 판정을 «바꾸지 않습니다». 알려 주기만 합니다.
+  //      柳吉諒 을 「류길량」으로 쓰면 ★5.0, 「유길량」이면 ★4.0 — «둘 다 맞습니다».
+  //      교재는 표기음 그대로 봅니다(이재명 = 토·금·수).
+  //   ★그 한자가 «정말 두 음으로 실려 있을 때만» 뜹니다 (hanja 표에 물어봅니다).
+  // ══════════════════════════════════════════════════════════════
+  const [dueumMsg, setDueumMsg] = useState<string | null>(null)
 
   // ★2026-07-31 복성 — 성이 두 글자일 수 있어 배열로 둡니다.
   //   예전에는 저장 레코드의 chars[0] 만 집어서 남궁민수의 «궁» 이 통째로 사라졌습니다.
@@ -432,6 +449,17 @@ function NewHanjaInner() {
 
   function pickHanja(row: HanjaRow) {
     setChosen((prev) => ({ ...prev, [activeIdx]: row }))
+
+    // ★성씨 자리에서만 봅니다. 이름 가운데·끝 글자는 두음 자리가 아닙니다
+    //   (諒은 이름 끝에서 «량» 이 맞습니다)
+    const isSurnameSlot = slots[activeIdx]?.role === '성'
+    if (!isSurnameSlot) { setDueumMsg(null); return }
+    void (async () => {
+      const readings = await fetchHanjaReadings(
+        (h) => supabase.from('hanja').select('hangul').eq('hanja', h), rowHanja(row))
+      const p = dueumPairIfReal(row.hangul, readings, rowHanja(row))
+      setDueumMsg(p ? dueumNotice(p) : null)
+    })()
   }
 
   // 현재 tries 목록 읽기 (user_id 열쇠)
@@ -627,6 +655,23 @@ function NewHanjaInner() {
           )
         })}
       </div>
+
+      {/* ══════════════════════════════════════════════════════════
+          ★2026-08-01 (43부) 두음법칙 안내 — 개명·신생아 «둘 다» 에 뜹니다
+            ⚠️ 판정을 바꾸는 것이 아닙니다. 「류/유」 어느 쪽으로 적느냐로
+               발음오행 풀이가 달라지는 것을 «알려만» 줍니다. 둘 다 맞습니다.
+            ★정말 두 음으로 실려 있는 한자에만 뜹니다 (hanja 표를 보고 판단)
+          ══════════════════════════════════════════════════════════ */}
+      {dueumMsg && (
+        <div style={{
+          fontSize: 11, lineHeight: 1.7, color: '#5c3a1e',
+          background: 'rgba(200,120,60,0.07)', border: '1px solid rgba(200,120,60,0.25)',
+          borderRadius: 10, padding: '10px 12px', marginBottom: 14,
+        }}>
+          <span style={{ color: GOLD, fontWeight: 600 }}>알려 드립니다 · </span>
+          {dueumMsg}
+        </div>
+      )}
 
       {/* ★신생아 — 성씨 한자를 왜 묻는지 알려 줍니다 */}
       {pickSurname && activeIdx < surnameSlotCount && (

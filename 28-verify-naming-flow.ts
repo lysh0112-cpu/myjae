@@ -37,6 +37,10 @@ const P = {
   sto: 'app/manseryeok/naming/diagnosis/storage/page.tsx',
   home: 'app/home-new/page.tsx',
   rec: 'lib/saju/namingRecords.ts',
+  auto: 'app/manseryeok/naming/rename/auto/page.tsx',
+  hanja: 'app/manseryeok/naming/rename/hanja/page.tsx',
+  hrow: 'lib/saju/hanjaRow.ts',
+  rj: 'lib/saju/resourceJudge.ts',
 }
 const S = Object.fromEntries(Object.entries(P).map(([k, v]) => [k, read(v)])) as Record<keyof typeof P, string>
 
@@ -190,6 +194,77 @@ console.log('\n━━ ⑲-h ⚠️ 옛 개명 손님이 «안 깨지는가» ━
   for (const [n, c] of [['Step 2', S.nn], ['Step 3', S.nh], ['Step 4', S.nr]] as const) {
     check(!/SCORE_BASE|REL_SCORE/.test(codeOf(c)), `${n} 이 판정을 다시 하지 않습니다`)
   }
+}
+
+console.log('\n━━ ⑲-i 🔴 rename/auto 에 «가짜 데이터» 가 남아 있지 않은가 ━━')
+{
+  const code = codeOf(S.auto)
+  // 🔴 손으로 박아 둔 이름 열 개 — 어느 손님이 와도 «오씨 이름» 이 나왔습니다
+  check(!/吳娟熙|吳瑞潤|吳沇河|吳涓汐/.test(code), `★박아 놓은 이름(吳○○)이 코드에 없습니다`)
+  check(!/const ALL = \[/.test(code), `★손으로 적은 후보 배열이 없습니다`)
+  check(!/grade: '좋음'|grade: '보통'/.test(code), `★손으로 적은 «등급» 이 없습니다`)
+  check(!/사주\(용신\)에 맞춰 지은 이름입니다/.test(code),
+    `★사주를 안 보면서 «맞춰 지었다» 고 말하지 않습니다`)
+  // ⚠️ 파일을 지우지는 «않았습니다» — 옛 링크가 404 가 되지 않게 (교훈 AM)
+  check(existsSync(P.auto), `파일은 남아 있습니다 (옛 링크가 404 가 되지 않도록)`)
+  check(/rename\/newname/.test(code), `★엔진이 있는 곳으로 보냅니다`)
+  // 여기에 «또» 엔진을 붙이면 두 곳에서 갈립니다 (교훈 CJ)
+  check(!/recommendNames|NAME_DICT/.test(code),
+    `★추천 엔진을 여기 «다시» 붙이지 않았습니다 (Step 2 가 유일한 창구)`)
+}
+
+console.log('\n━━ ⑲-j ★두음법칙 안내가 «한자 고르는 화면» 에도 있는가 ━━')
+{
+  const nhCode = codeOf(S.nh)
+  // 두음이 갈리는 자리는 «성씨» 입니다. 성씨 한자를 고르는 곳이 여기입니다.
+  check(/dueumPairIfReal/.test(nhCode) && /dueumNotice/.test(nhCode),
+    `★개명·신생아 한자 화면에 두음 안내가 있습니다 (전에는 감정 화면에만)`)
+  check(/slots\[activeIdx\]\?\.role === '성'/.test(nhCode),
+    `★성씨 자리에서만 봅니다 (諒은 이름 끝에서 «량» 이 맞습니다)`)
+  check(/fetchHanjaReadings/.test(nhCode),
+    `★그 한자가 «정말 두 음으로 실려 있을 때만» 뜹니다 (hanja 표에 물어봅니다)`)
+  // ⚠️ 판정을 바꾸면 교재를 어깁니다 — 알려 주기만 해야 합니다
+  check(!/setSyllables|setChosen/.test(
+    nhCode.slice(nhCode.indexOf('dueumPairIfReal'), nhCode.indexOf('dueumPairIfReal') + 400)),
+    `★안내가 «판정을 바꾸지» 않습니다 (교재는 표기음 그대로)`)
+}
+
+console.log('\n━━ ⑲-k ★대법원 인명용 한자 — «없는 것을 지어내지» 않는가 ━━')
+{
+  const hrow = codeOf(S.hrow)
+  check(/court_name_use/.test(hrow), `표 칸 자리가 마련돼 있습니다`)
+  check(/export function courtNameUse/.test(hrow), `읽는 창구가 있습니다`)
+  // ⚠️ 지금은 «모름» 이 정상입니다. true 로 뭉개면 손님이 신고에서 되돌아옵니다
+  check(/typeof row\.court_name_use === 'boolean' \? row\.court_name_use : null/.test(hrow),
+    `★칸이 없으면 «모름(null)» 을 냅니다 — true 로 뭉개지 않습니다`)
+  // 세 화면에 «확인 권유» 가 있는가 (판정이 아닙니다)
+  for (const [n, src] of [['아기 작명 입구', S.nb], ['신생아·개명 한자', S.nh], ['개명 한자', S.hanja]] as const) {
+    check(/대법원 인명용 한자/.test(src), `${n} 화면에 안내가 있습니다`)
+  }
+  // ⚠️ 「우리 목록이 곧 대법원 표」 라고 말하면 안 됩니다
+  for (const [n, src] of [['newborn', S.nb], ['newhanja', S.nh], ['hanja', S.hanja]] as const) {
+    check(!/인명용 한자입니다|인명용 한자만 보여|인명용 한자로만 골랐/.test(src),
+      `${n} — 목록이 «대법원 표와 같다» 고 말하지 않습니다`)
+  }
+}
+
+console.log('\n━━ ⑲-l ★자원오행 배점 — «유지» 확정이 기록돼 있는가 ━━')
+{
+  const rj = S.rj
+  // ⚠️ 값이 바뀌지 않았는지 (20-verify 도 봅니다 — 여기서는 «기록» 을 봅니다)
+  check(/export const W_FLOW = 30/.test(rj) && /export const W_YONGSIN = 40/.test(rj),
+    `배점이 그대로입니다 (흐름 30 · 용신 40)`)
+  check(/\[확정\] 2026-08-01 \(43부\)/.test(rj),
+    `★「현행 유지」 확정이 코드에 적혀 있습니다`)
+  check(/measure:resource/.test(rj),
+    `★고치려는 다음 세션에게 «먼저 재라» 고 일러 둡니다`)
+  check(/같은 결정/.test(rj),
+    `★39부 3-1장 ①·교재 151쪽과 «같은 결정» 임이 적혀 있습니다`)
+  // 하네스가 «검사가 아님» 을 지킵니다 — verify 에 들어가면 배포가 느려집니다
+  const pkg = read('package.json')
+  check(!/29-measure/.test(JSON.parse(pkg).scripts.verify),
+    `★측정 하네스는 verify 체인에 «없습니다» (검사가 아니라 «자» 입니다)`)
+  check(/measure:resource/.test(pkg), `npm run measure:resource 로 잴 수 있습니다`)
 }
 
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)

@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "verify": "tsx 13-verify-18-daeun.ts && tsx 14-verify-exam-seven.ts && tsx 16-verify-naming.ts && tsx 18-verify-sound.ts && tsx 19-verify-eumyang.ts && tsx 20-verify-resource.ts && tsx 21-verify-lunar.ts && tsx 22-verify-jijanggan.ts && tsx 23-verify-career-bridge.ts && tsx 24-verify-deps.ts && tsx 25-verify-manse-ui.ts && tsx 26-verify-namedict.ts && tsx 27-verify-recommend.ts && tsx 28-verify-naming-flow.ts",
+    "verify": "tsx 13-verify-18-daeun.ts && tsx 14-verify-exam-seven.ts && tsx 16-verify-naming.ts && tsx 18-verify-sound.ts && tsx 19-verify-eumyang.ts && tsx 20-verify-resource.ts && tsx 21-verify-lunar.ts && tsx 22-verify-jijanggan.ts && tsx 23-verify-career-bridge.ts && tsx 24-verify-deps.ts && tsx 25-verify-manse-ui.ts && tsx 26-verify-namedict.ts && tsx 27-verify-recommend.ts && tsx 28-verify-naming-flow.ts && tsx 30-e2e-naming-flow.ts",
     "verify:daeun": "tsx 13-verify-18-daeun.ts",
     "verify:gyeokguk": "python3 04-verify-19-cases.py",
     "verify:hap": "python3 05-verify-hap-78-83.py",
@@ -27,7 +27,8 @@
     "verify:namedict": "tsx 26-verify-namedict.ts",
     "verify:recommend": "tsx 27-verify-recommend.ts",
     "verify:namingflow": "tsx 28-verify-naming-flow.ts",
-    "measure:resource": "tsx 29-measure-resource-weights.ts"
+    "measure:resource": "tsx 29-measure-resource-weights.ts",
+    "verify:namingE2E": "tsx 30-e2e-naming-flow.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",

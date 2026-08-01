@@ -63,6 +63,18 @@ export interface HanjaRow {
   strokes_actual?: number | null
   is_name_use?: boolean | null
   is_active?: boolean | null
+  /**
+   * ★대법원 «인명용 한자» 인가 — 🔴 아직 DB 에 «없는» 칸입니다 (2026-08-01 · 43부)
+   *
+   * ⚠️ is_name_use 와 «다른 것» 입니다. 헷갈리지 마십시오.
+   *     is_name_use  = 작명 기준 — 자의품격 不用 을 거른 것 (우리 판단)
+   *     court_name_use = 대법원 인명용 한자표에 실렸는가 (★법)
+   *   출생신고·개명신고는 «법» 쪽만 봅니다. 뜻이 좋아도 표에 없으면 못 씁니다.
+   *
+   * ★이 칸이 들어오면 courtNameUse() 가 «모름» 대신 참·거짓을 냅니다.
+   *   그때 화면 안내를 «판정» 으로 올릴 수 있습니다. 코드는 안 고쳐도 됩니다.
+   */
+  court_name_use?: boolean | null
   review_note?: string | null
 
   /** id 는 표에 있으나 화면이 쓰지 않습니다 */
@@ -124,6 +136,35 @@ export function rowNameUse(row: HanjaRow): boolean {
   if (typeof row.is_name_use === 'boolean') return row.is_name_use
   if (typeof row.grade === 'string') return row.grade.trim() !== '不用'
   return true
+}
+
+/**
+ * ★대법원 인명용 한자인가 — 🔴 «모름(null)» 이 정상입니다 (2026-08-01 · 43부)
+ *
+ * ══════════════════════════════════════════════════════════════════
+ *  [왜 지금은 언제나 «모름» 인가]
+ *    hanja 표에 그 칸이 아직 없습니다. 대조할 원본을 받지 못했습니다.
+ *
+ *  ⚠️⚠️ «모름» 을 true 로 뭉개지 마십시오.
+ *     우리 목록(자의품격 기준)이 대법원 표와 «같다는 근거가 없습니다».
+ *     같다고 말해 버리면 손님이 출생신고에서 되돌아옵니다 —
+ *     이름을 다시 지어야 하고, 그 책임이 우리에게 옵니다.
+ *     ★없는 것을 지어내지 않습니다. (교훈 EJ)
+ *
+ *  [그래서 지금 하는 일]
+ *    화면은 «판정» 대신 «확인 권유» 를 냅니다 —
+ *      「출생신고에는 대법원 인명용 한자만 쓸 수 있습니다. 한 번 더 확인해 주세요」
+ *    ★한자 고르는 화면 둘(newhanja·hanja)과 아기 작명 입구에 있습니다.
+ *
+ *  [칸이 들어오면]
+ *    ① SQL 로 court_name_use 를 채우고
+ *    ② listPolicy 에 배지 한 줄을 더하면 됩니다 (거르지는 «마십시오» —
+ *       50개 음이 후보 0개가 되던 일이 不用 에서 이미 있었습니다)
+ *    ③ 그때 화면 문구를 «권유» 에서 «판정» 으로 올리십시오.
+ * ══════════════════════════════════════════════════════════════════
+ */
+export function courtNameUse(row: HanjaRow): boolean | null {
+  return typeof row.court_name_use === 'boolean' ? row.court_name_use : null
 }
 
 /** 목록에 낼 줄인가 (중복으로 «쉬게» 한 줄을 제외) */

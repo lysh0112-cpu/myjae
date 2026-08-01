@@ -525,6 +525,26 @@ function HanjaInner() {
             </>
           )}
 
+          {/* ══════════════════════════════════════════════════════
+              ★2026-08-01 (43부) — 대법원 인명용 한자 «확인 권유»
+                ⚠️ «판정이 아닙니다». 우리 목록은 자의품격(不用) 기준으로 고른 것이고,
+                   대법원 인명용 한자표와 «같다는 근거가 없습니다».
+                   같다고 말하면 손님이 개명신고에서 되돌아옵니다.
+                🔴 hanja 표에 court_name_use 칸이 들어오면 «판정» 으로 올리십시오.
+                   lib/saju/hanjaRow.ts 의 courtNameUse() 를 보십시오.
+              ══════════════════════════════════════════════════════ */}
+          {yongsinReady && !loadingList && hanjaList.length > 0 && (
+            <div style={{
+              marginTop: 16, borderRadius: 12, padding: '10px 13px',
+              background: CARD, border: '0.5px solid rgba(250,199,117,0.12)',
+              fontSize: 11, color: SUB, lineHeight: 1.7,
+            }}>
+              ⚠️ 개명신고에는 <b>대법원 인명용 한자</b>만 쓸 수 있습니다.
+              여기 목록은 작명 기준으로 고른 것이라, 고르신 한자가 그 표에 있는지
+              <b> 대법원 전자가족관계등록시스템</b>에서 한 번 더 확인해 주세요.
+            </div>
+          )}
+
           {yongsinReady && !loadingList && hanjaList.length > 0 && (
             <div style={{ marginTop: 20, borderRadius: 16, padding: '13px 16px',
               background: activeIdx !== null && chosen[activeIdx] ? 'rgba(250,199,117,0.16)' : CARD,
