@@ -330,7 +330,19 @@ console.log('\n━━ ⑲-B ★A4 선명장(撰名狀) 양식 (43부 10차) ━�
   check(/const chongLen =/.test(cert) && /const chongSize =/.test(cert),
     `★總評 글자 수를 세어 크기를 고릅니다`)
   check(/chongLen > 900 \? 7\.6/.test(cert),
-    `⚠️ 무한정 줄이지 않습니다 — 읽을 수 있는 크기를 지킵니다`)
+    `첫 크기를 글자 수로 어림잡습니다`)
+  // 🔴★15차 — 어림만으로는 800·1100자에서 «넘쳤습니다». 브라우저가 재게 했습니다
+  check(/function fitToPage/.test(cert), `★브라우저가 «재서» 한 장에 맞춥니다`)
+  check(/height:279mm/.test(cert) && /ruler\.offsetHeight/.test(cert),
+    `⚠️ mm→px 를 «자를 만들어» 잽니다 (숫자를 박으면 기기마다 어긋납니다)`)
+  check(/var minPx = 7\.2/.test(cert),
+    `★7.2pt 를 «바닥» 으로 둡니다 — 그보다 작으면 못 읽습니다`)
+  check(/const trimChong/.test(cert) && /CHONG_MAX = 1150/.test(cert),
+    `★너무 길면 «글을» 줄입니다 (글자만 줄이면 5.6pt 가 됩니다)`)
+  check(/lastIndexOf\('\. '\)/.test(cert),
+    `⚠️ 문장 «가운데» 를 자르지 않습니다 — 마침표에서 끊습니다`)
+  check(/자세한 풀이는 앱에서 이어집니다/.test(S.cert),
+    `★잘렸다는 것을 «숨기지 않습니다»`)
   check(/AI 가 씁니다 — 이름마다 길이가 «크게» 다릅니다/.test(S.cert),
     `★「한 번 재서 맞췄으니 됐다」가 안 통하는 까닭이 적혀 있습니다`)
 
@@ -343,7 +355,8 @@ console.log('\n━━ ⑲-B ★A4 선명장(撰名狀) 양식 (43부 10차) ━�
     `★AI 가 쓴 그 글을 «그대로» 싣습니다 (화면과 갈리지 않게)`)
   check(/class="cl"/.test(cert) && /class="cend"/.test(cert),
     `「이 이름은」·「맺음」 이 눈으로 갈립니다`)
-  check(/\(p\.yongsinMeaning \|\| p\.conclusion\)/.test(cert),
+  // ★15차에 «줄인 뒤» 의 값(cMean·cEnd)을 봅니다 — 변수 이름이 바뀌었습니다
+  check(/\$\{\(cMean \|\| cEnd\) \?/.test(cert),
     `⚠️ 둘 다 없으면 總評 칸을 «안 그립니다» (빈 제목만 남지 않게)`)
 }
 

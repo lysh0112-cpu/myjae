@@ -159,8 +159,32 @@ export function buildCertificateHtml(p: NamingCertificateProps): string {
   //      그보다 길면 «넘치더라도» 읽을 수 있는 크기를 지킵니다.
   //      (그런 이름은 아직 본 적이 없지만, 언젠가 옵니다)
   // ══════════════════════════════════════════════════════════════
-  const chongLen = (p.yongsinLine ?? '').length
-    + (p.yongsinMeaning ?? '').length + (p.conclusion ?? '').length
+  /**
+   * ★總評이 «너무 길면» 문장 단위로 줄입니다 (2026-08-01 · 43부 15차)
+   *
+   *  🔴 [왜]  글자만 줄이면 1,400자에서 6.5pt, 2,000자에서 5.6pt 가 됩니다.
+   *     한 장에는 담기지만 «어르신이 못 읽으십니다». 그건 담긴 것이 아닙니다.
+   *  ★그래서 «읽을 수 있는 크기(7.6pt)» 를 먼저 지키고, 넘치는 만큼 글을 줄입니다.
+   *  ⚠️ 중간을 자르지 «않습니다» — 문장이 끊기면 말이 이상해집니다.
+   *     마침표에서 끊고, 잘렸다는 것을 «숨기지 않습니다».
+   *  ⚠️ 화면에는 «전문» 이 그대로 있습니다. 종이만 줄입니다.
+   */
+  const trimChong = (t: string, max: number): string => {
+    const v = (t ?? '').trim()
+    if (v.length <= max) return v
+    const cut = v.slice(0, max)
+    const at = cut.lastIndexOf('. ')
+    const kept = at > max * 0.5 ? cut.slice(0, at + 1) : cut.trimEnd()
+    return kept + ' (…자세한 풀이는 앱에서 이어집니다)'
+  }
+  // ⚠️ 한 장에 «읽을 수 있는 크기» 로 담기는 한계입니다 — 재서 얻은 값입니다
+  const CHONG_MAX = 1150
+  const cLine = p.yongsinLine ?? ''
+  const room = Math.max(300, CHONG_MAX - cLine.length)
+  const cMean = trimChong(p.yongsinMeaning ?? '', Math.round(room * 0.6))
+  const cEnd = trimChong(p.conclusion ?? '', room - cMean.length)
+
+  const chongLen = cLine.length + cMean.length + cEnd.length
   const chongSize = chongLen > 900 ? 7.6 : chongLen > 620 ? 8.3 : 9.2
   const chongLead = chongLen > 900 ? 1.55 : chongLen > 620 ? 1.62 : 1.72
 
@@ -312,10 +336,10 @@ export function buildCertificateHtml(p: NamingCertificateProps): string {
       </div>
     </div>
 
-    ${(p.yongsinMeaning || p.conclusion) ? `<h2>總 評</h2><div class="chong">
-      ${p.yongsinLine ? `<p class="cl">${esc(p.yongsinLine)}</p>` : ''}
-      ${p.yongsinMeaning ? `<p>${esc(p.yongsinMeaning)}</p>` : ''}
-      ${p.conclusion ? `<p class="cend">${esc(p.conclusion)}</p>` : ''}
+    ${(cMean || cEnd) ? `<h2>總 評</h2><div class="chong">
+      ${cLine ? `<p class="cl">${esc(cLine)}</p>` : ''}
+      ${cMean ? `<p>${esc(cMean)}</p>` : ''}
+      ${cEnd ? `<p class="cend">${esc(cEnd)}</p>` : ''}
     </div>` : ''}
 
     <div class="foot">
@@ -333,6 +357,49 @@ export function buildCertificateHtml(p: NamingCertificateProps): string {
     </div>
 
   </div></div></div>
+
+  <script>
+  /* ══════════════════════════════════════════════════════════════
+     ★2026-08-01 (43부 15차) — A4 «한 장» 을 브라우저가 «재서» 맞춥니다
+
+      🔴 [왜 필요한가]  總評은 AI 가 씁니다. 길이가 이름마다 크게 다릅니다.
+         글자 수로 크기를 어림잡아 봤지만 800자·1100자에서 넘쳤습니다 —
+         글자 수와 «줄 수» 가 비례하지 않기 때문입니다
+         (줄바꿈 자리에 따라 한 줄이 통째로 늘어납니다).
+         ⚠️ 한 장을 넘기면 «인장과 원장 이름» 이 둘째 장으로 밀립니다.
+            증서에서 그것만은 있으면 안 됩니다.
+
+      ★[방법]  실제 높이를 재서, 담길 때까지 總評 글자를 줄입니다.
+      ⚠️ 6.4pt 를 «바닥» 으로 둡니다 — 그보다 작으면 어르신이 못 읽으십니다.
+         바닥까지 줄여도 안 담기면 «넘치는 편» 을 고릅니다.
+         못 읽는 증서보다 두 장이 낫습니다.
+      ⚠️ mm→px 는 «기기마다 다릅니다». 279mm 짜리 자를 만들어 그 자로 잽니다.
+         숫자를 박아 두면 어느 기기에서 반드시 어긋납니다.
+     ══════════════════════════════════════════════════════════════ */
+  (function fitToPage() {
+    var frame = document.querySelector('.frame')
+    var chong = document.querySelector('.chong')
+    if (!frame || !chong) return
+    /* ★279mm 가 몇 px 인지 «재서» 알아냅니다 (A4 297mm − 위아래 여백 9mm씩) */
+    var ruler = document.createElement('div')
+    ruler.style.cssText = 'position:absolute;visibility:hidden;height:279mm'
+    document.body.appendChild(ruler)
+    var limit = ruler.offsetHeight
+    document.body.removeChild(ruler)
+    if (!limit) return
+
+    var size = parseFloat(getComputedStyle(chong).fontSize)
+    /* ★바닥 7.2pt — 그보다 작으면 읽기 어렵습니다.
+       ⚠️ 위에서 글을 이미 줄여 두었으므로 여기까지 내려갈 일은 드뭅니다. */
+    var minPx = 7.2 * (limit / 279) * (25.4 / 72)
+    var guard = 0
+    while (frame.offsetHeight > limit && size > minPx && guard++ < 60) {
+      size -= 0.3
+      chong.style.fontSize = size + 'px'
+      chong.style.lineHeight = '1.52'
+    }
+  })()
+  </script>
 </body></html>`
 }
 
