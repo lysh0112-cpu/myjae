@@ -599,6 +599,18 @@ function NewResultInner() {
     <main style={{ minHeight: '100vh', background: BG, maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       <Header router={router} />
+      {/* ★고르신 이름과 «다른 이름» 을 그리고 있으면 알려 드립니다 (43부 31차)
+          ⚠️ 조용히 다른 풀이를 보여 드리는 것이 가장 나쁩니다. */}
+      {nameMismatch && (
+        <div style={{
+          background: '#fff4f4', border: '1px solid #e8b4b4', borderRadius: 12,
+          padding: '10px 12px', margin: '8px 0 4px',
+          fontSize: 11.5, color: '#a33', lineHeight: 1.7,
+        }}>
+          ⚠️ 방금 고르신 이름을 불러오지 못했어요.
+          <br />아래는 <b>지난번에 지으신 이름</b>의 풀이입니다. 다시 지어 주세요.
+        </div>
+      )}
 
       {/* ══════════════════════════════════════════════════════════
           🔴★2026-08-01 (43부 20차) — 이름이 «두 번» 나오던 자리 (대표님 지적)
@@ -679,10 +691,22 @@ function NewResultInner() {
           // ★2026-08-01 (43부 20차) — 라벨을 «하나» 로 통일했습니다 (대표님 지시).
           //   전에는 「새로 지은 이름」·「아기에게 지어 드린 이름」 둘이 갈려 있었습니다.
           subtitle="내 아이를 위한 추천 이름"
-          // ★네 기준 요약을 «프레임 안» 으로 넘깁니다 (43부 20차)
-          //   ⚠️ 위쪽에 따로 두면 이름·요약이 두 번 나옵니다.
-          summaryRows={rows.map(r => ({ label: r.label, grade: r.f.grade }))}
-          summaryOverall={result?.overallGrade ?? ''}
+          // ══════════════════════════════════════════════════════
+          //  ★2026-08-01 (43부 31차) — 요약 카드를 «끕니다» (대표님 지시)
+          //
+          //   [무엇이 있었나]  20차에 위쪽 중복을 없애며 요약표를 이 프레임 안으로
+          //     옮겼습니다. 그 뒤 30차에 아코디언마다 별점이 붙었습니다.
+          //     → ★같은 말을 두 번 하게 됐습니다. 자리만 잡아먹습니다.
+          //
+          //   🔴 게다가 이 카드는 «어긋나» 있었습니다 —
+          //     번호·부연설명을 «자리(index)» 로 붙였는데 여기서 넘기는 차례가
+          //     아코디언과 달라, 「一. 사주 보완(용신) — 획수에 담긴 음과 양」처럼
+          //     제목과 설명이 짝이 안 맞았습니다.
+          //     ⚠️ 자리로 잇지 말고 «열쇠» 로 이어야 하는 자리였습니다.
+          //
+          //   ★배선만 끊습니다. 부품(summaryRows)은 남겨 둡니다 —
+          //     되살릴 때는 «반드시 열쇠로» 이으십시오. (교훈 AM)
+          // ══════════════════════════════════════════════════════
           badge={{ kind: badgeKind }}
           saju={saju}
           solarYear={solar?.year ?? 0}

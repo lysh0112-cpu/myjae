@@ -451,11 +451,19 @@ console.log('\n━━ ⑲-E ★명품작명 결과 화면 · 컷라인 (43부 20
     `★위쪽 «중복 이름» 이 없습니다`)
   check(!/이름 분석 \(4가지 기준\)/.test(nr),
     `★위쪽 «중복 요약표» 가 없습니다`)
-  check(/summaryRows=\{rows\.map/.test(nr),
-    `★요약표를 «프레임 안» 으로 넘깁니다 (없앤 것이 아닙니다)`)
+  // ★2026-08-01 (43부 31차) — 요약 카드를 «껐습니다» (대표님 지시).
+  //   아코디언마다 별점이 붙어 «같은 말을 두 번» 하게 됐습니다.
+  check(!/summaryRows=\{rows\.map/.test(nr),
+    `★★요약 카드를 끄고 아코디언 별점 하나로 모았습니다`)
   check(/summaryRows\?: \{ label: string; grade: string \}\[\]/.test(view),
-    `프레임이 요약을 받습니다`)
-  check(/summaryOverall/.test(view) && /summaryOverall/.test(nr), `종합 한 줄도 함께 갑니다`)
+    `⚠️ 부품은 남겨 두었습니다 (배선만 끊음 · 교훈 AM)`)
+  check(/열쇠\(yinyang·baleum…\)를 함께 받아/.test(read('app/manseryeok/naming/components/NameAnalysisResultView.tsx')),
+    `★되살릴 때 «열쇠로 이으라» 고 적어 두었습니다 (자리로 이으면 어긋납니다)`)
+  // ★재 놓고 «안 쓰던» 값을 실제로 알려 드리는가
+  check(/\{nameMismatch && \(/.test(nr),
+    `★★고른 이름과 다른 이름을 그리면 «알려 드립니다» (재 놓고 안 쓰던 값)`)
+  check(/방금 고르신 이름을 불러오지 못했어요/.test(S.nr),
+    `⚠️ 조용히 다른 풀이를 보여 드리지 않습니다`)
 
   // ② 라벨 통일
   check(/subtitle="내 아이를 위한 추천 이름"/.test(nr), `★라벨이 «하나» 로 통일됐습니다`)
