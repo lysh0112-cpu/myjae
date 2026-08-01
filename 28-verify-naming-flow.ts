@@ -212,6 +212,55 @@ console.log('\n━━ ⑲-h ⚠️ 옛 개명 손님이 «안 깨지는가» ━
   }
 }
 
+console.log('\n━━ ⑲-B ★A4 선명장(撰名狀) 양식 (43부 10차) ━━')
+{
+  const cert = codeOf(S.cert)
+  const nr = codeOf(S.nr)
+  // ① 전통 양식의 뼈대
+  for (const k of ['撰 名 狀', '劃　數', '音五行', '字源五行', '總 評',
+                   '위와 같이 作名하여 撰名狀을 드립니다', '作名之印']) {
+    check(S.cert.includes(k), `선명장에 「${k}」 가 있습니다`)
+  }
+  check(/乾命|坤命/.test(nr), `★남녀를 乾命·坤命 으로 적습니다`)
+  check(/陰' : '陽/.test(nr), `★양력·음력을 陽·陰 으로 적습니다`)
+  // ② 수리 4격
+  check(/CertGyeok/.test(cert) && /gy-name/.test(cert), `元亨利貞 4격 칸이 있습니다`)
+  check(/result\.suri\.gyeok/.test(nr),
+    `★4격을 diagnoseName 이 낸 값으로 «그대로» 싣습니다`)
+  check(!/공명격|건창격|입신격/.test(cert),
+    `⚠️ 격 이름을 작명서가 «지어내지» 않습니다 (교훈 BF)`)
+  // ③ 음오행 — 판정과 같은 창구
+  check(/soundOhaengOf\(c\.hangul\)/.test(nr),
+    `★音五行을 판정과 «같은 창구» 로 냅니다 (교훈 CJ)`)
+  check(!/ㄱ|ㄴ|ㅁ/.test(cert.slice(cert.indexOf('const oh ='), cert.indexOf('const oh =') + 200)),
+    `작명서가 초성표를 «따로 갖고» 있지 않습니다`)
+  // ④ 없는 값을 지어내지 않는가
+  check(/c\.meaning \|\| ''/.test(cert), `★훈음이 없으면 «비웁니다»`)
+  check(/meaning: \(c as \{ meaning\?: string \}\)\.meaning \|\| ''/.test(nr),
+    `저장된 글자에 훈음이 없어도 지어내지 않습니다`)
+  // ⑤ ⚠️ 인장은 «그림이 아니라» 글자 — 인쇄 설정에서 사라지지 않게
+  check(/class="seal"/.test(cert) && !/<img/.test(cert),
+    `★인장을 그림 파일로 넣지 «않았습니다» (배경 그림 끄기에서 사라지지 않게)`)
+  // ⑥ ⚠️ A4 «한 장» — 넘치면 증서 꼴이 안 납니다
+  check(/@page \{ size: A4/.test(cert), `A4 규격입니다`)
+  check(/성별은 info 가 아니라/.test(S.nr),
+    `★성별을 «작명 대상» 에서 받습니다 (남의 이름에 내 성별이 찍히지 않게)`)
+  // ⑦ HTML 안에 JSX 주석이 «찍혀 나오지» 않는가
+  check(!/\{\/\*/.test(cert), `⚠️ HTML 문자열 안에 JSX 주석이 남아 있지 않습니다`)
+
+  // ⑧ ★總評 — 「이름이 사주를 어떻게 돕는가」까지 담는가 (43부 11차)
+  //    ⚠️ 맺음말만 실으면 «왜 좋은 이름인지» 가 종이에 남지 않습니다.
+  check(/yongsinLine/.test(cert) && /yongsinMeaning/.test(cert),
+    `★總評에 «사주와의 만남» 을 담을 자리가 있습니다`)
+  check(/cur\.commentary\?\.yongsin\?\.name/.test(nr)
+     && /cur\.commentary\?\.yongsin\?\.meaning/.test(nr),
+    `★AI 가 쓴 그 글을 «그대로» 싣습니다 (화면과 갈리지 않게)`)
+  check(/class="cl"/.test(cert) && /class="cend"/.test(cert),
+    `「이 이름은」·「맺음」 이 눈으로 갈립니다`)
+  check(/\(p\.yongsinMeaning \|\| p\.conclusion\)/.test(cert),
+    `⚠️ 둘 다 없으면 總評 칸을 «안 그립니다» (빈 제목만 남지 않게)`)
+}
+
 console.log('\n━━ ⑲-A ★보관함 둘을 «따로» 운영하는가 (43부 9차) ━━')
 {
   const view = codeOf(S.sto)

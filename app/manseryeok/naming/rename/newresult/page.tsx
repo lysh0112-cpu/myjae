@@ -12,7 +12,11 @@ import { diagnoseName, type NameChar, type DiagnoseResult, type Grade } from '@/
 import { saveNamingRecord, updateNamingRecordResult } from '@/lib/saju/namingRecords'
 import ConsultButton from '@/app/components/common/ConsultButton'
 // ★2026-08-01 (43부 5차) — A4 작명서 (인쇄 · PDF)
-import NamingCertificateButton, { type CertChar } from '@/app/manseryeok/naming/components/NamingCertificate'
+import NamingCertificateButton, {
+  type CertChar, type CertGyeok,
+} from '@/app/manseryeok/naming/components/NamingCertificate'
+// ★2026-08-01 (43부 10차) — 선명장에 音五行을 적기 위해
+import { soundOhaengOf } from '@/lib/saju/sound/normalize'
 // ★2026-08-01 (43부 6차) — 「한 번에 이름 하나」 정책 (대표님 확정)
 //   ⚠️ 비교 칩·회차 안내는 «지우지 않았습니다». 배선만 끊었습니다.
 import { clampTryLimit, isSingleName, visibleTries, keepPastTries } from '@/lib/saju/namingPolicy'
@@ -713,9 +717,25 @@ function NewResultInner() {
           chars={cur.chars.map((c, i): CertChar => ({
             hangul: c.hangul, hanja: c.hanja,
             strokes: c.strokes, resourceOhaeng: c.resourceOhaeng,
+            // ★音五行 — 초성으로 봅니다. 판정과 «같은 창구» 를 씁니다 (교훈 CJ)
+            soundOhaeng: soundOhaengOf(c.hangul) || '',
+            // ⚠️ 훈음은 저장된 글자에 없을 수 있습니다. 없으면 «비웁니다» — 지어내지 않습니다
+            meaning: (c as { meaning?: string }).meaning || '',
             // ★성·이름 가르기는 저장된 chars 의 앞부분이 성입니다 (복성은 두 글자)
             role: i < cur.chars.length - (cur.chars.length >= 3 ? 2 : 1) ? '성' : '이름',
           }))}
+          // ★수리 4격 — diagnoseName 이 낸 값을 «그대로» 싣습니다. 여기서 짓지 않습니다
+          gyeok={(result.suri.gyeok ?? []).map((g): CertGyeok => ({
+            mark: g.key, label: g.label, sum: g.sum, name: g.name, un: g.un,
+          }))}
+          // ⚠️ 성별은 info 가 아니라 «작명 대상» 에서 받습니다 —
+          //    남의 이름을 지을 때 «내» 성별이 종이에 찍히면 안 됩니다
+          gender={target?.gender === '여' ? '坤命' : target?.gender === '남' ? '乾命' : ''}
+          birthHanja={info
+            ? `${info.calType === '음력' ? '陰' : '陽'} ${info.year}年 `
+              + `${String(info.month).padStart(2, '0')}月 ${String(info.day).padStart(2, '0')}日 `
+              + (solar && saju[2] ? `${saju[0]?.branch ?? ''}時生` : '時未詳')
+            : ''}
           saju={saju.map(x => ({ pillar: x.pillar, stem: x.stem, branch: x.branch }))}
           birthText={info
             ? `${info.calType} ${info.year}년 ${info.month}월 ${info.day}일`
@@ -730,6 +750,12 @@ function NewResultInner() {
             // ★[내이름 감정] 과 «같은 다섯 관점» 입니다 — 하나도 빠뜨리지 않습니다
             ['사주와의 만남', result.yongsinBohwan.grade],
           ]}
+          // ★2026-08-01 (43부 11차) — 總評에 «사주와의 만남» 을 함께 담습니다.
+          //   ⚠️ 이름의 «값어치» 는 「이름이 사주를 어떻게 돕는가」에 있습니다.
+          //      맺음말만 실으면 그 까닭이 종이에 남지 않습니다.
+          //   ⚠️ AI 가 쓴 글을 «그대로» 싣습니다 — 여기서 고쳐 쓰면 화면과 갈립니다.
+          yongsinLine={cur.commentary?.yongsin?.name || ''}
+          yongsinMeaning={cur.commentary?.yongsin?.meaning || ''}
           conclusion={cur.commentary?.conclusion || ''}
           issuedAt={(() => {
             const d = new Date()

@@ -34,13 +34,34 @@ export interface CertChar {
   hangul: string
   hanja: string
   strokes: number
+  /** ★자원오행 — 한자가 품은 기운 (字源五行) */
   resourceOhaeng: string
-  /** 뜻 (한자 표의 meaning). 없으면 비웁니다 */
+  /** ★음오행 — 초성으로 보는 기운 (音五行). 없으면 화면에서 비웁니다 */
+  soundOhaeng?: string
+  /** 훈음 — 「버들」 처럼 한 낱말. 없으면 비웁니다 */
   meaning?: string
   role: '성' | '이름'
 }
 
 export interface CertPillar { pillar: string; stem: string; branch: string }
+
+/**
+ * ★수리 4격 한 줄 — 元·亨·利·貞
+ *
+ * ⚠️ 값을 여기서 «만들지» 않습니다. diagnoseName 의 suri.gyeok 을 그대로 받습니다.
+ *    격 이름을 새로 지어내면 화면과 종이가 갈립니다. (교훈 CJ·BF)
+ */
+export interface CertGyeok {
+  /** 元 · 亨 · 利 · 貞 */
+  mark: string
+  /** 초년운 · 청년운 · 중년운 · 말년운 */
+  label: string
+  sum: number
+  /** 격 이름 — 「공명격」 */
+  name: string
+  /** 운 이름 — 「개신융창운」 */
+  un: string
+}
 
 export interface NamingCertificateProps {
   hangulName: string
@@ -53,8 +74,26 @@ export interface NamingCertificateProps {
   yongsin: string
   /** 관점별 한 줄 — [이름, 값] */
   lines: [string, string][]
+  /** ★수리 4격 (元亨利貞). 비면 그 칸을 안 그립니다 */
+  gyeok?: CertGyeok[]
+  /** 남자=乾命 · 여자=坤命. 모르면 비웁니다 */
+  gender?: string
+  /** 「陽 1998年 01月 05日 寅時生」 처럼 한자로 적은 인적사항 */
+  birthHanja?: string
   /** 맺음말 (AI 통변의 conclusion). 없으면 그 칸을 안 그립니다 */
   conclusion?: string
+  /**
+   * ★總評에 함께 담을 «사주와의 만남» 풀이 (2026-08-01 · 43부 11차)
+   *
+   *   nameLine  「이 이름은」 — 이 사주는 무엇을 용신·희신으로 삼고, 이름에 무엇이 담겼는가
+   *   meaning   「어떤 의미인가」 — 왜 그것이 사주를 돕는가
+   *
+   * ⚠️ 이 글은 AI 가 «다섯 관점» 을 보고 쓴 것입니다. 여기서 고쳐 쓰지 마십시오 —
+   *    화면과 종이가 «다른 말» 을 하면 손님은 어느 쪽을 믿어야 할지 모릅니다. (교훈 CJ)
+   * ⚠️ 없으면 그 줄을 «비웁니다». 지어내지 않습니다.
+   */
+  yongsinLine?: string
+  yongsinMeaning?: string
   /** 발행일 — 「2026년 8월 1일」 */
   issuedAt: string
   /** 팝업이 막혔을 때 알림 */
@@ -68,85 +107,139 @@ function esc(v: string): string {
     .replace(/"/g, '&quot;')
 }
 
-/** A4 한 장짜리 문서를 «글자로» 짓습니다. ★여기가 작명서의 모양입니다 */
+/**
+ * A4 한 장짜리 «선명장(撰名狀)» 을 글자로 짓습니다. ★여기가 작명서의 모양입니다.
+ *
+ * ══════════════════════════════════════════════════════════════════
+ *  ★2026-08-01 (43부 10차) — 대표님이 주신 «전통 선명장» 양식으로 다시 지었습니다.
+ *
+ *   담는 것 다섯
+ *     ① 머리      撰名狀 · 陽/陰 生年月日時 · 乾命/坤命
+ *     ② 이름      한자 크게 · 훈음(버들 류) · 劃數 · 音五行 · 字源五行
+ *     ③ 수리 4격  元·亨·利·貞 — 획수합 · 격 이름 · 운 이름
+ *     ④ 총평      사주 보완 · 수리 길흉을 아우른 한 덩이 글
+ *     ⑤ 발급      「위와 같이 作名하여 撰名狀을 드립니다」 · 연구소 · 원장 · 인장
+ *
+ *  ⚠️⚠️ «판정을 여기서 하지 않습니다». 격 이름도 훈음도 «받아서» 적습니다.
+ *     종이에만 다른 말이 적히면 손님은 어느 쪽을 믿어야 할지 모릅니다. (교훈 CJ·BF)
+ *
+ *  ⚠️ 값이 없으면 그 칸을 «비웁니다». 지어내지 않습니다 —
+ *     훈음이 없는 한자에 그럴듯한 뜻을 붙이면 그것이 종이로 남습니다. (교훈 EJ)
+ *
+ *  ⚠️ 인장은 «그림 파일이 아니라» 글자와 테두리로 그립니다.
+ *     이미지를 쓰면 인쇄 설정(배경 그림 끄기)에서 통째로 사라집니다.
+ * ══════════════════════════════════════════════════════════════════
+ */
 export function buildCertificateHtml(p: NamingCertificateProps): string {
-  const sur = p.chars.filter(c => c.role === '성')
-  const giv = p.chars.filter(c => c.role === '이름')
   const totalStrokes = p.chars.reduce((a, c) => a + (c.strokes || 0), 0)
+  /** 한자 오행 한 글자 — 값이 없으면 «비웁니다» */
+  const oh = (v?: string) => ({ 목: '木', 화: '火', 토: '土', 금: '金', 수: '水' }[v ?? ''] ?? '')
 
-  const charCell = (c: CertChar) => `
-    <div class="ch">
-      <div class="ch-hanja">${esc(c.hanja)}</div>
-      <div class="ch-hangul">${esc(c.hangul)}</div>
-      <div class="ch-meta">${esc(c.meaning || '')}</div>
-      <div class="ch-meta2">${esc(c.resourceOhaeng || '—')} · ${c.strokes}획</div>
-    </div>`
+  const nameCol = (c: CertChar) => `
+    <td class="nc">
+      <div class="nc-hanja">${esc(c.hanja || c.hangul)}</div>
+      <div class="nc-hun">(${esc(c.meaning || '')}${c.meaning ? ', ' : ''}${esc(c.hangul)})</div>
+    </td>`
 
-  const sajuCell = (x: CertPillar) => `
-    <div class="pil">
-      <div class="pil-t">${esc(x.pillar)}</div>
-      <div class="pil-g">${esc(x.stem)}</div>
-      <div class="pil-b">${esc(x.branch)}</div>
-    </div>`
+  const gyeokRows = (p.gyeok ?? []).map((g) => `
+    <div class="gy">
+      <span class="gy-k">${esc(g.mark)}格</span>
+      <span class="gy-n">${g.sum}</span>
+      <span class="gy-name">${esc(g.name)}</span>
+      <span class="gy-un">${esc(g.un)}</span>
+      <span class="gy-age">${esc(g.label)}</span>
+    </div>`).join('')
 
   return `<!doctype html>
 <html lang="ko"><head><meta charset="utf-8">
-<title>${esc(p.hanjaName || p.hangulName)} 작명서</title>
+<title>${esc(p.hanjaName || p.hangulName)} 撰名狀</title>
 <style>
-  /* ⚠️ A4 한 장에 «반드시» 담기게 — 넘치면 두 장으로 갈라져 인증서 꼴이 안 납니다 */
-  @page { size: A4; margin: 14mm; }
+  /* ⚠️ A4 한 장에 «반드시» 담기게 — 넘치면 두 장으로 갈라져 증서 꼴이 안 납니다 */
+  @page { size: A4; margin: 9mm; }
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body {
-    margin: 0; font-family: 'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;
-    color: #3a2e28; background: #fff;
+    margin: 0; background: #fff; color: #241c14;
+    font-family: 'Apple SD Gothic Neo','Malgun Gothic','Noto Serif KR','Batang',serif;
   }
-  .sheet { width: 182mm; margin: 0 auto; }
-  .frame { border: 1.2mm solid #c8783c; padding: 9mm 8mm; position: relative; }
-  .frame::after {
-    content: ''; position: absolute; inset: 2mm; border: 0.3mm solid #e0b98f; pointer-events: none;
+  .sheet { width: 192mm; margin: 0 auto; }
+  /* 겹테두리 — 전통 증서의 결 */
+  .frame {
+    border: 2mm solid #8a6a2f; padding: 5mm 7mm 4mm; position: relative;
+    background:
+      radial-gradient(circle at 12% 10%, rgba(196,166,90,0.10), transparent 42%),
+      radial-gradient(circle at 88% 10%, rgba(196,166,90,0.10), transparent 42%),
+      #fffdf7;
   }
-  .head { text-align: center; margin-bottom: 6mm; }
-  .kind {
-    display: inline-block; font-size: 8pt; letter-spacing: 2px; color: #fff;
-    background: ${p.kind === '신생아' ? '#4a7c59' : '#8f3d0e'};
-    padding: 1mm 4mm; border-radius: 6mm;
+  .frame::before {
+    content: ''; position: absolute; inset: 1.6mm;
+    border: 0.5mm solid #c4a65a; pointer-events: none;
   }
-  .title { font-size: 20pt; font-weight: 700; letter-spacing: 8px; margin: 3mm 0 1mm; color: #8f3d0e; }
-  .sub { font-size: 8.5pt; color: #8a7063; letter-spacing: 1px; }
-  .name-hanja { font-size: 40pt; font-weight: 700; letter-spacing: 10px; color: #3a2e28; margin: 5mm 0 1mm; }
-  .name-hangul { font-size: 12pt; color: #6b5340; letter-spacing: 3px; }
-  .rule { height: 0.3mm; background: #e0b98f; margin: 6mm 0 5mm; }
-  h2 {
-    font-size: 9pt; font-weight: 700; color: #96502e; margin: 0 0 2.5mm;
-    letter-spacing: 1px; border-left: 1mm solid #c8783c; padding-left: 2.5mm;
-  }
-  .chars { display: flex; gap: 3mm; justify-content: center; margin-bottom: 5mm; }
-  .ch { flex: 1; max-width: 30mm; text-align: center; border: 0.3mm solid #f0e0d5; border-radius: 2mm; padding: 3mm 1mm; background: #fffbf7; }
-  .ch-hanja { font-size: 20pt; font-weight: 700; color: #8f3d0e; line-height: 1.1; }
-  .ch-hangul { font-size: 9pt; color: #6b5340; margin-top: 1mm; }
-  .ch-meta { font-size: 7pt; color: #8a7063; margin-top: 1.5mm; min-height: 3mm; }
-  .ch-meta2 { font-size: 7pt; color: #a8927e; margin-top: 0.5mm; }
-  .two { display: flex; gap: 6mm; margin-bottom: 5mm; }
+  .inner { position: relative; }
+
+  .title { text-align: center; font-size: 23pt; font-weight: 700; letter-spacing: 11px;
+           color: #7a1f1f; margin: 0 0 2mm; text-indent: 11px; }
+  .birth { text-align: center; font-size: 10.5pt; letter-spacing: 3px; color: #3b2f22; margin-bottom: 3.5mm; }
+
+  /* ── 이름 · 오행 표 ── */
+  table.name { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 2.5mm; }
+  table.name td { text-align: center; }
+  td.nc { padding-bottom: 1mm; }
+  .nc-hanja { font-size: 33pt; font-weight: 700; line-height: 1.02; color: #241c14; }
+  .nc-hun { font-size: 9.5pt; color: #4a3a28; margin-top: 1mm; }
+  tr.lab td { font-size: 10.5pt; letter-spacing: 2px; padding: 0.8mm 0; color: #3b2f22; }
+  tr.lab td:first-child { text-align: right; padding-right: 4mm; color: #6b563a; letter-spacing: 3px; }
+  .sep { height: 0.4mm; background: #c4a65a; margin: 2mm 0 2.5mm; }
+
+  /* ── 수리 4격 ── */
+  .gy { display: flex; align-items: baseline; gap: 3mm; font-size: 11pt;
+        padding: 1mm 2mm; border-bottom: 0.2mm dotted #ddc79a; }
+  .gy-k { font-weight: 700; color: #7a1f1f; width: 13mm; letter-spacing: 1px; }
+  .gy-n { width: 9mm; text-align: right; font-weight: 700; }
+  .gy-name { font-weight: 700; color: #241c14; }
+  .gy-un { color: #4a3a28; }
+  .gy-age { margin-left: auto; font-size: 8.5pt; color: #8a7355; }
+
+  h2 { font-size: 9.5pt; color: #7a1f1f; letter-spacing: 3px; margin: 3mm 0 1.5mm;
+       font-weight: 700; text-align: center; }
+  .two { display: flex; gap: 6mm; margin-top: 2mm; }
   .two > div { flex: 1; }
-  .pils { display: flex; gap: 2mm; }
-  .pil { flex: 1; text-align: center; border: 0.3mm solid #f0e0d5; border-radius: 2mm; padding: 2mm 0; background: #fffbf7; }
-  .pil-t { font-size: 6.5pt; color: #a8927e; }
-  .pil-g { font-size: 13pt; font-weight: 700; color: #3a2e28; line-height: 1.2; }
-  .pil-b { font-size: 13pt; font-weight: 700; color: #6b5340; line-height: 1.2; }
-  table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
-  td { padding: 1.6mm 0; border-bottom: 0.2mm dotted #ead9c9; }
-  td.k { color: #8a7063; width: 42%; }
-  td.v { text-align: right; font-weight: 700; }
-  .concl { font-size: 8.5pt; line-height: 1.75; color: #5c3a1e; background: #fffbf7;
-           border: 0.3mm solid #f0e0d5; border-radius: 2mm; padding: 3.5mm 4mm; }
-  .foot { margin-top: 6mm; text-align: center; }
-  .date { font-size: 9pt; letter-spacing: 2px; color: #5c3a1e; }
-  .issuer { font-size: 11pt; font-weight: 700; letter-spacing: 4px; color: #8f3d0e; margin-top: 2mm; }
-  .note { font-size: 6.5pt; color: #a8927e; margin-top: 3mm; line-height: 1.6; }
-  /* 화면에서 미리 볼 때만 보이는 안내 — 인쇄에는 안 나갑니다 */
-  .bar { text-align: center; padding: 10px; background: #FDF6F0; font-size: 13px; color: #6b5340; }
+  .pils { display: flex; gap: 1.5mm; }
+  .pil { flex: 1; text-align: center; border: 0.3mm solid #ddc79a; border-radius: 1mm;
+         padding: 1.5mm 0; background: #fffaf0; }
+  .pil-t { font-size: 6.5pt; color: #8a7355; }
+  .pil-g, .pil-b { font-size: 12pt; font-weight: 700; line-height: 1.15; }
+  table.info { width: 100%; border-collapse: collapse; font-size: 9pt; }
+  table.info td { padding: 0.9mm 0; border-bottom: 0.2mm dotted #ead9c9; }
+  table.info td.k { color: #6b563a; }
+  table.info td.v { text-align: right; font-weight: 700; }
+
+  /* ── 총평 ── */
+  .chong { font-size: 9.2pt; line-height: 1.72; color: #241c14; text-align: justify;
+           margin-top: 1mm; padding: 0 1mm; }
+  .chong p { margin: 0 0 1.6mm; }
+  .chong p:last-child { margin-bottom: 0; }
+  /* ★「이 이름은」 한 줄 — 사주와 이름의 «관계» 를 먼저 못 박습니다 */
+  .chong p.cl { font-weight: 700; color: #7a1f1f; text-align: center; letter-spacing: 0.2px; }
+  /* ★맺음 — 윗글과 갈리도록 가는 선을 둡니다 */
+  .chong p.cend { border-top: 0.2mm dotted #ddc79a; padding-top: 1.6mm; }
+
+  /* ── 발급 ── */
+  .foot { margin-top: 4mm; text-align: center; position: relative; }
+  .give { font-size: 11.5pt; letter-spacing: 3px; margin-bottom: 2mm; }
+  .house { font-size: 13pt; font-weight: 700; letter-spacing: 8px; color: #241c14; }
+  .master { font-size: 11.5pt; letter-spacing: 4px; margin-top: 2mm; }
+  /* ★인장 — 그림이 아니라 «글자와 테두리» 로 그립니다 (인쇄에서 안 사라지게) */
+  .seal {
+    display: inline-block; margin-left: 5mm; vertical-align: middle;
+    width: 13.5mm; height: 13.5mm; border: 0.7mm solid #a32020; border-radius: 1.2mm;
+    color: #a32020; font-size: 7.5pt; font-weight: 700; line-height: 1.15;
+    padding-top: 2.4mm; letter-spacing: 0.5px;
+  }
+  .note { font-size: 6.5pt; color: #8a7355; margin-top: 3mm; line-height: 1.55; }
+
+  .bar { text-align: center; padding: 10px; background: #F4F2EF; font-size: 13px; color: #4a3a28; }
   .bar button { font-size: 13px; padding: 9px 20px; border-radius: 9px; border: none;
-                background: #c8783c; color: #fff; cursor: pointer; margin-left: 8px; }
+                background: #8a6a2f; color: #fff; cursor: pointer; margin-left: 8px; }
   @media print { .bar { display: none !important; } }
 </style></head>
 <body>
@@ -155,50 +248,61 @@ export function buildCertificateHtml(p: NamingCertificateProps): string {
     <button onclick="window.print()">인쇄 / PDF 저장</button>
   </div>
 
-  <div class="sheet"><div class="frame">
-    <div class="head">
-      <span class="kind">${esc(p.kind)} 작명</span>
-      <div class="title">作 名 書</div>
-      <div class="sub">이 름 에 담 은 기 운 을 적 어 드 립 니 다</div>
-      <div class="name-hanja">${esc(p.hanjaName || p.hangulName)}</div>
-      <div class="name-hangul">${esc(p.hangulName)}</div>
-    </div>
+  <div class="sheet"><div class="frame"><div class="inner">
 
-    <div class="rule"></div>
+    <div class="title">撰 名 狀</div>
+    <div class="birth">${esc(p.birthHanja || p.birthText)}${p.gender ? ` ${esc(p.gender)}` : ''}</div>
 
-    <h2>이름을 이루는 글자</h2>
-    <div class="chars">${p.chars.map(charCell).join('')}</div>
+    <table class="name">
+      <tr><td style="width:22mm"></td>${p.chars.map(nameCol).join('')}</tr>
+      <tr class="lab"><td>劃　數</td>${p.chars.map((c) => `<td>${String(c.strokes ?? 0).padStart(2, '0')}</td>`).join('')}</tr>
+      <tr class="lab"><td>音五行</td>${p.chars.map((c) => `<td>${oh(c.soundOhaeng)}</td>`).join('')}</tr>
+      <tr class="lab"><td>字源五行</td>${p.chars.map((c) => `<td>${oh(c.resourceOhaeng)}</td>`).join('')}</tr>
+    </table>
+
+    ${gyeokRows ? `<div class="sep"></div>${gyeokRows}` : ''}
 
     <div class="two">
       <div>
-        <h2>사주 원국</h2>
-        <div class="pils">${p.saju.map(sajuCell).join('')}</div>
-        <table style="margin-top:2.5mm">
-          <tr><td class="k">생년월일시</td><td class="v">${esc(p.birthText)}</td></tr>
+        <h2>四 柱 原 局</h2>
+        <div class="pils">${p.saju.map((x) => `
+          <div class="pil"><div class="pil-t">${esc(x.pillar)}</div>
+          <div class="pil-g">${esc(x.stem)}</div><div class="pil-b">${esc(x.branch)}</div></div>`).join('')}</div>
+        <table class="info" style="margin-top:2mm">
+          <tr><td class="k">生年月日時</td><td class="v">${esc(p.birthText)}</td></tr>
           <tr><td class="k">사주가 바라는 기운</td><td class="v">${esc(p.yongsin || '—')}</td></tr>
           <tr><td class="k">이름 총 획수</td><td class="v">${totalStrokes}획</td></tr>
         </table>
       </div>
       <div>
-        <h2>살펴본 자리</h2>
-        <table>
+        <h2>살 펴 본 자 리</h2>
+        <table class="info">
           ${p.lines.map(([k, v]) => `<tr><td class="k">${esc(k)}</td><td class="v">${esc(v)}</td></tr>`).join('')}
-          <tr><td class="k">성 · 이름</td><td class="v">${esc(sur.map(c => c.hanja).join(''))} · ${esc(giv.map(c => c.hanja).join(''))}</td></tr>
         </table>
       </div>
     </div>
 
-    ${p.conclusion ? `<h2>맺음말</h2><div class="concl">${esc(p.conclusion)}</div>` : ''}
+    ${(p.yongsinMeaning || p.conclusion) ? `<h2>總 評</h2><div class="chong">
+      ${p.yongsinLine ? `<p class="cl">${esc(p.yongsinLine)}</p>` : ''}
+      ${p.yongsinMeaning ? `<p>${esc(p.yongsinMeaning)}</p>` : ''}
+      ${p.conclusion ? `<p class="cend">${esc(p.conclusion)}</p>` : ''}
+    </div>` : ''}
 
     <div class="foot">
-      <div class="date">${esc(p.issuedAt)}</div>
-      <div class="issuer">명 연 재 연 구 소</div>
+      <div class="give">위와 같이 作名하여 撰名狀을 드립니다.</div>
+      <div style="font-size:9.5pt;letter-spacing:2px;color:#4a3a28;margin-bottom:2.5mm">${esc(p.issuedAt)}</div>
+      <div class="house">明 淵 齋 硏 究 所</div>
+      <div class="master">
+        院長 &nbsp;明淵齋
+        <span class="seal">明淵齋<br>作名之印</span>
+      </div>
       <div class="note">
-        ⚠️ 이 작명서는 명리 해석에 따른 «참고 자료» 입니다. 법적 효력을 갖지 않습니다.<br>
+        ⚠️ 이 撰名狀은 명리 해석에 따른 «참고 자료» 입니다. 법적 효력을 갖지 않습니다.<br>
         출생·개명 신고에는 대법원 인명용 한자만 쓸 수 있으니 한 번 더 확인해 주세요.
       </div>
     </div>
-  </div></div>
+
+  </div></div></div>
 </body></html>`
 }
 
