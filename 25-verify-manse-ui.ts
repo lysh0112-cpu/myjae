@@ -230,8 +230,10 @@ console.log('\n━━ ⑯-h ★보관함 — 풀이와 작명을 가르는가 (P
   }
   check(/KIND_TAG/.test(sto), `작명에 붙는 «도드라지는» 태그가 있습니다`)
   check(/aria-pressed/.test(sto), `탭에 aria-pressed 가 있습니다`)
-  check(/새 이름 풀이 \/ 작명하기/.test(sto), `★하단 버튼이 «하나» 로 모였습니다`)
-  check(!/\+ 새 이름 풀이하기</.test(sto), `옛 버튼 문구가 남아 있지 않습니다`)
+  // ★2026-08-01 — 버튼을 다시 «둘» 로 나눴습니다 (⑯-j 에서 자세히 봅니다)
+  //   [왜 되돌렸나] 하나로 모으니 «누르면 무엇이 되는지» 알 수 없었습니다
+  check(/새 이름 짓기/.test(sto) && /새 이름 풀이하기/.test(sto),
+    `★하단 버튼이 «둘» 입니다 — 작명 · 풀이`)
 
   // ④ 손맛 — 눌림 모션 (요청 6)
   check(/cubic-bezier\(\.4,0,\.2,1\)/.test(sto), `누를 때 반응하는 모션이 걸려 있습니다`)
@@ -286,31 +288,37 @@ console.log('\n━━ ⑯-j ★갈림길 화면 — 풀이할까 지어 드릴�
   const sto = readFileSync('app/manseryeok/naming/diagnosis/storage/page.tsx', 'utf8')
   const nn = readFileSync('app/manseryeok/naming/rename/newname/page.tsx', 'utf8')
 
-  // ① 보관함 버튼이 «갈림길» 로 오는가 (전에는 바로 진단으로 갔습니다)
-  check(/naming\/start/.test(sto), `★보관함이 갈림길 화면으로 보냅니다`)
-  check(!/router\.push\('\/manseryeok\/naming\/diagnosis'\)/.test(sto),
-    `보관함이 «바로 진단» 으로 가지 않습니다`)
+  // ① ★보관함 버튼이 «둘» 인가 (2026-08-01 — 하나면 어디로 가는지 헷갈립니다)
+  check(/새 이름 짓기/.test(sto) && /새 이름 풀이하기/.test(sto),
+    `★보관함에 버튼이 «둘» 입니다 — 작명 · 풀이`)
+  check(!/새 이름 풀이 \/ 작명하기/.test(sto), `합쳐 놓은 옛 버튼이 없습니다`)
+  // 팝업 제목이 «길마다 다른가»
+  check(/작명 기본 정보 입력/.test(sto) && /이름 풀이 인적사항 입력/.test(sto),
+    `★팝업 제목이 길마다 다릅니다`)
+  check(/rename\/newname/.test(sto) && /naming\/diagnosis/.test(sto),
+    `두 길이 각자 목적지로 갑니다`)
 
   // ② 두 길이 다 있는가
   check(/naming\/diagnosis/.test(src), `길 ① 이름 풀이`)
   check(/rename\/newname/.test(src), `길 ② 작명`)
 
   // ③ ★사주를 «다시 묻지 않는가» — 앞에서 받은 것을 그대로 나릅니다
+  check(/toResultQuery/.test(sto), `보관함이 사주를 그대로 실어 보냅니다`)
   for (const k of ['year', 'month', 'day', 'gender', 'calType', 'leapMonth', 'hour']) {
-    check(src.includes(`'${k}'`), `사주 ${k} 를 이어 나릅니다`)
+    check(src.includes(`'${k}'`), `갈림길도 사주 ${k} 를 이어 나릅니다`)
   }
+  // ⚠️ start 는 지금 아무도 안 부르지만 «지우면 안 됩니다» (교훈 AM)
+  check(/지우지 마십시오/.test(src), `★안 쓰여도 지우지 말라는 안내가 있습니다`)
 
-  // ④ ⚠️ 작명 옵션이 «교재 밖» 임을 밝히는가
-  check(/어감\/성향 선호 필터 \(교재 밖 참고용\)/.test(src),
+  // ④ ⚠️ 작명 조건이 «교재 밖» 임을 밝히는가 — 이제 Step 2 안에서 고릅니다
+  const pk = readFileSync('app/manseryeok/naming/components/NamePicker.tsx', 'utf8')
+  check(/어감\/성향 선호 필터 \(교재 밖 참고용\)/.test(pk),
     `★「교재 밖 참고용」 이 명시돼 있습니다`)
-  check(/길흉 판정에 쓰지 않습니다|길흉 판정 아님/.test(src),
+  check(/길흉 판정에 쓰지 않습니다|길흉은 교재의 기준으로/.test(pk),
     `길흉에 쓰지 않는다고 적혀 있습니다`)
-
-  // ⑤ ★옵션이 다음 화면까지 «살아 가는가»
-  for (const k of ['kind', 'style', 'prefer', 'avoid']) {
-    check(src.includes(`'${k}'`) || src.includes(`set('${k}'`), `${k} 를 실어 보냅니다`)
-  }
-  check(/withOpts/.test(nn), `★newname 이 옵션을 «잃지 않고» 다음으로 나릅니다`)
+  check(/조건 고르기/.test(pk), `★조건을 Step 2 «안» 에서 고릅니다`)
+  check(/setStyle|setPrefer|setAvoid/.test(pk), `바꾸면 그 자리에서 다시 뜹니다`)
+  check(/withOpts/.test(nn), `newname 이 URL 옵션도 «잃지 않고» 나릅니다`)
 
   // ⑥ 손맛
   check(/cubic-bezier\(\.4,0,\.2,1\)/.test(src), `누를 때 반응하는 모션`)

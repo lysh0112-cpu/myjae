@@ -46,7 +46,7 @@ export interface NamePickerProps {
   yongsin?: Ohaeng | null
   heeksin?: Ohaeng | null
   gisin?: Ohaeng | null
-  /* 어감/성향 선호 필터 (교재 밖 참고용) */
+  /* 어감/성향 선호 필터 (교재 밖 참고용) — «첫 값» 입니다. 손님이 화면에서 바꿉니다 */
   style?: NameStyle | null
   prefer?: string
   avoid?: string
@@ -64,6 +64,22 @@ export default function NamePicker(p: NamePickerProps) {
   const [cho, setCho] = useState<string>(CHO_ORDER[0])
   const [checked, setChecked] = useState<string | null>(null)
 
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-01 — 작명 «조건» 을 여기서 고릅니다 (대표님 지시)
+  //
+  //   [왜 여기인가]  전에는 앞 화면(갈림길)에서 물었습니다.
+  //     그런데 보관함 버튼을 둘로 나누며 «작명은 Step 2 로 바로» 오게 되었습니다.
+  //     → 조건 고르는 자리가 사라지므로 이리로 옮겼습니다.
+  //   ★여기가 나은 까닭 — 조건을 바꾸면 «그 자리에서» 목록이 다시 뜹니다.
+  //     앞 화면에서 고르면 되돌아가야 했습니다.
+  //
+  //   ⚠️ 이 셋은 «교재 밖 취향» 입니다. 길흉 판정에 쓰지 않습니다.
+  // ══════════════════════════════════════════════════════════════
+  const [openOpts, setOpenOpts] = useState(false)
+  const [style, setStyle] = useState<NameStyle | null>(p.style ?? null)
+  const [prefer, setPrefer] = useState(p.prefer ?? '')
+  const [avoid, setAvoid] = useState(p.avoid ?? '')
+
   const sur = p.surname.trim()
   const ready = sur.length > 0
 
@@ -73,12 +89,12 @@ export default function NamePicker(p: NamePickerProps) {
       yongsin: p.yongsin ?? null,
       heeksin: p.heeksin ?? null,
       gisin: p.gisin ?? null,
-      style: p.style ?? undefined,
-      prefer: p.prefer ? [...p.prefer.replace(/[,\s]+/g, '')] : undefined,
-      avoid: p.avoid ? p.avoid.split(/[,\s]+/).filter(Boolean) : undefined,
+      style: style ?? undefined,
+      prefer: prefer ? [...prefer.replace(/[,\s]+/g, '')] : undefined,
+      avoid: avoid ? avoid.split(/[,\s]+/).filter(Boolean) : undefined,
       limit: 10,
     })
-  }, [ready, sur, p.yongsin, p.heeksin, p.gisin, p.style, p.prefer, p.avoid])
+  }, [ready, sur, p.yongsin, p.heeksin, p.gisin, style, prefer, avoid])
 
   /** ★사전에서 고른 이름을 «그 자리에서» 성씨와 맞춰 봅니다 */
   const dictCheck = useMemo(() => {
@@ -115,6 +131,58 @@ export default function NamePicker(p: NamePickerProps) {
       {/* ── ① 추천 ── */}
       {tab === '추천' && (
         <div>
+          {/* ★조건 고르기 — 접힌 채 시작합니다. 안 고르셔도 됩니다 */}
+          <button onClick={() => setOpenOpts(v => !v)} aria-expanded={openOpts}
+            style={{
+              ...PRESS, width: '100%', display: 'flex', justifyContent: 'space-between',
+              alignItems: 'center', background: CARD, border: `1px solid ${LINE}`,
+              borderRadius: 12, padding: '10px 13px', marginBottom: 9, cursor: 'pointer',
+            }}>
+            <span style={{ fontSize: 12, color: '#6b5340' }}>
+              조건 고르기
+              {(style || prefer || avoid) && (
+                <span style={{ color: GOLD, marginLeft: 6 }}>
+                  {[style, prefer && `“${prefer}”`, avoid && `${avoid} 빼기`].filter(Boolean).join(' · ')}
+                </span>
+              )}
+            </span>
+            <span style={{ fontSize: 11, color: SUB }}>{openOpts ? '접기 ▾' : '펼치기 ▸'}</span>
+          </button>
+
+          {openOpts && (
+            <div style={{
+              background: CARD, border: `1px solid ${LINE}`, borderRadius: 12,
+              padding: '13px 12px', marginBottom: 11,
+            }}>
+              <div style={{ fontSize: 11.5, color: SUB, marginBottom: 6 }}>
+                어떤 결이 좋으세요 <span style={{ color: '#b09a86' }}>· 고르지 않으셔도 됩니다</span>
+              </div>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                {(['남성적', '여성적', '중성적'] as NameStyle[]).map(v => (
+                  <button key={v} onClick={() => setStyle(style === v ? null : v)}
+                    aria-pressed={style === v}
+                    style={{
+                      ...PRESS, cursor: 'pointer', fontSize: 12, padding: '7px 13px',
+                      borderRadius: 12, fontWeight: style === v ? 600 : 400,
+                      background: style === v ? GOLD : '#fff',
+                      color: style === v ? '#fff' : '#5c3a1e',
+                      border: `1px solid ${style === v ? GOLD : LINE}`,
+                    }}>{v}</button>
+                ))}
+              </div>
+
+              <Opt label="꼭 넣고 싶은 소리" placeholder="예) 민, 서" value={prefer} onChange={setPrefer} />
+              <Opt label="피하고 싶은 글자" placeholder="예) 항렬자·친척 이름의 한 글자"
+                value={avoid} onChange={setAvoid}
+                note="한 글자를 적으시면 그 글자가 든 이름을 모두 뺍니다" />
+
+              <div style={{ fontSize: 10.5, color: '#a8927e', lineHeight: 1.65 }}>
+                어감에 대한 취향은 참고로만 씁니다.
+                이름의 길흉은 교재의 기준으로 따로 살핍니다.
+              </div>
+            </div>
+          )}
+
           {!ready && <Empty>성씨를 먼저 알려 주세요.</Empty>}
           {ready && list.length === 0 && (
             <Empty>고르신 조건에 맞는 이름을 찾지 못했습니다. 조건을 조금 넓혀 보세요.</Empty>
@@ -234,6 +302,24 @@ export default function NamePicker(p: NamePickerProps) {
 
       {/* ── ③ 직접 쓰기 — 전에 하던 그대로 ── */}
       {tab === '직접' && <div>{p.manual}</div>}
+    </div>
+  )
+}
+
+function Opt({ label, placeholder, value, onChange, note }: {
+  label: string; placeholder: string; value: string
+  onChange: (v: string) => void; note?: string
+}) {
+  return (
+    <div style={{ marginBottom: 11 }}>
+      <div style={{ fontSize: 11.5, color: SUB, marginBottom: 5 }}>{label}</div>
+      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
+        style={{
+          width: '100%', padding: '9px 11px', borderRadius: 10,
+          border: `1px solid ${LINE}`, background: '#fff',
+          fontSize: 13, color: INK, outline: 'none',
+        }} />
+      {note && <div style={{ fontSize: 10.5, color: '#a8927e', marginTop: 4 }}>{note}</div>}
     </div>
   )
 }

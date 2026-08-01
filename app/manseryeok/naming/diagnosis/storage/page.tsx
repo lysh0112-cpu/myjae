@@ -67,7 +67,20 @@ function NamingStorageInner() {
   const shownRecords = (records ?? []).filter(r =>
     filter === '전체' ? true : filter === '풀이' ? r.kind === '풀이' : r.kind !== '풀이')
   const [deleting, setDeleting] = useState(false)
-  const [pickerOpen, setPickerOpen] = useState(false)   // "누구 이름을 볼까요?" 사람 선택
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-01 — 버튼을 «둘» 로 나눴습니다 (대표님 지시)
+  //
+  //   [무엇이 문제였나]  버튼이 하나뿐이라 «어디로 가는지» 헷갈렸습니다.
+  //     버튼 하나에 두 뜻을 담아 두었더니 «누르면 무엇이 되는지» 알 수 없었습니다
+  //
+  //   [이제는]  길마다 버튼이 있고, 팝업 «제목» 도 다릅니다.
+  //     [+ 새 이름 풀이하기]  → 「이름 풀이 인적사항 입력」 → 감정 화면
+  //     [+ 새 이름 짓기]      → 「작명 기본 정보 입력」   → Step 2 이름 고르기
+  //
+  //   ⚠️ 작명 조건(어감·선호 소리·피할 글자)은 Step 2 화면 «안» 에서 고릅니다.
+  //      여기서 묻고 저기서 또 묻으면 손님이 지칩니다.
+  // ══════════════════════════════════════════════════════════════
+  const [pickerOpen, setPickerOpen] = useState<null | '풀이' | '작명'>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -236,17 +249,28 @@ function NamingStorageInner() {
         })}
 
         {/* 새로 보기 → 누구 이름을 볼지 먼저 선택 (나 / 가족·지인 / 새 사람) */}
+        {/* ★버튼 둘 — 어디로 가는지 «이름» 으로 알 수 있게 */}
         {records && (
-          <button onClick={() => setPickerOpen(true)}
-            style={{
-              ...PRESS,
-              width: '100%', marginTop: 8, padding: 14, borderRadius: 12,
-              background: '#c8783c', border: 'none', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer',
-            }}>
-            {/* ★2026-08-01 — 버튼을 하나로 모았습니다 (요청 1-3).
-                누르면 사람을 고르고 → «갈림길 화면(start)» 에서 풀이/작명을 정합니다 */}
-            + 새 이름 풀이 / 작명하기
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+            <button onClick={() => setPickerOpen('작명')}
+              style={{
+                ...PRESS,
+                width: '100%', padding: 15, borderRadius: 12,
+                background: '#c8783c', border: 'none', color: '#fff',
+                fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              }}>
+              + 새 이름 짓기 <span style={{ fontSize: 12, opacity: .85 }}>(작명)</span>
+            </button>
+            <button onClick={() => setPickerOpen('풀이')}
+              style={{
+                ...PRESS,
+                width: '100%', padding: 14, borderRadius: 12,
+                background: '#FFFBF7', border: '1px solid #c8783c', color: '#c8783c',
+                fontSize: 14, fontWeight: 500, cursor: 'pointer',
+              }}>
+              + 새 이름 풀이하기
+            </button>
+          </div>
         )}
       </div>
 
@@ -300,26 +324,29 @@ function NamingStorageInner() {
 
       {/* 누구 이름을 볼까요? — 나 / 가족·지인 / 새 사람 선택 (사주 보관함과 동일 모달) */}
       <PersonPickerModal
-        open={pickerOpen}
-        serviceLabel="이름풀이"
-        headline="누구의 이름을 볼까요?"
+        open={pickerOpen !== null}
+        serviceLabel={pickerOpen === '작명' ? '작명' : '이름풀이'}
+        headline={pickerOpen === '작명' ? '작명 기본 정보 입력' : '이름 풀이 인적사항 입력'}
         serviceType="naming"
-        submitLabel="다음"
-        onClose={() => setPickerOpen(false)}
+        submitLabel={pickerOpen === '작명' ? '이름 지으러 가기' : '이름 풀이하러 가기'}
+        onClose={() => setPickerOpen(null)}
         onPickMe={() => {
-          setPickerOpen(false)
-          // ★2026-08-01 (Phase 2-B) — 바로 진단으로 가지 «않습니다».
-          //   갈림길 화면에서 「풀이할까요 / 지어 드릴까요」를 먼저 고릅니다.
-          //   ⚠️ 사주는 로그인 회원 본인 것이라 파라미터 없이 넘깁니다.
-          router.push('/manseryeok/naming/start')
+          const to = pickerOpen === '작명'
+            ? '/manseryeok/naming/rename/newname'   // Step 2 — 이름 고르기
+            : '/manseryeok/naming/diagnosis'        // 감정
+          setPickerOpen(null)
+          // ⚠️ 사주는 로그인 회원 본인 것이라 파라미터 없이 넘깁니다
+          router.push(to)
         }}
         onPick={(person: SavedPerson) => {
-          setPickerOpen(false)
-          // ★2026-08-01 (Phase 2-B) — 그 사람 사주를 «갈림길 화면» 으로 실어 보냅니다.
-          //   ⚠️ 여기서 사주를 다시 묻지 않습니다. 두 번 묻는 화면은 손님이 지칩니다.
+          const base = pickerOpen === '작명'
+            ? '/manseryeok/naming/rename/newname'   // Step 2 — 이름 고르기
+            : '/manseryeok/naming/diagnosis'        // 감정
+          setPickerOpen(null)
+          // ★그 사람 사주를 그대로 실어 보냅니다 — 다음 화면에서 다시 묻지 않습니다
           const q = toResultQuery(person)
           const rel = person.relation ? `&relation=${encodeURIComponent(person.relation)}` : ''
-          router.push(`/manseryeok/naming/start?${q}${rel}`)
+          router.push(`${base}?${q}${rel}`)
         }}
       />
     </main>
