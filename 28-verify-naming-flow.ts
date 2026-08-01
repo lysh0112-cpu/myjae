@@ -214,6 +214,53 @@ console.log('\n━━ ⑲-h ⚠️ 옛 개명 손님이 «안 깨지는가» ━
   }
 }
 
+console.log('\n━━ ⑲-I ★화살표 · 요약 카드 · 하단 위계 (43부 27·28차) ━━')
+{
+  const acc = codeOf(read('app/manseryeok/components/PerspectiveAccordion.tsx'))
+  const view = codeOf(read('app/manseryeok/naming/components/NameAnalysisResultView.tsx'))
+  const nr = codeOf(S.nr)
+  const cert = codeOf(S.cert)
+
+  // ① 화살표 — 작아서 «누를 수 있는 줄» 인지 몰랐습니다
+  check(/fontSize: '22px'/.test(acc) && /rotate\(180deg\)/.test(acc),
+    `★화살표를 22px 로 키우고 «돌아가게» 했습니다 (13px → 22px)`)
+  check(!/fontSize: '13px', color: gold, flexShrink: 0, transform/.test(acc),
+    `옛 13px 화살표가 남아 있지 않습니다`)
+  check(/padding: '6px 4px'/.test(acc), `★둘레에 «누르는 자리» 를 두었습니다`)
+
+  // ② 요약 카드 ↔ 아코디언 연동
+  check(/SUMMARY_KEYS = \['yinyang', 'baleum', 'suri', 'jawon', 'yongsin'\]/.test(view),
+    `★요약 카드가 아코디언과 «같은 차례» 입니다`)
+  check(/SUMMARY_NUMERALS/.test(view) && /一/.test(view), `一·二·三 체계로 통일했습니다`)
+  check(/setFocusKey\(SUMMARY_KEYS\[i\]\)/.test(view), `줄을 누르면 그 관점을 가리킵니다`)
+  check(/focusNonce/.test(view) && /focusNonce/.test(acc),
+    `⚠️ 같은 줄을 두 번 눌러도 듣습니다 (nonce)`)
+  check(/scrollIntoView\(\{ behavior: 'smooth'/.test(acc), `★부드럽게 미끄러져 갑니다`)
+  check(/id=\{`persp-\$\{String\(h\.key\)\}`\}/.test(acc), `관점마다 닻이 있습니다`)
+  check(/scrollMarginTop/.test(acc), `⚠️ 머리글에 «가려지지» 않게 여백을 두었습니다`)
+  // ⚠️ 별점을 두 곳에서 그리면 모양이 갈립니다
+  check(/export function Stars/.test(acc) && /import PerspectiveAccordion, \{ Stars/.test(view),
+    `★별점은 «한 곳» 에서만 그립니다 (교훈 CJ)`)
+
+  // ③ 하단 위계
+  check(/A4 명품 작명서 인쇄 · PDF 저장/.test(S.cert), `★으뜸 버튼 — A4 명품 작명서`)
+  check(/background: p\.disabled \? '#EDE7E0' : '#c8783c'/.test(cert),
+    `★으뜸은 «채운 색» 입니다 (나머지는 테두리만)`)
+  check(/✓ 보관함에 안전하게 자동 저장되었습니다/.test(S.nr),
+    `★저장 안내가 «버튼이 아니라» 얌전한 한 줄입니다`)
+  check(!/✓ 보관함에 저장됐어요/.test(nr), `옛 «큰 상자» 안내가 없습니다`)
+  check(/display: 'flex', gap: 8, marginTop: 4, marginBottom: 10/.test(nr),
+    `★버금 둘을 «나란히» 두었습니다`)
+  check(/\+ 새 이름 지으러 가기/.test(S.nr) && /textDecoration: 'underline'/.test(nr),
+    `★끝은 «조용한 글줄» 입니다`)
+  // ⚠️ 같은 버튼이 두 번 뜨지 않는가
+  check(/onOtherHanja=\{undefined\}/.test(nr),
+    `⚠️ 「다른 한자 보기」가 화면에 두 번 뜨지 않습니다`)
+  // ⚠️ 저장 «실패» 는 여전히 눈에 띄어야 합니다 — 그때는 눌러야 합니다
+  check(/saveFailed && \(/.test(nr) && /보관함에 다시 저장하기/.test(S.nr),
+    `★저장이 «실패하면» 예전처럼 도드라집니다`)
+}
+
 console.log('\n━━ ⑲-H 🔴 보관함에서 선명장을 «다시» 뽑을 수 있는가 (43부 26차) ━━')
 {
   const diag = read('app/manseryeok/naming/diagnosis/page.tsx')
@@ -943,7 +990,9 @@ console.log('\n━━ ⑲-q ★A4 작명서 · 보관함 버튼 (Step 4) ━━'
   check(/NamingCertificateButton/.test(nr), `결과 화면에 작명서 버튼이 있습니다`)
   check(/disabled=\{!cur\.commentary/.test(nr),
     `★풀이 전에는 눌리지 않습니다 (맺음말이 빈 작명서가 나가지 않게)`)
-  check(/작명 보관함에서 보기/.test(S.nr), `★보관함으로 «가는» 버튼이 있습니다`)
+  // ★28차 — 「작명 보관함」 으로 «짧게» 바뀌었습니다 (버금 줄에 나란히)
+  check(/naming-storage'\)\}/.test(codeOf(S.nr)) && /작명 보관함/.test(S.nr),
+    `★보관함으로 «가는» 버튼이 있습니다`)
   check(/naming-storage/.test(nr), `작명 기록이므로 «작명 보관함» 으로 갑니다`)
   // ★[내이름 감정] 과 같은 다섯 관점이 다 실리는가
   for (const k of ['음양', '발음오행', '수리 4격', '자원오행', '사주와의 만남']) {

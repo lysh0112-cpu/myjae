@@ -27,10 +27,10 @@
 //  ⚠️ 색은 lib/saju/ohaengColor.ts 한 곳만 씁니다. 여기서 오행 색을 지어내지 마십시오.
 // ══════════════════════════════════════════════════════════════════
 
-import React from 'react'
+import React, { useState } from 'react'
 import NamingSajuSummary from '@/app/manseryeok/naming/diagnosis/components/NamingSajuSummary'
 import NamingAptitude from '@/app/manseryeok/naming/diagnosis/components/NamingAptitude'
-import PerspectiveAccordion, { type PerspectiveCommentary } from '@/app/manseryeok/components/PerspectiveAccordion'
+import PerspectiveAccordion, { Stars, type PerspectiveCommentary } from '@/app/manseryeok/components/PerspectiveAccordion'
 import type { StarResult, PerspectiveStar } from '@/lib/saju/starRating'
 import type { Ohaeng } from '@/lib/saju/ohaeng'
 
@@ -40,6 +40,14 @@ function gradeTone(g: string): string {
   if (g === '아쉬움') return '#c8783c'
   return '#5c3a1e'
 }
+
+/** ★요약 카드 ↔ 아래 아코디언을 잇는 «차례». 아코디언 HEADS 와 «같은 순서» 여야 합니다 */
+const SUMMARY_KEYS = ['yinyang', 'baleum', 'suri', 'jawon', 'yongsin'] as const
+const SUMMARY_NUMERALS = ['一', '二', '三', '四', '五']
+const SUMMARY_SUBS = [
+  '획수에 담긴 음과 양', '부르는 소리의 기운', '획수가 그리는 네 마디',
+  '한자에 담긴 본래 기운', '이름이 사주를 돕는가',
+]
 
 const GOLD = '#c8783c'
 const CARD = '#FFFBF7'
@@ -110,6 +118,14 @@ export interface NameAnalysisResultViewProps {
 }
 
 export default function NameAnalysisResultView(p: NameAnalysisResultViewProps) {
+  /**
+   * ★요약 카드에서 누른 관점 (2026-08-01 · 43부 27차)
+   *
+   *  ⚠️ 같은 줄을 두 번 눌러도 듣게 «nonce» 를 함께 둡니다.
+   *     값이 그대로면 아래 효과가 다시 돌지 않습니다.
+   */
+  const [focusKey, setFocusKey] = useState<typeof SUMMARY_KEYS[number] | null>(null)
+  const [focusNonce, setFocusNonce] = useState(0)
   const hourBranch = p.saju.find((x) => x.pillar === '시주')?.branch ?? null
   const ready = p.saju.length > 0 && !!p.dayStem && p.dayStem !== '?'
 
@@ -160,16 +176,50 @@ export default function NameAnalysisResultView(p: NameAnalysisResultViewProps) {
             marginTop: 14, textAlign: 'left',
             background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: '14px 16px',
           }}>
-            {p.summaryRows.map((row, i) => (
-              <div key={row.label} style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '7px 0',
-                borderBottom: i === p.summaryRows!.length - 1 ? 'none' : `1px solid ${LINE}`,
-              }}>
-                <span style={{ fontSize: 13, color: '#2E2622' }}>{row.label}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: gradeTone(row.grade) }}>{row.grade}</span>
-              </div>
-            ))}
+            {/* ══════════════════════════════════════════════════════
+                ★2026-08-01 (43부 27차) — 요약 카드를 «아코디언과 같은 체계» 로
+
+                 一·二·三 번호 + 제목 + 딸림말 + 별점 + ★큰 화살표
+                 ★누르면 아래 그 관점이 «펼쳐지고» 그리로 미끄러져 갑니다.
+                ⚠️ 등급 글자(좋음/보통)를 «별점» 으로 바꿨습니다 —
+                   아래 아코디언이 별점으로 말하는데 위만 글자면 두 말이 됩니다.
+                   ★별점이 없는 옛 기록은 등급 글자를 그대로 씁니다.
+                ══════════════════════════════════════════════════════ */}
+            {p.summaryRows.map((row, i) => {
+              const st = p.stars?.find(x => x.key === SUMMARY_KEYS[i]) ?? null
+              return (
+                <button
+                  key={row.label}
+                  onClick={() => { setFocusKey(SUMMARY_KEYS[i]); setFocusNonce(n => n + 1) }}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                    // ★누르는 자리를 넉넉히 — 손가락이 닿아야 «누를 수 있다» 고 압니다
+                    padding: '11px 2px', background: 'none', border: 'none',
+                    borderBottom: i === p.summaryRows!.length - 1 ? 'none' : `1px solid ${LINE}`,
+                    cursor: 'pointer', textAlign: 'left',
+                  }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: GOLD, flexShrink: 0 }}>
+                    {SUMMARY_NUMERALS[i]}.
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#2E2622', flexShrink: 0 }}>
+                    {row.label}
+                  </span>
+                  <span style={{
+                    fontSize: 10.5, color: '#8A7A6E', flex: 1, minWidth: 0,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>{SUMMARY_SUBS[i]}</span>
+                  {st
+                    ? <Stars s={st} size={13} />
+                    : <span style={{ fontSize: 12.5, fontWeight: 700, color: gradeTone(row.grade) }}>
+                        {row.grade}
+                      </span>}
+                  {/* ★큰 화살표 — 여기가 «누를 수 있는 줄» 임을 알립니다 */}
+                  <span aria-hidden style={{
+                    fontSize: 20, lineHeight: 1, color: GOLD, flexShrink: 0, padding: '0 2px',
+                  }}>▾</span>
+                </button>
+              )
+            })}
             {p.summaryOverall && (
               <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${LINE}`, textAlign: 'center' }}>
                 <span style={{ fontSize: 12, color: '#6B5B50' }}>종합 </span>
@@ -201,6 +251,9 @@ export default function NameAnalysisResultView(p: NameAnalysisResultViewProps) {
           commentary={p.commentary}
           stars={p.stars}
           overallStar={p.overallStar}
+          // ★위 요약 카드에서 누른 관점을 펼치고 그리로 미끄러져 갑니다 (43부 27차)
+          focusKey={focusKey}
+          focusNonce={focusNonce}
         />
       )}
 

@@ -8,7 +8,7 @@
 // 데이터는 route.ts의 commentary(5관점 3단 통변)를 그대로 받는다.
 // 이름/한글이름 등 상단·하단은 page.tsx가 담당. 이 부품은 "해설 블록"만.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 // ★2026-07-30 (3단계-b) — 관점별 별점 (대표님 지시)
 import { starGlyphs, type PerspectiveStar, type StarResult } from '@/lib/saju/starRating'
 
@@ -57,7 +57,8 @@ const STAR_TONE: Record<StarResult['tone'], string> = {
   watch: '#b09a8a',  // 회갈 — ★붉은 경고색을 쓰지 않습니다
 }
 
-function Stars({ s, size = 13 }: { s: PerspectiveStar | StarResult; size?: number }) {
+/** ★별점 그리기 — «한 곳» 에서만 그립니다. 복사하면 두 모양이 됩니다 (교훈 CJ) */
+export function Stars({ s, size = 13 }: { s: PerspectiveStar | StarResult; size?: number }) {
   const g = starGlyphs(s.star)
   const c = STAR_TONE[s.tone]
   return (
@@ -100,17 +101,46 @@ function Triple({ label, text }: { label: string; text: string }) {
 export default function PerspectiveAccordion({
   commentary,
   stars,
+  focusKey,
+  focusNonce,
   overallStar,
 }: {
   commentary: PerspectiveCommentary
   /** ★선택값 — 옛 보관함 기록에는 없습니다. 없으면 별을 안 그립니다 */
   stars?: PerspectiveStar[] | null
+  /**
+   * ★밖에서 「이 관점을 펼쳐 달라」고 시키는 자리 (2026-08-01 · 43부 27차)
+   *
+   *  위 요약 카드의 줄을 누르면 그 관점이 «펼쳐지고» 그리로 «미끄러져» 갑니다.
+   *  ⚠️ 값이 같으면 아무 일도 안 일어납니다 — 같은 줄을 두 번 눌러도 됩니다.
+   *     그래서 «누를 때마다 달라지는» 값(nonce)을 함께 받습니다.
+   */
+  focusKey?: keyof PerspectiveCommentary | null
+  focusNonce?: number
   overallStar?: StarResult | null
 }) {
   /** key 로 별을 찾습니다. 순서에 기대지 않습니다 */
   const starOfKey = (k: string) => stars?.find((x) => x.key === k) ?? null
   // 기본: 모두 접힘. 첫 관점만 펼쳐 시작하고 싶으면 useState(new Set([0]))로.
   const [open, setOpen] = useState<Set<number>>(new Set())
+
+  // ★요약 카드에서 「여기 보여 줘」 하면 펼치고 그리로 미끄러져 갑니다
+  useEffect(() => {
+    if (!focusKey) return
+    const i = HEADS.findIndex((h) => h.key === focusKey)
+    if (i === -1) return
+    // ⚠️ 효과 «안에서 곧바로» 상태를 바꾸면 그리기가 겹칩니다(eslint).
+    //    그리고 펼쳐지기 «전» 에 옮기면 엉뚱한 자리에 섭니다.
+    //    ★한 박자 뒤에 «펼치고 옮깁니다» — 두 가지가 한 번에 풀립니다.
+    const t = setTimeout(() => {
+      setOpen((prev) => new Set(prev).add(i))
+      requestAnimationFrame(() => {
+        document.getElementById(`persp-${String(focusKey)}`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    }, 0)
+    return () => clearTimeout(t)
+  }, [focusKey, focusNonce])
   const toggle = (i: number) =>
     setOpen((prev) => {
       const next = new Set(prev)
@@ -149,7 +179,13 @@ export default function PerspectiveAccordion({
         const isOpen = open.has(i)
         const star = starOfKey(h.key as string)
         return (
-          <div key={h.key} style={{ background: cardBg, border, borderRadius: '16px', marginBottom: '12px', overflow: 'hidden' }}>
+          /* ★닻(id) — 요약 카드에서 «이리로» 미끄러져 옵니다 (43부 27차)
+             ⚠️ scroll-margin-top 을 두어 «머리글에 가려지지» 않게 합니다 */
+          <div key={h.key} id={`persp-${String(h.key)}`}
+            style={{
+              background: cardBg, border, borderRadius: '16px', marginBottom: '12px',
+              overflow: 'hidden', scrollMarginTop: '64px',
+            }}>
             <div
               onClick={() => toggle(i)}
               role="button"
@@ -172,7 +208,21 @@ export default function PerspectiveAccordion({
                   </div>
                 )}
               </div>
-              <span style={{ fontSize: '13px', color: gold, flexShrink: 0, transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s' }}>▼</span>
+              {/* ══════════════════════════════════════════════════
+                  ★2026-08-01 (43부 27차) — 화살표를 «크게» (대표님 지시)
+
+                   🔴 13px 이라 «누를 수 있는 줄» 인지 모르고 지나치셨습니다.
+                   ★22px 로 키우고, 둘레에 «누르는 자리»(padding)를 둡니다.
+                   ⚠️ 색도 진하게 — 옅으면 커도 눈에 안 들어옵니다.
+                   ★펼치면 ▲ 로 «돌아갑니다» (0.25초) — 상태가 눈에 보이게.
+                  ══════════════════════════════════════════════════ */}
+              <span aria-hidden style={{
+                fontSize: '22px', lineHeight: 1, color: isOpen ? '#8f3d0e' : gold,
+                flexShrink: 0, padding: '6px 4px', marginRight: '-4px',
+                transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform .25s cubic-bezier(.4,0,.2,1), color .2s',
+                display: 'inline-block',
+              }}>▾</span>
             </div>
             {isOpen && (
               <div style={{ padding: '0 18px 18px' }}>

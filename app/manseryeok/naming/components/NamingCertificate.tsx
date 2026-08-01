@@ -468,18 +468,22 @@ export default function NamingCertificateButton(
         }}
         className="active:scale-95"
         style={{
-          width: '100%', padding: 14, borderRadius: 12, marginBottom: 6,
-          background: p.disabled ? '#f0e0d5' : '#fffbf7',
-          border: `1px solid ${p.disabled ? '#f0e0d5' : '#c8783c'}`,
-          color: p.disabled ? '#b09a86' : '#c8783c',
-          fontSize: 14, fontWeight: 600, cursor: p.disabled ? 'default' : 'pointer',
+          // ★2026-08-01 (43부 28차) — 이 화면의 «으뜸» 버튼입니다 (대표님 지시).
+          //   채운 색 · 넓게 · 조금 더 크게. 나머지는 테두리만 두어 뒤로 물립니다.
+          width: '100%', padding: 16, borderRadius: 14, marginBottom: 6,
+          background: p.disabled ? '#EDE7E0' : '#c8783c',
+          border: 'none',
+          color: p.disabled ? '#A99B8E' : '#fff',
+          fontSize: 15, fontWeight: 700, letterSpacing: '-0.2px',
+          boxShadow: p.disabled ? 'none' : '0 2px 8px rgba(200,120,60,0.28)',
+          cursor: p.disabled ? 'default' : 'pointer',
         }}>
-        🖨️ A4 작명서 인쇄 · PDF로 저장
+        🖨️ A4 명품 작명서 인쇄 · PDF 저장
       </button>
       <div style={{ fontSize: 10.5, color: '#a8927e', textAlign: 'center', marginBottom: 10, lineHeight: 1.6 }}>
         {msg
           ? <span style={{ color: '#c8506e' }}>{msg}</span>
-          : '새 창에서 인쇄하거나 「PDF로 저장」을 고르시면 됩니다.'}
+          : '새 창에서 인쇄 또는 PDF로 저장'}
       </div>
     </>
   )

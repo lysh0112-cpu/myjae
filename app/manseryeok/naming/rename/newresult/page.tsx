@@ -665,7 +665,9 @@ function NewResultInner() {
           overallStar={null}
           yongsin={(yongsin || null) as never}
           careerHref="/manseryeok/career-input"
-          onOtherHanja={() => router.push('/manseryeok/naming/rename/newhanja')}
+          // ★2026-08-01 (43부 28차) — 아래 «버금» 줄로 옮겼습니다.
+          //   ⚠️ 두 곳에 두면 같은 버튼이 화면에 두 번 뜹니다.
+          onOtherHanja={undefined}
         />
       ) : (
         <div style={{ marginBottom: 14 }}>
@@ -764,36 +766,62 @@ function NewResultInner() {
         />
       )}
 
-      {/* 보관함 저장 상태 — 자동 저장이라 누르는 버튼이 아니다. (2026-07-21 2차)
-          실패했을 때만 [다시 저장]으로 바뀐다. */}
+      {/* ══════════════════════════════════════════════════════════
+          ★2026-08-01 (43부 28차) — 하단을 «위계» 로 다시 세웠습니다 (대표님 지시)
+
+           🔴 [무엇이 있었나]  같은 크기·같은 무게의 버튼이 «다섯 개» 세로로
+             늘어서 있었습니다. 무엇이 중요한지 눈으로 알 수 없었습니다.
+             ⚠️ 「보관함에 저장됐어요」는 «알림» 인데 버튼처럼 커서, 누르는 것으로
+                보였습니다. 눌러도 아무 일이 없으니 손님이 갸웃하십니다.
+
+           ★[이제]  세 켜로 나눕니다.
+             ① 으뜸   A4 명품 작명서 — 채운 색 · 넓게 · 하나뿐
+             ② 버금   다른 한자 보기 · 보관함으로 — 나란히 둘 (테두리만)
+             ③ 끝     새 이름 지으러 — 조용한 글줄
+             그 아래   ✓ 저장 안내 — «버튼이 아닌» 얌전한 한 줄
+
+           ⚠️ 저장 «실패» 는 예전처럼 눈에 띄게 둡니다 — 그때는 눌러야 하니까요.
+           ⚠️ 안내 문구는 버튼 사이에 흩지 않고 «버튼 바로 아래 잔글씨» 로 모읍니다.
+          ══════════════════════════════════════════════════════════ */}
+      {cur && result && saveFailed && (
+        <button onClick={saveToArchive} className="active:scale-95"
+          style={{ width: '100%', padding: 14, borderRadius: 12, marginBottom: 10,
+            background: GOLD, border: 'none', color: '#fff',
+            fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+          💾 보관함에 다시 저장하기
+        </button>
+      )}
+
+      {/* ── ② 버금 — 나란히 둘 ── */}
       {cur && result && (
-        saveFailed ? (
-          <button onClick={saveToArchive}
-            style={{ width: '100%', padding: 13, borderRadius: 12, marginBottom: 6,
-              background: GOLD, border: 'none', color: '#fff',
-              fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-            💾 다시 저장하기
+        <div style={{ display: 'flex', gap: 8, marginTop: 4, marginBottom: 10 }}>
+          <button
+            onClick={() => router.push('/manseryeok/naming/rename/newhanja')}
+            className="active:scale-95"
+            style={{ flex: 1, padding: '13px 6px', borderRadius: 12,
+              background: CARD, border: `1px solid ${LINE}`, color: '#6B5B50',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            다른 한자 보기
           </button>
-        ) : savedRecordId ? (
-          <>
-            <div style={{ width: '100%', padding: 13, borderRadius: 12, marginBottom: 4,
-              background: '#eef5e8', color: '#4a7a3a',
-              fontSize: 14, fontWeight: 500, textAlign: 'center' }}>
-              ✓ 보관함에 저장됐어요
-            </div>
-            {/* ★2026-08-01 (43부 5차) — 보관함으로 «가는 버튼» 을 함께 둡니다.
-                ⚠️ 「저장됐어요」 만 있고 갈 길이 없어, 어디서 다시 보는지 알 수 없었습니다.
-                   ★작명 기록이므로 «작명 보관함» 으로 보냅니다 (mode=naming). */}
-            <button
-              onClick={() => router.push('/manseryeok/naming/naming-storage')}
-              className="active:scale-95"
-              style={{ width: '100%', padding: 13, borderRadius: 12, marginBottom: 10,
-                background: '#fffbf7', border: '1px solid #c8783c', color: '#c8783c',
-                fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-              📚 작명 보관함에서 보기 →
-            </button>
-          </>
-        ) : null
+          <button
+            onClick={() => router.push('/manseryeok/naming/naming-storage')}
+            className="active:scale-95"
+            style={{ flex: 1, padding: '13px 6px', borderRadius: 12,
+              background: CARD, border: `1px solid ${LINE}`, color: '#6B5B50',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            작명 보관함
+          </button>
+        </div>
+      )}
+
+      {/* ── ✓ 저장 안내 — «버튼이 아닙니다». 얌전한 한 줄 ── */}
+      {cur && result && !saveFailed && savedRecordId && (
+        <div style={{
+          textAlign: 'center', fontSize: 11.5, color: '#6f8a5f',
+          padding: '2px 0 12px', lineHeight: 1.6,
+        }}>
+          ✓ 보관함에 안전하게 자동 저장되었습니다
+        </div>
       )}
 
       {/* 전문가 상담 연결 (개명 상담 · mode=naming) — 저장 표시 아래.
@@ -809,16 +837,23 @@ function NewResultInner() {
              길이 없으면 손님이 화면에 갇힙니다.
           ══════════════════════════════════════════════════════════ */}
       {isSingleName ? (
-        <>
-          <div style={{ fontSize: 11, color: SUB, textAlign: 'center', margin: '20px 0 8px', lineHeight: 1.7 }}>
-            다른 이름도 지어 보시겠어요?<br />
-            <span style={{ color: '#a8927e' }}>이름 하나마다 따로 풀이해 드립니다.</span>
-          </div>
-          <button onClick={() => router.push('/manseryeok/naming/rename/newname')} className="active:scale-95"
-            style={{ width: '100%', background: 'rgba(200,120,60,0.12)', border: '1px solid ' + GOLD, borderRadius: 14, padding: 13, color: GOLD, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-            새 이름 지으러 가기 →
+        // ── ③ 끝 — «조용한 글줄» (43부 28차)
+        //    ⚠️ 여기가 버튼으로 도드라지면 으뜸(작명서)과 다툽니다.
+        //       길은 남기되 목소리는 낮춥니다.
+        <div style={{ textAlign: 'center', margin: '22px 0 8px' }}>
+          <button onClick={() => router.push('/manseryeok/naming/rename/newname')}
+            className="active:scale-95"
+            style={{
+              background: 'none', border: 'none', color: GOLD,
+              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              padding: '10px 16px', textDecoration: 'underline', textUnderlineOffset: 4,
+            }}>
+            + 새 이름 지으러 가기
           </button>
-        </>
+          <div style={{ fontSize: 10.5, color: '#8A7A6E', marginTop: 2 }}>
+            이름 하나마다 따로 풀이해 드립니다
+          </div>
+        </div>
       ) : (
         <>
           <div style={{ fontSize: 11, color: SUB, textAlign: 'center', margin: '20px 0 8px' }}>
