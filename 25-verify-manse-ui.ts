@@ -354,5 +354,48 @@ console.log('\n━━ ⑯-k ★Step 2 — 한글 이름을 «고르는» 화면 
   check(/catch \{ return '' \}/.test(nn), `용신을 못 구해도 «멈추지 않습니다»`)
 }
 
+console.log('\n━━ ⑯-l 🔴 useSearchParams 를 쓰는 화면이 Suspense 로 감싸였는가 ━━')
+{
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-01 — 이 검사가 «왜» 생겼나
+  //
+  //   Step 2 를 붙이며 newname 에 useSearchParams() 를 더했는데
+  //   Suspense 로 «안 감쌌습니다». Next.js 는 정적으로 그리는 페이지에서
+  //   그 훅을 쓰면 Suspense 경계를 요구합니다 — 없으면 «빌드가 실패» 합니다.
+  //
+  //   ⚠️ npm run verify 로는 못 잡았습니다. Next 빌드를 안 하기 때문입니다.
+  //      배포 로그에서야 드러났습니다. ★그래서 여기서 «미리» 잡습니다.
+  // ══════════════════════════════════════════════════════════════
+  const { execSync } = require('child_process') as typeof import('child_process')
+  const sh = (c: string) => { try { return execSync(c, { encoding: 'utf8' }) } catch { return '' } }
+
+  const files = sh(`grep -rl "useSearchParams" --include=page.tsx app/ 2>/dev/null`)
+    .split('\n').filter(Boolean)
+  const bad: string[] = []
+  for (const f of files) {
+    const src = readFileSync(f, 'utf8')
+    // ⚠️ 'use client' 가 아니면 서버 컴포넌트라 이 규칙이 없습니다
+    if (!/^'use client'/m.test(src)) continue
+    if (!/<Suspense/.test(src)) bad.push(f.replace('app/manseryeok/', ''))
+  }
+  check(bad.length === 0,
+    `★useSearchParams 를 쓰는 page ${files.length}개가 전부 Suspense 로 감싸였습니다`
+    + (bad.length ? ` — 안 감싼 곳 ${bad.join(', ')}` : ''))
+  if (bad.length) {
+    console.log('')
+    console.log('     ┌──────────────────────────────────────────────────────────┐')
+    console.log('     │  고치는 법 — 안쪽을 따로 떼고 Suspense 로 감싸십시오        │')
+    console.log('     │                                                          │')
+    console.log('     │    function XxxInner() { … useSearchParams() … }          │')
+    console.log('     │    export default function Page() {                       │')
+    console.log('     │      return <Suspense fallback={…}><XxxInner /></Suspense> │')
+    console.log('     │    }                                                     │')
+    console.log('     │                                                          │')
+    console.log('     │  ⚠️ 안 감싸면 «빌드가 실패» 합니다. verify 로는 안 잡힙니다. │')
+    console.log('     └──────────────────────────────────────────────────────────┘')
+    console.log('')
+  }
+}
+
 console.log(`\n━━ 만세력 화면 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail > 0) process.exit(1)

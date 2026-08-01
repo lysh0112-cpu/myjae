@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef, CSSProperties } from 'react'
+import { useState, useEffect, useRef, Suspense, CSSProperties } from 'react'
 import { splitSurname } from '@/lib/saju/surname'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -38,7 +38,7 @@ function firstHangul(s: string): string {
   return arr.length > 0 ? arr[arr.length - 1] : ''
 }
 
-export default function NewNamePage() {
+function NewNameInner() {
   const router = useRouter()
   const sp = useSearchParams()
 
@@ -428,5 +428,28 @@ function Header({ router }: { router: ReturnType<typeof useRouter> }) {
       <button onClick={() => router.push('/manseryeok/naming/diagnosis')} aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
       <span style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>발음 그대로, 한자 바꾸기</span>
     </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  ★2026-08-01 — Suspense 로 감쌌습니다.
+//
+//   [무슨 일이 있었나]
+//     Step 2 를 붙이며 이 화면에 useSearchParams() 를 더했습니다.
+//     Next.js 는 «정적으로 그리는» 페이지에서 그 훅을 쓰면
+//     Suspense 경계를 요구합니다 — 없으면 «빌드가 실패» 합니다.
+//
+//     ⚠️ npm run verify 로는 못 잡습니다. Next 빌드를 안 하기 때문입니다.
+//        ★배포 로그에서야 드러났습니다:
+//          「useSearchParams() should be wrapped in a suspense boundary」
+//
+//   ⚠️ useSearchParams() 를 쓰는 화면은 «반드시» 이렇게 감싸십시오.
+//      같은 폴더의 start/page.tsx 도 같은 꼴입니다.
+// ══════════════════════════════════════════════════════════════════
+export default function NewNamePage() {
+  return (
+    <Suspense fallback={<main style={{ minHeight: '100vh', background: '#FDF6F0' }} />}>
+      <NewNameInner />
+    </Suspense>
   )
 }
