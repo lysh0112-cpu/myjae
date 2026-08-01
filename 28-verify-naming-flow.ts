@@ -38,6 +38,7 @@ const P = {
   sto: 'app/manseryeok/naming/components/NamingStorageView.tsx',
   stoDoor: 'app/manseryeok/naming/diagnosis/storage/page.tsx',
   stoNaming: 'app/manseryeok/naming/naming-storage/page.tsx',
+  stoDiag: 'app/manseryeok/naming/diagnosis-storage/page.tsx',
   home: 'app/home-new/page.tsx',
   rec: 'lib/saju/namingRecords.ts',
   auto: 'app/manseryeok/naming/rename/auto/page.tsx',
@@ -778,42 +779,43 @@ console.log('\n━━ ⑲-B ★A4 선명장(撰名狀) 양식 (43부 10차) ━�
     `결과 화면이 요약을 넘깁니다`)
 }
 
-console.log('\n━━ ⑲-A ★보관함 둘을 «따로» 운영하는가 (43부 9차) ━━')
+// ★2026-08-01 (43부 33차) — ⑲-A(9차)·⑲-m(2차)을 «걷어냈습니다».
+//   🔴 그 검사들은 «탭이 있고 mode 가 없을 수도 있던» 시절의 모습을 요구했습니다.
+//      이제 갈래가 «언제나» 정해지고 탭이 없습니다 (대표님 지시).
+//   ★그 자리는 아래 ⑲-K 가 «새 구조로» 대신 잽니다.
+//   ⚠️ 옛 검사를 남기면 새 구조를 «되돌리라고 떠미는» 셈이 됩니다.
+console.log('\n━━ ⑲-K ★보관함 «완전» 분리 — 탭 없음 (43부 33차) ━━')
 {
-  const view = codeOf(S.sto)
-  const door = codeOf(S.stoDoor)
-  const naming = codeOf(S.stoNaming)
+  const v = codeOf(S.sto)
+  // ① 전용 주소가 «둘 다»
+  check(existsSync(P.stoDiag), `★이름 정밀분석 «전용 주소» 가 있습니다`)
+  check(existsSync(P.stoNaming), `★내 아이 명품작명 «전용 주소» 가 있습니다`)
+  check(/forcedMode="diagnosis"/.test(codeOf(S.stoDiag)), `그 주소는 «언제나» 정밀분석입니다`)
+  check(/forcedMode="naming"/.test(codeOf(S.stoNaming)), `그 주소는 «언제나» 작명입니다`)
 
-  // ① 주소가 «둘» 인가 — ?mode= 하나로만 가르면 뒤로가기·북마크가 섞입니다
-  check(existsSync(P.stoNaming), `★작명 보관함 «전용 주소» 가 있습니다`)
-  check(/forcedMode="naming"/.test(naming), `그 주소는 «언제나» 작명입니다`)
-  check(/StorageMode = forcedMode/.test(view), `★전용 주소면 ?mode= 보다 «먼저» 입니다`)
+  // ② 🔴 탭이 «없는가»
+  check(!/FILTERS\.map/.test(v), `★★상단 구분 탭을 걷어냈습니다`)
+  check(/필터 탭을 «걷어냈습니다»/.test(S.sto), `⚠️ 왜 걷었는지 적어 두었습니다`)
+  check(/const mode: Exclude<StorageMode, null> = forcedMode/.test(v),
+    `★갈래가 «언제나» 정해집니다 (「전체」 없음)`)
+  check(/modeParam === 'naming' \? 'naming' : 'diagnosis'/.test(v),
+    `★옛 주소는 «이름 정밀분석» 입니다 (그 주소의 원래 뜻)`)
 
-  // ② ⚠️⚠️ 화면을 «복사하지» 않았는가 — 복사하면 한쪽만 고치는 날이 옵니다
-  check(/NamingStorageView/.test(door) && /NamingStorageView/.test(naming),
-    `★두 문이 «같은 부품» 을 씁니다`)
-  check(door.split('\n').length < 40 && naming.split('\n').length < 40,
-    `★두 문이 «얇습니다» (본체를 복사하지 않았습니다)`)
-  check(!/listNamingRecords/.test(door) && !/listNamingRecords/.test(naming),
-    `문에는 목록을 읽는 코드가 «없습니다»`)
+  // ③ 버튼 하나 · 옆으로 가는 길
+  check(/view\.button === '작명' && \(/.test(v) && /view\.button === '풀이' && \(/.test(v),
+    `★하단 버튼이 갈래마다 «하나» 입니다`)
+  check(/otherLabel: '내 아이 명품작명으로 가기'/.test(v)
+     && /otherLabel: '내 이름 정밀분석으로 가기'/.test(v),
+    `★옆 보관함 안내가 «새 이름» 입니다`)
+  check(/hiddenCount > 0[\s\S]{0,80}건 →/.test(v),
+    `⚠️ 저쪽에 몇 건인지 알려 드립니다 (사라진 줄 알고 놀라시지 않게)`)
 
-  // ③ ⚠️ 옛 주소를 좁히지 않았는가 — 마이페이지·북마크가 아직 옵니다
-  check(!/forcedMode=/.test(door),
-    `★옛 주소에 갈래를 «못 박지 않았습니다» (옛 링크가 작명 기록도 볼 수 있게)`)
-
-  // ④ 섞어 보여 주지 않는가 — 가른 뜻이 없어집니다
-  check(/const showAll = false/.test(view), `★한 화면에서 «섞지» 않습니다`)
-  check(/router\.push\(mode === 'naming'/.test(view),
-    `★대신 «옆 보관함으로 가는 길» 을 줍니다`)
-  check(/hiddenCount > 0[\s\S]{0,80}건 →/.test(view),
-    `⚠️ 저쪽에 몇 건 있는지 알려 드립니다 (사라진 줄 알고 놀라시지 않게)`)
-
-  // ⑤ 링크가 새 주소를 보는가
-  check(/naming\/naming-storage/.test(S.home), `홈 [아기 작명] 이 전용 주소로 갑니다`)
-  check(/naming\/naming-storage/.test(codeOf(S.nb)), `아기 작명 입구도 전용 주소로 갑니다`)
-  check(/naming\/naming-storage/.test(codeOf(S.nr)), `결과 화면의 보관함 버튼도 전용 주소입니다`)
-  check(!/storage\?mode=naming/.test(S.home + S.nb + S.nr),
-    `★옛 ?mode=naming 링크가 남아 있지 않습니다`)
+  // ④ ⚠️ 거르기는 «화면에서만» — 기록은 하나도 안 지웁니다
+  check(!/listNamingRecords\((mode|view)/.test(v),
+    `★목록을 «불러올 때» 거르지 않습니다`)
+  check(/shownRecords\.length\}건/.test(v), `머리의 건수가 «보이는 목록» 과 같습니다`)
+  // ⚠️ 옛 주소를 지우지 않았는가
+  check(existsSync(P.stoDoor), `⚠️ 옛 주소를 «지우지 않았습니다» (북마크·마이페이지)`)
 }
 
 console.log('\n━━ ⑲-z 🔴 회차 문구 · 보관함 «온전한» 저장 (43부 8차) ━━')
@@ -1135,56 +1137,8 @@ console.log('\n━━ ⑲-n ★홈 — 폴더를 «열지 않고» 바로 들어
 
   // ⑧ ⚠️ 연결(href)이 바뀌지 않았는가 — 자리를 옮긴 것이지 길을 바꾼 것이 아닙니다
   check(/couple-storage/.test(home), `궁합 연결 그대로`)
-  check(/storage\?mode=diagnosis/.test(home) && /naming-storage/.test(home),
-    `이름 두 카드가 «각자» 보관함으로 갑니다`)
-}
-
-console.log('\n━━ ⑲-m ★들어온 «입구» 에 따라 보관함이 갈리는가 (43부 2차) ━━')
-{
-  const sto = codeOf(S.sto)
-  // ① 모드를 읽는가
-  check(/sp\?\.get\('mode'\)/.test(sto), `?mode= 를 읽습니다`)
-  check(/MODE_VIEW/.test(sto) && /diagnosis:/.test(sto) && /naming:/.test(sto),
-    `★모드마다 달라지는 것을 «한 곳» 에만 적었습니다 (MODE_VIEW)`)
-
-  // ② 제목이 갈리는가
-  check(/title: '내 이름 정밀분석'/.test(sto) && /title: '내 아이 명품작명'/.test(sto),
-    `★제목이 갈립니다 — 「내 이름 정밀분석」 · 「내 아이 명품작명」`)
-
-  // ③ 탭이 숨는가
-  check(/\{!view && records && records\.length > 0 && \(/.test(sto),
-    `★모드로 들어오면 탭을 숨깁니다 (갈래가 이미 정해져 있습니다)`)
-
-  // ④ 하단 버튼이 «하나» 인가
-  check(/\(!view \|\| view\.button === '작명'\)/.test(sto)
-     && /\(!view \|\| view\.button === '풀이'\)/.test(sto),
-    `★버튼이 모드마다 하나씩만 뜹니다`)
-
-  // ⑤ ⚠️ «기록이 사라진 줄» 알고 놀라시지 않는가 — 가장 중요한 자리
-  check(/hiddenCount/.test(sto), `★가려진 기록이 몇 건인지 셉니다`)
-  // ★9차 — 「모두 보기」 대신 «옆 보관함으로 가기» 입니다 (⑲-A 가 봅니다)
-  check(/으로 가기'/.test(S.sto),
-    `★옆 보관함으로 가는 길이 있습니다 — 길이 끊기지 않습니다`)
-  // ⚠️ 거르기이지 «지우기» 가 아닙니다 — 목록 조회에 mode 가 끼면 안 됩니다
-  check(!/listNamingRecords\((mode|view)/.test(sto),
-    `★목록을 «불러올 때» 거르지 않습니다 (거르기는 화면에서만 — 기록은 그대로입니다)`)
-
-  // ⑥ 건수와 목록이 어긋나지 않는가
-  check(/view && !showAll \? shownRecords\.length : records\.length/.test(sto),
-    `★머리의 건수가 «보이는 목록» 과 같습니다`)
-
-  // ⑦ ⚠️ 모드가 «없을» 때는 예전 그대로여야 합니다 (옛 링크·마이페이지)
-  check(/: null\)/.test(sto),
-    `★mode 가 없으면 null — 탭 셋 · 버튼 둘로 «예전 그대로» 돕니다`)
-  check(/useState<FilterKey>\(view \? view\.only : '전체'\)/.test(sto),
-    `모드가 없으면 첫 탭이 «전체» 입니다`)
-  check(/mode: StorageMode = forcedMode/.test(sto), `전용 주소면 그 갈래로 고정됩니다`)
-
-  // ⑧ 입구가 mode 를 실어 보내는가
-  check(/mode=diagnosis/.test(S.home), `홈 [내이름 감정] 이 mode=diagnosis 로 갑니다`)
-  // ★9차 — 작명은 «전용 주소» 로 갈렸습니다 (위 ⑲-A 가 봅니다)
-  check(/naming-storage/.test(S.home), `홈 [아기 작명] 이 작명 보관함으로 갑니다`)
-  check(/naming-storage\?open=작명/.test(S.nb), `★안내 화면도 작명 보관함으로 갑니다`)
+  check(/naming\/diagnosis-storage/.test(home) && /naming\/naming-storage/.test(home),
+    `이름 두 카드가 «각자» 전용 보관함으로 갑니다 (43부 33차)`)
 }
 
 console.log('\n━━ ⑲-i 🔴 rename/auto 에 «가짜 데이터» 가 남아 있지 않은가 ━━')

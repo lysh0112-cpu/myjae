@@ -17,9 +17,11 @@
 //     ★여기에 diagnosis 를 못 박으면 옛 링크로 오신 분이 «작명 기록을 못 봅니다».
 //       (교훈 AM — 안 쓰인다고 지레 좁히면 쓰이던 길이 끊깁니다)
 //
-//  ★새로 만드는 링크는 아래 두 주소를 쓰십시오.
-//     이름 풀이  /manseryeok/naming/diagnosis/storage?mode=diagnosis
-//     작명       /manseryeok/naming/naming-storage
+//  ★2026-08-01 (43부 33차) — 새로 만드는 링크는 «전용 주소» 를 쓰십시오.
+//     이름 정밀분석  /manseryeok/naming/diagnosis-storage
+//     내 아이 명품작명 /manseryeok/naming/naming-storage
+//  ⚠️ 이 옛 주소는 «그대로 둡니다» — 마이페이지·북마크가 아직 옵니다.
+//     mode 가 없으면 «이름 정밀분석» 이 뜹니다 (이 주소의 원래 뜻입니다).
 // ══════════════════════════════════════════════════════════════════
 
 import NamingStorageView from '@/app/manseryeok/naming/components/NamingStorageView'

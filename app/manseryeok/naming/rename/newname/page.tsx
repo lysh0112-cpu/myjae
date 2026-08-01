@@ -480,7 +480,7 @@ function NewNameInner() {
             <br />성씨와 생년월일을 받아 이리로 모셔 옵니다.
           </div>
           <div style={{ marginTop: 20 }}>
-            <button onClick={() => router.push(isNewborn ? '/manseryeok/naming/naming-storage' : '/manseryeok/naming/diagnosis/storage?mode=diagnosis')}
+            <button onClick={() => router.push(isNewborn ? '/manseryeok/naming/naming-storage' : '/manseryeok/naming/diagnosis-storage')}
               style={{ padding: '12px 22px', borderRadius: 12, background: 'rgba(200,120,60,0.12)', border: '1px solid ' + GOLD, color: GOLD, fontWeight: 700, cursor: 'pointer' }}>
               {isNewborn ? '작명 보관함으로 가기 →' : '이름 보관함으로 가기 →'}
             </button>

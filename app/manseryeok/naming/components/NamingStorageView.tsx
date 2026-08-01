@@ -45,9 +45,8 @@ import { surnameOfHangul } from '@/lib/saju/surname'
 // ══════════════════════════════════════════════════════════════════
 
 type FilterKey = '전체' | '풀이' | '작명'
-const FILTER_LABEL: Record<FilterKey, string> = {
-  전체: '전체', 풀이: '이름 풀이', 작명: '작명 보관함',
-}
+// ★2026-08-01 (43부 33차) — 탭을 걷어내며 «탭 이름표» 도 함께 걷었습니다.
+//   ⚠️ FilterKey 의 '전체' 는 «남겨 둡니다» — 옛 저장본을 읽는 자리가 아직 씁니다.
 
 // ══════════════════════════════════════════════════════════════════
 //  ★2026-08-01 (43부 2차) — 「들어온 입구」에 따라 보관함이 «달라집니다»
@@ -97,7 +96,6 @@ const MODE_VIEW = {
   },
 } as const
 
-const FILTERS: FilterKey[] = ['전체', '풀이', '작명']
 
 /** 작명 기록에만 붙는 도드라지는 태그 */
 const KIND_TAG: Partial<Record<NamingKind, { label: string; bg: string; fg: string }>> = {
@@ -140,22 +138,31 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
   // ══════════════════════════════════════════════════════════════
   const modeParam = sp?.get('mode')
   //   ★전용 주소로 들어왔으면 그 갈래로 «고정» 입니다 (43부 9차)
-  const mode: StorageMode = forcedMode
-    ?? (modeParam === 'diagnosis' ? 'diagnosis'
-      : modeParam === 'naming' ? 'naming' : null)
-  const view = mode ? MODE_VIEW[mode] : null
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-01 (43부 33차) — 보관함을 «완전히» 갈랐습니다 (대표님 지시)
+  //
+  //   [무엇이 바뀌었나]  갈래가 «언제나» 정해집니다. 「전체」가 없습니다.
+  //     전  주소에 mode 가 없으면 → 탭 셋(전체·풀이·작명)
+  //     후  주소에 mode 가 없으면 → ★«이름 정밀분석» 입니다
+  //
+  //   ⚠️ 옛 주소(diagnosis/storage)를 diagnosis 로 «정한» 까닭 —
+  //      그 주소는 원래부터 «내 이름 풀이 보관함» 이었습니다.
+  //      옛 링크로 오신 분이 보시던 것과 «같은 것» 이 나옵니다.
+  //      ★작명 기록을 보시려면 ?mode=naming 이 그대로 듣습니다 (옛 링크 호환).
+  //
+  //   ⚠️ 「전체」를 없앤 뒤에도 기록은 «하나도» 지워지지 않습니다.
+  //      거르기는 화면에서만 합니다 — 아래 「◯◯으로 가기 · N건」이 저쪽을 알려 줍니다.
+  // ══════════════════════════════════════════════════════════════
+  const mode: Exclude<StorageMode, null> = forcedMode
+    ?? (modeParam === 'naming' ? 'naming' : 'diagnosis')
+  const view = MODE_VIEW[mode]
 
-  /** ★모드가 있으면 그 갈래로 «고정» 됩니다. 없으면 손님이 탭으로 고릅니다 */
-  const [filter, setFilter] = useState<FilterKey>(view ? view.only : '전체')
-  // ★2026-08-01 (43부 9차) — 「모두 보기」를 걷어냈습니다.
-  //   두 보관함을 «주소부터» 갈랐으므로, 한 화면에서 섞어 보여 주지 않습니다.
-  //   ⚠️ 대신 아래에서 «옆 보관함으로 가는 길» 과 «저쪽에 몇 건인지» 를 알려 드립니다.
-  const showAll = false
-  const effFilter: FilterKey = showAll ? '전체' : filter
+  /** ★탭이 없으므로 «갈래 그대로» 입니다 */
+  const effFilter: FilterKey = view.only
 
-  /** ★탭에 맞춰 거릅니다. «작명» 은 풀이가 아닌 것 전부 (개명·신생아) */
+  /** «작명» 은 풀이가 아닌 것 전부 (개명·신생아) */
   const shownRecords = (records ?? []).filter(r =>
-    effFilter === '전체' ? true : effFilter === '풀이' ? r.kind === '풀이' : r.kind !== '풀이')
+    effFilter === '풀이' ? r.kind === '풀이' : r.kind !== '풀이')
   /** ⚠️ «다른 갈래에 몇 건이 있는지» — 기록이 사라진 줄 알고 놀라시지 않도록 */
   const hiddenCount = (records ?? []).length - shownRecords.length
   const [deleting, setDeleting] = useState(false)
@@ -212,13 +219,13 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
         <button onClick={() => router.push('/home-new')}
           style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
         <div style={{ fontSize: 16, fontWeight: 500, color: '#1a1a1a' }}>
-          {view ? view.title : '내 이름 보관함'}
+          {view.title}
         </div>
         {records && (
           <div style={{ marginLeft: 'auto', fontSize: 12, color: '#5c3a1e' }}>
-            {/* ⚠️ 모드일 때는 «보이는 건수» 를 적습니다 — 전체 건수를 적으면
+            {/* ⚠️ «보이는 건수» 를 적습니다 — 전체 건수를 적으면
                 목록과 숫자가 어긋나 「어디 갔지」 가 됩니다 */}
-            {(view && !showAll ? shownRecords.length : records.length)}건
+            {shownRecords.length}건
           </div>
         )}
       </div>
@@ -236,42 +243,17 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
           <div style={{ textAlign: 'center', padding: '46px 20px', color: '#5c3a1e' }}>
             <div style={{ fontSize: 30, marginBottom: 10 }}>{mode === 'naming' ? '✍️' : '📜'}</div>
             <div style={{ fontSize: 14, color: '#96502e', fontWeight: 500, marginBottom: 4 }}>
-              {view ? view.empty : '아직 저장된 이름 풀이가 없어요'}
+              {view.empty}
             </div>
             <div style={{ fontSize: 12, lineHeight: 1.6 }}>
-              {view ? view.emptySub : '이름을 풀면 여기에 차곡차곡 쌓여요'}
+              {view.emptySub}
             </div>
           </div>
         )}
 
-        {/* ★필터 탭 — 전체 / 이름 풀이 / 작명 보관함
-            ⚠️ 모드로 들어오면 «숨깁니다». 갈래가 이미 정해져 있는데 탭을 보이면
-               「왜 하나만 나오지」 가 됩니다. 대신 아래 「모두 보기」 를 둡니다. */}
-        {!view && records && records.length > 0 && (
-          <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-            {FILTERS.map(k => {
-              const on = filter === k
-              const n = k === '전체' ? records.length
-                : k === '풀이' ? records.filter(x => x.kind === '풀이').length
-                : records.filter(x => x.kind !== '풀이').length
-              return (
-                <button key={k} onClick={() => setFilter(k)}
-                  aria-pressed={on}
-                  style={{
-                    ...PRESS,
-                    flex: 1, padding: '9px 6px', borderRadius: 11, cursor: 'pointer',
-                    fontSize: 12, fontWeight: on ? 600 : 400,
-                    background: on ? '#c8783c' : '#FFFBF7',
-                    color: on ? '#fff' : '#6b5340',
-                    border: `0.5px solid ${on ? '#c8783c' : '#f0e0d5'}`,
-                  }}>
-                  {FILTER_LABEL[k]}
-                  <span style={{ fontSize: 10, opacity: .75, marginLeft: 4 }}>{n}</span>
-                </button>
-              )
-            })}
-          </div>
-        )}
+        {/* ★2026-08-01 (43부 33차) — 필터 탭을 «걷어냈습니다» (대표님 지시).
+            두 보관함이 주소부터 갈렸으므로 한 화면에서 갈래를 고를 까닭이 없습니다.
+            ⚠️ 「전체」도 없앴습니다 — 섞어 보면 «갈랐다는 뜻» 이 없어집니다. */}
 
         {/* ★고른 탭에 아무것도 없을 때 — «전체가 비었을 때» 와 다릅니다 */}
         {records && records.length > 0 && shownRecords.length === 0 && (
@@ -375,7 +357,8 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
             ══════════════════════════════════════════════════════ */}
         {records && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-            {(!view || view.button === '작명') && (
+            {/* ★버튼은 «하나» 뿐입니다 — 이 보관함의 갈래에 맞는 것만 (43부 33차) */}
+            {view.button === '작명' && (
               <button onClick={() => setPickerOpen('작명')}
                 style={{
                   ...PRESS,
@@ -386,7 +369,7 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
                 + 새 이름 짓기 <span style={{ fontSize: 12, opacity: .85 }}>(작명)</span>
               </button>
             )}
-            {(!view || view.button === '풀이') && (
+            {view.button === '풀이' && (
               <button onClick={() => setPickerOpen('풀이')}
                 style={{
                   ...PRESS,
@@ -423,14 +406,14 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
               모드로 걸러 놓았을 뿐 하나도 지워지지 않았다는 것을 알려 드립니다.
               몇 건이 가려져 있는지 «숫자로» 적습니다.
             ══════════════════════════════════════════════════════ */}
-        {view && records && records.length > 0 && (
+        {records && records.length > 0 && (
           <button
             onClick={() => {
               // ★2026-08-01 (43부 9차) — «섞어 보여 주지» 않고 «옆 보관함으로 갑니다».
               //   ⚠️ 두 곳을 갈라 놓고 한 화면에서 섞으면 가른 뜻이 없어집니다.
               //      다만 «몇 건이 저쪽에 있는지» 는 알려 드려야 놀라시지 않습니다.
               router.push(mode === 'naming'
-                ? '/manseryeok/naming/diagnosis/storage?mode=diagnosis'
+                ? '/manseryeok/naming/diagnosis-storage'
                 : '/manseryeok/naming/naming-storage')
             }}
             style={{
