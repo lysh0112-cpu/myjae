@@ -44,6 +44,7 @@ const P = {
   hanja: 'app/manseryeok/naming/rename/hanja/page.tsx',
   hrow: 'lib/saju/hanjaRow.ts',
   rj: 'lib/saju/resourceJudge.ts',
+  api: 'app/api/naming/route.ts',
   svc: 'app/home-new/components/ServiceSection.tsx',
   cert: 'app/manseryeok/naming/components/NamingCertificate.tsx',
   pol: 'lib/saju/namingPolicy.ts',
@@ -343,6 +344,75 @@ console.log('\n━━ ⑲-B ★A4 선명장(撰名狀) 양식 (43부 10차) ━�
     `⚠️ 문장 «가운데» 를 자르지 않습니다 — 마침표에서 끊습니다`)
   check(/자세한 풀이는 앱에서 이어집니다/.test(S.cert),
     `★잘렸다는 것을 «숨기지 않습니다»`)
+
+  // ⑫ ★★프롬프트 상한 ↔ 종이 그릇 — «두 숫자가 갈라지면» 안 됩니다 (43부 16차)
+  //    글을 «쓰는 쪽»(프롬프트)과 «담는 쪽»(종이)이 서로 다른 파일에 있습니다.
+  //    ⚠️ 한쪽만 고치는 날이 반드시 옵니다. 그때 조용히 문장이 잘려 나갑니다.
+  //    ★그래서 두 숫자를 «맞대어» 잽니다.
+  {
+    const api = read(P.api)
+    // ★2026-08-01 (43부 17차) — 상한은 이제 «종이용 요약(chongpyeong)» 에만 겁니다.
+    //   🔴 전에는 «화면 글» 에 800자를 걸었습니다. 종이 때문이었는데,
+    //      그 바람에 손님이 읽는 화면 글이 «얇아졌습니다». 대표님 지시로 걷어냈습니다.
+    const m = api.match(/«(\d+)자 안쪽» 으로\. 문단을 나누지 말고/)
+    check(!!m, `★프롬프트에 «요약 총평» 상한이 적혀 있습니다`)
+    const promptCap = m ? Number(m[1]) : 0
+    const paperCap = Number((cert.match(/CHONG_MAX = (\d+)/) ?? [])[1] ?? 0)
+    check(paperCap > 0, `종이가 담는 한계(CHONG_MAX)가 있습니다`)
+    check(promptCap > 0 && paperCap > promptCap,
+      `★종이 그릇(${paperCap}자)이 프롬프트 상한(${promptCap}자)보다 «큽니다» — 잘릴 일이 없습니다`)
+    check(paperCap - promptCap >= 200,
+      `★여유가 ${paperCap - promptCap}자 있습니다 (AI 가 조금 넘겨도 안 잘립니다)`)
+    // ⚠️ 프롬프트가 «왜» 그 상한을 지켜야 하는지 적혀 있어야 다음 세션이 안 지웁니다
+    check(/A4 한 장짜리 종이 증서의 總評 자리/.test(api),
+      `⚠️ 그 상한이 «선명장 때문» 임이 프롬프트에 적혀 있습니다`)
+    // ★★화면 글에는 «상한이 없어야» 합니다 (대표님 지시)
+    check(/상한을 두지 «않습니다». 넉넉히 쓰세요/.test(api),
+      `★화면 글(다섯 관점·맺음말)에는 «상한이 없습니다»`)
+    check(!/★conclusion 은 4~5문장. «350자 안쪽»/.test(api),
+      `★맺음말의 옛 상한(350자)이 걷혔습니다`)
+    check(/내용은 줄이지 말고, 그 내용들을 «요약»/.test(api),
+      `⚠️ 왜 갈랐는지가 프롬프트에 적혀 있습니다`)
+    // 새 필드가 «실제로» 요청되는가
+    check(/"chongpyeong":/.test(api), `★JSON 스키마에 chongpyeong 이 있습니다`)
+    check(/요약해 새로 쓴» 한 덩이 글/.test(api),
+      `★«줄인 것» 이 아니라 «요약해 새로 쓴» 글임을 일러 둡니다`)
+    check(/새로 지어내지» 마세요/.test(api),
+      `⚠️ 화면에 없는 이야기를 지어내지 못하게 막았습니다`)
+    // ★AI 가 상한을 넘겨도 «아무도 모르는» 일이 없게
+    check(new RegExp(`CHONG_PROMPT_CAP = ${promptCap}`).test(api),
+      `★서버가 그 상한(${promptCap}자)을 «같은 값» 으로 들고 있습니다`)
+    check(/chongpyeong 이 비었습니다/.test(api),
+      `★요약이 아예 비면 «그것도» 로그에 남깁니다 (옛 길로 갔다는 뜻입니다)`)
+    check(/console\.warn\([\s\S]{0,80}總評 분량 초과/.test(api),
+      `★넘치면 로그에 남깁니다 (조용히 지나가지 않습니다)`)
+    // ⚠️ 서버가 «자르면» 화면 풀이까지 잘립니다
+    check(!/conclusion: [\s\S]{0,40}\.slice\(0, CHONG/.test(api),
+      `⚠️ 서버는 «자르지 않습니다» — 화면에는 전문이 나갑니다`)
+  }
+
+  // ⑫ ★통변 «프롬프트» 가 분량을 조절하는가 (43부 16차)
+  //    ⚠️ 뒤에서 자르는 것보다 «애초에 알맞게 쓰게» 하는 것이 낫습니다.
+  const api = read('app/api/naming/route.ts')
+  // ★2026-08-01 (43부 17차) — 이 검사 다섯이 «옛 방식» 을 요구하고 있었습니다.
+  //   🔴 화면 글에 800자 상한을 두던 때의 검사입니다.
+  //      그 상한 때문에 손님이 읽는 글이 «얇아졌습니다». 대표님 지시로 갈랐습니다.
+  //      → 화면 글은 «상한 없이», 종이용 요약(chongpyeong)만 450자.
+  check(/450자 안쪽» 으로\. 문단을 나누지 말고/.test(api),
+    `★종이용 «요약» 에만 상한이 있습니다`)
+  check(/"chongpyeong":/.test(api),
+    `★AI 에게 «요약 총평» 을 따로 청합니다`)
+  check(/A4 한 장짜리 종이 증서의 總評 자리/.test(api),
+    `★«왜» 짧아야 하는지 프롬프트에 적혀 있습니다 (그래야 AI 가 지킵니다)`)
+  check(/상한을 두지 «않습니다». 넉넉히 쓰세요/.test(api),
+    `★★화면 글에는 «상한이 없습니다» — 정밀분석을 줄이지 않습니다`)
+  check(!/800자를 넘기지 마세요/.test(api),
+    `★화면 글의 옛 상한(800자)이 걷혔습니다`)
+  // ⚠️⚠️ 프롬프트가 생겼다고 자름막을 걷어내면 안 됩니다
+  check(/CHONG_MAX = 1150/.test(cert),
+    `★자름막이 «그대로» 있습니다 — AI 가 상한을 못 지킬 때가 있습니다`)
+  check(/프롬프트는 «부탁» 이고, 이 값은 «약속»/.test(S.cert),
+    `★둘 다 있어야 하는 까닭이 적혀 있습니다`)
   check(/AI 가 씁니다 — 이름마다 길이가 «크게» 다릅니다/.test(S.cert),
     `★「한 번 재서 맞췄으니 됐다」가 안 통하는 까닭이 적혀 있습니다`)
 
@@ -358,6 +428,19 @@ console.log('\n━━ ⑲-B ★A4 선명장(撰名狀) 양식 (43부 10차) ━�
   // ★15차에 «줄인 뒤» 의 값(cMean·cEnd)을 봅니다 — 변수 이름이 바뀌었습니다
   check(/\$\{\(cMean \|\| cEnd\) \?/.test(cert),
     `⚠️ 둘 다 없으면 總評 칸을 «안 그립니다» (빈 제목만 남지 않게)`)
+
+  // ⑬ ★종이는 «요약» 을 싣습니다 — 화면 글을 잘라 붙이지 않습니다 (43부 17차)
+  check(/chongpyeong\?: string/.test(cert), `선명장이 «요약 총평» 을 받습니다`)
+  check(/const summary = \(p\.chongpyeong \?\? ''\)\.trim\(\)/.test(cert)
+     && /summary\s*\n?\s*\? trimChong\(summary, room\)/.test(cert),
+    `★요약이 있으면 «그것만» 씁니다`)
+  check(/const cEnd = summary \? '' :/.test(cert),
+    `★요약이 있으면 화면 맺음말을 «덧붙이지 않습니다»`)
+  // ⚠️ 옛 기록에는 요약이 «없습니다». 그분들 증서도 나와야 합니다
+  check(/비어 있으면 옛 길/.test(S.cert),
+    `⚠️ 요약이 없으면 옛 길로 갑니다 (옛 기록도 증서가 나옵니다)`)
+  check(/chongpyeong=\{\(cur\.commentary as/.test(nr),
+    `결과 화면이 요약을 넘깁니다`)
 }
 
 console.log('\n━━ ⑲-A ★보관함 둘을 «따로» 운영하는가 (43부 9차) ━━')

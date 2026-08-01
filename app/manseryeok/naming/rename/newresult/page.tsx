@@ -754,6 +754,9 @@ function NewResultInner() {
           //   ⚠️ 이름의 «값어치» 는 「이름이 사주를 어떻게 돕는가」에 있습니다.
           //      맺음말만 실으면 그 까닭이 종이에 남지 않습니다.
           //   ⚠️ AI 가 쓴 글을 «그대로» 싣습니다 — 여기서 고쳐 쓰면 화면과 갈립니다.
+          // ★2026-08-01 (43부 17차) — 종이에는 «요약» 을 싣습니다.
+          //   ⚠️ 화면 글은 «줄이지 않습니다» (대표님 지시). 종이용 글이 따로 옵니다.
+          chongpyeong={(cur.commentary as { chongpyeong?: string })?.chongpyeong || ''}
           yongsinLine={cur.commentary?.yongsin?.name || ''}
           yongsinMeaning={cur.commentary?.yongsin?.meaning || ''}
           conclusion={cur.commentary?.conclusion || ''}

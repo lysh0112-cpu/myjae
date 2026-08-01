@@ -80,6 +80,8 @@ function emptyCommentary() {
     jawon: { intro: '', name: '', meaning: '' },     // ④ 자원오행
     yongsin: { intro: '', name: '', meaning: '' },   // ⑤ 사주와의 만남
     conclusion: '',                                   // 맺음말
+    // ★2026-08-01 (43부 17차) — 선명장에 실을 «요약 총평» (화면 글과 별개)
+    chongpyeong: '',
   }
 }
 
@@ -240,6 +242,31 @@ ${namingGuide}
   용신·희신을 담았는가, 사주의 약하거나 넘치는 기운과 어떻게 만나는가, weakClashNote.
 - ★두 관점이 같은 이야기를 두 번 하지 않게 하세요.
 
+[★분량 — 화면 글은 «줄이지 마세요»]
+- ★2026-08-01 대표님 지시 —
+  「내 이름 정밀분석 내용은 줄이지 말고, 그 내용들을 «요약» 해서 선명장에 실어라」
+- ⚠️⚠️ 다섯 관점(yinyang·baleum·suri·jawon·yongsin)과 conclusion 은
+     «화면에서 손님이 읽는 글» 입니다. 상한을 두지 «않습니다». 넉넉히 쓰세요.
+     ★전에는 여기에 800자 상한이 있었습니다. 종이(선명장) 때문이었는데,
+       그 때문에 «화면 글이 얇아졌습니다». 상한을 걷어냈습니다.
+- ★yongsin 의 「name」만은 «한 문장·60자 안쪽» 으로 둡니다.
+  이 사주가 무엇을 용신·희신으로 삼고, 이름에 무엇이 담겼는지만 적으세요.
+  (선명장 머리에 «한 줄» 로 들어갑니다)
+- ★종이에 들어갈 짧은 글은 «따로» 씁니다 — 아래 chongpyeong 을 보세요.
+
+[★chongpyeong — 撰名狀(선명장)에 실을 «總評»]
+- ★이것은 «위 글을 줄인 것» 이 아니라 «요약해 새로 쓴» 한 덩이 글입니다.
+  A4 한 장짜리 종이 증서의 總評 자리에 들어갑니다. 손님 손에 오래 남습니다.
+- ⚠️⚠️ «450자 안쪽» 으로. 문단을 나누지 말고 «한 덩이» 로 쓰세요.
+  [왜]  종이가 한 장입니다. 넘치면 글자가 작아지거나 문장이 잘립니다.
+        ★잘린 문장이 찍힌 증서를 드릴 수는 없습니다.
+- 담을 것 — ① 이름이 사주의 «어떤 기운» 을 채우거나 덜어 주는가
+             ② 수리 4격의 흐름이 어떠한가 (한두 마디로)
+             ③ 부르는 사람과 함께 채워 가는 이름이라는 맺음
+- 어조는 전통 증서에 어울리게 «담담하고 정갈하게». 다만 옛투로 꾸미지 마세요.
+- ⚠️ 화면 글에 없는 이야기를 «새로 지어내지» 마세요. 위 다섯 관점 안에서만 추리세요.
+- ⚠️ 「매우 좋은 이름입니다」 같은 «단정» 을 쓰지 마세요. 화면과 같은 태도를 지키세요.
+
 [★yongsin(사주와의 만남)의 맺음]
 - 마지막 문장은 «개운» 의 말로 맺으세요. 이름이 사주를 어떻게 돕는지에 초점을 둡니다.
   예) "사주에 부족한 기운을 보완하여 삶의 흐름을 한층 윤택하게 돕는 이름으로 볼 수 있습니다."
@@ -290,7 +317,8 @@ ${JSON.stringify(factsForAI, null, 2)}
   "suri":     { "intro": "", "name": "", "meaning": "" },
   "jawon":    { "intro": "", "name": "", "meaning": "" },
   "yongsin":  { "intro": "", "name": "", "meaning": "" },
-  "conclusion": "다섯 관점을 아우르는 겸손한 맺음말 3~5문장. 판정하지 말고, 이름과 사주가 어우러지는 결을 전하며 '좋고 나쁨으로 가르기보다 더불어 살아가는 것'이라는 태도로 마무리."
+  "conclusion": "다섯 관점을 아우르는 겸손한 맺음말. 판정하지 말고, 이름과 사주가 어우러지는 결을 전하며 '좋고 나쁨으로 가르기보다 더불어 살아가는 것'이라는 태도로 마무리. ★분량 상한 없음 — 화면 글입니다.",
+  "chongpyeong": "★撰名狀(종이 증서)에 실을 總評. 위 글들을 «요약해 새로 쓴» 한 덩이 글. ⚠️450자 안쪽, 문단 나누지 말 것. 이름이 사주의 어떤 기운을 채우는가 · 수리의 흐름 · 부르는 사람과 함께 채워 가는 이름이라는 맺음."
 }`
 
     let commentary: Record<string, unknown> = emptyCommentary()
@@ -432,11 +460,46 @@ ${JSON.stringify(factsForAI, null, 2)}
       suriGrade: result.suri.grade,
     })
 
+    // ══════════════════════════════════════════════════════════════
+    //  ★2026-08-01 (43부 16차) — 總評 분량이 «상한을 넘었는지» 재서 남깁니다
+    //
+    //   ★2026-08-01 (43부 17차) — 이제 «화면 글» 이 아니라 «요약 총평(chongpyeong)» 을 잽니다.
+    //     [무엇이 달라졌나]  전에는 화면 글(yongsin+conclusion)에 800자 상한을 두었습니다.
+    //       종이 때문이었는데, ★그 바람에 «화면 글이 얇아졌습니다».
+    //       대표님 지시로 화면 글의 상한을 걷고, 종이용 요약을 «따로» 받습니다.
+    //   [왜 재는가]  프롬프트의 450자는 «부탁» 입니다. AI 는 때때로 넘깁니다.
+    //     넘긴 것을 «아무도 모르면» 어느 날 선명장에서 문장이 잘려 나가고,
+    //     그제야 손님이 알려 주십니다.
+    //   ⚠️ 여기서 «자르지» 않습니다 — 자르면 문장 가운데가 끊깁니다.
+    //      종이 쪽(NamingCertificate)이 1,150자까지 담고, 넘으면 거기서 줄입니다.
+    //   ⚠️ 이 숫자를 고치실 때는 NamingCertificate 의 CHONG_MAX 와 «함께» 보십시오.
+    //      28-verify ⑲-B 가 두 숫자를 맞대어 잽니다.
+    // ══════════════════════════════════════════════════════════════
+    //   ⚠️ commentary 는 느슨한 모양이라 «조심스럽게» 꺼냅니다 — 없으면 0 입니다
+    const cAny = commentary as {
+      yongsin?: { name?: string; meaning?: string }
+      conclusion?: string; chongpyeong?: string
+    }
+    const chongLen = (cAny.chongpyeong ?? '').length
+    const CHONG_PROMPT_CAP = 450
+    if (chongLen > CHONG_PROMPT_CAP) {
+      console.warn(
+        `[naming] 撰名狀 總評 분량 초과 — ${chongLen}자 (상한 ${CHONG_PROMPT_CAP}자) · ${hanjaName || hangulName}\n`
+        + `  종이는 1,150자까지 담습니다. 자주 뜨면 프롬프트의 chongpyeong 지침을 다시 보십시오.`,
+      )
+    }
+    // ⚠️ 요약이 «아예 비면» 종이가 옛 길(화면 글)로 갑니다 — 그것도 알아야 합니다
+    if (!cAny.chongpyeong && (cAny.conclusion ?? '')) {
+      console.warn(`[naming] chongpyeong 이 비었습니다 — 선명장이 화면 글로 대신합니다 · ${hanjaName || hangulName}`)
+    }
+
     return NextResponse.json({
       hangulName,
       hanjaName,
       result,
       commentary,
+      // ★總評 분량 — 화면이 쓰지는 않지만, 넘치는지 «밖에서» 볼 수 있게 냅니다
+      chongLen,
       savedId,
       stars,
       overallStar: overallStar(stars, verdict.facts.hasYongsin),

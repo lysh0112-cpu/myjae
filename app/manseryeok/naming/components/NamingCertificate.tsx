@@ -105,6 +105,16 @@ export interface NamingCertificateProps {
    */
   yongsinLine?: string
   yongsinMeaning?: string
+  /**
+   * ★撰名狀 전용 «요약 總評» (2026-08-01 · 43부 17차 · 대표님 지시)
+   *
+   *   「내 이름 정밀분석 내용은 줄이지 말고, 그 내용들을 «요약» 해서 실어라」
+   *
+   *   ★이 값이 있으면 이것«만» 씁니다 — 화면 글을 잘라 붙이지 않습니다.
+   *   ⚠️ 비어 있으면 옛 길(yongsinMeaning + conclusion)로 갑니다.
+   *      옛 기록에는 이 값이 «없습니다». 그분들 증서도 나와야 합니다. (교훈 [폴백])
+   */
+  chongpyeong?: string
   /** 발행일 — 「2026년 8월 1일」 */
   issuedAt: string
   /** 팝업이 막혔을 때 알림 */
@@ -177,12 +187,32 @@ export function buildCertificateHtml(p: NamingCertificateProps): string {
     const kept = at > max * 0.5 ? cut.slice(0, at + 1) : cut.trimEnd()
     return kept + ' (…자세한 풀이는 앱에서 이어집니다)'
   }
-  // ⚠️ 한 장에 «읽을 수 있는 크기» 로 담기는 한계입니다 — 재서 얻은 값입니다
+  /**
+   * ⚠️ 한 장에 «읽을 수 있는 크기» 로 담기는 한계입니다 — 재서 얻은 값입니다.
+   *
+   * ★2026-08-01 (43부 16차) — 통변 프롬프트에도 «800자» 상한을 두었습니다
+   *   (app/api/naming/route.ts 의 「분량」 대목).
+   *   ⚠️ 그래도 이 자름막을 «걷어내지 마십시오».
+   *      AI 는 상한을 «지키지 못할 때가 있습니다». 그때 종이가 두 장으로 갈라집니다.
+   *      ★프롬프트는 «부탁» 이고, 이 값은 «약속» 입니다. 둘 다 있어야 합니다.
+   *   실측 — 실제 통변 745자 (상한의 65%). 여유가 넉넉합니다.
+   */
   const CHONG_MAX = 1150
   const cLine = p.yongsinLine ?? ''
   const room = Math.max(300, CHONG_MAX - cLine.length)
-  const cMean = trimChong(p.yongsinMeaning ?? '', Math.round(room * 0.6))
-  const cEnd = trimChong(p.conclusion ?? '', room - cMean.length)
+
+  /**
+   * ★요약이 있으면 «그것만» 씁니다 (43부 17차).
+   *
+   *  ⚠️ 화면 글을 잘라 붙이던 옛 길은 «요약이 없을 때만» 돕니다.
+   *     옛 기록에는 chongpyeong 이 없어, 그분들 증서가 안 나오면 안 됩니다.
+   *  ⚠️ 요약도 상한을 지납니다 — AI 가 넘길 수 있습니다.
+   */
+  const summary = (p.chongpyeong ?? '').trim()
+  const cMean = summary
+    ? trimChong(summary, room)
+    : trimChong(p.yongsinMeaning ?? '', Math.round(room * 0.6))
+  const cEnd = summary ? '' : trimChong(p.conclusion ?? '', room - cMean.length)
 
   const chongLen = cLine.length + cMean.length + cEnd.length
   const chongSize = chongLen > 900 ? 7.6 : chongLen > 620 ? 8.3 : 9.2
