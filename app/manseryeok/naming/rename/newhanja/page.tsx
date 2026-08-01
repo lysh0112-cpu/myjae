@@ -20,6 +20,8 @@ import {
 } from '@/lib/saju/hanjaRow'
 // ★2026-08-01 (43부) 두음법칙 안내 — «판정은 바꾸지 않습니다» (교재는 표기음 그대로)
 import { dueumPairIfReal, dueumNotice } from '@/lib/saju/sound/dueum'
+// ★2026-08-01 (43부 23차) — 성씨는 «전용 표» 를 씁니다 (이름용 잣대로 거르지 않습니다)
+import { surnameHanjaOf, surnameRank } from '@/lib/saju/surnameHanja'
 // ★2026-08-01 (43부 6차) — 「한 번에 이름 하나」 정책 (대표님 확정)
 //   ⚠️ 부품은 두고 «배선만» 끊었습니다. lib/saju/namingPolicy.ts 의 값 하나로 되돌아옵니다.
 import { clampTryLimit, isSingleName } from '@/lib/saju/namingPolicy'
@@ -451,8 +453,21 @@ function NewHanjaInner() {
           //   不用 을 목록에서 빼면 50개 음(겁·괴·늠 …)이 후보 0개가 되어
           //   그 음을 이름에 가진 손님이 한자를 하나도 못 고르게 됩니다.
           //   → 막는 것은 avoid_hard·쉬는 줄뿐이고, 나머지는 흐리게 + 배지로 냅니다.
-          const filtered = ((data as HanjaRow[]) ?? []).filter((row) => listPolicy(row).show)
-          setHanjaList(filtered)
+          // ══════════════════════════════════════════════════════
+          //  🔴★2026-08-01 (43부 23차) — 성씨 칸에서는 «거르지 않습니다»
+          //
+          //   [무엇이 있었나]  성씨도 이름용 잣대(listPolicy)로 걸렀습니다.
+          //     → 「이」를 고르면 李(오이 이)가 «아예 안 보이고» 낯선 글자만 떴습니다.
+          //     ⚠️ 성씨는 «고르는 것» 이 아니라 «타고나는 것» 입니다.
+          //        집안의 글자를 화면이 지워 버리면 안 됩니다.
+          //
+          //   ★[이제]  성씨 칸이면 표가 준 것을 «그대로» 냅니다.
+          //     사주·수리 잣대는 «고른 뒤 풀이» 에만 씁니다 (대표님 지시).
+          //   ⚠️ 이름 칸은 예전 그대로 거릅니다 — 거기는 «고르는» 자리입니다.
+          // ══════════════════════════════════════════════════════
+          const isSurnameSlot = slots[activeIdx]?.role === '성'
+          const rows = (data as HanjaRow[]) ?? []
+          setHanjaList(isSurnameSlot ? rows : rows.filter((row) => listPolicy(row).show))
         }
         setLoadingList(false)
       })
@@ -601,6 +616,34 @@ function NewHanjaInner() {
     //   ⚠️ ③ 「주의」가 붙은 한자도 «추천» 에서 뺍니다 (대표님 지시).
     //      권해 놓고 고르면 수리·자원오행이 깎이는 것은 앞뒤가 안 맞습니다.
     //      ★「그 외」에는 그대로 둡니다 — 집안 한자가 거기 있을 수 있습니다.
+    // ══════════════════════════════════════════════════════════
+    //  ★성씨 칸은 «사주 잣대를 쓰지 않습니다» (43부 23차 · 대표님 지시)
+    //
+    //   「성씨는 사주 추천 대상이 아니라 «가문 선택 대상» 입니다」
+    //   ★대표 성씨 한자를 앞 묶음으로 내고, 그 안에서 «흔한 차례» 로 세웁니다.
+    //   ⚠️ 성씨 표에 없는 글자도 «빼지 않습니다» — 뒤에 그대로 둡니다.
+    //      드문 집안 글자가 표에 없을 수 있습니다.
+    // ══════════════════════════════════════════════════════════
+    if (slots[activeIdx]?.role === '성') {
+      const h = slots[activeIdx].hangul
+      const bySurname = [...scored].sort((a, b) =>
+        surnameRank(h, rowHanja(a.row)) - surnameRank(h, rowHanja(b.row))
+        || rowStrokes(a.row) - rowStrokes(b.row))
+      let known = bySurname.filter((x) => surnameRank(h, rowHanja(x.row)) < 999)
+      let rest = bySurname.filter((x) => surnameRank(h, rowHanja(x.row)) === 999)
+      // ⚠️ 성씨 표에 그 소리가 «없으면»(드문 집안·귀화 성씨) 앞 묶음이 빕니다.
+      //    그때는 «획수가 적은 차례» 로 앞에 냅니다 — 빈 자리를 두지 않습니다.
+      //    ★표에 없다고 「성씨가 아니다」라고 말하지 않습니다.
+      if (known.length === 0 && surnameHanjaOf(h).length === 0) {
+        known = rest.slice(0, TOP_N)
+        rest = rest.slice(TOP_N)
+      }
+      return {
+        recommend: known.map((x, i) => ({ row: x.row, rank: i + 1 })),
+        others: rest.map((x) => x.row),
+      }
+    }
+
     const fitSorted = sorted.filter((s) =>
       s.fitsYongsin
       && s.verdict.warnings.length === 0
@@ -611,7 +654,7 @@ function NewHanjaInner() {
     const recSet = new Set(rec.map((r) => r.row.hanja + r.row.strokes))
     const oth = sorted.map((s) => s.row).filter((r) => !recSet.has(r.hanja + r.strokes))
     return { recommend: rec, others: oth }
-  }, [scored])
+  }, [scored, activeIdx, slots])
 
   function pickHanja(row: HanjaRow) {
     setChosen((prev) => ({ ...prev, [activeIdx]: row }))
@@ -654,6 +697,14 @@ function NewHanjaInner() {
   // "이 이름으로 →" : 다음 글자로 넘어가거나, 다 골랐으면 확인 팝업 띄우기
   function proceed() {
     if (!chosen[activeIdx]) return
+    // ★2026-08-01 (43부 23차) — 성씨가 «먼저» 입니다 (대표님 지시 Step 0).
+    //   ⚠️ 성씨 획수가 정해져야 수리 4격이 «제대로» 나옵니다.
+    //      성씨를 비워 둔 채 이름 한자를 고르면 4격이 나중에 통째로 달라집니다.
+    const surnameHole = slots.findIndex((sl, i) => sl.role === '성' && !slotFilled(i))
+    if (surnameHole !== -1 && surnameHole !== activeIdx) {
+      setActiveIdx(surnameHole)
+      return
+    }
     const next = slots.findIndex((_, i) => !slotFilled(i) && i !== activeIdx)
     if (next !== -1) {
       setActiveIdx(next)
@@ -835,7 +886,11 @@ function NewHanjaInner() {
           /** ★불러온 성씨를 «그대로 쓰는» 칸인가 — 흐리게 두어 개명 화면을 안 흔듭니다 */
           const asLoaded = isSur && !chosen[i] && !!pickedSurnameChars[i]
           return (
-            <button key={i} onClick={() => setActiveIdx(i)} className="active:scale-95"
+            <button key={i} onClick={() => {
+              // ★성씨가 아직이면 «성씨부터» 입니다 (43부 23차)
+              const hole = slots.findIndex((sl, k) => sl.role === '성' && !slotFilled(k))
+              setActiveIdx(hole !== -1 && slot.role !== '성' ? hole : i)
+            }} className="active:scale-95"
               /* ★성씨 칸도 «누를 수 있습니다» — 柳/劉 처럼 집안마다 다릅니다 */
               aria-pressed={on}
               style={{ flex: 1, padding: '12px 0', borderRadius: 14, textAlign: 'center', cursor: 'pointer',
@@ -918,7 +973,8 @@ function NewHanjaInner() {
 
       {/* ★추천이 비는 것은 «정상» 입니다 — 이 글자에 용신 한자가 없을 수 있습니다.
           ⚠️ 아무 말도 없으면 손님이 「왜 추천이 없지」 하십니다. */}
-      {yongsinReady && !loadingList && recommend.length === 0 && others.length > 0 && (
+      {yongsinReady && !loadingList && recommend.length === 0 && others.length > 0
+        && slots[activeIdx]?.role !== '성' && (
         <div style={{
           background: CARD, border: `1px solid ${LINE}`, borderRadius: 12,
           padding: '10px 13px', marginBottom: 12, fontSize: 11.5, color: '#96502e', lineHeight: 1.7,
@@ -938,7 +994,11 @@ function NewHanjaInner() {
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: GREEN, display: 'inline-block' }} />
-            <span style={{ fontSize: 11, color: SUB }}>사주(용신 {yongsin})에 맞는 추천 · 좋은 순서 {recommend.length}개</span>
+            <span style={{ fontSize: 11, color: SUB }}>
+              {slots[activeIdx]?.role === '성'
+                ? <>★대표 성씨 한자 {recommend.length}개 · 가문의 글자를 골라 주세요</>
+                : <>사주(용신 {yongsin})에 맞는 추천 · 좋은 순서 {recommend.length}개</>}
+            </span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 16 }}>
             {recommend.map((r) => cell(r.row, true, r.rank))}

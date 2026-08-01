@@ -214,6 +214,47 @@ console.log('\n━━ ⑲-h ⚠️ 옛 개명 손님이 «안 깨지는가» ━
   }
 }
 
+console.log('\n━━ ⑲-G 🔴 성씨는 «가문 선택» 이지 «사주 추천» 이 아니다 (43부 23차) ━━')
+{
+  const nh = codeOf(S.nh)
+  const tbl = read('lib/saju/surnameHanja.ts')
+
+  // ① 성씨 «전용» 데이터셋
+  check(existsSync('lib/saju/surnameHanja.ts'), `성씨 전용 표가 있습니다`)
+  check(/이: \['李'/.test(tbl), `★「이」에 李 가 «첫째» 로 있습니다`)
+  check(/류: \['柳', '劉'\]/.test(tbl) && /정: \['鄭', '丁'/.test(tbl),
+    `★같은 소리의 여러 집안이 담겨 있습니다 (류·정)`)
+  check(/남궁: \['南宮'\]/.test(tbl), `복성도 있습니다`)
+  // ⚠️ 획수를 여기 또 적으면 hanja 표와 갈립니다
+  check(!/bookStrokes|strokes:/.test(tbl),
+    `★획수를 «여기 적지 않았습니다» — hanja 표가 정본입니다 (교훈 CJ)`)
+  check(/이 표를 «전부» 라고 여기지 마십시오/.test(tbl),
+    `⚠️ 이 표가 전부가 아님을 적어 두었습니다`)
+
+  // ② 🔴 성씨 칸에서 «거르지 않는가» — 李 가 사라지던 자리
+  check(/setHanjaList\(isSurnameSlot \? rows : rows\.filter/.test(nh),
+    `★★성씨 칸은 이름용 잣대(listPolicy)로 «거르지 않습니다»`)
+  check(/성씨는 «고르는 것» 이 아니라 «타고나는 것»/.test(S.nh),
+    `⚠️ 그 까닭이 적혀 있습니다`)
+  // 대표 성씨를 앞으로
+  check(/surnameRank\(h, rowHanja\(a\.row\)\)/.test(nh),
+    `★대표 성씨 한자를 «앞 묶음» 으로 냅니다`)
+  check(/대표 성씨 한자 \{recommend\.length\}개/.test(S.nh),
+    `머리글도 「대표 성씨 한자」로 갈립니다`)
+  // ⚠️ 표에 없는 성씨도 막지 않아야 합니다
+  check(/known\.length === 0 && surnameHanjaOf\(h\)\.length === 0/.test(nh),
+    `⚠️ 표에 없는 성씨(드문 집안·귀화)도 앞에 냅니다`)
+  // ⚠️ 성씨 칸에 «용신 경고» 를 띄우면 안 됩니다
+  check(/slots\[activeIdx\]\?\.role !== '성' && \(/.test(nh),
+    `★성씨 칸에는 «용신에 안 맞는다» 는 경고를 띄우지 않습니다`)
+
+  // ③ ★Step 0 — 성씨가 «먼저»
+  check(/const surnameHole = slots\.findIndex/.test(nh),
+    `★성씨를 비워 둔 채 이름 한자로 넘어가지 «못합니다»`)
+  check(/성씨 획수가 정해져야 수리 4격이 «제대로» 나옵니다/.test(S.nh),
+    `⚠️ 왜 성씨가 먼저인지 적혀 있습니다`)
+}
+
 console.log('\n━━ ⑲-F 🔴 점수 널뛰기 · 추천이 나무라는 한자 (43부 21차) ━━')
 {
   const nh = codeOf(S.nh)
