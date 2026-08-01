@@ -584,8 +584,29 @@ function NewHanjaInner() {
       { fitsYongsin: a.fitsYongsin, avoidSoft: !!a.row.avoid_soft, score: a.weighted, strokes: rowStrokes(a.row), softPenalty: listPolicy(a.row).softPenalty },
       { fitsYongsin: b.fitsYongsin, avoidSoft: !!b.row.avoid_soft, score: b.weighted, strokes: rowStrokes(b.row), softPenalty: listPolicy(b.row).softPenalty },
     ))
-    const fitSorted = sorted.filter((s) => s.fitsYongsin)
-    const recSrc = (fitSorted.length > 0 ? fitSorted : sorted).slice(0, TOP_N)
+    // ══════════════════════════════════════════════════════════
+    //  🔴★2026-08-01 (43부 21차) — «용신 추천» 에 엉뚱한 한자가 섞이던 자리
+    //
+    //   [무엇이 있었나]  용신에 맞는 한자가 «하나도 없으면» 전체를 그대로
+    //     「사주(용신 토)에 맞는 추천」 자리에 내놓았습니다.
+    //     → 용신이 토인데 화(暖)가 «추천» 으로 떴고,
+    //       그것을 고르면 확정 팝업이 「화가 이미 넉넉한데 화를 더한다」며 깎았습니다.
+    //     ⚠️ 화면이 «권하고» 화면이 «나무라는» 꼴이었습니다.
+    //
+    //   ★[이제]  용신에 맞는 것이 없으면 «권하지 않습니다».
+    //     빈 자리를 억지로 채우지 않고, 아래 「그 외」에서 고르시게 합니다.
+    //   ⚠️ 그리고 사주가 «이미 넘치는» 오행·기신은 추천에서 «뺍니다» —
+    //      그것을 더하면 확정 팝업이 곧바로 경고를 냅니다. 권할 까닭이 없습니다.
+    // ══════════════════════════════════════════════════════════
+    //   ⚠️ ③ 「주의」가 붙은 한자도 «추천» 에서 뺍니다 (대표님 지시).
+    //      권해 놓고 고르면 수리·자원오행이 깎이는 것은 앞뒤가 안 맞습니다.
+    //      ★「그 외」에는 그대로 둡니다 — 집안 한자가 거기 있을 수 있습니다.
+    const fitSorted = sorted.filter((s) =>
+      s.fitsYongsin
+      && s.verdict.warnings.length === 0
+      && !s.row.avoid_soft
+      && listPolicy(s.row).softPenalty === 0)
+    const recSrc = fitSorted.slice(0, TOP_N)
     const rec = recSrc.map((s, i) => ({ row: s.row, rank: i + 1 }))
     const recSet = new Set(rec.map((r) => r.row.hanja + r.row.strokes))
     const oth = sorted.map((s) => s.row).filter((r) => !recSet.has(r.hanja + r.strokes))
@@ -895,6 +916,18 @@ function NewHanjaInner() {
         </div>
       )}
 
+      {/* ★추천이 비는 것은 «정상» 입니다 — 이 글자에 용신 한자가 없을 수 있습니다.
+          ⚠️ 아무 말도 없으면 손님이 「왜 추천이 없지」 하십니다. */}
+      {yongsinReady && !loadingList && recommend.length === 0 && others.length > 0 && (
+        <div style={{
+          background: CARD, border: `1px solid ${LINE}`, borderRadius: 12,
+          padding: '10px 13px', marginBottom: 12, fontSize: 11.5, color: '#96502e', lineHeight: 1.7,
+        }}>
+          ‘{slotTarget}’ 소리에는 사주가 바라는 <b>{yongsin}</b> 기운의 한자가 없어요.
+          <br />아래에서 뜻과 획수를 보고 골라 주세요.
+        </div>
+      )}
+
       {yongsinReady && !loadingList && recommend.length > 0 && (
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
@@ -1011,8 +1044,13 @@ function NewHanjaInner() {
                       && ` 외 ${previewVerdict.verdict.warnings.length - 1}가지`}
                   </div>
                 )}
-                <div style={{ fontSize: 10, color: '#a8927e', marginTop: 7, lineHeight: 1.6 }}>
-                  자세한 풀이는 다음 화면에서 보여 드립니다.
+                {/* ★2026-08-01 (43부 21차) — 앞 걸음의 점수와 «왜 다른지» 밝힙니다.
+                    ⚠️ 「98점」을 보고 오셨는데 여기서 70점이면 «깎였다» 고 느끼십니다.
+                       깎인 것이 아니라 «재는 것이 늘어난» 것입니다. */}
+                <div style={{ fontSize: 10, color: '#8a7063', marginTop: 7, lineHeight: 1.65 }}>
+                  앞 걸음의 점수는 <b>소리</b>만 본 것이고, 이 점수는 고르신 <b>한자의
+                  획수·기운</b>까지 함께 본 것입니다.
+                  <br />자세한 풀이는 다음 화면에서 보여 드립니다.
                 </div>
               </div>
             )}

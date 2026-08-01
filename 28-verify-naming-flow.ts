@@ -214,6 +214,36 @@ console.log('\n━━ ⑲-h ⚠️ 옛 개명 손님이 «안 깨지는가» ━
   }
 }
 
+console.log('\n━━ ⑲-F 🔴 점수 널뛰기 · 추천이 나무라는 한자 (43부 21차) ━━')
+{
+  const nh = codeOf(S.nh)
+  const pick = codeOf(S.pick)
+
+  // ① 🔴 「사주(용신 X)에 맞는 추천」에 엉뚱한 한자가 섞이던 것
+  //    용신에 맞는 것이 «없으면» 전체를 그대로 추천 자리에 내놓았습니다.
+  check(!/fitSorted\.length > 0 \? fitSorted : sorted/.test(nh),
+    `★용신에 맞는 것이 없으면 «권하지 않습니다» (전체를 들이밀지 않습니다)`)
+  check(/s\.verdict\.warnings\.length === 0/.test(nh),
+    `★★확정 팝업이 «나무랄» 한자는 추천하지 않습니다`)
+  check(/!s\.row\.avoid_soft/.test(nh) && /softPenalty === 0/.test(nh),
+    `★「주의」 한자도 추천에서 뺍니다`)
+  check(/그 외\S*에는 그대로 둡니다/.test(S.nh),
+    `⚠️ 「그 외」에는 남깁니다 — 집안 한자가 거기 있을 수 있습니다`)
+  // ⚠️ 추천이 비면 «까닭» 을 알려야 합니다
+  check(/recommend\.length === 0 && others\.length > 0/.test(nh),
+    `★추천이 비면 «왜» 인지 알려 드립니다`)
+
+  // ② 🔴 「98점 → 70점」 널뛰기
+  check(/소리 \{Math\.round\(c\.score\)\}/.test(pick),
+    `★Step 2 점수가 «소리» 를 잰 것임을 드러냅니다`)
+  check(!/\{Math\.round\(c\.score\)\}점/.test(pick),
+    `★«점» 을 붙여 최종 점수처럼 보이지 않게 했습니다`)
+  check(/다음 걸음에서 한자를 고를 때<\/b> 정해집니다/.test(S.pick),
+    `★무엇이 «아직» 안 정해졌는지 목록 머리에 적었습니다`)
+  check(/앞 걸음의 점수는 <b>소리<\/b>만 본 것이고/.test(S.nh),
+    `★확정 팝업이 «왜 숫자가 다른지» 밝힙니다`)
+}
+
 console.log('\n━━ ⑲-E ★명품작명 결과 화면 · 컷라인 (43부 20차) ━━')
 {
   const nr = codeOf(S.nr)

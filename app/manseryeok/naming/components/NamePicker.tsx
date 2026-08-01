@@ -379,6 +379,16 @@ export default function NamePicker(p: NamePickerProps) {
           {ready && list.length === 0 && (
             <Empty>고르신 조건에 맞는 이름을 찾지 못했습니다. 조건을 조금 넓혀 보세요.</Empty>
           )}
+          {/* ★무엇을 잰 점수인지 «먼저» 알려 드립니다 (43부 21차) */}
+          {ready && list.length > 0 && (
+            <div style={{
+              fontSize: 10.5, color: '#7A6A5E', lineHeight: 1.65,
+              padding: '0 4px', marginBottom: 9,
+            }}>
+              점수는 <b>소리의 흐름</b>과 <b>사주가 바라는 기운</b>을 본 것입니다.
+              <br />획수(수리 4격)와 한자의 기운은 <b>다음 걸음에서 한자를 고를 때</b> 정해집니다.
+            </div>
+          )}
           {list.map((c) => (
             <button key={c.name} onClick={() => p.onPick(c.name)}
               style={{
@@ -391,8 +401,24 @@ export default function NamePicker(p: NamePickerProps) {
                 <span style={{ fontSize: 18, fontWeight: 600, color: INK, letterSpacing: 1 }}>
                   {c.fullName}
                 </span>
+                {/* ══════════════════════════════════════════════
+                    🔴★2026-08-01 (43부 21차) — 「98점 → 70점」 널뛰기 (대표님 지적)
+
+                     [무엇이 있었나]  여기 「98점」이 «최종 점수처럼» 보였습니다.
+                       그런데 이 점수는 «한글만» 보고 낸 것입니다 —
+                       발음오행 70 + 용신 20 + 어감 8 + 선호 2.
+                       ⚠️ 수리 4격과 자원오행은 «한자를 고른 뒤» 에야 정해집니다.
+                          그래서 다음 걸음에서 70점이 되어 «깎인 것처럼» 보였습니다.
+                       ★깎인 것이 아니라 «다른 것을 재고 있었습니다».
+
+                     [고침]  ① 「점」을 떼고 «소리 98» 로 적습니다 — 무엇을 잰 것인지 드러나게.
+                             ② 목록 머리에 「한자를 고르면 최종 점수가 나옵니다」를 적습니다.
+                     ⚠️ 두 점수를 «같은 잣대» 로 맞추려면 후보마다 한자 조합을
+                        전부 따져야 합니다 — 한 후보에 수백 가지입니다.
+                        ★그래서 «맞추는» 대신 «다른 것임을 밝히는» 길을 골랐습니다.
+                    ══════════════════════════════════════════════ */}
                 <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: GOLD }}>
-                  {Math.round(c.score)}점
+                  소리 {Math.round(c.score)}
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', paddingLeft: 38 }}>
