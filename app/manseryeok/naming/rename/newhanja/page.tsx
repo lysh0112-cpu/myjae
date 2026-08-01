@@ -1032,7 +1032,7 @@ function Header({ router, isNewborn }: {
     }}>
       <button onClick={() => router.push('/manseryeok/naming/rename/newname')} aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
       <span style={{ fontSize: 15, fontWeight: 500, color: INK }}>
-        {isNewborn ? '아기 이름 한자 고르기' : '새 이름 한자 고르기'}
+        {isNewborn ? '내 아이 명품작명 · 한자 고르기' : '새 이름 한자 고르기'}
       </span>
     </div>
   )

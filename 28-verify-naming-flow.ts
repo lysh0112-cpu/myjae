@@ -213,6 +213,49 @@ console.log('\n━━ ⑲-h ⚠️ 옛 개명 손님이 «안 깨지는가» ━
   }
 }
 
+console.log('\n━━ ⑲-D ★서비스 이름 개편 · 압핀 지키기 (43부 13차) ━━')
+{
+  const home = codeOf(S.home)
+  const svc = codeOf(S.svc)
+
+  // ① 새 이름 · 새 설명
+  check(/name: '내 이름 정밀분석'/.test(home), `「내 이름 정밀분석」 입니다`)
+  check(/name: '내 아이 명품작명'/.test(home), `「내 아이 명품작명」 입니다`)
+  check(/sub: '내 이름의 가치와 사주 밸런스 진단'/.test(home), `설명 한 줄이 맞습니다`)
+  check(/sub: '사주에 꼭 맞는 첫 이름 선물'/.test(home), `설명 한 줄이 맞습니다`)
+  check(!/name: '내이름 감정'/.test(home) && !/name: '아기 작명'/.test(home),
+    `옛 이름이 SERVICES 에 남아 있지 않습니다`)
+
+  // ② 폴더로 묶였는가 — 「특화 목적 & 타이밍」과 «같은 모양»
+  check(/title: '개명 & 작명하기'/.test(svc), `★[개명 & 작명하기] 폴더가 있습니다`)
+  check(/desc: '내 이름 분석부터 아기 명품작명까지'/.test(svc), `폴더 설명이 맞습니다`)
+  check(/names: \['내 이름 정밀분석', '내 아이 명품작명'\]/.test(svc),
+    `★둘이 그 폴더 «안» 에 있습니다`)
+  check(/SOLO_NAMES = \['궁합'\]/.test(svc),
+    `★낱장에서 빠졌습니다 (궁합만 홀로 남습니다)`)
+  // ⚠️ 낱장과 폴더에 «겹쳐» 적으면 같은 카드가 두 번 뜹니다
+  check(!/SOLO_NAMES = \[[^\]]*정밀분석/.test(svc), `낱장과 폴더에 겹쳐 있지 않습니다`)
+
+  // ③ ⚠️⚠️ 압핀 — 이름을 바꾸면 회원이 고정해 둔 것이 «말없이» 사라집니다
+  check(/const SERVICE_RENAMED/.test(home), `★옛 이름 → 새 이름 지도가 있습니다`)
+  check(/'내이름 감정': '내 이름 정밀분석'/.test(home)
+     && /'아기 작명': '내 아이 명품작명'/.test(home),
+    `★이번에 바꾼 둘이 지도에 있습니다`)
+  check(/SERVICE_RENAMED\[n\] \?\? n/.test(home),
+    `★압핀을 «갈아 끼웁니다» (없어진 서비스로 보고 지우지 않습니다)`)
+  check(/지우지 마십시오/.test(S.home),
+    `⚠️ 지도를 지우지 말라고 적어 두었습니다 (옛 핀이 아직 남아 있습니다)`)
+
+  // ④ 화면 머리글까지 맞췄는가 — 홈만 바꾸면 «다른 서비스로 왔나» 헷갈립니다
+  const sto = codeOf(S.sto)
+  check(/title: '내 이름 정밀분석'/.test(sto) && /title: '내 아이 명품작명'/.test(sto),
+    `★보관함 두 곳의 머리글이 새 이름입니다`)
+  check(/내 아이 명품작명<\/span>/.test(codeOf(S.nb)), `아기 작명 입구 머리글도 새 이름입니다`)
+  check(/'내 아이 명품작명' : '발음 그대로/.test(codeOf(S.nn)), `Step 2 머리글도 새 이름입니다`)
+  check(/title="내 이름 정밀분석"/.test(read('app/manseryeok/naming/diagnosis/page.tsx')),
+    `이름 풀이 화면 머리글도 새 이름입니다`)
+}
+
 console.log('\n━━ ⑲-C 🔴 같은 사람에게 «여러 번» 지을 수 있는가 (43부 12차) ━━')
 {
   const modal = codeOf(S.modal)
@@ -574,8 +617,11 @@ console.log('\n━━ ⑲-n ★홈 — 폴더를 «열지 않고» 바로 들어
 
   // ① 셋이 «낱장» 인가
   check(/const SOLO_NAMES = \[/.test(svc), `낱장 카드 목록이 있습니다`)
-  for (const n of ['궁합', '내이름 감정', '아기 작명']) {
-    check(new RegExp(`SOLO_NAMES = \\[[^\\]]*'${n}'`).test(svc), `★「${n}」이 낱장입니다`)
+  // ★2026-08-01 (43부 13차) — 이름 둘은 «폴더» 로 옮겼습니다 (위 ⑲-D 가 봅니다).
+  //   ⚠️ 이 검사가 옛 배치를 «요구» 하고 있었습니다. 낱장은 이제 궁합뿐입니다.
+  check(/SOLO_NAMES = \['궁합'\]/.test(svc), `★「궁합」이 낱장입니다`)
+  for (const n of ['내 이름 정밀분석', '내 아이 명품작명']) {
+    check(new RegExp(`names: \\[[^\\]]*'${n}'`).test(svc), `★「${n}」이 폴더 안에 있습니다`)
   }
 
   // ② 🔴 폴더가 «없어졌는가» — 전에는 「궁합 & 기타 (2)」 안에 묻혀 있었습니다
@@ -606,10 +652,9 @@ console.log('\n━━ ⑲-n ★홈 — 폴더를 «열지 않고» 바로 들어
 
   // ⑥ 한 줄 문구
   check(/'두 사람의 결'/.test(svc), `궁합 — 「두 사람의 결」`)
-  check(/'내 이름 풀이 및 개명'/.test(svc), `내이름 감정 — 「내 이름 풀이 및 개명」`)
-  check(/'아기 이름 지어 주기'/.test(svc), `아기 작명 — 「아기 이름 지어 주기」`)
-  // ⚠️ 압핀 칩·다른 화면이 쓰는 sub 도 함께 맞춰 두었는가
-  check(/sub: '내 이름 풀이 및 개명'/.test(home), `★SERVICES 의 sub 도 같이 맞췄습니다`)
+  // ★13차 — 설명 한 줄이 새 문구로 바뀌었습니다 (⑲-D 가 값을 봅니다)
+  check(/sub: '내 이름의 가치와 사주 밸런스 진단'/.test(home), `내 이름 정밀분석 — 설명 한 줄`)
+  check(/sub: '사주에 꼭 맞는 첫 이름 선물'/.test(home), `내 아이 명품작명 — 설명 한 줄`)
 
   // ⑦ ★카드가 «하나도 사라지지 않았는가» — 자리를 옮기는 일에서 가장 무서운 것
   //    ⚠️ 홈 카드가 조용히 사라지면 그 서비스로 «가는 길이 통째로» 끊깁니다.
@@ -645,8 +690,8 @@ console.log('\n━━ ⑲-m ★들어온 «입구» 에 따라 보관함이 갈�
     `★모드마다 달라지는 것을 «한 곳» 에만 적었습니다 (MODE_VIEW)`)
 
   // ② 제목이 갈리는가
-  check(/title: '내 이름 보관함'/.test(sto) && /title: '작명 보관함'/.test(sto),
-    `★제목이 갈립니다 — 「내 이름 보관함」 · 「작명 보관함」`)
+  check(/title: '내 이름 정밀분석'/.test(sto) && /title: '내 아이 명품작명'/.test(sto),
+    `★제목이 갈립니다 — 「내 이름 정밀분석」 · 「내 아이 명품작명」`)
 
   // ③ 탭이 숨는가
   check(/\{!view && records && records\.length > 0 && \(/.test(sto),
@@ -660,7 +705,7 @@ console.log('\n━━ ⑲-m ★들어온 «입구» 에 따라 보관함이 갈�
   // ⑤ ⚠️ «기록이 사라진 줄» 알고 놀라시지 않는가 — 가장 중요한 자리
   check(/hiddenCount/.test(sto), `★가려진 기록이 몇 건인지 셉니다`)
   // ★9차 — 「모두 보기」 대신 «옆 보관함으로 가기» 입니다 (⑲-A 가 봅니다)
-  check(/보관함으로 가기/.test(S.sto),
+  check(/으로 가기'/.test(S.sto),
     `★옆 보관함으로 가는 길이 있습니다 — 길이 끊기지 않습니다`)
   // ⚠️ 거르기이지 «지우기» 가 아닙니다 — 목록 조회에 mode 가 끼면 안 됩니다
   check(!/listNamingRecords\((mode|view)/.test(sto),

@@ -65,7 +65,7 @@ function NewbornInner() {
           style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>
           {'\u2039'}
         </button>
-        <span style={{ fontSize: 15, fontWeight: 500, color: INK }}>아기 이름 짓기</span>
+        <span style={{ fontSize: 15, fontWeight: 500, color: INK }}>내 아이 명품작명</span>
       </div>
 
       <div style={{ textAlign: 'center', padding: '18px 8px 22px' }}>

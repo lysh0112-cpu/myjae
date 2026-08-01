@@ -78,22 +78,22 @@ type StorageMode = 'diagnosis' | 'naming' | null
 /** 모드마다 화면이 어떻게 달라지는가 — ★한 곳에만 적습니다 */
 const MODE_VIEW = {
   diagnosis: {
-    title: '내 이름 보관함',
+    title: '내 이름 정밀분석',
     /** 이 갈래만 보여 줍니다 */
     only: '풀이' as FilterKey,
     /** 하단 버튼 — 하나만 */
     button: '풀이' as const,
     empty: '아직 저장된 이름 풀이가 없어요',
     emptySub: '이름을 풀면 여기에 차곡차곡 쌓여요',
-    otherLabel: '작명 보관함으로 가기',
+    otherLabel: '내 아이 명품작명으로 가기',
   },
   naming: {
-    title: '작명 보관함',
+    title: '내 아이 명품작명',
     only: '작명' as FilterKey,
     button: '작명' as const,
     empty: '아직 지어 드린 이름이 없어요',
     emptySub: '아래에서 새 이름을 지어 보세요',
-    otherLabel: '이름 풀이 보관함으로 가기',
+    otherLabel: '내 이름 정밀분석으로 가기',
   },
 } as const
 
@@ -414,7 +414,7 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
               background: 'none', border: 'none', color: '#8a7063',
               fontSize: 12, cursor: 'pointer',
             }}>
-            아기 작명이 처음이신가요? 어떻게 진행되는지 보기 →
+            명품작명이 처음이신가요? 어떻게 진행되는지 보기 →
           </button>
         )}
 

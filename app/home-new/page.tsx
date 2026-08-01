@@ -137,6 +137,20 @@ const SLIDES = [
 //   ⚠️ color·bg 는 그대로 둡니다. 다른 화면(보관함 배지 등)이 아직 씁니다.
 //   ⚠️ 그라데이션 색은 Tailwind 이름과 짝을 맞춘 실제 hex 입니다.
 //      이 파일은 인라인 스타일로 되어 있어 클래스를 섞지 않았습니다.
+/**
+ * ★서비스 «옛 이름 → 새 이름» 지도 (2026-08-01 · 43부 13차)
+ *
+ * ⚠️ 압핀(📌)은 «서비스 이름» 으로 저장됩니다. 이름을 바꾸면 그 핀이 미아가 되고,
+ *    아래 정리 규칙이 「없어진 서비스」로 보고 «말없이 해제» 합니다.
+ *    → 회원이 고정해 둔 것이 사라집니다. 그것도 «왜 사라졌는지 모르게» 사라집니다.
+ * ★이름을 바꾸실 때마다 여기 한 줄을 더하십시오. 그리고 «지우지 마십시오» —
+ *   오래 안 들어오신 회원의 핀은 아직 옛 이름으로 남아 있습니다.
+ */
+const SERVICE_RENAMED: Record<string, string> = {
+  '내이름 감정': '내 이름 정밀분석',
+  '아기 작명': '내 아이 명품작명',
+}
+
 const SERVICES = [
   // 🔮 통합 리포트 — 은은한 후광 (indigo-500 → violet-400)
   { name: '내 사주 & 운세', color: '#6e50a0', bg: '#efe6f7', href: '/manseryeok/saju-storage', cat: '사주명리', sub: '원국·10년 흐름·올해를 한 번에', icon: '🔮', grad: ['#6366f1', '#a78bfa'] },
@@ -158,7 +172,7 @@ const SERVICES = [
   //     sub 도 「이름 풀이해 보기」 → 「내 이름 풀이 및 개명」 으로 (대표님 지시).
   //     ⚠️ 낱장 카드의 한 줄은 ServiceSection 의 SOLO_COPY 가 «먼저» 입니다.
   //        여기 sub 는 압핀 칩·다른 화면이 쓰므로 함께 맞춰 둡니다.
-  { name: '내이름 감정', color: '#5a825a', bg: '#eaf0e6', href: '/manseryeok/naming/diagnosis/storage?mode=diagnosis', cat: '개명', sub: '내 이름 풀이 및 개명', icon: '📇', grad: ['#38bdf8', '#67e8f9'] },
+  { name: '내 이름 정밀분석', color: '#5a825a', bg: '#eaf0e6', href: '/manseryeok/naming/diagnosis/storage?mode=diagnosis', cat: '개명', sub: '내 이름의 가치와 사주 밸런스 진단', icon: '📇', grad: ['#38bdf8', '#67e8f9'] },
   // ★2026-08-01 (43부 · E) — 아기 이름 짓기를 «다시» 홈에 냅니다.
   //   [왜 사라져 있었나]  기능이 미완성이라 닫아 두었고, 카드 연결도 끊겼습니다.
   //     그 사이 rename/newborn 은 «아무도 부르지 않는» 준비중 안내로 남아 있었습니다.
@@ -168,7 +182,7 @@ const SERVICES = [
   //     ⚠️ 전에는 안내 화면(rename/newborn)으로 갔는데, 두 번째 오시는 분은
   //        «지난번에 지은 이름» 부터 보고 싶으십니다. 안내를 매번 볼 까닭이 없습니다.
   //     ★안내 화면은 보관함 안에서 「처음이신가요」로 이어 둡니다 — 끊기지 않습니다.
-  { name: '아기 작명',   color: '#4a7c59', bg: '#e6f0ea', href: '/manseryeok/naming/naming-storage', cat: '개명', sub: '아기 이름 지어 주기', icon: '👶', grad: ['#34d399', '#5eead4'] },
+  { name: '내 아이 명품작명', color: '#4a7c59', bg: '#e6f0ea', href: '/manseryeok/naming/naming-storage', cat: '개명', sub: '사주에 꼭 맞는 첫 이름 선물', icon: '👶', grad: ['#34d399', '#5eead4'] },
   // 🃏 violet-500 → fuchsia-400
   { name: '타로',       color: '#b45a78', bg: '#f6e5eb', href: '/tarot', cat: '기타', sub: '오늘의 카드', icon: '🃏', grad: ['#8b5cf6', '#e879f9'] },
   // 🧭 BEST — purple-500 → pink-400
@@ -206,10 +220,32 @@ export default function HomeNew() {
   //     지금 SERVICES 에 없는 이름은 홈에 들어올 때 조용히 해제합니다.
   //     ⚠️ 이름이 «영영 사라진» 것만 지웁니다. 잠깐 감춘 서비스가 있다면
   //        SERVICES 에 남겨 두십시오. 여기서 지워 버립니다.
+  //
+  // ★★2026-08-01 (43부 13차) — 이름을 «바꿀 때» 압핀을 잃지 않게 합니다.
+  //
+  //   ⚠️⚠️ 위 정리 규칙은 「SERVICES 에 없는 이름은 해제」입니다.
+  //      그러면 «이름만 바뀐» 서비스도 «없어진 것» 으로 보고 핀을 걷어냅니다.
+  //      → 회원이 고정해 둔 「내이름 감정」이 말없이 사라집니다.
+  //   ★그래서 «옛 이름 → 새 이름» 지도를 두고 «갈아 끼웁니다».
+  //   ⚠️ 이름을 바꿀 때마다 여기 한 줄을 «반드시» 더하십시오.
+  //      지도는 지우지 마십시오 — 오래 안 들어온 회원의 핀이 아직 옛 이름입니다.
   useEffect(() => {
     let mounted = true
     listPinnedServices().then(async (list) => {
       const alive = new Set(SERVICES.map(s => s.name))
+      // ① 옛 이름을 새 이름으로 갈아 끼웁니다
+      for (const [oldName, newName] of Object.entries(SERVICE_RENAMED)) {
+        if (list.includes(oldName)) {
+          await togglePinnedService(oldName)                       // 옛 이름 해제
+          if (!list.includes(newName) && alive.has(newName)) {
+            await togglePinnedService(newName)                     // 새 이름으로 고정
+          }
+        }
+      }
+      if (Object.keys(SERVICE_RENAMED).some(n => list.includes(n))) {
+        list = [...new Set(list.map(n => SERVICE_RENAMED[n] ?? n))].filter(n => alive.has(n))
+      }
+      // ② 그러고도 없는 이름만 «영영 사라진» 것으로 봅니다
       const dead = list.filter(n => !alive.has(n))
       for (const n of dead) await togglePinnedService(n)   // 해제
       if (mounted) setPinned(list.filter(n => alive.has(n)))

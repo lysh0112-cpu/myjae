@@ -8,7 +8,7 @@ const MENUS = [
   {
     key: 'diagnosis',
     emoji: '🔍',
-    title1: '내 이름 풀이',
+    title1: '내 이름 정밀분석',
     title2: '+ 개명하기',
     desc: '지금 내 이름이 사주에 맞는지 풀어주고, 더 좋은 한자로 바꿔드려요',
     price: '9,900원~',

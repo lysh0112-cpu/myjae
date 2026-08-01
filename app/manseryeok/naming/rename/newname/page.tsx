@@ -625,7 +625,7 @@ function Header({ router, isNewborn }: {
           : '/manseryeok/naming/diagnosis')}
         aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
       <span style={{ fontSize: 15, fontWeight: 500, color: INK }}>
-        {isNewborn ? '아기 이름 짓기' : '발음 그대로, 한자 바꾸기'}
+        {isNewborn ? '내 아이 명품작명' : '발음 그대로, 한자 바꾸기'}
       </span>
     </div>
   )
