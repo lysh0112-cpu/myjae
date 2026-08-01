@@ -35,10 +35,59 @@ import { surnameOfHangul } from '@/lib/saju/surname'
 // ══════════════════════════════════════════════════════════════════
 
 type FilterKey = '전체' | '풀이' | '작명'
-const FILTERS: FilterKey[] = ['전체', '풀이', '작명']
 const FILTER_LABEL: Record<FilterKey, string> = {
   전체: '전체', 풀이: '이름 풀이', 작명: '작명 보관함',
 }
+
+// ══════════════════════════════════════════════════════════════════
+//  ★2026-08-01 (43부 2차) — 「들어온 입구」에 따라 보관함이 «달라집니다»
+//
+//  [무엇이 문제였나]  대표님 지시 —
+//    홈에서 [내이름 감정]과 [아기 작명] 버튼을 갈라 놓았는데,
+//    둘 다 «같은 보관함» 으로 들어왔습니다.
+//    ⚠️ 아기 이름을 지으러 온 분이 [+ 새 이름 풀이하기] 버튼을 함께 보고,
+//       이름을 풀러 온 분이 [+ 새 이름 짓기] 를 함께 봤습니다.
+//       ★버튼을 가른 뜻이 보관함에서 도로 뭉개졌습니다.
+//
+//  [이제]  ?mode= 로 갈립니다.
+//    diagnosis  「내 이름 보관함」   탭 없음 · [+ 새 이름 풀이하기] 하나
+//    naming     「작명 보관함」      탭 없음 · [+ 새 이름 짓기] 하나
+//    (없음)     「내 이름 보관함」   탭 셋 · 버튼 둘   ← ★예전 그대로
+//
+//  ⚠️⚠️ «거르기» 이지 «지우기» 가 아닙니다.
+//     모드가 걸려도 기록은 하나도 사라지지 않습니다. 다른 갈래를 보고 싶으면
+//     화면 아래 「모두 보기」 로 언제든 전체 보관함에 갈 수 있습니다.
+//     ★기록이 «없어진 줄» 알고 놀라시는 일이 없어야 합니다.
+//
+//  ⚠️ mode 가 없을 때를 «예전 그대로» 둔 것은 일부러입니다 —
+//     옛 링크·북마크가 아직 살아 있습니다. (교훈 AM)
+// ══════════════════════════════════════════════════════════════════
+
+type StorageMode = 'diagnosis' | 'naming' | null
+
+/** 모드마다 화면이 어떻게 달라지는가 — ★한 곳에만 적습니다 */
+const MODE_VIEW = {
+  diagnosis: {
+    title: '내 이름 보관함',
+    /** 이 갈래만 보여 줍니다 */
+    only: '풀이' as FilterKey,
+    /** 하단 버튼 — 하나만 */
+    button: '풀이' as const,
+    empty: '아직 저장된 이름 풀이가 없어요',
+    emptySub: '이름을 풀면 여기에 차곡차곡 쌓여요',
+    otherLabel: '작명 기록도 함께 보기',
+  },
+  naming: {
+    title: '작명 보관함',
+    only: '작명' as FilterKey,
+    button: '작명' as const,
+    empty: '아직 지어 드린 이름이 없어요',
+    emptySub: '아래에서 새 이름을 지어 보세요',
+    otherLabel: '이름 풀이 기록도 함께 보기',
+  },
+} as const
+
+const FILTERS: FilterKey[] = ['전체', '풀이', '작명']
 
 /** 작명 기록에만 붙는 도드라지는 태그 */
 const KIND_TAG: Partial<Record<NamingKind, { label: string; bg: string; fg: string }>> = {
@@ -63,11 +112,30 @@ function NamingStorageInner() {
 
   const [records, setRecords] = useState<NamingRecord[] | null>(null)
   const [confirmDel, setConfirmDel] = useState<NamingRecord | null>(null)
-  const [filter, setFilter] = useState<FilterKey>('전체')
+
+  // ══════════════════════════════════════════════════════════════
+  //  ★들어온 입구 (2026-08-01 · 43부 2차)
+  //   ?mode=diagnosis  홈 [내이름 감정] 에서
+  //   ?mode=naming     홈 [아기 작명] 에서
+  //   없음             옛 링크·마이페이지 — ★예전 그대로 (탭 셋 · 버튼 둘)
+  // ══════════════════════════════════════════════════════════════
+  const modeParam = sp?.get('mode')
+  const mode: StorageMode =
+    modeParam === 'diagnosis' ? 'diagnosis'
+      : modeParam === 'naming' ? 'naming' : null
+  const view = mode ? MODE_VIEW[mode] : null
+
+  /** ★모드가 있으면 그 갈래로 «고정» 됩니다. 없으면 손님이 탭으로 고릅니다 */
+  const [filter, setFilter] = useState<FilterKey>(view ? view.only : '전체')
+  /** 모드인데도 «전체» 를 보고 싶다고 하셨는가 — 「모두 보기」를 누른 경우 */
+  const [showAll, setShowAll] = useState(false)
+  const effFilter: FilterKey = showAll ? '전체' : filter
 
   /** ★탭에 맞춰 거릅니다. «작명» 은 풀이가 아닌 것 전부 (개명·신생아) */
   const shownRecords = (records ?? []).filter(r =>
-    filter === '전체' ? true : filter === '풀이' ? r.kind === '풀이' : r.kind !== '풀이')
+    effFilter === '전체' ? true : effFilter === '풀이' ? r.kind === '풀이' : r.kind !== '풀이')
+  /** ⚠️ «다른 갈래에 몇 건이 있는지» — 기록이 사라진 줄 알고 놀라시지 않도록 */
+  const hiddenCount = (records ?? []).length - shownRecords.length
   const [deleting, setDeleting] = useState(false)
   // ══════════════════════════════════════════════════════════════
   //  ★2026-08-01 — 버튼을 «둘» 로 나눴습니다 (대표님 지시)
@@ -121,8 +189,16 @@ function NamingStorageInner() {
       }}>
         <button onClick={() => router.push('/home-new')}
           style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
-        <div style={{ fontSize: 16, fontWeight: 500, color: '#1a1a1a' }}>내 이름 보관함</div>
-        {records && <div style={{ marginLeft: 'auto', fontSize: 12, color: '#5c3a1e' }}>{records.length}건</div>}
+        <div style={{ fontSize: 16, fontWeight: 500, color: '#1a1a1a' }}>
+          {view ? view.title : '내 이름 보관함'}
+        </div>
+        {records && (
+          <div style={{ marginLeft: 'auto', fontSize: 12, color: '#5c3a1e' }}>
+            {/* ⚠️ 모드일 때는 «보이는 건수» 를 적습니다 — 전체 건수를 적으면
+                목록과 숫자가 어긋나 「어디 갔지」 가 됩니다 */}
+            {(view && !showAll ? shownRecords.length : records.length)}건
+          </div>
+        )}
       </div>
 
       <div style={{ padding: '16px 14px 0' }}>
@@ -136,16 +212,20 @@ function NamingStorageInner() {
         {/* 빈 상태 */}
         {records && records.length === 0 && (
           <div style={{ textAlign: 'center', padding: '46px 20px', color: '#5c3a1e' }}>
-            <div style={{ fontSize: 30, marginBottom: 10 }}>📜</div>
+            <div style={{ fontSize: 30, marginBottom: 10 }}>{mode === 'naming' ? '✍️' : '📜'}</div>
             <div style={{ fontSize: 14, color: '#96502e', fontWeight: 500, marginBottom: 4 }}>
-              아직 저장된 이름 풀이가 없어요
+              {view ? view.empty : '아직 저장된 이름 풀이가 없어요'}
             </div>
-            <div style={{ fontSize: 12, lineHeight: 1.6 }}>이름을 풀면 여기에 차곡차곡 쌓여요</div>
+            <div style={{ fontSize: 12, lineHeight: 1.6 }}>
+              {view ? view.emptySub : '이름을 풀면 여기에 차곡차곡 쌓여요'}
+            </div>
           </div>
         )}
 
-        {/* ★필터 탭 — 전체 / 이름 풀이 / 작명 보관함 */}
-        {records && records.length > 0 && (
+        {/* ★필터 탭 — 전체 / 이름 풀이 / 작명 보관함
+            ⚠️ 모드로 들어오면 «숨깁니다». 갈래가 이미 정해져 있는데 탭을 보이면
+               「왜 하나만 나오지」 가 됩니다. 대신 아래 「모두 보기」 를 둡니다. */}
+        {!view && records && records.length > 0 && (
           <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
             {FILTERS.map(k => {
               const on = filter === k
@@ -177,9 +257,11 @@ function NamingStorageInner() {
             textAlign: 'center', padding: '30px 16px', color: '#8a7063',
             fontSize: 12, lineHeight: 1.7,
           }}>
-            {filter === '작명'
-              ? '아직 작명 기록이 없어요. 아래에서 새로 지어 보세요.'
-              : '이 갈래에는 아직 기록이 없어요.'}
+            {effFilter === '작명'
+              ? '아직 지어 드린 이름이 없어요. 아래에서 새로 지어 보세요.'
+              : effFilter === '풀이'
+                ? '아직 풀어 본 이름이 없어요. 아래에서 시작해 보세요.'
+                : '이 갈래에는 아직 기록이 없어요.'}
           </div>
         )}
 
@@ -258,29 +340,81 @@ function NamingStorageInner() {
           )
         })}
 
-        {/* 새로 보기 → 누구 이름을 볼지 먼저 선택 (나 / 가족·지인 / 새 사람) */}
-        {/* ★버튼 둘 — 어디로 가는지 «이름» 으로 알 수 있게 */}
+        {/* ══════════════════════════════════════════════════════
+            새로 보기 → 누구 이름을 볼지 먼저 선택 (나 / 가족·지인 / 새 사람)
+
+            ★2026-08-01 (43부 2차) — 들어온 입구에 따라 버튼이 «하나» 입니다.
+              diagnosis  [+ 새 이름 풀이하기] 만
+              naming     [+ 새 이름 짓기]    만
+              모드 없음   둘 다 (예전 그대로)
+
+            ⚠️ 버튼을 숨겨도 «길이 끊기지» 않습니다 — 아래 「모두 보기」로
+               전체 보관함에 가면 두 버튼이 다시 나옵니다.
+            ══════════════════════════════════════════════════════ */}
         {records && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-            <button onClick={() => setPickerOpen('작명')}
-              style={{
-                ...PRESS,
-                width: '100%', padding: 15, borderRadius: 12,
-                background: '#c8783c', border: 'none', color: '#fff',
-                fontSize: 14, fontWeight: 600, cursor: 'pointer',
-              }}>
-              + 새 이름 짓기 <span style={{ fontSize: 12, opacity: .85 }}>(작명)</span>
-            </button>
-            <button onClick={() => setPickerOpen('풀이')}
-              style={{
-                ...PRESS,
-                width: '100%', padding: 14, borderRadius: 12,
-                background: '#FFFBF7', border: '1px solid #c8783c', color: '#c8783c',
-                fontSize: 14, fontWeight: 500, cursor: 'pointer',
-              }}>
-              + 새 이름 풀이하기
-            </button>
+            {(!view || view.button === '작명') && (
+              <button onClick={() => setPickerOpen('작명')}
+                style={{
+                  ...PRESS,
+                  width: '100%', padding: 15, borderRadius: 12,
+                  background: '#c8783c', border: 'none', color: '#fff',
+                  fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                }}>
+                + 새 이름 짓기 <span style={{ fontSize: 12, opacity: .85 }}>(작명)</span>
+              </button>
+            )}
+            {(!view || view.button === '풀이') && (
+              <button onClick={() => setPickerOpen('풀이')}
+                style={{
+                  ...PRESS,
+                  width: '100%', padding: view?.button === '풀이' ? 15 : 14, borderRadius: 12,
+                  // ★이 갈래 전용 화면이면 이 버튼이 «주인공» 이라 채워 씁니다
+                  background: view?.button === '풀이' ? '#c8783c' : '#FFFBF7',
+                  border: view?.button === '풀이' ? 'none' : '1px solid #c8783c',
+                  color: view?.button === '풀이' ? '#fff' : '#c8783c',
+                  fontSize: 14, fontWeight: view?.button === '풀이' ? 600 : 500, cursor: 'pointer',
+                }}>
+                + 새 이름 풀이하기
+              </button>
+            )}
           </div>
+        )}
+
+        {/* ★작명 모드 — 처음 오신 분께 «어떻게 진행되는지» 안내 화면을 이어 둡니다.
+            ⚠️ 홈 카드가 보관함으로 바로 오게 되면서 안내 화면이 «아무도 안 부르는»
+               자리가 될 뻔했습니다. 여기서 잇습니다. (교훈 AM) */}
+        {mode === 'naming' && records && (
+          <button
+            onClick={() => router.push('/manseryeok/naming/rename/newborn')}
+            style={{
+              ...PRESS, width: '100%', marginTop: 10, padding: '11px 10px',
+              background: 'none', border: 'none', color: '#8a7063',
+              fontSize: 12, cursor: 'pointer',
+            }}>
+            아기 작명이 처음이신가요? 어떻게 진행되는지 보기 →
+          </button>
+        )}
+
+        {/* ══════════════════════════════════════════════════════
+            ★「모두 보기」 — ⚠️ 기록이 «사라진 줄» 알고 놀라시지 않도록
+              모드로 걸러 놓았을 뿐 하나도 지워지지 않았다는 것을 알려 드립니다.
+              몇 건이 가려져 있는지 «숫자로» 적습니다.
+            ══════════════════════════════════════════════════════ */}
+        {view && records && records.length > 0 && (
+          <button
+            onClick={() => setShowAll(v => !v)}
+            style={{
+              ...PRESS, width: '100%', marginTop: 12, padding: '11px 10px',
+              background: 'none', border: 'none', color: '#8a7063',
+              fontSize: 12, cursor: 'pointer', lineHeight: 1.6,
+            }}>
+            {showAll
+              ? '이 보관함만 보기 ▴'
+              : hiddenCount > 0
+                ? `${view.otherLabel} · ${hiddenCount}건 ▾`
+                : '전체 보관함 보기 ▾'}
+          </button>
         )}
       </div>
 

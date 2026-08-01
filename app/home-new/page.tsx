@@ -151,13 +151,20 @@ const SERVICES = [
   { name: '출산택일',   color: '#b45a78', bg: '#f6e5eb', href: '/manseryeok/birth-timing/birth-storage', cat: '택일', sub: '아기 맞을 날', icon: '🍼', grad: ['#f9a8d4', '#fed7aa'] },
   { name: '이사택일',   color: '#967850', bg: '#f0eae0', href: '/manseryeok/moving-timing/moving-storage', cat: '택일', sub: '좋은 이사 날', icon: '🏡', grad: ['#a3e635', '#6ee7b7'] },
   // 📇 sky-400 → cyan-300
-  { name: '내이름 감정', color: '#5a825a', bg: '#eaf0e6', href: '/manseryeok/naming/diagnosis/storage', cat: '개명', sub: '이름 풀이해 보기', icon: '📇', grad: ['#38bdf8', '#67e8f9'] },
+  // ★2026-08-01 (43부 2차) — mode 를 실어 보냅니다.
+  //   ⚠️ 두 카드가 «같은 보관함» 으로 들어와, 버튼을 가른 뜻이 도로 뭉개졌습니다.
+  //      이제 입구마다 «전용 화면» 이 뜹니다.
+  { name: '내이름 감정', color: '#5a825a', bg: '#eaf0e6', href: '/manseryeok/naming/diagnosis/storage?mode=diagnosis', cat: '개명', sub: '이름 풀이해 보기', icon: '📇', grad: ['#38bdf8', '#67e8f9'] },
   // ★2026-08-01 (43부 · E) — 아기 이름 짓기를 «다시» 홈에 냅니다.
   //   [왜 사라져 있었나]  기능이 미완성이라 닫아 두었고, 카드 연결도 끊겼습니다.
   //     그 사이 rename/newborn 은 «아무도 부르지 않는» 준비중 안내로 남아 있었습니다.
   //   ★43부에 신생아 동선(성씨만으로 시작 → 성씨 한자 고르기 → 신생아 배지)이
   //     갖춰져 재오픈합니다. 👶 emerald-400 → teal-300
-  { name: '아기 작명',   color: '#4a7c59', bg: '#e6f0ea', href: '/manseryeok/naming/rename/newborn', cat: '개명', sub: '아기 이름 지어 주기', icon: '👶', grad: ['#34d399', '#5eead4'] },
+  //   ★2026-08-01 (43부 2차) — «작명 보관함» 으로 바로 들어갑니다 (대표님 지시).
+  //     ⚠️ 전에는 안내 화면(rename/newborn)으로 갔는데, 두 번째 오시는 분은
+  //        «지난번에 지은 이름» 부터 보고 싶으십니다. 안내를 매번 볼 까닭이 없습니다.
+  //     ★안내 화면은 보관함 안에서 「처음이신가요」로 이어 둡니다 — 끊기지 않습니다.
+  { name: '아기 작명',   color: '#4a7c59', bg: '#e6f0ea', href: '/manseryeok/naming/diagnosis/storage?mode=naming', cat: '개명', sub: '아기 이름 지어 주기', icon: '👶', grad: ['#34d399', '#5eead4'] },
   // 🃏 violet-500 → fuchsia-400
   { name: '타로',       color: '#b45a78', bg: '#f6e5eb', href: '/tarot', cat: '기타', sub: '오늘의 카드', icon: '🃏', grad: ['#8b5cf6', '#e879f9'] },
   // 🧭 BEST — purple-500 → pink-400

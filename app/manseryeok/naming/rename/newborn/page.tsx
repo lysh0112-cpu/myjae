@@ -47,7 +47,8 @@ function NewbornInner() {
    * ★보관함으로 보내면서 «작명 폼을 열어 달라» 고 알려 줍니다.
    *   보관함이 open=작명 을 보고 그 자리에서 폼을 띄웁니다.
    */
-  const start = () => router.push('/manseryeok/naming/diagnosis/storage?open=작명')
+  //   ★mode=naming 을 함께 실어 «작명 보관함» 으로 들어갑니다 (43부 2차)
+  const start = () => router.push('/manseryeok/naming/diagnosis/storage?mode=naming&open=작명')
 
   return (
     <main style={{

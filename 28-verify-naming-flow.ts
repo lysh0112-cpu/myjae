@@ -173,7 +173,11 @@ console.log('\n━━ ⑲-g ★E — 아기 이름 짓기가 «열려 있는가�
   check(/useState<null \| '풀이' \| '작명'>\(\s*\n?\s*openParam ===/.test(S.sto),
     `★효과가 아니라 «첫 값» 으로 엽니다 (폼이 깜박이지 않습니다)`)
   // 홈에서 갈 수 있는가 — 「아무도 안 부르는 화면」이 되지 않게
-  check(/rename\/newborn/.test(S.home), `★홈에서 아기 작명으로 갈 수 있습니다`)
+  //   ★2026-08-01 (43부 2차) — 홈 카드가 «작명 보관함» 으로 바뀌었습니다.
+  //     안내 화면은 그 보관함 안에서 잇습니다. 검사도 한 칸 늘려 봅니다.
+  check(/storage\?mode=naming/.test(S.home), `★홈 [아기 작명] 이 «작명 보관함» 으로 갑니다`)
+  check(/rename\/newborn/.test(codeOf(S.sto)),
+    `★안내 화면이 보관함에서 «이어져» 있습니다 (아무도 안 부르는 화면이 되지 않게)`)
   // 대법원 인명용 한자 안내 (E-②)
   check(/대법원 인명용 한자/.test(S.nh), `★한자 고르는 화면에 인명용 한자 안내가 있습니다`)
   // ⚠️ 「우리 목록이 곧 대법원 표」 라고 말하면 안 됩니다 — 그 표가 아직 없습니다
@@ -194,6 +198,51 @@ console.log('\n━━ ⑲-h ⚠️ 옛 개명 손님이 «안 깨지는가» ━
   for (const [n, c] of [['Step 2', S.nn], ['Step 3', S.nh], ['Step 4', S.nr]] as const) {
     check(!/SCORE_BASE|REL_SCORE/.test(codeOf(c)), `${n} 이 판정을 다시 하지 않습니다`)
   }
+}
+
+console.log('\n━━ ⑲-m ★들어온 «입구» 에 따라 보관함이 갈리는가 (43부 2차) ━━')
+{
+  const sto = codeOf(S.sto)
+  // ① 모드를 읽는가
+  check(/sp\?\.get\('mode'\)/.test(sto), `?mode= 를 읽습니다`)
+  check(/MODE_VIEW/.test(sto) && /diagnosis:/.test(sto) && /naming:/.test(sto),
+    `★모드마다 달라지는 것을 «한 곳» 에만 적었습니다 (MODE_VIEW)`)
+
+  // ② 제목이 갈리는가
+  check(/title: '내 이름 보관함'/.test(sto) && /title: '작명 보관함'/.test(sto),
+    `★제목이 갈립니다 — 「내 이름 보관함」 · 「작명 보관함」`)
+
+  // ③ 탭이 숨는가
+  check(/\{!view && records && records\.length > 0 && \(/.test(sto),
+    `★모드로 들어오면 탭을 숨깁니다 (갈래가 이미 정해져 있습니다)`)
+
+  // ④ 하단 버튼이 «하나» 인가
+  check(/\(!view \|\| view\.button === '작명'\)/.test(sto)
+     && /\(!view \|\| view\.button === '풀이'\)/.test(sto),
+    `★버튼이 모드마다 하나씩만 뜹니다`)
+
+  // ⑤ ⚠️ «기록이 사라진 줄» 알고 놀라시지 않는가 — 가장 중요한 자리
+  check(/hiddenCount/.test(sto), `★가려진 기록이 몇 건인지 셉니다`)
+  check(/showAll/.test(sto) && /모두 보기|함께 보기|전체 보관함 보기/.test(S.sto),
+    `★「모두 보기」로 전체 보관함에 갈 수 있습니다 — 길이 끊기지 않습니다`)
+  // ⚠️ 거르기이지 «지우기» 가 아닙니다 — 목록 조회에 mode 가 끼면 안 됩니다
+  check(!/listNamingRecords\((mode|view)/.test(sto),
+    `★목록을 «불러올 때» 거르지 않습니다 (거르기는 화면에서만 — 기록은 그대로입니다)`)
+
+  // ⑥ 건수와 목록이 어긋나지 않는가
+  check(/view && !showAll \? shownRecords\.length : records\.length/.test(sto),
+    `★머리의 건수가 «보이는 목록» 과 같습니다`)
+
+  // ⑦ ⚠️ 모드가 «없을» 때는 예전 그대로여야 합니다 (옛 링크·마이페이지)
+  check(/mode: StorageMode =[\s\S]{0,140}: null/.test(sto),
+    `★mode 가 없으면 null — 탭 셋 · 버튼 둘로 «예전 그대로» 돕니다`)
+  check(/useState<FilterKey>\(view \? view\.only : '전체'\)/.test(sto),
+    `모드가 없으면 첫 탭이 «전체» 입니다`)
+
+  // ⑧ 입구가 mode 를 실어 보내는가
+  check(/mode=diagnosis/.test(S.home), `홈 [내이름 감정] 이 mode=diagnosis 로 갑니다`)
+  check(/mode=naming/.test(S.home), `홈 [아기 작명] 이 mode=naming 으로 갑니다`)
+  check(/mode=naming&open=작명/.test(S.nb), `★안내 화면도 mode 를 «잃지 않고» 넘깁니다`)
 }
 
 console.log('\n━━ ⑲-i 🔴 rename/auto 에 «가짜 데이터» 가 남아 있지 않은가 ━━')
