@@ -329,6 +329,7 @@ function NamingStorageInner() {
         headline={pickerOpen === '작명' ? '작명 기본 정보 입력' : '이름 풀이 인적사항 입력'}
         serviceType="naming"
         submitLabel={pickerOpen === '작명' ? '이름 지으러 가기' : '이름 풀이하러 가기'}
+        namingMode={pickerOpen === '작명'}   /* ★작명이면 «이름» 대신 «성씨 + 태명·호칭» */
         onClose={() => setPickerOpen(null)}
         onPickMe={() => {
           const to = pickerOpen === '작명'
@@ -346,7 +347,12 @@ function NamingStorageInner() {
           // ★그 사람 사주를 그대로 실어 보냅니다 — 다음 화면에서 다시 묻지 않습니다
           const q = toResultQuery(person)
           const rel = person.relation ? `&relation=${encodeURIComponent(person.relation)}` : ''
-          router.push(`${base}?${q}${rel}`)
+          // ★작명이면 «성씨» 도 함께 — 아직 이름이 없는 손님을 받쳐 줍니다.
+          //   저장된 이름의 «첫 글자» 를 성씨로 봅니다 (「류 첫째」 면 「류」).
+          const sn = pickerOpen === '작명' && person.title
+            ? `&surname=${encodeURIComponent(person.title.trim().split(/\s+/)[0].slice(0, 2))}`
+            : ''
+          router.push(`${base}?${q}${rel}${sn}`)
         }}
       />
     </main>

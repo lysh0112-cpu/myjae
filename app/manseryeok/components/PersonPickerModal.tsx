@@ -94,6 +94,12 @@ export interface PersonPickerModalProps {
   onPick: (person: SavedPerson) => void   // 저장된 사람 선택 시 (결과로 이동)
   onPickMe?: () => void         // "나"(로그인 회원 본인) 선택 시. 없으면 "나" 항목 숨김
   onClose: () => void
+  /**
+   * ★2026-08-01 — «작명» 모드 (대표님 지시)
+   *   새 사람을 더할 때 「이름」 대신 「성씨 + 태명·호칭」을 받습니다.
+   *   ⚠️ 작명은 «아직 이름이 없는» 상태입니다. 이름을 필수로 받으면 손님이 막힙니다.
+   */
+  namingMode?: boolean
 }
 
 // profiles에서 "나" 표시에 쓸 최소 정보
@@ -113,7 +119,7 @@ type View =
 
 export default function PersonPickerModal({
   open, serviceLabel, headline, serviceType, presetRelation, submitLabel = '저장하기',
-  onPick, onPickMe, onClose,
+  onPick, onPickMe, onClose, namingMode = false,
 }: PersonPickerModalProps) {
   const [people, setPeople] = useState<SavedPerson[]>([])
   const [me, setMe] = useState<MeInfo | null>(null)
@@ -235,6 +241,7 @@ export default function PersonPickerModal({
     return (
       <Overlay onClose={onClose}>
         <PersonFormPitch
+          namingMode={namingMode}
           initial={initial}
           presetRelation={presetRelation}
           serviceType={serviceType}

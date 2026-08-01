@@ -405,5 +405,41 @@ console.log('\n━━ ⑯-l 🔴 useSearchParams 를 쓰는 화면이 Suspense �
   }
 }
 
+console.log('\n━━ ⑯-m ★작명은 «이름 없이» 시작할 수 있는가 (2026-08-01) ━━')
+{
+  // ══════════════════════════════════════════════════════════════
+  //  ⚠️ 작명은 «아직 이름이 없는» 상태입니다.
+  //     그런데 새 사람 폼이 「이름 (별명)」을 «필수» 로 받고 있었습니다.
+  //     → 이름을 지으러 온 손님에게 이름을 내놓으라 하는 셈이었습니다.
+  // ══════════════════════════════════════════════════════════════
+  const form = readFileSync('app/manseryeok/components/PersonFormPitch.tsx', 'utf8')
+  const modal = readFileSync('app/manseryeok/components/PersonPickerModal.tsx', 'utf8')
+  const sto = readFileSync('app/manseryeok/naming/diagnosis/storage/page.tsx', 'utf8')
+  const nn = readFileSync('app/manseryeok/naming/rename/newname/page.tsx', 'utf8')
+
+  // ① 폼이 작명 모드를 아는가
+  check(/namingMode/.test(form), `새 사람 폼이 «작명 모드» 를 압니다`)
+  check(/성씨 및 태명·호칭/.test(form), `★작명이면 「성씨 및 태명·호칭」 을 받습니다`)
+  check(/첫째 · 대박이 \(선택\)/.test(form), `호칭은 «선택» 이라고 적혀 있습니다`)
+  check(/성씨를 입력해주세요/.test(form), `★성씨가 «필수» 입니다`)
+  check(/복성이면 두 글자/.test(form), `복성(두 글자 성씨)도 받습니다`)
+  check(/이름은 다음 걸음에서 골라 드립니다/.test(form),
+    `★「이름은 다음 걸음에서」 라고 안내합니다`)
+
+  // ② 풀이는 «그대로» — 이름을 필수로 받아야 합니다
+  check(/이름 \(별명\)/.test(form), `풀이 모드는 전처럼 「이름 (별명)」 입니다`)
+  check(/이름을 입력해주세요/.test(form), `풀이는 이름이 «필수» 그대로입니다`)
+
+  // ③ 모달·보관함이 이어 주는가
+  check(/namingMode/.test(modal), `모달이 폼에 넘깁니다`)
+  check(/namingMode=\{pickerOpen === '작명'\}/.test(sto), `★작명 버튼일 때만 켜집니다`)
+
+  // ④ ★성씨가 다음 화면까지 «살아 가는가»
+  check(/surname=/.test(sto), `보관함이 «성씨» 를 실어 보냅니다`)
+  check(/surnameFromUrl/.test(nn), `★newname 이 URL 성씨를 «받쳐» 씁니다`)
+  check(/surnameChars\.map\(c => c\.hangul\)\.join\(''\) \|\| surnameFromUrl/.test(nn),
+    `저장된 이름이 있으면 그쪽이 먼저 — 없으면 URL 성씨`)
+}
+
 console.log(`\n━━ 만세력 화면 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail > 0) process.exit(1)

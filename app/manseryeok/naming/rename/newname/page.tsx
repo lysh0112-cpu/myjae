@@ -54,9 +54,18 @@ function NewNameInner() {
   //   예전에는 남궁민수가 성「남」 + 이름「궁·민」 으로 채워져 «수» 가 사라졌습니다.
   const [surnameChars, setSurnameChars] = useState<SavedChar[]>([])
   const surname: SavedChar | null = surnameChars[0] ?? null
-  /** 화면에 보일 성씨 — 복성이면 두 글자를 붙입니다 */
+  /**
+   * 화면에 보일 성씨 — 복성이면 두 글자를 붙입니다.
+   *
+   * ★2026-08-01 — «저장된 이름이 없을 때» 를 받쳐 줍니다 (대표님 지시)
+   *   [왜]  신생아 작명은 «아직 이름이 없습니다». chars 가 비어 있습니다.
+   *         그러면 성씨도 비어 추천이 «한 개도» 안 나옵니다.
+   *   ★그래서 앞 화면에서 실어 온 성씨(URL) 를 «받쳐» 씁니다.
+   *     저장된 이름이 있으면 그쪽이 먼저입니다 — 개명은 성씨가 이미 정해져 있으니까요.
+   */
+  const surnameFromUrl = (sp?.get('surname') || sp?.get('name') || '').trim().slice(0, 2)
   const surnameHanja = surnameChars.map(c => c.hanja).join('')
-  const surnameHangul = surnameChars.map(c => c.hangul).join('')
+  const surnameHangul = surnameChars.map(c => c.hangul).join('') || surnameFromUrl
   const [loaded, setLoaded] = useState(false)
 
   // ── 이용권/결제 ──

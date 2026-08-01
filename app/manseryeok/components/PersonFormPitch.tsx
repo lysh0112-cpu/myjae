@@ -84,6 +84,19 @@ export interface PersonFormPitchProps {
   onSubmit: (draft: PersonDraft) => void
   onBack?: () => void
   onClose?: () => void
+  /**
+   * ★2026-08-01 — «작명» 모드 (대표님 지시)
+   *
+   *   [왜 필요한가]  작명은 «아직 이름이 없는» 상태입니다.
+   *     그런데 이 폼은 「이름 (별명)」을 «필수» 로 받고 있었습니다.
+   *     → 이름을 지으러 온 손님에게 이름을 내놓으라 하는 셈이었습니다.
+   *
+   *   [작명 모드에서는]
+   *     · 「성씨」가 «필수» 입니다 (한 글자, 복성이면 두 글자)
+   *     · 「태명·호칭」은 «선택» 입니다 (첫째 · 대박이 …)
+   *     · 저장 이름은 성씨+호칭으로 만듭니다 — 「류 첫째」
+   */
+  namingMode?: boolean
 }
 
 export default function PersonFormPitch({
@@ -93,6 +106,7 @@ export default function PersonFormPitch({
   submitLabel = '저장하기',
   submitting = false,
   errorMessage,
+  namingMode = false,
   onSubmit,
   onBack,
   onClose,
@@ -152,13 +166,25 @@ export default function PersonFormPitch({
     if (hour && !b.hours.includes(Number(hour))) setHour('')
   }
 
-  const avatar = useMemo(() => avatarColor(title), [title])
+  /** ★작명 모드에서만 쓰는 성씨 (한글) */
+  const [surname, setSurname] = useState(initial?.title?.slice(0, 1) ?? '')
+  /** 작명이면 성씨+호칭으로 이름을 만듭니다. 호칭이 없으면 「류 아기」 */
+  const effectiveTitle = namingMode
+    ? `${surname.trim()}${title.trim() ? ' ' + title.trim() : ' 아기'}`.trim()
+    : title
+  const avatar = useMemo(() => avatarColor(effectiveTitle), [effectiveTitle])
   const effectiveRelation = useCustom ? customRelation.trim() : relation
 
   function handleSubmit() {
     setLocalErr('')
-    const t = title.trim()
-    if (!t) { setLocalErr('이름을 입력해주세요.'); return }
+    // ★작명이면 «성씨» 가 필수이고, 이름(호칭)은 «선택» 입니다
+    if (namingMode) {
+      const sn = surname.trim()
+      if (!sn) { setLocalErr('성씨를 입력해주세요.'); return }
+      if (sn.length > 2) { setLocalErr('성씨는 한 글자, 복성이면 두 글자로 적어주세요.'); return }
+    }
+    const t = effectiveTitle.trim()
+    if (!t) { setLocalErr(namingMode ? '성씨를 입력해주세요.' : '이름을 입력해주세요.'); return }
     if (!effectiveRelation) { setLocalErr('관계를 선택해주세요.'); return }
     const y = parseInt(year, 10), m = parseInt(month, 10), d = parseInt(day, 10)
     if (year.length !== 4 || !y || y < 1900 || y > 2200) { setLocalErr('연도를 4자리로 정확히 입력해주세요.'); return }
@@ -214,14 +240,38 @@ export default function PersonFormPitch({
             width: 52, height: 52, borderRadius: 16, background: avatar.bg, color: avatar.fg,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 20, fontWeight: 500, flexShrink: 0,
-          }}>{avatarChar(title)}</div>
+          }}>{avatarChar(effectiveTitle)}</div>
           <div style={{ flex: 1 }}>
-            <div style={label}>이름 (별명)</div>
-            <input value={title} onChange={e => setTitle(e.target.value.slice(0, 20))}
-              placeholder="예: 아내, 큰딸, 김대표"
-              style={{ ...numInput, textAlign: 'left', color: title ? C.title : C.subLight }} />
+            {namingMode ? (
+              /* ★작명 — 아직 이름이 «없습니다». 성씨만 받고 호칭은 선택입니다 */
+              <>
+                <div style={label}>성씨 및 태명·호칭</div>
+                <div style={{ display: 'flex', gap: 7 }}>
+                  <input value={surname} onChange={e => setSurname(e.target.value.slice(0, 2))}
+                    placeholder="류"
+                    style={{ ...numInput, width: 62, textAlign: 'center', flexShrink: 0,
+                      color: surname ? C.title : C.subLight }} />
+                  <input value={title} onChange={e => setTitle(e.target.value.slice(0, 20))}
+                    placeholder="첫째 · 대박이 (선택)"
+                    style={{ ...numInput, flex: 1, textAlign: 'left',
+                      color: title ? C.title : C.subLight }} />
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={label}>이름 (별명)</div>
+                <input value={title} onChange={e => setTitle(e.target.value.slice(0, 20))}
+                  placeholder="예: 아내, 큰딸, 김대표"
+                  style={{ ...numInput, textAlign: 'left', color: title ? C.title : C.subLight }} />
+              </>
+            )}
           </div>
         </div>
+        {namingMode && (
+          <div style={{ fontSize: 11, color: C.sub, lineHeight: 1.65, margin: '-8px 0 14px 65px' }}>
+            이름은 다음 걸음에서 골라 드립니다. 지금은 성씨만 있으면 됩니다.
+          </div>
+        )}
 
         {/* 관계 — ① 탭으로 갈래를 고르고 ② 그 안에서 세부 관계를 고른다
             ★2026-07-21 2차: 탭과 세부 칩이 같은 모양이라 헷갈린다는 지적을 반영.
