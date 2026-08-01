@@ -34,6 +34,13 @@ import PerspectiveAccordion, { type PerspectiveCommentary } from '@/app/manserye
 import type { StarResult, PerspectiveStar } from '@/lib/saju/starRating'
 import type { Ohaeng } from '@/lib/saju/ohaeng'
 
+/** 등급 색 — ⚠️ 새 색표를 만들지 않습니다. 이 화면 안 세 값뿐입니다 */
+function gradeTone(g: string): string {
+  if (g === '좋음') return '#4a9450'
+  if (g === '아쉬움') return '#c8783c'
+  return '#5c3a1e'
+}
+
 const GOLD = '#c8783c'
 const CARD = '#FFFBF7'
 const LINE = '#f0e0d5'
@@ -62,8 +69,19 @@ export interface NameAnalysisResultViewProps {
   hangulName: string
   /** 작명이면 배지, 감정이면 비워 두십시오 */
   badge?: NameResultBadge
-  /** 이름 아래 한 줄 (예: 「새로 지은 이름」) */
+  /** 이름 아래 한 줄 (예: 「내 아이를 위한 추천 이름」) */
   subtitle?: string
+  /**
+   * ★이름 바로 아래 붙는 «네 기준 요약» (2026-08-01 · 43부 20차)
+   *
+   *  🔴 [왜 여기로 왔나]  전에는 작명 결과 화면 «위쪽» 에 따로 있었습니다.
+   *     그래서 한 화면에 같은 이름이 두 번, 사주 요약도 두 번 나왔습니다.
+   *     ★배지·이름·요약이 «한 덩이» 여야 손님이 헷갈리지 않습니다.
+   *  ⚠️ 감정(내 이름 정밀분석)은 이 값을 «주지 않습니다» — 거기는 예전 그대로입니다.
+   */
+  summaryRows?: { label: string; grade: string }[]
+  /** 요약 맨 아래 «종합» 한 줄. summaryRows 와 함께 옵니다 */
+  summaryOverall?: string
 
   saju: Pillar[]
   solarYear: number
@@ -135,6 +153,33 @@ export default function NameAnalysisResultView(p: NameAnalysisResultViewProps) {
         <div style={{ fontSize: 14, color: '#1a1a1a', marginTop: 4 }}>
           {p.hangulName}{p.subtitle ? ` · ${p.subtitle}` : ''}
         </div>
+
+        {/* ★네 기준 요약 — 배지·이름 바로 아래에 «이어» 둡니다 (43부 20차) */}
+        {p.summaryRows && p.summaryRows.length > 0 && (
+          <div style={{
+            marginTop: 14, textAlign: 'left',
+            background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: '14px 16px',
+          }}>
+            {p.summaryRows.map((row, i) => (
+              <div key={row.label} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '7px 0',
+                borderBottom: i === p.summaryRows!.length - 1 ? 'none' : `1px solid ${LINE}`,
+              }}>
+                <span style={{ fontSize: 13, color: '#2E2622' }}>{row.label}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: gradeTone(row.grade) }}>{row.grade}</span>
+              </div>
+            ))}
+            {p.summaryOverall && (
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${LINE}`, textAlign: 'center' }}>
+                <span style={{ fontSize: 12, color: '#6B5B50' }}>종합 </span>
+                <span style={{ fontSize: 20, fontWeight: 700, color: gradeTone(p.summaryOverall) }}>
+                  {p.summaryOverall}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── ① 내 사주 한눈에 (펼친 채) ── */}

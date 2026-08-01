@@ -214,6 +214,48 @@ console.log('\n━━ ⑲-h ⚠️ 옛 개명 손님이 «안 깨지는가» ━
   }
 }
 
+console.log('\n━━ ⑲-E ★명품작명 결과 화면 · 컷라인 (43부 20차) ━━')
+{
+  const nr = codeOf(S.nr)
+  const pick = codeOf(S.pick)
+  const view = codeOf(read('app/manseryeok/naming/components/NameAnalysisResultView.tsx'))
+  const rec = codeOf(S.rec2)
+
+  // ① 🔴 이름이 «두 번» 나오던 것
+  check(!/letterSpacing: 4 \}\}>\{fullName\}/.test(nr),
+    `★위쪽 «중복 이름» 이 없습니다`)
+  check(!/이름 분석 \(4가지 기준\)/.test(nr),
+    `★위쪽 «중복 요약표» 가 없습니다`)
+  check(/summaryRows=\{rows\.map/.test(nr),
+    `★요약표를 «프레임 안» 으로 넘깁니다 (없앤 것이 아닙니다)`)
+  check(/summaryRows\?: \{ label: string; grade: string \}\[\]/.test(view),
+    `프레임이 요약을 받습니다`)
+  check(/summaryOverall/.test(view) && /summaryOverall/.test(nr), `종합 한 줄도 함께 갑니다`)
+
+  // ② 라벨 통일
+  check(/subtitle="내 아이를 위한 추천 이름"/.test(nr), `★라벨이 «하나» 로 통일됐습니다`)
+  check(!/아기에게 지어 드린 이름/.test(nr) && !/'새로 지은 이름'/.test(nr),
+    `★옛 라벨 둘이 남아 있지 않습니다`)
+
+  // ③ ★컷라인
+  check(/premium\?: boolean/.test(rec), `엔진이 «명품 컷라인» 을 받습니다`)
+  check(/c\.sound\.grade === '좋음'/.test(rec), `★발음오행 «좋음» 만 냅니다`)
+  check(/if \(good\.length > 0\)/.test(rec),
+    `⚠️ 걸러서 «하나도 안 남으면» 되돌립니다 (빈 화면을 내밀지 않습니다)`)
+  check(/premium=\{isNewborn\}/.test(codeOf(S.nn)),
+    `★신생아(명품작명)만 컷라인이 걸립니다`)
+  check(/개명은 «쓰던 발음을 지키는» 자리/.test(S.nn),
+    `⚠️ 개명에 걸지 않는 까닭이 적혀 있습니다`)
+  // 사전 탭으로 «새어 들어오던» 길
+  check(/p\.premium && dictCheck\.grade !== '좋음'/.test(pick),
+    `★사전 탭에도 컷라인이 걸립니다 (교재 사전은 성씨를 가리지 않습니다)`)
+  check(/명품작명은 <b>좋음<\/b>인 이름만/.test(S.pick),
+    `⚠️ 막되 «왜» 인지 알려 드립니다 (그냥 안 눌리면 고장으로 보입니다)`)
+  // ⚠️ 지킬 수 없는 약속을 하지 않았는가
+  check(/여기서 걸 수 있는 것은 «발음오행뿐»/.test(S.rec2),
+    `★자원오행·수리는 «한자를 고른 뒤» 정해진다고 적어 두었습니다`)
+}
+
 console.log('\n━━ ⑲-D ★서비스 이름 개편 · 압핀 지키기 (43부 13차) ━━')
 {
   const home = codeOf(S.home)

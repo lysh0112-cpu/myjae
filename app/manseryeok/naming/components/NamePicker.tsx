@@ -83,6 +83,14 @@ export interface NamePickerProps {
   avoid?: string
   /** 고르면 부릅니다 */
   onPick: (name: string) => void
+  /**
+   * ★「내 아이 명품작명」인가 (2026-08-01 · 43부 20차)
+   *
+   *  켜면 «발음오행이 좋음» 인 이름만 냅니다.
+   *  ⚠️ 개명은 «끕니다» — 손님이 이미 쓰는 이름의 발음을 지키려는 자리라,
+   *     좋음만 내밀면 고를 것이 없어집니다.
+   */
+  premium?: boolean
   /** 직접 쓰기 탭 내용 — 기존 화면을 그대로 넣습니다 */
   manual?: React.ReactNode
 }
@@ -167,6 +175,8 @@ export default function NamePicker(p: NamePickerProps) {
       style: style ?? undefined,
       prefer: preferChars.length ? preferChars : undefined,
       preferPos,
+      // ★「내 아이 명품작명」이면 «발음오행 좋음» 만 냅니다 (43부 20차)
+      premium: p.premium === true,
       avoid: avoidChars.length ? avoidChars : undefined,
       limit: 10,
     })
@@ -309,6 +319,7 @@ export default function NamePicker(p: NamePickerProps) {
                   marginBottom: list.length ? 7 : 0,
                 }}>
                   <span style={{ fontSize: 11, color: SUB }}>
+                    {p.premium && <b style={{ color: GOLD }}>명품 기준 · </b>}
                     지금 조건으로
                     <b style={{ color: list.length === 0 ? '#c8506e' : GOLD, marginLeft: 5 }}>
                       {ready ? `${list.length}개` : '—'}
@@ -444,14 +455,38 @@ export default function NamePicker(p: NamePickerProps) {
                 {dictCheck.gyeokPublic ? ` — ${dictCheck.gyeokPublic}` : ''}
                 {dictCheck.gentle ? <><br />{dictCheck.gentle}</> : null}
               </div>
-              <button onClick={() => p.onPick(checked)}
-                style={{
-                  ...PRESS, width: '100%', marginTop: 9, padding: 11, borderRadius: 11,
-                  background: GOLD, border: 'none', color: '#fff',
-                  fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              {/* ══════════════════════════════════════════════════
+                  ★「명품작명」 컷라인 — 사전 탭에도 겁니다 (43부 20차)
+
+                   🔴 [왜]  추천 탭은 이미 «좋음» 만 냅니다. 그런데 사전 탭은
+                      교재 1장의 이름을 그대로 늘어놓습니다.
+                      ⚠️ 사전에 실린 이름이라도 «이 성씨와 만나면» 흉이 될 수 있습니다.
+                         (교재 사전은 성씨를 가리지 않고 실려 있습니다)
+                      → 명품이라 이름 붙인 자리에 아쉬움이 새어 들어오던 길입니다.
+
+                   ⚠️ 막되 «왜» 인지 알려 드립니다. 그냥 안 눌리면 고장으로 보입니다.
+                  ══════════════════════════════════════════════════ */}
+              {p.premium && dictCheck.grade !== '좋음' ? (
+                <div style={{
+                  marginTop: 9, padding: '10px 11px', borderRadius: 11,
+                  background: '#fff', border: `1px solid ${LINE}`,
+                  fontSize: 11.5, color: '#96502e', lineHeight: 1.7,
                 }}>
-                이 이름으로 한자 고르러 가기 →
-              </button>
+                  이 이름은 <b>{sur}</b> 씨와 만나면 소리의 흐름이
+                  <b> {dictCheck.grade}</b>으로 봅니다.
+                  <br />명품작명은 <b>좋음</b>인 이름만 지어 드리고 있어요.
+                  다른 이름을 골라 주세요.
+                </div>
+              ) : (
+                <button onClick={() => p.onPick(checked)}
+                  style={{
+                    ...PRESS, width: '100%', marginTop: 9, padding: 11, borderRadius: 11,
+                    background: GOLD, border: 'none', color: '#fff',
+                    fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  }}>
+                  이 이름으로 한자 고르러 가기 →
+                </button>
+              )}
             </div>
           )}
 

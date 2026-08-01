@@ -513,6 +513,9 @@ function NewNameInner() {
         prefer={sp?.get('prefer') ?? ''}
         avoid={sp?.get('avoid') ?? ''}
         onPick={pickName}
+        // ★신생아(내 아이 명품작명)만 컷라인을 겁니다 (43부 20차)
+        //   ⚠️ 개명은 «쓰던 발음을 지키는» 자리라 좋음만 내밀면 고를 것이 없어집니다.
+        premium={isNewborn}
         manual={<>
       <div style={{ fontSize: 12, color: SUB, marginBottom: 8, padding: '0 4px' }}>이름 글자 수</div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>

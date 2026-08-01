@@ -161,6 +161,21 @@ export interface RecommendOptions extends PoolOptions {
   gusin?: Ohaeng | null
   /** 몇 개를 돌려줄까. 기본 10 */
   limit?: number
+  /**
+   * ★「명품작명」 컷라인 (2026-08-01 · 43부 20차 · 대표님 지시)
+   *
+   *   true 면 «발음오행이 좋음(吉)» 인 이름만 냅니다.
+   *
+   *  ⚠️⚠️ 여기서 걸 수 있는 것은 «발음오행뿐» 입니다.
+   *     [왜]  이 엔진은 «한글 이름» 을 고릅니다. 자원오행과 수리 4격은
+   *           «한자를 고른 뒤» 에야 정해집니다 (획수·자원오행이 한자에 붙습니다).
+   *           → 그 둘의 컷라인은 Step 3(한자 고르기)에서 걸어야 합니다.
+   *     ★여기서 「4격도 좋음만」 이라고 말하면 «지킬 수 없는 약속» 이 됩니다.
+   *
+   *  ⚠️ 걸러서 열 개가 안 차면 «그대로 냅니다». 억지로 채우지 않습니다 —
+   *     채우면 컷라인이 없는 것과 같아집니다.
+   */
+  premium?: boolean
   /** 울림소리 받침에 가산점을 줄까. 기본 true (★판정 아님 · 어감) */
   softEnding?: boolean
   /** 피할 이름 (항렬자·친척 이름 등). 그대로 걸러 냅니다 */
@@ -264,6 +279,7 @@ export function recommendNames(
   opt: RecommendOptions = {},
 ): NameCandidate[] {
   const limit = opt.limit ?? 10
+  const premium = opt.premium === true
   const wantLen = opt.givenLength ?? 2
   const softOn = opt.softEnding !== false
   const avoid = new Set(opt.avoid ?? [])
@@ -436,6 +452,23 @@ export function recommendNames(
     const filtered = out.filter((c) => c.preferHit)
     out.length = 0
     out.push(...filtered)
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  ★「명품작명」 컷라인 — 발음오행이 «좋음» 인 이름만 (43부 20차)
+  //
+  //   ⚠️ 「보통」도 뺍니다. 명품이라 이름 붙인 자리에 «반길반흉» 을 내밀 수 없습니다.
+  //   ⚠️ 사전(교재 1장)에 실린 이름이라도 성씨와 만나면 흉이 될 수 있습니다.
+  //      그래서 «사전에 있음» 이 통과권이 되지 않습니다.
+  //   ⚠️ 걸러서 하나도 안 남으면 «걸기 전» 으로 되돌립니다 —
+  //      빈 화면을 내밀면 손님이 아무것도 못 합니다. 그때는 화면이 알려 드립니다.
+  // ══════════════════════════════════════════════════════════════
+  if (premium) {
+    const good = out.filter((c) => c.sound.grade === '좋음')
+    if (good.length > 0) {
+      out.length = 0
+      out.push(...good)
+    }
   }
 
   out.sort((a, b) =>

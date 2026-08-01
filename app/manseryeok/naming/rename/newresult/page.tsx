@@ -571,27 +571,18 @@ function NewResultInner() {
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       <Header router={router} />
 
-      <div style={{ textAlign: 'center', margin: '14px 0 6px' }}>
-        <div style={{ fontSize: 32, fontWeight: 700, color: GOLD, letterSpacing: 4 }}>{fullName}</div>
-        <div style={{ fontSize: 13, color: SUB, marginTop: 4 }}>{hangulName} · 새로 지은 이름</div>
-        {yongsin && <div style={{ fontSize: 11, color: SUB, marginTop: 2 }}>사주에 필요한 기운 <b style={{ color: GREEN }}>{yongsin}</b></div>}
-      </div>
+      {/* ══════════════════════════════════════════════════════════
+          🔴★2026-08-01 (43부 20차) — 이름이 «두 번» 나오던 자리 (대표님 지적)
 
-      {result && (
-        <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: 16, margin: '16px 0 14px' }}>
-          <div style={{ fontSize: 12, color: GOLD, marginBottom: 12, fontWeight: 700 }}>이름 분석 (4가지 기준)</div>
-          {rows.map((row, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: i === rows.length - 1 ? 'none' : `1px solid ${LINE}` }}>
-              <span style={{ fontSize: 13, color: INK }}>{row.label}</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: gradeColor(row.f.grade) }}>{row.f.grade}</span>
-            </div>
-          ))}
-          <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${LINE}`, textAlign: 'center' }}>
-            <span style={{ fontSize: 12, color: SUB }}>종합 </span>
-            <span style={{ fontSize: 20, fontWeight: 700, color: gradeColor(result.overallGrade) }}>{result.overallGrade}</span>
-          </div>
-        </div>
-      )}
+           [무엇이 있었나]  여기 위쪽에 이름 + 요약표가 있고,
+             아래 NameAnalysisResultView 에 «같은 이름» 이 배지와 함께 또 나왔습니다.
+             ⚠️ 한 화면에 같은 이름이 두 번, 사주 요약도 두 번.
+                손님이 「무엇이 무엇인지」 헷갈립니다.
+
+           ★[이제]  위쪽을 걷어내고 아래 프레임 «하나» 로 모았습니다.
+             요약표는 프레임의 summary 로 넘깁니다 — 배지·이름·요약이 한 덩이입니다.
+           ⚠️ 요약표를 «없앤 것이 아닙니다». 자리를 옮겼을 뿐입니다.
+          ══════════════════════════════════════════════════════════ */}
 
       {/* ══════════════════════════════════════════════════════════
           ★2026-08-01 (43부 6차) — 「한 번에 이름 하나」 (대표님 확정)
@@ -656,7 +647,13 @@ function NewResultInner() {
         <NameAnalysisResultView
           hanjaName={fullName}
           hangulName={hangulName}
-          subtitle={namingKind === '신생아' ? '아기에게 지어 드린 이름' : '새로 지은 이름'}
+          // ★2026-08-01 (43부 20차) — 라벨을 «하나» 로 통일했습니다 (대표님 지시).
+          //   전에는 「새로 지은 이름」·「아기에게 지어 드린 이름」 둘이 갈려 있었습니다.
+          subtitle="내 아이를 위한 추천 이름"
+          // ★네 기준 요약을 «프레임 안» 으로 넘깁니다 (43부 20차)
+          //   ⚠️ 위쪽에 따로 두면 이름·요약이 두 번 나옵니다.
+          summaryRows={rows.map(r => ({ label: r.label, grade: r.f.grade }))}
+          summaryOverall={result?.overallGrade ?? ''}
           badge={{ kind: badgeKind }}
           saju={saju}
           solarYear={solar?.year ?? 0}
