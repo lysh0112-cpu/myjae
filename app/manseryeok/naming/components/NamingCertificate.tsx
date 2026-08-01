@@ -198,7 +198,14 @@ export function buildCertificateHtml(p: NamingCertificateProps): string {
    *   실측 — 실제 통변 745자 (상한의 65%). 여유가 넉넉합니다.
    */
   const CHONG_MAX = 1150
-  const cLine = p.yongsinLine ?? ''
+  /**
+   * ★머리줄은 종이 쪽에서 «줄입니다» (2026-08-01 · 43부 18차)
+   *
+   *  ⚠️ 전에는 프롬프트에 「60자 안쪽」을 걸어 두었습니다.
+   *     그런데 이 글은 «화면에도» 나옵니다 — 종이 사정으로 화면을 줄인 셈이었습니다.
+   *  ★이제 화면 글에는 어떤 상한도 두지 않고, 길면 여기서 한 줄로 다듬습니다.
+   */
+  const cLine = trimChong(p.yongsinLine ?? '', 110)
   const room = Math.max(300, CHONG_MAX - cLine.length)
 
   /**
