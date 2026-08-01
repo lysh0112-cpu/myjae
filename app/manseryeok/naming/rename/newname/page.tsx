@@ -1,6 +1,10 @@
 'use client'
 import { useState, useEffect, useRef, Suspense, CSSProperties } from 'react'
 import { splitSurname, surnameOfHangul } from '@/lib/saju/surname'
+// ★2026-08-01 (43부 8차) — 「한 번에 이름 하나」 정책.
+//   🔴 6차에 여기를 «빠뜨렸습니다». 결제 팝업이 여전히 「3개의 이름을 지어보고」 라고
+//      말하고 있었습니다. 한도를 쓰는 곳은 «모두» 정책을 지나야 합니다.
+import { clampTryLimit, isSingleName } from '@/lib/saju/namingPolicy'
 import { useRouter, useSearchParams } from 'next/navigation'
 // ★2026-08-01 (43부) — 작명 «대상» 을 Step 3·4 까지 잃지 않고 나릅니다 (결함 ①②③④)
 import {
@@ -50,7 +54,7 @@ const SHADOW = '0 1px 3px rgba(46,38,34,0.06)'
 const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
 const NAMING_PASS_KEY = 'naming_pass_v1'   // 개명 이용권 { userId, remaining }
-const DEFAULT_TRY_LIMIT = 3
+const DEFAULT_TRY_LIMIT = clampTryLimit(3)
 
 interface SavedChar {
   hangul: string
@@ -160,7 +164,8 @@ function NewNameInner() {
     supabase.from('analysis_prices').select('price').eq('price_key', 'naming_hanja').maybeSingle()
       .then(({ data }) => { if (data) setHanjaPrice(data.price) })
     supabase.from('app_settings').select('value').eq('key', 'naming_try_limit').maybeSingle()
-      .then(({ data }) => { if (data && typeof data.value === 'number') setTryLimit(data.value) })
+      // ⚠️ 관리자 설정 값도 «정책을 지나» 옵니다 — 설정으로 3개가 되살아나지 않습니다
+      .then(({ data }) => { if (data && typeof data.value === 'number') setTryLimit(clampTryLimit(data.value)) })
     supabase.auth.getUser().then(({ data }) => { if (data?.user) setUid(data.user.id) })
   }, [])
 
@@ -475,9 +480,9 @@ function NewNameInner() {
             <br />성씨와 생년월일을 받아 이리로 모셔 옵니다.
           </div>
           <div style={{ marginTop: 20 }}>
-            <button onClick={() => router.push('/manseryeok/naming/diagnosis/storage')}
+            <button onClick={() => router.push(isNewborn ? '/manseryeok/naming/naming-storage' : '/manseryeok/naming/diagnosis/storage?mode=diagnosis')}
               style={{ padding: '12px 22px', borderRadius: 12, background: 'rgba(200,120,60,0.12)', border: '1px solid ' + GOLD, color: GOLD, fontWeight: 700, cursor: 'pointer' }}>
-              이름 보관함으로 가기 →
+              {isNewborn ? '작명 보관함으로 가기 →' : '이름 보관함으로 가기 →'}
             </button>
           </div>
         </div>
@@ -569,10 +574,18 @@ function NewNameInner() {
             style={{ width: '100%', maxWidth: 360, background: '#fffbf7', borderRadius: 18, padding: '24px 20px', boxShadow: '0 16px 40px rgba(90,50,30,0.2)', textAlign: 'center' }}>
             <div style={{ fontSize: 28, marginBottom: 10 }}>✍️</div>
             <div style={{ fontSize: 16, fontWeight: 700, color: INK, marginBottom: 6 }}>이름 지어보기 이용권</div>
+            {/* ★2026-08-01 (43부 8차) — 「한 번에 하나」면 «개수를 말하지 않습니다».
+                ⚠️ 「3개」라고 해 놓고 하나만 주면 그것은 «약속을 어기는» 것입니다. */}
             <div style={{ fontSize: 13, color: SUB, marginBottom: 16, lineHeight: 1.7 }}>
-              결제하시면 사주에 맞는 한자로<br />
-              <b style={{ color: GOLD }}>{tryLimit}개</b>의 이름을 지어보고<br />
-              상세 풀이까지 확인하실 수 있어요.
+              {isSingleName ? (
+                <>결제하시면 사주에 맞는 한자로<br />
+                  <b style={{ color: GOLD }}>이름 하나</b>를 지어 드리고<br />
+                  상세 풀이까지 확인하실 수 있어요.</>
+              ) : (
+                <>결제하시면 사주에 맞는 한자로<br />
+                  <b style={{ color: GOLD }}>{tryLimit}개</b>의 이름을 지어보고<br />
+                  상세 풀이까지 확인하실 수 있어요.</>
+              )}
             </div>
             <div style={{ background: CARD, borderRadius: 12, padding: '14px', marginBottom: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 14, color: SUB }}>결제 금액</span>
@@ -607,7 +620,8 @@ function Header({ router, isNewborn }: {
           그 화면으로 되돌리면 갈 곳이 없어 보입니다. 보관함으로 보냅니다. */}
       <button
         onClick={() => router.push(isNewborn
-          ? '/manseryeok/naming/diagnosis/storage'
+          // ★2026-08-01 (43부 9차) — 신생아는 «작명 보관함» 으로 돌아갑니다
+          ? '/manseryeok/naming/naming-storage'
           : '/manseryeok/naming/diagnosis')}
         aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
       <span style={{ fontSize: 15, fontWeight: 500, color: INK }}>

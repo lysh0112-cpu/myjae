@@ -34,7 +34,10 @@ const P = {
   nh: 'app/manseryeok/naming/rename/newhanja/page.tsx',
   nr: 'app/manseryeok/naming/rename/newresult/page.tsx',
   nb: 'app/manseryeok/naming/rename/newborn/page.tsx',
-  sto: 'app/manseryeok/naming/diagnosis/storage/page.tsx',
+  // ★2026-08-01 (43부 9차) — 본체가 부품으로 옮겨졌습니다
+  sto: 'app/manseryeok/naming/components/NamingStorageView.tsx',
+  stoDoor: 'app/manseryeok/naming/diagnosis/storage/page.tsx',
+  stoNaming: 'app/manseryeok/naming/naming-storage/page.tsx',
   home: 'app/home-new/page.tsx',
   rec: 'lib/saju/namingRecords.ts',
   auto: 'app/manseryeok/naming/rename/auto/page.tsx',
@@ -184,7 +187,7 @@ console.log('\n━━ ⑲-g ★E — 아기 이름 짓기가 «열려 있는가�
   // 홈에서 갈 수 있는가 — 「아무도 안 부르는 화면」이 되지 않게
   //   ★2026-08-01 (43부 2차) — 홈 카드가 «작명 보관함» 으로 바뀌었습니다.
   //     안내 화면은 그 보관함 안에서 잇습니다. 검사도 한 칸 늘려 봅니다.
-  check(/storage\?mode=naming/.test(S.home), `★홈 [아기 작명] 이 «작명 보관함» 으로 갑니다`)
+  check(/naming-storage/.test(S.home), `★홈 [아기 작명] 이 «작명 보관함» 으로 갑니다`)
   check(/rename\/newborn/.test(codeOf(S.sto)),
     `★안내 화면이 보관함에서 «이어져» 있습니다 (아무도 안 부르는 화면이 되지 않게)`)
   // 대법원 인명용 한자 안내 (E-②)
@@ -207,6 +210,77 @@ console.log('\n━━ ⑲-h ⚠️ 옛 개명 손님이 «안 깨지는가» ━
   for (const [n, c] of [['Step 2', S.nn], ['Step 3', S.nh], ['Step 4', S.nr]] as const) {
     check(!/SCORE_BASE|REL_SCORE/.test(codeOf(c)), `${n} 이 판정을 다시 하지 않습니다`)
   }
+}
+
+console.log('\n━━ ⑲-A ★보관함 둘을 «따로» 운영하는가 (43부 9차) ━━')
+{
+  const view = codeOf(S.sto)
+  const door = codeOf(S.stoDoor)
+  const naming = codeOf(S.stoNaming)
+
+  // ① 주소가 «둘» 인가 — ?mode= 하나로만 가르면 뒤로가기·북마크가 섞입니다
+  check(existsSync(P.stoNaming), `★작명 보관함 «전용 주소» 가 있습니다`)
+  check(/forcedMode="naming"/.test(naming), `그 주소는 «언제나» 작명입니다`)
+  check(/StorageMode = forcedMode/.test(view), `★전용 주소면 ?mode= 보다 «먼저» 입니다`)
+
+  // ② ⚠️⚠️ 화면을 «복사하지» 않았는가 — 복사하면 한쪽만 고치는 날이 옵니다
+  check(/NamingStorageView/.test(door) && /NamingStorageView/.test(naming),
+    `★두 문이 «같은 부품» 을 씁니다`)
+  check(door.split('\n').length < 40 && naming.split('\n').length < 40,
+    `★두 문이 «얇습니다» (본체를 복사하지 않았습니다)`)
+  check(!/listNamingRecords/.test(door) && !/listNamingRecords/.test(naming),
+    `문에는 목록을 읽는 코드가 «없습니다»`)
+
+  // ③ ⚠️ 옛 주소를 좁히지 않았는가 — 마이페이지·북마크가 아직 옵니다
+  check(!/forcedMode=/.test(door),
+    `★옛 주소에 갈래를 «못 박지 않았습니다» (옛 링크가 작명 기록도 볼 수 있게)`)
+
+  // ④ 섞어 보여 주지 않는가 — 가른 뜻이 없어집니다
+  check(/const showAll = false/.test(view), `★한 화면에서 «섞지» 않습니다`)
+  check(/router\.push\(mode === 'naming'/.test(view),
+    `★대신 «옆 보관함으로 가는 길» 을 줍니다`)
+  check(/hiddenCount > 0[\s\S]{0,80}건 →/.test(view),
+    `⚠️ 저쪽에 몇 건 있는지 알려 드립니다 (사라진 줄 알고 놀라시지 않게)`)
+
+  // ⑤ 링크가 새 주소를 보는가
+  check(/naming\/naming-storage/.test(S.home), `홈 [아기 작명] 이 전용 주소로 갑니다`)
+  check(/naming\/naming-storage/.test(codeOf(S.nb)), `아기 작명 입구도 전용 주소로 갑니다`)
+  check(/naming\/naming-storage/.test(codeOf(S.nr)), `결과 화면의 보관함 버튼도 전용 주소입니다`)
+  check(!/storage\?mode=naming/.test(S.home + S.nb + S.nr),
+    `★옛 ?mode=naming 링크가 남아 있지 않습니다`)
+}
+
+console.log('\n━━ ⑲-z 🔴 회차 문구 · 보관함 «온전한» 저장 (43부 8차) ━━')
+{
+  const nn = codeOf(S.nn)
+  const nr = codeOf(S.nr)
+  const nh = codeOf(S.nh)
+  const rec = read('lib/saju/namingRecords.ts')
+
+  // 🔴 6차에 newname 을 «빠뜨려» 결제 팝업이 여전히 「3개의 이름을」이라 했습니다
+  check(/clampTryLimit/.test(nn), `★Step 2 도 «정책을 지나» 한도를 받습니다`)
+  check(/isSingleName \? \([\s\S]{0,120}이름 하나<\/b>/.test(nn),
+    `★결제 팝업이 «개수를 부풀리지» 않습니다`)
+  check(!/typeof data\.value === 'number'\) setTryLimit\(data\.value\)/.test(nn),
+    `관리자 설정도 정책을 지납니다`)
+  // 회차를 말하는 자리가 모두 갈래로 막혔는가
+  check(/isSingleName\s*\n?\s*\? <>✨ 이 이름 자세히 풀이 보기<\/>/.test(nr),
+    `★풀이 버튼이 «남은 N회» 를 말하지 않습니다`)
+  check(/\{alreadyTried && !isSingleName/.test(nh),
+    `★확정 팝업도 «횟수» 를 말하지 않습니다`)
+
+  // 🔴 보관함에 «일부만» 담기던 것 — 풀이가 오기 전에 저장하고 다시 안 했습니다
+  check(/export async function updateNamingRecordResult/.test(rec),
+    `★이미 저장한 줄에 풀이를 «갈아 끼우는» 창구가 있습니다`)
+  check(/\.update\(\{ result_data: snapshot \}\)[\s\S]{0,80}\.eq\('user_id', uid\)/.test(rec),
+    `⚠️ 남의 기록을 고치지 못하게 user_id 를 함께 겁니다`)
+  check(/savedNamesRef = useRef<Map<string, boolean>>/.test(nr),
+    `★«통변까지 담겼는지» 를 함께 기억합니다`)
+  check(/cur\?\.commentary\?\.yinyang\?\.meaning\]/.test(nr),
+    `★풀이가 «도착했을 때» 저장이 다시 돕니다`)
+  check(/updateNamingRecordResult\(rowId/.test(nr),
+    `★다시 insert 하지 않고 «갈아 끼웁니다» (같은 이름이 두 건 쌓이지 않게)`)
+  check(/savedIdRef/.test(nr), `갈아 끼울 줄의 id 를 기억합니다`)
 }
 
 console.log('\n━━ ⑲-v 🔴 «방금 고른 이름» 이 결과에 나오는가 (43부 7차) ━━')
@@ -406,7 +480,7 @@ console.log('\n━━ ⑲-q ★A4 작명서 · 보관함 버튼 (Step 4) ━━'
   check(/disabled=\{!cur\.commentary/.test(nr),
     `★풀이 전에는 눌리지 않습니다 (맺음말이 빈 작명서가 나가지 않게)`)
   check(/작명 보관함에서 보기/.test(S.nr), `★보관함으로 «가는» 버튼이 있습니다`)
-  check(/storage\?mode=naming/.test(nr), `작명 기록이므로 «작명 보관함» 으로 갑니다`)
+  check(/naming-storage/.test(nr), `작명 기록이므로 «작명 보관함» 으로 갑니다`)
   // ★[내이름 감정] 과 같은 다섯 관점이 다 실리는가
   for (const k of ['음양', '발음오행', '수리 4격', '자원오행', '사주와의 만남']) {
     check(nr.includes(`'${k}'`), `작명서에 「${k}」 가 실립니다`)
@@ -491,8 +565,8 @@ console.log('\n━━ ⑲-n ★홈 — 폴더를 «열지 않고» 바로 들어
 
   // ⑧ ⚠️ 연결(href)이 바뀌지 않았는가 — 자리를 옮긴 것이지 길을 바꾼 것이 아닙니다
   check(/couple-storage/.test(home), `궁합 연결 그대로`)
-  check(/storage\?mode=diagnosis/.test(home) && /storage\?mode=naming/.test(home),
-    `이름 두 카드의 연결 그대로 (mode 유지)`)
+  check(/storage\?mode=diagnosis/.test(home) && /naming-storage/.test(home),
+    `이름 두 카드가 «각자» 보관함으로 갑니다`)
 }
 
 console.log('\n━━ ⑲-m ★들어온 «입구» 에 따라 보관함이 갈리는가 (43부 2차) ━━')
@@ -518,8 +592,9 @@ console.log('\n━━ ⑲-m ★들어온 «입구» 에 따라 보관함이 갈�
 
   // ⑤ ⚠️ «기록이 사라진 줄» 알고 놀라시지 않는가 — 가장 중요한 자리
   check(/hiddenCount/.test(sto), `★가려진 기록이 몇 건인지 셉니다`)
-  check(/showAll/.test(sto) && /모두 보기|함께 보기|전체 보관함 보기/.test(S.sto),
-    `★「모두 보기」로 전체 보관함에 갈 수 있습니다 — 길이 끊기지 않습니다`)
+  // ★9차 — 「모두 보기」 대신 «옆 보관함으로 가기» 입니다 (⑲-A 가 봅니다)
+  check(/보관함으로 가기/.test(S.sto),
+    `★옆 보관함으로 가는 길이 있습니다 — 길이 끊기지 않습니다`)
   // ⚠️ 거르기이지 «지우기» 가 아닙니다 — 목록 조회에 mode 가 끼면 안 됩니다
   check(!/listNamingRecords\((mode|view)/.test(sto),
     `★목록을 «불러올 때» 거르지 않습니다 (거르기는 화면에서만 — 기록은 그대로입니다)`)
@@ -529,15 +604,17 @@ console.log('\n━━ ⑲-m ★들어온 «입구» 에 따라 보관함이 갈�
     `★머리의 건수가 «보이는 목록» 과 같습니다`)
 
   // ⑦ ⚠️ 모드가 «없을» 때는 예전 그대로여야 합니다 (옛 링크·마이페이지)
-  check(/mode: StorageMode =[\s\S]{0,140}: null/.test(sto),
+  check(/: null\)/.test(sto),
     `★mode 가 없으면 null — 탭 셋 · 버튼 둘로 «예전 그대로» 돕니다`)
   check(/useState<FilterKey>\(view \? view\.only : '전체'\)/.test(sto),
     `모드가 없으면 첫 탭이 «전체» 입니다`)
+  check(/mode: StorageMode = forcedMode/.test(sto), `전용 주소면 그 갈래로 고정됩니다`)
 
   // ⑧ 입구가 mode 를 실어 보내는가
   check(/mode=diagnosis/.test(S.home), `홈 [내이름 감정] 이 mode=diagnosis 로 갑니다`)
-  check(/mode=naming/.test(S.home), `홈 [아기 작명] 이 mode=naming 으로 갑니다`)
-  check(/mode=naming&open=작명/.test(S.nb), `★안내 화면도 mode 를 «잃지 않고» 넘깁니다`)
+  // ★9차 — 작명은 «전용 주소» 로 갈렸습니다 (위 ⑲-A 가 봅니다)
+  check(/naming-storage/.test(S.home), `홈 [아기 작명] 이 작명 보관함으로 갑니다`)
+  check(/naming-storage\?open=작명/.test(S.nb), `★안내 화면도 작명 보관함으로 갑니다`)
 }
 
 console.log('\n━━ ⑲-i 🔴 rename/auto 에 «가짜 데이터» 가 남아 있지 않은가 ━━')

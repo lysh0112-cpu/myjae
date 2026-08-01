@@ -3,7 +3,7 @@
 ```
 기준 저장소   https://github.com/lysh0112-cpu/myjae.git
 기준 커밋     3b97c57
-검사          857 → ★1,148건 · 실패 0
+검사          857 → ★1,174건 · 실패 0
 타입          tsc --noEmit 통과
 eslint        기준선 유지 (오류 동일 · 경고 1건 감소)
 ```
@@ -36,6 +36,69 @@ rename/newborn    → storage?mode=naming&open=작명
 · 아래 「◯◯ 기록도 함께 보기 · N건」 으로 언제든 전체를 봅니다
   ★기록이 «사라진 줄» 알고 놀라시는 일이 없어야 합니다
 · mode 가 없을 때를 예전 그대로 둔 것은 «일부러» 입니다 — 옛 링크·마이페이지 (교훈 AM)
+```
+
+---
+
+## ★43부 9차 — 보관함 둘을 «따로» 운영
+
+```
+전  /manseryeok/naming/diagnosis/storage?mode=naming     ← ?mode= 로만 갈랐습니다
+    ⚠️ 뒤로가기·북마크·브라우저 기록이 서로 섞였습니다
+    ⚠️ 「함께 보기」가 남의 갈래를 끌어와 «갈랐다는 느낌» 이 없었습니다
+
+후  /manseryeok/naming/diagnosis/storage?mode=diagnosis   이름 풀이 보관함
+    /manseryeok/naming/naming-storage                     ★작명 보관함 (전용 주소)
+```
+
+⚠️⚠️ **화면을 «복사하지 않았습니다».**
+```
+본체  app/manseryeok/naming/components/NamingStorageView.tsx   ← 새 부품
+문    diagnosis/storage/page.tsx    (30줄)  ← 옛 주소 · 갈래를 «안» 박음
+      naming-storage/page.tsx       (30줄)  ← forcedMode="naming" 못 박음
+★복사하면 한쪽만 고치는 날이 반드시 옵니다. (교훈 CJ)
+  검사가 «두 문이 얇은지» 와 «같은 부품을 쓰는지» 를 잽니다.
+```
+
+⚠️ **옛 주소에는 갈래를 못 박지 않았습니다.**
+마이페이지·북마크가 아직 그 주소로 옵니다. 여기에 diagnosis 를 박으면
+옛 링크로 오신 분이 «작명 기록을 못 봅니다». (교훈 AM)
+
+⚠️ **섞어 보여 주지 않습니다.**
+「함께 보기」(한 화면에서 섞기) → 「◯◯ 보관함으로 가기 · N건 →」(옆으로 이동)
+★다만 «저쪽에 몇 건 있는지» 는 그대로 알려 드립니다 — 사라진 줄 알고 놀라시지 않게.
+
+---
+
+## 🔴 43부 8차 — 화면 확인으로 잡은 것 둘
+
+### ① 「몇 회 남았어요」가 아직 나오던 것 (제 잘못)
+```
+🔴 6차에 한도를 «정책» 으로 옮기면서 newname(Step 2)을 «빠뜨렸습니다».
+   결제 팝업이 여전히 「3개의 이름을 지어보고」 라고 말하고 있었습니다.
+   ⚠️ 「3개」라고 해 놓고 하나만 드리면 그것은 «약속을 어기는» 것입니다.
+
+고친 자리 넷
+  ① newname 결제 팝업      「3개의 이름을」 → 「이름 하나를」
+  ② newname 관리자 설정값   clampTryLimit 을 지나게 (설정으로 3개가 되살아나지 않게)
+  ③ newresult 풀이 버튼     「자세히 풀이 보기 · 남은 2회」 → 「자세히 풀이 보기」
+  ④ newhanja 확정 팝업      「다시 열어봐도 횟수는 줄지 않아요」 갈래를 막음
+★한도를 쓰는 곳이 «모두» 정책을 지나는지 검사로 못 박았습니다.
+```
+
+### ② 보관함에서 열면 «일부만» 나오던 것
+```
+🔴 자동 저장이 «풀이(통변)가 오기 전» 에 한 번 돕니다.
+   그 뒤 손님이 [자세히 풀이 보기] 를 눌러 통변이 도착해도
+   「이미 저장한 이름」 검사에 걸려 «다시 저장하지 않았습니다».
+   → 보관함에는 «계산 결과만» 있고 맺음말·다섯 관점 풀이가 «없었습니다».
+   ⇒ 이름 풀이와 달리 보관함에서 «일부만» 보였습니다.
+
+★고침  「통변까지 담겼는지」를 함께 기억합니다.
+       통변이 도착하면 그 줄에 «갈아 끼웁니다».
+⚠️⚠️ 다시 saveNamingRecord 를 부르면 «insert» 라 같은 이름이 «두 건» 쌓입니다.
+     → updateNamingRecordResult 를 새로 만들었습니다 (update · user_id 함께 검사).
+     ★보관함에 똑같은 이름이 둘 보이면 손님은 어느 쪽이 맞는지 모릅니다.
 ```
 
 ---
@@ -259,7 +322,7 @@ BEST(2) + 낱장(3) + 폴더(6) = SERVICES(11)   ← 딱 맞아야 통과
 
 ```
 lib/saju/namingSession.ts        작명 «대상» 을 Step 2→3→4 로 나르는 단일 창구
-28-verify-naming-flow.ts         작명 동선 그물 219건  → verify 등록
+28-verify-naming-flow.ts         작명 동선 그물 245건  → verify 등록
 30-e2e-naming-flow.ts            세 동선 + 조건 e2e 68건 → verify 등록
 29-measure-resource-weights.ts   자원오행 배점 «자»
                                  ⚠️ verify 에 «넣지 않았습니다» — 검사가 아닙니다
@@ -275,11 +338,14 @@ lib/saju/namingSession.ts        작명 «대상» 을 Step 2→3→4 로 나르
  naming/rename/newresult   ③붙박이 제거 · ④대상 사주 · relation · ★A4 작명서 · 보관함 버튼 · 묵은 세션 차단
  naming/components/NamingCertificate  ★신설 — A4 작명서 (인쇄·PDF)
  naming/rename/newborn     E — 준비중 안내 → 실입구 (+ mode 전달)
- naming/diagnosis/storage  kind 전달 · ?open=작명 · ★?mode= 분기
+ naming/diagnosis/storage  ★얇은 문으로 (본체는 아래 부품)
+ naming/naming-storage     ★신설 — 작명 보관함 전용 주소
+ naming/components/NamingStorageView  ★신설 — 보관함 본체 (둘이 나눠 씀)
  app/home-new              👶 카드 복원 · 두 카드에 mode · ★sub 문구
  home-new/components/ServiceSection  ★낱장 카드(SOLO) · 「궁합 & 기타」 폴더 해제
  lib/saju/surname.ts       surnameOfHangul() 추가
  lib/saju/namingPolicy.ts  ★신설 — 「한 번에 하나」 스위치 (배선만 끊음)
+ lib/saju/namingRecords.ts ★updateNamingRecordResult 추가 (풀이 갈아 끼우기)
  naming/components/NamePicker  ★조건 즉시 반영 · 실시간 미리보기 · 조합 중 낱자 거르기
  lib/saju/nameRecommend.ts     ★선호 소리를 «줄 세우기 첫 잣대» 로
  27-verify-recommend.ts        ⚠️ `|| true` 로 «언제나 통과» 하던 검사를 진짜 검사로

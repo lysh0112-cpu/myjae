@@ -999,7 +999,7 @@ function NewHanjaInner() {
             <div style={{ background: CARD, borderRadius: 12, padding: '12px 14px', marginBottom: 18, fontSize: 12, color: SUB, lineHeight: 1.7 }}>
               {/* ★2026-08-01 (43부 6차) — 「한 번에 하나」라 회차를 세지 않습니다.
                   ⚠️ 그래도 «되돌릴 수 있게» 옛 문구를 지우지 않고 갈래로 둡니다. */}
-              {alreadyTried
+              {alreadyTried && !isSingleName
                 ? '이미 지어본 이름이에요. 다시 열어봐도 횟수는 줄지 않아요.'
                 : isSingleName
                   ? <>이 이름으로 <b style={{ color: GOLD }}>풀이를 받습니다</b>.<br />다른 이름은 새로 조회하시면 돼요.</>

@@ -9,7 +9,7 @@ import type { PerspectiveCommentary } from '@/app/manseryeok/components/Perspect
 import { calcYongsinCompat } from '@/lib/saju/yongsinNew'
 import { supabase } from '@/lib/supabase'
 import { diagnoseName, type NameChar, type DiagnoseResult, type Grade } from '@/lib/saju/naming'
-import { saveNamingRecord } from '@/lib/saju/namingRecords'
+import { saveNamingRecord, updateNamingRecordResult } from '@/lib/saju/namingRecords'
 import ConsultButton from '@/app/components/common/ConsultButton'
 // ★2026-08-01 (43부 5차) — A4 작명서 (인쇄 · PDF)
 import NamingCertificateButton, { type CertChar } from '@/app/manseryeok/naming/components/NamingCertificate'
@@ -310,15 +310,53 @@ function NewResultInner() {
   const savingRef = useRef(false)
   // ★이미 저장한 이름을 기억한다. 후보 탭을 왔다갔다 할 때마다
   //   같은 이름이 다시 쌓이는 것을 막는다. (한 화면 안에서만 유효)
-  const savedNamesRef = useRef<Set<string>>(new Set())
+  /**
+   * 🔴★2026-08-01 (43부 8차) — 보관함에 «일부만» 담기던 까닭
+   *
+   *   [무엇이 있었나]  자동 저장이 «풀이(통변)가 오기 전» 에 한 번 돕니다.
+   *     그 뒤 손님이 [자세히 풀이 보기] 를 눌러 통변이 도착해도
+   *     아래 «이미 저장한 이름» 검사에 걸려 «다시 저장하지 않았습니다».
+   *     → 보관함에는 «계산 결과만» 있고 맺음말·다섯 관점 풀이가 «없었습니다».
+   *     ⚠️ 그래서 보관함에서 열면 이름 풀이와 달리 «일부만» 보였습니다.
+   *
+   *   ★[이제]  «통변이 담겼는지» 까지 함께 기억합니다.
+   *     통변 없이 저장해 둔 이름에 통변이 도착하면 «한 번 더» 저장합니다.
+   *   ⚠️ 통변까지 담은 뒤에는 다시 저장하지 않습니다 — 같은 이름이 쌓이면 안 됩니다.
+   */
+  const savedNamesRef = useRef<Map<string, boolean>>(new Map())
+  /** 저장한 기록의 DB id — 풀이가 오면 «그 줄» 을 갈아 끼웁니다 */
+  const savedIdRef = useRef<Map<string, string>>(new Map())
 
   async function saveToArchive() {
     if (!cur || !result) return
     if (savingRef.current) return
     const nameKey = cur.chars.map((c) => c.hanja).join('')
-    if (savedNamesRef.current.has(nameKey)) {
-      setSavedRecordId(nameKey)   // 이미 저장한 이름 → 표시만 유지
-      return
+    /** 지금 통변까지 담을 수 있는가 */
+    const hasCommentary = !!cur.commentary?.yinyang?.meaning
+    const savedWithCommentary = savedNamesRef.current.get(nameKey)
+    if (savedWithCommentary !== undefined) {
+      const needsUpdate = hasCommentary && savedWithCommentary === false
+      if (!needsUpdate) {
+        setSavedRecordId(nameKey)   // 이미 온전히 저장한 이름 → 표시만 유지
+        return
+      }
+      // ★통변 없이 저장해 둔 줄에 풀이를 «갈아 끼웁니다».
+      //   ⚠️ 다시 insert 하면 같은 이름이 두 건 쌓입니다. 그래서 update 입니다.
+      const rowId = savedIdRef.current.get(nameKey)
+      if (rowId) {
+        savingRef.current = true
+        try {
+          const up = await updateNamingRecordResult(rowId, {
+            result,
+            commentary: (cur.commentary ?? null) as Record<string, unknown> | null,
+          })
+          if (up.ok) savedNamesRef.current.set(nameKey, true)
+        } catch { /* 뒤에서 도는 저장이라 막지 않습니다 */ }
+        finally { savingRef.current = false }
+        setSavedRecordId(nameKey)
+        return
+      }
+      // ⚠️ id 를 모르면 갈아 끼울 수 없습니다. 그때만 새로 저장합니다.
     }
     savingRef.current = true
     setSaveFailed(false)
@@ -349,7 +387,8 @@ function NewResultInner() {
       })
       // ★실패해도 alert 로 막지 않는다. 고객이 부른 게 아니라 자동 저장이다.
       if (res.ok && res.id) {
-        savedNamesRef.current.add(nameKey)
+        savedNamesRef.current.set(nameKey, hasCommentary)
+        if (res.id) savedIdRef.current.set(nameKey, res.id)
         setSavedRecordId(res.id)
       } else {
         setSaveFailed(true)
@@ -368,8 +407,10 @@ function NewResultInner() {
     setSavedRecordId(null)
     setSaveFailed(false)
     saveToArchive()
+    // ⚠️ 통변(맺음말)이 «도착했을 때» 도 다시 돌아야 합니다 —
+    //    안 그러면 보관함에 «풀이 없는» 기록만 남습니다 (43부 8차).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cur, result])
+  }, [cur, result, cur?.commentary?.yinyang?.meaning])
 
   // ★ 현재 보고 있는 "새 이름"을 예약 시 상담사 화면으로 넘기기 위해 세션에 저장
   //    (궁합·물상도·이름풀이와 동일 방식. consultant-select가 naming_full을 읽어 namings에 저장)
@@ -593,7 +634,7 @@ function NewResultInner() {
           ⚠️ 말없이 감추면 「내가 지은 이름 어디 갔지」가 됩니다. */}
       {isSingleName && keepPastTries(tries) > 0 && (
         <button
-          onClick={() => router.push('/manseryeok/naming/diagnosis/storage?mode=naming')}
+          onClick={() => router.push('/manseryeok/naming/naming-storage')}
           style={{
             width: '100%', marginBottom: 14, padding: '11px 12px', borderRadius: 12,
             background: CARD, border: `1px solid ${LINE}`, color: '#6b5340',
@@ -629,11 +670,15 @@ function NewResultInner() {
         <div style={{ marginBottom: 14 }}>
           {remaining > 0 ? (
             <>
+              {/* ★2026-08-01 (43부 8차) — 「한 번에 하나」면 «회차를 말하지 않습니다».
+                  ⚠️ 「남은 2회」라고 적어 놓고 두 번째를 못 쓰면 «거짓말» 이 됩니다. */}
               <button onClick={loadDetail} disabled={detailLoading} className="active:scale-95"
                 style={{ width: '100%', background: 'rgba(200,120,60,0.12)', border: '1px solid ' + GOLD, borderRadius: 14, padding: 14, color: GOLD, fontWeight: 700, fontSize: 14, cursor: detailLoading ? 'default' : 'pointer' }}>
                 {detailLoading
                   ? <><span style={{ display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span> 이름을 정성껏 풀이하는 중…</>
-                  : <>✨ 이 이름 자세히 풀이 보기 · 남은 {remaining}회</>}
+                  : isSingleName
+                    ? <>✨ 이 이름 자세히 풀이 보기</>
+                    : <>✨ 이 이름 자세히 풀이 보기 · 남은 {remaining}회</>}
               </button>
               <div style={{ fontSize: 11, color: SUB, textAlign: 'center', marginTop: 8, lineHeight: 1.6 }}>
                 결제하신 이용권으로 상세 풀이를 확인하실 수 있어요.
@@ -714,7 +759,7 @@ function NewResultInner() {
                 ⚠️ 「저장됐어요」 만 있고 갈 길이 없어, 어디서 다시 보는지 알 수 없었습니다.
                    ★작명 기록이므로 «작명 보관함» 으로 보냅니다 (mode=naming). */}
             <button
-              onClick={() => router.push('/manseryeok/naming/diagnosis/storage?mode=naming')}
+              onClick={() => router.push('/manseryeok/naming/naming-storage')}
               className="active:scale-95"
               style={{ width: '100%', padding: 13, borderRadius: 12, marginBottom: 10,
                 background: '#fffbf7', border: '1px solid #c8783c', color: '#c8783c',

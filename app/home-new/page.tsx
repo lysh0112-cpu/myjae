@@ -168,7 +168,7 @@ const SERVICES = [
   //     ⚠️ 전에는 안내 화면(rename/newborn)으로 갔는데, 두 번째 오시는 분은
   //        «지난번에 지은 이름» 부터 보고 싶으십니다. 안내를 매번 볼 까닭이 없습니다.
   //     ★안내 화면은 보관함 안에서 「처음이신가요」로 이어 둡니다 — 끊기지 않습니다.
-  { name: '아기 작명',   color: '#4a7c59', bg: '#e6f0ea', href: '/manseryeok/naming/diagnosis/storage?mode=naming', cat: '개명', sub: '아기 이름 지어 주기', icon: '👶', grad: ['#34d399', '#5eead4'] },
+  { name: '아기 작명',   color: '#4a7c59', bg: '#e6f0ea', href: '/manseryeok/naming/naming-storage', cat: '개명', sub: '아기 이름 지어 주기', icon: '👶', grad: ['#34d399', '#5eead4'] },
   // 🃏 violet-500 → fuchsia-400
   { name: '타로',       color: '#b45a78', bg: '#f6e5eb', href: '/tarot', cat: '기타', sub: '오늘의 카드', icon: '🃏', grad: ['#8b5cf6', '#e879f9'] },
   // 🧭 BEST — purple-500 → pink-400

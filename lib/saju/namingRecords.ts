@@ -190,6 +190,46 @@ export async function saveNamingRecord(args: {
   return { ok: true, id: data?.id }
 }
 
+/**
+ * ★2026-08-01 (43부 8차) — 이미 저장한 기록의 «풀이만» 채워 넣습니다.
+ *
+ * ══════════════════════════════════════════════════════════════════
+ *  [왜 필요한가]
+ *    작명 결과는 «통변(풀이)이 오기 전» 에 한 번 자동 저장됩니다.
+ *    손님이 [자세히 풀이 보기] 를 눌러 통변이 도착하면 그것도 담아야 합니다.
+ *    ⚠️ 그때 saveNamingRecord 를 다시 부르면 «insert» 라 같은 이름이 두 건 쌓입니다.
+ *       → 보관함에 똑같은 이름이 둘 보이고, 손님은 어느 쪽이 맞는지 모릅니다.
+ *    ★그래서 «갈아 끼우는» 창구를 따로 둡니다.
+ *
+ *  ⚠️ result_data «통째로» 덮습니다. 부분만 고치면 옛 값과 새 값이 섞입니다.
+ *  ⚠️ 실패해도 «막지 않습니다» — 손님이 부른 일이 아니라 뒤에서 도는 저장입니다.
+ *     화면에는 이미 풀이가 떠 있습니다.
+ * ══════════════════════════════════════════════════════════════════
+ */
+export async function updateNamingRecordResult(
+  id: string,
+  args: { result: DiagnoseResult | null; commentary: Record<string, unknown> | null },
+): Promise<{ ok: boolean; message?: string }> {
+  if (!id) return { ok: false, message: 'id 가 없습니다' }
+  const { data: auth } = await supabase.auth.getUser()
+  const uid = auth?.user?.id
+  if (!uid) return { ok: false, message: '로그인이 필요해요' }
+
+  const snapshot: NamingResultSnapshot = {
+    result: args.result,
+    commentary: args.commentary,
+  }
+  // ⚠️ user_id 를 함께 걸어 «남의 기록» 을 고치지 못하게 합니다
+  const { error } = await supabase
+    .from('saju_records')
+    .update({ result_data: snapshot })
+    .eq('id', id)
+    .eq('user_id', uid)
+
+  if (error) return { ok: false, message: error.message }
+  return { ok: true }
+}
+
 // DB row → NamingRecord 변환
 function toRecord(r: {
   id: string; relation: string | null; title: string;

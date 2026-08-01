@@ -204,7 +204,9 @@ console.log('\n━━ ⑯-g ★이름 풀이 재료·프롬프트 (2026-08-01 �
 console.log('\n━━ ⑯-h ★보관함 — 풀이와 작명을 가르는가 (Phase 1 A) ━━')
 {
   const rec = readFileSync('lib/saju/namingRecords.ts', 'utf8')
-  const sto = readFileSync('app/manseryeok/naming/diagnosis/storage/page.tsx', 'utf8')
+  // ★2026-08-01 (43부 9차) — 보관함 «본체» 가 부품으로 옮겨졌습니다.
+  //   두 주소(이름 풀이 · 작명)가 이 부품 하나를 나눠 씁니다. 화면은 여기 있습니다.
+  const sto = readFileSync('app/manseryeok/naming/components/NamingStorageView.tsx', 'utf8')
   const newres = readFileSync('app/manseryeok/naming/rename/newresult/page.tsx', 'utf8')
   const diag = readFileSync('app/manseryeok/naming/diagnosis/page.tsx', 'utf8')
 
@@ -290,7 +292,9 @@ console.log('\n━━ ⑯-j ★갈림길 화면 — 풀이할까 지어 드릴�
   const start = 'app/manseryeok/naming/start/page.tsx'
   check(existsSync(start), `갈림길 화면이 있습니다`)
   const src = readFileSync(start, 'utf8')
-  const sto = readFileSync('app/manseryeok/naming/diagnosis/storage/page.tsx', 'utf8')
+  // ★2026-08-01 (43부 9차) — 보관함 «본체» 가 부품으로 옮겨졌습니다.
+  //   두 주소(이름 풀이 · 작명)가 이 부품 하나를 나눠 씁니다. 화면은 여기 있습니다.
+  const sto = readFileSync('app/manseryeok/naming/components/NamingStorageView.tsx', 'utf8')
   const nn = readFileSync('app/manseryeok/naming/rename/newname/page.tsx', 'utf8')
 
   // ① ★보관함 버튼이 «둘» 인가 (2026-08-01 — 하나면 어디로 가는지 헷갈립니다)
@@ -419,7 +423,9 @@ console.log('\n━━ ⑯-m ★작명은 «이름 없이» 시작할 수 있는�
   // ══════════════════════════════════════════════════════════════
   const form = readFileSync('app/manseryeok/components/PersonFormPitch.tsx', 'utf8')
   const modal = readFileSync('app/manseryeok/components/PersonPickerModal.tsx', 'utf8')
-  const sto = readFileSync('app/manseryeok/naming/diagnosis/storage/page.tsx', 'utf8')
+  // ★2026-08-01 (43부 9차) — 보관함 «본체» 가 부품으로 옮겨졌습니다.
+  //   두 주소(이름 풀이 · 작명)가 이 부품 하나를 나눠 씁니다. 화면은 여기 있습니다.
+  const sto = readFileSync('app/manseryeok/naming/components/NamingStorageView.tsx', 'utf8')
   const nn = readFileSync('app/manseryeok/naming/rename/newname/page.tsx', 'utf8')
 
   // ① 폼이 작명 모드를 아는가
