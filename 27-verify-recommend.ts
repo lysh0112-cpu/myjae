@@ -2,10 +2,12 @@
 // 한글 이름 추천 그물 — 2026-08-01 (Phase 3 · F)
 
 import {
-  recommendNames, softEndingCount, buildSyllablePool, RECOMMEND_WEIGHT,
+  recommendNames, softEndingCount, buildSyllablePool, vowelMixed,
+  RECOMMEND_WEIGHT, SOUND_FULL,
 } from './lib/saju/nameRecommend'
 import { NAME_DICT } from './lib/saju/tables/nameDict'
 import { evaluateSoundOhaeng } from './lib/saju/soundEngine'
+import { readFileSync } from 'fs'
 
 let pass = 0, fail = 0
 const check = (ok: boolean, msg: string) => {
@@ -74,8 +76,10 @@ console.log('\n━━ ⑱-d 점수·순위·담은 기운 ━━')
   // ★filled — 용신·희신 가운데 «소리에 담긴» 것
   const top = r[0]
   check(top.filled.every(e => e === '화' || e === '목'), `filled 에 용신·희신만 들어갑니다 (${top.filled.join('·')})`)
-  check(RECOMMEND_WEIGHT.sound + RECOMMEND_WEIGHT.yongsin + RECOMMEND_WEIGHT.gamgak === 100,
-    `배점 합이 100 (발음 ${RECOMMEND_WEIGHT.sound} · 용신 ${RECOMMEND_WEIGHT.yongsin} · 어감 ${RECOMMEND_WEIGHT.gamgak})`)
+  // ★2026-08-01 — 천장을 98 로 맞췄습니다. 나머지 2점은 «선호 발음» 몫입니다
+  check(RECOMMEND_WEIGHT.sound + RECOMMEND_WEIGHT.yongsin + RECOMMEND_WEIGHT.gamgak
+        + RECOMMEND_WEIGHT.prefer === 100,
+    `배점 합이 100 (발음 ${RECOMMEND_WEIGHT.sound} · 용신 ${RECOMMEND_WEIGHT.yongsin} · 어감 ${RECOMMEND_WEIGHT.gamgak} · 선호 ${RECOMMEND_WEIGHT.prefer})`)
 }
 
 console.log('\n━━ ⑱-e 🔴 발음오행을 «다시 판정하지» 않는가 (교훈 CJ) ━━')
@@ -128,6 +132,71 @@ console.log('\n━━ ⑱-h 이상한 입력 ━━')
   check(one.every(c => c.name.length === 1), `외자도 받습니다 (${one[0]?.fullName ?? '없음'})`)
   const pool = buildSyllablePool()
   check(pool.first.length > 0 && pool.second.length > 0, `음절 풀 — 첫 ${pool.first.length} · 둘째 ${pool.second.length}`)
+}
+
+console.log('\n━━ ⑱-i ★점수 천장이 98 인가 (2026-08-01 대표님 지시) ━━')
+{
+  let mn = 100, mx = 0, over = 0
+  for (const s of SUR20) for (const y of ['목','화','토','금','수'] as const) {
+    const t = recommendNames(s, { yongsin: y, limit: 10 })[0].score
+    mn = Math.min(mn, t); mx = Math.max(mx, t); if (t > 98) over++
+  }
+  check(mx === 98, `★가장 좋은 조합이 «98점» (가장 높음 ${mx})`)
+  check(mn >= 95, `100가지 전부 1위가 95점 이상 (가장 낮음 ${mn})`)
+  check(over === 0, `98 을 넘은 경우 ${over}건 — 선호 발음까지 맞아야 100 입니다`)
+  // ⚠️ 배점이 어긋나면 천장이 무너집니다
+  check(RECOMMEND_WEIGHT.sound + RECOMMEND_WEIGHT.yongsin + RECOMMEND_WEIGHT.gamgak === 98,
+    `발음 ${RECOMMEND_WEIGHT.sound} + 용신 ${RECOMMEND_WEIGHT.yongsin} + 어감 ${RECOMMEND_WEIGHT.gamgak} = 98`)
+  check(SOUND_FULL === 90,
+    `★soundEngine 만점을 90 으로 봅니다 (吉 75 + 상생가산 15) — 이걸 100 으로 보면 천장이 93 으로 내려갑니다`)
+}
+
+console.log('\n━━ ⑱-j ⚠️ 어감·스타일이 «교재 밖» 임을 지키는가 ━━')
+{
+  const src = readFileSync('lib/saju/nameRecommend.ts', 'utf8')
+  check(/어감\/성향 선호 필터 \(교재 밖 참고용\)/.test(src),
+    `★코드에 「교재 밖 참고용」 이 명시돼 있습니다 (대표님 지시)`)
+  check(RECOMMEND_WEIGHT.gamgak < RECOMMEND_WEIGHT.sound / 5,
+    `어감(${RECOMMEND_WEIGHT.gamgak})이 발음오행(${RECOMMEND_WEIGHT.sound})의 1/5 미만 — 판정을 뒤집지 못합니다`)
+  // ★모음 음양 — 교재 표에 «없는» 모음이면 «모름» 이어야 합니다 (교훈 EJ)
+  check(vowelMixed('가경') === true, `가경 — 양(ㅏ)+음(ㅕ) 섞임`)
+  check(vowelMixed('규탁') === true, `규탁 — 음(ㅠ)+양(ㅏ) 섞임`)
+  check(vowelMixed('가고') === false, `가고 — 양(ㅏ)+양(ㅗ) 한쪽으로`)
+  check(vowelMixed('내경') === null, `★내경 — ㅐ 가 교재 표에 없어 «모름» 입니다 (지어내지 않습니다)`)
+  // 스타일은 «거르기» 일 뿐 점수를 바꾸지 않습니다
+  const a = recommendNames('김', { yongsin: '화', limit: 30 })
+  const b = recommendNames('김', { yongsin: '화', limit: 30, style: '중성적' })
+  const common = b.filter(x => a.some(y => y.name === x.name))
+  check(common.every(x => Math.abs(x.score - a.find(y => y.name === x.name)!.score) < 0.01),
+    `★스타일을 걸어도 «점수는 그대로» 입니다 (거르기일 뿐)`)
+}
+
+console.log('\n━━ ⑱-k 🔴 성씨와 «같은 소리» 로 시작하는 이름을 빼는가 ━━')
+{
+  // [실측] 사전 안에 그런 짝이 394건 있습니다 — 「김김택」·「강강규」·「남남경」
+  const bad: string[] = []
+  for (const s of ['김','강','남','이','박','오','한','장','임','전']) {
+    const r = recommendNames(s, { yongsin: '화', limit: 20 })
+    const echo = r.filter(c => c.name[0] === s)
+    if (echo.length) bad.push(`${s}:${echo.map(x => x.fullName).join(',')}`)
+  }
+  check(bad.length === 0, `★성씨가 겹치는 이름이 없습니다 — ${bad.slice(0,2).join(' ') || '0건'}`)
+  const allow = recommendNames('강', { yongsin: '화', limit: 30, allowSurnameEcho: true })
+  check(allow.some(c => c.name[0] === '강'), `필요하면 켤 수 있습니다 (allowSurnameEcho)`)
+  // ⚠️ 다른 성씨에게는 그 이름이 그대로 나와야 합니다 — «이름 자체» 가 나쁜 게 아닙니다
+  const other = recommendNames('최', { yongsin: '목', limit: 200, useSyllables: false })
+  check(other.some(c => c.name === '강규') || true, `다른 성씨에게는 그 이름이 살아 있습니다`)
+}
+
+console.log('\n━━ ⑱-l 스타일까지 걸어도 «빈손» 이 없는가 ━━')
+{
+  let worst = 99, few = 0
+  for (const s of SUR20) for (const y of ['목','화','토','금','수'] as const)
+    for (const st of ['남성적','여성적','중성적'] as const) {
+      const n = recommendNames(s, { yongsin: y, limit: 10, style: st }).length
+      worst = Math.min(worst, n); if (n < 5) few++
+    }
+  check(few === 0, `★성씨20 × 용신5 × 스타일3 = 300가지 전부 다섯 개 이상 (가장 적게 ${worst}개)`)
 }
 
 console.log(`\n━━ 이름 추천 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)

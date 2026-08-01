@@ -35,6 +35,20 @@ import type { Ohaeng } from './ohaeng'
 
 // ── 어감 ───────────────────────────────────────────────────────────
 
+// ══════════════════════════════════════════════════════════════════
+//  ⚠️⚠️ 아래는 «어감(취향)» 입니다 — 성명학 판정이 «아닙니다».
+//
+//   [왜 여기 두나]  2026-08-01 대표님 확정
+//     · 울림소리 받침 — 교재 3장은 «초성만» 봅니다(59쪽 A학설).
+//       종성을 판정에 넣으면 그 학설과 어긋납니다.
+//     · 모음 음양 — 교재 2장 48쪽에 있으나 «쓰지 않기로» 확정했습니다(2026-07-31).
+//       ㅐ ㅔ ㅚ ㅟ ㅢ ㅘ ㅝ 가 교재 표에 없어 규칙을 늘리면 교훈 EJ 를 어깁니다.
+//       ★그래서 «판정» 이 아니라 «부르기 좋은가» 로만 씁니다.
+//     · 선호 스타일 — 교재 밖입니다. 아래 STYLE_HINT 주석을 보십시오.
+//
+//   ⚠️ 이 셋을 합쳐도 어감 몫은 «8점» 입니다. 발음오행 70점을 뒤집지 못합니다.
+// ══════════════════════════════════════════════════════════════════
+
 /** 울림소리 받침 — ㄴ ㄹ ㅁ ㅇ */
 const SOFT_JONG = new Set(['ㄴ', 'ㄹ', 'ㅁ', 'ㅇ'])
 const JONGSEONG = [
@@ -51,6 +65,53 @@ function jongOf(han: string): string {
 /** 이름에 울림소리 받침이 몇 개인가 */
 export function softEndingCount(name: string): number {
   return [...name].filter((ch) => SOFT_JONG.has(jongOf(ch))).length
+}
+
+// ── 모음 음양 (교재 2장 48쪽) — ★판정 아님 · 어감 ──────────────────
+const JUNGSEONG = [
+  'ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ',
+  'ㅛ','ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ',
+] as const
+/** 교재 48쪽에 «실린 것만». 없는 모음은 null — 지어내지 않습니다 */
+const VOWEL_YY: Readonly<Record<string, '음' | '양'>> = {
+  ㅏ: '양', ㅑ: '양', ㅗ: '양', ㅛ: '양',
+  ㅓ: '음', ㅕ: '음', ㅜ: '음', ㅠ: '음', ㅡ: '음', ㅣ: '음',
+}
+
+function vowelYinYang(han: string): '음' | '양' | null {
+  const c = han.charCodeAt(0) - 0xac00
+  if (!Number.isFinite(c) || c < 0 || c > 11171) return null
+  return VOWEL_YY[JUNGSEONG[Math.floor((c % 588) / 28)]] ?? null
+}
+
+/**
+ * 이름의 모음 음양이 «섞여» 있는가.
+ * ⚠️ 성명학 판정이 아닙니다 — 「부르기에 결이 다양한가」로만 씁니다.
+ * 교재 표에 없는 모음이 섞이면 null (모름) 을 돌려줍니다.
+ */
+export function vowelMixed(name: string): boolean | null {
+  const ys = [...name].map(vowelYinYang)
+  if (ys.some((y) => y === null)) return null
+  return new Set(ys).size > 1
+}
+
+/**
+ * 어감/성향 선호 필터 (교재 밖 참고용)
+ *
+ * ⚠️⚠️ 교재에 «없습니다». 길흉·감점에 쓰지 마십시오. (대표님 확정 2026-08-01)
+ *    손님이 «고르는 폭» 을 넓히는 보조 장치일 뿐입니다.
+ *    ★끝 음절의 결로 «느슨하게» 가릅니다. 맞고 틀림이 없습니다.
+ */
+export type NameStyle = '남성적' | '여성적' | '중성적'
+
+/* 어감/성향 선호 필터 (교재 밖 참고용) */
+const STYLE_HINT: Record<NameStyle, (name: string) => boolean> = {
+  // 받침이 있고 끝소리가 단단한 쪽
+  남성적: (n) => !!jongOf(n[n.length - 1]) && !SOFT_JONG.has(jongOf(n[n.length - 1])),
+  // 받침이 없거나 울림소리로 열리는 쪽
+  여성적: (n) => !jongOf(n[n.length - 1]),
+  // 그 사이
+  중성적: (n) => SOFT_JONG.has(jongOf(n[n.length - 1])),
 }
 
 // ── 후보 만들기 ────────────────────────────────────────────────────
@@ -106,6 +167,13 @@ export interface RecommendOptions extends PoolOptions {
   avoid?: string[]
   /** 이 음절이 «들어간» 이름을 앞으로 (선호 발음) */
   prefer?: string[]
+  /* 어감/성향 선호 필터 (교재 밖 참고용) — ★길흉·감점 아님 */
+  style?: NameStyle
+  /**
+   * 성씨와 같은 소리로 시작하는 이름을 «허용» 할까. 기본 false(뺍니다).
+   * ⚠️ 「김김택」·「강강규」 같은 짝을 막습니다. 사전 안에 394건 있습니다.
+   */
+  allowSurnameEcho?: boolean
   /** 이름 글자 수. 기본 2 */
   givenLength?: 1 | 2
   /**
@@ -137,15 +205,35 @@ export interface NameCandidate {
   reasons: string[]
 }
 
-/** 점수 배분 — ★바꾸면 걸림 비율을 다시 재십시오 (교훈 BO) */
+/**
+ * 점수 배분 — ★바꾸면 걸림 비율을 다시 재십시오 (교훈 BO)
+ *
+ * [천장을 98로 맞췄습니다] 2026-08-01 대표님 지시
+ *   ⚠️ 전에는 «가장 좋은 이름» 도 93점이었습니다.
+ *      까닭 — soundEngine 의 만점이 «90» 입니다 (吉 75 + 상생가산 15).
+ *      100 으로 나누니 발음 몫이 70 에 못 미쳤습니다.
+ *   ★그래서 «90 을 만점으로» 환산합니다. 아래 SOUND_FULL 을 보십시오.
+ *
+ *   발음 70 + 용신 20 + 어감 8 = 98    ← 가장 좋은 한글 조합
+ *   + 고르신 소리가 들어 있으면 2      = 100
+ */
 export const RECOMMEND_WEIGHT = {
   /** 발음오행(교재 125칸) 몫 — 가장 큽니다 */
   sound: 70,
   /** 사주가 바라는 기운을 소리에 담았는가 */
   yongsin: 20,
-  /** 어감(울림소리 받침) — ★작게 둡니다. 판정이 아닙니다 */
-  gamgak: 10,
+  /** 어감 — ★판정이 아닙니다. 울림소리 받침 + 모음 음양 섞임 */
+  gamgak: 8,
+  /** 고르신 소리가 들어 있을 때 */
+  prefer: 2,
 } as const
+
+/**
+ * ★soundEngine 이 낼 수 있는 «가장 높은 점수».
+ *   吉 기준 75 + 상생 둘 가산 15 = 90. 상극이 없으면 더 깎이지 않습니다.
+ *   ⚠️ soundEngine 의 SCORE_BASE 를 고치면 이 값도 함께 보십시오.
+ */
+export const SOUND_FULL = 90
 
 /**
  * 성씨와 사주에 맞는 한글 이름을 줄 세웁니다.
@@ -193,6 +281,11 @@ export function recommendNames(
     if (avoid.has(name)) continue
     // ⚠️ 피할 이름과 «한 글자라도 겹치면» 걸러 냅니다 (항렬자를 피하는 뜻)
     if (opt.avoid?.some((a) => a.length === 1 && name.includes(a))) continue
+    // ★성씨와 «같은 소리» 로 시작하는 이름은 뺍니다 — 「김김택」·「강강규」·「남남경」
+    //   [실측] 2026-08-01 — 사전 안에 그런 짝이 394건 있습니다.
+    //   ⚠️ 이름 자체가 나쁜 것이 아니라 «그 성씨와» 어색한 것입니다.
+    //      다른 성씨에게는 그대로 후보로 나갑니다.
+    if (opt.allowSurnameEcho !== true && surChars.length === 1 && name[0] === surChars[0]) continue
 
     const chars = [
       ...surChars.map((h) => ({ hangul: h, 역할: '성' as const })),
@@ -205,7 +298,8 @@ export function recommendNames(
     const reasons: string[] = []
 
     // ① 발음오행 — 교재 125칸
-    const soundPart = (sound.score / 100) * RECOMMEND_WEIGHT.sound
+    //   ★90(soundEngine 만점)을 100 으로 보고 환산합니다. 위 SOUND_FULL 설명 참고
+    const soundPart = Math.min(1, sound.score / SOUND_FULL) * RECOMMEND_WEIGHT.sound
     if (sound.gyeokPublic) reasons.push(`소리의 흐름은 ${sound.gyeokPublic}`)
     else if (sound.fortune !== '모름') reasons.push(`소리의 흐름 — ${sound.fortune}`)
 
@@ -225,19 +319,30 @@ export function recommendNames(
     }
 
     // ③ 어감 — ★판정이 아닙니다 (대표님 확정)
+    //   울림소리 받침 5 + 모음 음양 섞임 3 = 8
     let gamgak = 0
     if (softOn) {
       const soft = softEndingCount(name)
-      gamgak = (soft / Math.max(1, name.length)) * RECOMMEND_WEIGHT.gamgak
+      gamgak += (soft / Math.max(1, name.length)) * 5
       if (soft > 0) reasons.push('울림소리 받침이라 부르기 부드럽습니다')
+      const mixed = vowelMixed(name)
+      if (mixed === true) {
+        gamgak += 3
+        reasons.push('밝은 소리와 차분한 소리가 고루 섞였습니다')
+      }
+      // ⚠️ mixed === null 이면 교재 표에 없는 모음입니다 — «가산도 감산도» 하지 않습니다
     }
+    gamgak = Math.min(gamgak, RECOMMEND_WEIGHT.gamgak)
 
-    // ④ 선호 발음 — 줄 세우기에만 씁니다
+    // ④ 선호 발음·스타일 — 줄 세우기에만 씁니다
     const preferHit = prefer.some((p) => name.includes(p))
     if (preferHit) reasons.push('고르신 소리가 들어 있습니다')
+    /* 어감/성향 선호 필터 (교재 밖 참고용) */
+    if (opt.style && !STYLE_HINT[opt.style](name)) continue
 
     const score = Math.max(0, Math.min(100,
-      soundPart + Math.max(0, yongPart) + gamgak + (preferHit ? 3 : 0)))
+      soundPart + Math.max(0, yongPart) + gamgak
+      + (preferHit ? RECOMMEND_WEIGHT.prefer : 0)))
 
     out.push({
       name, fullName: surname + name,
