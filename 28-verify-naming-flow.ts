@@ -437,8 +437,20 @@ console.log('\n━━ ⑲-E ★명품작명 결과 화면 · 컷라인 (43부 20
   check(/개명은 «쓰던 발음을 지키는» 자리/.test(S.nn),
     `⚠️ 개명에 걸지 않는 까닭이 적혀 있습니다`)
   // 사전 탭으로 «새어 들어오던» 길
-  check(/p\.premium && dictCheck\.grade !== '좋음'/.test(pick),
+  check(/checked && dictCheck && p\.premium && dictCheck\.grade !== '좋음'/.test(pick),
     `★사전 탭에도 컷라인이 걸립니다 (교재 사전은 성씨를 가리지 않습니다)`)
+
+  // ★2026-08-01 (43부 29차) — 사전 탭에서 «누르면 바로» 넘어갑니다
+  check(/if \(!p\.premium\) \{ p\.onPick\(n\); return \}/.test(pick),
+    `★★이름을 누르면 «곧장» 한자 고르기로 갑니다 (흐름이 안 끊깁니다)`)
+  check(/if \(v\.grade === '좋음'\) p\.onPick\(n\)/.test(pick),
+    `★명품작명은 «좋음» 일 때만 넘어갑니다`)
+  check(/if \(on\) \{ setChecked\(null\); return \}/.test(pick),
+    `이미 고른 이름을 다시 누르면 «끕니다» (예전 그대로)`)
+  check(!/교재에 실린 이름입니다/.test(S.pick),
+    `★맨 아래 안내 문구를 걷어냈습니다`)
+  check(!/이 이름으로 한자 고르러 가기/.test(S.pick),
+    `⚠️ 「이 이름으로」 버튼이 «남아 겹치지» 않습니다 (누르면 바로 가므로)`)
   check(/명품작명은 <b>좋음<\/b>인 이름만/.test(S.pick),
     `⚠️ 막되 «왜» 인지 알려 드립니다 (그냥 안 눌리면 고장으로 보입니다)`)
   // ⚠️ 지킬 수 없는 약속을 하지 않았는가

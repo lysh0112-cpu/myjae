@@ -471,8 +471,12 @@ export default function NamePicker(p: NamePickerProps) {
             })}
           </div>
 
-          {/* ★고른 이름을 그 자리에서 재 봅니다 */}
-          {checked && dictCheck && (
+          {/* ★고른 이름을 그 자리에서 재 봅니다.
+              ⚠️ 2026-08-01 (43부 29차) — 이제 좋은 이름은 «곧장 넘어갑니다».
+                 그래서 이 카드는 «세워진 때» 에만 보입니다 —
+                 명품작명인데 이 성씨와 어울림이 좋음이 아닌 경우입니다.
+              ★그때만 까닭을 보여 드리고, 손님이 한 번 더 고르십니다. */}
+          {checked && dictCheck && p.premium && dictCheck.grade !== '좋음' && (
             <div style={{
               background: '#fff7f0', border: `1px solid ${GOLD}`, borderRadius: 12,
               padding: '11px 12px', marginBottom: 10,
@@ -496,27 +500,18 @@ export default function NamePicker(p: NamePickerProps) {
 
                    ⚠️ 막되 «왜» 인지 알려 드립니다. 그냥 안 눌리면 고장으로 보입니다.
                   ══════════════════════════════════════════════════ */}
-              {p.premium && dictCheck.grade !== '좋음' ? (
-                <div style={{
-                  marginTop: 9, padding: '10px 11px', borderRadius: 11,
-                  background: '#fff', border: `1px solid ${LINE}`,
-                  fontSize: 11.5, color: '#96502e', lineHeight: 1.7,
-                }}>
-                  이 이름은 <b>{sur}</b> 씨와 만나면 소리의 흐름이
-                  <b> {dictCheck.grade}</b>으로 봅니다.
-                  <br />명품작명은 <b>좋음</b>인 이름만 지어 드리고 있어요.
-                  다른 이름을 골라 주세요.
-                </div>
-              ) : (
-                <button onClick={() => p.onPick(checked)}
-                  style={{
-                    ...PRESS, width: '100%', marginTop: 9, padding: 11, borderRadius: 11,
-                    background: GOLD, border: 'none', color: '#fff',
-                    fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                  }}>
-                  이 이름으로 한자 고르러 가기 →
-                </button>
-              )}
+              {/* ⚠️ 바깥에서 이미 «명품 & 좋음 아님» 으로 좁혔습니다.
+                     여기서 또 가르지 않습니다 — 같은 판단을 두 번 하면 갈립니다. */}
+              <div style={{
+                marginTop: 9, padding: '10px 11px', borderRadius: 11,
+                background: '#fff', border: `1px solid ${LINE}`,
+                fontSize: 11.5, color: '#96502e', lineHeight: 1.7,
+              }}>
+                <b>{sur}{checked}</b> 는 소리의 흐름이
+                <b> {dictCheck.grade}</b>으로 봅니다.
+                <br />명품작명은 <b>좋음</b>인 이름만 지어 드리고 있어요.
+                다른 이름을 골라 주세요.
+              </div>
             </div>
           )}
 
@@ -528,7 +523,31 @@ export default function NamePicker(p: NamePickerProps) {
             {group?.names.map((n) => {
               const on = checked === n
               return (
-                <button key={n} onClick={() => setChecked(on ? null : n)}
+                <button key={n} onClick={() => {
+                  // ══════════════════════════════════════════════
+                  //  ★2026-08-01 (43부 29차) — 누르면 «바로 한자 고르기» 로
+                  //
+                  //   🔴 [무엇이 있었나]  머리글은 「한자는 다음 걸음에서 골라요」인데
+                  //     이름을 눌러도 «풀이만» 뜨고 멈췄습니다. 흐름이 끊겼습니다.
+                  //     손님은 「눌렀는데 왜 안 넘어가지」 하십니다.
+                  //
+                  //   ★[이제]  누르면 그 이름으로 «곧장» 넘어갑니다.
+                  //   ⚠️ 다만 «명품작명이고 성씨와 어울림이 아쉬운» 이름은 세웁니다 —
+                  //      그때는 카드로 까닭을 보여 드리고, 손님이 한 번 더 고르십니다.
+                  //      ★말없이 넘기면 나중에 결과에서 아쉬움을 보고 놀라십니다.
+                  //   ⚠️ 이미 고른 이름을 다시 누르면 «끕니다» (예전 그대로).
+                  // ══════════════════════════════════════════════
+                  if (on) { setChecked(null); return }
+                  setChecked(n)
+                  if (!p.premium) { p.onPick(n); return }
+                  // 명품작명 — 이 성씨와 어울리는지 먼저 봅니다
+                  const v = evaluateSoundOhaeng([
+                    ...[...sur].map((h) => ({ hangul: h, 역할: '성' as const })),
+                    ...[...n].map((h) => ({ hangul: h, 역할: '이름' as const })),
+                  ])
+                  if (v.grade === '좋음') p.onPick(n)
+                  // ⚠️ 아쉬움·보통이면 넘기지 않습니다. 아래 카드가 까닭을 알려 드립니다.
+                }}
                   style={{
                     ...PRESS, cursor: 'pointer', fontSize: 13, padding: '7px 11px',
                     borderRadius: 10, background: on ? GOLD : '#fff',
@@ -540,9 +559,8 @@ export default function NamePicker(p: NamePickerProps) {
               )
             })}
           </div>
-          <Note>
-            교재에 실린 이름입니다. 누르시면 지금 성씨와 어울리는지 함께 보여 드립니다.
-          </Note>
+          {/* ★2026-08-01 (43부 29차) — 맨 아래 안내를 걷어냈습니다 (대표님 지시).
+              ⚠️ 이제 누르면 «바로 넘어가므로» 그 설명이 맞지도 않습니다. */}
         </div>
       )}
 
