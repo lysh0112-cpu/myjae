@@ -241,5 +241,42 @@ console.log('\n━━ ⑯-h ★보관함 — 풀이와 작명을 가르는가 (P
     `★service_type 을 새로 나누지 «않았습니다» (나누면 옛 기록이 목록에서 사라집니다)`)
 }
 
+console.log('\n━━ ⑯-i ★결과 프레임이 «한 벌» 인가 (Phase 1-C) ━━')
+{
+  const frame = 'app/manseryeok/naming/components/NameAnalysisResultView.tsx'
+  check(existsSync(frame), `공용 프레임이 있습니다`)
+  const diag = readFileSync('app/manseryeok/naming/diagnosis/page.tsx', 'utf8')
+  const newres = readFileSync('app/manseryeok/naming/rename/newresult/page.tsx', 'utf8')
+
+  check(/NameAnalysisResultView/.test(diag), `★감정 화면이 공용 프레임을 씁니다`)
+  check(/NameAnalysisResultView/.test(newres), `★작명 화면이 공용 프레임을 씁니다`)
+
+  // 🔴 옛 통변 구조가 «남아 있지 않은가» — 이것 때문에 통변이 안 나왔습니다
+  // ⚠️ 줄머리 주석은 걸러 냅니다 — 왜 고쳤는지 적어 둔 것까지 잡으면 안 됩니다
+  const code = newres.split('\n').filter(l => !/^\s*(\/\/|\*)/.test(l)).join('\n')
+  check(!/commentary\.summary/.test(code),
+    `★작명이 «commentary.summary» 를 더 보지 않습니다 (API 가 주지 않는 필드였습니다)`)
+  for (const k of ['\\.good', '\\.improve', '\\.advice']) {
+    check(!new RegExp(`commentary${k}`).test(newres), `옛 필드 commentary${k.replace('\\\\','')} 가 없습니다`)
+  }
+  check(/yinyang/.test(newres) && /conclusion/.test(newres),
+    `5관점 구조를 씁니다 (yinyang·conclusion)`)
+
+  // 프레임이 세 부품을 다 그리는가
+  const src = readFileSync(frame, 'utf8')
+  for (const c of ['NamingSajuSummary', 'PerspectiveAccordion', 'NamingAptitude']) {
+    check(src.includes(c), `프레임이 ${c} 를 그립니다`)
+  }
+  // ★작명 전용 — 배지와 [다른 추천 한자 보기]
+  check(/NameResultBadge/.test(src) && /추천 \{p\.badge\.rank\}순위/.test(src),
+    `★작명 배지 [개명]·[추천 N순위 · 점수] 가 있습니다`)
+  check(/다른 추천 한자 보기/.test(src), `[다른 추천 한자 보기] 가 있습니다`)
+  // ⚠️ 숫자 점수는 «화면에만». AI 문장 규칙과 충돌하지 않는지
+  check(/숫자 점수는 «여기» 에만 보입니다/.test(src),
+    `★점수는 배지에만 — AI 문장에는 안 쓴다는 것이 적혀 있습니다`)
+  // 색을 지어내지 않았는가
+  check(!/목:\s*'#/.test(src), `프레임이 «자기 오행 색표» 를 갖고 있지 않습니다`)
+}
+
 console.log(`\n━━ 만세력 화면 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail > 0) process.exit(1)

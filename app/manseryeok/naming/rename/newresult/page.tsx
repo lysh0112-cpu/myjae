@@ -3,6 +3,9 @@ import { Suspense, useState, useEffect, useMemo, useRef } from 'react'
 import { splitSurname } from '@/lib/saju/surname'
 import { useRouter } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
+// ★2026-08-01 (Phase 1-C) — 감정과 «같은» 결과 프레임
+import NameAnalysisResultView from '@/app/manseryeok/naming/components/NameAnalysisResultView'
+import type { PerspectiveCommentary } from '@/app/manseryeok/components/PerspectiveAccordion'
 import { calcYongsinCompat } from '@/lib/saju/yongsinNew'
 import { supabase } from '@/lib/supabase'
 import { diagnoseName, type NameChar, type DiagnoseResult, type Grade } from '@/lib/saju/naming'
@@ -28,13 +31,15 @@ interface SavedChar {
   resourceOhaeng: string
 }
 
-interface Commentary {
-  title: string
-  summary: string
-  good: string
-  improve: string
-  advice: string
-}
+// ★2026-08-01 (Phase 1-C) — 5관점으로 바로잡았습니다.
+//
+//   🔴 전에는 { title, summary, good, improve, advice } 였습니다.
+//      그런데 /api/naming 은 «5관점» (yinyang·baleum·suri·jawon·yongsin·conclusion)을 줍니다.
+//      → commentary.summary 가 «늘 비어» 있어, 손님은 통변을 불러도
+//        「불러오기 버튼」만 계속 봤습니다. 통변이 아예 안 나오고 있었습니다.
+//
+//   ★이제 감정 화면과 «같은» 프레임(NameAnalysisResultView)을 씁니다.
+type Commentary = PerspectiveCommentary
 
 interface TryItem {
   name: string
@@ -239,7 +244,16 @@ function NewResultInner() {
       if (c) {
         const hangulName = cur.chars.map((ch) => ch.hangul).join('')
         const hanjaName = cur.chars.map((ch) => ch.hanja).join('')
-        const text = `[개명 · ${hangulName} (${hanjaName})]\n\n· 종합\n${c.summary || ''}\n\n· 좋은 점\n${c.good || ''}\n\n· 더 좋아지려면\n${c.improve || ''}\n\n· 조언\n${c.advice || ''}`.trim()
+        // ★2026-08-01 — 5관점으로 바꿨습니다 (옛 summary/good/improve/advice 는 «오지 않습니다»)
+        const seg = (label: string, v: { intro: string; name: string; meaning: string }) =>
+          `· ${label}\n${[v.name, v.meaning].filter(Boolean).join('\n')}`
+        const text = [
+          `[개명 · ${hangulName} (${hanjaName})]`,
+          c.title ? `\n"${c.title}"` : '',
+          '', seg('음양오행', c.yinyang), seg('발음오행', c.baleum), seg('수리오행', c.suri),
+          seg('자원오행', c.jawon), seg('사주와의 만남', c.yongsin),
+          c.conclusion ? `\n· 맺음말\n${c.conclusion}` : '',
+        ].filter(Boolean).join('\n').trim()
         sessionStorage.setItem('ai_analysis', text)
       }
     } catch {}
@@ -290,7 +304,15 @@ function NewResultInner() {
         }),
       })
       const data = await res.json()
-      const commentary: Commentary = data.commentary ?? { title: '', summary: '', good: '', improve: '', advice: '' }
+      const EMPTY: Commentary = {
+        title: '', conclusion: '',
+        yinyang: { intro: '', name: '', meaning: '' },
+        baleum: { intro: '', name: '', meaning: '' },
+        suri: { intro: '', name: '', meaning: '' },
+        jawon: { intro: '', name: '', meaning: '' },
+        yongsin: { intro: '', name: '', meaning: '' },
+      }
+      const commentary: Commentary = (data.commentary as Commentary) ?? EMPTY
 
       setTries((prev) => {
         const nextTries = prev.map((t, i) => (i === activeTry ? { ...t, commentary } : t))
@@ -393,25 +415,28 @@ function NewResultInner() {
         </div>
       )}
 
-      {cur.commentary && cur.commentary.summary ? (
-        <div style={{ background: CARD, border: '1px solid rgba(200,120,60,0.12)', borderRadius: 16, padding: 18, marginBottom: 14 }}>
-          {cur.commentary.title && (
-            <div style={{ fontSize: 16, fontWeight: 700, color: GOLD, marginBottom: 12, lineHeight: 1.5 }}>
-              &ldquo;{cur.commentary.title}&rdquo;
-            </div>
-          )}
-          {[
-            { label: '종합', text: cur.commentary.summary },
-            { label: '좋은 점', text: cur.commentary.good },
-            { label: '더 좋아지려면', text: cur.commentary.improve },
-            { label: '조언', text: cur.commentary.advice },
-          ].filter((s) => s.text).map((s, i) => (
-            <div key={i} style={{ borderLeft: '3px solid ' + GOLD, padding: '4px 12px', marginBottom: 14 }}>
-              <div style={{ fontSize: 12, color: GOLD, marginBottom: 4 }}>{s.label}</div>
-              <div style={{ fontSize: 14, color: '#1a1a1a', lineHeight: 1.8 }}>{s.text}</div>
-            </div>
-          ))}
-        </div>
+      {/* ★2026-08-01 (Phase 1-C) — 감정과 «같은» 결과 프레임을 씁니다.
+          [무엇이 고쳐졌나]  전에는 옛 «종합» 필드를 봤는데 API 가 그 필드를
+            «주지 않아» 조건이 늘 거짓이었습니다. 손님은 통변을 불러도
+            「불러오기 버튼」만 계속 봤습니다. */}
+      {cur.commentary && cur.commentary.yinyang?.meaning ? (
+        <NameAnalysisResultView
+          hanjaName={fullName}
+          hangulName={hangulName}
+          subtitle="새로 지은 이름"
+          badge={{ kind: '개명' }}
+          saju={saju}
+          solarYear={solar?.year ?? 0}
+          solarMonth={solar?.month ?? 1}
+          solarDay={solar?.day ?? 1}
+          dayStem={dayStem ?? ''}
+          commentary={cur.commentary}
+          stars={null}
+          overallStar={null}
+          yongsin={(yongsin || null) as never}
+          careerHref="/manseryeok/career-input"
+          onOtherHanja={() => router.push('/manseryeok/naming/rename/newhanja')}
+        />
       ) : (
         <div style={{ marginBottom: 14 }}>
           {remaining > 0 ? (

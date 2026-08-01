@@ -18,6 +18,7 @@ import { dueumPairIfReal, dueumNotice } from '@/lib/saju/sound/dueum'
 // ★2026-08-01 (41부 Step 3 · UI) — 사주 요약 · 이름에 담을 기운 · 명리적성
 import NamingSajuSummary from './components/NamingSajuSummary'
 import NamingAptitude from './components/NamingAptitude'
+import NameAnalysisResultView from '@/app/manseryeok/naming/components/NameAnalysisResultView'
 import { calcCareerScore, gradeAll } from '@/lib/saju/career/careerScore'
 import { calcNamingBridge } from '@/lib/saju/career/namingBridge'
 import type { Ohaeng } from '@/lib/saju/ohaeng'
@@ -981,49 +982,26 @@ function DiagnosisInner() {
 
             {!loading && result && (
               <>
-                <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                  <div style={{ fontSize: '34px', fontWeight: 'bold', color: gold, letterSpacing: '4px' }}>
-                    {chars.filter(Boolean).map(c => c!.hanja).join('')}
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#1a1a1a', marginTop: '4px' }}>
-                    {chars.filter(Boolean).map(c => c!.hangul).join('')}
-                  </div>
-                </div>
-
-                {/* ★2026-08-01 — 「내 사주 한눈에」. 대표님 확정: «펼친 채» 둡니다.
-                    이름에 필요한 기운을 설득하려면 손님이 원국과 오행 점수를
-                    먼저 보는 것이 낫습니다. */}
-                {saju.length > 0 && solar && dayStem && (
-                  <NamingSajuSummary
-                    saju={saju}
-                    solarYear={solar.year}
-                    solarMonth={solar.month}
-                    solarDay={solar.day}
-                    hourBranch={saju.find(pp => pp.pillar === '시주')?.branch ?? null}
-                    dayStem={dayStem}
-                    fillElements={namingFill}
-                  />
-                )}
-
-                {commentary && (
-                  <PerspectiveAccordion commentary={commentary} stars={stars} overallStar={overallStar} />
-                )}
-
-                {/* ★五. 이름에 담을 기운 · 六. 사주 명리적성 (六 은 «접힌 채» 시작) */}
-                {saju.length > 0 && solar && dayStem && (
-                  <NamingAptitude
-                    saju={saju}
-                    solarYear={solar.year}
-                    solarMonth={solar.month}
-                    solarDay={solar.day}
-                    hourBranch={saju.find(pp => pp.pillar === '시주')?.branch ?? null}
-                    dayStem={dayStem}
-                    yongsin={aptYongsin.yongsin}
-                    heeksin={aptYongsin.heeksin}
-                    gisin={aptYongsin.gisin}
-                    careerHref={careerHref}
-                  />
-                )}
+                {/* ★2026-08-01 (Phase 1-C) — 결과 프레임을 «공용 부품» 으로 바꿨습니다.
+                    [왜]  감정과 작명이 각자 그리다가 작명 쪽이 «옛 통변 구조» 에 멈춰
+                          손님이 통변을 못 보고 있었습니다. 한 벌로 모읍니다. (교훈 ET) */}
+                <NameAnalysisResultView
+                  hanjaName={chars.filter(Boolean).map(c => c!.hanja).join('')}
+                  hangulName={chars.filter(Boolean).map(c => c!.hangul).join('')}
+                  saju={saju}
+                  solarYear={solar?.year ?? 0}
+                  solarMonth={solar?.month ?? 1}
+                  solarDay={solar?.day ?? 1}
+                  dayStem={dayStem ?? ''}
+                  commentary={commentary}
+                  stars={stars}
+                  overallStar={overallStar}
+                  yongsin={aptYongsin.yongsin}
+                  heeksin={aptYongsin.heeksin}
+                  gisin={aptYongsin.gisin}
+                  fillElements={namingFill}
+                  careerHref={careerHref}
+                />
 
                 {/* ★2026-07-21 2차: 저장 표시를 상담 버튼 바로 위로 옮겼다.
                     사주·궁합·택일과 위치를 통일하기 위함. 저장은 원래부터 자동이었다. */}
