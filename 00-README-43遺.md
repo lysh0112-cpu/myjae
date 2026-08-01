@@ -3,7 +3,7 @@
 ```
 기준 저장소   https://github.com/lysh0112-cpu/myjae.git
 기준 커밋     3b97c57
-검사          857 → ★1,198건 · 실패 0
+검사          857 → ★1,202건 · 실패 0
 타입          tsc --noEmit 통과
 eslint        기준선 유지 (오류 동일 · 경고 1건 감소)
 ```
@@ -37,6 +37,29 @@ rename/newborn    → storage?mode=naming&open=작명
   ★기록이 «사라진 줄» 알고 놀라시는 일이 없어야 합니다
 · mode 가 없을 때를 예전 그대로 둔 것은 «일부러» 입니다 — 옛 링크·마이페이지 (교훈 AM)
 ```
+
+---
+
+## 🔴 43부 12차 — 「새로운 사람 추가」에서 «넘어가지 않던» 것
+
+```
+생년월일·시·성별이 이미 있는 사람과 «같으면» 저장을 막고 화면이 멈췄습니다.
+  → [이름 지으러 가기] 를 눌러도 「이미 있어요」만 뜨고 아무 일도 안 일어났습니다.
+
+⚠️ 이름 «풀이» 라면 맞는 판단입니다 — 같은 사람이 명단에 둘 있을 까닭이 없습니다.
+★그러나 작명은 «같은 아이에게 이름을 여러 번» 지어 봅니다.
+  한 번에 하나씩만 조회하도록 바꾼 뒤로는 더더욱 그렇습니다.
+
+고침  이미 있는 사람이면 «그 사람으로 그냥 넘어갑니다».
+      ⚠️ 새로 만들지 «않습니다» — 만들면 같은 사람이 명단에 쌓입니다.
+         막지도 않고 쌓지도 않는 길입니다.
+      ⚠️ «수정» 화면은 예전 그대로 알려 드립니다 —
+         거기서는 같은 사람을 둘로 만드는 것이 실수이기 때문입니다.
+```
+
+⚠️ 남는 자리 하나 — 이미 있는 사람으로 넘어가면 «성씨는 그 사람의 것» 을 씁니다.
+   생년월일시·성별이 똑같은데 «성씨만 다른» 분을 새로 넣으실 수는 없습니다.
+   그때는 기존 사람을 «편집» 하시거나, 태어난 시를 정확히 넣어 갈라 주십시오.
 
 ---
 
@@ -369,7 +392,7 @@ BEST(2) + 낱장(3) + 폴더(6) = SERVICES(11)   ← 딱 맞아야 통과
 
 ```
 lib/saju/namingSession.ts        작명 «대상» 을 Step 2→3→4 로 나르는 단일 창구
-28-verify-naming-flow.ts         작명 동선 그물 269건  → verify 등록
+28-verify-naming-flow.ts         작명 동선 그물 273건  → verify 등록
 30-e2e-naming-flow.ts            세 동선 + 조건 e2e 68건 → verify 등록
 29-measure-resource-weights.ts   자원오행 배점 «자»
                                  ⚠️ verify 에 «넣지 않았습니다» — 검사가 아닙니다
@@ -384,6 +407,7 @@ lib/saju/namingSession.ts        작명 «대상» 을 Step 2→3→4 로 나르
  naming/rename/newhanja    ③kind 전달 · ④대상 사주 · 성씨 한자 고르기 · 두음 안내
  naming/rename/newresult   ③붙박이 제거 · ④대상 사주 · relation · ★A4 작명서 · 보관함 버튼 · 묵은 세션 차단
  naming/components/NamingCertificate  ★A4 «선명장(撰名狀)» — 인쇄·PDF
+ manseryeok/components/PersonPickerModal  ★같은 사람이어도 작명이 «막히지» 않게
  naming/rename/newborn     E — 준비중 안내 → 실입구 (+ mode 전달)
  naming/diagnosis/storage  ★얇은 문으로 (본체는 아래 부품)
  naming/naming-storage     ★신설 — 작명 보관함 전용 주소

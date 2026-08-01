@@ -48,6 +48,7 @@ const P = {
   cert: 'app/manseryeok/naming/components/NamingCertificate.tsx',
   pol: 'lib/saju/namingPolicy.ts',
   pick: 'app/manseryeok/naming/components/NamePicker.tsx',
+  modal: 'app/manseryeok/components/PersonPickerModal.tsx',
   rec2: 'lib/saju/nameRecommend.ts',
 }
 const S = Object.fromEntries(Object.entries(P).map(([k, v]) => [k, read(v)])) as Record<keyof typeof P, string>
@@ -210,6 +211,23 @@ console.log('\n━━ ⑲-h ⚠️ 옛 개명 손님이 «안 깨지는가» ━
   for (const [n, c] of [['Step 2', S.nn], ['Step 3', S.nh], ['Step 4', S.nr]] as const) {
     check(!/SCORE_BASE|REL_SCORE/.test(codeOf(c)), `${n} 이 판정을 다시 하지 않습니다`)
   }
+}
+
+console.log('\n━━ ⑲-C 🔴 같은 사람에게 «여러 번» 지을 수 있는가 (43부 12차) ━━')
+{
+  const modal = codeOf(S.modal)
+  // 🔴 생년월일·시·성별이 같으면 저장을 막고 «화면이 멈췄습니다».
+  //    작명은 같은 아이에게 이름을 여러 번 지어 봅니다. 막으면 안 됩니다.
+  check(/if \(res\.reason === 'duplicate'\) \{\s*\n\s*onPick\(res\.existing\)/.test(modal),
+    `★이미 있는 사람이면 «그 사람으로 넘어갑니다» (막지 않습니다)`)
+  check(!/'add'[\s\S]{0,400}duplicate'\) setFormErr/.test(modal),
+    `★새 사람 추가에서 「이미 있어요」로 «멈추지» 않습니다`)
+  // ⚠️ 그렇다고 같은 사람을 «쌓지도» 않아야 합니다
+  check(/만들면 같은 사람이 명단에 쌓입니다/.test(S.modal),
+    `⚠️ 새로 만들지 않는 까닭이 적혀 있습니다`)
+  // ⚠️ 수정(edit) 은 예전 그대로 알려 드려야 합니다
+  check(/'edit'[\s\S]{0,300}duplicate'\) setFormErr/.test(modal),
+    `★«수정» 에서는 예전처럼 알려 드립니다 (거기선 둘로 만드는 것이 실수입니다)`)
 }
 
 console.log('\n━━ ⑲-B ★A4 선명장(撰名狀) 양식 (43부 10차) ━━')

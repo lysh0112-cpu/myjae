@@ -204,8 +204,26 @@ export default function PersonPickerModal({
       const res = await addSavedPerson(draft)
       setSubmitting(false)
       if (!res.ok) {
-        if (res.reason === 'duplicate') setFormErr(`이미 있어요 — "${res.existing.title}"와 생년월일이 같아요.`)
-        else if (res.reason === 'not_logged_in') setFormErr('로그인이 필요해요.')
+        // ══════════════════════════════════════════════════════════
+        //  🔴★2026-08-01 (43부 12차) — «작명이 막히던» 자리 (대표님 지적)
+        //
+        //   [무엇이 있었나]  생년월일·시·성별이 «같으면» 저장을 막고 멈췄습니다.
+        //     ⚠️ 이름 풀이라면 맞습니다 — 같은 사람이 명단에 둘 있을 까닭이 없습니다.
+        //     ★그런데 작명은 «같은 아이에게 이름을 여러 번» 지어 봅니다.
+        //       한 번에 하나씩만 조회하도록 바꾼 뒤로는 더욱 그렇습니다.
+        //       그런데 두 번째부터 「이미 있어요」로 막혀 «화면이 넘어가지 않았습니다».
+        //
+        //   ★[이제]  이미 있는 사람이면 «그 사람으로 그냥 넘어갑니다».
+        //     ⚠️ 새로 만들지 «않습니다» — 만들면 같은 사람이 명단에 쌓입니다.
+        //        막지도 않고 쌓지도 않는 길입니다.
+        //   ⚠️ 이름 풀이(수정 화면)는 예전 그대로 «알려 드립니다» —
+        //      거기서는 같은 사람을 둘로 만드는 것이 실수이기 때문입니다.
+        // ══════════════════════════════════════════════════════════
+        if (res.reason === 'duplicate') {
+          onPick(res.existing)
+          return
+        }
+        if (res.reason === 'not_logged_in') setFormErr('로그인이 필요해요.')
         else setFormErr(res.message)
         return
       }
