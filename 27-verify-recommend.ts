@@ -119,7 +119,19 @@ console.log('\n━━ ⑱-g 피할 이름 · 선호 발음 ━━')
   check(!r.some(c => c.name === '난경'), `피할 이름이 빠집니다`)
   check(!r.some(c => c.name.includes('동')), `★한 글자를 주면 그 글자가 든 이름이 다 빠집니다 (항렬자)`)
   const p = recommendNames('김', { yongsin: '화', limit: 10, prefer: ['민'] })
-  check(p.some(c => c.name.includes('민')) || true, `선호 발음을 앞으로 (있으면)`)
+  // ★2026-08-01 (43부 3차) — 이 검사를 «진짜» 검사로 바꿨습니다.
+  //   🔴 전에는 `|| true` 가 붙어 «언제나 통과» 했습니다.
+  //      그래서 선호 발음이 2점 가산뿐이라 「민」을 넣어도 1위가 「김난경」인 것을
+  //      아무도 몰랐습니다. ★검사가 결함을 덮고 있던 자리입니다.
+  //   ⚠️ 이제 선호는 «줄 세우기의 첫 잣대» 입니다 (nameRecommend 의 out.sort).
+  check(p[0].name.includes('민'),
+    `★고르신 소리가 든 이름이 «1위» 입니다 (${p[0].fullName})`)
+  check(p.filter(c => c.preferHit).every((c, i) => p[i].preferHit),
+    `★그 이름들이 «앞줄» 에 모여 있습니다`)
+  // ⚠️ «거르는» 것이 아닙니다 — 하나도 없을 때 빈손이 되면 안 됩니다
+  const rare = recommendNames('김', { yongsin: '화', limit: 10, prefer: ['쥑'] })
+  check(rare.length === 10, `★없는 소리를 넣어도 빈손이 되지 않습니다 (${rare.length}개)`)
+  check(rare.every(c => !c.preferHit), `그때는 preferHit 가 모두 거짓입니다`)
 }
 
 console.log('\n━━ ⑱-h 이상한 입력 ━━')

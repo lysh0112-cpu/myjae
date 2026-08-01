@@ -273,6 +273,67 @@ console.log('\n━━ ④ 가장자리 — 끊길 만한 자리 ━━')
     `★대상이 없으면 null — 부르는 쪽이 «옛 길» 로 갈 수 있습니다`)
 }
 
+// ══════════════════════════════════════════════════════════════════
+//  ⑤ 조건을 «바꾸면 그 자리에서» 목록이 달라지는가 (43부 3차)
+// ══════════════════════════════════════════════════════════════════
+console.log('\n━━ ⑤ 조건 바꾸기 — 「입력해도 안 바뀐다」 를 잡습니다 ━━')
+{
+  const SUR = '김'
+  const opt = { yongsin: '화' as const, heeksin: '목' as const, limit: 10 }
+  const base = recommendNames(SUR, opt)
+  check(base.length === 10, `조건 없이 열 개 (${base.length}개)`)
+
+  // ★NamePicker 가 하는 «완성 글자만 쓰기» 를 그대로 흉내 냅니다
+  const syllablesOf = (v: string) =>
+    [...v.replace(/[,\s]+/g, '')].filter(ch => {
+      const c = ch.charCodeAt(0); return c >= 0xac00 && c <= 0xd7a3
+    })
+
+  // ── 선호 소리 ──
+  const preferred = recommendNames(SUR, { ...opt, prefer: syllablesOf('민') })
+  check(preferred.length > 0, `「민」을 넣으면 목록이 나옵니다 (${preferred.length}개)`)
+  check(preferred[0].name !== base[0].name || preferred.some(c => c.name.includes('민')),
+    `★「민」이 든 이름이 앞으로 옵니다 (1위 ${preferred[0].fullName})`)
+
+  // ⚠️ 조합 중 낱자 — 「ㅁ」은 «아직 글자가 아닙니다». 조건에서 빠져야 합니다
+  check(syllablesOf('ㅁ').length === 0, `★조합 중 낱자 「ㅁ」은 조건에서 빠집니다`)
+  const midComposing = recommendNames(SUR, {
+    ...opt, prefer: syllablesOf('ㅁ').length ? syllablesOf('ㅁ') : undefined })
+  check(midComposing.map(c => c.name).join() === base.map(c => c.name).join(),
+    `★조합 중에는 «조건 없음» 과 같습니다 — 목록이 엉뚱하게 비지 않습니다`)
+  check(syllablesOf('미').length === 1 && syllablesOf('민').length === 1,
+    `「미」·「민」은 완성 글자라 곧바로 조건이 됩니다`)
+
+  // ── 피할 글자 ──
+  const avoidCh = base[0].name[0]
+  const avoided = recommendNames(SUR, { ...opt, avoid: [avoidCh] })
+  check(!avoided.some(c => c.name.includes(avoidCh)),
+    `★「${avoidCh}」를 빼면 그 글자가 든 이름이 «하나도» 없습니다`)
+  check(avoided.length > 0, `그래도 목록이 비지 않습니다 (${avoided.length}개)`)
+
+  // ── 성향 ──
+  const styles = ['남성적', '여성적', '중성적'] as const
+  const byStyle = styles.map(st => recommendNames(SUR, { ...opt, style: st }))
+  check(byStyle.every(l => l.length > 0), `성향 셋 다 목록이 나옵니다`)
+  check(new Set(byStyle.map(l => l.map(c => c.name).join())).size === 3,
+    `★성향을 바꾸면 목록이 «서로 다릅니다» (버튼이 먹통이 아닙니다)`)
+
+  // ── 겹쳐 걸기 ──
+  const both = recommendNames(SUR, {
+    ...opt, style: '중성적', prefer: syllablesOf('민'), avoid: [avoidCh] })
+  check(!both.some(c => c.name.includes(avoidCh)), `조건을 겹쳐도 «피할 글자» 가 지켜집니다`)
+
+  // ⚠️ 조건이 «판정» 을 바꾸지는 않아야 합니다 (교재 밖 취향이므로)
+  const common = base.find(b => preferred.some(x => x.name === b.name))
+  if (common) {
+    const same = preferred.find(x => x.name === common.name)!
+    check(Math.abs(same.sound.score - common.sound.score) < 0.001,
+      `★같은 이름의 «발음오행 판정» 은 조건을 걸어도 그대로입니다 (${same.sound.score})`)
+  } else {
+    check(true, `이 표본에는 겹치는 이름이 없어 넘어갑니다`)
+  }
+}
+
 console.log(`\n━━ 작명 동선 e2e — 통과 ${pass} · 실패 ${fail} ━━`)
 console.log(`
   ⚠️ 이 검사가 «대신하지 못하는» 것 — 실기기 확인

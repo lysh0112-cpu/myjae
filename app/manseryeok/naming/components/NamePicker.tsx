@@ -83,6 +83,48 @@ export default function NamePicker(p: NamePickerProps) {
   const sur = p.surname.trim()
   const ready = sur.length > 0
 
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-01 (43부 3차) — 「입력해도 목록이 안 바뀐다」 를 고쳤습니다
+  //
+  //  [먼저 밝힐 것]  이 화면에 «[적용] 버튼은 없습니다».
+  //    아래 useMemo 는 style·prefer·avoid 가 바뀌면 «이미» 다시 돕니다.
+  //    ★그런데도 손님이 「안 바뀐다」고 느끼신 까닭이 «둘» 있었습니다.
+  //
+  //  🔴 까닭 ① — 목록이 «화면 밖» 으로 밀렸습니다.
+  //     조건 패널을 펼치면 그 높이(약 280px)가 목록을 아래로 밀어냅니다.
+  //     휴대폰에서는 목록이 «접힌 화면 아래» 로 사라집니다.
+  //     → 손님은 글자를 치면서 «바뀌는 것을 볼 수가 없었습니다».
+  //     ★그래서 패널 «안» 에 실시간 미리보기를 넣었습니다. 닫지 않아도 보입니다.
+  //
+  //  🔴 까닭 ② — 한글 «조합 중» 낱자가 그대로 엔진에 들어갔습니다.
+  //     「민」을 치면 ㅁ → 미 → 민 순으로 값이 바뀝니다.
+  //     그런데 「ㅁ」은 이름 글자에 «절대 들어 있지 않습니다» (name.includes('ㅁ')).
+  //     → 첫 글자를 친 순간에는 아무 일도 안 일어나 «먹통» 처럼 보였습니다.
+  //     ★그래서 «완성된 글자» 만 조건으로 씁니다. 조합이 끝나면 곧바로 반영됩니다.
+  //
+  //  ⚠️ 되짚어 «판정» 이 바뀌는 것은 아닙니다. 거르기·줄 세우기만 달라집니다.
+  // ══════════════════════════════════════════════════════════════
+
+  /**
+   * ★완성된 한글 음절만 남깁니다 (가~힣).
+   *   조합 중 낱자(ㅁ·ㅏ 같은 호환 자모)는 «아직 글자가 아니므로» 뺍니다.
+   *   ⚠️ 빼는 것이지 «막는» 것이 아닙니다 — 입력칸의 글자는 그대로 보입니다.
+   */
+  const syllablesOf = (v: string) =>
+    [...v.replace(/[,\s]+/g, '')].filter(ch => {
+      const c = ch.charCodeAt(0)
+      return c >= 0xac00 && c <= 0xd7a3
+    })
+
+  const preferChars = useMemo(() => syllablesOf(prefer), [prefer])
+  const avoidChars = useMemo(
+    () => avoid.split(/[,\s]+/).filter(Boolean).filter(w => syllablesOf(w).length === w.length),
+    [avoid])
+
+  /** ⚠️ 조합 중이라 «아직 못 쓰는» 글자가 있는가 — 손님에게 알려 드립니다 */
+  const pending = (prefer.trim() !== '' && preferChars.length === 0)
+    || (avoid.trim() !== '' && avoidChars.length === 0)
+
   const list = useMemo(() => {
     if (!ready) return []
     return recommendNames(sur, {
@@ -90,11 +132,11 @@ export default function NamePicker(p: NamePickerProps) {
       heeksin: p.heeksin ?? null,
       gisin: p.gisin ?? null,
       style: style ?? undefined,
-      prefer: prefer ? [...prefer.replace(/[,\s]+/g, '')] : undefined,
-      avoid: avoid ? avoid.split(/[,\s]+/).filter(Boolean) : undefined,
+      prefer: preferChars.length ? preferChars : undefined,
+      avoid: avoidChars.length ? avoidChars : undefined,
       limit: 10,
     })
-  }, [ready, sur, p.yongsin, p.heeksin, p.gisin, style, prefer, avoid])
+  }, [ready, sur, p.yongsin, p.heeksin, p.gisin, style, preferChars, avoidChars])
 
   /** ★사전에서 고른 이름을 «그 자리에서» 성씨와 맞춰 봅니다 */
   const dictCheck = useMemo(() => {
@@ -146,7 +188,16 @@ export default function NamePicker(p: NamePickerProps) {
                 </span>
               )}
             </span>
-            <span style={{ fontSize: 11, color: SUB }}>{openOpts ? '접기 ▾' : '펼치기 ▸'}</span>
+            {/* ★조건이 걸리면 «지금 몇 개» 인지 곧바로 보여 드립니다 —
+                접혀 있어도 바뀌는 것이 눈에 보입니다 */}
+            <span style={{ fontSize: 11, color: SUB, display: 'flex', alignItems: 'center', gap: 7 }}>
+              {ready && (style || preferChars.length || avoidChars.length) && (
+                <span style={{ color: list.length === 0 ? '#c8506e' : GOLD, fontWeight: 600 }}>
+                  {list.length}개
+                </span>
+              )}
+              {openOpts ? '접기 ▾' : '펼치기 ▸'}
+            </span>
           </button>
 
           {openOpts && (
@@ -176,7 +227,69 @@ export default function NamePicker(p: NamePickerProps) {
                 value={avoid} onChange={setAvoid}
                 note="한 글자를 적으시면 그 글자가 든 이름을 모두 뺍니다" />
 
+              {/* ══════════════════════════════════════════════════
+                  ★실시간 미리보기 — 패널을 «닫지 않아도» 바뀌는 것이 보입니다
+                    🔴 이것이 없어서 「입력해도 안 바뀐다」로 느껴졌습니다.
+                       목록은 패널 «아래» 라 펼친 동안 화면 밖으로 밀렸습니다.
+                    ⚠️ 판정을 여기서 다시 하지 않습니다 — 위 list 를 그대로 씁니다.
+                  ══════════════════════════════════════════════════ */}
+              <div style={{
+                background: '#fff', border: `1px solid ${LINE}`, borderRadius: 10,
+                padding: '10px 11px', marginBottom: 11,
+              }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  marginBottom: list.length ? 7 : 0,
+                }}>
+                  <span style={{ fontSize: 11, color: SUB }}>
+                    지금 조건으로
+                    <b style={{ color: list.length === 0 ? '#c8506e' : GOLD, marginLeft: 5 }}>
+                      {ready ? `${list.length}개` : '—'}
+                    </b>
+                    {/* ⚠️ 선호 소리는 «거르기» 가 아니라 «앞줄 세우기» 입니다.
+                        몇 개가 실제로 그 소리를 담았는지 «따로» 적어 오해를 막습니다 —
+                        「민 넣었는데 왜 민 없는 이름이 있지」 가 되지 않게. */}
+                    {preferChars.length > 0 && (
+                      <span style={{ marginLeft: 6, color: '#a8927e' }}>
+                        · 「{preferChars.join('·')}」 담은 것 {list.filter(c => c.preferHit).length}개
+                      </span>
+                    )}
+                  </span>
+                  {/* ⚠️ 조합이 끝나지 않은 글자가 있으면 «왜 아직인지» 알려 드립니다 */}
+                  {pending && (
+                    <span style={{ fontSize: 10.5, color: '#b09a86' }}>글자를 마저 입력해 주세요</span>
+                  )}
+                </div>
+
+                {ready && list.length > 0 && (
+                  <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                    {list.slice(0, 4).map(c => (
+                      <button key={c.name} onClick={() => p.onPick(c.name)}
+                        style={{
+                          ...PRESS, cursor: 'pointer', fontSize: 12.5, padding: '5px 10px',
+                          borderRadius: 9, background: '#fffbf7', color: INK,
+                          border: `1px solid ${LINE}`,
+                        }}>
+                        {c.fullName}
+                      </button>
+                    ))}
+                    {list.length > 4 && (
+                      <span style={{ fontSize: 10.5, color: '#a8927e', alignSelf: 'center' }}>
+                        외 {list.length - 4}개 · 아래에 이어집니다
+                      </span>
+                    )}
+                  </div>
+                )}
+                {ready && list.length === 0 && !pending && (
+                  <div style={{ fontSize: 11, color: '#c8506e', lineHeight: 1.6, marginTop: 5 }}>
+                    이 조건에 맞는 이름이 없습니다. 조건을 조금 넓혀 보세요.
+                  </div>
+                )}
+              </div>
+
               <div style={{ fontSize: 10.5, color: '#a8927e', lineHeight: 1.65 }}>
+                조건을 바꾸시면 <b>바로</b> 다시 골라 드립니다. 따로 누르실 것은 없습니다.
+                <br />
                 어감에 대한 취향은 참고로만 씁니다.
                 이름의 길흉은 교재의 기준으로 따로 살핍니다.
               </div>
@@ -306,6 +419,19 @@ export default function NamePicker(p: NamePickerProps) {
   )
 }
 
+/**
+ * 조건 입력칸 하나.
+ *
+ * ★2026-08-01 (43부 3차) — 「입력해도 안 바뀐다」의 나머지 절반을 여기서 막습니다.
+ *
+ *   ⚠️ 한글은 «조합» 으로 들어옵니다 — ㅁ → 미 → 민.
+ *      onChange 만 쓰면 조합 중 낱자까지 그대로 흘러갑니다.
+ *      ★값은 그대로 두되(입력칸에서 글자가 사라지면 안 됩니다),
+ *        조합이 «끝났음» 을 위쪽에 알려 그 순간 곧바로 다시 고르게 합니다.
+ *
+ *   ⚠️ 조합 중에 값을 잘라내지 «마십시오». 안드로이드 자판에서 글자가 깨집니다.
+ *      (rename/newname 의 firstHangul 이 같은 까닭으로 조합을 살펴봅니다)
+ */
 function Opt({ label, placeholder, value, onChange, note }: {
   label: string; placeholder: string; value: string
   onChange: (v: string) => void; note?: string
@@ -313,7 +439,14 @@ function Opt({ label, placeholder, value, onChange, note }: {
   return (
     <div style={{ marginBottom: 11 }}>
       <div style={{ fontSize: 11.5, color: SUB, marginBottom: 5 }}>{label}</div>
-      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
+      <input
+        value={value}
+        // ⚠️ 조합 중에도 «값은 그대로» 넣습니다 — 화면에서 글자가 사라지면 안 됩니다.
+        //    조건으로 쓸 때 완성된 글자만 골라 씁니다 (위 syllablesOf).
+        onChange={(e) => onChange(e.target.value)}
+        onCompositionEnd={(e) => onChange(e.currentTarget.value)}
+        placeholder={placeholder}
+        inputMode="text"
         style={{
           width: '100%', padding: '9px 11px', borderRadius: 10,
           border: `1px solid ${LINE}`, background: '#fff',

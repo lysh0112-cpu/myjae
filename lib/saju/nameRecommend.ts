@@ -201,6 +201,13 @@ export interface NameCandidate {
   sound: SoundVerdict
   /** 사전에서 온 이름인가 */
   fromDict: boolean
+  /**
+   * ★「꼭 넣고 싶은 소리」가 이 이름에 들어 있는가 (2026-08-01 · 43부 3차)
+   *
+   * ⚠️ 줄 세우기의 «첫 잣대» 입니다 — 아래 out.sort 를 보십시오.
+   *    화면이 「이 조건에 맞는 것은 N개」를 적을 때도 씁니다.
+   */
+  preferHit: boolean
   /** 왜 이 자리인가 — 화면·통변 재료 */
   reasons: string[]
 }
@@ -335,7 +342,7 @@ export function recommendNames(
     gamgak = Math.min(gamgak, RECOMMEND_WEIGHT.gamgak)
 
     // ④ 선호 발음·스타일 — 줄 세우기에만 씁니다
-    const preferHit = prefer.some((p) => name.includes(p))
+    const preferHit = prefer.length > 0 && prefer.some((p) => name.includes(p))
     if (preferHit) reasons.push('고르신 소리가 들어 있습니다')
     /* 어감/성향 선호 필터 (교재 밖 참고용) */
     if (opt.style && !STYLE_HINT[opt.style](name)) continue
@@ -350,14 +357,32 @@ export function recommendNames(
       rank: 0,
       filled, sound,
       fromDict: dictSet.has(name),
+      preferHit,
       reasons,
     })
   }
 
-  // ── 줄 세우기 ──
+  // ══════════════════════════════════════════════════════════════
+  //  줄 세우기
+  //
+  //  ★2026-08-01 (43부 3차) — 「꼭 넣고 싶은 소리」를 «첫 잣대» 로 올렸습니다.
+  //
+  //   🔴 [무엇이 있었나]  선호 발음은 «2점 가산» 뿐이었습니다.
+  //      김씨에게 「민」을 넣어도 1위가 「김난경」이었습니다 — 민이 «한 글자도» 없습니다.
+  //      화면의 이름표는 「꼭 넣고 싶은 소리」인데, 엔진은 «살짝 밀어 주기» 였습니다.
+  //      ⚠️ 손님은 「입력해도 안 먹는다」고 느끼십니다. 말과 행동이 어긋났습니다.
+  //
+  //   ★[이제]  그 소리가 든 이름을 «앞줄에» 세웁니다.
+  //      ⚠️ «거르는» 것이 아닙니다 — 하나도 없을 때 빈손이 되면 안 되니
+  //         뒤에 나머지를 그대로 이어 붙입니다. 손님이 조건을 넓히실 수 있습니다.
+  //      ⚠️ 점수는 그대로입니다. 판정을 바꾸는 것이 아니라 «보여 주는 차례» 만 바꿉니다.
+  //         (선호는 교재 밖 취향입니다 — 길흉에 넣지 않습니다)
+  //
   //   ⚠️ 점수가 같으면 «사전에 실린 이름» 을 앞으로 — 교재에 있는 쪽이 안전합니다
+  // ══════════════════════════════════════════════════════════════
   out.sort((a, b) =>
-    (b.score - a.score)
+    (Number(b.preferHit) - Number(a.preferHit))
+    || (b.score - a.score)
     || (Number(b.fromDict) - Number(a.fromDict))
     || a.name.localeCompare(b.name))
 
