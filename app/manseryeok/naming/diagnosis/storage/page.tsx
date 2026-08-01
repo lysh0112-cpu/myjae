@@ -243,7 +243,8 @@ function NamingStorageInner() {
               width: '100%', marginTop: 8, padding: 14, borderRadius: 12,
               background: '#c8783c', border: 'none', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer',
             }}>
-            {/* ★2026-08-01 — 버튼을 하나로 모았습니다 (요청 1-3) */}
+            {/* ★2026-08-01 — 버튼을 하나로 모았습니다 (요청 1-3).
+                누르면 사람을 고르고 → «갈림길 화면(start)» 에서 풀이/작명을 정합니다 */}
             + 새 이름 풀이 / 작명하기
           </button>
         )}
@@ -303,19 +304,22 @@ function NamingStorageInner() {
         serviceLabel="이름풀이"
         headline="누구의 이름을 볼까요?"
         serviceType="naming"
-        submitLabel="이름 풀이하기"
+        submitLabel="다음"
         onClose={() => setPickerOpen(false)}
         onPickMe={() => {
           setPickerOpen(false)
-          // 나(로그인 회원 본인) → URL 없이 진단(내 사주 자동)
-          router.push('/manseryeok/naming/diagnosis')
+          // ★2026-08-01 (Phase 2-B) — 바로 진단으로 가지 «않습니다».
+          //   갈림길 화면에서 「풀이할까요 / 지어 드릴까요」를 먼저 고릅니다.
+          //   ⚠️ 사주는 로그인 회원 본인 것이라 파라미터 없이 넘깁니다.
+          router.push('/manseryeok/naming/start')
         }}
         onPick={(person: SavedPerson) => {
           setPickerOpen(false)
-          // 가족·지인(또는 새로 추가한 사람) → 그 사람 생년월일·관계를 실어 진단
+          // ★2026-08-01 (Phase 2-B) — 그 사람 사주를 «갈림길 화면» 으로 실어 보냅니다.
+          //   ⚠️ 여기서 사주를 다시 묻지 않습니다. 두 번 묻는 화면은 손님이 지칩니다.
           const q = toResultQuery(person)
           const rel = person.relation ? `&relation=${encodeURIComponent(person.relation)}` : ''
-          router.push(`/manseryeok/naming/diagnosis?${q}${rel}`)
+          router.push(`/manseryeok/naming/start?${q}${rel}`)
         }}
       />
     </main>

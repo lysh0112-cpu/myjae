@@ -1,9 +1,15 @@
 'use client'
 import { useState, useEffect, useRef, CSSProperties } from 'react'
 import { splitSurname } from '@/lib/saju/surname'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { fromMyInfo, fromProfile, personKey } from '@/lib/saju/myInfo'
+// ★2026-08-01 (Step 2) — 추천·사전에서 고르기
+import NamePicker from '@/app/manseryeok/naming/components/NamePicker'
+import type { NameStyle } from '@/lib/saju/nameRecommend'
+import { useResultSaju } from '@/hooks/useResultSaju'
+import { calcYongsinCompat } from '@/lib/saju/yongsinNew'
+import { ohaengOrEmpty } from '@/lib/saju/ohaeng'
 
 const GOLD = '#c8783c'
 const CARD = '#fffbf7'
@@ -34,6 +40,7 @@ function firstHangul(s: string): string {
 
 export default function NewNamePage() {
   const router = useRouter()
+  const sp = useSearchParams()
 
   const [count, setCount] = useState<1 | 2 | null>(null)
   const [c1, setC1] = useState('')
@@ -180,7 +187,7 @@ export default function NewNamePage() {
     const name = count === 1 ? a : a + b
     // 남은 조회 횟수가 있으면 바로 진입, 없으면 결제 팝업
     if (readRemaining() > 0) {
-      router.push('/manseryeok/naming/rename/newhanja?name=' + encodeURIComponent(name))
+      router.push(withOpts('/manseryeok/naming/rename/newhanja?name=' + encodeURIComponent(name)))
     } else {
       setPendingName(name)
       setPayOpen(true)
@@ -196,7 +203,83 @@ export default function NewNamePage() {
       localStorage.removeItem('newname_history_v1')
     } catch {}
     setPayOpen(false)
-    router.push('/manseryeok/naming/rename/newhanja?name=' + encodeURIComponent(pendingName))
+    router.push(withOpts('/manseryeok/naming/rename/newhanja?name=' + encodeURIComponent(pendingName)))
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-01 (Phase 2-B) — 갈림길 화면(start)에서 실어 온 «작명 옵션»
+  //
+  //   kind(신생아·개명) · style · prefer · avoid
+  //   ⚠️ 여기서 «쓰지는 않습니다». 다음 화면까지 «잃지 않고» 나르는 것이 일입니다.
+  //      실제로 쓰는 곳은 Step 2 추천 화면입니다.
+  //   ⚠️ style·prefer·avoid 는 «교재 밖 취향» 입니다. 길흉 판정에 쓰지 마십시오.
+  // ══════════════════════════════════════════════════════════════
+  const namingOpts = (() => {
+    const q = new URLSearchParams()
+    for (const k of ['kind', 'style', 'prefer', 'avoid', 'relation']) {
+      const v = sp?.get(k)
+      if (v) q.set(k, v)
+    }
+    return q.toString()
+  })()
+  const withOpts = (base: string) => (namingOpts ? `${base}&${namingOpts}` : base)
+
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-01 (Step 2) — 추천에 쓸 «용신» 을 여기서 구합니다
+  //
+  //   ⚠️ 이 화면은 전에 사주를 «안 봤습니다» — 손님이 이름을 직접 쳤으니까요.
+  //      추천을 하려면 사주가 있어야 합니다. myinfo(또는 URL)에서 읽어 냅니다.
+  //   ⚠️ 용신을 못 구해도 «멈추지 않습니다». 그때는 발음오행만으로 줄 세웁니다.
+  // ══════════════════════════════════════════════════════════════
+  const infoForSaju = (() => {
+    const q = (k: string) => sp?.get(k)
+    if (q('year')) {
+      return {
+        calType: q('calType') || '양력',
+        year: Number(q('year')), month: Number(q('month') || 1), day: Number(q('day') || 1),
+        leapMonth: q('leapMonth') || '0',
+        hourIdx: q('hour') && q('hour') !== '모름' ? Number(q('hour')) : null,
+      }
+    }
+    try {
+      const m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
+      return {
+        calType: m.calType || '양력',
+        year: Number(m.year) || 0, month: Number(m.month) || 1, day: Number(m.day) || 1,
+        leapMonth: m.leapMonth || '0',
+        hourIdx: m.hour != null && m.hour !== '모름' ? Number(m.hour) : null,
+      }
+    } catch { return { calType: '양력', year: 0, month: 1, day: 1, leapMonth: '0', hourIdx: null } }
+  })()
+
+  const { saju, solar, dayStem } = useResultSaju(
+    infoForSaju.calType, infoForSaju.year, infoForSaju.month,
+    infoForSaju.day, infoForSaju.leapMonth, infoForSaju.hourIdx,
+  )
+
+  const yongsin = (() => {
+    if (!saju.length || !dayStem) return ''
+    try {
+      return ohaengOrEmpty(calcYongsinCompat(
+        saju, dayStem, solar?.month, solar?.day,
+        saju.find(x => x.pillar === '시주')?.branch ?? null,
+      ).yongsin)
+    } catch { return '' }
+  })()
+
+  /**
+   * ★2026-08-01 (Step 2) — 추천·사전에서 고른 이름으로 바로 넘어갑니다.
+   *   ⚠️ 직접 쓰기와 «같은 길» 을 씁니다 — 이용권 차감·결제 흐름이 갈리면 안 됩니다.
+   */
+  function pickName(name: string) {
+    const n = name.trim()
+    if (!n) return
+    if (readRemaining() > 0) {
+      router.push(withOpts('/manseryeok/naming/rename/newhanja?name=' + encodeURIComponent(n)))
+    } else {
+      setPendingName(n)
+      setPayOpen(true)
+    }
   }
 
   const inputStyle: CSSProperties = {
@@ -244,6 +327,16 @@ export default function NewNamePage() {
         성씨 {surnameHanja}({surnameHangul})는 그대로 · 발음은 두고 한자만 바꿔드려요
       </p>
 
+      {/* ★2026-08-01 (Step 2) — 세 갈래로 고릅니다.
+          추천받기 · 교재 사전에서 고르기 · 직접 쓰기(전에 하던 그대로) */}
+      <NamePicker
+        surname={surnameHangul}
+        yongsin={(yongsin || null) as never}
+        style={(sp?.get('style') as NameStyle | null) ?? null}
+        prefer={sp?.get('prefer') ?? ''}
+        avoid={sp?.get('avoid') ?? ''}
+        onPick={pickName}
+        manual={<>
       <div style={{ fontSize: 12, color: SUB, marginBottom: 8, padding: '0 4px' }}>이름 글자 수</div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
         {chip(1, '외자 (한 글자)')}
@@ -290,6 +383,8 @@ export default function NewNamePage() {
           </button>
         </>
       )}
+        </>}
+      />
 
       {/* ★ 개명 이용권 결제 팝업 (선결제 → tryLimit회 조회) */}
       {payOpen && (
