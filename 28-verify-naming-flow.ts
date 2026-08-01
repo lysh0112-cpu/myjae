@@ -309,6 +309,31 @@ console.log('\n━━ ⑲-B ★A4 선명장(撰名狀) 양식 (43부 10차) ━�
   // ⑦ HTML 안에 JSX 주석이 «찍혀 나오지» 않는가
   check(!/\{\/\*/.test(cert), `⚠️ HTML 문자열 안에 JSX 주석이 남아 있지 않습니다`)
 
+  // ⑨ 🔴★元亨利貞 이 «한자로» 새겨지는가 (43부 14차)
+  //    diagnoseName 의 key 는 won·hyeong·i·jeong (로마자) 입니다.
+  //    그대로 넣었더니 종이에 「won格 · hyeong格」 이 찍혀 나갔습니다.
+  check(/GYEOK_MARK/.test(cert) && /won: '元', hyeong: '亨', i: '利', jeong: '貞'/.test(cert),
+    `★로마자 key 를 한자로 옮기는 지도가 있습니다`)
+  check(/GYEOK_MARK\[g\.mark\] \?\? g\.mark/.test(cert),
+    `★그 지도를 «실제로» 지나 찍습니다`)
+
+  // ⑩ 🔴★訓(뜻)이 채워지는가 (43부 14차)
+  //    저장된 글자에 뜻이 없어 「(류)」만 찍혀 나갔습니다. 한자 고르는 화면이 담습니다.
+  const nh2 = codeOf(S.nh)
+  check(/function firstMeaning/.test(nh2), `★한자를 고를 때 뜻을 «첫 낱말» 로 담습니다`)
+  check(/meaning: firstMeaning\(r\)/.test(nh2), `고른 글자에 뜻이 실립니다`)
+  check(/m\.split\(\/\[,·\]\/\)\[0\]/.test(nh2),
+    `⚠️ 여러 뜻 가운데 «한 낱말» 만 새깁니다 (종이가 좁습니다)`)
+
+  // ⑪ 🔴★總評 길이에 따라 «스스로» 줄어드는가 (43부 14차)
+  //    글자 크기를 한 번 맞춰 두었더니 실제 손님 것(1.6배)이 두 장으로 갈라졌습니다.
+  check(/const chongLen =/.test(cert) && /const chongSize =/.test(cert),
+    `★總評 글자 수를 세어 크기를 고릅니다`)
+  check(/chongLen > 900 \? 7\.6/.test(cert),
+    `⚠️ 무한정 줄이지 않습니다 — 읽을 수 있는 크기를 지킵니다`)
+  check(/AI 가 씁니다 — 이름마다 길이가 «크게» 다릅니다/.test(S.cert),
+    `★「한 번 재서 맞췄으니 됐다」가 안 통하는 까닭이 적혀 있습니다`)
+
   // ⑧ ★總評 — 「이름이 사주를 어떻게 돕는가」까지 담는가 (43부 11차)
   //    ⚠️ 맺음말만 실으면 «왜 좋은 이름인지» 가 종이에 남지 않습니다.
   check(/yongsinLine/.test(cert) && /yongsinMeaning/.test(cert),

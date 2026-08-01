@@ -51,8 +51,19 @@ export interface CertPillar { pillar: string; stem: string; branch: string }
  * ⚠️ 값을 여기서 «만들지» 않습니다. diagnoseName 의 suri.gyeok 을 그대로 받습니다.
  *    격 이름을 새로 지어내면 화면과 종이가 갈립니다. (교훈 CJ·BF)
  */
+/** ★元亨利貞 — 한자로 새깁니다 (2026-08-01 · 43부 14차) */
+export const GYEOK_MARK: Record<string, string> = {
+  won: '元', hyeong: '亨', i: '利', jeong: '貞',
+}
+
 export interface CertGyeok {
-  /** 元 · 亨 · 利 · 貞 */
+  /**
+   * 元 · 亨 · 利 · 貞
+   *
+   * 🔴⚠️ diagnoseName 의 key 는 «won·hyeong·i·jeong» 입니다 (로마자).
+   *    그것을 그대로 넣었더니 종이에 「won格 · hyeong格」 이 찍혀 나갔습니다.
+   *    ★반드시 GYEOK_MARK 로 옮겨서 넣으십시오.
+   */
   mark: string
   /** 초년운 · 청년운 · 중년운 · 말년운 */
   label: string
@@ -135,6 +146,24 @@ export function buildCertificateHtml(p: NamingCertificateProps): string {
   /** 한자 오행 한 글자 — 값이 없으면 «비웁니다» */
   const oh = (v?: string) => ({ 목: '木', 화: '火', 토: '土', 금: '金', 수: '水' }[v ?? ''] ?? '')
 
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-01 (43부 14차) — 總評 길이에 따라 «스스로» 줄어듭니다
+  //
+  //   🔴 [무엇이 있었나]  글자 크기를 «한 번» 맞춰 두었습니다.
+  //      그런데 총평은 AI 가 씁니다 — 이름마다 길이가 «크게» 다릅니다.
+  //      짧은 표본으로 맞춰 두었더니 실제 손님 것(약 1.6배)이 두 장으로 갈라졌습니다.
+  //      ⚠️ 「한 번 재서 맞췄으니 됐다」가 통하지 않는 자리였습니다.
+  //
+  //   ★[이제]  글자 수를 세어 크기를 «세 단» 으로 고릅니다.
+  //   ⚠️ 무한정 줄이지 않습니다 — 7.4pt 아래로는 읽기 어렵습니다.
+  //      그보다 길면 «넘치더라도» 읽을 수 있는 크기를 지킵니다.
+  //      (그런 이름은 아직 본 적이 없지만, 언젠가 옵니다)
+  // ══════════════════════════════════════════════════════════════
+  const chongLen = (p.yongsinLine ?? '').length
+    + (p.yongsinMeaning ?? '').length + (p.conclusion ?? '').length
+  const chongSize = chongLen > 900 ? 7.6 : chongLen > 620 ? 8.3 : 9.2
+  const chongLead = chongLen > 900 ? 1.55 : chongLen > 620 ? 1.62 : 1.72
+
   const nameCol = (c: CertChar) => `
     <td class="nc">
       <div class="nc-hanja">${esc(c.hanja || c.hangul)}</div>
@@ -143,7 +172,7 @@ export function buildCertificateHtml(p: NamingCertificateProps): string {
 
   const gyeokRows = (p.gyeok ?? []).map((g) => `
     <div class="gy">
-      <span class="gy-k">${esc(g.mark)}格</span>
+      <span class="gy-k">${esc(GYEOK_MARK[g.mark] ?? g.mark)}格</span>
       <span class="gy-n">${g.sum}</span>
       <span class="gy-name">${esc(g.name)}</span>
       <span class="gy-un">${esc(g.un)}</span>
@@ -193,7 +222,8 @@ export function buildCertificateHtml(p: NamingCertificateProps): string {
   /* ── 수리 4격 ── */
   .gy { display: flex; align-items: baseline; gap: 3mm; font-size: 11pt;
         padding: 1mm 2mm; border-bottom: 0.2mm dotted #ddc79a; }
-  .gy-k { font-weight: 700; color: #7a1f1f; width: 13mm; letter-spacing: 1px; }
+  .gy-k { font-weight: 700; color: #7a1f1f; width: 13mm; letter-spacing: 1px;
+          white-space: nowrap; flex-shrink: 0; }
   .gy-n { width: 9mm; text-align: right; font-weight: 700; }
   .gy-name { font-weight: 700; color: #241c14; }
   .gy-un { color: #4a3a28; }
@@ -214,7 +244,7 @@ export function buildCertificateHtml(p: NamingCertificateProps): string {
   table.info td.v { text-align: right; font-weight: 700; }
 
   /* ── 총평 ── */
-  .chong { font-size: 9.2pt; line-height: 1.72; color: #241c14; text-align: justify;
+  .chong { font-size: ${chongSize}pt; line-height: ${chongLead}; color: #241c14; text-align: justify;
            margin-top: 1mm; padding: 0 1mm; }
   .chong p { margin: 0 0 1.6mm; }
   .chong p:last-child { margin-bottom: 0; }

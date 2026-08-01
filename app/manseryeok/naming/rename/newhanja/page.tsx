@@ -73,6 +73,24 @@ interface SavedChar {
   hanja: string
   strokes: number
   resourceOhaeng: string
+  /**
+   * ★훈(訓) — 「버들」 한 낱말 (2026-08-01 · 43부 14차)
+   *
+   * 🔴 [왜 더했나]  선명장에 「柳(버들, 류)」 처럼 훈음을 새겨야 하는데
+   *    저장된 글자에 뜻이 «없어» 「(류)」만 찍혀 나갔습니다.
+   *    ★한자를 고르는 «이 화면» 이 뜻을 알고 있습니다. 그때 함께 담습니다.
+   * ⚠️ 없으면 «비웁니다». 그럴듯한 뜻을 붙이면 그것이 종이로 남습니다. (교훈 EJ)
+   * ⚠️ 옛 기록에는 이 값이 없습니다 — 선택값이라 읽는 쪽이 견딥니다.
+   */
+  meaning?: string
+}
+
+/** 뜻에서 «첫 낱말» 만 — 「버들, 버드나무 류」 → 「버들」 */
+function firstMeaning(row: HanjaRow | null | undefined): string {
+  const m = (row?.meaning ?? '').trim()
+  if (!m) return ''
+  // ⚠️ 쉼표·가운뎃점으로 여러 뜻이 이어집니다. 선명장에는 한 낱말만 새깁니다.
+  return m.split(/[,·]/)[0].trim().slice(0, 6)
 }
 
 // ★2026-07-30 (3단계) — 지역 정의를 걷어내고 lib/saju/hanjaRow.ts 를 씁니다. (교훈 CJ)
@@ -327,6 +345,7 @@ function NewHanjaInner() {
         out.push({
           hangul: slots[i].hangul, hanja: rowHanja(row),
           strokes: rowStrokes(row), resourceOhaeng: rowOhaeng(row) ?? '',
+          meaning: firstMeaning(row),
         })
       } else if (loadedSurnameFits && surnameChars[i]) {
         out.push(surnameChars[i])
@@ -452,6 +471,8 @@ function NewHanjaInner() {
   const composeWith = useMemo(() => (row: HanjaRow | null) => {
     const asChar = (r: HanjaRow, hangul: string): SavedChar => ({
       hangul, hanja: rowHanja(r), strokes: rowStrokes(r), resourceOhaeng: rowOhaeng(r) ?? '',
+      // ★훈(訓) 을 함께 담습니다 — 선명장에 「柳(버들, 류)」 로 새기기 위해
+      meaning: firstMeaning(r),
     })
     const all: SavedChar[] = slots.map((slot, i) => {
       if (row && i === activeIdx) return asChar(row, slot.hangul)
