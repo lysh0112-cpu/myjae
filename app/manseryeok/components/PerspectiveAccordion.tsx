@@ -9,6 +9,7 @@
 // 이름/한글이름 등 상단·하단은 page.tsx가 담당. 이 부품은 "해설 블록"만.
 
 import { useEffect, useState } from 'react'
+import Stars from '@/app/components/common/StarRating'
 // ★2026-07-30 (3단계-b) — 관점별 별점 (대표님 지시)
 import { starGlyphs, type PerspectiveStar, type StarResult } from '@/lib/saju/starRating'
 
@@ -57,28 +58,12 @@ const STAR_TONE: Record<StarResult['tone'], string> = {
   watch: '#b09a8a',  // 회갈 — ★붉은 경고색을 쓰지 않습니다
 }
 
-/** ★별점 그리기 — «한 곳» 에서만 그립니다. 복사하면 두 모양이 됩니다 (교훈 CJ) */
-export function Stars({ s, size = 13 }: { s: PerspectiveStar | StarResult; size?: number }) {
-  const g = starGlyphs(s.star)
-  const c = STAR_TONE[s.tone]
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' }}>
-      <span aria-hidden style={{ fontSize: `${size}px`, letterSpacing: '1px', lineHeight: 1 }}>
-        {Array.from({ length: g.full }).map((_, i) => (
-          <span key={`f${i}`} style={{ color: c }}>★</span>
-        ))}
-        {g.half === 1 && <span style={{ color: c, opacity: 0.45 }}>★</span>}
-        {Array.from({ length: g.empty }).map((_, i) => (
-          <span key={`e${i}`} style={{ color: c, opacity: 0.16 }}>★</span>
-        ))}
-      </span>
-      <span style={{ fontSize: `${size - 2}px`, color: c, fontWeight: 600 }}>
-        {s.star.toFixed(1)}
-      </span>
-      <span className="sr-only">{`5점 만점에 ${s.star.toFixed(1)}점, ${s.label}`}</span>
-    </span>
-  )
-}
+// ★2026-08-01 (43부 30차) — 별점 그리기를 «공용 부품» 으로 내보냈습니다.
+//   🔴 여기 있던 Stars 를 걷어냅니다 — 이 파일 «안» 에 숨어 있어
+//      다른 화면이 쓰지 못했고, 결국 «별점 없는 화면» 이 생겼습니다.
+//   ★app/components/common/StarRating.tsx 하나만 씁니다.
+//   ⚠️ 옛 이름(Stars)으로 부르던 곳이 있어 그대로 다시 내보냅니다.
+export { default as Stars } from '@/app/components/common/StarRating'
 
 const HEADS: { key: keyof PerspectiveCommentary; title: string; sub: string }[] = [
   { key: 'yinyang', title: '음양오행', sub: '획수에 담긴 음과 양' },

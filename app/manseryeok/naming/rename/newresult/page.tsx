@@ -17,6 +17,7 @@ import NamingCertificateButton, {
 } from '@/app/manseryeok/naming/components/NamingCertificate'
 // ★2026-08-01 (43부 10차) — 선명장에 音五行을 적기 위해
 import { soundOhaengOf } from '@/lib/saju/sound/normalize'
+import type { PerspectiveStar, StarResult } from '@/lib/saju/starRating'
 // ★2026-08-01 (43부 6차) — 「한 번에 이름 하나」 정책 (대표님 확정)
 //   ⚠️ 비교 칩·회차 안내는 «지우지 않았습니다». 배선만 끊었습니다.
 import { clampTryLimit, isSingleName, visibleTries, keepPastTries } from '@/lib/saju/namingPolicy'
@@ -85,6 +86,17 @@ interface TryItem {
   name: string
   chars: SavedChar[]
   commentary?: Commentary
+  /**
+   * ★별점 (2026-08-01 · 43부 30차 · 대표님 지적)
+   *
+   *  🔴 [무엇이 있었나]  /api/naming 이 stars·overallStar 를 «주고 있었는데»
+   *    이 화면이 받지 않고 stars={null} 을 넘겼습니다.
+   *    → 공들여 만든 점수화가 작명 결과에서 «통째로» 사라졌습니다.
+   *    ⚠️ 「안 만든 것」이 아니라 «버리고 있던» 것입니다.
+   *  ⚠️ 옛 기록에는 없습니다 — 선택값이라 없으면 별점을 안 그립니다 (0점 아님).
+   */
+  stars?: PerspectiveStar[] | null
+  overallStar?: StarResult | null
 }
 
 // ★2026-07-30 (1단계) — 이 자리에 있던 ohaengChar 사본을 걷어냈습니다.
@@ -327,6 +339,12 @@ function NewResultInner() {
    *     통변 없이 저장해 둔 이름에 통변이 도착하면 «한 번 더» 저장합니다.
    *   ⚠️ 통변까지 담은 뒤에는 다시 저장하지 않습니다 — 같은 이름이 쌓이면 안 됩니다.
    */
+  /** ★풀이 + 별점을 «한 덩이» 로 — 저장하는 자리가 둘이라 함수로 모읍니다 */
+  const withStars = (t: TryItem): Record<string, unknown> | null =>
+    (t.commentary
+      ? { ...t.commentary, _stars: t.stars ?? null, _overallStar: t.overallStar ?? null }
+      : null) as Record<string, unknown> | null
+
   const savedNamesRef = useRef<Map<string, boolean>>(new Map())
   /** 저장한 기록의 DB id — 풀이가 오면 «그 줄» 을 갈아 끼웁니다 */
   const savedIdRef = useRef<Map<string, string>>(new Map())
@@ -352,7 +370,10 @@ function NewResultInner() {
         try {
           const up = await updateNamingRecordResult(rowId, {
             result,
-            commentary: (cur.commentary ?? null) as Record<string, unknown> | null,
+            // ★별점도 함께 담습니다 (43부 30차) — 보관함에서 다시 열 때 나와야 합니다.
+            //   ⚠️ 감정 화면은 «_stars» 라는 이름으로 꺼내 씁니다(extractStars).
+            //      ★그 이름 그대로 넣어야 보입니다. 새 칸을 만들면 안 보입니다.
+            commentary: withStars(cur),
           })
           if (up.ok) savedNamesRef.current.set(nameKey, true)
         } catch { /* 뒤에서 도는 저장이라 막지 않습니다 */ }
@@ -382,7 +403,10 @@ function NewResultInner() {
         result,
         // Commentary 는 이 화면의 로컬 타입이고 저장 함수는 Record 를 받는다.
         //   담기는 값은 같은 모양이라 캐스팅으로 맞춘다.
-        commentary: (cur.commentary ?? null) as Record<string, unknown> | null,
+        // ★별점도 함께 담습니다 (43부 30차) — 보관함에서 다시 열 때 나와야 합니다.
+            //   ⚠️ 감정 화면은 «_stars» 라는 이름으로 꺼내 씁니다(extractStars).
+            //      ★그 이름 그대로 넣어야 보입니다. 새 칸을 만들면 안 보입니다.
+            commentary: withStars(cur),
         // ⚠️ service_type 은 «나누지 않습니다» — 나누면 옛 기록이 목록에서 사라집니다
         serviceType: 'naming',
         // ★2026-08-01 (43부) — «붙박이 '개명'» 을 걷어냈습니다 (결함 ③).
@@ -512,9 +536,14 @@ function NewResultInner() {
         yongsin: { intro: '', name: '', meaning: '' },
       }
       const commentary: Commentary = (data.commentary as Commentary) ?? EMPTY
+      // ★API 가 준 별점을 «받습니다». 전에는 여기서 버렸습니다 (43부 30차)
+      const gotStars = (data.stars as PerspectiveStar[] | undefined) ?? null
+      const gotOverall = (data.overallStar as StarResult | undefined) ?? null
 
       setTries((prev) => {
-        const nextTries = prev.map((t, i) => (i === activeTry ? { ...t, commentary } : t))
+        const nextTries = prev.map((t, i) => (i === activeTry
+          ? { ...t, commentary, stars: gotStars, overallStar: gotOverall }
+          : t))
         try {
           localStorage.setItem(NEWNAME_HISTORY_KEY, JSON.stringify({ userId: uid, tries: nextTries }))
         } catch {}
@@ -661,8 +690,9 @@ function NewResultInner() {
           solarDay={solar?.day ?? 1}
           dayStem={dayStem ?? ''}
           commentary={cur.commentary}
-          stars={null}
-          overallStar={null}
+          // ★별점을 «그대로» 넘깁니다 — 감정 화면과 같은 부품이 그립니다 (43부 30차)
+          stars={cur.stars ?? null}
+          overallStar={cur.overallStar ?? null}
           yongsin={(yongsin || null) as never}
           careerHref="/manseryeok/career-input"
           // ★2026-08-01 (43부 28차) — 아래 «버금» 줄로 옮겼습니다.

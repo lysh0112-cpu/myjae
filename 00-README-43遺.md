@@ -3,7 +3,7 @@
 ```
 기준 저장소   https://github.com/lysh0112-cpu/myjae.git
 기준 커밋     3b97c57
-검사          857 → ★1,370건 · 실패 0
+검사          857 → ★1,383건 · 실패 0
 타입          tsc --noEmit 통과
 eslint        기준선 유지 (오류 동일 · 경고 1건 감소)
 ```
@@ -37,6 +37,49 @@ rename/newborn    → storage?mode=naming&open=작명
   ★기록이 «사라진 줄» 알고 놀라시는 일이 없어야 합니다
 · mode 가 없을 때를 예전 그대로 둔 것은 «일부러» 입니다 — 옛 링크·마이페이지 (교훈 AM)
 ```
+
+---
+
+## 🔴 43부 30차 — 별점이 «사라진» 것이 아니라 «버려지고» 있었습니다
+
+```
+🔴 원인  app/manseryeok/naming/rename/newresult/page.tsx
+           stars={null}
+           overallStar={null}
+   ★/api/naming 이 별점을 «주고 있었는데» 화면이 그것을 버렸습니다.
+   ⚠️ 「안 만든 것」이 아니라 «받아 놓고 안 쓴» 것이었습니다.
+```
+
+### ① 공용 별점 부품 — app/components/common/StarRating.tsx
+```
+전  별 그리는 코드가 PerspectiveAccordion «안» 에 숨어 있었습니다.
+    → 다른 화면에서 쓰려면 그 파일을 열어야 했고, 결국 «안 쓰게» 됩니다.
+       그 결과가 작명 결과의 stars={null} 입니다.
+
+후  ★StarRating 하나만 씁니다.
+    · 아코디언 머리 · 요약 카드 · 앞으로 생길 어느 자리든
+    · 아코디언은 옛 이름(Stars)으로 «다시 내보내» 부르던 곳이 안 깨집니다
+⚠️ 별점이 «없으면» 빈 자리를 냅니다 — 0점으로 그리면 «아주 나쁜 이름» 으로 보입니다.
+   ★없는 것과 나쁜 것은 다릅니다. (교훈 EJ)
+```
+
+### ② 두 화면이 «같은 부품»
+```
+내 이름 정밀분석   요약 카드 · 아코디언 머리 — StarRating
+내 아이 명품작명   ★같은 프레임(NameAnalysisResultView)을 쓰므로 자동으로 같습니다
+                   이제 별점 데이터까지 이어져 «완전히» 같습니다
+화살표 22px · padding · 0.25초 회전 — 한 부품이라 «저절로» 같습니다
+```
+
+### ③ 보관함에서 다시 열 때도
+```
+저장에 «_stars» 로 담습니다.
+⚠️ 감정 화면이 그 이름으로 꺼냅니다(extractStars). 새 칸을 만들면 «안 보입니다».
+⚠️ 저장하는 자리가 «둘»(신규·갱신)이라 한 함수(withStars)로 모았습니다 —
+   한쪽만 고치는 날이 반드시 옵니다.
+```
+
+⚠️ 옛 기록에는 별점이 없습니다. 그때는 «빈 자리» 로 둡니다 — 새로 짓는 이름부터 나옵니다.
 
 ---
 
@@ -863,7 +906,7 @@ BEST(2) + 낱장(3) + 폴더(6) = SERVICES(11)   ← 딱 맞아야 통과
 
 ```
 lib/saju/namingSession.ts        작명 «대상» 을 Step 2→3→4 로 나르는 단일 창구
-28-verify-naming-flow.ts         작명 동선 그물 441건  → verify 등록
+28-verify-naming-flow.ts         작명 동선 그물 454건  → verify 등록
 30-e2e-naming-flow.ts            세 동선 + 조건 e2e 68건 → verify 등록
 29-measure-resource-weights.ts   자원오행 배점 «자»
                                  ⚠️ verify 에 «넣지 않았습니다» — 검사가 아닙니다

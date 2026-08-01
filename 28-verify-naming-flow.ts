@@ -214,6 +214,39 @@ console.log('\n━━ ⑲-h ⚠️ 옛 개명 손님이 «안 깨지는가» ━
   }
 }
 
+console.log('\n━━ ⑲-J 🔴★별점 — 공용 부품 · 두 화면 통일 (43부 30차) ━━')
+{
+  const nr = codeOf(S.nr)
+  const acc = codeOf(read('app/manseryeok/components/PerspectiveAccordion.tsx'))
+  const view = codeOf(read('app/manseryeok/naming/components/NameAnalysisResultView.tsx'))
+  const star = read('app/components/common/StarRating.tsx')
+
+  // ① 공용 부품
+  check(existsSync('app/components/common/StarRating.tsx'), `★공용 별점 부품이 있습니다`)
+  check(/export default function StarRating/.test(star), `StarRating 을 내어 줍니다`)
+  // ⚠️ 별을 «두 곳» 에서 그리면 화면마다 모양이 갈립니다
+  check(/export \{ default as Stars \} from '@\/app\/components\/common\/StarRating'/.test(acc),
+    `★아코디언이 «자기 별» 을 그리지 않고 공용 부품을 씁니다`)
+  check(!/function Stars\(\{ s, size/.test(acc), `아코디언 안의 옛 Stars 가 없습니다`)
+  check(/import PerspectiveAccordion, \{ Stars/.test(view),
+    `요약 카드도 «같은 부품» 을 씁니다`)
+  // ⚠️ 없는 별점을 0점으로 그리면 «아주 나쁜 이름» 으로 보입니다
+  check(/if \(!s\) return null/.test(star),
+    `★별점이 없으면 «빈 자리» 를 냅니다 (0점으로 그리지 않습니다)`)
+  check(/없는 것과 나쁜 것은 다릅니다/.test(star), `⚠️ 그 까닭이 적혀 있습니다`)
+
+  // ② 🔴 작명 결과가 별점을 «버리던» 자리
+  check(!/stars=\{null\}/.test(nr), `★★stars={null} 이 없습니다 (별점을 버리지 않습니다)`)
+  check(/stars=\{cur\.stars \?\? null\}/.test(nr), `★API 가 준 별점을 그대로 넘깁니다`)
+  check(/const gotStars = \(data\.stars/.test(nr), `★API 응답에서 별점을 받습니다`)
+  check(/stars\?: PerspectiveStar\[\] \| null/.test(nr), `기록 모양에 별점 자리가 있습니다`)
+  // ③ 보관함에서 다시 열 때도 나오는가 — 이름이 «같아야» 합니다
+  check(/_stars: t\.stars \?\? null/.test(nr) && /_overallStar/.test(nr),
+    `★보관함 저장에 «_stars» 로 담습니다 (감정 화면이 그 이름으로 꺼냅니다)`)
+  check(/const withStars = /.test(nr),
+    `⚠️ 저장하는 자리가 둘이라 «한 함수» 로 모았습니다 (한쪽만 고치지 않게)`)
+}
+
 console.log('\n━━ ⑲-I ★화살표 · 요약 카드 · 하단 위계 (43부 27·28차) ━━')
 {
   const acc = codeOf(read('app/manseryeok/components/PerspectiveAccordion.tsx'))
@@ -239,7 +272,9 @@ console.log('\n━━ ⑲-I ★화살표 · 요약 카드 · 하단 위계 (43�
   check(/id=\{`persp-\$\{String\(h\.key\)\}`\}/.test(acc), `관점마다 닻이 있습니다`)
   check(/scrollMarginTop/.test(acc), `⚠️ 머리글에 «가려지지» 않게 여백을 두었습니다`)
   // ⚠️ 별점을 두 곳에서 그리면 모양이 갈립니다
-  check(/export function Stars/.test(acc) && /import PerspectiveAccordion, \{ Stars/.test(view),
+  // ★30차 — 별점 그리기가 «공용 부품» 으로 옮겨졌습니다 (위 ⑲-J 가 봅니다)
+  check(/from '@\/app\/components\/common\/StarRating'/.test(acc)
+     && /import PerspectiveAccordion, \{ Stars/.test(view),
     `★별점은 «한 곳» 에서만 그립니다 (교훈 CJ)`)
 
   // ③ 하단 위계
