@@ -1,7 +1,12 @@
 'use client'
 import { useState, useEffect, useRef, Suspense, CSSProperties } from 'react'
-import { splitSurname } from '@/lib/saju/surname'
+import { splitSurname, surnameOfHangul } from '@/lib/saju/surname'
 import { useRouter, useSearchParams } from 'next/navigation'
+// ★2026-08-01 (43부) — 작명 «대상» 을 Step 3·4 까지 잃지 않고 나릅니다 (결함 ①②③④)
+import {
+  loadNamingTarget, saveNamingTarget, namingTargetQuery, guessKind, hasSaju,
+  type NamingTarget, type NamingKindLite,
+} from '@/lib/saju/namingSession'
 import { supabase } from '@/lib/supabase'
 import { fromMyInfo, fromProfile, personKey } from '@/lib/saju/myInfo'
 // ★2026-08-01 (Step 2) — 추천·사전에서 고르기
@@ -53,7 +58,6 @@ function NewNameInner() {
   // ★2026-07-31 복성 — 성이 두 글자일 수 있습니다.
   //   예전에는 남궁민수가 성「남」 + 이름「궁·민」 으로 채워져 «수» 가 사라졌습니다.
   const [surnameChars, setSurnameChars] = useState<SavedChar[]>([])
-  const surname: SavedChar | null = surnameChars[0] ?? null
   /**
    * 화면에 보일 성씨 — 복성이면 두 글자를 붙입니다.
    *
@@ -63,10 +67,60 @@ function NewNameInner() {
    *   ★그래서 앞 화면에서 실어 온 성씨(URL) 를 «받쳐» 씁니다.
    *     저장된 이름이 있으면 그쪽이 먼저입니다 — 개명은 성씨가 이미 정해져 있으니까요.
    */
-  const surnameFromUrl = (sp?.get('surname') || sp?.get('name') || '').trim().slice(0, 2)
-  const surnameHanja = surnameChars.map(c => c.hanja).join('')
-  const surnameHangul = surnameChars.map(c => c.hangul).join('') || surnameFromUrl
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-01 (43부) 결함 ② — 이 값이 «한 번도 쓰이지 않았습니다»
+  //
+  //   [무엇이 있었나]
+  //     surnameHangul = chars.join('') || surnameFromUrl 이었는데
+  //       · chars 가 있으면 앞이 이기고
+  //       · chars 가 없으면 아래 313행 관문에서 «이미 막혔습니다»
+  //     → 42부에 넣은 «URL 성씨 받치기» 가 구조상 도달 불가였습니다.
+  //
+  //   ⚠️ 앞 두 글자를 그냥 자르면 안 됩니다 — 보관함은 「류 첫째」를,
+  //      개명은 「김철수」를 name 으로 실어 보냅니다.
+  //      ★성 분리는 surname.ts 한 곳만 씁니다 (교훈 CJ).
+  // ══════════════════════════════════════════════════════════════
+  //   ⚠️ 세션(부본)도 봅니다 — Step 3 에서 «뒤로» 로 돌아오면 URL 이 빕니다.
+  //      그때 성씨가 사라지면 손님이 처음부터 다시 해야 합니다.
+  const [sess, setSess] = useState<NamingTarget | null>(null)
+
+  const surnameFromUrl = (() => {
+    const s = (sp?.get('surname') || '').trim()
+    if (s) return surnameOfHangul(s)
+    const fromName = surnameOfHangul(sp?.get('name') || '')
+    if (fromName) return fromName
+    return sess?.surnameHangul ?? ''
+  })()
+  /**
+   * ★2026-08-01 (43부) — URL 이 성씨를 «또박또박» 준 경우 그것이 «먼저» 입니다.
+   *
+   *   [왜]  아래 surnameChars 는 my_names 의 «내 가장 최근 이름풀이» 입니다.
+   *     아기 이름을 지으러 온 부모에게도 그 값이 있습니다.
+   *     ⚠️ 그것을 먼저 쓰면 「류 아기」를 지으러 왔는데 «부모 성씨·부모 이름» 이 나옵니다.
+   *     ★앞 화면이 성씨를 명시했으면 그 사람의 것입니다.
+   */
+  const explicitSurname = surnameOfHangul(sp?.get('surname') || '')
+  const loadedSurnameHangul = surnameChars.map(c => c.hangul).join('')
+  const surnameHangul = explicitSurname || loadedSurnameHangul || surnameFromUrl
+  // ⚠️ 한자 성씨는 «불러온 것이 이 성씨일 때만» 씁니다. 아니면 Step 3 에서 고릅니다.
+  const surnameHanja = loadedSurnameHangul === surnameHangul
+    ? surnameChars.map(c => c.hanja).join('')
+    : ''
   const [loaded, setLoaded] = useState(false)
+
+  /**
+   * ★결함 ③ — 개명인가 신생아인가.
+   *   URL 이 «먼저» 이고, 없으면 chars 유무로 가늠합니다.
+   *   chars 있음 → 개명 (성씨가 이미 정해져 있습니다)
+   *   chars 없음 → 신생아 (아직 이름이 없습니다)
+   */
+  const kind: NamingKindLite =
+    sp?.get('kind') === '신생아' ? '신생아'
+      : sp?.get('kind') === '개명' ? '개명'
+        // ⚠️ chars 가 «이 성씨의» 것일 때만 개명으로 봅니다.
+        //    부모의 이름 기록을 보고 아기 작명을 개명으로 오해하지 않도록.
+        : sess?.kind ?? guessKind(surnameHanja.length > 0)
+  const isNewborn = kind === '신생아'
 
   // ── 이용권/결제 ──
   const [uid, setUid] = useState('')
@@ -116,6 +170,10 @@ function NewNameInner() {
     }
 
     async function load() {
+      // ★세션(부본)을 먼저 집어 둡니다 — 뒤로가기로 돌아온 손님을 받쳐 줍니다
+      const t = loadNamingTarget()
+      if (!cancelled && t) setSess(t)
+
       // 1) 로그인했으면 내 계정(my_names)에서 가장 최근 이름풀이 전체를 불러와 채움
       try {
         const { data: u } = await supabase.auth.getUser()
@@ -183,8 +241,10 @@ function NewNameInner() {
     setter(firstHangul(raw))
   }
 
+  // ★2026-08-01 (43부) — «한글» 성씨만 있으면 됩니다.
+  //   전에는 !!surname(= 저장된 한자 성씨)을 봤습니다. 신생아는 그것이 «없습니다».
   const ready =
-    !!surname &&
+    surnameHangul.length > 0 &&
     count !== null &&
     firstHangul(c1).trim().length > 0 &&
     (count === 1 || firstHangul(c2).trim().length > 0)
@@ -196,7 +256,7 @@ function NewNameInner() {
     const name = count === 1 ? a : a + b
     // 남은 조회 횟수가 있으면 바로 진입, 없으면 결제 팝업
     if (readRemaining() > 0) {
-      router.push(withOpts('/manseryeok/naming/rename/newhanja?name=' + encodeURIComponent(name)))
+      goHanja(name)
     } else {
       setPendingName(name)
       setPayOpen(true)
@@ -212,7 +272,7 @@ function NewNameInner() {
       localStorage.removeItem('newname_history_v1')
     } catch {}
     setPayOpen(false)
-    router.push(withOpts('/manseryeok/naming/rename/newhanja?name=' + encodeURIComponent(pendingName)))
+    goHanja(pendingName)
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -223,15 +283,12 @@ function NewNameInner() {
   //      실제로 쓰는 곳은 Step 2 추천 화면입니다.
   //   ⚠️ style·prefer·avoid 는 «교재 밖 취향» 입니다. 길흉 판정에 쓰지 마십시오.
   // ══════════════════════════════════════════════════════════════
-  const namingOpts = (() => {
-    const q = new URLSearchParams()
-    for (const k of ['kind', 'style', 'prefer', 'avoid', 'relation']) {
-      const v = sp?.get(k)
-      if (v) q.set(k, v)
-    }
-    return q.toString()
-  })()
-  const withOpts = (base: string) => (namingOpts ? `${base}&${namingOpts}` : base)
+  //   ★2026-08-01 (43부) 결함 ③④ — 여기서 나르는 것이 «옵션» 만이 아니게 되었습니다.
+  //     전에는 kind·style·prefer·avoid·relation 다섯 개만 실었고,
+  //       · kind 는 newhanja 가 «읽지도 넘기지도» 않아 거기서 끊겼고 (③)
+  //       · 사주는 아예 «안 실어» Step 3 이 내 myinfo 로 돌아갔습니다 (④)
+  //     ★이제 성씨·사주·kind 까지 한 덩이(NamingTarget)로 나릅니다.
+  //     아래 target / withOpts / goHanja 를 보십시오.
 
   // ══════════════════════════════════════════════════════════════
   //  ★2026-08-01 (Step 2) — 추천에 쓸 «용신» 을 여기서 구합니다
@@ -240,25 +297,45 @@ function NewNameInner() {
   //      추천을 하려면 사주가 있어야 합니다. myinfo(또는 URL)에서 읽어 냅니다.
   //   ⚠️ 용신을 못 구해도 «멈추지 않습니다». 그때는 발음오행만으로 줄 세웁니다.
   // ══════════════════════════════════════════════════════════════
+  //   ★2026-08-01 (43부) — from 을 함께 돌려줍니다.
+  //     'url' 이면 «보관함에서 고른 그 사람» 이고, 'me' 면 로그인한 나입니다.
+  //     ⚠️ 이 구분이 있어야 Step 3·4 에 «누구 사주를» 넘기는지가 또렷해집니다.
   const infoForSaju = (() => {
     const q = (k: string) => sp?.get(k)
     if (q('year')) {
       return {
+        from: 'url' as const,
         calType: q('calType') || '양력',
         year: Number(q('year')), month: Number(q('month') || 1), day: Number(q('day') || 1),
         leapMonth: q('leapMonth') || '0',
         hourIdx: q('hour') && q('hour') !== '모름' ? Number(q('hour')) : null,
+        gender: q('gender') || null,
+      }
+    }
+    // ★세션(부본) — 뒤로가기로 돌아왔을 때 «그 사람» 사주를 지킵니다
+    if (hasSaju(sess)) {
+      return {
+        from: 'url' as const,
+        calType: sess!.calType, year: sess!.year, month: sess!.month, day: sess!.day,
+        leapMonth: sess!.leapMonth, hourIdx: sess!.hourIdx, gender: sess!.gender,
       }
     }
     try {
       const m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
       return {
+        from: 'me' as const,
         calType: m.calType || '양력',
         year: Number(m.year) || 0, month: Number(m.month) || 1, day: Number(m.day) || 1,
         leapMonth: m.leapMonth || '0',
         hourIdx: m.hour != null && m.hour !== '모름' ? Number(m.hour) : null,
+        gender: m.gender || null,
       }
-    } catch { return { calType: '양력', year: 0, month: 1, day: 1, leapMonth: '0', hourIdx: null } }
+    } catch {
+      return {
+        from: 'me' as const, calType: '양력', year: 0, month: 1, day: 1,
+        leapMonth: '0', hourIdx: null, gender: null,
+      }
+    }
   })()
 
   const { saju, solar, dayStem } = useResultSaju(
@@ -276,6 +353,43 @@ function NewNameInner() {
     } catch { return '' }
   })()
 
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-01 (43부) — 작명 «대상» 한 덩이 (결함 ③④를 여기서 막습니다)
+  //
+  //   ⚠️ 성씨·사주·kind 가 «따로» 흘러 다니면 한 군데만 빠져도
+  //      Step 3 이 조용히 내 사주로 돌아갑니다. 그것이 ④였습니다.
+  //      → 한 덩이로 묶어 «통째로» 넘깁니다.
+  // ══════════════════════════════════════════════════════════════
+  const target: NamingTarget = {
+    kind,
+    surnameHangul,
+    // ★신생아는 한자 성씨가 «없습니다». Step 3 에서 성씨 한자부터 고릅니다.
+    surnameHanja: surnameHanja || null,
+    calType: infoForSaju.calType,
+    year: infoForSaju.year,
+    month: infoForSaju.month,
+    day: infoForSaju.day,
+    leapMonth: infoForSaju.leapMonth,
+    hourIdx: infoForSaju.hourIdx,
+    gender: infoForSaju.gender,
+    relation: sp?.get('relation') ?? null,
+    personTitle: sp?.get('name') ?? null,
+    style: sp?.get('style') ?? null,
+    prefer: sp?.get('prefer') ?? null,
+    avoid: sp?.get('avoid') ?? null,
+  }
+
+  /** ★Step 3 로 가는 «단 하나» 의 문. URL(정본) + 세션(부본) 둘 다에 실어 보냅니다 */
+  function goHanja(n: string) {
+    saveNamingTarget(target)
+    router.push(withOpts('/manseryeok/naming/rename/newhanja?name=' + encodeURIComponent(n)))
+  }
+
+  const withOpts = (base: string) => {
+    const q = namingTargetQuery(target)
+    return q ? `${base}&${q}` : base
+  }
+
   /**
    * ★2026-08-01 (Step 2) — 추천·사전에서 고른 이름으로 바로 넘어갑니다.
    *   ⚠️ 직접 쓰기와 «같은 길» 을 씁니다 — 이용권 차감·결제 흐름이 갈리면 안 됩니다.
@@ -284,7 +398,7 @@ function NewNameInner() {
     const n = name.trim()
     if (!n) return
     if (readRemaining() > 0) {
-      router.push(withOpts('/manseryeok/naming/rename/newhanja?name=' + encodeURIComponent(n)))
+      goHanja(n)
     } else {
       setPendingName(n)
       setPayOpen(true)
@@ -310,16 +424,33 @@ function NewNameInner() {
     )
   }
 
-  if (loaded && !surname) {
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-01 (43부) 결함 ① — 여기가 «신생아를 막던» 자리입니다
+  //
+  //   [무엇이 있었나]  조건이 `!surname` 이었습니다.
+  //     surname 은 «저장된 이름(chars)의 첫 글자» 입니다.
+  //     ⚠️ 신생아는 이름이 «없어서» 오는 손님입니다. chars 가 없습니다.
+  //     → 성씨를 또박또박 적고 들어와도 「먼저 이름 풀이에서 시작해 주세요」를 봤습니다.
+  //       작명 입구를 만들어 놓고 작명을 막고 있었습니다.
+  //
+  //   [이제]  «한글 성씨 한 글자» 만 있으면 들여보냅니다.
+  //     한자 성씨는 Step 3 에서 고릅니다 — 그것이 신생아의 정상 순서입니다.
+  //   ⚠️ 성씨조차 없을 때만 막습니다. 그때는 어디로 가야 하는지도 알려 줍니다.
+  // ══════════════════════════════════════════════════════════════
+  if (loaded && !surnameHangul) {
     return (
       <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
-        <Header router={router} />
+        <Header router={router} isNewborn={isNewborn} />
         <div style={{ padding: '40px 8px', textAlign: 'center', color: SUB, lineHeight: 1.8 }}>
-          먼저 &lsquo;내 이름 풀이&rsquo;에서 시작해 주세요.
+          성씨를 먼저 알려 주세요.
+          <div style={{ fontSize: 12, marginTop: 8, color: '#a8927e' }}>
+            보관함에서 <b>[+ 새 이름 짓기]</b> 를 누르시면
+            <br />성씨와 생년월일을 받아 이리로 모셔 옵니다.
+          </div>
           <div style={{ marginTop: 20 }}>
-            <button onClick={() => router.push('/manseryeok/naming')}
+            <button onClick={() => router.push('/manseryeok/naming/diagnosis/storage')}
               style={{ padding: '12px 22px', borderRadius: 12, background: 'rgba(200,120,60,0.12)', border: '1px solid ' + GOLD, color: GOLD, fontWeight: 700, cursor: 'pointer' }}>
-              이름 메뉴로 가기 →
+              이름 보관함으로 가기 →
             </button>
           </div>
         </div>
@@ -331,9 +462,14 @@ function NewNameInner() {
 
   return (
     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
-      <Header router={router} />
-      <p style={{ fontSize: 12, color: SUB, margin: '0 0 16px', padding: '0 4px' }}>
-        성씨 {surnameHanja}({surnameHangul})는 그대로 · 발음은 두고 한자만 바꿔드려요
+      <Header router={router} isNewborn={isNewborn} />
+      {/* ★2026-08-01 (43부) — 신생아와 개명은 «하는 일이 다릅니다». 문구를 갈랐습니다.
+          개명  : 발음은 그대로 두고 한자만 바꿉니다
+          신생아: 한글 이름부터 짓고, 한자는 다음 걸음에서 고릅니다 */}
+      <p style={{ fontSize: 12, color: SUB, margin: '0 0 16px', padding: '0 4px', lineHeight: 1.7 }}>
+        {isNewborn
+          ? <><b style={{ color: '#8f3d0e' }}>{surnameHangul}</b> 씨 아기의 이름을 지어 드립니다 · 한자는 다음 걸음에서 골라요</>
+          : <>성씨 {surnameHanja}({surnameHangul})는 그대로 · 발음은 두고 한자만 바꿔드려요</>}
       </p>
 
       {/* ★2026-08-01 (Step 2) — 세 갈래로 고릅니다.
@@ -356,7 +492,8 @@ function NewNameInner() {
         <>
           <div style={{ background: CARD, border: '1px solid rgba(200,120,60,0.10)', borderRadius: 16, padding: '18px 16px' }}>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
-              <span style={{ fontSize: 22, color: SUB }}>{surnameHanja}</span>
+              {/* ★2026-08-01 (43부) — 신생아는 한자 성씨가 «아직 없습니다». 한글로 보여 줍니다 */}
+              <span style={{ fontSize: 22, color: SUB }}>{surnameHanja || surnameHangul}</span>
               <input
                 value={c1}
                 maxLength={2}
@@ -381,7 +518,9 @@ function NewNameInner() {
               )}
             </div>
             <div style={{ fontSize: 11, color: SUB, textAlign: 'center', marginTop: 12, lineHeight: 1.6 }}>
-              원래 이름이 채워져 있어요. 그대로 두면 발음은 유지하고 한자만 바꿔드려요.
+              {isNewborn
+                ? '부르고 싶은 한글 이름을 적어 주세요. 한자는 다음 걸음에서 골라 드려요.'
+                : '원래 이름이 채워져 있어요. 그대로 두면 발음은 유지하고 한자만 바꿔드려요.'}
             </div>
           </div>
           <button onClick={proceed} disabled={!ready} className="active:scale-95"
@@ -427,15 +566,26 @@ function NewNameInner() {
   )
 }
 
-function Header({ router }: { router: ReturnType<typeof useRouter> }) {
+function Header({ router, isNewborn }: {
+  router: ReturnType<typeof useRouter>
+  isNewborn?: boolean
+}) {
   return (
     <div style={{
       position: 'sticky', top: 0, zIndex: 50,
       display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px',
       background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid #f0e0d5',
     }}>
-      <button onClick={() => router.push('/manseryeok/naming/diagnosis')} aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
-      <span style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>발음 그대로, 한자 바꾸기</span>
+      {/* ★2026-08-01 (43부) — 신생아는 «이름 풀이» 를 한 적이 없습니다.
+          그 화면으로 되돌리면 갈 곳이 없어 보입니다. 보관함으로 보냅니다. */}
+      <button
+        onClick={() => router.push(isNewborn
+          ? '/manseryeok/naming/diagnosis/storage'
+          : '/manseryeok/naming/diagnosis')}
+        aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
+      <span style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>
+        {isNewborn ? '아기 이름 짓기' : '발음 그대로, 한자 바꾸기'}
+      </span>
     </div>
   )
 }

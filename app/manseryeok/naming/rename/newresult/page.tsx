@@ -1,7 +1,7 @@
 'use client'
 import { Suspense, useState, useEffect, useMemo, useRef } from 'react'
 import { splitSurname } from '@/lib/saju/surname'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 // ★2026-08-01 (Phase 1-C) — 감정과 «같은» 결과 프레임
 import NameAnalysisResultView from '@/app/manseryeok/naming/components/NameAnalysisResultView'
@@ -12,6 +12,10 @@ import { diagnoseName, type NameChar, type DiagnoseResult, type Grade } from '@/
 import { saveNamingRecord } from '@/lib/saju/namingRecords'
 import ConsultButton from '@/app/components/common/ConsultButton'
 import { ohaengOrEmpty } from '@/lib/saju/ohaeng'
+// ★2026-08-01 (43부) — 작명 «대상» 을 Step 3 에서 그대로 받습니다 (결함 ③④)
+import {
+  resolveNamingTarget, hasSaju, type NamingTarget,
+} from '@/lib/saju/namingSession'
 
 const GOLD = '#c8783c'
 const CARD = '#fffbf7'
@@ -60,6 +64,23 @@ function gradeColor(g: Grade | string) {
 
 function NewResultInner() {
   const router = useRouter()
+  const sp = useSearchParams()
+
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-01 (43부) 결함 ③④ — 이 화면이 «누구의» 이름을 그리는지
+  //
+  //   [무엇이 있었나]
+  //     ③ badge 와 보관함 저장이 «'개명' 붙박이» 였습니다.
+  //        → 「신생아」 배지는 «생길 길이 없었습니다».
+  //     ④ 사주를 localStorage myinfo(내 것)에서만 읽었습니다.
+  //        → 가족 이름을 지어도 결과는 «내» 사주로 풀렸습니다.
+  //
+  //   ⚠️ 대상이 없으면 target 은 null 이고, 아래는 옛 길(myinfo·'개명')로 갑니다.
+  //      ★기존 개명 손님의 화면은 달라지지 않습니다. (교훈 [폴백])
+  // ══════════════════════════════════════════════════════════════
+  const [target, setTarget] = useState<NamingTarget | null>(null)
+  /** 개명인가 신생아인가 — ★붙박이를 걷어낸 자리 */
+  const namingKind = target?.kind ?? '개명'
 
   const [info, setInfo] = useState<{
     calType: string; year: number; month: number; day: number
@@ -96,20 +117,34 @@ function NewResultInner() {
     let cancelled = false
 
     async function load() {
-      // 사주 info는 localStorage myinfo에서 (계산용)
-      try {
-        const m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
-        if (m.year && !cancelled) {
+      // ★대상을 «먼저» 받습니다 — URL(정본) → 세션(부본)
+      const t = resolveNamingTarget((k) => sp?.get(k))
+      if (!cancelled) setTarget(t)
+
+      // ── 사주 info ──
+      //   ★① 대상의 사주 (결함 ④가 새던 자리)  ② 없으면 localStorage myinfo
+      if (hasSaju(t)) {
+        if (!cancelled) {
           setInfo({
-            calType: (m.calType as string) || '양력',
-            year: parseInt(String(m.year)),
-            month: parseInt(String(m.month)),
-            day: parseInt(String(m.day)),
-            leapMonth: (m.leapMonth as string) || '0',
-            hourIdx: m.hour === '모름' || m.hour == null ? null : parseInt(String(m.hour)),
+            calType: t!.calType, year: t!.year, month: t!.month, day: t!.day,
+            leapMonth: t!.leapMonth, hourIdx: t!.hourIdx,
           })
         }
-      } catch {}
+      } else {
+        try {
+          const m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
+          if (m.year && !cancelled) {
+            setInfo({
+              calType: (m.calType as string) || '양력',
+              year: parseInt(String(m.year)),
+              month: parseInt(String(m.month)),
+              day: parseInt(String(m.day)),
+              leapMonth: (m.leapMonth as string) || '0',
+              hourIdx: m.hour === '모름' || m.hour == null ? null : parseInt(String(m.hour)),
+            })
+          }
+        } catch {}
+      }
 
       // ★ tries는 user_id 열쇠로 읽음 (저장한 newhanja와 동일 규칙)
       try {
@@ -128,7 +163,7 @@ function NewResultInner() {
 
     load()
     return () => { cancelled = true }
-  }, [])
+  }, [sp])
 
   const { saju, solar, dayStem } = useResultSaju(
     info?.calType || '양력',
@@ -183,15 +218,27 @@ function NewResultInner() {
     try {
       const res = await saveNamingRecord({
         chars: cur.chars,
-        relation: 'self',
-        person: null,
+        // ★2026-08-01 (43부) — 「누구 이름인가」를 기록에 남깁니다.
+        //   전에는 언제나 self 라, 아이 이름을 지어도 보관함에 «본인» 으로 쌓였습니다.
+        relation: target?.relation || 'self',
+        person: target && hasSaju(target)
+          ? {
+              gender: target.gender || '남',
+              calType: target.calType,
+              year: String(target.year), month: String(target.month), day: String(target.day),
+              leapMonth: target.leapMonth,
+              hour: target.hourIdx == null ? '모름' : String(target.hourIdx),
+            }
+          : null,
         result,
         // Commentary 는 이 화면의 로컬 타입이고 저장 함수는 Record 를 받는다.
         //   담기는 값은 같은 모양이라 캐스팅으로 맞춘다.
         commentary: (cur.commentary ?? null) as Record<string, unknown> | null,
+        // ⚠️ service_type 은 «나누지 않습니다» — 나누면 옛 기록이 목록에서 사라집니다
         serviceType: 'naming',
-        // ★2026-08-01 — 보관함에서 «작명» 으로 갈립니다 (옛 기록은 «풀이» 로 남습니다)
-        kind: '개명',
+        // ★2026-08-01 (43부) — «붙박이 '개명'» 을 걷어냈습니다 (결함 ③).
+        //   전에는 신생아 작명도 「개명」으로 저장돼 보관함 배지가 늘 개명이었습니다.
+        kind: namingKind,
       })
       // ★실패해도 alert 로 막지 않는다. 고객이 부른 게 아니라 자동 저장이다.
       if (res.ok && res.id) {
@@ -423,8 +470,8 @@ function NewResultInner() {
         <NameAnalysisResultView
           hanjaName={fullName}
           hangulName={hangulName}
-          subtitle="새로 지은 이름"
-          badge={{ kind: '개명' }}
+          subtitle={namingKind === '신생아' ? '아기에게 지어 드린 이름' : '새로 지은 이름'}
+          badge={{ kind: namingKind }}
           saju={saju}
           solarYear={solar?.year ?? 0}
           solarMonth={solar?.month ?? 1}

@@ -16,7 +16,7 @@
  */
 
 import { Suspense, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   listNamingRecords, deleteNamingRecord, daysAgoLabel,
   NAMING_RELATION_COLOR, namingRelationGroup, namingRelationLabel,
@@ -24,6 +24,7 @@ import {
 } from '@/lib/saju/namingRecords'
 import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
 import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
+import { surnameOfHangul } from '@/lib/saju/surname'
 
 // ══════════════════════════════════════════════════════════════════
 //  ★2026-08-01 — 보관함에 «풀이» 와 «작명» 을 가르는 탭을 넣습니다
@@ -58,6 +59,7 @@ const GRADE_COLOR: Record<string, string> = {
 
 function NamingStorageInner() {
   const router = useRouter()
+  const sp = useSearchParams()
 
   const [records, setRecords] = useState<NamingRecord[] | null>(null)
   const [confirmDel, setConfirmDel] = useState<NamingRecord | null>(null)
@@ -80,7 +82,15 @@ function NamingStorageInner() {
   //   ⚠️ 작명 조건(어감·선호 소리·피할 글자)은 Step 2 화면 «안» 에서 고릅니다.
   //      여기서 묻고 저기서 또 묻으면 손님이 지칩니다.
   // ══════════════════════════════════════════════════════════════
-  const [pickerOpen, setPickerOpen] = useState<null | '풀이' | '작명'>(null)
+  // ★2026-08-01 (43부 · E) — 아기 이름 짓기 입구(rename/newborn)에서
+  //   ?open=작명 으로 들어오면 그 자리에서 작명 폼을 엽니다.
+  //   ⚠️ 폼을 두 곳에 만들지 않기 위한 길입니다 (교훈 CJ).
+  //   ⚠️ 효과(useEffect)로 열지 «않습니다» — 한 번 더 그려지고 폼이 깜박입니다.
+  //      첫 값으로 둡니다.
+  const openParam = sp?.get('open')
+  const [pickerOpen, setPickerOpen] = useState<null | '풀이' | '작명'>(
+    openParam === '작명' || openParam === '풀이' ? openParam : null,
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -332,12 +342,17 @@ function NamingStorageInner() {
         namingMode={pickerOpen === '작명'}   /* ★작명이면 «이름» 대신 «성씨 + 태명·호칭» */
         onClose={() => setPickerOpen(null)}
         onPickMe={() => {
-          const to = pickerOpen === '작명'
-            ? '/manseryeok/naming/rename/newname'   // Step 2 — 이름 고르기
-            : '/manseryeok/naming/diagnosis'        // 감정
           setPickerOpen(null)
+          if (pickerOpen === '작명') {
+            // ★2026-08-01 (43부) — 이 길은 «성씨 + 태명» 으로 들어옵니다.
+            //   즉 «아직 이름이 없는» 작명입니다. kind 를 또박또박 실어 보냅니다.
+            //   ⚠️ 안 실으면 newname 이 my_names(내 최근 이름풀이)를 보고
+            //      「개명」으로 오해합니다. ③번이 되살아나는 자리입니다.
+            router.push('/manseryeok/naming/rename/newname?kind=신생아')
+            return
+          }
           // ⚠️ 사주는 로그인 회원 본인 것이라 파라미터 없이 넘깁니다
-          router.push(to)
+          router.push('/manseryeok/naming/diagnosis')
         }}
         onPick={(person: SavedPerson) => {
           const base = pickerOpen === '작명'
@@ -349,10 +364,13 @@ function NamingStorageInner() {
           const rel = person.relation ? `&relation=${encodeURIComponent(person.relation)}` : ''
           // ★작명이면 «성씨» 도 함께 — 아직 이름이 없는 손님을 받쳐 줍니다.
           //   저장된 이름의 «첫 글자» 를 성씨로 봅니다 (「류 첫째」 면 「류」).
+          //   ⚠️ 앞 두 글자를 그냥 자르지 않습니다 — 복성 판단은 surname.ts 한 곳만.
           const sn = pickerOpen === '작명' && person.title
-            ? `&surname=${encodeURIComponent(person.title.trim().split(/\s+/)[0].slice(0, 2))}`
+            ? `&surname=${encodeURIComponent(surnameOfHangul(person.title))}`
             : ''
-          router.push(`${base}?${q}${rel}${sn}`)
+          // ★kind — 이 길은 «이름이 아직 없는» 작명입니다 (43부 결함 ③)
+          const kd = pickerOpen === '작명' ? '&kind=신생아' : ''
+          router.push(`${base}?${q}${rel}${sn}${kd}`)
         }}
       />
     </main>

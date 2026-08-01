@@ -152,6 +152,12 @@ const SERVICES = [
   { name: '이사택일',   color: '#967850', bg: '#f0eae0', href: '/manseryeok/moving-timing/moving-storage', cat: '택일', sub: '좋은 이사 날', icon: '🏡', grad: ['#a3e635', '#6ee7b7'] },
   // 📇 sky-400 → cyan-300
   { name: '내이름 감정', color: '#5a825a', bg: '#eaf0e6', href: '/manseryeok/naming/diagnosis/storage', cat: '개명', sub: '이름 풀이해 보기', icon: '📇', grad: ['#38bdf8', '#67e8f9'] },
+  // ★2026-08-01 (43부 · E) — 아기 이름 짓기를 «다시» 홈에 냅니다.
+  //   [왜 사라져 있었나]  기능이 미완성이라 닫아 두었고, 카드 연결도 끊겼습니다.
+  //     그 사이 rename/newborn 은 «아무도 부르지 않는» 준비중 안내로 남아 있었습니다.
+  //   ★43부에 신생아 동선(성씨만으로 시작 → 성씨 한자 고르기 → 신생아 배지)이
+  //     갖춰져 재오픈합니다. 👶 emerald-400 → teal-300
+  { name: '아기 작명',   color: '#4a7c59', bg: '#e6f0ea', href: '/manseryeok/naming/rename/newborn', cat: '개명', sub: '아기 이름 지어 주기', icon: '👶', grad: ['#34d399', '#5eead4'] },
   // 🃏 violet-500 → fuchsia-400
   { name: '타로',       color: '#b45a78', bg: '#f6e5eb', href: '/tarot', cat: '기타', sub: '오늘의 카드', icon: '🃏', grad: ['#8b5cf6', '#e879f9'] },
   // 🧭 BEST — purple-500 → pink-400

@@ -220,7 +220,12 @@ console.log('\n━━ ⑯-h ★보관함 — 풀이와 작명을 가르는가 (P
     `읽을 때 기본값으로 메웁니다`)
 
   // ② 두 화면이 «자기 종류» 를 적는가
-  check(/kind: '개명'/.test(newres), `개명 결과가 «개명» 으로 저장합니다`)
+  //   ★2026-08-01 (43부) — 검사를 «갱신» 했습니다.
+  //     전에는 /kind: '개명'/ 을 «요구» 했는데, 그 붙박이 때문에
+  //     신생아 작명도 「개명」으로 저장돼 배지가 늘 개명이었습니다 (결함 ③).
+  //     ⚠️ 검사가 결함을 «지키고» 있던 자리입니다. 이제 «대상에서 받는지» 를 봅니다.
+  check(/kind: namingKind/.test(newres) && !/kind: '개명'/.test(newres),
+    `★작명 결과가 «개명·신생아» 를 가려 저장합니다 (붙박이 아님)`)
   check(/kind: '풀이'/.test(diag), `이름 풀이가 «풀이» 로 저장합니다`)
 
   // ③ 화면 — 필터 탭 · 태그 · 통합 버튼
@@ -437,8 +442,17 @@ console.log('\n━━ ⑯-m ★작명은 «이름 없이» 시작할 수 있는�
   // ④ ★성씨가 다음 화면까지 «살아 가는가»
   check(/surname=/.test(sto), `보관함이 «성씨» 를 실어 보냅니다`)
   check(/surnameFromUrl/.test(nn), `★newname 이 URL 성씨를 «받쳐» 씁니다`)
-  check(/surnameChars\.map\(c => c\.hangul\)\.join\(''\) \|\| surnameFromUrl/.test(nn),
-    `저장된 이름이 있으면 그쪽이 먼저 — 없으면 URL 성씨`)
+  // ★2026-08-01 (43부) — 검사를 «뒤집었습니다».
+  //   🔴 전에는 「저장된 이름이 먼저」를 요구했습니다. 그런데 그 «저장된 이름» 은
+  //      my_names 의 «내 가장 최근 이름풀이» 입니다.
+  //      → 아기 이름을 지으러 온 부모에게 «부모 성씨» 가 나왔습니다.
+  //        그리고 chars 가 있으니 kind 도 「개명」으로 굳었습니다 (결함 ②③).
+  //   ★앞 화면이 성씨를 «또박또박» 주었으면 그 사람의 것입니다. 그쪽이 먼저입니다.
+  //   ⚠️ URL 이 성씨를 «안 줄 때» 는 예전처럼 저장된 이름을 씁니다 — 개명은 그대로입니다.
+  check(/const explicitSurname = surnameOfHangul\(sp\?\.get\('surname'\) \|\| ''\)/.test(nn),
+    `★URL 이 준 성씨가 «먼저» 입니다 (없으면 저장된 이름으로 내려갑니다)`)
+  check(/explicitSurname \|\| loadedSurnameHangul \|\| surnameFromUrl/.test(nn),
+    `성씨 순서 — URL · 저장된 이름 · 받침(세션) 세 겹입니다`)
 }
 
 console.log(`\n━━ 만세력 화면 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)

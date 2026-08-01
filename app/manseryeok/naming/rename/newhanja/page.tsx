@@ -8,6 +8,11 @@ import { supabase } from '@/lib/supabase'
 import { diagnoseName, type NameChar } from '@/lib/saju/naming'
 import { fromMyInfo, fromProfile, personKey, type MyInfo } from '@/lib/saju/myInfo'
 import { ohaengOrEmpty } from '@/lib/saju/ohaeng'
+// ★2026-08-01 (43부) — 작명 «대상» 을 Step 2 에서 그대로 받습니다 (결함 ③④)
+import {
+  resolveNamingTarget, saveNamingTarget, namingTargetQuery, hasSaju,
+  type NamingTarget,
+} from '@/lib/saju/namingSession'
 // ★2026-07-30 (3단계) — hanja 표 단일 창구 + 후보 정렬 이관
 import {
   HANJA_SELECT, listPolicy, rowOhaeng, rowStrokes, rowHanja,
@@ -62,10 +67,27 @@ function NewHanjaInner() {
 
   const [info, setInfo] = useState<MyInfo | null>(null)
 
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-01 (43부) 결함 ③④ — 이 화면이 «누구» 의 이름을 짓는지
+  //
+  //   [무엇이 있었나]
+  //     ③ kind(개명·신생아)를 Step 2 가 URL 로 실어 보냈는데
+  //        이 화면이 «읽지도 넘기지도» 않아 여기서 끊겼습니다.
+  //     ④ 사주를 localStorage myinfo(내 것)에서만 읽었습니다.
+  //        보관함에서 가족을 골라도 한자는 «내» 사주로 골라졌습니다.
+  //
+  //   [이제]  URL(정본) → 세션(부본) 순으로 대상을 받습니다.
+  //   ⚠️ 둘 다 없으면 target 은 null 이고, 아래는 «옛 길»(myinfo)로 갑니다.
+  //      ★기존 개명 손님의 화면은 한 글자도 달라지지 않습니다. (교훈 [폴백])
+  // ══════════════════════════════════════════════════════════════
+  const [target, setTarget] = useState<NamingTarget | null>(null)
+
   // ★2026-07-31 복성 — 성이 두 글자일 수 있어 배열로 둡니다.
   //   예전에는 저장 레코드의 chars[0] 만 집어서 남궁민수의 «궁» 이 통째로 사라졌습니다.
   const [surnameChars, setSurnameChars] = useState<SavedChar[]>([])
-  const surname: SavedChar | null = surnameChars[0] ?? null
+  // ★2026-08-01 (43부) — 여기 있던 surname(= chars 첫 글자)을 걷어냈습니다.
+  //   신생아는 그 값이 «없는 것이 정상» 이라, 화면이 그 값을 보면 다시 막힙니다.
+  //   ⚠️ 대신 surnameNow(고른 것 포함)와 wantSurname(대상의 성씨)을 쓰십시오.
   const [uid, setUid] = useState<string>('')   // ★ 로그인 회원 user_id (tries 저장 열쇠)
   const [syllables, setSyllables] = useState<string[]>([])
   const [activeIdx, setActiveIdx] = useState<number>(0)
@@ -90,12 +112,30 @@ function NewHanjaInner() {
     let cancelled = false
 
     async function loadAll() {
-      // ── info 구성: localStorage myinfo 우선, 없으면 profiles(DB) ──
+      // ★대상을 «먼저» 받습니다 — 이것이 있으면 myinfo 를 보지 않습니다
+      const t = resolveNamingTarget((k) => sp.get(k))
+      if (!cancelled) setTarget(t)
+
+      // ── info 구성 ──
+      //   ★① 대상의 사주 (보관함에서 고른 그 사람 — 결함 ④가 새던 자리)
+      //     ② 없으면 localStorage myinfo
+      //     ③ 그것도 없으면 profiles(DB)
       let stdInfo: MyInfo | null = null
-      try {
-        const m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
-        stdInfo = fromMyInfo(m)
-      } catch {}
+      if (hasSaju(t)) {
+        stdInfo = fromMyInfo({
+          calType: t!.calType,
+          year: String(t!.year), month: String(t!.month), day: String(t!.day),
+          leapMonth: t!.leapMonth,
+          hour: t!.hourIdx == null ? '모름' : String(t!.hourIdx),
+          gender: t!.gender ?? '남',
+        })
+      }
+      if (!stdInfo) {
+        try {
+          const m = JSON.parse(localStorage.getItem(MY_INFO_KEY) || '{}')
+          stdInfo = fromMyInfo(m)
+        } catch {}
+      }
 
       if (!stdInfo) {
         try {
@@ -157,10 +197,92 @@ function NewHanjaInner() {
     return () => { cancelled = true }
   }, [sp])
 
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-01 (43부) — 성씨 한자를 «고를 수도» 있게 했습니다
+  //
+  //   [왜 필요한가]  신생아는 chars 가 없어 성씨 한자를 «아무도 모릅니다».
+  //     ⚠️ 그런데 수리 4격은 성씨 획수에서 시작하고,
+  //        자원오행 흐름은 성씨 오행에서 출발합니다.
+  //        성씨 한자가 없으면 «판정을 할 수가 없습니다».
+  //     ★그래서 신생아는 성씨 한자를 «첫 칸» 으로 두고 고르게 합니다.
+  //       류(柳/劉), 정(鄭/丁), 강(姜/康) 처럼 집안마다 다릅니다 — 물어야 맞습니다.
+  //
+  //   [개명은 그대로입니다]  저장된 chars 의 성씨가 «대상의 성씨와 같으면»
+  //     예전처럼 붙박이 칸으로 보여 줍니다. 화면이 달라지지 않습니다.
+  // ══════════════════════════════════════════════════════════════
+  const wantSurname = target?.surnameHangul
+    || surnameChars.map((c) => c.hangul).join('')
+  /** 불러온 성씨가 «이 대상의» 성씨인가. 아니면 골라야 합니다 */
+  const loadedSurnameFits =
+    surnameChars.length > 0
+    && surnameChars.map((c) => c.hangul).join('') === wantSurname
+  const pickSurname = !loadedSurnameFits && wantSurname.length > 0
+
+  /** 성씨 칸(고를 때만) + 이름 칸. ★activeIdx·chosen 은 이 배열을 가리킵니다 */
+  const slots = useMemo(() => {
+    const sur = pickSurname
+      ? Array.from(wantSurname).map((h) => ({ hangul: h, role: '성' as const }))
+      : []
+    return [...sur, ...syllables.map((h) => ({ hangul: h, role: '이름' as const }))]
+  }, [pickSurname, wantSurname, syllables])
+
+  const surnameSlotCount = pickSurname ? Array.from(wantSurname).length : 0
+
+  /** 지금까지 확정된 성씨 글자들 (고르는 중이면 아직 빌 수 있습니다) */
+  const pickedSurnameChars: SavedChar[] = useMemo(() => {
+    if (!pickSurname) return surnameChars
+    const out: SavedChar[] = []
+    for (let i = 0; i < surnameSlotCount; i++) {
+      const row = chosen[i]
+      if (!row) break
+      out.push({
+        hangul: slots[i].hangul, hanja: rowHanja(row),
+        strokes: rowStrokes(row), resourceOhaeng: rowOhaeng(row) ?? '',
+      })
+    }
+    return out
+  }, [pickSurname, surnameChars, surnameSlotCount, chosen, slots])
+
+  /** ★화면·판정이 쓰는 «지금의» 성씨 첫 글자 */
+  const surnameNow: SavedChar | null = pickedSurnameChars[0] ?? null
+
+  /** ★결함 ③ — 개명인가 신생아인가. 여기서 «끊기던» 값입니다 */
+  const isNewborn = (target?.kind ?? '개명') === '신생아'
+
   const infoYear = info ? parseInt(info.year) : 0
   const infoMonth = info ? parseInt(info.month) : 0
   const infoDay = info ? parseInt(info.day) : 0
   const infoHourIdx = info ? (info.hour === '모름' ? null : parseInt(info.hour)) : null
+
+  /**
+   * ★2026-08-01 (43부) — 결과 화면으로 넘길 «지금의» 대상.
+   *
+   *   · 앞에서 받은 대상이 있으면 그것을 쓰고,
+   *   · 없으면(옛 길로 들어온 개명) 지금 화면이 아는 것으로 «만들어» 줍니다.
+   *     ⚠️ 옛 길에서도 결과 화면이 myinfo 로 되돌아가지 않게 하려는 것입니다.
+   *   · 성씨 한자는 여기서 «확정» 되므로 채워 넣습니다 (신생아가 방금 골랐습니다).
+   */
+  const targetNow: NamingTarget | null = useMemo(() => {
+    if (!wantSurname) return null
+    const base: NamingTarget = target ?? {
+      kind: '개명',
+      surnameHangul: wantSurname,
+      surnameHanja: null,
+      calType: info?.calType || '양력',
+      year: infoYear, month: infoMonth, day: infoDay,
+      leapMonth: info?.leapMonth || '0',
+      hourIdx: infoHourIdx,
+      gender: info?.gender ?? null,
+      relation: null, personTitle: null,
+      style: null, prefer: null, avoid: null,
+    }
+    const surHanja = pickedSurnameChars.map((c) => c.hanja).join('')
+    return {
+      ...base,
+      surnameHangul: wantSurname,
+      surnameHanja: surHanja || base.surnameHanja,
+    }
+  }, [target, wantSurname, info, infoYear, infoMonth, infoDay, infoHourIdx, pickedSurnameChars])
 
   const { saju, solar, dayStem, converting } = useResultSaju(
     info?.calType || '양력',
@@ -193,8 +315,8 @@ function NewHanjaInner() {
   const yongsinReady = !converting && !!yongsin
 
   useEffect(() => {
-    if (!restored || syllables.length === 0) { setHanjaList([]); return }
-    const hangul = syllables[activeIdx]
+    if (!restored || slots.length === 0) { setHanjaList([]); return }
+    const hangul = slots[activeIdx]?.hangul
     if (!hangul) { setHanjaList([]); return }
     let cancelled = false
     setLoadingList(true)
@@ -220,16 +342,38 @@ function NewHanjaInner() {
         setLoadingList(false)
       })
     return () => { cancelled = true }
-  }, [activeIdx, syllables, restored])
+  }, [activeIdx, slots, restored])
+
+  /**
+   * ★2026-08-01 (43부) — 어느 칸을 고르는 중인지에 따라 «성/이름» 을 다시 엮습니다.
+   *
+   *   개명   : 성씨는 붙박이, 후보는 언제나 «이름» 칸에 들어갑니다 (예전 그대로)
+   *   신생아 : 앞 칸이 성씨입니다. 성씨를 고르는 중이면 «후보가 성씨» 가 됩니다.
+   *
+   *   ⚠️ 아직 안 고른 칸은 빈 글자로 둡니다 — 예전과 같습니다.
+   *      diagnoseName 이 빈 글자를 이미 견디도록 되어 있습니다.
+   */
+  const composeWith = useMemo(() => (row: HanjaRow | null) => {
+    const asChar = (r: HanjaRow, hangul: string): SavedChar => ({
+      hangul, hanja: rowHanja(r), strokes: rowStrokes(r), resourceOhaeng: rowOhaeng(r) ?? '',
+    })
+    const all: SavedChar[] = slots.map((slot, i) => {
+      if (row && i === activeIdx) return asChar(row, slot.hangul)
+      const pick = chosen[i]
+      if (pick) return asChar(pick, slot.hangul)
+      return { hangul: slot.hangul, hanja: '', strokes: 0, resourceOhaeng: '' }
+    })
+    const sur = pickSurname ? all.slice(0, surnameSlotCount) : surnameChars
+    const giv = all.slice(surnameSlotCount)
+    return { sur, giv }
+  }, [slots, activeIdx, chosen, pickSurname, surnameSlotCount, surnameChars])
 
   const scored = useMemo(() => {
-    if (!yongsinReady || !surname || hanjaList.length === 0) return []
-    const surnameChar: NameChar = {
-      hangul: surname.hangul,
-      hanja: surname.hanja,
-      strokes: surname.strokes,
-      resourceOhaeng: ohaengOrEmpty(surname.resourceOhaeng),
-    }
+    // ⚠️ 성씨를 «고르는 중» 이면 surnameNow 가 아직 없습니다. 그래도 재야 합니다 —
+    //    후보 자체가 성씨이기 때문입니다. 그래서 surnameNow 를 조건에서 뺐습니다.
+    if (!yongsinReady || hanjaList.length === 0 || slots.length === 0) return []
+    if (!pickSurname && !surnameNow) return []
+
     // ★사주 프로필 — 후보마다 다시 만들지 않습니다
     const profile = buildSajuOhaengProfile({
       isStrong: yong.isStrong, yongsin: yong.yongsin, heeksin: yong.heeksin,
@@ -237,23 +381,17 @@ function NewHanjaInner() {
     }, saju)
 
     return hanjaList.map((row) => {
-      const given: NameChar[] = syllables.map((syl, i) => {
-        if (i === activeIdx) {
-          return { hangul: row.hangul, hanja: rowHanja(row), strokes: rowStrokes(row), resourceOhaeng: rowOhaeng(row) ?? '' }
-        }
-        const pick = chosen[i]
-        if (pick) {
-          return { hangul: syl, hanja: rowHanja(pick), strokes: rowStrokes(pick), resourceOhaeng: rowOhaeng(pick) ?? '' }
-        }
-        return { hangul: syl, hanja: '', strokes: 0, resourceOhaeng: '' }
+      const { sur, giv } = composeWith(row)
+      const toNC = (c: SavedChar): NameChar => ({
+        hangul: c.hangul, hanja: c.hanja, strokes: c.strokes,
+        resourceOhaeng: ohaengOrEmpty(c.resourceOhaeng),
       })
+      const given: NameChar[] = giv.map(toNC)
       const r = diagnoseName({
-        surname: surnameChar,
-        surname2: surnameChars[1]
-          ? { hangul: surnameChars[1].hangul, hanja: surnameChars[1].hanja,
-              strokes: surnameChars[1].strokes,
-              resourceOhaeng: ohaengOrEmpty(surnameChars[1].resourceOhaeng) }
-          : null,
+        surname: sur[0]
+          ? toNC(sur[0])
+          : { hangul: wantSurname[0] ?? '', hanja: '', strokes: 0, resourceOhaeng: '' },
+        surname2: sur[1] ? toNC(sur[1]) : null,
         given,
         yongsin: yong.yongsin,
         heeksin: yong.heeksin,
@@ -263,7 +401,7 @@ function NewHanjaInner() {
       //   자원오행+사주보완 칸만 judgeResource 의 0~100 으로. 수리·발음 무게는 그대로.
       const verdict = judgeResource(
         // ★복성이면 성 두 글자를 배열로 — 둘째 글자가 이름 글자로 채점되지 않도록
-        surnameChars.map(c => ({ hanja: c.hanja, hangul: c.hangul,
+        sur.map(c => ({ hanja: c.hanja, hangul: c.hangul,
           primary: ohaengOrEmpty(c.resourceOhaeng) || null, secondary: null })),
         given.map(g => ({ hanja: g.hanja, hangul: g.hangul,
           primary: ohaengOrEmpty(g.resourceOhaeng) || null, secondary: null })),
@@ -275,7 +413,7 @@ function NewHanjaInner() {
       const fitsYongsin = rowOhaeng(row) === yongsin
       return { row, weighted, fitsYongsin, verdict }
     })
-  }, [yongsinReady, surname, hanjaList, syllables, activeIdx, chosen, yong, saju])
+  }, [yongsinReady, hanjaList, slots, pickSurname, surnameNow, wantSurname, composeWith, yong, saju, yongsin])
 
   const { recommend, others } = useMemo(() => {
     if (scored.length === 0) return { recommend: [] as { row: HanjaRow; rank: number }[], others: [] as HanjaRow[] }
@@ -306,32 +444,27 @@ function NewHanjaInner() {
   }
 
   // 완성된 이름의 chars 배열
+  //   ★2026-08-01 (43부) — 성씨 칸까지 아우릅니다 (신생아는 성씨도 «고른» 것입니다)
   function buildNameChars(): SavedChar[] | null {
-    if (!surname) return null
-    // 아직 모든 글자의 한자를 고르지 않았으면 계산하지 않음 (undefined 방지)
-    if (syllables.length === 0) return null
-    if (!syllables.every((_, i) => chosen[i])) return null
-    return [
-      ...surnameChars,          // ★복성이면 두 글자 모두
-      ...syllables.map((syl, i) => {
-        const pick = chosen[i]!
-        // ★2026-07-30 (1단계) — 보관함에 «표준 표기» 로 남깁니다.
-        //   판정 경로(위 useMemo)는 이미 정규화했지만 이 줄은 저장용이라 날것이었습니다.
-        //   날것으로 저장하면 다시보기 때 그 값이 다시 흘러 들어옵니다.
-        return { hangul: syl, hanja: rowHanja(pick), strokes: rowStrokes(pick), resourceOhaeng: rowOhaeng(pick) ?? '' }
-      }),
-    ]
+    if (slots.length === 0) return null
+    // 아직 모든 칸의 한자를 고르지 않았으면 계산하지 않음 (undefined 방지)
+    if (!slots.every((_, i) => chosen[i])) return null
+    if (!pickSurname && !surnameNow) return null
+    const { sur, giv } = composeWith(null)
+    // ★2026-07-30 (1단계) — 보관함에 «표준 표기» 로 남깁니다.
+    //   판정 경로(위 useMemo)는 이미 정규화했지만 이 줄은 저장용이라 날것이었습니다.
+    //   날것으로 저장하면 다시보기 때 그 값이 다시 흘러 들어옵니다.
+    return [...sur, ...giv]
   }
 
   // "이 이름으로 →" : 다음 글자로 넘어가거나, 다 골랐으면 확인 팝업 띄우기
   function proceed() {
     if (!chosen[activeIdx]) return
-    const next = syllables.findIndex((_, i) => !chosen[i] && i !== activeIdx)
+    const next = slots.findIndex((_, i) => !chosen[i] && i !== activeIdx)
     if (next !== -1) {
       setActiveIdx(next)
       return
     }
-    if (!surname) return
     setConfirmOpen(true)   // ★ 즉시 저장 대신 확인 팝업
   }
 
@@ -348,7 +481,10 @@ function NewHanjaInner() {
       if (tries.length >= TRY_LIMIT) {
         alert('총 ' + TRY_LIMIT + '회까지 이름을 지어볼 수 있어요.\n지금까지 본 이름 중에서 골라주세요.')
         setConfirmOpen(false)
-        router.push('/manseryeok/naming/rename/newresult')
+        // ★2026-08-01 (43부) — 이 갈래도 «대상을 실어» 보냅니다.
+        //   ⚠️ 28-verify 가 잡았습니다. 여기만 맨몸이면 횟수를 다 쓴 손님의
+        //      결과 화면이 «내 사주 · 개명 배지» 로 돌아갑니다. 조용히 갈리는 자리입니다.
+        router.push(gotoResult())
         return
       }
       tries.push({ name: hangulName, chars: nameChars })
@@ -363,16 +499,33 @@ function NewHanjaInner() {
     } catch {}
 
     setConfirmOpen(false)
-    router.push('/manseryeok/naming/rename/newresult')
+    // ★2026-08-01 (43부) 결함 ③④ — 대상을 «끝까지» 넘깁니다.
+    //   전에는 아무것도 안 실어 보내 newresult 가 내 myinfo 로 돌아갔고,
+    //   배지·보관함은 '개명' 붙박이였습니다.
+    router.push(gotoResult())
   }
 
-  if (restored && (!surname || syllables.length === 0)) {
+  /**
+   * ★결과 화면으로 가는 «단 하나» 의 문.
+   *   여기서 성씨 한자가 «확정» 되므로 대상에 채워 넣어 다시 실어 보냅니다.
+   */
+  function gotoResult(): string {
+    const base = '/manseryeok/naming/rename/newresult'
+    if (!targetNow) return base
+    saveNamingTarget(targetNow)
+    const q = namingTargetQuery(targetNow)
+    return q ? `${base}?${q}` : base
+  }
+
+  // ★2026-08-01 (43부) — 「성씨가 없다」가 아니라 「성씨 «글자» 조차 없다」로 봅니다.
+  //   신생아는 한자 성씨가 없는 것이 «정상» 입니다. 그건 아래에서 고릅니다.
+  if (restored && (!wantSurname || syllables.length === 0)) {
     return (
       <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
         <Header router={router} />
         <div style={{ padding: '40px 8px', textAlign: 'center', color: SUB, lineHeight: 1.8 }}>
-          {!surname
-            ? <>먼저 &lsquo;내 이름 풀이&rsquo;에서<br />이름을 입력해 주세요.</>
+          {!wantSurname
+            ? <>성씨를 알 수 없어요.<br />앞 화면에서 성씨부터 알려 주세요.</>
             : <>새 이름이 전달되지 않았어요.<br />다시 입력해 주세요.</>}
           <div style={{ marginTop: 20 }}>
             <button onClick={() => router.push('/manseryeok/naming/rename/newname')}
@@ -387,13 +540,14 @@ function NewHanjaInner() {
 
   if (!restored) return <main style={{ minHeight: '100vh', background: '#FDF6F0' }} />
 
-  const target = syllables[activeIdx]
-  const allChosen = syllables.length > 0 && syllables.every((_, i) => chosen[i])
+  // ★2026-08-01 (43부) — 이름은 slotTarget 으로. 위 targetNow(작명 대상)와 헷갈리지 않게 합니다
+  const slotTarget = slots[activeIdx]?.hangul ?? ''
+  const allChosen = slots.length > 0 && slots.every((_, i) => chosen[i])
 
   // 팝업에 보여줄 정보
   const previewChars = buildNameChars()
   const previewHanja = previewChars ? previewChars.map((c) => c.hanja).join('') : ''
-  const previewHangul = surname && syllables.length ? surname.hangul + syllables.join('') : ''
+  const previewHangul = wantSurname && syllables.length ? wantSurname + syllables.join('') : ''
   const curTries = readTries()
   const previewHanjaKey = previewChars ? previewChars.map((c) => c.hanja).join('') : ''
   const alreadyTried = curTries.some((t) => t.chars.map((c) => c.hanja).join('') === previewHanjaKey)
@@ -434,35 +588,77 @@ function NewHanjaInner() {
   return (
     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-      <Header router={router} />
+      <Header router={router} isNewborn={isNewborn} />
 
       <p style={{ fontSize: 12, color: SUB, margin: '0 0 14px', padding: '0 4px', lineHeight: 1.7 }}>
         {!yongsinReady
           ? '사주 불러오는 중…'
-          : <>새 이름 <b style={{ color: '#8f3d0e' }}>{surname!.hanja}{syllables.join('')}</b> · 사주에 필요한 기운은 <b style={{ color: GOLD }}>{yongsin}</b>입니다</>}
+          : <>새 이름 <b style={{ color: '#8f3d0e' }}>{(surnameNow?.hanja || wantSurname)}{syllables.join('')}</b> · 사주에 필요한 기운은 <b style={{ color: GOLD }}>{yongsin}</b>입니다</>}
       </p>
 
+      {/* ══════════════════════════════════════════════════════════
+          ★2026-08-01 (43부) — 칸 줄
+            개명   : 성씨는 붙박이 (예전 그대로)
+            신생아 : 성씨도 «고르는 칸» 입니다 — 류(柳/劉)처럼 집안마다 다릅니다
+          ══════════════════════════════════════════════════════════ */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-        <div style={{ flex: 1, padding: '12px 0', borderRadius: 14, textAlign: 'center', background: CARD, border: '0.5px solid #f0e0d5' }}>
-          <div style={{ fontSize: 22, fontWeight: 700, color: '#cfcdc4' }}>{surname!.hanja}</div>
-          <div style={{ fontSize: 10, color: SUB, marginTop: 3 }}>{surname!.hangul} · 성씨</div>
-        </div>
-        {syllables.map((syl, i) => {
+        {!pickSurname && surnameNow && (
+          <div style={{ flex: 1, padding: '12px 0', borderRadius: 14, textAlign: 'center', background: CARD, border: '0.5px solid #f0e0d5' }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: '#cfcdc4' }}>{surnameNow.hanja}</div>
+            <div style={{ fontSize: 10, color: SUB, marginTop: 3 }}>{surnameNow.hangul} · 성씨</div>
+          </div>
+        )}
+        {slots.map((slot, i) => {
           const on = activeIdx === i
           const done = !!chosen[i]
+          const isSur = slot.role === '성'
           return (
             <button key={i} onClick={() => setActiveIdx(i)} className="active:scale-95"
               style={{ flex: 1, padding: '12px 0', borderRadius: 14, textAlign: 'center', cursor: 'pointer',
                 background: on ? 'rgba(200,120,60,0.12)' : done ? 'rgba(129,199,132,0.14)' : CARD,
                 border: '1px solid ' + (on ? GOLD : done ? GREEN : 'rgba(200,120,60,0.10)') }}>
               <div style={{ fontSize: 22, fontWeight: 700, color: done ? GREEN : on ? GOLD : '#1a1a1a' }}>
-                {done ? chosen[i].hanja : syl}
+                {done ? chosen[i].hanja : slot.hangul}
               </div>
-              <div style={{ fontSize: 10, color: SUB, marginTop: 3 }}>{syl} {done ? '✓' : on ? '고르는 중' : ''}</div>
+              <div style={{ fontSize: 10, color: SUB, marginTop: 3 }}>
+                {slot.hangul}{isSur ? ' · 성씨' : ''} {done ? '✓' : on ? '고르는 중' : ''}
+              </div>
             </button>
           )
         })}
       </div>
+
+      {/* ★신생아 — 성씨 한자를 왜 묻는지 알려 줍니다 */}
+      {pickSurname && activeIdx < surnameSlotCount && (
+        <div style={{
+          background: '#fff7f0', border: `1px solid ${GOLD}`, borderRadius: 12,
+          padding: '11px 13px', marginBottom: 14, fontSize: 11.5, color: '#5c3a1e', lineHeight: 1.7,
+        }}>
+          <b>성씨 한자부터 골라 주세요.</b><br />
+          같은 「{wantSurname}」 라도 집안마다 한자가 다릅니다.
+          획수와 오행이 달라져 <b>이름 전체의 풀이가 바뀝니다</b>.
+          <br />가족관계등록부에 적힌 한자를 골라 주세요.
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════
+          ★2026-08-01 (43부 · E-②) — 대법원 인명용 한자 안내
+            ⚠️ 목록은 «자의품격(不用)» 기준으로 거른 것입니다.
+               대법원 인명용 한자표와 «같다고 말하지 않습니다» — 지어내지 않습니다.
+               → 출생신고 전에 한 번 더 확인하시라고 «알려만» 드립니다.
+            🔴 PENDING — hanja 표에 «대법원 인명용» 표시 칸이 아직 없습니다.
+               들어오면 이 안내를 «판정» 으로 올릴 수 있습니다.
+          ══════════════════════════════════════════════════════════ */}
+      {isNewborn && (
+        <div style={{
+          background: CARD, border: '0.5px solid #f0e0d5', borderRadius: 12,
+          padding: '10px 13px', marginBottom: 14, fontSize: 11, color: '#8a7063', lineHeight: 1.7,
+        }}>
+          ⚠️ 출생신고에는 <b>대법원 인명용 한자</b>만 쓸 수 있습니다.
+          여기 목록은 작명 기준으로 고른 것이라, 고르신 한자가 그 표에 있는지
+          <b> 대법원 전자가족관계등록시스템</b>에서 한 번 더 확인해 주세요.
+        </div>
+      )}
 
       {(!yongsinReady || loadingList) && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '40px 0' }}>
@@ -473,7 +669,7 @@ function NewHanjaInner() {
 
       {yongsinReady && !loadingList && hanjaList.length === 0 && (
         <div style={{ textAlign: 'center', color: SUB, padding: 24, fontSize: 13 }}>
-          &lsquo;{target}&rsquo; 음의 인명용 한자를 찾을 수 없어요
+          &lsquo;{slotTarget}&rsquo; 음의 인명용 한자를 찾을 수 없어요
         </div>
       )}
 
@@ -493,7 +689,7 @@ function NewHanjaInner() {
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: SUB, display: 'inline-block' }} />
-            <span style={{ fontSize: 11, color: SUB }}>그 외 &lsquo;{target}&rsquo; 한자</span>
+            <span style={{ fontSize: 11, color: SUB }}>그 외 &lsquo;{slotTarget}&rsquo; 한자</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
             {others.map((x) => cell(x, false))}
@@ -545,7 +741,10 @@ function NewHanjaInner() {
   )
 }
 
-function Header({ router }: { router: ReturnType<typeof useRouter> }) {
+function Header({ router, isNewborn }: {
+  router: ReturnType<typeof useRouter>
+  isNewborn?: boolean
+}) {
   return (
     <div style={{
       position: 'sticky', top: 0, zIndex: 50,
@@ -553,7 +752,9 @@ function Header({ router }: { router: ReturnType<typeof useRouter> }) {
       background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid #f0e0d5',
     }}>
       <button onClick={() => router.push('/manseryeok/naming/rename/newname')} aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
-      <span style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>새 이름 한자 고르기</span>
+      <span style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>
+        {isNewborn ? '아기 이름 한자 고르기' : '새 이름 한자 고르기'}
+      </span>
     </div>
   )
 }

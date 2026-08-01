@@ -97,6 +97,30 @@ export function findCompoundSurname(
 }
 
 /**
+ * ★2026-08-01 (43부) — «한글 글자열» 에서 성씨만 떼어 냅니다.
+ *
+ * [왜 필요한가]  신생아 작명은 chars 가 «없습니다». 손님이 성씨를 «글자로» 적고,
+ *   보관함은 「류 첫째」 같은 호칭을 통째로 실어 보냅니다.
+ *   그때 앞 두 글자를 무턱대고 자르면 「김철수」가 「김철」이 됩니다.
+ *
+ * ⚠️ 복성 판단은 위 BY_HANGUL 한 곳만 봅니다 — 목록을 새로 만들지 마십시오.
+ *
+ *   "류"        → "류"
+ *   "류 첫째"   → "류"      (첫 낱말만 봅니다)
+ *   "남궁"      → "남궁"    (복성)
+ *   "김철수"    → "김"      (복성이 아니니 한 글자)
+ */
+export function surnameOfHangul(text: string): string {
+  const first = (text ?? "").trim().split(/\s+/)[0] ?? "";
+  const ch = [...first];
+  if (ch.length >= 2) {
+    const two = ch[0] + ch[1];
+    if (BY_HANGUL.has(two)) return two;
+  }
+  return ch[0] ?? "";
+}
+
+/**
  * 글자 배열을 «성» 과 «이름» 으로 가릅니다. ★성 분리는 이 함수 하나로만 하십시오.
  *
  * 남궁민수 → surname [남, 궁] · given [민, 수]
