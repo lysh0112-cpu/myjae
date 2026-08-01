@@ -154,7 +154,11 @@ const SERVICES = [
   // ★2026-08-01 (43부 2차) — mode 를 실어 보냅니다.
   //   ⚠️ 두 카드가 «같은 보관함» 으로 들어와, 버튼을 가른 뜻이 도로 뭉개졌습니다.
   //      이제 입구마다 «전용 화면» 이 뜹니다.
-  { name: '내이름 감정', color: '#5a825a', bg: '#eaf0e6', href: '/manseryeok/naming/diagnosis/storage?mode=diagnosis', cat: '개명', sub: '이름 풀이해 보기', icon: '📇', grad: ['#38bdf8', '#67e8f9'] },
+  //   ★2026-08-01 (43부 4차) — 폴더 밖 «낱장 카드» 로 나왔습니다.
+  //     sub 도 「이름 풀이해 보기」 → 「내 이름 풀이 및 개명」 으로 (대표님 지시).
+  //     ⚠️ 낱장 카드의 한 줄은 ServiceSection 의 SOLO_COPY 가 «먼저» 입니다.
+  //        여기 sub 는 압핀 칩·다른 화면이 쓰므로 함께 맞춰 둡니다.
+  { name: '내이름 감정', color: '#5a825a', bg: '#eaf0e6', href: '/manseryeok/naming/diagnosis/storage?mode=diagnosis', cat: '개명', sub: '내 이름 풀이 및 개명', icon: '📇', grad: ['#38bdf8', '#67e8f9'] },
   // ★2026-08-01 (43부 · E) — 아기 이름 짓기를 «다시» 홈에 냅니다.
   //   [왜 사라져 있었나]  기능이 미완성이라 닫아 두었고, 카드 연결도 끊겼습니다.
   //     그 사이 rename/newborn 은 «아무도 부르지 않는» 준비중 안내로 남아 있었습니다.

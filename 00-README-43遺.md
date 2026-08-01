@@ -3,7 +3,7 @@
 ```
 기준 저장소   https://github.com/lysh0112-cpu/myjae.git
 기준 커밋     3b97c57
-검사          857 → ★1,017건 · 실패 0
+검사          857 → ★1,039건 · 실패 0
 타입          tsc --noEmit 통과
 eslint        기준선 유지 (오류 동일 · 경고 1건 감소)
 ```
@@ -37,6 +37,34 @@ rename/newborn    → storage?mode=naming&open=작명
   ★기록이 «사라진 줄» 알고 놀라시는 일이 없어야 합니다
 · mode 가 없을 때를 예전 그대로 둔 것은 «일부러» 입니다 — 옛 링크·마이페이지 (교훈 AM)
 ```
+
+---
+
+## ★홈 개편 — 폴더 없이 한 번에 (43부 4차)
+
+```
+전  📂 궁합 & 기타 (2)  ← 열어야 「궁합」·「내이름 감정」이 나옴 (두 걸음)
+    🗂️ 그 밖의 서비스    ← 🔴「아기 작명」이 «여기» 있었습니다
+후  💖 궁합          두 사람의 결
+    📇 내이름 감정   내 이름 풀이 및 개명
+    👶 아기 작명     아기 이름 지어 주기      ★셋 다 «낱장» · 한 번만 누르면 들어갑니다
+```
+
+🔴 **함께 발견한 것 —「아기 작명」이 엉뚱한 폴더에 있었습니다.**
+43부에 홈 카드를 되살리며 `SERVICES` 에만 더하고 `GROUPS` 에 안 적었습니다.
+`orphans` 안전망이 받아 「🗂️ 그 밖의 서비스」로 보내고 있었습니다.
+⚠️ **안전망은 «사라지는 것» 만 막습니다. «엉뚱한 자리» 는 못 막습니다.**
+
+★그래서 카드 배치를 «수를 세어» 검사합니다 (28-verify ⑲-n):
+```
+BEST(2) + 낱장(3) + 폴더(6) = SERVICES(11)   ← 딱 맞아야 통과
+고아 0 · 유령 0 · 두 번 뜨는 것 0
+⚠️ 홈 카드가 조용히 사라지면 그 서비스로 가는 길이 «통째로» 끊깁니다.
+   화면에서 원인을 찾으면 못 찾습니다.
+```
+
+⚠️ 연결(href)은 **하나도 안 바꿨습니다.** 자리를 옮긴 것이지 길을 바꾼 것이 아닙니다.
+⚠️ 압핀(📌)도 그대로입니다 — 회원 설정을 말없이 없애지 않았습니다.
 
 ---
 
@@ -79,7 +107,7 @@ rename/newborn    → storage?mode=naming&open=작명
 
 ```
 lib/saju/namingSession.ts        작명 «대상» 을 Step 2→3→4 로 나르는 단일 창구
-28-verify-naming-flow.ts         작명 동선 그물 99건   → verify 등록
+28-verify-naming-flow.ts         작명 동선 그물 121건  → verify 등록
 30-e2e-naming-flow.ts            세 동선 + 조건 e2e 57건 → verify 등록
 29-measure-resource-weights.ts   자원오행 배점 «자»
                                  ⚠️ verify 에 «넣지 않았습니다» — 검사가 아닙니다
@@ -95,7 +123,8 @@ lib/saju/namingSession.ts        작명 «대상» 을 Step 2→3→4 로 나르
  naming/rename/newresult   ③'개명' 붙박이 제거 · ④대상 사주 · relation 기록
  naming/rename/newborn     E — 준비중 안내 → 실입구 (+ mode 전달)
  naming/diagnosis/storage  kind 전달 · ?open=작명 · ★?mode= 분기
- app/home-new              👶 카드 복원 + ★두 카드에 mode
+ app/home-new              👶 카드 복원 · 두 카드에 mode · ★sub 문구
+ home-new/components/ServiceSection  ★낱장 카드(SOLO) · 「궁합 & 기타」 폴더 해제
  lib/saju/surname.ts       surnameOfHangul() 추가
  naming/components/NamePicker  ★조건 즉시 반영 · 실시간 미리보기 · 조합 중 낱자 거르기
  lib/saju/nameRecommend.ts     ★선호 소리를 «줄 세우기 첫 잣대» 로

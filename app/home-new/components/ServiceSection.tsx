@@ -127,6 +127,36 @@ const BEST_THEME: Record<string, BestTheme> = {
 /** 갈래 안에 하나뿐이어도 접지 않고 바로 보여 줄 갈래 */
 const ALWAYS_OPEN = ['saju']
 
+// ══════════════════════════════════════════════════════════════════
+//  ★2026-08-01 (43부 4차) — «폴더를 열지 않고» 바로 들어가는 카드 (대표님 지시)
+//
+//  🔴 [무엇이 문제였나]
+//    ① 「궁합」과 「내이름 감정」이 «궁합 & 기타 (2)» 폴더 «안» 에 있었습니다.
+//       손님이 궁합을 보려면 폴더를 «열고» 골라야 했습니다. 두 걸음입니다.
+//       ⚠️ 이름표가 「궁합 & 기타」라 «이름 감정이 거기 있는 줄» 알기도 어려웠습니다.
+//    ② ★「아기 작명」은 아예 «그 밖의 서비스» 폴더에 있었습니다.
+//       43부에 홈 카드를 되살리며 SERVICES 에만 더하고 GROUPS 에 안 적었습니다.
+//       → 아래 orphans 안전망이 받아 «🗂️ 그 밖의 서비스» 로 보내고 있었습니다.
+//       ⚠️ 안전망이 «사라지는 것» 은 막았지만 «엉뚱한 자리» 는 못 막았습니다.
+//         ★그래서 SOLO 를 검사로 못 박아 둡니다 (28-verify ⑲-n).
+//
+//  ★[이제]  셋을 «최상위 낱장 카드» 로 냅니다. 한 번만 누르면 들어갑니다.
+//    ⚠️ 폴더가 아니므로 «개수 배지»(2) 도 «여닫이» 도 없습니다.
+//
+//  ⚠️ SOLO 에 이름을 적으면 GROUPS 에서는 «빼야» 합니다.
+//     둘 다 적으면 같은 카드가 화면에 두 번 뜹니다. 아래 placed 가 함께 셉니다.
+// ══════════════════════════════════════════════════════════════════
+
+/** ★폴더 없이 «낱장» 으로 내보내는 서비스 — 차례대로 뜹니다 */
+const SOLO_NAMES = ['궁합', '내이름 감정', '아기 작명']
+
+/** 낱장 카드에만 쓰는 한 줄 — SERVICES 의 sub 보다 «이 자리에» 맞게 */
+const SOLO_COPY: Record<string, string> = {
+  '궁합': '두 사람의 결',
+  '내이름 감정': '내 이름 풀이 및 개명',
+  '아기 작명': '아기 이름 지어 주기',
+}
+
 interface Group { key: string; icon: string; title: string; desc: string; names: string[] }
 
 const GROUPS: Group[] = [
@@ -142,11 +172,10 @@ const GROUPS: Group[] = [
     names: ['합격운/취업운', '결혼택일', '출산택일', '이사택일'],
   },
   { key: 'life', icon: '📅', title: '오늘의 라이프', desc: '오늘의 카드 한 장', names: ['타로'] },
-  {
-    key: 'etc', icon: '💞', title: '궁합 & 기타',
-    desc: '두 사람의 결, 그리고 이름',
-    names: ['궁합', '내이름 감정'],
-  },
+  // ★2026-08-01 (43부 4차) — «궁합 & 기타» 갈래를 «없앴습니다».
+  //   궁합·내이름 감정이 SOLO 로 나가면서 남는 것이 없어졌습니다.
+  //   ⚠️ 빈 갈래를 두면 아래 `if (!list.length) return null` 로 조용히 사라져
+  //      「왜 안 뜨지」를 찾게 됩니다. 아예 지웁니다.
 ]
 
 export default function ServiceSection({
@@ -160,8 +189,13 @@ export default function ServiceSection({
   const pinnedSvcs = pinned.map(n => byName.get(n)).filter((s): s is HomeService => !!s)
   const best = BEST_NAMES.map(n => byName.get(n)).filter((s): s is HomeService => !!s)
 
+  /** ★낱장 카드 — 차례는 SOLO_NAMES 그대로입니다 */
+  const solo = SOLO_NAMES.map(n => byName.get(n)).filter((s): s is HomeService => !!s)
+
   // ── 안전망 — GROUPS 에 못 적은 서비스가 있어도 사라지지 않게 ──
-  const placed = new Set<string>([...BEST_NAMES, ...GROUPS.flatMap(g => g.names)])
+  //   ⚠️ SOLO 도 «자리를 잡은» 것으로 셉니다. 안 세면 낱장으로도 뜨고
+  //      「그 밖의 서비스」에도 뜨어 같은 카드가 두 번 나옵니다.
+  const placed = new Set<string>([...BEST_NAMES, ...SOLO_NAMES, ...GROUPS.flatMap(g => g.names)])
   const orphans = services.filter(s => !placed.has(s.name))
   const groups: Group[] = orphans.length
     ? [...GROUPS, {
@@ -335,6 +369,41 @@ export default function ServiceSection({
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+          {/* ══════════════════════════════════════════════════════
+              ★낱장 카드 — 폴더를 «열지 않고» 한 번에 들어갑니다 (43부 4차)
+                궁합 · 내이름 감정 · 아기 작명
+              ⚠️ 폴더가 아니므로 개수 배지도 여닫이 화살표도 없습니다.
+                 «누르면 바로 간다» 는 것이 모양으로도 보여야 합니다.
+              ⚠️ 압핀(📌)은 그대로 답니다 — 회원 설정을 말없이 없애면 안 됩니다.
+              ══════════════════════════════════════════════════════ */}
+          {solo.map((s) => (
+            <div key={s.name} style={{
+              ...cardStyle(pinned.includes(s.name)),
+              display: 'flex', alignItems: 'center', gap: 11, padding: '13px 13px',
+            }}>
+              <button
+                className="svcTap svcRow"
+                onClick={() => onOpen(s)}
+                style={{
+                  flex: 1, display: 'flex', alignItems: 'center', gap: 11,
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  textAlign: 'left', padding: 0, minWidth: 0, borderRadius: 12,
+                }}
+              >
+                <Tile icon={s.icon} size={44} />
+                <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+                  <span style={{ fontSize: 14.5, fontWeight: 700, color: C.text, letterSpacing: '-0.2px' }}>
+                    {s.name}
+                  </span>
+                  <span style={{ fontSize: 11, color: C.sub }}>{SOLO_COPY[s.name] ?? s.sub}</span>
+                </span>
+                <span style={{ fontSize: 15, color: C.text, flexShrink: 0 }}>›</span>
+              </button>
+              <Pin name={s.name} />
+            </div>
+          ))}
+
           {groups.map((g) => {
             const list = g.names.map(n => byName.get(n)).filter((s): s is HomeService => !!s)
             if (!list.length) return null

@@ -41,6 +41,7 @@ const P = {
   hanja: 'app/manseryeok/naming/rename/hanja/page.tsx',
   hrow: 'lib/saju/hanjaRow.ts',
   rj: 'lib/saju/resourceJudge.ts',
+  svc: 'app/home-new/components/ServiceSection.tsx',
 }
 const S = Object.fromEntries(Object.entries(P).map(([k, v]) => [k, read(v)])) as Record<keyof typeof P, string>
 
@@ -198,6 +199,75 @@ console.log('\n━━ ⑲-h ⚠️ 옛 개명 손님이 «안 깨지는가» ━
   for (const [n, c] of [['Step 2', S.nn], ['Step 3', S.nh], ['Step 4', S.nr]] as const) {
     check(!/SCORE_BASE|REL_SCORE/.test(codeOf(c)), `${n} 이 판정을 다시 하지 않습니다`)
   }
+}
+
+console.log('\n━━ ⑲-n ★홈 — 폴더를 «열지 않고» 바로 들어가는가 (43부 4차) ━━')
+{
+  const svc = codeOf(S.svc)
+  const home = codeOf(S.home)
+
+  // ① 셋이 «낱장» 인가
+  check(/const SOLO_NAMES = \[/.test(svc), `낱장 카드 목록이 있습니다`)
+  for (const n of ['궁합', '내이름 감정', '아기 작명']) {
+    check(new RegExp(`SOLO_NAMES = \\[[^\\]]*'${n}'`).test(svc), `★「${n}」이 낱장입니다`)
+  }
+
+  // ② 🔴 폴더가 «없어졌는가» — 전에는 「궁합 & 기타 (2)」 안에 묻혀 있었습니다
+  check(!/title: '궁합 & 기타'/.test(svc), `★«궁합 & 기타» 폴더가 없습니다`)
+  check(!/names: \['궁합', '내이름 감정'\]/.test(svc), `★그 폴더의 목록도 없습니다`)
+
+  // ③ ⚠️ 같은 카드가 «두 번» 뜨지 않는가 — SOLO 와 GROUPS 에 겹쳐 적으면 그렇게 됩니다
+  const grpNames = [...svc.matchAll(/names: \[([^\]]*)\]/g)]
+    .flatMap(m => [...m[1].matchAll(/'([^']+)'/g)].map(x => x[1]))
+  const soloNames = [...(svc.match(/SOLO_NAMES = \[([^\]]*)\]/) ?? [])[1]
+    ?.matchAll(/'([^']+)'/g) ?? []].map(x => x[1])
+  const dup = soloNames.filter(n => grpNames.includes(n))
+  check(dup.length === 0,
+    `★낱장과 폴더에 «겹쳐 적힌» 이름이 없습니다${dup.length ? ` — ${dup.join(', ')}` : ''}`)
+
+  // ④ 🔴 ★「아기 작명」이 «그 밖의 서비스» 로 새지 않는가
+  //    43부에 홈 카드를 되살리며 GROUPS 에 안 적어 orphans 안전망이 받고 있었습니다.
+  //    ⚠️ 안전망은 «사라지는 것» 만 막습니다. «엉뚱한 자리» 는 못 막습니다.
+  check(/placed = new Set<string>\(\[\.\.\.BEST_NAMES, \.\.\.SOLO_NAMES/.test(svc),
+    `★낱장도 «자리를 잡은» 것으로 셉니다 (안 세면 «그 밖의 서비스» 에도 또 뜹니다)`)
+
+  // ⑤ 낱장에는 폴더 표시(개수 배지·여닫이)가 없어야 합니다
+  const soloBlock = svc.slice(svc.indexOf('{solo.map('), svc.indexOf('{groups.map('))
+  check(soloBlock.length > 100, `낱장을 그리는 자리가 있습니다`)
+  check(!/aria-expanded/.test(soloBlock), `★낱장에 여닫이가 없습니다 — 한 번만 누르면 들어갑니다`)
+  check(!/list\.length/.test(soloBlock), `★낱장에 개수 배지가 없습니다`)
+  check(/<Pin name=\{s\.name\} \/>/.test(soloBlock), `압핀은 그대로입니다 (회원 설정)`)
+
+  // ⑥ 한 줄 문구
+  check(/'두 사람의 결'/.test(svc), `궁합 — 「두 사람의 결」`)
+  check(/'내 이름 풀이 및 개명'/.test(svc), `내이름 감정 — 「내 이름 풀이 및 개명」`)
+  check(/'아기 이름 지어 주기'/.test(svc), `아기 작명 — 「아기 이름 지어 주기」`)
+  // ⚠️ 압핀 칩·다른 화면이 쓰는 sub 도 함께 맞춰 두었는가
+  check(/sub: '내 이름 풀이 및 개명'/.test(home), `★SERVICES 의 sub 도 같이 맞췄습니다`)
+
+  // ⑦ ★카드가 «하나도 사라지지 않았는가» — 자리를 옮기는 일에서 가장 무서운 것
+  //    ⚠️ 홈 카드가 조용히 사라지면 그 서비스로 «가는 길이 통째로» 끊깁니다.
+  //       화면에서 원인을 찾으면 못 찾습니다 (교훈 [의존]과 같은 결).
+  {
+    const services = [...S.home.matchAll(/\{ name: '([^']+)',\s+color:/g)].map(m => m[1])
+    const best = [...((svc.match(/BEST_NAMES = \[([^\]]*)\]/) ?? [])[1] ?? '')
+      .matchAll(/'([^']+)'/g)].map(x => x[1])
+    const placedAll = new Set([...best, ...soloNames, ...grpNames])
+    const orphan = services.filter(n => !placedAll.has(n))
+    const ghost = [...placedAll].filter(n => !services.includes(n))
+    check(services.length > 0, `홈 서비스 ${services.length}개를 읽었습니다`)
+    check(orphan.length === 0,
+      `★«그 밖의 서비스» 로 새는 카드가 없습니다${orphan.length ? ` — ${orphan.join(', ')}` : ''}`)
+    check(ghost.length === 0,
+      `★SERVICES 에 없는데 적어 둔 이름이 없습니다${ghost.length ? ` — ${ghost.join(', ')}` : ''}`)
+    check(best.length + soloNames.length + grpNames.length === services.length,
+      `★BEST(${best.length}) + 낱장(${soloNames.length}) + 폴더(${grpNames.length}) = ${services.length} — 딱 맞습니다`)
+  }
+
+  // ⑧ ⚠️ 연결(href)이 바뀌지 않았는가 — 자리를 옮긴 것이지 길을 바꾼 것이 아닙니다
+  check(/couple-storage/.test(home), `궁합 연결 그대로`)
+  check(/storage\?mode=diagnosis/.test(home) && /storage\?mode=naming/.test(home),
+    `이름 두 카드의 연결 그대로 (mode 유지)`)
 }
 
 console.log('\n━━ ⑲-m ★들어온 «입구» 에 따라 보관함이 갈리는가 (43부 2차) ━━')
