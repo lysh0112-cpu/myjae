@@ -923,8 +923,14 @@ function NewHanjaInner() {
           background: CARD, border: `1px solid ${LINE}`, borderRadius: 12,
           padding: '10px 13px', marginBottom: 12, fontSize: 11.5, color: '#96502e', lineHeight: 1.7,
         }}>
-          ‘{slotTarget}’ 소리에는 사주가 바라는 <b>{yongsin}</b> 기운의 한자가 없어요.
-          <br />아래에서 뜻과 획수를 보고 골라 주세요.
+          <b style={{ color: '#c8506e' }}>⚠️ 이 소리에는 사주가 바라는 기운의 한자가 없어요.</b>
+          <br />‘{slotTarget}’ 소리에 <b>{yongsin}</b> 기운을 지닌 한자가 없습니다.
+          아래에서 뜻과 획수를 보고 골라 주시되,
+          <b> 다른 글자를 먼저 살펴보시는 것</b>도 좋습니다.
+          <br />
+          <span style={{ fontSize: 10.5, color: '#8a7063' }}>
+            (이름의 다른 글자가 {yongsin} 기운을 담고 있으면 괜찮습니다)
+          </span>
         </div>
       )}
 
@@ -1013,7 +1019,10 @@ function NewHanjaInner() {
                   display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
                   marginBottom: 8,
                 }}>
-                  <span style={{ fontSize: 11.5, color: SUB }}>사주와의 어울림</span>
+                  {/* ★2026-08-01 (43부 22차) — 「종합 성명학 점수」로 적습니다 (대표님 확정).
+                      ⚠️ 앞 걸음은 「소리 98점」입니다. 이름이 다르면 «다른 것» 임이
+                         저절로 드러나, 깎였다고 느끼지 않으십니다. */}
+                  <span style={{ fontSize: 11.5, color: SUB }}>종합 성명학 점수</span>
                   <span style={{ fontSize: 15, fontWeight: 700, color: GOLD }}>
                     {Math.round(previewVerdict.total)}점
                   </span>

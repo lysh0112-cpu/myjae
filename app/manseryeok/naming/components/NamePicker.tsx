@@ -385,8 +385,8 @@ export default function NamePicker(p: NamePickerProps) {
               fontSize: 10.5, color: '#7A6A5E', lineHeight: 1.65,
               padding: '0 4px', marginBottom: 9,
             }}>
-              점수는 <b>소리의 흐름</b>과 <b>사주가 바라는 기운</b>을 본 것입니다.
-              <br />획수(수리 4격)와 한자의 기운은 <b>다음 걸음에서 한자를 고를 때</b> 정해집니다.
+              <b>소리 점수</b>는 소리의 흐름과 사주가 바라는 기운을 본 것입니다.
+              <br />획수와 한자의 기운은 <b>다음 걸음(한자 고르기)에서 최종 완성됩니다.</b>
             </div>
           )}
           {list.map((c) => (
@@ -411,14 +411,18 @@ export default function NamePicker(p: NamePickerProps) {
                           그래서 다음 걸음에서 70점이 되어 «깎인 것처럼» 보였습니다.
                        ★깎인 것이 아니라 «다른 것을 재고 있었습니다».
 
-                     [고침]  ① 「점」을 떼고 «소리 98» 로 적습니다 — 무엇을 잰 것인지 드러나게.
-                             ② 목록 머리에 「한자를 고르면 최종 점수가 나옵니다」를 적습니다.
+                     [고침 — 2026-08-01 대표님 확정]
+                       ① 「소리 98점」 — «점» 은 살리고 «무엇을 잰 것인지» 를 앞에 답니다.
+                          ⚠️ 「점」을 떼면 그것대로 어색합니다. 이름표를 붙이는 편이 낫습니다.
+                       ② 목록 머리에 「한자 고르기에서 최종 완성됩니다」를 적습니다.
+                       ③ 확정 팝업은 「종합 성명학 점수」로 적습니다 — 이름이 다르면 «다른 것»
+                          임이 저절로 드러납니다.
                      ⚠️ 두 점수를 «같은 잣대» 로 맞추려면 후보마다 한자 조합을
                         전부 따져야 합니다 — 한 후보에 수백 가지입니다.
                         ★그래서 «맞추는» 대신 «다른 것임을 밝히는» 길을 골랐습니다.
                     ══════════════════════════════════════════════ */}
-                <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: GOLD }}>
-                  소리 {Math.round(c.score)}
+                <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: GOLD, flexShrink: 0 }}>
+                  소리 {Math.round(c.score)}점
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', paddingLeft: 38 }}>
