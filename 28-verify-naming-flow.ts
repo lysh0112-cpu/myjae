@@ -231,6 +231,35 @@ console.log('\n━━ ⑲-G 🔴 성씨는 «가문 선택» 이지 «사주 추
   check(/이 표를 «전부» 라고 여기지 마십시오/.test(tbl),
     `⚠️ 이 표가 전부가 아님을 적어 두었습니다`)
 
+  // ★2026-08-01 (43부 24차) — 표 «자체» 를 잽니다
+  {
+    const rows = [...tbl.matchAll(/^\s{2}([가-힣]+): \[([^\]]*)\],/gm)].map(m => ({
+      h: m[1], v: [...m[2].matchAll(/'([^']+)'/g)].map(x => x[1]),
+    }))
+    const single = rows.filter(r => [...r.h].length === 1)
+    const comp = rows.filter(r => [...r.h].length > 1)
+    check(rows.length >= 120, `성씨 소리 ${rows.length}개 (단성 ${single.length} · 복성 ${comp.length})`)
+    check(new Set(rows.map(r => r.h)).size === rows.length, `★같은 소리를 «두 번» 적지 않았습니다`)
+    // ⚠️ 한 소리 안에 같은 한자가 두 번 있으면 화면에 두 번 뜹니다
+    const dup = rows.filter(r => new Set(r.v).size !== r.v.length)
+    check(dup.length === 0, `★한 소리 안에 겹치는 한자가 없습니다${dup.length ? ' — ' + dup.map(d => d.h).join(',') : ''}`)
+    check(rows.every(r => r.v.length > 0), `빈 목록이 없습니다`)
+    // ★복성은 한자도 «두 글자» 여야 합니다
+    const badComp = comp.filter(r => r.v.some(v => [...v].length !== [...r.h].length))
+    check(badComp.length === 0,
+      `★복성은 한자도 글자 수가 맞습니다${badComp.length ? ' — ' + badComp.map(d => d.h).join(',') : ''}`)
+    // 대표님 명단의 주요 소리가 다 들어왔는가
+    for (const h of ['이', '정', '강', '조', '장', '신', '전', '류', '양', '진', '순', '어', '대'])
+      check(rows.some(r => r.h === h), `「${h}」이(가) 있습니다`)
+    for (const h of ['망절', '어금', '비전'])
+      check(rows.some(r => r.h === h), `복성 「${h}」이(가) 있습니다`)
+  }
+  // ⚠️ 확인이 안 된 것을 «지레 넣지» 않았는가
+  check(/넣지 않은» 것과 그 까닭/.test(tbl),
+    `★확인 못 한 한자를 «넣지 않고» 까닭을 적어 두었습니다`)
+  check(!/'刑'/.test(tbl) && !/도: \[[^\]]*'鄭'/.test(tbl),
+    `★소리가 어긋나는 한자(刑·鄭)를 넣지 않았습니다`)
+
   // ② 🔴 성씨 칸에서 «거르지 않는가» — 李 가 사라지던 자리
   check(/setHanjaList\(isSurnameSlot \? rows : rows\.filter/.test(nh),
     `★★성씨 칸은 이름용 잣대(listPolicy)로 «거르지 않습니다»`)
