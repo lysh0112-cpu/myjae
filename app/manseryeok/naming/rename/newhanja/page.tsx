@@ -436,6 +436,20 @@ function NewHanjaInner() {
     const hangul = slots[activeIdx]?.hangul
     if (!hangul) { setHanjaList([]); return }
     let cancelled = false
+    // ══════════════════════════════════════════════════════════
+    //  ★2026-08-01 (43부 32차) — «다른 소리의 한자» 가 박히지 않도록 (예방)
+    //
+    //   ⚠️ 실제로 그런 일이 있었던 것은 «아닙니다». 코드를 읽다 보인 틈입니다 —
+    //     칸을 옮기면 새 목록을 «불러오는 동안» 옛 칸의 목록이 화면에 남습니다.
+    //     그 사이에 하나를 누르면 «다른 소리» 의 글자가 새 칸에 담길 수 있습니다.
+    //     느린 인터넷에서 일어나기 쉽고, 일어나면 이름의 소리와 한자가
+    //     어긋난 채 작명서까지 나갑니다.
+    //
+    //   ★[이제]  칸이 바뀌면 옛 목록을 «곧바로 비웁니다».
+    //     비어 있으면 누를 것이 없으니 어긋날 자리가 없습니다.
+    //   ⚠️ 아래 pickHanja 에서 «한 번 더» 맞대어 봅니다 — 두 겹으로 막습니다.
+    // ══════════════════════════════════════════════════════════
+    setHanjaList([])
     setLoadingList(true)
     supabase
       .from('hanja')
@@ -657,6 +671,13 @@ function NewHanjaInner() {
   }, [scored, activeIdx, slots])
 
   function pickHanja(row: HanjaRow) {
+    // ★소리가 «맞는지» 맞대어 봅니다 (43부 32차 · 두 번째 겹 · 예방)
+    //   ⚠️ 표가 준 줄은 원래 소리가 맞습니다 — 이것은 «만일» 을 위한 자물쇠입니다.
+    const slotHangul = slots[activeIdx]?.hangul
+    if (slotHangul && row.hangul && row.hangul !== slotHangul) {
+      console.warn(`[newhanja] 소리가 어긋난 한자 — 칸 '${slotHangul}' 에 '${row.hangul}(${rowHanja(row)})' 을 담으려 했습니다`)
+      return
+    }
     setChosen((prev) => ({ ...prev, [activeIdx]: row }))
 
     // ★성씨 자리에서만 봅니다. 이름 가운데·끝 글자는 두음 자리가 아닙니다
