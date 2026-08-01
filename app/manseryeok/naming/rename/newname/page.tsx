@@ -17,7 +17,29 @@ import { calcYongsinCompat } from '@/lib/saju/yongsinNew'
 import { ohaengOrEmpty } from '@/lib/saju/ohaeng'
 
 const GOLD = '#c8783c'
-const CARD = '#fffbf7'
+// ══════════════════════════════════════════════════════════════════
+//  ★2026-08-01 (43부 6차) — 배색 대비를 올렸습니다 (대표님 지시)
+//
+//   [무엇이 문제였나]  바탕(#FDF6F0)과 카드(#fffbf7)가 «거의 같은 색» 이라
+//     카드가 어디서 시작하고 끝나는지 눈에 안 들어왔습니다.
+//     테두리도 rgba(200,120,60,0.10) — 그 위에서는 «없는 것과 같았습니다».
+//     ⚠️ 그래서 「고른 것/안 고른 것」이 구분되지 않았습니다.
+//
+//   ★[이제]  세 층을 또렷이 갈랐습니다.
+//     바탕  #F5E9DE   ← 한 단 낮춥니다 (카드가 «떠» 보이게)
+//     카드  #FFFFFF   ← 흰색. 바탕과 확실히 갈립니다
+//     테두리 #E5D3C2  ← 실제로 «보이는» 선
+//     고름  GOLD 테두리 + 옅은 금빛 바탕
+//
+//   ⚠️ 글자색은 건드리지 않았습니다 — 바탕이 더 밝아졌으므로 대비는 «좋아지기만» 합니다.
+//   ⚠️ 어두운 테마 화면(rename/hanja · rename/result)은 «손대지 않았습니다».
+//      거기서는 흰 글씨가 «맞습니다». 같이 바꾸면 그 화면이 통째로 안 보입니다.
+// ══════════════════════════════════════════════════════════════════
+const CARD = '#FFFFFF'
+/** ★보이는 테두리 — 이 파일에서 «선» 은 전부 이 값을 쓰십시오 */
+const LINE = '#E5D3C2'
+/** 바탕 — 카드가 떠 보이도록 한 단 낮춥니다 */
+const BG = '#F5E9DE'
 const SUB = '#b4785a'
 
 const MY_INFO_KEY = 'myinfo'
@@ -417,7 +439,7 @@ function NewNameInner() {
       <button onClick={() => chooseCount(n)} className="active:scale-95"
         style={{ flex: 1, padding: '12px 0', borderRadius: 12, cursor: 'pointer',
           background: on ? 'rgba(200,120,60,0.12)' : CARD,
-          border: '1px solid ' + (on ? GOLD : 'rgba(200,120,60,0.10)'),
+          border: '1px solid ' + (on ? GOLD : LINE),
           color: on ? GOLD : '#cfcdc4', fontWeight: 700, fontSize: 14 }}>
         {label}
       </button>
@@ -439,7 +461,7 @@ function NewNameInner() {
   // ══════════════════════════════════════════════════════════════
   if (loaded && !surnameHangul) {
     return (
-      <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
+      <main style={{ minHeight: '100vh', background: BG, maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
         <Header router={router} isNewborn={isNewborn} />
         <div style={{ padding: '40px 8px', textAlign: 'center', color: SUB, lineHeight: 1.8 }}>
           성씨를 먼저 알려 주세요.
@@ -458,10 +480,10 @@ function NewNameInner() {
     )
   }
 
-  if (!loaded) return <main style={{ minHeight: '100vh', background: '#FDF6F0' }} />
+  if (!loaded) return <main style={{ minHeight: '100vh', background: BG }} />
 
   return (
-    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
+    <main style={{ minHeight: '100vh', background: BG, maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
       <Header router={router} isNewborn={isNewborn} />
       {/* ★2026-08-01 (43부) — 신생아와 개명은 «하는 일이 다릅니다». 문구를 갈랐습니다.
           개명  : 발음은 그대로 두고 한자만 바꿉니다
@@ -490,7 +512,7 @@ function NewNameInner() {
 
       {count !== null && (
         <>
-          <div style={{ background: CARD, border: '1px solid rgba(200,120,60,0.10)', borderRadius: 16, padding: '18px 16px' }}>
+          <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 16, padding: '18px 16px' }}>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
               {/* ★2026-08-01 (43부) — 신생아는 한자 성씨가 «아직 없습니다». 한글로 보여 줍니다 */}
               <span style={{ fontSize: 22, color: SUB }}>{surnameHanja || surnameHangul}</span>
@@ -556,7 +578,7 @@ function NewNameInner() {
               💳 {hanjaPrice.toLocaleString()}원 결제하고 시작하기
             </button>
             <button onClick={() => setPayOpen(false)}
-              style={{ width: '100%', padding: 12, borderRadius: 12, background: 'transparent', border: '0.5px solid #f0e0d5', color: SUB, fontSize: 13, cursor: 'pointer' }}>
+              style={{ width: '100%', padding: 12, borderRadius: 12, background: 'transparent', border: `1px solid ${LINE}`, color: SUB, fontSize: 13, cursor: 'pointer' }}>
               다음에 할게요
             </button>
           </div>
@@ -574,7 +596,7 @@ function Header({ router, isNewborn }: {
     <div style={{
       position: 'sticky', top: 0, zIndex: 50,
       display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px',
-      background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid #f0e0d5',
+      background: 'rgba(245,233,222,0.96)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${LINE}`,
     }}>
       {/* ★2026-08-01 (43부) — 신생아는 «이름 풀이» 를 한 적이 없습니다.
           그 화면으로 되돌리면 갈 곳이 없어 보입니다. 보관함으로 보냅니다. */}
@@ -607,7 +629,7 @@ function Header({ router, isNewborn }: {
 // ══════════════════════════════════════════════════════════════════
 export default function NewNamePage() {
   return (
-    <Suspense fallback={<main style={{ minHeight: '100vh', background: '#FDF6F0' }} />}>
+    <Suspense fallback={<main style={{ minHeight: '100vh', background: BG }} />}>
       <NewNameInner />
     </Suspense>
   )

@@ -20,17 +20,44 @@ import {
 } from '@/lib/saju/hanjaRow'
 // ★2026-08-01 (43부) 두음법칙 안내 — «판정은 바꾸지 않습니다» (교재는 표기음 그대로)
 import { dueumPairIfReal, dueumNotice } from '@/lib/saju/sound/dueum'
+// ★2026-08-01 (43부 6차) — 「한 번에 이름 하나」 정책 (대표님 확정)
+//   ⚠️ 부품은 두고 «배선만» 끊었습니다. lib/saju/namingPolicy.ts 의 값 하나로 되돌아옵니다.
+import { clampTryLimit, isSingleName } from '@/lib/saju/namingPolicy'
+
 import {
   buildSajuOhaengProfile, judgeResource, candidateScore, compareCandidates,
 } from '@/lib/saju/resourceJudge'
 
 const GOLD = '#c8783c'
-const CARD = '#fffbf7'
+// ══════════════════════════════════════════════════════════════════
+//  ★2026-08-01 (43부 6차) — 배색 대비를 올렸습니다 (대표님 지시)
+//
+//   [무엇이 문제였나]  바탕(#FDF6F0)과 카드(#fffbf7)가 «거의 같은 색» 이라
+//     카드가 어디서 시작하고 끝나는지 눈에 안 들어왔습니다.
+//     테두리도 rgba(200,120,60,0.10) — 그 위에서는 «없는 것과 같았습니다».
+//     ⚠️ 그래서 「고른 것/안 고른 것」이 구분되지 않았습니다.
+//
+//   ★[이제]  세 층을 또렷이 갈랐습니다.
+//     바탕  #F5E9DE   ← 한 단 낮춥니다 (카드가 «떠» 보이게)
+//     카드  #FFFFFF   ← 흰색. 바탕과 확실히 갈립니다
+//     테두리 #E5D3C2  ← 실제로 «보이는» 선
+//     고름  GOLD 테두리 + 옅은 금빛 바탕
+//
+//   ⚠️ 글자색은 건드리지 않았습니다 — 바탕이 더 밝아졌으므로 대비는 «좋아지기만» 합니다.
+//   ⚠️ 어두운 테마 화면(rename/hanja · rename/result)은 «손대지 않았습니다».
+//      거기서는 흰 글씨가 «맞습니다». 같이 바꾸면 그 화면이 통째로 안 보입니다.
+// ══════════════════════════════════════════════════════════════════
+const CARD = '#FFFFFF'
+/** ★보이는 테두리 — 이 파일에서 «선» 은 전부 이 값을 쓰십시오 */
+const LINE = '#E5D3C2'
+/** 바탕 — 카드가 떠 보이도록 한 단 낮춥니다 */
+const BG = '#F5E9DE'
 const SUB = '#b4785a'
 const GREEN = '#81c784'
 
 const TOP_N = 6
-const DEFAULT_TRY_LIMIT = 3
+// ★한 번에 몇 개인지는 namingPolicy 가 정합니다 (아래 clampTryLimit)
+const DEFAULT_TRY_LIMIT = clampTryLimit(3)
 
 const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
@@ -57,6 +84,13 @@ interface TryItem {
 //   ⚠️ 여기에 다시 사본을 만들지 마십시오. lib/saju/ohaeng.ts 를 부르십시오.
 
 // ★2026-07-30 (3단계) — gradeNum 을 걷어냈습니다. candidateScore 가 대신합니다.
+
+/** 등급 한 줄의 색 — ⚠️ 색표를 새로 만들지 않습니다. 이 화면 안 세 값뿐입니다 */
+function gradeTone(g: string): string {
+  if (g === '좋음') return '#4a9450'
+  if (g === '아쉬움' || g.includes('미충족')) return '#c8783c'
+  return '#5c3a1e'
+}
 
 function isHangulSyllable(ch: string): boolean {
   const code = ch.charCodeAt(0)
@@ -122,7 +156,8 @@ function NewHanjaInner() {
   const [TRY_LIMIT, setTryLimit] = useState(DEFAULT_TRY_LIMIT)
   useEffect(() => {
     supabase.from('app_settings').select('value').eq('key', 'naming_try_limit').maybeSingle()
-      .then(({ data }) => { if (data && typeof data.value === 'number') setTryLimit(data.value) })
+      // ⚠️ 관리자 설정 값도 «정책을 지나» 옵니다 — 한 군데만 빠뜨리면 어긋납니다
+      .then(({ data }) => { if (data && typeof data.value === 'number') setTryLimit(clampTryLimit(data.value)) })
   }, [])
 
   useEffect(() => {
@@ -192,11 +227,18 @@ function NewHanjaInner() {
         }
       } catch {}
 
+      /** 불러온 성씨의 한글 — 첫 칸을 어디에 둘지 정하는 데 씁니다 */
+      let loadedSurHangul = ''
       if (!surnameLoaded) {
         try {
           const r = JSON.parse(localStorage.getItem(NAMING_RESULT_KEY) || '{}')
           if (!cancelled && Array.isArray(r.chars) && r.chars[0]) {
-            setSurnameChars(splitSurname(r.chars as SavedChar[]).surname)
+            const sp2 = splitSurname(r.chars as SavedChar[]).surname
+            setSurnameChars(sp2)
+            // ⚠️ 여기서도 «불러왔다» 고 세워야 합니다 — 안 세우면 개명 손님이
+            //    성씨 칸에 서게 되어 「왜 성을 고르라 하지」 가 됩니다.
+            surnameLoaded = true
+            loadedSurHangul = sp2.map(c => c.hangul).join('')
           }
         } catch {}
       }
@@ -205,7 +247,13 @@ function NewHanjaInner() {
       const arr = Array.from(nameParam.trim()).filter(isHangulSyllable)
       if (!cancelled) {
         setSyllables(arr)
-        setActiveIdx(0)
+        // ★첫 칸 — 성씨를 «골라야 하면» 성씨부터, 아니면 «이름» 부터.
+        //   ⚠️ 개명 손님을 성씨 칸에 세우면 「왜 성을 고르라 하지」 가 됩니다.
+        //      이미 정해진 성씨는 «확인하고 싶을 때만» 누르시면 됩니다.
+        const surLen = Array.from(t?.surnameHangul || loadedSurHangul).length
+        // ★성씨 한자를 «아무도 모를 때» 만 성씨 칸에서 시작합니다 (신생아)
+        const needPick = !t?.surnameHanja && !surnameLoaded
+        setActiveIdx(needPick ? 0 : surLen)
         setRestored(true)
       }
     }
@@ -229,36 +277,62 @@ function NewHanjaInner() {
   // ══════════════════════════════════════════════════════════════
   const wantSurname = target?.surnameHangul
     || surnameChars.map((c) => c.hangul).join('')
-  /** 불러온 성씨가 «이 대상의» 성씨인가. 아니면 골라야 합니다 */
+  /** 불러온 성씨가 «이 대상의» 성씨인가 */
   const loadedSurnameFits =
     surnameChars.length > 0
     && surnameChars.map((c) => c.hangul).join('') === wantSurname
+  /** ★성씨 한자를 «반드시» 골라야 하는가 (불러온 것이 없거나 다른 성씨) */
   const pickSurname = !loadedSurnameFits && wantSurname.length > 0
 
-  /** 성씨 칸(고를 때만) + 이름 칸. ★activeIdx·chosen 은 이 배열을 가리킵니다 */
-  const slots = useMemo(() => {
-    const sur = pickSurname
-      ? Array.from(wantSurname).map((h) => ({ hangul: h, role: '성' as const }))
-      : []
-    return [...sur, ...syllables.map((h) => ({ hangul: h, role: '이름' as const }))]
-  }, [pickSurname, wantSurname, syllables])
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-01 (43부 5차) — 성씨도 «언제나 칸» 입니다 (대표님 지시)
+  //
+  //   [무엇이 문제였나]  개명에서는 성씨가 «회색 상자» 였습니다. 못 눌렀습니다.
+  //     ⚠️ 그런데 같은 「류」라도 柳(9획)·劉(15획)로 획수가 다르고,
+  //        「이」는 李(7획)·異(11획)로 갈립니다.
+  //        불러온 한자가 «그 집안 것이 아닐» 수 있는데 고칠 길이 없었습니다.
+  //        → 수리 4격이 통째로 어긋난 채 결과가 나갑니다.
+  //     ★두음 성씨(류/유·리/이)는 오행까지 갈립니다. 더더욱 확인이 필요합니다.
+  //
+  //   ★[이제]  성씨도 칸으로 두고 «눌러서 바꿀 수» 있습니다.
+  //
+  //   ⚠️⚠️ 칸을 «있다 없다» 하게 만들지 마십시오.
+  //      chosen 은 «칸 번호» 로 담깁니다. 성씨 칸이 나중에 생기면 번호가 밀려
+  //      이미 고른 이름 한자가 «성씨 자리로» 옮겨 갑니다.
+  //      ★그래서 성씨 칸은 처음부터 «언제나» 있습니다. 개명은 그 칸이 미리 채워질 뿐입니다.
+  // ══════════════════════════════════════════════════════════════
+  const slots = useMemo(() => [
+    ...Array.from(wantSurname).map((h) => ({ hangul: h, role: '성' as const })),
+    ...syllables.map((h) => ({ hangul: h, role: '이름' as const })),
+  ], [wantSurname, syllables])
 
-  const surnameSlotCount = pickSurname ? Array.from(wantSurname).length : 0
+  const surnameSlotCount = Array.from(wantSurname).length
 
-  /** 지금까지 확정된 성씨 글자들 (고르는 중이면 아직 빌 수 있습니다) */
+  /**
+   * 지금의 성씨 글자들.
+   *   ① 손님이 «고른» 것이 있으면 그것
+   *   ② 없으면 불러온 것 (개명 — 예전 그대로)
+   *   ③ 둘 다 없으면 «아직 안 고른» 칸 (신생아)
+   */
   const pickedSurnameChars: SavedChar[] = useMemo(() => {
-    if (!pickSurname) return surnameChars
     const out: SavedChar[] = []
     for (let i = 0; i < surnameSlotCount; i++) {
       const row = chosen[i]
-      if (!row) break
-      out.push({
-        hangul: slots[i].hangul, hanja: rowHanja(row),
-        strokes: rowStrokes(row), resourceOhaeng: rowOhaeng(row) ?? '',
-      })
+      if (row) {
+        out.push({
+          hangul: slots[i].hangul, hanja: rowHanja(row),
+          strokes: rowStrokes(row), resourceOhaeng: rowOhaeng(row) ?? '',
+        })
+      } else if (loadedSurnameFits && surnameChars[i]) {
+        out.push(surnameChars[i])
+      } else break
     }
     return out
-  }, [pickSurname, surnameChars, surnameSlotCount, chosen, slots])
+  }, [surnameSlotCount, chosen, slots, loadedSurnameFits, surnameChars])
+
+  /** 그 칸이 «채워졌는가» — 고른 것이든 불러온 것이든 */
+  const slotFilled = (i: number) =>
+    !!chosen[i] || (i < surnameSlotCount && !!pickedSurnameChars[i])
 
   /** ★화면·판정이 쓰는 «지금의» 성씨 첫 글자 */
   const surnameNow: SavedChar | null = pickedSurnameChars[0] ?? null
@@ -378,18 +452,63 @@ function NewHanjaInner() {
       if (row && i === activeIdx) return asChar(row, slot.hangul)
       const pick = chosen[i]
       if (pick) return asChar(pick, slot.hangul)
+      // ★성씨 칸은 «불러온 것» 이 받쳐 줍니다 (개명은 예전 그대로 돕니다)
+      if (i < surnameSlotCount && pickedSurnameChars[i]) return pickedSurnameChars[i]
       return { hangul: slot.hangul, hanja: '', strokes: 0, resourceOhaeng: '' }
     })
-    const sur = pickSurname ? all.slice(0, surnameSlotCount) : surnameChars
-    const giv = all.slice(surnameSlotCount)
-    return { sur, giv }
-  }, [slots, activeIdx, chosen, pickSurname, surnameSlotCount, surnameChars])
+    return { sur: all.slice(0, surnameSlotCount), giv: all.slice(surnameSlotCount) }
+  }, [slots, activeIdx, chosen, surnameSlotCount, pickedSurnameChars])
+
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-01 (43부 5차) — 「최종 확정」 완충 단계에 보여 줄 조화도
+  //
+  //  ⚠️⚠️ 이 자리에 두는 것이 «중요합니다».
+  //     아래에 있던 것을 옮겼습니다 — 화면이 일찍 return 하는 자리(!restored 등)
+  //     «뒤» 에 훅이 있으면 그릴 때마다 훅 개수가 달라져 React 가 깨집니다.
+  //     ★훅은 «조기 반환보다 위» 에 모아 두십시오. (eslint react-hooks/rules-of-hooks)
+  //
+  //  ⚠️ 판정을 «다시 하지» 않습니다. 위 scored 와 같은 창구
+  //     (diagnoseName · judgeResource)를 그대로 부릅니다. (교훈 CJ)
+  //  ★한 번 더 보시고 넘어가시라는 자리입니다 — 다음 걸음은 결제 횟수를 씁니다.
+  // ══════════════════════════════════════════════════════════════
+  const previewChars = buildNameChars()
+  /** ★의존 목록에 «식» 을 넣지 않으려고 열쇠를 미리 지어 둡니다 (eslint 규칙) */
+  const previewKey = previewChars ? previewChars.map(c => c.hanja).join('') : ''
+
+  const previewVerdict = useMemo(() => {
+    if (!previewChars || !yongsinReady) return null
+    try {
+      const toNC = (c: SavedChar): NameChar => ({
+        hangul: c.hangul, hanja: c.hanja, strokes: c.strokes,
+        resourceOhaeng: ohaengOrEmpty(c.resourceOhaeng),
+      })
+      const sur = previewChars.slice(0, surnameSlotCount)
+      const giv = previewChars.slice(surnameSlotCount)
+      const r = diagnoseName({
+        surname: toNC(sur[0]), surname2: sur[1] ? toNC(sur[1]) : null,
+        given: giv.map(toNC),
+        yongsin: yong.yongsin, heeksin: yong.heeksin, elementScore: yong.score,
+      })
+      const profile = buildSajuOhaengProfile({
+        isStrong: yong.isStrong, yongsin: yong.yongsin, heeksin: yong.heeksin,
+        gisin: yong.gisin, gusin: yong.gusin, hansin: yong.hansin, score: yong.score,
+      }, saju)
+      const verdict = judgeResource(
+        sur.map(c => ({ hanja: c.hanja, hangul: c.hangul,
+          primary: ohaengOrEmpty(c.resourceOhaeng) || null, secondary: null })),
+        giv.map(c => ({ hanja: c.hanja, hangul: c.hangul,
+          primary: ohaengOrEmpty(c.resourceOhaeng) || null, secondary: null })),
+        profile,
+      )
+      return { r, verdict, total: candidateScore(verdict, r.suri.grade, r.soundFlow.score) }
+    } catch { return null }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewKey, yongsinReady, yong, saju, surnameSlotCount])
 
   const scored = useMemo(() => {
     // ⚠️ 성씨를 «고르는 중» 이면 surnameNow 가 아직 없습니다. 그래도 재야 합니다 —
     //    후보 자체가 성씨이기 때문입니다. 그래서 surnameNow 를 조건에서 뺐습니다.
     if (!yongsinReady || hanjaList.length === 0 || slots.length === 0) return []
-    if (!pickSurname && !surnameNow) return []
 
     // ★사주 프로필 — 후보마다 다시 만들지 않습니다
     const profile = buildSajuOhaengProfile({
@@ -430,7 +549,7 @@ function NewHanjaInner() {
       const fitsYongsin = rowOhaeng(row) === yongsin
       return { row, weighted, fitsYongsin, verdict }
     })
-  }, [yongsinReady, hanjaList, slots, pickSurname, surnameNow, wantSurname, composeWith, yong, saju, yongsin])
+  }, [yongsinReady, hanjaList, slots, wantSurname, composeWith, yong, saju, yongsin])
 
   const { recommend, others } = useMemo(() => {
     if (scored.length === 0) return { recommend: [] as { row: HanjaRow; rank: number }[], others: [] as HanjaRow[] }
@@ -475,9 +594,9 @@ function NewHanjaInner() {
   //   ★2026-08-01 (43부) — 성씨 칸까지 아우릅니다 (신생아는 성씨도 «고른» 것입니다)
   function buildNameChars(): SavedChar[] | null {
     if (slots.length === 0) return null
-    // 아직 모든 칸의 한자를 고르지 않았으면 계산하지 않음 (undefined 방지)
-    if (!slots.every((_, i) => chosen[i])) return null
-    if (!pickSurname && !surnameNow) return null
+    // 아직 모든 칸의 한자가 «차지» 않았으면 계산하지 않음 (undefined 방지)
+    //   ★성씨 칸은 불러온 것으로도 찹니다 (개명)
+    if (!slots.every((_, i) => slotFilled(i))) return null
     const { sur, giv } = composeWith(null)
     // ★2026-07-30 (1단계) — 보관함에 «표준 표기» 로 남깁니다.
     //   판정 경로(위 useMemo)는 이미 정규화했지만 이 줄은 저장용이라 날것이었습니다.
@@ -488,7 +607,7 @@ function NewHanjaInner() {
   // "이 이름으로 →" : 다음 글자로 넘어가거나, 다 골랐으면 확인 팝업 띄우기
   function proceed() {
     if (!chosen[activeIdx]) return
-    const next = slots.findIndex((_, i) => !chosen[i] && i !== activeIdx)
+    const next = slots.findIndex((_, i) => !slotFilled(i) && i !== activeIdx)
     if (next !== -1) {
       setActiveIdx(next)
       return
@@ -507,7 +626,9 @@ function NewHanjaInner() {
     const existIdx = tries.findIndex((t) => t.chars.map((c) => c.hanja).join('') === hanjaKey)
     if (existIdx === -1) {
       if (tries.length >= TRY_LIMIT) {
-        alert('총 ' + TRY_LIMIT + '회까지 이름을 지어볼 수 있어요.\n지금까지 본 이름 중에서 골라주세요.')
+        alert(isSingleName
+          ? '이번 조회는 이름 하나까지예요.\n방금 지으신 이름 결과를 보여 드릴게요.'
+          : '총 ' + TRY_LIMIT + '회까지 이름을 지어볼 수 있어요.\n지금까지 본 이름 중에서 골라주세요.')
         setConfirmOpen(false)
         // ★2026-08-01 (43부) — 이 갈래도 «대상을 실어» 보냅니다.
         //   ⚠️ 28-verify 가 잡았습니다. 여기만 맨몸이면 횟수를 다 쓴 손님의
@@ -549,7 +670,7 @@ function NewHanjaInner() {
   //   신생아는 한자 성씨가 없는 것이 «정상» 입니다. 그건 아래에서 고릅니다.
   if (restored && (!wantSurname || syllables.length === 0)) {
     return (
-      <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
+      <main style={{ minHeight: '100vh', background: BG, maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
         <Header router={router} />
         <div style={{ padding: '40px 8px', textAlign: 'center', color: SUB, lineHeight: 1.8 }}>
           {!wantSurname
@@ -566,14 +687,13 @@ function NewHanjaInner() {
     )
   }
 
-  if (!restored) return <main style={{ minHeight: '100vh', background: '#FDF6F0' }} />
+  if (!restored) return <main style={{ minHeight: '100vh', background: BG }} />
 
   // ★2026-08-01 (43부) — 이름은 slotTarget 으로. 위 targetNow(작명 대상)와 헷갈리지 않게 합니다
   const slotTarget = slots[activeIdx]?.hangul ?? ''
-  const allChosen = slots.length > 0 && slots.every((_, i) => chosen[i])
+  const allChosen = slots.length > 0 && slots.every((_, i) => slotFilled(i))
 
-  // 팝업에 보여줄 정보
-  const previewChars = buildNameChars()
+  // 팝업에 보여줄 정보 — ★previewChars·previewVerdict 는 위(훅 구역)로 옮겼습니다
   const previewHanja = previewChars ? previewChars.map((c) => c.hanja).join('') : ''
   const previewHangul = wantSurname && syllables.length ? wantSurname + syllables.join('') : ''
   const curTries = readTries()
@@ -592,7 +712,7 @@ function NewHanjaInner() {
       <button key={x.hanja + x.strokes} onClick={() => pickHanja(x)} className="active:scale-95"
         style={{ position: 'relative', padding: '10px 4px 8px', textAlign: 'center', borderRadius: 16,
           background: on ? 'rgba(200,120,60,0.12)' : CARD,
-          border: '1px solid ' + (on ? GOLD : 'rgba(200,120,60,0.10)'),
+          border: '1px solid ' + (on ? GOLD : LINE),
           cursor: 'pointer', transition: 'transform 0.15s ease' }}>
         {rank !== undefined && (
           <span style={{ position: 'absolute', top: 4, left: 6, fontSize: 10, fontWeight: 700, color: '#fff',
@@ -614,7 +734,7 @@ function NewHanjaInner() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
+    <main style={{ minHeight: '100vh', background: BG, maxWidth: 480, margin: '0 auto', padding: '8px 16px 32px' }}>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       <Header router={router} isNewborn={isNewborn} />
 
@@ -630,26 +750,30 @@ function NewHanjaInner() {
             신생아 : 성씨도 «고르는 칸» 입니다 — 류(柳/劉)처럼 집안마다 다릅니다
           ══════════════════════════════════════════════════════════ */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-        {!pickSurname && surnameNow && (
-          <div style={{ flex: 1, padding: '12px 0', borderRadius: 14, textAlign: 'center', background: CARD, border: '0.5px solid #f0e0d5' }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: '#cfcdc4' }}>{surnameNow.hanja}</div>
-            <div style={{ fontSize: 10, color: SUB, marginTop: 3 }}>{surnameNow.hangul} · 성씨</div>
-          </div>
-        )}
         {slots.map((slot, i) => {
           const on = activeIdx === i
-          const done = !!chosen[i]
           const isSur = slot.role === '성'
+          const filled = slotFilled(i)
+          /** 화면에 보일 한자 — 고른 것 → 불러온 것 → 아직 없으면 한글 */
+          const shown = chosen[i]
+            ? chosen[i].hanja
+            : (isSur && pickedSurnameChars[i]?.hanja) || slot.hangul
+          /** ★불러온 성씨를 «그대로 쓰는» 칸인가 — 흐리게 두어 개명 화면을 안 흔듭니다 */
+          const asLoaded = isSur && !chosen[i] && !!pickedSurnameChars[i]
           return (
             <button key={i} onClick={() => setActiveIdx(i)} className="active:scale-95"
+              /* ★성씨 칸도 «누를 수 있습니다» — 柳/劉 처럼 집안마다 다릅니다 */
+              aria-pressed={on}
               style={{ flex: 1, padding: '12px 0', borderRadius: 14, textAlign: 'center', cursor: 'pointer',
-                background: on ? 'rgba(200,120,60,0.12)' : done ? 'rgba(129,199,132,0.14)' : CARD,
-                border: '1px solid ' + (on ? GOLD : done ? GREEN : 'rgba(200,120,60,0.10)') }}>
-              <div style={{ fontSize: 22, fontWeight: 700, color: done ? GREEN : on ? GOLD : '#1a1a1a' }}>
-                {done ? chosen[i].hanja : slot.hangul}
-              </div>
+                background: on ? 'rgba(200,120,60,0.12)' : filled && !asLoaded ? 'rgba(129,199,132,0.14)' : CARD,
+                border: '1px solid ' + (on ? GOLD : filled && !asLoaded ? GREEN : 'rgba(200,120,60,0.10)') }}>
+              <div style={{
+                fontSize: 22, fontWeight: 700,
+                color: on ? GOLD : asLoaded ? '#8a7063' : filled ? GREEN : '#1a1a1a',
+              }}>{shown}</div>
               <div style={{ fontSize: 10, color: SUB, marginTop: 3 }}>
-                {slot.hangul}{isSur ? ' · 성씨' : ''} {done ? '✓' : on ? '고르는 중' : ''}
+                {slot.hangul}{isSur ? ' · 성씨' : ''}{' '}
+                {on ? '고르는 중' : asLoaded ? '바꾸기' : filled ? '✓' : ''}
               </div>
             </button>
           )
@@ -696,7 +820,7 @@ function NewHanjaInner() {
           ══════════════════════════════════════════════════════════ */}
       {isNewborn && (
         <div style={{
-          background: CARD, border: '0.5px solid #f0e0d5', borderRadius: 12,
+          background: CARD, border: `1px solid ${LINE}`, borderRadius: 12,
           padding: '10px 13px', marginBottom: 14, fontSize: 11, color: '#8a7063', lineHeight: 1.7,
         }}>
           ⚠️ 출생신고에는 <b>대법원 인명용 한자</b>만 쓸 수 있습니다.
@@ -763,21 +887,99 @@ function NewHanjaInner() {
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
           <div onClick={(e) => e.stopPropagation()}
             style={{ width: '100%', maxWidth: 360, background: '#fffbf7', borderRadius: 18, padding: '24px 20px', boxShadow: '0 16px 40px rgba(0,0,0,0.5)', textAlign: 'center' }}>
-            <div style={{ fontSize: 13, color: SUB, marginBottom: 10 }}>이 이름으로 저장할까요?</div>
+            {/* ★2026-08-01 (43부 5차) — «최종 이름 확정» 완충 단계
+                ⚠️ 여기를 지나면 결제 횟수가 한 번 줄어듭니다.
+                   그러니 «무엇을 고르셨는지» 를 한눈에 보여 드리고 여쭙습니다. */}
+            <div style={{ fontSize: 13, color: SUB, marginBottom: 10 }}>이 이름으로 확정할까요?</div>
             <div style={{ fontSize: 32, fontWeight: 700, color: GOLD, letterSpacing: 4, marginBottom: 2 }}>{previewHanja}</div>
             <div style={{ fontSize: 13, color: '#1a1a1a', marginBottom: 16 }}>{previewHangul}</div>
+            {/* ── 고르신 글자 낱낱이 — 한자·훈·획수·자원오행 ── */}
+            {previewChars && (
+              <div style={{
+                background: CARD, borderRadius: 12, padding: '10px 12px', marginBottom: 10,
+                display: 'flex', flexDirection: 'column', gap: 6,
+              }}>
+                {previewChars.map((c, i) => (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    fontSize: 11.5, color: '#5c3a1e',
+                  }}>
+                    <span style={{ fontSize: 17, fontWeight: 700, color: '#8f3d0e', width: 24 }}>{c.hanja}</span>
+                    <span style={{ width: 22, color: SUB }}>{c.hangul}</span>
+                    <span style={{ color: SUB }}>
+                      {i < surnameSlotCount ? '성씨' : '이름'}
+                    </span>
+                    <span style={{ marginLeft: 'auto', color: SUB }}>
+                      {c.resourceOhaeng || '?'} · {c.strokes}획
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ── ★사주와 어울리는가 — 네 관점을 한 줄씩 ── */}
+            {previewVerdict && (
+              <div style={{
+                background: '#fff', border: `1px solid rgba(200,120,60,0.18)`,
+                borderRadius: 12, padding: '11px 12px', marginBottom: 10, textAlign: 'left',
+              }}>
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+                  marginBottom: 8,
+                }}>
+                  <span style={{ fontSize: 11.5, color: SUB }}>사주와의 어울림</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: GOLD }}>
+                    {Math.round(previewVerdict.total)}점
+                  </span>
+                </div>
+                {[
+                  ['발음오행', previewVerdict.r.soundFlow.grade],
+                  ['수리 4격', previewVerdict.r.suri.grade],
+                  ['자원오행', previewVerdict.verdict.grade],
+                  ['사주 보완', previewVerdict.verdict.facts.hasYongsin
+                    ? `${yong.yongsin} 담김` : '용신 미충족'],
+                ].map(([k, v]) => (
+                  <div key={k} style={{
+                    display: 'flex', justifyContent: 'space-between',
+                    fontSize: 11.5, color: '#5c3a1e', padding: '2px 0',
+                  }}>
+                    <span style={{ color: SUB }}>{k}</span>
+                    <span style={{ fontWeight: 600, color: gradeTone(String(v)) }}>{v}</span>
+                  </div>
+                ))}
+                {/* ⚠️ 살펴볼 자리가 있으면 «가리지 않고» 먼저 알려 드립니다 */}
+                {previewVerdict.verdict.warnings.length > 0 && (
+                  <div style={{
+                    marginTop: 8, paddingTop: 8, borderTop: `1px solid ${LINE}`,
+                    fontSize: 10.5, color: '#96502e', lineHeight: 1.6,
+                  }}>
+                    ⚠️ {previewVerdict.verdict.warnings[0]}
+                    {previewVerdict.verdict.warnings.length > 1
+                      && ` 외 ${previewVerdict.verdict.warnings.length - 1}가지`}
+                  </div>
+                )}
+                <div style={{ fontSize: 10, color: '#a8927e', marginTop: 7, lineHeight: 1.6 }}>
+                  자세한 풀이는 다음 화면에서 보여 드립니다.
+                </div>
+              </div>
+            )}
+
             <div style={{ background: CARD, borderRadius: 12, padding: '12px 14px', marginBottom: 18, fontSize: 12, color: SUB, lineHeight: 1.7 }}>
+              {/* ★2026-08-01 (43부 6차) — 「한 번에 하나」라 회차를 세지 않습니다.
+                  ⚠️ 그래도 «되돌릴 수 있게» 옛 문구를 지우지 않고 갈래로 둡니다. */}
               {alreadyTried
                 ? '이미 지어본 이름이에요. 다시 열어봐도 횟수는 줄지 않아요.'
-                : <>저장하면 남은 횟수가 <b style={{ color: GOLD }}>{leftAfter}회</b>가 돼요.<br />(총 {TRY_LIMIT}회까지 지어볼 수 있어요)</>}
+                : isSingleName
+                  ? <>이 이름으로 <b style={{ color: GOLD }}>풀이를 받습니다</b>.<br />다른 이름은 새로 조회하시면 돼요.</>
+                  : <>저장하면 남은 횟수가 <b style={{ color: GOLD }}>{leftAfter}회</b>가 돼요.<br />(총 {TRY_LIMIT}회까지 지어볼 수 있어요)</>}
             </div>
             <button onClick={confirmSave}
               style={{ width: '100%', padding: 14, borderRadius: 12, background: '#c8783c', border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>
-              이 이름으로 저장하기
+              이 이름으로 확정하기
             </button>
             <button onClick={() => setConfirmOpen(false)}
-              style={{ width: '100%', padding: 12, borderRadius: 12, background: 'transparent', border: '0.5px solid #f0e0d5', color: SUB, fontSize: 13, cursor: 'pointer' }}>
-              다시 고를게요
+              style={{ width: '100%', padding: 12, borderRadius: 12, background: 'transparent', border: `1px solid ${LINE}`, color: SUB, fontSize: 13, cursor: 'pointer' }}>
+              더 골라 볼게요
             </button>
           </div>
         </div>
@@ -794,7 +996,7 @@ function Header({ router, isNewborn }: {
     <div style={{
       position: 'sticky', top: 0, zIndex: 50,
       display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px',
-      background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)', borderBottom: '0.5px solid #f0e0d5',
+      background: 'rgba(245,233,222,0.96)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${LINE}`,
     }}>
       <button onClick={() => router.push('/manseryeok/naming/rename/newname')} aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
       <span style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>
@@ -806,7 +1008,7 @@ function Header({ router, isNewborn }: {
 
 export default function NewHanjaPage() {
   return (
-    <Suspense fallback={<div style={{ background: '#FDF6F0', minHeight: '100vh' }} />}>
+    <Suspense fallback={<div style={{ background: BG, minHeight: '100vh' }} />}>
       <NewHanjaInner />
     </Suspense>
   )

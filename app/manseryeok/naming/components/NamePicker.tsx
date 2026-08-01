@@ -32,8 +32,12 @@ import { EL_CHART, EL_TEXT } from '@/lib/saju/ohaengColor'
 import type { Ohaeng } from '@/lib/saju/ohaeng'
 
 const GOLD = '#c8783c'
-const CARD = '#FFFBF7'
-const LINE = '#f0e0d5'
+// ★2026-08-01 (43부 6차) — 바깥 화면과 «같은» 대비를 씁니다.
+//   ⚠️ 이 부품만 옛 색을 쓰면 조건 패널이 화면에서 «떠» 보입니다.
+const CARD = '#FFFFFF'
+const LINE = '#E5D3C2'
+/** 패널 바탕 — 카드(흰색)와 갈리도록 한 단 낮춥니다 */
+const PANEL = '#F5E9DE'
 const INK = '#3a2e28'
 const SUB = '#8a7063'
 const PRESS: React.CSSProperties = { transition: 'all .12s cubic-bezier(.4,0,.2,1)' }
@@ -79,6 +83,8 @@ export default function NamePicker(p: NamePickerProps) {
   const [style, setStyle] = useState<NameStyle | null>(p.style ?? null)
   const [prefer, setPrefer] = useState(p.prefer ?? '')
   const [avoid, setAvoid] = useState(p.avoid ?? '')
+  /** ★고르신 소리를 «어느 자리에» 넣을지 (43부 6차 · 대표님 지시) */
+  const [preferPos, setPreferPos] = useState<'가운데' | '끝' | null>(null)
 
   const sur = p.surname.trim()
   const ready = sur.length > 0
@@ -133,10 +139,11 @@ export default function NamePicker(p: NamePickerProps) {
       gisin: p.gisin ?? null,
       style: style ?? undefined,
       prefer: preferChars.length ? preferChars : undefined,
+      preferPos,
       avoid: avoidChars.length ? avoidChars : undefined,
       limit: 10,
     })
-  }, [ready, sur, p.yongsin, p.heeksin, p.gisin, style, preferChars, avoidChars])
+  }, [ready, sur, p.yongsin, p.heeksin, p.gisin, style, preferChars, avoidChars, preferPos])
 
   /** ★사전에서 고른 이름을 «그 자리에서» 성씨와 맞춰 봅니다 */
   const dictCheck = useMemo(() => {
@@ -184,7 +191,8 @@ export default function NamePicker(p: NamePickerProps) {
               조건 고르기
               {(style || prefer || avoid) && (
                 <span style={{ color: GOLD, marginLeft: 6 }}>
-                  {[style, prefer && `“${prefer}”`, avoid && `${avoid} 빼기`].filter(Boolean).join(' · ')}
+                  {[style, prefer && `“${prefer}”${preferPos ? ` ${preferPos}` : ''}`,
+                    avoid && `${avoid} 빼기`].filter(Boolean).join(' · ')}
                 </span>
               )}
             </span>
@@ -223,6 +231,44 @@ export default function NamePicker(p: NamePickerProps) {
               </div>
 
               <Opt label="꼭 넣고 싶은 소리" placeholder="예) 민, 서" value={prefer} onChange={setPrefer} />
+
+              {/* ══════════════════════════════════════════════════
+                  ★2026-08-01 (43부 6차) — 그 소리를 «어느 자리에» 넣을지
+                    항렬자는 집안마다 «가운데» 또는 «끝» 으로 정해져 있습니다.
+                    ⚠️ 안 고르시면 예전 그대로 «어디든» 들어 있으면 맞습니다.
+                    ⚠️ 자리를 고르시면 «외자» 는 맞지 않습니다 — 넣을 자리가 없습니다.
+                  ══════════════════════════════════════════════════ */}
+              {preferChars.length > 0 && (
+                <div style={{ marginTop: -4, marginBottom: 11 }}>
+                  <div style={{ fontSize: 11.5, color: SUB, marginBottom: 5 }}>
+                    「{preferChars.join('·')}」를 넣을 자리
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {([null, '가운데', '끝'] as const).map(v => {
+                      const on = preferPos === v
+                      return (
+                        <button key={String(v)} onClick={() => setPreferPos(v)}
+                          style={{
+                            ...PRESS, flex: 1, padding: '8px 0', borderRadius: 9, cursor: 'pointer',
+                            fontSize: 12, fontWeight: on ? 700 : 500,
+                            background: on ? GOLD : '#fff',
+                            color: on ? '#fff' : INK,
+                            border: `1px solid ${on ? GOLD : LINE}`,
+                          }}>
+                          {v ?? '상관없음'}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {/* ⚠️ 자리를 고르면 후보가 줄어드는 것이 «정상» 입니다. 미리 알려 드립니다 */}
+                  {preferPos && list.filter(c => c.preferHit).length === 0 && (
+                    <div style={{ fontSize: 10.5, color: '#c8506e', marginTop: 5, lineHeight: 1.6 }}>
+                      「{preferChars.join('·')}」를 {preferPos} 자리에 둔 이름은 사전에 없어요.
+                      「상관없음」으로 넓혀 보세요.
+                    </div>
+                  )}
+                </div>
+              )}
               <Opt label="피하고 싶은 글자" placeholder="예) 항렬자·친척 이름의 한 글자"
                 value={avoid} onChange={setAvoid}
                 note="한 글자를 적으시면 그 글자가 든 이름을 모두 뺍니다" />
@@ -234,7 +280,7 @@ export default function NamePicker(p: NamePickerProps) {
                     ⚠️ 판정을 여기서 다시 하지 않습니다 — 위 list 를 그대로 씁니다.
                   ══════════════════════════════════════════════════ */}
               <div style={{
-                background: '#fff', border: `1px solid ${LINE}`, borderRadius: 10,
+                background: CARD, border: `1px solid ${LINE}`, borderRadius: 10,
                 padding: '10px 11px', marginBottom: 11,
               }}>
                 <div style={{
@@ -251,7 +297,8 @@ export default function NamePicker(p: NamePickerProps) {
                         「민 넣었는데 왜 민 없는 이름이 있지」 가 되지 않게. */}
                     {preferChars.length > 0 && (
                       <span style={{ marginLeft: 6, color: '#a8927e' }}>
-                        · 「{preferChars.join('·')}」 담은 것 {list.filter(c => c.preferHit).length}개
+                        · 「{preferChars.join('·')}」{preferPos ? ` ${preferPos}에` : ''} 담은 것{' '}
+                        {list.filter(c => c.preferHit).length}개
                       </span>
                     )}
                   </span>
@@ -267,7 +314,7 @@ export default function NamePicker(p: NamePickerProps) {
                       <button key={c.name} onClick={() => p.onPick(c.name)}
                         style={{
                           ...PRESS, cursor: 'pointer', fontSize: 12.5, padding: '5px 10px',
-                          borderRadius: 9, background: '#fffbf7', color: INK,
+                          borderRadius: 9, background: PANEL, color: INK,
                           border: `1px solid ${LINE}`,
                         }}>
                         {c.fullName}

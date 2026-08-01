@@ -167,6 +167,18 @@ export interface RecommendOptions extends PoolOptions {
   avoid?: string[]
   /** 이 음절이 «들어간» 이름을 앞으로 (선호 발음) */
   prefer?: string[]
+  /**
+   * ★고르신 소리를 «어느 자리에» 넣을지 (2026-08-01 · 43부 6차)
+   *
+   *   null(안 고름)  이름 «어디든» 들어 있으면 맞습니다 — 예전 그대로
+   *   '가운데'       두 글자 이름의 «첫 글자» 자리 (항렬자가 흔히 오는 자리)
+   *   '끝'           «마지막 글자» 자리
+   *
+   * ⚠️ 외자 이름은 «가운데도 끝도» 아닙니다. 한 글자뿐이라 자리가 없습니다.
+   *    → 자리를 고르시면 외자는 «맞지 않는» 것으로 봅니다. 거르지는 않습니다.
+   * ⚠️ «판정» 이 아닙니다. 교재 밖 취향이라 길흉에 넣지 않습니다 — 차례만 바꿉니다.
+   */
+  preferPos?: '가운데' | '끝' | null
   /* 어감/성향 선호 필터 (교재 밖 참고용) — ★길흉·감점 아님 */
   style?: NameStyle
   /**
@@ -256,6 +268,23 @@ export function recommendNames(
   const softOn = opt.softEnding !== false
   const avoid = new Set(opt.avoid ?? [])
   const prefer = opt.prefer ?? []
+  const preferPos = opt.preferPos ?? null
+
+  /**
+   * ★고르신 소리가 «그 자리에» 있는가.
+   *
+   *   ⚠️ 「가운데」는 두 글자 이름의 앞 글자입니다. 세 글자 이름은 이 서비스에 없습니다
+   *      (성 + 이름 한두 글자). 그래서 «앞 = 가운데 · 뒤 = 끝» 로 봅니다.
+   *   ⚠️ 자리를 고르셨는데 외자면 «맞지 않음» 입니다 — 넣을 자리가 없습니다.
+   */
+  const hitsPrefer = (name: string): boolean => {
+    if (prefer.length === 0) return false
+    const ch = [...name]
+    if (!preferPos) return prefer.some((p) => name.includes(p))
+    if (ch.length < 2) return false          // 외자 — 자리가 없습니다
+    const at = preferPos === '가운데' ? ch[0] : ch[ch.length - 1]
+    return prefer.includes(at)
+  }
   const surChars = [...surname.trim()].filter(Boolean)
   if (surChars.length === 0) return []
 
@@ -342,8 +371,12 @@ export function recommendNames(
     gamgak = Math.min(gamgak, RECOMMEND_WEIGHT.gamgak)
 
     // ④ 선호 발음·스타일 — 줄 세우기에만 씁니다
-    const preferHit = prefer.length > 0 && prefer.some((p) => name.includes(p))
-    if (preferHit) reasons.push('고르신 소리가 들어 있습니다')
+    const preferHit = hitsPrefer(name)
+    if (preferHit) {
+      reasons.push(preferPos
+        ? `고르신 소리가 ${preferPos} 자리에 있습니다`
+        : '고르신 소리가 들어 있습니다')
+    }
     /* 어감/성향 선호 필터 (교재 밖 참고용) */
     if (opt.style && !STYLE_HINT[opt.style](name)) continue
 

@@ -42,6 +42,10 @@ const P = {
   hrow: 'lib/saju/hanjaRow.ts',
   rj: 'lib/saju/resourceJudge.ts',
   svc: 'app/home-new/components/ServiceSection.tsx',
+  cert: 'app/manseryeok/naming/components/NamingCertificate.tsx',
+  pol: 'lib/saju/namingPolicy.ts',
+  pick: 'app/manseryeok/naming/components/NamePicker.tsx',
+  rec2: 'lib/saju/nameRecommend.ts',
 }
 const S = Object.fromEntries(Object.entries(P).map(([k, v]) => [k, read(v)])) as Record<keyof typeof P, string>
 
@@ -156,9 +160,13 @@ console.log('\n━━ ⑲-f ★신생아는 성씨 한자를 «고를 수» 있�
     `★불러온 성씨가 «이 대상의» 성씨일 때만 붙박이로 씁니다`)
   check(/가족관계등록부에 적힌 한자/.test(S.nh),
     `왜 성씨 한자를 묻는지 알려 줍니다`)
-  // 개명은 예전 그대로여야 합니다
-  check(/!pickSurname && surnameNow/.test(nhCode),
-    `★개명은 성씨가 «붙박이 칸» 그대로입니다`)
+  // ★2026-08-01 (43부 5차) — 이 검사를 «뒤집었습니다».
+  //   🔴 전에는 「개명은 성씨가 붙박이」를 «요구» 했습니다.
+  //      그 붙박이 때문에 개명 손님이 성씨 한자를 «고칠 길이 없었습니다».
+  //      柳(9획)·劉(15획)가 다른데 불러온 것이 틀려도 그대로 갔습니다 — 수리4격이 어긋납니다.
+  //   ★이제 성씨도 누를 수 있습니다. 다만 개명은 «미리 채워져» 있어 화면이 안 흔들립니다.
+  check(/slotFilled\(i\)/.test(nhCode),
+    `★개명은 성씨 칸이 «미리 채워져» 있습니다 (누르면 바꿀 수도 있습니다)`)
 }
 
 console.log('\n━━ ⑲-g ★E — 아기 이름 짓기가 «열려 있는가» ━━')
@@ -199,6 +207,154 @@ console.log('\n━━ ⑲-h ⚠️ 옛 개명 손님이 «안 깨지는가» ━
   for (const [n, c] of [['Step 2', S.nn], ['Step 3', S.nh], ['Step 4', S.nr]] as const) {
     check(!/SCORE_BASE|REL_SCORE/.test(codeOf(c)), `${n} 이 판정을 다시 하지 않습니다`)
   }
+}
+
+console.log('\n━━ ⑲-s ★한 번에 이름 «하나» — 부품은 두고 배선만 끊었는가 (43부 6차) ━━')
+{
+  const pol = codeOf(S.pol)
+  const nr = codeOf(S.nr)
+  const nh = codeOf(S.nh)
+  check(existsSync(P.pol), `정책 파일이 있습니다`)
+  check(/NAMES_PER_LOOKUP = 1/.test(pol), `★한 번에 «하나» 입니다`)
+  // ⚠️ 스위치가 «한 곳» 이어야 합니다 — 화면마다 판단하면 한 군데가 어긋납니다
+  check(/clampTryLimit/.test(nh) && /clampTryLimit/.test(nr),
+    `★두 화면 모두 «정책을 지나» 한도를 받습니다`)
+  check(!/typeof data\.value === 'number'\) setTryLimit\(data\.value\)/.test(nh + nr),
+    `★관리자 설정 값도 정책을 지납니다 (설정으로 3개가 되살아나지 않습니다)`)
+  // ★부품이 «살아 있는가» — 지운 것이 아니라 끊은 것입니다 (교훈 AM)
+  check(/지금까지 지어본 이름/.test(S.nr), `★비교 칩 부품이 «그대로» 있습니다`)
+  check(/!isSingleName && tries\.length > 1/.test(nr), `그 배선이 «끊겨» 있습니다`)
+  check(/총 \{TRY_LIMIT\}회까지 종합 해설/.test(S.nr), `★회차 안내 부품도 남아 있습니다`)
+  check(/isSingleName \? \(/.test(nr), `그 배선도 갈래로 끊겨 있습니다`)
+  // ⚠️ 옛 손님의 기록을 «감추기만» 해야 합니다
+  check(/keepPastTries/.test(nr), `★전에 지은 이름이 몇 개인지 셉니다`)
+  check(/작명 보관함에 있어요/.test(S.nr), `★어디서 볼 수 있는지 알려 드립니다 (말없이 감추지 않습니다)`)
+  // ⚠️ 손님이 화면에 갇히면 안 됩니다
+  check(/새 이름 지으러 가기/.test(S.nr), `★다른 이름을 지을 길이 남아 있습니다`)
+  // ★언제나 «마지막에 지은» 이름을 봅니다
+  check(/visibleTries\(tries\)/.test(nr), `보여 줄 이름을 정책이 정합니다`)
+  check(/isSingleName \? shownTries\[0\] : tries\[activeTry\]/.test(nr),
+    `★한 개 정책이면 «마지막에 지은» 이름을 봅니다`)
+}
+
+console.log('\n━━ ⑲-t ★선호 소리를 «어느 자리에» 넣을지 (43부 6차) ━━')
+{
+  const rec = codeOf(S.rec2)
+  const pick = codeOf(S.pick)
+  check(/preferPos\?: '가운데' \| '끝' \| null/.test(rec), `엔진이 자리를 받습니다`)
+  check(/const hitsPrefer =/.test(rec), `자리를 재는 창구가 하나입니다`)
+  // ⚠️ 외자는 «가운데도 끝도» 아닙니다
+  check(/if \(ch\.length < 2\) return false/.test(rec),
+    `★외자는 자리가 없어 «맞지 않음» 입니다`)
+  // ⚠️ 안 고르면 예전 그대로여야 합니다
+  check(/if \(!preferPos\) return prefer\.some/.test(rec),
+    `★안 고르시면 «어디든» 들어 있으면 맞습니다 (예전 그대로)`)
+  check(/setPreferPos/.test(pick), `화면에 자리 고르기가 있습니다`)
+  check(/preferChars\.length > 0 && \(/.test(pick),
+    `★소리를 넣으셔야 자리 고르기가 뜹니다 (빈 화면에 안 띄웁니다)`)
+  check(/사전에 없어요/.test(S.pick), `★그 자리에 맞는 이름이 없으면 «미리» 알려 드립니다`)
+  // ⚠️ 판정이 아닙니다
+  check(/차례만 바꿉니다|길흉에 넣지 않습니다/.test(S.rec2),
+    `★교재 밖 취향이라 길흉에 넣지 않았습니다`)
+}
+
+console.log('\n━━ ⑲-u 🔴 배색 — 카드가 바탕에 «묻히지» 않는가 (43부 6차) ━━')
+{
+  // 🔴 바탕 #FDF6F0 과 카드 #fffbf7 이 거의 같은 색이라 카드 경계가 안 보였습니다
+  for (const [n, src] of [['newname', S.nn], ['newhanja', S.nh], ['newresult', S.nr]] as const) {
+    check(/const CARD = '#FFFFFF'/.test(src), `${n} — 카드가 «흰색» 입니다`)
+    check(/const LINE = '#E5D3C2'/.test(src), `${n} — 테두리가 «보이는» 선입니다`)
+    check(!/'1px solid rgba\(200,120,60,0\.10\)'/.test(src),
+      `${n} — «안 보이던» 테두리가 남아 있지 않습니다`)
+  }
+  // 🔴 흰 바탕에 «흰 글씨» — 이름이 통째로 사라져 보였습니다
+  check(!/color: on \? GOLD : '#fff' \}\}>\{t\.chars/.test(codeOf(S.nr)),
+    `★비교 칩의 «흰 글씨» 가 없습니다`)
+  // ⚠️ 어두운 테마 화면은 «손대면 안 됩니다» — 거기서는 흰 글씨가 맞습니다
+  const dark = read('app/manseryeok/naming/rename/hanja/page.tsx')
+  check(/const CARD = '#2C2C2A'/.test(dark),
+    `★어두운 테마(rename/hanja)는 그대로입니다 — 거기 흰 글씨는 «맞습니다»`)
+}
+
+console.log('\n━━ ⑲-o ★성씨 한자를 «눌러서 바꿀 수» 있는가 (43부 5차) ━━')
+{
+  const nh = codeOf(S.nh)
+  // ⚠️ 같은 「류」라도 柳(9획)·劉(15획) — 획수가 달라 수리4격이 통째로 어긋납니다
+  check(!/color: '#cfcdc4' \}\}>\{surnameNow\.hanja\}/.test(nh),
+    `★성씨가 «못 누르는 회색 상자» 가 아닙니다`)
+  check(/const slots = useMemo\(\(\) => \[\s*\n\s*\.\.\.Array\.from\(wantSurname\)/.test(nh),
+    `★성씨가 «언제나» 칸입니다`)
+  // ⚠️⚠️ 칸이 있다 없다 하면 chosen 의 «번호가 밀려» 이름 한자가 성씨 자리로 갑니다
+  check(!/pickSurname\s*\?\s*Array\.from\(wantSurname\)/.test(nh),
+    `★칸이 «있다 없다» 하지 않습니다 (번호가 밀리면 고른 한자가 뒤섞입니다)`)
+  check(/const slotFilled =/.test(nh),
+    `불러온 성씨도 «찬 칸» 으로 셉니다 (개명이 예전처럼 돕니다)`)
+  check(/needPick \? 0 : surLen/.test(nh),
+    `★개명은 «이름 칸» 부터 시작합니다 — 성씨는 확인하고 싶을 때만 누릅니다`)
+  check(/asLoaded/.test(nh), `불러온 성씨 칸은 «바꾸기» 로 흐리게 둡니다`)
+}
+
+console.log('\n━━ ⑲-p ★Step 3 → 4 «최종 확정» 완충 단계 ━━')
+{
+  const nh = codeOf(S.nh)
+  check(/이 이름으로 확정할까요/.test(S.nh), `확정을 여쭙는 자리가 있습니다`)
+  check(/previewVerdict/.test(nh), `★고른 이름의 «조화도» 를 함께 보여 줍니다`)
+  // ⚠️ 판정을 여기서 다시 만들면 결과 화면과 갈립니다 (교훈 ET)
+  check(/diagnoseName\(\{[\s\S]{0,400}judgeResource\(/.test(nh),
+    `★같은 창구(diagnoseName·judgeResource)를 부릅니다 — 새 잣대를 만들지 않았습니다`)
+  check(/previewVerdict\.verdict\.warnings/.test(nh),
+    `★살펴볼 자리가 있으면 «가리지 않고» 알려 드립니다`)
+  for (const k of ['발음오행', '수리 4격', '자원오행', '사주 보완']) {
+    check(nh.includes(`'${k}'`), `확정 화면에 「${k}」 줄이 있습니다`)
+  }
+  check(/setConfirmOpen\(true\)/.test(nh) && !/proceed\(\)[\s\S]{0,120}gotoResult\(\)/.test(nh),
+    `★[이 이름으로] 가 결과로 «바로» 넘어가지 않습니다`)
+}
+
+console.log('\n━━ ⑲-q ★A4 작명서 · 보관함 버튼 (Step 4) ━━')
+{
+  const cert = codeOf(S.cert)
+  const nr = codeOf(S.nr)
+  check(existsSync(P.cert), `작명서 부품이 있습니다`)
+  check(/@page \{ size: A4/.test(cert), `★A4 한 장 규격입니다`)
+  check(/window\.print\(\)/.test(cert), `인쇄 · PDF 저장이 됩니다`)
+  // ⚠️ 팝업이 막히면 «조용히» 아무 일도 안 일어나면 안 됩니다
+  check(/onBlocked/.test(cert), `★팝업이 막히면 알려 드립니다 (조용히 실패하지 않습니다)`)
+  // ⚠️ 이름에 <, & 가 들어오면 문서가 깨집니다
+  check(/function esc\(/.test(cert) && /replace\(\/&\/g, '&amp;'\)/.test(cert),
+    `★값을 «걸러서» 꽂습니다 (이름에 <·& 가 와도 안 깨집니다)`)
+  // ⚠️ 판정을 여기서 하지 않습니다
+  check(!/judgeResource|diagnoseName|SCORE_BASE/.test(cert),
+    `★작명서가 판정을 «다시 하지» 않습니다 — 받은 값을 그립니다 (교훈 CJ)`)
+  // ⚠️ 무거운 PDF 꾸러미를 더하지 않았는지 — 의존이 늘면 package-lock 도 함께 (교훈 [의존])
+  const pkg = JSON.parse(read('package.json'))
+  const deps = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })
+  check(!deps.some((d: string) => /jspdf|html2canvas|pdfmake|puppeteer/.test(d)),
+    `★PDF 꾸러미를 더하지 «않았습니다» (한글 글꼴이 빠져 깨질 위험 · 교훈 [의존])`)
+
+  // 화면에 붙었는가
+  check(/NamingCertificateButton/.test(nr), `결과 화면에 작명서 버튼이 있습니다`)
+  check(/disabled=\{!cur\.commentary/.test(nr),
+    `★풀이 전에는 눌리지 않습니다 (맺음말이 빈 작명서가 나가지 않게)`)
+  check(/작명 보관함에서 보기/.test(S.nr), `★보관함으로 «가는» 버튼이 있습니다`)
+  check(/storage\?mode=naming/.test(nr), `작명 기록이므로 «작명 보관함» 으로 갑니다`)
+  // ★[내이름 감정] 과 같은 다섯 관점이 다 실리는가
+  for (const k of ['음양', '발음오행', '수리 4격', '자원오행', '사주와의 만남']) {
+    check(nr.includes(`'${k}'`), `작명서에 「${k}」 가 실립니다`)
+  }
+}
+
+console.log('\n━━ ⑲-r 🔴 «묵은 세션» 이 배지·사주를 뒤집지 않는가 ━━')
+{
+  const nr = codeOf(S.nr)
+  // 🔴 아기 이름을 한 번 지으면 kind=신생아 가 세션에 남습니다.
+  //    나중에 개명을 옛 길로 들어오면 그 묵은 세션이 집혀 배지가 「신생아」로 굳었습니다.
+  check(/묵은 세션|fromUrl/.test(S.nr), `★묵은 세션을 가려내는 자리가 있습니다`)
+  check(/t\.surnameHangul\.startsWith\(surOfName\)/.test(nr),
+    `★세션의 성씨가 «지금 이름» 과 다르면 버립니다`)
+  check(/const fromUrl = !!sp\?\.get\('surname'\)/.test(nr),
+    `URL 로 온 것은 «정본» 이라 이 검사를 건너뜁니다`)
+  check(!/badge=\{\{ kind: '(개명|신생아)' \}\}/.test(nr), `배지에 붙박이가 없습니다`)
 }
 
 console.log('\n━━ ⑲-n ★홈 — 폴더를 «열지 않고» 바로 들어가는가 (43부 4차) ━━')

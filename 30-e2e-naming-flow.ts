@@ -334,6 +334,35 @@ console.log('\n━━ ⑤ 조건 바꾸기 — 「입력해도 안 바뀐다」 
   }
 }
 
+// ══════════════════════════════════════════════════════════════════
+//  ⑥ 선호 소리 «자리» 가 실제로 듣는가 (43부 6차)
+// ══════════════════════════════════════════════════════════════════
+console.log('\n━━ ⑥ 「민」을 가운데 / 끝 자리에 ━━')
+{
+  const opt = { yongsin: '화' as const, limit: 10 }
+  const any = recommendNames('김', { ...opt, prefer: ['민'] })
+  const mid = recommendNames('김', { ...opt, prefer: ['민'], preferPos: '가운데' })
+  const end = recommendNames('김', { ...opt, prefer: ['민'], preferPos: '끝' })
+
+  const hitsOf = (l: typeof any) => l.filter(c => c.preferHit)
+  check(hitsOf(mid).every(c => [...c.name][0] === '민'),
+    `★가운데를 고르면 «앞 글자» 가 민입니다 (${hitsOf(mid)[0]?.fullName ?? '없음'})`)
+  check(hitsOf(end).every(c => [...c.name][[...c.name].length - 1] === '민'),
+    `★끝을 고르면 «마지막 글자» 가 민입니다 (${hitsOf(end)[0]?.fullName ?? '없음'})`)
+  // ⚠️ 외자는 자리가 없습니다
+  check(hitsOf(mid).every(c => [...c.name].length >= 2)
+     && hitsOf(end).every(c => [...c.name].length >= 2),
+    `★외자는 «맞지 않음» 입니다 — 넣을 자리가 없습니다`)
+  // ⚠️ 자리를 고르면 후보가 줄어드는 것이 정상 — 그래도 «빈손» 은 안 됩니다
+  check(mid.length === 10 && end.length === 10,
+    `자리를 골라도 목록이 비지 않습니다 (${mid.length} · ${end.length}개)`)
+  check(hitsOf(any).length >= hitsOf(mid).length,
+    `★「상관없음」이 가장 넓습니다 (${hitsOf(any).length} ≥ ${hitsOf(mid).length})`)
+  // 가운데와 끝은 «서로 다른» 결과여야 합니다 (둘 다 먹통이 아님)
+  check(mid.map(c => c.name).join() !== end.map(c => c.name).join(),
+    `★가운데와 끝이 «서로 다릅니다» (버튼이 먹통이 아닙니다)`)
+}
+
 console.log(`\n━━ 작명 동선 e2e — 통과 ${pass} · 실패 ${fail} ━━`)
 console.log(`
   ⚠️ 이 검사가 «대신하지 못하는» 것 — 실기기 확인
