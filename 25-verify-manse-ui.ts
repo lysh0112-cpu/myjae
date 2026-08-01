@@ -278,5 +278,81 @@ console.log('\n━━ ⑯-i ★결과 프레임이 «한 벌» 인가 (Phase 1-C
   check(!/목:\s*'#/.test(src), `프레임이 «자기 오행 색표» 를 갖고 있지 않습니다`)
 }
 
+console.log('\n━━ ⑯-j ★갈림길 화면 — 풀이할까 지어 드릴까 (Phase 2-B) ━━')
+{
+  const start = 'app/manseryeok/naming/start/page.tsx'
+  check(existsSync(start), `갈림길 화면이 있습니다`)
+  const src = readFileSync(start, 'utf8')
+  const sto = readFileSync('app/manseryeok/naming/diagnosis/storage/page.tsx', 'utf8')
+  const nn = readFileSync('app/manseryeok/naming/rename/newname/page.tsx', 'utf8')
+
+  // ① 보관함 버튼이 «갈림길» 로 오는가 (전에는 바로 진단으로 갔습니다)
+  check(/naming\/start/.test(sto), `★보관함이 갈림길 화면으로 보냅니다`)
+  check(!/router\.push\('\/manseryeok\/naming\/diagnosis'\)/.test(sto),
+    `보관함이 «바로 진단» 으로 가지 않습니다`)
+
+  // ② 두 길이 다 있는가
+  check(/naming\/diagnosis/.test(src), `길 ① 이름 풀이`)
+  check(/rename\/newname/.test(src), `길 ② 작명`)
+
+  // ③ ★사주를 «다시 묻지 않는가» — 앞에서 받은 것을 그대로 나릅니다
+  for (const k of ['year', 'month', 'day', 'gender', 'calType', 'leapMonth', 'hour']) {
+    check(src.includes(`'${k}'`), `사주 ${k} 를 이어 나릅니다`)
+  }
+
+  // ④ ⚠️ 작명 옵션이 «교재 밖» 임을 밝히는가
+  check(/어감\/성향 선호 필터 \(교재 밖 참고용\)/.test(src),
+    `★「교재 밖 참고용」 이 명시돼 있습니다`)
+  check(/길흉 판정에 쓰지 않습니다|길흉 판정 아님/.test(src),
+    `길흉에 쓰지 않는다고 적혀 있습니다`)
+
+  // ⑤ ★옵션이 다음 화면까지 «살아 가는가»
+  for (const k of ['kind', 'style', 'prefer', 'avoid']) {
+    check(src.includes(`'${k}'`) || src.includes(`set('${k}'`), `${k} 를 실어 보냅니다`)
+  }
+  check(/withOpts/.test(nn), `★newname 이 옵션을 «잃지 않고» 다음으로 나릅니다`)
+
+  // ⑥ 손맛
+  check(/cubic-bezier\(\.4,0,\.2,1\)/.test(src), `누를 때 반응하는 모션`)
+  check(/aria-pressed/.test(src), `고른 자리에 aria-pressed`)
+}
+
+console.log('\n━━ ⑯-k ★Step 2 — 한글 이름을 «고르는» 화면 (Phase 3) ━━')
+{
+  const picker = 'app/manseryeok/naming/components/NamePicker.tsx'
+  check(existsSync(picker), `이름 고르기 부품이 있습니다`)
+  const src = readFileSync(picker, 'utf8')
+  const nn = readFileSync('app/manseryeok/naming/rename/newname/page.tsx', 'utf8')
+
+  // ① 세 갈래
+  for (const t of ['추천받기', '사전에서 고르기', '직접 쓰기']) {
+    check(src.includes(t), `탭 「${t}」 가 있습니다`)
+  }
+  check(/recommendNames/.test(src), `★추천 엔진을 씁니다`)
+  check(/NAME_DICT/.test(src), `★교재 1장 사전을 씁니다`)
+
+  // ② ⚠️ 사전에서 고른 이름을 «그 자리에서» 성씨와 맞춰 보는가
+  check(/evaluateSoundOhaeng/.test(src),
+    `★사전에서 고르면 «지금 성씨와» 어울리는지 그 자리에서 잽니다`)
+  check(/이 이름으로 한자 고르러 가기/.test(src), `고른 뒤 다음으로 가는 길이 있습니다`)
+
+  // ③ 판정을 «다시 하지» 않는가 (교훈 CJ)
+  check(!/SCORE_BASE|125칸을 여기서/.test(src), `판정을 여기서 다시 하지 않습니다`)
+  check(!/목:\s*'#/.test(src), `«자기 오행 색표» 를 갖고 있지 않습니다`)
+
+  // ④ 화면에 얹혔는가 · 직접 쓰기가 «살아 있는가»
+  check(/NamePicker/.test(nn), `★newname 이 이 부품을 씁니다`)
+  check(/manual=\{<>/.test(nn), `★「직접 쓰기」 가 그대로 살아 있습니다`)
+  check(/function pickName/.test(nn), `고르면 다음으로 넘기는 길이 있습니다`)
+  // ⚠️ 이용권·결제 흐름이 «갈리지» 않아야 합니다
+  check(/pickName[\s\S]{0,300}readRemaining\(\) > 0[\s\S]{0,200}setPayOpen\(true\)/.test(nn),
+    `★추천으로 고를 때도 «같은» 이용권·결제 길을 씁니다`)
+
+  // ⑤ 추천에 쓸 사주·용신을 구하는가
+  check(/useResultSaju/.test(nn), `사주를 구합니다`)
+  check(/calcYongsinCompat/.test(nn), `용신을 구합니다`)
+  check(/catch \{ return '' \}/.test(nn), `용신을 못 구해도 «멈추지 않습니다»`)
+}
+
 console.log(`\n━━ 만세력 화면 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail > 0) process.exit(1)
