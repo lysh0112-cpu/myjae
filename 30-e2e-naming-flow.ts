@@ -361,6 +361,22 @@ console.log('\n━━ ⑥ 「민」을 가운데 / 끝 자리에 ━━')
   // 가운데와 끝은 «서로 다른» 결과여야 합니다 (둘 다 먹통이 아님)
   check(mid.map(c => c.name).join() !== end.map(c => c.name).join(),
     `★가운데와 끝이 «서로 다릅니다» (버튼이 먹통이 아닙니다)`)
+
+  // 🔴★2026-08-01 (43부 7차) — «섞여 나오던» 것을 잡습니다.
+  //   전에는 최민교·최민조 아래에 최은도·최우노가 섞였습니다 (앞줄 세우기만 했음).
+  check(mid.every(c => [...c.name][0] === '민'),
+    `★가운데 — «민이 없는 이름» 이 하나도 안 섞입니다 (${mid.map(c => c.name).join(' ')})`)
+  check(end.every(c => [...c.name][[...c.name].length - 1] === '민'),
+    `★끝 — «민이 없는 이름» 이 하나도 안 섞입니다`)
+  check(mid.every(c => c.preferHit) && end.every(c => c.preferHit),
+    `자리를 고르면 «전부» 조건을 만족합니다`)
+  // ⚠️ 「상관없음」은 «거르지 않습니다» — 예전 그대로여야 합니다
+  const anyNames = recommendNames('김', { ...opt })
+  check(anyNames.length === 10 && any.length === 10,
+    `★조건이 없거나 「상관없음」이면 거르지 않습니다 (${any.length}개)`)
+  // ⚠️ 없는 소리를 그 자리에 두면 «빈손» 이 «사실» 입니다. 억지로 채우지 않습니다
+  const none = recommendNames('김', { ...opt, prefer: ['쥑'], preferPos: '끝' })
+  check(none.length === 0, `★맞는 이름이 없으면 «억지로 채우지» 않습니다 (${none.length}개)`)
 }
 
 console.log(`\n━━ 작명 동선 e2e — 통과 ${pass} · 실패 ${fail} ━━`)

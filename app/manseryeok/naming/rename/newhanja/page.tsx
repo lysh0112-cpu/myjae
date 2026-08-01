@@ -38,9 +38,9 @@ const GOLD = '#c8783c'
 //     ⚠️ 그래서 「고른 것/안 고른 것」이 구분되지 않았습니다.
 //
 //   ★[이제]  세 층을 또렷이 갈랐습니다.
-//     바탕  #F5E9DE   ← 한 단 낮춥니다 (카드가 «떠» 보이게)
+//     바탕  #F4F2EF   ← ★7차: 베이지를 버린 «오프화이트». 흰 카드와 확실히 갈립니다
 //     카드  #FFFFFF   ← 흰색. 바탕과 확실히 갈립니다
-//     테두리 #E5D3C2  ← 실제로 «보이는» 선
+//     테두리 #DFD9D2  ← 실제로 «보이는» 선 (+ 카드에 옅은 그림자)
 //     고름  GOLD 테두리 + 옅은 금빛 바탕
 //
 //   ⚠️ 글자색은 건드리지 않았습니다 — 바탕이 더 밝아졌으므로 대비는 «좋아지기만» 합니다.
@@ -49,10 +49,15 @@ const GOLD = '#c8783c'
 // ══════════════════════════════════════════════════════════════════
 const CARD = '#FFFFFF'
 /** ★보이는 테두리 — 이 파일에서 «선» 은 전부 이 값을 쓰십시오 */
-const LINE = '#E5D3C2'
+const LINE = '#DFD9D2'
 /** 바탕 — 카드가 떠 보이도록 한 단 낮춥니다 */
-const BG = '#F5E9DE'
-const SUB = '#b4785a'
+const BG = '#F4F2EF'
+/** ★7차 — 안내 글자를 «짙게». #b4785a 는 흰 카드 위에서 흐렸습니다 */
+const SUB = '#6B5B50'
+/** 본문 글자 — 검정 대신 짙은 갈회색 */
+const INK = '#2E2622'
+/** 카드 그림자 — 테두리만으로 부족한 자리에 */
+const SHADOW = '0 1px 3px rgba(46,38,34,0.06)'
 const GREEN = '#81c784'
 
 const TOP_N = 6
@@ -623,23 +628,41 @@ function NewHanjaInner() {
     const hanjaKey = nameChars.map((c) => c.hanja).join('')
 
     let tries = readTries()
-    const existIdx = tries.findIndex((t) => t.chars.map((c) => c.hanja).join('') === hanjaKey)
-    if (existIdx === -1) {
-      if (tries.length >= TRY_LIMIT) {
-        alert(isSingleName
-          ? '이번 조회는 이름 하나까지예요.\n방금 지으신 이름 결과를 보여 드릴게요.'
-          : '총 ' + TRY_LIMIT + '회까지 이름을 지어볼 수 있어요.\n지금까지 본 이름 중에서 골라주세요.')
-        setConfirmOpen(false)
-        // ★2026-08-01 (43부) — 이 갈래도 «대상을 실어» 보냅니다.
-        //   ⚠️ 28-verify 가 잡았습니다. 여기만 맨몸이면 횟수를 다 쓴 손님의
-        //      결과 화면이 «내 사주 · 개명 배지» 로 돌아갑니다. 조용히 갈리는 자리입니다.
-        router.push(gotoResult())
-        return
-      }
-      tries.push({ name: hangulName, chars: nameChars })
+
+    // ══════════════════════════════════════════════════════════
+    //  🔴★2026-08-01 (43부 7차) — «방금 고른 이름이 안 나오던» 버그
+    //
+    //   [무엇이 있었나]  제가 6차에 한도를 «1» 로 내리면서,
+    //     아래 「한도를 다 썼으면 막는다」 갈래가 «두 번째 이름부터 언제나» 걸렸습니다.
+    //       ① 崔旼佼 를 확정해도 tries 에 «넣지 않고»
+    //       ② 옛 목록(柳彊珉)을 그대로 둔 채 결과 화면으로 보냈습니다
+    //       → 손님은 방금 고른 이름 대신 «지난번 이름» 의 풀이를 봤습니다.
+    //       → 보관함에도 새 이름이 «저장되지 않았습니다».
+    //     ⚠️ 「한 번에 하나」는 «하나만 저장한다» 는 뜻이지
+    //        «두 번째를 막는다» 는 뜻이 아니었습니다. 제가 잘못 옮겼습니다.
+    //
+    //   ★[이제]  한 번에 하나면 «새로 고른 이름으로 갈아 끼웁니다».
+    //     ⚠️ 옛 이름을 잃는 것이 아닙니다 — 보관함에 이미 저장돼 있습니다.
+    //        (아래 결과 화면이 「전에 지으신 이름 N개는 보관함에 있어요」로 안내합니다)
+    // ══════════════════════════════════════════════════════════
+    if (isSingleName) {
+      // ★언제나 «방금 고른 이름» 하나만 남깁니다. 막지 않습니다.
+      tries = [{ name: hangulName, chars: nameChars }]
     } else {
-      const item = tries.splice(existIdx, 1)[0]
-      tries.push(item)
+      const existIdx = tries.findIndex((t) => t.chars.map((c) => c.hanja).join('') === hanjaKey)
+      if (existIdx === -1) {
+        if (tries.length >= TRY_LIMIT) {
+          alert('총 ' + TRY_LIMIT + '회까지 이름을 지어볼 수 있어요.\n지금까지 본 이름 중에서 골라주세요.')
+          setConfirmOpen(false)
+          // ⚠️ 이 갈래도 «대상을 실어» 보냅니다 (28-verify 가 잡았던 자리)
+          router.push(gotoResult())
+          return
+        }
+        tries.push({ name: hangulName, chars: nameChars })
+      } else {
+        const item = tries.splice(existIdx, 1)[0]
+        tries.push(item)
+      }
     }
 
     try {
@@ -648,22 +671,31 @@ function NewHanjaInner() {
     } catch {}
 
     setConfirmOpen(false)
-    // ★2026-08-01 (43부) 결함 ③④ — 대상을 «끝까지» 넘깁니다.
-    //   전에는 아무것도 안 실어 보내 newresult 가 내 myinfo 로 돌아갔고,
-    //   배지·보관함은 '개명' 붙박이였습니다.
-    router.push(gotoResult())
+    // ★대상 + «방금 고른 이름» 을 함께 넘깁니다 (43부 7차)
+    router.push(gotoResult({ hangul: hangulName, hanja: hanjaKey }))
   }
 
   /**
    * ★결과 화면으로 가는 «단 하나» 의 문.
    *   여기서 성씨 한자가 «확정» 되므로 대상에 채워 넣어 다시 실어 보냅니다.
    */
-  function gotoResult(): string {
+  function gotoResult(picked?: { hangul: string; hanja: string }): string {
     const base = '/manseryeok/naming/rename/newresult'
-    if (!targetNow) return base
-    saveNamingTarget(targetNow)
-    const q = namingTargetQuery(targetNow)
-    return q ? `${base}?${q}` : base
+    const q = new URLSearchParams()
+    // ★2026-08-01 (43부 7차) — «방금 고른 이름» 을 URL 에도 또박또박 싣습니다.
+    //   ⚠️ 전에는 결과 화면이 localStorage 의 tries «마지막 줄» 만 믿었습니다.
+    //      그 줄이 갱신되지 않으면 «지난번 이름» 이 그대로 나옵니다 (7차 버그).
+    //      → 결과 화면이 «URL 과 다른 이름» 을 그리면 스스로 알아채도록 실어 보냅니다.
+    if (picked?.hanja) {
+      q.set('pickedHanja', picked.hanja)
+      q.set('pickedHangul', picked.hangul)
+    }
+    if (targetNow) {
+      saveNamingTarget(targetNow)
+      for (const [k, v] of new URLSearchParams(namingTargetQuery(targetNow))) q.set(k, v)
+    }
+    const qs = q.toString()
+    return qs ? `${base}?${qs}` : base
   }
 
   // ★2026-08-01 (43부) — 「성씨가 없다」가 아니라 「성씨 «글자» 조차 없다」로 봅니다.
@@ -892,7 +924,7 @@ function NewHanjaInner() {
                    그러니 «무엇을 고르셨는지» 를 한눈에 보여 드리고 여쭙습니다. */}
             <div style={{ fontSize: 13, color: SUB, marginBottom: 10 }}>이 이름으로 확정할까요?</div>
             <div style={{ fontSize: 32, fontWeight: 700, color: GOLD, letterSpacing: 4, marginBottom: 2 }}>{previewHanja}</div>
-            <div style={{ fontSize: 13, color: '#1a1a1a', marginBottom: 16 }}>{previewHangul}</div>
+            <div style={{ fontSize: 13, color: INK, marginBottom: 16 }}>{previewHangul}</div>
             {/* ── 고르신 글자 낱낱이 — 한자·훈·획수·자원오행 ── */}
             {previewChars && (
               <div style={{
@@ -996,10 +1028,10 @@ function Header({ router, isNewborn }: {
     <div style={{
       position: 'sticky', top: 0, zIndex: 50,
       display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px',
-      background: 'rgba(245,233,222,0.96)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${LINE}`,
+      background: 'rgba(244,242,239,0.96)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${LINE}`,
     }}>
       <button onClick={() => router.push('/manseryeok/naming/rename/newname')} aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
-      <span style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>
+      <span style={{ fontSize: 15, fontWeight: 500, color: INK }}>
         {isNewborn ? '아기 이름 한자 고르기' : '새 이름 한자 고르기'}
       </span>
     </div>

@@ -46,7 +46,11 @@ interface Pillar { pillar: string; stem: string; branch: string }
 /** 작명일 때 이름 위에 붙는 배지 */
 export interface NameResultBadge {
   /** [개명] · [신생아] */
-  kind?: '개명' | '신생아'
+  /**
+     * 배지에 쓸 말. ★2026-08-01 (43부 7차) — «관계» 도 옵니다 (손주·자녀 …).
+     * ⚠️ 아무 말이나 넣지 마십시오 — 사람 고르기 화면이 쓰는 관계 이름만 넣습니다.
+     */
+    kind?: string
   /** 몇 순위로 뽑힌 이름인가 */
   rank?: number
   /** 종합 적합도 0~100 — ★화면에만 숫자로 보입니다 */
@@ -103,7 +107,9 @@ export default function NameAnalysisResultView(p: NameAnalysisResultViewProps) {
             {p.badge.kind && (
               <span style={{
                 fontSize: 11, fontWeight: 600, color: '#fff',
-                background: p.badge.kind === '신생아' ? '#4a7c59' : '#8f3d0e',
+                // ★2026-08-01 (43부 7차) — 「손주·자녀」 같은 관계도 옵니다.
+                //   ⚠️ 개명만 갈색이고 «나머지는 모두» 아기 쪽 초록입니다.
+                background: p.badge.kind === '개명' ? '#8f3d0e' : '#4a7c59',
                 padding: '4px 11px', borderRadius: 12,
               }}>
                 {p.badge.kind} 작명

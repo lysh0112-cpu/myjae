@@ -26,9 +26,9 @@ const GOLD = '#c8783c'
 //     ⚠️ 그래서 「고른 것/안 고른 것」이 구분되지 않았습니다.
 //
 //   ★[이제]  세 층을 또렷이 갈랐습니다.
-//     바탕  #F5E9DE   ← 한 단 낮춥니다 (카드가 «떠» 보이게)
+//     바탕  #F4F2EF   ← ★7차: 베이지를 버린 «오프화이트». 흰 카드와 확실히 갈립니다
 //     카드  #FFFFFF   ← 흰색. 바탕과 확실히 갈립니다
-//     테두리 #E5D3C2  ← 실제로 «보이는» 선
+//     테두리 #DFD9D2  ← 실제로 «보이는» 선 (+ 카드에 옅은 그림자)
 //     고름  GOLD 테두리 + 옅은 금빛 바탕
 //
 //   ⚠️ 글자색은 건드리지 않았습니다 — 바탕이 더 밝아졌으므로 대비는 «좋아지기만» 합니다.
@@ -37,10 +37,15 @@ const GOLD = '#c8783c'
 // ══════════════════════════════════════════════════════════════════
 const CARD = '#FFFFFF'
 /** ★보이는 테두리 — 이 파일에서 «선» 은 전부 이 값을 쓰십시오 */
-const LINE = '#E5D3C2'
+const LINE = '#DFD9D2'
 /** 바탕 — 카드가 떠 보이도록 한 단 낮춥니다 */
-const BG = '#F5E9DE'
-const SUB = '#b4785a'
+const BG = '#F4F2EF'
+/** ★7차 — 안내 글자를 «짙게». #b4785a 는 흰 카드 위에서 흐렸습니다 */
+const SUB = '#6B5B50'
+/** 본문 글자 — 검정 대신 짙은 갈회색 */
+const INK = '#2E2622'
+/** 카드 그림자 — 테두리만으로 부족한 자리에 */
+const SHADOW = '0 1px 3px rgba(46,38,34,0.06)'
 
 const MY_INFO_KEY = 'myinfo'
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
@@ -430,7 +435,7 @@ function NewNameInner() {
   const inputStyle: CSSProperties = {
     width: 48, height: 46, textAlign: 'center', fontSize: 18,
     borderRadius: 10, border: '1px solid ' + GOLD,
-    background: 'rgba(200,120,60,0.07)', color: '#1a1a1a',
+    background: 'rgba(200,120,60,0.07)', color: INK,
   }
 
   const chip = (n: 1 | 2, label: string) => {
@@ -563,7 +568,7 @@ function NewNameInner() {
           <div onClick={(e) => e.stopPropagation()}
             style={{ width: '100%', maxWidth: 360, background: '#fffbf7', borderRadius: 18, padding: '24px 20px', boxShadow: '0 16px 40px rgba(90,50,30,0.2)', textAlign: 'center' }}>
             <div style={{ fontSize: 28, marginBottom: 10 }}>✍️</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a1a', marginBottom: 6 }}>이름 지어보기 이용권</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: INK, marginBottom: 6 }}>이름 지어보기 이용권</div>
             <div style={{ fontSize: 13, color: SUB, marginBottom: 16, lineHeight: 1.7 }}>
               결제하시면 사주에 맞는 한자로<br />
               <b style={{ color: GOLD }}>{tryLimit}개</b>의 이름을 지어보고<br />
@@ -596,7 +601,7 @@ function Header({ router, isNewborn }: {
     <div style={{
       position: 'sticky', top: 0, zIndex: 50,
       display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px',
-      background: 'rgba(245,233,222,0.96)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${LINE}`,
+      background: 'rgba(244,242,239,0.96)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${LINE}`,
     }}>
       {/* ★2026-08-01 (43부) — 신생아는 «이름 풀이» 를 한 적이 없습니다.
           그 화면으로 되돌리면 갈 곳이 없어 보입니다. 보관함으로 보냅니다. */}
@@ -605,7 +610,7 @@ function Header({ router, isNewborn }: {
           ? '/manseryeok/naming/diagnosis/storage'
           : '/manseryeok/naming/diagnosis')}
         aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
-      <span style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>
+      <span style={{ fontSize: 15, fontWeight: 500, color: INK }}>
         {isNewborn ? '아기 이름 짓기' : '발음 그대로, 한자 바꾸기'}
       </span>
     </div>

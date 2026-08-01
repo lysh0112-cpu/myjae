@@ -34,12 +34,39 @@ import type { Ohaeng } from '@/lib/saju/ohaeng'
 const GOLD = '#c8783c'
 // ★2026-08-01 (43부 6차) — 바깥 화면과 «같은» 대비를 씁니다.
 //   ⚠️ 이 부품만 옛 색을 쓰면 조건 패널이 화면에서 «떠» 보입니다.
+// ★2026-08-01 (43부 7차) — 배색을 «오프화이트 + 흰 카드» 로 다시 잡았습니다.
+//   ⚠️ 6차의 베이지(#F5E9DE)는 흰 카드와 여전히 «비슷한 색» 이었습니다.
+//      바탕에서 누런 기를 빼야 흰 카드가 또렷이 떠오릅니다.
 const CARD = '#FFFFFF'
-const LINE = '#E5D3C2'
+const LINE = '#DFD9D2'
 /** 패널 바탕 — 카드(흰색)와 갈리도록 한 단 낮춥니다 */
-const PANEL = '#F5E9DE'
-const INK = '#3a2e28'
-const SUB = '#8a7063'
+const PANEL = '#F4F2EF'
+/** 카드 그림자 — 테두리만으로 부족한 자리에 */
+const SHADOW = '0 1px 3px rgba(46,38,34,0.06)'
+
+/**
+ * ★고른 버튼 / 안 고른 버튼 — «한눈에» 갈리게 (대표님 지시)
+ *
+ *  ⚠️ 전에는 둘 다 옅어 「지금 뭘 골랐지」를 알기 어려웠습니다.
+ *     고른 쪽: 금색을 «채우고» 흰 글씨 + 옅은 금빛 그림자
+ *     안 고른 쪽: 흰 바탕 + «보이는» 테두리 + 짙은 글씨
+ */
+function chipStyle(on: boolean): React.CSSProperties {
+  return on
+    ? {
+        background: GOLD, color: '#fff', fontWeight: 700,
+        border: `1px solid ${GOLD}`,
+        boxShadow: '0 2px 6px rgba(200,120,60,0.30)',
+      }
+    : {
+        background: CARD, color: INK, fontWeight: 500,
+        border: `1px solid ${LINE}`,
+        boxShadow: SHADOW,
+      }
+}
+const INK = '#2E2622'
+/** ★7차 — 안내 글자를 «짙게» (흰 카드 위에서 흐렸습니다) */
+const SUB = '#6B5B50'
 const PRESS: React.CSSProperties = { transition: 'all .12s cubic-bezier(.4,0,.2,1)' }
 
 type Tab = '추천' | '사전' | '직접'
@@ -221,11 +248,8 @@ export default function NamePicker(p: NamePickerProps) {
                   <button key={v} onClick={() => setStyle(style === v ? null : v)}
                     aria-pressed={style === v}
                     style={{
-                      ...PRESS, cursor: 'pointer', fontSize: 12, padding: '7px 13px',
-                      borderRadius: 12, fontWeight: style === v ? 600 : 400,
-                      background: style === v ? GOLD : '#fff',
-                      color: style === v ? '#fff' : '#5c3a1e',
-                      border: `1px solid ${style === v ? GOLD : LINE}`,
+                      ...PRESS, cursor: 'pointer', fontSize: 12, padding: '8px 14px',
+                      borderRadius: 12, ...chipStyle(style === v),
                     }}>{v}</button>
                 ))}
               </div>
@@ -249,11 +273,8 @@ export default function NamePicker(p: NamePickerProps) {
                       return (
                         <button key={String(v)} onClick={() => setPreferPos(v)}
                           style={{
-                            ...PRESS, flex: 1, padding: '8px 0', borderRadius: 9, cursor: 'pointer',
-                            fontSize: 12, fontWeight: on ? 700 : 500,
-                            background: on ? GOLD : '#fff',
-                            color: on ? '#fff' : INK,
-                            border: `1px solid ${on ? GOLD : LINE}`,
+                            ...PRESS, flex: 1, padding: '9px 0', borderRadius: 9, cursor: 'pointer',
+                            fontSize: 12, ...chipStyle(on),
                           }}>
                           {v ?? '상관없음'}
                         </button>
@@ -296,7 +317,7 @@ export default function NamePicker(p: NamePickerProps) {
                         몇 개가 실제로 그 소리를 담았는지 «따로» 적어 오해를 막습니다 —
                         「민 넣었는데 왜 민 없는 이름이 있지」 가 되지 않게. */}
                     {preferChars.length > 0 && (
-                      <span style={{ marginLeft: 6, color: '#a8927e' }}>
+                      <span style={{ marginLeft: 6, color: '#7A6A5E' }}>
                         · 「{preferChars.join('·')}」{preferPos ? ` ${preferPos}에` : ''} 담은 것{' '}
                         {list.filter(c => c.preferHit).length}개
                       </span>
@@ -321,7 +342,7 @@ export default function NamePicker(p: NamePickerProps) {
                       </button>
                     ))}
                     {list.length > 4 && (
-                      <span style={{ fontSize: 10.5, color: '#a8927e', alignSelf: 'center' }}>
+                      <span style={{ fontSize: 10.5, color: '#7A6A5E', alignSelf: 'center' }}>
                         외 {list.length - 4}개 · 아래에 이어집니다
                       </span>
                     )}
@@ -334,7 +355,7 @@ export default function NamePicker(p: NamePickerProps) {
                 )}
               </div>
 
-              <div style={{ fontSize: 10.5, color: '#a8927e', lineHeight: 1.65 }}>
+              <div style={{ fontSize: 10.5, color: '#7A6A5E', lineHeight: 1.65 }}>
                 조건을 바꾸시면 <b>바로</b> 다시 골라 드립니다. 따로 누르실 것은 없습니다.
                 <br />
                 어감에 대한 취향은 참고로만 씁니다.
@@ -499,7 +520,7 @@ function Opt({ label, placeholder, value, onChange, note }: {
           border: `1px solid ${LINE}`, background: '#fff',
           fontSize: 13, color: INK, outline: 'none',
         }} />
-      {note && <div style={{ fontSize: 10.5, color: '#a8927e', marginTop: 4 }}>{note}</div>}
+      {note && <div style={{ fontSize: 10.5, color: '#7A6A5E', marginTop: 4 }}>{note}</div>}
     </div>
   )
 }
@@ -515,7 +536,7 @@ function Empty({ children }: { children: React.ReactNode }) {
 
 function Note({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontSize: 10.5, color: '#a8927e', lineHeight: 1.65, marginTop: 9 }}>
+    <div style={{ fontSize: 10.5, color: '#7A6A5E', lineHeight: 1.65, marginTop: 9 }}>
       {children}
     </div>
   )

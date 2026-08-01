@@ -32,9 +32,9 @@ const GOLD = '#c8783c'
 //     ⚠️ 그래서 「고른 것/안 고른 것」이 구분되지 않았습니다.
 //
 //   ★[이제]  세 층을 또렷이 갈랐습니다.
-//     바탕  #F5E9DE   ← 한 단 낮춥니다 (카드가 «떠» 보이게)
+//     바탕  #F4F2EF   ← ★7차: 베이지를 버린 «오프화이트». 흰 카드와 확실히 갈립니다
 //     카드  #FFFFFF   ← 흰색. 바탕과 확실히 갈립니다
-//     테두리 #E5D3C2  ← 실제로 «보이는» 선
+//     테두리 #DFD9D2  ← 실제로 «보이는» 선 (+ 카드에 옅은 그림자)
 //     고름  GOLD 테두리 + 옅은 금빛 바탕
 //
 //   ⚠️ 글자색은 건드리지 않았습니다 — 바탕이 더 밝아졌으므로 대비는 «좋아지기만» 합니다.
@@ -43,10 +43,15 @@ const GOLD = '#c8783c'
 // ══════════════════════════════════════════════════════════════════
 const CARD = '#FFFFFF'
 /** ★보이는 테두리 — 이 파일에서 «선» 은 전부 이 값을 쓰십시오 */
-const LINE = '#E5D3C2'
+const LINE = '#DFD9D2'
 /** 바탕 — 카드가 떠 보이도록 한 단 낮춥니다 */
-const BG = '#F5E9DE'
-const SUB = '#b4785a'
+const BG = '#F4F2EF'
+/** ★7차 — 안내 글자를 «짙게». #b4785a 는 흰 카드 위에서 흐렸습니다 */
+const SUB = '#6B5B50'
+/** 본문 글자 — 검정 대신 짙은 갈회색 */
+const INK = '#2E2622'
+/** 카드 그림자 — 테두리만으로 부족한 자리에 */
+const SHADOW = '0 1px 3px rgba(46,38,34,0.06)'
 const GREEN = '#81c784'
 
 const DEFAULT_TRY_LIMIT = clampTryLimit(3)
@@ -108,6 +113,22 @@ function NewResultInner() {
   const [target, setTarget] = useState<NamingTarget | null>(null)
   /** 개명인가 신생아인가 — ★붙박이를 걷어낸 자리 */
   const namingKind = target?.kind ?? '개명'
+
+  /**
+   * ★2026-08-01 (43부 7차) — 배지에 «누구 이름인지» 까지 담습니다 (대표님 지시).
+   *
+   *   신생아 + 손주 → 「손주 작명」   신생아 + 자녀 → 「자녀 작명」
+   *   관계를 모르면 → 「신생아 작명」 · 「개명」  (예전 그대로)
+   *
+   *   ⚠️ 관계 이름을 «새로 만들지» 않습니다 — 사람 고르기 화면이 쓰는 말을 그대로 씁니다.
+   *      여기서 지어내면 화면마다 말이 갈립니다. (교훈 CJ)
+   *   ⚠️ 「본인·나」 는 관계로 적지 않습니다 — 「나 작명」은 말이 안 됩니다.
+   */
+  const badgeKind = (() => {
+    const rel = (target?.relation || '').trim()
+    if (namingKind === '신생아' && rel && !['self', '본인', '나'].includes(rel)) return rel
+    return namingKind
+  })()
 
   const [info, setInfo] = useState<{
     calType: string; year: number; month: number; day: number
@@ -239,7 +260,28 @@ function NewResultInner() {
    *      한 군데만 어긋나도 «다른 이름의 풀이» 가 나갑니다.
    */
   const shownTries = visibleTries(tries)
-  const cur = isSingleName ? shownTries[0] : tries[activeTry]
+
+  // ══════════════════════════════════════════════════════════════
+  //  🔴★2026-08-01 (43부 7차) — «방금 고른 이름» 을 반드시 그립니다
+  //
+  //   [무엇이 있었나]  이 화면은 localStorage 의 tries «마지막 줄» 만 믿었습니다.
+  //     앞 화면이 그 줄을 갱신하지 못하면(7차 버그) 조용히 «지난번 이름» 을 그렸습니다.
+  //     ⚠️ 조용히 틀리는 것이 가장 나쁩니다 — 손님은 崔旼佼 를 골랐는데
+  //        柳彊珉 의 풀이를 «자기 이름 풀이» 로 믿고 가져가십니다.
+  //
+  //   ★[이제]  URL 이 「내가 고른 한자」를 함께 실어 옵니다.
+  //     그 한자를 가진 줄을 tries 에서 «찾아» 그립니다.
+  //     ⚠️ 없으면 그때는 마지막 줄로 갑니다 — 옛 링크·북마크가 깨지지 않게.
+  // ══════════════════════════════════════════════════════════════
+  const pickedHanja = (sp?.get('pickedHanja') || '').trim()
+  const curByUrl = pickedHanja
+    ? tries.find(t => t.chars.map(c => c.hanja).join('') === pickedHanja)
+    : undefined
+  const cur = curByUrl ?? (isSingleName ? shownTries[0] : tries[activeTry])
+
+  /** ⚠️ URL 이 말하는 이름과 «그리고 있는 이름» 이 다른가 — 조용히 넘기지 않습니다 */
+  const nameMismatch = !!pickedHanja && !curByUrl && !!cur
+    && cur.chars.map(c => c.hanja).join('') !== pickedHanja
 
   // 심산 오행 점수로 용신 계산 (월지 계절 치환 반영). 4곳에서 같이 쓴다.
   const yongArgs = () => [solar?.month, solar?.day,
@@ -495,7 +537,7 @@ function NewResultInner() {
           <div style={{ fontSize: 12, color: GOLD, marginBottom: 12, fontWeight: 700 }}>이름 분석 (4가지 기준)</div>
           {rows.map((row, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: i === rows.length - 1 ? 'none' : `1px solid ${LINE}` }}>
-              <span style={{ fontSize: 13, color: '#1a1a1a' }}>{row.label}</span>
+              <span style={{ fontSize: 13, color: INK }}>{row.label}</span>
               <span style={{ fontSize: 13, fontWeight: 700, color: gradeColor(row.f.grade) }}>{row.f.grade}</span>
             </div>
           ))}
@@ -570,7 +612,7 @@ function NewResultInner() {
           hanjaName={fullName}
           hangulName={hangulName}
           subtitle={namingKind === '신생아' ? '아기에게 지어 드린 이름' : '새로 지은 이름'}
-          badge={{ kind: namingKind }}
+          badge={{ kind: badgeKind }}
           saju={saju}
           solarYear={solar?.year ?? 0}
           solarMonth={solar?.month ?? 1}
@@ -599,7 +641,7 @@ function NewResultInner() {
             </>
           ) : (
             <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: '16px', textAlign: 'center' }}>
-              <div style={{ fontSize: 13, color: '#1a1a1a', lineHeight: 1.7, marginBottom: 12 }}>
+              <div style={{ fontSize: 13, color: INK, lineHeight: 1.7, marginBottom: 12 }}>
                 이용 가능 횟수를 모두 사용했어요.<br />다시 결제하시면 이어서 이용하실 수 있어요.
               </div>
               <button onClick={() => router.push('/manseryeok/naming/rename/newname')} className="active:scale-95"
@@ -732,10 +774,10 @@ function Header({ router }: { router: ReturnType<typeof useRouter> }) {
     <div style={{
       position: 'sticky', top: 0, zIndex: 50,
       display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px',
-      background: 'rgba(245,233,222,0.96)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${LINE}`,
+      background: 'rgba(244,242,239,0.96)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${LINE}`,
     }}>
       <button onClick={() => router.push('/manseryeok/naming/rename/newhanja')} aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
-      <span style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>새 이름 결과</span>
+      <span style={{ fontSize: 15, fontWeight: 500, color: INK }}>새 이름 결과</span>
     </div>
   )
 }

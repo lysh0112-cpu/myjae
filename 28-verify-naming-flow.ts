@@ -209,6 +209,74 @@ console.log('\n━━ ⑲-h ⚠️ 옛 개명 손님이 «안 깨지는가» ━
   }
 }
 
+console.log('\n━━ ⑲-v 🔴 «방금 고른 이름» 이 결과에 나오는가 (43부 7차) ━━')
+{
+  const nh = codeOf(S.nh)
+  const nr = codeOf(S.nr)
+  // 🔴 6차에 한도를 1 로 내리면서 «두 번째 이름부터» 막혀
+  //    새 이름이 저장되지 않고 «지난번 이름» 결과가 나왔습니다.
+  check(/if \(isSingleName\) \{[\s\S]{0,200}tries = \[\{ name: hangulName/.test(nh),
+    `★한 개 정책이면 «새 이름으로 갈아 끼웁니다» — 막지 않습니다`)
+  check(!/isSingleName[\s\S]{0,80}이번 조회는 이름 하나까지/.test(nh),
+    `★「하나까지예요」로 «막고 넘어가는» 갈래가 없습니다`)
+  // ★URL 이 「내가 고른 한자」를 실어 옵니다
+  check(/q\.set\('pickedHanja'/.test(nh), `앞 화면이 «고른 한자» 를 URL 에 싣습니다`)
+  check(/gotoResult\(\{ hangul: hangulName, hanja: hanjaKey \}\)/.test(nh),
+    `확정 버튼이 그 이름을 넘깁니다`)
+  check(/const pickedHanja = \(sp\?\.get\('pickedHanja'\)/.test(nr),
+    `★결과 화면이 URL 의 이름을 읽습니다`)
+  check(/const cur = curByUrl \?\?/.test(nr),
+    `★URL 이 말하는 이름을 «먼저» 그립니다 (없으면 옛 길)`)
+  // ⚠️ 보관함 저장은 cur 을 따라갑니다 — cur 이 옳아야 저장도 옳습니다
+  check(/chars: cur\.chars/.test(nr), `보관함에 «지금 그리는» 이름을 저장합니다`)
+}
+
+console.log('\n━━ ⑲-w 🔴 자리를 고르면 «섞이지» 않는가 (43부 7차) ━━')
+{
+  const rec = codeOf(S.rec2)
+  // 🔴 6차에는 앞줄 세우기만 해 「민 가운데」에 최은도·최우노가 섞였습니다
+  check(/if \(preferPos && prefer\.length > 0\) \{[\s\S]{0,160}out\.filter\(\(c\) => c\.preferHit\)/.test(rec),
+    `★자리를 고르시면 «거릅니다»`)
+  // ⚠️ out 을 자기 자신으로 갈아 끼우면 목록이 통째로 비어 버립니다
+  check(/const filtered = out\.filter/.test(rec) && /out\.length = 0/.test(rec),
+    `거를 때만 손댑니다 (같은 배열을 자기 자신으로 비우지 않습니다)`)
+  check(/걸러야 할 때만 손댑니다/.test(S.rec2),
+    `★그 함정을 코드에 적어 두었습니다`)
+  // 「상관없음」은 예전 그대로
+  check(/if \(!preferPos\) return prefer\.some/.test(rec),
+    `★「상관없음」이면 거르지 않습니다`)
+}
+
+console.log('\n━━ ⑲-x ★배지가 «진입 경로» 를 따르는가 (43부 7차) ━━')
+{
+  const nr = codeOf(S.nr)
+  check(/const badgeKind =/.test(nr), `배지 말을 따로 정합니다`)
+  check(/namingKind === '신생아' && rel/.test(nr),
+    `★신생아면 «관계»(손주·자녀 …)를 배지에 씁니다`)
+  check(/\['self', '본인', '나'\]/.test(nr),
+    `⚠️ 「나 작명」 같은 말이 나오지 않게 막았습니다`)
+  check(/badge=\{\{ kind: badgeKind \}\}/.test(nr), `그 말을 프레임에 넘깁니다`)
+  const view = read('app/manseryeok/naming/components/NameAnalysisResultView.tsx')
+  check(/p\.badge\.kind === '개명' \? '#8f3d0e' : '#4a7c59'/.test(view),
+    `★모르는 말이 와도 색이 «빠지지» 않습니다`)
+}
+
+console.log('\n━━ ⑲-y ★배색 — 바탕에서 누런 기를 뺐는가 (43부 7차) ━━')
+{
+  for (const [n, src] of [['newname', S.nn], ['newhanja', S.nh], ['newresult', S.nr]] as const) {
+    check(/const BG = '#F4F2EF'/.test(src), `${n} — 바탕이 «오프화이트» 입니다`)
+    check(/const LINE = '#DFD9D2'/.test(src), `${n} — 테두리가 중성색입니다`)
+    check(/const SUB = '#6B5B50'/.test(src), `${n} — 안내 글자가 «짙어졌습니다»`)
+    check(!/const BG = '#F5E9DE'/.test(src), `${n} — 베이지 바탕이 남아 있지 않습니다`)
+  }
+  const pick = codeOf(S.pick)
+  check(/function chipStyle\(on: boolean\)/.test(pick),
+    `★고른/안 고른 버튼 모양을 «한 곳» 에서 정합니다`)
+  check(/boxShadow: '0 2px 6px rgba\(200,120,60,0\.30\)'/.test(pick),
+    `★고른 버튼이 «한눈에» 보입니다 (채운 금색 + 그림자)`)
+  check(/const PANEL = '#F4F2EF'/.test(pick), `조건 패널도 같은 바탕을 씁니다`)
+}
+
 console.log('\n━━ ⑲-s ★한 번에 이름 «하나» — 부품은 두고 배선만 끊었는가 (43부 6차) ━━')
 {
   const pol = codeOf(S.pol)
@@ -263,7 +331,8 @@ console.log('\n━━ ⑲-u 🔴 배색 — 카드가 바탕에 «묻히지» �
   // 🔴 바탕 #FDF6F0 과 카드 #fffbf7 이 거의 같은 색이라 카드 경계가 안 보였습니다
   for (const [n, src] of [['newname', S.nn], ['newhanja', S.nh], ['newresult', S.nr]] as const) {
     check(/const CARD = '#FFFFFF'/.test(src), `${n} — 카드가 «흰색» 입니다`)
-    check(/const LINE = '#E5D3C2'/.test(src), `${n} — 테두리가 «보이는» 선입니다`)
+    // ★7차에 중성색(#DFD9D2)으로 다시 잡았습니다 — 아래 ⑲-y 가 값을 봅니다
+    check(/const LINE = '#/.test(src), `${n} — 테두리가 «보이는» 선입니다`)
     check(!/'1px solid rgba\(200,120,60,0\.10\)'/.test(src),
       `${n} — «안 보이던» 테두리가 남아 있지 않습니다`)
   }
