@@ -17,9 +17,9 @@ import {
 } from './lib/saju/simsanOhaeng'
 // ★두 계산기가 «같은 점수» 를 내는지 맞대어 봅니다 (2026-08-02 결함)
 import { calcCareerScore } from './lib/saju/career/careerScore'
-import { judgeSinsal } from './lib/saju/career/sinsal9'
+import { judgeSinsal, checkSinsal9 } from './lib/saju/career/sinsal9'
 import { calcCareerYongsin, judgeYongsin } from './lib/saju/career/yongsin'
-import { judgeStrength } from './lib/saju/yongsinNew'
+import { judgeStrength, calcYongsinNew, isYanginIlju } from './lib/saju/yongsinNew'
 
 /** 일간 오행의 비겁·인성 — ★판정을 다시 짜지 않고 «신강약만» 견주려고 둡니다 */
 function relOfDay(dayStem: string): { bigeop: Ohaeng; insung: Ohaeng } {
@@ -330,6 +330,117 @@ console.log('\n━━ ㉕ ★궁합의 진술축미 — 조후용신으로 반�
   check(/isSummer\) return \{ element: '수'/.test(yn), `★未월 → 조후용신 水`)
   check(/return \{ element: null, note: '봄·가을생은 조후가 온화해요' \}/.test(yn),
     `⚠️ 辰·戌월은 «조후 없음» — 교재에 없으므로 지어내지 않습니다`)
+}
+
+console.log('\n━━ ㉖ ★신살의 «자리» 조건 (교재 48·94·96쪽) ━━')
+{
+  const P = (a: string[]) => ['년주', '월주', '일주', '시주']
+    .map((p, i) => ({ pillar: p, stem: a[i][0], branch: a[i][1] })) as Pillar[]
+  const find = (sj: Pillar[], name: string) =>
+    (checkSinsal9(sj) as unknown as { name: string; count: number; active: boolean; marks: { pillar: string }[] }[])
+      .find(x => x.name === name)!
+
+  // ★도화살 — 년지·시지에만 있으면 «성립 안 함» (교재 48쪽)
+  const d1 = find(P(['甲子', '丙寅', '乙巳', '乙酉']), '도화살')
+  check(d1.count === 0, `★년지·시지의 子·酉는 «도화가 아닙니다» (교재 48쪽) — ${d1.count}개`)
+  // ★월지·일지에 있으면 성립
+  const d2 = find(P(['甲寅', '庚午', '乙卯', '丙戌']), '도화살')
+  check(d2.count === 2 && d2.marks.every(m => m.pillar === '월주' || m.pillar === '일주'),
+    `★월지·일지의 도화만 셉니다 — ${d2.count}개`)
+  check(d2.active, `★월지·일지 포함 2개면 작용합니다 (교재 94쪽)`)
+
+  // ⚠️ 백호살에는 자리 조건이 «없습니다» — 붙이지 않았는가 (교재 95쪽 전문)
+  const t = read('lib/saju/career/tables/sinsal.ts')
+  const bh = t.slice(t.indexOf("key: 'baekho'"), t.indexOf("key: 'goegang'"))
+  check(!/onlyAt|needAt|posWeight/.test(bh), `⚠️ 백호살에 자리 조건이 «없습니다» (교재에 없으므로)`)
+
+  // ★괴강·양인에는 月>日>時>年 무게가 있는가 (교재 95·96쪽)
+  const gg = t.slice(t.indexOf("key: 'goegang'"), t.indexOf("key: 'yangin'"))
+  check(/posWeight: \{ 월주: 4, 일주: 3, 시주: 2, 년주: 1 \}/.test(gg), `★괴강살 — 月>日>時>年`)
+  const yi = t.slice(t.indexOf("key: 'yangin'"), t.indexOf("key: 'yeokma'"))
+  check(/posWeight: \{ 월주: 4, 일주: 3, 시주: 2, 년주: 1 \}/.test(yi), `★양인 — 月>日>時>年`)
+
+  // ⚠️ 현침살은 「3개 이상 «이거나» 일주 현침」 — «또는» 이라 needAt 을 쓰면 안 됩니다
+  const hc = t.slice(t.indexOf("key: 'hyeonchim'"), t.indexOf("key: 'cheonmun'"))
+  // ⚠️ 주석에도 「needAt」이 적혀 있으므로 «값» 만 봅니다 (줄머리 검사)
+  check(!/^\s*needAt:/m.test(hc), `⚠️ 현침살에 needAt 을 걸지 «않았습니다» (「또는」이라서)`)
+  const h1 = find(P(['甲子', '辛未', '乙卯', '丙寅']), '현침살')
+  check(h1.active, `★일주에 없어도 3개 이상이면 작용합니다 — ${h1.count}개`)
+
+  // ⚠️ 역마·화개·천문성은 자리 조건이 «교재에 없음» — 붙이지 않았는가
+  const ym = t.slice(t.indexOf("key: 'yeokma'"), t.indexOf("key: 'dohwa'"))
+  check(!/onlyAt|needAt|posWeight/.test(ym), `⚠️ 역마살에 자리 조건이 «없습니다» (교재에 없으므로)`)
+}
+
+console.log('\n━━ ㉗ ★천을귀인 — 日·時 가 으뜸 · 1~2개가 좋다 (교재 96쪽) ━━')
+{
+  const c = read('lib/saju/coupleFilterV1.ts')
+  check(/GWIIN_POS: Record<string, number> = \{ 일주: 2, 시주: 2, 년주: 1, 월주: 1 \}/.test(c),
+    `★日·時 가 으뜸입니다 (★다른 신살과 «거꾸로» 입니다)`)
+  check(/배우자 자리\(일지\)나 말년 자리\(시지\)에 있어 더 가깝게 닿습니다/.test(c),
+    `★으뜸 자리에 걸리면 «더해» 말합니다`)
+  check(/귀인 글자가 여럿입니다/.test(c), `★셋 이상이면 알려 드립니다 (교재 「1~2개가 좋다」)`)
+  // ⚠️ «깎아» 말하지 않는가 — 년지라서 약하다고 하지 않습니다
+  // ⚠️ 주석에 그 말이 «왜 안 되는지» 적혀 있으므로, 손님께 나가는 문구(push)만 봅니다
+  const pushed = [...c.matchAll(/gwiinLines\.push\('([^']*)'\)/g)].map(m => m[1]).join(' ')
+  check(!/년지라서|약하게 닿|약합니다/.test(pushed),
+    `⚠️ 「년지라서 약하다」고 «깎아» 말하지 않습니다`)
+  // ⚠️ 판정(별점)은 바꾸지 않았는가 — 교재가 「몇 개면 별 몇」을 말하지 않습니다
+  check(/stars: bothGwiin \? 5 : oneGwiin \? 3 : 2/.test(c), `⚠️ 별점 판정은 «그대로» 입니다`)
+}
+
+console.log('\n━━ ㉘ ★己(기)의 양인 제거 — 교과서대로 (교재 178·162쪽) ━━')
+{
+  const yn = read('lib/saju/yongsinNew.ts')
+  check(/⛔ 己: '巳' — 2026-08-02 «뺐습니다»/.test(yn), `★己의 양인을 뺐다는 기록이 있습니다`)
+  check(!/^\s*己: '巳',/m.test(yn), `★YANGIN_MONTH 에 己 가 «없습니다»`)
+  check(/음일간은 음인격이 없다/.test(yn), `★교재 178쪽 근거가 적혀 있습니다`)
+  check(/되돌리지 마십시오/.test(yn), `⚠️ 되돌리지 말라는 말이 적혀 있습니다`)
+
+  const S = (a: string[]) => ['년주', '월주', '일주', '시주']
+    .map((p, i) => ({ pillar: p, stem: a[i][0], branch: a[i][1] })) as Pillar[]
+  const r = calcYongsinNew(S(['甲子', '丁巳', '己卯', '乙亥']) as never, '己')!
+  check(r.gyeokguk.name !== '양인격', `★己 일간 巳월이 «양인격이 아닙니다» — ${r.gyeokguk.name}`)
+
+  // ★양인일주는 교재 178쪽의 «셋» 뿐
+  check(isYanginIlju('丙', '午') && isYanginIlju('戊', '午') && isYanginIlju('壬', '子'),
+    `★양인일주 셋(丙午·戊午·壬子)은 그대로입니다`)
+  check(!isYanginIlju('己', '巳'), `★己巳는 양인일주가 «아닙니다» (교재 178쪽은 셋만 듭니다)`)
+
+  // ⚠️ 戊 건록 巳 · 戊 양인 午 · 己 건록 午 는 «그대로» 여야 합니다 (교재 39·178쪽)
+  check(/甲: '寅', 乙: '卯', 丙: '巳', 丁: '午', 戊: '巳',/.test(yn), `⚠️ 戊 건록 巳 그대로`)
+  check(/己: '午', 庚: '申', 辛: '酉', 壬: '亥', 癸: '子',/.test(yn), `⚠️ 己 건록 午 그대로`)
+  check(/甲: '卯', 丙: '午', 戊: '午', 庚: '酉', 壬: '子',/.test(yn), `⚠️ 戊 양인 午 그대로`)
+}
+
+console.log('\n━━ ㉙ ★현침살 — 교재 94쪽 «다섯 글자» (卯 없음) ━━')
+{
+  //  ★2026-08-02 대표님 확정 — 대표님이 교재 94쪽 원본을 찍어 주셔서 확인했습니다.
+  //    "현침살 (甲午未申辛)" — ★卯가 «없습니다».
+  //  ⚠️ 시중 통설은 «甲辛卯午未申 여섯» 으로 봅니다. 통설로 되돌리지 마십시오.
+  //  ⚠️ 노트북LM 에 세 번 물어 «세 번 다른» 답이 왔습니다. 원본만 믿으십시오.
+  const t = read('lib/saju/career/tables/sinsal.ts')
+  const hc = t.slice(t.indexOf("key: 'hyeonchim'"), t.indexOf("key: 'cheonmun'"))
+  check(/chars: \['甲', '午', '辛', '未', '申'\]/.test(hc), `★현침 글자가 «다섯» 입니다 (甲午辛未申)`)
+  check(!/^\s*semi: \['卯'\]/m.test(hc), `★준현침 «卯» 가 없습니다 (교재 94쪽에 없음)`)
+  check(/94쪽 \(5\) 현침살/.test(hc), `★출전이 «94쪽» 입니다 (92쪽은 공망 — 원본 확인)`)
+  check(/92쪽은 «공망» 입니다/.test(hc), `⚠️ 옛 표기가 왜 틀렸는지 적혀 있습니다`)
+  check(/연재쌤 확인 대기/.test(hc), `⚠️ 「일주 현침살」의 뜻이 «교재에 없다» 는 것이 적혀 있습니다`)
+
+  // ★실기 — 卯만 여럿인 사주는 현침이 «아닙니다»
+  const P = (a: string[]) => ['년주', '월주', '일주', '시주']
+    .map((p, i) => ({ pillar: p, stem: a[i][0], branch: a[i][1] })) as Pillar[]
+  const f = (sj: Pillar[]) =>
+    (checkSinsal9(sj) as unknown as { name: string; count: number; active: boolean }[])
+      .find(x => x.name === '현침살')!
+  const m1 = f(P(['甲子', '乙卯', '乙卯', '乙卯']))
+  check(m1.count === 1 && !m1.active, `★卯 셋 + 甲 하나 → 현침 «1개·작용 안 함» (전에는 잡혔습니다)`)
+  const m2 = f(P(['甲子', '辛未', '乙巳', '丙申']))
+  check(m2.count === 4 && m2.active, `★다섯 글자로 넷이면 작용합니다 — ${m2.count}개`)
+
+  // ⚠️ 직업이 교재 94쪽과 맞는가
+  check(/'문인'/.test(hc) && /'자동차정비사'/.test(hc), `★교재의 «문인·자동차정비사» 가 들어 있습니다`)
+  check(!/'수의사'|'비평가'/.test(hc), `⚠️ 교재에 «없는» 수의사·비평가를 뺐습니다`)
 }
 
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')

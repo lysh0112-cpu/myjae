@@ -41,6 +41,10 @@ export interface SinsalHit {
   /** 자리로 본 작용력 3(가장 큼) / 2 / 1 / 0 */
   power: number
   powerNote: string
+  /** ★어느 자리에 있어 얼마나 드러나는가 (교재 95·96쪽 月>日>時>年) */
+  posNote: string
+  /** ★개수가 많을 때 (교재 96쪽 「귀인은 1~2개가 좋다」) */
+  overNote: string
   row: SinsalRow
 }
 
@@ -97,11 +101,29 @@ function checkOne(saju: Pillar[], row: SinsalRow): SinsalHit {
 
   // 같은 자리·같은 글자가 두 번 담기지 않게
   const seen = new Set<string>()
-  const uniq = marks.filter(m => {
+  let uniq = marks.filter(m => {
     const k = `${m.pillar}|${m.ch}`
     if (seen.has(k)) return false
     seen.add(k); return true
   })
+
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-02 — 신살의 «자리» 조건 (교재 48·94·96쪽)
+  //
+  //  🔴 [무엇이 있었나]  이 함수는 «글자와 개수» 만 셌습니다.
+  //    ⇒ 년지의 子 하나로도 도화가 잡혔습니다.
+  //       교재 48쪽은 「年支와 時支에 있으면 도화가 «아니다»」라고 합니다.
+  //
+  //  ⚠️ 신살마다 «다릅니다». 표(tables/sinsal.ts)에 적힌 것만 씁니다.
+  //     ★백호살에는 자리 조건이 «없습니다». 붙이지 마십시오 (95쪽 전문 확인)
+  // ══════════════════════════════════════════════════════════════
+
+  // ① onlyAt — 이 자리에 있어야만 «성립» 합니다 (도화살 48쪽)
+  if (row.onlyAt) uniq = uniq.filter(m => row.onlyAt!.includes(m.pillar as never))
+
+  // ② needAt — 이 자리 가운데 «적어도 하나» 는 걸려야 작용합니다
+  //    도화 94쪽 「月支, 日支 포함 2개 이상」 · 현침 96쪽 「일주 현침이면 작용력 크다」
+  const needOk = !row.needAt || uniq.some(m => row.needAt!.includes(m.pillar as never))
 
   // 자리로 본 작용력
   const pillars = new Set(uniq.map(m => m.pillar))
@@ -112,9 +134,29 @@ function checkOne(saju: Pillar[], row: SinsalRow): SinsalHit {
     }
   }
 
+  // ③ 자리 무게 — 가장 «센» 자리가 어디인가 (95·96쪽 月>日>時>年)
+  //    ⚠️ 판정을 바꾸지 «않습니다». 화면 문구에만 씁니다.
+  let posNote = ''
+  if (row.posWeight && uniq.length) {
+    const best = uniq.reduce((a, b) =>
+      (row.posWeight![b.pillar as never] ?? 0) > (row.posWeight![a.pillar as never] ?? 0) ? b : a)
+    const w = row.posWeight[best.pillar as never] ?? 0
+    posNote = w >= 4 ? `${best.pillar}에 있어 가장 세게 드러납니다.`
+      : w >= 3 ? `${best.pillar}에 있어 뚜렷하게 드러납니다.`
+        : w >= 2 ? `${best.pillar}에 있어 은은하게 드러납니다.`
+          : `${best.pillar}에 있어 크게 드러나지는 않습니다.`
+  }
+
+  // ④ bestCount — «많으면» 좋지 않다 (천을귀인 96쪽 「1~2개가 좋다」)
+  let overNote = ''
+  if (row.bestCount && uniq.length > row.bestCount[1]) {
+    overNote = `${uniq.length}개로 많은 편입니다. 교재는 ${row.bestCount[0]}~${row.bestCount[1]}개를 좋게 봅니다.`
+  }
+
   return {
     key: row.key, name: row.name, marks: uniq, count: uniq.length,
-    active: uniq.length >= row.threshold, power, powerNote, row,
+    active: needOk && uniq.length >= row.threshold,
+    power, powerNote, posNote, overNote, row,
   }
 }
 
@@ -153,6 +195,8 @@ export interface SinsalGroupView {
   count: number
   power: number
   powerNote: string
+  posNote?: string
+  overNote?: string
   row: SinsalRow
   members?: string[]
 }
@@ -163,7 +207,7 @@ function toGroupViews(hits: SinsalHit[]): SinsalGroupView[] {
     if (!h.active) continue
     const g = h.row.group
     if (!g) {
-      out.push({ key: h.key, name: h.name, marks: h.marks, count: h.count, power: h.power, powerNote: h.powerNote, row: h.row })
+      out.push({ key: h.key, name: h.name, marks: h.marks, count: h.count, power: h.power, powerNote: h.powerNote, posNote: h.posNote, overNote: h.overNote, row: h.row })
       continue
     }
     if (done.has(g)) continue
@@ -233,6 +277,15 @@ export function judgeSinsal(input: CareerInput): CareerCard {
       lines.push(`${h.name} — ${chars} · ${h.count}${unit}${detail}`)
       lines.push(h.row.gijil)
       if (h.powerNote) lines.push(h.powerNote + '.')
+      // ★2026-08-02 — 어느 자리에 있어 얼마나 드러나는가 (교재 95·96쪽)
+      //   ⚠️ 묶음(괴백양)은 여러 살을 합친 것이라 자리 말을 붙이지 «않습니다».
+      //      한 살 안에서만 「月>日>時>年」이 뜻을 가집니다.
+      if (!h.members && (h as { posNote?: string }).posNote) {
+        lines.push((h as { posNote?: string }).posNote!)
+      }
+      if ((h as { overNote?: string }).overNote) {
+        lines.push((h as { overNote?: string }).overNote!)
+      }
       if (h.row.caution) lines.push(h.row.caution)
       if (h.key === 'dohwa') {
         const seenCh = new Set<string>()

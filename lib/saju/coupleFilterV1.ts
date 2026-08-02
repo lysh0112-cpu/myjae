@@ -918,8 +918,33 @@ export function judgeCouple(
   //   ⚠️ 궁합에서는 천을귀인만 본다. 심산 232·233쪽이 천을귀인만 말하기 때문이다.
   //      사주 원국 화면은 귀인 8종을 다 보여 주므로, 고객이 "내 사주엔 귀인이
   //      많던데?" 하고 생각하실 수 있다. 그래서 아래 안내 한 줄을 넣는다.
-  const aGetsGwiin = pb.saju.filter(q => a.gwiinChars.includes(q.branch)).map(q => q.branch)
-  const bGetsGwiin = pa.saju.filter(q => b.gwiinChars.includes(q.branch)).map(q => q.branch)
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-02 — 천을귀인의 «자리와 개수» (교재 96쪽)
+  //
+  //   "★日, 時 > 年, 月.  귀인은 1~2개가 좋다."
+  //   ⚠️⚠️ 천을귀인만 «거꾸로» 입니다. 다른 신살은 月이 으뜸인데
+  //      귀인은 «日·時» 가 으뜸입니다. 다른 신살의 잣대를 가져오지 마십시오.
+  //
+  //  [무엇이 있었나]  네 기둥을 «똑같이» 훑었습니다.
+  //    년지에 있어도 일지에 있는 것과 같은 무게였고, 셋이 나와도 그냥 셌습니다.
+  //
+  //  ★[이제]  «거르지는 않습니다» — 년지에 있어도 귀인은 귀인입니다.
+  //     다만 «어느 자리에 있는지» 를 말해 드리고, 셋 이상이면 그것도 알려 드립니다.
+  //  ⚠️ 판정(별점)은 바꾸지 «않았습니다». 교재가 「몇 개면 별 몇 개」를 말하지 않습니다.
+  // ══════════════════════════════════════════════════════════════
+  /** 교재 96쪽 — 日·時 가 으뜸, 年·月 은 그다음 */
+  const GWIIN_POS: Record<string, number> = { 일주: 2, 시주: 2, 년주: 1, 월주: 1 }
+  const gwiinHits = (from: PersonInput, chars: string[]) =>
+    from.saju.filter(q => chars.includes(q.branch))
+      .map(q => ({ br: q.branch, pillar: q.pillar, w: GWIIN_POS[q.pillar] ?? 1 }))
+
+  const aHitList = gwiinHits(pb, a.gwiinChars)   // b 가 a 에게 주는 귀인
+  const bHitList = gwiinHits(pa, b.gwiinChars)   // a 가 b 에게 주는 귀인
+  const aGetsGwiin = aHitList.map(x => x.br)
+  const bGetsGwiin = bHitList.map(x => x.br)
+  /** 으뜸 자리(일지·시지)에 걸렸는가 — 교재 96쪽 */
+  const aStrong = aHitList.some(x => x.w === 2)
+  const bStrong = bHitList.some(x => x.w === 2)
   const gwiinLines: string[] = []
 
   if (bGetsGwiin.length)
@@ -934,6 +959,18 @@ export function judgeCouple(
 
   const bothGwiin = aGetsGwiin.length > 0 && bGetsGwiin.length > 0
   const oneGwiin = aGetsGwiin.length > 0 || bGetsGwiin.length > 0
+
+  // ★자리 — 교재 96쪽 「日, 時 > 年, 月」
+  //   ⚠️ 「년지라서 약하다」고 «깎아 말하지» 않습니다. 강한 쪽만 «더해» 말합니다.
+  if (aStrong || bStrong) {
+    gwiinLines.push('그 귀인 글자가 배우자 자리(일지)나 말년 자리(시지)에 있어 더 가깝게 닿습니다.')
+  }
+  // ★개수 — 교재 96쪽 「귀인은 1~2개가 좋다」
+  //   ⚠️ 「많아서 나쁘다」로 들리지 않게 씁니다. 교재의 뜻은 «귀함이 흔해지면 옅어진다» 입니다.
+  const gwiinTotal = aGetsGwiin.length + bGetsGwiin.length
+  if (gwiinTotal > 2) {
+    gwiinLines.push('귀인 글자가 여럿입니다. 교재는 한둘일 때를 가장 귀하게 보는데, 여럿이면 그만큼 두루 도움을 주고받는 사이로 봅니다.')
+  }
 
   if (!oneGwiin) {
     // 둘 다 없을 때 — 여기서 끝내면 야박하다. 뜻을 정확히 전하고 다독인다.
