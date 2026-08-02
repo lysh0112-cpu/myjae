@@ -468,14 +468,25 @@ export default function NamingCertificateButton(
         }}
         className="active:scale-95"
         style={{
-          // ★2026-08-01 (43부 28차) — 이 화면의 «으뜸» 버튼입니다 (대표님 지시).
-          //   채운 색 · 넓게 · 조금 더 크게. 나머지는 테두리만 두어 뒤로 물립니다.
-          width: '100%', padding: 16, borderRadius: 14, marginBottom: 6,
+          // ══════════════════════════════════════════════════════════
+          //  ★2026-08-02 — «컴팩트한 서브 버튼» 으로 줄입니다 (대표님 지시 ③)
+          //
+          //   [무엇이 있었나]  43부 28차에 이 버튼을 «으뜸» 으로 세우며
+          //     16px 여백 · 15px 글자 · 그림자로 크게 키웠습니다.
+          //     ★그랬더니 결과 «본문» 보다 이 버튼이 먼저 눈에 들어왔습니다.
+          //     손님이 보러 오신 것은 «이름 풀이» 이지 인쇄 버튼이 아닙니다.
+          //
+          //   ★[이제]  높이와 여백을 줄입니다 (16→10, 15→13.5px).
+          //   ⚠️ 색은 «채운 채로» 둡니다 — 이것만 색이 차 있어야
+          //      아래 테두리 버튼들과 켜가 갈립니다. 크기로 낮추고 색으로 남깁니다.
+          //   ⚠️ 그림자도 줄였습니다. 그림자가 크면 «작아도 커 보입니다».
+          // ══════════════════════════════════════════════════════════
+          width: '100%', padding: '10px 12px', borderRadius: 12, marginBottom: 5,
           background: p.disabled ? '#EDE7E0' : '#c8783c',
           border: 'none',
           color: p.disabled ? '#A99B8E' : '#fff',
-          fontSize: 15, fontWeight: 700, letterSpacing: '-0.2px',
-          boxShadow: p.disabled ? 'none' : '0 2px 8px rgba(200,120,60,0.28)',
+          fontSize: 13.5, fontWeight: 600, letterSpacing: '-0.2px',
+          boxShadow: p.disabled ? 'none' : '0 1px 4px rgba(200,120,60,0.20)',
           cursor: p.disabled ? 'default' : 'pointer',
         }}>
         🖨️ A4 명품 작명서 인쇄 · PDF 저장

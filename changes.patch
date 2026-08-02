@@ -1,0 +1,593 @@
+From bb7384de2d4b22c108aef5849a84bfe4600969a0 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Sun, 2 Aug 2026 02:53:02 +0000
+Subject: [PATCH] =?UTF-8?q?=EA=B2=B0=EA=B3=BC=20=ED=99=94=EB=A9=B4=20?=
+ =?UTF-8?q?=EB=9D=BC=EC=9A=B0=ED=8C=85=C2=B7=ED=95=98=EB=8B=A8=20=EC=A0=95?=
+ =?UTF-8?q?=EB=8F=88=20(44=EB=B6=80=201=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+① 결과 화면이 «제» 보관함으로 돌아갑니다
+   - namingRecords 에 storageBranchOfKind / NAMING_STORAGE_PATH 창구 신설
+   - 풀이 → diagnosis-storage · 개명·신생아 → naming-storage
+   - diagnosis 화면의 붙박이 주소 제거 (하단 버튼 · 머리글 뒤로가기 둘 다)
+   - 보관함이 기록을 열 때 ?from= 으로 갈래를 함께 보냄 (기록 오기 전을 받침)
+
+② 「불러온 기록」 초록 띠 삭제 (저장 알림·실패 알림은 남김)
+③ A4 명품 작명서 버튼 컴팩트 (여백 16→10 · 15/700→13.5/600 · 채운 색은 유지)
+④ 맨 하단 1행 2컬럼 — 보관함 이름·주소가 갈래를 따름
+⑤ 아코디언 三 자원오행 · 四 수리오행 (요약 카드·선명장 줄 차례 동조)
+   useResultSaju — 불러올 것이 없으면 converting 을 끝냄 (멈춤 수리)
+
+검사 1,368 → 1,398 (작명 동선 441 → 471) · 실패 0
+tsc 통과 · eslint 82/139 (손대기 전과 동일)
+---
+ 28-verify-naming-flow.ts                      | 130 +++++++++++++++++-
+ .../components/PerspectiveAccordion.tsx       |  17 ++-
+ .../components/NameAnalysisResultView.tsx     |  10 +-
+ .../naming/components/NamingCertificate.tsx   |  21 ++-
+ .../naming/components/NamingStorageView.tsx   |  10 +-
+ app/manseryeok/naming/diagnosis/page.tsx      | 120 +++++++++++++---
+ .../naming/rename/newresult/page.tsx          |   3 +-
+ hooks/useResultSaju.ts                        |  28 +++-
+ lib/saju/namingRecords.ts                     |  49 +++++++
+ 9 files changed, 353 insertions(+), 35 deletions(-)
+
+diff --git a/28-verify-naming-flow.ts b/28-verify-naming-flow.ts
+index 1e4228b..28db2f6 100644
+--- a/28-verify-naming-flow.ts
++++ b/28-verify-naming-flow.ts
+@@ -263,8 +263,32 @@ console.log('\n━━ ⑲-I ★화살표 · 요약 카드 · 하단 위계 (43
+   check(/padding: '6px 4px'/.test(acc), `★둘레에 «누르는 자리» 를 두었습니다`)
+ 
+   // ② 요약 카드 ↔ 아코디언 연동
+-  check(/SUMMARY_KEYS = \['yinyang', 'baleum', 'suri', 'jawon', 'yongsin'\]/.test(view),
+-    `★요약 카드가 아코디언과 «같은 차례» 입니다`)
++  // ══════════════════════════════════════════════════════════════
++  //  ★2026-08-02 — 이 검사가 «옛 차례» 를 지키고 있었습니다.
++  //    대표님 지시로 三 자원 · 四 수리 로 바꾸려는데 이 줄이 막았습니다.
++  //    ★코드를 되돌리지 않고 «검사를 뒤집었습니다». (교훈 [검사가 지킨다])
++  //    [까닭]  한자에 담긴 기운(자원)을 보고 → 그 획수가 그리는 마디(수리)를 보고
++  //            → 사주와 어떻게 만나는가로 이야기가 이어집니다.
++  //  ⚠️ 아래 ②-b 가 «두 곳이 같은 차례인지» 를 함께 봅니다 — 한쪽만 못 고칩니다.
++  // ══════════════════════════════════════════════════════════════
++  check(/SUMMARY_KEYS = \['yinyang', 'baleum', 'jawon', 'suri', 'yongsin'\]/.test(view),
++    `★요약 카드가 아코디언과 «같은 차례» 입니다 (三 자원 · 四 수리)`)
++  check(!/SUMMARY_KEYS = \['yinyang', 'baleum', 'suri', 'jawon'/.test(view),
++    `옛 차례(三 수리 · 四 자원)가 남아 있지 않습니다`)
++
++  // ②-b ★★두 곳의 차례가 «정말로» 같은가 — 눈으로 맞추지 않습니다
++  //   ⚠️ 번호(一二三)는 아직 «자리(index)» 로 붙습니다. 차례가 갈리면
++  //      「三. 수리오행 — 한자에 담긴 본래 기운」 같은 것이 나옵니다.
++  {
++    const headOrder = [...acc.matchAll(/\{ key: '(\w+)', title:/g)].map(m => m[1])
++    const sumOrder = (view.match(/SUMMARY_KEYS = \[([^\]]+)\]/) ?? ['', ''])[1]
++      .split(',').map(s => s.trim().replace(/'/g, '')).filter(Boolean)
++    check(headOrder.length === 5, `아코디언 관점이 다섯입니다 (${headOrder.length})`)
++    check(headOrder.join('>') === sumOrder.join('>'),
++      `★아코디언과 요약 카드의 차례가 «글자 그대로» 같습니다 (${headOrder.join('>')})`)
++    check(headOrder[2] === 'jawon' && headOrder[3] === 'suri',
++      `★三 = 자원오행 · 四 = 수리오행`)
++  }
+   check(/SUMMARY_NUMERALS/.test(view) && /一/.test(view), `一·二·三 체계로 통일했습니다`)
+   check(/setFocusKey\(SUMMARY_KEYS\[i\]\)/.test(view), `줄을 누르면 그 관점을 가리킵니다`)
+   check(/focusNonce/.test(view) && /focusNonce/.test(acc),
+@@ -1212,6 +1236,108 @@ console.log('\n━━ ⑲-l ★자원오행 배점 — «유지» 확정이 기
+   check(/measure:resource/.test(pkg), `npm run measure:resource 로 잴 수 있습니다`)
+ }
+ 
++// ══════════════════════════════════════════════════════════════════
++//  ⑳ ★2026-08-02 — 결과 화면이 «제 보관함» 으로 돌아가는가 (대표님 지시 ①)
++//
++//   🔴 [무엇이 있었나]  명품작명으로 들어와 결과를 본 뒤 보관함 버튼을 누르면
++//     «정밀분석 보관함» 이 열렸습니다. 주소가 붙박이였습니다.
++//   ★이 그물이 그 붙박이가 «다시 생기는 것» 을 막습니다.
++// ══════════════════════════════════════════════════════════════════
++console.log('\n━━ ⑳-a ★결과 화면 → «제» 보관함 (붙박이 금지) ━━')
++{
++  const rec = codeOf(S.rec)
++  const diag = codeOf(read('app/manseryeok/naming/diagnosis/page.tsx'))
++  const sto = codeOf(S.sto)
++
++  // ① 규칙이 «한 곳» 에 있는가 (교훈 CJ)
++  check(/export function storageBranchOfKind/.test(rec),
++    `★갈래를 정하는 창구가 namingRecords 에 «하나» 있습니다`)
++  check(/NAMING_STORAGE_PATH/.test(rec) && /diagnosis-storage/.test(rec) && /naming-storage/.test(rec),
++    `★두 보관함 주소를 그 창구가 들고 있습니다`)
++  // ⚠️ 보관함 «거르기» 와 «같은 규칙» 이어야 합니다 — 갈리면 버튼이 데려간 곳에
++  //    그 기록이 없습니다
++  check(/'풀이' \? 'diagnosis' : 'naming'/.test(rec),
++    `★거르기와 «같은 규칙» 입니다 (풀이가 아니면 전부 작명)`)
++  check(/effFilter === '풀이' \? r\.kind === '풀이' : r\.kind !== '풀이'/.test(sto),
++    `⚠️ 보관함 거르기도 「풀이인가 아닌가」 그대로입니다`)
++
++  // ② 결과 화면이 그 창구를 «쓰는가»
++  check(/storageBranchOfKind/.test(diag) && /storageBranchOfParam/.test(diag),
++    `★결과 화면이 기록의 kind 와 URL 을 «차례로» 봅니다`)
++  check(/const storagePath = NAMING_STORAGE_PATH\[storageBranch\]/.test(diag),
++    `★보관함 주소를 «갈래로» 정합니다`)
++
++  // ③ ★붙박이가 «하나도» 남아 있지 않은가 — 이것이 이 그물의 핵심입니다
++  const hardCoded = [...diag.matchAll(/router\.push\('\/manseryeok\/naming\/[a-z/-]*storage[^']*'\)/g)]
++    .map(m => m[0])
++  check(hardCoded.length === 0,
++    `★결과 화면에 보관함 주소를 «박아 넣은» 자리가 없습니다${hardCoded.length ? ` — ${hardCoded.join(' , ')}` : ''}`)
++
++  // ④ 보관함이 기록을 열 때 «어디서 왔는지» 를 실어 보내는가
++  check(/from=\$\{storageBranchOfKind\(r\.kind\)\}/.test(sto),
++    `★보관함이 기록을 열 때 갈래를 함께 보냅니다 (기록이 오기 «전» 을 받칩니다)`)
++
++  // ⑤ ⚠️ 옛 주소는 «살아 있되» 가리키지 않습니다 (교훈 AM)
++  check(existsSync(P.stoDoor),
++    `⚠️ 옛 주소(diagnosis/storage)의 문은 «그대로» 있습니다 — 북마크가 옵니다`)
++  check(!/'\/manseryeok\/naming\/diagnosis\/storage'/.test(diag),
++    `★다만 결과 화면이 옛 주소를 «가리키지» 않습니다`)
++}
++
++console.log('\n━━ ⑳-b ★하단 정돈 — 띠 배너 · A4 버튼 · 두 칸 ━━')
++{
++  const diag = codeOf(read('app/manseryeok/naming/diagnosis/page.tsx'))
++  const cert = codeOf(S.cert)
++
++  // ① 「보관함에서 불러온 기록」 띠가 «없는가» (지시 ②)
++  check(!/보관함에서 불러온 기록/.test(diag),
++    `★「📁 보관함에서 불러온 기록」 띠가 «완전히» 없습니다`)
++  // ⚠️ 다만 «저장됐다» 는 알림은 남아야 합니다 — 그건 방금 일어난 일입니다
++  check(/자동 저장되었습니다/.test(diag),
++    `⚠️ 「✓ 자동 저장」 알림은 «남아» 있습니다 (한 줄로 낮췄습니다)`)
++  check(/보관함에 저장하지 못했어요/.test(diag),
++    `⚠️ 저장 «실패» 알림은 눈에 띄게 그대로입니다`)
++
++  // ② A4 버튼이 «컴팩트» 한가 (지시 ③)
++  const pad = (cert.match(/width: '100%', padding: '(\d+)px \d+px', borderRadius: 12/) ?? [])[1]
++  check(!!pad && Number(pad) <= 11,
++    `★A4 버튼 여백이 컴팩트합니다 (${pad ?? '?'}px ≤ 11)`)
++  check(/fontSize: 13\.5, fontWeight: 600/.test(cert),
++    `★글자도 함께 낮췄습니다 (15/700 → 13.5/600)`)
++  check(!/width: '100%', padding: 16, borderRadius: 14/.test(cert),
++    `옛 «으뜸» 크기(16px 여백)가 남아 있지 않습니다`)
++  // ⚠️ 크기는 낮추되 «채운 색» 은 남깁니다 — 이것만 색이 차 있어야 켜가 갈립니다
++  check(/background: p\.disabled \? '#EDE7E0' : '#c8783c'/.test(cert),
++    `⚠️ 채운 색은 그대로입니다 (크기로 낮추고 색으로 남깁니다)`)
++
++  // ③ 맨 하단이 «한 줄 두 칸» 인가 (지시 ④)
++  check(/gridTemplateColumns: '1fr 1fr'/.test(diag),
++    `★맨 하단 두 버튼이 «한 줄 두 칸» 입니다 (50:50)`)
++  check(/📜 \{storageLabel\}/.test(diag),
++    `★보관함 버튼 «이름» 도 갈래를 따릅니다`)
++  check(/storageBranch === 'naming' \? '새 이름 지어보기' : '다른 이름 풀어보기'/.test(diag),
++    `★왼쪽 버튼도 갈래를 따릅니다 (작명 기록에 «풀이 입력» 을 내밀지 않습니다)`)
++}
++
++console.log('\n━━ ⑳-c 🔴 「사주 불러오는 중…」 이 «끝나는가» ━━')
++{
++  const hook = read('hooks/useResultSaju.ts')
++  // 🔴 생년월일이 없으면 그냥 나가 버려 converting 이 영영 true 였습니다
++  check(/if \(!yearParam \|\| !monthParam \|\| !dayParam\) \{ setConverting\(false\); return \}/.test(hook),
++    `★불러올 것이 없으면 «곧바로 끝났다» 고 알립니다`)
++  check(!/if \(!yearParam \|\| !monthParam \|\| !dayParam\) return\n/.test(hook),
++    `옛 «그냥 나가기» 가 남아 있지 않습니다`)
++  check(/finally \{[\s\S]{0,60}setConverting\(false\)/.test(hook),
++    `⚠️ 실패해도 끝냅니다 (finally)`)
++  // ⚠️ 이 훅은 여러 화면이 나눠 씁니다 — «끝났다» 가 늦으면 전부 멈춥니다
++  const users = ['app/manseryeok/naming/diagnosis/page.tsx',
++    'app/manseryeok/naming/rename/newhanja/page.tsx',
++    'app/manseryeok/result-new/page.tsx']
++  for (const u of users) {
++    check(/useResultSaju/.test(read(u)), `⚠️ ${u.split('/').slice(-2).join('/')} 가 이 훅을 씁니다`)
++  }
++}
++
+ console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
+ if (fail > 0) {
+   console.log('  ┌────────────────────────────────────────────────────────────┐')
+diff --git a/app/manseryeok/components/PerspectiveAccordion.tsx b/app/manseryeok/components/PerspectiveAccordion.tsx
+index 43663a5..0bd9687 100644
+--- a/app/manseryeok/components/PerspectiveAccordion.tsx
++++ b/app/manseryeok/components/PerspectiveAccordion.tsx
+@@ -65,11 +65,26 @@ const STAR_TONE: Record<StarResult['tone'], string> = {
+ //   ⚠️ 옛 이름(Stars)으로 부르던 곳이 있어 그대로 다시 내보냅니다.
+ export { default as Stars } from '@/app/components/common/StarRating'
+ 
++// ══════════════════════════════════════════════════════════════════
++//  ★2026-08-02 — 차례를 «三 자원오행 · 四 수리오행» 으로 바꿉니다 (대표님 지시)
++//
++//   [까닭]  앞의 둘(음양·발음)은 «한글 소리와 획수» 이야기이고,
++//     자원오행은 «한자에 담긴 기운», 수리 4격은 «획수가 그리는 운» 입니다.
++//     자원 → 수리로 두면 「글자를 보고 → 그 획수가 그리는 마디를 보고 →
++//     그것이 사주와 어떻게 만나는가」로 이야기가 한 줄로 이어집니다.
++//
++//  ⚠️⚠️ 번호(一二三四五)는 이 배열의 «자리» 로 붙습니다 (NUMERALS[i]).
++//     그러니 여기 차례를 바꾸면 «번호도 함께» 따라옵니다 — 그것이 맞습니다.
++//     다만 밖에서 이어 붙이는 것들(요약 카드·선명장 줄)은 «자리» 가 아니라
++//     열쇠(yinyang·baleum…)로 잇거나, 여기와 «같은 차례» 로 적어야 합니다.
++//     ★함께 고칠 곳 — NameAnalysisResultView 의 SUMMARY_KEYS,
++//       diagnosis / newresult 가 선명장에 넘기는 lines. (교훈 [자리 말고 열쇠])
++// ══════════════════════════════════════════════════════════════════
+ const HEADS: { key: keyof PerspectiveCommentary; title: string; sub: string }[] = [
+   { key: 'yinyang', title: '음양오행', sub: '획수에 담긴 음과 양' },
+   { key: 'baleum', title: '발음오행', sub: '부르는 소리의 기운' },
+-  { key: 'suri', title: '수리오행', sub: '획수가 그리는 네 마디' },
+   { key: 'jawon', title: '자원오행', sub: '한자에 담긴 본래 기운' },
++  { key: 'suri', title: '수리오행', sub: '획수가 그리는 네 마디' },
+   { key: 'yongsin', title: '사주와의 만남', sub: '이름이 사주를 돕는가' },
+ ]
+ 
+diff --git a/app/manseryeok/naming/components/NameAnalysisResultView.tsx b/app/manseryeok/naming/components/NameAnalysisResultView.tsx
+index 6088531..9664e06 100644
+--- a/app/manseryeok/naming/components/NameAnalysisResultView.tsx
++++ b/app/manseryeok/naming/components/NameAnalysisResultView.tsx
+@@ -42,11 +42,15 @@ function gradeTone(g: string): string {
+ }
+ 
+ /** ★요약 카드 ↔ 아래 아코디언을 잇는 «차례». 아코디언 HEADS 와 «같은 순서» 여야 합니다 */
+-const SUMMARY_KEYS = ['yinyang', 'baleum', 'suri', 'jawon', 'yongsin'] as const
++// ★2026-08-02 — 아코디언이 «三 자원 · 四 수리» 로 바뀌었습니다. 여기도 «같이» 바꿉니다.
++//   ⚠️ 이 카드는 지금 꺼져 있지만(31차), 차례가 갈린 채로 두면
++//      되살리는 날 「三. 수리오행 — 한자에 담긴 본래 기운」이 나옵니다.
++//      ★번호와 부연설명이 아직 «자리(index)» 로 붙어 있기 때문입니다.
++const SUMMARY_KEYS = ['yinyang', 'baleum', 'jawon', 'suri', 'yongsin'] as const
+ const SUMMARY_NUMERALS = ['一', '二', '三', '四', '五']
+ const SUMMARY_SUBS = [
+-  '획수에 담긴 음과 양', '부르는 소리의 기운', '획수가 그리는 네 마디',
+-  '한자에 담긴 본래 기운', '이름이 사주를 돕는가',
++  '획수에 담긴 음과 양', '부르는 소리의 기운', '한자에 담긴 본래 기운',
++  '획수가 그리는 네 마디', '이름이 사주를 돕는가',
+ ]
+ 
+ const GOLD = '#c8783c'
+diff --git a/app/manseryeok/naming/components/NamingCertificate.tsx b/app/manseryeok/naming/components/NamingCertificate.tsx
+index 70469ef..18840d0 100644
+--- a/app/manseryeok/naming/components/NamingCertificate.tsx
++++ b/app/manseryeok/naming/components/NamingCertificate.tsx
+@@ -468,14 +468,25 @@ export default function NamingCertificateButton(
+         }}
+         className="active:scale-95"
+         style={{
+-          // ★2026-08-01 (43부 28차) — 이 화면의 «으뜸» 버튼입니다 (대표님 지시).
+-          //   채운 색 · 넓게 · 조금 더 크게. 나머지는 테두리만 두어 뒤로 물립니다.
+-          width: '100%', padding: 16, borderRadius: 14, marginBottom: 6,
++          // ══════════════════════════════════════════════════════════
++          //  ★2026-08-02 — «컴팩트한 서브 버튼» 으로 줄입니다 (대표님 지시 ③)
++          //
++          //   [무엇이 있었나]  43부 28차에 이 버튼을 «으뜸» 으로 세우며
++          //     16px 여백 · 15px 글자 · 그림자로 크게 키웠습니다.
++          //     ★그랬더니 결과 «본문» 보다 이 버튼이 먼저 눈에 들어왔습니다.
++          //     손님이 보러 오신 것은 «이름 풀이» 이지 인쇄 버튼이 아닙니다.
++          //
++          //   ★[이제]  높이와 여백을 줄입니다 (16→10, 15→13.5px).
++          //   ⚠️ 색은 «채운 채로» 둡니다 — 이것만 색이 차 있어야
++          //      아래 테두리 버튼들과 켜가 갈립니다. 크기로 낮추고 색으로 남깁니다.
++          //   ⚠️ 그림자도 줄였습니다. 그림자가 크면 «작아도 커 보입니다».
++          // ══════════════════════════════════════════════════════════
++          width: '100%', padding: '10px 12px', borderRadius: 12, marginBottom: 5,
+           background: p.disabled ? '#EDE7E0' : '#c8783c',
+           border: 'none',
+           color: p.disabled ? '#A99B8E' : '#fff',
+-          fontSize: 15, fontWeight: 700, letterSpacing: '-0.2px',
+-          boxShadow: p.disabled ? 'none' : '0 2px 8px rgba(200,120,60,0.28)',
++          fontSize: 13.5, fontWeight: 600, letterSpacing: '-0.2px',
++          boxShadow: p.disabled ? 'none' : '0 1px 4px rgba(200,120,60,0.20)',
+           cursor: p.disabled ? 'default' : 'pointer',
+         }}>
+         🖨️ A4 명품 작명서 인쇄 · PDF 저장
+diff --git a/app/manseryeok/naming/components/NamingStorageView.tsx b/app/manseryeok/naming/components/NamingStorageView.tsx
+index e1f52ee..91b8124 100644
+--- a/app/manseryeok/naming/components/NamingStorageView.tsx
++++ b/app/manseryeok/naming/components/NamingStorageView.tsx
+@@ -30,6 +30,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
+ import {
+   listNamingRecords, deleteNamingRecord, daysAgoLabel,
+   NAMING_RELATION_COLOR, namingRelationGroup, namingRelationLabel,
++  storageBranchOfKind,
+   type NamingRecord, type NamingKind,
+ } from '@/lib/saju/namingRecords'
+ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+@@ -276,7 +277,14 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
+           const relLabel = namingRelationLabel(r.relation)
+           const kindTag = KIND_TAG[r.kind]
+           return (
+-            <div key={r.id} onClick={() => router.push(`/manseryeok/naming/diagnosis?recordId=${r.id}`)}
++            /* ★2026-08-02 — «어느 보관함에서 왔는지» 를 함께 보냅니다.
++                 ⚠️ 결과 화면은 기록을 불러온 «뒤» 라야 kind 를 압니다.
++                    그 사이에도 하단 버튼이 «옳은 보관함» 을 가리켜야 하므로
++                    입구를 URL 로 실어 보냅니다. (기록이 오면 kind 가 정본입니다) */
++            <div key={r.id} onClick={() => router.push(
++              `/manseryeok/naming/diagnosis?recordId=${r.id}`
++              + `&from=${storageBranchOfKind(r.kind)}`,
++            )}
+               style={{
+                 display: 'flex', alignItems: 'center', gap: 13, padding: '15px',
+                 background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14,
+diff --git a/app/manseryeok/naming/diagnosis/page.tsx b/app/manseryeok/naming/diagnosis/page.tsx
+index ecf980c..2b42ca9 100644
+--- a/app/manseryeok/naming/diagnosis/page.tsx
++++ b/app/manseryeok/naming/diagnosis/page.tsx
+@@ -26,7 +26,9 @@ import ConsultButton from '@/app/components/common/ConsultButton'
+ import { fromProfile, fromUrl, personKey, type MyInfo } from '@/lib/saju/myInfo'
+ import {
+   saveNamingRecord, getNamingRecord,
+-  type NamingPerson,
++  storageBranchOfKind, storageBranchOfParam,
++  NAMING_STORAGE_PATH, NAMING_STORAGE_LABEL,
++  type NamingPerson, type NamingKind, type NamingStorageBranch,
+ } from '@/lib/saju/namingRecords'
+ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+ import PerspectiveAccordion from '@/app/manseryeok/components/PerspectiveAccordion'
+@@ -292,6 +294,29 @@ function DiagnosisInner() {
+    */
+   const [recKind, setRecKind] = useState<string | null>(null)
+   const [recRelation, setRecRelation] = useState<string | null>(null)
++
++  // ══════════════════════════════════════════════════════════════
++  //  ★2026-08-02 — 이 화면은 «어느 보관함» 의 것인가 (대표님 지시 ①)
++  //
++  //  🔴 [무엇이 있었나]  하단 보관함 버튼이 «언제나» 정밀분석 보관함으로
++  //    갔습니다. 명품작명으로 들어오신 분이 남의 보관함에 떨어졌습니다.
++  //
++  //  ★[이제]  차례로 봅니다 — «정본이 앞» 입니다.
++  //    ① 기록의 kind      보관함에서 연 것이면 이것이 «정본» 입니다
++  //    ② URL 의 ?from=    기록이 아직 안 왔을 때 받쳐 줍니다
++  //    ③ 없으면 정밀분석  이 화면의 원래 뜻입니다
++  //
++  //  ⚠️ ②를 둔 까닭 — 기록은 «불러온 뒤» 라야 kind 를 압니다. 그 사이에
++  //     버튼이 엉뚱한 곳을 가리키면 손님이 그때 눌러 버립니다.
++  //  ⚠️ from=mypage 는 «갈래가 아닙니다». storageBranchOfParam 이 null 을
++  //     돌려주므로 아래 ③으로 내려갑니다 — 마이페이지 길은 따로 있습니다.
++  // ══════════════════════════════════════════════════════════════
++  const storageBranch: NamingStorageBranch =
++    (recKind ? storageBranchOfKind(recKind as NamingKind) : null)
++    ?? storageBranchOfParam(sp.get('from'))
++    ?? 'diagnosis'
++  const storagePath = NAMING_STORAGE_PATH[storageBranch]
++  const storageLabel = NAMING_STORAGE_LABEL[storageBranch]
+   /** ★2026-07-31 (40부 3차) 두음법칙 안내 — 판정은 «바꾸지 않습니다». 알려 주기만 합니다 */
+   const [dueumMsg, setDueumMsg] = useState<string | null>(null)
+ 
+@@ -795,7 +820,13 @@ function DiagnosisInner() {
+   return (
+     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
+       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+-      <PitchHeader title="내 이름 정밀분석" onBack={() => router.push((sp.get('from') === 'mypage' || nameId) ? '/mypage-new' : '/manseryeok/naming/diagnosis/storage')} onHome={() => router.push('/home-new')} />
++      {/* ★2026-08-02 — 뒤로가기도 «온 길» 로 돌아갑니다.
++          ⚠️ 하단 버튼만 고치면 «머리글로 나간 손님» 이 또 남의 보관함에 떨어집니다.
++             나가는 문이 둘이니 둘 다 같은 곳을 가리켜야 합니다. */}
++      <PitchHeader
++        title={storageBranch === 'naming' ? '내 아이 명품작명' : '내 이름 정밀분석'}
++        onBack={() => router.push((sp.get('from') === 'mypage' || nameId) ? '/mypage-new' : storagePath)}
++        onHome={() => router.push('/home-new')} />
+ 
+       <div style={{ padding: '16px' }}>
+         <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
+@@ -1061,10 +1092,12 @@ function DiagnosisInner() {
+                       gender={info?.gender === '여' ? '坤命' : info?.gender === '남' ? '乾命' : ''}
+                       yongsin={aptYongsin.yongsin ?? ''}
+                       lines={[
++                        // ★2026-08-02 — 화면 아코디언과 «같은 차례» (三 자원 · 四 수리)
++                        //   ⚠️ 종이와 화면의 차례가 갈리면 손님이 대조하다 헷갈리십니다.
+                         ['음양', result.yinYang.grade],
+                         ['발음오행', result.soundFlow.grade],
+-                        ['수리 4격', result.suri.grade],
+                         ['자원오행', result.resourceFlow.grade],
++                        ['수리 4격', result.suri.grade],
+                         ['사주와의 만남', result.yongsinBohwan.grade],
+                       ]}
+                       chongpyeong={(commentary as { chongpyeong?: string })?.chongpyeong || ''}
+@@ -1090,18 +1123,27 @@ function DiagnosisInner() {
+                     보관함에 저장하지 못했어요. 이 화면을 닫으면 다시 볼 수 없어요
+                   </div>
+                 )}
+-                {savedRecordId && (
++                {/* ══════════════════════════════════════════════════════
++                    ★2026-08-02 — 「📁 …불러왔다」 는 초록 띠를 «걷어냅니다» (대표님 지시 ②)
++                     ⚠️ 옛 문구를 여기 «그대로» 적지 마십시오 — 검사가 주석까지 읽어
++                        「아직 남아 있다」고 봅니다 (JSX 주석은 codeOf 가 못 걷습니다).
++
++                     [까닭]  보관함에서 눌러서 들어오신 분은 «그것을 이미 아십니다».
++                       아는 것을 큰 초록 띠로 다시 말하니 화면만 어지러웠습니다.
++
++                     ⚠️ 「✓ 보관함에 저장됐어요」는 «남겨 둡니다» —
++                        그것은 아는 사실이 아니라 «방금 일어난 일» 을 알리는 말입니다.
++                        저장이 됐는지 모르면 손님이 화면을 못 닫으십니다.
++                        ★그 대신 띠를 걷고 «얌전한 한 줄» 로 낮췄습니다
++                          (작명 결과 화면과 같은 결 — 43부 28차).
++                     ⚠️ 저장 «실패» 띠는 위에 그대로 있습니다. 그때는 눈에 띄어야 합니다.
++                    ══════════════════════════════════════════════════════ */}
++                {savedRecordId && !viewOnly && (
+                   <div style={{
+-                    textAlign: 'center', fontSize: '14px', fontWeight: 500,
+-                    color: '#4a7a3a', background: '#eef5e8',
+-                    borderRadius: '12px', padding: '13px', marginBottom: '4px',
++                    textAlign: 'center', fontSize: '11.5px', color: '#6f8a5f',
++                    padding: '2px 0 12px', lineHeight: 1.6,
+                   }}>
+-                    {viewOnly ? '📁 보관함에서 불러온 기록' : '✓ 보관함에 저장됐어요'}
+-                  </div>
+-                )}
+-                {savedRecordId && !viewOnly && (
+-                  <div style={{ fontSize: '11px', color: '#6b5340', textAlign: 'center', marginBottom: '12px' }}>
+-                    보관함에서 언제든 다시 볼 수 있어요
++                    ✓ 보관함에 안전하게 자동 저장되었습니다
+                   </div>
+                 )}
+ 
+@@ -1126,15 +1168,51 @@ function DiagnosisInner() {
+                   </button>
+                 </div>
+ 
+-                <button onClick={() => router.push('/manseryeok/naming/diagnosis/storage')}
+-                  style={{ width: '100%', padding: '13px', borderRadius: '12px', background: 'rgba(200,120,60,0.10)', border: '0.5px solid #f0e0d5', color: subWarm, fontSize: '13px', fontWeight: 500, cursor: 'pointer', marginBottom: '8px' }}>
+-                  📜 내 이름 정밀분석 보관함
+-                </button>
++                {/* ══════════════════════════════════════════════════════
++                    ★2026-08-02 — 맨 아래 두 버튼을 «한 줄 두 칸» 으로 (대표님 지시 ④)
++
++                     [까닭]  같은 폭·같은 무게의 버튼이 세로로 쌓여
++                       세로 공간만 먹고 «무엇이 무엇인지» 눈에 안 들어왔습니다.
++                       ★나란히 두면 「하나 더 볼까 / 나갈까」 라는 «갈림길» 로 읽힙니다.
++
++                     ⚠️ 오른쪽 버튼은 «들어온 갈래» 를 따릅니다 (지시 ①).
++                        명품작명으로 왔으면 명품작명 보관함, 풀이면 정밀분석 보관함.
++                     ⚠️ 왼쪽도 갈래를 따릅니다 —
++                        작명 기록을 보고 계신 분께 「다른 이름 풀어보기」를 내밀면
++                        «이름 풀이 입력 화면» 으로 떨어집니다. 그것도 같은 종류의 어긋남입니다.
++                     ⚠️ 마이페이지에서 오신 분(nameId)은 «온 길로» 돌아가야 하므로
++                        그 자리는 예전 그대로 둡니다.
++                     ⚠️ 430px 화면에서 두 칸입니다 — 글자를 짧게 두십시오.
++                        길어지면 줄바꿈되어 높이가 서로 달라집니다.
++                    ══════════════════════════════════════════════════════ */}
++                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
++                  <button
++                    onClick={() => {
++                      if (nameId) { router.push('/mypage-new'); return }
++                      if (storageBranch === 'naming') {
++                        router.push('/manseryeok/naming/rename/newname?kind=신생아')
++                        return
++                      }
++                      resetAll()
++                    }}
++                    style={{
++                      padding: '13px 6px', borderRadius: '12px', background: 'transparent',
++                      border, color: '#5c3a1e', fontSize: '13px', fontWeight: 500, cursor: 'pointer',
++                    }}>
++                    {nameId
++                      ? '← 마이페이지로'
++                      : storageBranch === 'naming' ? '새 이름 지어보기' : '다른 이름 풀어보기'}
++                  </button>
+ 
+-                <button onClick={() => nameId ? router.push('/mypage-new') : resetAll()}
+-                  style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#5c3a1e', fontSize: '13px', cursor: 'pointer' }}>
+-                  {nameId ? '← 마이페이지로' : '다른 이름 풀어보기'}
+-                </button>
++                  <button onClick={() => router.push(storagePath)}
++                    style={{
++                      padding: '13px 6px', borderRadius: '12px',
++                      background: 'rgba(200,120,60,0.10)', border: '0.5px solid #f0e0d5',
++                      color: subWarm, fontSize: '13px', fontWeight: 500, cursor: 'pointer',
++                    }}>
++                    📜 {storageLabel}
++                  </button>
++                </div>
+               </>
+             )}
+           </>
+diff --git a/app/manseryeok/naming/rename/newresult/page.tsx b/app/manseryeok/naming/rename/newresult/page.tsx
+index 8270c14..b3cee3d 100644
+--- a/app/manseryeok/naming/rename/newresult/page.tsx
++++ b/app/manseryeok/naming/rename/newresult/page.tsx
+@@ -814,10 +814,11 @@ function NewResultInner() {
+             : '—'}
+           yongsin={yongsin}
+           lines={[
++            // ★2026-08-02 — 화면 아코디언과 «같은 차례» (三 자원 · 四 수리)
+             ['음양', result.yinYang.grade],
+             ['발음오행', result.soundFlow.grade],
+-            ['수리 4격', result.suri.grade],
+             ['자원오행', result.resourceFlow.grade],
++            ['수리 4격', result.suri.grade],
+             // ★[내이름 감정] 과 «같은 다섯 관점» 입니다 — 하나도 빠뜨리지 않습니다
+             ['사주와의 만남', result.yongsinBohwan.grade],
+           ]}
+diff --git a/hooks/useResultSaju.ts b/hooks/useResultSaju.ts
+index 61d2a98..7448a47 100644
+--- a/hooks/useResultSaju.ts
++++ b/hooks/useResultSaju.ts
+@@ -20,7 +20,33 @@ export function useResultSaju(
+   const [monthGanji, setMonthGanji] = useState("")
+   const [yearStem, setYearStem] = useState("")
+   useEffect(() => {
+-    if (!yearParam || !monthParam || !dayParam) return
++    // ══════════════════════════════════════════════════════════════
++    //  🔴 2026-08-02 — 「사주 불러오는 중…」 이 «영영» 멈춰 있던 자리
++    //
++    //  [무엇이 있었나]  converting 은 true 로 시작합니다.
++    //    그런데 생년월일이 없으면 여기서 «그냥 나가» 버렸습니다.
++    //    → setConverting(false) 를 지나갈 길이 없어 true 로 남았고,
++    //      손님은 「곧 나오겠지」 하며 빈 화면을 계속 보고 계셨습니다.
++    //
++    //  ★[이제]  «불러올 것이 없다» 는 것도 «끝난 것» 입니다.
++    //    끝났다고 알려야 부르는 쪽이 「사주 정보가 필요해요」 안내를 낼 수 있습니다.
++    //
++    //  ⚠️ 이 훅은 여섯 화면이 나눠 씁니다. 전부 «생년월일이 없을 때»
++    //     따로 안내를 갖고 있습니다 (result-new 의 !info, 오늘운세의 !saju_saved).
++    //     로딩을 붙잡아 두는 것이 그 안내를 «가리고» 있었습니다.
++    // ══════════════════════════════════════════════════════════════
++    //  ⚠️⚠️ 아래 한 줄만 eslint 규칙(set-state-in-effect)을 풉니다.
++    //     [까닭]  그 규칙은 «다른 값에서 끌어낼 수 있는 것을 effect 로 만들지 말라» 는
++    //       뜻입니다. 옳은 말입니다. 다만 여기 converting 은 «불러오는 일» 그 자체의
++    //       처음과 끝이고, 그 일이 이 effect 안에 있습니다.
++    //       ★「부를 것이 없다」는 것도 그 일의 «끝» 입니다. 여기서 알리지 않으면
++    //         알릴 자리가 없습니다.
++    //     ⚠️ 규칙을 따르려면 converting 을 걷어내고 「끝났는가」를 부르는 쪽에서
++    //        따져야 하는데, 이 훅은 «여섯 화면» 이 나눠 씁니다.
++    //        한꺼번에 손대면 멈춤을 고치려다 여섯 곳을 흔듭니다. (교훈 CJ)
++    //     ⚠️ 이 줄을 지우실 때는 여섯 화면을 «모두» 세고 함께 옮기십시오.
++    // eslint-disable-next-line react-hooks/set-state-in-effect
++    if (!yearParam || !monthParam || !dayParam) { setConverting(false); return }
+     async function loadSaju() {
+       setConverting(true)
+       try {
+diff --git a/lib/saju/namingRecords.ts b/lib/saju/namingRecords.ts
+index 2cfabfe..2f8ad21 100644
+--- a/lib/saju/namingRecords.ts
++++ b/lib/saju/namingRecords.ts
+@@ -87,6 +87,55 @@ export const NAMING_KIND_LABEL: Record<NamingKind, string> = {
+   풀이: '이름 풀이', 개명: '개명', 신생아: '신생아',
+ }
+ 
++// ══════════════════════════════════════════════════════════════════
++//  ★2026-08-02 — 「이 기록은 «어느» 보관함의 것인가」 (대표님 지시)
++//
++//  🔴 [무엇이 있었나]  «내 아이 명품작명» 으로 들어와 결과를 본 뒤
++//    하단 보관함 버튼을 누르면 «내 이름 정밀분석 보관함» 이 열렸습니다.
++//    까닭 — 결과 화면(diagnosis)이 보관함 주소를 «붙박이» 로 들고 있었습니다.
++//      router.push('/manseryeok/naming/diagnosis/storage')   ← 언제나 이것
++//    ⚠️ 그 화면은 «두 갈래를 다» 엽니다. 작명 기록도 여기서 다시 봅니다.
++//       그러니 붙박이로 두면 «작명 손님은 반드시 남의 보관함» 으로 갑니다.
++//
++//  ★[이제]  갈래는 기록의 kind 가 정합니다. 그 규칙을 «한 곳에만» 적습니다.
++//    ⚠️ 보관함 화면(NamingStorageView)의 거르기와 «같은 규칙» 이어야 합니다 —
++//       거기도 「풀이인가, 아닌가」로 가릅니다. 두 곳이 갈리면
++//       버튼이 데려간 보관함에 그 기록이 «없는» 일이 생깁니다. (교훈 CJ)
++//    ⚠️ 옛 주소(/naming/diagnosis/storage)는 «그대로 살아 있습니다» — 다만
++//       이제 «가리키지» 않습니다. 북마크·마이페이지로 오시는 분만 그리 옵니다.
++// ══════════════════════════════════════════════════════════════════
++
++/** 보관함은 «둘» 뿐입니다 */
++export type NamingStorageBranch = 'diagnosis' | 'naming'
++
++export const NAMING_STORAGE_PATH: Record<NamingStorageBranch, string> = {
++  diagnosis: '/manseryeok/naming/diagnosis-storage',
++  naming: '/manseryeok/naming/naming-storage',
++}
++
++/** 하단 버튼에 쓰는 짧은 이름 */
++export const NAMING_STORAGE_LABEL: Record<NamingStorageBranch, string> = {
++  diagnosis: '정밀분석 보관함',
++  naming: '명품작명 보관함',
++}
++
++/**
++ * 기록의 갈래 → 보관함.
++ *
++ * ⚠️ «풀이가 아니면 전부 작명» 입니다 (개명·신생아).
++ *    새 kind 가 생겨도 작명 쪽으로 갑니다 — 정밀분석 보관함은
++ *    「내 이름을 푼 것」만 담는 자리이기 때문입니다.
++ * ⚠️ 옛 기록에는 kind 가 없습니다. 없으면 «풀이» 입니다.
++ */
++export function storageBranchOfKind(kind: NamingKind | null | undefined): NamingStorageBranch {
++  return (kind ?? DEFAULT_NAMING_KIND) === '풀이' ? 'diagnosis' : 'naming'
++}
++
++/** URL 로 나르는 열쇠 (?from=naming). ⚠️ 'mypage' 도 이 열쇠를 씁니다 — 덮어쓰지 마십시오 */
++export function storageBranchOfParam(from: string | null | undefined): NamingStorageBranch | null {
++  return from === 'naming' ? 'naming' : from === 'diagnosis' ? 'diagnosis' : null
++}
++
+ interface NamingInputBlob {
+   person: NamingPerson | null   // 진단한 사람의 사주 입력값 (내 것이면 profiles 값)
+   relation: string              // self | 관계
+-- 
+2.43.0
+

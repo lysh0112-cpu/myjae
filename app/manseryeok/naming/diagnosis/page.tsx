@@ -26,7 +26,9 @@ import ConsultButton from '@/app/components/common/ConsultButton'
 import { fromProfile, fromUrl, personKey, type MyInfo } from '@/lib/saju/myInfo'
 import {
   saveNamingRecord, getNamingRecord,
-  type NamingPerson,
+  storageBranchOfKind, storageBranchOfParam,
+  NAMING_STORAGE_PATH, NAMING_STORAGE_LABEL,
+  type NamingPerson, type NamingKind, type NamingStorageBranch,
 } from '@/lib/saju/namingRecords'
 import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
 import PerspectiveAccordion from '@/app/manseryeok/components/PerspectiveAccordion'
@@ -292,6 +294,29 @@ function DiagnosisInner() {
    */
   const [recKind, setRecKind] = useState<string | null>(null)
   const [recRelation, setRecRelation] = useState<string | null>(null)
+
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-02 — 이 화면은 «어느 보관함» 의 것인가 (대표님 지시 ①)
+  //
+  //  🔴 [무엇이 있었나]  하단 보관함 버튼이 «언제나» 정밀분석 보관함으로
+  //    갔습니다. 명품작명으로 들어오신 분이 남의 보관함에 떨어졌습니다.
+  //
+  //  ★[이제]  차례로 봅니다 — «정본이 앞» 입니다.
+  //    ① 기록의 kind      보관함에서 연 것이면 이것이 «정본» 입니다
+  //    ② URL 의 ?from=    기록이 아직 안 왔을 때 받쳐 줍니다
+  //    ③ 없으면 정밀분석  이 화면의 원래 뜻입니다
+  //
+  //  ⚠️ ②를 둔 까닭 — 기록은 «불러온 뒤» 라야 kind 를 압니다. 그 사이에
+  //     버튼이 엉뚱한 곳을 가리키면 손님이 그때 눌러 버립니다.
+  //  ⚠️ from=mypage 는 «갈래가 아닙니다». storageBranchOfParam 이 null 을
+  //     돌려주므로 아래 ③으로 내려갑니다 — 마이페이지 길은 따로 있습니다.
+  // ══════════════════════════════════════════════════════════════
+  const storageBranch: NamingStorageBranch =
+    (recKind ? storageBranchOfKind(recKind as NamingKind) : null)
+    ?? storageBranchOfParam(sp.get('from'))
+    ?? 'diagnosis'
+  const storagePath = NAMING_STORAGE_PATH[storageBranch]
+  const storageLabel = NAMING_STORAGE_LABEL[storageBranch]
   /** ★2026-07-31 (40부 3차) 두음법칙 안내 — 판정은 «바꾸지 않습니다». 알려 주기만 합니다 */
   const [dueumMsg, setDueumMsg] = useState<string | null>(null)
 
@@ -795,7 +820,13 @@ function DiagnosisInner() {
   return (
     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-      <PitchHeader title="내 이름 정밀분석" onBack={() => router.push((sp.get('from') === 'mypage' || nameId) ? '/mypage-new' : '/manseryeok/naming/diagnosis/storage')} onHome={() => router.push('/home-new')} />
+      {/* ★2026-08-02 — 뒤로가기도 «온 길» 로 돌아갑니다.
+          ⚠️ 하단 버튼만 고치면 «머리글로 나간 손님» 이 또 남의 보관함에 떨어집니다.
+             나가는 문이 둘이니 둘 다 같은 곳을 가리켜야 합니다. */}
+      <PitchHeader
+        title={storageBranch === 'naming' ? '내 아이 명품작명' : '내 이름 정밀분석'}
+        onBack={() => router.push((sp.get('from') === 'mypage' || nameId) ? '/mypage-new' : storagePath)}
+        onHome={() => router.push('/home-new')} />
 
       <div style={{ padding: '16px' }}>
         <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
@@ -1061,10 +1092,12 @@ function DiagnosisInner() {
                       gender={info?.gender === '여' ? '坤命' : info?.gender === '남' ? '乾命' : ''}
                       yongsin={aptYongsin.yongsin ?? ''}
                       lines={[
+                        // ★2026-08-02 — 화면 아코디언과 «같은 차례» (三 자원 · 四 수리)
+                        //   ⚠️ 종이와 화면의 차례가 갈리면 손님이 대조하다 헷갈리십니다.
                         ['음양', result.yinYang.grade],
                         ['발음오행', result.soundFlow.grade],
-                        ['수리 4격', result.suri.grade],
                         ['자원오행', result.resourceFlow.grade],
+                        ['수리 4격', result.suri.grade],
                         ['사주와의 만남', result.yongsinBohwan.grade],
                       ]}
                       chongpyeong={(commentary as { chongpyeong?: string })?.chongpyeong || ''}
@@ -1090,18 +1123,27 @@ function DiagnosisInner() {
                     보관함에 저장하지 못했어요. 이 화면을 닫으면 다시 볼 수 없어요
                   </div>
                 )}
-                {savedRecordId && (
-                  <div style={{
-                    textAlign: 'center', fontSize: '14px', fontWeight: 500,
-                    color: '#4a7a3a', background: '#eef5e8',
-                    borderRadius: '12px', padding: '13px', marginBottom: '4px',
-                  }}>
-                    {viewOnly ? '📁 보관함에서 불러온 기록' : '✓ 보관함에 저장됐어요'}
-                  </div>
-                )}
+                {/* ══════════════════════════════════════════════════════
+                    ★2026-08-02 — 「📁 …불러왔다」 는 초록 띠를 «걷어냅니다» (대표님 지시 ②)
+                     ⚠️ 옛 문구를 여기 «그대로» 적지 마십시오 — 검사가 주석까지 읽어
+                        「아직 남아 있다」고 봅니다 (JSX 주석은 codeOf 가 못 걷습니다).
+
+                     [까닭]  보관함에서 눌러서 들어오신 분은 «그것을 이미 아십니다».
+                       아는 것을 큰 초록 띠로 다시 말하니 화면만 어지러웠습니다.
+
+                     ⚠️ 「✓ 보관함에 저장됐어요」는 «남겨 둡니다» —
+                        그것은 아는 사실이 아니라 «방금 일어난 일» 을 알리는 말입니다.
+                        저장이 됐는지 모르면 손님이 화면을 못 닫으십니다.
+                        ★그 대신 띠를 걷고 «얌전한 한 줄» 로 낮췄습니다
+                          (작명 결과 화면과 같은 결 — 43부 28차).
+                     ⚠️ 저장 «실패» 띠는 위에 그대로 있습니다. 그때는 눈에 띄어야 합니다.
+                    ══════════════════════════════════════════════════════ */}
                 {savedRecordId && !viewOnly && (
-                  <div style={{ fontSize: '11px', color: '#6b5340', textAlign: 'center', marginBottom: '12px' }}>
-                    보관함에서 언제든 다시 볼 수 있어요
+                  <div style={{
+                    textAlign: 'center', fontSize: '11.5px', color: '#6f8a5f',
+                    padding: '2px 0 12px', lineHeight: 1.6,
+                  }}>
+                    ✓ 보관함에 안전하게 자동 저장되었습니다
                   </div>
                 )}
 
@@ -1126,15 +1168,51 @@ function DiagnosisInner() {
                   </button>
                 </div>
 
-                <button onClick={() => router.push('/manseryeok/naming/diagnosis/storage')}
-                  style={{ width: '100%', padding: '13px', borderRadius: '12px', background: 'rgba(200,120,60,0.10)', border: '0.5px solid #f0e0d5', color: subWarm, fontSize: '13px', fontWeight: 500, cursor: 'pointer', marginBottom: '8px' }}>
-                  📜 내 이름 정밀분석 보관함
-                </button>
+                {/* ══════════════════════════════════════════════════════
+                    ★2026-08-02 — 맨 아래 두 버튼을 «한 줄 두 칸» 으로 (대표님 지시 ④)
 
-                <button onClick={() => nameId ? router.push('/mypage-new') : resetAll()}
-                  style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#5c3a1e', fontSize: '13px', cursor: 'pointer' }}>
-                  {nameId ? '← 마이페이지로' : '다른 이름 풀어보기'}
-                </button>
+                     [까닭]  같은 폭·같은 무게의 버튼이 세로로 쌓여
+                       세로 공간만 먹고 «무엇이 무엇인지» 눈에 안 들어왔습니다.
+                       ★나란히 두면 「하나 더 볼까 / 나갈까」 라는 «갈림길» 로 읽힙니다.
+
+                     ⚠️ 오른쪽 버튼은 «들어온 갈래» 를 따릅니다 (지시 ①).
+                        명품작명으로 왔으면 명품작명 보관함, 풀이면 정밀분석 보관함.
+                     ⚠️ 왼쪽도 갈래를 따릅니다 —
+                        작명 기록을 보고 계신 분께 「다른 이름 풀어보기」를 내밀면
+                        «이름 풀이 입력 화면» 으로 떨어집니다. 그것도 같은 종류의 어긋남입니다.
+                     ⚠️ 마이페이지에서 오신 분(nameId)은 «온 길로» 돌아가야 하므로
+                        그 자리는 예전 그대로 둡니다.
+                     ⚠️ 430px 화면에서 두 칸입니다 — 글자를 짧게 두십시오.
+                        길어지면 줄바꿈되어 높이가 서로 달라집니다.
+                    ══════════════════════════════════════════════════════ */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <button
+                    onClick={() => {
+                      if (nameId) { router.push('/mypage-new'); return }
+                      if (storageBranch === 'naming') {
+                        router.push('/manseryeok/naming/rename/newname?kind=신생아')
+                        return
+                      }
+                      resetAll()
+                    }}
+                    style={{
+                      padding: '13px 6px', borderRadius: '12px', background: 'transparent',
+                      border, color: '#5c3a1e', fontSize: '13px', fontWeight: 500, cursor: 'pointer',
+                    }}>
+                    {nameId
+                      ? '← 마이페이지로'
+                      : storageBranch === 'naming' ? '새 이름 지어보기' : '다른 이름 풀어보기'}
+                  </button>
+
+                  <button onClick={() => router.push(storagePath)}
+                    style={{
+                      padding: '13px 6px', borderRadius: '12px',
+                      background: 'rgba(200,120,60,0.10)', border: '0.5px solid #f0e0d5',
+                      color: subWarm, fontSize: '13px', fontWeight: 500, cursor: 'pointer',
+                    }}>
+                    📜 {storageLabel}
+                  </button>
+                </div>
               </>
             )}
           </>

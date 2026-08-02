@@ -42,11 +42,15 @@ function gradeTone(g: string): string {
 }
 
 /** ★요약 카드 ↔ 아래 아코디언을 잇는 «차례». 아코디언 HEADS 와 «같은 순서» 여야 합니다 */
-const SUMMARY_KEYS = ['yinyang', 'baleum', 'suri', 'jawon', 'yongsin'] as const
+// ★2026-08-02 — 아코디언이 «三 자원 · 四 수리» 로 바뀌었습니다. 여기도 «같이» 바꿉니다.
+//   ⚠️ 이 카드는 지금 꺼져 있지만(31차), 차례가 갈린 채로 두면
+//      되살리는 날 「三. 수리오행 — 한자에 담긴 본래 기운」이 나옵니다.
+//      ★번호와 부연설명이 아직 «자리(index)» 로 붙어 있기 때문입니다.
+const SUMMARY_KEYS = ['yinyang', 'baleum', 'jawon', 'suri', 'yongsin'] as const
 const SUMMARY_NUMERALS = ['一', '二', '三', '四', '五']
 const SUMMARY_SUBS = [
-  '획수에 담긴 음과 양', '부르는 소리의 기운', '획수가 그리는 네 마디',
-  '한자에 담긴 본래 기운', '이름이 사주를 돕는가',
+  '획수에 담긴 음과 양', '부르는 소리의 기운', '한자에 담긴 본래 기운',
+  '획수가 그리는 네 마디', '이름이 사주를 돕는가',
 ]
 
 const GOLD = '#c8783c'

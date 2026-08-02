@@ -87,6 +87,55 @@ export const NAMING_KIND_LABEL: Record<NamingKind, string> = {
   풀이: '이름 풀이', 개명: '개명', 신생아: '신생아',
 }
 
+// ══════════════════════════════════════════════════════════════════
+//  ★2026-08-02 — 「이 기록은 «어느» 보관함의 것인가」 (대표님 지시)
+//
+//  🔴 [무엇이 있었나]  «내 아이 명품작명» 으로 들어와 결과를 본 뒤
+//    하단 보관함 버튼을 누르면 «내 이름 정밀분석 보관함» 이 열렸습니다.
+//    까닭 — 결과 화면(diagnosis)이 보관함 주소를 «붙박이» 로 들고 있었습니다.
+//      router.push('/manseryeok/naming/diagnosis/storage')   ← 언제나 이것
+//    ⚠️ 그 화면은 «두 갈래를 다» 엽니다. 작명 기록도 여기서 다시 봅니다.
+//       그러니 붙박이로 두면 «작명 손님은 반드시 남의 보관함» 으로 갑니다.
+//
+//  ★[이제]  갈래는 기록의 kind 가 정합니다. 그 규칙을 «한 곳에만» 적습니다.
+//    ⚠️ 보관함 화면(NamingStorageView)의 거르기와 «같은 규칙» 이어야 합니다 —
+//       거기도 「풀이인가, 아닌가」로 가릅니다. 두 곳이 갈리면
+//       버튼이 데려간 보관함에 그 기록이 «없는» 일이 생깁니다. (교훈 CJ)
+//    ⚠️ 옛 주소(/naming/diagnosis/storage)는 «그대로 살아 있습니다» — 다만
+//       이제 «가리키지» 않습니다. 북마크·마이페이지로 오시는 분만 그리 옵니다.
+// ══════════════════════════════════════════════════════════════════
+
+/** 보관함은 «둘» 뿐입니다 */
+export type NamingStorageBranch = 'diagnosis' | 'naming'
+
+export const NAMING_STORAGE_PATH: Record<NamingStorageBranch, string> = {
+  diagnosis: '/manseryeok/naming/diagnosis-storage',
+  naming: '/manseryeok/naming/naming-storage',
+}
+
+/** 하단 버튼에 쓰는 짧은 이름 */
+export const NAMING_STORAGE_LABEL: Record<NamingStorageBranch, string> = {
+  diagnosis: '정밀분석 보관함',
+  naming: '명품작명 보관함',
+}
+
+/**
+ * 기록의 갈래 → 보관함.
+ *
+ * ⚠️ «풀이가 아니면 전부 작명» 입니다 (개명·신생아).
+ *    새 kind 가 생겨도 작명 쪽으로 갑니다 — 정밀분석 보관함은
+ *    「내 이름을 푼 것」만 담는 자리이기 때문입니다.
+ * ⚠️ 옛 기록에는 kind 가 없습니다. 없으면 «풀이» 입니다.
+ */
+export function storageBranchOfKind(kind: NamingKind | null | undefined): NamingStorageBranch {
+  return (kind ?? DEFAULT_NAMING_KIND) === '풀이' ? 'diagnosis' : 'naming'
+}
+
+/** URL 로 나르는 열쇠 (?from=naming). ⚠️ 'mypage' 도 이 열쇠를 씁니다 — 덮어쓰지 마십시오 */
+export function storageBranchOfParam(from: string | null | undefined): NamingStorageBranch | null {
+  return from === 'naming' ? 'naming' : from === 'diagnosis' ? 'diagnosis' : null
+}
+
 interface NamingInputBlob {
   person: NamingPerson | null   // 진단한 사람의 사주 입력값 (내 것이면 profiles 값)
   relation: string              // self | 관계

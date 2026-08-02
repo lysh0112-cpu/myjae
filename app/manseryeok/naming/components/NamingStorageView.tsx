@@ -30,6 +30,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import {
   listNamingRecords, deleteNamingRecord, daysAgoLabel,
   NAMING_RELATION_COLOR, namingRelationGroup, namingRelationLabel,
+  storageBranchOfKind,
   type NamingRecord, type NamingKind,
 } from '@/lib/saju/namingRecords'
 import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
@@ -276,7 +277,14 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
           const relLabel = namingRelationLabel(r.relation)
           const kindTag = KIND_TAG[r.kind]
           return (
-            <div key={r.id} onClick={() => router.push(`/manseryeok/naming/diagnosis?recordId=${r.id}`)}
+            /* ★2026-08-02 — «어느 보관함에서 왔는지» 를 함께 보냅니다.
+                 ⚠️ 결과 화면은 기록을 불러온 «뒤» 라야 kind 를 압니다.
+                    그 사이에도 하단 버튼이 «옳은 보관함» 을 가리켜야 하므로
+                    입구를 URL 로 실어 보냅니다. (기록이 오면 kind 가 정본입니다) */
+            <div key={r.id} onClick={() => router.push(
+              `/manseryeok/naming/diagnosis?recordId=${r.id}`
+              + `&from=${storageBranchOfKind(r.kind)}`,
+            )}
               style={{
                 display: 'flex', alignItems: 'center', gap: 13, padding: '15px',
                 background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14,

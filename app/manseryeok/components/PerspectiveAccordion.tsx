@@ -65,11 +65,26 @@ const STAR_TONE: Record<StarResult['tone'], string> = {
 //   ⚠️ 옛 이름(Stars)으로 부르던 곳이 있어 그대로 다시 내보냅니다.
 export { default as Stars } from '@/app/components/common/StarRating'
 
+// ══════════════════════════════════════════════════════════════════
+//  ★2026-08-02 — 차례를 «三 자원오행 · 四 수리오행» 으로 바꿉니다 (대표님 지시)
+//
+//   [까닭]  앞의 둘(음양·발음)은 «한글 소리와 획수» 이야기이고,
+//     자원오행은 «한자에 담긴 기운», 수리 4격은 «획수가 그리는 운» 입니다.
+//     자원 → 수리로 두면 「글자를 보고 → 그 획수가 그리는 마디를 보고 →
+//     그것이 사주와 어떻게 만나는가」로 이야기가 한 줄로 이어집니다.
+//
+//  ⚠️⚠️ 번호(一二三四五)는 이 배열의 «자리» 로 붙습니다 (NUMERALS[i]).
+//     그러니 여기 차례를 바꾸면 «번호도 함께» 따라옵니다 — 그것이 맞습니다.
+//     다만 밖에서 이어 붙이는 것들(요약 카드·선명장 줄)은 «자리» 가 아니라
+//     열쇠(yinyang·baleum…)로 잇거나, 여기와 «같은 차례» 로 적어야 합니다.
+//     ★함께 고칠 곳 — NameAnalysisResultView 의 SUMMARY_KEYS,
+//       diagnosis / newresult 가 선명장에 넘기는 lines. (교훈 [자리 말고 열쇠])
+// ══════════════════════════════════════════════════════════════════
 const HEADS: { key: keyof PerspectiveCommentary; title: string; sub: string }[] = [
   { key: 'yinyang', title: '음양오행', sub: '획수에 담긴 음과 양' },
   { key: 'baleum', title: '발음오행', sub: '부르는 소리의 기운' },
-  { key: 'suri', title: '수리오행', sub: '획수가 그리는 네 마디' },
   { key: 'jawon', title: '자원오행', sub: '한자에 담긴 본래 기운' },
+  { key: 'suri', title: '수리오행', sub: '획수가 그리는 네 마디' },
   { key: 'yongsin', title: '사주와의 만남', sub: '이름이 사주를 돕는가' },
 ]
 

@@ -20,7 +20,33 @@ export function useResultSaju(
   const [monthGanji, setMonthGanji] = useState("")
   const [yearStem, setYearStem] = useState("")
   useEffect(() => {
-    if (!yearParam || !monthParam || !dayParam) return
+    // ══════════════════════════════════════════════════════════════
+    //  🔴 2026-08-02 — 「사주 불러오는 중…」 이 «영영» 멈춰 있던 자리
+    //
+    //  [무엇이 있었나]  converting 은 true 로 시작합니다.
+    //    그런데 생년월일이 없으면 여기서 «그냥 나가» 버렸습니다.
+    //    → setConverting(false) 를 지나갈 길이 없어 true 로 남았고,
+    //      손님은 「곧 나오겠지」 하며 빈 화면을 계속 보고 계셨습니다.
+    //
+    //  ★[이제]  «불러올 것이 없다» 는 것도 «끝난 것» 입니다.
+    //    끝났다고 알려야 부르는 쪽이 「사주 정보가 필요해요」 안내를 낼 수 있습니다.
+    //
+    //  ⚠️ 이 훅은 여섯 화면이 나눠 씁니다. 전부 «생년월일이 없을 때»
+    //     따로 안내를 갖고 있습니다 (result-new 의 !info, 오늘운세의 !saju_saved).
+    //     로딩을 붙잡아 두는 것이 그 안내를 «가리고» 있었습니다.
+    // ══════════════════════════════════════════════════════════════
+    //  ⚠️⚠️ 아래 한 줄만 eslint 규칙(set-state-in-effect)을 풉니다.
+    //     [까닭]  그 규칙은 «다른 값에서 끌어낼 수 있는 것을 effect 로 만들지 말라» 는
+    //       뜻입니다. 옳은 말입니다. 다만 여기 converting 은 «불러오는 일» 그 자체의
+    //       처음과 끝이고, 그 일이 이 effect 안에 있습니다.
+    //       ★「부를 것이 없다」는 것도 그 일의 «끝» 입니다. 여기서 알리지 않으면
+    //         알릴 자리가 없습니다.
+    //     ⚠️ 규칙을 따르려면 converting 을 걷어내고 「끝났는가」를 부르는 쪽에서
+    //        따져야 하는데, 이 훅은 «여섯 화면» 이 나눠 씁니다.
+    //        한꺼번에 손대면 멈춤을 고치려다 여섯 곳을 흔듭니다. (교훈 CJ)
+    //     ⚠️ 이 줄을 지우실 때는 여섯 화면을 «모두» 세고 함께 옮기십시오.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!yearParam || !monthParam || !dayParam) { setConverting(false); return }
     async function loadSaju() {
       setConverting(true)
       try {

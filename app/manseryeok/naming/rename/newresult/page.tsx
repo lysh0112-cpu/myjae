@@ -814,10 +814,11 @@ function NewResultInner() {
             : '—'}
           yongsin={yongsin}
           lines={[
+            // ★2026-08-02 — 화면 아코디언과 «같은 차례» (三 자원 · 四 수리)
             ['음양', result.yinYang.grade],
             ['발음오행', result.soundFlow.grade],
-            ['수리 4격', result.suri.grade],
             ['자원오행', result.resourceFlow.grade],
+            ['수리 4격', result.suri.grade],
             // ★[내이름 감정] 과 «같은 다섯 관점» 입니다 — 하나도 빠뜨리지 않습니다
             ['사주와의 만남', result.yongsinBohwan.grade],
           ]}

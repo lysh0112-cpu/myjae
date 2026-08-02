@@ -263,8 +263,32 @@ console.log('\n━━ ⑲-I ★화살표 · 요약 카드 · 하단 위계 (43�
   check(/padding: '6px 4px'/.test(acc), `★둘레에 «누르는 자리» 를 두었습니다`)
 
   // ② 요약 카드 ↔ 아코디언 연동
-  check(/SUMMARY_KEYS = \['yinyang', 'baleum', 'suri', 'jawon', 'yongsin'\]/.test(view),
-    `★요약 카드가 아코디언과 «같은 차례» 입니다`)
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-02 — 이 검사가 «옛 차례» 를 지키고 있었습니다.
+  //    대표님 지시로 三 자원 · 四 수리 로 바꾸려는데 이 줄이 막았습니다.
+  //    ★코드를 되돌리지 않고 «검사를 뒤집었습니다». (교훈 [검사가 지킨다])
+  //    [까닭]  한자에 담긴 기운(자원)을 보고 → 그 획수가 그리는 마디(수리)를 보고
+  //            → 사주와 어떻게 만나는가로 이야기가 이어집니다.
+  //  ⚠️ 아래 ②-b 가 «두 곳이 같은 차례인지» 를 함께 봅니다 — 한쪽만 못 고칩니다.
+  // ══════════════════════════════════════════════════════════════
+  check(/SUMMARY_KEYS = \['yinyang', 'baleum', 'jawon', 'suri', 'yongsin'\]/.test(view),
+    `★요약 카드가 아코디언과 «같은 차례» 입니다 (三 자원 · 四 수리)`)
+  check(!/SUMMARY_KEYS = \['yinyang', 'baleum', 'suri', 'jawon'/.test(view),
+    `옛 차례(三 수리 · 四 자원)가 남아 있지 않습니다`)
+
+  // ②-b ★★두 곳의 차례가 «정말로» 같은가 — 눈으로 맞추지 않습니다
+  //   ⚠️ 번호(一二三)는 아직 «자리(index)» 로 붙습니다. 차례가 갈리면
+  //      「三. 수리오행 — 한자에 담긴 본래 기운」 같은 것이 나옵니다.
+  {
+    const headOrder = [...acc.matchAll(/\{ key: '(\w+)', title:/g)].map(m => m[1])
+    const sumOrder = (view.match(/SUMMARY_KEYS = \[([^\]]+)\]/) ?? ['', ''])[1]
+      .split(',').map(s => s.trim().replace(/'/g, '')).filter(Boolean)
+    check(headOrder.length === 5, `아코디언 관점이 다섯입니다 (${headOrder.length})`)
+    check(headOrder.join('>') === sumOrder.join('>'),
+      `★아코디언과 요약 카드의 차례가 «글자 그대로» 같습니다 (${headOrder.join('>')})`)
+    check(headOrder[2] === 'jawon' && headOrder[3] === 'suri',
+      `★三 = 자원오행 · 四 = 수리오행`)
+  }
   check(/SUMMARY_NUMERALS/.test(view) && /一/.test(view), `一·二·三 체계로 통일했습니다`)
   check(/setFocusKey\(SUMMARY_KEYS\[i\]\)/.test(view), `줄을 누르면 그 관점을 가리킵니다`)
   check(/focusNonce/.test(view) && /focusNonce/.test(acc),
@@ -1210,6 +1234,108 @@ console.log('\n━━ ⑲-l ★자원오행 배점 — «유지» 확정이 기�
   check(!/29-measure/.test(JSON.parse(pkg).scripts.verify),
     `★측정 하네스는 verify 체인에 «없습니다» (검사가 아니라 «자» 입니다)`)
   check(/measure:resource/.test(pkg), `npm run measure:resource 로 잴 수 있습니다`)
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  ⑳ ★2026-08-02 — 결과 화면이 «제 보관함» 으로 돌아가는가 (대표님 지시 ①)
+//
+//   🔴 [무엇이 있었나]  명품작명으로 들어와 결과를 본 뒤 보관함 버튼을 누르면
+//     «정밀분석 보관함» 이 열렸습니다. 주소가 붙박이였습니다.
+//   ★이 그물이 그 붙박이가 «다시 생기는 것» 을 막습니다.
+// ══════════════════════════════════════════════════════════════════
+console.log('\n━━ ⑳-a ★결과 화면 → «제» 보관함 (붙박이 금지) ━━')
+{
+  const rec = codeOf(S.rec)
+  const diag = codeOf(read('app/manseryeok/naming/diagnosis/page.tsx'))
+  const sto = codeOf(S.sto)
+
+  // ① 규칙이 «한 곳» 에 있는가 (교훈 CJ)
+  check(/export function storageBranchOfKind/.test(rec),
+    `★갈래를 정하는 창구가 namingRecords 에 «하나» 있습니다`)
+  check(/NAMING_STORAGE_PATH/.test(rec) && /diagnosis-storage/.test(rec) && /naming-storage/.test(rec),
+    `★두 보관함 주소를 그 창구가 들고 있습니다`)
+  // ⚠️ 보관함 «거르기» 와 «같은 규칙» 이어야 합니다 — 갈리면 버튼이 데려간 곳에
+  //    그 기록이 없습니다
+  check(/'풀이' \? 'diagnosis' : 'naming'/.test(rec),
+    `★거르기와 «같은 규칙» 입니다 (풀이가 아니면 전부 작명)`)
+  check(/effFilter === '풀이' \? r\.kind === '풀이' : r\.kind !== '풀이'/.test(sto),
+    `⚠️ 보관함 거르기도 「풀이인가 아닌가」 그대로입니다`)
+
+  // ② 결과 화면이 그 창구를 «쓰는가»
+  check(/storageBranchOfKind/.test(diag) && /storageBranchOfParam/.test(diag),
+    `★결과 화면이 기록의 kind 와 URL 을 «차례로» 봅니다`)
+  check(/const storagePath = NAMING_STORAGE_PATH\[storageBranch\]/.test(diag),
+    `★보관함 주소를 «갈래로» 정합니다`)
+
+  // ③ ★붙박이가 «하나도» 남아 있지 않은가 — 이것이 이 그물의 핵심입니다
+  const hardCoded = [...diag.matchAll(/router\.push\('\/manseryeok\/naming\/[a-z/-]*storage[^']*'\)/g)]
+    .map(m => m[0])
+  check(hardCoded.length === 0,
+    `★결과 화면에 보관함 주소를 «박아 넣은» 자리가 없습니다${hardCoded.length ? ` — ${hardCoded.join(' , ')}` : ''}`)
+
+  // ④ 보관함이 기록을 열 때 «어디서 왔는지» 를 실어 보내는가
+  check(/from=\$\{storageBranchOfKind\(r\.kind\)\}/.test(sto),
+    `★보관함이 기록을 열 때 갈래를 함께 보냅니다 (기록이 오기 «전» 을 받칩니다)`)
+
+  // ⑤ ⚠️ 옛 주소는 «살아 있되» 가리키지 않습니다 (교훈 AM)
+  check(existsSync(P.stoDoor),
+    `⚠️ 옛 주소(diagnosis/storage)의 문은 «그대로» 있습니다 — 북마크가 옵니다`)
+  check(!/'\/manseryeok\/naming\/diagnosis\/storage'/.test(diag),
+    `★다만 결과 화면이 옛 주소를 «가리키지» 않습니다`)
+}
+
+console.log('\n━━ ⑳-b ★하단 정돈 — 띠 배너 · A4 버튼 · 두 칸 ━━')
+{
+  const diag = codeOf(read('app/manseryeok/naming/diagnosis/page.tsx'))
+  const cert = codeOf(S.cert)
+
+  // ① 「보관함에서 불러온 기록」 띠가 «없는가» (지시 ②)
+  check(!/보관함에서 불러온 기록/.test(diag),
+    `★「📁 보관함에서 불러온 기록」 띠가 «완전히» 없습니다`)
+  // ⚠️ 다만 «저장됐다» 는 알림은 남아야 합니다 — 그건 방금 일어난 일입니다
+  check(/자동 저장되었습니다/.test(diag),
+    `⚠️ 「✓ 자동 저장」 알림은 «남아» 있습니다 (한 줄로 낮췄습니다)`)
+  check(/보관함에 저장하지 못했어요/.test(diag),
+    `⚠️ 저장 «실패» 알림은 눈에 띄게 그대로입니다`)
+
+  // ② A4 버튼이 «컴팩트» 한가 (지시 ③)
+  const pad = (cert.match(/width: '100%', padding: '(\d+)px \d+px', borderRadius: 12/) ?? [])[1]
+  check(!!pad && Number(pad) <= 11,
+    `★A4 버튼 여백이 컴팩트합니다 (${pad ?? '?'}px ≤ 11)`)
+  check(/fontSize: 13\.5, fontWeight: 600/.test(cert),
+    `★글자도 함께 낮췄습니다 (15/700 → 13.5/600)`)
+  check(!/width: '100%', padding: 16, borderRadius: 14/.test(cert),
+    `옛 «으뜸» 크기(16px 여백)가 남아 있지 않습니다`)
+  // ⚠️ 크기는 낮추되 «채운 색» 은 남깁니다 — 이것만 색이 차 있어야 켜가 갈립니다
+  check(/background: p\.disabled \? '#EDE7E0' : '#c8783c'/.test(cert),
+    `⚠️ 채운 색은 그대로입니다 (크기로 낮추고 색으로 남깁니다)`)
+
+  // ③ 맨 하단이 «한 줄 두 칸» 인가 (지시 ④)
+  check(/gridTemplateColumns: '1fr 1fr'/.test(diag),
+    `★맨 하단 두 버튼이 «한 줄 두 칸» 입니다 (50:50)`)
+  check(/📜 \{storageLabel\}/.test(diag),
+    `★보관함 버튼 «이름» 도 갈래를 따릅니다`)
+  check(/storageBranch === 'naming' \? '새 이름 지어보기' : '다른 이름 풀어보기'/.test(diag),
+    `★왼쪽 버튼도 갈래를 따릅니다 (작명 기록에 «풀이 입력» 을 내밀지 않습니다)`)
+}
+
+console.log('\n━━ ⑳-c 🔴 「사주 불러오는 중…」 이 «끝나는가» ━━')
+{
+  const hook = read('hooks/useResultSaju.ts')
+  // 🔴 생년월일이 없으면 그냥 나가 버려 converting 이 영영 true 였습니다
+  check(/if \(!yearParam \|\| !monthParam \|\| !dayParam\) \{ setConverting\(false\); return \}/.test(hook),
+    `★불러올 것이 없으면 «곧바로 끝났다» 고 알립니다`)
+  check(!/if \(!yearParam \|\| !monthParam \|\| !dayParam\) return\n/.test(hook),
+    `옛 «그냥 나가기» 가 남아 있지 않습니다`)
+  check(/finally \{[\s\S]{0,60}setConverting\(false\)/.test(hook),
+    `⚠️ 실패해도 끝냅니다 (finally)`)
+  // ⚠️ 이 훅은 여러 화면이 나눠 씁니다 — «끝났다» 가 늦으면 전부 멈춥니다
+  const users = ['app/manseryeok/naming/diagnosis/page.tsx',
+    'app/manseryeok/naming/rename/newhanja/page.tsx',
+    'app/manseryeok/result-new/page.tsx']
+  for (const u of users) {
+    check(/useResultSaju/.test(read(u)), `⚠️ ${u.split('/').slice(-2).join('/')} 가 이 훅을 씁니다`)
+  }
 }
 
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
