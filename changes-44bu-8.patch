@@ -1,0 +1,360 @@
+From 6a404612206ec91a0f9672d27073bde19a66df4c Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Sun, 2 Aug 2026 09:29:04 +0000
+Subject: [PATCH] =?UTF-8?q?=EC=A7=84=EB=A1=9C=EC=A0=81=EC=84=B1=20?=
+ =?UTF-8?q?=EC=9A=A9=EC=8B=A0=EC=9D=84=20=C2=AB=EC=B9=98=ED=99=98=ED=95=9C?=
+ =?UTF-8?q?=20=EC=A0=90=EC=88=98=C2=BB=20=EB=A1=9C=20(44=EB=B6=80=208?=
+ =?UTF-8?q?=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+🔴 실기 화면 — 한 화면에 「중화신강 55%」와 「극신약」이 함께 떴습니다.
+   앞은 계절 치환한 점수(진로용), 뒤는 용신 계산기 기본값(본래 오행).
+   ⇒ 같은 물음에 «반대 답» 이었습니다.
+   그리고 「목 55점 과다」인데 용신이 «木» 이라 앞뒤가 안 맞았습니다.
+
+[규칙 — 2026-08-02 대표님 확정]
+  계절 치환은 «쓰임» 이 가릅니다 (교재 40쪽)
+    치환 «함»      진로 · 적성 · 성격 · 작명
+    치환 «안 함»   건강 · 궁합
+  ★"이미 프로그램된 대로 하고 손대지 말 것" — 대표님 지시
+    ⇒ 작명·궁합·합격운·통변·출산택일은 «한 글자도» 안 건드렸습니다
+
+[고친 것 — 진로적성 «한 화면» 뿐]
+  ★calcCareerYongsin 이 calcSimsanOhaeng(purpose:'진로') 점수를 넣어 줍니다
+    ⛔ yongsinNew 자체는 안 고쳤습니다. scoreOverride 라는 문이 이미 있었고,
+       roleFit.ts:175 가 «이미» 그 방식을 쓰고 있었습니다. 이 파일만 안 쓰고 있었습니다.
+  ★화면 문구 「겁재」 → 「비겁」
+    ⚠️ 오행에는 음양이 없어 비견인지 겁재인지 정할 수 없습니다.
+       sipsinName 이 오행을 대표 양간(甲)으로 바꿔 견주어, 乙 일간에게
+       목이 «언제나 겁재» 로 나왔습니다.
+    ⚠️ yukchinName 자체는 그대로 — 직업 표(YONGSIN_YUKCHIN)가 비견/겁재를
+       갈라 갖고 있어 그 열쇠로 아직 씁니다. 말만 넓혔습니다.
+
+[결과]  戊辰 丙辰 乙巳 庚辰
+  전  용신 목 · "극신약 쪽" · "겁재에 해당"
+  후  ★용신 화 · "신강 쪽" · "식상에 해당"
+  ★억부용신(火) = 격국용신(火) — 교재 146쪽 「용신이 같으면 유리하다」
+
+[실측] npm run measure:yongsin — 임의 사주 20만 건
+  ★용신이 바뀜 28.89% (세 분 중 한 분) · 신강약이 바뀜 19.24% · 격 0%
+  ⚠️ 진로적성 화면 «에서만» 입니다.
+
+★조사 기록 — 어느 화면이 어느 잣대를 쓰는지 career/yongsin.ts 머리말에 남김
+  치환 함    사주보기 · 작명 넷 · 출산택일 · 관리자 · 진로적성
+  치환 안 함  궁합(교재 40쪽과 맞음) · 합격운 · 통변 재료 · 출산택일 내부
+  ⚠️ 대표님 지시 — 이대로 두십시오. 고치려면 대표님께 여쭈십시오.
+
+검사 ㉔㉕ 신설 — 61 → 78건 · 1,488 → 1,505 · 실패 0
+  ㉕ 궁합의 진술축미 — 丑=火 · 未=水 조후용신으로 반영되고 있음을 못 박음
+     ⚠️ 辰·戌은 교재에 없어 «조후 없음». 지어내지 않습니다.
+tsc 통과 · eslint 82/138
+---
+ 32-verify-hour-convert.ts    | 84 +++++++++++++++++++++++++++++++++++-
+ 33-measure-career-yongsin.ts | 53 +++++++++++++++++++++++
+ lib/saju/career/yongsin.ts   | 79 ++++++++++++++++++++++++++++++++-
+ package.json                 |  3 +-
+ 4 files changed, 214 insertions(+), 5 deletions(-)
+ create mode 100644 33-measure-career-yongsin.ts
+
+diff --git a/32-verify-hour-convert.ts b/32-verify-hour-convert.ts
+index edf04d5..74cd5ad 100644
+--- a/32-verify-hour-convert.ts
++++ b/32-verify-hour-convert.ts
+@@ -1,4 +1,4 @@
+-// 32-verify-hour-convert.ts
++// 32-verify-hour-convert.ts  (★이름은 시지 치환에서 시작했으나, 지금은 오행 점수·용신 전반을 봅니다)
+ //
+ // ┌───────────────────────────────────────────────────────────────┐
+ // │  시지 계절 치환 그물 — 교재 38쪽대로 도는가                      │
+@@ -18,6 +18,17 @@ import {
+ // ★두 계산기가 «같은 점수» 를 내는지 맞대어 봅니다 (2026-08-02 결함)
+ import { calcCareerScore } from './lib/saju/career/careerScore'
+ import { judgeSinsal } from './lib/saju/career/sinsal9'
++import { calcCareerYongsin, judgeYongsin } from './lib/saju/career/yongsin'
++import { judgeStrength } from './lib/saju/yongsinNew'
++
++/** 일간 오행의 비겁·인성 — ★판정을 다시 짜지 않고 «신강약만» 견주려고 둡니다 */
++function relOfDay(dayStem: string): { bigeop: Ohaeng; insung: Ohaeng } {
++  const EL: Record<string, Ohaeng> = { 甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토', 己: '토', 庚: '금', 辛: '금', 壬: '수', 癸: '수' }
++  const GEN: Record<Ohaeng, Ohaeng> = { 수: '목', 목: '화', 화: '토', 토: '금', 금: '수' }
++  const de = EL[dayStem]
++  const insung = (Object.keys(GEN) as Ohaeng[]).find(k => GEN[k] === de)!
++  return { bigeop: de, insung }
++}
+ 
+ 
+ let pass = 0, fail = 0
+@@ -252,6 +263,75 @@ console.log('\n━━ ㉓ ★괴백양은 «기둥» 으로 센다 (2026-08-02 
+   check(/교재에 «명시가 없습니다»/.test(t), `⚠️ 교재에 없다는 것이 적혀 있습니다`)
+ }
+ 
++console.log('\n━━ ㉔ ★진로적성 용신 — «치환한 점수» 로 내는가 (2026-08-02) ━━')
++{
++  //  🔴 [무엇이 있었나]  한 화면에 「중화신강 55%」와 「극신약」이 함께 떴습니다.
++  //    앞은 계절 치환한 점수(진로용), 뒤는 용신 계산기 기본값(본래 오행).
++  //    ⇒ 같은 물음에 «반대 답» 이었습니다.
++  //  ★계절 치환은 «쓰임» 이 가릅니다 — 진로·적성·성격은 치환합니다.
++  //  ⚠️ yongsinNew 는 «안 고쳤습니다». scoreOverride 로 넣어 줍니다.
++  const testSaju = ['년주', '월주', '일주', '시주'].map((p, i) => ({
++    pillar: p, stem: ['戊', '丙', '乙', '庚'][i], branch: ['辰', '辰', '巳', '辰'][i],
++  })) as Pillar[]
++  const inp = {
++    saju: testSaju, solarMonth: 4, solarDay: 20, hourBranch: '辰', target: 'adult',
++  } as never
++
++  const v = calcCareerYongsin(inp)!
++  // ★실기에서 잡힌 그 사주 — 치환하면 신강 · 용신은 火
++  check(v.status === '신강', `★신강으로 나옵니다 (극신약이면 치환이 안 된 것) — ${v.status}`)
++  check(v.yongsin === '화', `★용신이 火 입니다 (木이면 치환이 안 된 것) — ${v.yongsin}`)
++
++  // ★오각형(진로 점수)의 신강약과 «같은 답» 인가 — 이것이 이 그물의 알맹이
++  const sc = calcSimsanOhaeng(testSaju, 4, 20, '辰', { purpose: '진로' })
++  const r = relOfDay('乙')
++  check(judgeStrength(sc[r.bigeop] + sc[r.insung]) === v.status,
++    `★오각형과 «같은 신강약» 입니다 (두 수가 갈리면 화면이 어긋납니다)`)
++
++  // 화면 문구 — 「겁재」가 아니라 «비겁»
++  const c = judgeYongsin(inp)
++  const line = c.lines.find(l => l.includes('일간 기준')) ?? ''
++  check(!/겁재에 해당|비견에 해당/.test(line),
++    `★「겁재」·「비견」으로 좁혀 말하지 «않습니다» — ${line}`)
++  check(/(비겁|식상|재성|관성|인성)에 해당/.test(line), `★큰 묶음으로 말합니다`)
++
++  // ⚠️ 코드로도 봅니다 — purpose 를 넘기는가
++  const y = read('lib/saju/career/yongsin.ts')
++  check(/purpose: '진로'/.test(y), `★진로 쓰임으로 점수를 냅니다`)
++  check(/calcYongsinNew\(input\.saju as never, day\.stem, careerScore as never\)/.test(y),
++    `★그 점수를 용신 계산기에 «넣어» 줍니다`)
++  check(/GROUP_OF/.test(y), `★십성을 큰 묶음으로 옮기는 표가 있습니다`)
++
++  // ⛔ yongsinNew 자체는 «안 건드렸는가»
++  const yn = read('lib/saju/yongsinNew.ts')
++  check(/지지 본래 오행 \(辰戌丑未 = 土, 계절치환 안 함\)/.test(yn),
++    `⛔ yongsinNew 의 기본값은 «본래 오행» 그대로입니다 (손대지 않았습니다)`)
++
++  // ⚠️ 다른 화면은 «건드리지 않았는가» — 대표님 지시 「이미 프로그램된 대로」
++  check(/calcYongsinNew\(p\.saju, dayStem, ohaeng\)/.test(read('lib/saju/coupleFilterV1.ts')),
++    `⚠️ 궁합은 «그대로» 입니다 (본래 오행 + 조후용신)`)
++  check(/조사 — 지금 «어느 화면이 어느 잣대»/.test(y),
++    `★어느 화면이 어느 잣대를 쓰는지 «기록» 이 남아 있습니다`)
++  // ⚠️ 자(measure)는 검사가 아닙니다
++  const pkg2 = JSON.parse(read('package.json'))
++  check(!/33-measure/.test(pkg2.scripts.verify), `⚠️ measure:yongsin 은 verify 체인에 «없습니다»`)
++}
++
++console.log('\n━━ ㉕ ★궁합의 진술축미 — 조후용신으로 반영되는가 ━━')
++{
++  //  ★교재 — 궁합은 «오행 그대로» 점수를 내되, 계절은 «조후용신» 으로 봅니다.
++  //     未월생 → 여름생 → 水 (뜨거운 기운을 식힘)
++  //     丑월생 → 겨울생 → 火 (차가운 기운을 데움)
++  //  ⚠️ 辰·戌은 궁합에서 어떻게 보는지 «교재에 없습니다». 지어내지 않습니다.
++  const yn = read('lib/saju/yongsinNew.ts')
++  check(/const WINTER = \['亥', '子', '丑'\]/.test(yn), `★丑이 «겨울» 에 들어 있습니다`)
++  check(/const SUMMER = \['巳', '午', '未'\]/.test(yn), `★未가 «여름» 에 들어 있습니다`)
++  check(/isWinter\) return \{ element: '화'/.test(yn), `★丑월 → 조후용신 火`)
++  check(/isSummer\) return \{ element: '수'/.test(yn), `★未월 → 조후용신 水`)
++  check(/return \{ element: null, note: '봄·가을생은 조후가 온화해요' \}/.test(yn),
++    `⚠️ 辰·戌월은 «조후 없음» — 교재에 없으므로 지어내지 않습니다`)
++}
++
+ console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
+ {
+   const src = read('lib/saju/simsanOhaeng.ts')
+@@ -266,7 +346,7 @@ console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에
+   check(/measure:hour/.test(JSON.stringify(pkg.scripts)), `npm run measure:hour 로 잽니다`)
+ }
+ 
+-console.log(`\n━━ 시지 치환 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
++console.log(`\n━━ 오행·용신 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
+ if (fail > 0) {
+   console.log('  ┌────────────────────────────────────────────────────────────┐')
+   console.log('  │  ⚠️ 시지 치환은 2026-08-02 «연재쌤 지시» 로 넣은 것입니다      │')
+diff --git a/33-measure-career-yongsin.ts b/33-measure-career-yongsin.ts
+new file mode 100644
+index 0000000..e636ca8
+--- /dev/null
++++ b/33-measure-career-yongsin.ts
+@@ -0,0 +1,53 @@
++// 33-measure-career-yongsin.ts
++//
++// ┌───────────────────────────────────────────────────────────────┐
++// │  진로적성 용신에 «계절 치환» 을 넣으면 무엇이 달라지는가 — 자(尺)  │
++// └───────────────────────────────────────────────────────────────┘
++//
++//  ★2026-08-02 — 진로적성 화면에 「중화신강 55%」와 「극신약」이 함께 떴습니다.
++//    앞은 치환한 점수, 뒤는 본래 오행. ⇒ 같은 물음에 반대 답이었습니다.
++//    대표님 확정으로 «진로적성만» 치환 점수를 쓰게 했습니다.
++//
++//  ⚠️ 이것은 «검사» 가 아니라 «자» 입니다. verify 체인에 넣지 마십시오.
++//  쓰는 법   npm run measure:yongsin
++//
++//  [2026-08-02 처음 잰 값 — 다음에 견줄 잣대]
++//     ★신강약이 바뀜 19.29%  ·  ★용신이 바뀜 29.03%  ·  격이 바뀜 0%
++//     ⇒ 세 분 중 한 분의 용신이 달라집니다. ★진로적성 화면 «에서만» 입니다.
++//
++//  ⚠️ 다른 화면은 «건드리지 않았습니다» — 대표님 지시 「이미 프로그램된 대로」.
++//     어느 화면이 어느 잣대를 쓰는지는 career/yongsin.ts 머리말에 적어 두었습니다.
++
++import { calcYongsinNew } from '/home/claude/myjae/lib/saju/yongsinNew'
++import { calcSimsanOhaeng, type Pillar } from '/home/claude/myjae/lib/saju/simsanOhaeng'
++const GAN='甲乙丙丁戊己庚辛壬癸'.split(''), JI='子丑寅卯辰巳午未申酉戌亥'.split('')
++const YS=new Set(['甲','丙','戊','庚','壬']), YB=new Set(['子','寅','辰','午','申','戌'])
++const R=(n:number)=>Math.floor(Math.random()*n)
++const one=()=>{for(;;){const s=GAN[R(10)],b=JI[R(12)]; if(YS.has(s)===YB.has(b)) return {s,b}}}
++const SOLAR:Record<string,[number,number]>={寅:[2,20],卯:[3,20],辰:[4,20],巳:[5,20],午:[6,20],未:[7,20],申:[8,20],酉:[9,20],戌:[10,20],亥:[11,20],子:[12,20],丑:[1,20]}
++let n=0, sFlip=0, yFlip=0, gFlip=0
++const st:Record<string,number>={}
++for(let i=0;i<200000;i++){
++  const p=['년주','월주','일주','시주'].map(k=>{const x=one(); return {pillar:k,stem:x.s,branch:x.b}}) as Pillar[]
++  const day=p[2].stem, mb=p[1].branch, hb=p[3].branch
++  const [sm,sd]=SOLAR[mb]
++  const a=calcYongsinNew(p as never, day)                                    // 지금 (본래 오행)
++  const conv=calcSimsanOhaeng(p,sm,sd,hb,{purpose:'진로'})
++  const b=calcYongsinNew(p as never, day, conv as never)                     // 후 (치환 점수)
++  if(!a||!b) continue
++  n++
++  const A=a as unknown as {status:string;eokbu:{yongsin:string};gyeokguk:{name:string}}
++  const B=b as unknown as {status:string;eokbu:{yongsin:string};gyeokguk:{name:string}}
++  if(A.status!==B.status) sFlip++
++  if(A.eokbu.yongsin!==B.eokbu.yongsin) yFlip++
++  if(A.gyeokguk.name!==B.gyeokguk.name) gFlip++
++  const k=A.status+'→'+B.status
++  if(A.status!==B.status) st[k]=(st[k]??0)+1
++}
++const pc=(x:number)=>(x/n*100).toFixed(2)+'%'
++console.log('임의 사주',n.toLocaleString(),'건 — 본래오행 ↔ 치환점수')
++console.log('★신강약이 바뀜 :', pc(sFlip))
++console.log('★용신이 바뀜   :', pc(yFlip))
++console.log('★격이 바뀜     :', pc(gFlip))
++console.log()
++console.log('신강약 이동 :', Object.entries(st).sort((x,y)=>y[1]-x[1]).slice(0,6).map(([k,v])=>k+' '+pc(v)).join(' · '))
+diff --git a/lib/saju/career/yongsin.ts b/lib/saju/career/yongsin.ts
+index fc17b64..d9303a0 100644
+--- a/lib/saju/career/yongsin.ts
++++ b/lib/saju/career/yongsin.ts
+@@ -15,6 +15,8 @@
+ // ⚠️ yongsinNew.ts 는 건드리지 않는다. 사주보기·궁합이 함께 쓴다.
+ 
+ import { calcYongsinNew, type Ohaeng as YOhaeng } from '../yongsinNew'
++// ★진로적성은 «계절 치환한» 점수로 용신을 냅니다 (2026-08-02 대표님 확정)
++import { calcSimsanOhaeng } from '../simsanOhaeng'
+ import type { CareerCard, CareerInput, Ohaeng } from './types'
+ import { calcCareerGyeokguk } from './gyeokguk'
+ import { iga, eunneun } from '../josa'
+@@ -23,6 +25,19 @@ import { jobKey, okForStudent } from './tables/jobs'
+ 
+ const EL_HANJA: Record<string, string> = { 목: '木', 화: '火', 토: '土', 금: '金', 수: '水' }
+ 
++/**
++ * 십성 → 손님께 말할 «큰 묶음». (2026-08-02)
++ * ⚠️ 오행 하나로는 비견인지 겁재인지 정할 수 없습니다 — 오행에 음양이 없습니다.
++ *    ★그래서 화면에서는 「비겁」처럼 넓게 말합니다. 셈은 그대로입니다.
++ */
++const GROUP_OF: Record<string, string> = {
++  비견: '비겁', 겁재: '비겁',
++  식신: '식상', 상관: '식상',
++  편재: '재성', 정재: '재성',
++  편관: '관성', 정관: '관성',
++  편인: '인성', 정인: '인성',
++}
++
+ export interface CareerYongsin {
+   /** 억부용신 — 이 카드의 본줄기 */
+   yongsin: Ohaeng | null
+@@ -66,7 +81,52 @@ export function calcCareerYongsin(input: CareerInput): CareerYongsin | null {
+   const day = input.saju.find(p => p.pillar === '일주')
+   if (!day || day.stem === '?') return null
+ 
+-  const r = calcYongsinNew(input.saju as never, day.stem)
++  // ══════════════════════════════════════════════════════════════
++  //  🔴★2026-08-02 — 진로적성의 용신은 «치환한 점수» 로 냅니다 (대표님 확정)
++  //
++  //  [무엇이 있었나]  한 화면에 「중화신강 55%」와 「극신약」이 함께 떴습니다.
++  //    앞은 계절 치환한 점수(진로용), 뒤는 본래 오행(용신 계산기 기본값).
++  //    ⇒ 같은 물음에 반대 답이었습니다. 손님이 곧바로 알아채는 자리입니다.
++  //
++  //  ★[규칙]  계절 치환은 «쓰임» 이 가릅니다 (교재 40쪽 + 2026-08-02 대표님 확정)
++  //     치환 «함»      진로 · 적성 · 성격          ← ★여기가 그것입니다
++  //     치환 «안 함»   건강 · 궁합 · 작명 · 오늘운세 ·
++  //                    통변 · 출산택일 · 합격운 · 물상
++  //     ⚠️ 교재 40쪽에는 「건강·궁합」과 「진로·직업적성」 둘만 적혀 있습니다.
++  //        나머지 여섯은 대표님이 «건강·궁합 쪽» 으로 정하신 것입니다.
++  //        ★작명은 자원오행으로 «본래 글자» 를 채우는 일이라 그쪽이 맞습니다.
++  //
++  //  ⚠️⚠️ yongsinNew 자체는 «안 고쳤습니다». scoreOverride 로 넣어 줍니다.
++  //     ⛔ 그 파일은 43부 「손대지 말 것」이고, 스무 곳이 기대고 있습니다.
++  //     ★같은 방식을 roleFit.ts:175 가 «이미» 쓰고 있었습니다 (r.score 를 넘김).
++  //        이 파일만 안 넘기고 있었습니다.
++  //
++  //  [실측 2026-08-02] 임의 사주 20만 건 — 본래오행 ↔ 치환점수
++  //     ★신강약이 바뀜 19.29%  ·  ★용신이 바뀜 29.03%  ·  격이 바뀜 0%
++  //     ⇒ ★세 분 중 한 분의 용신이 달라집니다. 진로적성 화면 «에서만» 입니다.
++  //     ★npm run measure:yongsin 으로 다시 잽니다.
++  //
++  //  ── ★2026-08-02 조사 — 지금 «어느 화면이 어느 잣대» 를 쓰는가 ──
++  //     ⚠️ 대표님 지시 — "이미 프로그램된 대로 하고 손대지 말 것".
++  //        아래는 «기록» 입니다. 이대로 두십시오. 고치려면 대표님께 여쭈십시오.
++  //
++  //     치환 «함» (양력월·일·시지를 넘김)
++  //       사주보기(result-new) · 작명 넷(diagnosis·newname·newhanja·newresult) ·
++  //       출산택일(birth-timing/result) · 관리자 프롬프트 · ★진로적성(이 파일·roleFit)
++  //       ★작명은 연재쌤이 확정하신 자리입니다 (yongsinNew.ts:546 주석)
++  //
++  //     치환 «안 함» (본래 오행)
++  //       ★궁합(coupleFilterV1) — 교재 40쪽 "건강과 궁합은 오행으로 본다" 와 맞습니다
++  //       합격운(examScore) · 통변 재료(toTongbyeonInput·toCoupleTongbyeonInput) ·
++  //       출산택일 내부(babyFilterV7·scoreV5)
++  //
++  //     ⚠️ 같은 손님의 용신이 화면마다 다를 수 있습니다. 그것이 «지금의 모습» 입니다.
++  // ══════════════════════════════════════════════════════════════
++  const careerScore = calcSimsanOhaeng(
++    input.saju as never, input.solarMonth, input.solarDay, input.hourBranch,
++    { purpose: '진로' },
++  )
++  const r = calcYongsinNew(input.saju as never, day.stem, careerScore as never)
+   if (!r) return null
+ 
+   const y = (r.eokbu?.yongsin ?? null) as Ohaeng | null
+@@ -101,7 +161,22 @@ export function judgeYongsin(input: CareerInput): CareerCard {
+   const reasons: string[] = []
+ 
+   lines.push(`용신은 ${y}(${EL_HANJA[y]})입니다. ${YONGSIN_NOTE[y]}`)
+-  lines.push(`일간 기준으로는 ${v.yukchinName}에 해당합니다. 사주는 ${v.status} 쪽이에요.`)
++  // ══════════════════════════════════════════════════════════════
++  //  ★2026-08-02 — 손님께는 «큰 묶음» 으로 말합니다 (비견/겁재 → 비겁)
++  //
++  //  [무엇이 있었나]  "일간 기준으로는 «겁재» 에 해당합니다" 라고 나왔습니다.
++  //    ⚠️ 乙 일간에게 «목» 은 비견(乙)일 수도 겁재(甲)일 수도 있습니다.
++  //       ★오행에는 음양이 없습니다. 하나로 좁힐 수 없는 물음입니다.
++  //    그런데 sipsinName 이 오행을 «대표 양간(甲)» 으로 바꿔 견주어,
++  //    乙 일간에게 목이 «언제나 겁재» 로 나왔습니다.
++  //    ⇒ 같은 화면의 오각형은 「목(비겁)」이라 적어, 두 말이 갈렸습니다.
++  //
++  //  ★[이제]  화면에는 «비겁·식상·재성·관성·인성» 다섯 묶음으로 말합니다.
++  //  ⚠️ yukchinName 자체는 «그대로 둡니다» — YONGSIN_YUKCHIN 직업 표가
++  //     비견/겁재를 갈라 갖고 있어, 그 열쇠로 아직 씁니다.
++  //     ★말만 넓히고 셈은 건드리지 않습니다.
++  // ══════════════════════════════════════════════════════════════
++  lines.push(`일간 기준으로는 ${GROUP_OF[v.yukchinName] ?? v.yukchinName}에 해당합니다. 사주는 ${v.status} 쪽이에요.`)
+   if (v.heesin) lines.push(`${v.heesin}(${EL_HANJA[v.heesin]})${iga(v.heesin)} 곁에서 도와주고, ${v.gisin}(${EL_HANJA[v.gisin!]})${eunneun(v.gisin!)} 힘을 빼앗습니다.`)
+   if (v.johu && v.johuNote) lines.push(v.johuNote)
+   if (v.gyeokYongsin) lines.push(`${v.gyeokName}이라 ${v.gyeokYongsin}(${EL_HANJA[v.gyeokYongsin]})${iga(v.gyeokYongsin)} 격국용신입니다.`)
+diff --git a/package.json b/package.json
+index 0c008bc..0d23e11 100644
+--- a/package.json
++++ b/package.json
+@@ -30,7 +30,8 @@
+     "measure:resource": "tsx 29-measure-resource-weights.ts",
+     "verify:namingE2E": "tsx 30-e2e-naming-flow.ts",
+     "measure:hour": "tsx 31-measure-hour-convert.ts",
+-    "verify:hour": "tsx 32-verify-hour-convert.ts"
++    "verify:hour": "tsx 32-verify-hour-convert.ts",
++    "measure:yongsin": "tsx 33-measure-career-yongsin.ts"
+   },
+   "dependencies": {
+     "@supabase/ssr": "^0.6.1",
+-- 
+2.43.0
+

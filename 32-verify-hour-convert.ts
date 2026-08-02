@@ -1,4 +1,4 @@
-// 32-verify-hour-convert.ts
+// 32-verify-hour-convert.ts  (★이름은 시지 치환에서 시작했으나, 지금은 오행 점수·용신 전반을 봅니다)
 //
 // ┌───────────────────────────────────────────────────────────────┐
 // │  시지 계절 치환 그물 — 교재 38쪽대로 도는가                      │
@@ -18,6 +18,17 @@ import {
 // ★두 계산기가 «같은 점수» 를 내는지 맞대어 봅니다 (2026-08-02 결함)
 import { calcCareerScore } from './lib/saju/career/careerScore'
 import { judgeSinsal } from './lib/saju/career/sinsal9'
+import { calcCareerYongsin, judgeYongsin } from './lib/saju/career/yongsin'
+import { judgeStrength } from './lib/saju/yongsinNew'
+
+/** 일간 오행의 비겁·인성 — ★판정을 다시 짜지 않고 «신강약만» 견주려고 둡니다 */
+function relOfDay(dayStem: string): { bigeop: Ohaeng; insung: Ohaeng } {
+  const EL: Record<string, Ohaeng> = { 甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토', 己: '토', 庚: '금', 辛: '금', 壬: '수', 癸: '수' }
+  const GEN: Record<Ohaeng, Ohaeng> = { 수: '목', 목: '화', 화: '토', 토: '금', 금: '수' }
+  const de = EL[dayStem]
+  const insung = (Object.keys(GEN) as Ohaeng[]).find(k => GEN[k] === de)!
+  return { bigeop: de, insung }
+}
 
 
 let pass = 0, fail = 0
@@ -252,6 +263,75 @@ console.log('\n━━ ㉓ ★괴백양은 «기둥» 으로 센다 (2026-08-02 �
   check(/교재에 «명시가 없습니다»/.test(t), `⚠️ 교재에 없다는 것이 적혀 있습니다`)
 }
 
+console.log('\n━━ ㉔ ★진로적성 용신 — «치환한 점수» 로 내는가 (2026-08-02) ━━')
+{
+  //  🔴 [무엇이 있었나]  한 화면에 「중화신강 55%」와 「극신약」이 함께 떴습니다.
+  //    앞은 계절 치환한 점수(진로용), 뒤는 용신 계산기 기본값(본래 오행).
+  //    ⇒ 같은 물음에 «반대 답» 이었습니다.
+  //  ★계절 치환은 «쓰임» 이 가릅니다 — 진로·적성·성격은 치환합니다.
+  //  ⚠️ yongsinNew 는 «안 고쳤습니다». scoreOverride 로 넣어 줍니다.
+  const testSaju = ['년주', '월주', '일주', '시주'].map((p, i) => ({
+    pillar: p, stem: ['戊', '丙', '乙', '庚'][i], branch: ['辰', '辰', '巳', '辰'][i],
+  })) as Pillar[]
+  const inp = {
+    saju: testSaju, solarMonth: 4, solarDay: 20, hourBranch: '辰', target: 'adult',
+  } as never
+
+  const v = calcCareerYongsin(inp)!
+  // ★실기에서 잡힌 그 사주 — 치환하면 신강 · 용신은 火
+  check(v.status === '신강', `★신강으로 나옵니다 (극신약이면 치환이 안 된 것) — ${v.status}`)
+  check(v.yongsin === '화', `★용신이 火 입니다 (木이면 치환이 안 된 것) — ${v.yongsin}`)
+
+  // ★오각형(진로 점수)의 신강약과 «같은 답» 인가 — 이것이 이 그물의 알맹이
+  const sc = calcSimsanOhaeng(testSaju, 4, 20, '辰', { purpose: '진로' })
+  const r = relOfDay('乙')
+  check(judgeStrength(sc[r.bigeop] + sc[r.insung]) === v.status,
+    `★오각형과 «같은 신강약» 입니다 (두 수가 갈리면 화면이 어긋납니다)`)
+
+  // 화면 문구 — 「겁재」가 아니라 «비겁»
+  const c = judgeYongsin(inp)
+  const line = c.lines.find(l => l.includes('일간 기준')) ?? ''
+  check(!/겁재에 해당|비견에 해당/.test(line),
+    `★「겁재」·「비견」으로 좁혀 말하지 «않습니다» — ${line}`)
+  check(/(비겁|식상|재성|관성|인성)에 해당/.test(line), `★큰 묶음으로 말합니다`)
+
+  // ⚠️ 코드로도 봅니다 — purpose 를 넘기는가
+  const y = read('lib/saju/career/yongsin.ts')
+  check(/purpose: '진로'/.test(y), `★진로 쓰임으로 점수를 냅니다`)
+  check(/calcYongsinNew\(input\.saju as never, day\.stem, careerScore as never\)/.test(y),
+    `★그 점수를 용신 계산기에 «넣어» 줍니다`)
+  check(/GROUP_OF/.test(y), `★십성을 큰 묶음으로 옮기는 표가 있습니다`)
+
+  // ⛔ yongsinNew 자체는 «안 건드렸는가»
+  const yn = read('lib/saju/yongsinNew.ts')
+  check(/지지 본래 오행 \(辰戌丑未 = 土, 계절치환 안 함\)/.test(yn),
+    `⛔ yongsinNew 의 기본값은 «본래 오행» 그대로입니다 (손대지 않았습니다)`)
+
+  // ⚠️ 다른 화면은 «건드리지 않았는가» — 대표님 지시 「이미 프로그램된 대로」
+  check(/calcYongsinNew\(p\.saju, dayStem, ohaeng\)/.test(read('lib/saju/coupleFilterV1.ts')),
+    `⚠️ 궁합은 «그대로» 입니다 (본래 오행 + 조후용신)`)
+  check(/조사 — 지금 «어느 화면이 어느 잣대»/.test(y),
+    `★어느 화면이 어느 잣대를 쓰는지 «기록» 이 남아 있습니다`)
+  // ⚠️ 자(measure)는 검사가 아닙니다
+  const pkg2 = JSON.parse(read('package.json'))
+  check(!/33-measure/.test(pkg2.scripts.verify), `⚠️ measure:yongsin 은 verify 체인에 «없습니다»`)
+}
+
+console.log('\n━━ ㉕ ★궁합의 진술축미 — 조후용신으로 반영되는가 ━━')
+{
+  //  ★교재 — 궁합은 «오행 그대로» 점수를 내되, 계절은 «조후용신» 으로 봅니다.
+  //     未월생 → 여름생 → 水 (뜨거운 기운을 식힘)
+  //     丑월생 → 겨울생 → 火 (차가운 기운을 데움)
+  //  ⚠️ 辰·戌은 궁합에서 어떻게 보는지 «교재에 없습니다». 지어내지 않습니다.
+  const yn = read('lib/saju/yongsinNew.ts')
+  check(/const WINTER = \['亥', '子', '丑'\]/.test(yn), `★丑이 «겨울» 에 들어 있습니다`)
+  check(/const SUMMER = \['巳', '午', '未'\]/.test(yn), `★未가 «여름» 에 들어 있습니다`)
+  check(/isWinter\) return \{ element: '화'/.test(yn), `★丑월 → 조후용신 火`)
+  check(/isSummer\) return \{ element: '수'/.test(yn), `★未월 → 조후용신 水`)
+  check(/return \{ element: null, note: '봄·가을생은 조후가 온화해요' \}/.test(yn),
+    `⚠️ 辰·戌월은 «조후 없음» — 교재에 없으므로 지어내지 않습니다`)
+}
+
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
 {
   const src = read('lib/saju/simsanOhaeng.ts')
@@ -266,7 +346,7 @@ console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에
   check(/measure:hour/.test(JSON.stringify(pkg.scripts)), `npm run measure:hour 로 잽니다`)
 }
 
-console.log(`\n━━ 시지 치환 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
+console.log(`\n━━ 오행·용신 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail > 0) {
   console.log('  ┌────────────────────────────────────────────────────────────┐')
   console.log('  │  ⚠️ 시지 치환은 2026-08-02 «연재쌤 지시» 로 넣은 것입니다      │')

@@ -15,6 +15,8 @@
 // ⚠️ yongsinNew.ts 는 건드리지 않는다. 사주보기·궁합이 함께 쓴다.
 
 import { calcYongsinNew, type Ohaeng as YOhaeng } from '../yongsinNew'
+// ★진로적성은 «계절 치환한» 점수로 용신을 냅니다 (2026-08-02 대표님 확정)
+import { calcSimsanOhaeng } from '../simsanOhaeng'
 import type { CareerCard, CareerInput, Ohaeng } from './types'
 import { calcCareerGyeokguk } from './gyeokguk'
 import { iga, eunneun } from '../josa'
@@ -22,6 +24,19 @@ import { YONGSIN_OHAENG, YONGSIN_YUKCHIN, YONGSIN_NOTE, YONGSIN_SRC } from './ta
 import { jobKey, okForStudent } from './tables/jobs'
 
 const EL_HANJA: Record<string, string> = { 목: '木', 화: '火', 토: '土', 금: '金', 수: '水' }
+
+/**
+ * 십성 → 손님께 말할 «큰 묶음». (2026-08-02)
+ * ⚠️ 오행 하나로는 비견인지 겁재인지 정할 수 없습니다 — 오행에 음양이 없습니다.
+ *    ★그래서 화면에서는 「비겁」처럼 넓게 말합니다. 셈은 그대로입니다.
+ */
+const GROUP_OF: Record<string, string> = {
+  비견: '비겁', 겁재: '비겁',
+  식신: '식상', 상관: '식상',
+  편재: '재성', 정재: '재성',
+  편관: '관성', 정관: '관성',
+  편인: '인성', 정인: '인성',
+}
 
 export interface CareerYongsin {
   /** 억부용신 — 이 카드의 본줄기 */
@@ -66,7 +81,52 @@ export function calcCareerYongsin(input: CareerInput): CareerYongsin | null {
   const day = input.saju.find(p => p.pillar === '일주')
   if (!day || day.stem === '?') return null
 
-  const r = calcYongsinNew(input.saju as never, day.stem)
+  // ══════════════════════════════════════════════════════════════
+  //  🔴★2026-08-02 — 진로적성의 용신은 «치환한 점수» 로 냅니다 (대표님 확정)
+  //
+  //  [무엇이 있었나]  한 화면에 「중화신강 55%」와 「극신약」이 함께 떴습니다.
+  //    앞은 계절 치환한 점수(진로용), 뒤는 본래 오행(용신 계산기 기본값).
+  //    ⇒ 같은 물음에 반대 답이었습니다. 손님이 곧바로 알아채는 자리입니다.
+  //
+  //  ★[규칙]  계절 치환은 «쓰임» 이 가릅니다 (교재 40쪽 + 2026-08-02 대표님 확정)
+  //     치환 «함»      진로 · 적성 · 성격          ← ★여기가 그것입니다
+  //     치환 «안 함»   건강 · 궁합 · 작명 · 오늘운세 ·
+  //                    통변 · 출산택일 · 합격운 · 물상
+  //     ⚠️ 교재 40쪽에는 「건강·궁합」과 「진로·직업적성」 둘만 적혀 있습니다.
+  //        나머지 여섯은 대표님이 «건강·궁합 쪽» 으로 정하신 것입니다.
+  //        ★작명은 자원오행으로 «본래 글자» 를 채우는 일이라 그쪽이 맞습니다.
+  //
+  //  ⚠️⚠️ yongsinNew 자체는 «안 고쳤습니다». scoreOverride 로 넣어 줍니다.
+  //     ⛔ 그 파일은 43부 「손대지 말 것」이고, 스무 곳이 기대고 있습니다.
+  //     ★같은 방식을 roleFit.ts:175 가 «이미» 쓰고 있었습니다 (r.score 를 넘김).
+  //        이 파일만 안 넘기고 있었습니다.
+  //
+  //  [실측 2026-08-02] 임의 사주 20만 건 — 본래오행 ↔ 치환점수
+  //     ★신강약이 바뀜 19.29%  ·  ★용신이 바뀜 29.03%  ·  격이 바뀜 0%
+  //     ⇒ ★세 분 중 한 분의 용신이 달라집니다. 진로적성 화면 «에서만» 입니다.
+  //     ★npm run measure:yongsin 으로 다시 잽니다.
+  //
+  //  ── ★2026-08-02 조사 — 지금 «어느 화면이 어느 잣대» 를 쓰는가 ──
+  //     ⚠️ 대표님 지시 — "이미 프로그램된 대로 하고 손대지 말 것".
+  //        아래는 «기록» 입니다. 이대로 두십시오. 고치려면 대표님께 여쭈십시오.
+  //
+  //     치환 «함» (양력월·일·시지를 넘김)
+  //       사주보기(result-new) · 작명 넷(diagnosis·newname·newhanja·newresult) ·
+  //       출산택일(birth-timing/result) · 관리자 프롬프트 · ★진로적성(이 파일·roleFit)
+  //       ★작명은 연재쌤이 확정하신 자리입니다 (yongsinNew.ts:546 주석)
+  //
+  //     치환 «안 함» (본래 오행)
+  //       ★궁합(coupleFilterV1) — 교재 40쪽 "건강과 궁합은 오행으로 본다" 와 맞습니다
+  //       합격운(examScore) · 통변 재료(toTongbyeonInput·toCoupleTongbyeonInput) ·
+  //       출산택일 내부(babyFilterV7·scoreV5)
+  //
+  //     ⚠️ 같은 손님의 용신이 화면마다 다를 수 있습니다. 그것이 «지금의 모습» 입니다.
+  // ══════════════════════════════════════════════════════════════
+  const careerScore = calcSimsanOhaeng(
+    input.saju as never, input.solarMonth, input.solarDay, input.hourBranch,
+    { purpose: '진로' },
+  )
+  const r = calcYongsinNew(input.saju as never, day.stem, careerScore as never)
   if (!r) return null
 
   const y = (r.eokbu?.yongsin ?? null) as Ohaeng | null
@@ -101,7 +161,22 @@ export function judgeYongsin(input: CareerInput): CareerCard {
   const reasons: string[] = []
 
   lines.push(`용신은 ${y}(${EL_HANJA[y]})입니다. ${YONGSIN_NOTE[y]}`)
-  lines.push(`일간 기준으로는 ${v.yukchinName}에 해당합니다. 사주는 ${v.status} 쪽이에요.`)
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-02 — 손님께는 «큰 묶음» 으로 말합니다 (비견/겁재 → 비겁)
+  //
+  //  [무엇이 있었나]  "일간 기준으로는 «겁재» 에 해당합니다" 라고 나왔습니다.
+  //    ⚠️ 乙 일간에게 «목» 은 비견(乙)일 수도 겁재(甲)일 수도 있습니다.
+  //       ★오행에는 음양이 없습니다. 하나로 좁힐 수 없는 물음입니다.
+  //    그런데 sipsinName 이 오행을 «대표 양간(甲)» 으로 바꿔 견주어,
+  //    乙 일간에게 목이 «언제나 겁재» 로 나왔습니다.
+  //    ⇒ 같은 화면의 오각형은 「목(비겁)」이라 적어, 두 말이 갈렸습니다.
+  //
+  //  ★[이제]  화면에는 «비겁·식상·재성·관성·인성» 다섯 묶음으로 말합니다.
+  //  ⚠️ yukchinName 자체는 «그대로 둡니다» — YONGSIN_YUKCHIN 직업 표가
+  //     비견/겁재를 갈라 갖고 있어, 그 열쇠로 아직 씁니다.
+  //     ★말만 넓히고 셈은 건드리지 않습니다.
+  // ══════════════════════════════════════════════════════════════
+  lines.push(`일간 기준으로는 ${GROUP_OF[v.yukchinName] ?? v.yukchinName}에 해당합니다. 사주는 ${v.status} 쪽이에요.`)
   if (v.heesin) lines.push(`${v.heesin}(${EL_HANJA[v.heesin]})${iga(v.heesin)} 곁에서 도와주고, ${v.gisin}(${EL_HANJA[v.gisin!]})${eunneun(v.gisin!)} 힘을 빼앗습니다.`)
   if (v.johu && v.johuNote) lines.push(v.johuNote)
   if (v.gyeokYongsin) lines.push(`${v.gyeokName}이라 ${v.gyeokYongsin}(${EL_HANJA[v.gyeokYongsin]})${iga(v.gyeokYongsin)} 격국용신입니다.`)

@@ -30,7 +30,8 @@
     "measure:resource": "tsx 29-measure-resource-weights.ts",
     "verify:namingE2E": "tsx 30-e2e-naming-flow.ts",
     "measure:hour": "tsx 31-measure-hour-convert.ts",
-    "verify:hour": "tsx 32-verify-hour-convert.ts"
+    "verify:hour": "tsx 32-verify-hour-convert.ts",
+    "measure:yongsin": "tsx 33-measure-career-yongsin.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
