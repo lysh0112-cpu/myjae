@@ -243,14 +243,35 @@ function personBlock(p: CouplePersonInput, label: string, need?: Set<Need>): str
 }
 
 // ── 심산 판정 블록 ──────────────────────────────────────────────────────
+/**
+ * ★2026-08-02 — 지금은 «쓰지 않습니다». 재료에서 별표를 뺐기 때문입니다.
+ *   ⚠️ 지우지 «마십시오» — 되살릴 때 필요합니다.
+ *   ⚠️ eslint 가 「안 쓰인다」고 알려 주는 것이 «맞습니다». 그대로 두십시오.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function starStr(n?: number): string {
   return n ? '★'.repeat(n) + '☆'.repeat(5 - n) : ''
 }
 
 function catBlock(c: CategoryResult): string {
-  const out: string[] = [`[${c.title}] ${starStr(c.stars)}`]
+  // ══════════════════════════════════════════════════════════════
+  //  ★★2026-08-02 — 재료에서 «별표를 뺐습니다» (대표님 확정)
+  //    "점수제는 없애고 «깊이» 로 상대하자"
+  //    "별점은 없애고 «프리미엄 해설» 로 대신하는 걸로 하자"
+  //
+  //  ⚠️⚠️ 화면에서만 끄면 «모자랍니다» —
+  //     이 글은 «AI 재료» 로 갑니다. 별을 보여 주면 AI 가
+  //     "★★★★★인 자리라 아주 좋습니다" 처럼 «별을 근거로» 풀어 버립니다.
+  //     ⇒ 화면에는 별이 없는데 글에는 별 이야기가 남는 어긋남이 생깁니다.
+  //  ★그래서 화면(CoupleJudgeCard)·요약(judgeToText)·재료(여기) «세 곳» 을
+  //    함께 껐습니다. 한 곳만 끄면 다른 곳으로 새어 나옵니다.
+  //
+  //  ⚠️ starStr 은 «남겨 둡니다» — 되살릴 때 필요합니다.
+  //  ⚠️ c.stars 값 자체는 그대로 옵니다. 검사와 카드 거르기가 씁니다.
+  // ══════════════════════════════════════════════════════════════
+  const out: string[] = [`[${c.title}]`]
   c.lines.forEach(l => out.push(`  - ${l}`))
-  c.dual?.forEach(d => out.push(`  - ${d.text} ${starStr(d.stars)}`))
+  c.dual?.forEach(d => out.push(`  - ${d.text}`))
   // ★2026-07-25 — 이 대목의 통변 재료(reasons). 화면엔 안 보이지만 통변에 꼭 반영한다.
   //   심산 판정 규칙(관성·재성·계절·자식운 등)의 사실을 담은 것.
   //   "(순화해서 전할 것)" 표시가 붙은 것은 무섭지 않게 부드럽게 풀어써야 한다.

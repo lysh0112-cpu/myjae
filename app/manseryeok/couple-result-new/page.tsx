@@ -335,14 +335,27 @@ function stripInternalMarks(s: string): string {
   return s.replace(/\s*\((?:순화해서 전할 것|순화)\)\s*/g, ' ').replace(/\s+/g, ' ').trim()
 }
 function judgeToText(j: CoupleJudgeV1): string {
-  const star = (n?: number) => (n ? '★'.repeat(n) + '☆'.repeat(5 - n) : '')
+  // ══════════════════════════════════════════════════════════════
+  //  ★★2026-08-02 — 재료에서 «별표를 뺐습니다» (대표님 확정)
+  //    "점수제는 없애고 «깊이» 로 상대하자"
+  //    "별점은 없애고 «프리미엄 해설» 로 대신하는 걸로 하자"
+  //
+  //  ⚠️⚠️ 화면에서만 끄면 «모자랍니다» —
+  //     이 글은 «AI 재료» 로 갑니다. 별을 보여 주면 AI 가
+  //     "★★★★★인 자리라 아주 좋습니다" 처럼 «별을 근거로» 풀어 버립니다.
+  //     ⇒ 화면에는 별이 없는데 글에는 별 이야기가 남는 어긋남이 생깁니다.
+  //  ★그래서 재료에서도 «뺍니다». 판정(stars 값)은 그대로 살아 있습니다.
+  //
+  //  ⚠️ 「본문도 별도 없는 카드는 건너뛴다」는 조건은 «그대로» 둡니다 —
+  //     stars 값 자체는 남아 있으므로 부부운·자식운 카드가 여전히 걸러집니다.
+  // ══════════════════════════════════════════════════════════════
   const lines: string[] = ['■ 궁합 판정', `한줄: ${j.badge}`, '']
   for (const c of j.cats) {
     // 본문도 별도 없는 카드(부부운·자식운)는 통변 본문에 내용이 담기므로 제목만 남기지 않는다.
     if (!c.lines.length && !c.dual?.length && !c.stars) continue
-    lines.push(`[${c.title}] ${star(c.stars)}`.trim())
+    lines.push(`[${c.title}]`)
     c.lines.forEach(l => lines.push(`  - ${stripInternalMarks(l)}`))
-    c.dual?.forEach(d => lines.push(`  - ${stripInternalMarks(d.text)} ${star(d.stars)}`))
+    c.dual?.forEach(d => lines.push(`  - ${stripInternalMarks(d.text)}`))
     lines.push('')
   }
   if (j.good.length) { lines.push('· 도움이 되는 자리'); j.good.forEach(t => lines.push(`  - ${stripInternalMarks(t)}`)) }

@@ -1005,6 +1005,64 @@ console.log('\n━━ ㊵ ★여덟 단계를 프롬프트로 엮기 (프리미�
   check(/t\.includes\('함께 살아가는'\)/.test(pg), `★「함께 살아가는 결」 아이콘이 있습니다`)
 }
 
+console.log('\n━━ ㊶ ★★별점을 걷어냈는가 (프리미엄 궁합 5차) ━━')
+{
+  //  ★대표님 확정 (2026-08-02)
+  //    "점수제는 없애고 «깊이» 로 상대하자"
+  //    "별점은 없애고 «프리미엄 해설» 로 대신하는 걸로 하자"
+  //
+  //  ⚠️⚠️ «세 곳» 을 함께 꺼야 합니다. 한 곳만 끄면 다른 곳으로 새어 나옵니다 —
+  //     ① 화면 (CoupleJudgeCard)
+  //     ② 요약 (judgeToText — AI 재료로 갑니다)
+  //     ③ 재료 (catBlock — ★여기를 빠뜨려 프롬프트에 별이 남았습니다)
+  const A = {
+    name: '가', gender: '남',
+    saju: ['년주', '월주', '일주', '시주'].map((p, i) => ({
+      pillar: p, stem: ['戊', '丙', '乙', '庚'][i], branch: ['辰', '辰', '巳', '辰'][i],
+    })), solarMonth: 4, solarDay: 20, hourBranch: '辰',
+  }
+  const B = {
+    name: '나', gender: '여',
+    saju: ['년주', '월주', '일주', '시주'].map((p, i) => ({
+      pillar: p, stem: ['甲', '丁', '丙', '己'][i], branch: ['子', '亥', '午', '丑'][i],
+    })), solarMonth: 11, solarDay: 20, hourBranch: '丑',
+  }
+  const j = judgeCouple(A as never, B as never, (n: string) => n + '님의 배우자운', true)
+  const m = toCoupleTongbyeonMaterial(A as never, B as never, j as never, { fromYear: 2026 })
+
+  // ★★프롬프트에 별이 «하나도» 없는가 — 이것이 이 검사의 알맹이
+  for (const rel of ['부부', '연인'] as const) {
+    const sp = buildCouplePrompt(m, { relation: rel }).systemPrompt
+    check(!/[★☆]{3}/.test(sp), `★★${rel} — 프롬프트에 별표(★★★)가 «하나도» 없습니다`)
+  }
+  check(!/[★☆]{3}/.test(m.judgeBlock), `★재료(judgeBlock)에 별표가 없습니다`)
+
+  // ★점수를 만들지 말라는 지시가 있는가
+  const sp2 = buildCouplePrompt(m, { relation: '부부' }).systemPrompt
+  check(/점수·등급·별점/.test(sp2), `★「점수·등급·별점을 만들지 마세요」 지시가 있습니다`)
+  check(/깊이/.test(sp2), `★「프리미엄의 값은 수치가 아니라 깊이」라고 일러 둡니다`)
+
+  // ★화면에서 별을 그리지 않는가
+  const card = read('app/manseryeok/couple-result-new/components/CoupleJudgeCard.tsx')
+  check(!/\{cat\.stars && <StarRow/.test(card), `★화면이 별을 «그리지 않습니다»`)
+  check(/별표를 «껐습니다»/.test(card), `⚠️ 왜 껐는지가 적혀 있습니다`)
+  // ⚠️ 「지운」 것이 아니라 «감춘» 것인가 — 되살릴 수 있어야 합니다
+  check(/function StarRow/.test(card), `⚠️ StarRow 를 «지우지» 않았습니다 (되살릴 때 필요)`)
+  const inp = read('lib/saju/toCoupleTongbyeonInput.ts')
+  check(/function starStr/.test(inp), `⚠️ starStr 을 «지우지» 않았습니다`)
+
+  // ★판정(stars 값)은 «살아 있는가» — 검사와 카드 거르기가 씁니다
+  const cats = (j as unknown as { cats: { stars?: number }[] }).cats
+  check(cats.some(c => c.stars), `★stars 값 자체는 «그대로» 살아 있습니다`)
+  check(/stars: bothGwiin \? 5 : oneGwiin \? 3 : 2/.test(read('lib/saju/coupleFilterV1.ts')),
+    `★판정 규칙은 «건드리지 않았습니다»`)
+
+  // ⚠️ 요약(judgeToText)에서도 뺐는가
+  const pg = read('app/manseryeok/couple-result-new/page.tsx')
+  check(!/lines\.push\(`\[\$\{c\.title\}\] \$\{star\(c\.stars\)\}`/.test(pg),
+    `★요약(judgeToText)에서도 별을 «뺐습니다»`)
+}
+
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
 {
   const src = read('lib/saju/simsanOhaeng.ts')
