@@ -18,8 +18,8 @@
 //  ⚠️ 다른 화면은 «건드리지 않았습니다» — 대표님 지시 「이미 프로그램된 대로」.
 //     어느 화면이 어느 잣대를 쓰는지는 career/yongsin.ts 머리말에 적어 두었습니다.
 
-import { calcYongsinNew } from '/home/claude/myjae/lib/saju/yongsinNew'
-import { calcSimsanOhaeng, type Pillar } from '/home/claude/myjae/lib/saju/simsanOhaeng'
+import { calcYongsinNew } from './lib/saju/yongsinNew'
+import { calcSimsanOhaeng, type Pillar } from './lib/saju/simsanOhaeng'
 const GAN='甲乙丙丁戊己庚辛壬癸'.split(''), JI='子丑寅卯辰巳午未申酉戌亥'.split('')
 const YS=new Set(['甲','丙','戊','庚','壬']), YB=new Set(['子','寅','辰','午','申','戌'])
 const R=(n:number)=>Math.floor(Math.random()*n)

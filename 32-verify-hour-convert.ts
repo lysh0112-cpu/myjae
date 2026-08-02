@@ -10,7 +10,7 @@
 //  ⚠️ 2026-07 에는 「넣지 않는다」가 확정이었습니다. 그 주석을 보고
 //     되돌리려는 다음 세션이 반드시 옵니다. 여기서 막힙니다.
 
-import { readFileSync } from 'fs'
+import { readFileSync, readdirSync } from 'fs'
 import {
   calcSimsanOhaeng, hourConvertEl, hourConvertNote, hourNoConvertNote,
   type Ohaeng, type Pillar,
@@ -441,6 +441,50 @@ console.log('\n━━ ㉙ ★현침살 — 교재 94쪽 «다섯 글자» (卯 �
   // ⚠️ 직업이 교재 94쪽과 맞는가
   check(/'문인'/.test(hc) && /'자동차정비사'/.test(hc), `★교재의 «문인·자동차정비사» 가 들어 있습니다`)
   check(!/'수의사'|'비평가'/.test(hc), `⚠️ 교재에 «없는» 수의사·비평가를 뺐습니다`)
+}
+
+console.log('\n━━ ㉚ 🔴 «절대 경로» 가 없는가 — 배포를 막습니다 ━━')
+{
+  //  🔴 2026-08-02 — 제가 만든 사고입니다.
+  //    /tmp 에서 만든 측정 파일을 저장소로 옮기면서 import 경로를
+  //    '/home/claude/myjae/lib/…' 그대로 두었습니다.
+  //    ⇒ 제 컨테이너에서는 «실재하는 경로» 라 tsc 가 통과했고,
+  //       npm run verify 도 measure 는 체인 밖이라 안 돌았습니다.
+  //    ⇒ ★Vercel 빌드에서 "Cannot find module" 로 배포가 통째로 막혔습니다.
+  //
+  //  ⚠️⚠️ tsconfig.json 의 include 가 «**/*.ts» 입니다.
+  //     ⇒ next build 의 타입 검사에 31·32·33번 같은 «저장소 루트 스크립트» 도
+  //        전부 들어갑니다. 이 파일들이 안 돌아도 «컴파일은» 됩니다.
+  //     ★그러니 루트 스크립트의 import 도 «상대 경로» 라야 합니다.
+  const files = readdirSync('.').filter(f => /^\d\d-.*\.ts$/.test(f))
+  check(files.length >= 3, `루트 스크립트를 ${files.length}개 봅니다`)
+  const bad: string[] = []
+  for (const f of files) {
+    const src = read(f)
+    for (const m of src.matchAll(/from '([^']+)'/g)) {
+      if (m[1].startsWith('/')) bad.push(`${f} → ${m[1]}`)
+    }
+  }
+  check(bad.length === 0,
+    `★절대 경로 import 가 «하나도» 없습니다${bad.length ? ' — ' + bad.join(' , ') : ''}`)
+
+  // ⚠️ app/ · lib/ 도 함께 봅니다 (같은 실수가 거기서 나면 더 큽니다)
+  const bad2: string[] = []
+  const walk = (dir: string) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (e.name === 'node_modules' || e.name.startsWith('.')) continue
+      const full = `${dir}/${e.name}`
+      if (e.isDirectory()) walk(full)
+      else if (/\.tsx?$/.test(e.name)) {
+        for (const m of read(full).matchAll(/from '([^']+)'/g)) {
+          if (m[1].startsWith('/home/') || m[1].startsWith('/Users/')) bad2.push(`${full} → ${m[1]}`)
+        }
+      }
+    }
+  }
+  walk('lib'); walk('app')
+  check(bad2.length === 0,
+    `★lib·app 에도 절대 경로가 «없습니다»${bad2.length ? ' — ' + bad2.slice(0, 3).join(' , ') : ''}`)
 }
 
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
