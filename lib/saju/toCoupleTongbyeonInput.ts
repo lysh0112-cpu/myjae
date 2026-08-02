@@ -52,6 +52,8 @@ import type { CoupleJudgeV1, CategoryResult } from './coupleFilterV1'
 //   ⚠️ 성별 줄은 넘기지 않는다. 상대방 사주에 성별을 두고 한 말이 뜨면 곤란하다.
 //   ★가장 값진 것은 "다루는 법"(교재 20~24쪽) — 상대를 어떻게 대할 것인가.
 import { needsOf, pickLines, byeongjonBrief, COUPLE_CATEGORY_NEEDS, type Need } from './jaryoPick'
+// ★재료가 나가기 «전» 에 말을 다듬는 문지기 (2026-08-02)
+import { guardTone } from './couple/toneGuard'
 
 // ── 표기용 ──────────────────────────────────────────────────────────────
 const EL_KOR: Record<string, string> = {
@@ -339,9 +341,24 @@ export function toCoupleTongbyeonMaterial(
   // ★질문 갈래로 자료를 고른다. 없거나 모르는 갈래면 다 나간다.
   const need = needsOf(opts.questionCategories, COUPLE_CATEGORY_NEEDS)
   const fromYear = opts.fromYear ?? new Date().getFullYear()
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-02 — 재료가 프롬프트로 나가기 «전» 에 말을 다듬습니다
+  //
+  //  [실측]  이 재료(7,646자)에 「헤어짐」이 «실제로» 나가고 있었습니다 —
+  //    "형충파해가 겹치면 뜻밖의 일과 구설, 헤어짐을 조심하시고"
+  //    ⇒ AI 가 그대로 풀면 궁합을 보러 오신 두 분께 「헤어짐」이 닿습니다.
+  //
+  //  ⚠️⚠️ 이 함수를 «지나지 않고» 프롬프트로 나가는 길을 만들지 마십시오.
+  //     ★검사(㉞)가 그것을 셉니다.
+  //  ⚠️ 「지우는」 것이 아니라 «바꿔 주는» 것입니다 —
+  //     지우면 뜻까지 사라져 AI 가 빈 곳을 지어냅니다. (교훈 CA)
+  // ══════════════════════════════════════════════════════════════
   return {
-    personBlocks: [personBlock(a, '첫 번째 사람', need), personBlock(b, '두 번째 사람', need)],
-    judgeBlock: judgeBlock(judge),
-    flowBlock: flowBlock(a, b, fromYear, opts.flowYears ?? 8),
+    personBlocks: [
+      guardTone(personBlock(a, '첫 번째 사람', need)),
+      guardTone(personBlock(b, '두 번째 사람', need)),
+    ],
+    judgeBlock: guardTone(judgeBlock(judge)),
+    flowBlock: guardTone(flowBlock(a, b, fromYear, opts.flowYears ?? 8)),
   }
 }

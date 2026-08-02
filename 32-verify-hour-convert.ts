@@ -18,6 +18,10 @@ import {
 // ★두 계산기가 «같은 점수» 를 내는지 맞대어 봅니다 (2026-08-02 결함)
 import { calcCareerScore } from './lib/saju/career/careerScore'
 import { judgeSinsal, checkSinsal9 } from './lib/saju/career/sinsal9'
+// ★궁합 재료의 말 다듬기 (2026-08-02)
+import { judgeCouple } from './lib/saju/coupleFilterV1'
+import { toCoupleTongbyeonMaterial } from './lib/saju/toCoupleTongbyeonInput'
+import { findBanned } from './lib/saju/couple/toneGuard'
 import { calcCareerYongsin, judgeYongsin } from './lib/saju/career/yongsin'
 import { judgeStrength, calcYongsinNew, isYanginIlju } from './lib/saju/yongsinNew'
 
@@ -227,16 +231,24 @@ console.log('\n━━ ㉓ ★괴백양은 «기둥» 으로 센다 (2026-08-02 �
     .map((p, i) => ({ pillar: p, stem: a[i][0], branch: a[i][1] })) as Pillar[]
 
   // 戊辰(백호∩괴강) + 庚辰(괴강) → ★2기둥 (3이면 살로 센 것)
+  // ⚠️⚠️ 「첫 줄」로 찾지 «마십시오» — 신살이 늘면 차례가 바뀝니다.
+  //    ★2026-08-02 에 화개살을 넣자 첫 줄이 화개살이 되어 이 검사가 깨졌습니다.
+  //    (43부 교훈 [자리 말고 열쇠] 와 같은 자리입니다)
+  const gLineOf = (c: { lines: string[] }) =>
+    c.lines.find(l => l.includes('백호살') || l.includes('괴강살')) ?? ''
+
   const c1 = judgeSinsal({ saju: P4(['戊辰', '丙辰', '乙巳', '庚辰']), target: 'adult' } as never)
-  check(/2기둥/.test(c1.lines[0]), `★戊辰+庚辰 = «2기둥» 입니다 — ${c1.lines[0]}`)
-  check(!/3기둥/.test(c1.lines[0]), `⚠️ 戊辰을 두 번 세지 «않습니다»`)
-  check(!/양인/.test(c1.lines[0]), `★양인이 0개면 이름에 «안 붙입니다»`)
-  check((c1.lines[0].match(/戊辰/g) ?? []).length === 1, `★겹치는 기둥을 «한 번만» 적습니다`)
+  const g1 = gLineOf(c1)
+  check(/2기둥/.test(g1), `★戊辰+庚辰 = «2기둥» 입니다 — ${g1}`)
+  check(!/3기둥/.test(g1), `⚠️ 戊辰을 두 번 세지 «않습니다»`)
+  check(!/양인/.test(g1), `★양인이 0개면 이름에 «안 붙입니다»`)
+  check((g1.match(/戊辰/g) ?? []).length === 1, `★겹치는 기둥을 «한 번만» 적습니다`)
 
   // 양인일주(壬子)까지 걸리는 표본
   const c2 = judgeSinsal({ saju: P4(['甲辰', '丙戌', '壬子', '庚辰']), target: 'adult' } as never)
-  check(/양인/.test(c2.lines[0]), `★양인일주(壬子)가 잡히면 이름에 «붙습니다»`)
-  check(/4기둥/.test(c2.lines[0]), `★네 기둥 다 걸리면 4기둥 — ${c2.lines[0]}`)
+  const g2 = gLineOf(c2)
+  check(/양인/.test(g2), `★양인일주(壬子)가 잡히면 이름에 «붙습니다»`)
+  check(/4기둥/.test(g2), `★네 기둥 다 걸리면 4기둥 — ${g2}`)
 
   // ⚠️ 기둥은 넷뿐입니다 — «묶음(괴백양)» 에서 5기둥 이상이 나올 수 없어야 합니다
   //   ⚠️ 현침·도화·역마는 «글자» 로 세므로 8개까지 나옵니다. 그것은 「개」로 적습니다.
@@ -567,7 +579,8 @@ console.log('\n━━ ㉜ ★일주 현침 — 개수와 무관하게 작용 (�
   const hLine = c1.lines.find(l => l.startsWith('현침살')) ?? ''
   check(/甲 · 午/.test(hLine), `★甲午 → 글자 «둘 다» 적습니다 — ${hLine}`)
   const c2 = judgeSinsal({ saju: P(['戊辰', '丙辰', '乙巳', '庚辰']), target: 'adult' } as never)
-  check(/戊辰 · 庚辰 · 2기둥/.test(c2.lines[0]), `★묶음은 여전히 «기둥» 으로 겹침을 지웁니다`)
+  check(c2.lines.some(l => /戊辰 · 庚辰 · 2기둥/.test(l)),
+    `★묶음은 여전히 «기둥» 으로 겹침을 지웁니다`)
 }
 
 console.log('\n━━ ㉝ ★천문성 낱글자 넷 · 문창성·천의성·삼기성 신설 (교재 94·97쪽) ━━')
@@ -624,6 +637,71 @@ console.log('\n━━ ㉝ ★천문성 낱글자 넷 · 문창성·천의성·�
   // ⚠️ 교재에 «없는» 겹치기를 지어내지 않았는가 — 둘뿐이어야 합니다
   const nCombo = (t.match(/keys: \['/g) ?? []).length
   check(nCombo === 2, `⚠️ 겹치기는 «둘» 뿐입니다 (교재에 그것만 있습니다) — ${nCombo}`)
+}
+
+console.log('\n━━ ㉞ 🔴★궁합 재료의 «말» 을 다듬는가 (toneGuard) ━━')
+{
+  //  🔴 [실측 2026-08-02]  궁합 재료(7,646자)에 「헤어짐」이 «나가고» 있었습니다 —
+  //    "형충파해가 겹치면 뜻밖의 일과 구설, 헤어짐을 조심하시고"
+  //  ★재료가 프롬프트로 나가기 «전» 에 말을 다듬습니다.
+  //  ⚠️ 「지우는」 것이 아니라 «바꿔 주는» 것입니다 (교훈 CA)
+  const A = {
+    name: '가', gender: '남', birth: '1988-04-20',
+    saju: ['년주', '월주', '일주', '시주'].map((p, i) => ({
+      pillar: p, stem: ['戊', '丙', '乙', '庚'][i], branch: ['辰', '辰', '巳', '辰'][i],
+    })), solarMonth: 4, solarDay: 20, hourBranch: '辰',
+  }
+  const B = {
+    name: '나', gender: '여', birth: '1990-11-20',
+    saju: ['년주', '월주', '일주', '시주'].map((p, i) => ({
+      pillar: p, stem: ['甲', '丁', '丙', '己'][i], branch: ['子', '亥', '午', '丑'][i],
+    })), solarMonth: 11, solarDay: 20, hourBranch: '丑',
+  }
+  const j = judgeCouple(A as never, B as never, (n: string) => n + '님의 배우자운', true)
+  const m = toCoupleTongbyeonMaterial(A as never, B as never, j as never)
+  const all = [...m.personBlocks, m.judgeBlock, m.flowBlock].join('\n')
+
+  const left = findBanned(all)
+  check(left.length === 0,
+    `★재료에 금지어가 «하나도» 없습니다${left.length ? ' — ' + left.slice(0, 3).map(x => x.word).join(' , ') : ''}`)
+  check(!/헤어짐/.test(all), `★「헤어짐」이 «사라졌습니다» (실측에서 나가고 있던 말)`)
+  check(/구설이 따를 수 있으니/.test(all), `★뜻은 «남았습니다» — 지우지 않고 바꿨습니다`)
+  check(all.length > 5000, `⚠️ 재료가 «줄지» 않았습니다 (${all.length}자) — 지우면 AI 가 지어냅니다`)
+
+  // ⚠️ 문지기를 «지나지 않는 길» 이 없는가
+  const src = read('lib/saju/toCoupleTongbyeonInput.ts')
+  check(/guardTone\(personBlock\(a/.test(src), `★personBlocks 가 문지기를 지납니다`)
+  check(/guardTone\(judgeBlock\(judge\)\)/.test(src), `★judgeBlock 이 문지기를 지납니다`)
+  check(/guardTone\(flowBlock\(/.test(src), `★flowBlock 이 문지기를 지납니다`)
+
+  // ⚠️ 멀쩡한 말까지 «막지» 않는가 — 실측에서 셋이 그랬습니다
+  const g = read('lib/saju/couple/toneGuard.ts')
+  check(/명식을 가리키는 말/.test(g), `⚠️ 「명식(팔자)」은 걸리지 않습니다`)
+  check(/좋은 뜻으로 쓰인 자리/.test(g), `⚠️ 「위기 속에서도 탈출구를」은 걸리지 않습니다`)
+  check(/금지 지시문 안의 예시/.test(g), `⚠️ 금지 지시문 «안» 의 예시는 걸리지 않습니다`)
+  check(/SOLUTION_HINT/.test(g), `★흉을 말하면 솔루션 한 줄로 맺으라는 안내가 있습니다`)
+}
+
+console.log('\n━━ ㉟ ★화개살 신설 (교재 94쪽) ━━')
+{
+  const t = read('lib/saju/career/tables/sinsal.ts')
+  const hg = t.slice(t.indexOf("key: 'hwagae'"), t.indexOf("key: 'munchang'"))
+  check(/chars: \['辰', '戌', '丑', '未'\]/.test(hg), `★화개살 — 辰戌丑未 (교재 94쪽)`)
+  check(/^\s*threshold: 2,/m.test(hg), `★문턱 2 (교재에 개수 없음 — 천문성과 같은 잣대)`)
+  // ⚠️⚠️ 「기생, 스님 팔자」를 «담지 않았는가» — 가장 중요합니다
+  check(!/기생, 스님 팔자'/.test(hg) && !/gijil:[^,]*기생/.test(hg),
+    `⚠️⚠️ 「옛날에 여자는 기생, 스님 팔자」를 «담지 않았습니다» (교훈 CA)`)
+  check(/담지 «않았습니다»/.test(hg), `⚠️ 왜 담지 않았는지가 적혀 있습니다`)
+  check(/커리어 우먼/.test(hg), `★교재가 스스로 고쳐 말한 줄만 살렸습니다`)
+
+  const P = (a: string[]) => ['년주', '월주', '일주', '시주']
+    .map((p, i) => ({ pillar: p, stem: a[i][0], branch: a[i][1] })) as Pillar[]
+  const h = (checkSinsal9(P(['甲辰', '丙戌', '乙丑', '丁未'])) as unknown as
+    { name: string; count: number; active: boolean }[]).find(x => x.name === '화개살')!
+  check(h.count === 4 && h.active, `★辰戌丑未 넷 → 화개살 작용 — ${h.count}개`)
+  const h2 = (checkSinsal9(P(['甲辰', '丙寅', '乙巳', '丁卯'])) as unknown as
+    { name: string; count: number; active: boolean }[]).find(x => x.name === '화개살')!
+  check(h2.count === 1 && !h2.active, `⚠️ 하나뿐이면 «작용 안 함» (문턱 2)`)
 }
 
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
