@@ -18,7 +18,7 @@ import {
   calcCareerScore, gradeAll, pickStrong, EL5, GRADE_RULE, TIE_GAP,
   type CareerScoreResult, type GradeResult, type Ohaeng,
 } from './careerScore'
-import { seasonConvertNote } from '../simsanOhaeng'
+import { seasonConvertNote, hourConvertNote } from '../simsanOhaeng'
 import type { CareerCard, CareerInput } from './types'
 import { isHourUnknown } from './types'
 import { iga } from '../josa'
@@ -33,6 +33,8 @@ export interface OhaengGijilData {
   weak: Ohaeng[]       // 약함
   gap: number          // 1위-2위 점수 차
   monthNote: string | null
+  /** ★시지 계절 치환 안내 — 걸렸으면 «반드시» 있습니다 (2026-08-02) */
+  hourConvNote: string | null
   hourNote: string | null
   hourUnknown: boolean
   total: number
@@ -51,10 +53,14 @@ export function judgeOhaengGijil(input: CareerInput): CareerCard {
   const sorted = [...EL5].sort((a, b) => (r.score[b] ?? 0) - (r.score[a] ?? 0))
   const gap = (r.score[sorted[0]] ?? 0) - (r.score[sorted[1]] ?? 0)
 
+  const monthBranchNow = saju.find(p => p.pillar === '월주')?.branch ?? ''
   const monthNote = seasonConvertNote(
-    saju.find(p => p.pillar === '월주')?.branch ?? '',
-    solarMonth, solarDay, hourBranch ?? '',
+    monthBranchNow, solarMonth, solarDay, hourBranch ?? '',
   )
+  // ★2026-08-02 — 시지 치환이 걸리면 «반드시» 한 줄 (대표님 지시)
+  //   ⚠️ 진로·적성은 치환을 «적용» 하므로, 그 사실을 손님께 알려야
+  //      건강·궁합 화면과 숫자가 다른 까닭이 설명됩니다.
+  const hourConvNote = hourConvertNote(monthBranchNow, hourBranch ?? '')
   const hourUnknown = isHourUnknown(saju)
 
   // ── 고객이 읽을 문장 ──────────────────────────────────────────
@@ -82,6 +88,7 @@ export function judgeOhaengGijil(input: CareerInput): CareerCard {
   }
   if (r.hourNote) lines.push(r.hourNote)
   if (monthNote) lines.push(monthNote)
+  if (hourConvNote) lines.push(hourConvNote)
   if (hourUnknown) {
     lines.push('태어난 시(時)를 몰라 시주 두 자리를 비워 두고 보았어요. 점수는 나머지 여덟 자리를 100점으로 환산해 판단했습니다.')
   }
@@ -110,7 +117,8 @@ export function judgeOhaengGijil(input: CareerInput): CareerCard {
 
   const data: OhaengGijilData = {
     score: r.score as Record<Ohaeng, number>, grades: g, top: strong,
-    excess, lack, weak, gap, monthNote, hourNote: r.hourNote, hourUnknown, total: r.total,
+    excess, lack, weak, gap, monthNote, hourConvNote,
+    hourNote: r.hourNote, hourUnknown, total: r.total,
   }
   return {
     key: 'ohaeng_gijil', title: '타고난 오행의 결', badge, lines, reasons,

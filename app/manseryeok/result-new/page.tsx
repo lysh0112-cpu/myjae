@@ -11,7 +11,7 @@ import { getUnsung, getSinsal, unsungColor, getGongmang, SINSAL_HIGHLIGHT } from
 
 import { calcYongsinNew, calcYongsinCompat } from "@/lib/saju/yongsinNew";
 import { calcHapchungScore } from "@/lib/saju/hapchungScore";
-import { calcSimsanOhaeng, toPercentList, seasonConvertNote } from "@/lib/saju/simsanOhaeng";
+import { calcSimsanOhaeng, toPercentList, seasonConvertNote, hourConvertNote } from "@/lib/saju/simsanOhaeng";
 import { calcSipsungDist, getSipsin, getSipsinBranch } from "@/lib/saju/sipsungDist";
 import AiAnalysisNew from "./components/AiAnalysisNew";
 import { withNim, nimEuiTitle } from "@/lib/saju/honorific";
@@ -673,12 +673,19 @@ function ResultNewContent() {
           <div style={{fontSize:'10.5px',color:'#b4785a',background:'#faf3ec',border:'0.5px solid #f0e0d5',borderRadius:'8px',padding:'7px 10px',marginBottom:'10px',lineHeight:1.6}}>
             진로·적성·성격은 <b style={{color:'#96502e'}}>계절 치환</b>으로, 건강·궁합은 오행 그대로 봐요.
             {(() => {
-              const note = saju.length>0 && monthBranchForNote
-                ? seasonConvertNote(monthBranchForNote, solarMonth, solarDay, hourBranch ?? '')
-                : null
-              return note ? (
-                <div style={{marginTop:'5px',color:'#c8783c'}}>↳ {note}</div>
-              ) : null
+              /* ★2026-08-02 — 월지 치환에 이어 «시지» 치환도 알려 드립니다 (대표님 지시)
+                 ⚠️ 이 화면은 진로·성격 쪽이라 시지 치환이 «걸립니다».
+                    걸렸는데 말해 주지 않으면 궁합 화면과 숫자가 다른 까닭을 알 수 없습니다. */
+              if (!(saju.length>0 && monthBranchForNote)) return null
+              const note = seasonConvertNote(monthBranchForNote, solarMonth, solarDay, hourBranch ?? '')
+              const hNote = hourConvertNote(monthBranchForNote, hourBranch ?? '')
+              if (!note && !hNote) return null
+              return (
+                <>
+                  {note ? <div style={{marginTop:'5px',color:'#c8783c'}}>↳ {note}</div> : null}
+                  {hNote ? <div style={{marginTop:'3px',color:'#c8783c'}}>↳ {hNote}</div> : null}
+                </>
+              )
             })()}
           </div>
           {/* 오각형 그래프(왼쪽) + 십성표(오른쪽) 나란히 */}

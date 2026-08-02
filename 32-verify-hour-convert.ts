@@ -1,0 +1,141 @@
+// 32-verify-hour-convert.ts
+//
+// ┌───────────────────────────────────────────────────────────────┐
+// │  시지 계절 치환 그물 — 교재 38쪽대로 도는가                      │
+// └───────────────────────────────────────────────────────────────┘
+//
+//  ★2026-08-02 연재쌤 지시로 시지 치환을 «넣었습니다».
+//    이 그물은 그것이 «조용히 되돌려지는 것» 을 막습니다.
+//
+//  ⚠️ 2026-07 에는 「넣지 않는다」가 확정이었습니다. 그 주석을 보고
+//     되돌리려는 다음 세션이 반드시 옵니다. 여기서 막힙니다.
+
+import { readFileSync } from 'fs'
+import {
+  calcSimsanOhaeng, hourConvertEl, hourConvertNote, hourNoConvertNote,
+  type Ohaeng, type Pillar,
+} from './lib/saju/simsanOhaeng'
+
+let pass = 0, fail = 0
+const check = (ok: boolean, msg: string) => {
+  if (ok) { pass++; console.log(`  ✅ ${msg}`) } else { fail++; console.log(`  🔴 ${msg}`) }
+}
+const read = (p: string) => readFileSync(p, 'utf8')
+const JI = '子丑寅卯辰巳午未申酉戌亥'.split('')
+const EL5: Ohaeng[] = ['목', '화', '토', '금', '수']
+
+console.log('\n━━ ㉒-a ★교재 38쪽 — 열한 칸이 «전부» 도는가 ━━')
+{
+  // 교재 38쪽 시지 안내 (월지가 맞을 때만)
+  const WANT: [string, string, Ohaeng][] = [
+    ['寅', '丑', '수'], ['寅', '寅', '수'],
+    ['丑', '丑', '수'], ['丑', '寅', '수'],
+    ['卯', '辰', '목'], ['辰', '辰', '목'],
+    ['未', '未', '화'],
+    ['申', '未', '화'], ['申', '申', '화'],
+    ['酉', '戌', '금'], ['戌', '戌', '금'],
+  ]
+  for (const [m, h, el] of WANT) {
+    check(hourConvertEl(m, h) === el, `${m}월 ${h}시 → ${el}`)
+  }
+  // ★열한 칸 «뿐» 인가 — 더 생기면 교재 밖입니다
+  let n = 0
+  for (const m of JI) for (const h of JI) if (hourConvertEl(m, h)) n++
+  check(n === 11, `치환되는 칸이 «열한 개» 뿐입니다 (${n})`)
+}
+
+console.log('\n━━ ㉒-b ⚠️ 공란 월지는 «있는 오행 그대로» 인가 ━━')
+{
+  // ★대표님 확인 2026-08-02 — "공란은 있는 오행 그대로 보면 된다"
+  for (const m of ['子', '巳', '午', '亥']) {
+    const any = JI.some(h => hourConvertEl(m, h) !== null)
+    check(!any, `${m}월 — 치환이 «하나도» 없습니다`)
+  }
+  // ⚠️ 卯시·酉시는 본래 오행이 이미 그것이라 «치환이 아닙니다»
+  check(hourConvertEl('卯', '卯') === null, `⚠️ 卯월 卯시 — 본래 木이라 치환 아님`)
+  check(hourConvertEl('酉', '酉') === null, `⚠️ 酉월 酉시 — 본래 金이라 치환 아님`)
+}
+
+console.log('\n━━ ㉒-c ★쓰임에 따라 갈리는가 (진로 ↔ 건강궁합) ━━')
+{
+  //   진로·적성·성격 → 치환 «적용»  ·  건강·궁합 → «그대로»  (2026-08-02 대표님 지시)
+  const pill = ['년주', '월주', '일주', '시주'].map((p, i) => ({
+    pillar: p, stem: '甲', branch: ['子', '辰', '子', '辰'][i],
+  })) as Pillar[]
+  const career = calcSimsanOhaeng(pill, 4, 20, '辰', { purpose: '진로' })
+  const health = calcSimsanOhaeng(pill, 4, 20, '辰', { purpose: '건강궁합' })
+  check(career['목'] > health['목'], `★진로에서 辰시가 木으로 갑니다 (${health['목']} → ${career['목']})`)
+  check(health['토'] > career['토'], `★건강궁합에서는 辰시가 土 그대로입니다`)
+
+  // ⚠️ 옛 이름(forCouple)도 그대로 들어야 합니다 — 부르는 곳이 여럿입니다
+  const old = calcSimsanOhaeng(pill, 4, 20, '辰', { forCouple: true })
+  check(EL5.every(e => old[e] === health[e]), `⚠️ 옛 이름 forCouple:true 가 «건강궁합» 과 같습니다`)
+
+  // ★기본값은 «진로» — 지금까지 부르던 곳이 대부분 그쪽입니다
+  const dflt = calcSimsanOhaeng(pill, 4, 20, '辰')
+  check(EL5.every(e => dflt[e] === career[e]), `★아무것도 안 주면 «진로» 입니다`)
+}
+
+console.log('\n━━ ㉒-d ★치환이 걸리면 «반드시 한 줄» 이 나오는가 ━━')
+{
+  //   ⚠️ 대표님 지시 — "이런 경우에는 반드시 한 줄의 해설을 덧붙여 줄 것"
+  let missing = 0, spurious = 0
+  for (const m of JI) for (const h of JI) {
+    const to = hourConvertEl(m, h)
+    const note = hourConvertNote(m, h)
+    if (to && !note) missing++
+    if (!to && note) spurious++
+  }
+  check(missing === 0, `★치환된 열한 칸 «전부» 한 줄이 나옵니다`)
+  check(spurious === 0, `⚠️ 치환 안 된 칸에서는 «말하지 않습니다» (없는 차이를 걱정시키지 않음)`)
+
+  // 건강·궁합 쪽 안내도 같은 자리에서만
+  let hMiss = 0
+  for (const m of JI) for (const h of JI) {
+    if (hourConvertEl(m, h) && !hourNoConvertNote(m, h)) hMiss++
+  }
+  check(hMiss === 0, `★건강·궁합 쪽도 «왜 숫자가 다른지» 알려 줍니다`)
+
+  const s = hourConvertNote('辰', '辰') ?? ''
+  check(s.includes('辰시') && s.includes('봄') && s.includes('목'),
+    `한 줄에 «시지·계절·오행» 이 다 들어 있습니다 — ${s}`)
+}
+
+console.log('\n━━ ㉒-e ⚠️ 합이 언제나 100인가 ━━')
+{
+  let bad = 0
+  for (const m of JI) for (const h of JI) {
+    const pill = ['년주', '월주', '일주', '시주'].map((p, i) => ({
+      pillar: p, stem: '甲', branch: ['子', m, '子', h][i],
+    })) as Pillar[]
+    for (const purpose of ['진로', '건강궁합'] as const) {
+      const sc = calcSimsanOhaeng(pill, 4, 20, h, { purpose })
+      if (EL5.reduce((a, e) => a + sc[e], 0) !== 100) bad++
+    }
+  }
+  check(bad === 0, `144칸 × 두 쓰임 — 합이 «언제나» 100입니다`)
+}
+
+console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
+{
+  const src = read('lib/saju/simsanOhaeng.ts')
+  check(/2026-08-02 연재쌤 지시/.test(src), `★언제 누가 정했는지 적혀 있습니다`)
+  check(/넣지 않기로 되돌리지 마십시오/.test(src), `⚠️ 되돌리지 말라는 말이 적혀 있습니다`)
+  check(/원장님 손글씨 수정판/.test(src), `★원본 스캔으로 확인했다는 근거가 있습니다`)
+  check(/공란인 월지\(子·巳·午·亥\)/.test(src), `★공란 월지 규칙이 적혀 있습니다`)
+  check(/measure:hour/.test(src), `★고치려는 다음 세션에게 «먼저 재라» 고 일러 둡니다`)
+  // ⚠️ 자(measure)는 검사가 아닙니다 — verify 체인에 들어가면 배포가 느려집니다
+  const pkg = JSON.parse(read('package.json'))
+  check(!/31-measure/.test(pkg.scripts.verify), `⚠️ 측정 하네스는 verify 체인에 «없습니다»`)
+  check(/measure:hour/.test(JSON.stringify(pkg.scripts)), `npm run measure:hour 로 잽니다`)
+}
+
+console.log(`\n━━ 시지 치환 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
+if (fail > 0) {
+  console.log('  ┌────────────────────────────────────────────────────────────┐')
+  console.log('  │  ⚠️ 시지 치환은 2026-08-02 «연재쌤 지시» 로 넣은 것입니다      │')
+  console.log('  │     되돌리려면 연재쌤께 다시 여쭈십시오.                      │')
+  console.log('  │     손대기 전에 npm run measure:hour 를 먼저 돌리십시오.       │')
+  console.log('  └────────────────────────────────────────────────────────────┘')
+  process.exit(1)
+}
