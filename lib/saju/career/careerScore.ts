@@ -32,9 +32,8 @@
 //     책 사례가 "육친별 점수 목40 화30 토10 금15 수15" 처럼
 //     오행 이름으로 적는 것도 같은 이유다. 숫자는 한 벌이고 부르는 이름만 둘이다.
 
-import { calcSimsanOhaeng, hourConvertEl, type Ohaeng, type OhaengScore } from '../simsanOhaeng'
+import { calcSimsanOhaeng, hourConvertEl, hourConvertNote, type Ohaeng, type OhaengScore } from '../simsanOhaeng'
 import type { Pillar } from './types'
-import { euro } from '../josa'
 
 /** 지지 본래 오행 */
 const BRANCH_EL: Record<string, Ohaeng> = {
@@ -161,7 +160,10 @@ export function calcCareerScore(
     const to = hourConvertEl(monthBranch, hb)
     if (from && to && from !== to) {
       hourConverted = true
-      hourNote = `시지 ${hb}(${from})을 ${monthBranch}월의 기운으로 보아 ${to}${euro(to)} 계산했어요.`
+      // ★2026-08-02 — 말은 simsanOhaeng.hourConvertNote «한 곳» 이 냅니다.
+      //   ⚠️ 여기서 또 지으면 두 줄이 «같은 말» 을 하게 됩니다.
+      //      실기 화면에서 실제로 그렇게 나왔습니다 (2026-08-02).
+      hourNote = hourConvertNote(monthBranch, hb)
     }
   }
 

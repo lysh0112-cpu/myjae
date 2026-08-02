@@ -354,10 +354,6 @@ export function seasonConvertNote(
 //      두 곳에서 따로 판단하면 「치환은 됐는데 말은 안 나오는」 날이 옵니다. (교훈 CJ)
 // ══════════════════════════════════════════════════════════════════
 
-const EL_SEASON: Record<Ohaeng, string> = {
-  목: '봄', 화: '여름', 금: '가을', 수: '겨울', 토: '환절기',
-}
-
 /**
  * 시지 계절 치환이 걸렸으면 한 줄로 알려 줍니다. 안 걸렸으면 null.
  *
@@ -367,7 +363,11 @@ const EL_SEASON: Record<Ohaeng, string> = {
 export function hourConvertNote(monthBranch: string, hourBranch: string): string | null {
   const to = hourConvertEl(monthBranch, hourBranch)
   if (!to) return null
-  return `태어난 시(${hourBranch}시)를 ${EL_SEASON[to]} 기운으로 보아 ${to}(으)로 계산했어요.`
+  const from = BRANCH_EL[hourBranch]
+  // ★2026-08-02 — careerScore 가 따로 내던 hourNote 를 «여기로 모았습니다».
+  //   그쪽 말투가 더 정확해서(「辰월의 기운으로」) 그것을 따릅니다.
+  //   ⚠️ 두 곳에서 따로 말하면 한쪽만 고치는 날이 옵니다. (교훈 CJ)
+  return `태어난 시 ${hourBranch}(${from})를 ${monthBranch}월의 기운으로 보아 ${to}(으)로 계산했어요.`
 }
 
 /**

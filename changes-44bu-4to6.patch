@@ -1,0 +1,2797 @@
+From bb7384de2d4b22c108aef5849a84bfe4600969a0 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Sun, 2 Aug 2026 02:53:02 +0000
+Subject: [PATCH 1/6] =?UTF-8?q?=EA=B2=B0=EA=B3=BC=20=ED=99=94=EB=A9=B4=20?=
+ =?UTF-8?q?=EB=9D=BC=EC=9A=B0=ED=8C=85=C2=B7=ED=95=98=EB=8B=A8=20=EC=A0=95?=
+ =?UTF-8?q?=EB=8F=88=20(44=EB=B6=80=201=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+① 결과 화면이 «제» 보관함으로 돌아갑니다
+   - namingRecords 에 storageBranchOfKind / NAMING_STORAGE_PATH 창구 신설
+   - 풀이 → diagnosis-storage · 개명·신생아 → naming-storage
+   - diagnosis 화면의 붙박이 주소 제거 (하단 버튼 · 머리글 뒤로가기 둘 다)
+   - 보관함이 기록을 열 때 ?from= 으로 갈래를 함께 보냄 (기록 오기 전을 받침)
+
+② 「불러온 기록」 초록 띠 삭제 (저장 알림·실패 알림은 남김)
+③ A4 명품 작명서 버튼 컴팩트 (여백 16→10 · 15/700→13.5/600 · 채운 색은 유지)
+④ 맨 하단 1행 2컬럼 — 보관함 이름·주소가 갈래를 따름
+⑤ 아코디언 三 자원오행 · 四 수리오행 (요약 카드·선명장 줄 차례 동조)
+   useResultSaju — 불러올 것이 없으면 converting 을 끝냄 (멈춤 수리)
+
+검사 1,368 → 1,398 (작명 동선 441 → 471) · 실패 0
+tsc 통과 · eslint 82/139 (손대기 전과 동일)
+---
+ 28-verify-naming-flow.ts                      | 130 +++++++++++++++++-
+ .../components/PerspectiveAccordion.tsx       |  17 ++-
+ .../components/NameAnalysisResultView.tsx     |  10 +-
+ .../naming/components/NamingCertificate.tsx   |  21 ++-
+ .../naming/components/NamingStorageView.tsx   |  10 +-
+ app/manseryeok/naming/diagnosis/page.tsx      | 120 +++++++++++++---
+ .../naming/rename/newresult/page.tsx          |   3 +-
+ hooks/useResultSaju.ts                        |  28 +++-
+ lib/saju/namingRecords.ts                     |  49 +++++++
+ 9 files changed, 353 insertions(+), 35 deletions(-)
+
+diff --git a/28-verify-naming-flow.ts b/28-verify-naming-flow.ts
+index 1e4228b..28db2f6 100644
+--- a/28-verify-naming-flow.ts
++++ b/28-verify-naming-flow.ts
+@@ -263,8 +263,32 @@ console.log('\n━━ ⑲-I ★화살표 · 요약 카드 · 하단 위계 (43
+   check(/padding: '6px 4px'/.test(acc), `★둘레에 «누르는 자리» 를 두었습니다`)
+ 
+   // ② 요약 카드 ↔ 아코디언 연동
+-  check(/SUMMARY_KEYS = \['yinyang', 'baleum', 'suri', 'jawon', 'yongsin'\]/.test(view),
+-    `★요약 카드가 아코디언과 «같은 차례» 입니다`)
++  // ══════════════════════════════════════════════════════════════
++  //  ★2026-08-02 — 이 검사가 «옛 차례» 를 지키고 있었습니다.
++  //    대표님 지시로 三 자원 · 四 수리 로 바꾸려는데 이 줄이 막았습니다.
++  //    ★코드를 되돌리지 않고 «검사를 뒤집었습니다». (교훈 [검사가 지킨다])
++  //    [까닭]  한자에 담긴 기운(자원)을 보고 → 그 획수가 그리는 마디(수리)를 보고
++  //            → 사주와 어떻게 만나는가로 이야기가 이어집니다.
++  //  ⚠️ 아래 ②-b 가 «두 곳이 같은 차례인지» 를 함께 봅니다 — 한쪽만 못 고칩니다.
++  // ══════════════════════════════════════════════════════════════
++  check(/SUMMARY_KEYS = \['yinyang', 'baleum', 'jawon', 'suri', 'yongsin'\]/.test(view),
++    `★요약 카드가 아코디언과 «같은 차례» 입니다 (三 자원 · 四 수리)`)
++  check(!/SUMMARY_KEYS = \['yinyang', 'baleum', 'suri', 'jawon'/.test(view),
++    `옛 차례(三 수리 · 四 자원)가 남아 있지 않습니다`)
++
++  // ②-b ★★두 곳의 차례가 «정말로» 같은가 — 눈으로 맞추지 않습니다
++  //   ⚠️ 번호(一二三)는 아직 «자리(index)» 로 붙습니다. 차례가 갈리면
++  //      「三. 수리오행 — 한자에 담긴 본래 기운」 같은 것이 나옵니다.
++  {
++    const headOrder = [...acc.matchAll(/\{ key: '(\w+)', title:/g)].map(m => m[1])
++    const sumOrder = (view.match(/SUMMARY_KEYS = \[([^\]]+)\]/) ?? ['', ''])[1]
++      .split(',').map(s => s.trim().replace(/'/g, '')).filter(Boolean)
++    check(headOrder.length === 5, `아코디언 관점이 다섯입니다 (${headOrder.length})`)
++    check(headOrder.join('>') === sumOrder.join('>'),
++      `★아코디언과 요약 카드의 차례가 «글자 그대로» 같습니다 (${headOrder.join('>')})`)
++    check(headOrder[2] === 'jawon' && headOrder[3] === 'suri',
++      `★三 = 자원오행 · 四 = 수리오행`)
++  }
+   check(/SUMMARY_NUMERALS/.test(view) && /一/.test(view), `一·二·三 체계로 통일했습니다`)
+   check(/setFocusKey\(SUMMARY_KEYS\[i\]\)/.test(view), `줄을 누르면 그 관점을 가리킵니다`)
+   check(/focusNonce/.test(view) && /focusNonce/.test(acc),
+@@ -1212,6 +1236,108 @@ console.log('\n━━ ⑲-l ★자원오행 배점 — «유지» 확정이 기
+   check(/measure:resource/.test(pkg), `npm run measure:resource 로 잴 수 있습니다`)
+ }
+ 
++// ══════════════════════════════════════════════════════════════════
++//  ⑳ ★2026-08-02 — 결과 화면이 «제 보관함» 으로 돌아가는가 (대표님 지시 ①)
++//
++//   🔴 [무엇이 있었나]  명품작명으로 들어와 결과를 본 뒤 보관함 버튼을 누르면
++//     «정밀분석 보관함» 이 열렸습니다. 주소가 붙박이였습니다.
++//   ★이 그물이 그 붙박이가 «다시 생기는 것» 을 막습니다.
++// ══════════════════════════════════════════════════════════════════
++console.log('\n━━ ⑳-a ★결과 화면 → «제» 보관함 (붙박이 금지) ━━')
++{
++  const rec = codeOf(S.rec)
++  const diag = codeOf(read('app/manseryeok/naming/diagnosis/page.tsx'))
++  const sto = codeOf(S.sto)
++
++  // ① 규칙이 «한 곳» 에 있는가 (교훈 CJ)
++  check(/export function storageBranchOfKind/.test(rec),
++    `★갈래를 정하는 창구가 namingRecords 에 «하나» 있습니다`)
++  check(/NAMING_STORAGE_PATH/.test(rec) && /diagnosis-storage/.test(rec) && /naming-storage/.test(rec),
++    `★두 보관함 주소를 그 창구가 들고 있습니다`)
++  // ⚠️ 보관함 «거르기» 와 «같은 규칙» 이어야 합니다 — 갈리면 버튼이 데려간 곳에
++  //    그 기록이 없습니다
++  check(/'풀이' \? 'diagnosis' : 'naming'/.test(rec),
++    `★거르기와 «같은 규칙» 입니다 (풀이가 아니면 전부 작명)`)
++  check(/effFilter === '풀이' \? r\.kind === '풀이' : r\.kind !== '풀이'/.test(sto),
++    `⚠️ 보관함 거르기도 「풀이인가 아닌가」 그대로입니다`)
++
++  // ② 결과 화면이 그 창구를 «쓰는가»
++  check(/storageBranchOfKind/.test(diag) && /storageBranchOfParam/.test(diag),
++    `★결과 화면이 기록의 kind 와 URL 을 «차례로» 봅니다`)
++  check(/const storagePath = NAMING_STORAGE_PATH\[storageBranch\]/.test(diag),
++    `★보관함 주소를 «갈래로» 정합니다`)
++
++  // ③ ★붙박이가 «하나도» 남아 있지 않은가 — 이것이 이 그물의 핵심입니다
++  const hardCoded = [...diag.matchAll(/router\.push\('\/manseryeok\/naming\/[a-z/-]*storage[^']*'\)/g)]
++    .map(m => m[0])
++  check(hardCoded.length === 0,
++    `★결과 화면에 보관함 주소를 «박아 넣은» 자리가 없습니다${hardCoded.length ? ` — ${hardCoded.join(' , ')}` : ''}`)
++
++  // ④ 보관함이 기록을 열 때 «어디서 왔는지» 를 실어 보내는가
++  check(/from=\$\{storageBranchOfKind\(r\.kind\)\}/.test(sto),
++    `★보관함이 기록을 열 때 갈래를 함께 보냅니다 (기록이 오기 «전» 을 받칩니다)`)
++
++  // ⑤ ⚠️ 옛 주소는 «살아 있되» 가리키지 않습니다 (교훈 AM)
++  check(existsSync(P.stoDoor),
++    `⚠️ 옛 주소(diagnosis/storage)의 문은 «그대로» 있습니다 — 북마크가 옵니다`)
++  check(!/'\/manseryeok\/naming\/diagnosis\/storage'/.test(diag),
++    `★다만 결과 화면이 옛 주소를 «가리키지» 않습니다`)
++}
++
++console.log('\n━━ ⑳-b ★하단 정돈 — 띠 배너 · A4 버튼 · 두 칸 ━━')
++{
++  const diag = codeOf(read('app/manseryeok/naming/diagnosis/page.tsx'))
++  const cert = codeOf(S.cert)
++
++  // ① 「보관함에서 불러온 기록」 띠가 «없는가» (지시 ②)
++  check(!/보관함에서 불러온 기록/.test(diag),
++    `★「📁 보관함에서 불러온 기록」 띠가 «완전히» 없습니다`)
++  // ⚠️ 다만 «저장됐다» 는 알림은 남아야 합니다 — 그건 방금 일어난 일입니다
++  check(/자동 저장되었습니다/.test(diag),
++    `⚠️ 「✓ 자동 저장」 알림은 «남아» 있습니다 (한 줄로 낮췄습니다)`)
++  check(/보관함에 저장하지 못했어요/.test(diag),
++    `⚠️ 저장 «실패» 알림은 눈에 띄게 그대로입니다`)
++
++  // ② A4 버튼이 «컴팩트» 한가 (지시 ③)
++  const pad = (cert.match(/width: '100%', padding: '(\d+)px \d+px', borderRadius: 12/) ?? [])[1]
++  check(!!pad && Number(pad) <= 11,
++    `★A4 버튼 여백이 컴팩트합니다 (${pad ?? '?'}px ≤ 11)`)
++  check(/fontSize: 13\.5, fontWeight: 600/.test(cert),
++    `★글자도 함께 낮췄습니다 (15/700 → 13.5/600)`)
++  check(!/width: '100%', padding: 16, borderRadius: 14/.test(cert),
++    `옛 «으뜸» 크기(16px 여백)가 남아 있지 않습니다`)
++  // ⚠️ 크기는 낮추되 «채운 색» 은 남깁니다 — 이것만 색이 차 있어야 켜가 갈립니다
++  check(/background: p\.disabled \? '#EDE7E0' : '#c8783c'/.test(cert),
++    `⚠️ 채운 색은 그대로입니다 (크기로 낮추고 색으로 남깁니다)`)
++
++  // ③ 맨 하단이 «한 줄 두 칸» 인가 (지시 ④)
++  check(/gridTemplateColumns: '1fr 1fr'/.test(diag),
++    `★맨 하단 두 버튼이 «한 줄 두 칸» 입니다 (50:50)`)
++  check(/📜 \{storageLabel\}/.test(diag),
++    `★보관함 버튼 «이름» 도 갈래를 따릅니다`)
++  check(/storageBranch === 'naming' \? '새 이름 지어보기' : '다른 이름 풀어보기'/.test(diag),
++    `★왼쪽 버튼도 갈래를 따릅니다 (작명 기록에 «풀이 입력» 을 내밀지 않습니다)`)
++}
++
++console.log('\n━━ ⑳-c 🔴 「사주 불러오는 중…」 이 «끝나는가» ━━')
++{
++  const hook = read('hooks/useResultSaju.ts')
++  // 🔴 생년월일이 없으면 그냥 나가 버려 converting 이 영영 true 였습니다
++  check(/if \(!yearParam \|\| !monthParam \|\| !dayParam\) \{ setConverting\(false\); return \}/.test(hook),
++    `★불러올 것이 없으면 «곧바로 끝났다» 고 알립니다`)
++  check(!/if \(!yearParam \|\| !monthParam \|\| !dayParam\) return\n/.test(hook),
++    `옛 «그냥 나가기» 가 남아 있지 않습니다`)
++  check(/finally \{[\s\S]{0,60}setConverting\(false\)/.test(hook),
++    `⚠️ 실패해도 끝냅니다 (finally)`)
++  // ⚠️ 이 훅은 여러 화면이 나눠 씁니다 — «끝났다» 가 늦으면 전부 멈춥니다
++  const users = ['app/manseryeok/naming/diagnosis/page.tsx',
++    'app/manseryeok/naming/rename/newhanja/page.tsx',
++    'app/manseryeok/result-new/page.tsx']
++  for (const u of users) {
++    check(/useResultSaju/.test(read(u)), `⚠️ ${u.split('/').slice(-2).join('/')} 가 이 훅을 씁니다`)
++  }
++}
++
+ console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
+ if (fail > 0) {
+   console.log('  ┌────────────────────────────────────────────────────────────┐')
+diff --git a/app/manseryeok/components/PerspectiveAccordion.tsx b/app/manseryeok/components/PerspectiveAccordion.tsx
+index 43663a5..0bd9687 100644
+--- a/app/manseryeok/components/PerspectiveAccordion.tsx
++++ b/app/manseryeok/components/PerspectiveAccordion.tsx
+@@ -65,11 +65,26 @@ const STAR_TONE: Record<StarResult['tone'], string> = {
+ //   ⚠️ 옛 이름(Stars)으로 부르던 곳이 있어 그대로 다시 내보냅니다.
+ export { default as Stars } from '@/app/components/common/StarRating'
+ 
++// ══════════════════════════════════════════════════════════════════
++//  ★2026-08-02 — 차례를 «三 자원오행 · 四 수리오행» 으로 바꿉니다 (대표님 지시)
++//
++//   [까닭]  앞의 둘(음양·발음)은 «한글 소리와 획수» 이야기이고,
++//     자원오행은 «한자에 담긴 기운», 수리 4격은 «획수가 그리는 운» 입니다.
++//     자원 → 수리로 두면 「글자를 보고 → 그 획수가 그리는 마디를 보고 →
++//     그것이 사주와 어떻게 만나는가」로 이야기가 한 줄로 이어집니다.
++//
++//  ⚠️⚠️ 번호(一二三四五)는 이 배열의 «자리» 로 붙습니다 (NUMERALS[i]).
++//     그러니 여기 차례를 바꾸면 «번호도 함께» 따라옵니다 — 그것이 맞습니다.
++//     다만 밖에서 이어 붙이는 것들(요약 카드·선명장 줄)은 «자리» 가 아니라
++//     열쇠(yinyang·baleum…)로 잇거나, 여기와 «같은 차례» 로 적어야 합니다.
++//     ★함께 고칠 곳 — NameAnalysisResultView 의 SUMMARY_KEYS,
++//       diagnosis / newresult 가 선명장에 넘기는 lines. (교훈 [자리 말고 열쇠])
++// ══════════════════════════════════════════════════════════════════
+ const HEADS: { key: keyof PerspectiveCommentary; title: string; sub: string }[] = [
+   { key: 'yinyang', title: '음양오행', sub: '획수에 담긴 음과 양' },
+   { key: 'baleum', title: '발음오행', sub: '부르는 소리의 기운' },
+-  { key: 'suri', title: '수리오행', sub: '획수가 그리는 네 마디' },
+   { key: 'jawon', title: '자원오행', sub: '한자에 담긴 본래 기운' },
++  { key: 'suri', title: '수리오행', sub: '획수가 그리는 네 마디' },
+   { key: 'yongsin', title: '사주와의 만남', sub: '이름이 사주를 돕는가' },
+ ]
+ 
+diff --git a/app/manseryeok/naming/components/NameAnalysisResultView.tsx b/app/manseryeok/naming/components/NameAnalysisResultView.tsx
+index 6088531..9664e06 100644
+--- a/app/manseryeok/naming/components/NameAnalysisResultView.tsx
++++ b/app/manseryeok/naming/components/NameAnalysisResultView.tsx
+@@ -42,11 +42,15 @@ function gradeTone(g: string): string {
+ }
+ 
+ /** ★요약 카드 ↔ 아래 아코디언을 잇는 «차례». 아코디언 HEADS 와 «같은 순서» 여야 합니다 */
+-const SUMMARY_KEYS = ['yinyang', 'baleum', 'suri', 'jawon', 'yongsin'] as const
++// ★2026-08-02 — 아코디언이 «三 자원 · 四 수리» 로 바뀌었습니다. 여기도 «같이» 바꿉니다.
++//   ⚠️ 이 카드는 지금 꺼져 있지만(31차), 차례가 갈린 채로 두면
++//      되살리는 날 「三. 수리오행 — 한자에 담긴 본래 기운」이 나옵니다.
++//      ★번호와 부연설명이 아직 «자리(index)» 로 붙어 있기 때문입니다.
++const SUMMARY_KEYS = ['yinyang', 'baleum', 'jawon', 'suri', 'yongsin'] as const
+ const SUMMARY_NUMERALS = ['一', '二', '三', '四', '五']
+ const SUMMARY_SUBS = [
+-  '획수에 담긴 음과 양', '부르는 소리의 기운', '획수가 그리는 네 마디',
+-  '한자에 담긴 본래 기운', '이름이 사주를 돕는가',
++  '획수에 담긴 음과 양', '부르는 소리의 기운', '한자에 담긴 본래 기운',
++  '획수가 그리는 네 마디', '이름이 사주를 돕는가',
+ ]
+ 
+ const GOLD = '#c8783c'
+diff --git a/app/manseryeok/naming/components/NamingCertificate.tsx b/app/manseryeok/naming/components/NamingCertificate.tsx
+index 70469ef..18840d0 100644
+--- a/app/manseryeok/naming/components/NamingCertificate.tsx
++++ b/app/manseryeok/naming/components/NamingCertificate.tsx
+@@ -468,14 +468,25 @@ export default function NamingCertificateButton(
+         }}
+         className="active:scale-95"
+         style={{
+-          // ★2026-08-01 (43부 28차) — 이 화면의 «으뜸» 버튼입니다 (대표님 지시).
+-          //   채운 색 · 넓게 · 조금 더 크게. 나머지는 테두리만 두어 뒤로 물립니다.
+-          width: '100%', padding: 16, borderRadius: 14, marginBottom: 6,
++          // ══════════════════════════════════════════════════════════
++          //  ★2026-08-02 — «컴팩트한 서브 버튼» 으로 줄입니다 (대표님 지시 ③)
++          //
++          //   [무엇이 있었나]  43부 28차에 이 버튼을 «으뜸» 으로 세우며
++          //     16px 여백 · 15px 글자 · 그림자로 크게 키웠습니다.
++          //     ★그랬더니 결과 «본문» 보다 이 버튼이 먼저 눈에 들어왔습니다.
++          //     손님이 보러 오신 것은 «이름 풀이» 이지 인쇄 버튼이 아닙니다.
++          //
++          //   ★[이제]  높이와 여백을 줄입니다 (16→10, 15→13.5px).
++          //   ⚠️ 색은 «채운 채로» 둡니다 — 이것만 색이 차 있어야
++          //      아래 테두리 버튼들과 켜가 갈립니다. 크기로 낮추고 색으로 남깁니다.
++          //   ⚠️ 그림자도 줄였습니다. 그림자가 크면 «작아도 커 보입니다».
++          // ══════════════════════════════════════════════════════════
++          width: '100%', padding: '10px 12px', borderRadius: 12, marginBottom: 5,
+           background: p.disabled ? '#EDE7E0' : '#c8783c',
+           border: 'none',
+           color: p.disabled ? '#A99B8E' : '#fff',
+-          fontSize: 15, fontWeight: 700, letterSpacing: '-0.2px',
+-          boxShadow: p.disabled ? 'none' : '0 2px 8px rgba(200,120,60,0.28)',
++          fontSize: 13.5, fontWeight: 600, letterSpacing: '-0.2px',
++          boxShadow: p.disabled ? 'none' : '0 1px 4px rgba(200,120,60,0.20)',
+           cursor: p.disabled ? 'default' : 'pointer',
+         }}>
+         🖨️ A4 명품 작명서 인쇄 · PDF 저장
+diff --git a/app/manseryeok/naming/components/NamingStorageView.tsx b/app/manseryeok/naming/components/NamingStorageView.tsx
+index e1f52ee..91b8124 100644
+--- a/app/manseryeok/naming/components/NamingStorageView.tsx
++++ b/app/manseryeok/naming/components/NamingStorageView.tsx
+@@ -30,6 +30,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
+ import {
+   listNamingRecords, deleteNamingRecord, daysAgoLabel,
+   NAMING_RELATION_COLOR, namingRelationGroup, namingRelationLabel,
++  storageBranchOfKind,
+   type NamingRecord, type NamingKind,
+ } from '@/lib/saju/namingRecords'
+ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+@@ -276,7 +277,14 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
+           const relLabel = namingRelationLabel(r.relation)
+           const kindTag = KIND_TAG[r.kind]
+           return (
+-            <div key={r.id} onClick={() => router.push(`/manseryeok/naming/diagnosis?recordId=${r.id}`)}
++            /* ★2026-08-02 — «어느 보관함에서 왔는지» 를 함께 보냅니다.
++                 ⚠️ 결과 화면은 기록을 불러온 «뒤» 라야 kind 를 압니다.
++                    그 사이에도 하단 버튼이 «옳은 보관함» 을 가리켜야 하므로
++                    입구를 URL 로 실어 보냅니다. (기록이 오면 kind 가 정본입니다) */
++            <div key={r.id} onClick={() => router.push(
++              `/manseryeok/naming/diagnosis?recordId=${r.id}`
++              + `&from=${storageBranchOfKind(r.kind)}`,
++            )}
+               style={{
+                 display: 'flex', alignItems: 'center', gap: 13, padding: '15px',
+                 background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14,
+diff --git a/app/manseryeok/naming/diagnosis/page.tsx b/app/manseryeok/naming/diagnosis/page.tsx
+index ecf980c..2b42ca9 100644
+--- a/app/manseryeok/naming/diagnosis/page.tsx
++++ b/app/manseryeok/naming/diagnosis/page.tsx
+@@ -26,7 +26,9 @@ import ConsultButton from '@/app/components/common/ConsultButton'
+ import { fromProfile, fromUrl, personKey, type MyInfo } from '@/lib/saju/myInfo'
+ import {
+   saveNamingRecord, getNamingRecord,
+-  type NamingPerson,
++  storageBranchOfKind, storageBranchOfParam,
++  NAMING_STORAGE_PATH, NAMING_STORAGE_LABEL,
++  type NamingPerson, type NamingKind, type NamingStorageBranch,
+ } from '@/lib/saju/namingRecords'
+ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+ import PerspectiveAccordion from '@/app/manseryeok/components/PerspectiveAccordion'
+@@ -292,6 +294,29 @@ function DiagnosisInner() {
+    */
+   const [recKind, setRecKind] = useState<string | null>(null)
+   const [recRelation, setRecRelation] = useState<string | null>(null)
++
++  // ══════════════════════════════════════════════════════════════
++  //  ★2026-08-02 — 이 화면은 «어느 보관함» 의 것인가 (대표님 지시 ①)
++  //
++  //  🔴 [무엇이 있었나]  하단 보관함 버튼이 «언제나» 정밀분석 보관함으로
++  //    갔습니다. 명품작명으로 들어오신 분이 남의 보관함에 떨어졌습니다.
++  //
++  //  ★[이제]  차례로 봅니다 — «정본이 앞» 입니다.
++  //    ① 기록의 kind      보관함에서 연 것이면 이것이 «정본» 입니다
++  //    ② URL 의 ?from=    기록이 아직 안 왔을 때 받쳐 줍니다
++  //    ③ 없으면 정밀분석  이 화면의 원래 뜻입니다
++  //
++  //  ⚠️ ②를 둔 까닭 — 기록은 «불러온 뒤» 라야 kind 를 압니다. 그 사이에
++  //     버튼이 엉뚱한 곳을 가리키면 손님이 그때 눌러 버립니다.
++  //  ⚠️ from=mypage 는 «갈래가 아닙니다». storageBranchOfParam 이 null 을
++  //     돌려주므로 아래 ③으로 내려갑니다 — 마이페이지 길은 따로 있습니다.
++  // ══════════════════════════════════════════════════════════════
++  const storageBranch: NamingStorageBranch =
++    (recKind ? storageBranchOfKind(recKind as NamingKind) : null)
++    ?? storageBranchOfParam(sp.get('from'))
++    ?? 'diagnosis'
++  const storagePath = NAMING_STORAGE_PATH[storageBranch]
++  const storageLabel = NAMING_STORAGE_LABEL[storageBranch]
+   /** ★2026-07-31 (40부 3차) 두음법칙 안내 — 판정은 «바꾸지 않습니다». 알려 주기만 합니다 */
+   const [dueumMsg, setDueumMsg] = useState<string | null>(null)
+ 
+@@ -795,7 +820,13 @@ function DiagnosisInner() {
+   return (
+     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
+       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+-      <PitchHeader title="내 이름 정밀분석" onBack={() => router.push((sp.get('from') === 'mypage' || nameId) ? '/mypage-new' : '/manseryeok/naming/diagnosis/storage')} onHome={() => router.push('/home-new')} />
++      {/* ★2026-08-02 — 뒤로가기도 «온 길» 로 돌아갑니다.
++          ⚠️ 하단 버튼만 고치면 «머리글로 나간 손님» 이 또 남의 보관함에 떨어집니다.
++             나가는 문이 둘이니 둘 다 같은 곳을 가리켜야 합니다. */}
++      <PitchHeader
++        title={storageBranch === 'naming' ? '내 아이 명품작명' : '내 이름 정밀분석'}
++        onBack={() => router.push((sp.get('from') === 'mypage' || nameId) ? '/mypage-new' : storagePath)}
++        onHome={() => router.push('/home-new')} />
+ 
+       <div style={{ padding: '16px' }}>
+         <div style={{ background: cardBg, border, borderRadius: '14px', padding: '14px', marginBottom: '16px' }}>
+@@ -1061,10 +1092,12 @@ function DiagnosisInner() {
+                       gender={info?.gender === '여' ? '坤命' : info?.gender === '남' ? '乾命' : ''}
+                       yongsin={aptYongsin.yongsin ?? ''}
+                       lines={[
++                        // ★2026-08-02 — 화면 아코디언과 «같은 차례» (三 자원 · 四 수리)
++                        //   ⚠️ 종이와 화면의 차례가 갈리면 손님이 대조하다 헷갈리십니다.
+                         ['음양', result.yinYang.grade],
+                         ['발음오행', result.soundFlow.grade],
+-                        ['수리 4격', result.suri.grade],
+                         ['자원오행', result.resourceFlow.grade],
++                        ['수리 4격', result.suri.grade],
+                         ['사주와의 만남', result.yongsinBohwan.grade],
+                       ]}
+                       chongpyeong={(commentary as { chongpyeong?: string })?.chongpyeong || ''}
+@@ -1090,18 +1123,27 @@ function DiagnosisInner() {
+                     보관함에 저장하지 못했어요. 이 화면을 닫으면 다시 볼 수 없어요
+                   </div>
+                 )}
+-                {savedRecordId && (
++                {/* ══════════════════════════════════════════════════════
++                    ★2026-08-02 — 「📁 …불러왔다」 는 초록 띠를 «걷어냅니다» (대표님 지시 ②)
++                     ⚠️ 옛 문구를 여기 «그대로» 적지 마십시오 — 검사가 주석까지 읽어
++                        「아직 남아 있다」고 봅니다 (JSX 주석은 codeOf 가 못 걷습니다).
++
++                     [까닭]  보관함에서 눌러서 들어오신 분은 «그것을 이미 아십니다».
++                       아는 것을 큰 초록 띠로 다시 말하니 화면만 어지러웠습니다.
++
++                     ⚠️ 「✓ 보관함에 저장됐어요」는 «남겨 둡니다» —
++                        그것은 아는 사실이 아니라 «방금 일어난 일» 을 알리는 말입니다.
++                        저장이 됐는지 모르면 손님이 화면을 못 닫으십니다.
++                        ★그 대신 띠를 걷고 «얌전한 한 줄» 로 낮췄습니다
++                          (작명 결과 화면과 같은 결 — 43부 28차).
++                     ⚠️ 저장 «실패» 띠는 위에 그대로 있습니다. 그때는 눈에 띄어야 합니다.
++                    ══════════════════════════════════════════════════════ */}
++                {savedRecordId && !viewOnly && (
+                   <div style={{
+-                    textAlign: 'center', fontSize: '14px', fontWeight: 500,
+-                    color: '#4a7a3a', background: '#eef5e8',
+-                    borderRadius: '12px', padding: '13px', marginBottom: '4px',
++                    textAlign: 'center', fontSize: '11.5px', color: '#6f8a5f',
++                    padding: '2px 0 12px', lineHeight: 1.6,
+                   }}>
+-                    {viewOnly ? '📁 보관함에서 불러온 기록' : '✓ 보관함에 저장됐어요'}
+-                  </div>
+-                )}
+-                {savedRecordId && !viewOnly && (
+-                  <div style={{ fontSize: '11px', color: '#6b5340', textAlign: 'center', marginBottom: '12px' }}>
+-                    보관함에서 언제든 다시 볼 수 있어요
++                    ✓ 보관함에 안전하게 자동 저장되었습니다
+                   </div>
+                 )}
+ 
+@@ -1126,15 +1168,51 @@ function DiagnosisInner() {
+                   </button>
+                 </div>
+ 
+-                <button onClick={() => router.push('/manseryeok/naming/diagnosis/storage')}
+-                  style={{ width: '100%', padding: '13px', borderRadius: '12px', background: 'rgba(200,120,60,0.10)', border: '0.5px solid #f0e0d5', color: subWarm, fontSize: '13px', fontWeight: 500, cursor: 'pointer', marginBottom: '8px' }}>
+-                  📜 내 이름 정밀분석 보관함
+-                </button>
++                {/* ══════════════════════════════════════════════════════
++                    ★2026-08-02 — 맨 아래 두 버튼을 «한 줄 두 칸» 으로 (대표님 지시 ④)
++
++                     [까닭]  같은 폭·같은 무게의 버튼이 세로로 쌓여
++                       세로 공간만 먹고 «무엇이 무엇인지» 눈에 안 들어왔습니다.
++                       ★나란히 두면 「하나 더 볼까 / 나갈까」 라는 «갈림길» 로 읽힙니다.
++
++                     ⚠️ 오른쪽 버튼은 «들어온 갈래» 를 따릅니다 (지시 ①).
++                        명품작명으로 왔으면 명품작명 보관함, 풀이면 정밀분석 보관함.
++                     ⚠️ 왼쪽도 갈래를 따릅니다 —
++                        작명 기록을 보고 계신 분께 「다른 이름 풀어보기」를 내밀면
++                        «이름 풀이 입력 화면» 으로 떨어집니다. 그것도 같은 종류의 어긋남입니다.
++                     ⚠️ 마이페이지에서 오신 분(nameId)은 «온 길로» 돌아가야 하므로
++                        그 자리는 예전 그대로 둡니다.
++                     ⚠️ 430px 화면에서 두 칸입니다 — 글자를 짧게 두십시오.
++                        길어지면 줄바꿈되어 높이가 서로 달라집니다.
++                    ══════════════════════════════════════════════════════ */}
++                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
++                  <button
++                    onClick={() => {
++                      if (nameId) { router.push('/mypage-new'); return }
++                      if (storageBranch === 'naming') {
++                        router.push('/manseryeok/naming/rename/newname?kind=신생아')
++                        return
++                      }
++                      resetAll()
++                    }}
++                    style={{
++                      padding: '13px 6px', borderRadius: '12px', background: 'transparent',
++                      border, color: '#5c3a1e', fontSize: '13px', fontWeight: 500, cursor: 'pointer',
++                    }}>
++                    {nameId
++                      ? '← 마이페이지로'
++                      : storageBranch === 'naming' ? '새 이름 지어보기' : '다른 이름 풀어보기'}
++                  </button>
+ 
+-                <button onClick={() => nameId ? router.push('/mypage-new') : resetAll()}
+-                  style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border, color: '#5c3a1e', fontSize: '13px', cursor: 'pointer' }}>
+-                  {nameId ? '← 마이페이지로' : '다른 이름 풀어보기'}
+-                </button>
++                  <button onClick={() => router.push(storagePath)}
++                    style={{
++                      padding: '13px 6px', borderRadius: '12px',
++                      background: 'rgba(200,120,60,0.10)', border: '0.5px solid #f0e0d5',
++                      color: subWarm, fontSize: '13px', fontWeight: 500, cursor: 'pointer',
++                    }}>
++                    📜 {storageLabel}
++                  </button>
++                </div>
+               </>
+             )}
+           </>
+diff --git a/app/manseryeok/naming/rename/newresult/page.tsx b/app/manseryeok/naming/rename/newresult/page.tsx
+index 8270c14..b3cee3d 100644
+--- a/app/manseryeok/naming/rename/newresult/page.tsx
++++ b/app/manseryeok/naming/rename/newresult/page.tsx
+@@ -814,10 +814,11 @@ function NewResultInner() {
+             : '—'}
+           yongsin={yongsin}
+           lines={[
++            // ★2026-08-02 — 화면 아코디언과 «같은 차례» (三 자원 · 四 수리)
+             ['음양', result.yinYang.grade],
+             ['발음오행', result.soundFlow.grade],
+-            ['수리 4격', result.suri.grade],
+             ['자원오행', result.resourceFlow.grade],
++            ['수리 4격', result.suri.grade],
+             // ★[내이름 감정] 과 «같은 다섯 관점» 입니다 — 하나도 빠뜨리지 않습니다
+             ['사주와의 만남', result.yongsinBohwan.grade],
+           ]}
+diff --git a/hooks/useResultSaju.ts b/hooks/useResultSaju.ts
+index 61d2a98..7448a47 100644
+--- a/hooks/useResultSaju.ts
++++ b/hooks/useResultSaju.ts
+@@ -20,7 +20,33 @@ export function useResultSaju(
+   const [monthGanji, setMonthGanji] = useState("")
+   const [yearStem, setYearStem] = useState("")
+   useEffect(() => {
+-    if (!yearParam || !monthParam || !dayParam) return
++    // ══════════════════════════════════════════════════════════════
++    //  🔴 2026-08-02 — 「사주 불러오는 중…」 이 «영영» 멈춰 있던 자리
++    //
++    //  [무엇이 있었나]  converting 은 true 로 시작합니다.
++    //    그런데 생년월일이 없으면 여기서 «그냥 나가» 버렸습니다.
++    //    → setConverting(false) 를 지나갈 길이 없어 true 로 남았고,
++    //      손님은 「곧 나오겠지」 하며 빈 화면을 계속 보고 계셨습니다.
++    //
++    //  ★[이제]  «불러올 것이 없다» 는 것도 «끝난 것» 입니다.
++    //    끝났다고 알려야 부르는 쪽이 「사주 정보가 필요해요」 안내를 낼 수 있습니다.
++    //
++    //  ⚠️ 이 훅은 여섯 화면이 나눠 씁니다. 전부 «생년월일이 없을 때»
++    //     따로 안내를 갖고 있습니다 (result-new 의 !info, 오늘운세의 !saju_saved).
++    //     로딩을 붙잡아 두는 것이 그 안내를 «가리고» 있었습니다.
++    // ══════════════════════════════════════════════════════════════
++    //  ⚠️⚠️ 아래 한 줄만 eslint 규칙(set-state-in-effect)을 풉니다.
++    //     [까닭]  그 규칙은 «다른 값에서 끌어낼 수 있는 것을 effect 로 만들지 말라» 는
++    //       뜻입니다. 옳은 말입니다. 다만 여기 converting 은 «불러오는 일» 그 자체의
++    //       처음과 끝이고, 그 일이 이 effect 안에 있습니다.
++    //       ★「부를 것이 없다」는 것도 그 일의 «끝» 입니다. 여기서 알리지 않으면
++    //         알릴 자리가 없습니다.
++    //     ⚠️ 규칙을 따르려면 converting 을 걷어내고 「끝났는가」를 부르는 쪽에서
++    //        따져야 하는데, 이 훅은 «여섯 화면» 이 나눠 씁니다.
++    //        한꺼번에 손대면 멈춤을 고치려다 여섯 곳을 흔듭니다. (교훈 CJ)
++    //     ⚠️ 이 줄을 지우실 때는 여섯 화면을 «모두» 세고 함께 옮기십시오.
++    // eslint-disable-next-line react-hooks/set-state-in-effect
++    if (!yearParam || !monthParam || !dayParam) { setConverting(false); return }
+     async function loadSaju() {
+       setConverting(true)
+       try {
+diff --git a/lib/saju/namingRecords.ts b/lib/saju/namingRecords.ts
+index 2cfabfe..2f8ad21 100644
+--- a/lib/saju/namingRecords.ts
++++ b/lib/saju/namingRecords.ts
+@@ -87,6 +87,55 @@ export const NAMING_KIND_LABEL: Record<NamingKind, string> = {
+   풀이: '이름 풀이', 개명: '개명', 신생아: '신생아',
+ }
+ 
++// ══════════════════════════════════════════════════════════════════
++//  ★2026-08-02 — 「이 기록은 «어느» 보관함의 것인가」 (대표님 지시)
++//
++//  🔴 [무엇이 있었나]  «내 아이 명품작명» 으로 들어와 결과를 본 뒤
++//    하단 보관함 버튼을 누르면 «내 이름 정밀분석 보관함» 이 열렸습니다.
++//    까닭 — 결과 화면(diagnosis)이 보관함 주소를 «붙박이» 로 들고 있었습니다.
++//      router.push('/manseryeok/naming/diagnosis/storage')   ← 언제나 이것
++//    ⚠️ 그 화면은 «두 갈래를 다» 엽니다. 작명 기록도 여기서 다시 봅니다.
++//       그러니 붙박이로 두면 «작명 손님은 반드시 남의 보관함» 으로 갑니다.
++//
++//  ★[이제]  갈래는 기록의 kind 가 정합니다. 그 규칙을 «한 곳에만» 적습니다.
++//    ⚠️ 보관함 화면(NamingStorageView)의 거르기와 «같은 규칙» 이어야 합니다 —
++//       거기도 「풀이인가, 아닌가」로 가릅니다. 두 곳이 갈리면
++//       버튼이 데려간 보관함에 그 기록이 «없는» 일이 생깁니다. (교훈 CJ)
++//    ⚠️ 옛 주소(/naming/diagnosis/storage)는 «그대로 살아 있습니다» — 다만
++//       이제 «가리키지» 않습니다. 북마크·마이페이지로 오시는 분만 그리 옵니다.
++// ══════════════════════════════════════════════════════════════════
++
++/** 보관함은 «둘» 뿐입니다 */
++export type NamingStorageBranch = 'diagnosis' | 'naming'
++
++export const NAMING_STORAGE_PATH: Record<NamingStorageBranch, string> = {
++  diagnosis: '/manseryeok/naming/diagnosis-storage',
++  naming: '/manseryeok/naming/naming-storage',
++}
++
++/** 하단 버튼에 쓰는 짧은 이름 */
++export const NAMING_STORAGE_LABEL: Record<NamingStorageBranch, string> = {
++  diagnosis: '정밀분석 보관함',
++  naming: '명품작명 보관함',
++}
++
++/**
++ * 기록의 갈래 → 보관함.
++ *
++ * ⚠️ «풀이가 아니면 전부 작명» 입니다 (개명·신생아).
++ *    새 kind 가 생겨도 작명 쪽으로 갑니다 — 정밀분석 보관함은
++ *    「내 이름을 푼 것」만 담는 자리이기 때문입니다.
++ * ⚠️ 옛 기록에는 kind 가 없습니다. 없으면 «풀이» 입니다.
++ */
++export function storageBranchOfKind(kind: NamingKind | null | undefined): NamingStorageBranch {
++  return (kind ?? DEFAULT_NAMING_KIND) === '풀이' ? 'diagnosis' : 'naming'
++}
++
++/** URL 로 나르는 열쇠 (?from=naming). ⚠️ 'mypage' 도 이 열쇠를 씁니다 — 덮어쓰지 마십시오 */
++export function storageBranchOfParam(from: string | null | undefined): NamingStorageBranch | null {
++  return from === 'naming' ? 'naming' : from === 'diagnosis' ? 'diagnosis' : null
++}
++
+ interface NamingInputBlob {
+   person: NamingPerson | null   // 진단한 사람의 사주 입력값 (내 것이면 profiles 값)
+   relation: string              // self | 관계
+-- 
+2.43.0
+
+
+From 6f909f03ee44ddefe929206f1f44b34bc059948f Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Sun, 2 Aug 2026 03:29:53 +0000
+Subject: [PATCH 2/6] =?UTF-8?q?=EC=84=B1=EC=94=A8=20=ED=95=9C=EC=9E=90=20?=
+ =?UTF-8?q?=E2=80=94=20=EC=A0=95=EB=B0=80=EB=B6=84=EC=84=9D=20=ED=99=94?=
+ =?UTF-8?q?=EB=A9=B4=EC=97=90=EB=8F=84=20=EC=A0=84=EC=9A=A9=20=ED=91=9C=20?=
+ =?UTF-8?q?=EC=9E=87=EA=B8=B0=20(44=EB=B6=80=202=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+🔴 43부 23차에 만든 성씨 전용 표(126소리·186한자)를 작명 화면에만
+   이었습니다. 성씨를 «고르는» 창구가 둘인데 하나(내 이름 정밀분석)가
+   빠져, '이' 를 누르면 李가 「이름에 잘 쓰지 않는 글자」 흐린 칸에
+   밀려 있었습니다.
+
+① 성씨 칸(첫 글자)에서는 이름용 잣대(isAvoidChar)를 걸지 않습니다
+   → 李가 밝은 칸으로. 작명 화면(newhanja)과 같은 규칙입니다.
+② 성씨 «흔한 차례» 로 앞에 세웁니다 (이 → 李 異 伊)
+   표 차례가 통계청 인구수 순(金→李→朴→崔→鄭)임을 명시하고 검사로 고정
+   ⚠️ 표에 없는 한자는 뒤로 갈 뿐 사라지지 않습니다
+③ 성씨를 고르기 전에는 이름 칸을 잠급니다 (흐림 + disabled + 안내)
+   ⚠️ 이미 고른 이름 글자는 «지우지 않습니다» — 잠그기만 합니다
+   ⚠️ 성씨 칸 자신은 언제나 열려 있습니다
+
+검사 ㉑-a/b/c/d 신설 — 창구를 «세어서», 표는 «값으로» 확인합니다.
+  ⚠️ ㉑-a 가 제 첫 목록의 잘못(newname 은 나르는 자리)을 잡았습니다.
+
+검사 1,398 → 1,427 (작명 동선 471 → 500) · 실패 0
+tsc 통과 · eslint 82/139 (변동 없음)
+---
+ 28-verify-naming-flow.ts                 | 120 +++++++++++++++++++++++
+ app/manseryeok/naming/diagnosis/page.tsx |  97 ++++++++++++++++--
+ lib/saju/surnameHanja.ts                 |  18 +++-
+ 3 files changed, 228 insertions(+), 7 deletions(-)
+
+diff --git a/28-verify-naming-flow.ts b/28-verify-naming-flow.ts
+index 28db2f6..cdd3d78 100644
+--- a/28-verify-naming-flow.ts
++++ b/28-verify-naming-flow.ts
+@@ -18,6 +18,9 @@
+ // ══════════════════════════════════════════════════════════════════
+ 
+ import { readFileSync, existsSync } from 'fs'
++// ★2026-08-02 — 성씨 표는 «정규식» 이 아니라 «값» 으로 봅니다.
++//   ⚠️ 주석에 「인구수 순」이라 적혀 있어도 값이 흩어져 있으면 소용없습니다.
++import { SURNAME_HANJA } from './lib/saju/surnameHanja'
+ 
+ let pass = 0, fail = 0
+ const check = (ok: boolean, msg: string) => {
+@@ -1338,6 +1341,123 @@ console.log('\n━━ ⑳-c 🔴 「사주 불러오는 중…」 이 «끝나
+   }
+ }
+ 
++// ══════════════════════════════════════════════════════════════════
++//  ㉑ ★2026-08-02 — 성씨 한자를 고르는 창구가 «셋» 이다 (대표님 지적)
++//
++//   🔴 [무엇이 있었나]  43부 23차에 「李가 안 보인다」를 잡고 전용 표를 만들었는데,
++//     그 표를 «작명 두 화면» 에만 이었습니다. 창구는 셋인데 둘만 고쳤습니다.
++//     → 「내 이름 정밀분석」에서 '이' 를 누르면 李가 «이름에 잘 쓰지 않는 글자»
++//       흐린 칸에 밀려 있었습니다.
++//   ★이 그물은 «셋을 함께» 셉니다. 하나라도 빠지면 여기서 막힙니다.
++//   ⚠️ 창구가 넷째로 늘어나면 아래 DOORS 에 «반드시» 한 줄 더하십시오.
++// ══════════════════════════════════════════════════════════════════
++console.log('\n━━ ㉑-a ★성씨 전용 표 — 성씨를 «고르는» 창구가 모두 지나는가 ━━')
++{
++  // ⚠️ 먼저 «창구가 몇인지» 를 셉니다. 목록을 손으로 적어 두면 늘어난 것을 놓칩니다.
++  //    hanja 표를 직접 캐는 화면이 곧 «한자를 고르는» 화면입니다.
++  const PICKERS = [
++    'app/manseryeok/naming/diagnosis/page.tsx',      // 내 이름 정밀분석
++    'app/manseryeok/naming/rename/newhanja/page.tsx', // 작명 Step 3
++    'app/manseryeok/naming/rename/hanja/page.tsx',    // 옛 개명 — ★성씨는 «잠깁니다»
++  ]
++  const found = PICKERS.filter(p => /from\('hanja'\)/.test(read(p)))
++  check(found.length === 3,
++    `한자 표를 직접 캐는 화면이 셋입니다 (${found.length})`)
++
++  // ★그 가운데 «성씨를» 고르는 곳은 둘입니다.
++  //   ⚠️ 셋째(rename/hanja)는 「성씨는 개명 대상이 아니다」 가 대표님 확정이라
++  //      성씨 칸을 아예 안 엽니다. 그래서 표가 필요 없습니다.
++  const SURNAME_DOORS: [string, string][] = [
++    ['내 이름 정밀분석 (diagnosis)', 'app/manseryeok/naming/diagnosis/page.tsx'],
++    ['작명 Step 3 (newhanja)', P.nh],
++  ]
++  for (const [label, path] of SURNAME_DOORS) {
++    const src = codeOf(read(path))
++    check(/from '@\/lib\/saju\/surnameHanja'/.test(src),
++      `★${label} 이 성씨 전용 표를 씁니다`)
++  }
++  // ⚠️ 셋째가 «말없이» 성씨를 고르게 바뀌면 여기서 막힙니다
++  check(/성씨는 개명 대상이 아닙니다/.test(read('app/manseryeok/naming/rename/hanja/page.tsx')),
++    `⚠️ 옛 개명 화면은 성씨를 «고르지 않습니다» (근거가 코드에 적혀 있습니다)`)
++
++  // ⚠️ 「나르는」 자리와 「고르는」 자리를 헷갈리지 마십시오 —
++  //    newname 은 성씨 한자를 «받아서 넘길» 뿐입니다. 표가 필요 없습니다.
++  check(/surnameHanja: surnameHanja \|\| null/.test(codeOf(S.nn)),
++    `⚠️ 작명 Step 0 은 성씨 한자를 «나르기만» 합니다 (고르지 않습니다)`)
++
++  // ⚠️ «들여오기만» 하고 안 쓰면 소용이 없습니다 — 실제로 줄 세우는지 봅니다
++  const diag = codeOf(read('app/manseryeok/naming/diagnosis/page.tsx'))
++  check(/surnameRank\(syl, rowHanja\(a\)\)/.test(diag),
++    `★정밀분석이 성씨 «흔한 차례» 로 줄을 세웁니다`)
++  check(/surnameRank/.test(codeOf(S.nh)),
++    `★작명 Step 3 도 같은 잣대로 줄을 세웁니다`)
++}
++
++console.log('\n━━ ㉑-b 🔴 성씨 칸에서는 «거르지 않는가» (李가 밝은 칸에) ━━')
++{
++  const diag = codeOf(read('app/manseryeok/naming/diagnosis/page.tsx'))
++  // ★성씨 칸이면 avoidList 가 «비어» 있어야 합니다 — 흐린 칸으로 밀지 않습니다
++  check(/const avoidList = isSurnameSlot \? \[\] :/.test(diag),
++    `★성씨 칸에서는 «흐린 칸» 이 아예 없습니다`)
++  check(/const normalList = isSurnameSlot \? surnameSorted :/.test(diag),
++    `★성씨 칸은 표가 준 것을 «그대로» 냅니다`)
++  check(/const isSurnameSlot = pickerIdx === 0/.test(diag),
++    `성씨 칸은 «첫 글자» 입니다`)
++  // ⚠️ 이름 칸은 «예전 그대로» 걸러야 합니다 — 거기는 «고르는» 자리입니다
++  check(/hanjaList\.filter\(\(r\) => isAvoidChar\(r\)\)/.test(diag),
++    `⚠️ 이름 칸은 예전 그대로 거릅니다 (성씨만 예외입니다)`)
++  // ⚠️ 표에 없는 한자를 «빼지» 않습니다 — 뒤로 보낼 뿐입니다
++  const sh = codeOf(read('lib/saju/surnameHanja.ts'))
++  check(/return i === -1 \? 999 : i/.test(sh),
++    `⚠️ 표에 없는 한자는 «뒤로» 갈 뿐 사라지지 않습니다`)
++}
++
++console.log('\n━━ ㉑-c ★성씨를 고르기 «전» 에는 이름 칸이 잠기는가 ━━')
++{
++  const diag = codeOf(read('app/manseryeok/naming/diagnosis/page.tsx'))
++  check(/const locked = i > 0 && !chars\[0\]/.test(diag),
++    `★성씨가 비면 이름 칸이 잠깁니다`)
++  check(/disabled=\{locked\}/.test(diag) && /opacity: locked \? 0\.4 : 1/.test(diag),
++    `★잠긴 칸은 흐리고 «눌리지 않습니다»`)
++  check(/먼저 <b>성씨 한자<\/b>를 골라주세요/.test(diag),
++    `★잠근 «까닭» 을 말해 줍니다`)
++  // ⚠️⚠️ 이미 고른 이름 글자를 «지우지 않습니다» (대표님 확정 · 가 방식)
++  check(!/setChars\(\[\]\)/.test(diag) || !/locked[\s\S]{0,200}setChars\(\[\]\)/.test(diag),
++    `⚠️ 잠글 때 이미 고른 이름 글자를 «지우지» 않습니다`)
++  // ★성씨 칸 자신은 «언제나» 열려 있어야 합니다 — 잠그면 열 길이 없습니다
++  check(/i > 0/.test(diag), `★성씨 칸(i===0)은 언제나 열려 있습니다`)
++}
++
++console.log('\n━━ ㉑-d ★성씨 표 차례 — 통계청 인구수 순인가 (대표님 확정) ━━')
++{
++  // ⚠️ 정규식이 아니라 «표를 직접 불러» 셉니다 — 주석이 아니라 «값» 을 봅니다
++  const keys = Object.keys(SURNAME_HANJA)
++  const top5 = keys.slice(0, 5).map(k => SURNAME_HANJA[k][0])
++  check(top5.join('→') === '金→李→朴→崔→鄭',
++    `★앞 다섯이 인구수 순입니다 (${top5.join('→')})`)
++  check(keys.slice(0, 12).join(' ') === '김 이 박 최 정 강 조 윤 장 임 한 오',
++    `★앞 열둘까지 인구수 순입니다`)
++
++  // ⚠️ 한 소리 «안» 의 차례도 흔한 것이 앞이어야 합니다 — 손님 눈에 보이는 것은 이쪽입니다
++  check(SURNAME_HANJA['이']?.[0] === '李', `★「이」의 첫 한자가 李 입니다 (화면 맨 위)`)
++  check(SURNAME_HANJA['정']?.[0] === '鄭', `★「정」의 첫 한자가 鄭 입니다`)
++  check(SURNAME_HANJA['류']?.[0] === '柳', `★「류」의 첫 한자가 柳 입니다`)
++
++  // ★수량 — 43부 확정값이 흔들리지 않았는가
++  const flat = Object.values(SURNAME_HANJA).flat()
++  check(keys.length === 126, `126 소리 그대로입니다 (${keys.length})`)
++  check(new Set(flat).size === 186, `고유 한자 186 그대로입니다 (${new Set(flat).size})`)
++  // ⚠️ 연 수(189)가 고유 수(186)보다 큰 것은 «일부러» 입니다 — 두음법칙
++  check(flat.length - new Set(flat).size === 3,
++    `⚠️ 두 소리에 걸친 셋(柳·劉·羅)이 그대로입니다 — 두음법칙이라 일부러입니다`)
++
++  // ⚠️ 43부에 «넣지 않기로 확정» 한 다섯이 되살아나지 않았는가
++  check(!SURNAME_HANJA['도']?.includes('鄭'), `⚠️ 도←鄭 (오타)가 없습니다`)
++  check(!SURNAME_HANJA['성']?.includes('刑'), `⚠️ 성←刑 (오타)가 없습니다`)
++  check(!SURNAME_HANJA['노']?.includes('老'), `⚠️ 노←老 (확인 못 함)가 없습니다`)
++  check(!SURNAME_HANJA['소']?.includes('肖'), `⚠️ 소←肖 (초로도 읽음)가 없습니다`)
++}
++
+ console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
+ if (fail > 0) {
+   console.log('  ┌────────────────────────────────────────────────────────────┐')
+diff --git a/app/manseryeok/naming/diagnosis/page.tsx b/app/manseryeok/naming/diagnosis/page.tsx
+index 2b42ca9..f92cdc1 100644
+--- a/app/manseryeok/naming/diagnosis/page.tsx
++++ b/app/manseryeok/naming/diagnosis/page.tsx
+@@ -15,6 +15,21 @@ import {
+ } from '@/lib/saju/hanjaRow'
+ // ★2026-07-31 (40부 3차) 두음법칙 안내 — «판정은 바꾸지 않습니다» (교재는 표기음 그대로)
+ import { dueumPairIfReal, dueumNotice } from '@/lib/saju/sound/dueum'
++// ══════════════════════════════════════════════════════════════════
++//  🔴★2026-08-02 — 성씨 «전용 표» 를 이 화면에도 잇습니다 (대표님 지적)
++//
++//   [무엇이 있었나]  43부 23차에 「李가 안 보인다」를 잡고 표를 만들었는데,
++//     그 표를 «작명 두 화면» 에만 이었습니다. 성씨 한자를 고르는 창구는 «셋» 인데
++//     이 화면(내 이름 정밀분석)이 빠졌습니다.
++//     → 「이도련」을 풀려고 '이' 를 누르면 李가 위 칸에 없고,
++//       «이름에 잘 쓰지 않는 글자» 흐린 칸에 「오얏 이」로 밀려 있었습니다.
++//     ⚠️ 성씨는 «고르는 것» 이 아니라 «타고나는 것» 입니다.
++//        이름용 잣대로 흐리게 하면 집안의 글자를 화면이 나무라는 셈이 됩니다.
++//
++//   ★교훈 [다 세고 옮길 것] — 값을 쓰는 곳을 «모두» 세고 옮길 것.
++//     28-verify 의 ㉑ 그물이 이제 «세 창구» 를 함께 셉니다.
++// ══════════════════════════════════════════════════════════════════
++import { surnameRank } from '@/lib/saju/surnameHanja'
+ // ★2026-08-01 (41부 Step 3 · UI) — 사주 요약 · 이름에 담을 기운 · 명리적성
+ import NamingSajuSummary from './components/NamingSajuSummary'
+ import NamingAptitude from './components/NamingAptitude'
+@@ -791,8 +806,32 @@ function DiagnosisInner() {
+ 
+   const slotLabel = (i: number) => i === 0 ? '성(姓)' : `이름 ${i}글자`
+ 
+-  const normalList = hanjaList.filter((r) => !isAvoidChar(r))
+-  const avoidList = hanjaList.filter((r) => isAvoidChar(r))
++  // ══════════════════════════════════════════════════════════════
++  //  ★2026-08-02 — 성씨 칸은 «거르지 않습니다» (대표님 지시 ①②)
++  //
++  //   ⚠️ 성씨 칸(첫 글자)에서는 「이름에 잘 쓰지 않는 글자」 잣대를 걸지 않습니다.
++  //      그 잣대는 «이름을 고를 때» 의 것입니다. 성씨는 타고나는 것이라
++  //      고르고 말고가 없습니다. 작명 화면(newhanja)과 «같은 규칙» 입니다.
++  //   ★그리고 성씨 전용 표의 «흔한 차례» 로 앞에 세웁니다 —
++  //      「이」면 李 → 異 → 伊, 「김」이면 金, 「박」이면 朴 이 맨 앞입니다.
++  //   ⚠️ 표에 없는 한자를 «빼지 않습니다» — 뒤로 보낼 뿐입니다.
++  //      드문 집안 글자가 이 표에 없을 수 있습니다. 막으면 그 집안이 못 씁니다.
++  //   ⚠️ 획수 차례는 «그 다음» 입니다 — 성씨가 아닌 것끼리는 예전 그대로입니다.
++  // ══════════════════════════════════════════════════════════════
++  const isSurnameSlot = pickerIdx === 0
++  const surnameSorted = (() => {
++    if (!isSurnameSlot) return hanjaList
++    const syl = syllables[0] ?? ''
++    return [...hanjaList].sort((a, b) => {
++      const ra = surnameRank(syl, rowHanja(a))
++      const rb = surnameRank(syl, rowHanja(b))
++      if (ra !== rb) return ra - rb
++      return rowStrokes(a) - rowStrokes(b)
++    })
++  })()
++
++  const normalList = isSurnameSlot ? surnameSorted : hanjaList.filter((r) => !isAvoidChar(r))
++  const avoidList = isSurnameSlot ? [] : hanjaList.filter((r) => isAvoidChar(r))
+ 
+   const hanjaCard = (row: HanjaRow, i: number, dim: boolean) => (
+     <div key={i}
+@@ -870,15 +909,38 @@ function DiagnosisInner() {
+                 <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', marginBottom: '20px', flexWrap: 'wrap' }}>
+                   {syllables.map((syl, i) => {
+                     const c = chars[i]
++                    // ══════════════════════════════════════════════════
++                    //  ★2026-08-02 — 성씨를 고르기 «전» 에는 이름 칸을 잠급니다
++                    //    (대표님 지시 ③ · 가) 방식)
++                    //
++                    //   [까닭]  성씨 획수에서 수리 4격이 시작하고,
++                    //     성씨 오행에서 자원오행 흐름이 출발합니다.
++                    //     성씨가 비면 뒤의 글자를 아무리 골라도 «판정이 서지 않습니다».
++                    //     ★그러니 «순서» 를 화면이 지켜 드려야 합니다.
++                    //
++                    //   ⚠️⚠️ 이미 고른 이름 글자를 «지우지 않습니다» (대표님 확정).
++                    //      잠그기만 합니다. 성씨를 다시 고르면 그대로 돌아옵니다.
++                    //      ★세 글자를 다 고른 뒤 성씨를 눌렀다가 닫으셨다고 해서
++                    //        두 글자가 날아가면 안 됩니다.
++                    //   ⚠️ 성씨 칸(i===0) 자신은 «언제나» 열려 있습니다 —
++                    //      잠그면 열 길이 없어집니다.
++                    // ══════════════════════════════════════════════════
++                    const locked = i > 0 && !chars[0]
+                     return (
+                       <div key={i} style={{ textAlign: 'center' }}>
+-                        <button onClick={() => openPicker(i)} className="active:scale-95"
++                        <button
++                          onClick={() => { if (!locked) openPicker(i) }}
++                          disabled={locked}
++                          aria-disabled={locked}
++                          title={locked ? '먼저 성씨 한자를 골라주세요' : undefined}
++                          className={locked ? undefined : 'active:scale-95'}
+                           style={{
+                             width: '78px', height: '78px', borderRadius: '50%',
+                             background: c ? 'rgba(200,120,60,0.10)' : cardBg,
+                             border: c ? `2px solid ${gold}` : '1px dashed #d8a87e',
+                             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+-                            cursor: 'pointer', transition: 'transform 0.15s ease',
++                            cursor: locked ? 'not-allowed' : 'pointer', transition: 'transform 0.15s ease',
++                            opacity: locked ? 0.4 : 1,
+                           }}>
+                           {c ? (
+                             <>
+@@ -899,6 +961,21 @@ function DiagnosisInner() {
+                     )
+                   })}
+                 </div>
++                {/* ★2026-08-02 — 잠긴 까닭을 «말해 줍니다».
++                    ⚠️ 흐리게만 해 두면 「왜 안 눌리지」가 됩니다. 잠근 것과 까닭은 한 쌍입니다. */}
++                {!chars[0] && syllables.length >= 2 && (
++                  <div style={{
++                    fontSize: '12px', lineHeight: 1.7, color: '#96502e',
++                    background: 'rgba(200,120,60,0.07)', border: '1px solid rgba(200,120,60,0.25)',
++                    borderRadius: '10px', padding: '10px 12px', marginBottom: '16px', textAlign: 'center',
++                  }}>
++                    먼저 <b>성씨 한자</b>를 골라주세요<br />
++                    <span style={{ fontSize: '11px', color: '#5c3a1e' }}>
++                      성씨의 획수와 오행에서 수리 4격·자원오행이 시작돼요
++                    </span>
++                  </div>
++                )}
++
+                 <div style={{ fontSize: '11px', color: '#5c3a1e', marginBottom: '20px', lineHeight: 1.6 }}>
+                   · 원을 누르면 그 글자의 한자가 자동으로 나와요<br />
+                   · 이름을 바꾸려면 위에 다시 입력하고 확인을 누르세요
+@@ -1233,8 +1310,16 @@ function DiagnosisInner() {
+               borderRadius: '18px', padding: '20px 16px', boxShadow: '0 16px 40px rgba(90,50,30,0.2)',
+               maxHeight: '80vh', display: 'flex', flexDirection: 'column',
+             }}>
+-            <div style={{ fontSize: '15px', fontWeight: 'bold', color: gold, marginBottom: '14px' }}>
+-              &lsquo;{syllables[pickerIdx]}&rsquo; 한자 고르기
++            <div style={{ fontSize: '15px', fontWeight: 'bold', color: gold, marginBottom: '4px' }}>
++              &lsquo;{syllables[pickerIdx]}&rsquo; {isSurnameSlot ? '성씨 한자 고르기' : '한자 고르기'}
++            </div>
++            {/* ★2026-08-02 — 성씨 칸에서는 «거르지 않았다» 는 것을 밝혀 둡니다.
++                ⚠️ 낯선 글자가 함께 보이는 것이 «잘못» 이 아니라는 것을 알려야
++                   손님이 「왜 이런 게 나오지」 하고 헤매지 않으십니다. */}
++            <div style={{ fontSize: '11px', color: '#5c3a1e', marginBottom: '14px', lineHeight: 1.6 }}>
++              {isSurnameSlot
++                ? '집안에서 쓰시는 한자를 골라주세요. 흔한 성씨 한자가 위에 있어요'
++                : '\u00a0'}
+             </div>
+ 
+             <div style={{ overflowY: 'auto', flex: 1 }}>
+diff --git a/lib/saju/surnameHanja.ts b/lib/saju/surnameHanja.ts
+index df2a587..748e68c 100644
+--- a/lib/saju/surnameHanja.ts
++++ b/lib/saju/surnameHanja.ts
+@@ -37,9 +37,25 @@
+  */
+ export const SURNAME_HANJA: Record<string, string[]> = {
+   // ★★[확정] 2026-08-01 — 126 소리 · 186 한자 (대표님 확정)
++  //   ⚠️ 연 수는 189 이고 «고유 한자» 는 186 입니다 — 柳·劉(류/유)와 羅(나/라)가
++  //      두 소리에 걸쳐 있습니다. 두음법칙 때문이며 «일부러» 둘 다 적었습니다.
+   //   ⚠️ 더하실 때는 «확인된 것만». 확신이 안 서면 넣지 말고 아래 주석에 적어 두십시오.
+   //      hanja 표에 있으면 「그 외」 자리에 그대로 나옵니다 — 못 고르는 것이 아닙니다.
+-  // ── 아주 흔한 ──
++  //
++  // ══════════════════════════════════════════════════════════════
++  //  ★2026-08-02 — 이 차례는 «통계청 인구수 순» 입니다 (대표님 확정)
++  //
++  //   金 → 李 → 朴 → 崔 → 鄭 → 姜 → 趙 → 尹 → 張 → 林 → 韓 → 吳 → …
++  //
++  //   ⚠️⚠️ 다만 이 «소리 차례» 는 화면에 «보이지 않습니다».
++  //      표는 소리로 찾는 것이라(「이」를 누르면 이 줄만 옵니다),
++  //      김·이·박이 «한 목록에 함께» 뜨는 일은 없습니다.
++  //      ★손님 눈에 보이는 것은 «한 소리 안의» 차례입니다 — 이: 李 異 伊.
++  //   ★그럼에도 인구수 순으로 두는 까닭 — 사람이 이 파일을 읽고 고칠 때
++  //     「흔한 것부터」라는 잣대가 있어야 어디에 끼워 넣을지 알 수 있습니다.
++  //   ⚠️ 28-verify 의 ㉑-d 가 앞 다섯을 «세어서» 지킵니다. 흩지 마십시오.
++  // ══════════════════════════════════════════════════════════════
++  // ── 아주 흔한 (인구수 1~) ──
+   김: ['金'],
+   이: ['李', '異', '伊'],
+   박: ['朴'],
+-- 
+2.43.0
+
+
+From 72bb64a927f2ccbdec238e0bc7f78bffae6ee6a0 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Sun, 2 Aug 2026 04:33:10 +0000
+Subject: [PATCH 3/6] =?UTF-8?q?=EB=B3=B4=EA=B4=80=ED=95=A8=20=EB=B6=84?=
+ =?UTF-8?q?=EB=A6=AC=20=C2=B7=20=EC=84=B1=EC=94=A8=20=EB=A8=BC=EC=A0=80=20?=
+ =?UTF-8?q?=C2=B7=20=EC=97=AC=EC=84=B1=EC=A0=81=20=EC=96=B4=EA=B0=90=20?=
+ =?UTF-8?q?=C2=B7=20=EA=B5=90=EC=9E=AC=20=EC=A0=84=EC=88=98=20=EB=8C=80?=
+ =?UTF-8?q?=EC=A1=B0=20(44=EB=B6=80=203=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+① 보관함 — 상세 «주소» 를 갈랐습니다
+   /manseryeok/naming/naming-record   작명 기록  ★신설
+   /manseryeok/naming/diagnosis       풀이 기록
+   ⚠️ 화면은 «한 부품» 입니다 — 주소만 둘입니다 (교훈 CJ)
+   ⚠️ 옛 주소(diagnosis?from=naming)도 그대로 듣습니다 (교훈 AM)
+   「◯◯으로 가기 · N건 →」 줄 삭제 (대표님 지시)
+   ⚠️ 기록은 여전히 하나도 지워지지 않습니다 — 거르기는 화면에서만
+
+② 작명 Step 3 — 성씨보다 이름 칸이 먼저 열리던 것
+   🔴 needPick 이 surnameLoaded(아무 성씨나) 를 봤습니다.
+      앞서 柳로 지으신 분이 閔씨 아기를 지으면 성씨 칸을 건너뛰었습니다.
+   ★loadedSurHangul === want (loadedSurnameFits 와 같은 잣대) 로 고쳤습니다.
+   ★칸에도 «보이는 잠금» 을 더했습니다 (두 겹).
+
+③ 「여성적」 어감 — 민건모·민군모가 앞에 오던 것
+   ★끝 글자의 «결» 까지 보아 앞줄에 세웁니다 (FEMININE_TAIL · 98개)
+   ⚠️ «거르지» 않습니다 — 후보가 0개가 되면 안 됩니다. 차례만 바꿉니다.
+   ⚠️ 점수는 한 글자도 바꾸지 않았습니다 (교재 밖 취향 · 길흉 아님)
+
+④ 교재 1장 이름 사전 — 전수 대조로 바로잡음 (1,256 → 1,258)
+   오타 5  김택→강택 · 국민→국만 · 병칠→병철 · 이룬→이륜 · 신흥→신홍
+   누락 2  남혁(火_ㄴ) · 삼우(金_ㅅ)
+   차례 5  삼호 · 상필 상학 · 서원 서윤 · 서필 — 교재 차례로
+   ⚠️ 「김택」은 성씨 김과 겹쳐 «김김택» 이 나올 자리였습니다
+
+검사 ㉑-e/f/g 신설 · ⑰-a 재작성 — 1,427 → 1,484 · 실패 0
+tsc 통과 · eslint 82/139 (변동 없음)
+---
+ 26-verify-namedict.ts                         |  53 ++++++++-
+ 28-verify-naming-flow.ts                      | 106 +++++++++++++++++-
+ .../naming/components/NamingStorageView.tsx   |  68 +++++------
+ app/manseryeok/naming/diagnosis/page.tsx      |  12 +-
+ app/manseryeok/naming/naming-record/page.tsx  |  30 +++++
+ .../naming/rename/newhanja/page.tsx           |  55 +++++++--
+ lib/saju/nameRecommend.ts                     |  68 +++++++++++
+ lib/saju/tables/nameDict.ts                   |  71 ++++++------
+ 8 files changed, 375 insertions(+), 88 deletions(-)
+ create mode 100644 app/manseryeok/naming/naming-record/page.tsx
+
+diff --git a/26-verify-namedict.ts b/26-verify-namedict.ts
+index 37e960f..b98aaca 100644
+--- a/26-verify-namedict.ts
++++ b/26-verify-namedict.ts
+@@ -13,11 +13,53 @@ const check = (ok: boolean, msg: string) => {
+ }
+ 
+ console.log('\n━━ ⑰-a 전사 규모 ━━')
+-check(NAME_DICT_TOTAL === 1256, `이름 ${NAME_DICT_TOTAL}개 (기대 1,256)`)
++// ══════════════════════════════════════════════════════════════════
++//  ★2026-08-02 — 1,256 → 1,258 (대표님 확정 · 교재 전수 재대조)
++//
++//   [무엇을 했나]  교재 35~38쪽을 300dpi·600dpi 로 두 번 떠서 한국어 OCR 로
++//     따로 읽고, 차례까지 맞춘 대조로 어긋난 자리를 전부 뽑았습니다.
++//     의심 낱말은 5배로 확대해 다시 읽혀 가렸습니다.
++//     ★교차 검증 — 교재 목록은 소리마다 «가나다순» 이라, 사전에서 그 차례가
++//       깨진 자리를 따로 세어 맞대어 보았습니다 (김택·신흥이 여기서 걸렸습니다).
++//
++//   🔴 [글자가 틀렸던 다섯]
++//     김택 → 강택   ⚠️ 성씨 「김」과 겹쳐 «김김택» 이 나올 자리였습니다
++//     국민 → 국만 · 병칠 → 병철 · 이룬 → 이륜 · 신흥 → 신홍
++//   🔴 [빠져 있던 둘]  남혁(火_ㄴ) · 삼우(金_ㅅ)   ⇒ 1,256 + 2 = 1,258
++//   ⚠️ [차례만 달랐던 다섯]  삼호 · 상필 상학 · 서원 서윤 · 서필
++//      → 교재 차례로 되돌렸습니다. 이름 자체는 원래 다 있었습니다.
++//
++//   ⚠️ 이 값을 함부로 되돌리지 마십시오. 되돌리면 위 일곱이 함께 사라집니다.
++//      ★다음에 또 재실 때는 「교재는 소리마다 가나다순」이라는 잣대가 가장 잘 듣습니다.
++// ══════════════════════════════════════════════════════════════════
++check(NAME_DICT_TOTAL === 1258, `이름 ${NAME_DICT_TOTAL}개 (기대 1,258)`)
+ check(Object.keys(NAME_DICT).length === 12, `묶음 ${Object.keys(NAME_DICT).length}개 (기대 12)`)
+ {
+   const all = Object.values(NAME_DICT).flatMap(g => [...g.names])
+   check(new Set(all).size === all.length, `중복 ${all.length - new Set(all).size}건`)
++
++  // ★고친 일곱이 «그대로 있는가» — 다음 세션이 되돌리면 여기서 막힙니다
++  const S = new Set(all)
++  for (const n of ['강택', '국만', '병철', '이륜', '신홍', '남혁', '삼우']) {
++    check(S.has(n), `★교재 대조로 바로잡은 「${n}」이 있습니다`)
++  }
++  for (const n of ['김택', '국민', '병칠', '이룬', '신흥']) {
++    check(!S.has(n), `⚠️ 옛 오타 「${n}」이 되살아나지 않았습니다`)
++  }
++  // ⚠️ 「김택」은 성씨와 겹치던 자리입니다 — 사전에 성씨 소리로 시작하는 오타가
++  //    다시 들어오면 「김김택」 같은 짝이 생깁니다
++  check(!all.some(n => n.startsWith('김')), `⚠️ 「김」으로 시작하는 이름이 없습니다`)
++
++  // ★차례 — 교재는 소리마다 «가나다순» 입니다.
++  //   ⚠️ 교재 자체가 몇 군데 어긋나 있어(완우 와운·용준 용오 …) 0을 요구하지 «않습니다».
++  //      다만 그 수가 «늘면» 전사가 흐트러진 것입니다.
++  let broken = 0
++  for (const g of Object.values(NAME_DICT)) {
++    for (let i = 1; i < g.names.length; i++) {
++      if (g.names[i - 1].localeCompare(g.names[i], 'ko') > 0) broken++
++    }
++  }
++  check(broken <= 9, `★가나다 차례가 깨진 자리 ${broken}곳 (교재 자체의 어긋남 · 9 이하)`)
+ }
+ 
+ console.log('\n━━ ⑰-b 🔴 초성 → 오행이 «교재 3장» 과 맞는가 ━━')
+@@ -31,7 +73,7 @@ console.log('\n━━ ⑰-b 🔴 초성 → 오행이 «교재 3장» 과 맞는
+     }
+   }
+   check(bad.length === 0,
+-    `★1,256개 전부 첫소리가 그 오행입니다 — 어긋남 ${bad.slice(0, 3).join(', ') || '0건'}`)
++    `★1,258개 전부 첫소리가 그 오행입니다 — 어긋남 ${bad.slice(0, 3).join(', ') || '0건'}`)
+ }
+ 
+ console.log('\n━━ ⑰-c ⚠️ 교재에 «없는» 것을 채우지 않았는가 (교훈 EJ) ━━')
+@@ -49,14 +91,17 @@ console.log('\n━━ ⑰-d ⚠️ 오행별 개수가 «기울어» 있다는 
+   for (const [e, n] of cnt) console.log(`     ${e}  ${String(n).padStart(4)}개`)
+   const mok = namesByElement('목').length
+   const geum = namesByElement('금').length
+-  check(mok === 65 && geum === 575, `목 65 · 금 575 (기울기 ${(geum / mok).toFixed(1)}배)`)
++  // ★2026-08-02 — 삼우(金_ㅅ)를 보충해 금이 575 → 576 이 되었습니다.
++  //   ⚠️ 기울기는 «여전히» 8.9배입니다. 이 값이 좋아진 것이 아닙니다 —
++  //      교재 자체가 기울어 있고, 그 사실을 바꾸지 않았습니다.
++  check(mok === 65 && geum === 576, `목 65 · 금 576 (기울기 ${(geum / mok).toFixed(1)}배)`)
+   // ★사전만으로는 목(木)이 필요한 손님을 못 채웁니다. 규칙 추천 엔진(F)이 «먼저» 입니다
+   check(mok < 100,
+     `★목이 100개 미만입니다 — 사전은 «보조», 규칙 추천(F)이 «먼저» (대표님 확정)`)
+ }
+ 
+ console.log('\n━━ ⑰-e 조회 함수 ━━')
+-check(namesByElement('금').length === 575, `오행으로 찾기`)
++check(namesByElement('금').length === 576, `오행으로 찾기`)
+ check(namesByCho('ㄱ').length === 65, `첫소리로 찾기`)
+ check(namesByElement('목' as never).every(n => n.length >= 1), `빈 이름이 없습니다`)
+ 
+diff --git a/28-verify-naming-flow.ts b/28-verify-naming-flow.ts
+index cdd3d78..df9c208 100644
+--- a/28-verify-naming-flow.ts
++++ b/28-verify-naming-flow.ts
+@@ -21,6 +21,9 @@ import { readFileSync, existsSync } from 'fs'
+ // ★2026-08-02 — 성씨 표는 «정규식» 이 아니라 «값» 으로 봅니다.
+ //   ⚠️ 주석에 「인구수 순」이라 적혀 있어도 값이 흩어져 있으면 소용없습니다.
+ import { SURNAME_HANJA } from './lib/saju/surnameHanja'
++// ★2026-08-02 — 사전과 추천은 «돌려서» 봅니다. 붙박이 표본이 아니라 실제 결과를 잽니다.
++import { NAME_DICT } from './lib/saju/tables/nameDict'
++import { recommendNames } from './lib/saju/nameRecommend'
+ 
+ let pass = 0, fail = 0
+ const check = (ok: boolean, msg: string) => {
+@@ -834,8 +837,19 @@ console.log('\n━━ ⑲-K ★보관함 «완전» 분리 — 탭 없음 (43부
+   check(/otherLabel: '내 아이 명품작명으로 가기'/.test(v)
+      && /otherLabel: '내 이름 정밀분석으로 가기'/.test(v),
+     `★옆 보관함 안내가 «새 이름» 입니다`)
+-  check(/hiddenCount > 0[\s\S]{0,80}건 →/.test(v),
+-    `⚠️ 저쪽에 몇 건인지 알려 드립니다 (사라진 줄 알고 놀라시지 않게)`)
++  // ══════════════════════════════════════════════════════════════
++  //  ★2026-08-02 — 이 검사가 «옛 모습» 을 지키고 있었습니다.
++  //    대표님 지시로 「◯◯으로 가기 · N건 →」 줄을 지우려는데 여기서 막혔습니다.
++  //    ★코드를 되돌리지 않고 «검사를 뒤집었습니다». (교훈 [검사가 지킨다])
++  //    [까닭]  그 줄 때문에 두 보관함이 «아직 하나» 처럼 보였습니다.
++  //  ⚠️ 다만 «기록이 지워지지 않는다» 는 것은 여전히 지켜야 합니다 — 아래로 옮겼습니다.
++  // ══════════════════════════════════════════════════════════════
++  check(!/hiddenCount > 0[\s\S]{0,80}건 →/.test(v),
++    `★「◯◯으로 가기 · N건」 줄이 «없습니다» (대표님 지시)`)
++  check(/listNamingRecords\(\)\.then/.test(v),
++    `⚠️⚠️ 그래도 기록은 «전부» 불러옵니다 — 거르기는 화면에서만 합니다`)
++  check(/거르기는 화면에서만/.test(read(P.sto)),
++    `⚠️ 「지우기가 아니라 거르기」 라는 근거가 코드에 남아 있습니다`)
+ 
+   // ④ ⚠️ 거르기는 «화면에서만» — 기록은 하나도 안 지웁니다
+   check(!/listNamingRecords\((mode|view)/.test(v),
+@@ -1277,8 +1291,21 @@ console.log('\n━━ ⑳-a ★결과 화면 → «제» 보관함 (붙박이 
+     `★결과 화면에 보관함 주소를 «박아 넣은» 자리가 없습니다${hardCoded.length ? ` — ${hardCoded.join(' , ')}` : ''}`)
+ 
+   // ④ 보관함이 기록을 열 때 «어디서 왔는지» 를 실어 보내는가
+-  check(/from=\$\{storageBranchOfKind\(r\.kind\)\}/.test(sto),
+-    `★보관함이 기록을 열 때 갈래를 함께 보냅니다 (기록이 오기 «전» 을 받칩니다)`)
++  // ★2026-08-02 — 주소를 갈랐습니다 (대표님 지시 ①-가)
++  check(/\/manseryeok\/naming\/naming-record/.test(sto),
++    `★작명 기록은 «전용 주소» 로 엽니다 (naming-record)`)
++  check(/\?recordId=\$\{r\.id\}&from=\$\{br\}/.test(sto),
++    `★갈래도 함께 보냅니다 (기록이 오기 «전» 을 받칩니다)`)
++  check(existsSync('app/manseryeok/naming/naming-record/page.tsx'),
++    `★작명 기록 전용 주소의 문이 있습니다`)
++  // ⚠️⚠️ 화면을 «복사하지» 않았는가 — 복사하면 한쪽만 고치는 날이 옵니다 (교훈 CJ)
++  const door = read('app/manseryeok/naming/naming-record/page.tsx')
++  check(/export \{ default \} from '@\/app\/manseryeok\/naming\/diagnosis\/page'/.test(door),
++    `⚠️⚠️ 화면은 «한 부품» 입니다 — 주소만 둘입니다`)
++  check(door.length < 4000, `⚠️ 그 문은 «얇습니다» (${door.length}자) — 판정이 들어 있지 않습니다`)
++  // ★주소가 갈래를 «먼저» 정하는가 — 기록이 오기 전부터 화면이 옳게 서야 합니다
++  check(/pathname\?\.includes\('\/naming-record'\) \? 'naming' : null/.test(diag),
++    `★주소가 «가장 먼저» 갈래를 정합니다`)
+ 
+   // ⑤ ⚠️ 옛 주소는 «살아 있되» 가리키지 않습니다 (교훈 AM)
+   check(existsSync(P.stoDoor),
+@@ -1458,6 +1485,77 @@ console.log('\n━━ ㉑-d ★성씨 표 차례 — 통계청 인구수 순인
+   check(!SURNAME_HANJA['소']?.includes('肖'), `⚠️ 소←肖 (초로도 읽음)가 없습니다`)
+ }
+ 
++console.log('\n━━ ㉑-e 🔴 작명 Step 3 — 성씨보다 이름 칸이 «먼저 열리지» 않는가 ━━')
++{
++  const nh = codeOf(S.nh)
++  // 🔴 needPick 이 「아무 성씨나 불러왔는가」를 보던 자리
++  check(!/const needPick = !t\?\.surnameHanja && !surnameLoaded/.test(nh),
++    `★옛 잣대(surnameLoaded 날것)가 남아 있지 않습니다`)
++  check(/const loadedFits = surnameLoaded && !!want && loadedSurHangul === want/.test(nh),
++    `★불러온 성씨가 «이 아기의» 성씨와 같은지 봅니다`)
++  check(/const needPick = !t\?\.surnameHanja && !loadedFits/.test(nh),
++    `★그래야 성씨 칸에서 시작합니다`)
++  // ⚠️ my_names 갈래에서도 한글을 담아야 합니다 — 안 담으면 위 잣대가 헛돕니다
++  check(/loadedSurHangul = sp1\.map\(c => c\.hangul\)\.join\(''\)/.test(nh),
++    `⚠️ my_names 로 불러올 때도 성씨 «한글» 을 담습니다`)
++  // ★두 번째 겹 — 칸을 눌러 건너뛰지 못하게
++  check(/const locked = surnameHole !== -1 && !isSur/.test(nh),
++    `★성씨가 비면 이름 칸이 «잠깁니다»`)
++  check(/opacity: locked \? 0\.4 : 1/.test(nh) && /cursor: locked \? 'not-allowed'/.test(nh),
++    `★잠긴 칸은 «눈으로» 보입니다`)
++  // ⚠️ 성씨 칸 자신은 언제나 열려 있어야 합니다
++  check(/!isSur/.test(nh), `⚠️ 성씨 칸(role === '성')은 잠기지 않습니다`)
++}
++
++console.log('\n━━ ㉑-f ★「여성적」 어감이 «무색하지» 않은가 ━━')
++{
++  const rc = codeOf(S.rec2)
++  check(/FEMININE_TAIL/.test(rc), `★끝 글자의 «결» 을 보는 묶음이 있습니다`)
++  check(/export function styleTier/.test(rc), `★어감으로 «앞줄» 을 정하는 창구가 있습니다`)
++  // ⚠️⚠️ «거르지» 않습니다 — 후보가 0개가 되면 안 됩니다
++  check(/if \(style !== '여성적'\) return 0/.test(rc),
++    `⚠️ 남성적·중성적은 «예전 그대로» 입니다`)
++  check(/\(b\.styleFit - a\.styleFit\)\s*\n\s*\|\| \(b\.score - a\.score\)/.test(rc),
++    `★어감이 «점수 앞» 에 섭니다 (뒤에 두면 화면에 안 드러납니다)`)
++  check(/\(Number\(b\.preferHit\) - Number\(a\.preferHit\)\)/.test(rc),
++    `⚠️ 「꼭 넣고 싶은 소리」는 여전히 «첫 잣대» 입니다`)
++  // ★실측 — 정말로 여자 이름이 앞에 오는가 (붙박이 표본이 아니라 «돌려서» 봅니다)
++  const FEM = new Set(['아','서','지','유','예','하','나','다','미','희','연','혜',
++    '채','리','율','슬','화','은','수','주','영','윤','원','현','인'])
++  for (const sur of ['김', '이', '박', '최']) {
++    const r = recommendNames(sur, { style: '여성적', yongsin: '목' as never, limit: 8 } as never) as { name: string }[]
++    const hit = r.filter(c => FEM.has(c.name[c.name.length - 1])).length
++    check(hit >= 6, `★「${sur}」 여성적 8개 중 ${hit}개가 여자 이름 끝소리입니다`)
++  }
++  // ⚠️ 남성적·중성적이 «달라지지 않았는가»
++  const m = (recommendNames('민', { style: '남성적', yongsin: '수' as never, limit: 5 } as never) as { name: string }[])
++    .map(c => c.name).join(' ')
++  check(m === '경복 교묵 기복 강백 경백', `⚠️ 남성적은 «예전 그대로» 입니다 (${m})`)
++}
++
++console.log('\n━━ ㉑-g ★교재 전수 대조로 바로잡은 사전 (2026-08-02) ━━')
++{
++  const all = Object.values(NAME_DICT).flatMap(g => [...g.names])
++  const S2 = new Set(all)
++  check(all.length === 1258, `이름 1,258개 (1,256 + 남혁 + 삼우)`)
++  for (const n of ['강택', '국만', '병철', '이륜', '신홍', '남혁', '삼우']) {
++    check(S2.has(n), `★「${n}」이 있습니다`)
++  }
++  for (const n of ['김택', '국민', '병칠', '이룬', '신흥']) {
++    check(!S2.has(n), `⚠️ 옛 오타 「${n}」이 되살아나지 않았습니다`)
++  }
++  // ★차례까지 교재와 맞췄는가 — 다섯 자리
++  const sk = NAME_DICT['金_ㅅ'].names
++  const at = (a: string, b: string) => sk.indexOf(a) + 1 === sk.indexOf(b)
++  check(at('산호', '삼우'), `★삼우가 산호 뒤입니다`)
++  check(at('삼현', '삼호'), `★삼호가 삼현 뒤입니다 (교재 차례)`)
++  check(at('상철', '상필') && at('상필', '상학'), `★상필·상학이 상철 뒤입니다`)
++  check(at('서원', '서윤'), `★서원 → 서윤 차례입니다`)
++  check(at('서창', '서필'), `★서필이 서창 뒤입니다`)
++  // ⚠️ 「김택」은 성씨와 겹치던 자리입니다
++  check(!all.some(n => n.startsWith('김')), `⚠️ 「김」으로 시작하는 이름이 없습니다 (김김택 방지)`)
++}
++
+ console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
+ if (fail > 0) {
+   console.log('  ┌────────────────────────────────────────────────────────────┐')
+diff --git a/app/manseryeok/naming/components/NamingStorageView.tsx b/app/manseryeok/naming/components/NamingStorageView.tsx
+index 91b8124..10428fe 100644
+--- a/app/manseryeok/naming/components/NamingStorageView.tsx
++++ b/app/manseryeok/naming/components/NamingStorageView.tsx
+@@ -164,8 +164,15 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
+   /** «작명» 은 풀이가 아닌 것 전부 (개명·신생아) */
+   const shownRecords = (records ?? []).filter(r =>
+     effFilter === '풀이' ? r.kind === '풀이' : r.kind !== '풀이')
+-  /** ⚠️ «다른 갈래에 몇 건이 있는지» — 기록이 사라진 줄 알고 놀라시지 않도록 */
+-  const hiddenCount = (records ?? []).length - shownRecords.length
++  /**
++   * ⚠️ «다른 갈래에 몇 건이 있는지».
++   *
++   * ★2026-08-02 — 아래 「◯◯으로 가기 · N건」 줄을 지우면서 «쓰는 곳이 없어졌습니다».
++   *   그래도 «남겨 둡니다» — 되살리실 때 이 셈이 필요하고,
++   *   거르기가 «지우기가 아님» 을 코드로 증언하는 자리이기도 합니다.
++   *   ⚠️ 지우지 마십시오. (교훈 AM)
++   */
++  void ((records ?? []).length - shownRecords.length)
+   const [deleting, setDeleting] = useState(false)
+   // ══════════════════════════════════════════════════════════════
+   //  ★2026-08-01 — 버튼을 «둘» 로 나눴습니다 (대표님 지시)
+@@ -277,14 +284,18 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
+           const relLabel = namingRelationLabel(r.relation)
+           const kindTag = KIND_TAG[r.kind]
+           return (
+-            /* ★2026-08-02 — «어느 보관함에서 왔는지» 를 함께 보냅니다.
+-                 ⚠️ 결과 화면은 기록을 불러온 «뒤» 라야 kind 를 압니다.
+-                    그 사이에도 하단 버튼이 «옳은 보관함» 을 가리켜야 하므로
+-                    입구를 URL 로 실어 보냅니다. (기록이 오면 kind 가 정본입니다) */
+-            <div key={r.id} onClick={() => router.push(
+-              `/manseryeok/naming/diagnosis?recordId=${r.id}`
+-              + `&from=${storageBranchOfKind(r.kind)}`,
+-            )}
++            /* ★2026-08-02 — 갈래마다 «주소가 다릅니다» (대표님 지시 ①-가)
++                 작명 기록 → /naming/naming-record   풀이 기록 → /naming/diagnosis
++                 ⚠️ 화면은 «한 부품» 입니다. 주소만 둘입니다 (교훈 CJ).
++                 ⚠️ from= 도 함께 보냅니다 — 옛 주소로 들어오는 길이 아직 살아 있고,
++                    기록이 오기 «전» 에도 하단 버튼이 옳은 곳을 가리켜야 합니다. */
++            <div key={r.id} onClick={() => {
++              const br = storageBranchOfKind(r.kind)
++              const base = br === 'naming'
++                ? '/manseryeok/naming/naming-record'
++                : '/manseryeok/naming/diagnosis'
++              router.push(`${base}?recordId=${r.id}&from=${br}`)
++            }}
+               style={{
+                 display: 'flex', alignItems: 'center', gap: 13, padding: '15px',
+                 background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14,
+@@ -410,30 +421,21 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
+         )}
+ 
+         {/* ══════════════════════════════════════════════════════
+-            ★「모두 보기」 — ⚠️ 기록이 «사라진 줄» 알고 놀라시지 않도록
+-              모드로 걸러 놓았을 뿐 하나도 지워지지 않았다는 것을 알려 드립니다.
+-              몇 건이 가려져 있는지 «숫자로» 적습니다.
++            ★2026-08-02 — 「◯◯으로 가기 · N건 →」 줄을 «지웠습니다» (대표님 지시)
++
++             [무엇이 있었나]  43부에 «기록이 사라진 줄 알고 놀라지 않도록»
++               옆 보관함으로 가는 줄을 두었습니다.
++               ⚠️ 그런데 그 줄 때문에 두 보관함이 «아직 하나» 처럼 보였습니다.
++                  가르려고 만든 화면에서 가른 뜻을 도로 흐리고 있었습니다.
++
++             ⚠️⚠️ [지웠지만 «길은» 남아 있습니다]
++               홈의 「개명 & 작명하기」 폴더에 두 카드가 그대로 있습니다.
++               ★기록은 여전히 «하나도» 지워지지 않습니다 — 거르기는 화면에서만 합니다.
++               (listNamingRecords 는 예전 그대로 전부 불러옵니다)
++
++             ⚠️ 되살리실 때는 hiddenCount 와 view.otherLabel 이 그대로 있습니다.
++                지운 것은 «그리는 자리» 뿐입니다.
+             ══════════════════════════════════════════════════════ */}
+-        {records && records.length > 0 && (
+-          <button
+-            onClick={() => {
+-              // ★2026-08-01 (43부 9차) — «섞어 보여 주지» 않고 «옆 보관함으로 갑니다».
+-              //   ⚠️ 두 곳을 갈라 놓고 한 화면에서 섞으면 가른 뜻이 없어집니다.
+-              //      다만 «몇 건이 저쪽에 있는지» 는 알려 드려야 놀라시지 않습니다.
+-              router.push(mode === 'naming'
+-                ? '/manseryeok/naming/diagnosis-storage'
+-                : '/manseryeok/naming/naming-storage')
+-            }}
+-            style={{
+-              ...PRESS, width: '100%', marginTop: 12, padding: '11px 10px',
+-              background: 'none', border: 'none', color: '#8a7063',
+-              fontSize: 12, cursor: 'pointer', lineHeight: 1.6,
+-            }}>
+-            {hiddenCount > 0
+-              ? `${view.otherLabel} · ${hiddenCount}건 →`
+-              : `${view.otherLabel} →`}
+-          </button>
+-        )}
+       </div>
+ 
+       {/* 삭제 확인 팝업 */}
+diff --git a/app/manseryeok/naming/diagnosis/page.tsx b/app/manseryeok/naming/diagnosis/page.tsx
+index f92cdc1..0923b0e 100644
+--- a/app/manseryeok/naming/diagnosis/page.tsx
++++ b/app/manseryeok/naming/diagnosis/page.tsx
+@@ -1,6 +1,6 @@
+ 'use client'
+ import { Suspense, useState, useEffect, useMemo } from 'react'
+-import { useSearchParams, useRouter } from 'next/navigation'
++import { useSearchParams, useRouter, usePathname } from 'next/navigation'
+ import { useResultSaju } from '@/hooks/useResultSaju'
+ import { calcYongsinCompat } from '@/lib/saju/yongsinNew'
+ import { supabase } from '@/lib/supabase'
+@@ -207,6 +207,7 @@ function PitchHeader({ title, onBack, onHome }: { title: string; onBack: () => v
+ function DiagnosisInner() {
+   const router = useRouter()
+   const sp = useSearchParams()
++  const pathname = usePathname()
+ 
+   const [info, setInfo] = useState<MyInfo | null>(null)
+ 
+@@ -326,8 +327,15 @@ function DiagnosisInner() {
+   //  ⚠️ from=mypage 는 «갈래가 아닙니다». storageBranchOfParam 이 null 을
+   //     돌려주므로 아래 ③으로 내려갑니다 — 마이페이지 길은 따로 있습니다.
+   // ══════════════════════════════════════════════════════════════
++  //  ★2026-08-02 — 주소가 «가장 먼저» 입니다.
++  //    /manseryeok/naming/naming-record 로 들어오셨으면 그것이 정본입니다 —
++  //    기록을 불러오기 «전» 부터 화면이 「내 아이 명품작명」으로 서 있어야 합니다.
++  //    ⚠️ 옛 주소(diagnosis?from=naming)도 그대로 듣습니다.
++  const branchByPath: NamingStorageBranch | null =
++    pathname?.includes('/naming-record') ? 'naming' : null
+   const storageBranch: NamingStorageBranch =
+-    (recKind ? storageBranchOfKind(recKind as NamingKind) : null)
++    branchByPath
++    ?? (recKind ? storageBranchOfKind(recKind as NamingKind) : null)
+     ?? storageBranchOfParam(sp.get('from'))
+     ?? 'diagnosis'
+   const storagePath = NAMING_STORAGE_PATH[storageBranch]
+diff --git a/app/manseryeok/naming/naming-record/page.tsx b/app/manseryeok/naming/naming-record/page.tsx
+new file mode 100644
+index 0000000..ca86c06
+--- /dev/null
++++ b/app/manseryeok/naming/naming-record/page.tsx
+@@ -0,0 +1,30 @@
++// app/manseryeok/naming/naming-record/page.tsx
++//
++// ┌───────────────────────────────────────────────────────────────┐
++// │  「내 아이 명품작명」 기록 «상세» — 전용 주소                      │
++// └───────────────────────────────────────────────────────────────┘
++//
++// ══════════════════════════════════════════════════════════════════
++//  ★2026-08-02 — 대표님 지적
++//    「내 이름 정밀분석과 내 아이 명품작명이 «보관함을 하나로» 쓰고 있다」
++//
++//  [무엇이 있었나]  목록(보관함)은 갈라져 있었는데, 기록을 «누르면»
++//    둘 다 /manseryeok/naming/diagnosis 로 갔습니다.
++//    ⚠️ 주소에 «diagnosis» 가 찍히니, 작명으로 들어오신 분이
++//       「내 이름 정밀분석」의 집에 들어와 계셨습니다.
++//       44부 1차가 제목·버튼은 갈랐지만 «주소» 는 그대로였습니다.
++//
++//  ★[이제]  주소를 «둘» 로 나눕니다.
++//    /manseryeok/naming/naming-record   내 아이 명품작명 기록
++//    /manseryeok/naming/diagnosis       내 이름 정밀분석
++//
++//  ⚠️⚠️ 화면을 «복사하지 않았습니다». 같은 부품 하나를 두 주소가 나눠 씁니다.
++//     복사하면 한쪽만 고치는 날이 반드시 옵니다. (교훈 CJ)
++//     ★갈래는 그 부품이 «주소를 보고» 스스로 정합니다 (usePathname).
++//
++//  ⚠️ 옛 주소(/naming/diagnosis?recordId=…&from=naming)도 «그대로 듣습니다» —
++//     북마크·지난 링크가 살아 있습니다. 그때는 ?from=naming 이 갈래를 알려 줍니다.
++//     (교훈 AM — 안 쓰인다고 지우면, 쓰이던 길이 함께 끊깁니다)
++// ══════════════════════════════════════════════════════════════════
++
++export { default } from '@/app/manseryeok/naming/diagnosis/page'
+diff --git a/app/manseryeok/naming/rename/newhanja/page.tsx b/app/manseryeok/naming/rename/newhanja/page.tsx
+index b7ae900..60f507f 100644
+--- a/app/manseryeok/naming/rename/newhanja/page.tsx
++++ b/app/manseryeok/naming/rename/newhanja/page.tsx
+@@ -234,6 +234,8 @@ function NewHanjaInner() {
+ 
+       // ── 성씨 + user_id: 로그인 my_names 우선, 없으면 localStorage ──
+       let surnameLoaded = false
++      /** 불러온 성씨의 «한글» — ★어느 갈래로 불러왔든 여기에 담습니다 */
++      let loadedSurHangul = ''
+       try {
+         const { data: u } = await supabase.auth.getUser()
+         if (u?.user) {
+@@ -246,14 +248,16 @@ function NewHanjaInner() {
+             .limit(1)
+           if (!cancelled && rows && rows[0] && Array.isArray(rows[0].chars) && rows[0].chars[0]) {
+             // ★복성이면 앞 두 글자가 성입니다. 가르는 것은 splitSurname 하나뿐입니다.
+-            setSurnameChars(splitSurname(rows[0].chars as SavedChar[]).surname)
++            const sp1 = splitSurname(rows[0].chars as SavedChar[]).surname
++            setSurnameChars(sp1)
+             surnameLoaded = true
++            // 🔴★2026-08-02 — 여기서 한글을 «안 담고» 있었습니다.
++            //    그래서 아래 needPick 이 「어느 성씨든 불러왔으면 됐다」로 읽혔습니다.
++            loadedSurHangul = sp1.map(c => c.hangul).join('')
+           }
+         }
+       } catch {}
+ 
+-      /** 불러온 성씨의 한글 — 첫 칸을 어디에 둘지 정하는 데 씁니다 */
+-      let loadedSurHangul = ''
+       if (!surnameLoaded) {
+         try {
+           const r = JSON.parse(localStorage.getItem(NAMING_RESULT_KEY) || '{}')
+@@ -275,9 +279,26 @@ function NewHanjaInner() {
+         // ★첫 칸 — 성씨를 «골라야 하면» 성씨부터, 아니면 «이름» 부터.
+         //   ⚠️ 개명 손님을 성씨 칸에 세우면 「왜 성을 고르라 하지」 가 됩니다.
+         //      이미 정해진 성씨는 «확인하고 싶을 때만» 누르시면 됩니다.
+-        const surLen = Array.from(t?.surnameHangul || loadedSurHangul).length
+-        // ★성씨 한자를 «아무도 모를 때» 만 성씨 칸에서 시작합니다 (신생아)
+-        const needPick = !t?.surnameHanja && !surnameLoaded
++        const want = t?.surnameHangul || loadedSurHangul
++        const surLen = Array.from(want).length
++        // ══════════════════════════════════════════════════════════
++        //  🔴★2026-08-02 — 성씨보다 «이름 칸» 이 먼저 열리던 자리 (대표님 지적)
++        //
++        //   [무엇이 있었나]  needPick 이 surnameLoaded 를 봤습니다.
++        //     그것은 「성씨를 «아무거나» 불러왔는가」입니다.
++        //     ★앞서 柳·姜·辛 으로 지어 두신 분이 「민」씨 아기를 지으러 오시면,
++        //       불려 있던 «류» 때문에 성씨 칸을 건너뛰고 이름 칸에서 시작했습니다.
++        //       성씨 한자는 «비어 있는데» 이름 한자부터 고르게 된 것입니다.
++        //
++        //   ★[이제]  바로 아래(pickSurname)에 이미 있던 «맞는 잣대» 를 씁니다 —
++        //     「불러온 성씨가 «이 아기의» 성씨와 같은가」.
++        //   ⚠️ 개명 손님은 성씨가 «같으므로» 예전 그대로 이름 칸에서 시작합니다.
++        //      성씨 칸에 세우면 「왜 성을 고르라 하지」 가 됩니다.
++        //   ⚠️ 아래 슬롯 버튼에도 «잠금» 을 두었습니다 — 이 첫 칸만 고치면
++        //      손님이 이름 칸을 눌러 건너뛸 수 있습니다. 두 겹으로 막습니다.
++        // ══════════════════════════════════════════════════════════
++        const loadedFits = surnameLoaded && !!want && loadedSurHangul === want
++        const needPick = !t?.surnameHanja && !loadedFits
+         setActiveIdx(needPick ? 0 : surLen)
+         setRestored(true)
+       }
+@@ -906,15 +927,29 @@ function NewHanjaInner() {
+             : (isSur && pickedSurnameChars[i]?.hanja) || slot.hangul
+           /** ★불러온 성씨를 «그대로 쓰는» 칸인가 — 흐리게 두어 개명 화면을 안 흔듭니다 */
+           const asLoaded = isSur && !chosen[i] && !!pickedSurnameChars[i]
++          // ══════════════════════════════════════════════════════
++          //  ★2026-08-02 — 성씨를 고르기 «전» 에는 이름 칸을 잠급니다
++          //    (대표님 지시 · 정밀분석 화면과 «같은 규칙»)
++          //
++          //   ⚠️ 전에는 «눌렀을 때 성씨로 되돌리기» 만 있었습니다.
++          //      그래서 «어디로 튕겼는지» 모른 채 손님이 다시 이름 칸을 눌렀습니다.
++          //   ★이제 흐리게 두어 «아직 아니다» 를 눈으로 보이게 합니다.
++          //   ⚠️ 성씨 칸(role === '성')은 «언제나» 열려 있습니다 — 잠그면 열 길이 없습니다.
++          //   ⚠️ 이미 고른 이름 한자를 «지우지 않습니다». 잠그기만 합니다.
++          // ══════════════════════════════════════════════════════
++          const surnameHole = slots.findIndex((sl, k) => sl.role === '성' && !slotFilled(k))
++          const locked = surnameHole !== -1 && !isSur
+           return (
+             <button key={i} onClick={() => {
+               // ★성씨가 아직이면 «성씨부터» 입니다 (43부 23차)
+-              const hole = slots.findIndex((sl, k) => sl.role === '성' && !slotFilled(k))
+-              setActiveIdx(hole !== -1 && slot.role !== '성' ? hole : i)
+-            }} className="active:scale-95"
++              setActiveIdx(locked ? surnameHole : i)
++            }} className={locked ? undefined : 'active:scale-95'}
+               /* ★성씨 칸도 «누를 수 있습니다» — 柳/劉 처럼 집안마다 다릅니다 */
+               aria-pressed={on}
+-              style={{ flex: 1, padding: '12px 0', borderRadius: 14, textAlign: 'center', cursor: 'pointer',
++              aria-disabled={locked}
++              title={locked ? '먼저 성씨 한자를 골라 주세요' : undefined}
++              style={{ flex: 1, padding: '12px 0', borderRadius: 14, textAlign: 'center',
++                cursor: locked ? 'not-allowed' : 'pointer', opacity: locked ? 0.4 : 1,
+                 background: on ? 'rgba(200,120,60,0.12)' : filled && !asLoaded ? 'rgba(129,199,132,0.14)' : CARD,
+                 border: '1px solid ' + (on ? GOLD : filled && !asLoaded ? GREEN : 'rgba(200,120,60,0.10)') }}>
+               <div style={{
+diff --git a/lib/saju/nameRecommend.ts b/lib/saju/nameRecommend.ts
+index d0f2981..1da1808 100644
+--- a/lib/saju/nameRecommend.ts
++++ b/lib/saju/nameRecommend.ts
+@@ -114,6 +114,59 @@ const STYLE_HINT: Record<NameStyle, (name: string) => boolean> = {
+   중성적: (n) => SOFT_JONG.has(jongOf(n[n.length - 1])),
+ }
+ 
++// ══════════════════════════════════════════════════════════════════
++//  🔴★2026-08-02 — 「여성적」이 무색하던 자리 (대표님 지적)
++//
++//   [무엇이 있었나]  「여성적」을 고르시면 «민건모 민건표 민경모 민군모 민상무»
++//     가 나왔습니다. 규칙이 «끝 글자에 받침이 없다» 하나뿐이었기 때문입니다.
++//     ⚠️ 받침만 없앤 것이라 여성적으로 들리지 않았습니다.
++//
++//   🔴 [더 깊은 원인]  교재 1장 이름 사전(1,258개)은 «남자 이름 목록» 에 가깝습니다.
++//     강백 경복 교묵 국길 군모 백범 병묵 상학 성묵 …
++//     받침 없는 이름 352개 가운데, 여자 이름으로 쓸 만한 것은 «백 개 안팎» 입니다.
++//     ★규칙만 다듬어서는 한계가 뚜렷합니다. 이것은 «사전을 늘려야» 풀립니다.
++//
++//   ★[이제]  끝 글자의 «결» 까지 보아 앞줄에 세웁니다 (대표님 확정 · 가 방식).
++//
++//   ⚠️⚠️ «거르지» 않습니다 — 앞줄에 세울 뿐입니다.
++//      [왜]  거르면 성씨 상생·용신까지 지난 뒤 후보가 «0개» 가 되는 사주가 생깁니다.
++//            그때 빈 화면을 내밀면 손님이 아무것도 못 하십니다.
++//            ★뒤에 나머지(받침 없는 이름)를 그대로 이어 둡니다.
++//   ⚠️ 이것은 «판정이 아닙니다». 점수를 바꾸지 않고 «보여 주는 차례» 만 바꿉니다.
++//      (교재 밖 취향이라 길흉에 넣지 않습니다 — 43부 확정)
++//   ⚠️ 아래 글자를 «맞고 틀림» 으로 여기지 마십시오. 이름은 누구의 것도 될 수 있습니다.
++//      흔한 쓰임을 적어 둔 것뿐이고, 다른 글자를 «막지» 않습니다.
++// ══════════════════════════════════════════════════════════════════
++
++/**
++ * 여자 이름의 «끝 글자» 로 흔히 쓰이는 소리 (교재 밖 · 어감)
++ *
++ * ★2026-08-02 실측 — 이 묶음으로 사전 1,258개 가운데 «98개» 가 앞줄에 섭니다.
++ *   ⚠️ 처음에 「도·조·오·우」까지 넣었더니 192개가 되면서
++ *      «민건도 민경도 민병조 민봉수» 가 도로 앞줄에 왔습니다. 좁혔습니다.
++ *   ⚠️ 「수·주·영·윤·원·현·인」은 남녀가 함께 쓰는 소리입니다.
++ *      빼면 73개로 줄어 고를 것이 너무 적어집니다. ★넣어 두되 «맞고 틀림» 이 아닙니다.
++ */
++const FEMININE_TAIL = new Set([
++  '아', '서', '지', '유', '예', '하', '나', '다', '미', '희', '연', '혜',
++  '채', '리', '율', '슬', '화', '은',
++  // ── 남녀가 함께 쓰는 소리 ──
++  '수', '주', '영', '윤', '원', '현', '인',
++])
++
++/**
++ * 그 어감으로 «앞줄에 설» 만한가.
++ *
++ *   여성적  받침이 없고 + 끝 글자가 여자 이름에 흔한 소리
++ *   남성적·중성적  지금 그대로 (STYLE_HINT 로 충분합니다)
++ *
++ * ⚠️ 이 함수가 false 라도 목록에서 «빠지지 않습니다». 뒤로 갈 뿐입니다.
++ */
++export function styleTier(style: NameStyle | undefined, name: string): number {
++  if (style !== '여성적') return 0
++  return FEMININE_TAIL.has(name[name.length - 1]) ? 1 : 0
++}
++
+ // ── 후보 만들기 ────────────────────────────────────────────────────
+ 
+ export interface PoolOptions {
+@@ -235,6 +288,12 @@ export interface NameCandidate {
+    *    화면이 「이 조건에 맞는 것은 N개」를 적을 때도 씁니다.
+    */
+   preferHit: boolean
++  /**
++   * ★고르신 어감에 «잘 맞는가» (2026-08-02)
++   *   1 = 앞줄 · 0 = 뒤줄. ⚠️ 0 이라고 «빠지지» 않습니다.
++   *   ⚠️ 판정이 아닙니다 — 점수에 넣지 마십시오. 차례에만 씁니다.
++   */
++  styleFit: number
+   /** 왜 이 자리인가 — 화면·통변 재료 */
+   reasons: string[]
+ }
+@@ -407,6 +466,7 @@ export function recommendNames(
+       filled, sound,
+       fromDict: dictSet.has(name),
+       preferHit,
++      styleFit: styleTier(opt.style, name),
+       reasons,
+     })
+   }
+@@ -471,8 +531,16 @@ export function recommendNames(
+     }
+   }
+ 
++  // ★2026-08-02 — 어감을 «점수 앞» 에 둡니다 (대표님 확정 · 가 방식)
++  //   ⚠️ 점수 뒤에 두면 소용이 없습니다 — 발음오행 70점이 같은 후보가 수십 개라
++  //      어감이 «동점을 가르는» 잣대로만 쓰이고 화면에는 드러나지 않습니다.
++  //      ★「여성적」을 고르셨는데 민건모가 1위로 오던 것이 그 때문입니다.
++  //   ⚠️ 「꼭 넣고 싶은 소리」는 «여전히 첫 잣대» 입니다 — 손님이 직접 적으신 것이라
++  //      취향(어감)보다 무겁습니다.
++  //   ⚠️ 점수는 «한 글자도» 바꾸지 않았습니다. 차례만 바꿉니다.
+   out.sort((a, b) =>
+     (Number(b.preferHit) - Number(a.preferHit))
++    || (b.styleFit - a.styleFit)
+     || (b.score - a.score)
+     || (Number(b.fromDict) - Number(a.fromDict))
+     || a.name.localeCompare(b.name))
+diff --git a/lib/saju/tables/nameDict.ts b/lib/saju/tables/nameDict.ts
+index 2bc77ce..e017724 100644
+--- a/lib/saju/tables/nameDict.ts
++++ b/lib/saju/tables/nameDict.ts
+@@ -53,17 +53,17 @@ export interface NameDictGroup {
+ /** 교재 1장 35~38쪽 — 초성별 추천 이름 */
+ export const NAME_DICT: Readonly<Record<NameDictKey, NameDictGroup>> = {
+   '木_ㄱ': { el: '목', cho: 'ㄱ', names: [
+-    '가경', '강규', '강근', '강모', '강민', '강백', '강태', '김택', '강필', '건도',
++    '가경', '강규', '강근', '강모', '강민', '강백', '강태', '강택', '강필', '건도',
+     '건모', '건표', '경규', '경균', '경남', '경대', '경도', '경륜', '경모', '경무',
+     '경백', '경복', '경빈', '경율', '경태', '경택', '경표', '경필', '공명', '공민',
+-    '교묵', '국길', '국도', '국민', '국태', '군길', '군모', '규강', '규건', '규경',
++    '교묵', '국길', '국도', '국만', '국태', '군길', '군모', '규강', '규건', '규경',
+     '규광', '규람', '규로', '규리', '규만', '규민', '규백', '규범', '규빈', '규탁',
+     '규태', '기남', '기담', '기동', '기룡', '기륭', '기문', '기민', '기백', '기복',
+     '기봉', '기탁', '기태', '기택', '기표',
+   ] },
+   '火_ㄴ': { el: '화', cho: 'ㄴ', names: [
+     '나경', '나리', '나영', '나우', '나희', '난경', '난영', '난욱', '난호', '남경',
+-    '남기', '남도', '남룡', '남연', '남이', '남익', '남인', '남헌', '남현', '남호',
++    '남기', '남도', '남룡', '남연', '남이', '남익', '남인', '남헌', '남혁', '남현', '남호',
+     '남훈', '남희', '내경', '내정', '내형',
+   ] },
+   '火_ㄷ': { el: '화', cho: 'ㄷ', names: [
+@@ -91,7 +91,7 @@ export const NAME_DICT: Readonly<Record<NameDictKey, NameDictGroup>> = {
+     '범준', '범진', '범찬', '범천', '범철', '병걸', '병관', '병국', '병권', '병규',
+     '병기', '병길', '병만', '병모', '병민', '병서', '병석', '병선', '병섭', '병수',
+     '병식', '병재', '병조', '병주', '병준', '병지', '병진', '병찬', '병창', '병채',
+-    '병천', '병칠', '병필', '보경', '보광', '보길', '보민', '보배', '보빈', '보준',
++    '병천', '병철', '병필', '보경', '보광', '보길', '보민', '보배', '보빈', '보준',
+     '본광', '본규', '본근', '본기', '본길', '본무', '본서', '본석', '본승', '본주',
+     '본준', '본찬', '본창', '봉수', '봉천', '부광', '부길', '부민', '부석', '부선',
+     '부성', '부송', '부찬', '부창', '비강', '비건', '비산', '비삼', '비선', '비성',
+@@ -99,36 +99,37 @@ export const NAME_DICT: Readonly<Record<NameDictKey, NameDictGroup>> = {
+   ] },
+   '金_ㅅ': { el: '금', cho: 'ㅅ', names: [
+     '사미', '사범', '사빈', '사열', '사영', '사준', '사호', '사홍', '산오', '산우',
+-    '산일', '산호', '삼욱', '삼운', '삼원', '삼윤', '삼재', '삼정', '삼준', '삼호',
+-    '삼헌', '삼혁', '삼현', '상모', '상무', '상문', '상민', '상배', '상백', '상봉',
+-    '상빈', '상선', '상수', '상아', '상연', '상열', '상영', '상오', '상우', '상욱',
+-    '상운', '상원', '상유', '상윤', '상은', '상익', '상인', '상일', '상재', '상준',
+-    '상진', '상철', '상헌', '상혁', '상현', '상호', '상환', '상필', '상학', '서빈',
+-    '서양', '서연', '서영', '서욱', '서윤', '서원', '서은', '서일', '서정', '서준',
+-    '서진', '서찬', '서창', '서하', '서현', '서호', '서홍', '서환', '서훈', '서희',
+-    '서필', '석모', '석무', '석문', '석민', '석봉', '석수', '석영', '석오', '석우',
+-    '석운', '석원', '석윤', '석인', '석일', '석주', '석준', '석진', '석찬', '석하',
+-    '석헌', '석현', '석호', '석환', '석훈', '선모', '선빈', '선영', '선오', '선용',
+-    '선우', '선운', '선일', '선진', '선찬', '선필', '선혜', '선호', '선환', '선훈',
+-    '성모', '성무', '성묵', '성문', '성민', '성배', '성빈', '성수', '성식', '성신',
+-    '성아', '성안', '성연', '성열', '성오', '성용', '성우', '성운', '성원', '성윤',
+-    '성은', '성인', '성일', '성재', '성주', '성준', '성진', '성찬', '성철', '성필',
+-    '성헌', '성현', '성호', '성화', '성환', '성훈', '세빈', '세연', '세왕', '세은',
+-    '세인', '세일', '세진', '세찬', '세현', '세호', '세화', '세환', '세훈', '소민',
+-    '소범', '소언', '소연', '소영', '소일', '소정', '소준', '소진', '소찬', '소현',
+-    '소형', '소환', '소훈', '손호', '손환', '송민', '송연', '송열', '송우', '송욱',
+-    '송운', '송원', '송윤', '송이', '송재', '송주', '송준', '송찬', '송하', '송헌',
+-    '송호', '송환', '송회', '송훈', '수민', '수백', '수빈', '수석', '수아', '수양',
+-    '수연', '수열', '수영', '수예', '수용', '수운', '수웅', '수원', '수유', '수인',
+-    '수일', '수정', '수종', '수준', '수진', '수찬', '수창', '수철', '수하', '수헌',
+-    '수혁', '수현', '수혜', '수호', '수홍', '수환', '수황', '수훈', '순민', '순빈',
+-    '순식', '순신', '순양', '순열', '순영', '순오', '순용', '순우', '순욱', '순일',
+-    '순재', '순찬', '순창', '순필', '순하', '순헌', '순혁', '순현', '순호', '순홍',
+-    '순환', '승빈', '승선', '승연', '승오', '승은', '승이', '승인', '승종', '승주',
+-    '승준', '승진', '승학', '승환', '승희', '시연', '시영', '시완', '시원', '시윤',
+-    '시준', '시진', '시찬', '시형', '시환', '시훈', '신민', '신석', '신성', '신안',
+-    '신양', '신연', '신열', '신영', '신예', '신오', '신용', '신우', '신욱', '신원',
+-    '신일', '신조', '신준', '신찬', '신철', '신현', '신호', '신흥', '신화', '신환',
++    '산일', '산호', '삼우', '삼욱', '삼운', '삼원', '삼윤', '삼재', '삼정', '삼준',
++    '삼헌', '삼혁', '삼현', '삼호', '상모', '상무', '상문', '상민', '상배', '상백',
++    '상봉', '상빈', '상선', '상수', '상아', '상연', '상열', '상영', '상오', '상우',
++    '상욱', '상운', '상원', '상유', '상윤', '상은', '상익', '상인', '상일', '상재',
++    '상준', '상진', '상철', '상필', '상학', '상헌', '상혁', '상현', '상호', '상환',
++    '서빈', '서양', '서연', '서영', '서욱', '서원', '서윤', '서은', '서일', '서정',
++    '서준', '서진', '서찬', '서창', '서필', '서하', '서현', '서호', '서홍', '서환',
++    '서훈', '서희', '석모', '석무', '석문', '석민', '석봉', '석수', '석영', '석오',
++    '석우', '석운', '석원', '석윤', '석인', '석일', '석주', '석준', '석진', '석찬',
++    '석하', '석헌', '석현', '석호', '석환', '석훈', '선모', '선빈', '선영', '선오',
++    '선용', '선우', '선운', '선일', '선진', '선찬', '선필', '선혜', '선호', '선환',
++    '선훈', '성모', '성무', '성묵', '성문', '성민', '성배', '성빈', '성수', '성식',
++    '성신', '성아', '성안', '성연', '성열', '성오', '성용', '성우', '성운', '성원',
++    '성윤', '성은', '성인', '성일', '성재', '성주', '성준', '성진', '성찬', '성철',
++    '성필', '성헌', '성현', '성호', '성화', '성환', '성훈', '세빈', '세연', '세왕',
++    '세은', '세인', '세일', '세진', '세찬', '세현', '세호', '세화', '세환', '세훈',
++    '소민', '소범', '소언', '소연', '소영', '소일', '소정', '소준', '소진', '소찬',
++    '소현', '소형', '소환', '소훈', '손호', '손환', '송민', '송연', '송열', '송우',
++    '송욱', '송운', '송원', '송윤', '송이', '송재', '송주', '송준', '송찬', '송하',
++    '송헌', '송호', '송환', '송회', '송훈', '수민', '수백', '수빈', '수석', '수아',
++    '수양', '수연', '수열', '수영', '수예', '수용', '수운', '수웅', '수원', '수유',
++    '수인', '수일', '수정', '수종', '수준', '수진', '수찬', '수창', '수철', '수하',
++    '수헌', '수혁', '수현', '수혜', '수호', '수홍', '수환', '수황', '수훈', '순민',
++    '순빈', '순식', '순신', '순양', '순열', '순영', '순오', '순용', '순우', '순욱',
++    '순일', '순재', '순찬', '순창', '순필', '순하', '순헌', '순혁', '순현', '순호',
++    '순홍', '순환', '승빈', '승선', '승연', '승오', '승은', '승이', '승인', '승종',
++    '승주', '승준', '승진', '승학', '승환', '승희', '시연', '시영', '시완', '시원',
++    '시윤', '시준', '시진', '시찬', '시형', '시환', '시훈', '신민', '신석', '신성',
++    '신안', '신양', '신연', '신열', '신영', '신예', '신오', '신용', '신우', '신욱',
++    '신원', '신일', '신조', '신준', '신찬', '신철', '신현', '신호', '신홍', '신화',
++    '신환',
+   ] },
+   '土_ㅇ': { el: '토', cho: 'ㅇ', names: [
+     '아승', '아연', '아영', '아진', '안오', '안중', '양우', '양운', '양원', '양윤',
+@@ -148,7 +149,7 @@ export const NAME_DICT: Readonly<Record<NameDictKey, NameDictGroup>> = {
+     '윤선', '윤소', '윤수', '윤승', '윤오', '윤우', '윤일', '윤재', '윤조', '윤중',
+     '윤창', '윤천', '윤태', '윤형', '윤호', '윤환', '윤효', '율우', '은대', '은도',
+     '은상', '은서', '은환', '의서', '의선', '의수', '의진', '의환', '이나', '이도',
+-    '이룬', '이림', '이서', '이석', '이성', '이열', '이영', '이웅', '이원', '이재',
++    '이륜', '이림', '이서', '이석', '이성', '이열', '이영', '이웅', '이원', '이재',
+     '이정', '이준', '이증', '이지', '이진', '이창', '이철', '이현', '이화', '이환',
+     '인량', '인서', '인석', '인선', '인성', '인수', '인열', '인오', '인요', '인용',
+     '인우', '인웅', '인원', '인유', '인재', '인준', '인중', '인직', '인진', '인창',
+-- 
+2.43.0
+
+
+From 1b25c08407ddf0a9e8a56b145463da4824cfe54f Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Sun, 2 Aug 2026 07:32:52 +0000
+Subject: [PATCH 4/6] =?UTF-8?q?=EC=8B=9C=EC=A7=80=20=EA=B3=84=EC=A0=88=20?=
+ =?UTF-8?q?=EC=B9=98=ED=99=98=20=EB=B0=98=EC=98=81=20(44=EB=B6=80=204?=
+ =?UTF-8?q?=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+★2026-08-02 연재쌤 지시 — "시지 점수를 반영하자"
+  대표님이 원장님 손글씨 수정판 스캔(38쪽)을 보내 주셔서 확인했습니다.
+  원장님은 점수만 15→10 으로 고치셨고 시지 안내는 지우지 않으셨습니다.
+  ⇒ 2026-07 의 「넣지 않는다」가 오히려 교재 밖이었습니다.
+
+① 교재 38쪽 시지 안내 — 월지가 «맞을 때만» · 전부 10점
+     寅·丑월  丑·寅시 → 水    卯·辰월  辰시 → 木
+     未월     未시   → 火    申월     申·未시 → 火
+     酉·戌월  戌시   → 金
+   ⚠️ 공란 월지(子·巳·午·亥)는 «있는 오행 그대로» (대표님 확인)
+
+② ★쓰임에 따라 갈립니다 (대표님 지시)
+     진로·적성·성격  치환 «적용»  (기본)
+     건강·궁합       있는 오행 «그대로»
+   ★교재 147쪽 "조후용신은 건강과 궁합을 볼 때 많이 사용한다" 와 같은 묶음
+   ⚠️ 옛 forCouple 은 남겨 두었습니다 — 부르는 곳이 여럿입니다
+   ⚠️ 「건강」 전용 화면이 아직 없어 사주보기는 진로·성격 쪽으로 둡니다
+
+③ ★치환이 걸리면 «반드시 한 줄» (대표님 지시)
+     hourConvertNote()    진로 쪽 — "태어난 시(辰시)를 봄 기운으로 보아…"
+     hourNoConvertNote()  건강궁합 쪽 — 왜 숫자가 다른지
+   진로적성 카드 · 사주보기 화면에 붙였습니다
+
+실측 (npm run measure:hour)
+  144칸 중 11칸(7.6%) · 점수 변동 7.56%
+  ★발달·과다 판정 뒤집힘 4.94% · 가장 센 오행 바뀜 1.48%
+  ⚠️ 처음에 4.62% 로 잘못 쟀습니다 — purpose 를 통째로 바꾸면 월지 치환(35점)이
+     함께 꺼집니다. 시지만 떼어 재야 합니다. measure 머리말에 적어 두었습니다.
+
+검사 1,427 → 1,461 (시지 치환 그물 34 신설) · 실패 0
+tsc 통과 · eslint 82/138
+---
+ 31-measure-hour-convert.ts         | 125 +++++++++++++++++++++++
+ 32-verify-hour-convert.ts          | 141 ++++++++++++++++++++++++++
+ app/manseryeok/result-new/page.tsx |  21 ++--
+ lib/saju/career/ohaengGijil.ts     |  16 ++-
+ lib/saju/simsanOhaeng.ts           | 156 +++++++++++++++++++++++++----
+ package.json                       |   6 +-
+ 6 files changed, 433 insertions(+), 32 deletions(-)
+ create mode 100644 31-measure-hour-convert.ts
+ create mode 100644 32-verify-hour-convert.ts
+
+diff --git a/31-measure-hour-convert.ts b/31-measure-hour-convert.ts
+new file mode 100644
+index 0000000..6241a23
+--- /dev/null
++++ b/31-measure-hour-convert.ts
+@@ -0,0 +1,125 @@
++// 31-measure-hour-convert.ts
++//
++// ┌───────────────────────────────────────────────────────────────┐
++// │  시지 계절 치환이 «무엇을 얼마나» 바꾸는가 — 자(尺)입니다        │
++// └───────────────────────────────────────────────────────────────┘
++//
++//  ★2026-08-02 — 연재쌤이 「시지 점수를 반영하자」 하셔서 넣었습니다.
++//    ⚠️ 이것은 «검사» 가 아니라 «자» 입니다. verify 체인에 넣지 마십시오.
++//       배포가 느려지고, 임의 표본이라 값이 조금씩 흔들립니다.
++//
++//  쓰는 법   npm run measure:hour
++//
++//  ⚠️⚠️ 시지 치환을 손대기 «전» 에 반드시 이것을 먼저 돌리십시오.
++//     43부 자원오행에서 배웠습니다 — 재지 않고 손대면 «나중에» 알게 됩니다.
++//
++//  [2026-08-02 처음 잰 값 — 다음에 견줄 잣대]
++//     144칸 중 달라지는 칸        11개 (7.6%)
++//     점수가 달라지는 사람        7.56%
++//     ★발달·과다 판정이 뒤집힘    4.91%
++//     ★가장 센 오행이 바뀜        1.51%
++//     약함→결핍                   1.18%
++//
++//  ⚠️⚠️ 재실 때 «시지만» 떼어 재십시오. purpose 를 통째로 바꾸면 월지 치환(35점)이
++//     함께 꺼져 숫자가 부풀려집니다. 처음에 그렇게 재어 4.62% 라는 값을 냈습니다.
++
++import { calcSimsanOhaeng, grade, hourConvertEl, type Ohaeng, type Pillar } from './lib/saju/simsanOhaeng'
++
++const GAN = '甲乙丙丁戊己庚辛壬癸'.split('')
++const JI = '子丑寅卯辰巳午未申酉戌亥'.split('')
++const EL5: Ohaeng[] = ['목', '화', '토', '금', '수']
++
++/** 지지 본래 오행 — ⚠️ 판정용이 아닙니다. 「달라졌는가」를 재는 데만 씁니다 */
++const BRANCH_EL: Record<string, Ohaeng> = {
++  子: '수', 丑: '토', 寅: '목', 卯: '목', 辰: '토', 巳: '화',
++  午: '화', 未: '토', 申: '금', 酉: '금', 戌: '토', 亥: '수',
++}
++/** 월지 → 양력 한가운데 날짜 (寅·申월 날짜분할을 피해 가운데로 잡습니다) */
++const SOLAR: Record<string, [number, number]> = {
++  寅: [2, 20], 卯: [3, 20], 辰: [4, 20], 巳: [5, 20], 午: [6, 20], 未: [7, 20],
++  申: [8, 20], 酉: [9, 20], 戌: [10, 20], 亥: [11, 20], 子: [12, 20], 丑: [1, 20],
++}
++const R = (n: number) => Math.floor(Math.random() * n)
++const pc = (x: number, n: number) => (x / n * 100).toFixed(2) + '%'
++
++console.log('\n━━ ① 144칸 전수 — 어느 월지×시지가 달라지는가 ━━')
++{
++  const changed: string[] = []
++  for (const m of JI) for (const h of JI) {
++    const to = hourConvertEl(m, h)
++    if (to) changed.push(`${m}월 ${h}시 ${BRANCH_EL[h]}→${to}`)
++  }
++  console.log(`  달라지는 칸  ${changed.length}개 / 144  (${(changed.length / 144 * 100).toFixed(1)}%)`)
++  for (const c of changed) console.log(`    · ${c}`)
++  // ⚠️ 공란 월지는 «그대로» 여야 합니다 (대표님 확인 2026-08-02)
++  const blank = ['子', '巳', '午', '亥']
++  const bad = blank.filter(m => JI.some(h => hourConvertEl(m, h) !== null))
++  console.log(`  공란 월지(子巳午亥)에 치환이 «없는가»  ${bad.length === 0 ? '✅' : '🔴 ' + bad.join()}`)
++}
++
++console.log('\n━━ ② 사람 단위 — 판정이 얼마나 뒤집히는가 ━━')
++{
++  const N = 200000
++  let n = 0, scoreDiff = 0, gradeFlip = 0, topFlip = 0
++  const flips: Record<string, number> = {}
++  for (let i = 0; i < N; i++) {
++    const pill = ['년주', '월주', '일주', '시주'].map(p => ({
++      pillar: p, stem: GAN[R(10)], branch: JI[R(12)],
++    })) as Pillar[]
++    const mb = pill[1].branch, hb = pill[3].branch
++    const [sm, sd] = SOLAR[mb]
++    n++
++    // ══════════════════════════════════════════════════════════
++    //  ⚠️⚠️ «시지만» 떼어 재야 합니다.
++    //   purpose 를 통째로 바꾸면 «월지 치환(35점)» 도 함께 꺼집니다
++    //     (forCouple — 丑辰未戌월을 土로 · 2026-07-24 대표님 지시)
++    //   ★그러면 시지 10점의 영향이 월지 35점에 묻혀 숫자가 크게 부풀려집니다.
++    //     제가 2026-08-02 에 실제로 한 번 그렇게 재어 4.62% 라는 잘못된 값을 냈습니다.
++    //   ⇒ 진로 값을 기준으로 두고, 시지 10점만 «손으로» 되돌려 견줍니다.
++    // ══════════════════════════════════════════════════════════
++    const to = hourConvertEl(mb, hb)
++    if (!to) continue
++    const forCareer = calcSimsanOhaeng(pill, sm, sd, hb, { purpose: '진로' })
++    const forHealth = { ...forCareer }
++    forHealth[to] -= 10
++    forHealth[BRANCH_EL[hb]] += 10
++    scoreDiff++
++    const gA = EL5.map(e => grade(forCareer[e])).join('')
++    const gB = EL5.map(e => grade(forHealth[e])).join('')
++    if (gA !== gB) {
++      gradeFlip++
++      for (const e of EL5) {
++        const a = grade(forHealth[e]), b = grade(forCareer[e])
++        if (a !== b) flips[`${a}→${b}`] = (flips[`${a}→${b}`] ?? 0) + 1
++      }
++    }
++    const topA = EL5.reduce((x, y) => forCareer[y] > forCareer[x] ? y : x)
++    const topB = EL5.reduce((x, y) => forHealth[y] > forHealth[x] ? y : x)
++    if (topA !== topB) topFlip++
++  }
++  console.log(`  임의 사주 ${n.toLocaleString()}건 — 진로 값 ↔ 건강궁합 값 대조`)
++  console.log(`  점수가 달라지는 사람        ${pc(scoreDiff, n)}`)
++  console.log(`  ★발달·과다 판정이 뒤집힘    ${pc(gradeFlip, n)}`)
++  console.log(`  ★가장 센 오행이 바뀜        ${pc(topFlip, n)}`)
++  console.log('  등급 이동 :', Object.entries(flips).sort((a, b) => b[1] - a[1])
++    .map(([k, v]) => `${k} ${pc(v, n)}`).join(' · '))
++}
++
++console.log('\n━━ ③ 합이 언제나 100인가 ━━')
++{
++  let bad = 0
++  for (let i = 0; i < 20000; i++) {
++    const pill = ['년주', '월주', '일주', '시주'].map(p => ({
++      pillar: p, stem: GAN[R(10)], branch: JI[R(12)],
++    })) as Pillar[]
++    const [sm, sd] = SOLAR[pill[1].branch]
++    for (const purpose of ['진로', '건강궁합'] as const) {
++      const s = calcSimsanOhaeng(pill, sm, sd, pill[3].branch, { purpose })
++      const sum = EL5.reduce((a, e) => a + s[e], 0)
++      if (sum !== 100) bad++
++    }
++  }
++  console.log(`  합이 100이 아닌 경우  ${bad}건  ${bad === 0 ? '✅' : '🔴'}`)
++}
++
++console.log('\n⚠️ 이것은 «자» 입니다. 검사가 아닙니다. verify 체인에 넣지 마십시오.\n')
+diff --git a/32-verify-hour-convert.ts b/32-verify-hour-convert.ts
+new file mode 100644
+index 0000000..900e634
+--- /dev/null
++++ b/32-verify-hour-convert.ts
+@@ -0,0 +1,141 @@
++// 32-verify-hour-convert.ts
++//
++// ┌───────────────────────────────────────────────────────────────┐
++// │  시지 계절 치환 그물 — 교재 38쪽대로 도는가                      │
++// └───────────────────────────────────────────────────────────────┘
++//
++//  ★2026-08-02 연재쌤 지시로 시지 치환을 «넣었습니다».
++//    이 그물은 그것이 «조용히 되돌려지는 것» 을 막습니다.
++//
++//  ⚠️ 2026-07 에는 「넣지 않는다」가 확정이었습니다. 그 주석을 보고
++//     되돌리려는 다음 세션이 반드시 옵니다. 여기서 막힙니다.
++
++import { readFileSync } from 'fs'
++import {
++  calcSimsanOhaeng, hourConvertEl, hourConvertNote, hourNoConvertNote,
++  type Ohaeng, type Pillar,
++} from './lib/saju/simsanOhaeng'
++
++let pass = 0, fail = 0
++const check = (ok: boolean, msg: string) => {
++  if (ok) { pass++; console.log(`  ✅ ${msg}`) } else { fail++; console.log(`  🔴 ${msg}`) }
++}
++const read = (p: string) => readFileSync(p, 'utf8')
++const JI = '子丑寅卯辰巳午未申酉戌亥'.split('')
++const EL5: Ohaeng[] = ['목', '화', '토', '금', '수']
++
++console.log('\n━━ ㉒-a ★교재 38쪽 — 열한 칸이 «전부» 도는가 ━━')
++{
++  // 교재 38쪽 시지 안내 (월지가 맞을 때만)
++  const WANT: [string, string, Ohaeng][] = [
++    ['寅', '丑', '수'], ['寅', '寅', '수'],
++    ['丑', '丑', '수'], ['丑', '寅', '수'],
++    ['卯', '辰', '목'], ['辰', '辰', '목'],
++    ['未', '未', '화'],
++    ['申', '未', '화'], ['申', '申', '화'],
++    ['酉', '戌', '금'], ['戌', '戌', '금'],
++  ]
++  for (const [m, h, el] of WANT) {
++    check(hourConvertEl(m, h) === el, `${m}월 ${h}시 → ${el}`)
++  }
++  // ★열한 칸 «뿐» 인가 — 더 생기면 교재 밖입니다
++  let n = 0
++  for (const m of JI) for (const h of JI) if (hourConvertEl(m, h)) n++
++  check(n === 11, `치환되는 칸이 «열한 개» 뿐입니다 (${n})`)
++}
++
++console.log('\n━━ ㉒-b ⚠️ 공란 월지는 «있는 오행 그대로» 인가 ━━')
++{
++  // ★대표님 확인 2026-08-02 — "공란은 있는 오행 그대로 보면 된다"
++  for (const m of ['子', '巳', '午', '亥']) {
++    const any = JI.some(h => hourConvertEl(m, h) !== null)
++    check(!any, `${m}월 — 치환이 «하나도» 없습니다`)
++  }
++  // ⚠️ 卯시·酉시는 본래 오행이 이미 그것이라 «치환이 아닙니다»
++  check(hourConvertEl('卯', '卯') === null, `⚠️ 卯월 卯시 — 본래 木이라 치환 아님`)
++  check(hourConvertEl('酉', '酉') === null, `⚠️ 酉월 酉시 — 본래 金이라 치환 아님`)
++}
++
++console.log('\n━━ ㉒-c ★쓰임에 따라 갈리는가 (진로 ↔ 건강궁합) ━━')
++{
++  //   진로·적성·성격 → 치환 «적용»  ·  건강·궁합 → «그대로»  (2026-08-02 대표님 지시)
++  const pill = ['년주', '월주', '일주', '시주'].map((p, i) => ({
++    pillar: p, stem: '甲', branch: ['子', '辰', '子', '辰'][i],
++  })) as Pillar[]
++  const career = calcSimsanOhaeng(pill, 4, 20, '辰', { purpose: '진로' })
++  const health = calcSimsanOhaeng(pill, 4, 20, '辰', { purpose: '건강궁합' })
++  check(career['목'] > health['목'], `★진로에서 辰시가 木으로 갑니다 (${health['목']} → ${career['목']})`)
++  check(health['토'] > career['토'], `★건강궁합에서는 辰시가 土 그대로입니다`)
++
++  // ⚠️ 옛 이름(forCouple)도 그대로 들어야 합니다 — 부르는 곳이 여럿입니다
++  const old = calcSimsanOhaeng(pill, 4, 20, '辰', { forCouple: true })
++  check(EL5.every(e => old[e] === health[e]), `⚠️ 옛 이름 forCouple:true 가 «건강궁합» 과 같습니다`)
++
++  // ★기본값은 «진로» — 지금까지 부르던 곳이 대부분 그쪽입니다
++  const dflt = calcSimsanOhaeng(pill, 4, 20, '辰')
++  check(EL5.every(e => dflt[e] === career[e]), `★아무것도 안 주면 «진로» 입니다`)
++}
++
++console.log('\n━━ ㉒-d ★치환이 걸리면 «반드시 한 줄» 이 나오는가 ━━')
++{
++  //   ⚠️ 대표님 지시 — "이런 경우에는 반드시 한 줄의 해설을 덧붙여 줄 것"
++  let missing = 0, spurious = 0
++  for (const m of JI) for (const h of JI) {
++    const to = hourConvertEl(m, h)
++    const note = hourConvertNote(m, h)
++    if (to && !note) missing++
++    if (!to && note) spurious++
++  }
++  check(missing === 0, `★치환된 열한 칸 «전부» 한 줄이 나옵니다`)
++  check(spurious === 0, `⚠️ 치환 안 된 칸에서는 «말하지 않습니다» (없는 차이를 걱정시키지 않음)`)
++
++  // 건강·궁합 쪽 안내도 같은 자리에서만
++  let hMiss = 0
++  for (const m of JI) for (const h of JI) {
++    if (hourConvertEl(m, h) && !hourNoConvertNote(m, h)) hMiss++
++  }
++  check(hMiss === 0, `★건강·궁합 쪽도 «왜 숫자가 다른지» 알려 줍니다`)
++
++  const s = hourConvertNote('辰', '辰') ?? ''
++  check(s.includes('辰시') && s.includes('봄') && s.includes('목'),
++    `한 줄에 «시지·계절·오행» 이 다 들어 있습니다 — ${s}`)
++}
++
++console.log('\n━━ ㉒-e ⚠️ 합이 언제나 100인가 ━━')
++{
++  let bad = 0
++  for (const m of JI) for (const h of JI) {
++    const pill = ['년주', '월주', '일주', '시주'].map((p, i) => ({
++      pillar: p, stem: '甲', branch: ['子', m, '子', h][i],
++    })) as Pillar[]
++    for (const purpose of ['진로', '건강궁합'] as const) {
++      const sc = calcSimsanOhaeng(pill, 4, 20, h, { purpose })
++      if (EL5.reduce((a, e) => a + sc[e], 0) !== 100) bad++
++    }
++  }
++  check(bad === 0, `144칸 × 두 쓰임 — 합이 «언제나» 100입니다`)
++}
++
++console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
++{
++  const src = read('lib/saju/simsanOhaeng.ts')
++  check(/2026-08-02 연재쌤 지시/.test(src), `★언제 누가 정했는지 적혀 있습니다`)
++  check(/넣지 않기로 되돌리지 마십시오/.test(src), `⚠️ 되돌리지 말라는 말이 적혀 있습니다`)
++  check(/원장님 손글씨 수정판/.test(src), `★원본 스캔으로 확인했다는 근거가 있습니다`)
++  check(/공란인 월지\(子·巳·午·亥\)/.test(src), `★공란 월지 규칙이 적혀 있습니다`)
++  check(/measure:hour/.test(src), `★고치려는 다음 세션에게 «먼저 재라» 고 일러 둡니다`)
++  // ⚠️ 자(measure)는 검사가 아닙니다 — verify 체인에 들어가면 배포가 느려집니다
++  const pkg = JSON.parse(read('package.json'))
++  check(!/31-measure/.test(pkg.scripts.verify), `⚠️ 측정 하네스는 verify 체인에 «없습니다»`)
++  check(/measure:hour/.test(JSON.stringify(pkg.scripts)), `npm run measure:hour 로 잽니다`)
++}
++
++console.log(`\n━━ 시지 치환 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
++if (fail > 0) {
++  console.log('  ┌────────────────────────────────────────────────────────────┐')
++  console.log('  │  ⚠️ 시지 치환은 2026-08-02 «연재쌤 지시» 로 넣은 것입니다      │')
++  console.log('  │     되돌리려면 연재쌤께 다시 여쭈십시오.                      │')
++  console.log('  │     손대기 전에 npm run measure:hour 를 먼저 돌리십시오.       │')
++  console.log('  └────────────────────────────────────────────────────────────┘')
++  process.exit(1)
++}
+diff --git a/app/manseryeok/result-new/page.tsx b/app/manseryeok/result-new/page.tsx
+index 40ed362..f6ba92c 100644
+--- a/app/manseryeok/result-new/page.tsx
++++ b/app/manseryeok/result-new/page.tsx
+@@ -11,7 +11,7 @@ import { getUnsung, getSinsal, unsungColor, getGongmang, SINSAL_HIGHLIGHT } from
+ 
+ import { calcYongsinNew, calcYongsinCompat } from "@/lib/saju/yongsinNew";
+ import { calcHapchungScore } from "@/lib/saju/hapchungScore";
+-import { calcSimsanOhaeng, toPercentList, seasonConvertNote } from "@/lib/saju/simsanOhaeng";
++import { calcSimsanOhaeng, toPercentList, seasonConvertNote, hourConvertNote } from "@/lib/saju/simsanOhaeng";
+ import { calcSipsungDist, getSipsin, getSipsinBranch } from "@/lib/saju/sipsungDist";
+ import AiAnalysisNew from "./components/AiAnalysisNew";
+ import { withNim, nimEuiTitle } from "@/lib/saju/honorific";
+@@ -673,12 +673,19 @@ function ResultNewContent() {
+           <div style={{fontSize:'10.5px',color:'#b4785a',background:'#faf3ec',border:'0.5px solid #f0e0d5',borderRadius:'8px',padding:'7px 10px',marginBottom:'10px',lineHeight:1.6}}>
+             진로·적성·성격은 <b style={{color:'#96502e'}}>계절 치환</b>으로, 건강·궁합은 오행 그대로 봐요.
+             {(() => {
+-              const note = saju.length>0 && monthBranchForNote
+-                ? seasonConvertNote(monthBranchForNote, solarMonth, solarDay, hourBranch ?? '')
+-                : null
+-              return note ? (
+-                <div style={{marginTop:'5px',color:'#c8783c'}}>↳ {note}</div>
+-              ) : null
++              /* ★2026-08-02 — 월지 치환에 이어 «시지» 치환도 알려 드립니다 (대표님 지시)
++                 ⚠️ 이 화면은 진로·성격 쪽이라 시지 치환이 «걸립니다».
++                    걸렸는데 말해 주지 않으면 궁합 화면과 숫자가 다른 까닭을 알 수 없습니다. */
++              if (!(saju.length>0 && monthBranchForNote)) return null
++              const note = seasonConvertNote(monthBranchForNote, solarMonth, solarDay, hourBranch ?? '')
++              const hNote = hourConvertNote(monthBranchForNote, hourBranch ?? '')
++              if (!note && !hNote) return null
++              return (
++                <>
++                  {note ? <div style={{marginTop:'5px',color:'#c8783c'}}>↳ {note}</div> : null}
++                  {hNote ? <div style={{marginTop:'3px',color:'#c8783c'}}>↳ {hNote}</div> : null}
++                </>
++              )
+             })()}
+           </div>
+           {/* 오각형 그래프(왼쪽) + 십성표(오른쪽) 나란히 */}
+diff --git a/lib/saju/career/ohaengGijil.ts b/lib/saju/career/ohaengGijil.ts
+index 4726e44..a226dae 100644
+--- a/lib/saju/career/ohaengGijil.ts
++++ b/lib/saju/career/ohaengGijil.ts
+@@ -18,7 +18,7 @@ import {
+   calcCareerScore, gradeAll, pickStrong, EL5, GRADE_RULE, TIE_GAP,
+   type CareerScoreResult, type GradeResult, type Ohaeng,
+ } from './careerScore'
+-import { seasonConvertNote } from '../simsanOhaeng'
++import { seasonConvertNote, hourConvertNote } from '../simsanOhaeng'
+ import type { CareerCard, CareerInput } from './types'
+ import { isHourUnknown } from './types'
+ import { iga } from '../josa'
+@@ -33,6 +33,8 @@ export interface OhaengGijilData {
+   weak: Ohaeng[]       // 약함
+   gap: number          // 1위-2위 점수 차
+   monthNote: string | null
++  /** ★시지 계절 치환 안내 — 걸렸으면 «반드시» 있습니다 (2026-08-02) */
++  hourConvNote: string | null
+   hourNote: string | null
+   hourUnknown: boolean
+   total: number
+@@ -51,10 +53,14 @@ export function judgeOhaengGijil(input: CareerInput): CareerCard {
+   const sorted = [...EL5].sort((a, b) => (r.score[b] ?? 0) - (r.score[a] ?? 0))
+   const gap = (r.score[sorted[0]] ?? 0) - (r.score[sorted[1]] ?? 0)
+ 
++  const monthBranchNow = saju.find(p => p.pillar === '월주')?.branch ?? ''
+   const monthNote = seasonConvertNote(
+-    saju.find(p => p.pillar === '월주')?.branch ?? '',
+-    solarMonth, solarDay, hourBranch ?? '',
++    monthBranchNow, solarMonth, solarDay, hourBranch ?? '',
+   )
++  // ★2026-08-02 — 시지 치환이 걸리면 «반드시» 한 줄 (대표님 지시)
++  //   ⚠️ 진로·적성은 치환을 «적용» 하므로, 그 사실을 손님께 알려야
++  //      건강·궁합 화면과 숫자가 다른 까닭이 설명됩니다.
++  const hourConvNote = hourConvertNote(monthBranchNow, hourBranch ?? '')
+   const hourUnknown = isHourUnknown(saju)
+ 
+   // ── 고객이 읽을 문장 ──────────────────────────────────────────
+@@ -82,6 +88,7 @@ export function judgeOhaengGijil(input: CareerInput): CareerCard {
+   }
+   if (r.hourNote) lines.push(r.hourNote)
+   if (monthNote) lines.push(monthNote)
++  if (hourConvNote) lines.push(hourConvNote)
+   if (hourUnknown) {
+     lines.push('태어난 시(時)를 몰라 시주 두 자리를 비워 두고 보았어요. 점수는 나머지 여덟 자리를 100점으로 환산해 판단했습니다.')
+   }
+@@ -110,7 +117,8 @@ export function judgeOhaengGijil(input: CareerInput): CareerCard {
+ 
+   const data: OhaengGijilData = {
+     score: r.score as Record<Ohaeng, number>, grades: g, top: strong,
+-    excess, lack, weak, gap, monthNote, hourNote: r.hourNote, hourUnknown, total: r.total,
++    excess, lack, weak, gap, monthNote, hourConvNote,
++    hourNote: r.hourNote, hourUnknown, total: r.total,
+   }
+   return {
+     key: 'ohaeng_gijil', title: '타고난 오행의 결', badge, lines, reasons,
+diff --git a/lib/saju/simsanOhaeng.ts b/lib/saju/simsanOhaeng.ts
+index 8b0afa2..c109e16 100644
+--- a/lib/saju/simsanOhaeng.ts
++++ b/lib/saju/simsanOhaeng.ts
+@@ -136,26 +136,86 @@ function monthBranchScore(
+ }
+ 
+ // ── 시지 점수 (시지 10점) ───────────────────────────────────────
+-//   ★ 연재쌤 확정(2026-07): 시지 계절 보정은 적용하지 않는다.
+-//     시지는 언제나 본래 오행 그대로 계산.
++// ══════════════════════════════════════════════════════════════════
++//  ★★2026-08-02 연재쌤 지시 — 시지 계절 치환을 «넣습니다» (방향이 뒤집혔습니다)
+ //
+-//   [왜 안 하는가 — 2026-07-20 확인]
+-//   소스 p.38 점수론 표에는 시지 보정이 적혀 있다.
+-//     예) 寅·丑월의 丑시·寅시 → 水 / 卯·辰월의 辰시 → 木
+-//         未월의 未시 → 火 / 申월의 申시·未시 → 火 / 酉·戌월의 戌시 → 金
+-//   그러나 심산 선생님도 강의에서 넣을 때와 안 넣을 때가 있다고 한다.
+-//   즉 상황을 보고 판단하는 참고 규칙이지 절대 규칙이 아니다.
+-//   자동 계산에는 "때에 따라"가 없으므로(항상 넣거나 항상 빼야 한다)
+-//   연재쌤 판단대로 넣지 않는 쪽으로 확정했다.
++//  [무엇이 바뀌었나]
++//    전  2026-07 연재쌤 확정 — "시지 계절 보정은 적용하지 않는다"
++//    후  ★2026-08-02 연재쌤 지시 — "시지 점수를 반영하자"
++//        ⚠️ 옛 확정을 «되돌린» 것이 아니라, 연재쌤이 «새로 정하신» 것입니다.
++//           원장님 손글씨 수정판 스캔(38쪽)을 대표님이 보내 주셔서 확인했습니다.
++//           원장님은 점수만 15→10 으로 고치셨고 «시지 안내는 지우지 않으셨습니다».
++//        ★그러니 「넣지 않는다」가 오히려 교재 밖이었습니다.
+ //
+-//   [영향 확인] 넣어도 144개 월지·시지 조합 중 11개(8%)만 점수가 달라지고,
+-//   검증사주 6명은 점수·용신이 하나도 바뀌지 않았다. 실익이 작다.
++//  [옛 판단의 까닭 — 기록으로 남깁니다]
++//    "심산 선생님도 강의에서 넣을 때와 안 넣을 때가 있다고 한다.
++//     상황을 보고 판단하는 참고 규칙이지 절대 규칙이 아니다."
++//    ⇒ 그 «때에 따라» 를 이제 «쓰임» 으로 가릅니다. 아래 purpose 를 보십시오.
+ //
+-//   ※ 나중에 넣기로 바뀌면 이 함수 하나만 고치면 된다.
+-//     (monthBranch를 이미 인자로 받고 있고, 호출부도 넘기고 있다)
+-function hourBranchScore(hourBranch: string, _monthBranch: string): [Ohaeng, number] {
++//  ⚠️⚠️ [넣지 않기로 되돌리지 마십시오]
++//     이 주석을 보고 "2026-07 에 안 넣기로 했는데" 하며 되돌리면
++//     연재쌤 지시를 뒤집는 것입니다. 되돌리려면 연재쌤께 다시 여쭈십시오.
++//
++//  ── ★교재 38쪽 시지 안내 (월지가 «맞을 때만» · 전부 10점) ──
++//     ⚠️ 월지 칸에 안내가 «적힌» 자리만 치환합니다.
++//        공란인 월지(子·巳·午·亥)는 «있는 오행 그대로» 입니다. (대표님 확인)
++//
++//       寅월 · 丑월   시지 丑·寅  →  水 10
++//       卯월 · 辰월   시지 辰      →  木 10
++//       未월          시지 未      →  火 10
++//       申월          시지 申·未   →  火 10
++//       酉월 · 戌월   시지 戌      →  金 10
++//
++//     ⚠️ 卯시·酉시가 안내에 없는 것은 «본래 오행이 이미 그것» 이라 적을 필요가
++//        없었기 때문입니다 (卯=목 · 酉=금). 치환해도 결과가 같습니다.
++//
++//  ── ★쓰임에 따라 가릅니다 (2026-08-02 대표님 지시) ──
++//       진로 · 적성 · 성격   →  치환 «적용»    (기본)
++//       건강 · 궁합          →  치환 «미적용». 있는 오행 그대로
++//       ★교재 147쪽 "조후용신은 건강과 궁합을 볼 때 많이 사용한다" 와 같은 묶음입니다.
++//     ⚠️ 치환이 걸리면 «반드시 한 줄» 을 덧붙여야 합니다 —
++//        seasonConvertNote() 가 그 말을 냅니다. 빠뜨리면 두 화면의 숫자가
++//        왜 다른지 손님이 알 수 없습니다.
++//     ⚠️ 「건강」만 보는 화면이 아직 없어, 사주보기는 «진로·성격» 쪽으로 둡니다.
++//        ★건강 화면이 생기면 purpose: '건강궁합' 으로 부르십시오. (대표님 지시)
++//
++//  [실측 2026-08-02] 144칸 중 11칸(7.6%)이 달라집니다.
++//     임의 사주 20만 건 — 점수 변동 7.56% · ★발달·과다 판정 뒤집힘 4.91%
++//     · 가장 센 오행 바뀜 1.51% · 약함→결핍 1.18%
++//     ⚠️ 작은 수정이 아닙니다. 진로적성의 «강점 지능» 이 66명 중 한 분 달라집니다.
++//     ★npm run measure:hour 로 언제든 다시 잽니다.
++// ══════════════════════════════════════════════════════════════════
++
++/** 교재 38쪽 — 월지가 맞을 때만 걸리는 시지 치환. ★안 적힌 월지는 «그대로» */
++const HOUR_CONVERT: Record<string, { hours: string[]; el: Ohaeng }> = {
++  寅: { hours: ['丑', '寅'], el: '수' },
++  丑: { hours: ['丑', '寅'], el: '수' },
++  卯: { hours: ['辰'], el: '목' },
++  辰: { hours: ['辰'], el: '목' },
++  未: { hours: ['未'], el: '화' },
++  申: { hours: ['申', '未'], el: '화' },
++  酉: { hours: ['戌'], el: '금' },
++  戌: { hours: ['戌'], el: '금' },
++}
++
++/**
++ * 이 월지·시지 짝에 치환이 걸리는가. 걸리면 바뀔 오행, 아니면 null.
++ * ★판정과 «안내 문구» 가 같은 창구를 쓰게 하려고 따로 냅니다. (교훈 CJ)
++ */
++export function hourConvertEl(monthBranch: string, hourBranch: string): Ohaeng | null {
++  const r = HOUR_CONVERT[monthBranch]
++  if (!r || !r.hours.includes(hourBranch)) return null
++  const from = BRANCH_EL[hourBranch]
++  return from === r.el ? null : r.el   // 이미 같은 오행이면 «치환이 아닙니다»
++}
++
++function hourBranchScore(
++  hourBranch: string,
++  monthBranch: string,
++  convert: boolean,
++): [Ohaeng, number] {
+   const S = 10 // 시지 총점
+-  const el = BRANCH_EL[hourBranch]
++  const el = (convert ? hourConvertEl(monthBranch, hourBranch) : null) ?? BRANCH_EL[hourBranch]
+   return el ? [el, S] : ['목', 0]
+ }
+ 
+@@ -167,16 +227,33 @@ function hourBranchScore(hourBranch: string, _monthBranch: string): [Ohaeng, num
+  * @param solarMonth  양력 월 (1~12) — 寅·申월 날짜분할에 필요
+  * @param solarDay    양력 일 (1~31)
+  * @param hourBranch  시지 글자 (예 '卯'). 없으면 시주 미반영
++ * @param opts.purpose  ★무엇을 보려고 부르는가 (2026-08-02 대표님 지시)
++ *                      '진로'(기본)  진로·적성·성격 — 시지 계절 치환을 «적용»
++ *                      '건강궁합'    건강·궁합       — 있는 오행 «그대로»
++ * @param opts.forCouple ⚠️ 옛 이름입니다. 부르는 곳이 여럿이라 남겨 둡니다.
++ *                       true 면 purpose='건강궁합' 과 같습니다.
+  * @returns 오행별 점수 { 목, 화, 토, 금, 수 } (합계 최대 100)
+  */
++export type OhaengPurpose = '진로' | '건강궁합'
++
+ export function calcSimsanOhaeng(
+   saju: Pillar[],
+   solarMonth: number,
+   solarDay: number,
+   hourBranch: string | null,
+-  opts: { forCouple?: boolean } = {},
++  opts: { forCouple?: boolean; purpose?: OhaengPurpose } = {},
+ ): OhaengScore {
+-  const forCouple = opts.forCouple ?? false
++  // ══════════════════════════════════════════════════════════════
++  //  ★2026-08-02 — 「쓰임」 하나로 모읍니다
++  //   ⚠️ forCouple 은 원래 «월지» 치환만 가르던 값이었습니다.
++  //      이제 «시지» 치환도 함께 가르므로 뜻이 겹칩니다.
++  //      ★새로 부르는 곳은 purpose 를 쓰십시오. forCouple 은 옛 길입니다.
++  //   ⚠️ 둘 다 안 주면 «진로» 입니다 — 지금까지 부르던 곳이 대부분 그쪽입니다.
++  // ══════════════════════════════════════════════════════════════
++  const purpose: OhaengPurpose = opts.purpose ?? (opts.forCouple ? '건강궁합' : '진로')
++  const forCouple = purpose === '건강궁합'
++  /** 시지 계절 치환을 넣는가 — ★진로·적성·성격에서만 */
++  const convertHour = purpose === '진로'
+   const score = emptyScore()
+   const monthPillar = saju.find(p => p.pillar === '월주')
+   const monthBranch = monthPillar ? monthPillar.branch : ''
+@@ -193,7 +270,7 @@ export function calcSimsanOhaeng(
+       }
+     } else if (pillar === '시주') {
+       const hb = hourBranch ?? branch
+-      const [el, pts] = hourBranchScore(hb, monthBranch)
++      const [el, pts] = hourBranchScore(hb, monthBranch, convertHour)
+       score[el] += pts
+     } else {
+       // 일지(15) · 년지(5) — 계절 치환 없이 본래 오행
+@@ -265,3 +342,44 @@ export function seasonConvertNote(
+       return null
+   }
+ }
++
++// ══════════════════════════════════════════════════════════════════
++//  ★2026-08-02 — 시지 치환이 걸리면 «반드시 한 줄» (대표님 지시)
++//
++//   [왜 반드시인가]  진로 화면과 건강·궁합 화면의 «숫자가 달라집니다».
++//     까닭을 말해 주지 않으면 손님이 「어느 게 맞느냐」고 여쭙습니다.
++//     ★위 seasonConvertNote 가 «월지» 를 위해 만들어진 것과 같은 뜻입니다.
++//
++//   ⚠️ 이 말을 «지어내지» 마십시오 — hourConvertEl 이 판정하고 여기는 옮겨만 씁니다.
++//      두 곳에서 따로 판단하면 「치환은 됐는데 말은 안 나오는」 날이 옵니다. (교훈 CJ)
++// ══════════════════════════════════════════════════════════════════
++
++const EL_SEASON: Record<Ohaeng, string> = {
++  목: '봄', 화: '여름', 금: '가을', 수: '겨울', 토: '환절기',
++}
++
++/**
++ * 시지 계절 치환이 걸렸으면 한 줄로 알려 줍니다. 안 걸렸으면 null.
++ *
++ * ⚠️ 건강·궁합(purpose='건강궁합')에서는 치환을 «안 하므로»,
++ *    그때는 이 함수를 부르지 말고 hourNoConvertNote() 를 쓰십시오.
++ */
++export function hourConvertNote(monthBranch: string, hourBranch: string): string | null {
++  const to = hourConvertEl(monthBranch, hourBranch)
++  if (!to) return null
++  return `태어난 시(${hourBranch}시)를 ${EL_SEASON[to]} 기운으로 보아 ${to}(으)로 계산했어요.`
++}
++
++/**
++ * ★건강·궁합 화면에서 «왜 숫자가 다른지» 알려 주는 한 줄.
++ *
++ *   치환이 걸릴 «자리인데» 안 걸었을 때만 말합니다.
++ *   ⚠️ 아무 때나 말하면 손님이 없는 차이를 걱정하십니다.
++ */
++export function hourNoConvertNote(monthBranch: string, hourBranch: string): string | null {
++  const to = hourConvertEl(monthBranch, hourBranch)
++  if (!to) return null
++  const from = BRANCH_EL[hourBranch]
++  return `건강과 궁합을 볼 때는 태어난 시를 있는 그대로 봅니다(${hourBranch}=${from}).`
++    + ` 진로·적성 화면에서는 ${to}(으)로 보아 숫자가 조금 다를 수 있어요.`
++}
+diff --git a/package.json b/package.json
+index 36d5779..0c008bc 100644
+--- a/package.json
++++ b/package.json
+@@ -8,7 +8,7 @@
+     "build": "next build",
+     "start": "next start",
+     "lint": "eslint",
+-    "verify": "tsx 13-verify-18-daeun.ts && tsx 14-verify-exam-seven.ts && tsx 16-verify-naming.ts && tsx 18-verify-sound.ts && tsx 19-verify-eumyang.ts && tsx 20-verify-resource.ts && tsx 21-verify-lunar.ts && tsx 22-verify-jijanggan.ts && tsx 23-verify-career-bridge.ts && tsx 24-verify-deps.ts && tsx 25-verify-manse-ui.ts && tsx 26-verify-namedict.ts && tsx 27-verify-recommend.ts && tsx 28-verify-naming-flow.ts && tsx 30-e2e-naming-flow.ts",
++    "verify": "tsx 13-verify-18-daeun.ts && tsx 14-verify-exam-seven.ts && tsx 16-verify-naming.ts && tsx 18-verify-sound.ts && tsx 19-verify-eumyang.ts && tsx 20-verify-resource.ts && tsx 21-verify-lunar.ts && tsx 22-verify-jijanggan.ts && tsx 23-verify-career-bridge.ts && tsx 24-verify-deps.ts && tsx 25-verify-manse-ui.ts && tsx 26-verify-namedict.ts && tsx 27-verify-recommend.ts && tsx 28-verify-naming-flow.ts && tsx 30-e2e-naming-flow.ts && tsx 32-verify-hour-convert.ts",
+     "verify:daeun": "tsx 13-verify-18-daeun.ts",
+     "verify:gyeokguk": "python3 04-verify-19-cases.py",
+     "verify:hap": "python3 05-verify-hap-78-83.py",
+@@ -28,7 +28,9 @@
+     "verify:recommend": "tsx 27-verify-recommend.ts",
+     "verify:namingflow": "tsx 28-verify-naming-flow.ts",
+     "measure:resource": "tsx 29-measure-resource-weights.ts",
+-    "verify:namingE2E": "tsx 30-e2e-naming-flow.ts"
++    "verify:namingE2E": "tsx 30-e2e-naming-flow.ts",
++    "measure:hour": "tsx 31-measure-hour-convert.ts",
++    "verify:hour": "tsx 32-verify-hour-convert.ts"
+   },
+   "dependencies": {
+     "@supabase/ssr": "^0.6.1",
+-- 
+2.43.0
+
+
+From 8e34d617a46daf42fbeb8fd18c91015be4e4b665 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Sun, 2 Aug 2026 08:02:59 +0000
+Subject: [PATCH 5/6] =?UTF-8?q?=F0=9F=94=B4=20=EC=8B=9C=EC=A7=80=2010?=
+ =?UTF-8?q?=EC=A0=90=20=EC=9D=B4=EC=A4=91=20=EC=9D=B4=EB=8F=99=20=EC=88=98?=
+ =?UTF-8?q?=EB=A6=AC=20=C2=B7=20=EC=8B=AD=EC=84=B1=20=ED=91=9C=20=EC=95=88?=
+ =?UTF-8?q?=EB=82=B4=20(44=EB=B6=80=205=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+🔴 제가 만든 결함입니다. 실기 화면으로 잡혔습니다.
+
+  [무엇이 있었나]
+    2026-07-20 에 simsanOhaeng 이 시지 치환을 안 하기로 하면서,
+    진로적성(careerScore)은 «자기 안에서» 따로 치환하고 있었습니다.
+    그런데 44부 4차에 simsanOhaeng 에 치환을 넣으면서
+    ★같은 10점이 «두 번» 옮겨졌습니다.
+
+    실측 (戊辰 丙辰 乙巳 庚辰)
+      비겁 55 → 65 «과다»   ·   재성 10 → 0 «결핍»
+    ⚠️ 없는 「과다」와 없는 「결핍」이 손님 화면에 나갔습니다.
+
+  [고친 것]
+    ★점수는 calcSimsanOhaeng(purpose:'진로') «한 곳» 이 냅니다.
+      careerScore 는 «글자 세기» 만 합니다. 다시 옮기지 않습니다.
+    ★글자 세기도 같은 창구(hourConvertEl)를 씁니다.
+    ⚠️ HOUR_BRANCH_POINT 는 남겨 두었습니다 — 두 값이 같아야 함을 증언합니다.
+
+★십성 표에 까닭 한 줄 (대표님 지시)
+  "십성은 글자를 있는 그대로 셉니다. 위 오행 비율은 계절 치환이 들어가
+   서로 다를 수 있어요."
+  ⚠️ 십성 셈은 «고치지 않았습니다» — 십성은 「이 글자가 일간에게 무엇인가」이고
+     그것으로 육친을 읽습니다. 계절로 바꿔 세면 사람이 바뀝니다.
+
+검사 ㉒-g / ㉒-h 신설 — 34 → 46건
+  ㉒-g  144칸 전수로 두 계산기의 점수가 «같은지» 맞대어 봅니다
+        ★실기에서 잡힌 그 사주를 표본으로 못 박았습니다 (목 55 · 토 10)
+검사 1,461 → 1,473 · 실패 0 · tsc 통과
+---
+ 32-verify-hour-convert.ts                  | 56 ++++++++++++++++++++++
+ app/manseryeok/result-new/SipsungTable.tsx | 23 +++++++++
+ lib/saju/career/careerScore.ts             | 51 ++++++++++++++++----
+ 3 files changed, 120 insertions(+), 10 deletions(-)
+
+diff --git a/32-verify-hour-convert.ts b/32-verify-hour-convert.ts
+index 900e634..d474569 100644
+--- a/32-verify-hour-convert.ts
++++ b/32-verify-hour-convert.ts
+@@ -15,6 +15,8 @@ import {
+   calcSimsanOhaeng, hourConvertEl, hourConvertNote, hourNoConvertNote,
+   type Ohaeng, type Pillar,
+ } from './lib/saju/simsanOhaeng'
++// ★두 계산기가 «같은 점수» 를 내는지 맞대어 봅니다 (2026-08-02 결함)
++import { calcCareerScore } from './lib/saju/career/careerScore'
+ 
+ let pass = 0, fail = 0
+ const check = (ok: boolean, msg: string) => {
+@@ -116,6 +118,60 @@ console.log('\n━━ ㉒-e ⚠️ 합이 언제나 100인가 ━━')
+   check(bad === 0, `144칸 × 두 쓰임 — 합이 «언제나» 100입니다`)
+ }
+ 
++console.log('\n━━ ㉒-g 🔴 시지 10점이 «두 번» 옮겨지지 않는가 ━━')
++{
++  // 🔴 2026-08-02 — 제가 만든 결함입니다.
++  //   simsanOhaeng 에 치환을 넣었는데 careerScore 가 «자기 치환» 을 갖고 있어
++  //   같은 10점이 두 번 옮겨졌습니다. 없던 「과다」와 「결핍」이 손님께 나갔습니다.
++  //   ★이 그물이 그것이 되살아나는 것을 막습니다.
++  const JI2 = JI
++  let diff = 0, worst = ''
++  for (const m of JI2) for (const h of JI2) {
++    const pill = ['년주', '월주', '일주', '시주'].map((p, i) => ({
++      pillar: p, stem: ['戊', '丙', '乙', '庚'][i], branch: ['子', m, '巳', h][i],
++    })) as Pillar[]
++    const a = calcSimsanOhaeng(pill, 4, 20, h, { purpose: '진로' })
++    const r = calcCareerScore(pill, 4, 20, h)
++    if (!EL5.every(e => a[e] === r.score[e])) { diff++; if (!worst) worst = `${m}월 ${h}시` }
++  }
++  check(diff === 0,
++    `★144칸 전수 — 오각형(simsanOhaeng)과 육친(careerScore) 점수가 «같습니다»${worst ? ` — 어긋남 ${worst}` : ''}`)
++
++  // ★실기에서 잡힌 그 사주로 못 박습니다 (戊辰 丙辰 乙巳 庚辰)
++  const real4 = ['년주', '월주', '일주', '시주'].map((p, i) => ({
++    pillar: p, stem: ['戊', '丙', '乙', '庚'][i], branch: ['辰', '辰', '巳', '辰'][i],
++  })) as Pillar[]
++  const rr = calcCareerScore(real4, 4, 20, '辰')
++  check(rr.score['목'] === 55, `★실기 표본 — 목 55점 (65점이면 두 번 옮겨진 것) — ${rr.score['목']}`)
++  check(rr.score['토'] === 10, `★실기 표본 — 토 10점 (0점이면 두 번 옮겨진 것) — ${rr.score['토']}`)
++  check(EL5.reduce((a, e) => a + rr.score[e], 0) === 100, `합이 100입니다`)
++  check(rr.hourConverted === true, `시지 치환이 걸렸다고 «알립니다»`)
++
++  // ⚠️ careerScore 가 점수를 «다시 옮기지» 않는가 — 코드로도 봅니다
++  const cs = read('lib/saju/career/careerScore.ts')
++  check(!/score\[from\] = \(score\[from\] \?\? 0\) - HOUR_BRANCH_POINT/.test(cs),
++    `★careerScore 가 점수를 «다시 옮기지» 않습니다`)
++  check(/purpose: '진로'/.test(cs), `★simsanOhaeng 을 «진로» 쓰임으로 부릅니다`)
++  check(/hourConvertEl\(monthBranch, p\.branch\)/.test(cs),
++    `★글자 세기도 «같은 창구»(hourConvertEl)를 씁니다`)
++}
++
++console.log('\n━━ ㉒-h ★십성 표 — «왜 다른지» 알려 주는가 ━━')
++{
++  //  ⚠️ 오각형은 «점수 + 계절 치환», 십성 표는 «글자 개수» 입니다.
++  //     한 화면에 나란히 있어 손님이 갸웃하십니다. 까닭을 말해 드려야 합니다.
++  const t = read('app/manseryeok/result-new/SipsungTable.tsx')
++  check(/십성은 글자를 있는 그대로 셉니다/.test(t), `★십성 표에 까닭 한 줄이 있습니다`)
++  check(/계절 치환이 들어가/.test(t), `★오행 비율과 다른 «까닭» 을 말합니다`)
++  // ★셈은 «고치지» 않았는가 — 십성은 글자 그대로여야 합니다
++  const d = read('lib/saju/sipsungDist.ts')
++  check(!/hourConvert|convertHourBranch|purpose/.test(d),
++    `⚠️ 십성 셈에 «치환이 들어가지» 않았습니다 (글자 그대로여야 합니다)`)
++  // ⚠️ 이 표는 공용 부품입니다 — 두 화면이 나눠 씁니다
++  check(/SipsungTable/.test(read('app/manseryeok/components/SajuTableSlot.tsx')),
++    `⚠️ 공용 부품이라 한 곳만 고치면 두 화면에 다 붙습니다`)
++}
++
+ console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
+ {
+   const src = read('lib/saju/simsanOhaeng.ts')
+diff --git a/app/manseryeok/result-new/SipsungTable.tsx b/app/manseryeok/result-new/SipsungTable.tsx
+index dd88a8f..43ff92f 100644
+--- a/app/manseryeok/result-new/SipsungTable.tsx
++++ b/app/manseryeok/result-new/SipsungTable.tsx
+@@ -69,6 +69,29 @@ export default function SipsungTable({ sipsung }: { sipsung: { ss: string; pct:
+           )
+         })}
+       </tbody>
++      {/* ══════════════════════════════════════════════════════════
++          ★2026-08-02 — 「왜 오행 비율과 다른가」 한 줄 (대표님 지시)
++
++           [무엇이 헷갈리나]  같은 화면의 오각형은 «점수» 로, 이 표는 «글자 개수» 로
++             셉니다. 그리고 오각형은 월지·시지에 «계절 치환» 이 걸립니다.
++             ⇒ 「목이 55%인데 비견은 14.3%」 같은 모양이 나옵니다.
++
++           ★십성은 «글자 그대로» 세는 것이 맞습니다 —
++             십성은 「이 글자가 일간에게 무엇인가」이고, 그것으로 육친
++             (아버지·재물·배우자)을 읽습니다. 계절로 바꿔 세면 사람이 바뀝니다.
++           ⚠️ 그러니 셈을 고치지 «마십시오». 까닭을 말해 드리는 것으로 족합니다.
++          ══════════════════════════════════════════════════════════ */}
++      <tfoot>
++        <tr>
++          <td colSpan={2} style={{
++            padding: '5px 4px', fontSize: '8.5px', color: '#a8927e',
++            lineHeight: 1.5, border: 'none', textAlign: 'left',
++          }}>
++            십성은 글자를 있는 그대로 셉니다. 위 오행 비율은 계절 치환이 들어가
++            서로 다를 수 있어요.
++          </td>
++        </tr>
++      </tfoot>
+     </table>
+   )
+ }
+diff --git a/lib/saju/career/careerScore.ts b/lib/saju/career/careerScore.ts
+index d582abc..9060ead 100644
+--- a/lib/saju/career/careerScore.ts
++++ b/lib/saju/career/careerScore.ts
+@@ -32,7 +32,7 @@
+ //     책 사례가 "육친별 점수 목40 화30 토10 금15 수15" 처럼
+ //     오행 이름으로 적는 것도 같은 이유다. 숫자는 한 벌이고 부르는 이름만 둘이다.
+ 
+-import { calcSimsanOhaeng, type Ohaeng, type OhaengScore } from '../simsanOhaeng'
++import { calcSimsanOhaeng, hourConvertEl, type Ohaeng, type OhaengScore } from '../simsanOhaeng'
+ import type { Pillar } from './types'
+ import { euro } from '../josa'
+ 
+@@ -46,8 +46,16 @@ const STEM_EL: Record<string, Ohaeng> = {
+   己: '토', 庚: '금', 辛: '금', 壬: '수', 癸: '수',
+ }
+ 
+-/** 시지 배점 (simsanOhaeng 과 같아야 한다) */
+-const HOUR_BRANCH_POINT = 10
++/**
++ * 시지 배점.
++ *
++ * ★2026-08-02 — 점수를 여기서 옮기지 «않게» 되면서 쓰는 곳이 없어졌습니다.
++ *   그래도 «남겨 둡니다» — simsanOhaeng 과 같은 값이어야 한다는 것을
++ *   증언하는 자리이고, 되살릴 때 필요합니다.
++ *   ⚠️ 이 값을 보고 「점수를 옮겨야겠다」고 생각하지 마십시오.
++ *      옮기는 일은 simsanOhaeng 이 «이미» 합니다.
++ */
++export const HOUR_BRANCH_POINT = 10
+ 
+ /**
+  * 시지 계절치환 — 교재 60쪽 표 「시지(時支) 특이사항」
+@@ -108,12 +116,36 @@ const real = (x: string) => !!x && x !== '?'
+ 
+ /**
+  * 진로적성 육친 점수.
+- * calcSimsanOhaeng(100점 · 월지 치환)을 받아 **시지 10점만 다시 배치**한다.
++ *
++ * ★2026-08-02 — 점수는 calcSimsanOhaeng(purpose:'진로') 이 «전부» 냅니다.
++ *   이 함수는 «글자 세기(chars)» 만 합니다.
+  */
+ export function calcCareerScore(
+   saju: Pillar[], solarMonth: number, solarDay: number, hourBranch: string | null,
+ ): CareerScoreResult {
+-  const base = calcSimsanOhaeng(saju, solarMonth, solarDay, hourBranch)
++  // ══════════════════════════════════════════════════════════════
++  //  🔴★2026-08-02 — 시지 10점이 «두 번» 옮겨지던 자리 (제가 만든 결함)
++  //
++  //  [무엇이 있었나]
++  //    2026-07-20 에 simsanOhaeng 이 시지 치환을 «안 하기로» 하면서,
++  //    진로적성은 자기 안에서 «따로» 치환하고 있었습니다.
++  //      const base = calcSimsanOhaeng(...)        ← 치환 «없는» 값
++  //      score[from] -= 10 ; score[to] += 10       ← 여기서 옮김
++  //
++  //    ★그런데 2026-08-02 에 연재쌤 지시로 simsanOhaeng 에 치환을 넣었습니다.
++  //      ⇒ 같은 10점을 «두 번» 옮기게 되었습니다.
++  //      실측(戊辰 丙辰 乙巳 庚辰) — 비겁 55 → 65 «과다» · 재성 10 → 0 «결핍»
++  //      ⚠️ 없는 「과다」와 없는 「결핍」이 손님 화면에 나갔습니다.
++  //
++  //  ★[이제]  점수는 simsanOhaeng «한 곳» 이 냅니다. 여기서 다시 옮기지 않습니다.
++  //    ⚠️⚠️ 아래 score 에 손대지 마십시오. 옮기고 싶으면 simsanOhaeng 을 고치십시오.
++  //       (교훈 CJ — 판정은 한 창구)
++  //
++  //  ⚠️ convertHourBranch 는 «글자 세기» 에 아직 씁니다. 지우지 마십시오.
++  //     다만 simsanOhaeng.hourConvertEl 과 «같은 답» 을 내야 합니다 —
++  //     32-verify-hour-convert.ts 가 144칸을 맞대어 봅니다.
++  // ══════════════════════════════════════════════════════════════
++  const base = calcSimsanOhaeng(saju, solarMonth, solarDay, hourBranch, { purpose: '진로' })
+   const score: OhaengScore = { ...base }
+ 
+   const monthPillar = saju.find(p => p.pillar === '월주')
+@@ -121,15 +153,13 @@ export function calcCareerScore(
+   const hourPillar = saju.find(p => p.pillar === '시주')
+   const hb = hourBranch ?? hourPillar?.branch ?? ''
+ 
+-  // ── 시지 치환 ────────────────────────────────────────────────
++  // ── 시지 치환이 «걸렸는가» — 점수는 이미 반영되어 있고, 여기서는 «알리기» 만 ──
+   let hourConverted = false
+   let hourNote: string | null = null
+   if (real(hb) && real(monthBranch)) {
+     const from = BRANCH_EL[hb]
+-    const to = convertHourBranch(monthBranch, hb)
++    const to = hourConvertEl(monthBranch, hb)
+     if (from && to && from !== to) {
+-      score[from] = (score[from] ?? 0) - HOUR_BRANCH_POINT
+-      score[to] = (score[to] ?? 0) + HOUR_BRANCH_POINT
+       hourConverted = true
+       hourNote = `시지 ${hb}(${from})을 ${monthBranch}월의 기운으로 보아 ${to}${euro(to)} 계산했어요.`
+     }
+@@ -154,7 +184,8 @@ export function calcCareerScore(
+       el = pickMonthEl(base, p.branch, saju, solarMonth, solarDay, hb) ?? from
+       monthEl = el
+     } else if (p.pillar === '시주') {
+-      el = convertHourBranch(monthBranch, p.branch) ?? from
++      // ★점수와 «같은 창구» 로 셉니다 (교훈 CJ)
++      el = hourConvertEl(monthBranch, p.branch) ?? from
+     }
+     chars[el].push({ ch: p.branch, pillar: p.pillar, where: '지지', el, converted: el !== from })
+   }
+-- 
+2.43.0
+
+
+From bd940ce716926bb3999f8c4d584ec8575919516c Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Sun, 2 Aug 2026 08:19:23 +0000
+Subject: [PATCH 6/6] =?UTF-8?q?=EC=95=88=EB=82=B4=20=EC=A4=84=20=ED=95=98?=
+ =?UTF-8?q?=EB=82=98=EB=A1=9C=20=C2=B7=20=EC=B0=A8=EB=A1=80=20=EC=9B=94?=
+ =?UTF-8?q?=EC=A7=80=E2=86=92=EC=8B=9C=EC=A7=80=20(44=EB=B6=80=206?=
+ =?UTF-8?q?=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+🔴 실기 화면에 같은 말이 «두 줄» 떴습니다.
+   "시지 辰(토)을 辰월의 기운으로 보아 목으로…"   ← careerScore.hourNote
+   "월지 辰(토)을 봄 기운으로 보아 木으로…"        ← seasonConvertNote
+   "태어난 시(辰시)를 봄 기운으로 보아 목으로…"    ← 4차에 제가 넣은 것
+   ★첫째와 셋째가 같은 말이었습니다.
+
+[까닭]  4차에서 hourConvertNote 를 넣을 때, careerScore 가 이미 hourNote 를
+        내고 있는 줄 몰랐습니다. 5차의 이중 이동과 «같은 뿌리» 입니다 —
+        그쪽에 이미 있는 것을 못 봤습니다.
+
+[고친 것]
+  ★말은 simsanOhaeng.hourConvertNote «한 곳» 이 냅니다.
+    careerScore.hourNote 도 그것을 받아 옵니다 — 같은 문장입니다.
+  ★문구를 careerScore 말투로 통일했습니다 (더 정확합니다)
+    "태어난 시 辰(토)를 辰월의 기운으로 보아 목(으)로 계산했어요."
+    ⚠️ 옛 검사가 「봄 기운으로」를 지키고 있어 검사를 뒤집었습니다.
+       계절 대신 «월지» 를 밝히는 쪽이 정확합니다.
+  ★차례 — 월지(35점)가 시지(10점)보다 무거우니 월지 먼저
+
+검사 ㉒-i 신설 — 46 → 52건
+  두 말이 같은 문장인가 · 두 번 밀어 넣지 않는가 · 차례가 맞는가
+검사 1,473 → 1,479 · 실패 0 · tsc 통과 · eslint 82/138
+---
+ 32-verify-hour-convert.ts      | 36 ++++++++++++++++++++++++++++++++--
+ lib/saju/career/careerScore.ts |  8 +++++---
+ lib/saju/career/ohaengGijil.ts | 15 +++++++++++++-
+ lib/saju/simsanOhaeng.ts       | 10 +++++-----
+ 4 files changed, 58 insertions(+), 11 deletions(-)
+
+diff --git a/32-verify-hour-convert.ts b/32-verify-hour-convert.ts
+index d474569..ef4b321 100644
+--- a/32-verify-hour-convert.ts
++++ b/32-verify-hour-convert.ts
+@@ -18,6 +18,7 @@ import {
+ // ★두 계산기가 «같은 점수» 를 내는지 맞대어 봅니다 (2026-08-02 결함)
+ import { calcCareerScore } from './lib/saju/career/careerScore'
+ 
++
+ let pass = 0, fail = 0
+ const check = (ok: boolean, msg: string) => {
+   if (ok) { pass++; console.log(`  ✅ ${msg}`) } else { fail++; console.log(`  🔴 ${msg}`) }
+@@ -98,9 +99,13 @@ console.log('\n━━ ㉒-d ★치환이 걸리면 «반드시 한 줄» 이 나
+   }
+   check(hMiss === 0, `★건강·궁합 쪽도 «왜 숫자가 다른지» 알려 줍니다`)
+ 
++  // ★2026-08-02 — 문구를 careerScore 말투로 통일했습니다 («◯월의 기운으로»).
++  //   ⚠️ 옛 문구는 「봄 기운으로」였습니다. 이 검사가 그것을 지키고 있어
++  //      «검사를 뒤집었습니다». 계절 대신 «월지» 를 밝히는 쪽이 더 정확합니다.
+   const s = hourConvertNote('辰', '辰') ?? ''
+-  check(s.includes('辰시') && s.includes('봄') && s.includes('목'),
+-    `한 줄에 «시지·계절·오행» 이 다 들어 있습니다 — ${s}`)
++  check(s.includes('辰') && s.includes('월의 기운') && s.includes('목'),
++    `한 줄에 «시지·월지·오행» 이 다 들어 있습니다 — ${s}`)
++  check(s.startsWith('태어난 시'), `★손님 말로 시작합니다 (「시지」가 아니라 「태어난 시」)`)
+ }
+ 
+ console.log('\n━━ ㉒-e ⚠️ 합이 언제나 100인가 ━━')
+@@ -156,6 +161,33 @@ console.log('\n━━ ㉒-g 🔴 시지 10점이 «두 번» 옮겨지지 않는
+     `★글자 세기도 «같은 창구»(hourConvertEl)를 씁니다`)
+ }
+ 
++console.log('\n━━ ㉒-i ★안내 줄이 «겹치지» 않는가 ━━')
++{
++  // 🔴 2026-08-02 실기 — 같은 말이 «두 줄» 떴습니다.
++  //   제가 hourConvertNote 를 넣을 때 careerScore 가 이미 hourNote 를
++  //   내고 있는 줄 몰랐습니다. ★말은 «한 곳» 이 내야 합니다. (교훈 CJ)
++  const pill = ['년주', '월주', '일주', '시주'].map((p, i) => ({
++    pillar: p, stem: ['戊', '丙', '乙', '庚'][i], branch: ['辰', '辰', '巳', '辰'][i],
++  })) as Pillar[]
++  const r = calcCareerScore(pill, 4, 20, '辰')
++  check(r.hourNote === hourConvertNote('辰', '辰'),
++    `★careerScore 의 말이 hourConvertNote 와 «같은 문장» 입니다`)
++
++  const g = read('lib/saju/career/ohaengGijil.ts')
++  check(!/if \(r\.hourNote\) lines\.push\(r\.hourNote\)/.test(g),
++    `★같은 말을 «두 번» 밀어 넣지 않습니다`)
++  // ⚠️ 차례 — 월지(35점)가 시지(10점)보다 무겁습니다
++  const mi = g.indexOf('if (monthNote) lines.push(monthNote)')
++  const hi = g.indexOf('if (hourConvNote) lines.push(hourConvNote)')
++  check(mi > 0 && hi > mi, `★월지 안내가 «먼저» 나옵니다 (35점 > 10점)`)
++
++  // ⚠️ careerScore 가 문구를 «따로 짓지» 않는가
++  const cs = read('lib/saju/career/careerScore.ts')
++  check(!/hourNote = `시지/.test(cs), `★careerScore 가 문구를 «따로 짓지» 않습니다`)
++  check(/hourNote = hourConvertNote\(monthBranch, hb\)/.test(cs),
++    `★같은 창구에서 받아 옵니다`)
++}
++
+ console.log('\n━━ ㉒-h ★십성 표 — «왜 다른지» 알려 주는가 ━━')
+ {
+   //  ⚠️ 오각형은 «점수 + 계절 치환», 십성 표는 «글자 개수» 입니다.
+diff --git a/lib/saju/career/careerScore.ts b/lib/saju/career/careerScore.ts
+index 9060ead..9391802 100644
+--- a/lib/saju/career/careerScore.ts
++++ b/lib/saju/career/careerScore.ts
+@@ -32,9 +32,8 @@
+ //     책 사례가 "육친별 점수 목40 화30 토10 금15 수15" 처럼
+ //     오행 이름으로 적는 것도 같은 이유다. 숫자는 한 벌이고 부르는 이름만 둘이다.
+ 
+-import { calcSimsanOhaeng, hourConvertEl, type Ohaeng, type OhaengScore } from '../simsanOhaeng'
++import { calcSimsanOhaeng, hourConvertEl, hourConvertNote, type Ohaeng, type OhaengScore } from '../simsanOhaeng'
+ import type { Pillar } from './types'
+-import { euro } from '../josa'
+ 
+ /** 지지 본래 오행 */
+ const BRANCH_EL: Record<string, Ohaeng> = {
+@@ -161,7 +160,10 @@ export function calcCareerScore(
+     const to = hourConvertEl(monthBranch, hb)
+     if (from && to && from !== to) {
+       hourConverted = true
+-      hourNote = `시지 ${hb}(${from})을 ${monthBranch}월의 기운으로 보아 ${to}${euro(to)} 계산했어요.`
++      // ★2026-08-02 — 말은 simsanOhaeng.hourConvertNote «한 곳» 이 냅니다.
++      //   ⚠️ 여기서 또 지으면 두 줄이 «같은 말» 을 하게 됩니다.
++      //      실기 화면에서 실제로 그렇게 나왔습니다 (2026-08-02).
++      hourNote = hourConvertNote(monthBranch, hb)
+     }
+   }
+ 
+diff --git a/lib/saju/career/ohaengGijil.ts b/lib/saju/career/ohaengGijil.ts
+index a226dae..b592cae 100644
+--- a/lib/saju/career/ohaengGijil.ts
++++ b/lib/saju/career/ohaengGijil.ts
+@@ -86,7 +86,20 @@ export function judgeOhaengGijil(input: CareerInput): CareerCard {
+   for (const el of lack) {
+     lines.push(`${el}(${OHAENG_GIJIL[el].hanja})${iga(el)} 타고나지 않았어요 — ${OHAENG_GIJIL[el].keyword}. ${GRADE_NOTE.결핍}`)
+   }
+-  if (r.hourNote) lines.push(r.hourNote)
++  // ══════════════════════════════════════════════════════════════
++  //  ★2026-08-02 — 안내 줄을 «하나로» · 차례는 월지 → 시지
++  //
++  //  🔴 [무엇이 있었나]  실기 화면에 «세 줄» 이 떴습니다.
++  //       "시지 辰(토)을 辰월의 기운으로 보아 목으로…"   ← r.hourNote
++  //       "월지 辰(토)을 봄 기운으로 보아 木으로…"        ← monthNote
++  //       "태어난 시(辰시)를 봄 기운으로 보아 목으로…"    ← hourConvNote
++  //     ★첫째와 셋째가 «같은 말» 이었습니다. 제가 hourConvNote 를 넣을 때
++  //       careerScore 가 이미 hourNote 를 내고 있는 줄 몰랐습니다.
++  //
++  //  ★[이제]  말은 simsanOhaeng.hourConvertNote 한 곳이 냅니다.
++  //     r.hourNote 도 그것을 받아 오므로 «같은 문장» 입니다. 하나만 씁니다.
++  //  ⚠️ 차례 — 월지(35점)가 시지(10점)보다 무거우니 «월지 먼저» 입니다.
++  // ══════════════════════════════════════════════════════════════
+   if (monthNote) lines.push(monthNote)
+   if (hourConvNote) lines.push(hourConvNote)
+   if (hourUnknown) {
+diff --git a/lib/saju/simsanOhaeng.ts b/lib/saju/simsanOhaeng.ts
+index c109e16..a6d9cca 100644
+--- a/lib/saju/simsanOhaeng.ts
++++ b/lib/saju/simsanOhaeng.ts
+@@ -354,10 +354,6 @@ export function seasonConvertNote(
+ //      두 곳에서 따로 판단하면 「치환은 됐는데 말은 안 나오는」 날이 옵니다. (교훈 CJ)
+ // ══════════════════════════════════════════════════════════════════
+ 
+-const EL_SEASON: Record<Ohaeng, string> = {
+-  목: '봄', 화: '여름', 금: '가을', 수: '겨울', 토: '환절기',
+-}
+-
+ /**
+  * 시지 계절 치환이 걸렸으면 한 줄로 알려 줍니다. 안 걸렸으면 null.
+  *
+@@ -367,7 +363,11 @@ const EL_SEASON: Record<Ohaeng, string> = {
+ export function hourConvertNote(monthBranch: string, hourBranch: string): string | null {
+   const to = hourConvertEl(monthBranch, hourBranch)
+   if (!to) return null
+-  return `태어난 시(${hourBranch}시)를 ${EL_SEASON[to]} 기운으로 보아 ${to}(으)로 계산했어요.`
++  const from = BRANCH_EL[hourBranch]
++  // ★2026-08-02 — careerScore 가 따로 내던 hourNote 를 «여기로 모았습니다».
++  //   그쪽 말투가 더 정확해서(「辰월의 기운으로」) 그것을 따릅니다.
++  //   ⚠️ 두 곳에서 따로 말하면 한쪽만 고치는 날이 옵니다. (교훈 CJ)
++  return `태어난 시 ${hourBranch}(${from})를 ${monthBranch}월의 기운으로 보아 ${to}(으)로 계산했어요.`
+ }
+ 
+ /**
+-- 
+2.43.0
+

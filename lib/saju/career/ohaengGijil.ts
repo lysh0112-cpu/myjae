@@ -86,7 +86,20 @@ export function judgeOhaengGijil(input: CareerInput): CareerCard {
   for (const el of lack) {
     lines.push(`${el}(${OHAENG_GIJIL[el].hanja})${iga(el)} 타고나지 않았어요 — ${OHAENG_GIJIL[el].keyword}. ${GRADE_NOTE.결핍}`)
   }
-  if (r.hourNote) lines.push(r.hourNote)
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-02 — 안내 줄을 «하나로» · 차례는 월지 → 시지
+  //
+  //  🔴 [무엇이 있었나]  실기 화면에 «세 줄» 이 떴습니다.
+  //       "시지 辰(토)을 辰월의 기운으로 보아 목으로…"   ← r.hourNote
+  //       "월지 辰(토)을 봄 기운으로 보아 木으로…"        ← monthNote
+  //       "태어난 시(辰시)를 봄 기운으로 보아 목으로…"    ← hourConvNote
+  //     ★첫째와 셋째가 «같은 말» 이었습니다. 제가 hourConvNote 를 넣을 때
+  //       careerScore 가 이미 hourNote 를 내고 있는 줄 몰랐습니다.
+  //
+  //  ★[이제]  말은 simsanOhaeng.hourConvertNote 한 곳이 냅니다.
+  //     r.hourNote 도 그것을 받아 오므로 «같은 문장» 입니다. 하나만 씁니다.
+  //  ⚠️ 차례 — 월지(35점)가 시지(10점)보다 무거우니 «월지 먼저» 입니다.
+  // ══════════════════════════════════════════════════════════════
   if (monthNote) lines.push(monthNote)
   if (hourConvNote) lines.push(hourConvNote)
   if (hourUnknown) {

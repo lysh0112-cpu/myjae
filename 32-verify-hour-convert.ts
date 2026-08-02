@@ -18,6 +18,7 @@ import {
 // ★두 계산기가 «같은 점수» 를 내는지 맞대어 봅니다 (2026-08-02 결함)
 import { calcCareerScore } from './lib/saju/career/careerScore'
 
+
 let pass = 0, fail = 0
 const check = (ok: boolean, msg: string) => {
   if (ok) { pass++; console.log(`  ✅ ${msg}`) } else { fail++; console.log(`  🔴 ${msg}`) }
@@ -98,9 +99,13 @@ console.log('\n━━ ㉒-d ★치환이 걸리면 «반드시 한 줄» 이 나
   }
   check(hMiss === 0, `★건강·궁합 쪽도 «왜 숫자가 다른지» 알려 줍니다`)
 
+  // ★2026-08-02 — 문구를 careerScore 말투로 통일했습니다 («◯월의 기운으로»).
+  //   ⚠️ 옛 문구는 「봄 기운으로」였습니다. 이 검사가 그것을 지키고 있어
+  //      «검사를 뒤집었습니다». 계절 대신 «월지» 를 밝히는 쪽이 더 정확합니다.
   const s = hourConvertNote('辰', '辰') ?? ''
-  check(s.includes('辰시') && s.includes('봄') && s.includes('목'),
-    `한 줄에 «시지·계절·오행» 이 다 들어 있습니다 — ${s}`)
+  check(s.includes('辰') && s.includes('월의 기운') && s.includes('목'),
+    `한 줄에 «시지·월지·오행» 이 다 들어 있습니다 — ${s}`)
+  check(s.startsWith('태어난 시'), `★손님 말로 시작합니다 (「시지」가 아니라 「태어난 시」)`)
 }
 
 console.log('\n━━ ㉒-e ⚠️ 합이 언제나 100인가 ━━')
@@ -154,6 +159,33 @@ console.log('\n━━ ㉒-g 🔴 시지 10점이 «두 번» 옮겨지지 않는
   check(/purpose: '진로'/.test(cs), `★simsanOhaeng 을 «진로» 쓰임으로 부릅니다`)
   check(/hourConvertEl\(monthBranch, p\.branch\)/.test(cs),
     `★글자 세기도 «같은 창구»(hourConvertEl)를 씁니다`)
+}
+
+console.log('\n━━ ㉒-i ★안내 줄이 «겹치지» 않는가 ━━')
+{
+  // 🔴 2026-08-02 실기 — 같은 말이 «두 줄» 떴습니다.
+  //   제가 hourConvertNote 를 넣을 때 careerScore 가 이미 hourNote 를
+  //   내고 있는 줄 몰랐습니다. ★말은 «한 곳» 이 내야 합니다. (교훈 CJ)
+  const pill = ['년주', '월주', '일주', '시주'].map((p, i) => ({
+    pillar: p, stem: ['戊', '丙', '乙', '庚'][i], branch: ['辰', '辰', '巳', '辰'][i],
+  })) as Pillar[]
+  const r = calcCareerScore(pill, 4, 20, '辰')
+  check(r.hourNote === hourConvertNote('辰', '辰'),
+    `★careerScore 의 말이 hourConvertNote 와 «같은 문장» 입니다`)
+
+  const g = read('lib/saju/career/ohaengGijil.ts')
+  check(!/if \(r\.hourNote\) lines\.push\(r\.hourNote\)/.test(g),
+    `★같은 말을 «두 번» 밀어 넣지 않습니다`)
+  // ⚠️ 차례 — 월지(35점)가 시지(10점)보다 무겁습니다
+  const mi = g.indexOf('if (monthNote) lines.push(monthNote)')
+  const hi = g.indexOf('if (hourConvNote) lines.push(hourConvNote)')
+  check(mi > 0 && hi > mi, `★월지 안내가 «먼저» 나옵니다 (35점 > 10점)`)
+
+  // ⚠️ careerScore 가 문구를 «따로 짓지» 않는가
+  const cs = read('lib/saju/career/careerScore.ts')
+  check(!/hourNote = `시지/.test(cs), `★careerScore 가 문구를 «따로 짓지» 않습니다`)
+  check(/hourNote = hourConvertNote\(monthBranch, hb\)/.test(cs),
+    `★같은 창구에서 받아 옵니다`)
 }
 
 console.log('\n━━ ㉒-h ★십성 표 — «왜 다른지» 알려 주는가 ━━')
