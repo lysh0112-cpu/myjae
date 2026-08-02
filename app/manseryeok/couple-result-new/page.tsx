@@ -369,6 +369,12 @@ function tbIcon(t: string): string {
   if (t.includes('결혼') || t.includes('미래') || t.includes('시기')) return '💍'
   if (t.includes('재물') || t.includes('돈')) return '💰'
   if (t.includes('개운') || t.includes('조언') || t.includes('살리는') || t.includes('맞춰')) return '🔮'
+  // ★2026-08-02 — 프리미엄 궁합 새 대목 셋 (4차)
+  //   ⚠️ 「시기」가 앞줄(결혼·미래)에 걸려 있어, 「열 해」를 «먼저» 봐야 합니다.
+  //      ★그래서 위가 아니라 «여기» 에 두되, 앞줄보다 좁은 말로 잡습니다.
+  if (t.includes('열 해') || t.includes('앞으로의')) return '🗓️'
+  if (t.includes('어떤 분')) return '🌱'
+  if (t.includes('함께 살아가는')) return '🏡'
   return '🌟'
 }
 function tbClean(s: string): string {

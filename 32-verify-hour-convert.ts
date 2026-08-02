@@ -29,6 +29,8 @@ import { judgeBranchPair, judgeEnv } from './lib/saju/couple/step5Env'
 // ★1단계 그릇과 온도 (프리미엄 궁합 3차 · 2026-08-02)
 import { judgeVessel, vesselBlock } from './lib/saju/couple/step1Vessel'
 import { guardTone } from './lib/saju/couple/toneGuard'
+// ★여덟 단계 엮기 (프리미엄 궁합 4차 · 2026-08-02)
+import { buildCouplePrompt } from './lib/saju/buildCouplePrompt'
 import { calcCareerYongsin, judgeYongsin } from './lib/saju/career/yongsin'
 import { judgeStrength, calcYongsinNew, isYanginIlju } from './lib/saju/yongsinNew'
 
@@ -929,6 +931,78 @@ console.log('\n━━ ㊴ 🔴★재료의 «금지 안내문» 이 guardTone �
   const raw = vesselBlock(A, B)
   check(guardTone(raw) === raw,
     `★★1단계 재료는 guardTone 을 지나도 «한 글자도 안 바뀝니다»`)
+}
+
+console.log('\n━━ ㊵ ★여덟 단계를 프롬프트로 엮기 (프리미엄 궁합 4차) ━━')
+{
+  //  🔴 [무엇이 있었나]  15~19차에 재료를 만들어 두고도
+  //     buildCouplePrompt 가 «부르지 않아» 프롬프트에 «안 들어가고» 있었습니다.
+  //     ⇒ 만들어만 두고 쓰지 않던 셈입니다.
+  const A = {
+    name: '가', gender: '남', birth: '1988-04-20',
+    saju: ['년주', '월주', '일주', '시주'].map((p, i) => ({
+      pillar: p, stem: ['戊', '丙', '乙', '庚'][i], branch: ['辰', '辰', '巳', '辰'][i],
+    })), solarMonth: 4, solarDay: 20, hourBranch: '辰',
+  }
+  const B = {
+    name: '나', gender: '여', birth: '1990-11-20',
+    saju: ['년주', '월주', '일주', '시주'].map((p, i) => ({
+      pillar: p, stem: ['甲', '丁', '丙', '己'][i], branch: ['子', '亥', '午', '丑'][i],
+    })), solarMonth: 11, solarDay: 20, hourBranch: '丑',
+  }
+  const j = judgeCouple(A as never, B as never, (n: string) => n + '님의 배우자운', true)
+  const m = toCoupleTongbyeonMaterial(A as never, B as never, j as never, { fromYear: 2026 })
+
+  for (const rel of ['부부', '연인'] as const) {
+    const p = buildCouplePrompt(m, { relation: rel })
+    const sp = p.systemPrompt
+
+    // ★재료 셋이 프롬프트에 «실제로» 들어갔는가
+    check(sp.includes('그릇과 온도'), `★${rel} — 1단계 재료가 프롬프트에 들어갑니다`)
+    check(sp.includes('함께 살아가는 결 — 월지'), `★${rel} — 5단계 재료가 들어갑니다`)
+    check(sp.includes('앞으로의 열 해 — 두 분'), `★${rel} — 8단계 재료가 들어갑니다`)
+
+    // ★뼈대에 새 대목 셋이 있는가
+    check(/1-2\. 두 분은 어떤 분인가/.test(sp), `★${rel} — 「1-2 두 분은 어떤 분인가」`)
+    check(/4-2\. 함께 살아가는 결/.test(sp), `★${rel} — 「4-2 함께 살아가는 결」`)
+    check(/6-2\. 앞으로의 열 해/.test(sp), `★${rel} — 「6-2 앞으로의 열 해」`)
+
+    // ⚠️⚠️ 옛 대목의 «번호와 제목» 이 한 글자도 안 바뀌었는가
+    //    ★화면이 제목으로 카드를 찾습니다. 바꾸면 잘못 붙습니다. (26부 교훈)
+    for (const old of [
+      '2. 없는 오행을 채워 주는가', '3. 서로에게 귀인이 되는가',
+      '4. 두 분 일주가 만나는 자리',
+    ]) check(sp.includes(old), `⚠️ ${rel} — 옛 대목 「${old}」가 그대로입니다`)
+    if (rel === '부부') {
+      check(sp.includes('7. 두 분의 부부운'), `⚠️ 부부 — 「7. 두 분의 부부운」 그대로`)
+      check(sp.includes('8. 두 분의 자식운'), `⚠️ 부부 — 「8. 두 분의 자식운」 그대로`)
+      check(sp.includes('9. 맺는말'), `⚠️ 부부 — 「9. 맺는말」 그대로`)
+    } else {
+      check(sp.includes('7. 맺는말'), `⚠️ 연인 — 「7. 맺는말」 그대로`)
+    }
+
+    // ⚠️ 대목 수를 «박아 두지» 않는가 — 대목이 늘면 어긋납니다
+    check(!/아홉 대목|일곱 대목/.test(sp), `⚠️ ${rel} — 대목 «수» 를 박아 두지 않습니다`)
+
+    // ★금지어가 프롬프트에 «없는가»
+    const BAD = ['이혼', '헤어짐', '악처', '바람기']
+    const hit = BAD.filter(w => sp.includes(w))
+    check(hit.length === 0, `★${rel} — 프롬프트에 금지어가 없습니다${hit.length ? ' — ' + hit.join(',') : ''}`)
+  }
+
+  // ★재료가 «없으면» 그 대목을 넣지 않는가 — 없는 것을 가리키면 AI 가 지어냅니다
+  const empty = { ...m, vesselBlock: '', envBlock: '', timelineBlock: '' }
+  const p2 = buildCouplePrompt(empty, { relation: '부부' })
+  check(!/1-2\.|4-2\.|6-2\./.test(p2.systemPrompt),
+    `★재료가 없으면 그 대목을 «아예 넣지 않습니다»`)
+  check(/2\. 없는 오행을 채워 주는가/.test(p2.systemPrompt),
+    `★그래도 옛 대목은 그대로 나옵니다`)
+
+  // ★화면이 새 제목에 아이콘을 붙이는가
+  const pg = read('app/manseryeok/couple-result-new/page.tsx')
+  check(/t\.includes\('열 해'\)/.test(pg), `★「앞으로의 열 해」 아이콘이 있습니다`)
+  check(/t\.includes\('어떤 분'\)/.test(pg), `★「두 분은 어떤 분인가」 아이콘이 있습니다`)
+  check(/t\.includes\('함께 살아가는'\)/.test(pg), `★「함께 살아가는 결」 아이콘이 있습니다`)
 }
 
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
