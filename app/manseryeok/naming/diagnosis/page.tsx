@@ -1,6 +1,6 @@
 'use client'
 import { Suspense, useState, useEffect, useMemo } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsinCompat } from '@/lib/saju/yongsinNew'
 import { supabase } from '@/lib/supabase'
@@ -207,6 +207,7 @@ function PitchHeader({ title, onBack, onHome }: { title: string; onBack: () => v
 function DiagnosisInner() {
   const router = useRouter()
   const sp = useSearchParams()
+  const pathname = usePathname()
 
   const [info, setInfo] = useState<MyInfo | null>(null)
 
@@ -326,8 +327,15 @@ function DiagnosisInner() {
   //  ⚠️ from=mypage 는 «갈래가 아닙니다». storageBranchOfParam 이 null 을
   //     돌려주므로 아래 ③으로 내려갑니다 — 마이페이지 길은 따로 있습니다.
   // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-02 — 주소가 «가장 먼저» 입니다.
+  //    /manseryeok/naming/naming-record 로 들어오셨으면 그것이 정본입니다 —
+  //    기록을 불러오기 «전» 부터 화면이 「내 아이 명품작명」으로 서 있어야 합니다.
+  //    ⚠️ 옛 주소(diagnosis?from=naming)도 그대로 듣습니다.
+  const branchByPath: NamingStorageBranch | null =
+    pathname?.includes('/naming-record') ? 'naming' : null
   const storageBranch: NamingStorageBranch =
-    (recKind ? storageBranchOfKind(recKind as NamingKind) : null)
+    branchByPath
+    ?? (recKind ? storageBranchOfKind(recKind as NamingKind) : null)
     ?? storageBranchOfParam(sp.get('from'))
     ?? 'diagnosis'
   const storagePath = NAMING_STORAGE_PATH[storageBranch]

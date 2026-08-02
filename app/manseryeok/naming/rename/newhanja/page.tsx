@@ -234,6 +234,8 @@ function NewHanjaInner() {
 
       // ── 성씨 + user_id: 로그인 my_names 우선, 없으면 localStorage ──
       let surnameLoaded = false
+      /** 불러온 성씨의 «한글» — ★어느 갈래로 불러왔든 여기에 담습니다 */
+      let loadedSurHangul = ''
       try {
         const { data: u } = await supabase.auth.getUser()
         if (u?.user) {
@@ -246,14 +248,16 @@ function NewHanjaInner() {
             .limit(1)
           if (!cancelled && rows && rows[0] && Array.isArray(rows[0].chars) && rows[0].chars[0]) {
             // ★복성이면 앞 두 글자가 성입니다. 가르는 것은 splitSurname 하나뿐입니다.
-            setSurnameChars(splitSurname(rows[0].chars as SavedChar[]).surname)
+            const sp1 = splitSurname(rows[0].chars as SavedChar[]).surname
+            setSurnameChars(sp1)
             surnameLoaded = true
+            // 🔴★2026-08-02 — 여기서 한글을 «안 담고» 있었습니다.
+            //    그래서 아래 needPick 이 「어느 성씨든 불러왔으면 됐다」로 읽혔습니다.
+            loadedSurHangul = sp1.map(c => c.hangul).join('')
           }
         }
       } catch {}
 
-      /** 불러온 성씨의 한글 — 첫 칸을 어디에 둘지 정하는 데 씁니다 */
-      let loadedSurHangul = ''
       if (!surnameLoaded) {
         try {
           const r = JSON.parse(localStorage.getItem(NAMING_RESULT_KEY) || '{}')
@@ -275,9 +279,26 @@ function NewHanjaInner() {
         // ★첫 칸 — 성씨를 «골라야 하면» 성씨부터, 아니면 «이름» 부터.
         //   ⚠️ 개명 손님을 성씨 칸에 세우면 「왜 성을 고르라 하지」 가 됩니다.
         //      이미 정해진 성씨는 «확인하고 싶을 때만» 누르시면 됩니다.
-        const surLen = Array.from(t?.surnameHangul || loadedSurHangul).length
-        // ★성씨 한자를 «아무도 모를 때» 만 성씨 칸에서 시작합니다 (신생아)
-        const needPick = !t?.surnameHanja && !surnameLoaded
+        const want = t?.surnameHangul || loadedSurHangul
+        const surLen = Array.from(want).length
+        // ══════════════════════════════════════════════════════════
+        //  🔴★2026-08-02 — 성씨보다 «이름 칸» 이 먼저 열리던 자리 (대표님 지적)
+        //
+        //   [무엇이 있었나]  needPick 이 surnameLoaded 를 봤습니다.
+        //     그것은 「성씨를 «아무거나» 불러왔는가」입니다.
+        //     ★앞서 柳·姜·辛 으로 지어 두신 분이 「민」씨 아기를 지으러 오시면,
+        //       불려 있던 «류» 때문에 성씨 칸을 건너뛰고 이름 칸에서 시작했습니다.
+        //       성씨 한자는 «비어 있는데» 이름 한자부터 고르게 된 것입니다.
+        //
+        //   ★[이제]  바로 아래(pickSurname)에 이미 있던 «맞는 잣대» 를 씁니다 —
+        //     「불러온 성씨가 «이 아기의» 성씨와 같은가」.
+        //   ⚠️ 개명 손님은 성씨가 «같으므로» 예전 그대로 이름 칸에서 시작합니다.
+        //      성씨 칸에 세우면 「왜 성을 고르라 하지」 가 됩니다.
+        //   ⚠️ 아래 슬롯 버튼에도 «잠금» 을 두었습니다 — 이 첫 칸만 고치면
+        //      손님이 이름 칸을 눌러 건너뛸 수 있습니다. 두 겹으로 막습니다.
+        // ══════════════════════════════════════════════════════════
+        const loadedFits = surnameLoaded && !!want && loadedSurHangul === want
+        const needPick = !t?.surnameHanja && !loadedFits
         setActiveIdx(needPick ? 0 : surLen)
         setRestored(true)
       }
@@ -906,15 +927,29 @@ function NewHanjaInner() {
             : (isSur && pickedSurnameChars[i]?.hanja) || slot.hangul
           /** ★불러온 성씨를 «그대로 쓰는» 칸인가 — 흐리게 두어 개명 화면을 안 흔듭니다 */
           const asLoaded = isSur && !chosen[i] && !!pickedSurnameChars[i]
+          // ══════════════════════════════════════════════════════
+          //  ★2026-08-02 — 성씨를 고르기 «전» 에는 이름 칸을 잠급니다
+          //    (대표님 지시 · 정밀분석 화면과 «같은 규칙»)
+          //
+          //   ⚠️ 전에는 «눌렀을 때 성씨로 되돌리기» 만 있었습니다.
+          //      그래서 «어디로 튕겼는지» 모른 채 손님이 다시 이름 칸을 눌렀습니다.
+          //   ★이제 흐리게 두어 «아직 아니다» 를 눈으로 보이게 합니다.
+          //   ⚠️ 성씨 칸(role === '성')은 «언제나» 열려 있습니다 — 잠그면 열 길이 없습니다.
+          //   ⚠️ 이미 고른 이름 한자를 «지우지 않습니다». 잠그기만 합니다.
+          // ══════════════════════════════════════════════════════
+          const surnameHole = slots.findIndex((sl, k) => sl.role === '성' && !slotFilled(k))
+          const locked = surnameHole !== -1 && !isSur
           return (
             <button key={i} onClick={() => {
               // ★성씨가 아직이면 «성씨부터» 입니다 (43부 23차)
-              const hole = slots.findIndex((sl, k) => sl.role === '성' && !slotFilled(k))
-              setActiveIdx(hole !== -1 && slot.role !== '성' ? hole : i)
-            }} className="active:scale-95"
+              setActiveIdx(locked ? surnameHole : i)
+            }} className={locked ? undefined : 'active:scale-95'}
               /* ★성씨 칸도 «누를 수 있습니다» — 柳/劉 처럼 집안마다 다릅니다 */
               aria-pressed={on}
-              style={{ flex: 1, padding: '12px 0', borderRadius: 14, textAlign: 'center', cursor: 'pointer',
+              aria-disabled={locked}
+              title={locked ? '먼저 성씨 한자를 골라 주세요' : undefined}
+              style={{ flex: 1, padding: '12px 0', borderRadius: 14, textAlign: 'center',
+                cursor: locked ? 'not-allowed' : 'pointer', opacity: locked ? 0.4 : 1,
                 background: on ? 'rgba(200,120,60,0.12)' : filled && !asLoaded ? 'rgba(129,199,132,0.14)' : CARD,
                 border: '1px solid ' + (on ? GOLD : filled && !asLoaded ? GREEN : 'rgba(200,120,60,0.10)') }}>
               <div style={{

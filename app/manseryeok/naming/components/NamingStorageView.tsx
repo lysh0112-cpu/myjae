@@ -164,8 +164,15 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
   /** «작명» 은 풀이가 아닌 것 전부 (개명·신생아) */
   const shownRecords = (records ?? []).filter(r =>
     effFilter === '풀이' ? r.kind === '풀이' : r.kind !== '풀이')
-  /** ⚠️ «다른 갈래에 몇 건이 있는지» — 기록이 사라진 줄 알고 놀라시지 않도록 */
-  const hiddenCount = (records ?? []).length - shownRecords.length
+  /**
+   * ⚠️ «다른 갈래에 몇 건이 있는지».
+   *
+   * ★2026-08-02 — 아래 「◯◯으로 가기 · N건」 줄을 지우면서 «쓰는 곳이 없어졌습니다».
+   *   그래도 «남겨 둡니다» — 되살리실 때 이 셈이 필요하고,
+   *   거르기가 «지우기가 아님» 을 코드로 증언하는 자리이기도 합니다.
+   *   ⚠️ 지우지 마십시오. (교훈 AM)
+   */
+  void ((records ?? []).length - shownRecords.length)
   const [deleting, setDeleting] = useState(false)
   // ══════════════════════════════════════════════════════════════
   //  ★2026-08-01 — 버튼을 «둘» 로 나눴습니다 (대표님 지시)
@@ -277,14 +284,18 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
           const relLabel = namingRelationLabel(r.relation)
           const kindTag = KIND_TAG[r.kind]
           return (
-            /* ★2026-08-02 — «어느 보관함에서 왔는지» 를 함께 보냅니다.
-                 ⚠️ 결과 화면은 기록을 불러온 «뒤» 라야 kind 를 압니다.
-                    그 사이에도 하단 버튼이 «옳은 보관함» 을 가리켜야 하므로
-                    입구를 URL 로 실어 보냅니다. (기록이 오면 kind 가 정본입니다) */
-            <div key={r.id} onClick={() => router.push(
-              `/manseryeok/naming/diagnosis?recordId=${r.id}`
-              + `&from=${storageBranchOfKind(r.kind)}`,
-            )}
+            /* ★2026-08-02 — 갈래마다 «주소가 다릅니다» (대표님 지시 ①-가)
+                 작명 기록 → /naming/naming-record   풀이 기록 → /naming/diagnosis
+                 ⚠️ 화면은 «한 부품» 입니다. 주소만 둘입니다 (교훈 CJ).
+                 ⚠️ from= 도 함께 보냅니다 — 옛 주소로 들어오는 길이 아직 살아 있고,
+                    기록이 오기 «전» 에도 하단 버튼이 옳은 곳을 가리켜야 합니다. */
+            <div key={r.id} onClick={() => {
+              const br = storageBranchOfKind(r.kind)
+              const base = br === 'naming'
+                ? '/manseryeok/naming/naming-record'
+                : '/manseryeok/naming/diagnosis'
+              router.push(`${base}?recordId=${r.id}&from=${br}`)
+            }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 13, padding: '15px',
                 background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14,
@@ -410,30 +421,21 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
         )}
 
         {/* ══════════════════════════════════════════════════════
-            ★「모두 보기」 — ⚠️ 기록이 «사라진 줄» 알고 놀라시지 않도록
-              모드로 걸러 놓았을 뿐 하나도 지워지지 않았다는 것을 알려 드립니다.
-              몇 건이 가려져 있는지 «숫자로» 적습니다.
+            ★2026-08-02 — 「◯◯으로 가기 · N건 →」 줄을 «지웠습니다» (대표님 지시)
+
+             [무엇이 있었나]  43부에 «기록이 사라진 줄 알고 놀라지 않도록»
+               옆 보관함으로 가는 줄을 두었습니다.
+               ⚠️ 그런데 그 줄 때문에 두 보관함이 «아직 하나» 처럼 보였습니다.
+                  가르려고 만든 화면에서 가른 뜻을 도로 흐리고 있었습니다.
+
+             ⚠️⚠️ [지웠지만 «길은» 남아 있습니다]
+               홈의 「개명 & 작명하기」 폴더에 두 카드가 그대로 있습니다.
+               ★기록은 여전히 «하나도» 지워지지 않습니다 — 거르기는 화면에서만 합니다.
+               (listNamingRecords 는 예전 그대로 전부 불러옵니다)
+
+             ⚠️ 되살리실 때는 hiddenCount 와 view.otherLabel 이 그대로 있습니다.
+                지운 것은 «그리는 자리» 뿐입니다.
             ══════════════════════════════════════════════════════ */}
-        {records && records.length > 0 && (
-          <button
-            onClick={() => {
-              // ★2026-08-01 (43부 9차) — «섞어 보여 주지» 않고 «옆 보관함으로 갑니다».
-              //   ⚠️ 두 곳을 갈라 놓고 한 화면에서 섞으면 가른 뜻이 없어집니다.
-              //      다만 «몇 건이 저쪽에 있는지» 는 알려 드려야 놀라시지 않습니다.
-              router.push(mode === 'naming'
-                ? '/manseryeok/naming/diagnosis-storage'
-                : '/manseryeok/naming/naming-storage')
-            }}
-            style={{
-              ...PRESS, width: '100%', marginTop: 12, padding: '11px 10px',
-              background: 'none', border: 'none', color: '#8a7063',
-              fontSize: 12, cursor: 'pointer', lineHeight: 1.6,
-            }}>
-            {hiddenCount > 0
-              ? `${view.otherLabel} · ${hiddenCount}건 →`
-              : `${view.otherLabel} →`}
-          </button>
-        )}
       </div>
 
       {/* 삭제 확인 팝업 */}

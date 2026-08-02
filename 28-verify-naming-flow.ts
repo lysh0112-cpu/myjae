@@ -21,6 +21,9 @@ import { readFileSync, existsSync } from 'fs'
 // ★2026-08-02 — 성씨 표는 «정규식» 이 아니라 «값» 으로 봅니다.
 //   ⚠️ 주석에 「인구수 순」이라 적혀 있어도 값이 흩어져 있으면 소용없습니다.
 import { SURNAME_HANJA } from './lib/saju/surnameHanja'
+// ★2026-08-02 — 사전과 추천은 «돌려서» 봅니다. 붙박이 표본이 아니라 실제 결과를 잽니다.
+import { NAME_DICT } from './lib/saju/tables/nameDict'
+import { recommendNames } from './lib/saju/nameRecommend'
 
 let pass = 0, fail = 0
 const check = (ok: boolean, msg: string) => {
@@ -834,8 +837,19 @@ console.log('\n━━ ⑲-K ★보관함 «완전» 분리 — 탭 없음 (43부
   check(/otherLabel: '내 아이 명품작명으로 가기'/.test(v)
      && /otherLabel: '내 이름 정밀분석으로 가기'/.test(v),
     `★옆 보관함 안내가 «새 이름» 입니다`)
-  check(/hiddenCount > 0[\s\S]{0,80}건 →/.test(v),
-    `⚠️ 저쪽에 몇 건인지 알려 드립니다 (사라진 줄 알고 놀라시지 않게)`)
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-02 — 이 검사가 «옛 모습» 을 지키고 있었습니다.
+  //    대표님 지시로 「◯◯으로 가기 · N건 →」 줄을 지우려는데 여기서 막혔습니다.
+  //    ★코드를 되돌리지 않고 «검사를 뒤집었습니다». (교훈 [검사가 지킨다])
+  //    [까닭]  그 줄 때문에 두 보관함이 «아직 하나» 처럼 보였습니다.
+  //  ⚠️ 다만 «기록이 지워지지 않는다» 는 것은 여전히 지켜야 합니다 — 아래로 옮겼습니다.
+  // ══════════════════════════════════════════════════════════════
+  check(!/hiddenCount > 0[\s\S]{0,80}건 →/.test(v),
+    `★「◯◯으로 가기 · N건」 줄이 «없습니다» (대표님 지시)`)
+  check(/listNamingRecords\(\)\.then/.test(v),
+    `⚠️⚠️ 그래도 기록은 «전부» 불러옵니다 — 거르기는 화면에서만 합니다`)
+  check(/거르기는 화면에서만/.test(read(P.sto)),
+    `⚠️ 「지우기가 아니라 거르기」 라는 근거가 코드에 남아 있습니다`)
 
   // ④ ⚠️ 거르기는 «화면에서만» — 기록은 하나도 안 지웁니다
   check(!/listNamingRecords\((mode|view)/.test(v),
@@ -1277,8 +1291,21 @@ console.log('\n━━ ⑳-a ★결과 화면 → «제» 보관함 (붙박이 �
     `★결과 화면에 보관함 주소를 «박아 넣은» 자리가 없습니다${hardCoded.length ? ` — ${hardCoded.join(' , ')}` : ''}`)
 
   // ④ 보관함이 기록을 열 때 «어디서 왔는지» 를 실어 보내는가
-  check(/from=\$\{storageBranchOfKind\(r\.kind\)\}/.test(sto),
-    `★보관함이 기록을 열 때 갈래를 함께 보냅니다 (기록이 오기 «전» 을 받칩니다)`)
+  // ★2026-08-02 — 주소를 갈랐습니다 (대표님 지시 ①-가)
+  check(/\/manseryeok\/naming\/naming-record/.test(sto),
+    `★작명 기록은 «전용 주소» 로 엽니다 (naming-record)`)
+  check(/\?recordId=\$\{r\.id\}&from=\$\{br\}/.test(sto),
+    `★갈래도 함께 보냅니다 (기록이 오기 «전» 을 받칩니다)`)
+  check(existsSync('app/manseryeok/naming/naming-record/page.tsx'),
+    `★작명 기록 전용 주소의 문이 있습니다`)
+  // ⚠️⚠️ 화면을 «복사하지» 않았는가 — 복사하면 한쪽만 고치는 날이 옵니다 (교훈 CJ)
+  const door = read('app/manseryeok/naming/naming-record/page.tsx')
+  check(/export \{ default \} from '@\/app\/manseryeok\/naming\/diagnosis\/page'/.test(door),
+    `⚠️⚠️ 화면은 «한 부품» 입니다 — 주소만 둘입니다`)
+  check(door.length < 4000, `⚠️ 그 문은 «얇습니다» (${door.length}자) — 판정이 들어 있지 않습니다`)
+  // ★주소가 갈래를 «먼저» 정하는가 — 기록이 오기 전부터 화면이 옳게 서야 합니다
+  check(/pathname\?\.includes\('\/naming-record'\) \? 'naming' : null/.test(diag),
+    `★주소가 «가장 먼저» 갈래를 정합니다`)
 
   // ⑤ ⚠️ 옛 주소는 «살아 있되» 가리키지 않습니다 (교훈 AM)
   check(existsSync(P.stoDoor),
@@ -1456,6 +1483,77 @@ console.log('\n━━ ㉑-d ★성씨 표 차례 — 통계청 인구수 순인�
   check(!SURNAME_HANJA['성']?.includes('刑'), `⚠️ 성←刑 (오타)가 없습니다`)
   check(!SURNAME_HANJA['노']?.includes('老'), `⚠️ 노←老 (확인 못 함)가 없습니다`)
   check(!SURNAME_HANJA['소']?.includes('肖'), `⚠️ 소←肖 (초로도 읽음)가 없습니다`)
+}
+
+console.log('\n━━ ㉑-e 🔴 작명 Step 3 — 성씨보다 이름 칸이 «먼저 열리지» 않는가 ━━')
+{
+  const nh = codeOf(S.nh)
+  // 🔴 needPick 이 「아무 성씨나 불러왔는가」를 보던 자리
+  check(!/const needPick = !t\?\.surnameHanja && !surnameLoaded/.test(nh),
+    `★옛 잣대(surnameLoaded 날것)가 남아 있지 않습니다`)
+  check(/const loadedFits = surnameLoaded && !!want && loadedSurHangul === want/.test(nh),
+    `★불러온 성씨가 «이 아기의» 성씨와 같은지 봅니다`)
+  check(/const needPick = !t\?\.surnameHanja && !loadedFits/.test(nh),
+    `★그래야 성씨 칸에서 시작합니다`)
+  // ⚠️ my_names 갈래에서도 한글을 담아야 합니다 — 안 담으면 위 잣대가 헛돕니다
+  check(/loadedSurHangul = sp1\.map\(c => c\.hangul\)\.join\(''\)/.test(nh),
+    `⚠️ my_names 로 불러올 때도 성씨 «한글» 을 담습니다`)
+  // ★두 번째 겹 — 칸을 눌러 건너뛰지 못하게
+  check(/const locked = surnameHole !== -1 && !isSur/.test(nh),
+    `★성씨가 비면 이름 칸이 «잠깁니다»`)
+  check(/opacity: locked \? 0\.4 : 1/.test(nh) && /cursor: locked \? 'not-allowed'/.test(nh),
+    `★잠긴 칸은 «눈으로» 보입니다`)
+  // ⚠️ 성씨 칸 자신은 언제나 열려 있어야 합니다
+  check(/!isSur/.test(nh), `⚠️ 성씨 칸(role === '성')은 잠기지 않습니다`)
+}
+
+console.log('\n━━ ㉑-f ★「여성적」 어감이 «무색하지» 않은가 ━━')
+{
+  const rc = codeOf(S.rec2)
+  check(/FEMININE_TAIL/.test(rc), `★끝 글자의 «결» 을 보는 묶음이 있습니다`)
+  check(/export function styleTier/.test(rc), `★어감으로 «앞줄» 을 정하는 창구가 있습니다`)
+  // ⚠️⚠️ «거르지» 않습니다 — 후보가 0개가 되면 안 됩니다
+  check(/if \(style !== '여성적'\) return 0/.test(rc),
+    `⚠️ 남성적·중성적은 «예전 그대로» 입니다`)
+  check(/\(b\.styleFit - a\.styleFit\)\s*\n\s*\|\| \(b\.score - a\.score\)/.test(rc),
+    `★어감이 «점수 앞» 에 섭니다 (뒤에 두면 화면에 안 드러납니다)`)
+  check(/\(Number\(b\.preferHit\) - Number\(a\.preferHit\)\)/.test(rc),
+    `⚠️ 「꼭 넣고 싶은 소리」는 여전히 «첫 잣대» 입니다`)
+  // ★실측 — 정말로 여자 이름이 앞에 오는가 (붙박이 표본이 아니라 «돌려서» 봅니다)
+  const FEM = new Set(['아','서','지','유','예','하','나','다','미','희','연','혜',
+    '채','리','율','슬','화','은','수','주','영','윤','원','현','인'])
+  for (const sur of ['김', '이', '박', '최']) {
+    const r = recommendNames(sur, { style: '여성적', yongsin: '목' as never, limit: 8 } as never) as { name: string }[]
+    const hit = r.filter(c => FEM.has(c.name[c.name.length - 1])).length
+    check(hit >= 6, `★「${sur}」 여성적 8개 중 ${hit}개가 여자 이름 끝소리입니다`)
+  }
+  // ⚠️ 남성적·중성적이 «달라지지 않았는가»
+  const m = (recommendNames('민', { style: '남성적', yongsin: '수' as never, limit: 5 } as never) as { name: string }[])
+    .map(c => c.name).join(' ')
+  check(m === '경복 교묵 기복 강백 경백', `⚠️ 남성적은 «예전 그대로» 입니다 (${m})`)
+}
+
+console.log('\n━━ ㉑-g ★교재 전수 대조로 바로잡은 사전 (2026-08-02) ━━')
+{
+  const all = Object.values(NAME_DICT).flatMap(g => [...g.names])
+  const S2 = new Set(all)
+  check(all.length === 1258, `이름 1,258개 (1,256 + 남혁 + 삼우)`)
+  for (const n of ['강택', '국만', '병철', '이륜', '신홍', '남혁', '삼우']) {
+    check(S2.has(n), `★「${n}」이 있습니다`)
+  }
+  for (const n of ['김택', '국민', '병칠', '이룬', '신흥']) {
+    check(!S2.has(n), `⚠️ 옛 오타 「${n}」이 되살아나지 않았습니다`)
+  }
+  // ★차례까지 교재와 맞췄는가 — 다섯 자리
+  const sk = NAME_DICT['金_ㅅ'].names
+  const at = (a: string, b: string) => sk.indexOf(a) + 1 === sk.indexOf(b)
+  check(at('산호', '삼우'), `★삼우가 산호 뒤입니다`)
+  check(at('삼현', '삼호'), `★삼호가 삼현 뒤입니다 (교재 차례)`)
+  check(at('상철', '상필') && at('상필', '상학'), `★상필·상학이 상철 뒤입니다`)
+  check(at('서원', '서윤'), `★서원 → 서윤 차례입니다`)
+  check(at('서창', '서필'), `★서필이 서창 뒤입니다`)
+  // ⚠️ 「김택」은 성씨와 겹치던 자리입니다
+  check(!all.some(n => n.startsWith('김')), `⚠️ 「김」으로 시작하는 이름이 없습니다 (김김택 방지)`)
 }
 
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
