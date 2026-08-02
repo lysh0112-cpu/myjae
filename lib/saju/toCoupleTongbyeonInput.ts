@@ -54,6 +54,8 @@ import type { CoupleJudgeV1, CategoryResult } from './coupleFilterV1'
 import { needsOf, pickLines, byeongjonBrief, COUPLE_CATEGORY_NEEDS, type Need } from './jaryoPick'
 // ★재료가 나가기 «전» 에 말을 다듬는 문지기 (2026-08-02)
 import { guardTone } from './couple/toneGuard'
+// ★8단계 「앞으로의 열 해」 (2026-08-02)
+import { buildTimeline, timelineBlock } from './couple/step8Timeline'
 
 // ── 표기용 ──────────────────────────────────────────────────────────────
 const EL_KOR: Record<string, string> = {
@@ -85,6 +87,17 @@ export interface CoupleTongbyeonMaterial {
   judgeBlock: string
   /** [흐름] 세운·대운 블록 (시기 질문용) */
   flowBlock: string
+  /**
+   * ★[앞으로의 열 해] — 두 분 것을 «나란히» 놓은 연표 (2026-08-02 신설)
+   *
+   *   ⚠️ flowBlock 과 «다릅니다» —
+   *     flowBlock  「인연운이 오는 해 · 자리에 合/沖」 — 질문에 답하기 위한 «자료»
+   *     timelineBlock ★「그 해가 두 분께 어떤 결인가」 — 8단계 «본문» 이 될 글
+   *   ⇒ 둘 다 넘깁니다. AI 가 8단계를 쓸 때는 이쪽을 씁니다.
+   *
+   *   ⚠️ 두 분의 «용신» 이 있어야 만들 수 있습니다. 없으면 빈 문자열입니다.
+   */
+  timelineBlock: string
 }
 
 // ── 한 사람 재료 ────────────────────────────────────────────────────────
@@ -360,5 +373,36 @@ export function toCoupleTongbyeonMaterial(
     ],
     judgeBlock: guardTone(judgeBlock(judge)),
     flowBlock: guardTone(flowBlock(a, b, fromYear, opts.flowYears ?? 8)),
+    // ★2026-08-02 — 8단계 「앞으로의 열 해」
+    //   ⚠️ 여기도 «반드시» guardTone 을 지납니다. 문지기를 건너뛰지 마십시오.
+    timelineBlock: guardTone(timelineOf(a, b, judge, fromYear)),
   }
+}
+
+/**
+ * 두 분의 연표를 만듭니다. 용신을 못 구하면 «빈 문자열» 입니다.
+ *
+ * ⚠️ 용신은 judge(PersonJudge)가 들고 있습니다. 여기서 다시 계산하지 «않습니다».
+ *    ★계산기를 두 벌 만들면 한쪽만 고치는 날이 옵니다. (교훈 CJ)
+ */
+function timelineOf(
+  a: CouplePersonInput, b: CouplePersonInput,
+  judge: CoupleJudgeV1 | null, fromYear: number,
+): string {
+  const ap = judge?.a, bp = judge?.b
+  if (!ap?.eokbu || !bp?.eokbu) return ''
+  const aDay = a.saju.find(x => x.pillar === '일주')
+  const bDay = b.saju.find(x => x.pillar === '일주')
+  if (!aDay?.stem || !aDay?.branch || !bDay?.stem || !bDay?.branch) return ''
+  return timelineBlock(buildTimeline(
+    {
+      name: a.name, dayStem: aDay.stem, dayBranch: aDay.branch,
+      yongsin: ap.eokbu.yongsin, heesin: ap.eokbu.heesin, gisin: ap.eokbu.gisin,
+    },
+    {
+      name: b.name, dayStem: bDay.stem, dayBranch: bDay.branch,
+      yongsin: bp.eokbu.yongsin, heesin: bp.eokbu.heesin, gisin: bp.eokbu.gisin,
+    },
+    fromYear, 10,
+  ))
 }

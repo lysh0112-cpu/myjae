@@ -22,6 +22,8 @@ import { judgeSinsal, checkSinsal9 } from './lib/saju/career/sinsal9'
 import { judgeCouple } from './lib/saju/coupleFilterV1'
 import { toCoupleTongbyeonMaterial } from './lib/saju/toCoupleTongbyeonInput'
 import { findBanned } from './lib/saju/couple/toneGuard'
+// ★8단계 연표 (프리미엄 궁합 1차 · 2026-08-02)
+import { buildTimeline, timelineBlock, bestYear } from './lib/saju/couple/step8Timeline'
 import { calcCareerYongsin, judgeYongsin } from './lib/saju/career/yongsin'
 import { judgeStrength, calcYongsinNew, isYanginIlju } from './lib/saju/yongsinNew'
 
@@ -710,6 +712,69 @@ console.log('\n━━ ㉟ ★화개살 신설 (교재 94쪽) ━━')
   const h2 = (checkSinsal9(P(['甲辰', '丙寅', '乙巳', '丁卯'])) as unknown as
     { name: string; count: number; active: boolean }[]).find(x => x.name === '화개살')!
   check(h2.count === 1 && !h2.active, `⚠️ 하나뿐이면 «작용 안 함» (문턱 2)`)
+}
+
+console.log('\n━━ ㊱ ★8단계 연표 — 두 분 것을 «나란히» (프리미엄 궁합 1차) ━━')
+{
+  const A = { name: '가', dayBranch: '巳', dayStem: '乙',
+    yongsin: '화' as Ohaeng, heesin: '토' as Ohaeng, gisin: '수' as Ohaeng }
+  const B = { name: '나', dayBranch: '午', dayStem: '丙',
+    yongsin: '토' as Ohaeng, heesin: '금' as Ohaeng, gisin: '목' as Ohaeng }
+  const rows = buildTimeline(A, B, 2026, 10)
+  const blk = timelineBlock(rows)
+
+  check(rows.length === 10, `★열 해가 나옵니다 (${rows.length})`)
+  check(rows.every(r => r.each.length === 2), `★해마다 «두 분» 것이 나란히 있습니다`)
+
+  // ⚠️⚠️ 「위기」·「이별」이 «하나도» 없는가 — 대표님 지시
+  const BAD = ['위기', '이별', '이혼', '헤어', '파혼', '사별', '악처', '바람', '불화', '별거', '각방']
+  const hit = BAD.filter(w => blk.includes(w))
+  check(hit.length === 0, `★★금지어가 «하나도» 없습니다${hit.length ? ' — ' + hit.join(',') : ''}`)
+  check(findBanned(blk).length === 0, `★toneGuard 로도 걸리는 것이 없습니다`)
+
+  // ★교재의 말을 쓰는가 — 「위기」 대신 「인터체인지」
+  check(/인터체인지/.test(blk), `★교재의 말 「인터체인지」를 씁니다 (134쪽)`)
+  check(/접목/.test(blk), `★교재의 말 「접목」을 씁니다`)
+  check(/준비하는 해|준비하는 시기/.test(blk), `★「준비하는 해」로 부릅니다`)
+
+  // ★★흉을 말한 해에는 «반드시» 솔루션 — 대표님 지시
+  const noSol = rows.filter(r =>
+    /흔들|준비|접목|더디|얽히|조급/.test(r.line) && !r.solution)
+  check(noSol.length === 0,
+    `★★흉을 말한 해에 솔루션이 «반드시» 있습니다${noSol.length ? ' — ' + noSol.map(r => r.year).join(',') : ''}`)
+
+  // ⚠️ 솔루션이 «누구» 이야기인지 어긋나지 않는가
+  //   🔴 2026-08-02 — 「가 준비 · 나 흔들림」인 해에 솔루션이 «가를 살피라» 로 시작했습니다
+  for (const r of rows) {
+    const sh = r.each.find(e => e.shaken)
+    if (!sh || !r.solution) continue
+    const other = r.each.find(e => e.name !== sh.name)!.name
+    check(r.solution.startsWith(other),
+      `★${r.year} — 흔들리는 분(${sh.name})께 «상대(${other})» 가 말을 걸도록 씁니다`)
+  }
+
+  // ⚠️ 「두 분이 동시에 어려운 해」라고 «판정하지» 않는가 — 교재에 대조법이 없습니다
+  const src = read('lib/saju/couple/step8Timeline.ts')
+  check(/판정하지» 않습니다/.test(src), `⚠️ 「동시에 어려운 해」를 판정하지 않는다고 적혀 있습니다`)
+  check(/대조법/.test(src), `⚠️ 교재에 «대조법이 없다» 는 근거가 적혀 있습니다`)
+  check(!/'나쁨'/.test(src), `★「나쁨」이라는 칸을 «두지 않았습니다» (교재 238쪽 단식 판단 금지)`)
+
+  // ★대운을 여기서 «다시 계산하지» 않는가 — dayun.ts 하나를 지납니다
+  check(/from '\.\.\/dayun'/.test(src), `★dayun.ts «하나» 를 지납니다`)
+  // ⚠️ 주석에도 「절입일」이 적혀 있으므로 «부르는 곳» 만 봅니다.
+  //    ★2026-08-02 — 낱말로 훑다 제 주석에 걸렸습니다. 세 번째입니다.
+  check(!/calcDayunStartAge\(/.test(src),
+    `⚠️ 대운수를 여기서 계산하지 «않습니다» (절기가 필요해 서버 전용)`)
+
+  // ★가장 고른 해 — 접목인 해를 «고르지 않는가»
+  const best = bestYear(rows)
+  check(!best || !best.jeopmok,
+    `★「가장 고른 해」로 «접목» 인 해를 고르지 않습니다 — ${best ? best.year : '(없음)'}`)
+
+  // ⚠️ 재료가 문지기를 지나는가
+  const ti = read('lib/saju/toCoupleTongbyeonInput.ts')
+  check(/timelineBlock: guardTone\(timelineOf/.test(ti), `★연표도 guardTone 을 지납니다`)
+  check(/ap\.eokbu|judge\?\.a/.test(ti), `★용신을 judge 에서 «받아» 씁니다 (다시 계산하지 않음)`)
 }
 
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
