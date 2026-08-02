@@ -25,7 +25,7 @@
 import type { CareerCard, CareerInput, Pillar } from './types'
 import { isHourUnknown } from './types'
 import { iga } from '../josa'
-import { SINSAL9, DOHWA_NOTE, POWER_PAIRS, GROUP_RULE, type SinsalRow } from './tables/sinsal'
+import { SINSAL9, DOHWA_NOTE, POWER_PAIRS, GROUP_RULE, SINSAL_COMBO, type SinsalRow } from './tables/sinsal'
 import { jobKey, okForStudent } from './tables/jobs'
 
 /** 신살 하나의 판정 결과 */
@@ -63,6 +63,9 @@ const real = (x: string) => x !== '?' && x !== ''
  * ★2026-08-02 — strongAt(일주 현침) 이 «일지» 만 보게 하려고 둡니다.
  *   ⚠️ marks 는 천간 글자도 담습니다(현침의 甲·辛). 그것을 걸러야 합니다.
  */
+/** 십이지 차례 — 「바로 앞 글자」를 찾는 데 씁니다 (천의성 97쪽) */
+const JIJI_ORDER = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
+
 function isBranchMark(saju: Pillar[], m: { ch: string; pillar: string }): boolean {
   const p = saju.find(x => x.pillar === m.pillar)
   return !!p && p.branch === m.ch
@@ -97,6 +100,54 @@ function checkOne(saju: Pillar[], row: SinsalRow): SinsalHit {
       if (ha && hb) {
         marks.push({ ch: a, pillar: ha.pillar })
         marks.push({ ch: b, pillar: hb.pillar })
+      }
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-02 신설 — 교재 97쪽 (문창성·천의성·삼기성)
+  //    셋 다 «길성» 입니다. 「살」이 아닙니다.
+  // ══════════════════════════════════════════════════════════════
+
+  // byDay — 일간마다 정해진 «지지» (문창성 97쪽)
+  if (row.kind.includes('byDay') && row.byDayStem) {
+    const day = saju.find(p => p.pillar === '일주')
+    const want = day && real(day.stem) ? row.byDayStem[day.stem] : undefined
+    if (want) {
+      for (const p of saju) {
+        if (real(p.branch) && p.branch === want) marks.push({ ch: p.branch, pillar: p.pillar })
+      }
+    }
+  }
+
+  // beforeMonth — 월지의 «바로 앞 글자» 가 지지에 있는가 (천의성 97쪽)
+  //   교재 "月支의 바로 앞 글자가 地支에 있는 경우. 亥月生이고 戌이 있으면 천의성"
+  //   ⚠️ 「바로 앞」은 «십이지 차례» 의 앞입니다 (亥 앞은 戌).
+  if (row.kind.includes('beforeMonth')) {
+    const mb = saju.find(p => p.pillar === '월주')?.branch
+    const i = mb ? JIJI_ORDER.indexOf(mb) : -1
+    if (i >= 0) {
+      const want = JIJI_ORDER[(i + 11) % 12]   // 하나 앞
+      for (const p of saju) {
+        if (p.pillar === '월주') continue       // 월지 자신은 세지 않습니다
+        if (real(p.branch) && p.branch === want) marks.push({ ch: p.branch, pillar: p.pillar })
+      }
+    }
+  }
+
+  // stemSet — 정해진 «천간 셋» 이 다 있는가 (삼기성 97쪽)
+  //   ⚠️ 교재 "日干에는 «반드시» 있어야 한다" → needDayStem
+  if (row.kind.includes('stemSet') && row.stemSets) {
+    const dayStem = saju.find(p => p.pillar === '일주')?.stem ?? ''
+    const stems = saju.filter(p => real(p.stem)).map(p => p.stem)
+    for (const set of row.stemSets) {
+      const allThere = set.stems.every(x => stems.includes(x))
+      const dayOk = !row.needDayStem || set.stems.includes(dayStem)
+      if (allThere && dayOk) {
+        for (const p of saju) {
+          if (real(p.stem) && set.stems.includes(p.stem)) marks.push({ ch: p.stem, pillar: p.pillar })
+        }
+        break   // ★한 묶음만 셉니다
       }
     }
   }
@@ -343,6 +394,25 @@ export function judgeSinsal(input: CareerInput): CareerCard {
     }
   }
 
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-02 — 신살이 «겹칠 때» (교재 97쪽 천의성)
+  //    "천의성+양인살(외과 의사), 천의성+괴강살(약사, 종교 지도자)"
+  //  ⚠️ 교재가 «공식처럼» 밝힌 유일한 겹치기입니다. 다른 것을 지어내지 마십시오.
+  // ══════════════════════════════════════════════════════════════
+  //  ⚠️ 겹치기는 «묶음 문턱» 과 무관하게 «걸렸는가» 로 봅니다.
+  //     교재 97쪽은 「천의성+양인살」이라 했지 「괴백양이 2개 이상일 때」라
+  //     하지 않았습니다. ★양인이 하나뿐이어도 천의성과 겹치면 그 결입니다.
+  //     (괴백양 문턱 2는 「성질 괴팍함」을 말할 때의 잣대입니다 — 다른 이야기)
+  const onKeys = new Set(all.filter(h => h.count > 0).map(h => h.key))
+  const comboJobs: string[] = []
+  for (const c of SINSAL_COMBO) {
+    if (c.keys.every(k => onKeys.has(k))) {
+      lines.push(c.note)
+      comboJobs.push(...c.jobs)
+      reasons.push(`신살 겹침 ${c.keys.join('+')} → ${c.jobs.join('·')} (교재 97쪽)`)
+    }
+  }
+
   // AI 통변 재료
   // ★2026-07-27 — 학생이면 어른용 직업을 재료에서도 뺀다.
   //   도화살 목록에 '유흥업'이 들어 있어 아이 사주 재료로 그대로 나갔다.
@@ -359,6 +429,13 @@ export function judgeSinsal(input: CareerInput): CareerCard {
       ` · 근거 ${h.row.src}`
     )
   }
+  // ★2026-08-02 — 겹치기 직업을 재료로 넘깁니다 (교재 97쪽)
+  //   ⚠️ 학생이면 걸러 냅니다 (2026-07-27 교훈과 같은 결)
+  if (comboJobs.length) {
+    const cj = forStudent ? comboJobs.filter(j => okForStudent(jobKey(j))) : comboJobs
+    if (cj.length) reasons.push(`★신살이 겹쳐 나오는 일 : ${cj.join(', ')} (교재 97쪽)`)
+  }
+
   const off = all.filter(h => !h.active && h.count > 0)
   if (off.length) {
     reasons.push(`문턱에 못 미친 것 : ${off.map(h => `${h.name} ${h.count}개(기준 ${h.row.threshold})`).join(' · ')}. 언급하지 마세요.`)

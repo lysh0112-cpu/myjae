@@ -570,6 +570,62 @@ console.log('\n━━ ㉜ ★일주 현침 — 개수와 무관하게 작용 (�
   check(/戊辰 · 庚辰 · 2기둥/.test(c2.lines[0]), `★묶음은 여전히 «기둥» 으로 겹침을 지웁니다`)
 }
 
+console.log('\n━━ ㉝ ★천문성 낱글자 넷 · 문창성·천의성·삼기성 신설 (교재 94·97쪽) ━━')
+{
+  const t = read('lib/saju/career/tables/sinsal.ts')
+  const P = (a: string[]) => ['년주', '월주', '일주', '시주']
+    .map((p, i) => ({ pillar: p, stem: a[i][0], branch: a[i][1] })) as Pillar[]
+  const f = (sj: Pillar[], nm: string) =>
+    (checkSinsal9(sj) as unknown as { name: string; count: number; active: boolean }[])
+      .find(x => x.name === nm)!
+
+  // ★천문성 — 낱글자 넷(卯戌亥未) · 문턱 2 (대표님 결정)
+  const cm = t.slice(t.indexOf("key: 'cheonmun'"), t.indexOf("key: 'munchang'"))
+  check(/chars: \['卯', '戌', '亥', '未'\]/.test(cm), `★천문성 — 낱글자 넷 (교재 94쪽)`)
+  check(/^\s*threshold: 2,/m.test(cm), `★천문성 문턱 2 (교재에 개수 없음 — 대표님 결정)`)
+  check(!/^\s*pairs:/m.test(cm), `⚠️ 짝(pair)을 쓰지 «않습니다»`)
+  check(/교재 근거가 «아닙니다»/.test(cm), `⚠️ 문턱이 교재 근거가 아니라는 것이 적혀 있습니다`)
+  check(/94쪽 \(4\) 천문성/.test(cm), `★출전이 94쪽입니다 (92쪽은 공망)`)
+  const t1 = f(P(['甲戌', '乙亥', '丙子', '丁丑']), '천문성')
+  check(t1.count === 2 && t1.active, `★戌亥 → 천문성 2개·작용`)
+  const t2 = f(P(['甲戌', '乙巳', '丙子', '丁丑']), '천문성')
+  check(t2.count === 1 && !t2.active, `⚠️ 하나뿐이면 «작용 안 함» (문턱 2)`)
+
+  // ★문창성 — 일간마다 정해진 지지 (교재 97쪽)
+  check(/byDayStem: \{/.test(t), `★문창성 — 일간별 지지 표가 있습니다`)
+  check(/甲: '巳', 乙: '午', 丙: '申', 丁: '酉', 戊: '申'/.test(t), `★교재 97쪽 표 앞 다섯`)
+  check(/己: '酉', 庚: '亥', 辛: '子', 壬: '寅', 癸: '卯'/.test(t), `★교재 97쪽 표 뒤 다섯`)
+  const m1 = f(P(['乙丑', '丙寅', '甲午', '己巳']), '문창성')
+  check(m1.count === 1 && m1.active, `★甲 일간 + 巳 → 문창성`)
+  const m2 = f(P(['乙丑', '丙寅', '甲午', '己卯']), '문창성')
+  check(m2.count === 0, `⚠️ 甲 일간에 卯는 문창성이 «아닙니다»`)
+
+  // ★천의성 — 月支의 «바로 앞 글자» (교재 97쪽)
+  const u1 = f(P(['甲戌', '丁亥', '丙寅', '己丑']), '천의성')
+  check(u1.count === 1 && u1.active, `★亥월 + 戌 → 천의성 (★교재 97쪽이 든 «바로 그 예»)`)
+  const u2 = f(P(['甲子', '丁亥', '丙寅', '己丑']), '천의성')
+  check(u2.count === 0, `⚠️ 亥월에 子는 천의성이 «아닙니다» (앞 글자가 아니라 뒤)`)
+
+  // ★삼기성 — 천간 셋 + 「日干에는 반드시」 (교재 97쪽)
+  check(/needDayStem: true/.test(t), `★「日干에는 반드시 있어야 한다」가 걸려 있습니다`)
+  const g1 = f(P(['乙丑', '丁亥', '丙寅', '己丑']), '삼기성')
+  check(g1.active, `★乙丙丁 + 일간 丙 → 삼기성`)
+  const g2 = f(P(['乙丑', '丁亥', '己卯', '丙寅']), '삼기성')
+  check(g2.count === 0, `⚠️ 乙丙丁 이 다 있어도 «일간이 그 안에 없으면» 성립 안 함`)
+
+  // ★신살 겹치기 — 교재 97쪽 천의성
+  check(/SINSAL_COMBO/.test(t), `★겹치기 표가 있습니다`)
+  check(/keys: \['cheonui', 'yangin'\]/.test(t), `★천의성+양인 = 외과의사 (교재 97쪽)`)
+  check(/keys: \['cheonui', 'goegang'\]/.test(t), `★천의성+괴강 = 약사·종교지도자 (교재 97쪽)`)
+  const c1 = judgeSinsal({ saju: P(['甲戌', '丁亥', '丙午', '己丑']), target: 'adult' } as never)
+  check(c1.lines.some(l => l.includes('칼을 쥐는')), `★천의성+양인이 겹치면 «한 줄» 이 나옵니다`)
+  const c2 = judgeSinsal({ saju: P(['甲戌', '丁亥', '庚辰', '己丑']), target: 'adult' } as never)
+  check(c2.lines.some(l => l.includes('판을 세우는')), `★천의성+괴강도 나옵니다`)
+  // ⚠️ 교재에 «없는» 겹치기를 지어내지 않았는가 — 둘뿐이어야 합니다
+  const nCombo = (t.match(/keys: \['/g) ?? []).length
+  check(nCombo === 2, `⚠️ 겹치기는 «둘» 뿐입니다 (교재에 그것만 있습니다) — ${nCombo}`)
+}
+
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
 {
   const src = read('lib/saju/simsanOhaeng.ts')
