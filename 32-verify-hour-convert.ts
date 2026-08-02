@@ -1063,6 +1063,69 @@ console.log('\n━━ ㊶ ★★별점을 걷어냈는가 (프리미엄 궁합 5
     `★요약(judgeToText)에서도 별을 «뺐습니다»`)
 }
 
+console.log('\n━━ ㊷ ★★목업 정본 화면·분량 개편 (44부 22차) ━━')
+{
+  const A = {
+    name: '가', gender: '남',
+    saju: ['년주', '월주', '일주', '시주'].map((p, i) => ({
+      pillar: p, stem: ['己', '丁', '甲', '癸'][i], branch: ['酉', '卯', '午', '酉'][i],
+    })), solarMonth: 3, solarDay: 20, hourBranch: '酉',
+  }
+  const B = {
+    name: '나', gender: '여',
+    saju: ['년주', '월주', '일주', '시주'].map((p, i) => ({
+      pillar: p, stem: ['己', '戊', '壬', '辛'][i], branch: ['酉', '辰', '申', '亥'][i],
+    })), solarMonth: 4, solarDay: 27, hourBranch: '亥',
+  }
+  const j = judgeCouple(A as never, B as never, (n: string) => n + '님의 배우자운', true)
+  const m = toCoupleTongbyeonMaterial(A as never, B as never, j as never, { fromYear: 2026 })
+  const sp = buildCouplePrompt(m, { relation: '부부' }).systemPrompt
+
+  // ★★분량 — 「넘기지 마세요」가 «사라졌는가»
+  check(!/1300~1600/.test(sp), `★★옛 상한(1300~1600자)이 «사라졌습니다»`)
+  check(!/길면 화면에서 잘립니/.test(sp), `★★「길면 잘린다」는 «거짓» 이었습니다. 지웠습니다`)
+  check(/5,000자 안팎/.test(sp), `★프리미엄 분량(5,000자 안팎)이 적혀 있습니다`)
+  check(/넘겨도 «괜찮습니다»/.test(sp), `★넘겨도 된다고 «분명히» 말합니다`)
+
+  // ★새 대목 셋에 «분량» 이 명시됐는가 — 없어서 버려지던 것
+  check(/두 분은 어떤 분인가: 다섯 문단 이상/.test(sp), `★「두 분은 어떤 분인가」 분량 명시`)
+  check(/함께 살아가는 결: 네 문단 이상/.test(sp), `★「함께 살아가는 결」 분량 명시`)
+  check(/앞으로의 열 해: ★해마다/.test(sp), `★「앞으로의 열 해」 분량 명시`)
+
+  // ⚠️ 43부 교훈 — «범위» 가 아니라 «이상» 으로
+  check(/바닥이지 천장이 아닙니다/.test(sp), `⚠️ 「이상」이 바닥임을 못 박습니다 (43부 교훈)`)
+  check(!/자 안팎 \(오행을 하나씩/.test(sp), `⚠️ 옛 「250자 안팎」식 지시가 없습니다`)
+
+  // ★대목을 버리지 말라 — 실제로 셋이 사라졌던 자리
+  check(/대목을 «하나도 건너뛰지 마세요»/.test(sp), `★대목을 버리지 말라고 못 박습니다`)
+  check(/대목 셋이 통째로 사라졌습니다/.test(sp), `★그 일이 «실제로 일어났다» 고 알려 줍니다`)
+
+  // ★솔루션 — 프리미엄의 값
+  check(/"→ " 로 시작하는 줄로 «반드시» 맺으세요/.test(sp), `★솔루션을 「→」로 맺으라고 지시합니다`)
+  check(/행동 지침 셋/.test(sp), `★맺음말에 「이번 주/이번 달/앞으로」 지침 셋`)
+
+  // ★★화면 — 목업 정본
+  const rep = read('app/manseryeok/couple-result-new/components/CoupleReport.tsx')
+  check(!/useState|onClick|접기/.test(rep), `★★리포트가 «펼친 채» 입니다 (접기 없음)`)
+  check(/GRAPH_IN/.test(rep), `★오행 그래프를 «해당 대목 안» 에 넣습니다 (대표님 지시로 살림)`)
+  check(/isSol/.test(rep) && /→/.test(rep), `★「→」 솔루션 줄을 «따로» 눈에 띄게 그립니다`)
+
+  const pg = read('app/manseryeok/couple-result-new/page.tsx')
+  // 🔴 키 매핑을 «버렸는가» — 새 대목을 삼키던 자리
+  check(!/tongByKey/.test(pg.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')),
+    `★★통변을 «판정 카드 키» 에 매핑하지 «않습니다» (새 대목을 삼키던 자리)`)
+  check(/<CoupleReport/.test(pg), `★목업 정본 리포트를 그립니다`)
+  check(/reportSections/.test(pg), `★AI 가 쓴 대목을 «차례 그대로» 씁니다`)
+  // ⚠️ 옛 부품을 «지우지» 않았는가 — 되살릴 때 필요합니다
+  check(/import CoupleJudgeCard/.test(pg), `⚠️ CoupleJudgeCard 를 «지우지» 않았습니다`)
+  // ★부록(도움이 되는 자리…)을 «없앴는가» — 목업에 없습니다
+  check(!/<CoupleJudgeCard$/m.test(pg.replace(/\s+/g, ' ')) || !/tongByKey=/.test(pg),
+    `★맨 아래 부록 섹션이 «사라졌습니다» (목업에 없음)`)
+
+  // ★premium 을 보내는가 — 5,000자를 쓰려면 필요합니다
+  check(/premium: true/.test(pg), `★premium: true 로 보냅니다 (max_tokens 16,000)`)
+}
+
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
 {
   const src = read('lib/saju/simsanOhaeng.ts')

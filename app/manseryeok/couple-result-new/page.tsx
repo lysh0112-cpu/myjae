@@ -21,6 +21,8 @@
  */
 
 import { Suspense, useMemo, useState, useEffect, useRef } from 'react'
+// ⚠️ spouseSectionTitle 은 CoupleJudgeCard 가 쓰던 것입니다. 되살릴 때 필요해 «남겨 둡니다» (2026-08-02)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { coupleKindOfPair, coupleTitleOf, spouseFortuneTitle, spouseSectionTitle, COUPLE_PRICE_KEY, type CoupleKind } from '@/lib/saju/coupleRelation'
 import { useRouter, useSearchParams } from 'next/navigation'
 import CoupleWonguk from './components/CoupleWonguk'
@@ -28,7 +30,11 @@ import OhaengCompareCard from './components/OhaengCompareCard'
 // ★2026-07-26 — 옛 점수제(coupleScore.ts)를 걷어내면서, 거기 있던
 //   SajuPillarSimple 타입을 simsanOhaeng 의 Pillar 로 갈아탄다. (구조가 완전히 같다)
 import { calcSimsanOhaeng, type Pillar as SajuPillarSimple } from '@/lib/saju/simsanOhaeng'
+// ⚠️ CoupleJudgeCard 는 «지우지 않았습니다» — 되살릴 때 필요합니다 (2026-08-02)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import CoupleJudgeCard from './components/CoupleJudgeCard'
+// ★목업 정본 리포트 (44부 22차)
+import CoupleReport, { type ReportSection } from './components/CoupleReport'
 import CoupleFollowUp, { MAX_FOLLOWUPS, type FollowUp } from './components/CoupleFollowUp'
 import { judgeCouple, type CoupleJudgeV1, type Gender } from '@/lib/saju/coupleFilterV1'
 import { COUPLE_QUESTIONS, groupCoupleByCategory } from '@/lib/saju/coupleQuestions'
@@ -673,74 +679,42 @@ function CoupleResultView({
     [tongResult],
   )
 
-  // ★2026-07-25 — 통변을 판정 카드 key에 매핑한다. (제목 키워드 기반 — 순서보다 안정적)
-  //   통변 제목과 판정 카드를 키워드로 짝짓는다. AI가 순서를 조금 바꿔도 안 밀린다.
-  const { tongByKey, tongIntro, tongOutro } = useMemo(() => {
-    const empty = { tongByKey: {} as Record<string, string>, tongIntro: '', tongOutro: '' }
-    if (!tbCards.length) return empty
-    const catKeys = (judge?.cats ?? []).map(c => c.key)
+  // ══════════════════════════════════════════════════════════════
+  //  ★★2026-08-02 — 통변을 «그대로» 그립니다 (44부 22차 · 대표님 지시)
+  //
+  //  🔴 [무엇이 있었나]  통변을 «판정 카드 키» 에 매핑하고 있었습니다.
+  //     catKeys = ohaeng·gwiin·ilju·spouse_a·spouse_b·couple_overall·child
+  //     ⇒ ★새 대목 셋(그릇과 온도 · 함께 살아가는 결 · 앞으로의 열 해)은
+  //       «키가 없어» 매핑에 실패하고, 「판정 카드를 다 채운 뒤 남은 것」으로
+  //       밀려 outro 에 뭉치거나 «사라졌습니다».
+  //     ⇒ 실기에서 연표가 「두 분의 자식운」 카드 안에 들어가 있던 까닭입니다.
+  //
+  //  ★[이제]  AI 가 쓴 «■ 대목» 을 차례 그대로 그립니다.
+  //     ⇒ 대목이 늘어도 «그냥 나옵니다». 키를 더할 필요가 없습니다.
+  //  ⚠️ 판정(coupleFilterV1)은 «건드리지 않았습니다». 판정은 코드가 하고
+  //     AI 는 풀기만 하며, 화면은 «그리기만» 합니다.
+  // ══════════════════════════════════════════════════════════════
+  const { reportSections, tongIntro, tongOutro } = useMemo(() => {
     const nm = (s: string) => s.replace(/\s/g, '')
-    const keyOf = (title: string): string | null => {
-      const t = nm(title)
-      if (t.includes('배우자운') || t.includes('배우자자리')) {
-        if (judge && t.includes(nm(judge.a.name))) return 'spouse_a'
-        if (judge && t.includes(nm(judge.b.name))) return 'spouse_b'
-        return null
-      }
-      if ((t.includes('없는') && (t.includes('오행') || t.includes('기운'))) || t.includes('채워')) return 'ohaeng'
-      if (t.includes('귀인')) return 'gwiin'
-      if (t.includes('일주') || t.includes('만나는자리') || t.includes('만나는결')) return 'ilju'
-      if (t.includes('부부운') || t.includes('두분의부부') || t.includes('종합')) return 'couple_overall'
-      if (t.includes('자식운') || t.includes('자녀운') || t.includes('자식') || t.includes('자녀')) return 'child'
-      return null
-    }
-    const map: Record<string, string> = {}
-    let intro = tbIntro || ''
+    const secs: ReportSection[] = []
+    const intro = tbIntro || ''
     const outroParts: string[] = []
-    const usedSpouse: string[] = []
-    let matchedAny = false
-    // 아직 안 채워진 판정 카드를 순서대로 꺼내는 헬퍼 (제목 매칭 실패 시 보완용)
-    const nextUnfilledKey = (): string | null => {
-      for (const k of catKeys) if (!map[k]) return k
-      return null
-    }
     for (const c of tbCards) {
-      // ★2026-07-25 — 카드 안에 이미 제목이 있으므로, 통변 본문에 제목을 다시 붙이지 않는다.
-      //   (전에는 `${c.title}\n${c.body}` 로 제목을 앞에 붙여, 카드 제목과 겹쳐 중복됐다.)
       const body = c.body.trim()
-      // ★맺는말 — "■ 맺는말" 제목이 붙은 대목은 판정 카드가 아니라 맺음글이다.
-      //   순서 안전장치가 자식운 등에 잘못 넣지 않도록, 매칭 전에 outro로 보낸다.
+      if (!body) continue
+      // ★맺는말은 «맺음글» 로 (대목이 아닙니다)
       if (nm(c.title).includes('맺는말') || nm(c.title).includes('맺음말')) {
-        if (matchedAny) outroParts.push(body)
-        else intro = (intro ? intro + '\n\n' : '') + body   // ★2026-07-26 '\\n\\n' 오타 고침
+        outroParts.push(body)
         continue
       }
-      let k = keyOf(c.title)
-      if (!k && (c.title.includes('배우자운') || c.title.includes('배우자 자리'))) {
-        k = !usedSpouse.includes('spouse_a') ? 'spouse_a' : 'spouse_b'
-      }
-      // ★제목 매칭 실패 시 — 아직 채울 판정 카드가 남았을 때만 순서대로 채운다.
-      //   (AI가 제목을 바꿔도 통변이 떠돌지 않게. 단, 판정 카드를 다 채웠으면
-      //    남은 것은 맺는말이므로 억지로 카드에 넣지 않는다 — 자식운 카드에
-      //    맺는말이 잘못 붙던 문제를 막는다.)
-      if ((!k || !catKeys.includes(k) || map[k]) && matchedAny && nextUnfilledKey() !== null) {
-        const nk = nextUnfilledKey()
-        if (nk) k = nk
-      }
-      if (k && catKeys.includes(k) && !map[k]) {
-        map[k] = body
-        matchedAny = true
-        if (k.startsWith('spouse_')) usedSpouse.push(k)
-      } else if (!matchedAny) {
-        // 아직 어떤 주제도 매칭 전이면 = 여는말
-        intro = (intro ? intro + '\n\n' : '') + body
-      } else {
-        // 판정 카드를 다 채운 뒤 남은 것 = 맺는말·기타
-        outroParts.push(body)
-      }
+      secs.push({ title: c.title, body, icon: c.icon })
     }
-    return { tongByKey: map, tongIntro: intro, tongOutro: outroParts.join('\n\n') }
-  }, [tbCards, tbIntro, judge])
+    return {
+      reportSections: secs,
+      tongIntro: intro,
+      tongOutro: outroParts.join('\n\n'),
+    }
+  }, [tbCards, tbIntro])
 
 
   /** ★2026-07-26 — 완성된 통변을 보관함 행에 덮어쓴다.
@@ -1019,14 +993,27 @@ function CoupleResultView({
                  '필요한 기운을 채워 주는가' 카드 안으로 넣었다. (대표님 지시)
                  같은 이야기를 두 곳에서 하지 않기 위해서다.
                  embedded=true 라 자체 제목·배경·접기를 끄고 내용만 그린다. */}
-        {judge && (
-          <CoupleJudgeCard
-            judge={judge}
-            tongByKey={tongByKey}
-            tongIntro={tongIntro}
-            tongOutro={tongOutro}
-            soloLabel={spouseSectionTitle(kind)}
-            needExtra={ohaeng1 && ohaeng2 ? (
+        {/* ══════════════════════════════════════════════════════
+              ★★2026-08-02 — 목업 정본 리포트 (44부 22차 · 대표님 지시)
+
+              🔴 [무엇이 있었나]  CoupleJudgeCard 는 —
+                 · 제목만 보이고 «눌러야» 열렸습니다 (프리미엄인데 내용이 숨음)
+                 · 판정 카드 → 접힌 풀이 → AI 글 «두 겹» 이었습니다
+                 · 통변을 «판정 카드 키» 에 매핑해 ★새 대목 셋을 삼켰습니다
+                 · 맨 아래 「도움이 되는 자리…」 부록이 목업에 없습니다
+
+              ★[이제]  CoupleReport — 모두 «펼친 채» · «한 겹» · AI 차례 그대로
+              ⚠️ CoupleJudgeCard 는 «지우지 않았습니다» — 되살릴 때 필요합니다.
+                 ⚠️ 되살리려면 대표님께 여쭈십시오.
+              ⚠️ 오행 그래프는 «살립니다» (대표님 지시) — 해당 대목 «안» 에 넣습니다.
+           ══════════════════════════════════════════════════════ */}
+        {judge && (reportSections.length > 0 || tongIntro || tongOutro) && (
+          <CoupleReport
+            badge={judge.badge}
+            intro={tongIntro}
+            sections={reportSections}
+            outro={tongOutro}
+            graph={ohaeng1 && ohaeng2 ? (
               <OhaengCompareCard
                 aScores={ohaeng1}
                 bScores={ohaeng2}
