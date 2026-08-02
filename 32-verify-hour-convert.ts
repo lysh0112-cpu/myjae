@@ -487,6 +487,48 @@ console.log('\n━━ ㉚ 🔴 «절대 경로» 가 없는가 — 배포를 막
     `★lib·app 에도 절대 경로가 «없습니다»${bad2.length ? ' — ' + bad2.slice(0, 3).join(' , ') : ''}`)
 }
 
+console.log('\n━━ ㉛ ★천라·지망 신설 · 공망 궁합 (교재 95·92쪽) ━━')
+{
+  const t = read('lib/saju/career/tables/sinsal.ts')
+  // ★천라 (辰亥, 寅酉) — 교재 95쪽
+  check(/key: 'cheonra', name: '천라'/.test(t), `★천라를 세웠습니다 (교재 95쪽)`)
+  check(/pairs: \[\['辰','亥'\], \['寅','酉'\]\]/.test(t), `★천라 짝 — 辰亥 · 寅酉`)
+  // ★지망 (辰巳) — 교재 95쪽 · 자리 무게 있음
+  check(/key: 'jimang', name: '지망'/.test(t), `★지망을 세웠습니다 (교재 95쪽)`)
+  check(/pairs: \[\['辰','巳'\]\]/.test(t), `★지망 짝 — 辰巳`)
+  const jm = t.slice(t.indexOf("key: 'jimang'"), t.indexOf("key: 'yeokma'"))
+  check(/posWeight: \{ 월주: 4, 일주: 3, 시주: 2, 년주: 1 \}/.test(jm),
+    `★지망에 «月>日>時>年» 이 있습니다 (교재 95쪽 「년주는 영향력 거의 없음」)`)
+  // ⚠️ 지망은 «흉살인데 좋게 보는 조건» 이 있습니다 — 그것을 함께 말하는가
+  check(/오히려 좋게/.test(jm), `⚠️ 「중화·조후가 맞으면 오히려 좋다」를 함께 말합니다`)
+
+  // ★실기 — 천라·지망이 실제로 잡히는가
+  const P = (a: string[]) => ['년주', '월주', '일주', '시주']
+    .map((p, i) => ({ pillar: p, stem: a[i][0], branch: a[i][1] })) as Pillar[]
+  const f = (sj: Pillar[], nm: string) =>
+    (checkSinsal9(sj) as unknown as { name: string; count: number; active: boolean; posNote: string }[])
+      .find(x => x.name === nm)!
+  const j1 = f(P(['甲辰', '乙巳', '丙子', '丁丑']), '지망')
+  check(j1.active && /월주에 있어/.test(j1.posNote), `★辰巳 → 지망 · 자리 안내가 붙습니다`)
+  const c1 = f(P(['甲辰', '乙亥', '丙子', '丁丑']), '천라')
+  check(c1.active, `★辰亥 → 천라가 잡힙니다`)
+
+  // ★공망 궁합 — 교재 92쪽 「공망이 같으면 인연」
+  const cp = read('lib/saju/coupleFilterV1.ts')
+  check(/key: 'gongmang'/.test(cp), `★「두 분의 코드가 맞는 자리」 카드가 있습니다`)
+  check(/a\.gongmang\.join\(''\) === b\.gongmang\.join\(''\)/.test(cp),
+    `★두 사람의 공망을 맞대어 봅니다`)
+  check(/의견이 일치되고 코드가 맞는/.test(cp), `★교재 92쪽 원문의 뜻을 씁니다`)
+  // ⚠️⚠️ «다르면 나쁘다» 고 말하지 않는가 — 교재는 「같으면 인연」이라고만 했습니다
+  check(!/공망이 다르|인연이 없|맞지 않는 사이/.test(cp),
+    `⚠️ 공망이 «다르다고 나쁘다» 고 말하지 않습니다 (없는 흉을 만들지 않음)`)
+  // ⚠️ 「공치고 망함」 같은 말을 손님께 쓰지 않는가
+  // ⚠️ 주석에 그 말이 «왜 안 되는지» 적혀 있으므로, 손님께 나가는 lines 만 봅니다
+  const gmCard = cp.slice(cp.indexOf("key: 'gongmang'"), cp.indexOf("key: 'gongmang'") + 900)
+  const shown = [...gmCard.matchAll(/'([^']*요\.|[^']*니다\.|[^']*어요\.)'/g)].map(m => m[1]).join(' ')
+  check(!/공치고 망/.test(shown), `⚠️ 「공치고 망한다」를 화면에 쓰지 않습니다`)
+}
+
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
 {
   const src = read('lib/saju/simsanOhaeng.ts')
