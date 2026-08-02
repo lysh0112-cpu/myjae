@@ -18,6 +18,9 @@
 // ══════════════════════════════════════════════════════════════════
 
 import { readFileSync, existsSync } from 'fs'
+// ★2026-08-02 — 성씨 표는 «정규식» 이 아니라 «값» 으로 봅니다.
+//   ⚠️ 주석에 「인구수 순」이라 적혀 있어도 값이 흩어져 있으면 소용없습니다.
+import { SURNAME_HANJA } from './lib/saju/surnameHanja'
 
 let pass = 0, fail = 0
 const check = (ok: boolean, msg: string) => {
@@ -1336,6 +1339,123 @@ console.log('\n━━ ⑳-c 🔴 「사주 불러오는 중…」 이 «끝나�
   for (const u of users) {
     check(/useResultSaju/.test(read(u)), `⚠️ ${u.split('/').slice(-2).join('/')} 가 이 훅을 씁니다`)
   }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  ㉑ ★2026-08-02 — 성씨 한자를 고르는 창구가 «셋» 이다 (대표님 지적)
+//
+//   🔴 [무엇이 있었나]  43부 23차에 「李가 안 보인다」를 잡고 전용 표를 만들었는데,
+//     그 표를 «작명 두 화면» 에만 이었습니다. 창구는 셋인데 둘만 고쳤습니다.
+//     → 「내 이름 정밀분석」에서 '이' 를 누르면 李가 «이름에 잘 쓰지 않는 글자»
+//       흐린 칸에 밀려 있었습니다.
+//   ★이 그물은 «셋을 함께» 셉니다. 하나라도 빠지면 여기서 막힙니다.
+//   ⚠️ 창구가 넷째로 늘어나면 아래 DOORS 에 «반드시» 한 줄 더하십시오.
+// ══════════════════════════════════════════════════════════════════
+console.log('\n━━ ㉑-a ★성씨 전용 표 — 성씨를 «고르는» 창구가 모두 지나는가 ━━')
+{
+  // ⚠️ 먼저 «창구가 몇인지» 를 셉니다. 목록을 손으로 적어 두면 늘어난 것을 놓칩니다.
+  //    hanja 표를 직접 캐는 화면이 곧 «한자를 고르는» 화면입니다.
+  const PICKERS = [
+    'app/manseryeok/naming/diagnosis/page.tsx',      // 내 이름 정밀분석
+    'app/manseryeok/naming/rename/newhanja/page.tsx', // 작명 Step 3
+    'app/manseryeok/naming/rename/hanja/page.tsx',    // 옛 개명 — ★성씨는 «잠깁니다»
+  ]
+  const found = PICKERS.filter(p => /from\('hanja'\)/.test(read(p)))
+  check(found.length === 3,
+    `한자 표를 직접 캐는 화면이 셋입니다 (${found.length})`)
+
+  // ★그 가운데 «성씨를» 고르는 곳은 둘입니다.
+  //   ⚠️ 셋째(rename/hanja)는 「성씨는 개명 대상이 아니다」 가 대표님 확정이라
+  //      성씨 칸을 아예 안 엽니다. 그래서 표가 필요 없습니다.
+  const SURNAME_DOORS: [string, string][] = [
+    ['내 이름 정밀분석 (diagnosis)', 'app/manseryeok/naming/diagnosis/page.tsx'],
+    ['작명 Step 3 (newhanja)', P.nh],
+  ]
+  for (const [label, path] of SURNAME_DOORS) {
+    const src = codeOf(read(path))
+    check(/from '@\/lib\/saju\/surnameHanja'/.test(src),
+      `★${label} 이 성씨 전용 표를 씁니다`)
+  }
+  // ⚠️ 셋째가 «말없이» 성씨를 고르게 바뀌면 여기서 막힙니다
+  check(/성씨는 개명 대상이 아닙니다/.test(read('app/manseryeok/naming/rename/hanja/page.tsx')),
+    `⚠️ 옛 개명 화면은 성씨를 «고르지 않습니다» (근거가 코드에 적혀 있습니다)`)
+
+  // ⚠️ 「나르는」 자리와 「고르는」 자리를 헷갈리지 마십시오 —
+  //    newname 은 성씨 한자를 «받아서 넘길» 뿐입니다. 표가 필요 없습니다.
+  check(/surnameHanja: surnameHanja \|\| null/.test(codeOf(S.nn)),
+    `⚠️ 작명 Step 0 은 성씨 한자를 «나르기만» 합니다 (고르지 않습니다)`)
+
+  // ⚠️ «들여오기만» 하고 안 쓰면 소용이 없습니다 — 실제로 줄 세우는지 봅니다
+  const diag = codeOf(read('app/manseryeok/naming/diagnosis/page.tsx'))
+  check(/surnameRank\(syl, rowHanja\(a\)\)/.test(diag),
+    `★정밀분석이 성씨 «흔한 차례» 로 줄을 세웁니다`)
+  check(/surnameRank/.test(codeOf(S.nh)),
+    `★작명 Step 3 도 같은 잣대로 줄을 세웁니다`)
+}
+
+console.log('\n━━ ㉑-b 🔴 성씨 칸에서는 «거르지 않는가» (李가 밝은 칸에) ━━')
+{
+  const diag = codeOf(read('app/manseryeok/naming/diagnosis/page.tsx'))
+  // ★성씨 칸이면 avoidList 가 «비어» 있어야 합니다 — 흐린 칸으로 밀지 않습니다
+  check(/const avoidList = isSurnameSlot \? \[\] :/.test(diag),
+    `★성씨 칸에서는 «흐린 칸» 이 아예 없습니다`)
+  check(/const normalList = isSurnameSlot \? surnameSorted :/.test(diag),
+    `★성씨 칸은 표가 준 것을 «그대로» 냅니다`)
+  check(/const isSurnameSlot = pickerIdx === 0/.test(diag),
+    `성씨 칸은 «첫 글자» 입니다`)
+  // ⚠️ 이름 칸은 «예전 그대로» 걸러야 합니다 — 거기는 «고르는» 자리입니다
+  check(/hanjaList\.filter\(\(r\) => isAvoidChar\(r\)\)/.test(diag),
+    `⚠️ 이름 칸은 예전 그대로 거릅니다 (성씨만 예외입니다)`)
+  // ⚠️ 표에 없는 한자를 «빼지» 않습니다 — 뒤로 보낼 뿐입니다
+  const sh = codeOf(read('lib/saju/surnameHanja.ts'))
+  check(/return i === -1 \? 999 : i/.test(sh),
+    `⚠️ 표에 없는 한자는 «뒤로» 갈 뿐 사라지지 않습니다`)
+}
+
+console.log('\n━━ ㉑-c ★성씨를 고르기 «전» 에는 이름 칸이 잠기는가 ━━')
+{
+  const diag = codeOf(read('app/manseryeok/naming/diagnosis/page.tsx'))
+  check(/const locked = i > 0 && !chars\[0\]/.test(diag),
+    `★성씨가 비면 이름 칸이 잠깁니다`)
+  check(/disabled=\{locked\}/.test(diag) && /opacity: locked \? 0\.4 : 1/.test(diag),
+    `★잠긴 칸은 흐리고 «눌리지 않습니다»`)
+  check(/먼저 <b>성씨 한자<\/b>를 골라주세요/.test(diag),
+    `★잠근 «까닭» 을 말해 줍니다`)
+  // ⚠️⚠️ 이미 고른 이름 글자를 «지우지 않습니다» (대표님 확정 · 가 방식)
+  check(!/setChars\(\[\]\)/.test(diag) || !/locked[\s\S]{0,200}setChars\(\[\]\)/.test(diag),
+    `⚠️ 잠글 때 이미 고른 이름 글자를 «지우지» 않습니다`)
+  // ★성씨 칸 자신은 «언제나» 열려 있어야 합니다 — 잠그면 열 길이 없습니다
+  check(/i > 0/.test(diag), `★성씨 칸(i===0)은 언제나 열려 있습니다`)
+}
+
+console.log('\n━━ ㉑-d ★성씨 표 차례 — 통계청 인구수 순인가 (대표님 확정) ━━')
+{
+  // ⚠️ 정규식이 아니라 «표를 직접 불러» 셉니다 — 주석이 아니라 «값» 을 봅니다
+  const keys = Object.keys(SURNAME_HANJA)
+  const top5 = keys.slice(0, 5).map(k => SURNAME_HANJA[k][0])
+  check(top5.join('→') === '金→李→朴→崔→鄭',
+    `★앞 다섯이 인구수 순입니다 (${top5.join('→')})`)
+  check(keys.slice(0, 12).join(' ') === '김 이 박 최 정 강 조 윤 장 임 한 오',
+    `★앞 열둘까지 인구수 순입니다`)
+
+  // ⚠️ 한 소리 «안» 의 차례도 흔한 것이 앞이어야 합니다 — 손님 눈에 보이는 것은 이쪽입니다
+  check(SURNAME_HANJA['이']?.[0] === '李', `★「이」의 첫 한자가 李 입니다 (화면 맨 위)`)
+  check(SURNAME_HANJA['정']?.[0] === '鄭', `★「정」의 첫 한자가 鄭 입니다`)
+  check(SURNAME_HANJA['류']?.[0] === '柳', `★「류」의 첫 한자가 柳 입니다`)
+
+  // ★수량 — 43부 확정값이 흔들리지 않았는가
+  const flat = Object.values(SURNAME_HANJA).flat()
+  check(keys.length === 126, `126 소리 그대로입니다 (${keys.length})`)
+  check(new Set(flat).size === 186, `고유 한자 186 그대로입니다 (${new Set(flat).size})`)
+  // ⚠️ 연 수(189)가 고유 수(186)보다 큰 것은 «일부러» 입니다 — 두음법칙
+  check(flat.length - new Set(flat).size === 3,
+    `⚠️ 두 소리에 걸친 셋(柳·劉·羅)이 그대로입니다 — 두음법칙이라 일부러입니다`)
+
+  // ⚠️ 43부에 «넣지 않기로 확정» 한 다섯이 되살아나지 않았는가
+  check(!SURNAME_HANJA['도']?.includes('鄭'), `⚠️ 도←鄭 (오타)가 없습니다`)
+  check(!SURNAME_HANJA['성']?.includes('刑'), `⚠️ 성←刑 (오타)가 없습니다`)
+  check(!SURNAME_HANJA['노']?.includes('老'), `⚠️ 노←老 (확인 못 함)가 없습니다`)
+  check(!SURNAME_HANJA['소']?.includes('肖'), `⚠️ 소←肖 (초로도 읽음)가 없습니다`)
 }
 
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)

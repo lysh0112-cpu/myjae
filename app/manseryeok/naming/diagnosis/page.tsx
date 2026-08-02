@@ -15,6 +15,21 @@ import {
 } from '@/lib/saju/hanjaRow'
 // ★2026-07-31 (40부 3차) 두음법칙 안내 — «판정은 바꾸지 않습니다» (교재는 표기음 그대로)
 import { dueumPairIfReal, dueumNotice } from '@/lib/saju/sound/dueum'
+// ══════════════════════════════════════════════════════════════════
+//  🔴★2026-08-02 — 성씨 «전용 표» 를 이 화면에도 잇습니다 (대표님 지적)
+//
+//   [무엇이 있었나]  43부 23차에 「李가 안 보인다」를 잡고 표를 만들었는데,
+//     그 표를 «작명 두 화면» 에만 이었습니다. 성씨 한자를 고르는 창구는 «셋» 인데
+//     이 화면(내 이름 정밀분석)이 빠졌습니다.
+//     → 「이도련」을 풀려고 '이' 를 누르면 李가 위 칸에 없고,
+//       «이름에 잘 쓰지 않는 글자» 흐린 칸에 「오얏 이」로 밀려 있었습니다.
+//     ⚠️ 성씨는 «고르는 것» 이 아니라 «타고나는 것» 입니다.
+//        이름용 잣대로 흐리게 하면 집안의 글자를 화면이 나무라는 셈이 됩니다.
+//
+//   ★교훈 [다 세고 옮길 것] — 값을 쓰는 곳을 «모두» 세고 옮길 것.
+//     28-verify 의 ㉑ 그물이 이제 «세 창구» 를 함께 셉니다.
+// ══════════════════════════════════════════════════════════════════
+import { surnameRank } from '@/lib/saju/surnameHanja'
 // ★2026-08-01 (41부 Step 3 · UI) — 사주 요약 · 이름에 담을 기운 · 명리적성
 import NamingSajuSummary from './components/NamingSajuSummary'
 import NamingAptitude from './components/NamingAptitude'
@@ -791,8 +806,32 @@ function DiagnosisInner() {
 
   const slotLabel = (i: number) => i === 0 ? '성(姓)' : `이름 ${i}글자`
 
-  const normalList = hanjaList.filter((r) => !isAvoidChar(r))
-  const avoidList = hanjaList.filter((r) => isAvoidChar(r))
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-02 — 성씨 칸은 «거르지 않습니다» (대표님 지시 ①②)
+  //
+  //   ⚠️ 성씨 칸(첫 글자)에서는 「이름에 잘 쓰지 않는 글자」 잣대를 걸지 않습니다.
+  //      그 잣대는 «이름을 고를 때» 의 것입니다. 성씨는 타고나는 것이라
+  //      고르고 말고가 없습니다. 작명 화면(newhanja)과 «같은 규칙» 입니다.
+  //   ★그리고 성씨 전용 표의 «흔한 차례» 로 앞에 세웁니다 —
+  //      「이」면 李 → 異 → 伊, 「김」이면 金, 「박」이면 朴 이 맨 앞입니다.
+  //   ⚠️ 표에 없는 한자를 «빼지 않습니다» — 뒤로 보낼 뿐입니다.
+  //      드문 집안 글자가 이 표에 없을 수 있습니다. 막으면 그 집안이 못 씁니다.
+  //   ⚠️ 획수 차례는 «그 다음» 입니다 — 성씨가 아닌 것끼리는 예전 그대로입니다.
+  // ══════════════════════════════════════════════════════════════
+  const isSurnameSlot = pickerIdx === 0
+  const surnameSorted = (() => {
+    if (!isSurnameSlot) return hanjaList
+    const syl = syllables[0] ?? ''
+    return [...hanjaList].sort((a, b) => {
+      const ra = surnameRank(syl, rowHanja(a))
+      const rb = surnameRank(syl, rowHanja(b))
+      if (ra !== rb) return ra - rb
+      return rowStrokes(a) - rowStrokes(b)
+    })
+  })()
+
+  const normalList = isSurnameSlot ? surnameSorted : hanjaList.filter((r) => !isAvoidChar(r))
+  const avoidList = isSurnameSlot ? [] : hanjaList.filter((r) => isAvoidChar(r))
 
   const hanjaCard = (row: HanjaRow, i: number, dim: boolean) => (
     <div key={i}
@@ -870,15 +909,38 @@ function DiagnosisInner() {
                 <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', marginBottom: '20px', flexWrap: 'wrap' }}>
                   {syllables.map((syl, i) => {
                     const c = chars[i]
+                    // ══════════════════════════════════════════════════
+                    //  ★2026-08-02 — 성씨를 고르기 «전» 에는 이름 칸을 잠급니다
+                    //    (대표님 지시 ③ · 가) 방식)
+                    //
+                    //   [까닭]  성씨 획수에서 수리 4격이 시작하고,
+                    //     성씨 오행에서 자원오행 흐름이 출발합니다.
+                    //     성씨가 비면 뒤의 글자를 아무리 골라도 «판정이 서지 않습니다».
+                    //     ★그러니 «순서» 를 화면이 지켜 드려야 합니다.
+                    //
+                    //   ⚠️⚠️ 이미 고른 이름 글자를 «지우지 않습니다» (대표님 확정).
+                    //      잠그기만 합니다. 성씨를 다시 고르면 그대로 돌아옵니다.
+                    //      ★세 글자를 다 고른 뒤 성씨를 눌렀다가 닫으셨다고 해서
+                    //        두 글자가 날아가면 안 됩니다.
+                    //   ⚠️ 성씨 칸(i===0) 자신은 «언제나» 열려 있습니다 —
+                    //      잠그면 열 길이 없어집니다.
+                    // ══════════════════════════════════════════════════
+                    const locked = i > 0 && !chars[0]
                     return (
                       <div key={i} style={{ textAlign: 'center' }}>
-                        <button onClick={() => openPicker(i)} className="active:scale-95"
+                        <button
+                          onClick={() => { if (!locked) openPicker(i) }}
+                          disabled={locked}
+                          aria-disabled={locked}
+                          title={locked ? '먼저 성씨 한자를 골라주세요' : undefined}
+                          className={locked ? undefined : 'active:scale-95'}
                           style={{
                             width: '78px', height: '78px', borderRadius: '50%',
                             background: c ? 'rgba(200,120,60,0.10)' : cardBg,
                             border: c ? `2px solid ${gold}` : '1px dashed #d8a87e',
                             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer', transition: 'transform 0.15s ease',
+                            cursor: locked ? 'not-allowed' : 'pointer', transition: 'transform 0.15s ease',
+                            opacity: locked ? 0.4 : 1,
                           }}>
                           {c ? (
                             <>
@@ -899,6 +961,21 @@ function DiagnosisInner() {
                     )
                   })}
                 </div>
+                {/* ★2026-08-02 — 잠긴 까닭을 «말해 줍니다».
+                    ⚠️ 흐리게만 해 두면 「왜 안 눌리지」가 됩니다. 잠근 것과 까닭은 한 쌍입니다. */}
+                {!chars[0] && syllables.length >= 2 && (
+                  <div style={{
+                    fontSize: '12px', lineHeight: 1.7, color: '#96502e',
+                    background: 'rgba(200,120,60,0.07)', border: '1px solid rgba(200,120,60,0.25)',
+                    borderRadius: '10px', padding: '10px 12px', marginBottom: '16px', textAlign: 'center',
+                  }}>
+                    먼저 <b>성씨 한자</b>를 골라주세요<br />
+                    <span style={{ fontSize: '11px', color: '#5c3a1e' }}>
+                      성씨의 획수와 오행에서 수리 4격·자원오행이 시작돼요
+                    </span>
+                  </div>
+                )}
+
                 <div style={{ fontSize: '11px', color: '#5c3a1e', marginBottom: '20px', lineHeight: 1.6 }}>
                   · 원을 누르면 그 글자의 한자가 자동으로 나와요<br />
                   · 이름을 바꾸려면 위에 다시 입력하고 확인을 누르세요
@@ -1233,8 +1310,16 @@ function DiagnosisInner() {
               borderRadius: '18px', padding: '20px 16px', boxShadow: '0 16px 40px rgba(90,50,30,0.2)',
               maxHeight: '80vh', display: 'flex', flexDirection: 'column',
             }}>
-            <div style={{ fontSize: '15px', fontWeight: 'bold', color: gold, marginBottom: '14px' }}>
-              &lsquo;{syllables[pickerIdx]}&rsquo; 한자 고르기
+            <div style={{ fontSize: '15px', fontWeight: 'bold', color: gold, marginBottom: '4px' }}>
+              &lsquo;{syllables[pickerIdx]}&rsquo; {isSurnameSlot ? '성씨 한자 고르기' : '한자 고르기'}
+            </div>
+            {/* ★2026-08-02 — 성씨 칸에서는 «거르지 않았다» 는 것을 밝혀 둡니다.
+                ⚠️ 낯선 글자가 함께 보이는 것이 «잘못» 이 아니라는 것을 알려야
+                   손님이 「왜 이런 게 나오지」 하고 헤매지 않으십니다. */}
+            <div style={{ fontSize: '11px', color: '#5c3a1e', marginBottom: '14px', lineHeight: 1.6 }}>
+              {isSurnameSlot
+                ? '집안에서 쓰시는 한자를 골라주세요. 흔한 성씨 한자가 위에 있어요'
+                : '\u00a0'}
             </div>
 
             <div style={{ overflowY: 'auto', flex: 1 }}>
