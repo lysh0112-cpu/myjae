@@ -529,6 +529,47 @@ console.log('\n━━ ㉛ ★천라·지망 신설 · 공망 궁합 (교재 95·
   check(!/공치고 망/.test(shown), `⚠️ 「공치고 망한다」를 화면에 쓰지 않습니다`)
 }
 
+console.log('\n━━ ㉜ ★일주 현침 — 개수와 무관하게 작용 (교재 94쪽 「이거나」) ━━')
+{
+  //  교재 94쪽 "3개 이상«이거나» 일주 현침살이 작용력이 큼"  ← ★«또는» 입니다
+  //  ⚠️ 「일주 현침살」이 무엇인지 교재가 «밝히지 않습니다».
+  //     ★일지 기준으로 정했습니다 (2026-08-02 대표님 결정 · 통설).
+  //     까닭 — 교재 178쪽 「日柱가 겁재면 양인 일주」의 양인 일주(丙午·戊午·壬子)가
+  //            «일지» 를 보는 것과 결이 같습니다.
+  //     ⚠️ 교재 근거가 «아닙니다». 연재쌤 확인이 오면 바꾸십시오.
+  const P = (a: string[]) => ['년주', '월주', '일주', '시주']
+    .map((p, i) => ({ pillar: p, stem: a[i][0], branch: a[i][1] })) as Pillar[]
+  const f = (sj: Pillar[]) =>
+    (checkSinsal9(sj) as unknown as { name: string; count: number; active: boolean; strongHit: boolean }[])
+      .find(x => x.name === '현침살')!
+
+  const a1 = f(P(['乙丑', '丙寅', '丙午', '癸亥']))
+  check(a1.count === 1 && a1.active && a1.strongHit,
+    `★일지가 午 → 1개인데도 «작용» 합니다 (개수 무관)`)
+  const a2 = f(P(['乙丑', '丙寅', '甲午', '癸亥']))
+  check(a2.strongHit, `★甲午 — 일간·일지 둘 다 현침`)
+  const a3 = f(P(['乙丑', '丙寅', '甲子', '癸亥']))
+  check(!a3.active && !a3.strongHit,
+    `⚠️ 甲子 — 일«간» 만 현침이면 «성립 안 함» (일지 기준이므로)`)
+  const a4 = f(P(['甲子', '辛丑', '乙巳', '丙申']))
+  check(a4.count === 3 && a4.active && !a4.strongHit,
+    `★일주 아닌 곳에 셋 → «개수» 로 작용합니다 (「이거나」의 앞쪽)`)
+
+  // ⚠️ strongAt 은 «또는» 입니다 — needAt(그리고)과 헷갈리면 안 됩니다
+  const t = read('lib/saju/career/tables/sinsal.ts')
+  const hc = t.slice(t.indexOf("key: 'hyeonchim'"), t.indexOf("key: 'cheonmun'"))
+  check(/^\s*strongAt: \['일주'\],/m.test(hc), `★현침에 strongAt: ['일주'] 가 있습니다`)
+  check(!/^\s*needAt:/m.test(hc), `⚠️ needAt(그리고)을 쓰지 «않았습니다»`)
+  check(/교재 근거가 «아닙니다»/.test(t), `⚠️ 통설로 정했다는 것이 적혀 있습니다`)
+
+  // 🔴 겹침 제거가 «묶음에만» 걸리는가 (글자 신살까지 자르면 안 됩니다)
+  const c1 = judgeSinsal({ saju: P(['乙巳', '癸酉', '甲午', '乙酉']), target: 'adult' } as never)
+  const hLine = c1.lines.find(l => l.startsWith('현침살')) ?? ''
+  check(/甲 · 午/.test(hLine), `★甲午 → 글자 «둘 다» 적습니다 — ${hLine}`)
+  const c2 = judgeSinsal({ saju: P(['戊辰', '丙辰', '乙巳', '庚辰']), target: 'adult' } as never)
+  check(/戊辰 · 庚辰 · 2기둥/.test(c2.lines[0]), `★묶음은 여전히 «기둥» 으로 겹침을 지웁니다`)
+}
+
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
 {
   const src = read('lib/saju/simsanOhaeng.ts')

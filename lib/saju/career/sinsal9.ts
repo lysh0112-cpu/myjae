@@ -45,6 +45,8 @@ export interface SinsalHit {
   posNote: string
   /** ★개수가 많을 때 (교재 96쪽 「귀인은 1~2개가 좋다」) */
   overNote: string
+  /** ★일주(일지)에 걸려 개수와 무관하게 작용하는가 (교재 94쪽 현침살 「이거나」) */
+  strongHit: boolean
   row: SinsalRow
 }
 
@@ -55,6 +57,17 @@ export const SHOW_MAX = 3
 const real = (x: string) => x !== '?' && x !== ''
 
 // ── 신살 하나 판정 ──────────────────────────────────────────────
+/**
+ * 이 표시가 그 기둥의 «지지» 인가. (천간이면 false)
+ *
+ * ★2026-08-02 — strongAt(일주 현침) 이 «일지» 만 보게 하려고 둡니다.
+ *   ⚠️ marks 는 천간 글자도 담습니다(현침의 甲·辛). 그것을 걸러야 합니다.
+ */
+function isBranchMark(saju: Pillar[], m: { ch: string; pillar: string }): boolean {
+  const p = saju.find(x => x.pillar === m.pillar)
+  return !!p && p.branch === m.ch
+}
+
 function checkOne(saju: Pillar[], row: SinsalRow): SinsalHit {
   const marks: SinsalHit['marks'] = []
 
@@ -121,9 +134,18 @@ function checkOne(saju: Pillar[], row: SinsalRow): SinsalHit {
   // ① onlyAt — 이 자리에 있어야만 «성립» 합니다 (도화살 48쪽)
   if (row.onlyAt) uniq = uniq.filter(m => row.onlyAt!.includes(m.pillar as never))
 
-  // ② needAt — 이 자리 가운데 «적어도 하나» 는 걸려야 작용합니다
-  //    도화 94쪽 「月支, 日支 포함 2개 이상」 · 현침 96쪽 「일주 현침이면 작용력 크다」
+  // ② needAt — 이 자리 가운데 «적어도 하나» 는 걸려야 작용합니다 (★그리고)
+  //    도화 94쪽 「月支, 日支 포함 2개 이상」
   const needOk = !row.needAt || uniq.some(m => row.needAt!.includes(m.pillar as never))
+
+  // ③ strongAt — 이 자리의 «지지» 가 걸리면 개수와 «무관하게» 작용합니다 (★또는)
+  //    교재 94쪽 현침살 「3개 이상«이거나» 일주 현침살이 작용력이 큼」
+  //    ⚠️⚠️ needAt(그리고)과 «반대» 입니다. 헷갈리지 마십시오.
+  //    ⚠️ 「일주 현침살」이 무엇인지 교재가 밝히지 않아 «일지 기준» 으로 정했습니다.
+  //       (2026-08-02 대표님 결정 · 통설 · tables/sinsal.ts 의 strongAt 주석 참고)
+  //       ★그래서 «지지(where === '지지')» 만 봅니다. 천간은 안 봅니다.
+  const strongHit = !!row.strongAt && uniq.some(m =>
+    row.strongAt!.includes(m.pillar as never) && isBranchMark(saju, m))
 
   // 자리로 본 작용력
   const pillars = new Set(uniq.map(m => m.pillar))
@@ -155,7 +177,9 @@ function checkOne(saju: Pillar[], row: SinsalRow): SinsalHit {
 
   return {
     key: row.key, name: row.name, marks: uniq, count: uniq.length,
-    active: needOk && uniq.length >= row.threshold,
+    // ★strongHit 이면 개수 문턱을 넘지 않아도 작용합니다 (교재 「이거나」)
+    active: needOk && (strongHit || uniq.length >= row.threshold),
+    strongHit,
     power, powerNote, posNote, overNote, row,
   }
 }
@@ -197,6 +221,8 @@ export interface SinsalGroupView {
   powerNote: string
   posNote?: string
   overNote?: string
+  /** ★일주(일지)에 걸려 개수와 무관하게 작용하는가 (교재 94쪽 현침살) */
+  strongHit?: boolean
   row: SinsalRow
   members?: string[]
 }
@@ -207,7 +233,7 @@ function toGroupViews(hits: SinsalHit[]): SinsalGroupView[] {
     if (!h.active) continue
     const g = h.row.group
     if (!g) {
-      out.push({ key: h.key, name: h.name, marks: h.marks, count: h.count, power: h.power, powerNote: h.powerNote, posNote: h.posNote, overNote: h.overNote, row: h.row })
+      out.push({ key: h.key, name: h.name, marks: h.marks, count: h.count, power: h.power, powerNote: h.powerNote, posNote: h.posNote, overNote: h.overNote, strongHit: h.strongHit, row: h.row })
       continue
     }
     if (done.has(g)) continue
@@ -256,9 +282,19 @@ export function judgeSinsal(input: CareerInput): CareerCard {
     for (const h of shown) {
       // ★2026-08-02 — 겹치는 기둥은 «한 번만» 적습니다.
       //   ⚠️ 戊辰이 백호·괴강 둘 다라 「戊辰 · 庚辰 · 戊辰」으로 나왔습니다.
-      const seenP = new Set<string>()
+      // ⚠️⚠️ 2026-08-02 — 겹침 제거는 «묶음(괴백양)» 에서만 합니다.
+      //   [무엇이 있었나]  戊辰이 백호·괴강 둘 다라 「戊辰 · 庚辰 · 戊辰」으로
+      //     나오던 것을 고치려고 «기둥» 단위로 잘랐는데,
+      //     ★글자로 세는 신살(현침·도화·역마)까지 잘렸습니다.
+      //     甲午 일주가 「甲 · 2개」로 나와 午가 사라졌습니다.
+      //   ★묶음은 «기둥» 이 단위, 글자 신살은 «글자» 가 단위입니다.
+      const seen2 = new Set<string>()
       const chars = h.marks
-        .filter(m => !seenP.has(m.pillar) && seenP.add(m.pillar) !== undefined)
+        .filter(m => {
+          const k = h.members ? m.pillar : `${m.pillar}|${m.ch}`
+          if (seen2.has(k)) return false
+          seen2.add(k); return true
+        })
         .map(m => m.semi ? `${m.ch}(준)` : m.ch).join(' · ')
       // ══════════════════════════════════════════════════════
       //  ★2026-08-02 — 두 수를 «갈라» 적습니다 (교재 95쪽)
@@ -285,6 +321,16 @@ export function judgeSinsal(input: CareerInput): CareerCard {
       }
       if ((h as { overNote?: string }).overNote) {
         lines.push((h as { overNote?: string }).overNote!)
+      }
+      // ★2026-08-02 — 일주(일지)에 걸려 «개수와 무관하게» 작용하는 자리
+      //   교재 94쪽 현침살 「3개 이상«이거나» 일주 현침살이 작용력이 큼」
+      //   ⚠️ 「살이라 나쁘다」로 들리지 않게 씁니다 — 결이 «뚜렷하다» 는 뜻입니다.
+      if ((h as { strongHit?: boolean }).strongHit) {
+        const day = saju.find(p => p.pillar === '일주')
+        const bothHit = !!day && h.marks.some(m => m.pillar === '일주' && m.ch === day.stem)
+        lines.push(bothHit
+          ? '태어난 날의 «두 글자가 모두» 이 결이라, 개수와 상관없이 뚜렷하게 드러납니다.'
+          : '태어난 날의 자리에 있어, 개수와 상관없이 뚜렷하게 드러납니다.')
       }
       if (h.row.caution) lines.push(h.row.caution)
       if (h.key === 'dohwa') {
