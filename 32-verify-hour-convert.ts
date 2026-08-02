@@ -17,6 +17,7 @@ import {
 } from './lib/saju/simsanOhaeng'
 // ★두 계산기가 «같은 점수» 를 내는지 맞대어 봅니다 (2026-08-02 결함)
 import { calcCareerScore } from './lib/saju/career/careerScore'
+import { judgeSinsal } from './lib/saju/career/sinsal9'
 
 
 let pass = 0, fail = 0
@@ -202,6 +203,53 @@ console.log('\n━━ ㉒-h ★십성 표 — «왜 다른지» 알려 주는가
   // ⚠️ 이 표는 공용 부품입니다 — 두 화면이 나눠 씁니다
   check(/SipsungTable/.test(read('app/manseryeok/components/SajuTableSlot.tsx')),
     `⚠️ 공용 부품이라 한 곳만 고치면 두 화면에 다 붙습니다`)
+}
+
+console.log('\n━━ ㉓ ★괴백양은 «기둥» 으로 센다 (2026-08-02 대표님 확정) ━━')
+{
+  //  🔴 [무엇이 있었나]  살마다 센 수를 «합쳤습니다».
+  //    戊辰·壬戌은 백호 목록과 괴강 목록에 «둘 다» 있어(교재 95쪽)
+  //    한 기둥이 2개로 세어졌습니다. 최대 7개까지 나왔습니다 — 기둥은 넷인데요.
+  //  ★기둥으로 셉니다. 겹치는 것은 «성질» 이지 기둥이 아닙니다.
+  //  ⚠️ 교재에 명시가 «없습니다». 연재쌤 답이 오면 여기를 바꾸십시오.
+  const P4 = (a: string[]) => ['년주', '월주', '일주', '시주']
+    .map((p, i) => ({ pillar: p, stem: a[i][0], branch: a[i][1] })) as Pillar[]
+
+  // 戊辰(백호∩괴강) + 庚辰(괴강) → ★2기둥 (3이면 살로 센 것)
+  const c1 = judgeSinsal({ saju: P4(['戊辰', '丙辰', '乙巳', '庚辰']), target: 'adult' } as never)
+  check(/2기둥/.test(c1.lines[0]), `★戊辰+庚辰 = «2기둥» 입니다 — ${c1.lines[0]}`)
+  check(!/3기둥/.test(c1.lines[0]), `⚠️ 戊辰을 두 번 세지 «않습니다»`)
+  check(!/양인/.test(c1.lines[0]), `★양인이 0개면 이름에 «안 붙입니다»`)
+  check((c1.lines[0].match(/戊辰/g) ?? []).length === 1, `★겹치는 기둥을 «한 번만» 적습니다`)
+
+  // 양인일주(壬子)까지 걸리는 표본
+  const c2 = judgeSinsal({ saju: P4(['甲辰', '丙戌', '壬子', '庚辰']), target: 'adult' } as never)
+  check(/양인/.test(c2.lines[0]), `★양인일주(壬子)가 잡히면 이름에 «붙습니다»`)
+  check(/4기둥/.test(c2.lines[0]), `★네 기둥 다 걸리면 4기둥 — ${c2.lines[0]}`)
+
+  // ⚠️ 기둥은 넷뿐입니다 — «묶음(괴백양)» 에서 5기둥 이상이 나올 수 없어야 합니다
+  //   ⚠️ 현침·도화·역마는 «글자» 로 세므로 8개까지 나옵니다. 그것은 「개」로 적습니다.
+  //      ★제가 처음에 이 구분을 안 하고 검사를 짜서 2,074건이 걸렸습니다.
+  const GAN = '甲乙丙丁戊己庚辛壬癸'.split(''), JIx = '子丑寅卯辰巳午未申酉戌亥'.split('')
+  const YS = new Set(['甲', '丙', '戊', '庚', '壬']), YB = new Set(['子', '寅', '辰', '午', '申', '戌'])
+  const R = (n: number) => Math.floor(Math.random() * n)
+  const one = () => { for (;;) { const st = GAN[R(10)], b = JIx[R(12)]; if (YS.has(st) === YB.has(b)) return { st, b } } }
+  let over = 0
+  for (let i = 0; i < 30000; i++) {
+    const sj = ['년주', '월주', '일주', '시주'].map(k => { const x = one(); return { pillar: k, stem: x.st, branch: x.b } }) as Pillar[]
+    const c = judgeSinsal({ saju: sj, target: 'adult' } as never)
+    for (const ln of c.lines) {
+      const m = ln.match(/(\d+)기둥/)
+      if (m && Number(m[1]) > 4) over++
+    }
+  }
+  check(over === 0, `★임의 3만 건 — «5기둥 이상» 이 나오지 않습니다 (${over})`)
+
+  // ⚠️ 백호 단독 셈과 괴백양 셈은 «다른 잣대» 입니다 (교재 95쪽)
+  const t = read('lib/saju/career/tables/sinsal.ts')
+  check(/백호살 «단독» 기준은 이것과 «다른 셈»/.test(t),
+    `⚠️ 두 셈이 다르다는 것이 코드에 적혀 있습니다`)
+  check(/교재에 «명시가 없습니다»/.test(t), `⚠️ 교재에 없다는 것이 적혀 있습니다`)
 }
 
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')

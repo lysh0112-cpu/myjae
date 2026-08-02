@@ -122,12 +122,24 @@ function checkOne(saju: Pillar[], row: SinsalRow): SinsalHit {
 export function checkSinsal9(saju: Pillar[]): SinsalHit[] {
   const hits = SINSAL9.map(row => checkOne(saju, row))
 
-  // ★묶음 처리 — 백호·괴강·양인은 합쳐서 세야 한다 (교재 93쪽)
-  //   따로 세면 각각 1개로 성립해 신살이 과하게 뜬다.
+  // ══════════════════════════════════════════════════════════════
+  //  ★묶음 처리 — 백호·괴강·양인은 «합쳐» 셉니다 (교재 95쪽 「괴백양」)
+  //
+  //  ★2026-08-02 — «기둥» 으로 셉니다 (대표님 확정)
+  //    전  살마다 센 수를 더함  →  戊辰 하나가 백호1+괴강1 = «2개»
+  //                                 최대 7개까지 나왔습니다 (기둥은 넷인데)
+  //    후  ★해당하는 «기둥» 이 몇인가  →  戊辰은 «1개»
+  //
+  //  ⚠️ 교재에 명시가 «없습니다». 노트북LM 두 갈래로 물어 확인했습니다.
+  //     연재쌤 답이 오면 이 줄만 바꾸십시오.
+  //  ⚠️ 자세한 까닭은 tables/sinsal.ts 의 GROUP_RULE 머리말을 보십시오.
+  // ══════════════════════════════════════════════════════════════
   for (const [gkey, rule] of Object.entries(GROUP_RULE)) {
     const members = hits.filter(h => h.row.group === gkey)
     if (!members.length) continue
-    const total = members.reduce((a, h) => a + h.count, 0)
+    // ★기둥으로 셉니다 — 한 기둥이 두 살에 걸려도 «하나» 입니다
+    const pillarsHit = new Set(members.flatMap(h => h.marks.map(m => m.pillar)))
+    const total = pillarsHit.size
     for (const h of members) h.active = h.count > 0 && total >= rule.threshold
   }
   return hits
@@ -165,9 +177,13 @@ function toGroupViews(hits: SinsalHit[]): SinsalGroupView[] {
         power = pp.level; powerNote = pp.note
       }
     }
+    // ★2026-08-02 — 화면에 내는 수도 «기둥» 수입니다 (대표님 확정)
+    //   ⚠️ marks.length 로 두면 戊辰이 두 번 세어져 「3개」로 보입니다.
+    //      실기에서 「백호·괴강·양인일주 3개」가 그렇게 나왔습니다.
+    //   ★그리고 이름은 «잡힌 살만» 부릅니다 — 양인이 0개면 「양인」을 안 붙입니다.
     out.push({
-      key: g, name: GROUP_RULE[g].name, marks,
-      count: marks.length, power, powerNote, row: ms[0].row,
+      key: g, name: ms.map(x => x.name.replace('일주', '')).join('·'), marks,
+      count: pillars.size, power, powerNote, row: ms[0].row,
       members: ms.map(x => `${x.name} ${x.count}`),
     })
   }
@@ -194,9 +210,27 @@ export function judgeSinsal(input: CareerInput): CareerCard {
     reasons.push('작용력 있는 신살 없음. 신살 이야기를 억지로 만들지 마세요.')
   } else {
     for (const h of shown) {
-      const chars = h.marks.map(m => m.semi ? `${m.ch}(준)` : m.ch).join(' · ')
+      // ★2026-08-02 — 겹치는 기둥은 «한 번만» 적습니다.
+      //   ⚠️ 戊辰이 백호·괴강 둘 다라 「戊辰 · 庚辰 · 戊辰」으로 나왔습니다.
+      const seenP = new Set<string>()
+      const chars = h.marks
+        .filter(m => !seenP.has(m.pillar) && seenP.add(m.pillar) !== undefined)
+        .map(m => m.semi ? `${m.ch}(준)` : m.ch).join(' · ')
+      // ══════════════════════════════════════════════════════
+      //  ★2026-08-02 — 두 수를 «갈라» 적습니다 (교재 95쪽)
+      //   백호 단독   "2~3개 이상이면 큰 사주" · "3개 이상이면 흉함"
+      //   괴백양 통합 "2개 정도 있으면 성질 괴팍함"
+      //   ⇒ ★서로 «다른 잣대» 입니다. 한 수로 뭉치면
+      //      백호 1개인 분이 「3개라 흉함」으로 보입니다.
+      //   ⚠️ 괄호 안 수는 «살마다» 센 것이고, 앞의 수는 «기둥» 수입니다.
+      //      합이 안 맞아 보이는 것이 «맞습니다» — 그래서 말로 밝힙니다.
+      // ══════════════════════════════════════════════════════
       const detail = h.members ? ` (${h.members.join(' · ')})` : ''
-      lines.push(`${h.name} ${h.count}개${detail} — ${chars}`)
+      // ⚠️ «기둥» 이라는 말은 «묶음(괴백양)» 에만 씁니다.
+      //    현침·도화·역마는 «글자» 로 성립해 한 기둥에 둘도 들어갑니다
+      //    (甲午 → 甲과 午 둘 다 현침). 「기둥」이라 부르면 5개 이상이 나옵니다.
+      const unit = h.members ? '기둥' : '개'
+      lines.push(`${h.name} — ${chars} · ${h.count}${unit}${detail}`)
       lines.push(h.row.gijil)
       if (h.powerNote) lines.push(h.powerNote + '.')
       if (h.row.caution) lines.push(h.row.caution)
