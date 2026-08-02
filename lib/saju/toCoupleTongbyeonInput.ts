@@ -56,6 +56,8 @@ import { needsOf, pickLines, byeongjonBrief, COUPLE_CATEGORY_NEEDS, type Need } 
 import { guardTone } from './couple/toneGuard'
 // ★8단계 「앞으로의 열 해」 (2026-08-02)
 import { buildTimeline, timelineBlock } from './couple/step8Timeline'
+// ★5단계 「함께 살아가는 결」 (2026-08-02)
+import { envBlock } from './couple/step5Env'
 
 // ── 표기용 ──────────────────────────────────────────────────────────────
 const EL_KOR: Record<string, string> = {
@@ -98,6 +100,14 @@ export interface CoupleTongbyeonMaterial {
    *   ⚠️ 두 분의 «용신» 이 있어야 만들 수 있습니다. 없으면 빈 문자열입니다.
    */
   timelineBlock: string
+  /**
+   * ★[함께 살아가는 결] — 월지·년지 (2026-08-02 신설 · 5단계)
+   *
+   *   ⚠️ 계절 짝(「찰떡궁합」)은 «여기 없습니다» —
+   *      monthSeasonMatch 가 judgeBlock 안에서 이미 말합니다. 두 번 말하지 마십시오.
+   *   ⛔ 49쪽 조견표(jijiGrade)를 쓰지 «않습니다». 등급 대신 «관계 이름» 으로 말합니다.
+   */
+  envBlock: string
 }
 
 // ── 한 사람 재료 ────────────────────────────────────────────────────────
@@ -376,7 +386,23 @@ export function toCoupleTongbyeonMaterial(
     // ★2026-08-02 — 8단계 「앞으로의 열 해」
     //   ⚠️ 여기도 «반드시» guardTone 을 지납니다. 문지기를 건너뛰지 마십시오.
     timelineBlock: guardTone(timelineOf(a, b, judge, fromYear)),
+    // ★2026-08-02 — 5단계 「함께 살아가는 결」 (월지·년지)
+    //   ⚠️ 여기도 «반드시» guardTone 을 지납니다.
+    envBlock: guardTone(envOf(a, b)),
   }
+}
+
+/** 5단계 재료. 월지·년지가 없으면 «빈 문자열» 입니다. */
+function envOf(a: CouplePersonInput, b: CouplePersonInput): string {
+  const am = a.saju.find(x => x.pillar === '월주')?.branch
+  const bm = b.saju.find(x => x.pillar === '월주')?.branch
+  const ay = a.saju.find(x => x.pillar === '년주')?.branch
+  const by = b.saju.find(x => x.pillar === '년주')?.branch
+  if (!am || !bm || !ay || !by) return ''
+  return envBlock({
+    aName: a.name, bName: b.name,
+    aMonth: am, bMonth: bm, aYear: ay, bYear: by,
+  })
 }
 
 /**

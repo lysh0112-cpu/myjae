@@ -24,6 +24,8 @@ import { toCoupleTongbyeonMaterial } from './lib/saju/toCoupleTongbyeonInput'
 import { findBanned } from './lib/saju/couple/toneGuard'
 // ★8단계 연표 (프리미엄 궁합 1차 · 2026-08-02)
 import { buildTimeline, timelineBlock, bestYear } from './lib/saju/couple/step8Timeline'
+// ★5단계 월지·년지 (프리미엄 궁합 2차 · 2026-08-02)
+import { judgeBranchPair, judgeEnv } from './lib/saju/couple/step5Env'
 import { calcCareerYongsin, judgeYongsin } from './lib/saju/career/yongsin'
 import { judgeStrength, calcYongsinNew, isYanginIlju } from './lib/saju/yongsinNew'
 
@@ -775,6 +777,76 @@ console.log('\n━━ ㊱ ★8단계 연표 — 두 분 것을 «나란히» (�
   const ti = read('lib/saju/toCoupleTongbyeonInput.ts')
   check(/timelineBlock: guardTone\(timelineOf/.test(ti), `★연표도 guardTone 을 지납니다`)
   check(/ap\.eokbu|judge\?\.a/.test(ti), `★용신을 judge 에서 «받아» 씁니다 (다시 계산하지 않음)`)
+}
+
+console.log('\n━━ ㊲ ★5단계 월지·년지 (프리미엄 궁합 2차) ━━')
+{
+  const JI2 = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
+
+  // ★대칭 — 두 사람 사이는 «서로» 이므로 (a,b)와 (b,a)가 같아야 합니다
+  let asym = 0
+  for (const a of JI2) for (const b of JI2) {
+    if (judgeBranchPair(a, b).kind !== judgeBranchPair(b, a).kind) asym++
+  }
+  check(asym === 0, `★144칸 전수 — «대칭» 입니다 (${asym})`)
+
+  // ★교재가 이름 붙인 대로인가
+  check(judgeBranchPair('子', '丑').kind === '육합', `★子丑 = 육합 (교재의 대표 예)`)
+  check(judgeBranchPair('午', '未').kind === '육합', `★午未 = 육합`)
+  check(judgeBranchPair('申', '子').kind === '준삼합', `★申子 = 준삼합 (生+旺)`)
+  check(judgeBranchPair('子', '辰').kind === '반합', `★子辰 = 반합 (旺+墓)`)
+  check(judgeBranchPair('申', '辰').kind === '가합', `★申辰 = 가합 (生+墓)`)
+  check(judgeBranchPair('寅', '卯').kind === '방합(반)', `★寅卯 = 방합(반)`)
+  check(judgeBranchPair('子', '午').kind === '충', `★子午 = 충`)
+  // ⚠️ 「삼합」이라 부르지 않는가 — 두 글자는 세 글자가 아닙니다
+  let named3 = 0
+  for (const a of JI2) for (const b of JI2) {
+    if ((judgeBranchPair(a, b).kind as string) === '삼합') named3++
+  }
+  check(named3 === 0, `⚠️ 두 글자를 «삼합» 이라 부르지 않습니다 (준삼합·반합·가합)`)
+
+  const src = read('lib/saju/couple/step5Env.ts')
+  // ⛔ 49쪽 조견표를 쓰지 않는가
+  check(!/jijiPairText|jijiGrade|JIJI_GRADE/.test(src.replace(/\/\/.*/g, '').replace(/\/\*[\s\S]*?\*\//g, '')),
+    `⛔ 49쪽 조견표(jijiGrade)를 «쓰지 않습니다» — 운 대입 표입니다`)
+  // ⛔ 時支를 넣지 않는가
+  check(!/aHour|bHour|시주.*시주/.test(src.replace(/\/\/.*/g, '')),
+    `⛔ 「時支 × 時支」를 «넣지 않습니다» (교재에 궁합용이라는 말이 없음)`)
+  // ⛔ 「겉궁합」을 쓰지 않는가 — 손님께 나가는 말만 봅니다
+  // ★손님께 «실제로 나가는» 말만 모읍니다.
+  //   ⚠️ 주석에는 「겉궁합」·「찰떡궁합」이 «왜 안 되는지» 적혀 있어, 그것까지 세면
+  //      멀쩡한 코드가 걸립니다. (2026-08-02 — 이 함정을 네 번째로 밟았습니다)
+  //   ⇒ ★주석을 «먼저 지우고» 문자열만 봅니다.
+  const noComment = src
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '')
+  const shown = [...noComment.matchAll(/'([^']{4,})'/g)].map(m => m[1]).join(' ')
+  check(!/겉궁합/.test(shown), `⛔ 「겉궁합」이라 부르지 «않습니다» (교재에 없는 말)`)
+  // ★점수·별점을 내지 않는가
+  check(!/stars|score|등급: '[ABCD]'/.test(src.replace(/\/\/.*/g, '')),
+    `★점수·별점·등급을 내지 «않습니다» (교재에 궁합 배점표가 없음)`)
+
+  // ★띠 궁합 안내가 있는가 — 손님이 가장 잘 아는 자리
+  const r = judgeEnv({ aName: '가', bName: '나', aMonth: '子', bMonth: '午', aYear: '寅', bYear: '亥' })
+  check(r.lines.some(l => l.includes('띠 궁합')), `★「띠 궁합」이 년지 자리임을 미리 알려 줍니다`)
+  check(r.lines[0].includes('월지'), `★월지를 «먼저» 말합니다 (교재 「月支가 총사령관」)`)
+  // ★충이면 «반드시» 솔루션
+  check(!!r.solution, `★월지가 충이면 솔루션이 «반드시» 있습니다`)
+  // ⚠️ 「충 = 나쁨」으로 말하지 않는가
+  const chungSay = judgeBranchPair('子', '午').say
+  check(/못 보는 것을 봐 줍니다|서로가/.test(chungSay),
+    `⚠️ 「충」을 나쁘게만 말하지 «않습니다» (교재 121·263쪽 「50%는 긍정적」)`)
+
+  // ⚠️ 계절 짝을 두 번 말하지 않는가 — monthSeasonMatch 가 이미 말합니다
+  // ⚠️ 주석에 «왜 안 되는지» 적혀 있으므로 손님께 나가는 말(shown)만 봅니다.
+  //    ★2026-08-02 — 낱말로 훑다 제 주석에 걸린 것이 «네 번째» 입니다.
+  //      toneGuard·현침·천을귀인·연표에 이어. ⇒ ★처음부터 shown 으로 보십시오.
+  check(!/찰떡궁합/.test(shown),
+    `⚠️ 「찰떡궁합」을 여기서 말하지 «않습니다» (monthSeasonMatch 가 이미 말합니다)`)
+
+  // ⚠️ 재료가 문지기를 지나는가
+  const ti = read('lib/saju/toCoupleTongbyeonInput.ts')
+  check(/envBlock: guardTone\(envOf/.test(ti), `★5단계 재료도 guardTone 을 지납니다`)
 }
 
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
