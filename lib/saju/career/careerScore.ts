@@ -32,7 +32,7 @@
 //     책 사례가 "육친별 점수 목40 화30 토10 금15 수15" 처럼
 //     오행 이름으로 적는 것도 같은 이유다. 숫자는 한 벌이고 부르는 이름만 둘이다.
 
-import { calcSimsanOhaeng, type Ohaeng, type OhaengScore } from '../simsanOhaeng'
+import { calcSimsanOhaeng, hourConvertEl, type Ohaeng, type OhaengScore } from '../simsanOhaeng'
 import type { Pillar } from './types'
 import { euro } from '../josa'
 
@@ -46,8 +46,16 @@ const STEM_EL: Record<string, Ohaeng> = {
   己: '토', 庚: '금', 辛: '금', 壬: '수', 癸: '수',
 }
 
-/** 시지 배점 (simsanOhaeng 과 같아야 한다) */
-const HOUR_BRANCH_POINT = 10
+/**
+ * 시지 배점.
+ *
+ * ★2026-08-02 — 점수를 여기서 옮기지 «않게» 되면서 쓰는 곳이 없어졌습니다.
+ *   그래도 «남겨 둡니다» — simsanOhaeng 과 같은 값이어야 한다는 것을
+ *   증언하는 자리이고, 되살릴 때 필요합니다.
+ *   ⚠️ 이 값을 보고 「점수를 옮겨야겠다」고 생각하지 마십시오.
+ *      옮기는 일은 simsanOhaeng 이 «이미» 합니다.
+ */
+export const HOUR_BRANCH_POINT = 10
 
 /**
  * 시지 계절치환 — 교재 60쪽 표 「시지(時支) 특이사항」
@@ -108,12 +116,36 @@ const real = (x: string) => !!x && x !== '?'
 
 /**
  * 진로적성 육친 점수.
- * calcSimsanOhaeng(100점 · 월지 치환)을 받아 **시지 10점만 다시 배치**한다.
+ *
+ * ★2026-08-02 — 점수는 calcSimsanOhaeng(purpose:'진로') 이 «전부» 냅니다.
+ *   이 함수는 «글자 세기(chars)» 만 합니다.
  */
 export function calcCareerScore(
   saju: Pillar[], solarMonth: number, solarDay: number, hourBranch: string | null,
 ): CareerScoreResult {
-  const base = calcSimsanOhaeng(saju, solarMonth, solarDay, hourBranch)
+  // ══════════════════════════════════════════════════════════════
+  //  🔴★2026-08-02 — 시지 10점이 «두 번» 옮겨지던 자리 (제가 만든 결함)
+  //
+  //  [무엇이 있었나]
+  //    2026-07-20 에 simsanOhaeng 이 시지 치환을 «안 하기로» 하면서,
+  //    진로적성은 자기 안에서 «따로» 치환하고 있었습니다.
+  //      const base = calcSimsanOhaeng(...)        ← 치환 «없는» 값
+  //      score[from] -= 10 ; score[to] += 10       ← 여기서 옮김
+  //
+  //    ★그런데 2026-08-02 에 연재쌤 지시로 simsanOhaeng 에 치환을 넣었습니다.
+  //      ⇒ 같은 10점을 «두 번» 옮기게 되었습니다.
+  //      실측(戊辰 丙辰 乙巳 庚辰) — 비겁 55 → 65 «과다» · 재성 10 → 0 «결핍»
+  //      ⚠️ 없는 「과다」와 없는 「결핍」이 손님 화면에 나갔습니다.
+  //
+  //  ★[이제]  점수는 simsanOhaeng «한 곳» 이 냅니다. 여기서 다시 옮기지 않습니다.
+  //    ⚠️⚠️ 아래 score 에 손대지 마십시오. 옮기고 싶으면 simsanOhaeng 을 고치십시오.
+  //       (교훈 CJ — 판정은 한 창구)
+  //
+  //  ⚠️ convertHourBranch 는 «글자 세기» 에 아직 씁니다. 지우지 마십시오.
+  //     다만 simsanOhaeng.hourConvertEl 과 «같은 답» 을 내야 합니다 —
+  //     32-verify-hour-convert.ts 가 144칸을 맞대어 봅니다.
+  // ══════════════════════════════════════════════════════════════
+  const base = calcSimsanOhaeng(saju, solarMonth, solarDay, hourBranch, { purpose: '진로' })
   const score: OhaengScore = { ...base }
 
   const monthPillar = saju.find(p => p.pillar === '월주')
@@ -121,15 +153,13 @@ export function calcCareerScore(
   const hourPillar = saju.find(p => p.pillar === '시주')
   const hb = hourBranch ?? hourPillar?.branch ?? ''
 
-  // ── 시지 치환 ────────────────────────────────────────────────
+  // ── 시지 치환이 «걸렸는가» — 점수는 이미 반영되어 있고, 여기서는 «알리기» 만 ──
   let hourConverted = false
   let hourNote: string | null = null
   if (real(hb) && real(monthBranch)) {
     const from = BRANCH_EL[hb]
-    const to = convertHourBranch(monthBranch, hb)
+    const to = hourConvertEl(monthBranch, hb)
     if (from && to && from !== to) {
-      score[from] = (score[from] ?? 0) - HOUR_BRANCH_POINT
-      score[to] = (score[to] ?? 0) + HOUR_BRANCH_POINT
       hourConverted = true
       hourNote = `시지 ${hb}(${from})을 ${monthBranch}월의 기운으로 보아 ${to}${euro(to)} 계산했어요.`
     }
@@ -154,7 +184,8 @@ export function calcCareerScore(
       el = pickMonthEl(base, p.branch, saju, solarMonth, solarDay, hb) ?? from
       monthEl = el
     } else if (p.pillar === '시주') {
-      el = convertHourBranch(monthBranch, p.branch) ?? from
+      // ★점수와 «같은 창구» 로 셉니다 (교훈 CJ)
+      el = hourConvertEl(monthBranch, p.branch) ?? from
     }
     chars[el].push({ ch: p.branch, pillar: p.pillar, where: '지지', el, converted: el !== from })
   }

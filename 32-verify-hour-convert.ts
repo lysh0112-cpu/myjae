@@ -15,6 +15,8 @@ import {
   calcSimsanOhaeng, hourConvertEl, hourConvertNote, hourNoConvertNote,
   type Ohaeng, type Pillar,
 } from './lib/saju/simsanOhaeng'
+// ★두 계산기가 «같은 점수» 를 내는지 맞대어 봅니다 (2026-08-02 결함)
+import { calcCareerScore } from './lib/saju/career/careerScore'
 
 let pass = 0, fail = 0
 const check = (ok: boolean, msg: string) => {
@@ -114,6 +116,60 @@ console.log('\n━━ ㉒-e ⚠️ 합이 언제나 100인가 ━━')
     }
   }
   check(bad === 0, `144칸 × 두 쓰임 — 합이 «언제나» 100입니다`)
+}
+
+console.log('\n━━ ㉒-g 🔴 시지 10점이 «두 번» 옮겨지지 않는가 ━━')
+{
+  // 🔴 2026-08-02 — 제가 만든 결함입니다.
+  //   simsanOhaeng 에 치환을 넣었는데 careerScore 가 «자기 치환» 을 갖고 있어
+  //   같은 10점이 두 번 옮겨졌습니다. 없던 「과다」와 「결핍」이 손님께 나갔습니다.
+  //   ★이 그물이 그것이 되살아나는 것을 막습니다.
+  const JI2 = JI
+  let diff = 0, worst = ''
+  for (const m of JI2) for (const h of JI2) {
+    const pill = ['년주', '월주', '일주', '시주'].map((p, i) => ({
+      pillar: p, stem: ['戊', '丙', '乙', '庚'][i], branch: ['子', m, '巳', h][i],
+    })) as Pillar[]
+    const a = calcSimsanOhaeng(pill, 4, 20, h, { purpose: '진로' })
+    const r = calcCareerScore(pill, 4, 20, h)
+    if (!EL5.every(e => a[e] === r.score[e])) { diff++; if (!worst) worst = `${m}월 ${h}시` }
+  }
+  check(diff === 0,
+    `★144칸 전수 — 오각형(simsanOhaeng)과 육친(careerScore) 점수가 «같습니다»${worst ? ` — 어긋남 ${worst}` : ''}`)
+
+  // ★실기에서 잡힌 그 사주로 못 박습니다 (戊辰 丙辰 乙巳 庚辰)
+  const real4 = ['년주', '월주', '일주', '시주'].map((p, i) => ({
+    pillar: p, stem: ['戊', '丙', '乙', '庚'][i], branch: ['辰', '辰', '巳', '辰'][i],
+  })) as Pillar[]
+  const rr = calcCareerScore(real4, 4, 20, '辰')
+  check(rr.score['목'] === 55, `★실기 표본 — 목 55점 (65점이면 두 번 옮겨진 것) — ${rr.score['목']}`)
+  check(rr.score['토'] === 10, `★실기 표본 — 토 10점 (0점이면 두 번 옮겨진 것) — ${rr.score['토']}`)
+  check(EL5.reduce((a, e) => a + rr.score[e], 0) === 100, `합이 100입니다`)
+  check(rr.hourConverted === true, `시지 치환이 걸렸다고 «알립니다»`)
+
+  // ⚠️ careerScore 가 점수를 «다시 옮기지» 않는가 — 코드로도 봅니다
+  const cs = read('lib/saju/career/careerScore.ts')
+  check(!/score\[from\] = \(score\[from\] \?\? 0\) - HOUR_BRANCH_POINT/.test(cs),
+    `★careerScore 가 점수를 «다시 옮기지» 않습니다`)
+  check(/purpose: '진로'/.test(cs), `★simsanOhaeng 을 «진로» 쓰임으로 부릅니다`)
+  check(/hourConvertEl\(monthBranch, p\.branch\)/.test(cs),
+    `★글자 세기도 «같은 창구»(hourConvertEl)를 씁니다`)
+}
+
+console.log('\n━━ ㉒-h ★십성 표 — «왜 다른지» 알려 주는가 ━━')
+{
+  //  ⚠️ 오각형은 «점수 + 계절 치환», 십성 표는 «글자 개수» 입니다.
+  //     한 화면에 나란히 있어 손님이 갸웃하십니다. 까닭을 말해 드려야 합니다.
+  const t = read('app/manseryeok/result-new/SipsungTable.tsx')
+  check(/십성은 글자를 있는 그대로 셉니다/.test(t), `★십성 표에 까닭 한 줄이 있습니다`)
+  check(/계절 치환이 들어가/.test(t), `★오행 비율과 다른 «까닭» 을 말합니다`)
+  // ★셈은 «고치지» 않았는가 — 십성은 글자 그대로여야 합니다
+  const d = read('lib/saju/sipsungDist.ts')
+  check(!/hourConvert|convertHourBranch|purpose/.test(d),
+    `⚠️ 십성 셈에 «치환이 들어가지» 않았습니다 (글자 그대로여야 합니다)`)
+  // ⚠️ 이 표는 공용 부품입니다 — 두 화면이 나눠 씁니다
+  check(/SipsungTable/.test(read('app/manseryeok/components/SajuTableSlot.tsx')),
+    `⚠️ 공용 부품이라 한 곳만 고치면 두 화면에 다 붙습니다`)
 }
 
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
