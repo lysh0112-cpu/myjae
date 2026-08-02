@@ -58,6 +58,8 @@ import { guardTone } from './couple/toneGuard'
 import { buildTimeline, timelineBlock } from './couple/step8Timeline'
 // ★5단계 「함께 살아가는 결」 (2026-08-02)
 import { envBlock } from './couple/step5Env'
+// ★1단계 「그릇과 온도」 (2026-08-02)
+import { vesselBlock } from './couple/step1Vessel'
 
 // ── 표기용 ──────────────────────────────────────────────────────────────
 const EL_KOR: Record<string, string> = {
@@ -108,6 +110,15 @@ export interface CoupleTongbyeonMaterial {
    *   ⛔ 49쪽 조견표(jijiGrade)를 쓰지 «않습니다». 등급 대신 «관계 이름» 으로 말합니다.
    */
   envBlock: string
+  /**
+   * ★[두 분은 어떤 분인가] — 그릇과 온도 (2026-08-02 신설 · 1단계)
+   *
+   *   ⚠️ judgeBlock 과 «다릅니다» —
+   *      judgeBlock  두 분 «사이» 의 판정 (귀인·오행·일주·배우자운…)
+   *      vesselBlock ★«각자가 어떤 분인가» — 만나기 «전» 의 이야기
+   *   ⚠️ 신강약은 PersonJudge.status 에서 «받아» 씁니다. 다시 계산하지 않습니다.
+   */
+  vesselBlock: string
 }
 
 // ── 한 사람 재료 ────────────────────────────────────────────────────────
@@ -389,7 +400,19 @@ export function toCoupleTongbyeonMaterial(
     // ★2026-08-02 — 5단계 「함께 살아가는 결」 (월지·년지)
     //   ⚠️ 여기도 «반드시» guardTone 을 지납니다.
     envBlock: guardTone(envOf(a, b)),
+    // ★2026-08-02 — 1단계 「두 분은 어떤 분인가」 (그릇과 온도)
+    vesselBlock: guardTone(vesselOf(judge)),
   }
+}
+
+/** 1단계 재료. 판정이 없으면 «빈 문자열» 입니다. */
+function vesselOf(judge: CoupleJudgeV1 | null): string {
+  const ap = judge?.a, bp = judge?.b
+  if (!ap || !bp) return ''
+  return vesselBlock(
+    { name: ap.name, status: ap.status, season: ap.season, needEl: ap.needEl, needFrom: ap.needFrom },
+    { name: bp.name, status: bp.status, season: bp.season, needEl: bp.needEl, needFrom: bp.needFrom },
+  )
 }
 
 /** 5단계 재료. 월지·년지가 없으면 «빈 문자열» 입니다. */

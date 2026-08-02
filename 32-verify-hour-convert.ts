@@ -26,6 +26,9 @@ import { findBanned } from './lib/saju/couple/toneGuard'
 import { buildTimeline, timelineBlock, bestYear } from './lib/saju/couple/step8Timeline'
 // ★5단계 월지·년지 (프리미엄 궁합 2차 · 2026-08-02)
 import { judgeBranchPair, judgeEnv } from './lib/saju/couple/step5Env'
+// ★1단계 그릇과 온도 (프리미엄 궁합 3차 · 2026-08-02)
+import { judgeVessel, vesselBlock } from './lib/saju/couple/step1Vessel'
+import { guardTone } from './lib/saju/couple/toneGuard'
 import { calcCareerYongsin, judgeYongsin } from './lib/saju/career/yongsin'
 import { judgeStrength, calcYongsinNew, isYanginIlju } from './lib/saju/yongsinNew'
 
@@ -847,6 +850,85 @@ console.log('\n━━ ㊲ ★5단계 월지·년지 (프리미엄 궁합 2차) �
   // ⚠️ 재료가 문지기를 지나는가
   const ti = read('lib/saju/toCoupleTongbyeonInput.ts')
   check(/envBlock: guardTone\(envOf/.test(ti), `★5단계 재료도 guardTone 을 지납니다`)
+}
+
+console.log('\n━━ ㊳ ★1단계 그릇과 온도 (프리미엄 궁합 3차) ━━')
+{
+  const V = (name: string, status: string, season: string) => ({
+    name, status, season, needEl: '화', needFrom: '억부',
+  }) as never
+
+  // ★교재 142쪽 「신강 사주의 배우자는 신약 사주랑 만나는 게 좋다」
+  const r1 = judgeVessel(V('가', '신강', '봄'), V('나', '신약', '겨울'))
+  check(r1.cross === '뚜렷과 헤아림', `★신강 × 신약 = 「뚜렷과 헤아림」 (교재 142쪽 권장)`)
+  check(!!r1.solution, `★솔루션이 «반드시» 있습니다`)
+
+  // ★교재 123쪽 — 이 단계의 «보석»
+  const r2 = judgeVessel(V('가', '신강', '봄'), V('나', '신강', '가을'))
+  check(r2.cross === '둘 다 뚜렷', `★신강 × 신강 = 「둘 다 뚜렷」`)
+  check(r2.lines.some(l => l.includes('인품과 마음공부')),
+    `★★교재 123쪽 「잘 지내시면 인품·인격 수양이 깊은 사람」을 «반드시» 말합니다`)
+  check(!!r2.solution, `★솔루션이 있습니다 (그 자리에서 결론 내지 않기)`)
+
+  // ⛔ 「둘 다 신약」을 «판정하지» 않는가 — 교재에 없습니다
+  const r3 = judgeVessel(V('가', '극신약', '봄'), V('나', '신약', '가을'))
+  check(r3.cross === '둘 다 헤아림', `★극신약 × 신약 = 「둘 다 헤아림」`)
+  check(!r3.lines.some(l => /추진력이 떨어|이끌어가는 힘이 없|부족/.test(l)),
+    `⛔ 「둘 다 신약」을 «깎아» 말하지 않습니다 (교재에 그 조합 판정이 없음)`)
+
+  // ★온도가 서로 반대면 «반드시» 말하는가 (교재 232쪽 2번)
+  const r4 = judgeVessel(V('가', '중화', '겨울'), V('나', '중화', '여름'))
+  check(r4.lines.some(l => l.includes('온도가 «서로 반대»')),
+    `★겨울 × 여름 — 온도가 서로를 눅여 준다고 말합니다`)
+
+  const src = read('lib/saju/couple/step1Vessel.ts')
+  const noC = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  const shown1 = [...noC.matchAll(/'([^']{4,})'/g)].map(m => m[1]).join(' ')
+  // ⛔ 「극신강」을 쓰지 않는가 — 교재에 없는 말
+  check(!/극신강/.test(shown1.replace(/극신강»?이라는 말을 쓰지 마세요[^']*/g, '')),
+    `⛔ 「극신강」을 손님께 쓰지 «않습니다» (교재에 없는 말)`)
+  // ⛔ 사람을 깎는 말을 그대로 옮기지 않는가
+  check(!/마마보이|마마걸|부부 불화|대단히 조심/.test(shown1),
+    `⛔ 「마마보이·마마걸」·「부부 불화」를 그대로 쓰지 «않습니다»`)
+  // ★신강약을 «다시 계산하지» 않는가
+  check(!/judgeStrength|calcYongsin/.test(noC),
+    `★신강약을 «받아» 씁니다 (PersonJudge.status · 다시 계산하지 않음)`)
+
+  // ⚠️ 재료가 문지기를 지나는가
+  const ti = read('lib/saju/toCoupleTongbyeonInput.ts')
+  check(/vesselBlock: guardTone\(vesselOf/.test(ti), `★1단계 재료도 guardTone 을 지납니다`)
+}
+
+console.log('\n━━ ㊴ 🔴★재료의 «금지 안내문» 이 guardTone 에 바뀌지 않는가 ━━')
+{
+  //  🔴 2026-08-02 — 오늘 «다섯 번» 밟은 함정입니다.
+  //    ① toneGuard 지을 때  ② 현침  ③ 천을귀인  ④ 연표  ⑤ ★1단계
+  //    ⑤에서는 "「고집불통」 같은 말은 금지" 가 guardTone 에 바뀌어
+  //    ★"「뜻이 아주 뚜렷함」 같은 말은 금지" 로 나갔습니다 — 뜻이 «뒤집혔습니다».
+  //  ★금지어 목록은 toneGuard.BAN_NOTE «한 곳» 에만 둡니다.
+  //    다른 재료 파일에는 «써야 할 말» 만 적습니다.
+  const files = [
+    'lib/saju/couple/step1Vessel.ts',
+    'lib/saju/couple/step5Env.ts',
+    'lib/saju/couple/step8Timeline.ts',
+  ]
+  const BAN_WORDS = ['고집불통', '이혼', '헤어짐', '악처', '바람기', '위기', '마마보이']
+  for (const f of files) {
+    const src = read(f)
+    const noC = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+    const pushed = [...noC.matchAll(/out\.push\('([^']*)'\)/g)].map(m => m[1]).join(' ')
+    const bad = BAN_WORDS.filter(w => pushed.includes(w))
+    check(bad.length === 0,
+      `★${f.split('/').pop()} — 재료 안내문에 금지어를 «적지 않았습니다»${bad.length ? ' — ' + bad.join(',') : ''}`)
+  }
+  // ★그리고 guardTone 을 지나도 «뜻이 안 바뀌는가» — 전수로 봅니다
+  const A = { name: '가', status: '신강' as const, season: '봄' as const,
+    needEl: '화' as Ohaeng, needFrom: '억부' as const }
+  const B = { name: '나', status: '신약' as const, season: '겨울' as const,
+    needEl: '토' as Ohaeng, needFrom: '조후' as const }
+  const raw = vesselBlock(A, B)
+  check(guardTone(raw) === raw,
+    `★★1단계 재료는 guardTone 을 지나도 «한 글자도 안 바뀝니다»`)
 }
 
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')

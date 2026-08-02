@@ -315,6 +315,18 @@ export interface PersonJudge {
   needFrom: '조후' | '억부'
   /** 억부 5신 (참고용) */
   eokbu: { yongsin: Ohaeng; heesin: Ohaeng; gisin: Ohaeng }
+  /**
+   * ★신강·신약 — 1단계 「그릇」의 알맹이 (2026-08-02)
+   *
+   *   교재 141쪽 "월지가 비겁과 인성으로 통근하고 있으면 신강 사주,
+   *               월지가 식재관이면 신약 사주로 본다"
+   *   교재 144쪽 "신강, 신약을 판단하는 기준 중 중요한 것은 «일주의 통근» 여부"
+   *
+   *   ⚠️ calcYongsinNew 가 «이미» 내고 있었는데 여기서 «버리고» 있었습니다.
+   *      ★새로 계산하지 마십시오. 받아만 씁니다. (교훈 CJ)
+   *   ⚠️ 교재에 «극신강» 은 없습니다 — 신강·신약·극신약·중화 넷입니다.
+   */
+  status: '극신약' | '신약' | '중화' | '신강' | null
   /** 배우자 십신 — 남=재성 / 여=관성 (232쪽 5번) */
   spouseName: '재성' | '관성'
   spouseEl: Ohaeng
@@ -490,6 +502,9 @@ export function judgePerson(p: PersonInput): PersonJudge {
         gisin: yong.eokbu.gisin,
       }
     : { yongsin: dayEl, heesin: dayEl, gisin: CON[dayEl] }
+  // ★2026-08-02 — 신강·신약을 «받아» 둡니다. 1단계가 씁니다.
+  //   ⚠️ calcYongsinNew 가 이미 냈는데 여기서 버리고 있었습니다.
+  const status = (yong?.status ?? null) as PersonJudge['status']
   // 조후로 볼 때: 겨울생은 火, 여름생은 水 (232쪽 2번 — 조후에서는 水火가 가장 중요)
   const johuEl: Ohaeng = season === '겨울' ? '화' : '수'
   const needEl: Ohaeng = useJohu ? johuEl : eokbu.yongsin
@@ -846,7 +861,7 @@ export function judgePerson(p: PersonInput): PersonJudge {
     ohaeng, season, useJohu, needEl, needFrom, eokbu,
     spouseName, spouseEl, spouseScore, spouseAbsent, spouseWhere,
     spouseRooted, spouseIsolated, spouseGongmang,
-    iljiSipsin, seasonRel, wonjinIlWol, chukChukSelf,
+    iljiSipsin, seasonRel, wonjinIlWol, chukChukSelf, status,
     spouseIsYongHee, gwansalHonjap, spouseIsGisin, muGwan, gwanIsCheonEul, johuBalance, gyeokgak, jaeWeakBigyeopStrong, jaengTuHap, siksangExcess, femaleSanggwanNoJae, insungHelps, bokEum, sanggwanJeonggwanNear, jaeDaBulhwa, spouseIpmyo, spouseIpmyoButRooted, siksangSuStrong, dohwaYeonWol, dohwaIlSi,
     childName, childCount, childAbsent, childWeak, childStrong, childIsolated, childInseongPressed, childHourChung, hourUnknown,
     spouseStarNone, jaeHyeongChungGongmang, jaeRootedRich, jaeExcess, jaeIsGisin, jaeIsYongHee, jaePresent,
