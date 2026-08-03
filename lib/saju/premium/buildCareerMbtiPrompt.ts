@@ -302,6 +302,31 @@ export interface CareerMbtiPromptResult {
   mbti: SajuMbtiResult
 }
 
+/**
+ * ★프리미엄 리포트인지 «가리는» 잣대 (44부 38차)
+ *
+ *  🔴 [까닭]  「다시보기」로 열면 isPremiumTong 이 «거짓으로 남아»
+ *     프리미엄 글이 카드형으로 잘못 그려지고, A4·해설복사 버튼도 안 떴습니다.
+ *  ⚠️ 저장본에는 「프리미엄이었는지」가 «적혀 있지 않습니다».
+ *     ⇒ ★대목 «제목» 으로 가립니다. 제목은 이 파일이 정하므로 여기 둡니다.
+ *  ⚠️ 제목을 고치시면 ★이 목록도 함께 고치십시오. 안 그러면 옛 기록이 카드형으로 돌아갑니다.
+ */
+export const PREMIUM_SECTION_TITLES = [
+  '사주로 본 성향',
+  '사주 성향 vs 실제 성향',
+  '사주 추정 성향의 핵심',
+  '강점 지능과 행동 패턴',
+  '직무 & 커리어 전략',
+  '리더십과 재물 운용',
+  '커리어 발복 대운과 개운',
+] as const
+
+/** 저장된 통변이 «프리미엄 리포트» 인가 */
+export function isPremiumReport(tong: string): boolean {
+  const t = (tong ?? '').replace(/\s/g, '')
+  return PREMIUM_SECTION_TITLES.some(x => t.includes(x.replace(/\s/g, '')))
+}
+
 export function buildCareerMbtiPrompt(v: CareerMbtiInput): CareerMbtiPromptResult {
   const { sections, mbti } = buildSections(v)
 

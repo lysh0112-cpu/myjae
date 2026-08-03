@@ -1689,6 +1689,17 @@ console.log('\n━━ (53) ★진로적성 A4 인쇄 · 해설 복사 (44부 36�
   check(/toPercentList\(score\)/.test(page) && /calcSipsungDist\(calc\.saju, dayStem\)/.test(page),
     `⚠️ 화면 부품과 «같은 함수» 로 셈합니다 (두 벌로 두지 않습니다)`)
   check(/function barTable/.test(cert), `★인쇄용 막대 표를 그립니다`)
+
+  // 🔴 「다시보기」로 열어도 프리미엄으로 «알아보는가» (44부 38차)
+  //   [무엇이 있었나] setIsPremiumTong 을 «새로 돌릴 때만» 불러,
+  //     저장된 기록을 열면 ★프리미엄 글이 카드형으로 그려지고 A4 버튼도 안 떴습니다.
+  const prm = noComment(read('lib/saju/premium/buildCareerMbtiPrompt.ts'))
+  check(/export function isPremiumReport/.test(prm), `★저장본이 프리미엄인지 가리는 잣대가 있습니다`)
+  check(/PREMIUM_SECTION_TITLES/.test(prm), `★대목 «제목» 으로 가립니다 (제목을 정하는 곳에 둡니다)`)
+  check(/setIsPremiumTong\(isPremiumReport\(t\)\)/.test(page),
+    `🔴★다시보기로 열어도 프리미엄으로 알아봅니다`)
+  check(/제목을 고치시면/.test(read('lib/saju/premium/buildCareerMbtiPrompt.ts')),
+    `⚠️ 제목을 고치면 목록도 함께 고치라고 일러 둡니다`)
   check(/flexDirection: 'row', gap: 8[\s\S]{0,60}alignItems: 'stretch'/.test(page),
     `★두 버튼이 «가로로» 나란히 있습니다`)
   check(/className="copy-half"/.test(page) && /\.copy-half > button \{ width: 100% \}/.test(page),

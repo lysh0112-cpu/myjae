@@ -32,7 +32,7 @@ import { calcSajuMbti, compareMbti } from '@/lib/saju/career/sajuMbti'
 import { type CareerStatus, STATUS_LABEL } from '@/lib/saju/career/status'
 import MbtiCard from './components/MbtiCard'
 // ★2026-07-29 — 프리미엄 진로적성&MBTI 리포트 (모듈2)
-import { buildCareerMbtiPrompt } from '@/lib/saju/premium/buildCareerMbtiPrompt'
+import { buildCareerMbtiPrompt, isPremiumReport } from '@/lib/saju/premium/buildCareerMbtiPrompt'
 import { isPremium } from '@/lib/saju/premium/config'
 import { openCareerCertificate } from './components/CareerCertificate'
 import CopyTextButton from '@/app/components/common/CopyTextButton'
@@ -297,7 +297,16 @@ function CareerResultInner() {
       getRecord(recordId).then(r => {
         if (cancelled || !r) return
         const t = (r.resultData as { tong?: string } | undefined)?.tong
-        if (t) { setTong(t); setTongState('done') }
+        if (t) {
+          setTong(t); setTongState('done')
+          // 🔴★2026-08-03 (44부 38차) — 「다시보기」로 열면 isPremiumTong 이
+          //   ★«거짓으로 남아» 프리미엄 리포트가 카드형으로 잘못 그려지고,
+          //   A4·해설복사 버튼도 뜨지 않았습니다.
+          //   ⇒ 저장된 글이 «프리미엄 꼴» 인지 보고 정합니다.
+          //   ⚠️ 저장본에는 「프리미엄이었는지」가 안 적혀 있어 «글의 모양» 으로 가립니다 —
+          //      ★대목 «제목» 으로 가립니다 — 제목은 buildCareerMbtiPrompt 가 정합니다.
+          setIsPremiumTong(isPremiumReport(t))
+        }
       }),
     ).catch(e => console.error('저장된 풀이 불러오기 실패', e))
     return () => { cancelled = true }
