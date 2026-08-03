@@ -172,7 +172,7 @@ const GROUPS: Group[] = [
     names: ['내 사주 & 운세'],
   },
   {
-    key: 'timing', icon: '🎯', title: '특화 목적 & 타이밍',
+    key: 'timing', icon: '🎯', title: '결혼, 이사, 출산 택일',
     // ⛔ 2026-08-04 (45부) — 「합격운/취업운」을 뺐습니다. 소개 글도 함께 고칩니다.
     //   ⚠️ 여기만 빼고 page.tsx 의 SERVICES 를 그대로 두면 «묶이지 않은 채» 남습니다.
     desc: '좋은 날 잡기',
