@@ -158,8 +158,18 @@ const SERVICES = [
   { name: '내사주그림', color: '#b46e46', bg: '#f5e9df', href: '/manseryeok/mulsang-storage', cat: '사주명리', sub: '사주를 그림으로', icon: '🎨', grad: ['#fb7185', '#fcd34d'] },
   // 💖 rose-400 → pink-300
   { name: '궁합',       color: '#c85a6e', bg: '#f7e5e8', href: '/manseryeok/couple-storage', cat: '궁합', sub: '두 사람의 결', icon: '💖', grad: ['#fb7185', '#f9a8d4'] },
-  // 🎯 emerald-400 → teal-300
-  { name: '합격운/취업운', color: '#c85a8c', bg: '#f7e6ee', href: '/manseryeok/exam-luck', cat: '기타', sub: '시험과 일자리', icon: '🎯', grad: ['#34d399', '#5eead4'] },
+  // ⛔ 2026-08-04 (45부) — ★「합격운/취업운」은 «서비스를 안 합니다» (대표님 지시)
+  //   ★부품은 «하나도 안 지웠습니다» — app/manseryeok/exam-luck · exam-luck-result ·
+  //     job-luck-result · lib/saju/examLuck 전부 그대로입니다. ★«길만» 끊었습니다.
+  //   ⚠️⚠️ ★옛 줄을 «주석으로 남기지 마십시오» — 44부 1-1 교훈입니다.
+  //     검사 ⑲-D 가 「{ name: …, color: 」 꼴을 낱말로 훑어 ★주석까지 «살아 있는 서비스»
+  //     로 읽습니다. 제가 그렇게 남겼다가 검사 2건이 깨졌습니다 (2026-08-04).
+  //   되살리시는 법 — 아래 여섯 값으로 이 자리에 줄을 «다시 지으십시오».
+  //     이름 합격운/취업운 · 글자색 #c85a8c · 바탕 #f7e6ee · 갈래 기타
+  //     소개 시험과 일자리 · 아이콘 🎯 · 그라데이션 #34d399 → #5eead4
+  //     주소 /manseryeok/exam-luck
+  //   ⚠️ 그리고 ServiceSection 의 names 와 archiveRecords 의 ARCHIVE_TYPES 에도
+  //     «함께» 되돌리십시오. ★셋이 한 벌입니다. 하나만 되살리면 어긋납니다.
   // ★택일 셋은 지시에 없어 제가 골랐습니다. 바꾸실 자리입니다.
   { name: '결혼택일',   color: '#96643c', bg: '#f0e8df', href: '/manseryeok/wedding-timing/wedding-storage', cat: '택일', sub: '좋은 날 잡기', icon: '💍', grad: ['#fbbf24', '#fda4af'] },
   { name: '출산택일',   color: '#b45a78', bg: '#f6e5eb', href: '/manseryeok/birth-timing/birth-storage', cat: '택일', sub: '아기 맞을 날', icon: '🍼', grad: ['#f9a8d4', '#fed7aa'] },
