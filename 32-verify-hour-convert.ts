@@ -1310,6 +1310,70 @@ console.log('\n━━ ㊺ ★보관함 열 곳이 «한 모습» 인가 (44부 2
   check(!/\{info\.badge\} 궁합/.test(cp), `🔴 「궁합 궁합」이 사라졌습니다`)
 }
 
+console.log('\n━━ ㊻ ★사주 MBTI 산식 — 교재 대조로 고친 자리 (44부 27차) ━━')
+{
+  // ⚠️ 교훈 1-1 — 주석을 «먼저 지우고» 봅니다
+  const noComment = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  const m = noComment(read('lib/saju/career/sajuMbti.ts'))
+  const doc = read('lib/saju/career/sajuMbti.ts')   // 주석까지 — 까닭이 적혔는지 볼 때
+
+  // 🔴 B — 지지를 «세는가» (교재 36·159·259쪽)
+  check(/BRANCH_BONGI/.test(m), `★48쪽 본기 천간 표가 있습니다`)
+  check(/子: '癸'/.test(m) && /午: '丁'/.test(m), `★子=癸(음) · 午=丁(음) — 48쪽 그대로`)
+  check(/const asStem = isStem \? ch : BRANCH_BONGI\[ch\]/.test(m),
+    `🔴★정재·편재를 가릴 때 «지지도» 셉니다`)
+  check(!/const el = isStem \? STEM_EL\[ch\] : undefined/.test(m),
+    `⚠️ 지지를 건너뛰던 옛 줄이 «사라졌습니다»`)
+  // ⚠️⚠️ 두 잣대가 «둘 다» 살아 있는가 — 하나로 합치면 안 됩니다
+  check(/YANG_BRANCH = new Set\(\['子', '寅', '辰', '午', '申', '戌'\]\)/.test(m),
+    `⚠️ 음양 «비율» 용 표(子=양)는 그대로입니다 — 260쪽 양팔통 사례`)
+  check(/하나로 합치지 마십시오/.test(doc), `⚠️ 두 표를 합치지 말라는 까닭이 적혀 있습니다`)
+
+  // A — 오행·육친을 «층으로 가르는가» (교재 40쪽)
+  check(/type Layer = \{ L: Array<\[string, number\]>; R: Array<\[string, number\]> \}/.test(m),
+    `★층(Layer) 으로 가릅니다`)
+  check(/if \(!ly\.L\.length \|\| !ly\.R\.length\) continue/.test(m),
+    `★한쪽이 빈 층은 «세지 않습니다» (대립이 아님)`)
+
+  // γ — «세기 평균» 으로 견주는가
+  check(/const l = sum\(ly\.L\) \/ ly\.L\.length/.test(m) && /const r = sum\(ly\.R\) \/ ly\.R\.length/.test(m),
+    `★γ — 성분 «개수» 가 아니라 «세기» 로 견줍니다`)
+
+  // C-1 — 50점 뚜껑 (교재 259쪽)
+  check(/const cap = \(v: number\) => Math\.min\(v, 50\)/.test(m), `★C-1 — 50점 뚜껑이 있습니다`)
+  check(/cap\(S\['목'\]\)/.test(m) && /cap\(Y\['식상'\]\)/.test(m),
+    `★오행·육친 모두 뚜껑을 지납니다`)
+
+  // D — 근거 없는 셋이 «빠졌는가»
+  check(!/yanginBaekho/.test(m), `★T쪽 백호가 빠졌습니다 (95쪽은 성격을 말하지 않음)`)
+  const sn = m.slice(m.indexOf("push('SN'"), m.indexOf("push('TF'"))
+  check(!/관성/.test(sn), `★S쪽 관성이 빠졌습니다 (교재에서 못 찾음)`)
+  check(!/S\['화'\]/.test(sn), `★N쪽 화가 빠졌습니다 (화는 열정·표현·예의·행동)`)
+
+  // ⚠️ 「없다」가 아니라 「못 찾았다」로 적었는가 — 184~257쪽을 아직 못 봤습니다
+  check(/못 찾았다|못 찾았습니다|못 찾은/.test(doc),
+    `⚠️ 「교재에 없다」가 아니라 «확인한 범위에서 못 찾았다» 로 적혀 있습니다`)
+  check(/184~257/.test(doc), `⚠️ 아직 못 본 쪽 범위가 적혀 있습니다`)
+  // ★되살릴 길을 남겼는가
+  check(/되살리십시오|되살릴 수 있습니다/.test(doc), `★쪽이 확인되면 되살리라고 일러 둡니다`)
+  // ⚠️ 토가 빠진 것을 «숨기지 않았는가»
+  check(/토\(45쪽/.test(doc), `⚠️ 토가 산식에서 빠졌다는 것을 적어 두었습니다`)
+
+  // ⚠️ 다른 엔진을 «건드리지 않았는가»
+  check(/import \{ calcCareerScore \}/.test(m) && /import \{ yukchinOf \}/.test(m)
+     && /import \{ checkSinsal9 \}/.test(m), `⚠️ 다른 엔진은 «부르기만» 합니다`)
+
+  // ⚠️ 자(尺)는 verify 체인에 «없는가»
+  const pkg4 = JSON.parse(read('package.json'))
+  check(!/34-measure/.test(pkg4.scripts.verify), `⚠️ 자(尺)는 verify 체인에 «없습니다»`)
+  check(/measure:mbti/.test(JSON.stringify(pkg4.scripts)), `npm run measure:mbti 로 잽니다`)
+  // ★옛 산식이 자 안에 «남아 있는가» — 잣대가 함께 움직이면 안 됩니다
+  const mm = read('34-measure-saju-mbti.ts')
+  check(/function code0\(b: Bag\)/.test(mm), `★옛 산식이 자 안에 붙박여 있습니다 (잣대 보존)`)
+  check(/어긋난 건수/.test(mm), `★자가 «실제 파일과 같은 답인지» 맞대어 봅니다`)
+}
+
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
 {
   const src = read('lib/saju/simsanOhaeng.ts')

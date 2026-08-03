@@ -1,0 +1,914 @@
+diff --git a/32-verify-hour-convert.ts b/32-verify-hour-convert.ts
+index 326b05f..af50f83 100644
+--- a/32-verify-hour-convert.ts
++++ b/32-verify-hour-convert.ts
+@@ -1310,6 +1310,70 @@ console.log('\n━━ ㊺ ★보관함 열 곳이 «한 모습» 인가 (44부 2
+   check(!/\{info\.badge\} 궁합/.test(cp), `🔴 「궁합 궁합」이 사라졌습니다`)
+ }
+ 
++console.log('\n━━ ㊻ ★사주 MBTI 산식 — 교재 대조로 고친 자리 (44부 27차) ━━')
++{
++  // ⚠️ 교훈 1-1 — 주석을 «먼저 지우고» 봅니다
++  const noComment = (s: string) =>
++    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
++  const m = noComment(read('lib/saju/career/sajuMbti.ts'))
++  const doc = read('lib/saju/career/sajuMbti.ts')   // 주석까지 — 까닭이 적혔는지 볼 때
++
++  // 🔴 B — 지지를 «세는가» (교재 36·159·259쪽)
++  check(/BRANCH_BONGI/.test(m), `★48쪽 본기 천간 표가 있습니다`)
++  check(/子: '癸'/.test(m) && /午: '丁'/.test(m), `★子=癸(음) · 午=丁(음) — 48쪽 그대로`)
++  check(/const asStem = isStem \? ch : BRANCH_BONGI\[ch\]/.test(m),
++    `🔴★정재·편재를 가릴 때 «지지도» 셉니다`)
++  check(!/const el = isStem \? STEM_EL\[ch\] : undefined/.test(m),
++    `⚠️ 지지를 건너뛰던 옛 줄이 «사라졌습니다»`)
++  // ⚠️⚠️ 두 잣대가 «둘 다» 살아 있는가 — 하나로 합치면 안 됩니다
++  check(/YANG_BRANCH = new Set\(\['子', '寅', '辰', '午', '申', '戌'\]\)/.test(m),
++    `⚠️ 음양 «비율» 용 표(子=양)는 그대로입니다 — 260쪽 양팔통 사례`)
++  check(/하나로 합치지 마십시오/.test(doc), `⚠️ 두 표를 합치지 말라는 까닭이 적혀 있습니다`)
++
++  // A — 오행·육친을 «층으로 가르는가» (교재 40쪽)
++  check(/type Layer = \{ L: Array<\[string, number\]>; R: Array<\[string, number\]> \}/.test(m),
++    `★층(Layer) 으로 가릅니다`)
++  check(/if \(!ly\.L\.length \|\| !ly\.R\.length\) continue/.test(m),
++    `★한쪽이 빈 층은 «세지 않습니다» (대립이 아님)`)
++
++  // γ — «세기 평균» 으로 견주는가
++  check(/const l = sum\(ly\.L\) \/ ly\.L\.length/.test(m) && /const r = sum\(ly\.R\) \/ ly\.R\.length/.test(m),
++    `★γ — 성분 «개수» 가 아니라 «세기» 로 견줍니다`)
++
++  // C-1 — 50점 뚜껑 (교재 259쪽)
++  check(/const cap = \(v: number\) => Math\.min\(v, 50\)/.test(m), `★C-1 — 50점 뚜껑이 있습니다`)
++  check(/cap\(S\['목'\]\)/.test(m) && /cap\(Y\['식상'\]\)/.test(m),
++    `★오행·육친 모두 뚜껑을 지납니다`)
++
++  // D — 근거 없는 셋이 «빠졌는가»
++  check(!/yanginBaekho/.test(m), `★T쪽 백호가 빠졌습니다 (95쪽은 성격을 말하지 않음)`)
++  const sn = m.slice(m.indexOf("push('SN'"), m.indexOf("push('TF'"))
++  check(!/관성/.test(sn), `★S쪽 관성이 빠졌습니다 (교재에서 못 찾음)`)
++  check(!/S\['화'\]/.test(sn), `★N쪽 화가 빠졌습니다 (화는 열정·표현·예의·행동)`)
++
++  // ⚠️ 「없다」가 아니라 「못 찾았다」로 적었는가 — 184~257쪽을 아직 못 봤습니다
++  check(/못 찾았다|못 찾았습니다|못 찾은/.test(doc),
++    `⚠️ 「교재에 없다」가 아니라 «확인한 범위에서 못 찾았다» 로 적혀 있습니다`)
++  check(/184~257/.test(doc), `⚠️ 아직 못 본 쪽 범위가 적혀 있습니다`)
++  // ★되살릴 길을 남겼는가
++  check(/되살리십시오|되살릴 수 있습니다/.test(doc), `★쪽이 확인되면 되살리라고 일러 둡니다`)
++  // ⚠️ 토가 빠진 것을 «숨기지 않았는가»
++  check(/토\(45쪽/.test(doc), `⚠️ 토가 산식에서 빠졌다는 것을 적어 두었습니다`)
++
++  // ⚠️ 다른 엔진을 «건드리지 않았는가»
++  check(/import \{ calcCareerScore \}/.test(m) && /import \{ yukchinOf \}/.test(m)
++     && /import \{ checkSinsal9 \}/.test(m), `⚠️ 다른 엔진은 «부르기만» 합니다`)
++
++  // ⚠️ 자(尺)는 verify 체인에 «없는가»
++  const pkg4 = JSON.parse(read('package.json'))
++  check(!/34-measure/.test(pkg4.scripts.verify), `⚠️ 자(尺)는 verify 체인에 «없습니다»`)
++  check(/measure:mbti/.test(JSON.stringify(pkg4.scripts)), `npm run measure:mbti 로 잽니다`)
++  // ★옛 산식이 자 안에 «남아 있는가» — 잣대가 함께 움직이면 안 됩니다
++  const mm = read('34-measure-saju-mbti.ts')
++  check(/function code0\(b: Bag\)/.test(mm), `★옛 산식이 자 안에 붙박여 있습니다 (잣대 보존)`)
++  check(/어긋난 건수/.test(mm), `★자가 «실제 파일과 같은 답인지» 맞대어 봅니다`)
++}
++
+ console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
+ {
+   const src = read('lib/saju/simsanOhaeng.ts')
+diff --git a/34-measure-saju-mbti.ts b/34-measure-saju-mbti.ts
+new file mode 100644
+index 0000000..44a3ef3
+--- /dev/null
++++ b/34-measure-saju-mbti.ts
+@@ -0,0 +1,316 @@
++// 34-measure-saju-mbti.ts
++//
++// ┌───────────────────────────────────────────────────────────────┐
++// │  사주 MBTI 산식 — «무엇을 얼마나» 바꾸는가. 자(尺)입니다        │
++// └───────────────────────────────────────────────────────────────┘
++//
++//  ★2026-08-03 — 교재 대조로 드러난 세 가지를 재기 위해 지었습니다.
++//    ⚠️ 이것은 «검사» 가 아니라 «자» 입니다. verify 체인에 넣지 마십시오.
++//       배포가 느려지고, 임의 표본이라 값이 조금씩 흔들립니다.
++//
++//  쓰는 법   npm run measure:mbti
++//
++//  ══ 무엇을 견주는가 ══
++//   후보0   지금 산식 (2026-07-29 대표님 확정본을 그대로 옮긴 코드)
++//   후보A   ★오행·육친 «이중 계산» 풀기      — 교재 40쪽
++//   후보C1  ★50점 문턱 뚜껑                  — 교재 25·259쪽
++//   후보D   ★근거 없는 셋 빼기               — 관성(S) · 화(N) · 백호(T)
++//   ★확정   A + C1 + D  (2026-08-03 대표님 지시)
++//
++//  ⚠️⚠️ 이 파일은 «재기만» 합니다.
++//     sajuMbti.ts 를 비롯한 어떤 엔진도 «고치지 않습니다».
++//     후보들은 이 파일 «안» 에 따로 구현해 견줍니다.
++//
++//  ⚠️ 표본은 «임의로 지은» 사주입니다. 손님 기록을 쓰지 «않습니다».
++
++import { calcSajuMbti } from './lib/saju/career/sajuMbti'
++import { calcCareerScore } from './lib/saju/career/careerScore'
++import { yukchinOf } from './lib/saju/career/yukchin'
++import { checkSinsal9 } from './lib/saju/career/sinsal9'
++import type { Ohaeng, Pillar } from './lib/saju/career/types'
++
++const GAN = '甲乙丙丁戊己庚辛壬癸'.split('')
++const JI = '子丑寅卯辰巳午未申酉戌亥'.split('')
++const EL5: Ohaeng[] = ['목', '화', '토', '금', '수']
++
++/** 월지 → 양력 한가운데 날짜 (절기 경계를 피해 가운데로) — 31-measure 와 같은 표 */
++const SOLAR: Record<string, [number, number]> = {
++  寅: [2, 20], 卯: [3, 20], 辰: [4, 20], 巳: [5, 20], 午: [6, 20], 未: [7, 20],
++  申: [8, 20], 酉: [9, 20], 戌: [10, 20], 亥: [11, 20], 子: [12, 20], 丑: [1, 20],
++}
++
++const YANG_STEM = new Set(['甲', '丙', '戊', '庚', '壬'])
++/** ★음양 «비율» 을 셀 때 — 교재 260쪽 양팔통 사례(甲辰·甲戌·壬寅·庚子)가 子를 양으로 봅니다 */
++const YANG_BRANCH = new Set(['子', '寅', '辰', '午', '申', '戌'])
++/** ★십성을 가릴 때 — 교재 48쪽 도표(지지의 본기 천간). 子=癸(음) · 午=丁(음) */
++const BRANCH_BONGI: Record<string, string> = {
++  子: '癸', 丑: '己', 寅: '甲', 卯: '乙', 辰: '戊', 巳: '丙',
++  午: '丁', 未: '己', 申: '庚', 酉: '辛', 戌: '戊', 亥: '壬',
++}
++const STEM_EL: Record<string, Ohaeng> = {
++  甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토',
++  己: '토', 庚: '금', 辛: '금', 壬: '수', 癸: '수',
++}
++
++const R = (n: number) => Math.floor(Math.random() * n)
++const pc = (x: number, n: number) => (x / n * 100).toFixed(2) + '%'
++
++/** ★60갑자에 «실재하는» 짝만 씁니다 (양간-양지 / 음간-음지) */
++function gapja(i: number): { stem: string; branch: string } {
++  return { stem: GAN[i % 10], branch: JI[i % 12] }
++}
++
++// ══════════════════════════════════════════════════════════════
++//  후보 산식들 — ★이 파일 «안» 에만 있습니다
++// ══════════════════════════════════════════════════════════════
++
++interface Bag {
++  S: Record<Ohaeng, number>   // 오행 100점
++  Y: Record<string, number>   // 육친 묶음 점수
++  yangPt: number; eumPt: number
++  yangin: number; baekho: number; dohwa: number
++  jeongJae: number; pyeonJae: number
++}
++
++/** 재료 모으기 — ★엔진을 «부르기만» 합니다 */
++function gather(saju: Pillar[], sm: number, sd: number, hb: string, useBongi: boolean): Bag {
++  const r = calcCareerScore(saju, sm, sd, hb)
++  const S = r.score as Record<Ohaeng, number>
++  const dayStem = saju.find(p => p.pillar === '일주')?.stem ?? ''
++  const dayEl = STEM_EL[dayStem] ?? '토'
++
++  const Y: Record<string, number> = { 비겁: 0, 식상: 0, 재성: 0, 관성: 0, 인성: 0 }
++  for (const el of EL5) Y[yukchinOf(dayEl, el)] += S[el] ?? 0
++
++  let yang = 0, eum = 0
++  for (const p of saju) {
++    if (p.stem && p.stem !== '?') { if (YANG_STEM.has(p.stem)) yang++; else eum++ }
++    if (p.branch && p.branch !== '?') { if (YANG_BRANCH.has(p.branch)) yang++; else eum++ }
++  }
++
++  const hits = checkSinsal9(saju)
++  const has = (n: string) => hits.some(h => h.name.includes(n))
++
++  // ── 정재/편재 가르기 ──
++  const dayYang = YANG_STEM.has(dayStem)
++  let jJ = 0, jP = 0
++  for (const p of saju) {
++    // 천간
++    for (const ch of [p.stem]) {
++      if (!ch || ch === '?') continue
++      const el = STEM_EL[ch]; if (!el) continue
++      if (yukchinOf(dayEl, el) !== '재성') continue
++      if (YANG_STEM.has(ch) !== dayYang) jJ++; else jP++
++    }
++    // ★지지 — 후보B(확정안에 포함)에서만 셉니다. 48쪽 본기 천간으로 봅니다
++    if (useBongi) {
++      const ch = p.branch
++      if (!ch || ch === '?') continue
++      const bg = BRANCH_BONGI[ch]; if (!bg) continue
++      const el = STEM_EL[bg]; if (!el) continue
++      if (yukchinOf(dayEl, el) !== '재성') continue
++      if (YANG_STEM.has(bg) !== dayYang) jJ++; else jP++
++    }
++  }
++  const tot = Math.max(1, jJ + jP)
++  return {
++    S, Y, yangPt: yang * 6, eumPt: eum * 6,
++    yangin: has('양인') ? 10 : 0, baekho: has('백호') ? 10 : 0, dohwa: has('도화') ? 12 : 0,
++    jeongJae: (Y['재성'] * jJ) / tot, pyeonJae: (Y['재성'] * jP) / tot,
++  }
++}
++
++const sum = (a: number[]) => a.reduce((x, y) => x + y, 0)
++/** 지금 방식 — 바닥 15% 를 깔고 비율을 냅니다 */
++function pick(L: number, Rr: number, left: string, right: string): string {
++  const floor = (L + Rr) * 0.15 || 1
++  return (L + floor) / (L + floor + Rr + floor) >= 0.5 ? left : right
++}
++/** ★후보C-1 — 50점 넘는 몫은 «세지 않습니다» (교재 259쪽 「50점 이상은 단점으로 발현」) */
++const cap = (v: number) => Math.min(v, 50)
++
++/**
++ * 후보0 — ★«옛» 산식 (2026-08-03 이전).
++ *
++ *  ⚠️⚠️ 일부러 이 파일 «안» 에 붙박아 두었습니다.
++ *    sajuMbti.ts 를 부르면, 그 파일이 바뀌는 순간 «잣대가 함께 움직여»
++ *    무엇이 얼마나 달라졌는지 영영 알 수 없게 됩니다.
++ *    ★옛 모습은 여기 남겨 둡니다. 지우지 마십시오.
++ *  ⚠️ 옛 산식은 지지를 안 세었으므로 bagPlain(useBongi=false)을 받습니다.
++ */
++function code0(b: Bag): string {
++  return pick(sum([b.yangPt, b.S['화'], b.S['목'], b.Y['식상'], b.Y['비겁']]),
++    sum([b.eumPt, b.S['수'], b.S['금'], b.Y['인성']]), 'E', 'I')
++    + pick(sum([b.Y['재성'], b.Y['관성'], b.S['토']]),
++      sum([b.Y['식상'], b.Y['인성'], b.S['화']]), 'S', 'N')
++    + pick(sum([b.S['금'], b.Y['관성'], b.yangin + b.baekho]),
++      sum([b.S['수'], b.S['목'], b.Y['인성'], b.dohwa]), 'T', 'F')
++    + pick(sum([b.Y['관성'], b.jeongJae]),
++      sum([b.Y['비겁'], b.Y['식상'], b.pyeonJae]), 'J', 'P')
++}
++
++/**
++ * ★확정안 — A(이중계산 풀기) + C-1(50점 뚜껑) + D(근거 없는 셋 빼기)
++ *
++ *  ⚠️⚠️ 「층 건너뛰기」가 «핵심» 입니다.
++ *    A 는 오행 몫·육친 몫·음양 몫을 «따로» 재서 평균 냅니다 (교재 40쪽).
++ *    그런데 D 로 재료를 빼면 «한쪽에 아무것도 없는 층» 이 생깁니다.
++ *      예) S축 오행 층 — S 쪽에 土, N 쪽에 ★아무것도 없음
++ *    그 층을 그대로 세면 «土가 조금만 있어도 언제나 S» 가 됩니다.
++ *    ⇒ ★대립이 서지 않는 층은 «세지 않습니다».
++ *    (skip=false 로 두면 어떤 일이 나는지 아래 「확정안-β」로 재 두었습니다)
++ */
++function codeFinal(b: Bag, skip: boolean, mean = false): string {
++  const c = cap
++  const axis = (
++    oL: number[], oR: number[], yL: number[], yR: number[], sL: number[], sR: number[],
++    left: string, right: string,
++  ) => {
++    const parts: number[] = []
++    const layer = (L: number[], Rr: number[]) => {
++      // ★한쪽에 재료가 «없으면» 대립이 아닙니다 — 그 층은 건너뜁니다
++      if (skip && (L.length === 0 || Rr.length === 0)) return
++      // ★mean — 성분 «개수» 가 아니라 «세기» 로 견줍니다.
++      //   D 로 재료를 빼면 한쪽 성분이 둘, 다른 쪽이 하나가 되어
++      //   «많은 쪽이 그냥 이기는» 일이 생깁니다. 그것을 막습니다.
++      const l = mean && L.length ? sum(L) / L.length : sum(L)
++      const r = mean && Rr.length ? sum(Rr) / Rr.length : sum(Rr)
++      if (l + r <= 0) return
++      const f = (l + r) * 0.15
++      parts.push((l + f) / (l + f + r + f))
++    }
++    layer(oL, oR); layer(yL, yR); layer(sL, sR)
++    const p = parts.length ? sum(parts) / parts.length : 0.5
++    // ★화면이 「81 : 19」로 «반올림한» 값을 보이므로, 고르는 것도 그 값으로 합니다.
++    //   ⚠️ p >= 0.5 로 고르면 49.7% 인 분이 화면엔 50 인데 오른쪽으로 갑니다.
++    //      실측 128/5000(2.56%)이 그 경계에 걸렸습니다.
++    return Math.round(p * 100) >= 50 ? left : right
++  }
++  return axis(
++    [c(b.S['화']), c(b.S['목'])], [c(b.S['수']), c(b.S['금'])],
++    [c(b.Y['식상']), c(b.Y['비겁'])], [c(b.Y['인성'])],
++    [b.yangPt], [b.eumPt], 'E', 'I')
++    // ★D — S 쪽 관성 · N 쪽 화를 뺐습니다 ⇒ 오행 층이 «한쪽뿐» 이라 건너뜁니다
++    + axis([c(b.S['토'])], [], [c(b.Y['재성'])], [c(b.Y['식상']), c(b.Y['인성'])], [], [], 'S', 'N')
++    // ★D — T 쪽 백호를 뺐습니다
++    + axis([c(b.S['금'])], [c(b.S['수']), c(b.S['목'])],
++      [c(b.Y['관성'])], [c(b.Y['인성'])], [b.yangin], [b.dohwa], 'T', 'F')
++    + axis([], [], [c(b.Y['관성']), c(b.jeongJae)],
++      [c(b.Y['비겁']), c(b.Y['식상']), c(b.pyeonJae)], [], [], 'J', 'P')
++}
++
++/** 후보A 만 — 이중 계산만 풀고 나머지는 지금대로 */
++function codeA(b: Bag): string {
++  const axis = (
++    oL: number[], oR: number[], yL: number[], yR: number[], eL: number, eR: number,
++    left: string, right: string,
++  ) => {
++    const parts: number[] = []
++    const ratio = (l: number, r: number) => {
++      if (l + r <= 0) return null
++      const f = (l + r) * 0.15
++      return (l + f) / (l + f + r + f)
++    }
++    for (const [l, r] of [[sum(oL), sum(oR)], [sum(yL), sum(yR)], [eL, eR]] as Array<[number, number]>) {
++      const v = ratio(l, r); if (v !== null) parts.push(v)
++    }
++    const p = parts.length ? sum(parts) / parts.length : 0.5
++    return p >= 0.5 ? left : right
++  }
++  return axis([b.S['화'], b.S['목']], [b.S['수'], b.S['금']],
++    [b.Y['식상'], b.Y['비겁']], [b.Y['인성']], b.yangPt, b.eumPt, 'E', 'I')
++    + axis([b.S['토']], [b.S['화']], [b.Y['재성'], b.Y['관성']], [b.Y['식상'], b.Y['인성']], 0, 0, 'S', 'N')
++    + axis([b.S['금']], [b.S['수'], b.S['목']], [b.Y['관성']], [b.Y['인성']],
++      b.yangin + b.baekho, b.dohwa, 'T', 'F')
++    + axis([], [], [b.Y['관성'], b.jeongJae], [b.Y['비겁'], b.Y['식상'], b.pyeonJae], 0, 0, 'J', 'P')
++}
++
++/** 후보C1 만 — 지금 산식에 50점 뚜껑만 */
++function codeC1(b: Bag): string {
++  const c = cap
++  return pick(sum([b.yangPt, c(b.S['화']), c(b.S['목']), c(b.Y['식상']), c(b.Y['비겁'])]),
++    sum([b.eumPt, c(b.S['수']), c(b.S['금']), c(b.Y['인성'])]), 'E', 'I')
++    + pick(sum([c(b.Y['재성']), c(b.Y['관성']), c(b.S['토'])]),
++      sum([c(b.Y['식상']), c(b.Y['인성']), c(b.S['화'])]), 'S', 'N')
++    + pick(sum([c(b.S['금']), c(b.Y['관성']), b.yangin + b.baekho]),
++      sum([c(b.S['수']), c(b.S['목']), c(b.Y['인성']), b.dohwa]), 'T', 'F')
++    + pick(sum([c(b.Y['관성']), c(b.jeongJae)]),
++      sum([c(b.Y['비겁']), c(b.Y['식상']), c(b.pyeonJae)]), 'J', 'P')
++}
++
++/** 후보D 만 — 근거 없는 셋만 빼고 나머지는 지금대로 */
++function codeD(b: Bag): string {
++  return pick(sum([b.yangPt, b.S['화'], b.S['목'], b.Y['식상'], b.Y['비겁']]),
++    sum([b.eumPt, b.S['수'], b.S['금'], b.Y['인성']]), 'E', 'I')
++    + pick(sum([b.Y['재성'], b.S['토']]), sum([b.Y['식상'], b.Y['인성']]), 'S', 'N')
++    + pick(sum([b.S['금'], b.Y['관성'], b.yangin]),
++      sum([b.S['수'], b.S['목'], b.Y['인성'], b.dohwa]), 'T', 'F')
++    + pick(sum([b.Y['관성'], b.jeongJae]),
++      sum([b.Y['비겁'], b.Y['식상'], b.pyeonJae]), 'J', 'P')
++}
++
++// ══════════════════════════════════════════════════════════════
++
++const N = Number(process.env.N ?? 5000)
++const CANDS = ['후보0 (지금)', '후보A 이중계산', '후보C1 50점뚜껑', '후보D 셋빼기', '★확정 A+C1+D', '확정안-β 층안건넘', '★확정안-γ 세기평균']
++const dist: Array<Record<string, number>> = CANDS.map(() => ({}))
++const flip = [0, 0, 0, 0, 0, 0, 0]
++let mismatch = 0
++const axisFlip = CANDS.map(() => [0, 0, 0, 0])
++
++for (let i = 0; i < N; i++) {
++  const idx = [R(60), R(60), R(60), R(60)]
++  const names = ['년주', '월주', '일주', '시주']
++  const saju: Pillar[] = idx.map((v, k) => ({ pillar: names[k], ...gapja(v) }))
++  const mb = saju[1].branch, hb = saju[3].branch
++  const [sm, sd] = SOLAR[mb]
++
++  const bagPlain = gather(saju, sm, sd, hb, false)
++  const bagBongi = gather(saju, sm, sd, hb, true)
++  const base = code0(bagPlain)
++  // ★맞대보기 — «실제 파일» 이 γ 와 같은 답을 내는가
++  if (calcSajuMbti(saju, sm, sd, hb).code !== codeFinal(bagBongi, true, true)) mismatch++
++
++  const codes = [base, codeA(bagPlain), codeC1(bagPlain), codeD(bagPlain),
++    codeFinal(bagBongi, true), codeFinal(bagBongi, false),
++    codeFinal(bagBongi, true, true)]
++  codes.forEach((c, k) => {
++    dist[k][c] = (dist[k][c] ?? 0) + 1
++    if (k > 0) {
++      if (c !== base) flip[k]++
++      for (let a = 0; a < 4; a++) if (c[a] !== base[a]) axisFlip[k][a]++
++    }
++  })
++}
++
++const ALL16 = ['ISTJ', 'ISFJ', 'INFJ', 'INTJ', 'ISTP', 'ISFP', 'INFP', 'INTP',
++  'ESTP', 'ESFP', 'ENFP', 'ENTP', 'ESTJ', 'ESFJ', 'ENFJ', 'ENTJ']
++
++console.log(`\n━━ 사주 MBTI 산식 자(尺) — 표본 ${N.toLocaleString()}벌 ━━`)
++console.log('⚠️ 임의로 지은 사주입니다(60갑자 실재 짝). 손님 기록이 아닙니다.\n')
++
++CANDS.forEach((name, k) => {
++  const d = dist[k]
++  const shown = ALL16.filter(t => d[t])
++  const top = ALL16.map(t => [t, d[t] ?? 0] as const).sort((a, b) => b[1] - a[1])
++  console.log(`── ${name}`)
++  console.log(`   나온 유형        ${shown.length} / 16`)
++  console.log(`   가장 많은 유형    ${top[0][0]} ${pc(top[0][1], N)}`)
++  console.log(`   위 셋 합          ${pc(top[0][1] + top[1][1] + top[2][1], N)}`)
++  if (k > 0) {
++    console.log(`   ★유형 뒤집힘      ${pc(flip[k], N)}`)
++    console.log(`   축별 뒤집힘       E/I ${pc(axisFlip[k][0], N)} · S/N ${pc(axisFlip[k][1], N)}`
++      + ` · T/F ${pc(axisFlip[k][2], N)} · J/P ${pc(axisFlip[k][3], N)}`)
++  }
++  console.log('')
++})
++
++console.log(`━━ ★맞대보기 — 실제 sajuMbti.ts 와 γ 가 «같은 답» 인가 ━━`)
++console.log(`   어긋난 건수  ${mismatch} / ${N}  ${mismatch === 0 ? '✅ 같습니다' : '🔴 다릅니다'}\n`)
++
++console.log('━━ 16유형 분포 (%) ━━')
++console.log('유형     ' + CANDS.map(c => c.slice(0, 8).padStart(9)).join(''))
++for (const t of ALL16) {
++  console.log(t.padEnd(9) + CANDS.map((_, k) => pc(dist[k][t] ?? 0, N).padStart(9)).join(''))
++}
++console.log('')
+diff --git a/README-44BU-27-INSTALL.md b/README-44BU-27-INSTALL.md
+new file mode 100644
+index 0000000..dfb0dc9
+--- /dev/null
++++ b/README-44BU-27-INSTALL.md
+@@ -0,0 +1,256 @@
++# 44부 27차 — 사주 MBTI 산식을 «교재 대조로» 고침 (A + C-1 + D + γ)
++
++```
++기준 커밋   cc2b75f  (44부 26차까지 올라간 상태)
++검사        1,785 → ★1,808건 · 실패 0   (오행·용신 그물 349 → 372 · ㊻ 신설)
++타입        npx tsc --noEmit 통과
++eslint      오류 82 · 경고 138  (기준선 그대로)
++변경        수정 3 · 신규 1 = 4 파일
++⚠️ 빌드     ★제 쪽에서 «확인 못 했습니다» — 구글 폰트가 막힌 자리 (25·26차와 같음)
++```
++
++## 넣는 법
++
++```bash
++cd myjae
++unzip -o ../myjae-44bu-27-20260803.zip
++git status --porcelain      # ★ M 세 줄 + ?? 두 줄
++npm run verify              # 실패 0 · 오행·용신 372
++npx tsc --noEmit
++npm run measure:mbti        # ★맞대보기 「어긋난 건수 0 / 5000 ✅」이 나와야 합니다
++★npm run build
++git add -A
++git commit -m "사주 MBTI 산식을 교재 대조로 고침 — A+C-1+D+γ (44부 27차)"
++git push
++```
++
++---
++
++# ⚠️ 먼저 — 제가 바로잡은 잘못
++
++앞선 보고에서 **「ENFP 21.4% · 16유형 중 9개」**라는 숫자를 적었습니다.
++**★그것은 표 모양을 보이려고 «제가 지어낸» 숫자였습니다.** 측정한 적이 없었습니다.
++44부 교훈 1-4 를 제가 또 어겼습니다. 대표님께 그대로 아뢰고 바로잡았습니다.
++
++★**아래 숫자는 전부 실제로 잰 것입니다.** `npm run measure:mbti` 로 다시 재실 수 있습니다.
++
++---
++
++# 무엇이 문제였나 — 교재 열두 번 대조
++
++노트북LM 에 열한 번 물어 네 축 스물세 성분을 교재와 맞대어 보았습니다.
++
++```
++축     근거 있음                          🔴근거 못 찾음
++────  ────────────────────────────────  ──────────────────
++E↔I   양·목화/음·금수 260쪽 · 비겁 활동성   —
++S↔N   재성 111 · 식상 109 · 인성 115·130    ★관성 · ★화
++T↔F   금 23·25 · 목 20 · 양인 96 · 도화 94  ★백호
++J↔P   관성 112·113 · 정재 111·43 · 식상 124 —
++```
++
++그리고 **뼈대 셋이 교재와 어긋나 있었습니다.**
++
++```
++🔴 40쪽  "오행과 육친을 «분리해서» 해석해야 하는데 … 오류가 발생한다"
++         ⇒ 지금은 한 줄에 «더하고» 있었습니다. 게다가 육친 점수는 오행 점수를
++           그대로 부은 것이라, ★같은 55점이 한 축에 «두 번» 실렸습니다.
++🔴 259쪽 "점수가 50점 이상이 되면 … 장점보다는 단점으로 발현이 된다"
++         ⇒ 지금은 «클수록 더 세게 밀기만» 했습니다.
++🔴 36·159쪽 "지지는 현실적·실질적(60~70%)"
++         ⇒ 정재·편재를 가를 때 지지를 ★«한 글자도» 세지 않았습니다.
++```
++
++---
++
++# ★무엇을 했나
++
++## A — 오행 몫 · 육친 몫 · 음양 몫을 «층으로» 갈랐습니다 (40쪽)
++
++```
++전   E = 양의기운 + 화 + 목 + 식상 + 비겁      ← 한 줄에 섞여 있었습니다
++★후  오행 층   화·목  ↔  수·금
++     육친 층   식상·비겁  ↔  인성
++     음양 층   양의기운  ↔  음의기운
++     ⇒ ★세 층을 «따로» 재서 평균 냅니다. 이중 계산이 사라집니다.
++```
++
++## C-1 — 50점 넘는 몫은 «세지 않습니다» (259·25쪽)
++
++```
++const cap = (v: number) => Math.min(v, 50)
++```
++
++⚠️ 교재는 「단점이 된다」고만 하지 **«반대 성향이 된다» 고 하지 않습니다.**
++그래서 **뒤집지 않고 멈추기만** 합니다. 뒤집는 것은 우리 발명이 됩니다.
++⚠️ 실효는 작습니다(측정 1.68%). **그래도 교재 근거가 가장 분명한 자리**입니다.
++
++## D — 교재에서 «못 찾은» 셋을 뺐습니다
++
++```
++S쪽 관성   「현실적」이 관성에 없습니다 (144쪽 「현실 감각」은 ★«정인격» 의 말)
++N쪽 화     화는 "열정·표현·예의·행동"(21·25쪽). 상상력·직관이 아닙니다
++T쪽 백호   95쪽은 «성격» 을 말하지 않습니다 ("큰 사주·활동을 크게" 뿐)
++```
++
++⚠️⚠️ **「교재에 없다」가 아니라 「확인한 범위에서 못 찾았다」입니다.**
++노트북LM 소스에 **184~257쪽 대부분이 빠져 있습니다.** 코드 주석에 그렇게 적었고,
++**쪽이 확인되면 되살리라**고 일러 두었습니다.
++
++## ★γ — 층 안에서 «합» 이 아니라 «세기 평균» 으로 견줍니다
++
++🔴 **지시하신 A+C-1+D 를 그대로 넣으니 «더 나빠졌습니다».**
++
++```
++D 로 화를 빼자 S/N 의 오행 층이 「토 ↔ 아무것도 없음」이 되고,
++육친 층은 「재성 ↔ 식상+인성」으로 ★1 대 2 가 되었습니다.
++⇒ ★성분이 «많은 쪽» 이 그냥 이깁니다.
++[실측] ENFP 24.86% → ★29.40% 로 «더 몰렸습니다»
++```
++
++★그래서 **층 안에서 성분 하나당 평균으로** 견줍니다. 재료를 빼도 축이 기울지 않습니다.
++
++```
++[실측] ENFP 24.86% → ★16.74%
++```
++
++⚠️⚠️ **γ 는 교재에 없습니다. 우리가 정한 것입니다.** (2026-08-03 대표님 승인)
++
++## ★층 건너뛰기 — 한쪽이 빈 층은 «세지 않습니다»
++
++```
++「토 ↔ 아무것도 없음」을 그대로 세면 «토가 조금만 있어도 언제나 S» 가 됩니다.
++[실측] 그렇게 하면 ESFP 가 ★36.32% 까지 몰립니다 (확정안-β)
++```
++
++⚠️⚠️ **그 바람에 토(45쪽 "실질적")가 산식에서 «빠졌습니다».**
++교재 근거가 있는 재료인데 자리를 잃은 것입니다. **숨기지 않고 코드에 적어 두었습니다.**
++★184~257쪽에서 N 쪽 오행 재료가 나오면 층을 되살리고 토를 넣으십시오.
++
++## B — 정재·편재에 «지지도» 넣었습니다 (36·159·259쪽)
++
++```
++전   천간 넉 자만. 지지는 «한 글자도» 안 셈
++★후  여덟 자를 다 셈. 지지는 ★48쪽 «본기 천간» 으로 봄
++       子=癸(음) · 午=丁(음) …
++     근거: ★96쪽이 壬 일간의 양인(겁재)을 子라 합니다.
++           壬(양)의 겁재는 «음» 이라야 하므로 子를 癸(음)로 본 것입니다.
++```
++
++### ⚠️⚠️ 한 파일에 지지 음양표가 «둘» 입니다 — 합치지 마십시오
++
++```
++음양 «비율» 을 셀 때   YANG_BRANCH (子=★양)
++   근거: 260쪽 사례 ★甲辰·甲戌·壬寅·庚子 를 «양팔통» 이라 부릅니다.
++        ★子가 있는데도 양팔통이라 했으므로, 비율을 셀 때는 子가 양입니다.
++십성 을 가릴 때        BRANCH_BONGI (子=癸 ★음)
++   근거: 48쪽 도표 · 96쪽 양인 壬→子
++
++★쓰임이 다르면 잣대도 다릅니다. (지장간 표를 «일부러» 둘 둔 것과 같은 결)
++⚠️ 코드에도 「하나로 합치지 마십시오」라 적었고, ★검사 ㊻ 가 둘 다 살아 있는지 봅니다.
++```
++
++---
++
++# ★실측 — 표본 5,000벌
++
++```
++                        가장 많은 유형   위 셋 합   나온 유형   유형 뒤집힘
++후보0 (옛 산식)          ENFP 24.86%     48.56%     16/16         —
++후보A 이중계산만          ENFP 19.76%       …        16/16      31.4%
++후보C-1 50점 뚜껑만       ENFP 24.82%       …        16/16       1.7%
++후보D 셋 빼기만           ENFP 22.68%     55.40%     16/16      23.7%
++🔴A+C-1+D («합» 으로)     ENFP 29.40%     56.58%     16/16      44.6%   ← ★더 나빠짐
++🔴확정안-β (층 안 건넘)    ESFP 36.32%     65.04%     16/16      62.2%   ← 최악
++★확정 A+C-1+D+γ          ENFP ★16.74%    ★39.76%    16/16      52.4%
++```
++
++## ★잘 안 나오던 유형이 살아났습니다
++
++```
++유형    옛 산식      ★새 산식      변화
++INTJ    0.60%   →   3.36%      ★5.6배
++INFJ    1.50%   →   4.58%      ★3.1배
++INTP    1.34%   →   2.28%
++ENTJ    1.62%   →   3.54%
++ENFJ    1.24%   →   2.58%
++ENFP   24.86%   →  16.74%      ★쏠림이 풀렸습니다
++ESFP   13.40%   →  10.08%
++```
++
++⚠️ 「16 중 16」은 옛 산식도 그랬습니다. 다만 **0.6% 짜리는 «사실상 안 나오는» 것**입니다.
++INTJ 가 다섯 배 넘게 늘어난 것이 이번 손질의 알맹이입니다.
++
++## ⚠️ 정직하게 — 유형 뒤집힘 52.36%
++
++★**두 분 중 한 분의 네 글자가 바뀝니다.** 이미 결과를 보신 손님이 다시 보면 다른 유형이 나옵니다.
++⚠️ 손님께 알릴지 대표님이 정해 주십시오. 화면에는 「재미로 보는 참고」가 이미 적혀 있습니다.
++
++## ⚠️ 표본의 한계
++
++```
++임의로 지은 사주 5,000벌 (60갑자 실재 짝) — ★손님 기록을 쓰지 않았습니다
++⚠️ 실제 출생 분포와는 다릅니다. 절대값이 아니라 «옛것과 새것의 차이» 로 읽으십시오
++```
++
++---
++
++# ⚠️ 손댄 범위 — 지시하신 대로
++
++```
++✅ lib/saju/career/sajuMbti.ts     ★산식만
++✅ 32-verify-hour-convert.ts       ㊻ 그물 신설
++✅ package.json                    measure:mbti 한 줄
++✅ 34-measure-saju-mbti.ts         신설 (자)
++
++⛔ 건드리지 «않은» 것 — 부르기만 합니다
++   careerScore · yukchinOf · checkSinsal9 · simsanOhaeng · yongsinNew ·
++   dayun(지지 음양표 子=음) · roleFit · coupleFilterV1 · couple/* …
++★검사 ㊻ 가 「다른 엔진은 부르기만 하는가」를 봅니다.
++```
++
++## ★자(尺)에 «옛 산식» 을 붙박아 두었습니다
++
++```
++34-measure-saju-mbti.ts 의 code0() 은 ★옛 산식을 그대로 옮긴 것입니다.
++⚠️⚠️ sajuMbti.ts 를 부르게 하면, 그 파일이 바뀌는 순간 «잣대가 함께 움직여»
++   무엇이 얼마나 달라졌는지 영영 알 수 없게 됩니다. ★지우지 마십시오.
++
++★그리고 자가 «실제 파일과 같은 답인지» 5,000벌로 맞대어 봅니다 —
++   「어긋난 건수 0 / 5000 ✅ 같습니다」
++   ⚠️ 여기서 어긋나면 산식과 자가 갈라진 것입니다. 반드시 맞추십시오.
++```
++
++⚠️ 맞대어 보다가 결함 하나를 잡았습니다 — **반올림 경계**입니다.
++화면은 「81 : 19」로 **반올림한** 값을 보이는데 고르는 것은 반올림 «전» 값이라,
++**49.7% 인 분이 화면엔 50 인데 오른쪽으로 가고 있었습니다**(5,000 중 128, 2.56%).
++★화면과 같은 값으로 고르도록 맞췄습니다.
++
++---
++
++# ⬜ 배포 후 실기 확인
++
++```
++□ ★진로적성 결과 → 「사주로 본 성향」 카드가 그려지는지
++□ ★네 축 막대와 아래 근거 한 줄이 나오는지
++□ ⚠️ 「양인·백호」가 아니라 ★「양인」으로 나오는지 (백호를 뺐습니다)
++□ ⚠️ S/N 줄 근거에 ★「관성」·「화」가 «없는지»
++□ ★실제 MBTI 를 넣었을 때 견주기 카드가 그대로 나오는지
++□ 「재미로 보는 참고예요」 문구가 그대로 있는지
++```
++
++---
++
++# 🔴 남은 일 · 여쭐 것
++
++```
++□ 🔴 노트북LM 소스에 ★184~257쪽 채우기
++   ⇒ 관성=현실적 · 화=상상력 · 백호의 성격이 «거기 있을 수» 있습니다.
++     나오면 D 로 뺀 셋을 되살리고, 토가 빠진 S/N 오행 층도 되살립니다.
++□ 교재 사진 ★27·40·259쪽 — 「4개 이상 / 50점 이상 = 과다」 문턱
++   ⇒ 인수인계서 6-5장에 「교재에 없음」이라 적혀 있는데 ★쪽수까지 나왔습니다.
++   ⚠️ simsanOhaeng.ts 는 «손대지 않습니다». 근거만 적어 둘 것입니다.
++□ 🔴 「"요즘 어때, 괜찮아?" 중복」 — step8Timeline.ts:235
++□ 「六 대화와 역할」 짓기 (step6Roles)
++□ ⚠️ 유형 뒤집힘 52.36% — 이미 보신 손님께 알릴지 여쭙습니다
++```
+diff --git a/lib/saju/career/sajuMbti.ts b/lib/saju/career/sajuMbti.ts
+index bc3e5da..ac8ae02 100644
+--- a/lib/saju/career/sajuMbti.ts
++++ b/lib/saju/career/sajuMbti.ts
+@@ -69,6 +69,18 @@ const STEM_EL: Record<string, Ohaeng> = {
+   甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토',
+   己: '토', 庚: '금', 辛: '금', 壬: '수', 癸: '수',
+ }
++/**
++ * ★지지의 «본기 천간» — 교재 48쪽 도표 (2026-08-03 확인)
++ *
++ *  ⚠️⚠️ 위 YANG_BRANCH 와 «다른 것을 잽니다». 하나로 합치지 마십시오.
++ *    음양 «비율» 을 셀 때   → YANG_BRANCH (子=양)  — 260쪽 양팔통 사례 甲辰·甲戌·壬寅·庚子
++ *    ★십성 을 가릴 때       → 이 표 (子=癸 음)      — 48쪽 도표 · 96쪽 壬 양인=子
++ *  ★쓰임이 다르면 잣대도 다릅니다. (지장간 표를 «일부러» 둘 둔 것과 같은 결)
++ */
++const BRANCH_BONGI: Record<string, string> = {
++  子: '癸', 丑: '己', 寅: '甲', 卯: '乙', 辰: '戊', 巳: '丙',
++  午: '丁', 未: '己', 申: '庚', 酉: '辛', 戌: '戊', 亥: '壬',
++}
+ 
+ /** 16유형 칭호 — 사주 결로 지은 이름입니다 (MBTI 공식 명칭이 아닙니다) */
+ const TITLE: Record<string, string> = {
+@@ -118,78 +130,173 @@ export function calcSajuMbti(
+   // ── 신살 — 양인·백호 / 도화 ──
+   const hits = checkSinsal9(saju)
+   const hasName = (n: string) => hits.some(h => h.name.includes(n))
+-  const yanginBaekho = (hasName('양인') ? 10 : 0) + (hasName('백호') ? 10 : 0)
++  const yangin = hasName('양인') ? 10 : 0
++  // ⚠️ 2026-08-03 (44부 27차) — ★백호를 «뺐습니다».
++  //    교재 95쪽은 백호의 «성격» 을 말하지 않습니다 ("2~3개 이상이면 큰 사주이고
++  //    활동을 크게 해야 함" 뿐). 양인과 같은 10점을 준 것은 근거가 없었습니다.
++  //    ★184~257쪽에서 백호의 성격 설명이 나오면 되살리십시오.
+   const dohwa = hasName('도화') ? 12 : 0
+ 
+-  // ── 정재/편재 · 정관/편관 가르기 ──
+-  //   교재식으로 «일간과 음양이 같으면 편, 다르면 정»입니다.
+-  //   재성·관성 점수를 그 비율로 나눠 씁니다.
++  // ── 정재/편재 가르기 ────────────────────────────────────────────
++  //  ★2026-08-03 (44부 27차) — «지지도» 셉니다. 교재 대조로 고친 자리입니다.
++  //
++  //   [무엇이 있었나]  천간 넉 자만 세고 있었습니다.
++  //     const el = isStem ? STEM_EL[ch] : undefined; if (!el) continue
++  //     ⇒ 지지가 «한 글자도» 세어지지 않았습니다.
++  //   [교재]  ★36쪽 "天干보다 地支는 매우 중요한 위치를 차지한다"
++  //           ★159쪽 "천간은 정신적인 측면(40% 정도), 지지는 현실적·실질적(60~70%)"
++  //           ★259쪽 "오행의 개수는 본래의 오행에 해당하는 개수를 쓴다"
++  //             ⇒ 지지는 «본기 하나» 로 «한 개» 를 셉니다 (지장간 셋을 다 세지 않습니다)
++  //   ⚠️⚠️ 지지의 음양은 ★48쪽 «본기 천간» 으로 봅니다 — 子=癸(음) · 午=丁(음).
++  //      근거: ★96쪽이 壬 일간의 양인(겁재)을 子라 합니다.
++  //            壬(양)의 겁재는 «음» 이라야 하므로, 子를 癸(음)로 본 것입니다.
++  //      ⛔ 위 YANG_BRANCH(子=양) 를 여기에 쓰지 «마십시오». 재는 것이 다릅니다 —
++  //         음양 «비율» 은 260쪽 양팔통 사례가 子를 «양» 으로 봅니다.
++  //         ★한 파일에 두 잣대가 있는 것이 «맞습니다». 하나로 합치지 마십시오.
+   const dayYang = YANG_STEM.has(dayStem)
+-  let jaeJeong = 0, jaePyeon = 0, gwanJeong = 0
++  let jaeJeong = 0, jaePyeon = 0
+   for (const p of saju) {
+     for (const [ch, isStem] of [[p.stem, true], [p.branch, false]] as Array<[string, boolean]>) {
+       if (!ch || ch === '?') continue
+-      const el = isStem ? STEM_EL[ch] : undefined
++      // ★지지는 48쪽 본기 천간으로 바꿔서 봅니다
++      const asStem = isStem ? ch : BRANCH_BONGI[ch]
++      const el = STEM_EL[asStem]
+       if (!el) continue
+-      const grp = yukchinOf(dayEl, el)
+-      const chYang = isStem ? YANG_STEM.has(ch) : YANG_BRANCH.has(ch)
+-      const jeong = chYang !== dayYang      // 음양이 다르면 정(正)
+-      if (grp === '재성') { if (jeong) jaeJeong++; else jaePyeon++ }
+-      if (grp === '관성' && jeong) gwanJeong++
++      if (yukchinOf(dayEl, el) !== '재성') continue
++      if (YANG_STEM.has(asStem) !== dayYang) jaeJeong++   // 음양이 다르면 정재
++      else jaePyeon++
+     }
+   }
+   const jaeTotal = Math.max(1, jaeJeong + jaePyeon)
+   const jeongJae = (Y['재성'] * jaeJeong) / jaeTotal
+   const pyeonJae = (Y['재성'] * jaePyeon) / jaeTotal
+-  void gwanJeong   // 정관/편관 구분은 지금 산식에 안 쓰이나, 뒤에 쓸 자리를 남겨 둔다
+ 
+   // ── 네 축 ──────────────────────────────────────────────────────
++  //
++  //  ★2026-08-03 (44부 27차) — 대표님 승인으로 «접는 방식» 을 고쳤습니다.
++  //    ⚠️ 재료를 고른 것(어느 성분이 어느 쪽인가)은 2026-07-29 대표님 산식 그대로입니다.
++  //       바꾼 것은 «어떻게 합치는가» 입니다. 아래 셋입니다.
++  //
++  //   A  ★오행 몫 · 육친 몫 · 음양(신살) 몫을 «층으로 갈라» 재고 평균 냅니다.
++  //      [까닭] 교재 ★40쪽 "오행과 육친을 «분리해서» 해석해야 하는데 분리하지 않고
++  //             두리뭉실하게 대충 해석하기 때문에 … 오류가 발생한다"
++  //      [무엇이 있었나] 육친 점수는 «오행 점수를 그대로 부은 것» 이라,
++  //             목 일간의 목 55점이 「목」으로 한 번 + 「비겁」으로 또 한 번,
++  //             ★같은 55점이 한 축에 «두 번» 실렸습니다.
++  //
++  //   C-1 ★50점 넘는 몫은 «세지 않습니다» (뚜껑).
++  //      [까닭] 교재 ★259쪽 "점수가 50점 이상이 되면 이때부터는 장점보다는 단점으로
++  //             발현이 된다" · ★25쪽 「오행이 과다할 때」 (목=안하무인·용두사미 …)
++  //      ⚠️ 교재는 「단점이 된다」고만 하지 «반대 성향이 된다» 고 하지 «않습니다».
++  //         그래서 뒤집지 «않고» 멈추기만 합니다. 뒤집는 것은 우리 발명이 됩니다.
++  //      ⚠️ 실효는 작습니다(측정 1.68%). 그래도 교재 근거가 가장 분명한 자리입니다.
++  //
++  //   D  ★교재에서 못 찾은 재료 셋을 뺐습니다.
++  //        S쪽 관성  — 「현실적」이라는 말이 관성에 없습니다 (144쪽 「현실 감각」은 «정인격»)
++  //        N쪽 화    — 화는 "열정·표현·예의·행동"(21·25쪽). 상상력·직관이 아닙니다
++  //        T쪽 백호  — 95쪽은 «성격» 을 말하지 않습니다 ("큰 사주·활동을 크게" 뿐)
++  //      ⚠️ 「없다」가 아니라 ★「2026-08-03 에 확인한 범위(20~183·232·233·238·258~269쪽)
++  //         에서 못 찾았다」 입니다. 184~257쪽 대부분을 아직 못 봤습니다.
++  //         ★그 쪽이 확인되면 되살릴 수 있습니다.
++  //
++  //   γ  ★층 안에서는 «합» 이 아니라 «세기 평균» 으로 견줍니다.
++  //      [까닭] D 로 재료를 빼면 한쪽 성분이 둘, 다른 쪽이 하나가 되어
++  //             ★«많은 쪽이 그냥 이기는» 일이 납니다.
++  //      [실측] 합으로 견주면 ENFP 가 27.46% → ★32.14% 로 «더 몰렸습니다».
++  //             세기 평균으로 견주니 ★17.78% 로 내려갔습니다. (5,000벌)
++  //      ⚠️⚠️ γ 는 «교재에 없습니다». 우리가 정한 것입니다. (2026-08-03 대표님 승인)
++  //
++  //   ★층 건너뛰기 — 한쪽에 재료가 «없는» 층은 «세지 않습니다».
++  //      D 로 화를 빼자 S/N 의 오행 층이 「토 ↔ 아무것도 없음」이 되었습니다.
++  //      그대로 세면 «토가 조금만 있어도 언제나 S» 가 됩니다 (실측 ESFP 38.56%).
++  //      ⚠️⚠️ 그 바람에 ★토(45쪽 "실질적")가 산식에서 «빠졌습니다».
++  //         교재 근거가 있는 재료인데 자리를 잃은 것입니다.
++  //         ★184~257쪽에서 N 쪽 오행 재료가 나오면 층을 되살리고 토를 넣으십시오.
++  //
++  //  [2026-08-03 처음 잰 값 — 다음에 견줄 잣대 · npm run measure:mbti]
++  //     가장 많은 유형   ENFP 27.46% → ★17.78%
++  //     위 셋 합         50.42%      → ★42.52%
++  //     INTJ            0.36%       → ★3.10%  (8.6배)
++  //     INFJ            1.18%       → ★4.60%
++  //     ★유형 뒤집힘     52.00% — 두 분 중 한 분의 네 글자가 바뀝니다
++  // ────────────────────────────────────────────────────────────────
++
++  /** ★C-1 — 50점을 넘는 몫은 세지 않는다 (교재 259쪽) */
++  const cap = (v: number) => Math.min(v, 50)
++  /** 한 층 = 「왼쪽 재료들 ↔ 오른쪽 재료들」 */
++  type Layer = { L: Array<[string, number]>; R: Array<[string, number]> }
++
+   const axes: AxisResult[] = []
+-  const push = (
+-    axis: MbtiAxis, left: string, right: string,
+-    L: Array<[string, number]>, R: Array<[string, number]>,
+-  ) => {
+-    const rawL = L.reduce((a, [, v]) => a + v, 0)
+-    const rawR = R.reduce((a, [, v]) => a + v, 0)
+-    // ★양쪽에 «바닥»을 깔아 준다.
+-    //   [왜] 관성이 하나도 없는 명식이면 J 쪽이 0 이 되어 «1:99» 같은 막대가 나옵니다.
+-    //        숫자로는 맞지만 사람을 그렇게 그리면 안 됩니다.
+-    //        아무리 한쪽으로 기운 사람도 다른 쪽 결을 조금은 씁니다.
+-    //   [얼마나] 그 축 총점의 15%. 고정값을 쓰면 축마다 총점이 달라 들쭉날쭉합니다.
+-    //   ⚠️ 이 숫자도 교재가 아니라 우리가 정한 것입니다. 화면 인상을 보고 조절하십시오.
+-    const floor = (rawL + rawR) * 0.15 || 1
+-    const ls = rawL + floor
+-    const rs = rawR + floor
+-    const leftPct = Math.round((ls / (ls + rs)) * 100)
++  const push = (axis: MbtiAxis, left: string, right: string, layers: Layer[]) => {
++    const ratios: number[] = []
++    for (const ly of layers) {
++      // ★층 건너뛰기 — 한쪽에 재료가 «없으면» 대립이 아닙니다
++      if (!ly.L.length || !ly.R.length) continue
++      const sum = (a: Array<[string, number]>) => a.reduce((x, [, v]) => x + v, 0)
++      // ★γ — 성분 «개수» 가 아니라 «세기» 로 견줍니다
++      const l = sum(ly.L) / ly.L.length
++      const r = sum(ly.R) / ly.R.length
++      if (l + r <= 0) continue
++      // ★바닥 — 한쪽이 0이어도 «1:99» 같은 막대를 내지 않습니다.
++      //   [얼마나] 그 층 총합의 15%. ⚠️ 교재가 아니라 우리가 정한 값입니다.
++      const floor = (l + r) * 0.15
++      ratios.push((l + floor) / (l + floor + r + floor))
++    }
++    const p = ratios.length ? ratios.reduce((a, b) => a + b, 0) / ratios.length : 0.5
++    const leftPct = Math.round(p * 100)
+     const pick = leftPct >= 50 ? left : right
++    // ★화면에 보이는 숫자는 «날점수 합» 입니다 (뚜껑·평균을 거치기 전).
++    //   ⚠️ 막대(leftPct)와 아래 숫자가 딱 맞아떨어지지 않는 것은 그 때문입니다.
++    const flatL = layers.flatMap(x => x.L)
++    const flatR = layers.flatMap(x => x.R)
+     axes.push({
+       axis, left, right,
+-      leftScore: Math.round(rawL), rightScore: Math.round(rawR), leftPct, pick,
+-      why: leftPct >= 50 ? reason(L) : reason(R),
+-      // ⚠️ leftScore·rightScore 는 «바닥을 빼고» 실제 점수를 담습니다.
+-      //    막대(leftPct)와 숫자가 다른 것은 그 때문입니다.
++      leftScore: Math.round(flatL.reduce((a, [, v]) => a + v, 0)),
++      rightScore: Math.round(flatR.reduce((a, [, v]) => a + v, 0)),
++      leftPct, pick,
++      why: leftPct >= 50 ? reason(flatL) : reason(flatR),
+     })
+   }
+ 
+   // E vs I — 밖으로 뻗는 기운 vs 안으로 모으는 기운
+-  push('EI', 'E', 'I',
+-    [['양의 기운', yangPt], ['화', S['화']], ['목', S['목']], ['식상', Y['식상']], ['비겁', Y['비겁']]],
+-    [['음의 기운', eumPt], ['수', S['수']], ['금', S['금']], ['인성', Y['인성']]])
++  //   ★교재 260쪽 "陽의 기운+木火: 외향적 … 활동적인 사람 /
++  //                陰의 기운+金水: 내성적이고 차분하고 행동보다는 생각이 많은 유형"
++  //   ★비겁 = "활동성 · 대인 관계 활발" · 식상 = "언변술 · 발산"
++  //   ★인성 = "산속에서 혼자 사는 것이 좋다 · 고독"(과다) · "생각만 많고 실행력이 약함"
++  push('EI', 'E', 'I', [
++    { L: [['화', cap(S['화'])], ['목', cap(S['목'])]], R: [['수', cap(S['수'])], ['금', cap(S['금'])]] },
++    { L: [['식상', cap(Y['식상'])], ['비겁', cap(Y['비겁'])]], R: [['인성', cap(Y['인성'])]] },
++    { L: [['양의 기운', yangPt]], R: [['음의 기운', eumPt]] },
++  ])
+ 
+   // S vs N — 눈앞의 실제 vs 그림과 뜻
+-  push('SN', 'S', 'N',
+-    [['재성', Y['재성']], ['관성', Y['관성']], ['토', S['토']]],
+-    [['식상', Y['식상']], ['인성', Y['인성']], ['화', S['화']]])
++  //   ★재성 111쪽 "구체적이고 현실적인 것 좋아한다 · 실리주의자"
++  //   ★식상 109쪽 "아이디어와 상상력이 풍부" · 인성 115·130쪽 "학문 · 이론 중시"
++  //   ⚠️ 오행 층은 D 로 «대립이 사라져» 건너뜁니다 (위 설명 참고)
++  push('SN', 'S', 'N', [
++    { L: [['재성', cap(Y['재성'])]], R: [['식상', cap(Y['식상'])], ['인성', cap(Y['인성'])]] },
++  ])
+ 
+   // T vs F — 잣대로 자르는 결 vs 마음으로 품는 결
+-  push('TF', 'T', 'F',
+-    [['금', S['금']], ['관성', Y['관성']], ['양인·백호', yanginBaekho]],
+-    [['수', S['수']], ['목', S['목']], ['인성', Y['인성']], ['도화', dohwa]])
++  //   ★금 23·25쪽 "결단력 · 의리 · 냉철한 분별" · 목 20쪽 "배려 지향 · 인간 중심"
++  //   ★양인 96쪽 "고집, 오만, 욱기, 냉혹함" · 도화 40·43·94쪽 "매력 · 예술적 직업"
++  //   ⚠️ 금 23쪽은 "겉으로는 냉정해 보이지만 내면은 따뜻하고 정이 있다" 고도 합니다.
++  //      ★오행은 «양쪽 결» 을 지녀 한 축에 온전히 붙지 않습니다. 그래서 층을 나눕니다.
++  push('TF', 'T', 'F', [
++    { L: [['금', cap(S['금'])]], R: [['수', cap(S['수'])], ['목', cap(S['목'])]] },
++    { L: [['관성', cap(Y['관성'])]], R: [['인성', cap(Y['인성'])]] },
++    { L: [['양인', yangin]], R: [['도화', dohwa]] },
++  ])
+ 
+   // J vs P — 정해 두고 가는 결 vs 열어 두고 가는 결
+-  push('JP', 'J', 'P',
+-    [['관성', Y['관성']], ['정재', jeongJae]],
+-    [['비겁', Y['비겁']], ['식상', Y['식상']], ['편재', pyeonJae]])
++  //   ★관성 112·113쪽 "계획성이 투철하다 · 룰과 법칙을 중요시"
++  //   ★정재 111·43쪽 "안정과 안전을 추구 · 매사에 정확 · 치밀하고 세밀하고 꼼꼼"
++  //   ★식상 124쪽 "식신 상관은 관성을 극하므로 룰과 법과 고정 관념을 싫어한다. 자유방임주의"
++  //     ⇒ ★교재가 «극이니까 반대» 라는 논리까지 밝힌 유일한 자리입니다
++  push('JP', 'J', 'P', [
++    { L: [['관성', cap(Y['관성'])], ['정재', cap(jeongJae)]],
++      R: [['비겁', cap(Y['비겁'])], ['식상', cap(Y['식상'])], ['편재', cap(pyeonJae)]] },
++  ])
+ 
+   const code = axes.map(a => a.pick).join('')
+   const balanced = axes.filter(a => a.leftPct >= 45 && a.leftPct <= 55).length >= 2
+diff --git a/package.json b/package.json
+index 0d23e11..6096126 100644
+--- a/package.json
++++ b/package.json
+@@ -31,7 +31,8 @@
+     "verify:namingE2E": "tsx 30-e2e-naming-flow.ts",
+     "measure:hour": "tsx 31-measure-hour-convert.ts",
+     "verify:hour": "tsx 32-verify-hour-convert.ts",
+-    "measure:yongsin": "tsx 33-measure-career-yongsin.ts"
++    "measure:yongsin": "tsx 33-measure-career-yongsin.ts",
++    "measure:mbti": "tsx 34-measure-saju-mbti.ts"
+   },
+   "dependencies": {
+     "@supabase/ssr": "^0.6.1",
