@@ -1791,10 +1791,10 @@ console.log('\n━━ (55) ★종이 차례 · 성인 직업 거르기 (44부 43
   const jb = noComment(read('lib/saju/career/jobs.ts'))
 
   // ★종이 카드가 «화면과 같은 차례» 인가
-  check(/cards: GROUPS\s*\n\s*\.flatMap\(g => g\.keys\)/.test(page),
-    `★종이 판정 카드를 GROUPS 차례로 줄 세웁니다`)
-  check(!/cards: cards\s*\n\s*\.filter\(c => c\.lines\.length > 0\)\s*\n\s*\.map\(c => \(\{ title/.test(page),
-    `⚠️ 만든 차례 그대로 넘기던 자리가 사라졌습니다`)
+  // ⚠️ 2026-08-03 (44부 48차) — 종이에 판정 카드를 ★«아예 안 넘깁니다».
+  //    43차의 「차례를 맞추라」는 검사는 그 자리가 사라져 뜻을 잃었습니다.
+  //    ⇒ ★「안 넘기는가」로 바로잡습니다. (57)이 그것을 자세히 봅니다.
+  check(/cards: \[\],/.test(page), `⛔★종이에 판정 카드를 «안 넘깁니다»`)
 
   // 🔴 성인 리포트에서 「유흥업」 같은 낱말을 거르는가
   check(/BLOCKED_KEYS/.test(jb) && /\.filter\(x => !blocked\(x\.key\)\)/.test(jb),
@@ -1855,6 +1855,41 @@ console.log('\n━━ (56) ★진로적성 「근거 보기」를 감췄는가 (
   // ⚠️ 합격운은 «건드리지 않았는가» — 그쪽 판정 문장은 이미 다듬어진 말입니다
   check(!/SHOW_WHY/.test(ejc) && /근거 보기/.test(ejc),
     `⚠️ 합격운의 「근거 보기」는 «그대로» 입니다 (그쪽 말은 이미 다듬어져 있습니다)`)
+}
+
+console.log('\n━━ (57) ⛔★판정 근거는 종이에도 «절대» 안 나갑니다 · 학생 리더십 (44부 48차) ━━')
+{
+  const noComment = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  const page = noComment(read('app/manseryeok/career-result/page.tsx'))
+  const doc = read('app/manseryeok/career-result/page.tsx')
+  const sc = noComment(read('lib/saju/career/strengthCards.ts'))
+  const bp = noComment(read('lib/saju/career/buildCareerPrompt.ts'))
+
+  // ⛔⛔ 판정 근거 — 화면·종이 «둘 다» 막혔는가
+  check(/cards: \[\],/.test(page), `⛔🔴★종이에 판정 근거를 «안 넘깁니다»`)
+  check(!/cards: GROUPS/.test(page), `⚠️ 넘기던 자리가 사라졌습니다`)
+  check(/절대» 손님께 보이지 않습니다|«절대» 보여 주면 안 된다/.test(doc),
+    `⛔★「절대 보여 주면 안 된다」가 코드에 적혀 있습니다`)
+  check(/되살리지 «마십시오»/.test(doc), `⛔ 되살리지 말라고 못박혀 있습니다`)
+  const cjc2 = noComment(read('app/manseryeok/career-result/components/CareerJudgeCard.tsx'))
+  check(/const SHOW_WHY = false/.test(cjc2), `⛔★화면에서도 감춰져 있습니다 (두 곳 다)`)
+
+  // ★학생 — 재물을 빼고 리더십만
+  check(/function judgeStudentLead/.test(sc), `★학생용 「모둠에서 맡는 자리」가 있습니다`)
+  check(/if \(v\.target === 'student'\) return judgeStudentLead/.test(sc),
+    `★학생이면 그쪽으로 갈립니다`)
+  check(/title: '모둠에서 맡는 자리'/.test(sc), `★제목도 학생 말입니다`)
+  // ⚠️ 학생 글에 «재물·투자» 가 섞이지 않았는가
+  // ⚠️ 구간을 «주석» 으로 자르면 주석이 바뀔 때 검사가 헛돕니다. ★함수 경계로 자릅니다.
+  const stuStart = sc.indexOf('function judgeStudentLead')
+  const stuEnd = sc.indexOf('export function judgeCareerLuck')
+  const stu = sc.slice(stuStart, stuEnd > stuStart ? stuEnd : undefined)
+  check(!/투자|재물|벌이|수입|편재가 우세/.test(stu),
+    `🔴★학생 글에 «재물·투자» 이야기가 «없습니다»`)
+  // ★통변 제목이 카드를 따르는가 (안 그러면 AI 가 재물을 씁니다)
+  check(/const titleOfCard = new Map/.test(bp), `★통변 제목이 «카드가 정한 것» 을 따릅니다`)
+  check(/\[\$\{c\.title \|\| o\?\.title \|\| ''\}\]/.test(bp), `⚠️ 재료 제목도 같습니다 (안 같으면 안 붙습니다)`)
 }
 
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')

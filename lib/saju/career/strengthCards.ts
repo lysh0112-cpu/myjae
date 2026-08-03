@@ -123,6 +123,20 @@ export function judgeLeadWealth(v: StrengthInput): CareerCard {
   for (const el of EL5) grp[yukchinOf(dayEl, el)] += v.score[el] ?? 0
 
   const gwan = grp['관성'], bigyeop = grp['비겁']
+
+  // ══════════════════════════════════════════════════════════════
+  //  ★학생이면 «재물을 빼고 리더십만» — 제목도 갈래 (44부 48차 · 대표님 지시)
+  //
+  //  🔴 [무엇이 있었나]  13세 손님에게 이런 글이 나갔습니다 —
+  //     「재물을 꼼꼼하게 관리하기보다 ★확장하는 방향으로 쓰는 결」
+  //     「벌이의 진폭이 큰 만큼 «잃어도 되는 선» 을 미리 정해 두셔야」
+  //     「★투자 판단은 늘 평소 잣대로 하십시오」
+  //     ⇒ 13세에게 쓸 자리가 없고, ★부모님이 함께 읽어 오해를 부릅니다.
+  //  ★리더십은 «남깁니다» — 진로적성의 알맹이라 빼기 아깝습니다.
+  //     다만 「조직·이직」이 아니라 ★«모둠·학급·동아리» 의 말로 옮깁니다.
+  //  ⚠️ 값을 «새로 계산하지 않습니다» — 같은 관성·비겁·식상 점수를 씁니다.
+  // ══════════════════════════════════════════════════════════════
+  if (v.target === 'student') return judgeStudentLead(grp, v)
   const wealth = judgeWealthStyle(v.saju, v.dayStem, v.score)
 
   const lines: string[] = []
@@ -149,6 +163,61 @@ export function judgeLeadWealth(v: StrengthInput): CareerCard {
   reasons.push(`재물 결 — ${wealth.label} (정재 ${wealth.jeongJae} · 편재 ${wealth.pyeonJae})`)
 
   return { key: 'leadwealth', title: '리더십과 재물 운용', badge: wealth.label, lines, reasons }
+}
+
+/**
+ * ★학생용 — 「모둠에서 맡는 자리」 (44부 48차)
+ *
+ *  ⚠️ 재물 이야기는 «넣지 않습니다». 13세에게 투자는 쓸 자리가 없습니다.
+ *  ⚠️ 이 문장들은 교재의 말이 «아닙니다» — 관성·비겁·식상의 결을
+ *     ★학교 생활의 말로 옮긴 것입니다. 명리 근거를 붙이지 마십시오.
+ */
+function judgeStudentLead(grp: Record<string, number>, v: StrengthInput): CareerCard {
+  const gwan = grp['관성'], bigyeop = grp['비겁'], siksang = grp['식상'], insung = grp['인성']
+  const lines: string[] = []
+  const reasons: string[] = []
+
+  // ── 규칙이 편한가, 스스로 정하는 쪽이 편한가 ──
+  if (gwan >= 25) {
+    lines.push('정해진 규칙과 차례가 있는 자리에서 마음이 편한 편이에요. 맡은 몫을 끝까지 해내는 결이라 믿고 맡길 수 있는 사람으로 보입니다.')
+  } else if (gwan === 0) {
+    lines.push('누가 촘촘히 시키는 자리는 답답해하는 편이에요. 무엇을 할지 스스로 정할 수 있을 때 훨씬 힘이 납니다.')
+  } else {
+    lines.push('규칙을 따르는 것도, 스스로 정하는 것도 크게 어렵지 않은 편이에요. 자리에 따라 맞춰 갈 수 있는 결입니다.')
+  }
+
+  // ── 앞에 나서는 쪽인가 ──
+  if (bigyeop >= 25 && siksang >= 25) {
+    lines.push('앞에 나서서 말하고 이끄는 쪽이 잘 맞아요. 모둠장이나 발표를 맡으면 제 몫을 톡톡히 합니다.')
+  } else if (bigyeop >= 25) {
+    lines.push('내 뜻대로 해 보고 싶은 마음이 큰 편이에요. 남이 짜 놓은 대로 따라가기보다 «내가 맡은 몫» 이 뚜렷할 때 힘이 납니다.')
+  } else if (siksang >= 25) {
+    lines.push('생각한 것을 말이나 글, 만드는 것으로 꺼내 놓는 데 힘이 있어요. 발표·기획·자료 만들기 같은 자리가 잘 맞습니다.')
+  } else {
+    lines.push('앞에 나서기보다 곁에서 살피고 받쳐 주는 쪽이 편한 편이에요. 눈에 덜 띄어도 모둠이 굴러가게 하는 자리입니다.')
+  }
+
+  // ── 배워서 쌓는 쪽인가 ──
+  if (insung >= 25) {
+    lines.push('배운 것을 차곡차곡 쌓아 두는 결이라, 자료를 정리하거나 기록을 맡는 자리에서도 빛이 납니다.')
+  }
+
+  // ── 해볼 만한 자리 ──
+  const jobs: string[] = []
+  if (bigyeop >= 25 || (gwan >= 25 && siksang >= 25)) jobs.push('모둠장')
+  if (siksang >= 25) jobs.push('발표')
+  if (insung >= 25 || gwan >= 25) jobs.push('기록·자료 정리')
+  if (!jobs.length) jobs.push('도움이 필요한 곳을 먼저 살피는 자리')
+  lines.push(`→ 학교에서 «${jobs.join(' · ')}» 부터 한 번 맡아 보시면 이 결이 어디에 잘 붙는지 알게 됩니다.`)
+
+  reasons.push(`관성 ${Math.round(gwan)}점 · 비겁 ${Math.round(bigyeop)}점 · 식상 ${Math.round(siksang)}점 · 인성 ${Math.round(insung)}점`)
+  // ⚠️⚠️ 「학생이라 재물 운용은 내지 않습니다」를 ★reasons 에 적지 «않습니다».
+  //    reasons 는 AI 재료로 나갑니다 — ★금지하려는 낱말을 재료에 적으면
+  //    AI 가 그것을 보고 오히려 그 이야기를 꺼냅니다. (44부 1-2 교훈)
+  //    ★까닭은 이 주석에만 둡니다.
+  void v
+
+  return { key: 'leadwealth', title: '모둠에서 맡는 자리', badge: '', lines, reasons }
 }
 
 // ══════════════════════════════════════════════════════════════

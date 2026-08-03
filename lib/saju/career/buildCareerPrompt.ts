@@ -135,10 +135,16 @@ export function buildCareerPrompt(v: CareerPromptInput): string {
   //      그런데 plan 은 have(열쇠)로만 골라, ★빈 카드도 «대목으로 시켰습니다».
   //   ★lines 가 빈 카드는 계획에서 뺍니다 — 화면이 안 그리는 것을 AI 도 안 씁니다.
   const emptyKeys = new Set(v.cards.filter(c => c.lines.length === 0).map(c => c.key))
+  // ★2026-08-03 (44부 48차) — 제목은 «카드가 정한 것» 을 씁니다.
+  //   [까닭] 「리더십과 재물 운용」은 ★학생이면 「모둠에서 맡는 자리」로 바뀝니다.
+  //     ORDER 의 제목을 그대로 쓰면 ★AI 가 «재물 이야기» 를 써야 하나 헤맵니다.
+  //   ⚠️ 화면 카드와 통변 제목이 «같아야» 붙습니다. 카드 쪽을 따릅니다. (교훈 AS)
+  const titleOfCard = new Map(v.cards.filter(c => c.title).map(c => [c.key, c.title]))
   const plan = ORDER
     .filter(o => have.has(o.key))
     .filter(o => !emptyKeys.has(o.key))
     .filter(o => academic || o.key !== 'gyeyeol')
+    .map(o => ({ ...o, title: titleOfCard.get(o.key) ?? o.title }))
 
   const myeongsik = v.saju
     .map(p => `${p.pillar} ${p.stem === '?' ? '·' : p.stem}${p.branch === '?' ? '·' : p.branch}`)
@@ -210,9 +216,10 @@ export function buildCareerPrompt(v: CareerPromptInput): string {
     .filter(c => !dropKeys.includes(c.key))
     .filter(c => c.reasons.length > 0)
     .map(c => {
+      // ⚠️ 재료 제목도 «카드가 정한 것» 을 먼저 씁니다 — 시킨 제목과 같아야 붙습니다
       const o = ORDER.find(x => x.key === c.key)
       const rs = [...c.reasons, ...(extra[c.key] ?? [])]
-      return `[${o?.title ?? c.title}]\n` + rs.map(r => `- ${r}`).join('\n')
+      return `[${c.title || o?.title || ''}]\n` + rs.map(r => `- ${r}`).join('\n')
     }).join('\n\n')
 
   // ★2026-07-29 — 신분을 알면 그 결로, 모르면 예전처럼 학생/성인으로.
