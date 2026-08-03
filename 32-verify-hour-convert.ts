@@ -1605,6 +1605,44 @@ console.log('\n━━ (51) ★MBTI 카드 — 「표」를 걷고 «읽는 글»
     `⚠️ AXIS_WORK 와 «다른 것» 이라는 까닭이 적혀 있습니다`)
 }
 
+console.log('\n━━ (52) 🔴★「사주로 본 성향」은 MBTI 를 넣은 분만 (44부 35차) ━━')
+{
+  const noComment = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  const page = noComment(read('app/manseryeok/career-result/page.tsx'))
+  const inp = noComment(read('app/manseryeok/career-input/page.tsx'))
+  const dlg = noComment(read('app/manseryeok/components/MbtiAskDialog.tsx'))
+  const pr = noComment(read('lib/saju/premium/buildCareerMbtiPrompt.ts'))
+
+  // 🔴 화면 — 안 넣으면 카드가 «통째로» 안 나오는가
+  check(/g\.label === '타고난 결' && sajuMbti && realMbti && mbtiCmp && \(/.test(page),
+    `🔴★MBTI 를 넣으신 분만 카드를 봅니다`)
+
+  // ⚠️⚠️ 재료에서도 1·2번 대목이 빠지는가 — 화면만 숨기면 AI 글이 «허공을 가리킵니다»
+  check(/const showMbti = !!real/.test(pr), `★재료도 넣으셨는지 봅니다`)
+  check(/\.\.\.\(!showMbti \? \[\] : \(\[\{/.test(pr),
+    `⚠️⚠️ 재료의 1·2번 대목이 «함께» 빠집니다 (44부 1-3 교훈)`)
+
+  // ★입력 화면 — 한 번 여쭙는가
+  check(/if \(!mbti\) \{ setAsk\(true\); return \}/.test(inp),
+    `★MBTI 가 비면 «그 자리에서» 한 번 여쭙습니다`)
+  check(/<MbtiAskDialog/.test(inp), `★권유 팝업을 씁니다`)
+  check(/MBTI 를 알고 계신가요\?/.test(dlg), `★정중히 여쭙는 말입니다`)
+  check(/무료 검사 하러 가기/.test(dlg), `★무료 검사로 이끕니다`)
+  check(/이번엔 넣지 않고 볼게요/.test(dlg), `⚠️ 그래도 진행하는 길을 «막지 않습니다»`)
+  check(/onSkip=\{\(\) => \{ setAsk\(false\); router\.push/.test(inp),
+    `⚠️ 「넣지 않고 볼게요」면 그대로 갑니다`)
+
+  // ⚠️ 팝업 꼴이 삭제 팝업과 «같은 결» 인가 (서비스마다 달라 보이지 않게)
+  check(/maxWidth: 320, background: '#FFFBF7'/.test(dlg) && /borderRadius: 16, padding: '22px 20px 16px'/.test(dlg),
+    `⚠️ 44부 25차 삭제 팝업과 «같은 꼴» 입니다`)
+
+  // ⚠️ 검사 주소가 두 벌이 되지 않았는가
+  const sel = read('app/manseryeok/components/MbtiSelect.tsx')
+  check(/16personalities\.com\/ko/.test(sel) && /16personalities\.com\/ko/.test(read('app/manseryeok/components/MbtiAskDialog.tsx')),
+    `⚠️ 검사 주소가 «같은 곳» 입니다 (고칠 때 둘 다 보라고 적어 두었습니다)`)
+}
+
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
 {
   const src = read('lib/saju/simsanOhaeng.ts')

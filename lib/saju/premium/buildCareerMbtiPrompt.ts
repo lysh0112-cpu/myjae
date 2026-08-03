@@ -126,8 +126,20 @@ function buildSections(v: CareerMbtiInput): { sections: Section[]; mbti: SajuMbt
         ],
       }
 
+  // ══════════════════════════════════════════════════════════════
+  //  🔴★2026-08-03 (44부 35차) — MBTI 를 «안 넣으셨으면» 1·2번 대목을 «내지 않습니다».
+  //
+  //   [까닭]  화면에서 「사주로 본 성향」 카드를 통째로 숨기기로 했습니다 (대표님 지시).
+  //     ⚠️ 재료를 그대로 두면 ★AI 글에 「ESFP 이신 분은…」이 나가는데
+  //        화면에는 그 카드가 «없습니다». 손님이 무엇을 말하는지 모릅니다.
+  //     ★44부 1-3 교훈 — 「재료와 그 재료를 쓸 자리는 «같은 차수» 에」.
+  //        연표를 재료로만 내보내 자식운 카드에 들어갔던 자리와 같습니다.
+  //   ⚠️ 대목 «번호» 는 그대로 둡니다 — 화면이 제목으로 찾으므로 번호를 다시 매기지 않습니다.
+  // ══════════════════════════════════════════════════════════════
+  const showMbti = !!real
+
   const sections: Section[] = [
-    {
+    ...(!showMbti ? [] : ([{
       no: 1, title: '사주로 본 성향 — 네 축 입체 분석',
       blocks: [
         ['1-1 최종 코드와 칭호', [
@@ -142,8 +154,7 @@ function buildSections(v: CareerMbtiInput): { sections: Section[]; mbti: SajuMbt
         ['1-2 네 축의 사주 근거', mbti.axes.map(a =>
           `${a.left}/${a.right} — ${a.pick} · 근거 ${a.why} · 일할 때: ${AXIS_WORK[a.pick] ?? ''}`)],
       ],
-    },
-    {
+    }, {
       no: 2, title: cmp ? '사주 성향 vs 실제 성향 — 시너지와 반전' : '사주 추정 성향의 핵심',
       blocks: cmp ? [
         ['2-1 융합 시너지', [
@@ -173,7 +184,7 @@ function buildSections(v: CareerMbtiInput): { sections: Section[]; mbti: SajuMbt
           ...mbti.axes.map(a => `${a.pick} — ${AXIS_WORK[a.pick] ?? ''}`),
         ]],
       ],
-    },
+    }] as Section[])),
     {
       no: 3, title: '강점 지능과 행동 패턴',
       blocks: [

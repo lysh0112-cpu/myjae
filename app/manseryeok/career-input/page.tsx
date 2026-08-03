@@ -18,6 +18,7 @@ import { Suspense, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ageOf } from '@/lib/saju/career/calcPerson'
 import MbtiSelect from '@/app/manseryeok/components/MbtiSelect'
+import MbtiAskDialog from '@/app/manseryeok/components/MbtiAskDialog'
 import { STATUS_OPTIONS, statusToTarget, type CareerStatus } from '@/lib/saju/career/status'
 
 const ACCENT = '#785aaa'
@@ -44,6 +45,8 @@ function CareerInputInner() {
   )
   const target: Target = statusToTarget(status)
   const [mbti, setMbti] = useState('')
+  /** ★MBTI 를 안 고르셨을 때 한 번 여쭙는 팝업 (44부 35차) */
+  const [ask, setAsk] = useState(false)
 
   const query = useMemo(() => {
     const p = new URLSearchParams()
@@ -110,7 +113,10 @@ function CareerInputInner() {
           <MbtiSelect value={mbti} onChange={setMbti} accent={ACCENT} />
         </div>
 
-        <button onClick={() => router.push(`/manseryeok/career-result?${query}`)}
+        {/* ★2026-08-03 (44부 35차) — MBTI 를 안 고르셨으면 «한 번» 여쭙습니다.
+            ⚠️ 「이번엔 넣지 않고 볼게요」를 고르시면 그대로 갑니다 —
+               길을 «막지 않습니다». 다만 「사주로 본 성향」 대목이 빠집니다. */}
+        <button onClick={() => { if (!mbti) { setAsk(true); return } router.push(`/manseryeok/career-result?${query}`) }}
           style={{
             width: '100%', marginTop: 14, padding: 15, borderRadius: 12,
             background: ACCENT, border: 'none', color: '#fff',
@@ -118,6 +124,13 @@ function CareerInputInner() {
           }}>
           진로적성 보기
         </button>
+
+        <MbtiAskDialog
+          open={ask}
+          accent={ACCENT}
+          onPick={() => setAsk(false)}
+          onSkip={() => { setAsk(false); router.push(`/manseryeok/career-result?${query}`) }}
+        />
 
         <div style={{ fontSize: 11.5, color: '#8a7063', lineHeight: 1.7, marginTop: 16, textAlign: 'center' }}>
           태어난 시(時)를 모르셔도 볼 수 있어요.<br />다만 시주를 비워 두고 보게 되니, 그만큼 조심해서 읽어 주세요.
