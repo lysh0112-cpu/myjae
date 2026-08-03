@@ -182,7 +182,18 @@ export function buildCareerPrompt(v: CareerPromptInput): string {
     }
   }
 
-  const material = v.cards
+  // 🔴⚠️ 2026-08-03 (44부 44차) — ★재료도 «ORDER 차례» 로 늘어놓습니다.
+  //   [무엇이 있었나]  v.cards 를 «만든 차례» 그대로 늘어놓았습니다.
+  //     judgeSpecial 이 맨 처음이라 재료에서도 ★「한 번 더 볼 점」이 맨 앞이었고,
+  //     ★AI 가 그 차례를 따라 써서 «1번 대목» 으로 나갔습니다.
+  //     (40차에 ORDER 는 맨 아래로 내렸는데 재료만 옛 차례였습니다)
+  //   ⚠️ 아래 plan(128줄)은 ORDER 로 만드는데 재료만 달랐습니다. 두 곳이 어긋난 것입니다.
+  //   ★AI 는 «시킨 차례» 보다 «재료가 놓인 차례» 를 따라갑니다. 둘을 맞춰야 합니다.
+  const ordered = ORDER
+    .map(o => v.cards.find(c => c.key === o.key))
+    .filter((c): c is CareerCard => !!c)
+
+  const material = ordered
     // ★학업 대목을 안 낼 신분이면 재료에서도 뺍니다.
     //   재료에 남겨 두고 «쓰지 말라» 고만 하면 AI 가 꺼내 씁니다. (교훈 BF)
     .filter(c => !dropKeys.includes(c.key))

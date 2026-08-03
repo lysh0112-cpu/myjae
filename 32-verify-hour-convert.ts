@@ -1797,6 +1797,21 @@ console.log('\n━━ (55) ★종이 차례 · 성인 직업 거르기 (44부 43
   check(!/some\(b => key\.includes\(b\)/.test(jb),
     `⚠️ 낱말이 겹친다고 막지 «않습니다» (「의사」가 「장의사」에 걸렸었습니다)`)
   check(/BLOCKED_KEYS\.has\(key\)/.test(jb), `★«같은 이름» 일 때만 막습니다`)
+
+  // 🔴 재료도 «ORDER 차례» 인가 (44부 44차)
+  //   [무엇이 있었나] plan 은 ORDER 로 만드는데 ★재료만 v.cards 차례였습니다.
+  //     judgeSpecial 이 맨 처음이라 ★AI 가 「한 번 더 볼 점」을 1번으로 썼습니다.
+  //   ★AI 는 «시킨 차례» 보다 «재료가 놓인 차례» 를 따라갑니다.
+  const bp = noComment(read('lib/saju/career/buildCareerPrompt.ts'))
+  check(/const ordered = ORDER\s*\n\s*\.map\(o => v\.cards\.find/.test(bp),
+    `🔴★재료를 ORDER 차례로 늘어놓습니다`)
+  check(/const material = ordered/.test(bp) && !/const material = v\.cards/.test(bp),
+    `⚠️ 「만든 차례」로 늘어놓던 자리가 사라졌습니다`)
+  // ★「한 번 더 볼 점」이 ORDER 의 «맨 끝» 인가
+  const om2 = bp.match(/const ORDER[\s\S]*?\n\]/)?.[0] ?? ''
+  const ok2 = [...om2.matchAll(/key: '([a-z_]+)'/g)].map(m => m[1])
+  check(ok2[ok2.length - 1] === 'special',
+    `★「한 번 더 볼 점」이 «맨 끝» 입니다 (경고부터 보이지 않습니다)`)
 }
 
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
