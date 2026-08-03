@@ -1773,6 +1773,32 @@ console.log('\n━━ (54) ★진로적성 — 다섯 단계 한 벌로 통일 (
   check(/yongsin: \{ kinds: \['yongsin'\]/.test(page), `★용신 표는 용신 이야기 뒤`)
 }
 
+console.log('\n━━ (55) ★종이 차례 · 성인 직업 거르기 (44부 43차) ━━')
+{
+  const noComment = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  const page = noComment(read('app/manseryeok/career-result/page.tsx'))
+  const jb = noComment(read('lib/saju/career/jobs.ts'))
+
+  // ★종이 카드가 «화면과 같은 차례» 인가
+  check(/cards: GROUPS\s*\n\s*\.flatMap\(g => g\.keys\)/.test(page),
+    `★종이 판정 카드를 GROUPS 차례로 줄 세웁니다`)
+  check(!/cards: cards\s*\n\s*\.filter\(c => c\.lines\.length > 0\)\s*\n\s*\.map\(c => \(\{ title/.test(page),
+    `⚠️ 만든 차례 그대로 넘기던 자리가 사라졌습니다`)
+
+  // 🔴 성인 리포트에서 「유흥업」 같은 낱말을 거르는가
+  check(/BLOCKED_KEYS/.test(jb) && /\.filter\(x => !blocked\(x\.key\)\)/.test(jb),
+    `🔴★성인 리포트에서도 어른용 직업을 거릅니다`)
+  check(/ADULT_JOB_BLOCKLIST\.map\(jobKey\)/.test(jb),
+    `⚠️ 목록도 «같은 잣대(jobKey)» 로 다듬어 견줍니다 (「수도사업」→「수도」)`)
+  check(/import \{ ADULT_JOB_BLOCKLIST \} from '\.\/roleFit'/.test(jb),
+    `⚠️ 목록은 roleFit 것을 «가져다» 씁니다 (두 벌로 적지 않습니다)`)
+  // ⚠️ 「의사」가 「장의사」에 걸려 사라지지 «않는가»
+  check(!/some\(b => key\.includes\(b\)/.test(jb),
+    `⚠️ 낱말이 겹친다고 막지 «않습니다» (「의사」가 「장의사」에 걸렸었습니다)`)
+  check(/BLOCKED_KEYS\.has\(key\)/.test(jb), `★«같은 이름» 일 때만 막습니다`)
+}
+
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
 {
   const src = read('lib/saju/simsanOhaeng.ts')

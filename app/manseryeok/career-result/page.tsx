@@ -467,8 +467,17 @@ function CareerResultInner() {
             .filter(c => c.lines.length > 0 && tongByKey[c.key])
             .map(c => ({ title: c.title, body: tongByKey[c.key] })),
       // ★판정 카드도 «모두» 담습니다 (2026-08-03 대표님 확정)
-      cards: cards
-        .filter(c => c.lines.length > 0)
+      //
+      // 🔴⚠️ 2026-08-03 (44부 43차) — ★GROUPS 차례로 «줄 세워» 넘깁니다.
+      //   [무엇이 있었나]  cards 를 «만든 차례» 그대로 넘겨,
+      //     화면은 다섯 단계로 서는데 ★종이만 옛 차례였습니다.
+      //     새 카드 셋(강점·리더십·발복)이 «맨 끝» 에 붙어 나왔습니다.
+      //   ⚠️ 화면과 종이가 다른 차례면 손님이 「같은 리포트인가」 합니다.
+      //   ★GROUPS 는 화면이 쓰는 그 표입니다. 두 벌로 두지 않습니다. (교훈 AS)
+      cards: GROUPS
+        .flatMap(g => g.keys)
+        .map(k => cards.find(c => c.key === k))
+        .filter((c): c is CareerCard => !!c && c.lines.length > 0)
         .map(c => ({ title: c.title, badge: c.badge, lines: c.lines })),
       // ★화면 카드 사이의 «표» 를 종이에도 (44부 37차 · 대표님 「표가 모두 사라졌다」)
       //   ⚠️ 값을 «다시 계산하지 않습니다» — 화면 부품이 쓰는 함수를 그대로 부릅니다 (교훈 CJ)

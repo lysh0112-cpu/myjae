@@ -30,6 +30,7 @@
 //   두 군데 이상(합 4점 이상)에서 나온 것만 고른다.
 
 import { calcCareerScore, gradeAll, pickStrong, type Ohaeng } from './careerScore'
+import { ADULT_JOB_BLOCKLIST } from './roleFit'
 import { yukchinOf } from './yukchin'
 import { checkSinsal9 } from './sinsal9'
 import { calcCareerYongsin } from './yongsin'
@@ -37,6 +38,15 @@ import type { CareerCard, CareerInput } from './types'
 import { calcCareerGyeokguk } from './gyeokguk'
 import { ILJU } from './tables/ilju'
 import { OHAENG_JOBS, jobKey, jobLabel, okForStudent } from './tables/jobs'
+
+/**
+ * ★성인 리포트에서 걸러 낼 직업 «열쇠» (44부 43차)
+ *
+ *  ⚠️ 목록은 roleFit 의 것을 «가져다» 씁니다. 두 벌로 적지 마십시오. (교훈 E)
+ *  ⚠️ 열쇠로 바꿔 두는 까닭 — jobKey 가 「수도사업」을 「수도」로 줄입니다.
+ *     날것으로 견주면 «안 걸립니다».
+ */
+const BLOCKED_KEYS = new Set(ADULT_JOB_BLOCKLIST.map(jobKey))
 import { YUKCHIN_GIJIL, GRID25, YUKCHIN_ORDER, type YukchinGroup } from './tables/yukchin'
 import { GYEOKGUK_INFO } from './tables/gyeokguk'
 import { SINSAL9 } from './tables/sinsal'
@@ -171,9 +181,27 @@ export function pickJobs(input: CareerInput): { hits: JobHit[]; pool: number } {
 
   // ★학생 모드에서는 어른용 직업을 걸러 낸다 (유흥·카지노·대부업 등)
   const forStudent = input.target === 'student'
+
+  // 🔴★2026-08-03 (44부 43차) — «성인» 리포트에서도 걸러 냅니다.
+  //   [무엇이 있었나]  학생만 걸러, 직장인 리포트에 ★「유흥업」이 그대로 나갔습니다.
+  //     (2026-08-03 대표님 PDF — 「어울리는 직업」에 유흥업이 찍혀 있었습니다)
+  //   ⚠️ roleFit.ts 머리말에 그 까닭이 «이미» 적혀 있었습니다 —
+  //      「직장인이 «당신에게 어울리는 직업: 유흥업» 을 읽으면 리포트 전체를 못 믿게 된다」
+  //      ★그런데 roleFit 만 그 판단을 쓰고 여기서는 안 썼습니다. 두 곳이 어긋난 것입니다.
+  //   ⚠️ 나쁜 직업이라는 뜻이 «아닙니다». 커리어 리포트의 결에 안 맞는 것입니다.
+  //      ★교재 표는 «안 고쳤습니다». 목록도 roleFit 의 것을 «가져다» 씁니다 (교훈 E).
+  //   ⚠️⚠️ ★«같은 이름일 때만» 막습니다.
+  //      처음엔 includes 로 견주었더니 ★「의사」가 「장의사」에 걸려 사라졌습니다.
+  //      한 글자라도 겹치면 막는 방식은 «멀쩡한 직업» 을 지웁니다. (교훈 — 낱말로 막지 말 것)
+  //   ⚠️⚠️ ★목록도 «같은 잣대(jobKey)» 로 다듬어 견줍니다.
+  //      「수도사업」은 jobKey 가 「사업」을 떼어 ★「수도」가 되므로,
+  //      목록을 날것 그대로 견주면 ★안 걸립니다. (실제로 「수도」가 남아 나왔습니다)
+  const blocked = (key: string) => BLOCKED_KEYS.has(key)
+
   const hits = [...bag.values()]
     .filter(x => x.score >= JOB_MIN)
     .filter(x => !forStudent || okForStudent(x.key))
+    .filter(x => !blocked(x.key))
     .sort((a, b) => (b.score - a.score) || (b.sources.length - a.sources.length))
 
   return { hits, pool: bag.size }
