@@ -424,6 +424,21 @@ function CareerResultInner() {
     }
   }, [calc, dayStem])
 
+  /**
+   * ★통변이 «다 왔는가» (44부 42차)
+   *
+   *  ⚠️ tongState 만 믿을 수 없습니다 — 스트리밍 중 effect 가 정리되면
+   *     cancelled 가 true 가 되어 ★setTongState('done') 에 «닿지 못합니다».
+   *     tongStartedRef 때문에 다시 시작하지도 않아, 글은 있는데 상태만 'loading' 으로 남습니다.
+   *  ★그래서 «글 자체» 를 봅니다. 대목이 셋 이상이면 반쪽이 아닙니다.
+   *  ⚠️ 저장본 다시보기는 tongState 가 'done' 이므로 그것으로도 참입니다.
+   */
+  const tongDone = useMemo(() => {
+    if (!tong) return false
+    if (tongState === 'done') return true
+    return (tong.match(/^\s*■/gm) ?? []).length >= 3
+  }, [tong, tongState])
+
   function onPrintCert() {
     if (!calc) return
     const r = openCareerCertificate({
@@ -763,7 +778,11 @@ function CareerResultInner() {
                 40차에 프리미엄을 끄자 그 배열이 «언제나 빈» 것이 되어
                 ★A4·해설복사 버튼이 «영영 안 떴습니다». 36차에 만든 것을 40차가 죽인 셈입니다.
                 ⇒ 「★통변이 다 나왔는가」로 답니다. 프리미엄과 무관합니다. */}
-            {tongState === 'done' && !!tong && (
+            {/* 🔴⚠️ 2026-08-03 (44부 42차) — ★tongState 에서 «뗐습니다».
+                스트리밍 중 effect 가 정리되면 'done' 에 닿지 못해,
+                ★글은 있는데 버튼만 «영영 안 뜨는» 일이 있었습니다. (대표님 화면)
+                ⇒ 위 tongDone 이 «글» 을 보고 답니다. */}
+            {tongDone && (
               <>
                 <div style={{
                   display: 'flex', flexDirection: 'row', gap: 8,

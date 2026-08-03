@@ -1678,8 +1678,15 @@ console.log('\n━━ (53) ★진로적성 A4 인쇄 · 해설 복사 (44부 36�
   // 🔴⚠️ 2026-08-03 (44부 41차) — 버튼이 premiumSections 에 매여 있어,
   //   프리미엄을 끄자 ★영영 안 떴습니다. 이제 «통변» 에 맵니다.
   //   ⚠️ 재는 것은 그대로입니다 — 「다 나온 뒤에만 뜨는가」.
-  check(/\{tongState === 'done' && !!tong && \(/.test(page),
-    `🔴★통변이 «다 나온 뒤» 에만 보입니다 (반쪽 인쇄물을 막습니다)`)
+  // 🔴⚠️ 2026-08-03 (44부 42차) — tongState 에서 «뗐습니다».
+  //   스트리밍 중 effect 가 정리되면 'done' 에 닿지 못해 ★버튼이 영영 안 떴습니다.
+  //   ⚠️ 재는 것은 그대로입니다 — 「반쪽일 때는 안 뜨는가」.
+  check(/\{tongDone && \(/.test(page),
+    `🔴★통변이 «다 왔을 때» 만 보입니다 (반쪽 인쇄물을 막습니다)`)
+  check(/const tongDone = useMemo/.test(page) && /\.length >= 3/.test(page),
+    `★대목이 «셋 이상» 이라야 «다 왔다» 고 봅니다`)
+  check(/if \(tongState === 'done'\) return true/.test(page),
+    `⚠️ 저장본 다시보기는 tongState 로도 참입니다`)
   check(!/\{tongState === 'done' && premiumSections/.test(page),
     `⚠️ 버튼이 «프리미엄» 에 매여 있지 않습니다 (꺼도 떠야 합니다)`)
   check(/premiumSections\.length[\s\S]{0,200}tongByKey\[c\.key\]/.test(page),
