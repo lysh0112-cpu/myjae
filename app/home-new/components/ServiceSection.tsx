@@ -167,9 +167,9 @@ interface Group { key: string; icon: string; title: string; desc: string; names:
 const GROUPS: Group[] = [
   {
     // ★사주·대운·연월운세가 하나로 합쳐져 항목이 하나뿐입니다.
-    key: 'saju', icon: '🧭', title: '내 사주 & 운세',
+    key: 'saju', icon: '🧭', title: '내 사주와 운세보기',
     desc: '원국·10년 흐름·올해를 한 번에',
-    names: ['내 사주 & 운세'],
+    names: ['내 사주와 운세보기'],
   },
   {
     key: 'timing', icon: '🎯', title: '결혼, 이사, 출산 택일',

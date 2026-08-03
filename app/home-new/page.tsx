@@ -149,11 +149,13 @@ const SLIDES = [
 const SERVICE_RENAMED: Record<string, string> = {
   '내이름 감정': '내 이름 정밀분석',
   '아기 작명': '내 아이 명품작명',
+  // ★2026-08-04 (45부) — 대표님 지시로 이름을 바꿨습니다.
+  '내 사주 & 운세': '내 사주와 운세보기',
 }
 
 const SERVICES = [
   // 🔮 통합 리포트 — 은은한 후광 (indigo-500 → violet-400)
-  { name: '내 사주 & 운세', color: '#6e50a0', bg: '#efe6f7', href: '/manseryeok/saju-storage', cat: '사주명리', sub: '원국·10년 흐름·올해를 한 번에', icon: '🔮', grad: ['#6366f1', '#a78bfa'] },
+  { name: '내 사주와 운세보기', color: '#6e50a0', bg: '#efe6f7', href: '/manseryeok/saju-storage', cat: '사주명리', sub: '원국·10년 흐름·올해를 한 번에', icon: '🔮', grad: ['#6366f1', '#a78bfa'] },
   // 🎨 BEST — rose-400 → amber-300
   { name: '내사주그림', color: '#b46e46', bg: '#f5e9df', href: '/manseryeok/mulsang-storage', cat: '사주명리', sub: '사주를 그림으로', icon: '🎨', grad: ['#fb7185', '#fcd34d'] },
   // 💖 rose-400 → pink-300
