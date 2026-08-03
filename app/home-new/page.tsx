@@ -511,6 +511,52 @@ export default function HomeNew() {
         </HomeBottomSheet>
       </main>
 
+      {/* ═══════════════════════════════════════════════════════════
+          ★2026-08-04 (45부 · 대표님 지시) — 회사 정보 푸터
+            자리는 </main> «뒤», 하단바 «앞» 입니다.
+            ⚠️ 하단바는 position:fixed 라 이 자리에 두어도 «겹치지 않습니다».
+               다만 화면 컨테이너의 paddingBottom(70px)이 하단바 자리를 비웁니다.
+
+          ⚠️ 목업으로 대표님 승낙을 받고 «덜어낸» 것들 —
+            ⛔ 회사소개 · 이용약관 · 개인정보처리방침 링크 줄 (갈 화면이 없습니다)
+            ⛔ 소셜 알약 셋(IG·YT·X) · 전화번호 · 「문의하기」 버튼
+            ★되살리시려면 말씀만 주십시오. 지운 값은 목업에 남아 있습니다.
+
+          ⚠️ 사업자등록번호는 ★«나중에» 채우기로 하셨습니다 (2026-08-04).
+             아래 000-00-00000 자리에 실제 번호를 적으시면 됩니다.
+          ⚠️ 개인정보처리방침은 결제를 붙이시기 전에 «법으로» 필요합니다.
+             지금은 어디에도 없습니다. 그때 다시 여쭙겠습니다.
+          ═══════════════════════════════════════════════════════════ */}
+      <footer style={{ background: '#f8f8f6', padding: '24px 20px', borderTop: '0.5px solid #e8e5de' }}>
+        {/* 사업자 정보 */}
+        <div style={{ fontSize: '11px', color: '#888888', lineHeight: 1.8 }}>
+          <div>(주)명연재 <span style={{ color: '#ccc' }}>|</span> 대표 오연희</div>
+          <div>사업자등록번호 000-00-00000</div>
+          <div>서울시 강북구 솔매로45길 95, 201호</div>
+        </div>
+
+        {/* 고객센터 — ★이름과 메일을 «한 줄» 로 (대표님 지시)
+            ⚠️ flexWrap 이 있어야 좁은 화면에서 메일이 «잘리지 않고» 아랫줄로 갑니다 */}
+        <div style={{
+          marginTop: '14px', fontSize: '11px', color: '#888888', lineHeight: 1.8,
+          display: 'flex', gap: '8px', alignItems: 'baseline', flexWrap: 'wrap',
+        }}>
+          <strong style={{ color: '#444444', fontWeight: 600, flex: 'none' }}>고객센터</strong>
+          <a href="mailto:lysh6728@naver.com" style={{ color: '#888888', textDecoration: 'none' }}>
+            lysh6728@naver.com
+          </a>
+        </div>
+
+        {/* 카피라이트 */}
+        <div style={{
+          marginTop: '20px', paddingTop: '12px',
+          borderTop: '0.5px solid #eeeeee',
+          fontSize: '11px', color: '#aaaaaa',
+        }}>
+          © 2026 (주)명연재. All rights reserved.
+        </div>
+      </footer>
+
       {/* 하단 고정 네비게이션 */}
       <div style={{
         position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
