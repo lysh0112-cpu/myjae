@@ -542,6 +542,8 @@ function CareerResultInner() {
                       result={sajuMbti}
                       realMbti={realMbti}
                       compare={mbtiCmp}
+                      /* ★2026-08-03 (44부 32차) — 「◯◯님은 사주명리에 비춰 볼 때…」 */
+                      name={person.name}
                       onWantInput={() => router.push(`/manseryeok/career-input?${backQuery}`)}
                     />
                   )}

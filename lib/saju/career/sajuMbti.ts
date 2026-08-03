@@ -133,6 +133,34 @@ function reason(parts: Array<[string, number]>): string {
  *  ⚠️ 이 문장들은 교재의 말이 «아닙니다» — 우리가 지은 풀이입니다.
  *     MBTI 축을 «일의 결» 로 옮긴 것이라 명리 근거를 붙이지 마십시오.
  */
+/**
+ * 여덟 글자의 «짧은 이름» — 「어떤 결인가」.
+ *
+ *  ★2026-08-03 신설 (44부 32차) — 대표님 지시로 카드를 «표» 에서 «글» 로 바꾸며
+ *    「타고나기는 …인데, 지금은 …」 을 쓰기 위해 지었습니다.
+ *  ⚠️ AXIS_WORK 와 «다른 것» 입니다 —
+ *      AXIS_NAME_SHORT  「어떤 결인가」   짧은 이름   ← 이것
+ *      AXIS_WORK        「일할 때 어떻게 드러나나」  긴 설명
+ *    두 벌이 «필요해서» 둘입니다. 하나로 합치지 마십시오.
+ *  ⚠️ 교재의 말이 «아닙니다» — MBTI 축을 우리 말로 옮긴 것입니다.
+ */
+export const AXIS_NAME_SHORT: Record<string, string> = {
+  E: '사람 사이에서 힘을 얻는 결', I: '혼자 있는 시간에 힘을 채우는 결',
+  S: '눈에 보이는 것을 먼저 보는 결', N: '아직 없는 그림을 먼저 보는 결',
+  T: '잣대로 자르는 결', F: '마음을 헤아려 고르는 결',
+  J: '정해 두고 가는 결', P: '열어 두고 가는 결',
+}
+
+/** 네 축의 이름 — ★화면·견주기가 «같은 말» 을 쓰도록 한 곳에 둡니다 */
+export const AXIS_LABEL: Record<MbtiAxis, string> = {
+  EI: '나서는 결', SN: '보는 결', TF: '고르는 결', JP: '맺는 결',
+}
+
+/** 열여섯 칭호 — ★넣으신 MBTI 에도 같은 표를 씁니다 (2026-08-03 대표님 확정 「가)」) */
+export function titleOf(code: string): string {
+  return TITLE[(code ?? '').toUpperCase()] ?? '고유한 결'
+}
+
 export const AXIS_WORK: Record<string, string> = {
   E: '사람 사이에서 기운이 차오릅니다. 회의·발표·현장이 에너지원입니다.',
   I: '혼자 있는 시간에 기운이 차오릅니다. 몰입할 자리를 지켜 주어야 합니다.',
@@ -367,14 +395,28 @@ export function calcSajuMbti(
 export interface MbtiCompare {
   /** 네 축 가운데 몇 개가 같은가 */
   same: number
-  /** 다른 축의 이름 (예: ['E/I', 'T/F']) */
+  /** 다른 축의 이름 (예: ['나서는 결']) */
   diffAxes: string[]
+  /** ★같은 축의 이름 */
+  sameAxes: string[]
   headline: string
   body: string
-}
-
-const AXIS_LABEL: Record<MbtiAxis, string> = {
-  EI: '나서는 결', SN: '보는 결', TF: '고르는 결', JP: '맺는 결',
+  /**
+   * ★2026-08-03 (44부 32차) — 화면이 «그릴» 재료.
+   *
+   *  ⚠️ 화면에서 다시 셈하지 «마십시오». 여기서 한 번만 가릅니다.
+   *     두 벌로 세면 「같은 결」과 「다른 결」이 어긋나는 날이 옵니다. (교훈 CJ)
+   */
+  axes: Array<{
+    /** 축 이름 — 나서는 결 · 보는 결 · 고르는 결 · 맺는 결 */
+    label: string
+    /** 사주로 본 글자 */
+    born: string
+    /** 넣으신 MBTI 의 글자 */
+    now: string
+    /** 같은가 */
+    same: boolean
+  }>
 }
 
 /**
@@ -395,16 +437,20 @@ export function compareMbti(saju: SajuMbtiResult, real: string): MbtiCompare | n
     else diffAxes.push(AXIS_LABEL[a.axis])
   })
 
+  const axes = saju.axes.map((a, i) => ({
+    label: AXIS_LABEL[a.axis], born: a.pick, now: R[i], same: a.pick === R[i],
+  }))
+
   if (same === 4) {
     return {
-      same, diffAxes,
+      same, diffAxes, sameAxes, axes,
       headline: '타고난 결과 지금의 결이 그대로 겹칩니다',
       body: '사주가 가리키는 방향과 스스로 아는 성향이 같습니다. 억지로 자신을 바꿔 쓰지 않아도 되는 자리라, 힘이 덜 들고 오래 갑니다. 잘하는 쪽으로 더 밀어도 좋습니다.',
     }
   }
   if (same === 0) {
     return {
-      same, diffAxes,
+      same, diffAxes, sameAxes, axes,
       headline: '타고난 결과 지금의 결이 크게 다릅니다',
       body: '이건 어긋난 것이 아니라, 살아오며 필요해서 다른 쪽 근육을 키우신 것입니다. 두 결을 다 쓸 수 있다는 뜻이라 쓰임이 넓습니다. 다만 오래 쓰면 지치는 쪽이 있으니, 힘들 때 돌아갈 자리가 타고난 쪽이라는 것만 기억해 두십시오.',
     }
@@ -415,7 +461,7 @@ export function compareMbti(saju: SajuMbtiResult, real: string): MbtiCompare | n
   //    AI 가 헷갈리면 손님은 더합니다.
   //  ⇒ ★«겹치는 결» 과 «갈리는 결» 의 이름을 «둘 다» 대어 줍니다.
   return {
-    same, diffAxes,
+    same, diffAxes, sameAxes, axes,
     headline: `겹치는 결 ${same}가지 · 갈리는 결 ${diffAxes.length}가지`,
     // ⚠️ 조사를 문자열에 «박지» 마십시오 — lib/saju/josa.ts 를 씁니다. (교훈 AU)
     //    그 파일 머리말에 「진로적성에서도 "토(土)이 없어요" 가 나왔다」고 적혀 있습니다.

@@ -1391,7 +1391,10 @@ console.log('\n━━ ㊼ ★사주 MBTI 화면 — 숫자를 걷어내고 «말
   check(/d <= 5/.test(card) && /leftPct >= 45 && a\.leftPct <= 55/.test(eng),
     `⚠️ 「반반」 잣대가 balanced(45~55%)와 같습니다`)
   // ★막대는 «남았는가» — 지운 것이 아니라 감춘 것입니다
-  check(/width: `\$\{a\.leftPct\}%`/.test(card), `★막대는 그대로입니다 (leftPct 를 씁니다)`)
+  // ★2026-08-03 (44부 32차) — 막대가 «가운데에서» 자라도록 바뀌었습니다.
+  //   ⚠️ 검사를 헐겁게 한 것이 «아닙니다» — 「막대가 leftPct 로 그려지는가」를 그대로 잽니다.
+  check(/\$\{a\.leftPct - 50\}%/.test(card) && /\$\{50 - a\.leftPct\}%/.test(card),
+    `★막대는 그대로입니다 (leftPct 로 그립니다)`)
 
   // 🔴 근거 줄에서 «점수» 가 사라졌는가
   check(!/\$\{k\} \$\{Math\.round\(v\)\}/.test(eng),
@@ -1430,12 +1433,17 @@ console.log('\n━━ ㊽ ★「어떤 결인가요」 해설 · 재료의 숫�
   check(!/const AXIS_WORK/.test(pr), `⚠️ 프롬프트가 «제 벌» 을 다시 적지 않습니다`)
   check(/import \{ calcSajuMbti, compareMbti, AXIS_WORK/.test(pr),
     `⚠️ 프롬프트는 그 한 곳에서 «가져다» 씁니다`)
-  check(/import \{ AXIS_WORK \} from '@\/lib\/saju\/career\/sajuMbti'/.test(card),
+  check(/import \{ AXIS_WORK[^}]*\} from '@\/lib\/saju\/career\/sajuMbti'/.test(card),
     `⚠️ 화면도 같은 곳에서 가져다 씁니다`)
 
   // ★표 아래 해설이 그려지는가
-  check(/어떤 결인가요/.test(card), `★「어떤 결인가요」 해설이 있습니다`)
-  check(/\{AXIS_WORK\[a\.pick\]\}/.test(card), `★이긴 글자의 줄을 그립니다`)
+  // ★2026-08-03 (44부 32차) — 「어떤 결인가요」 네 줄이 «같은 결 / 다른 결» 로 바뀌었습니다.
+  //   ⚠️ 없어진 것이 «아니라» 결마다 제자리를 찾아간 것입니다. 뜻을 그대로 잽니다 —
+  //      「이긴 글자의 설명을 그리는가」.
+  check(/\{AXIS_WORK\[a\.born\]\}|trimEcho\(a\.born\)/.test(card),
+    `★같은 결에서 이긴 글자의 줄을 그립니다`)
+  check(/trimEcho\(a\.pick\)|\{AXIS_WORK\[a\.pick\]\}/.test(card),
+    `★MBTI 를 안 넣으신 분께도 네 글자를 풀어 드립니다`)
   check(/result\.axes\.map\(a => \(/.test(card), `★네 축 모두 그립니다`)
 
   // 🔴 재료에도 「81:19」가 «남지 않았는가» (44부 3-3 별점 교훈)
@@ -1507,7 +1515,10 @@ console.log('\n━━ ㊿ ★MBTI 를 안 넣으면 조르지 않는다 · 겹�
   // 🔴 권유 상자가 «화면과 재료 둘 다» 에서 사라졌는가
   check(!/실제 MBTI 를 넣으시면/.test(card), `🔴★화면에서 권유 상자가 사라졌습니다`)
   check(!/실제 MBTI 를 넣으시면/.test(pr), `🔴⚠️ ★«재료» 에서도 사라졌습니다 (새어 나가지 않게)`)
-  check(/\) : null\}/.test(card), `★안 넣으면 «아무것도» 그리지 않습니다`)
+  // ★2026-08-03 (44부 32차) — 「권유 상자」가 아예 사라져 그 자리 자체가 없어졌습니다.
+  //   ⇒ 「넣으라고 조르는 말이 없는가」로 잽니다. 그것이 본디 재려던 것입니다.
+  check(!/넣으시면|넣고 다시 보기/.test(card),
+    `★안 넣으신 분께 «조르지» 않습니다`)
   // ⚠️ 되살릴 길은 남겼는가
   check(/onWantInput\?: \(\) => void/.test(card), `⚠️ onWantInput 은 남아 있습니다 (되살릴 때)`)
 
@@ -1527,6 +1538,53 @@ console.log('\n━━ ㊿ ★MBTI 를 안 넣으면 조르지 않는다 · 겹�
   check(/eunneun\(sameAxes/.test(eng), `⚠️ 조사를 josa.ts 로 붙입니다 (교훈 AU)`)
   check(/sameAxes\.join\(' · '\)/.test(eng) && /diffAxes\.join\(' · '\)/.test(eng),
     `⚠️ 「과」로 잇지 않습니다 — 「보는 결과 고르는 결」이 «결과» 로 읽힙니다`)
+}
+
+console.log('\n━━ (51) ★MBTI 카드 — 「표」를 걷고 «읽는 글» 로 (44부 32차) ━━')
+{
+  const noComment = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  const card = noComment(read('app/manseryeok/career-result/components/MbtiCard.tsx'))
+  const eng = noComment(read('lib/saju/career/sajuMbti.ts'))
+  const page = noComment(read('app/manseryeok/career-result/page.tsx'))
+
+  // ★여는말 — 누가 무엇을 말하는지 첫 문장에서 끝내는가
+  check(/사주명리에 비춰 볼 때 타고난 결이/.test(card), `★「…사주명리에 비춰 볼 때 타고난 결이」로 엽니다`)
+  check(/\{result\.code\}\(\{result\.title\}\)/.test(card), `★ESFP(분위기를 여는 사람) 꼴입니다`)
+  check(/\{realMbti\}\(\{titleOf\(realMbti\)\}\)/.test(card), `★넣으신 MBTI 에도 칭호를 붙입니다 (대표님 확정 「가)」)`)
+  check(/name=\{person\.name\}/.test(page), `★「◯◯님은」 이름이 화면에서 넘어옵니다`)
+  check(/어긋난 것이 아니라, 살아오며 길러 내신 결입니다/.test(card),
+    `★손님이 «혼자 의아해할 틈» 을 주지 않습니다`)
+
+  // ★같은 결 / 다른 결 — 알약은 짧게, 이름은 옆에 (대표님 확정 「나)」)
+  check(/>같은 결</.test(card) && />다른 결</.test(card), `★알약 둘이 있습니다`)
+  check(/\{compare\.sameAxes\.join\(' · '\)\}/.test(card) && /\{compare\.diffAxes\.join\(' · '\)\}/.test(card),
+    `★결 이름은 알약 «옆» 에 둡니다 (알약이 두 줄로 터지지 않게)`)
+  check(/compare\.axes\.some\(a => a\.same\)/.test(card) && /compare\.axes\.some\(a => !a\.same\)/.test(card),
+    `⚠️ 한쪽이 비면 그 알약을 «안 그립니다» (넷 다 같거나 넷 다 다를 때)`)
+  check(/\{a\.born\} → \{a\.now\}/.test(card), `★「E → I」로 어느 쪽에서 어느 쪽인지 밝힙니다`)
+
+  // ⚠️ 셈은 «한 곳» 에서 — 화면이 다시 가르지 않는가 (교훈 CJ)
+  check(/sameAxes: string\[\]/.test(eng) && /axes: Array<\{/.test(eng),
+    `⚠️ 같은/다른 가르기를 «엔진» 이 합니다. 화면은 그리기만 합니다`)
+
+  // ★막대는 «접었는가» — 지운 것이 아닙니다
+  check(/<details/.test(card) && /사주에서 어떻게 나온 건가요/.test(card),
+    `★네 축 막대를 «접어» 두었습니다 (지우지 않았습니다)`)
+  check(/사주로 본 결/.test(card), `★막대의 «임자» 를 밝힙니다`)
+  check(/left: '50%', top: 0, bottom: 0/.test(card), `★가운데(반반) 선이 있습니다`)
+  check(/a\.leftPct >= 50[\s\S]{0,120}right: '50%'/.test(card),
+    `★막대가 «고른 쪽» 으로 자랍니다 (막대와 진한 글자가 언제나 같은 쪽)`)
+
+  // ⚠️ 같은 말을 두 번 하지 않는가
+  check(/function trimEcho/.test(card), `⚠️ 짧은 이름과 긴 설명이 겹치면 «한 번만» 말합니다`)
+  check(!/compare\.headline/.test(card), `⚠️ 옛 「타고난 결 ↔ 지금의 결」 상자가 사라졌습니다 (세 번 말하던 것)`)
+  check(/NUM: Record<number, string>/.test(card), `⚠️ 「1가지」가 아니라 「한 가지」로 씁니다`)
+
+  // ★여덟 줄 짧은 이름이 «엔진» 에 있는가
+  check(/AXIS_NAME_SHORT/.test(eng), `★「어떤 결인가」 여덟 줄이 엔진 한 곳에 있습니다`)
+  check(/두 벌이 «필요해서» 둘입니다/.test(read('lib/saju/career/sajuMbti.ts')),
+    `⚠️ AXIS_WORK 와 «다른 것» 이라는 까닭이 적혀 있습니다`)
 }
 
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
