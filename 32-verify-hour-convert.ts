@@ -1126,6 +1126,69 @@ console.log('\n━━ ㊷ ★★목업 정본 화면·분량 개편 (44부 22차
   check(/premium: true/.test(pg), `★premium: true 로 보냅니다 (max_tokens 16,000)`)
 }
 
+console.log('\n━━ ㊸ ★오행 그래프 «가운데 0» · A4 궁합서 (44부 23차) ━━')
+{
+  const g = read('app/manseryeok/couple-result-new/components/OhaengCompareCard.tsx')
+
+  // ★가운데가 0 — 두 막대가 «바깥으로» 뻗습니다
+  check(/양방향 막대로 바꿨습니다/.test(g), `★양방향으로 바꾼 기록이 있습니다`)
+  check(/gridTemplateColumns: `\$\{NAME_W\}px 1fr 1fr \$\{NAME_W\}px`/.test(g),
+    `★칸이 «이름 | 아내 | 남편 | 이름» 넷입니다`)
+  check(/justifyContent: 'flex-end'/.test(g) && /justifyContent: 'flex-start'/.test(g),
+    `★아내는 «왼쪽으로», 남편은 «오른쪽으로» 뻗습니다`)
+  check(/left: '50%'/.test(g), `★가운데(50%)에 0 선이 있습니다`)
+
+  // ★오행 이름이 «양끝» 에 대칭으로 (가운데가 아니라)
+  const nameCells = (g.match(/\{name\}<\/div>/g) ?? []).length
+  check(nameCells === 2, `★오행 이름이 «양끝» 에 둘입니다 (${nameCells})`)
+  check(/★왼쪽 끝 이름/.test(g) && /★오른쪽 끝 이름 \(대칭\)/.test(g),
+    `★왼쪽·오른쪽 끝에 대칭으로 둔다고 적혀 있습니다`)
+  // ⚠️ 옛 배치(이름이 가운데)가 «남아 있지» 않은가
+  check(!/width: 42, textAlign: 'center'/.test(g),
+    `⚠️ 옛 «가운데 이름» 배치가 사라졌습니다`)
+
+  // ★타이틀이 그래프 «위» 좌우로
+  check(/★타이틀 — 그래프 «위» 좌우로/.test(g), `★「아내/남편」이 그래프 위 좌우에 있습니다`)
+
+  // ⚠️ 계산을 «건드리지 않았는가» — CSS 만 바꾸라는 지시였습니다
+  check(/compareOhaeng\(aScores, bScores\)/.test(g), `⚠️ 계산은 compareOhaeng 그대로입니다`)
+  check(/EL_BG\[el\]/.test(g), `⚠️ 색은 EL_BG(연재쌤 지정) 그대로입니다`)
+
+  // ★A4 궁합서
+  const c = read('app/manseryeok/couple-result-new/components/CoupleCertificate.tsx')
+  check(/@page \{ size: A4/.test(c), `★A4 규격을 지정합니다`)
+  check(/window\.print\(\)/.test(c), `★브라우저 인쇄로 「PDF 저장」을 함께 줍니다`)
+  // ⚠️ PDF 라이브러리를 더하지 «않았는가» (교훈 [의존])
+  check(!/jspdf|html2canvas|html2pdf/i.test(c),
+    `⚠️ PDF 라이브러리를 «더하지 않았습니다» (한글 글꼴·의존 교훈)`)
+  const pkg3 = JSON.parse(read('package.json'))
+  check(!Object.keys({ ...pkg3.dependencies, ...pkg3.devDependencies })
+    .some(k => /jspdf|html2canvas|html2pdf/i.test(k)),
+  `⚠️ package.json 에도 PDF 라이브러리가 «없습니다»`)
+
+  // ★종이에서도 «가운데 0» 이 깨지지 않는가 — 대표님 지시
+  check(/가운데가 0» 인 양방향/.test(c), `★종이도 «가운데 0» 양방향입니다`)
+  check(/table-layout: fixed/.test(c),
+    `★인쇄는 flex 대신 «표» 로 그립니다 (인쇄 엔진마다 flex 를 다르게 잽니다)`)
+  check(/border-right: 1px solid #e0d6cc/.test(c), `★종이에도 가운데 0 선이 있습니다`)
+  check(/\.onm\.r \{ text-align: right/.test(c) && /\.onm\.l \{ text-align: left/.test(c),
+    `★종이도 이름이 «양끝» 에 대칭입니다`)
+  // ★솔루션 줄이 «잘리지 않는가»
+  check(/\.sol \{[\s\S]{0,200}page-break-inside: avoid/.test(c),
+    `★「→」 솔루션이 쪽 경계에서 «잘리지 않습니다»`)
+  check(/page-break-after: avoid/.test(c), `★제목만 홀로 남지 않습니다`)
+  // ⚠️ 팝업이 막히면 «조용히 넘어가지» 않는가 (교훈 U)
+  check(/팝업이 막혀 있어/.test(c), `⚠️ 팝업이 막히면 «알려 드립니다»`)
+
+  // ⚠️ 값을 «다시 계산하지» 않는가 (교훈 CJ)
+  const pg2 = read('app/manseryeok/couple-result-new/page.tsx')
+  check(/compareOhaeng\(ohaeng1, ohaeng2\)/.test(pg2),
+    `⚠️ 닮음·채움을 «한 창구»(compareOhaeng)에서 받습니다`)
+  check(/A4 궁합서 \(인쇄 \/ PDF 저장\)/.test(pg2), `★화면에 버튼이 있습니다`)
+  check(/reportSections\.length > 0 &&[\s\S]{0,200}onPrintCert/.test(pg2),
+    `⚠️ 통변이 «다 나온 뒤» 에만 버튼이 보입니다 (반쪽 궁합서를 막습니다)`)
+}
+
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
 {
   const src = read('lib/saju/simsanOhaeng.ts')

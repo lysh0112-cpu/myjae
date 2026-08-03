@@ -35,6 +35,11 @@ import { calcSimsanOhaeng, type Pillar as SajuPillarSimple } from '@/lib/saju/si
 import CoupleJudgeCard from './components/CoupleJudgeCard'
 // ★목업 정본 리포트 (44부 22차)
 import CoupleReport, { type ReportSection } from './components/CoupleReport'
+// ★A4 궁합서 (2026-08-03)
+import { openCoupleCertificate, type CertPerson } from './components/CoupleCertificate'
+import { elOfStem, elOfBranch } from '@/lib/saju/ohaengColor'
+// ★닮음·채움은 «한 창구» 에서만 (화면과 같은 값이라야 합니다)
+import { compareOhaeng } from '@/lib/saju/ohaengCompare'
 import CoupleFollowUp, { MAX_FOLLOWUPS, type FollowUp } from './components/CoupleFollowUp'
 import { judgeCouple, type CoupleJudgeV1, type Gender } from '@/lib/saju/coupleFilterV1'
 import { COUPLE_QUESTIONS, groupCoupleByCategory } from '@/lib/saju/coupleQuestions'
@@ -717,6 +722,66 @@ function CoupleResultView({
   }, [tbCards, tbIntro])
 
 
+  // ══════════════════════════════════════════════════════════════
+  //  ★A4 궁합서 (2026-08-03 · 대표님 지시 · 44부 23차)
+  //
+  //  ⚠️ PDF 라이브러리를 «더하지 않았습니다» — 한글 글꼴 때문에 꾸러미가
+  //     몇 MB 늘고, 안 실으면 «글자가 깨진» 궁합서가 나갑니다. (교훈 [의존])
+  //  ★브라우저 인쇄가 어느 기기에서나 「PDF로 저장」을 함께 줍니다.
+  //  ★43부 선명장(NamingCertificate)과 «같은 방식» 입니다. 전례를 따릅니다.
+  //
+  //  ⚠️⚠️ 값을 «다시 계산하지 않습니다». 화면이 쓰는 것을 그대로 넘깁니다. (교훈 CJ)
+  //  ⚠️ 팝업이 막히면 «조용히 넘어가지 않고» 알려 드립니다. (교훈 U)
+  // ══════════════════════════════════════════════════════════════
+  function onPrintCert() {
+    const toCert = (
+      nm: string, birth: string, pillars: SajuPillarSimple[],
+    ): CertPerson => ({
+      name: nm, birth,
+      // ★화면(CoupleWonguk)과 «같은 차례» — 시·일·월·년
+      pillars: ['시주', '일주', '월주', '년주'].map(k => {
+        const q = pillars.find(x => x.pillar === k)
+        return {
+          label: k[0],
+          stem: q?.stem ?? '', branch: q?.branch ?? '',
+          stemEl: elOfStem(q?.stem ?? '') ?? '토',
+          branchEl: elOfBranch(q?.branch ?? '') ?? '토',
+        }
+      }),
+    })
+    const aName = kind === 'married'
+      ? (person1.gender === '남' ? '남편' : person1.gender === '여' ? '아내' : name1)
+      : name1
+    const bName = kind === 'married'
+      ? (person2.gender === '남' ? '남편' : person2.gender === '여' ? '아내' : name2)
+      : name2
+    const r = openCoupleCertificate({
+      kindLabel: coupleTitleOf(kind),
+      badge: judge?.badge ?? '',
+      a: toCert(name1, person1.year ? `${person1.year}.${person1.month}.${person1.day}` : '', saju1 ?? []),
+      b: toCert(name2, person2.year ? `${person2.year}.${person2.month}.${person2.day}` : '', saju2 ?? []),
+      aLabel: aName, bLabel: bName,
+      intro: tongIntro,
+      sections: reportSections.map(x => ({ title: x.title, body: x.body })),
+      outro: tongOutro,
+      // ⚠️⚠️ 닮음·채움을 «다시 계산하지 않습니다» —
+      //    compareOhaeng «한 창구» 를 씁니다. 화면(OhaengCompareCard)과 같은 값입니다.
+      //    ★두 벌로 세면 종이와 화면이 «다른 수» 를 말하는 날이 옵니다. (교훈 CJ)
+      ohaeng: ohaeng1 && ohaeng2
+        ? (() => {
+            const cmp = compareOhaeng(ohaeng1, ohaeng2)
+            return {
+              // ⚠️ 화면 그래프와 «같은 방향» — 왼쪽이 A, 오른쪽이 B 입니다.
+              rows: cmp.rows.map(x => ({ el: x.el as string, a: x.a, b: x.b })),
+              similarity: cmp.similarity,
+              complement: cmp.complement,
+            }
+          })()
+        : undefined,
+    })
+    if (!r.ok && r.message) alert(r.message)
+  }
+
   /** ★2026-07-26 — 완성된 통변을 보관함 행에 덮어쓴다.
    *
    *  저장 순서가 "판정 저장(insert) → 통변 완성(update)" 두 걸음이라,
@@ -1086,6 +1151,25 @@ function CoupleResultView({
           )}
           <button onClick={onOther} style={{ flex: 1, background: '#b46e46', border: 'none', borderRadius: 11, padding: 12, fontSize: 13, color: '#fff', cursor: 'pointer' }}>다른 궁합 보기</button>
         </div>
+
+        {/* ══════════════════════════════════════════════════════
+             ★A4 궁합서 — 인쇄 / PDF 저장 (2026-08-03 · 대표님 지시)
+             ⚠️ PDF 라이브러리를 «더하지 않았습니다» — 한글 글꼴 때문에
+                꾸러미가 몇 MB 늘고, 안 실으면 «글자가 깨집니다». (교훈 [의존])
+             ★브라우저 인쇄가 어느 기기에서나 「PDF로 저장」을 함께 줍니다.
+             ★43부 선명장(NamingCertificate)과 «같은 방식» 입니다.
+             ⚠️ 통변이 «다 나온 뒤» 에만 보입니다. 반쪽 궁합서를 내지 않습니다.
+           ══════════════════════════════════════════════════════ */}
+        {reportSections.length > 0 && (
+          <button
+            onClick={onPrintCert}
+            style={{
+              width: '100%', marginTop: 8, background: '#b48a3c', border: 'none',
+              borderRadius: 11, padding: 13, fontSize: 13.5, fontWeight: 600,
+              color: '#fff', cursor: 'pointer',
+            }}
+          >🖨 A4 궁합서 (인쇄 / PDF 저장)</button>
+        )}
 
         {/* ★해설 복사 — 카톡 등에 붙여넣기 (공용 부품) */}
         {/* ★2026-07-24 — 판정 결과 + 이미 받은 문답을 함께 담는다. */}

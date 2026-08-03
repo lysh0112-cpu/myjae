@@ -21,6 +21,13 @@ const EL_TEXT: Record<Ohaeng, string> = {
   목: '#2e7d32', 화: '#c62828', 토: '#b8801a', 금: '#8a8a8a', 수: '#2b2b2b',
 }
 
+/**
+ * ★양끝 오행 이름 칸 너비 (2026-08-03)
+ *   「목 나무」처럼 두 글자+두 글자라 44px 이면 줄바꿈 없이 들어갑니다.
+ *   ⚠️ 좁히면 「금 쇠」만 남고 나머지가 접힙니다. 재고 정한 값입니다.
+ */
+const NAME_W = 44
+
 // ★2026-07-26 — 조사(과/와 · 이/가)를 받침으로 가른다.
 //
 //   [왜]
@@ -74,40 +81,81 @@ export default function OhaengCompareCard({
         <ScoreCard label="🤝 채워주는 정도" value={r.complement} track="#fbeaf0" fill="#d4537e" />
       </div>
 
-      {/* 좌우 방향 표시 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, margin: '0 4px 10px' }}>
-        <span style={{ color: '#8a6a52' }}>◀ {aLabel}</span>
-        <span style={{ color: '#c0a898' }}>오행</span>
-        <span style={{ color: '#8a6a52' }}>{bLabel} ▶</span>
+      {/* ══════════════════════════════════════════════════════════
+          ★2026-08-03 — 양방향 막대로 바꿨습니다 (대표님 지시)
+
+          전   [아내 막대][오행 이름][남편 막대]
+               ⇒ 이름이 «가운데» 라 0 이 어디인지 알기 어려웠습니다
+               ⇒ 막대가 이름 쪽으로 «안으로» 붙어 방향이 헷갈렸습니다
+
+          ★후  [목]  아내 막대 ◀─(0 중앙)─▶ 남편 막대  [목]
+               ★맨 가운데가 «0» 입니다. 두 막대가 «바깥으로» 뻗습니다.
+               ★오행 이름을 «양끝» 에 대칭으로 둡니다.
+
+          ⚠️ 계산은 «건드리지 않았습니다» — compareOhaeng 그대로입니다.
+             CSS 배치만 바꿨습니다 (대표님 지시).
+          ⚠️ 색은 EL_BG(연재쌤 지정) 그대로. 금(金)은 흰색이라 테두리로 드러냅니다.
+          ══════════════════════════════════════════════════════════ */}
+
+      {/* ★타이틀 — 그래프 «위» 좌우로 */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: `${NAME_W}px 1fr 1fr ${NAME_W}px`,
+        alignItems: 'center', fontSize: 11, marginBottom: 8,
+      }}>
+        <span />
+        <span style={{ color: '#8a6a52', textAlign: 'left', paddingLeft: 2 }}>◀ {aLabel}</span>
+        <span style={{ color: '#8a6a52', textAlign: 'right', paddingRight: 2 }}>{bLabel} ▶</span>
+        <span />
       </div>
 
-      {/* 오행별 좌우 막대 */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+      {/* ★오행별 — 가운데가 0, 바깥으로 뻗습니다 */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 11, position: 'relative' }}>
         {OHAENG_ORDER.map(el => {
           const row = r.rows.find(x => x.el === el)!
           const isGeum = el === '금'  // 흰색이라 테두리로 드러냄
-          const barStyle = (side: 'l' | 'r') => ({
+          const bar = (side: 'l' | 'r') => ({
             display: 'block' as const,
             width: side === 'l' ? pct(row.a) : pct(row.b),
             height: 15,
             background: EL_BG[el],
             border: isGeum ? '0.5px solid #c8c8c8' : 'none',
+            // ★바깥쪽 끝만 둥글게 — 가운데(0)는 각지게 두어 «시작점» 임을 보입니다
             borderRadius: side === 'l' ? '3px 0 0 3px' : '0 3px 3px 0',
           })
+          const name = (
+            <span style={{
+              fontSize: 11, color: EL_TEXT[el], fontWeight: 500,
+              whiteSpace: 'nowrap' as const,
+            }}>{EL_LABEL[el]}</span>
+          )
           return (
-            <div key={el} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-                <span style={barStyle('l')} />
+            <div key={el} style={{
+              display: 'grid',
+              gridTemplateColumns: `${NAME_W}px 1fr 1fr ${NAME_W}px`,
+              alignItems: 'center', gap: 6,
+            }}>
+              {/* ★왼쪽 끝 이름 */}
+              <div style={{ textAlign: 'right' }}>{name}</div>
+              {/* 아내 — 가운데에서 «왼쪽으로» */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <span style={bar('l')} />
               </div>
-              <span style={{ width: 42, textAlign: 'center', fontSize: 11, color: EL_TEXT[el], fontWeight: 500, flexShrink: 0 }}>
-                {EL_LABEL[el]}
-              </span>
-              <div style={{ flex: 1 }}>
-                <span style={barStyle('r')} />
+              {/* 남편 — 가운데에서 «오른쪽으로» */}
+              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                <span style={bar('r')} />
               </div>
+              {/* ★오른쪽 끝 이름 (대칭) */}
+              <div style={{ textAlign: 'left' }}>{name}</div>
             </div>
           )
         })}
+
+        {/* ★가운데 0 선 — 두 막대가 «여기서» 시작합니다 */}
+        <div aria-hidden style={{
+          position: 'absolute', left: '50%', top: -3, bottom: -3,
+          width: 1, background: '#e0d6cc', transform: 'translateX(-0.5px)',
+          pointerEvents: 'none',
+        }} />
       </div>
 
       {/* 해설 */}
