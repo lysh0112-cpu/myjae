@@ -650,7 +650,11 @@ function ResultNewContent() {
                   에서는 아래 풀이도 안 그려져 ★표가 통째로 사라졌습니다.
             ⚠️ 만세력 두 화면(홈에서 들어가는 두 길)은 «원래대로» 표가 다 나와야 합니다.
                되돌릴 일이 아닙니다. 25-verify-manse-ui.ts 가 이 자리를 지킵니다. */}
-        {saju.length>0 && (
+        {/* ⛔ 2026-08-04 (45부 · 대표님 지시) — ★병존은 «전문가용에만» 보입니다.
+              [까닭] 「나의 만세력」은 손님이 보는 화면이라 병존까지는 무겁습니다.
+              ★ByeongjonView.tsx 부품은 «하나도 안 지웠습니다». 조건만 달았습니다.
+              되살리시려면 아래 isPro && 를 떼면 됩니다. */}
+        {isPro && saju.length>0 && (
           <ByeongjonView saju={saju} target={byeongjonTarget}/>
         )}
 

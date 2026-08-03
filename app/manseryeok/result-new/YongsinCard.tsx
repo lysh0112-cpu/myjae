@@ -33,6 +33,69 @@ const GYEOK_PRINCIPLE: Record<string, { name: string; line: string }> = {
   편인격: { name: '관인상생', line: '관이 인을 살려 나를 키워요' },
   정인격: { name: '관인상생', line: '관이 인을 살려 나를 키워요' },
 }
+/* ★2026-08-04 (45부) — 격 설명 «사전» (교재 A책 159~182쪽 「8정격과 양인격, 건록격」)
+ *
+ *  [무엇인가]  격 이름을 누르면 나오는 모달의 글입니다.
+ *
+ *  ⚠️⚠️ 교재는 «상담자용 노트» 라 손님께 그대로 낼 수 없는 말이 많습니다.
+ *     ⛔ 안 담은 것 — 「한량」 「카사노바」 「일부다처형」 「주색잡기」 「조폭」
+ *        「밖에서는 좋은데 안에서는 폭군」 「이혼 가능성」 「화류계」
+ *        「돈을 벌려면 건강을 잃어야 한다」 · 성별 단정 · 직업 목록
+ *     ★44부 화개살(교훈 CA)과 «같은 판단» 입니다 — 어투를 다듬어 될 자리가 아닙니다.
+ *     ⛔ 되살리지 마십시오. 되살리려면 대표님께 여쭈십시오.
+ *
+ *  ★교재가 «좋은 쪽» 을 스스로 일러 준 줄만 살렸습니다.
+ *     예) 180쪽 「카리스마를 고집으로 부리지 말고 자존감·추진력·리더십으로 발휘하라」
+ *
+ *  ★말은 «쉬운 말 + 괄호에 명리 말» 입니다 (44부 34차 방식).
+ *     28차에 명리 말을 «전부» 걷어냈더니 사주 화면인데 사주가 안 보였습니다.
+ *
+ *  ⚠️ 차례는 ★「타고난 결」이 «먼저», 「무엇이 있으면 좋나요」가 «뒤» 입니다.
+ *     (2026-08-04 대표님 확정 — 손님이 궁금한 것이 먼저 옵니다)
+ */
+const GYEOK_DESC: Record<string, { gyeol: string; need: string }> = {
+  식신격: {
+    gyeol: '마음이 넉넉하고 남을 배려하며 양보할 줄 압니다. 낙천적이면서도 파고드는 힘이 있고, 표현이 좋아 사람이 따릅니다. 먹을 복과 건강 복이 있고, 어울리는 일이 많아 길을 고르는 데 크게 어려움이 없는 결입니다.',
+    need: '재물의 기운(재성)이 함께 있으면 가장 좋습니다. 가진 재주가 그대로 결실로 이어지는 구조입니다.',
+  },
+  상관격: {
+    gyeol: '기회를 알아채는 눈이 빠르고 머리가 총명합니다. 생각이 새롭고 상상력과 예술성이 있으며 말솜씨가 뛰어납니다. 기운이 고르게 잡히면 지금 시대에 크게 쓰일 결입니다. 자존심이 센 만큼 마음을 다스리는 시간이 도움이 됩니다.',
+    need: '배우고 다스리는 기운(인성)이 함께 있어야 합니다. 넘치는 재주를 다잡아 주는 자리입니다.',
+  },
+  정재격: {
+    gyeol: '셈이 밝고 성실하며 노력으로 쌓아 가는 결입니다. 명예와 신용을 무겁게 여기고 의리가 있습니다. 일을 크게 벌이기보다 자리를 잡고 다지는 쪽에서 힘이 납니다. 투기보다 안정된 방향이 이 결과 잘 맞습니다.',
+    need: '나 자신의 힘이 튼튼해야 합니다. 내가 강하고 재물도 강한 구조일 때 가장 좋습니다.',
+  },
+  편재격: {
+    gyeol: '사람을 끄는 힘이 있고 인기와 재치가 있습니다. 움직임이 넓어 여러 곳에서 기회를 잡습니다. 일에 프로 정신이 있고 쫀쫀하지 않아 융통성이 아주 좋습니다. 통이 큰 결이라 씀씀이에 내 잣대를 하나 두면 좋습니다.',
+    need: '나 자신의 힘이 튼튼해야 합니다. 내가 강하면 큰 재물을 감당해 내는 구조입니다.',
+  },
+  정관격: {
+    gyeol: '근면하고 성실하며 명예를 소중히 여깁니다. 예의가 바르고 신용을 지키며 원리 원칙이 뚜렷합니다. 꼼꼼하고 믿음직해 사람들이 기대는 자리에 서게 됩니다. 원칙이 뚜렷한 만큼 너그러움을 한 뼘 두면 더 넓어집니다.',
+    need: '나도 강하고 관도 강해야 합니다. 부딪히고 흔들리는 기운은 이 결이 꺼립니다.',
+  },
+  편관격: {
+    gyeol: '추진력과 통솔력이 있고 무리를 이끄는 힘이 있습니다. 결단이 빠르고 어려운 자리에서 앞에 서는 결입니다. 몸에서 뿜는 기운이 있어 사람들이 따릅니다. 힘이 센 만큼 서두르지 않는 것이 이 결의 열쇠입니다.',
+    need: '나 자신의 힘이 튼튼해야 합니다. 베풀고 표현하는 기운(식신)이 있으면 가장 좋습니다.',
+  },
+  정인격: {
+    gyeol: '지혜롭고 정직하며 남을 이해하는 마음이 깊습니다. 배움에 힘이 있고 눈썰미가 좋으며 머리가 총명합니다. 스스로 서는 힘이 있고 기회를 알아보는 눈이 밝습니다. 공부와 자격으로 쌓아 갈 때 가장 멀리 가는 결입니다.',
+    need: '재물을 지나치게 좇지 않아야 합니다. 실력을 쌓으면 재물이 뒤따라오는 구조입니다.',
+  },
+  편인격: {
+    gyeol: '상황에 맞추는 재주가 뛰어나 융통성의 달인이라 합니다. 눈치가 빠르고 호기심이 많아 연구하고 궁리하기를 즐깁니다. 남이 못 보는 것을 보는 감각이 있습니다. 생각이 많은 만큼 손에 쥔 것 하나로 파고들면 결실이 납니다.',
+    need: '재물의 기운(재성)이 함께 있어야 합니다. 한쪽으로 쏠린 기운을 고르게 잡아 주는 자리입니다.',
+  },
+  양인격: {
+    gyeol: '나를 위해서보다 여럿을 위해 움직이는 마음이 있습니다. 사람을 이끄는 힘이 세고 한번 마음먹으면 끝까지 밉니다. 힘이 센 결이라 고집으로 쓰지 않는 것이 관건입니다. 말을 아끼고 지갑을 열면 사람이 모이는 결입니다.',
+    need: '책임지는 기운(관성)이 반드시 있어야 합니다. 없으면 강한 힘이 갈 곳을 잃습니다.',
+  },
+  건록격: {
+    gyeol: '영향력을 지닌 사람으로 크게 될 가능성이 큽니다. 원리 원칙이 뚜렷하고 정직하며 성실해 누구에게나 인정받습니다. 가슴 깊이 책임을 품고 여럿을 위해 움직입니다. 재물을 좇기보다 공익 쪽으로 갈 때 더 크게 되는 결입니다.',
+    need: '책임지는 기운(정관)이 있어야 합니다. 있으면 어디를 가도 능력을 인정받습니다.',
+  },
+}
+
 /* 육친 이름 (조후·격국용신 표시용) */
 const YUKCHIN_OF_EL = (dayEl: string, el: string): string => {
   const GEN: Record<string, string> = { 목: '화', 화: '토', 토: '금', 금: '수', 수: '목' }
@@ -78,6 +141,9 @@ export default function YongsinCard({ result, saju }: Props) {
   const [detail, setDetail] = useState(false)
 
   const openCard = (role: string, el: string | null) => { if (!el) return; setOpen({ role, el }); setDetail(false) }
+  // ★2026-08-04 (45부) — 격 이름 전용 모달. 오행 모달과 «따로» 둡니다.
+  //   ⚠️ 오행 모달(open)은 하나도 안 건드렸습니다.
+  const [openGyeok, setOpenGyeok] = useState<string | null>(null)
   const close = () => { setOpen(null); setDetail(false) }
   const info = open ? OHAENG_INFO[open.el] : null
 
@@ -181,6 +247,10 @@ export default function YongsinCard({ result, saju }: Props) {
     const pr = GYEOK_PRINCIPLE[gyeokguk.name]
     const found = elFoundInSaju(el)
     const has = found.length > 0
+    // ★2026-08-04 (45부 · 대표님 지시) — 격 이름을 «왼쪽 라벨에서 이리로» 옮겼습니다.
+    //   「양인격, 土(관성)」 처럼 앞에 붙습니다. 크기는 ★뒤와 «똑같이» (대표님 확정 ⓐ).
+    //   ⚠️ 격이 없는 분은 예전처럼 「土(관성)」만 나옵니다.
+    const hasDesc = !!GYEOK_DESC[gyeokguk.name]
     return (
       <div onClick={() => openCard('용신', el)}
         style={{
@@ -188,7 +258,15 @@ export default function YongsinCard({ result, saju }: Props) {
           borderRadius: 10, padding: '12px 6px', textAlign: 'center', cursor: 'pointer',
         }}>
         <div style={{ fontSize: 22, fontWeight: 700, color: EL_C[el], lineHeight: 1.2 }}>
-          {EL_HAN[el]}({yukchin})
+          {gyeokguk.name && (
+            <span
+              onClick={(e) => { e.stopPropagation(); if (hasDesc) setOpenGyeok(gyeokguk.name) }}
+              style={hasDesc
+                ? { textDecoration: 'underline', textDecorationStyle: 'dotted' as const, textUnderlineOffset: 4, cursor: 'pointer' }
+                : undefined}
+            >{gyeokguk.name}</span>
+          )}
+          {gyeokguk.name ? ', ' : ''}{EL_HAN[el]}({yukchin})
         </div>
         {pr && (
           <div style={{ fontSize: 11, color: EL_C_SUB[el], marginTop: 5, fontWeight: 600 }}>
@@ -223,9 +301,11 @@ export default function YongsinCard({ result, saju }: Props) {
         <div style={{ flex: 1 }}>{johuCell()}</div>
       </div>
 
-      {/* ② 격국용신 (용신 1개) */}
+      {/* ② 격국용신 (용신 1개)
+          ★2026-08-04 (45부) — 격 이름(양인격)을 «오른쪽 칸으로» 옮겼습니다.
+            왼쪽은 조후용신과 «같은 모양» 이 됩니다. (대표님 지시) */}
       <div style={{ display: 'flex', gap: 7, alignItems: 'stretch', marginBottom: 8 }}>
-        {labelBox('격국용신', gyeokguk.name || '직업·명예', !!gyeokguk.name)}
+        {labelBox('격국용신', '직업·명예')}
         <div style={{ flex: 1 }}>{gyeokCell()}</div>
       </div>
 
@@ -347,6 +427,38 @@ export default function YongsinCard({ result, saju }: Props) {
             )}
 
             <div onClick={close} style={{ marginTop: 16, background: '#1a1a1a', color: '#fff', textAlign: 'center', padding: 11, borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+              확인
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ★2026-08-04 (45부) — 격 전용 모달 (교재 A책 159~182쪽)
+          ⚠️ 위 오행 모달과 «따로» 입니다. 합치지 마십시오 — 담는 것이 다릅니다.
+          ★알약은 «칸 이름표» 입니다 (대표님 확정 ⓐ). 글을 상자로 감싸지 않습니다.
+          ★차례 — 「타고난 결」이 먼저, 「무엇이 있으면 좋나요」가 뒤. */}
+      {openGyeok && GYEOK_DESC[openGyeok] && (
+        <div onClick={() => setOpenGyeok(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 1000 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: 320, width: '100%', background: '#fff', borderRadius: 16, padding: '20px 18px', maxHeight: '80vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <span style={{ fontSize: 19, fontWeight: 700, color: '#1a1a1a' }}>{openGyeok}</span>
+              <button onClick={() => setOpenGyeok(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', fontSize: 16, color: '#ccc', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <div style={{ display: 'inline-block', background: '#fff3e9', border: '0.5px solid #e8d5c5', color: '#8f3d0e', fontSize: 11, padding: '3px 11px', borderRadius: 20, marginBottom: 7 }}>
+              타고난 결
+            </div>
+            <div style={{ fontSize: 12.5, color: '#555', lineHeight: 1.9, marginBottom: 15 }}>
+              {GYEOK_DESC[openGyeok].gyeol}
+            </div>
+
+            <div style={{ display: 'inline-block', background: '#f2f6f2', border: '0.5px solid #d8e4d8', color: '#3b6d11', fontSize: 11, padding: '3px 11px', borderRadius: 20, marginBottom: 7 }}>
+              무엇이 있으면 좋나요
+            </div>
+            <div style={{ fontSize: 12.5, color: '#555', lineHeight: 1.9 }}>
+              {GYEOK_DESC[openGyeok].need}
+            </div>
+
+            <div onClick={() => setOpenGyeok(null)} style={{ marginTop: 16, background: '#1a1a1a', color: '#fff', textAlign: 'center', padding: 11, borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
               확인
             </div>
           </div>
