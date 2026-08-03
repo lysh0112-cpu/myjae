@@ -76,6 +76,40 @@ function pillarHtml(ps: CareerCertPillar[]): string {
   </table>`
 }
 
+/**
+ * ★오행 오각형 — 화면(SajuTableSlot)과 «같은 모양» 을 종이에 (44부 47차)
+ *
+ *  🔴 [까닭]  종이에는 가로 막대만 있어 ★화면과 달랐습니다.
+ *     대표님 「그래프나 표들이 사라진다」의 그 자리입니다.
+ *  ⚠️ 화면 부품은 React 라 그대로 못 옮깁니다. ★값을 받아 SVG 로 다시 그립니다.
+ *  ⚠️ 셈은 «다시 하지 않습니다» — 화면이 넘긴 백분율을 그대로 씁니다. (교훈 CJ)
+ */
+function pentagon(rows: Array<{ el: string; pct: number }>): string {
+  const ORDER: string[] = ['목', '화', '토', '금', '수']
+  const pts = ORDER.map((el, i) => {
+    const v = rows.find(r => r.el === el)?.pct ?? 0
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5
+    const r = 12 + (Math.min(v, 100) / 100) * 46
+    return { el, v, a, x: 70 + r * Math.cos(a), y: 70 + r * Math.sin(a) }
+  })
+  const ring = (k: number) => ORDER.map((_, i) => {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5
+    return `${(70 + k * Math.cos(a)).toFixed(1)},${(70 + k * Math.sin(a)).toFixed(1)}`
+  }).join(' ')
+  const area = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
+  const label = pts.map(p => {
+    const lx = 70 + 66 * Math.cos(p.a), ly = 70 + 66 * Math.sin(p.a)
+    return `<text x="${lx.toFixed(1)}" y="${(ly + 3).toFixed(1)}" text-anchor="middle"
+      font-size="8" fill="${EL_C[p.el] ?? '#555'}">${p.el} ${p.v}</text>`
+  }).join('')
+  return `<svg viewBox="0 0 140 140" width="128" height="128" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="${ring(58)}" fill="none" stroke="#e6ded6" stroke-width="0.8"/>
+    <polygon points="${ring(35)}" fill="none" stroke="#efe9e3" stroke-width="0.7"/>
+    <polygon points="${area}" fill="#b9a9dd66" stroke="#7d6bb8" stroke-width="1.4"/>
+    ${label}
+  </svg>`
+}
+
 /** 인쇄용 가로 막대 표 — ★화면 오각형·표를 «값 그대로» 옮겨 그립니다 */
 function barTable(rows: Array<{ name: string; pct: number; color?: string }>): string {
   const max = Math.max(1, ...rows.map(r => r.pct))
@@ -134,10 +168,41 @@ const CSS = `
   .btbl .bp { width: 12mm; text-align: right; font-size: 8.5pt; color: #7a6a60 }
   .btbl .bb i { display: block; height: 10px; border-radius: 2px }
   .ys { font-size: 9.5pt; color: #3a2e28 }
+  .penta { text-align: center; margin: 4px 0 6px }
   .ys b { color: #5b4580 }
 `
 
 export function openCareerCertificate(d: CareerCertInput): { ok: boolean; message?: string } {
+  const t = d.tables
+
+  //  ★표를 «그 말을 하는 대목 뒤» 에 붙입니다 (44부 47차 · 대표님 지시)
+  //   🔴 [무엇이 있었나]  표 셋을 «명식 바로 아래» 에 몰아 두었습니다.
+  //      화면은 각 대목 뒤인데 ★종이만 달라, 말과 근거가 멀리 떨어져 있었습니다.
+  //   ⚠️ 대목 «제목» 으로 짝을 짓습니다 — 화면 TABLE_AFTER 와 같은 짝입니다.
+  const tableFor = (title: string): string => {
+    const t2 = (title ?? '').replace(/\s/g, '')
+    if (!t) return ''
+    if (t2.includes('오행의결') && t.ohaeng?.length) {
+      return `<div class="tbox"><div class="t">이 이야기의 바탕 — 오행과 십성의 세력</div>
+        <div class="penta">${pentagon(t.ohaeng)}</div>
+        ${barTable(t.ohaeng.map(o => ({ name: `${o.el}(${EL_HAN[o.el] ?? ''})`, pct: o.pct, color: EL_BG[o.el] })))}
+        ${t.sipsung?.length ? barTable(t.sipsung.map(x => ({ name: x.ss, pct: x.pct }))) : ''}</div>`
+    }
+    if (t2.includes('육친이가리키는곳') && t.yongsin?.strength) {
+      return `<div class="tbox"><div class="t">내 힘이 얼마나 받쳐지는가</div>
+        <div class="ys">힘의 세기 <b>${esc(t.yongsin.strength)}</b></div></div>`
+    }
+    if (t2.includes('기운을얻는자리') && t.yongsin) {
+      return `<div class="tbox"><div class="t">어떤 기운이 나를 돕는가</div>
+        <div class="ys">
+          ${t.yongsin.eokbu ? `억부용신 <b>${esc(t.yongsin.eokbu)}</b> · ` : ''}
+          ${t.yongsin.johu ? `조후용신 <b>${esc(t.yongsin.johu)}</b> · ` : ''}
+          ${t.yongsin.gyeokguk ? `격국용신 <b>${esc(t.yongsin.gyeokguk)}</b>` : ''}
+        </div></div>`
+    }
+    return ''
+  }
+
   const secs = d.sections.map((s, i) => {
     // ★[한줄]·[태그]·[실천] 을 갈라 그립니다 — 화면과 «같은 파서» 입니다 (44부 30차)
     const p = splitCardText(s.body)
@@ -147,6 +212,7 @@ export function openCareerCertificate(d: CareerCertInput): { ok: boolean; messag
       ${p.tags?.length ? `<div class="tags">${p.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}
       ${paraHtml(p.body)}
       ${p.action ? `<div class="act">${esc(p.action)}</div>` : ''}
+      ${tableFor(s.title)}
     </section>`
   }).join('')
 
@@ -159,23 +225,8 @@ export function openCareerCertificate(d: CareerCertInput): { ok: boolean; messag
     </div>`).join('')}
   </div>` : ''
 
-  // ★표 — 화면 SajuTableSlot 이 그리던 넷을 종이에 옮깁니다
-  const t = d.tables
-  const tbl = !t ? '' : [
-    t.ohaeng?.length ? `<div class="tbox"><div class="t">오행의 세력</div>${
-      barTable(t.ohaeng.map(o => ({
-        name: `${o.el}(${EL_HAN[o.el] ?? ''})`, pct: o.pct, color: EL_BG[o.el],
-      })))}</div>` : '',
-    t.sipsung?.length ? `<div class="tbox"><div class="t">십성의 세력</div>${
-      barTable(t.sipsung.map(x => ({ name: x.ss, pct: x.pct })))}</div>` : '',
-    t.yongsin ? `<div class="tbox"><div class="t">어떤 기운이 나를 돕는가</div>
-      <div class="ys">
-        ${t.yongsin.strength ? `힘의 세기 <b>${esc(t.yongsin.strength)}</b><br>` : ''}
-        ${t.yongsin.eokbu ? `억부용신 <b>${esc(t.yongsin.eokbu)}</b> · ` : ''}
-        ${t.yongsin.johu ? `조후용신 <b>${esc(t.yongsin.johu)}</b> · ` : ''}
-        ${t.yongsin.gyeokguk ? `격국용신 <b>${esc(t.yongsin.gyeokguk)}</b>` : ''}
-      </div></div>` : '',
-  ].filter(Boolean).join('')
+  // ⚠️ 2026-08-03 (44부 47차) — 맨 위에 표를 «몰아 두던» 자리를 걷어냈습니다.
+  //    이제 tableFor() 가 각 대목 뒤에 붙입니다. 두 번 나오지 않게 합니다.
 
   return openA4({
     title: `${d.name || '진로적성'} — 진로적성`,
@@ -191,7 +242,6 @@ export function openCareerCertificate(d: CareerCertInput): { ok: boolean; messag
         ${d.badge ? `<div class="badge">${esc(d.badge)}</div>` : ''}
       </div>
       <div class="wonguk">${pillarHtml(d.pillars)}</div>
-      ${tbl}
       ${secs}
       ${cards}
       <div class="foot">

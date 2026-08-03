@@ -1668,6 +1668,16 @@ console.log('\n━━ (53) ★진로적성 A4 인쇄 · 해설 복사 (44부 36�
   check(/cards\.length \? /.test(cert), `★판정 카드도 «모두» 담습니다 (대표님 확정)`)
   check(/EL_BG\[el\]/.test(cert), `⚠️ 오행 색은 ohaengColor 그대로입니다`)
 
+  // 🔴 종이의 표 — «그 말을 하는 대목 뒤» 인가 · 오각형이 있는가 (44부 47차)
+  check(/function pentagon/.test(cert), `🔴★종이에도 «오행 오각형» 을 그립니다`)
+  check(/<svg viewBox="0 0 140 140"/.test(cert), `★SVG 로 그려 인쇄에 남습니다`)
+  check(/const tableFor = \(title: string\)/.test(cert),
+    `★표를 «대목 제목» 으로 짝지어 붙입니다`)
+  check(/\$\{tableFor\(s\.title\)\}/.test(cert), `★대목 뒤에 붙습니다`)
+  check(!/\$\{tbl\}/.test(cert), `⚠️ 맨 위에 «몰아 두던» 자리가 사라졌습니다 (두 번 안 나옵니다)`)
+  check(/오행의결/.test(cert) && /기운을얻는자리/.test(cert),
+    `⚠️ 화면 TABLE_AFTER 와 «같은 짝» 입니다`)
+
   // ★화면 — 버튼 둘이 나란히, 통변 뒤에만
   check(/A4 PDF저장\/인쇄/.test(page), `★「A4 PDF저장/인쇄」 버튼이 있습니다`)
   check(/<CopyTextButton/.test(page), `★「해설 복사」 버튼이 있습니다`)
