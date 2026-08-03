@@ -1,0 +1,536 @@
+diff --git a/32-verify-hour-convert.ts b/32-verify-hour-convert.ts
+index cb445e5..59df81b 100644
+--- a/32-verify-hour-convert.ts
++++ b/32-verify-hour-convert.ts
+@@ -1668,6 +1668,23 @@ console.log('\n━━ (53) ★진로적성 A4 인쇄 · 해설 복사 (44부 36
+   check(/cards\.length \? /.test(cert), `★판정 카드도 «모두» 담습니다 (대표님 확정)`)
+   check(/EL_BG\[el\]/.test(cert), `⚠️ 오행 색은 ohaengColor 그대로입니다`)
+ 
++  // 🔴 종이의 표 — «그 말을 하는 대목 뒤» 인가 · 오각형이 있는가 (44부 47차)
++  // ⛔ 2026-08-03 (44부 49차) — ★오각형(SVG)은 «그리지 않습니다».
++  //   [까닭] PDF 로 뽑으면 ★도형이 사라지고 «글자만» 남았습니다.
++  //     (대표님 PDF — 「목 25 · 화 0 · 금 10 토 50 · 수 15」가 흩어져 찍혔습니다)
++  //   ★막대표는 <table> + 배경색이라 인쇄에도 남습니다.
++  //   ⇒ 대표님 지시 — 종이에는 «사주 원국» 과 «타고난 오행의 결» 둘만.
++  check(!/function pentagon/.test(cert), `⛔★오각형(SVG)을 «그리지 않습니다» (인쇄에서 사라집니다)`)
++  check(!/<svg /.test(cert), `⛔ SVG 가 남아 있지 않습니다`)
++  check(/const tableFor = \(title: string\)/.test(cert),
++    `★표를 «대목 제목» 으로 짝지어 붙입니다`)
++  check(/\$\{tableFor\(s\.title\)\}/.test(cert), `★대목 뒤에 붙습니다`)
++  check(!/\$\{tbl\}/.test(cert), `⚠️ 맨 위에 «몰아 두던» 자리가 사라졌습니다 (두 번 안 나옵니다)`)
++  check(/오행의결/.test(cert) && !/기운을얻는자리/.test(cert),
++    `⛔★종이의 표는 «오행의 결» 하나뿐입니다 (십성·신강·용신은 안 그립니다)`)
++  check(/인쇄에 남는 방식» 을 먼저 확인하십시오/.test(read('app/manseryeok/career-result/components/CareerCertificate.tsx')),
++    `⚠️ 되살릴 때 «SVG 는 안 된다» 고 일러 두었습니다`)
++
+   // ★화면 — 버튼 둘이 나란히, 통변 뒤에만
+   check(/A4 PDF저장\/인쇄/.test(page), `★「A4 PDF저장/인쇄」 버튼이 있습니다`)
+   check(/<CopyTextButton/.test(page), `★「해설 복사」 버튼이 있습니다`)
+@@ -1773,6 +1790,115 @@ console.log('\n━━ (54) ★진로적성 — 다섯 단계 한 벌로 통일 (
+   check(/yongsin: \{ kinds: \['yongsin'\]/.test(page), `★용신 표는 용신 이야기 뒤`)
+ }
+ 
++console.log('\n━━ (55) ★종이 차례 · 성인 직업 거르기 (44부 43차) ━━')
++{
++  const noComment = (s: string) =>
++    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
++  const page = noComment(read('app/manseryeok/career-result/page.tsx'))
++  const jb = noComment(read('lib/saju/career/jobs.ts'))
++
++  // ★종이 카드가 «화면과 같은 차례» 인가
++  // ⚠️ 2026-08-03 (44부 48차) — 종이에 판정 카드를 ★«아예 안 넘깁니다».
++  //    43차의 「차례를 맞추라」는 검사는 그 자리가 사라져 뜻을 잃었습니다.
++  //    ⇒ ★「안 넘기는가」로 바로잡습니다. (57)이 그것을 자세히 봅니다.
++  check(/cards: \[\],/.test(page), `⛔★종이에 판정 카드를 «안 넘깁니다»`)
++
++  // 🔴 성인 리포트에서 「유흥업」 같은 낱말을 거르는가
++  check(/BLOCKED_KEYS/.test(jb) && /\.filter\(x => !blocked\(x\.key\)\)/.test(jb),
++    `🔴★성인 리포트에서도 어른용 직업을 거릅니다`)
++  check(/ADULT_JOB_BLOCKLIST\.map\(jobKey\)/.test(jb),
++    `⚠️ 목록도 «같은 잣대(jobKey)» 로 다듬어 견줍니다 (「수도사업」→「수도」)`)
++  check(/import \{ ADULT_JOB_BLOCKLIST \} from '\.\/roleFit'/.test(jb),
++    `⚠️ 목록은 roleFit 것을 «가져다» 씁니다 (두 벌로 적지 않습니다)`)
++  // ⚠️ 「의사」가 「장의사」에 걸려 사라지지 «않는가»
++  check(!/some\(b => key\.includes\(b\)/.test(jb),
++    `⚠️ 낱말이 겹친다고 막지 «않습니다» (「의사」가 「장의사」에 걸렸었습니다)`)
++  check(/BLOCKED_KEYS\.has\(key\)/.test(jb), `★«같은 이름» 일 때만 막습니다`)
++
++  // 🔴 재료도 «ORDER 차례» 인가 (44부 44차)
++  //   [무엇이 있었나] plan 은 ORDER 로 만드는데 ★재료만 v.cards 차례였습니다.
++  //     judgeSpecial 이 맨 처음이라 ★AI 가 「한 번 더 볼 점」을 1번으로 썼습니다.
++  //   ★AI 는 «시킨 차례» 보다 «재료가 놓인 차례» 를 따라갑니다.
++  const bp = noComment(read('lib/saju/career/buildCareerPrompt.ts'))
++  check(/const ordered = ORDER\s*\n\s*\.map\(o => v\.cards\.find/.test(bp),
++    `🔴★재료를 ORDER 차례로 늘어놓습니다`)
++  check(/const material = ordered/.test(bp) && !/const material = v\.cards/.test(bp),
++    `⚠️ 「만든 차례」로 늘어놓던 자리가 사라졌습니다`)
++  // ★「한 번 더 볼 점」이 ORDER 의 «맨 끝» 인가
++  const om2 = bp.match(/const ORDER[\s\S]*?\n\]/)?.[0] ?? ''
++  const ok2 = [...om2.matchAll(/key: '([a-z_]+)'/g)].map(m => m[1])
++  check(ok2[ok2.length - 1] === 'special',
++    `★「한 번 더 볼 점」이 «맨 끝» 입니다 (경고부터 보이지 않습니다)`)
++
++  // 🔴 학생에게 «직장 이야기» 가 나가지 않는가 (44부 45차)
++  //   [무엇이 있었나] 「계열과 학과」(성인에게 안 냄)만 빼고,
++  //     ★「핵심 직무」·「조직 성향」(학생에게 안 냄)은 «안 뺐습니다».
++  //     ⇒ 14세 손님 통변에 ★「이직·조직 성향」이 그대로 나갔습니다.
++  //   ⚠️ 카드는 빈 채로 오는데 plan 은 «열쇠» 로만 골라 대목으로 시켰습니다.
++  check(/const emptyKeys = new Set\(v\.cards\.filter\(c => c\.lines\.length === 0\)/.test(bp),
++    `🔴★lines 가 빈 카드는 «대목으로 시키지» 않습니다`)
++  check(/\.filter\(o => !emptyKeys\.has\(o\.key\)\)/.test(bp),
++    `★화면이 «안 그리는» 것은 AI 도 «안 씁니다»`)
++}
++
++console.log('\n━━ (56) ★진로적성 「근거 보기」를 감췄는가 (44부 46차) ━━')
++{
++  const noComment = (s: string) =>
++    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
++  const cjc = noComment(read('app/manseryeok/career-result/components/CareerJudgeCard.tsx'))
++  const doc = read('app/manseryeok/career-result/components/CareerJudgeCard.tsx')
++  const ejc = noComment(read('app/manseryeok/exam-luck-result/components/ExamJudgeCard.tsx'))
++
++  // ★감췄는가
++  check(/const SHOW_WHY = false/.test(cjc), `🔴★「근거 보기」를 감췄습니다`)
++  check(/\{SHOW_WHY && hasTong && card\.lines\.length > 0 && \(/.test(cjc),
++    `★단추가 «아예 안 그려집니다»`)
++  // ⚠️ «지운» 것이 아니라 «감춘» 것인가 — 되살릴 길
++  check(/card\.lines\.map/.test(cjc) && /openWhy/.test(cjc),
++    `⚠️ lines·openWhy 는 «그대로» 있습니다 (지운 것이 아닙니다)`)
++  check(/되살리시려면 이 한 줄을 true/.test(doc), `⚠️ 되살리는 법이 적혀 있습니다`)
++  check(/단정하는 험한 말/.test(doc), `⚠️ 왜 감췄는지 까닭이 적혀 있습니다`)
++
++  // ⚠️ 합격운은 «건드리지 않았는가» — 그쪽 판정 문장은 이미 다듬어진 말입니다
++  check(!/SHOW_WHY/.test(ejc) && /근거 보기/.test(ejc),
++    `⚠️ 합격운의 「근거 보기」는 «그대로» 입니다 (그쪽 말은 이미 다듬어져 있습니다)`)
++}
++
++console.log('\n━━ (57) ⛔★판정 근거는 종이에도 «절대» 안 나갑니다 · 학생 리더십 (44부 48차) ━━')
++{
++  const noComment = (s: string) =>
++    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
++  const page = noComment(read('app/manseryeok/career-result/page.tsx'))
++  const doc = read('app/manseryeok/career-result/page.tsx')
++  const sc = noComment(read('lib/saju/career/strengthCards.ts'))
++  const bp = noComment(read('lib/saju/career/buildCareerPrompt.ts'))
++
++  // ⛔⛔ 판정 근거 — 화면·종이 «둘 다» 막혔는가
++  check(/cards: \[\],/.test(page), `⛔🔴★종이에 판정 근거를 «안 넘깁니다»`)
++  check(!/cards: GROUPS/.test(page), `⚠️ 넘기던 자리가 사라졌습니다`)
++  check(/절대» 손님께 보이지 않습니다|«절대» 보여 주면 안 된다/.test(doc),
++    `⛔★「절대 보여 주면 안 된다」가 코드에 적혀 있습니다`)
++  check(/되살리지 «마십시오»/.test(doc), `⛔ 되살리지 말라고 못박혀 있습니다`)
++  const cjc2 = noComment(read('app/manseryeok/career-result/components/CareerJudgeCard.tsx'))
++  check(/const SHOW_WHY = false/.test(cjc2), `⛔★화면에서도 감춰져 있습니다 (두 곳 다)`)
++
++  // ★학생 — 재물을 빼고 리더십만
++  check(/function judgeStudentLead/.test(sc), `★학생용 「모둠에서 맡는 자리」가 있습니다`)
++  check(/if \(v\.target === 'student'\) return judgeStudentLead/.test(sc),
++    `★학생이면 그쪽으로 갈립니다`)
++  check(/title: '모둠에서 맡는 자리'/.test(sc), `★제목도 학생 말입니다`)
++  // ⚠️ 학생 글에 «재물·투자» 가 섞이지 않았는가
++  // ⚠️ 구간을 «주석» 으로 자르면 주석이 바뀔 때 검사가 헛돕니다. ★함수 경계로 자릅니다.
++  const stuStart = sc.indexOf('function judgeStudentLead')
++  const stuEnd = sc.indexOf('export function judgeCareerLuck')
++  const stu = sc.slice(stuStart, stuEnd > stuStart ? stuEnd : undefined)
++  check(!/투자|재물|벌이|수입|편재가 우세/.test(stu),
++    `🔴★학생 글에 «재물·투자» 이야기가 «없습니다»`)
++  // ★통변 제목이 카드를 따르는가 (안 그러면 AI 가 재물을 씁니다)
++  check(/const titleOfCard = new Map/.test(bp), `★통변 제목이 «카드가 정한 것» 을 따릅니다`)
++  check(/\[\$\{c\.title \|\| o\?\.title \|\| ''\}\]/.test(bp), `⚠️ 재료 제목도 같습니다 (안 같으면 안 붙습니다)`)
++}
++
+ console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
+ {
+   const src = read('lib/saju/simsanOhaeng.ts')
+diff --git a/app/manseryeok/career-result/components/CareerCertificate.tsx b/app/manseryeok/career-result/components/CareerCertificate.tsx
+index 72c769b..6d12509 100644
+--- a/app/manseryeok/career-result/components/CareerCertificate.tsx
++++ b/app/manseryeok/career-result/components/CareerCertificate.tsx
+@@ -76,6 +76,20 @@ function pillarHtml(ps: CareerCertPillar[]): string {
+   </table>`
+ }
+ 
++/*
++ * ⛔★오각형은 종이에 «그리지 않습니다» (44부 49차)
++ *
++ *  🔴 [무엇이 있었나]  47차에 SVG 로 오각형을 그렸는데,
++ *     ★PDF 로 뽑으면 «도형이 사라지고 글자만» 남았습니다.
++ *     (대표님 PDF — 「목 25 · 화 0 · 금 10 토 50 · 수 15」가 흩어져 찍혔습니다)
++ *     ⇒ 새 창에 document.write 로 넣은 SVG 는 인쇄에서 빠지는 일이 있습니다.
++ *  ★막대표는 <table> + 배경색이라 «인쇄에도 남습니다» (실제로 PDF 에 나왔습니다).
++ *  ⇒ 2026-08-03 대표님 지시 —
++ *    「종이에는 ★«사주 원국» 과 «타고난 오행의 결» 두 가지만.
++ *      나머지는 진로적성 결과 내용을 그대로」
++ *  ⚠️ 되살리시려면 «인쇄에 남는 방식» 을 먼저 확인하십시오. SVG 는 안 됩니다.
++ */
++
+ /** 인쇄용 가로 막대 표 — ★화면 오각형·표를 «값 그대로» 옮겨 그립니다 */
+ function barTable(rows: Array<{ name: string; pct: number; color?: string }>): string {
+   const max = Math.max(1, ...rows.map(r => r.pct))
+@@ -134,10 +148,32 @@ const CSS = `
+   .btbl .bp { width: 12mm; text-align: right; font-size: 8.5pt; color: #7a6a60 }
+   .btbl .bb i { display: block; height: 10px; border-radius: 2px }
+   .ys { font-size: 9.5pt; color: #3a2e28 }
++  .penta { text-align: center; margin: 4px 0 6px }
+   .ys b { color: #5b4580 }
+ `
+ 
+ export function openCareerCertificate(d: CareerCertInput): { ok: boolean; message?: string } {
++  const t = d.tables
++
++  //  ★표를 «그 말을 하는 대목 뒤» 에 붙입니다 (44부 47차 · 대표님 지시)
++  //   🔴 [무엇이 있었나]  표 셋을 «명식 바로 아래» 에 몰아 두었습니다.
++  //      화면은 각 대목 뒤인데 ★종이만 달라, 말과 근거가 멀리 떨어져 있었습니다.
++  //   ⚠️ 대목 «제목» 으로 짝을 짓습니다 — 화면 TABLE_AFTER 와 같은 짝입니다.
++  const tableFor = (title: string): string => {
++    // ⛔★종이에는 «오행의 결» 하나만 붙입니다 (2026-08-03 대표님 지시 · 44부 49차)
++    //   [무엇이 있었나]  십성 막대 · 신강 게이지 · 용신 줄까지 넣었더니
++    //     ★종이가 표로 빽빽해지고, 오각형까지 겹쳐 같은 값이 두 번 나왔습니다.
++    //   ★남긴 것 — 사주 원국(머리)과 «타고난 오행의 결» 막대.
++    //   ⚠️ 나머지 표는 «지운 것이 아니라 안 그리는» 것입니다.
++    //      d.tables 는 그대로 넘어옵니다. 되살리려면 여기 가지를 더하십시오.
++    if (!t?.ohaeng?.length) return ''
++    if (!(title ?? '').replace(/\s/g, '').includes('오행의결')) return ''
++    return `<div class="tbox"><div class="t">타고난 오행의 결</div>${
++      barTable(t.ohaeng.map(o => ({
++        name: `${o.el}(${EL_HAN[o.el] ?? ''})`, pct: o.pct, color: EL_BG[o.el],
++      })))}</div>`
++  }
++
+   const secs = d.sections.map((s, i) => {
+     // ★[한줄]·[태그]·[실천] 을 갈라 그립니다 — 화면과 «같은 파서» 입니다 (44부 30차)
+     const p = splitCardText(s.body)
+@@ -147,6 +183,7 @@ export function openCareerCertificate(d: CareerCertInput): { ok: boolean; messag
+       ${p.tags?.length ? `<div class="tags">${p.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}
+       ${paraHtml(p.body)}
+       ${p.action ? `<div class="act">${esc(p.action)}</div>` : ''}
++      ${tableFor(s.title)}
+     </section>`
+   }).join('')
+ 
+@@ -159,23 +196,8 @@ export function openCareerCertificate(d: CareerCertInput): { ok: boolean; messag
+     </div>`).join('')}
+   </div>` : ''
+ 
+-  // ★표 — 화면 SajuTableSlot 이 그리던 넷을 종이에 옮깁니다
+-  const t = d.tables
+-  const tbl = !t ? '' : [
+-    t.ohaeng?.length ? `<div class="tbox"><div class="t">오행의 세력</div>${
+-      barTable(t.ohaeng.map(o => ({
+-        name: `${o.el}(${EL_HAN[o.el] ?? ''})`, pct: o.pct, color: EL_BG[o.el],
+-      })))}</div>` : '',
+-    t.sipsung?.length ? `<div class="tbox"><div class="t">십성의 세력</div>${
+-      barTable(t.sipsung.map(x => ({ name: x.ss, pct: x.pct })))}</div>` : '',
+-    t.yongsin ? `<div class="tbox"><div class="t">어떤 기운이 나를 돕는가</div>
+-      <div class="ys">
+-        ${t.yongsin.strength ? `힘의 세기 <b>${esc(t.yongsin.strength)}</b><br>` : ''}
+-        ${t.yongsin.eokbu ? `억부용신 <b>${esc(t.yongsin.eokbu)}</b> · ` : ''}
+-        ${t.yongsin.johu ? `조후용신 <b>${esc(t.yongsin.johu)}</b> · ` : ''}
+-        ${t.yongsin.gyeokguk ? `격국용신 <b>${esc(t.yongsin.gyeokguk)}</b>` : ''}
+-      </div></div>` : '',
+-  ].filter(Boolean).join('')
++  // ⚠️ 2026-08-03 (44부 47차) — 맨 위에 표를 «몰아 두던» 자리를 걷어냈습니다.
++  //    이제 tableFor() 가 각 대목 뒤에 붙입니다. 두 번 나오지 않게 합니다.
+ 
+   return openA4({
+     title: `${d.name || '진로적성'} — 진로적성`,
+@@ -191,7 +213,6 @@ export function openCareerCertificate(d: CareerCertInput): { ok: boolean; messag
+         ${d.badge ? `<div class="badge">${esc(d.badge)}</div>` : ''}
+       </div>
+       <div class="wonguk">${pillarHtml(d.pillars)}</div>
+-      ${tbl}
+       ${secs}
+       ${cards}
+       <div class="foot">
+diff --git a/app/manseryeok/career-result/components/CareerJudgeCard.tsx b/app/manseryeok/career-result/components/CareerJudgeCard.tsx
+index 74731a9..33a0393 100644
+--- a/app/manseryeok/career-result/components/CareerJudgeCard.tsx
++++ b/app/manseryeok/career-result/components/CareerJudgeCard.tsx
+@@ -26,6 +26,16 @@ const CARD = '#FFFBF7'
+ const LINE = '#f0e0d5'
+ const ACCENT = '#785aaa'
+ 
++/**
++ * ★「근거 보기」를 손님께 보일 것인가 (44부 46차)
++ *
++ *  ⚠️ false 이면 접기 단추가 «아예 안 그려집니다».
++ *     교재 원문의 판정 문장에 명리 술어와 단정하는 험한 말이 섞여 있어
++ *     ★2026-08-03 대표님 지시로 감췄습니다.
++ *  ★되살리시려면 이 한 줄을 true 로 두십시오. 지운 것은 하나도 없습니다.
++ */
++const SHOW_WHY = false
++
+ /**
+  * 오행 막대 색 — 육친 막대도 같은 색을 쓴다.
+  *
+@@ -156,7 +166,27 @@ export default function CareerJudgeCard({ card, tong }: Props) {
+         <p key={i} style={{ fontSize: 13, color: '#4a3a30', lineHeight: 1.75, margin: '0 0 6px' }}>{l}</p>
+       ))}
+ 
+-      {hasTong && card.lines.length > 0 && (
++      {/* ══════════════════════════════════════════════════════════
++          🔴★2026-08-03 (44부 46차) — 「근거 보기」를 «감췄습니다». (대표님 지시)
++
++          [까닭]  펼쳐 보이던 것은 ★교재 원문 그대로의 «판정 문장» 입니다.
++            ⚠️ 명리 술어가 날것으로 나갑니다 — 식상 · 격국용신 · 활인업 · 현침살
++            🔴 그보다 무거운 것은 ★«단정하는 험한 말» 입니다 —
++               「독선적이고 융통성이 부족하며 자존심과 집착이 강해요」
++               「남을 배려하는 마음이 부족하고 … 대인 관계가 매끄럽지 못한」
++               「변덕이 있고 비밀을 발설하며 … 구설수가 따릅니다」
++            ★14세 손님과 부모님이 «함께» 읽습니다.
++            AI 풀이는 같은 내용을 「장점이 지나치면 단점으로 나타난다」로 다듬어 전합니다.
++            ⇒ 다듬은 말이 이미 있는데 날것을 곁들일 까닭이 없습니다.
++
++          ⚠️⚠️ 「지운」 것이 아니라 «감춘» 것입니다 —
++             card.lines 도 openWhy 도 그대로 있습니다.
++             ★되살리시려면 아래 SHOW_WHY 를 true 로 두십시오.
++          ⚠️ 44부 3-3장에서 궁합 판정 카드를 끈 것과 «같은 결» 입니다.
++             ⇒ 그때 배운 것 — 「한 곳만 끄면 «새어 나갑니다»」.
++               ★여기는 화면 한 곳뿐이라, AI 재료(reasons)는 원래 따로입니다.
++          ══════════════════════════════════════════════════════════ */}
++      {SHOW_WHY && hasTong && card.lines.length > 0 && (
+         <div style={{ marginTop: 10, borderTop: `0.5px solid ${LINE}`, paddingTop: 8 }}>
+           <button onClick={() => setOpenWhy(o => !o)}
+             style={{
+diff --git a/app/manseryeok/career-result/page.tsx b/app/manseryeok/career-result/page.tsx
+index 6809854..d1c3581 100644
+--- a/app/manseryeok/career-result/page.tsx
++++ b/app/manseryeok/career-result/page.tsx
+@@ -466,10 +466,29 @@ function CareerResultInner() {
+         : cards
+             .filter(c => c.lines.length > 0 && tongByKey[c.key])
+             .map(c => ({ title: c.title, body: tongByKey[c.key] })),
+-      // ★판정 카드도 «모두» 담습니다 (2026-08-03 대표님 확정)
+-      cards: cards
+-        .filter(c => c.lines.length > 0)
+-        .map(c => ({ title: c.title, badge: c.badge, lines: c.lines })),
++      // ══════════════════════════════════════════════════════════
++      //  ⛔⛔★판정 근거는 «절대» 손님께 보이지 않습니다 (44부 48차)
++      //
++      //  ★2026-08-03 대표님 지시 — 「판정 근거는 보여 주면 안 되지.
++      //    ★이것은 «절대» 보여 주면 안 된다고 적어 놔」
++      //
++      //  [까닭]  card.lines 는 ★교재 원문 그대로의 판정 문장입니다.
++      //    ⚠️ 명리 술어가 날것으로 — 식상 · 격국용신 · 활인업 · 현침살
++      //    🔴 그보다 무거운 것은 ★«단정하는 험한 말» 입니다 —
++      //       「독선적이고 융통성이 부족하며 자존심과 집착이 강해요」
++      //       「남을 배려하는 마음이 부족하고 … 대인 관계가 매끄럽지 못한 편입니다」
++      //       「변덕이 있고 비밀을 발설하며 … 구설수가 따릅니다」
++      //    ★13세 손님과 부모님이 «함께» 읽습니다.
++      //    AI 풀이가 같은 내용을 이미 «다듬어» 전합니다.
++      //
++      //  ⚠️⚠️ 44부 46차에 «화면» 에서 감췄는데 ★종이는 안 껐습니다.
++      //     그래서 A4 에 그대로 실려 나갔습니다.
++      //     ★44부 3-3장 교훈 — 「한 곳만 끄면 «새어 나갑니다»」. 또 겪었습니다.
++      //
++      //  ⛔ 되살리지 «마십시오». 되살리려면 반드시 대표님께 여쭈십시오.
++      //  ⚠️ 지운 것이 아니라 «안 넘기는» 것입니다 — cards 는 화면이 그대로 씁니다.
++      // ══════════════════════════════════════════════════════════
++      cards: [],
+       // ★화면 카드 사이의 «표» 를 종이에도 (44부 37차 · 대표님 「표가 모두 사라졌다」)
+       //   ⚠️ 값을 «다시 계산하지 않습니다» — 화면 부품이 쓰는 함수를 그대로 부릅니다 (교훈 CJ)
+       tables: certTables,
+diff --git a/lib/saju/career/buildCareerPrompt.ts b/lib/saju/career/buildCareerPrompt.ts
+index d21b9bc..51a2d7c 100644
+--- a/lib/saju/career/buildCareerPrompt.ts
++++ b/lib/saju/career/buildCareerPrompt.ts
+@@ -125,9 +125,26 @@ export function buildCareerPrompt(v: CareerPromptInput): string {
+   const have = new Set(v.cards.map(c => c.key))
+   // ★학업 대목을 안 낼 신분이면 계획에서 **통째로 뺍니다.**
+   //   카드가 비어 있어도 계획에 남아 있으면 AI 가 «학과 이야기를 써야 하나» 하고 헤맵니다.
++  //
++  // 🔴⚠️ 2026-08-03 (44부 45차) — ★«반대쪽» 도 빼야 했습니다.
++  //   [무엇이 있었나]  「계열과 학과」(성인에게 안 냄)만 빼고 있었고,
++  //     ★「핵심 직무」·「잘 맞는 직무 & 조직 성향」(학생에게 안 냄)은 «안 뺐습니다».
++  //     ⇒ 중·고등학생 리포트에 ★직장 이야기가 그대로 나갔습니다.
++  //       (2026-08-03 대표님 확인 — 14세 손님 통변에 「이직·조직 성향」이 있었습니다)
++  //   ⚠️ judgeRoleFit·judgeJobFit 은 학생이면 «빈 카드» 를 돌려줍니다.
++  //      그런데 plan 은 have(열쇠)로만 골라, ★빈 카드도 «대목으로 시켰습니다».
++  //   ★lines 가 빈 카드는 계획에서 뺍니다 — 화면이 안 그리는 것을 AI 도 안 씁니다.
++  const emptyKeys = new Set(v.cards.filter(c => c.lines.length === 0).map(c => c.key))
++  // ★2026-08-03 (44부 48차) — 제목은 «카드가 정한 것» 을 씁니다.
++  //   [까닭] 「리더십과 재물 운용」은 ★학생이면 「모둠에서 맡는 자리」로 바뀝니다.
++  //     ORDER 의 제목을 그대로 쓰면 ★AI 가 «재물 이야기» 를 써야 하나 헤맵니다.
++  //   ⚠️ 화면 카드와 통변 제목이 «같아야» 붙습니다. 카드 쪽을 따릅니다. (교훈 AS)
++  const titleOfCard = new Map(v.cards.filter(c => c.title).map(c => [c.key, c.title]))
+   const plan = ORDER
+     .filter(o => have.has(o.key))
++    .filter(o => !emptyKeys.has(o.key))
+     .filter(o => academic || o.key !== 'gyeyeol')
++    .map(o => ({ ...o, title: titleOfCard.get(o.key) ?? o.title }))
+ 
+   const myeongsik = v.saju
+     .map(p => `${p.pillar} ${p.stem === '?' ? '·' : p.stem}${p.branch === '?' ? '·' : p.branch}`)
+@@ -182,15 +199,27 @@ export function buildCareerPrompt(v: CareerPromptInput): string {
+     }
+   }
+ 
+-  const material = v.cards
++  // 🔴⚠️ 2026-08-03 (44부 44차) — ★재료도 «ORDER 차례» 로 늘어놓습니다.
++  //   [무엇이 있었나]  v.cards 를 «만든 차례» 그대로 늘어놓았습니다.
++  //     judgeSpecial 이 맨 처음이라 재료에서도 ★「한 번 더 볼 점」이 맨 앞이었고,
++  //     ★AI 가 그 차례를 따라 써서 «1번 대목» 으로 나갔습니다.
++  //     (40차에 ORDER 는 맨 아래로 내렸는데 재료만 옛 차례였습니다)
++  //   ⚠️ 아래 plan(128줄)은 ORDER 로 만드는데 재료만 달랐습니다. 두 곳이 어긋난 것입니다.
++  //   ★AI 는 «시킨 차례» 보다 «재료가 놓인 차례» 를 따라갑니다. 둘을 맞춰야 합니다.
++  const ordered = ORDER
++    .map(o => v.cards.find(c => c.key === o.key))
++    .filter((c): c is CareerCard => !!c)
++
++  const material = ordered
+     // ★학업 대목을 안 낼 신분이면 재료에서도 뺍니다.
+     //   재료에 남겨 두고 «쓰지 말라» 고만 하면 AI 가 꺼내 씁니다. (교훈 BF)
+     .filter(c => !dropKeys.includes(c.key))
+     .filter(c => c.reasons.length > 0)
+     .map(c => {
++      // ⚠️ 재료 제목도 «카드가 정한 것» 을 먼저 씁니다 — 시킨 제목과 같아야 붙습니다
+       const o = ORDER.find(x => x.key === c.key)
+       const rs = [...c.reasons, ...(extra[c.key] ?? [])]
+-      return `[${o?.title ?? c.title}]\n` + rs.map(r => `- ${r}`).join('\n')
++      return `[${c.title || o?.title || ''}]\n` + rs.map(r => `- ${r}`).join('\n')
+     }).join('\n\n')
+ 
+   // ★2026-07-29 — 신분을 알면 그 결로, 모르면 예전처럼 학생/성인으로.
+diff --git a/lib/saju/career/jobs.ts b/lib/saju/career/jobs.ts
+index 299278d..5072da3 100644
+--- a/lib/saju/career/jobs.ts
++++ b/lib/saju/career/jobs.ts
+@@ -30,6 +30,7 @@
+ //   두 군데 이상(합 4점 이상)에서 나온 것만 고른다.
+ 
+ import { calcCareerScore, gradeAll, pickStrong, type Ohaeng } from './careerScore'
++import { ADULT_JOB_BLOCKLIST } from './roleFit'
+ import { yukchinOf } from './yukchin'
+ import { checkSinsal9 } from './sinsal9'
+ import { calcCareerYongsin } from './yongsin'
+@@ -37,6 +38,15 @@ import type { CareerCard, CareerInput } from './types'
+ import { calcCareerGyeokguk } from './gyeokguk'
+ import { ILJU } from './tables/ilju'
+ import { OHAENG_JOBS, jobKey, jobLabel, okForStudent } from './tables/jobs'
++
++/**
++ * ★성인 리포트에서 걸러 낼 직업 «열쇠» (44부 43차)
++ *
++ *  ⚠️ 목록은 roleFit 의 것을 «가져다» 씁니다. 두 벌로 적지 마십시오. (교훈 E)
++ *  ⚠️ 열쇠로 바꿔 두는 까닭 — jobKey 가 「수도사업」을 「수도」로 줄입니다.
++ *     날것으로 견주면 «안 걸립니다».
++ */
++const BLOCKED_KEYS = new Set(ADULT_JOB_BLOCKLIST.map(jobKey))
+ import { YUKCHIN_GIJIL, GRID25, YUKCHIN_ORDER, type YukchinGroup } from './tables/yukchin'
+ import { GYEOKGUK_INFO } from './tables/gyeokguk'
+ import { SINSAL9 } from './tables/sinsal'
+@@ -171,9 +181,27 @@ export function pickJobs(input: CareerInput): { hits: JobHit[]; pool: number } {
+ 
+   // ★학생 모드에서는 어른용 직업을 걸러 낸다 (유흥·카지노·대부업 등)
+   const forStudent = input.target === 'student'
++
++  // 🔴★2026-08-03 (44부 43차) — «성인» 리포트에서도 걸러 냅니다.
++  //   [무엇이 있었나]  학생만 걸러, 직장인 리포트에 ★「유흥업」이 그대로 나갔습니다.
++  //     (2026-08-03 대표님 PDF — 「어울리는 직업」에 유흥업이 찍혀 있었습니다)
++  //   ⚠️ roleFit.ts 머리말에 그 까닭이 «이미» 적혀 있었습니다 —
++  //      「직장인이 «당신에게 어울리는 직업: 유흥업» 을 읽으면 리포트 전체를 못 믿게 된다」
++  //      ★그런데 roleFit 만 그 판단을 쓰고 여기서는 안 썼습니다. 두 곳이 어긋난 것입니다.
++  //   ⚠️ 나쁜 직업이라는 뜻이 «아닙니다». 커리어 리포트의 결에 안 맞는 것입니다.
++  //      ★교재 표는 «안 고쳤습니다». 목록도 roleFit 의 것을 «가져다» 씁니다 (교훈 E).
++  //   ⚠️⚠️ ★«같은 이름일 때만» 막습니다.
++  //      처음엔 includes 로 견주었더니 ★「의사」가 「장의사」에 걸려 사라졌습니다.
++  //      한 글자라도 겹치면 막는 방식은 «멀쩡한 직업» 을 지웁니다. (교훈 — 낱말로 막지 말 것)
++  //   ⚠️⚠️ ★목록도 «같은 잣대(jobKey)» 로 다듬어 견줍니다.
++  //      「수도사업」은 jobKey 가 「사업」을 떼어 ★「수도」가 되므로,
++  //      목록을 날것 그대로 견주면 ★안 걸립니다. (실제로 「수도」가 남아 나왔습니다)
++  const blocked = (key: string) => BLOCKED_KEYS.has(key)
++
+   const hits = [...bag.values()]
+     .filter(x => x.score >= JOB_MIN)
+     .filter(x => !forStudent || okForStudent(x.key))
++    .filter(x => !blocked(x.key))
+     .sort((a, b) => (b.score - a.score) || (b.sources.length - a.sources.length))
+ 
+   return { hits, pool: bag.size }
+diff --git a/lib/saju/career/strengthCards.ts b/lib/saju/career/strengthCards.ts
+index 5305835..e9198d3 100644
+--- a/lib/saju/career/strengthCards.ts
++++ b/lib/saju/career/strengthCards.ts
+@@ -123,6 +123,20 @@ export function judgeLeadWealth(v: StrengthInput): CareerCard {
+   for (const el of EL5) grp[yukchinOf(dayEl, el)] += v.score[el] ?? 0
+ 
+   const gwan = grp['관성'], bigyeop = grp['비겁']
++
++  // ══════════════════════════════════════════════════════════════
++  //  ★학생이면 «재물을 빼고 리더십만» — 제목도 갈래 (44부 48차 · 대표님 지시)
++  //
++  //  🔴 [무엇이 있었나]  13세 손님에게 이런 글이 나갔습니다 —
++  //     「재물을 꼼꼼하게 관리하기보다 ★확장하는 방향으로 쓰는 결」
++  //     「벌이의 진폭이 큰 만큼 «잃어도 되는 선» 을 미리 정해 두셔야」
++  //     「★투자 판단은 늘 평소 잣대로 하십시오」
++  //     ⇒ 13세에게 쓸 자리가 없고, ★부모님이 함께 읽어 오해를 부릅니다.
++  //  ★리더십은 «남깁니다» — 진로적성의 알맹이라 빼기 아깝습니다.
++  //     다만 「조직·이직」이 아니라 ★«모둠·학급·동아리» 의 말로 옮깁니다.
++  //  ⚠️ 값을 «새로 계산하지 않습니다» — 같은 관성·비겁·식상 점수를 씁니다.
++  // ══════════════════════════════════════════════════════════════
++  if (v.target === 'student') return judgeStudentLead(grp, v)
+   const wealth = judgeWealthStyle(v.saju, v.dayStem, v.score)
+ 
+   const lines: string[] = []
+@@ -151,6 +165,61 @@ export function judgeLeadWealth(v: StrengthInput): CareerCard {
+   return { key: 'leadwealth', title: '리더십과 재물 운용', badge: wealth.label, lines, reasons }
+ }
+ 
++/**
++ * ★학생용 — 「모둠에서 맡는 자리」 (44부 48차)
++ *
++ *  ⚠️ 재물 이야기는 «넣지 않습니다». 13세에게 투자는 쓸 자리가 없습니다.
++ *  ⚠️ 이 문장들은 교재의 말이 «아닙니다» — 관성·비겁·식상의 결을
++ *     ★학교 생활의 말로 옮긴 것입니다. 명리 근거를 붙이지 마십시오.
++ */
++function judgeStudentLead(grp: Record<string, number>, v: StrengthInput): CareerCard {
++  const gwan = grp['관성'], bigyeop = grp['비겁'], siksang = grp['식상'], insung = grp['인성']
++  const lines: string[] = []
++  const reasons: string[] = []
++
++  // ── 규칙이 편한가, 스스로 정하는 쪽이 편한가 ──
++  if (gwan >= 25) {
++    lines.push('정해진 규칙과 차례가 있는 자리에서 마음이 편한 편이에요. 맡은 몫을 끝까지 해내는 결이라 믿고 맡길 수 있는 사람으로 보입니다.')
++  } else if (gwan === 0) {
++    lines.push('누가 촘촘히 시키는 자리는 답답해하는 편이에요. 무엇을 할지 스스로 정할 수 있을 때 훨씬 힘이 납니다.')
++  } else {
++    lines.push('규칙을 따르는 것도, 스스로 정하는 것도 크게 어렵지 않은 편이에요. 자리에 따라 맞춰 갈 수 있는 결입니다.')
++  }
++
++  // ── 앞에 나서는 쪽인가 ──
++  if (bigyeop >= 25 && siksang >= 25) {
++    lines.push('앞에 나서서 말하고 이끄는 쪽이 잘 맞아요. 모둠장이나 발표를 맡으면 제 몫을 톡톡히 합니다.')
++  } else if (bigyeop >= 25) {
++    lines.push('내 뜻대로 해 보고 싶은 마음이 큰 편이에요. 남이 짜 놓은 대로 따라가기보다 «내가 맡은 몫» 이 뚜렷할 때 힘이 납니다.')
++  } else if (siksang >= 25) {
++    lines.push('생각한 것을 말이나 글, 만드는 것으로 꺼내 놓는 데 힘이 있어요. 발표·기획·자료 만들기 같은 자리가 잘 맞습니다.')
++  } else {
++    lines.push('앞에 나서기보다 곁에서 살피고 받쳐 주는 쪽이 편한 편이에요. 눈에 덜 띄어도 모둠이 굴러가게 하는 자리입니다.')
++  }
++
++  // ── 배워서 쌓는 쪽인가 ──
++  if (insung >= 25) {
++    lines.push('배운 것을 차곡차곡 쌓아 두는 결이라, 자료를 정리하거나 기록을 맡는 자리에서도 빛이 납니다.')
++  }
++
++  // ── 해볼 만한 자리 ──
++  const jobs: string[] = []
++  if (bigyeop >= 25 || (gwan >= 25 && siksang >= 25)) jobs.push('모둠장')
++  if (siksang >= 25) jobs.push('발표')
++  if (insung >= 25 || gwan >= 25) jobs.push('기록·자료 정리')
++  if (!jobs.length) jobs.push('도움이 필요한 곳을 먼저 살피는 자리')
++  lines.push(`→ 학교에서 «${jobs.join(' · ')}» 부터 한 번 맡아 보시면 이 결이 어디에 잘 붙는지 알게 됩니다.`)
++
++  reasons.push(`관성 ${Math.round(gwan)}점 · 비겁 ${Math.round(bigyeop)}점 · 식상 ${Math.round(siksang)}점 · 인성 ${Math.round(insung)}점`)
++  // ⚠️⚠️ 「학생이라 재물 운용은 내지 않습니다」를 ★reasons 에 적지 «않습니다».
++  //    reasons 는 AI 재료로 나갑니다 — ★금지하려는 낱말을 재료에 적으면
++  //    AI 가 그것을 보고 오히려 그 이야기를 꺼냅니다. (44부 1-2 교훈)
++  //    ★까닭은 이 주석에만 둡니다.
++  void v
++
++  return { key: 'leadwealth', title: '모둠에서 맡는 자리', badge: '', lines, reasons }
++}
++
+ // ══════════════════════════════════════════════════════════════
+ //  ③ 발복 대운과 개운
+ //

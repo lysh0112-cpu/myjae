@@ -76,39 +76,19 @@ function pillarHtml(ps: CareerCertPillar[]): string {
   </table>`
 }
 
-/**
- * ★오행 오각형 — 화면(SajuTableSlot)과 «같은 모양» 을 종이에 (44부 47차)
+/*
+ * ⛔★오각형은 종이에 «그리지 않습니다» (44부 49차)
  *
- *  🔴 [까닭]  종이에는 가로 막대만 있어 ★화면과 달랐습니다.
- *     대표님 「그래프나 표들이 사라진다」의 그 자리입니다.
- *  ⚠️ 화면 부품은 React 라 그대로 못 옮깁니다. ★값을 받아 SVG 로 다시 그립니다.
- *  ⚠️ 셈은 «다시 하지 않습니다» — 화면이 넘긴 백분율을 그대로 씁니다. (교훈 CJ)
+ *  🔴 [무엇이 있었나]  47차에 SVG 로 오각형을 그렸는데,
+ *     ★PDF 로 뽑으면 «도형이 사라지고 글자만» 남았습니다.
+ *     (대표님 PDF — 「목 25 · 화 0 · 금 10 토 50 · 수 15」가 흩어져 찍혔습니다)
+ *     ⇒ 새 창에 document.write 로 넣은 SVG 는 인쇄에서 빠지는 일이 있습니다.
+ *  ★막대표는 <table> + 배경색이라 «인쇄에도 남습니다» (실제로 PDF 에 나왔습니다).
+ *  ⇒ 2026-08-03 대표님 지시 —
+ *    「종이에는 ★«사주 원국» 과 «타고난 오행의 결» 두 가지만.
+ *      나머지는 진로적성 결과 내용을 그대로」
+ *  ⚠️ 되살리시려면 «인쇄에 남는 방식» 을 먼저 확인하십시오. SVG 는 안 됩니다.
  */
-function pentagon(rows: Array<{ el: string; pct: number }>): string {
-  const ORDER: string[] = ['목', '화', '토', '금', '수']
-  const pts = ORDER.map((el, i) => {
-    const v = rows.find(r => r.el === el)?.pct ?? 0
-    const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5
-    const r = 12 + (Math.min(v, 100) / 100) * 46
-    return { el, v, a, x: 70 + r * Math.cos(a), y: 70 + r * Math.sin(a) }
-  })
-  const ring = (k: number) => ORDER.map((_, i) => {
-    const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5
-    return `${(70 + k * Math.cos(a)).toFixed(1)},${(70 + k * Math.sin(a)).toFixed(1)}`
-  }).join(' ')
-  const area = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
-  const label = pts.map(p => {
-    const lx = 70 + 66 * Math.cos(p.a), ly = 70 + 66 * Math.sin(p.a)
-    return `<text x="${lx.toFixed(1)}" y="${(ly + 3).toFixed(1)}" text-anchor="middle"
-      font-size="8" fill="${EL_C[p.el] ?? '#555'}">${p.el} ${p.v}</text>`
-  }).join('')
-  return `<svg viewBox="0 0 140 140" width="128" height="128" xmlns="http://www.w3.org/2000/svg">
-    <polygon points="${ring(58)}" fill="none" stroke="#e6ded6" stroke-width="0.8"/>
-    <polygon points="${ring(35)}" fill="none" stroke="#efe9e3" stroke-width="0.7"/>
-    <polygon points="${area}" fill="#b9a9dd66" stroke="#7d6bb8" stroke-width="1.4"/>
-    ${label}
-  </svg>`
-}
 
 /** 인쇄용 가로 막대 표 — ★화면 오각형·표를 «값 그대로» 옮겨 그립니다 */
 function barTable(rows: Array<{ name: string; pct: number; color?: string }>): string {
@@ -180,27 +160,18 @@ export function openCareerCertificate(d: CareerCertInput): { ok: boolean; messag
   //      화면은 각 대목 뒤인데 ★종이만 달라, 말과 근거가 멀리 떨어져 있었습니다.
   //   ⚠️ 대목 «제목» 으로 짝을 짓습니다 — 화면 TABLE_AFTER 와 같은 짝입니다.
   const tableFor = (title: string): string => {
-    const t2 = (title ?? '').replace(/\s/g, '')
-    if (!t) return ''
-    if (t2.includes('오행의결') && t.ohaeng?.length) {
-      return `<div class="tbox"><div class="t">이 이야기의 바탕 — 오행과 십성의 세력</div>
-        <div class="penta">${pentagon(t.ohaeng)}</div>
-        ${barTable(t.ohaeng.map(o => ({ name: `${o.el}(${EL_HAN[o.el] ?? ''})`, pct: o.pct, color: EL_BG[o.el] })))}
-        ${t.sipsung?.length ? barTable(t.sipsung.map(x => ({ name: x.ss, pct: x.pct }))) : ''}</div>`
-    }
-    if (t2.includes('육친이가리키는곳') && t.yongsin?.strength) {
-      return `<div class="tbox"><div class="t">내 힘이 얼마나 받쳐지는가</div>
-        <div class="ys">힘의 세기 <b>${esc(t.yongsin.strength)}</b></div></div>`
-    }
-    if (t2.includes('기운을얻는자리') && t.yongsin) {
-      return `<div class="tbox"><div class="t">어떤 기운이 나를 돕는가</div>
-        <div class="ys">
-          ${t.yongsin.eokbu ? `억부용신 <b>${esc(t.yongsin.eokbu)}</b> · ` : ''}
-          ${t.yongsin.johu ? `조후용신 <b>${esc(t.yongsin.johu)}</b> · ` : ''}
-          ${t.yongsin.gyeokguk ? `격국용신 <b>${esc(t.yongsin.gyeokguk)}</b>` : ''}
-        </div></div>`
-    }
-    return ''
+    // ⛔★종이에는 «오행의 결» 하나만 붙입니다 (2026-08-03 대표님 지시 · 44부 49차)
+    //   [무엇이 있었나]  십성 막대 · 신강 게이지 · 용신 줄까지 넣었더니
+    //     ★종이가 표로 빽빽해지고, 오각형까지 겹쳐 같은 값이 두 번 나왔습니다.
+    //   ★남긴 것 — 사주 원국(머리)과 «타고난 오행의 결» 막대.
+    //   ⚠️ 나머지 표는 «지운 것이 아니라 안 그리는» 것입니다.
+    //      d.tables 는 그대로 넘어옵니다. 되살리려면 여기 가지를 더하십시오.
+    if (!t?.ohaeng?.length) return ''
+    if (!(title ?? '').replace(/\s/g, '').includes('오행의결')) return ''
+    return `<div class="tbox"><div class="t">타고난 오행의 결</div>${
+      barTable(t.ohaeng.map(o => ({
+        name: `${o.el}(${EL_HAN[o.el] ?? ''})`, pct: o.pct, color: EL_BG[o.el],
+      })))}</div>`
   }
 
   const secs = d.sections.map((s, i) => {

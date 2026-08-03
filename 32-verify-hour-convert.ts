@@ -1669,14 +1669,21 @@ console.log('\n━━ (53) ★진로적성 A4 인쇄 · 해설 복사 (44부 36�
   check(/EL_BG\[el\]/.test(cert), `⚠️ 오행 색은 ohaengColor 그대로입니다`)
 
   // 🔴 종이의 표 — «그 말을 하는 대목 뒤» 인가 · 오각형이 있는가 (44부 47차)
-  check(/function pentagon/.test(cert), `🔴★종이에도 «오행 오각형» 을 그립니다`)
-  check(/<svg viewBox="0 0 140 140"/.test(cert), `★SVG 로 그려 인쇄에 남습니다`)
+  // ⛔ 2026-08-03 (44부 49차) — ★오각형(SVG)은 «그리지 않습니다».
+  //   [까닭] PDF 로 뽑으면 ★도형이 사라지고 «글자만» 남았습니다.
+  //     (대표님 PDF — 「목 25 · 화 0 · 금 10 토 50 · 수 15」가 흩어져 찍혔습니다)
+  //   ★막대표는 <table> + 배경색이라 인쇄에도 남습니다.
+  //   ⇒ 대표님 지시 — 종이에는 «사주 원국» 과 «타고난 오행의 결» 둘만.
+  check(!/function pentagon/.test(cert), `⛔★오각형(SVG)을 «그리지 않습니다» (인쇄에서 사라집니다)`)
+  check(!/<svg /.test(cert), `⛔ SVG 가 남아 있지 않습니다`)
   check(/const tableFor = \(title: string\)/.test(cert),
     `★표를 «대목 제목» 으로 짝지어 붙입니다`)
   check(/\$\{tableFor\(s\.title\)\}/.test(cert), `★대목 뒤에 붙습니다`)
   check(!/\$\{tbl\}/.test(cert), `⚠️ 맨 위에 «몰아 두던» 자리가 사라졌습니다 (두 번 안 나옵니다)`)
-  check(/오행의결/.test(cert) && /기운을얻는자리/.test(cert),
-    `⚠️ 화면 TABLE_AFTER 와 «같은 짝» 입니다`)
+  check(/오행의결/.test(cert) && !/기운을얻는자리/.test(cert),
+    `⛔★종이의 표는 «오행의 결» 하나뿐입니다 (십성·신강·용신은 안 그립니다)`)
+  check(/인쇄에 남는 방식» 을 먼저 확인하십시오/.test(read('app/manseryeok/career-result/components/CareerCertificate.tsx')),
+    `⚠️ 되살릴 때 «SVG 는 안 된다» 고 일러 두었습니다`)
 
   // ★화면 — 버튼 둘이 나란히, 통변 뒤에만
   check(/A4 PDF저장\/인쇄/.test(page), `★「A4 PDF저장/인쇄」 버튼이 있습니다`)
