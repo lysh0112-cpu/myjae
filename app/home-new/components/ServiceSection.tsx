@@ -75,6 +75,10 @@ const C = {
   border: 'rgba(120,53,15,0.15)',       // amber-900/15 — 카드 바깥선
   borderIn: 'rgba(120,53,15,0.11)',     // 열린 갈래 안쪽 카드
   well: '#fbf8f5',                      // 열린 갈래의 바닥 — 안쪽 카드가 떠 보이게
+  /** ★2026-08-04 (45부) — 서브 버튼 전용. 메인(순백)과 바닥(well) «사이» 입니다.
+   *  ⚠️ 순백으로 되돌리면 메인 카드와 구분이 사라집니다. (대표님 지시로 낮춘 것) */
+  subCard: '#fdfbf9',                   // 순백보다 한 톤 연하게
+  borderSub: 'rgba(120,53,15,0.08)',    // borderIn(0.11)보다 «더 옅게»
   iconBg: '#f8fafc',      // slate-50
   iconEdge: '#eef2f6',
   text: '#1e293b',        // slate-800  — 고대비 본문
@@ -230,7 +234,9 @@ export default function ServiceSection({
     >{icon}</span>
   )
 
-  const Pin = ({ name }: { name: string }) => {
+  // ★2026-08-04 (45부) — small 을 더했습니다. ⚠️ 안 넘기면 «예전 그대로» 입니다.
+  //   다른 화면(낱장·BEST·메인)은 하나도 안 바뀝니다.
+  const Pin = ({ name, small = false }: { name: string; small?: boolean }) => {
     const on = pinned.includes(name)
     return (
       <button
@@ -239,8 +245,10 @@ export default function ServiceSection({
         aria-label={on ? `${name} 고정 해제` : `${name} 고정`}
         aria-pressed={on}
         style={{
-          width: 32, height: 32, border: 'none', background: 'none', cursor: 'pointer',
-          fontSize: 15, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: small ? 26 : 32, height: small ? 26 : 32,
+          border: 'none', background: 'none', cursor: 'pointer',
+          fontSize: small ? 12 : 15,
+          flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
           filter: on ? 'none' : 'grayscale(1)', opacity: on ? 1 : 0.28,
           transform: on ? 'scale(1.05)' : 'none',
         }}
@@ -496,23 +504,36 @@ export default function ServiceSection({
                 {/* ★2026-07-29 (4차) — 접히는 구간 안쪽도 **낱장 카드**로 바꿨습니다.
                     전에는 선 하나로만 나뉘어 있어, 열었을 때 안쪽 항목들이
                     경계 없이 이어져 보였습니다. 이제 항목마다 테두리가 있습니다.
-                    바닥(well)을 살짝 눌러 안쪽 카드가 떠 보이게 했습니다. */}
+                    바닥(well)을 살짝 눌러 안쪽 카드가 떠 보이게 했습니다.
+
+                    ★2026-08-04 (45부 · 대표님 지시) — 서브 버튼을 «작게» 했습니다.
+                      [까닭] 메인 카드와 크기·굵기가 «같아» 계층이 안 보였습니다.
+                      너비 92% + 가운데 · 여백 축소 · 아이콘 40→28 · 제목 14→12
+                      바탕은 순백보다 «한 톤 연하게», 테두리는 «더 옅게».
+                    ⚠️ 설명 글자는 ★11 «그대로» 둡니다 — 10 으로 내리면 작은 화면에서
+                       읽기 어렵습니다. 대신 «색을 옅게» 해서 뒤로 물립니다.
+                    ⚠️ 높이가 약 56 → 44 가 됩니다. ★44 는 손가락으로 누를 «최소선» 입니다.
+                       더 줄이지 «마십시오» — 어르신 손님이 못 누릅니다.
+                    ⚠️ 메인 카드(위 머리 버튼)는 ★하나도 안 건드렸습니다. */}
                 {isOpen && (
                   <div style={{
                     background: C.well,
                     borderTop: `1px solid ${C.border}`,
-                    padding: 9,
-                    display: 'flex', flexDirection: 'column', gap: 8,
+                    padding: '9px 9px 10px',
+                    display: 'flex', flexDirection: 'column', gap: 6,
                   }}>
                     {list.map((s) => (
                       <div
                         key={s.name}
                         style={{
-                          display: 'flex', alignItems: 'center', gap: 11,
-                          padding: '10px 11px',
-                          borderRadius: 13,
-                          background: C.white,
-                          border: `1px solid ${C.borderIn}`,
+                          // ★서브임이 한눈에 보이도록 «좁게 + 가운데»
+                          width: '92%', margin: '0 auto',
+                          display: 'flex', alignItems: 'center', gap: 8,
+                          padding: '7px 9px',
+                          borderRadius: 11,
+                          // ★순백(메인)보다 «한 톤 연하게» — 바닥과 메인 사이에 놓습니다
+                          background: C.subCard,
+                          border: `1px solid ${C.borderSub}`,
                           boxShadow: pinned.includes(s.name) ? C.shadowUp : C.shadow,
                         }}
                       >
@@ -520,21 +541,22 @@ export default function ServiceSection({
                           className="svcTap svcRow"
                           onClick={() => onOpen(s)}
                           style={{
-                            flex: 1, display: 'flex', alignItems: 'center', gap: 11,
+                            flex: 1, display: 'flex', alignItems: 'center', gap: 8,
                             background: 'none', border: 'none', cursor: 'pointer',
-                            textAlign: 'left', padding: 0, minWidth: 0, borderRadius: 12,
+                            textAlign: 'left', padding: 0, minWidth: 0, borderRadius: 10,
                           }}
                         >
-                          <Tile icon={s.icon} size={40} />
-                          <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-                            <span style={{ fontSize: 14, color: C.text, fontWeight: 700, letterSpacing: '-0.2px' }}>
+                          <Tile icon={s.icon} size={28} />
+                          <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
+                            <span style={{ fontSize: 12, color: C.text, fontWeight: 600, letterSpacing: '-0.2px' }}>
                               {s.name}
                             </span>
-                            <span style={{ fontSize: 11, color: C.sub }}>{s.sub}</span>
+                            {/* ⚠️ 11 «그대로» — 10 으로 내리지 마십시오 (읽기 어려워집니다) */}
+                            <span style={{ fontSize: 11, color: C.faint }}>{s.sub}</span>
                           </span>
-                          <span style={{ fontSize: 14, color: C.text, flexShrink: 0 }}>›</span>
+                          <span style={{ fontSize: 11, color: C.sub, flexShrink: 0 }}>›</span>
                         </button>
-                        <Pin name={s.name} />
+                        <Pin name={s.name} small />
                       </div>
                     ))}
                   </div>
