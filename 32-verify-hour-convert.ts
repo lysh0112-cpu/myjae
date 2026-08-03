@@ -1184,7 +1184,14 @@ console.log('\n━━ ㊸ ★오행 그래프 «가운데 0» · A4 궁합서 (4
   const pg2 = read('app/manseryeok/couple-result-new/page.tsx')
   check(/compareOhaeng\(ohaeng1, ohaeng2\)/.test(pg2),
     `⚠️ 닮음·채움을 «한 창구»(compareOhaeng)에서 받습니다`)
-  check(/A4 궁합서 \(인쇄 \/ PDF 저장\)/.test(pg2), `★화면에 버튼이 있습니다`)
+  check(/A4 PDF저장\/인쇄/.test(pg2), `★화면에 「A4 PDF저장/인쇄」 버튼이 있습니다`)
+  // ★2026-08-03 — 두 버튼을 «나란히» (대표님 지시)
+  check(/flexDirection: 'row', gap: 8, alignItems: 'stretch'/.test(pg2),
+    `★A4·해설복사 버튼이 «가로로» 나란히 있습니다`)
+  check(/className="copy-half"/.test(pg2) && /\.copy-half > button \{ width: 100%/.test(pg2),
+    `⚠️ 공용 부품(CopyTextButton)을 «고치지 않고» 감싼 자리에서 너비를 맞춥니다`)
+  const copySrc = read('app/components/common/CopyTextButton.tsx')
+  check(/fullWidth = true/.test(copySrc), `⚠️ 공용 부품의 기본값을 «건드리지 않았습니다»`)
   check(/reportSections\.length > 0 &&[\s\S]{0,200}onPrintCert/.test(pg2),
     `⚠️ 통변이 «다 나온 뒤» 에만 버튼이 보입니다 (반쪽 궁합서를 막습니다)`)
 }

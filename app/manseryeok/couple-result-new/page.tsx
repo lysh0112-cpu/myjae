@@ -1160,29 +1160,48 @@ function CoupleResultView({
              ★43부 선명장(NamingCertificate)과 «같은 방식» 입니다.
              ⚠️ 통변이 «다 나온 뒤» 에만 보입니다. 반쪽 궁합서를 내지 않습니다.
            ══════════════════════════════════════════════════════ */}
-        {reportSections.length > 0 && (
-          <button
-            onClick={onPrintCert}
-            style={{
-              width: '100%', marginTop: 8, background: '#b48a3c', border: 'none',
-              borderRadius: 11, padding: 13, fontSize: 13.5, fontWeight: 600,
-              color: '#fff', cursor: 'pointer',
-            }}
-          >🖨 A4 궁합서 (인쇄 / PDF 저장)</button>
-        )}
+        {/* ══════════════════════════════════════════════════════
+             ★2026-08-03 — 두 버튼을 «나란히» 둡니다 (대표님 지시)
+               전  세로로 둘 — 하단이 길어졌습니다
+               ★후 가로로 둘 — 각자 절반씩
+             ⚠️ CopyTextButton 은 «공용 부품» 입니다 (작명·사주보기도 씁니다).
+                ★부품을 고치지 않고 «감싸서» 너비를 맞춥니다. (교훈 E)
+                fullWidth={false} 로 두면 안쪽 버튼이 제 너비만 차지하므로,
+                감싼 div 에 flex:1 을 주고 부품에는 width:100% 를 걸어 줍니다.
+             ⚠️ 부품 안에 marginTop:8 이 박혀 있어 높이가 어긋납니다 —
+                ★A4 버튼에도 같은 marginTop 을 주어 «윗선» 을 맞췄습니다.
+           ══════════════════════════════════════════════════════ */}
+        <div style={{ display: 'flex', flexDirection: 'row', gap: 8, alignItems: 'stretch' }}>
+          {reportSections.length > 0 && (
+            <button
+              onClick={onPrintCert}
+              style={{
+                flex: 1, marginTop: 8, background: '#b48a3c', border: 'none',
+                borderRadius: 11, padding: 13, fontSize: 13.5, fontWeight: 600,
+                color: '#fff', cursor: 'pointer', lineHeight: 1.3,
+              }}
+            >🖨 A4 PDF저장/인쇄</button>
+          )}
 
-        {/* ★해설 복사 — 카톡 등에 붙여넣기 (공용 부품) */}
-        {/* ★2026-07-24 — 판정 결과 + 이미 받은 문답을 함께 담는다. */}
-        <CopyTextButton
-          text={[
-            judge ? judgeToText(judge) : '',
-            followUps.length
-              ? '\n■ 더 궁금했던 것\n' + followUps.map((f, i) => `Q${i + 1}. ${f.q}\nA. ${f.a}`).join('\n\n')
-              : '',
-            (tongResult || '').trim(),
-          ].filter(Boolean).join('\n')}
-          label={`${coupleTitleOf(kind)} 분석`}
-        />
+          {/* ★해설 복사 — 카톡 등에 붙여넣기 (공용 부품) */}
+          {/* ★2026-07-24 — 판정 결과 + 이미 받은 문답을 함께 담는다. */}
+          {/* ⚠️ 통변이 아직이면 A4 버튼이 «없습니다» — 그때는 복사 버튼이
+                 혼자 남으므로 «가로로 꽉» 차야 합니다. flex:1 하나로 됩니다. */}
+          <div style={{ flex: 1, display: 'flex' }} className="copy-half">
+            <CopyTextButton
+              text={[
+                judge ? judgeToText(judge) : '',
+                followUps.length
+                  ? '\n■ 더 궁금했던 것\n' + followUps.map((f, i) => `Q${i + 1}. ${f.q}\nA. ${f.a}`).join('\n\n')
+                  : '',
+                (tongResult || '').trim(),
+              ].filter(Boolean).join('\n')}
+              label={`${coupleTitleOf(kind)} 분석`}
+            />
+          </div>
+          {/* ⚠️ 공용 부품을 «고치지 않고» 감싼 자리에서만 너비를 맞춥니다 */}
+          <style>{`.copy-half > button { width: 100%; }`}</style>
+        </div>
 
         {/* 전문가 상담 — 저장 표시 아래.
             ★ 연인/부부가 서로 다른 가격표(price_key)를 쓴다.
