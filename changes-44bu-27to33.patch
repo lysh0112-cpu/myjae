@@ -1,0 +1,4495 @@
+diff --git a/32-verify-hour-convert.ts b/32-verify-hour-convert.ts
+index 326b05f..ce9a2a4 100644
+--- a/32-verify-hour-convert.ts
++++ b/32-verify-hour-convert.ts
+@@ -1310,6 +1310,294 @@ console.log('\n━━ ㊺ ★보관함 열 곳이 «한 모습» 인가 (44부 2
+   check(!/\{info\.badge\} 궁합/.test(cp), `🔴 「궁합 궁합」이 사라졌습니다`)
+ }
+ 
++console.log('\n━━ ㊻ ★사주 MBTI 산식 — 교재 대조로 고친 자리 (44부 27차) ━━')
++{
++  // ⚠️ 교훈 1-1 — 주석을 «먼저 지우고» 봅니다
++  const noComment = (s: string) =>
++    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
++  const m = noComment(read('lib/saju/career/sajuMbti.ts'))
++  const doc = read('lib/saju/career/sajuMbti.ts')   // 주석까지 — 까닭이 적혔는지 볼 때
++
++  // 🔴 B — 지지를 «세는가» (교재 36·159·259쪽)
++  check(/BRANCH_BONGI/.test(m), `★48쪽 본기 천간 표가 있습니다`)
++  check(/子: '癸'/.test(m) && /午: '丁'/.test(m), `★子=癸(음) · 午=丁(음) — 48쪽 그대로`)
++  check(/const asStem = isStem \? ch : BRANCH_BONGI\[ch\]/.test(m),
++    `🔴★정재·편재를 가릴 때 «지지도» 셉니다`)
++  check(!/const el = isStem \? STEM_EL\[ch\] : undefined/.test(m),
++    `⚠️ 지지를 건너뛰던 옛 줄이 «사라졌습니다»`)
++  // ⚠️⚠️ 두 잣대가 «둘 다» 살아 있는가 — 하나로 합치면 안 됩니다
++  check(/YANG_BRANCH = new Set\(\['子', '寅', '辰', '午', '申', '戌'\]\)/.test(m),
++    `⚠️ 음양 «비율» 용 표(子=양)는 그대로입니다 — 260쪽 양팔통 사례`)
++  check(/하나로 합치지 마십시오/.test(doc), `⚠️ 두 표를 합치지 말라는 까닭이 적혀 있습니다`)
++
++  // A — 오행·육친을 «층으로 가르는가» (교재 40쪽)
++  check(/type Layer = \{ L: Array<\[string, number\]>; R: Array<\[string, number\]> \}/.test(m),
++    `★층(Layer) 으로 가릅니다`)
++  check(/if \(!ly\.L\.length \|\| !ly\.R\.length\) continue/.test(m),
++    `★한쪽이 빈 층은 «세지 않습니다» (대립이 아님)`)
++
++  // γ — «세기 평균» 으로 견주는가
++  check(/const l = sum\(ly\.L\) \/ ly\.L\.length/.test(m) && /const r = sum\(ly\.R\) \/ ly\.R\.length/.test(m),
++    `★γ — 성분 «개수» 가 아니라 «세기» 로 견줍니다`)
++
++  // C-1 — 50점 뚜껑 (교재 259쪽)
++  check(/const cap = \(v: number\) => Math\.min\(v, 50\)/.test(m), `★C-1 — 50점 뚜껑이 있습니다`)
++  check(/cap\(S\['목'\]\)/.test(m) && /cap\(Y\['식상'\]\)/.test(m),
++    `★오행·육친 모두 뚜껑을 지납니다`)
++
++  // D — 근거 없는 셋이 «빠졌는가»
++  check(!/yanginBaekho/.test(m), `★T쪽 백호가 빠졌습니다 (95쪽은 성격을 말하지 않음)`)
++  const sn = m.slice(m.indexOf("push('SN'"), m.indexOf("push('TF'"))
++  check(!/관성/.test(sn), `★S쪽 관성이 빠졌습니다 (교재에서 못 찾음)`)
++  check(!/S\['화'\]/.test(sn), `★N쪽 화가 빠졌습니다 (화는 열정·표현·예의·행동)`)
++
++  // ⚠️ 「없다」가 아니라 「못 찾았다」로 적었는가 — 184~257쪽을 아직 못 봤습니다
++  check(/못 찾았다|못 찾았습니다|못 찾은/.test(doc),
++    `⚠️ 「교재에 없다」가 아니라 «확인한 범위에서 못 찾았다» 로 적혀 있습니다`)
++  check(/184~257/.test(doc), `⚠️ 아직 못 본 쪽 범위가 적혀 있습니다`)
++  // ★되살릴 길을 남겼는가
++  check(/되살리십시오|되살릴 수 있습니다/.test(doc), `★쪽이 확인되면 되살리라고 일러 둡니다`)
++  // ⚠️ 토가 빠진 것을 «숨기지 않았는가»
++  check(/토\(45쪽/.test(doc), `⚠️ 토가 산식에서 빠졌다는 것을 적어 두었습니다`)
++
++  // ⚠️ 다른 엔진을 «건드리지 않았는가»
++  check(/import \{ calcCareerScore \}/.test(m) && /import \{ yukchinOf \}/.test(m)
++     && /import \{ checkSinsal9 \}/.test(m), `⚠️ 다른 엔진은 «부르기만» 합니다`)
++
++  // ⚠️ 자(尺)는 verify 체인에 «없는가»
++  const pkg4 = JSON.parse(read('package.json'))
++  check(!/34-measure/.test(pkg4.scripts.verify), `⚠️ 자(尺)는 verify 체인에 «없습니다»`)
++  check(/measure:mbti/.test(JSON.stringify(pkg4.scripts)), `npm run measure:mbti 로 잽니다`)
++  // ★옛 산식이 자 안에 «남아 있는가» — 잣대가 함께 움직이면 안 됩니다
++  const mm = read('34-measure-saju-mbti.ts')
++  check(/function code0\(b: Bag\)/.test(mm), `★옛 산식이 자 안에 붙박여 있습니다 (잣대 보존)`)
++  check(/어긋난 건수/.test(mm), `★자가 «실제 파일과 같은 답인지» 맞대어 봅니다`)
++}
++
++console.log('\n━━ ㊼ ★사주 MBTI 화면 — 숫자를 걷어내고 «말» 로 (44부 28차) ━━')
++{
++  const noComment = (s: string) =>
++    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
++  const card = noComment(read('app/manseryeok/career-result/components/MbtiCard.tsx'))
++  const eng = noComment(read('lib/saju/career/sajuMbti.ts'))
++
++  // 🔴 「81 : 19」가 «사라졌는가» — 무엇의 비율인지 화면에 없던 숫자입니다
++  check(!/\{a\.leftPct\} : \{100 - a\.leftPct\}/.test(card),
++    `🔴★「81 : 19」가 사라졌습니다`)
++  check(/leanWord\(a\.leftPct\)/.test(card), `★기울기를 «말» 로 보입니다`)
++  check(/반반에 가까워요/.test(card) && /아주 뚜렷해요/.test(card),
++    `★「반반에 가까워요 … 아주 뚜렷해요」 넷입니다`)
++  // ⚠️ 「반반」 잣대가 balanced 와 «같은가» — 두 곳이 다르면 화면이 서로 어긋납니다
++  check(/d <= 5/.test(card) && /leftPct >= 45 && a\.leftPct <= 55/.test(eng),
++    `⚠️ 「반반」 잣대가 balanced(45~55%)와 같습니다`)
++  // ★막대는 «남았는가» — 지운 것이 아니라 감춘 것입니다
++  // ★2026-08-03 (44부 32차) — 막대가 «가운데에서» 자라도록 바뀌었습니다.
++  //   ⚠️ 검사를 헐겁게 한 것이 «아닙니다» — 「막대가 leftPct 로 그려지는가」를 그대로 잽니다.
++  check(/\$\{a\.leftPct - 50\}%/.test(card) && /\$\{50 - a\.leftPct\}%/.test(card),
++    `★막대는 그대로입니다 (leftPct 로 그립니다)`)
++
++  // 🔴 근거 줄에서 «점수» 가 사라졌는가
++  check(!/\$\{k\} \$\{Math\.round\(v\)\}/.test(eng),
++    `🔴★근거 줄에서 점수(「목 55」)가 사라졌습니다`)
++  check(/const LABEL: Record<string, string>/.test(eng), `★재료 이름을 손님 말로 옮깁니다`)
++  check(/비겁: '주체성'/.test(eng) && /인성: '사고력'/.test(eng),
++    `★「비겁·인성」 같은 명리 말이 화면에 안 나갑니다`)
++  // ⚠️ 같은 말을 두 번 하지 «않는가» (목 = 비겁일 때)
++  check(/const seen = new Set<string>\(\)/.test(eng),
++    `⚠️ 같은 기운을 두 번 말하지 않습니다 (목=비겁인 분)`)
++  check(/\{a\.pick\} 쪽 — \{a\.why\}/.test(card), `★어느 쪽인지 글자로도 밝힙니다`)
++
++  // ⚠️ 지운 것이 아니라 «감춘» 것인가 — 되살릴 길
++  check(/leftScore: Math\.round/.test(eng), `⚠️ 점수는 «남아 있습니다» — 지운 것이 아닙니다`)
++  const doc = read('lib/saju/career/sajuMbti.ts')
++  check(/되살리려면 대표님께 여쭈십시오/.test(doc), `⚠️ 되살릴 때 여쭈라고 적혀 있습니다`)
++  check(/계산기처럼 보이면 안 됩니다/.test(doc), `★「참고 카드」라는 까닭이 적혀 있습니다`)
++  // ★「재미로 보는 참고」가 그대로 있는가
++  check(/재미로 보는 참고예요/.test(card), `★「재미로 보는 참고예요」가 그대로 있습니다`)
++}
++
++console.log('\n━━ ㊽ ★「어떤 결인가요」 해설 · 재료의 숫자 걷어내기 (44부 29차) ━━')
++{
++  const noComment = (s: string) =>
++    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
++  const eng = noComment(read('lib/saju/career/sajuMbti.ts'))
++  const card = noComment(read('app/manseryeok/career-result/components/MbtiCard.tsx'))
++  const pr = noComment(read('lib/saju/premium/buildCareerMbtiPrompt.ts'))
++
++  // ★여덟 줄이 «한 곳» 에 있는가
++  check(/export const AXIS_WORK: Record<string, string>/.test(eng),
++    `★AXIS_WORK 여덟 줄이 sajuMbti.ts «한 곳» 에 있습니다`)
++  check(['E', 'I', 'S', 'N', 'T', 'F', 'J', 'P'].every(k => new RegExp(`${k}: '`).test(eng)),
++    `★여덟 글자가 모두 있습니다`)
++  // ⚠️⚠️ 두 벌이 되지 «않았는가» — 두 벌이면 다른 말을 하는 날이 옵니다
++  check(!/const AXIS_WORK/.test(pr), `⚠️ 프롬프트가 «제 벌» 을 다시 적지 않습니다`)
++  check(/import \{ calcSajuMbti, compareMbti, AXIS_WORK/.test(pr),
++    `⚠️ 프롬프트는 그 한 곳에서 «가져다» 씁니다`)
++  check(/import \{ AXIS_WORK[^}]*\} from '@\/lib\/saju\/career\/sajuMbti'/.test(card),
++    `⚠️ 화면도 같은 곳에서 가져다 씁니다`)
++
++  // ★표 아래 해설이 그려지는가
++  // ★2026-08-03 (44부 32차) — 「어떤 결인가요」 네 줄이 «같은 결 / 다른 결» 로 바뀌었습니다.
++  //   ⚠️ 없어진 것이 «아니라» 결마다 제자리를 찾아간 것입니다. 뜻을 그대로 잽니다 —
++  //      「이긴 글자의 설명을 그리는가」.
++  check(/\{AXIS_WORK\[a\.born\]\}|trimEcho\(a\.born\)/.test(card),
++    `★같은 결에서 이긴 글자의 줄을 그립니다`)
++  check(/trimEcho\(a\.pick\)|\{AXIS_WORK\[a\.pick\]\}/.test(card),
++    `★MBTI 를 안 넣으신 분께도 네 글자를 풀어 드립니다`)
++  check(/result\.axes\.map\(a => \(/.test(card), `★네 축 모두 그립니다`)
++
++  // 🔴 재료에도 「81:19」가 «남지 않았는가» (44부 3-3 별점 교훈)
++  check(!/\$\{a\.leftPct\}:\$\{100 - a\.leftPct\}/.test(pr) && !/leftPct/.test(pr),
++    `🔴★통변 «재료» 에서도 「81:19」가 사라졌습니다`)
++  const doc = read('lib/saju/premium/buildCareerMbtiPrompt.ts')
++  check(/화면에서만 걷어내고 여기 남겨 두면/.test(doc),
++    `⚠️ 왜 재료에서도 걷어냈는지 까닭이 적혀 있습니다`)
++}
++
++console.log('\n━━ ㊾ 🔴★[한줄]·[태그]·[실천] 이 «글자 그대로» 나가지 않는가 (44부 30차) ━━')
++{
++  const noComment = (s: string) =>
++    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
++  const P = 'lib/saju/premium/splitCardText.ts'
++  const sp = noComment(read(P))
++
++  // ★파서가 «한 곳» 에 있는가
++  check(/export function splitCardText/.test(sp), `★파서가 splitCardText.ts 한 곳에 있습니다`)
++  check(/\[한줄\\\]/.test(sp) && /\[태그\\\]/.test(sp) && /\[실천\\\]/.test(sp),
++    `★세 표시를 모두 가릅니다`)
++
++  // ⚠️⚠️ 화면들이 «제 벌» 을 다시 적지 않는가 — 그렇게 해서 두 벌이 되었습니다
++  const SCREENS = [
++    'app/manseryeok/components/TongbyeonView.tsx',
++    'app/manseryeok/exam-luck-result/components/ExamJudgeCard.tsx',
++    'app/manseryeok/career-result/page.tsx',
++  ]
++  const src = SCREENS.map(p => [p, noComment(read(p))] as const)
++  check(src.every(([, s]) => /splitCardText/.test(s)),
++    `★세 화면이 «모두» 공용 파서를 씁니다 (${src.filter(([, s]) => /splitCardText/.test(s)).length}/3)`)
++  const own = src.filter(([, s]) => /const mS = t\.match/.test(s))
++  check(own.length === 0,
++    `⚠️ 화면이 «제 파서» 를 따로 들고 있지 않습니다${own.length ? ' — ' + own.map(x => x[0]).join(', ') : ''}`)
++
++  // 🔴 진로적성 — 통짜로 찍던 자리가 «사라졌는가»
++  const car = noComment(read('app/manseryeok/career-result/page.tsx'))
++  check(/const p = splitCardText\(sec\.body\)/.test(car),
++    `🔴★진로적성이 대목을 갈라 그립니다`)
++  check(/p\.summary/.test(car) && /p\.tags/.test(car) && /p\.action/.test(car),
++    `★한줄·태그·실천을 각각 그립니다`)
++  check(!/\}\}>\{sec\.body\}<\/div>/.test(car),
++    `🔴⚠️ 본문을 «통째로» 찍던 자리가 사라졌습니다`)
++
++  // ⚠️ 프롬프트가 그 표시를 시키는가 — 시키는데 화면이 모르면 또 새어 나갑니다
++  const pr1 = read('lib/saju/premium/buildCareerMbtiPrompt.ts')
++  const pr2 = read('lib/saju/premium/buildGeneralSajuPrompt.ts')
++  check(/대괄호까지 그대로/.test(pr1) && /대괄호까지 그대로/.test(pr2),
++    `⚠️ 프롬프트가 «대괄호까지» 적으라고 시킵니다 — 화면이 반드시 갈라야 합니다`)
++
++  // ⚠️ 표시가 «없는» 옛 통변이 깨지지 않는가
++  check(/옛 통변이 깨지지 않게/.test(read(P)), `⚠️ 표시가 없으면 그대로 둔다고 적혀 있습니다`)
++}
++
++console.log('\n━━ ㊿ ★MBTI 를 안 넣으면 조르지 않는다 · 겹침/갈림 헷갈림 (44부 31차) ━━')
++{
++  const noComment = (s: string) =>
++    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
++  const card = noComment(read('app/manseryeok/career-result/components/MbtiCard.tsx'))
++  const sel = noComment(read('app/manseryeok/components/MbtiSelect.tsx'))
++  const pr = noComment(read('lib/saju/premium/buildCareerMbtiPrompt.ts'))
++  const eng = noComment(read('lib/saju/career/sajuMbti.ts'))
++
++  // ★제목이 갈리는가
++  check(/내 MBTI에 대비해 본 나의 사주명리/.test(card), `★넣은 분 제목이 있습니다`)
++  check(/compare && realMbti \? '내 MBTI에 대비해 본 나의 사주명리' : '사주로 본 성향'/.test(card),
++    `★안 넣은 분에게는 「사주로 본 성향」입니다 (없는 것을 있다 하지 않습니다)`)
++
++  // 🔴 권유 상자가 «화면과 재료 둘 다» 에서 사라졌는가
++  check(!/실제 MBTI 를 넣으시면/.test(card), `🔴★화면에서 권유 상자가 사라졌습니다`)
++  check(!/실제 MBTI 를 넣으시면/.test(pr), `🔴⚠️ ★«재료» 에서도 사라졌습니다 (새어 나가지 않게)`)
++  // ★2026-08-03 (44부 32차) — 「권유 상자」가 아예 사라져 그 자리 자체가 없어졌습니다.
++  //   ⇒ 「넣으라고 조르는 말이 없는가」로 잽니다. 그것이 본디 재려던 것입니다.
++  check(!/넣으시면|넣고 다시 보기/.test(card),
++    `★안 넣으신 분께 «조르지» 않습니다`)
++  // ⚠️ 되살릴 길은 남겼는가
++  check(/onWantInput\?: \(\) => void/.test(card), `⚠️ onWantInput 은 남아 있습니다 (되살릴 때)`)
++
++  // ★입력 화면 — 「검사하기」가 «늘» 보이는가
++  check(/모르면 검사하기/.test(sel), `★콤보 옆에 「모르면 검사하기 ↗」가 늘 보입니다`)
++  check(/href=\{TEST_URL\}[\s\S]{0,400}모르면 검사하기/.test(sel),
++    `⚠️ 링크는 «이미 있던» TEST_URL 을 씁니다 (새로 짓지 않았습니다)`)
++  check(/잘 모름 \/ MBTI 검사하기/.test(sel), `⚠️ 콤보 안 「잘 모름」도 그대로입니다`)
++
++  // 🔴 겹침/갈림 — 이름을 «둘 다» 대는가
++  check(/const sameAxes: string\[\] = \[\]/.test(eng), `★겹치는 결의 이름도 모읍니다`)
++  check(/겹치는 결 \$\{same\}가지 · 갈리는 결 \$\{diffAxes\.length\}가지/.test(eng),
++    `🔴★「겹치는 결 N가지 · 갈리는 결 N가지」로 둘 다 밝힙니다`)
++  check(!/네 결 가운데 \$\{same\}가지가 겹칩니다/.test(eng),
++    `🔴⚠️ 뒤집혀 읽히던 옛 문장이 사라졌습니다`)
++  // ⚠️ 조사·이음말
++  check(/eunneun\(sameAxes/.test(eng), `⚠️ 조사를 josa.ts 로 붙입니다 (교훈 AU)`)
++  check(/sameAxes\.join\(' · '\)/.test(eng) && /diffAxes\.join\(' · '\)/.test(eng),
++    `⚠️ 「과」로 잇지 않습니다 — 「보는 결과 고르는 결」이 «결과» 로 읽힙니다`)
++}
++
++console.log('\n━━ (51) ★MBTI 카드 — 「표」를 걷고 «읽는 글» 로 (44부 32차) ━━')
++{
++  const noComment = (s: string) =>
++    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
++  const card = noComment(read('app/manseryeok/career-result/components/MbtiCard.tsx'))
++  const eng = noComment(read('lib/saju/career/sajuMbti.ts'))
++  const page = noComment(read('app/manseryeok/career-result/page.tsx'))
++
++  // ★여는말 — 누가 무엇을 말하는지 첫 문장에서 끝내는가
++  check(/사주명리에 비춰 볼 때 타고난 결이/.test(card), `★「…사주명리에 비춰 볼 때 타고난 결이」로 엽니다`)
++  check(/\{result\.code\}\(\{result\.title\}\)/.test(card), `★ESFP(분위기를 여는 사람) 꼴입니다`)
++  check(/\{realMbti\}\(\{titleOf\(realMbti\)\}\)/.test(card), `★넣으신 MBTI 에도 칭호를 붙입니다 (대표님 확정 「가)」)`)
++  check(/name=\{person\.name\}/.test(page), `★「◯◯님은」 이름이 화면에서 넘어옵니다`)
++  check(/어긋난 것이 아니라, 살아오며 길러 내신 결입니다/.test(card),
++    `★손님이 «혼자 의아해할 틈» 을 주지 않습니다`)
++
++  // ★같은 결 / 다른 결 — 알약은 짧게, 이름은 옆에 (대표님 확정 「나)」)
++  check(/>같은 결</.test(card) && />다른 결</.test(card), `★알약 둘이 있습니다`)
++  check(/\{compare\.sameAxes\.join\(' · '\)\}/.test(card) && /\{compare\.diffAxes\.join\(' · '\)\}/.test(card),
++    `★결 이름은 알약 «옆» 에 둡니다 (알약이 두 줄로 터지지 않게)`)
++  check(/compare\.axes\.some\(a => a\.same\)/.test(card) && /compare\.axes\.some\(a => !a\.same\)/.test(card),
++    `⚠️ 한쪽이 비면 그 알약을 «안 그립니다» (넷 다 같거나 넷 다 다를 때)`)
++  check(/\{a\.born\} → \{a\.now\}/.test(card), `★「E → I」로 어느 쪽에서 어느 쪽인지 밝힙니다`)
++
++  // ⚠️ 셈은 «한 곳» 에서 — 화면이 다시 가르지 않는가 (교훈 CJ)
++  check(/sameAxes: string\[\]/.test(eng) && /axes: Array<\{/.test(eng),
++    `⚠️ 같은/다른 가르기를 «엔진» 이 합니다. 화면은 그리기만 합니다`)
++
++  // ★막대는 «접었는가» — 지운 것이 아닙니다
++  check(/<details/.test(card) && /사주에서 어떻게 나온 건가요/.test(card),
++    `★네 축 막대를 «접어» 두었습니다 (지우지 않았습니다)`)
++  check(/사주로 본 결/.test(card), `★막대의 «임자» 를 밝힙니다`)
++  // ★2026-08-03 (44부 33차) — 선이 «보이는가» 까지 잽니다.
++  //   🔴 전에는 색이 #d8dee6 로 막대 바탕(#eef2f6)과 거의 같아 ★묻혀서 안 보였습니다.
++  //      「반반에 가까워요」인 축은 막대도 0에 가까워 «아무것도 없는 줄» 로 보였습니다.
++  check(/left: '50%', top: -4, bottom: -4/.test(card),
++    `★가운데(반반) 선이 막대 «위아래로 내밀어» 있습니다`)
++  check(/background: '#9b8bc4'/.test(card), `★선 색이 막대 바탕과 «갈립니다»`)
++  check(/여기가 반반/.test(card), `★가운데가 무엇인지 «한 번만» 밝힙니다`)
++  // ★두 줄 겹쳐 보기 — 이름이 «왼쪽» 인가
++  check(/width: 36, flexShrink: 0, fontSize: 11[^}]*textAlign: 'right'/.test(card),
++    `★「타고난 / 지금」이 칸 «왼쪽» 에 있습니다 (글은 왼쪽에서 흐릅니다)`)
++  check(/\{a\.label\.replace\(' 결', ''\)\}/.test(card),
++    `★칸 아래에 어느 결인지 옅게 적습니다`)
++  check(/a\.leftPct >= 50[\s\S]{0,120}right: '50%'/.test(card),
++    `★막대가 «고른 쪽» 으로 자랍니다 (막대와 진한 글자가 언제나 같은 쪽)`)
++
++  // ⚠️ 같은 말을 두 번 하지 않는가
++  check(/function trimEcho/.test(card), `⚠️ 짧은 이름과 긴 설명이 겹치면 «한 번만» 말합니다`)
++  check(!/compare\.headline/.test(card), `⚠️ 옛 「타고난 결 ↔ 지금의 결」 상자가 사라졌습니다 (세 번 말하던 것)`)
++  check(/NUM: Record<number, string>/.test(card), `⚠️ 「1가지」가 아니라 「한 가지」로 씁니다`)
++
++  // ★여덟 줄 짧은 이름이 «엔진» 에 있는가
++  check(/AXIS_NAME_SHORT/.test(eng), `★「어떤 결인가」 여덟 줄이 엔진 한 곳에 있습니다`)
++  check(/두 벌이 «필요해서» 둘입니다/.test(read('lib/saju/career/sajuMbti.ts')),
++    `⚠️ AXIS_WORK 와 «다른 것» 이라는 까닭이 적혀 있습니다`)
++}
++
+ console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
+ {
+   const src = read('lib/saju/simsanOhaeng.ts')
+diff --git a/34-measure-saju-mbti.ts b/34-measure-saju-mbti.ts
+new file mode 100644
+index 0000000..44a3ef3
+--- /dev/null
++++ b/34-measure-saju-mbti.ts
+@@ -0,0 +1,316 @@
++// 34-measure-saju-mbti.ts
++//
++// ┌───────────────────────────────────────────────────────────────┐
++// │  사주 MBTI 산식 — «무엇을 얼마나» 바꾸는가. 자(尺)입니다        │
++// └───────────────────────────────────────────────────────────────┘
++//
++//  ★2026-08-03 — 교재 대조로 드러난 세 가지를 재기 위해 지었습니다.
++//    ⚠️ 이것은 «검사» 가 아니라 «자» 입니다. verify 체인에 넣지 마십시오.
++//       배포가 느려지고, 임의 표본이라 값이 조금씩 흔들립니다.
++//
++//  쓰는 법   npm run measure:mbti
++//
++//  ══ 무엇을 견주는가 ══
++//   후보0   지금 산식 (2026-07-29 대표님 확정본을 그대로 옮긴 코드)
++//   후보A   ★오행·육친 «이중 계산» 풀기      — 교재 40쪽
++//   후보C1  ★50점 문턱 뚜껑                  — 교재 25·259쪽
++//   후보D   ★근거 없는 셋 빼기               — 관성(S) · 화(N) · 백호(T)
++//   ★확정   A + C1 + D  (2026-08-03 대표님 지시)
++//
++//  ⚠️⚠️ 이 파일은 «재기만» 합니다.
++//     sajuMbti.ts 를 비롯한 어떤 엔진도 «고치지 않습니다».
++//     후보들은 이 파일 «안» 에 따로 구현해 견줍니다.
++//
++//  ⚠️ 표본은 «임의로 지은» 사주입니다. 손님 기록을 쓰지 «않습니다».
++
++import { calcSajuMbti } from './lib/saju/career/sajuMbti'
++import { calcCareerScore } from './lib/saju/career/careerScore'
++import { yukchinOf } from './lib/saju/career/yukchin'
++import { checkSinsal9 } from './lib/saju/career/sinsal9'
++import type { Ohaeng, Pillar } from './lib/saju/career/types'
++
++const GAN = '甲乙丙丁戊己庚辛壬癸'.split('')
++const JI = '子丑寅卯辰巳午未申酉戌亥'.split('')
++const EL5: Ohaeng[] = ['목', '화', '토', '금', '수']
++
++/** 월지 → 양력 한가운데 날짜 (절기 경계를 피해 가운데로) — 31-measure 와 같은 표 */
++const SOLAR: Record<string, [number, number]> = {
++  寅: [2, 20], 卯: [3, 20], 辰: [4, 20], 巳: [5, 20], 午: [6, 20], 未: [7, 20],
++  申: [8, 20], 酉: [9, 20], 戌: [10, 20], 亥: [11, 20], 子: [12, 20], 丑: [1, 20],
++}
++
++const YANG_STEM = new Set(['甲', '丙', '戊', '庚', '壬'])
++/** ★음양 «비율» 을 셀 때 — 교재 260쪽 양팔통 사례(甲辰·甲戌·壬寅·庚子)가 子를 양으로 봅니다 */
++const YANG_BRANCH = new Set(['子', '寅', '辰', '午', '申', '戌'])
++/** ★십성을 가릴 때 — 교재 48쪽 도표(지지의 본기 천간). 子=癸(음) · 午=丁(음) */
++const BRANCH_BONGI: Record<string, string> = {
++  子: '癸', 丑: '己', 寅: '甲', 卯: '乙', 辰: '戊', 巳: '丙',
++  午: '丁', 未: '己', 申: '庚', 酉: '辛', 戌: '戊', 亥: '壬',
++}
++const STEM_EL: Record<string, Ohaeng> = {
++  甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토',
++  己: '토', 庚: '금', 辛: '금', 壬: '수', 癸: '수',
++}
++
++const R = (n: number) => Math.floor(Math.random() * n)
++const pc = (x: number, n: number) => (x / n * 100).toFixed(2) + '%'
++
++/** ★60갑자에 «실재하는» 짝만 씁니다 (양간-양지 / 음간-음지) */
++function gapja(i: number): { stem: string; branch: string } {
++  return { stem: GAN[i % 10], branch: JI[i % 12] }
++}
++
++// ══════════════════════════════════════════════════════════════
++//  후보 산식들 — ★이 파일 «안» 에만 있습니다
++// ══════════════════════════════════════════════════════════════
++
++interface Bag {
++  S: Record<Ohaeng, number>   // 오행 100점
++  Y: Record<string, number>   // 육친 묶음 점수
++  yangPt: number; eumPt: number
++  yangin: number; baekho: number; dohwa: number
++  jeongJae: number; pyeonJae: number
++}
++
++/** 재료 모으기 — ★엔진을 «부르기만» 합니다 */
++function gather(saju: Pillar[], sm: number, sd: number, hb: string, useBongi: boolean): Bag {
++  const r = calcCareerScore(saju, sm, sd, hb)
++  const S = r.score as Record<Ohaeng, number>
++  const dayStem = saju.find(p => p.pillar === '일주')?.stem ?? ''
++  const dayEl = STEM_EL[dayStem] ?? '토'
++
++  const Y: Record<string, number> = { 비겁: 0, 식상: 0, 재성: 0, 관성: 0, 인성: 0 }
++  for (const el of EL5) Y[yukchinOf(dayEl, el)] += S[el] ?? 0
++
++  let yang = 0, eum = 0
++  for (const p of saju) {
++    if (p.stem && p.stem !== '?') { if (YANG_STEM.has(p.stem)) yang++; else eum++ }
++    if (p.branch && p.branch !== '?') { if (YANG_BRANCH.has(p.branch)) yang++; else eum++ }
++  }
++
++  const hits = checkSinsal9(saju)
++  const has = (n: string) => hits.some(h => h.name.includes(n))
++
++  // ── 정재/편재 가르기 ──
++  const dayYang = YANG_STEM.has(dayStem)
++  let jJ = 0, jP = 0
++  for (const p of saju) {
++    // 천간
++    for (const ch of [p.stem]) {
++      if (!ch || ch === '?') continue
++      const el = STEM_EL[ch]; if (!el) continue
++      if (yukchinOf(dayEl, el) !== '재성') continue
++      if (YANG_STEM.has(ch) !== dayYang) jJ++; else jP++
++    }
++    // ★지지 — 후보B(확정안에 포함)에서만 셉니다. 48쪽 본기 천간으로 봅니다
++    if (useBongi) {
++      const ch = p.branch
++      if (!ch || ch === '?') continue
++      const bg = BRANCH_BONGI[ch]; if (!bg) continue
++      const el = STEM_EL[bg]; if (!el) continue
++      if (yukchinOf(dayEl, el) !== '재성') continue
++      if (YANG_STEM.has(bg) !== dayYang) jJ++; else jP++
++    }
++  }
++  const tot = Math.max(1, jJ + jP)
++  return {
++    S, Y, yangPt: yang * 6, eumPt: eum * 6,
++    yangin: has('양인') ? 10 : 0, baekho: has('백호') ? 10 : 0, dohwa: has('도화') ? 12 : 0,
++    jeongJae: (Y['재성'] * jJ) / tot, pyeonJae: (Y['재성'] * jP) / tot,
++  }
++}
++
++const sum = (a: number[]) => a.reduce((x, y) => x + y, 0)
++/** 지금 방식 — 바닥 15% 를 깔고 비율을 냅니다 */
++function pick(L: number, Rr: number, left: string, right: string): string {
++  const floor = (L + Rr) * 0.15 || 1
++  return (L + floor) / (L + floor + Rr + floor) >= 0.5 ? left : right
++}
++/** ★후보C-1 — 50점 넘는 몫은 «세지 않습니다» (교재 259쪽 「50점 이상은 단점으로 발현」) */
++const cap = (v: number) => Math.min(v, 50)
++
++/**
++ * 후보0 — ★«옛» 산식 (2026-08-03 이전).
++ *
++ *  ⚠️⚠️ 일부러 이 파일 «안» 에 붙박아 두었습니다.
++ *    sajuMbti.ts 를 부르면, 그 파일이 바뀌는 순간 «잣대가 함께 움직여»
++ *    무엇이 얼마나 달라졌는지 영영 알 수 없게 됩니다.
++ *    ★옛 모습은 여기 남겨 둡니다. 지우지 마십시오.
++ *  ⚠️ 옛 산식은 지지를 안 세었으므로 bagPlain(useBongi=false)을 받습니다.
++ */
++function code0(b: Bag): string {
++  return pick(sum([b.yangPt, b.S['화'], b.S['목'], b.Y['식상'], b.Y['비겁']]),
++    sum([b.eumPt, b.S['수'], b.S['금'], b.Y['인성']]), 'E', 'I')
++    + pick(sum([b.Y['재성'], b.Y['관성'], b.S['토']]),
++      sum([b.Y['식상'], b.Y['인성'], b.S['화']]), 'S', 'N')
++    + pick(sum([b.S['금'], b.Y['관성'], b.yangin + b.baekho]),
++      sum([b.S['수'], b.S['목'], b.Y['인성'], b.dohwa]), 'T', 'F')
++    + pick(sum([b.Y['관성'], b.jeongJae]),
++      sum([b.Y['비겁'], b.Y['식상'], b.pyeonJae]), 'J', 'P')
++}
++
++/**
++ * ★확정안 — A(이중계산 풀기) + C-1(50점 뚜껑) + D(근거 없는 셋 빼기)
++ *
++ *  ⚠️⚠️ 「층 건너뛰기」가 «핵심» 입니다.
++ *    A 는 오행 몫·육친 몫·음양 몫을 «따로» 재서 평균 냅니다 (교재 40쪽).
++ *    그런데 D 로 재료를 빼면 «한쪽에 아무것도 없는 층» 이 생깁니다.
++ *      예) S축 오행 층 — S 쪽에 土, N 쪽에 ★아무것도 없음
++ *    그 층을 그대로 세면 «土가 조금만 있어도 언제나 S» 가 됩니다.
++ *    ⇒ ★대립이 서지 않는 층은 «세지 않습니다».
++ *    (skip=false 로 두면 어떤 일이 나는지 아래 「확정안-β」로 재 두었습니다)
++ */
++function codeFinal(b: Bag, skip: boolean, mean = false): string {
++  const c = cap
++  const axis = (
++    oL: number[], oR: number[], yL: number[], yR: number[], sL: number[], sR: number[],
++    left: string, right: string,
++  ) => {
++    const parts: number[] = []
++    const layer = (L: number[], Rr: number[]) => {
++      // ★한쪽에 재료가 «없으면» 대립이 아닙니다 — 그 층은 건너뜁니다
++      if (skip && (L.length === 0 || Rr.length === 0)) return
++      // ★mean — 성분 «개수» 가 아니라 «세기» 로 견줍니다.
++      //   D 로 재료를 빼면 한쪽 성분이 둘, 다른 쪽이 하나가 되어
++      //   «많은 쪽이 그냥 이기는» 일이 생깁니다. 그것을 막습니다.
++      const l = mean && L.length ? sum(L) / L.length : sum(L)
++      const r = mean && Rr.length ? sum(Rr) / Rr.length : sum(Rr)
++      if (l + r <= 0) return
++      const f = (l + r) * 0.15
++      parts.push((l + f) / (l + f + r + f))
++    }
++    layer(oL, oR); layer(yL, yR); layer(sL, sR)
++    const p = parts.length ? sum(parts) / parts.length : 0.5
++    // ★화면이 「81 : 19」로 «반올림한» 값을 보이므로, 고르는 것도 그 값으로 합니다.
++    //   ⚠️ p >= 0.5 로 고르면 49.7% 인 분이 화면엔 50 인데 오른쪽으로 갑니다.
++    //      실측 128/5000(2.56%)이 그 경계에 걸렸습니다.
++    return Math.round(p * 100) >= 50 ? left : right
++  }
++  return axis(
++    [c(b.S['화']), c(b.S['목'])], [c(b.S['수']), c(b.S['금'])],
++    [c(b.Y['식상']), c(b.Y['비겁'])], [c(b.Y['인성'])],
++    [b.yangPt], [b.eumPt], 'E', 'I')
++    // ★D — S 쪽 관성 · N 쪽 화를 뺐습니다 ⇒ 오행 층이 «한쪽뿐» 이라 건너뜁니다
++    + axis([c(b.S['토'])], [], [c(b.Y['재성'])], [c(b.Y['식상']), c(b.Y['인성'])], [], [], 'S', 'N')
++    // ★D — T 쪽 백호를 뺐습니다
++    + axis([c(b.S['금'])], [c(b.S['수']), c(b.S['목'])],
++      [c(b.Y['관성'])], [c(b.Y['인성'])], [b.yangin], [b.dohwa], 'T', 'F')
++    + axis([], [], [c(b.Y['관성']), c(b.jeongJae)],
++      [c(b.Y['비겁']), c(b.Y['식상']), c(b.pyeonJae)], [], [], 'J', 'P')
++}
++
++/** 후보A 만 — 이중 계산만 풀고 나머지는 지금대로 */
++function codeA(b: Bag): string {
++  const axis = (
++    oL: number[], oR: number[], yL: number[], yR: number[], eL: number, eR: number,
++    left: string, right: string,
++  ) => {
++    const parts: number[] = []
++    const ratio = (l: number, r: number) => {
++      if (l + r <= 0) return null
++      const f = (l + r) * 0.15
++      return (l + f) / (l + f + r + f)
++    }
++    for (const [l, r] of [[sum(oL), sum(oR)], [sum(yL), sum(yR)], [eL, eR]] as Array<[number, number]>) {
++      const v = ratio(l, r); if (v !== null) parts.push(v)
++    }
++    const p = parts.length ? sum(parts) / parts.length : 0.5
++    return p >= 0.5 ? left : right
++  }
++  return axis([b.S['화'], b.S['목']], [b.S['수'], b.S['금']],
++    [b.Y['식상'], b.Y['비겁']], [b.Y['인성']], b.yangPt, b.eumPt, 'E', 'I')
++    + axis([b.S['토']], [b.S['화']], [b.Y['재성'], b.Y['관성']], [b.Y['식상'], b.Y['인성']], 0, 0, 'S', 'N')
++    + axis([b.S['금']], [b.S['수'], b.S['목']], [b.Y['관성']], [b.Y['인성']],
++      b.yangin + b.baekho, b.dohwa, 'T', 'F')
++    + axis([], [], [b.Y['관성'], b.jeongJae], [b.Y['비겁'], b.Y['식상'], b.pyeonJae], 0, 0, 'J', 'P')
++}
++
++/** 후보C1 만 — 지금 산식에 50점 뚜껑만 */
++function codeC1(b: Bag): string {
++  const c = cap
++  return pick(sum([b.yangPt, c(b.S['화']), c(b.S['목']), c(b.Y['식상']), c(b.Y['비겁'])]),
++    sum([b.eumPt, c(b.S['수']), c(b.S['금']), c(b.Y['인성'])]), 'E', 'I')
++    + pick(sum([c(b.Y['재성']), c(b.Y['관성']), c(b.S['토'])]),
++      sum([c(b.Y['식상']), c(b.Y['인성']), c(b.S['화'])]), 'S', 'N')
++    + pick(sum([c(b.S['금']), c(b.Y['관성']), b.yangin + b.baekho]),
++      sum([c(b.S['수']), c(b.S['목']), c(b.Y['인성']), b.dohwa]), 'T', 'F')
++    + pick(sum([c(b.Y['관성']), c(b.jeongJae)]),
++      sum([c(b.Y['비겁']), c(b.Y['식상']), c(b.pyeonJae)]), 'J', 'P')
++}
++
++/** 후보D 만 — 근거 없는 셋만 빼고 나머지는 지금대로 */
++function codeD(b: Bag): string {
++  return pick(sum([b.yangPt, b.S['화'], b.S['목'], b.Y['식상'], b.Y['비겁']]),
++    sum([b.eumPt, b.S['수'], b.S['금'], b.Y['인성']]), 'E', 'I')
++    + pick(sum([b.Y['재성'], b.S['토']]), sum([b.Y['식상'], b.Y['인성']]), 'S', 'N')
++    + pick(sum([b.S['금'], b.Y['관성'], b.yangin]),
++      sum([b.S['수'], b.S['목'], b.Y['인성'], b.dohwa]), 'T', 'F')
++    + pick(sum([b.Y['관성'], b.jeongJae]),
++      sum([b.Y['비겁'], b.Y['식상'], b.pyeonJae]), 'J', 'P')
++}
++
++// ══════════════════════════════════════════════════════════════
++
++const N = Number(process.env.N ?? 5000)
++const CANDS = ['후보0 (지금)', '후보A 이중계산', '후보C1 50점뚜껑', '후보D 셋빼기', '★확정 A+C1+D', '확정안-β 층안건넘', '★확정안-γ 세기평균']
++const dist: Array<Record<string, number>> = CANDS.map(() => ({}))
++const flip = [0, 0, 0, 0, 0, 0, 0]
++let mismatch = 0
++const axisFlip = CANDS.map(() => [0, 0, 0, 0])
++
++for (let i = 0; i < N; i++) {
++  const idx = [R(60), R(60), R(60), R(60)]
++  const names = ['년주', '월주', '일주', '시주']
++  const saju: Pillar[] = idx.map((v, k) => ({ pillar: names[k], ...gapja(v) }))
++  const mb = saju[1].branch, hb = saju[3].branch
++  const [sm, sd] = SOLAR[mb]
++
++  const bagPlain = gather(saju, sm, sd, hb, false)
++  const bagBongi = gather(saju, sm, sd, hb, true)
++  const base = code0(bagPlain)
++  // ★맞대보기 — «실제 파일» 이 γ 와 같은 답을 내는가
++  if (calcSajuMbti(saju, sm, sd, hb).code !== codeFinal(bagBongi, true, true)) mismatch++
++
++  const codes = [base, codeA(bagPlain), codeC1(bagPlain), codeD(bagPlain),
++    codeFinal(bagBongi, true), codeFinal(bagBongi, false),
++    codeFinal(bagBongi, true, true)]
++  codes.forEach((c, k) => {
++    dist[k][c] = (dist[k][c] ?? 0) + 1
++    if (k > 0) {
++      if (c !== base) flip[k]++
++      for (let a = 0; a < 4; a++) if (c[a] !== base[a]) axisFlip[k][a]++
++    }
++  })
++}
++
++const ALL16 = ['ISTJ', 'ISFJ', 'INFJ', 'INTJ', 'ISTP', 'ISFP', 'INFP', 'INTP',
++  'ESTP', 'ESFP', 'ENFP', 'ENTP', 'ESTJ', 'ESFJ', 'ENFJ', 'ENTJ']
++
++console.log(`\n━━ 사주 MBTI 산식 자(尺) — 표본 ${N.toLocaleString()}벌 ━━`)
++console.log('⚠️ 임의로 지은 사주입니다(60갑자 실재 짝). 손님 기록이 아닙니다.\n')
++
++CANDS.forEach((name, k) => {
++  const d = dist[k]
++  const shown = ALL16.filter(t => d[t])
++  const top = ALL16.map(t => [t, d[t] ?? 0] as const).sort((a, b) => b[1] - a[1])
++  console.log(`── ${name}`)
++  console.log(`   나온 유형        ${shown.length} / 16`)
++  console.log(`   가장 많은 유형    ${top[0][0]} ${pc(top[0][1], N)}`)
++  console.log(`   위 셋 합          ${pc(top[0][1] + top[1][1] + top[2][1], N)}`)
++  if (k > 0) {
++    console.log(`   ★유형 뒤집힘      ${pc(flip[k], N)}`)
++    console.log(`   축별 뒤집힘       E/I ${pc(axisFlip[k][0], N)} · S/N ${pc(axisFlip[k][1], N)}`
++      + ` · T/F ${pc(axisFlip[k][2], N)} · J/P ${pc(axisFlip[k][3], N)}`)
++  }
++  console.log('')
++})
++
++console.log(`━━ ★맞대보기 — 실제 sajuMbti.ts 와 γ 가 «같은 답» 인가 ━━`)
++console.log(`   어긋난 건수  ${mismatch} / ${N}  ${mismatch === 0 ? '✅ 같습니다' : '🔴 다릅니다'}\n`)
++
++console.log('━━ 16유형 분포 (%) ━━')
++console.log('유형     ' + CANDS.map(c => c.slice(0, 8).padStart(9)).join(''))
++for (const t of ALL16) {
++  console.log(t.padEnd(9) + CANDS.map((_, k) => pc(dist[k][t] ?? 0, N).padStart(9)).join(''))
++}
++console.log('')
+diff --git a/README-44BU-27-INSTALL.md b/README-44BU-27-INSTALL.md
+new file mode 100644
+index 0000000..d2c615c
+--- /dev/null
++++ b/README-44BU-27-INSTALL.md
+@@ -0,0 +1,695 @@
++# 44부 27~33차 — 사주 MBTI 산식을 «교재 대조로» 고치고, 화면 숫자를 «말» 로
++
++```
++기준 커밋   cc2b75f  (44부 26차까지 올라간 상태)
++검사        1,785 → ★1,878건 · 실패 0   (오행·용신 그물 349 → 442 · ㊻~(51) 신설)
++타입        npx tsc --noEmit 통과
++eslint      오류 82 · 경고 138  (기준선 그대로)
++변경        수정 8 · 신규 2 = 10 파일
++⚠️ 빌드     ★제 쪽에서 «확인 못 했습니다» — 구글 폰트가 막힌 자리 (25·26차와 같음)
++```
++
++## 넣는 법
++
++```bash
++cd myjae
++unzip -o ../myjae-44bu-27-20260803.zip
++git status --porcelain      # ★ M 세 줄 + ?? 두 줄
++npm run verify              # 실패 0 · 오행·용신 442
++npx tsc --noEmit
++npm run measure:mbti        # ★맞대보기 「어긋난 건수 0 / 5000 ✅」이 나와야 합니다
++★npm run build
++git add -A
++git commit -m "사주 MBTI — 산식 교재 대조 · 카드를 표에서 읽는 글로 (44부 27~33차)"
++git push
++```
++
++---
++
++# ⚠️ 먼저 — 제가 바로잡은 잘못
++
++앞선 보고에서 **「ENFP 21.4% · 16유형 중 9개」**라는 숫자를 적었습니다.
++**★그것은 표 모양을 보이려고 «제가 지어낸» 숫자였습니다.** 측정한 적이 없었습니다.
++44부 교훈 1-4 를 제가 또 어겼습니다. 대표님께 그대로 아뢰고 바로잡았습니다.
++
++★**아래 숫자는 전부 실제로 잰 것입니다.** `npm run measure:mbti` 로 다시 재실 수 있습니다.
++
++---
++
++# 무엇이 문제였나 — 교재 열두 번 대조
++
++노트북LM 에 열한 번 물어 네 축 스물세 성분을 교재와 맞대어 보았습니다.
++
++```
++축     근거 있음                          🔴근거 못 찾음
++────  ────────────────────────────────  ──────────────────
++E↔I   양·목화/음·금수 260쪽 · 비겁 활동성   —
++S↔N   재성 111 · 식상 109 · 인성 115·130    ★관성 · ★화
++T↔F   금 23·25 · 목 20 · 양인 96 · 도화 94  ★백호
++J↔P   관성 112·113 · 정재 111·43 · 식상 124 —
++```
++
++그리고 **뼈대 셋이 교재와 어긋나 있었습니다.**
++
++```
++🔴 40쪽  "오행과 육친을 «분리해서» 해석해야 하는데 … 오류가 발생한다"
++         ⇒ 지금은 한 줄에 «더하고» 있었습니다. 게다가 육친 점수는 오행 점수를
++           그대로 부은 것이라, ★같은 55점이 한 축에 «두 번» 실렸습니다.
++🔴 259쪽 "점수가 50점 이상이 되면 … 장점보다는 단점으로 발현이 된다"
++         ⇒ 지금은 «클수록 더 세게 밀기만» 했습니다.
++🔴 36·159쪽 "지지는 현실적·실질적(60~70%)"
++         ⇒ 정재·편재를 가를 때 지지를 ★«한 글자도» 세지 않았습니다.
++```
++
++---
++
++# ★무엇을 했나
++
++## A — 오행 몫 · 육친 몫 · 음양 몫을 «층으로» 갈랐습니다 (40쪽)
++
++```
++전   E = 양의기운 + 화 + 목 + 식상 + 비겁      ← 한 줄에 섞여 있었습니다
++★후  오행 층   화·목  ↔  수·금
++     육친 층   식상·비겁  ↔  인성
++     음양 층   양의기운  ↔  음의기운
++     ⇒ ★세 층을 «따로» 재서 평균 냅니다. 이중 계산이 사라집니다.
++```
++
++## C-1 — 50점 넘는 몫은 «세지 않습니다» (259·25쪽)
++
++```
++const cap = (v: number) => Math.min(v, 50)
++```
++
++⚠️ 교재는 「단점이 된다」고만 하지 **«반대 성향이 된다» 고 하지 않습니다.**
++그래서 **뒤집지 않고 멈추기만** 합니다. 뒤집는 것은 우리 발명이 됩니다.
++⚠️ 실효는 작습니다(측정 1.68%). **그래도 교재 근거가 가장 분명한 자리**입니다.
++
++## D — 교재에서 «못 찾은» 셋을 뺐습니다
++
++```
++S쪽 관성   「현실적」이 관성에 없습니다 (144쪽 「현실 감각」은 ★«정인격» 의 말)
++N쪽 화     화는 "열정·표현·예의·행동"(21·25쪽). 상상력·직관이 아닙니다
++T쪽 백호   95쪽은 «성격» 을 말하지 않습니다 ("큰 사주·활동을 크게" 뿐)
++```
++
++⚠️⚠️ **「교재에 없다」가 아니라 「확인한 범위에서 못 찾았다」입니다.**
++노트북LM 소스에 **184~257쪽 대부분이 빠져 있습니다.** 코드 주석에 그렇게 적었고,
++**쪽이 확인되면 되살리라**고 일러 두었습니다.
++
++## ★γ — 층 안에서 «합» 이 아니라 «세기 평균» 으로 견줍니다
++
++🔴 **지시하신 A+C-1+D 를 그대로 넣으니 «더 나빠졌습니다».**
++
++```
++D 로 화를 빼자 S/N 의 오행 층이 「토 ↔ 아무것도 없음」이 되고,
++육친 층은 「재성 ↔ 식상+인성」으로 ★1 대 2 가 되었습니다.
++⇒ ★성분이 «많은 쪽» 이 그냥 이깁니다.
++[실측] ENFP 24.86% → ★29.40% 로 «더 몰렸습니다»
++```
++
++★그래서 **층 안에서 성분 하나당 평균으로** 견줍니다. 재료를 빼도 축이 기울지 않습니다.
++
++```
++[실측] ENFP 24.86% → ★16.74%
++```
++
++⚠️⚠️ **γ 는 교재에 없습니다. 우리가 정한 것입니다.** (2026-08-03 대표님 승인)
++
++## ★층 건너뛰기 — 한쪽이 빈 층은 «세지 않습니다»
++
++```
++「토 ↔ 아무것도 없음」을 그대로 세면 «토가 조금만 있어도 언제나 S» 가 됩니다.
++[실측] 그렇게 하면 ESFP 가 ★36.32% 까지 몰립니다 (확정안-β)
++```
++
++⚠️⚠️ **그 바람에 토(45쪽 "실질적")가 산식에서 «빠졌습니다».**
++교재 근거가 있는 재료인데 자리를 잃은 것입니다. **숨기지 않고 코드에 적어 두었습니다.**
++★184~257쪽에서 N 쪽 오행 재료가 나오면 층을 되살리고 토를 넣으십시오.
++
++## B — 정재·편재에 «지지도» 넣었습니다 (36·159·259쪽)
++
++```
++전   천간 넉 자만. 지지는 «한 글자도» 안 셈
++★후  여덟 자를 다 셈. 지지는 ★48쪽 «본기 천간» 으로 봄
++       子=癸(음) · 午=丁(음) …
++     근거: ★96쪽이 壬 일간의 양인(겁재)을 子라 합니다.
++           壬(양)의 겁재는 «음» 이라야 하므로 子를 癸(음)로 본 것입니다.
++```
++
++### ⚠️⚠️ 한 파일에 지지 음양표가 «둘» 입니다 — 합치지 마십시오
++
++```
++음양 «비율» 을 셀 때   YANG_BRANCH (子=★양)
++   근거: 260쪽 사례 ★甲辰·甲戌·壬寅·庚子 를 «양팔통» 이라 부릅니다.
++        ★子가 있는데도 양팔통이라 했으므로, 비율을 셀 때는 子가 양입니다.
++십성 을 가릴 때        BRANCH_BONGI (子=癸 ★음)
++   근거: 48쪽 도표 · 96쪽 양인 壬→子
++
++★쓰임이 다르면 잣대도 다릅니다. (지장간 표를 «일부러» 둘 둔 것과 같은 결)
++⚠️ 코드에도 「하나로 합치지 마십시오」라 적었고, ★검사 ㊻ 가 둘 다 살아 있는지 봅니다.
++```
++
++---
++
++# ★실측 — 표본 5,000벌
++
++```
++                        가장 많은 유형   위 셋 합   나온 유형   유형 뒤집힘
++후보0 (옛 산식)          ENFP 24.86%     48.56%     16/16         —
++후보A 이중계산만          ENFP 19.76%       …        16/16      31.4%
++후보C-1 50점 뚜껑만       ENFP 24.82%       …        16/16       1.7%
++후보D 셋 빼기만           ENFP 22.68%     55.40%     16/16      23.7%
++🔴A+C-1+D («합» 으로)     ENFP 29.40%     56.58%     16/16      44.6%   ← ★더 나빠짐
++🔴확정안-β (층 안 건넘)    ESFP 36.32%     65.04%     16/16      62.2%   ← 최악
++★확정 A+C-1+D+γ          ENFP ★16.74%    ★39.76%    16/16      52.4%
++```
++
++## ★잘 안 나오던 유형이 살아났습니다
++
++```
++유형    옛 산식      ★새 산식      변화
++INTJ    0.60%   →   3.36%      ★5.6배
++INFJ    1.50%   →   4.58%      ★3.1배
++INTP    1.34%   →   2.28%
++ENTJ    1.62%   →   3.54%
++ENFJ    1.24%   →   2.58%
++ENFP   24.86%   →  16.74%      ★쏠림이 풀렸습니다
++ESFP   13.40%   →  10.08%
++```
++
++⚠️ 「16 중 16」은 옛 산식도 그랬습니다. 다만 **0.6% 짜리는 «사실상 안 나오는» 것**입니다.
++INTJ 가 다섯 배 넘게 늘어난 것이 이번 손질의 알맹이입니다.
++
++## ⚠️ 정직하게 — 유형 뒤집힘 52.36%
++
++★**두 분 중 한 분의 네 글자가 바뀝니다.** 이미 결과를 보신 손님이 다시 보면 다른 유형이 나옵니다.
++⚠️ 손님께 알릴지 대표님이 정해 주십시오. 화면에는 「재미로 보는 참고」가 이미 적혀 있습니다.
++
++## ⚠️ 표본의 한계
++
++```
++임의로 지은 사주 5,000벌 (60갑자 실재 짝) — ★손님 기록을 쓰지 않았습니다
++⚠️ 실제 출생 분포와는 다릅니다. 절대값이 아니라 «옛것과 새것의 차이» 로 읽으십시오
++```
++
++---
++
++# ⚠️ 손댄 범위 — 지시하신 대로
++
++```
++✅ lib/saju/career/sajuMbti.ts     ★산식만
++✅ 32-verify-hour-convert.ts       ㊻ 그물 신설
++✅ package.json                    measure:mbti 한 줄
++✅ 34-measure-saju-mbti.ts         신설 (자)
++
++⛔ 건드리지 «않은» 것 — 부르기만 합니다
++   careerScore · yukchinOf · checkSinsal9 · simsanOhaeng · yongsinNew ·
++   dayun(지지 음양표 子=음) · roleFit · coupleFilterV1 · couple/* …
++★검사 ㊻ 가 「다른 엔진은 부르기만 하는가」를 봅니다.
++```
++
++## ★자(尺)에 «옛 산식» 을 붙박아 두었습니다
++
++```
++34-measure-saju-mbti.ts 의 code0() 은 ★옛 산식을 그대로 옮긴 것입니다.
++⚠️⚠️ sajuMbti.ts 를 부르게 하면, 그 파일이 바뀌는 순간 «잣대가 함께 움직여»
++   무엇이 얼마나 달라졌는지 영영 알 수 없게 됩니다. ★지우지 마십시오.
++
++★그리고 자가 «실제 파일과 같은 답인지» 5,000벌로 맞대어 봅니다 —
++   「어긋난 건수 0 / 5000 ✅ 같습니다」
++   ⚠️ 여기서 어긋나면 산식과 자가 갈라진 것입니다. 반드시 맞추십시오.
++```
++
++⚠️ 맞대어 보다가 결함 하나를 잡았습니다 — **반올림 경계**입니다.
++화면은 「81 : 19」로 **반올림한** 값을 보이는데 고르는 것은 반올림 «전» 값이라,
++**49.7% 인 분이 화면엔 50 인데 오른쪽으로 가고 있었습니다**(5,000 중 128, 2.56%).
++★화면과 같은 값으로 고르도록 맞췄습니다.
++
++---
++
++# ⬜ 배포 후 실기 확인
++
++```
++□ ★진로적성 결과 → 「사주로 본 성향」 카드가 그려지는지
++□ ★네 축 막대와 아래 근거 한 줄이 나오는지
++□ ⚠️ 「양인·백호」가 아니라 ★「양인」으로 나오는지 (백호를 뺐습니다)
++□ ⚠️ S/N 줄 근거에 ★「관성」·「화」가 «없는지»
++□ ★실제 MBTI 를 넣었을 때 견주기 카드가 그대로 나오는지
++□ 「재미로 보는 참고예요」 문구가 그대로 있는지
++```
++
++---
++
++# 🔴 남은 일 · 여쭐 것
++
++```
++□ 🔴 노트북LM 소스에 ★184~257쪽 채우기
++   ⇒ 관성=현실적 · 화=상상력 · 백호의 성격이 «거기 있을 수» 있습니다.
++     나오면 D 로 뺀 셋을 되살리고, 토가 빠진 S/N 오행 층도 되살립니다.
++□ 교재 사진 ★27·40·259쪽 — 「4개 이상 / 50점 이상 = 과다」 문턱
++   ⇒ 인수인계서 6-5장에 「교재에 없음」이라 적혀 있는데 ★쪽수까지 나왔습니다.
++   ⚠️ simsanOhaeng.ts 는 «손대지 않습니다». 근거만 적어 둘 것입니다.
++□ 🔴 「"요즘 어때, 괜찮아?" 중복」 — step8Timeline.ts:235
++□ 「六 대화와 역할」 짓기 (step6Roles)
++□ ⚠️ 유형 뒤집힘 52.36% — 이미 보신 손님께 알릴지 여쭙습니다
++```
++
++---
++
++# ★28차 — 화면의 숫자를 «말» 로 바꿨습니다
++
++## 🔴 무엇이 문제였나 — 대표님이 짚어 주셨습니다
++
++```
++「이 표를 고객이 어떻게 보는거야? 나도 헷갈리는데」
++```
++
++화면 코드를 열어 보니 넷이 걸렸습니다.
++
++```
++🔴 ①  「81 : 19」가 «무엇의 비율인지» 화면 어디에도 없습니다
++🔴 ②  아래 근거를 아무리 더해도 그 값이 «나오지 않습니다»
++        목 55 · 비겁 55 · 양의 기운 36 → 더하면 146. 그런데 위에는 81 : 19
++        (바닥 15% · 큰 것 셋만 보이기 · ★27차의 층별 평균 — 셋 다 설명이 없습니다)
++🔴 ③  「55」가 무슨 단위인지 모릅니다 (오행 100점인데 화면엔 그냥 55)
++🔴 ④  ★「목 55 · 비겁 55」— 일간이 목이면 늘 같은 수가 나란히 찍혀 «오류로 보입니다»
++```
++
++⚠️ **27차가 이것을 더 나쁘게 만들었습니다.** 층으로 나눠 평균을 내니 아래 숫자와 위 비율이 더 멀어졌습니다. ★제가 산식만 보고 화면을 안 본 탓입니다 (44부 교훈 1-3).
++
++## ★어떻게 바꿨나
++
++```
++전   기운이 향하는 곳                    81 : 19
++     E ████████████████░░░░ I
++     목 55 · 비겁 55 · 양의 기운 36
++
++★후  기운이 향하는 곳                조금 기울어요
++     E ████████████████░░░░ I
++     E 쪽 — 양(陽) · 목(木) · 주체성
++```
++
++```
++기울기   |50%에서 얼마나| 로 넷 —  ≤5 반반에 가까워요 · ≤15 조금 기울어요
++                                  ≤25 뚜렷해요 · 그 위 아주 뚜렷해요
++         ⚠️ 「반반」 잣대(5)는 result.balanced(45~55%)와 ★같습니다.
++            두 곳이 다르면 「반반」이라 써 놓고 아래엔 안 그렇게 나오는 날이 옵니다.
++재료     ★명리 말을 손님 말로 — 비겁→주체성 · 식상→표현력 · 재성→현실 감각
++                              관성→책임감 · 인성→사고력 · 정재→꼼꼼함
++                              편재→판을 읽는 힘 · 양인→결단 · 도화→매력
++겹침     ★같은 기운을 두 번 말하지 않습니다 (목=비겁인 분)
++```
++
++⚠️⚠️ **「지운」 것이 아니라 «감춘» 것입니다** — `leftPct`(막대)와 `leftScore`·`rightScore` 는 그대로 넘어갑니다. 되살리려면 대표님께 여쭙겠습니다. **44부 21차에 별점을 걷어낸 것과 같은 결**입니다.
++
++★그리고 **막대와 「재미로 보는 참고예요」는 그대로 둡니다.**
++
++## ⚠️ 찍어 보고 두 번 고쳤습니다
++
++말로 바꾼 뒤 실제로 나갈 글을 찍어 보니 —
++
++```
++🔴 「기운이 도드라집니다」가 네 줄 모두 되풀이 — 지겹습니다
++🔴 「양(陽)의 기운 기운이 도드라집니다」 — ★말이 겹칩니다
++⇒ 꼬리말을 걷어내고 이름만 잇도록 고쳤습니다
++```
++
++★**짐작으로 넘기지 않고 찍어 본 것이 잡았습니다.**
++
++## ⬜ 28차 실기 확인
++
++```
++□ ★진로적성 결과 → 「사주로 본 성향」 카드에 «숫자가 하나도 없는지»
++   ⚠️ 「81 : 19」도, 「목 55」도 «안 보여야» 합니다
++□ ★대신 「조금 기울어요 / 뚜렷해요 / 아주 뚜렷해요 / 반반에 가까워요」가 뜨는지
++□ ★근거 줄이 「E 쪽 — 양(陽) · 목(木) · 주체성」처럼 나오는지
++□ ⚠️ 「비겁」·「식상」 같은 명리 말이 «안 나오는지»
++□ ★막대는 그대로 있는지
++□ 「재미로 보는 참고예요」가 그대로 있는지
++```
++
++---
++
++# ★29차 — 표 아래 「어떤 결인가요」 해설
++
++## 무엇을 넣었나
++
++28차에서 숫자를 걷어내고 나니 **「E · N · F · P」 네 글자만 남아**, 그것이 무슨 뜻인지
++카드 안에서 알 길이 없었습니다. 대표님 지시로 **표 아래에 해설 네 줄**을 붙였습니다.
++
++```
++┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
++어떤 결인가요
++ [E] 사람 사이에서 기운이 차오릅니다. 회의·발표·현장이 에너지원입니다.
++ [N] 아직 없는 그림을 먼저 봅니다. 새 판을 여는 자리에서 강합니다.
++ [T] 기준과 논리로 자릅니다. 결정을 미루지 않아 일이 굴러갑니다.
++ [J] 정해 두고 가야 편합니다. 마감과 계획이 곧 힘입니다.
++```
++
++## ★새로 짓지 «않았습니다» (교훈 E — 만들기 전에 grep)
++
++그 여덟 줄은 **이미 있었습니다** — `buildCareerMbtiPrompt.ts` 의 `AXIS_WORK`.
++프리미엄 통변이 쓰고 있던 것입니다.
++
++```
++⚠️⚠️ 다만 그 자리에 두면 화면이 쓸 수 없어, 두 벌로 적을 뻔했습니다.
++★career/sajuMbti.ts 로 «옮겨» 한 곳에 두고, 화면·프롬프트가 «가져다» 씁니다.
++   두 벌이 되면 «다른 말을 하는 날» 이 옵니다. 검사 ㊽ 가 그것을 봅니다.
++```
++
++## ⚠️ 겹칩니다 — 알고 두었습니다
++
++프리미엄 통변 **2번 「핵심 성향 진단」**도 같은 여덟 줄을 씁니다.
++카드에도 나오고 통변에도 나오므로 **손님이 같은 말을 두 번 읽습니다.**
++★**2026-08-03 대표님 지시로 «그대로 두었습니다».**
++
++⚠️ 거슬리면 `buildCareerMbtiPrompt.ts` 의 '핵심 성향 진단' 블록에서
++`...mbti.axes.map(a => ...AXIS_WORK...)` 한 줄만 빼면 됩니다. 한 줄입니다.
++
++## 🔴 함께 잡은 결함 — 재료에 「81:19」가 남아 있었습니다
++
++```
++buildCareerMbtiPrompt.ts : 143  (전)
++  `${a.left}/${a.right} — ${a.pick} (${a.leftPct}:${100 - a.leftPct}) · 근거 …`
++                                     ★AI 에게 그 숫자를 그대로 넘기고 있었습니다
++```
++
++⚠️⚠️ **화면에서만 걷어내고 재료에 남겨 두면, AI 가 「81 대 19 로 아주 뚜렷합니다」로
++풀어 버립니다.** 44부 3-3장에서 별점을 «세 곳 중 두 곳» 만 껐다가 겪은 일과 **같은 자리**입니다.
++그리고 그 숫자는 **손님이 아무리 더해도 맞지 않습니다**(바닥 15%·층별 평균).
++
++★걷어냈고, **검사 ㊽ 가 「재료에도 leftPct 가 없는가」를 봅니다.**
++
++## ⬜ 29차 실기 확인
++
++```
++□ ★표 아래에 「어떤 결인가요」와 네 줄이 보이는지
++□ ★네 글자 배지([E]·[N]·[T]·[J])가 카드 위 코드와 «같은지»
++□ ★점선으로 위 표와 갈라져 있는지
++□ ⚠️ 프리미엄 통변에 「81 대 19」 같은 말이 «없는지»  ← ★가장 중요합니다
++□ ⚠️ 통변 1번 대목이 그대로 나오는지 (숫자만 빠졌습니다)
++```
++
++---
++
++# 🔴 30차 — [한줄]·[태그]·[실천] 이 «글자 그대로» 나가고 있었습니다
++
++## 무엇이 문제였나 — 대표님 사진
++
++```
++사주로 본 성향 — 네 축 입체 분석
++[한줄] 상황에 따라 달리 쓰는, 유연한 주체입니다.      ← ★손님 화면에 이렇게 나갑니다
++[태그] 유연한 결 · 현장형 · 사람 중심
++…
++[실천] 이번 주 회의나 현장에서 …
++```
++
++## ★표시 자체는 «일부러» 넣은 것입니다
++
++```
++buildCareerMbtiPrompt.ts : 274
++  · [한줄]·[태그]·[실천] 은 **대괄호까지 그대로** 적으세요.
++    ★화면이 그것으로 갈라 그립니다.
++```
++
++⇒ **문제는 «화면이 갈라 그리지 않은» 것**입니다.
++
++## 🔴 까닭 — 파서가 두 곳에 복사되고, 세 번째는 «없었습니다»
++
++```
++TongbyeonView.tsx        (사주풀이)   ─┐
++ExamJudgeCard.tsx        (합격운)     ─┤ ★한 글자도 다르지 않은 «복사본»
++career-result/page.tsx   (진로적성)   ─┘ 🔴«없었습니다»
++```
++
++진로적성은 본문을 `whiteSpace:'pre-wrap'` 으로 **통째로** 찍고 있었습니다.
++
++## ★고친 법 — 세 벌로 늘리지 «않았습니다»
++
++```
++신설  lib/saju/premium/splitCardText.ts   ★파서 «한 곳»
++      TongbyeonView · ExamJudgeCard 는 제 벌을 버리고 «가져다» 씁니다
++      career-result 는 ★새로 갈라 그립니다
++```
++
++```
++전   [한줄] 상황에 따라 달리 쓰는, 유연한 주체입니다.
++     [태그] 유연한 결 · 현장형 · 사람 중심
++     류도이 씨의 사주는…
++     [실천] 이번 주 회의나 현장에서…
++
++★후  상황에 따라 달리 쓰는, 유연한 주체입니다.        ← 보라색 굵은 한 줄
++     (유연한 결) (현장형) (사람 중심)                 ← 알약 태그
++     류도이 씨의 사주는…                              ← 문단으로 나눠
++     ✅ 이번 주 회의나 현장에서…                       ← 강조 상자
++```
++
++⚠️ **표시가 «없는» 옛 통변은 예전처럼 통짜로 그려집니다. 안 깨집니다.**
++★사진의 글로 직접 시험해 보았습니다 — 한줄·태그 셋·실천이 모두 갈리고,
++**본문에 표시가 하나도 남지 않았습니다.**
++
++## ⬜ 30차 실기 확인
++
++```
++□ 🔴★진로적성 프리미엄 리포트에 「[한줄]」·「[태그]」·「[실천]」이 «안 보이는지»
++□ ★맨 위에 보라색 한 줄, 그 아래 알약 태그가 뜨는지
++□ ★「실천」이 ✅ 강조 상자로 따로 빠지는지
++□ ⚠️ 사주풀이·합격운 화면이 «그대로» 인지 (파서를 옮겼을 뿐입니다)
++□ ⚠️ 옛 기록(표시 없는 통변)을 열었을 때 안 깨지는지
++```
++
++---
++
++# ★31차 — MBTI 를 «안 넣으면 조르지 않습니다»
++
++## 무엇이 문제였나
++
++```
++결과 화면   「실제 MBTI 를 넣으시면 … [넣고 다시 보기]」
++⚠️ ★모르는 분에겐 «막다른 길» 이었습니다 —
++   눌러서 돌아가 봐야 콤보에 「잘 모름」밖에 고를 것이 없었습니다.
++입력 화면   「검사하기」는 ★콤보를 «열어서» 「잘 모름」을 골라야 나타났습니다.
++   ⇒ 닫힌 채로는 «검사» 라는 말이 아예 안 보입니다. (대표님 사진)
++```
++
++## ★고친 넷
++
++```
++① 입력 화면   콤보 라벨 옆에 「모르면 검사하기 ↗」를 ★«늘» 보이게
++              ⚠️ 링크(TEST_URL)·안내 상자는 «이미 있던 것» 을 씁니다. 새로 짓지 않았습니다
++② 결과 화면   안 넣으셨으면 ★권유 상자를 «통째로» 뺐습니다
++              ⇒ 카드가 「어떤 결인가요」로 깔끔히 끝납니다
++③ 통변 재료   ★같은 권유 문장을 «재료에서도» 뺐습니다
++              ⚠️ 화면에서만 빼면 AI 글에서 다시 튀어나옵니다 (44부 3-3 별점 교훈)
++④ 제목        넣은 분   ★「내 MBTI에 대비해 본 나의 사주명리」
++              안 넣은 분  「사주로 본 성향」  (없는 것을 있다고 하지 않습니다)
++```
++
++⚠️ ①이 「몰라서 못 넣는 분」을 줄이므로, ②로 비는 자리는 **정말 넣기 싫은 분**만 남습니다. 둘이 서로를 받쳐 줍니다.
++⚠️ `onWantInput` 은 **남겨 두었습니다** — 되살릴 때 필요합니다.
++
++## 🔴 함께 잡은 것 — 「겹칩니다」가 «뒤집혀» 읽혔습니다
++
++```
++전   네 결 가운데 3가지가 겹칩니다
++     나서는 결에서 타고난 쪽과 지금 쪽이 갈립니다
++     ⇒ ★겹치는 셋의 «이름이 없어», 뒤에 나온 이름이 «겹치는» 것으로 읽힙니다
++```
++
++★**실제로 겪었습니다** — 대표님이 이 화면을 다른 AI 에게 읽히셨더니
++**「E/I와 S/N 두 가지가 겹쳐서 나타납니다」**라고 **정반대로** 풀었습니다.
++그 둘은 «갈리는» 결이었습니다. **AI 가 헷갈리면 손님은 더합니다.**
++
++```
++★후  겹치는 결 3가지 · 갈리는 결 1가지
++     보는 결 · 고르는 결 · 맺는 결은 타고난 대로 쓰고 계십니다. …
++     나서는 결에서는 타고난 쪽과 지금 쪽이 갈립니다. …
++     ⇒ ★양쪽 «이름을 둘 다» 대어 뒤집힐 자리를 없앴습니다
++```
++
++⚠️ 찍어 보고 두 번 더 고쳤습니다.
++
++```
++🔴 「보는 결과 고르는 결과 맺는 결」  → ★"결과(結果)"로 읽힙니다. 가운뎃점으로 이었습니다
++🔴 「…맺는 결은(는)」               → ★조사가 그대로 나갔습니다. lib/saju/josa.ts 를 씁니다
++   ⚠️ 그 파일 머리말에 「진로적성에서도 "토(土)이 없어요" 가 나왔다」고 적혀 있습니다. 같은 잘못입니다
++```
++
++★네 갈래(0·1·3·4가지 겹침)를 모두 찍어 확인했습니다.
++
++## ⬜ 31차 실기 확인
++
++```
++□ ★진로적성 «입력» 화면 — MBTI 라벨 오른쪽에 「모르면 검사하기 ↗」가 보이는지
++□ ★눌러서 새 창으로 검사 사이트가 열리는지
++□ ⚠️ 콤보 안 「잘 모름 / MBTI 검사하기」와 안내 상자가 «그대로» 인지
++□ ★MBTI 를 «안 넣고» 본 결과 — 카드 제목이 「사주로 본 성향」인지
++□ ★그 카드에 「실제 MBTI 를 넣으시면…」 상자가 «없는지»
++□ ★MBTI 를 «넣고» 본 결과 — 제목이 「내 MBTI에 대비해 본 나의 사주명리」인지
++□ 🔴★맨 아래 견주기에 「겹치는 결 N가지 · 갈리는 결 N가지」가 뜨는지
++□ ⚠️ 프리미엄 통변에 「실제 MBTI 를 넣으시면」 같은 말이 «없는지»
++```
++
++---
++
++# ★32차 — 카드를 「표」에서 «읽는 글» 로
++
++## 🔴 무엇이 문제였나 — 대표님 물음 셋
++
++```
++「이 표를 고객이 어떻게 보는거야? 나도 헷갈리는데」
++「표에서 굵은 막대가 나의 타고난 결이란 얘기인가?」
++「이 사람의 타고난 결은 ESFP란 거야?」
++```
++
++★**화면에 ESFP 라고 크게 적혀 있는데도 세 번째를 물으셔야 했습니다.**
++그 네 글자가 «무엇인지» — 사주가 본 것인지 손님이 넣으신 것인지 —
++★맨 아래에 가서야 밝히고 있었기 때문입니다.
++
++⚠️ 그리고 다른 AI 에게 이 화면을 읽히니 **「E/I와 S/N 두 가지가 겹칩니다」**라고
++**정반대로** 풀었습니다. 그 둘은 «갈리는» 결이었습니다.
++
++## ★어떻게 바꿨나
++
++```
++전   ESFP(크게) → 네 축 막대 표 → 어떤 결인가요 4줄 → 타고난 결↔지금의 결
++     ⇒ ★결론을 던지고 «그게 뭔지» 는 맨 끝
++
++★후  ① 류도이님은 사주명리에 비춰 볼 때 타고난 결이 ESFP(분위기를 여는 사람)입니다.
++        스스로 아시는 결은 INFP(마음이 넓은 이상가)라고 하셨지요.
++        ★네 결 가운데 한 가지가 갈립니다. 어긋난 것이 아니라, 살아오며 길러 내신 결입니다.
++     ② E N F P   타고난          ← ★두 줄로 겹쳐 보기. 바뀐 칸만 주황
++        I N F P   지금
++     ③ [같은 결] 보는 결 · 고르는 결 · 맺는 결
++          N 아직 없는 그림을 먼저 보는 결 …
++          → 타고난 대로 쓰고 계신 자리라 힘이 덜 듭니다.
++        [다른 결] 나서는 결
++          E → I  타고나기는 사람 사이에서 힘을 얻는 결인데, 지금은 …
++          → 두 결을 다 쓸 수 있다는 뜻입니다.
++     ④ ▾ 사주에서 어떻게 나온 건가요      ← ★막대를 여기로 «접었습니다»
++```
++
++★**손님이 「어? 나는 INFP 인데」 하고 «혼자 의아해할 틈» 을 주지 않습니다.**
++우리가 먼저 그 말을 꺼내고, 「어긋난 것이 아니다」까지 첫 상자에서 끝냅니다.
++
++## ★확정하신 것 둘
++
++```
++가) 넣으신 MBTI 에도 «같은 칭호표» 를 씁니다 — INFP(마음이 넓은 이상가)
++    ⚠️ 그 칭호 열여섯은 «우리가 사주 결로 지은» 이름이지 MBTI 공식 명칭이 아닙니다.
++       카드 맨 위 「재미로 보는 참고예요」가 이미 그것을 밝히고 있어 짧게 갑니다.
++나) 알약에는 「같은 결」만, 결 이름은 «옆에» 옅게
++    ⚠️ 알약 안에 이름까지 넣으면 넷이 갈리는 분은 «두 줄로 터집니다»
++```
++
++## ★막대 — 지우지 않고 «접고», 가운데에서 자라게
++
++```
++🔴 [무엇이 있었나]  막대가 «언제나 왼쪽» 에서 자랐습니다.
++   ⇒ 「무엇으로 고르는가」에서 ★막대는 T 쪽으로 긴데 고른 글자는 F —
++     손님 눈에 «어긋나» 보였습니다 (48% 도 F 로 갈립니다).
++★[이제]  가운데가 «반반» 이고, 고른 쪽으로 자랍니다.
++   ⇒ 막대와 진한 글자가 «언제나» 같은 쪽입니다. 짧으면 반반에 가깝다는 뜻입니다.
++   ★44부 23차에 궁합 오행 그래프를 「가운데 0」으로 바꾼 것과 같은 결입니다.
++★그리고 「아래 막대는 «사주로 본 결» 이에요」로 ★임자를 밝힙니다.
++```
++
++## ⚠️ 찍어 보고 네 번 고쳤습니다
++
++```
++🔴 「1가지가 갈립니다」        → ★「한 가지가」
++🔴 「INFP(…) 라고 하셨지요」   → ★앞 빈칸 제거
++🔴 「N 아직 없는 그림을 먼저 보는 결 / 아직 없는 그림을 먼저 봅니다」 ← ★같은 말 두 번
++   ⇒ trimEcho() — 짧은 이름의 낱말이 겹치는 문장을 뺍니다
++   ⚠️ 처음엔 «앞 여덟 글자» 로 견주었는데 S·J·P 를 못 잡았습니다
++      (「정해 두고 가는 결」/「정해 두고 가야 편합니다」 — 말끝만 다릅니다)
++      ⇒ ★낱말 기준으로 다시 짰습니다. 여덟 글자 모두 확인했습니다.
++🔴 옛 「타고난 결 ↔ 지금의 결」 상자  → ★걷어냈습니다. 같은 말을 «세 번» 하고 있었습니다
++```
++
++## ⚠️ 검사 다섯을 «뜻 그대로» 고쳤습니다
++
++앞 차수 그물이 «옛 모양» 을 글자로 지키고 있어 걸렸습니다. **헐겁게 하지 않았습니다.**
++
++```
++「width: ${a.leftPct}%」      → ★「${a.leftPct - 50}% / ${50 - a.leftPct}%」 (가운데 기준)
++「어떤 결인가요」가 있는가      → ★「이긴 글자의 설명을 그리는가」 (자리를 옮겼을 뿐)
++「) : null}」이 있는가         → ★「넣으라고 조르는 말이 «없는가»」 (본디 재려던 것)
++```
++
++★**역시험을 두 번 했습니다** — 여는말을 바꾸고, 같은 결 설명을 지워 보니 둘 다 잡았습니다.
++
++## ⬜ 32차 실기 확인
++
++```
++□ ★MBTI 를 «넣고» 본 결과 —
++   「◯◯님은 사주명리에 비춰 볼 때 타고난 결이 ESFP(분위기를 여는 사람)입니다」로 시작하는지
++□ ★그 아래 「스스로 아시는 결은 INFP(마음이 넓은 이상가)라고 하셨지요」가 나오는지
++□ ★네 글자가 «두 줄» 로 겹쳐 보이고, 바뀐 칸만 주황인지
++□ ★[같은 결] [다른 결] 알약이 뜨고, 결 이름이 «알약 옆» 에 있는지
++□ ★「E → I」로 어느 쪽에서 어느 쪽인지 보이는지
++□ ★「사주에서 어떻게 나온 건가요」를 누르면 막대가 열리는지
++□ ★막대가 «가운데» 에서 «고른 글자 쪽» 으로 자라는지
++□ ⚠️ 같은 말이 두 번 나오는 줄이 «없는지»
++□ ★MBTI 를 «안 넣고» 본 결과 — 네 글자 풀이만 나오고 조르는 말이 없는지
++□ ⚠️ 넷이 «모두 겹치는» 분은 「다른 결」 알약이 안 나오는지
++```
++
++---
++
++# ★33차 — 가운데 선을 «보이게» · 「타고난/지금」을 왼쪽으로
++
++## 🔴 무엇이 문제였나 — 대표님 사진
++
++```
++「차라리 가운데 선을 하나 그어서 가운데부터 그래프가 자라난다는 것을 보여줘」
++```
++
++★코드는 32차에 이미 «가운데에서 자라도록» 그리고 있었습니다.
++문제는 ★**선이 안 보이는 것**이었습니다.
++
++```
++선 색 #d8dee6  ↔  막대 바탕 #eef2f6      ← ★거의 같은 색. 묻혔습니다
++굵기 1px · 막대 안에만                    ← 눈에 안 띕니다
++⇒ 「반반에 가까워요」인 축은 막대도 0에 가까워
++   ★«아무것도 없는 줄» 로 보였습니다
++```
++
++## ★고친 셋
++
++```
++① 선 색    #d8dee6 → ★#9b8bc4      막대 바탕과 갈립니다
++② 선 꼴    1px 막대 안 → ★2px · 위아래로 4px 씩 «내밀어» 눈금처럼
++③ 머리말   ★「↓ 여기가 반반」을 맨 위에 «한 번만»
++           ⚠️ 줄마다 적으면 시끄럽습니다. 네 줄이 같은 자리를 쓰니 한 번이면 됩니다
++```
++
++⚠️ **막대를 «벌리는» 것(1.5~2배)은 하지 «않았습니다».**
++대표님이 「선을 그어 보여 달라」고 하셨고, 막대를 부풀리면 ★실제보다 세게 느껴질 수
++있어서입니다. 선만으로 모자라면 그때 다시 여쭙겠습니다.
++
++## ★「타고난 / 지금」을 칸 왼쪽으로
++
++```
++전   [E][S][F][P] 타고난          ← 오른쪽 끝에 붙어 «따로 놀았습니다»
++     [I][N][F][P] 지금
++
++★후  타고난 [E][S][F][P]
++     지금   [I][N][F][P]
++            나서는 보는 고르는 맺는   ← ★어느 칸이 무슨 결인지 아래에 옅게
++```
++
++★글은 왼쪽에서 오른쪽으로 흐르니 **이름이 먼저 와야** 읽힙니다.
++그리고 **칸마다 무슨 결인지** 아래에 옅게 적어, 위 알약(「같은 결 · 다른 결」)과
++**같은 이름으로 이어집니다.**
++
++## ⬜ 33차 실기 확인
++
++```
++□ ★막대 가운데에 «보라색 세로선» 이 보이는지 (위아래로 살짝 내밀어 있는지)
++□ ★막대 위에 「↓ 여기가 반반」이 «한 번만» 있는지
++□ ★「반반에 가까워요」인 축도 «빈 줄로 보이지 않는지»
++□ ★「타고난 / 지금」이 칸 «왼쪽» 에 있는지
++□ ★칸 아래에 「나서는 · 보는 · 고르는 · 맺는」이 옅게 있는지
++```
+diff --git a/app/manseryeok/career-result/components/MbtiCard.tsx b/app/manseryeok/career-result/components/MbtiCard.tsx
+index 37901c4..249444e 100644
+--- a/app/manseryeok/career-result/components/MbtiCard.tsx
++++ b/app/manseryeok/career-result/components/MbtiCard.tsx
+@@ -16,6 +16,7 @@
+ //     ③ 실제 MBTI 를 넣었으면 견주기 카드, 안 넣었으면 넣도록 권하는 띠
+ // ============================================================================
+ 
++import { AXIS_WORK, AXIS_NAME_SHORT, titleOf } from '@/lib/saju/career/sajuMbti'
+ import type { SajuMbtiResult, MbtiCompare } from '@/lib/saju/career/sajuMbti'
+ 
+ const ACCENT = '#785aaa'
+@@ -26,6 +27,8 @@ interface Props {
+   compare?: MbtiCompare | null
+   /** [실제 MBTI 넣기] 를 눌렀을 때 — 입력 화면으로 되돌린다 */
+   onWantInput?: () => void
++  /** 손님 이름 — 「류도이님은 …」 (없으면 이름 없이 씁니다) */
++  name?: string
+ }
+ 
+ const AXIS_NAME: Record<string, string> = {
+@@ -35,7 +38,46 @@ const AXIS_NAME: Record<string, string> = {
+   JP: '어떻게 맺는가',
+ }
+ 
+-export default function MbtiCard({ result, realMbti, compare, onWantInput }: Props) {
++/**
++ * 기울기를 «말» 로 — ★숫자를 보이지 않습니다.
++ *
++ *  ⚠️ 「반반에 가까워요」는 45~55% 로 잡습니다 — result.balanced 와 «같은 잣대» 입니다.
++ *     두 곳이 다르면 「반반」이라 써 놓고 아래엔 안 그렇게 나오는 날이 옵니다.
++ */
++/** ⚠️ 「1가지가」가 아니라 「한 가지가」 — 손님께 드리는 말입니다 */
++/**
++ * 긴 설명이 짧은 이름과 «같은 말로 시작»하면 그 문장을 뺍니다.
++ *  ⚠️ 두 벌이 결이 달라 대개는 안 겹치는데, N·P 처럼 겹치는 글자가 있습니다.
++ *     겹친 채로 두면 손님 눈에 ★같은 말을 두 번 한 것으로 보입니다.
++ */
++function trimEcho(ch: string): string {
++  // ★짧은 이름의 «낱말» 을 뽑아, 그 낱말이 여럿 겹치는 문장을 뺍니다.
++  //   ⚠️ 앞 여덟 글자만 견주면 S·J·P 를 못 잡습니다 —
++  //      「정해 두고 가는 결」 / 「정해 두고 가야 편합니다」처럼 말끝만 다릅니다.
++  const words = (AXIS_NAME_SHORT[ch] ?? '')
++    .replace(/ 결$/, '').split(/\s+/).filter(w => w.length >= 2)
++  const parts = (AXIS_WORK[ch] ?? '').split(/(?<=\.)\s+/).filter(Boolean)
++  const echo = (p: string) => {
++    const hit = words.filter(w => p.includes(w.replace(/(는|을|를|이|가|에서|으로)$/, ''))).length
++    return words.length > 0 && hit >= Math.min(2, words.length)
++  }
++  const kept = parts.filter(p => !echo(p))
++  return (kept.length ? kept : parts).join(' ')
++}
++
++const NUM: Record<number, string> = { 1: '한 가지', 2: '두 가지', 3: '세 가지' }
++
++function leanWord(leftPct: number): string {
++  const d = Math.abs(leftPct - 50)
++  if (d <= 5) return '반반에 가까워요'
++  if (d <= 15) return '조금 기울어요'
++  if (d <= 25) return '뚜렷해요'
++  return '아주 뚜렷해요'
++}
++
++// ⚠️ onWantInput 은 Props 에 «남겨 두되» 지금은 받지 않습니다 —
++//    부르는 쪽(career-result/page.tsx)을 고치지 않으려는 것입니다. 되살릴 때 씁니다.
++export default function MbtiCard({ result, realMbti, compare, name }: Props) {
+   return (
+     <div style={{
+       background: '#fff',
+@@ -49,8 +91,11 @@ export default function MbtiCard({ result, realMbti, compare, onWantInput }: Pro
+       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+         <span style={{ fontSize: 22, lineHeight: 1 }}>🧩</span>
+         <div style={{ flex: 1, minWidth: 0 }}>
++          {/* ★2026-08-03 (44부 31차) — 제목을 «갈랐습니다» (대표님 지시)
++              ⚠️ 「내 MBTI에 대비해 본…」은 ★MBTI 를 넣으신 분에게만 맞는 말입니다.
++                 안 넣으신 분께 그렇게 말하면 «없는 것을 있다고» 하는 셈입니다. */}
+           <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', letterSpacing: '-0.2px' }}>
+-            사주로 본 성향
++            {compare && realMbti ? '내 MBTI에 대비해 본 나의 사주명리' : '사주로 본 성향'}
+           </div>
+           <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+             재미로 보는 참고예요. 검사 결과를 대신하지 않아요.
+@@ -58,110 +103,273 @@ export default function MbtiCard({ result, realMbti, compare, onWantInput }: Pro
+         </div>
+       </div>
+ 
+-      {/* ── 네 글자 + 칭호 ── */}
++      {/* ══════════════════════════════════════════════════════════
++          ★2026-08-03 (44부 32차) — 「표」를 걷어내고 «읽는 글» 로 (대표님 지시)
++
++          🔴 [무엇이 있었나]  네 글자(ESFP)를 크게 던져 놓고, 그것이 «무엇인지»
++             — 사주가 본 것인지, 손님이 넣으신 것인지 — 를 ★맨 아래에서야 밝혔습니다.
++             ⚠️ 대표님도 「이 사람의 타고난 결이 ESFP란 거야?」 하고 물으셨습니다.
++                화면에 크게 적혀 있는데도 그러셨다면, 손님은 더합니다.
++          ★[이제]  첫 문장에서 «누가 무엇을 말하는지» 를 끝냅니다.
++             ① 사주가 본 결은 …입니다  ② 스스로 아시는 결은 …라고 하셨지요
++             ③ 어긋난 것이 아닙니다   ← ★손님이 «혼자 의아해할 틈» 을 주지 않습니다
++          ══════════════════════════════════════════════════════════ */}
+       <div style={{
+-        display: 'flex', alignItems: 'baseline', gap: 9,
+-        margin: '14px 0 4px', padding: '13px 14px', borderRadius: 13,
+-        background: 'linear-gradient(120deg, rgba(250,245,255,0.95), rgba(238,242,255,0.85))',
+-        border: `1px solid ${ACCENT}2e`,
++        background: '#f3f0fc', borderRadius: 12,
++        padding: '14px 15px', margin: '14px 0 16px',
+       }}>
+-        <span style={{ fontSize: 25, fontWeight: 800, color: ACCENT, letterSpacing: '1.5px' }}>
+-          {result.code}
+-        </span>
+-        <span style={{ fontSize: 13, color: '#4a3b60', fontWeight: 600 }}>{result.title}</span>
++        <p style={{ margin: '0 0 8px', fontSize: 14, lineHeight: 1.8, color: '#2e2550' }}>
++          {name ? `${name}님은 ` : ''}사주명리에 비춰 볼 때 타고난 결이{' '}
++          <b style={{ fontWeight: 700 }}>{result.code}({result.title})</b>입니다.
++        </p>
++        {compare && realMbti && (
++          <p style={{ margin: 0, fontSize: 13, lineHeight: 1.8, color: '#4a3b60' }}>
++            스스로 아시는 결은{' '}
++            <b style={{ fontWeight: 700 }}>{realMbti}({titleOf(realMbti)})</b>라고 하셨지요.{' '}
++            {compare.same === 4
++              ? '네 결이 그대로 겹칩니다.'
++              : compare.same === 0
++                ? '네 결이 모두 갈립니다. 어긋난 것이 아니라, 살아오며 길러 내신 결입니다.'
++                : `네 결 가운데 ${NUM[compare.diffAxes.length] ?? compare.diffAxes.length}가 갈립니다. 어긋난 것이 아니라, 살아오며 길러 내신 결입니다.`}
++          </p>
++        )}
+       </div>
+ 
+-      {result.balanced && (
+-        <div style={{ fontSize: 11, color: '#8a6a52', marginBottom: 6, lineHeight: 1.6 }}>
+-          ※ 두 축 이상이 반반에 가깝습니다. 어느 한쪽으로 몰린 결이 아니라, 상황에 따라 달리 쓰는 분입니다.
+-        </div>
+-      )}
+-
+-      {/* ── 네 축 막대 ── */}
+-      <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 13 }}>
+-        {result.axes.map(a => (
+-          <div key={a.axis}>
+-            <div style={{
+-              display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+-              marginBottom: 5,
++      {/* ★두 줄로 겹쳐 보기 — 어느 칸이 바뀌었는지 «한눈에»
++          ⚠️ 2026-08-03 (44부 33차) — 「타고난 / 지금」을 칸 «왼쪽» 으로 옮겼습니다.
++             오른쪽 끝에 붙여 두니 어느 줄의 이름인지 눈이 한 번 더 가야 했습니다.
++             ★글은 왼쪽에서 오른쪽으로 흐르니 이름이 «먼저» 와야 읽힙니다. */}
++      {compare && realMbti && compare.same < 4 && (
++        <div style={{ marginBottom: 18 }}>
++          {([['born', '타고난'], ['now', '지금']] as const).map(([k, lab]) => (
++            <div key={k} style={{
++              display: 'flex', gap: 7, alignItems: 'center',
++              marginBottom: k === 'born' ? 6 : 0,
+             }}>
+-              <span style={{ fontSize: 11, color: '#64748b' }}>{AXIS_NAME[a.axis]}</span>
+-              <span style={{ fontSize: 11, color: '#94a3b8' }}>{a.leftPct} : {100 - a.leftPct}</span>
++              <span style={{
++                width: 36, flexShrink: 0, fontSize: 11, color: '#94a3b8', textAlign: 'right',
++              }}>{lab}</span>
++              {compare.axes.map(a => {
++                const on = a.same
++                return (
++                  <div key={a.label} style={{
++                    flex: 1, height: 42, borderRadius: 9,
++                    background: on ? '#e6f4ee' : (k === 'born' ? '#fbeee9' : '#f6d9cd'),
++                    display: 'grid', placeItems: 'center',
++                    fontSize: 18, fontWeight: 700,
++                    color: on ? '#0f6e56' : (k === 'born' ? '#993c1d' : '#4a1b0c'),
++                  }}>{a[k]}</div>
++                )
++              })}
+             </div>
++          ))}
++          {/* ★어느 칸이 무슨 결인지 — 아래에 옅게 한 줄 */}
++          <div style={{ display: 'flex', gap: 7, alignItems: 'center', marginTop: 5 }}>
++            <span style={{ width: 36, flexShrink: 0 }} />
++            {compare.axes.map(a => (
++              <div key={a.label} style={{
++                flex: 1, textAlign: 'center', fontSize: 10, color: '#a09488',
++              }}>{a.label.replace(' 결', '')}</div>
++            ))}
++          </div>
++        </div>
++      )}
+ 
+-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+-              <span style={{
+-                fontSize: 12.5, fontWeight: 800, width: 15, textAlign: 'center', flexShrink: 0,
+-                color: a.pick === a.left ? ACCENT : '#cbd5e1',
+-              }}>{a.left}</span>
++      {/* ══════════════════════════════════════════════════════════
++          ★같은 결 / 다른 결 — 알약 머리말 + 결마다 한 덩이 (44부 32차)
+ 
+-              <div style={{
+-                flex: 1, height: 9, borderRadius: 20, overflow: 'hidden',
+-                background: '#eef2f6', position: 'relative',
+-              }}>
+-                <div style={{
+-                  position: 'absolute', inset: 0,
+-                  width: `${a.leftPct}%`,
+-                  background: `linear-gradient(90deg, ${ACCENT}, #a58fd0)`,
+-                  borderRadius: 20,
+-                }} />
++          ⚠️ 알약에는 「같은 결」만, 결 이름은 «옆에» 옅게 둡니다.
++             알약 안에 이름까지 넣으면 넷이 갈리는 분은 «두 줄로 터집니다».
++          ⚠️ 한쪽이 비면 그 알약을 «안 그립니다» (넷 다 같거나 넷 다 다를 때)
++          ══════════════════════════════════════════════════════════ */}
++      {compare && realMbti ? (
++        <>
++          {compare.axes.some(a => a.same) && (
++            <>
++              <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 10px' }}>
++                <span style={{
++                  fontSize: 11.5, color: '#0f6e56', background: '#e6f4ee',
++                  border: '0.5px solid #b6e0d0', padding: '4px 13px', borderRadius: 20,
++                }}>같은 결</span>
++                <span style={{ fontSize: 11.5, color: '#8a7063' }}>
++                  {compare.sameAxes.join(' · ')}
++                </span>
++              </div>
++              {compare.axes.filter(a => a.same).map(a => (
++                <div key={a.label} style={{
++                  borderLeft: '2px solid #5dcaa5', padding: '2px 0 2px 12px', marginBottom: 8,
++                }}>
++                  {/* ⚠️ 짧은 이름과 긴 설명이 «같은 말» 로 시작하는 글자가 있습니다
++                      (N — 「아직 없는 그림을 먼저 보는 결 / 아직 없는 그림을 먼저 봅니다」)
++                      ⇒ ★겹치면 짧은 이름만 두고 긴 설명의 «뒷문장» 만 씁니다 */}
++                  <div style={{ fontSize: 13, color: '#2b2320', lineHeight: 1.7 }}>
++                    <b style={{ fontWeight: 700, color: '#0f6e56' }}>{a.born}</b>{' '}
++                    {AXIS_NAME_SHORT[a.born]}
++                  </div>
++                  <div style={{ fontSize: 12, color: '#6b5a4e', lineHeight: 1.7 }}>
++                    {trimEcho(a.born)}
++                  </div>
++                </div>
++              ))}
++              <div style={{ fontSize: 12, color: '#0f6e56', margin: '0 0 18px 14px' }}>
++                → 타고난 대로 쓰고 계신 자리라 힘이 덜 듭니다.
+               </div>
++            </>
++          )}
+ 
+-              <span style={{
+-                fontSize: 12.5, fontWeight: 800, width: 15, textAlign: 'center', flexShrink: 0,
+-                color: a.pick === a.right ? ACCENT : '#cbd5e1',
+-              }}>{a.right}</span>
++          {compare.axes.some(a => !a.same) && (
++            <>
++              <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 10px' }}>
++                <span style={{
++                  fontSize: 11.5, color: '#993c1d', background: '#fbeee9',
++                  border: '0.5px solid #f2c9b8', padding: '4px 13px', borderRadius: 20,
++                }}>다른 결</span>
++                <span style={{ fontSize: 11.5, color: '#8a7063' }}>
++                  {compare.diffAxes.join(' · ')}
++                </span>
++              </div>
++              {compare.axes.filter(a => !a.same).map(a => (
++                <div key={a.label} style={{
++                  borderLeft: '2px solid #f0997b', padding: '2px 0 2px 12px', marginBottom: 8,
++                }}>
++                  <div style={{ fontSize: 13, color: '#2b2320', lineHeight: 1.7 }}>
++                    <b style={{ fontWeight: 700, color: '#993c1d' }}>{a.born} → {a.now}</b>
++                  </div>
++                  <div style={{ fontSize: 12, color: '#6b5a4e', lineHeight: 1.7 }}>
++                    타고나기는 {AXIS_NAME_SHORT[a.born]}인데, 지금은 {AXIS_NAME_SHORT[a.now]}로 쓰십니다.
++                  </div>
++                </div>
++              ))}
++              <div style={{ fontSize: 12, color: '#993c1d', margin: '0 0 18px 14px' }}>
++                → 두 결을 다 쓸 수 있다는 뜻입니다. 남들이 예상하지 못한 방식으로 일을 풀 수 있습니다.
++              </div>
++            </>
++          )}
++        </>
++      ) : (
++        /* ★MBTI 를 안 넣으신 분 — 견줄 것이 없으니 네 결을 «그냥» 풀어 드립니다 */
++        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
++          {result.axes.map(a => (
++            <div key={a.axis} style={{
++              borderLeft: '2px solid #cec9f0', padding: '2px 0 2px 12px',
++            }}>
++              <div style={{ fontSize: 13, color: '#2b2320', lineHeight: 1.7 }}>
++                <b style={{ fontWeight: 700, color: '#534ab7' }}>{a.pick}</b>{' '}
++                {AXIS_NAME_SHORT[a.pick]}
++              </div>
++              <div style={{ fontSize: 12, color: '#6b5a4e', lineHeight: 1.7 }}>
++                {trimEcho(a.pick)}
++              </div>
+             </div>
++          ))}
++        </div>
++      )}
+ 
+-            {/* 왜 그렇게 나왔나 — 근거 한 줄 */}
+-            <div style={{ fontSize: 10.5, color: '#8a6a52', marginTop: 5, paddingLeft: 23 }}>
+-              {a.why}
+-            </div>
+-          </div>
+-        ))}
+-      </div>
++      {/* ══════════════════════════════════════════════════════════
++          ★사주에서 어떻게 나온 건가요 — 네 축 막대를 «접어» 둡니다 (44부 32차)
++
++          ⚠️ 지우는 것이 «아닙니다». 근거를 보고 싶은 분은 열면 됩니다.
++          🔴 [까닭]  막대·기울기·근거 기운이 위에 있으니 손님이 «표» 로 읽고,
++             「이게 무슨 표냐」에서 멈췄습니다. 결론을 먼저 드리고 근거는 뒤로 뺍니다.
++          ══════════════════════════════════════════════════════════ */}
++      <details style={{ borderTop: '1px dashed rgba(120,53,15,0.14)', paddingTop: 12 }}>
++        <summary style={{
++          fontSize: 12, color: '#8a7063', cursor: 'pointer', listStyle: 'none',
++        }}>사주에서 어떻게 나온 건가요</summary>
+ 
+-      {/* ── 실제 MBTI 와 견주기 ── */}
+-      {compare && realMbti ? (
+         <div style={{
+-          marginTop: 16, padding: '13px 14px', borderRadius: 13,
+-          background: '#fbf8f5', border: '1px solid rgba(120,53,15,0.11)',
++          fontSize: 11, color: '#8a7063', background: '#faf7f3',
++          borderRadius: 9, padding: '8px 10px', margin: '10px 0 14px', lineHeight: 1.6,
+         }}>
+-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+-            <span style={{ fontSize: 11.5, color: '#64748b' }}>타고난 결</span>
+-            <span style={{ fontSize: 13, fontWeight: 800, color: ACCENT }}>{result.code}</span>
+-            <span style={{ fontSize: 12, color: '#cbd5e1' }}>↔</span>
+-            <span style={{ fontSize: 11.5, color: '#64748b' }}>지금의 결</span>
+-            <span style={{ fontSize: 13, fontWeight: 800, color: '#1e293b' }}>{realMbti}</span>
+-          </div>
+-          <div style={{ fontSize: 12.5, fontWeight: 700, color: '#1e293b', marginBottom: 5 }}>
+-            {compare.headline}
+-          </div>
+-          <div style={{ fontSize: 11.5, color: '#5c4a3e', lineHeight: 1.72 }}>
+-            {compare.body}
+-          </div>
++          아래 막대는 <b style={{ fontWeight: 700, color: '#4a3b60' }}>사주로 본 결</b>이에요.
++          기운이 기운 쪽으로 자랍니다.
+         </div>
+-      ) : (
++
++        {/* ★가운데 선이 무엇인지 한 번만 밝힙니다 — 줄마다 적으면 시끄럽습니다 */}
+         <div style={{
+-          marginTop: 16, padding: '13px 14px', borderRadius: 13,
+-          background: '#faf7ff', border: `1px solid ${ACCENT}26`,
++          display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 9px',
++          fontSize: 10.5, color: '#a09488',
+         }}>
+-          <div style={{ fontSize: 11.5, color: '#4a3b60', lineHeight: 1.7 }}>
+-            실제 MBTI 를 넣으시면 <b>타고난 결과 지금의 결</b>이 어떻게 만나는지
+-            입체적으로 견주어 드려요.
+-          </div>
+-          {onWantInput && (
+-            <button
+-              onClick={onWantInput}
+-              style={{
+-                marginTop: 10, width: '100%', padding: '10px 12px', borderRadius: 11,
+-                background: ACCENT, border: 'none', color: '#fff',
+-                fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+-              }}
+-            >실제 MBTI 넣고 다시 보기</button>
+-          )}
++          <span style={{ width: 15, flexShrink: 0 }} />
++          <div style={{ flex: 1, textAlign: 'center' }}>↓ 여기가 반반</div>
++          <span style={{ width: 15, flexShrink: 0 }} />
+         </div>
+-      )}
++
++        <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
++          {result.axes.map(a => (
++            <div key={a.axis}>
++              <div style={{
++                display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
++                marginBottom: 5,
++              }}>
++                <span style={{ fontSize: 11, color: '#64748b' }}>{AXIS_NAME[a.axis]}</span>
++                <span style={{ fontSize: 11, color: '#94a3b8' }}>{leanWord(a.leftPct)}</span>
++              </div>
++
++              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
++                <span style={{
++                  fontSize: 12.5, fontWeight: 800, width: 15, textAlign: 'center', flexShrink: 0,
++                  color: a.pick === a.left ? ACCENT : '#cbd5e1',
++                }}>{a.left}</span>
++
++                {/* ★가운데가 «반반» — 고른 쪽으로 자랍니다 (44부 32차)
++                    ⚠️ 전에는 언제나 왼쪽에서 자라, 막대는 T 쪽인데 고른 글자는 F 인
++                       «어긋나 보이는» 일이 있었습니다. 궁합 오행 그래프를 「가운데 0」으로
++                       바꾼 것과 같은 결입니다 (44부 23차). */}
++                <div style={{
++                  flex: 1, height: 9, borderRadius: 20,
++                  background: '#eef2f6', position: 'relative',
++                }}>
++                  {/* ★가운데 선 — «여기서부터 자란다» 는 것을 눈으로 보이게 (44부 33차)
++                      🔴 [무엇이 있었나] 선 색이 #d8dee6 로 막대 바탕(#eef2f6)과 거의 같아
++                         ★묻혀서 안 보였습니다. 「반반에 가까워요」인 축은 막대도 0에 가까워
++                         «아무것도 없는 줄» 로 보였습니다. (대표님 사진 2026-08-03)
++                      ⚠️ 막대보다 «위아래로 길게» 빼서 눈금처럼 세웁니다. */}
++                  <div style={{
++                    position: 'absolute', left: '50%', top: -4, bottom: -4,
++                    width: 2, marginLeft: -1, background: '#9b8bc4', borderRadius: 2,
++                  }} />
++                  <div style={{
++                    position: 'absolute', top: 0, bottom: 0,
++                    ...(a.leftPct >= 50
++                      ? { right: '50%', width: `${a.leftPct - 50}%` }
++                      : { left: '50%', width: `${50 - a.leftPct}%` }),
++                    background: ACCENT, borderRadius: 20,
++                  }} />
++                </div>
++
++                <span style={{
++                  fontSize: 12.5, fontWeight: 800, width: 15, textAlign: 'center', flexShrink: 0,
++                  color: a.pick === a.right ? ACCENT : '#cbd5e1',
++                }}>{a.right}</span>
++              </div>
++
++              <div style={{ fontSize: 10.5, color: '#8a6a52', marginTop: 5, paddingLeft: 23 }}>
++                {a.pick} 쪽 — {a.why}
++              </div>
++            </div>
++          ))}
++        </div>
++      </details>
++
++      {/* ⚠️⚠️ 2026-08-03 (44부 32차) — ★옛 「타고난 결 ↔ 지금의 결」 상자를 «걷어냈습니다».
++          여는말이 이미 그 말을 하고, 「같은 결 / 다른 결」이 속을 풀어 줍니다.
++          그대로 두면 ★같은 말을 «세 번» 하게 됩니다.
++          ⚠️ compare.headline·body 는 «남아 있습니다» — 통변 재료가 그것을 씁니다.
++             화면에서만 안 그립니다. 되살리려면 대표님께 여쭈십시오. */}
++      {/* ══════════════════════════════════════════════════════════
++          🔴★2026-08-03 (44부 31차) — MBTI 를 안 넣으셨으면 «아무것도 그리지 않습니다».
++
++          [무엇이 있었나]  「실제 MBTI 를 넣으시면 … [넣고 다시 보기]」 상자.
++            ⚠️ 모르는 분에겐 ★막다른 길이었습니다 — 돌아가 봐야 콤보에
++               「잘 모름」밖에 고를 것이 없었습니다.
++          ★대신 «입력 화면» 콤보 옆에 「검사하기 ↗」를 늘 보이게 했습니다.
++            거기서 검사하고 오시면 됩니다. 결과 화면에서 조르지 않습니다.
++          ⚠️⚠️ 통변 «재료» 에서도 같은 권유 문장을 뺐습니다.
++             화면에서만 빼면 AI 글에서 다시 튀어나옵니다.
++             (44부 3-3장 — 별점을 세 곳 중 두 곳만 껐다가 새어 나간 자리)
++          ⚠️ onWantInput 은 «남겨 둡니다» — 되살릴 때 필요합니다.
++          ══════════════════════════════════════════════════════════ */}
+     </div>
+   )
+ }
+diff --git a/app/manseryeok/career-result/page.tsx b/app/manseryeok/career-result/page.tsx
+index c320725..958b5a1 100644
+--- a/app/manseryeok/career-result/page.tsx
++++ b/app/manseryeok/career-result/page.tsx
+@@ -34,6 +34,7 @@ import MbtiCard from './components/MbtiCard'
+ // ★2026-07-29 — 프리미엄 진로적성&MBTI 리포트 (모듈2)
+ import { buildCareerMbtiPrompt } from '@/lib/saju/premium/buildCareerMbtiPrompt'
+ import { isPremium } from '@/lib/saju/premium/config'
++import { splitCardText } from '@/lib/saju/premium/splitCardText'
+ import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
+ import { calcYongsinNew } from '@/lib/saju/yongsinNew'
+ import { getGongmang } from '@/lib/saju/gongmang'
+@@ -428,10 +429,69 @@ function CareerResultInner() {
+                       fontSize: 14.5, fontWeight: 700, color: '#1e293b',
+                       marginBottom: 9, letterSpacing: '-0.2px',
+                     }}>{sec.title}</div>
+-                    <div style={{
+-                      fontSize: 13.5, color: '#3a2e28', lineHeight: 1.85,
+-                      whiteSpace: 'pre-wrap',
+-                    }}>{sec.body}</div>
++
++                    {/* ══════════════════════════════════════════════════
++                        🔴★2026-08-03 (44부 30차) — [한줄]·[태그]·[실천] 을 갈라 그립니다.
++
++                        [무엇이 있었나]  본문을 whiteSpace:'pre-wrap' 으로 «통째로» 찍어
++                          ★「[한줄] 상황에 따라 달리 쓰는…」·「[태그] …」·「[실천] …」이
++                            손님 화면에 «글자 그대로» 나갔습니다. (대표님 사진 2026-08-03)
++                        [까닭]  프롬프트는 그 표시를 «일부러» 붙이게 합니다 —
++                          "화면이 그것으로 갈라 그립니다" 라고 적혀 있는데,
++                          ★사주풀이·합격운만 갈라 그리고 진로적성은 «안 했습니다».
++                        ⚠️ 파서는 lib/saju/premium/splitCardText.ts «한 곳» 입니다.
++                           여기서 다시 적지 마십시오. 그렇게 해서 두 벌이 되었습니다.
++                        ⚠️ 표시가 없는 옛 통변은 예전처럼 통짜로 그려집니다. 안 깨집니다.
++                        ══════════════════════════════════════════════════ */}
++                    {(() => {
++                      const p = splitCardText(sec.body)
++                      return (
++                        <>
++                          {/* ★한줄 — 카드에서 가장 하고 싶은 말 */}
++                          {p.summary && (
++                            <p style={{
++                              fontSize: 13, color: '#785aaa', lineHeight: 1.6, fontWeight: 600,
++                              margin: '0 0 9px',
++                            }}>{p.summary}</p>
++                          )}
++
++                          {/* ★태그 — 알약으로 */}
++                          {p.tags && p.tags.length > 0 && (
++                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, margin: '0 0 10px' }}>
++                              {p.tags.map((t, k) => (
++                                <span key={k} style={{
++                                  fontSize: 10.5, color: '#5b4580', background: '#f3eefb',
++                                  border: '1px solid #e4daf5', padding: '3px 9px',
++                                  borderRadius: 20, fontWeight: 600,
++                                }}>{t}</span>
++                              ))}
++                            </div>
++                          )}
++
++                          {/* 본문 — 빈 줄로 문단을 나눠 그립니다 */}
++                          {p.body.split(/\n\s*\n/).filter(x => x.trim()).map((para, k) => (
++                            <p key={k} style={{
++                              fontSize: 13.5, color: '#3a2e28', lineHeight: 1.85,
++                              margin: '0 0 10px', whiteSpace: 'pre-wrap',
++                            }}>{para.trim()}</p>
++                          ))}
++
++                          {/* ★실천 — 강조 상자로 따로 */}
++                          {p.action && (
++                            <div style={{
++                              marginTop: 2, padding: '11px 12px', borderRadius: 11,
++                              background: '#fdf6ee', border: '1px solid rgba(200,120,60,0.26)',
++                              display: 'flex', gap: 8, alignItems: 'flex-start',
++                            }}>
++                              <span style={{ fontSize: 13, lineHeight: 1.4, flexShrink: 0 }}>✅</span>
++                              <span style={{ fontSize: 12.5, lineHeight: 1.75, color: '#6b4a2e' }}>
++                                {p.action}
++                              </span>
++                            </div>
++                          )}
++                        </>
++                      )
++                    })()}
+                   </div>
+                 ))}
+                 <div style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center', margin: '4px 0 2px' }}>
+@@ -482,6 +542,8 @@ function CareerResultInner() {
+                       result={sajuMbti}
+                       realMbti={realMbti}
+                       compare={mbtiCmp}
++                      /* ★2026-08-03 (44부 32차) — 「◯◯님은 사주명리에 비춰 볼 때…」 */
++                      name={person.name}
+                       onWantInput={() => router.push(`/manseryeok/career-input?${backQuery}`)}
+                     />
+                   )}
+diff --git a/app/manseryeok/components/MbtiSelect.tsx b/app/manseryeok/components/MbtiSelect.tsx
+index fdf65b7..8c12c4f 100644
+--- a/app/manseryeok/components/MbtiSelect.tsx
++++ b/app/manseryeok/components/MbtiSelect.tsx
+@@ -35,12 +35,35 @@ export default function MbtiSelect({ value, onChange, accent = '#785aaa' }: Prop
+ 
+   return (
+     <div>
+-      <label
+-        htmlFor="mbti-select"
+-        style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#3a2e28', marginBottom: 7 }}
+-      >
+-        MBTI <span style={{ fontWeight: 400, color: '#8a6a52' }}>(모르셔도 괜찮아요)</span>
+-      </label>
++      {/* ══════════════════════════════════════════════════════════
++          ★2026-08-03 (44부 31차) — 「검사하기 ↗」를 «늘» 보이게 (대표님 지시)
++
++          [무엇이 있었나]  콤보를 열고 → 「잘 모름 / MBTI 검사하기」를 고르고 →
++            그제야 안내가 떴습니다. ★닫힌 채로는 «검사» 라는 말이 아예 안 보였습니다.
++          ⇒ 모르는 분이 그냥 지나쳐 버리고, 결과 화면에서야 아쉬워하셨습니다.
++          ★여기서 검사하고 오시면 결과 화면이 「내 MBTI에 대비해 본…」으로 바뀝니다.
++          ⚠️ 링크(TEST_URL)와 안내 상자는 «이미 있던 것» 을 그대로 씁니다. 새로 짓지 않았습니다.
++          ══════════════════════════════════════════════════════════ */}
++      <div style={{
++        display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 7,
++      }}>
++        <label
++          htmlFor="mbti-select"
++          style={{ fontSize: 12.5, fontWeight: 600, color: '#3a2e28' }}
++        >
++          MBTI <span style={{ fontWeight: 400, color: '#8a6a52' }}>(모르셔도 괜찮아요)</span>
++        </label>
++        <a
++          href={TEST_URL}
++          target="_blank"
++          rel="noopener noreferrer"
++          style={{
++            marginLeft: 'auto', fontSize: 11.5, fontWeight: 600, color: accent,
++            textDecoration: 'none', whiteSpace: 'nowrap',
++            borderBottom: `1px solid ${accent}55`, paddingBottom: 1,
++          }}
++        >모르면 검사하기 ↗</a>
++      </div>
+ 
+       <select
+         id="mbti-select"
+diff --git a/app/manseryeok/components/TongbyeonView.tsx b/app/manseryeok/components/TongbyeonView.tsx
+index fb4502a..d0a4727 100644
+--- a/app/manseryeok/components/TongbyeonView.tsx
++++ b/app/manseryeok/components/TongbyeonView.tsx
+@@ -17,6 +17,7 @@
+ 'use client'
+ 
+ import { useEffect, useMemo, useRef, useState } from 'react'
++import { splitCardText } from '@/lib/saju/premium/splitCardText'
+ import { buildTongbyeonPrompt, type TongbyeonInput } from '@/lib/saju/tongbyeonPrompt'
+ import type { SajuQuestion } from '@/lib/saju/questions'
+ import { withNim } from '@/lib/saju/honorific'
+@@ -99,27 +100,10 @@ function parseCards(text: string): { intro: string; cards: Card[] } {
+ 
+   const isHeading = (ln: string) => /^\s*(#{1,6}\s*)?\u25A0/.test(ln) || /^\s*#{2,6}\s+/.test(ln)
+ 
+-  /**
+-   * 본문에서 [한줄]·[태그]·[실천] 을 뽑아낸다.
+-   *   ⚠️ 없으면 그대로 둡니다. 옛 통변이 깨지지 않게 하려는 것입니다.
+-   */
+-  const split = (bodyRaw: string) => {
+-    let summary: string | undefined
+-    let action: string | undefined
+-    let tags: string[] | undefined
+-    const rest: string[] = []
+-    for (const ln of bodyRaw.split('\n')) {
+-      const t = ln.trim()
+-      const mS = t.match(/^\[한줄\]\s*(.+)$/)
+-      const mT = t.match(/^\[태그\]\s*(.+)$/)
+-      const mA = t.match(/^\[실천\]\s*(.+)$/)
+-      if (mS) { summary = mS[1].trim(); continue }
+-      if (mT) { tags = mT[1].split(/[·,]/).map(x => x.trim()).filter(Boolean).slice(0, 4); continue }
+-      if (mA) { action = mA[1].trim(); continue }
+-      rest.push(ln)
+-    }
+-    return { summary, tags, action, body: rest.join('\n').trim() }
+-  }
++  // ★2026-08-03 (44부 30차) — 파서를 lib/saju/premium/splitCardText.ts 로 «옮겼습니다».
++  //   ⚠️ 같은 코드가 합격운에도 복사되어 있었고, ★진로적성에는 «없었습니다».
++  //      고칠 곳은 그 «한 곳» 입니다. 여기서 다시 적지 마십시오.
++  const split = splitCardText
+ 
+   for (const raw of lines) {
+     const ln = raw
+diff --git a/app/manseryeok/exam-luck-result/components/ExamJudgeCard.tsx b/app/manseryeok/exam-luck-result/components/ExamJudgeCard.tsx
+index 31bd9c4..5856bde 100644
+--- a/app/manseryeok/exam-luck-result/components/ExamJudgeCard.tsx
++++ b/app/manseryeok/exam-luck-result/components/ExamJudgeCard.tsx
+@@ -13,6 +13,7 @@
+  */
+ 
+ import { useState } from 'react'
++import { splitCardText } from '@/lib/saju/premium/splitCardText'
+ import type { ExamCard, Grade } from '@/lib/saju/examLuck/types'
+ 
+ /**
+@@ -52,23 +53,10 @@ interface Props {
+  *     사주풀이(TongbyeonView)는 이미 갈라 그리는데 합격운만 안 했습니다.
+  *   ⚠️ 형식이 없으면 예전처럼 통짜로 그립니다. 옛 통변도 안 깨집니다.
+  */
+-function splitTong(raw: string) {
+-  let summary: string | undefined
+-  let action: string | undefined
+-  let tags: string[] | undefined
+-  const rest: string[] = []
+-  for (const ln of raw.split('\n')) {
+-    const t = ln.trim()
+-    const mS = t.match(/^\[한줄\]\s*(.+)$/)
+-    const mT = t.match(/^\[태그\]\s*(.+)$/)
+-    const mA = t.match(/^\[실천\]\s*(.+)$/)
+-    if (mS) { summary = mS[1].trim(); continue }
+-    if (mT) { tags = mT[1].split(/[·,]/).map(x => x.trim()).filter(Boolean).slice(0, 4); continue }
+-    if (mA) { action = mA[1].trim(); continue }
+-    rest.push(ln)
+-  }
+-  return { summary, tags, action, body: rest.join('\n').trim() }
+-}
++// ★2026-08-03 (44부 30차) — 파서를 lib/saju/premium/splitCardText.ts 로 «옮겼습니다».
++//   ⚠️ 같은 코드가 사주풀이·합격운 두 곳에 복사되어 있었고, ★진로적성에는 «없어서»
++//      「[한줄] …」이 손님 화면에 글자 그대로 나갔습니다. 여기서 다시 적지 마십시오.
++const splitTong = splitCardText
+ 
+ export default function ExamJudgeCard({ card, tong }: Props) {
+   const [openWhy, setOpenWhy] = useState(false)
+diff --git a/changes-44bu-27.patch b/changes-44bu-27.patch
+new file mode 100644
+index 0000000..3f2ecad
+--- /dev/null
++++ b/changes-44bu-27.patch
+@@ -0,0 +1,1930 @@
++diff --git a/32-verify-hour-convert.ts b/32-verify-hour-convert.ts
++index 326b05f..ce9a2a4 100644
++--- a/32-verify-hour-convert.ts
+++++ b/32-verify-hour-convert.ts
++@@ -1310,6 +1310,294 @@ console.log('\n━━ ㊺ ★보관함 열 곳이 «한 모습» 인가 (44부 2
++   check(!/\{info\.badge\} 궁합/.test(cp), `🔴 「궁합 궁합」이 사라졌습니다`)
++ }
++ 
+++console.log('\n━━ ㊻ ★사주 MBTI 산식 — 교재 대조로 고친 자리 (44부 27차) ━━')
+++{
+++  // ⚠️ 교훈 1-1 — 주석을 «먼저 지우고» 봅니다
+++  const noComment = (s: string) =>
+++    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+++  const m = noComment(read('lib/saju/career/sajuMbti.ts'))
+++  const doc = read('lib/saju/career/sajuMbti.ts')   // 주석까지 — 까닭이 적혔는지 볼 때
+++
+++  // 🔴 B — 지지를 «세는가» (교재 36·159·259쪽)
+++  check(/BRANCH_BONGI/.test(m), `★48쪽 본기 천간 표가 있습니다`)
+++  check(/子: '癸'/.test(m) && /午: '丁'/.test(m), `★子=癸(음) · 午=丁(음) — 48쪽 그대로`)
+++  check(/const asStem = isStem \? ch : BRANCH_BONGI\[ch\]/.test(m),
+++    `🔴★정재·편재를 가릴 때 «지지도» 셉니다`)
+++  check(!/const el = isStem \? STEM_EL\[ch\] : undefined/.test(m),
+++    `⚠️ 지지를 건너뛰던 옛 줄이 «사라졌습니다»`)
+++  // ⚠️⚠️ 두 잣대가 «둘 다» 살아 있는가 — 하나로 합치면 안 됩니다
+++  check(/YANG_BRANCH = new Set\(\['子', '寅', '辰', '午', '申', '戌'\]\)/.test(m),
+++    `⚠️ 음양 «비율» 용 표(子=양)는 그대로입니다 — 260쪽 양팔통 사례`)
+++  check(/하나로 합치지 마십시오/.test(doc), `⚠️ 두 표를 합치지 말라는 까닭이 적혀 있습니다`)
+++
+++  // A — 오행·육친을 «층으로 가르는가» (교재 40쪽)
+++  check(/type Layer = \{ L: Array<\[string, number\]>; R: Array<\[string, number\]> \}/.test(m),
+++    `★층(Layer) 으로 가릅니다`)
+++  check(/if \(!ly\.L\.length \|\| !ly\.R\.length\) continue/.test(m),
+++    `★한쪽이 빈 층은 «세지 않습니다» (대립이 아님)`)
+++
+++  // γ — «세기 평균» 으로 견주는가
+++  check(/const l = sum\(ly\.L\) \/ ly\.L\.length/.test(m) && /const r = sum\(ly\.R\) \/ ly\.R\.length/.test(m),
+++    `★γ — 성분 «개수» 가 아니라 «세기» 로 견줍니다`)
+++
+++  // C-1 — 50점 뚜껑 (교재 259쪽)
+++  check(/const cap = \(v: number\) => Math\.min\(v, 50\)/.test(m), `★C-1 — 50점 뚜껑이 있습니다`)
+++  check(/cap\(S\['목'\]\)/.test(m) && /cap\(Y\['식상'\]\)/.test(m),
+++    `★오행·육친 모두 뚜껑을 지납니다`)
+++
+++  // D — 근거 없는 셋이 «빠졌는가»
+++  check(!/yanginBaekho/.test(m), `★T쪽 백호가 빠졌습니다 (95쪽은 성격을 말하지 않음)`)
+++  const sn = m.slice(m.indexOf("push('SN'"), m.indexOf("push('TF'"))
+++  check(!/관성/.test(sn), `★S쪽 관성이 빠졌습니다 (교재에서 못 찾음)`)
+++  check(!/S\['화'\]/.test(sn), `★N쪽 화가 빠졌습니다 (화는 열정·표현·예의·행동)`)
+++
+++  // ⚠️ 「없다」가 아니라 「못 찾았다」로 적었는가 — 184~257쪽을 아직 못 봤습니다
+++  check(/못 찾았다|못 찾았습니다|못 찾은/.test(doc),
+++    `⚠️ 「교재에 없다」가 아니라 «확인한 범위에서 못 찾았다» 로 적혀 있습니다`)
+++  check(/184~257/.test(doc), `⚠️ 아직 못 본 쪽 범위가 적혀 있습니다`)
+++  // ★되살릴 길을 남겼는가
+++  check(/되살리십시오|되살릴 수 있습니다/.test(doc), `★쪽이 확인되면 되살리라고 일러 둡니다`)
+++  // ⚠️ 토가 빠진 것을 «숨기지 않았는가»
+++  check(/토\(45쪽/.test(doc), `⚠️ 토가 산식에서 빠졌다는 것을 적어 두었습니다`)
+++
+++  // ⚠️ 다른 엔진을 «건드리지 않았는가»
+++  check(/import \{ calcCareerScore \}/.test(m) && /import \{ yukchinOf \}/.test(m)
+++     && /import \{ checkSinsal9 \}/.test(m), `⚠️ 다른 엔진은 «부르기만» 합니다`)
+++
+++  // ⚠️ 자(尺)는 verify 체인에 «없는가»
+++  const pkg4 = JSON.parse(read('package.json'))
+++  check(!/34-measure/.test(pkg4.scripts.verify), `⚠️ 자(尺)는 verify 체인에 «없습니다»`)
+++  check(/measure:mbti/.test(JSON.stringify(pkg4.scripts)), `npm run measure:mbti 로 잽니다`)
+++  // ★옛 산식이 자 안에 «남아 있는가» — 잣대가 함께 움직이면 안 됩니다
+++  const mm = read('34-measure-saju-mbti.ts')
+++  check(/function code0\(b: Bag\)/.test(mm), `★옛 산식이 자 안에 붙박여 있습니다 (잣대 보존)`)
+++  check(/어긋난 건수/.test(mm), `★자가 «실제 파일과 같은 답인지» 맞대어 봅니다`)
+++}
+++
+++console.log('\n━━ ㊼ ★사주 MBTI 화면 — 숫자를 걷어내고 «말» 로 (44부 28차) ━━')
+++{
+++  const noComment = (s: string) =>
+++    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+++  const card = noComment(read('app/manseryeok/career-result/components/MbtiCard.tsx'))
+++  const eng = noComment(read('lib/saju/career/sajuMbti.ts'))
+++
+++  // 🔴 「81 : 19」가 «사라졌는가» — 무엇의 비율인지 화면에 없던 숫자입니다
+++  check(!/\{a\.leftPct\} : \{100 - a\.leftPct\}/.test(card),
+++    `🔴★「81 : 19」가 사라졌습니다`)
+++  check(/leanWord\(a\.leftPct\)/.test(card), `★기울기를 «말» 로 보입니다`)
+++  check(/반반에 가까워요/.test(card) && /아주 뚜렷해요/.test(card),
+++    `★「반반에 가까워요 … 아주 뚜렷해요」 넷입니다`)
+++  // ⚠️ 「반반」 잣대가 balanced 와 «같은가» — 두 곳이 다르면 화면이 서로 어긋납니다
+++  check(/d <= 5/.test(card) && /leftPct >= 45 && a\.leftPct <= 55/.test(eng),
+++    `⚠️ 「반반」 잣대가 balanced(45~55%)와 같습니다`)
+++  // ★막대는 «남았는가» — 지운 것이 아니라 감춘 것입니다
+++  // ★2026-08-03 (44부 32차) — 막대가 «가운데에서» 자라도록 바뀌었습니다.
+++  //   ⚠️ 검사를 헐겁게 한 것이 «아닙니다» — 「막대가 leftPct 로 그려지는가」를 그대로 잽니다.
+++  check(/\$\{a\.leftPct - 50\}%/.test(card) && /\$\{50 - a\.leftPct\}%/.test(card),
+++    `★막대는 그대로입니다 (leftPct 로 그립니다)`)
+++
+++  // 🔴 근거 줄에서 «점수» 가 사라졌는가
+++  check(!/\$\{k\} \$\{Math\.round\(v\)\}/.test(eng),
+++    `🔴★근거 줄에서 점수(「목 55」)가 사라졌습니다`)
+++  check(/const LABEL: Record<string, string>/.test(eng), `★재료 이름을 손님 말로 옮깁니다`)
+++  check(/비겁: '주체성'/.test(eng) && /인성: '사고력'/.test(eng),
+++    `★「비겁·인성」 같은 명리 말이 화면에 안 나갑니다`)
+++  // ⚠️ 같은 말을 두 번 하지 «않는가» (목 = 비겁일 때)
+++  check(/const seen = new Set<string>\(\)/.test(eng),
+++    `⚠️ 같은 기운을 두 번 말하지 않습니다 (목=비겁인 분)`)
+++  check(/\{a\.pick\} 쪽 — \{a\.why\}/.test(card), `★어느 쪽인지 글자로도 밝힙니다`)
+++
+++  // ⚠️ 지운 것이 아니라 «감춘» 것인가 — 되살릴 길
+++  check(/leftScore: Math\.round/.test(eng), `⚠️ 점수는 «남아 있습니다» — 지운 것이 아닙니다`)
+++  const doc = read('lib/saju/career/sajuMbti.ts')
+++  check(/되살리려면 대표님께 여쭈십시오/.test(doc), `⚠️ 되살릴 때 여쭈라고 적혀 있습니다`)
+++  check(/계산기처럼 보이면 안 됩니다/.test(doc), `★「참고 카드」라는 까닭이 적혀 있습니다`)
+++  // ★「재미로 보는 참고」가 그대로 있는가
+++  check(/재미로 보는 참고예요/.test(card), `★「재미로 보는 참고예요」가 그대로 있습니다`)
+++}
+++
+++console.log('\n━━ ㊽ ★「어떤 결인가요」 해설 · 재료의 숫자 걷어내기 (44부 29차) ━━')
+++{
+++  const noComment = (s: string) =>
+++    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+++  const eng = noComment(read('lib/saju/career/sajuMbti.ts'))
+++  const card = noComment(read('app/manseryeok/career-result/components/MbtiCard.tsx'))
+++  const pr = noComment(read('lib/saju/premium/buildCareerMbtiPrompt.ts'))
+++
+++  // ★여덟 줄이 «한 곳» 에 있는가
+++  check(/export const AXIS_WORK: Record<string, string>/.test(eng),
+++    `★AXIS_WORK 여덟 줄이 sajuMbti.ts «한 곳» 에 있습니다`)
+++  check(['E', 'I', 'S', 'N', 'T', 'F', 'J', 'P'].every(k => new RegExp(`${k}: '`).test(eng)),
+++    `★여덟 글자가 모두 있습니다`)
+++  // ⚠️⚠️ 두 벌이 되지 «않았는가» — 두 벌이면 다른 말을 하는 날이 옵니다
+++  check(!/const AXIS_WORK/.test(pr), `⚠️ 프롬프트가 «제 벌» 을 다시 적지 않습니다`)
+++  check(/import \{ calcSajuMbti, compareMbti, AXIS_WORK/.test(pr),
+++    `⚠️ 프롬프트는 그 한 곳에서 «가져다» 씁니다`)
+++  check(/import \{ AXIS_WORK[^}]*\} from '@\/lib\/saju\/career\/sajuMbti'/.test(card),
+++    `⚠️ 화면도 같은 곳에서 가져다 씁니다`)
+++
+++  // ★표 아래 해설이 그려지는가
+++  // ★2026-08-03 (44부 32차) — 「어떤 결인가요」 네 줄이 «같은 결 / 다른 결» 로 바뀌었습니다.
+++  //   ⚠️ 없어진 것이 «아니라» 결마다 제자리를 찾아간 것입니다. 뜻을 그대로 잽니다 —
+++  //      「이긴 글자의 설명을 그리는가」.
+++  check(/\{AXIS_WORK\[a\.born\]\}|trimEcho\(a\.born\)/.test(card),
+++    `★같은 결에서 이긴 글자의 줄을 그립니다`)
+++  check(/trimEcho\(a\.pick\)|\{AXIS_WORK\[a\.pick\]\}/.test(card),
+++    `★MBTI 를 안 넣으신 분께도 네 글자를 풀어 드립니다`)
+++  check(/result\.axes\.map\(a => \(/.test(card), `★네 축 모두 그립니다`)
+++
+++  // 🔴 재료에도 「81:19」가 «남지 않았는가» (44부 3-3 별점 교훈)
+++  check(!/\$\{a\.leftPct\}:\$\{100 - a\.leftPct\}/.test(pr) && !/leftPct/.test(pr),
+++    `🔴★통변 «재료» 에서도 「81:19」가 사라졌습니다`)
+++  const doc = read('lib/saju/premium/buildCareerMbtiPrompt.ts')
+++  check(/화면에서만 걷어내고 여기 남겨 두면/.test(doc),
+++    `⚠️ 왜 재료에서도 걷어냈는지 까닭이 적혀 있습니다`)
+++}
+++
+++console.log('\n━━ ㊾ 🔴★[한줄]·[태그]·[실천] 이 «글자 그대로» 나가지 않는가 (44부 30차) ━━')
+++{
+++  const noComment = (s: string) =>
+++    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+++  const P = 'lib/saju/premium/splitCardText.ts'
+++  const sp = noComment(read(P))
+++
+++  // ★파서가 «한 곳» 에 있는가
+++  check(/export function splitCardText/.test(sp), `★파서가 splitCardText.ts 한 곳에 있습니다`)
+++  check(/\[한줄\\\]/.test(sp) && /\[태그\\\]/.test(sp) && /\[실천\\\]/.test(sp),
+++    `★세 표시를 모두 가릅니다`)
+++
+++  // ⚠️⚠️ 화면들이 «제 벌» 을 다시 적지 않는가 — 그렇게 해서 두 벌이 되었습니다
+++  const SCREENS = [
+++    'app/manseryeok/components/TongbyeonView.tsx',
+++    'app/manseryeok/exam-luck-result/components/ExamJudgeCard.tsx',
+++    'app/manseryeok/career-result/page.tsx',
+++  ]
+++  const src = SCREENS.map(p => [p, noComment(read(p))] as const)
+++  check(src.every(([, s]) => /splitCardText/.test(s)),
+++    `★세 화면이 «모두» 공용 파서를 씁니다 (${src.filter(([, s]) => /splitCardText/.test(s)).length}/3)`)
+++  const own = src.filter(([, s]) => /const mS = t\.match/.test(s))
+++  check(own.length === 0,
+++    `⚠️ 화면이 «제 파서» 를 따로 들고 있지 않습니다${own.length ? ' — ' + own.map(x => x[0]).join(', ') : ''}`)
+++
+++  // 🔴 진로적성 — 통짜로 찍던 자리가 «사라졌는가»
+++  const car = noComment(read('app/manseryeok/career-result/page.tsx'))
+++  check(/const p = splitCardText\(sec\.body\)/.test(car),
+++    `🔴★진로적성이 대목을 갈라 그립니다`)
+++  check(/p\.summary/.test(car) && /p\.tags/.test(car) && /p\.action/.test(car),
+++    `★한줄·태그·실천을 각각 그립니다`)
+++  check(!/\}\}>\{sec\.body\}<\/div>/.test(car),
+++    `🔴⚠️ 본문을 «통째로» 찍던 자리가 사라졌습니다`)
+++
+++  // ⚠️ 프롬프트가 그 표시를 시키는가 — 시키는데 화면이 모르면 또 새어 나갑니다
+++  const pr1 = read('lib/saju/premium/buildCareerMbtiPrompt.ts')
+++  const pr2 = read('lib/saju/premium/buildGeneralSajuPrompt.ts')
+++  check(/대괄호까지 그대로/.test(pr1) && /대괄호까지 그대로/.test(pr2),
+++    `⚠️ 프롬프트가 «대괄호까지» 적으라고 시킵니다 — 화면이 반드시 갈라야 합니다`)
+++
+++  // ⚠️ 표시가 «없는» 옛 통변이 깨지지 않는가
+++  check(/옛 통변이 깨지지 않게/.test(read(P)), `⚠️ 표시가 없으면 그대로 둔다고 적혀 있습니다`)
+++}
+++
+++console.log('\n━━ ㊿ ★MBTI 를 안 넣으면 조르지 않는다 · 겹침/갈림 헷갈림 (44부 31차) ━━')
+++{
+++  const noComment = (s: string) =>
+++    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+++  const card = noComment(read('app/manseryeok/career-result/components/MbtiCard.tsx'))
+++  const sel = noComment(read('app/manseryeok/components/MbtiSelect.tsx'))
+++  const pr = noComment(read('lib/saju/premium/buildCareerMbtiPrompt.ts'))
+++  const eng = noComment(read('lib/saju/career/sajuMbti.ts'))
+++
+++  // ★제목이 갈리는가
+++  check(/내 MBTI에 대비해 본 나의 사주명리/.test(card), `★넣은 분 제목이 있습니다`)
+++  check(/compare && realMbti \? '내 MBTI에 대비해 본 나의 사주명리' : '사주로 본 성향'/.test(card),
+++    `★안 넣은 분에게는 「사주로 본 성향」입니다 (없는 것을 있다 하지 않습니다)`)
+++
+++  // 🔴 권유 상자가 «화면과 재료 둘 다» 에서 사라졌는가
+++  check(!/실제 MBTI 를 넣으시면/.test(card), `🔴★화면에서 권유 상자가 사라졌습니다`)
+++  check(!/실제 MBTI 를 넣으시면/.test(pr), `🔴⚠️ ★«재료» 에서도 사라졌습니다 (새어 나가지 않게)`)
+++  // ★2026-08-03 (44부 32차) — 「권유 상자」가 아예 사라져 그 자리 자체가 없어졌습니다.
+++  //   ⇒ 「넣으라고 조르는 말이 없는가」로 잽니다. 그것이 본디 재려던 것입니다.
+++  check(!/넣으시면|넣고 다시 보기/.test(card),
+++    `★안 넣으신 분께 «조르지» 않습니다`)
+++  // ⚠️ 되살릴 길은 남겼는가
+++  check(/onWantInput\?: \(\) => void/.test(card), `⚠️ onWantInput 은 남아 있습니다 (되살릴 때)`)
+++
+++  // ★입력 화면 — 「검사하기」가 «늘» 보이는가
+++  check(/모르면 검사하기/.test(sel), `★콤보 옆에 「모르면 검사하기 ↗」가 늘 보입니다`)
+++  check(/href=\{TEST_URL\}[\s\S]{0,400}모르면 검사하기/.test(sel),
+++    `⚠️ 링크는 «이미 있던» TEST_URL 을 씁니다 (새로 짓지 않았습니다)`)
+++  check(/잘 모름 \/ MBTI 검사하기/.test(sel), `⚠️ 콤보 안 「잘 모름」도 그대로입니다`)
+++
+++  // 🔴 겹침/갈림 — 이름을 «둘 다» 대는가
+++  check(/const sameAxes: string\[\] = \[\]/.test(eng), `★겹치는 결의 이름도 모읍니다`)
+++  check(/겹치는 결 \$\{same\}가지 · 갈리는 결 \$\{diffAxes\.length\}가지/.test(eng),
+++    `🔴★「겹치는 결 N가지 · 갈리는 결 N가지」로 둘 다 밝힙니다`)
+++  check(!/네 결 가운데 \$\{same\}가지가 겹칩니다/.test(eng),
+++    `🔴⚠️ 뒤집혀 읽히던 옛 문장이 사라졌습니다`)
+++  // ⚠️ 조사·이음말
+++  check(/eunneun\(sameAxes/.test(eng), `⚠️ 조사를 josa.ts 로 붙입니다 (교훈 AU)`)
+++  check(/sameAxes\.join\(' · '\)/.test(eng) && /diffAxes\.join\(' · '\)/.test(eng),
+++    `⚠️ 「과」로 잇지 않습니다 — 「보는 결과 고르는 결」이 «결과» 로 읽힙니다`)
+++}
+++
+++console.log('\n━━ (51) ★MBTI 카드 — 「표」를 걷고 «읽는 글» 로 (44부 32차) ━━')
+++{
+++  const noComment = (s: string) =>
+++    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+++  const card = noComment(read('app/manseryeok/career-result/components/MbtiCard.tsx'))
+++  const eng = noComment(read('lib/saju/career/sajuMbti.ts'))
+++  const page = noComment(read('app/manseryeok/career-result/page.tsx'))
+++
+++  // ★여는말 — 누가 무엇을 말하는지 첫 문장에서 끝내는가
+++  check(/사주명리에 비춰 볼 때 타고난 결이/.test(card), `★「…사주명리에 비춰 볼 때 타고난 결이」로 엽니다`)
+++  check(/\{result\.code\}\(\{result\.title\}\)/.test(card), `★ESFP(분위기를 여는 사람) 꼴입니다`)
+++  check(/\{realMbti\}\(\{titleOf\(realMbti\)\}\)/.test(card), `★넣으신 MBTI 에도 칭호를 붙입니다 (대표님 확정 「가)」)`)
+++  check(/name=\{person\.name\}/.test(page), `★「◯◯님은」 이름이 화면에서 넘어옵니다`)
+++  check(/어긋난 것이 아니라, 살아오며 길러 내신 결입니다/.test(card),
+++    `★손님이 «혼자 의아해할 틈» 을 주지 않습니다`)
+++
+++  // ★같은 결 / 다른 결 — 알약은 짧게, 이름은 옆에 (대표님 확정 「나)」)
+++  check(/>같은 결</.test(card) && />다른 결</.test(card), `★알약 둘이 있습니다`)
+++  check(/\{compare\.sameAxes\.join\(' · '\)\}/.test(card) && /\{compare\.diffAxes\.join\(' · '\)\}/.test(card),
+++    `★결 이름은 알약 «옆» 에 둡니다 (알약이 두 줄로 터지지 않게)`)
+++  check(/compare\.axes\.some\(a => a\.same\)/.test(card) && /compare\.axes\.some\(a => !a\.same\)/.test(card),
+++    `⚠️ 한쪽이 비면 그 알약을 «안 그립니다» (넷 다 같거나 넷 다 다를 때)`)
+++  check(/\{a\.born\} → \{a\.now\}/.test(card), `★「E → I」로 어느 쪽에서 어느 쪽인지 밝힙니다`)
+++
+++  // ⚠️ 셈은 «한 곳» 에서 — 화면이 다시 가르지 않는가 (교훈 CJ)
+++  check(/sameAxes: string\[\]/.test(eng) && /axes: Array<\{/.test(eng),
+++    `⚠️ 같은/다른 가르기를 «엔진» 이 합니다. 화면은 그리기만 합니다`)
+++
+++  // ★막대는 «접었는가» — 지운 것이 아닙니다
+++  check(/<details/.test(card) && /사주에서 어떻게 나온 건가요/.test(card),
+++    `★네 축 막대를 «접어» 두었습니다 (지우지 않았습니다)`)
+++  check(/사주로 본 결/.test(card), `★막대의 «임자» 를 밝힙니다`)
+++  // ★2026-08-03 (44부 33차) — 선이 «보이는가» 까지 잽니다.
+++  //   🔴 전에는 색이 #d8dee6 로 막대 바탕(#eef2f6)과 거의 같아 ★묻혀서 안 보였습니다.
+++  //      「반반에 가까워요」인 축은 막대도 0에 가까워 «아무것도 없는 줄» 로 보였습니다.
+++  check(/left: '50%', top: -4, bottom: -4/.test(card),
+++    `★가운데(반반) 선이 막대 «위아래로 내밀어» 있습니다`)
+++  check(/background: '#9b8bc4'/.test(card), `★선 색이 막대 바탕과 «갈립니다»`)
+++  check(/여기가 반반/.test(card), `★가운데가 무엇인지 «한 번만» 밝힙니다`)
+++  // ★두 줄 겹쳐 보기 — 이름이 «왼쪽» 인가
+++  check(/width: 36, flexShrink: 0, fontSize: 11[^}]*textAlign: 'right'/.test(card),
+++    `★「타고난 / 지금」이 칸 «왼쪽» 에 있습니다 (글은 왼쪽에서 흐릅니다)`)
+++  check(/\{a\.label\.replace\(' 결', ''\)\}/.test(card),
+++    `★칸 아래에 어느 결인지 옅게 적습니다`)
+++  check(/a\.leftPct >= 50[\s\S]{0,120}right: '50%'/.test(card),
+++    `★막대가 «고른 쪽» 으로 자랍니다 (막대와 진한 글자가 언제나 같은 쪽)`)
+++
+++  // ⚠️ 같은 말을 두 번 하지 않는가
+++  check(/function trimEcho/.test(card), `⚠️ 짧은 이름과 긴 설명이 겹치면 «한 번만» 말합니다`)
+++  check(!/compare\.headline/.test(card), `⚠️ 옛 「타고난 결 ↔ 지금의 결」 상자가 사라졌습니다 (세 번 말하던 것)`)
+++  check(/NUM: Record<number, string>/.test(card), `⚠️ 「1가지」가 아니라 「한 가지」로 씁니다`)
+++
+++  // ★여덟 줄 짧은 이름이 «엔진» 에 있는가
+++  check(/AXIS_NAME_SHORT/.test(eng), `★「어떤 결인가」 여덟 줄이 엔진 한 곳에 있습니다`)
+++  check(/두 벌이 «필요해서» 둘입니다/.test(read('lib/saju/career/sajuMbti.ts')),
+++    `⚠️ AXIS_WORK 와 «다른 것» 이라는 까닭이 적혀 있습니다`)
+++}
+++
++ console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
++ {
++   const src = read('lib/saju/simsanOhaeng.ts')
++diff --git a/34-measure-saju-mbti.ts b/34-measure-saju-mbti.ts
++new file mode 100644
++index 0000000..44a3ef3
++--- /dev/null
+++++ b/34-measure-saju-mbti.ts
++@@ -0,0 +1,316 @@
+++// 34-measure-saju-mbti.ts
+++//
+++// ┌───────────────────────────────────────────────────────────────┐
+++// │  사주 MBTI 산식 — «무엇을 얼마나» 바꾸는가. 자(尺)입니다        │
+++// └───────────────────────────────────────────────────────────────┘
+++//
+++//  ★2026-08-03 — 교재 대조로 드러난 세 가지를 재기 위해 지었습니다.
+++//    ⚠️ 이것은 «검사» 가 아니라 «자» 입니다. verify 체인에 넣지 마십시오.
+++//       배포가 느려지고, 임의 표본이라 값이 조금씩 흔들립니다.
+++//
+++//  쓰는 법   npm run measure:mbti
+++//
+++//  ══ 무엇을 견주는가 ══
+++//   후보0   지금 산식 (2026-07-29 대표님 확정본을 그대로 옮긴 코드)
+++//   후보A   ★오행·육친 «이중 계산» 풀기      — 교재 40쪽
+++//   후보C1  ★50점 문턱 뚜껑                  — 교재 25·259쪽
+++//   후보D   ★근거 없는 셋 빼기               — 관성(S) · 화(N) · 백호(T)
+++//   ★확정   A + C1 + D  (2026-08-03 대표님 지시)
+++//
+++//  ⚠️⚠️ 이 파일은 «재기만» 합니다.
+++//     sajuMbti.ts 를 비롯한 어떤 엔진도 «고치지 않습니다».
+++//     후보들은 이 파일 «안» 에 따로 구현해 견줍니다.
+++//
+++//  ⚠️ 표본은 «임의로 지은» 사주입니다. 손님 기록을 쓰지 «않습니다».
+++
+++import { calcSajuMbti } from './lib/saju/career/sajuMbti'
+++import { calcCareerScore } from './lib/saju/career/careerScore'
+++import { yukchinOf } from './lib/saju/career/yukchin'
+++import { checkSinsal9 } from './lib/saju/career/sinsal9'
+++import type { Ohaeng, Pillar } from './lib/saju/career/types'
+++
+++const GAN = '甲乙丙丁戊己庚辛壬癸'.split('')
+++const JI = '子丑寅卯辰巳午未申酉戌亥'.split('')
+++const EL5: Ohaeng[] = ['목', '화', '토', '금', '수']
+++
+++/** 월지 → 양력 한가운데 날짜 (절기 경계를 피해 가운데로) — 31-measure 와 같은 표 */
+++const SOLAR: Record<string, [number, number]> = {
+++  寅: [2, 20], 卯: [3, 20], 辰: [4, 20], 巳: [5, 20], 午: [6, 20], 未: [7, 20],
+++  申: [8, 20], 酉: [9, 20], 戌: [10, 20], 亥: [11, 20], 子: [12, 20], 丑: [1, 20],
+++}
+++
+++const YANG_STEM = new Set(['甲', '丙', '戊', '庚', '壬'])
+++/** ★음양 «비율» 을 셀 때 — 교재 260쪽 양팔통 사례(甲辰·甲戌·壬寅·庚子)가 子를 양으로 봅니다 */
+++const YANG_BRANCH = new Set(['子', '寅', '辰', '午', '申', '戌'])
+++/** ★십성을 가릴 때 — 교재 48쪽 도표(지지의 본기 천간). 子=癸(음) · 午=丁(음) */
+++const BRANCH_BONGI: Record<string, string> = {
+++  子: '癸', 丑: '己', 寅: '甲', 卯: '乙', 辰: '戊', 巳: '丙',
+++  午: '丁', 未: '己', 申: '庚', 酉: '辛', 戌: '戊', 亥: '壬',
+++}
+++const STEM_EL: Record<string, Ohaeng> = {
+++  甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토',
+++  己: '토', 庚: '금', 辛: '금', 壬: '수', 癸: '수',
+++}
+++
+++const R = (n: number) => Math.floor(Math.random() * n)
+++const pc = (x: number, n: number) => (x / n * 100).toFixed(2) + '%'
+++
+++/** ★60갑자에 «실재하는» 짝만 씁니다 (양간-양지 / 음간-음지) */
+++function gapja(i: number): { stem: string; branch: string } {
+++  return { stem: GAN[i % 10], branch: JI[i % 12] }
+++}
+++
+++// ══════════════════════════════════════════════════════════════
+++//  후보 산식들 — ★이 파일 «안» 에만 있습니다
+++// ══════════════════════════════════════════════════════════════
+++
+++interface Bag {
+++  S: Record<Ohaeng, number>   // 오행 100점
+++  Y: Record<string, number>   // 육친 묶음 점수
+++  yangPt: number; eumPt: number
+++  yangin: number; baekho: number; dohwa: number
+++  jeongJae: number; pyeonJae: number
+++}
+++
+++/** 재료 모으기 — ★엔진을 «부르기만» 합니다 */
+++function gather(saju: Pillar[], sm: number, sd: number, hb: string, useBongi: boolean): Bag {
+++  const r = calcCareerScore(saju, sm, sd, hb)
+++  const S = r.score as Record<Ohaeng, number>
+++  const dayStem = saju.find(p => p.pillar === '일주')?.stem ?? ''
+++  const dayEl = STEM_EL[dayStem] ?? '토'
+++
+++  const Y: Record<string, number> = { 비겁: 0, 식상: 0, 재성: 0, 관성: 0, 인성: 0 }
+++  for (const el of EL5) Y[yukchinOf(dayEl, el)] += S[el] ?? 0
+++
+++  let yang = 0, eum = 0
+++  for (const p of saju) {
+++    if (p.stem && p.stem !== '?') { if (YANG_STEM.has(p.stem)) yang++; else eum++ }
+++    if (p.branch && p.branch !== '?') { if (YANG_BRANCH.has(p.branch)) yang++; else eum++ }
+++  }
+++
+++  const hits = checkSinsal9(saju)
+++  const has = (n: string) => hits.some(h => h.name.includes(n))
+++
+++  // ── 정재/편재 가르기 ──
+++  const dayYang = YANG_STEM.has(dayStem)
+++  let jJ = 0, jP = 0
+++  for (const p of saju) {
+++    // 천간
+++    for (const ch of [p.stem]) {
+++      if (!ch || ch === '?') continue
+++      const el = STEM_EL[ch]; if (!el) continue
+++      if (yukchinOf(dayEl, el) !== '재성') continue
+++      if (YANG_STEM.has(ch) !== dayYang) jJ++; else jP++
+++    }
+++    // ★지지 — 후보B(확정안에 포함)에서만 셉니다. 48쪽 본기 천간으로 봅니다
+++    if (useBongi) {
+++      const ch = p.branch
+++      if (!ch || ch === '?') continue
+++      const bg = BRANCH_BONGI[ch]; if (!bg) continue
+++      const el = STEM_EL[bg]; if (!el) continue
+++      if (yukchinOf(dayEl, el) !== '재성') continue
+++      if (YANG_STEM.has(bg) !== dayYang) jJ++; else jP++
+++    }
+++  }
+++  const tot = Math.max(1, jJ + jP)
+++  return {
+++    S, Y, yangPt: yang * 6, eumPt: eum * 6,
+++    yangin: has('양인') ? 10 : 0, baekho: has('백호') ? 10 : 0, dohwa: has('도화') ? 12 : 0,
+++    jeongJae: (Y['재성'] * jJ) / tot, pyeonJae: (Y['재성'] * jP) / tot,
+++  }
+++}
+++
+++const sum = (a: number[]) => a.reduce((x, y) => x + y, 0)
+++/** 지금 방식 — 바닥 15% 를 깔고 비율을 냅니다 */
+++function pick(L: number, Rr: number, left: string, right: string): string {
+++  const floor = (L + Rr) * 0.15 || 1
+++  return (L + floor) / (L + floor + Rr + floor) >= 0.5 ? left : right
+++}
+++/** ★후보C-1 — 50점 넘는 몫은 «세지 않습니다» (교재 259쪽 「50점 이상은 단점으로 발현」) */
+++const cap = (v: number) => Math.min(v, 50)
+++
+++/**
+++ * 후보0 — ★«옛» 산식 (2026-08-03 이전).
+++ *
+++ *  ⚠️⚠️ 일부러 이 파일 «안» 에 붙박아 두었습니다.
+++ *    sajuMbti.ts 를 부르면, 그 파일이 바뀌는 순간 «잣대가 함께 움직여»
+++ *    무엇이 얼마나 달라졌는지 영영 알 수 없게 됩니다.
+++ *    ★옛 모습은 여기 남겨 둡니다. 지우지 마십시오.
+++ *  ⚠️ 옛 산식은 지지를 안 세었으므로 bagPlain(useBongi=false)을 받습니다.
+++ */
+++function code0(b: Bag): string {
+++  return pick(sum([b.yangPt, b.S['화'], b.S['목'], b.Y['식상'], b.Y['비겁']]),
+++    sum([b.eumPt, b.S['수'], b.S['금'], b.Y['인성']]), 'E', 'I')
+++    + pick(sum([b.Y['재성'], b.Y['관성'], b.S['토']]),
+++      sum([b.Y['식상'], b.Y['인성'], b.S['화']]), 'S', 'N')
+++    + pick(sum([b.S['금'], b.Y['관성'], b.yangin + b.baekho]),
+++      sum([b.S['수'], b.S['목'], b.Y['인성'], b.dohwa]), 'T', 'F')
+++    + pick(sum([b.Y['관성'], b.jeongJae]),
+++      sum([b.Y['비겁'], b.Y['식상'], b.pyeonJae]), 'J', 'P')
+++}
+++
+++/**
+++ * ★확정안 — A(이중계산 풀기) + C-1(50점 뚜껑) + D(근거 없는 셋 빼기)
+++ *
+++ *  ⚠️⚠️ 「층 건너뛰기」가 «핵심» 입니다.
+++ *    A 는 오행 몫·육친 몫·음양 몫을 «따로» 재서 평균 냅니다 (교재 40쪽).
+++ *    그런데 D 로 재료를 빼면 «한쪽에 아무것도 없는 층» 이 생깁니다.
+++ *      예) S축 오행 층 — S 쪽에 土, N 쪽에 ★아무것도 없음
+++ *    그 층을 그대로 세면 «土가 조금만 있어도 언제나 S» 가 됩니다.
+++ *    ⇒ ★대립이 서지 않는 층은 «세지 않습니다».
+++ *    (skip=false 로 두면 어떤 일이 나는지 아래 「확정안-β」로 재 두었습니다)
+++ */
+++function codeFinal(b: Bag, skip: boolean, mean = false): string {
+++  const c = cap
+++  const axis = (
+++    oL: number[], oR: number[], yL: number[], yR: number[], sL: number[], sR: number[],
+++    left: string, right: string,
+++  ) => {
+++    const parts: number[] = []
+++    const layer = (L: number[], Rr: number[]) => {
+++      // ★한쪽에 재료가 «없으면» 대립이 아닙니다 — 그 층은 건너뜁니다
+++      if (skip && (L.length === 0 || Rr.length === 0)) return
+++      // ★mean — 성분 «개수» 가 아니라 «세기» 로 견줍니다.
+++      //   D 로 재료를 빼면 한쪽 성분이 둘, 다른 쪽이 하나가 되어
+++      //   «많은 쪽이 그냥 이기는» 일이 생깁니다. 그것을 막습니다.
+++      const l = mean && L.length ? sum(L) / L.length : sum(L)
+++      const r = mean && Rr.length ? sum(Rr) / Rr.length : sum(Rr)
+++      if (l + r <= 0) return
+++      const f = (l + r) * 0.15
+++      parts.push((l + f) / (l + f + r + f))
+++    }
+++    layer(oL, oR); layer(yL, yR); layer(sL, sR)
+++    const p = parts.length ? sum(parts) / parts.length : 0.5
+++    // ★화면이 「81 : 19」로 «반올림한» 값을 보이므로, 고르는 것도 그 값으로 합니다.
+++    //   ⚠️ p >= 0.5 로 고르면 49.7% 인 분이 화면엔 50 인데 오른쪽으로 갑니다.
+++    //      실측 128/5000(2.56%)이 그 경계에 걸렸습니다.
+++    return Math.round(p * 100) >= 50 ? left : right
+++  }
+++  return axis(
+++    [c(b.S['화']), c(b.S['목'])], [c(b.S['수']), c(b.S['금'])],
+++    [c(b.Y['식상']), c(b.Y['비겁'])], [c(b.Y['인성'])],
+++    [b.yangPt], [b.eumPt], 'E', 'I')
+++    // ★D — S 쪽 관성 · N 쪽 화를 뺐습니다 ⇒ 오행 층이 «한쪽뿐» 이라 건너뜁니다
+++    + axis([c(b.S['토'])], [], [c(b.Y['재성'])], [c(b.Y['식상']), c(b.Y['인성'])], [], [], 'S', 'N')
+++    // ★D — T 쪽 백호를 뺐습니다
+++    + axis([c(b.S['금'])], [c(b.S['수']), c(b.S['목'])],
+++      [c(b.Y['관성'])], [c(b.Y['인성'])], [b.yangin], [b.dohwa], 'T', 'F')
+++    + axis([], [], [c(b.Y['관성']), c(b.jeongJae)],
+++      [c(b.Y['비겁']), c(b.Y['식상']), c(b.pyeonJae)], [], [], 'J', 'P')
+++}
+++
+++/** 후보A 만 — 이중 계산만 풀고 나머지는 지금대로 */
+++function codeA(b: Bag): string {
+++  const axis = (
+++    oL: number[], oR: number[], yL: number[], yR: number[], eL: number, eR: number,
+++    left: string, right: string,
+++  ) => {
+++    const parts: number[] = []
+++    const ratio = (l: number, r: number) => {
+++      if (l + r <= 0) return null
+++      const f = (l + r) * 0.15
+++      return (l + f) / (l + f + r + f)
+++    }
+++    for (const [l, r] of [[sum(oL), sum(oR)], [sum(yL), sum(yR)], [eL, eR]] as Array<[number, number]>) {
+++      const v = ratio(l, r); if (v !== null) parts.push(v)
+++    }
+++    const p = parts.length ? sum(parts) / parts.length : 0.5
+++    return p >= 0.5 ? left : right
+++  }
+++  return axis([b.S['화'], b.S['목']], [b.S['수'], b.S['금']],
+++    [b.Y['식상'], b.Y['비겁']], [b.Y['인성']], b.yangPt, b.eumPt, 'E', 'I')
+++    + axis([b.S['토']], [b.S['화']], [b.Y['재성'], b.Y['관성']], [b.Y['식상'], b.Y['인성']], 0, 0, 'S', 'N')
+++    + axis([b.S['금']], [b.S['수'], b.S['목']], [b.Y['관성']], [b.Y['인성']],
+++      b.yangin + b.baekho, b.dohwa, 'T', 'F')
+++    + axis([], [], [b.Y['관성'], b.jeongJae], [b.Y['비겁'], b.Y['식상'], b.pyeonJae], 0, 0, 'J', 'P')
+++}
+++
+++/** 후보C1 만 — 지금 산식에 50점 뚜껑만 */
+++function codeC1(b: Bag): string {
+++  const c = cap
+++  return pick(sum([b.yangPt, c(b.S['화']), c(b.S['목']), c(b.Y['식상']), c(b.Y['비겁'])]),
+++    sum([b.eumPt, c(b.S['수']), c(b.S['금']), c(b.Y['인성'])]), 'E', 'I')
+++    + pick(sum([c(b.Y['재성']), c(b.Y['관성']), c(b.S['토'])]),
+++      sum([c(b.Y['식상']), c(b.Y['인성']), c(b.S['화'])]), 'S', 'N')
+++    + pick(sum([c(b.S['금']), c(b.Y['관성']), b.yangin + b.baekho]),
+++      sum([c(b.S['수']), c(b.S['목']), c(b.Y['인성']), b.dohwa]), 'T', 'F')
+++    + pick(sum([c(b.Y['관성']), c(b.jeongJae)]),
+++      sum([c(b.Y['비겁']), c(b.Y['식상']), c(b.pyeonJae)]), 'J', 'P')
+++}
+++
+++/** 후보D 만 — 근거 없는 셋만 빼고 나머지는 지금대로 */
+++function codeD(b: Bag): string {
+++  return pick(sum([b.yangPt, b.S['화'], b.S['목'], b.Y['식상'], b.Y['비겁']]),
+++    sum([b.eumPt, b.S['수'], b.S['금'], b.Y['인성']]), 'E', 'I')
+++    + pick(sum([b.Y['재성'], b.S['토']]), sum([b.Y['식상'], b.Y['인성']]), 'S', 'N')
+++    + pick(sum([b.S['금'], b.Y['관성'], b.yangin]),
+++      sum([b.S['수'], b.S['목'], b.Y['인성'], b.dohwa]), 'T', 'F')
+++    + pick(sum([b.Y['관성'], b.jeongJae]),
+++      sum([b.Y['비겁'], b.Y['식상'], b.pyeonJae]), 'J', 'P')
+++}
+++
+++// ══════════════════════════════════════════════════════════════
+++
+++const N = Number(process.env.N ?? 5000)
+++const CANDS = ['후보0 (지금)', '후보A 이중계산', '후보C1 50점뚜껑', '후보D 셋빼기', '★확정 A+C1+D', '확정안-β 층안건넘', '★확정안-γ 세기평균']
+++const dist: Array<Record<string, number>> = CANDS.map(() => ({}))
+++const flip = [0, 0, 0, 0, 0, 0, 0]
+++let mismatch = 0
+++const axisFlip = CANDS.map(() => [0, 0, 0, 0])
+++
+++for (let i = 0; i < N; i++) {
+++  const idx = [R(60), R(60), R(60), R(60)]
+++  const names = ['년주', '월주', '일주', '시주']
+++  const saju: Pillar[] = idx.map((v, k) => ({ pillar: names[k], ...gapja(v) }))
+++  const mb = saju[1].branch, hb = saju[3].branch
+++  const [sm, sd] = SOLAR[mb]
+++
+++  const bagPlain = gather(saju, sm, sd, hb, false)
+++  const bagBongi = gather(saju, sm, sd, hb, true)
+++  const base = code0(bagPlain)
+++  // ★맞대보기 — «실제 파일» 이 γ 와 같은 답을 내는가
+++  if (calcSajuMbti(saju, sm, sd, hb).code !== codeFinal(bagBongi, true, true)) mismatch++
+++
+++  const codes = [base, codeA(bagPlain), codeC1(bagPlain), codeD(bagPlain),
+++    codeFinal(bagBongi, true), codeFinal(bagBongi, false),
+++    codeFinal(bagBongi, true, true)]
+++  codes.forEach((c, k) => {
+++    dist[k][c] = (dist[k][c] ?? 0) + 1
+++    if (k > 0) {
+++      if (c !== base) flip[k]++
+++      for (let a = 0; a < 4; a++) if (c[a] !== base[a]) axisFlip[k][a]++
+++    }
+++  })
+++}
+++
+++const ALL16 = ['ISTJ', 'ISFJ', 'INFJ', 'INTJ', 'ISTP', 'ISFP', 'INFP', 'INTP',
+++  'ESTP', 'ESFP', 'ENFP', 'ENTP', 'ESTJ', 'ESFJ', 'ENFJ', 'ENTJ']
+++
+++console.log(`\n━━ 사주 MBTI 산식 자(尺) — 표본 ${N.toLocaleString()}벌 ━━`)
+++console.log('⚠️ 임의로 지은 사주입니다(60갑자 실재 짝). 손님 기록이 아닙니다.\n')
+++
+++CANDS.forEach((name, k) => {
+++  const d = dist[k]
+++  const shown = ALL16.filter(t => d[t])
+++  const top = ALL16.map(t => [t, d[t] ?? 0] as const).sort((a, b) => b[1] - a[1])
+++  console.log(`── ${name}`)
+++  console.log(`   나온 유형        ${shown.length} / 16`)
+++  console.log(`   가장 많은 유형    ${top[0][0]} ${pc(top[0][1], N)}`)
+++  console.log(`   위 셋 합          ${pc(top[0][1] + top[1][1] + top[2][1], N)}`)
+++  if (k > 0) {
+++    console.log(`   ★유형 뒤집힘      ${pc(flip[k], N)}`)
+++    console.log(`   축별 뒤집힘       E/I ${pc(axisFlip[k][0], N)} · S/N ${pc(axisFlip[k][1], N)}`
+++      + ` · T/F ${pc(axisFlip[k][2], N)} · J/P ${pc(axisFlip[k][3], N)}`)
+++  }
+++  console.log('')
+++})
+++
+++console.log(`━━ ★맞대보기 — 실제 sajuMbti.ts 와 γ 가 «같은 답» 인가 ━━`)
+++console.log(`   어긋난 건수  ${mismatch} / ${N}  ${mismatch === 0 ? '✅ 같습니다' : '🔴 다릅니다'}\n`)
+++
+++console.log('━━ 16유형 분포 (%) ━━')
+++console.log('유형     ' + CANDS.map(c => c.slice(0, 8).padStart(9)).join(''))
+++for (const t of ALL16) {
+++  console.log(t.padEnd(9) + CANDS.map((_, k) => pc(dist[k][t] ?? 0, N).padStart(9)).join(''))
+++}
+++console.log('')
++diff --git a/README-44BU-27-INSTALL.md b/README-44BU-27-INSTALL.md
++new file mode 100644
++index 0000000..d2c615c
++--- /dev/null
+++++ b/README-44BU-27-INSTALL.md
++@@ -0,0 +1,695 @@
+++# 44부 27~33차 — 사주 MBTI 산식을 «교재 대조로» 고치고, 화면 숫자를 «말» 로
+++
+++```
+++기준 커밋   cc2b75f  (44부 26차까지 올라간 상태)
+++검사        1,785 → ★1,878건 · 실패 0   (오행·용신 그물 349 → 442 · ㊻~(51) 신설)
+++타입        npx tsc --noEmit 통과
+++eslint      오류 82 · 경고 138  (기준선 그대로)
+++변경        수정 8 · 신규 2 = 10 파일
+++⚠️ 빌드     ★제 쪽에서 «확인 못 했습니다» — 구글 폰트가 막힌 자리 (25·26차와 같음)
+++```
+++
+++## 넣는 법
+++
+++```bash
+++cd myjae
+++unzip -o ../myjae-44bu-27-20260803.zip
+++git status --porcelain      # ★ M 세 줄 + ?? 두 줄
+++npm run verify              # 실패 0 · 오행·용신 442
+++npx tsc --noEmit
+++npm run measure:mbti        # ★맞대보기 「어긋난 건수 0 / 5000 ✅」이 나와야 합니다
+++★npm run build
+++git add -A
+++git commit -m "사주 MBTI — 산식 교재 대조 · 카드를 표에서 읽는 글로 (44부 27~33차)"
+++git push
+++```
+++
+++---
+++
+++# ⚠️ 먼저 — 제가 바로잡은 잘못
+++
+++앞선 보고에서 **「ENFP 21.4% · 16유형 중 9개」**라는 숫자를 적었습니다.
+++**★그것은 표 모양을 보이려고 «제가 지어낸» 숫자였습니다.** 측정한 적이 없었습니다.
+++44부 교훈 1-4 를 제가 또 어겼습니다. 대표님께 그대로 아뢰고 바로잡았습니다.
+++
+++★**아래 숫자는 전부 실제로 잰 것입니다.** `npm run measure:mbti` 로 다시 재실 수 있습니다.
+++
+++---
+++
+++# 무엇이 문제였나 — 교재 열두 번 대조
+++
+++노트북LM 에 열한 번 물어 네 축 스물세 성분을 교재와 맞대어 보았습니다.
+++
+++```
+++축     근거 있음                          🔴근거 못 찾음
+++────  ────────────────────────────────  ──────────────────
+++E↔I   양·목화/음·금수 260쪽 · 비겁 활동성   —
+++S↔N   재성 111 · 식상 109 · 인성 115·130    ★관성 · ★화
+++T↔F   금 23·25 · 목 20 · 양인 96 · 도화 94  ★백호
+++J↔P   관성 112·113 · 정재 111·43 · 식상 124 —
+++```
+++
+++그리고 **뼈대 셋이 교재와 어긋나 있었습니다.**
+++
+++```
+++🔴 40쪽  "오행과 육친을 «분리해서» 해석해야 하는데 … 오류가 발생한다"
+++         ⇒ 지금은 한 줄에 «더하고» 있었습니다. 게다가 육친 점수는 오행 점수를
+++           그대로 부은 것이라, ★같은 55점이 한 축에 «두 번» 실렸습니다.
+++🔴 259쪽 "점수가 50점 이상이 되면 … 장점보다는 단점으로 발현이 된다"
+++         ⇒ 지금은 «클수록 더 세게 밀기만» 했습니다.
+++🔴 36·159쪽 "지지는 현실적·실질적(60~70%)"
+++         ⇒ 정재·편재를 가를 때 지지를 ★«한 글자도» 세지 않았습니다.
+++```
+++
+++---
+++
+++# ★무엇을 했나
+++
+++## A — 오행 몫 · 육친 몫 · 음양 몫을 «층으로» 갈랐습니다 (40쪽)
+++
+++```
+++전   E = 양의기운 + 화 + 목 + 식상 + 비겁      ← 한 줄에 섞여 있었습니다
+++★후  오행 층   화·목  ↔  수·금
+++     육친 층   식상·비겁  ↔  인성
+++     음양 층   양의기운  ↔  음의기운
+++     ⇒ ★세 층을 «따로» 재서 평균 냅니다. 이중 계산이 사라집니다.
+++```
+++
+++## C-1 — 50점 넘는 몫은 «세지 않습니다» (259·25쪽)
+++
+++```
+++const cap = (v: number) => Math.min(v, 50)
+++```
+++
+++⚠️ 교재는 「단점이 된다」고만 하지 **«반대 성향이 된다» 고 하지 않습니다.**
+++그래서 **뒤집지 않고 멈추기만** 합니다. 뒤집는 것은 우리 발명이 됩니다.
+++⚠️ 실효는 작습니다(측정 1.68%). **그래도 교재 근거가 가장 분명한 자리**입니다.
+++
+++## D — 교재에서 «못 찾은» 셋을 뺐습니다
+++
+++```
+++S쪽 관성   「현실적」이 관성에 없습니다 (144쪽 「현실 감각」은 ★«정인격» 의 말)
+++N쪽 화     화는 "열정·표현·예의·행동"(21·25쪽). 상상력·직관이 아닙니다
+++T쪽 백호   95쪽은 «성격» 을 말하지 않습니다 ("큰 사주·활동을 크게" 뿐)
+++```
+++
+++⚠️⚠️ **「교재에 없다」가 아니라 「확인한 범위에서 못 찾았다」입니다.**
+++노트북LM 소스에 **184~257쪽 대부분이 빠져 있습니다.** 코드 주석에 그렇게 적었고,
+++**쪽이 확인되면 되살리라**고 일러 두었습니다.
+++
+++## ★γ — 층 안에서 «합» 이 아니라 «세기 평균» 으로 견줍니다
+++
+++🔴 **지시하신 A+C-1+D 를 그대로 넣으니 «더 나빠졌습니다».**
+++
+++```
+++D 로 화를 빼자 S/N 의 오행 층이 「토 ↔ 아무것도 없음」이 되고,
+++육친 층은 「재성 ↔ 식상+인성」으로 ★1 대 2 가 되었습니다.
+++⇒ ★성분이 «많은 쪽» 이 그냥 이깁니다.
+++[실측] ENFP 24.86% → ★29.40% 로 «더 몰렸습니다»
+++```
+++
+++★그래서 **층 안에서 성분 하나당 평균으로** 견줍니다. 재료를 빼도 축이 기울지 않습니다.
+++
+++```
+++[실측] ENFP 24.86% → ★16.74%
+++```
+++
+++⚠️⚠️ **γ 는 교재에 없습니다. 우리가 정한 것입니다.** (2026-08-03 대표님 승인)
+++
+++## ★층 건너뛰기 — 한쪽이 빈 층은 «세지 않습니다»
+++
+++```
+++「토 ↔ 아무것도 없음」을 그대로 세면 «토가 조금만 있어도 언제나 S» 가 됩니다.
+++[실측] 그렇게 하면 ESFP 가 ★36.32% 까지 몰립니다 (확정안-β)
+++```
+++
+++⚠️⚠️ **그 바람에 토(45쪽 "실질적")가 산식에서 «빠졌습니다».**
+++교재 근거가 있는 재료인데 자리를 잃은 것입니다. **숨기지 않고 코드에 적어 두었습니다.**
+++★184~257쪽에서 N 쪽 오행 재료가 나오면 층을 되살리고 토를 넣으십시오.
+++
+++## B — 정재·편재에 «지지도» 넣었습니다 (36·159·259쪽)
+++
+++```
+++전   천간 넉 자만. 지지는 «한 글자도» 안 셈
+++★후  여덟 자를 다 셈. 지지는 ★48쪽 «본기 천간» 으로 봄
+++       子=癸(음) · 午=丁(음) …
+++     근거: ★96쪽이 壬 일간의 양인(겁재)을 子라 합니다.
+++           壬(양)의 겁재는 «음» 이라야 하므로 子를 癸(음)로 본 것입니다.
+++```
+++
+++### ⚠️⚠️ 한 파일에 지지 음양표가 «둘» 입니다 — 합치지 마십시오
+++
+++```
+++음양 «비율» 을 셀 때   YANG_BRANCH (子=★양)
+++   근거: 260쪽 사례 ★甲辰·甲戌·壬寅·庚子 를 «양팔통» 이라 부릅니다.
+++        ★子가 있는데도 양팔통이라 했으므로, 비율을 셀 때는 子가 양입니다.
+++십성 을 가릴 때        BRANCH_BONGI (子=癸 ★음)
+++   근거: 48쪽 도표 · 96쪽 양인 壬→子
+++
+++★쓰임이 다르면 잣대도 다릅니다. (지장간 표를 «일부러» 둘 둔 것과 같은 결)
+++⚠️ 코드에도 「하나로 합치지 마십시오」라 적었고, ★검사 ㊻ 가 둘 다 살아 있는지 봅니다.
+++```
+++
+++---
+++
+++# ★실측 — 표본 5,000벌
+++
+++```
+++                        가장 많은 유형   위 셋 합   나온 유형   유형 뒤집힘
+++후보0 (옛 산식)          ENFP 24.86%     48.56%     16/16         —
+++후보A 이중계산만          ENFP 19.76%       …        16/16      31.4%
+++후보C-1 50점 뚜껑만       ENFP 24.82%       …        16/16       1.7%
+++후보D 셋 빼기만           ENFP 22.68%     55.40%     16/16      23.7%
+++🔴A+C-1+D («합» 으로)     ENFP 29.40%     56.58%     16/16      44.6%   ← ★더 나빠짐
+++🔴확정안-β (층 안 건넘)    ESFP 36.32%     65.04%     16/16      62.2%   ← 최악
+++★확정 A+C-1+D+γ          ENFP ★16.74%    ★39.76%    16/16      52.4%
+++```
+++
+++## ★잘 안 나오던 유형이 살아났습니다
+++
+++```
+++유형    옛 산식      ★새 산식      변화
+++INTJ    0.60%   →   3.36%      ★5.6배
+++INFJ    1.50%   →   4.58%      ★3.1배
+++INTP    1.34%   →   2.28%
+++ENTJ    1.62%   →   3.54%
+++ENFJ    1.24%   →   2.58%
+++ENFP   24.86%   →  16.74%      ★쏠림이 풀렸습니다
+++ESFP   13.40%   →  10.08%
+++```
+++
+++⚠️ 「16 중 16」은 옛 산식도 그랬습니다. 다만 **0.6% 짜리는 «사실상 안 나오는» 것**입니다.
+++INTJ 가 다섯 배 넘게 늘어난 것이 이번 손질의 알맹이입니다.
+++
+++## ⚠️ 정직하게 — 유형 뒤집힘 52.36%
+++
+++★**두 분 중 한 분의 네 글자가 바뀝니다.** 이미 결과를 보신 손님이 다시 보면 다른 유형이 나옵니다.
+++⚠️ 손님께 알릴지 대표님이 정해 주십시오. 화면에는 「재미로 보는 참고」가 이미 적혀 있습니다.
+++
+++## ⚠️ 표본의 한계
+++
+++```
+++임의로 지은 사주 5,000벌 (60갑자 실재 짝) — ★손님 기록을 쓰지 않았습니다
+++⚠️ 실제 출생 분포와는 다릅니다. 절대값이 아니라 «옛것과 새것의 차이» 로 읽으십시오
+++```
+++
+++---
+++
+++# ⚠️ 손댄 범위 — 지시하신 대로
+++
+++```
+++✅ lib/saju/career/sajuMbti.ts     ★산식만
+++✅ 32-verify-hour-convert.ts       ㊻ 그물 신설
+++✅ package.json                    measure:mbti 한 줄
+++✅ 34-measure-saju-mbti.ts         신설 (자)
+++
+++⛔ 건드리지 «않은» 것 — 부르기만 합니다
+++   careerScore · yukchinOf · checkSinsal9 · simsanOhaeng · yongsinNew ·
+++   dayun(지지 음양표 子=음) · roleFit · coupleFilterV1 · couple/* …
+++★검사 ㊻ 가 「다른 엔진은 부르기만 하는가」를 봅니다.
+++```
+++
+++## ★자(尺)에 «옛 산식» 을 붙박아 두었습니다
+++
+++```
+++34-measure-saju-mbti.ts 의 code0() 은 ★옛 산식을 그대로 옮긴 것입니다.
+++⚠️⚠️ sajuMbti.ts 를 부르게 하면, 그 파일이 바뀌는 순간 «잣대가 함께 움직여»
+++   무엇이 얼마나 달라졌는지 영영 알 수 없게 됩니다. ★지우지 마십시오.
+++
+++★그리고 자가 «실제 파일과 같은 답인지» 5,000벌로 맞대어 봅니다 —
+++   「어긋난 건수 0 / 5000 ✅ 같습니다」
+++   ⚠️ 여기서 어긋나면 산식과 자가 갈라진 것입니다. 반드시 맞추십시오.
+++```
+++
+++⚠️ 맞대어 보다가 결함 하나를 잡았습니다 — **반올림 경계**입니다.
+++화면은 「81 : 19」로 **반올림한** 값을 보이는데 고르는 것은 반올림 «전» 값이라,
+++**49.7% 인 분이 화면엔 50 인데 오른쪽으로 가고 있었습니다**(5,000 중 128, 2.56%).
+++★화면과 같은 값으로 고르도록 맞췄습니다.
+++
+++---
+++
+++# ⬜ 배포 후 실기 확인
+++
+++```
+++□ ★진로적성 결과 → 「사주로 본 성향」 카드가 그려지는지
+++□ ★네 축 막대와 아래 근거 한 줄이 나오는지
+++□ ⚠️ 「양인·백호」가 아니라 ★「양인」으로 나오는지 (백호를 뺐습니다)
+++□ ⚠️ S/N 줄 근거에 ★「관성」·「화」가 «없는지»
+++□ ★실제 MBTI 를 넣었을 때 견주기 카드가 그대로 나오는지
+++□ 「재미로 보는 참고예요」 문구가 그대로 있는지
+++```
+++
+++---
+++
+++# 🔴 남은 일 · 여쭐 것
+++
+++```
+++□ 🔴 노트북LM 소스에 ★184~257쪽 채우기
+++   ⇒ 관성=현실적 · 화=상상력 · 백호의 성격이 «거기 있을 수» 있습니다.
+++     나오면 D 로 뺀 셋을 되살리고, 토가 빠진 S/N 오행 층도 되살립니다.
+++□ 교재 사진 ★27·40·259쪽 — 「4개 이상 / 50점 이상 = 과다」 문턱
+++   ⇒ 인수인계서 6-5장에 「교재에 없음」이라 적혀 있는데 ★쪽수까지 나왔습니다.
+++   ⚠️ simsanOhaeng.ts 는 «손대지 않습니다». 근거만 적어 둘 것입니다.
+++□ 🔴 「"요즘 어때, 괜찮아?" 중복」 — step8Timeline.ts:235
+++□ 「六 대화와 역할」 짓기 (step6Roles)
+++□ ⚠️ 유형 뒤집힘 52.36% — 이미 보신 손님께 알릴지 여쭙습니다
+++```
+++
+++---
+++
+++# ★28차 — 화면의 숫자를 «말» 로 바꿨습니다
+++
+++## 🔴 무엇이 문제였나 — 대표님이 짚어 주셨습니다
+++
+++```
+++「이 표를 고객이 어떻게 보는거야? 나도 헷갈리는데」
+++```
+++
+++화면 코드를 열어 보니 넷이 걸렸습니다.
+++
+++```
+++🔴 ①  「81 : 19」가 «무엇의 비율인지» 화면 어디에도 없습니다
+++🔴 ②  아래 근거를 아무리 더해도 그 값이 «나오지 않습니다»
+++        목 55 · 비겁 55 · 양의 기운 36 → 더하면 146. 그런데 위에는 81 : 19
+++        (바닥 15% · 큰 것 셋만 보이기 · ★27차의 층별 평균 — 셋 다 설명이 없습니다)
+++🔴 ③  「55」가 무슨 단위인지 모릅니다 (오행 100점인데 화면엔 그냥 55)
+++🔴 ④  ★「목 55 · 비겁 55」— 일간이 목이면 늘 같은 수가 나란히 찍혀 «오류로 보입니다»
+++```
+++
+++⚠️ **27차가 이것을 더 나쁘게 만들었습니다.** 층으로 나눠 평균을 내니 아래 숫자와 위 비율이 더 멀어졌습니다. ★제가 산식만 보고 화면을 안 본 탓입니다 (44부 교훈 1-3).
+++
+++## ★어떻게 바꿨나
+++
+++```
+++전   기운이 향하는 곳                    81 : 19
+++     E ████████████████░░░░ I
+++     목 55 · 비겁 55 · 양의 기운 36
+++
+++★후  기운이 향하는 곳                조금 기울어요
+++     E ████████████████░░░░ I
+++     E 쪽 — 양(陽) · 목(木) · 주체성
+++```
+++
+++```
+++기울기   |50%에서 얼마나| 로 넷 —  ≤5 반반에 가까워요 · ≤15 조금 기울어요
+++                                  ≤25 뚜렷해요 · 그 위 아주 뚜렷해요
+++         ⚠️ 「반반」 잣대(5)는 result.balanced(45~55%)와 ★같습니다.
+++            두 곳이 다르면 「반반」이라 써 놓고 아래엔 안 그렇게 나오는 날이 옵니다.
+++재료     ★명리 말을 손님 말로 — 비겁→주체성 · 식상→표현력 · 재성→현실 감각
+++                              관성→책임감 · 인성→사고력 · 정재→꼼꼼함
+++                              편재→판을 읽는 힘 · 양인→결단 · 도화→매력
+++겹침     ★같은 기운을 두 번 말하지 않습니다 (목=비겁인 분)
+++```
+++
+++⚠️⚠️ **「지운」 것이 아니라 «감춘» 것입니다** — `leftPct`(막대)와 `leftScore`·`rightScore` 는 그대로 넘어갑니다. 되살리려면 대표님께 여쭙겠습니다. **44부 21차에 별점을 걷어낸 것과 같은 결**입니다.
+++
+++★그리고 **막대와 「재미로 보는 참고예요」는 그대로 둡니다.**
+++
+++## ⚠️ 찍어 보고 두 번 고쳤습니다
+++
+++말로 바꾼 뒤 실제로 나갈 글을 찍어 보니 —
+++
+++```
+++🔴 「기운이 도드라집니다」가 네 줄 모두 되풀이 — 지겹습니다
+++🔴 「양(陽)의 기운 기운이 도드라집니다」 — ★말이 겹칩니다
+++⇒ 꼬리말을 걷어내고 이름만 잇도록 고쳤습니다
+++```
+++
+++★**짐작으로 넘기지 않고 찍어 본 것이 잡았습니다.**
+++
+++## ⬜ 28차 실기 확인
+++
+++```
+++□ ★진로적성 결과 → 「사주로 본 성향」 카드에 «숫자가 하나도 없는지»
+++   ⚠️ 「81 : 19」도, 「목 55」도 «안 보여야» 합니다
+++□ ★대신 「조금 기울어요 / 뚜렷해요 / 아주 뚜렷해요 / 반반에 가까워요」가 뜨는지
+++□ ★근거 줄이 「E 쪽 — 양(陽) · 목(木) · 주체성」처럼 나오는지
+++□ ⚠️ 「비겁」·「식상」 같은 명리 말이 «안 나오는지»
+++□ ★막대는 그대로 있는지
+++□ 「재미로 보는 참고예요」가 그대로 있는지
+++```
+++
+++---
+++
+++# ★29차 — 표 아래 「어떤 결인가요」 해설
+++
+++## 무엇을 넣었나
+++
+++28차에서 숫자를 걷어내고 나니 **「E · N · F · P」 네 글자만 남아**, 그것이 무슨 뜻인지
+++카드 안에서 알 길이 없었습니다. 대표님 지시로 **표 아래에 해설 네 줄**을 붙였습니다.
+++
+++```
+++┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+++어떤 결인가요
+++ [E] 사람 사이에서 기운이 차오릅니다. 회의·발표·현장이 에너지원입니다.
+++ [N] 아직 없는 그림을 먼저 봅니다. 새 판을 여는 자리에서 강합니다.
+++ [T] 기준과 논리로 자릅니다. 결정을 미루지 않아 일이 굴러갑니다.
+++ [J] 정해 두고 가야 편합니다. 마감과 계획이 곧 힘입니다.
+++```
+++
+++## ★새로 짓지 «않았습니다» (교훈 E — 만들기 전에 grep)
+++
+++그 여덟 줄은 **이미 있었습니다** — `buildCareerMbtiPrompt.ts` 의 `AXIS_WORK`.
+++프리미엄 통변이 쓰고 있던 것입니다.
+++
+++```
+++⚠️⚠️ 다만 그 자리에 두면 화면이 쓸 수 없어, 두 벌로 적을 뻔했습니다.
+++★career/sajuMbti.ts 로 «옮겨» 한 곳에 두고, 화면·프롬프트가 «가져다» 씁니다.
+++   두 벌이 되면 «다른 말을 하는 날» 이 옵니다. 검사 ㊽ 가 그것을 봅니다.
+++```
+++
+++## ⚠️ 겹칩니다 — 알고 두었습니다
+++
+++프리미엄 통변 **2번 「핵심 성향 진단」**도 같은 여덟 줄을 씁니다.
+++카드에도 나오고 통변에도 나오므로 **손님이 같은 말을 두 번 읽습니다.**
+++★**2026-08-03 대표님 지시로 «그대로 두었습니다».**
+++
+++⚠️ 거슬리면 `buildCareerMbtiPrompt.ts` 의 '핵심 성향 진단' 블록에서
+++`...mbti.axes.map(a => ...AXIS_WORK...)` 한 줄만 빼면 됩니다. 한 줄입니다.
+++
+++## 🔴 함께 잡은 결함 — 재료에 「81:19」가 남아 있었습니다
+++
+++```
+++buildCareerMbtiPrompt.ts : 143  (전)
+++  `${a.left}/${a.right} — ${a.pick} (${a.leftPct}:${100 - a.leftPct}) · 근거 …`
+++                                     ★AI 에게 그 숫자를 그대로 넘기고 있었습니다
+++```
+++
+++⚠️⚠️ **화면에서만 걷어내고 재료에 남겨 두면, AI 가 「81 대 19 로 아주 뚜렷합니다」로
+++풀어 버립니다.** 44부 3-3장에서 별점을 «세 곳 중 두 곳» 만 껐다가 겪은 일과 **같은 자리**입니다.
+++그리고 그 숫자는 **손님이 아무리 더해도 맞지 않습니다**(바닥 15%·층별 평균).
+++
+++★걷어냈고, **검사 ㊽ 가 「재료에도 leftPct 가 없는가」를 봅니다.**
+++
+++## ⬜ 29차 실기 확인
+++
+++```
+++□ ★표 아래에 「어떤 결인가요」와 네 줄이 보이는지
+++□ ★네 글자 배지([E]·[N]·[T]·[J])가 카드 위 코드와 «같은지»
+++□ ★점선으로 위 표와 갈라져 있는지
+++□ ⚠️ 프리미엄 통변에 「81 대 19」 같은 말이 «없는지»  ← ★가장 중요합니다
+++□ ⚠️ 통변 1번 대목이 그대로 나오는지 (숫자만 빠졌습니다)
+++```
+++
+++---
+++
+++# 🔴 30차 — [한줄]·[태그]·[실천] 이 «글자 그대로» 나가고 있었습니다
+++
+++## 무엇이 문제였나 — 대표님 사진
+++
+++```
+++사주로 본 성향 — 네 축 입체 분석
+++[한줄] 상황에 따라 달리 쓰는, 유연한 주체입니다.      ← ★손님 화면에 이렇게 나갑니다
+++[태그] 유연한 결 · 현장형 · 사람 중심
+++…
+++[실천] 이번 주 회의나 현장에서 …
+++```
+++
+++## ★표시 자체는 «일부러» 넣은 것입니다
+++
+++```
+++buildCareerMbtiPrompt.ts : 274
+++  · [한줄]·[태그]·[실천] 은 **대괄호까지 그대로** 적으세요.
+++    ★화면이 그것으로 갈라 그립니다.
+++```
+++
+++⇒ **문제는 «화면이 갈라 그리지 않은» 것**입니다.
+++
+++## 🔴 까닭 — 파서가 두 곳에 복사되고, 세 번째는 «없었습니다»
+++
+++```
+++TongbyeonView.tsx        (사주풀이)   ─┐
+++ExamJudgeCard.tsx        (합격운)     ─┤ ★한 글자도 다르지 않은 «복사본»
+++career-result/page.tsx   (진로적성)   ─┘ 🔴«없었습니다»
+++```
+++
+++진로적성은 본문을 `whiteSpace:'pre-wrap'` 으로 **통째로** 찍고 있었습니다.
+++
+++## ★고친 법 — 세 벌로 늘리지 «않았습니다»
+++
+++```
+++신설  lib/saju/premium/splitCardText.ts   ★파서 «한 곳»
+++      TongbyeonView · ExamJudgeCard 는 제 벌을 버리고 «가져다» 씁니다
+++      career-result 는 ★새로 갈라 그립니다
+++```
+++
+++```
+++전   [한줄] 상황에 따라 달리 쓰는, 유연한 주체입니다.
+++     [태그] 유연한 결 · 현장형 · 사람 중심
+++     류도이 씨의 사주는…
+++     [실천] 이번 주 회의나 현장에서…
+++
+++★후  상황에 따라 달리 쓰는, 유연한 주체입니다.        ← 보라색 굵은 한 줄
+++     (유연한 결) (현장형) (사람 중심)                 ← 알약 태그
+++     류도이 씨의 사주는…                              ← 문단으로 나눠
+++     ✅ 이번 주 회의나 현장에서…                       ← 강조 상자
+++```
+++
+++⚠️ **표시가 «없는» 옛 통변은 예전처럼 통짜로 그려집니다. 안 깨집니다.**
+++★사진의 글로 직접 시험해 보았습니다 — 한줄·태그 셋·실천이 모두 갈리고,
+++**본문에 표시가 하나도 남지 않았습니다.**
+++
+++## ⬜ 30차 실기 확인
+++
+++```
+++□ 🔴★진로적성 프리미엄 리포트에 「[한줄]」·「[태그]」·「[실천]」이 «안 보이는지»
+++□ ★맨 위에 보라색 한 줄, 그 아래 알약 태그가 뜨는지
+++□ ★「실천」이 ✅ 강조 상자로 따로 빠지는지
+++□ ⚠️ 사주풀이·합격운 화면이 «그대로» 인지 (파서를 옮겼을 뿐입니다)
+++□ ⚠️ 옛 기록(표시 없는 통변)을 열었을 때 안 깨지는지
+++```
+++
+++---
+++
+++# ★31차 — MBTI 를 «안 넣으면 조르지 않습니다»
+++
+++## 무엇이 문제였나
+++
+++```
+++결과 화면   「실제 MBTI 를 넣으시면 … [넣고 다시 보기]」
+++⚠️ ★모르는 분에겐 «막다른 길» 이었습니다 —
+++   눌러서 돌아가 봐야 콤보에 「잘 모름」밖에 고를 것이 없었습니다.
+++입력 화면   「검사하기」는 ★콤보를 «열어서» 「잘 모름」을 골라야 나타났습니다.
+++   ⇒ 닫힌 채로는 «검사» 라는 말이 아예 안 보입니다. (대표님 사진)
+++```
+++
+++## ★고친 넷
+++
+++```
+++① 입력 화면   콤보 라벨 옆에 「모르면 검사하기 ↗」를 ★«늘» 보이게
+++              ⚠️ 링크(TEST_URL)·안내 상자는 «이미 있던 것» 을 씁니다. 새로 짓지 않았습니다
+++② 결과 화면   안 넣으셨으면 ★권유 상자를 «통째로» 뺐습니다
+++              ⇒ 카드가 「어떤 결인가요」로 깔끔히 끝납니다
+++③ 통변 재료   ★같은 권유 문장을 «재료에서도» 뺐습니다
+++              ⚠️ 화면에서만 빼면 AI 글에서 다시 튀어나옵니다 (44부 3-3 별점 교훈)
+++④ 제목        넣은 분   ★「내 MBTI에 대비해 본 나의 사주명리」
+++              안 넣은 분  「사주로 본 성향」  (없는 것을 있다고 하지 않습니다)
+++```
+++
+++⚠️ ①이 「몰라서 못 넣는 분」을 줄이므로, ②로 비는 자리는 **정말 넣기 싫은 분**만 남습니다. 둘이 서로를 받쳐 줍니다.
+++⚠️ `onWantInput` 은 **남겨 두었습니다** — 되살릴 때 필요합니다.
+++
+++## 🔴 함께 잡은 것 — 「겹칩니다」가 «뒤집혀» 읽혔습니다
+++
+++```
+++전   네 결 가운데 3가지가 겹칩니다
+++     나서는 결에서 타고난 쪽과 지금 쪽이 갈립니다
+++     ⇒ ★겹치는 셋의 «이름이 없어», 뒤에 나온 이름이 «겹치는» 것으로 읽힙니다
+++```
+++
+++★**실제로 겪었습니다** — 대표님이 이 화면을 다른 AI 에게 읽히셨더니
+++**「E/I와 S/N 두 가지가 겹쳐서 나타납니다」**라고 **정반대로** 풀었습니다.
+++그 둘은 «갈리는» 결이었습니다. **AI 가 헷갈리면 손님은 더합니다.**
+++
+++```
+++★후  겹치는 결 3가지 · 갈리는 결 1가지
+++     보는 결 · 고르는 결 · 맺는 결은 타고난 대로 쓰고 계십니다. …
+++     나서는 결에서는 타고난 쪽과 지금 쪽이 갈립니다. …
+++     ⇒ ★양쪽 «이름을 둘 다» 대어 뒤집힐 자리를 없앴습니다
+++```
+++
+++⚠️ 찍어 보고 두 번 더 고쳤습니다.
+++
+++```
+++🔴 「보는 결과 고르는 결과 맺는 결」  → ★"결과(結果)"로 읽힙니다. 가운뎃점으로 이었습니다
+++🔴 「…맺는 결은(는)」               → ★조사가 그대로 나갔습니다. lib/saju/josa.ts 를 씁니다
+++   ⚠️ 그 파일 머리말에 「진로적성에서도 "토(土)이 없어요" 가 나왔다」고 적혀 있습니다. 같은 잘못입니다
+++```
+++
+++★네 갈래(0·1·3·4가지 겹침)를 모두 찍어 확인했습니다.
+++
+++## ⬜ 31차 실기 확인
+++
+++```
+++□ ★진로적성 «입력» 화면 — MBTI 라벨 오른쪽에 「모르면 검사하기 ↗」가 보이는지
+++□ ★눌러서 새 창으로 검사 사이트가 열리는지
+++□ ⚠️ 콤보 안 「잘 모름 / MBTI 검사하기」와 안내 상자가 «그대로» 인지
+++□ ★MBTI 를 «안 넣고» 본 결과 — 카드 제목이 「사주로 본 성향」인지
+++□ ★그 카드에 「실제 MBTI 를 넣으시면…」 상자가 «없는지»
+++□ ★MBTI 를 «넣고» 본 결과 — 제목이 「내 MBTI에 대비해 본 나의 사주명리」인지
+++□ 🔴★맨 아래 견주기에 「겹치는 결 N가지 · 갈리는 결 N가지」가 뜨는지
+++□ ⚠️ 프리미엄 통변에 「실제 MBTI 를 넣으시면」 같은 말이 «없는지»
+++```
+++
+++---
+++
+++# ★32차 — 카드를 「표」에서 «읽는 글» 로
+++
+++## 🔴 무엇이 문제였나 — 대표님 물음 셋
+++
+++```
+++「이 표를 고객이 어떻게 보는거야? 나도 헷갈리는데」
+++「표에서 굵은 막대가 나의 타고난 결이란 얘기인가?」
+++「이 사람의 타고난 결은 ESFP란 거야?」
+++```
+++
+++★**화면에 ESFP 라고 크게 적혀 있는데도 세 번째를 물으셔야 했습니다.**
+++그 네 글자가 «무엇인지» — 사주가 본 것인지 손님이 넣으신 것인지 —
+++★맨 아래에 가서야 밝히고 있었기 때문입니다.
+++
+++⚠️ 그리고 다른 AI 에게 이 화면을 읽히니 **「E/I와 S/N 두 가지가 겹칩니다」**라고
+++**정반대로** 풀었습니다. 그 둘은 «갈리는» 결이었습니다.
+++
+++## ★어떻게 바꿨나
+++
+++```
+++전   ESFP(크게) → 네 축 막대 표 → 어떤 결인가요 4줄 → 타고난 결↔지금의 결
+++     ⇒ ★결론을 던지고 «그게 뭔지» 는 맨 끝
+++
+++★후  ① 류도이님은 사주명리에 비춰 볼 때 타고난 결이 ESFP(분위기를 여는 사람)입니다.
+++        스스로 아시는 결은 INFP(마음이 넓은 이상가)라고 하셨지요.
+++        ★네 결 가운데 한 가지가 갈립니다. 어긋난 것이 아니라, 살아오며 길러 내신 결입니다.
+++     ② E N F P   타고난          ← ★두 줄로 겹쳐 보기. 바뀐 칸만 주황
+++        I N F P   지금
+++     ③ [같은 결] 보는 결 · 고르는 결 · 맺는 결
+++          N 아직 없는 그림을 먼저 보는 결 …
+++          → 타고난 대로 쓰고 계신 자리라 힘이 덜 듭니다.
+++        [다른 결] 나서는 결
+++          E → I  타고나기는 사람 사이에서 힘을 얻는 결인데, 지금은 …
+++          → 두 결을 다 쓸 수 있다는 뜻입니다.
+++     ④ ▾ 사주에서 어떻게 나온 건가요      ← ★막대를 여기로 «접었습니다»
+++```
+++
+++★**손님이 「어? 나는 INFP 인데」 하고 «혼자 의아해할 틈» 을 주지 않습니다.**
+++우리가 먼저 그 말을 꺼내고, 「어긋난 것이 아니다」까지 첫 상자에서 끝냅니다.
+++
+++## ★확정하신 것 둘
+++
+++```
+++가) 넣으신 MBTI 에도 «같은 칭호표» 를 씁니다 — INFP(마음이 넓은 이상가)
+++    ⚠️ 그 칭호 열여섯은 «우리가 사주 결로 지은» 이름이지 MBTI 공식 명칭이 아닙니다.
+++       카드 맨 위 「재미로 보는 참고예요」가 이미 그것을 밝히고 있어 짧게 갑니다.
+++나) 알약에는 「같은 결」만, 결 이름은 «옆에» 옅게
+++    ⚠️ 알약 안에 이름까지 넣으면 넷이 갈리는 분은 «두 줄로 터집니다»
+++```
+++
+++## ★막대 — 지우지 않고 «접고», 가운데에서 자라게
+++
+++```
+++🔴 [무엇이 있었나]  막대가 «언제나 왼쪽» 에서 자랐습니다.
+++   ⇒ 「무엇으로 고르는가」에서 ★막대는 T 쪽으로 긴데 고른 글자는 F —
+++     손님 눈에 «어긋나» 보였습니다 (48% 도 F 로 갈립니다).
+++★[이제]  가운데가 «반반» 이고, 고른 쪽으로 자랍니다.
+++   ⇒ 막대와 진한 글자가 «언제나» 같은 쪽입니다. 짧으면 반반에 가깝다는 뜻입니다.
+++   ★44부 23차에 궁합 오행 그래프를 「가운데 0」으로 바꾼 것과 같은 결입니다.
+++★그리고 「아래 막대는 «사주로 본 결» 이에요」로 ★임자를 밝힙니다.
+++```
+++
+++## ⚠️ 찍어 보고 네 번 고쳤습니다
+++
+++```
+++🔴 「1가지가 갈립니다」        → ★「한 가지가」
+++🔴 「INFP(…) 라고 하셨지요」   → ★앞 빈칸 제거
+++🔴 「N 아직 없는 그림을 먼저 보는 결 / 아직 없는 그림을 먼저 봅니다」 ← ★같은 말 두 번
+++   ⇒ trimEcho() — 짧은 이름의 낱말이 겹치는 문장을 뺍니다
+++   ⚠️ 처음엔 «앞 여덟 글자» 로 견주었는데 S·J·P 를 못 잡았습니다
+++      (「정해 두고 가는 결」/「정해 두고 가야 편합니다」 — 말끝만 다릅니다)
+++      ⇒ ★낱말 기준으로 다시 짰습니다. 여덟 글자 모두 확인했습니다.
+++🔴 옛 「타고난 결 ↔ 지금의 결」 상자  → ★걷어냈습니다. 같은 말을 «세 번» 하고 있었습니다
+++```
+++
+++## ⚠️ 검사 다섯을 «뜻 그대로» 고쳤습니다
+++
+++앞 차수 그물이 «옛 모양» 을 글자로 지키고 있어 걸렸습니다. **헐겁게 하지 않았습니다.**
+++
+++```
+++「width: ${a.leftPct}%」      → ★「${a.leftPct - 50}% / ${50 - a.leftPct}%」 (가운데 기준)
+++「어떤 결인가요」가 있는가      → ★「이긴 글자의 설명을 그리는가」 (자리를 옮겼을 뿐)
+++「) : null}」이 있는가         → ★「넣으라고 조르는 말이 «없는가»」 (본디 재려던 것)
+++```
+++
+++★**역시험을 두 번 했습니다** — 여는말을 바꾸고, 같은 결 설명을 지워 보니 둘 다 잡았습니다.
+++
+++## ⬜ 32차 실기 확인
+++
+++```
+++□ ★MBTI 를 «넣고» 본 결과 —
+++   「◯◯님은 사주명리에 비춰 볼 때 타고난 결이 ESFP(분위기를 여는 사람)입니다」로 시작하는지
+++□ ★그 아래 「스스로 아시는 결은 INFP(마음이 넓은 이상가)라고 하셨지요」가 나오는지
+++□ ★네 글자가 «두 줄» 로 겹쳐 보이고, 바뀐 칸만 주황인지
+++□ ★[같은 결] [다른 결] 알약이 뜨고, 결 이름이 «알약 옆» 에 있는지
+++□ ★「E → I」로 어느 쪽에서 어느 쪽인지 보이는지
+++□ ★「사주에서 어떻게 나온 건가요」를 누르면 막대가 열리는지
+++□ ★막대가 «가운데» 에서 «고른 글자 쪽» 으로 자라는지
+++□ ⚠️ 같은 말이 두 번 나오는 줄이 «없는지»
+++□ ★MBTI 를 «안 넣고» 본 결과 — 네 글자 풀이만 나오고 조르는 말이 없는지
+++□ ⚠️ 넷이 «모두 겹치는» 분은 「다른 결」 알약이 안 나오는지
+++```
+++
+++---
+++
+++# ★33차 — 가운데 선을 «보이게» · 「타고난/지금」을 왼쪽으로
+++
+++## 🔴 무엇이 문제였나 — 대표님 사진
+++
+++```
+++「차라리 가운데 선을 하나 그어서 가운데부터 그래프가 자라난다는 것을 보여줘」
+++```
+++
+++★코드는 32차에 이미 «가운데에서 자라도록» 그리고 있었습니다.
+++문제는 ★**선이 안 보이는 것**이었습니다.
+++
+++```
+++선 색 #d8dee6  ↔  막대 바탕 #eef2f6      ← ★거의 같은 색. 묻혔습니다
+++굵기 1px · 막대 안에만                    ← 눈에 안 띕니다
+++⇒ 「반반에 가까워요」인 축은 막대도 0에 가까워
+++   ★«아무것도 없는 줄» 로 보였습니다
+++```
+++
+++## ★고친 셋
+++
+++```
+++① 선 색    #d8dee6 → ★#9b8bc4      막대 바탕과 갈립니다
+++② 선 꼴    1px 막대 안 → ★2px · 위아래로 4px 씩 «내밀어» 눈금처럼
+++③ 머리말   ★「↓ 여기가 반반」을 맨 위에 «한 번만»
+++           ⚠️ 줄마다 적으면 시끄럽습니다. 네 줄이 같은 자리를 쓰니 한 번이면 됩니다
+++```
+++
+++⚠️ **막대를 «벌리는» 것(1.5~2배)은 하지 «않았습니다».**
+++대표님이 「선을 그어 보여 달라」고 하셨고, 막대를 부풀리면 ★실제보다 세게 느껴질 수
+++있어서입니다. 선만으로 모자라면 그때 다시 여쭙겠습니다.
+++
+++## ★「타고난 / 지금」을 칸 왼쪽으로
+++
+++```
+++전   [E][S][F][P] 타고난          ← 오른쪽 끝에 붙어 «따로 놀았습니다»
+++     [I][N][F][P] 지금
+++
+++★후  타고난 [E][S][F][P]
+++     지금   [I][N][F][P]
+++            나서는 보는 고르는 맺는   ← ★어느 칸이 무슨 결인지 아래에 옅게
+++```
+++
+++★글은 왼쪽에서 오른쪽으로 흐르니 **이름이 먼저 와야** 읽힙니다.
+++그리고 **칸마다 무슨 결인지** 아래에 옅게 적어, 위 알약(「같은 결 · 다른 결」)과
+++**같은 이름으로 이어집니다.**
+++
+++## ⬜ 33차 실기 확인
+++
+++```
+++□ ★막대 가운데에 «보라색 세로선» 이 보이는지 (위아래로 살짝 내밀어 있는지)
+++□ ★막대 위에 「↓ 여기가 반반」이 «한 번만» 있는지
+++□ ★「반반에 가까워요」인 축도 «빈 줄로 보이지 않는지»
+++□ ★「타고난 / 지금」이 칸 «왼쪽» 에 있는지
+++□ ★칸 아래에 「나서는 · 보는 · 고르는 · 맺는」이 옅게 있는지
+++```
++diff --git a/app/manseryeok/career-result/components/MbtiCard.tsx b/app/manseryeok/career-result/components/MbtiCard.tsx
++index 37901c4..249444e 100644
++--- a/app/manseryeok/career-result/components/MbtiCard.tsx
+++++ b/app/manseryeok/career-result/components/MbtiCard.tsx
++@@ -16,6 +16,7 @@
++ //     ③ 실제 MBTI 를 넣었으면 견주기 카드, 안 넣었으면 넣도록 권하는 띠
++ // ============================================================================
++ 
+++import { AXIS_WORK, AXIS_NAME_SHORT, titleOf } from '@/lib/saju/career/sajuMbti'
++ import type { SajuMbtiResult, MbtiCompare } from '@/lib/saju/career/sajuMbti'
++ 
++ const ACCENT = '#785aaa'
++@@ -26,6 +27,8 @@ interface Props {
++   compare?: MbtiCompare | null
++   /** [실제 MBTI 넣기] 를 눌렀을 때 — 입력 화면으로 되돌린다 */
++   onWantInput?: () => void
+++  /** 손님 이름 — 「류도이님은 …」 (없으면 이름 없이 씁니다) */
+++  name?: string
++ }
++ 
++ const AXIS_NAME: Record<string, string> = {
++@@ -35,7 +38,46 @@ const AXIS_NAME: Record<string, string> = {
++   JP: '어떻게 맺는가',
++ }
++ 
++-export default function MbtiCard({ result, realMbti, compare, onWantInput }: Props) {
+++/**
+++ * 기울기를 «말» 로 — ★숫자를 보이지 않습니다.
+++ *
+++ *  ⚠️ 「반반에 가까워요」는 45~55% 로 잡습니다 — result.balanced 와 «같은 잣대» 입니다.
+++ *     두 곳이 다르면 「반반」이라 써 놓고 아래엔 안 그렇게 나오는 날이 옵니다.
+++ */
+++/** ⚠️ 「1가지가」가 아니라 「한 가지가」 — 손님께 드리는 말입니다 */
+++/**
+++ * 긴 설명이 짧은 이름과 «같은 말로 시작»하면 그 문장을 뺍니다.
+++ *  ⚠️ 두 벌이 결이 달라 대개는 안 겹치는데, N·P 처럼 겹치는 글자가 있습니다.
+++ *     겹친 채로 두면 손님 눈에 ★같은 말을 두 번 한 것으로 보입니다.
+++ */
+++function trimEcho(ch: string): string {
+++  // ★짧은 이름의 «낱말» 을 뽑아, 그 낱말이 여럿 겹치는 문장을 뺍니다.
+++  //   ⚠️ 앞 여덟 글자만 견주면 S·J·P 를 못 잡습니다 —
+++  //      「정해 두고 가는 결」 / 「정해 두고 가야 편합니다」처럼 말끝만 다릅니다.
+++  const words = (AXIS_NAME_SHORT[ch] ?? '')
+++    .replace(/ 결$/, '').split(/\s+/).filter(w => w.length >= 2)
+++  const parts = (AXIS_WORK[ch] ?? '').split(/(?<=\.)\s+/).filter(Boolean)
+++  const echo = (p: string) => {
+++    const hit = words.filter(w => p.includes(w.replace(/(는|을|를|이|가|에서|으로)$/, ''))).length
+++    return words.length > 0 && hit >= Math.min(2, words.length)
+++  }
+++  const kept = parts.filter(p => !echo(p))
+++  return (kept.length ? kept : parts).join(' ')
+++}
+++
+++const NUM: Record<number, string> = { 1: '한 가지', 2: '두 가지', 3: '세 가지' }
+++
+++function leanWord(leftPct: number): string {
+++  const d = Math.abs(leftPct - 50)
+++  if (d <= 5) return '반반에 가까워요'
+++  if (d <= 15) return '조금 기울어요'
+++  if (d <= 25) return '뚜렷해요'
+++  return '아주 뚜렷해요'
+++}
+++
+++// ⚠️ onWantInput 은 Props 에 «남겨 두되» 지금은 받지 않습니다 —
+++//    부르는 쪽(career-result/page.tsx)을 고치지 않으려는 것입니다. 되살릴 때 씁니다.
+++export default function MbtiCard({ result, realMbti, compare, name }: Props) {
++   return (
++     <div style={{
++       background: '#fff',
++@@ -49,8 +91,11 @@ export default function MbtiCard({ result, realMbti, compare, onWantInput }: Pro
++       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
++         <span style={{ fontSize: 22, lineHeight: 1 }}>🧩</span>
++         <div style={{ flex: 1, minWidth: 0 }}>
+++          {/* ★2026-08-03 (44부 31차) — 제목을 «갈랐습니다» (대표님 지시)
+++              ⚠️ 「내 MBTI에 대비해 본…」은 ★MBTI 를 넣으신 분에게만 맞는 말입니다.
+++                 안 넣으신 분께 그렇게 말하면 «없는 것을 있다고» 하는 셈입니다. */}
++           <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', letterSpacing: '-0.2px' }}>
++-            사주로 본 성향
+++            {compare && realMbti ? '내 MBTI에 대비해 본 나의 사주명리' : '사주로 본 성향'}
++           </div>
++           <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
++             재미로 보는 참고예요. 검사 결과를 대신하지 않아요.
++@@ -58,110 +103,273 @@ export default function MbtiCard({ result, realMbti, compare, onWantInput }: Pro
++         </div>
++       </div>
++ 
++-      {/* ── 네 글자 + 칭호 ── */}
+++      {/* ══════════════════════════════════════════════════════════
+++          ★2026-08-03 (44부 32차) — 「표」를 걷어내고 «읽는 글» 로 (대표님 지시)
+++
+++          🔴 [무엇이 있었나]  네 글자(ESFP)를 크게 던져 놓고, 그것이 «무엇인지»
+++             — 사주가 본 것인지, 손님이 넣으신 것인지 — 를 ★맨 아래에서야 밝혔습니다.
+++             ⚠️ 대표님도 「이 사람의 타고난 결이 ESFP란 거야?」 하고 물으셨습니다.
+++                화면에 크게 적혀 있는데도 그러셨다면, 손님은 더합니다.
+++          ★[이제]  첫 문장에서 «누가 무엇을 말하는지» 를 끝냅니다.
+++             ① 사주가 본 결은 …입니다  ② 스스로 아시는 결은 …라고 하셨지요
+++             ③ 어긋난 것이 아닙니다   ← ★손님이 «혼자 의아해할 틈» 을 주지 않습니다
+++          ══════════════════════════════════════════════════════════ */}
++       <div style={{
++-        display: 'flex', alignItems: 'baseline', gap: 9,
++-        margin: '14px 0 4px', padding: '13px 14px', borderRadius: 13,
++-        background: 'linear-gradient(120deg, rgba(250,245,255,0.95), rgba(238,242,255,0.85))',
++-        border: `1px solid ${ACCENT}2e`,
+++        background: '#f3f0fc', borderRadius: 12,
+++        padding: '14px 15px', margin: '14px 0 16px',
++       }}>
++-        <span style={{ fontSize: 25, fontWeight: 800, color: ACCENT, letterSpacing: '1.5px' }}>
++-          {result.code}
++-        </span>
++-        <span style={{ fontSize: 13, color: '#4a3b60', fontWeight: 600 }}>{result.title}</span>
+++        <p style={{ margin: '0 0 8px', fontSize: 14, lineHeight: 1.8, color: '#2e2550' }}>
+++          {name ? `${name}님은 ` : ''}사주명리에 비춰 볼 때 타고난 결이{' '}
+++          <b style={{ fontWeight: 700 }}>{result.code}({result.title})</b>입니다.
+++        </p>
+++        {compare && realMbti && (
+++          <p style={{ margin: 0, fontSize: 13, lineHeight: 1.8, color: '#4a3b60' }}>
+++            스스로 아시는 결은{' '}
+++            <b style={{ fontWeight: 700 }}>{realMbti}({titleOf(realMbti)})</b>라고 하셨지요.{' '}
+++            {compare.same === 4
+++              ? '네 결이 그대로 겹칩니다.'
+++              : compare.same === 0
+++                ? '네 결이 모두 갈립니다. 어긋난 것이 아니라, 살아오며 길러 내신 결입니다.'
+++                : `네 결 가운데 ${NUM[compare.diffAxes.length] ?? compare.diffAxes.length}가 갈립니다. 어긋난 것이 아니라, 살아오며 길러 내신 결입니다.`}
+++          </p>
+++        )}
++       </div>
++ 
++-      {result.balanced && (
++-        <div style={{ fontSize: 11, color: '#8a6a52', marginBottom: 6, lineHeight: 1.6 }}>
++-          ※ 두 축 이상이 반반에 가깝습니다. 어느 한쪽으로 몰린 결이 아니라, 상황에 따라 달리 쓰는 분입니다.
++-        </div>
++-      )}
++-
++-      {/* ── 네 축 막대 ── */}
++-      <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 13 }}>
++-        {result.axes.map(a => (
++-          <div key={a.axis}>
++-            <div style={{
++-              display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
++-              marginBottom: 5,
+++      {/* ★두 줄로 겹쳐 보기 — 어느 칸이 바뀌었는지 «한눈에»
+++          ⚠️ 2026-08-03 (44부 33차) — 「타고난 / 지금」을 칸 «왼쪽» 으로 옮겼습니다.
+++             오른쪽 끝에 붙여 두니 어느 줄의 이름인지 눈이 한 번 더 가야 했습니다.
+++             ★글은 왼쪽에서 오른쪽으로 흐르니 이름이 «먼저» 와야 읽힙니다. */}
+++      {compare && realMbti && compare.same < 4 && (
+++        <div style={{ marginBottom: 18 }}>
+++          {([['born', '타고난'], ['now', '지금']] as const).map(([k, lab]) => (
+++            <div key={k} style={{
+++              display: 'flex', gap: 7, alignItems: 'center',
+++              marginBottom: k === 'born' ? 6 : 0,
++             }}>
++-              <span style={{ fontSize: 11, color: '#64748b' }}>{AXIS_NAME[a.axis]}</span>
++-              <span style={{ fontSize: 11, color: '#94a3b8' }}>{a.leftPct} : {100 - a.leftPct}</span>
+++              <span style={{
+++                width: 36, flexShrink: 0, fontSize: 11, color: '#94a3b8', textAlign: 'right',
+++              }}>{lab}</span>
+++              {compare.axes.map(a => {
+++                const on = a.same
+++                return (
+++                  <div key={a.label} style={{
+++                    flex: 1, height: 42, borderRadius: 9,
+++                    background: on ? '#e6f4ee' : (k === 'born' ? '#fbeee9' : '#f6d9cd'),
+++                    display: 'grid', placeItems: 'center',
+++                    fontSize: 18, fontWeight: 700,
+++                    color: on ? '#0f6e56' : (k === 'born' ? '#993c1d' : '#4a1b0c'),
+++                  }}>{a[k]}</div>
+++                )
+++              })}
++             </div>
+++          ))}
+++          {/* ★어느 칸이 무슨 결인지 — 아래에 옅게 한 줄 */}
+++          <div style={{ display: 'flex', gap: 7, alignItems: 'center', marginTop: 5 }}>
+++            <span style={{ width: 36, flexShrink: 0 }} />
+++            {compare.axes.map(a => (
+++              <div key={a.label} style={{
+++                flex: 1, textAlign: 'center', fontSize: 10, color: '#a09488',
+++              }}>{a.label.replace(' 결', '')}</div>
+++            ))}
+++          </div>
+++        </div>
+++      )}
++ 
++-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
++-              <span style={{
++-                fontSize: 12.5, fontWeight: 800, width: 15, textAlign: 'center', flexShrink: 0,
++-                color: a.pick === a.left ? ACCENT : '#cbd5e1',
++-              }}>{a.left}</span>
+++      {/* ══════════════════════════════════════════════════════════
+++          ★같은 결 / 다른 결 — 알약 머리말 + 결마다 한 덩이 (44부 32차)
++ 
++-              <div style={{
++-                flex: 1, height: 9, borderRadius: 20, overflow: 'hidden',
++-                background: '#eef2f6', position: 'relative',
++-              }}>
++-                <div style={{
++-                  position: 'absolute', inset: 0,
++-                  width: `${a.leftPct}%`,
++-                  background: `linear-gradient(90deg, ${ACCENT}, #a58fd0)`,
++-                  borderRadius: 20,
++-                }} />
+++          ⚠️ 알약에는 「같은 결」만, 결 이름은 «옆에» 옅게 둡니다.
+++             알약 안에 이름까지 넣으면 넷이 갈리는 분은 «두 줄로 터집니다».
+++          ⚠️ 한쪽이 비면 그 알약을 «안 그립니다» (넷 다 같거나 넷 다 다를 때)
+++          ══════════════════════════════════════════════════════════ */}
+++      {compare && realMbti ? (
+++        <>
+++          {compare.axes.some(a => a.same) && (
+++            <>
+++              <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 10px' }}>
+++                <span style={{
+++                  fontSize: 11.5, color: '#0f6e56', background: '#e6f4ee',
+++                  border: '0.5px solid #b6e0d0', padding: '4px 13px', borderRadius: 20,
+++                }}>같은 결</span>
+++                <span style={{ fontSize: 11.5, color: '#8a7063' }}>
+++                  {compare.sameAxes.join(' · ')}
+++                </span>
+++              </div>
+++              {compare.axes.filter(a => a.same).map(a => (
+++                <div key={a.label} style={{
+++                  borderLeft: '2px solid #5dcaa5', padding: '2px 0 2px 12px', marginBottom: 8,
+++                }}>
+++                  {/* ⚠️ 짧은 이름과 긴 설명이 «같은 말» 로 시작하는 글자가 있습니다
+++                      (N — 「아직 없는 그림을 먼저 보는 결 / 아직 없는 그림을 먼저 봅니다」)
+++                      ⇒ ★겹치면 짧은 이름만 두고 긴 설명의 «뒷문장» 만 씁니다 */}
+++                  <div style={{ fontSize: 13, color: '#2b2320', lineHeight: 1.7 }}>
+++                    <b style={{ fontWeight: 700, color: '#0f6e56' }}>{a.born}</b>{' '}
+++                    {AXIS_NAME_SHORT[a.born]}
+++                  </div>
+++                  <div style={{ fontSize: 12, color: '#6b5a4e', lineHeight: 1.7 }}>
+++                    {trimEcho(a.born)}
+++                  </div>
+++                </div>
+++              ))}
+++              <div style={{ fontSize: 12, color: '#0f6e56', margin: '0 0 18px 14px' }}>
+++                → 타고난 대로 쓰고 계신 자리라 힘이 덜 듭니다.
++               </div>
+++            </>
+++          )}
++ 
++-              <span style={{
++-                fontSize: 12.5, fontWeight: 800, width: 15, textAlign: 'center', flexShrink: 0,
++-                color: a.pick === a.right ? ACCENT : '#cbd5e1',
++-              }}>{a.right}</span>
+++          {compare.axes.some(a => !a.same) && (
+++            <>
+++              <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 10px' }}>
+++                <span style={{
+++                  fontSize: 11.5, color: '#993c1d', background: '#fbeee9',
+++                  border: '0.5px solid #f2c9b8', padding: '4px 13px', borderRadius: 20,
+++                }}>다른 결</span>
+++                <span style={{ fontSize: 11.5, color: '#8a7063' }}>
+++                  {compare.diffAxes.join(' · ')}
+++                </span>
+++              </div>
+++              {compare.axes.filter(a => !a.same).map(a => (
+++                <div key={a.label} style={{
+++                  borderLeft: '2px solid #f0997b', padding: '2px 0 2px 12px', marginBottom: 8,
+++                }}>
+++                  <div style={{ fontSize: 13, color: '#2b2320', lineHeight: 1.7 }}>
+++                    <b style={{ fontWeight: 700, color: '#993c1d' }}>{a.born} → {a.now}</b>
+++                  </div>
+++                  <div style={{ fontSize: 12, color: '#6b5a4e', lineHeight: 1.7 }}>
+++                    타고나기는 {AXIS_NAME_SHORT[a.born]}인데, 지금은 {AXIS_NAME_SHORT[a.now]}로 쓰십니다.
+++                  </div>
+++                </div>
+++              ))}
+++              <div style={{ fontSize: 12, color: '#993c1d', margin: '0 0 18px 14px' }}>
+++                → 두 결을 다 쓸 수 있다는 뜻입니다. 남들이 예상하지 못한 방식으로 일을 풀 수 있습니다.
+++              </div>
+++            </>
+++          )}
+++        </>
+++      ) : (
+++        /* ★MBTI 를 안 넣으신 분 — 견줄 것이 없으니 네 결을 «그냥» 풀어 드립니다 */
+++        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
+++          {result.axes.map(a => (
+++            <div key={a.axis} style={{
+++              borderLeft: '2px solid #cec9f0', padding: '2px 0 2px 12px',
+++            }}>
+++              <div style={{ fontSize: 13, color: '#2b2320', lineHeight: 1.7 }}>
+++                <b style={{ fontWeight: 700, color: '#534ab7' }}>{a.pick}</b>{' '}
+++                {AXIS_NAME_SHORT[a.pick]}
+++              </div>
+++              <div style={{ fontSize: 12, color: '#6b5a4e', lineHeight: 1.7 }}>
+++                {trimEcho(a.pick)}
+++              </div>
++             </div>
+++          ))}
+++        </div>
+++      )}
++ 
++-            {/* 왜 그렇게 나왔나 — 근거 한 줄 */}
++-            <div style={{ fontSize: 10.5, color: '#8a6a52', marginTop: 5, paddingLeft: 23 }}>
++-              {a.why}
++-            </div>
++-          </div>
++-        ))}
++-      </div>
+++      {/* ══════════════════════════════════════════════════════════
+++          ★사주에서 어떻게 나온 건가요 — 네 축 막대를 «접어» 둡니다 (44부 32차)
+++
+++          ⚠️ 지우는 것이 «아닙니다». 근거를 보고 싶은 분은 열면 됩니다.
+++          🔴 [까닭]  막대·기울기·근거 기운이 위에 있으니 손님이 «표» 로 읽고,
+++             「이게 무슨 표냐」에서 멈췄습니다. 결론을 먼저 드리고 근거는 뒤로 뺍니다.
+++          ══════════════════════════════════════════════════════════ */}
+++      <details style={{ borderTop: '1px dashed rgba(120,53,15,0.14)', paddingTop: 12 }}>
+++        <summary style={{
+++          fontSize: 12, color: '#8a7063', cursor: 'pointer', listStyle: 'none',
+++        }}>사주에서 어떻게 나온 건가요</summary>
++ 
++-      {/* ── 실제 MBTI 와 견주기 ── */}
++-      {compare && realMbti ? (
++         <div style={{
++-          marginTop: 16, padding: '13px 14px', borderRadius: 13,
++-          background: '#fbf8f5', border: '1px solid rgba(120,53,15,0.11)',
+++          fontSize: 11, color: '#8a7063', background: '#faf7f3',
+++          borderRadius: 9, padding: '8px 10px', margin: '10px 0 14px', lineHeight: 1.6,
++         }}>
++-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
++-            <span style={{ fontSize: 11.5, color: '#64748b' }}>타고난 결</span>
++-            <span style={{ fontSize: 13, fontWeight: 800, color: ACCENT }}>{result.code}</span>
++-            <span style={{ fontSize: 12, color: '#cbd5e1' }}>↔</span>
++-            <span style={{ fontSize: 11.5, color: '#64748b' }}>지금의 결</span>
++-            <span style={{ fontSize: 13, fontWeight: 800, color: '#1e293b' }}>{realMbti}</span>
++-          </div>
++-          <div style={{ fontSize: 12.5, fontWeight: 700, color: '#1e293b', marginBottom: 5 }}>
++-            {compare.headline}
++-          </div>
++-          <div style={{ fontSize: 11.5, color: '#5c4a3e', lineHeight: 1.72 }}>
++-            {compare.body}
++-          </div>
+++          아래 막대는 <b style={{ fontWeight: 700, color: '#4a3b60' }}>사주로 본 결</b>이에요.
+++          기운이 기운 쪽으로 자랍니다.
++         </div>
++-      ) : (
+++
+++        {/* ★가운데 선이 무엇인지 한 번만 밝힙니다 — 줄마다 적으면 시끄럽습니다 */}
++         <div style={{
++-          marginTop: 16, padding: '13px 14px', borderRadius: 13,
++-          background: '#faf7ff', border: `1px solid ${ACCENT}26`,
+++          display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 9px',
+++          fontSize: 10.5, color: '#a09488',
++         }}>
++-          <div style={{ fontSize: 11.5, color: '#4a3b60', lineHeight: 1.7 }}>
++-            실제 MBTI 를 넣으시면 <b>타고난 결과 지금의 결</b>이 어떻게 만나는지
++-            입체적으로 견주어 드려요.
++-          </div>
++-          {onWantInput && (
++-            <button
++-              onClick={onWantInput}
++-              style={{
++-                marginTop: 10, width: '100%', padding: '10px 12px', borderRadius: 11,
++-                background: ACCENT, border: 'none', color: '#fff',
++-                fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
++-              }}
++-            >실제 MBTI 넣고 다시 보기</button>
++-          )}
+++          <span style={{ width: 15, flexShrink: 0 }} />
+++          <div style={{ flex: 1, textAlign: 'center' }}>↓ 여기가 반반</div>
+++          <span style={{ width: 15, flexShrink: 0 }} />
++         </div>
++-      )}
+++
+++        <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+++          {result.axes.map(a => (
+++            <div key={a.axis}>
+++              <div style={{
+++                display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+++                marginBottom: 5,
+++              }}>
+++                <span style={{ fontSize: 11, color: '#64748b' }}>{AXIS_NAME[a.axis]}</span>
+++                <span style={{ fontSize: 11, color: '#94a3b8' }}>{leanWord(a.leftPct)}</span>
+++              </div>
+++
+++              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+++                <span style={{
+++                  fontSize: 12.5, fontWeight: 800, width: 15, textAlign: 'center', flexShrink: 0,
+++                  color: a.pick === a.left ? ACCENT : '#cbd5e1',
+++                }}>{a.left}</span>
+++
+++                {/* ★가운데가 «반반» — 고른 쪽으로 자랍니다 (44부 32차)
+++                    ⚠️ 전에는 언제나 왼쪽에서 자라, 막대는 T 쪽인데 고른 글자는 F 인
+++                       «어긋나 보이는» 일이 있었습니다. 궁합 오행 그래프를 「가운데 0」으로
+++                       바꾼 것과 같은 결입니다 (44부 23차). */}
+++                <div style={{
+++                  flex: 1, height: 9, borderRadius: 20,
+++                  background: '#eef2f6', position: 'relative',
+++                }}>
+++                  {/* ★가운데 선 — «여기서부터 자란다» 는 것을 눈으로 보이게 (44부 33차)
+++                      🔴 [무엇이 있었나] 선 색이 #d8dee6 로 막대 바탕(#eef2f6)과 거의 같아
+++                         ★묻혀서 안 보였습니다. 「반반에 가까워요」인 축은 막대도 0에 가까워
+++                         «아무것도 없는 줄» 로 보였습니다. (대표님 사진 2026-08-03)
+++                      ⚠️ 막대보다 «위아래로 길게» 빼서 눈금처럼 세웁니다. */}
+++                  <div style={{
+++                    position: 'absolute', left: '50%', top: -4, bottom: -4,
+++                    width: 2, marginLeft: -1, background: '#9b8bc4', borderRadius: 2,
+++                  }} />
+++                  <div style={{
+++                    position: 'absolute', top: 0, bottom: 0,
+++                    ...(a.leftPct >= 50
+++                      ? { right: '50%', width: `${a.leftPct - 50}%` }
+++                      : { left: '50%', width: `${50 - a.leftPct}%` }),
+++                    background: ACCENT, borderRadius: 20,
+++                  }} />
+++                </div>
+++
+++                <span style={{
+++                  fontSize: 12.5, fontWeight: 800, width: 15, textAlign: 'center', flexShrink: 0,
+++                  color: a.pick === a.right ? ACCENT : '#cbd5e1',
+++                }}>{a.right}</span>
+++              </div>
+++
+++              <div style={{ fontSize: 10.5, color: '#8a6a52', marginTop: 5, paddingLeft: 23 }}>
+++                {a.pick} 쪽 — {a.why}
+++              </div>
+++            </div>
+++          ))}
+++        </div>
+++      </details>
+++
+++      {/* ⚠️⚠️ 2026-08-03 (44부 32차) — ★옛 「타고난 결 ↔ 지금의 결」 상자를 «걷어냈습니다».
+++          여는말이 이미 그 말을 하고, 「같은 결 / 다른 결」이 속을 풀어 줍니다.
+++          그대로 두면 ★같은 말을 «세 번» 하게 됩니다.
+++          ⚠️ compare.headline·body 는 «남아 있습니다» — 통변 재료가 그것을 씁니다.
+++             화면에서만 안 그립니다. 되살리려면 대표님께 여쭈십시오. */}
+++      {/* ══════════════════════════════════════════════════════════
+++          🔴★2026-08-03 (44부 31차) — MBTI 를 안 넣으셨으면 «아무것도 그리지 않습니다».
+++
+++          [무엇이 있었나]  「실제 MBTI 를 넣으시면 … [넣고 다시 보기]」 상자.
+++            ⚠️ 모르는 분에겐 ★막다른 길이었습니다 — 돌아가 봐야 콤보에
+++               「잘 모름」밖에 고를 것이 없었습니다.
+++          ★대신 «입력 화면» 콤보 옆에 「검사하기 ↗」를 늘 보이게 했습니다.
+++            거기서 검사하고 오시면 됩니다. 결과 화면에서 조르지 않습니다.
+++          ⚠️⚠️ 통변 «재료» 에서도 같은 권유 문장을 뺐습니다.
+++             화면에서만 빼면 AI 글에서 다시 튀어나옵니다.
+++             (44부 3-3장 — 별점을 세 곳 중 두 곳만 껐다가 새어 나간 자리)
+++          ⚠️ onWantInput 은 «남겨 둡니다» — 되살릴 때 필요합니다.
+++          ══════════════════════════════════════════════════════════ */}
++     </div>
++   )
++ }
++diff --git a/app/manseryeok/career-result/page.tsx b/app/manseryeok/career-result/page.tsx
++index c320725..958b5a1 100644
++--- a/app/manseryeok/career-result/page.tsx
+++++ b/app/manseryeok/career-result/page.tsx
++@@ -34,6 +34,7 @@ import MbtiCard from './components/MbtiCard'
++ // ★2026-07-29 — 프리미엄 진로적성&MBTI 리포트 (모듈2)
++ import { buildCareerMbtiPrompt } from '@/lib/saju/premium/buildCareerMbtiPrompt'
++ import { isPremium } from '@/lib/saju/premium/config'
+++import { splitCardText } from '@/lib/saju/premium/splitCardText'
++ import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
++ import { calcYongsinNew } from '@/lib/saju/yongsinNew'
++ import { getGongmang } from '@/lib/saju/gongmang'
++@@ -428,10 +429,69 @@ function CareerResultInner() {
++                       fontSize: 14.5, fontWeight: 700, color: '#1e293b',
++                       marginBottom: 9, letterSpacing: '-0.2px',
++                     }}>{sec.title}</div>
++-                    <div style={{
++-                      fontSize: 13.5, color: '#3a2e28', lineHeight: 1.85,
++-                      whiteSpace: 'pre-wrap',
++-                    }}>{sec.body}</div>
+++
+++                    {/* ══════════════════════════════════════════════════
+++                        🔴★2026-08-03 (44부 30차) — [한줄]·[태그]·[실천] 을 갈라 그립니다.
+++
+++                        [무엇이 있었나]  본문을 whiteSpace:'pre-wrap' 으로 «통째로» 찍어
+++                          ★「[한줄] 상황에 따라 달리 쓰는…」·「[태그] …」·「[실천] …」이
+++                            손님 화면에 «글자 그대로» 나갔습니다. (대표님 사진 2026-08-03)
+++                        [까닭]  프롬프트는 그 표시를 «일부러» 붙이게 합니다 —
+++                          "화면이 그것으로 갈라 그립니다" 라고 적혀 있는데,
+++                          ★사주풀이·합격운만 갈라 그리고 진로적성은 «안 했습니다».
+++                        ⚠️ 파서는 lib/saju/premium/splitCardText.ts «한 곳» 입니다.
+++                           여기서 다시 적지 마십시오. 그렇게 해서 두 벌이 되었습니다.
+++                        ⚠️ 표시가 없는 옛 통변은 예전처럼 통짜로 그려집니다. 안 깨집니다.
+++                        ══════════════════════════════════════════════════ */}
+++                    {(() => {
+++                      const p = splitCardText(sec.body)
+++                      return (
+++                        <>
+++                          {/* ★한줄 — 카드에서 가장 하고 싶은 말 */}
+++                          {p.summary && (
+++                            <p style={{
+++                              fontSize: 13, color: '#785aaa', lineHeight: 1.6, fontWeight: 600,
+++                              margin: '0 0 9px',
+++                            }}>{p.summary}</p>
+++                          )}
+++
+++                          {/* ★태그 — 알약으로 */}
+++                          {p.tags && p.tags.length > 0 && (
+++                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, margin: '0 0 10px' }}>
+++                              {p.tags.map((t, k) => (
+++                                <span key={k} style={{
+++                                  fontSize: 10.5, color: '#5b4580', background: '#f3eefb',
+++                                  border: '1px solid #e4daf5', padding: '3px 9px',
+++                                  borderRadius: 20, fontWeight: 600,
+++                                }}>{t}</span>
+++                              ))}
+++                            </div>
+++                          )}
+++
+++                          {/* 본문 — 빈 줄로 문단을 나눠 그립니다 */}
+++                          {p.body.split(/\n\s*\n/).filter(x => x.trim()).map((para, k) => (
+++                            <p key={k} style={{
+++                              fontSize: 13.5, color: '#3a2e28', lineHeight: 1.85,
+++                              margin: '0 0 10px', whiteSpace: 'pre-wrap',
+++                            }}>{para.trim()}</p>
+++                          ))}
+++
+++                          {/* ★실천 — 강조 상자로 따로 */}
+++                          {p.action && (
+++                            <div style={{
+++                              marginTop: 2, padding: '11px 12px', borderRadius: 11,
+++                              background: '#fdf6ee', border: '1px solid rgba(200,120,60,0.26)',
+++                              display: 'flex', gap: 8, alignItems: 'flex-start',
+++                            }}>
+++                              <span style={{ fontSize: 13, lineHeight: 1.4, flexShrink: 0 }}>✅</span>
+++                              <span style={{ fontSize: 12.5, lineHeight: 1.75, color: '#6b4a2e' }}>
+++                                {p.action}
+++                              </span>
+++                            </div>
+++                          )}
+++                        </>
+++                      )
+++                    })()}
++                   </div>
++                 ))}
++                 <div style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center', margin: '4px 0 2px' }}>
++@@ -482,6 +542,8 @@ function CareerResultInner() {
++                       result={sajuMbti}
++                       realMbti={realMbti}
++                       compare={mbtiCmp}
+++                      /* ★2026-08-03 (44부 32차) — 「◯◯님은 사주명리에 비춰 볼 때…」 */
+++                      name={person.name}
++                       onWantInput={() => router.push(`/manseryeok/career-input?${backQuery}`)}
++                     />
++                   )}
++diff --git a/app/manseryeok/components/MbtiSelect.tsx b/app/manseryeok/components/MbtiSelect.tsx
++index fdf65b7..8c12c4f 100644
++--- a/app/manseryeok/components/MbtiSelect.tsx
+++++ b/app/manseryeok/components/MbtiSelect.tsx
++@@ -35,12 +35,35 @@ export default function MbtiSelect({ value, onChange, accent = '#785aaa' }: Prop
++ 
++   return (
++     <div>
++-      <label
++-        htmlFor="mbti-select"
++-        style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#3a2e28', marginBottom: 7 }}
++-      >
++-        MBTI <span style={{ fontWeight: 400, color: '#8a6a52' }}>(모르셔도 괜찮아요)</span>
++-      </label>
+++      {/* ══════════════════════════════════════════════════════════
+++          ★2026-08-03 (44부 31차) — 「검사하기 ↗」를 «늘» 보이게 (대표님 지시)
+++
+++          [무엇이 있었나]  콤보를 열고 → 「잘 모름 / MBTI 검사하기」를 고르고 →
+++            그제야 안내가 떴습니다. ★닫힌 채로는 «검사» 라는 말이 아예 안 보였습니다.
+++          ⇒ 모르는 분이 그냥 지나쳐 버리고, 결과 화면에서야 아쉬워하셨습니다.
+++          ★여기서 검사하고 오시면 결과 화면이 「내 MBTI에 대비해 본…」으로 바뀝니다.
+++          ⚠️ 링크(TEST_URL)와 안내 상자는 «이미 있던 것» 을 그대로 씁니다. 새로 짓지 않았습니다.
+++          ══════════════════════════════════════════════════════════ */}
+++      <div style={{
+++        display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 7,
+++      }}>
+++        <label
+++          htmlFor="mbti-select"
+++          style={{ fontSize: 12.5, fontWeight: 600, color: '#3a2e28' }}
+++        >
+++          MBTI <span style={{ fontWeight: 400, color: '#8a6a52' }}>(모르셔도 괜찮아요)</span>
+++        </label>
+++        <a
+++          href={TEST_URL}
+++          target="_blank"
+++          rel="noopener noreferrer"
+++          style={{
+++            marginLeft: 'auto', fontSize: 11.5, fontWeight: 600, color: accent,
+++            textDecoration: 'none', whiteSpace: 'nowrap',
+++            borderBottom: `1px solid ${accent}55`, paddingBottom: 1,
+++          }}
+++        >모르면 검사하기 ↗</a>
+++      </div>
++ 
++       <select
++         id="mbti-select"
++diff --git a/app/manseryeok/components/TongbyeonView.tsx b/app/manseryeok/components/TongbyeonView.tsx
++index fb4502a..d0a4727 100644
++--- a/app/manseryeok/components/TongbyeonView.tsx
+++++ b/app/manseryeok/components/TongbyeonView.tsx
++@@ -17,6 +17,7 @@
++ 'use client'
++ 
++ import { useEffect, useMemo, useRef, useState } from 'react'
+++import { splitCardText } from '@/lib/saju/premium/splitCardText'
++ import { buildTongbyeonPrompt, type TongbyeonInput } from '@/lib/saju/tongbyeonPrompt'
++ import type { SajuQuestion } from '@/lib/saju/questions'
++ import { withNim } from '@/lib/saju/honorific'
++@@ -99,27 +100,10 @@ function parseCards(text: string): { intro: string; cards: Card[] } {
++ 
++   const isHeading = (ln: string) => /^\s*(#{1,6}\s*)?\u25A0/.test(ln) || /^\s*#{2,6}\s+/.test(ln)
++ 
++-  /**
++-   * 본문에서 [한줄]·[태그]·[실천] 을 뽑아낸다.
++-   *   ⚠️ 없으면 그대로 둡니다. 옛 통변이 깨지지 않게 하려는 것입니다.
++-   */
++-  const split = (bodyRaw: string) => {
++-    let summary: string | undefined
++-    let action: string | undefined
++-    let tags: string[] | undefined
++-    const rest: string[] = []
++-
+\ No newline at end of file
+diff --git a/lib/saju/career/sajuMbti.ts b/lib/saju/career/sajuMbti.ts
+index bc3e5da..5e70e1b 100644
+--- a/lib/saju/career/sajuMbti.ts
++++ b/lib/saju/career/sajuMbti.ts
+@@ -32,6 +32,7 @@ import type { Ohaeng, Pillar } from './types'
+ import { calcCareerScore } from './careerScore'
+ import { yukchinOf } from './yukchin'
+ import { checkSinsal9 } from './sinsal9'
++import { eunneun } from '../josa'
+ 
+ export type MbtiAxis = 'EI' | 'SN' | 'TF' | 'JP'
+ 
+@@ -69,6 +70,18 @@ const STEM_EL: Record<string, Ohaeng> = {
+   甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토',
+   己: '토', 庚: '금', 辛: '금', 壬: '수', 癸: '수',
+ }
++/**
++ * ★지지의 «본기 천간» — 교재 48쪽 도표 (2026-08-03 확인)
++ *
++ *  ⚠️⚠️ 위 YANG_BRANCH 와 «다른 것을 잽니다». 하나로 합치지 마십시오.
++ *    음양 «비율» 을 셀 때   → YANG_BRANCH (子=양)  — 260쪽 양팔통 사례 甲辰·甲戌·壬寅·庚子
++ *    ★십성 을 가릴 때       → 이 표 (子=癸 음)      — 48쪽 도표 · 96쪽 壬 양인=子
++ *  ★쓰임이 다르면 잣대도 다릅니다. (지장간 표를 «일부러» 둘 둔 것과 같은 결)
++ */
++const BRANCH_BONGI: Record<string, string> = {
++  子: '癸', 丑: '己', 寅: '甲', 卯: '乙', 辰: '戊', 巳: '丙',
++  午: '丁', 未: '己', 申: '庚', 酉: '辛', 戌: '戊', 亥: '壬',
++}
+ 
+ /** 16유형 칭호 — 사주 결로 지은 이름입니다 (MBTI 공식 명칭이 아닙니다) */
+ const TITLE: Record<string, string> = {
+@@ -78,11 +91,94 @@ const TITLE: Record<string, string> = {
+   ESTJ: '판을 세우는 관리자', ESFJ: '두루 챙기는 조력자', ENFJ: '사람을 이끄는 사람', ENTJ: '앞장서는 지휘자',
+ }
+ 
+-/** 점수 이름을 한 줄 근거로 옮긴다 */
++/**
++ * 왜 그렇게 나왔는지 — ★«이름만» 옮깁니다. 숫자를 보이지 않습니다.
++ *
++ *  🔴 [무엇이 있었나]  「목 55 · 비겁 55 · 양의 기운 36」처럼 «점수» 를 찍었습니다.
++ *    ⚠️ ① 그 숫자를 아무리 더해도 막대의 「81 : 19」가 나오지 «않습니다» —
++ *          바닥 15%·큰 것 셋만 보이기·층별 평균을 거치기 때문입니다.
++ *       ② 「55」가 무슨 단위인지 화면 어디에도 없습니다.
++ *       ③ 일간이 목이면 «목 = 비겁» 이라 ★같은 수가 나란히 찍혀 오류로 보입니다.
++ *    ⇒ ★2026-08-03 대표님 지시 — 「숫자를 걷어내고 말로 바꾸자」 (44부 28차)
++ *
++ *  ⚠️ 「지운」 것이 아니라 «감춘» 것입니다 — leftScore·rightScore 는 그대로 넘어갑니다.
++ *     되살리려면 대표님께 여쭈십시오. (44부 21차 별점을 걷어낸 것과 같은 결)
++ *  ★이 카드는 「재미로 보는 참고」입니다. 계산기처럼 보이면 안 됩니다.
++ */
+ function reason(parts: Array<[string, number]>): string {
+-  const shown = parts.filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 3)
+-  if (!shown.length) return '뚜렷하게 기운 곳이 없습니다'
+-  return shown.map(([k, v]) => `${k} ${Math.round(v)}`).join(' · ')
++  const shown = parts.filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1])
++  if (!shown.length) return '뚜렷하게 기운 곳이 없어요'
++  // ★같은 것을 두 번 말하지 않습니다 (목·비겁이 같은 오행일 때)
++  const seen = new Set<string>()
++  const names: string[] = []
++  for (const [k] of shown) {
++    const w = LABEL[k] ?? k
++    if (seen.has(w)) continue
++    seen.add(w); names.push(w)
++    if (names.length >= 3) break
++  }
++  // ⚠️ 「…기운이 도드라집니다」를 네 줄 모두 붙이면 지겹고,
++  //    「양(陽)의 기운 기운이…」처럼 ★말이 겹치기도 합니다. 이름만 잇습니다.
++  return names.join(' · ')
++}
++
++/**
++ * 네 글자가 «일할 때» 어떻게 드러나는가 — 여덟 줄.
++ *
++ *  ★2026-08-03 (44부 29차) — buildCareerMbtiPrompt.ts 에 있던 AXIS_WORK 를
++ *    ★여기로 옮겼습니다. 화면(MbtiCard)도 같은 줄을 써야 하기 때문입니다.
++ *    ⚠️⚠️ 두 벌로 적으면 «다른 말을 하는 날» 이 옵니다. 여기 «한 곳» 입니다.
++ *       프롬프트 쪽은 이것을 가져다 씁니다 (re-export).
++ *
++ *  ⚠️ 이 문장들은 교재의 말이 «아닙니다» — 우리가 지은 풀이입니다.
++ *     MBTI 축을 «일의 결» 로 옮긴 것이라 명리 근거를 붙이지 마십시오.
++ */
++/**
++ * 여덟 글자의 «짧은 이름» — 「어떤 결인가」.
++ *
++ *  ★2026-08-03 신설 (44부 32차) — 대표님 지시로 카드를 «표» 에서 «글» 로 바꾸며
++ *    「타고나기는 …인데, 지금은 …」 을 쓰기 위해 지었습니다.
++ *  ⚠️ AXIS_WORK 와 «다른 것» 입니다 —
++ *      AXIS_NAME_SHORT  「어떤 결인가」   짧은 이름   ← 이것
++ *      AXIS_WORK        「일할 때 어떻게 드러나나」  긴 설명
++ *    두 벌이 «필요해서» 둘입니다. 하나로 합치지 마십시오.
++ *  ⚠️ 교재의 말이 «아닙니다» — MBTI 축을 우리 말로 옮긴 것입니다.
++ */
++export const AXIS_NAME_SHORT: Record<string, string> = {
++  E: '사람 사이에서 힘을 얻는 결', I: '혼자 있는 시간에 힘을 채우는 결',
++  S: '눈에 보이는 것을 먼저 보는 결', N: '아직 없는 그림을 먼저 보는 결',
++  T: '잣대로 자르는 결', F: '마음을 헤아려 고르는 결',
++  J: '정해 두고 가는 결', P: '열어 두고 가는 결',
++}
++
++/** 네 축의 이름 — ★화면·견주기가 «같은 말» 을 쓰도록 한 곳에 둡니다 */
++export const AXIS_LABEL: Record<MbtiAxis, string> = {
++  EI: '나서는 결', SN: '보는 결', TF: '고르는 결', JP: '맺는 결',
++}
++
++/** 열여섯 칭호 — ★넣으신 MBTI 에도 같은 표를 씁니다 (2026-08-03 대표님 확정 「가)」) */
++export function titleOf(code: string): string {
++  return TITLE[(code ?? '').toUpperCase()] ?? '고유한 결'
++}
++
++export const AXIS_WORK: Record<string, string> = {
++  E: '사람 사이에서 기운이 차오릅니다. 회의·발표·현장이 에너지원입니다.',
++  I: '혼자 있는 시간에 기운이 차오릅니다. 몰입할 자리를 지켜 주어야 합니다.',
++  S: '눈에 보이는 사실과 경험으로 판단합니다. 검증된 방식에서 강합니다.',
++  N: '아직 없는 그림을 먼저 봅니다. 새 판을 여는 자리에서 강합니다.',
++  T: '기준과 논리로 자릅니다. 결정을 미루지 않아 일이 굴러갑니다.',
++  F: '사람과 분위기를 먼저 헤아립니다. 팀이 흩어지지 않게 붙잡습니다.',
++  J: '정해 두고 가야 편합니다. 마감과 계획이 곧 힘입니다.',
++  P: '열어 두고 가야 편합니다. 상황이 바뀔 때 오히려 잘합니다.',
++}
++
++/** 재료 이름 → ★손님이 읽는 말 */
++const LABEL: Record<string, string> = {
++  목: '목(木)', 화: '화(火)', 토: '토(土)', 금: '금(金)', 수: '수(水)',
++  비겁: '주체성', 식상: '표현력', 재성: '현실 감각', 관성: '책임감', 인성: '사고력',
++  정재: '꼼꼼함', 편재: '판을 읽는 힘',
++  '양의 기운': '양(陽)', '음의 기운': '음(陰)',
++  양인: '결단', 도화: '매력',
+ }
+ 
+ /**
+@@ -118,78 +214,173 @@ export function calcSajuMbti(
+   // ── 신살 — 양인·백호 / 도화 ──
+   const hits = checkSinsal9(saju)
+   const hasName = (n: string) => hits.some(h => h.name.includes(n))
+-  const yanginBaekho = (hasName('양인') ? 10 : 0) + (hasName('백호') ? 10 : 0)
++  const yangin = hasName('양인') ? 10 : 0
++  // ⚠️ 2026-08-03 (44부 27차) — ★백호를 «뺐습니다».
++  //    교재 95쪽은 백호의 «성격» 을 말하지 않습니다 ("2~3개 이상이면 큰 사주이고
++  //    활동을 크게 해야 함" 뿐). 양인과 같은 10점을 준 것은 근거가 없었습니다.
++  //    ★184~257쪽에서 백호의 성격 설명이 나오면 되살리십시오.
+   const dohwa = hasName('도화') ? 12 : 0
+ 
+-  // ── 정재/편재 · 정관/편관 가르기 ──
+-  //   교재식으로 «일간과 음양이 같으면 편, 다르면 정»입니다.
+-  //   재성·관성 점수를 그 비율로 나눠 씁니다.
++  // ── 정재/편재 가르기 ────────────────────────────────────────────
++  //  ★2026-08-03 (44부 27차) — «지지도» 셉니다. 교재 대조로 고친 자리입니다.
++  //
++  //   [무엇이 있었나]  천간 넉 자만 세고 있었습니다.
++  //     const el = isStem ? STEM_EL[ch] : undefined; if (!el) continue
++  //     ⇒ 지지가 «한 글자도» 세어지지 않았습니다.
++  //   [교재]  ★36쪽 "天干보다 地支는 매우 중요한 위치를 차지한다"
++  //           ★159쪽 "천간은 정신적인 측면(40% 정도), 지지는 현실적·실질적(60~70%)"
++  //           ★259쪽 "오행의 개수는 본래의 오행에 해당하는 개수를 쓴다"
++  //             ⇒ 지지는 «본기 하나» 로 «한 개» 를 셉니다 (지장간 셋을 다 세지 않습니다)
++  //   ⚠️⚠️ 지지의 음양은 ★48쪽 «본기 천간» 으로 봅니다 — 子=癸(음) · 午=丁(음).
++  //      근거: ★96쪽이 壬 일간의 양인(겁재)을 子라 합니다.
++  //            壬(양)의 겁재는 «음» 이라야 하므로, 子를 癸(음)로 본 것입니다.
++  //      ⛔ 위 YANG_BRANCH(子=양) 를 여기에 쓰지 «마십시오». 재는 것이 다릅니다 —
++  //         음양 «비율» 은 260쪽 양팔통 사례가 子를 «양» 으로 봅니다.
++  //         ★한 파일에 두 잣대가 있는 것이 «맞습니다». 하나로 합치지 마십시오.
+   const dayYang = YANG_STEM.has(dayStem)
+-  let jaeJeong = 0, jaePyeon = 0, gwanJeong = 0
++  let jaeJeong = 0, jaePyeon = 0
+   for (const p of saju) {
+     for (const [ch, isStem] of [[p.stem, true], [p.branch, false]] as Array<[string, boolean]>) {
+       if (!ch || ch === '?') continue
+-      const el = isStem ? STEM_EL[ch] : undefined
++      // ★지지는 48쪽 본기 천간으로 바꿔서 봅니다
++      const asStem = isStem ? ch : BRANCH_BONGI[ch]
++      const el = STEM_EL[asStem]
+       if (!el) continue
+-      const grp = yukchinOf(dayEl, el)
+-      const chYang = isStem ? YANG_STEM.has(ch) : YANG_BRANCH.has(ch)
+-      const jeong = chYang !== dayYang      // 음양이 다르면 정(正)
+-      if (grp === '재성') { if (jeong) jaeJeong++; else jaePyeon++ }
+-      if (grp === '관성' && jeong) gwanJeong++
++      if (yukchinOf(dayEl, el) !== '재성') continue
++      if (YANG_STEM.has(asStem) !== dayYang) jaeJeong++   // 음양이 다르면 정재
++      else jaePyeon++
+     }
+   }
+   const jaeTotal = Math.max(1, jaeJeong + jaePyeon)
+   const jeongJae = (Y['재성'] * jaeJeong) / jaeTotal
+   const pyeonJae = (Y['재성'] * jaePyeon) / jaeTotal
+-  void gwanJeong   // 정관/편관 구분은 지금 산식에 안 쓰이나, 뒤에 쓸 자리를 남겨 둔다
+ 
+   // ── 네 축 ──────────────────────────────────────────────────────
++  //
++  //  ★2026-08-03 (44부 27차) — 대표님 승인으로 «접는 방식» 을 고쳤습니다.
++  //    ⚠️ 재료를 고른 것(어느 성분이 어느 쪽인가)은 2026-07-29 대표님 산식 그대로입니다.
++  //       바꾼 것은 «어떻게 합치는가» 입니다. 아래 셋입니다.
++  //
++  //   A  ★오행 몫 · 육친 몫 · 음양(신살) 몫을 «층으로 갈라» 재고 평균 냅니다.
++  //      [까닭] 교재 ★40쪽 "오행과 육친을 «분리해서» 해석해야 하는데 분리하지 않고
++  //             두리뭉실하게 대충 해석하기 때문에 … 오류가 발생한다"
++  //      [무엇이 있었나] 육친 점수는 «오행 점수를 그대로 부은 것» 이라,
++  //             목 일간의 목 55점이 「목」으로 한 번 + 「비겁」으로 또 한 번,
++  //             ★같은 55점이 한 축에 «두 번» 실렸습니다.
++  //
++  //   C-1 ★50점 넘는 몫은 «세지 않습니다» (뚜껑).
++  //      [까닭] 교재 ★259쪽 "점수가 50점 이상이 되면 이때부터는 장점보다는 단점으로
++  //             발현이 된다" · ★25쪽 「오행이 과다할 때」 (목=안하무인·용두사미 …)
++  //      ⚠️ 교재는 「단점이 된다」고만 하지 «반대 성향이 된다» 고 하지 «않습니다».
++  //         그래서 뒤집지 «않고» 멈추기만 합니다. 뒤집는 것은 우리 발명이 됩니다.
++  //      ⚠️ 실효는 작습니다(측정 1.68%). 그래도 교재 근거가 가장 분명한 자리입니다.
++  //
++  //   D  ★교재에서 못 찾은 재료 셋을 뺐습니다.
++  //        S쪽 관성  — 「현실적」이라는 말이 관성에 없습니다 (144쪽 「현실 감각」은 «정인격»)
++  //        N쪽 화    — 화는 "열정·표현·예의·행동"(21·25쪽). 상상력·직관이 아닙니다
++  //        T쪽 백호  — 95쪽은 «성격» 을 말하지 않습니다 ("큰 사주·활동을 크게" 뿐)
++  //      ⚠️ 「없다」가 아니라 ★「2026-08-03 에 확인한 범위(20~183·232·233·238·258~269쪽)
++  //         에서 못 찾았다」 입니다. 184~257쪽 대부분을 아직 못 봤습니다.
++  //         ★그 쪽이 확인되면 되살릴 수 있습니다.
++  //
++  //   γ  ★층 안에서는 «합» 이 아니라 «세기 평균» 으로 견줍니다.
++  //      [까닭] D 로 재료를 빼면 한쪽 성분이 둘, 다른 쪽이 하나가 되어
++  //             ★«많은 쪽이 그냥 이기는» 일이 납니다.
++  //      [실측] 합으로 견주면 ENFP 가 27.46% → ★32.14% 로 «더 몰렸습니다».
++  //             세기 평균으로 견주니 ★17.78% 로 내려갔습니다. (5,000벌)
++  //      ⚠️⚠️ γ 는 «교재에 없습니다». 우리가 정한 것입니다. (2026-08-03 대표님 승인)
++  //
++  //   ★층 건너뛰기 — 한쪽에 재료가 «없는» 층은 «세지 않습니다».
++  //      D 로 화를 빼자 S/N 의 오행 층이 「토 ↔ 아무것도 없음」이 되었습니다.
++  //      그대로 세면 «토가 조금만 있어도 언제나 S» 가 됩니다 (실측 ESFP 38.56%).
++  //      ⚠️⚠️ 그 바람에 ★토(45쪽 "실질적")가 산식에서 «빠졌습니다».
++  //         교재 근거가 있는 재료인데 자리를 잃은 것입니다.
++  //         ★184~257쪽에서 N 쪽 오행 재료가 나오면 층을 되살리고 토를 넣으십시오.
++  //
++  //  [2026-08-03 처음 잰 값 — 다음에 견줄 잣대 · npm run measure:mbti]
++  //     가장 많은 유형   ENFP 27.46% → ★17.78%
++  //     위 셋 합         50.42%      → ★42.52%
++  //     INTJ            0.36%       → ★3.10%  (8.6배)
++  //     INFJ            1.18%       → ★4.60%
++  //     ★유형 뒤집힘     52.00% — 두 분 중 한 분의 네 글자가 바뀝니다
++  // ────────────────────────────────────────────────────────────────
++
++  /** ★C-1 — 50점을 넘는 몫은 세지 않는다 (교재 259쪽) */
++  const cap = (v: number) => Math.min(v, 50)
++  /** 한 층 = 「왼쪽 재료들 ↔ 오른쪽 재료들」 */
++  type Layer = { L: Array<[string, number]>; R: Array<[string, number]> }
++
+   const axes: AxisResult[] = []
+-  const push = (
+-    axis: MbtiAxis, left: string, right: string,
+-    L: Array<[string, number]>, R: Array<[string, number]>,
+-  ) => {
+-    const rawL = L.reduce((a, [, v]) => a + v, 0)
+-    const rawR = R.reduce((a, [, v]) => a + v, 0)
+-    // ★양쪽에 «바닥»을 깔아 준다.
+-    //   [왜] 관성이 하나도 없는 명식이면 J 쪽이 0 이 되어 «1:99» 같은 막대가 나옵니다.
+-    //        숫자로는 맞지만 사람을 그렇게 그리면 안 됩니다.
+-    //        아무리 한쪽으로 기운 사람도 다른 쪽 결을 조금은 씁니다.
+-    //   [얼마나] 그 축 총점의 15%. 고정값을 쓰면 축마다 총점이 달라 들쭉날쭉합니다.
+-    //   ⚠️ 이 숫자도 교재가 아니라 우리가 정한 것입니다. 화면 인상을 보고 조절하십시오.
+-    const floor = (rawL + rawR) * 0.15 || 1
+-    const ls = rawL + floor
+-    const rs = rawR + floor
+-    const leftPct = Math.round((ls / (ls + rs)) * 100)
++  const push = (axis: MbtiAxis, left: string, right: string, layers: Layer[]) => {
++    const ratios: number[] = []
++    for (const ly of layers) {
++      // ★층 건너뛰기 — 한쪽에 재료가 «없으면» 대립이 아닙니다
++      if (!ly.L.length || !ly.R.length) continue
++      const sum = (a: Array<[string, number]>) => a.reduce((x, [, v]) => x + v, 0)
++      // ★γ — 성분 «개수» 가 아니라 «세기» 로 견줍니다
++      const l = sum(ly.L) / ly.L.length
++      const r = sum(ly.R) / ly.R.length
++      if (l + r <= 0) continue
++      // ★바닥 — 한쪽이 0이어도 «1:99» 같은 막대를 내지 않습니다.
++      //   [얼마나] 그 층 총합의 15%. ⚠️ 교재가 아니라 우리가 정한 값입니다.
++      const floor = (l + r) * 0.15
++      ratios.push((l + floor) / (l + floor + r + floor))
++    }
++    const p = ratios.length ? ratios.reduce((a, b) => a + b, 0) / ratios.length : 0.5
++    const leftPct = Math.round(p * 100)
+     const pick = leftPct >= 50 ? left : right
++    // ★화면에 보이는 숫자는 «날점수 합» 입니다 (뚜껑·평균을 거치기 전).
++    //   ⚠️ 막대(leftPct)와 아래 숫자가 딱 맞아떨어지지 않는 것은 그 때문입니다.
++    const flatL = layers.flatMap(x => x.L)
++    const flatR = layers.flatMap(x => x.R)
+     axes.push({
+       axis, left, right,
+-      leftScore: Math.round(rawL), rightScore: Math.round(rawR), leftPct, pick,
+-      why: leftPct >= 50 ? reason(L) : reason(R),
+-      // ⚠️ leftScore·rightScore 는 «바닥을 빼고» 실제 점수를 담습니다.
+-      //    막대(leftPct)와 숫자가 다른 것은 그 때문입니다.
++      leftScore: Math.round(flatL.reduce((a, [, v]) => a + v, 0)),
++      rightScore: Math.round(flatR.reduce((a, [, v]) => a + v, 0)),
++      leftPct, pick,
++      why: leftPct >= 50 ? reason(flatL) : reason(flatR),
+     })
+   }
+ 
+   // E vs I — 밖으로 뻗는 기운 vs 안으로 모으는 기운
+-  push('EI', 'E', 'I',
+-    [['양의 기운', yangPt], ['화', S['화']], ['목', S['목']], ['식상', Y['식상']], ['비겁', Y['비겁']]],
+-    [['음의 기운', eumPt], ['수', S['수']], ['금', S['금']], ['인성', Y['인성']]])
++  //   ★교재 260쪽 "陽의 기운+木火: 외향적 … 활동적인 사람 /
++  //                陰의 기운+金水: 내성적이고 차분하고 행동보다는 생각이 많은 유형"
++  //   ★비겁 = "활동성 · 대인 관계 활발" · 식상 = "언변술 · 발산"
++  //   ★인성 = "산속에서 혼자 사는 것이 좋다 · 고독"(과다) · "생각만 많고 실행력이 약함"
++  push('EI', 'E', 'I', [
++    { L: [['화', cap(S['화'])], ['목', cap(S['목'])]], R: [['수', cap(S['수'])], ['금', cap(S['금'])]] },
++    { L: [['식상', cap(Y['식상'])], ['비겁', cap(Y['비겁'])]], R: [['인성', cap(Y['인성'])]] },
++    { L: [['양의 기운', yangPt]], R: [['음의 기운', eumPt]] },
++  ])
+ 
+   // S vs N — 눈앞의 실제 vs 그림과 뜻
+-  push('SN', 'S', 'N',
+-    [['재성', Y['재성']], ['관성', Y['관성']], ['토', S['토']]],
+-    [['식상', Y['식상']], ['인성', Y['인성']], ['화', S['화']]])
++  //   ★재성 111쪽 "구체적이고 현실적인 것 좋아한다 · 실리주의자"
++  //   ★식상 109쪽 "아이디어와 상상력이 풍부" · 인성 115·130쪽 "학문 · 이론 중시"
++  //   ⚠️ 오행 층은 D 로 «대립이 사라져» 건너뜁니다 (위 설명 참고)
++  push('SN', 'S', 'N', [
++    { L: [['재성', cap(Y['재성'])]], R: [['식상', cap(Y['식상'])], ['인성', cap(Y['인성'])]] },
++  ])
+ 
+   // T vs F — 잣대로 자르는 결 vs 마음으로 품는 결
+-  push('TF', 'T', 'F',
+-    [['금', S['금']], ['관성', Y['관성']], ['양인·백호', yanginBaekho]],
+-    [['수', S['수']], ['목', S['목']], ['인성', Y['인성']], ['도화', dohwa]])
++  //   ★금 23·25쪽 "결단력 · 의리 · 냉철한 분별" · 목 20쪽 "배려 지향 · 인간 중심"
++  //   ★양인 96쪽 "고집, 오만, 욱기, 냉혹함" · 도화 40·43·94쪽 "매력 · 예술적 직업"
++  //   ⚠️ 금 23쪽은 "겉으로는 냉정해 보이지만 내면은 따뜻하고 정이 있다" 고도 합니다.
++  //      ★오행은 «양쪽 결» 을 지녀 한 축에 온전히 붙지 않습니다. 그래서 층을 나눕니다.
++  push('TF', 'T', 'F', [
++    { L: [['금', cap(S['금'])]], R: [['수', cap(S['수'])], ['목', cap(S['목'])]] },
++    { L: [['관성', cap(Y['관성'])]], R: [['인성', cap(Y['인성'])]] },
++    { L: [['양인', yangin]], R: [['도화', dohwa]] },
++  ])
+ 
+   // J vs P — 정해 두고 가는 결 vs 열어 두고 가는 결
+-  push('JP', 'J', 'P',
+-    [['관성', Y['관성']], ['정재', jeongJae]],
+-    [['비겁', Y['비겁']], ['식상', Y['식상']], ['편재', pyeonJae]])
++  //   ★관성 112·113쪽 "계획성이 투철하다 · 룰과 법칙을 중요시"
++  //   ★정재 111·43쪽 "안정과 안전을 추구 · 매사에 정확 · 치밀하고 세밀하고 꼼꼼"
++  //   ★식상 124쪽 "식신 상관은 관성을 극하므로 룰과 법과 고정 관념을 싫어한다. 자유방임주의"
++  //     ⇒ ★교재가 «극이니까 반대» 라는 논리까지 밝힌 유일한 자리입니다
++  push('JP', 'J', 'P', [
++    { L: [['관성', cap(Y['관성'])], ['정재', cap(jeongJae)]],
++      R: [['비겁', cap(Y['비겁'])], ['식상', cap(Y['식상'])], ['편재', cap(pyeonJae)]] },
++  ])
+ 
+   const code = axes.map(a => a.pick).join('')
+   const balanced = axes.filter(a => a.leftPct >= 45 && a.leftPct <= 55).length >= 2
+@@ -204,14 +395,28 @@ export function calcSajuMbti(
+ export interface MbtiCompare {
+   /** 네 축 가운데 몇 개가 같은가 */
+   same: number
+-  /** 다른 축의 이름 (예: ['E/I', 'T/F']) */
++  /** 다른 축의 이름 (예: ['나서는 결']) */
+   diffAxes: string[]
++  /** ★같은 축의 이름 */
++  sameAxes: string[]
+   headline: string
+   body: string
+-}
+-
+-const AXIS_LABEL: Record<MbtiAxis, string> = {
+-  EI: '나서는 결', SN: '보는 결', TF: '고르는 결', JP: '맺는 결',
++  /**
++   * ★2026-08-03 (44부 32차) — 화면이 «그릴» 재료.
++   *
++   *  ⚠️ 화면에서 다시 셈하지 «마십시오». 여기서 한 번만 가릅니다.
++   *     두 벌로 세면 「같은 결」과 「다른 결」이 어긋나는 날이 옵니다. (교훈 CJ)
++   */
++  axes: Array<{
++    /** 축 이름 — 나서는 결 · 보는 결 · 고르는 결 · 맺는 결 */
++    label: string
++    /** 사주로 본 글자 */
++    born: string
++    /** 넣으신 MBTI 의 글자 */
++    now: string
++    /** 같은가 */
++    same: boolean
++  }>
+ }
+ 
+ /**
+@@ -225,29 +430,45 @@ export function compareMbti(saju: SajuMbtiResult, real: string): MbtiCompare | n
+   if (!/^[EI][SN][TF][JP]$/.test(R)) return null
+ 
+   const diffAxes: string[] = []
++  const sameAxes: string[] = []
+   let same = 0
+   saju.axes.forEach((a, i) => {
+-    if (a.pick === R[i]) same++
++    if (a.pick === R[i]) { same++; sameAxes.push(AXIS_LABEL[a.axis]) }
+     else diffAxes.push(AXIS_LABEL[a.axis])
+   })
+ 
++  const axes = saju.axes.map((a, i) => ({
++    label: AXIS_LABEL[a.axis], born: a.pick, now: R[i], same: a.pick === R[i],
++  }))
++
+   if (same === 4) {
+     return {
+-      same, diffAxes,
++      same, diffAxes, sameAxes, axes,
+       headline: '타고난 결과 지금의 결이 그대로 겹칩니다',
+       body: '사주가 가리키는 방향과 스스로 아는 성향이 같습니다. 억지로 자신을 바꿔 쓰지 않아도 되는 자리라, 힘이 덜 들고 오래 갑니다. 잘하는 쪽으로 더 밀어도 좋습니다.',
+     }
+   }
+   if (same === 0) {
+     return {
+-      same, diffAxes,
++      same, diffAxes, sameAxes, axes,
+       headline: '타고난 결과 지금의 결이 크게 다릅니다',
+       body: '이건 어긋난 것이 아니라, 살아오며 필요해서 다른 쪽 근육을 키우신 것입니다. 두 결을 다 쓸 수 있다는 뜻이라 쓰임이 넓습니다. 다만 오래 쓰면 지치는 쪽이 있으니, 힘들 때 돌아갈 자리가 타고난 쪽이라는 것만 기억해 두십시오.',
+     }
+   }
++  // 🔴★2026-08-03 (44부 31차) — 「N가지가 겹칩니다」 다음에 «갈리는» 결 이름이 와서
++  //    ★그 이름이 «겹치는» 것으로 뒤집혀 읽혔습니다.
++  //    실제로 겪었습니다 — 다른 AI 에게 이 화면을 읽히니 정반대로 풀었습니다.
++  //    AI 가 헷갈리면 손님은 더합니다.
++  //  ⇒ ★«겹치는 결» 과 «갈리는 결» 의 이름을 «둘 다» 대어 줍니다.
+   return {
+-    same, diffAxes,
+-    headline: `네 결 가운데 ${same}가지가 겹칩니다`,
+-    body: `${diffAxes.join('과 ')}에서 타고난 쪽과 지금 쪽이 갈립니다. 갈리는 자리가 오히려 반전이 되는 곳입니다. 남들이 예상하지 못한 방식으로 일을 풀 수 있고, 그 자리가 이 분만의 강점이 됩니다.`,
++    same, diffAxes, sameAxes, axes,
++    headline: `겹치는 결 ${same}가지 · 갈리는 결 ${diffAxes.length}가지`,
++    // ⚠️ 조사를 문자열에 «박지» 마십시오 — lib/saju/josa.ts 를 씁니다. (교훈 AU)
++    //    그 파일 머리말에 「진로적성에서도 "토(土)이 없어요" 가 나왔다」고 적혀 있습니다.
++    // ⚠️ 이름을 「과」로 잇지 «않습니다» — 「보는 결과 고르는 결과 맺는 결」이 되어
++    //    ★"결과(結果)"로 읽힙니다. 가운뎃점으로 잇습니다.
++    body: `${sameAxes.join(' · ')}${eunneun(sameAxes[sameAxes.length - 1] ?? '')} 타고난 대로 쓰고 계십니다. 억지로 꾸미지 않아도 되는 자리라 힘이 덜 듭니다. `
++      + `${diffAxes.join(' · ')}에서는 타고난 쪽과 지금 쪽이 갈립니다. 갈리는 자리가 오히려 반전이 되는 곳입니다. `
++      + `남들이 예상하지 못한 방식으로 일을 풀 수 있고, 그 자리가 이 분만의 강점이 됩니다.`,
+   }
+ }
+diff --git a/lib/saju/premium/buildCareerMbtiPrompt.ts b/lib/saju/premium/buildCareerMbtiPrompt.ts
+index c51052d..5ab20f4 100644
+--- a/lib/saju/premium/buildCareerMbtiPrompt.ts
++++ b/lib/saju/premium/buildCareerMbtiPrompt.ts
+@@ -24,7 +24,7 @@
+ import type { Ohaeng } from '../simsanOhaeng'
+ import type { YongsinNewResult } from '../yongsinNew'
+ import type { DayunItem } from '../dayun'
+-import { calcSajuMbti, compareMbti, type SajuMbtiResult } from '../career/sajuMbti'
++import { calcSajuMbti, compareMbti, AXIS_WORK, type SajuMbtiResult } from '../career/sajuMbti'
+ import { STATUS_PROMPT, statusToTarget, showsGyeyeol, STATUS_LABEL, type CareerStatus } from '../career/status'
+ import { judgeRoleFit } from '../career/roleFit'
+ import { judgeJobFit } from '../career/jobFit'
+@@ -57,16 +57,9 @@ export interface CareerMbtiInput {
+ }
+ 
+ // ── MBTI 네 축이 «일할 때» 어떻게 드러나는가 ──────────────────────────
+-const AXIS_WORK: Record<string, string> = {
+-  E: '사람 사이에서 기운이 차오릅니다. 회의·발표·현장이 에너지원입니다.',
+-  I: '혼자 있는 시간에 기운이 차오릅니다. 몰입할 자리를 지켜 주어야 합니다.',
+-  S: '눈에 보이는 사실과 경험으로 판단합니다. 검증된 방식에서 강합니다.',
+-  N: '아직 없는 그림을 먼저 봅니다. 새 판을 여는 자리에서 강합니다.',
+-  T: '기준과 논리로 자릅니다. 결정을 미루지 않아 일이 굴러갑니다.',
+-  F: '사람과 분위기를 먼저 헤아립니다. 팀이 흩어지지 않게 붙잡습니다.',
+-  J: '정해 두고 가야 편합니다. 마감과 계획이 곧 힘입니다.',
+-  P: '열어 두고 가야 편합니다. 상황이 바뀔 때 오히려 잘합니다.',
+-}
++//  ★2026-08-03 (44부 29차) — 여덟 줄을 career/sajuMbti.ts 로 «옮겼습니다».
++//    화면(MbtiCard)도 같은 줄을 보여야 해서, 두 벌이 되면 «다른 말» 을 하게 됩니다.
++//    ⚠️ 여기서 다시 적지 «마십시오». 고칠 곳은 sajuMbti.ts 한 곳입니다.
+ 
+ interface Section { no: number; title: string; blocks: Array<[string, string[]]> }
+ 
+@@ -141,8 +134,13 @@ function buildSections(v: CareerMbtiInput): { sections: Section[]; mbti: SajuMbt
+           `${mbti.code} — ${mbti.title}`,
+           mbti.balanced ? '두 축 이상이 반반에 가깝습니다. 한쪽으로 몰린 결이 아니라 상황에 따라 달리 쓰는 분입니다.' : '',
+         ].filter(Boolean)],
++        // ⚠️⚠️ 2026-08-03 (44부 29차) — ★「81:19」를 «재료에서도» 걷어냈습니다.
++        //   화면에서만 걷어내고 여기 남겨 두면, AI 가 그 숫자를 보고
++        //   ★"81 대 19 로 아주 뚜렷합니다" 로 풀어 버립니다.
++        //   44부 3-3장에서 별점을 «세 곳 중 두 곳» 만 껐다가 겪은 일과 같은 자리입니다.
++        //   ⚠️ 그 숫자는 손님이 아무리 더해도 «맞지 않습니다» (바닥 15%·층별 평균).
+         ['1-2 네 축의 사주 근거', mbti.axes.map(a =>
+-          `${a.left}/${a.right} — ${a.pick} (${a.leftPct}:${100 - a.leftPct}) · 근거 ${a.why} · 일할 때: ${AXIS_WORK[a.pick] ?? ''}`)],
++          `${a.left}/${a.right} — ${a.pick} · 근거 ${a.why} · 일할 때: ${AXIS_WORK[a.pick] ?? ''}`)],
+       ],
+     },
+     {
+@@ -164,10 +162,15 @@ function buildSections(v: CareerMbtiInput): { sections: Section[]; mbti: SajuMbt
+           cmp.diffAxes.length ? `갈리는 자리(${cmp.diffAxes.join('·')})는 흠이 아니라 두 결을 다 쓸 수 있다는 뜻입니다.` : '',
+         ].filter(Boolean)],
+       ] : [
++        // ⚠️⚠️ 2026-08-03 (44부 31차) — ★「실제 MBTI 를 넣으시면…」 권유를 «뺐습니다».
++        //   [까닭] 화면에서도 그 상자를 없앴습니다(막다른 길이었습니다).
++        //     재료에 남겨 두면 ★AI 글에서 다시 튀어나옵니다 —
++        //     44부 3-3장에서 별점을 «세 곳 중 두 곳» 만 껐다가 겪은 일과 같은 자리입니다.
++        //   ★대신 «입력 화면» 콤보 옆에 「검사하기 ↗」를 늘 보이게 두었습니다.
++        //     결과를 다 본 손님을 붙잡고 조르지 «않습니다».
+         ['핵심 성향 진단', [
+           `${mbti.code} — ${mbti.title}`,
+           ...mbti.axes.map(a => `${a.pick} — ${AXIS_WORK[a.pick] ?? ''}`),
+-          '※ 실제 MBTI 를 넣으시면 타고난 결과 지금의 결을 견주어 시너지와 반전을 더 깊이 볼 수 있습니다.',
+         ]],
+       ],
+     },
+diff --git a/lib/saju/premium/splitCardText.ts b/lib/saju/premium/splitCardText.ts
+new file mode 100644
+index 0000000..e721c47
+--- /dev/null
++++ b/lib/saju/premium/splitCardText.ts
+@@ -0,0 +1,51 @@
++// lib/saju/premium/splitCardText.ts
++//
++// ┌───────────────────────────────────────────────────────────────┐
++// │  통변 한 대목에서 [한줄]·[태그]·[실천] 을 갈라낸다 — 공용 부품    │
++// └───────────────────────────────────────────────────────────────┘
++//
++//  ★2026-08-03 신설 (44부 30차)
++//
++//  ══ 왜 공용 부품인가 ══
++//    프롬프트가 AI 에게 「[한줄]·[태그]·[실천] 을 대괄호까지 그대로 적으라」고
++//    시켜 두었는데, ★그것을 갈라 그리는 코드가 «화면마다» 있었습니다.
++//      · TongbyeonView.tsx        (사주풀이)   ─┐
++//      · ExamJudgeCard.tsx        (합격운)     ─┤ ★한 글자도 다르지 않은 «복사본»
++//      · career-result/page.tsx   (진로적성)   ─┘ ⇒ ★없었습니다
++//
++//    🔴 그래서 진로적성 프리미엄 리포트에 「[한줄] …」·「[태그] …」·「[실천] …」이
++//       ★손님 화면에 «글자 그대로» 나가고 있었습니다. (2026-08-03 대표님 사진)
++//
++//  ⚠️⚠️ 화면마다 다시 짓지 «마십시오». 그렇게 해서 두 벌이 되었고,
++//     세 번째 화면은 아예 빠뜨렸습니다. ★고칠 곳은 여기 «한 곳» 입니다.
++//
++//  ⚠️ 표시가 «없는» 글은 그대로 돌려줍니다 — 옛 통변이 깨지지 않게 하려는 것입니다.
++
++export interface SplitCard {
++  /** [한줄] — 카드 맨 위 한 문장 */
++  summary?: string
++  /** [태그] — 알약으로 그릴 낱말 (최대 넷) */
++  tags?: string[]
++  /** [실천] — 강조 상자로 따로 뺀다 */
++  action?: string
++  /** 표시를 걷어낸 본문 */
++  body: string
++}
++
++export function splitCardText(raw: string): SplitCard {
++  let summary: string | undefined
++  let action: string | undefined
++  let tags: string[] | undefined
++  const rest: string[] = []
++  for (const ln of (raw ?? '').split('\n')) {
++    const t = ln.trim()
++    const mS = t.match(/^\[한줄\]\s*(.+)$/)
++    const mT = t.match(/^\[태그\]\s*(.+)$/)
++    const mA = t.match(/^\[실천\]\s*(.+)$/)
++    if (mS) { summary = mS[1].trim(); continue }
++    if (mT) { tags = mT[1].split(/[·,]/).map(x => x.trim()).filter(Boolean).slice(0, 4); continue }
++    if (mA) { action = mA[1].trim(); continue }
++    rest.push(ln)
++  }
++  return { summary, tags, action, body: rest.join('\n').trim() }
++}
+diff --git a/package.json b/package.json
+index 0d23e11..6096126 100644
+--- a/package.json
++++ b/package.json
+@@ -31,7 +31,8 @@
+     "verify:namingE2E": "tsx 30-e2e-naming-flow.ts",
+     "measure:hour": "tsx 31-measure-hour-convert.ts",
+     "verify:hour": "tsx 32-verify-hour-convert.ts",
+-    "measure:yongsin": "tsx 33-measure-career-yongsin.ts"
++    "measure:yongsin": "tsx 33-measure-career-yongsin.ts",
++    "measure:mbti": "tsx 34-measure-saju-mbti.ts"
+   },
+   "dependencies": {
+     "@supabase/ssr": "^0.6.1",

@@ -135,14 +135,20 @@ export default function MbtiCard({ result, realMbti, compare, name }: Props) {
         )}
       </div>
 
-      {/* ★두 줄로 겹쳐 보기 — 어느 칸이 바뀌었는지 «한눈에» */}
+      {/* ★두 줄로 겹쳐 보기 — 어느 칸이 바뀌었는지 «한눈에»
+          ⚠️ 2026-08-03 (44부 33차) — 「타고난 / 지금」을 칸 «왼쪽» 으로 옮겼습니다.
+             오른쪽 끝에 붙여 두니 어느 줄의 이름인지 눈이 한 번 더 가야 했습니다.
+             ★글은 왼쪽에서 오른쪽으로 흐르니 이름이 «먼저» 와야 읽힙니다. */}
       {compare && realMbti && compare.same < 4 && (
         <div style={{ marginBottom: 18 }}>
           {([['born', '타고난'], ['now', '지금']] as const).map(([k, lab]) => (
             <div key={k} style={{
-              display: 'flex', gap: 8, alignItems: 'center',
+              display: 'flex', gap: 7, alignItems: 'center',
               marginBottom: k === 'born' ? 6 : 0,
             }}>
+              <span style={{
+                width: 36, flexShrink: 0, fontSize: 11, color: '#94a3b8', textAlign: 'right',
+              }}>{lab}</span>
               {compare.axes.map(a => {
                 const on = a.same
                 return (
@@ -155,11 +161,17 @@ export default function MbtiCard({ result, realMbti, compare, name }: Props) {
                   }}>{a[k]}</div>
                 )
               })}
-              <span style={{
-                width: 34, flexShrink: 0, fontSize: 11, color: '#94a3b8', textAlign: 'left',
-              }}>{lab}</span>
             </div>
           ))}
+          {/* ★어느 칸이 무슨 결인지 — 아래에 옅게 한 줄 */}
+          <div style={{ display: 'flex', gap: 7, alignItems: 'center', marginTop: 5 }}>
+            <span style={{ width: 36, flexShrink: 0 }} />
+            {compare.axes.map(a => (
+              <div key={a.label} style={{
+                flex: 1, textAlign: 'center', fontSize: 10, color: '#a09488',
+              }}>{a.label.replace(' 결', '')}</div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -273,6 +285,16 @@ export default function MbtiCard({ result, realMbti, compare, name }: Props) {
           기운이 기운 쪽으로 자랍니다.
         </div>
 
+        {/* ★가운데 선이 무엇인지 한 번만 밝힙니다 — 줄마다 적으면 시끄럽습니다 */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 9px',
+          fontSize: 10.5, color: '#a09488',
+        }}>
+          <span style={{ width: 15, flexShrink: 0 }} />
+          <div style={{ flex: 1, textAlign: 'center' }}>↓ 여기가 반반</div>
+          <span style={{ width: 15, flexShrink: 0 }} />
+        </div>
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
           {result.axes.map(a => (
             <div key={a.axis}>
@@ -298,9 +320,14 @@ export default function MbtiCard({ result, realMbti, compare, name }: Props) {
                   flex: 1, height: 9, borderRadius: 20,
                   background: '#eef2f6', position: 'relative',
                 }}>
+                  {/* ★가운데 선 — «여기서부터 자란다» 는 것을 눈으로 보이게 (44부 33차)
+                      🔴 [무엇이 있었나] 선 색이 #d8dee6 로 막대 바탕(#eef2f6)과 거의 같아
+                         ★묻혀서 안 보였습니다. 「반반에 가까워요」인 축은 막대도 0에 가까워
+                         «아무것도 없는 줄» 로 보였습니다. (대표님 사진 2026-08-03)
+                      ⚠️ 막대보다 «위아래로 길게» 빼서 눈금처럼 세웁니다. */}
                   <div style={{
-                    position: 'absolute', left: '50%', top: 0, bottom: 0,
-                    width: 1, background: '#d8dee6',
+                    position: 'absolute', left: '50%', top: -4, bottom: -4,
+                    width: 2, marginLeft: -1, background: '#9b8bc4', borderRadius: 2,
                   }} />
                   <div style={{
                     position: 'absolute', top: 0, bottom: 0,

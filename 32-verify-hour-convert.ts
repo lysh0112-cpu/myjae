@@ -1572,7 +1572,18 @@ console.log('\n━━ (51) ★MBTI 카드 — 「표」를 걷고 «읽는 글»
   check(/<details/.test(card) && /사주에서 어떻게 나온 건가요/.test(card),
     `★네 축 막대를 «접어» 두었습니다 (지우지 않았습니다)`)
   check(/사주로 본 결/.test(card), `★막대의 «임자» 를 밝힙니다`)
-  check(/left: '50%', top: 0, bottom: 0/.test(card), `★가운데(반반) 선이 있습니다`)
+  // ★2026-08-03 (44부 33차) — 선이 «보이는가» 까지 잽니다.
+  //   🔴 전에는 색이 #d8dee6 로 막대 바탕(#eef2f6)과 거의 같아 ★묻혀서 안 보였습니다.
+  //      「반반에 가까워요」인 축은 막대도 0에 가까워 «아무것도 없는 줄» 로 보였습니다.
+  check(/left: '50%', top: -4, bottom: -4/.test(card),
+    `★가운데(반반) 선이 막대 «위아래로 내밀어» 있습니다`)
+  check(/background: '#9b8bc4'/.test(card), `★선 색이 막대 바탕과 «갈립니다»`)
+  check(/여기가 반반/.test(card), `★가운데가 무엇인지 «한 번만» 밝힙니다`)
+  // ★두 줄 겹쳐 보기 — 이름이 «왼쪽» 인가
+  check(/width: 36, flexShrink: 0, fontSize: 11[^}]*textAlign: 'right'/.test(card),
+    `★「타고난 / 지금」이 칸 «왼쪽» 에 있습니다 (글은 왼쪽에서 흐릅니다)`)
+  check(/\{a\.label\.replace\(' 결', ''\)\}/.test(card),
+    `★칸 아래에 어느 결인지 옅게 적습니다`)
   check(/a\.leftPct >= 50[\s\S]{0,120}right: '50%'/.test(card),
     `★막대가 «고른 쪽» 으로 자랍니다 (막대와 진한 글자가 언제나 같은 쪽)`)
 
