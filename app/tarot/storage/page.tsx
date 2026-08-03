@@ -22,6 +22,8 @@ import {
   type TarotRecord,
 } from '@/lib/saju/tarotRecords'
 import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+import StorageShell from '@/app/components/common/StorageShell'
+import StorageRow from '@/app/components/common/StorageRow'
 
 function TarotStorageInner() {
   const router = useRouter()
@@ -50,46 +52,21 @@ function TarotStorageInner() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
-      {/* 헤더 */}
-      <div style={{
-        position: 'sticky', top: 0, zIndex: 5,
-        background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
-        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
-      }}>
-        <button onClick={() => router.push('/tarot')}
-          style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
-        <div style={{ fontSize: 16, fontWeight: 500, color: '#3a2e28' }}>타로 보관함</div>
-        {records && <div style={{ marginLeft: 'auto', fontSize: 12, color: '#5c3a1e' }}>{records.length}건</div>}
-      </div>
-
-      <div style={{ padding: '16px 14px 0' }}>
-        {/* 로딩 */}
-        {records === null && (
-          <div style={{ textAlign: 'center', padding: '50px 0', color: '#5c3a1e', fontSize: 13 }}>
-            보관함을 불러오는 중…
-          </div>
-        )}
-
-        {/* 빈 상태 */}
-        {records && records.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '46px 20px', color: '#5c3a1e' }}>
-            <div style={{ fontSize: 30, marginBottom: 10 }}>🔮</div>
-            <div style={{ fontSize: 14, color: '#96502e', fontWeight: 500, marginBottom: 4 }}>
-              아직 저장된 타로 기록이 없어요
-            </div>
-            <div style={{ fontSize: 12, lineHeight: 1.6 }}>카드를 뽑으면 여기에 차곡차곡 쌓여요</div>
-          </div>
-        )}
-
+    <StorageShell
+      title="타로 보관함"
+      onBack={() => router.push('/tarot')}
+      count={records ? records.length : null}
+      loading={records === null}
+      showEmpty={!!records && records.length === 0}
+      emptyIcon="🔮"
+      emptyTitle="아직 저장된 타로 기록이 없어요"
+      emptyDesc="카드를 뽑으면 여기에 차곡차곡 쌓여요"
+      actionLabel="+ 새 타로 보기"
+      onAction={() => router.push('/tarot')}
+    >
         {/* 카드 목록 */}
         {records && records.map(r => (
-          <div key={r.id} onClick={() => router.push(`/tarot?recordId=${r.id}`)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 13, padding: '15px',
-              background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14,
-              marginBottom: 10, cursor: 'pointer',
-            }}>
+          <StorageRow key={r.id} onClick={() => router.push(`/tarot?recordId=${r.id}`)} onDelete={() => setConfirmDel(r)}>
             {/* 관심사 배지 */}
             <div style={{
               minWidth: 52, height: 44, borderRadius: 10, flexShrink: 0, padding: '0 6px',
@@ -111,30 +88,8 @@ function TarotStorageInner() {
                 {r.spreadTitle} · {daysAgoLabel(r.createdAt)}
               </div>
             </div>
-
-            {/* 삭제 버튼 */}
-            <button
-              onClick={(e) => { e.stopPropagation(); setConfirmDel(r) }}
-              aria-label="삭제"
-              style={{
-                flexShrink: 0, width: 28, height: 28, borderRadius: 8,
-                background: 'none', border: 'none', color: '#6b5340', fontSize: 17,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-              ×
-            </button>
-          </div>
+          </StorageRow>
         ))}
-
-        {/* 새로 보기 → 타로 입구 */}
-        <button onClick={() => router.push('/tarot')}
-          style={{
-            width: '100%', marginTop: 8, padding: 14, borderRadius: 12,
-            background: '#b45a78', border: 'none', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer',
-          }}>
-          + 새 타로 보기
-        </button>
-      </div>
 
       {/* 삭제 확인 팝업 */}
       {confirmDel && (
@@ -146,7 +101,7 @@ function TarotStorageInner() {
           onConfirm={handleDelete}
         />
       )}
-    </main>
+    </StorageShell>
   )
 }
 

@@ -1,0 +1,2885 @@
+diff --git a/28-verify-naming-flow.ts b/28-verify-naming-flow.ts
+index df9c208..2ee58a9 100644
+--- a/28-verify-naming-flow.ts
++++ b/28-verify-naming-flow.ts
+@@ -832,8 +832,15 @@ console.log('\n━━ ⑲-K ★보관함 «완전» 분리 — 탭 없음 (43부
+     `★옛 주소는 «이름 정밀분석» 입니다 (그 주소의 원래 뜻)`)
+ 
+   // ③ 버튼 하나 · 옆으로 가는 길
+-  check(/view\.button === '작명' && \(/.test(v) && /view\.button === '풀이' && \(/.test(v),
++  // ★2026-08-03 (44부 26차) — 버튼을 «화면» 이 아니라 StorageShell 이 그립니다.
++  //   ⚠️ 검사를 헐겁게 하지 «않았습니다» — 「갈래마다 하나」라는 뜻을 그대로 잽니다.
++  //      ① 화면이 갈래를 보고 «글자 하나» 를 고르는가
++  //      ② 틀이 그 글자를 «한 번만» 그리는가
++  const shellSrc = codeOf(read('app/components/common/StorageShell.tsx'))
++  check(/view\.button === '작명' \?/.test(v) && /view\.button === '풀이' \?/.test(v),
+     `★하단 버튼이 갈래마다 «하나» 입니다`)
++  check((shellSrc.match(/\{actionLabel && \(/g) ?? []).length === 1,
++    `★그 버튼을 틀이 «한 번만» 그립니다`)
+   check(/otherLabel: '내 아이 명품작명으로 가기'/.test(v)
+      && /otherLabel: '내 이름 정밀분석으로 가기'/.test(v),
+     `★옆 보관함 안내가 «새 이름» 입니다`)
+@@ -854,7 +861,11 @@ console.log('\n━━ ⑲-K ★보관함 «완전» 분리 — 탭 없음 (43부
+   // ④ ⚠️ 거르기는 «화면에서만» — 기록은 하나도 안 지웁니다
+   check(!/listNamingRecords\((mode|view)/.test(v),
+     `★목록을 «불러올 때» 거르지 않습니다`)
+-  check(/shownRecords\.length\}건/.test(v), `머리의 건수가 «보이는 목록» 과 같습니다`)
++  // ★2026-08-03 (44부 26차) — 「N건」도 StorageShell 이 그립니다.
++  //   ⚠️ 「보이는 목록의 수를 넘기는가」로 잽니다 — 뜻은 그대로입니다.
++  check(/count=\{records \? shownRecords\.length : null\}/.test(v),
++    `머리의 건수가 «보이는 목록» 과 같습니다`)
++  check(/\{count\}건/.test(shellSrc), `★그 수를 틀이 「N건」으로 그립니다`)
+   // ⚠️ 옛 주소를 지우지 않았는가
+   check(existsSync(P.stoDoor), `⚠️ 옛 주소를 «지우지 않았습니다» (북마크·마이페이지)`)
+ }
+diff --git a/32-verify-hour-convert.ts b/32-verify-hour-convert.ts
+index 5e959b9..326b05f 100644
+--- a/32-verify-hour-convert.ts
++++ b/32-verify-hour-convert.ts
+@@ -1249,6 +1249,67 @@ console.log('\n━━ ㊹ ★삭제 확인 팝업 — «한 부품» 으로 통
+   check(twins.length === 0, `⚠️ 팝업을 «다시 지은» 화면이 없습니다`)
+ }
+ 
++console.log('\n━━ ㊺ ★보관함 열 곳이 «한 모습» 인가 (44부 26차) ━━')
++{
++  // ⚠️ 교훈 1-1 — 주석을 «먼저 지우고» 봅니다
++  const noComment = (s: string) =>
++    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
++
++  const shell = noComment(read('app/components/common/StorageShell.tsx'))
++  const row = noComment(read('app/components/common/StorageRow.tsx'))
++
++  // ★한 모습이 «한 곳» 에 모여 있는가
++  check(/bg: '#FDF6F0'/.test(shell) && /card: '#FFFBF7'/.test(shell) && /line: '#f0e0d5'/.test(shell),
++    `★바탕·카드·선 색이 S 한 곳에 있습니다`)
++  check(/btn: '#b46e46'/.test(shell), `★아래 버튼 색이 «하나» 입니다 (서비스별 색을 걷어냄)`)
++  check(/fontSize: 16, fontWeight: 500, color: S\.ink/.test(shell), `★머리말 제목이 16·500 하나입니다`)
++  check(/\{count\}건/.test(shell), `★「N건」을 부품이 그립니다`)
++  check(/보관함을 불러오는 중…/.test(shell), `★기다리는 글이 하나입니다`)
++  check(/width: 28, height: 28, borderRadius: 8/.test(row) && /color: S\.del/.test(row),
++    `★✕ 버튼이 28×28 한 모양입니다`)
++  check(/e\.stopPropagation\(\)/.test(row), `⚠️ ✕ 가 카드 누르기와 겹치지 않게 부품이 막습니다`)
++
++  const SCREENS = [
++    'app/manseryeok/couple-storage/page.tsx',
++    'app/manseryeok/saju-storage/page.tsx',
++    'app/manseryeok/mulsang-storage/page.tsx',
++    'app/tarot/storage/page.tsx',
++    'app/manseryeok/naming/components/NamingStorageView.tsx',
++    'app/manseryeok/wedding-timing/wedding-storage/page.tsx',
++    'app/manseryeok/birth-timing/birth-storage/page.tsx',
++    'app/manseryeok/moving-timing/moving-storage/page.tsx',
++    'app/manseryeok/career/page.tsx',
++    'app/manseryeok/exam-luck/page.tsx',
++  ]
++  const src = SCREENS.map(p => [p, noComment(read(p))] as const)
++
++  check(src.every(([, s]) => /<StorageShell/.test(s)),
++    `★보관함 «열 곳» 이 모두 StorageShell 을 씁니다 (${src.filter(([, s]) => /<StorageShell/.test(s)).length}/10)`)
++  check(src.every(([, s]) => /<StorageRow/.test(s)),
++    `★열 곳이 모두 StorageRow 를 씁니다`)
++
++  // ⚠️⚠️ 화면이 «제 틀» 을 다시 들고 있지 않은가 — 이것이 열 벌로 갈라졌던 까닭입니다
++  const ownShell = src.filter(([, s]) =>
++    /position: 'sticky', top: 0, zIndex: \d+,/.test(s) || /backdropFilter: 'blur\(10px\)'/.test(s))
++  check(ownShell.length === 0,
++    `⚠️ 화면이 «제 머리말» 을 따로 그리지 않습니다${ownShell.length ? ' — ' + ownShell.map(x => x[0]).join(', ') : ''}`)
++
++  const ownRow = src.filter(([, s]) =>
++    /flexShrink: 0, width: 28, height: 28, borderRadius: 8/.test(s))
++  check(ownRow.length === 0,
++    `⚠️ 화면이 «제 ✕ 버튼» 을 따로 그리지 않습니다${ownRow.length ? ' — ' + ownRow.map(x => x[0]).join(', ') : ''}`)
++
++  // ⚠️ 보관함에 «서비스 색» 이 남아 있지 않은가 (대표님 지시)
++  const leftColor = src.filter(([, s]) =>
++    /background: (ACCENT|accent|info\.accent|SOFT)\b/.test(s))
++  check(leftColor.length === 0,
++    `★서비스별 색이 남아 있지 않습니다${leftColor.length ? ' — ' + leftColor.map(x => x[0]).join(', ') : ''}`)
++
++  // 🔴 「궁합 궁합」 — 말이 겹치던 자리
++  const cp = noComment(read('app/manseryeok/couple-storage/page.tsx'))
++  check(!/\{info\.badge\} 궁합/.test(cp), `🔴 「궁합 궁합」이 사라졌습니다`)
++}
++
+ console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
+ {
+   const src = read('lib/saju/simsanOhaeng.ts')
+diff --git a/README-44BU-25-INSTALL.md b/README-44BU-25-INSTALL.md
+deleted file mode 100644
+index d3a0dac..0000000
+--- a/README-44BU-25-INSTALL.md
++++ /dev/null
+@@ -1,194 +0,0 @@
+-# 44부 25차 — 삭제 확인 팝업을 «한 부품» 으로 통일
+-
+-```
+-기준 커밋   deb648c  (44부 24차까지 올라간 상태)
+-검사        1,754 → ★1,763건 · 실패 0   (오행·용신 그물 327 → 336)
+-타입        npx tsc --noEmit 통과
+-eslint      오류 82 · 경고 138  (기준선 그대로)
+-변경        수정 12 · 신규 1 = 13 파일
+-⚠️ 빌드     ★제 쪽에서 «확인하지 못했습니다» — 아래 「빌드」 항을 꼭 읽으십시오
+-```
+-
+-## 넣는 법
+-
+-```bash
+-cd myjae
+-unzip -o ../myjae-44bu-25-20260803.zip
+-git status --porcelain      # ★ M 12줄 + ?? 2줄
+-npm run verify              # 실패 0 · 오행·용신 그물 336
+-npx tsc --noEmit
+-★npm run build              # ⚠️ 이것을 «반드시» 돌려 주십시오 (아래 참고)
+-git add -A
+-git commit -m "삭제 확인 팝업을 공용 부품 하나로 통일 (44부 25차)"
+-git push
+-```
+-
+-## ⚠️⚠️ 빌드 — 제가 «확인하지 못했습니다»
+-
+-```
+-제 작업 자리는 fonts.googleapis.com 이 «막혀» 있어 next build 가
+-글꼴을 못 받고 멈춥니다 (403). ★코드 문제가 아니라 망(網) 문제입니다.
+-
+-  Failed to fetch `Geist` from Google Fonts.   ← app/layout.tsx 의 next/font
+-
+-⇒ 그러나 «확인 못 한 것은 확인 못 한 것» 입니다 (44부 교훈 1-4).
+-  ★대표님 자리에서 npm run build 를 한 번 돌려 주십시오.
+-  ⚠️ 이번 변경은 화면 파일만 건드렸고 의존도 더하지 않아 위험은 낮습니다.
+-```
+-
+----
+-
+-# 무엇이 문제였나
+-
+-대표님이 보내 주신 사진 세 장이 서로 «다른 말투» 였습니다.
+-
+-```
+-진로적성 보관함   「이 기록을 지울까요?」   [그대로 둘게요] [지울게요]   ← 왼쪽정렬
+-궁합 보관함       「정말 삭제할까요?」     [취소] [삭제]              ← 가운데정렬
+-내 이름 정밀분석   「정말 삭제할까요?」     [취소] [삭제]
+-```
+-
+-전수로 훑어보니 삭제 확인이 뜨는 자리가 **열일곱 곳**, 말투가 **네 갈래** 였습니다.
+-
+-```
+-① 「정말 삭제할까요? / 취소·삭제」            8곳   ← ★정본으로 삼았습니다
+-② 「이 기록을 지울까요? / 그대로 둘게요·지울게요」 2곳   진로적성 · 합격운
+-③ 「삭제할까요?」 260px 흰 팝업                1곳   인물 고르기
+-④ 브라우저 기본 confirm() 창                  6곳   ⚠️ 이번에 «안 건드렸습니다»
+-```
+-
+-🔴 **까닭 — 팝업 코드가 «열한 벌 복사» 되어 있었습니다.**
+-한 곳을 고쳐도 나머지 열 곳이 그대로 남는 구조였습니다.
+-
+-⚠️ ②의 두 곳은 «서로 베낀» 것입니다 —
+-exam-luck 머리말에 「진로적성 보관함을 그대로 본떴다」고 적혀 있습니다.
+-**한 뿌리라 함께 어긋났습니다.**
+-
+----
+-
+-# ★무엇을 했나
+-
+-## ① 공용 부품 하나 — `app/components/common/ConfirmDeleteDialog.tsx`
+-
+-```
+-★app/components/common/ 이 이 저장소의 공용 부품 자리입니다
+-  (ConsultButton · CopyTextButton · PageHeader · StarRating) — 전례를 따릅니다.
+-
+-쓰는 법
+-  <ConfirmDeleteDialog
+-    open
+-    message={<>{confirmDel.name1} ♥ {confirmDel.name2} 궁합을 삭제해요.</>}
+-    busy={deleting}
+-    onCancel={() => setConfirmDel(null)}
+-    onConfirm={handleDelete}
+-  />
+-
+-★message 는 «무엇을 지우는지» 한 줄만 씁니다.
+-  「삭제하면 되돌릴 수 없어요.」 는 ★부품이 «언제나» 붙입니다. 따로 적지 마십시오.
+-```
+-
+-⚠️⚠️ **말투를 바꾸시려면 이 파일 한 곳만 고치십시오. 열한 화면이 함께 바뀝니다.**
+-   `TITLE` · `WARN` · `CANCEL_LABEL` · `CONFIRM_LABEL` · `BUSY_LABEL` 다섯 줄입니다.
+-
+-### ★덧붙은 것 둘
+-
+-```
+-· ESC 로도 닫힙니다  (지우는 중에는 잠깁니다)
+-· role="dialog" aria-modal — 읽어 주는 기기가 팝업임을 압니다
+-```
+-
+-### ★`contained` — 모달 «안» 에서 열릴 때
+-
+-```
+-인물 고르기(PersonPickerModal)는 «이미 떠 있는 모달» 위에 겹칩니다.
+-position:fixed 로 화면 전체를 덮으면 부모 모달의 둥근 모서리를 넘어갑니다.
+-⇒ 그때만 absolute 로 «부모 안» 을 덮습니다. 옛 동작 그대로입니다.
+-```
+-
+-## ② 열한 화면을 갈아 끼웠습니다
+-
+-```
+-궁합 · 사주 · 물상(그림) · 타로 · 내 이름 정밀분석 ·
+-결혼택일 · 출산택일 · 이사택일 · 진로적성 · 합격운·취업운 · 인물 고르기
+-```
+-
+-★**419줄이 지워지고 88줄이 들어왔습니다.** 같은 코드 열한 벌이 한 벌이 되었습니다.
+-
+-### ⚠️ 말은 그대로 옮겼습니다
+-
+-각 화면이 «무엇을 지우는지» 이르던 말은 **한 글자도 바꾸지 않았습니다.**
+-
+-```
+-궁합        정준호 ♥ 이경아 궁합을 삭제해요.
+-내 이름     ‘류이진’ 이름 풀이를 삭제해요.
+-이사택일    홍길동 · 김철수 이사택일을 삭제해요.
+-★진로적성   {이름}의 진로적성 기록을 삭제해요.        ← 새로 맞춘 두 곳
+-★합격운     {이름}의 합격운·취업운 기록을 삭제해요.
+-```
+-
+-### ⚠️ 이사택일의 «흙색» 은 사라집니다
+-
+-```
+-이사택일만 카드 #FFFDF9 · 글 #7A6440 · 취소 #F0EADA 로 그 화면 테마를 따랐습니다.
+-⇒ ★통일이 목적이라 «정본 색» 으로 맞췄습니다.
+-⚠️ 그 화면 색을 되살리길 원하시면 말씀해 주십시오 — 부품에 낱말 하나만 더하면 됩니다.
+-```
+-
+-## ③ 검사 그물 ㊹ — 다시 갈라지지 않도록
+-
+-```
+-32-verify-hour-convert.ts 에 아홉 가지를 더했습니다 (327 → 336).
+-
+-  ★말투가 부품 «한 곳» 에 있는가
+-  ★열한 화면이 «모두» 그 부품을 부르는가 (11/11)
+-  ⚠️ 어느 화면도 «제 팝업 문구» 를 따로 들고 있지 않은가   ← ★이것이 핵심입니다
+-  ★진로적성·합격운의 「그대로 둘게요」가 사라졌는가
+-```
+-
+-⚠️ **교훈 1-1 을 지켰습니다** — 검사가 «제 주석» 에 걸리지 않도록
+-   `noComment()` 로 **주석을 먼저 지우고** 소스를 봅니다.
+-   (부품 머리말에 「이 기록을 지울까요?」 같은 옛 문구가 적혀 있어, 안 지우면 걸립니다)
+-
+-★**역시험을 했습니다** — 진로적성 화면 하나만 옛것으로 되돌려 보니
+-   그물이 「10/11」로 «잡았습니다». 눈속임 검사가 아닙니다.
+-
+----
+-
+-# ⬜ 배포 후 실기 확인
+-
+-```
+-□ ★진로적성 보관함 ✕ — 「정말 삭제할까요?」 · [취소] [삭제] 인지
+-   ⚠️ 사진의 「그대로 둘게요 / 지울게요」가 «사라졌어야» 합니다
+-□ ★합격운·취업운 보관함 ✕ — 같은 모양인지
+-□ 궁합 · 사주 · 물상 · 타로 · 내 이름 · 결혼택일 · 출산택일 — 그대로인지
+-□ ★이사택일 ✕ — 색이 다른 화면과 «같아졌는지» (전에는 흙색이었습니다)
+-□ ★인물 고르기(사람 목록)에서 ✕ — 팝업이 «모달 안» 에 뜨는지
+-   ⚠️ 화면 전체를 덮어 모달 모서리를 넘어가면 «잘못된 것» 입니다
+-□ ★실제로 지워지는지 · 지우는 동안 「삭제 중…」 이 뜨는지
+-□ ★바깥을 눌러도 닫히는지 · ESC 로도 닫히는지
+-```
+-
+----
+-
+-# ⚠️ 아직 «안 한» 것 — 브라우저 기본 confirm() 여섯 곳
+-
+-```
+-📚 통합 보관함(ArchiveList) · 마이페이지(이름풀이·예약취소·회원탈퇴)
+-상담사 상담내역 · 관리자 화면들
+-
+-⇒ 이 자리는 팝업이 아니라 «브라우저 알림창» 이 뜹니다. 모양이 아예 다릅니다.
+-⚠️ 다만 여기는 «되돌릴 수 없는 무게» 가 다릅니다 —
+-   회원탈퇴·영구삭제처럼 «브라우저 창이 오히려 나은» 자리가 섞여 있습니다.
+-★대표님 뜻을 여쭙고 다음 차수에 하겠습니다.
+-```
+-
+-# 🔴 그대로 남아 있는 다음 일
+-
+-```
+-□ 🔴 「"요즘 어때, 괜찮아?" 하고 한 번 물어봐 주시는 것」이 «중복»
+-   ★lib/saju/couple/step8Timeline.ts:235 에 그 줄이 있습니다.
+-     흔들림 해마다 같은 솔루션이 들어가는 자리로 «보입니다».
+-   ⚠️ 화면을 못 봐서 «단정하지 않았습니다». 사진을 주시면 그때 잡겠습니다.
+-□ 「六 대화와 역할」 짓기 (step6Roles)
+-□ 22차 실기 확인 (아직 못 하셨습니다)
+-```
+diff --git a/app/components/common/StorageRow.tsx b/app/components/common/StorageRow.tsx
+new file mode 100644
+index 0000000..0c06ad4
+--- /dev/null
++++ b/app/components/common/StorageRow.tsx
+@@ -0,0 +1,61 @@
++'use client'
++
++/**
++ * StorageRow — 보관함의 «한 줄» 공용 부품.
++ * ─────────────────────────────────────────────────────────────
++ *  ★2026-08-03 신설 — 대표님 지시 「모두 통일해줘」 (44부 26차)
++ *
++ * ══ 무엇을 맡는가 ══
++ *   줄카드의 «테두리·바탕·여백» 과 오른쪽 ✕ 버튼만 맡습니다.
++ *   ★줄 «안» 은 화면마다 정말 다릅니다 —
++ *     내 이름 보관함은 왼쪽에 한자 22px, 궁합은 「이름 ♥ 이름」,
++ *     타로는 관심사 배지…  ⇒ ★그 안은 children 으로 받아 «손대지 않습니다».
++ *
++ * ⚠️ ✕ 버튼은 카드 누르기(결과로 이동)와 겹치므로 stopPropagation 을
++ *    ★이 부품이 «대신» 합니다. 화면에서 또 적지 마십시오.
++ *
++ * 쓰는 법:
++ *   <StorageRow key={r.id} onClick={() => router.push(url)} onDelete={() => setConfirmDel(r)}>
++ *     …줄 안…
++ *   </StorageRow>
++ */
++
++import type { ReactNode } from 'react'
++import { S } from './StorageShell'
++
++interface Props {
++  children: ReactNode
++  onClick?: () => void
++  /** 없으면 ✕ 를 그리지 않습니다 */
++  onDelete?: () => void
++}
++
++export default function StorageRow({ children, onClick, onDelete }: Props) {
++  return (
++    <div
++      onClick={onClick}
++      style={{
++        display: 'flex', alignItems: 'center', gap: 13, padding: 15,
++        background: S.card, border: `0.5px solid ${S.line}`, borderRadius: 14,
++        marginBottom: 10, cursor: onClick ? 'pointer' : 'default',
++      }}>
++      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 13 }}>
++        {children}
++      </div>
++
++      {onDelete && (
++        <button
++          onClick={(e) => { e.stopPropagation(); onDelete() }}
++          aria-label="삭제"
++          style={{
++            flexShrink: 0, width: 28, height: 28, borderRadius: 8,
++            background: 'none', border: 'none', color: S.del, fontSize: 17,
++            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
++            fontFamily: 'inherit',
++          }}>
++          ×
++        </button>
++      )}
++    </div>
++  )
++}
+diff --git a/app/components/common/StorageShell.tsx b/app/components/common/StorageShell.tsx
+new file mode 100644
+index 0000000..f11e622
+--- /dev/null
++++ b/app/components/common/StorageShell.tsx
+@@ -0,0 +1,143 @@
++'use client'
++
++/**
++ * StorageShell — 보관함 «틀» 공용 부품.
++ * ─────────────────────────────────────────────────────────────
++ *  ★2026-08-03 신설 — 대표님 지시 「모두 통일해줘. 서비스별로 보관함을
++ *    차별화할 필요없다」 (44부 26차)
++ *
++ * ══ 왜 공용 부품인가 ══
++ *   보관함이 열 곳인데 틀이 «열 벌 복사» 되어 있었습니다.
++ *   아홉 곳은 값이 우연히 같았고, 이사택일 하나가 어긋나 있었으며,
++ *   아래 버튼 색은 서비스마다 제각각이었습니다(보라·분홍·갈색·자주…).
++ *   ⇒ ★대표님 확정 — 보관함은 «서비스별로 다를 까닭이 없습니다». 한 모습입니다.
++ *
++ * ⚠️⚠️ 화면마다 머리말·빈 화면·아래 버튼을 «다시 짓지 마십시오».
++ *    그렇게 해서 열 벌이 되었습니다. 이 부품에 넘기십시오.
++ * ⚠️ 색·크기를 바꾸시려면 «이 파일 한 곳» 만 고치십시오. 열 화면이 함께 바뀝니다.
++ *
++ * 쓰는 법:
++ *   <StorageShell
++ *     title="궁합 보관함"
++ *     count={records?.length}
++ *     loading={records === null}
++ *     showEmpty={!!records && records.length === 0}
++ *     emptyIcon="💝"
++ *     emptyTitle="아직 저장된 궁합이 없어요"
++ *     emptyDesc="새 궁합을 보면 여기에 차곡차곡 쌓여요"
++ *     actionLabel="+ 새 궁합 보기"
++ *     onAction={() => router.push('/manseryeok/couple-input-new')}
++ *   >
++ *     {records?.map(r => <StorageRow …/>)}
++ *   </StorageShell>
++ */
++
++import { useRouter } from 'next/navigation'
++import type { ReactNode } from 'react'
++
++/* ══ 보관함 «한 모습» — ★고치려면 여기만 ══ */
++export const S = {
++  bg: '#FDF6F0',            // 바탕
++  bar: 'rgba(250,250,248,0.96)', // 머리말
++  line: '#f0e0d5',          // 선
++  card: '#FFFBF7',          // 줄카드
++  ink: '#3a2e28',           // 제목 글자
++  sub: '#5c3a1e',           // 잔글씨
++  back: '#96502e',          // ← 화살표
++  del: '#6b5340',           // ✕
++  btn: '#b46e46',           // ★아래 버튼 — 서비스별 색을 걷어내고 하나로
++  emp: '#96502e',           // 빈 화면 한 줄
++} as const
++
++interface Props {
++  title: string
++  /** 오른쪽 끝 「N건」 — 없으면 감춥니다 */
++  count?: number | null
++  /** 기본은 홈으로 */
++  onBack?: () => void
++  loading?: boolean
++  showEmpty?: boolean
++  emptyIcon?: string
++  emptyTitle?: ReactNode
++  emptyDesc?: ReactNode
++  /** 아래 큰 버튼 — 글이 없으면 그리지 않습니다 */
++  actionLabel?: ReactNode
++  onAction?: () => void
++  children?: ReactNode
++  /** 아래 버튼 «뒤» 에 더 붙일 것 (안내문 등) */
++  footer?: ReactNode
++}
++
++export default function StorageShell({
++  title, count, onBack, loading = false,
++  showEmpty = false, emptyIcon = '📁', emptyTitle, emptyDesc,
++  actionLabel, onAction, children, footer,
++}: Props) {
++  const router = useRouter()
++
++  return (
++    <main style={{
++      minHeight: '100vh', background: S.bg, maxWidth: 480,
++      margin: '0 auto', paddingBottom: 40,
++    }}>
++      {/* ── 머리말 ── */}
++      <div style={{
++        position: 'sticky', top: 0, zIndex: 5,
++        background: S.bar, backdropFilter: 'blur(10px)',
++        borderBottom: `0.5px solid ${S.line}`, padding: '13px 16px',
++        display: 'flex', alignItems: 'center', gap: 8,
++      }}>
++        <button
++          onClick={() => (onBack ? onBack() : router.push('/home-new'))}
++          aria-label="뒤로"
++          style={{
++            background: 'none', border: 'none', color: S.back,
++            fontSize: 17, cursor: 'pointer', padding: 0, fontFamily: 'inherit',
++          }}>←</button>
++        <div style={{ fontSize: 16, fontWeight: 500, color: S.ink }}>{title}</div>
++        {count != null && (
++          <div style={{ marginLeft: 'auto', fontSize: 12, color: S.sub }}>{count}건</div>
++        )}
++      </div>
++
++      <div style={{ padding: '16px 14px 0' }}>
++        {/* ── 불러오는 중 ── */}
++        {loading && (
++          <div style={{ textAlign: 'center', padding: '50px 0', color: S.sub, fontSize: 13 }}>
++            보관함을 불러오는 중…
++          </div>
++        )}
++
++        {/* ── 비었을 때 ── */}
++        {showEmpty && (
++          <div style={{ textAlign: 'center', padding: '46px 20px', color: S.sub }}>
++            <div style={{ fontSize: 30, marginBottom: 10 }}>{emptyIcon}</div>
++            <div style={{ fontSize: 14, color: S.emp, fontWeight: 500, marginBottom: 4 }}>
++              {emptyTitle}
++            </div>
++            {emptyDesc && (
++              <div style={{ fontSize: 12, lineHeight: 1.6 }}>{emptyDesc}</div>
++            )}
++          </div>
++        )}
++
++        {children}
++
++        {/* ── 아래 큰 버튼 ── */}
++        {actionLabel && (
++          <button
++            onClick={onAction}
++            style={{
++              width: '100%', marginTop: 8, padding: 14, borderRadius: 12,
++              background: S.btn, border: 'none', color: '#fff',
++              fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
++            }}>
++            {actionLabel}
++          </button>
++        )}
++
++        {footer}
++      </div>
++    </main>
++  )
++}
+diff --git a/app/manseryeok/birth-timing/birth-storage/page.tsx b/app/manseryeok/birth-timing/birth-storage/page.tsx
+index a927d56..d8e0370 100644
+--- a/app/manseryeok/birth-timing/birth-storage/page.tsx
++++ b/app/manseryeok/birth-timing/birth-storage/page.tsx
+@@ -19,8 +19,12 @@ import {
+ } from '@/lib/saju/birthRecords'
+ import type { SavedInputData } from '@/lib/saju/savedPeople'
+ import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
++import StorageShell from '@/app/components/common/StorageShell'
++import StorageRow from '@/app/components/common/StorageRow'
+ 
+-const accent = '#b45a78'   // 출산택일 포인트(로즈핑크 — 홈 카드색과 통일)
++// ⚠️ 2026-08-03 (44부 26차) — 보관함 «전용 색» 을 걷어냈습니다.
++//    대표님 지시 「모두 통일해줘. 서비스별로 보관함을 차별화할 필요없어」
++//    ⇒ 바탕·카드·선·버튼 색은 StorageShell 의 S 하나가 정합니다.
+ 
+ // 두 부모 정보 → 다시보기 URL
+ //   ★기록이 어느 화면에서 만들어졌는지에 따라 갈라 보낸다. (2026-07-23)
+@@ -71,46 +75,20 @@ function BirthStorageInner() {
+   }
+ 
+   return (
+-    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
+-      {/* 헤더 */}
+-      <div style={{
+-        position: 'sticky', top: 0, zIndex: 5,
+-        background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
+-        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
+-      }}>
+-        <button onClick={() => router.push('/home-new')}
+-          style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
+-        <div style={{ fontSize: 16, fontWeight: 500, color: '#3a2e28' }}>출산택일 보관함</div>
+-        {records && <div style={{ marginLeft: 'auto', fontSize: 12, color: '#5c3a1e' }}>{records.length}건</div>}
+-      </div>
+-
+-      <div style={{ padding: '16px 14px 0' }}>
+-        {/* 로딩 */}
+-        {records === null && (
+-          <div style={{ textAlign: 'center', padding: '50px 0', color: '#5c3a1e', fontSize: 13 }}>
+-            보관함을 불러오는 중…
+-          </div>
+-        )}
+-
+-        {/* 빈 상태 */}
+-        {records && records.length === 0 && (
+-          <div style={{ textAlign: 'center', padding: '46px 20px', color: '#5c3a1e' }}>
+-            <div style={{ fontSize: 30, marginBottom: 10 }}>👶</div>
+-            <div style={{ fontSize: 14, color: '#96502e', fontWeight: 500, marginBottom: 4 }}>
+-              아직 저장된 출산택일이 없어요
+-            </div>
+-            <div style={{ fontSize: 12, lineHeight: 1.6 }}>새로 택일을 보면 여기에 차곡차곡 쌓여요</div>
+-          </div>
+-        )}
+-
++    <StorageShell
++      title="출산택일 보관함"
++      count={records ? records.length : null}
++      loading={records === null}
++      showEmpty={!!records && records.length === 0}
++      emptyIcon="🍼"
++      emptyTitle="아직 저장된 출산택일이 없어요"
++      emptyDesc="새로 택일을 보면 여기에 차곡차곡 쌓여요"
++      actionLabel="+ 새 출산택일 보기"
++      onAction={() => router.push('/manseryeok/birth-timing/input')}
++    >
+         {/* 카드 목록 */}
+         {records && records.map(r => (
+-          <div key={r.id} onClick={() => router.push(toResultUrl(r))}
+-            style={{
+-              display: 'flex', alignItems: 'center', gap: 13, padding: '15px',
+-              background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14,
+-              marginBottom: 10, cursor: 'pointer',
+-            }}>
++          <StorageRow key={r.id} onClick={() => router.push(toResultUrl(r))} onDelete={() => setConfirmDel(r)}>
+             {/* 예정일 배지 */}
+             <div style={{ textAlign: 'center', minWidth: 50, flexShrink: 0 }}>
+               <span style={{
+@@ -133,31 +111,9 @@ function BirthStorageInner() {
+                 {r.summary ? <span style={{ color: '#6b5340' }}>· {r.summary}</span> : null}
+               </div>
+             </div>
+-
+-            {/* 삭제 버튼 */}
+-            <button
+-              onClick={(e) => { e.stopPropagation(); setConfirmDel(r) }}
+-              aria-label="삭제"
+-              style={{
+-                flexShrink: 0, width: 28, height: 28, borderRadius: 8,
+-                background: 'none', border: 'none', color: '#6b5340', fontSize: 17,
+-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+-              }}>
+-              ×
+-            </button>
+-          </div>
++          </StorageRow>
+         ))}
+ 
+-        {/* 새 출산택일 보기 → 부모 두 사람 선택 */}
+-        <button onClick={() => router.push('/manseryeok/birth-timing/input')}
+-          style={{
+-            width: '100%', marginTop: 8, padding: 14, borderRadius: 12,
+-            background: accent, border: 'none', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer',
+-          }}>
+-          + 새 출산택일 보기
+-        </button>
+-      </div>
+-
+       {/* 삭제 확인 팝업 */}
+       {confirmDel && (
+         <ConfirmDeleteDialog
+@@ -168,7 +124,7 @@ function BirthStorageInner() {
+           onConfirm={handleDelete}
+         />
+       )}
+-    </main>
++    </StorageShell>
+   )
+ }
+ 
+diff --git a/app/manseryeok/career/page.tsx b/app/manseryeok/career/page.tsx
+index 96ef2d4..fdc6519 100644
+--- a/app/manseryeok/career/page.tsx
++++ b/app/manseryeok/career/page.tsx
+@@ -21,11 +21,13 @@ import {
+ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+ import { toResultQuery, type SavedPerson, type SavedInputData } from '@/lib/saju/savedPeople'
+ import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
++import StorageShell, { S } from '@/app/components/common/StorageShell'
++import StorageRow from '@/app/components/common/StorageRow'
+ 
+-const ACCENT = '#785aaa'      // 진로적성 색 (홈 서비스 목록과 같은 보라)
+-const BG = '#FDF6F0'
+-const CARD = '#FFFBF7'
+-const LINE = '#f0e0d5'
++//    ★서비스 색(ACCENT)도 걷어냈습니다 — 배지까지 한 모습입니다.
++// ⚠️ 2026-08-03 (44부 26차) — 보관함 «전용 색» 을 걷어냈습니다.
++//    대표님 지시 「모두 통일해줘. 서비스별로 보관함을 차별화할 필요없어」
++//    ⇒ 바탕·카드·선·버튼 색은 StorageShell 의 S 하나가 정합니다.
+ 
+ // 저장된 입력값 → 입력 화면이 읽는 URL 쿼리
+ function personToQuery(d: SavedInputData, name: string): string {
+@@ -64,47 +66,22 @@ function CareerStorageInner() {
+   }
+ 
+   return (
+-    <main style={{ minHeight: '100vh', background: BG, maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
+-      <div style={{
+-        position: 'sticky', top: 0, zIndex: 5,
+-        background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
+-        borderBottom: `0.5px solid ${LINE}`, padding: '13px 16px',
+-        display: 'flex', alignItems: 'center', gap: 8,
+-      }}>
+-        <button onClick={() => router.push('/home-new')}
+-          style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
+-        <div style={{ fontSize: 16, fontWeight: 500, color: '#3a2e28' }}>진로적성 보관함</div>
+-        {records && <div style={{ marginLeft: 'auto', fontSize: 12, color: '#5c3a1e' }}>{records.length}건</div>}
+-      </div>
+-
+-      <div style={{ padding: '16px 14px 0' }}>
+-        {records === null && (
+-          <div style={{ textAlign: 'center', padding: '50px 0', color: '#5c3a1e', fontSize: 13 }}>
+-            보관함을 불러오는 중…
+-          </div>
+-        )}
+-
+-        {records && records.length === 0 && (
+-          <div style={{ textAlign: 'center', padding: '46px 20px', color: '#5c3a1e' }}>
+-            <div style={{ fontSize: 30, marginBottom: 10 }}>🌱</div>
+-            <div style={{ fontSize: 14, color: ACCENT, fontWeight: 500, marginBottom: 4 }}>
+-              아직 저장된 진로적성 기록이 없어요
+-            </div>
+-            <div style={{ fontSize: 12, lineHeight: 1.6 }}>새로 보면 여기에 차곡차곡 쌓여요</div>
+-          </div>
+-        )}
+-
++    <StorageShell
++      title="진로적성 보관함"
++      count={records ? records.length : null}
++      loading={records === null}
++      showEmpty={!!records && records.length === 0}
++      emptyIcon="🧭"
++      emptyTitle={"아직 저장된 진로적성 기록이 없어요"}
++      emptyDesc={"새로 보면 여기에 차곡차곡 쌓여요"}
++      actionLabel={"+ 새 진로적성 보기"}
++      onAction={() => setPickerOpen(true)}
++    >
+         {records && records.map(r => (
+-          <div key={r.id}
+-            onClick={() => router.push(`/manseryeok/career-result?${personToQuery(r.inputData, r.title)}&recordId=${r.id}`)}
+-            style={{
+-              display: 'flex', alignItems: 'center', gap: 13, padding: 15,
+-              background: CARD, border: `0.5px solid ${LINE}`, borderRadius: 14,
+-              marginBottom: 10, cursor: 'pointer',
+-            }}>
++          <StorageRow key={r.id} onClick={() => router.push(`/manseryeok/career-result?${personToQuery(r.inputData, r.title)}&recordId=${r.id}`)} onDelete={() => setConfirmDel(r)}>
+             <div style={{
+               minWidth: 44, height: 44, borderRadius: 10, flexShrink: 0,
+-              background: ACCENT, color: '#fff', fontSize: 12, fontWeight: 600,
++              background: S.btn, color: '#fff', fontSize: 12, fontWeight: 600,
+               display: 'flex', alignItems: 'center', justifyContent: 'center',
+             }}>
+               {(r.title || '?').slice(0, 2)}
+@@ -118,24 +95,9 @@ function CareerStorageInner() {
+                 {r.inputData.year}.{r.inputData.month}.{r.inputData.day} · {daysAgoLabel(r.createdAt)}
+               </div>
+             </div>
+-            <button onClick={(e) => { e.stopPropagation(); setConfirmDel(r) }} aria-label="삭제"
+-              style={{
+-                flexShrink: 0, width: 28, height: 28, borderRadius: 8,
+-                background: 'none', border: 'none', color: '#6b5340', fontSize: 17,
+-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+-              }}>×</button>
+-          </div>
++          </StorageRow>
+         ))}
+ 
+-        <button onClick={() => setPickerOpen(true)}
+-          style={{
+-            width: '100%', marginTop: 8, padding: 14, borderRadius: 12,
+-            background: ACCENT, border: 'none', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer',
+-          }}>
+-          + 새 진로적성 보기
+-        </button>
+-      </div>
+-
+       <PersonPickerModal
+         open={pickerOpen}
+         serviceLabel="진로적성"
+@@ -158,7 +120,7 @@ function CareerStorageInner() {
+           onConfirm={handleDelete}
+         />
+       )}
+-    </main>
++    </StorageShell>
+   )
+ }
+ 
+diff --git a/app/manseryeok/couple-storage/page.tsx b/app/manseryeok/couple-storage/page.tsx
+index 1b22e69..6633db2 100644
+--- a/app/manseryeok/couple-storage/page.tsx
++++ b/app/manseryeok/couple-storage/page.tsx
+@@ -20,6 +20,8 @@ import {
+ } from '@/lib/saju/coupleRecords'
+ import type { SavedInputData } from '@/lib/saju/savedPeople'
+ import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
++import StorageShell, { S } from '@/app/components/common/StorageShell'
++import StorageRow from '@/app/components/common/StorageRow'
+ 
+ const MODE_INFO: Record<CoupleMode, { title: string; accent: string; badge: string }> = {
+   couple:  { title: '연인 궁합 보관함', accent: '#c85a8c', badge: '연인' },
+@@ -91,102 +93,53 @@ function CoupleStorageInner() {
+   }
+ 
+   return (
+-    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
+-      {/* 헤더 */}
+-      <div style={{
+-        position: 'sticky', top: 0, zIndex: 5,
+-        background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
+-        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
+-      }}>
+-        <button onClick={() => router.push('/home-new')}
+-          style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
+-        <div style={{ fontSize: 16, fontWeight: 500, color: '#3a2e28' }}>{info.title}</div>
+-        {records && <div style={{ marginLeft: 'auto', fontSize: 12, color: '#5c3a1e' }}>{records.length}건</div>}
+-      </div>
+-
+-      <div style={{ padding: '16px 14px 0' }}>
+-        {/* 로딩 */}
+-        {records === null && (
+-          <div style={{ textAlign: 'center', padding: '50px 0', color: '#5c3a1e', fontSize: 13 }}>
+-            보관함을 불러오는 중…
+-          </div>
+-        )}
+-
+-        {/* 빈 상태 */}
+-        {records && records.length === 0 && (
+-          <div style={{ textAlign: 'center', padding: '46px 20px', color: '#5c3a1e' }}>
+-            <div style={{ fontSize: 30, marginBottom: 10 }}>💝</div>
+-            <div style={{ fontSize: 14, color: '#96502e', fontWeight: 500, marginBottom: 4 }}>
+-              아직 저장된 {info.badge} 궁합이 없어요
+-            </div>
+-            <div style={{ fontSize: 12, lineHeight: 1.6 }}>새 궁합을 보면 여기에 차곡차곡 쌓여요</div>
+-          </div>
+-        )}
+-
+-        {/* 카드 목록 */}
+-        {records && records.map(r => (
+-          <div key={r.id} onClick={() => router.push(toResultUrl(r))}
+-            style={{
+-              display: 'flex', alignItems: 'center', gap: 13, padding: '15px',
+-              background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14,
+-              marginBottom: 10, cursor: 'pointer',
++    <StorageShell
++      title={info.title}
++      count={records ? records.length : null}
++      loading={records === null}
++      showEmpty={!!records && records.length === 0}
++      emptyIcon="💝"
++      emptyTitle="아직 저장된 궁합이 없어요"
++      emptyDesc="새 궁합을 보면 여기에 차곡차곡 쌓여요"
++      actionLabel="+ 새 궁합 보기"
++      onAction={() => router.push('/manseryeok/couple-input-new')}
++    >
++      {records && records.map(r => (
++        <StorageRow key={r.id} onClick={() => router.push(toResultUrl(r))} onDelete={() => setConfirmDel(r)}>
++          {/* 등급 (점수 숨김 · C안) */}
++          <div style={{ textAlign: 'center', width: 62, flexShrink: 0 }}>
++            <div style={{
++              fontSize: 11, fontWeight: 600, color: S.btn,
++              lineHeight: 1.35, letterSpacing: '-.03em', wordBreak: 'keep-all',
+             }}>
+-            {/* 등급 (점수 숨김 · C안) */}
+-            <div style={{ textAlign: 'center', width: 62, flexShrink: 0 }}>
+-              <div style={{
+-                fontSize: 11, fontWeight: 600, color: info.accent,
+-                lineHeight: 1.35, letterSpacing: '-.03em', wordBreak: 'keep-all',
+-              }}>
+-                {gradeShort(r.grade)}
+-              </div>
++              {gradeShort(r.grade)}
+             </div>
++          </div>
+ 
+-            <div style={{ width: '0.5px', height: 34, background: '#f0e0d5', flexShrink: 0 }} />
++          <div style={{ width: '0.5px', height: 34, background: '#f0e0d5', flexShrink: 0 }} />
+ 
+-            {/* 두 사람 + 날짜 */}
+-            <div style={{ flex: 1, minWidth: 0 }}>
+-              <div style={{ fontSize: 14, fontWeight: 500, color: '#3a2e28', marginBottom: 4 }}>
+-                {r.name1} <span style={{ color: '#d4537e' }}>♥</span> {r.name2}
+-              </div>
+-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#5c3a1e', flexWrap: 'wrap' }}>
+-                <span>{daysAgoLabel(r.createdAt)}</span>
+-                {/* 자유 질문 개수 — 물어본 게 있을 때만 (2026-07-24) */}
+-                {qaCount(r.resultData) > 0 && (
+-                  <span style={{
+-                    display: 'inline-flex', alignItems: 'center', gap: 3,
+-                    background: '#f6ecdf', borderRadius: 7, padding: '1.5px 6px',
+-                    fontSize: 10, color: '#8a6a4a',
+-                  }}>
+-                    💬 질문 {qaCount(r.resultData)}
+-                  </span>
+-                )}
+-                {r.unsavedCount ? <span style={{ color: '#6b5340' }}>· 미저장 {r.unsavedCount}명</span> : null}
+-              </div>
++          {/* 두 사람 + 날짜 */}
++          <div style={{ flex: 1, minWidth: 0 }}>
++            <div style={{ fontSize: 14, fontWeight: 500, color: '#3a2e28', marginBottom: 4 }}>
++              {r.name1} <span style={{ color: '#d4537e' }}>♥</span> {r.name2}
++            </div>
++            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#5c3a1e', flexWrap: 'wrap' }}>
++              <span>{daysAgoLabel(r.createdAt)}</span>
++              {/* 자유 질문 개수 — 물어본 게 있을 때만 (2026-07-24) */}
++              {qaCount(r.resultData) > 0 && (
++                <span style={{
++                  display: 'inline-flex', alignItems: 'center', gap: 3,
++                  background: '#f6ecdf', borderRadius: 7, padding: '1.5px 6px',
++                  fontSize: 10, color: '#8a6a4a',
++                }}>
++                  💬 질문 {qaCount(r.resultData)}
++                </span>
++              )}
++              {r.unsavedCount ? <span style={{ color: '#6b5340' }}>· 미저장 {r.unsavedCount}명</span> : null}
+             </div>
+-
+-            {/* 삭제 버튼 — 카드 클릭(결과 이동)과 겹치지 않게 stopPropagation */}
+-            <button
+-              onClick={(e) => { e.stopPropagation(); setConfirmDel(r) }}
+-              aria-label="삭제"
+-              style={{
+-                flexShrink: 0, width: 28, height: 28, borderRadius: 8,
+-                background: 'none', border: 'none', color: '#6b5340', fontSize: 17,
+-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+-              }}>
+-              ×
+-            </button>
+           </div>
+-        ))}
+-
+-        {/* 새 궁합 보기 — 부부/연인은 사람 고를 때 관계로 갈린다 */}
+-        <button onClick={() => router.push('/manseryeok/couple-input-new')}
+-          style={{
+-            width: '100%', marginTop: 8, padding: 14, borderRadius: 12,
+-            background: '#b46e46', border: 'none', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer',
+-          }}>
+-          + 새 {info.badge} 궁합 보기
+-        </button>
+-      </div>
++        </StorageRow>
++      ))}
+ 
+       {/* 삭제 확인 팝업 */}
+       {confirmDel && (
+@@ -198,7 +151,7 @@ function CoupleStorageInner() {
+           onConfirm={handleDelete}
+         />
+       )}
+-    </main>
++    </StorageShell>
+   )
+ }
+ 
+diff --git a/app/manseryeok/exam-luck/page.tsx b/app/manseryeok/exam-luck/page.tsx
+index 9fac329..1247adc 100644
+--- a/app/manseryeok/exam-luck/page.tsx
++++ b/app/manseryeok/exam-luck/page.tsx
+@@ -22,12 +22,13 @@ import {
+ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+ import { toResultQuery, type SavedPerson, type SavedInputData } from '@/lib/saju/savedPeople'
+ import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
++import StorageShell, { S } from '@/app/components/common/StorageShell'
++import StorageRow from '@/app/components/common/StorageRow'
+ 
+-const ACCENT = '#c85a8c'      // 합격운 색 (홈 서비스 목록과 같은 분홍)
+-const SOFT = '#f7e6ee'
+-const BG = '#FDF6F0'
+-const CARD = '#FFFBF7'
+-const LINE = '#f0e0d5'
++//    ★서비스 색(ACCENT)도 걷어냈습니다 — 배지까지 한 모습입니다.
++// ⚠️ 2026-08-03 (44부 26차) — 보관함 «전용 색» 을 걷어냈습니다.
++//    대표님 지시 「모두 통일해줘. 서비스별로 보관함을 차별화할 필요없어」
++//    ⇒ 바탕·카드·선·버튼 색은 StorageShell 의 S 하나가 정합니다.
+ 
+ function personToQuery(d: SavedInputData, name: string): string {
+   const p = new URLSearchParams()
+@@ -65,39 +66,19 @@ function ExamLuckStorageInner() {
+   }
+ 
+   return (
+-    <main style={{ minHeight: '100vh', background: BG, maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
+-      <div style={{
+-        position: 'sticky', top: 0, zIndex: 5,
+-        background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
+-        borderBottom: `0.5px solid ${LINE}`, padding: '13px 16px',
+-        display: 'flex', alignItems: 'center', gap: 8,
+-      }}>
+-        <button onClick={() => router.push('/home-new')}
+-          style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
+-        <div style={{ fontSize: 16, fontWeight: 500, color: '#3a2e28' }}>합격운 · 취업운 보관함</div>
+-        {records && <div style={{ marginLeft: 'auto', fontSize: 12, color: '#5c3a1e' }}>{records.length}건</div>}
+-      </div>
+-
+-      <div style={{ padding: '16px 14px 0' }}>
+-        {records === null && (
+-          <div style={{ textAlign: 'center', padding: '50px 0', color: '#5c3a1e', fontSize: 13 }}>
+-            보관함을 불러오는 중…
+-          </div>
+-        )}
+-
+-        {records && records.length === 0 && (
+-          <div style={{ textAlign: 'center', padding: '46px 20px', color: '#5c3a1e' }}>
+-            <div style={{ fontSize: 30, marginBottom: 10 }}>🌱</div>
+-            <div style={{ fontSize: 14, color: ACCENT, fontWeight: 500, marginBottom: 4 }}>
+-              아직 저장된 합격운 기록이 없어요
+-            </div>
+-            <div style={{ fontSize: 12, lineHeight: 1.6 }}>새로 보면 여기에 차곡차곡 쌓여요</div>
+-          </div>
+-        )}
+-
++    <StorageShell
++      title="합격운 · 취업운 보관함"
++      count={records ? records.length : null}
++      loading={records === null}
++      showEmpty={!!records && records.length === 0}
++      emptyIcon="🍀"
++      emptyTitle={"아직 저장된 합격운 기록이 없어요"}
++      emptyDesc={"새로 보면 여기에 차곡차곡 쌓여요"}
++      actionLabel={"+ 새 합격운 보기"}
++      onAction={() => setPickerOpen(true)}
++    >
+         {records && records.map(r => (
+-          <div key={r.id}
+-            onClick={() => {
++          <StorageRow key={r.id} onClick={() => {
+               /**
+                * ★2026-07-30 — 저장할 때 함께 남긴 target 으로 «되돌아갈 화면» 을 가릅니다.
+                *   ⚠️ 옛 기록에는 target 이 없습니다. 그때는 진학 화면으로 보냅니다.
+@@ -110,15 +91,10 @@ function ExamLuckStorageInner() {
+                 : '/manseryeok/exam-luck-result'
+               const extra = d?.kind ? `&kind=${d.kind}` : ''
+               router.push(`${to}?${personToQuery(r.inputData, r.title)}&recordId=${r.id}${extra}`)
+-            }}
+-            style={{
+-              display: 'flex', alignItems: 'center', gap: 13, padding: 15,
+-              background: CARD, border: `0.5px solid ${LINE}`, borderRadius: 14,
+-              marginBottom: 10, cursor: 'pointer',
+-            }}>
++            }} onDelete={() => setConfirmDel(r)}>
+             <div style={{
+               minWidth: 44, height: 44, borderRadius: 10, flexShrink: 0,
+-              background: ACCENT, color: '#fff', fontSize: 12, fontWeight: 600,
++              background: S.btn, color: '#fff', fontSize: 12, fontWeight: 600,
+               display: 'flex', alignItems: 'center', justifyContent: 'center',
+             }}>
+               {(r.title || '?').slice(0, 2)}
+@@ -132,31 +108,16 @@ function ExamLuckStorageInner() {
+                 {r.inputData.year}.{r.inputData.month}.{r.inputData.day} · {daysAgoLabel(r.createdAt)}
+               </div>
+             </div>
+-            <button onClick={(e) => { e.stopPropagation(); setConfirmDel(r) }} aria-label="삭제"
+-              style={{
+-                flexShrink: 0, width: 28, height: 28, borderRadius: 8,
+-                background: 'none', border: 'none', color: '#6b5340', fontSize: 17,
+-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+-              }}>×</button>
+-          </div>
++          </StorageRow>
+         ))}
+ 
+-        <button onClick={() => setPickerOpen(true)}
+-          style={{
+-            width: '100%', marginTop: 8, padding: 14, borderRadius: 12,
+-            background: ACCENT, border: 'none', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer',
+-          }}>
+-          + 새 합격운 보기
+-        </button>
+-
+         <div style={{
+-          marginTop: 14, background: SOFT, border: '0.5px solid #f0d8e2', borderRadius: 12,
+-          padding: '11px 14px', fontSize: 11.5, color: '#8c4a63', lineHeight: 1.7,
++          marginTop: 14, background: S.card, border: `0.5px solid ${S.line}`, borderRadius: 12,
++          padding: '11px 14px', fontSize: 11.5, color: S.sub, lineHeight: 1.7,
+         }}>
+           시험과 일자리의 흐름을 봅니다. 사주가 말해 주는 건 흐름이고,
+           결과를 만드는 건 준비한 시간이에요.
+         </div>
+-      </div>
+ 
+       <PersonPickerModal
+         open={pickerOpen}
+@@ -180,7 +141,7 @@ function ExamLuckStorageInner() {
+           onConfirm={handleDelete}
+         />
+       )}
+-    </main>
++    </StorageShell>
+   )
+ }
+ 
+diff --git a/app/manseryeok/moving-timing/moving-storage/page.tsx b/app/manseryeok/moving-timing/moving-storage/page.tsx
+index ad2710e..2d44ebb 100644
+--- a/app/manseryeok/moving-timing/moving-storage/page.tsx
++++ b/app/manseryeok/moving-timing/moving-storage/page.tsx
+@@ -20,10 +20,13 @@ import {
+ } from '@/lib/saju/movingRecords'
+ import type { SavedInputData } from '@/lib/saju/savedPeople'
+ import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
++import StorageShell from '@/app/components/common/StorageShell'
++import StorageRow from '@/app/components/common/StorageRow'
+ 
+-const accent = '#967850'
+-const line = '#EAE0CE'
+-const ink = '#3A3228'
++// ⚠️ 2026-08-03 (44부 26차) — 이사택일 «전용 색» 을 걷어냈습니다.
++//    대표님 지시 「모두 통일해줘. 서비스별로 보관함을 차별화할 필요없어」
++//    ⇒ 보관함의 색·크기는 StorageShell 의 S 하나가 정합니다.
++//    ★sub 는 Suspense 대기 글자에 아직 씁니다.
+ const sub = '#9A8060'
+ 
+ const KIND_BADGE: Record<'check' | 'find', { label: string; color: string; bg: string }> = {
+@@ -71,134 +74,45 @@ function MovingStorageInner() {
+   }
+ 
+   return (
+-    <main style={{
+-      minHeight: '100vh', background: '#FBF8F2', maxWidth: 480,
+-      margin: '0 auto', paddingBottom: 40,
+-    }}>
+-      <div style={{
+-        position: 'sticky', top: 0, zIndex: 10,
+-        background: 'rgba(251,248,242,0.96)', backdropFilter: 'blur(10px)',
+-        borderBottom: `0.5px solid ${line}`, padding: '13px 16px',
+-        display: 'flex', alignItems: 'center', gap: 8,
+-      }}>
+-        <button
+-          onClick={() => router.push('/home-new')}
+-          style={{
+-            background: 'none', border: 'none', color: '#7A6440',
+-            fontSize: 17, cursor: 'pointer', padding: 0,
+-          }}
+-        >←</button>
+-        <div>
+-          <div style={{ fontSize: 15, fontWeight: 500, color: ink }}>이사택일</div>
+-          <div style={{ fontSize: 10.5, color: '#7A6440' }}>좋은 이사 날을 봐드려요</div>
+-        </div>
+-      </div>
+-
+-      <div style={{ padding: '18px 16px 0' }}>
+-
+-        <button
+-          onClick={() => router.push('/manseryeok/moving-timing/input')}
+-          style={{
+-            width: '100%', padding: '15px 0', background: accent, color: '#fff',
+-            border: 'none', borderRadius: 13, fontSize: 15, fontWeight: 700,
+-            cursor: 'pointer', fontFamily: 'inherit', marginBottom: 20,
+-            transition: 'transform .08s, filter .12s',
+-          }}
+-          onPointerDown={e => {
+-            e.currentTarget.style.transform = 'scale(0.98)'
+-            e.currentTarget.style.filter = 'brightness(0.92)'
+-          }}
+-          onPointerUp={e => {
+-            e.currentTarget.style.transform = 'scale(1)'
+-            e.currentTarget.style.filter = 'none'
+-          }}
+-          onPointerLeave={e => {
+-            e.currentTarget.style.transform = 'scale(1)'
+-            e.currentTarget.style.filter = 'none'
+-          }}
+-        >
+-          + 새 이사택일 보기
+-        </button>
+-
+-        {records === null && (
+-          <div style={{ padding: '40px 0', textAlign: 'center', color: sub, fontSize: 13 }}>
+-            불러오는 중이에요…
+-          </div>
+-        )}
+-
+-        {records !== null && records.length === 0 && (
+-          <div style={{
+-            background: '#FFFDF9', border: `1px solid ${line}`, borderRadius: 13,
+-            padding: '34px 20px', textAlign: 'center',
+-          }}>
+-            <div style={{ fontSize: 13.5, color: ink, fontWeight: 600, marginBottom: 6 }}>
+-              아직 보신 이사택일이 없어요
++    <StorageShell
++      title="이사택일 보관함"
++      count={records ? records.length : null}
++      loading={records === null}
++      showEmpty={!!records && records.length === 0}
++      emptyIcon="📦"
++      emptyTitle="아직 보신 이사택일이 없어요"
++      emptyDesc="새로 택일을 보면 여기에 차곡차곡 쌓여요"
++      actionLabel="+ 새 이사택일 보기"
++      onAction={() => router.push('/manseryeok/moving-timing/input')}
++    >
++      {records && records.map(r => {
++        const badge = KIND_BADGE[r.kind]
++        return (
++          <StorageRow key={r.id} onClick={() => router.push(toResultUrl(r))} onDelete={() => setConfirmDel(r)}>
++            <div style={{ flex: 1, minWidth: 0 }}>
++              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
++                <span style={{
++                  background: badge.bg, color: badge.color, fontSize: 10.5,
++                  fontWeight: 700, padding: '3px 9px', borderRadius: 7,
++                }}>
++                  {badge.label}
++                </span>
++                <span style={{ fontSize: 14, fontWeight: 500, color: '#3a2e28' }}>
++                  {r.name1}{r.name2 ? ` · ${r.name2}` : ''}
++                </span>
++              </div>
++              <div style={{ fontSize: 11, color: '#5c3a1e', lineHeight: 1.6 }}>
++                {r.summary}
++              </div>
++              <div style={{ fontSize: 11, color: '#5c3a1e', marginTop: 3 }}>
++                {OWNER_MODE_LABEL[r.ownerMode]}
++                {r.direction && ` · ${r.direction}쪽`}
++                {' · '}{daysAgoLabel(r.createdAt)}
++              </div>
+             </div>
+-            <div style={{ fontSize: 12.5, color: sub, lineHeight: 1.8 }}>
+-              위 버튼을 눌러 시작해 보세요.
+-            </div>
+-          </div>
+-        )}
+-
+-        {records !== null && records.length > 0 && (
+-          <>
+-            <div style={{ fontSize: 12.5, fontWeight: 700, color: '#7A6440', marginBottom: 10 }}>
+-              지난 기록
+-            </div>
+-            {records.map(r => {
+-              const badge = KIND_BADGE[r.kind]
+-              return (
+-                <div
+-                  key={r.id}
+-                  style={{
+-                    display: 'flex', alignItems: 'center', gap: 11,
+-                    background: '#FFFDF9', border: `1px solid ${line}`,
+-                    borderRadius: 13, padding: '14px 15px', marginBottom: 9,
+-                  }}
+-                >
+-                  <button
+-                    onClick={() => router.push(toResultUrl(r))}
+-                    style={{
+-                      flex: 1, background: 'none', border: 'none', padding: 0,
+-                      cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+-                    }}
+-                  >
+-                    <div style={{
+-                      display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4,
+-                    }}>
+-                      <span style={{
+-                        background: badge.bg, color: badge.color, fontSize: 10.5,
+-                        fontWeight: 700, padding: '3px 9px', borderRadius: 7,
+-                      }}>
+-                        {badge.label}
+-                      </span>
+-                      <span style={{ fontSize: 14, fontWeight: 600, color: ink }}>
+-                        {r.name1}{r.name2 ? ` · ${r.name2}` : ''}
+-                      </span>
+-                    </div>
+-                    <div style={{ fontSize: 12, color: sub, lineHeight: 1.6 }}>
+-                      {r.summary}
+-                    </div>
+-                    <div style={{ fontSize: 11, color: '#BFAE96', marginTop: 3 }}>
+-                      {OWNER_MODE_LABEL[r.ownerMode]}
+-                      {r.direction && ` · ${r.direction}쪽`}
+-                      {' · '}{daysAgoLabel(r.createdAt)}
+-                    </div>
+-                  </button>
+-                  <button
+-                    onClick={() => setConfirmDel(r)}
+-                    aria-label="이 기록 지우기"
+-                    style={{
+-                      background: 'none', border: 'none', color: '#C9BBA6',
+-                      fontSize: 15, cursor: 'pointer', padding: '4px 2px', flex: 'none',
+-                    }}
+-                  >×</button>
+-                </div>
+-              )
+-            })}
+-          </>
+-        )}
+-      </div>
++          </StorageRow>
++        )
++      })}
+ 
+       {confirmDel && (
+         <ConfirmDeleteDialog
+@@ -209,8 +123,7 @@ function MovingStorageInner() {
+           onConfirm={handleDelete}
+         />
+       )}
+-
+-    </main>
++    </StorageShell>
+   )
+ }
+ 
+diff --git a/app/manseryeok/mulsang-storage/page.tsx b/app/manseryeok/mulsang-storage/page.tsx
+index 71cff52..1a9684a 100644
+--- a/app/manseryeok/mulsang-storage/page.tsx
++++ b/app/manseryeok/mulsang-storage/page.tsx
+@@ -21,8 +21,10 @@ import { STYLE_CONFIGS } from '@/lib/saju/mulsangPrompt'
+ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+ import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
+ import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
++import StorageShell, { S } from '@/app/components/common/StorageShell'
++import StorageRow from '@/app/components/common/StorageRow'
+ 
+-const ACCENT = '#b46e46'
++//    ★서비스 색(ACCENT)도 걷어냈습니다 — 배지까지 한 모습입니다.
+ 
+ function MulsangStorageInner() {
+   const router = useRouter()
+@@ -71,50 +73,23 @@ function MulsangStorageInner() {
+   const goNew = (q: string) => router.push(`/manseryeok/mulsang?${q}&fresh=1`)
+ 
+   return (
+-    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
+-      {/* 헤더 */}
+-      <div style={{
+-        position: 'sticky', top: 0, zIndex: 5,
+-        background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
+-        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
+-      }}>
+-        <button onClick={() => router.push('/home-new')}
+-          style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
+-        <div style={{ fontSize: 16, fontWeight: 500, color: '#3a2e28' }}>내 사주 그림 보관함</div>
+-        {records && <div style={{ marginLeft: 'auto', fontSize: 12, color: '#5c3a1e' }}>{records.length}건</div>}
+-      </div>
+-
+-      <div style={{ padding: '16px 14px 0' }}>
+-        {/* 로딩 */}
+-        {records === null && (
+-          <div style={{ textAlign: 'center', padding: '50px 0', color: '#5c3a1e', fontSize: 13 }}>
+-            보관함을 불러오는 중…
+-          </div>
+-        )}
+-
+-        {/* 빈 상태 */}
+-        {records && records.length === 0 && (
+-          <div style={{ textAlign: 'center', padding: '46px 20px', color: '#5c3a1e' }}>
+-            <div style={{ fontSize: 30, marginBottom: 10 }}>🖼️</div>
+-            <div style={{ fontSize: 14, color: '#96502e', fontWeight: 500, marginBottom: 4 }}>
+-              아직 저장된 그림이 없어요
+-            </div>
+-            <div style={{ fontSize: 12, lineHeight: 1.6 }}>새 그림을 그리면 여기에 차곡차곡 쌓여요</div>
+-          </div>
+-        )}
+-
+-        {/* 카드 목록 */}
++    <StorageShell
++      title="내 사주 그림 보관함"
++      count={records ? records.length : null}
++      loading={records === null}
++      showEmpty={!!records && records.length === 0}
++      emptyIcon="🖼️"
++      emptyTitle={"아직 저장된 그림이 없어요"}
++      emptyDesc={"새 그림을 그리면 여기에 차곡차곡 쌓여요"}
++      actionLabel={"+ 새 그림 그리기"}
++      onAction={() => setPickerOpen(true)}
++    >
+         {records && records.map(r => (
+-          <div key={r.id} onClick={() => openRecord(r)}
+-            style={{
+-              display: 'flex', alignItems: 'center', gap: 13, padding: '15px',
+-              background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14,
+-              marginBottom: 10, cursor: 'pointer',
+-            }}>
++          <StorageRow key={r.id} onClick={() => openRecord(r)} onDelete={() => setConfirmDel(r)}>
+             {/* 뱃지 */}
+             <div style={{
+               minWidth: 44, height: 44, borderRadius: 10, flexShrink: 0,
+-              background: ACCENT, color: '#fff', fontSize: 12, fontWeight: 600,
++              background: S.btn, color: '#fff', fontSize: 12, fontWeight: 600,
+               display: 'flex', alignItems: 'center', justifyContent: 'center',
+             }}>
+               {(r.title || '?').slice(0, 2)}
+@@ -139,31 +114,9 @@ function MulsangStorageInner() {
+                 {' · '}{daysAgoLabel(r.createdAt)}
+               </div>
+             </div>
+-
+-            {/* 삭제 */}
+-            <button
+-              onClick={(e) => { e.stopPropagation(); setConfirmDel(r) }}
+-              aria-label="삭제"
+-              style={{
+-                flexShrink: 0, width: 28, height: 28, borderRadius: 8,
+-                background: 'none', border: 'none', color: '#6b5340', fontSize: 17,
+-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+-              }}>
+-              ×
+-            </button>
+-          </div>
++          </StorageRow>
+         ))}
+ 
+-        {/* 새 그림 */}
+-        <button onClick={() => setPickerOpen(true)}
+-          style={{
+-            width: '100%', marginTop: 8, padding: 14, borderRadius: 12,
+-            background: ACCENT, border: 'none', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer',
+-          }}>
+-          + 새 그림 그리기
+-        </button>
+-      </div>
+-
+       {/* 사람 선택 모달 (나 / 가족·지인 / 새 입력) */}
+       <PersonPickerModal
+         open={pickerOpen}
+@@ -194,7 +147,7 @@ function MulsangStorageInner() {
+           onConfirm={handleDelete}
+         />
+       )}
+-    </main>
++    </StorageShell>
+   )
+ }
+ 
+diff --git a/app/manseryeok/naming/components/NamingStorageView.tsx b/app/manseryeok/naming/components/NamingStorageView.tsx
+index 707d657..d7561d7 100644
+--- a/app/manseryeok/naming/components/NamingStorageView.tsx
++++ b/app/manseryeok/naming/components/NamingStorageView.tsx
+@@ -37,6 +37,8 @@ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+ import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
+ import { surnameOfHangul } from '@/lib/saju/surname'
+ import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
++import StorageShell from '@/app/components/common/StorageShell'
++import StorageRow from '@/app/components/common/StorageRow'
+ 
+ // ══════════════════════════════════════════════════════════════════
+ //  ★2026-08-01 — 보관함에 «풀이» 와 «작명» 을 가르는 탭을 넣습니다
+@@ -218,48 +220,35 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
+   }
+ 
+   return (
+-    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
+-      {/* 헤더 */}
+-      <div style={{
+-        position: 'sticky', top: 0, zIndex: 5,
+-        background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
+-        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
+-      }}>
+-        <button onClick={() => router.push('/home-new')}
+-          style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
+-        <div style={{ fontSize: 16, fontWeight: 500, color: '#1a1a1a' }}>
+-          {view.title}
+-        </div>
+-        {records && (
+-          <div style={{ marginLeft: 'auto', fontSize: 12, color: '#5c3a1e' }}>
+-            {/* ⚠️ «보이는 건수» 를 적습니다 — 전체 건수를 적으면
+-                목록과 숫자가 어긋나 「어디 갔지」 가 됩니다 */}
+-            {shownRecords.length}건
+-          </div>
+-        )}
+-      </div>
+-
+-      <div style={{ padding: '16px 14px 0' }}>
+-        {/* 로딩 */}
+-        {records === null && (
+-          <div style={{ textAlign: 'center', padding: '50px 0', color: '#5c3a1e', fontSize: 13 }}>
+-            보관함을 불러오는 중…
+-          </div>
+-        )}
+-
+-        {/* 빈 상태 */}
+-        {records && records.length === 0 && (
+-          <div style={{ textAlign: 'center', padding: '46px 20px', color: '#5c3a1e' }}>
+-            <div style={{ fontSize: 30, marginBottom: 10 }}>{mode === 'naming' ? '✍️' : '📜'}</div>
+-            <div style={{ fontSize: 14, color: '#96502e', fontWeight: 500, marginBottom: 4 }}>
+-              {view.empty}
+-            </div>
+-            <div style={{ fontSize: 12, lineHeight: 1.6 }}>
+-              {view.emptySub}
+-            </div>
+-          </div>
+-        )}
+-
++    <StorageShell
++      title={view.title}
++      /* ⚠️ «보이는 건수» 를 적습니다 — 전체 건수를 적으면
++             목록과 숫자가 어긋나 「어디 갔지」 가 됩니다 */
++      count={records ? shownRecords.length : null}
++      loading={records === null}
++      showEmpty={!!records && records.length === 0}
++      emptyIcon={mode === 'naming' ? '✍️' : '📜'}
++      emptyTitle={view.empty}
++      emptyDesc={view.emptySub}
++      /* ★버튼은 «하나» 뿐입니다 — 이 보관함의 갈래에 맞는 것만 (43부 33차) */
++      actionLabel={!records ? undefined
++        : view.button === '작명' ? <>+ 새 이름 짓기 <span style={{ fontSize: 12, opacity: .85 }}>(작명)</span></>
++        : view.button === '풀이' ? '+ 새 이름 풀이하기'
++        : undefined}
++      onAction={() => setPickerOpen(view.button === '작명' ? '작명' : '풀이')}
++      footer={mode === 'naming' && records ? (
++        /* ★작명 모드 — 처음 오신 분께 «어떻게 진행되는지» 안내 화면을 이어 둡니다. (교훈 AM) */
++        <button
++          onClick={() => router.push('/manseryeok/naming/rename/newborn')}
++          style={{
++            ...PRESS, width: '100%', marginTop: 10, padding: '11px 10px',
++            background: 'none', border: 'none', color: '#8a7063',
++            fontSize: 12, cursor: 'pointer',
++          }}>
++          명품작명이 처음이신가요? 어떻게 진행되는지 보기 →
++        </button>
++      ) : null}
++    >
+         {/* ★2026-08-01 (43부 33차) — 필터 탭을 «걷어냈습니다» (대표님 지시).
+             두 보관함이 주소부터 갈렸으므로 한 화면에서 갈래를 고를 까닭이 없습니다.
+             ⚠️ 「전체」도 없앴습니다 — 섞어 보면 «갈랐다는 뜻» 이 없어집니다. */}
+@@ -290,18 +279,13 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
+                  ⚠️ 화면은 «한 부품» 입니다. 주소만 둘입니다 (교훈 CJ).
+                  ⚠️ from= 도 함께 보냅니다 — 옛 주소로 들어오는 길이 아직 살아 있고,
+                     기록이 오기 «전» 에도 하단 버튼이 옳은 곳을 가리켜야 합니다. */
+-            <div key={r.id} onClick={() => {
++            <StorageRow key={r.id} onDelete={() => setConfirmDel(r)} onClick={() => {
+               const br = storageBranchOfKind(r.kind)
+               const base = br === 'naming'
+                 ? '/manseryeok/naming/naming-record'
+                 : '/manseryeok/naming/diagnosis'
+               router.push(`${base}?recordId=${r.id}&from=${br}`)
+-            }}
+-              style={{
+-                display: 'flex', alignItems: 'center', gap: 13, padding: '15px',
+-                background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14,
+-                marginBottom: 10, cursor: 'pointer',
+-              }}>
++            }}>
+               {/* 이름(한자) */}
+               <div style={{ minWidth: 54, textAlign: 'center', flexShrink: 0 }}>
+                 <div style={{ fontSize: 22, fontWeight: 500, color: '#8f3d0e', letterSpacing: 1 }}>
+@@ -348,97 +332,10 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
+                   {daysAgoLabel(r.createdAt)}
+                 </div>
+               </div>
+-
+-              {/* 삭제 버튼 */}
+-              <button
+-                onClick={(e) => { e.stopPropagation(); setConfirmDel(r) }}
+-                aria-label="삭제"
+-                style={{
+-                  flexShrink: 0, width: 28, height: 28, borderRadius: 8,
+-                  background: 'none', border: 'none', color: '#6b5340', fontSize: 17,
+-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+-                }}>
+-                ×
+-              </button>
+-            </div>
++            </StorageRow>
+           )
+         })}
+ 
+-        {/* ══════════════════════════════════════════════════════
+-            새로 보기 → 누구 이름을 볼지 먼저 선택 (나 / 가족·지인 / 새 사람)
+-
+-            ★2026-08-01 (43부 2차) — 들어온 입구에 따라 버튼이 «하나» 입니다.
+-              diagnosis  [+ 새 이름 풀이하기] 만
+-              naming     [+ 새 이름 짓기]    만
+-              모드 없음   둘 다 (예전 그대로)
+-
+-            ⚠️ 버튼을 숨겨도 «길이 끊기지» 않습니다 — 아래 「모두 보기」로
+-               전체 보관함에 가면 두 버튼이 다시 나옵니다.
+-            ══════════════════════════════════════════════════════ */}
+-        {records && (
+-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+-            {/* ★버튼은 «하나» 뿐입니다 — 이 보관함의 갈래에 맞는 것만 (43부 33차) */}
+-            {view.button === '작명' && (
+-              <button onClick={() => setPickerOpen('작명')}
+-                style={{
+-                  ...PRESS,
+-                  width: '100%', padding: 15, borderRadius: 12,
+-                  background: '#c8783c', border: 'none', color: '#fff',
+-                  fontSize: 14, fontWeight: 600, cursor: 'pointer',
+-                }}>
+-                + 새 이름 짓기 <span style={{ fontSize: 12, opacity: .85 }}>(작명)</span>
+-              </button>
+-            )}
+-            {view.button === '풀이' && (
+-              <button onClick={() => setPickerOpen('풀이')}
+-                style={{
+-                  ...PRESS,
+-                  width: '100%', padding: view?.button === '풀이' ? 15 : 14, borderRadius: 12,
+-                  // ★이 갈래 전용 화면이면 이 버튼이 «주인공» 이라 채워 씁니다
+-                  background: view?.button === '풀이' ? '#c8783c' : '#FFFBF7',
+-                  border: view?.button === '풀이' ? 'none' : '1px solid #c8783c',
+-                  color: view?.button === '풀이' ? '#fff' : '#c8783c',
+-                  fontSize: 14, fontWeight: view?.button === '풀이' ? 600 : 500, cursor: 'pointer',
+-                }}>
+-                + 새 이름 풀이하기
+-              </button>
+-            )}
+-          </div>
+-        )}
+-
+-        {/* ★작명 모드 — 처음 오신 분께 «어떻게 진행되는지» 안내 화면을 이어 둡니다.
+-            ⚠️ 홈 카드가 보관함으로 바로 오게 되면서 안내 화면이 «아무도 안 부르는»
+-               자리가 될 뻔했습니다. 여기서 잇습니다. (교훈 AM) */}
+-        {mode === 'naming' && records && (
+-          <button
+-            onClick={() => router.push('/manseryeok/naming/rename/newborn')}
+-            style={{
+-              ...PRESS, width: '100%', marginTop: 10, padding: '11px 10px',
+-              background: 'none', border: 'none', color: '#8a7063',
+-              fontSize: 12, cursor: 'pointer',
+-            }}>
+-            명품작명이 처음이신가요? 어떻게 진행되는지 보기 →
+-          </button>
+-        )}
+-
+-        {/* ══════════════════════════════════════════════════════
+-            ★2026-08-02 — 「◯◯으로 가기 · N건 →」 줄을 «지웠습니다» (대표님 지시)
+-
+-             [무엇이 있었나]  43부에 «기록이 사라진 줄 알고 놀라지 않도록»
+-               옆 보관함으로 가는 줄을 두었습니다.
+-               ⚠️ 그런데 그 줄 때문에 두 보관함이 «아직 하나» 처럼 보였습니다.
+-                  가르려고 만든 화면에서 가른 뜻을 도로 흐리고 있었습니다.
+-
+-             ⚠️⚠️ [지웠지만 «길은» 남아 있습니다]
+-               홈의 「개명 & 작명하기」 폴더에 두 카드가 그대로 있습니다.
+-               ★기록은 여전히 «하나도» 지워지지 않습니다 — 거르기는 화면에서만 합니다.
+-               (listNamingRecords 는 예전 그대로 전부 불러옵니다)
+-
+-             ⚠️ 되살리실 때는 hiddenCount 와 view.otherLabel 이 그대로 있습니다.
+-                지운 것은 «그리는 자리» 뿐입니다.
+-            ══════════════════════════════════════════════════════ */}
+-      </div>
+-
+       {/* 삭제 확인 팝업 */}
+       {confirmDel && (
+         <ConfirmDeleteDialog
+@@ -491,7 +388,7 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
+           router.push(`${base}?${q}${rel}${sn}${kd}`)
+         }}
+       />
+-    </main>
++    </StorageShell>
+   )
+ }
+ 
+diff --git a/app/manseryeok/saju-storage/page.tsx b/app/manseryeok/saju-storage/page.tsx
+index da2326c..bd4d5b0 100644
+--- a/app/manseryeok/saju-storage/page.tsx
++++ b/app/manseryeok/saju-storage/page.tsx
+@@ -23,6 +23,8 @@ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+ import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
+ import type { SavedInputData } from '@/lib/saju/savedPeople'
+ import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
++import StorageShell, { S } from '@/app/components/common/StorageShell'
++import StorageRow from '@/app/components/common/StorageRow'
+ 
+ // 서비스별 정보 (제목·색·결과경로·unse 파라미터)
+ // ★2026-07-29 — 보관함 단권화 (대표님 확정)
+@@ -100,50 +102,24 @@ function SajuStorageInner() {
+   }
+ 
+   return (
+-    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
+-      {/* 헤더 */}
+-      <div style={{
+-        position: 'sticky', top: 0, zIndex: 5,
+-        background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
+-        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
+-      }}>
+-        <button onClick={() => router.push('/home-new')}
+-          style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
+-        <div style={{ fontSize: 16, fontWeight: 500, color: '#3a2e28' }}>{info.title}</div>
+-        {records && <div style={{ marginLeft: 'auto', fontSize: 12, color: '#5c3a1e' }}>{records.length}건</div>}
+-      </div>
+-
+-      <div style={{ padding: '16px 14px 0' }}>
+-        {/* 로딩 */}
+-        {records === null && (
+-          <div style={{ textAlign: 'center', padding: '50px 0', color: '#5c3a1e', fontSize: 13 }}>
+-            보관함을 불러오는 중…
+-          </div>
+-        )}
+-
+-        {/* 빈 상태 */}
+-        {records && records.length === 0 && (
+-          <div style={{ textAlign: 'center', padding: '46px 20px', color: '#5c3a1e' }}>
+-            <div style={{ fontSize: 30, marginBottom: 10 }}>📜</div>
+-            <div style={{ fontSize: 14, color: '#96502e', fontWeight: 500, marginBottom: 4 }}>
+-              아직 저장된 {info.badge} 기록이 없어요
+-            </div>
+-            <div style={{ fontSize: 12, lineHeight: 1.6 }}>새로 보면 여기에 차곡차곡 쌓여요</div>
+-          </div>
+-        )}
+-
++    <StorageShell
++      title={info.title}
++      count={records ? records.length : null}
++      loading={records === null}
++      showEmpty={!!records && records.length === 0}
++      emptyIcon="📜"
++      emptyTitle={`아직 저장된 ${info.badge} 기록이 없어요`}
++      emptyDesc="새로 보면 여기에 차곡차곡 쌓여요"
++      actionLabel={`+ 새 ${info.badge} 보기`}
++      onAction={() => setPickerOpen(true)}
++    >
+         {/* 카드 목록 */}
+         {records && records.map(r => (
+-          <div key={r.id} onClick={() => router.push(toResultUrl(r, service))}
+-            style={{
+-              display: 'flex', alignItems: 'center', gap: 13, padding: '15px',
+-              background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14,
+-              marginBottom: 10, cursor: 'pointer',
+-            }}>
++          <StorageRow key={r.id} onClick={() => router.push(toResultUrl(r, service))} onDelete={() => setConfirmDel(r)}>
+             {/* 뱃지 (서비스 색) */}
+             <div style={{
+               minWidth: 44, height: 44, borderRadius: 10, flexShrink: 0,
+-              background: info.accent, color: '#fff', fontSize: 12, fontWeight: 600,
++              background: S.btn, color: '#fff', fontSize: 12, fontWeight: 600,
+               display: 'flex', alignItems: 'center', justifyContent: 'center',
+             }}>
+               {(r.title || '?').slice(0, 2)}
+@@ -160,30 +136,9 @@ function SajuStorageInner() {
+               </div>
+             </div>
+ 
+-            {/* 삭제 버튼 */}
+-            <button
+-              onClick={(e) => { e.stopPropagation(); setConfirmDel(r) }}
+-              aria-label="삭제"
+-              style={{
+-                flexShrink: 0, width: 28, height: 28, borderRadius: 8,
+-                background: 'none', border: 'none', color: '#6b5340', fontSize: 17,
+-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+-              }}>
+-              ×
+-            </button>
+-          </div>
++          </StorageRow>
+         ))}
+ 
+-        {/* 새로 보기 */}
+-        <button onClick={() => setPickerOpen(true)}
+-          style={{
+-            width: '100%', marginTop: 8, padding: 14, borderRadius: 12,
+-            background: '#b46e46', border: 'none', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer',
+-          }}>
+-          + 새 {info.badge} 보기
+-        </button>
+-      </div>
+-
+       {/* 사람 선택 모달 (나 / 가족·지인 / 새 입력) — 검증된 공용 부품 */}
+       <PersonPickerModal
+         open={pickerOpen}
+@@ -214,7 +169,7 @@ function SajuStorageInner() {
+           onConfirm={handleDelete}
+         />
+       )}
+-    </main>
++    </StorageShell>
+   )
+ }
+ 
+diff --git a/app/manseryeok/wedding-timing/wedding-storage/page.tsx b/app/manseryeok/wedding-timing/wedding-storage/page.tsx
+index d0d3a0c..76c3c03 100644
+--- a/app/manseryeok/wedding-timing/wedding-storage/page.tsx
++++ b/app/manseryeok/wedding-timing/wedding-storage/page.tsx
+@@ -20,8 +20,12 @@ import {
+ } from '@/lib/saju/weddingRecords'
+ import type { SavedInputData } from '@/lib/saju/savedPeople'
+ import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
++import StorageShell from '@/app/components/common/StorageShell'
++import StorageRow from '@/app/components/common/StorageRow'
+ 
+-const accent = '#96643c'   // 결혼택일 포인트(브라운)
++// ⚠️ 2026-08-03 (44부 26차) — 보관함 «전용 색» 을 걷어냈습니다.
++//    대표님 지시 「모두 통일해줘. 서비스별로 보관함을 차별화할 필요없어」
++//    ⇒ 바탕·카드·선·버튼 색은 StorageShell 의 S 하나가 정합니다.
+ 
+ // 카드 kind 배지 색
+ const KIND_BADGE: Record<'check' | 'find', { label: string; color: string; bg: string }> = {
+@@ -66,48 +70,22 @@ function WeddingStorageInner() {
+   }
+ 
+   return (
+-    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
+-      {/* 헤더 */}
+-      <div style={{
+-        position: 'sticky', top: 0, zIndex: 5,
+-        background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
+-        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
+-      }}>
+-        <button onClick={() => router.push('/home-new')}
+-          style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
+-        <div style={{ fontSize: 16, fontWeight: 500, color: '#3a2e28' }}>결혼택일 보관함</div>
+-        {records && <div style={{ marginLeft: 'auto', fontSize: 12, color: '#5c3a1e' }}>{records.length}건</div>}
+-      </div>
+-
+-      <div style={{ padding: '16px 14px 0' }}>
+-        {/* 로딩 */}
+-        {records === null && (
+-          <div style={{ textAlign: 'center', padding: '50px 0', color: '#5c3a1e', fontSize: 13 }}>
+-            보관함을 불러오는 중…
+-          </div>
+-        )}
+-
+-        {/* 빈 상태 */}
+-        {records && records.length === 0 && (
+-          <div style={{ textAlign: 'center', padding: '46px 20px', color: '#5c3a1e' }}>
+-            <div style={{ fontSize: 30, marginBottom: 10 }}>💍</div>
+-            <div style={{ fontSize: 14, color: '#96502e', fontWeight: 500, marginBottom: 4 }}>
+-              아직 저장된 결혼택일이 없어요
+-            </div>
+-            <div style={{ fontSize: 12, lineHeight: 1.6 }}>새로 택일을 보면 여기에 차곡차곡 쌓여요</div>
+-          </div>
+-        )}
+-
++    <StorageShell
++      title="결혼택일 보관함"
++      count={records ? records.length : null}
++      loading={records === null}
++      showEmpty={!!records && records.length === 0}
++      emptyIcon="💍"
++      emptyTitle={"아직 저장된 결혼택일이 없어요"}
++      emptyDesc={"새로 택일을 보면 여기에 차곡차곡 쌓여요"}
++      actionLabel={"+ 새 결혼택일 보기"}
++      onAction={() => router.push('/manseryeok/wedding-timing/input')}
++    >
+         {/* 카드 목록 */}
+         {records && records.map(r => {
+           const badge = KIND_BADGE[r.kind]
+           return (
+-            <div key={r.id} onClick={() => router.push(toResultUrl(r))}
+-              style={{
+-                display: 'flex', alignItems: 'center', gap: 13, padding: '15px',
+-                background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14,
+-                marginBottom: 10, cursor: 'pointer',
+-              }}>
++            <StorageRow key={r.id} onClick={() => router.push(toResultUrl(r))} onDelete={() => setConfirmDel(r)}>
+               {/* kind 배지 */}
+               <div style={{ textAlign: 'center', minWidth: 50, flexShrink: 0 }}>
+                 <span style={{
+@@ -130,32 +108,10 @@ function WeddingStorageInner() {
+                   {r.summary ? <span style={{ color: '#6b5340' }}>· {r.summary}</span> : null}
+                 </div>
+               </div>
+-
+-              {/* 삭제 버튼 */}
+-              <button
+-                onClick={(e) => { e.stopPropagation(); setConfirmDel(r) }}
+-                aria-label="삭제"
+-                style={{
+-                  flexShrink: 0, width: 28, height: 28, borderRadius: 8,
+-                  background: 'none', border: 'none', color: '#6b5340', fontSize: 17,
+-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+-                }}>
+-                ×
+-              </button>
+-            </div>
++            </StorageRow>
+           )
+         })}
+ 
+-        {/* 새 결혼택일 보기 → 두 사람 선택 */}
+-        <button onClick={() => router.push('/manseryeok/wedding-timing/input')}
+-          style={{
+-            width: '100%', marginTop: 8, padding: 14, borderRadius: 12,
+-            background: accent, border: 'none', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer',
+-          }}>
+-          + 새 결혼택일 보기
+-        </button>
+-      </div>
+-
+       {/* 삭제 확인 팝업 */}
+       {confirmDel && (
+         <ConfirmDeleteDialog
+@@ -166,7 +122,7 @@ function WeddingStorageInner() {
+           onConfirm={handleDelete}
+         />
+       )}
+-    </main>
++    </StorageShell>
+   )
+ }
+ 
+diff --git a/app/tarot/storage/page.tsx b/app/tarot/storage/page.tsx
+index 6722ad2..a85e268 100644
+--- a/app/tarot/storage/page.tsx
++++ b/app/tarot/storage/page.tsx
+@@ -22,6 +22,8 @@ import {
+   type TarotRecord,
+ } from '@/lib/saju/tarotRecords'
+ import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
++import StorageShell from '@/app/components/common/StorageShell'
++import StorageRow from '@/app/components/common/StorageRow'
+ 
+ function TarotStorageInner() {
+   const router = useRouter()
+@@ -50,46 +52,21 @@ function TarotStorageInner() {
+   }
+ 
+   return (
+-    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
+-      {/* 헤더 */}
+-      <div style={{
+-        position: 'sticky', top: 0, zIndex: 5,
+-        background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
+-        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
+-      }}>
+-        <button onClick={() => router.push('/tarot')}
+-          style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
+-        <div style={{ fontSize: 16, fontWeight: 500, color: '#3a2e28' }}>타로 보관함</div>
+-        {records && <div style={{ marginLeft: 'auto', fontSize: 12, color: '#5c3a1e' }}>{records.length}건</div>}
+-      </div>
+-
+-      <div style={{ padding: '16px 14px 0' }}>
+-        {/* 로딩 */}
+-        {records === null && (
+-          <div style={{ textAlign: 'center', padding: '50px 0', color: '#5c3a1e', fontSize: 13 }}>
+-            보관함을 불러오는 중…
+-          </div>
+-        )}
+-
+-        {/* 빈 상태 */}
+-        {records && records.length === 0 && (
+-          <div style={{ textAlign: 'center', padding: '46px 20px', color: '#5c3a1e' }}>
+-            <div style={{ fontSize: 30, marginBottom: 10 }}>🔮</div>
+-            <div style={{ fontSize: 14, color: '#96502e', fontWeight: 500, marginBottom: 4 }}>
+-              아직 저장된 타로 기록이 없어요
+-            </div>
+-            <div style={{ fontSize: 12, lineHeight: 1.6 }}>카드를 뽑으면 여기에 차곡차곡 쌓여요</div>
+-          </div>
+-        )}
+-
++    <StorageShell
++      title="타로 보관함"
++      onBack={() => router.push('/tarot')}
++      count={records ? records.length : null}
++      loading={records === null}
++      showEmpty={!!records && records.length === 0}
++      emptyIcon="🔮"
++      emptyTitle="아직 저장된 타로 기록이 없어요"
++      emptyDesc="카드를 뽑으면 여기에 차곡차곡 쌓여요"
++      actionLabel="+ 새 타로 보기"
++      onAction={() => router.push('/tarot')}
++    >
+         {/* 카드 목록 */}
+         {records && records.map(r => (
+-          <div key={r.id} onClick={() => router.push(`/tarot?recordId=${r.id}`)}
+-            style={{
+-              display: 'flex', alignItems: 'center', gap: 13, padding: '15px',
+-              background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14,
+-              marginBottom: 10, cursor: 'pointer',
+-            }}>
++          <StorageRow key={r.id} onClick={() => router.push(`/tarot?recordId=${r.id}`)} onDelete={() => setConfirmDel(r)}>
+             {/* 관심사 배지 */}
+             <div style={{
+               minWidth: 52, height: 44, borderRadius: 10, flexShrink: 0, padding: '0 6px',
+@@ -111,31 +88,9 @@ function TarotStorageInner() {
+                 {r.spreadTitle} · {daysAgoLabel(r.createdAt)}
+               </div>
+             </div>
+-
+-            {/* 삭제 버튼 */}
+-            <button
+-              onClick={(e) => { e.stopPropagation(); setConfirmDel(r) }}
+-              aria-label="삭제"
+-              style={{
+-                flexShrink: 0, width: 28, height: 28, borderRadius: 8,
+-                background: 'none', border: 'none', color: '#6b5340', fontSize: 17,
+-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+-              }}>
+-              ×
+-            </button>
+-          </div>
++          </StorageRow>
+         ))}
+ 
+-        {/* 새로 보기 → 타로 입구 */}
+-        <button onClick={() => router.push('/tarot')}
+-          style={{
+-            width: '100%', marginTop: 8, padding: 14, borderRadius: 12,
+-            background: '#b45a78', border: 'none', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer',
+-          }}>
+-          + 새 타로 보기
+-        </button>
+-      </div>
+-
+       {/* 삭제 확인 팝업 */}
+       {confirmDel && (
+         <ConfirmDeleteDialog
+@@ -146,7 +101,7 @@ function TarotStorageInner() {
+           onConfirm={handleDelete}
+         />
+       )}
+-    </main>
++    </StorageShell>
+   )
+ }
+ 
+diff --git a/changes-44bu-25.patch b/changes-44bu-25.patch
+deleted file mode 100644
+index ab73ed5..0000000
+--- a/changes-44bu-25.patch
++++ /dev/null
+@@ -1,916 +0,0 @@
+-diff --git a/32-verify-hour-convert.ts b/32-verify-hour-convert.ts
+-index cdedc20..5e959b9 100644
+---- a/32-verify-hour-convert.ts
+-+++ b/32-verify-hour-convert.ts
+-@@ -1196,6 +1196,59 @@ console.log('\n━━ ㊸ ★오행 그래프 «가운데 0» · A4 궁합서 (4
+-     `⚠️ 통변이 «다 나온 뒤» 에만 버튼이 보입니다 (반쪽 궁합서를 막습니다)`)
+- }
+- 
+-+console.log('\n━━ ㊹ ★삭제 확인 팝업 — «한 부품» 으로 통일했는가 (44부 25차) ━━')
+-+{
+-+  // ⚠️ 교훈 1-1 — 낱말로 소스를 훑으면 «제 주석» 까지 걸립니다.
+-+  //    ★주석을 «먼저 지우고» 봅니다.
+-+  const noComment = (s: string) =>
+-+    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+-+
+-+  const DLG = 'app/components/common/ConfirmDeleteDialog.tsx'
+-+  const dlg = noComment(read(DLG))
+-+
+-+  // ★말투가 «한 곳» 에 모여 있는가
+-+  check(/TITLE = '정말 삭제할까요\?'/.test(dlg), `★제목이 「정말 삭제할까요?」 한 곳에 있습니다`)
+-+  check(/WARN = '삭제하면 되돌릴 수 없어요\.'/.test(dlg), `★「삭제하면 되돌릴 수 없어요.」를 부품이 «언제나» 붙입니다`)
+-+  check(/CANCEL_LABEL = '취소'/.test(dlg) && /CONFIRM_LABEL = '삭제'/.test(dlg),
+-+    `★버튼은 «취소·삭제» 입니다`)
+-+  check(/BUSY_LABEL = '삭제 중…'/.test(dlg), `★지우는 동안 「삭제 중…」 으로 잠깁니다`)
+-+  check(/contained/.test(dlg), `★모달 «안» 에서도 쓸 수 있습니다 (인물 고르기)`)
+-+
+-+  // ★열한 화면이 «모두» 그 부품을 부르는가
+-+  const SCREENS = [
+-+    'app/manseryeok/couple-storage/page.tsx',
+-+    'app/manseryeok/saju-storage/page.tsx',
+-+    'app/manseryeok/mulsang-storage/page.tsx',
+-+    'app/tarot/storage/page.tsx',
+-+    'app/manseryeok/naming/components/NamingStorageView.tsx',
+-+    'app/manseryeok/wedding-timing/wedding-storage/page.tsx',
+-+    'app/manseryeok/birth-timing/birth-storage/page.tsx',
+-+    'app/manseryeok/moving-timing/moving-storage/page.tsx',
+-+    'app/manseryeok/career/page.tsx',
+-+    'app/manseryeok/exam-luck/page.tsx',
+-+    'app/manseryeok/components/PersonPickerModal.tsx',
+-+  ]
+-+  const uses = SCREENS.filter(p => /<ConfirmDeleteDialog/.test(noComment(read(p))))
+-+  check(uses.length === SCREENS.length,
+-+    `★삭제 확인이 뜨는 «열한 화면» 이 모두 공용 팝업을 씁니다 (${uses.length}/${SCREENS.length})`)
+-+
+-+  // ⚠️⚠️ 어느 화면에도 «제 손으로 지은» 팝업이 남아 있지 않은가
+-+  //    ★이것이 갈래 넷으로 갈라졌던 까닭입니다. 한 곳이라도 남으면 다시 갈라집니다.
+-+  const OWN = /정말 삭제할까요|지울까요|되돌릴 수 없어요|그대로 둘게요|지울게요/
+-+  const leaked = SCREENS.filter(p => OWN.test(noComment(read(p))))
+-+  check(leaked.length === 0,
+-+    `⚠️ 화면이 «제 팝업 문구» 를 따로 들고 있지 «않습니다»${leaked.length ? ' — ' + leaked.join(', ') : ''}`)
+-+
+-+  // ⚠️ 옛 갈래 ②(「이 기록을 지울까요? / 그대로 둘게요·지울게요」)가 사라졌는가
+-+  check(!/그대로 둘게요/.test(noComment(read('app/manseryeok/career/page.tsx'))) &&
+-+        !/그대로 둘게요/.test(noComment(read('app/manseryeok/exam-luck/page.tsx'))),
+-+    `★진로적성·합격운의 «다른 말투» 가 사라졌습니다`)
+-+
+-+  // ⚠️ 부품이 «둘» 이 되지 않았는가 — 공용 부품 자리에 하나뿐이어야 합니다
+-+  const twins = SCREENS.filter(p => /position: (contained \? 'absolute' : )?'fixed', inset: 0, zIndex: 50/.test(noComment(read(p))) && OWN.test(noComment(read(p))))
+-+  check(twins.length === 0, `⚠️ 팝업을 «다시 지은» 화면이 없습니다`)
+-+}
+-+
+- console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
+- {
+-   const src = read('lib/saju/simsanOhaeng.ts')
+-diff --git a/app/components/common/ConfirmDeleteDialog.tsx b/app/components/common/ConfirmDeleteDialog.tsx
+-new file mode 100644
+-index 0000000..7bbeb29
+---- /dev/null
+-+++ b/app/components/common/ConfirmDeleteDialog.tsx
+-@@ -0,0 +1,141 @@
+-+'use client'
+-+
+-+/**
+-+ * ConfirmDeleteDialog — 보관함에서 «지울까요?» 를 묻는 공용 팝업.
+-+ * ─────────────────────────────────────────────────────────────
+-+ *  ★2026-08-03 신설 — 대표님 지시 「삭제 메시지 형식을 통일할 것」 (44부 25차)
+-+ *
+-+ * ══ 왜 공용 부품인가 ══
+-+ *   삭제 확인이 뜨는 자리가 열한 곳인데 팝업 코드가 «열한 벌 복사» 되어 있었고,
+-+ *   그래서 말투가 네 갈래로 갈라져 있었습니다 —
+-+ *
+-+ *     ① 「정말 삭제할까요? / 취소·삭제」          8곳  ← ★정본으로 삼았습니다
+-+ *     ② 「이 기록을 지울까요? / 그대로 둘게요·지울게요」 2곳 (진로적성·합격운)
+-+ *     ③ 「삭제할까요?」 260px 흰 팝업              1곳 (인물 고르기)
+-+ *     ④ 브라우저 기본 confirm() 창                6곳 (아직 그대로 — 8-2 참고)
+-+ *
+-+ *   ★①을 고른 까닭 — 여덟 곳이 이미 그 말투이고, ②는 두 곳이 «서로 베낀» 것입니다
+-+ *     (exam-luck 머리말에 「진로적성 보관함을 그대로 본떴다」고 적혀 있습니다).
+-+ *
+-+ * ⚠️ 말투를 바꾸시려면 «이 파일 한 곳» 만 고치십시오. 열한 화면이 함께 바뀝니다.
+-+ *    제목은 TITLE, 버튼 글자는 CANCEL_LABEL·CONFIRM_LABEL·BUSY_LABEL 입니다.
+-+ * ⚠️⚠️ 화면마다 이 팝업을 «다시 짓지 마십시오». 그렇게 해서 넷으로 갈라졌습니다.
+-+ *
+-+ * 쓰는 법:
+-+ *   <ConfirmDeleteDialog
+-+ *     open={!!confirmDel}
+-+ *     message={<>{confirmDel?.name1} ♥ {confirmDel?.name2} 궁합을 삭제해요.</>}
+-+ *     busy={deleting}
+-+ *     onCancel={() => setConfirmDel(null)}
+-+ *     onConfirm={handleDelete}
+-+ *   />
+-+ *
+-+ * ★message 는 «무엇을 지우는지» 한 줄만 씁니다.
+-+ *   「삭제하면 되돌릴 수 없어요.」 는 이 부품이 «언제나» 붙입니다. 따로 적지 마십시오.
+-+ */
+-+
+-+import { useEffect } from 'react'
+-+import type { ReactNode } from 'react'
+-+
+-+/* ══ 말투 — ★고치려면 여기만 ══ */
+-+const TITLE = '정말 삭제할까요?'
+-+const WARN = '삭제하면 되돌릴 수 없어요.'
+-+const CANCEL_LABEL = '취소'
+-+const CONFIRM_LABEL = '삭제'
+-+const BUSY_LABEL = '삭제 중…'
+-+
+-+/* ══ 꼴 — 갈래 ①(여덟 곳)의 값 그대로 ══ */
+-+const OVERLAY = 'rgba(40,28,22,0.35)'
+-+const CARD_BG = '#FFFBF7'
+-+const TITLE_C = '#3a2e28'
+-+const BODY_C = '#96502e'
+-+const CANCEL_BG = '#f3e6db'
+-+const CONFIRM_BG = '#c8506e'
+-+const CONFIRM_BUSY = '#d99'
+-+
+-+interface Props {
+-+  /** 열려 있는가 */
+-+  open: boolean
+-+  /**
+-+   * 무엇을 지우는지 한 줄.
+-+   * 없으면 「이 기록을 삭제해요.」 로 나갑니다.
+-+   */
+-+  message?: ReactNode
+-+  /** 지우는 중 — 버튼이 잠기고 「삭제 중…」 이 됩니다 */
+-+  busy?: boolean
+-+  onCancel: () => void
+-+  onConfirm: () => void
+-+  /**
+-+   * 다른 팝업 «안» 에서 열릴 때 true.
+-+   *   ⚠️ 인물 고르기(PersonPickerModal)처럼 이미 떠 있는 모달 위에 겹칠 때는
+-+   *      position:fixed 로 화면 전체를 덮으면 부모 모달의 둥근 모서리를 넘어갑니다.
+-+   *      그때만 absolute 로 «부모 안» 을 덮습니다.
+-+   */
+-+  contained?: boolean
+-+}
+-+
+-+export default function ConfirmDeleteDialog({
+-+  open, message, busy = false, onCancel, onConfirm, contained = false,
+-+}: Props) {
+-+  /* ★ESC 로도 닫힙니다 — 지우는 중에는 잠급니다 */
+-+  useEffect(() => {
+-+    if (!open) return
+-+    const onKey = (e: KeyboardEvent) => {
+-+      if (e.key === 'Escape' && !busy) onCancel()
+-+    }
+-+    window.addEventListener('keydown', onKey)
+-+    return () => window.removeEventListener('keydown', onKey)
+-+  }, [open, busy, onCancel])
+-+
+-+  if (!open) return null
+-+
+-+  return (
+-+    <div
+-+      onClick={() => !busy && onCancel()}
+-+      style={{
+-+        position: contained ? 'absolute' : 'fixed', inset: 0, zIndex: 50,
+-+        background: OVERLAY, borderRadius: contained ? 20 : undefined,
+-+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+-+      }}>
+-+      <div
+-+        role="dialog"
+-+        aria-modal="true"
+-+        onClick={(e) => e.stopPropagation()}
+-+        style={{
+-+          width: '100%', maxWidth: 320, background: CARD_BG,
+-+          borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
+-+          boxShadow: '0 8px 30px rgba(90,50,30,0.2)',
+-+        }}>
+-+        <div style={{ fontSize: 15, fontWeight: 600, color: TITLE_C, marginBottom: 8 }}>
+-+          {TITLE}
+-+        </div>
+-+        <div style={{ fontSize: 13, color: BODY_C, lineHeight: 1.5, marginBottom: 18 }}>
+-+          {message ?? '이 기록을 삭제해요.'}<br />
+-+          {WARN}
+-+        </div>
+-+        <div style={{ display: 'flex', gap: 8 }}>
+-+          <button
+-+            onClick={onCancel}
+-+            disabled={busy}
+-+            style={{
+-+              flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+-+              background: CANCEL_BG, border: 'none', color: BODY_C,
+-+              cursor: busy ? 'default' : 'pointer', fontFamily: 'inherit',
+-+            }}>
+-+            {CANCEL_LABEL}
+-+          </button>
+-+          <button
+-+            onClick={onConfirm}
+-+            disabled={busy}
+-+            style={{
+-+              flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+-+              background: busy ? CONFIRM_BUSY : CONFIRM_BG, border: 'none', color: '#fff',
+-+              cursor: busy ? 'default' : 'pointer', fontFamily: 'inherit',
+-+            }}>
+-+            {busy ? BUSY_LABEL : CONFIRM_LABEL}
+-+          </button>
+-+        </div>
+-+      </div>
+-+    </div>
+-+  )
+-+}
+-diff --git a/app/manseryeok/birth-timing/birth-storage/page.tsx b/app/manseryeok/birth-timing/birth-storage/page.tsx
+-index fc08f7c..a927d56 100644
+---- a/app/manseryeok/birth-timing/birth-storage/page.tsx
+-+++ b/app/manseryeok/birth-timing/birth-storage/page.tsx
+-@@ -18,6 +18,7 @@ import {
+-   type BirthRecord,
+- } from '@/lib/saju/birthRecords'
+- import type { SavedInputData } from '@/lib/saju/savedPeople'
+-+import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+- 
+- const accent = '#b45a78'   // 출산택일 포인트(로즈핑크 — 홈 카드색과 통일)
+- 
+-@@ -159,51 +160,13 @@ function BirthStorageInner() {
+- 
+-       {/* 삭제 확인 팝업 */}
+-       {confirmDel && (
+--        <div
+--          onClick={() => !deleting && setConfirmDel(null)}
+--          style={{
+--            position: 'fixed', inset: 0, zIndex: 50,
+--            background: 'rgba(40,28,22,0.35)',
+--            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+--          }}>
+--          <div onClick={(e) => e.stopPropagation()}
+--            style={{
+--              width: '100%', maxWidth: 320, background: '#FFFBF7',
+--              borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
+--              boxShadow: '0 8px 30px rgba(90,50,30,0.2)',
+--            }}>
+--            <div style={{ fontSize: 15, fontWeight: 600, color: '#3a2e28', marginBottom: 8 }}>
+--              정말 삭제할까요?
+--            </div>
+--            <div style={{ fontSize: 13, color: '#96502e', lineHeight: 1.5, marginBottom: 18 }}>
+--              {confirmDel.name1} <span style={{ color: '#6b5340' }}>·</span> {confirmDel.name2}
+--              {' '}출산택일을 삭제해요.<br />
+--              삭제하면 되돌릴 수 없어요.
+--            </div>
+--            <div style={{ display: 'flex', gap: 8 }}>
+--              <button
+--                onClick={() => setConfirmDel(null)}
+--                disabled={deleting}
+--                style={{
+--                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+--                  background: '#f3e6db', border: 'none', color: '#96502e',
+--                  cursor: deleting ? 'default' : 'pointer',
+--                }}>
+--                취소
+--              </button>
+--              <button
+--                onClick={handleDelete}
+--                disabled={deleting}
+--                style={{
+--                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+--                  background: deleting ? '#d99' : '#c8506e', border: 'none', color: '#fff',
+--                  cursor: deleting ? 'default' : 'pointer',
+--                }}>
+--                {deleting ? '삭제 중…' : '삭제'}
+--              </button>
+--            </div>
+--          </div>
+--        </div>
+-+        <ConfirmDeleteDialog
+-+          open
+-+          message={<>{confirmDel.name1} <span style={{ color: '#6b5340' }}>·</span> {confirmDel.name2} 출산택일을 삭제해요.</>}
+-+          busy={deleting}
+-+          onCancel={() => setConfirmDel(null)}
+-+          onConfirm={handleDelete}
+-+        />
+-       )}
+-     </main>
+-   )
+-diff --git a/app/manseryeok/career/page.tsx b/app/manseryeok/career/page.tsx
+-index a7b33dd..96ef2d4 100644
+---- a/app/manseryeok/career/page.tsx
+-+++ b/app/manseryeok/career/page.tsx
+-@@ -20,6 +20,7 @@ import {
+- } from '@/lib/saju/sajuRecords'
+- import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+- import { toResultQuery, type SavedPerson, type SavedInputData } from '@/lib/saju/savedPeople'
+-+import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+- 
+- const ACCENT = '#785aaa'      // 진로적성 색 (홈 서비스 목록과 같은 보라)
+- const BG = '#FDF6F0'
+-@@ -149,31 +150,13 @@ function CareerStorageInner() {
+-       />
+- 
+-       {confirmDel && (
+--        <div onClick={() => !deleting && setConfirmDel(null)}
+--          style={{
+--            position: 'fixed', inset: 0, background: 'rgba(60,40,30,0.35)',
+--            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 24,
+--          }}>
+--          <div onClick={e => e.stopPropagation()}
+--            style={{ background: CARD, borderRadius: 16, padding: '22px 20px', maxWidth: 300, width: '100%' }}>
+--            <div style={{ fontSize: 14.5, fontWeight: 500, color: '#3a2e28', marginBottom: 6 }}>
+--              이 기록을 지울까요?
+--            </div>
+--            <div style={{ fontSize: 12.5, color: '#5c3a1e', lineHeight: 1.6, marginBottom: 18 }}>
+--              {confirmDel.title || '이름 없음'} · 지우면 되돌릴 수 없어요.
+--            </div>
+--            <div style={{ display: 'flex', gap: 8 }}>
+--              <button onClick={() => setConfirmDel(null)} disabled={deleting}
+--                style={{ flex: 1, padding: 11, borderRadius: 10, background: '#faf3ee', border: `0.5px solid ${LINE}`, color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>
+--                그대로 둘게요
+--              </button>
+--              <button onClick={handleDelete} disabled={deleting}
+--                style={{ flex: 1, padding: 11, borderRadius: 10, background: '#c05a5a', border: 'none', color: '#fff', fontSize: 13, cursor: 'pointer' }}>
+--                {deleting ? '지우는 중…' : '지울게요'}
+--              </button>
+--            </div>
+--          </div>
+--        </div>
+-+        <ConfirmDeleteDialog
+-+          open
+-+          message={<>{confirmDel.title || '이름 없음'}의 진로적성 기록을 삭제해요.</>}
+-+          busy={deleting}
+-+          onCancel={() => setConfirmDel(null)}
+-+          onConfirm={handleDelete}
+-+        />
+-       )}
+-     </main>
+-   )
+-diff --git a/app/manseryeok/components/PersonPickerModal.tsx b/app/manseryeok/components/PersonPickerModal.tsx
+-index 620d51b..d3542b8 100644
+---- a/app/manseryeok/components/PersonPickerModal.tsx
+-+++ b/app/manseryeok/components/PersonPickerModal.tsx
+-@@ -36,6 +36,7 @@ import {
+-   type SavedPerson, type PersonDraft,
+- } from '@/lib/saju/savedPeople'
+- import PersonFormPitch from './PersonFormPitch'
+-+import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+- 
+- // ── 피치톤 색 ──
+- const C = {
+-@@ -388,20 +389,13 @@ export default function PersonPickerModal({
+- 
+-       {/* 삭제 확인 */}
+-       {confirmDel && (
+--        <div onClick={() => setConfirmDel(null)}
+--          style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 20 }}>
+--          <div onClick={e => e.stopPropagation()}
+--            style={{ background: '#fff', borderRadius: 16, padding: '22px 20px', width: 260, textAlign: 'center' }}>
+--            <div style={{ fontSize: 15, fontWeight: 500, color: C.title, marginBottom: 6 }}>삭제할까요?</div>
+--            <div style={{ fontSize: 12, color: C.sub, marginBottom: 18, lineHeight: 1.6 }}>&quot;{confirmDel.title}&quot;을(를) 목록에서 지워요.<br />되돌릴 수 없어요.</div>
+--            <div style={{ display: 'flex', gap: 8 }}>
+--              <button onClick={() => setConfirmDel(null)}
+--                style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: `0.5px solid ${C.searchBorder}`, background: 'none', color: C.sub, fontSize: 13, cursor: 'pointer' }}>취소</button>
+--              <button onClick={() => handleDelete(confirmDel)}
+--                style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', background: C.danger, color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>삭제</button>
+--            </div>
+--          </div>
+--        </div>
+-+        <ConfirmDeleteDialog
+-+          open
+-+          contained
+-+          message={<>&lsquo;{confirmDel.title}&rsquo;을(를) 목록에서 삭제해요.</>}
+-+          onCancel={() => setConfirmDel(null)}
+-+          onConfirm={() => handleDelete(confirmDel)}
+-+        />
+-       )}
+-     </Overlay>
+-   )
+-diff --git a/app/manseryeok/couple-storage/page.tsx b/app/manseryeok/couple-storage/page.tsx
+-index 08c8e65..1b22e69 100644
+---- a/app/manseryeok/couple-storage/page.tsx
+-+++ b/app/manseryeok/couple-storage/page.tsx
+-@@ -19,6 +19,7 @@ import {
+-   type CoupleRecord, type CoupleMode,
+- } from '@/lib/saju/coupleRecords'
+- import type { SavedInputData } from '@/lib/saju/savedPeople'
+-+import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+- 
+- const MODE_INFO: Record<CoupleMode, { title: string; accent: string; badge: string }> = {
+-   couple:  { title: '연인 궁합 보관함', accent: '#c85a8c', badge: '연인' },
+-@@ -189,50 +190,13 @@ function CoupleStorageInner() {
+- 
+-       {/* 삭제 확인 팝업 */}
+-       {confirmDel && (
+--        <div
+--          onClick={() => !deleting && setConfirmDel(null)}
+--          style={{
+--            position: 'fixed', inset: 0, zIndex: 50,
+--            background: 'rgba(40,28,22,0.35)',
+--            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+--          }}>
+--          <div onClick={(e) => e.stopPropagation()}
+--            style={{
+--              width: '100%', maxWidth: 320, background: '#FFFBF7',
+--              borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
+--              boxShadow: '0 8px 30px rgba(90,50,30,0.2)',
+--            }}>
+--            <div style={{ fontSize: 15, fontWeight: 600, color: '#3a2e28', marginBottom: 8 }}>
+--              정말 삭제할까요?
+--            </div>
+--            <div style={{ fontSize: 13, color: '#96502e', lineHeight: 1.5, marginBottom: 18 }}>
+--              {confirmDel.name1} <span style={{ color: '#d4537e' }}>♥</span> {confirmDel.name2} 궁합을 삭제해요.<br />
+--              삭제하면 되돌릴 수 없어요.
+--            </div>
+--            <div style={{ display: 'flex', gap: 8 }}>
+--              <button
+--                onClick={() => setConfirmDel(null)}
+--                disabled={deleting}
+--                style={{
+--                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+--                  background: '#f3e6db', border: 'none', color: '#96502e',
+--                  cursor: deleting ? 'default' : 'pointer',
+--                }}>
+--                취소
+--              </button>
+--              <button
+--                onClick={handleDelete}
+--                disabled={deleting}
+--                style={{
+--                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+--                  background: deleting ? '#d99' : '#c8506e', border: 'none', color: '#fff',
+--                  cursor: deleting ? 'default' : 'pointer',
+--                }}>
+--                {deleting ? '삭제 중…' : '삭제'}
+--              </button>
+--            </div>
+--          </div>
+--        </div>
+-+        <ConfirmDeleteDialog
+-+          open
+-+          message={<>{confirmDel.name1} <span style={{ color: '#d4537e' }}>♥</span> {confirmDel.name2} 궁합을 삭제해요.</>}
+-+          busy={deleting}
+-+          onCancel={() => setConfirmDel(null)}
+-+          onConfirm={handleDelete}
+-+        />
+-       )}
+-     </main>
+-   )
+-diff --git a/app/manseryeok/exam-luck/page.tsx b/app/manseryeok/exam-luck/page.tsx
+-index 20d96cd..9fac329 100644
+---- a/app/manseryeok/exam-luck/page.tsx
+-+++ b/app/manseryeok/exam-luck/page.tsx
+-@@ -21,6 +21,7 @@ import {
+- } from '@/lib/saju/sajuRecords'
+- import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+- import { toResultQuery, type SavedPerson, type SavedInputData } from '@/lib/saju/savedPeople'
+-+import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+- 
+- const ACCENT = '#c85a8c'      // 합격운 색 (홈 서비스 목록과 같은 분홍)
+- const SOFT = '#f7e6ee'
+-@@ -171,31 +172,13 @@ function ExamLuckStorageInner() {
+-       />
+- 
+-       {confirmDel && (
+--        <div onClick={() => !deleting && setConfirmDel(null)}
+--          style={{
+--            position: 'fixed', inset: 0, background: 'rgba(60,40,30,0.35)',
+--            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 24,
+--          }}>
+--          <div onClick={e => e.stopPropagation()}
+--            style={{ background: CARD, borderRadius: 16, padding: '22px 20px', maxWidth: 300, width: '100%' }}>
+--            <div style={{ fontSize: 14.5, fontWeight: 500, color: '#3a2e28', marginBottom: 6 }}>
+--              이 기록을 지울까요?
+--            </div>
+--            <div style={{ fontSize: 12.5, color: '#5c3a1e', lineHeight: 1.6, marginBottom: 18 }}>
+--              {confirmDel.title || '이름 없음'} · 지우면 되돌릴 수 없어요.
+--            </div>
+--            <div style={{ display: 'flex', gap: 8 }}>
+--              <button onClick={() => setConfirmDel(null)} disabled={deleting}
+--                style={{ flex: 1, padding: 11, borderRadius: 10, background: '#faf3ee', border: `0.5px solid ${LINE}`, color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>
+--                그대로 둘게요
+--              </button>
+--              <button onClick={handleDelete} disabled={deleting}
+--                style={{ flex: 1, padding: 11, borderRadius: 10, background: '#c05a5a', border: 'none', color: '#fff', fontSize: 13, cursor: 'pointer' }}>
+--                {deleting ? '지우는 중…' : '지울게요'}
+--              </button>
+--            </div>
+--          </div>
+--        </div>
+-+        <ConfirmDeleteDialog
+-+          open
+-+          message={<>{confirmDel.title || '이름 없음'}의 합격운·취업운 기록을 삭제해요.</>}
+-+          busy={deleting}
+-+          onCancel={() => setConfirmDel(null)}
+-+          onConfirm={handleDelete}
+-+        />
+-       )}
+-     </main>
+-   )
+-diff --git a/app/manseryeok/moving-timing/moving-storage/page.tsx b/app/manseryeok/moving-timing/moving-storage/page.tsx
+-index 610eec9..ad2710e 100644
+---- a/app/manseryeok/moving-timing/moving-storage/page.tsx
+-+++ b/app/manseryeok/moving-timing/moving-storage/page.tsx
+-@@ -19,6 +19,7 @@ import {
+-   type MovingRecord,
+- } from '@/lib/saju/movingRecords'
+- import type { SavedInputData } from '@/lib/saju/savedPeople'
+-+import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+- 
+- const accent = '#967850'
+- const line = '#EAE0CE'
+-@@ -200,51 +201,13 @@ function MovingStorageInner() {
+-       </div>
+- 
+-       {confirmDel && (
+--        <div
+--          onClick={() => !deleting && setConfirmDel(null)}
+--          style={{
+--            position: 'fixed', inset: 0, zIndex: 50,
+--            background: 'rgba(40,32,24,0.35)',
+--            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+--          }}>
+--          <div onClick={e => e.stopPropagation()}
+--            style={{
+--              width: '100%', maxWidth: 320, background: '#FFFDF9',
+--              borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
+--              boxShadow: '0 8px 30px rgba(90,70,40,0.2)',
+--            }}>
+--            <div style={{ fontSize: 15, fontWeight: 600, color: ink, marginBottom: 8 }}>
+--              정말 삭제할까요?
+--            </div>
+--            <div style={{ fontSize: 13, color: '#7A6440', lineHeight: 1.5, marginBottom: 18 }}>
+--              {confirmDel.name1}{confirmDel.name2 ? ` · ${confirmDel.name2}` : ''}
+--              {' '}이사택일을 삭제해요.<br />
+--              삭제하면 되돌릴 수 없어요.
+--            </div>
+--            <div style={{ display: 'flex', gap: 8 }}>
+--              <button
+--                onClick={() => setConfirmDel(null)}
+--                disabled={deleting}
+--                style={{
+--                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+--                  background: '#F0EADA', border: 'none', color: '#7A6440',
+--                  cursor: deleting ? 'default' : 'pointer', fontFamily: 'inherit',
+--                }}>
+--                취소
+--              </button>
+--              <button
+--                onClick={handleDelete}
+--                disabled={deleting}
+--                style={{
+--                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+--                  background: deleting ? '#d99' : '#c8506e', border: 'none', color: '#fff',
+--                  cursor: deleting ? 'default' : 'pointer', fontFamily: 'inherit',
+--                }}>
+--                {deleting ? '삭제 중…' : '삭제'}
+--              </button>
+--            </div>
+--          </div>
+--        </div>
+-+        <ConfirmDeleteDialog
+-+          open
+-+          message={<>{confirmDel.name1}{confirmDel.name2 ? ` · ${confirmDel.name2}` : ''} 이사택일을 삭제해요.</>}
+-+          busy={deleting}
+-+          onCancel={() => setConfirmDel(null)}
+-+          onConfirm={handleDelete}
+-+        />
+-       )}
+- 
+-     </main>
+-diff --git a/app/manseryeok/mulsang-storage/page.tsx b/app/manseryeok/mulsang-storage/page.tsx
+-index bd309cf..71cff52 100644
+---- a/app/manseryeok/mulsang-storage/page.tsx
+-+++ b/app/manseryeok/mulsang-storage/page.tsx
+-@@ -20,6 +20,7 @@ import {
+- import { STYLE_CONFIGS } from '@/lib/saju/mulsangPrompt'
+- import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+- import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
+-+import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+- 
+- const ACCENT = '#b46e46'
+- 
+-@@ -185,50 +186,13 @@ function MulsangStorageInner() {
+- 
+-       {/* 삭제 확인 팝업 */}
+-       {confirmDel && (
+--        <div
+--          onClick={() => !deleting && setConfirmDel(null)}
+--          style={{
+--            position: 'fixed', inset: 0, zIndex: 50,
+--            background: 'rgba(40,28,22,0.35)',
+--            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+--          }}>
+--          <div onClick={(e) => e.stopPropagation()}
+--            style={{
+--              width: '100%', maxWidth: 320, background: '#FFFBF7',
+--              borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
+--              boxShadow: '0 8px 30px rgba(90,50,30,0.2)',
+--            }}>
+--            <div style={{ fontSize: 15, fontWeight: 600, color: '#3a2e28', marginBottom: 8 }}>
+--              정말 삭제할까요?
+--            </div>
+--            <div style={{ fontSize: 13, color: '#96502e', lineHeight: 1.5, marginBottom: 18 }}>
+--              {confirmDel.title || '이 기록'}의 그림 기록을 삭제해요.<br />
+--              삭제하면 되돌릴 수 없어요.
+--            </div>
+--            <div style={{ display: 'flex', gap: 8 }}>
+--              <button
+--                onClick={() => setConfirmDel(null)}
+--                disabled={deleting}
+--                style={{
+--                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+--                  background: '#f3e6db', border: 'none', color: '#96502e',
+--                  cursor: deleting ? 'default' : 'pointer',
+--                }}>
+--                취소
+--              </button>
+--              <button
+--                onClick={handleDelete}
+--                disabled={deleting}
+--                style={{
+--                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+--                  background: deleting ? '#d99' : '#c8506e', border: 'none', color: '#fff',
+--                  cursor: deleting ? 'default' : 'pointer',
+--                }}>
+--                {deleting ? '삭제 중…' : '삭제'}
+--              </button>
+--            </div>
+--          </div>
+--        </div>
+-+        <ConfirmDeleteDialog
+-+          open
+-+          message={<>{confirmDel.title || '이 기록'}의 그림 기록을 삭제해요.</>}
+-+          busy={deleting}
+-+          onCancel={() => setConfirmDel(null)}
+-+          onConfirm={handleDelete}
+-+        />
+-       )}
+-     </main>
+-   )
+-diff --git a/app/manseryeok/naming/components/NamingStorageView.tsx b/app/manseryeok/naming/components/NamingStorageView.tsx
+-index 10428fe..707d657 100644
+---- a/app/manseryeok/naming/components/NamingStorageView.tsx
+-+++ b/app/manseryeok/naming/components/NamingStorageView.tsx
+-@@ -36,6 +36,7 @@ import {
+- import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+- import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
+- import { surnameOfHangul } from '@/lib/saju/surname'
+-+import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+- 
+- // ══════════════════════════════════════════════════════════════════
+- //  ★2026-08-01 — 보관함에 «풀이» 와 «작명» 을 가르는 탭을 넣습니다
+-@@ -440,50 +441,13 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
+- 
+-       {/* 삭제 확인 팝업 */}
+-       {confirmDel && (
+--        <div
+--          onClick={() => !deleting && setConfirmDel(null)}
+--          style={{
+--            position: 'fixed', inset: 0, zIndex: 50,
+--            background: 'rgba(40,28,22,0.35)',
+--            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+--          }}>
+--          <div onClick={(e) => e.stopPropagation()}
+--            style={{
+--              width: '100%', maxWidth: 320, background: '#FFFBF7',
+--              borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
+--              boxShadow: '0 8px 30px rgba(90,50,30,0.2)',
+--            }}>
+--            <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a', marginBottom: 8 }}>
+--              정말 삭제할까요?
+--            </div>
+--            <div style={{ fontSize: 13, color: '#96502e', lineHeight: 1.5, marginBottom: 18 }}>
+--              &lsquo;{confirmDel.hangulName || confirmDel.hanjaName}&rsquo; 이름 풀이를 삭제해요.<br />
+--              삭제하면 되돌릴 수 없어요.
+--            </div>
+--            <div style={{ display: 'flex', gap: 8 }}>
+--              <button
+--                onClick={() => setConfirmDel(null)}
+--                disabled={deleting}
+--                style={{
+--                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+--                  background: '#f3e6db', border: 'none', color: '#96502e',
+--                  cursor: deleting ? 'default' : 'pointer',
+--                }}>
+--                취소
+--              </button>
+--              <button
+--                onClick={handleDelete}
+--                disabled={deleting}
+--                style={{
+--                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+--                  background: deleting ? '#d99' : '#c8506e', border: 'none', color: '#fff',
+--                  cursor: deleting ? 'default' : 'pointer',
+--                }}>
+--                {deleting ? '삭제 중…' : '삭제'}
+--              </button>
+--            </div>
+--          </div>
+--        </div>
+-+        <ConfirmDeleteDialog
+-+          open
+-+          message={<>&lsquo;{confirmDel.hangulName || confirmDel.hanjaName}&rsquo; 이름 풀이를 삭제해요.</>}
+-+          busy={deleting}
+-+          onCancel={() => setConfirmDel(null)}
+-+          onConfirm={handleDelete}
+-+        />
+-       )}
+- 
+-       {/* 누구 이름을 볼까요? — 나 / 가족·지인 / 새 사람 선택 (사주 보관함과 동일 모달) */}
+-diff --git a/app/manseryeok/saju-storage/page.tsx b/app/manseryeok/saju-storage/page.tsx
+-index dfd5197..da2326c 100644
+---- a/app/manseryeok/saju-storage/page.tsx
+-+++ b/app/manseryeok/saju-storage/page.tsx
+-@@ -22,6 +22,7 @@ import {
+- import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+- import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
+- import type { SavedInputData } from '@/lib/saju/savedPeople'
+-+import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+- 
+- // 서비스별 정보 (제목·색·결과경로·unse 파라미터)
+- // ★2026-07-29 — 보관함 단권화 (대표님 확정)
+-@@ -205,50 +206,13 @@ function SajuStorageInner() {
+- 
+-       {/* 삭제 확인 팝업 */}
+-       {confirmDel && (
+--        <div
+--          onClick={() => !deleting && setConfirmDel(null)}
+--          style={{
+--            position: 'fixed', inset: 0, zIndex: 50,
+--            background: 'rgba(40,28,22,0.35)',
+--            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+--          }}>
+--          <div onClick={(e) => e.stopPropagation()}
+--            style={{
+--              width: '100%', maxWidth: 320, background: '#FFFBF7',
+--              borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
+--              boxShadow: '0 8px 30px rgba(90,50,30,0.2)',
+--            }}>
+--            <div style={{ fontSize: 15, fontWeight: 600, color: '#3a2e28', marginBottom: 8 }}>
+--              정말 삭제할까요?
+--            </div>
+--            <div style={{ fontSize: 13, color: '#96502e', lineHeight: 1.5, marginBottom: 18 }}>
+--              {confirmDel.title || '이 기록'}의 {info.badge} 기록을 삭제해요.<br />
+--              삭제하면 되돌릴 수 없어요.
+--            </div>
+--            <div style={{ display: 'flex', gap: 8 }}>
+--              <button
+--                onClick={() => setConfirmDel(null)}
+--                disabled={deleting}
+--                style={{
+--                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+--                  background: '#f3e6db', border: 'none', color: '#96502e',
+--                  cursor: deleting ? 'default' : 'pointer',
+--                }}>
+--                취소
+--              </button>
+--              <button
+--                onClick={handleDelete}
+--                disabled={deleting}
+--                style={{
+--                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+--                  background: deleting ? '#d99' : '#c8506e', border: 'none', color: '#fff',
+--                  cursor: deleting ? 'default' : 'pointer',
+--                }}>
+--                {deleting ? '삭제 중…' : '삭제'}
+--              </button>
+--            </div>
+--          </div>
+--        </div>
+-+        <ConfirmDeleteDialog
+-+          open
+-+          message={<>{confirmDel.title || '이 기록'}의 {info.badge} 기록을 삭제해요.</>}
+-+          busy={deleting}
+-+          onCancel={() => setConfirmDel(null)}
+-+          onConfirm={handleDelete}
+-+        />
+-       )}
+-     </main>
+-   )
+-diff --git a/app/manseryeok/wedding-timing/wedding-storage/page.tsx b/app/manseryeok/wedding-timing/wedding-storage/page.tsx
+-index d9f640c..d0d3a0c 100644
+---- a/app/manseryeok/wedding-timing/wedding-storage/page.tsx
+-+++ b/app/manseryeok/wedding-timing/wedding-storage/page.tsx
+-@@ -19,6 +19,7 @@ import {
+-   type WeddingRecord,
+- } from '@/lib/saju/weddingRecords'
+- import type { SavedInputData } from '@/lib/saju/savedPeople'
+-+import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+- 
+- const accent = '#96643c'   // 결혼택일 포인트(브라운)
+- 
+-@@ -157,51 +158,13 @@ function WeddingStorageInner() {
+- 
+-       {/* 삭제 확인 팝업 */}
+-       {confirmDel && (
+--        <div
+--          onClick={() => !deleting && setConfirmDel(null)}
+--          style={{
+--            position: 'fixed', inset: 0, zIndex: 50,
+--            background: 'rgba(40,28,22,0.35)',
+--            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+--          }}>
+--          <div onClick={(e) => e.stopPropagation()}
+--            style={{
+--              width: '100%', maxWidth: 320, background: '#FFFBF7',
+--              borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
+--              boxShadow: '0 8px 30px rgba(90,50,30,0.2)',
+--            }}>
+--            <div style={{ fontSize: 15, fontWeight: 600, color: '#3a2e28', marginBottom: 8 }}>
+--              정말 삭제할까요?
+--            </div>
+--            <div style={{ fontSize: 13, color: '#96502e', lineHeight: 1.5, marginBottom: 18 }}>
+--              {confirmDel.name1} <span style={{ color: '#d4537e' }}>♥</span> {confirmDel.name2}
+--              {' '}결혼택일을 삭제해요.<br />
+--              삭제하면 되돌릴 수 없어요.
+--            </div>
+--            <div style={{ display: 'flex', gap: 8 }}>
+--              <button
+--                onClick={() => setConfirmDel(null)}
+--                disabled={deleting}
+--                style={{
+--                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+--                  background: '#f3e6db', border: 'none', color: '#96502e',
+--                  cursor: deleting ? 'default' : 'pointer',
+--                }}>
+--                취소
+--              </button>
+--              <button
+--                onClick={handleDelete}
+--                disabled={deleting}
+--                style={{
+--                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+--                  background: deleting ? '#d99' : '#c8506e', border: 'none', color: '#fff',
+--                  cursor: deleting ? 'default' : 'pointer',
+--                }}>
+--                {deleting ? '삭제 중…' : '삭제'}
+--              </button>
+--            </div>
+--          </div>
+--        </div>
+-+        <ConfirmDeleteDialog
+-+          open
+-+          message={<>{confirmDel.name1} <span style={{ color: '#d4537e' }}>♥</span> {confirmDel.name2} 결혼택일을 삭제해요.</>}
+-+          busy={deleting}
+-+          onCancel={() => setConfirmDel(null)}
+-+          onConfirm={handleDelete}
+-+        />
+-       )}
+-     </main>
+-   )
+-diff --git a/app/tarot/storage/page.tsx b/app/tarot/storage/page.tsx
+-index 7ac35d1..6722ad2 100644
+---- a/app/tarot/storage/page.tsx
+-+++ b/app/tarot/storage/page.tsx
+-@@ -21,6 +21,7 @@ import {
+-   TAROT_CATEGORY_COLOR,
+-   type TarotRecord,
+- } from '@/lib/saju/tarotRecords'
+-+import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+- 
+- function TarotStorageInner() {
+-   const router = useRouter()
+-@@ -137,50 +138,13 @@ function TarotStorageInner() {
+- 
+-       {/* 삭제 확인 팝업 */}
+-       {confirmDel && (
+--        <div
+--          onClick={() => !deleting && setConfirmDel(null)}
+--          style={{
+--            position: 'fixed', inset: 0, zIndex: 50,
+--            background: 'rgba(40,28,22,0.35)',
+--            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+--          }}>
+--          <div onClick={(e) => e.stopPropagation()}
+--            style={{
+--              width: '100%', maxWidth: 320, background: '#FFFBF7',
+--              borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
+--              boxShadow: '0 8px 30px rgba(90,50,30,0.2)',
+--            }}>
+--            <div style={{ fontSize: 15, fontWeight: 600, color: '#3a2e28', marginBottom: 8 }}>
+--              정말 삭제할까요?
+--            </div>
+--            <div style={{ fontSize: 13, color: '#96502e', lineHeight: 1.5, marginBottom: 18 }}>
+--              이 타로 기록을 삭제해요.<br />
+--              삭제하면 되돌릴 수 없어요.
+--            </div>
+--            <div style={{ display: 'flex', gap: 8 }}>
+--              <button
+--                onClick={() => setConfirmDel(null)}
+--                disabled={deleting}
+--                style={{
+--                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+--                  background: '#f3e6db', border: 'none', color: '#96502e',
+--                  cursor: deleting ? 'default' : 'pointer',
+--                }}>
+--                취소
+--              </button>
+--              <button
+--                onClick={handleDelete}
+--                disabled={deleting}
+--                style={{
+--                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+--                  background: deleting ? '#d99' : '#c8506e', border: 'none', color: '#fff',
+--                  cursor: deleting ? 'default' : 'pointer',
+--                }}>
+--                {deleting ? '삭제 중…' : '삭제'}
+--              </button>
+--            </div>
+--          </div>
+--        </div>
+-+        <ConfirmDeleteDialog
+-+          open
+-+          message={<>이 타로 기록을 삭제해요.</>}
+-+          busy={deleting}
+-+          onCancel={() => setConfirmDel(null)}
+-+          onConfirm={handleDelete}
+-+        />
+-       )}
+-     </main>
+-   )

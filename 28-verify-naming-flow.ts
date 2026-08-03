@@ -832,8 +832,15 @@ console.log('\n━━ ⑲-K ★보관함 «완전» 분리 — 탭 없음 (43부
     `★옛 주소는 «이름 정밀분석» 입니다 (그 주소의 원래 뜻)`)
 
   // ③ 버튼 하나 · 옆으로 가는 길
-  check(/view\.button === '작명' && \(/.test(v) && /view\.button === '풀이' && \(/.test(v),
+  // ★2026-08-03 (44부 26차) — 버튼을 «화면» 이 아니라 StorageShell 이 그립니다.
+  //   ⚠️ 검사를 헐겁게 하지 «않았습니다» — 「갈래마다 하나」라는 뜻을 그대로 잽니다.
+  //      ① 화면이 갈래를 보고 «글자 하나» 를 고르는가
+  //      ② 틀이 그 글자를 «한 번만» 그리는가
+  const shellSrc = codeOf(read('app/components/common/StorageShell.tsx'))
+  check(/view\.button === '작명' \?/.test(v) && /view\.button === '풀이' \?/.test(v),
     `★하단 버튼이 갈래마다 «하나» 입니다`)
+  check((shellSrc.match(/\{actionLabel && \(/g) ?? []).length === 1,
+    `★그 버튼을 틀이 «한 번만» 그립니다`)
   check(/otherLabel: '내 아이 명품작명으로 가기'/.test(v)
      && /otherLabel: '내 이름 정밀분석으로 가기'/.test(v),
     `★옆 보관함 안내가 «새 이름» 입니다`)
@@ -854,7 +861,11 @@ console.log('\n━━ ⑲-K ★보관함 «완전» 분리 — 탭 없음 (43부
   // ④ ⚠️ 거르기는 «화면에서만» — 기록은 하나도 안 지웁니다
   check(!/listNamingRecords\((mode|view)/.test(v),
     `★목록을 «불러올 때» 거르지 않습니다`)
-  check(/shownRecords\.length\}건/.test(v), `머리의 건수가 «보이는 목록» 과 같습니다`)
+  // ★2026-08-03 (44부 26차) — 「N건」도 StorageShell 이 그립니다.
+  //   ⚠️ 「보이는 목록의 수를 넘기는가」로 잽니다 — 뜻은 그대로입니다.
+  check(/count=\{records \? shownRecords\.length : null\}/.test(v),
+    `머리의 건수가 «보이는 목록» 과 같습니다`)
+  check(/\{count\}건/.test(shellSrc), `★그 수를 틀이 「N건」으로 그립니다`)
   // ⚠️ 옛 주소를 지우지 않았는가
   check(existsSync(P.stoDoor), `⚠️ 옛 주소를 «지우지 않았습니다» (북마크·마이페이지)`)
 }

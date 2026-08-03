@@ -23,6 +23,8 @@ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
 import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
 import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+import StorageShell, { S } from '@/app/components/common/StorageShell'
+import StorageRow from '@/app/components/common/StorageRow'
 
 // 서비스별 정보 (제목·색·결과경로·unse 파라미터)
 // ★2026-07-29 — 보관함 단권화 (대표님 확정)
@@ -100,50 +102,24 @@ function SajuStorageInner() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
-      {/* 헤더 */}
-      <div style={{
-        position: 'sticky', top: 0, zIndex: 5,
-        background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
-        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
-      }}>
-        <button onClick={() => router.push('/home-new')}
-          style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
-        <div style={{ fontSize: 16, fontWeight: 500, color: '#3a2e28' }}>{info.title}</div>
-        {records && <div style={{ marginLeft: 'auto', fontSize: 12, color: '#5c3a1e' }}>{records.length}건</div>}
-      </div>
-
-      <div style={{ padding: '16px 14px 0' }}>
-        {/* 로딩 */}
-        {records === null && (
-          <div style={{ textAlign: 'center', padding: '50px 0', color: '#5c3a1e', fontSize: 13 }}>
-            보관함을 불러오는 중…
-          </div>
-        )}
-
-        {/* 빈 상태 */}
-        {records && records.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '46px 20px', color: '#5c3a1e' }}>
-            <div style={{ fontSize: 30, marginBottom: 10 }}>📜</div>
-            <div style={{ fontSize: 14, color: '#96502e', fontWeight: 500, marginBottom: 4 }}>
-              아직 저장된 {info.badge} 기록이 없어요
-            </div>
-            <div style={{ fontSize: 12, lineHeight: 1.6 }}>새로 보면 여기에 차곡차곡 쌓여요</div>
-          </div>
-        )}
-
+    <StorageShell
+      title={info.title}
+      count={records ? records.length : null}
+      loading={records === null}
+      showEmpty={!!records && records.length === 0}
+      emptyIcon="📜"
+      emptyTitle={`아직 저장된 ${info.badge} 기록이 없어요`}
+      emptyDesc="새로 보면 여기에 차곡차곡 쌓여요"
+      actionLabel={`+ 새 ${info.badge} 보기`}
+      onAction={() => setPickerOpen(true)}
+    >
         {/* 카드 목록 */}
         {records && records.map(r => (
-          <div key={r.id} onClick={() => router.push(toResultUrl(r, service))}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 13, padding: '15px',
-              background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14,
-              marginBottom: 10, cursor: 'pointer',
-            }}>
+          <StorageRow key={r.id} onClick={() => router.push(toResultUrl(r, service))} onDelete={() => setConfirmDel(r)}>
             {/* 뱃지 (서비스 색) */}
             <div style={{
               minWidth: 44, height: 44, borderRadius: 10, flexShrink: 0,
-              background: info.accent, color: '#fff', fontSize: 12, fontWeight: 600,
+              background: S.btn, color: '#fff', fontSize: 12, fontWeight: 600,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               {(r.title || '?').slice(0, 2)}
@@ -160,29 +136,8 @@ function SajuStorageInner() {
               </div>
             </div>
 
-            {/* 삭제 버튼 */}
-            <button
-              onClick={(e) => { e.stopPropagation(); setConfirmDel(r) }}
-              aria-label="삭제"
-              style={{
-                flexShrink: 0, width: 28, height: 28, borderRadius: 8,
-                background: 'none', border: 'none', color: '#6b5340', fontSize: 17,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-              ×
-            </button>
-          </div>
+          </StorageRow>
         ))}
-
-        {/* 새로 보기 */}
-        <button onClick={() => setPickerOpen(true)}
-          style={{
-            width: '100%', marginTop: 8, padding: 14, borderRadius: 12,
-            background: '#b46e46', border: 'none', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer',
-          }}>
-          + 새 {info.badge} 보기
-        </button>
-      </div>
 
       {/* 사람 선택 모달 (나 / 가족·지인 / 새 입력) — 검증된 공용 부품 */}
       <PersonPickerModal
@@ -214,7 +169,7 @@ function SajuStorageInner() {
           onConfirm={handleDelete}
         />
       )}
-    </main>
+    </StorageShell>
   )
 }
 

@@ -20,6 +20,8 @@ import {
 } from '@/lib/saju/coupleRecords'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
 import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+import StorageShell, { S } from '@/app/components/common/StorageShell'
+import StorageRow from '@/app/components/common/StorageRow'
 
 const MODE_INFO: Record<CoupleMode, { title: string; accent: string; badge: string }> = {
   couple:  { title: '연인 궁합 보관함', accent: '#c85a8c', badge: '연인' },
@@ -91,102 +93,53 @@ function CoupleStorageInner() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
-      {/* 헤더 */}
-      <div style={{
-        position: 'sticky', top: 0, zIndex: 5,
-        background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
-        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
-      }}>
-        <button onClick={() => router.push('/home-new')}
-          style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
-        <div style={{ fontSize: 16, fontWeight: 500, color: '#3a2e28' }}>{info.title}</div>
-        {records && <div style={{ marginLeft: 'auto', fontSize: 12, color: '#5c3a1e' }}>{records.length}건</div>}
-      </div>
-
-      <div style={{ padding: '16px 14px 0' }}>
-        {/* 로딩 */}
-        {records === null && (
-          <div style={{ textAlign: 'center', padding: '50px 0', color: '#5c3a1e', fontSize: 13 }}>
-            보관함을 불러오는 중…
-          </div>
-        )}
-
-        {/* 빈 상태 */}
-        {records && records.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '46px 20px', color: '#5c3a1e' }}>
-            <div style={{ fontSize: 30, marginBottom: 10 }}>💝</div>
-            <div style={{ fontSize: 14, color: '#96502e', fontWeight: 500, marginBottom: 4 }}>
-              아직 저장된 {info.badge} 궁합이 없어요
-            </div>
-            <div style={{ fontSize: 12, lineHeight: 1.6 }}>새 궁합을 보면 여기에 차곡차곡 쌓여요</div>
-          </div>
-        )}
-
-        {/* 카드 목록 */}
-        {records && records.map(r => (
-          <div key={r.id} onClick={() => router.push(toResultUrl(r))}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 13, padding: '15px',
-              background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14,
-              marginBottom: 10, cursor: 'pointer',
+    <StorageShell
+      title={info.title}
+      count={records ? records.length : null}
+      loading={records === null}
+      showEmpty={!!records && records.length === 0}
+      emptyIcon="💝"
+      emptyTitle="아직 저장된 궁합이 없어요"
+      emptyDesc="새 궁합을 보면 여기에 차곡차곡 쌓여요"
+      actionLabel="+ 새 궁합 보기"
+      onAction={() => router.push('/manseryeok/couple-input-new')}
+    >
+      {records && records.map(r => (
+        <StorageRow key={r.id} onClick={() => router.push(toResultUrl(r))} onDelete={() => setConfirmDel(r)}>
+          {/* 등급 (점수 숨김 · C안) */}
+          <div style={{ textAlign: 'center', width: 62, flexShrink: 0 }}>
+            <div style={{
+              fontSize: 11, fontWeight: 600, color: S.btn,
+              lineHeight: 1.35, letterSpacing: '-.03em', wordBreak: 'keep-all',
             }}>
-            {/* 등급 (점수 숨김 · C안) */}
-            <div style={{ textAlign: 'center', width: 62, flexShrink: 0 }}>
-              <div style={{
-                fontSize: 11, fontWeight: 600, color: info.accent,
-                lineHeight: 1.35, letterSpacing: '-.03em', wordBreak: 'keep-all',
-              }}>
-                {gradeShort(r.grade)}
-              </div>
+              {gradeShort(r.grade)}
             </div>
-
-            <div style={{ width: '0.5px', height: 34, background: '#f0e0d5', flexShrink: 0 }} />
-
-            {/* 두 사람 + 날짜 */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 500, color: '#3a2e28', marginBottom: 4 }}>
-                {r.name1} <span style={{ color: '#d4537e' }}>♥</span> {r.name2}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#5c3a1e', flexWrap: 'wrap' }}>
-                <span>{daysAgoLabel(r.createdAt)}</span>
-                {/* 자유 질문 개수 — 물어본 게 있을 때만 (2026-07-24) */}
-                {qaCount(r.resultData) > 0 && (
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 3,
-                    background: '#f6ecdf', borderRadius: 7, padding: '1.5px 6px',
-                    fontSize: 10, color: '#8a6a4a',
-                  }}>
-                    💬 질문 {qaCount(r.resultData)}
-                  </span>
-                )}
-                {r.unsavedCount ? <span style={{ color: '#6b5340' }}>· 미저장 {r.unsavedCount}명</span> : null}
-              </div>
-            </div>
-
-            {/* 삭제 버튼 — 카드 클릭(결과 이동)과 겹치지 않게 stopPropagation */}
-            <button
-              onClick={(e) => { e.stopPropagation(); setConfirmDel(r) }}
-              aria-label="삭제"
-              style={{
-                flexShrink: 0, width: 28, height: 28, borderRadius: 8,
-                background: 'none', border: 'none', color: '#6b5340', fontSize: 17,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-              ×
-            </button>
           </div>
-        ))}
 
-        {/* 새 궁합 보기 — 부부/연인은 사람 고를 때 관계로 갈린다 */}
-        <button onClick={() => router.push('/manseryeok/couple-input-new')}
-          style={{
-            width: '100%', marginTop: 8, padding: 14, borderRadius: 12,
-            background: '#b46e46', border: 'none', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer',
-          }}>
-          + 새 {info.badge} 궁합 보기
-        </button>
-      </div>
+          <div style={{ width: '0.5px', height: 34, background: '#f0e0d5', flexShrink: 0 }} />
+
+          {/* 두 사람 + 날짜 */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 500, color: '#3a2e28', marginBottom: 4 }}>
+              {r.name1} <span style={{ color: '#d4537e' }}>♥</span> {r.name2}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#5c3a1e', flexWrap: 'wrap' }}>
+              <span>{daysAgoLabel(r.createdAt)}</span>
+              {/* 자유 질문 개수 — 물어본 게 있을 때만 (2026-07-24) */}
+              {qaCount(r.resultData) > 0 && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 3,
+                  background: '#f6ecdf', borderRadius: 7, padding: '1.5px 6px',
+                  fontSize: 10, color: '#8a6a4a',
+                }}>
+                  💬 질문 {qaCount(r.resultData)}
+                </span>
+              )}
+              {r.unsavedCount ? <span style={{ color: '#6b5340' }}>· 미저장 {r.unsavedCount}명</span> : null}
+            </div>
+          </div>
+        </StorageRow>
+      ))}
 
       {/* 삭제 확인 팝업 */}
       {confirmDel && (
@@ -198,7 +151,7 @@ function CoupleStorageInner() {
           onConfirm={handleDelete}
         />
       )}
-    </main>
+    </StorageShell>
   )
 }
 

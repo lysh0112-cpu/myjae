@@ -1249,6 +1249,67 @@ console.log('\n━━ ㊹ ★삭제 확인 팝업 — «한 부품» 으로 통�
   check(twins.length === 0, `⚠️ 팝업을 «다시 지은» 화면이 없습니다`)
 }
 
+console.log('\n━━ ㊺ ★보관함 열 곳이 «한 모습» 인가 (44부 26차) ━━')
+{
+  // ⚠️ 교훈 1-1 — 주석을 «먼저 지우고» 봅니다
+  const noComment = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+
+  const shell = noComment(read('app/components/common/StorageShell.tsx'))
+  const row = noComment(read('app/components/common/StorageRow.tsx'))
+
+  // ★한 모습이 «한 곳» 에 모여 있는가
+  check(/bg: '#FDF6F0'/.test(shell) && /card: '#FFFBF7'/.test(shell) && /line: '#f0e0d5'/.test(shell),
+    `★바탕·카드·선 색이 S 한 곳에 있습니다`)
+  check(/btn: '#b46e46'/.test(shell), `★아래 버튼 색이 «하나» 입니다 (서비스별 색을 걷어냄)`)
+  check(/fontSize: 16, fontWeight: 500, color: S\.ink/.test(shell), `★머리말 제목이 16·500 하나입니다`)
+  check(/\{count\}건/.test(shell), `★「N건」을 부품이 그립니다`)
+  check(/보관함을 불러오는 중…/.test(shell), `★기다리는 글이 하나입니다`)
+  check(/width: 28, height: 28, borderRadius: 8/.test(row) && /color: S\.del/.test(row),
+    `★✕ 버튼이 28×28 한 모양입니다`)
+  check(/e\.stopPropagation\(\)/.test(row), `⚠️ ✕ 가 카드 누르기와 겹치지 않게 부품이 막습니다`)
+
+  const SCREENS = [
+    'app/manseryeok/couple-storage/page.tsx',
+    'app/manseryeok/saju-storage/page.tsx',
+    'app/manseryeok/mulsang-storage/page.tsx',
+    'app/tarot/storage/page.tsx',
+    'app/manseryeok/naming/components/NamingStorageView.tsx',
+    'app/manseryeok/wedding-timing/wedding-storage/page.tsx',
+    'app/manseryeok/birth-timing/birth-storage/page.tsx',
+    'app/manseryeok/moving-timing/moving-storage/page.tsx',
+    'app/manseryeok/career/page.tsx',
+    'app/manseryeok/exam-luck/page.tsx',
+  ]
+  const src = SCREENS.map(p => [p, noComment(read(p))] as const)
+
+  check(src.every(([, s]) => /<StorageShell/.test(s)),
+    `★보관함 «열 곳» 이 모두 StorageShell 을 씁니다 (${src.filter(([, s]) => /<StorageShell/.test(s)).length}/10)`)
+  check(src.every(([, s]) => /<StorageRow/.test(s)),
+    `★열 곳이 모두 StorageRow 를 씁니다`)
+
+  // ⚠️⚠️ 화면이 «제 틀» 을 다시 들고 있지 않은가 — 이것이 열 벌로 갈라졌던 까닭입니다
+  const ownShell = src.filter(([, s]) =>
+    /position: 'sticky', top: 0, zIndex: \d+,/.test(s) || /backdropFilter: 'blur\(10px\)'/.test(s))
+  check(ownShell.length === 0,
+    `⚠️ 화면이 «제 머리말» 을 따로 그리지 않습니다${ownShell.length ? ' — ' + ownShell.map(x => x[0]).join(', ') : ''}`)
+
+  const ownRow = src.filter(([, s]) =>
+    /flexShrink: 0, width: 28, height: 28, borderRadius: 8/.test(s))
+  check(ownRow.length === 0,
+    `⚠️ 화면이 «제 ✕ 버튼» 을 따로 그리지 않습니다${ownRow.length ? ' — ' + ownRow.map(x => x[0]).join(', ') : ''}`)
+
+  // ⚠️ 보관함에 «서비스 색» 이 남아 있지 않은가 (대표님 지시)
+  const leftColor = src.filter(([, s]) =>
+    /background: (ACCENT|accent|info\.accent|SOFT)\b/.test(s))
+  check(leftColor.length === 0,
+    `★서비스별 색이 남아 있지 않습니다${leftColor.length ? ' — ' + leftColor.map(x => x[0]).join(', ') : ''}`)
+
+  // 🔴 「궁합 궁합」 — 말이 겹치던 자리
+  const cp = noComment(read('app/manseryeok/couple-storage/page.tsx'))
+  check(!/\{info\.badge\} 궁합/.test(cp), `🔴 「궁합 궁합」이 사라졌습니다`)
+}
+
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
 {
   const src = read('lib/saju/simsanOhaeng.ts')

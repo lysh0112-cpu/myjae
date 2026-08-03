@@ -37,6 +37,8 @@ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
 import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 import { surnameOfHangul } from '@/lib/saju/surname'
 import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+import StorageShell from '@/app/components/common/StorageShell'
+import StorageRow from '@/app/components/common/StorageRow'
 
 // ══════════════════════════════════════════════════════════════════
 //  ★2026-08-01 — 보관함에 «풀이» 와 «작명» 을 가르는 탭을 넣습니다
@@ -218,48 +220,35 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
   }
 
   return (
-    <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
-      {/* 헤더 */}
-      <div style={{
-        position: 'sticky', top: 0, zIndex: 5,
-        background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
-        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
-      }}>
-        <button onClick={() => router.push('/home-new')}
-          style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
-        <div style={{ fontSize: 16, fontWeight: 500, color: '#1a1a1a' }}>
-          {view.title}
-        </div>
-        {records && (
-          <div style={{ marginLeft: 'auto', fontSize: 12, color: '#5c3a1e' }}>
-            {/* ⚠️ «보이는 건수» 를 적습니다 — 전체 건수를 적으면
-                목록과 숫자가 어긋나 「어디 갔지」 가 됩니다 */}
-            {shownRecords.length}건
-          </div>
-        )}
-      </div>
-
-      <div style={{ padding: '16px 14px 0' }}>
-        {/* 로딩 */}
-        {records === null && (
-          <div style={{ textAlign: 'center', padding: '50px 0', color: '#5c3a1e', fontSize: 13 }}>
-            보관함을 불러오는 중…
-          </div>
-        )}
-
-        {/* 빈 상태 */}
-        {records && records.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '46px 20px', color: '#5c3a1e' }}>
-            <div style={{ fontSize: 30, marginBottom: 10 }}>{mode === 'naming' ? '✍️' : '📜'}</div>
-            <div style={{ fontSize: 14, color: '#96502e', fontWeight: 500, marginBottom: 4 }}>
-              {view.empty}
-            </div>
-            <div style={{ fontSize: 12, lineHeight: 1.6 }}>
-              {view.emptySub}
-            </div>
-          </div>
-        )}
-
+    <StorageShell
+      title={view.title}
+      /* ⚠️ «보이는 건수» 를 적습니다 — 전체 건수를 적으면
+             목록과 숫자가 어긋나 「어디 갔지」 가 됩니다 */
+      count={records ? shownRecords.length : null}
+      loading={records === null}
+      showEmpty={!!records && records.length === 0}
+      emptyIcon={mode === 'naming' ? '✍️' : '📜'}
+      emptyTitle={view.empty}
+      emptyDesc={view.emptySub}
+      /* ★버튼은 «하나» 뿐입니다 — 이 보관함의 갈래에 맞는 것만 (43부 33차) */
+      actionLabel={!records ? undefined
+        : view.button === '작명' ? <>+ 새 이름 짓기 <span style={{ fontSize: 12, opacity: .85 }}>(작명)</span></>
+        : view.button === '풀이' ? '+ 새 이름 풀이하기'
+        : undefined}
+      onAction={() => setPickerOpen(view.button === '작명' ? '작명' : '풀이')}
+      footer={mode === 'naming' && records ? (
+        /* ★작명 모드 — 처음 오신 분께 «어떻게 진행되는지» 안내 화면을 이어 둡니다. (교훈 AM) */
+        <button
+          onClick={() => router.push('/manseryeok/naming/rename/newborn')}
+          style={{
+            ...PRESS, width: '100%', marginTop: 10, padding: '11px 10px',
+            background: 'none', border: 'none', color: '#8a7063',
+            fontSize: 12, cursor: 'pointer',
+          }}>
+          명품작명이 처음이신가요? 어떻게 진행되는지 보기 →
+        </button>
+      ) : null}
+    >
         {/* ★2026-08-01 (43부 33차) — 필터 탭을 «걷어냈습니다» (대표님 지시).
             두 보관함이 주소부터 갈렸으므로 한 화면에서 갈래를 고를 까닭이 없습니다.
             ⚠️ 「전체」도 없앴습니다 — 섞어 보면 «갈랐다는 뜻» 이 없어집니다. */}
@@ -290,18 +279,13 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
                  ⚠️ 화면은 «한 부품» 입니다. 주소만 둘입니다 (교훈 CJ).
                  ⚠️ from= 도 함께 보냅니다 — 옛 주소로 들어오는 길이 아직 살아 있고,
                     기록이 오기 «전» 에도 하단 버튼이 옳은 곳을 가리켜야 합니다. */
-            <div key={r.id} onClick={() => {
+            <StorageRow key={r.id} onDelete={() => setConfirmDel(r)} onClick={() => {
               const br = storageBranchOfKind(r.kind)
               const base = br === 'naming'
                 ? '/manseryeok/naming/naming-record'
                 : '/manseryeok/naming/diagnosis'
               router.push(`${base}?recordId=${r.id}&from=${br}`)
-            }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 13, padding: '15px',
-                background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14,
-                marginBottom: 10, cursor: 'pointer',
-              }}>
+            }}>
               {/* 이름(한자) */}
               <div style={{ minWidth: 54, textAlign: 'center', flexShrink: 0 }}>
                 <div style={{ fontSize: 22, fontWeight: 500, color: '#8f3d0e', letterSpacing: 1 }}>
@@ -348,96 +332,9 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
                   {daysAgoLabel(r.createdAt)}
                 </div>
               </div>
-
-              {/* 삭제 버튼 */}
-              <button
-                onClick={(e) => { e.stopPropagation(); setConfirmDel(r) }}
-                aria-label="삭제"
-                style={{
-                  flexShrink: 0, width: 28, height: 28, borderRadius: 8,
-                  background: 'none', border: 'none', color: '#6b5340', fontSize: 17,
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                ×
-              </button>
-            </div>
+            </StorageRow>
           )
         })}
-
-        {/* ══════════════════════════════════════════════════════
-            새로 보기 → 누구 이름을 볼지 먼저 선택 (나 / 가족·지인 / 새 사람)
-
-            ★2026-08-01 (43부 2차) — 들어온 입구에 따라 버튼이 «하나» 입니다.
-              diagnosis  [+ 새 이름 풀이하기] 만
-              naming     [+ 새 이름 짓기]    만
-              모드 없음   둘 다 (예전 그대로)
-
-            ⚠️ 버튼을 숨겨도 «길이 끊기지» 않습니다 — 아래 「모두 보기」로
-               전체 보관함에 가면 두 버튼이 다시 나옵니다.
-            ══════════════════════════════════════════════════════ */}
-        {records && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-            {/* ★버튼은 «하나» 뿐입니다 — 이 보관함의 갈래에 맞는 것만 (43부 33차) */}
-            {view.button === '작명' && (
-              <button onClick={() => setPickerOpen('작명')}
-                style={{
-                  ...PRESS,
-                  width: '100%', padding: 15, borderRadius: 12,
-                  background: '#c8783c', border: 'none', color: '#fff',
-                  fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                }}>
-                + 새 이름 짓기 <span style={{ fontSize: 12, opacity: .85 }}>(작명)</span>
-              </button>
-            )}
-            {view.button === '풀이' && (
-              <button onClick={() => setPickerOpen('풀이')}
-                style={{
-                  ...PRESS,
-                  width: '100%', padding: view?.button === '풀이' ? 15 : 14, borderRadius: 12,
-                  // ★이 갈래 전용 화면이면 이 버튼이 «주인공» 이라 채워 씁니다
-                  background: view?.button === '풀이' ? '#c8783c' : '#FFFBF7',
-                  border: view?.button === '풀이' ? 'none' : '1px solid #c8783c',
-                  color: view?.button === '풀이' ? '#fff' : '#c8783c',
-                  fontSize: 14, fontWeight: view?.button === '풀이' ? 600 : 500, cursor: 'pointer',
-                }}>
-                + 새 이름 풀이하기
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* ★작명 모드 — 처음 오신 분께 «어떻게 진행되는지» 안내 화면을 이어 둡니다.
-            ⚠️ 홈 카드가 보관함으로 바로 오게 되면서 안내 화면이 «아무도 안 부르는»
-               자리가 될 뻔했습니다. 여기서 잇습니다. (교훈 AM) */}
-        {mode === 'naming' && records && (
-          <button
-            onClick={() => router.push('/manseryeok/naming/rename/newborn')}
-            style={{
-              ...PRESS, width: '100%', marginTop: 10, padding: '11px 10px',
-              background: 'none', border: 'none', color: '#8a7063',
-              fontSize: 12, cursor: 'pointer',
-            }}>
-            명품작명이 처음이신가요? 어떻게 진행되는지 보기 →
-          </button>
-        )}
-
-        {/* ══════════════════════════════════════════════════════
-            ★2026-08-02 — 「◯◯으로 가기 · N건 →」 줄을 «지웠습니다» (대표님 지시)
-
-             [무엇이 있었나]  43부에 «기록이 사라진 줄 알고 놀라지 않도록»
-               옆 보관함으로 가는 줄을 두었습니다.
-               ⚠️ 그런데 그 줄 때문에 두 보관함이 «아직 하나» 처럼 보였습니다.
-                  가르려고 만든 화면에서 가른 뜻을 도로 흐리고 있었습니다.
-
-             ⚠️⚠️ [지웠지만 «길은» 남아 있습니다]
-               홈의 「개명 & 작명하기」 폴더에 두 카드가 그대로 있습니다.
-               ★기록은 여전히 «하나도» 지워지지 않습니다 — 거르기는 화면에서만 합니다.
-               (listNamingRecords 는 예전 그대로 전부 불러옵니다)
-
-             ⚠️ 되살리실 때는 hiddenCount 와 view.otherLabel 이 그대로 있습니다.
-                지운 것은 «그리는 자리» 뿐입니다.
-            ══════════════════════════════════════════════════════ */}
-      </div>
 
       {/* 삭제 확인 팝업 */}
       {confirmDel && (
@@ -491,7 +388,7 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
           router.push(`${base}?${q}${rel}${sn}${kd}`)
         }}
       />
-    </main>
+    </StorageShell>
   )
 }
 

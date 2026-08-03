@@ -20,10 +20,13 @@ import {
 } from '@/lib/saju/movingRecords'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
 import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+import StorageShell from '@/app/components/common/StorageShell'
+import StorageRow from '@/app/components/common/StorageRow'
 
-const accent = '#967850'
-const line = '#EAE0CE'
-const ink = '#3A3228'
+// ⚠️ 2026-08-03 (44부 26차) — 이사택일 «전용 색» 을 걷어냈습니다.
+//    대표님 지시 「모두 통일해줘. 서비스별로 보관함을 차별화할 필요없어」
+//    ⇒ 보관함의 색·크기는 StorageShell 의 S 하나가 정합니다.
+//    ★sub 는 Suspense 대기 글자에 아직 씁니다.
 const sub = '#9A8060'
 
 const KIND_BADGE: Record<'check' | 'find', { label: string; color: string; bg: string }> = {
@@ -71,134 +74,45 @@ function MovingStorageInner() {
   }
 
   return (
-    <main style={{
-      minHeight: '100vh', background: '#FBF8F2', maxWidth: 480,
-      margin: '0 auto', paddingBottom: 40,
-    }}>
-      <div style={{
-        position: 'sticky', top: 0, zIndex: 10,
-        background: 'rgba(251,248,242,0.96)', backdropFilter: 'blur(10px)',
-        borderBottom: `0.5px solid ${line}`, padding: '13px 16px',
-        display: 'flex', alignItems: 'center', gap: 8,
-      }}>
-        <button
-          onClick={() => router.push('/home-new')}
-          style={{
-            background: 'none', border: 'none', color: '#7A6440',
-            fontSize: 17, cursor: 'pointer', padding: 0,
-          }}
-        >←</button>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 500, color: ink }}>이사택일</div>
-          <div style={{ fontSize: 10.5, color: '#7A6440' }}>좋은 이사 날을 봐드려요</div>
-        </div>
-      </div>
-
-      <div style={{ padding: '18px 16px 0' }}>
-
-        <button
-          onClick={() => router.push('/manseryeok/moving-timing/input')}
-          style={{
-            width: '100%', padding: '15px 0', background: accent, color: '#fff',
-            border: 'none', borderRadius: 13, fontSize: 15, fontWeight: 700,
-            cursor: 'pointer', fontFamily: 'inherit', marginBottom: 20,
-            transition: 'transform .08s, filter .12s',
-          }}
-          onPointerDown={e => {
-            e.currentTarget.style.transform = 'scale(0.98)'
-            e.currentTarget.style.filter = 'brightness(0.92)'
-          }}
-          onPointerUp={e => {
-            e.currentTarget.style.transform = 'scale(1)'
-            e.currentTarget.style.filter = 'none'
-          }}
-          onPointerLeave={e => {
-            e.currentTarget.style.transform = 'scale(1)'
-            e.currentTarget.style.filter = 'none'
-          }}
-        >
-          + 새 이사택일 보기
-        </button>
-
-        {records === null && (
-          <div style={{ padding: '40px 0', textAlign: 'center', color: sub, fontSize: 13 }}>
-            불러오는 중이에요…
-          </div>
-        )}
-
-        {records !== null && records.length === 0 && (
-          <div style={{
-            background: '#FFFDF9', border: `1px solid ${line}`, borderRadius: 13,
-            padding: '34px 20px', textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 13.5, color: ink, fontWeight: 600, marginBottom: 6 }}>
-              아직 보신 이사택일이 없어요
+    <StorageShell
+      title="이사택일 보관함"
+      count={records ? records.length : null}
+      loading={records === null}
+      showEmpty={!!records && records.length === 0}
+      emptyIcon="📦"
+      emptyTitle="아직 보신 이사택일이 없어요"
+      emptyDesc="새로 택일을 보면 여기에 차곡차곡 쌓여요"
+      actionLabel="+ 새 이사택일 보기"
+      onAction={() => router.push('/manseryeok/moving-timing/input')}
+    >
+      {records && records.map(r => {
+        const badge = KIND_BADGE[r.kind]
+        return (
+          <StorageRow key={r.id} onClick={() => router.push(toResultUrl(r))} onDelete={() => setConfirmDel(r)}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                <span style={{
+                  background: badge.bg, color: badge.color, fontSize: 10.5,
+                  fontWeight: 700, padding: '3px 9px', borderRadius: 7,
+                }}>
+                  {badge.label}
+                </span>
+                <span style={{ fontSize: 14, fontWeight: 500, color: '#3a2e28' }}>
+                  {r.name1}{r.name2 ? ` · ${r.name2}` : ''}
+                </span>
+              </div>
+              <div style={{ fontSize: 11, color: '#5c3a1e', lineHeight: 1.6 }}>
+                {r.summary}
+              </div>
+              <div style={{ fontSize: 11, color: '#5c3a1e', marginTop: 3 }}>
+                {OWNER_MODE_LABEL[r.ownerMode]}
+                {r.direction && ` · ${r.direction}쪽`}
+                {' · '}{daysAgoLabel(r.createdAt)}
+              </div>
             </div>
-            <div style={{ fontSize: 12.5, color: sub, lineHeight: 1.8 }}>
-              위 버튼을 눌러 시작해 보세요.
-            </div>
-          </div>
-        )}
-
-        {records !== null && records.length > 0 && (
-          <>
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: '#7A6440', marginBottom: 10 }}>
-              지난 기록
-            </div>
-            {records.map(r => {
-              const badge = KIND_BADGE[r.kind]
-              return (
-                <div
-                  key={r.id}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 11,
-                    background: '#FFFDF9', border: `1px solid ${line}`,
-                    borderRadius: 13, padding: '14px 15px', marginBottom: 9,
-                  }}
-                >
-                  <button
-                    onClick={() => router.push(toResultUrl(r))}
-                    style={{
-                      flex: 1, background: 'none', border: 'none', padding: 0,
-                      cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-                    }}
-                  >
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4,
-                    }}>
-                      <span style={{
-                        background: badge.bg, color: badge.color, fontSize: 10.5,
-                        fontWeight: 700, padding: '3px 9px', borderRadius: 7,
-                      }}>
-                        {badge.label}
-                      </span>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: ink }}>
-                        {r.name1}{r.name2 ? ` · ${r.name2}` : ''}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 12, color: sub, lineHeight: 1.6 }}>
-                      {r.summary}
-                    </div>
-                    <div style={{ fontSize: 11, color: '#BFAE96', marginTop: 3 }}>
-                      {OWNER_MODE_LABEL[r.ownerMode]}
-                      {r.direction && ` · ${r.direction}쪽`}
-                      {' · '}{daysAgoLabel(r.createdAt)}
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => setConfirmDel(r)}
-                    aria-label="이 기록 지우기"
-                    style={{
-                      background: 'none', border: 'none', color: '#C9BBA6',
-                      fontSize: 15, cursor: 'pointer', padding: '4px 2px', flex: 'none',
-                    }}
-                  >×</button>
-                </div>
-              )
-            })}
-          </>
-        )}
-      </div>
+          </StorageRow>
+        )
+      })}
 
       {confirmDel && (
         <ConfirmDeleteDialog
@@ -209,8 +123,7 @@ function MovingStorageInner() {
           onConfirm={handleDelete}
         />
       )}
-
-    </main>
+    </StorageShell>
   )
 }
 

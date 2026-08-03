@@ -22,12 +22,13 @@ import {
 import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
 import { toResultQuery, type SavedPerson, type SavedInputData } from '@/lib/saju/savedPeople'
 import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+import StorageShell, { S } from '@/app/components/common/StorageShell'
+import StorageRow from '@/app/components/common/StorageRow'
 
-const ACCENT = '#c85a8c'      // 합격운 색 (홈 서비스 목록과 같은 분홍)
-const SOFT = '#f7e6ee'
-const BG = '#FDF6F0'
-const CARD = '#FFFBF7'
-const LINE = '#f0e0d5'
+//    ★서비스 색(ACCENT)도 걷어냈습니다 — 배지까지 한 모습입니다.
+// ⚠️ 2026-08-03 (44부 26차) — 보관함 «전용 색» 을 걷어냈습니다.
+//    대표님 지시 「모두 통일해줘. 서비스별로 보관함을 차별화할 필요없어」
+//    ⇒ 바탕·카드·선·버튼 색은 StorageShell 의 S 하나가 정합니다.
 
 function personToQuery(d: SavedInputData, name: string): string {
   const p = new URLSearchParams()
@@ -65,39 +66,19 @@ function ExamLuckStorageInner() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', background: BG, maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
-      <div style={{
-        position: 'sticky', top: 0, zIndex: 5,
-        background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
-        borderBottom: `0.5px solid ${LINE}`, padding: '13px 16px',
-        display: 'flex', alignItems: 'center', gap: 8,
-      }}>
-        <button onClick={() => router.push('/home-new')}
-          style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
-        <div style={{ fontSize: 16, fontWeight: 500, color: '#3a2e28' }}>합격운 · 취업운 보관함</div>
-        {records && <div style={{ marginLeft: 'auto', fontSize: 12, color: '#5c3a1e' }}>{records.length}건</div>}
-      </div>
-
-      <div style={{ padding: '16px 14px 0' }}>
-        {records === null && (
-          <div style={{ textAlign: 'center', padding: '50px 0', color: '#5c3a1e', fontSize: 13 }}>
-            보관함을 불러오는 중…
-          </div>
-        )}
-
-        {records && records.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '46px 20px', color: '#5c3a1e' }}>
-            <div style={{ fontSize: 30, marginBottom: 10 }}>🌱</div>
-            <div style={{ fontSize: 14, color: ACCENT, fontWeight: 500, marginBottom: 4 }}>
-              아직 저장된 합격운 기록이 없어요
-            </div>
-            <div style={{ fontSize: 12, lineHeight: 1.6 }}>새로 보면 여기에 차곡차곡 쌓여요</div>
-          </div>
-        )}
-
+    <StorageShell
+      title="합격운 · 취업운 보관함"
+      count={records ? records.length : null}
+      loading={records === null}
+      showEmpty={!!records && records.length === 0}
+      emptyIcon="🍀"
+      emptyTitle={"아직 저장된 합격운 기록이 없어요"}
+      emptyDesc={"새로 보면 여기에 차곡차곡 쌓여요"}
+      actionLabel={"+ 새 합격운 보기"}
+      onAction={() => setPickerOpen(true)}
+    >
         {records && records.map(r => (
-          <div key={r.id}
-            onClick={() => {
+          <StorageRow key={r.id} onClick={() => {
               /**
                * ★2026-07-30 — 저장할 때 함께 남긴 target 으로 «되돌아갈 화면» 을 가릅니다.
                *   ⚠️ 옛 기록에는 target 이 없습니다. 그때는 진학 화면으로 보냅니다.
@@ -110,15 +91,10 @@ function ExamLuckStorageInner() {
                 : '/manseryeok/exam-luck-result'
               const extra = d?.kind ? `&kind=${d.kind}` : ''
               router.push(`${to}?${personToQuery(r.inputData, r.title)}&recordId=${r.id}${extra}`)
-            }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 13, padding: 15,
-              background: CARD, border: `0.5px solid ${LINE}`, borderRadius: 14,
-              marginBottom: 10, cursor: 'pointer',
-            }}>
+            }} onDelete={() => setConfirmDel(r)}>
             <div style={{
               minWidth: 44, height: 44, borderRadius: 10, flexShrink: 0,
-              background: ACCENT, color: '#fff', fontSize: 12, fontWeight: 600,
+              background: S.btn, color: '#fff', fontSize: 12, fontWeight: 600,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               {(r.title || '?').slice(0, 2)}
@@ -132,31 +108,16 @@ function ExamLuckStorageInner() {
                 {r.inputData.year}.{r.inputData.month}.{r.inputData.day} · {daysAgoLabel(r.createdAt)}
               </div>
             </div>
-            <button onClick={(e) => { e.stopPropagation(); setConfirmDel(r) }} aria-label="삭제"
-              style={{
-                flexShrink: 0, width: 28, height: 28, borderRadius: 8,
-                background: 'none', border: 'none', color: '#6b5340', fontSize: 17,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>×</button>
-          </div>
+          </StorageRow>
         ))}
 
-        <button onClick={() => setPickerOpen(true)}
-          style={{
-            width: '100%', marginTop: 8, padding: 14, borderRadius: 12,
-            background: ACCENT, border: 'none', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer',
-          }}>
-          + 새 합격운 보기
-        </button>
-
         <div style={{
-          marginTop: 14, background: SOFT, border: '0.5px solid #f0d8e2', borderRadius: 12,
-          padding: '11px 14px', fontSize: 11.5, color: '#8c4a63', lineHeight: 1.7,
+          marginTop: 14, background: S.card, border: `0.5px solid ${S.line}`, borderRadius: 12,
+          padding: '11px 14px', fontSize: 11.5, color: S.sub, lineHeight: 1.7,
         }}>
           시험과 일자리의 흐름을 봅니다. 사주가 말해 주는 건 흐름이고,
           결과를 만드는 건 준비한 시간이에요.
         </div>
-      </div>
 
       <PersonPickerModal
         open={pickerOpen}
@@ -180,7 +141,7 @@ function ExamLuckStorageInner() {
           onConfirm={handleDelete}
         />
       )}
-    </main>
+    </StorageShell>
   )
 }
 
