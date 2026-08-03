@@ -35,6 +35,20 @@ const AXIS_NAME: Record<string, string> = {
   JP: '어떻게 맺는가',
 }
 
+/**
+ * 기울기를 «말» 로 — ★숫자를 보이지 않습니다.
+ *
+ *  ⚠️ 「반반에 가까워요」는 45~55% 로 잡습니다 — result.balanced 와 «같은 잣대» 입니다.
+ *     두 곳이 다르면 「반반」이라 써 놓고 아래엔 안 그렇게 나오는 날이 옵니다.
+ */
+function leanWord(leftPct: number): string {
+  const d = Math.abs(leftPct - 50)
+  if (d <= 5) return '반반에 가까워요'
+  if (d <= 15) return '조금 기울어요'
+  if (d <= 25) return '뚜렷해요'
+  return '아주 뚜렷해요'
+}
+
 export default function MbtiCard({ result, realMbti, compare, onWantInput }: Props) {
   return (
     <div style={{
@@ -86,7 +100,12 @@ export default function MbtiCard({ result, realMbti, compare, onWantInput }: Pro
               marginBottom: 5,
             }}>
               <span style={{ fontSize: 11, color: '#64748b' }}>{AXIS_NAME[a.axis]}</span>
-              <span style={{ fontSize: 11, color: '#94a3b8' }}>{a.leftPct} : {100 - a.leftPct}</span>
+              {/* ★2026-08-03 (44부 28차) — 「81 : 19」를 «말» 로 바꿨습니다.
+                  🔴 [까닭] 그 숫자가 «무엇의 비율인지» 화면 어디에도 없었고,
+                     아래 근거를 아무리 더해도 그 값이 나오지 «않았습니다».
+                     ⚠️ 대표님도 헷갈리셨습니다. 손님은 더합니다.
+                  ⚠️ leftPct 는 «막대 길이» 로 그대로 씁니다 — 지운 것이 아닙니다. */}
+              <span style={{ fontSize: 11, color: '#94a3b8' }}>{leanWord(a.leftPct)}</span>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -113,9 +132,9 @@ export default function MbtiCard({ result, realMbti, compare, onWantInput }: Pro
               }}>{a.right}</span>
             </div>
 
-            {/* 왜 그렇게 나왔나 — 근거 한 줄 */}
+            {/* 왜 그렇게 나왔나 — ★기운 «이름» 만. 숫자를 보이지 않습니다 (44부 28차) */}
             <div style={{ fontSize: 10.5, color: '#8a6a52', marginTop: 5, paddingLeft: 23 }}>
-              {a.why}
+              {a.pick} 쪽 — {a.why}
             </div>
           </div>
         ))}

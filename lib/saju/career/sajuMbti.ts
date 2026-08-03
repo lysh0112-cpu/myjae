@@ -90,11 +90,44 @@ const TITLE: Record<string, string> = {
   ESTJ: '판을 세우는 관리자', ESFJ: '두루 챙기는 조력자', ENFJ: '사람을 이끄는 사람', ENTJ: '앞장서는 지휘자',
 }
 
-/** 점수 이름을 한 줄 근거로 옮긴다 */
+/**
+ * 왜 그렇게 나왔는지 — ★«이름만» 옮깁니다. 숫자를 보이지 않습니다.
+ *
+ *  🔴 [무엇이 있었나]  「목 55 · 비겁 55 · 양의 기운 36」처럼 «점수» 를 찍었습니다.
+ *    ⚠️ ① 그 숫자를 아무리 더해도 막대의 「81 : 19」가 나오지 «않습니다» —
+ *          바닥 15%·큰 것 셋만 보이기·층별 평균을 거치기 때문입니다.
+ *       ② 「55」가 무슨 단위인지 화면 어디에도 없습니다.
+ *       ③ 일간이 목이면 «목 = 비겁» 이라 ★같은 수가 나란히 찍혀 오류로 보입니다.
+ *    ⇒ ★2026-08-03 대표님 지시 — 「숫자를 걷어내고 말로 바꾸자」 (44부 28차)
+ *
+ *  ⚠️ 「지운」 것이 아니라 «감춘» 것입니다 — leftScore·rightScore 는 그대로 넘어갑니다.
+ *     되살리려면 대표님께 여쭈십시오. (44부 21차 별점을 걷어낸 것과 같은 결)
+ *  ★이 카드는 「재미로 보는 참고」입니다. 계산기처럼 보이면 안 됩니다.
+ */
 function reason(parts: Array<[string, number]>): string {
-  const shown = parts.filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 3)
-  if (!shown.length) return '뚜렷하게 기운 곳이 없습니다'
-  return shown.map(([k, v]) => `${k} ${Math.round(v)}`).join(' · ')
+  const shown = parts.filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1])
+  if (!shown.length) return '뚜렷하게 기운 곳이 없어요'
+  // ★같은 것을 두 번 말하지 않습니다 (목·비겁이 같은 오행일 때)
+  const seen = new Set<string>()
+  const names: string[] = []
+  for (const [k] of shown) {
+    const w = LABEL[k] ?? k
+    if (seen.has(w)) continue
+    seen.add(w); names.push(w)
+    if (names.length >= 3) break
+  }
+  // ⚠️ 「…기운이 도드라집니다」를 네 줄 모두 붙이면 지겹고,
+  //    「양(陽)의 기운 기운이…」처럼 ★말이 겹치기도 합니다. 이름만 잇습니다.
+  return names.join(' · ')
+}
+
+/** 재료 이름 → ★손님이 읽는 말 */
+const LABEL: Record<string, string> = {
+  목: '목(木)', 화: '화(火)', 토: '토(土)', 금: '금(金)', 수: '수(水)',
+  비겁: '주체성', 식상: '표현력', 재성: '현실 감각', 관성: '책임감', 인성: '사고력',
+  정재: '꼼꼼함', 편재: '판을 읽는 힘',
+  '양의 기운': '양(陽)', '음의 기운': '음(陰)',
+  양인: '결단', 도화: '매력',
 }
 
 /**

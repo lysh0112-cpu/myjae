@@ -1374,6 +1374,45 @@ console.log('\n━━ ㊻ ★사주 MBTI 산식 — 교재 대조로 고친 자�
   check(/어긋난 건수/.test(mm), `★자가 «실제 파일과 같은 답인지» 맞대어 봅니다`)
 }
 
+console.log('\n━━ ㊼ ★사주 MBTI 화면 — 숫자를 걷어내고 «말» 로 (44부 28차) ━━')
+{
+  const noComment = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  const card = noComment(read('app/manseryeok/career-result/components/MbtiCard.tsx'))
+  const eng = noComment(read('lib/saju/career/sajuMbti.ts'))
+
+  // 🔴 「81 : 19」가 «사라졌는가» — 무엇의 비율인지 화면에 없던 숫자입니다
+  check(!/\{a\.leftPct\} : \{100 - a\.leftPct\}/.test(card),
+    `🔴★「81 : 19」가 사라졌습니다`)
+  check(/leanWord\(a\.leftPct\)/.test(card), `★기울기를 «말» 로 보입니다`)
+  check(/반반에 가까워요/.test(card) && /아주 뚜렷해요/.test(card),
+    `★「반반에 가까워요 … 아주 뚜렷해요」 넷입니다`)
+  // ⚠️ 「반반」 잣대가 balanced 와 «같은가» — 두 곳이 다르면 화면이 서로 어긋납니다
+  check(/d <= 5/.test(card) && /leftPct >= 45 && a\.leftPct <= 55/.test(eng),
+    `⚠️ 「반반」 잣대가 balanced(45~55%)와 같습니다`)
+  // ★막대는 «남았는가» — 지운 것이 아니라 감춘 것입니다
+  check(/width: `\$\{a\.leftPct\}%`/.test(card), `★막대는 그대로입니다 (leftPct 를 씁니다)`)
+
+  // 🔴 근거 줄에서 «점수» 가 사라졌는가
+  check(!/\$\{k\} \$\{Math\.round\(v\)\}/.test(eng),
+    `🔴★근거 줄에서 점수(「목 55」)가 사라졌습니다`)
+  check(/const LABEL: Record<string, string>/.test(eng), `★재료 이름을 손님 말로 옮깁니다`)
+  check(/비겁: '주체성'/.test(eng) && /인성: '사고력'/.test(eng),
+    `★「비겁·인성」 같은 명리 말이 화면에 안 나갑니다`)
+  // ⚠️ 같은 말을 두 번 하지 «않는가» (목 = 비겁일 때)
+  check(/const seen = new Set<string>\(\)/.test(eng),
+    `⚠️ 같은 기운을 두 번 말하지 않습니다 (목=비겁인 분)`)
+  check(/\{a\.pick\} 쪽 — \{a\.why\}/.test(card), `★어느 쪽인지 글자로도 밝힙니다`)
+
+  // ⚠️ 지운 것이 아니라 «감춘» 것인가 — 되살릴 길
+  check(/leftScore: Math\.round/.test(eng), `⚠️ 점수는 «남아 있습니다» — 지운 것이 아닙니다`)
+  const doc = read('lib/saju/career/sajuMbti.ts')
+  check(/되살리려면 대표님께 여쭈십시오/.test(doc), `⚠️ 되살릴 때 여쭈라고 적혀 있습니다`)
+  check(/계산기처럼 보이면 안 됩니다/.test(doc), `★「참고 카드」라는 까닭이 적혀 있습니다`)
+  // ★「재미로 보는 참고」가 그대로 있는가
+  check(/재미로 보는 참고예요/.test(card), `★「재미로 보는 참고예요」가 그대로 있습니다`)
+}
+
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
 {
   const src = read('lib/saju/simsanOhaeng.ts')
