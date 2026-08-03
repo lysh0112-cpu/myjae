@@ -1643,6 +1643,49 @@ console.log('\n━━ (52) 🔴★「사주로 본 성향」은 MBTI 를 넣은 
     `⚠️ 검사 주소가 «같은 곳» 입니다 (고칠 때 둘 다 보라고 적어 두었습니다)`)
 }
 
+console.log('\n━━ (53) ★진로적성 A4 인쇄 · 해설 복사 (44부 36차) ━━')
+{
+  const noComment = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  const a4 = noComment(read('app/components/common/A4Print.tsx'))
+  const cert = noComment(read('app/manseryeok/career-result/components/CareerCertificate.tsx'))
+  const page = noComment(read('app/manseryeok/career-result/page.tsx'))
+
+  // ★틀이 «한 곳» 에 있는가
+  check(/export function openA4/.test(a4), `★A4 틀이 A4Print.tsx 한 곳에 있습니다`)
+  check(/@page \{ size: A4; margin: \$\{mm\}mm; \}/.test(a4), `★A4 규격·여백을 틀이 정합니다`)
+  check(/팝업이 막혀 있어/.test(a4), `⚠️ 팝업이 막히면 «알려 드립니다» (교훈 U)`)
+  check(/@media print \{ \.bar \{ display: none/.test(a4), `★인쇄할 때 머리띠가 사라집니다`)
+  check(/page-break-after: avoid/.test(a4) && /page-break-inside: avoid/.test(a4),
+    `★제목만 홀로 남지 않고 솔루션이 잘리지 않습니다`)
+  // ⚠️ PDF 라이브러리를 더하지 «않았는가» (교훈 [의존])
+  check(!/jspdf|html2canvas|html2pdf/i.test(a4 + cert), `⚠️ PDF 라이브러리를 «더하지 않았습니다»`)
+  const pkg5 = JSON.parse(read('package.json'))
+  check(!Object.keys({ ...pkg5.dependencies, ...pkg5.devDependencies })
+    .some(k => /jspdf|html2canvas|html2pdf/i.test(k)), `⚠️ package.json 에도 없습니다`)
+
+  // ★진로적성 «속» — 틀을 «부르기만» 하는가
+  check(/import \{ openA4, esc, paraHtml \}/.test(cert), `★속은 틀을 «가져다» 씁니다`)
+  check(!/window\.open/.test(cert), `⚠️ 속에서 새 창을 «다시 열지» 않습니다`)
+  check(!/@page/.test(cert), `⚠️ 속에서 A4 규격을 «다시 적지» 않습니다`)
+  check(/marginMm: 12/.test(cert), `★여백 12mm 입니다 (2026-08-03 대표님 확정)`)
+  check(/splitCardText\(s\.body\)/.test(cert), `★[한줄]·[태그]·[실천] 을 «같은 파서» 로 가릅니다`)
+  check(/cards\.length \? /.test(cert), `★판정 카드도 «모두» 담습니다 (대표님 확정)`)
+  check(/EL_BG\[el\]/.test(cert), `⚠️ 오행 색은 ohaengColor 그대로입니다`)
+
+  // ★화면 — 버튼 둘이 나란히, 통변 뒤에만
+  check(/A4 PDF저장\/인쇄/.test(page), `★「A4 PDF저장/인쇄」 버튼이 있습니다`)
+  check(/<CopyTextButton/.test(page), `★「해설 복사」 버튼이 있습니다`)
+  check(/premiumSections\.length > 0 && \([\s\S]{0,600}onPrintCert/.test(page),
+    `⚠️ 통변이 «다 나온 뒤» 에만 보입니다 (반쪽 인쇄물을 막습니다)`)
+  check(/flexDirection: 'row', gap: 8[\s\S]{0,60}alignItems: 'stretch'/.test(page),
+    `★두 버튼이 «가로로» 나란히 있습니다`)
+  check(/className="copy-half"/.test(page) && /\.copy-half > button \{ width: 100% \}/.test(page),
+    `⚠️ 공용 부품(CopyTextButton)을 «고치지 않고» 감싼 자리에서 너비를 맞춥니다`)
+  // ⚠️ 값을 다시 계산하지 «않는가» (교훈 CJ)
+  check(/sections: premiumSections/.test(page), `⚠️ 화면이 쓰는 대목을 «그대로» 넘깁니다`)
+}
+
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
 {
   const src = read('lib/saju/simsanOhaeng.ts')

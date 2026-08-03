@@ -34,6 +34,9 @@ import MbtiCard from './components/MbtiCard'
 // ★2026-07-29 — 프리미엄 진로적성&MBTI 리포트 (모듈2)
 import { buildCareerMbtiPrompt } from '@/lib/saju/premium/buildCareerMbtiPrompt'
 import { isPremium } from '@/lib/saju/premium/config'
+import { openCareerCertificate } from './components/CareerCertificate'
+import CopyTextButton from '@/app/components/common/CopyTextButton'
+import { elOfStem, elOfBranch } from '@/lib/saju/ohaengColor'
 import { splitCardText } from '@/lib/saju/premium/splitCardText'
 import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
 import { calcYongsinNew } from '@/lib/saju/yongsinNew'
@@ -305,6 +308,38 @@ function CareerResultInner() {
     const { byTitle } = parseCareerTongbyeon(tong)
     return Object.entries(byTitle).map(([title, body]) => ({ title, body }))
   }, [isPremiumTong, tong])
+
+  // ══════════════════════════════════════════════════════════════
+  //  ★A4 진로적성 (2026-08-03 · 대표님 지시 · 44부 36차)
+  //
+  //  ⚠️⚠️ 값을 «다시 계산하지 않습니다» — 화면이 쓰는 것을 그대로 넘깁니다. (교훈 CJ)
+  //     두 벌로 세면 «종이와 화면이 다른 말» 을 하는 날이 옵니다.
+  //  ⚠️ 팝업이 막히면 «조용히 넘어가지 않고» 알려 드립니다. (교훈 U)
+  // ══════════════════════════════════════════════════════════════
+  function onPrintCert() {
+    if (!calc) return
+    const r = openCareerCertificate({
+      name: person.name || '',
+      birth: person.year ? `${person.year}.${person.month}.${person.day}` : '',
+      badge: [status, target === 'student' ? '학생' : '성인'].filter(Boolean).join(' · '),
+      // ★화면(SajuWonguk)과 «같은 차례» — 시·일·월·년
+      pillars: ['시주', '일주', '월주', '년주'].map(k => {
+        const q = calc.saju.find(x => x.pillar === k)
+        return {
+          label: k[0],
+          stem: q?.stem ?? '', branch: q?.branch ?? '',
+          stemEl: elOfStem(q?.stem ?? '') ?? '토',
+          branchEl: elOfBranch(q?.branch ?? '') ?? '토',
+        }
+      }),
+      sections: premiumSections,
+      // ★판정 카드도 «모두» 담습니다 (2026-08-03 대표님 확정)
+      cards: cards
+        .filter(c => c.lines.length > 0)
+        .map(c => ({ title: c.title, badge: c.badge, lines: c.lines })),
+    })
+    if (!r.ok && r.message) alert(r.message)
+  }
 
   const { tongIntro, tongByKey, tongOutro } = useMemo(() => {
     if (!tong || isPremiumTong) return { tongIntro: '', tongByKey: {} as Record<string, string>, tongOutro: '' }
@@ -582,6 +617,44 @@ function CareerResultInner() {
                   준비 중이라는 안내는 만드는 쪽 사정이지 읽는 분께 드릴 말이 아니다.
                   학과도 이제 나오므로 "학과와 대학"이라는 예고 자체가 어긋나 있었다.
                   학업운·합격운은 홈의 '합격운/취업운'(🐍)에서 따로 들어간다. */}
+
+            {/* ══════════════════════════════════════════════════════
+                ★2026-08-03 (44부 36차) — A4 인쇄 · 해설 복사 (대표님 지시)
+
+                ⚠️ 진로적성에는 셋 다 «없었습니다» — 궁합·사주·작명에는 있었습니다.
+                ★틀은 app/components/common/A4Print.tsx «한 곳» 입니다.
+                   여기서 window.open 이나 @page 를 다시 적지 마십시오.
+                ⚠️ 통변이 «다 나온 뒤» 에만 보입니다 — ★반쪽 인쇄물을 내지 않습니다.
+                   (44부 23차 궁합서와 같은 결)
+                ⚠️ 공용 부품(CopyTextButton)을 «고치지 않고» 감싼 자리에서 너비를 맞춥니다.
+                ══════════════════════════════════════════════════════ */}
+            {premiumSections.length > 0 && (
+              <>
+                <div style={{
+                  display: 'flex', flexDirection: 'row', gap: 8,
+                  alignItems: 'stretch', marginTop: 18,
+                }}>
+                  <button
+                    onClick={onPrintCert}
+                    style={{
+                      flex: 1, marginTop: 8, padding: '12px 10px', borderRadius: 12,
+                      background: '#785aaa', border: 'none', color: '#fff',
+                      fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                    }}>A4 PDF저장/인쇄</button>
+                  <div style={{ flex: 1 }} className="copy-half">
+                    <CopyTextButton
+                      text={tong}
+                      label="진로적성 풀이"
+                      name={person.name}
+                    />
+                  </div>
+                </div>
+                <style>{`.copy-half > button { width: 100% }`}</style>
+                <div style={{ fontSize: 10.5, color: '#a8927e', textAlign: 'center', marginTop: 6 }}>
+                  새 창에서 인쇄 또는 PDF로 저장
+                </div>
+              </>
+            )}
 
             <div style={{ fontSize: 11, color: '#a08d7d', textAlign: 'center', marginTop: 18, lineHeight: 1.7 }}>
               사주는 참고입니다. 길은 본인의 노력과 의지로 얼마든지 바꿀 수 있어요.
