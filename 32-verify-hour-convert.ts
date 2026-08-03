@@ -1429,7 +1429,6 @@ console.log('\n━━ ㊽ ★「어떤 결인가요」 해설 · 재료의 숫�
     s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
   const eng = noComment(read('lib/saju/career/sajuMbti.ts'))
   const card = noComment(read('app/manseryeok/career-result/components/MbtiCard.tsx'))
-  const pr = noComment(read('lib/saju/premium/buildCareerMbtiPrompt.ts'))
 
   // ★여덟 줄이 «한 곳» 에 있는가
   check(/export const AXIS_WORK: Record<string, string>/.test(eng),
@@ -1437,9 +1436,11 @@ console.log('\n━━ ㊽ ★「어떤 결인가요」 해설 · 재료의 숫�
   check(['E', 'I', 'S', 'N', 'T', 'F', 'J', 'P'].every(k => new RegExp(`${k}: '`).test(eng)),
     `★여덟 글자가 모두 있습니다`)
   // ⚠️⚠️ 두 벌이 되지 «않았는가» — 두 벌이면 다른 말을 하는 날이 옵니다
-  check(!/const AXIS_WORK/.test(pr), `⚠️ 프롬프트가 «제 벌» 을 다시 적지 않습니다`)
-  check(/import \{ calcSajuMbti, compareMbti, AXIS_WORK/.test(pr),
-    `⚠️ 프롬프트는 그 한 곳에서 «가져다» 씁니다`)
+  // ⚠️⚠️ 2026-08-03 (44부 39차) — ★buildCareerMbtiPrompt.ts 를 «원격 그대로» 되돌렸습니다.
+  //   [까닭] 대표님 지시는 「화면에서 숨겨 달라」였는데 제가 ★AI 재료까지 건드려,
+  //     대목 목록이 넷이 되는데 지시문은 「정확히 여섯 개」로 남아 서로 어긋났습니다.
+  //     ⇒ AI 가 「■ 제목」을 안 붙였고 ★글이 통째로 맨 아래에 쏟아졌습니다.
+  //   ⛔ 그 파일은 이제 «손대지 않습니다». 이 검사들도 함께 걷었습니다.
   check(/import \{ AXIS_WORK[^}]*\} from '@\/lib\/saju\/career\/sajuMbti'/.test(card),
     `⚠️ 화면도 같은 곳에서 가져다 씁니다`)
 
@@ -1454,11 +1455,7 @@ console.log('\n━━ ㊽ ★「어떤 결인가요」 해설 · 재료의 숫�
   check(/result\.axes\.map\(a => \(/.test(card), `★네 축 모두 그립니다`)
 
   // 🔴 재료에도 「81:19」가 «남지 않았는가» (44부 3-3 별점 교훈)
-  check(!/\$\{a\.leftPct\}:\$\{100 - a\.leftPct\}/.test(pr) && !/leftPct/.test(pr),
-    `🔴★통변 «재료» 에서도 「81:19」가 사라졌습니다`)
-  const doc = read('lib/saju/premium/buildCareerMbtiPrompt.ts')
-  check(/화면에서만 걷어내고 여기 남겨 두면/.test(doc),
-    `⚠️ 왜 재료에서도 걷어냈는지 까닭이 적혀 있습니다`)
+
 }
 
 console.log('\n━━ ㊾ 🔴★[한줄]·[태그]·[실천] 이 «글자 그대로» 나가지 않는가 (44부 30차) ━━')
@@ -1511,7 +1508,6 @@ console.log('\n━━ ㊿ ★MBTI 를 안 넣으면 조르지 않는다 · 겹�
     s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
   const card = noComment(read('app/manseryeok/career-result/components/MbtiCard.tsx'))
   const sel = noComment(read('app/manseryeok/components/MbtiSelect.tsx'))
-  const pr = noComment(read('lib/saju/premium/buildCareerMbtiPrompt.ts'))
   const eng = noComment(read('lib/saju/career/sajuMbti.ts'))
 
   // ★제목이 갈리는가
@@ -1521,7 +1517,7 @@ console.log('\n━━ ㊿ ★MBTI 를 안 넣으면 조르지 않는다 · 겹�
 
   // 🔴 권유 상자가 «화면과 재료 둘 다» 에서 사라졌는가
   check(!/실제 MBTI 를 넣으시면/.test(card), `🔴★화면에서 권유 상자가 사라졌습니다`)
-  check(!/실제 MBTI 를 넣으시면/.test(pr), `🔴⚠️ ★«재료» 에서도 사라졌습니다 (새어 나가지 않게)`)
+
   // ★2026-08-03 (44부 32차) — 「권유 상자」가 아예 사라져 그 자리 자체가 없어졌습니다.
   //   ⇒ 「넣으라고 조르는 말이 없는가」로 잽니다. 그것이 본디 재려던 것입니다.
   check(!/넣으시면|넣고 다시 보기/.test(card),
@@ -1612,16 +1608,13 @@ console.log('\n━━ (52) 🔴★「사주로 본 성향」은 MBTI 를 넣은 
   const page = noComment(read('app/manseryeok/career-result/page.tsx'))
   const inp = noComment(read('app/manseryeok/career-input/page.tsx'))
   const dlg = noComment(read('app/manseryeok/components/MbtiAskDialog.tsx'))
-  const pr = noComment(read('lib/saju/premium/buildCareerMbtiPrompt.ts'))
 
   // 🔴 화면 — 안 넣으면 카드가 «통째로» 안 나오는가
   check(/g\.label === '타고난 결' && sajuMbti && realMbti && mbtiCmp && \(/.test(page),
     `🔴★MBTI 를 넣으신 분만 카드를 봅니다`)
 
   // ⚠️⚠️ 재료에서도 1·2번 대목이 빠지는가 — 화면만 숨기면 AI 글이 «허공을 가리킵니다»
-  check(/const showMbti = !!real/.test(pr), `★재료도 넣으셨는지 봅니다`)
-  check(/\.\.\.\(!showMbti \? \[\] : \(\[\{/.test(pr),
-    `⚠️⚠️ 재료의 1·2번 대목이 «함께» 빠집니다 (44부 1-3 교훈)`)
+
 
   // ★입력 화면 — 한 번 여쭙는가
   check(/if \(!mbti\) \{ setAsk\(true\); return \}/.test(inp),
@@ -1693,13 +1686,12 @@ console.log('\n━━ (53) ★진로적성 A4 인쇄 · 해설 복사 (44부 36�
   // 🔴 「다시보기」로 열어도 프리미엄으로 «알아보는가» (44부 38차)
   //   [무엇이 있었나] setIsPremiumTong 을 «새로 돌릴 때만» 불러,
   //     저장된 기록을 열면 ★프리미엄 글이 카드형으로 그려지고 A4 버튼도 안 떴습니다.
-  const prm = noComment(read('lib/saju/premium/buildCareerMbtiPrompt.ts'))
-  check(/export function isPremiumReport/.test(prm), `★저장본이 프리미엄인지 가리는 잣대가 있습니다`)
-  check(/PREMIUM_SECTION_TITLES/.test(prm), `★대목 «제목» 으로 가립니다 (제목을 정하는 곳에 둡니다)`)
-  check(/setIsPremiumTong\(isPremiumReport\(t\)\)/.test(page),
+  // ⛔ 잣대를 «화면» 에 둡니다 — AI 재료 파일은 손대지 않기로 했습니다 (44부 39차)
+  check(/const PREMIUM_TITLES = \[/.test(page), `★저장본이 프리미엄인지 가리는 제목 목록이 있습니다`)
+  check(/setIsPremiumTong\(PREMIUM_TITLES\.some/.test(page),
     `🔴★다시보기로 열어도 프리미엄으로 알아봅니다`)
-  check(/제목을 고치시면/.test(read('lib/saju/premium/buildCareerMbtiPrompt.ts')),
-    `⚠️ 제목을 고치면 목록도 함께 고치라고 일러 둡니다`)
+  check(/그 파일의 제목을 고치시면 여기도 함께 고치십시오/.test(read('app/manseryeok/career-result/page.tsx')),
+    `⚠️ 제목을 고치면 이 목록도 함께 고치라고 일러 둡니다`)
   check(/flexDirection: 'row', gap: 8[\s\S]{0,60}alignItems: 'stretch'/.test(page),
     `★두 버튼이 «가로로» 나란히 있습니다`)
   check(/className="copy-half"/.test(page) && /\.copy-half > button \{ width: 100% \}/.test(page),

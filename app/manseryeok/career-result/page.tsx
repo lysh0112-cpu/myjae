@@ -32,7 +32,7 @@ import { calcSajuMbti, compareMbti } from '@/lib/saju/career/sajuMbti'
 import { type CareerStatus, STATUS_LABEL } from '@/lib/saju/career/status'
 import MbtiCard from './components/MbtiCard'
 // ★2026-07-29 — 프리미엄 진로적성&MBTI 리포트 (모듈2)
-import { buildCareerMbtiPrompt, isPremiumReport } from '@/lib/saju/premium/buildCareerMbtiPrompt'
+import { buildCareerMbtiPrompt } from '@/lib/saju/premium/buildCareerMbtiPrompt'
 import { isPremium } from '@/lib/saju/premium/config'
 import { openCareerCertificate } from './components/CareerCertificate'
 import CopyTextButton from '@/app/components/common/CopyTextButton'
@@ -69,6 +69,21 @@ const TABLE_AFTER: Record<string, { kinds: SajuTableKind[]; caption: string }> =
   // 용신 이야기 뒤 — 조후·억부·격국 세 갈래
   yongsin: { kinds: ['yongsin'], caption: '어떤 기운이 나를 돕는가' },
 }
+
+/**
+ * ★프리미엄 리포트인지 가리는 제목들 (44부 38차)
+ *
+ *  🔴 [까닭]  「다시보기」로 열면 isPremiumTong 이 «거짓으로 남아»
+ *     저장된 프리미엄 글이 카드형으로 잘못 그려지고 A4 버튼도 안 떴습니다.
+ *  ⚠️ 저장본에는 「프리미엄이었는지」가 «적혀 있지 않아» 제목으로 가립니다.
+ *  ⚠️⚠️ buildCareerMbtiPrompt 의 섹션 제목과 «같아야» 합니다.
+ *     ★그 파일의 제목을 고치시면 여기도 함께 고치십시오.
+ *     (그 파일은 AI 재료라 ⛔ 함부로 손대지 않기로 했습니다 — 2026-08-03)
+ */
+const PREMIUM_TITLES = [
+  '사주로본성향', '사주성향vs실제성향', '사주추정성향의핵심',
+  '강점지능과행동패턴', '직무&커리어전략', '리더십과재물운용', '커리어발복대운과개운',
+]
 
 /** 화면 묶음 — 통변 순서와 1:1 로 맞춘다. (교훈 AS) */
 const GROUPS: Array<{ label: string; keys: string[] }> = [
@@ -195,6 +210,7 @@ function CareerResultInner() {
       .catch(e => console.error('진로적성 기록 저장 실패', e))
   }, [calc, recordId, person])
 
+
   // ── 통변 ────────────────────────────────────────────────────
   //   ★다시보기(recordId)로 들어오면 새로 돌리지 않는다. 돈이 든다.
   //     저장해 둔 풀이를 그대로 보여 준다.
@@ -305,7 +321,7 @@ function CareerResultInner() {
           //   ⇒ 저장된 글이 «프리미엄 꼴» 인지 보고 정합니다.
           //   ⚠️ 저장본에는 「프리미엄이었는지」가 안 적혀 있어 «글의 모양» 으로 가립니다 —
           //      ★대목 «제목» 으로 가립니다 — 제목은 buildCareerMbtiPrompt 가 정합니다.
-          setIsPremiumTong(isPremiumReport(t))
+          setIsPremiumTong(PREMIUM_TITLES.some(x => t.replace(/\s/g, '').includes(x)))
         }
       }),
     ).catch(e => console.error('저장된 풀이 불러오기 실패', e))
