@@ -13,6 +13,7 @@
  */
 
 import { useState } from 'react'
+import { splitCardText } from '@/lib/saju/premium/splitCardText'
 import type { ExamCard, Grade } from '@/lib/saju/examLuck/types'
 
 /**
@@ -52,23 +53,10 @@ interface Props {
  *     사주풀이(TongbyeonView)는 이미 갈라 그리는데 합격운만 안 했습니다.
  *   ⚠️ 형식이 없으면 예전처럼 통짜로 그립니다. 옛 통변도 안 깨집니다.
  */
-function splitTong(raw: string) {
-  let summary: string | undefined
-  let action: string | undefined
-  let tags: string[] | undefined
-  const rest: string[] = []
-  for (const ln of raw.split('\n')) {
-    const t = ln.trim()
-    const mS = t.match(/^\[한줄\]\s*(.+)$/)
-    const mT = t.match(/^\[태그\]\s*(.+)$/)
-    const mA = t.match(/^\[실천\]\s*(.+)$/)
-    if (mS) { summary = mS[1].trim(); continue }
-    if (mT) { tags = mT[1].split(/[·,]/).map(x => x.trim()).filter(Boolean).slice(0, 4); continue }
-    if (mA) { action = mA[1].trim(); continue }
-    rest.push(ln)
-  }
-  return { summary, tags, action, body: rest.join('\n').trim() }
-}
+// ★2026-08-03 (44부 30차) — 파서를 lib/saju/premium/splitCardText.ts 로 «옮겼습니다».
+//   ⚠️ 같은 코드가 사주풀이·합격운 두 곳에 복사되어 있었고, ★진로적성에는 «없어서»
+//      「[한줄] …」이 손님 화면에 글자 그대로 나갔습니다. 여기서 다시 적지 마십시오.
+const splitTong = splitCardText
 
 export default function ExamJudgeCard({ card, tong }: Props) {
   const [openWhy, setOpenWhy] = useState(false)

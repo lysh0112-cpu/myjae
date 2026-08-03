@@ -34,6 +34,7 @@ import MbtiCard from './components/MbtiCard'
 // ★2026-07-29 — 프리미엄 진로적성&MBTI 리포트 (모듈2)
 import { buildCareerMbtiPrompt } from '@/lib/saju/premium/buildCareerMbtiPrompt'
 import { isPremium } from '@/lib/saju/premium/config'
+import { splitCardText } from '@/lib/saju/premium/splitCardText'
 import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
 import { calcYongsinNew } from '@/lib/saju/yongsinNew'
 import { getGongmang } from '@/lib/saju/gongmang'
@@ -428,10 +429,69 @@ function CareerResultInner() {
                       fontSize: 14.5, fontWeight: 700, color: '#1e293b',
                       marginBottom: 9, letterSpacing: '-0.2px',
                     }}>{sec.title}</div>
-                    <div style={{
-                      fontSize: 13.5, color: '#3a2e28', lineHeight: 1.85,
-                      whiteSpace: 'pre-wrap',
-                    }}>{sec.body}</div>
+
+                    {/* ══════════════════════════════════════════════════
+                        🔴★2026-08-03 (44부 30차) — [한줄]·[태그]·[실천] 을 갈라 그립니다.
+
+                        [무엇이 있었나]  본문을 whiteSpace:'pre-wrap' 으로 «통째로» 찍어
+                          ★「[한줄] 상황에 따라 달리 쓰는…」·「[태그] …」·「[실천] …」이
+                            손님 화면에 «글자 그대로» 나갔습니다. (대표님 사진 2026-08-03)
+                        [까닭]  프롬프트는 그 표시를 «일부러» 붙이게 합니다 —
+                          "화면이 그것으로 갈라 그립니다" 라고 적혀 있는데,
+                          ★사주풀이·합격운만 갈라 그리고 진로적성은 «안 했습니다».
+                        ⚠️ 파서는 lib/saju/premium/splitCardText.ts «한 곳» 입니다.
+                           여기서 다시 적지 마십시오. 그렇게 해서 두 벌이 되었습니다.
+                        ⚠️ 표시가 없는 옛 통변은 예전처럼 통짜로 그려집니다. 안 깨집니다.
+                        ══════════════════════════════════════════════════ */}
+                    {(() => {
+                      const p = splitCardText(sec.body)
+                      return (
+                        <>
+                          {/* ★한줄 — 카드에서 가장 하고 싶은 말 */}
+                          {p.summary && (
+                            <p style={{
+                              fontSize: 13, color: '#785aaa', lineHeight: 1.6, fontWeight: 600,
+                              margin: '0 0 9px',
+                            }}>{p.summary}</p>
+                          )}
+
+                          {/* ★태그 — 알약으로 */}
+                          {p.tags && p.tags.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, margin: '0 0 10px' }}>
+                              {p.tags.map((t, k) => (
+                                <span key={k} style={{
+                                  fontSize: 10.5, color: '#5b4580', background: '#f3eefb',
+                                  border: '1px solid #e4daf5', padding: '3px 9px',
+                                  borderRadius: 20, fontWeight: 600,
+                                }}>{t}</span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* 본문 — 빈 줄로 문단을 나눠 그립니다 */}
+                          {p.body.split(/\n\s*\n/).filter(x => x.trim()).map((para, k) => (
+                            <p key={k} style={{
+                              fontSize: 13.5, color: '#3a2e28', lineHeight: 1.85,
+                              margin: '0 0 10px', whiteSpace: 'pre-wrap',
+                            }}>{para.trim()}</p>
+                          ))}
+
+                          {/* ★실천 — 강조 상자로 따로 */}
+                          {p.action && (
+                            <div style={{
+                              marginTop: 2, padding: '11px 12px', borderRadius: 11,
+                              background: '#fdf6ee', border: '1px solid rgba(200,120,60,0.26)',
+                              display: 'flex', gap: 8, alignItems: 'flex-start',
+                            }}>
+                              <span style={{ fontSize: 13, lineHeight: 1.4, flexShrink: 0 }}>✅</span>
+                              <span style={{ fontSize: 12.5, lineHeight: 1.75, color: '#6b4a2e' }}>
+                                {p.action}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )
+                    })()}
                   </div>
                 ))}
                 <div style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center', margin: '4px 0 2px' }}>

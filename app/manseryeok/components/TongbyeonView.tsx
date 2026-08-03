@@ -17,6 +17,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { splitCardText } from '@/lib/saju/premium/splitCardText'
 import { buildTongbyeonPrompt, type TongbyeonInput } from '@/lib/saju/tongbyeonPrompt'
 import type { SajuQuestion } from '@/lib/saju/questions'
 import { withNim } from '@/lib/saju/honorific'
@@ -99,27 +100,10 @@ function parseCards(text: string): { intro: string; cards: Card[] } {
 
   const isHeading = (ln: string) => /^\s*(#{1,6}\s*)?\u25A0/.test(ln) || /^\s*#{2,6}\s+/.test(ln)
 
-  /**
-   * 본문에서 [한줄]·[태그]·[실천] 을 뽑아낸다.
-   *   ⚠️ 없으면 그대로 둡니다. 옛 통변이 깨지지 않게 하려는 것입니다.
-   */
-  const split = (bodyRaw: string) => {
-    let summary: string | undefined
-    let action: string | undefined
-    let tags: string[] | undefined
-    const rest: string[] = []
-    for (const ln of bodyRaw.split('\n')) {
-      const t = ln.trim()
-      const mS = t.match(/^\[한줄\]\s*(.+)$/)
-      const mT = t.match(/^\[태그\]\s*(.+)$/)
-      const mA = t.match(/^\[실천\]\s*(.+)$/)
-      if (mS) { summary = mS[1].trim(); continue }
-      if (mT) { tags = mT[1].split(/[·,]/).map(x => x.trim()).filter(Boolean).slice(0, 4); continue }
-      if (mA) { action = mA[1].trim(); continue }
-      rest.push(ln)
-    }
-    return { summary, tags, action, body: rest.join('\n').trim() }
-  }
+  // ★2026-08-03 (44부 30차) — 파서를 lib/saju/premium/splitCardText.ts 로 «옮겼습니다».
+  //   ⚠️ 같은 코드가 합격운에도 복사되어 있었고, ★진로적성에는 «없었습니다».
+  //      고칠 곳은 그 «한 곳» 입니다. 여기서 다시 적지 마십시오.
+  const split = splitCardText
 
   for (const raw of lines) {
     const ln = raw

@@ -1446,6 +1446,50 @@ console.log('\n━━ ㊽ ★「어떤 결인가요」 해설 · 재료의 숫�
     `⚠️ 왜 재료에서도 걷어냈는지 까닭이 적혀 있습니다`)
 }
 
+console.log('\n━━ ㊾ 🔴★[한줄]·[태그]·[실천] 이 «글자 그대로» 나가지 않는가 (44부 30차) ━━')
+{
+  const noComment = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  const P = 'lib/saju/premium/splitCardText.ts'
+  const sp = noComment(read(P))
+
+  // ★파서가 «한 곳» 에 있는가
+  check(/export function splitCardText/.test(sp), `★파서가 splitCardText.ts 한 곳에 있습니다`)
+  check(/\[한줄\\\]/.test(sp) && /\[태그\\\]/.test(sp) && /\[실천\\\]/.test(sp),
+    `★세 표시를 모두 가릅니다`)
+
+  // ⚠️⚠️ 화면들이 «제 벌» 을 다시 적지 않는가 — 그렇게 해서 두 벌이 되었습니다
+  const SCREENS = [
+    'app/manseryeok/components/TongbyeonView.tsx',
+    'app/manseryeok/exam-luck-result/components/ExamJudgeCard.tsx',
+    'app/manseryeok/career-result/page.tsx',
+  ]
+  const src = SCREENS.map(p => [p, noComment(read(p))] as const)
+  check(src.every(([, s]) => /splitCardText/.test(s)),
+    `★세 화면이 «모두» 공용 파서를 씁니다 (${src.filter(([, s]) => /splitCardText/.test(s)).length}/3)`)
+  const own = src.filter(([, s]) => /const mS = t\.match/.test(s))
+  check(own.length === 0,
+    `⚠️ 화면이 «제 파서» 를 따로 들고 있지 않습니다${own.length ? ' — ' + own.map(x => x[0]).join(', ') : ''}`)
+
+  // 🔴 진로적성 — 통짜로 찍던 자리가 «사라졌는가»
+  const car = noComment(read('app/manseryeok/career-result/page.tsx'))
+  check(/const p = splitCardText\(sec\.body\)/.test(car),
+    `🔴★진로적성이 대목을 갈라 그립니다`)
+  check(/p\.summary/.test(car) && /p\.tags/.test(car) && /p\.action/.test(car),
+    `★한줄·태그·실천을 각각 그립니다`)
+  check(!/\}\}>\{sec\.body\}<\/div>/.test(car),
+    `🔴⚠️ 본문을 «통째로» 찍던 자리가 사라졌습니다`)
+
+  // ⚠️ 프롬프트가 그 표시를 시키는가 — 시키는데 화면이 모르면 또 새어 나갑니다
+  const pr1 = read('lib/saju/premium/buildCareerMbtiPrompt.ts')
+  const pr2 = read('lib/saju/premium/buildGeneralSajuPrompt.ts')
+  check(/대괄호까지 그대로/.test(pr1) && /대괄호까지 그대로/.test(pr2),
+    `⚠️ 프롬프트가 «대괄호까지» 적으라고 시킵니다 — 화면이 반드시 갈라야 합니다`)
+
+  // ⚠️ 표시가 «없는» 옛 통변이 깨지지 않는가
+  check(/옛 통변이 깨지지 않게/.test(read(P)), `⚠️ 표시가 없으면 그대로 둔다고 적혀 있습니다`)
+}
+
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
 {
   const src = read('lib/saju/simsanOhaeng.ts')
