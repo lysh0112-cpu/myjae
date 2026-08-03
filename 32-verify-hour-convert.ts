@@ -1413,6 +1413,39 @@ console.log('\n━━ ㊼ ★사주 MBTI 화면 — 숫자를 걷어내고 «말
   check(/재미로 보는 참고예요/.test(card), `★「재미로 보는 참고예요」가 그대로 있습니다`)
 }
 
+console.log('\n━━ ㊽ ★「어떤 결인가요」 해설 · 재료의 숫자 걷어내기 (44부 29차) ━━')
+{
+  const noComment = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  const eng = noComment(read('lib/saju/career/sajuMbti.ts'))
+  const card = noComment(read('app/manseryeok/career-result/components/MbtiCard.tsx'))
+  const pr = noComment(read('lib/saju/premium/buildCareerMbtiPrompt.ts'))
+
+  // ★여덟 줄이 «한 곳» 에 있는가
+  check(/export const AXIS_WORK: Record<string, string>/.test(eng),
+    `★AXIS_WORK 여덟 줄이 sajuMbti.ts «한 곳» 에 있습니다`)
+  check(['E', 'I', 'S', 'N', 'T', 'F', 'J', 'P'].every(k => new RegExp(`${k}: '`).test(eng)),
+    `★여덟 글자가 모두 있습니다`)
+  // ⚠️⚠️ 두 벌이 되지 «않았는가» — 두 벌이면 다른 말을 하는 날이 옵니다
+  check(!/const AXIS_WORK/.test(pr), `⚠️ 프롬프트가 «제 벌» 을 다시 적지 않습니다`)
+  check(/import \{ calcSajuMbti, compareMbti, AXIS_WORK/.test(pr),
+    `⚠️ 프롬프트는 그 한 곳에서 «가져다» 씁니다`)
+  check(/import \{ AXIS_WORK \} from '@\/lib\/saju\/career\/sajuMbti'/.test(card),
+    `⚠️ 화면도 같은 곳에서 가져다 씁니다`)
+
+  // ★표 아래 해설이 그려지는가
+  check(/어떤 결인가요/.test(card), `★「어떤 결인가요」 해설이 있습니다`)
+  check(/\{AXIS_WORK\[a\.pick\]\}/.test(card), `★이긴 글자의 줄을 그립니다`)
+  check(/result\.axes\.map\(a => \(/.test(card), `★네 축 모두 그립니다`)
+
+  // 🔴 재료에도 「81:19」가 «남지 않았는가» (44부 3-3 별점 교훈)
+  check(!/\$\{a\.leftPct\}:\$\{100 - a\.leftPct\}/.test(pr) && !/leftPct/.test(pr),
+    `🔴★통변 «재료» 에서도 「81:19」가 사라졌습니다`)
+  const doc = read('lib/saju/premium/buildCareerMbtiPrompt.ts')
+  check(/화면에서만 걷어내고 여기 남겨 두면/.test(doc),
+    `⚠️ 왜 재료에서도 걷어냈는지 까닭이 적혀 있습니다`)
+}
+
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
 {
   const src = read('lib/saju/simsanOhaeng.ts')

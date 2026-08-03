@@ -16,6 +16,7 @@
 //     ③ 실제 MBTI 를 넣었으면 견주기 카드, 안 넣었으면 넣도록 권하는 띠
 // ============================================================================
 
+import { AXIS_WORK } from '@/lib/saju/career/sajuMbti'
 import type { SajuMbtiResult, MbtiCompare } from '@/lib/saju/career/sajuMbti'
 
 const ACCENT = '#785aaa'
@@ -138,6 +139,40 @@ export default function MbtiCard({ result, realMbti, compare, onWantInput }: Pro
             </div>
           </div>
         ))}
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════
+          ★어떤 결인가요 — 표 아래 «간단한 해설» (44부 29차 · 대표님 지시)
+
+          🔴 [까닭]  숫자를 걷어내고 나니 「E · N · F · P」 네 글자만 남아,
+             그것이 «무슨 뜻인지» 카드 안에서 알 길이 없었습니다.
+          ⚠️ 문장은 ★career/sajuMbti.ts 의 AXIS_WORK «한 곳» 에서 가져옵니다.
+             화면에서 따로 적지 «마십시오» — 통변 재료와 «다른 말» 을 하게 됩니다.
+          ⚠️ 프리미엄 통변 2번 대목도 같은 여덟 줄을 씁니다. ★겹칩니다.
+             2026-08-03 대표님 지시로 «그대로 두었습니다».
+             (겹침이 거슬리면 프롬프트 쪽 '핵심 성향 진단' 에서 빼면 됩니다)
+          ══════════════════════════════════════════════════════════ */}
+      <div style={{
+        marginTop: 14, paddingTop: 13, borderTop: '1px dashed rgba(120,53,15,0.14)',
+      }}>
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: '#4a3b60', marginBottom: 9 }}>
+          어떤 결인가요
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          {result.axes.map(a => (
+            <div key={`w-${a.axis}`} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              <span style={{
+                flexShrink: 0, width: 19, height: 19, borderRadius: 6,
+                background: `${ACCENT}1a`, color: ACCENT,
+                fontSize: 10.5, fontWeight: 800,
+                display: 'grid', placeItems: 'center', marginTop: 1,
+              }}>{a.pick}</span>
+              <span style={{ fontSize: 11.5, color: '#5c4a3e', lineHeight: 1.68 }}>
+                {AXIS_WORK[a.pick]}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ── 실제 MBTI 와 견주기 ── */}

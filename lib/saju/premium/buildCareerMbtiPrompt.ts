@@ -24,7 +24,7 @@
 import type { Ohaeng } from '../simsanOhaeng'
 import type { YongsinNewResult } from '../yongsinNew'
 import type { DayunItem } from '../dayun'
-import { calcSajuMbti, compareMbti, type SajuMbtiResult } from '../career/sajuMbti'
+import { calcSajuMbti, compareMbti, AXIS_WORK, type SajuMbtiResult } from '../career/sajuMbti'
 import { STATUS_PROMPT, statusToTarget, showsGyeyeol, STATUS_LABEL, type CareerStatus } from '../career/status'
 import { judgeRoleFit } from '../career/roleFit'
 import { judgeJobFit } from '../career/jobFit'
@@ -57,16 +57,9 @@ export interface CareerMbtiInput {
 }
 
 // ── MBTI 네 축이 «일할 때» 어떻게 드러나는가 ──────────────────────────
-const AXIS_WORK: Record<string, string> = {
-  E: '사람 사이에서 기운이 차오릅니다. 회의·발표·현장이 에너지원입니다.',
-  I: '혼자 있는 시간에 기운이 차오릅니다. 몰입할 자리를 지켜 주어야 합니다.',
-  S: '눈에 보이는 사실과 경험으로 판단합니다. 검증된 방식에서 강합니다.',
-  N: '아직 없는 그림을 먼저 봅니다. 새 판을 여는 자리에서 강합니다.',
-  T: '기준과 논리로 자릅니다. 결정을 미루지 않아 일이 굴러갑니다.',
-  F: '사람과 분위기를 먼저 헤아립니다. 팀이 흩어지지 않게 붙잡습니다.',
-  J: '정해 두고 가야 편합니다. 마감과 계획이 곧 힘입니다.',
-  P: '열어 두고 가야 편합니다. 상황이 바뀔 때 오히려 잘합니다.',
-}
+//  ★2026-08-03 (44부 29차) — 여덟 줄을 career/sajuMbti.ts 로 «옮겼습니다».
+//    화면(MbtiCard)도 같은 줄을 보여야 해서, 두 벌이 되면 «다른 말» 을 하게 됩니다.
+//    ⚠️ 여기서 다시 적지 «마십시오». 고칠 곳은 sajuMbti.ts 한 곳입니다.
 
 interface Section { no: number; title: string; blocks: Array<[string, string[]]> }
 
@@ -141,8 +134,13 @@ function buildSections(v: CareerMbtiInput): { sections: Section[]; mbti: SajuMbt
           `${mbti.code} — ${mbti.title}`,
           mbti.balanced ? '두 축 이상이 반반에 가깝습니다. 한쪽으로 몰린 결이 아니라 상황에 따라 달리 쓰는 분입니다.' : '',
         ].filter(Boolean)],
+        // ⚠️⚠️ 2026-08-03 (44부 29차) — ★「81:19」를 «재료에서도» 걷어냈습니다.
+        //   화면에서만 걷어내고 여기 남겨 두면, AI 가 그 숫자를 보고
+        //   ★"81 대 19 로 아주 뚜렷합니다" 로 풀어 버립니다.
+        //   44부 3-3장에서 별점을 «세 곳 중 두 곳» 만 껐다가 겪은 일과 같은 자리입니다.
+        //   ⚠️ 그 숫자는 손님이 아무리 더해도 «맞지 않습니다» (바닥 15%·층별 평균).
         ['1-2 네 축의 사주 근거', mbti.axes.map(a =>
-          `${a.left}/${a.right} — ${a.pick} (${a.leftPct}:${100 - a.leftPct}) · 근거 ${a.why} · 일할 때: ${AXIS_WORK[a.pick] ?? ''}`)],
+          `${a.left}/${a.right} — ${a.pick} · 근거 ${a.why} · 일할 때: ${AXIS_WORK[a.pick] ?? ''}`)],
       ],
     },
     {
