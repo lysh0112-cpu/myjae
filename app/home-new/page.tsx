@@ -527,9 +527,9 @@ export default function HomeNew() {
           ⚠️ 개인정보처리방침은 결제를 붙이시기 전에 «법으로» 필요합니다.
              지금은 어디에도 없습니다. 그때 다시 여쭙겠습니다.
           ═══════════════════════════════════════════════════════════ */}
-      <footer style={{ background: '#f8f8f6', padding: '24px 20px', borderTop: '0.5px solid #e8e5de' }}>
+      <footer style={{ background: '#f8f8f6', padding: '20px 20px 12px', borderTop: '0.5px solid #e8e5de' }}>
         {/* 사업자 정보 */}
-        <div style={{ fontSize: '11px', color: '#888888', lineHeight: 1.8 }}>
+        <div style={{ fontSize: '11px', color: '#888888', lineHeight: 1.6 }}>
           <div>(주)명연재 <span style={{ color: '#ccc' }}>|</span> 대표 오연희</div>
           <div>사업자등록번호 000-00-00000</div>
           <div>서울시 강북구 솔매로45길 95, 201호</div>
@@ -538,8 +538,8 @@ export default function HomeNew() {
         {/* 고객센터 — ★이름과 메일을 «한 줄» 로 (대표님 지시)
             ⚠️ flexWrap 이 있어야 좁은 화면에서 메일이 «잘리지 않고» 아랫줄로 갑니다 */}
         <div style={{
-          marginTop: '14px', fontSize: '11px', color: '#888888', lineHeight: 1.8,
-          display: 'flex', gap: '8px', alignItems: 'baseline', flexWrap: 'wrap',
+          marginTop: '6px', fontSize: '11px', color: '#888888', lineHeight: 1.6,
+          display: 'flex', gap: '6px', alignItems: 'baseline', flexWrap: 'wrap',
         }}>
           <strong style={{ color: '#444444', fontWeight: 600, flex: 'none' }}>고객센터</strong>
           <a href="mailto:lysh6728@naver.com" style={{ color: '#888888', textDecoration: 'none' }}>
@@ -547,9 +547,12 @@ export default function HomeNew() {
           </a>
         </div>
 
-        {/* 카피라이트 */}
+        {/* 카피라이트
+            ⚠️ 글자는 ★11px «그대로» 입니다 — 10 으로 내리지 마십시오.
+               어르신 손님이 읽기 어렵습니다. (대표님과 앞서 정한 것)
+            ⚠️ 아래 여백 12 밑으로 줄이지 마십시오 — 하단바 선에 «닿아» 보입니다. */}
         <div style={{
-          marginTop: '20px', paddingTop: '12px',
+          marginTop: '8px', paddingTop: '8px',
           borderTop: '0.5px solid #eeeeee',
           fontSize: '11px', color: '#aaaaaa',
         }}>
