@@ -125,8 +125,19 @@ export function buildCareerPrompt(v: CareerPromptInput): string {
   const have = new Set(v.cards.map(c => c.key))
   // ★학업 대목을 안 낼 신분이면 계획에서 **통째로 뺍니다.**
   //   카드가 비어 있어도 계획에 남아 있으면 AI 가 «학과 이야기를 써야 하나» 하고 헤맵니다.
+  //
+  // 🔴⚠️ 2026-08-03 (44부 45차) — ★«반대쪽» 도 빼야 했습니다.
+  //   [무엇이 있었나]  「계열과 학과」(성인에게 안 냄)만 빼고 있었고,
+  //     ★「핵심 직무」·「잘 맞는 직무 & 조직 성향」(학생에게 안 냄)은 «안 뺐습니다».
+  //     ⇒ 중·고등학생 리포트에 ★직장 이야기가 그대로 나갔습니다.
+  //       (2026-08-03 대표님 확인 — 14세 손님 통변에 「이직·조직 성향」이 있었습니다)
+  //   ⚠️ judgeRoleFit·judgeJobFit 은 학생이면 «빈 카드» 를 돌려줍니다.
+  //      그런데 plan 은 have(열쇠)로만 골라, ★빈 카드도 «대목으로 시켰습니다».
+  //   ★lines 가 빈 카드는 계획에서 뺍니다 — 화면이 안 그리는 것을 AI 도 안 씁니다.
+  const emptyKeys = new Set(v.cards.filter(c => c.lines.length === 0).map(c => c.key))
   const plan = ORDER
     .filter(o => have.has(o.key))
+    .filter(o => !emptyKeys.has(o.key))
     .filter(o => academic || o.key !== 'gyeyeol')
 
   const myeongsik = v.saju
