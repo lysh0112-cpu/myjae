@@ -1610,7 +1610,9 @@ console.log('\n━━ (52) 🔴★「사주로 본 성향」은 MBTI 를 넣은 
   const dlg = noComment(read('app/manseryeok/components/MbtiAskDialog.tsx'))
 
   // 🔴 화면 — 안 넣으면 카드가 «통째로» 안 나오는가
-  check(/g\.label === '타고난 결' && sajuMbti && realMbti && mbtiCmp && \(/.test(page),
+  // ⚠️ 44부 40차에 묶음 이름이 「타고난 결」→「핵심 에너지와 성향」으로 바뀌었습니다.
+  //    ★재는 것은 그대로입니다 — 「MBTI 를 넣으신 분만 보는가」.
+  check(/sajuMbti && realMbti && mbtiCmp && \(/.test(page),
     `🔴★MBTI 를 넣으신 분만 카드를 봅니다`)
 
   // ⚠️⚠️ 재료에서도 1·2번 대목이 빠지는가 — 화면만 숨기면 AI 글이 «허공을 가리킵니다»
@@ -1673,8 +1675,15 @@ console.log('\n━━ (53) ★진로적성 A4 인쇄 · 해설 복사 (44부 36�
   //   «쓰다 만 글» 이 종이에 박혔습니다. 대표님 PDF 가 문장 가운데서 끊겼습니다.
   //   ⇒ 이제 «완료» 를 글자로 잽니다. 이 검사는 그때 «통과하고 있었습니다» —
   //     조건을 안 보고 「그 언저리에 onPrintCert 가 있는가」만 봤기 때문입니다.
-  check(/\{tongState === 'done' && premiumSections\.length > 0 && \(/.test(page),
+  // 🔴⚠️ 2026-08-03 (44부 41차) — 버튼이 premiumSections 에 매여 있어,
+  //   프리미엄을 끄자 ★영영 안 떴습니다. 이제 «통변» 에 맵니다.
+  //   ⚠️ 재는 것은 그대로입니다 — 「다 나온 뒤에만 뜨는가」.
+  check(/\{tongState === 'done' && !!tong && \(/.test(page),
     `🔴★통변이 «다 나온 뒤» 에만 보입니다 (반쪽 인쇄물을 막습니다)`)
+  check(!/\{tongState === 'done' && premiumSections/.test(page),
+    `⚠️ 버튼이 «프리미엄» 에 매여 있지 않습니다 (꺼도 떠야 합니다)`)
+  check(/premiumSections\.length[\s\S]{0,200}tongByKey\[c\.key\]/.test(page),
+    `★프리미엄이 꺼지면 A4 가 «카드별 통변» 을 담습니다 (빈 종이를 막습니다)`)
   // 🔴 신분이 «영문 그대로» 나가지 않는가 — 「worker · 성인」이 찍혔습니다
   check(/STATUS_LABEL\[status\]/.test(page), `🔴★신분을 «한글 이름표» 로 씁니다`)
   // ★표 — 화면에 있는 것이 종이에도 있는가
@@ -1688,8 +1697,9 @@ console.log('\n━━ (53) ★진로적성 A4 인쇄 · 해설 복사 (44부 36�
   //     저장된 기록을 열면 ★프리미엄 글이 카드형으로 그려지고 A4 버튼도 안 떴습니다.
   // ⛔ 잣대를 «화면» 에 둡니다 — AI 재료 파일은 손대지 않기로 했습니다 (44부 39차)
   check(/const PREMIUM_TITLES = \[/.test(page), `★저장본이 프리미엄인지 가리는 제목 목록이 있습니다`)
-  check(/setIsPremiumTong\(PREMIUM_TITLES\.some/.test(page),
-    `🔴★다시보기로 열어도 프리미엄으로 알아봅니다`)
+  // ⚠️ 40차에 CAREER_PREMIUM 로 한 번 더 가립니다 — 껐으면 다시보기도 카드형입니다.
+  check(/setIsPremiumTong\(CAREER_PREMIUM/.test(page) && /PREMIUM_TITLES\.some/.test(page),
+    `🔴★다시보기로 열어도 프리미엄으로 알아봅니다 (켜져 있을 때)`)
   check(/그 파일의 제목을 고치시면 여기도 함께 고치십시오/.test(read('app/manseryeok/career-result/page.tsx')),
     `⚠️ 제목을 고치면 이 목록도 함께 고치라고 일러 둡니다`)
   check(/flexDirection: 'row', gap: 8[\s\S]{0,60}alignItems: 'stretch'/.test(page),
@@ -1698,6 +1708,62 @@ console.log('\n━━ (53) ★진로적성 A4 인쇄 · 해설 복사 (44부 36�
     `⚠️ 공용 부품(CopyTextButton)을 «고치지 않고» 감싼 자리에서 너비를 맞춥니다`)
   // ⚠️ 값을 다시 계산하지 «않는가» (교훈 CJ)
   check(/sections: premiumSections/.test(page), `⚠️ 화면이 쓰는 대목을 «그대로» 넘깁니다`)
+}
+
+console.log('\n━━ (54) ★진로적성 — 다섯 단계 한 벌로 통일 (44부 40차) ━━')
+{
+  const noComment = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  const page = noComment(read('app/manseryeok/career-result/page.tsx'))
+  const prompt = noComment(read('lib/saju/career/buildCareerPrompt.ts'))
+  const sc = noComment(read('lib/saju/career/strengthCards.ts'))
+
+  // ⛔ 프리미엄 리포트를 «껐는가» — 대표님 지시
+  check(/const CAREER_PREMIUM = false/.test(page), `⛔★진로적성에서 프리미엄 리포트를 껐습니다`)
+  check(/CAREER_PREMIUM && isPremium\(\)/.test(page), `★끄는 곳이 «한 곳» 입니다`)
+  // ⚠️ «지운» 것이 아니라 «감춘» 것인가 — 되살릴 길
+  check(/buildCareerMbtiPrompt/.test(page) && /premiumSections/.test(page),
+    `⚠️ 리포트 코드는 «그대로» 있습니다 (지운 것이 아닙니다)`)
+  check(/되살리시려면 이 한 줄을 true/.test(read('app/manseryeok/career-result/page.tsx')),
+    `⚠️ 되살리는 법이 적혀 있습니다`)
+  // ⚠️ 궁합·사주까지 끄지 «않았는가»
+  check(!/PREMIUM_FOR_ALL = false/.test(read('lib/saju/premium/config.ts')),
+    `⚠️ config 는 «안 건드렸습니다» — 궁합·사주는 그대로입니다`)
+
+  // ★새 카드 셋
+  check(/export function judgeStrength/.test(sc) && /export function judgeLeadWealth/.test(sc)
+     && /export function judgeCareerLuck/.test(sc), `★새 카드 셋이 있습니다`)
+  check(/judgeStrength\(sIn\), judgeLeadWealth\(sIn\), judgeCareerLuck\(sIn\)/.test(page),
+    `★화면이 새 카드 셋을 만듭니다`)
+  // ⚠️ 값을 «새로 계산하지» 않는가 (교훈 CJ)
+  check(/import \{ buildDeep, judgeWealthStyle, flagCareerDaeun \}/.test(sc),
+    `⚠️ deepJudge 의 값을 «부르기만» 합니다 (두 벌로 세지 않습니다)`)
+  // ⚠️ 조사를 josa.ts 로 붙이는가 (교훈 AU)
+  check(/import \{ iga, eunneun \}/.test(sc), `⚠️ 조사를 josa.ts 로 붙입니다`)
+  check(!/이\(가\)|은\(는\)/.test(sc), `⚠️ 「이(가)」·「은(는)」이 글로 나가지 않습니다`)
+
+  // ★다섯 묶음 · ORDER 와 «같은 차례» 인가 (교훈 AS)
+  const gm = page.match(/const GROUPS[\s\S]*?\n\]/)?.[0] ?? ''
+  const gKeys = [...gm.matchAll(/'([a-z_]+)'/g)].map(m => m[1])
+  const om = prompt.match(/const ORDER[\s\S]*?\n\]/)?.[0] ?? ''
+  const oKeys = [...om.matchAll(/key: '([a-z_]+)'/g)].map(m => m[1])
+  check(gKeys.length === 15 && oKeys.length === 15,
+    `★카드가 «열다섯» 입니다 (화면 ${gKeys.length} · 통변 ${oKeys.length})`)
+  check(gKeys.join(',') === oKeys.join(','),
+    `🔴★화면 차례와 통변 차례가 «같습니다» (교훈 AS)`)
+  check(gKeys[0] === 'ohaeng_gijil' && gKeys[gKeys.length - 1] === 'special',
+    `★오행으로 열고 「한 번 더 볼 점」으로 닫습니다 (순서도 1→5단계)`)
+  check(/'강점과 행동 패턴'/.test(page) && /'운세와 개운'/.test(page)
+     && /'종합과 한 번 더 볼 점'/.test(page), `★묶음 이름이 순서도 다섯 단계입니다`)
+
+  // ⚠️ 묶음 이름을 바꿀 때 MBTI 카드가 «떨어지지» 않았는가
+  check(/g\.label === '핵심 에너지와 성향' && sajuMbti/.test(page),
+    `⚠️ 「사주로 본 성향」 카드가 1단계에 붙습니다`)
+
+  // ★표는 그 말 «바로 뒤» 인가
+  check(/ohaeng_gijil: \{ kinds: \['ohaeng', 'sipsung'\]/.test(page), `★오행·십성 표는 오행 이야기 뒤`)
+  check(/yukchin: \{ kinds: \['singang'\]/.test(page), `★신강 표는 육친 이야기 뒤`)
+  check(/yongsin: \{ kinds: \['yongsin'\]/.test(page), `★용신 표는 용신 이야기 뒤`)
 }
 
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')

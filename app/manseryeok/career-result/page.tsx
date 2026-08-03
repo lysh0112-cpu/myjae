@@ -34,6 +34,8 @@ import MbtiCard from './components/MbtiCard'
 // ★2026-07-29 — 프리미엄 진로적성&MBTI 리포트 (모듈2)
 import { buildCareerMbtiPrompt } from '@/lib/saju/premium/buildCareerMbtiPrompt'
 import { isPremium } from '@/lib/saju/premium/config'
+// ★44부 40차 — 프리미엄 리포트에만 있던 이야기 셋을 카드로
+import { judgeStrength, judgeLeadWealth, judgeCareerLuck } from '@/lib/saju/career/strengthCards'
 import { openCareerCertificate } from './components/CareerCertificate'
 import CopyTextButton from '@/app/components/common/CopyTextButton'
 import { elOfStem, elOfBranch } from '@/lib/saju/ohaengColor'
@@ -71,6 +73,18 @@ const TABLE_AFTER: Record<string, { kinds: SajuTableKind[]; caption: string }> =
 }
 
 /**
+ * ⛔★진로적성에서 프리미엄 리포트를 낼 것인가 (44부 40차)
+ *
+ *  ★2026-08-03 대표님 지시 — 「프리미엄은 «궁합» 을 그렇게 만들라고 한 것.
+ *    진로적성은 일단 ★숨겨 줘. ★삭제가 아니야」
+ *
+ *  ⚠️ false 이면 예전처럼 «판정 카드 + 카드별 통변» 만 나옵니다.
+ *     ★되살리시려면 이 한 줄을 true 로 두십시오. 지운 것은 하나도 없습니다.
+ *  ⚠️ lib/saju/premium/config.ts 를 끄면 ★궁합·사주까지 꺼집니다. 여기서만 가립니다.
+ */
+const CAREER_PREMIUM = false
+
+/**
  * ★프리미엄 리포트인지 가리는 제목들 (44부 38차)
  *
  *  🔴 [까닭]  「다시보기」로 열면 isPremiumTong 이 «거짓으로 남아»
@@ -85,14 +99,24 @@ const PREMIUM_TITLES = [
   '강점지능과행동패턴', '직무&커리어전략', '리더십과재물운용', '커리어발복대운과개운',
 ]
 
-/** 화면 묶음 — 통변 순서와 1:1 로 맞춘다. (교훈 AS) */
+/**
+ * 화면 묶음 — 통변 순서와 1:1 로 맞춘다. (교훈 AS)
+ *
+ *  ★2026-08-03 (44부 40차) — 대표님 「사주명리 진로적성 통합 순서도」에 맞춰
+ *    ★다섯 묶음으로 전면 개편했습니다.
+ *  ⚠️ buildCareerPrompt.ts 의 ORDER 와 «같은 차례» 라야 합니다.
+ *     한쪽만 고치면 통변이 엉뚱한 카드에 붙습니다. ★검사 그물이 둘을 맞대어 봅니다.
+ */
 const GROUPS: Array<{ label: string; keys: string[] }> = [
-  { label: '', keys: ['special'] },                       // 경고는 맨 위, 제목 없이
-  { label: '타고난 결', keys: ['ohaeng_gijil', 'yukchin', 'ilju'] },
-  { label: '그릇과 자리', keys: ['gyeokguk', 'sinsal', 'yongsin'] },
-  // ★성인은 jobfit·rolefit 이 메인, 학생은 gyeyeol·jobs 가 메인.
+  { label: '핵심 에너지와 성향', keys: ['ohaeng_gijil', 'yukchin', 'ilju'] },
+  // ★44부 40차 신설 — 프리미엄 리포트에만 있던 이야기를 카드로 옮겼습니다
+  { label: '강점과 행동 패턴', keys: ['strength', 'leadwealth'] },
+  // ★성인은 rolefit·jobfit 이, 학생은 gyeyeol 이 나옵니다.
   //   해당 없는 카드는 빈 카드로 와서 아래 렌더에서 걸러집니다.
-  { label: '어울리는 자리', keys: ['jobfit', 'rolefit', 'gyeyeol', 'jobstruct', 'jobs'] },
+  { label: '진로와 커리어 전략', keys: ['rolefit', 'jobfit', 'gyeyeol'] },
+  { label: '운세와 개운', keys: ['yongsin', 'careerluck'] },
+  // ⚠️ 「한 번 더 볼 점」은 ★맨 아래입니다 — 경고부터 보여 드리지 않습니다
+  { label: '종합과 한 번 더 볼 점', keys: ['gyeokguk', 'sinsal', 'jobstruct', 'jobs', 'special'] },
 ]
 
 function CareerResultInner() {
@@ -181,8 +205,25 @@ function CareerResultInner() {
       //   ⚠️ 교재 표는 안 고쳤습니다. 성인 출력만 바꾼 것입니다. (roleFit 머리말)
       judgeRoleFit(input),
       judgeJobs(input),
+      // ★2026-08-03 (44부 40차) — 프리미엄 리포트에만 있던 이야기 셋을 카드로.
+      //   ⚠️ 값을 «새로 계산하지 않습니다» — deepJudge 의 것을 부르기만 합니다 (교훈 CJ)
+      //   ⚠️⚠️ 대운 목록은 «여기서 안 만듭니다» —
+      //      calcDayunList 가 비동기(절기 조회)라 useMemo 안에서 부를 수 없습니다.
+      //      ★프리미엄 리포트도 대운을 안 넘기고 있었습니다(같은 까닭).
+      //      ⇒ 「발복 대운과 개운」은 «개운» 쪽만 나옵니다. ★없는 대운을 지어내지 않습니다.
+      //      대운까지 담으려면 화면이 먼저 대운을 불러 두어야 합니다 — 다음 차수 일입니다.
+      ...(dayStem && dayStem !== '?' ? (() => {
+        const score = calcSimsanOhaeng(calc.saju, calc.solarMonth, calc.solarDay, calc.hourBranch)
+        const ys = calcYongsinNew(calc.saju, dayStem, score)
+        const sIn = {
+          saju: calc.saju, dayStem, score,
+          age: ageOf(person.year) ?? 30, target,
+          yongsin: ys?.eokbu ?? null,
+        }
+        return [judgeStrength(sIn), judgeLeadWealth(sIn), judgeCareerLuck(sIn)]
+      })() : []),
     ].filter(Boolean) as CareerCard[]
-  }, [calc, target])
+  }, [calc, target, dayStem, person.year])
 
   // ★사주 추정 MBTI — 카드 판정과 별개로 한 번만 잰다
   const sajuMbti = useMemo(
@@ -228,7 +269,24 @@ function CareerResultInner() {
       const age = ageOf(person.year) ?? 30
       const score = calcSimsanOhaeng(calc.saju, calc.solarMonth, calc.solarDay, calc.hourBranch)
       const dayStem = calc.saju.find(p => p.pillar === '일주')?.stem ?? ''
-      const prem = isPremium() && !!dayStem && dayStem !== '?'
+      // ══════════════════════════════════════════════════════════
+      //  ⛔★2026-08-03 (44부 40차) — 진로적성에서 프리미엄 리포트를 «껐습니다».
+      //     대표님 지시 — 「프리미엄은 «궁합» 을 그렇게 만들라고 한 것이다.
+      //                   일단은 ★숨겨 줘. 삭제가 아니야」
+      //
+      //   [무엇이 문제였나]  프리미엄 리포트 여섯 대목과 판정 카드 열둘이
+      //     ★«같은 이야기를 두 번» 했습니다 —
+      //       리포트 「직무 & 커리어 전략」 ↔ 카드 「잘 맞는 직무」·「어울리는 직업」
+      //       리포트 「강점 지능과 행동 패턴」 ↔ 카드 「타고난 오행의 결」·「육친이 …」
+      //     2026-07-29 에 리포트를 «얹으면서» 판정 카드를 그대로 두어 생긴 일입니다.
+      //
+      //  ⚠️⚠️ ★«지운» 것이 아니라 «감춘» 것입니다 —
+      //     buildCareerMbtiPrompt · premiumSections · PREMIUM_TITLES 모두 «그대로» 있습니다.
+      //     ★되살리려면 아래 CAREER_PREMIUM 을 true 로 두기만 하면 됩니다.
+      //  ⚠️ lib/saju/premium/config.ts 는 «건드리지 않았습니다» —
+      //     그것을 끄면 ★궁합·사주까지 함께 꺼집니다. 진로적성만 여기서 가립니다.
+      // ══════════════════════════════════════════════════════════
+      const prem = CAREER_PREMIUM && isPremium() && !!dayStem && dayStem !== '?'
         ? buildCareerMbtiPrompt({
             name: person.name, gender: person.gender, age,
             saju: calc.saju, dayStem, score,
@@ -321,7 +379,10 @@ function CareerResultInner() {
           //   ⇒ 저장된 글이 «프리미엄 꼴» 인지 보고 정합니다.
           //   ⚠️ 저장본에는 「프리미엄이었는지」가 안 적혀 있어 «글의 모양» 으로 가립니다 —
           //      ★대목 «제목» 으로 가립니다 — 제목은 buildCareerMbtiPrompt 가 정합니다.
-          setIsPremiumTong(PREMIUM_TITLES.some(x => t.replace(/\s/g, '').includes(x)))
+          // ⛔ 진로적성 프리미엄을 껐으므로(44부 40차) 저장된 옛 프리미엄 글도
+          //    «카드형» 으로 그립니다. ★되살리면 이 줄이 함께 살아납니다.
+          setIsPremiumTong(CAREER_PREMIUM
+            && PREMIUM_TITLES.some(x => t.replace(/\s/g, '').includes(x)))
         }
       }),
     ).catch(e => console.error('저장된 풀이 불러오기 실패', e))
@@ -382,7 +443,14 @@ function CareerResultInner() {
           branchEl: elOfBranch(q?.branch ?? '') ?? '토',
         }
       }),
-      sections: premiumSections,
+      // ⚠️ 2026-08-03 (44부 41차) — 프리미엄이 꺼지면 premiumSections 가 «빕니다».
+      //    ★그러면 «빈 종이» 가 나갑니다. 카드별 통변을 담습니다.
+      //    ⚠️ 값을 «다시 계산하지 않습니다» — 화면이 쓰는 것을 그대로 씁니다 (교훈 CJ)
+      sections: premiumSections.length
+        ? premiumSections
+        : cards
+            .filter(c => c.lines.length > 0 && tongByKey[c.key])
+            .map(c => ({ title: c.title, body: tongByKey[c.key] })),
       // ★판정 카드도 «모두» 담습니다 (2026-08-03 대표님 확정)
       cards: cards
         .filter(c => c.lines.length > 0)
@@ -638,7 +706,10 @@ function CareerResultInner() {
                          (44부 1-3 교훈 — 연표가 자식운 카드에 들어갔던 자리)
                       ⚠️ 되살리려면 realMbti 조건만 떼면 됩니다. 카드는 그대로 있습니다.
                       ══════════════════════════════════════════════════════ */}
-                  {g.label === '타고난 결' && sajuMbti && realMbti && mbtiCmp && (
+                  {/* ⚠️ 2026-08-03 (44부 40차) — 묶음 이름이 「타고난 결」에서
+                      「핵심 에너지와 성향」으로 바뀌었습니다. ★여기도 함께 고쳐야
+                      카드가 붙습니다. 한쪽만 고치면 «어디에도 안 붙습니다». */}
+                  {g.label === '핵심 에너지와 성향' && sajuMbti && realMbti && mbtiCmp && (
                     <MbtiCard
                       result={sajuMbti}
                       realMbti={realMbti}
@@ -688,7 +759,11 @@ function CareerResultInner() {
                   대표님이 뽑으신 PDF 가 「회의·발표·현장처럼 사」에서 끊겼습니다.
                 ⚠️ 44부 23차 궁합서는 이 조건을 «제대로» 걸고 있었는데,
                    제가 옮기며 빠뜨렸습니다. 검사 그물에도 「다 나온 뒤」라 적어 놓고서요. */}
-            {tongState === 'done' && premiumSections.length > 0 && (
+            {/* 🔴⚠️ 2026-08-03 (44부 41차) — 버튼이 ★premiumSections 에 매여 있었습니다.
+                40차에 프리미엄을 끄자 그 배열이 «언제나 빈» 것이 되어
+                ★A4·해설복사 버튼이 «영영 안 떴습니다». 36차에 만든 것을 40차가 죽인 셈입니다.
+                ⇒ 「★통변이 다 나왔는가」로 답니다. 프리미엄과 무관합니다. */}
+            {tongState === 'done' && !!tong && (
               <>
                 <div style={{
                   display: 'flex', flexDirection: 'row', gap: 8,
