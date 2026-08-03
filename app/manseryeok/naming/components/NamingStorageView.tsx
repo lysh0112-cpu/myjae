@@ -36,6 +36,7 @@ import {
 import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
 import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 import { surnameOfHangul } from '@/lib/saju/surname'
+import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
 
 // ══════════════════════════════════════════════════════════════════
 //  ★2026-08-01 — 보관함에 «풀이» 와 «작명» 을 가르는 탭을 넣습니다
@@ -440,50 +441,13 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
 
       {/* 삭제 확인 팝업 */}
       {confirmDel && (
-        <div
-          onClick={() => !deleting && setConfirmDel(null)}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 50,
-            background: 'rgba(40,28,22,0.35)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-          }}>
-          <div onClick={(e) => e.stopPropagation()}
-            style={{
-              width: '100%', maxWidth: 320, background: '#FFFBF7',
-              borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
-              boxShadow: '0 8px 30px rgba(90,50,30,0.2)',
-            }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a', marginBottom: 8 }}>
-              정말 삭제할까요?
-            </div>
-            <div style={{ fontSize: 13, color: '#96502e', lineHeight: 1.5, marginBottom: 18 }}>
-              &lsquo;{confirmDel.hangulName || confirmDel.hanjaName}&rsquo; 이름 풀이를 삭제해요.<br />
-              삭제하면 되돌릴 수 없어요.
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => setConfirmDel(null)}
-                disabled={deleting}
-                style={{
-                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
-                  background: '#f3e6db', border: 'none', color: '#96502e',
-                  cursor: deleting ? 'default' : 'pointer',
-                }}>
-                취소
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                style={{
-                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
-                  background: deleting ? '#d99' : '#c8506e', border: 'none', color: '#fff',
-                  cursor: deleting ? 'default' : 'pointer',
-                }}>
-                {deleting ? '삭제 중…' : '삭제'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDeleteDialog
+          open
+          message={<>&lsquo;{confirmDel.hangulName || confirmDel.hanjaName}&rsquo; 이름 풀이를 삭제해요.</>}
+          busy={deleting}
+          onCancel={() => setConfirmDel(null)}
+          onConfirm={handleDelete}
+        />
       )}
 
       {/* 누구 이름을 볼까요? — 나 / 가족·지인 / 새 사람 선택 (사주 보관함과 동일 모달) */}

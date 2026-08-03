@@ -36,6 +36,7 @@ import {
   type SavedPerson, type PersonDraft,
 } from '@/lib/saju/savedPeople'
 import PersonFormPitch from './PersonFormPitch'
+import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
 
 // ── 피치톤 색 ──
 const C = {
@@ -388,20 +389,13 @@ export default function PersonPickerModal({
 
       {/* 삭제 확인 */}
       {confirmDel && (
-        <div onClick={() => setConfirmDel(null)}
-          style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 20 }}>
-          <div onClick={e => e.stopPropagation()}
-            style={{ background: '#fff', borderRadius: 16, padding: '22px 20px', width: 260, textAlign: 'center' }}>
-            <div style={{ fontSize: 15, fontWeight: 500, color: C.title, marginBottom: 6 }}>삭제할까요?</div>
-            <div style={{ fontSize: 12, color: C.sub, marginBottom: 18, lineHeight: 1.6 }}>&quot;{confirmDel.title}&quot;을(를) 목록에서 지워요.<br />되돌릴 수 없어요.</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setConfirmDel(null)}
-                style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: `0.5px solid ${C.searchBorder}`, background: 'none', color: C.sub, fontSize: 13, cursor: 'pointer' }}>취소</button>
-              <button onClick={() => handleDelete(confirmDel)}
-                style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', background: C.danger, color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>삭제</button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDeleteDialog
+          open
+          contained
+          message={<>&lsquo;{confirmDel.title}&rsquo;을(를) 목록에서 삭제해요.</>}
+          onCancel={() => setConfirmDel(null)}
+          onConfirm={() => handleDelete(confirmDel)}
+        />
       )}
     </Overlay>
   )

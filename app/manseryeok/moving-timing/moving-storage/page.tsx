@@ -19,6 +19,7 @@ import {
   type MovingRecord,
 } from '@/lib/saju/movingRecords'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
+import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
 
 const accent = '#967850'
 const line = '#EAE0CE'
@@ -200,51 +201,13 @@ function MovingStorageInner() {
       </div>
 
       {confirmDel && (
-        <div
-          onClick={() => !deleting && setConfirmDel(null)}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 50,
-            background: 'rgba(40,32,24,0.35)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
-          }}>
-          <div onClick={e => e.stopPropagation()}
-            style={{
-              width: '100%', maxWidth: 320, background: '#FFFDF9',
-              borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
-              boxShadow: '0 8px 30px rgba(90,70,40,0.2)',
-            }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: ink, marginBottom: 8 }}>
-              정말 삭제할까요?
-            </div>
-            <div style={{ fontSize: 13, color: '#7A6440', lineHeight: 1.5, marginBottom: 18 }}>
-              {confirmDel.name1}{confirmDel.name2 ? ` · ${confirmDel.name2}` : ''}
-              {' '}이사택일을 삭제해요.<br />
-              삭제하면 되돌릴 수 없어요.
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => setConfirmDel(null)}
-                disabled={deleting}
-                style={{
-                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
-                  background: '#F0EADA', border: 'none', color: '#7A6440',
-                  cursor: deleting ? 'default' : 'pointer', fontFamily: 'inherit',
-                }}>
-                취소
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                style={{
-                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
-                  background: deleting ? '#d99' : '#c8506e', border: 'none', color: '#fff',
-                  cursor: deleting ? 'default' : 'pointer', fontFamily: 'inherit',
-                }}>
-                {deleting ? '삭제 중…' : '삭제'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDeleteDialog
+          open
+          message={<>{confirmDel.name1}{confirmDel.name2 ? ` · ${confirmDel.name2}` : ''} 이사택일을 삭제해요.</>}
+          busy={deleting}
+          onCancel={() => setConfirmDel(null)}
+          onConfirm={handleDelete}
+        />
       )}
 
     </main>

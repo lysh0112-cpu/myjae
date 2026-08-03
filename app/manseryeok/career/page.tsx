@@ -20,6 +20,7 @@ import {
 } from '@/lib/saju/sajuRecords'
 import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
 import { toResultQuery, type SavedPerson, type SavedInputData } from '@/lib/saju/savedPeople'
+import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
 
 const ACCENT = '#785aaa'      // 진로적성 색 (홈 서비스 목록과 같은 보라)
 const BG = '#FDF6F0'
@@ -149,31 +150,13 @@ function CareerStorageInner() {
       />
 
       {confirmDel && (
-        <div onClick={() => !deleting && setConfirmDel(null)}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(60,40,30,0.35)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 24,
-          }}>
-          <div onClick={e => e.stopPropagation()}
-            style={{ background: CARD, borderRadius: 16, padding: '22px 20px', maxWidth: 300, width: '100%' }}>
-            <div style={{ fontSize: 14.5, fontWeight: 500, color: '#3a2e28', marginBottom: 6 }}>
-              이 기록을 지울까요?
-            </div>
-            <div style={{ fontSize: 12.5, color: '#5c3a1e', lineHeight: 1.6, marginBottom: 18 }}>
-              {confirmDel.title || '이름 없음'} · 지우면 되돌릴 수 없어요.
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setConfirmDel(null)} disabled={deleting}
-                style={{ flex: 1, padding: 11, borderRadius: 10, background: '#faf3ee', border: `0.5px solid ${LINE}`, color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>
-                그대로 둘게요
-              </button>
-              <button onClick={handleDelete} disabled={deleting}
-                style={{ flex: 1, padding: 11, borderRadius: 10, background: '#c05a5a', border: 'none', color: '#fff', fontSize: 13, cursor: 'pointer' }}>
-                {deleting ? '지우는 중…' : '지울게요'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDeleteDialog
+          open
+          message={<>{confirmDel.title || '이름 없음'}의 진로적성 기록을 삭제해요.</>}
+          busy={deleting}
+          onCancel={() => setConfirmDel(null)}
+          onConfirm={handleDelete}
+        />
       )}
     </main>
   )

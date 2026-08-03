@@ -1196,6 +1196,59 @@ console.log('\n━━ ㊸ ★오행 그래프 «가운데 0» · A4 궁합서 (4
     `⚠️ 통변이 «다 나온 뒤» 에만 버튼이 보입니다 (반쪽 궁합서를 막습니다)`)
 }
 
+console.log('\n━━ ㊹ ★삭제 확인 팝업 — «한 부품» 으로 통일했는가 (44부 25차) ━━')
+{
+  // ⚠️ 교훈 1-1 — 낱말로 소스를 훑으면 «제 주석» 까지 걸립니다.
+  //    ★주석을 «먼저 지우고» 봅니다.
+  const noComment = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+
+  const DLG = 'app/components/common/ConfirmDeleteDialog.tsx'
+  const dlg = noComment(read(DLG))
+
+  // ★말투가 «한 곳» 에 모여 있는가
+  check(/TITLE = '정말 삭제할까요\?'/.test(dlg), `★제목이 「정말 삭제할까요?」 한 곳에 있습니다`)
+  check(/WARN = '삭제하면 되돌릴 수 없어요\.'/.test(dlg), `★「삭제하면 되돌릴 수 없어요.」를 부품이 «언제나» 붙입니다`)
+  check(/CANCEL_LABEL = '취소'/.test(dlg) && /CONFIRM_LABEL = '삭제'/.test(dlg),
+    `★버튼은 «취소·삭제» 입니다`)
+  check(/BUSY_LABEL = '삭제 중…'/.test(dlg), `★지우는 동안 「삭제 중…」 으로 잠깁니다`)
+  check(/contained/.test(dlg), `★모달 «안» 에서도 쓸 수 있습니다 (인물 고르기)`)
+
+  // ★열한 화면이 «모두» 그 부품을 부르는가
+  const SCREENS = [
+    'app/manseryeok/couple-storage/page.tsx',
+    'app/manseryeok/saju-storage/page.tsx',
+    'app/manseryeok/mulsang-storage/page.tsx',
+    'app/tarot/storage/page.tsx',
+    'app/manseryeok/naming/components/NamingStorageView.tsx',
+    'app/manseryeok/wedding-timing/wedding-storage/page.tsx',
+    'app/manseryeok/birth-timing/birth-storage/page.tsx',
+    'app/manseryeok/moving-timing/moving-storage/page.tsx',
+    'app/manseryeok/career/page.tsx',
+    'app/manseryeok/exam-luck/page.tsx',
+    'app/manseryeok/components/PersonPickerModal.tsx',
+  ]
+  const uses = SCREENS.filter(p => /<ConfirmDeleteDialog/.test(noComment(read(p))))
+  check(uses.length === SCREENS.length,
+    `★삭제 확인이 뜨는 «열한 화면» 이 모두 공용 팝업을 씁니다 (${uses.length}/${SCREENS.length})`)
+
+  // ⚠️⚠️ 어느 화면에도 «제 손으로 지은» 팝업이 남아 있지 않은가
+  //    ★이것이 갈래 넷으로 갈라졌던 까닭입니다. 한 곳이라도 남으면 다시 갈라집니다.
+  const OWN = /정말 삭제할까요|지울까요|되돌릴 수 없어요|그대로 둘게요|지울게요/
+  const leaked = SCREENS.filter(p => OWN.test(noComment(read(p))))
+  check(leaked.length === 0,
+    `⚠️ 화면이 «제 팝업 문구» 를 따로 들고 있지 «않습니다»${leaked.length ? ' — ' + leaked.join(', ') : ''}`)
+
+  // ⚠️ 옛 갈래 ②(「이 기록을 지울까요? / 그대로 둘게요·지울게요」)가 사라졌는가
+  check(!/그대로 둘게요/.test(noComment(read('app/manseryeok/career/page.tsx'))) &&
+        !/그대로 둘게요/.test(noComment(read('app/manseryeok/exam-luck/page.tsx'))),
+    `★진로적성·합격운의 «다른 말투» 가 사라졌습니다`)
+
+  // ⚠️ 부품이 «둘» 이 되지 않았는가 — 공용 부품 자리에 하나뿐이어야 합니다
+  const twins = SCREENS.filter(p => /position: (contained \? 'absolute' : )?'fixed', inset: 0, zIndex: 50/.test(noComment(read(p))) && OWN.test(noComment(read(p))))
+  check(twins.length === 0, `⚠️ 팝업을 «다시 지은» 화면이 없습니다`)
+}
+
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
 {
   const src = read('lib/saju/simsanOhaeng.ts')

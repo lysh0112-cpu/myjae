@@ -1,0 +1,916 @@
+diff --git a/32-verify-hour-convert.ts b/32-verify-hour-convert.ts
+index cdedc20..5e959b9 100644
+--- a/32-verify-hour-convert.ts
++++ b/32-verify-hour-convert.ts
+@@ -1196,6 +1196,59 @@ console.log('\n━━ ㊸ ★오행 그래프 «가운데 0» · A4 궁합서 (4
+     `⚠️ 통변이 «다 나온 뒤» 에만 버튼이 보입니다 (반쪽 궁합서를 막습니다)`)
+ }
+ 
++console.log('\n━━ ㊹ ★삭제 확인 팝업 — «한 부품» 으로 통일했는가 (44부 25차) ━━')
++{
++  // ⚠️ 교훈 1-1 — 낱말로 소스를 훑으면 «제 주석» 까지 걸립니다.
++  //    ★주석을 «먼저 지우고» 봅니다.
++  const noComment = (s: string) =>
++    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
++
++  const DLG = 'app/components/common/ConfirmDeleteDialog.tsx'
++  const dlg = noComment(read(DLG))
++
++  // ★말투가 «한 곳» 에 모여 있는가
++  check(/TITLE = '정말 삭제할까요\?'/.test(dlg), `★제목이 「정말 삭제할까요?」 한 곳에 있습니다`)
++  check(/WARN = '삭제하면 되돌릴 수 없어요\.'/.test(dlg), `★「삭제하면 되돌릴 수 없어요.」를 부품이 «언제나» 붙입니다`)
++  check(/CANCEL_LABEL = '취소'/.test(dlg) && /CONFIRM_LABEL = '삭제'/.test(dlg),
++    `★버튼은 «취소·삭제» 입니다`)
++  check(/BUSY_LABEL = '삭제 중…'/.test(dlg), `★지우는 동안 「삭제 중…」 으로 잠깁니다`)
++  check(/contained/.test(dlg), `★모달 «안» 에서도 쓸 수 있습니다 (인물 고르기)`)
++
++  // ★열한 화면이 «모두» 그 부품을 부르는가
++  const SCREENS = [
++    'app/manseryeok/couple-storage/page.tsx',
++    'app/manseryeok/saju-storage/page.tsx',
++    'app/manseryeok/mulsang-storage/page.tsx',
++    'app/tarot/storage/page.tsx',
++    'app/manseryeok/naming/components/NamingStorageView.tsx',
++    'app/manseryeok/wedding-timing/wedding-storage/page.tsx',
++    'app/manseryeok/birth-timing/birth-storage/page.tsx',
++    'app/manseryeok/moving-timing/moving-storage/page.tsx',
++    'app/manseryeok/career/page.tsx',
++    'app/manseryeok/exam-luck/page.tsx',
++    'app/manseryeok/components/PersonPickerModal.tsx',
++  ]
++  const uses = SCREENS.filter(p => /<ConfirmDeleteDialog/.test(noComment(read(p))))
++  check(uses.length === SCREENS.length,
++    `★삭제 확인이 뜨는 «열한 화면» 이 모두 공용 팝업을 씁니다 (${uses.length}/${SCREENS.length})`)
++
++  // ⚠️⚠️ 어느 화면에도 «제 손으로 지은» 팝업이 남아 있지 않은가
++  //    ★이것이 갈래 넷으로 갈라졌던 까닭입니다. 한 곳이라도 남으면 다시 갈라집니다.
++  const OWN = /정말 삭제할까요|지울까요|되돌릴 수 없어요|그대로 둘게요|지울게요/
++  const leaked = SCREENS.filter(p => OWN.test(noComment(read(p))))
++  check(leaked.length === 0,
++    `⚠️ 화면이 «제 팝업 문구» 를 따로 들고 있지 «않습니다»${leaked.length ? ' — ' + leaked.join(', ') : ''}`)
++
++  // ⚠️ 옛 갈래 ②(「이 기록을 지울까요? / 그대로 둘게요·지울게요」)가 사라졌는가
++  check(!/그대로 둘게요/.test(noComment(read('app/manseryeok/career/page.tsx'))) &&
++        !/그대로 둘게요/.test(noComment(read('app/manseryeok/exam-luck/page.tsx'))),
++    `★진로적성·합격운의 «다른 말투» 가 사라졌습니다`)
++
++  // ⚠️ 부품이 «둘» 이 되지 않았는가 — 공용 부품 자리에 하나뿐이어야 합니다
++  const twins = SCREENS.filter(p => /position: (contained \? 'absolute' : )?'fixed', inset: 0, zIndex: 50/.test(noComment(read(p))) && OWN.test(noComment(read(p))))
++  check(twins.length === 0, `⚠️ 팝업을 «다시 지은» 화면이 없습니다`)
++}
++
+ console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
+ {
+   const src = read('lib/saju/simsanOhaeng.ts')
+diff --git a/app/components/common/ConfirmDeleteDialog.tsx b/app/components/common/ConfirmDeleteDialog.tsx
+new file mode 100644
+index 0000000..7bbeb29
+--- /dev/null
++++ b/app/components/common/ConfirmDeleteDialog.tsx
+@@ -0,0 +1,141 @@
++'use client'
++
++/**
++ * ConfirmDeleteDialog — 보관함에서 «지울까요?» 를 묻는 공용 팝업.
++ * ─────────────────────────────────────────────────────────────
++ *  ★2026-08-03 신설 — 대표님 지시 「삭제 메시지 형식을 통일할 것」 (44부 25차)
++ *
++ * ══ 왜 공용 부품인가 ══
++ *   삭제 확인이 뜨는 자리가 열한 곳인데 팝업 코드가 «열한 벌 복사» 되어 있었고,
++ *   그래서 말투가 네 갈래로 갈라져 있었습니다 —
++ *
++ *     ① 「정말 삭제할까요? / 취소·삭제」          8곳  ← ★정본으로 삼았습니다
++ *     ② 「이 기록을 지울까요? / 그대로 둘게요·지울게요」 2곳 (진로적성·합격운)
++ *     ③ 「삭제할까요?」 260px 흰 팝업              1곳 (인물 고르기)
++ *     ④ 브라우저 기본 confirm() 창                6곳 (아직 그대로 — 8-2 참고)
++ *
++ *   ★①을 고른 까닭 — 여덟 곳이 이미 그 말투이고, ②는 두 곳이 «서로 베낀» 것입니다
++ *     (exam-luck 머리말에 「진로적성 보관함을 그대로 본떴다」고 적혀 있습니다).
++ *
++ * ⚠️ 말투를 바꾸시려면 «이 파일 한 곳» 만 고치십시오. 열한 화면이 함께 바뀝니다.
++ *    제목은 TITLE, 버튼 글자는 CANCEL_LABEL·CONFIRM_LABEL·BUSY_LABEL 입니다.
++ * ⚠️⚠️ 화면마다 이 팝업을 «다시 짓지 마십시오». 그렇게 해서 넷으로 갈라졌습니다.
++ *
++ * 쓰는 법:
++ *   <ConfirmDeleteDialog
++ *     open={!!confirmDel}
++ *     message={<>{confirmDel?.name1} ♥ {confirmDel?.name2} 궁합을 삭제해요.</>}
++ *     busy={deleting}
++ *     onCancel={() => setConfirmDel(null)}
++ *     onConfirm={handleDelete}
++ *   />
++ *
++ * ★message 는 «무엇을 지우는지» 한 줄만 씁니다.
++ *   「삭제하면 되돌릴 수 없어요.」 는 이 부품이 «언제나» 붙입니다. 따로 적지 마십시오.
++ */
++
++import { useEffect } from 'react'
++import type { ReactNode } from 'react'
++
++/* ══ 말투 — ★고치려면 여기만 ══ */
++const TITLE = '정말 삭제할까요?'
++const WARN = '삭제하면 되돌릴 수 없어요.'
++const CANCEL_LABEL = '취소'
++const CONFIRM_LABEL = '삭제'
++const BUSY_LABEL = '삭제 중…'
++
++/* ══ 꼴 — 갈래 ①(여덟 곳)의 값 그대로 ══ */
++const OVERLAY = 'rgba(40,28,22,0.35)'
++const CARD_BG = '#FFFBF7'
++const TITLE_C = '#3a2e28'
++const BODY_C = '#96502e'
++const CANCEL_BG = '#f3e6db'
++const CONFIRM_BG = '#c8506e'
++const CONFIRM_BUSY = '#d99'
++
++interface Props {
++  /** 열려 있는가 */
++  open: boolean
++  /**
++   * 무엇을 지우는지 한 줄.
++   * 없으면 「이 기록을 삭제해요.」 로 나갑니다.
++   */
++  message?: ReactNode
++  /** 지우는 중 — 버튼이 잠기고 「삭제 중…」 이 됩니다 */
++  busy?: boolean
++  onCancel: () => void
++  onConfirm: () => void
++  /**
++   * 다른 팝업 «안» 에서 열릴 때 true.
++   *   ⚠️ 인물 고르기(PersonPickerModal)처럼 이미 떠 있는 모달 위에 겹칠 때는
++   *      position:fixed 로 화면 전체를 덮으면 부모 모달의 둥근 모서리를 넘어갑니다.
++   *      그때만 absolute 로 «부모 안» 을 덮습니다.
++   */
++  contained?: boolean
++}
++
++export default function ConfirmDeleteDialog({
++  open, message, busy = false, onCancel, onConfirm, contained = false,
++}: Props) {
++  /* ★ESC 로도 닫힙니다 — 지우는 중에는 잠급니다 */
++  useEffect(() => {
++    if (!open) return
++    const onKey = (e: KeyboardEvent) => {
++      if (e.key === 'Escape' && !busy) onCancel()
++    }
++    window.addEventListener('keydown', onKey)
++    return () => window.removeEventListener('keydown', onKey)
++  }, [open, busy, onCancel])
++
++  if (!open) return null
++
++  return (
++    <div
++      onClick={() => !busy && onCancel()}
++      style={{
++        position: contained ? 'absolute' : 'fixed', inset: 0, zIndex: 50,
++        background: OVERLAY, borderRadius: contained ? 20 : undefined,
++        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
++      }}>
++      <div
++        role="dialog"
++        aria-modal="true"
++        onClick={(e) => e.stopPropagation()}
++        style={{
++          width: '100%', maxWidth: 320, background: CARD_BG,
++          borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
++          boxShadow: '0 8px 30px rgba(90,50,30,0.2)',
++        }}>
++        <div style={{ fontSize: 15, fontWeight: 600, color: TITLE_C, marginBottom: 8 }}>
++          {TITLE}
++        </div>
++        <div style={{ fontSize: 13, color: BODY_C, lineHeight: 1.5, marginBottom: 18 }}>
++          {message ?? '이 기록을 삭제해요.'}<br />
++          {WARN}
++        </div>
++        <div style={{ display: 'flex', gap: 8 }}>
++          <button
++            onClick={onCancel}
++            disabled={busy}
++            style={{
++              flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
++              background: CANCEL_BG, border: 'none', color: BODY_C,
++              cursor: busy ? 'default' : 'pointer', fontFamily: 'inherit',
++            }}>
++            {CANCEL_LABEL}
++          </button>
++          <button
++            onClick={onConfirm}
++            disabled={busy}
++            style={{
++              flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
++              background: busy ? CONFIRM_BUSY : CONFIRM_BG, border: 'none', color: '#fff',
++              cursor: busy ? 'default' : 'pointer', fontFamily: 'inherit',
++            }}>
++            {busy ? BUSY_LABEL : CONFIRM_LABEL}
++          </button>
++        </div>
++      </div>
++    </div>
++  )
++}
+diff --git a/app/manseryeok/birth-timing/birth-storage/page.tsx b/app/manseryeok/birth-timing/birth-storage/page.tsx
+index fc08f7c..a927d56 100644
+--- a/app/manseryeok/birth-timing/birth-storage/page.tsx
++++ b/app/manseryeok/birth-timing/birth-storage/page.tsx
+@@ -18,6 +18,7 @@ import {
+   type BirthRecord,
+ } from '@/lib/saju/birthRecords'
+ import type { SavedInputData } from '@/lib/saju/savedPeople'
++import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+ 
+ const accent = '#b45a78'   // 출산택일 포인트(로즈핑크 — 홈 카드색과 통일)
+ 
+@@ -159,51 +160,13 @@ function BirthStorageInner() {
+ 
+       {/* 삭제 확인 팝업 */}
+       {confirmDel && (
+-        <div
+-          onClick={() => !deleting && setConfirmDel(null)}
+-          style={{
+-            position: 'fixed', inset: 0, zIndex: 50,
+-            background: 'rgba(40,28,22,0.35)',
+-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+-          }}>
+-          <div onClick={(e) => e.stopPropagation()}
+-            style={{
+-              width: '100%', maxWidth: 320, background: '#FFFBF7',
+-              borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
+-              boxShadow: '0 8px 30px rgba(90,50,30,0.2)',
+-            }}>
+-            <div style={{ fontSize: 15, fontWeight: 600, color: '#3a2e28', marginBottom: 8 }}>
+-              정말 삭제할까요?
+-            </div>
+-            <div style={{ fontSize: 13, color: '#96502e', lineHeight: 1.5, marginBottom: 18 }}>
+-              {confirmDel.name1} <span style={{ color: '#6b5340' }}>·</span> {confirmDel.name2}
+-              {' '}출산택일을 삭제해요.<br />
+-              삭제하면 되돌릴 수 없어요.
+-            </div>
+-            <div style={{ display: 'flex', gap: 8 }}>
+-              <button
+-                onClick={() => setConfirmDel(null)}
+-                disabled={deleting}
+-                style={{
+-                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+-                  background: '#f3e6db', border: 'none', color: '#96502e',
+-                  cursor: deleting ? 'default' : 'pointer',
+-                }}>
+-                취소
+-              </button>
+-              <button
+-                onClick={handleDelete}
+-                disabled={deleting}
+-                style={{
+-                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+-                  background: deleting ? '#d99' : '#c8506e', border: 'none', color: '#fff',
+-                  cursor: deleting ? 'default' : 'pointer',
+-                }}>
+-                {deleting ? '삭제 중…' : '삭제'}
+-              </button>
+-            </div>
+-          </div>
+-        </div>
++        <ConfirmDeleteDialog
++          open
++          message={<>{confirmDel.name1} <span style={{ color: '#6b5340' }}>·</span> {confirmDel.name2} 출산택일을 삭제해요.</>}
++          busy={deleting}
++          onCancel={() => setConfirmDel(null)}
++          onConfirm={handleDelete}
++        />
+       )}
+     </main>
+   )
+diff --git a/app/manseryeok/career/page.tsx b/app/manseryeok/career/page.tsx
+index a7b33dd..96ef2d4 100644
+--- a/app/manseryeok/career/page.tsx
++++ b/app/manseryeok/career/page.tsx
+@@ -20,6 +20,7 @@ import {
+ } from '@/lib/saju/sajuRecords'
+ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+ import { toResultQuery, type SavedPerson, type SavedInputData } from '@/lib/saju/savedPeople'
++import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+ 
+ const ACCENT = '#785aaa'      // 진로적성 색 (홈 서비스 목록과 같은 보라)
+ const BG = '#FDF6F0'
+@@ -149,31 +150,13 @@ function CareerStorageInner() {
+       />
+ 
+       {confirmDel && (
+-        <div onClick={() => !deleting && setConfirmDel(null)}
+-          style={{
+-            position: 'fixed', inset: 0, background: 'rgba(60,40,30,0.35)',
+-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 24,
+-          }}>
+-          <div onClick={e => e.stopPropagation()}
+-            style={{ background: CARD, borderRadius: 16, padding: '22px 20px', maxWidth: 300, width: '100%' }}>
+-            <div style={{ fontSize: 14.5, fontWeight: 500, color: '#3a2e28', marginBottom: 6 }}>
+-              이 기록을 지울까요?
+-            </div>
+-            <div style={{ fontSize: 12.5, color: '#5c3a1e', lineHeight: 1.6, marginBottom: 18 }}>
+-              {confirmDel.title || '이름 없음'} · 지우면 되돌릴 수 없어요.
+-            </div>
+-            <div style={{ display: 'flex', gap: 8 }}>
+-              <button onClick={() => setConfirmDel(null)} disabled={deleting}
+-                style={{ flex: 1, padding: 11, borderRadius: 10, background: '#faf3ee', border: `0.5px solid ${LINE}`, color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>
+-                그대로 둘게요
+-              </button>
+-              <button onClick={handleDelete} disabled={deleting}
+-                style={{ flex: 1, padding: 11, borderRadius: 10, background: '#c05a5a', border: 'none', color: '#fff', fontSize: 13, cursor: 'pointer' }}>
+-                {deleting ? '지우는 중…' : '지울게요'}
+-              </button>
+-            </div>
+-          </div>
+-        </div>
++        <ConfirmDeleteDialog
++          open
++          message={<>{confirmDel.title || '이름 없음'}의 진로적성 기록을 삭제해요.</>}
++          busy={deleting}
++          onCancel={() => setConfirmDel(null)}
++          onConfirm={handleDelete}
++        />
+       )}
+     </main>
+   )
+diff --git a/app/manseryeok/components/PersonPickerModal.tsx b/app/manseryeok/components/PersonPickerModal.tsx
+index 620d51b..d3542b8 100644
+--- a/app/manseryeok/components/PersonPickerModal.tsx
++++ b/app/manseryeok/components/PersonPickerModal.tsx
+@@ -36,6 +36,7 @@ import {
+   type SavedPerson, type PersonDraft,
+ } from '@/lib/saju/savedPeople'
+ import PersonFormPitch from './PersonFormPitch'
++import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+ 
+ // ── 피치톤 색 ──
+ const C = {
+@@ -388,20 +389,13 @@ export default function PersonPickerModal({
+ 
+       {/* 삭제 확인 */}
+       {confirmDel && (
+-        <div onClick={() => setConfirmDel(null)}
+-          style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 20 }}>
+-          <div onClick={e => e.stopPropagation()}
+-            style={{ background: '#fff', borderRadius: 16, padding: '22px 20px', width: 260, textAlign: 'center' }}>
+-            <div style={{ fontSize: 15, fontWeight: 500, color: C.title, marginBottom: 6 }}>삭제할까요?</div>
+-            <div style={{ fontSize: 12, color: C.sub, marginBottom: 18, lineHeight: 1.6 }}>&quot;{confirmDel.title}&quot;을(를) 목록에서 지워요.<br />되돌릴 수 없어요.</div>
+-            <div style={{ display: 'flex', gap: 8 }}>
+-              <button onClick={() => setConfirmDel(null)}
+-                style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: `0.5px solid ${C.searchBorder}`, background: 'none', color: C.sub, fontSize: 13, cursor: 'pointer' }}>취소</button>
+-              <button onClick={() => handleDelete(confirmDel)}
+-                style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', background: C.danger, color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>삭제</button>
+-            </div>
+-          </div>
+-        </div>
++        <ConfirmDeleteDialog
++          open
++          contained
++          message={<>&lsquo;{confirmDel.title}&rsquo;을(를) 목록에서 삭제해요.</>}
++          onCancel={() => setConfirmDel(null)}
++          onConfirm={() => handleDelete(confirmDel)}
++        />
+       )}
+     </Overlay>
+   )
+diff --git a/app/manseryeok/couple-storage/page.tsx b/app/manseryeok/couple-storage/page.tsx
+index 08c8e65..1b22e69 100644
+--- a/app/manseryeok/couple-storage/page.tsx
++++ b/app/manseryeok/couple-storage/page.tsx
+@@ -19,6 +19,7 @@ import {
+   type CoupleRecord, type CoupleMode,
+ } from '@/lib/saju/coupleRecords'
+ import type { SavedInputData } from '@/lib/saju/savedPeople'
++import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+ 
+ const MODE_INFO: Record<CoupleMode, { title: string; accent: string; badge: string }> = {
+   couple:  { title: '연인 궁합 보관함', accent: '#c85a8c', badge: '연인' },
+@@ -189,50 +190,13 @@ function CoupleStorageInner() {
+ 
+       {/* 삭제 확인 팝업 */}
+       {confirmDel && (
+-        <div
+-          onClick={() => !deleting && setConfirmDel(null)}
+-          style={{
+-            position: 'fixed', inset: 0, zIndex: 50,
+-            background: 'rgba(40,28,22,0.35)',
+-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+-          }}>
+-          <div onClick={(e) => e.stopPropagation()}
+-            style={{
+-              width: '100%', maxWidth: 320, background: '#FFFBF7',
+-              borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
+-              boxShadow: '0 8px 30px rgba(90,50,30,0.2)',
+-            }}>
+-            <div style={{ fontSize: 15, fontWeight: 600, color: '#3a2e28', marginBottom: 8 }}>
+-              정말 삭제할까요?
+-            </div>
+-            <div style={{ fontSize: 13, color: '#96502e', lineHeight: 1.5, marginBottom: 18 }}>
+-              {confirmDel.name1} <span style={{ color: '#d4537e' }}>♥</span> {confirmDel.name2} 궁합을 삭제해요.<br />
+-              삭제하면 되돌릴 수 없어요.
+-            </div>
+-            <div style={{ display: 'flex', gap: 8 }}>
+-              <button
+-                onClick={() => setConfirmDel(null)}
+-                disabled={deleting}
+-                style={{
+-                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+-                  background: '#f3e6db', border: 'none', color: '#96502e',
+-                  cursor: deleting ? 'default' : 'pointer',
+-                }}>
+-                취소
+-              </button>
+-              <button
+-                onClick={handleDelete}
+-                disabled={deleting}
+-                style={{
+-                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+-                  background: deleting ? '#d99' : '#c8506e', border: 'none', color: '#fff',
+-                  cursor: deleting ? 'default' : 'pointer',
+-                }}>
+-                {deleting ? '삭제 중…' : '삭제'}
+-              </button>
+-            </div>
+-          </div>
+-        </div>
++        <ConfirmDeleteDialog
++          open
++          message={<>{confirmDel.name1} <span style={{ color: '#d4537e' }}>♥</span> {confirmDel.name2} 궁합을 삭제해요.</>}
++          busy={deleting}
++          onCancel={() => setConfirmDel(null)}
++          onConfirm={handleDelete}
++        />
+       )}
+     </main>
+   )
+diff --git a/app/manseryeok/exam-luck/page.tsx b/app/manseryeok/exam-luck/page.tsx
+index 20d96cd..9fac329 100644
+--- a/app/manseryeok/exam-luck/page.tsx
++++ b/app/manseryeok/exam-luck/page.tsx
+@@ -21,6 +21,7 @@ import {
+ } from '@/lib/saju/sajuRecords'
+ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+ import { toResultQuery, type SavedPerson, type SavedInputData } from '@/lib/saju/savedPeople'
++import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+ 
+ const ACCENT = '#c85a8c'      // 합격운 색 (홈 서비스 목록과 같은 분홍)
+ const SOFT = '#f7e6ee'
+@@ -171,31 +172,13 @@ function ExamLuckStorageInner() {
+       />
+ 
+       {confirmDel && (
+-        <div onClick={() => !deleting && setConfirmDel(null)}
+-          style={{
+-            position: 'fixed', inset: 0, background: 'rgba(60,40,30,0.35)',
+-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 24,
+-          }}>
+-          <div onClick={e => e.stopPropagation()}
+-            style={{ background: CARD, borderRadius: 16, padding: '22px 20px', maxWidth: 300, width: '100%' }}>
+-            <div style={{ fontSize: 14.5, fontWeight: 500, color: '#3a2e28', marginBottom: 6 }}>
+-              이 기록을 지울까요?
+-            </div>
+-            <div style={{ fontSize: 12.5, color: '#5c3a1e', lineHeight: 1.6, marginBottom: 18 }}>
+-              {confirmDel.title || '이름 없음'} · 지우면 되돌릴 수 없어요.
+-            </div>
+-            <div style={{ display: 'flex', gap: 8 }}>
+-              <button onClick={() => setConfirmDel(null)} disabled={deleting}
+-                style={{ flex: 1, padding: 11, borderRadius: 10, background: '#faf3ee', border: `0.5px solid ${LINE}`, color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>
+-                그대로 둘게요
+-              </button>
+-              <button onClick={handleDelete} disabled={deleting}
+-                style={{ flex: 1, padding: 11, borderRadius: 10, background: '#c05a5a', border: 'none', color: '#fff', fontSize: 13, cursor: 'pointer' }}>
+-                {deleting ? '지우는 중…' : '지울게요'}
+-              </button>
+-            </div>
+-          </div>
+-        </div>
++        <ConfirmDeleteDialog
++          open
++          message={<>{confirmDel.title || '이름 없음'}의 합격운·취업운 기록을 삭제해요.</>}
++          busy={deleting}
++          onCancel={() => setConfirmDel(null)}
++          onConfirm={handleDelete}
++        />
+       )}
+     </main>
+   )
+diff --git a/app/manseryeok/moving-timing/moving-storage/page.tsx b/app/manseryeok/moving-timing/moving-storage/page.tsx
+index 610eec9..ad2710e 100644
+--- a/app/manseryeok/moving-timing/moving-storage/page.tsx
++++ b/app/manseryeok/moving-timing/moving-storage/page.tsx
+@@ -19,6 +19,7 @@ import {
+   type MovingRecord,
+ } from '@/lib/saju/movingRecords'
+ import type { SavedInputData } from '@/lib/saju/savedPeople'
++import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+ 
+ const accent = '#967850'
+ const line = '#EAE0CE'
+@@ -200,51 +201,13 @@ function MovingStorageInner() {
+       </div>
+ 
+       {confirmDel && (
+-        <div
+-          onClick={() => !deleting && setConfirmDel(null)}
+-          style={{
+-            position: 'fixed', inset: 0, zIndex: 50,
+-            background: 'rgba(40,32,24,0.35)',
+-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+-          }}>
+-          <div onClick={e => e.stopPropagation()}
+-            style={{
+-              width: '100%', maxWidth: 320, background: '#FFFDF9',
+-              borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
+-              boxShadow: '0 8px 30px rgba(90,70,40,0.2)',
+-            }}>
+-            <div style={{ fontSize: 15, fontWeight: 600, color: ink, marginBottom: 8 }}>
+-              정말 삭제할까요?
+-            </div>
+-            <div style={{ fontSize: 13, color: '#7A6440', lineHeight: 1.5, marginBottom: 18 }}>
+-              {confirmDel.name1}{confirmDel.name2 ? ` · ${confirmDel.name2}` : ''}
+-              {' '}이사택일을 삭제해요.<br />
+-              삭제하면 되돌릴 수 없어요.
+-            </div>
+-            <div style={{ display: 'flex', gap: 8 }}>
+-              <button
+-                onClick={() => setConfirmDel(null)}
+-                disabled={deleting}
+-                style={{
+-                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+-                  background: '#F0EADA', border: 'none', color: '#7A6440',
+-                  cursor: deleting ? 'default' : 'pointer', fontFamily: 'inherit',
+-                }}>
+-                취소
+-              </button>
+-              <button
+-                onClick={handleDelete}
+-                disabled={deleting}
+-                style={{
+-                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+-                  background: deleting ? '#d99' : '#c8506e', border: 'none', color: '#fff',
+-                  cursor: deleting ? 'default' : 'pointer', fontFamily: 'inherit',
+-                }}>
+-                {deleting ? '삭제 중…' : '삭제'}
+-              </button>
+-            </div>
+-          </div>
+-        </div>
++        <ConfirmDeleteDialog
++          open
++          message={<>{confirmDel.name1}{confirmDel.name2 ? ` · ${confirmDel.name2}` : ''} 이사택일을 삭제해요.</>}
++          busy={deleting}
++          onCancel={() => setConfirmDel(null)}
++          onConfirm={handleDelete}
++        />
+       )}
+ 
+     </main>
+diff --git a/app/manseryeok/mulsang-storage/page.tsx b/app/manseryeok/mulsang-storage/page.tsx
+index bd309cf..71cff52 100644
+--- a/app/manseryeok/mulsang-storage/page.tsx
++++ b/app/manseryeok/mulsang-storage/page.tsx
+@@ -20,6 +20,7 @@ import {
+ import { STYLE_CONFIGS } from '@/lib/saju/mulsangPrompt'
+ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+ import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
++import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+ 
+ const ACCENT = '#b46e46'
+ 
+@@ -185,50 +186,13 @@ function MulsangStorageInner() {
+ 
+       {/* 삭제 확인 팝업 */}
+       {confirmDel && (
+-        <div
+-          onClick={() => !deleting && setConfirmDel(null)}
+-          style={{
+-            position: 'fixed', inset: 0, zIndex: 50,
+-            background: 'rgba(40,28,22,0.35)',
+-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+-          }}>
+-          <div onClick={(e) => e.stopPropagation()}
+-            style={{
+-              width: '100%', maxWidth: 320, background: '#FFFBF7',
+-              borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
+-              boxShadow: '0 8px 30px rgba(90,50,30,0.2)',
+-            }}>
+-            <div style={{ fontSize: 15, fontWeight: 600, color: '#3a2e28', marginBottom: 8 }}>
+-              정말 삭제할까요?
+-            </div>
+-            <div style={{ fontSize: 13, color: '#96502e', lineHeight: 1.5, marginBottom: 18 }}>
+-              {confirmDel.title || '이 기록'}의 그림 기록을 삭제해요.<br />
+-              삭제하면 되돌릴 수 없어요.
+-            </div>
+-            <div style={{ display: 'flex', gap: 8 }}>
+-              <button
+-                onClick={() => setConfirmDel(null)}
+-                disabled={deleting}
+-                style={{
+-                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+-                  background: '#f3e6db', border: 'none', color: '#96502e',
+-                  cursor: deleting ? 'default' : 'pointer',
+-                }}>
+-                취소
+-              </button>
+-              <button
+-                onClick={handleDelete}
+-                disabled={deleting}
+-                style={{
+-                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+-                  background: deleting ? '#d99' : '#c8506e', border: 'none', color: '#fff',
+-                  cursor: deleting ? 'default' : 'pointer',
+-                }}>
+-                {deleting ? '삭제 중…' : '삭제'}
+-              </button>
+-            </div>
+-          </div>
+-        </div>
++        <ConfirmDeleteDialog
++          open
++          message={<>{confirmDel.title || '이 기록'}의 그림 기록을 삭제해요.</>}
++          busy={deleting}
++          onCancel={() => setConfirmDel(null)}
++          onConfirm={handleDelete}
++        />
+       )}
+     </main>
+   )
+diff --git a/app/manseryeok/naming/components/NamingStorageView.tsx b/app/manseryeok/naming/components/NamingStorageView.tsx
+index 10428fe..707d657 100644
+--- a/app/manseryeok/naming/components/NamingStorageView.tsx
++++ b/app/manseryeok/naming/components/NamingStorageView.tsx
+@@ -36,6 +36,7 @@ import {
+ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+ import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
+ import { surnameOfHangul } from '@/lib/saju/surname'
++import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+ 
+ // ══════════════════════════════════════════════════════════════════
+ //  ★2026-08-01 — 보관함에 «풀이» 와 «작명» 을 가르는 탭을 넣습니다
+@@ -440,50 +441,13 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
+ 
+       {/* 삭제 확인 팝업 */}
+       {confirmDel && (
+-        <div
+-          onClick={() => !deleting && setConfirmDel(null)}
+-          style={{
+-            position: 'fixed', inset: 0, zIndex: 50,
+-            background: 'rgba(40,28,22,0.35)',
+-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+-          }}>
+-          <div onClick={(e) => e.stopPropagation()}
+-            style={{
+-              width: '100%', maxWidth: 320, background: '#FFFBF7',
+-              borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
+-              boxShadow: '0 8px 30px rgba(90,50,30,0.2)',
+-            }}>
+-            <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a', marginBottom: 8 }}>
+-              정말 삭제할까요?
+-            </div>
+-            <div style={{ fontSize: 13, color: '#96502e', lineHeight: 1.5, marginBottom: 18 }}>
+-              &lsquo;{confirmDel.hangulName || confirmDel.hanjaName}&rsquo; 이름 풀이를 삭제해요.<br />
+-              삭제하면 되돌릴 수 없어요.
+-            </div>
+-            <div style={{ display: 'flex', gap: 8 }}>
+-              <button
+-                onClick={() => setConfirmDel(null)}
+-                disabled={deleting}
+-                style={{
+-                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+-                  background: '#f3e6db', border: 'none', color: '#96502e',
+-                  cursor: deleting ? 'default' : 'pointer',
+-                }}>
+-                취소
+-              </button>
+-              <button
+-                onClick={handleDelete}
+-                disabled={deleting}
+-                style={{
+-                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+-                  background: deleting ? '#d99' : '#c8506e', border: 'none', color: '#fff',
+-                  cursor: deleting ? 'default' : 'pointer',
+-                }}>
+-                {deleting ? '삭제 중…' : '삭제'}
+-              </button>
+-            </div>
+-          </div>
+-        </div>
++        <ConfirmDeleteDialog
++          open
++          message={<>&lsquo;{confirmDel.hangulName || confirmDel.hanjaName}&rsquo; 이름 풀이를 삭제해요.</>}
++          busy={deleting}
++          onCancel={() => setConfirmDel(null)}
++          onConfirm={handleDelete}
++        />
+       )}
+ 
+       {/* 누구 이름을 볼까요? — 나 / 가족·지인 / 새 사람 선택 (사주 보관함과 동일 모달) */}
+diff --git a/app/manseryeok/saju-storage/page.tsx b/app/manseryeok/saju-storage/page.tsx
+index dfd5197..da2326c 100644
+--- a/app/manseryeok/saju-storage/page.tsx
++++ b/app/manseryeok/saju-storage/page.tsx
+@@ -22,6 +22,7 @@ import {
+ import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
+ import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
+ import type { SavedInputData } from '@/lib/saju/savedPeople'
++import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+ 
+ // 서비스별 정보 (제목·색·결과경로·unse 파라미터)
+ // ★2026-07-29 — 보관함 단권화 (대표님 확정)
+@@ -205,50 +206,13 @@ function SajuStorageInner() {
+ 
+       {/* 삭제 확인 팝업 */}
+       {confirmDel && (
+-        <div
+-          onClick={() => !deleting && setConfirmDel(null)}
+-          style={{
+-            position: 'fixed', inset: 0, zIndex: 50,
+-            background: 'rgba(40,28,22,0.35)',
+-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+-          }}>
+-          <div onClick={(e) => e.stopPropagation()}
+-            style={{
+-              width: '100%', maxWidth: 320, background: '#FFFBF7',
+-              borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
+-              boxShadow: '0 8px 30px rgba(90,50,30,0.2)',
+-            }}>
+-            <div style={{ fontSize: 15, fontWeight: 600, color: '#3a2e28', marginBottom: 8 }}>
+-              정말 삭제할까요?
+-            </div>
+-            <div style={{ fontSize: 13, color: '#96502e', lineHeight: 1.5, marginBottom: 18 }}>
+-              {confirmDel.title || '이 기록'}의 {info.badge} 기록을 삭제해요.<br />
+-              삭제하면 되돌릴 수 없어요.
+-            </div>
+-            <div style={{ display: 'flex', gap: 8 }}>
+-              <button
+-                onClick={() => setConfirmDel(null)}
+-                disabled={deleting}
+-                style={{
+-                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+-                  background: '#f3e6db', border: 'none', color: '#96502e',
+-                  cursor: deleting ? 'default' : 'pointer',
+-                }}>
+-                취소
+-              </button>
+-              <button
+-                onClick={handleDelete}
+-                disabled={deleting}
+-                style={{
+-                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+-                  background: deleting ? '#d99' : '#c8506e', border: 'none', color: '#fff',
+-                  cursor: deleting ? 'default' : 'pointer',
+-                }}>
+-                {deleting ? '삭제 중…' : '삭제'}
+-              </button>
+-            </div>
+-          </div>
+-        </div>
++        <ConfirmDeleteDialog
++          open
++          message={<>{confirmDel.title || '이 기록'}의 {info.badge} 기록을 삭제해요.</>}
++          busy={deleting}
++          onCancel={() => setConfirmDel(null)}
++          onConfirm={handleDelete}
++        />
+       )}
+     </main>
+   )
+diff --git a/app/manseryeok/wedding-timing/wedding-storage/page.tsx b/app/manseryeok/wedding-timing/wedding-storage/page.tsx
+index d9f640c..d0d3a0c 100644
+--- a/app/manseryeok/wedding-timing/wedding-storage/page.tsx
++++ b/app/manseryeok/wedding-timing/wedding-storage/page.tsx
+@@ -19,6 +19,7 @@ import {
+   type WeddingRecord,
+ } from '@/lib/saju/weddingRecords'
+ import type { SavedInputData } from '@/lib/saju/savedPeople'
++import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+ 
+ const accent = '#96643c'   // 결혼택일 포인트(브라운)
+ 
+@@ -157,51 +158,13 @@ function WeddingStorageInner() {
+ 
+       {/* 삭제 확인 팝업 */}
+       {confirmDel && (
+-        <div
+-          onClick={() => !deleting && setConfirmDel(null)}
+-          style={{
+-            position: 'fixed', inset: 0, zIndex: 50,
+-            background: 'rgba(40,28,22,0.35)',
+-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+-          }}>
+-          <div onClick={(e) => e.stopPropagation()}
+-            style={{
+-              width: '100%', maxWidth: 320, background: '#FFFBF7',
+-              borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
+-              boxShadow: '0 8px 30px rgba(90,50,30,0.2)',
+-            }}>
+-            <div style={{ fontSize: 15, fontWeight: 600, color: '#3a2e28', marginBottom: 8 }}>
+-              정말 삭제할까요?
+-            </div>
+-            <div style={{ fontSize: 13, color: '#96502e', lineHeight: 1.5, marginBottom: 18 }}>
+-              {confirmDel.name1} <span style={{ color: '#d4537e' }}>♥</span> {confirmDel.name2}
+-              {' '}결혼택일을 삭제해요.<br />
+-              삭제하면 되돌릴 수 없어요.
+-            </div>
+-            <div style={{ display: 'flex', gap: 8 }}>
+-              <button
+-                onClick={() => setConfirmDel(null)}
+-                disabled={deleting}
+-                style={{
+-                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+-                  background: '#f3e6db', border: 'none', color: '#96502e',
+-                  cursor: deleting ? 'default' : 'pointer',
+-                }}>
+-                취소
+-              </button>
+-              <button
+-                onClick={handleDelete}
+-                disabled={deleting}
+-                style={{
+-                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+-                  background: deleting ? '#d99' : '#c8506e', border: 'none', color: '#fff',
+-                  cursor: deleting ? 'default' : 'pointer',
+-                }}>
+-                {deleting ? '삭제 중…' : '삭제'}
+-              </button>
+-            </div>
+-          </div>
+-        </div>
++        <ConfirmDeleteDialog
++          open
++          message={<>{confirmDel.name1} <span style={{ color: '#d4537e' }}>♥</span> {confirmDel.name2} 결혼택일을 삭제해요.</>}
++          busy={deleting}
++          onCancel={() => setConfirmDel(null)}
++          onConfirm={handleDelete}
++        />
+       )}
+     </main>
+   )
+diff --git a/app/tarot/storage/page.tsx b/app/tarot/storage/page.tsx
+index 7ac35d1..6722ad2 100644
+--- a/app/tarot/storage/page.tsx
++++ b/app/tarot/storage/page.tsx
+@@ -21,6 +21,7 @@ import {
+   TAROT_CATEGORY_COLOR,
+   type TarotRecord,
+ } from '@/lib/saju/tarotRecords'
++import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
+ 
+ function TarotStorageInner() {
+   const router = useRouter()
+@@ -137,50 +138,13 @@ function TarotStorageInner() {
+ 
+       {/* 삭제 확인 팝업 */}
+       {confirmDel && (
+-        <div
+-          onClick={() => !deleting && setConfirmDel(null)}
+-          style={{
+-            position: 'fixed', inset: 0, zIndex: 50,
+-            background: 'rgba(40,28,22,0.35)',
+-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+-          }}>
+-          <div onClick={(e) => e.stopPropagation()}
+-            style={{
+-              width: '100%', maxWidth: 320, background: '#FFFBF7',
+-              borderRadius: 16, padding: '22px 20px 16px', textAlign: 'center',
+-              boxShadow: '0 8px 30px rgba(90,50,30,0.2)',
+-            }}>
+-            <div style={{ fontSize: 15, fontWeight: 600, color: '#3a2e28', marginBottom: 8 }}>
+-              정말 삭제할까요?
+-            </div>
+-            <div style={{ fontSize: 13, color: '#96502e', lineHeight: 1.5, marginBottom: 18 }}>
+-              이 타로 기록을 삭제해요.<br />
+-              삭제하면 되돌릴 수 없어요.
+-            </div>
+-            <div style={{ display: 'flex', gap: 8 }}>
+-              <button
+-                onClick={() => setConfirmDel(null)}
+-                disabled={deleting}
+-                style={{
+-                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+-                  background: '#f3e6db', border: 'none', color: '#96502e',
+-                  cursor: deleting ? 'default' : 'pointer',
+-                }}>
+-                취소
+-              </button>
+-              <button
+-                onClick={handleDelete}
+-                disabled={deleting}
+-                style={{
+-                  flex: 1, padding: 12, borderRadius: 10, fontSize: 13.5, fontWeight: 500,
+-                  background: deleting ? '#d99' : '#c8506e', border: 'none', color: '#fff',
+-                  cursor: deleting ? 'default' : 'pointer',
+-                }}>
+-                {deleting ? '삭제 중…' : '삭제'}
+-              </button>
+-            </div>
+-          </div>
+-        </div>
++        <ConfirmDeleteDialog
++          open
++          message={<>이 타로 기록을 삭제해요.</>}
++          busy={deleting}
++          onCancel={() => setConfirmDel(null)}
++          onConfirm={handleDelete}
++        />
+       )}
+     </main>
+   )
