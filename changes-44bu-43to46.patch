@@ -1,0 +1,259 @@
+diff --git a/32-verify-hour-convert.ts b/32-verify-hour-convert.ts
+index cb445e5..aa78963 100644
+--- a/32-verify-hour-convert.ts
++++ b/32-verify-hour-convert.ts
+@@ -1773,6 +1773,80 @@ console.log('\n━━ (54) ★진로적성 — 다섯 단계 한 벌로 통일 (
+   check(/yongsin: \{ kinds: \['yongsin'\]/.test(page), `★용신 표는 용신 이야기 뒤`)
+ }
+ 
++console.log('\n━━ (55) ★종이 차례 · 성인 직업 거르기 (44부 43차) ━━')
++{
++  const noComment = (s: string) =>
++    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
++  const page = noComment(read('app/manseryeok/career-result/page.tsx'))
++  const jb = noComment(read('lib/saju/career/jobs.ts'))
++
++  // ★종이 카드가 «화면과 같은 차례» 인가
++  check(/cards: GROUPS\s*\n\s*\.flatMap\(g => g\.keys\)/.test(page),
++    `★종이 판정 카드를 GROUPS 차례로 줄 세웁니다`)
++  check(!/cards: cards\s*\n\s*\.filter\(c => c\.lines\.length > 0\)\s*\n\s*\.map\(c => \(\{ title/.test(page),
++    `⚠️ 만든 차례 그대로 넘기던 자리가 사라졌습니다`)
++
++  // 🔴 성인 리포트에서 「유흥업」 같은 낱말을 거르는가
++  check(/BLOCKED_KEYS/.test(jb) && /\.filter\(x => !blocked\(x\.key\)\)/.test(jb),
++    `🔴★성인 리포트에서도 어른용 직업을 거릅니다`)
++  check(/ADULT_JOB_BLOCKLIST\.map\(jobKey\)/.test(jb),
++    `⚠️ 목록도 «같은 잣대(jobKey)» 로 다듬어 견줍니다 (「수도사업」→「수도」)`)
++  check(/import \{ ADULT_JOB_BLOCKLIST \} from '\.\/roleFit'/.test(jb),
++    `⚠️ 목록은 roleFit 것을 «가져다» 씁니다 (두 벌로 적지 않습니다)`)
++  // ⚠️ 「의사」가 「장의사」에 걸려 사라지지 «않는가»
++  check(!/some\(b => key\.includes\(b\)/.test(jb),
++    `⚠️ 낱말이 겹친다고 막지 «않습니다» (「의사」가 「장의사」에 걸렸었습니다)`)
++  check(/BLOCKED_KEYS\.has\(key\)/.test(jb), `★«같은 이름» 일 때만 막습니다`)
++
++  // 🔴 재료도 «ORDER 차례» 인가 (44부 44차)
++  //   [무엇이 있었나] plan 은 ORDER 로 만드는데 ★재료만 v.cards 차례였습니다.
++  //     judgeSpecial 이 맨 처음이라 ★AI 가 「한 번 더 볼 점」을 1번으로 썼습니다.
++  //   ★AI 는 «시킨 차례» 보다 «재료가 놓인 차례» 를 따라갑니다.
++  const bp = noComment(read('lib/saju/career/buildCareerPrompt.ts'))
++  check(/const ordered = ORDER\s*\n\s*\.map\(o => v\.cards\.find/.test(bp),
++    `🔴★재료를 ORDER 차례로 늘어놓습니다`)
++  check(/const material = ordered/.test(bp) && !/const material = v\.cards/.test(bp),
++    `⚠️ 「만든 차례」로 늘어놓던 자리가 사라졌습니다`)
++  // ★「한 번 더 볼 점」이 ORDER 의 «맨 끝» 인가
++  const om2 = bp.match(/const ORDER[\s\S]*?\n\]/)?.[0] ?? ''
++  const ok2 = [...om2.matchAll(/key: '([a-z_]+)'/g)].map(m => m[1])
++  check(ok2[ok2.length - 1] === 'special',
++    `★「한 번 더 볼 점」이 «맨 끝» 입니다 (경고부터 보이지 않습니다)`)
++
++  // 🔴 학생에게 «직장 이야기» 가 나가지 않는가 (44부 45차)
++  //   [무엇이 있었나] 「계열과 학과」(성인에게 안 냄)만 빼고,
++  //     ★「핵심 직무」·「조직 성향」(학생에게 안 냄)은 «안 뺐습니다».
++  //     ⇒ 14세 손님 통변에 ★「이직·조직 성향」이 그대로 나갔습니다.
++  //   ⚠️ 카드는 빈 채로 오는데 plan 은 «열쇠» 로만 골라 대목으로 시켰습니다.
++  check(/const emptyKeys = new Set\(v\.cards\.filter\(c => c\.lines\.length === 0\)/.test(bp),
++    `🔴★lines 가 빈 카드는 «대목으로 시키지» 않습니다`)
++  check(/\.filter\(o => !emptyKeys\.has\(o\.key\)\)/.test(bp),
++    `★화면이 «안 그리는» 것은 AI 도 «안 씁니다»`)
++}
++
++console.log('\n━━ (56) ★진로적성 「근거 보기」를 감췄는가 (44부 46차) ━━')
++{
++  const noComment = (s: string) =>
++    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
++  const cjc = noComment(read('app/manseryeok/career-result/components/CareerJudgeCard.tsx'))
++  const doc = read('app/manseryeok/career-result/components/CareerJudgeCard.tsx')
++  const ejc = noComment(read('app/manseryeok/exam-luck-result/components/ExamJudgeCard.tsx'))
++
++  // ★감췄는가
++  check(/const SHOW_WHY = false/.test(cjc), `🔴★「근거 보기」를 감췄습니다`)
++  check(/\{SHOW_WHY && hasTong && card\.lines\.length > 0 && \(/.test(cjc),
++    `★단추가 «아예 안 그려집니다»`)
++  // ⚠️ «지운» 것이 아니라 «감춘» 것인가 — 되살릴 길
++  check(/card\.lines\.map/.test(cjc) && /openWhy/.test(cjc),
++    `⚠️ lines·openWhy 는 «그대로» 있습니다 (지운 것이 아닙니다)`)
++  check(/되살리시려면 이 한 줄을 true/.test(doc), `⚠️ 되살리는 법이 적혀 있습니다`)
++  check(/단정하는 험한 말/.test(doc), `⚠️ 왜 감췄는지 까닭이 적혀 있습니다`)
++
++  // ⚠️ 합격운은 «건드리지 않았는가» — 그쪽 판정 문장은 이미 다듬어진 말입니다
++  check(!/SHOW_WHY/.test(ejc) && /근거 보기/.test(ejc),
++    `⚠️ 합격운의 「근거 보기」는 «그대로» 입니다 (그쪽 말은 이미 다듬어져 있습니다)`)
++}
++
+ console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
+ {
+   const src = read('lib/saju/simsanOhaeng.ts')
+diff --git a/app/manseryeok/career-result/components/CareerJudgeCard.tsx b/app/manseryeok/career-result/components/CareerJudgeCard.tsx
+index 74731a9..33a0393 100644
+--- a/app/manseryeok/career-result/components/CareerJudgeCard.tsx
++++ b/app/manseryeok/career-result/components/CareerJudgeCard.tsx
+@@ -26,6 +26,16 @@ const CARD = '#FFFBF7'
+ const LINE = '#f0e0d5'
+ const ACCENT = '#785aaa'
+ 
++/**
++ * ★「근거 보기」를 손님께 보일 것인가 (44부 46차)
++ *
++ *  ⚠️ false 이면 접기 단추가 «아예 안 그려집니다».
++ *     교재 원문의 판정 문장에 명리 술어와 단정하는 험한 말이 섞여 있어
++ *     ★2026-08-03 대표님 지시로 감췄습니다.
++ *  ★되살리시려면 이 한 줄을 true 로 두십시오. 지운 것은 하나도 없습니다.
++ */
++const SHOW_WHY = false
++
+ /**
+  * 오행 막대 색 — 육친 막대도 같은 색을 쓴다.
+  *
+@@ -156,7 +166,27 @@ export default function CareerJudgeCard({ card, tong }: Props) {
+         <p key={i} style={{ fontSize: 13, color: '#4a3a30', lineHeight: 1.75, margin: '0 0 6px' }}>{l}</p>
+       ))}
+ 
+-      {hasTong && card.lines.length > 0 && (
++      {/* ══════════════════════════════════════════════════════════
++          🔴★2026-08-03 (44부 46차) — 「근거 보기」를 «감췄습니다». (대표님 지시)
++
++          [까닭]  펼쳐 보이던 것은 ★교재 원문 그대로의 «판정 문장» 입니다.
++            ⚠️ 명리 술어가 날것으로 나갑니다 — 식상 · 격국용신 · 활인업 · 현침살
++            🔴 그보다 무거운 것은 ★«단정하는 험한 말» 입니다 —
++               「독선적이고 융통성이 부족하며 자존심과 집착이 강해요」
++               「남을 배려하는 마음이 부족하고 … 대인 관계가 매끄럽지 못한」
++               「변덕이 있고 비밀을 발설하며 … 구설수가 따릅니다」
++            ★14세 손님과 부모님이 «함께» 읽습니다.
++            AI 풀이는 같은 내용을 「장점이 지나치면 단점으로 나타난다」로 다듬어 전합니다.
++            ⇒ 다듬은 말이 이미 있는데 날것을 곁들일 까닭이 없습니다.
++
++          ⚠️⚠️ 「지운」 것이 아니라 «감춘» 것입니다 —
++             card.lines 도 openWhy 도 그대로 있습니다.
++             ★되살리시려면 아래 SHOW_WHY 를 true 로 두십시오.
++          ⚠️ 44부 3-3장에서 궁합 판정 카드를 끈 것과 «같은 결» 입니다.
++             ⇒ 그때 배운 것 — 「한 곳만 끄면 «새어 나갑니다»」.
++               ★여기는 화면 한 곳뿐이라, AI 재료(reasons)는 원래 따로입니다.
++          ══════════════════════════════════════════════════════════ */}
++      {SHOW_WHY && hasTong && card.lines.length > 0 && (
+         <div style={{ marginTop: 10, borderTop: `0.5px solid ${LINE}`, paddingTop: 8 }}>
+           <button onClick={() => setOpenWhy(o => !o)}
+             style={{
+diff --git a/app/manseryeok/career-result/page.tsx b/app/manseryeok/career-result/page.tsx
+index 6809854..a07ca16 100644
+--- a/app/manseryeok/career-result/page.tsx
++++ b/app/manseryeok/career-result/page.tsx
+@@ -467,8 +467,17 @@ function CareerResultInner() {
+             .filter(c => c.lines.length > 0 && tongByKey[c.key])
+             .map(c => ({ title: c.title, body: tongByKey[c.key] })),
+       // ★판정 카드도 «모두» 담습니다 (2026-08-03 대표님 확정)
+-      cards: cards
+-        .filter(c => c.lines.length > 0)
++      //
++      // 🔴⚠️ 2026-08-03 (44부 43차) — ★GROUPS 차례로 «줄 세워» 넘깁니다.
++      //   [무엇이 있었나]  cards 를 «만든 차례» 그대로 넘겨,
++      //     화면은 다섯 단계로 서는데 ★종이만 옛 차례였습니다.
++      //     새 카드 셋(강점·리더십·발복)이 «맨 끝» 에 붙어 나왔습니다.
++      //   ⚠️ 화면과 종이가 다른 차례면 손님이 「같은 리포트인가」 합니다.
++      //   ★GROUPS 는 화면이 쓰는 그 표입니다. 두 벌로 두지 않습니다. (교훈 AS)
++      cards: GROUPS
++        .flatMap(g => g.keys)
++        .map(k => cards.find(c => c.key === k))
++        .filter((c): c is CareerCard => !!c && c.lines.length > 0)
+         .map(c => ({ title: c.title, badge: c.badge, lines: c.lines })),
+       // ★화면 카드 사이의 «표» 를 종이에도 (44부 37차 · 대표님 「표가 모두 사라졌다」)
+       //   ⚠️ 값을 «다시 계산하지 않습니다» — 화면 부품이 쓰는 함수를 그대로 부릅니다 (교훈 CJ)
+diff --git a/lib/saju/career/buildCareerPrompt.ts b/lib/saju/career/buildCareerPrompt.ts
+index d21b9bc..b8286a8 100644
+--- a/lib/saju/career/buildCareerPrompt.ts
++++ b/lib/saju/career/buildCareerPrompt.ts
+@@ -125,8 +125,19 @@ export function buildCareerPrompt(v: CareerPromptInput): string {
+   const have = new Set(v.cards.map(c => c.key))
+   // ★학업 대목을 안 낼 신분이면 계획에서 **통째로 뺍니다.**
+   //   카드가 비어 있어도 계획에 남아 있으면 AI 가 «학과 이야기를 써야 하나» 하고 헤맵니다.
++  //
++  // 🔴⚠️ 2026-08-03 (44부 45차) — ★«반대쪽» 도 빼야 했습니다.
++  //   [무엇이 있었나]  「계열과 학과」(성인에게 안 냄)만 빼고 있었고,
++  //     ★「핵심 직무」·「잘 맞는 직무 & 조직 성향」(학생에게 안 냄)은 «안 뺐습니다».
++  //     ⇒ 중·고등학생 리포트에 ★직장 이야기가 그대로 나갔습니다.
++  //       (2026-08-03 대표님 확인 — 14세 손님 통변에 「이직·조직 성향」이 있었습니다)
++  //   ⚠️ judgeRoleFit·judgeJobFit 은 학생이면 «빈 카드» 를 돌려줍니다.
++  //      그런데 plan 은 have(열쇠)로만 골라, ★빈 카드도 «대목으로 시켰습니다».
++  //   ★lines 가 빈 카드는 계획에서 뺍니다 — 화면이 안 그리는 것을 AI 도 안 씁니다.
++  const emptyKeys = new Set(v.cards.filter(c => c.lines.length === 0).map(c => c.key))
+   const plan = ORDER
+     .filter(o => have.has(o.key))
++    .filter(o => !emptyKeys.has(o.key))
+     .filter(o => academic || o.key !== 'gyeyeol')
+ 
+   const myeongsik = v.saju
+@@ -182,7 +193,18 @@ export function buildCareerPrompt(v: CareerPromptInput): string {
+     }
+   }
+ 
+-  const material = v.cards
++  // 🔴⚠️ 2026-08-03 (44부 44차) — ★재료도 «ORDER 차례» 로 늘어놓습니다.
++  //   [무엇이 있었나]  v.cards 를 «만든 차례» 그대로 늘어놓았습니다.
++  //     judgeSpecial 이 맨 처음이라 재료에서도 ★「한 번 더 볼 점」이 맨 앞이었고,
++  //     ★AI 가 그 차례를 따라 써서 «1번 대목» 으로 나갔습니다.
++  //     (40차에 ORDER 는 맨 아래로 내렸는데 재료만 옛 차례였습니다)
++  //   ⚠️ 아래 plan(128줄)은 ORDER 로 만드는데 재료만 달랐습니다. 두 곳이 어긋난 것입니다.
++  //   ★AI 는 «시킨 차례» 보다 «재료가 놓인 차례» 를 따라갑니다. 둘을 맞춰야 합니다.
++  const ordered = ORDER
++    .map(o => v.cards.find(c => c.key === o.key))
++    .filter((c): c is CareerCard => !!c)
++
++  const material = ordered
+     // ★학업 대목을 안 낼 신분이면 재료에서도 뺍니다.
+     //   재료에 남겨 두고 «쓰지 말라» 고만 하면 AI 가 꺼내 씁니다. (교훈 BF)
+     .filter(c => !dropKeys.includes(c.key))
+diff --git a/lib/saju/career/jobs.ts b/lib/saju/career/jobs.ts
+index 299278d..5072da3 100644
+--- a/lib/saju/career/jobs.ts
++++ b/lib/saju/career/jobs.ts
+@@ -30,6 +30,7 @@
+ //   두 군데 이상(합 4점 이상)에서 나온 것만 고른다.
+ 
+ import { calcCareerScore, gradeAll, pickStrong, type Ohaeng } from './careerScore'
++import { ADULT_JOB_BLOCKLIST } from './roleFit'
+ import { yukchinOf } from './yukchin'
+ import { checkSinsal9 } from './sinsal9'
+ import { calcCareerYongsin } from './yongsin'
+@@ -37,6 +38,15 @@ import type { CareerCard, CareerInput } from './types'
+ import { calcCareerGyeokguk } from './gyeokguk'
+ import { ILJU } from './tables/ilju'
+ import { OHAENG_JOBS, jobKey, jobLabel, okForStudent } from './tables/jobs'
++
++/**
++ * ★성인 리포트에서 걸러 낼 직업 «열쇠» (44부 43차)
++ *
++ *  ⚠️ 목록은 roleFit 의 것을 «가져다» 씁니다. 두 벌로 적지 마십시오. (교훈 E)
++ *  ⚠️ 열쇠로 바꿔 두는 까닭 — jobKey 가 「수도사업」을 「수도」로 줄입니다.
++ *     날것으로 견주면 «안 걸립니다».
++ */
++const BLOCKED_KEYS = new Set(ADULT_JOB_BLOCKLIST.map(jobKey))
+ import { YUKCHIN_GIJIL, GRID25, YUKCHIN_ORDER, type YukchinGroup } from './tables/yukchin'
+ import { GYEOKGUK_INFO } from './tables/gyeokguk'
+ import { SINSAL9 } from './tables/sinsal'
+@@ -171,9 +181,27 @@ export function pickJobs(input: CareerInput): { hits: JobHit[]; pool: number } {
+ 
+   // ★학생 모드에서는 어른용 직업을 걸러 낸다 (유흥·카지노·대부업 등)
+   const forStudent = input.target === 'student'
++
++  // 🔴★2026-08-03 (44부 43차) — «성인» 리포트에서도 걸러 냅니다.
++  //   [무엇이 있었나]  학생만 걸러, 직장인 리포트에 ★「유흥업」이 그대로 나갔습니다.
++  //     (2026-08-03 대표님 PDF — 「어울리는 직업」에 유흥업이 찍혀 있었습니다)
++  //   ⚠️ roleFit.ts 머리말에 그 까닭이 «이미» 적혀 있었습니다 —
++  //      「직장인이 «당신에게 어울리는 직업: 유흥업» 을 읽으면 리포트 전체를 못 믿게 된다」
++  //      ★그런데 roleFit 만 그 판단을 쓰고 여기서는 안 썼습니다. 두 곳이 어긋난 것입니다.
++  //   ⚠️ 나쁜 직업이라는 뜻이 «아닙니다». 커리어 리포트의 결에 안 맞는 것입니다.
++  //      ★교재 표는 «안 고쳤습니다». 목록도 roleFit 의 것을 «가져다» 씁니다 (교훈 E).
++  //   ⚠️⚠️ ★«같은 이름일 때만» 막습니다.
++  //      처음엔 includes 로 견주었더니 ★「의사」가 「장의사」에 걸려 사라졌습니다.
++  //      한 글자라도 겹치면 막는 방식은 «멀쩡한 직업» 을 지웁니다. (교훈 — 낱말로 막지 말 것)
++  //   ⚠️⚠️ ★목록도 «같은 잣대(jobKey)» 로 다듬어 견줍니다.
++  //      「수도사업」은 jobKey 가 「사업」을 떼어 ★「수도」가 되므로,
++  //      목록을 날것 그대로 견주면 ★안 걸립니다. (실제로 「수도」가 남아 나왔습니다)
++  const blocked = (key: string) => BLOCKED_KEYS.has(key)
++
+   const hits = [...bag.values()]
+     .filter(x => x.score >= JOB_MIN)
+     .filter(x => !forStudent || okForStudent(x.key))
++    .filter(x => !blocked(x.key))
+     .sort((a, b) => (b.score - a.score) || (b.sources.length - a.sources.length))
+ 
+   return { hits, pool: bag.size }

@@ -1824,6 +1824,29 @@ console.log('\n━━ (55) ★종이 차례 · 성인 직업 거르기 (44부 43
     `★화면이 «안 그리는» 것은 AI 도 «안 씁니다»`)
 }
 
+console.log('\n━━ (56) ★진로적성 「근거 보기」를 감췄는가 (44부 46차) ━━')
+{
+  const noComment = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  const cjc = noComment(read('app/manseryeok/career-result/components/CareerJudgeCard.tsx'))
+  const doc = read('app/manseryeok/career-result/components/CareerJudgeCard.tsx')
+  const ejc = noComment(read('app/manseryeok/exam-luck-result/components/ExamJudgeCard.tsx'))
+
+  // ★감췄는가
+  check(/const SHOW_WHY = false/.test(cjc), `🔴★「근거 보기」를 감췄습니다`)
+  check(/\{SHOW_WHY && hasTong && card\.lines\.length > 0 && \(/.test(cjc),
+    `★단추가 «아예 안 그려집니다»`)
+  // ⚠️ «지운» 것이 아니라 «감춘» 것인가 — 되살릴 길
+  check(/card\.lines\.map/.test(cjc) && /openWhy/.test(cjc),
+    `⚠️ lines·openWhy 는 «그대로» 있습니다 (지운 것이 아닙니다)`)
+  check(/되살리시려면 이 한 줄을 true/.test(doc), `⚠️ 되살리는 법이 적혀 있습니다`)
+  check(/단정하는 험한 말/.test(doc), `⚠️ 왜 감췄는지 까닭이 적혀 있습니다`)
+
+  // ⚠️ 합격운은 «건드리지 않았는가» — 그쪽 판정 문장은 이미 다듬어진 말입니다
+  check(!/SHOW_WHY/.test(ejc) && /근거 보기/.test(ejc),
+    `⚠️ 합격운의 「근거 보기」는 «그대로» 입니다 (그쪽 말은 이미 다듬어져 있습니다)`)
+}
+
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
 {
   const src = read('lib/saju/simsanOhaeng.ts')
