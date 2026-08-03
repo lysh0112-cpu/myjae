@@ -22,7 +22,7 @@
 
 import { openA4, esc, paraHtml } from '@/app/components/common/A4Print'
 import { splitCardText } from '@/lib/saju/premium/splitCardText'
-import { EL_BG, EL_C } from '@/lib/saju/ohaengColor'
+import { EL_BG, EL_C, EL_HAN } from '@/lib/saju/ohaengColor'
 
 const ACCENT = '#785aaa'
 
@@ -46,6 +46,23 @@ export interface CareerCertInput {
   sections: Array<{ title: string; body: string }>
   /** ★판정 카드 — 근거 (대표님 「모두 담을 것」) */
   cards: Array<{ title: string; badge?: string; lines: string[] }>
+  /**
+   * ★화면 카드 사이에 끼는 «표» — 오행·십성·신강·용신 (44부 37차)
+   *
+   *  🔴 [까닭]  대표님이 뽑으신 첫 PDF 에 ★「설명하는 표가 모두 사라졌다」 하셨습니다.
+   *    화면에는 SajuTableSlot 이 네 가지를 그리는데 종이에는 «하나도» 없었습니다.
+   *  ⚠️ 화면 부품은 React(오각형 SVG·표)라 종이에 그대로 못 옮깁니다.
+   *     ★«값» 을 받아 인쇄용 표로 다시 그립니다.
+   *  ⚠️⚠️ 값을 «다시 계산하지 않습니다» — 화면이 쓰는 것을 그대로 받습니다. (교훈 CJ)
+   */
+  tables?: {
+    /** 오행 세력 — 목·화·토·금·수 백분율 */
+    ohaeng?: Array<{ el: string; pct: number }>
+    /** 십성 세력 */
+    sipsung?: Array<{ ss: string; pct: number }>
+    /** 용신 세 갈래 — 조후 · 억부 · 격국 */
+    yongsin?: { johu?: string; eokbu?: string; gyeokguk?: string; strength?: string }
+  }
 }
 
 /** 넉 기둥 — 화면(SajuWonguk)과 «같은 차례» 로 그립니다 */
@@ -57,6 +74,16 @@ function pillarHtml(ps: CareerCertPillar[]): string {
     <tr>${ps.map(p => cell(p.stem, p.stemEl)).join('')}</tr>
     <tr>${ps.map(p => cell(p.branch, p.branchEl)).join('')}</tr>
   </table>`
+}
+
+/** 인쇄용 가로 막대 표 — ★화면 오각형·표를 «값 그대로» 옮겨 그립니다 */
+function barTable(rows: Array<{ name: string; pct: number; color?: string }>): string {
+  const max = Math.max(1, ...rows.map(r => r.pct))
+  return `<table class="btbl">${rows.map(r => `<tr>
+    <td class="bn">${esc(r.name)}</td>
+    <td class="bb"><i style="width:${Math.round((r.pct / max) * 100)}%;background:${r.color ?? '#b9a9dd'}"></i></td>
+    <td class="bp">${r.pct}</td>
+  </tr>`).join('')}</table>`
 }
 
 const CSS = `
@@ -98,6 +125,16 @@ const CSS = `
     padding: 1px 8px; margin-left: 6px; font-weight: 400;
   }
   .card p { margin: 0 0 3px; font-size: 9.5pt; color: #4a3a30 }
+
+  .tbox { margin: 10px 0 4px; page-break-inside: avoid; break-inside: avoid }
+  .tbox > .t { font-size: 8.5pt; color: #8a7063; margin-bottom: 5px }
+  .btbl { width: 100%; border-collapse: collapse }
+  .btbl td { padding: 2px 0; vertical-align: middle }
+  .btbl .bn { width: 16mm; font-size: 8.5pt; color: #5b4580; white-space: nowrap }
+  .btbl .bp { width: 12mm; text-align: right; font-size: 8.5pt; color: #7a6a60 }
+  .btbl .bb i { display: block; height: 10px; border-radius: 2px }
+  .ys { font-size: 9.5pt; color: #3a2e28 }
+  .ys b { color: #5b4580 }
 `
 
 export function openCareerCertificate(d: CareerCertInput): { ok: boolean; message?: string } {
@@ -122,6 +159,24 @@ export function openCareerCertificate(d: CareerCertInput): { ok: boolean; messag
     </div>`).join('')}
   </div>` : ''
 
+  // ★표 — 화면 SajuTableSlot 이 그리던 넷을 종이에 옮깁니다
+  const t = d.tables
+  const tbl = !t ? '' : [
+    t.ohaeng?.length ? `<div class="tbox"><div class="t">오행의 세력</div>${
+      barTable(t.ohaeng.map(o => ({
+        name: `${o.el}(${EL_HAN[o.el] ?? ''})`, pct: o.pct, color: EL_BG[o.el],
+      })))}</div>` : '',
+    t.sipsung?.length ? `<div class="tbox"><div class="t">십성의 세력</div>${
+      barTable(t.sipsung.map(x => ({ name: x.ss, pct: x.pct })))}</div>` : '',
+    t.yongsin ? `<div class="tbox"><div class="t">어떤 기운이 나를 돕는가</div>
+      <div class="ys">
+        ${t.yongsin.strength ? `힘의 세기 <b>${esc(t.yongsin.strength)}</b><br>` : ''}
+        ${t.yongsin.eokbu ? `억부용신 <b>${esc(t.yongsin.eokbu)}</b> · ` : ''}
+        ${t.yongsin.johu ? `조후용신 <b>${esc(t.yongsin.johu)}</b> · ` : ''}
+        ${t.yongsin.gyeokguk ? `격국용신 <b>${esc(t.yongsin.gyeokguk)}</b>` : ''}
+      </div></div>` : '',
+  ].filter(Boolean).join('')
+
   return openA4({
     title: `${d.name || '진로적성'} — 진로적성`,
     accent: ACCENT,
@@ -136,6 +191,7 @@ export function openCareerCertificate(d: CareerCertInput): { ok: boolean; messag
         ${d.badge ? `<div class="badge">${esc(d.badge)}</div>` : ''}
       </div>
       <div class="wonguk">${pillarHtml(d.pillars)}</div>
+      ${tbl}
       ${secs}
       ${cards}
       <div class="foot">

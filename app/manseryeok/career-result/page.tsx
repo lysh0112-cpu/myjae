@@ -38,6 +38,8 @@ import { openCareerCertificate } from './components/CareerCertificate'
 import CopyTextButton from '@/app/components/common/CopyTextButton'
 import { elOfStem, elOfBranch } from '@/lib/saju/ohaengColor'
 import { splitCardText } from '@/lib/saju/premium/splitCardText'
+import { toPercentList } from '@/lib/saju/simsanOhaeng'
+import { calcSipsungDist } from '@/lib/saju/sipsungDist'
 import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
 import { calcYongsinNew } from '@/lib/saju/yongsinNew'
 import { getGongmang } from '@/lib/saju/gongmang'
@@ -316,12 +318,35 @@ function CareerResultInner() {
   //     두 벌로 세면 «종이와 화면이 다른 말» 을 하는 날이 옵니다.
   //  ⚠️ 팝업이 막히면 «조용히 넘어가지 않고» 알려 드립니다. (교훈 U)
   // ══════════════════════════════════════════════════════════════
+  /**
+   * ★종이에 넣을 표 값 (44부 37차)
+   *  ⚠️ 화면 SajuTableSlot 과 «같은 함수» 를 부릅니다. 셈을 두 벌로 두지 않습니다.
+   */
+  const certTables = useMemo(() => {
+    if (!calc || !dayStem || dayStem === '?') return undefined
+    const score = calcSimsanOhaeng(calc.saju, calc.solarMonth, calc.solarDay, calc.hourBranch)
+    const ys = calcYongsinNew(calc.saju, dayStem)
+    return {
+      ohaeng: toPercentList(score).map(o => ({ el: o.el as string, pct: o.pct })),
+      sipsung: calcSipsungDist(calc.saju, dayStem).map(x => ({ ss: x.ss, pct: x.pct })),
+      yongsin: {
+        strength: ys?.status ?? '',
+        eokbu: ys?.eokbu?.yongsin ?? '',
+        johu: ys?.johu?.element ?? '',
+        gyeokguk: ys?.gyeokguk?.element ?? '',
+      },
+    }
+  }, [calc, dayStem])
+
   function onPrintCert() {
     if (!calc) return
     const r = openCareerCertificate({
       name: person.name || '',
       birth: person.year ? `${person.year}.${person.month}.${person.day}` : '',
-      badge: [status, target === 'student' ? '학생' : '성인'].filter(Boolean).join(' · '),
+      // 🔴 2026-08-03 (44부 37차) — status 를 «그대로» 넣어 「worker · 성인」이 나갔습니다.
+      //   ★화면과 «같은 이름표»(STATUS_LABEL)를 씁니다. 두 벌로 적지 마십시오.
+      badge: [status ? STATUS_LABEL[status] : '', target === 'student' ? '학생' : '성인']
+        .filter(Boolean).join(' · '),
       // ★화면(SajuWonguk)과 «같은 차례» — 시·일·월·년
       pillars: ['시주', '일주', '월주', '년주'].map(k => {
         const q = calc.saju.find(x => x.pillar === k)
@@ -337,6 +362,9 @@ function CareerResultInner() {
       cards: cards
         .filter(c => c.lines.length > 0)
         .map(c => ({ title: c.title, badge: c.badge, lines: c.lines })),
+      // ★화면 카드 사이의 «표» 를 종이에도 (44부 37차 · 대표님 「표가 모두 사라졌다」)
+      //   ⚠️ 값을 «다시 계산하지 않습니다» — 화면 부품이 쓰는 함수를 그대로 부릅니다 (교훈 CJ)
+      tables: certTables,
     })
     if (!r.ok && r.message) alert(r.message)
   }
@@ -628,7 +656,14 @@ function CareerResultInner() {
                    (44부 23차 궁합서와 같은 결)
                 ⚠️ 공용 부품(CopyTextButton)을 «고치지 않고» 감싼 자리에서 너비를 맞춥니다.
                 ══════════════════════════════════════════════════════ */}
-            {premiumSections.length > 0 && (
+            {/* 🔴⚠️ 2026-08-03 (44부 37차) — ★tongState === 'done' 을 «빠뜨렸습니다».
+                [무엇이 있었나]  premiumSections.length > 0 만 걸어 두어,
+                  ★AI 가 «첫 대목을 쓰기 시작하자마자» 버튼이 떴습니다.
+                  그때 누르시면 «쓰다 만 글» 이 종이에 박힙니다 —
+                  대표님이 뽑으신 PDF 가 「회의·발표·현장처럼 사」에서 끊겼습니다.
+                ⚠️ 44부 23차 궁합서는 이 조건을 «제대로» 걸고 있었는데,
+                   제가 옮기며 빠뜨렸습니다. 검사 그물에도 「다 나온 뒤」라 적어 놓고서요. */}
+            {tongState === 'done' && premiumSections.length > 0 && (
               <>
                 <div style={{
                   display: 'flex', flexDirection: 'row', gap: 8,

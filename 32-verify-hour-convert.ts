@@ -1676,8 +1676,19 @@ console.log('\n━━ (53) ★진로적성 A4 인쇄 · 해설 복사 (44부 36�
   // ★화면 — 버튼 둘이 나란히, 통변 뒤에만
   check(/A4 PDF저장\/인쇄/.test(page), `★「A4 PDF저장/인쇄」 버튼이 있습니다`)
   check(/<CopyTextButton/.test(page), `★「해설 복사」 버튼이 있습니다`)
-  check(/premiumSections\.length > 0 && \([\s\S]{0,600}onPrintCert/.test(page),
-    `⚠️ 통변이 «다 나온 뒤» 에만 보입니다 (반쪽 인쇄물을 막습니다)`)
+  // 🔴⚠️ 2026-08-03 (44부 37차) — ★tongState === 'done' 을 빠뜨려
+  //   «쓰다 만 글» 이 종이에 박혔습니다. 대표님 PDF 가 문장 가운데서 끊겼습니다.
+  //   ⇒ 이제 «완료» 를 글자로 잽니다. 이 검사는 그때 «통과하고 있었습니다» —
+  //     조건을 안 보고 「그 언저리에 onPrintCert 가 있는가」만 봤기 때문입니다.
+  check(/\{tongState === 'done' && premiumSections\.length > 0 && \(/.test(page),
+    `🔴★통변이 «다 나온 뒤» 에만 보입니다 (반쪽 인쇄물을 막습니다)`)
+  // 🔴 신분이 «영문 그대로» 나가지 않는가 — 「worker · 성인」이 찍혔습니다
+  check(/STATUS_LABEL\[status\]/.test(page), `🔴★신분을 «한글 이름표» 로 씁니다`)
+  // ★표 — 화면에 있는 것이 종이에도 있는가
+  check(/tables: certTables/.test(page), `★오행·십성·용신 표를 종이에 넘깁니다`)
+  check(/toPercentList\(score\)/.test(page) && /calcSipsungDist\(calc\.saju, dayStem\)/.test(page),
+    `⚠️ 화면 부품과 «같은 함수» 로 셈합니다 (두 벌로 두지 않습니다)`)
+  check(/function barTable/.test(cert), `★인쇄용 막대 표를 그립니다`)
   check(/flexDirection: 'row', gap: 8[\s\S]{0,60}alignItems: 'stretch'/.test(page),
     `★두 버튼이 «가로로» 나란히 있습니다`)
   check(/className="copy-half"/.test(page) && /\.copy-half > button \{ width: 100% \}/.test(page),
