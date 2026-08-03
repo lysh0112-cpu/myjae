@@ -50,7 +50,9 @@ function leanWord(leftPct: number): string {
   return '아주 뚜렷해요'
 }
 
-export default function MbtiCard({ result, realMbti, compare, onWantInput }: Props) {
+// ⚠️ onWantInput 은 Props 에 «남겨 두되» 지금은 받지 않습니다 —
+//    부르는 쪽(career-result/page.tsx)을 고치지 않으려는 것입니다. 되살릴 때 씁니다.
+export default function MbtiCard({ result, realMbti, compare }: Props) {
   return (
     <div style={{
       background: '#fff',
@@ -64,8 +66,11 @@ export default function MbtiCard({ result, realMbti, compare, onWantInput }: Pro
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
         <span style={{ fontSize: 22, lineHeight: 1 }}>🧩</span>
         <div style={{ flex: 1, minWidth: 0 }}>
+          {/* ★2026-08-03 (44부 31차) — 제목을 «갈랐습니다» (대표님 지시)
+              ⚠️ 「내 MBTI에 대비해 본…」은 ★MBTI 를 넣으신 분에게만 맞는 말입니다.
+                 안 넣으신 분께 그렇게 말하면 «없는 것을 있다고» 하는 셈입니다. */}
           <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', letterSpacing: '-0.2px' }}>
-            사주로 본 성향
+            {compare && realMbti ? '내 MBTI에 대비해 본 나의 사주명리' : '사주로 본 성향'}
           </div>
           <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
             재미로 보는 참고예요. 검사 결과를 대신하지 않아요.
@@ -195,27 +200,20 @@ export default function MbtiCard({ result, realMbti, compare, onWantInput }: Pro
             {compare.body}
           </div>
         </div>
-      ) : (
-        <div style={{
-          marginTop: 16, padding: '13px 14px', borderRadius: 13,
-          background: '#faf7ff', border: `1px solid ${ACCENT}26`,
-        }}>
-          <div style={{ fontSize: 11.5, color: '#4a3b60', lineHeight: 1.7 }}>
-            실제 MBTI 를 넣으시면 <b>타고난 결과 지금의 결</b>이 어떻게 만나는지
-            입체적으로 견주어 드려요.
-          </div>
-          {onWantInput && (
-            <button
-              onClick={onWantInput}
-              style={{
-                marginTop: 10, width: '100%', padding: '10px 12px', borderRadius: 11,
-                background: ACCENT, border: 'none', color: '#fff',
-                fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >실제 MBTI 넣고 다시 보기</button>
-          )}
-        </div>
-      )}
+      ) : null}
+      {/* ══════════════════════════════════════════════════════════
+          🔴★2026-08-03 (44부 31차) — MBTI 를 안 넣으셨으면 «아무것도 그리지 않습니다».
+
+          [무엇이 있었나]  「실제 MBTI 를 넣으시면 … [넣고 다시 보기]」 상자.
+            ⚠️ 모르는 분에겐 ★막다른 길이었습니다 — 돌아가 봐야 콤보에
+               「잘 모름」밖에 고를 것이 없었습니다.
+          ★대신 «입력 화면» 콤보 옆에 「검사하기 ↗」를 늘 보이게 했습니다.
+            거기서 검사하고 오시면 됩니다. 결과 화면에서 조르지 않습니다.
+          ⚠️⚠️ 통변 «재료» 에서도 같은 권유 문장을 뺐습니다.
+             화면에서만 빼면 AI 글에서 다시 튀어나옵니다.
+             (44부 3-3장 — 별점을 세 곳 중 두 곳만 껐다가 새어 나간 자리)
+          ⚠️ onWantInput 은 «남겨 둡니다» — 되살릴 때 필요합니다.
+          ══════════════════════════════════════════════════════════ */}
     </div>
   )
 }

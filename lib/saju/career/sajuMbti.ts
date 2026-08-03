@@ -32,6 +32,7 @@ import type { Ohaeng, Pillar } from './types'
 import { calcCareerScore } from './careerScore'
 import { yukchinOf } from './yukchin'
 import { checkSinsal9 } from './sinsal9'
+import { eunneun } from '../josa'
 
 export type MbtiAxis = 'EI' | 'SN' | 'TF' | 'JP'
 
@@ -387,9 +388,10 @@ export function compareMbti(saju: SajuMbtiResult, real: string): MbtiCompare | n
   if (!/^[EI][SN][TF][JP]$/.test(R)) return null
 
   const diffAxes: string[] = []
+  const sameAxes: string[] = []
   let same = 0
   saju.axes.forEach((a, i) => {
-    if (a.pick === R[i]) same++
+    if (a.pick === R[i]) { same++; sameAxes.push(AXIS_LABEL[a.axis]) }
     else diffAxes.push(AXIS_LABEL[a.axis])
   })
 
@@ -407,9 +409,20 @@ export function compareMbti(saju: SajuMbtiResult, real: string): MbtiCompare | n
       body: '이건 어긋난 것이 아니라, 살아오며 필요해서 다른 쪽 근육을 키우신 것입니다. 두 결을 다 쓸 수 있다는 뜻이라 쓰임이 넓습니다. 다만 오래 쓰면 지치는 쪽이 있으니, 힘들 때 돌아갈 자리가 타고난 쪽이라는 것만 기억해 두십시오.',
     }
   }
+  // 🔴★2026-08-03 (44부 31차) — 「N가지가 겹칩니다」 다음에 «갈리는» 결 이름이 와서
+  //    ★그 이름이 «겹치는» 것으로 뒤집혀 읽혔습니다.
+  //    실제로 겪었습니다 — 다른 AI 에게 이 화면을 읽히니 정반대로 풀었습니다.
+  //    AI 가 헷갈리면 손님은 더합니다.
+  //  ⇒ ★«겹치는 결» 과 «갈리는 결» 의 이름을 «둘 다» 대어 줍니다.
   return {
     same, diffAxes,
-    headline: `네 결 가운데 ${same}가지가 겹칩니다`,
-    body: `${diffAxes.join('과 ')}에서 타고난 쪽과 지금 쪽이 갈립니다. 갈리는 자리가 오히려 반전이 되는 곳입니다. 남들이 예상하지 못한 방식으로 일을 풀 수 있고, 그 자리가 이 분만의 강점이 됩니다.`,
+    headline: `겹치는 결 ${same}가지 · 갈리는 결 ${diffAxes.length}가지`,
+    // ⚠️ 조사를 문자열에 «박지» 마십시오 — lib/saju/josa.ts 를 씁니다. (교훈 AU)
+    //    그 파일 머리말에 「진로적성에서도 "토(土)이 없어요" 가 나왔다」고 적혀 있습니다.
+    // ⚠️ 이름을 「과」로 잇지 «않습니다» — 「보는 결과 고르는 결과 맺는 결」이 되어
+    //    ★"결과(結果)"로 읽힙니다. 가운뎃점으로 잇습니다.
+    body: `${sameAxes.join(' · ')}${eunneun(sameAxes[sameAxes.length - 1] ?? '')} 타고난 대로 쓰고 계십니다. 억지로 꾸미지 않아도 되는 자리라 힘이 덜 듭니다. `
+      + `${diffAxes.join(' · ')}에서는 타고난 쪽과 지금 쪽이 갈립니다. 갈리는 자리가 오히려 반전이 되는 곳입니다. `
+      + `남들이 예상하지 못한 방식으로 일을 풀 수 있고, 그 자리가 이 분만의 강점이 됩니다.`,
   }
 }

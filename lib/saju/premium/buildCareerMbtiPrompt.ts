@@ -162,10 +162,15 @@ function buildSections(v: CareerMbtiInput): { sections: Section[]; mbti: SajuMbt
           cmp.diffAxes.length ? `갈리는 자리(${cmp.diffAxes.join('·')})는 흠이 아니라 두 결을 다 쓸 수 있다는 뜻입니다.` : '',
         ].filter(Boolean)],
       ] : [
+        // ⚠️⚠️ 2026-08-03 (44부 31차) — ★「실제 MBTI 를 넣으시면…」 권유를 «뺐습니다».
+        //   [까닭] 화면에서도 그 상자를 없앴습니다(막다른 길이었습니다).
+        //     재료에 남겨 두면 ★AI 글에서 다시 튀어나옵니다 —
+        //     44부 3-3장에서 별점을 «세 곳 중 두 곳» 만 껐다가 겪은 일과 같은 자리입니다.
+        //   ★대신 «입력 화면» 콤보 옆에 「검사하기 ↗」를 늘 보이게 두었습니다.
+        //     결과를 다 본 손님을 붙잡고 조르지 «않습니다».
         ['핵심 성향 진단', [
           `${mbti.code} — ${mbti.title}`,
           ...mbti.axes.map(a => `${a.pick} — ${AXIS_WORK[a.pick] ?? ''}`),
-          '※ 실제 MBTI 를 넣으시면 타고난 결과 지금의 결을 견주어 시너지와 반전을 더 깊이 볼 수 있습니다.',
         ]],
       ],
     },

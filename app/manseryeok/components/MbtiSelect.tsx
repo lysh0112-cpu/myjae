@@ -35,12 +35,35 @@ export default function MbtiSelect({ value, onChange, accent = '#785aaa' }: Prop
 
   return (
     <div>
-      <label
-        htmlFor="mbti-select"
-        style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#3a2e28', marginBottom: 7 }}
-      >
-        MBTI <span style={{ fontWeight: 400, color: '#8a6a52' }}>(모르셔도 괜찮아요)</span>
-      </label>
+      {/* ══════════════════════════════════════════════════════════
+          ★2026-08-03 (44부 31차) — 「검사하기 ↗」를 «늘» 보이게 (대표님 지시)
+
+          [무엇이 있었나]  콤보를 열고 → 「잘 모름 / MBTI 검사하기」를 고르고 →
+            그제야 안내가 떴습니다. ★닫힌 채로는 «검사» 라는 말이 아예 안 보였습니다.
+          ⇒ 모르는 분이 그냥 지나쳐 버리고, 결과 화면에서야 아쉬워하셨습니다.
+          ★여기서 검사하고 오시면 결과 화면이 「내 MBTI에 대비해 본…」으로 바뀝니다.
+          ⚠️ 링크(TEST_URL)와 안내 상자는 «이미 있던 것» 을 그대로 씁니다. 새로 짓지 않았습니다.
+          ══════════════════════════════════════════════════════════ */}
+      <div style={{
+        display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 7,
+      }}>
+        <label
+          htmlFor="mbti-select"
+          style={{ fontSize: 12.5, fontWeight: 600, color: '#3a2e28' }}
+        >
+          MBTI <span style={{ fontWeight: 400, color: '#8a6a52' }}>(모르셔도 괜찮아요)</span>
+        </label>
+        <a
+          href={TEST_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            marginLeft: 'auto', fontSize: 11.5, fontWeight: 600, color: accent,
+            textDecoration: 'none', whiteSpace: 'nowrap',
+            borderBottom: `1px solid ${accent}55`, paddingBottom: 1,
+          }}
+        >모르면 검사하기 ↗</a>
+      </div>
 
       <select
         id="mbti-select"

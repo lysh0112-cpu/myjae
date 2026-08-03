@@ -1490,6 +1490,45 @@ console.log('\n━━ ㊾ 🔴★[한줄]·[태그]·[실천] 이 «글자 그�
   check(/옛 통변이 깨지지 않게/.test(read(P)), `⚠️ 표시가 없으면 그대로 둔다고 적혀 있습니다`)
 }
 
+console.log('\n━━ ㊿ ★MBTI 를 안 넣으면 조르지 않는다 · 겹침/갈림 헷갈림 (44부 31차) ━━')
+{
+  const noComment = (s: string) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  const card = noComment(read('app/manseryeok/career-result/components/MbtiCard.tsx'))
+  const sel = noComment(read('app/manseryeok/components/MbtiSelect.tsx'))
+  const pr = noComment(read('lib/saju/premium/buildCareerMbtiPrompt.ts'))
+  const eng = noComment(read('lib/saju/career/sajuMbti.ts'))
+
+  // ★제목이 갈리는가
+  check(/내 MBTI에 대비해 본 나의 사주명리/.test(card), `★넣은 분 제목이 있습니다`)
+  check(/compare && realMbti \? '내 MBTI에 대비해 본 나의 사주명리' : '사주로 본 성향'/.test(card),
+    `★안 넣은 분에게는 「사주로 본 성향」입니다 (없는 것을 있다 하지 않습니다)`)
+
+  // 🔴 권유 상자가 «화면과 재료 둘 다» 에서 사라졌는가
+  check(!/실제 MBTI 를 넣으시면/.test(card), `🔴★화면에서 권유 상자가 사라졌습니다`)
+  check(!/실제 MBTI 를 넣으시면/.test(pr), `🔴⚠️ ★«재료» 에서도 사라졌습니다 (새어 나가지 않게)`)
+  check(/\) : null\}/.test(card), `★안 넣으면 «아무것도» 그리지 않습니다`)
+  // ⚠️ 되살릴 길은 남겼는가
+  check(/onWantInput\?: \(\) => void/.test(card), `⚠️ onWantInput 은 남아 있습니다 (되살릴 때)`)
+
+  // ★입력 화면 — 「검사하기」가 «늘» 보이는가
+  check(/모르면 검사하기/.test(sel), `★콤보 옆에 「모르면 검사하기 ↗」가 늘 보입니다`)
+  check(/href=\{TEST_URL\}[\s\S]{0,400}모르면 검사하기/.test(sel),
+    `⚠️ 링크는 «이미 있던» TEST_URL 을 씁니다 (새로 짓지 않았습니다)`)
+  check(/잘 모름 \/ MBTI 검사하기/.test(sel), `⚠️ 콤보 안 「잘 모름」도 그대로입니다`)
+
+  // 🔴 겹침/갈림 — 이름을 «둘 다» 대는가
+  check(/const sameAxes: string\[\] = \[\]/.test(eng), `★겹치는 결의 이름도 모읍니다`)
+  check(/겹치는 결 \$\{same\}가지 · 갈리는 결 \$\{diffAxes\.length\}가지/.test(eng),
+    `🔴★「겹치는 결 N가지 · 갈리는 결 N가지」로 둘 다 밝힙니다`)
+  check(!/네 결 가운데 \$\{same\}가지가 겹칩니다/.test(eng),
+    `🔴⚠️ 뒤집혀 읽히던 옛 문장이 사라졌습니다`)
+  // ⚠️ 조사·이음말
+  check(/eunneun\(sameAxes/.test(eng), `⚠️ 조사를 josa.ts 로 붙입니다 (교훈 AU)`)
+  check(/sameAxes\.join\(' · '\)/.test(eng) && /diffAxes\.join\(' · '\)/.test(eng),
+    `⚠️ 「과」로 잇지 않습니다 — 「보는 결과 고르는 결」이 «결과» 로 읽힙니다`)
+}
+
 console.log('\n━━ ㉒-f ★되돌려지지 않도록 — 까닭이 코드에 적혀 있는가 ━━')
 {
   const src = read('lib/saju/simsanOhaeng.ts')
