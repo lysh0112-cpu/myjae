@@ -128,10 +128,25 @@ function ExpertInner() {
       <div style={{ padding: 14 }}>
         <div style={{ fontSize: 11, color: '#6b5340', marginBottom: 12 }}>아무 사주나 등록해 만세력을 확인하는 도구예요. (통변 없음)</div>
 
-        {/* 새로 등록 버튼 */}
+        {/* 새로 등록 버튼
+            ★2026-08-04 (45부 · 대표님 지시) — 다른 보관함과 «같은 모습» 으로 맞췄습니다.
+              전에는 «점선 + 흰 바탕» 이라 이 화면만 혼자 달랐습니다.
+              ⇒ StorageShell 의 S.btn(#b46e46) 과 «같은 값» 을 씁니다.
+                 꽉 찬 갈색 · 흰 글씨 · padding 14 · borderRadius 12 · fontSize 14
+
+            ⚠️⚠️ 색·크기를 바꾸시려면 ★app/components/common/StorageShell.tsx 의
+               S.btn 을 먼저 보십시오. 그것이 «정본» 이고 여기는 «따라가는» 자리입니다.
+               ⇒ 그쪽을 고치시면 ★여기도 «손으로» 맞춰 주셔야 합니다.
+
+            ⚠️ 이 화면은 StorageShell 로 «통째로 바꾸지 않았습니다» (대표님 확정 ⓐ).
+               까닭 — 다른 보관함과 다른 점이 셋 있습니다.
+                 ① 등록 폼이 «같은 화면 안» 에서 펼쳐집니다 (다른 곳은 새 화면으로 이동)
+                 ② 줄카드에 [조회][삭제] 버튼이 «둘» 입니다
+                 ③ 삭제 팝업을 «자기가» 갖고 있습니다 (공용 ConfirmDeleteDialog 아님)
+               ★겉모습만 맞추는 것이 지금 판단입니다. 바꾸시려면 목업부터 그리십시오. */}
         {!showForm && (
           <button onClick={() => { resetForm(); setShowForm(true) }}
-            style={{ width: '100%', padding: '13px 0', borderRadius: 12, border: '0.5px dashed #9c7a58', background: '#fffbf7', color: '#96502e', fontSize: 14, fontWeight: 600, cursor: 'pointer', marginBottom: 14 }}>
+            style={{ width: '100%', padding: 14, borderRadius: 12, border: 'none', background: '#b46e46', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 14 }}>
             + 새로 등록
           </button>
         )}
