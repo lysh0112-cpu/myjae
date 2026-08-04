@@ -181,19 +181,19 @@ export function passOpt(d: WeddingFlags, on: OptState): boolean {
 
 /** 고정 필터 칩 — 화면 상단에 설명용으로 띄운다 */
 export const FIXED_CHIPS: { key: string; label: string; hanja: string }[] = [
-  { key: 'fixMyeongjeol', label: '명절 아님', hanja: '名節' },
-  { key: 'fixGongmang', label: '빈자리 아님', hanja: '空亡' },
-  { key: 'fixChung', label: '부딪힘 없음', hanja: '沖' },
-  { key: 'fixHyeong', label: '모남 없음', hanja: '刑' },
+  { key: 'fixMyeongjeol', label: '명절 제외', hanja: '名節' },
+  { key: 'fixGongmang', label: '공망 제외', hanja: '空亡' },
+  { key: 'fixChung', label: '일지 충 피함', hanja: '沖' },
+  { key: 'fixHyeong', label: '형살 피함', hanja: '刑' },
 ]
 
 /** 진단 화면이 쓰는 7줄 순서 (고정 4 + 선택 3) */
 export const ALL_ROWS: { key: keyof WeddingFlags; label: string; hanja: string; kind: 'fix' | 'opt' }[] = [
   { key: 'optWeekend', label: '예식하는 날', hanja: '週末', kind: 'opt' },
-  { key: 'fixMyeongjeol', label: '명절 아님', hanja: '名節', kind: 'fix' },
-  { key: 'fixGongmang', label: '빈자리 아님', hanja: '空亡', kind: 'fix' },
-  { key: 'fixChung', label: '부딪힘 없음', hanja: '沖', kind: 'fix' },
-  { key: 'fixHyeong', label: '모남 없음', hanja: '刑', kind: 'fix' },
+  { key: 'fixMyeongjeol', label: '명절 제외', hanja: '名節', kind: 'fix' },
+  { key: 'fixGongmang', label: '공망 제외', hanja: '空亡', kind: 'fix' },
+  { key: 'fixChung', label: '일지 충 피함', hanja: '沖', kind: 'fix' },
+  { key: 'fixHyeong', label: '형살 피함', hanja: '刑', kind: 'fix' },
   { key: 'optBride', label: '신부에게 좋은 날', hanja: '用神日', kind: 'opt' },
   { key: 'optBoth', label: '신랑에게도 좋은 날', hanja: '用神日', kind: 'opt' },
 ]
