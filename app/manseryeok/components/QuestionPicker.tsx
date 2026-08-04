@@ -235,7 +235,7 @@ export default function QuestionPicker({
 
       {/* 전체 선택/해제 */}
       <div style={{ padding: '10px 14px', display: 'flex', gap: 8, borderBottom: `0.5px solid ${C.divider}`, flexShrink: 0 }}>
-        <button onClick={selectAll} style={{ flex: 1, height: 34, background: C.selBg, border: `0.5px solid #e0c0a8`, borderRadius: 9, color: C.titleWarm, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>✓ 전체 선택</button>
+        <button onClick={selectAll} style={{ flex: 1, height: 34, background: C.selBg, border: `0.5px solid #ca946c`, borderRadius: 9, color: C.titleWarm, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>✓ 전체 선택</button>
         <button onClick={clearAll} style={{ flex: 1, height: 34, background: '#fff', border: `0.5px solid ${C.chipBorder}`, borderRadius: 9, color: C.sub, fontSize: 12, cursor: 'pointer' }}>전체 해제</button>
       </div>
 
@@ -259,7 +259,7 @@ export default function QuestionPicker({
         ))}
 
         {/* ── 직접 물어보기 (맨 아래) ── */}
-        <div style={{ marginTop: 6, border: `1px dashed #d8b89a`, borderRadius: 12, background: '#faf3ec', padding: '12px 13px' }}>
+        <div style={{ marginTop: 6, border: `1px dashed #9c7a58`, borderRadius: 12, background: '#faf3ec', padding: '12px 13px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
             <span style={{ fontSize: 14 }}>✏️</span>
             <span style={{ fontSize: 13, fontWeight: 700, color: '#96502e' }}>직접 물어보기</span>
@@ -271,7 +271,7 @@ export default function QuestionPicker({
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
                 <span style={{ fontSize: 11, color: '#4a9450', flex: 1 }}>✓ 아래 풀이에 함께 담겨요</span>
-                <button type="button" onClick={cancelDirect} style={{ fontSize: 11, color: '#5c3a1e', border: '0.5px solid #e0c0a8', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', background: '#fff', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>지우고 다시 쓰기</button>
+                <button type="button" onClick={cancelDirect} style={{ fontSize: 11, color: '#5c3a1e', border: '0.5px solid #ca946c', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', background: '#fff', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>지우고 다시 쓰기</button>
               </div>
             </div>
           ) : (

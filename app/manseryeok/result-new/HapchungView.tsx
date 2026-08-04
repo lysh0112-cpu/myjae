@@ -78,7 +78,7 @@ export default function HapchungView({ saju }: Props) {
       {/* 적용된 합충 목록 */}
       <div style={{ fontSize: 11, color: '#96502e', fontWeight: 700, marginBottom: 6 }}>적용된 합·충</div>
       {notes.length === 0 || !changed ? (
-        <div style={{ fontSize: 11, color: '#6b5340', background: '#fff', border: '0.5px dashed #f0e0d5', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
+        <div style={{ fontSize: 11, color: '#6b5340', background: '#fff', border: '0.5px dashed #9c7a58', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
           이 사주엔 점수를 바꾸는 합·충이 없어요.
         </div>
       ) : (

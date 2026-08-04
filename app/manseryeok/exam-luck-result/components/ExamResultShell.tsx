@@ -735,7 +735,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       <div style={{ padding: '14px 14px 0' }}>
         {kindLabel && (
           <div style={{
-            background: '#f7e6ee', border: '0.5px solid #f0d8e2', borderRadius: 12,
+            background: '#f7e6ee', border: '0.5px solid #d38caa', borderRadius: 12,
             padding: '10px 14px', marginBottom: 12, fontSize: 12.5, color: '#8c4a63', lineHeight: 1.7,
           }}>
             {kindLabel}을(를) 기준으로 보았습니다.
@@ -927,7 +927,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         {/* 일부 묶음만 온 경우 — 글은 보여 주고 «덜 왔다» 는 것만 알립니다 */}
         {tongState === 'done' && failWhy && (
           <div style={{
-            background: '#fdf4e8', border: '0.5px solid #f0dcc0', borderRadius: 12,
+            background: '#fdf4e8', border: '0.5px solid #cb964d', borderRadius: 12,
             padding: '11px 14px', marginBottom: 12, fontSize: 12, color: '#8a6a3c', lineHeight: 1.75,
           }} title={failWhy}>
             일부 갈래를 못 받았어요. 아래 [다시 시도]로 한 번 더 받아 보실 수 있습니다.
@@ -995,7 +995,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
                → ?pro=1 에서만 그립니다. 지우지는 않았습니다. */}
         {showDiag && diag.length > 0 && (
           <details style={{
-            background: '#f7f4f0', border: '0.5px dashed #d8c8b8', borderRadius: 12,
+            background: '#f7f4f0', border: '0.5px dashed #9c7a58', borderRadius: 12,
             padding: '10px 12px', marginBottom: 12,
           }}>
             <summary style={{ fontSize: 11.5, color: '#8a7063', cursor: 'pointer' }}>
@@ -1007,7 +1007,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
                   {`${d.n}. ${d.key.padEnd(8)} HTTP ${d.status ?? '—'} · ${(d.ms / 1000).toFixed(1)}s · ${d.chars}자 · ${d.note}`}
                 </div>
               ))}
-              <div style={{ marginTop: 7, paddingTop: 7, borderTop: '1px solid #e5dcd2' }}>
+              <div style={{ marginTop: 7, paddingTop: 7, borderTop: '1px solid #b69c80' }}>
                 {`총 ${tong.length}자 · 상한 없음(라우트 기본 16,000) · 상태 ${tongState}`}
               </div>
               {/* ★★2026-07-30 (8차) — «잘림» 과 «안 씀» 을 여기서 눈으로 가릅니다. (교훈 DS)
@@ -1033,7 +1033,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       <div style={{
         position: 'fixed', bottom: 0, zIndex: 50, left: '50%', transform: 'translateX(-50%)',
         width: '100%', maxWidth: 430, display: 'flex', justifyContent: 'space-around',
-        padding: '10px 0 20px', background: '#fff', borderTop: '0.5px solid #f0ede6',
+        padding: '10px 0 20px', background: '#fff', borderTop: '0.5px solid #ae9e79',
       }}>
         {[{ icon: '🏠', label: '홈', to: '/home-new' },
           { icon: '⊞', label: '서비스', to: '/home-new' },

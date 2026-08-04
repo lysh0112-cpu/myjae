@@ -106,7 +106,7 @@ function ExpertInner() {
     background: active ? '#b46e46' : '#f5efe9', color: active ? '#fff' : '#b09a88',
   })
   const inp: React.CSSProperties = {
-    flex: 1, background: '#faf7f4', border: '0.5px solid #eaddd2', borderRadius: 8,
+    flex: 1, background: '#faf7f4', border: '0.5px solid #bf9877', borderRadius: 8,
     padding: '10px 8px', color: '#5a4a3e', fontSize: 15, outline: 'none', textAlign: 'center', width: '100%',
   }
   // 드롭다운 (기본 화살표 숨기고 직접 그림 — 좁은 칸에서 글자가 가려지지 않게)
@@ -131,7 +131,7 @@ function ExpertInner() {
         {/* 새로 등록 버튼 */}
         {!showForm && (
           <button onClick={() => { resetForm(); setShowForm(true) }}
-            style={{ width: '100%', padding: '13px 0', borderRadius: 12, border: '0.5px dashed #d0a878', background: '#fffbf7', color: '#96502e', fontSize: 14, fontWeight: 600, cursor: 'pointer', marginBottom: 14 }}>
+            style={{ width: '100%', padding: '13px 0', borderRadius: 12, border: '0.5px dashed #9c7a58', background: '#fffbf7', color: '#96502e', fontSize: 14, fontWeight: 600, cursor: 'pointer', marginBottom: 14 }}>
             + 새로 등록
           </button>
         )}
@@ -201,7 +201,7 @@ function ExpertInner() {
         {people === null ? (
           <div style={{ textAlign: 'center', color: '#6b5340', fontSize: 12, padding: 20 }}>불러오는 중…</div>
         ) : people.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#6b5340', fontSize: 12, padding: 24, background: '#fff', border: '0.5px dashed #f0e0d5', borderRadius: 12 }}>
+          <div style={{ textAlign: 'center', color: '#6b5340', fontSize: 12, padding: 24, background: '#fff', border: '0.5px dashed #9c7a58', borderRadius: 12 }}>
             아직 등록한 사주가 없어요.<br />위 [+ 새로 등록]으로 추가해 보세요.
           </div>
         ) : (

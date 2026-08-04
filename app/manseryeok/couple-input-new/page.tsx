@@ -135,7 +135,7 @@ function CoupleInputInner() {
 
         <SlotView n={1} slot={slot1} onOpen={() => setPickerFor(1)} />
 
-        <div style={{ textAlign: 'center', color: '#d4537e', fontSize: 16, margin: '2px 0 8px' }}>♥</div>
+        <div style={{ textAlign: 'center', color: '#A93A60', fontSize: 16, margin: '2px 0 8px' }}>♥</div>
 
         <SlotView n={2} slot={slot2} onOpen={() => setPickerFor(2)} />
 
@@ -199,7 +199,7 @@ function SlotView({ n, slot, onOpen }: {
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 500, color: '#3a2e28' }}>
               {slot.name}
-              {slot.isMe && <span style={{ fontSize: 9, color: '#b46e46', background: '#f6e3d6', borderRadius: 99, padding: '0 6px', marginLeft: 3 }}>나</span>}
+              {slot.isMe && <span style={{ fontSize: 9, color: '#8F5433', background: '#f6e3d6', borderRadius: 99, padding: '0 6px', marginLeft: 3 }}>나</span>}
             </div>
             {birthLabel && <div style={{ fontSize: 10, color: '#5c3a1e' }}>{birthLabel}</div>}
           </div>
@@ -207,7 +207,7 @@ function SlotView({ n, slot, onOpen }: {
         </div>
       ) : (
         <div onClick={onOpen} style={{
-          background: '#FFFBF7', border: '1.5px dashed #e0c9b8', borderRadius: 12, padding: '16px 12px',
+          background: '#FFFBF7', border: '1.5px dashed #9c7a58', borderRadius: 12, padding: '16px 12px',
           textAlign: 'center', cursor: 'pointer', color: '#5c3a1e',
         }}>
           <span style={{ fontSize: 18, color: '#c8a086' }}>＋</span>

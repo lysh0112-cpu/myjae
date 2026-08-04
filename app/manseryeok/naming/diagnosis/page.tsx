@@ -945,7 +945,7 @@ function DiagnosisInner() {
                           style={{
                             width: '78px', height: '78px', borderRadius: '50%',
                             background: c ? 'rgba(200,120,60,0.10)' : cardBg,
-                            border: c ? `2px solid ${gold}` : '1px dashed #d8a87e',
+                            border: c ? `2px solid ${gold}` : '1px dashed #9c7a58',
                             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                             cursor: locked ? 'not-allowed' : 'pointer', transition: 'transform 0.15s ease',
                             opacity: locked ? 0.4 : 1,
@@ -1059,7 +1059,7 @@ function DiagnosisInner() {
         {step === 'pay' && (
           <>
             <div style={{
-              border: '2px dashed #d8a87e', borderRadius: '16px',
+              border: '2px dashed #9c7a58', borderRadius: '16px',
               padding: '30px 20px', textAlign: 'center', marginBottom: '20px',
             }}>
               <div style={{ fontSize: '28px', marginBottom: '10px' }}>💳</div>
@@ -1098,7 +1098,7 @@ function DiagnosisInner() {
             {/* ★2026-07-30 (3단계) — 실패했을 때 «빈 화면» 대신 이유와 [다시 시도] 를 냅니다 */}
             {!loading && failWhy && (
               <div style={{
-                background: cardBg, border: '1px solid #f0c9c9', borderRadius: '14px',
+                background: cardBg, border: '1px solid #dc8888', borderRadius: '14px',
                 padding: '22px 18px', textAlign: 'center', marginBottom: '16px',
               }}>
                 <div style={{ fontSize: '26px', marginBottom: '8px' }}>🌧️</div>

@@ -78,7 +78,7 @@ export default function CoupleFollowUp({
       {/* 입력칸 */}
       {!disabled && (
         <div style={{
-          border: '1px dashed #d8b89a', borderRadius: 13, background: '#faf3ec', padding: '12px 13px',
+          border: '1px dashed #9c7a58', borderRadius: 13, background: '#faf3ec', padding: '12px 13px',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <span style={{ fontSize: 12.5, fontWeight: 700, color: '#96502e', letterSpacing: '-.02em' }}>
@@ -147,7 +147,7 @@ export default function CoupleFollowUp({
 function QaCard({ qa, streaming }: { qa: FollowUp; streaming?: boolean }) {
   return (
     <div style={{
-      background: '#fff', border: '0.5px solid #eee2d6', borderRadius: 13,
+      background: '#fff', border: '0.5px solid #c3986e', borderRadius: 13,
       padding: '12px 13px', marginBottom: 7,
     }}>
       <div style={{
@@ -165,7 +165,7 @@ function QaCard({ qa, streaming }: { qa: FollowUp; streaming?: boolean }) {
       {(qa.a || streaming) && (
         <div style={{
           fontSize: 12, lineHeight: 1.85, color: '#2f211c', whiteSpace: 'pre-wrap',
-          marginTop: 9, paddingTop: 9, borderTop: '0.5px solid #f5ece3', letterSpacing: '-.01em',
+          marginTop: 9, paddingTop: 9, borderTop: '0.5px solid #c79664', letterSpacing: '-.01em',
         }}>
           {qa.a}
           {streaming && !qa.a && (
