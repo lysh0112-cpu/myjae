@@ -31,25 +31,25 @@ const C = {
 interface Help { t: string; hanja: string; cat: string; one: string; body: string; note: string }
 const HELP: Record<string, Help> = {
   fixRoot: {
-    t: '뿌리 기운', hanja: '通根', cat: '고정',
+    t: '일간 통근 확인', hanja: '通根', cat: '고정',
     one: '아이 자신이 땅에 뿌리를 내린 날이에요.',
     body: '사주 여덟 글자 가운데 아이 자신을 뜻하는 글자가 하나 있어요. 그 글자와 같은 기운이 아래쪽 땅자리에 들어 있으면 뿌리를 내렸다고 합니다.\n\n나무로 치면 줄기만 서 있는 것과, 흙에 단단히 박힌 것의 차이예요. 뿌리가 있어야 좋은 기운이 찾아와도 받아서 쓸 힘이 생긴다고 봅니다.',
     note: '뿌리가 많다고 무조건 좋은 것은 아니에요. 지나치면 고집이 세지거나 융통성이 부족해질 수 있어서, 알맞은 정도가 좋다고 봅니다.',
   },
   fixWonjin: {
-    t: '거슬림 없음', hanja: '怨嗔', cat: '고정',
+    t: '월지·일지 원진 제외', hanja: '怨嗔', cat: '고정',
     one: '태어난 달과 날이 서로 순한 날이에요.',
     body: '특별한 이유가 없는데도 왠지 마음이 맞지 않는 관계를 원진이라고 합니다. 크게 다투지는 않지만 속으로 앙금이 남는 사이예요.\n\n태어난 달과 날이 이런 사이가 되는 경우를 미리 빼 두었어요. 이 두 자리는 아이가 자라며 가장 오래 머무는 자리로 봅니다.',
     note: '부딪침이 큰 편은 아니라서 가볍게 보는 분들도 있어요. 다만 굳이 두고 볼 이유도 없다고 판단했습니다.',
   },
   fixHyeong: {
-    t: '부딪힘 없음', hanja: '刑', cat: '고정',
+    t: '월지·일지 형살 피함', hanja: '刑', cat: '고정',
     one: '태어난 달과 날이 서로 모나지 않은 날이에요.',
     body: '사람 사이에도 유난히 부딪치는 조합이 있듯, 열두 글자 중에도 만나면 서로를 깎아내리는 짝이 있어요. 이것을 형(刑)이라고 합니다.\n\n태어난 달과 날이 그런 사이인 경우를 빼 두었어요. 옛 책에서는 다치거나 시비에 휘말리기 쉽다고 보았습니다.',
     note: '남을 다스리는 일에는 오히려 힘이 된다고 보는 견해도 있어요. 반드시 나쁘기만 한 것은 아니지만, 아이 사주에는 두지 않는 쪽으로 잡았습니다.',
   },
   fixSamePillar: {
-    t: '중복 없음', hanja: '重複', cat: '고정',
+    t: '일주·월주 중복 제외', hanja: '重複', cat: '고정',
     one: '같은 글자가 겹쳐 한쪽으로 쏠리지 않은 날이에요.',
     body: '사주는 네 기둥으로 이루어져요. 그중 태어난 달과 태어난 날의 두 글자가 완전히 똑같이 겹치는 경우가 있습니다.\n\n같은 글자가 겹치면 그 기운만 두 배로 커져서 나머지가 묻히기 쉬워요. 겉으로는 다섯 기운이 다 있어 보여도 실제로는 한쪽으로 쏠린 사주가 됩니다.',
     note: '같은 기둥이 겹치는 것을 기운이 뚜렷하다고 좋게 보는 견해도 있어요. 다만 균형을 우선으로 보는 쪽을 택했습니다.',
@@ -87,10 +87,10 @@ const HELP: Record<string, Help> = {
 }
 
 const FIXED_CHIPS: { key: string; label: string; hanja: string }[] = [
-  { key: 'fixRoot', label: '뿌리 기운', hanja: '通根' },
-  { key: 'fixWonjin', label: '거슬림 없음', hanja: '怨嗔' },
-  { key: 'fixHyeong', label: '부딪힘 없음', hanja: '刑' },
-  { key: 'fixSamePillar', label: '중복 없음', hanja: '重複' },
+  { key: 'fixRoot', label: '일간 통근 확인', hanja: '通根' },
+  { key: 'fixWonjin', label: '월지·일지 원진 제외', hanja: '怨嗔' },
+  { key: 'fixHyeong', label: '월지·일지 형살 피함', hanja: '刑' },
+  { key: 'fixSamePillar', label: '일주·월주 중복 제외', hanja: '重複' },
 ]
 
 interface Props {
