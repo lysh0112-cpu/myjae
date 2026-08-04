@@ -396,30 +396,50 @@ function DetailInner() {
           그 안에서 <b style={{ color: C.brand }}>날과 시간</b>을 골라 결을 다듬는 것이 택일입니다.
         </div>
 
-        {/* 로고 — 이미지로 저장했을 때 출처가 남게 */}
-        <div style={{
-          textAlign: 'center', marginTop: 16, fontSize: 11.5, color: C.faint, letterSpacing: '.2px',
-        }}>
-          🌸 <b style={{ color: C.sub }}>명카페</b> 전통 사주명리 출산택일
-        </div>
+        {/* ⛔ 2026-08-04 (45부 · 대표님 지시) — 「🌸 명카페 전통 사주명리 출산택일」
+              한 줄을 «뺐습니다». 화면이 복잡하다고 하셨습니다.
+            ⚠️ 이 자리는 «캡처 영역 안» 이라, 저장한 그림에도 이제 출처가 안 남습니다.
+               ★대표님께 그 점을 말씀드렸고 「지워도 문제없다」 하셨습니다.
+               되살리시려면 이 자리에 가운데 정렬 한 줄을 다시 넣으시면 됩니다. */}
 
         </div>{/* 캡처 영역 끝 */}
 
-        {/* 저장 · 이미지 내려받기
-            보관함에서 들어온 경우(recordId)엔 이미 저장된 것이라 저장 버튼을 숨긴다 */}
+        {/* 저장 · 이미지 내려받기 · 되돌아가기
+            ★2026-08-04 (45부 · 대표님 지시) — 셋을 «한 줄» 로 모았습니다.
+              전에는 [보관함에 저장][🖼 이미지로 저장] 한 줄 + [보관함으로] 아래 한 줄이라
+              세로로 길었습니다.
+
+            ⚠️⚠️ 글자를 줄인 까닭 — ★가장 좁은 화면(320px)에서 «잘립니다».
+              버튼 하나에 쓸 수 있는 폭이 79px 인데 —
+                「보관함 저장」 73px ✅   「다른 날 보기」 73px ✅
+                「🖼 이미지 저장」 93px ★넘침  ← ★아이콘이 20px 을 먹습니다
+              ⇒ 「🖼」 아이콘을 «뺐습니다». 글자 크기(13.5)는 그대로입니다.
+              ⚠️ 아이콘을 되살리시려면 글자를 12.5 로 줄여도 여전히 넘칩니다(88px).
+                 ★한 줄을 지키시려면 아이콘은 넣지 마십시오.
+
+            ⚠️ 보관함에서 들어온 경우(recordId)엔 「보관함에 저장」이 빠져 둘이 됩니다.
+               그때는 여유가 있지만, 둘이 달라 보이지 않게 «같은 글자» 를 씁니다. */}
         <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
           {!recordId && (
           <button onClick={handleSaveRecord} disabled={saving} style={{
-            flex: 1, padding: 13, borderRadius: 12, border: `1px solid ${C.accent}`,
+            flex: 1, padding: '13px 6px', borderRadius: 12, border: `1px solid ${C.accent}`,
             background: C.soft, color: C.brand, fontSize: 13.5, fontWeight: 700,
             cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit', opacity: saving ? .6 : 1,
-          }}>{saving ? '저장 중…' : '보관함에 저장'}</button>
+            whiteSpace: 'nowrap',
+          }}>{saving ? '저장 중…' : '보관함 저장'}</button>
           )}
           <button onClick={handleSaveImage} disabled={sharing} style={{
-            flex: 1, padding: 13, borderRadius: 12, border: `1px solid ${C.accent}`,
+            flex: 1, padding: '13px 6px', borderRadius: 12, border: `1px solid ${C.accent}`,
             background: C.soft, color: C.brand, fontSize: 13.5, fontWeight: 700,
             cursor: sharing ? 'default' : 'pointer', fontFamily: 'inherit', opacity: sharing ? .6 : 1,
-          }}>{sharing ? '만드는 중…' : '🖼 이미지로 저장'}</button>
+            whiteSpace: 'nowrap',
+          }}>{sharing ? '만드는 중…' : '이미지 저장'}</button>
+          <button onClick={() => router.back()} style={{
+            flex: 1, padding: '13px 6px', borderRadius: 12,
+            border: `1px solid ${C.line}`, background: '#fff', color: C.brand,
+            fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+            whiteSpace: 'nowrap',
+          }}>{recordId ? '보관함으로' : '다른 날 보기'}</button>
         </div>
         {savedMsg && (
           <div style={{
@@ -444,11 +464,8 @@ function DetailInner() {
           </div>
         </button>
 
-        <button onClick={() => router.back()} style={{
-          width: '100%', marginTop: 9, padding: 13, borderRadius: 12,
-          border: `1px solid ${C.line}`, background: '#fff', color: C.brand,
-          fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-        }}>{recordId ? '보관함으로' : '다른 날도 보기'}</button>
+        {/* ★2026-08-04 (45부) — 여기 있던 [보관함으로 / 다른 날 보기] 버튼은
+              ★위 «한 줄» 로 올렸습니다. 두 벌로 두지 마십시오. */}
 
       </div>
     </main>
