@@ -343,7 +343,7 @@ export default function PickMovingV1({ result, onPickDay }: Props) {
         onConfirm={d => { setDetailDay(null); onPickDay?.(d) }}
       />
 
-      <MovingTermModal termKey={help} onClose={() => setHelp(null)} />
+      <MovingTermModal termKey={help} onClose={() => setHelp(null)} direction={result.direction} />
     </div>
   )
 }

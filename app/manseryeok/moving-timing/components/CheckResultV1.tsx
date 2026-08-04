@@ -260,7 +260,7 @@ export default function CheckResultV1({ result }: Props) {
         골라 주세요.
       </div>
 
-      <MovingTermModal termKey={help} onClose={() => setHelp(null)} />
+      <MovingTermModal termKey={help} onClose={() => setHelp(null)} direction={result.direction} />
     </div>
   )
 }

@@ -237,19 +237,19 @@ export function passOpt(d: MovingFlags, on: OptState): boolean {
 
 /** 고정 필터 칩 — 화면 상단 설명용 */
 export const FIXED_CHIPS: { key: string; label: string; hanja: string }[] = [
-  { key: 'fixMyeongjeol', label: '명절 아님', hanja: '名節' },
-  { key: 'fixGongmang', label: '빈자리 아님', hanja: '空亡' },
-  { key: 'fixChung', label: '부딪힘 없음', hanja: '沖' },
-  { key: 'fixHyeong', label: '모남 없음', hanja: '刑' },
+  { key: 'fixMyeongjeol', label: '명절 제외', hanja: '名節' },
+  { key: 'fixGongmang', label: '공망 제외', hanja: '空亡' },
+  { key: 'fixChung', label: '일지 충 피함', hanja: '沖' },
+  { key: 'fixHyeong', label: '형살 피함', hanja: '刑' },
 ]
 
 /** 진단 화면이 쓰는 9줄 (고정 4 + 선택 5) */
 export const ALL_ROWS: { key: keyof MovingFlags; label: string; hanja: string; kind: 'fix' | 'opt' }[] = [
   { key: 'optWeekend', label: '쉬는 날', hanja: '週末', kind: 'opt' },
-  { key: 'fixMyeongjeol', label: '명절 아님', hanja: '名節', kind: 'fix' },
-  { key: 'fixGongmang', label: '빈자리 아님', hanja: '空亡', kind: 'fix' },
-  { key: 'fixChung', label: '부딪힘 없음', hanja: '沖', kind: 'fix' },
-  { key: 'fixHyeong', label: '모남 없음', hanja: '刑', kind: 'fix' },
+  { key: 'fixMyeongjeol', label: '명절 제외', hanja: '名節', kind: 'fix' },
+  { key: 'fixGongmang', label: '공망 제외', hanja: '空亡', kind: 'fix' },
+  { key: 'fixChung', label: '일지 충 피함', hanja: '沖', kind: 'fix' },
+  { key: 'fixHyeong', label: '형살 피함', hanja: '刑', kind: 'fix' },
   { key: 'optYongsin', label: '기운이 맞는 날', hanja: '用神日', kind: 'opt' },
   { key: 'optYongsinAll', label: '두 분 다 맞는 날', hanja: '用神日', kind: 'opt' },
   { key: 'optSonEomneun', label: '손 없는 날', hanja: '損', kind: 'opt' },
@@ -259,23 +259,26 @@ export const ALL_ROWS: { key: keyof MovingFlags; label: string; hanja: string; k
 /** 용어 설명 모달 문안 */
 export const HELP_TEXT: Record<string, { title: string; hanja: string; body: string }> = {
   fixMyeongjeol: {
-    title: '명절 아님', hanja: '名節',
+    title: '명절 제외', hanja: '名節',
     body: '설·추석 연휴는 빼 드려요. 이삿짐 업체도 쉬고, 도로도 막히거든요.',
   },
   fixGongmang: {
-    title: '빈자리 아님', hanja: '空亡',
-    body: '공망은 기운이 비는 자리예요. 예로부터 이런 날엔 큰일을 시작하지 않았어요.\n' +
-          '두 분 중 한 분이라도 걸리면 빼 드려요.',
+    title: '공망 제외', hanja: '空亡',
+    body: '예순 개의 날짜 이름이 열 개씩 짝을 지어 돌아가는데, 그때마다 짝을 찾지 못하고 남는 자리가 둘씩 생겨요. 이것을 공망이라 합니다.\n\n' +
+          '기운이 비는 자리라 예로부터 이런 날엔 큰일을 시작하지 않았어요. 이사도 살림을 새로 여는 일이라 빼 드립니다.\n\n' +
+          '공망은 사람마다 다르고, 태어난 날의 이름(일주)으로 정해져요. 공동명의면 두 분 중 한 분이라도 걸리는 날을 모두 빼 드립니다. ' +
+          '세운(그 해)에는 적용하지 않고 이사하는 하루(일진)만 봅니다.',
   },
   fixChung: {
-    title: '부딪힘 없음', hanja: '沖',
+    title: '일지 충 피함', hanja: '沖',
     body: '충은 두 기운이 정면으로 맞부딪히는 관계예요.\n' +
           '이사하시는 날이 두 분 일지와 부딪히지 않도록 골라요.',
   },
   fixHyeong: {
-    title: '모남 없음', hanja: '刑',
-    body: '형은 서로 어긋나고 다투는 관계예요.\n' +
-          '삼형·상형·자형을 모두 봐요.',
+    title: '형살 피함', hanja: '刑',
+    body: '형은 서로 어긋나고 다투는 관계예요. 충이 정면으로 부딪히는 것이라면, 형은 조금씩 깎아내리는 사이입니다.\n\n' +
+          '형에는 세 갈래가 있어요. 셋이 얽히는 삼형(寅巳申·丑戌未), 둘이 맞물리는 상형(子卯), 같은 글자가 겹치는 자형(辰·午·酉·亥)입니다. ' +
+          '저희는 세 갈래를 모두 형으로 보아, 태어난 날의 글자와 이런 사이인 날을 다 빼두었어요.',
   },
   optWeekend: {
     title: '쉬는 날', hanja: '週末',
@@ -297,14 +300,18 @@ export const HELP_TEXT: Record<string, { title: string; hanja: string; body: str
   },
   optSonEomneun: {
     title: '손 없는 날', hanja: '損',
-    body: "'손'은 방위를 돌아다니며 이사를 방해한다는 존재예요.\n" +
-          '음력 9·10·19·20·29·30일에는 하늘로 올라가 어느 방위에도 없어요.\n' +
-          '그래서 이 날들은 어느 쪽으로 가셔도 괜찮아요.',
+    body: '음력 끝수 9, 0일로 사방에 귀신이 없는 날이에요.\n\n' +
+          "'손'은 방위를 돌아다니며 이사를 방해한다는 귀신이에요. " +
+          '음력 9·10·19·20·29·30일에는 하늘로 올라가 어느 방위에도 없습니다.\n\n' +
+          '그래서 이 날들은 어느 쪽으로 가셔도 괜찮아요. 다만 사람이 몰려 이삿짐 값이 오르는 날이기도 합니다.',
   },
   optDirection: {
     title: '가는 방향에 손 없음', hanja: '方位',
-    body: '손은 음력 날짜에 따라 자리를 옮겨요.\n' +
-          '1·2일은 동쪽, 3·4일은 남쪽, 5·6일은 서쪽, 7·8일은 북쪽이에요.\n' +
+    // ★{dir} 은 손님이 고르신 방향(동/서/남/북)으로 바뀝니다.
+    //   MovingTermModal 이 direction 을 받아 갈아 끼웁니다.
+    //   ⚠️ 방향을 안 고르셨으면 「이사하시는 방향으로」 로 나갑니다. 지우지 마십시오.
+    body: '이사하는 {dir} 해를 끼치는 귀신이 없는 날이에요.\n\n' +
+          '손은 음력 날짜에 따라 자리를 옮겨요. 1·2일은 동쪽, 3·4일은 남쪽, 5·6일은 서쪽, 7·8일은 북쪽입니다.\n\n' +
           '가시는 쪽에만 손이 없으면 되니, 손 없는 날보다 고르실 수 있는 날이 훨씬 많아요.',
   },
 }

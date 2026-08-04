@@ -14,12 +14,21 @@ const C = {
 interface Props {
   termKey: string | null
   onClose: () => void
+  /** ★손님이 고르신 이사 방향(동/서/남/북). 없으면 두루뭉술하게 나간다. */
+  direction?: string | null
 }
 
-export default function MovingTermModal({ termKey, onClose }: Props) {
+export default function MovingTermModal({ termKey, onClose, direction }: Props) {
   if (!termKey) return null
   const t = HELP_TEXT[termKey]
   if (!t) return null
+
+  // ★{dir} 자리에 고르신 방향을 넣는다.
+  //   고른 방향이 있으면  「이사하는 남쪽 방향으로 …」
+  //   없으면             「이사하시는 방향으로 …」
+  //   ⚠️ {dir} 이 없는 문안은 그대로 지나간다. 다른 문안에 영향이 없다.
+  const body = t.body.replace('{dir}',
+    direction ? `${direction}쪽 방향으로` : '방향으로')
 
   return (
     <div
@@ -47,7 +56,7 @@ export default function MovingTermModal({ termKey, onClose }: Props) {
         <div style={{
           fontSize: 13.5, color: C.sub, lineHeight: 1.85, whiteSpace: 'pre-line',
         }}>
-          {t.body}
+          {body}
         </div>
 
         <button
