@@ -62,9 +62,12 @@ function GanjiBox({ char, el }: { char: string; el: string }) {
   const bg = el ? EL_BG[el] : '#f5f5f5'
   const bd = el ? EL_BD[el] : '#ddd'
   return (
-    <div style={{ width: 38, height: 46, borderRadius: 7, background: bg, border: `1px solid ${bd}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-      <span style={{ fontSize: 19, fontWeight: 600, color, lineHeight: 1 }}>{char}</span>
-      {el && <span style={{ fontSize: 10.5, fontWeight: 600, color: sub, marginTop: 1 }}>{EL_HAN[el]}</span>}
+    // ★2026-08-04 — 38×46 → 34×40 으로 줄였습니다 (좁은 화면에서 이름 자리를 벌기 위함).
+    //   ★누르는 자리가 «아니라» 보여 주기만 하는 칸이라 44px 최소선과 무관합니다.
+    //   ⛔ 더 줄이지 마십시오. 한자와 오행 글자가 뭉개집니다.
+    <div style={{ width: 34, height: 40, borderRadius: 7, background: bg, border: `1px solid ${bd}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <span style={{ fontSize: 17, fontWeight: 600, color, lineHeight: 1 }}>{char}</span>
+      {el && <span style={{ fontSize: 9.5, fontWeight: 600, color: sub, marginTop: 1 }}>{EL_HAN[el]}</span>}
     </div>
   )
 }
@@ -176,6 +179,21 @@ export default function UserCard({ footer }: { footer?: ReactNode | ((info: User
 
   return (
     <div style={wrap}>
+      {/*
+        ★2026-08-04 — 좁은 화면(핸드폰)에서 «두 줄» 로 나눕니다. (대표님 지시)
+
+        [겪은 일]  핸드폰에서 이름이 「류/도/이/님」 처럼 세로로 흘렀습니다.
+        [까닭]  한 줄에 넷이 나란히 있었는데(이름칸·역할알약·수정·일주 둘),
+                ★이름칸만 flex:1 이라 좁아질 때 «혼자» 눌렸습니다.
+                나머지는 전부 flexShrink:0 이라 안 줄어듭니다.
+        [고침]  윗줄 = 이름 + 일주 둘  ·  아랫줄 = 생년월일 + 역할알약 + 수정
+                ★이름에 nowrap + 넘치면 «…» 를 두어 세로로 못 흐르게 했습니다.
+
+        ⚠️ 일주 알약을 38×46 → ★34×40 으로 줄였습니다. 이름 자리를 벌기 위함입니다.
+           ★누르는 것이 아니라 «보여 주기만» 하는 자리라 44px 최소선과 무관합니다.
+           ⛔ 더 줄이지는 마십시오. 한자가 뭉개집니다.
+        ⚠️ PC·탭은 카드가 넓어 «지금과 거의 같아» 보입니다. 한 줄이 두 줄이 될 뿐입니다.
+      */}
       <div style={{ padding: '13px 14px', display: 'flex', alignItems: 'center', gap: 11 }}>
         <div style={{
           width: 42, height: 42, borderRadius: '50%', background: '#fae6d5',
@@ -184,31 +202,44 @@ export default function UserCard({ footer }: { footer?: ReactNode | ((info: User
         }}>{initial}</div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
+          {/* 윗줄 — 이름 ……… 일주 둘 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#3a2e28' }}>{withNim(displayName)}</span>
             <span style={{
-              fontSize: 9, padding: '2px 8px', borderRadius: 10,
-              background: rc.bg, color: rc.fg, fontWeight: 500, flexShrink: 0,
-            }}>{roleLabel(profile?.role || null)}</span>
-            <button
-              onClick={() => setEditOpen(true)}
-              style={{
-                marginLeft: 'auto', flexShrink: 0,
-                fontSize: 10, color: '#6b5340',
-                border: '0.5px solid #b99a7d', borderRadius: 7,
-                padding: '3px 8px', background: 'none', cursor: 'pointer',
-              }}
-            >수정</button>
-          </div>
-          <div style={{ fontSize: 10.5, color: '#7d6a5b', marginTop: 3 }}>{subLine}</div>
-        </div>
+              fontSize: 14.5, fontWeight: 600, color: '#3a2e28',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>{withNim(displayName)}</span>
 
-        {hasSaju && dayPillar && dayPillar.stem !== '?' && (
-          <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
-            <GanjiBox char={dayPillar.stem} el={STEM_ELEMENT[dayPillar.stem]} />
-            <GanjiBox char={dayPillar.branch} el={BRANCH_ELEMENT[dayPillar.branch]} />
+            {hasSaju && dayPillar && dayPillar.stem !== '?' && (
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 3, flexShrink: 0 }}>
+                <GanjiBox char={dayPillar.stem} el={STEM_ELEMENT[dayPillar.stem]} />
+                <GanjiBox char={dayPillar.branch} el={BRANCH_ELEMENT[dayPillar.branch]} />
+              </div>
+            )}
           </div>
-        )}
+
+          {/* 아랫줄 — 생년월일 ……… 역할 알약 · 수정 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>
+            <span style={{
+              fontSize: 10.5, color: '#7d6a5b',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>{subLine}</span>
+
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+              <span style={{
+                fontSize: 9, padding: '2px 8px', borderRadius: 10,
+                background: rc.bg, color: rc.fg, fontWeight: 500,
+              }}>{roleLabel(profile?.role || null)}</span>
+              <button
+                onClick={() => setEditOpen(true)}
+                style={{
+                  fontSize: 10, color: '#6b5340',
+                  border: '0.5px solid #b99a7d', borderRadius: 7,
+                  padding: '3px 8px', background: 'none', cursor: 'pointer',
+                }}
+              >수정</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {footer && (
