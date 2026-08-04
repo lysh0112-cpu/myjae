@@ -20,7 +20,7 @@ import type { Direction } from '../lib/movingTables'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
 
 const accent = '#967850'
-const line = '#EAE0CE'
+const line = '#9c7a58'
 const ink = '#3A3228'
 const sub = '#9A8060'
 
@@ -206,7 +206,7 @@ function CheckInner() {
           )}
 
           {err && (
-            <div style={{ fontSize: 12.5, color: '#C0705E', marginTop: 11, paddingLeft: 2 }}>
+            <div style={{ fontSize: 12.5, color: '#9E4F3E', marginTop: 11, paddingLeft: 2 }}>
               {err}
             </div>
           )}
@@ -239,7 +239,7 @@ function CheckInner() {
 
       {!loading && result?.error && (
         <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-          <div style={{ fontSize: 13.5, color: '#C0705E', lineHeight: 1.8 }}>
+          <div style={{ fontSize: 13.5, color: '#9E4F3E', lineHeight: 1.8 }}>
             {result.error}
           </div>
         </div>

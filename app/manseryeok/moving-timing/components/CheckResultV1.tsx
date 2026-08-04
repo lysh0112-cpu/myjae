@@ -20,7 +20,7 @@ import CoupleWonguk from '@/app/manseryeok/couple-result-new/components/CoupleWo
 import SoloWonguk from './SoloWonguk'
 
 const C = {
-  bg: '#FBF8F2', card: '#FFFDF9', line: '#EAE0CE', ink: '#3A3228',
+  bg: '#FBF8F2', card: '#FFFDF9', line: '#9c7a58', ink: '#3A3228',
   sub: '#9A8060', brand: '#7A6440', accent: '#967850', soft: '#F2EADA', warm: '#F5F0E4',
   bad: '#9E4F3E', good: '#5F7A4E',
 }

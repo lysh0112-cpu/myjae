@@ -7,7 +7,7 @@
 import { HELP_TEXT } from '../lib/movingFilterV1'
 
 const C = {
-  card: '#FFFBF7', line: '#EDE3D5', ink: '#3A3228',
+  card: '#FFFBF7', line: '#9c7a58', ink: '#3A3228',
   sub: '#9A8060', brand: '#7A6440',
 }
 

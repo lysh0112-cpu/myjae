@@ -17,7 +17,7 @@
 import { Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
-const line = '#EAE0CE'
+const line = '#9c7a58'
 const ink = '#3A3228'
 const sub = '#9A8060'
 

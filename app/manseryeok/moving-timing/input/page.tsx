@@ -26,7 +26,7 @@ import type { SavedPerson, SavedInputData } from '@/lib/saju/savedPeople'
 import { DIRECTIONS, DIR_HANJA, type Direction } from '../lib/movingTables'
 
 const accent = '#967850'   // 이사택일 포인트(흙빛)
-const line = '#EAE0CE'
+const line = '#9c7a58'
 const ink = '#3A3228'
 const sub = '#9A8060'
 

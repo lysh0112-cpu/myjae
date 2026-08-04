@@ -17,7 +17,7 @@ import type { PersonSaju } from '../lib/movingFilterV1'
 import type { Direction } from '../lib/movingTables'
 
 const C = {
-  card: '#FFFDF9', line: '#EAE0CE', ink: '#3A3228',
+  card: '#FFFDF9', line: '#9c7a58', ink: '#3A3228',
   sub: '#9A8060', brand: '#7A6440', accent: '#967850',
   good: '#5F7A4E', warm: '#F5F0E4',
 }

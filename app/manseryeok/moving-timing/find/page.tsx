@@ -19,7 +19,7 @@ import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 const accent = '#967850'
-const line = '#EAE0CE'
+const line = '#9c7a58'
 const ink = '#3A3228'
 const sub = '#9A8060'
 
@@ -154,7 +154,7 @@ function FindInner() {
         )}
 
         {err && (
-          <div style={{ fontSize: 12.5, color: '#C0705E', marginTop: 11, paddingLeft: 2 }}>
+          <div style={{ fontSize: 12.5, color: '#9E4F3E', marginTop: 11, paddingLeft: 2 }}>
             {err}
           </div>
         )}

@@ -27,7 +27,7 @@ import SoloWonguk from './SoloWonguk'
 
 // 이사택일 포인트 색 — 홈 메뉴의 #967850 계열(흙빛)
 const C = {
-  bg: '#FBF8F2', card: '#FFFDF9', line: '#EAE0CE', ink: '#3A3228',
+  bg: '#FBF8F2', card: '#FFFDF9', line: '#9c7a58', ink: '#3A3228',
   sub: '#9A8060', brand: '#7A6440', accent: '#967850', soft: '#F2EADA', warm: '#F5F0E4',
 }
 
