@@ -180,7 +180,7 @@ export default function ReviewManager() {
                         📌
                       </button>
                       <button onClick={() => remove(r)} title="삭제"
-                        style={{ background: 'rgba(255,80,80,0.12)', color: '#ff8080', border: '1px solid rgba(255,80,80,0.2)', borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                        style={{ background: 'rgba(255,80,80,0.12)', color: '#ff8080', border: '1px solid rgba(193,69,69,0.65)', borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                         🗑
                       </button>
                     </div>

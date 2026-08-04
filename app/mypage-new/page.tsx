@@ -418,7 +418,7 @@ export default function MyPageNew() {
             </g>
           </svg>
           <span style={{ fontSize: 18, fontWeight: 900, fontStyle: 'italic' }}>
-            <span style={{ color: '#96502e' }}>Myung</span><span style={{ color: '#b46e46' }}>Cafe</span>
+            <span style={{ color: '#96502e' }}>Myung</span><span style={{ color: '#8F5433' }}>Cafe</span>
           </span>
         </div>
         <div style={{ display: 'flex', gap: 16, fontSize: 18, color: '#b49080' }}>
@@ -436,7 +436,7 @@ export default function MyPageNew() {
                 <span style={{ fontSize: 14, fontWeight: 600, color: '#3a2e28' }}>{withNim(displayName)}</span>
                 <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 10, background: rc.bg, color: rc.fg, fontWeight: 500, flexShrink: 0 }}>{roleLabel(profile?.role || null)}</span>
               </div>
-              <div style={{ fontSize: 10.5, color: '#9a8574', marginTop: 2 }}>
+              <div style={{ fontSize: 10.5, color: '#7d6a5b', marginTop: 2 }}>
                 {profile?.saju_saved && profile?.birth_year
                   ? `${profile.cal_type || '양력'} ${profile.birth_year}.${profile.birth_month}.${profile.birth_day} · ${hourTextFull(profile.birth_hour).split('(')[0]} · ${profile.gender === '여' ? '여성' : '남성'}`
                   : '사주 미등록'}
@@ -592,7 +592,7 @@ export default function MyPageNew() {
                           </div>
                           {isBooked && (
                             <button onClick={() => cancelBooking(c)} disabled={cancelingId === c.id}
-                              style={{ marginTop: 6, width: '100%', padding: '9px 0', borderRadius: 9, background: 'none', border: '0.5px solid #f0d0d0', color: '#c05a5a', fontSize: 12, fontWeight: 500, cursor: 'pointer', opacity: cancelingId === c.id ? 0.5 : 1 }}>{cancelingId === c.id ? '취소 처리 중…' : '예약 취소'}</button>
+                              style={{ marginTop: 6, width: '100%', padding: '9px 0', borderRadius: 9, background: 'none', border: '0.5px solid #d98b8b', color: '#c05a5a', fontSize: 12, fontWeight: 500, cursor: 'pointer', opacity: cancelingId === c.id ? 0.5 : 1 }}>{cancelingId === c.id ? '취소 처리 중…' : '예약 취소'}</button>
                           )}
                         </div>
                       )
@@ -680,7 +680,7 @@ export default function MyPageNew() {
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
           <button onClick={logout} style={{ flex: 1, textAlign: 'center', background: '#f5ebe2', border: '0.5px solid #9c7a58', borderRadius: 12, padding: 12, fontSize: 13, color: '#6f6053', cursor: 'pointer' }}>로그아웃</button>
-          <button onClick={withdraw} style={{ flex: 1, textAlign: 'center', background: '#FFFBF7', border: '0.5px solid #f0d0d0', borderRadius: 12, padding: 12, fontSize: 13, color: '#c05a5a', cursor: 'pointer' }}>회원 탈퇴</button>
+          <button onClick={withdraw} style={{ flex: 1, textAlign: 'center', background: '#FFFBF7', border: '0.5px solid #d98b8b', borderRadius: 12, padding: 12, fontSize: 13, color: '#c05a5a', cursor: 'pointer' }}>회원 탈퇴</button>
         </div>
 
         <div style={{ textAlign: 'center', fontSize: 10, color: '#6b5340', padding: '8px 0' }}>

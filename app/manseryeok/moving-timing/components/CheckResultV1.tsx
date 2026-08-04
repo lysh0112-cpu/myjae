@@ -22,7 +22,7 @@ import SoloWonguk from './SoloWonguk'
 const C = {
   bg: '#FBF8F2', card: '#FFFDF9', line: '#EAE0CE', ink: '#3A3228',
   sub: '#9A8060', brand: '#7A6440', accent: '#967850', soft: '#F2EADA', warm: '#F5F0E4',
-  bad: '#C0705E', good: '#5F7A4E',
+  bad: '#9E4F3E', good: '#5F7A4E',
 }
 
 interface Props {
@@ -96,9 +96,9 @@ export default function CheckResultV1({ result }: Props) {
     <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 16px 60px' }}>
 
       <div style={{
-        background: 'rgba(255,120,120,.06)', border: '1px solid rgba(255,120,120,.18)',
+        background: 'rgba(255,120,120,.06)', border: '1px solid rgba(193,69,69,0.65)',
         borderRadius: 10, padding: '12px 14px', fontSize: 13, fontWeight: 600,
-        color: '#C0705E', lineHeight: 1.7, margin: '16px 0',
+        color: '#9E4F3E', lineHeight: 1.7, margin: '16px 0',
       }}>
         ※ 본 분석은 전통 사주명리에 기반한 참고 정보입니다. 실제 이사일은 계약·잔금·
         이삿짐 업체 사정을 함께 고려해 결정하세요.
@@ -163,7 +163,7 @@ export default function CheckResultV1({ result }: Props) {
         return (
           <div key={day.dateKey} style={{
             background: C.card,
-            border: fixOk ? `1px solid ${C.line}` : `1.5px solid #E0A99A`,
+            border: fixOk ? `1px solid ${C.line}` : `1.5px solid #d68e7a`,
             borderRadius: 13, padding: '15px 16px', marginBottom: 13,
           }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 3 }}>

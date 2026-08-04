@@ -130,16 +130,16 @@ export default function PickDateV7({ result, onPickHour, onConsult }: Props) {
     return { text: `켜면 ${diff}일 줄어요`, tone: 'norm' as const }
   }
 
-  const toneColor = { on: '#8FA37E', zero: '#C0705E', same: '#AA9999', norm: C.brand }
+  const toneColor = { on: '#8FA37E', zero: '#9E4F3E', same: '#AA9999', norm: C.brand }
 
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 16px 60px' }}>
 
       {/* 면책 — 캡처 영역 안쪽에 두어 이미지 저장 시에도 담기게 한다 */}
       <div style={{
-        background: 'rgba(255,120,120,.06)', border: '1px solid rgba(255,120,120,.18)',
+        background: 'rgba(255,120,120,.06)', border: '1px solid rgba(193,69,69,0.65)',
         borderRadius: 10, padding: '12px 14px', fontSize: 13, fontWeight: 600,
-        color: '#C0705E', lineHeight: 1.7, margin: '16px 0',
+        color: '#9E4F3E', lineHeight: 1.7, margin: '16px 0',
       }}>
         ※ 본 분석은 전통 사주명리에 기반한 참고 정보입니다. 실제 출산일·수술일 결정은 산모와
         아기의 건강을 최우선으로, 반드시 담당 산부인과 전문의와 상의해 결정하세요.
@@ -173,7 +173,7 @@ export default function PickDateV7({ result, onPickHour, onConsult }: Props) {
               cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '-.2px',
             }}>
               {f.label}
-              <span style={{ fontSize: 10, color: '#C9AA96', fontWeight: 400 }}>{f.hanja}</span>
+              <span style={{ fontSize: 10, color: '#8A6E5B', fontWeight: 400 }}>{f.hanja}</span>
             </button>
           ))}
         </div>
@@ -186,7 +186,7 @@ export default function PickDateV7({ result, onPickHour, onConsult }: Props) {
       }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
           <b style={{
-            fontSize: 33, color: days.length ? C.brand : '#C0705E',
+            fontSize: 33, color: days.length ? C.brand : '#9E4F3E',
             letterSpacing: '-1.3px', fontVariantNumeric: 'tabular-nums',
           }}>{days.length}</b>
           <span style={{ fontSize: 13, color: C.sub }}>일 · {hourCount}개 시간</span>
@@ -225,7 +225,7 @@ export default function PickDateV7({ result, onPickHour, onConsult }: Props) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
                   <span style={{ fontSize: 15.5, fontWeight: 700, letterSpacing: '-.3px' }}>{f.label}</span>
-                  <span style={{ fontSize: 10.5, color: '#C9AA96', fontWeight: 400 }}>{f.hanja}</span>
+                  <span style={{ fontSize: 10.5, color: '#8A6E5B', fontWeight: 400 }}>{f.hanja}</span>
                 </div>
                 <div style={{ fontSize: 12.5, color: C.sub, lineHeight: 1.6, marginTop: 5 }}>{f.desc}</div>
               </div>
@@ -252,7 +252,7 @@ export default function PickDateV7({ result, onPickHour, onConsult }: Props) {
               <span style={{ fontSize: 11.5, fontWeight: 600, color: toneColor[p.tone] }}>
                 {p.tone === 'on' ? '✓ ' : ''}{p.text}
               </span>
-              <span style={{ fontSize: 11, color: '#C9AA96' }}>눌러서 자세히</span>
+              <span style={{ fontSize: 11, color: '#8A6E5B' }}>눌러서 자세히</span>
             </div>
           </div>
         )
@@ -268,7 +268,7 @@ export default function PickDateV7({ result, onPickHour, onConsult }: Props) {
 
       <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 14, overflow: 'hidden' }}>
         {days.length > 0 ? days.map(d => (
-          <div key={d.dateKey} style={{ padding: '13px 14px', borderBottom: `1px solid #F7EDE5` }}>
+          <div key={d.dateKey} style={{ padding: '13px 14px', borderBottom: `1px solid #b99a7d` }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
               <b style={{ fontSize: 14.5, fontVariantNumeric: 'tabular-nums' }}>{d.dateLabel}</b>
               <span style={{ fontSize: 12, color: C.sub }}>{d.weekday}요일</span>
@@ -379,7 +379,7 @@ export default function PickDateV7({ result, onPickHour, onConsult }: Props) {
 
               <div style={{
                 marginTop: 14, paddingTop: 12, borderTop: '1px solid #eee',
-                fontSize: 12.5, color: '#8a7a6d', lineHeight: 1.75,
+                fontSize: 12.5, color: '#736558', lineHeight: 1.75,
               }}>
                 <span style={{ color: '#8f3d0e', fontWeight: 700 }}>다만</span> — {h.note}
               </div>

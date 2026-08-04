@@ -13,7 +13,7 @@
 import { useEffect, useState } from 'react'
 import { MOODS, MoodCode, EmotionLog, listMonthMoods, firstMoodMonth } from '@/lib/saju/emotionLog'
 
-const COLOR: Record<MoodCode, string> = { 0: '#9a8574', 1: '#d88a8a', 2: '#c0a898', 3: '#7cc4a0', 4: '#e0a94e' }
+const COLOR: Record<MoodCode, string> = { 0: '#7d6a5b', 1: '#d88a8a', 2: '#c0a898', 3: '#7cc4a0', 4: '#e0a94e' }
 
 function emojiOf(m: MoodCode) { return MOODS.find((x) => x.code === m)?.emoji || '😐' }
 function labelOf(m: MoodCode) { return MOODS.find((x) => x.code === m)?.label || '' }

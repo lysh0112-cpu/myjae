@@ -180,7 +180,7 @@ function MovingInputInner() {
       <div style={{ padding: '18px 16px 0' }}>
 
         <div style={{
-          background: 'rgba(255,120,120,0.06)', border: '1px solid rgba(255,120,120,0.18)',
+          background: 'rgba(255,120,120,0.06)', border: '1px solid rgba(193,69,69,0.65)',
           borderRadius: 10, padding: '10px 14px', fontSize: 11.5, color: '#d88',
           lineHeight: 1.6, marginBottom: 18,
         }}>
@@ -200,7 +200,7 @@ function MovingInputInner() {
         {slotView(2, spouse, '배우자', '배우자를 골라 주세요 (없으면 건너뛰기)')}
 
         {meErr && (
-          <div style={{ fontSize: 12, color: '#C0705E', marginBottom: 10 }}>{meErr}</div>
+          <div style={{ fontSize: 12, color: '#9E4F3E', marginBottom: 10 }}>{meErr}</div>
         )}
 
         {/* 명의 */}

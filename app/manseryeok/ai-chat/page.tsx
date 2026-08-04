@@ -62,7 +62,7 @@ function AiChatInner() {
         </div>
         <div style={{display:'flex', gap:'6px'}}>
           <button onClick={handleClearChat}
-            style={{fontSize:'11px', padding:'4px 10px', borderRadius:'20px', background:'rgba(255,80,80,0.1)', color:'rgba(255,120,120,0.7)', border:'1px solid rgba(255,80,80,0.2)', cursor:'pointer'}}>
+            style={{fontSize:'11px', padding:'4px 10px', borderRadius:'20px', background:'rgba(255,80,80,0.1)', color:'rgba(255,120,120,0.7)', border:'1px solid rgba(193,69,69,0.65)', cursor:'pointer'}}>
             초기화
           </button>
           <button onClick={() => router.push(`/manseryeok/consultant-select?mode=${mode}`)}

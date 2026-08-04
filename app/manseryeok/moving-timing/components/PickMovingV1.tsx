@@ -64,7 +64,7 @@ export default function PickMovingV1({ result, onPickDay }: Props) {
     return { text: `켜면 ${diff}일 줄어요`, tone: 'norm' as const }
   }
 
-  const toneColor = { on: '#8FA37E', zero: '#C0705E', same: '#AA9999', norm: C.brand }
+  const toneColor = { on: '#8FA37E', zero: '#9E4F3E', same: '#AA9999', norm: C.brand }
 
   // 연도별로 묶기
   const byYear = new Map<number, DayResult[]>()
@@ -86,9 +86,9 @@ export default function PickMovingV1({ result, onPickDay }: Props) {
     <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 16px 60px' }}>
 
       <div style={{
-        background: 'rgba(255,120,120,.06)', border: '1px solid rgba(255,120,120,.18)',
+        background: 'rgba(255,120,120,.06)', border: '1px solid rgba(193,69,69,0.65)',
         borderRadius: 10, padding: '12px 14px', fontSize: 13, fontWeight: 600,
-        color: '#C0705E', lineHeight: 1.7, margin: '16px 0',
+        color: '#9E4F3E', lineHeight: 1.7, margin: '16px 0',
       }}>
         ※ 본 분석은 전통 사주명리에 기반한 참고 정보입니다. 실제 이사일은 계약·잔금·
         이삿짐 업체 사정을 함께 고려해 결정하세요.

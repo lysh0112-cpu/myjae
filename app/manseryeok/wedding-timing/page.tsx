@@ -21,7 +21,7 @@ interface PersonInput {
 
 function Disclaimer() {
   return (
-    <div style={{ background: 'rgba(255,120,120,0.06)', border: '1px solid rgba(255,120,120,0.18)', borderRadius: '10px', padding: '10px 14px', fontSize: '11px', color: '#d88', lineHeight: 1.6 }}>
+    <div style={{ background: 'rgba(255,120,120,0.06)', border: '1px solid rgba(193,69,69,0.65)', borderRadius: '10px', padding: '10px 14px', fontSize: '11px', color: '#d88', lineHeight: 1.6 }}>
       ※ 본 분석은 전통 사주명리에 기반한 참고 정보입니다. 실제 예식일은 양가·예식장 사정과 두 분의 형편을 함께 고려해 결정하세요.
     </div>
   )

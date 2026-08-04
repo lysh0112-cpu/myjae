@@ -73,9 +73,9 @@ export default function CheckResultV7({
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 16px 60px' }}>
       <div style={{
-        background: 'rgba(255,120,120,.06)', border: '1px solid rgba(255,120,120,.18)',
+        background: 'rgba(255,120,120,.06)', border: '1px solid rgba(193,69,69,0.65)',
         borderRadius: 10, padding: '12px 14px', fontSize: 13, fontWeight: 600,
-        color: '#C0705E', lineHeight: 1.7, margin: '16px 0 18px',
+        color: '#9E4F3E', lineHeight: 1.7, margin: '16px 0 18px',
       }}>
         ※ 본 분석은 전통 사주명리에 기반한 참고 정보입니다. 실제 예식일은 양가·예식장
         사정과 두 분의 형편을 함께 고려해 결정하세요.
@@ -95,7 +95,7 @@ export default function CheckResultV7({
             <span style={{ flex: 1, textAlign: 'center' }}>
               필요한 기운 <b style={{ color: C.brand }}>{groom.yongsin || '—'}</b>
             </span>
-            <span style={{ color: '#E0CDBC' }}>·</span>
+            <span style={{ color: '#7D6B5A' }}>·</span>
             <span style={{ flex: 1, textAlign: 'center' }}>
               필요한 기운 <b style={{ color: C.brand }}>{bride.yongsin || '—'}</b>
             </span>
@@ -107,8 +107,8 @@ export default function CheckResultV7({
         const s = summaryOf(r.detail)
         const box =
           s.tone === 'good' ? { bg: '#FBEEE2', bd: '1.5px solid #C8783C', lab: '#96502E', txt: '#7A3E20' }
-          : s.tone === 'bad' ? { bg: '#FBECE8', bd: '1px solid #E8C4B8', lab: '#C0705E', txt: '#A65440' }
-          : { bg: C.warm, bd: '1px solid #E8DCD0', lab: '#96502E', txt: '#6B4A38' }
+          : s.tone === 'bad' ? { bg: '#FBECE8', bd: '1px solid #C08070', lab: '#9E4F3E', txt: '#A65440' }
+          : { bg: C.warm, bd: '1px solid #B99A7D', lab: '#96502E', txt: '#6B4A38' }
 
         return (
           <div key={r.dateKey} style={{
@@ -149,11 +149,11 @@ export default function CheckResultV7({
                     background: failed ? '#FBECE8' : 'transparent',
                     borderRadius: failed ? 8 : 0,
                     margin: failed ? '2px 0' : 0,
-                    borderBottom: !failed && !last ? '1px solid #F7EDE5' : 'none',
+                    borderBottom: !failed && !last ? '1px solid #b99a7d' : 'none',
                   }}>
                     <span style={{
                       width: 14, fontSize: 14, flex: 'none',
-                      color: failed ? '#C0705E' : dim ? '#C9AA96' : '#8FA37E',
+                      color: failed ? '#9E4F3E' : dim ? '#8A6E5B' : '#8FA37E',
                     }}>{failed ? '✕' : dim ? '—' : '✓'}</span>
                     <span style={{
                       flex: 1, fontSize: 13,
@@ -161,11 +161,11 @@ export default function CheckResultV7({
                       fontWeight: failed ? 600 : 400,
                     }}>
                       {row.label}{' '}
-                      <span style={{ fontSize: 10, color: '#C9AA96' }}>{row.hanja}</span>
+                      <span style={{ fontSize: 10, color: '#8A6E5B' }}>{row.hanja}</span>
                     </span>
                     <span style={{
                       fontSize: 11.5, flex: 'none',
-                      color: failed ? '#C0705E' : dim ? '#C9AA96' : ok && !isFix ? C.brand : C.sub,
+                      color: failed ? '#9E4F3E' : dim ? '#8A6E5B' : ok && !isFix ? C.brand : C.sub,
                       fontWeight: failed || (ok && !isFix) ? 600 : 400,
                     }}>{reasonOf(String(row.key), r.detail, r.ganji[1] ?? '')}</span>
                   </div>

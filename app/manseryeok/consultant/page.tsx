@@ -502,7 +502,7 @@ function ConsultantContent() {
         <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:'8px'}}>
           <span style={{fontSize:'11px', color:'#7766aa'}}>{consultantName || '상담사'} 님</span>
           <button onClick={handleLogout}
-            style={{fontSize:'10px', padding:'2px 8px', borderRadius:'5px', border:'1px solid rgba(255,80,80,0.2)', background:'transparent', color:'rgba(255,100,100,0.7)', cursor:'pointer'}}>
+            style={{fontSize:'10px', padding:'2px 8px', borderRadius:'5px', border:'1px solid rgba(193,69,69,0.65)', background:'transparent', color:'rgba(255,100,100,0.7)', cursor:'pointer'}}>
             로그아웃
           </button>
         </div>

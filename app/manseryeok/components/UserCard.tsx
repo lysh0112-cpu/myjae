@@ -123,7 +123,7 @@ export default function UserCard({ footer }: { footer?: ReactNode | ((info: User
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
           <div style={{
             width: 44, height: 44, borderRadius: '50%',
-            background: '#f5ebe2', border: '1.5px solid #e6d5c5',
+            background: '#f5ebe2', border: '1.5px solid #c19770',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 20, flexShrink: 0, color: '#6b5340',
           }}>👤</div>
@@ -138,7 +138,7 @@ export default function UserCard({ footer }: { footer?: ReactNode | ((info: User
             color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
           }}>로그인</button>
           <button onClick={() => router.push('/signup')} style={{
-            flex: 1, height: 44, background: '#fff', border: '0.5px solid #e6d0bc', borderRadius: 10,
+            flex: 1, height: 44, background: '#fff', border: '0.5px solid #c7966a', borderRadius: 10,
             color: '#96502e', fontSize: 13, fontWeight: 600, cursor: 'pointer',
           }}>회원가입</button>
         </div>
@@ -195,12 +195,12 @@ export default function UserCard({ footer }: { footer?: ReactNode | ((info: User
               style={{
                 marginLeft: 'auto', flexShrink: 0,
                 fontSize: 10, color: '#6b5340',
-                border: '0.5px solid #ecd8c6', borderRadius: 7,
+                border: '0.5px solid #b99a7d', borderRadius: 7,
                 padding: '3px 8px', background: 'none', cursor: 'pointer',
               }}
             >수정</button>
           </div>
-          <div style={{ fontSize: 10.5, color: '#9a8574', marginTop: 3 }}>{subLine}</div>
+          <div style={{ fontSize: 10.5, color: '#7d6a5b', marginTop: 3 }}>{subLine}</div>
         </div>
 
         {hasSaju && dayPillar && dayPillar.stem !== '?' && (

@@ -57,7 +57,7 @@ export default function PickWeddingV7({ result, onPickDay }: Props) {
     return { text: `켜면 ${diff}일 줄어요`, tone: 'norm' as const }
   }
 
-  const toneColor = { on: '#8FA37E', zero: '#C0705E', same: '#AA9999', norm: C.brand }
+  const toneColor = { on: '#8FA37E', zero: '#9E4F3E', same: '#AA9999', norm: C.brand }
 
   // 연도별로 묶기
   const byYear = new Map<number, DayResult[]>()
@@ -70,9 +70,9 @@ export default function PickWeddingV7({ result, onPickDay }: Props) {
     <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 16px 60px' }}>
 
       <div style={{
-        background: 'rgba(255,120,120,.06)', border: '1px solid rgba(255,120,120,.18)',
+        background: 'rgba(255,120,120,.06)', border: '1px solid rgba(193,69,69,0.65)',
         borderRadius: 10, padding: '12px 14px', fontSize: 13, fontWeight: 600,
-        color: '#C0705E', lineHeight: 1.7, margin: '16px 0',
+        color: '#9E4F3E', lineHeight: 1.7, margin: '16px 0',
       }}>
         ※ 본 분석은 전통 사주명리에 기반한 참고 정보입니다. 실제 예식일은 양가·예식장
         사정과 두 분의 형편을 함께 고려해 결정하세요.
@@ -101,7 +101,7 @@ export default function PickWeddingV7({ result, onPickDay }: Props) {
             <span style={{ flex: 1, textAlign: 'center' }}>
               필요한 기운 <b style={{ color: C.brand }}>{result.groom.yongsin || '—'}</b>
             </span>
-            <span style={{ color: '#E0CDBC' }}>·</span>
+            <span style={{ color: '#7D6B5A' }}>·</span>
             <span style={{ flex: 1, textAlign: 'center' }}>
               필요한 기운 <b style={{ color: C.brand }}>{result.bride.yongsin || '—'}</b>
             </span>
@@ -127,7 +127,7 @@ export default function PickWeddingV7({ result, onPickDay }: Props) {
               cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '-.2px',
             }}>
               {f.label}
-              <span style={{ fontSize: 10, color: '#C9AA96', fontWeight: 400 }}>{f.hanja}</span>
+              <span style={{ fontSize: 10, color: '#8A6E5B', fontWeight: 400 }}>{f.hanja}</span>
             </button>
           ))}
         </div>
@@ -140,7 +140,7 @@ export default function PickWeddingV7({ result, onPickDay }: Props) {
       }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
           <b style={{
-            fontSize: 33, color: days.length ? C.brand : '#C0705E',
+            fontSize: 33, color: days.length ? C.brand : '#9E4F3E',
             letterSpacing: '-1.3px', fontVariantNumeric: 'tabular-nums',
           }}>{days.length}</b>
           <span style={{ fontSize: 13, color: C.sub }}>일 고를 수 있어요</span>
@@ -180,7 +180,7 @@ export default function PickWeddingV7({ result, onPickDay }: Props) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
                   <span style={{ fontSize: 15.5, fontWeight: 700, letterSpacing: '-.3px' }}>{f.label}</span>
-                  <span style={{ fontSize: 10.5, color: '#C9AA96', fontWeight: 400 }}>{f.hanja}</span>
+                  <span style={{ fontSize: 10.5, color: '#8A6E5B', fontWeight: 400 }}>{f.hanja}</span>
                 </div>
                 <div style={{ fontSize: 12.5, color: C.sub, lineHeight: 1.6, marginTop: 5 }}>{f.desc}</div>
               </div>
@@ -207,7 +207,7 @@ export default function PickWeddingV7({ result, onPickDay }: Props) {
               <span style={{ fontSize: 11.5, fontWeight: 600, color: toneColor[p.tone] }}>
                 {p.tone === 'on' ? '✓ ' : ''}{p.text}
               </span>
-              <span style={{ fontSize: 11, color: '#C9AA96' }}>눌러서 자세히</span>
+              <span style={{ fontSize: 11, color: '#8A6E5B' }}>눌러서 자세히</span>
             </div>
           </div>
         )
@@ -225,7 +225,7 @@ export default function PickWeddingV7({ result, onPickDay }: Props) {
         {days.length > 0 ? [...byYear.entries()].map(([year, list], idx) => (
           <div key={year} style={{
             padding: '13px 14px',
-            borderBottom: idx < byYear.size - 1 ? '1px solid #F7EDE5' : 'none',
+            borderBottom: idx < byYear.size - 1 ? '1px solid #b99a7d' : 'none',
           }}>
             <div style={{ fontSize: 11, color: C.sub, marginBottom: 8 }}>{year}년</div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>

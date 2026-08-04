@@ -37,7 +37,7 @@ interface V7Snapshot {
 const C = {
   bg: '#FDF6F0', card: '#FFFBF7', line: '#F0E0D5', ink: '#3A2E28',
   sub: '#B4785A', brand: '#96502E', accent: '#C8783C', soft: '#F6E3D6',
-  warm: '#F5EDE6', faint: '#C9AA96',
+  warm: '#F5EDE6', faint: '#8A6E5B',
 }
 
 interface SurveyInput {
@@ -77,7 +77,7 @@ function SajuGrid({ hour }: { hour: HourOption }) {
       <div style={{
         width: 46, height: 46, borderRadius: 9, margin: '0 auto',
         background: el ? BG[el] : '#f5f5f5',
-        border: isDay ? `2px solid ${C.accent}` : '1px solid #E6DED6',
+        border: isDay ? `2px solid ${C.accent}` : '1px solid #b39b83',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         <span style={{ fontSize: 21, fontWeight: 700, color: el ? FG[el] : '#888' }}>{ch}</span>
@@ -313,9 +313,9 @@ function DetailInner() {
         <div ref={captureRef} style={{ background: C.bg, padding: '2px 0 8px' }}>
 
         <div style={{
-          background: 'rgba(255,120,120,.06)', border: '1px solid rgba(255,120,120,.18)',
+          background: 'rgba(255,120,120,.06)', border: '1px solid rgba(193,69,69,0.65)',
           borderRadius: 10, padding: '12px 14px', fontSize: 12.5, fontWeight: 600,
-          color: '#C0705E', lineHeight: 1.7, marginBottom: 18,
+          color: '#9E4F3E', lineHeight: 1.7, marginBottom: 18,
         }}>
           ※ 본 분석은 전통 사주명리에 기반한 참고 정보입니다. 실제 출산일·수술일 결정은
           산모와 아기의 건강을 최우선으로, 반드시 담당 산부인과 전문의와 상의해 결정하세요.
@@ -348,7 +348,7 @@ function DetailInner() {
           <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 11 }}>타고나는 여덟 글자</div>
           <SajuGrid hour={hour} />
           <div style={{
-            marginTop: 12, paddingTop: 11, borderTop: `1px solid #F7EDE5`,
+            marginTop: 12, paddingTop: 11, borderTop: `1px solid #b99a7d`,
             display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 11.5, color: C.sub,
           }}>
             <span>일간 <b style={{ color: C.brand }}>{hour.detail.dayStem}({hour.detail.dayEl})</b></span>

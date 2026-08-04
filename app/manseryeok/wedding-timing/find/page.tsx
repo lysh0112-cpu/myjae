@@ -32,7 +32,7 @@ const SURVEY_KEY = 'wedding-timing-survey'
 
 function Disclaimer({ full }: { full?: boolean }) {
   return (
-    <div style={{ background: 'rgba(255,120,120,0.06)', border: '1px solid rgba(255,120,120,0.18)', borderRadius: '10px', padding: '10px 14px', fontSize: '11px', color: '#d88', lineHeight: 1.6 }}>
+    <div style={{ background: 'rgba(255,120,120,0.06)', border: '1px solid rgba(193,69,69,0.65)', borderRadius: '10px', padding: '10px 14px', fontSize: '11px', color: '#d88', lineHeight: 1.6 }}>
       {full
         ? '※ 본 분석은 전통 사주명리에 기반한 참고 정보입니다. 실제 예식일은 양가·예식장 사정과 두 분의 형편을 함께 고려해 결정하세요.'
         : '※ 전통 명리 참고용 · 실제 예식일은 양가·예식장 사정과 함께 결정하세요.'}
@@ -186,7 +186,7 @@ function WeddingFindInner() {
         </div>
 
         {error && (
-          <div style={{ marginTop: '14px', background: 'rgba(255,80,80,0.08)', border: '1px solid rgba(255,80,80,0.2)', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', color: '#ff8888', lineHeight: 1.6 }}>
+          <div style={{ marginTop: '14px', background: 'rgba(255,80,80,0.08)', border: '1px solid rgba(193,69,69,0.65)', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', color: '#C64B4B', lineHeight: 1.6 }}>
             {error}
           </div>
         )}
