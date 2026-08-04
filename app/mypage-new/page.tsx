@@ -466,7 +466,7 @@ export default function MyPageNew() {
           <div style={{ padding: (nickEdit || editMode) ? 14 : '10px 14px' }}>
             {!editMode && !nickEdit && (
               <div style={{ display: 'flex', gap: 6 }}>
-                <button onClick={() => { if (!profile?.birth_year) { openEdit() } else { router.push(sajuDetailUrl()) } }} style={{ flex: 1, fontSize: 11, color: '#96502e', background: '#faede0', border: '0.5px solid #ecd8c6', borderRadius: 8, padding: '8px 0', cursor: 'pointer', fontWeight: 600 }}>내 사주 자세히 보기 →</button>
+                <button onClick={() => { if (!profile?.birth_year) { openEdit() } else { router.push(sajuDetailUrl()) } }} style={{ flex: 1, fontSize: 11, color: '#96502e', background: '#faede0', border: '0.5px solid #b99a7d', borderRadius: 8, padding: '8px 0', cursor: 'pointer', fontWeight: 600 }}>내 사주 원국표 보기 →</button>
                 <button onClick={openNickEdit} style={{ fontSize: 11, color: '#5c3a1e', border: '0.5px solid #9c7a58', borderRadius: 8, padding: '8px 12px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>닉네임</button>
                 <button onClick={openEdit} style={{ fontSize: 11, color: '#5c3a1e', border: '0.5px solid #9c7a58', borderRadius: 8, padding: '8px 12px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>수정</button>
               </div>
