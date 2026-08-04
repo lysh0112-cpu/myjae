@@ -374,7 +374,7 @@ function BirthResultInner() {
       <div style={{
         position: 'sticky', top: 0, zIndex: 10,
         background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
-        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
+        borderBottom: '0.5px solid #9c7a58', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <button onClick={() => router.push(sp.get('from') === 'mypage' ? '/mypage-new' : '/manseryeok/birth-timing/birth-storage')}
           style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
@@ -389,7 +389,7 @@ function BirthResultInner() {
       <div style={{ padding: '16px' }}>
         <Disclaimer strong />
 
-        <div style={{ margin: '16px 0', padding: '12px 14px', background: cardBg, borderRadius: '10px', border: '1px solid #f0e0d5' }}>
+        <div style={{ margin: '16px 0', padding: '12px 14px', background: cardBg, borderRadius: '10px', border: '1px solid #9c7a58' }}>
           <div style={{ fontSize: '11px', color: sub, marginBottom: '6px' }}>분석 조건</div>
           <div style={{ fontSize: '12px', color: '#96502e', lineHeight: 1.7 }}>
             출산예정일 {survey?.dueDate || '-'} · {survey?.method || '-'}<br />
@@ -476,7 +476,7 @@ function BirthResultInner() {
 
         <button
           onClick={() => router.push('/manseryeok/birth-timing/birth-storage')}
-          style={{ width: '100%', marginTop: '8px', padding: '12px', borderRadius: '12px', background: '#fff', border: '1px solid #f0e0d5', color: '#96502e', fontSize: '13px', cursor: 'pointer' }}>
+          style={{ width: '100%', marginTop: '8px', padding: '12px', borderRadius: '12px', background: '#fff', border: '1px solid #9c7a58', color: '#96502e', fontSize: '13px', cursor: 'pointer' }}>
           ↩ 보관함으로
         </button>
 

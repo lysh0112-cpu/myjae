@@ -149,7 +149,7 @@ const BRANCH_FG: Record<string, string> = {
 
 /* ── 공통 스타일 ── */
 const card: React.CSSProperties = {
-  background: '#fff', border: '0.5px solid #f0e0d5', borderRadius: 12,
+  background: '#fff', border: '0.5px solid #9c7a58', borderRadius: 12,
   padding: '11px 12px', marginBottom: 9,
 }
 const ttl: React.CSSProperties = {
@@ -160,9 +160,9 @@ const tb: React.CSSProperties = {
 }
 const th: React.CSSProperties = {
   background: '#faf3ec', color: '#96502e', padding: '4px 2px',
-  border: '0.5px solid #f0e0d5', fontWeight: 600,
+  border: '0.5px solid #9c7a58', fontWeight: 600,
 }
-const td: React.CSSProperties = { padding: '4px 2px', border: '0.5px solid #f0e0d5' }
+const td: React.CSSProperties = { padding: '4px 2px', border: '0.5px solid #9c7a58' }
 const rl: React.CSSProperties = {
   ...td, color: '#6b5340', fontSize: 9.5, background: '#fdf9f5', width: 46,
 }

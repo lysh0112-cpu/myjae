@@ -31,7 +31,7 @@ const SIPSIN_COLOR: Record<string, string> = {
 
 const th: React.CSSProperties = {
   padding: '3px 2px', textAlign: 'center', fontWeight: 600,
-  color: '#555', fontSize: '9px', border: '0.5px solid #f0e0d5',
+  color: '#555', fontSize: '9px', border: '0.5px solid #9c7a58',
 }
 
 export default function SipsungTable({ sipsung }: { sipsung: { ss: string; pct: number }[] }) {
@@ -66,7 +66,7 @@ export default function SipsungTable({ sipsung }: { sipsung: { ss: string; pct: 
                 onClick={() => SAJU_TERMS[ss] && setTerm(ss)}
                 style={{
                   padding: '3px 2px', textAlign: 'center', fontWeight: 600,
-                  color: SIPSIN_COLOR[ss] || '#555', border: '0.5px solid #f0e0d5',
+                  color: SIPSIN_COLOR[ss] || '#555', border: '0.5px solid #9c7a58',
                   cursor: SAJU_TERMS[ss] ? 'pointer' : 'default',
                 }}>
                 {SAJU_TERMS[ss]
@@ -77,7 +77,7 @@ export default function SipsungTable({ sipsung }: { sipsung: { ss: string; pct: 
                 padding: '3px 2px', textAlign: 'center',
                 fontWeight: p !== null ? 700 : 400,
                 color: p !== null ? '#1a1a1a' : '#bbb',
-                border: '0.5px solid #f0e0d5',
+                border: '0.5px solid #9c7a58',
               }}>
                 {p !== null ? `${p}%` : '-'}
               </td>

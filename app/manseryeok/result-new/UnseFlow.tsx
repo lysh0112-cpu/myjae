@@ -204,11 +204,11 @@ export default function UnseFlow(props: Props) {
   }
 
   const section = (title: string, badge: string, cells: Cell[], small: boolean) => (
-    <div style={{ background: '#fff', border: '0.5px solid #f0e0d5', borderRadius: 14, overflow: 'hidden', marginBottom: 8 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '11px 15px 8px', borderBottom: '0.5px solid #f7ede4' }}>
+    <div style={{ background: '#fff', border: '0.5px solid #9c7a58', borderRadius: 14, overflow: 'hidden', marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '11px 15px 8px', borderBottom: '0.5px solid #b99a7d' }}>
         <span style={{ color: '#8f3d0e', fontSize: 12 }}>✦</span>
         <span style={{ fontSize: 12.5, fontWeight: 700, color: '#1a1a1a' }}>{title}</span>
-        {badge && <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 8, background: '#fff3e9', border: '0.5px solid #e8d5c5', color: '#8f3d0e', fontWeight: 600 }}>{badge}</span>}
+        {badge && <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 8, background: '#fff3e9', border: '0.5px solid #9c7a58', color: '#8f3d0e', fontWeight: 600 }}>{badge}</span>}
       </div>
       <div style={{ fontSize: 10, color: '#8f3d0e', padding: '5px 15px 0' }}>
         👆 눌러서 자세히 보기{myMonthBranch ? ' · A~D는 내 월지와의 어울림이에요' : ''}
@@ -264,7 +264,7 @@ export default function UnseFlow(props: Props) {
           if (!rel) return null
           const g = GRADE_C[rel.grade]
           return (
-            <div style={{ background: '#faf6f1', border: '0.5px solid #f0e0d5', borderRadius: 10, padding: '10px 12px', marginBottom: 7 }}>
+            <div style={{ background: '#faf6f1', border: '0.5px solid #9c7a58', borderRadius: 10, padding: '10px 12px', marginBottom: 7 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 11, color: '#9e8878' }}>{title}</span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#5c4a3a' }}>{mine}{detail.branch}</span>

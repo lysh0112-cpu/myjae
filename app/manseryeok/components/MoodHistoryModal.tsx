@@ -76,7 +76,7 @@ export default function MoodHistoryModal({ open, onClose }: { open: boolean; onC
         {loading ? (
           <div style={{ fontSize: 12, color: '#5c3a1e', textAlign: 'center', padding: '30px 0' }}>불러오는 중…</div>
         ) : rows.length === 0 ? (
-          <div style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: '28px 14px', textAlign: 'center' }}>
+          <div style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 12, padding: '28px 14px', textAlign: 'center' }}>
             <div style={{ fontSize: 13, color: '#8a7360', marginBottom: 4 }}>이 달의 기록이 없어요</div>
             <div style={{ fontSize: 11, color: '#6b5340' }}>오늘의 기분을 기록하면 여기 흐름이 그려져요.</div>
           </div>
@@ -85,7 +85,7 @@ export default function MoodHistoryModal({ open, onClose }: { open: boolean; onC
             <div style={{ fontSize: 11.5, fontWeight: 600, color: '#96502e', margin: '0 2px 8px' }}>
               한 달 기분 흐름 <span style={{ fontWeight: 400, color: '#6b5340', fontSize: 10 }}>· 막대를 누르면 그날 기록이 보여요</span>
             </div>
-            <div style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: '14px 10px' }}>
+            <div style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 12, padding: '14px 10px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 100 }}>
                 {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => {
                   const rec = byDay[d]
@@ -110,7 +110,7 @@ export default function MoodHistoryModal({ open, onClose }: { open: boolean; onC
             </div>
 
             {picked && (
-              <div style={{ background: '#faf3ec', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: '14px 15px', display: 'flex', alignItems: 'center', gap: 13 }}>
+              <div style={{ background: '#faf3ec', border: '0.5px solid #9c7a58', borderRadius: 12, padding: '14px 15px', display: 'flex', alignItems: 'center', gap: 13 }}>
                 <span style={{ fontSize: 30 }}>{emojiOf(picked.mood)}</span>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 11.5, color: '#6b5340' }}>{picked.logDate.replace(/-/g, '.').slice(5)}{isThisMonth && Number(picked.logDate.split('-')[2]) === today.getDate() ? ' (오늘)' : ''}</div>

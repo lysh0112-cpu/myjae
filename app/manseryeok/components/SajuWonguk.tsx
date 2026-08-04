@@ -223,7 +223,7 @@ export default function SajuWonguk({ saju, dayStem, yeonjji, iljji: _iljji, gm1,
       </table>
 
       {/* 요약 */}
-      <div style={{ background: '#faf3ee', border: '0.5px solid #f0e0d5', borderRadius: 8, padding: 9, display: 'flex', justifyContent: 'space-around', marginTop: 12 }}>
+      <div style={{ background: '#faf3ee', border: '0.5px solid #9c7a58', borderRadius: 8, padding: 9, display: 'flex', justifyContent: 'space-around', marginTop: 12 }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ color: '#6b5340', fontSize: 9, marginBottom: 2 }}>일간</div>
           <div style={{ color: '#1a1a1a', fontWeight: 700, fontSize: 11 }}>{dayStem ? `${dayStem}(${STEM_ELEMENT[dayStem] || '?'})` : '-'}</div>

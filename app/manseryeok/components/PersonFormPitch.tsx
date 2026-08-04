@@ -219,7 +219,7 @@ export default function PersonFormPitch({
   return (
     <div style={{ background: C.cardBg, borderRadius: 20, overflow: 'hidden', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', maxHeight: '88vh' }}>
       {/* 헤더 (고정) */}
-      <div style={{ padding: '18px 18px 14px', position: 'relative', textAlign: 'center', borderBottom: `0.5px solid #f5e5da`, flexShrink: 0 }}>
+      <div style={{ padding: '18px 18px 14px', position: 'relative', textAlign: 'center', borderBottom: `0.5px solid #b99a7d`, flexShrink: 0 }}>
         {onBack && (
           <button onClick={onBack} aria-label="뒤로"
             style={{ position: 'absolute', top: 16, left: 16, background: 'none', border: 'none', cursor: 'pointer', color: C.subLight, fontSize: 18, lineHeight: 1 }}>‹</button>
@@ -313,7 +313,7 @@ export default function PersonFormPitch({
                     fontSize: 12, borderRadius: 20, padding: '7px 14px', cursor: 'pointer',
                     background: active ? '#faede0' : '#fff',
                     color: active ? '#8f3d0e' : C.chipText,
-                    border: active ? '0.5px solid #f5d5b8' : `0.5px solid ${C.borderInput}`,
+                    border: active ? '0.5px solid #b99a7d' : `0.5px solid ${C.borderInput}`,
                     fontWeight: active ? 600 : 400,
                   }}>{r}</button>
               )
@@ -413,7 +413,7 @@ export default function PersonFormPitch({
       </div>
 
       {/* 저장 버튼 (하단 고정 — 항상 보임) */}
-      <div style={{ padding: '10px 16px 16px', flexShrink: 0, borderTop: `0.5px solid #f5e5da`, background: C.cardBg }}>
+      <div style={{ padding: '10px 16px 16px', flexShrink: 0, borderTop: `0.5px solid #b99a7d`, background: C.cardBg }}>
         {(localErr || errorMessage) && (
           <div style={{ color: '#c05a5a', fontSize: 12, marginBottom: 8, textAlign: 'center' }}>{localErr || errorMessage}</div>
         )}

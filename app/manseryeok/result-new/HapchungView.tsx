@@ -39,7 +39,7 @@ export default function HapchungView({ saju }: Props) {
 
   return (
     <div style={{ fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>
-      <div style={{ background: '#fff3e9', border: '0.5px solid #e8d5c5', borderRadius: 10, padding: '11px 13px', marginBottom: 12 }}>
+      <div style={{ background: '#fff3e9', border: '0.5px solid #9c7a58', borderRadius: 10, padding: '11px 13px', marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: '#b46e46', borderRadius: 6, padding: '3px 8px' }}>합충 반영됨</span>
           <span style={{ fontSize: 14, fontWeight: 700, color: '#96502e' }}>합충 반영 오행</span>
@@ -53,7 +53,7 @@ export default function HapchungView({ saju }: Props) {
       </div>
 
       {/* 전/후 점수 비교표 */}
-      <div style={{ background: '#faf3ee', border: '0.5px solid #f0e0d5', borderRadius: 10, padding: '10px 12px', marginBottom: 10 }}>
+      <div style={{ background: '#faf3ee', border: '0.5px solid #9c7a58', borderRadius: 10, padding: '10px 12px', marginBottom: 10 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 1fr', gap: 4, fontSize: 11 }}>
           <div style={{ color: '#6b5340', fontWeight: 600 }}>오행</div>
           <div style={{ color: '#6b5340', fontWeight: 600, textAlign: 'right' }}>합충 전</div>
@@ -84,7 +84,7 @@ export default function HapchungView({ saju }: Props) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
           {notes.map((n, i) => (
-            <div key={i} style={{ fontSize: 11, color: '#5a4a3e', background: '#fff', border: '0.5px solid #f0e0d5', borderRadius: 8, padding: '8px 11px' }}>
+            <div key={i} style={{ fontSize: 11, color: '#5a4a3e', background: '#fff', border: '0.5px solid #9c7a58', borderRadius: 8, padding: '8px 11px' }}>
               {n}
             </div>
           ))}

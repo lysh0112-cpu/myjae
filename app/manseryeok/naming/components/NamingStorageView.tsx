@@ -294,7 +294,7 @@ function NamingStorageInner({ forcedMode }: NamingStorageViewProps) {
               </div>
 
               {/* 한글이름 + 관계 배지 + 등급·날짜 */}
-              <div style={{ flex: 1, minWidth: 0, borderLeft: '0.5px solid #f0e0d5', paddingLeft: 12 }}>
+              <div style={{ flex: 1, minWidth: 0, borderLeft: '0.5px solid #9c7a58', paddingLeft: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                   <span style={{
                     fontSize: 14, fontWeight: 500, color: '#1a1a1a',

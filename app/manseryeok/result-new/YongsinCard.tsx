@@ -283,7 +283,7 @@ export default function YongsinCard({ result, saju }: Props) {
   // strongSub=true 면 아랫줄(부제)을 크고 진하게 — 격국 이름처럼 "설명"이 아니라
   // "정보"인 경우에 쓴다. (연재쌤: 무슨 격인지가 직업·사회활동 판단에 중요)
   const labelBox = (title: string, sub: string, strongSub = false) => (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#fff3e9', border: '0.5px solid #e8d5c5', borderRadius: 9, minWidth: 52, padding: '6px 0' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#fff3e9', border: '0.5px solid #9c7a58', borderRadius: 9, minWidth: 52, padding: '6px 0' }}>
       <span style={{ fontSize: 11, fontWeight: 700, color: '#8f3d0e' }}>{title}</span>
       <span style={strongSub
         ? { fontSize: 12, fontWeight: 700, color: '#8f3d0e', marginTop: 3, whiteSpace: 'nowrap' as const }
@@ -318,7 +318,7 @@ export default function YongsinCard({ result, saju }: Props) {
           ))}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '34px repeat(5,1fr)', gap: 4, alignItems: 'stretch' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#fff3e9', border: '0.5px solid #e8d5c5', borderRadius: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#fff3e9', border: '0.5px solid #9c7a58', borderRadius: 8 }}>
             <span style={{ fontSize: 9.5, fontWeight: 700, color: '#8f3d0e' }}>억부</span>
             <span style={{ fontSize: 7, color: '#6b5340' }}>재물</span>
           </div>
@@ -378,7 +378,7 @@ export default function YongsinCard({ result, saju }: Props) {
       )}
 
       {/* 안내 문구 */}
-      <div style={{ background: '#faf3ee', border: '0.5px solid #f0e0d5', borderRadius: 8, padding: '10px 12px', fontSize: 11, color: '#666', lineHeight: 1.75 }}>
+      <div style={{ background: '#faf3ee', border: '0.5px solid #9c7a58', borderRadius: 8, padding: '10px 12px', fontSize: 11, color: '#666', lineHeight: 1.75 }}>
         <b style={{ color: '#96502e' }}>조후</b>는 건강·마음, <b style={{ color: '#96502e' }}>억부</b>는 재물·현실, <b style={{ color: '#96502e' }}>격국</b>은 직업·명예를 도와주는 기운이에요.
       </div>
 
@@ -402,7 +402,7 @@ export default function YongsinCard({ result, saju }: Props) {
             </div>
 
             {!detail && (
-              <div onClick={() => setDetail(true)} style={{ background: '#fff3e9', border: '0.5px solid #e8d5c5', color: '#8f3d0e', textAlign: 'center', padding: 11, borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              <div onClick={() => setDetail(true)} style={{ background: '#fff3e9', border: '0.5px solid #9c7a58', color: '#8f3d0e', textAlign: 'center', padding: 11, borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                 {info.name}({info.hanja})의 기운이 뭐예요? →
               </div>
             )}
@@ -444,7 +444,7 @@ export default function YongsinCard({ result, saju }: Props) {
               <button onClick={() => setOpenGyeok(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', fontSize: 16, color: '#ccc', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div style={{ display: 'inline-block', background: '#fff3e9', border: '0.5px solid #e8d5c5', color: '#8f3d0e', fontSize: 11, padding: '3px 11px', borderRadius: 20, marginBottom: 7 }}>
+            <div style={{ display: 'inline-block', background: '#fff3e9', border: '0.5px solid #9c7a58', color: '#8f3d0e', fontSize: 11, padding: '3px 11px', borderRadius: 20, marginBottom: 7 }}>
               타고난 결
             </div>
             <div style={{ fontSize: 12.5, color: '#555', lineHeight: 1.9, marginBottom: 15 }}>

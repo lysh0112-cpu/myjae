@@ -69,7 +69,7 @@ function MenuInner() {
       <div style={{
         position: 'sticky', top: 0, zIndex: 10,
         background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
-        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
+        borderBottom: '0.5px solid #9c7a58', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <button onClick={() => router.push('/manseryeok/wedding-timing/input')}
           style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
@@ -83,7 +83,7 @@ function MenuInner() {
         <Disclaimer />
 
         <div style={{ fontSize: '13px', color: '#96502e', fontWeight: 600, margin: '20px 0 10px' }}>두 사람 정보</div>
-        <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', border: '1px solid #f0e0d5' }}>
+        <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', border: '1px solid #9c7a58' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
             <span style={{ fontSize: '14px' }}>🤵</span>
             <span style={{ fontSize: '12px', color: sub, width: '44px' }}>신랑</span>
@@ -103,7 +103,7 @@ function MenuInner() {
 
         <button onClick={() => go('check')}
           className="active:scale-95"
-          style={{ width: '100%', textAlign: 'left', background: cardBg, border: '1px solid #f0e0d5', borderRadius: '14px', padding: '16px', marginBottom: '10px', cursor: 'pointer', transition: 'transform 0.15s ease' }}>
+          style={{ width: '100%', textAlign: 'left', background: cardBg, border: '1px solid #9c7a58', borderRadius: '14px', padding: '16px', marginBottom: '10px', cursor: 'pointer', transition: 'transform 0.15s ease' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
             <span style={{ fontSize: '18px' }}>📅</span>
             <span style={{ fontSize: '15px', fontWeight: 600, color: text }}>정한 날 봐주기</span>
@@ -115,7 +115,7 @@ function MenuInner() {
 
         <button onClick={() => go('find')}
           className="active:scale-95"
-          style={{ width: '100%', textAlign: 'left', background: cardBg, border: '1px solid #f0e0d5', borderRadius: '14px', padding: '16px', cursor: 'pointer', transition: 'transform 0.15s ease' }}>
+          style={{ width: '100%', textAlign: 'left', background: cardBg, border: '1px solid #9c7a58', borderRadius: '14px', padding: '16px', cursor: 'pointer', transition: 'transform 0.15s ease' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
             <span style={{ fontSize: '18px' }}>💍</span>
             <span style={{ fontSize: '15px', fontWeight: 600, color: text }}>좋은 날 찾아주기</span>

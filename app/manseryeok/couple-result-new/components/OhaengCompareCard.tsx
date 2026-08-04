@@ -188,7 +188,7 @@ export default function OhaengCompareCard({
 
 function ScoreCard({ label, value, track, fill }: { label: string; value: number; track: string; fill: string }) {
   return (
-    <div style={{ flex: 1, background: '#fff', border: '0.5px solid #f0e0d5', borderRadius: 11, padding: '11px 11px' }}>
+    <div style={{ flex: 1, background: '#fff', border: '0.5px solid #9c7a58', borderRadius: 11, padding: '11px 11px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 7 }}>
         <span style={{ fontSize: 11.5, color: '#96502e' }}>{label}</span>
         <span style={{ fontSize: 17, fontWeight: 500, color: fill }}>{value}%</span>

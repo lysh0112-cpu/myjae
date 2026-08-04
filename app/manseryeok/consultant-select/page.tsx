@@ -345,7 +345,7 @@ function ConsultantSelectInner() {
         </button>
         <button onClick={() => router.push('/')}
           className="w-full max-w-[300px] py-[13px] rounded-xl text-[14px]"
-          style={{ background: '#faede0', color: '#96502e', border: '0.5px solid #f0e0d5' }}>
+          style={{ background: '#faede0', color: '#96502e', border: '0.5px solid #9c7a58' }}>
           홈으로
         </button>
       </main>
@@ -388,7 +388,7 @@ function ConsultantSelectInner() {
             const first = sched[0]
             return (
               <div key={c.id} className="mb-2 rounded-2xl overflow-hidden"
-                style={{ border: '0.5px solid #f0e0d5', background: open ? '#fff' : '#fffbf7' }}>
+                style={{ border: '0.5px solid #9c7a58', background: open ? '#fff' : '#fffbf7' }}>
                 <button onClick={() => openConsultant(c.id)}
                   className="w-full flex items-center gap-3 p-3 text-left">
                   <div style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
@@ -445,7 +445,7 @@ function ConsultantSelectInner() {
                         <div className="flex flex-col gap-2">
                           {sched.map(row => (
                             <div key={row.date} className="rounded-lg px-3 py-2"
-                              style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5' }}>
+                              style={{ background: '#fffbf7', border: '0.5px solid #9c7a58' }}>
                               <div className="text-[11px] mb-1.5" style={{ color: '#5c3a1e' }}>{fmtDate(row.date)}</div>
                               <div className="flex flex-wrap gap-1.5">
                                 {row.slots.map(s => {
@@ -455,7 +455,7 @@ function ConsultantSelectInner() {
                                       className="text-[12px] px-2.5 py-1 rounded-md"
                                       style={on
                                         ? { background: '#b46e46', color: '#fff', border: '0.5px solid #b46e46', fontWeight: 600 }
-                                        : { background: '#faede0', color: '#8f3d0e', border: '0.5px solid #f5d5b8' }}>
+                                        : { background: '#faede0', color: '#8f3d0e', border: '0.5px solid #b99a7d' }}>
                                       {s.slot_hour}시
                                     </button>
                                   )
@@ -475,14 +475,14 @@ function ConsultantSelectInner() {
                           <input value={custName} onChange={e => setCustName(e.target.value)}
                             placeholder="홍길동"
                             className="w-full rounded-lg px-3 py-2 text-[14px] outline-none"
-                            style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', color: '#3a2e28' }} />
+                            style={{ background: '#fffbf7', border: '0.5px solid #9c7a58', color: '#3a2e28' }} />
                         </div>
                         <div className="mb-4">
                           <div className="text-[12px] mb-1" style={{ color: '#5c3a1e' }}>휴대폰 번호</div>
                           <input value={custPhone} onChange={e => setCustPhone(formatPhone(e.target.value))}
                             placeholder="010-1234-5678" inputMode="numeric"
                             className="w-full rounded-lg px-3 py-2 text-[14px] outline-none"
-                            style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5', color: '#3a2e28' }} />
+                            style={{ background: '#fffbf7', border: '0.5px solid #9c7a58', color: '#3a2e28' }} />
                         </div>
 
                         <button onClick={() => reserve(c)} disabled={booking}
@@ -508,7 +508,7 @@ function ConsultantSelectInner() {
         <button onClick={() => router.back()}
           style={{ fontSize:'13px', padding:'12px 24px', borderRadius:'20px',
             background:'#fffbf7', color:'#96502e',
-            border:'0.5px solid #f0e0d5', cursor:'pointer' }}>
+            border:'0.5px solid #9c7a58', cursor:'pointer' }}>
           ← AI 채팅으로 돌아가기
         </button>
       </div>

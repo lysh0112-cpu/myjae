@@ -117,7 +117,7 @@ function CoupleInputInner() {
       <div style={{
         position: 'sticky', top: 0, zIndex: 5,
         background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
-        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
+        borderBottom: '0.5px solid #9c7a58', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <button onClick={() => router.push('/home-new')}
           style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
@@ -142,7 +142,7 @@ function CoupleInputInner() {
         {meErr && (
           <div style={{
             marginTop: 12, padding: '10px 12px', borderRadius: 10,
-            background: '#fbece4', border: '0.5px solid #f0d5c5',
+            background: '#fbece4', border: '0.5px solid #b99a7d',
             color: '#96502e', fontSize: 12.5, lineHeight: 1.5,
           }}>
             {meErr}
@@ -190,7 +190,7 @@ function SlotView({ n, slot, onOpen }: {
 
       {slot ? (
         <div onClick={onOpen} style={{
-          background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: 12,
+          background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 12, padding: 12,
           display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
         }}>
           <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#efe0d3', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#96502e', fontSize: 14 }}>

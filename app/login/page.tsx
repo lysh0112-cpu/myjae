@@ -59,7 +59,7 @@ export default function LoginPage() {
   }
 
   const inputWrap: React.CSSProperties = {
-    height: 50, background: '#fff', border: '0.5px solid #e8d5c5', borderRadius: 12,
+    height: 50, background: '#fff', border: '0.5px solid #9c7a58', borderRadius: 12,
     display: 'flex', alignItems: 'center', padding: '0 14px',
   }
   const inputStyle: React.CSSProperties = {
@@ -84,7 +84,7 @@ export default function LoginPage() {
       {/* 헤더 */}
       <div style={{
         display: 'flex', alignItems: 'center', padding: '14px 18px',
-        background: '#FFFBF7', borderBottom: '0.5px solid #f0e0d5',
+        background: '#FFFBF7', borderBottom: '0.5px solid #9c7a58',
       }}>
         <button onClick={() => router.back()}
           style={{ background: 'none', border: 'none', color: '#5c3a1e', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>←</button>
@@ -178,7 +178,7 @@ export default function LoginPage() {
         <div style={{ textAlign: 'center', fontSize: 10, color: '#6b5340', marginBottom: 26 }}>소셜 로그인은 준비 중이에요</div>
 
         {/* 회원가입 링크 */}
-        <div style={{ textAlign: 'center', fontSize: 13, color: '#8a7868', paddingTop: 18, borderTop: '0.5px solid #f0e0d5' }}>
+        <div style={{ textAlign: 'center', fontSize: 13, color: '#6f6053', paddingTop: 18, borderTop: '0.5px solid #9c7a58' }}>
           아직 회원이 아니신가요?{' '}
           <button type="button" onClick={() => router.push('/signup')} style={{ color: '#8f3d0e', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>회원가입</button>
         </div>

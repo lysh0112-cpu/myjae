@@ -34,7 +34,7 @@ export default function ArchivePage() {
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '13px 16px',
         background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
-        borderBottom: '0.5px solid #f0e0d5',
+        borderBottom: '0.5px solid #9c7a58',
       }}>
         <button
           onClick={() => router.push('/home-new')}
@@ -53,7 +53,7 @@ export default function ArchivePage() {
         position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
         width: '100%', maxWidth: 430,
         display: 'flex', background: '#FFFBF7',
-        borderTop: '0.5px solid #f0e0d5', zIndex: 20,
+        borderTop: '0.5px solid #9c7a58', zIndex: 20,
       }}>
         {NAV.map((n) => {
           const active = n.href === pathname

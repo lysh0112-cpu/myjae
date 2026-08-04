@@ -12,7 +12,7 @@ const READ: Record<string, string> = {
 }
 function elemColor(ch: string) {
   const el = STEM_ELEMENT[ch] || BRANCH_ELEMENT[ch]
-  return ELEMENT_COLOR[el] || '#8a7868'
+  return ELEMENT_COLOR[el] || '#6f6053'
 }
 
 // ── 랜딩용 예시 사주 (보여주기 전용) ──
@@ -153,7 +153,7 @@ export default function LandingPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '38px repeat(4, 1fr)', alignItems: 'stretch' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#6b5340' }}>천간</div>
                 {TOP_STEMS.map((ch, i) => (
-                  <div key={i} style={{ textAlign: 'center', padding: '6px 0', borderLeft: '1px solid #f0e0d5' }}>
+                  <div key={i} style={{ textAlign: 'center', padding: '6px 0', borderLeft: '1px solid #9c7a58' }}>
                     <div style={{ fontSize: '20px', fontWeight: 700, color: elemColor(ch), lineHeight: 1.1 }}>
                       {READ[ch]}{ch}
                     </div>
@@ -166,7 +166,7 @@ export default function LandingPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '38px repeat(4, 1fr)', borderTop: '1px solid #f5ebe2' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#6b5340' }}>십성</div>
                 {TOP_SIPSIN.map((s, i) => (
-                  <div key={i} style={{ textAlign: 'center', fontSize: '11px', color: '#8a7868', padding: '5px 0', borderLeft: '1px solid #f0e0d5' }}>{s}</div>
+                  <div key={i} style={{ textAlign: 'center', fontSize: '11px', color: '#6f6053', padding: '5px 0', borderLeft: '1px solid #9c7a58' }}>{s}</div>
                 ))}
               </div>
 
@@ -174,7 +174,7 @@ export default function LandingPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '38px repeat(4, 1fr)', borderTop: '1px solid #f5ebe2' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#6b5340' }}>지지</div>
                 {BOT_BRANCH.map((ch, i) => (
-                  <div key={i} style={{ textAlign: 'center', padding: '6px 0', borderLeft: '1px solid #f0e0d5' }}>
+                  <div key={i} style={{ textAlign: 'center', padding: '6px 0', borderLeft: '1px solid #9c7a58' }}>
                     <div style={{ fontSize: '20px', fontWeight: 700, color: elemColor(ch), lineHeight: 1.1 }}>
                       {READ[ch]}{ch}
                     </div>
@@ -187,7 +187,7 @@ export default function LandingPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '38px repeat(4, 1fr)', borderTop: '1px solid #f5ebe2' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#6b5340' }}>십성</div>
                 {BOT_SIPSIN.map((s, i) => (
-                  <div key={i} style={{ textAlign: 'center', fontSize: '11px', color: '#8a7868', padding: '5px 0', borderLeft: '1px solid #f0e0d5' }}>{s}</div>
+                  <div key={i} style={{ textAlign: 'center', fontSize: '11px', color: '#6f6053', padding: '5px 0', borderLeft: '1px solid #9c7a58' }}>{s}</div>
                 ))}
               </div>
             </div>
@@ -219,7 +219,7 @@ export default function LandingPage() {
             style={{
               width: '100%', height: '46px',
               background: '#f5f5f3', border: '0.5px solid #e0ddd6',
-              borderRadius: '16px', color: '#8a7868',
+              borderRadius: '16px', color: '#6f6053',
               fontSize: '14px', cursor: 'pointer',
             }}
           >
@@ -261,7 +261,7 @@ export default function LandingPage() {
             <div key={item.title} style={{
               display: 'flex', alignItems: 'center', gap: '14px',
               background: '#fff',
-              border: '0.5px solid #f0e0d5',
+              border: '0.5px solid #9c7a58',
               borderRadius: '14px',
               padding: '14px 16px',
               marginBottom: '10px',
@@ -301,7 +301,7 @@ export default function LandingPage() {
                 background: '#fff',
                 border: '0.5px solid #e0ddd6',
                 borderRadius: '12px',
-                color: '#8a7868', fontSize: '13px', cursor: 'pointer',
+                color: '#6f6053', fontSize: '13px', cursor: 'pointer',
               }}
             >서비스 더 알아보기</button>
           </div>
@@ -311,7 +311,7 @@ export default function LandingPage() {
         <div style={{ height: '8px', background: '#f0ede6' }} />
 
         {/* ④ 푸터 */}
-        <div style={{ background: '#f8f8f6', padding: '24px 20px 40px', borderTop: '0.5px solid #f0e0d5' }}>
+        <div style={{ background: '#f8f8f6', padding: '24px 20px 40px', borderTop: '0.5px solid #9c7a58' }}>
           <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' as const }}>
             {['회사소개', '이용약관', '개인정보처리방침'].map((t, i) => (
               <span key={t} style={{
@@ -339,17 +339,17 @@ export default function LandingPage() {
             서울시 강북구 솔매로45길 95, 201호
           </div>
           <div style={{ marginTop: '12px', fontSize: '11px', color: '#5c3a1e', lineHeight: 1.9 }}>
-            <strong style={{ color: '#8a7868' }}>고객센터</strong><br />
+            <strong style={{ color: '#6f6053' }}>고객센터</strong><br />
             lysh6728@naver.com<br />
             070-0000-0000
           </div>
           <button style={{
             marginTop: '12px', padding: '7px 18px',
             border: '0.5px solid #ddd', borderRadius: '16px',
-            background: '#fff', color: '#8a7868',
+            background: '#fff', color: '#6f6053',
             fontSize: '11px', cursor: 'pointer',
           }}>문의하기</button>
-          <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '0.5px solid #f0e0d5', fontSize: '10px', color: '#ccc' }}>
+          <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '0.5px solid #9c7a58', fontSize: '10px', color: '#ccc' }}>
             © 2026 (주)명연재. All rights reserved.
           </div>
         </div>

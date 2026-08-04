@@ -176,7 +176,7 @@ export default function SajuEditModal({
 
   if (!open) return null
 
-  const numInput: React.CSSProperties = { flex: 1, minWidth: 0, padding: '10px 6px', borderRadius: 8, textAlign: 'center', border: '0.5px solid #e8d5c5', background: '#fff', color: '#3a2e28', fontSize: 14, outline: 'none' }
+  const numInput: React.CSSProperties = { flex: 1, minWidth: 0, padding: '10px 6px', borderRadius: 8, textAlign: 'center', border: '0.5px solid #9c7a58', background: '#fff', color: '#3a2e28', fontSize: 14, outline: 'none' }
   // 드롭다운 (좁은 칸에서 글자가 화살표에 가려지지 않게 직접 그림)
   const selInput: React.CSSProperties = {
     ...numInput, appearance: 'none', cursor: 'pointer', textAlign: 'left',
@@ -224,20 +224,20 @@ export default function SajuEditModal({
                 onChange={e => setENick(e.target.value)}
                 placeholder="닉네임을 입력하세요"
                 maxLength={20}
-                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #e8d5c5', background: '#fff', color: '#3a2e28', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 12 }}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #9c7a58', background: '#fff', color: '#3a2e28', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 12 }}
               />
 
               <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                 <div style={{ flex: 1 }}>
                   <div style={label}>성별</div>
-                  <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '0.5px solid #e8d5c5' }}>
+                  <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '0.5px solid #9c7a58' }}>
                     <button onClick={() => setEGender('남')} style={seg(eGender === '남')}>남</button>
                     <button onClick={() => setEGender('여')} style={seg(eGender === '여')}>여</button>
                   </div>
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={label}>달력</div>
-                  <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '0.5px solid #e8d5c5' }}>
+                  <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '0.5px solid #9c7a58' }}>
                     <button onClick={() => applyECal('양력')} style={seg(eCal === '양력')}>양력</button>
                     <button onClick={() => applyECal('음력')} style={seg(eCal === '음력')}>음력</button>
                   </div>
@@ -261,7 +261,7 @@ export default function SajuEditModal({
               </div>
 
               <div style={label}>태어난 시 (시주)</div>
-              <select value={eHour} onChange={e => setEHour(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #e8d5c5', background: '#fff', color: eHour ? '#3a2e28' : '#b4785a', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 8 }}>
+              <select value={eHour} onChange={e => setEHour(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #9c7a58', background: '#fff', color: eHour ? '#3a2e28' : '#b4785a', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 8 }}>
                 <option value="">시간 선택</option>
                 {eVisibleHours.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
               </select>
@@ -274,7 +274,7 @@ export default function SajuEditModal({
                   return (
                     <button key={b.key} type="button" onClick={() => pickEBand(b)} style={{
                       flex: 1, padding: '7px 2px', borderRadius: 8,
-                      border: on ? 'none' : '0.5px solid #e8d5c5',
+                      border: on ? 'none' : '0.5px solid #9c7a58',
                       background: on ? '#b46e46' : '#fff',
                       color: on ? '#fff' : '#b4785a',
                       cursor: 'pointer', lineHeight: 1.3,
@@ -300,7 +300,7 @@ export default function SajuEditModal({
 
             {/* 저장 버튼 (고정) */}
             <div style={{ display: 'flex', gap: 8, paddingTop: 12, flexShrink: 0 }}>
-              <button onClick={onClose} style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: '0.5px solid #e8d5c5', background: 'none', color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>취소</button>
+              <button onClick={onClose} style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: '0.5px solid #9c7a58', background: 'none', color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>취소</button>
               <button onClick={save} disabled={saving} style={{ flex: 1.5, padding: '11px 0', borderRadius: 10, border: 'none', background: '#b46e46', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>{saving ? '저장 중…' : '저장'}</button>
             </div>
           </>

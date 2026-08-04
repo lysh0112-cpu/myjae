@@ -110,7 +110,7 @@ export default function UserCard({ footer }: { footer?: ReactNode | ((info: User
   useEffect(() => { loadProfile() }, [loadProfile])
 
   const wrap: React.CSSProperties = {
-    background: '#FFFBF7', border: '0.5px solid #f0e0d5',
+    background: '#FFFBF7', border: '0.5px solid #9c7a58',
     borderRadius: 16, overflow: 'hidden',
   }
 
@@ -212,7 +212,7 @@ export default function UserCard({ footer }: { footer?: ReactNode | ((info: User
       </div>
 
       {footer && (
-        <div style={{ borderTop: '0.5px solid #f5e5da' }}>
+        <div style={{ borderTop: '0.5px solid #b99a7d' }}>
           {typeof footer === 'function'
             ? footer({ hasSaju, sajuDetailUrl: sajuDetailUrl(), displayName })
             : footer}

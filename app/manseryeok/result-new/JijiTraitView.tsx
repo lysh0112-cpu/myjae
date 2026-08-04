@@ -49,7 +49,7 @@ function One({ pillar, pillars, branch, row, target, ctx, defaultOpen }: {
   const dohwa = pillars.some(p => isDohwaAt(p.replace('지', '주'), branch))
 
   return (
-    <div style={{ borderTop: `0.5px solid #f7ede4` }}>
+    <div style={{ borderTop: `0.5px solid #b99a7d` }}>
       <div onClick={() => setOpen(v => !v)}
         style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', padding: '11px 15px 9px', cursor: 'pointer' }}>
         <span style={{ fontSize: 11, color: '#b4785a', whiteSpace: 'nowrap' }}>{pillar}</span>
@@ -104,13 +104,13 @@ export default function JijiTraitView({ saju, target = 'adult' }: Props) {
       <div onClick={() => setOpen(v => !v)}
         style={{
           display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px 10px',
-          borderBottom: open ? `0.5px solid #f7ede4` : 'none', cursor: 'pointer',
+          borderBottom: open ? `0.5px solid #b99a7d` : 'none', cursor: 'pointer',
         }}>
         <span style={{ color: ACCENT, fontSize: 12 }}>✦</span>
         <span style={{ fontSize: 12.5, fontWeight: 700, color: '#1a1a1a' }}>지지가 말하는 것</span>
         <span style={{
           fontSize: 10, padding: '2px 8px', borderRadius: 8,
-          background: '#fff3e9', border: `0.5px solid #e8d5c5`, color: ACCENT, fontWeight: 600,
+          background: '#fff3e9', border: `0.5px solid #9c7a58`, color: ACCENT, fontWeight: 600,
         }}>{hits.length}가지</span>
         <span style={{ marginLeft: 'auto', fontSize: 11, color: '#c5a590' }}>{open ? '접기' : '펼쳐보기'}</span>
       </div>

@@ -266,7 +266,7 @@ export default function QuestionPicker({
           </div>
           {directQ ? (
             <div>
-              <div style={{ background: '#fff', border: '0.5px solid #e8d5c5', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, color: '#3a2e28', lineHeight: 1.5 }}>
+              <div style={{ background: '#fff', border: '0.5px solid #9c7a58', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, color: '#3a2e28', lineHeight: 1.5 }}>
                 {directQ.question}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
@@ -280,7 +280,7 @@ export default function QuestionPicker({
                 value={directText}
                 onChange={(e) => { setDirectText(e.target.value); if (directHint) setDirectHint('') }}
                 placeholder="내 사주에 대해 궁금한 걸 자유롭게 적어보세요"
-                style={{ width: '100%', boxSizing: 'border-box', minHeight: 52, background: '#fff', border: '0.5px solid #e8d5c5', borderRadius: 10, padding: '9px 12px', fontSize: 12.5, color: '#3a2e28', resize: 'none', fontFamily: 'inherit', outline: 'none', lineHeight: 1.5 }}
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 52, background: '#fff', border: '0.5px solid #9c7a58', borderRadius: 10, padding: '9px 12px', fontSize: 12.5, color: '#3a2e28', resize: 'none', fontFamily: 'inherit', outline: 'none', lineHeight: 1.5 }}
               />
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
                 <span style={{ fontSize: 10.5, color: directHint ? '#c8783c' : '#c5a590', flex: 1, lineHeight: 1.5 }}>

@@ -174,7 +174,7 @@ const ink = '#1a1a1a'          // 본문 진한 텍스트
 const sub = '#b4785a'          // 보조 텍스트
 const subWarm = '#96502e'      // 따뜻한 강조 텍스트
 const rose = '#c8506e'         // 삭제·경고 포인트
-const border = '0.5px solid #f0e0d5'
+const border = '0.5px solid #9c7a58'
 
 // ★isAvoidChar 는 lib/saju/hanjaRow.ts 의 것을 씁니다 (AVOID_KEYWORDS 도 함께 옮겼습니다)
 function isAvoidChar(row: HanjaRow): boolean { return isAvoidCharShared(row) }
@@ -192,7 +192,7 @@ function PitchHeader({ title, onBack, onHome }: { title: string; onBack: () => v
       position: 'sticky', top: 0, zIndex: 50,
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '13px 16px', background: 'rgba(250,250,248,0.96)',
-      backdropFilter: 'blur(10px)', borderBottom: '0.5px solid #f0e0d5',
+      backdropFilter: 'blur(10px)', borderBottom: '0.5px solid #9c7a58',
     }}>
       <button onClick={onBack} aria-label="뒤로"
         style={{ background: 'none', border: 'none', color: '#999', fontSize: '20px', cursor: 'pointer', padding: 0, lineHeight: 1 }}>←</button>
@@ -847,7 +847,7 @@ function DiagnosisInner() {
       style={{
         display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
         borderRadius: '12px', background: '#fffbf7', cursor: 'pointer',
-        border: '0.5px solid #f0e0d5', opacity: dim ? 0.45 : 1,
+        border: '0.5px solid #9c7a58', opacity: dim ? 0.45 : 1,
       }}>
       <span style={{ fontSize: '26px', fontWeight: 'bold', color: gold, minWidth: '32px', textAlign: 'center' }}>
         {row.hanja}
@@ -901,7 +901,7 @@ function DiagnosisInner() {
                 maxLength={5}
                 style={{
                   flex: 1, padding: '13px', borderRadius: '12px', background: '#FDF6F0',
-                  border: '0.5px solid #f0e0d5', color: '#1a1a1a', fontSize: '16px',
+                  border: '0.5px solid #9c7a58', color: '#1a1a1a', fontSize: '16px',
                 }} />
               <button onClick={applyName}
                 style={{ padding: '13px 20px', borderRadius: '12px', background: gold, border: 'none', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>
@@ -1292,7 +1292,7 @@ function DiagnosisInner() {
                   <button onClick={() => router.push(storagePath)}
                     style={{
                       padding: '13px 6px', borderRadius: '12px',
-                      background: 'rgba(200,120,60,0.10)', border: '0.5px solid #f0e0d5',
+                      background: 'rgba(200,120,60,0.10)', border: '0.5px solid #9c7a58',
                       color: subWarm, fontSize: '13px', fontWeight: 500, cursor: 'pointer',
                     }}>
                     📜 {storageLabel}

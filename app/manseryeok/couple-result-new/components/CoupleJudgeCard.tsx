@@ -189,7 +189,7 @@ export default function CoupleJudgeCard({ judge, needExtra, tongByKey, tongIntro
       {/* 여는말 통변 — 두 사람 소개 (카드 위 독립) */}
       {tongIntro && tongIntro.trim() && (
         <div style={{
-          background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 13,
+          background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 13,
           padding: '14px 15px', marginBottom: 12,
           fontSize: 12.5, color: '#5c3a1e', lineHeight: 1.85, letterSpacing: '-.01em', whiteSpace: 'pre-wrap',
         }}>{tongIntro.trim()}</div>
@@ -223,7 +223,7 @@ export default function CoupleJudgeCard({ judge, needExtra, tongByKey, tongIntro
       {/* ★2026-07-25 — 맺는말 통변 (카드 아래 독립) */}
       {tongOutro && tongOutro.trim() && (
         <div style={{
-          marginTop: 14, background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 13,
+          marginTop: 14, background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 13,
           padding: '14px 15px',
           fontSize: 12.5, color: '#5c3a1e', lineHeight: 1.85, letterSpacing: '-.01em', whiteSpace: 'pre-wrap',
         }}>{tongOutro.trim()}</div>

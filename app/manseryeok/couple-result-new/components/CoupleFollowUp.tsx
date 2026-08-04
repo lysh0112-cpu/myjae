@@ -108,7 +108,7 @@ export default function CoupleFollowUp({
                 disabled={loading}
                 style={{
                   width: '100%', boxSizing: 'border-box', minHeight: 50, background: '#fff',
-                  border: '0.5px solid #e8d5c5', borderRadius: 10, padding: '9px 11px',
+                  border: '0.5px solid #9c7a58', borderRadius: 10, padding: '9px 11px',
                   fontSize: 12, color: '#2f211c', resize: 'none', fontFamily: 'inherit',
                   outline: 'none', lineHeight: 1.55,
                 }}

@@ -117,7 +117,7 @@ export default function CoupleWonguk({ left, right }: Props) {
   return (
     <div style={{
       fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif",
-      background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: '12px 8px',
+      background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 12, padding: '12px 8px',
     }}>
       {/* 두 사람 이름 + 하트 */}
       <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', marginBottom: 10 }}>

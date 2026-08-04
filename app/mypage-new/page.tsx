@@ -355,8 +355,8 @@ export default function MyPageNew() {
     return <div style={{ minHeight: '100vh', background: '#FDF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5c3a1e', fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>불러오는 중…</div>
   }
 
-  const card: React.CSSProperties = { background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14, padding: 14, marginBottom: 12 }
-  const numInput: React.CSSProperties = { flex: 1, minWidth: 0, padding: '10px 6px', borderRadius: 8, textAlign: 'center', border: '0.5px solid #e8d5c5', background: '#fff', color: '#3a2e28', fontSize: 14, outline: 'none' }
+  const card: React.CSSProperties = { background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 14, padding: 14, marginBottom: 12 }
+  const numInput: React.CSSProperties = { flex: 1, minWidth: 0, padding: '10px 6px', borderRadius: 8, textAlign: 'center', border: '0.5px solid #9c7a58', background: '#fff', color: '#3a2e28', fontSize: 14, outline: 'none' }
   // 드롭다운 (좁은 칸에서 글자가 화살표에 가려지지 않게 직접 그림)
   const selInput: React.CSSProperties = {
     ...numInput, appearance: 'none', cursor: 'pointer', textAlign: 'left',
@@ -402,7 +402,7 @@ export default function MyPageNew() {
         .mc-steam-c { animation: mcSteamA 2.8s ease-out infinite 1.6s; }
       `}</style>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', background: '#FFFBF7', borderBottom: '0.5px solid #f0e0d5', position: 'sticky', top: 0, zIndex: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', background: '#FFFBF7', borderBottom: '0.5px solid #9c7a58', position: 'sticky', top: 0, zIndex: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <svg width="30" height="34" viewBox="0 0 46 50" style={{ overflow: 'visible' }}>
             <g>
@@ -428,8 +428,8 @@ export default function MyPageNew() {
 
       <main style={{ padding: 16, paddingBottom: 100 }}>
 
-        <div style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}>
-          <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 11, borderBottom: (nickEdit || editMode) ? '0.5px solid #f5e5da' : 'none' }}>
+        <div style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}>
+          <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 11, borderBottom: (nickEdit || editMode) ? '0.5px solid #b99a7d' : 'none' }}>
             <div style={{ width: 42, height: 42, borderRadius: '50%', background: '#fae6d5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 700, color: '#8f3d0e', flexShrink: 0 }}>{initial}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -451,13 +451,13 @@ export default function MyPageNew() {
           </div>
 
           {nickEdit && (
-            <div style={{ padding: '12px 14px', borderBottom: '0.5px solid #f5e5da' }}>
+            <div style={{ padding: '12px 14px', borderBottom: '0.5px solid #b99a7d' }}>
               <div style={{ fontSize: 11, color: '#5c3a1e', marginBottom: 4 }}>닉네임</div>
               <input value={eNick} onChange={e => setENick(e.target.value)} placeholder="닉네임을 입력하세요" maxLength={20}
-                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #e8d5c5', background: '#fff', color: '#3a2e28', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 8 }} />
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #9c7a58', background: '#fff', color: '#3a2e28', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 8 }} />
               {nickMsg && <div style={{ color: '#c05a5a', fontSize: 12, marginBottom: 8 }}>{nickMsg}</div>}
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => setNickEdit(false)} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '0.5px solid #e8d5c5', background: 'none', color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>취소</button>
+                <button onClick={() => setNickEdit(false)} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '0.5px solid #9c7a58', background: 'none', color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>취소</button>
                 <button onClick={saveNick} disabled={nickSaving} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', background: '#b46e46', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', opacity: nickSaving ? 0.6 : 1 }}>{nickSaving ? '저장 중…' : '저장'}</button>
               </div>
             </div>
@@ -467,8 +467,8 @@ export default function MyPageNew() {
             {!editMode && !nickEdit && (
               <div style={{ display: 'flex', gap: 6 }}>
                 <button onClick={() => { if (!profile?.birth_year) { openEdit() } else { router.push(sajuDetailUrl()) } }} style={{ flex: 1, fontSize: 11, color: '#96502e', background: '#faede0', border: '0.5px solid #ecd8c6', borderRadius: 8, padding: '8px 0', cursor: 'pointer', fontWeight: 600 }}>내 사주 자세히 보기 →</button>
-                <button onClick={openNickEdit} style={{ fontSize: 11, color: '#5c3a1e', border: '0.5px solid #e8d5c5', borderRadius: 8, padding: '8px 12px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>닉네임</button>
-                <button onClick={openEdit} style={{ fontSize: 11, color: '#5c3a1e', border: '0.5px solid #e8d5c5', borderRadius: 8, padding: '8px 12px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>수정</button>
+                <button onClick={openNickEdit} style={{ fontSize: 11, color: '#5c3a1e', border: '0.5px solid #9c7a58', borderRadius: 8, padding: '8px 12px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>닉네임</button>
+                <button onClick={openEdit} style={{ fontSize: 11, color: '#5c3a1e', border: '0.5px solid #9c7a58', borderRadius: 8, padding: '8px 12px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>수정</button>
               </div>
             )}
 
@@ -478,14 +478,14 @@ export default function MyPageNew() {
                 <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 11, color: '#5c3a1e', marginBottom: 4 }}>성별</div>
-                    <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '0.5px solid #e8d5c5' }}>
+                    <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '0.5px solid #9c7a58' }}>
                       <button onClick={() => setEGender('남')} style={seg(eGender === '남')}>남</button>
                       <button onClick={() => setEGender('여')} style={seg(eGender === '여')}>여</button>
                     </div>
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 11, color: '#5c3a1e', marginBottom: 4 }}>달력</div>
-                    <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '0.5px solid #e8d5c5' }}>
+                    <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '0.5px solid #9c7a58' }}>
                       <button onClick={() => applyECal('양력')} style={seg(eCal === '양력')}>양력</button>
                       <button onClick={() => applyECal('음력')} style={seg(eCal === '음력')}>음력</button>
                     </div>
@@ -507,7 +507,7 @@ export default function MyPageNew() {
                   <span style={{ fontSize: 12, color: '#5c3a1e' }}>일</span>
                 </div>
                 <div style={{ fontSize: 11, color: '#5c3a1e', marginBottom: 4 }}>태어난 시 (시주)</div>
-                <select value={eHour} onChange={e => setEHour(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #e8d5c5', background: '#fff', color: eHour ? '#3a2e28' : '#b4785a', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 8 }}>
+                <select value={eHour} onChange={e => setEHour(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid #9c7a58', background: '#fff', color: eHour ? '#3a2e28' : '#b4785a', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 8 }}>
                   <option value="">시간 선택</option>
                   {eVisibleHours.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
                 </select>
@@ -520,7 +520,7 @@ export default function MyPageNew() {
                     return (
                       <button key={b.key} type="button" onClick={() => pickEBand(b)} style={{
                         flex: 1, padding: '7px 2px', borderRadius: 8,
-                        border: on ? 'none' : '0.5px solid #e8d5c5',
+                        border: on ? 'none' : '0.5px solid #9c7a58',
                         background: on ? '#b46e46' : '#fff',
                         color: on ? '#fff' : '#b4785a',
                         cursor: 'pointer', lineHeight: 1.3,
@@ -543,7 +543,7 @@ export default function MyPageNew() {
                 )}
                 {msg && <div style={{ color: '#c05a5a', fontSize: 12, marginBottom: 10 }}>{msg}</div>}
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => setEditMode(false)} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '0.5px solid #e8d5c5', background: 'none', color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>취소</button>
+                  <button onClick={() => setEditMode(false)} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '0.5px solid #9c7a58', background: 'none', color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>취소</button>
                   <button onClick={saveSaju} disabled={saving} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', background: '#b46e46', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>{saving ? '저장 중…' : '저장'}</button>
                 </div>
               </div>
@@ -573,7 +573,7 @@ export default function MyPageNew() {
                       // 끝난 상담(완료)만 삭제할 수 있다. 예약 확정·진행 중은 [예약 취소]를 쓴다.
                       const canHide = !isBooked && c.status !== 'in_progress'
                       return (
-                        <div key={c.id} style={{ padding: '10px 0', borderBottom: i < arr.length - 1 ? '0.5px solid #f5e5da' : 'none' }}>
+                        <div key={c.id} style={{ padding: '10px 0', borderBottom: i < arr.length - 1 ? '0.5px solid #b99a7d' : 'none' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
                               <div style={{ fontSize: 14 }}>{c.consultant_name || '상담사'}</div>
@@ -602,7 +602,7 @@ export default function MyPageNew() {
 
                 {/* ★삭제한 내역 — 실수로 지웠을 때 되살릴 수 있게 해둔다 */}
                 {hidden.length > 0 && (
-                  <div style={{ marginTop: 10, borderTop: '0.5px solid #f5e5da', paddingTop: 8 }}>
+                  <div style={{ marginTop: 10, borderTop: '0.5px solid #b99a7d', paddingTop: 8 }}>
                     <button onClick={() => setHiddenOpen(v => !v)}
                       style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11.5, color: '#6b5340' }}>
                       {hiddenOpen ? '▾' : '▸'} 삭제한 내역 {hidden.length}건
@@ -615,7 +615,7 @@ export default function MyPageNew() {
                               {c.consultant_name || '상담사'} · {dateText(c.booking_date || c.created_at)}
                             </div>
                             <button onClick={() => unhideConsult(c)} disabled={hidingId === c.id}
-                              style={{ background: 'none', border: '0.5px solid #e8d5c5', borderRadius: 7, color: '#96502e', fontSize: 11, cursor: 'pointer', padding: '4px 10px', opacity: hidingId === c.id ? 0.4 : 1 }}>되살리기</button>
+                              style={{ background: 'none', border: '0.5px solid #9c7a58', borderRadius: 7, color: '#96502e', fontSize: 11, cursor: 'pointer', padding: '4px 10px', opacity: hidingId === c.id ? 0.4 : 1 }}>되살리기</button>
                           </div>
                         ))}
                       </div>
@@ -627,7 +627,7 @@ export default function MyPageNew() {
           })()}
         </div>
 
-        <div style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}>
+        <div style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}>
           <button onClick={() => setCashOpen(v => !v)}
             style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 14, background: 'none', border: 'none', cursor: 'pointer' }}>
             <span style={{ fontSize: 13, color: '#5a4a3e' }}>{cashOpen ? '▾' : '▸'} 캐시 · 포인트 · 이용권</span>
@@ -641,7 +641,7 @@ export default function MyPageNew() {
           )}
         </div>
 
-        <div style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}>
+        <div style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}>
           <button onClick={() => setPayOpen(v => !v)}
             style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 14, background: 'none', border: 'none', cursor: 'pointer' }}>
             <span style={{ fontSize: 13, color: '#5a4a3e' }}>{payOpen ? '▾' : '▸'} 결제 내역 · 쿠폰 등록</span>
@@ -649,17 +649,17 @@ export default function MyPageNew() {
           </button>
           {payOpen && (
             <div style={{ padding: '0 14px 14px' }}>
-              <div style={{ padding: '10px 12px', background: '#faede0', borderRadius: 8, fontSize: 12, color: '#8a7868', textAlign: 'center', marginBottom: 8 }}>결제 내역이 여기에 표시됩니다</div>
-              <button style={{ width: '100%', padding: '10px 0', background: 'none', border: '0.5px solid #e8d5c5', borderRadius: 10, color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>🎁 쿠폰 등록하기</button>
+              <div style={{ padding: '10px 12px', background: '#faede0', borderRadius: 8, fontSize: 12, color: '#6f6053', textAlign: 'center', marginBottom: 8 }}>결제 내역이 여기에 표시됩니다</div>
+              <button style={{ width: '100%', padding: '10px 0', background: 'none', border: '0.5px solid #9c7a58', borderRadius: 10, color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>🎁 쿠폰 등록하기</button>
             </div>
           )}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, marginBottom: 12 }}>
-          <div onClick={() => { setEditMode(true); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }) }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 12px', background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, cursor: 'pointer' }}>
+          <div onClick={() => { setEditMode(true); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }) }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 12px', background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 12, cursor: 'pointer' }}>
             <span style={{ fontSize: 13, color: '#5a4a3e' }}>⚙️ 계정 설정</span>
           </div>
-          <div onClick={() => router.push('/manseryeok/reviews/write')} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 12px', background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, cursor: 'pointer' }}>
+          <div onClick={() => router.push('/manseryeok/reviews/write')} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 12px', background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 12, cursor: 'pointer' }}>
             <span style={{ fontSize: 13, color: '#5a4a3e' }}>❓ 문의하기</span>
           </div>
         </div>
@@ -669,9 +669,9 @@ export default function MyPageNew() {
             <button onClick={async () => {
               const { data: c } = await supabase.from('consultants').select('id').eq('email', email).single()
               router.push(c ? `/manseryeok/consultant?consultantId=${c.id}` : '/manseryeok/consultant')
-            }} style={{ flex: 1, textAlign: 'center', background: '#FFFBF7', border: '0.5px solid #f5d5b8', borderRadius: 12, padding: '13px 8px', fontSize: 12.5, color: '#96502e', cursor: 'pointer' }}>🩺 상담 관리</button>
+            }} style={{ flex: 1, textAlign: 'center', background: '#FFFBF7', border: '0.5px solid #b99a7d', borderRadius: 12, padding: '13px 8px', fontSize: 12.5, color: '#96502e', cursor: 'pointer' }}>🩺 상담 관리</button>
             {isMaster ? (
-              <button onClick={() => router.push('/admin')} style={{ flex: 1, textAlign: 'center', background: '#FFFBF7', border: '0.5px solid #f5d5b8', borderRadius: 12, padding: '13px 8px', fontSize: 12.5, color: '#96502e', cursor: 'pointer' }}>🔐 관리자</button>
+              <button onClick={() => router.push('/admin')} style={{ flex: 1, textAlign: 'center', background: '#FFFBF7', border: '0.5px solid #b99a7d', borderRadius: 12, padding: '13px 8px', fontSize: 12.5, color: '#96502e', cursor: 'pointer' }}>🔐 관리자</button>
             ) : (
               <div style={{ flex: 1 }} />
             )}
@@ -679,7 +679,7 @@ export default function MyPageNew() {
         )}
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          <button onClick={logout} style={{ flex: 1, textAlign: 'center', background: '#f5ebe2', border: '0.5px solid #e8d5c5', borderRadius: 12, padding: 12, fontSize: 13, color: '#8a7868', cursor: 'pointer' }}>로그아웃</button>
+          <button onClick={logout} style={{ flex: 1, textAlign: 'center', background: '#f5ebe2', border: '0.5px solid #9c7a58', borderRadius: 12, padding: 12, fontSize: 13, color: '#6f6053', cursor: 'pointer' }}>로그아웃</button>
           <button onClick={withdraw} style={{ flex: 1, textAlign: 'center', background: '#FFFBF7', border: '0.5px solid #f0d0d0', borderRadius: 12, padding: 12, fontSize: 13, color: '#c05a5a', cursor: 'pointer' }}>회원 탈퇴</button>
         </div>
 
@@ -694,7 +694,7 @@ export default function MyPageNew() {
         position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
         width: '100%', maxWidth: 430,
         display: 'flex', background: '#FFFBF7',
-        borderTop: '0.5px solid #f0e0d5', zIndex: 20,
+        borderTop: '0.5px solid #9c7a58', zIndex: 20,
       }}>
         {[
           { icon: '🏠', label: '홈', href: '/home-new', active: false },

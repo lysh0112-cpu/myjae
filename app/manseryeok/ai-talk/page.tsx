@@ -163,7 +163,7 @@ function AiTalkInner() {
   return (
     <main style={{ minHeight: '100vh', background: '#FDF6F0', display: 'flex', flexDirection: 'column', maxWidth: 480, margin: '0 auto' }}>
       {/* 헤더 */}
-      <div style={{ padding: '13px 16px', background: '#FFFBF7', borderBottom: '0.5px solid #f0e0d5', display: 'flex', alignItems: 'center', gap: 10, position: 'sticky', top: 0, zIndex: 10 }}>
+      <div style={{ padding: '13px 16px', background: '#FFFBF7', borderBottom: '0.5px solid #9c7a58', display: 'flex', alignItems: 'center', gap: 10, position: 'sticky', top: 0, zIndex: 10 }}>
         <button onClick={() => router.back()} style={{ fontSize: 22, color: '#b46e46', background: 'none', border: 'none', cursor: 'pointer' }}>‹</button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#96502e' }}>명카페 AI</div>
@@ -176,7 +176,7 @@ function AiTalkInner() {
       </div>
 
       {/* 글자 크기 조절 */}
-      <div style={{ padding: '9px 16px', background: '#faf3ec', borderBottom: '0.5px solid #f0e0d5', display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ padding: '9px 16px', background: '#faf3ec', borderBottom: '0.5px solid #9c7a58', display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 11, color: '#96502e', fontWeight: 600, flexShrink: 0 }}>글자 크기</span>
         <span style={{ fontSize: 10, color: '#5c3a1e', flexShrink: 0 }}>작게</span>
         <input type="range" min="12" max="22" step="1" value={chatFontSize}
@@ -188,10 +188,10 @@ function AiTalkInner() {
 
       {/* 목소리 설정 (켰을 때만) */}
       {voiceOn && (
-        <div style={{ padding: '10px 16px', background: '#fef7f1', borderBottom: '0.5px solid #f5e5da', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ padding: '10px 16px', background: '#fef7f1', borderBottom: '0.5px solid #b99a7d', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 11, color: '#96502e', fontWeight: 600 }}>목소리</span>
           <select value={voiceIdx} onChange={(e) => setVoiceIdx(Number(e.target.value))}
-            style={{ fontSize: 11, padding: '5px 8px', borderRadius: 8, border: '0.5px solid #e8d5c5', background: '#fff', color: '#5a4a3e', flex: 1, minWidth: 120 }}>
+            style={{ fontSize: 11, padding: '5px 8px', borderRadius: 8, border: '0.5px solid #9c7a58', background: '#fff', color: '#5a4a3e', flex: 1, minWidth: 120 }}>
             {voices.length === 0 && <option>기본 음성</option>}
             {voices.map((v, i) => <option key={i} value={i}>{v.name.replace(/Microsoft |Google /g, '')}</option>)}
           </select>
@@ -209,7 +209,7 @@ function AiTalkInner() {
               maxWidth: '78%', padding: '10px 13px', borderRadius: 14, fontSize: chatFontSize, lineHeight: 1.6,
               background: m.role === 'user' ? '#b46e46' : '#FFFBF7',
               color: m.role === 'user' ? '#fff' : '#3a2e28',
-              border: m.role === 'user' ? 'none' : '0.5px solid #f0e0d5',
+              border: m.role === 'user' ? 'none' : '0.5px solid #9c7a58',
               borderBottomRightRadius: m.role === 'user' ? 4 : 14,
               borderBottomLeftRadius: m.role === 'user' ? 14 : 4,
               whiteSpace: 'pre-wrap',
@@ -222,7 +222,7 @@ function AiTalkInner() {
       </div>
 
       {/* 입력창 */}
-      <div style={{ padding: '10px 12px', background: '#FFFBF7', borderTop: '0.5px solid #f0e0d5', display: 'flex', alignItems: 'center', gap: 8, position: 'sticky', bottom: 0 }}>
+      <div style={{ padding: '10px 12px', background: '#FFFBF7', borderTop: '0.5px solid #9c7a58', display: 'flex', alignItems: 'center', gap: 8, position: 'sticky', bottom: 0 }}>
         <button onClick={startVoice}
           style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, cursor: 'pointer', border: '0.5px solid ' + (listening ? '#c8783c' : '#e8d5c5'), background: listening ? '#faede0' : '#fff', fontSize: 17 }}>
           {listening ? '🔴' : '🎙️'}
@@ -232,7 +232,7 @@ function AiTalkInner() {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) send() }}
           placeholder={listening ? '말씀해 주세요…' : '메시지를 입력하거나 마이크를 눌러 말하세요'}
-          style={{ flex: 1, height: 40, fontSize: 13, color: '#3a2e28', background: '#fff', border: '0.5px solid #e8d5c5', borderRadius: 20, padding: '0 15px', outline: 'none' }}
+          style={{ flex: 1, height: 40, fontSize: 13, color: '#3a2e28', background: '#fff', border: '0.5px solid #9c7a58', borderRadius: 20, padding: '0 15px', outline: 'none' }}
         />
         <button onClick={send} disabled={streaming || !input.trim()}
           style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, cursor: 'pointer', border: 'none', background: input.trim() && !streaming ? '#b46e46' : '#d8bfae', color: '#fff', fontSize: 16 }}>

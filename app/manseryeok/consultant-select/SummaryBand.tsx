@@ -21,7 +21,7 @@ export default function SummaryBand({ mode, score, names }: Props) {
 
   return (
     <div className="flex items-center gap-2 mx-5 mt-4 rounded-xl px-4 py-3"
-      style={{ background: '#fffbf7', border: '0.5px solid #f0e0d5' }}>
+      style={{ background: '#fffbf7', border: '0.5px solid #9c7a58' }}>
       <span className="w-2 h-2 rounded-full shrink-0" style={{ background: '#b46e46' }} />
       <span className="w-2 h-2 rounded-full shrink-0" style={{ background: '#e0a878' }} />
       <span className="text-[13px] flex-1" style={{ color: '#5c3a1e' }}>{names || '두 사람'}</span>

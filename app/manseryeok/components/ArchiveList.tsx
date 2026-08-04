@@ -79,7 +79,7 @@ export default function ArchiveList() {
 
   if (items.length === 0) {
     return (
-      <div style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: '20px 14px', textAlign: 'center' }}>
+      <div style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 12, padding: '20px 14px', textAlign: 'center' }}>
         <div style={{ fontSize: 13, color: '#8a7360', marginBottom: 4 }}>아직 저장한 기록이 없어요</div>
         <div style={{ fontSize: 11, color: '#6b5340' }}>사주·궁합·타로·개명 등을 보고 저장하면 여기 모여요.</div>
       </div>
@@ -117,7 +117,7 @@ export default function ArchiveList() {
               fontSize: 10.5, padding: '5px 11px', borderRadius: 14, cursor: 'pointer',
               background: filter === null ? '#b46e46' : '#f5ebe2',
               color: filter === null ? '#fff' : '#8a6a52',
-              border: filter === null ? 'none' : '0.5px solid #e8d5c5',
+              border: filter === null ? 'none' : '0.5px solid #9c7a58',
               fontWeight: filter === null ? 600 : 400,
             }}
           >전체 {items.length}</button>
@@ -131,7 +131,7 @@ export default function ArchiveList() {
                   fontSize: 10.5, padding: '5px 11px', borderRadius: 14, cursor: 'pointer',
                   background: on ? '#b46e46' : '#f5ebe2',
                   color: on ? '#fff' : '#8a6a52',
-                  border: on ? 'none' : '0.5px solid #e8d5c5',
+                  border: on ? 'none' : '0.5px solid #9c7a58',
                   fontWeight: on ? 600 : 400,
                 }}
               >{k.label} {k.count}{on ? ' ✕' : ''}</button>
@@ -146,7 +146,7 @@ export default function ArchiveList() {
           const open = openId === it.id
           const sn = snippet(it.resultData)
           return (
-            <div key={it.id} style={{ background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12, overflow: 'hidden' }}>
+            <div key={it.id} style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 12, overflow: 'hidden' }}>
               <div
                 onClick={() => setOpenId(open ? null : it.id)}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 13px', cursor: 'pointer' }}
@@ -160,7 +160,7 @@ export default function ArchiveList() {
               </div>
 
               {open && (
-                <div style={{ padding: '0 13px 12px', borderTop: '0.5px solid #f5e5da' }}>
+                <div style={{ padding: '0 13px 12px', borderTop: '0.5px solid #b99a7d' }}>
                   {sn && <div style={{ fontSize: 11.5, color: '#6a5848', lineHeight: 1.6, background: '#faf3ec', borderRadius: 8, padding: '9px 11px', margin: '10px 0' }}>{sn}</div>}
                   <div style={{ display: 'flex', gap: 8, marginTop: sn ? 0 : 10 }}>
                     <button

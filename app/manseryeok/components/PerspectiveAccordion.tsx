@@ -18,7 +18,7 @@ const cardBg = '#fffbf7'
 const gold = '#c8783c'
 const ink = '#1a1a1a'
 const sub = '#b4785a'
-const border = '0.5px solid #f0e0d5'
+const border = '0.5px solid #9c7a58'
 const accent = '#e6be9f' // 3단 좌측 라인
 
 export interface Perspective {

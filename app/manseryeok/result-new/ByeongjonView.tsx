@@ -60,7 +60,7 @@ export default function ByeongjonView({ saju }: Props) {
         <span style={{ fontSize: 12.5, fontWeight: 700, color: '#1a1a1a' }}>병존 (竝存)</span>
         <span style={{
           fontSize: 10, padding: '2px 8px', borderRadius: 8,
-          background: '#fff3e9', border: `0.5px solid #e8d5c5`, color: ACCENT, fontWeight: 600,
+          background: '#fff3e9', border: `0.5px solid #9c7a58`, color: ACCENT, fontWeight: 600,
         }}>{total}가지</span>
       </div>
 

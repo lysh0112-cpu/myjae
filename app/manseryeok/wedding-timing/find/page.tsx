@@ -142,7 +142,7 @@ function WeddingFindInner() {
       <div style={{
         position: 'sticky', top: 0, zIndex: 10,
         background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
-        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
+        borderBottom: '0.5px solid #9c7a58', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <button onClick={() => router.back()}
           style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
@@ -156,7 +156,7 @@ function WeddingFindInner() {
         <Disclaimer full />
 
         <SectionLabel>두 사람 정보</SectionLabel>
-        <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', border: '1px solid #f0e0d5' }}>
+        <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', border: '1px solid #9c7a58' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
             <span style={{ fontSize: '14px' }}>🤵</span>
             <span style={{ fontSize: '12px', color: sub, width: '44px' }}>신랑</span>
@@ -213,7 +213,7 @@ function WeddingFindInner() {
               두 분께 맞는 좋은 날을 모두 찾아드려요
             </div>
 
-            <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '1px solid #f0e0d5' }}>
+            <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '1px solid #9c7a58' }}>
               <div style={{ fontSize: '12px', color: sub, marginBottom: '8px' }}>분석 내용</div>
               {['희망 기간의 모든 날을 하루씩 판정', '공망·충·형을 미리 걸러낸 날짜 목록', '신부·신랑 용신일을 켜고 끄며 고르기', '각 조건이 무슨 뜻인지 설명'].map((t, i) => (
                 <div key={i} style={{ fontSize: '13px', color: '#6b5d54', lineHeight: 1.9 }}>· {t}</div>
@@ -231,7 +231,7 @@ function WeddingFindInner() {
             </button>
            
             <button onClick={() => setPayOpen(false)}
-              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: '1px solid #f0e0d5', color: sub, fontSize: '13px', cursor: 'pointer', marginBottom: '14px' }}>
+              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: '1px solid #9c7a58', color: sub, fontSize: '13px', cursor: 'pointer', marginBottom: '14px' }}>
               취소
             </button>
 

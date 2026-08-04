@@ -54,7 +54,7 @@ const rose = '#b45a78'
 const ink = '#1a1a1a'
 const sub = '#b4785a'
 const cardBg = '#FFFBF7'
-const border = '1px solid #f0e0d5'
+const border = '1px solid #9c7a58'
 
 function loadHistory(): HistoryItem[] {
   try {
@@ -245,7 +245,7 @@ function TarotInner() {
       <div style={{
         position: 'sticky', top: 0, zIndex: 10,
         background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
-        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
+        borderBottom: '0.5px solid #9c7a58', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <button onClick={() => {
           if (viewOnly) {
@@ -270,7 +270,7 @@ function TarotInner() {
           <p style={{ color: '', fontSize: '15px', lineHeight: 1.8, marginBottom: '18px' }}>마음속에 담긴 질문을 떠올려 보세요</p>
           <textarea value={question} onChange={e => setQuestion(e.target.value)}
             placeholder="예) 그 사람과의 인연이 궁금해요..."
-            style={{ width: '100%', minHeight: '80px', padding: '12px', borderRadius: '12px', background: '#FFFBF7', border: '1px solid #f0e0d5', color: ink, fontSize: '14px', lineHeight: 1.6, resize: 'none', boxSizing: 'border-box' }} />
+            style={{ width: '100%', minHeight: '80px', padding: '12px', borderRadius: '12px', background: '#FFFBF7', border: '1px solid #9c7a58', color: ink, fontSize: '14px', lineHeight: 1.6, resize: 'none', boxSizing: 'border-box' }} />
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', justifyContent: 'center', margin: '14px 0 20px' }}>
             {CATEGORY_CHIPS.map(c => (
               <button key={c.label} onClick={() => { setQuestion(c.text); setCategory(c.label as TarotCategory) }}
@@ -307,7 +307,7 @@ function TarotInner() {
             return (
               <div key={d.code} onClick={() => { if (active) setDeckCode(d.code) }}
                 style={{ background: selected ? cardBg : '#FBF3EC',
-                  border: selected ? '1px solid #d8a87e' : '1px solid #f0e0d5',
+                  border: selected ? '1px solid #d8a87e' : '1px solid #9c7a58',
                   borderRadius: '12px', padding: '14px', marginBottom: '10px',
                   cursor: active ? 'pointer' : 'default', opacity: active ? 1 : 0.5 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -336,7 +336,7 @@ function TarotInner() {
             const badge = badgeText(p)
             return (
               <div key={s.id} onClick={() => setSpreadId(s.id)}
-                style={{ background: cardBg, border: selected ? '1px solid #d8a87e' : '1px solid #f0e0d5', borderRadius: '12px', padding: '14px', marginBottom: '10px', cursor: 'pointer' }}>
+                style={{ background: cardBg, border: selected ? '1px solid #d8a87e' : '1px solid #9c7a58', borderRadius: '12px', padding: '14px', marginBottom: '10px', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
                   <span style={{ color: ink, fontSize: '14px', fontWeight: 500 }}>{s.title}</span>
                   {badge && (

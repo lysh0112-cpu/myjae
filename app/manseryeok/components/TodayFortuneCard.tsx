@@ -411,7 +411,7 @@ export default function TodayFortuneCard() {
 
   // ── 화면 ──────────────────────────────────────────────────────────────
   const wrap: React.CSSProperties = {
-    background: '#FFFBF7', border: '0.5px solid #f5d5b8',
+    background: '#FFFBF7', border: '0.5px solid #b99a7d',
     borderRadius: 14, padding: 15,
   }
 
@@ -583,7 +583,7 @@ export default function TodayFortuneCard() {
                 </span>
               ))}
               {days.bad.map(d => (
-                <span key={`b${d.day}`} style={{ fontSize: 10.5, background: '#fdf0ec', color: '#c0705a', padding: '4px 9px', borderRadius: 7, border: '0.5px solid #f0d5cc' }}>
+                <span key={`b${d.day}`} style={{ fontSize: 10.5, background: '#fdf0ec', color: '#94503c', padding: '4px 9px', borderRadius: 7, border: '0.5px solid #f0d5cc' }}>
                   {month}/{d.day} 조심
                 </span>
               ))}
@@ -594,7 +594,7 @@ export default function TodayFortuneCard() {
         {/* 펼치면: 1년 흐름 + 명리 근거 */}
         {open && (
           <>
-            <div style={{ paddingTop: 11, borderTop: '0.5px solid #f0e0d5', marginBottom: 11 }}>
+            <div style={{ paddingTop: 11, borderTop: '0.5px solid #9c7a58', marginBottom: 11 }}>
               <div style={{ fontSize: 11.5, fontWeight: 600, color: '#8f3d0e', marginBottom: 9 }}>📈 올해 흐름</div>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 58 }}>
                 {trend.map(t => {
@@ -630,7 +630,7 @@ export default function TodayFortuneCard() {
               </div>
             )}
 
-            <div style={{ paddingTop: 11, borderTop: '0.5px solid #f0e0d5', marginBottom: 11 }}>
+            <div style={{ paddingTop: 11, borderTop: '0.5px solid #9c7a58', marginBottom: 11 }}>
               <div style={{ fontSize: 11.5, fontWeight: 600, color: '#8f3d0e', marginBottom: 6 }}>📖 이달의 명리 한 조각</div>
               {/* AI가 순화한 문장을 먼저 쓴다. 실패했을 때만 소스 원문을 보여준다.
                   (원문은 상담사용 표현이라 "정신적으로 문제가 발생한다" 같은 문장이 그대로 나온다) */}
@@ -739,21 +739,21 @@ export default function TodayFortuneCard() {
         <>
           <div style={{ display: 'flex', gap: 6, marginBottom: fortuneShown.today_insight ? 12 : 0 }}>
             <div style={{ flex: 1, background: '#fdf4ec', borderRadius: 8, padding: 8 }}>
-              <div style={{ fontSize: 9, color: '#c8967a', marginBottom: 3 }}>❤️ 애정</div>
-              <div style={{ fontSize: 10.5, color: '#8a7868', lineHeight: 1.5 }}>{fortuneShown.love || '-'}</div>
+              <div style={{ fontSize: 9, color: '#8f6449', marginBottom: 3 }}>❤️ 애정</div>
+              <div style={{ fontSize: 10.5, color: '#6f6053', lineHeight: 1.5 }}>{fortuneShown.love || '-'}</div>
             </div>
             <div style={{ flex: 1, background: '#fdf4ec', borderRadius: 8, padding: 8 }}>
-              <div style={{ fontSize: 9, color: '#c8967a', marginBottom: 3 }}>💰 재물</div>
-              <div style={{ fontSize: 10.5, color: '#8a7868', lineHeight: 1.5 }}>{fortuneShown.money || '-'}</div>
+              <div style={{ fontSize: 9, color: '#8f6449', marginBottom: 3 }}>💰 재물</div>
+              <div style={{ fontSize: 10.5, color: '#6f6053', lineHeight: 1.5 }}>{fortuneShown.money || '-'}</div>
             </div>
             <div style={{ flex: 1, background: '#fdf4ec', borderRadius: 8, padding: 8 }}>
-              <div style={{ fontSize: 9, color: '#c8967a', marginBottom: 3 }}>🌿 건강</div>
-              <div style={{ fontSize: 10.5, color: '#8a7868', lineHeight: 1.5 }}>{fortuneShown.health || '-'}</div>
+              <div style={{ fontSize: 9, color: '#8f6449', marginBottom: 3 }}>🌿 건강</div>
+              <div style={{ fontSize: 10.5, color: '#6f6053', lineHeight: 1.5 }}>{fortuneShown.health || '-'}</div>
             </div>
           </div>
 
           {fortuneShown.today_insight && (
-            <div style={{ paddingTop: 12, borderTop: '0.5px solid #f0e0d5' }}>
+            <div style={{ paddingTop: 12, borderTop: '0.5px solid #9c7a58' }}>
               <div style={{ fontSize: 11.5, fontWeight: 600, color: '#8f3d0e', marginBottom: 6 }}>🔥 오늘의 명리 한 조각</div>
               <p style={{ fontSize: 11.5, color: '#7a6858', lineHeight: 1.7, margin: 0 }}>{fortuneShown.today_insight}</p>
             </div>

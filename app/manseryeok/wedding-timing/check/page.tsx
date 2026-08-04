@@ -193,7 +193,7 @@ function CheckInner() {
       <div style={{
         position: 'sticky', top: 0, zIndex: 10,
         background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
-        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
+        borderBottom: '0.5px solid #9c7a58', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <button onClick={() => router.back()}
           style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
@@ -207,7 +207,7 @@ function CheckInner() {
         <Disclaimer full />
 
         <div style={{ fontSize: '13px', color: '#96502e', fontWeight: 600, margin: '20px 0 10px' }}>두 사람 정보</div>
-        <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', border: '1px solid #f0e0d5' }}>
+        <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', border: '1px solid #9c7a58' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
             <span style={{ fontSize: '14px' }}>{roleIcon(groom)}</span>
             <span style={{ fontSize: '12px', color: sub, width: '44px' }}>{roleLabel(groom, '신랑')}</span>
@@ -230,7 +230,7 @@ function CheckInner() {
             </div>
             {dates.length > 1 && (
               <button onClick={() => removeDate(i)}
-                style={{ background: 'transparent', border: '0.5px solid #f0e0d5', borderRadius: '10px', padding: '10px 12px', color: sub, fontSize: '13px', cursor: 'pointer' }}>✕</button>
+                style={{ background: 'transparent', border: '0.5px solid #9c7a58', borderRadius: '10px', padding: '10px 12px', color: sub, fontSize: '13px', cursor: 'pointer' }}>✕</button>
             )}
           </div>
         ))}
@@ -281,7 +281,7 @@ function CheckInner() {
             </button>
             <button
               onClick={() => router.push('/manseryeok/wedding-timing/wedding-storage')}
-              style={{ width: '100%', marginTop: '8px', padding: '12px', borderRadius: '12px', background: '#faf3ec', border: '1px solid #f0e0d5', color: '#96502e', fontSize: '13px', cursor: 'pointer' }}>
+              style={{ width: '100%', marginTop: '8px', padding: '12px', borderRadius: '12px', background: '#faf3ec', border: '1px solid #9c7a58', color: '#96502e', fontSize: '13px', cursor: 'pointer' }}>
               📋 결혼택일 보관함
             </button>
           </>
@@ -304,7 +304,7 @@ function CheckInner() {
               생각해 둔 날짜가 두 분께 좋은 날인지 봐드려요
             </div>
 
-            <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '1px solid #f0e0d5' }}>
+            <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '1px solid #9c7a58' }}>
               <div style={{ fontSize: '12px', color: sub, marginBottom: '8px' }}>분석 내용</div>
               {['고르신 날짜를 일곱 가지 조건으로 판정', '공망·충·형에 걸리면 어느 분과 걸리는지', '두 분의 용신이 그날에 드는지', '각 조건이 무슨 뜻인지 설명'].map((t, i) => (
                 <div key={i} style={{ fontSize: '13px', color: '#6b5d54', lineHeight: 1.9 }}>· {t}</div>
@@ -322,7 +322,7 @@ function CheckInner() {
             </button>
            
             <button onClick={() => setPayOpen(false)}
-              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: '1px solid #f0e0d5', color: sub, fontSize: '13px', cursor: 'pointer', marginBottom: '14px' }}>
+              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: '1px solid #9c7a58', color: sub, fontSize: '13px', cursor: 'pointer', marginBottom: '14px' }}>
               취소
             </button>
 

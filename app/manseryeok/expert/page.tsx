@@ -120,7 +120,7 @@ function ExpertInner() {
   return (
     <div style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 430, margin: '0 auto', fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>
       {/* 헤더 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', background: '#fff', borderBottom: '0.5px solid #f0e0d5' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', background: '#fff', borderBottom: '0.5px solid #9c7a58' }}>
         <button type="button" onClick={() => router.back()} style={{ fontSize: 20, color: '#96502e', cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>‹</button>
         <span style={{ fontSize: 15, fontWeight: 700, color: '#96502e' }}>전문가용 만세력 계산기</span>
       </div>
@@ -138,7 +138,7 @@ function ExpertInner() {
 
         {/* 입력 폼 */}
         {showForm && (
-          <div style={{ background: '#fff', border: '0.5px solid #f0e0d5', borderRadius: 14, padding: 16, marginBottom: 14 }}>
+          <div style={{ background: '#fff', border: '0.5px solid #9c7a58', borderRadius: 14, padding: 16, marginBottom: 14 }}>
             <div style={{ fontSize: 10, color: '#999', marginBottom: 4 }}>닉네임</div>
             <input value={nick} onChange={e => setNick(e.target.value.slice(0, 20))} placeholder="예: 김고객 / A씨 / 상담123"
               style={{ ...inp, textAlign: 'left', marginBottom: 12 }} />
@@ -184,7 +184,7 @@ function ExpertInner() {
 
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => { setShowForm(false); resetForm() }}
-                style={{ flex: 1, padding: '12px 0', borderRadius: 10, border: '0.5px solid #e8d5c5', background: 'none', color: '#5c3a1e', fontSize: 14, cursor: 'pointer' }}>취소</button>
+                style={{ flex: 1, padding: '12px 0', borderRadius: 10, border: '0.5px solid #9c7a58', background: 'none', color: '#5c3a1e', fontSize: 14, cursor: 'pointer' }}>취소</button>
               <button onClick={save} disabled={busy}
                 style={{ flex: 2, padding: '12px 0', borderRadius: 10, border: 'none', background: '#b46e46', color: '#fff', fontSize: 14, fontWeight: 700, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}>
                 {busy ? '저장 중…' : '저장하고 목록에 추가'}
@@ -206,7 +206,7 @@ function ExpertInner() {
           </div>
         ) : (
           people.map(p => (
-            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 11, background: '#fff', border: '0.5px solid #f0e0d5', borderRadius: 12, padding: '12px 14px', marginBottom: 8 }}>
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 11, background: '#fff', border: '0.5px solid #9c7a58', borderRadius: 12, padding: '12px 14px', marginBottom: 8 }}>
               <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#f3ece5', color: '#96502e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, flexShrink: 0 }}>
                 {expertAvatarChar(p.name)}
               </div>
@@ -217,9 +217,9 @@ function ExpertInner() {
                 </div>
               </div>
               <button onClick={() => router.push(toExpertResultUrl(p))}
-                style={{ fontSize: 11, color: '#96502e', border: '0.5px solid #e8d5c5', borderRadius: 8, padding: '5px 11px', background: '#fffbf7', cursor: 'pointer', flexShrink: 0 }}>조회</button>
+                style={{ fontSize: 11, color: '#96502e', border: '0.5px solid #9c7a58', borderRadius: 8, padding: '5px 11px', background: '#fffbf7', cursor: 'pointer', flexShrink: 0 }}>조회</button>
               <button onClick={() => setConfirmDel(p)}
-                style={{ fontSize: 11, color: '#c09080', border: '0.5px solid #f0e0d5', borderRadius: 8, padding: '5px 9px', background: 'none', cursor: 'pointer', flexShrink: 0 }}>삭제</button>
+                style={{ fontSize: 11, color: '#c09080', border: '0.5px solid #9c7a58', borderRadius: 8, padding: '5px 9px', background: 'none', cursor: 'pointer', flexShrink: 0 }}>삭제</button>
             </div>
           ))
         )}
@@ -232,7 +232,7 @@ function ExpertInner() {
             <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a1a', marginBottom: 6 }}>삭제할까요?</div>
             <div style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>“{confirmDel.name}”을(를) 목록에서 지웁니다.</div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setConfirmDel(null)} style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: '0.5px solid #e8d5c5', background: 'none', color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>취소</button>
+              <button onClick={() => setConfirmDel(null)} style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: '0.5px solid #9c7a58', background: 'none', color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>취소</button>
               <button onClick={del} disabled={busy} style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: 'none', background: '#c0392b', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: busy ? 0.6 : 1 }}>{busy ? '삭제 중…' : '삭제'}</button>
             </div>
           </div>

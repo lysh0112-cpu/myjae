@@ -318,7 +318,7 @@ export default function HomeNew() {
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '14px 18px', background: '#FFFBF7',
-        borderBottom: '0.5px solid #f0e0d5',
+        borderBottom: '0.5px solid #9c7a58',
         position: 'sticky', top: 0, zIndex: 20,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -499,7 +499,7 @@ export default function HomeNew() {
             onClick={() => router.push('/manseryeok/expert')}
             style={{
               display: 'flex', alignItems: 'center', gap: 8, padding: '13px 12px',
-              background: '#FFFBF7', border: '0.5px solid #f0e0d5', borderRadius: 12,
+              background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 12,
               cursor: 'pointer',
             }}
           >
@@ -567,7 +567,7 @@ export default function HomeNew() {
         position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
         width: '100%', maxWidth: '430px',
         display: 'flex', background: '#FFFBF7',
-        borderTop: '0.5px solid #f0e0d5', zIndex: 20,
+        borderTop: '0.5px solid #9c7a58', zIndex: 20,
       }}>
         {[
           { icon: '🏠', label: '홈', href: '/home-new', active: true },

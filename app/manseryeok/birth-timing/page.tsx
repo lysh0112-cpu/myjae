@@ -42,7 +42,7 @@ const SURVEY_KEY = 'birth-timing-survey'
 
 function Disclaimer({ full }: { full?: boolean }) {
   return (
-    <div style={{ background: '#fbece4', border: '0.5px solid #f0d5c5', borderRadius: '10px', padding: '10px 14px', fontSize: '11px', color: '#b06a52', lineHeight: 1.6 }}>
+    <div style={{ background: '#fbece4', border: '0.5px solid #b99a7d', borderRadius: '10px', padding: '10px 14px', fontSize: '11px', color: '#b06a52', lineHeight: 1.6 }}>
       {full
         ? '※ 본 분석은 전통 사주명리에 기반한 참고 정보입니다. 실제 출산일·수술일 결정은 산모와 아기의 건강을 최우선으로, 반드시 담당 산부인과 전문의와 상의해 결정하세요.'
         : '※ 전통 명리 참고용 · 최종 결정은 전문의와 상의하세요.'}
@@ -167,7 +167,7 @@ function BirthTimingInner() {
       <div style={{
         position: 'sticky', top: 0, zIndex: 10,
         background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
-        borderBottom: '0.5px solid #f0e0d5', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
+        borderBottom: '0.5px solid #9c7a58', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <button onClick={() => router.push('/manseryeok/birth-timing/input')}
           style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
@@ -181,7 +181,7 @@ function BirthTimingInner() {
         <Disclaimer full />
 
         <SectionLabel>부모 정보</SectionLabel>
-        <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', border: '0.5px solid #f0e0d5' }}>
+        <div style={{ background: cardBg, borderRadius: '12px', padding: '14px', border: '0.5px solid #9c7a58' }}>
           {/* 이름이 있으면 이름으로 표시. 없을 때만 '부모1/부모2' 로 떨어진다. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
             <span style={{ fontSize: '14px' }}>🧑</span>
@@ -207,7 +207,7 @@ function BirthTimingInner() {
         <QLabel>출산예정일이 언제인가요? <span style={{ color: accent }}>*</span></QLabel>
         <input type="date" value={survey.dueDate}
           onChange={e => setSurveyField('dueDate', e.target.value)}
-          style={{ width: '100%', boxSizing: 'border-box', background: '#fff', border: '0.5px solid #f0e0d5', borderRadius: '10px', padding: '12px 14px', color: survey.dueDate ? '#96502e' : '#c5a590', fontSize: '15px', colorScheme: 'light', outline: 'none' }} />
+          style={{ width: '100%', boxSizing: 'border-box', background: '#fff', border: '0.5px solid #9c7a58', borderRadius: '10px', padding: '12px 14px', color: survey.dueDate ? '#96502e' : '#c5a590', fontSize: '15px', colorScheme: 'light', outline: 'none' }} />
 
         <QLabel>분만 방식은 어떻게 예정하고 계세요?</QLabel>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -244,7 +244,7 @@ function BirthTimingInner() {
             나중에 실제로 반영할 때 이 칸을 되살리면 된다. */}
 
         {error && (
-          <div style={{ marginTop: '14px', background: '#fbece4', border: '0.5px solid #f0d5c5', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', color: '#c8506e', lineHeight: 1.6 }}>
+          <div style={{ marginTop: '14px', background: '#fbece4', border: '0.5px solid #b99a7d', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', color: '#c8506e', lineHeight: 1.6 }}>
             {error}
           </div>
         )}
@@ -271,7 +271,7 @@ function BirthTimingInner() {
               아기에게 좋은 출산일 5곳을 찾아드려요
             </div>
 
-            <div style={{ background: '#fdf6f0', borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '0.5px solid #f0e0d5' }}>
+            <div style={{ background: '#fdf6f0', borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '0.5px solid #9c7a58' }}>
               <div style={{ fontSize: '12px', color: sub, marginBottom: '8px' }}>분석 내용</div>
               {['추천 출산일 5순위', '각 날짜의 아기 사주 풀이', '피하면 좋은 날 안내', '부모와의 관계 분석'].map((t, i) => (
                 <div key={i} style={{ fontSize: '13px', color: '#96502e', lineHeight: 1.9 }}>· {t}</div>

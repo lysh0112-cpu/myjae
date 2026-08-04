@@ -101,7 +101,7 @@ function GanjiBox({char,el,isDay,isGongmang}:{char:string;el:string;isDay?:boole
     <div style={{
       width:'100%',height:'52px',borderRadius:'8px',
       background:isDay?'#fff3e9':bg,
-      border:isGongmang?'1.5px solid #f44336':isDay?'1.5px solid #e8d5c5':`1px solid ${bd}`,
+      border:isGongmang?'1.5px solid #f44336':isDay?'1.5px solid #9c7a58':`1px solid ${bd}`,
       display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
       position:'relative' as const,gap:'1px',
     }}>
@@ -147,11 +147,11 @@ function Section({
 }) {
   const isOpen = collapsible ? !!open : true
   return (
-    <div style={{background:'#fff',border:'0.5px solid #f0e0d5',borderRadius:'16px',overflow:'hidden',marginBottom:'10px'}}>
+    <div style={{background:'#fff',border:'0.5px solid #9c7a58',borderRadius:'16px',overflow:'hidden',marginBottom:'10px'}}>
       <div
         onClick={collapsible?onToggle:undefined}
         style={{display:'flex',alignItems:'center',gap:'8px',padding:'12px 16px 10px',
-          borderBottom: isOpen?'0.5px solid #f7ede4':'none',
+          borderBottom: isOpen?'0.5px solid #b99a7d':'none',
           cursor: collapsible?'pointer':'default'}}
       >
         <span style={{color:'#c8783c',fontSize:'13px'}}>✦</span>
@@ -346,7 +346,7 @@ function ResultNewContent() {
       <p style={{color:'#b4785a',fontSize:'13px',lineHeight:1.7}}>로그인하시면 내 사주가 자동으로 나와요.<br/>또는 홈에서 생년월일을 입력해 주세요.</p>
       <div style={{display:'flex',gap:'8px',marginTop:'4px'}}>
         <button onClick={()=>router.push('/login')} style={{background:'#b46e46',color:'#fff',border:'none',borderRadius:'10px',padding:'10px 20px',fontSize:'14px',fontWeight:600,cursor:'pointer'}}>로그인</button>
-        <button onClick={()=>router.push('/home-new')} style={{background:'#fffbf7',color:'#96502e',border:'0.5px solid #f0e0d5',borderRadius:'10px',padding:'10px 20px',fontSize:'14px',fontWeight:600,cursor:'pointer'}}>홈으로</button>
+        <button onClick={()=>router.push('/home-new')} style={{background:'#fffbf7',color:'#96502e',border:'0.5px solid #9c7a58',borderRadius:'10px',padding:'10px 20px',fontSize:'14px',fontWeight:600,cursor:'pointer'}}>홈으로</button>
       </div>
     </div>
   )
@@ -575,7 +575,7 @@ function ResultNewContent() {
     <div style={{minHeight:'100vh',background:'#FDF6F0',maxWidth:'430px',margin:'0 auto',fontFamily:"'Apple SD Gothic Neo','Noto Sans KR',sans-serif",color:'#1a1a1a'}}>
 
       {/* 헤더 */}
-      <div style={{position:'sticky',top:0,zIndex:50,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',background:'rgba(250,250,248,0.96)',backdropFilter:'blur(10px)',borderBottom:'0.5px solid #f0e0d5'}}>
+      <div style={{position:'sticky',top:0,zIndex:50,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',background:'rgba(250,250,248,0.96)',backdropFilter:'blur(10px)',borderBottom:'0.5px solid #9c7a58'}}>
         <button onClick={()=>router.back()} style={{background:'none',border:'none',color:'#999',fontSize:'20px',cursor:'pointer'}}>←</button>
         <div style={{textAlign:'center'}}>
           <div style={{fontSize:'14px',fontWeight:700,color:'#1a1a1a'}}>{titleName}</div>
@@ -586,9 +586,9 @@ function ResultNewContent() {
 
       {/* 프로필 헤더 (피치톤) */}
       <div style={{padding:'12px 16px 0'}}>
-        <div style={{background:'#fffbf7',border:'0.5px solid #f0e0d5',borderRadius:'12px',padding:'16px'}}>
+        <div style={{background:'#fffbf7',border:'0.5px solid #9c7a58',borderRadius:'12px',padding:'16px'}}>
           <div style={{display:'flex',alignItems:'center',gap:'11px'}}>
-            <div style={{width:'42px',height:'42px',borderRadius:'50%',background:'#f5ebe2',border:'1.5px solid #e8d5c5',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'19px',flexShrink:0}}>🌿</div>
+            <div style={{width:'42px',height:'42px',borderRadius:'50%',background:'#f5ebe2',border:'1.5px solid #9c7a58',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'19px',flexShrink:0}}>🌿</div>
             <div>
               <div style={{fontSize:'13px',fontWeight:700,color:'#96502e',marginBottom:'2px'}}>{cardName}</div>
               <div style={{fontSize:'11px',color:'#b4785a',lineHeight:1.5}}>{calLabel}{solarLabel} · {hourLabel} · {genderLabel}</div>
@@ -601,7 +601,7 @@ function ResultNewContent() {
 
         {/* 전문가 모드: 전문가 상세 토글 (?pro=1일 때만) */}
         {isPro && (
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:'#fff3e9',border:'0.5px solid #e8d5c5',borderRadius:'12px',padding:'11px 14px',marginBottom:'10px'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:'#fff3e9',border:'0.5px solid #9c7a58',borderRadius:'12px',padding:'11px 14px',marginBottom:'10px'}}>
             <div>
               <span style={{fontSize:'12px',fontWeight:700,color:'#96502e'}}>전문가 상세</span>
               <span style={{fontSize:'10px',color:'#c5a590',marginLeft:'8px'}}>{hapchungOn?'지장간·납음·신살·형충회합 표시 중':'켜면 상세 정보가 모두 나와요'}</span>
@@ -674,7 +674,7 @@ function ResultNewContent() {
         {(
         <Section title="오행과 십성 분석" collapsible={!chartOnly} open={openSection==='ohaeng'} onToggle={()=>toggleSection('ohaeng')}>
           {/* 계산 기준 안내 — 합충 반영 그래프와 숫자가 다른 이유 */}
-          <div style={{fontSize:'10.5px',color:'#b4785a',background:'#faf3ec',border:'0.5px solid #f0e0d5',borderRadius:'8px',padding:'7px 10px',marginBottom:'10px',lineHeight:1.6}}>
+          <div style={{fontSize:'10.5px',color:'#b4785a',background:'#faf3ec',border:'0.5px solid #9c7a58',borderRadius:'8px',padding:'7px 10px',marginBottom:'10px',lineHeight:1.6}}>
             진로·적성·성격은 <b style={{color:'#96502e'}}>계절 치환</b>으로, 건강·궁합은 오행 그대로 봐요.
             {(() => {
               /* ★2026-08-02 — 월지 치환에 이어 «시지» 치환도 알려 드립니다 (대표님 지시)
