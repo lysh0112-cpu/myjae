@@ -1,6 +1,8 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
+import TermModal from './TermModal'
+import { SAJU_TERMS } from './sajuTerms'
 
 /**
  * 십성표 (명카페 공용 부품 · 포스텔러 스타일)
@@ -38,7 +40,16 @@ export default function SipsungTable({ sipsung }: { sipsung: { ss: string; pct: 
     return d ? d.pct : null
   }
 
+  /* ★2026-08-04 (45부 · 대표님 지시) — 십성 이름을 누르면 «뜻풀이» 가 뜹니다.
+     [만들기 전에 grep 했습니다 — 교훈 E]
+       사전   sajuTerms.ts 의 SAJU_TERMS 에 ★십성 열 개가 «이미» 다 있었습니다
+       모달   TermModal.tsx 가 «이미» 공용입니다 (원국·UnTable·대운표가 씁니다)
+     ⇒ ★새로 지은 것이 «하나도 없습니다». 잇기만 했습니다.
+     ⚠️ 사전에 없는 낱말이면 모달이 안 뜹니다 — 그때는 예전처럼 그냥 글자입니다. */
+  const [term, setTerm] = useState<string | null>(null)
+
   return (
+    <>
     <table style={{ borderCollapse: 'collapse', fontSize: '9.5px', width: '100%' }}>
       <thead>
         <tr style={{ background: '#f7ede4' }}>
@@ -51,11 +62,16 @@ export default function SipsungTable({ sipsung }: { sipsung: { ss: string; pct: 
           const p = pct(ss)
           return (
             <tr key={ss}>
-              <td style={{
-                padding: '3px 2px', textAlign: 'center', fontWeight: 600,
-                color: SIPSIN_COLOR[ss] || '#555', border: '0.5px solid #f0e0d5',
-              }}>
-                {ss}
+              <td
+                onClick={() => SAJU_TERMS[ss] && setTerm(ss)}
+                style={{
+                  padding: '3px 2px', textAlign: 'center', fontWeight: 600,
+                  color: SIPSIN_COLOR[ss] || '#555', border: '0.5px solid #f0e0d5',
+                  cursor: SAJU_TERMS[ss] ? 'pointer' : 'default',
+                }}>
+                {SAJU_TERMS[ss]
+                  ? <span style={{ textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 3 }}>{ss}</span>
+                  : ss}
               </td>
               <td style={{
                 padding: '3px 2px', textAlign: 'center',
@@ -87,11 +103,13 @@ export default function SipsungTable({ sipsung }: { sipsung: { ss: string; pct: 
             padding: '5px 4px', fontSize: '8.5px', color: '#a8927e',
             lineHeight: 1.5, border: 'none', textAlign: 'left',
           }}>
-            십성은 글자를 있는 그대로 셉니다. 위 오행 비율은 계절 치환이 들어가
-            서로 다를 수 있어요.
+            👆 십성을 누르면 뜻풀이가 나와요 · 십성은 글자를 있는 그대로 셉니다.
+            위 오행 비율은 계절 치환이 들어가 서로 다를 수 있어요.
           </td>
         </tr>
       </tfoot>
     </table>
+    <TermModal term={term} onClose={() => setTerm(null)} />
+    </>
   )
 }
