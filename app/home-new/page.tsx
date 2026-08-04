@@ -459,7 +459,7 @@ export default function HomeNew() {
                   padding: '12px 14px', fontSize: '12px', color: '#96502e',
                   fontWeight: 600, cursor: 'pointer',
                 }}
-              >{hasSaju ? '내 사주 자세히 보기 →' : '내 사주 등록하기 →'}</button>
+              >{hasSaju ? '내 사주 원국표 보기 →' : '내 사주 등록하기 →'}</button>
             )}
           />
         </div>
