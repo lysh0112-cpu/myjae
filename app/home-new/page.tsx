@@ -527,10 +527,12 @@ export default function HomeNew() {
           ⚠️ 개인정보처리방침은 결제를 붙이시기 전에 «법으로» 필요합니다.
              지금은 어디에도 없습니다. 그때 다시 여쭙겠습니다.
           ═══════════════════════════════════════════════════════════ */}
-      <footer style={{ background: '#f8f8f6', padding: '20px 20px 12px', borderTop: '0.5px solid #e8e5de' }}>
-        {/* 사업자 정보 */}
-        <div style={{ fontSize: '11px', color: '#888888', lineHeight: 1.6 }}>
-          <div>(주)명연재 <span style={{ color: '#ccc' }}>|</span> 대표 오연희</div>
+      <footer style={{ background: '#f2f0ea', padding: '20px 20px 12px', borderTop: '1.5px solid #a89f8d' }}>
+        {/* 사업자 정보
+            ★2026-08-04 (45부) — 대비 2단계. #888888(3.33:1) → #6b6b6b(5.66:1)
+            ⚠️ 옅게 되돌리지 마십시오 — 대표님이 「흐려서 안 보인다」 하신 자리입니다. */}
+        <div style={{ fontSize: '11px', color: '#6b6b6b', lineHeight: 1.6 }}>
+          <div>(주)명연재 <span style={{ color: '#8f8878' }}>|</span> 대표 오연희</div>
           <div>사업자등록번호 000-00-00000</div>
           <div>서울시 강북구 솔매로45길 95, 201호</div>
         </div>
@@ -538,23 +540,23 @@ export default function HomeNew() {
         {/* 고객센터 — ★이름과 메일을 «한 줄» 로 (대표님 지시)
             ⚠️ flexWrap 이 있어야 좁은 화면에서 메일이 «잘리지 않고» 아랫줄로 갑니다 */}
         <div style={{
-          marginTop: '6px', fontSize: '11px', color: '#888888', lineHeight: 1.6,
+          marginTop: '6px', fontSize: '11px', color: '#6b6b6b', lineHeight: 1.6,
           display: 'flex', gap: '6px', alignItems: 'baseline', flexWrap: 'wrap',
         }}>
-          <strong style={{ color: '#444444', fontWeight: 600, flex: 'none' }}>고객센터</strong>
-          <a href="mailto:lysh6728@naver.com" style={{ color: '#888888', textDecoration: 'none' }}>
+          <strong style={{ color: '#3d3d3d', fontWeight: 600, flex: 'none' }}>고객센터</strong>
+          <a href="mailto:lysh6728@naver.com" style={{ color: '#6b6b6b', textDecoration: 'none' }}>
             lysh6728@naver.com
           </a>
         </div>
 
         {/* 카피라이트
             ⚠️ 글자는 ★11px «그대로» 입니다 — 10 으로 내리지 마십시오.
-               어르신 손님이 읽기 어렵습니다. (대표님과 앞서 정한 것)
+            ★2026-08-04 — #aaaaaa(2.18:1) → #767676(4.68:1). 옅게 되돌리지 마십시오.
             ⚠️ 아래 여백 12 밑으로 줄이지 마십시오 — 하단바 선에 «닿아» 보입니다. */}
         <div style={{
           marginTop: '8px', paddingTop: '8px',
-          borderTop: '0.5px solid #eeeeee',
-          fontSize: '11px', color: '#aaaaaa',
+          borderTop: '1px solid #b0a898',
+          fontSize: '11px', color: '#6a6a6a',
         }}>
           © 2026 (주)명연재. All rights reserved.
         </div>

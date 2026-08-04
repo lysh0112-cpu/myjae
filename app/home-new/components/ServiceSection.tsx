@@ -72,18 +72,34 @@ const C = {
    *     ⚠️ slate-200(#e2e8f0) 도 후보였으나 차가운 회색이라 크림 위에서 떠 보입니다.
    *        차가운 쪽으로 가시려면 border 를 '#e2e8f0' 로 두면 됩니다.
    */
-  border: 'rgba(120,53,15,0.15)',       // amber-900/15 — 카드 바깥선
-  borderIn: 'rgba(120,53,15,0.11)',     // 열린 갈래 안쪽 카드
-  well: '#fbf8f5',                      // 열린 갈래의 바닥 — 안쪽 카드가 떠 보이게
-  /** ★2026-08-04 (45부) — 서브 버튼 전용. 메인(순백)과 바닥(well) «사이» 입니다.
-   *  ⚠️ 순백으로 되돌리면 메인 카드와 구분이 사라집니다. (대표님 지시로 낮춘 것) */
-  subCard: '#fdfbf9',                   // 순백보다 한 톤 연하게
-  borderSub: 'rgba(120,53,15,0.08)',    // borderIn(0.11)보다 «더 옅게»
-  iconBg: '#f8fafc',      // slate-50
-  iconEdge: '#eef2f6',
-  text: '#1e293b',        // slate-800  — 고대비 본문
-  sub: '#64748b',         // slate-500
-  faint: '#94a3b8',       // slate-400  — 화살표·설명
+  /* ══════════════════════════════════════════════════════════════════
+     ★2026-08-04 (45부 · 대표님 지시) — «대비 2단계» 로 올렸습니다.
+
+     [무엇이 문제였나]  대표님이 「너무 흐리고 안 보이지 않아?」 하셔서
+       WCAG 로 실제 대비를 재 보니 ★다섯 곳이 기준 미달이었습니다.
+         서브 설명   2.48:1 (본문 기준 4.5)   ← 제가 45부에 옅게 만든 것
+         카피라이트  2.18:1
+         푸터 글자   3.33:1
+         선 넷       1.09~1.68:1 (선 기준 3.0)
+
+     [무엇을 골랐나]  ★목업 두 단계를 보시고 «2단계» 로 확정하셨습니다.
+       선을 여기서 «더» 올리면 갈색이 검게 보여 종이 표처럼 됩니다. 여기가 끝입니다.
+
+     ⚠️ 선만 진하게 하면 ★선이 붕 떠 보입니다. 그래서 바닥(well)과
+        아이콘 타일도 «한 톤씩» 함께 내렸습니다. 한쪽만 되돌리지 마십시오.
+     ⚠️ 서브 카드는 반대로 ★순백으로 «올렸습니다» — 바닥이 진해져서
+        이제 순백이라야 갈립니다. (45부 초에 낮췄던 것을 되돌린 셈입니다)
+     ══════════════════════════════════════════════════════════════════ */
+  border: '#9c7a58',        // 카드 바깥선 — 흰 위에서 3.93:1 (선 기준 3.0 넘김)
+  borderIn: '#b59a7c',      // 열린 갈래 안쪽 카드
+  well: '#f4ece1',          // 열린 갈래의 바닥 — 한 톤 내림
+  subCard: '#ffffff',       // ★순백. 진해진 바닥과 갈리려면 이래야 합니다
+  borderSub: '#b59a7c',     // 서브 카드 테두리 — 2.67:1
+  iconBg: '#f0e6d8',        // 아이콘 타일 — 크림 결로 맞춤
+  iconEdge: '#c4af95',
+  text: '#141c28',          // 본문 — 흰 위에서 16.9:1
+  sub: '#55636f',           // 설명 — 6.06:1 (전 #64748b 4.76)
+  faint: '#41505c',         // 화살표 — 8.58:1 (전 #94a3b8 ★2.48 미달이었음)
   /** 4면 경계가 칼같이 보이도록 그림자는 촘촘하게 (퍼지면 선이 흐려집니다) */
   shadow: '0 2px 8px rgba(0,0,0,0.04)',
   shadowUp: '0 3px 12px rgba(0,0,0,0.06)',
@@ -262,7 +278,7 @@ export default function ServiceSection({
   /** 순백 카드 — 목록의 기본 단위 */
   const cardStyle = (pinnedOn: boolean): React.CSSProperties => ({
     background: C.white,
-    border: `1px solid ${C.border}`,
+    border: `1.5px solid ${C.border}`,
     borderRadius: 16,
     boxShadow: pinnedOn ? C.shadowUp : C.shadow,
     overflow: 'hidden',
@@ -372,7 +388,7 @@ export default function ServiceSection({
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '8px 14px 8px 10px', borderRadius: 20, cursor: 'pointer',
-                  background: C.white, border: `1px solid ${C.border}`, boxShadow: C.shadow,
+                  background: C.white, border: `1.5px solid ${C.border}`, boxShadow: C.shadow,
                 }}
               >
                 <span style={{ fontSize: 14, lineHeight: 1 }}>{s.icon}</span>
@@ -489,7 +505,7 @@ export default function ServiceSection({
                       </span>
                       <span style={{
                         fontSize: 10, color: C.sub, background: C.iconBg,
-                        border: `1px solid ${C.border}`,
+                        border: `1.5px solid ${C.border}`,
                         padding: '1px 7px', borderRadius: 20, fontWeight: 600,
                       }}>{list.length}</span>
                     </span>
@@ -521,7 +537,7 @@ export default function ServiceSection({
                 {isOpen && (
                   <div style={{
                     background: C.well,
-                    borderTop: `1px solid ${C.border}`,
+                    borderTop: `1.5px solid ${C.border}`,
                     padding: '9px 9px 10px',
                     display: 'flex', flexDirection: 'column', gap: 6,
                   }}>
