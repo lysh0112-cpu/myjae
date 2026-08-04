@@ -122,25 +122,44 @@ const BEST_COPY: Record<string, string> = {
  *   ⚠️ 테두리는 진짜 그라데이션입니다. padding-box / border-box 두 겹으로 냅니다.
  *      단색 테두리로 바꾸시려면 border 를 `1.5px solid <색>` 으로 두면 됩니다.
  */
-interface BestTheme { bg: string; glow: string; badge: string; arrow: string; iconBg: string }
+interface BestTheme { bg: string; glow: string; badge: string; arrow: string; iconBg: string; iconEdge: string }
+/* ★2026-08-04 (45부 · 대표님 지시) — BEST 카드도 «대비 2단계» 로 올렸습니다.
+ *
+ *   [까닭]  아래 카드들만 진해지고 BEST 둘이 옛 대비로 남아 «따로 놀았습니다».
+ *     잰 값 — 테두리 넷이 모두 미달이었습니다 (선 기준 3.0)
+ *       내사주그림 1.83 / 1.40   ·   진로적성 1.65 / 1.86
+ *
+ *   [고친 값]  테두리 3.14~3.35 · 화살표 6.11~6.78 로 올렸습니다.
+ *     ⚠️ 내사주그림의 «노란 쪽» 만 2.39 로 못 미칩니다.
+ *        노랑은 어둡게 하면 «갈색» 이 되어 노을 느낌이 사라집니다. 여기가 한계입니다.
+ *
+ *   ⚠️ 글자는 «안 건드렸습니다» — C.text·C.sub 를 쓰고 있어
+ *      팔레트를 올릴 때 «함께» 진해졌습니다.
+ *   ⚠️ 아이콘 타일을 반투명 흰 → ★순백 + 옅은 테두리로 바꿨습니다.
+ *      진해진 카드 안에서 동그라미가 묻히지 않게 하려는 것입니다.
+ *   ⚠️ BEST 뱃지도 한 톤 내렸습니다 — 흰 글씨가 얹히는 자리입니다.
+ *   ⛔ 옅게 되돌리지 마십시오. 대표님이 「흐려서 안 보인다」 하신 자리입니다.
+ */
 const BEST_THEME: Record<string, BestTheme> = {
   '내사주그림': {
     bg:
       'linear-gradient(135deg, rgba(255,251,235,0.94) 0%, rgba(255,241,242,0.86) 100%) padding-box,' +
-      ' linear-gradient(135deg, #fda4af 0%, #fcd34d 52%, #fda4af 100%) border-box',
-    glow: '0 6px 22px -6px rgba(251,113,133,0.28), 0 2px 8px rgba(0,0,0,0.03)',
-    badge: 'linear-gradient(100deg, #e8927f, #d4a05f)',
-    arrow: '#9f6b62',
-    iconBg: 'rgba(255,255,255,0.86)',
+      ' linear-gradient(135deg, #e0697a 0%, #d69a1f 52%, #e0697a 100%) border-box',
+    glow: '0 6px 22px -6px rgba(224,105,122,0.30), 0 2px 8px rgba(0,0,0,0.04)',
+    badge: 'linear-gradient(100deg, #cf6b56, #b57f37)',
+    arrow: '#8a5049',
+    iconBg: '#ffffff',
+    iconEdge: '#e8cfc4',
   },
   '진로적성': {
     bg:
       'linear-gradient(135deg, rgba(250,245,255,0.94) 0%, rgba(238,242,255,0.86) 100%) padding-box,' +
-      ' linear-gradient(135deg, #d8b4fe 0%, #a5b4fc 52%, #d8b4fe 100%) border-box',
-    glow: '0 6px 22px -6px rgba(168,85,247,0.26), 0 2px 8px rgba(0,0,0,0.03)',
-    badge: 'linear-gradient(100deg, #9b7cd4, #7c86d8)',
-    arrow: '#7566a8',
-    iconBg: 'rgba(255,255,255,0.86)',
+      ' linear-gradient(135deg, #a86fd8 0%, #6f80e0 52%, #a86fd8 100%) border-box',
+    glow: '0 6px 22px -6px rgba(168,111,216,0.28), 0 2px 8px rgba(0,0,0,0.04)',
+    badge: 'linear-gradient(100deg, #7d5cb8, #5f6bc4)',
+    arrow: '#5b4d8c',
+    iconBg: '#ffffff',
+    iconEdge: '#d5cde8',
   },
 }
 
@@ -242,12 +261,13 @@ export default function ServiceSection({
     : GROUPS
 
   /** 아이콘 — 아주 연한 모노톤 둥근 타일 위에 3D 이모지만 */
-  const Tile = ({ icon, size = 42, bg = C.iconBg }: { icon: string; size?: number; bg?: string }) => (
+  // ★2026-08-04 (45부) — edge 를 더했습니다. ⚠️ 안 넘기면 «예전 그대로» 입니다.
+  const Tile = ({ icon, size = 42, bg = C.iconBg, edge = C.iconEdge }: { icon: string; size?: number; bg?: string; edge?: string }) => (
     <span
       className="svcTile"
       style={{
         width: size, height: size, borderRadius: size * 0.34,
-        background: bg, border: `1px solid ${C.iconEdge}`,
+        background: bg, border: `1px solid ${edge}`,
         fontSize: Math.round(size * 0.55),
       }}
     >{icon}</span>
@@ -351,7 +371,7 @@ export default function ServiceSection({
                   backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
                 }}
               >
-                <Tile icon={s.icon} size={52} bg={t.iconBg} />
+                <Tile icon={s.icon} size={52} bg={t.iconBg} edge={t.iconEdge} />
                 <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontSize: 15.5, fontWeight: 700, color: C.text, letterSpacing: '-0.3px' }}>
