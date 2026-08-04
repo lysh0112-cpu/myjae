@@ -16,7 +16,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import PickDateV7 from '../components/PickDateV7'
 import { runRecommendV7, type RecommendV7Result, type DayOption, type HourOption } from '../lib/recommendV7'
 
-const C = { bg: '#FDF6F0', sub: '#B4785A', brand: '#96502E', line: '#F0E0D5' }
+const C = { bg: '#FDF6F0', sub: '#B4785A', brand: '#96502E', line: '#9c7a58' }
 
 interface SurveyInput {
   dueDate: string

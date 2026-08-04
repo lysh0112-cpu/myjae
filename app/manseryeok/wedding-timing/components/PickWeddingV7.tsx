@@ -22,7 +22,7 @@ import WeddingTermModal from './WeddingTermModal'
 import CoupleWonguk from '@/app/manseryeok/couple-result-new/components/CoupleWonguk'
 
 const C = {
-  bg: '#FDF6F0', card: '#FFFBF7', line: '#F0E0D5', ink: '#3A2E28',
+  bg: '#FDF6F0', card: '#FFFBF7', line: '#9c7a58', ink: '#3A2E28',
   sub: '#B4785A', brand: '#96502E', accent: '#C8783C', soft: '#F6E3D6', warm: '#F5EDE6',
 }
 

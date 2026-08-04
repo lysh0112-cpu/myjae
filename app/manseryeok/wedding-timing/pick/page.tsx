@@ -14,7 +14,7 @@ import { runWeddingV7, type WeddingV7Result, type RawPerson, type DayResult } fr
 import { saveWeddingRecord, getWeddingRecord } from '@/lib/saju/weddingRecords'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
 
-const C = { bg: '#FDF6F0', sub: '#B4785A', brand: '#96502E', line: '#F0E0D5' }
+const C = { bg: '#FDF6F0', sub: '#B4785A', brand: '#96502E', line: '#9c7a58' }
 
 interface WeddingSurvey {
   startDate: string

@@ -21,7 +21,7 @@ import CoupleWonguk from '@/app/manseryeok/couple-result-new/components/CoupleWo
 import type { PersonSaju } from '../lib/weddingFilterV7'
 
 const C = {
-  card: '#FFFBF7', line: '#F0E0D5', ink: '#3A2E28',
+  card: '#FFFBF7', line: '#9c7a58', ink: '#3A2E28',
   sub: '#B4785A', brand: '#96502E', accent: '#C8783C', warm: '#F5EDE6',
 }
 
