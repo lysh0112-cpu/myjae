@@ -158,9 +158,15 @@ export function judgeDay(day: DayInput, bride: PersonSaju, groom: PersonSaju): W
 // ── 선택 필터 메타 (화면이 그대로 읽어 쓴다) ────────────────────────────
 export type OptKey = 'optWeekend' | 'optBride' | 'optBoth'
 
-export const OPT_FILTERS: { key: OptKey; label: string; hanja: string; desc: string }[] = [
+//   ★2026-08-04 — desc 를 «켰을 때» 문안으로 두고, descOff 를 «껐을 때» 문안으로 더한다.
+//     [왜]  토글이 켜졌는지 꺼졌는지가 글로 안 보여 헷갈린다는 지적(대표님).
+//           스위치 모양만으로는 「지금 무엇으로 설정된 것인가」를 못 읽는다.
+//     ⚠️ descOff 는 «없어도 된다». 없으면 화면이 desc 를 그대로 쓴다.
+//        (공용 값을 더할 때는 기본값을 둔다 — 45부 교훈)
+export const OPT_FILTERS: { key: OptKey; label: string; hanja: string; desc: string; descOff?: string }[] = [
   { key: 'optWeekend', label: '예식하는 날', hanja: '週末',
-    desc: '토·일요일과 공휴일만 봐요.' },
+    desc: '주말과 공휴일만 예식하는 날로 설정',
+    descOff: '평일 포함하여 예식하는 날로 설정' },
   { key: 'optBride', label: '신부에게 좋은 날', hanja: '用神日',
     desc: '신부에게 필요한 기운이 든 날이에요.' },
   { key: 'optBoth', label: '두 분 모두 좋은 날', hanja: '用神日',

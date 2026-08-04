@@ -182,7 +182,10 @@ export default function PickWeddingV7({ result, onPickDay }: Props) {
                   <span style={{ fontSize: 15.5, fontWeight: 700, letterSpacing: '-.3px' }}>{f.label}</span>
                   <span style={{ fontSize: 10.5, color: '#8A6E5B', fontWeight: 400 }}>{f.hanja}</span>
                 </div>
-                <div style={{ fontSize: 12.5, color: C.sub, lineHeight: 1.6, marginTop: 5 }}>{f.desc}</div>
+                {/* ★껐을 때 문안이 따로 있으면 그것을, 없으면 desc 를 그대로 쓴다 */}
+                <div style={{ fontSize: 12.5, color: C.sub, lineHeight: 1.6, marginTop: 5 }}>
+                  {active ? f.desc : (f.descOff ?? f.desc)}
+                </div>
               </div>
               <button
                 onClick={e => { e.stopPropagation(); setOn({ ...on, [f.key]: !active }) }}
