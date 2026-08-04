@@ -202,12 +202,22 @@ export default function UserCard({ footer }: { footer?: ReactNode | ((info: User
         }}>{initial}</div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          {/* 윗줄 — 이름 ……… 일주 둘 */}
+          {/* 윗줄 — 이름 · 역할알약 ……… 일주 둘 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{
               fontSize: 14.5, fontWeight: 600, color: '#3a2e28',
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>{withNim(displayName)}</span>
+
+            {/* ★2026-08-04 — 역할 알약은 «윗줄» 에 둡니다.
+                아랫줄에 두었더니 핸드폰에서 「양력 1998.1.5 · 寅시 · 여성」의
+                ★'여성' 이 «…» 로 잘렸습니다 (대표님 사진).
+                윗줄은 이름이 짧아 자리가 남고, 아랫줄은 글이 길어 모자랍니다.
+                ⛔ 다시 아랫줄로 내리지 마십시오. 성별이 또 잘립니다. */}
+            <span style={{
+              fontSize: 9, padding: '2px 8px', borderRadius: 10,
+              background: rc.bg, color: rc.fg, fontWeight: 500, flexShrink: 0,
+            }}>{roleLabel(profile?.role || null)}</span>
 
             {hasSaju && dayPillar && dayPillar.stem !== '?' && (
               <div style={{ marginLeft: 'auto', display: 'flex', gap: 3, flexShrink: 0 }}>
@@ -217,27 +227,22 @@ export default function UserCard({ footer }: { footer?: ReactNode | ((info: User
             )}
           </div>
 
-          {/* 아랫줄 — 생년월일 ……… 역할 알약 · 수정 */}
+          {/* 아랫줄 — 생년월일 ……… 수정 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>
             <span style={{
               fontSize: 10.5, color: '#7d6a5b',
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>{subLine}</span>
 
-            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-              <span style={{
-                fontSize: 9, padding: '2px 8px', borderRadius: 10,
-                background: rc.bg, color: rc.fg, fontWeight: 500,
-              }}>{roleLabel(profile?.role || null)}</span>
-              <button
-                onClick={() => setEditOpen(true)}
-                style={{
-                  fontSize: 10, color: '#6b5340',
-                  border: '0.5px solid #b99a7d', borderRadius: 7,
-                  padding: '3px 8px', background: 'none', cursor: 'pointer',
-                }}
-              >수정</button>
-            </div>
+            <button
+              onClick={() => setEditOpen(true)}
+              style={{
+                marginLeft: 'auto', flexShrink: 0,
+                fontSize: 10, color: '#6b5340',
+                border: '0.5px solid #b99a7d', borderRadius: 7,
+                padding: '3px 8px', background: 'none', cursor: 'pointer',
+              }}
+            >수정</button>
           </div>
         </div>
       </div>
