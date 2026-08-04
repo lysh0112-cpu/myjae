@@ -58,7 +58,7 @@ export default function MovingTermModal({ termKey, onClose }: Props) {
             fontSize: 14.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
           }}
         >
-          알겠어요
+          확인
         </button>
       </div>
     </div>
