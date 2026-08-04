@@ -80,7 +80,7 @@ export default function ArchiveList() {
   if (items.length === 0) {
     return (
       <div style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 12, padding: '20px 14px', textAlign: 'center' }}>
-        <div style={{ fontSize: 13, color: '#8a7360', marginBottom: 4 }}>아직 저장한 기록이 없어요</div>
+        <div style={{ fontSize: 13, color: '#7d6553', marginBottom: 4 }}>아직 저장한 기록이 없어요</div>
         <div style={{ fontSize: 11, color: '#6b5340' }}>사주·궁합·타로·개명 등을 보고 저장하면 여기 모여요.</div>
       </div>
     )

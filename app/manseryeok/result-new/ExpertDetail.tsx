@@ -246,7 +246,7 @@ export default function ExpertDetail({
                       background: isBongi ? '#fdf9f5' : undefined,
                     }}>
                       <span style={{ color: '#3a2e28' }}>{g}</span>{' '}
-                      <button type="button" onClick={() => open(ss)} style={{ color: SS_COLOR[ss] || '#8a7360', fontSize: 9.5, cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>{ss}</button>
+                      <button type="button" onClick={() => open(ss)} style={{ color: SS_COLOR[ss] || '#7d6553', fontSize: 9.5, cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>{ss}</button>
                     </td>
                   )
                 })}
@@ -276,7 +276,7 @@ export default function ExpertDetail({
               <td style={rl}>년간 {yearStem}</td>
               {saju.map((p, i) => {
                 const u = yearStem ? getUnsung(yearStem, p.branch) : ''
-                return <td key={i} onClick={() => open(u)} style={{ ...td, color: unsungColor(u) || '#8a7360', cursor: u ? 'pointer' : 'default' }}>{u || '-'}</td>
+                return <td key={i} onClick={() => open(u)} style={{ ...td, color: unsungColor(u) || '#7d6553', cursor: u ? 'pointer' : 'default' }}>{u || '-'}</td>
               })}
             </tr>
           </tbody>
@@ -296,14 +296,14 @@ export default function ExpertDetail({
               <td style={rl}>년지 {yeonjji}</td>
               {saju.map((p, i) => {
                 const s = getSinsal(yeonjji, p.branch)
-                return <td key={i} onClick={() => open(s)} style={{ ...td, color: SINSAL_HIGHLIGHT[s] || '#8a7360', fontWeight: 600, cursor: s ? 'pointer' : 'default' }}>{s || '-'}</td>
+                return <td key={i} onClick={() => open(s)} style={{ ...td, color: SINSAL_HIGHLIGHT[s] || '#7d6553', fontWeight: 600, cursor: s ? 'pointer' : 'default' }}>{s || '-'}</td>
               })}
             </tr>
             <tr>
               <td style={rl}>일지 {iljji}</td>
               {saju.map((p, i) => {
                 const s = getSinsal(iljji, p.branch)
-                return <td key={i} onClick={() => open(s)} style={{ ...td, color: SINSAL_HIGHLIGHT[s] || '#8a7360', cursor: s ? 'pointer' : 'default' }}>{s || '-'}</td>
+                return <td key={i} onClick={() => open(s)} style={{ ...td, color: SINSAL_HIGHLIGHT[s] || '#7d6553', cursor: s ? 'pointer' : 'default' }}>{s || '-'}</td>
               })}
             </tr>
           </tbody>
@@ -354,7 +354,7 @@ export default function ExpertDetail({
           </tbody>
         </table>
         {/* 개수 요약 */}
-        <div style={{ marginTop: 7, fontSize: 10, color: '#8a7360', textAlign: 'center' }}>
+        <div style={{ marginTop: 7, fontSize: 10, color: '#7d6553', textAlign: 'center' }}>
           {(() => {
             let h = 0, g = 0
             for (const p of saju) {
@@ -510,7 +510,7 @@ export default function ExpertDetail({
               )
             })}
           </svg>
-          <div style={{ fontSize: 9.5, color: '#8a7360', textAlign: 'center', lineHeight: 1.8 }}>
+          <div style={{ fontSize: 9.5, color: '#7d6553', textAlign: 'center', lineHeight: 1.8 }}>
             <span style={{ color: '#2e7d32' }}>━ 합(실선)</span>{'  '}
             <span style={{ color: '#c62828' }}>┅ 충·원진(점선)</span>
             <div style={{ color: '#8f3d0e', marginTop: 2 }}>👆 방합·삼합 같은 글씨를 누르면 설명이 나와요</div>

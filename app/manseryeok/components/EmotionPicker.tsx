@@ -66,7 +66,7 @@ export default function EmotionPicker() {
   const dirty = selected != null && (selected !== savedMood || note.trim().length >= 0)
 
   return (
-    <div style={{ background: '#FFFBF7', border: '0.5px solid #f0d8c0', borderRadius: 14, padding: '14px 14px 13px', marginBottom: 11 }}>
+    <div style={{ background: '#FFFBF7', border: '1.5px solid #9c7a58', borderRadius: 14, padding: '14px 14px 13px', marginBottom: 11 }}>
       <style>{`
         @keyframes emoPopB {
           0%{transform:scale(.9) translateY(0)}
@@ -79,7 +79,7 @@ export default function EmotionPicker() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 11 }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: '#96502e' }}>오늘 기분은 어떠세요?</span>
         {/* 진짜 button으로 둔다. span이면 손가락이 살짝 밀릴 때 글자 범위만 잡히고 눌리지 않는다. */}
-        <button type="button" onClick={() => setShowHistory(true)} style={{ fontSize: 10.5, color: '#8f3d0e', background: '#faede0', border: '0.5px solid #ecd8c6', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>📅 내 감정 기록</button>
+        <button type="button" onClick={() => setShowHistory(true)} style={{ fontSize: 10.5, color: '#8f3d0e', background: '#faede0', border: '1px solid #b99a7d', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>📅 내 감정 기록</button>
       </div>
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between' }}>
@@ -114,7 +114,7 @@ export default function EmotionPicker() {
       </div>
 
       {selected != null && (
-        <div style={{ fontSize: 11, color: '#8a7360', marginTop: 9, textAlign: 'center', fontWeight: 500 }}>
+        <div style={{ fontSize: 11, color: '#7d6553', marginTop: 9, textAlign: 'center', fontWeight: 500 }}>
           {MOODS.find((m) => m.code === selected)?.label}
         </div>
       )}
@@ -126,7 +126,7 @@ export default function EmotionPicker() {
         maxLength={60}
         style={{
           width: '100%', marginTop: 10, fontSize: 11.5, color: '#5a4a3e',
-          background: '#fff', border: '0.5px solid #efe0d4', borderRadius: 9,
+          background: '#fff', border: '1px solid #b99a7d', borderRadius: 9,
           padding: '9px 11px', outline: 'none', boxSizing: 'border-box',
         }}
       />
@@ -152,7 +152,7 @@ export default function EmotionPicker() {
         <div onClick={() => setNotice(null)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(60,40,30,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, zIndex: 1100 }}>
           <div onClick={(e) => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: 300, background: '#FFFBF7', border: '0.5px solid #f0d8c0', borderRadius: 16, padding: 20, textAlign: 'center' }}>
+            style={{ width: '100%', maxWidth: 300, background: '#FFFBF7', border: '1px solid #b99a7d', borderRadius: 16, padding: 20, textAlign: 'center' }}>
             <div style={{ fontSize: 32, marginBottom: 9 }}>{notice.emoji}</div>
             <div style={{ fontSize: 14, fontWeight: 600, color: '#96502e', marginBottom: 8 }}>{notice.title}</div>
             <div style={{ fontSize: 12, color: '#7a6858', lineHeight: 1.7 }}>{notice.body}</div>

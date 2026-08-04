@@ -77,7 +77,7 @@ export default function MoodHistoryModal({ open, onClose }: { open: boolean; onC
           <div style={{ fontSize: 12, color: '#5c3a1e', textAlign: 'center', padding: '30px 0' }}>불러오는 중…</div>
         ) : rows.length === 0 ? (
           <div style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 12, padding: '28px 14px', textAlign: 'center' }}>
-            <div style={{ fontSize: 13, color: '#8a7360', marginBottom: 4 }}>이 달의 기록이 없어요</div>
+            <div style={{ fontSize: 13, color: '#7d6553', marginBottom: 4 }}>이 달의 기록이 없어요</div>
             <div style={{ fontSize: 11, color: '#6b5340' }}>오늘의 기분을 기록하면 여기 흐름이 그려져요.</div>
           </div>
         ) : (

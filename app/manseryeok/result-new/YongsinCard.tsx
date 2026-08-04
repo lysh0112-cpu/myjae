@@ -205,7 +205,7 @@ export default function YongsinCard({ result, saju }: Props) {
     if (!el) {
       return (
         <div style={{ background: '#f7f4f0', border: '0.5px solid #e5dcd2', borderRadius: 10, padding: '14px 6px', textAlign: 'center' }}>
-          <div style={{ fontSize: 15, color: '#8a7360', fontWeight: 600 }}>해당 없음</div>
+          <div style={{ fontSize: 15, color: '#7d6553', fontWeight: 600 }}>해당 없음</div>
           <div style={{ fontSize: 10.5, color: '#5c3a1e', marginTop: 3 }}>{johu.note}</div>
         </div>
       )
@@ -239,7 +239,7 @@ export default function YongsinCard({ result, saju }: Props) {
     if (!el) {
       return (
         <div style={{ background: '#f7f4f0', border: '0.5px solid #e5dcd2', borderRadius: 10, padding: '14px 6px', textAlign: 'center' }}>
-          <div style={{ fontSize: 15, color: '#8a7360', fontWeight: 600 }}>없음</div>
+          <div style={{ fontSize: 15, color: '#7d6553', fontWeight: 600 }}>없음</div>
         </div>
       )
     }
