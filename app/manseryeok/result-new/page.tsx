@@ -845,9 +845,12 @@ function ResultNewContent() {
             홈 서비스 목록(사주·대운·연월운세)으로 들어온 경우에는 그대로 보인다.
             ★2026-07-21 2차: 저장 표시 아래로 옮겼다.
               ConsultButton 만 감싸므로, 관리자 > 가격 관리에서 '노출'을 끄면
-              버튼이 스스로 null 을 돌려주어 이 영역이 통째로 사라진다. */}
+              버튼이 스스로 null 을 돌려주어 이 영역이 통째로 사라진다.
+            ⚠️ 아래 여백 24 — ★2026-08-05 에 80 에서 줄였습니다.
+              80 은 «fixed 하단바에 가려지지 않으려고» 둔 자리였습니다.
+              그 바를 걷어냈으므로 빈 자리만 남습니다. 24 는 그냥 아래 숨통입니다. */}
         {!chartOnly && (
-          <div style={{marginTop:'10px',marginBottom:'80px'}}>
+          <div style={{marginTop:'10px',marginBottom:'24px'}}>
             <ConsultButton priceKey="saju" mode="personal" searchParams={searchParams}
               /* ★고객이 본 통변을 상담사에게 넘긴다 (2026-07-21)
                  새 조회면 tongText, 보관함 다시보기면 savedTong 을 쓴다.
@@ -863,15 +866,18 @@ function ResultNewContent() {
 
       </div>
 
-      {/* 하단 네비 */}
-      <div style={{position:'fixed',bottom:0,zIndex:50,left:'50%',transform:'translateX(-50%)',width:'100%',maxWidth:'430px',display:'flex',justifyContent:'space-around',padding:'10px 0 20px',background:'#fff',borderTop:'0.5px solid #f0ede6'}}>
-        {[{icon:'🏠',label:'홈'},{icon:'⊞',label:'서비스'},{icon:'💬',label:'상담'},{icon:'🤍',label:'찜'},{icon:'👤',label:'마이'}].map(item=>(
-          <div key={item.label} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'3px',cursor:'pointer'}}>
-            <span style={{fontSize:'20px'}}>{item.icon}</span>
-            <span style={{fontSize:'9px',color:'#ccc'}}>{item.label}</span>
-          </div>
-        ))}
-      </div>
+      {/* ⛔ 하단 네비 — 2026-08-05 «걷어냈습니다» (대표님 지시)
+          「이 화면은 상단 뒤로가기 버튼만 있으면 되는 화면이야」
+
+          [무엇이었나]  홈·서비스·상담·찜·마이 다섯 칸이 fixed 로 깔려 있었습니다.
+          [그런데]  ★눌러도 «아무 일도 일어나지 않았습니다».
+                    onClick 도 href 도 라우터도 «하나도 없었고», 글자색이 #ccc 였습니다.
+                    ⇒ 홈의 진짜 하단바(홈·서비스·상담·보관함 넷)와 «칸도 달랐습니다».
+                       흉내만 낸 장식이었습니다.
+          [그래서]  ★나의 만세력·전문가용 만세력 «둘 다» 이 화면(result-new)이라
+                    여기 하나만 걷으면 둘 다 사라집니다.
+
+          ⚠️ 되살리지 마십시오. 되살리시려면 ★대표님께 먼저 여쭈십시오. */}
 
     </div>
   )
