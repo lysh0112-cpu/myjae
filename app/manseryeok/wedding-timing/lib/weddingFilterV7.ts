@@ -40,12 +40,36 @@ import {
   isChung, hyeongOf, gongmangBranches,
 } from './weddingTables'
 
+/**
+ * ★한 사람의 용신 한 가지 — 어느 오행이 «어느 용신법» 으로 나왔는가.
+ *
+ *   2026-08-04 대표님 확정 — 조후·억부·격국 «셋을 다» 봅니다.
+ *   [근거] 교재 147쪽 「한 가지 用神만 고집하면 안 된다(억부와 격국, 조후를
+ *          다 고려해야 한다)」 · 146쪽 · 148쪽
+ *          231쪽 3번의 예 「月支가 정편관이면 인성인 날(관인상생)」도 격국 쪽 결입니다.
+ *
+ *   같은 오행이 두 법에서 나오면 ★한 줄로 합치고 kinds 에 둘 다 담습니다.
+ *     예) { el: '목', kinds: ['억부', '격국'] } → 화면에 「목(억부·격국)」
+ */
+export interface YongsinPick {
+  el: string        // '목' | '화' | '토' | '금' | '수'
+  kinds: string[]   // ['억부'] · ['조후'] · ['억부','격국'] …
+}
+
 /** 한 사람의 채점 입력 (일주·일지·용신) */
 export interface PersonSaju {
   dayStem: string       // 일간
   dayBranch: string     // 일지
   ganji: string         // 일주 60갑자
-  yongsin: string       // 억부용신 오행
+  yongsin: string       // ★억부용신 오행 — 옛 자리. yongsins 가 비었을 때의 기본값
+  /**
+   * ★조후·억부·격국을 모은 것. 비어 있으면 화면·판정이 yongsin 하나로 되돌아갑니다.
+   *   (공용 값을 더할 때는 기본값을 둔다 — 45부 교훈)
+   * ⚠️ 조후는 «봄·가을생이면 없습니다» (교재 151쪽은 여름·겨울생만).
+   *    그때는 「해당 없음」이지 어긋남이 아닙니다. 억부·격국 둘로만 봅니다.
+   * ⚠️ 격국도 못 잡는 명식이 있습니다. 있으면 넣고 없으면 뺍니다.
+   */
+  yongsins: YongsinPick[]
   status: string        // 신강/중화/신약/극신약
   monthBranch: string   // 월지 (계절 표시용)
   /**
@@ -103,6 +127,32 @@ export function judgeDay(day: DayInput, bride: PersonSaju, groom: PersonSaju): W
   const ds = day.dayStem
 
   // ── 공망 — 한 사람이라도 걸리면 배제 ──
+  //
+  //   ★★세운(歲運)은 «일부러 안 넣었습니다». 되살리지 마십시오.
+  //
+  //   [교재]  231쪽 1번 —
+  //     「空亡은 ★세운과 일진에만 적용하고 대운과 월운은 적용하지 않는다」
+  //     「평소에는 일진을 안 보지만 ★중요한 날은 일진을 본다」
+  //     ⇒ 글자대로 읽으면 세운도 봐야 합니다. 그런데 «안 넣었습니다».
+  //
+  //   [왜 뺐나 — 2026-08-04 대표님 확정]
+  //     세운을 넣으면 ★한 해가 «통째로» 사라집니다.
+  //     세운 지지는 그 해 365일이 «모두 같은 글자» 라, 그 글자가 두 분 중
+  //     한 분의 공망이면 그 해에는 ★고를 수 있는 날이 0일이 됩니다.
+  //
+  //     실측)  신랑 丙戌(공망 午未) · 신부 壬子(공망 寅卯)
+  //            2026 丙午 → 午 = 신랑 공망 → ⛔ 한 해 전부 사라짐
+  //            2027 丁未 → 未 = 신랑 공망 → ⛔ 한 해 전부 사라짐
+  //            ★두 사람이면 12해 중 «넉 해» 가 막힙니다.
+  //     ⇒ 「내년에 식 올리고 싶다」는 손님께 «아무 날도» 못 드립니다.
+  //
+  //   ⚠️⚠️ 다음 세션에게 —
+  //     「교재에 세운이 적혀 있는데 코드에 없다」는 ★결함이 아닙니다.
+  //     알고도 뺀 것입니다. 되살리시려면 ★대표님께 «먼저 여쭈십시오».
+  //     (45부 1-1 교훈 — 교재·인수인계서와 다르다 ≠ 결함)
+  //
+  //   ★모달(weddingHelpV7.fixGongmang)에도 「저희는 그중 예식일 하루(일진)를
+  //     봐드려요」라 적어 손님께 밝혀 두었습니다. 문구도 함께 지키십시오.
   const gmB = gongmangBranches(bride.ganji)
   const gmG = gongmangBranches(groom.ganji)
   const gongmangWho: string[] = []
@@ -125,15 +175,33 @@ export function judgeDay(day: DayInput, bride: PersonSaju, groom: PersonSaju): W
   // ── 용신일 — 그날 간지(천간·지지)의 오행 집합으로 본다 ──
   //   ★판정 범위: 일간 '또는' 일지. 둘 중 하나만 맞아도 용신일로 인정한다.
   //     (교재 231쪽은 판정 범위를 명시하지 않았다. 옛 코드도 이 방식이었다.)
+  //
+  //   ★2026-08-04 — 용신을 «조후·억부·격국 셋» 으로 넓혔습니다 (대표님 확정).
+  //     [전] 억부 하나만 봤습니다 → 맞는 날이 적었습니다.
+  //     [후] 셋 중 «어느 하나에라도» 걸리면 용신일입니다.
+  //     [근거] 교재 147쪽 「한 가지 用神만 고집하면 안 된다」
+  //     ⚠️ 그만큼 «용신일이 늘어납니다». 헐거워졌다고 느껴지면 되돌리기 전에
+  //        먼저 대표님께 여쭈십시오. 알고 넓힌 것입니다.
   const stemEl = STEM_EL[ds] ?? ''
   const branchEl = BRANCH_EL[db] ?? ''
   const dayEls = new Set([stemEl, branchEl].filter(Boolean))
 
-  const brideOk = !!bride.yongsin && dayEls.has(bride.yongsin)
-  const groomOk = !!groom.yongsin && dayEls.has(groom.yongsin)
+  /** 그 사람의 용신 목록. 비어 있으면 옛 자리(yongsin 하나)로 되돌아간다. */
+  const picksOf = (p: PersonSaju): YongsinPick[] =>
+    p.yongsins?.length ? p.yongsins
+      : p.yongsin ? [{ el: p.yongsin, kinds: ['억부'] }] : []
 
-  const hitText = (el: string) =>
-    stemEl === el ? `${ds} = ${el}` : branchEl === el ? `${db} = ${el}` : ''
+  const hitsOf = (p: PersonSaju) => picksOf(p).filter(y => dayEls.has(y.el))
+  const brideHits = hitsOf(bride)
+  const groomHits = hitsOf(groom)
+  const brideOk = brideHits.length > 0
+  const groomOk = groomHits.length > 0
+
+  /** 「乙 = 목(억부·격국)」 꼴. 여럿이면 ' · ' 로 잇는다. */
+  const hitText = (hits: YongsinPick[]) => hits.map(y => {
+    const ch = stemEl === y.el ? ds : db
+    return `${ch} = ${y.el}(${y.kinds.join('·')})`
+  }).join(' · ')
 
   const flags: WeddingFlags = {
     fixMyeongjeol: !day.isMyeongjeol,
@@ -148,8 +216,8 @@ export function judgeDay(day: DayInput, bride: PersonSaju, groom: PersonSaju): W
   return {
     ...flags,
     gongmangWho, chungWho, hyeongWho, hyeongKind,
-    brideHit: brideOk ? hitText(bride.yongsin) : '',
-    groomHit: groomOk ? hitText(groom.yongsin) : '',
+    brideHit: brideOk ? hitText(brideHits) : '',
+    groomHit: groomOk ? hitText(groomHits) : '',
     passFixed:
       flags.fixMyeongjeol && flags.fixGongmang && flags.fixChung && flags.fixHyeong,
   }

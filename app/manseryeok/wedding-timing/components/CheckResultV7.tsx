@@ -61,6 +61,13 @@ function summaryOf(d: DayResult['detail']): { tone: 'good' | 'soso' | 'bad'; hea
   return { tone: 'soso', head: '괜찮은 날', msg: '피할 것은 없는 날이에요' }
 }
 
+/** ★필요한 기운 — 「목(억부·격국) · 수(조후)」 꼴로 잇는다.
+ *   yongsins 가 비었으면 옛 자리(yongsin 하나)로 되돌아간다. */
+function yongsinLabel(p: { yongsin?: string; yongsins?: { el: string; kinds: string[] }[] }): string {
+  if (p.yongsins?.length) return p.yongsins.map(y => `${y.el}(${y.kinds.join('·')})`).join(' · ')
+  return p.yongsin || '—'
+}
+
 export default function CheckResultV7({
   results, bride, groom,
 }: {
@@ -93,11 +100,11 @@ export default function CheckResultV7({
             color: C.sub, lineHeight: 1.6,
           }}>
             <span style={{ flex: 1, textAlign: 'center' }}>
-              필요한 기운 <b style={{ color: C.brand }}>{groom.yongsin || '—'}</b>
+              필요한 기운 <b style={{ color: C.brand }}>{yongsinLabel(groom)}</b>
             </span>
             <span style={{ color: '#7D6B5A' }}>·</span>
             <span style={{ flex: 1, textAlign: 'center' }}>
-              필요한 기운 <b style={{ color: C.brand }}>{bride.yongsin || '—'}</b>
+              필요한 기운 <b style={{ color: C.brand }}>{yongsinLabel(bride)}</b>
             </span>
           </div>
         </div>

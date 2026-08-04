@@ -26,6 +26,13 @@ const C = {
   sub: '#B4785A', brand: '#96502E', accent: '#C8783C', soft: '#F6E3D6', warm: '#F5EDE6',
 }
 
+/** ★필요한 기운 — 「목(억부·격국) · 수(조후)」 꼴로 잇는다.
+ *   yongsins 가 비었으면 옛 자리(yongsin 하나)로 되돌아간다. */
+function yongsinLabel(p: { yongsin?: string; yongsins?: { el: string; kinds: string[] }[] }): string {
+  if (p.yongsins?.length) return p.yongsins.map(y => `${y.el}(${y.kinds.join('·')})`).join(' · ')
+  return p.yongsin || '—'
+}
+
 interface Props {
   result: WeddingV7Result
   onPickDay?: (day: DayResult) => void
@@ -99,11 +106,11 @@ export default function PickWeddingV7({ result, onPickDay }: Props) {
             color: C.sub, lineHeight: 1.6,
           }}>
             <span style={{ flex: 1, textAlign: 'center' }}>
-              필요한 기운 <b style={{ color: C.brand }}>{result.groom.yongsin || '—'}</b>
+              필요한 기운 <b style={{ color: C.brand }}>{yongsinLabel(result.groom)}</b>
             </span>
             <span style={{ color: '#7D6B5A' }}>·</span>
             <span style={{ flex: 1, textAlign: 'center' }}>
-              필요한 기운 <b style={{ color: C.brand }}>{result.bride.yongsin || '—'}</b>
+              필요한 기운 <b style={{ color: C.brand }}>{yongsinLabel(result.bride)}</b>
             </span>
           </div>
         </div>

@@ -10,9 +10,10 @@
 //               화면의 '예식하는 날' 토글이 거른다.
 //   [명절]      설·추석 연휴는 고정 배제. /api/holidays 의 이름으로 판정한다.
 
-import { judgeDay, type DayInput, type PersonSaju, type WeddingDetail } from './weddingFilterV7'
+import { judgeDay, type DayInput, type PersonSaju, type WeddingDetail, type YongsinPick } from './weddingFilterV7'
 import { splitGanji, calcHourPillar, STEMS, BRANCHES } from './weddingTables'
-import { calcYongsinCompat as calcYongsin } from '@/lib/saju/yongsinNew'
+import { calcYongsinNew } from '@/lib/saju/yongsinNew'
+import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
 import { getDayGanji } from '@/lib/saju/ganji'
 
 const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토']
@@ -112,7 +113,34 @@ async function fetchPersonSaju(p: RawPerson | null, roleName: string): Promise<P
     ].filter(pp => pp.stem !== '?' && pp.branch !== '?')
 
     const hb = hour.branch === '?' ? null : hour.branch
-    const ys = calcYongsin(pillars, day.stem, data.solarMonth, data.solarDay, hb)
+
+    // ★2026-08-04 — 용신을 «조후·억부·격국 셋» 으로 뽑습니다 (대표님 확정).
+    //
+    //   [왜 calcYongsinCompat 을 안 쓰나]
+    //     그 어댑터는 r.eokbu 하나만 꺼내 돌려줍니다. 조후·격국은 «버려집니다».
+    //     셋이 다 필요하므로 calcYongsinNew 를 직접 부릅니다.
+    //
+    //   ⚠️⚠️ 아래 두 줄은 calcYongsinCompat 의 «속을 그대로 옮긴 것» 입니다
+    //     (yongsinNew.ts:578~584). 심산 오행 점수를 그대로 넘겨야
+    //     ★억부용신 값이 «지금까지와 똑같이» 나옵니다.
+    //     calcYongsinCompat 이 바뀌면 ★여기도 함께 맞추십시오. 한쪽만 고치지 마십시오.
+    //   ⛔ lib/saju/yongsinNew.ts · simsanOhaeng.ts 는 «안 고칩니다». 부르기만 합니다.
+    const score = calcSimsanOhaeng(pillars, data.solarMonth, data.solarDay, hb)
+    const yn = calcYongsinNew(pillars, day.stem, score as never)
+
+    //   같은 오행이 두 법에서 나오면 한 줄로 합칩니다 → 「목(억부·격국)」
+    //   ⚠️ 조후는 봄·가을생이면 null 입니다. 격국도 못 잡는 명식이 있습니다.
+    //      «없으면 그냥 빼면» 됩니다. 억지로 채우지 마십시오.
+    const picks: YongsinPick[] = []
+    const addPick = (el: string | null | undefined, kind: string) => {
+      if (!el) return
+      const found = picks.find(p => p.el === el)
+      if (found) { if (!found.kinds.includes(kind)) found.kinds.push(kind) }
+      else picks.push({ el, kinds: [kind] })
+    }
+    addPick(yn?.eokbu?.yongsin, '억부')
+    addPick(yn?.johu?.element, '조후')
+    addPick(yn?.gyeokguk?.element, '격국')
 
     // 화면 원국표용 표시 라벨. 시를 모르면 시각을 빼고 적는다.
     const HOUR_NAME = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
@@ -124,8 +152,9 @@ async function fetchPersonSaju(p: RawPerson | null, roleName: string): Promise<P
       dayStem: day.stem,
       dayBranch: day.branch,
       ganji: day.stem + day.branch,
-      yongsin: ys.yongsin ?? '',
-      status: (ys as { status?: string }).status ?? '',
+      yongsin: yn?.eokbu?.yongsin ?? '',   // ★옛 자리 — 억부 하나 (되돌림용 기본값)
+      yongsins: picks,                     // ★조후·억부·격국을 모은 것
+      status: yn?.status ?? '',
       monthBranch: month.branch,
       pillars,
       birthLabel,
