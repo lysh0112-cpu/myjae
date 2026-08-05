@@ -289,7 +289,8 @@ function TarotInner() {
   return (
     <main style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: '430px', margin: '0 auto', paddingBottom: '40px' }}>
       <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-        @keyframes slideLeft{from{transform:translateX(0)}to{transform:translateX(-50%)}}`}</style>
+        @keyframes slideLeft{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+        @keyframes deckSlide{from{transform:translateX(0)}to{transform:translateX(-600px)}}`}</style>
       <div style={{
         position: 'sticky', top: 0, zIndex: 10,
         background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
@@ -443,7 +444,10 @@ function TarotInner() {
               </p>
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '22px', flexWrap: 'wrap' }}>
                 {picked.map((p, i) => (
-                  <div key={i} style={{ width: '44px', height: '64px', borderRadius: '7px', background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FAC775', fontSize: '13px' }}>{i + 1}</div>
+                  // ★번호 13px → 16px + 두껍게 (46부 19차 · 대표님 지시)
+                  //   44×64 칸 안에서 13px 은 너무 작아 «몇 장 뽑았는지» 가 한눈에 안 들어왔습니다.
+                  //   ⚠️ 칸(44×64)은 «누르는 것이 아니라» 보여 주기만 하는 자리라 그대로 둡니다.
+                  <div key={i} style={{ width: '44px', height: '64px', borderRadius: '7px', background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FAC775', fontSize: '16px', fontWeight: 500 }}>{i + 1}</div>
                 ))}
               </div>
               <button onClick={() => setStep('reveal')}
@@ -459,17 +463,72 @@ function TarotInner() {
             <>
               <p style={{ color: gold, fontSize: '14px', textAlign: 'center', marginBottom: '6px' }}>마음이 이끄는 카드를 눌러주세요</p>
               <p style={{ color: sub, fontSize: '12px', textAlign: 'center', marginBottom: '16px' }}>{picked.length} / {spread.count} 장 선택됨</p>
+              {/* ★2026-08-05 (46부 19차) — 카드를 «겹쳐 쌓아» 흐르게 합니다. [대표님 확정]
+                  [전]  카드가 8px 간격으로 «반듯이» 줄지어 흘렀습니다. 컨베이어 벨트 같았습니다.
+                  [후]  한 벌을 옆으로 쭉 밀어 놓은 모양 — 실제 타로 「스프레드」와 닮았습니다.
+
+                  ★겹침 30px 인 까닭 — «누를 자리» 때문입니다
+                    카드 폭 80 − 겹침 30 = ★실제로 눌리는 폭 50px
+                    ⛔ 겹침을 더 키우지 마십시오. 44px(손가락 최소선) 밑으로 내려갑니다.
+                       목업에서 44px 겹침을 재 보니 ★36px 만 남아 옆 카드가 눌렸습니다.
+                       (45부 3-6 교훈 — 44 가 누를 최소선입니다)
+
+                  ★zIndex 를 앞쪽이 위로 오게 둡니다 — 오른쪽 카드가 왼쪽을 «덮습니다».
+                    실제로 한 벌을 옆으로 밀면 그렇게 됩니다. 뒤집으면 어색해집니다.
+                  ★기울기 ±4° · 높낮이 ±3px 를 카드마다 «조금씩 다르게» 줍니다.
+                    규칙적으로 하면 또 기계처럼 보입니다. sin 으로 흩뜨립니다.
+                  ⚠️ transform 만 씁니다. width·left 를 건드리면 낡은 핸드폰이 버벅입니다.
+                  ★흐름 10초 → 15초. 「마음이 이끄는 카드를 누르세요」인데
+                    10초는 누르려는 순간 지나가 버렸습니다.
+
+                  🔴🔴 ★되돌아가는 «이음새» — 두 가지를 «함께» 맞춰야 합니다
+                    [겪은 일]  겹쳐 쌓기를 넣자마자 이음새가 튀었습니다.
+                      전에는 카드가 다 «똑같이» 생겨 되돌아가도 티가 안 났는데,
+                      이제 카드마다 기울기가 «달라» 되돌아가는 순간 무늬가 확 바뀝니다.
+                    [까닭]  옛 slideLeft 는 -50% 로 되돌아갑니다.
+                      띠 전체 폭 1230px 의 절반은 615px = ★12.3장. 딱 안 맞습니다.
+                    [고침]  ① 전용 ★deckSlide 로 «정확히 600px»(=12장) 만 움직입니다
+                            ② 기울기·높낮이를 ★i % 12 로 «12장 주기» 로 되풀이합니다
+                      ⇒ 13번째 카드가 1번째 자리에 «똑같은 모습» 으로 옵니다. 이음새가 없습니다.
+
+                    ⚠️⚠️ ★셋이 «묶여» 있습니다 — 카드 폭 80 · 겹침 30 · 이동 600 · 주기 12
+                       하나만 바꾸면 ★이음새가 다시 튑니다.
+                       바꾸실 때는  이동값 = (카드폭 − 겹침) × 주기  로 다시 셈해 주십시오.
+                       지금은 (80 − 30) × 12 = 600 입니다.
+                    ⛔ 옛 slideLeft 는 «그대로» 두었습니다. 다른 데서 씁니다. */}
               <div style={{ position: 'relative', height: '150px', overflow: 'hidden', borderRadius: '14px', background: '#FFFBF7', border }}>
-                <div style={{ display: 'flex', gap: '8px', padding: '15px 0', width: 'max-content', animation: 'slideLeft 10s linear infinite' }}>
-                  {[...Array(24)].map((_, i) => (
-                    <div key={i} onClick={drawOne}
-                      style={{ flex: '0 0 80px', height: '118px', borderRadius: '10px', background: 'linear-gradient(135deg,#3C3489,#2C2C2A)', border: '1px solid rgba(250,199,117,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#FAC775', fontSize: '26px' }}>✦</div>
-                  ))}
+                <div style={{ display: 'flex', padding: '15px 0', width: 'max-content', animation: 'deckSlide 15s linear infinite' }}>
+                  {[...Array(24)].map((_, i) => {
+                    const wob = (n: number) => Math.sin((i % 12) * n) * 0.5 + 0.5
+                    return (
+                      <div key={i} onClick={drawOne}
+                        style={{
+                          flex: '0 0 80px', height: '118px', borderRadius: '10px',
+                          background: 'linear-gradient(135deg,#3C3489,#2C2C2A)',
+                          border: '1px solid rgba(250,199,117,0.3)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          cursor: 'pointer', color: '#FAC775', fontSize: '26px',
+                          marginLeft: i ? '-30px' : 0,
+                          zIndex: 100 - i,
+                          boxShadow: '-4px 0 10px rgba(0,0,0,0.3)',
+                          transform: `rotate(${((wob(9.1) * 2 - 1) * 4).toFixed(1)}deg) translateY(${((wob(5.5) * 2 - 1) * 3).toFixed(1)}px)`,
+                        }}>✦</div>
+                    )
+                  })}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '16px', flexWrap: 'wrap' }}>
                 {picked.map((p, i) => (
-                  <div key={i} style={{ width: '44px', height: '64px', borderRadius: '7px', background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FAC775', fontSize: '13px' }}>{i + 1}</div>
+                  <div key={i} style={{
+                    width: '44px', height: '64px', borderRadius: '7px', background: '#2C2C2A',
+                    border: '1px solid rgba(250,199,117,0.3)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FAC775',
+                    /* ★2026-08-05 (46부 19차) — 13px 이 «너무 작게 보인다» 는 지적(대표님).
+                       16px + 두껍게(500). 칸(44×64)은 그대로 둡니다 — 넉넉합니다.
+                       ⚠️ 이 칸은 «누르는 자리가 아니라» 보여 주기만 하는 곳이라
+                          44px 최소선과 무관합니다. */
+                    fontSize: '16px', fontWeight: 500,
+                  }}>{i + 1}</div>
                 ))}
                 {[...Array(Math.max(0, spread.count - picked.length))].map((_, i) => (
                   <div key={`e${i}`} style={{ width: '44px', height: '64px', borderRadius: '7px', background: '#1f1f1d', border: '1px dashed rgba(255,255,255,0.15)' }} />
