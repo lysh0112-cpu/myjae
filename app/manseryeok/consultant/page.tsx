@@ -174,12 +174,19 @@ function ConsultantContent() {
   }, [isMaster, consultantId])
 
   // ---------- 설정 불러오기 ----------
+  //   ★2026-08-05 (47부) — 여기서 «이름도» 화면에 넣습니다. [대표님 지시]
+  //     [겪은 일]  매니저가 상담사 화면에 들어가도 오른쪽 위에 «매니저 본인 닉네임» 이 떴습니다.
+  //     [까닭]  위 138줄 주석에 「URL 의 consultantId 로 그 상담사 이름을 표시한다」라
+  //       적혀 있었는데, 정작 이 자리가 name 을 «가져오면서도 안 쓰고» 있었습니다.
+  //       (ui_settings 만 쓰고 name 은 버렸습니다)
+  //     ⚠️ 상담사 «본인» 은 이미 위에서 con.name 으로 채워집니다. 같은 값이라 탈이 없습니다.
   useEffect(() => {
     if (!consultantId) return
     supabase.from('consultants').select('name, ui_settings')
       .eq('id', consultantId).single()
       .then(({ data }) => {
         if (data?.ui_settings) setSettings({ ...DEFAULT_SETTINGS, ...data.ui_settings })
+        if (data?.name) setConsultantName(data.name as string)
       })
   }, [consultantId])
 
@@ -541,8 +548,26 @@ function ConsultantContent() {
         )}
 
         {/* 우측: 상담사명 + 로그아웃 */}
+        {/* ★2026-08-05 (47부) — 이름 표시를 둘로 갈랐습니다. [대표님 지시]
+            ① 상담사 본인      → 「오금란 님」
+            ② 매니저가 대리   → 「오금란 선생님 화면」 + 「매니저 대리」 배지
+            [왜 배지를 달았나]  이름만 바꾸면 매니저가 «자기 계정으로 착각» 할 수 있습니다.
+              고객 사주·상담 기록을 다루는 화면이라 «누구 자리인지» 가 또렷해야 합니다.
+            [대비 실측]  글자색을 #7766aa(★3.78:1) → #9a98b0(★6.64:1) 로 올렸습니다.
+              #9a98b0 은 ★이 화면이 이미 쓰던 색입니다 (ConsultTimer·CustomerAiAnalysis).
+            ⛔ #7766aa 로 되돌리지 마십시오. */}
         <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:'8px'}}>
-          <span style={{fontSize:'11px', color:'#7766aa'}}>{consultantName || '상담사'} 님</span>
+          {isMaster && consultantId && (
+            <span style={{fontSize:'9px', padding:'1px 5px', borderRadius:'4px',
+              border:'1px solid rgba(250,199,117,0.5)', color:'#FAC775', whiteSpace:'nowrap'}}>
+              매니저 대리
+            </span>
+          )}
+          <span style={{fontSize:'11px', color:'#9a98b0', whiteSpace:'nowrap'}}>
+            {consultantName
+              ? (isMaster && consultantId ? `${consultantName} 선생님 화면` : `${consultantName} 님`)
+              : '상담사'}
+          </span>
           <button onClick={handleLogout}
             style={{fontSize:'10px', padding:'2px 8px', borderRadius:'5px', border:'1px solid rgba(193,69,69,0.65)', background:'transparent', color:'rgba(255,100,100,0.7)', cursor:'pointer'}}>
             로그아웃

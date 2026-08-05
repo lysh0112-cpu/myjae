@@ -20,10 +20,36 @@ export function useConsultantState() {
     return h === '모름' || h === null ? null : parseInt(h)
   })
   // consultantId: URL에 있으면 사용, 없으면 로그인 계정에서 자동으로 찾아옴
-  const [consultantId, setConsultantId] = useState(searchParams.get('consultantId') || '')
+  //
+  // ══════════════════════════════════════════════════════════════════════
+  // ★2026-08-05 (47부) — 주소를 «매번 다시 읽도록» 고쳤습니다.
+  //
+  //   [겪은 일]  대표님 — 「상담사를 클릭하면 해당 상담사 화면으로 들어가질 못하네」
+  //     매니저가 「어느 상담사의 화면을 볼까요?」에서 이름을 눌러도
+  //     ★주소는 ?consultantId=… 로 «바뀌는데» 화면은 고르기 그대로였습니다.
+  //
+  //   [까닭]  전에는 이랬습니다 —
+  //       const [consultantId, setConsultantId] = useState(searchParams.get('consultantId') || '')
+  //     ★useState 의 초기값은 «처음 붙을 때 한 번» 만 읽힙니다.
+  //     상담사를 누르면 router.push 로 «같은 주소» 에 물음표만 붙여 갑니다.
+  //     ⇒ Next 는 화면을 다시 그리기만 하고 ★«새로 붙이지 않습니다».
+  //     ⇒ searchParams 는 바뀌는데 consultantId 상태는 '' 그대로였습니다.
+  //     ⇒ page.tsx 의  isMaster && !consultantId  가 계속 참 → 고르기 화면에 갇혔습니다.
+  //     아래 useEffect 도 deps 가 [] 라 다시 돌지 않아 손쓸 자리가 없었습니다.
+  //
+  //   [고침]  ★주소값은 «상태로 담지 않고» 그릴 때마다 읽습니다.
+  //     로그인 계정에서 찾아온 값만 상태(myConsultantId)로 둡니다.
+  //   ⚠️ 상담사 «본인» 이 주소 없이 들어오는 길은 «그대로» 입니다 (아래 fallback).
+  //   ⛔ useState(searchParams.get(...)) 로 되돌리지 마십시오. 같은 증상이 다시 납니다.
+  //   ⚠️ 위 12~17줄의 gender·calType·leapMonth 도 «같은 결» 입니다.
+  //      그쪽은 화면 안에서 주소가 안 바뀌어 지금은 탈이 없어 «안 건드렸습니다».
+  // ══════════════════════════════════════════════════════════════════════
+  const urlConsultantId = searchParams.get('consultantId') || ''
+  const [myConsultantId, setMyConsultantId] = useState('')
+  const consultantId = urlConsultantId || myConsultantId
   useEffect(() => {
     // URL에 consultantId가 이미 있으면 그대로 사용 (기존 동작 유지)
-    if (searchParams.get('consultantId')) return
+    if (urlConsultantId) return
     // URL에 없으면 → 로그인한 사람의 profiles.consultant_id를 가져옴
     async function loadMyConsultantId() {
       const { data: { user } } = await supabase.auth.getUser()
@@ -34,11 +60,11 @@ export function useConsultantState() {
         .eq('id', user.id)
         .single()
       if (data?.consultant_id) {
-        setConsultantId(data.consultant_id)
+        setMyConsultantId(data.consultant_id)
       }
     }
     loadMyConsultantId()
-  }, [])
+  }, [urlConsultantId])
   useEffect(() => {
     setConsultationId(searchParams.get('consultationId') || null)
     setCustomerPhone(searchParams.get('customerPhone') || '')
