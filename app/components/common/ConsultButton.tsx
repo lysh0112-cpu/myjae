@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { LINE_OUTER } from '@/lib/ui/line'
 
 type Props = {
   priceKey: string                  // consult_prices의 price_key (예: 'saju')
@@ -163,7 +164,19 @@ export default function ConsultButton({ priceKey, mode, searchParams, payload }:
     //   ⚠️ 11차에 버튼 «높이» 를 부품 안에서 잡은 것과 «같은 결» 입니다.
     //   ⛔ 부르는 쪽에서 다시 marginTop 을 주지 마십시오. ★두 겹으로 벌어집니다.
     <div className="rounded-2xl p-5"
-      style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58', marginTop: 16, marginBottom: 16 }}>
+      // ★2026-08-05 (47부 19차) — 카드 선을 ★선 부품(LINE_OUTER)에서 받습니다. [대표님 지시]
+      //   [전]  0.5px #9c7a58  (45부 확정색 · 3.93:1)
+      //   [후]  ★lib/ui/line.ts 의 LINE_OUTER  (1px #ea8c46 · 2.52:1)
+      //   ⚠️⚠️ 이 부품은 ★아홉 서비스 «열두 화면» 이 함께 씁니다 —
+      //      사주 · 궁합 · 물상 · 진로적성 · 결혼택일 둘 · 출산택일 둘 · 이사택일 둘
+      //      · 내 이름 정밀분석 · 내 아기 명품이름
+      //      ⇒ 여기를 바꾸면 ★열두 화면의 상담 카드가 «한꺼번에» 바뀝니다.
+      //   ⚠️ 「내 이름 정밀분석」은 18차에 화면 전체를 2.52:1 로 옮겼는데
+      //      이 카드만 «혼자» 옛 색으로 남아 있었습니다. 그래서 맞췄습니다.
+      //   ⚠️ 다른 열한 화면은 아직 카드 선이 #9c7a58(3.93:1) 입니다.
+      //      ⇒ 지금은 ★상담 카드만 «조금 옅은» 선입니다. 그 화면들을 옮기면 맞아집니다.
+      //   ⛔ 여기 값을 직접 적지 마십시오. lib/ui/line.ts 의 LINE_OUTER 를 고치십시오.
+      style={{ background: '#FFFBF7', border: LINE_OUTER, marginTop: 16, marginBottom: 16 }}>
       <div className="flex items-center gap-2 mb-2">
         <span className="text-lg" aria-hidden="true">🔮</span>
         <h2 className="text-base font-bold" style={{ color: '#3a2e28' }}>전문가와 상담하기</h2>

@@ -55,6 +55,7 @@ import NamingCertificateButton, {
   type CertChar, type CertGyeok,
 } from '@/app/manseryeok/naming/components/NamingCertificate'
 import { soundOhaengOf } from '@/lib/saju/sound/normalize'
+import { LINE_OUTER, LINE_WARN } from '@/lib/ui/line'
 
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
 
@@ -174,7 +175,7 @@ const ink = '#1a1a1a'          // 본문 진한 텍스트
 const sub = '#b4785a'          // 보조 텍스트
 const subWarm = '#96502e'      // 따뜻한 강조 텍스트
 const rose = '#c8506e'         // 삭제·경고 포인트
-const border = '0.5px solid #9c7a58'
+const border = LINE_OUTER
 
 // ★isAvoidChar 는 lib/saju/hanjaRow.ts 의 것을 씁니다 (AVOID_KEYWORDS 도 함께 옮겼습니다)
 function isAvoidChar(row: HanjaRow): boolean { return isAvoidCharShared(row) }
@@ -192,7 +193,7 @@ function PitchHeader({ title, onBack, onHome }: { title: string; onBack: () => v
       position: 'sticky', top: 0, zIndex: 50,
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '13px 16px', background: 'rgba(250,250,248,0.96)',
-      backdropFilter: 'blur(10px)', borderBottom: '0.5px solid #9c7a58',
+      backdropFilter: 'blur(10px)', borderBottom: LINE_OUTER,
     }}>
       <button onClick={onBack} aria-label="뒤로"
         style={{ background: 'none', border: 'none', color: '#999', fontSize: '20px', cursor: 'pointer', padding: 0, lineHeight: 1 }}>←</button>
@@ -837,7 +838,7 @@ function DiagnosisInner() {
       style={{
         display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
         borderRadius: '12px', background: '#fffbf7', cursor: 'pointer',
-        border: '0.5px solid #9c7a58', opacity: dim ? 0.45 : 1,
+        border: LINE_OUTER, opacity: dim ? 0.45 : 1,
       }}>
       <span style={{ fontSize: '26px', fontWeight: 'bold', color: gold, minWidth: '32px', textAlign: 'center' }}>
         {row.hanja}
@@ -891,7 +892,7 @@ function DiagnosisInner() {
                 maxLength={5}
                 style={{
                   flex: 1, padding: '13px', borderRadius: '12px', background: '#FDF6F0',
-                  border: '0.5px solid #9c7a58', color: '#1a1a1a', fontSize: '16px',
+                  border: LINE_OUTER, color: '#1a1a1a', fontSize: '16px',
                 }} />
               <button onClick={applyName}
                 style={{ padding: '13px 20px', borderRadius: '12px', background: gold, border: 'none', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>
@@ -964,7 +965,7 @@ function DiagnosisInner() {
                 {!chars[0] && syllables.length >= 2 && (
                   <div style={{
                     fontSize: '12px', lineHeight: 1.7, color: '#96502e',
-                    background: 'rgba(200,120,60,0.07)', border: '1px solid rgba(200,120,60,0.25)',
+                    background: 'rgba(200,120,60,0.07)', border: LINE_OUTER,
                     borderRadius: '10px', padding: '10px 12px', marginBottom: '16px', textAlign: 'center',
                   }}>
                     먼저 <b>성씨 한자</b>를 골라주세요<br />
@@ -986,7 +987,7 @@ function DiagnosisInner() {
                 {dueumMsg && (
                   <div style={{
                     fontSize: '11px', lineHeight: 1.7, color: '#5c3a1e',
-                    background: 'rgba(200,120,60,0.07)', border: '1px solid rgba(200,120,60,0.25)',
+                    background: 'rgba(200,120,60,0.07)', border: LINE_OUTER,
                     borderRadius: '10px', padding: '10px 12px', marginBottom: '20px',
                   }}>
                     <span style={{ color: gold, fontWeight: 600 }}>알려 드립니다 · </span>
@@ -1088,7 +1089,7 @@ function DiagnosisInner() {
             {/* ★2026-07-30 (3단계) — 실패했을 때 «빈 화면» 대신 이유와 [다시 시도] 를 냅니다 */}
             {!loading && failWhy && (
               <div style={{
-                background: cardBg, border: '1px solid #dc8888', borderRadius: '14px',
+                background: cardBg, border: LINE_WARN, borderRadius: '14px',
                 padding: '22px 18px', textAlign: 'center', marginBottom: '16px',
               }}>
                 <div style={{ fontSize: '26px', marginBottom: '8px' }}>🌧️</div>
@@ -1274,7 +1275,7 @@ function DiagnosisInner() {
                   <button onClick={() => router.push(storagePath)}
                     style={{
                       padding: '13px 6px', borderRadius: '12px',
-                      background: 'rgba(200,120,60,0.10)', border: '0.5px solid #9c7a58',
+                      background: 'rgba(200,120,60,0.10)', border: LINE_OUTER,
                       color: subWarm, fontSize: '13px', fontWeight: 500, cursor: 'pointer',
                     }}>
                     📜 {storageLabel}

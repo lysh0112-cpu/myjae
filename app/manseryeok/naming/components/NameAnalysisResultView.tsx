@@ -33,6 +33,7 @@ import NamingAptitude from '@/app/manseryeok/naming/diagnosis/components/NamingA
 import PerspectiveAccordion, { Stars, type PerspectiveCommentary } from '@/app/manseryeok/components/PerspectiveAccordion'
 import type { StarResult, PerspectiveStar } from '@/lib/saju/starRating'
 import type { Ohaeng } from '@/lib/saju/ohaeng'
+import { LINE_OUTER, LINE_INNER } from '@/lib/ui/line'
 
 /** 등급 색 — ⚠️ 새 색표를 만들지 않습니다. 이 화면 안 세 값뿐입니다 */
 function gradeTone(g: string): string {
@@ -55,7 +56,7 @@ const SUMMARY_SUBS = [
 
 const GOLD = '#c8783c'
 const CARD = '#FFFBF7'
-const LINE = '#f0e0d5'
+// ★2026-08-05 (47부 18차) — 옛 선 상수를 걷었습니다. 값은 lib/ui/line.ts 에 있습니다.
 
 /** 눌림 모션 — 화면끼리 손맛을 맞춥니다 */
 const PRESS = { transition: 'all .12s cubic-bezier(.4,0,.2,1)' } as const
@@ -165,7 +166,7 @@ export default function NameAnalysisResultView(p: NameAnalysisResultViewProps) {
             {p.badge.rank != null && (
               <span style={{
                 fontSize: 11, fontWeight: 600, color: GOLD,
-                background: '#fff', border: `1px solid ${LINE}`,
+                background: '#fff', border: LINE_OUTER,
                 padding: '4px 11px', borderRadius: 12,
               }}>
                 추천 {p.badge.rank}순위
@@ -187,7 +188,7 @@ export default function NameAnalysisResultView(p: NameAnalysisResultViewProps) {
         {p.summaryRows && p.summaryRows.length > 0 && (
           <div style={{
             marginTop: 14, textAlign: 'left',
-            background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: '14px 16px',
+            background: CARD, border: LINE_OUTER, borderRadius: 14, padding: '14px 16px',
           }}>
             {/* ══════════════════════════════════════════════════════
                 ★2026-08-01 (43부 27차) — 요약 카드를 «아코디언과 같은 체계» 로
@@ -208,7 +209,7 @@ export default function NameAnalysisResultView(p: NameAnalysisResultViewProps) {
                     width: '100%', display: 'flex', alignItems: 'center', gap: 8,
                     // ★누르는 자리를 넉넉히 — 손가락이 닿아야 «누를 수 있다» 고 압니다
                     padding: '11px 2px', background: 'none', border: 'none',
-                    borderBottom: i === p.summaryRows!.length - 1 ? 'none' : `1px solid ${LINE}`,
+                    borderBottom: i === p.summaryRows!.length - 1 ? 'none' : LINE_INNER,
                     cursor: 'pointer', textAlign: 'left',
                   }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: GOLD, flexShrink: 0 }}>
@@ -234,7 +235,7 @@ export default function NameAnalysisResultView(p: NameAnalysisResultViewProps) {
               )
             })}
             {p.summaryOverall && (
-              <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${LINE}`, textAlign: 'center' }}>
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: LINE_INNER, textAlign: 'center' }}>
                 <span style={{ fontSize: 12, color: '#6B5B50' }}>종합 </span>
                 <span style={{ fontSize: 20, fontWeight: 700, color: gradeTone(p.summaryOverall) }}>
                   {p.summaryOverall}
@@ -292,7 +293,7 @@ export default function NameAnalysisResultView(p: NameAnalysisResultViewProps) {
           style={{
             ...PRESS,
             width: '100%', padding: 13, borderRadius: 12, marginBottom: 12,
-            background: CARD, border: `1px solid ${GOLD}`, color: GOLD,
+            background: CARD, border: LINE_OUTER, color: GOLD,
             fontSize: 13, fontWeight: 600, cursor: 'pointer',
           }}>
           {p.otherHanjaLabel ?? '다른 추천 한자 보기'} →

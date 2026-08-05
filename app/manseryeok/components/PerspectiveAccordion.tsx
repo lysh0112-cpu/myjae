@@ -12,13 +12,14 @@ import { useEffect, useState } from 'react'
 import Stars from '@/app/components/common/StarRating'
 // ★2026-07-30 (3단계-b) — 관점별 별점 (대표님 지시)
 import { starGlyphs, type PerspectiveStar, type StarResult } from '@/lib/saju/starRating'
+import { LINE_OUTER } from '@/lib/ui/line'
 
 // diagnosis/page.tsx와 동일 팔레트
 const cardBg = '#fffbf7'
 const gold = '#c8783c'
 const ink = '#1a1a1a'
 const sub = '#b4785a'
-const border = '0.5px solid #9c7a58'
+const border = LINE_OUTER   // ★2026-08-05 (47부 18차) — 선 부품으로
 const accent = '#e6be9f' // 3단 좌측 라인
 
 export interface Perspective {
@@ -237,7 +238,7 @@ export default function PerspectiveAccordion({
 
       {/* 맺음말 — 항상 펼침 */}
       {commentary.conclusion && (
-        <div style={{ background: 'rgba(200,120,60,0.07)', border: `1px solid ${gold}`, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
+        <div style={{ background: 'rgba(200,120,60,0.07)', border: LINE_OUTER, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
           <div style={{ fontSize: '12px', color: sub, marginBottom: '8px', textAlign: 'center' }}>맺음</div>
           <div style={{ fontSize: '13px', color: ink, lineHeight: 1.9, textAlign: 'center' }}>
             {commentary.conclusion}

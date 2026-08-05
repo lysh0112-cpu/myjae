@@ -30,6 +30,8 @@ import { judgeOhaengGijil, judgeGyeyeol, judgeJobFit } from '@/lib/saju/career'
 import { calcJijangganBridge } from '@/lib/saju/career/jijangganBridge'
 import { calcNamingBridge, type NamingBridgeResult } from '@/lib/saju/career/namingBridge'
 import type { CareerCard } from '@/lib/saju/career/types'
+import { LINE_OUTER, LINE_INNER } from '@/lib/ui/line'
+import { CHIP_BORDER, CHIP_RADIUS, CHIP_PADDING, CHIP_FONT_SIZE } from '@/lib/ui/line'
 
 type Ohaeng = '목' | '화' | '토' | '금' | '수'
 
@@ -51,7 +53,7 @@ export interface NamingAptitudeProps {
 }
 
 const CARD = '#FFFBF7'
-const LINE = '#f0e0d5'
+// ★2026-08-05 (47부 18차) — 옛 선 상수를 걷었습니다. 값은 lib/ui/line.ts 에 있습니다.
 const GOLD = '#c8783c'
 const INK = '#5c3a1e'
 
@@ -101,13 +103,13 @@ export default function NamingAptitude(p: NamingAptitudeProps) {
       {/* ── 五. 이름에 담을 기운 ── */}
       {naming && (naming.fill.length > 0 || naming.avoid.length > 0) && (
         <div style={{
-          background: CARD, border: `1px solid ${LINE}`, borderRadius: 14,
+          background: CARD, border: LINE_OUTER, borderRadius: 14,
           padding: '13px 12px', marginBottom: 12,
         }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: GOLD, marginBottom: 9 }}>
             이름에 담을 기운
           </div>
-          <div style={{ borderLeft: `2px solid ${LINE}`, paddingLeft: 9 }}>
+          <div style={{ borderLeft: LINE_INNER, paddingLeft: 9 }}>
             <div style={{ fontSize: 11.5, color: INK, lineHeight: 1.8 }}>
               {naming.fill.length > 0 && (
                 <>이름에 먼저 담아 보실 기운은{' '}
@@ -133,7 +135,7 @@ export default function NamingAptitude(p: NamingAptitudeProps) {
 
       {/* ── 六. 사주 명리적성 — ★접힌 채 시작 ── */}
       <div style={{
-        background: CARD, border: `1px solid ${LINE}`, borderRadius: 14,
+        background: CARD, border: LINE_OUTER, borderRadius: 14,
         padding: '13px 12px', marginBottom: 14,
       }}>
         <button
@@ -226,9 +228,16 @@ function ElChip({ el, label, muted }: { el: Ohaeng; label: string; muted?: boole
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5,
-      fontSize: 11, padding: '3px 9px', borderRadius: 11,
+      // ★2026-08-05 (47부 18차) — Chip(NamingSajuSummary)과 «같은 치수» 로 맞췄습니다.
+      //   [전] padding 3px 9px · radius 11 → 높이 ★19.2px
+      //   [후] padding 5px 10px · radius 14 → 높이 ★23.2px (Chip 과 같음)
+      //   ⛔ 한쪽만 바꾸지 마십시오. 두 알약이 «나란히» 놓입니다.
+      // ★2026-08-05 (47부 18차) — 알약 값을 «부품» 에서 받습니다 [대표님 지시]
+      //   ⚠️ 위 Chip(NamingSajuSummary)과 ★«같은 값» 을 씁니다. 전에는 4px 어긋났습니다.
+      //   ⛔ 여기 숫자를 직접 적지 마십시오. lib/ui/line.ts 의 CHIP_* 를 고치십시오.
+      fontSize: CHIP_FONT_SIZE, padding: CHIP_PADDING, borderRadius: CHIP_RADIUS,
       background: muted ? '#f2eee9' : '#fff',
-      border: `1px solid ${LINE}`, color: muted ? '#7a6a5c' : INK,
+      border: CHIP_BORDER, color: muted ? '#7a6a5c' : INK,
     }}>
       <span style={{
         width: 8, height: 8, borderRadius: 4, background: EL_CHART[el],

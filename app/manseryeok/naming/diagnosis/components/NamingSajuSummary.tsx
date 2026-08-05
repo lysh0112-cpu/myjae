@@ -34,6 +34,8 @@ import { calcSimsanOhaeng, grade as gradeOfPoints } from '@/lib/saju/simsanOhaen
 import { calcYongsinNew } from '@/lib/saju/yongsinNew'
 import { getGongmang } from '@/lib/saju'
 import { calcJijangganBridge } from '@/lib/saju/career/jijangganBridge'
+import { LINE_OUTER, LINE_INNER } from '@/lib/ui/line'
+import { CHIP_BORDER, CHIP_RADIUS, CHIP_PADDING, CHIP_FONT_SIZE } from '@/lib/ui/line'
 
 type Ohaeng = '목' | '화' | '토' | '금' | '수'
 const EL5: Ohaeng[] = ['목', '화', '토', '금', '수']
@@ -52,7 +54,7 @@ export interface NamingSajuSummaryProps {
 }
 
 const CARD = '#FFFBF7'
-const LINE = '#f0e0d5'
+// ★2026-08-05 (47부 18차) — 옛 선 상수를 걷었습니다. 값은 lib/ui/line.ts 에 있습니다.
 const GOLD = '#c8783c'
 const INK = '#3a2e28'
 
@@ -94,7 +96,7 @@ export default function NamingSajuSummary({
 
   return (
     <div style={{
-      background: CARD, border: `1px solid ${LINE}`, borderRadius: 14,
+      background: CARD, border: LINE_OUTER, borderRadius: 14,
       padding: '14px 12px', marginBottom: 16,
     }}>
       <div style={{ fontSize: 12, fontWeight: 700, color: GOLD, marginBottom: 10 }}>
@@ -108,7 +110,7 @@ export default function NamingSajuSummary({
       {jj?.jijanggan && jj.daysAfterJol != null && (
         <div style={{
           marginTop: 10, fontSize: 11, color: '#6b5340', lineHeight: 1.7,
-          background: '#faf3ec', border: `0.5px solid ${LINE}`, borderRadius: 9, padding: '8px 10px',
+          background: '#faf3ec', border: LINE_INNER, borderRadius: 9, padding: '8px 10px',
         }}>
           태어난 달({jj.monthBranch})의 절기가 든 뒤 <b style={{ color: GOLD }}>{jj.daysAfterJol.toFixed(1)}일째</b>,
           {' '}그 자리의 기운은 <b style={{ color: GOLD }}>{jj.jijanggan.currentGan}</b>
@@ -177,8 +179,10 @@ function Chip({ label, value, el }: { label: string; value: string; el?: Ohaeng 
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5,
-      fontSize: 11, padding: '5px 10px', borderRadius: 14,
-      background: '#fff', border: `1px solid ${LINE}`, color: INK,
+      // ★2026-08-05 (47부 18차) — 알약 값을 «부품» 에서 받습니다 [대표님 지시]
+      //   ⛔ 여기 숫자를 직접 적지 마십시오. lib/ui/line.ts 의 CHIP_* 를 고치십시오.
+      fontSize: CHIP_FONT_SIZE, padding: CHIP_PADDING, borderRadius: CHIP_RADIUS,
+      background: '#fff', border: CHIP_BORDER, color: INK,
     }}>
       {el && (
         <span style={{
