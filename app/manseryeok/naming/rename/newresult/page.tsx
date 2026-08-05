@@ -49,7 +49,8 @@ const GOLD = '#c8783c'
 // ══════════════════════════════════════════════════════════════════
 const CARD = '#FFFFFF'
 /** ★보이는 테두리 — 이 파일에서 «선» 은 전부 이 값을 쓰십시오 */
-const LINE = '#DFD9D2'
+// ★2026-08-05 (47부 24차) — 옛 선 상수 LINE(#DFD9D2)을 걷었습니다.
+//   카드 선은 lib/ui/line.ts 의 LINE_OUTER 로 옮겼습니다.
 /** 바탕 — 카드가 떠 보이도록 한 단 낮춥니다 */
 const BG = '#F4F2EF'
 /** ★7차 — 안내 글자를 «짙게». #b4785a 는 흰 카드 위에서 흐렸습니다 */
@@ -692,7 +693,7 @@ function NewResultInner() {
           onClick={() => router.push('/manseryeok/naming/naming-storage')}
           style={{
             width: '100%', marginBottom: 14, padding: '11px 12px', borderRadius: 12,
-            background: CARD, border: `1px solid ${LINE}`, color: '#6b5340',
+            background: CARD, border: LINE_OUTER, color: '#6b5340',
             fontSize: 11.5, cursor: 'pointer', lineHeight: 1.6, textAlign: 'center',
           }}>
           전에 지으신 이름 {keepPastTries(tries)}개는 작명 보관함에 있어요 →
@@ -760,7 +761,7 @@ function NewResultInner() {
               </div>
             </>
           ) : (
-            <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: '16px', textAlign: 'center' }}>
+            <div style={{ background: CARD, border: LINE_OUTER, borderRadius: 14, padding: '16px', textAlign: 'center' }}>
               <div style={{ fontSize: 13, color: INK, lineHeight: 1.7, marginBottom: 12 }}>
                 이용 가능 횟수를 모두 사용했어요.<br />다시 결제하시면 이어서 이용하실 수 있어요.
               </div>
@@ -955,7 +956,7 @@ function NewResultInner() {
               다른 이름 또 지어보기 →
             </button>
           ) : (
-            <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: '13px 16px', fontSize: 12, color: SUB, lineHeight: 1.7, textAlign: 'center' }}>
+            <div style={{ background: CARD, border: LINE_OUTER, borderRadius: 14, padding: '13px 16px', fontSize: 12, color: SUB, lineHeight: 1.7, textAlign: 'center' }}>
               {TRY_LIMIT}회를 모두 사용했어요.<br />지금까지 지어본 이름 중에서 골라보세요.
             </div>
           )}
@@ -997,7 +998,7 @@ function Header({ router }: { router: ReturnType<typeof useRouter> }) {
     <div style={{
       position: 'sticky', top: 0, zIndex: 50,
       display: 'flex', alignItems: 'center', gap: 10, padding: '13px 16px',
-      background: 'rgba(244,242,239,0.96)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${LINE}`,
+      background: 'rgba(244,242,239,0.96)', backdropFilter: 'blur(10px)', borderBottom: LINE_OUTER,
     }}>
       <button onClick={() => router.push('/manseryeok/naming/rename/newhanja')} aria-label="뒤로" style={{ background: 'none', border: 'none', color: '#999', fontSize: 20, cursor: 'pointer', padding: 0 }}>{'\u2039'}</button>
       <span style={{ fontSize: 15, fontWeight: 500, color: INK }}>새 이름 결과</span>

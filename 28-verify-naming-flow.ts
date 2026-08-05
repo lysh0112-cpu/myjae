@@ -967,11 +967,23 @@ console.log('\n━━ ⑲-x ★배지가 «진입 경로» 를 따르는가 (43�
 
 console.log('\n━━ ⑲-y ★배색 — 바탕에서 누런 기를 뺐는가 (43부 7차) ━━')
 {
+  // ★2026-08-05 (47부 24차) — newresult 만 «선 부품» 으로 옮겼습니다 [대표님 지시]
+  //   [까닭]  대표님 — 「모든 라인들을 부품처럼 통일하면 어떤가」
+  //     newresult 의 카드 선이 ★lib/ui/line.ts 의 LINE_OUTER 로 갔습니다.
+  //     그래서 그 파일에는 ★const LINE 상수가 «없습니다».
+  //   ⚠️ newname · newhanja 는 ★아직 안 옮겼습니다. 그 둘은 옛 검사 그대로입니다.
+  //   ⚠️ 그 둘도 옮기시면 ★아래 LINE 검사를 «걷고» 36-verify-line-token 의
+  //      MOVED 목록에 더하십시오.
+  //   ⛔ 바탕(BG)·글자(SUB) 검사는 «그대로» 둡니다 — 선 통일과 무관합니다.
   for (const [n, src] of [['newname', S.nn], ['newhanja', S.nh], ['newresult', S.nr]] as const) {
     check(/const BG = '#F4F2EF'/.test(src), `${n} — 바탕이 «오프화이트» 입니다`)
-    check(/const LINE = '#DFD9D2'/.test(src), `${n} — 테두리가 중성색입니다`)
     check(/const SUB = '#6B5B50'/.test(src), `${n} — 안내 글자가 «짙어졌습니다»`)
     check(!/const BG = '#F5E9DE'/.test(src), `${n} — 베이지 바탕이 남아 있지 않습니다`)
+    if (n === 'newresult') {
+      check(/from '@\/lib\/ui\/line'/.test(src), `${n} — ★선 부품을 씁니다 (LINE 상수 없음)`)
+    } else {
+      check(/const LINE = '#DFD9D2'/.test(src), `${n} — 테두리가 중성색입니다 (아직 안 옮김)`)
+    }
   }
   const pick = codeOf(S.pick)
   check(/function chipStyle\(on: boolean\)/.test(pick),
@@ -1036,7 +1048,13 @@ console.log('\n━━ ⑲-u 🔴 배색 — 카드가 바탕에 «묻히지» �
   for (const [n, src] of [['newname', S.nn], ['newhanja', S.nh], ['newresult', S.nr]] as const) {
     check(/const CARD = '#FFFFFF'/.test(src), `${n} — 카드가 «흰색» 입니다`)
     // ★7차에 중성색(#DFD9D2)으로 다시 잡았습니다 — 아래 ⑲-y 가 값을 봅니다
-    check(/const LINE = '#/.test(src), `${n} — 테두리가 «보이는» 선입니다`)
+    // ★2026-08-05 (47부 24차) — newresult 는 «선 부품» 으로 옮겼습니다.
+    //   그 파일에는 const LINE 이 «없습니다». 대신 lib/ui/line.ts 를 부릅니다.
+    if (n === 'newresult') {
+      check(/from '@\/lib\/ui\/line'/.test(src), `${n} — 테두리를 ★선 부품에서 받습니다`)
+    } else {
+      check(/const LINE = '#/.test(src), `${n} — 테두리가 «보이는» 선입니다`)
+    }
     check(!/'1px solid rgba\(200,120,60,0\.10\)'/.test(src),
       `${n} — «안 보이던» 테두리가 남아 있지 않습니다`)
   }
