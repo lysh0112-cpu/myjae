@@ -19,6 +19,7 @@ import type { DayResult } from '../lib/recommendV7'
 import WeddingTermModal from './WeddingTermModal'
 import CoupleWonguk from '@/app/manseryeok/couple-result-new/components/CoupleWonguk'
 import type { PersonSaju } from '../lib/weddingFilterV7'
+import ConsultButton from '@/app/components/common/ConsultButton'
 
 const C = {
   card: '#FFFBF7', line: '#9c7a58', ink: '#3A2E28',
@@ -192,6 +193,18 @@ export default function CheckResultV7({
       </div>
 
       <WeddingTermModal termKey={help} onClose={() => setHelp(null)} />
+
+      {/* ★2026-08-05 (47부 7차) — 전문가 상담 [대표님 지시]
+          「전체 9개 모든 서비스 결과화면 하단에 공용부품을 생성해」
+          ★여기는 결혼택일 · 정한 날 봐주기 입니다.
+          ⚠️ wedding 는 «화면 둘» 이 «같은 price_key» 를 씁니다 —
+             좋은 날 찾기 · 정한 날 봐주기. 관리자 토글 하나로 «함께» 켜지고 꺼집니다.
+          ⚠️ consult_prices 에 이 줄이 «있어야» 보입니다. 없으면 통째로 숨습니다(안전).
+          ⛔ 이 화면만 다른 price_key 로 바꾸지 마십시오. 토글이 갈라집니다. */}
+      <div style={{ marginTop: 16 }}>
+        <ConsultButton priceKey="wedding" mode="wedding" />
+      </div>
+
     </div>
   )
 }

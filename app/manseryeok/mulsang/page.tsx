@@ -11,6 +11,7 @@ import OhaengPentagon from '@/app/manseryeok/result-new/OhaengPentagon'
 import SajuWonguk from '@/app/manseryeok/components/SajuWonguk'
 import { getGongmang } from '@/lib/saju'
 import { saveRecord, getRecord, updateRecordResult } from '@/lib/saju/sajuRecords'
+import ConsultButton from '@/app/components/common/ConsultButton'
 import CopyTextButton from '@/app/components/common/CopyTextButton'
 import { supabase } from '@/lib/supabase'
 import type { SajuQuestion } from '@/lib/saju/questions'
@@ -661,26 +662,6 @@ function MulsangInner() {
     if (!res.ok) console.error('보관함 저장 실패:', res.message)
   }
 
-  function goConsult() {
-    // 상담 신청 시점에 현재 물상도(그림+해설)를 세션에 확실히 담는다.
-    // (그림을 새로 뽑았든, 예전 결과를 복원했든 항상 연결되게)
-    try {
-      if (tongResult || imageUrl) {
-        sessionStorage.setItem('mulsang_full', JSON.stringify({
-          image_url: imageUrl || null,
-          prompt: '',
-          style,
-          commentary: tongResult || null,
-        }))
-        // 상담사가 볼 해설 — 고객이 본 전체 해설을 그대로.
-        if (tongResult?.trim()) sessionStorage.setItem('ai_analysis', tongResult)
-      }
-    } catch {}
-    const params = new URLSearchParams()
-    params.set('mode', 'mulsang')       // 물상도로 구분 (상담사 화면이 그림+해설 표시)
-    params.set('priceKey', 'mulsang')
-    router.push('/manseryeok/consultant-select?' + params.toString())
-  }
 
   // ── 그림 내려받기 ──
   //   ⚠️ <a download> 은 같은 도메인일 때만 동작한다. 그림은 Supabase Storage(다른 도메인)라
@@ -1065,13 +1046,35 @@ function MulsangInner() {
             )}
           </div>
 
-          {/* 전문가 상담 연결 — 현재 숨김 (되살리려면 false를 true로) */}
-          {false && (
-            <button onClick={goConsult}
-              style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'transparent', border: '1px solid #c8783c', color: '#96502e', fontSize: '14px', fontWeight: 500, cursor: 'pointer', marginTop: '8px', marginBottom: '12px' }}>
-              🔮 이 그림에 대해 전문가와 상담하기 →
-            </button>
-          )}
+          {/* ══════════════════════════════════════════════════════════════
+              ★2026-08-05 (47부 6차) — 공용 부품으로 갈아 끼우고 «켰습니다». [대표님 지시]
+                「공용부품으로 교체해주고 · 내사주그림은 키면 되는 것이고」
+
+              [전]  false && 로 «꺼져» 있었고, goConsult() 라는 따로 만든 길이었습니다.
+                    버튼도 이 화면에만 있는 생김새였습니다.
+              [후]  ConsultButton 하나. 문구·배색·가격·노출토글이 다른 여섯 화면과 «같아집니다».
+
+              ⚠️ goConsult() 가 담던 mulsang_full(그림+해설)을 «잃지 않으려고»
+                 ConsultPayload 에 ★mulsangFull 자리를 새로 냈습니다.
+                 이 자리가 없으면 상담사 화면에 ★그림이 안 뜹니다.
+              ⚠️ mode='mulsang' 이어야 상담사 화면이 그림+해설을 그립니다. 지우지 마십시오.
+              ⚠️ priceKey='mulsang' — ★consult_prices 표에 이 줄이 «있어야» 버튼이 보입니다.
+                 줄이 없으면 active=false 로 떨어져 ★버튼이 통째로 숨습니다 (안전한 쪽입니다).
+                 SQL 은 _SQL_consult_prices_47bu.sql 에 담아 두었습니다.
+              ⛔ 옛 goConsult() 는 «지웠습니다». 되살릴 일이 없습니다.
+              ══════════════════════════════════════════════════════════════ */}
+          <div style={{ marginTop: '8px', marginBottom: '12px' }}>
+            <ConsultButton
+              priceKey="mulsang"
+              mode="mulsang"
+              payload={() => ({
+                aiAnalysis: tongResult || undefined,
+                mulsangFull: (tongResult || imageUrl)
+                  ? { image_url: imageUrl || null, prompt: '', style, commentary: tongResult || null }
+                  : undefined,
+              })}
+            />
+          </div>
 
           {/* ★다른 화풍으로 다시 그리기 — 지금 화풍을 뺀 나머지만 고르게 한다.
               (1회 결제 = 그림 1장이므로 다시 그리면 다시 결제된다) */}

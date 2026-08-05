@@ -49,6 +49,7 @@ import SajuWonguk from '@/app/manseryeok/components/SajuWonguk'
 import CareerJudgeCard from './components/CareerJudgeCard'
 // ★2026-07-31 — 만세력 표를 «떼어다» 통변 사이에 끼웁니다 (대표님 지시)
 import SajuTableSlot, { type SajuTableKind } from '@/app/manseryeok/components/SajuTableSlot'
+import ConsultButton from '@/app/components/common/ConsultButton'
 
 const ACCENT = '#785aaa'
 const BG = '#FDF6F0'
@@ -828,6 +829,21 @@ function CareerResultInner() {
                 </div>
               </>
             )}
+
+            {/* ★2026-08-05 (47부 6차) — 전문가 상담 [대표님 지시]
+                「진로적성과 타로는 넣어줘」
+                ⚠️ priceKey='career' — ★consult_prices 표에 이 줄이 «있어야» 보입니다.
+                   줄이 없으면 active=false 로 떨어져 버튼이 통째로 숨습니다 (안전한 쪽).
+                   SQL 은 _SQL_consult_prices_47bu.sql 에 담아 두었습니다.
+                ⚠️ 진로적성 통변(tong)을 상담사에게 넘깁니다.
+                   ⛔ 판정 근거(cards)는 «넘기지 않습니다» — 44부 확정으로 «절대» 안 보입니다. */}
+            <div style={{ marginTop: 18 }}>
+              <ConsultButton
+                priceKey="career"
+                mode="career"
+                payload={() => ({ aiAnalysis: tong || undefined })}
+              />
+            </div>
 
             <div style={{ fontSize: 11, color: '#a08d7d', textAlign: 'center', marginTop: 18, lineHeight: 1.7 }}>
               사주는 참고입니다. 길은 본인의 노력과 의지로 얼마든지 바꿀 수 있어요.

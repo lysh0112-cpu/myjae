@@ -35,6 +35,22 @@ export interface ConsultPayload {
     mode?: string
     result?: unknown
   }
+  /**
+   * ★2026-08-05 (47부 6차) — 물상도(내사주그림) 한 벌
+   *   [왜 더했나]  물상은 여태 «따로 만든» 버튼으로 갔고, 그 안에서 mulsang_full 을
+   *     직접 세션에 담았습니다. 공용 부품으로 바꾸면서 이 자리가 없으면
+   *     ★그림과 해설이 상담사에게 «안 넘어갑니다».
+   *   ⚠️ consultant-select 가 읽는 세션 키는 ★여섯입니다 —
+   *      ai_analysis · ai_free_analysis · couple_full · mulsang_full · naming_full · birth_full
+   *      이 부품이 담아 주는 것은 ★넷. naming_full·birth_full 은 그 화면들이
+   *      «스스로» 담고 나서 이 부품을 부릅니다. 그대로 두었습니다.
+   */
+  mulsangFull?: {
+    image_url?: string | null
+    prompt?: string
+    style?: string
+    commentary?: string | null
+  }
 }
 
 export default function ConsultButton({ priceKey, mode, searchParams, payload }: Props) {
@@ -67,6 +83,7 @@ export default function ConsultButton({ priceKey, mode, searchParams, payload }:
         if (p.aiAnalysis) sessionStorage.setItem('ai_analysis', p.aiAnalysis)
         if (p.aiFreeAnalysis) sessionStorage.setItem('ai_free_analysis', p.aiFreeAnalysis)
         if (p.coupleFull) sessionStorage.setItem('couple_full', JSON.stringify(p.coupleFull))
+        if (p.mulsangFull) sessionStorage.setItem('mulsang_full', JSON.stringify(p.mulsangFull))
       }
     } catch {
       // 세션 저장 실패는 상담 신청 자체를 막지 않는다.

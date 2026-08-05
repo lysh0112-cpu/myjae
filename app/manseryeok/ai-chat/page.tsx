@@ -65,10 +65,14 @@ function AiChatInner() {
             style={{fontSize:'11px', padding:'4px 10px', borderRadius:'20px', background:'rgba(255,80,80,0.1)', color:'rgba(255,120,120,0.7)', border:'1px solid rgba(193,69,69,0.65)', cursor:'pointer'}}>
             초기화
           </button>
-          <button onClick={() => router.push(`/manseryeok/consultant-select?mode=${mode}`)}
-            style={{fontSize:'11px', padding:'4px 10px', borderRadius:'20px', background:'rgba(60,52,137,0.4)', color:'#b8a9ff', border:'1px solid rgba(119,102,221,0.4)', cursor:'pointer'}}>
-            전문가 →
-          </button>
+          {/* ★2026-08-05 (47부 7차) — 옛 「전문가 →」 버튼을 «걷어냈습니다». [대표님 지시]
+              「기존 상담사 연결버튼은 모두 없애고, 새로운 부품을 모두 집어넣어」
+              ⚠️ AI 채팅은 대표님이 정하신 ★아홉 서비스에 «없습니다».
+                 그리고 여기는 결과 화면이 아니라 «상단 바» 라 카드형 공용 부품이 안 맞습니다.
+              ⇒ 그래서 «달지 않고 걷어내기만» 했습니다.
+              ⛔ 되살리실 때는 공용 부품(ConsultButton)으로 하십시오. 옛 생김새로 돌리지 마십시오.
+                 옛 것:  rgba(60,52,137,0.4) 바탕 · #b8a9ff 글자 — 손님 화면 결과 «완전히» 달랐습니다.
+                 그리고 ★priceKey 를 «안 넘겨» 가격도 노출토글도 안 걸렸습니다. */}
         </div>
       </div>
 
