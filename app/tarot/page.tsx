@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
@@ -114,6 +114,53 @@ function TarotInner() {
 
   // 타로 가격/무료횟수
   const [prices, setPrices] = useState<Record<string, TarotPrice>>({})
+
+  // ═══ ★배경음악 — 2026-08-05 (46부 18차 · 대표님 지시) ═══════════════
+  //
+  //   곡  "Envision" Kevin MacLeod (incompetech.com)
+  //       Licensed under Creative Commons: By Attribution 4.0 License
+  //       http://creativecommons.org/licenses/by/4.0/
+  //   ⚠️⚠️ ★CC BY 4.0 은 «저작권이 있는» 음악입니다. 크레디트를 «반드시» 화면에
+  //      보이게 적어야 합니다. 결과 화면 맨 아래에 두었습니다. ⛔ 지우지 마십시오.
+  //      (지우면 라이선스 위반입니다. 못 적을 자리면 유료 라이선스를 사야 합니다)
+  //
+  //   [파일]  public/audio/tarot-bgm.mp3
+  //     원본 3.26MB(320kbps·85.4초) → ★0.90MB(96kbps·79초). 72% 줄였습니다.
+  //     ★79초에서 자른 까닭 — 원곡은 80초부터 페이드아웃이라 그냥 반복하면
+  //       끝에서 «뚝 조용해졌다가» 다시 시작합니다(실측 -91dB).
+  //       0~79초를 쓰고 끝 1.5초를 앞 1.5초와 겹쳐 ★이음새를 없앴습니다.
+  //       (처음 -16.5dB · 끝 -15.7dB 로 맞췄습니다)
+  //     ⚠️ 자르고 붙이는 것은 라이선스가 허용합니다 (「따로 밝힐 필요 없다」).
+  //
+  //   [어디서]  뽑기(draw) · 펼치기(reveal) 두 화면 — 대표님 확정
+  //   [기본]    ★켬 — 대표님 확정
+  //     ⚠️ 브라우저가 «소리 자동재생» 을 막습니다. 특히 아이폰 사파리.
+  //        그래서 막히면 ★「🔊 소리 켜기」 버튼이 뜨고, 누르면 재생됩니다.
+  //     ⚠️ 아이폰 «무음 스위치» 를 켜 두면 소리가 안 납니다. ★막을 방법이 없습니다.
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const [bgmOn, setBgmOn] = useState(true)      // 손님이 끄면 false
+  const [bgmBlocked, setBgmBlocked] = useState(false)  // 브라우저가 막았나
+
+  const bgmShouldPlay = bgmOn && (step === 'draw' || step === 'reveal')
+
+  useEffect(() => {
+    const a = audioRef.current
+    if (!a) return
+    if (bgmShouldPlay) {
+      a.volume = 0.35   // ⚠️ 배경음입니다. 글을 읽는 화면이라 크게 하지 마십시오.
+      a.play().then(() => setBgmBlocked(false)).catch(() => setBgmBlocked(true))
+    } else {
+      a.pause()
+    }
+  }, [bgmShouldPlay])
+
+  // ★화면을 아주 떠날 때 소리를 멈춥니다 (46부 18차)
+  //   ⚠️ 이것이 없으면 뒤로가기·보관함으로 나가도 ★소리가 계속 납니다.
+  //      위 useEffect 는 step 이 바뀔 때만 도는데, 페이지를 떠나면 안 돌기 때문입니다.
+  useEffect(() => {
+    const a = audioRef.current
+    return () => { a?.pause() }
+  }, [])
 
   const spread = SPREADS.find(s => s.id === spreadId) || SPREADS[1]
   const fullyDrawn = picked.length > 0 && picked.length === spread.count
@@ -262,7 +309,35 @@ function TarotInner() {
           router.push(searchParams.get('from') === 'mypage' ? '/mypage-new' : '/')
         }} style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
         <div style={{ fontSize: 15, fontWeight: 500, color: ink }}>타로 카드 리딩</div>
+
+        {/* ★배경음악 켜고 끄기 — 뽑기·펼치기 화면에서만 보입니다 (46부 18차)
+            ⚠️ 브라우저가 자동재생을 막으면 「🔊 소리 켜기」로 바뀝니다.
+               누르는 것이 «손님의 동작» 이라 그때는 소리가 납니다. */}
+        {(step === 'draw' || step === 'reveal') && (
+          <button
+            onClick={() => {
+              if (bgmBlocked) {
+                const a = audioRef.current
+                a?.play().then(() => { setBgmBlocked(false); setBgmOn(true) }).catch(() => {})
+                return
+              }
+              setBgmOn(v => !v)
+            }}
+            aria-label={bgmOn && !bgmBlocked ? '배경음악 끄기' : '배경음악 켜기'}
+            style={{
+              marginLeft: 'auto', background: bgmBlocked ? cardBg : 'none',
+              border: bgmBlocked ? `1px solid ${gold}` : 'none',
+              borderRadius: 20, padding: bgmBlocked ? '5px 10px' : '5px 6px',
+              color: bgmOn ? gold : sub, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap',
+            }}>
+            {bgmBlocked ? '🔊 소리 켜기' : bgmOn ? '🔊' : '🔇'}
+          </button>
+        )}
       </div>
+
+      {/* ★배경음 — 화면 어디에 있든 하나만 둡니다. loop 로 이어 붙습니다.
+          ⚠️ preload="none" — 타로를 안 보는 손님이 0.9MB 를 미리 받지 않도록. */}
+      <audio ref={audioRef} src="/audio/tarot-bgm.mp3" loop preload="none" />
 
       {step === 'question' && (
         <div style={{ padding: '22px 16px', textAlign: 'center' }}>
@@ -487,6 +562,20 @@ function TarotInner() {
               style={{ flex: 1, padding: '13px 8px', borderRadius: '12px', background: 'transparent', border: `1px solid ${gold}`, color: gold, fontSize: '14px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
               📜 내 타로 보관함
             </button>
+          </div>
+
+          {/* ⛔⛔ ★음악 크레디트 — 2026-08-05 (46부 18차). «지우지 마십시오».
+              CC BY 4.0 은 「만든 이를 보이게 밝혀야」 하는 라이선스입니다.
+              지우면 ★라이선스 위반입니다. (못 적을 자리면 유료 라이선스를 사야 합니다)
+              ⚠️ 곡을 바꾸시면 ★제목도 함께 바꾸십시오. 제목이 틀리면 그것도 위반입니다. */}
+          <div style={{ marginTop: '18px', paddingTop: '14px', borderTop: `1px solid ${gold}22`,
+            fontSize: '10px', color: sub, lineHeight: 1.7, textAlign: 'center' }}>
+            배경음악 &ldquo;Envision&rdquo; Kevin MacLeod (incompetech.com)<br />
+            Licensed under Creative Commons: By Attribution 4.0 License<br />
+            <a href="http://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer"
+              style={{ color: sub, textDecoration: 'underline' }}>
+              creativecommons.org/licenses/by/4.0
+            </a>
           </div>
         </div>
       )}
