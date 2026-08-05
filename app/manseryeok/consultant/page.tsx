@@ -65,6 +65,7 @@ function ConsultantContent() {
     selectedUserId,
     gender, calType, yearParam, monthParam, dayParam, leapMonth, hourIdx,
     consultantId,
+    fromParam,
     handleSelectConsultation,
   } = useConsultantState()
 
@@ -256,6 +257,38 @@ function ConsultantContent() {
     router.push('/auth/login')
   }
 
+  // ══════════════════════════════════════════════════════════════════════
+  // ★2026-08-05 (47부 3차) — 뒤로가기 [대표님 지시]
+  //
+  //   [겪은 일]  대표님 — 「들어는 갔으나 뒤로 가기 버튼이 안된다」
+  //     ★이 화면에는 뒤로가기 버튼이 «아예 없었습니다». 상단 메뉴바를 전수로 훑어 확인했습니다.
+  //
+  //   [왜 브라우저 뒤로가기로 안 되나]
+  //     관리자 화면(ConsultantTable)에서 오는 길은 ★window.open(…, '_blank') 입니다.
+  //     ⇒ «새 탭» 이라 history 가 비어 있어 브라우저 뒤로가기가 «원리상» 안 됩니다.
+  //     ⇒ 화면 안 버튼이 반드시 있어야 합니다.
+  //
+  //   [대표님이 정하신 갈래]
+  //     상담사 본인            → 마이페이지
+  //     매니저 · 고르기에서 옴  → 상담사 고르기 화면
+  //     매니저 · 관리자에서 옴  → 관리자 화면
+  //
+  //   [어떻게 «어디서 왔는지» 아나]  주소에 from 을 담습니다 (useConsultantState 가 읽습니다).
+  //     from=pick   고르기 화면의 상담사 버튼이 붙입니다
+  //     from=admin  ConsultantTable 의 「🔮 화면 보기」가 붙입니다
+  //
+  //   ⚠️ from 이 «없는» 길도 있습니다 — 마이페이지 「🩺 상담 관리」·로그인 직후 welcome.
+  //      그때 매니저는 ★고르기 화면으로 보냅니다. «막다른 길이 아닌» 자리이기 때문입니다.
+  //      (고르기 화면에는 「← 관리자 화면으로」가 있어 어디로든 갈 수 있습니다)
+  //   ⛔ 매니저의 기본값을 /admin 으로 바꾸지 마십시오.
+  //      마이페이지에서 온 매니저가 관리자 화면으로 튕겨 «온 길을 잃습니다».
+  // ══════════════════════════════════════════════════════════════════════
+  const back = (() => {
+    if (!isMaster) return { href: '/mypage-new', label: '마이페이지' }
+    if (fromParam === 'admin') return { href: '/admin', label: '관리자 화면' }
+    return { href: '/manseryeok/consultant', label: '상담사 고르기' }
+  })()
+
   async function handleDeleteRequest(id: string) {
     if (!confirm('삭제를 요청하시겠어요? 관리자 승인 후 최종 삭제됩니다.')) return
     setDeleteLoading(id)
@@ -437,7 +470,7 @@ function ConsultantContent() {
             <div style={{color:'#7d6a5b', fontSize:13, textAlign:'center'}}>등록된 상담사가 없어요.</div>
           ) : pickList.map(p => (
             <button key={p.id}
-              onClick={() => router.push(`/manseryeok/consultant?consultantId=${p.id}`)}
+              onClick={() => router.push(`/manseryeok/consultant?consultantId=${p.id}&from=pick`)}
               style={{padding:'13px 0', borderRadius:10, border:'0.5px solid #9c7a58',
                 background:'#FFFBF7', color:'#3a2e28', fontSize:14, cursor:'pointer',
                 fontFamily:'inherit'}}>
@@ -464,6 +497,26 @@ function ConsultantContent() {
         background:'rgba(18,18,28,0.97)', borderBottom:'1px solid rgba(255,255,255,0.06)',
         display:'flex', alignItems:'center', padding:'0 12px', gap:'4px',
       }}>
+        {/* ★2026-08-05 (47부 3차) — 뒤로가기. 위 back 판단을 그대로 씁니다.
+            ★라벨에 «갈 곳» 을 적었습니다 — 「← 마이페이지」「← 관리자 화면」「← 상담사 고르기」
+              어디로 가는지 안 보이면 누르기가 망설여집니다.
+            [대비 실측]  #c8c0ff on 메뉴바(#12121c) = ★11.02:1
+              ⚠️ 옆 버튼들의 #8888aa(2.9:1)보다 «일부러» 진하게 했습니다.
+                 길을 되찾는 버튼이라 가장 먼저 보여야 합니다.
+            ⚠️ 메뉴바 높이가 40px 이라 44px 최소선을 못 맞춥니다. 마우스로 쓰는
+               PC 화면이라 그대로 두되 padding 으로 누르는 자리를 넓혔습니다. */}
+        <button onClick={() => router.push(back.href)}
+          title={`${back.label}(으)로 돌아갑니다`}
+          style={{
+            fontSize:'12px', padding:'4px 8px', borderRadius:'5px',
+            border:'1px solid rgba(200,192,255,0.35)', background:'rgba(255,255,255,0.05)',
+            color:'#c8c0ff', cursor:'pointer', display:'flex', alignItems:'center', gap:'4px',
+            whiteSpace:'nowrap', marginRight:'6px', fontFamily:'inherit',
+            WebkitUserSelect:'none', userSelect:'none', touchAction:'manipulation',
+          }}>
+          <span style={{fontSize:'14px'}} aria-hidden="true">←</span>
+          <span>{back.label}</span>
+        </button>
         <span style={{fontSize:'13px', fontWeight:'500', color:'#e8e4ff', marginRight:'6px'}}>명연재</span>
         <span style={{fontSize:'10px', color:'#333355', marginRight:'2px'}}>|</span>
 

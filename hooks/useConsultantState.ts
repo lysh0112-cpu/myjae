@@ -45,6 +45,12 @@ export function useConsultantState() {
   //      그쪽은 화면 안에서 주소가 안 바뀌어 지금은 탈이 없어 «안 건드렸습니다».
   // ══════════════════════════════════════════════════════════════════════
   const urlConsultantId = searchParams.get('consultantId') || ''
+  // ★2026-08-05 (47부 3차) — «어디서 들어왔는지» 를 주소에 담습니다. [대표님 지시]
+  //   뒤로가기가 «들어온 길» 로 돌아가야 하기 때문입니다.
+  //     from=pick   상담사 고르기 화면에서 왔다
+  //     from=admin  관리자 화면(상담사 표)에서 왔다  ★새 탭이라 브라우저 뒤로가기가 «안 됩니다»
+  //     (없음)      마이페이지·로그인 직후 등. page.tsx 가 안전한 기본값으로 보냅니다.
+  const fromParam = searchParams.get('from') || ''
   const [myConsultantId, setMyConsultantId] = useState('')
   const consultantId = urlConsultantId || myConsultantId
   useEffect(() => {
@@ -118,6 +124,7 @@ export function useConsultantState() {
     selectedUserId,
     gender, calType, yearParam, monthParam, dayParam, leapMonth, hourIdx,
     consultantId,
+    fromParam,
     handleFormSubmit, handleSelectConsultation,
   }
 }
