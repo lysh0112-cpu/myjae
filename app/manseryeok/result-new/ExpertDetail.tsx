@@ -326,7 +326,18 @@ export default function ExpertDetail({
                   if (ri === 0) g = hidden[0] ?? ''
                   else if (ri === 1) g = hidden.length === 3 ? hidden[1] : ''
                   else g = hidden[hidden.length - 1] ?? ''
-                  if (!g) return <td key={i} style={{ ...td, color: '#ddd0c4' }}>-</td>
+                  // ★2026-08-05 (46부 15차) — 빈 칸을 「없음」으로 적습니다. [대표님 지시]
+                  //
+                  //   [겪은 일]  월 酉 의 중기 칸이 «텅 비어» 보인다는 지적(대표님 사진).
+                  //   [까닭]  子·卯·午·酉 넷은 지장간이 «둘» 뿐이라 ★중기가 원래 없습니다.
+                  //           「-」를 그리고는 있었는데 색이 #ddd0c4 ─ ★대비가 1.3:1 쯤이라
+                  //           사진에서 안 보일 만큼 흐렸습니다.
+                  //   [고침]  ① 「-」 → 「없음」 으로 «뜻이 드러나게»
+                  //           ② 색 #ddd0c4 → #b99a7d (45부 색 대비 기준 2.63:1)
+                  //   ★같은 흐린 색이 이 파일에 «다섯 곳» 있어 함께 올렸습니다
+                  //     (현침·곡각 두 줄 · 형충회합 격자 · 여기)
+                  //   ⛔ 다시 흐리게 만들지 마십시오. 「빈 칸이 아니라 원래 없는 것」입니다.
+                  if (!g) return <td key={i} style={{ ...td, color: '#b99a7d', fontSize: 9.5, fontWeight: 400 }}>없음</td>
                   const ss = sipsinOf(dayStem, g)
                   const isBongi = ri === 2
                   // ★사령 칸 — 월주이고, 그 단계가 지금 사령인 자리
@@ -432,7 +443,7 @@ export default function ExpertDetail({
                     <span style={{ color: '#3a2e28', fontSize: 11 }}>{p.stem}</span>{' '}
                     {hc && <button type="button" onClick={() => open('현침살')} style={{ color: '#c85a6e', fontSize: 9, cursor: 'pointer', fontWeight: 600, background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>현침</button>}
                     {gg && <button type="button" onClick={() => open('곡각살')} style={{ color: '#7c5aaa', fontSize: 9, cursor: 'pointer', fontWeight: 600, background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>곡각</button>}
-                    {!hc && !gg && <span style={{ color: '#ddd0c4', fontSize: 9 }}>-</span>}
+                    {!hc && !gg && <span style={{ color: '#b99a7d', fontSize: 9 }}>-</span>}
                   </td>
                 )
               })}
@@ -446,7 +457,7 @@ export default function ExpertDetail({
                     <span style={{ color: '#3a2e28', fontSize: 11 }}>{p.branch}</span>{' '}
                     {hc && <button type="button" onClick={() => open('현침살')} style={{ color: '#c85a6e', fontSize: 9, cursor: 'pointer', fontWeight: 600, background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>현침</button>}
                     {gg && <button type="button" onClick={() => open('곡각살')} style={{ color: '#7c5aaa', fontSize: 9, cursor: 'pointer', fontWeight: 600, background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>곡각</button>}
-                    {!hc && !gg && <span style={{ color: '#ddd0c4', fontSize: 9 }}>-</span>}
+                    {!hc && !gg && <span style={{ color: '#b99a7d', fontSize: 9 }}>-</span>}
                   </td>
                 )
               })}
@@ -646,7 +657,7 @@ export default function ExpertDetail({
                             <Badge kind={r} />
                           </span>
                         ))
-                        : <span style={{ color: '#ddd0c4' }}>-</span>}
+                        : <span style={{ color: '#b99a7d' }}>-</span>}
                     </td>
                   )
                 })}
