@@ -39,7 +39,19 @@ const SERVICE_INFO: Record<Service, {
   resultPath: string; unse?: 'daeun' | 'seyun'; headline: string; submitLabel: string;
 }> = {
   integrated: {
-    title: '내 사주 & 운세 보관함', badge: '사주 & 운세', accent: '#6e50a0',
+    // ★2026-08-05 (47부 22차) — 제목을 「나의 만세력 보관함」으로. [대표님 지시]
+    //   [까닭]  이 보관함에서 기록을 고르면 결과 화면 제목이 ★「나의 만세력」입니다.
+    //     그런데 여기는 「내 사주 & 운세 보관함」이라 ★두 화면 이름이 이어지지 않았습니다.
+    //   ⚠️ ★badge 는 «그대로» 둡니다 — 문장 «안» 에 들어가는 말이기 때문입니다.
+    //      「아직 저장된 ★사주 & 운세 기록이 없어요」
+    //      「+ 새 ★사주 & 운세 보기」
+    //      「○○의 ★사주 & 운세 기록을 삭제해요」
+    //      ⇒ badge 를 「나의 만세력」으로 바꾸면
+    //        「아직 저장된 나의 만세력 기록이 없어요」가 되어 ★말이 어색해집니다.
+    //   ⚠️ title 은 «두 곳» 에 쓰입니다 — 화면 제목 · PersonPickerModal 의 serviceLabel.
+    //   ⚠️ ★홈 카드는 「내 사주와 운세보기」 그대로입니다 (대표님이 «놔두라» 하셨습니다).
+    //      결과 화면 제목(「나의 만세력」)도 그대로입니다.
+    title: '나의 만세력 보관함', badge: '사주 & 운세', accent: '#6e50a0',
     resultPath: '/manseryeok/result-new',
     headline: '누구의 사주와 운세를 볼까요?',
     submitLabel: '저장하고 리포트 보기',
