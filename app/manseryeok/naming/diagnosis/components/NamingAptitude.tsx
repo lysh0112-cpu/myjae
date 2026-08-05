@@ -148,7 +148,7 @@ export default function NamingAptitude(p: NamingAptitudeProps) {
             六. 사주 명리적성
           </span>
           <span style={{ fontSize: 11, color: '#8a7063' }}>
-            {open ? '접기 ▾' : '펼쳐보기 ▸'}
+            {open ? '접기 ' : '펼쳐보기 '}<span aria-hidden style={{ fontSize: 22, lineHeight: 1, verticalAlign: '-4px', display: 'inline-block', margin: '0 1px' }}>{open ? '▾' : '▸'}</span>
           </span>
         </button>
 

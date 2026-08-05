@@ -534,7 +534,8 @@ export default function ServiceSection({
                   <span
                     className="svcChev"
                     style={{
-                      fontSize: 11, color: C.faint, flexShrink: 0,
+                      fontSize: 22, lineHeight: 1, color: '#96502e', flexShrink: 0,
+                      padding: '4px 2px', display: 'inline-block',
                       transform: isOpen ? 'rotate(180deg)' : 'none',
                     }}
                   >▼</span>

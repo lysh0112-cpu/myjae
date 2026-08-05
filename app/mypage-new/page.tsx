@@ -605,7 +605,7 @@ export default function MyPageNew() {
                   <div style={{ marginTop: 10, borderTop: '0.5px solid #b99a7d', paddingTop: 8 }}>
                     <button onClick={() => setHiddenOpen(v => !v)}
                       style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11.5, color: '#6b5340' }}>
-                      {hiddenOpen ? '▾' : '▸'} 삭제한 내역 {hidden.length}건
+                      <span aria-hidden style={{ fontSize: 22, lineHeight: 1, verticalAlign: '-4px', display: 'inline-block', margin: '0 1px' }}>{hiddenOpen ? '▾' : '▸'}</span> 삭제한 내역 {hidden.length}건
                     </button>
                     {hiddenOpen && (
                       <div style={{ marginTop: 6 }}>
@@ -630,7 +630,7 @@ export default function MyPageNew() {
         <div style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}>
           <button onClick={() => setCashOpen(v => !v)}
             style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 14, background: 'none', border: 'none', cursor: 'pointer' }}>
-            <span style={{ fontSize: 13, color: '#5a4a3e' }}>{cashOpen ? '▾' : '▸'} 캐시 · 포인트 · 이용권</span>
+            <span style={{ fontSize: 13, color: '#5a4a3e' }}><span aria-hidden style={{ fontSize: 22, lineHeight: 1, verticalAlign: '-4px', display: 'inline-block', margin: '0 1px' }}>{cashOpen ? '▾' : '▸'}</span> 캐시 · 포인트 · 이용권</span>
             <span style={{ fontSize: 12, color: '#5c3a1e' }}>0원 · 0P · 0회</span>
           </button>
           {cashOpen && (
@@ -644,7 +644,7 @@ export default function MyPageNew() {
         <div style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}>
           <button onClick={() => setPayOpen(v => !v)}
             style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 14, background: 'none', border: 'none', cursor: 'pointer' }}>
-            <span style={{ fontSize: 13, color: '#5a4a3e' }}>{payOpen ? '▾' : '▸'} 결제 내역 · 쿠폰 등록</span>
+            <span style={{ fontSize: 13, color: '#5a4a3e' }}><span aria-hidden style={{ fontSize: 22, lineHeight: 1, verticalAlign: '-4px', display: 'inline-block', margin: '0 1px' }}>{payOpen ? '▾' : '▸'}</span> 결제 내역 · 쿠폰 등록</span>
             <span style={{ fontSize: 16, color: '#d0b8a5' }}>{payOpen ? '' : '›'}</span>
           </button>
           {payOpen && (

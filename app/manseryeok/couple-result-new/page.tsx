@@ -241,7 +241,7 @@ function CoupleResultInner() {
                   <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: col }}>{category}</span>
                   {gPicked > 0 && <span style={{ fontSize: 10, color: '#fff', background: col, borderRadius: 9, padding: '2px 7px' }}>{gPicked}</span>}
                   <button type="button" onClick={(e) => { e.stopPropagation(); toggleCatAll(category, items) }} style={{ fontSize: 10, color: col, border: `0.5px solid ${col}88`, borderRadius: 8, padding: '3px 8px', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>{allOn ? '모두 해제' : '모두 담기'}</button>
-                  <span style={{ color: col, fontSize: 12 }}>{open ? '▾' : '▸'}</span>
+                  <span aria-hidden style={{ color: col, fontSize: 22, lineHeight: 1, padding: '4px 2px', display: 'inline-block' }}>{open ? '▾' : '▸'}</span>
                 </div>
                 {open && (
                   <div style={{ padding: '8px 10px' }}>

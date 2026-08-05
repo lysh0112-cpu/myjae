@@ -241,7 +241,7 @@ export default function NamePicker(p: NamePickerProps) {
                   {list.length}개
                 </span>
               )}
-              {openOpts ? '접기 ▾' : '펼치기 ▸'}
+              {openOpts ? '접기 ' : '펼치기 '}<span aria-hidden style={{ fontSize: 22, lineHeight: 1, verticalAlign: '-4px', display: 'inline-block', margin: '0 1px' }}>{openOpts ? '▾' : '▸'}</span>
             </span>
           </button>
 

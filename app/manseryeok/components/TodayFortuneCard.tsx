@@ -655,7 +655,7 @@ export default function TodayFortuneCard() {
 
         <div onClick={() => setOpen(o => !o)} role="button" aria-expanded={open}
           style={{ textAlign: 'center', fontSize: 11.5, color: '#5c3a1e', padding: '9px 0 2px', cursor: 'pointer' }}>
-          {open ? '접기 ▲' : '자세히 보기 ▼'}
+          {open ? '접기 ' : '자세히 보기 '}<span aria-hidden style={{ fontSize: 22, lineHeight: 1, verticalAlign: '-4px', display: 'inline-block', margin: '0 1px' }}>{open ? '▲' : '▼'}</span>
         </div>
       </div>
     )
@@ -767,7 +767,7 @@ export default function TodayFortuneCard() {
         role="button"
         aria-expanded={open}
         style={{ textAlign: 'center', fontSize: 11.5, color: '#5c3a1e', padding: '9px 0 2px', cursor: 'pointer' }}
-      >{open ? '접기 ▲' : '자세히 보기 ▼'}</div>
+      >{open ? '접기 ' : '자세히 보기 '}<span aria-hidden style={{ fontSize: 22, lineHeight: 1, verticalAlign: '-4px', display: 'inline-block', margin: '0 1px' }}>{open ? '▲' : '▼'}</span></div>
     </div>
   )
 }

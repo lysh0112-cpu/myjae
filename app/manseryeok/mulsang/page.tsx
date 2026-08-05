@@ -859,7 +859,7 @@ function MulsangInner() {
                 <div onClick={() => setOpenCat(open ? null : category)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '11px 12px', background: gHasPicked ? '#6e50a014' : '#fff', cursor: 'pointer' }}>
                   <span style={{ flex: 1, fontSize: '13px', fontWeight: 700, color: '#6e50a0' }}>{category}</span>
                   {gHasPicked && <span style={{ fontSize: '10px', color: '#fff', background: '#6e50a0', borderRadius: '9px', padding: '2px 7px' }}>선택됨</span>}
-                  <span style={{ color: '#6e50a0', fontSize: '12px' }}>{open ? '▾' : '▸'}</span>
+                  <span aria-hidden style={{ color: '#5a3e88', fontSize: '22px', lineHeight: 1, padding: '4px 2px', display: 'inline-block' }}>{open ? '▾' : '▸'}</span>
                 </div>
                 {open && (
                   <div style={{ padding: '8px 10px' }}>
@@ -904,7 +904,7 @@ function MulsangInner() {
             <div style={{ background: '#fffbf7', border: '0.5px solid #9c7a58', borderRadius: '12px', marginBottom: '8px', overflow: 'hidden' }}>
               <div onClick={() => setOpenWonguk(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '11px 14px', cursor: 'pointer' }}>
                 <span style={{ flex: 1, fontSize: '13px', fontWeight: 700, color: '#3a2e28' }}>사주 원국 (내 여덟 글자)</span>
-                <span style={{ color: '#8f3d0e', fontSize: '12px' }}>{openWonguk ? '▾' : '▸'}</span>
+                <span aria-hidden style={{ color: '#8f3d0e', fontSize: '22px', lineHeight: 1, padding: '4px 2px', display: 'inline-block' }}>{openWonguk ? '▾' : '▸'}</span>
               </div>
               {openWonguk && (
                 <div style={{ padding: '4px 12px 14px' }}>
@@ -918,7 +918,7 @@ function MulsangInner() {
               <div style={{ background: '#fffbf7', border: '0.5px solid #9c7a58', borderRadius: '12px', marginBottom: '10px', overflow: 'hidden' }}>
                 <div onClick={() => setOpenOhaeng(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '11px 14px', cursor: 'pointer' }}>
                   <span style={{ flex: 1, fontSize: '13px', fontWeight: 700, color: '#96502e' }}>오행 분석 — 그림이 이렇게 그려진 이유</span>
-                  <span style={{ color: '#8f3d0e', fontSize: '12px' }}>{openOhaeng ? '▾' : '▸'}</span>
+                  <span aria-hidden style={{ color: '#8f3d0e', fontSize: '22px', lineHeight: 1, padding: '4px 2px', display: 'inline-block' }}>{openOhaeng ? '▾' : '▸'}</span>
                 </div>
                 {openOhaeng && (
                   <div style={{ padding: '2px 12px 12px' }}>
@@ -937,7 +937,7 @@ function MulsangInner() {
             <div onClick={() => setOpenImage(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '11px 16px', cursor: 'pointer' }}>
               <span style={{ flex: 1, fontSize: '13px', fontWeight: 700, color: '#96502e' }}>내 사주 그림</span>
               <span style={{ fontSize: '11px', color: '#5c3a1e' }}>{openImage ? '접기' : '크게 보기'}</span>
-              <span style={{ color: '#8f3d0e', fontSize: '12px' }}>{openImage ? '▾' : '▸'}</span>
+              <span aria-hidden style={{ color: '#8f3d0e', fontSize: '22px', lineHeight: 1, padding: '4px 2px', display: 'inline-block' }}>{openImage ? '▾' : '▸'}</span>
             </div>
             {openImage && (
               <>

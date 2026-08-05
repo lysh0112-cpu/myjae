@@ -178,7 +178,7 @@ export default function OhaengCompareCard({
         <span style={{ fontSize: 15, fontWeight: 500, color: '#96502e' }}>
           타고난 오행으로 본 우리의 차이
         </span>
-        <span style={{ fontSize: 11, color: '#c0a898', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
+        <span aria-hidden style={{ fontSize: 22, lineHeight: 1, color: '#96502e', padding: '4px 2px', display: 'inline-block', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
       </div>
 
       {open && body}

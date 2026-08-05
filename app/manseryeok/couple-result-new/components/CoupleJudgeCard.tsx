@@ -94,7 +94,7 @@ function Card({ cat, extra, tong }: { cat: CategoryResult; extra?: React.ReactNo
           >
             <span style={{ fontSize: 12 }}>✦</span>
             <span>{open ? '풀이 접기' : '이 자리의 풀이 보기'}</span>
-            <span style={{ marginLeft: 'auto', fontSize: 10, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>▾</span>
+            <span aria-hidden style={{ marginLeft: 'auto', fontSize: 22, lineHeight: 1, color: '#96502e', padding: '4px 2px', display: 'inline-block', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>▾</span>
           </button>
           {open && (
             <div style={{

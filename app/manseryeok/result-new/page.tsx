@@ -158,8 +158,23 @@ function Section({
         <span style={{flex:1,fontSize:'13px',fontWeight:700,color:'#1a1a1a'}}>{title}</span>
         {collapsible && hint && !isOpen &&
           <span style={{fontSize:'10px',color:'#c5a590'}}>{hint}</span>}
+        {/* ★2026-08-05 (46부 20차) — 접기 화살표를 22px + 진한 색으로. [대표님 지시]
+              「아코디언 역삼각형 버튼이 너무 작아서 보이질 않는다」
+
+              ⚠️⚠️ ★같은 지적이 «두 번째» 입니다.
+                 PerspectiveAccordion(22px) · NameAnalysisResultView(20px) 에
+                 앞 세션이 이미 고쳐 둔 자리가 있었고, 그 주석에 이렇게 적혀 있었습니다 —
+                   「13px 이라 «누를 수 있는 줄» 인지 모르고 지나치셨습니다」
+                   「⚠️ 색도 진하게 — ★옅으면 커도 눈에 안 들어옵니다」
+                 ⇒ 그 값(22px)에 ★맞췄습니다. 새로 정하지 않았습니다.
+
+              ★손님 화면 «전부» 를 훑어 열여덟 곳을 고쳤습니다 (대표님 지시).
+                홈 · 만세력 · 궁합 · 물상 · 작명 · 오늘의운세 · 보관함 · 마이페이지
+              ⛔ admin · landing · 상담사 화면(consultant)은 «손님 화면이 아니라» 뒀습니다.
+
+              ⛔ 다시 작게 만들지 마십시오. 두 번 나온 지적입니다. */}
         {collapsible &&
-          <span style={{color:'#c8783c',fontSize:'12px',transition:'transform .25s',
+          <span aria-hidden style={{color:'#96502e',fontSize:'22px',lineHeight:1,padding:'4px 2px',display:'inline-block',transition:'transform .25s',
             transform:`rotate(${isOpen?'180':'0'}deg)`}}>▾</span>}
       </div>
       <div style={{maxHeight: isOpen?'2000px':'0',overflow:'hidden',transition:'max-height .3s ease'}}>
