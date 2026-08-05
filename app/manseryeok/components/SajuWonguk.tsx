@@ -99,10 +99,31 @@ function GanjiBox({ char, el, isDay, isGongmang }: { char: string; el: Element |
         ? (isDay ? '3px solid #000000' : '1px solid #2b2b2b')
         : (isDay ? '2px solid #c8783c' : `1px solid ${el ? EL_BD[el] : '#ddd'}`),
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      margin: '0 auto', position: 'relative', opacity: isGongmang ? 0.45 : 1,
+      // ★2026-08-05 — 공망 흐림을 0.45 → 0.75 로 «올렸습니다» (대표님 확정).
+      //   [왜]  45부에 원국표 색 대비를 2.63~3.93:1 로 어렵게 올려 두었는데,
+      //         거기에 0.45 를 곱하면 ★대비가 절반 아래로 떨어져 어르신이 못 읽습니다.
+      //   [대신]  아래 「空」 배지가 «공망이라는 뜻» 을 대신 짊어집니다.
+      //   ⛔ 0.45 로 되돌리지 마십시오. 배지가 있으니 흐림은 거들기만 하면 됩니다.
+      margin: '0 auto', position: 'relative', opacity: isGongmang ? 0.75 : 1,
     }}>
       <span style={{ fontSize: 21, fontWeight: 700, color: el ? EL_C[el] : '#888', lineHeight: 1 }}>{char}</span>
       {el && <span style={{ position: 'absolute', bottom: 1, right: 3, fontSize: 10.5, fontWeight: 600, color: EL_C_SUB[el] }}>{EL_HAN[el]}</span>}
+      {/* ★공망 배지 — 2026-08-05 신설 (대표님 지시)
+          [왜]  원국을 보는 «그 자리에서» 어느 지지가 공망인지 바로 알아보려는 것입니다.
+                전에는 표 아래 요약칸의 「공망 戌·未」를 따로 봐야 알 수 있었습니다.
+          ★빨강(#c14545)입니다 — 45부 3-2 「빨강은 ‘주의’ 뜻이라 갈색으로 안 바꿈」과
+            같은 결입니다. 갈색으로 바꾸지 마십시오.
+          ⚠️ 왼쪽 위 모서리입니다. 오른쪽 아래는 오행 한자가 이미 씁니다.
+          ⚠️ 지금 기준은 ★일주 공망 하나입니다 (부르는 곳이 gm1·gm2 로 넘기는 것).
+             년주 기준을 함께 내려면 부르는 곳 «여덟 군데» 를 다 고쳐야 합니다. */}
+      {isGongmang && (
+        <span style={{
+          position: 'absolute', top: -4, left: -4,
+          background: '#c14545', color: '#fff',
+          fontSize: 8.5, fontWeight: 700, lineHeight: 1.3,
+          borderRadius: 5, padding: '1px 4px',
+        }}>空</span>
+      )}
     </div>
   )
 }
@@ -155,11 +176,18 @@ export default function SajuWonguk({ saju, dayStem, yeonjji, iljji: _iljji, gm1,
           {/* 지지 */}
           <tr>
             <td style={rowLabel}>지지</td>
-            {saju.map(({ branch }, i) => (
-              <td key={i} style={{ padding: 2 }}>
-                <GanjiBox char={branch} el={BRANCH_ELEMENT[branch]} isGongmang={branch === gm1 || branch === gm2} />
-              </td>
-            ))}
+            {saju.map(({ branch }, i) => {
+              const isGm = !!gm1 && (branch === gm1 || branch === gm2)
+              return (
+                // ★공망인 칸은 눌러도 「공망」 뜻풀이가 뜹니다 (2026-08-05).
+                //   사전(sajuTerms.ts)에 공망 항목이 «이미» 있어 잇기만 했습니다.
+                //   ⚠️ 공망이 아닌 칸은 지금까지처럼 «안 눌립니다». 그대로 두십시오.
+                <td key={i} style={{ padding: 2, cursor: isGm ? 'pointer' : 'default' }}
+                  onClick={() => isGm && open('공망')}>
+                  <GanjiBox char={branch} el={BRANCH_ELEMENT[branch]} isGongmang={isGm} />
+                </td>
+              )
+            })}
           </tr>
           {/* 지지 십성 */}
           <tr>
