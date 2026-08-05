@@ -769,12 +769,6 @@ function MulsangInner() {
     }
   }
 
-  function handleShare() {
-    if (navigator.share) {
-      navigator.share({ title: '명카페 사주 풍경화', text: '내 사주를 그림으로 봤어요!', url: window.location.href })
-    }
-  }
-
   const branchList = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥']
   const sajuLine = converting ? '사주 불러오는 중...' :
     `일간 ${dayStem} · ${info.calType} ${info.year}.${info.month}.${info.day}${info.hourIdx !== null ? ` ${branchList[info.hourIdx]}시` : ''}`
@@ -956,15 +950,25 @@ function MulsangInner() {
                 {imageUrl && (
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', padding: '10px 12px', background: '#fffbf7', borderBottom: '0.5px solid #9c7a58' }}>
                     <button onClick={handleDownloadImage} disabled={imgSaving}
-                      style={{ flex: 1, maxWidth: '200px', padding: '10px', borderRadius: '9px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: imgSaving ? 'default' : 'pointer' }}>
+                      style={{ flex: 1, maxWidth: '200px', padding: '10px', borderRadius: '9px', background: '#b46e46',
+                        minHeight: 44, boxSizing: 'border-box',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        border: 'none', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: imgSaving ? 'default' : 'pointer' }}>
                       {imgSaving ? '내려받는 중…' : '⬇ 그림 저장'}
                     </button>
-                    {typeof navigator !== 'undefined' && 'share' in navigator && (
-                      <button onClick={handleShare}
-                        style={{ flex: 1, maxWidth: '200px', padding: '10px', borderRadius: '9px', background: 'transparent', border: '0.5px solid #d8c4b4', color: '#96502e', fontSize: '13px', cursor: 'pointer' }}>
-                        ↗ 공유
-                      </button>
-                    )}
+                    {/* ★2026-08-05 (47부 12차) — 「↗ 공유」를 걷고 「카드로 저장」을 올렸습니다. [대표님 지시]
+                        ⚠️ 옛 「공유」는 navigator.share 를 받는 기기(폰)에서만 «있다가 없다가» 했습니다.
+                           PC 에서는 원래 「그림 저장」 혼자였습니다.
+                        ⚠️ handleShare 함수도 ★함께 지웠습니다 (아무도 안 부르면 eslint 경고가 늡니다).
+                        ⛔ 되살리시려면 ★버튼과 함수를 «함께» 되살리십시오. */}
+                    <button onClick={handleShareCard} disabled={cardBusy}
+                      style={{ flex: 1, maxWidth: '200px', padding: '10px', borderRadius: '9px', background: '#b46e46',
+                        minHeight: 44, boxSizing: 'border-box',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        border: 'none', color: '#fff', fontSize: '13px', fontWeight: 700,
+                        cursor: cardBusy ? 'default' : 'pointer' }}>
+                      {cardBusy ? (cardStep || '만드는 중…') : '🖼️ 카드로 저장'}
+                    </button>
                   </div>
                 )}
               </>
@@ -1025,20 +1029,18 @@ function MulsangInner() {
                         <div style={{ flex: 1 }}>
                           <CopyTextButton text={tongResult} label="사주 그림 해설" name={info?.name} inRow />
                         </div>
-                        {imageUrl && (
-                          <button onClick={handleShareCard} disabled={cardBusy}
-                            /* ★2026-08-05 (47부 11차) — 「해설 복사」와 높이를 맞췄습니다.
-                               [전] padding 11 · 글자 12.5 → ★37.0px  (짝은 38.6px 이었습니다)
-                               [후] padding 13 · 글자 13 · minHeight 44 → ★44px 로 «같아짐»
-                               ⛔ 짝(CopyTextButton)만 바꾸면 또 어긋납니다. 둘을 «함께» 보십시오. */
-                            style={{ flex: 1, padding: '13px', borderRadius: '10px', background: '#b46e46',
-                              minHeight: 44, boxSizing: 'border-box',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              border: 'none', color: '#fff', fontSize: '13px', fontWeight: 700,
-                              cursor: cardBusy ? 'default' : 'pointer' }}>
-                            {cardBusy ? (cardStep || '만드는 중…') : '🖼️ 카드로 저장'}
-                          </button>
-                        )}
+                        {/* ★2026-08-05 (47부 12차) — 이 자리를 「보관함」으로. [대표님 지시]
+                            ⚠️ 보관함 저장은 ★«자동» 이라 «저장하는» 버튼이 아니라 «가는» 버튼입니다.
+                            ⚠️ 옛 「👥 다른 사람 그리기」가 가던 그 자리(mulsang-storage)입니다.
+                            ⛔ 이 버튼까지 지우지 마십시오. 보관함으로 갈 길이 «없어집니다». */}
+                        <button onClick={() => router.push('/manseryeok/mulsang-storage')}
+                          style={{ flex: 1, padding: '13px', borderRadius: '10px', background: 'transparent',
+                            minHeight: 44, boxSizing: 'border-box',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            border: '0.5px solid #d8c4b4', color: '#96502e', fontSize: '13px', fontWeight: 500,
+                            cursor: 'pointer', fontFamily: 'inherit' }}>
+                          📜 보관함
+                        </button>
                       </div>
                     )}
                     {!tongLoading && imageUrl && (
@@ -1079,42 +1081,34 @@ function MulsangInner() {
 
           {/* ★보관함 저장 상태 — 누르는 버튼이 아니라 표시다 (그림이 뜨면 자동 저장).
               실패했을 때만 [다시 저장]을 눌러 재시도한다. (19-2부) */}
-          {imageUrl && saveState !== 'idle' && (
+          {/* ★2026-08-05 (47부 12차) — 저장 «성공» 안내를 걷어냈습니다. [대표님 지시]
+              「보관함에 저장했어요…문구 삭제 · 공간 효율화」
+              ⚠️ 보관함 저장은 ★«자동» 입니다. 잘 됐을 때는 굳이 알리지 않습니다.
+              🔴 ★«실패» 안내는 «남겼습니다» — 지우면 저장이 실패해도 손님이 모른 채 떠납니다.
+                 평소에는 안 보이므로 ★공간을 쓰지 않습니다.
+              ⛔ 실패 안내까지 지우지 마십시오.
+              ⚠️ 조건이 saveState !== 'idle' → ★=== 'failed' 로 바뀌었습니다. */}
+          {imageUrl && saveState === 'failed' && (
             <div style={{ marginTop: '12px' }}>
-              {saveState === 'failed' ? (
-                <div style={{ background: '#fdf0e8', border: '0.5px solid #f0d5c0', borderRadius: '12px', padding: '13px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '13px', color: '#8f3d0e', marginBottom: '8px' }}>보관함에 저장하지 못했어요</div>
-                  <button onClick={() => { setSaveState('idle'); handleSaveRecord() }}
-                    style={{ padding: '9px 20px', borderRadius: '9px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
-                    다시 저장
-                  </button>
-                </div>
-              ) : (
-                <div style={{ background: '#eef5e8', borderRadius: '12px', padding: '13px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '13.5px', color: '#4a7a3a', fontWeight: 700 }}>
-                    {saveState === 'saving' ? '보관함에 저장하는 중…' : '✓ 보관함에 저장됐어요'}
-                  </div>
-                  {saveState === 'saved' && (
-                    <div style={{ fontSize: '11px', color: '#5c7a4a', marginTop: '3px' }}>
-                      {STYLE_CONFIGS[style]?.label} · 보관함에서 언제든 다시 보실 수 있어요
-                    </div>
-                  )}
-                </div>
-              )}
+              <div style={{ background: '#fdf0e8', border: '0.5px solid #f0d5c0', borderRadius: '12px', padding: '13px', textAlign: 'center' }}>
+                <div style={{ fontSize: '13px', color: '#8f3d0e', marginBottom: '8px' }}>보관함에 저장하지 못했어요</div>
+                <button onClick={() => { setSaveState('idle'); handleSaveRecord() }}
+                  style={{ padding: '9px 20px', borderRadius: '9px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+                  다시 저장
+                </button>
+              </div>
             </div>
           )}
 
-          <button onClick={() => router.push('/manseryeok/mulsang-storage')}
-            style={{ width: '100%', padding: '13px', borderRadius: '12px', marginTop: '10px', marginBottom: '4px',
-              background: 'transparent', border: '0.5px solid #d8c4b4', color: '#96502e', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
-            👥 다른 사람 그리기
-          </button>
+          {/* ★2026-08-05 (47부 12차) — 「👥 다른 사람 그리기」를 «걷어냈습니다». [대표님 지시]
+              「공간 효율화…너무 복잡함」
+              ⚠️ 가던 자리(mulsang-storage)는 ★위 「📜 보관함」이 이어받았습니다. */}
 
           {/* ★2026-08-05 (47부 9차) — 상담 카드를 «화면 맨 끝» 으로 내렸습니다. [대표님 지시]
               「다시그리기 보다 더 아래…맨 끝으로 옮겨줘」
               [전]  「다시 그리기」 «위» 에 있어 그림 다시 뽑기와 뒤섞였습니다.
               ⚠️ 아래 공유카드 원본은 ★화면 밖(left:-9999px)이라 «보이는 끝» 이 아닙니다.
-                 그래서 「다른 사람 그리기」 뒤가 ★손님에게 보이는 마지막 자리입니다.
+                 ★12차에 「다른 사람 그리기」를 걷어냈으므로 지금은 ★이 상담 카드가 마지막입니다.
               ⛔ 다시 위로 올리지 마십시오. */}
           {/* ══════════════════════════════════════════════════════════════
               ★2026-08-05 (47부 6차) — 공용 부품으로 갈아 끼우고 «켰습니다». [대표님 지시]

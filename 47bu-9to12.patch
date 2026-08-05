@@ -1,0 +1,813 @@
+From f5277ade43682868cb6db0771235eef1218e9a08 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 11:40:49 +0000
+Subject: [PATCH 1/4] =?UTF-8?q?2=EB=8B=A8=EA=B3=84:=20=EC=83=81=EB=8B=B4?=
+ =?UTF-8?q?=20=EA=B0=80=EA=B2=A9=ED=91=9C=20SQL=20=E2=80=94=20=EC=95=84?=
+ =?UTF-8?q?=ED=99=89=20=EC=88=9C=EC=84=9C=C2=B7=EC=9D=B4=EB=A6=84=C2=B7?=
+ =?UTF-8?q?=ED=86=A0=EA=B8=80=20(47=EB=B6=80=208=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ ...4\352\260\200\352\262\251\355\221\234.sql" | 97 +++++++++++++++++++
+ 1 file changed, 97 insertions(+)
+ create mode 100644 "_SQL_47bu_2\353\213\250\352\263\204_\354\203\201\353\213\264\352\260\200\352\262\251\355\221\234.sql"
+
+diff --git "a/_SQL_47bu_2\353\213\250\352\263\204_\354\203\201\353\213\264\352\260\200\352\262\251\355\221\234.sql" "b/_SQL_47bu_2\353\213\250\352\263\204_\354\203\201\353\213\264\352\260\200\352\262\251\355\221\234.sql"
+new file mode 100644
+index 0000000..65ea508
+--- /dev/null
++++ "b/_SQL_47bu_2\353\213\250\352\263\204_\354\203\201\353\213\264\352\260\200\352\262\251\355\221\234.sql"
+@@ -0,0 +1,97 @@
++-- ════════════════════════════════════════════════════════════════════════
++-- 47부 2단계 — 전문가 상담 가격표를 «대표님 아홉» 으로 맞춥니다
++-- 2026-08-05
++--
++-- [지시]  「관리자 페이지 가격관리 전문가 상담가격의 이름(홈서비스순서와 일치)과
++--          토글버튼을 연결지어」
++--
++-- ★쓰는 법
++--   Supabase → SQL Editor 에 ★통째로 붙여넣고 한 번 실행하십시오.
++--   여러 번 돌려도 안전합니다.
++--
++-- ★한 줄도 «지우지» 않습니다. 45부 방식대로 «끄기» 만 합니다.
++-- ════════════════════════════════════════════════════════════════════════
++
++
++-- ── 0. 돌리기 «전» 모습을 남겨 둡니다 (되돌릴 때 씁니다) ────────────────
++select price_key, label, price, active, sort from consult_prices order by sort;
++--   ⚠️ ★이 결과를 «사진으로 찍어 두십시오». 되돌리실 때 쓰입니다.
++
++
++-- ── 1. 없는 줄 셋을 넣습니다 ────────────────────────────────────────────
++--   ★career · wedding · naming_baby 만 새로입니다.
++--     (moving 은 「이사택일 상담」으로 «이미» 있습니다)
++--   ⚠️ 값은 ★임시 50,000원 · ★꺼짐(false) 입니다.
++--      값을 정하신 뒤 관리자 화면에서 고치고 «켜십시오».
++insert into consult_prices (price_key, label, price, active, sort)
++values
++  ('career',      '진로적성',        50000, false, 2),
++  ('wedding',     '결혼택일',        50000, false, 5),
++  ('naming_baby', '내 아이 명품작명', 50000, false, 9)
++on conflict (price_key) do nothing;
++
++--   ⚠️ 위에서 「on conflict … 제약이 없다」는 오류가 나면 ★아래를 «먼저» 한 번 돌리십시오.
++--      alter table consult_prices add constraint consult_prices_price_key_key unique (price_key);
++--      (이미 있으면 「already exists」가 뜨는데 그냥 넘어가시면 됩니다)
++
++
++-- ── 2. 이름을 «홈 서비스 이름» 과 같게 하고, 차례를 대표님 아홉으로 ─────
++--   ★값(price)과 ★노출(active)은 «건드리지 않습니다». 지금 것을 그대로 둡니다.
++update consult_prices set label = '내 사주그림',      sort = 1 where price_key = 'mulsang';
++update consult_prices set label = '진로적성',          sort = 2 where price_key = 'career';
++update consult_prices set label = '궁합',              sort = 3 where price_key = 'couple';
++update consult_prices set label = '내 사주와 운세보기', sort = 4 where price_key = 'saju';
++update consult_prices set label = '결혼택일',          sort = 5 where price_key = 'wedding';
++update consult_prices set label = '출산택일',          sort = 6 where price_key = 'birth';
++update consult_prices set label = '이사택일',          sort = 7 where price_key = 'moving';
++update consult_prices set label = '내 이름 정밀분석',  sort = 8 where price_key = 'naming';
++update consult_prices set label = '내 아이 명품작명',  sort = 9 where price_key = 'naming_baby';
++
++--   ⚠️ 「내 이름 정밀분석」은 ★어른 개명과 «같은 것» 입니다 [대표님 확정].
++--      화면 둘이 이 한 줄을 씁니다 —
++--        naming/diagnosis            (이름 감정)
++--        naming/rename/newresult     (kind=개명)
++--   ⚠️ 「내 아이 명품작명」은 newresult 의 ★kind=신생아 일 때만 걸립니다.
++--   ⚠️ 홈 카드 이름은 「내 아이 명품작명」입니다. 대표님이 적으신 「내 아기 명품이름」과
++--      글자가 다릅니다. ★홈과 맞추려고 홈 이름을 썼습니다.
++--      바꾸시려면 위 label 만 고치면 됩니다. price_key 는 그대로 두십시오.
++
++
++-- ── 3. 아홉에 «없는» 줄은 끕니다 (지우지 않습니다) ──────────────────────
++--   ★prewedding(예비부부) 은 지금 «켜져» 있었습니다. 코드가 «전혀 안 부르는» 줄입니다.
++--   ★tarot 는 이번 아홉에서 빠졌습니다. 화면의 버튼도 걷어냈습니다.
++update consult_prices set active = false, sort = 90 where price_key = 'prewedding';
++update consult_prices set active = false, sort = 91 where price_key = 'married';
++update consult_prices set active = false, sort = 92 where price_key = 'tarot';
++--   ⛔ delete 하지 마십시오. 되살릴 때 관리자 화면에 「더하기」가 없어 또 SQL 이 필요합니다.
++
++
++-- ── 4. 돌린 «뒤» 를 확인합니다 ──────────────────────────────────────────
++select price_key, label, price, active, sort from consult_prices order by sort;
++--   ⇒ ★열두 줄이 나와야 합니다 (아홉 + 꺼둔 셋)
++--   ⇒ 위 아홉 줄의 차례가 대표님이 적으신 아홉과 «같아야» 합니다
++
++
++-- ════════════════════════════════════════════════════════════════════════
++-- 🔴 돌린 뒤 «관리자 화면에서» 하실 일
++--
++--   💰 가격 관리 → 「🔮 전문가 상담 가격」 표에서
++--     ① 아홉 줄의 ★값을 정하십시오
++--     ② 손님에게 보이실 것만 ★켜십시오
++--
++--   ⚠️⚠️ ★「이사택일」이 지금 ★0원 인데 «켜져» 있습니다.
++--      손님이 ★무료로 상담을 신청할 수 있는 상태로 보입니다.
++--      값을 넣으시거나, 값을 정할 때까지 ★꺼 두시기를 권합니다.
++--      (인수인계서 9-5 「이사택일 결제 관문이 없습니다」와 이어지는 자리입니다)
++--
++--   [지금 값 — 사진에서 읽은 것]
++--     내 사주그림        50,000  꺼짐
++--     진로적성           50,000  꺼짐   ← 새로 넣음
++--     궁합               50,000  켜짐
++--     내 사주와 운세보기  50,000  켜짐
++--     결혼택일           50,000  꺼짐   ← 새로 넣음
++--     출산택일           70,000  켜짐
++--     이사택일           ★0      ★켜짐  ← 확인이 필요합니다
++--     내 이름 정밀분석    80,000  꺼짐
++--     내 아이 명품작명    50,000  꺼짐   ← 새로 넣음
++-- ════════════════════════════════════════════════════════════════════════
+-- 
+2.43.0
+
+
+From 493189a1e863e3047dbb388bfadffc90c0f242ed Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 12:14:34 +0000
+Subject: [PATCH 2/4] =?UTF-8?q?=EC=83=81=EB=8B=B4=20=EC=B9=B4=EB=93=9C?=
+ =?UTF-8?q?=EB=A5=BC=20=ED=99=94=EB=A9=B4=20=EB=A7=A8=20=EB=81=9D=EC=9C=BC?=
+ =?UTF-8?q?=EB=A1=9C=20=C2=B7=20=EB=B2=84=ED=8A=BC=20=EC=83=89=EC=9D=84=20?=
+ =?UTF-8?q?=ED=99=94=EB=A9=B4=EA=B3=BC=20=ED=86=B5=EC=9D=BC=20(47=EB=B6=80?=
+ =?UTF-8?q?=209-10=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/components/common/ConsultButton.tsx       | 29 ++++++++-
+ app/manseryeok/birth-timing/result/page.tsx   | 18 +++--
+ app/manseryeok/career-result/page.tsx         | 13 ++--
+ app/manseryeok/couple-result-new/page.tsx     | 27 ++++----
+ app/manseryeok/mulsang/page.tsx               | 65 ++++++++++---------
+ app/manseryeok/naming/diagnosis/page.tsx      | 14 ++--
+ .../naming/rename/newresult/page.tsx          | 50 +++++++-------
+ 7 files changed, 134 insertions(+), 82 deletions(-)
+
+diff --git a/app/components/common/ConsultButton.tsx b/app/components/common/ConsultButton.tsx
+index 5c175b9..8bebfae 100644
+--- a/app/components/common/ConsultButton.tsx
++++ b/app/components/common/ConsultButton.tsx
+@@ -117,12 +117,35 @@ export default function ConsultButton({ priceKey, mode, searchParams, payload }:
+   //       카드 선    주황15% → #9c7a58   3.67:1  (45부 확정)
+   //       제목       #ffffff → #3a2e28  12.74:1
+   //       설명       #8a88a0 → #7d6a5b   ★4.99:1  ← 전에는 4.07:1 «미달» 이었습니다
+-  //       버튼       #FAC775+검정 → ★#96502e+흰글자  6.03:1
++  //       버튼       #FAC775+검정 → #96502e+흰글자
++  //
++  //   ★2026-08-05 (47부 10차) — 버튼 색을 ★#b46e46 으로 바꿨습니다. [대표님 확정]
++  //     [대표님]  「이 화면의 것들과 같은 색상으로 하라는 거야 · 모두 통일되게」
++  //     [겪은 일]  #96502e 로 뒀더니 물상 화면에서 「색상이 이상하다」 하셨습니다.
++  //       재 보니 그 화면의 「카드로 저장」·「다시 그리기」가 ★#b46e46 이라
++  //       비슷하면서 «미묘하게 다른» 갈색 둘이 나란히 놓여 잘못 칠한 것처럼 보였습니다.
++  //
++  //     ⚠️ 제가 한때 「화면마다 브랜드색이 다르다(진로 보라·궁합 분홍·작명 초록)」고
++  //        말씀드렸는데 ★틀렸습니다. 그건 «홈 카드» 색이었습니다.
++  //        ★결과 화면의 꽉 찬 버튼은 실제로 «두 색» 뿐입니다 —
++  //          #b46e46  물상(10) · 궁합(2) · 사주(2)
++  //          #c8783c  이름정밀분석(3) · 작명(1)
++  //        ⇒ 그래서 «색 하나» 로 통일할 수 있었고, 공용 부품을 지킬 수 있었습니다.
++  //
++  //   🔴🔴 ★알고 쓰는 «미달» 입니다 — 잊지 마십시오
++  //     #b46e46 + 흰 글자 = ★3.99:1  (기준 4.5 «미달»)
++  //     ⇒ ★이 화면들의 버튼이 «원래부터» 미달이었습니다. 45부 대비 손질에서 빠진 자리입니다.
++  //     ⇒ 대표님이 「통일」을 우선하기로 ★알고 고르셨습니다. 제 실수가 아닙니다.
++  //     ⚠️ 눈에 거의 같으면서 4.94:1 을 넘기는 값도 재 두었습니다 → ★#9f613e
++  //        나중에 #b46e46 버튼들을 «통째로» 올리실 때 이 값을 쓰시면 됩니다.
++  //        ⇒ 그때는 ★이 부품과 각 화면 버튼을 «함께» 바꾸십시오. 하나만 하면 또 어긋납니다.
++  //     ⛔ 이 부품만 혼자 다른 색으로 바꾸지 마십시오. 통일이 깨집니다.
+   //
+   //   ⚠️⚠️ 버튼을 ★#c8783c 로 바꾸지 마십시오.
+   //     작명·AiTalkFab 이 쓰는 색이라 «통일감» 은 더 좋지만
+   //     흰 글자와 ★3.38:1 로 기준(4.5) «미달» 입니다. 재서 확인했습니다.
+-  //     ⇒ 50,000원을 결제하는 버튼이라 또렷해야 합니다. 대표님이 #96502e 로 확정하셨습니다.
++  //     ⇒ 50,000원을 결제하는 버튼이라 또렷해야 합니다.
++  //     ⚠️ 이 판단은 ★아래 47부 10차에 «거두었습니다». 지금 색은 #b46e46 입니다.
+   //     ⇒ 나중에 손님 화면 주 버튼 색을 «통째로» 올릴 때 이 자리도 함께 보십시오.
+   //
+   //   ⚠️ 이 부품을 쓰는 화면은 «다섯» 입니다 — 여기를 고치면 다섯 곳이 함께 바뀝니다.
+@@ -141,7 +164,7 @@ export default function ConsultButton({ priceKey, mode, searchParams, payload }:
+       </p>
+       <button onClick={go}
+         className="w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2"
+-        style={{ background: '#96502e', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
++        style={{ background: '#b46e46', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+         상담 신청하기
+         {price != null && <span style={{ opacity: 0.85 }}>· {price.toLocaleString()}원</span>}
+       </button>
+diff --git a/app/manseryeok/birth-timing/result/page.tsx b/app/manseryeok/birth-timing/result/page.tsx
+index fb47465..b39904e 100644
+--- a/app/manseryeok/birth-timing/result/page.tsx
++++ b/app/manseryeok/birth-timing/result/page.tsx
+@@ -466,13 +466,6 @@ function BirthResultInner() {
+           )
+         )}
+ 
+-        {/* 전문가 상담 연결 (출산 택일 상담) — 저장 표시 아래.
+-            관리자 > 가격 관리에서 '노출'을 끄면 이 영역이 통째로 사라진다. */}
+-        {!loading && !errMsg && recs.length > 0 && (
+-          <div style={{ marginTop: '12px' }}>
+-            <ConsultButton priceKey="birth" mode="birth" />
+-          </div>
+-        )}
+ 
+         <button
+           onClick={() => router.push('/manseryeok/birth-timing/birth-storage')}
+@@ -483,6 +476,17 @@ function BirthResultInner() {
+         <div style={{ marginTop: '16px' }}>
+           <Disclaimer />
+         </div>
++
++        {/* ★2026-08-05 (47부 9차) — 상담 카드를 «화면 맨 끝» 으로. [대표님 지시]
++            ⚠️ 보관함 버튼·안내문이 상담 카드 «위» 로 올라갔습니다.
++            ⛔ 다시 위로 올리지 마십시오. */}
++        {/* 전문가 상담 연결 (출산 택일 상담) — 저장 표시 아래.
++            관리자 > 가격 관리에서 '노출'을 끄면 이 영역이 통째로 사라진다. */}
++        {!loading && !errMsg && recs.length > 0 && (
++          <div style={{ marginTop: '12px' }}>
++            <ConsultButton priceKey="birth" mode="birth" />
++          </div>
++        )}
+       </div>
+     </main>
+   )
+diff --git a/app/manseryeok/career-result/page.tsx b/app/manseryeok/career-result/page.tsx
+index ebaa97e..847475f 100644
+--- a/app/manseryeok/career-result/page.tsx
++++ b/app/manseryeok/career-result/page.tsx
+@@ -830,6 +830,15 @@ function CareerResultInner() {
+               </>
+             )}
+ 
++
++            <div style={{ fontSize: 11, color: '#a08d7d', textAlign: 'center', marginTop: 18, lineHeight: 1.7 }}>
++              사주는 참고입니다. 길은 본인의 노력과 의지로 얼마든지 바꿀 수 있어요.
++            </div>
++
++            {{/* ★2026-08-05 (47부 9차) — 상담 카드를 «화면 맨 끝» 으로 내렸습니다. [대표님 지시]
++                「다시그리기 보다 더 아래…맨 끝으로 옮겨줘」
++                ⚠️ 그래서 맺음말·안내글이 상담 카드 «위» 로 올라갔습니다. 뜻한 대로입니다.
++                ⛔ 다시 위로 올리지 마십시오. */}}
+             {/* ★2026-08-05 (47부 6차) — 전문가 상담 [대표님 지시]
+                 「진로적성과 타로는 넣어줘」
+                 ⚠️ priceKey='career' — ★consult_prices 표에 이 줄이 «있어야» 보입니다.
+@@ -844,10 +853,6 @@ function CareerResultInner() {
+                 payload={() => ({ aiAnalysis: tong || undefined })}
+               />
+             </div>
+-
+-            <div style={{ fontSize: 11, color: '#a08d7d', textAlign: 'center', marginTop: 18, lineHeight: 1.7 }}>
+-              사주는 참고입니다. 길은 본인의 노력과 의지로 얼마든지 바꿀 수 있어요.
+-            </div>
+           </>
+         )}
+       </div>
+diff --git a/app/manseryeok/couple-result-new/page.tsx b/app/manseryeok/couple-result-new/page.tsx
+index 44da06b..6dcc6ab 100644
+--- a/app/manseryeok/couple-result-new/page.tsx
++++ b/app/manseryeok/couple-result-new/page.tsx
+@@ -1203,6 +1203,22 @@ function CoupleResultView({
+           <style>{`.copy-half > button { width: 100%; }`}</style>
+         </div>
+ 
++
++
++        {/* 참고용 안내 — 결과에 과몰입하지 않도록 다정하게 */}
++        <div style={{
++          marginTop: 18, padding: '13px 14px', borderRadius: 11,
++          background: '#faf3ec', border: '0.5px solid #9c7a58',
++          fontSize: 11.5, lineHeight: 1.7, color: '#5c3a1e', textAlign: 'center',
++        }}>
++          이 풀이는 두 분을 더 깊이 이해하기 위한 다정한 참고예요.<br />
++          인연을 정하는 건 사주가 아니라 두 사람의 마음과 노력이랍니다. 🌿
++        </div>
++
++        {/* ★2026-08-05 (47부 9차) — 상담 카드를 «화면 맨 끝» 으로 내렸습니다. [대표님 지시]
++            「다시그리기 보다 더 아래…맨 끝으로 옮겨줘」
++            ⚠️ 그래서 참고용 안내가 상담 카드 «위» 로 올라갔습니다. 뜻한 대로입니다.
++            ⛔ 다시 위로 올리지 마십시오. */}
+         {/* 전문가 상담 — 저장 표시 아래.
+             ★ 연인/부부가 서로 다른 가격표(price_key)를 쓴다.
+               관리자 > 가격 관리에서 '노출'이 꺼져 있으면 ConsultButton이
+@@ -1244,17 +1260,6 @@ function CoupleResultView({
+             />
+           </div>
+         )}
+-
+-
+-        {/* 참고용 안내 — 결과에 과몰입하지 않도록 다정하게 */}
+-        <div style={{
+-          marginTop: 18, padding: '13px 14px', borderRadius: 11,
+-          background: '#faf3ec', border: '0.5px solid #9c7a58',
+-          fontSize: 11.5, lineHeight: 1.7, color: '#5c3a1e', textAlign: 'center',
+-        }}>
+-          이 풀이는 두 분을 더 깊이 이해하기 위한 다정한 참고예요.<br />
+-          인연을 정하는 건 사주가 아니라 두 사람의 마음과 노력이랍니다. 🌿
+-        </div>
+       </div>
+     </main>
+   )
+diff --git a/app/manseryeok/mulsang/page.tsx b/app/manseryeok/mulsang/page.tsx
+index 27c8d97..cfcc60e 100644
+--- a/app/manseryeok/mulsang/page.tsx
++++ b/app/manseryeok/mulsang/page.tsx
+@@ -1046,35 +1046,6 @@ function MulsangInner() {
+             )}
+           </div>
+ 
+-          {/* ══════════════════════════════════════════════════════════════
+-              ★2026-08-05 (47부 6차) — 공용 부품으로 갈아 끼우고 «켰습니다». [대표님 지시]
+-                「공용부품으로 교체해주고 · 내사주그림은 키면 되는 것이고」
+-
+-              [전]  false && 로 «꺼져» 있었고, goConsult() 라는 따로 만든 길이었습니다.
+-                    버튼도 이 화면에만 있는 생김새였습니다.
+-              [후]  ConsultButton 하나. 문구·배색·가격·노출토글이 다른 여섯 화면과 «같아집니다».
+-
+-              ⚠️ goConsult() 가 담던 mulsang_full(그림+해설)을 «잃지 않으려고»
+-                 ConsultPayload 에 ★mulsangFull 자리를 새로 냈습니다.
+-                 이 자리가 없으면 상담사 화면에 ★그림이 안 뜹니다.
+-              ⚠️ mode='mulsang' 이어야 상담사 화면이 그림+해설을 그립니다. 지우지 마십시오.
+-              ⚠️ priceKey='mulsang' — ★consult_prices 표에 이 줄이 «있어야» 버튼이 보입니다.
+-                 줄이 없으면 active=false 로 떨어져 ★버튼이 통째로 숨습니다 (안전한 쪽입니다).
+-                 SQL 은 _SQL_consult_prices_47bu.sql 에 담아 두었습니다.
+-              ⛔ 옛 goConsult() 는 «지웠습니다». 되살릴 일이 없습니다.
+-              ══════════════════════════════════════════════════════════════ */}
+-          <div style={{ marginTop: '8px', marginBottom: '12px' }}>
+-            <ConsultButton
+-              priceKey="mulsang"
+-              mode="mulsang"
+-              payload={() => ({
+-                aiAnalysis: tongResult || undefined,
+-                mulsangFull: (tongResult || imageUrl)
+-                  ? { image_url: imageUrl || null, prompt: '', style, commentary: tongResult || null }
+-                  : undefined,
+-              })}
+-            />
+-          </div>
+ 
+           {/* ★다른 화풍으로 다시 그리기 — 지금 화풍을 뺀 나머지만 고르게 한다.
+               (1회 결제 = 그림 1장이므로 다시 그리면 다시 결제된다) */}
+@@ -1132,6 +1103,42 @@ function MulsangInner() {
+               background: 'transparent', border: '0.5px solid #d8c4b4', color: '#96502e', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
+             👥 다른 사람 그리기
+           </button>
++
++          {/* ★2026-08-05 (47부 9차) — 상담 카드를 «화면 맨 끝» 으로 내렸습니다. [대표님 지시]
++              「다시그리기 보다 더 아래…맨 끝으로 옮겨줘」
++              [전]  「다시 그리기」 «위» 에 있어 그림 다시 뽑기와 뒤섞였습니다.
++              ⚠️ 아래 공유카드 원본은 ★화면 밖(left:-9999px)이라 «보이는 끝» 이 아닙니다.
++                 그래서 「다른 사람 그리기」 뒤가 ★손님에게 보이는 마지막 자리입니다.
++              ⛔ 다시 위로 올리지 마십시오. */}
++          {/* ══════════════════════════════════════════════════════════════
++              ★2026-08-05 (47부 6차) — 공용 부품으로 갈아 끼우고 «켰습니다». [대표님 지시]
++                「공용부품으로 교체해주고 · 내사주그림은 키면 되는 것이고」
++
++              [전]  false && 로 «꺼져» 있었고, goConsult() 라는 따로 만든 길이었습니다.
++                    버튼도 이 화면에만 있는 생김새였습니다.
++              [후]  ConsultButton 하나. 문구·배색·가격·노출토글이 다른 여섯 화면과 «같아집니다».
++
++              ⚠️ goConsult() 가 담던 mulsang_full(그림+해설)을 «잃지 않으려고»
++                 ConsultPayload 에 ★mulsangFull 자리를 새로 냈습니다.
++                 이 자리가 없으면 상담사 화면에 ★그림이 안 뜹니다.
++              ⚠️ mode='mulsang' 이어야 상담사 화면이 그림+해설을 그립니다. 지우지 마십시오.
++              ⚠️ priceKey='mulsang' — ★consult_prices 표에 이 줄이 «있어야» 버튼이 보입니다.
++                 줄이 없으면 active=false 로 떨어져 ★버튼이 통째로 숨습니다 (안전한 쪽입니다).
++                 SQL 은 _SQL_consult_prices_47bu.sql 에 담아 두었습니다.
++              ⛔ 옛 goConsult() 는 «지웠습니다». 되살릴 일이 없습니다.
++              ══════════════════════════════════════════════════════════════ */}
++          <div style={{ marginTop: '8px', marginBottom: '12px' }}>
++            <ConsultButton
++              priceKey="mulsang"
++              mode="mulsang"
++              payload={() => ({
++                aiAnalysis: tongResult || undefined,
++                mulsangFull: (tongResult || imageUrl)
++                  ? { image_url: imageUrl || null, prompt: '', style, commentary: tongResult || null }
++                  : undefined,
++              })}
++            />
++          </div>
+         </div>
+ 
+         {/* ★공유 카드 원본 — 화면 밖에 두고 캡처만 한다.
+diff --git a/app/manseryeok/naming/diagnosis/page.tsx b/app/manseryeok/naming/diagnosis/page.tsx
+index 00b25a8..2247129 100644
+--- a/app/manseryeok/naming/diagnosis/page.tsx
++++ b/app/manseryeok/naming/diagnosis/page.tsx
+@@ -1232,11 +1232,6 @@ function DiagnosisInner() {
+                   </div>
+                 )}
+ 
+-                {/* ★ 전문가 상담 연결 — 저장 표시 아래.
+-                    관리자 > 가격 관리에서 '노출'을 끄면 이 영역이 통째로 사라진다. */}
+-                <div style={{ marginBottom: '12px' }}>
+-                  <ConsultButton priceKey="naming" mode="naming" />
+-                </div>
+ 
+                 <div style={{ background: '#fdeee2', border: `1px solid ${gold}`, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
+                   <div style={{ fontSize: '12px', color: '#c8506e', fontStyle: 'italic', marginBottom: '14px', lineHeight: 1.5, textAlign: 'center' }}>
+@@ -1298,6 +1293,15 @@ function DiagnosisInner() {
+                     📜 {storageLabel}
+                   </button>
+                 </div>
++
++                {/* ★2026-08-05 (47부 9차) — 상담 카드를 «화면 맨 끝» 으로. [대표님 지시]
++                    ⚠️ 그래서 「한자 바꾸기」·보관함 버튼이 상담 카드 «위» 로 올라갔습니다.
++                    ⛔ 다시 위로 올리지 마십시오. */}
++                {/* ★ 전문가 상담 연결 — 저장 표시 아래.
++                    관리자 > 가격 관리에서 '노출'을 끄면 이 영역이 통째로 사라진다. */}
++                <div style={{ marginBottom: '12px' }}>
++                  <ConsultButton priceKey="naming" mode="naming" />
++                </div>
+               </>
+             )}
+           </>
+diff --git a/app/manseryeok/naming/rename/newresult/page.tsx b/app/manseryeok/naming/rename/newresult/page.tsx
+index dd40cb2..c78c2f7 100644
+--- a/app/manseryeok/naming/rename/newresult/page.tsx
++++ b/app/manseryeok/naming/rename/newresult/page.tsx
+@@ -897,29 +897,6 @@ function NewResultInner() {
+         </div>
+       )}
+ 
+-      {/* ══════════════════════════════════════════════════════════════
+-          ★2026-08-05 (47부 7차) — 아기 작명과 어른 개명을 «갈랐습니다». [대표님 지시]
+-            「아기 작명과 어른 개명을 분리시켜」 / 「어른 개명 = 내 이름 정밀분석」
+-
+-          [까닭]  이 화면 «하나» 가 둘을 다 그립니다. namingKind 로만 갈립니다.
+-            그래서 전에는 둘 다 priceKey="naming" 이라
+-            ★값도 노출토글도 «따로» 둘 수 없었습니다.
+-
+-          [지금]  namingKind === '신생아'  → ★naming_baby  「내 아기 명품이름」
+-                  그 밖(개명)             → ★naming       「내 이름 정밀분석」
+-            ⇒ 관리자 가격 관리에서 «따로» 값을 매기고 «따로» 켜고 끌 수 있습니다.
+-
+-          ⚠️ consult_prices 에 ★naming_baby 줄이 «있어야» 아기 쪽 버튼이 보입니다.
+-             줄이 없으면 통째로 숨습니다 (망가지지 않습니다).
+-          ⚠️ mode 도 함께 가릅니다 — 상담사 화면이 무슨 상담인지 알아야 합니다.
+-          ⛔ 다시 하나로 합치지 마십시오. 값을 따로 못 매기게 됩니다.
+-          ══════════════════════════════════════════════════════════════ */}
+-      <div style={{ marginBottom: 14 }}>
+-        <ConsultButton
+-          priceKey={namingKind === '신생아' ? 'naming_baby' : 'naming'}
+-          mode={namingKind === '신생아' ? 'naming_baby' : 'naming'}
+-        />
+-      </div>
+ 
+       {/* ══════════════════════════════════════════════════════════
+           ★2026-08-01 (43부 6차) — 회차 안내도 배선을 끊었습니다.
+@@ -962,6 +939,33 @@ function NewResultInner() {
+           )}
+         </>
+       )}
++
++      {/* ★2026-08-05 (47부 9차) — 상담 카드를 «화면 맨 끝» 으로. [대표님 지시]
++          ⚠️ 「다른 이름 또 지어보기」 보다 «아래» 입니다.
++          ⛔ 다시 위로 올리지 마십시오. */}
++      {/* ══════════════════════════════════════════════════════════════
++          ★2026-08-05 (47부 7차) — 아기 작명과 어른 개명을 «갈랐습니다». [대표님 지시]
++            「아기 작명과 어른 개명을 분리시켜」 / 「어른 개명 = 내 이름 정밀분석」
++
++          [까닭]  이 화면 «하나» 가 둘을 다 그립니다. namingKind 로만 갈립니다.
++            그래서 전에는 둘 다 priceKey="naming" 이라
++            ★값도 노출토글도 «따로» 둘 수 없었습니다.
++
++          [지금]  namingKind === '신생아'  → ★naming_baby  「내 아기 명품이름」
++                  그 밖(개명)             → ★naming       「내 이름 정밀분석」
++            ⇒ 관리자 가격 관리에서 «따로» 값을 매기고 «따로» 켜고 끌 수 있습니다.
++
++          ⚠️ consult_prices 에 ★naming_baby 줄이 «있어야» 아기 쪽 버튼이 보입니다.
++             줄이 없으면 통째로 숨습니다 (망가지지 않습니다).
++          ⚠️ mode 도 함께 가릅니다 — 상담사 화면이 무슨 상담인지 알아야 합니다.
++          ⛔ 다시 하나로 합치지 마십시오. 값을 따로 못 매기게 됩니다.
++          ══════════════════════════════════════════════════════════════ */}
++      <div style={{ marginBottom: 14 }}>
++        <ConsultButton
++          priceKey={namingKind === '신생아' ? 'naming_baby' : 'naming'}
++          mode={namingKind === '신생아' ? 'naming_baby' : 'naming'}
++        />
++      </div>
+     </main>
+   )
+ }
+-- 
+2.43.0
+
+
+From e55bdd905440149d957b788f11225d82ea8cf31d Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 12:28:19 +0000
+Subject: [PATCH 3/4] =?UTF-8?q?=EB=82=98=EB=9E=80=ED=9E=88=20=EB=86=93?=
+ =?UTF-8?q?=EC=9D=B8=20=EB=B2=84=ED=8A=BC=20=EB=86=92=EC=9D=B4=EB=A5=BC=20?=
+ =?UTF-8?q?44px=20=EB=A1=9C=20=ED=86=B5=EC=9D=BC=20(47=EB=B6=80=2011?=
+ =?UTF-8?q?=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/components/common/CopyTextButton.tsx  | 27 ++++++++++++++++++++---
+ app/manseryeok/career-result/page.tsx     | 10 +++++++--
+ app/manseryeok/couple-result-new/page.tsx | 10 +++++++--
+ app/manseryeok/mulsang/page.tsx           | 12 +++++++---
+ 4 files changed, 49 insertions(+), 10 deletions(-)
+
+diff --git a/app/components/common/CopyTextButton.tsx b/app/components/common/CopyTextButton.tsx
+index 9935e42..a901035 100644
+--- a/app/components/common/CopyTextButton.tsx
++++ b/app/components/common/CopyTextButton.tsx
+@@ -33,10 +33,21 @@ interface Props {
+   buttonLabel?: string
+   /** 가로로 꽉 채울지 (기본 true) */
+   fullWidth?: boolean
++  /**
++   * ★2026-08-05 (47부 11차) — 다른 버튼과 «나란히» 놓을 때 true.
++   *   [겪은 일]  대표님 — 「양쪽 두께가 안맞는 부분 보이지」
++   *     물상 화면에서 「해설 복사」와 「카드로 저장」이 어긋나 보였습니다.
++   *   [까닭 둘]
++   *     ① 이 부품 안에 ★marginTop:8 이 박혀 있어, 줄에 넣으면 «혼자 8px 아래로» 내려앉습니다.
++   *        (감싸는 줄에도 marginTop 이 있어 ★두 번» 밀렸습니다)
++   *     ② 높이가 달랐습니다 — 이것 38.6px / 카드로 저장 37.0px / 진로적성 40.2px
++   *   ⇒ inRow 를 주면 ★marginTop 을 0 으로 둡니다. 줄 간격은 «감싸는 쪽» 이 정합니다.
++   */
++  inRow?: boolean
+ }
+ 
+ export default function CopyTextButton({
+-  text, label, name, buttonLabel = '해설 복사', fullWidth = true,
++  text, label, name, buttonLabel = '해설 복사', fullWidth = true, inRow = false,
+ }: Props) {
+   const [copied, setCopied] = useState(false)
+ 
+@@ -76,9 +87,19 @@ export default function CopyTextButton({
+       onClick={handleCopy}
+       style={{
+         width: fullWidth ? '100%' : undefined,
+-        padding: '11px 16px',
++        // ★2026-08-05 (47부 11차) — 높이를 ★44px 로 맞췄습니다. [대표님 지시 「알아서 통일해」]
++        //   [전]  padding 11 + 글자 13 = ★38.6px — 손가락 최소선(44) «미달» 이었습니다.
++        //   [후]  padding 13 + minHeight 44 + boxSizing border-box → ★정확히 44px
++        //   ★나란히 놓이는 짝 버튼 셋도 같은 값으로 맞췄습니다 —
++        //     물상 「카드로 저장」 · 진로적성 「A4 PDF저장/인쇄」 · 궁합 짝 버튼
++        //   ⛔ 더 줄이지 마십시오. 44 는 «손가락으로 누를» 최소선입니다.
++        //   ⚠️ 짝 버튼만 바꾸면 또 어긋납니다. ★넷을 «함께» 보십시오.
++        padding: '13px 16px',
++        minHeight: 44,
++        boxSizing: 'border-box',
++        display: 'flex', alignItems: 'center', justifyContent: 'center',
+         borderRadius: 10,
+-        marginTop: 8,
++        marginTop: inRow ? 0 : 8,
+         background: copied ? '#eef5e8' : 'transparent',
+         border: `0.5px solid ${copied ? '#a8c898' : '#d8c4b4'}`,
+         color: copied ? '#4a7a3a' : '#96502e',
+diff --git a/app/manseryeok/career-result/page.tsx b/app/manseryeok/career-result/page.tsx
+index 847475f..0da9509 100644
+--- a/app/manseryeok/career-result/page.tsx
++++ b/app/manseryeok/career-result/page.tsx
+@@ -810,16 +810,22 @@ function CareerResultInner() {
+                 }}>
+                   <button
+                     onClick={onPrintCert}
++                    /* ★2026-08-05 (47부 11차) — 「해설 복사」와 높이·간격을 맞췄습니다.
++                         minHeight 44 · 글자 13 · marginTop 0 (줄 간격은 «감싸는 쪽» 이 정합니다)
++                         ⛔ 짝(CopyTextButton)만 바꾸면 또 어긋납니다. 둘을 «함께» 보십시오. */
+                     style={{
+-                      flex: 1, marginTop: 8, padding: '12px 10px', borderRadius: 12,
++                      flex: 1, marginTop: 0, padding: '13px 10px', borderRadius: 12,
++                      minHeight: 44, boxSizing: 'border-box',
++                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                       background: '#785aaa', border: 'none', color: '#fff',
+-                      fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
++                      fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                     }}>A4 PDF저장/인쇄</button>
+                   <div style={{ flex: 1 }} className="copy-half">
+                     <CopyTextButton
+                       text={tong}
+                       label="진로적성 풀이"
+                       name={person.name}
++                      inRow
+                     />
+                   </div>
+                 </div>
+diff --git a/app/manseryeok/couple-result-new/page.tsx b/app/manseryeok/couple-result-new/page.tsx
+index 6dcc6ab..960ee4a 100644
+--- a/app/manseryeok/couple-result-new/page.tsx
++++ b/app/manseryeok/couple-result-new/page.tsx
+@@ -1175,9 +1175,14 @@ function CoupleResultView({
+           {reportSections.length > 0 && (
+             <button
+               onClick={onPrintCert}
++              /* ★2026-08-05 (47부 11차) — 「해설 복사」와 높이·간격을 맞췄습니다.
++                         minHeight 44 · 글자 13 · marginTop 0 (줄 간격은 «감싸는 쪽» 이 정합니다)
++                         ⛔ 짝(CopyTextButton)만 바꾸면 또 어긋납니다. 둘을 «함께» 보십시오. */
+               style={{
+-                flex: 1, marginTop: 8, background: '#b48a3c', border: 'none',
+-                borderRadius: 11, padding: 13, fontSize: 13.5, fontWeight: 600,
++                flex: 1, marginTop: 0, background: '#b48a3c', border: 'none',
++                minHeight: 44, boxSizing: 'border-box',
++                display: 'flex', alignItems: 'center', justifyContent: 'center',
++                borderRadius: 11, padding: 13, fontSize: 13, fontWeight: 600,
+                 color: '#fff', cursor: 'pointer', lineHeight: 1.3,
+               }}
+             >🖨 A4 PDF저장/인쇄</button>
+@@ -1197,6 +1202,7 @@ function CoupleResultView({
+                 (tongResult || '').trim(),
+               ].filter(Boolean).join('\n')}
+               label={`${coupleTitleOf(kind)} 분석`}
++              inRow
+             />
+           </div>
+           {/* ⚠️ 공용 부품을 «고치지 않고» 감싼 자리에서만 너비를 맞춥니다 */}
+diff --git a/app/manseryeok/mulsang/page.tsx b/app/manseryeok/mulsang/page.tsx
+index cfcc60e..04d9356 100644
+--- a/app/manseryeok/mulsang/page.tsx
++++ b/app/manseryeok/mulsang/page.tsx
+@@ -1023,12 +1023,18 @@ function MulsangInner() {
+                     {!tongLoading && (
+                       <div style={{ display: 'flex', gap: '7px', marginTop: '8px' }}>
+                         <div style={{ flex: 1 }}>
+-                          <CopyTextButton text={tongResult} label="사주 그림 해설" name={info?.name} />
++                          <CopyTextButton text={tongResult} label="사주 그림 해설" name={info?.name} inRow />
+                         </div>
+                         {imageUrl && (
+                           <button onClick={handleShareCard} disabled={cardBusy}
+-                            style={{ flex: 1, padding: '11px', borderRadius: '10px', background: '#b46e46',
+-                              border: 'none', color: '#fff', fontSize: '12.5px', fontWeight: 700,
++                            /* ★2026-08-05 (47부 11차) — 「해설 복사」와 높이를 맞췄습니다.
++                               [전] padding 11 · 글자 12.5 → ★37.0px  (짝은 38.6px 이었습니다)
++                               [후] padding 13 · 글자 13 · minHeight 44 → ★44px 로 «같아짐»
++                               ⛔ 짝(CopyTextButton)만 바꾸면 또 어긋납니다. 둘을 «함께» 보십시오. */
++                            style={{ flex: 1, padding: '13px', borderRadius: '10px', background: '#b46e46',
++                              minHeight: 44, boxSizing: 'border-box',
++                              display: 'flex', alignItems: 'center', justifyContent: 'center',
++                              border: 'none', color: '#fff', fontSize: '13px', fontWeight: 700,
+                               cursor: cardBusy ? 'default' : 'pointer' }}>
+                             {cardBusy ? (cardStep || '만드는 중…') : '🖼️ 카드로 저장'}
+                           </button>
+-- 
+2.43.0
+
+
+From 6ef819cc0fb9354f0f200f4033a1d7fc94b0d029 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 12:49:43 +0000
+Subject: [PATCH 4/4] =?UTF-8?q?=EB=AC=BC=EC=83=81=20=ED=99=94=EB=A9=B4=20?=
+ =?UTF-8?q?=EB=B2=84=ED=8A=BC=20=EC=A0=95=EB=A6=AC=20=E2=80=94=20=EB=8B=A4?=
+ =?UTF-8?q?=EC=84=AF=EC=97=90=EC=84=9C=20=EB=84=B7=EC=9C=BC=EB=A1=9C=20(47?=
+ =?UTF-8?q?=EB=B6=80=2012=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/manseryeok/mulsang/page.tsx | 102 +++++++++++++++-----------------
+ 1 file changed, 48 insertions(+), 54 deletions(-)
+
+diff --git a/app/manseryeok/mulsang/page.tsx b/app/manseryeok/mulsang/page.tsx
+index 04d9356..747d1b8 100644
+--- a/app/manseryeok/mulsang/page.tsx
++++ b/app/manseryeok/mulsang/page.tsx
+@@ -769,12 +769,6 @@ function MulsangInner() {
+     }
+   }
+ 
+-  function handleShare() {
+-    if (navigator.share) {
+-      navigator.share({ title: '명카페 사주 풍경화', text: '내 사주를 그림으로 봤어요!', url: window.location.href })
+-    }
+-  }
+-
+   const branchList = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥']
+   const sajuLine = converting ? '사주 불러오는 중...' :
+     `일간 ${dayStem} · ${info.calType} ${info.year}.${info.month}.${info.day}${info.hourIdx !== null ? ` ${branchList[info.hourIdx]}시` : ''}`
+@@ -956,15 +950,25 @@ function MulsangInner() {
+                 {imageUrl && (
+                   <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', padding: '10px 12px', background: '#fffbf7', borderBottom: '0.5px solid #9c7a58' }}>
+                     <button onClick={handleDownloadImage} disabled={imgSaving}
+-                      style={{ flex: 1, maxWidth: '200px', padding: '10px', borderRadius: '9px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: imgSaving ? 'default' : 'pointer' }}>
++                      style={{ flex: 1, maxWidth: '200px', padding: '10px', borderRadius: '9px', background: '#b46e46',
++                        minHeight: 44, boxSizing: 'border-box',
++                        display: 'flex', alignItems: 'center', justifyContent: 'center',
++                        border: 'none', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: imgSaving ? 'default' : 'pointer' }}>
+                       {imgSaving ? '내려받는 중…' : '⬇ 그림 저장'}
+                     </button>
+-                    {typeof navigator !== 'undefined' && 'share' in navigator && (
+-                      <button onClick={handleShare}
+-                        style={{ flex: 1, maxWidth: '200px', padding: '10px', borderRadius: '9px', background: 'transparent', border: '0.5px solid #d8c4b4', color: '#96502e', fontSize: '13px', cursor: 'pointer' }}>
+-                        ↗ 공유
+-                      </button>
+-                    )}
++                    {/* ★2026-08-05 (47부 12차) — 「↗ 공유」를 걷고 「카드로 저장」을 올렸습니다. [대표님 지시]
++                        ⚠️ 옛 「공유」는 navigator.share 를 받는 기기(폰)에서만 «있다가 없다가» 했습니다.
++                           PC 에서는 원래 「그림 저장」 혼자였습니다.
++                        ⚠️ handleShare 함수도 ★함께 지웠습니다 (아무도 안 부르면 eslint 경고가 늡니다).
++                        ⛔ 되살리시려면 ★버튼과 함수를 «함께» 되살리십시오. */}
++                    <button onClick={handleShareCard} disabled={cardBusy}
++                      style={{ flex: 1, maxWidth: '200px', padding: '10px', borderRadius: '9px', background: '#b46e46',
++                        minHeight: 44, boxSizing: 'border-box',
++                        display: 'flex', alignItems: 'center', justifyContent: 'center',
++                        border: 'none', color: '#fff', fontSize: '13px', fontWeight: 700,
++                        cursor: cardBusy ? 'default' : 'pointer' }}>
++                      {cardBusy ? (cardStep || '만드는 중…') : '🖼️ 카드로 저장'}
++                    </button>
+                   </div>
+                 )}
+               </>
+@@ -1025,20 +1029,18 @@ function MulsangInner() {
+                         <div style={{ flex: 1 }}>
+                           <CopyTextButton text={tongResult} label="사주 그림 해설" name={info?.name} inRow />
+                         </div>
+-                        {imageUrl && (
+-                          <button onClick={handleShareCard} disabled={cardBusy}
+-                            /* ★2026-08-05 (47부 11차) — 「해설 복사」와 높이를 맞췄습니다.
+-                               [전] padding 11 · 글자 12.5 → ★37.0px  (짝은 38.6px 이었습니다)
+-                               [후] padding 13 · 글자 13 · minHeight 44 → ★44px 로 «같아짐»
+-                               ⛔ 짝(CopyTextButton)만 바꾸면 또 어긋납니다. 둘을 «함께» 보십시오. */
+-                            style={{ flex: 1, padding: '13px', borderRadius: '10px', background: '#b46e46',
+-                              minHeight: 44, boxSizing: 'border-box',
+-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+-                              border: 'none', color: '#fff', fontSize: '13px', fontWeight: 700,
+-                              cursor: cardBusy ? 'default' : 'pointer' }}>
+-                            {cardBusy ? (cardStep || '만드는 중…') : '🖼️ 카드로 저장'}
+-                          </button>
+-                        )}
++                        {/* ★2026-08-05 (47부 12차) — 이 자리를 「보관함」으로. [대표님 지시]
++                            ⚠️ 보관함 저장은 ★«자동» 이라 «저장하는» 버튼이 아니라 «가는» 버튼입니다.
++                            ⚠️ 옛 「👥 다른 사람 그리기」가 가던 그 자리(mulsang-storage)입니다.
++                            ⛔ 이 버튼까지 지우지 마십시오. 보관함으로 갈 길이 «없어집니다». */}
++                        <button onClick={() => router.push('/manseryeok/mulsang-storage')}
++                          style={{ flex: 1, padding: '13px', borderRadius: '10px', background: 'transparent',
++                            minHeight: 44, boxSizing: 'border-box',
++                            display: 'flex', alignItems: 'center', justifyContent: 'center',
++                            border: '0.5px solid #d8c4b4', color: '#96502e', fontSize: '13px', fontWeight: 500,
++                            cursor: 'pointer', fontFamily: 'inherit' }}>
++                          📜 보관함
++                        </button>
+                       </div>
+                     )}
+                     {!tongLoading && imageUrl && (
+@@ -1079,42 +1081,34 @@ function MulsangInner() {
+ 
+           {/* ★보관함 저장 상태 — 누르는 버튼이 아니라 표시다 (그림이 뜨면 자동 저장).
+               실패했을 때만 [다시 저장]을 눌러 재시도한다. (19-2부) */}
+-          {imageUrl && saveState !== 'idle' && (
++          {/* ★2026-08-05 (47부 12차) — 저장 «성공» 안내를 걷어냈습니다. [대표님 지시]
++              「보관함에 저장했어요…문구 삭제 · 공간 효율화」
++              ⚠️ 보관함 저장은 ★«자동» 입니다. 잘 됐을 때는 굳이 알리지 않습니다.
++              🔴 ★«실패» 안내는 «남겼습니다» — 지우면 저장이 실패해도 손님이 모른 채 떠납니다.
++                 평소에는 안 보이므로 ★공간을 쓰지 않습니다.
++              ⛔ 실패 안내까지 지우지 마십시오.
++              ⚠️ 조건이 saveState !== 'idle' → ★=== 'failed' 로 바뀌었습니다. */}
++          {imageUrl && saveState === 'failed' && (
+             <div style={{ marginTop: '12px' }}>
+-              {saveState === 'failed' ? (
+-                <div style={{ background: '#fdf0e8', border: '0.5px solid #f0d5c0', borderRadius: '12px', padding: '13px', textAlign: 'center' }}>
+-                  <div style={{ fontSize: '13px', color: '#8f3d0e', marginBottom: '8px' }}>보관함에 저장하지 못했어요</div>
+-                  <button onClick={() => { setSaveState('idle'); handleSaveRecord() }}
+-                    style={{ padding: '9px 20px', borderRadius: '9px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+-                    다시 저장
+-                  </button>
+-                </div>
+-              ) : (
+-                <div style={{ background: '#eef5e8', borderRadius: '12px', padding: '13px', textAlign: 'center' }}>
+-                  <div style={{ fontSize: '13.5px', color: '#4a7a3a', fontWeight: 700 }}>
+-                    {saveState === 'saving' ? '보관함에 저장하는 중…' : '✓ 보관함에 저장됐어요'}
+-                  </div>
+-                  {saveState === 'saved' && (
+-                    <div style={{ fontSize: '11px', color: '#5c7a4a', marginTop: '3px' }}>
+-                      {STYLE_CONFIGS[style]?.label} · 보관함에서 언제든 다시 보실 수 있어요
+-                    </div>
+-                  )}
+-                </div>
+-              )}
++              <div style={{ background: '#fdf0e8', border: '0.5px solid #f0d5c0', borderRadius: '12px', padding: '13px', textAlign: 'center' }}>
++                <div style={{ fontSize: '13px', color: '#8f3d0e', marginBottom: '8px' }}>보관함에 저장하지 못했어요</div>
++                <button onClick={() => { setSaveState('idle'); handleSaveRecord() }}
++                  style={{ padding: '9px 20px', borderRadius: '9px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
++                  다시 저장
++                </button>
++              </div>
+             </div>
+           )}
+ 
+-          <button onClick={() => router.push('/manseryeok/mulsang-storage')}
+-            style={{ width: '100%', padding: '13px', borderRadius: '12px', marginTop: '10px', marginBottom: '4px',
+-              background: 'transparent', border: '0.5px solid #d8c4b4', color: '#96502e', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
+-            👥 다른 사람 그리기
+-          </button>
++          {/* ★2026-08-05 (47부 12차) — 「👥 다른 사람 그리기」를 «걷어냈습니다». [대표님 지시]
++              「공간 효율화…너무 복잡함」
++              ⚠️ 가던 자리(mulsang-storage)는 ★위 「📜 보관함」이 이어받았습니다. */}
+ 
+           {/* ★2026-08-05 (47부 9차) — 상담 카드를 «화면 맨 끝» 으로 내렸습니다. [대표님 지시]
+               「다시그리기 보다 더 아래…맨 끝으로 옮겨줘」
+               [전]  「다시 그리기」 «위» 에 있어 그림 다시 뽑기와 뒤섞였습니다.
+               ⚠️ 아래 공유카드 원본은 ★화면 밖(left:-9999px)이라 «보이는 끝» 이 아닙니다.
+-                 그래서 「다른 사람 그리기」 뒤가 ★손님에게 보이는 마지막 자리입니다.
++                 ★12차에 「다른 사람 그리기」를 걷어냈으므로 지금은 ★이 상담 카드가 마지막입니다.
+               ⛔ 다시 위로 올리지 마십시오. */}
+           {/* ══════════════════════════════════════════════════════════════
+               ★2026-08-05 (47부 6차) — 공용 부품으로 갈아 끼우고 «켰습니다». [대표님 지시]
+-- 
+2.43.0
+
