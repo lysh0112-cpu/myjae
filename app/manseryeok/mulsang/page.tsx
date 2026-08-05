@@ -1023,12 +1023,18 @@ function MulsangInner() {
                     {!tongLoading && (
                       <div style={{ display: 'flex', gap: '7px', marginTop: '8px' }}>
                         <div style={{ flex: 1 }}>
-                          <CopyTextButton text={tongResult} label="사주 그림 해설" name={info?.name} />
+                          <CopyTextButton text={tongResult} label="사주 그림 해설" name={info?.name} inRow />
                         </div>
                         {imageUrl && (
                           <button onClick={handleShareCard} disabled={cardBusy}
-                            style={{ flex: 1, padding: '11px', borderRadius: '10px', background: '#b46e46',
-                              border: 'none', color: '#fff', fontSize: '12.5px', fontWeight: 700,
+                            /* ★2026-08-05 (47부 11차) — 「해설 복사」와 높이를 맞췄습니다.
+                               [전] padding 11 · 글자 12.5 → ★37.0px  (짝은 38.6px 이었습니다)
+                               [후] padding 13 · 글자 13 · minHeight 44 → ★44px 로 «같아짐»
+                               ⛔ 짝(CopyTextButton)만 바꾸면 또 어긋납니다. 둘을 «함께» 보십시오. */
+                            style={{ flex: 1, padding: '13px', borderRadius: '10px', background: '#b46e46',
+                              minHeight: 44, boxSizing: 'border-box',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              border: 'none', color: '#fff', fontSize: '13px', fontWeight: 700,
                               cursor: cardBusy ? 'default' : 'pointer' }}>
                             {cardBusy ? (cardStep || '만드는 중…') : '🖼️ 카드로 저장'}
                           </button>

@@ -1175,9 +1175,14 @@ function CoupleResultView({
           {reportSections.length > 0 && (
             <button
               onClick={onPrintCert}
+              /* ★2026-08-05 (47부 11차) — 「해설 복사」와 높이·간격을 맞췄습니다.
+                         minHeight 44 · 글자 13 · marginTop 0 (줄 간격은 «감싸는 쪽» 이 정합니다)
+                         ⛔ 짝(CopyTextButton)만 바꾸면 또 어긋납니다. 둘을 «함께» 보십시오. */
               style={{
-                flex: 1, marginTop: 8, background: '#b48a3c', border: 'none',
-                borderRadius: 11, padding: 13, fontSize: 13.5, fontWeight: 600,
+                flex: 1, marginTop: 0, background: '#b48a3c', border: 'none',
+                minHeight: 44, boxSizing: 'border-box',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: 11, padding: 13, fontSize: 13, fontWeight: 600,
                 color: '#fff', cursor: 'pointer', lineHeight: 1.3,
               }}
             >🖨 A4 PDF저장/인쇄</button>
@@ -1197,6 +1202,7 @@ function CoupleResultView({
                 (tongResult || '').trim(),
               ].filter(Boolean).join('\n')}
               label={`${coupleTitleOf(kind)} 분석`}
+              inRow
             />
           </div>
           {/* ⚠️ 공용 부품을 «고치지 않고» 감싼 자리에서만 너비를 맞춥니다 */}

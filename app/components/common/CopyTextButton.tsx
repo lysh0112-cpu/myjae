@@ -33,10 +33,21 @@ interface Props {
   buttonLabel?: string
   /** 가로로 꽉 채울지 (기본 true) */
   fullWidth?: boolean
+  /**
+   * ★2026-08-05 (47부 11차) — 다른 버튼과 «나란히» 놓을 때 true.
+   *   [겪은 일]  대표님 — 「양쪽 두께가 안맞는 부분 보이지」
+   *     물상 화면에서 「해설 복사」와 「카드로 저장」이 어긋나 보였습니다.
+   *   [까닭 둘]
+   *     ① 이 부품 안에 ★marginTop:8 이 박혀 있어, 줄에 넣으면 «혼자 8px 아래로» 내려앉습니다.
+   *        (감싸는 줄에도 marginTop 이 있어 ★두 번» 밀렸습니다)
+   *     ② 높이가 달랐습니다 — 이것 38.6px / 카드로 저장 37.0px / 진로적성 40.2px
+   *   ⇒ inRow 를 주면 ★marginTop 을 0 으로 둡니다. 줄 간격은 «감싸는 쪽» 이 정합니다.
+   */
+  inRow?: boolean
 }
 
 export default function CopyTextButton({
-  text, label, name, buttonLabel = '해설 복사', fullWidth = true,
+  text, label, name, buttonLabel = '해설 복사', fullWidth = true, inRow = false,
 }: Props) {
   const [copied, setCopied] = useState(false)
 
@@ -76,9 +87,19 @@ export default function CopyTextButton({
       onClick={handleCopy}
       style={{
         width: fullWidth ? '100%' : undefined,
-        padding: '11px 16px',
+        // ★2026-08-05 (47부 11차) — 높이를 ★44px 로 맞췄습니다. [대표님 지시 「알아서 통일해」]
+        //   [전]  padding 11 + 글자 13 = ★38.6px — 손가락 최소선(44) «미달» 이었습니다.
+        //   [후]  padding 13 + minHeight 44 + boxSizing border-box → ★정확히 44px
+        //   ★나란히 놓이는 짝 버튼 셋도 같은 값으로 맞췄습니다 —
+        //     물상 「카드로 저장」 · 진로적성 「A4 PDF저장/인쇄」 · 궁합 짝 버튼
+        //   ⛔ 더 줄이지 마십시오. 44 는 «손가락으로 누를» 최소선입니다.
+        //   ⚠️ 짝 버튼만 바꾸면 또 어긋납니다. ★넷을 «함께» 보십시오.
+        padding: '13px 16px',
+        minHeight: 44,
+        boxSizing: 'border-box',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
         borderRadius: 10,
-        marginTop: 8,
+        marginTop: inRow ? 0 : 8,
         background: copied ? '#eef5e8' : 'transparent',
         border: `0.5px solid ${copied ? '#a8c898' : '#d8c4b4'}`,
         color: copied ? '#4a7a3a' : '#96502e',

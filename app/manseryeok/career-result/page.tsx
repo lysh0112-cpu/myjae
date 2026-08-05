@@ -810,16 +810,22 @@ function CareerResultInner() {
                 }}>
                   <button
                     onClick={onPrintCert}
+                    /* ★2026-08-05 (47부 11차) — 「해설 복사」와 높이·간격을 맞췄습니다.
+                         minHeight 44 · 글자 13 · marginTop 0 (줄 간격은 «감싸는 쪽» 이 정합니다)
+                         ⛔ 짝(CopyTextButton)만 바꾸면 또 어긋납니다. 둘을 «함께» 보십시오. */
                     style={{
-                      flex: 1, marginTop: 8, padding: '12px 10px', borderRadius: 12,
+                      flex: 1, marginTop: 0, padding: '13px 10px', borderRadius: 12,
+                      minHeight: 44, boxSizing: 'border-box',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
                       background: '#785aaa', border: 'none', color: '#fff',
-                      fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                      fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
                     }}>A4 PDF저장/인쇄</button>
                   <div style={{ flex: 1 }} className="copy-half">
                     <CopyTextButton
                       text={tong}
                       label="진로적성 풀이"
                       name={person.name}
+                      inRow
                     />
                   </div>
                 </div>
