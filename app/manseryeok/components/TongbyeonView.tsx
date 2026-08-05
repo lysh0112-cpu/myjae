@@ -276,7 +276,18 @@ export default function TongbyeonView({ input, questions, premium, premiumPrompt
                     </span>
                   )}
                 </span>
-                <span style={{ color: C.point, fontSize: 12, transition: 'transform .25s', transform: `rotate(${open ? '180' : '0'}deg)` }}>{'\u25BE'}</span>
+                {/* ★2026-08-05 (46부 20차 2차) — 접기 화살표 22px + 진한 색. [대표님 지시]
+                    ⚠️⚠️ ★이 자리를 «놓쳤습니다». 까닭을 남깁니다 —
+                       화살표를 «▾ 글자» 가 아니라 ★유니코드 «이스케이프» 로 적어 두어
+                       제가 ▾ 로 훑았을 때 ★안 걸렸습니다.
+                       ⇒ 다음에 훑으실 때는 ★이스케이프 꿀(\\u25B·)까지 «함께» 찾으십시오.
+                    ★22px · #96502e — PerspectiveAccordion 과 «같은 값» 입니다.
+                    ⛔ 다시 작게 만들지 마십시오. 세 번 나온 지적입니다. */}
+                <span aria-hidden style={{
+                  color: '#96502e', fontSize: 22, lineHeight: 1,
+                  padding: '4px 2px', display: 'inline-block', flexShrink: 0,
+                  transition: 'transform .25s', transform: `rotate(${open ? '180' : '0'}deg)`,
+                }}>{'\u25BE'}</span>
               </div>
 
               {/* ★키워드 태그 — 접혀 있어도 보입니다 */}
