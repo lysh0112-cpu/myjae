@@ -1203,6 +1203,22 @@ function CoupleResultView({
           <style>{`.copy-half > button { width: 100%; }`}</style>
         </div>
 
+
+
+        {/* 참고용 안내 — 결과에 과몰입하지 않도록 다정하게 */}
+        <div style={{
+          marginTop: 18, padding: '13px 14px', borderRadius: 11,
+          background: '#faf3ec', border: '0.5px solid #9c7a58',
+          fontSize: 11.5, lineHeight: 1.7, color: '#5c3a1e', textAlign: 'center',
+        }}>
+          이 풀이는 두 분을 더 깊이 이해하기 위한 다정한 참고예요.<br />
+          인연을 정하는 건 사주가 아니라 두 사람의 마음과 노력이랍니다. 🌿
+        </div>
+
+        {/* ★2026-08-05 (47부 9차) — 상담 카드를 «화면 맨 끝» 으로 내렸습니다. [대표님 지시]
+            「다시그리기 보다 더 아래…맨 끝으로 옮겨줘」
+            ⚠️ 그래서 참고용 안내가 상담 카드 «위» 로 올라갔습니다. 뜻한 대로입니다.
+            ⛔ 다시 위로 올리지 마십시오. */}
         {/* 전문가 상담 — 저장 표시 아래.
             ★ 연인/부부가 서로 다른 가격표(price_key)를 쓴다.
               관리자 > 가격 관리에서 '노출'이 꺼져 있으면 ConsultButton이
@@ -1244,17 +1260,6 @@ function CoupleResultView({
             />
           </div>
         )}
-
-
-        {/* 참고용 안내 — 결과에 과몰입하지 않도록 다정하게 */}
-        <div style={{
-          marginTop: 18, padding: '13px 14px', borderRadius: 11,
-          background: '#faf3ec', border: '0.5px solid #9c7a58',
-          fontSize: 11.5, lineHeight: 1.7, color: '#5c3a1e', textAlign: 'center',
-        }}>
-          이 풀이는 두 분을 더 깊이 이해하기 위한 다정한 참고예요.<br />
-          인연을 정하는 건 사주가 아니라 두 사람의 마음과 노력이랍니다. 🌿
-        </div>
       </div>
     </main>
   )

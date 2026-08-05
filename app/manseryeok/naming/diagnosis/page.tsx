@@ -1232,11 +1232,6 @@ function DiagnosisInner() {
                   </div>
                 )}
 
-                {/* ★ 전문가 상담 연결 — 저장 표시 아래.
-                    관리자 > 가격 관리에서 '노출'을 끄면 이 영역이 통째로 사라진다. */}
-                <div style={{ marginBottom: '12px' }}>
-                  <ConsultButton priceKey="naming" mode="naming" />
-                </div>
 
                 <div style={{ background: '#fdeee2', border: `1px solid ${gold}`, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
                   <div style={{ fontSize: '12px', color: '#c8506e', fontStyle: 'italic', marginBottom: '14px', lineHeight: 1.5, textAlign: 'center' }}>
@@ -1297,6 +1292,15 @@ function DiagnosisInner() {
                     }}>
                     📜 {storageLabel}
                   </button>
+                </div>
+
+                {/* ★2026-08-05 (47부 9차) — 상담 카드를 «화면 맨 끝» 으로. [대표님 지시]
+                    ⚠️ 그래서 「한자 바꾸기」·보관함 버튼이 상담 카드 «위» 로 올라갔습니다.
+                    ⛔ 다시 위로 올리지 마십시오. */}
+                {/* ★ 전문가 상담 연결 — 저장 표시 아래.
+                    관리자 > 가격 관리에서 '노출'을 끄면 이 영역이 통째로 사라진다. */}
+                <div style={{ marginBottom: '12px' }}>
+                  <ConsultButton priceKey="naming" mode="naming" />
                 </div>
               </>
             )}

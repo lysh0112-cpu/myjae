@@ -466,13 +466,6 @@ function BirthResultInner() {
           )
         )}
 
-        {/* 전문가 상담 연결 (출산 택일 상담) — 저장 표시 아래.
-            관리자 > 가격 관리에서 '노출'을 끄면 이 영역이 통째로 사라진다. */}
-        {!loading && !errMsg && recs.length > 0 && (
-          <div style={{ marginTop: '12px' }}>
-            <ConsultButton priceKey="birth" mode="birth" />
-          </div>
-        )}
 
         <button
           onClick={() => router.push('/manseryeok/birth-timing/birth-storage')}
@@ -483,6 +476,17 @@ function BirthResultInner() {
         <div style={{ marginTop: '16px' }}>
           <Disclaimer />
         </div>
+
+        {/* ★2026-08-05 (47부 9차) — 상담 카드를 «화면 맨 끝» 으로. [대표님 지시]
+            ⚠️ 보관함 버튼·안내문이 상담 카드 «위» 로 올라갔습니다.
+            ⛔ 다시 위로 올리지 마십시오. */}
+        {/* 전문가 상담 연결 (출산 택일 상담) — 저장 표시 아래.
+            관리자 > 가격 관리에서 '노출'을 끄면 이 영역이 통째로 사라진다. */}
+        {!loading && !errMsg && recs.length > 0 && (
+          <div style={{ marginTop: '12px' }}>
+            <ConsultButton priceKey="birth" mode="birth" />
+          </div>
+        )}
       </div>
     </main>
   )

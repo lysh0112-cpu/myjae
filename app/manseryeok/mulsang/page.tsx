@@ -1046,35 +1046,6 @@ function MulsangInner() {
             )}
           </div>
 
-          {/* ══════════════════════════════════════════════════════════════
-              ★2026-08-05 (47부 6차) — 공용 부품으로 갈아 끼우고 «켰습니다». [대표님 지시]
-                「공용부품으로 교체해주고 · 내사주그림은 키면 되는 것이고」
-
-              [전]  false && 로 «꺼져» 있었고, goConsult() 라는 따로 만든 길이었습니다.
-                    버튼도 이 화면에만 있는 생김새였습니다.
-              [후]  ConsultButton 하나. 문구·배색·가격·노출토글이 다른 여섯 화면과 «같아집니다».
-
-              ⚠️ goConsult() 가 담던 mulsang_full(그림+해설)을 «잃지 않으려고»
-                 ConsultPayload 에 ★mulsangFull 자리를 새로 냈습니다.
-                 이 자리가 없으면 상담사 화면에 ★그림이 안 뜹니다.
-              ⚠️ mode='mulsang' 이어야 상담사 화면이 그림+해설을 그립니다. 지우지 마십시오.
-              ⚠️ priceKey='mulsang' — ★consult_prices 표에 이 줄이 «있어야» 버튼이 보입니다.
-                 줄이 없으면 active=false 로 떨어져 ★버튼이 통째로 숨습니다 (안전한 쪽입니다).
-                 SQL 은 _SQL_consult_prices_47bu.sql 에 담아 두었습니다.
-              ⛔ 옛 goConsult() 는 «지웠습니다». 되살릴 일이 없습니다.
-              ══════════════════════════════════════════════════════════════ */}
-          <div style={{ marginTop: '8px', marginBottom: '12px' }}>
-            <ConsultButton
-              priceKey="mulsang"
-              mode="mulsang"
-              payload={() => ({
-                aiAnalysis: tongResult || undefined,
-                mulsangFull: (tongResult || imageUrl)
-                  ? { image_url: imageUrl || null, prompt: '', style, commentary: tongResult || null }
-                  : undefined,
-              })}
-            />
-          </div>
 
           {/* ★다른 화풍으로 다시 그리기 — 지금 화풍을 뺀 나머지만 고르게 한다.
               (1회 결제 = 그림 1장이므로 다시 그리면 다시 결제된다) */}
@@ -1132,6 +1103,42 @@ function MulsangInner() {
               background: 'transparent', border: '0.5px solid #d8c4b4', color: '#96502e', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
             👥 다른 사람 그리기
           </button>
+
+          {/* ★2026-08-05 (47부 9차) — 상담 카드를 «화면 맨 끝» 으로 내렸습니다. [대표님 지시]
+              「다시그리기 보다 더 아래…맨 끝으로 옮겨줘」
+              [전]  「다시 그리기」 «위» 에 있어 그림 다시 뽑기와 뒤섞였습니다.
+              ⚠️ 아래 공유카드 원본은 ★화면 밖(left:-9999px)이라 «보이는 끝» 이 아닙니다.
+                 그래서 「다른 사람 그리기」 뒤가 ★손님에게 보이는 마지막 자리입니다.
+              ⛔ 다시 위로 올리지 마십시오. */}
+          {/* ══════════════════════════════════════════════════════════════
+              ★2026-08-05 (47부 6차) — 공용 부품으로 갈아 끼우고 «켰습니다». [대표님 지시]
+                「공용부품으로 교체해주고 · 내사주그림은 키면 되는 것이고」
+
+              [전]  false && 로 «꺼져» 있었고, goConsult() 라는 따로 만든 길이었습니다.
+                    버튼도 이 화면에만 있는 생김새였습니다.
+              [후]  ConsultButton 하나. 문구·배색·가격·노출토글이 다른 여섯 화면과 «같아집니다».
+
+              ⚠️ goConsult() 가 담던 mulsang_full(그림+해설)을 «잃지 않으려고»
+                 ConsultPayload 에 ★mulsangFull 자리를 새로 냈습니다.
+                 이 자리가 없으면 상담사 화면에 ★그림이 안 뜹니다.
+              ⚠️ mode='mulsang' 이어야 상담사 화면이 그림+해설을 그립니다. 지우지 마십시오.
+              ⚠️ priceKey='mulsang' — ★consult_prices 표에 이 줄이 «있어야» 버튼이 보입니다.
+                 줄이 없으면 active=false 로 떨어져 ★버튼이 통째로 숨습니다 (안전한 쪽입니다).
+                 SQL 은 _SQL_consult_prices_47bu.sql 에 담아 두었습니다.
+              ⛔ 옛 goConsult() 는 «지웠습니다». 되살릴 일이 없습니다.
+              ══════════════════════════════════════════════════════════════ */}
+          <div style={{ marginTop: '8px', marginBottom: '12px' }}>
+            <ConsultButton
+              priceKey="mulsang"
+              mode="mulsang"
+              payload={() => ({
+                aiAnalysis: tongResult || undefined,
+                mulsangFull: (tongResult || imageUrl)
+                  ? { image_url: imageUrl || null, prompt: '', style, commentary: tongResult || null }
+                  : undefined,
+              })}
+            />
+          </div>
         </div>
 
         {/* ★공유 카드 원본 — 화면 밖에 두고 캡처만 한다.
