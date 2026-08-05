@@ -18,6 +18,7 @@
 
 import { useState } from 'react'
 import { getUnsung, getSinsal, getGongmang, unsungColor, SINSAL_HIGHLIGHT } from '@/lib/saju'
+import { JIJANGAN } from '@/lib/saju/yongsinNew'
 import { getGwiinForBranch, getGwiinForStem } from '@/lib/saju/gwiin'
 import { nabeum } from '@/lib/saju/sajuDetail'
 import TermModal from './TermModal'
@@ -25,21 +26,16 @@ import { branchRelationLabels } from '@/lib/saju/hapJudge'
 
 interface Pillar { pillar: string; stem: string; branch: string }
 
-/* ── 지장간 (여기 → 중기 → 본기 순, 본기가 마지막) ── */
-const JIJANGAN: Record<string, string[]> = {
-  子: ['壬', '癸'],
-  丑: ['癸', '辛', '己'],
-  寅: ['戊', '丙', '甲'],
-  卯: ['甲', '乙'],
-  辰: ['乙', '癸', '戊'],
-  巳: ['戊', '庚', '丙'],
-  午: ['丙', '己', '丁'],
-  未: ['丁', '乙', '己'],
-  申: ['戊', '壬', '庚'],
-  酉: ['庚', '辛'],
-  戌: ['辛', '丁', '戊'],
-  亥: ['戊', '甲', '壬'],
-}
+/* ── 지장간 ──
+   ★2026-08-05 — 이 파일이 갖고 있던 «사본» 을 걷어내고 공용 표를 부릅니다. [대표님 지시]
+     [전]  여기에 JIJANGAN 을 따로 적어 두었습니다.
+     [대조]  lib/saju/yongsinNew.ts 의 표와 ★12/12 «완전히 같았습니다» (전수 확인).
+             순전한 사본이라 지워도 ★화면이 하나도 안 바뀝니다.
+     [까닭]  lib/saju/jijanggan.ts 머리글의 경고 —
+             「저장소에 지장간 표가 이미 둘 있다. ★세 번째 표를 만들면
+               그때부터 관리가 안 된다 (교훈 CJ)」
+     ⚠️ 이 표는 ★«여기먼저» [여, 중, 정] 차례입니다. 아래 여기/중기/본기 줄이
+        그 차례에 기댑니다. 뒤집힌 표를 넣지 마십시오. */
 
 /* ── 십성 계산 (천간 대 천간) ── */
 const STEM_EL: Record<string, string> = {
