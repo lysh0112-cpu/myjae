@@ -122,7 +122,6 @@ export interface NameAnalysisResultViewProps {
   /** 상단 칩 「이름에 담을 기운」 */
   fillElements?: Ohaeng[]
   /** 「상세 진로·적성 분석 보러가기」 */
-  careerHref: string
 
   /** 작명일 때 — [다른 추천 한자 보기] */
   onOtherHanja?: () => void
@@ -283,7 +282,6 @@ export default function NameAnalysisResultView(p: NameAnalysisResultViewProps) {
           yongsin={p.yongsin}
           heeksin={p.heeksin}
           gisin={p.gisin}
-          careerHref={p.careerHref}
         />
       )}
 

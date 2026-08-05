@@ -301,7 +301,7 @@ export default function PickWeddingV7({ result, onPickDay }: Props) {
              좋은 날 찾기 · 정한 날 봐주기. 관리자 토글 하나로 «함께» 켜지고 꺼집니다.
           ⚠️ consult_prices 에 이 줄이 «있어야» 보입니다. 없으면 통째로 숨습니다(안전).
           ⛔ 이 화면만 다른 price_key 로 바꾸지 마십시오. 토글이 갈라집니다. */}
-      <div style={{ marginTop: 16 }}>
+      <div>
         <ConsultButton priceKey="wedding" mode="wedding" />
       </div>
 

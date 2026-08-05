@@ -892,7 +892,7 @@ function ResultNewContent() {
               80 은 «fixed 하단바에 가려지지 않으려고» 둔 자리였습니다.
               그 바를 걷어냈으므로 빈 자리만 남습니다. 24 는 그냥 아래 숨통입니다. */}
         {!chartOnly && (
-          <div style={{marginTop:'10px',marginBottom:'24px'}}>
+          <div>
             <ConsultButton priceKey="saju" mode="personal" searchParams={searchParams}
               /* ★고객이 본 통변을 상담사에게 넘긴다 (2026-07-21)
                  새 조회면 tongText, 보관함 다시보기면 savedTong 을 쓴다.

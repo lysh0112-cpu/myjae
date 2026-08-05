@@ -154,7 +154,16 @@ export default function ConsultButton({ priceKey, mode, searchParams, payload }:
   //      지금 false && 로 «꺼져» 있어 안 건드렸습니다. 되살리실 때 이 부품으로 바꾸십시오.
   // ══════════════════════════════════════════════════════════════════════
   return (
-    <div className="rounded-2xl p-5" style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58' }}>
+    // ★2026-08-05 (47부 17차) — 위아래 여백을 ★«부품 안» 에서 잡습니다. [대표님 지시]
+    //   [무엇이 문제였나]  부르는 쪽 «열두 곳» 이 각자 여백을 정하고 있었습니다 —
+    //     8 · 10 · 12 · 16 · 18 · ★«없음» (작명 둘)
+    //     ⇒ 화면마다 카드가 뜨는 자리가 달랐고, 작명 둘은 ★위 버튼과 «붙어» 있었습니다.
+    //   [고침]  marginTop 16 · marginBottom 16 을 여기서 줍니다.
+    //     ⇒ 앞으로 어디에 붙여도 ★저절로 맞습니다. 부르는 쪽은 여백을 «안 줘도» 됩니다.
+    //   ⚠️ 11차에 버튼 «높이» 를 부품 안에서 잡은 것과 «같은 결» 입니다.
+    //   ⛔ 부르는 쪽에서 다시 marginTop 을 주지 마십시오. ★두 겹으로 벌어집니다.
+    <div className="rounded-2xl p-5"
+      style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58', marginTop: 16, marginBottom: 16 }}>
       <div className="flex items-center gap-2 mb-2">
         <span className="text-lg" aria-hidden="true">🔮</span>
         <h2 className="text-base font-bold" style={{ color: '#3a2e28' }}>전문가와 상담하기</h2>

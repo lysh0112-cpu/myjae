@@ -1230,7 +1230,7 @@ function CoupleResultView({
               관리자 > 가격 관리에서 '노출'이 꺼져 있으면 ConsultButton이
               스스로 null을 돌려주므로 이 영역 전체가 보이지 않는다. */}
         {(
-          <div style={{ marginTop: 12 }}>
+          <div>
             <ConsultButton
               priceKey={COUPLE_PRICE_KEY}
               mode={mode}

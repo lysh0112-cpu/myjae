@@ -852,7 +852,7 @@ function CareerResultInner() {
                    SQL 은 _SQL_consult_prices_47bu.sql 에 담아 두었습니다.
                 ⚠️ 진로적성 통변(tong)을 상담사에게 넘깁니다.
                    ⛔ 판정 근거(cards)는 «넘기지 않습니다» — 44부 확정으로 «절대» 안 보입니다. */}
-            <div style={{ marginTop: 18 }}>
+            <div>
               <ConsultButton
                 priceKey="career"
                 mode="career"

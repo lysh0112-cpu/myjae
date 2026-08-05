@@ -483,7 +483,7 @@ function BirthResultInner() {
         {/* 전문가 상담 연결 (출산 택일 상담) — 저장 표시 아래.
             관리자 > 가격 관리에서 '노출'을 끄면 이 영역이 통째로 사라진다. */}
         {!loading && !errMsg && recs.length > 0 && (
-          <div style={{ marginTop: '12px' }}>
+          <div>
             <ConsultButton priceKey="birth" mode="birth" />
           </div>
         )}

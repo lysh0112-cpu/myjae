@@ -230,19 +230,16 @@ function DiagnosisInner() {
 
   // 가격 (이름 풀이 / 한자 바꾸기)
   const [readPrice, setReadPrice] = useState(5000)
-  const [hanjaPrice, setHanjaPrice] = useState(20000)
 
   useEffect(() => {
     supabase
       .from('analysis_prices')
       .select('price_key, price')
-      .in('price_key', ['naming_read', 'naming_hanja'])
+      .in('price_key', ['naming_read'])
       .then(({ data }) => {
         if (data) {
           const read = data.find(d => d.price_key === 'naming_read')
-          const hanja = data.find(d => d.price_key === 'naming_hanja')
           if (read) setReadPrice(read.price)
-          if (hanja) setHanjaPrice(hanja.price)
         }
       })
   }, [])
@@ -395,16 +392,9 @@ function DiagnosisInner() {
     }
   }, [saju, dayStem, solar, aptYongsin])
 
-  /** 「상세 진로·적성 분석 보러가기」 — 진로적성 화면으로 그대로 넘깁니다 */
-  const careerHref = useMemo(() => {
-    if (!info) return '/manseryeok/career-input'
-    const q = new URLSearchParams({
-      name: '', gender: info.gender, calType: info.calType,
-      year: info.year, month: info.month, day: info.day,
-      leapMonth: info.leapMonth, hour: info.hour,
-    })
-    return `/manseryeok/career-result?${q.toString()}`
-  }, [info])
+  /* ★2026-08-05 (47부 17차) — careerHref 를 «걷어냈습니다».
+     「상세 진로·적성 분석 보러가기 →」 버튼을 지우면서 아무도 안 쓰게 되었습니다.
+     ⛔ 되살리시려면 ★버튼과 «함께». git 이력(47부 17차 이전)에 있습니다. */
   // ★2026-07-30 (3단계) — 실패 이유. 없으면 null. 빈 화면 대신 이것을 보여 줍니다.
   const [failWhy, setFailWhy] = useState<string | null>(null)
   // ★2026-07-30 (3단계-b) — 관점별 별점. 옛 저장본에는 없으므로 null 로 둡니다.
@@ -1135,7 +1125,6 @@ function DiagnosisInner() {
                   heeksin={aptYongsin.heeksin}
                   gisin={aptYongsin.gisin}
                   fillElements={namingFill}
-                  careerHref={careerHref}
                 />
 
                 {/* ══════════════════════════════════════════════════════
@@ -1233,20 +1222,18 @@ function DiagnosisInner() {
                 )}
 
 
-                <div style={{ background: '#fdeee2', border: `1px solid ${gold}`, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
-                  <div style={{ fontSize: '12px', color: '#c8506e', fontStyle: 'italic', marginBottom: '14px', lineHeight: 1.5, textAlign: 'center' }}>
-                    이름의 결을 더 살펴보고 싶다면, 다른 가능성도 열어둘 수 있습니다
-                  </div>
-
-                  <button onClick={() => router.push('/manseryeok/naming/rename/newname')}
-                    style={{ width: '100%', padding: '14px 16px', borderRadius: '12px', background: 'rgba(200,120,60,0.12)', border: `1px solid ${gold}`, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ textAlign: 'left' }}>
-                      <div style={{ fontSize: '14px', fontWeight: 'bold', color: gold }}>발음은 그대로, 한자 바꾸기</div>
-                      <div style={{ fontSize: '11px', color: '#96502e', marginTop: '2px' }}>부르는 이름은 두고, 사주에 맞는 한자로</div>
-                    </div>
-                    <span style={{ fontSize: '13px', fontWeight: 'bold', color: gold, whiteSpace: 'nowrap', marginLeft: '10px' }}>{hanjaPrice.toLocaleString()}원</span>
-                  </button>
-                </div>
+                {/* ★2026-08-05 (47부 17차) — 「이름의 결을 더 살펴보고…」 칸을
+                    «통째로» 걷어냈습니다. [대표님 지시 · 목업 ⓑ 로 확정]
+                      · 안내 문구 한 줄
+                      · 「발음은 그대로, 한자 바꾸기」 (20,000원 · rename/newname)
+                    ⚠️ ★돈이 걸린 자리라 지우기 전에 «다른 입구» 를 전수로 찾았습니다 —
+                       naming/start · NamingStorageView(보관함) · ★이 화면 아래
+                       「다른 이름 풀어보기」 도 같은 곳으로 갑니다.
+                       ⇒ 길이 «끊기지 않습니다». 그래서 지웠습니다.
+                    ⚠️ 함께 안 쓰게 된 ★hanjaPrice 상태도 걷었습니다.
+                       naming_hanja 가격 «조회» 는 남겨 두면 eslint 가 짖으므로 함께 정리했습니다.
+                       ⛔ 되살리시려면 ★셋을 «함께» — 칸 · hanjaPrice · 가격 조회.
+                          git 이력(47부 17차 이전)에 그대로 있습니다. */}
 
                 {/* ══════════════════════════════════════════════════════
                     ★2026-08-02 — 맨 아래 두 버튼을 «한 줄 두 칸» 으로 (대표님 지시 ④)
@@ -1299,7 +1286,7 @@ function DiagnosisInner() {
                     ⛔ 다시 위로 올리지 마십시오. */}
                 {/* ★ 전문가 상담 연결 — 저장 표시 아래.
                     관리자 > 가격 관리에서 '노출'을 끄면 이 영역이 통째로 사라진다. */}
-                <div style={{ marginBottom: '12px' }}>
+                <div>
                   <ConsultButton priceKey="naming" mode="naming" />
                 </div>
               </>

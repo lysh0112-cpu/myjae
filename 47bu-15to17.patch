@@ -1,0 +1,972 @@
+From ce4ec8bdd28e017bd99057bcfb728c042c3ccb54 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 13:58:08 +0000
+Subject: [PATCH 1/3] =?UTF-8?q?=EA=B0=80=EC=A7=9C=20=EC=98=88=EC=95=BD=20?=
+ =?UTF-8?q?=ED=99=94=EB=A9=B4(/booking)=20=EC=82=AD=EC=A0=9C=20(47?=
+ =?UTF-8?q?=EB=B6=80=2016=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/booking/page.tsx | 527 -------------------------------------------
+ 1 file changed, 527 deletions(-)
+ delete mode 100644 app/booking/page.tsx
+
+diff --git a/app/booking/page.tsx b/app/booking/page.tsx
+deleted file mode 100644
+index d670836..0000000
+--- a/app/booking/page.tsx
++++ /dev/null
+@@ -1,527 +0,0 @@
+-"use client";
+-
+-import { useState } from "react";
+-import Link from "next/link";
+-
+-// ─── 타입 ───
+-type Step = 1 | 2 | 3 | 4;
+-type ConsultType = "30min" | "60min" | "90min";
+-type ConsultMode = "chat" | "voice" | "video";
+-
+-// ─── 상담사 목업 ───
+-const COUNSELOR = {
+-  id: 1, name: "이명연", title: "사주·운명 전문가",
+-  rating: 4.9, reviews: 1243, initial: "이", color: "#3C3489",
+-  available: true, experience: 18,
+-};
+-
+-const CONSULT_TYPES: { key: ConsultType; label: string; duration: string; price: number; desc: string }[] = [
+-  { key: "30min", label: "기본 상담", duration: "30분", price: 30000, desc: "사주 기본 분석 + 현재 운세 핵심 정리" },
+-  { key: "60min", label: "심층 상담", duration: "60분", price: 60000, desc: "대운·세운·직업·연애운 전반 분석" },
+-  { key: "90min", label: "종합 상담", duration: "90분", price: 75000, desc: "전 분야 심층 분석 + 질의응답 무제한" },
+-];
+-
+-const CONSULT_MODES: { key: ConsultMode; icon: string; label: string; desc: string }[] = [
+-  { key: "chat", icon: "💬", label: "채팅 상담", desc: "텍스트로 편하게 대화" },
+-  { key: "voice", icon: "🎙️", label: "음성 상담", desc: "전화처럼 목소리로 대화" },
+-  { key: "video", icon: "📹", label: "화상 상담", desc: "얼굴 보며 깊은 상담" },
+-];
+-
+-const TIME_SLOTS = [
+-  { date: "오늘 (6/17)", day: "화", slots: ["14:00", "15:00", "16:30"] },
+-  { date: "내일 (6/18)", day: "수", slots: ["10:00", "11:00", "13:00", "15:00", "16:00"] },
+-  { date: "6/19", day: "목", slots: ["10:00", "14:00", "17:00"] },
+-  { date: "6/20", day: "금", slots: ["09:00", "11:00", "13:00", "15:00"] },
+-  { date: "6/21", day: "토", slots: ["10:00", "11:00", "12:00"] },
+-];
+-
+-const CONCERN_TAGS = [
+-  "연애·짝사랑", "결혼 타이밍", "이직·취업", "사업·창업",
+-  "재물·투자", "진로 방향", "건강", "가족 관계",
+-  "이사·풍수", "이름·작명", "올해 운세", "기타",
+-];
+-
+-// ─── 유틸 ───
+-function BackBtn({ href }: { href: string }) {
+-  return (
+-    <Link href={href}>
+-      <button className="w-9 h-9 rounded-xl flex items-center justify-center"
+-        style={{ background: "rgba(255,255,255,0.06)" }}>
+-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5 text-white">
+-          <polyline points="15 18 9 12 15 6" />
+-        </svg>
+-      </button>
+-    </Link>
+-  );
+-}
+-
+-function StepBar({ current }: { current: Step }) {
+-  const labels = ["상담 유형", "날짜·시간", "고민 입력", "최종 확인"];
+-  return (
+-    <div className="flex items-center gap-0">
+-      {labels.map((lbl, i) => {
+-        const n = (i + 1) as Step;
+-        const done = n < current;
+-        const active = n === current;
+-        return (
+-          <div key={lbl} className="flex items-center flex-1 last:flex-none">
+-            <div className="flex flex-col items-center gap-1">
+-              <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all"
+-                style={done
+-                  ? { background: "#FAC775", color: "#1a1a18" }
+-                  : active
+-                  ? { background: "#3C3489", color: "#FAC775", border: "2px solid #FAC775" }
+-                  : { background: "rgba(255,255,255,0.08)", color: "#6a6880" }}>
+-                {done ? "✓" : n}
+-              </div>
+-              <span className="text-[9px] whitespace-nowrap"
+-                style={{ color: active ? "#FAC775" : done ? "#b0aec8" : "#6a6880" }}>
+-                {lbl}
+-              </span>
+-            </div>
+-            {i < labels.length - 1 && (
+-              <div className="flex-1 h-px mx-1 mb-3.5 transition-all"
+-                style={{ background: done ? "#FAC775" : "rgba(255,255,255,0.08)" }} />
+-            )}
+-          </div>
+-        );
+-      })}
+-    </div>
+-  );
+-}
+-
+-// ─── Step 1: 상담 유형 선택 ───
+-function Step1({
+-  consultType, setConsultType,
+-  consultMode, setConsultMode,
+-}: {
+-  consultType: ConsultType | null; setConsultType: (v: ConsultType) => void;
+-  consultMode: ConsultMode | null; setConsultMode: (v: ConsultMode) => void;
+-}) {
+-  return (
+-    <div className="space-y-4">
+-      <div className="rounded-2xl p-5" style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+-        <div className="flex items-center gap-2 mb-4">
+-          <span className="text-xl">🗂️</span>
+-          <div>
+-            <h3 className="text-sm font-bold text-white">상담 시간 선택</h3>
+-            <p className="text-xs" style={{ color: "#8a88a0" }}>상담 목적에 맞는 시간을 선택하세요</p>
+-          </div>
+-        </div>
+-        <div className="space-y-2">
+-          {CONSULT_TYPES.map((t) => (
+-            <button key={t.key} onClick={() => setConsultType(t.key)}
+-              className="w-full rounded-xl p-4 text-left transition-all active:scale-[0.98]"
+-              style={consultType === t.key
+-                ? { background: "rgba(60,52,137,0.3)", border: "1px solid rgba(250,199,117,0.4)" }
+-                : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+-              <div className="flex items-center justify-between">
+-                <div className="flex items-center gap-3">
+-                  <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
+-                    style={consultType === t.key
+-                      ? { borderColor: "#FAC775", background: "#FAC775" }
+-                      : { borderColor: "#6a6880", background: "transparent" }}>
+-                    {consultType === t.key && <div className="w-2 h-2 rounded-full bg-white" />}
+-                  </div>
+-                  <div>
+-                    <div className="flex items-center gap-2">
+-                      <span className="text-sm font-semibold" style={{ color: consultType === t.key ? "#FAC775" : "#e0dce8" }}>
+-                        {t.label}
+-                      </span>
+-                      <span className="text-xs px-2 py-0.5 rounded-full"
+-                        style={{ background: "rgba(255,255,255,0.07)", color: "#8a88a0" }}>{t.duration}</span>
+-                    </div>
+-                    <p className="text-xs mt-0.5" style={{ color: "#8a88a0" }}>{t.desc}</p>
+-                  </div>
+-                </div>
+-                <span className="text-sm font-bold flex-shrink-0" style={{ color: consultType === t.key ? "#FAC775" : "#c8c4d8" }}>
+-                  {t.price.toLocaleString()}원
+-                </span>
+-              </div>
+-            </button>
+-          ))}
+-        </div>
+-      </div>
+-
+-      <div className="rounded-2xl p-5" style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+-        <div className="flex items-center gap-2 mb-4">
+-          <span className="text-xl">📡</span>
+-          <div>
+-            <h3 className="text-sm font-bold text-white">상담 방식 선택</h3>
+-            <p className="text-xs" style={{ color: "#8a88a0" }}>편한 방식으로 진행합니다</p>
+-          </div>
+-        </div>
+-        <div className="grid grid-cols-3 gap-2">
+-          {CONSULT_MODES.map((m) => (
+-            <button key={m.key} onClick={() => setConsultMode(m.key)}
+-              className="flex flex-col items-center py-4 px-2 rounded-xl transition-all active:scale-95"
+-              style={consultMode === m.key
+-                ? { background: "rgba(60,52,137,0.35)", border: "1px solid rgba(250,199,117,0.4)" }
+-                : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+-              <span className="text-2xl mb-1.5">{m.icon}</span>
+-              <span className="text-xs font-semibold" style={{ color: consultMode === m.key ? "#FAC775" : "#c8c4d8" }}>
+-                {m.label}
+-              </span>
+-              <span className="text-[10px] mt-0.5 text-center leading-tight" style={{ color: "#8a88a0" }}>
+-                {m.desc}
+-              </span>
+-            </button>
+-          ))}
+-        </div>
+-      </div>
+-    </div>
+-  );
+-}
+-
+-// ─── Step 2: 날짜·시간 ───
+-function Step2({ selected, setSelected }: {
+-  selected: string | null; setSelected: (v: string | null) => void;
+-}) {
+-  return (
+-    <div className="space-y-3">
+-      <div className="rounded-xl px-4 py-3" style={{ background: "rgba(250,199,117,0.08)", border: "1px solid rgba(250,199,117,0.2)" }}>
+-        <p className="text-xs" style={{ color: "#b0aec8" }}>
+-          <span style={{ color: "#FAC775" }}>💡 </span>
+-          상담 시작 1시간 전까지 무료 취소 가능합니다
+-        </p>
+-      </div>
+-      {TIME_SLOTS.map((group) => (
+-        <div key={group.date} className="rounded-2xl p-4"
+-          style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+-          <div className="flex items-center gap-2 mb-3">
+-            <span className="text-sm font-bold text-white">{group.date}</span>
+-            <span className="text-xs px-2 py-0.5 rounded-full"
+-              style={{ background: "rgba(255,255,255,0.06)", color: "#8a88a0" }}>{group.day}</span>
+-          </div>
+-          <div className="grid grid-cols-4 gap-2">
+-            {group.slots.map((slot) => {
+-              const key = `${group.date}-${slot}`;
+-              const on = selected === key;
+-              return (
+-                <button key={slot} onClick={() => setSelected(on ? null : key)}
+-                  className="py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95"
+-                  style={on
+-                    ? { background: "#3C3489", color: "#FAC775", border: "1px solid rgba(250,199,117,0.5)" }
+-                    : { background: "rgba(255,255,255,0.04)", color: "#c8c4d8", border: "1px solid rgba(255,255,255,0.08)" }}>
+-                  {slot}
+-                </button>
+-              );
+-            })}
+-          </div>
+-        </div>
+-      ))}
+-    </div>
+-  );
+-}
+-
+-// ─── Step 3: 고민 입력 ───
+-function Step3({ concern, setConcern, selectedTags, toggleTag }: {
+-  concern: string; setConcern: (v: string) => void;
+-  selectedTags: string[]; toggleTag: (v: string) => void;
+-}) {
+-  return (
+-    <div className="space-y-4">
+-      <div className="rounded-2xl p-5" style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+-        <div className="flex items-center gap-2 mb-4">
+-          <span className="text-xl">🏷️</span>
+-          <div>
+-            <h3 className="text-sm font-bold text-white">상담 주제 (복수 선택)</h3>
+-            <p className="text-xs" style={{ color: "#8a88a0" }}>어떤 부분이 궁금하신가요?</p>
+-          </div>
+-        </div>
+-        <div className="flex flex-wrap gap-2">
+-          {CONCERN_TAGS.map((tag) => {
+-            const on = selectedTags.includes(tag);
+-            return (
+-              <button key={tag} onClick={() => toggleTag(tag)}
+-                className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+-                style={on
+-                  ? { background: "#3C3489", color: "#FAC775", border: "1px solid rgba(250,199,117,0.3)" }
+-                  : { background: "rgba(255,255,255,0.04)", color: "#8a88a0", border: "1px solid rgba(255,255,255,0.08)" }}>
+-                {on ? "✓ " : ""}{tag}
+-              </button>
+-            );
+-          })}
+-        </div>
+-      </div>
+-
+-      <div className="rounded-2xl p-5" style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+-        <div className="flex items-center gap-2 mb-3">
+-          <span className="text-xl">✍️</span>
+-          <div>
+-            <h3 className="text-sm font-bold text-white">고민 내용 (선택)</h3>
+-            <p className="text-xs" style={{ color: "#8a88a0" }}>미리 알려주시면 더 정확한 상담이 가능해요</p>
+-          </div>
+-        </div>
+-        <textarea
+-          value={concern}
+-          onChange={(e) => setConcern(e.target.value)}
+-          placeholder="예) 올해 이직을 고민 중인데 현재 회사에 계속 다니는 게 좋을지, 새 회사로 옮기는 게 좋을지 고민입니다..."
+-          rows={5}
+-          className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none"
+-          style={{
+-            background: "#1a1a18",
+-            border: "1px solid rgba(255,255,255,0.1)",
+-            color: "#e0dce8",
+-            colorScheme: "dark",
+-          }}
+-        />
+-        <div className="flex justify-between mt-1.5">
+-          <p className="text-xs" style={{ color: "#6a6880" }}>상담 내용은 상담사에게만 공개됩니다</p>
+-          <span className="text-xs" style={{ color: concern.length > 400 ? "#ef9a9a" : "#6a6880" }}>
+-            {concern.length}/500
+-          </span>
+-        </div>
+-      </div>
+-    </div>
+-  );
+-}
+-
+-// ─── Step 4: 최종 확인 ───
+-function Step4({
+-  consultType, consultMode, slot, concern, selectedTags,
+-}: {
+-  consultType: ConsultType | null;
+-  consultMode: ConsultMode | null;
+-  slot: string | null;
+-  concern: string;
+-  selectedTags: string[];
+-}) {
+-  const typeInfo = CONSULT_TYPES.find((t) => t.key === consultType);
+-  const modeInfo = CONSULT_MODES.find((m) => m.key === consultMode);
+-
+-  const rows: { label: string; value: string }[] = [
+-    { label: "상담사", value: `${COUNSELOR.name} · ${COUNSELOR.title}` },
+-    { label: "상담 유형", value: typeInfo ? `${typeInfo.label} (${typeInfo.duration})` : "-" },
+-    { label: "상담 방식", value: modeInfo ? `${modeInfo.icon} ${modeInfo.label}` : "-" },
+-    { label: "날짜·시간", value: slot ? slot.replace("-", " ") : "-" },
+-  ];
+-
+-  return (
+-    <div className="space-y-4">
+-      {/* 예약 요약 */}
+-      <div className="rounded-2xl overflow-hidden"
+-        style={{ background: "#2C2C2A", border: "1px solid rgba(250,199,117,0.15)" }}>
+-        <div className="flex items-center gap-3 px-5 py-4"
+-          style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+-          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold text-white"
+-            style={{ background: `linear-gradient(135deg, ${COUNSELOR.color}, #FAC775)` }}>
+-            {COUNSELOR.initial}
+-          </div>
+-          <div>
+-            <div className="font-bold text-white">{COUNSELOR.name}</div>
+-            <div className="text-xs mt-0.5" style={{ color: "#b0aec8" }}>{COUNSELOR.title}</div>
+-            <div className="text-xs mt-0.5" style={{ color: "#FAC775" }}>★ {COUNSELOR.rating} · 후기 {COUNSELOR.reviews.toLocaleString()}</div>
+-          </div>
+-        </div>
+-        <div className="px-5 py-3 space-y-3">
+-          {rows.map(({ label, value }) => (
+-            <div key={label} className="flex items-start justify-between gap-4">
+-              <span className="text-xs flex-shrink-0" style={{ color: "#8a88a0" }}>{label}</span>
+-              <span className="text-xs text-right font-medium" style={{ color: "#e0dce8" }}>{value}</span>
+-            </div>
+-          ))}
+-          {selectedTags.length > 0 && (
+-            <div className="flex items-start justify-between gap-4">
+-              <span className="text-xs flex-shrink-0" style={{ color: "#8a88a0" }}>상담 주제</span>
+-              <div className="flex flex-wrap gap-1 justify-end">
+-                {selectedTags.map((t) => (
+-                  <span key={t} className="text-[10px] px-2 py-0.5 rounded-full"
+-                    style={{ background: "rgba(60,52,137,0.3)", color: "#b0aec8" }}>{t}</span>
+-                ))}
+-              </div>
+-            </div>
+-          )}
+-          {concern && (
+-            <div>
+-              <span className="text-xs block mb-1" style={{ color: "#8a88a0" }}>고민 내용</span>
+-              <p className="text-xs leading-relaxed rounded-xl px-3 py-2.5 line-clamp-3"
+-                style={{ background: "#1a1a18", color: "#b0aec8" }}>{concern}</p>
+-            </div>
+-          )}
+-        </div>
+-      </div>
+-
+-      {/* 결제 요약 */}
+-      <div className="rounded-2xl p-5"
+-        style={{ background: "linear-gradient(135deg, rgba(60,52,137,0.25), rgba(250,199,117,0.06))", border: "1px solid rgba(60,52,137,0.4)" }}>
+-        <h3 className="text-sm font-bold text-white mb-3">결제 정보</h3>
+-        <div className="space-y-2">
+-          <div className="flex justify-between text-sm">
+-            <span style={{ color: "#b0aec8" }}>{typeInfo?.label} ({typeInfo?.duration})</span>
+-            <span style={{ color: "#e0dce8" }}>{typeInfo?.price.toLocaleString()}원</span>
+-          </div>
+-          <div className="flex justify-between text-sm">
+-            <span style={{ color: "#b0aec8" }}>할인</span>
+-            <span style={{ color: "#4caf50" }}>-0원</span>
+-          </div>
+-          <div className="h-px mt-2 mb-2" style={{ background: "rgba(255,255,255,0.08)" }} />
+-          <div className="flex justify-between">
+-            <span className="font-bold text-white">최종 결제</span>
+-            <span className="text-lg font-bold" style={{ color: "#FAC775" }}>
+-              {typeInfo?.price.toLocaleString()}원
+-            </span>
+-          </div>
+-        </div>
+-        <div className="mt-3 flex items-center gap-2 text-xs" style={{ color: "#8a88a0" }}>
+-          <span>💳</span>
+-          <span>카드·간편결제·계좌이체 가능</span>
+-        </div>
+-      </div>
+-
+-      {/* 유의사항 */}
+-      <div className="rounded-xl px-4 py-3 space-y-1.5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+-        {["상담 시작 1시간 전까지 무료 취소 가능합니다.", "취소 후에는 동일 금액이 즉시 환불됩니다.", "상담 내용은 철저히 비밀이 보장됩니다."].map((t) => (
+-          <p key={t} className="text-xs flex gap-2" style={{ color: "#8a88a0" }}>
+-            <span style={{ color: "#FAC775" }}>·</span>{t}
+-          </p>
+-        ))}
+-      </div>
+-    </div>
+-  );
+-}
+-
+-// ─── 메인 페이지 ───
+-export default function BookingPage() {
+-  const [step, setStep] = useState<Step>(1);
+-  const [consultType, setConsultType] = useState<ConsultType | null>(null);
+-  const [consultMode, setConsultMode] = useState<ConsultMode | null>(null);
+-  const [slot, setSlot] = useState<string | null>(null);
+-  const [concern, setConcern] = useState("");
+-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+-  const [done, setDone] = useState(false);
+-
+-  function toggleTag(tag: string) {
+-    setSelectedTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
+-  }
+-
+-  const canNext =
+-    step === 1 ? !!(consultType && consultMode) :
+-    step === 2 ? !!slot :
+-    step === 3 ? true :
+-    true;
+-
+-  function handleNext() {
+-    if (step < 4) setStep((s) => (s + 1) as Step);
+-    else setDone(true);
+-  }
+-
+-  const typeInfo = CONSULT_TYPES.find((t) => t.key === consultType);
+-
+-  // 완료 화면
+-  if (done) {
+-    return (
+-      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center"
+-        style={{ background: "#1a1a18", maxWidth: "430px", margin: "0 auto" }}>
+-        <div className="text-7xl mb-6 animate-bounce">🎉</div>
+-        <h1 className="text-2xl font-bold text-white mb-2">예약 완료!</h1>
+-        <p className="text-sm mb-1" style={{ color: "#b0aec8" }}>
+-          {COUNSELOR.name} 상담사와의 예약이 완료되었습니다.
+-        </p>
+-        <p className="text-sm" style={{ color: "#8a88a0" }}>
+-          {slot?.replace("-", " ")} · {typeInfo?.duration}
+-        </p>
+-        <div className="w-full mt-8 p-5 rounded-2xl text-left space-y-3"
+-          style={{ background: "#2C2C2A", border: "1px solid rgba(250,199,117,0.2)" }}>
+-          <div className="flex items-center gap-2 mb-1">
+-            <div className="w-2 h-2 rounded-full" style={{ background: "#4caf50" }} />
+-            <span className="text-xs font-semibold" style={{ color: "#4caf50" }}>예약 확정</span>
+-          </div>
+-          {[
+-            ["상담사", COUNSELOR.name],
+-            ["일시", slot?.replace("-", " ") ?? ""],
+-            ["방식", CONSULT_MODES.find((m) => m.key === consultMode)?.label ?? ""],
+-            ["결제 금액", `${typeInfo?.price.toLocaleString()}원`],
+-          ].map(([k, v]) => (
+-            <div key={k} className="flex justify-between text-sm">
+-              <span style={{ color: "#8a88a0" }}>{k}</span>
+-              <span style={{ color: "#e0dce8", fontWeight: 500 }}>{v}</span>
+-            </div>
+-          ))}
+-        </div>
+-        <div className="flex gap-3 w-full mt-6">
+-          <Link href="/mypage-new" className="flex-1">
+-            <button className="w-full py-3.5 rounded-xl text-sm font-semibold"
+-              style={{ border: "1px solid rgba(250,199,117,0.3)", color: "#FAC775", background: "rgba(250,199,117,0.08)" }}>
+-              마이페이지
+-            </button>
+-          </Link>
+-          <Link href="/" className="flex-1">
+-            <button className="w-full py-3.5 rounded-xl text-sm font-bold"
+-              style={{ background: "linear-gradient(135deg, #3C3489, #FAC775)", color: "#1a1a18" }}>
+-              홈으로
+-            </button>
+-          </Link>
+-        </div>
+-      </div>
+-    );
+-  }
+-
+-  return (
+-    <div className="min-h-screen" style={{ background: "#1a1a18", maxWidth: "430px", margin: "0 auto" }}>
+-      {/* 헤더 */}
+-      <header className="fixed top-0 z-50 px-4 pt-4 pb-3"
+-        style={{
+-          background: "rgba(26,26,24,0.97)", backdropFilter: "blur(12px)",
+-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+-          width: "100%", maxWidth: "430px", left: "50%", transform: "translateX(-50%)",
+-        }}>
+-        <div className="flex items-center justify-between mb-3">
+-          <BackBtn href={step === 1 ? "/consultants/1" : "#"} />
+-          <span className="text-sm font-bold text-white">상담 예약</span>
+-          <div className="w-9" />
+-        </div>
+-        <StepBar current={step} />
+-      </header>
+-
+-      {/* 상담사 미니 카드 */}
+-      <div className="pt-28 px-4 pb-2">
+-        <div className="flex items-center gap-3 rounded-xl px-4 py-3"
+-          style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-base font-bold text-white"
+-            style={{ background: `linear-gradient(135deg, ${COUNSELOR.color}, #FAC775)` }}>
+-            {COUNSELOR.initial}
+-          </div>
+-          <div className="flex-1">
+-            <div className="text-sm font-bold text-white">{COUNSELOR.name}</div>
+-            <div className="text-xs" style={{ color: "#8a88a0" }}>{COUNSELOR.title} · ★ {COUNSELOR.rating}</div>
+-          </div>
+-          <div className="flex items-center gap-1.5">
+-            <div className="w-2 h-2 rounded-full" style={{ background: "#4caf50" }} />
+-            <span className="text-xs" style={{ color: "#4caf50" }}>상담 가능</span>
+-          </div>
+-        </div>
+-      </div>
+-
+-      <main className="px-4 pt-3 pb-40 space-y-4">
+-        {step === 1 && <Step1 consultType={consultType} setConsultType={setConsultType} consultMode={consultMode} setConsultMode={setConsultMode} />}
+-        {step === 2 && <Step2 selected={slot} setSelected={setSlot} />}
+-        {step === 3 && <Step3 concern={concern} setConcern={setConcern} selectedTags={selectedTags} toggleTag={toggleTag} />}
+-        {step === 4 && <Step4 consultType={consultType} consultMode={consultMode} slot={slot} concern={concern} selectedTags={selectedTags} />}
+-      </main>
+-
+-      {/* 하단 버튼 */}
+-      <div className="fixed bottom-0 z-50 px-4 py-4"
+-        style={{
+-          background: "linear-gradient(to top, #1a1a18 70%, transparent)",
+-          width: "100%", maxWidth: "430px", left: "50%", transform: "translateX(-50%)",
+-          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
+-        }}>
+-        {step > 1 && (
+-          <button onClick={() => setStep((s) => (s - 1) as Step)}
+-            className="w-full mb-2 py-3 rounded-xl text-sm font-semibold transition-all"
+-            style={{ border: "1px solid rgba(255,255,255,0.1)", color: "#8a88a0", background: "transparent" }}>
+-            ← 이전 단계
+-          </button>
+-        )}
+-        <button onClick={handleNext} disabled={!canNext}
+-          className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all active:scale-95"
+-          style={canNext
+-            ? { background: "linear-gradient(135deg, #3C3489 0%, #FAC775 100%)", color: "#1a1a18", boxShadow: "0 4px 20px rgba(60,52,137,0.4)" }
+-            : { background: "rgba(255,255,255,0.06)", color: "#6a6880", cursor: "not-allowed" }}>
+-          {step === 4 ? "💳 결제하고 예약 완료" : `다음 단계 (${step}/4)`}
+-        </button>
+-      </div>
+-    </div>
+-  );
+-}
+-- 
+2.43.0
+
+
+From e853493613f845f6ed36b3bcc8542cfad7eafe48 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 13:58:42 +0000
+Subject: [PATCH 2/3] =?UTF-8?q?=EC=A3=BC=EC=84=9D=EC=97=90=20=EB=82=A8?=
+ =?UTF-8?q?=EC=9D=80=20=EA=B0=80=EC=A7=9C=20=EC=9D=B4=EB=A6=84=20=EC=A0=95?=
+ =?UTF-8?q?=EB=A6=AC=20(47=EB=B6=80=2016=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/manseryeok/birth-timing/components/PickDateV7.tsx | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/app/manseryeok/birth-timing/components/PickDateV7.tsx b/app/manseryeok/birth-timing/components/PickDateV7.tsx
+index 5ac19d8..8415062 100644
+--- a/app/manseryeok/birth-timing/components/PickDateV7.tsx
++++ b/app/manseryeok/birth-timing/components/PickDateV7.tsx
+@@ -103,7 +103,7 @@ interface Props {
+    *   지금은 화면 맨 아래 ★공용 상담 카드가 그 일을 합니다.
+    *   ⚠️ /consultants 화면 «자체» 는 지우지 «않았습니다» (45부 방식 — 길만 끊음).
+    *      들어오는 길이 «여기 하나뿐» 이었으므로 이제 아무도 안 갑니다.
+-   *   ⛔ 되살리시려면 ★그 화면의 목업(박진수·정도운 등)을 «진짜 상담사» 로
++   *   ⛔ 되살리시려면 ★그 화면의 «가짜 목업» 을 진짜 상담사(DB)로
+    *      갈아 끼우고 「상담 신청하기」에 onClick 을 «먼저» 붙이십시오.
+    *      지금 그대로 되살리면 손님이 ★없는 사람과 없는 가격을 봅니다.
+    */
+@@ -312,7 +312,7 @@ export default function PickDateV7({ result, onPickHour }: Props) {
+             </p>
+             {/* ★2026-08-05 (47부 15차) — 「상담 알아보기」를 걷어냈습니다. [대표님 지시]
+                 [무엇이 문제였나]  이 버튼이 ★/consultants 로 갔습니다.
+-                  그 화면은 ★박진수·정도운·한동원 같은 «가짜 상담사» 목업이고
++                  그 화면은 코드에 «박혀 있던» ★가짜 상담사 목업이었고
+                   「상담 신청하기」에 onClick 도 «없어» 눌러도 아무 일이 안 났습니다.
+                   진짜 상담사(DB)와는 아무 상관이 없었습니다.
+                 ⚠️ 그리고 이 자리는 ★「고를 수 있는 날이 없을 때」만 나왔습니다.
+-- 
+2.43.0
+
+
+From 030087200a27a5db030b1a6a4ccd6947934cb69d Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 14:26:16 +0000
+Subject: [PATCH 3/3] =?UTF-8?q?=EC=83=81=EB=8B=B4=20=EC=B9=B4=EB=93=9C=20?=
+ =?UTF-8?q?=EC=97=AC=EB=B0=B1=EC=9D=84=20=EB=B6=80=ED=92=88=20=EC=95=88?=
+ =?UTF-8?q?=EC=9C=BC=EB=A1=9C=20=ED=86=B5=EC=9D=BC=20=C2=B7=20=EC=83=81?=
+ =?UTF-8?q?=EC=84=B8=EC=A7=84=EB=A1=9C=20=EB=B2=84=ED=8A=BC=EA=B3=BC=20?=
+ =?UTF-8?q?=ED=95=9C=EC=9E=90=EB=B0=94=EA=BE=B8=EA=B8=B0=20=EC=B9=B8=20?=
+ =?UTF-8?q?=EC=82=AD=EC=A0=9C=20(47=EB=B6=80=2017=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ 25-verify-manse-ui.ts                         | 10 ++--
+ app/components/common/ConsultButton.tsx       | 11 ++++-
+ .../birth-timing/components/PickDateV7.tsx    |  2 +-
+ app/manseryeok/birth-timing/result/page.tsx   |  2 +-
+ app/manseryeok/career-result/page.tsx         |  2 +-
+ app/manseryeok/couple-result-new/page.tsx     |  2 +-
+ .../components/CheckResultV1.tsx              |  2 +-
+ .../moving-timing/components/PickMovingV1.tsx |  2 +-
+ app/manseryeok/mulsang/page.tsx               |  2 +-
+ .../components/NameAnalysisResultView.tsx     |  2 -
+ .../diagnosis/components/NamingAptitude.tsx   | 18 +++----
+ app/manseryeok/naming/diagnosis/page.tsx      | 47 +++++++------------
+ .../naming/rename/newresult/page.tsx          |  3 +-
+ app/manseryeok/result-new/page.tsx            |  2 +-
+ .../components/CheckResultV7.tsx              |  2 +-
+ .../components/PickWeddingV7.tsx              |  2 +-
+ 16 files changed, 52 insertions(+), 59 deletions(-)
+
+diff --git a/25-verify-manse-ui.ts b/25-verify-manse-ui.ts
+index 0b4fc7d..f1dc191 100644
+--- a/25-verify-manse-ui.ts
++++ b/25-verify-manse-ui.ts
+@@ -152,9 +152,13 @@ console.log('\n━━ ⑯-f ★내이름 감정 화면 (41부 Step 3 · UI) ━
+   check(/useState\(false\)/.test(apt), `★六 명리적성이 «접힌 채» 시작합니다`)
+   check(/aria-expanded/.test(apt), `접기·펼치기에 aria-expanded 가 있습니다`)
+ 
+-  // ③ 상세 진로적성 링크
+-  check(/careerHref/.test(apt) && /career-result/.test(page),
+-    `★「상세 진로·적성 분석 보러가기」 링크가 있습니다`)
++  // ③ ★2026-08-05 (47부 17차) — 「상세 진로·적성 분석 보러가기」 검사를 «걷었습니다».
++  //   [까닭]  대표님 지시로 ★그 버튼을 지웠습니다. 검사를 남기면 «영영 실패» 합니다.
++  //   ⚠️ 이 검사가 있었다는 것은 앞 세션이 ★«지켜야 할 것» 으로 보았다는 뜻입니다.
++  //      그래서 지우기 전에 대표님 지시를 다시 확인했고, 목업으로 승낙받았습니다.
++  //   ⛔ 버튼을 되살리시면 ★이 검사도 «함께» 되살리십시오 —
++  //        check(/careerHref/.test(apt) && /career-result/.test(page),
++  //          `★「상세 진로·적성 분석 보러가기」 링크가 있습니다`)
+ 
+   // ④ 색을 지어내지 않았는가 — 오행 색은 명리 규칙입니다
+   for (const [n, src] of [['NamingSajuSummary', sum], ['NamingAptitude', apt]] as const) {
+diff --git a/app/components/common/ConsultButton.tsx b/app/components/common/ConsultButton.tsx
+index 8bebfae..4dd0dd2 100644
+--- a/app/components/common/ConsultButton.tsx
++++ b/app/components/common/ConsultButton.tsx
+@@ -154,7 +154,16 @@ export default function ConsultButton({ priceKey, mode, searchParams, payload }:
+   //      지금 false && 로 «꺼져» 있어 안 건드렸습니다. 되살리실 때 이 부품으로 바꾸십시오.
+   // ══════════════════════════════════════════════════════════════════════
+   return (
+-    <div className="rounded-2xl p-5" style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58' }}>
++    // ★2026-08-05 (47부 17차) — 위아래 여백을 ★«부품 안» 에서 잡습니다. [대표님 지시]
++    //   [무엇이 문제였나]  부르는 쪽 «열두 곳» 이 각자 여백을 정하고 있었습니다 —
++    //     8 · 10 · 12 · 16 · 18 · ★«없음» (작명 둘)
++    //     ⇒ 화면마다 카드가 뜨는 자리가 달랐고, 작명 둘은 ★위 버튼과 «붙어» 있었습니다.
++    //   [고침]  marginTop 16 · marginBottom 16 을 여기서 줍니다.
++    //     ⇒ 앞으로 어디에 붙여도 ★저절로 맞습니다. 부르는 쪽은 여백을 «안 줘도» 됩니다.
++    //   ⚠️ 11차에 버튼 «높이» 를 부품 안에서 잡은 것과 «같은 결» 입니다.
++    //   ⛔ 부르는 쪽에서 다시 marginTop 을 주지 마십시오. ★두 겹으로 벌어집니다.
++    <div className="rounded-2xl p-5"
++      style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58', marginTop: 16, marginBottom: 16 }}>
+       <div className="flex items-center gap-2 mb-2">
+         <span className="text-lg" aria-hidden="true">🔮</span>
+         <h2 className="text-base font-bold" style={{ color: '#3a2e28' }}>전문가와 상담하기</h2>
+diff --git a/app/manseryeok/birth-timing/components/PickDateV7.tsx b/app/manseryeok/birth-timing/components/PickDateV7.tsx
+index 8415062..c712b99 100644
+--- a/app/manseryeok/birth-timing/components/PickDateV7.tsx
++++ b/app/manseryeok/birth-timing/components/PickDateV7.tsx
+@@ -404,7 +404,7 @@ export default function PickDateV7({ result, onPickHour }: Props) {
+           ⇒ 그래서 result 에만 카드가 있으면 ★손님은 «못 만납니다». 여기에도 답니다.
+           ⚠️ priceKey='birth' — result 와 «같은 줄» 을 씁니다. 관리자 토글 하나로 함께 움직입니다.
+           ⛔ 한쪽만 다른 price_key 로 바꾸지 마십시오. 토글이 갈라집니다. */}
+-      <div style={{ marginTop: 16 }}>
++      <div>
+         <ConsultButton priceKey="birth" mode="birth" />
+       </div>
+ 
+diff --git a/app/manseryeok/birth-timing/result/page.tsx b/app/manseryeok/birth-timing/result/page.tsx
+index b39904e..2615544 100644
+--- a/app/manseryeok/birth-timing/result/page.tsx
++++ b/app/manseryeok/birth-timing/result/page.tsx
+@@ -483,7 +483,7 @@ function BirthResultInner() {
+         {/* 전문가 상담 연결 (출산 택일 상담) — 저장 표시 아래.
+             관리자 > 가격 관리에서 '노출'을 끄면 이 영역이 통째로 사라진다. */}
+         {!loading && !errMsg && recs.length > 0 && (
+-          <div style={{ marginTop: '12px' }}>
++          <div>
+             <ConsultButton priceKey="birth" mode="birth" />
+           </div>
+         )}
+diff --git a/app/manseryeok/career-result/page.tsx b/app/manseryeok/career-result/page.tsx
+index 7bfcf3a..39027be 100644
+--- a/app/manseryeok/career-result/page.tsx
++++ b/app/manseryeok/career-result/page.tsx
+@@ -852,7 +852,7 @@ function CareerResultInner() {
+                    SQL 은 _SQL_consult_prices_47bu.sql 에 담아 두었습니다.
+                 ⚠️ 진로적성 통변(tong)을 상담사에게 넘깁니다.
+                    ⛔ 판정 근거(cards)는 «넘기지 않습니다» — 44부 확정으로 «절대» 안 보입니다. */}
+-            <div style={{ marginTop: 18 }}>
++            <div>
+               <ConsultButton
+                 priceKey="career"
+                 mode="career"
+diff --git a/app/manseryeok/couple-result-new/page.tsx b/app/manseryeok/couple-result-new/page.tsx
+index 960ee4a..ae3d38c 100644
+--- a/app/manseryeok/couple-result-new/page.tsx
++++ b/app/manseryeok/couple-result-new/page.tsx
+@@ -1230,7 +1230,7 @@ function CoupleResultView({
+               관리자 > 가격 관리에서 '노출'이 꺼져 있으면 ConsultButton이
+               스스로 null을 돌려주므로 이 영역 전체가 보이지 않는다. */}
+         {(
+-          <div style={{ marginTop: 12 }}>
++          <div>
+             <ConsultButton
+               priceKey={COUPLE_PRICE_KEY}
+               mode={mode}
+diff --git a/app/manseryeok/moving-timing/components/CheckResultV1.tsx b/app/manseryeok/moving-timing/components/CheckResultV1.tsx
+index 101fe92..e65f8b7 100644
+--- a/app/manseryeok/moving-timing/components/CheckResultV1.tsx
++++ b/app/manseryeok/moving-timing/components/CheckResultV1.tsx
+@@ -270,7 +270,7 @@ export default function CheckResultV1({ result }: Props) {
+              좋은 날 찾기 · 정한 날 봐주기. 관리자 토글 하나로 «함께» 켜지고 꺼집니다.
+           ⚠️ consult_prices 에 이 줄이 «있어야» 보입니다. 없으면 통째로 숨습니다(안전).
+           ⛔ 이 화면만 다른 price_key 로 바꾸지 마십시오. 토글이 갈라집니다. */}
+-      <div style={{ marginTop: 16 }}>
++      <div>
+         <ConsultButton priceKey="moving" mode="moving" />
+       </div>
+ 
+diff --git a/app/manseryeok/moving-timing/components/PickMovingV1.tsx b/app/manseryeok/moving-timing/components/PickMovingV1.tsx
+index 1128a07..5643ab9 100644
+--- a/app/manseryeok/moving-timing/components/PickMovingV1.tsx
++++ b/app/manseryeok/moving-timing/components/PickMovingV1.tsx
+@@ -353,7 +353,7 @@ export default function PickMovingV1({ result, onPickDay }: Props) {
+              좋은 날 찾기 · 정한 날 봐주기. 관리자 토글 하나로 «함께» 켜지고 꺼집니다.
+           ⚠️ consult_prices 에 이 줄이 «있어야» 보입니다. 없으면 통째로 숨습니다(안전).
+           ⛔ 이 화면만 다른 price_key 로 바꾸지 마십시오. 토글이 갈라집니다. */}
+-      <div style={{ marginTop: 16 }}>
++      <div>
+         <ConsultButton priceKey="moving" mode="moving" />
+       </div>
+ 
+diff --git a/app/manseryeok/mulsang/page.tsx b/app/manseryeok/mulsang/page.tsx
+index 747d1b8..24716ef 100644
+--- a/app/manseryeok/mulsang/page.tsx
++++ b/app/manseryeok/mulsang/page.tsx
+@@ -1127,7 +1127,7 @@ function MulsangInner() {
+                  SQL 은 _SQL_consult_prices_47bu.sql 에 담아 두었습니다.
+               ⛔ 옛 goConsult() 는 «지웠습니다». 되살릴 일이 없습니다.
+               ══════════════════════════════════════════════════════════════ */}
+-          <div style={{ marginTop: '8px', marginBottom: '12px' }}>
++          <div>
+             <ConsultButton
+               priceKey="mulsang"
+               mode="mulsang"
+diff --git a/app/manseryeok/naming/components/NameAnalysisResultView.tsx b/app/manseryeok/naming/components/NameAnalysisResultView.tsx
+index 9664e06..ab48c62 100644
+--- a/app/manseryeok/naming/components/NameAnalysisResultView.tsx
++++ b/app/manseryeok/naming/components/NameAnalysisResultView.tsx
+@@ -122,7 +122,6 @@ export interface NameAnalysisResultViewProps {
+   /** 상단 칩 「이름에 담을 기운」 */
+   fillElements?: Ohaeng[]
+   /** 「상세 진로·적성 분석 보러가기」 */
+-  careerHref: string
+ 
+   /** 작명일 때 — [다른 추천 한자 보기] */
+   onOtherHanja?: () => void
+@@ -283,7 +282,6 @@ export default function NameAnalysisResultView(p: NameAnalysisResultViewProps) {
+           yongsin={p.yongsin}
+           heeksin={p.heeksin}
+           gisin={p.gisin}
+-          careerHref={p.careerHref}
+         />
+       )}
+ 
+diff --git a/app/manseryeok/naming/diagnosis/components/NamingAptitude.tsx b/app/manseryeok/naming/diagnosis/components/NamingAptitude.tsx
+index 7b364ab..ce8c60c 100644
+--- a/app/manseryeok/naming/diagnosis/components/NamingAptitude.tsx
++++ b/app/manseryeok/naming/diagnosis/components/NamingAptitude.tsx
+@@ -46,7 +46,6 @@ export interface NamingAptitudeProps {
+   heeksin?: Ohaeng | null
+   gisin?: Ohaeng | null
+   /** 진로적성 화면으로 넘길 주소 */
+-  careerHref: string
+   /** 학생이면 계열, 성인이면 직무를 보여 줍니다 */
+   target?: 'student' | 'adult'
+ }
+@@ -208,16 +207,13 @@ export default function NamingAptitude(p: NamingAptitudeProps) {
+               </div>
+             )}
+ 
+-            {/* ★상세 화면으로 */}
+-            <a
+-              href={p.careerHref}
+-              style={{
+-                display: 'block', textAlign: 'center', textDecoration: 'none',
+-                fontSize: 12, fontWeight: 600, color: '#fff', background: GOLD,
+-                borderRadius: 12, padding: '12px 14px',
+-              }}>
+-              상세 진로·적성 분석 보러가기 →
+-            </a>
++            {/* ★2026-08-05 (47부 17차) — 「상세 진로·적성 분석 보러가기 →」를
++                «걷어냈습니다». [대표님 지시]
++                ⚠️ 이 부품은 ★두 곳이 씁니다 — 내 이름 정밀분석 · NameAnalysisResultView.
++                   그래서 ★양쪽에서 함께 사라집니다.
++                ⚠️ 딸려 있던 careerHref 도 위로 거슬러 «다» 걷었습니다
++                   (부품 Props · NameAnalysisResultView · 부르는 화면 넷).
++                ⛔ 되살리시려면 ★그 사슬을 «함께» 되살리십시오. git 이력에 있습니다. */}
+           </div>
+         )}
+       </div>
+diff --git a/app/manseryeok/naming/diagnosis/page.tsx b/app/manseryeok/naming/diagnosis/page.tsx
+index 2247129..60b7de7 100644
+--- a/app/manseryeok/naming/diagnosis/page.tsx
++++ b/app/manseryeok/naming/diagnosis/page.tsx
+@@ -230,19 +230,16 @@ function DiagnosisInner() {
+ 
+   // 가격 (이름 풀이 / 한자 바꾸기)
+   const [readPrice, setReadPrice] = useState(5000)
+-  const [hanjaPrice, setHanjaPrice] = useState(20000)
+ 
+   useEffect(() => {
+     supabase
+       .from('analysis_prices')
+       .select('price_key, price')
+-      .in('price_key', ['naming_read', 'naming_hanja'])
++      .in('price_key', ['naming_read'])
+       .then(({ data }) => {
+         if (data) {
+           const read = data.find(d => d.price_key === 'naming_read')
+-          const hanja = data.find(d => d.price_key === 'naming_hanja')
+           if (read) setReadPrice(read.price)
+-          if (hanja) setHanjaPrice(hanja.price)
+         }
+       })
+   }, [])
+@@ -395,16 +392,9 @@ function DiagnosisInner() {
+     }
+   }, [saju, dayStem, solar, aptYongsin])
+ 
+-  /** 「상세 진로·적성 분석 보러가기」 — 진로적성 화면으로 그대로 넘깁니다 */
+-  const careerHref = useMemo(() => {
+-    if (!info) return '/manseryeok/career-input'
+-    const q = new URLSearchParams({
+-      name: '', gender: info.gender, calType: info.calType,
+-      year: info.year, month: info.month, day: info.day,
+-      leapMonth: info.leapMonth, hour: info.hour,
+-    })
+-    return `/manseryeok/career-result?${q.toString()}`
+-  }, [info])
++  /* ★2026-08-05 (47부 17차) — careerHref 를 «걷어냈습니다».
++     「상세 진로·적성 분석 보러가기 →」 버튼을 지우면서 아무도 안 쓰게 되었습니다.
++     ⛔ 되살리시려면 ★버튼과 «함께». git 이력(47부 17차 이전)에 있습니다. */
+   // ★2026-07-30 (3단계) — 실패 이유. 없으면 null. 빈 화면 대신 이것을 보여 줍니다.
+   const [failWhy, setFailWhy] = useState<string | null>(null)
+   // ★2026-07-30 (3단계-b) — 관점별 별점. 옛 저장본에는 없으므로 null 로 둡니다.
+@@ -1135,7 +1125,6 @@ function DiagnosisInner() {
+                   heeksin={aptYongsin.heeksin}
+                   gisin={aptYongsin.gisin}
+                   fillElements={namingFill}
+-                  careerHref={careerHref}
+                 />
+ 
+                 {/* ══════════════════════════════════════════════════════
+@@ -1233,20 +1222,18 @@ function DiagnosisInner() {
+                 )}
+ 
+ 
+-                <div style={{ background: '#fdeee2', border: `1px solid ${gold}`, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
+-                  <div style={{ fontSize: '12px', color: '#c8506e', fontStyle: 'italic', marginBottom: '14px', lineHeight: 1.5, textAlign: 'center' }}>
+-                    이름의 결을 더 살펴보고 싶다면, 다른 가능성도 열어둘 수 있습니다
+-                  </div>
+-
+-                  <button onClick={() => router.push('/manseryeok/naming/rename/newname')}
+-                    style={{ width: '100%', padding: '14px 16px', borderRadius: '12px', background: 'rgba(200,120,60,0.12)', border: `1px solid ${gold}`, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+-                    <div style={{ textAlign: 'left' }}>
+-                      <div style={{ fontSize: '14px', fontWeight: 'bold', color: gold }}>발음은 그대로, 한자 바꾸기</div>
+-                      <div style={{ fontSize: '11px', color: '#96502e', marginTop: '2px' }}>부르는 이름은 두고, 사주에 맞는 한자로</div>
+-                    </div>
+-                    <span style={{ fontSize: '13px', fontWeight: 'bold', color: gold, whiteSpace: 'nowrap', marginLeft: '10px' }}>{hanjaPrice.toLocaleString()}원</span>
+-                  </button>
+-                </div>
++                {/* ★2026-08-05 (47부 17차) — 「이름의 결을 더 살펴보고…」 칸을
++                    «통째로» 걷어냈습니다. [대표님 지시 · 목업 ⓑ 로 확정]
++                      · 안내 문구 한 줄
++                      · 「발음은 그대로, 한자 바꾸기」 (20,000원 · rename/newname)
++                    ⚠️ ★돈이 걸린 자리라 지우기 전에 «다른 입구» 를 전수로 찾았습니다 —
++                       naming/start · NamingStorageView(보관함) · ★이 화면 아래
++                       「다른 이름 풀어보기」 도 같은 곳으로 갑니다.
++                       ⇒ 길이 «끊기지 않습니다». 그래서 지웠습니다.
++                    ⚠️ 함께 안 쓰게 된 ★hanjaPrice 상태도 걷었습니다.
++                       naming_hanja 가격 «조회» 는 남겨 두면 eslint 가 짖으므로 함께 정리했습니다.
++                       ⛔ 되살리시려면 ★셋을 «함께» — 칸 · hanjaPrice · 가격 조회.
++                          git 이력(47부 17차 이전)에 그대로 있습니다. */}
+ 
+                 {/* ══════════════════════════════════════════════════════
+                     ★2026-08-02 — 맨 아래 두 버튼을 «한 줄 두 칸» 으로 (대표님 지시 ④)
+@@ -1299,7 +1286,7 @@ function DiagnosisInner() {
+                     ⛔ 다시 위로 올리지 마십시오. */}
+                 {/* ★ 전문가 상담 연결 — 저장 표시 아래.
+                     관리자 > 가격 관리에서 '노출'을 끄면 이 영역이 통째로 사라진다. */}
+-                <div style={{ marginBottom: '12px' }}>
++                <div>
+                   <ConsultButton priceKey="naming" mode="naming" />
+                 </div>
+               </>
+diff --git a/app/manseryeok/naming/rename/newresult/page.tsx b/app/manseryeok/naming/rename/newresult/page.tsx
+index c78c2f7..29553f0 100644
+--- a/app/manseryeok/naming/rename/newresult/page.tsx
++++ b/app/manseryeok/naming/rename/newresult/page.tsx
+@@ -736,7 +736,6 @@ function NewResultInner() {
+           stars={cur.stars ?? null}
+           overallStar={cur.overallStar ?? null}
+           yongsin={(yongsin || null) as never}
+-          careerHref="/manseryeok/career-input"
+           // ★2026-08-01 (43부 28차) — 아래 «버금» 줄로 옮겼습니다.
+           //   ⚠️ 두 곳에 두면 같은 버튼이 화면에 두 번 뜹니다.
+           onOtherHanja={undefined}
+@@ -960,7 +959,7 @@ function NewResultInner() {
+           ⚠️ mode 도 함께 가릅니다 — 상담사 화면이 무슨 상담인지 알아야 합니다.
+           ⛔ 다시 하나로 합치지 마십시오. 값을 따로 못 매기게 됩니다.
+           ══════════════════════════════════════════════════════════════ */}
+-      <div style={{ marginBottom: 14 }}>
++      <div>
+         <ConsultButton
+           priceKey={namingKind === '신생아' ? 'naming_baby' : 'naming'}
+           mode={namingKind === '신생아' ? 'naming_baby' : 'naming'}
+diff --git a/app/manseryeok/result-new/page.tsx b/app/manseryeok/result-new/page.tsx
+index d1a1569..d1914c1 100644
+--- a/app/manseryeok/result-new/page.tsx
++++ b/app/manseryeok/result-new/page.tsx
+@@ -892,7 +892,7 @@ function ResultNewContent() {
+               80 은 «fixed 하단바에 가려지지 않으려고» 둔 자리였습니다.
+               그 바를 걷어냈으므로 빈 자리만 남습니다. 24 는 그냥 아래 숨통입니다. */}
+         {!chartOnly && (
+-          <div style={{marginTop:'10px',marginBottom:'24px'}}>
++          <div>
+             <ConsultButton priceKey="saju" mode="personal" searchParams={searchParams}
+               /* ★고객이 본 통변을 상담사에게 넘긴다 (2026-07-21)
+                  새 조회면 tongText, 보관함 다시보기면 savedTong 을 쓴다.
+diff --git a/app/manseryeok/wedding-timing/components/CheckResultV7.tsx b/app/manseryeok/wedding-timing/components/CheckResultV7.tsx
+index 572a056..66a4806 100644
+--- a/app/manseryeok/wedding-timing/components/CheckResultV7.tsx
++++ b/app/manseryeok/wedding-timing/components/CheckResultV7.tsx
+@@ -201,7 +201,7 @@ export default function CheckResultV7({
+              좋은 날 찾기 · 정한 날 봐주기. 관리자 토글 하나로 «함께» 켜지고 꺼집니다.
+           ⚠️ consult_prices 에 이 줄이 «있어야» 보입니다. 없으면 통째로 숨습니다(안전).
+           ⛔ 이 화면만 다른 price_key 로 바꾸지 마십시오. 토글이 갈라집니다. */}
+-      <div style={{ marginTop: 16 }}>
++      <div>
+         <ConsultButton priceKey="wedding" mode="wedding" />
+       </div>
+ 
+diff --git a/app/manseryeok/wedding-timing/components/PickWeddingV7.tsx b/app/manseryeok/wedding-timing/components/PickWeddingV7.tsx
+index 12934a8..bb55b17 100644
+--- a/app/manseryeok/wedding-timing/components/PickWeddingV7.tsx
++++ b/app/manseryeok/wedding-timing/components/PickWeddingV7.tsx
+@@ -301,7 +301,7 @@ export default function PickWeddingV7({ result, onPickDay }: Props) {
+              좋은 날 찾기 · 정한 날 봐주기. 관리자 토글 하나로 «함께» 켜지고 꺼집니다.
+           ⚠️ consult_prices 에 이 줄이 «있어야» 보입니다. 없으면 통째로 숨습니다(안전).
+           ⛔ 이 화면만 다른 price_key 로 바꾸지 마십시오. 토글이 갈라집니다. */}
+-      <div style={{ marginTop: 16 }}>
++      <div>
+         <ConsultButton priceKey="wedding" mode="wedding" />
+       </div>
+ 
+-- 
+2.43.0
+

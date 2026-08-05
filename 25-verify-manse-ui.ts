@@ -152,9 +152,13 @@ console.log('\n━━ ⑯-f ★내이름 감정 화면 (41부 Step 3 · UI) ━�
   check(/useState\(false\)/.test(apt), `★六 명리적성이 «접힌 채» 시작합니다`)
   check(/aria-expanded/.test(apt), `접기·펼치기에 aria-expanded 가 있습니다`)
 
-  // ③ 상세 진로적성 링크
-  check(/careerHref/.test(apt) && /career-result/.test(page),
-    `★「상세 진로·적성 분석 보러가기」 링크가 있습니다`)
+  // ③ ★2026-08-05 (47부 17차) — 「상세 진로·적성 분석 보러가기」 검사를 «걷었습니다».
+  //   [까닭]  대표님 지시로 ★그 버튼을 지웠습니다. 검사를 남기면 «영영 실패» 합니다.
+  //   ⚠️ 이 검사가 있었다는 것은 앞 세션이 ★«지켜야 할 것» 으로 보았다는 뜻입니다.
+  //      그래서 지우기 전에 대표님 지시를 다시 확인했고, 목업으로 승낙받았습니다.
+  //   ⛔ 버튼을 되살리시면 ★이 검사도 «함께» 되살리십시오 —
+  //        check(/careerHref/.test(apt) && /career-result/.test(page),
+  //          `★「상세 진로·적성 분석 보러가기」 링크가 있습니다`)
 
   // ④ 색을 지어내지 않았는가 — 오행 색은 명리 규칙입니다
   for (const [n, src] of [['NamingSajuSummary', sum], ['NamingAptitude', apt]] as const) {

@@ -1127,7 +1127,7 @@ function MulsangInner() {
                  SQL 은 _SQL_consult_prices_47bu.sql 에 담아 두었습니다.
               ⛔ 옛 goConsult() 는 «지웠습니다». 되살릴 일이 없습니다.
               ══════════════════════════════════════════════════════════════ */}
-          <div style={{ marginTop: '8px', marginBottom: '12px' }}>
+          <div>
             <ConsultButton
               priceKey="mulsang"
               mode="mulsang"

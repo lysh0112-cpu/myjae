@@ -46,7 +46,6 @@ export interface NamingAptitudeProps {
   heeksin?: Ohaeng | null
   gisin?: Ohaeng | null
   /** 진로적성 화면으로 넘길 주소 */
-  careerHref: string
   /** 학생이면 계열, 성인이면 직무를 보여 줍니다 */
   target?: 'student' | 'adult'
 }
@@ -208,16 +207,13 @@ export default function NamingAptitude(p: NamingAptitudeProps) {
               </div>
             )}
 
-            {/* ★상세 화면으로 */}
-            <a
-              href={p.careerHref}
-              style={{
-                display: 'block', textAlign: 'center', textDecoration: 'none',
-                fontSize: 12, fontWeight: 600, color: '#fff', background: GOLD,
-                borderRadius: 12, padding: '12px 14px',
-              }}>
-              상세 진로·적성 분석 보러가기 →
-            </a>
+            {/* ★2026-08-05 (47부 17차) — 「상세 진로·적성 분석 보러가기 →」를
+                «걷어냈습니다». [대표님 지시]
+                ⚠️ 이 부품은 ★두 곳이 씁니다 — 내 이름 정밀분석 · NameAnalysisResultView.
+                   그래서 ★양쪽에서 함께 사라집니다.
+                ⚠️ 딸려 있던 careerHref 도 위로 거슬러 «다» 걷었습니다
+                   (부품 Props · NameAnalysisResultView · 부르는 화면 넷).
+                ⛔ 되살리시려면 ★그 사슬을 «함께» 되살리십시오. git 이력에 있습니다. */}
           </div>
         )}
       </div>

@@ -404,7 +404,7 @@ export default function PickDateV7({ result, onPickHour }: Props) {
           ⇒ 그래서 result 에만 카드가 있으면 ★손님은 «못 만납니다». 여기에도 답니다.
           ⚠️ priceKey='birth' — result 와 «같은 줄» 을 씁니다. 관리자 토글 하나로 함께 움직입니다.
           ⛔ 한쪽만 다른 price_key 로 바꾸지 마십시오. 토글이 갈라집니다. */}
-      <div style={{ marginTop: 16 }}>
+      <div>
         <ConsultButton priceKey="birth" mode="birth" />
       </div>
 

@@ -736,7 +736,6 @@ function NewResultInner() {
           stars={cur.stars ?? null}
           overallStar={cur.overallStar ?? null}
           yongsin={(yongsin || null) as never}
-          careerHref="/manseryeok/career-input"
           // ★2026-08-01 (43부 28차) — 아래 «버금» 줄로 옮겼습니다.
           //   ⚠️ 두 곳에 두면 같은 버튼이 화면에 두 번 뜹니다.
           onOtherHanja={undefined}
@@ -960,7 +959,7 @@ function NewResultInner() {
           ⚠️ mode 도 함께 가릅니다 — 상담사 화면이 무슨 상담인지 알아야 합니다.
           ⛔ 다시 하나로 합치지 마십시오. 값을 따로 못 매기게 됩니다.
           ══════════════════════════════════════════════════════════════ */}
-      <div style={{ marginBottom: 14 }}>
+      <div>
         <ConsultButton
           priceKey={namingKind === '신생아' ? 'naming_baby' : 'naming'}
           mode={namingKind === '신생아' ? 'naming_baby' : 'naming'}
