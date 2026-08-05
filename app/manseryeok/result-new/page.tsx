@@ -668,6 +668,12 @@ function ResultNewContent() {
               yeonjji={yeonjji}
               iljji={iljji}
               monthBranch={saju.find(p=>p.pillar==='월주')?.branch || ''}
+              /* ★사령 계산용 — 2026-08-05 (46부 12차).
+                 ⚠️ 안 넘기면 사령 칸만 «안 나옵니다». 나머지 표는 그대로입니다. */
+              solarYear={solarYear}
+              solarMonth={solarMonth}
+              solarDay={solarDay}
+              hourIdx={hourIdx}
             />
           </Section>
         )}

@@ -19,6 +19,7 @@
 import { useState } from 'react'
 import { getUnsung, getSinsal, getGongmang, unsungColor, SINSAL_HIGHLIGHT } from '@/lib/saju'
 import { JIJANGAN } from '@/lib/saju/yongsinNew'
+import { calcSaryeong } from '@/lib/saju/jijanggan'
 import { getGwiinForBranch, getGwiinForStem } from '@/lib/saju/gwiin'
 import { nabeum } from '@/lib/saju/sajuDetail'
 import TermModal from './TermModal'
@@ -176,6 +177,7 @@ function Badge({ kind }: { kind: string }) {
 
 export default function ExpertDetail({
   saju, dayStem, yearStem, yeonjji, iljji, monthBranch,
+  solarYear, solarMonth, solarDay, hourIdx,
 }: {
   saju: Pillar[]
   dayStem: string
@@ -183,6 +185,17 @@ export default function ExpertDetail({
   yeonjji: string
   iljji: string
   monthBranch: string
+  /**
+   * ★2026-08-05 (46부 12차) — 지장간 «사령» 을 구하려고 더했습니다.
+   *   ⚠️ 넷 다 «없어도 됩니다». 안 넘기면 사령 칸이 «안 나옵니다».
+   *      나머지 표는 지금까지와 똑같이 나옵니다.
+   *      (공용 부품에 값을 더할 때는 기본값을 둔다 — 45부 교훈)
+   */
+  solarYear?: number | null
+  solarMonth?: number | null
+  solarDay?: number | null
+  /** 태어난 시진 0~11 (子=0 … 亥=11). 모르면 안 넘겨도 됩니다 */
+  hourIdx?: number | null
 }) {
   // 용어 모달 (Hooks 규칙: early return보다 먼저 선언)
   const [term, setTerm] = useState<string | null>(null)
@@ -194,6 +207,15 @@ export default function ExpertDetail({
   const dayPillar = saju.find(p => p.pillar === '일주')
   const yearPillar = saju.find(p => p.pillar === '년주') ?? saju.find(p => p.pillar === '연주')
   const gmDay = dayPillar ? getGongmang(dayPillar.stem, dayPillar.branch) : ['', '']
+
+  // ★사령(司令) — 절입 뒤 며칠째에 태어났고, 그때 «권한을 쥔» 지장간이 무엇인가
+  //   ⚠️ 생년월일을 «안 넘기면» null 이 되어 아래 칸이 통째로 안 나옵니다.
+  //      나머지 표는 지금까지와 똑같습니다.
+  const saryeong = (solarYear && solarMonth && solarDay && monthBranch)
+    ? calcSaryeong(solarYear, solarMonth, solarDay, hourIdx ?? null,
+        monthBranch, { table: JIJANGAN, order: '여기먼저' })
+    : null
+  const STAGE_LABEL: Record<string, string> = { 여: '여기(餘氣)', 중: '중기(中氣)', 정: '본기(正氣)' }
   const gmYear = yearPillar ? getGongmang(yearPillar.stem, yearPillar.branch) : ['', '']
 
   // 형충회합 — 성립한 쌍 목록 (중복 제거: i<j 만)
@@ -216,6 +238,47 @@ export default function ExpertDetail({
         <div style={ttl} onClick={() => open('지장간')} title="지장간 설명 보기">
           <span style={{ cursor: 'pointer' }}>📋 지장간 · 십성 <span style={{ fontSize: 9, color: '#6b5340' }}>ⓘ</span></span>
         </div>
+        {/* ★사령 + 절입 경과일 — 2026-08-05 (46부 12차 · 대표님 지시)
+            「전문가용 화면에 토글을 켰을 경우에만」 → 이 부품 자체가 isPro && hapchungOn
+            조건 안에서만 그려지므로(page.tsx), 여기 두면 그 조건을 그대로 탑니다. */}
+        {saryeong && (
+          <div style={{ background: '#fdf6f0', borderRadius: 9, padding: '10px 12px', marginBottom: 12 }}>
+            <div style={{ fontSize: 11.5, color: '#3a2e28', lineHeight: 1.75 }}>
+              <b style={{ color: '#96502e' }}>{saryeong.termName}</b> 절입{' '}
+              {saryeong.jolip.getFullYear()}-{String(saryeong.jolip.getMonth() + 1).padStart(2, '0')}-{String(saryeong.jolip.getDate()).padStart(2, '0')}{' '}
+              {String(saryeong.jolip.getHours()).padStart(2, '0')}:{String(saryeong.jolip.getMinutes()).padStart(2, '0')}
+              {' · '}<b style={{ color: '#96502e' }}>{saryeong.days.toFixed(1)}일째</b> 태생
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 9.5, fontWeight: 700, color: '#fff', background: '#b46e46', borderRadius: 6, padding: '2px 7px' }}>사령</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#c62828' }}>{saryeong.result.currentGan}</span>
+              <span style={{ fontSize: 11, color: '#7d6a5b' }}>
+                {STAGE_LABEL[saryeong.result.stage]} — 월령의 권한을 쥔 글자
+              </span>
+            </div>
+            {/* 구간 막대 — 사령 구간만 진하게 */}
+            <div style={{ display: 'flex', height: 9, borderRadius: 5, overflow: 'hidden', marginTop: 9, border: '0.5px solid #b99a7d' }}>
+              {saryeong.result.slices.map((sl, i) => (
+                <div key={i} style={{ width: `${sl.ratio * 100}%`, background: sl.stage === saryeong.result.stage ? '#c62828' : '#e8dcc8' }} />
+              ))}
+            </div>
+            <div style={{ display: 'flex', fontSize: 9, color: '#7d6a5b', marginTop: 3 }}>
+              {saryeong.result.slices.map((sl, i) => (
+                <span key={i} style={{
+                  width: `${sl.ratio * 100}%`, textAlign: 'center',
+                  color: sl.stage === saryeong.result.stage ? '#c62828' : '#7d6a5b',
+                  fontWeight: sl.stage === saryeong.result.stage ? 700 : 400,
+                }}>{sl.gan} {sl.stage} {Math.round(sl.days)}일</span>
+              ))}
+            </div>
+            {/* ⚠️ 이 줄을 지우지 마십시오 — 날수 배분표가 «교재 정본이 아닙니다» */}
+            <div style={{ fontSize: 9.5, color: '#8a7565', marginTop: 8, lineHeight: 1.6 }}>
+              ※ 날수 배분은 <b>전통 배분</b> 기준이에요 (생지 7·7·16 / 왕지 10·20 / 午 10·9·11).
+              태어난 시각은 그 시진의 한가운데로 잡았어요.
+            </div>
+          </div>
+        )}
+
         <table style={tb}>
           <tbody>
             <tr>
@@ -235,14 +298,24 @@ export default function ExpertDetail({
                   if (!g) return <td key={i} style={{ ...td, color: '#ddd0c4' }}>-</td>
                   const ss = sipsinOf(dayStem, g)
                   const isBongi = ri === 2
+                  // ★사령 칸 — 월주이고, 그 단계가 지금 사령인 자리
+                  //   ⚠️ 사령은 «월지에만» 있습니다. 월령(月令)의 권한이라 다른 기둥에는 없습니다.
+                  const stageKey = ri === 0 ? '여' : ri === 1 ? '중' : '정'
+                  const isSaryeong = !!saryeong && p.pillar === '월주'
+                    && saryeong.result.stage === stageKey && saryeong.result.currentGan === g
                   return (
                     <td key={i} style={{
                       ...td,
-                      fontWeight: isBongi ? 700 : 400,
-                      background: isBongi ? '#fdf9f5' : undefined,
+                      fontWeight: isBongi || isSaryeong ? 700 : 400,
+                      background: isSaryeong ? '#fdeceb' : isBongi ? '#fdf9f5' : undefined,
+                      border: isSaryeong ? '1.5px solid #c62828' : undefined,
+                      borderRadius: isSaryeong ? 6 : undefined,
                     }}>
                       <span style={{ color: '#3a2e28' }}>{g}</span>{' '}
                       <button type="button" onClick={() => open(ss)} style={{ color: SS_COLOR[ss] || '#7d6553', fontSize: 9.5, cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>{ss}</button>
+                      {isSaryeong && (
+                        <span style={{ fontSize: 8, fontWeight: 700, color: '#fff', background: '#c62828', borderRadius: 4, padding: '0 3px', marginLeft: 3 }}>사령</span>
+                      )}
                     </td>
                   )
                 })}

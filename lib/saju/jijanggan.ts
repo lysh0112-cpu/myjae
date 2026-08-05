@@ -33,6 +33,8 @@
 //       (壬→癸 · 甲→乙 · 丙→丁 · 庚→辛) — 합쳐도 오행 총량이 그대로입니다.
 // ══════════════════════════════════════════════════════════════════
 
+import { calcSolarTermMoment } from './solartermCalc'
+
 /** 지장간 세 단계 */
 export type JijangganStage = '여' | '중' | '정'
 
@@ -333,4 +335,92 @@ export function splitJijanggan(
  */
 export function daysAfterJolip(birth: Date, jolip: Date): number {
   return (birth.getTime() - jolip.getTime()) / 86400000
+}
+
+// ── 사령(司令) ────────────────────────────────────────────────────────
+//
+//  ★2026-08-05 (46부 12차) — 대표님 지시로 더했습니다.
+//    「지장간 사령 + 절입 경과일을 전문가용 화면 토글에서만 보이게」
+//
+//  위의 splitJijanggan 은 «경과일» 을 받아 구간을 가릅니다.
+//  그 경과일을 «생년월일·시진에서» 구해 주는 것이 아래 함수입니다.
+//
+//  ⚠️⚠️ 날수 배분표(TRADITIONAL_DAY_SPLIT)는 ★«교재 정본이 아닙니다».
+//     위 주석대로 「전통 배분을 기본값으로 두고, 교재 전사 정본이 확정되면
+//     daySplit 인자로 갈아끼운다」가 대표님 확정입니다.
+//     ⇒ 그래서 ★화면에 「전통 배분 기준」이라고 «밝혀» 냅니다. 지우지 마십시오.
+//     ⇒ 특히 午 (여10·중9·정11) 는 「★교재 대조 대기 중」이라 적혀 있습니다.
+
+/** 월지 → 그 달을 여는 절기의 «양력 월» 과 이름 */
+const MONTH_TERM: Readonly<Record<string, { idx: number; name: string }>> = {
+  丑: { idx: 1, name: '소한' }, 寅: { idx: 2, name: '입춘' }, 卯: { idx: 3, name: '경칩' },
+  辰: { idx: 4, name: '청명' }, 巳: { idx: 5, name: '입하' }, 午: { idx: 6, name: '망종' },
+  未: { idx: 7, name: '소서' }, 申: { idx: 8, name: '입추' }, 酉: { idx: 9, name: '백로' },
+  戌: { idx: 10, name: '한로' }, 亥: { idx: 11, name: '입동' }, 子: { idx: 12, name: '대설' },
+}
+
+export interface SaryeongResult {
+  /** 절기 이름 — '망종' 등 */
+  termName: string
+  /** 절입 시각 */
+  jolip: Date
+  /** 절입 뒤 경과 일수 (소수) */
+  days: number
+  /** 구간 가르기 결과 — 사령 글자는 result.currentGan */
+  result: JijangganResult
+}
+
+/**
+ * 태어난 날·시진으로 «절입 경과일» 과 «사령» 을 구합니다.
+ *
+ * @param solarYear/Month/Day  ★양력 생년월일
+ * @param hourIdx  태어난 시진 0~11 (子=0 … 亥=11). 모르면 null — 그 시의 한가운데를 씁니다
+ * @param monthBranch  월지
+ * @param spec  ★지장간 표 + 차례. 만세력은 { table: JIJANGAN, order: '여기먼저' }
+ *
+ * ⚠️ 태어난 «분» 은 저희가 모릅니다. 시진까지만 압니다.
+ *    ⇒ ★그 시의 «한가운데» 를 씁니다. lib/saju/dayun.ts:226 과 «같은 셈법» 입니다.
+ *      (子 00:30 · 丑 02:30 · … · 未 14:30 · 申 16:30)
+ *    ⇒ 경과일이 ±0.5일 흔들립니다. 절입 «직후·직전» 태생은 사령이 갈릴 수 있습니다.
+ *
+ * ⚠️⚠️ ★子월(대설)은 절입이 «전해 12월» 입니다.
+ *    1월 초에 태어난 子월생을 그 해 12월 대설로 재면 ★통째로 틀립니다.
+ *    아래에서 「태어난 때가 절입보다 앞서면 한 해 뒤로」로 막아 두었습니다.
+ */
+export function calcSaryeong(
+  solarYear: number, solarMonth: number, solarDay: number,
+  hourIdx: number | null,
+  monthBranch: string,
+  spec: JijangganSpec,
+  opts: SplitOptions = {},
+): SaryeongResult | null {
+  const z = normalizeBranch(monthBranch)
+  if (!z) return null
+  const term = MONTH_TERM[z]
+  if (!term) return null
+  if (!Number.isFinite(solarYear) || !Number.isFinite(solarMonth) || !Number.isFinite(solarDay)) return null
+
+  // ★그 시의 한가운데 (자정부터 몇 분) — dayun.ts:226 과 같은 셈법
+  const bMin = hourIdx == null ? 12 * 60
+    : (((hourIdx * 120 + 1410) % 1440) + 60) % 1440
+  const birth = new Date(solarYear, solarMonth - 1, solarDay, Math.floor(bMin / 60), bMin % 60)
+
+  const toDate = (y: number) => {
+    const t = calcSolarTermMoment(y, term.idx)
+    if (!t) return null
+    const h = Math.floor(t.hour)
+    return new Date(y, t.month - 1, t.day, h, Math.round((t.hour - h) * 60))
+  }
+
+  let jolip = toDate(solarYear)
+  // ★태어난 때가 그 해 절입보다 «앞서면» 한 해 앞의 절입입니다 (子월 1월생)
+  if (jolip && birth.getTime() < jolip.getTime()) jolip = toDate(solarYear - 1)
+  if (!jolip) return null
+
+  const days = daysAfterJolip(birth, jolip)
+  if (days < 0) return null
+  const result = splitJijanggan(z, days, spec, opts)
+  if (!result) return null
+
+  return { termName: term.name, jolip, days, result }
 }
