@@ -26,6 +26,7 @@ import { ohaengOrEmpty } from '@/lib/saju/ohaeng'
 import {
   resolveNamingTarget, hasSaju, type NamingTarget,
 } from '@/lib/saju/namingSession'
+import { LINE_OUTER } from '@/lib/ui/line'
 
 const GOLD = '#c8783c'
 // ══════════════════════════════════════════════════════════════════
@@ -778,7 +779,10 @@ function NewResultInner() {
                그래서 풀이를 부르기 전에는 눌리지 않게 두었습니다.
             ⚠️ 판정을 여기서 다시 하지 않습니다 — result 가 낸 것을 그대로 싣습니다.
           ══════════════════════════════════════════════════════════ */}
+      {/* 윗줄 — 🖨️ A4 저장·출력  |  📜 작명 보관함   (47부 21차) */}
       {cur && result && (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <NamingCertificateButton
           disabled={!cur.commentary?.yinyang?.meaning}
           kind={namingKind}
@@ -836,6 +840,18 @@ function NewResultInner() {
             return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`
           })()}
         />
+          </div>
+          <button
+            onClick={() => router.push('/manseryeok/naming/naming-storage')}
+            className="active:scale-95"
+            style={{ flex: 1, padding: '13px 6px', borderRadius: 12,
+              minHeight: 46, boxSizing: 'border-box',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: CARD, border: LINE_OUTER, color: '#6B5B50',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+            📜 작명 보관함
+          </button>
+        </div>
       )}
 
       {/* ══════════════════════════════════════════════════════════
@@ -864,24 +880,43 @@ function NewResultInner() {
         </button>
       )}
 
-      {/* ── ② 버금 — 나란히 둘 ── */}
+      {/* ★2026-08-05 (47부 21차) — 하단을 «두 줄» 로 모았습니다. [대표님 지시]
+            「A4 PDF저장/출력 + 작명보관함 나란히 · 다른 한자보기 + 새 이름 짓기 나란히」
+            「공간을 줄이자…보기가 싫다」
+          [전] 다섯 켜 — A4(혼자) / 다른한자·보관함 / ✓안내 / 새이름 글줄 / 잔글씨
+          [후] ★두 줄 —
+             윗줄  🖨️ A4 저장·출력  |  📜 작명 보관함
+             아랫줄 다른 한자 보기   |  + 새 이름 짓기
+          ⇒ 세로로 ★약 100px 줄어듭니다.
+          ⚠️ 43부 28차의 «세 켜»(①으뜸 ②버금 ③끝)는 ★대표님 지시로 «거두었습니다».
+             다만 A4 는 «채운 색» 이라 으뜸이 조금이라도 도드라집니다.
+          ⚠️ 문구를 ★줄였습니다 — 한 줄에 둘이면 폭이 절반(약 200px)입니다.
+             ⛔ 다시 늘리지 마십시오. 바꾸실 때 ★320px 화면에서 재십시오.
+          ⚠️ minHeight 46 — ★넷이 «같은 높이» 입니다. 하나만 바꾸지 마십시오.
+          ⚠️ A4 버튼은 위(NamingCertificateButton)에서 «옮겨 온» 것입니다. */}
+
+      {/* 아랫줄 — 다른 한자 보기  |  + 새 이름 짓기 */}
       {cur && result && (
         <div style={{ display: 'flex', gap: 8, marginTop: 4, marginBottom: 10 }}>
           <button
             onClick={() => router.push('/manseryeok/naming/rename/newhanja')}
             className="active:scale-95"
             style={{ flex: 1, padding: '13px 6px', borderRadius: 12,
-              background: CARD, border: `1px solid ${LINE}`, color: '#6B5B50',
-              fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              minHeight: 46, boxSizing: 'border-box',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: CARD, border: LINE_OUTER, color: '#6B5B50',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
             다른 한자 보기
           </button>
           <button
-            onClick={() => router.push('/manseryeok/naming/naming-storage')}
+            onClick={() => router.push('/manseryeok/naming/rename/newname')}
             className="active:scale-95"
             style={{ flex: 1, padding: '13px 6px', borderRadius: 12,
-              background: CARD, border: `1px solid ${LINE}`, color: '#6B5B50',
-              fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            작명 보관함
+              minHeight: 46, boxSizing: 'border-box',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: CARD, border: LINE_OUTER, color: '#6B5B50',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+            + 새 이름 짓기
           </button>
         </div>
       )}
@@ -904,23 +939,11 @@ function NewResultInner() {
              길이 없으면 손님이 화면에 갇힙니다.
           ══════════════════════════════════════════════════════════ */}
       {isSingleName ? (
-        // ── ③ 끝 — «조용한 글줄» (43부 28차)
-        //    ⚠️ 여기가 버튼으로 도드라지면 으뜸(작명서)과 다툽니다.
-        //       길은 남기되 목소리는 낮춥니다.
-        <div style={{ textAlign: 'center', margin: '22px 0 8px' }}>
-          <button onClick={() => router.push('/manseryeok/naming/rename/newname')}
-            className="active:scale-95"
-            style={{
-              background: 'none', border: 'none', color: GOLD,
-              fontSize: 13, fontWeight: 600, cursor: 'pointer',
-              padding: '10px 16px', textDecoration: 'underline', textUnderlineOffset: 4,
-            }}>
-            + 새 이름 지으러 가기
-          </button>
-          <div style={{ fontSize: 10.5, color: '#8A7A6E', marginTop: 2 }}>
-            이름 하나마다 따로 풀이해 드립니다
-          </div>
-        </div>
+        // ★2026-08-05 (47부 21차) — 여기 있던 「+ 새 이름 지으러 가기」 글줄과
+        //   「이름 하나마다 따로 풀이해 드립니다」 잔글씨를 «걷었습니다». [대표님 지시]
+        //   ⇒ 위 «아랫줄» 의 「+ 새 이름 짓기」 버튼이 그 일을 이어받았습니다.
+        //   ⚠️ 삼항 구조를 지키려고 «참» 쪽을 null 로 둡니다. 지우면 아래 «거짓» 쪽이 깨집니다.
+        null
       ) : (
         <>
           <div style={{ fontSize: 11, color: SUB, textAlign: 'center', margin: '20px 0 8px' }}>

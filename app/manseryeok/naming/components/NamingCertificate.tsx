@@ -499,11 +499,13 @@ export default function NamingCertificateButton(
           background: p.disabled ? '#EDE7E0' : '#c8783c',
           border: 'none',
           color: p.disabled ? '#A99B8E' : '#fff',
-          fontSize: 13.5, fontWeight: 600, letterSpacing: '-0.2px',
+          fontSize: 13, fontWeight: 600, letterSpacing: '-0.2px',
+          minHeight: 46, boxSizing: 'border-box',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: p.disabled ? 'none' : '0 1px 4px rgba(200,120,60,0.20)',
           cursor: p.disabled ? 'default' : 'pointer',
         }}>
-        🖨️ A4 명품 작명서 인쇄 · PDF 저장
+        🖨️ A4 저장·출력
       </button>
       {msg && (
         <div style={{ fontSize: 10.5, color: '#c8506e', textAlign: 'center', marginBottom: 10, lineHeight: 1.6 }}>
