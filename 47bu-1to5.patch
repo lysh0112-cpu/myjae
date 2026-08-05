@@ -1,0 +1,597 @@
+From 1bc8c68ec6ed26db578c4d1eefbc08f14f9d090a Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 07:08:00 +0000
+Subject: [PATCH 1/5] =?UTF-8?q?=EC=83=81=EB=8B=B4=EC=82=AC=20=ED=99=94?=
+ =?UTF-8?q?=EB=A9=B4=20=EA=B8=B8=EB=AA=A9=20=EB=84=B7=EC=9D=84=20=ED=99=88?=
+ =?UTF-8?q?=ED=99=94=EB=A9=B4=20=ED=81=AC=EB=A6=BC=20=ED=86=A4=EC=9C=BC?=
+ =?UTF-8?q?=EB=A1=9C=20(47=EB=B6=80=201=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/manseryeok/consultant/page.tsx | 80 ++++++++++++++++++++++++------
+ 1 file changed, 65 insertions(+), 15 deletions(-)
+
+diff --git a/app/manseryeok/consultant/page.tsx b/app/manseryeok/consultant/page.tsx
+index 03e90ce..7b74c22 100644
+--- a/app/manseryeok/consultant/page.tsx
++++ b/app/manseryeok/consultant/page.tsx
+@@ -368,37 +368,79 @@ function ConsultantContent() {
+   )
+ 
+   // 권한 확인 중이거나 거부되면 본 화면을 렌더링하지 않음
++  //   ★2026-08-05 (47부) — 크림 톤으로 맞췄습니다. 아래 고르기 화면과 «같은 길목» 이라
++  //     여기만 어두우면 마이페이지(크림) → 깜빡 어두움 → 고르기(크림) 로 튑니다.
++  //     실측)  '확인 중' #7d6a5b on #FDF6F0 = 4.80:1
++  //            '권한 없음' #c14545 on #FDF6F0 = ★4.67:1 (기준 4.5)
++  //     ⚠️ 마이페이지의 오류색 #c05a5a 는 이 바탕에서 ★4.04:1 로 «미달» 이라 안 썼습니다.
++  //        45부 확정 빨강 #c14545 를 썼습니다.
+   if (authState !== 'ok') {
++    const denied = authState !== 'checking'
+     return (
+-      <div style={{width:'100vw', height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#1a1a18'}}>
+-        <div style={{color:'#FAC775', fontSize:'14px'}}>
+-          {authState === 'checking' ? '상담사 확인 중...' : '접근 권한이 없습니다.'}
++      <div style={{width:'100vw', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center',
++        background:'#FDF6F0', fontFamily:"'Apple SD Gothic Neo','Noto Sans KR',sans-serif", boxSizing:'border-box', padding:24}}>
++        <div style={{color: denied ? '#c14545' : '#7d6a5b', fontSize:'14px'}}>
++          {denied ? '접근 권한이 없습니다.' : '상담사 확인 중...'}
+         </div>
+       </div>
+     )
+   }
+ 
+   // ★매니저가 consultantId 없이 들어온 경우 — 누구 화면을 볼지 고른다 (2026-07-21 2차)
++  //
++  // ══════════════════════════════════════════════════════════════════════
++  // ★2026-08-05 (47부) — 이 화면을 «홈화면과 같은 톤» 으로 바꿨습니다. [대표님 지시]
++  //
++  //   [무엇이 문제였나]  대표님 —
++  //     「마이페이지에서 상담사 관리자 화면으로 들어가면 색상 자체가 이상해」
++  //     실제로 재 보니 ★버튼이 «있는지 없는지» 안 보였습니다.
++  //       버튼 바탕  rgba(255,255,255,0.06) on #1a1a18 → 대비 ★1.18:1
++  //       버튼 테두리 rgba(255,255,255,0.12) on #1a1a18 → 대비 ★1.42:1  (선 기준 3.0)
++  //     게다가 바탕은 «따뜻한» 검정(#1a1a18)인데 글자는 «푸른 보라»(#e8e2f5·#8a88a0)라
++  //     색기운이 반대로 얹혀 떠 보였습니다.
++  //
++  //   [왜 어두웠나]  대표님 확인 — 「일부러는 아니야, 하다 보니 어두운 색을 골랐다」
++  //     ⇒ 지켜야 할 어두운 테마가 «아닙니다». 그래서 갈아 끼워도 됩니다.
++  //     ⚠️ 참고: rename/hanja · rename/result 의 어두운 테마는 «일부러» 입니다 (45부).
++  //        그쪽은 이 판단과 무관합니다. 함께 바꾸지 마십시오.
++  //
++  //   [무엇을 골랐나]  ★새로 짓지 않고 mypage-new/page.tsx 의 색을 «그대로» 빌렸습니다.
++  //     바탕 #FDF6F0 · 카드 #FFFBF7 · 선 #9c7a58 · 본문 #3a2e28 · 설명 #7d6a5b
++  //     45부에 대비를 재서 확정한 값이라 다시 잴 필요가 없습니다.
++  //
++  //   [실측 — 바꾼 뒤 대비]
++  //     제목 #3a2e28 on #FFFBF7      12.74:1  (기준 4.5)
++  //     설명 #7d6a5b on #FDF6F0       4.80:1  (기준 4.5)
++  //     버튼 테두리 #9c7a58 on #FDF6F0 ★3.67:1  (기준 3.0) ← 1.42 에서 올렸습니다
++  //     관리자 글자 #96502e on #f4ece1  5.15:1  (기준 4.5)
++  //
++  //   ⛔ 어두운 색으로 되돌리지 마십시오. 되돌리면 버튼 선이 다시 1.42:1 이 됩니다.
++  //   ⚠️ 이 화면 «하나만» 바꿨습니다. 상담사 대시보드(#111118)는 그대로입니다.
++  //      대시보드까지 옮기려면 부품 열 개 · 색 지정 357군데라 따로 여쭈고 해야 합니다.
++  // ══════════════════════════════════════════════════════════════════════
+   if (isMaster && !consultantId) {
+     return (
+-      <div style={{width:'100vw', height:'100vh', background:'#1a1a18', display:'flex',
+-        flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14, padding:24}}>
+-        <div style={{color:'#FAC775', fontSize:16, fontWeight:600}}>어느 상담사의 화면을 볼까요?</div>
+-        <div style={{color:'#8a88a0', fontSize:12}}>매니저는 점검·대리를 위해 상담사 화면에 들어갈 수 있어요.</div>
++      <div style={{width:'100vw', minHeight:'100vh', background:'#FDF6F0', display:'flex',
++        flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14, padding:24,
++        fontFamily:"'Apple SD Gothic Neo','Noto Sans KR',sans-serif", boxSizing:'border-box'}}>
++        <div style={{color:'#3a2e28', fontSize:16, fontWeight:600}}>어느 상담사의 화면을 볼까요?</div>
++        <div style={{color:'#7d6a5b', fontSize:12, textAlign:'center', lineHeight:1.6}}>매니저는 점검·대리를 위해 상담사 화면에 들어갈 수 있어요.</div>
+         <div style={{display:'flex', flexDirection:'column', gap:8, width:'100%', maxWidth:320, marginTop:6}}>
+           {pickList.length === 0 ? (
+-            <div style={{color:'#8a88a0', fontSize:13, textAlign:'center'}}>등록된 상담사가 없어요.</div>
++            <div style={{color:'#7d6a5b', fontSize:13, textAlign:'center'}}>등록된 상담사가 없어요.</div>
+           ) : pickList.map(p => (
+             <button key={p.id}
+               onClick={() => router.push(`/manseryeok/consultant?consultantId=${p.id}`)}
+-              style={{padding:'13px 0', borderRadius:10, border:'1px solid rgba(255,255,255,0.12)',
+-                background:'rgba(255,255,255,0.06)', color:'#e8e2f5', fontSize:14, cursor:'pointer'}}>
++              style={{padding:'13px 0', borderRadius:10, border:'0.5px solid #9c7a58',
++                background:'#FFFBF7', color:'#3a2e28', fontSize:14, cursor:'pointer',
++                fontFamily:'inherit'}}>
+               {p.name} 선생님
+             </button>
+           ))}
+           <button onClick={() => router.push('/admin')}
+-            style={{padding:'11px 0', borderRadius:10, border:'none',
+-              background:'rgba(250,199,117,0.15)', color:'#FAC775', fontSize:13, cursor:'pointer', marginTop:4}}>
++            style={{padding:'11px 0', borderRadius:10, border:'0.5px solid #96502e',
++              background:'#f4ece1', color:'#96502e', fontSize:13, cursor:'pointer', marginTop:4,
++              fontFamily:'inherit'}}>
+             ← 관리자 화면으로
+           </button>
+         </div>
+@@ -575,12 +617,20 @@ export default function ConsultantPage() {
+   //   고객 사주·상담 내역이 보이는 화면이라 직원만 들어올 수 있어야 한다.
+   //   매니저도 허용한다 (상담사 화면을 점검·대리할 수 있어야 하므로).
+   const gate = useRoleGate(STAFF_ROLES)
+-  if (gate.state !== 'ok') return <RoleGateScreen gate={gate} />
++  // ★2026-08-05 (47부) — dark={false} 로 크림 갈래를 켰습니다. [대표님 지시]
++  //   ★새로 만들지 않았습니다. useRoleGate.tsx 에 크림 갈래가 «이미» 있었습니다.
++  //     dark=false → 바탕 #FDF6F0 · 제목 #96502e(5.63:1) · 본문 #5c3a1e(9.44:1)
++  //   ⚠️ 이 부품은 admin/page.tsx 도 씁니다. 거기는 «안 건드렸습니다»
++  //      (기본값 dark=true 그대로라 관리자 화면은 어두운 채입니다).
++  if (gate.state !== 'ok') return <RoleGateScreen gate={gate} dark={false} />
+ 
+   return (
+     <Suspense fallback={
+-      <div style={{minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#111118'}}>
+-        <div style={{color:'#FAC775'}}>로딩 중...</div>
++      // ★2026-08-05 (47부) — 크림 톤. 위 authState 대기 화면과 «같은 색» 이어야
++      //   들어오는 동안 두 번 깜빡이지 않습니다. (전 #111118 · 글자 #FAC775)
++      <div style={{minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center',
++        background:'#FDF6F0', fontFamily:"'Apple SD Gothic Neo','Noto Sans KR',sans-serif"}}>
++        <div style={{color:'#7d6a5b', fontSize:'14px'}}>로딩 중...</div>
+       </div>
+     }>
+       <ConsultantContent />
+-- 
+2.43.0
+
+
+From ce70ddbaae1ccfc0fc107a08f0fadf97c51df523 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 07:27:29 +0000
+Subject: [PATCH 2/5] =?UTF-8?q?=EC=83=81=EB=8B=B4=EC=82=AC=20=EA=B3=A0?=
+ =?UTF-8?q?=EB=A5=B4=EA=B8=B0=EC=97=90=EC=84=9C=20=EC=9D=B4=EB=A6=84?=
+ =?UTF-8?q?=EC=9D=84=20=EB=88=8C=EB=9F=AC=EB=8F=84=20=EC=95=88=20=EB=84=98?=
+ =?UTF-8?q?=EC=96=B4=EA=B0=80=EB=8D=98=20=EA=B2=83=20=C2=B7=20=EB=8C=80?=
+ =?UTF-8?q?=EB=A6=AC=20=EC=A4=91=20=EC=9D=B4=EB=A6=84=20=ED=91=9C=EC=8B=9C?=
+ =?UTF-8?q?=20(47=EB=B6=80=202=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/manseryeok/consultant/page.tsx | 27 +++++++++++++++++++++++-
+ hooks/useConsultantState.ts        | 34 ++++++++++++++++++++++++++----
+ 2 files changed, 56 insertions(+), 5 deletions(-)
+
+diff --git a/app/manseryeok/consultant/page.tsx b/app/manseryeok/consultant/page.tsx
+index 7b74c22..4ff019e 100644
+--- a/app/manseryeok/consultant/page.tsx
++++ b/app/manseryeok/consultant/page.tsx
+@@ -174,12 +174,19 @@ function ConsultantContent() {
+   }, [isMaster, consultantId])
+ 
+   // ---------- 설정 불러오기 ----------
++  //   ★2026-08-05 (47부) — 여기서 «이름도» 화면에 넣습니다. [대표님 지시]
++  //     [겪은 일]  매니저가 상담사 화면에 들어가도 오른쪽 위에 «매니저 본인 닉네임» 이 떴습니다.
++  //     [까닭]  위 138줄 주석에 「URL 의 consultantId 로 그 상담사 이름을 표시한다」라
++  //       적혀 있었는데, 정작 이 자리가 name 을 «가져오면서도 안 쓰고» 있었습니다.
++  //       (ui_settings 만 쓰고 name 은 버렸습니다)
++  //     ⚠️ 상담사 «본인» 은 이미 위에서 con.name 으로 채워집니다. 같은 값이라 탈이 없습니다.
+   useEffect(() => {
+     if (!consultantId) return
+     supabase.from('consultants').select('name, ui_settings')
+       .eq('id', consultantId).single()
+       .then(({ data }) => {
+         if (data?.ui_settings) setSettings({ ...DEFAULT_SETTINGS, ...data.ui_settings })
++        if (data?.name) setConsultantName(data.name as string)
+       })
+   }, [consultantId])
+ 
+@@ -541,8 +548,26 @@ function ConsultantContent() {
+         )}
+ 
+         {/* 우측: 상담사명 + 로그아웃 */}
++        {/* ★2026-08-05 (47부) — 이름 표시를 둘로 갈랐습니다. [대표님 지시]
++            ① 상담사 본인      → 「오금란 님」
++            ② 매니저가 대리   → 「오금란 선생님 화면」 + 「매니저 대리」 배지
++            [왜 배지를 달았나]  이름만 바꾸면 매니저가 «자기 계정으로 착각» 할 수 있습니다.
++              고객 사주·상담 기록을 다루는 화면이라 «누구 자리인지» 가 또렷해야 합니다.
++            [대비 실측]  글자색을 #7766aa(★3.78:1) → #9a98b0(★6.64:1) 로 올렸습니다.
++              #9a98b0 은 ★이 화면이 이미 쓰던 색입니다 (ConsultTimer·CustomerAiAnalysis).
++            ⛔ #7766aa 로 되돌리지 마십시오. */}
+         <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:'8px'}}>
+-          <span style={{fontSize:'11px', color:'#7766aa'}}>{consultantName || '상담사'} 님</span>
++          {isMaster && consultantId && (
++            <span style={{fontSize:'9px', padding:'1px 5px', borderRadius:'4px',
++              border:'1px solid rgba(250,199,117,0.5)', color:'#FAC775', whiteSpace:'nowrap'}}>
++              매니저 대리
++            </span>
++          )}
++          <span style={{fontSize:'11px', color:'#9a98b0', whiteSpace:'nowrap'}}>
++            {consultantName
++              ? (isMaster && consultantId ? `${consultantName} 선생님 화면` : `${consultantName} 님`)
++              : '상담사'}
++          </span>
+           <button onClick={handleLogout}
+             style={{fontSize:'10px', padding:'2px 8px', borderRadius:'5px', border:'1px solid rgba(193,69,69,0.65)', background:'transparent', color:'rgba(255,100,100,0.7)', cursor:'pointer'}}>
+             로그아웃
+diff --git a/hooks/useConsultantState.ts b/hooks/useConsultantState.ts
+index 0f77786..9ad540b 100644
+--- a/hooks/useConsultantState.ts
++++ b/hooks/useConsultantState.ts
+@@ -20,10 +20,36 @@ export function useConsultantState() {
+     return h === '모름' || h === null ? null : parseInt(h)
+   })
+   // consultantId: URL에 있으면 사용, 없으면 로그인 계정에서 자동으로 찾아옴
+-  const [consultantId, setConsultantId] = useState(searchParams.get('consultantId') || '')
++  //
++  // ══════════════════════════════════════════════════════════════════════
++  // ★2026-08-05 (47부) — 주소를 «매번 다시 읽도록» 고쳤습니다.
++  //
++  //   [겪은 일]  대표님 — 「상담사를 클릭하면 해당 상담사 화면으로 들어가질 못하네」
++  //     매니저가 「어느 상담사의 화면을 볼까요?」에서 이름을 눌러도
++  //     ★주소는 ?consultantId=… 로 «바뀌는데» 화면은 고르기 그대로였습니다.
++  //
++  //   [까닭]  전에는 이랬습니다 —
++  //       const [consultantId, setConsultantId] = useState(searchParams.get('consultantId') || '')
++  //     ★useState 의 초기값은 «처음 붙을 때 한 번» 만 읽힙니다.
++  //     상담사를 누르면 router.push 로 «같은 주소» 에 물음표만 붙여 갑니다.
++  //     ⇒ Next 는 화면을 다시 그리기만 하고 ★«새로 붙이지 않습니다».
++  //     ⇒ searchParams 는 바뀌는데 consultantId 상태는 '' 그대로였습니다.
++  //     ⇒ page.tsx 의  isMaster && !consultantId  가 계속 참 → 고르기 화면에 갇혔습니다.
++  //     아래 useEffect 도 deps 가 [] 라 다시 돌지 않아 손쓸 자리가 없었습니다.
++  //
++  //   [고침]  ★주소값은 «상태로 담지 않고» 그릴 때마다 읽습니다.
++  //     로그인 계정에서 찾아온 값만 상태(myConsultantId)로 둡니다.
++  //   ⚠️ 상담사 «본인» 이 주소 없이 들어오는 길은 «그대로» 입니다 (아래 fallback).
++  //   ⛔ useState(searchParams.get(...)) 로 되돌리지 마십시오. 같은 증상이 다시 납니다.
++  //   ⚠️ 위 12~17줄의 gender·calType·leapMonth 도 «같은 결» 입니다.
++  //      그쪽은 화면 안에서 주소가 안 바뀌어 지금은 탈이 없어 «안 건드렸습니다».
++  // ══════════════════════════════════════════════════════════════════════
++  const urlConsultantId = searchParams.get('consultantId') || ''
++  const [myConsultantId, setMyConsultantId] = useState('')
++  const consultantId = urlConsultantId || myConsultantId
+   useEffect(() => {
+     // URL에 consultantId가 이미 있으면 그대로 사용 (기존 동작 유지)
+-    if (searchParams.get('consultantId')) return
++    if (urlConsultantId) return
+     // URL에 없으면 → 로그인한 사람의 profiles.consultant_id를 가져옴
+     async function loadMyConsultantId() {
+       const { data: { user } } = await supabase.auth.getUser()
+@@ -34,11 +60,11 @@ export function useConsultantState() {
+         .eq('id', user.id)
+         .single()
+       if (data?.consultant_id) {
+-        setConsultantId(data.consultant_id)
++        setMyConsultantId(data.consultant_id)
+       }
+     }
+     loadMyConsultantId()
+-  }, [])
++  }, [urlConsultantId])
+   useEffect(() => {
+     setConsultationId(searchParams.get('consultationId') || null)
+     setCustomerPhone(searchParams.get('customerPhone') || '')
+-- 
+2.43.0
+
+
+From 06645c8d637e499445d5b3971129622e4326f1ba Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 07:48:38 +0000
+Subject: [PATCH 3/5] =?UTF-8?q?=EC=83=81=EB=8B=B4=EC=82=AC=20=ED=99=94?=
+ =?UTF-8?q?=EB=A9=B4=20=EB=92=A4=EB=A1=9C=EA=B0=80=EA=B8=B0=20=E2=80=94=20?=
+ =?UTF-8?q?=EB=93=A4=EC=96=B4=EC=98=A8=20=EA=B8=B8=EC=97=90=20=EB=94=B0?=
+ =?UTF-8?q?=EB=9D=BC=20(47=EB=B6=80=203=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/admin/components/ConsultantTable.tsx |  6 ++-
+ app/manseryeok/consultant/page.tsx       | 55 +++++++++++++++++++++++-
+ hooks/useConsultantState.ts              |  7 +++
+ 3 files changed, 66 insertions(+), 2 deletions(-)
+
+diff --git a/app/admin/components/ConsultantTable.tsx b/app/admin/components/ConsultantTable.tsx
+index 55e0494..90474b8 100644
+--- a/app/admin/components/ConsultantTable.tsx
++++ b/app/admin/components/ConsultantTable.tsx
+@@ -235,7 +235,11 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete,
+                   </button>
+                   {/* ★2026-07-21 2차: 매니저가 이 상담사의 화면을 바로 열 수 있게.
+                       예전에는 consultantId 를 알아야 URL 로 들어갈 수 있었다. */}
+-                  <button onClick={() => window.open(`/manseryeok/consultant?consultantId=${c.id}`, '_blank')}
++                  {/* ★2026-08-05 (47부 3차) — from=admin 을 붙였습니다.
++                      상담사 화면의 뒤로가기가 «관리자 화면으로» 돌아오게 하려는 것입니다.
++                      ⚠️ 여기는 window.open(_blank) 이라 «새 탭» 입니다.
++                         브라우저 뒤로가기가 원리상 안 되니 from 이 «반드시» 있어야 합니다. */}
++                  <button onClick={() => window.open(`/manseryeok/consultant?consultantId=${c.id}&from=admin`, '_blank')}
+                     className="flex-1 py-2 rounded-lg text-xs font-bold"
+                     title="이 상담사의 화면을 새 탭으로 엽니다 (점검·대리용)"
+                     style={{ background: 'rgba(100,150,255,0.15)', color: '#7fa8ff' }}>
+diff --git a/app/manseryeok/consultant/page.tsx b/app/manseryeok/consultant/page.tsx
+index 4ff019e..e520a22 100644
+--- a/app/manseryeok/consultant/page.tsx
++++ b/app/manseryeok/consultant/page.tsx
+@@ -65,6 +65,7 @@ function ConsultantContent() {
+     selectedUserId,
+     gender, calType, yearParam, monthParam, dayParam, leapMonth, hourIdx,
+     consultantId,
++    fromParam,
+     handleSelectConsultation,
+   } = useConsultantState()
+ 
+@@ -256,6 +257,38 @@ function ConsultantContent() {
+     router.push('/auth/login')
+   }
+ 
++  // ══════════════════════════════════════════════════════════════════════
++  // ★2026-08-05 (47부 3차) — 뒤로가기 [대표님 지시]
++  //
++  //   [겪은 일]  대표님 — 「들어는 갔으나 뒤로 가기 버튼이 안된다」
++  //     ★이 화면에는 뒤로가기 버튼이 «아예 없었습니다». 상단 메뉴바를 전수로 훑어 확인했습니다.
++  //
++  //   [왜 브라우저 뒤로가기로 안 되나]
++  //     관리자 화면(ConsultantTable)에서 오는 길은 ★window.open(…, '_blank') 입니다.
++  //     ⇒ «새 탭» 이라 history 가 비어 있어 브라우저 뒤로가기가 «원리상» 안 됩니다.
++  //     ⇒ 화면 안 버튼이 반드시 있어야 합니다.
++  //
++  //   [대표님이 정하신 갈래]
++  //     상담사 본인            → 마이페이지
++  //     매니저 · 고르기에서 옴  → 상담사 고르기 화면
++  //     매니저 · 관리자에서 옴  → 관리자 화면
++  //
++  //   [어떻게 «어디서 왔는지» 아나]  주소에 from 을 담습니다 (useConsultantState 가 읽습니다).
++  //     from=pick   고르기 화면의 상담사 버튼이 붙입니다
++  //     from=admin  ConsultantTable 의 「🔮 화면 보기」가 붙입니다
++  //
++  //   ⚠️ from 이 «없는» 길도 있습니다 — 마이페이지 「🩺 상담 관리」·로그인 직후 welcome.
++  //      그때 매니저는 ★고르기 화면으로 보냅니다. «막다른 길이 아닌» 자리이기 때문입니다.
++  //      (고르기 화면에는 「← 관리자 화면으로」가 있어 어디로든 갈 수 있습니다)
++  //   ⛔ 매니저의 기본값을 /admin 으로 바꾸지 마십시오.
++  //      마이페이지에서 온 매니저가 관리자 화면으로 튕겨 «온 길을 잃습니다».
++  // ══════════════════════════════════════════════════════════════════════
++  const back = (() => {
++    if (!isMaster) return { href: '/mypage-new', label: '마이페이지' }
++    if (fromParam === 'admin') return { href: '/admin', label: '관리자 화면' }
++    return { href: '/manseryeok/consultant', label: '상담사 고르기' }
++  })()
++
+   async function handleDeleteRequest(id: string) {
+     if (!confirm('삭제를 요청하시겠어요? 관리자 승인 후 최종 삭제됩니다.')) return
+     setDeleteLoading(id)
+@@ -437,7 +470,7 @@ function ConsultantContent() {
+             <div style={{color:'#7d6a5b', fontSize:13, textAlign:'center'}}>등록된 상담사가 없어요.</div>
+           ) : pickList.map(p => (
+             <button key={p.id}
+-              onClick={() => router.push(`/manseryeok/consultant?consultantId=${p.id}`)}
++              onClick={() => router.push(`/manseryeok/consultant?consultantId=${p.id}&from=pick`)}
+               style={{padding:'13px 0', borderRadius:10, border:'0.5px solid #9c7a58',
+                 background:'#FFFBF7', color:'#3a2e28', fontSize:14, cursor:'pointer',
+                 fontFamily:'inherit'}}>
+@@ -464,6 +497,26 @@ function ConsultantContent() {
+         background:'rgba(18,18,28,0.97)', borderBottom:'1px solid rgba(255,255,255,0.06)',
+         display:'flex', alignItems:'center', padding:'0 12px', gap:'4px',
+       }}>
++        {/* ★2026-08-05 (47부 3차) — 뒤로가기. 위 back 판단을 그대로 씁니다.
++            ★라벨에 «갈 곳» 을 적었습니다 — 「← 마이페이지」「← 관리자 화면」「← 상담사 고르기」
++              어디로 가는지 안 보이면 누르기가 망설여집니다.
++            [대비 실측]  #c8c0ff on 메뉴바(#12121c) = ★11.02:1
++              ⚠️ 옆 버튼들의 #8888aa(2.9:1)보다 «일부러» 진하게 했습니다.
++                 길을 되찾는 버튼이라 가장 먼저 보여야 합니다.
++            ⚠️ 메뉴바 높이가 40px 이라 44px 최소선을 못 맞춥니다. 마우스로 쓰는
++               PC 화면이라 그대로 두되 padding 으로 누르는 자리를 넓혔습니다. */}
++        <button onClick={() => router.push(back.href)}
++          title={`${back.label}(으)로 돌아갑니다`}
++          style={{
++            fontSize:'12px', padding:'4px 8px', borderRadius:'5px',
++            border:'1px solid rgba(200,192,255,0.35)', background:'rgba(255,255,255,0.05)',
++            color:'#c8c0ff', cursor:'pointer', display:'flex', alignItems:'center', gap:'4px',
++            whiteSpace:'nowrap', marginRight:'6px', fontFamily:'inherit',
++            WebkitUserSelect:'none', userSelect:'none', touchAction:'manipulation',
++          }}>
++          <span style={{fontSize:'14px'}} aria-hidden="true">←</span>
++          <span>{back.label}</span>
++        </button>
+         <span style={{fontSize:'13px', fontWeight:'500', color:'#e8e4ff', marginRight:'6px'}}>명연재</span>
+         <span style={{fontSize:'10px', color:'#333355', marginRight:'2px'}}>|</span>
+ 
+diff --git a/hooks/useConsultantState.ts b/hooks/useConsultantState.ts
+index 9ad540b..578e629 100644
+--- a/hooks/useConsultantState.ts
++++ b/hooks/useConsultantState.ts
+@@ -45,6 +45,12 @@ export function useConsultantState() {
+   //      그쪽은 화면 안에서 주소가 안 바뀌어 지금은 탈이 없어 «안 건드렸습니다».
+   // ══════════════════════════════════════════════════════════════════════
+   const urlConsultantId = searchParams.get('consultantId') || ''
++  // ★2026-08-05 (47부 3차) — «어디서 들어왔는지» 를 주소에 담습니다. [대표님 지시]
++  //   뒤로가기가 «들어온 길» 로 돌아가야 하기 때문입니다.
++  //     from=pick   상담사 고르기 화면에서 왔다
++  //     from=admin  관리자 화면(상담사 표)에서 왔다  ★새 탭이라 브라우저 뒤로가기가 «안 됩니다»
++  //     (없음)      마이페이지·로그인 직후 등. page.tsx 가 안전한 기본값으로 보냅니다.
++  const fromParam = searchParams.get('from') || ''
+   const [myConsultantId, setMyConsultantId] = useState('')
+   const consultantId = urlConsultantId || myConsultantId
+   useEffect(() => {
+@@ -118,6 +124,7 @@ export function useConsultantState() {
+     selectedUserId,
+     gender, calType, yearParam, monthParam, dayParam, leapMonth, hourIdx,
+     consultantId,
++    fromParam,
+     handleFormSubmit, handleSelectConsultation,
+   }
+ }
+-- 
+2.43.0
+
+
+From 14314f01551f05b7c5b56a820da45c5a03ad9714 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 08:02:12 +0000
+Subject: [PATCH 4/5] =?UTF-8?q?=EA=B4=80=EB=A6=AC=EC=9E=90=20=EC=83=81?=
+ =?UTF-8?q?=EB=8B=B4=EC=82=AC=20=EB=AA=A9=EB=A1=9D=EC=97=90=20=ED=99=94?=
+ =?UTF-8?q?=EB=A9=B4=20=EC=B9=B8=20(47=EB=B6=80=204=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/admin/components/ConsultantTable.tsx | 31 ++++++++++++++++++++++--
+ 1 file changed, 29 insertions(+), 2 deletions(-)
+
+diff --git a/app/admin/components/ConsultantTable.tsx b/app/admin/components/ConsultantTable.tsx
+index 90474b8..f0dd822 100644
+--- a/app/admin/components/ConsultantTable.tsx
++++ b/app/admin/components/ConsultantTable.tsx
+@@ -1,5 +1,6 @@
+ 'use client'
+ import { useState } from 'react'
++import { useRouter } from 'next/navigation'
+ import { ConsultantFormData } from './ConsultantForm'
+ 
+ // 상담사별 "아직 살아 있는 예약"(완료도 취소도 안 된 건)
+@@ -26,6 +27,7 @@ const COLUMNS = [
+ type ColKey = typeof COLUMNS[number]['key']
+ 
+ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, onToggleActive, onSaveSort }: Props) {
++  const router = useRouter()
+   const [cols, setCols] = useState<Record<ColKey, boolean>>({
+     email: false, phone: false, specialty: true,
+     region: false, bank: false, commission: false,
+@@ -113,9 +115,15 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete,
+           style={{ background: 'rgba(60,52,137,0.3)', color: '#FAC775' }}>
+           <span style={{ width: 92, textAlign: 'center' }}>순번</span>
+           <span style={{ width: 34 }}></span>
+-          <span style={{ flex: 1 }}>이름</span>
++          <span style={{ flex: 1, minWidth: 80 }}>이름</span>
+           <span style={{ width: 210 }}>진행중 예약</span>
+           <span style={{ width: 50, textAlign: 'center' }}>활성</span>
++          {/* ★2026-08-05 (47부 4차) — 「화면」 칸 [대표님 지시]
++              「관리자 화면 상담사목록에 버튼란을 하나 만들어서
++                상담사를 클릭하면 해당 상담사 관리자 화면으로 가게 해줘」
++              ⚠️ 전에도 「🔮 화면 보기」가 있었지만 ★이름을 눌러 «펼쳐야» 나오는
++                 상세 안에 숨어 있어 목록에서는 안 보였습니다. */}
++          <span style={{ width: 64, textAlign: 'center' }}>화면</span>
+           {cols.email && <span style={{ width: 130 }}>이메일</span>}
+           {cols.phone && <span style={{ width: 100 }}>전화번호</span>}
+           {cols.specialty && <span style={{ width: 90 }}>전문분야</span>}
+@@ -155,7 +163,7 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete,
+               </div>
+               {/* 이름 (누르면 펼침) */}
+               <button type="button" onClick={() => setOpenId(openId === c.id ? null : c.id)}
+-                style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff', cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}>{c.name}</button>
++                style={{ flex: 1, minWidth: 80, fontSize: 13, fontWeight: 700, color: '#fff', cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}>{c.name}</button>
+ 
+               {/* ★진행중 예약 — 완료도 취소도 안 된 건. 있으면 삭제할 수 없다. (2026-07-21 2차) */}
+               <span style={{ width: 210, fontSize: 11.5, lineHeight: 1.4 }}>
+@@ -182,6 +190,25 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete,
+                   {c.active ? '활성' : '비활'}
+                 </button>
+               </span>
++              {/* ★2026-08-05 (47부 4차) — 목록에서 바로 그 상담사 화면으로 [대표님 지시]
++                  ★from=admin 을 붙입니다 — 상담사 화면의 뒤로가기가 「← 관리자 화면」이 됩니다.
++                  ★같은 탭으로 갑니다(router.push). 아래 상세 안 버튼은 새 탭(window.open)이라
++                    다릅니다. 여기는 뒤로가기가 있어 같은 탭이 오가기 편합니다.
++                  [대비 실측]  글자 #7fa8ff on 버튼바탕 #29313f = 5.57:1 (기준 4.5)
++                    ⚠️ 버튼 «면» 은 행과 ★1.26:1 이라 «안 보입니다». 그래서 테두리를 넣었습니다 —
++                       rgba(127,168,255,0.55) → 행과 ★3.06:1 (선 기준 3.0)
++                    ⛔ 테두리를 지우거나 옅게 하지 마십시오. 버튼이 사라져 보입니다. */}
++              <span style={{ width: 64, textAlign: 'center' }}>
++                <button type="button"
++                  onClick={() => router.push(`/manseryeok/consultant?consultantId=${c.id}&from=admin`)}
++                  title={`${c.name} 선생님의 상담사 화면으로 갑니다 (점검·대리용)`}
++                  className="rounded-lg text-xs font-bold"
++                  style={{ padding: '5px 8px', background: 'rgba(100,150,255,0.15)', color: '#7fa8ff',
++                    border: '1px solid rgba(127,168,255,0.55)', cursor: 'pointer', whiteSpace: 'nowrap',
++                    fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}>
++                  🔮 화면
++                </button>
++              </span>
+               {cols.email && <span style={{ width: 130, fontSize: 12, color: '#b0aec8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email || '-'}</span>}
+               {cols.phone && <span style={{ width: 100, fontSize: 12, color: '#b0aec8' }}>{c.phone || '-'}</span>}
+               {cols.specialty && <span style={{ width: 90, fontSize: 12, color: '#b0aec8' }}>{c.specialty || '-'}</span>}
+-- 
+2.43.0
+
+
+From 2c8cfe498fd6c4f40b90920ba7f624a50b2b32c4 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 08:28:07 +0000
+Subject: [PATCH 5/5] =?UTF-8?q?=EC=A0=84=EB=AC=B8=EA=B0=80=20=EC=83=81?=
+ =?UTF-8?q?=EB=8B=B4=20=EA=B3=B5=EC=9A=A9=20=EB=B2=84=ED=8A=BC=20=E2=80=94?=
+ =?UTF-8?q?=20=EB=AC=B8=EA=B5=AC=20=EC=A4=91=EB=B3=B5=20=EA=B1=B7=EC=96=B4?=
+ =?UTF-8?q?=EB=82=B4=EA=B3=A0=20=EC=86=90=EB=8B=98=20=ED=99=94=EB=A9=B4=20?=
+ =?UTF-8?q?=EB=B0=B0=EC=83=89=EC=9C=BC=EB=A1=9C=20(47=EB=B6=80=205?=
+ =?UTF-8?q?=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/components/common/ConsultButton.tsx | 51 +++++++++++++++++++++----
+ 1 file changed, 43 insertions(+), 8 deletions(-)
+
+diff --git a/app/components/common/ConsultButton.tsx b/app/components/common/ConsultButton.tsx
+index 5a1f40d..79ec859 100644
+--- a/app/components/common/ConsultButton.tsx
++++ b/app/components/common/ConsultButton.tsx
+@@ -78,20 +78,55 @@ export default function ConsultButton({ priceKey, mode, searchParams, payload }:
+     router.push(`/manseryeok/consultant-select?${params.toString()}`)
+   }
+ 
++  // ══════════════════════════════════════════════════════════════════════
++  // ★2026-08-05 (47부 5차) — 문구와 배색 [대표님 확정]
++  //
++  //   [무엇이 문제였나]  대표님 — 「내용이 중복이 되는 내용이야」
++  //     같은 말이 ★세 겹이었습니다 —
++  //       제목  「전문가와 상담하기」
++  //       설명  「AI 분석이 더 궁금하신가요? 전문 상담사와 1:1 상담을 받아보세요」
++  //       버튼  「전문가와 상담하기 · 50,000원」   ← ★제목과 «똑같았습니다»
++  //     ⚠️ 설명글은 뜻도 어긋났습니다 — 손님은 «방금 풀이를 다 읽고» 내려온 자리입니다.
++  //        물어야 할 것은 「궁금한가」가 아니라 「이것만으로 «부족» 한가」입니다.
++  //
++  //   [무엇을 골랐나]  ★목업 넷을 보시고 ⓑ 로 확정하셨습니다.
++  //     제목은 두고 «버튼 문구» 를 바꿉니다. 누르면 무슨 일이 나는지 또렷해집니다.
++  //     ⚠️ 「AI」라는 말을 ★뺐습니다. 이 부품은 궁합·작명·출산택일도 함께 쓰는데
++  //        「이 풀이」라고 하면 어느 화면에서나 맞습니다.
++  //
++  //   [배색]  대표님 — 「고객들이 보는 화면의 색상들과 통일감있게」
++  //     ★색을 새로 짓지 않았습니다. 손님 화면이 «이미 쓰는» 값입니다.
++  //       카드 바탕  #2C2C2A → #FFFBF7   (마이페이지 카드와 같음)
++  //       카드 선    주황15% → #9c7a58   3.67:1  (45부 확정)
++  //       제목       #ffffff → #3a2e28  12.74:1
++  //       설명       #8a88a0 → #7d6a5b   ★4.99:1  ← 전에는 4.07:1 «미달» 이었습니다
++  //       버튼       #FAC775+검정 → ★#96502e+흰글자  6.03:1
++  //
++  //   ⚠️⚠️ 버튼을 ★#c8783c 로 바꾸지 마십시오.
++  //     작명·AiTalkFab 이 쓰는 색이라 «통일감» 은 더 좋지만
++  //     흰 글자와 ★3.38:1 로 기준(4.5) «미달» 입니다. 재서 확인했습니다.
++  //     ⇒ 50,000원을 결제하는 버튼이라 또렷해야 합니다. 대표님이 #96502e 로 확정하셨습니다.
++  //     ⇒ 나중에 손님 화면 주 버튼 색을 «통째로» 올릴 때 이 자리도 함께 보십시오.
++  //
++  //   ⚠️ 이 부품을 쓰는 화면은 «다섯» 입니다 — 여기를 고치면 다섯 곳이 함께 바뀝니다.
++  //      사주(result-new) · 궁합 · 출산택일 결과 · 작명진단 · 개명결과
++  //   ⚠️ 물상(mulsang/page.tsx:1070)에는 ★따로 만든 상담 버튼이 있습니다.
++  //      지금 false && 로 «꺼져» 있어 안 건드렸습니다. 되살리실 때 이 부품으로 바꾸십시오.
++  // ══════════════════════════════════════════════════════════════════════
+   return (
+-    <div className="rounded-2xl p-5" style={{ background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.15)' }}>
++    <div className="rounded-2xl p-5" style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58' }}>
+       <div className="flex items-center gap-2 mb-2">
+-        <span className="text-lg">🔮</span>
+-        <h2 className="text-base font-bold text-white">전문가와 상담하기</h2>
++        <span className="text-lg" aria-hidden="true">🔮</span>
++        <h2 className="text-base font-bold" style={{ color: '#3a2e28' }}>전문가와 상담하기</h2>
+       </div>
+-      <p className="text-xs mb-4" style={{ color: '#8a88a0' }}>
+-        AI 분석이 더 궁금하신가요? 전문 상담사와 1:1 상담을 받아보세요
++      <p className="text-xs mb-4" style={{ color: '#7d6a5b', lineHeight: 1.7 }}>
++        이 풀이로 못 다한 이야기, 상담사가 1:1로 짚어 드려요
+       </p>
+       <button onClick={go}
+         className="w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2"
+-        style={{ background: '#FAC775', color: '#1a1a18' }}>
+-        전문가와 상담하기
+-        {price != null && <span style={{ opacity: 0.8 }}>· {price.toLocaleString()}원</span>}
++        style={{ background: '#96502e', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
++        상담 신청하기
++        {price != null && <span style={{ opacity: 0.85 }}>· {price.toLocaleString()}원</span>}
+       </button>
+     </div>
+   )
+-- 
+2.43.0
+
