@@ -94,8 +94,16 @@ function TarotInner() {
   const [category, setCategory] = useState<TarotCategory>('기타')
   const [savedId, setSavedId] = useState<string | null>(null)
   const [viewOnly, setViewOnly] = useState(false)
-  const [decks, setDecks] = useState<{ code: string; name_ko: string; description: string; is_active: boolean }[]>([])
-  const [deckCode, setDeckCode] = useState('universal')
+  /**
+   * ★2026-08-05 (46부 16차) — 덱 고르는 화면을 걷어내며 정리했습니다.
+   *   [전]  decks 목록을 불러와 세 가지를 보여 주고 setDeckCode 로 골랐습니다.
+   *   [후]  카드는 ★한 종류(유니버설 웨이트)뿐이라 목록도 고르기도 필요 없습니다.
+   *   ⚠️ deckCode 는 ★남겨 두었습니다 — /api/tarot/cards?deck= 이 이 값을 씁니다.
+   *      지우면 카드가 «안 나옵니다».
+   *   ⇒ 카드를 늘리실 때는 이 자리에 decks 상태를 되살리고,
+   *     아래 「⛔ 덱 고르는 화면」 주석 자리에 화면을 다시 그리십시오.
+   */
+  const deckCode = 'universal'
   const [usesReversed, setUsesReversed] = useState(true)
   const [cards, setCards] = useState<Card[]>([])
   const [spreadId, setSpreadId] = useState('three')
@@ -109,13 +117,6 @@ function TarotInner() {
 
   const spread = SPREADS.find(s => s.id === spreadId) || SPREADS[1]
   const fullyDrawn = picked.length > 0 && picked.length === spread.count
-
-  useEffect(() => {
-    fetch('/api/tarot/cards')
-      .then(r => r.json())
-      .then(d => { if (d.decks) setDecks(d.decks) })
-      .catch(() => {})
-  }, [])
 
   // 보관함에서 recordId 로 들어오면 그 기록을 그대로 다시보기 (재계산·AI 재호출 없음)
   useEffect(() => {
@@ -256,8 +257,8 @@ function TarotInner() {
           if (step === 'result') { setStep('reveal'); return }
           if (step === 'reveal') { setStep('draw'); return }
           if (step === 'draw') { setStep('spread'); return }
-          if (step === 'spread') { setStep('deck'); return }
-          if (step === 'deck') { setStep('question'); return }
+          // ★deck 단계를 걷어냈으므로 spread 에서 바로 question 으로 (46부 16차)
+          if (step === 'spread') { setStep('question'); return }
           router.push(searchParams.get('from') === 'mypage' ? '/mypage-new' : '/')
         }} style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
         <div style={{ fontSize: 15, fontWeight: 500, color: ink }}>타로 카드 리딩</div>
@@ -279,7 +280,16 @@ function TarotInner() {
               </button>
             ))}
           </div>
-          <button onClick={() => { if (question.trim()) setStep('deck') }}
+          {/* ★2026-08-05 (46부 16차) — 덱 고르는 단계를 «건너뜁니다». [대표님 지시]
+              「카드는 한 종류로만 할 테니 이 화면은 삭제」
+              ⇒ 여기서 유니버설 웨이트 카드를 바로 불러오고 spread 로 넘어갑니다.
+              ⚠️ loadDeckCards 는 «그대로» 부릅니다. 카드 목록·역방향 설정이
+                 여기서 정해지므로 빼면 카드가 «안 나옵니다». */}
+          <button onClick={async () => {
+            if (!question.trim()) return
+            await loadDeckCards(deckCode)
+            setStep('spread')
+          }}
             style={{ width: '100%', padding: '14px', borderRadius: '12px',
               background: question.trim() ? rose : '#EFE0D5',
               border: 'none', color: question.trim() ? '#fff' : '#b09a8a',
@@ -298,33 +308,21 @@ function TarotInner() {
         </div>
       )}
 
-      {step === 'deck' && (
-        <div style={{ padding: '18px 16px' }}>
-          <p style={{ color: sub, fontSize: '13px', marginBottom: '14px' }}>어떤 카드로 마음을 들여다볼까요?</p>
-          {decks.map(d => {
-            const active = d.is_active
-            const selected = deckCode === d.code
-            return (
-              <div key={d.code} onClick={() => { if (active) setDeckCode(d.code) }}
-                style={{ background: selected ? cardBg : '#FBF3EC',
-                  border: selected ? '1px solid #d8a87e' : '1px solid #9c7a58',
-                  borderRadius: '12px', padding: '14px', marginBottom: '10px',
-                  cursor: active ? 'pointer' : 'default', opacity: active ? 1 : 0.5 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ color: selected ? gold : ink, fontSize: '14px', fontWeight: 500 }}>{d.name_ko}</span>
-                  {!active && <span style={{ background: 'rgba(180,120,90,0.12)', color: sub, fontSize: '10px', padding: '3px 8px', borderRadius: '20px' }}>준비 중</span>}
-                  {selected && active && <span style={{ marginLeft: 'auto', color: gold }}>✓</span>}
-                </div>
-                <p style={{ color: sub, fontSize: '11px', margin: '4px 0 0', lineHeight: 1.5 }}>{d.description}</p>
-              </div>
-            )
-          })}
-          <button onClick={async () => { await loadDeckCards(deckCode); setStep('spread') }}
-            style={{ width: '100%', padding: '14px', borderRadius: '12px', marginTop: '8px', background: rose, border: 'none', color: '#fff', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' }}>
-            이 카드로 볼게요 →
-          </button>
-        </div>
-      )}
+      {/* ⛔ 덱 고르는 화면 — 2026-08-05 «걷어냈습니다» (46부 16차 · 대표님 지시)
+            「카드는 한 종류로만 할 테니 이 화면은 삭제」
+
+          [무엇이었나]  유니버설 웨이트 / 명연재 젠 오라클(준비 중) / 명연재 오라클(준비 중)
+                        셋 중 고르는 화면이었습니다. 뒤 둘은 ★둘 다 「준비 중」이라
+                        실제로 고를 수 있는 것은 «하나뿐» 이었습니다.
+
+          [무엇을 안 지웠나]
+            · ★deckCode('universal')는 «그대로» 둡니다 — API 가 이 값으로 카드를 부릅니다
+            · Step 타입의 'deck' 도 «그대로» 둡니다 (되살릴 때 쓰라고 남겨 둡니다)
+            ⛔ decks 목록 상태와 그 불러오기(useEffect)는 «지웠습니다» —
+              화면이 없어 아무도 안 쓰게 되어 eslint 경고가 138→140 으로 늘었습니다.
+            ⇒ 되살리시려면 이 자리에 화면만 다시 그리고,
+              질문 화면 버튼을 setStep('deck') 으로, 뒤로가기를 spread→deck→question 으로
+              ★셋을 «함께» 되돌리십시오. 하나만 하면 길이 끊깁니다. */}
 
       {step === 'spread' && (
         <div style={{ padding: '18px 16px' }}>
