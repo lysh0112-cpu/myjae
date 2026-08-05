@@ -30,6 +30,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { LINE_OUTER } from '@/lib/ui/line'
 
 export interface ReportSection {
   /** ■ 뒤의 제목 그대로 */
@@ -63,7 +64,7 @@ export default function CoupleReport({
         <div style={{ textAlign: 'center', margin: '4px 0 18px' }}>
           <span style={{
             display: 'inline-block', fontSize: 15, fontWeight: 700, color: '#8a5a2e',
-            background: '#fff', border: '1px solid #e8d9c8', borderRadius: 12,
+            background: '#fff', border: LINE_OUTER, borderRadius: 12,
             padding: '10px 19px', boxShadow: '0 1px 3px rgba(0,0,0,.04)',
           }}>{badge}</span>
         </div>
@@ -84,12 +85,12 @@ export default function CoupleReport({
         const withGraph = !!graph && GRAPH_IN.some(w => s.title.includes(w))
         return (
           <section key={`${s.title}-${i}`} style={{
-            background: '#fff', border: '1px solid #DFD9D2', borderRadius: 14,
+            background: '#fff', border: LINE_OUTER, borderRadius: 14,
             marginBottom: 16, overflow: 'hidden',
           }}>
             <h2 style={{
               margin: 0, padding: '15px 17px 13px', fontSize: 15.5, fontWeight: 700,
-              borderBottom: '1px solid #f0ebe6', display: 'flex', alignItems: 'center', gap: 9,
+              borderBottom: LINE_OUTER, display: 'flex', alignItems: 'center', gap: 9,
               color: '#2b2320', letterSpacing: '-.02em',
             }}>
               <span style={{
@@ -112,7 +113,7 @@ export default function CoupleReport({
       {outro.trim() && (
         <div style={{
           background: 'linear-gradient(160deg,#fffdfa,#f9f4ee)',
-          border: '1px solid #ece0d4', borderRadius: 14,
+          border: LINE_OUTER, borderRadius: 14,
           padding: '20px 18px', marginTop: 20,
         }}>
           <h2 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 700, color: '#2b2320' }}>

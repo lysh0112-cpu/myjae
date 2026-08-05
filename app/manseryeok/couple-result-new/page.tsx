@@ -69,7 +69,7 @@ import type { SavedInputData } from '@/lib/saju/savedPeople'
 import ConsultButton from '@/app/components/common/ConsultButton'
 import CopyTextButton from '@/app/components/common/CopyTextButton'
 import { withNim } from '@/lib/saju/honorific'
-import { LINE_OUTER } from '@/lib/ui/line'
+import { LINE_OUTER, LINE_OUTER_COLOR } from '@/lib/ui/line'
 
 type Mode = 'couple' | 'married'
 
@@ -237,7 +237,9 @@ function CoupleResultInner() {
             const allOn = gPicked === items.length
             const open = openCats.has(category)
             return (
-              <div key={category} style={{ marginBottom: 10, border: `0.5px solid ${gPicked > 0 ? col + '55' : '#f0e0d5'}`, borderRadius: 12, overflow: 'hidden' }}>
+              <div key={category} style={{ marginBottom: 10, /* ★2026-08-05 (47부 25차) — 안 고른 쪽의 «옛 색»(#f0e0d5 · 1.29:1)을
+                     ★LINE_OUTER_COLOR 로 바꿨습니다. 고른 쪽은 «오행 색» 그대로입니다. */
+                border: `0.5px solid ${gPicked > 0 ? col + '55' : LINE_OUTER_COLOR}`, borderRadius: 12, overflow: 'hidden' }}>
                 <div onClick={() => toggleCat(category)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 12px', background: gPicked > 0 ? col + '14' : '#fff', cursor: 'pointer' }}>
                   <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: col }}>{category}</span>
                   {gPicked > 0 && <span style={{ fontSize: 10, color: '#fff', background: col, borderRadius: 9, padding: '2px 7px' }}>{gPicked}</span>}
@@ -250,7 +252,7 @@ function CoupleResultInner() {
                       const on = picked.has(q.id)
                       return (
                         <div key={q.id} onClick={() => toggleQ(q.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 8px', borderRadius: 8, background: on ? col + '14' : 'transparent', marginBottom: 3, cursor: 'pointer' }}>
-                          <span style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${on ? col : '#d8c4b4'}`, background: on ? col : '#fff', color: '#fff', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{on ? '✓' : ''}</span>
+                          <span style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${on ? col : LINE_OUTER_COLOR}`, background: on ? col : '#fff', color: '#fff', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{on ? '✓' : ''}</span>
                           <span style={{ fontSize: 12.5, color: '#3a2e28' }}>{q.question}</span>
                         </div>
                       )

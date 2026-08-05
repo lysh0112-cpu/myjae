@@ -20,6 +20,7 @@
 'use client'
 
 import { useState } from 'react'
+import { LINE_OUTER } from '@/lib/ui/line'
 
 export interface FollowUp {
   q: string
@@ -108,7 +109,7 @@ export default function CoupleFollowUp({
                 disabled={loading}
                 style={{
                   width: '100%', boxSizing: 'border-box', minHeight: 50, background: '#fff',
-                  border: '0.5px solid #9c7a58', borderRadius: 10, padding: '9px 11px',
+                  border: LINE_OUTER, borderRadius: 10, padding: '9px 11px',
                   fontSize: 12, color: '#2f211c', resize: 'none', fontFamily: 'inherit',
                   outline: 'none', lineHeight: 1.55,
                 }}
@@ -147,7 +148,7 @@ export default function CoupleFollowUp({
 function QaCard({ qa, streaming }: { qa: FollowUp; streaming?: boolean }) {
   return (
     <div style={{
-      background: '#fff', border: '0.5px solid #c3986e', borderRadius: 13,
+      background: '#fff', border: LINE_OUTER, borderRadius: 13,
       padding: '12px 13px', marginBottom: 7,
     }}>
       <div style={{
@@ -165,7 +166,7 @@ function QaCard({ qa, streaming }: { qa: FollowUp; streaming?: boolean }) {
       {(qa.a || streaming) && (
         <div style={{
           fontSize: 12, lineHeight: 1.85, color: '#2f211c', whiteSpace: 'pre-wrap',
-          marginTop: 9, paddingTop: 9, borderTop: '0.5px solid #c79664', letterSpacing: '-.01em',
+          marginTop: 9, paddingTop: 9, borderTop: LINE_OUTER, letterSpacing: '-.01em',
         }}>
           {qa.a}
           {streaming && !qa.a && (

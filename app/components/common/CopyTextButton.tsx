@@ -21,6 +21,7 @@
  */
 
 import { useState } from 'react'
+import { LINE_OUTER_COLOR } from '@/lib/ui/line'
 
 interface Props {
   /** 복사할 본문 */
@@ -101,7 +102,12 @@ export default function CopyTextButton({
         borderRadius: 10,
         marginTop: inRow ? 0 : 8,
         background: copied ? '#eef5e8' : 'transparent',
-        border: `0.5px solid ${copied ? '#a8c898' : '#d8c4b4'}`,
+        // ★2026-08-05 (47부 25차) — 안 눌렀을 때의 선을 ★선 부품으로. [대표님 지시]
+        //   [전] #d8c4b4 (1.68:1) — 흐려서 «버튼인지» 안 보였습니다.
+        //   ⚠️ 복사 «뒤» 초록(#a8c898)은 ★«됐다» 는 뜻이 있는 색이라 «그대로» 둡니다.
+        //   ⚠️⚠️ 이 부품은 ★네 화면이 씁니다 — 사주 · 궁합 · 진로적성 · 물상.
+        //      ⇒ 여기를 바꾸면 ★넷이 «함께» 바뀝니다.
+        border: `0.5px solid ${copied ? '#a8c898' : LINE_OUTER_COLOR}`,
         color: copied ? '#4a7a3a' : '#96502e',
         fontSize: 13,
         fontWeight: copied ? 700 : 400,

@@ -81,6 +81,16 @@ const MOVED = [
   'app/manseryeok/result-new/page.tsx',
   'app/manseryeok/result-new/YongsinCard.tsx',
   'app/manseryeok/result-new/HapchungView.tsx',
+  // ★2026-08-05 (47부 25차) — 궁합·진로적성 «부품 트리» 를 전수로 훑어 더했습니다.
+  //   ⚠️ 24차까지는 화면 page 만 보고 옮겨 ★CoupleReport(통변 본문 카드)를 «빠뜨렸습니다».
+  //      대표님이 사진으로 짚어 주셔서 알았습니다.
+  //   ⇒ 앞으로는 ★import 를 타고 «부품 트리 전체» 를 훑고 옮기십시오.
+  'app/components/common/CopyTextButton.tsx',
+  'app/manseryeok/couple-result-new/components/CoupleReport.tsx',
+  'app/manseryeok/couple-result-new/components/CoupleFollowUp.tsx',
+  'app/manseryeok/career-result/page.tsx',
+  'app/manseryeok/career-result/components/CareerJudgeCard.tsx',
+  'app/manseryeok/career-result/components/MbtiCard.tsx',
 ]
 
 /**
@@ -101,6 +111,10 @@ const MEANINGFUL = [
   'rgba(200,120,60',         // 연한 강조
   'rgba(120,53,15',          // 연한 강조
   'GOLD',                    // 강조
+  'copied',                  // 복사 «됐다» 는 뜻 (#a8c898 초록)
+  '#3c9a6e',                 // CoupleReport 세로선 — 좋음
+  '#5dcaa5', '#f0997b', '#cec9f0',   // MbtiCard 세로선 셋 — «세 가지 뜻» 을 색으로 가름
+  '#b6e0d0', '#f2c9b8',      // MbtiCard 강점/약점
 ]
 function isMeaningful(line: string) {
   return MEANINGFUL.some(m => line.includes(m))

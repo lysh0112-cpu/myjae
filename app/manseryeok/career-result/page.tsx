@@ -50,10 +50,12 @@ import CareerJudgeCard from './components/CareerJudgeCard'
 // ★2026-07-31 — 만세력 표를 «떼어다» 통변 사이에 끼웁니다 (대표님 지시)
 import SajuTableSlot, { type SajuTableKind } from '@/app/manseryeok/components/SajuTableSlot'
 import ConsultButton from '@/app/components/common/ConsultButton'
+import { LINE_OUTER, LINE_INNER } from '@/lib/ui/line'
 
 const ACCENT = '#785aaa'
 const BG = '#FDF6F0'
-const LINE = '#f0e0d5'
+// ★2026-08-05 (47부 25차) — 옛 선 상수를 걷었습니다 ('#f0e0d5').
+//   선은 lib/ui/line.ts 의 LINE_OUTER · LINE_INNER 에서 받습니다.
 
 /**
  * ★2026-07-31 — 카드 «뒤» 에 끼울 만세력 표. (대표님 지시)
@@ -521,7 +523,7 @@ function CareerResultInner() {
       <div style={{
         position: 'sticky', top: 0, zIndex: 5,
         background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
-        borderBottom: `0.5px solid ${LINE}`, padding: '13px 16px',
+        borderBottom: LINE_OUTER, padding: '13px 16px',
         display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <button onClick={() => router.push('/manseryeok/career')}
@@ -574,7 +576,7 @@ function CareerResultInner() {
             )}
             {tongIntro && (
               <div style={{
-                background: '#f7f3fb', border: `0.5px solid #e5dcf0`, borderRadius: 14,
+                background: '#f7f3fb', border: LINE_INNER, borderRadius: 14,
                 padding: '15px 16px', marginBottom: 14,
                 fontSize: 13.5, color: '#3a2e28', lineHeight: 1.85, whiteSpace: 'pre-wrap',
               }}>{tongIntro}</div>
@@ -588,7 +590,7 @@ function CareerResultInner() {
             }}>
               <span style={{
                 fontSize: 11, color: '#4a3b60', background: '#f3eefa',
-                border: '1px solid #785aaa26', padding: '4px 10px', borderRadius: 20, fontWeight: 600,
+                border: LINE_OUTER, padding: '4px 10px', borderRadius: 20, fontWeight: 600,
               }}>{STATUS_LABEL[status]} 기준</span>
               {realMbti && (
                 <span style={{
@@ -652,7 +654,7 @@ function CareerResultInner() {
                               {p.tags.map((t, k) => (
                                 <span key={k} style={{
                                   fontSize: 10.5, color: '#5b4580', background: '#f3eefb',
-                                  border: '1px solid #e4daf5', padding: '3px 9px',
+                                  border: LINE_OUTER, padding: '3px 9px',
                                   borderRadius: 20, fontWeight: 600,
                                 }}>{t}</span>
                               ))}
@@ -761,7 +763,7 @@ function CareerResultInner() {
             {/* 맺는말 */}
             {tongOutro && (
               <div style={{
-                background: '#f7f3fb', border: `0.5px solid #e5dcf0`, borderRadius: 14,
+                background: '#f7f3fb', border: LINE_INNER, borderRadius: 14,
                 padding: '15px 16px', margin: '4px 0 14px',
                 fontSize: 13.5, color: '#3a2e28', lineHeight: 1.85, whiteSpace: 'pre-wrap',
               }}>{tongOutro}</div>

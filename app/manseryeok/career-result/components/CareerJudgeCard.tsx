@@ -21,9 +21,11 @@
 import { useState } from 'react'
 import type { CareerCard } from '@/lib/saju/career'
 import { EL_CHART } from '@/lib/saju/ohaengColor'
+import { LINE_OUTER } from '@/lib/ui/line'
 
 const CARD = '#FFFBF7'
-const LINE = '#f0e0d5'
+// ★2026-08-05 (47부 25차) — 옛 선 상수를 걷었습니다 ('#f0e0d5').
+//   선은 lib/ui/line.ts 의 LINE_OUTER · LINE_INNER 에서 받습니다.
 const ACCENT = '#785aaa'
 
 /**
@@ -104,7 +106,7 @@ export default function CareerJudgeCard({ card, tong }: Props) {
 
   return (
     <div style={{
-      background: CARD, border: `0.5px solid ${LINE}`, borderRadius: 14,
+      background: CARD, border: LINE_OUTER, borderRadius: 14,
       padding: '16px 16px 14px', marginBottom: 12,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
@@ -187,7 +189,7 @@ export default function CareerJudgeCard({ card, tong }: Props) {
                ★여기는 화면 한 곳뿐이라, AI 재료(reasons)는 원래 따로입니다.
           ══════════════════════════════════════════════════════════ */}
       {SHOW_WHY && hasTong && card.lines.length > 0 && (
-        <div style={{ marginTop: 10, borderTop: `0.5px solid ${LINE}`, paddingTop: 8 }}>
+        <div style={{ marginTop: 10, borderTop: LINE_OUTER, paddingTop: 8 }}>
           <button onClick={() => setOpenWhy(o => !o)}
             style={{
               background: 'none', border: 'none', padding: 0, cursor: 'pointer',

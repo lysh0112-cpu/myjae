@@ -18,6 +18,7 @@
 
 import { AXIS_WORK, AXIS_NAME_SHORT, titleOf } from '@/lib/saju/career/sajuMbti'
 import type { SajuMbtiResult, MbtiCompare } from '@/lib/saju/career/sajuMbti'
+import { LINE_OUTER } from '@/lib/ui/line'
 
 const ACCENT = '#785aaa'
 
@@ -81,7 +82,10 @@ export default function MbtiCard({ result, realMbti, compare, name }: Props) {
   return (
     <div style={{
       background: '#fff',
-      border: '1px solid rgba(120,53,15,0.15)',
+      // ★2026-08-05 (47부 25차) — 카드 «바깥» 선을 선 부품으로. [대표님 지시]
+      //   ⚠️ 아래 borderLeft 셋(#5dcaa5 초록 · #f0997b 주황 · #cec9f0 보라)은
+      //      ★«세 가지 뜻» 을 색으로 가르는 자리라 «그대로» 둡니다.
+      border: LINE_OUTER,
       borderRadius: 16,
       boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
       padding: 16,
