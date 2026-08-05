@@ -469,14 +469,25 @@ function TarotInner() {
             </div>
           )}
 
-          <button onClick={startNew}
-            style={{ width: '100%', padding: '13px', borderRadius: '12px', background: cardBg, border, color: sub, fontSize: '14px', cursor: 'pointer', marginBottom: '10px' }}>
-            새로운 질문하기
-          </button>
-          <button onClick={() => router.push('/tarot/storage')}
-            style={{ width: '100%', padding: '13px', borderRadius: '12px', background: 'transparent', border: `1px solid ${gold}`, color: gold, fontSize: '14px', cursor: 'pointer' }}>
-            📜 내 타로 보관함
-          </button>
+          {/* ★2026-08-05 (46부 17차) — 두 버튼을 «한 줄» 로 놓습니다. [대표님 지시]
+              [전]  세로로 둘 — 높이 13+13 여백 10 = ★약 90px 을 썼습니다.
+              [후]  가로로 둘 — ★약 45px. 절반으로 줄었습니다.
+              ⚠️ 높이 13px 패딩(≈45px)은 ★손가락으로 누를 최소선(44)입니다.
+                 ⛔ 더 줄이지 마십시오. (45부 3-6 교훈)
+              ★폭을 실측했습니다 — 가장 좁은 320px 화면에서 버튼 한 개가 140px 인데
+                「새로운 질문하기」121px · 「📜 내 타로 보관함」128px 로 ★둘 다 들어갑니다.
+                ⇒ 아이콘을 그대로 두었습니다.
+              ⚠️ 글자를 더 늘리면 넘칩니다. 문구를 바꾸실 때 다시 재 보십시오. */}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={startNew}
+              style={{ flex: 1, padding: '13px 8px', borderRadius: '12px', background: cardBg, border, color: sub, fontSize: '14px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              새로운 질문하기
+            </button>
+            <button onClick={() => router.push('/tarot/storage')}
+              style={{ flex: 1, padding: '13px 8px', borderRadius: '12px', background: 'transparent', border: `1px solid ${gold}`, color: gold, fontSize: '14px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              📜 내 타로 보관함
+            </button>
+          </div>
         </div>
       )}
     </main>
