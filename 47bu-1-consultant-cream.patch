@@ -1,0 +1,138 @@
+From 1bc8c68ec6ed26db578c4d1eefbc08f14f9d090a Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 07:08:00 +0000
+Subject: [PATCH] =?UTF-8?q?=EC=83=81=EB=8B=B4=EC=82=AC=20=ED=99=94?=
+ =?UTF-8?q?=EB=A9=B4=20=EA=B8=B8=EB=AA=A9=20=EB=84=B7=EC=9D=84=20=ED=99=88?=
+ =?UTF-8?q?=ED=99=94=EB=A9=B4=20=ED=81=AC=EB=A6=BC=20=ED=86=A4=EC=9C=BC?=
+ =?UTF-8?q?=EB=A1=9C=20(47=EB=B6=80=201=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/manseryeok/consultant/page.tsx | 80 ++++++++++++++++++++++++------
+ 1 file changed, 65 insertions(+), 15 deletions(-)
+
+diff --git a/app/manseryeok/consultant/page.tsx b/app/manseryeok/consultant/page.tsx
+index 03e90ce..7b74c22 100644
+--- a/app/manseryeok/consultant/page.tsx
++++ b/app/manseryeok/consultant/page.tsx
+@@ -368,37 +368,79 @@ function ConsultantContent() {
+   )
+ 
+   // 권한 확인 중이거나 거부되면 본 화면을 렌더링하지 않음
++  //   ★2026-08-05 (47부) — 크림 톤으로 맞췄습니다. 아래 고르기 화면과 «같은 길목» 이라
++  //     여기만 어두우면 마이페이지(크림) → 깜빡 어두움 → 고르기(크림) 로 튑니다.
++  //     실측)  '확인 중' #7d6a5b on #FDF6F0 = 4.80:1
++  //            '권한 없음' #c14545 on #FDF6F0 = ★4.67:1 (기준 4.5)
++  //     ⚠️ 마이페이지의 오류색 #c05a5a 는 이 바탕에서 ★4.04:1 로 «미달» 이라 안 썼습니다.
++  //        45부 확정 빨강 #c14545 를 썼습니다.
+   if (authState !== 'ok') {
++    const denied = authState !== 'checking'
+     return (
+-      <div style={{width:'100vw', height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#1a1a18'}}>
+-        <div style={{color:'#FAC775', fontSize:'14px'}}>
+-          {authState === 'checking' ? '상담사 확인 중...' : '접근 권한이 없습니다.'}
++      <div style={{width:'100vw', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center',
++        background:'#FDF6F0', fontFamily:"'Apple SD Gothic Neo','Noto Sans KR',sans-serif", boxSizing:'border-box', padding:24}}>
++        <div style={{color: denied ? '#c14545' : '#7d6a5b', fontSize:'14px'}}>
++          {denied ? '접근 권한이 없습니다.' : '상담사 확인 중...'}
+         </div>
+       </div>
+     )
+   }
+ 
+   // ★매니저가 consultantId 없이 들어온 경우 — 누구 화면을 볼지 고른다 (2026-07-21 2차)
++  //
++  // ══════════════════════════════════════════════════════════════════════
++  // ★2026-08-05 (47부) — 이 화면을 «홈화면과 같은 톤» 으로 바꿨습니다. [대표님 지시]
++  //
++  //   [무엇이 문제였나]  대표님 —
++  //     「마이페이지에서 상담사 관리자 화면으로 들어가면 색상 자체가 이상해」
++  //     실제로 재 보니 ★버튼이 «있는지 없는지» 안 보였습니다.
++  //       버튼 바탕  rgba(255,255,255,0.06) on #1a1a18 → 대비 ★1.18:1
++  //       버튼 테두리 rgba(255,255,255,0.12) on #1a1a18 → 대비 ★1.42:1  (선 기준 3.0)
++  //     게다가 바탕은 «따뜻한» 검정(#1a1a18)인데 글자는 «푸른 보라»(#e8e2f5·#8a88a0)라
++  //     색기운이 반대로 얹혀 떠 보였습니다.
++  //
++  //   [왜 어두웠나]  대표님 확인 — 「일부러는 아니야, 하다 보니 어두운 색을 골랐다」
++  //     ⇒ 지켜야 할 어두운 테마가 «아닙니다». 그래서 갈아 끼워도 됩니다.
++  //     ⚠️ 참고: rename/hanja · rename/result 의 어두운 테마는 «일부러» 입니다 (45부).
++  //        그쪽은 이 판단과 무관합니다. 함께 바꾸지 마십시오.
++  //
++  //   [무엇을 골랐나]  ★새로 짓지 않고 mypage-new/page.tsx 의 색을 «그대로» 빌렸습니다.
++  //     바탕 #FDF6F0 · 카드 #FFFBF7 · 선 #9c7a58 · 본문 #3a2e28 · 설명 #7d6a5b
++  //     45부에 대비를 재서 확정한 값이라 다시 잴 필요가 없습니다.
++  //
++  //   [실측 — 바꾼 뒤 대비]
++  //     제목 #3a2e28 on #FFFBF7      12.74:1  (기준 4.5)
++  //     설명 #7d6a5b on #FDF6F0       4.80:1  (기준 4.5)
++  //     버튼 테두리 #9c7a58 on #FDF6F0 ★3.67:1  (기준 3.0) ← 1.42 에서 올렸습니다
++  //     관리자 글자 #96502e on #f4ece1  5.15:1  (기준 4.5)
++  //
++  //   ⛔ 어두운 색으로 되돌리지 마십시오. 되돌리면 버튼 선이 다시 1.42:1 이 됩니다.
++  //   ⚠️ 이 화면 «하나만» 바꿨습니다. 상담사 대시보드(#111118)는 그대로입니다.
++  //      대시보드까지 옮기려면 부품 열 개 · 색 지정 357군데라 따로 여쭈고 해야 합니다.
++  // ══════════════════════════════════════════════════════════════════════
+   if (isMaster && !consultantId) {
+     return (
+-      <div style={{width:'100vw', height:'100vh', background:'#1a1a18', display:'flex',
+-        flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14, padding:24}}>
+-        <div style={{color:'#FAC775', fontSize:16, fontWeight:600}}>어느 상담사의 화면을 볼까요?</div>
+-        <div style={{color:'#8a88a0', fontSize:12}}>매니저는 점검·대리를 위해 상담사 화면에 들어갈 수 있어요.</div>
++      <div style={{width:'100vw', minHeight:'100vh', background:'#FDF6F0', display:'flex',
++        flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14, padding:24,
++        fontFamily:"'Apple SD Gothic Neo','Noto Sans KR',sans-serif", boxSizing:'border-box'}}>
++        <div style={{color:'#3a2e28', fontSize:16, fontWeight:600}}>어느 상담사의 화면을 볼까요?</div>
++        <div style={{color:'#7d6a5b', fontSize:12, textAlign:'center', lineHeight:1.6}}>매니저는 점검·대리를 위해 상담사 화면에 들어갈 수 있어요.</div>
+         <div style={{display:'flex', flexDirection:'column', gap:8, width:'100%', maxWidth:320, marginTop:6}}>
+           {pickList.length === 0 ? (
+-            <div style={{color:'#8a88a0', fontSize:13, textAlign:'center'}}>등록된 상담사가 없어요.</div>
++            <div style={{color:'#7d6a5b', fontSize:13, textAlign:'center'}}>등록된 상담사가 없어요.</div>
+           ) : pickList.map(p => (
+             <button key={p.id}
+               onClick={() => router.push(`/manseryeok/consultant?consultantId=${p.id}`)}
+-              style={{padding:'13px 0', borderRadius:10, border:'1px solid rgba(255,255,255,0.12)',
+-                background:'rgba(255,255,255,0.06)', color:'#e8e2f5', fontSize:14, cursor:'pointer'}}>
++              style={{padding:'13px 0', borderRadius:10, border:'0.5px solid #9c7a58',
++                background:'#FFFBF7', color:'#3a2e28', fontSize:14, cursor:'pointer',
++                fontFamily:'inherit'}}>
+               {p.name} 선생님
+             </button>
+           ))}
+           <button onClick={() => router.push('/admin')}
+-            style={{padding:'11px 0', borderRadius:10, border:'none',
+-              background:'rgba(250,199,117,0.15)', color:'#FAC775', fontSize:13, cursor:'pointer', marginTop:4}}>
++            style={{padding:'11px 0', borderRadius:10, border:'0.5px solid #96502e',
++              background:'#f4ece1', color:'#96502e', fontSize:13, cursor:'pointer', marginTop:4,
++              fontFamily:'inherit'}}>
+             ← 관리자 화면으로
+           </button>
+         </div>
+@@ -575,12 +617,20 @@ export default function ConsultantPage() {
+   //   고객 사주·상담 내역이 보이는 화면이라 직원만 들어올 수 있어야 한다.
+   //   매니저도 허용한다 (상담사 화면을 점검·대리할 수 있어야 하므로).
+   const gate = useRoleGate(STAFF_ROLES)
+-  if (gate.state !== 'ok') return <RoleGateScreen gate={gate} />
++  // ★2026-08-05 (47부) — dark={false} 로 크림 갈래를 켰습니다. [대표님 지시]
++  //   ★새로 만들지 않았습니다. useRoleGate.tsx 에 크림 갈래가 «이미» 있었습니다.
++  //     dark=false → 바탕 #FDF6F0 · 제목 #96502e(5.63:1) · 본문 #5c3a1e(9.44:1)
++  //   ⚠️ 이 부품은 admin/page.tsx 도 씁니다. 거기는 «안 건드렸습니다»
++  //      (기본값 dark=true 그대로라 관리자 화면은 어두운 채입니다).
++  if (gate.state !== 'ok') return <RoleGateScreen gate={gate} dark={false} />
+ 
+   return (
+     <Suspense fallback={
+-      <div style={{minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#111118'}}>
+-        <div style={{color:'#FAC775'}}>로딩 중...</div>
++      // ★2026-08-05 (47부) — 크림 톤. 위 authState 대기 화면과 «같은 색» 이어야
++      //   들어오는 동안 두 번 깜빡이지 않습니다. (전 #111118 · 글자 #FAC775)
++      <div style={{minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center',
++        background:'#FDF6F0', fontFamily:"'Apple SD Gothic Neo','Noto Sans KR',sans-serif"}}>
++        <div style={{color:'#7d6a5b', fontSize:'14px'}}>로딩 중...</div>
+       </div>
+     }>
+       <ConsultantContent />
+-- 
+2.43.0
+
