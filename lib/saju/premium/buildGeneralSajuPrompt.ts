@@ -195,30 +195,19 @@ function buildSections(v: GeneralSajuInput): Section[] {
       ],
     },
 
+    /* ★2026-08-05 (46부 21차) — ★대운을 세운 «앞» 으로 올렸습니다. [대표님 지시]
+       [전]  5 합충형파해와 건강(세운 표)  →  6 대운의 흐름과 인생 곱선(대운 표)
+       [후]  ★5 대운의 흐름과 인생 곱선       →  6 천간·지지의 합충형파해와 건강
+       [까닭]  큰 흐름(10년)을 먼저 보고 그 다음 올해(1년)를 보는 차례입니다.
+
+       ⚠️⚠️ ★번호와 차례만 바꿠습니다. 안의 «재료·문구» 는 한 글자도 안 건드렸습니다.
+          이 파일은 ★AI 재료입니다. 44부에 같은 결의 파일을 건드렸다가
+          ★통변 전체를 무너뜨렸습니다 (9장 buildCareerMbtiPrompt).
+       ⚠️ 표는 같이 안 옮겼습니다 — result-new/page.tsx 의 premiumSlots 가
+          ★낱말로 붙입니다(match). 글이 자리를 옮기면 표도 «따라옵니다».
+       ⚠️ 이미 저장된 손님 기록은 ★옛 순서 그대로입니다. 새로 뽑는 것부터 바뀝니다. */
     {
-      no: 5, title: '천간·지지의 합충형파해와 건강',
-      blocks: [
-        ['7-1 합(合)과 묶임', [
-          ...ganHap.map(h => h.seongrip
-            ? `${h.key} ${h.where} — 성립. ${h.hwa ? `지지에 ${h.hwaEl} 세력이 있어 합화됩니다.` : '합하되 다른 기운으로 변하지는 않습니다.'}`
-            : `${h.key} ${h.where} — 사이에 ${h.block?.by ?? '다른 글자'}가 있어 합이 이루어지지 않습니다.`),
-          ...jiHap.map(h => `${h.key}(${h.kind}) ${h.where}${h.monthTied ? ' · 월지에 걸려 강합니다' : ''}`),
-        ]],
-        ['7-2 충(沖)을 통한 해소', [
-          ...seyun.lines.filter(t => t.includes('沖') || t.includes('견줌')),
-          ...daeun.lines.filter(t => t.includes('沖')),
-          '※ 묶여 있던 기운은 충이 들어올 때 풀립니다. 답답하던 자리가 그때 움직입니다.',
-        ]],
-        // ★기획 섹션5 — 합충과 건강을 한 자리에 둡니다.
-        //   충·형이 몸으로 드러나는 자리라 결이 이어집니다.
-        ['5-3 비거나 넘치는 기운과 몸', [
-          ...health.lines,
-          ...(B['건강'] ?? []).slice(0, 2),
-        ]],
-      ],
-    },
-    {
-      no: 6, title: '대운의 흐름과 인생 곡선',
+      no: 5, title: '대운의 흐름과 인생 곡선',
       blocks: [
         ['6-0 학창시절 대운(1~2대운)', school.length
           ? school.map(x => `${x.age}세 ${x.ganji} · ${x.group}${x.hakma ? '(학마운)' : ''} — ${x.say}`)
@@ -243,6 +232,28 @@ function buildSections(v: GeneralSajuInput): Section[] {
               return `${d.age}세 ${d.ganji}(${kind}) — 갈아타는 자리입니다. ${how}`
             })
           : ['접목운 대운이 표 범위에 없습니다.']],
+      ],
+    },
+    {
+      no: 6, title: '천간·지지의 합충형파해와 건강',
+      blocks: [
+        ['7-1 합(合)과 묶임', [
+          ...ganHap.map(h => h.seongrip
+            ? `${h.key} ${h.where} — 성립. ${h.hwa ? `지지에 ${h.hwaEl} 세력이 있어 합화됩니다.` : '합하되 다른 기운으로 변하지는 않습니다.'}`
+            : `${h.key} ${h.where} — 사이에 ${h.block?.by ?? '다른 글자'}가 있어 합이 이루어지지 않습니다.`),
+          ...jiHap.map(h => `${h.key}(${h.kind}) ${h.where}${h.monthTied ? ' · 월지에 걸려 강합니다' : ''}`),
+        ]],
+        ['7-2 충(沖)을 통한 해소', [
+          ...seyun.lines.filter(t => t.includes('沖') || t.includes('견줌')),
+          ...daeun.lines.filter(t => t.includes('沖')),
+          '※ 묶여 있던 기운은 충이 들어올 때 풀립니다. 답답하던 자리가 그때 움직입니다.',
+        ]],
+        // ★기획 섹션5 — 합충과 건강을 한 자리에 둡니다.
+        //   충·형이 몸으로 드러나는 자리라 결이 이어집니다.
+        ['5-3 비거나 넘치는 기운과 몸', [
+          ...health.lines,
+          ...(B['건강'] ?? []).slice(0, 2),
+        ]],
       ],
     },
     {
