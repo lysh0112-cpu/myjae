@@ -306,6 +306,13 @@ function ResultNewContent() {
   // 대운을 여기서 한 번만 받아 표(UnseFlow)와 통변 재료에 함께 쓴다.
   //   전에는 UnseFlow 가 혼자 불렀고, 통변은 대운을 아예 몰랐다.
   const [dayunList, setDayunList] = useState<DayunItem[]>([])
+  // ★2026-08-05 (46부 14차) — 「운의 흐름」에서 고른 대운·세운.
+  //   전문가 상세의 「운이 원국을 건드리는 자리」가 이 값을 씁니다.
+  //   ⚠️ UnseFlow 와 ExpertDetail 은 «형제» 라 서로 모릅니다. 여기서 이어 줍니다.
+  const [pickedUn, setPickedUn] = useState<{
+    daeun: { stem: string; branch: string; age: number } | null
+    seyun: { stem: string; branch: string; year: number } | null
+  }>({ daeun: null, seyun: null })
   useEffect(() => {
     if (!solarYear || !monthGanji || !yearStem || !dayStem) return
     let ok = true
@@ -674,6 +681,9 @@ function ResultNewContent() {
               solarMonth={solarMonth}
               solarDay={solarDay}
               hourIdx={hourIdx}
+              /* ★운↔원국 합충 — 2026-08-05 (46부 14차) */
+              pickedDaeun={pickedUn.daeun}
+              pickedSeyun={pickedUn.seyun}
             />
           </Section>
         )}
@@ -746,6 +756,7 @@ function ResultNewContent() {
               gender={gender} birthYear={yearParam} currentYear={currentYear}
               myMonthBranch={monthBranchForNote ?? ''} myDayBranch={iljji}
               list={dayunList} hourIdx={hourIdx}
+              onPick={setPickedUn}
             />
           </Section>
         )}

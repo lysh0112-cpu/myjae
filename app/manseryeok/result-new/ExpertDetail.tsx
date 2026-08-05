@@ -23,7 +23,7 @@ import { calcSaryeong } from '@/lib/saju/jijanggan'
 import { getGwiinForBranch, getGwiinForStem } from '@/lib/saju/gwiin'
 import { nabeum } from '@/lib/saju/sajuDetail'
 import TermModal from './TermModal'
-import { branchRelationLabels } from '@/lib/saju/hapJudge'
+import { branchRelationLabels, unMeetsWongook } from '@/lib/saju/hapJudge'
 
 interface Pillar { pillar: string; stem: string; branch: string }
 
@@ -73,6 +73,19 @@ const SS_COLOR: Record<string, string> = {
  *     lib/saju/hapJudge.branchRelationLabels 한 곳에 있습니다.
  *     표를 두 곳에 두면 반드시 갈립니다. (교훈 CJ)
  */
+
+/** ★운↔원국 딱지 색 — 2026-08-05. 원국 딱지(TAG)와 «따로» 둡니다.
+ *   원국 것은 격자표 안에서 작게 쓰이고, 이쪽은 줄 배경으로 쓰입니다. */
+const UN_TAG: Record<string, { bg: string; fg: string }> = {
+  삼합: { bg: '#e8f5e9', fg: '#2e7d32' },
+  방합: { bg: '#f3ece2', fg: '#96502e' },
+  육합: { bg: '#e8f0fb', fg: '#3c82a0' },
+  충: { bg: '#fdeaea', fg: '#c62828' },
+  원진: { bg: '#f7e6ee', fg: '#993556' },
+  천간합: { bg: '#f3ece2', fg: '#96502e' },
+  간지복음: { bg: '#efeaf6', fg: '#5b4a8a' },
+  복음: { bg: '#f5f2ea', fg: '#7d6a5b' },
+}
 
 interface RelTag { label: string; bg: string; fg: string }
 const TAG: Record<string, RelTag> = {
@@ -178,6 +191,7 @@ function Badge({ kind }: { kind: string }) {
 export default function ExpertDetail({
   saju, dayStem, yearStem, yeonjji, iljji, monthBranch,
   solarYear, solarMonth, solarDay, hourIdx,
+  pickedDaeun, pickedSeyun,
 }: {
   saju: Pillar[]
   dayStem: string
@@ -196,6 +210,13 @@ export default function ExpertDetail({
   solarDay?: number | null
   /** 태어난 시진 0~11 (子=0 … 亥=11). 모르면 안 넘겨도 됩니다 */
   hourIdx?: number | null
+  /**
+   * ★「운의 흐름」에서 고른 대운·세운 — 2026-08-05 (46부 14차).
+   *   ⚠️ 안 넘기면 「운이 원국을 건드리는 자리」 칸이 «안 나옵니다».
+   *      나머지는 지금까지와 똑같습니다.
+   */
+  pickedDaeun?: { stem: string; branch: string; age: number } | null
+  pickedSeyun?: { stem: string; branch: string; year: number } | null
 }) {
   // 용어 모달 (Hooks 규칙: early return보다 먼저 선언)
   const [term, setTerm] = useState<string | null>(null)
@@ -229,7 +250,17 @@ export default function ExpertDetail({
     }
   }
 
-  const shortP = (s: string) => s.replace('주', '')
+  // ★운이 원국을 «새로» 건드리는 자리 — 2026-08-05 (46부 14차 · 대표님 지시)
+  //   「전문가용 토글을 켜면 보여 줄 수 있는 것은 최대한 보여 주자」
+  //   ⚠️ 위 ⑥ 형충회합 표는 ★원국 넷끼리만 봅니다. 여기서 «덮어쓰지» 않습니다.
+  //      unMeetsWongook 이 두 번 돌려 «새로 생긴 것만» 골라 냅니다.
+  const unList = [
+    pickedDaeun ? { pillar: '대운', stem: pickedDaeun.stem, branch: pickedDaeun.branch } : null,
+    pickedSeyun ? { pillar: '세운', stem: pickedSeyun.stem, branch: pickedSeyun.branch } : null,
+  ].filter(Boolean) as { pillar: string; stem: string; branch: string }[]
+  const unHits = unList.length ? unMeetsWongook(saju, unList) : []
+
+    const shortP = (s: string) => s.replace('주', '')
 
   return (
     <div>
@@ -649,6 +680,62 @@ export default function ExpertDetail({
           )}
         </div>
       </div>
+
+      {/* ★⑥-2 운이 원국을 건드리는 자리 — 2026-08-05 (46부 14차 · 대표님 지시)
+          ⚠️ 위 ⑥ 형충회합 표는 «원국 넷끼리만» 봅니다. 이 칸이 그것을 «덮지» 않습니다.
+             unMeetsWongook 이 두 번 돌려 ★새로 생긴 것만 냅니다.
+          ⚠️ 대운·세운을 «안 넘기면» 이 칸이 통째로 안 나옵니다. */}
+      {unList.length > 0 && (
+        <div style={card}>
+          <div style={ttl}>🔗 운이 원국을 건드리는 자리</div>
+          <div style={{ fontSize: 10, color: '#8f3d0e', marginBottom: 10 }}>
+            👆 위 「운의 흐름」에서 대운·세운을 누르면 여기가 따라 바뀌어요
+          </div>
+
+          <div style={{ display: 'flex', gap: 6, marginBottom: 11, flexWrap: 'wrap' }}>
+            {pickedDaeun && (
+              <span style={{ fontSize: 11, background: '#f3ece2', border: '0.5px solid #9c7a58', borderRadius: 7, padding: '4px 9px', color: '#6b5340' }}>
+                대운 <b style={{ color: '#3a2e28' }}>{pickedDaeun.stem}{pickedDaeun.branch}</b> <span style={{ color: '#8a7565' }}>{pickedDaeun.age}세</span>
+              </span>
+            )}
+            {pickedSeyun && (
+              <span style={{ fontSize: 11, background: '#f3ece2', border: '0.5px solid #9c7a58', borderRadius: 7, padding: '4px 9px', color: '#6b5340' }}>
+                세운 <b style={{ color: '#3a2e28' }}>{pickedSeyun.stem}{pickedSeyun.branch}</b> <span style={{ color: '#8a7565' }}>{pickedSeyun.year}</span>
+              </span>
+            )}
+          </div>
+
+          {unHits.length === 0 ? (
+            <div style={{ fontSize: 11.5, color: '#7d6a5b', lineHeight: 1.7 }}>
+              고르신 운은 원국과 새로 얽히는 자리가 없어요. 조용히 지나가는 결이에요.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {unHits.map((h, i) => {
+                const t = UN_TAG[h.kind] ?? { bg: '#f5f2ea', fg: '#7d6a5b' }
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, background: t.bg, borderRadius: 7, padding: '7px 9px' }}>
+                    <span onClick={() => open(h.kind === '간지복음' ? '복음' : h.kind)}
+                      style={{ fontSize: 9.5, fontWeight: 700, color: t.fg, background: '#fff', borderRadius: 5, padding: '1px 6px', flexShrink: 0, cursor: 'pointer' }}>
+                      {h.kind}
+                    </span>
+                    <span style={{ fontSize: 11.5, color: '#3a2e28', lineHeight: 1.6 }}>
+                      {h.group && <b>{h.group}</b>}{h.group ? ' — ' : ''}
+                      {h.seats.join(' · ')}
+                      {h.hwaEl && <span style={{ color: '#7d6a5b' }}> → {h.hwaEl}로 화함</span>}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          <div style={{ marginTop: 11, paddingTop: 9, borderTop: '0.5px solid #f0e0d5', fontSize: 10, color: '#8a7565', lineHeight: 1.75 }}>
+            ※ 위 「형충회합」 표는 <b>원국 네 지지끼리만</b> 봅니다. 이 칸은 운을 얹어 <b>새로 생긴 것만</b> 모은 거예요.<br />
+            ※ 삼합·방합은 세 글자가 다 모여야 하므로 <b>한 줄로 묶어</b> 보여드려요. 운끼리(대운↔세운)의 관계는 빼두었어요.
+          </div>
+        </div>
+      )}
 
       {/* ⑦ 공망 두 기준 */}
       <div style={card}>

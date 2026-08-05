@@ -56,6 +56,14 @@ interface Props {
    *   ⚠️ 기본값이 'all' 이라 이 prop 을 안 넘기는 기존 화면은 하나도 안 바뀝니다.
    */
   mode?: 'all' | 'daeunOnly' | 'seyunOnly'
+  /**
+   * ★2026-08-05 (46부 14차) — 지금 «고른» 대운·세운을 밖으로 알려 줍니다.
+   *   전문가 상세의 「운이 원국을 건드리는 자리」가 이 값을 받아 씁니다.
+   *   ⚠️ 안 넘겨도 됩니다. 안 넘기면 아무 일도 일어나지 않습니다.
+   *      (공용 부품에 값을 더할 때는 기본값을 둔다 — 45부 교훈)
+   */
+  onPick?: (v: { daeun: { stem: string; branch: string; age: number } | null
+                 seyun: { stem: string; branch: string; year: number } | null }) => void
 }
 
 /** 등급 배지 색 — 겁주지 않는 결로 (교훈 AX) */
@@ -88,7 +96,7 @@ interface Cell {
 
 export default function UnseFlow(props: Props) {
   const { solarYear, solarMonth, solarDay, monthGanji, yearStem, dayStem, gender, birthYear, currentYear,
-          myMonthBranch = '', myDayBranch = '', list, hourIdx = null, mode = 'all' } = props
+          myMonthBranch = '', myDayBranch = '', list, hourIdx = null, mode = 'all', onPick } = props
 
   const [dayunList, setDayunList] = useState<DayunItem[]>([])
   const [selDaeun, setSelDaeun] = useState<number | null>(null)   // 대운 index
@@ -98,6 +106,29 @@ export default function UnseFlow(props: Props) {
   /** 144칸 자세히 보기 — 어느 칸을 눌렀나 */
   const [detail, setDetail] = useState<{ label: string; stem: string; branch: string } | null>(null)
   const openTerm = (v?: string) => { if (v && SAJU_TERMS[v]) setTerm(v) }
+
+  // ★고른 대운·세운을 밖으로 알린다 — 2026-08-05 (46부 14차)
+  //   전문가 상세의 「운이 원국을 건드리는 자리」가 이 값을 받아 씁니다.
+  //   ⚠️⚠️ ★반드시 «이른 return 앞» 에 두어야 합니다.
+  //      뒤에 두면 「Hook 이 조건부로 불린다」로 eslint 가 막습니다 (실제로 겪었습니다).
+  //   ⚠️ onPick 을 안 넘기면 아무 일도 하지 않습니다.
+  const pickedDaeunItem = selDaeun !== null ? (dayunList[selDaeun] ?? null) : null
+  useEffect(() => {
+    if (!onPick) return
+    let seyun: { stem: string; branch: string; year: number } | null = null
+    if (pickedDaeunItem && selYear !== null && dayStem) {
+      const y0 = birthYear + pickedDaeunItem.age
+      const hit = calcSeyunList(dayStem, y0 + 5).find(x => x.year === selYear)
+      if (hit) seyun = { stem: hit.cheongan, branch: hit.jiji, year: hit.year }
+    }
+    onPick({
+      daeun: pickedDaeunItem
+        ? { stem: pickedDaeunItem.cheongan, branch: pickedDaeunItem.jiji, age: pickedDaeunItem.age }
+        : null,
+      seyun,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickedDaeunItem?.age, pickedDaeunItem?.cheongan, pickedDaeunItem?.jiji, selYear, dayStem, birthYear])
 
   // 대운 로드 — 밖에서 넘겨받았으면 그걸 쓰고, 아니면 API 를 부른다
   useEffect(() => {

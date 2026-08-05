@@ -455,3 +455,125 @@ export function branchRelationLabels(a: string, b: string, all?: string[]): stri
   }
   return Array.from(new Set(out))
 }
+
+// ═══════════════════════════════════════════════════════════
+// 5. ★운(대운·세운) 과 원국의 만남 — 2026-08-05 (46부 14차)
+// ═══════════════════════════════════════════════════════════
+//
+//  ★대표님 지시 — 「전문가용 토글을 켜면 보여 줄 수 있는 것은 최대한 보여 주자」
+//
+//  [★교재 근거]  hapMeaning.CHEONGAN_HAP_NOTE —
+//    「천간합은 원국뿐 아니라 ★운로(대운·세운)의 길흉에도 크게 미치므로
+//      소홀히 보면 안 됩니다」
+//
+//  ⚠️⚠️ ★judgeCheonganHap 을 «그대로 쓰지 않습니다». 까닭이 있습니다 —
+//     그 함수는 sorted() 로 «년-월-일-시» 차례를 세우고
+//     「이웃한 자리끼리만 성립」(hi-lo>1 이면 불성립)을 잽니다. 교재 78쪽 규칙입니다.
+//     ⇒ 운은 원국의 «옆칸» 이 아닙니다. 다른 축입니다.
+//       운을 다섯째 기둥으로 끼우면 ★년주와만 이웃이 되어 «엉뚱하게» 판정됩니다.
+//     ⇒ 그래서 운↔원국은 «두 글자만» 보는 이 함수로 따로 냅니다.
+//     ⚠️ 운 천간합에 «이웃 규칙» 을 적용할지는 유파가 갈립니다.
+//        ★여기서는 적용하지 «않습니다» (운은 자리 개념이 다르므로).
+//        연재쌤 확인이 오면 바꾸십시오.
+//
+//  ⚠️⚠️ ★원국만의 판정을 «덮어쓰면 안 됩니다».
+//     삼합·방합은 세 글자가 다 있어야 성립하므로, 운을 끼우면
+//     «원국 둘 사이» 도 새로 삼합으로 잡힙니다. 실측으로 확인했습니다 —
+//       원국 시未 일戌 월午 년丑 에 대운 寅 을 얹으면
+//       ★「일戌-월午 삼합」이 새로 생깁니다 (원국만 볼 때는 없던 것).
+//     ⇒ 부르는 쪽이 «원국만» 과 «운을 얹은 것» 을 ★두 번 돌려
+//       «새로 생긴 것만» 골라 내야 합니다. 아래 unMeetsWongook 이 그렇게 합니다.
+
+/** 두 천간이 합인가 — 자리(이웃) 는 보지 않는다 */
+export function cheonganHapPair(a: string, b: string): { key: string; hwaEl: Ohaeng } | null {
+  if (!a || !b) return null
+  for (const row of CHEONGAN_HAP) {
+    const [x, y] = row.chars
+    if ((a === x && b === y) || (a === y && b === x)) return { key: row.key, hwaEl: row.result[0] }
+  }
+  return null
+}
+
+export interface UnHit {
+  /** '삼합' | '방합' | '육합' | '충' | '원진' | '천간합' | '복음' | '간지복음' */
+  kind: string
+  /** 삼합/방합이면 세 글자 — 예 '寅午戌'. 그 밖은 빈 문자열 */
+  group: string
+  /** 걸린 자리들 — 예 ['일지 戌', '월지 午', '대운 寅'] */
+  seats: string[]
+  /** 합화 오행 (천간합일 때만) */
+  hwaEl?: Ohaeng
+}
+
+/**
+ * ★고른 운(대운·세운…)이 원국을 «새로» 건드리는 자리를 냅니다.
+ *
+ * @param wongook  원국 네 기둥
+ * @param uns      얹을 운들 — pillar 에 '대운'·'세운' 처럼 이름을 넣으십시오
+ *
+ * ★규칙 셋 (되돌리지 마십시오)
+ *   ① 원국만으로 한 번, 운을 얹어 한 번 — ★«새로 생긴 것만» 냅니다.
+ *   ② ★운끼리(대운↔세운)의 관계는 «뺍니다». 원국과 무관한 줄이 섞이면 안 됩니다.
+ *   ③ 삼합·방합은 ★«한 줄로 묶습니다» (쌍 셋으로 흩지 않습니다). 대표님 확정.
+ */
+export function unMeetsWongook(wongook: Pill[], uns: Pill[]): UnHit[] {
+  const seatOf = (p: Pill) => {
+    const n = GAN_NAME[p.pillar]
+    return n ? `${n.replace('간', '지')} ${p.branch}` : `${p.pillar} ${p.branch}`
+  }
+  const seatStem = (p: Pill) => {
+    const n = GAN_NAME[p.pillar]
+    return n ? `${n} ${p.stem}` : `${p.pillar} ${p.stem}`
+  }
+  const all = [...wongook, ...uns]
+  const allB = all.map(p => p.branch).filter(Boolean)
+  const baseB = wongook.map(p => p.branch).filter(Boolean)
+  const isUn = (i: number) => i >= wongook.length
+
+  const out: UnHit[] = []
+  const seen = new Set<string>()
+  const push = (h: UnHit) => {
+    const k = `${h.kind}|${h.group}|${[...h.seats].sort().join(',')}`
+    if (seen.has(k)) return
+    seen.add(k); out.push(h)
+  }
+
+  // ── 삼합·방합 — ★한 줄로 묶는다 ──
+  for (const [kind, rows] of [['삼합', SAMHAP], ['방합', BANGHAP]] as const) {
+    for (const r of rows) {
+      const nowOk = r.chars.every(c => allB.includes(c))
+      const wasOk = r.chars.every(c => baseB.includes(c))
+      if (!nowOk || wasOk) continue          // ★운이 «새로» 완성시킨 것만
+      const seats = all.filter(p => r.chars.includes(p.branch)).map(seatOf)
+      push({ kind, group: r.chars.join(''), seats })
+    }
+  }
+
+  // ── 육합·충·원진 · 복음 — 운 ↔ 원국 «두 글자» 씩 ──
+  for (let i = 0; i < all.length; i++) {
+    for (let j = i + 1; j < all.length; j++) {
+      if (isUn(i) === isUn(j)) continue      // ★원국끼리·운끼리는 안 본다
+      const a = all[i], b = all[j]
+      if (!a.branch || !b.branch) continue
+      if (YUKHAP_PAIR[a.branch] === b.branch) push({ kind: '육합', group: '', seats: [seatOf(a), seatOf(b)] })
+      if (JIJI_CHUNG[a.branch] === b.branch) push({ kind: '충', group: '', seats: [seatOf(a), seatOf(b)] })
+      if (WONJIN[a.branch] === b.branch) push({ kind: '원진', group: '', seats: [seatOf(a), seatOf(b)] })
+      // ★복음(伏吟) — 같은 글자가 겹치는 것.
+      //   근거: lib/saju/jijiGrade.ts 「같은 글자가 중복되면 복음이라 한다」
+      //   ⚠️ 간지가 통째로 같으면 «간지복음» 으로 따로 냅니다. 더 무겁게 봅니다.
+      if (a.branch === b.branch) {
+        const same = a.stem && a.stem === b.stem
+        // ★간지복음은 «기둥 이름» 으로 적습니다 — 「월주 丙午」 (「월간 丙午」가 아닙니다)
+        const seatPillar = (p: Pill) => `${p.pillar} ${p.stem}${p.branch}`
+        push({
+          kind: same ? '간지복음' : '복음', group: '',
+          seats: same ? [seatPillar(a), seatPillar(b)] : [seatOf(a), seatOf(b)],
+        })
+      }
+      // ── 천간합 ──
+      const ch = cheonganHapPair(a.stem, b.stem)
+      if (ch) push({ kind: '천간합', group: ch.key, seats: [seatStem(a), seatStem(b)], hwaEl: ch.hwaEl })
+    }
+  }
+  return out
+}
