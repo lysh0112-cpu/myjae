@@ -144,7 +144,6 @@ function PickInner() {
       <PickDateV7
         result={result}
         onPickHour={handlePick}
-        onConsult={() => router.push('/consultants')}
       />
     </main>
   )

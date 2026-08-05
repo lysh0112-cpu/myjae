@@ -18,6 +18,7 @@ import {
   type OptKey, type OptState,
 } from '../lib/babyFilterV7'
 import type { DayOption, HourOption, RecommendV7Result } from '../lib/recommendV7'
+import ConsultButton from '@/app/components/common/ConsultButton'
 
 const C = {
   bg: '#FDF6F0', card: '#FFFBF7', line: '#9c7a58', ink: '#3A2E28',
@@ -96,10 +97,19 @@ const FIXED_CHIPS: { key: string; label: string; hanja: string }[] = [
 interface Props {
   result: RecommendV7Result
   onPickHour?: (day: DayOption, hour: HourOption) => void
-  onConsult?: () => void
+  /**
+   * ⛔ 2026-08-05 (47부 15차) — «걷어냈습니다». [대표님 지시]
+   *   이 자리는 ★/consultants (가짜 상담사 목업)로 가는 길이었습니다.
+   *   지금은 화면 맨 아래 ★공용 상담 카드가 그 일을 합니다.
+   *   ⚠️ /consultants 화면 «자체» 는 지우지 «않았습니다» (45부 방식 — 길만 끊음).
+   *      들어오는 길이 «여기 하나뿐» 이었으므로 이제 아무도 안 갑니다.
+   *   ⛔ 되살리시려면 ★그 화면의 목업(박진수·정도운 등)을 «진짜 상담사» 로
+   *      갈아 끼우고 「상담 신청하기」에 onClick 을 «먼저» 붙이십시오.
+   *      지금 그대로 되살리면 손님이 ★없는 사람과 없는 가격을 봅니다.
+   */
 }
 
-export default function PickDateV7({ result, onPickHour, onConsult }: Props) {
+export default function PickDateV7({ result, onPickHour }: Props) {
   const [on, setOn] = useState<OptState>(EMPTY_OPT)
   const [help, setHelp] = useState<string | null>(null)
 
@@ -300,21 +310,15 @@ export default function PickDateV7({ result, onPickHour, onConsult }: Props) {
             <p style={{ margin: 0 }}>
               조건을 <b style={{ color: C.brand }}>하나만 꺼</b> 보시면 다시 나타납니다.
             </p>
-            <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${C.line}`, textAlign: 'left' }}>
-              <div style={{ fontSize: 13.5, fontWeight: 700, color: C.brand, marginBottom: 6 }}>
-                전문가와 상담해 보세요
-              </div>
-              <p style={{ fontSize: 12.5, lineHeight: 1.8, color: C.sub, margin: '0 0 13px' }}>
-                조건을 줄여도 마음에 드는 날이 없거나, 여러 조건을 함께 살펴야 할 것 같다면
-                명리 선생님과 직접 이야기해 보시는 방법이 있어요. 사주는 조건을 하나씩
-                맞춰가는 것보다, 전체를 함께 놓고 보아야 할 때가 많습니다.
-              </p>
-              <button onClick={onConsult} style={{
-                width: '100%', padding: 12, borderRadius: 11, border: `1px solid ${C.accent}`,
-                background: C.soft, color: C.brand, fontSize: 13.5, fontWeight: 700,
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}>상담 알아보기</button>
-            </div>
+            {/* ★2026-08-05 (47부 15차) — 「상담 알아보기」를 걷어냈습니다. [대표님 지시]
+                [무엇이 문제였나]  이 버튼이 ★/consultants 로 갔습니다.
+                  그 화면은 ★박진수·정도운·한동원 같은 «가짜 상담사» 목업이고
+                  「상담 신청하기」에 onClick 도 «없어» 눌러도 아무 일이 안 났습니다.
+                  진짜 상담사(DB)와는 아무 상관이 없었습니다.
+                ⚠️ 그리고 이 자리는 ★「고를 수 있는 날이 없을 때」만 나왔습니다.
+                ⇒ 이제 ★화면 맨 아래 공용 상담 카드가 «언제나» 있습니다. 그쪽으로 모았습니다.
+                ⚠️ 여기 있던 안내 문구(「조건을 줄여도 마음에 드는 날이 없거나…」)도
+                   함께 걷었습니다. ★되살리기를 원하시면 말씀해 주십시오. */}
           </div>
         )}
       </div>
@@ -392,6 +396,18 @@ export default function PickDateV7({ result, onPickHour, onConsult }: Props) {
           </div>
         )
       })()}
+
+      {/* ★2026-08-05 (47부 15차) — 전문가 상담 [대표님 지시]
+          ★손님이 출산택일을 «처음 볼 때» 밟는 화면은 여기(pick)입니다.
+            birth-timing/result 는 ★보관함에서 다시 볼 때만 씁니다
+            (birth-timing/page.tsx:158 에 앞 세션이 길을 끊어 둔 기록이 있습니다).
+          ⇒ 그래서 result 에만 카드가 있으면 ★손님은 «못 만납니다». 여기에도 답니다.
+          ⚠️ priceKey='birth' — result 와 «같은 줄» 을 씁니다. 관리자 토글 하나로 함께 움직입니다.
+          ⛔ 한쪽만 다른 price_key 로 바꾸지 마십시오. 토글이 갈라집니다. */}
+      <div style={{ marginTop: 16 }}>
+        <ConsultButton priceKey="birth" mode="birth" />
+      </div>
+
     </div>
   )
 }
