@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { ConsultantFormData } from './ConsultantForm'
 
 // 상담사별 "아직 살아 있는 예약"(완료도 취소도 안 된 건)
@@ -26,6 +27,7 @@ const COLUMNS = [
 type ColKey = typeof COLUMNS[number]['key']
 
 export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, onToggleActive, onSaveSort }: Props) {
+  const router = useRouter()
   const [cols, setCols] = useState<Record<ColKey, boolean>>({
     email: false, phone: false, specialty: true,
     region: false, bank: false, commission: false,
@@ -113,9 +115,15 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, 
           style={{ background: 'rgba(60,52,137,0.3)', color: '#FAC775' }}>
           <span style={{ width: 92, textAlign: 'center' }}>순번</span>
           <span style={{ width: 34 }}></span>
-          <span style={{ flex: 1 }}>이름</span>
+          <span style={{ flex: 1, minWidth: 80 }}>이름</span>
           <span style={{ width: 210 }}>진행중 예약</span>
           <span style={{ width: 50, textAlign: 'center' }}>활성</span>
+          {/* ★2026-08-05 (47부 4차) — 「화면」 칸 [대표님 지시]
+              「관리자 화면 상담사목록에 버튼란을 하나 만들어서
+                상담사를 클릭하면 해당 상담사 관리자 화면으로 가게 해줘」
+              ⚠️ 전에도 「🔮 화면 보기」가 있었지만 ★이름을 눌러 «펼쳐야» 나오는
+                 상세 안에 숨어 있어 목록에서는 안 보였습니다. */}
+          <span style={{ width: 64, textAlign: 'center' }}>화면</span>
           {cols.email && <span style={{ width: 130 }}>이메일</span>}
           {cols.phone && <span style={{ width: 100 }}>전화번호</span>}
           {cols.specialty && <span style={{ width: 90 }}>전문분야</span>}
@@ -155,7 +163,7 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, 
               </div>
               {/* 이름 (누르면 펼침) */}
               <button type="button" onClick={() => setOpenId(openId === c.id ? null : c.id)}
-                style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#fff', cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}>{c.name}</button>
+                style={{ flex: 1, minWidth: 80, fontSize: 13, fontWeight: 700, color: '#fff', cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}>{c.name}</button>
 
               {/* ★진행중 예약 — 완료도 취소도 안 된 건. 있으면 삭제할 수 없다. (2026-07-21 2차) */}
               <span style={{ width: 210, fontSize: 11.5, lineHeight: 1.4 }}>
@@ -180,6 +188,25 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, 
                     ? { background: 'rgba(76,175,80,0.2)', color: '#81c784' }
                     : { background: 'rgba(255,100,100,0.2)', color: '#ff6464' }}>
                   {c.active ? '활성' : '비활'}
+                </button>
+              </span>
+              {/* ★2026-08-05 (47부 4차) — 목록에서 바로 그 상담사 화면으로 [대표님 지시]
+                  ★from=admin 을 붙입니다 — 상담사 화면의 뒤로가기가 「← 관리자 화면」이 됩니다.
+                  ★같은 탭으로 갑니다(router.push). 아래 상세 안 버튼은 새 탭(window.open)이라
+                    다릅니다. 여기는 뒤로가기가 있어 같은 탭이 오가기 편합니다.
+                  [대비 실측]  글자 #7fa8ff on 버튼바탕 #29313f = 5.57:1 (기준 4.5)
+                    ⚠️ 버튼 «면» 은 행과 ★1.26:1 이라 «안 보입니다». 그래서 테두리를 넣었습니다 —
+                       rgba(127,168,255,0.55) → 행과 ★3.06:1 (선 기준 3.0)
+                    ⛔ 테두리를 지우거나 옅게 하지 마십시오. 버튼이 사라져 보입니다. */}
+              <span style={{ width: 64, textAlign: 'center' }}>
+                <button type="button"
+                  onClick={() => router.push(`/manseryeok/consultant?consultantId=${c.id}&from=admin`)}
+                  title={`${c.name} 선생님의 상담사 화면으로 갑니다 (점검·대리용)`}
+                  className="rounded-lg text-xs font-bold"
+                  style={{ padding: '5px 8px', background: 'rgba(100,150,255,0.15)', color: '#7fa8ff',
+                    border: '1px solid rgba(127,168,255,0.55)', cursor: 'pointer', whiteSpace: 'nowrap',
+                    fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}>
+                  🔮 화면
                 </button>
               </span>
               {cols.email && <span style={{ width: 130, fontSize: 12, color: '#b0aec8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email || '-'}</span>}
