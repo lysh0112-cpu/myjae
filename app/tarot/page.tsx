@@ -2,6 +2,7 @@
 import { Suspense, useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import ConsultButton from '@/app/components/common/ConsultButton'
 import {
   saveTarotRecord, getTarotRecord,
   type TarotCategory, type TarotSavedCard,
@@ -623,6 +624,35 @@ function TarotInner() {
             </button>
           </div>
 
+          {/* ★2026-08-05 (47부 26차) — 전문가 상담 [대표님 지시]
+              「타로 상담은 타로결과화면 맨하단 상담사 연결을 넣어줘…토글로 끄면 되니까」
+
+              ⚠️ 6차에 넣었다가 7차에 «걷어냈던» 자리입니다.
+                 그때는 대표님이 정하신 «아홉 서비스» 에 타로가 없었습니다.
+                 ⇒ 이제 ★consult_prices 의 tarot 줄을 «살려 쓰기로» 하셨습니다.
+
+              ★자리 — 음악 크레디트 «위» 입니다 [대표님 지시].
+                ⛔ 크레디트가 «맨 아래» 에 남아야 합니다. 순서를 바꾸지 마십시오.
+                   CC BY 4.0 은 만든 이를 «보이게» 밝혀야 하는 라이선스입니다.
+                   ⚠️ 크레디트는 46부 18차에 놓은 자리 그대로입니다. 건드리지 않았습니다.
+
+              ⚠️ priceKey='tarot' — ★관리자 「💰 가격 관리 → 전문가 상담 가격」의
+                 「타로 상담」 줄이 그대로 쓰입니다. ★토글로 끄면 이 카드가 통째로 숨습니다.
+              ⚠️⚠️ 타로는 관리자 화면 «두 곳» 에 나옵니다 —
+                 tarot_prices     타로 자체 가격 · 무료 횟수 (뽑기 값)
+                 consult_prices   ★타로 «상담» 가격 (이 카드)
+                 ★둘은 «다른» 것입니다. 헷갈리지 마십시오. */}
+          {interp && (
+            <ConsultButton
+              priceKey="tarot"
+              mode="tarot"
+              payload={() => ({
+                aiAnalysis: [interp.title, interp.summary, interp.advice]
+                  .filter(Boolean).join('\n\n') || undefined,
+              })}
+            />
+          )}
+
           {/* ⛔⛔ ★음악 크레디트 — 2026-08-05 (46부 18차). «지우지 마십시오».
               CC BY 4.0 은 「만든 이를 보이게 밝혀야」 하는 라이선스입니다.
               지우면 ★라이선스 위반입니다. (못 적을 자리면 유료 라이선스를 사야 합니다)
@@ -636,6 +666,7 @@ function TarotInner() {
               creativecommons.org/licenses/by/4.0
             </a>
           </div>
+
         </div>
       )}
     </main>
