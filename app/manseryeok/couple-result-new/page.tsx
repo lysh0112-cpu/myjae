@@ -69,6 +69,7 @@ import type { SavedInputData } from '@/lib/saju/savedPeople'
 import ConsultButton from '@/app/components/common/ConsultButton'
 import CopyTextButton from '@/app/components/common/CopyTextButton'
 import { withNim } from '@/lib/saju/honorific'
+import { LINE_OUTER } from '@/lib/ui/line'
 
 type Mode = 'couple' | 'married'
 
@@ -209,7 +210,7 @@ function CoupleResultInner() {
         <div style={{
           position: 'sticky', top: 0, zIndex: 5,
           background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
-          borderBottom: '0.5px solid #9c7a58', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
+          borderBottom: LINE_OUTER, padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
         }}>
           {/* ★질문 고르기 화면의 뒤로가기 — 사람 고르는 입력 화면으로.
               router.back() 은 진입 경로에 따라 홈으로 튀었다. (2026-07-21) */}
@@ -223,9 +224,9 @@ function CoupleResultInner() {
         </div>
 
         {/* 전체 선택/해제 */}
-        <div style={{ padding: '10px 14px', display: 'flex', gap: 8, borderBottom: '0.5px solid #b99a7d' }}>
-          <button onClick={selectAll} style={{ flex: 1, height: 34, background: '#fff3e9', border: '0.5px solid #ca946c', borderRadius: 9, color: '#96502e', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>✓ 전체 선택</button>
-          <button onClick={clearAll} style={{ flex: 1, height: 34, background: '#fff', border: '0.5px solid #9c7a58', borderRadius: 9, color: '#5c3a1e', fontSize: 12, cursor: 'pointer' }}>전체 해제</button>
+        <div style={{ padding: '10px 14px', display: 'flex', gap: 8, borderBottom: LINE_OUTER }}>
+          <button onClick={selectAll} style={{ flex: 1, height: 34, background: '#fff3e9', border: LINE_OUTER, borderRadius: 9, color: '#96502e', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>✓ 전체 선택</button>
+          <button onClick={clearAll} style={{ flex: 1, height: 34, background: '#fff', border: LINE_OUTER, borderRadius: 9, color: '#5c3a1e', fontSize: 12, cursor: 'pointer' }}>전체 해제</button>
         </div>
 
         {/* 대분류 목록 */}
@@ -270,10 +271,10 @@ function CoupleResultInner() {
             </div>
             {directQ ? (
               <div>
-                <div style={{ background: '#fff', border: '0.5px solid #9c7a58', borderRadius: 10, padding: '10px 12px', fontSize: 12.5, color: '#3a2e28', lineHeight: 1.5 }}>{directQ.question}</div>
+                <div style={{ background: '#fff', border: LINE_OUTER, borderRadius: 10, padding: '10px 12px', fontSize: 12.5, color: '#3a2e28', lineHeight: 1.5 }}>{directQ.question}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
                   <span style={{ fontSize: 11, color: '#4a9450', flex: 1 }}>✓ 아래 풀이에 함께 담겨요</span>
-                  <button type="button" onClick={cancelDirect} style={{ fontSize: 11, color: '#5c3a1e', border: '0.5px solid #ca946c', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', background: '#fff', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>지우고 다시 쓰기</button>
+                  <button type="button" onClick={cancelDirect} style={{ fontSize: 11, color: '#5c3a1e', border: LINE_OUTER, borderRadius: 8, padding: '4px 10px', cursor: 'pointer', background: '#fff', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>지우고 다시 쓰기</button>
                 </div>
               </div>
             ) : (
@@ -281,7 +282,7 @@ function CoupleResultInner() {
                 <textarea value={directText}
                   onChange={(e) => { setDirectText(e.target.value); if (directHint) setDirectHint('') }}
                   placeholder="두 사람 궁합에 대해 궁금한 걸 자유롭게 적어보세요"
-                  style={{ width: '100%', boxSizing: 'border-box', minHeight: 52, background: '#fff', border: '0.5px solid #9c7a58', borderRadius: 10, padding: '9px 12px', fontSize: 12.5, color: '#3a2e28', resize: 'none', fontFamily: 'inherit', outline: 'none', lineHeight: 1.5 }} />
+                  style={{ width: '100%', boxSizing: 'border-box', minHeight: 52, background: '#fff', border: LINE_OUTER, borderRadius: 10, padding: '9px 12px', fontSize: 12.5, color: '#3a2e28', resize: 'none', fontFamily: 'inherit', outline: 'none', lineHeight: 1.5 }} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
                   <span style={{ fontSize: 10.5, color: directHint ? '#c8783c' : '#c5a590', flex: 1, lineHeight: 1.5 }}>{directHint || '위에서 고른 질문들과 함께 풀이돼요.'}</span>
                   <button type="button" onClick={confirmDirect} style={{ fontSize: 12, color: '#fff', background: directText.trim() ? '#b46e46' : '#d8bfae', borderRadius: 8, padding: '6px 14px', cursor: directText.trim() ? 'pointer' : 'default', flexShrink: 0, border: 'none', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>담기</button>
@@ -298,7 +299,7 @@ function CoupleResultInner() {
             {(nPicked + (directQ ? 1 : 0)) > 0 ? `${nPicked + (directQ ? 1 : 0)}개 질문으로 궁합 풀이 받기` : '궁금한 것을 골라주세요'}
           </button>
           <button onClick={() => setSubmitted([])}
-            style={{ width: '100%', height: 42, background: 'transparent', border: '0.5px solid #bc9a7f', borderRadius: 12, color: '#96502e', fontSize: 13, cursor: 'pointer', marginTop: 8 }}>
+            style={{ width: '100%', height: 42, background: 'transparent', border: LINE_OUTER, borderRadius: 12, color: '#96502e', fontSize: 13, cursor: 'pointer', marginTop: 8 }}>
             그냥 전체 궁합 총평 볼래요
           </button>
         </div>
@@ -1032,7 +1033,7 @@ function CoupleResultView({
       <div style={{
         position: 'sticky', top: 0, zIndex: 5,
         background: 'rgba(250,250,248,0.96)', backdropFilter: 'blur(10px)',
-        borderBottom: '0.5px solid #9c7a58', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
+        borderBottom: LINE_OUTER, padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
         <div style={{ fontSize: 15, fontWeight: 500, color: '#3a2e28' }}>{info.label} 결과</div>
@@ -1104,7 +1105,7 @@ function CoupleResultView({
                여기서는 생성 중 로딩 표시만 남긴다. (통변 카드 중복 제거) */}
         {SHOW_AUTO_TONGBYEON && tongLoading && (
           <div style={{ marginTop: 10 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: 24, color: '#5c3a1e', fontSize: 13, background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: 24, color: '#5c3a1e', fontSize: 13, background: '#FFFBF7', border: LINE_OUTER, borderRadius: 12 }}>
               <span style={{ fontSize: 28, display: 'inline-block', animation: 'spin 1.1s linear infinite', color: '#8f3d0e' }}>✦</span>
               <span>두 사람의 인연을 찬찬히 풀이하는 중이에요…</span>
               <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
@@ -1214,7 +1215,7 @@ function CoupleResultView({
         {/* 참고용 안내 — 결과에 과몰입하지 않도록 다정하게 */}
         <div style={{
           marginTop: 18, padding: '13px 14px', borderRadius: 11,
-          background: '#faf3ec', border: '0.5px solid #9c7a58',
+          background: '#faf3ec', border: LINE_OUTER,
           fontSize: 11.5, lineHeight: 1.7, color: '#5c3a1e', textAlign: 'center',
         }}>
           이 풀이는 두 분을 더 깊이 이해하기 위한 다정한 참고예요.<br />

@@ -36,6 +36,7 @@
 
 import { useState } from 'react'
 import type { CoupleJudgeV1, CategoryResult, Stars } from '@/lib/saju/coupleFilterV1'
+import { LINE_OUTER } from '@/lib/ui/line'
 
 const GOLD = '#c08a2e'
 const GOLD_DIM = '#e5d8bf'
@@ -59,7 +60,7 @@ function Card({ cat, extra, tong }: { cat: CategoryResult; extra?: React.ReactNo
   const [open, setOpen] = useState(false)
   return (
     <div style={{
-      background: '#fff', border: '0.5px solid #eee2d6', borderRadius: 13,
+      background: '#fff', border: LINE_OUTER, borderRadius: 13,
       padding: '13px 14px', marginBottom: 7,
     }}>
       {/* 제목 + 별 (양방향이면 별은 아래 dual 로 간다) */}
@@ -83,7 +84,7 @@ function Card({ cat, extra, tong }: { cat: CategoryResult; extra?: React.ReactNo
 
       {/* ★2026-07-25 — 이 주제의 AI 통변 해설 (접기). 판정 아래에 그 주제 풀이가 붙는다. */}
       {tong && tong.trim() && (
-        <div style={{ marginTop: 10, borderTop: '0.5px solid #f2e8dd', paddingTop: 9 }}>
+        <div style={{ marginTop: 10, borderTop: LINE_OUTER, paddingTop: 9 }}>
           <button
             onClick={() => setOpen(o => !o)}
             style={{
@@ -128,7 +129,7 @@ function Block({ kind, title, items }: {
   const color = kind === 'good' ? '#4f7d63' : kind === 'watch' ? '#b06a3c' : '#8a7063'
   return (
     <div style={{
-      background: '#fff', border: '0.5px solid #eee2d6', borderRadius: 13,
+      background: '#fff', border: LINE_OUTER, borderRadius: 13,
       padding: '13px 14px', marginBottom: 7, position: 'relative', overflow: 'hidden',
     }}>
       <span style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 2.5, background: color }} />
@@ -189,7 +190,7 @@ export default function CoupleJudgeCard({ judge, needExtra, tongByKey, tongIntro
       {/* 여는말 통변 — 두 사람 소개 (카드 위 독립) */}
       {tongIntro && tongIntro.trim() && (
         <div style={{
-          background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 13,
+          background: '#FFFBF7', border: LINE_OUTER, borderRadius: 13,
           padding: '14px 15px', marginBottom: 12,
           fontSize: 12.5, color: '#5c3a1e', lineHeight: 1.85, letterSpacing: '-.01em', whiteSpace: 'pre-wrap',
         }}>{tongIntro.trim()}</div>
@@ -223,7 +224,7 @@ export default function CoupleJudgeCard({ judge, needExtra, tongByKey, tongIntro
       {/* ★2026-07-25 — 맺는말 통변 (카드 아래 독립) */}
       {tongOutro && tongOutro.trim() && (
         <div style={{
-          marginTop: 14, background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 13,
+          marginTop: 14, background: '#FFFBF7', border: LINE_OUTER, borderRadius: 13,
           padding: '14px 15px',
           fontSize: 12.5, color: '#5c3a1e', lineHeight: 1.85, letterSpacing: '-.01em', whiteSpace: 'pre-wrap',
         }}>{tongOutro.trim()}</div>

@@ -21,11 +21,19 @@ import { splitCardText } from '@/lib/saju/premium/splitCardText'
 import { buildTongbyeonPrompt, type TongbyeonInput } from '@/lib/saju/tongbyeonPrompt'
 import type { SajuQuestion } from '@/lib/saju/questions'
 import { withNim } from '@/lib/saju/honorific'
+import { LINE_OUTER } from '@/lib/ui/line'
 
 const C = {
   cardBg: '#FFFBF7',
   card: '#fff',
-  border: '#f0e0d5',
+  // ★2026-08-05 (47부 23차) — 통변 카드 선을 ★선 부품으로 옮겼습니다. [대표님 지시]
+  //   [무엇이 문제였나]  대표님 — 「통변들 둘레 색상이 다른 화면들과 다르잖아」
+  //     궁합·사주 화면의 «다른 카드» 는 #9c7a58(3.93:1)인데
+  //     ★통변 카드만 #f0e0d5(1.29:1)라 «둘레가 없는 것처럼» 보였습니다.
+  //   ⚠️ 이 값(border)은 아직 «몇 군데» 가 씁니다 — 아래 LINE_OUTER 로 갈아 끼운 자리
+  //      말고 남은 것이 있으면 그것도 옮기십시오.
+  //   ⚠️ 이 부품은 ★궁합 · 사주(만세력) · 합격운 «셋» 이 씁니다. 함께 바뀝니다.
+  border: '#f0e0d5',   // ⚠️ 남아 있으면 «옛 값». 새로 쓰지 마십시오.
   divider: '#f5e5da',
   point: '#c8783c',
   brown: '#b46e46',
@@ -236,8 +244,8 @@ export default function TongbyeonView({ input, questions, premium, premiumPrompt
   const effectiveOpen = loading && cards.length > 0 ? cards.length - 1 : openIdx
 
   return (
-    <div style={{ background: C.cardBg, borderRadius: 18, border: `0.5px solid ${C.border}`, overflow: 'hidden' }}>
-      <div style={{ padding: '13px 16px', borderBottom: `0.5px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+    <div style={{ background: C.cardBg, borderRadius: 18, border: LINE_OUTER, overflow: 'hidden' }}>
+      <div style={{ padding: '13px 16px', borderBottom: LINE_OUTER, display: 'flex', alignItems: 'center', gap: 10 }}>
         {onBack && <button type="button" onClick={onBack} style={{ color: C.subLight, fontSize: 18, cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>{'\u2039'}</button>}
         <div style={{ flex: 1, textAlign: 'center' }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: C.title }}>{storyTitle}</div>
@@ -261,7 +269,7 @@ export default function TongbyeonView({ input, questions, premium, premiumPrompt
                 s2 && s2.match.some(w => c.title.replace(/\s/g, '').includes(w.replace(/\s/g, ''))))
               return hit ? <div style={{ marginBottom: 8 }}>{hit.node}</div> : null
             })()}
-            <div style={{ background: C.card, border: `0.5px solid ${C.border}`, borderRadius: 12, marginBottom: 8, overflow: 'hidden' }}>
+            <div style={{ background: C.card, border: LINE_OUTER, borderRadius: 12, marginBottom: 8, overflow: 'hidden' }}>
               <div
                 onClick={() => setOpenIdx(open ? -1 : i)}
                 style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '13px 14px', cursor: 'pointer' }}

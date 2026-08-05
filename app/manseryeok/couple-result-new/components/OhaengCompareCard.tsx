@@ -11,6 +11,7 @@
 import { useState } from 'react'
 import { compareOhaeng, OHAENG_ORDER, type Ohaeng } from '@/lib/saju/ohaengCompare'
 import { EL_BG } from '@/lib/saju/ohaengColor'
+import { LINE_OUTER } from '@/lib/ui/line'
 
 const EL_LABEL: Record<Ohaeng, string> = {
   목: '목 나무', 화: '화 불', 토: '토 흙', 금: '금 쇠', 수: '수 물',
@@ -188,7 +189,7 @@ export default function OhaengCompareCard({
 
 function ScoreCard({ label, value, track, fill }: { label: string; value: number; track: string; fill: string }) {
   return (
-    <div style={{ flex: 1, background: '#fff', border: '0.5px solid #9c7a58', borderRadius: 11, padding: '11px 11px' }}>
+    <div style={{ flex: 1, background: '#fff', border: LINE_OUTER, borderRadius: 11, padding: '11px 11px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 7 }}>
         <span style={{ fontSize: 11.5, color: '#96502e' }}>{label}</span>
         <span style={{ fontSize: 17, fontWeight: 500, color: fill }}>{value}%</span>
