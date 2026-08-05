@@ -831,48 +831,55 @@ function ResultNewContent() {
           </div>
         )}
 
-        {/* ⑩ 보관함 저장 상태 — 자동 저장이라 누르는 버튼이 아니다. (2026-07-21 2차)
-            [왜 자동인가] 고객이 저장을 안 누르고 나가면 돈 주고 본 결과가 사라진다.
-            실패했을 때만 [다시 저장]으로 바뀌어 눌러서 재시도할 수 있다. */}
-        {/* ★해설 복사 — 카톡 등에 붙여넣기 (공용 부품) */}
+        {/* ══════════════════════════════════════════════════════════════
+            ★2026-08-05 (47부 14차) — 「해설 복사」와 「보관함」을 «나란히». [대표님 지시]
+              「하단 해설복사 + 보관함 저장 두 버튼을 나란히 배치할 것」
+            [전]  해설 복사(가로로 꽉 · 혼자) + 저장 성공 안내 두 줄
+            [후]  📋 해설 복사  |  📜 보관함
+            ⚠️ 보관함 저장은 ★«자동» 입니다 — 「고객이 저장을 안 누르고 나가면
+               돈 주고 본 결과가 사라진다」. 그래서 «저장하는» 버튼이 아니라 ★«가는» 버튼입니다.
+            ★이 화면에는 보관함으로 가는 길이 «없었습니다». 이 버튼이 처음입니다.
+            ⚠️ 물상 화면(12차)과 «같은 꼴» 입니다. 한쪽만 바꾸지 마십시오.
+            🔴 저장 «실패» 안내는 아래에 «남겼습니다». ⛔ 그것까지 지우지 마십시오.
+            ⚠️ 높이 44px · 글자 13 — 11차에 통일한 값. ⛔ 더 줄이지 마십시오.
+            ══════════════════════════════════════════════════════════════ */}
         {!chartOnly && (
-          <CopyTextButton
-            text={tongText || savedTong}
-            label={_unse === 'daeun' ? '대운 풀이' : _unse === 'seyun' ? '연월운세 풀이' : '사주 풀이'}
-            name={personName || undefined}
-          />
+          <div style={{display:'flex', gap:'8px', marginTop:'8px'}}>
+            <div style={{flex:1, display:'flex'}}>
+              <CopyTextButton
+                text={tongText || savedTong}
+                label={_unse === 'daeun' ? '대운 풀이' : _unse === 'seyun' ? '연월운세 풀이' : '사주 풀이'}
+                name={personName || undefined}
+                inRow
+              />
+            </div>
+            <button onClick={()=>router.push('/manseryeok/saju-storage')}
+              style={{
+                flex:1, padding:'13px', borderRadius:10, background:'transparent',
+                minHeight:44, boxSizing:'border-box',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                border:'0.5px solid #d8c4b4', color:'#96502e', fontSize:13, fontWeight:500,
+                cursor:'pointer', fontFamily:'inherit',
+              }}>
+              📜 보관함
+            </button>
+          </div>
         )}
 
-        {info && !chartOnly && (saveState==='saved' || saveState==='failed') && (
+        {/* ⑩ 보관함 저장 — ★«실패했을 때만» 보입니다. 성공은 알리지 않습니다 (자동 저장). */}
+        {info && !chartOnly && saveState==='failed' && (
           <div style={{marginTop:'12px'}}>
-            {saveState==='saved' ? (
-              <>
-                <div style={{
-                  width:'100%',padding:'13px 0',borderRadius:'12px',
-                  background:'#eef5e8',color:'#4a7a3a',
-                  fontSize:'14px',fontWeight:500,textAlign:'center',
-                }}>
-                  ✓ 보관함에 저장됐어요
-                </div>
-                <div style={{fontSize:'11px',color:'#6b5340',textAlign:'center',marginTop:'7px'}}>
-                  보관함에서 언제든 다시 볼 수 있어요
-                </div>
-              </>
-            ) : (
-              <>
-                <button onClick={()=>handleSaveRecord()}
-                  style={{
-                    width:'100%',padding:'15px 0',borderRadius:'12px',border:'none',
-                    background:'#b46e46',color:'#fff',
-                    fontSize:'15px',fontWeight:600,cursor:'pointer',
-                  }}>
-                  💾 다시 저장하기
-                </button>
-                <div style={{fontSize:'11px',color:'#8f3d0e',textAlign:'center',marginTop:'7px'}}>
-                  보관함에 저장하지 못했어요. 한 번 더 눌러주세요
-                </div>
-              </>
-            )}
+            <button onClick={()=>handleSaveRecord()}
+              style={{
+                width:'100%',padding:'15px 0',borderRadius:'12px',border:'none',
+                background:'#b46e46',color:'#fff',
+                fontSize:'15px',fontWeight:600,cursor:'pointer',
+              }}>
+              💾 다시 저장하기
+            </button>
+            <div style={{fontSize:'11px',color:'#8f3d0e',textAlign:'center',marginTop:'7px'}}>
+              보관함에 저장하지 못했어요. 한 번 더 눌러주세요
+            </div>
           </div>
         )}
 

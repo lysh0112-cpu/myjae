@@ -1,0 +1,262 @@
+From 068fc56088f588f8b9cbb66a1056d91dba4bc6ed Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 13:04:00 +0000
+Subject: [PATCH 1/2] =?UTF-8?q?=EC=A7=84=EB=A1=9C=EC=A0=81=EC=84=B1=20?=
+ =?UTF-8?q?=ED=99=94=EB=A9=B4=EC=9D=B4=20=EC=95=88=20=EB=9C=A8=EB=8D=98=20?=
+ =?UTF-8?q?=EA=B2=83=20=E2=80=94=20=EA=B9=A8=EC=A7=84=20JSX=20=EC=A3=BC?=
+ =?UTF-8?q?=EC=84=9D=20=EA=B3=A0=EC=B9=A8=20(47=EB=B6=80=2013=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/manseryeok/career-result/page.tsx | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/app/manseryeok/career-result/page.tsx b/app/manseryeok/career-result/page.tsx
+index 0da9509..7bfcf3a 100644
+--- a/app/manseryeok/career-result/page.tsx
++++ b/app/manseryeok/career-result/page.tsx
+@@ -841,10 +841,10 @@ function CareerResultInner() {
+               사주는 참고입니다. 길은 본인의 노력과 의지로 얼마든지 바꿀 수 있어요.
+             </div>
+ 
+-            {{/* ★2026-08-05 (47부 9차) — 상담 카드를 «화면 맨 끝» 으로 내렸습니다. [대표님 지시]
++            {/* ★2026-08-05 (47부 9차) — 상담 카드를 «화면 맨 끝» 으로 내렸습니다. [대표님 지시]
+                 「다시그리기 보다 더 아래…맨 끝으로 옮겨줘」
+                 ⚠️ 그래서 맺음말·안내글이 상담 카드 «위» 로 올라갔습니다. 뜻한 대로입니다.
+-                ⛔ 다시 위로 올리지 마십시오. */}}
++                ⛔ 다시 위로 올리지 마십시오. */}
+             {/* ★2026-08-05 (47부 6차) — 전문가 상담 [대표님 지시]
+                 「진로적성과 타로는 넣어줘」
+                 ⚠️ priceKey='career' — ★consult_prices 표에 이 줄이 «있어야» 보입니다.
+-- 
+2.43.0
+
+
+From 07f3a9050a1eadda17367fa0992790dfd2cf4b36 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 13:25:33 +0000
+Subject: [PATCH 2/2] =?UTF-8?q?=EC=82=AC=EC=A3=BC=20=ED=99=94=EB=A9=B4=20?=
+ =?UTF-8?q?=ED=95=B4=EC=84=A4=EB=B3=B5=EC=82=AC+=EB=B3=B4=EA=B4=80?=
+ =?UTF-8?q?=ED=95=A8=20=EB=82=98=EB=9E=80=ED=9E=88=20=C2=B7=20JSX=20?=
+ =?UTF-8?q?=EC=95=88=EC=A0=84=20=EA=B7=B8=EB=AC=BC=20=EC=8B=A0=EC=84=A4=20?=
+ =?UTF-8?q?(47=EB=B6=80=2014=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ 35-verify-jsx-safe.ts              | 87 ++++++++++++++++++++++++++++++
+ app/manseryeok/result-new/page.tsx | 83 +++++++++++++++-------------
+ package.json                       |  2 +-
+ 3 files changed, 133 insertions(+), 39 deletions(-)
+ create mode 100644 35-verify-jsx-safe.ts
+
+diff --git a/35-verify-jsx-safe.ts b/35-verify-jsx-safe.ts
+new file mode 100644
+index 0000000..ea4b8a9
+--- /dev/null
++++ b/35-verify-jsx-safe.ts
+@@ -0,0 +1,87 @@
++// 35-verify-jsx-safe.ts
++// JSX 안전 그물 — 2026-08-05 (47부 13차 · 긴급)
++//
++// ══════════════════════════════════════════════════════════════════
++//  🔴 이 검사가 «왜» 생겼나
++//
++//   2026-08-05, 상담 카드를 화면 맨 끝으로 옮기면서
++//   JSX 주석을 ★{{/* … */}} 로 적었습니다. 중괄호가 «둘» 이었습니다.
++//
++//     ★잘못  {{/* 주석 */}}      ★맞음  {/* 주석 */}
++//
++//   ⇒ 진로적성 화면이 통째로 안 떴습니다 (This page couldn't load).
++//
++//  ⚠️⚠️ 무서운 것은 ★«아무도 못 잡았다» 는 점입니다 —
++//     {{/* 주석 */}} 은 ★문법이 «맞습니다».
++//       바깥 { } = JSX 식(expression)
++//       안쪽 { } = ★«빈 객체» {}   (주석은 그 안에 든 것)
++//     ⇒ tsc 통과 · eslint 통과 · verify 통과.
++//     ⇒ 「빈 객체를 자식으로 넣었다」는 ★«런타임에만» 터집니다.
++//        React: "Objects are not valid as a React child"
++//     ⇒ 게다가 이 자리에서는 구글 폰트가 막혀 ★npm run build 도 못 돌립니다.
++//     ⇒ 결국 ★대표님이 화면을 열어 보시고서야 드러났습니다.
++//
++//   ★교훈 — 사람이 눈으로 지킬 수 없는 것은 «검사가» 지켜야 합니다.
++//      (46부 1-6 「같은 지적이 세 번 나오면 그물을 치십시오」의 결.
++//       다만 이것은 «한 번 만에» 손님 화면을 죽였으므로 곧바로 칩니다.)
++//
++//   ⚠️ 스크립트로 JSX 를 «끼워 넣을» 때 특히 조심하십시오.
++//      파이썬 문자열에서 {{ }} 를 이스케이프로 쓰던 버릇이 그대로 나갑니다.
++//      (.format 이 아니라 .replace 를 쓰면 {{ 가 «글자 그대로» 남습니다)
++// ══════════════════════════════════════════════════════════════════
++
++import { readFileSync, readdirSync, statSync } from 'fs'
++import { join } from 'path'
++
++let pass = 0
++let fail = 0
++function check(ok: boolean, msg: string) {
++  if (ok) { pass++; console.log(`  ✅ ${msg}`) }
++  else { fail++; console.log(`  ❌ ${msg}`) }
++}
++
++/** app · components 아래의 .tsx 를 모두 모읍니다 */
++function collect(dir: string, out: string[] = []): string[] {
++  let entries: string[]
++  try { entries = readdirSync(dir) } catch { return out }
++  for (const name of entries) {
++    if (name === 'node_modules' || name.startsWith('.')) continue
++    const full = join(dir, name)
++    if (statSync(full).isDirectory()) collect(full, out)
++    else if (full.endsWith('.tsx')) out.push(full)
++  }
++  return out
++}
++
++const files = collect('app')
++
++console.log('\n━━ ㉟-a 🔴 JSX 주석의 «중괄호 겹침» ━━')
++{
++  // {{/*  …  */}}  — 안쪽이 «빈 객체» 가 되어 런타임에 화면이 죽습니다.
++  const bad: string[] = []
++  for (const f of files) {
++    const src = readFileSync(f, 'utf8')
++    const lines = src.split('\n')
++    lines.forEach((l, i) => {
++      if (l.includes('{{/*') || l.includes('*/}}')) bad.push(`${f}:${i + 1}`)
++    })
++  }
++  check(bad.length === 0,
++    bad.length === 0
++      ? `주석 중괄호가 겹친 곳이 «없습니다» (.tsx ${files.length}개)`
++      : `★중괄호가 겹친 곳 ${bad.length}군데 — ${bad.slice(0, 5).join(' · ')}`)
++  if (bad.length > 0) {
++    console.log('     ⚠️ {{/* … */}} 를 ★{/* … */} 로 고치십시오.')
++    console.log('     ⚠️ 그대로 배포하면 그 화면이 ★통째로 안 뜹니다 (tsc 는 통과합니다).')
++  }
++}
++
++console.log('\n━━ ㉟-b 검사 스크립트가 verify 에 «물려 있는가» ━━')
++{
++  const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as { scripts?: Record<string, string> }
++  const v = pkg.scripts?.verify ?? ''
++  check(v.includes('35-verify-jsx-safe'), `verify 에 35-verify-jsx-safe 가 물려 있습니다`)
++}
++
++console.log(`\n━━ JSX 안전 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
++if (fail > 0) process.exit(1)
+diff --git a/app/manseryeok/result-new/page.tsx b/app/manseryeok/result-new/page.tsx
+index efb11a8..d1a1569 100644
+--- a/app/manseryeok/result-new/page.tsx
++++ b/app/manseryeok/result-new/page.tsx
+@@ -831,48 +831,55 @@ function ResultNewContent() {
+           </div>
+         )}
+ 
+-        {/* ⑩ 보관함 저장 상태 — 자동 저장이라 누르는 버튼이 아니다. (2026-07-21 2차)
+-            [왜 자동인가] 고객이 저장을 안 누르고 나가면 돈 주고 본 결과가 사라진다.
+-            실패했을 때만 [다시 저장]으로 바뀌어 눌러서 재시도할 수 있다. */}
+-        {/* ★해설 복사 — 카톡 등에 붙여넣기 (공용 부품) */}
++        {/* ══════════════════════════════════════════════════════════════
++            ★2026-08-05 (47부 14차) — 「해설 복사」와 「보관함」을 «나란히». [대표님 지시]
++              「하단 해설복사 + 보관함 저장 두 버튼을 나란히 배치할 것」
++            [전]  해설 복사(가로로 꽉 · 혼자) + 저장 성공 안내 두 줄
++            [후]  📋 해설 복사  |  📜 보관함
++            ⚠️ 보관함 저장은 ★«자동» 입니다 — 「고객이 저장을 안 누르고 나가면
++               돈 주고 본 결과가 사라진다」. 그래서 «저장하는» 버튼이 아니라 ★«가는» 버튼입니다.
++            ★이 화면에는 보관함으로 가는 길이 «없었습니다». 이 버튼이 처음입니다.
++            ⚠️ 물상 화면(12차)과 «같은 꼴» 입니다. 한쪽만 바꾸지 마십시오.
++            🔴 저장 «실패» 안내는 아래에 «남겼습니다». ⛔ 그것까지 지우지 마십시오.
++            ⚠️ 높이 44px · 글자 13 — 11차에 통일한 값. ⛔ 더 줄이지 마십시오.
++            ══════════════════════════════════════════════════════════════ */}
+         {!chartOnly && (
+-          <CopyTextButton
+-            text={tongText || savedTong}
+-            label={_unse === 'daeun' ? '대운 풀이' : _unse === 'seyun' ? '연월운세 풀이' : '사주 풀이'}
+-            name={personName || undefined}
+-          />
++          <div style={{display:'flex', gap:'8px', marginTop:'8px'}}>
++            <div style={{flex:1, display:'flex'}}>
++              <CopyTextButton
++                text={tongText || savedTong}
++                label={_unse === 'daeun' ? '대운 풀이' : _unse === 'seyun' ? '연월운세 풀이' : '사주 풀이'}
++                name={personName || undefined}
++                inRow
++              />
++            </div>
++            <button onClick={()=>router.push('/manseryeok/saju-storage')}
++              style={{
++                flex:1, padding:'13px', borderRadius:10, background:'transparent',
++                minHeight:44, boxSizing:'border-box',
++                display:'flex', alignItems:'center', justifyContent:'center',
++                border:'0.5px solid #d8c4b4', color:'#96502e', fontSize:13, fontWeight:500,
++                cursor:'pointer', fontFamily:'inherit',
++              }}>
++              📜 보관함
++            </button>
++          </div>
+         )}
+ 
+-        {info && !chartOnly && (saveState==='saved' || saveState==='failed') && (
++        {/* ⑩ 보관함 저장 — ★«실패했을 때만» 보입니다. 성공은 알리지 않습니다 (자동 저장). */}
++        {info && !chartOnly && saveState==='failed' && (
+           <div style={{marginTop:'12px'}}>
+-            {saveState==='saved' ? (
+-              <>
+-                <div style={{
+-                  width:'100%',padding:'13px 0',borderRadius:'12px',
+-                  background:'#eef5e8',color:'#4a7a3a',
+-                  fontSize:'14px',fontWeight:500,textAlign:'center',
+-                }}>
+-                  ✓ 보관함에 저장됐어요
+-                </div>
+-                <div style={{fontSize:'11px',color:'#6b5340',textAlign:'center',marginTop:'7px'}}>
+-                  보관함에서 언제든 다시 볼 수 있어요
+-                </div>
+-              </>
+-            ) : (
+-              <>
+-                <button onClick={()=>handleSaveRecord()}
+-                  style={{
+-                    width:'100%',padding:'15px 0',borderRadius:'12px',border:'none',
+-                    background:'#b46e46',color:'#fff',
+-                    fontSize:'15px',fontWeight:600,cursor:'pointer',
+-                  }}>
+-                  💾 다시 저장하기
+-                </button>
+-                <div style={{fontSize:'11px',color:'#8f3d0e',textAlign:'center',marginTop:'7px'}}>
+-                  보관함에 저장하지 못했어요. 한 번 더 눌러주세요
+-                </div>
+-              </>
+-            )}
++            <button onClick={()=>handleSaveRecord()}
++              style={{
++                width:'100%',padding:'15px 0',borderRadius:'12px',border:'none',
++                background:'#b46e46',color:'#fff',
++                fontSize:'15px',fontWeight:600,cursor:'pointer',
++              }}>
++              💾 다시 저장하기
++            </button>
++            <div style={{fontSize:'11px',color:'#8f3d0e',textAlign:'center',marginTop:'7px'}}>
++              보관함에 저장하지 못했어요. 한 번 더 눌러주세요
++            </div>
+           </div>
+         )}
+ 
+diff --git a/package.json b/package.json
+index 6096126..3ac919f 100644
+--- a/package.json
++++ b/package.json
+@@ -8,7 +8,7 @@
+     "build": "next build",
+     "start": "next start",
+     "lint": "eslint",
+-    "verify": "tsx 13-verify-18-daeun.ts && tsx 14-verify-exam-seven.ts && tsx 16-verify-naming.ts && tsx 18-verify-sound.ts && tsx 19-verify-eumyang.ts && tsx 20-verify-resource.ts && tsx 21-verify-lunar.ts && tsx 22-verify-jijanggan.ts && tsx 23-verify-career-bridge.ts && tsx 24-verify-deps.ts && tsx 25-verify-manse-ui.ts && tsx 26-verify-namedict.ts && tsx 27-verify-recommend.ts && tsx 28-verify-naming-flow.ts && tsx 30-e2e-naming-flow.ts && tsx 32-verify-hour-convert.ts",
++    "verify": "tsx 13-verify-18-daeun.ts && tsx 14-verify-exam-seven.ts && tsx 16-verify-naming.ts && tsx 18-verify-sound.ts && tsx 19-verify-eumyang.ts && tsx 20-verify-resource.ts && tsx 21-verify-lunar.ts && tsx 22-verify-jijanggan.ts && tsx 23-verify-career-bridge.ts && tsx 24-verify-deps.ts && tsx 25-verify-manse-ui.ts && tsx 26-verify-namedict.ts && tsx 27-verify-recommend.ts && tsx 28-verify-naming-flow.ts && tsx 30-e2e-naming-flow.ts && tsx 32-verify-hour-convert.ts && tsx 35-verify-jsx-safe.ts",
+     "verify:daeun": "tsx 13-verify-18-daeun.ts",
+     "verify:gyeokguk": "python3 04-verify-19-cases.py",
+     "verify:hap": "python3 05-verify-hap-78-83.py",
+-- 
+2.43.0
+
