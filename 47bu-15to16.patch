@@ -1,0 +1,1422 @@
+From cf059929f9e2a2aae06ca877b2f903e40785b82f Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 13:49:02 +0000
+Subject: [PATCH 1/3] =?UTF-8?q?=EA=B0=80=EC=A7=9C=20=EC=83=81=EB=8B=B4?=
+ =?UTF-8?q?=EC=82=AC=20=ED=99=94=EB=A9=B4(/consultants)=20=ED=86=B5?=
+ =?UTF-8?q?=EC=A7=B8=EB=A1=9C=20=EC=82=AD=EC=A0=9C=20=C2=B7=20=EC=B6=9C?=
+ =?UTF-8?q?=EC=82=B0=ED=83=9D=EC=9D=BC=EC=97=90=20=EA=B3=B5=EC=9A=A9=20?=
+ =?UTF-8?q?=EC=83=81=EB=8B=B4=20=EC=B9=B4=EB=93=9C=20(47=EB=B6=80=2015?=
+ =?UTF-8?q?=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/consultants/[id]/page.tsx                 | 446 ------------------
+ app/consultants/page.tsx                      | 251 ----------
+ .../birth-timing/components/PickDateV7.tsx    |  50 +-
+ app/manseryeok/birth-timing/pick/page.tsx     |   1 -
+ 4 files changed, 33 insertions(+), 715 deletions(-)
+ delete mode 100644 app/consultants/[id]/page.tsx
+ delete mode 100644 app/consultants/page.tsx
+
+diff --git a/app/consultants/[id]/page.tsx b/app/consultants/[id]/page.tsx
+deleted file mode 100644
+index 14cb5e5..0000000
+--- a/app/consultants/[id]/page.tsx
++++ /dev/null
+@@ -1,446 +0,0 @@
+-"use client";
+-
+-import { useState } from "react";
+-import Link from "next/link";
+-import { use } from "react";
+-
+-// ─── 상담사 데이터 ───
+-const COUNSELORS_MAP: Record<string, {
+-  id: number; name: string; title: string; experience: number;
+-  tags: string[]; rating: number; reviews: number; price: number;
+-  available: boolean; initial: string; color: string; category: string;
+-  badge: string; intro: string; totalConsult: number;
+-  fullIntro: string; career: { year: string; desc: string }[];
+-  specialties: { icon: string; name: string; desc: string }[];
+-  reviewList: { author: string; rating: number; date: string; text: string; tag: string }[];
+-  timeSlots: { date: string; slots: string[] }[];
+-}> = {
+-  "1": {
+-    id: 1, name: "이명연", title: "사주·운명 전문가", experience: 18,
+-    tags: ["사주팔자", "궁합", "진로", "이직", "대운", "신살"], rating: 4.9, reviews: 1243,
+-    price: 30000, available: true, initial: "이", color: "#3C3489", category: "사주", badge: "인기",
+-    intro: "18년 경력의 정통 명리학 전문가. 1만 건 이상의 상담 경험.", totalConsult: 12480,
+-    fullIntro: "안녕하세요, 명리학 전문가 이명연입니다.\n\n18년간 오직 명리학 한 길만 걸어온 정통 상담사입니다. 사주팔자의 깊은 이치를 바탕으로 여러분의 타고난 기질·재능·운명의 흐름을 정확하게 짚어드립니다.\n\n단순한 운세 풀이를 넘어, 지금 당신이 서 있는 위치와 앞으로 나아가야 할 방향을 함께 찾아드리는 것이 저의 목표입니다.",
+-    career: [
+-      { year: "2024", desc: "명연재연구소 수석 상담사" },
+-      { year: "2018", desc: "한국명리학회 정회원 등록" },
+-      { year: "2015", desc: "강남 명리상담소 개원 (5년 운영)" },
+-      { year: "2012", desc: "대한명리학회 자격증 취득" },
+-      { year: "2006", desc: "명리학 입문 (고 김성호 선생 사사)" },
+-    ],
+-    specialties: [
+-      { icon: "🪬", name: "사주팔자", desc: "년·월·일·시 네 기둥의 정밀 분석" },
+-      { icon: "💕", name: "궁합·연애운", desc: "합·충·형·파·해 기반 궁합 분석" },
+-      { icon: "💼", name: "진로·이직운", desc: "격국과 용신으로 적성 직업 도출" },
+-      { icon: "🌊", name: "대운·세운", desc: "10년 대운과 연간 흐름 총정리" },
+-    ],
+-    reviewList: [
+-      { author: "별빛**", rating: 5, date: "2025.05.12", text: "선생님 덕분에 이직 타이밍을 잡았어요. 실제로 이직 후 연봉이 올랐습니다! 너무 정확해서 소름이었어요.", tag: "진로·이직" },
+-      { author: "꽃처럼**", rating: 5, date: "2025.04.28", text: "연애 문제로 상담했는데 제 성격을 너무 잘 맞추셔서 깜짝 놀랐습니다. 상담 후 마음이 정말 편해졌어요.", tag: "연애운" },
+-      { author: "구름위**", rating: 5, date: "2025.04.10", text: "3년째 매년 신년 운세 봅니다. 한 해 계획 세우는 데 정말 큰 도움이 돼요. 강력 추천!", tag: "신년운세" },
+-      { author: "노을빛**", rating: 4, date: "2025.03.22", text: "대운 분석이 정말 상세했습니다. 설명도 쉽게 해주셔서 명리학을 잘 몰라도 이해할 수 있었어요.", tag: "대운 분석" },
+-      { author: "하늘빛**", rating: 5, date: "2025.03.05", text: "사주 보는 게 처음이었는데 너무 따뜻하게 상담해 주셨어요. 제 고민을 정확히 짚어주셔서 감사합니다.", tag: "사주팔자" },
+-    ],
+-    timeSlots: [
+-      { date: "오늘 (6/17)", slots: ["14:00", "15:00", "16:30"] },
+-      { date: "내일 (6/18)", slots: ["10:00", "11:00", "13:00", "15:00"] },
+-      { date: "6/19 (목)", slots: ["10:00", "14:00", "17:00"] },
+-    ],
+-  },
+-  "4": {
+-    id: 4, name: "최하늘", title: "신점·사주 대가", experience: 22,
+-    tags: ["신점", "사업운", "이직", "건강", "부적", "기도"], rating: 5.0, reviews: 3210,
+-    price: 50000, available: true, initial: "최", color: "#7a3060", category: "사주", badge: "베스트",
+-    intro: "22년 전통 신점과 현대 명리학의 조화로 정확도 최고.", totalConsult: 21500,
+-    fullIntro: "안녕하세요, 최하늘입니다.\n\n22년간 신점과 명리학을 함께 연구해온 전문가입니다. 영적 감각과 학문적 명리학을 결합하여 남다른 정확도를 자랑합니다.\n\n특히 사업운, 재물운, 건강운 분야에서 탁월한 분석력을 발휘하며, 많은 사업가와 경영인들이 주요 의사결정 시 찾아주시는 상담사입니다.",
+-    career: [
+-      { year: "2022", desc: "명연재연구소 수석 마스터 상담사" },
+-      { year: "2015", desc: "전국명리학대회 최우수상 수상" },
+-      { year: "2010", desc: "신점·명리 융합 연구소 개원" },
+-      { year: "2005", desc: "전통 신점 수련 완성 (10년 과정)" },
+-      { year: "2002", desc: "명리학 입문" },
+-    ],
+-    specialties: [
+-      { icon: "🔮", name: "신점", desc: "전통 신점으로 영적 흐름 감지" },
+-      { icon: "💰", name: "사업·재물운", desc: "창업·투자·재물 타이밍 분석" },
+-      { icon: "🌿", name: "건강운", desc: "오행 체질 기반 건강 운세" },
+-      { icon: "🏢", name: "이직·승진운", desc: "직업과 사회적 지위 변화 예측" },
+-    ],
+-    reviewList: [
+-      { author: "사업가**", rating: 5, date: "2025.05.20", text: "창업 타이밍을 물어봤는데 정확히 짚어주셨어요. 말씀대로 하니 정말 잘 됐습니다. 경이롭습니다.", tag: "사업운" },
+-      { author: "직장인**", rating: 5, date: "2025.04.15", text: "건강 문제로 상담했는데 제가 말하지 않은 부분까지 정확히 아셨어요. 정말 신기합니다.", tag: "건강운" },
+-      { author: "주부맘**", rating: 5, date: "2025.03.30", text: "자녀 진로 상담을 했는데 아이의 적성을 너무 정확하게 맞추셔서 놀랐어요.", tag: "진로" },
+-    ],
+-    timeSlots: [
+-      { date: "오늘 (6/17)", slots: ["18:00", "19:00"] },
+-      { date: "내일 (6/18)", slots: ["09:00", "10:00", "18:00", "19:00"] },
+-      { date: "6/20 (금)", slots: ["14:00", "15:00"] },
+-    ],
+-  },
+-};
+-
+-const DEFAULT_COUNSELOR = COUNSELORS_MAP["1"];
+-
+-function StarRating({ rating, size = "sm" }: { rating: number; size?: "sm" | "lg" }) {
+-  const cls = size === "lg" ? "text-xl" : "text-sm";
+-  return (
+-    <span className={cls} style={{ color: "#FAC775" }}>
+-      {"★".repeat(Math.floor(rating))}{"☆".repeat(5 - Math.floor(rating))}
+-    </span>
+-  );
+-}
+-
+-type TabKey = "소개" | "후기" | "예약";
+-
+-export default function ConsultantProfilePage({ params }: { params: Promise<{ id: string }> }) {
+-  const { id } = use(params);
+-  const c = COUNSELORS_MAP[id] ?? DEFAULT_COUNSELOR;
+-  const [activeTab, setActiveTab] = useState<TabKey>("소개");
+-  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+-  const [bookingDone, setBookingDone] = useState(false);
+-
+-  const ratingDist = [
+-    { star: 5, pct: 78 }, { star: 4, pct: 15 }, { star: 3, pct: 5 }, { star: 2, pct: 1 }, { star: 1, pct: 1 },
+-  ];
+-
+-  function handleBook() {
+-    if (!selectedSlot) return;
+-    setBookingDone(true);
+-    setTimeout(() => setBookingDone(false), 3000);
+-    setSelectedSlot(null);
+-  }
+-
+-  return (
+-    <div className="min-h-screen" style={{ background: "#1a1a18", maxWidth: "430px", margin: "0 auto" }}>
+-
+-      {/* 헤더 */}
+-      <header className="fixed top-0 z-50 flex items-center justify-between px-4 py-4"
+-        style={{
+-          background: "rgba(26,26,24,0.97)", backdropFilter: "blur(12px)",
+-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+-          width: "100%", maxWidth: "430px", left: "50%", transform: "translateX(-50%)",
+-        }}>
+-        <Link href="/consultants">
+-          <button className="w-9 h-9 rounded-xl flex items-center justify-center"
+-            style={{ background: "rgba(255,255,255,0.06)" }}>
+-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5 text-white">
+-              <polyline points="15 18 9 12 15 6" />
+-            </svg>
+-          </button>
+-        </Link>
+-        <span className="text-sm font-bold text-white">{c.name} 상담사</span>
+-        <button className="w-9 h-9 rounded-xl flex items-center justify-center"
+-          style={{ background: "rgba(255,255,255,0.06)", color: "#8a88a0" }}>
+-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+-            <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+-            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+-          </svg>
+-        </button>
+-      </header>
+-
+-      <main className="pt-16 pb-36">
+-
+-        {/* ── 프로필 히어로 ── */}
+-        <div className="relative overflow-hidden px-4 pt-6 pb-6"
+-          style={{ background: "linear-gradient(160deg, #2C2C2A 0%, #3C3489 100%)" }}>
+-          <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-20"
+-            style={{ background: "radial-gradient(circle, #FAC775, transparent)" }} />
+-          <div className="relative z-10 flex items-start gap-4">
+-            {/* 아바타 */}
+-            <div className="relative flex-shrink-0">
+-              <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-bold text-white shadow-2xl"
+-                style={{ background: `linear-gradient(135deg, ${c.color}, #FAC775)` }}>
+-                {c.initial}
+-              </div>
+-              <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 flex items-center justify-center`}
+-                style={{ background: c.available ? "#4caf50" : "#757575", borderColor: "#2C2C2A" }}>
+-                <div className="w-2 h-2 rounded-full bg-white" />
+-              </div>
+-            </div>
+-            {/* 기본 정보 */}
+-            <div className="flex-1">
+-              <div className="flex items-center gap-2 mb-1">
+-                <h1 className="text-xl font-bold text-white">{c.name}</h1>
+-                {c.badge && (
+-                  <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+-                    style={{ background: "rgba(250,199,117,0.2)", color: "#FAC775", border: "1px solid rgba(250,199,117,0.4)" }}>
+-                    {c.badge}
+-                  </span>
+-                )}
+-              </div>
+-              <p className="text-sm mb-2" style={{ color: "#b0aec8" }}>{c.title}</p>
+-              <div className="flex items-center gap-1.5 mb-3">
+-                <StarRating rating={c.rating} />
+-                <span className="text-sm font-bold" style={{ color: "#FAC775" }}>{c.rating}</span>
+-                <span className="text-xs" style={{ color: "#8a88a0" }}>({c.reviews.toLocaleString()})</span>
+-              </div>
+-              <div className="flex flex-wrap gap-1">
+-                {c.tags.slice(0, 4).map((tag) => (
+-                  <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full"
+-                    style={{ background: "rgba(255,255,255,0.1)", color: "#c8c4d8" }}>#{tag}</span>
+-                ))}
+-              </div>
+-            </div>
+-          </div>
+-
+-          {/* 통계 */}
+-          <div className="grid grid-cols-4 gap-2 mt-5">
+-            {[
+-              { label: "경력", value: `${c.experience}년` },
+-              { label: "총 상담", value: `${(c.totalConsult / 1000).toFixed(1)}k` },
+-              { label: "후기", value: c.reviews.toLocaleString() },
+-              { label: "평점", value: String(c.rating) },
+-            ].map((stat) => (
+-              <div key={stat.label} className="text-center rounded-xl py-2.5"
+-                style={{ background: "rgba(255,255,255,0.08)" }}>
+-                <div className="text-base font-bold" style={{ color: "#FAC775" }}>{stat.value}</div>
+-                <div className="text-[10px] mt-0.5" style={{ color: "#8a88a0" }}>{stat.label}</div>
+-              </div>
+-            ))}
+-          </div>
+-        </div>
+-
+-        {/* ── 탭 ── */}
+-        <div className="sticky top-16 z-40 flex"
+-          style={{ background: "#1a1a18", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+-          {(["소개", "후기", "예약"] as TabKey[]).map((tab) => (
+-            <button key={tab} onClick={() => setActiveTab(tab)}
+-              className="flex-1 py-3 text-sm font-semibold relative transition-all"
+-              style={{ color: activeTab === tab ? "#FAC775" : "#8a88a0" }}>
+-              {tab}
+-              {activeTab === tab && (
+-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
+-                  style={{ background: "#FAC775" }} />
+-              )}
+-            </button>
+-          ))}
+-        </div>
+-
+-        <div className="px-4 pt-4 space-y-4">
+-
+-          {/* ── 소개 탭 ── */}
+-          {activeTab === "소개" && (
+-            <>
+-              {/* 소개 글 */}
+-              <div className="rounded-2xl p-5"
+-                style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+-                <h2 className="text-sm font-bold text-white mb-3">상담사 소개</h2>
+-                <p className="text-sm leading-loose whitespace-pre-line" style={{ color: "#c8c4d8" }}>
+-                  {c.fullIntro}
+-                </p>
+-              </div>
+-
+-              {/* 전문 분야 */}
+-              <div className="rounded-2xl p-5"
+-                style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+-                <h2 className="text-sm font-bold text-white mb-3">전문 분야</h2>
+-                <div className="grid grid-cols-2 gap-2">
+-                  {c.specialties.map((sp) => (
+-                    <div key={sp.name} className="rounded-xl p-3"
+-                      style={{ background: "rgba(60,52,137,0.2)", border: "1px solid rgba(60,52,137,0.3)" }}>
+-                      <div className="text-2xl mb-1.5">{sp.icon}</div>
+-                      <div className="text-sm font-semibold text-white">{sp.name}</div>
+-                      <div className="text-xs mt-0.5 leading-snug" style={{ color: "#8a88a0" }}>{sp.desc}</div>
+-                    </div>
+-                  ))}
+-                </div>
+-              </div>
+-
+-              {/* 경력 타임라인 */}
+-              <div className="rounded-2xl p-5"
+-                style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+-                <h2 className="text-sm font-bold text-white mb-4">경력 사항</h2>
+-                <div className="space-y-0">
+-                  {c.career.map((item, i) => (
+-                    <div key={item.year} className="flex gap-3">
+-                      {/* 타임라인 선 */}
+-                      <div className="flex flex-col items-center">
+-                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1"
+-                          style={{ background: i === 0 ? "#FAC775" : "#3C3489", border: i === 0 ? "2px solid #FAC775" : "2px solid #4e46b0" }} />
+-                        {i < c.career.length - 1 && (
+-                          <div className="w-px flex-1 mt-1" style={{ background: "rgba(60,52,137,0.4)", minHeight: "32px" }} />
+-                        )}
+-                      </div>
+-                      <div className="pb-4">
+-                        <span className="text-xs font-bold" style={{ color: i === 0 ? "#FAC775" : "#8a88a0" }}>
+-                          {item.year}
+-                        </span>
+-                        <p className="text-sm mt-0.5" style={{ color: i === 0 ? "#e0dce8" : "#b0aec8" }}>
+-                          {item.desc}
+-                        </p>
+-                      </div>
+-                    </div>
+-                  ))}
+-                </div>
+-              </div>
+-
+-              {/* 상담 요금 안내 */}
+-              <div className="rounded-2xl p-5"
+-                style={{ background: "linear-gradient(135deg, rgba(60,52,137,0.25), rgba(250,199,117,0.05))", border: "1px solid rgba(60,52,137,0.4)" }}>
+-                <h2 className="text-sm font-bold text-white mb-3">상담 요금</h2>
+-                {[
+-                  { name: "기본 상담 (30분)", price: c.price, desc: "사주 기본 분석 + 현재 운세" },
+-                  { name: "심층 상담 (60분)", price: c.price * 2, desc: "대운·세운·직업·연애운 포함" },
+-                  { name: "종합 상담 (90분)", price: Math.floor(c.price * 2.5), desc: "전 분야 심층 분석 + 질의응답" },
+-                ].map((plan) => (
+-                  <div key={plan.name} className="flex items-center justify-between py-3 border-b last:border-0"
+-                    style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+-                    <div>
+-                      <div className="text-sm font-medium text-white">{plan.name}</div>
+-                      <div className="text-xs mt-0.5" style={{ color: "#8a88a0" }}>{plan.desc}</div>
+-                    </div>
+-                    <div className="text-sm font-bold" style={{ color: "#FAC775" }}>
+-                      {plan.price.toLocaleString()}원
+-                    </div>
+-                  </div>
+-                ))}
+-              </div>
+-            </>
+-          )}
+-
+-          {/* ── 후기 탭 ── */}
+-          {activeTab === "후기" && (
+-            <>
+-              {/* 평점 요약 */}
+-              <div className="rounded-2xl p-5"
+-                style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+-                <div className="flex items-center gap-5">
+-                  <div className="text-center">
+-                    <div className="text-5xl font-bold" style={{ color: "#FAC775" }}>{c.rating}</div>
+-                    <StarRating rating={c.rating} size="lg" />
+-                    <div className="text-xs mt-1" style={{ color: "#8a88a0" }}>{c.reviews.toLocaleString()}개</div>
+-                  </div>
+-                  <div className="flex-1 space-y-1.5">
+-                    {ratingDist.map((r) => (
+-                      <div key={r.star} className="flex items-center gap-2">
+-                        <span className="text-xs w-4 text-right" style={{ color: "#8a88a0" }}>{r.star}</span>
+-                        <div className="flex-1 h-1.5 rounded-full overflow-hidden"
+-                          style={{ background: "rgba(255,255,255,0.06)" }}>
+-                          <div className="h-full rounded-full" style={{ width: `${r.pct}%`, background: "#FAC775" }} />
+-                        </div>
+-                        <span className="text-xs w-7" style={{ color: "#8a88a0" }}>{r.pct}%</span>
+-                      </div>
+-                    ))}
+-                  </div>
+-                </div>
+-              </div>
+-
+-              {/* 후기 목록 */}
+-              <div className="space-y-3">
+-                {c.reviewList.map((rev, i) => (
+-                  <div key={i} className="rounded-2xl p-4"
+-                    style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+-                    <div className="flex items-start justify-between mb-2">
+-                      <div>
+-                        <div className="flex items-center gap-2">
+-                          <span className="text-sm font-semibold text-white">{rev.author}</span>
+-                          <span className="text-[10px] px-2 py-0.5 rounded-full"
+-                            style={{ background: "rgba(60,52,137,0.3)", color: "#b0aec8" }}>{rev.tag}</span>
+-                        </div>
+-                        <StarRating rating={rev.rating} />
+-                      </div>
+-                      <span className="text-[10px]" style={{ color: "#6a6880" }}>{rev.date}</span>
+-                    </div>
+-                    <p className="text-sm leading-relaxed" style={{ color: "#c8c4d8" }}>{rev.text}</p>
+-                  </div>
+-                ))}
+-              </div>
+-            </>
+-          )}
+-
+-          {/* ── 예약 탭 ── */}
+-          {activeTab === "예약" && (
+-            <>
+-              <div className="rounded-2xl p-4"
+-                style={{ background: "rgba(250,199,117,0.08)", border: "1px solid rgba(250,199,117,0.2)" }}>
+-                <p className="text-xs" style={{ color: "#b0aec8" }}>
+-                  <span style={{ color: "#FAC775" }}>💡 안내 — </span>
+-                  상담 시작 1시간 전까지 취소 가능합니다. 30분 기본 상담 기준 요금입니다.
+-                </p>
+-              </div>
+-
+-              {/* 시간대 선택 */}
+-              {c.timeSlots.map((group) => (
+-                <div key={group.date} className="rounded-2xl p-4"
+-                  style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+-                  <h3 className="text-sm font-bold text-white mb-3">{group.date}</h3>
+-                  <div className="grid grid-cols-4 gap-2">
+-                    {group.slots.map((slot) => {
+-                      const key = `${group.date}-${slot}`;
+-                      const on = selectedSlot === key;
+-                      return (
+-                        <button key={slot} onClick={() => setSelectedSlot(on ? null : key)}
+-                          className="py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95"
+-                          style={on
+-                            ? { background: "#3C3489", color: "#FAC775", border: "1px solid rgba(250,199,117,0.4)" }
+-                            : { background: "rgba(255,255,255,0.04)", color: "#c8c4d8", border: "1px solid rgba(255,255,255,0.08)" }}>
+-                          {slot}
+-                        </button>
+-                      );
+-                    })}
+-                  </div>
+-                </div>
+-              ))}
+-
+-              {/* 선택된 슬롯 요약 */}
+-              {selectedSlot && (
+-                <div className="rounded-xl px-4 py-3 flex items-center gap-2"
+-                  style={{ background: "rgba(60,52,137,0.2)", border: "1px solid rgba(60,52,137,0.4)" }}>
+-                  <span style={{ color: "#FAC775" }}>✓</span>
+-                  <span className="text-sm text-white">
+-                    {selectedSlot.replace("-", " ")} · 30분 · {c.price.toLocaleString()}원
+-                  </span>
+-                </div>
+-              )}
+-            </>
+-          )}
+-
+-        </div>
+-      </main>
+-
+-      {/* 고정 하단 버튼 */}
+-      <div className="fixed bottom-0 z-50 px-4 py-4"
+-        style={{
+-          background: "linear-gradient(to top, #1a1a18 70%, transparent)",
+-          width: "100%", maxWidth: "430px", left: "50%", transform: "translateX(-50%)",
+-          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
+-        }}>
+-        <div className="flex items-center justify-between mb-2">
+-          <div>
+-            <span className="text-xs" style={{ color: "#8a88a0" }}>30분 기준 </span>
+-            <span className="text-base font-bold" style={{ color: "#FAC775" }}>
+-              {c.price.toLocaleString()}원
+-            </span>
+-          </div>
+-          <div className="flex items-center gap-1.5">
+-            <div className="w-2 h-2 rounded-full" style={{ background: c.available ? "#4caf50" : "#757575" }} />
+-            <span className="text-xs" style={{ color: c.available ? "#4caf50" : "#8a88a0" }}>
+-              {c.available ? "지금 상담 가능" : "대기 중"}
+-            </span>
+-          </div>
+-        </div>
+-        <button
+-          onClick={activeTab === "예약" ? handleBook : () => setActiveTab("예약")}
+-          disabled={activeTab === "예약" && !selectedSlot}
+-          className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all active:scale-95"
+-          style={
+-            activeTab === "예약" && !selectedSlot
+-              ? { background: "rgba(255,255,255,0.06)", color: "#8a88a0", cursor: "not-allowed" }
+-              : { background: "linear-gradient(135deg, #3C3489 0%, #FAC775 100%)", color: "#1a1a18", boxShadow: "0 4px 20px rgba(60,52,137,0.4)" }
+-          }>
+-          {activeTab === "예약"
+-            ? selectedSlot ? "✓ 상담 예약 확정하기" : "시간대를 선택해주세요"
+-            : "상담 예약하기"}
+-        </button>
+-      </div>
+-
+-      {/* 예약 완료 토스트 */}
+-      {bookingDone && (
+-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl text-sm font-semibold text-white shadow-2xl"
+-          style={{ background: "rgba(60,52,137,0.97)", border: "1px solid rgba(250,199,117,0.4)", whiteSpace: "nowrap" }}>
+-          ✓ {c.name} 상담사와 예약이 완료되었습니다!
+-        </div>
+-      )}
+-    </div>
+-  );
+-}
+diff --git a/app/consultants/page.tsx b/app/consultants/page.tsx
+deleted file mode 100644
+index ea2daf0..0000000
+--- a/app/consultants/page.tsx
++++ /dev/null
+@@ -1,251 +0,0 @@
+-"use client";
+-
+-import { useState, useMemo } from "react";
+-import Link from "next/link";
+-import BottomNav from "../components/BottomNav";
+-
+-// ─── 데이터 ───
+-const ALL_COUNSELORS = [
+-  { id: 1, name: "이명연", title: "사주·운명 전문가", experience: 18, tags: ["사주팔자", "궁합", "진로", "이직"], rating: 4.9, reviews: 1243, price: 30000, available: true, initial: "이", color: "#3C3489", category: "사주", badge: "인기", intro: "18년 경력의 정통 명리학 전문가. 1만 건 이상의 상담 경험.", totalConsult: 12480 },
+-  { id: 2, name: "박진수", title: "풍수지리·명리 연구가", experience: 12, tags: ["명리학", "풍수", "이사", "묘지"], rating: 4.8, reviews: 892, price: 25000, available: true, initial: "박", color: "#5a3d8a", category: "풍수", badge: "", intro: "풍수지리와 명리학을 결합한 종합적 운세 분석.", totalConsult: 6720 },
+-  { id: 3, name: "김서연", title: "타로·사주 상담사", experience: 9, tags: ["타로", "연애운", "재물운", "직업운"], rating: 4.9, reviews: 2104, price: 20000, available: false, initial: "김", color: "#2a5a8a", category: "타로", badge: "신규", intro: "심리 타로와 사주를 접목한 감성적 상담 전문가.", totalConsult: 8900 },
+-  { id: 4, name: "최하늘", title: "신점·사주 대가", experience: 22, tags: ["신점", "사업운", "이직", "건강"], rating: 5.0, reviews: 3210, price: 50000, available: true, initial: "최", color: "#7a3060", category: "사주", badge: "베스트", intro: "22년 전통 신점과 현대 명리학의 조화로 정확도 최고.", totalConsult: 21500 },
+-  { id: 5, name: "정도운", title: "수비학·명리 전문가", experience: 15, tags: ["수비학", "이름", "작명", "개명"], rating: 4.7, reviews: 567, price: 35000, available: true, initial: "정", color: "#2a6a5a", category: "작명", badge: "", intro: "성명학과 수비학으로 이름의 에너지를 분석합니다.", totalConsult: 4230 },
+-  { id: 6, name: "오미래", title: "연애·궁합 전문가", experience: 8, tags: ["궁합", "연애", "결혼", "이별"], rating: 4.8, reviews: 1890, price: 22000, available: true, initial: "오", color: "#8a2a60", category: "궁합", badge: "인기", intro: "연애·결혼 전문 상담으로 수천 쌍의 인연을 이어왔습니다.", totalConsult: 9800 },
+-  { id: 7, name: "한동원", title: "재물·사업운 전문", experience: 20, tags: ["재물운", "사업", "투자", "부동산"], rating: 4.9, reviews: 978, price: 45000, available: false, initial: "한", color: "#4a6a2a", category: "재물", badge: "", intro: "사업가 출신 명리학자. 실전 재물운 상담 전문.", totalConsult: 7600 },
+-  { id: 8, name: "윤지은", title: "건강·체질 명리사", experience: 11, tags: ["건강운", "체질", "오행", "음식"], rating: 4.6, reviews: 432, price: 28000, available: true, initial: "윤", color: "#6a4a2a", category: "건강", badge: "", intro: "오행 체질 분석으로 건강 관리법과 운세를 함께 알려드립니다.", totalConsult: 3100 },
+-];
+-
+-const CATEGORIES = ["전체", "사주", "궁합", "재물", "타로", "풍수", "작명", "건강"];
+-const SORT_OPTIONS = [
+-  { value: "recommend", label: "추천순" },
+-  { value: "reviews", label: "후기 많은순" },
+-  { value: "price_asc", label: "가격 낮은순" },
+-  { value: "career", label: "경력 높은순" },
+-  { value: "rating", label: "평점순" },
+-];
+-
+-function IconSearch() {
+-  return (
+-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+-      <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+-    </svg>
+-  );
+-}
+-function IconFilter() {
+-  return (
+-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+-      <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" />
+-    </svg>
+-  );
+-}
+-
+-type SortKey = "recommend" | "reviews" | "price_asc" | "career" | "rating";
+-
+-function sortCounselors(list: typeof ALL_COUNSELORS, sort: SortKey) {
+-  return [...list].sort((a, b) => {
+-    if (sort === "reviews") return b.reviews - a.reviews;
+-    if (sort === "price_asc") return a.price - b.price;
+-    if (sort === "career") return b.experience - a.experience;
+-    if (sort === "rating") return b.rating - a.rating;
+-    return b.totalConsult - a.totalConsult;
+-  });
+-}
+-
+-function CounselorListCard({ c }: { c: typeof ALL_COUNSELORS[0] }) {
+-  return (
+-    <Link href={`/consultants/${c.id}`}>
+-      <div className="rounded-2xl p-4 transition-all active:scale-[0.98]"
+-        style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+-        <div className="flex gap-3">
+-          {/* 아바타 */}
+-          <div className="relative flex-shrink-0">
+-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold text-white"
+-              style={{ background: `linear-gradient(135deg, ${c.color}, #FAC775)` }}>
+-              {c.initial}
+-            </div>
+-            {c.available
+-              ? <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 flex items-center justify-center"
+-                  style={{ background: "#4caf50", borderColor: "#2C2C2A" }} />
+-              : <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2"
+-                  style={{ background: "#757575", borderColor: "#2C2C2A" }} />
+-            }
+-          </div>
+-
+-          {/* 정보 */}
+-          <div className="flex-1 min-w-0">
+-            <div className="flex items-start justify-between gap-2">
+-              <div>
+-                <div className="flex items-center gap-2">
+-                  <span className="font-bold text-white text-base">{c.name}</span>
+-                  {c.badge && (
+-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+-                      style={{ background: "rgba(250,199,117,0.15)", color: "#FAC775", border: "1px solid rgba(250,199,117,0.3)" }}>
+-                      {c.badge}
+-                    </span>
+-                  )}
+-                </div>
+-                <p className="text-xs mt-0.5" style={{ color: "#b0aec8" }}>{c.title}</p>
+-              </div>
+-              <div className="text-right flex-shrink-0">
+-                <div className="text-sm font-bold" style={{ color: "#FAC775" }}>
+-                  {c.price.toLocaleString()}원~
+-                </div>
+-                <div className="text-[10px] mt-0.5" style={{ color: c.available ? "#4caf50" : "#757575" }}>
+-                  {c.available ? "● 상담 가능" : "● 대기 중"}
+-                </div>
+-              </div>
+-            </div>
+-
+-            <p className="text-xs mt-1.5 leading-relaxed line-clamp-1" style={{ color: "#8a88a0" }}>{c.intro}</p>
+-
+-            <div className="flex items-center gap-3 mt-2">
+-              <span className="text-xs" style={{ color: "#FAC775" }}>★ {c.rating}</span>
+-              <span className="text-xs" style={{ color: "#8a88a0" }}>후기 {c.reviews.toLocaleString()}</span>
+-              <span className="text-xs" style={{ color: "#8a88a0" }}>경력 {c.experience}년</span>
+-              <span className="text-xs" style={{ color: "#8a88a0" }}>총 {c.totalConsult.toLocaleString()}건</span>
+-            </div>
+-
+-            <div className="flex flex-wrap gap-1 mt-2">
+-              {c.tags.slice(0, 3).map((tag) => (
+-                <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full"
+-                  style={{ background: "rgba(60,52,137,0.25)", color: "#b0aec8" }}>#{tag}</span>
+-              ))}
+-            </div>
+-          </div>
+-        </div>
+-
+-        <button
+-          className="w-full mt-3 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95"
+-          style={c.available
+-            ? { background: "linear-gradient(135deg, #3C3489, #4e46b0)", color: "#FAC775" }
+-            : { background: "rgba(255,255,255,0.05)", color: "#8a88a0" }}>
+-          {c.available ? "상담 신청하기" : "대기 목록 등록"}
+-        </button>
+-      </div>
+-    </Link>
+-  );
+-}
+-
+-export default function ConsultantsPage() {
+-  const [category, setCategory] = useState("전체");
+-  const [sort, setSort] = useState<SortKey>("recommend");
+-  const [query, setQuery] = useState("");
+-  const [showSort, setShowSort] = useState(false);
+-
+-  const filtered = useMemo(() => {
+-    let list = ALL_COUNSELORS;
+-    if (category !== "전체") list = list.filter((c) => c.category === category);
+-    if (query.trim()) list = list.filter((c) =>
+-      c.name.includes(query) || c.tags.some((t) => t.includes(query)) || c.title.includes(query)
+-    );
+-    return sortCounselors(list, sort);
+-  }, [category, sort, query]);
+-
+-  const availableCount = filtered.filter((c) => c.available).length;
+-
+-  return (
+-    <div className="min-h-screen" style={{ background: "#1a1a18", maxWidth: "430px", margin: "0 auto" }}>
+-
+-      {/* 헤더 */}
+-      <header className="fixed top-0 z-50 px-4 pt-4 pb-3"
+-        style={{
+-          background: "rgba(26,26,24,0.97)", backdropFilter: "blur(12px)",
+-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+-          width: "100%", maxWidth: "430px", left: "50%", transform: "translateX(-50%)",
+-        }}>
+-        <div className="flex items-center gap-3 mb-3">
+-          <Link href="/">
+-            <button className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+-              style={{ background: "rgba(255,255,255,0.06)" }}>
+-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5 text-white">
+-                <polyline points="15 18 9 12 15 6" />
+-              </svg>
+-            </button>
+-          </Link>
+-          {/* 검색창 */}
+-          <div className="flex-1 flex items-center gap-2 rounded-xl px-3 py-2.5"
+-            style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.08)" }}>
+-            <span style={{ color: "#8a88a0" }}><IconSearch /></span>
+-            <input
+-              value={query}
+-              onChange={(e) => setQuery(e.target.value)}
+-              placeholder="이름, 전문분야 검색"
+-              className="flex-1 bg-transparent outline-none text-sm"
+-              style={{ color: "#e0dce8" }}
+-            />
+-          </div>
+-          {/* 정렬 */}
+-          <div className="relative">
+-            <button onClick={() => setShowSort(!showSort)}
+-              className="w-9 h-9 rounded-xl flex items-center justify-center"
+-              style={{ background: showSort ? "#3C3489" : "rgba(255,255,255,0.06)", color: showSort ? "#FAC775" : "#8a88a0" }}>
+-              <IconFilter />
+-            </button>
+-            {showSort && (
+-              <div className="absolute right-0 top-11 rounded-xl overflow-hidden z-50 w-40 shadow-2xl"
+-                style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.1)" }}>
+-                {SORT_OPTIONS.map((opt) => (
+-                  <button key={opt.value} onClick={() => { setSort(opt.value as SortKey); setShowSort(false); }}
+-                    className="w-full px-4 py-3 text-left text-sm transition-all"
+-                    style={sort === opt.value
+-                      ? { color: "#FAC775", background: "rgba(60,52,137,0.3)" }
+-                      : { color: "#c8c4d8" }}>
+-                    {sort === opt.value && "✓ "}{opt.label}
+-                  </button>
+-                ))}
+-              </div>
+-            )}
+-          </div>
+-        </div>
+-
+-        {/* 카테고리 탭 */}
+-        <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
+-          {CATEGORIES.map((cat) => (
+-            <button key={cat} onClick={() => setCategory(cat)}
+-              className="flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all"
+-              style={category === cat
+-                ? { background: "#3C3489", color: "#FAC775" }
+-                : { background: "rgba(255,255,255,0.05)", color: "#8a88a0" }}>
+-              {cat}
+-            </button>
+-          ))}
+-        </div>
+-      </header>
+-
+-      <BottomNav />
+-      <main className="pt-36 pb-24 px-4">
+-
+-        {/* 결과 요약 */}
+-        <div className="flex items-center justify-between mb-3">
+-          <p className="text-xs" style={{ color: "#8a88a0" }}>
+-            <span className="text-white font-semibold">{filtered.length}명</span> 의 상담사 ·{" "}
+-            <span style={{ color: "#4caf50" }}>{availableCount}명</span> 상담 가능
+-          </p>
+-          <span className="text-xs px-2 py-1 rounded-full"
+-            style={{ background: "rgba(255,255,255,0.05)", color: "#8a88a0" }}>
+-            {SORT_OPTIONS.find((o) => o.value === sort)?.label}
+-          </span>
+-        </div>
+-
+-        {/* 상담사 리스트 */}
+-        {filtered.length > 0 ? (
+-          <div className="space-y-3">
+-            {filtered.map((c) => <CounselorListCard key={c.id} c={c} />)}
+-          </div>
+-        ) : (
+-          <div className="flex flex-col items-center py-20">
+-            <div className="text-5xl mb-4">🔍</div>
+-            <p className="text-white font-semibold">검색 결과가 없습니다</p>
+-            <p className="text-xs mt-1" style={{ color: "#8a88a0" }}>다른 키워드나 카테고리로 검색해보세요</p>
+-            <button onClick={() => { setQuery(""); setCategory("전체"); }}
+-              className="mt-4 px-6 py-2.5 rounded-xl text-sm font-semibold"
+-              style={{ background: "#3C3489", color: "#FAC775" }}>
+-              필터 초기화
+-            </button>
+-          </div>
+-        )}
+-      </main>
+-    </div>
+-  );
+-}
+diff --git a/app/manseryeok/birth-timing/components/PickDateV7.tsx b/app/manseryeok/birth-timing/components/PickDateV7.tsx
+index 8cc2151..5ac19d8 100644
+--- a/app/manseryeok/birth-timing/components/PickDateV7.tsx
++++ b/app/manseryeok/birth-timing/components/PickDateV7.tsx
+@@ -18,6 +18,7 @@ import {
+   type OptKey, type OptState,
+ } from '../lib/babyFilterV7'
+ import type { DayOption, HourOption, RecommendV7Result } from '../lib/recommendV7'
++import ConsultButton from '@/app/components/common/ConsultButton'
+ 
+ const C = {
+   bg: '#FDF6F0', card: '#FFFBF7', line: '#9c7a58', ink: '#3A2E28',
+@@ -96,10 +97,19 @@ const FIXED_CHIPS: { key: string; label: string; hanja: string }[] = [
+ interface Props {
+   result: RecommendV7Result
+   onPickHour?: (day: DayOption, hour: HourOption) => void
+-  onConsult?: () => void
++  /**
++   * ⛔ 2026-08-05 (47부 15차) — «걷어냈습니다». [대표님 지시]
++   *   이 자리는 ★/consultants (가짜 상담사 목업)로 가는 길이었습니다.
++   *   지금은 화면 맨 아래 ★공용 상담 카드가 그 일을 합니다.
++   *   ⚠️ /consultants 화면 «자체» 는 지우지 «않았습니다» (45부 방식 — 길만 끊음).
++   *      들어오는 길이 «여기 하나뿐» 이었으므로 이제 아무도 안 갑니다.
++   *   ⛔ 되살리시려면 ★그 화면의 목업(박진수·정도운 등)을 «진짜 상담사» 로
++   *      갈아 끼우고 「상담 신청하기」에 onClick 을 «먼저» 붙이십시오.
++   *      지금 그대로 되살리면 손님이 ★없는 사람과 없는 가격을 봅니다.
++   */
+ }
+ 
+-export default function PickDateV7({ result, onPickHour, onConsult }: Props) {
++export default function PickDateV7({ result, onPickHour }: Props) {
+   const [on, setOn] = useState<OptState>(EMPTY_OPT)
+   const [help, setHelp] = useState<string | null>(null)
+ 
+@@ -300,21 +310,15 @@ export default function PickDateV7({ result, onPickHour, onConsult }: Props) {
+             <p style={{ margin: 0 }}>
+               조건을 <b style={{ color: C.brand }}>하나만 꺼</b> 보시면 다시 나타납니다.
+             </p>
+-            <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${C.line}`, textAlign: 'left' }}>
+-              <div style={{ fontSize: 13.5, fontWeight: 700, color: C.brand, marginBottom: 6 }}>
+-                전문가와 상담해 보세요
+-              </div>
+-              <p style={{ fontSize: 12.5, lineHeight: 1.8, color: C.sub, margin: '0 0 13px' }}>
+-                조건을 줄여도 마음에 드는 날이 없거나, 여러 조건을 함께 살펴야 할 것 같다면
+-                명리 선생님과 직접 이야기해 보시는 방법이 있어요. 사주는 조건을 하나씩
+-                맞춰가는 것보다, 전체를 함께 놓고 보아야 할 때가 많습니다.
+-              </p>
+-              <button onClick={onConsult} style={{
+-                width: '100%', padding: 12, borderRadius: 11, border: `1px solid ${C.accent}`,
+-                background: C.soft, color: C.brand, fontSize: 13.5, fontWeight: 700,
+-                cursor: 'pointer', fontFamily: 'inherit',
+-              }}>상담 알아보기</button>
+-            </div>
++            {/* ★2026-08-05 (47부 15차) — 「상담 알아보기」를 걷어냈습니다. [대표님 지시]
++                [무엇이 문제였나]  이 버튼이 ★/consultants 로 갔습니다.
++                  그 화면은 ★박진수·정도운·한동원 같은 «가짜 상담사» 목업이고
++                  「상담 신청하기」에 onClick 도 «없어» 눌러도 아무 일이 안 났습니다.
++                  진짜 상담사(DB)와는 아무 상관이 없었습니다.
++                ⚠️ 그리고 이 자리는 ★「고를 수 있는 날이 없을 때」만 나왔습니다.
++                ⇒ 이제 ★화면 맨 아래 공용 상담 카드가 «언제나» 있습니다. 그쪽으로 모았습니다.
++                ⚠️ 여기 있던 안내 문구(「조건을 줄여도 마음에 드는 날이 없거나…」)도
++                   함께 걷었습니다. ★되살리기를 원하시면 말씀해 주십시오. */}
+           </div>
+         )}
+       </div>
+@@ -392,6 +396,18 @@ export default function PickDateV7({ result, onPickHour, onConsult }: Props) {
+           </div>
+         )
+       })()}
++
++      {/* ★2026-08-05 (47부 15차) — 전문가 상담 [대표님 지시]
++          ★손님이 출산택일을 «처음 볼 때» 밟는 화면은 여기(pick)입니다.
++            birth-timing/result 는 ★보관함에서 다시 볼 때만 씁니다
++            (birth-timing/page.tsx:158 에 앞 세션이 길을 끊어 둔 기록이 있습니다).
++          ⇒ 그래서 result 에만 카드가 있으면 ★손님은 «못 만납니다». 여기에도 답니다.
++          ⚠️ priceKey='birth' — result 와 «같은 줄» 을 씁니다. 관리자 토글 하나로 함께 움직입니다.
++          ⛔ 한쪽만 다른 price_key 로 바꾸지 마십시오. 토글이 갈라집니다. */}
++      <div style={{ marginTop: 16 }}>
++        <ConsultButton priceKey="birth" mode="birth" />
++      </div>
++
+     </div>
+   )
+ }
+diff --git a/app/manseryeok/birth-timing/pick/page.tsx b/app/manseryeok/birth-timing/pick/page.tsx
+index 446ab82..4367345 100644
+--- a/app/manseryeok/birth-timing/pick/page.tsx
++++ b/app/manseryeok/birth-timing/pick/page.tsx
+@@ -144,7 +144,6 @@ function PickInner() {
+       <PickDateV7
+         result={result}
+         onPickHour={handlePick}
+-        onConsult={() => router.push('/consultants')}
+       />
+     </main>
+   )
+-- 
+2.43.0
+
+
+From ce4ec8bdd28e017bd99057bcfb728c042c3ccb54 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 13:58:08 +0000
+Subject: [PATCH 2/3] =?UTF-8?q?=EA=B0=80=EC=A7=9C=20=EC=98=88=EC=95=BD=20?=
+ =?UTF-8?q?=ED=99=94=EB=A9=B4(/booking)=20=EC=82=AD=EC=A0=9C=20(47?=
+ =?UTF-8?q?=EB=B6=80=2016=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/booking/page.tsx | 527 -------------------------------------------
+ 1 file changed, 527 deletions(-)
+ delete mode 100644 app/booking/page.tsx
+
+diff --git a/app/booking/page.tsx b/app/booking/page.tsx
+deleted file mode 100644
+index d670836..0000000
+--- a/app/booking/page.tsx
++++ /dev/null
+@@ -1,527 +0,0 @@
+-"use client";
+-
+-import { useState } from "react";
+-import Link from "next/link";
+-
+-// ─── 타입 ───
+-type Step = 1 | 2 | 3 | 4;
+-type ConsultType = "30min" | "60min" | "90min";
+-type ConsultMode = "chat" | "voice" | "video";
+-
+-// ─── 상담사 목업 ───
+-const COUNSELOR = {
+-  id: 1, name: "이명연", title: "사주·운명 전문가",
+-  rating: 4.9, reviews: 1243, initial: "이", color: "#3C3489",
+-  available: true, experience: 18,
+-};
+-
+-const CONSULT_TYPES: { key: ConsultType; label: string; duration: string; price: number; desc: string }[] = [
+-  { key: "30min", label: "기본 상담", duration: "30분", price: 30000, desc: "사주 기본 분석 + 현재 운세 핵심 정리" },
+-  { key: "60min", label: "심층 상담", duration: "60분", price: 60000, desc: "대운·세운·직업·연애운 전반 분석" },
+-  { key: "90min", label: "종합 상담", duration: "90분", price: 75000, desc: "전 분야 심층 분석 + 질의응답 무제한" },
+-];
+-
+-const CONSULT_MODES: { key: ConsultMode; icon: string; label: string; desc: string }[] = [
+-  { key: "chat", icon: "💬", label: "채팅 상담", desc: "텍스트로 편하게 대화" },
+-  { key: "voice", icon: "🎙️", label: "음성 상담", desc: "전화처럼 목소리로 대화" },
+-  { key: "video", icon: "📹", label: "화상 상담", desc: "얼굴 보며 깊은 상담" },
+-];
+-
+-const TIME_SLOTS = [
+-  { date: "오늘 (6/17)", day: "화", slots: ["14:00", "15:00", "16:30"] },
+-  { date: "내일 (6/18)", day: "수", slots: ["10:00", "11:00", "13:00", "15:00", "16:00"] },
+-  { date: "6/19", day: "목", slots: ["10:00", "14:00", "17:00"] },
+-  { date: "6/20", day: "금", slots: ["09:00", "11:00", "13:00", "15:00"] },
+-  { date: "6/21", day: "토", slots: ["10:00", "11:00", "12:00"] },
+-];
+-
+-const CONCERN_TAGS = [
+-  "연애·짝사랑", "결혼 타이밍", "이직·취업", "사업·창업",
+-  "재물·투자", "진로 방향", "건강", "가족 관계",
+-  "이사·풍수", "이름·작명", "올해 운세", "기타",
+-];
+-
+-// ─── 유틸 ───
+-function BackBtn({ href }: { href: string }) {
+-  return (
+-    <Link href={href}>
+-      <button className="w-9 h-9 rounded-xl flex items-center justify-center"
+-        style={{ background: "rgba(255,255,255,0.06)" }}>
+-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5 text-white">
+-          <polyline points="15 18 9 12 15 6" />
+-        </svg>
+-      </button>
+-    </Link>
+-  );
+-}
+-
+-function StepBar({ current }: { current: Step }) {
+-  const labels = ["상담 유형", "날짜·시간", "고민 입력", "최종 확인"];
+-  return (
+-    <div className="flex items-center gap-0">
+-      {labels.map((lbl, i) => {
+-        const n = (i + 1) as Step;
+-        const done = n < current;
+-        const active = n === current;
+-        return (
+-          <div key={lbl} className="flex items-center flex-1 last:flex-none">
+-            <div className="flex flex-col items-center gap-1">
+-              <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all"
+-                style={done
+-                  ? { background: "#FAC775", color: "#1a1a18" }
+-                  : active
+-                  ? { background: "#3C3489", color: "#FAC775", border: "2px solid #FAC775" }
+-                  : { background: "rgba(255,255,255,0.08)", color: "#6a6880" }}>
+-                {done ? "✓" : n}
+-              </div>
+-              <span className="text-[9px] whitespace-nowrap"
+-                style={{ color: active ? "#FAC775" : done ? "#b0aec8" : "#6a6880" }}>
+-                {lbl}
+-              </span>
+-            </div>
+-            {i < labels.length - 1 && (
+-              <div className="flex-1 h-px mx-1 mb-3.5 transition-all"
+-                style={{ background: done ? "#FAC775" : "rgba(255,255,255,0.08)" }} />
+-            )}
+-          </div>
+-        );
+-      })}
+-    </div>
+-  );
+-}
+-
+-// ─── Step 1: 상담 유형 선택 ───
+-function Step1({
+-  consultType, setConsultType,
+-  consultMode, setConsultMode,
+-}: {
+-  consultType: ConsultType | null; setConsultType: (v: ConsultType) => void;
+-  consultMode: ConsultMode | null; setConsultMode: (v: ConsultMode) => void;
+-}) {
+-  return (
+-    <div className="space-y-4">
+-      <div className="rounded-2xl p-5" style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+-        <div className="flex items-center gap-2 mb-4">
+-          <span className="text-xl">🗂️</span>
+-          <div>
+-            <h3 className="text-sm font-bold text-white">상담 시간 선택</h3>
+-            <p className="text-xs" style={{ color: "#8a88a0" }}>상담 목적에 맞는 시간을 선택하세요</p>
+-          </div>
+-        </div>
+-        <div className="space-y-2">
+-          {CONSULT_TYPES.map((t) => (
+-            <button key={t.key} onClick={() => setConsultType(t.key)}
+-              className="w-full rounded-xl p-4 text-left transition-all active:scale-[0.98]"
+-              style={consultType === t.key
+-                ? { background: "rgba(60,52,137,0.3)", border: "1px solid rgba(250,199,117,0.4)" }
+-                : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+-              <div className="flex items-center justify-between">
+-                <div className="flex items-center gap-3">
+-                  <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
+-                    style={consultType === t.key
+-                      ? { borderColor: "#FAC775", background: "#FAC775" }
+-                      : { borderColor: "#6a6880", background: "transparent" }}>
+-                    {consultType === t.key && <div className="w-2 h-2 rounded-full bg-white" />}
+-                  </div>
+-                  <div>
+-                    <div className="flex items-center gap-2">
+-                      <span className="text-sm font-semibold" style={{ color: consultType === t.key ? "#FAC775" : "#e0dce8" }}>
+-                        {t.label}
+-                      </span>
+-                      <span className="text-xs px-2 py-0.5 rounded-full"
+-                        style={{ background: "rgba(255,255,255,0.07)", color: "#8a88a0" }}>{t.duration}</span>
+-                    </div>
+-                    <p className="text-xs mt-0.5" style={{ color: "#8a88a0" }}>{t.desc}</p>
+-                  </div>
+-                </div>
+-                <span className="text-sm font-bold flex-shrink-0" style={{ color: consultType === t.key ? "#FAC775" : "#c8c4d8" }}>
+-                  {t.price.toLocaleString()}원
+-                </span>
+-              </div>
+-            </button>
+-          ))}
+-        </div>
+-      </div>
+-
+-      <div className="rounded-2xl p-5" style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+-        <div className="flex items-center gap-2 mb-4">
+-          <span className="text-xl">📡</span>
+-          <div>
+-            <h3 className="text-sm font-bold text-white">상담 방식 선택</h3>
+-            <p className="text-xs" style={{ color: "#8a88a0" }}>편한 방식으로 진행합니다</p>
+-          </div>
+-        </div>
+-        <div className="grid grid-cols-3 gap-2">
+-          {CONSULT_MODES.map((m) => (
+-            <button key={m.key} onClick={() => setConsultMode(m.key)}
+-              className="flex flex-col items-center py-4 px-2 rounded-xl transition-all active:scale-95"
+-              style={consultMode === m.key
+-                ? { background: "rgba(60,52,137,0.35)", border: "1px solid rgba(250,199,117,0.4)" }
+-                : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+-              <span className="text-2xl mb-1.5">{m.icon}</span>
+-              <span className="text-xs font-semibold" style={{ color: consultMode === m.key ? "#FAC775" : "#c8c4d8" }}>
+-                {m.label}
+-              </span>
+-              <span className="text-[10px] mt-0.5 text-center leading-tight" style={{ color: "#8a88a0" }}>
+-                {m.desc}
+-              </span>
+-            </button>
+-          ))}
+-        </div>
+-      </div>
+-    </div>
+-  );
+-}
+-
+-// ─── Step 2: 날짜·시간 ───
+-function Step2({ selected, setSelected }: {
+-  selected: string | null; setSelected: (v: string | null) => void;
+-}) {
+-  return (
+-    <div className="space-y-3">
+-      <div className="rounded-xl px-4 py-3" style={{ background: "rgba(250,199,117,0.08)", border: "1px solid rgba(250,199,117,0.2)" }}>
+-        <p className="text-xs" style={{ color: "#b0aec8" }}>
+-          <span style={{ color: "#FAC775" }}>💡 </span>
+-          상담 시작 1시간 전까지 무료 취소 가능합니다
+-        </p>
+-      </div>
+-      {TIME_SLOTS.map((group) => (
+-        <div key={group.date} className="rounded-2xl p-4"
+-          style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+-          <div className="flex items-center gap-2 mb-3">
+-            <span className="text-sm font-bold text-white">{group.date}</span>
+-            <span className="text-xs px-2 py-0.5 rounded-full"
+-              style={{ background: "rgba(255,255,255,0.06)", color: "#8a88a0" }}>{group.day}</span>
+-          </div>
+-          <div className="grid grid-cols-4 gap-2">
+-            {group.slots.map((slot) => {
+-              const key = `${group.date}-${slot}`;
+-              const on = selected === key;
+-              return (
+-                <button key={slot} onClick={() => setSelected(on ? null : key)}
+-                  className="py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95"
+-                  style={on
+-                    ? { background: "#3C3489", color: "#FAC775", border: "1px solid rgba(250,199,117,0.5)" }
+-                    : { background: "rgba(255,255,255,0.04)", color: "#c8c4d8", border: "1px solid rgba(255,255,255,0.08)" }}>
+-                  {slot}
+-                </button>
+-              );
+-            })}
+-          </div>
+-        </div>
+-      ))}
+-    </div>
+-  );
+-}
+-
+-// ─── Step 3: 고민 입력 ───
+-function Step3({ concern, setConcern, selectedTags, toggleTag }: {
+-  concern: string; setConcern: (v: string) => void;
+-  selectedTags: string[]; toggleTag: (v: string) => void;
+-}) {
+-  return (
+-    <div className="space-y-4">
+-      <div className="rounded-2xl p-5" style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+-        <div className="flex items-center gap-2 mb-4">
+-          <span className="text-xl">🏷️</span>
+-          <div>
+-            <h3 className="text-sm font-bold text-white">상담 주제 (복수 선택)</h3>
+-            <p className="text-xs" style={{ color: "#8a88a0" }}>어떤 부분이 궁금하신가요?</p>
+-          </div>
+-        </div>
+-        <div className="flex flex-wrap gap-2">
+-          {CONCERN_TAGS.map((tag) => {
+-            const on = selectedTags.includes(tag);
+-            return (
+-              <button key={tag} onClick={() => toggleTag(tag)}
+-                className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+-                style={on
+-                  ? { background: "#3C3489", color: "#FAC775", border: "1px solid rgba(250,199,117,0.3)" }
+-                  : { background: "rgba(255,255,255,0.04)", color: "#8a88a0", border: "1px solid rgba(255,255,255,0.08)" }}>
+-                {on ? "✓ " : ""}{tag}
+-              </button>
+-            );
+-          })}
+-        </div>
+-      </div>
+-
+-      <div className="rounded-2xl p-5" style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+-        <div className="flex items-center gap-2 mb-3">
+-          <span className="text-xl">✍️</span>
+-          <div>
+-            <h3 className="text-sm font-bold text-white">고민 내용 (선택)</h3>
+-            <p className="text-xs" style={{ color: "#8a88a0" }}>미리 알려주시면 더 정확한 상담이 가능해요</p>
+-          </div>
+-        </div>
+-        <textarea
+-          value={concern}
+-          onChange={(e) => setConcern(e.target.value)}
+-          placeholder="예) 올해 이직을 고민 중인데 현재 회사에 계속 다니는 게 좋을지, 새 회사로 옮기는 게 좋을지 고민입니다..."
+-          rows={5}
+-          className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none"
+-          style={{
+-            background: "#1a1a18",
+-            border: "1px solid rgba(255,255,255,0.1)",
+-            color: "#e0dce8",
+-            colorScheme: "dark",
+-          }}
+-        />
+-        <div className="flex justify-between mt-1.5">
+-          <p className="text-xs" style={{ color: "#6a6880" }}>상담 내용은 상담사에게만 공개됩니다</p>
+-          <span className="text-xs" style={{ color: concern.length > 400 ? "#ef9a9a" : "#6a6880" }}>
+-            {concern.length}/500
+-          </span>
+-        </div>
+-      </div>
+-    </div>
+-  );
+-}
+-
+-// ─── Step 4: 최종 확인 ───
+-function Step4({
+-  consultType, consultMode, slot, concern, selectedTags,
+-}: {
+-  consultType: ConsultType | null;
+-  consultMode: ConsultMode | null;
+-  slot: string | null;
+-  concern: string;
+-  selectedTags: string[];
+-}) {
+-  const typeInfo = CONSULT_TYPES.find((t) => t.key === consultType);
+-  const modeInfo = CONSULT_MODES.find((m) => m.key === consultMode);
+-
+-  const rows: { label: string; value: string }[] = [
+-    { label: "상담사", value: `${COUNSELOR.name} · ${COUNSELOR.title}` },
+-    { label: "상담 유형", value: typeInfo ? `${typeInfo.label} (${typeInfo.duration})` : "-" },
+-    { label: "상담 방식", value: modeInfo ? `${modeInfo.icon} ${modeInfo.label}` : "-" },
+-    { label: "날짜·시간", value: slot ? slot.replace("-", " ") : "-" },
+-  ];
+-
+-  return (
+-    <div className="space-y-4">
+-      {/* 예약 요약 */}
+-      <div className="rounded-2xl overflow-hidden"
+-        style={{ background: "#2C2C2A", border: "1px solid rgba(250,199,117,0.15)" }}>
+-        <div className="flex items-center gap-3 px-5 py-4"
+-          style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+-          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold text-white"
+-            style={{ background: `linear-gradient(135deg, ${COUNSELOR.color}, #FAC775)` }}>
+-            {COUNSELOR.initial}
+-          </div>
+-          <div>
+-            <div className="font-bold text-white">{COUNSELOR.name}</div>
+-            <div className="text-xs mt-0.5" style={{ color: "#b0aec8" }}>{COUNSELOR.title}</div>
+-            <div className="text-xs mt-0.5" style={{ color: "#FAC775" }}>★ {COUNSELOR.rating} · 후기 {COUNSELOR.reviews.toLocaleString()}</div>
+-          </div>
+-        </div>
+-        <div className="px-5 py-3 space-y-3">
+-          {rows.map(({ label, value }) => (
+-            <div key={label} className="flex items-start justify-between gap-4">
+-              <span className="text-xs flex-shrink-0" style={{ color: "#8a88a0" }}>{label}</span>
+-              <span className="text-xs text-right font-medium" style={{ color: "#e0dce8" }}>{value}</span>
+-            </div>
+-          ))}
+-          {selectedTags.length > 0 && (
+-            <div className="flex items-start justify-between gap-4">
+-              <span className="text-xs flex-shrink-0" style={{ color: "#8a88a0" }}>상담 주제</span>
+-              <div className="flex flex-wrap gap-1 justify-end">
+-                {selectedTags.map((t) => (
+-                  <span key={t} className="text-[10px] px-2 py-0.5 rounded-full"
+-                    style={{ background: "rgba(60,52,137,0.3)", color: "#b0aec8" }}>{t}</span>
+-                ))}
+-              </div>
+-            </div>
+-          )}
+-          {concern && (
+-            <div>
+-              <span className="text-xs block mb-1" style={{ color: "#8a88a0" }}>고민 내용</span>
+-              <p className="text-xs leading-relaxed rounded-xl px-3 py-2.5 line-clamp-3"
+-                style={{ background: "#1a1a18", color: "#b0aec8" }}>{concern}</p>
+-            </div>
+-          )}
+-        </div>
+-      </div>
+-
+-      {/* 결제 요약 */}
+-      <div className="rounded-2xl p-5"
+-        style={{ background: "linear-gradient(135deg, rgba(60,52,137,0.25), rgba(250,199,117,0.06))", border: "1px solid rgba(60,52,137,0.4)" }}>
+-        <h3 className="text-sm font-bold text-white mb-3">결제 정보</h3>
+-        <div className="space-y-2">
+-          <div className="flex justify-between text-sm">
+-            <span style={{ color: "#b0aec8" }}>{typeInfo?.label} ({typeInfo?.duration})</span>
+-            <span style={{ color: "#e0dce8" }}>{typeInfo?.price.toLocaleString()}원</span>
+-          </div>
+-          <div className="flex justify-between text-sm">
+-            <span style={{ color: "#b0aec8" }}>할인</span>
+-            <span style={{ color: "#4caf50" }}>-0원</span>
+-          </div>
+-          <div className="h-px mt-2 mb-2" style={{ background: "rgba(255,255,255,0.08)" }} />
+-          <div className="flex justify-between">
+-            <span className="font-bold text-white">최종 결제</span>
+-            <span className="text-lg font-bold" style={{ color: "#FAC775" }}>
+-              {typeInfo?.price.toLocaleString()}원
+-            </span>
+-          </div>
+-        </div>
+-        <div className="mt-3 flex items-center gap-2 text-xs" style={{ color: "#8a88a0" }}>
+-          <span>💳</span>
+-          <span>카드·간편결제·계좌이체 가능</span>
+-        </div>
+-      </div>
+-
+-      {/* 유의사항 */}
+-      <div className="rounded-xl px-4 py-3 space-y-1.5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+-        {["상담 시작 1시간 전까지 무료 취소 가능합니다.", "취소 후에는 동일 금액이 즉시 환불됩니다.", "상담 내용은 철저히 비밀이 보장됩니다."].map((t) => (
+-          <p key={t} className="text-xs flex gap-2" style={{ color: "#8a88a0" }}>
+-            <span style={{ color: "#FAC775" }}>·</span>{t}
+-          </p>
+-        ))}
+-      </div>
+-    </div>
+-  );
+-}
+-
+-// ─── 메인 페이지 ───
+-export default function BookingPage() {
+-  const [step, setStep] = useState<Step>(1);
+-  const [consultType, setConsultType] = useState<ConsultType | null>(null);
+-  const [consultMode, setConsultMode] = useState<ConsultMode | null>(null);
+-  const [slot, setSlot] = useState<string | null>(null);
+-  const [concern, setConcern] = useState("");
+-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+-  const [done, setDone] = useState(false);
+-
+-  function toggleTag(tag: string) {
+-    setSelectedTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
+-  }
+-
+-  const canNext =
+-    step === 1 ? !!(consultType && consultMode) :
+-    step === 2 ? !!slot :
+-    step === 3 ? true :
+-    true;
+-
+-  function handleNext() {
+-    if (step < 4) setStep((s) => (s + 1) as Step);
+-    else setDone(true);
+-  }
+-
+-  const typeInfo = CONSULT_TYPES.find((t) => t.key === consultType);
+-
+-  // 완료 화면
+-  if (done) {
+-    return (
+-      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center"
+-        style={{ background: "#1a1a18", maxWidth: "430px", margin: "0 auto" }}>
+-        <div className="text-7xl mb-6 animate-bounce">🎉</div>
+-        <h1 className="text-2xl font-bold text-white mb-2">예약 완료!</h1>
+-        <p className="text-sm mb-1" style={{ color: "#b0aec8" }}>
+-          {COUNSELOR.name} 상담사와의 예약이 완료되었습니다.
+-        </p>
+-        <p className="text-sm" style={{ color: "#8a88a0" }}>
+-          {slot?.replace("-", " ")} · {typeInfo?.duration}
+-        </p>
+-        <div className="w-full mt-8 p-5 rounded-2xl text-left space-y-3"
+-          style={{ background: "#2C2C2A", border: "1px solid rgba(250,199,117,0.2)" }}>
+-          <div className="flex items-center gap-2 mb-1">
+-            <div className="w-2 h-2 rounded-full" style={{ background: "#4caf50" }} />
+-            <span className="text-xs font-semibold" style={{ color: "#4caf50" }}>예약 확정</span>
+-          </div>
+-          {[
+-            ["상담사", COUNSELOR.name],
+-            ["일시", slot?.replace("-", " ") ?? ""],
+-            ["방식", CONSULT_MODES.find((m) => m.key === consultMode)?.label ?? ""],
+-            ["결제 금액", `${typeInfo?.price.toLocaleString()}원`],
+-          ].map(([k, v]) => (
+-            <div key={k} className="flex justify-between text-sm">
+-              <span style={{ color: "#8a88a0" }}>{k}</span>
+-              <span style={{ color: "#e0dce8", fontWeight: 500 }}>{v}</span>
+-            </div>
+-          ))}
+-        </div>
+-        <div className="flex gap-3 w-full mt-6">
+-          <Link href="/mypage-new" className="flex-1">
+-            <button className="w-full py-3.5 rounded-xl text-sm font-semibold"
+-              style={{ border: "1px solid rgba(250,199,117,0.3)", color: "#FAC775", background: "rgba(250,199,117,0.08)" }}>
+-              마이페이지
+-            </button>
+-          </Link>
+-          <Link href="/" className="flex-1">
+-            <button className="w-full py-3.5 rounded-xl text-sm font-bold"
+-              style={{ background: "linear-gradient(135deg, #3C3489, #FAC775)", color: "#1a1a18" }}>
+-              홈으로
+-            </button>
+-          </Link>
+-        </div>
+-      </div>
+-    );
+-  }
+-
+-  return (
+-    <div className="min-h-screen" style={{ background: "#1a1a18", maxWidth: "430px", margin: "0 auto" }}>
+-      {/* 헤더 */}
+-      <header className="fixed top-0 z-50 px-4 pt-4 pb-3"
+-        style={{
+-          background: "rgba(26,26,24,0.97)", backdropFilter: "blur(12px)",
+-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+-          width: "100%", maxWidth: "430px", left: "50%", transform: "translateX(-50%)",
+-        }}>
+-        <div className="flex items-center justify-between mb-3">
+-          <BackBtn href={step === 1 ? "/consultants/1" : "#"} />
+-          <span className="text-sm font-bold text-white">상담 예약</span>
+-          <div className="w-9" />
+-        </div>
+-        <StepBar current={step} />
+-      </header>
+-
+-      {/* 상담사 미니 카드 */}
+-      <div className="pt-28 px-4 pb-2">
+-        <div className="flex items-center gap-3 rounded-xl px-4 py-3"
+-          style={{ background: "#2C2C2A", border: "1px solid rgba(255,255,255,0.07)" }}>
+-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-base font-bold text-white"
+-            style={{ background: `linear-gradient(135deg, ${COUNSELOR.color}, #FAC775)` }}>
+-            {COUNSELOR.initial}
+-          </div>
+-          <div className="flex-1">
+-            <div className="text-sm font-bold text-white">{COUNSELOR.name}</div>
+-            <div className="text-xs" style={{ color: "#8a88a0" }}>{COUNSELOR.title} · ★ {COUNSELOR.rating}</div>
+-          </div>
+-          <div className="flex items-center gap-1.5">
+-            <div className="w-2 h-2 rounded-full" style={{ background: "#4caf50" }} />
+-            <span className="text-xs" style={{ color: "#4caf50" }}>상담 가능</span>
+-          </div>
+-        </div>
+-      </div>
+-
+-      <main className="px-4 pt-3 pb-40 space-y-4">
+-        {step === 1 && <Step1 consultType={consultType} setConsultType={setConsultType} consultMode={consultMode} setConsultMode={setConsultMode} />}
+-        {step === 2 && <Step2 selected={slot} setSelected={setSlot} />}
+-        {step === 3 && <Step3 concern={concern} setConcern={setConcern} selectedTags={selectedTags} toggleTag={toggleTag} />}
+-        {step === 4 && <Step4 consultType={consultType} consultMode={consultMode} slot={slot} concern={concern} selectedTags={selectedTags} />}
+-      </main>
+-
+-      {/* 하단 버튼 */}
+-      <div className="fixed bottom-0 z-50 px-4 py-4"
+-        style={{
+-          background: "linear-gradient(to top, #1a1a18 70%, transparent)",
+-          width: "100%", maxWidth: "430px", left: "50%", transform: "translateX(-50%)",
+-          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
+-        }}>
+-        {step > 1 && (
+-          <button onClick={() => setStep((s) => (s - 1) as Step)}
+-            className="w-full mb-2 py-3 rounded-xl text-sm font-semibold transition-all"
+-            style={{ border: "1px solid rgba(255,255,255,0.1)", color: "#8a88a0", background: "transparent" }}>
+-            ← 이전 단계
+-          </button>
+-        )}
+-        <button onClick={handleNext} disabled={!canNext}
+-          className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all active:scale-95"
+-          style={canNext
+-            ? { background: "linear-gradient(135deg, #3C3489 0%, #FAC775 100%)", color: "#1a1a18", boxShadow: "0 4px 20px rgba(60,52,137,0.4)" }
+-            : { background: "rgba(255,255,255,0.06)", color: "#6a6880", cursor: "not-allowed" }}>
+-          {step === 4 ? "💳 결제하고 예약 완료" : `다음 단계 (${step}/4)`}
+-        </button>
+-      </div>
+-    </div>
+-  );
+-}
+-- 
+2.43.0
+
+
+From e853493613f845f6ed36b3bcc8542cfad7eafe48 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 13:58:42 +0000
+Subject: [PATCH 3/3] =?UTF-8?q?=EC=A3=BC=EC=84=9D=EC=97=90=20=EB=82=A8?=
+ =?UTF-8?q?=EC=9D=80=20=EA=B0=80=EC=A7=9C=20=EC=9D=B4=EB=A6=84=20=EC=A0=95?=
+ =?UTF-8?q?=EB=A6=AC=20(47=EB=B6=80=2016=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/manseryeok/birth-timing/components/PickDateV7.tsx | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/app/manseryeok/birth-timing/components/PickDateV7.tsx b/app/manseryeok/birth-timing/components/PickDateV7.tsx
+index 5ac19d8..8415062 100644
+--- a/app/manseryeok/birth-timing/components/PickDateV7.tsx
++++ b/app/manseryeok/birth-timing/components/PickDateV7.tsx
+@@ -103,7 +103,7 @@ interface Props {
+    *   지금은 화면 맨 아래 ★공용 상담 카드가 그 일을 합니다.
+    *   ⚠️ /consultants 화면 «자체» 는 지우지 «않았습니다» (45부 방식 — 길만 끊음).
+    *      들어오는 길이 «여기 하나뿐» 이었으므로 이제 아무도 안 갑니다.
+-   *   ⛔ 되살리시려면 ★그 화면의 목업(박진수·정도운 등)을 «진짜 상담사» 로
++   *   ⛔ 되살리시려면 ★그 화면의 «가짜 목업» 을 진짜 상담사(DB)로
+    *      갈아 끼우고 「상담 신청하기」에 onClick 을 «먼저» 붙이십시오.
+    *      지금 그대로 되살리면 손님이 ★없는 사람과 없는 가격을 봅니다.
+    */
+@@ -312,7 +312,7 @@ export default function PickDateV7({ result, onPickHour }: Props) {
+             </p>
+             {/* ★2026-08-05 (47부 15차) — 「상담 알아보기」를 걷어냈습니다. [대표님 지시]
+                 [무엇이 문제였나]  이 버튼이 ★/consultants 로 갔습니다.
+-                  그 화면은 ★박진수·정도운·한동원 같은 «가짜 상담사» 목업이고
++                  그 화면은 코드에 «박혀 있던» ★가짜 상담사 목업이었고
+                   「상담 신청하기」에 onClick 도 «없어» 눌러도 아무 일이 안 났습니다.
+                   진짜 상담사(DB)와는 아무 상관이 없었습니다.
+                 ⚠️ 그리고 이 자리는 ★「고를 수 있는 날이 없을 때」만 나왔습니다.
+-- 
+2.43.0
+
