@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { EL_BG, EL_BD, EL_C, EL_C_SUB, EL_HAN } from '@/lib/saju/ohaengColor'
-import { calcSeyunList, calcWolunList, calcIlunList, type DayunItem } from '@/lib/saju/dayun'
+import { calcSeyunList, calcWolunList, calcIlunList, isForwardDayun, type DayunItem } from '@/lib/saju/dayun'
 // ★144칸 — 운에서 온 지지가 내 월지·일지를 만났을 때 (교재 49쪽 + 50~73쪽)
 import { jijiRelation, type JijiGrade } from '@/lib/saju/jijiGrade'
 import TermModal from './TermModal'
@@ -246,7 +246,28 @@ export default function UnseFlow(props: Props) {
     stemSS: d.ganYukchin, branchSS: d.jiYukchin, selected: false,
   }))
 
-  const daeunBadge = `현재 ${currentYear - birthYear}세`
+  // ★2026-08-05 (46부 13차) — 「대운수 · 순행/역행」을 «글로» 적습니다. [대표님 지시]
+  //
+  //   [왜]  칸의 나이(7세·17세…)로 대운수를 «짐작» 하게 두었습니다.
+  //         하늘도마뱀은 「대운 (대운수: 9) 순행」이라 «적어» 줍니다.
+  //
+  //   [★맞대어 확인했습니다 — 2026-08-05 · 하늘도마뱀 열 사례]
+  //     원국 8글자 10/10 · 순행역행 10/10 · 절입시각 10/10(3분 이내)
+  //     ★대운수(정수) 10/10 · 대운 간지 여덟 칸 10/10 · 지장간 사령 10/10
+  //
+  //   ⛔⛔ 앱이 옆에 적는 «大 6.9» 같은 ★소수는 «넣지 않습니다».
+  //     열 사례로 규칙을 못 찾았습니다 — 시각으로도 날짜로도, 반올림·버림
+  //     어느 쪽도 열 건을 다 못 맞췄고 어긋남이 ±0.16 까지 벌어졌습니다.
+  //     ★대운수 «정수» 는 10/10 맞습니다. 소수만 규칙을 모릅니다.
+  //     ⇒ 모르는 값을 술사께 내지 않습니다. 되살리지 마십시오.
+  //        (규칙을 찾으시면 그때 대표님께 여쭙고 넣으십시오)
+  const daeunSu = dayunList.length ? dayunList[0].age : null
+  const isFwd = yearStem && gender ? isForwardDayun(yearStem, gender) : null
+  const daeunBadge = [
+    daeunSu != null ? `대운수 ${daeunSu}` : '',
+    isFwd == null ? '' : (isFwd ? '순행' : '역행'),
+    `현재 ${currentYear - birthYear}세`,
+  ].filter(Boolean).join(' · ')
   const seyunBadge = `${daeunStartYear}~${daeunStartYear + 9}년`
 
   return (
