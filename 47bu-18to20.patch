@@ -1,0 +1,552 @@
+From 99aacae112d7dbab486926174bfbaf09108e3694 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 15:06:17 +0000
+Subject: [PATCH 1/3] =?UTF-8?q?=EC=84=A0=20=EB=B6=80=ED=92=88=20=EC=8B=A0?=
+ =?UTF-8?q?=EC=84=A4=20=E2=80=94=20=EB=82=B4=20=EC=9D=B4=EB=A6=84=20?=
+ =?UTF-8?q?=EC=A0=95=EB=B0=80=EB=B6=84=EC=84=9D=20=ED=99=94=EB=A9=B4?=
+ =?UTF-8?q?=EC=9D=98=20=EB=AA=A8=EB=93=A0=20=EC=84=A0=EC=9D=84=202.52:1=20?=
+ =?UTF-8?q?=EB=A1=9C=20=ED=86=B5=EC=9D=BC=20(47=EB=B6=80=2018=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../components/PerspectiveAccordion.tsx       |  5 +-
+ .../components/NameAnalysisResultView.tsx     | 13 +--
+ .../diagnosis/components/NamingAptitude.tsx   | 21 +++--
+ .../components/NamingSajuSummary.tsx          | 14 +--
+ app/manseryeok/naming/diagnosis/page.tsx      | 17 ++--
+ lib/ui/line.ts                                | 90 +++++++++++++++++++
+ 6 files changed, 133 insertions(+), 27 deletions(-)
+ create mode 100644 lib/ui/line.ts
+
+diff --git a/app/manseryeok/components/PerspectiveAccordion.tsx b/app/manseryeok/components/PerspectiveAccordion.tsx
+index cf1fa93..92fa408 100644
+--- a/app/manseryeok/components/PerspectiveAccordion.tsx
++++ b/app/manseryeok/components/PerspectiveAccordion.tsx
+@@ -12,13 +12,14 @@ import { useEffect, useState } from 'react'
+ import Stars from '@/app/components/common/StarRating'
+ // ★2026-07-30 (3단계-b) — 관점별 별점 (대표님 지시)
+ import { starGlyphs, type PerspectiveStar, type StarResult } from '@/lib/saju/starRating'
++import { LINE_OUTER } from '@/lib/ui/line'
+ 
+ // diagnosis/page.tsx와 동일 팔레트
+ const cardBg = '#fffbf7'
+ const gold = '#c8783c'
+ const ink = '#1a1a1a'
+ const sub = '#b4785a'
+-const border = '0.5px solid #9c7a58'
++const border = LINE_OUTER   // ★2026-08-05 (47부 18차) — 선 부품으로
+ const accent = '#e6be9f' // 3단 좌측 라인
+ 
+ export interface Perspective {
+@@ -237,7 +238,7 @@ export default function PerspectiveAccordion({
+ 
+       {/* 맺음말 — 항상 펼침 */}
+       {commentary.conclusion && (
+-        <div style={{ background: 'rgba(200,120,60,0.07)', border: `1px solid ${gold}`, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
++        <div style={{ background: 'rgba(200,120,60,0.07)', border: LINE_OUTER, borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
+           <div style={{ fontSize: '12px', color: sub, marginBottom: '8px', textAlign: 'center' }}>맺음</div>
+           <div style={{ fontSize: '13px', color: ink, lineHeight: 1.9, textAlign: 'center' }}>
+             {commentary.conclusion}
+diff --git a/app/manseryeok/naming/components/NameAnalysisResultView.tsx b/app/manseryeok/naming/components/NameAnalysisResultView.tsx
+index ab48c62..3be1ff3 100644
+--- a/app/manseryeok/naming/components/NameAnalysisResultView.tsx
++++ b/app/manseryeok/naming/components/NameAnalysisResultView.tsx
+@@ -33,6 +33,7 @@ import NamingAptitude from '@/app/manseryeok/naming/diagnosis/components/NamingA
+ import PerspectiveAccordion, { Stars, type PerspectiveCommentary } from '@/app/manseryeok/components/PerspectiveAccordion'
+ import type { StarResult, PerspectiveStar } from '@/lib/saju/starRating'
+ import type { Ohaeng } from '@/lib/saju/ohaeng'
++import { LINE_OUTER, LINE_INNER } from '@/lib/ui/line'
+ 
+ /** 등급 색 — ⚠️ 새 색표를 만들지 않습니다. 이 화면 안 세 값뿐입니다 */
+ function gradeTone(g: string): string {
+@@ -55,7 +56,7 @@ const SUMMARY_SUBS = [
+ 
+ const GOLD = '#c8783c'
+ const CARD = '#FFFBF7'
+-const LINE = '#f0e0d5'
++// ★2026-08-05 (47부 18차) — 옛 선 상수를 걷었습니다. 값은 lib/ui/line.ts 에 있습니다.
+ 
+ /** 눌림 모션 — 화면끼리 손맛을 맞춥니다 */
+ const PRESS = { transition: 'all .12s cubic-bezier(.4,0,.2,1)' } as const
+@@ -165,7 +166,7 @@ export default function NameAnalysisResultView(p: NameAnalysisResultViewProps) {
+             {p.badge.rank != null && (
+               <span style={{
+                 fontSize: 11, fontWeight: 600, color: GOLD,
+-                background: '#fff', border: `1px solid ${LINE}`,
++                background: '#fff', border: LINE_OUTER,
+                 padding: '4px 11px', borderRadius: 12,
+               }}>
+                 추천 {p.badge.rank}순위
+@@ -187,7 +188,7 @@ export default function NameAnalysisResultView(p: NameAnalysisResultViewProps) {
+         {p.summaryRows && p.summaryRows.length > 0 && (
+           <div style={{
+             marginTop: 14, textAlign: 'left',
+-            background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: '14px 16px',
++            background: CARD, border: LINE_OUTER, borderRadius: 14, padding: '14px 16px',
+           }}>
+             {/* ══════════════════════════════════════════════════════
+                 ★2026-08-01 (43부 27차) — 요약 카드를 «아코디언과 같은 체계» 로
+@@ -208,7 +209,7 @@ export default function NameAnalysisResultView(p: NameAnalysisResultViewProps) {
+                     width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                     // ★누르는 자리를 넉넉히 — 손가락이 닿아야 «누를 수 있다» 고 압니다
+                     padding: '11px 2px', background: 'none', border: 'none',
+-                    borderBottom: i === p.summaryRows!.length - 1 ? 'none' : `1px solid ${LINE}`,
++                    borderBottom: i === p.summaryRows!.length - 1 ? 'none' : LINE_INNER,
+                     cursor: 'pointer', textAlign: 'left',
+                   }}>
+                   <span style={{ fontSize: 13, fontWeight: 700, color: GOLD, flexShrink: 0 }}>
+@@ -234,7 +235,7 @@ export default function NameAnalysisResultView(p: NameAnalysisResultViewProps) {
+               )
+             })}
+             {p.summaryOverall && (
+-              <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${LINE}`, textAlign: 'center' }}>
++              <div style={{ marginTop: 12, paddingTop: 12, borderTop: LINE_INNER, textAlign: 'center' }}>
+                 <span style={{ fontSize: 12, color: '#6B5B50' }}>종합 </span>
+                 <span style={{ fontSize: 20, fontWeight: 700, color: gradeTone(p.summaryOverall) }}>
+                   {p.summaryOverall}
+@@ -292,7 +293,7 @@ export default function NameAnalysisResultView(p: NameAnalysisResultViewProps) {
+           style={{
+             ...PRESS,
+             width: '100%', padding: 13, borderRadius: 12, marginBottom: 12,
+-            background: CARD, border: `1px solid ${GOLD}`, color: GOLD,
++            background: CARD, border: LINE_OUTER, color: GOLD,
+             fontSize: 13, fontWeight: 600, cursor: 'pointer',
+           }}>
+           {p.otherHanjaLabel ?? '다른 추천 한자 보기'} →
+diff --git a/app/manseryeok/naming/diagnosis/components/NamingAptitude.tsx b/app/manseryeok/naming/diagnosis/components/NamingAptitude.tsx
+index ce8c60c..ff2316f 100644
+--- a/app/manseryeok/naming/diagnosis/components/NamingAptitude.tsx
++++ b/app/manseryeok/naming/diagnosis/components/NamingAptitude.tsx
+@@ -30,6 +30,8 @@ import { judgeOhaengGijil, judgeGyeyeol, judgeJobFit } from '@/lib/saju/career'
+ import { calcJijangganBridge } from '@/lib/saju/career/jijangganBridge'
+ import { calcNamingBridge, type NamingBridgeResult } from '@/lib/saju/career/namingBridge'
+ import type { CareerCard } from '@/lib/saju/career/types'
++import { LINE_OUTER, LINE_INNER } from '@/lib/ui/line'
++import { CHIP_BORDER, CHIP_RADIUS, CHIP_PADDING, CHIP_FONT_SIZE } from '@/lib/ui/line'
+ 
+ type Ohaeng = '목' | '화' | '토' | '금' | '수'
+ 
+@@ -51,7 +53,7 @@ export interface NamingAptitudeProps {
+ }
+ 
+ const CARD = '#FFFBF7'
+-const LINE = '#f0e0d5'
++// ★2026-08-05 (47부 18차) — 옛 선 상수를 걷었습니다. 값은 lib/ui/line.ts 에 있습니다.
+ const GOLD = '#c8783c'
+ const INK = '#5c3a1e'
+ 
+@@ -101,13 +103,13 @@ export default function NamingAptitude(p: NamingAptitudeProps) {
+       {/* ── 五. 이름에 담을 기운 ── */}
+       {naming && (naming.fill.length > 0 || naming.avoid.length > 0) && (
+         <div style={{
+-          background: CARD, border: `1px solid ${LINE}`, borderRadius: 14,
++          background: CARD, border: LINE_OUTER, borderRadius: 14,
+           padding: '13px 12px', marginBottom: 12,
+         }}>
+           <div style={{ fontSize: 12, fontWeight: 700, color: GOLD, marginBottom: 9 }}>
+             이름에 담을 기운
+           </div>
+-          <div style={{ borderLeft: `2px solid ${LINE}`, paddingLeft: 9 }}>
++          <div style={{ borderLeft: LINE_INNER, paddingLeft: 9 }}>
+             <div style={{ fontSize: 11.5, color: INK, lineHeight: 1.8 }}>
+               {naming.fill.length > 0 && (
+                 <>이름에 먼저 담아 보실 기운은{' '}
+@@ -133,7 +135,7 @@ export default function NamingAptitude(p: NamingAptitudeProps) {
+ 
+       {/* ── 六. 사주 명리적성 — ★접힌 채 시작 ── */}
+       <div style={{
+-        background: CARD, border: `1px solid ${LINE}`, borderRadius: 14,
++        background: CARD, border: LINE_OUTER, borderRadius: 14,
+         padding: '13px 12px', marginBottom: 14,
+       }}>
+         <button
+@@ -226,9 +228,16 @@ function ElChip({ el, label, muted }: { el: Ohaeng; label: string; muted?: boole
+   return (
+     <span style={{
+       display: 'inline-flex', alignItems: 'center', gap: 5,
+-      fontSize: 11, padding: '3px 9px', borderRadius: 11,
++      // ★2026-08-05 (47부 18차) — Chip(NamingSajuSummary)과 «같은 치수» 로 맞췄습니다.
++      //   [전] padding 3px 9px · radius 11 → 높이 ★19.2px
++      //   [후] padding 5px 10px · radius 14 → 높이 ★23.2px (Chip 과 같음)
++      //   ⛔ 한쪽만 바꾸지 마십시오. 두 알약이 «나란히» 놓입니다.
++      // ★2026-08-05 (47부 18차) — 알약 값을 «부품» 에서 받습니다 [대표님 지시]
++      //   ⚠️ 위 Chip(NamingSajuSummary)과 ★«같은 값» 을 씁니다. 전에는 4px 어긋났습니다.
++      //   ⛔ 여기 숫자를 직접 적지 마십시오. lib/ui/line.ts 의 CHIP_* 를 고치십시오.
++      fontSize: CHIP_FONT_SIZE, padding: CHIP_PADDING, borderRadius: CHIP_RADIUS,
+       background: muted ? '#f2eee9' : '#fff',
+-      border: `1px solid ${LINE}`, color: muted ? '#7a6a5c' : INK,
++      border: CHIP_BORDER, color: muted ? '#7a6a5c' : INK,
+     }}>
+       <span style={{
+         width: 8, height: 8, borderRadius: 4, background: EL_CHART[el],
+diff --git a/app/manseryeok/naming/diagnosis/components/NamingSajuSummary.tsx b/app/manseryeok/naming/diagnosis/components/NamingSajuSummary.tsx
+index 93a5d97..a107be7 100644
+--- a/app/manseryeok/naming/diagnosis/components/NamingSajuSummary.tsx
++++ b/app/manseryeok/naming/diagnosis/components/NamingSajuSummary.tsx
+@@ -34,6 +34,8 @@ import { calcSimsanOhaeng, grade as gradeOfPoints } from '@/lib/saju/simsanOhaen
+ import { calcYongsinNew } from '@/lib/saju/yongsinNew'
+ import { getGongmang } from '@/lib/saju'
+ import { calcJijangganBridge } from '@/lib/saju/career/jijangganBridge'
++import { LINE_OUTER, LINE_INNER } from '@/lib/ui/line'
++import { CHIP_BORDER, CHIP_RADIUS, CHIP_PADDING, CHIP_FONT_SIZE } from '@/lib/ui/line'
+ 
+ type Ohaeng = '목' | '화' | '토' | '금' | '수'
+ const EL5: Ohaeng[] = ['목', '화', '토', '금', '수']
+@@ -52,7 +54,7 @@ export interface NamingSajuSummaryProps {
+ }
+ 
+ const CARD = '#FFFBF7'
+-const LINE = '#f0e0d5'
++// ★2026-08-05 (47부 18차) — 옛 선 상수를 걷었습니다. 값은 lib/ui/line.ts 에 있습니다.
+ const GOLD = '#c8783c'
+ const INK = '#3a2e28'
+ 
+@@ -94,7 +96,7 @@ export default function NamingSajuSummary({
+ 
+   return (
+     <div style={{
+-      background: CARD, border: `1px solid ${LINE}`, borderRadius: 14,
++      background: CARD, border: LINE_OUTER, borderRadius: 14,
+       padding: '14px 12px', marginBottom: 16,
+     }}>
+       <div style={{ fontSize: 12, fontWeight: 700, color: GOLD, marginBottom: 10 }}>
+@@ -108,7 +110,7 @@ export default function NamingSajuSummary({
+       {jj?.jijanggan && jj.daysAfterJol != null && (
+         <div style={{
+           marginTop: 10, fontSize: 11, color: '#6b5340', lineHeight: 1.7,
+-          background: '#faf3ec', border: `0.5px solid ${LINE}`, borderRadius: 9, padding: '8px 10px',
++          background: '#faf3ec', border: LINE_INNER, borderRadius: 9, padding: '8px 10px',
+         }}>
+           태어난 달({jj.monthBranch})의 절기가 든 뒤 <b style={{ color: GOLD }}>{jj.daysAfterJol.toFixed(1)}일째</b>,
+           {' '}그 자리의 기운은 <b style={{ color: GOLD }}>{jj.jijanggan.currentGan}</b>
+@@ -177,8 +179,10 @@ function Chip({ label, value, el }: { label: string; value: string; el?: Ohaeng
+   return (
+     <span style={{
+       display: 'inline-flex', alignItems: 'center', gap: 5,
+-      fontSize: 11, padding: '5px 10px', borderRadius: 14,
+-      background: '#fff', border: `1px solid ${LINE}`, color: INK,
++      // ★2026-08-05 (47부 18차) — 알약 값을 «부품» 에서 받습니다 [대표님 지시]
++      //   ⛔ 여기 숫자를 직접 적지 마십시오. lib/ui/line.ts 의 CHIP_* 를 고치십시오.
++      fontSize: CHIP_FONT_SIZE, padding: CHIP_PADDING, borderRadius: CHIP_RADIUS,
++      background: '#fff', border: CHIP_BORDER, color: INK,
+     }}>
+       {el && (
+         <span style={{
+diff --git a/app/manseryeok/naming/diagnosis/page.tsx b/app/manseryeok/naming/diagnosis/page.tsx
+index 60b7de7..4f9b237 100644
+--- a/app/manseryeok/naming/diagnosis/page.tsx
++++ b/app/manseryeok/naming/diagnosis/page.tsx
+@@ -55,6 +55,7 @@ import NamingCertificateButton, {
+   type CertChar, type CertGyeok,
+ } from '@/app/manseryeok/naming/components/NamingCertificate'
+ import { soundOhaengOf } from '@/lib/saju/sound/normalize'
++import { LINE_OUTER, LINE_WARN } from '@/lib/ui/line'
+ 
+ const NAMING_RESULT_KEY = 'naming_last_result_v1'
+ 
+@@ -174,7 +175,7 @@ const ink = '#1a1a1a'          // 본문 진한 텍스트
+ const sub = '#b4785a'          // 보조 텍스트
+ const subWarm = '#96502e'      // 따뜻한 강조 텍스트
+ const rose = '#c8506e'         // 삭제·경고 포인트
+-const border = '0.5px solid #9c7a58'
++const border = LINE_OUTER
+ 
+ // ★isAvoidChar 는 lib/saju/hanjaRow.ts 의 것을 씁니다 (AVOID_KEYWORDS 도 함께 옮겼습니다)
+ function isAvoidChar(row: HanjaRow): boolean { return isAvoidCharShared(row) }
+@@ -192,7 +193,7 @@ function PitchHeader({ title, onBack, onHome }: { title: string; onBack: () => v
+       position: 'sticky', top: 0, zIndex: 50,
+       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+       padding: '13px 16px', background: 'rgba(250,250,248,0.96)',
+-      backdropFilter: 'blur(10px)', borderBottom: '0.5px solid #9c7a58',
++      backdropFilter: 'blur(10px)', borderBottom: LINE_OUTER,
+     }}>
+       <button onClick={onBack} aria-label="뒤로"
+         style={{ background: 'none', border: 'none', color: '#999', fontSize: '20px', cursor: 'pointer', padding: 0, lineHeight: 1 }}>←</button>
+@@ -837,7 +838,7 @@ function DiagnosisInner() {
+       style={{
+         display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
+         borderRadius: '12px', background: '#fffbf7', cursor: 'pointer',
+-        border: '0.5px solid #9c7a58', opacity: dim ? 0.45 : 1,
++        border: LINE_OUTER, opacity: dim ? 0.45 : 1,
+       }}>
+       <span style={{ fontSize: '26px', fontWeight: 'bold', color: gold, minWidth: '32px', textAlign: 'center' }}>
+         {row.hanja}
+@@ -891,7 +892,7 @@ function DiagnosisInner() {
+                 maxLength={5}
+                 style={{
+                   flex: 1, padding: '13px', borderRadius: '12px', background: '#FDF6F0',
+-                  border: '0.5px solid #9c7a58', color: '#1a1a1a', fontSize: '16px',
++                  border: LINE_OUTER, color: '#1a1a1a', fontSize: '16px',
+                 }} />
+               <button onClick={applyName}
+                 style={{ padding: '13px 20px', borderRadius: '12px', background: gold, border: 'none', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>
+@@ -964,7 +965,7 @@ function DiagnosisInner() {
+                 {!chars[0] && syllables.length >= 2 && (
+                   <div style={{
+                     fontSize: '12px', lineHeight: 1.7, color: '#96502e',
+-                    background: 'rgba(200,120,60,0.07)', border: '1px solid rgba(200,120,60,0.25)',
++                    background: 'rgba(200,120,60,0.07)', border: LINE_OUTER,
+                     borderRadius: '10px', padding: '10px 12px', marginBottom: '16px', textAlign: 'center',
+                   }}>
+                     먼저 <b>성씨 한자</b>를 골라주세요<br />
+@@ -986,7 +987,7 @@ function DiagnosisInner() {
+                 {dueumMsg && (
+                   <div style={{
+                     fontSize: '11px', lineHeight: 1.7, color: '#5c3a1e',
+-                    background: 'rgba(200,120,60,0.07)', border: '1px solid rgba(200,120,60,0.25)',
++                    background: 'rgba(200,120,60,0.07)', border: LINE_OUTER,
+                     borderRadius: '10px', padding: '10px 12px', marginBottom: '20px',
+                   }}>
+                     <span style={{ color: gold, fontWeight: 600 }}>알려 드립니다 · </span>
+@@ -1088,7 +1089,7 @@ function DiagnosisInner() {
+             {/* ★2026-07-30 (3단계) — 실패했을 때 «빈 화면» 대신 이유와 [다시 시도] 를 냅니다 */}
+             {!loading && failWhy && (
+               <div style={{
+-                background: cardBg, border: '1px solid #dc8888', borderRadius: '14px',
++                background: cardBg, border: LINE_WARN, borderRadius: '14px',
+                 padding: '22px 18px', textAlign: 'center', marginBottom: '16px',
+               }}>
+                 <div style={{ fontSize: '26px', marginBottom: '8px' }}>🌧️</div>
+@@ -1274,7 +1275,7 @@ function DiagnosisInner() {
+                   <button onClick={() => router.push(storagePath)}
+                     style={{
+                       padding: '13px 6px', borderRadius: '12px',
+-                      background: 'rgba(200,120,60,0.10)', border: '0.5px solid #9c7a58',
++                      background: 'rgba(200,120,60,0.10)', border: LINE_OUTER,
+                       color: subWarm, fontSize: '13px', fontWeight: 500, cursor: 'pointer',
+                     }}>
+                     📜 {storageLabel}
+diff --git a/lib/ui/line.ts b/lib/ui/line.ts
+new file mode 100644
+index 0000000..002a062
+--- /dev/null
++++ b/lib/ui/line.ts
+@@ -0,0 +1,90 @@
++// lib/ui/line.ts
++// 선(테두리) 부품 — 2026-08-05 (47부 18차 · 대표님 지시)
++//
++// ══════════════════════════════════════════════════════════════════
++//  🔴 이 부품이 «왜» 생겼나
++//
++//   대표님 — 「이번 기획에 화면의 모든 라인들을 부품처럼 통일하면 어떤가」
++//            「모두 2.52:1로 통일하되, 부품을 만들 때는
++//              "외곽선 2.52:1" · "내부선 2.52:1" 을 ★각각 따로 조절하도록」
++//
++//   [무엇이 문제였나]  저장소 전체를 세어 보니 —
++//     · 테두리 지정 ★799 군데
++//     · 색이 드러난 것 374 군데인데 ★서로 다른 색이 «94 가지»
++//     · 변수에 숨은 것 약 200 군데 (LINE · C.line · line · C.border …)
++//     · 「내 이름 정밀분석」 ★한 화면 안에만 선이 «여섯 종류» 였습니다
++//   ⇒ 사람이 눈으로 맞출 수 있는 크기가 아닙니다. 한 곳에 모읍니다.
++//
++//  ⚠️⚠️ ★외곽선과 내부선을 «따로» 둔 까닭
++//     같은 색이라도 «얹히는 바탕» 이 다르면 대비가 갈립니다. 실측 —
++//       #ea8c46 on 흰 카드 #fff        2.52:1
++//       #ea8c46 on 카드   #FFFBF7      2.45:1
++//       #ea8c46 on 안쪽칸 #faf3ec      2.29:1
++//       #ea8c46 on 알약   #f2eee9      2.18:1
++//     ⇒ 내부선은 «더 어두운 바탕» 에 얹히므로 나중에 따로 올려야 할 수 있습니다.
++//     ⇒ 그때 ★INNER 만 바꾸면 됩니다. OUTER 는 안 건드려도 됩니다.
++//
++//  ⚠️ 45부에 확정된 두 단계와 «다른» 값입니다 —
++//       45부  바깥 #9c7a58 (3.93:1) · 안쪽 #b99a7d (2.63:1)
++//       47부  대표님이 ★2.52:1 하나로 통일하기로 정하셨습니다.
++//     ⇒ 45부 값은 ★다른 화면들에 «그대로 살아 있습니다». 함께 지우지 마십시오.
++//     ⇒ 넓히실 때는 ★화면 하나씩, 사진으로 확인받으며 옮기십시오.
++//
++//  ⛔ 여기 값을 바꾸면 ★이 부품을 쓰는 화면이 «전부» 바뀝니다.
++//     바꾸기 전에 «어느 화면들이 쓰는지» grep 으로 세십시오.
++// ══════════════════════════════════════════════════════════════════
++
++/** 카드·버튼의 «바깥» 선 — 흰 카드 위에서 2.52:1 */
++export const LINE_OUTER_COLOR = '#ea8c46'
++export const LINE_OUTER_WIDTH = '1px'
++
++/** 카드 «안» 의 작은 칸·알약 선 — 지금은 바깥과 같은 값 */
++export const LINE_INNER_COLOR = '#ea8c46'
++export const LINE_INNER_WIDTH = '1px'
++
++/** 바로 style 에 넣어 쓰는 꼴 */
++export const LINE_OUTER = `${LINE_OUTER_WIDTH} solid ${LINE_OUTER_COLOR}`
++export const LINE_INNER = `${LINE_INNER_WIDTH} solid ${LINE_INNER_COLOR}`
++
++/**
++ * ══════════════════════════════════════════════════════════════════
++ *  알약(칩) — ★«따로» 돌립니다  [대표님 지시]
++ *   「알약들만 모아서 따로 조절할 수 있게 할 수 있나」
++ *
++ *  [왜 따로 두나]  알약은 카드보다 «작고 촘촘해서» 선이 굵으면 답답해 보이고,
++ *    반대로 옅으면 «칸이 있는지» 안 보입니다. 카드와 «다른 눈금» 이 필요합니다.
++ *
++ *  [지금 값]  카드 내부선과 «같습니다». 나중에 갈라도 됩니다.
++ *  [실측]  #ea8c46 on 흰 알약  #ffffff  2.52:1
++ *          #ea8c46 on 흐린 알약 #f2eee9  ★2.18:1  ← 「피할 것」 처럼 muted 인 것
++ *    ⚠️ 흐린 알약이 가장 낮습니다. 올려야 하면 ★CHIP 만 바꾸십시오.
++ *
++ *  [높이]  padding 5px 10px · fontSize 11 · radius 14 → ★23.2px
++ *    ⚠️ 전에는 Chip 23.2px / ElChip 19.2px 로 ★4px 어긋나 있었습니다. 맞췄습니다.
++ *    ⛔ 둘 중 하나만 바꾸지 마십시오. 또 어긋납니다.
++ *
++ *  ⚠️ 알약은 «누르는 버튼이 아닙니다» — 보여 주기만 하므로
++ *     44px 최소선과 무관합니다. (46부 6-2 의 일주 알약과 같은 판단)
++ * ══════════════════════════════════════════════════════════════════
++ */
++export const CHIP_BORDER_COLOR = '#ea8c46'
++export const CHIP_BORDER_WIDTH = '1px'
++export const CHIP_BORDER = `${CHIP_BORDER_WIDTH} solid ${CHIP_BORDER_COLOR}`
++export const CHIP_RADIUS = 14
++export const CHIP_PADDING = '5px 10px'
++export const CHIP_FONT_SIZE = 11
++
++/**
++ * 경고·주의 선 — «뜻이 있는» 색이라 통일에서 뺍니다.
++ * 45부 8-2: 「빨강 선은 «주의» 뜻이라 ★갈색으로 안 바꿈」
++ */
++export const LINE_WARN_COLOR = '#c14545'
++export const LINE_WARN = `1px solid ${LINE_WARN_COLOR}`
++
++/**
++ * ⚠️ 이 부품을 «쓰지 않는» 자리 — 일부러 그대로 둡니다
++ *   · 사주명식(SajuWonguk) · 대운 · 세운 등 ★별도 부품  [대표님 지시]
++ *   · 인쇄물 넷 (CoupleCertificate · NamingCertificate · CareerCertificate · A4Print)
++ *     45부: 「★색 대비를 «올리지 마십시오». 잉크가 번집니다」
++ *   · 오행 색(木火土金水) 처럼 ★«뜻이 있는» 색
++ */
+-- 
+2.43.0
+
+
+From c7706aa31031297d082f3be5c97f9d5ab8f3f6f5 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 15:11:24 +0000
+Subject: [PATCH 2/3] =?UTF-8?q?=EC=83=81=EB=8B=B4=20=EC=B9=B4=EB=93=9C=20?=
+ =?UTF-8?q?=EC=84=A0=EB=8F=84=20=EB=B6=80=ED=92=88=EC=9C=BC=EB=A1=9C=20?=
+ =?UTF-8?q?=E2=80=94=20=EC=97=B4=EB=91=90=20=ED=99=94=EB=A9=B4=20=ED=86=B5?=
+ =?UTF-8?q?=EC=9D=BC=20(47=EB=B6=80=2019=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/components/common/ConsultButton.tsx | 15 ++++++++++++++-
+ 1 file changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/app/components/common/ConsultButton.tsx b/app/components/common/ConsultButton.tsx
+index 4dd0dd2..e207c18 100644
+--- a/app/components/common/ConsultButton.tsx
++++ b/app/components/common/ConsultButton.tsx
+@@ -2,6 +2,7 @@
+ import { useEffect, useState } from 'react'
+ import { useRouter } from 'next/navigation'
+ import { supabase } from '@/lib/supabase'
++import { LINE_OUTER } from '@/lib/ui/line'
+ 
+ type Props = {
+   priceKey: string                  // consult_prices의 price_key (예: 'saju')
+@@ -163,7 +164,19 @@ export default function ConsultButton({ priceKey, mode, searchParams, payload }:
+     //   ⚠️ 11차에 버튼 «높이» 를 부품 안에서 잡은 것과 «같은 결» 입니다.
+     //   ⛔ 부르는 쪽에서 다시 marginTop 을 주지 마십시오. ★두 겹으로 벌어집니다.
+     <div className="rounded-2xl p-5"
+-      style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58', marginTop: 16, marginBottom: 16 }}>
++      // ★2026-08-05 (47부 19차) — 카드 선을 ★선 부품(LINE_OUTER)에서 받습니다. [대표님 지시]
++      //   [전]  0.5px #9c7a58  (45부 확정색 · 3.93:1)
++      //   [후]  ★lib/ui/line.ts 의 LINE_OUTER  (1px #ea8c46 · 2.52:1)
++      //   ⚠️⚠️ 이 부품은 ★아홉 서비스 «열두 화면» 이 함께 씁니다 —
++      //      사주 · 궁합 · 물상 · 진로적성 · 결혼택일 둘 · 출산택일 둘 · 이사택일 둘
++      //      · 내 이름 정밀분석 · 내 아기 명품이름
++      //      ⇒ 여기를 바꾸면 ★열두 화면의 상담 카드가 «한꺼번에» 바뀝니다.
++      //   ⚠️ 「내 이름 정밀분석」은 18차에 화면 전체를 2.52:1 로 옮겼는데
++      //      이 카드만 «혼자» 옛 색으로 남아 있었습니다. 그래서 맞췄습니다.
++      //   ⚠️ 다른 열한 화면은 아직 카드 선이 #9c7a58(3.93:1) 입니다.
++      //      ⇒ 지금은 ★상담 카드만 «조금 옅은» 선입니다. 그 화면들을 옮기면 맞아집니다.
++      //   ⛔ 여기 값을 직접 적지 마십시오. lib/ui/line.ts 의 LINE_OUTER 를 고치십시오.
++      style={{ background: '#FFFBF7', border: LINE_OUTER, marginTop: 16, marginBottom: 16 }}>
+       <div className="flex items-center gap-2 mb-2">
+         <span className="text-lg" aria-hidden="true">🔮</span>
+         <h2 className="text-base font-bold" style={{ color: '#3a2e28' }}>전문가와 상담하기</h2>
+-- 
+2.43.0
+
+
+From 19a80547ab700ba2b243f864f2d355d7b4b9e48d Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Wed, 5 Aug 2026 15:28:45 +0000
+Subject: [PATCH 3/3] =?UTF-8?q?=E3=80=8C=EC=83=88=20=EC=B0=BD=EC=97=90?=
+ =?UTF-8?q?=EC=84=9C=20=EC=9D=B8=EC=87=84=20=EB=98=90=EB=8A=94=20PDF?=
+ =?UTF-8?q?=EB=A1=9C=20=EC=A0=80=EC=9E=A5=E3=80=8D=20=EC=95=88=EB=82=B4=20?=
+ =?UTF-8?q?=EC=82=AD=EC=A0=9C=20=E2=80=94=20=EC=98=A4=EB=A5=98=20=EC=95=8C?=
+ =?UTF-8?q?=EB=A6=BC=EC=9D=80=20=EB=B3=B4=EC=A1=B4=20(47=EB=B6=80=2020?=
+ =?UTF-8?q?=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/manseryeok/career-result/page.tsx         |  6 ++---
+ .../naming/components/NamingCertificate.tsx   | 24 +++++++++++++++----
+ 2 files changed, 22 insertions(+), 8 deletions(-)
+
+diff --git a/app/manseryeok/career-result/page.tsx b/app/manseryeok/career-result/page.tsx
+index 39027be..41d6c66 100644
+--- a/app/manseryeok/career-result/page.tsx
++++ b/app/manseryeok/career-result/page.tsx
+@@ -830,9 +830,9 @@ function CareerResultInner() {
+                   </div>
+                 </div>
+                 <style>{`.copy-half > button { width: 100% }`}</style>
+-                <div style={{ fontSize: 10.5, color: '#a8927e', textAlign: 'center', marginTop: 6 }}>
+-                  새 창에서 인쇄 또는 PDF로 저장
+-                </div>
++                {/* ★2026-08-05 (47부 20차) — 「새 창에서 인쇄 또는 PDF로 저장」 안내를
++                    «걷어냈습니다». [대표님 지시 · 「공간을 줄이자」]
++                    ⚠️ 작명 쪽(NamingCertificate)과 «같이» 걷었습니다. 한쪽만 하면 어긋납니다. */}
+               </>
+             )}
+ 
+diff --git a/app/manseryeok/naming/components/NamingCertificate.tsx b/app/manseryeok/naming/components/NamingCertificate.tsx
+index 18840d0..45d35eb 100644
+--- a/app/manseryeok/naming/components/NamingCertificate.tsx
++++ b/app/manseryeok/naming/components/NamingCertificate.tsx
+@@ -450,6 +450,20 @@ export function openCertificate(p: NamingCertificateProps): boolean {
+ }
+ 
+ /** 결과 화면에 놓는 버튼 한 벌 */
++// ══════════════════════════════════════════════════════════════════
++// ★2026-08-05 (47부 20차) — 「새 창에서 인쇄 또는 PDF로 저장」 안내를 «걷어냈습니다».
++//   [대표님 지시]  「공간을 줄이자…보기가 싫다」
++//   🔴 ★오류 알림(msg)은 «남겼습니다» — 인쇄가 막히면 손님이 까닭을 알아야 합니다.
++//      평소에는 msg 가 없어 ★칸이 통째로 안 그려집니다. 공간을 «안» 씁니다.
++//   ⛔ 오류 알림까지 지우지 마십시오.
++//   ⚠️ 이 부품은 ★작명 결과 · 이름 정밀분석 «둘» 이 씁니다. 양쪽에서 함께 사라집니다.
++//   ⚠️ 진로적성의 같은 안내도 «함께» 걷었습니다. 한쪽만 하면 어긋납니다.
++//
++// ⛔⛔ ★이 파일에는 «인쇄용 HTML 문자열» 이 들어 있습니다.
++//    검사 ⑦(28-verify-naming-flow)이 ★JSX 주석을 통째로 막습니다 —
++//    HTML 문자열 안에 넣으면 ★종이에 그대로 «찍혀 나오기» 때문입니다.
++//    ⇒ 이 파일에 설명을 적으실 때는 ★반드시 «줄 주석(//)» 으로 하십시오.
++// ══════════════════════════════════════════════════════════════════
+ export default function NamingCertificateButton(
+   p: NamingCertificateProps & { disabled?: boolean },
+ ) {
+@@ -491,11 +505,11 @@ export default function NamingCertificateButton(
+         }}>
+         🖨️ A4 명품 작명서 인쇄 · PDF 저장
+       </button>
+-      <div style={{ fontSize: 10.5, color: '#a8927e', textAlign: 'center', marginBottom: 10, lineHeight: 1.6 }}>
+-        {msg
+-          ? <span style={{ color: '#c8506e' }}>{msg}</span>
+-          : '새 창에서 인쇄 또는 PDF로 저장'}
+-      </div>
++      {msg && (
++        <div style={{ fontSize: 10.5, color: '#c8506e', textAlign: 'center', marginBottom: 10, lineHeight: 1.6 }}>
++          {msg}
++        </div>
++      )}
+     </>
+   )
+ }
+-- 
+2.43.0
+

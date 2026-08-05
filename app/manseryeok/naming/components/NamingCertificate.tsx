@@ -450,6 +450,20 @@ export function openCertificate(p: NamingCertificateProps): boolean {
 }
 
 /** 결과 화면에 놓는 버튼 한 벌 */
+// ══════════════════════════════════════════════════════════════════
+// ★2026-08-05 (47부 20차) — 「새 창에서 인쇄 또는 PDF로 저장」 안내를 «걷어냈습니다».
+//   [대표님 지시]  「공간을 줄이자…보기가 싫다」
+//   🔴 ★오류 알림(msg)은 «남겼습니다» — 인쇄가 막히면 손님이 까닭을 알아야 합니다.
+//      평소에는 msg 가 없어 ★칸이 통째로 안 그려집니다. 공간을 «안» 씁니다.
+//   ⛔ 오류 알림까지 지우지 마십시오.
+//   ⚠️ 이 부품은 ★작명 결과 · 이름 정밀분석 «둘» 이 씁니다. 양쪽에서 함께 사라집니다.
+//   ⚠️ 진로적성의 같은 안내도 «함께» 걷었습니다. 한쪽만 하면 어긋납니다.
+//
+// ⛔⛔ ★이 파일에는 «인쇄용 HTML 문자열» 이 들어 있습니다.
+//    검사 ⑦(28-verify-naming-flow)이 ★JSX 주석을 통째로 막습니다 —
+//    HTML 문자열 안에 넣으면 ★종이에 그대로 «찍혀 나오기» 때문입니다.
+//    ⇒ 이 파일에 설명을 적으실 때는 ★반드시 «줄 주석(//)» 으로 하십시오.
+// ══════════════════════════════════════════════════════════════════
 export default function NamingCertificateButton(
   p: NamingCertificateProps & { disabled?: boolean },
 ) {
@@ -491,11 +505,11 @@ export default function NamingCertificateButton(
         }}>
         🖨️ A4 명품 작명서 인쇄 · PDF 저장
       </button>
-      <div style={{ fontSize: 10.5, color: '#a8927e', textAlign: 'center', marginBottom: 10, lineHeight: 1.6 }}>
-        {msg
-          ? <span style={{ color: '#c8506e' }}>{msg}</span>
-          : '새 창에서 인쇄 또는 PDF로 저장'}
-      </div>
+      {msg && (
+        <div style={{ fontSize: 10.5, color: '#c8506e', textAlign: 'center', marginBottom: 10, lineHeight: 1.6 }}>
+          {msg}
+        </div>
+      )}
     </>
   )
 }

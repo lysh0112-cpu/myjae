@@ -830,9 +830,9 @@ function CareerResultInner() {
                   </div>
                 </div>
                 <style>{`.copy-half > button { width: 100% }`}</style>
-                <div style={{ fontSize: 10.5, color: '#a8927e', textAlign: 'center', marginTop: 6 }}>
-                  새 창에서 인쇄 또는 PDF로 저장
-                </div>
+                {/* ★2026-08-05 (47부 20차) — 「새 창에서 인쇄 또는 PDF로 저장」 안내를
+                    «걷어냈습니다». [대표님 지시 · 「공간을 줄이자」]
+                    ⚠️ 작명 쪽(NamingCertificate)과 «같이» 걷었습니다. 한쪽만 하면 어긋납니다. */}
               </>
             )}
 
