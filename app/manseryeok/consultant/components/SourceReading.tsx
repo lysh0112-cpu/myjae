@@ -29,12 +29,12 @@
 
 import { useMemo, useState } from 'react'
 import { useResultSaju } from '@/hooks/useResultSaju'
-import { cheonganLines } from '@/lib/saju/cheonganTrait'
+import { cheonganLines, CHEONGAN_TRAIT } from '@/lib/saju/cheonganTrait'
 import { traitsInSaju, traitLines, noteLines, ctxOf } from '@/lib/saju/jijiTrait'
 import { findByeongjon, sayOf as byeongjonSay } from '@/lib/saju/byeongjon'
 import { judgeCheonganHap, judgeJijiHap } from '@/lib/saju/hapJudge'
-import { hapLines } from '@/lib/saju/hapMeaning'
-import { chungLines } from '@/lib/saju/chungMeaning'
+import { hapLines, findHap } from '@/lib/saju/hapMeaning'
+import { chungLines, findChung } from '@/lib/saju/chungMeaning'
 import { findRel, relLines, findSamhyeong } from '@/lib/saju/hyeongPaHae'
 import { calcYongsinNew, calcGyeokguk } from '@/lib/saju/yongsinNew'
 import { calcCareerGyeokguk } from '@/lib/saju/career/gyeokguk'
@@ -45,6 +45,12 @@ import { getGwiinForBranch, getGwiinForStem } from '@/lib/saju/gwiin'
 import { GWIIN_MEANING } from '@/lib/saju/gwiinMeaning'
 import { getGongmang } from '@/lib/saju/gongmang'
 import { GONGMANG_INTRO, GONGMANG_BY_PILLAR } from '@/lib/saju/gongmangMeaning'
+import { ILJU } from '@/lib/saju/career/tables/ilju'
+import { YUKCHIN_KEYS, rowOf as yukchinRowOf, yukchinLines, darununLines, sipsinCount } from '@/lib/saju/yukchinTable'
+import { groupBrief } from '@/lib/saju/yukchinGroup'
+import { OHAENG_TRAIT, excessLines, developLines, lackLines, gaeunLines } from '@/lib/saju/ohaengTrait'
+import { weaknessLines, handlingLines } from '@/lib/saju/ohaengNature'
+import { salLines } from '@/lib/saju/sinsalTable'
 import { LINE_OUTER, LINE_INNER } from '@/lib/ui/line'
 
 type Props = {
@@ -56,6 +62,46 @@ type Props = {
   day: string
   hourIdx: number | null
   name: string
+}
+
+/**
+ * ★2026-08-05 (47부 41차) — 교재 «원문»(original)을 함께 폅니다. [대표님 지시]
+ *   「상담사용은 모든 것을 최대한 ★원본대로 다 내보내」
+ *
+ *   ⚠️⚠️ 자료 파일에는 「original 은 화면에도 통변 재료에도 넣지 말 것」이라
+ *      적혀 있습니다. 그것은 ★«손님 화면» 을 두고 한 말입니다.
+ *      ⇒ 여기는 «상담사용» 이라 대표님이 펴라 하셨습니다.
+ *      ⛔ ★손님 화면(통변·진로적성·궁합)에는 «절대» 이 값을 넣지 마십시오.
+ *
+ *   🔴 ★알아 두실 것 — 「담지 않기로 한 일곱」은 original 에도 «없습니다» —
+ *      127쪽 단명·자살 · 129쪽 성범죄 피해자 탓 · 128쪽 실명
+ *      · 131쪽 낙태·유산·불임 판정 · 병명 · 센 말 · 종교 단정
+ *      (44부 교훈 CA · yukchinGroup.ts 머리말)
+ *      ⇒ original 을 펴도 그 일곱은 안 나옵니다. 어투가 원문에 가까워질 뿐입니다.
+ *      ⛔ 스캔을 보고 「빠졌다」 며 되살리지 마십시오.
+ */
+function orig(row: unknown): string[] {
+  const o = (row as { original?: unknown })?.original
+  if (typeof o === 'string' && o.trim()) return [`【교재 원문】 ${o.trim()}`]
+  if (Array.isArray(o)) {
+    const arr = o.filter(x => typeof x === 'string' && x.trim())
+    if (arr.length) return [`【교재 원문】 ${arr.join(' ')}`]
+  }
+  return []
+}
+
+/**
+ * ★신살 자료 «둘» 의 열쇠를 맞춥니다 (47부 41차)
+ *   왼쪽  career/tables/sinsal 의 key   ·   오른쪽  lib/saju/sinsalTable 의 key
+ *   ⚠️ 이름이 같은 살도 열쇠가 달라 그대로 넘기면 «못 찾습니다».
+ *   ⚠️ 짝이 없는 것(귀문관살·탕화살·양인일주)은 여기 없어 그냥 지나갑니다.
+ */
+const SAL_KEY: Record<string, string> = {
+  yeokma: 'yeokma', dohwa: 'dohwa', hwagae: 'hwagae',
+  cheonmun: 'cheonmun', hyeonchim: 'hyeonchim',
+  cheonra: 'cheonra', jimang: 'jimang',
+  baekho: 'baekho', goegang: 'goegang',
+  munchang: 'munchang', cheonui: 'cheonui', samgi: 'samgi',
 }
 
 type Item = { title: string; source?: string; lines: string[] }
@@ -119,7 +165,7 @@ export default function SourceReading(p: Props) {
         items.push({
           title: `일간 ${dayStem} — 타고난 성품`,
           source: '명리적성 비법노트 40~41쪽',
-          lines: cheonganLines(dayStem, p.gender),
+          lines: [...cheonganLines(dayStem, p.gender), ...orig(CHEONGAN_TRAIT[dayStem])],
         })
       }
       for (const pil of saju) {
@@ -129,7 +175,7 @@ export default function SourceReading(p: Props) {
         items.push({
           title: `${pil.pillar} 천간 ${pil.stem}`,
           source: '명리적성 비법노트 40~41쪽',
-          lines,
+          lines: [...lines, ...orig(CHEONGAN_TRAIT[pil.stem])],
         })
       }
       if (items.length) G.push({ key: 'cheongan', label: '천간 — 성품', items })
@@ -143,6 +189,7 @@ export default function SourceReading(p: Props) {
         const lines = [
           ...traitLines(hit.row, 'adult', ctx),
           ...noteLines(hit.row, 'adult', ctx),
+          ...orig(hit.row),
         ]
         if (lines.length === 0) continue
         items.push({
@@ -165,7 +212,7 @@ export default function SourceReading(p: Props) {
         items.push({
           title: `${h.row.ko} (${h.pillars.join('·')})`,
           source: '명리적성 비법노트 74~75쪽 「07 天干의 병존」',
-          lines: [say],
+          lines: [say, ...orig(h.row)],
         })
       }
       if (items.length) G.push({ key: 'byeongjon', label: '병존', items })
@@ -185,7 +232,7 @@ export default function SourceReading(p: Props) {
         items.push({
           title: `천간 ${h.key}`,
           source: '명리적성 비법노트 78~83쪽',
-          lines: [head, ...hapLines(h.key, '성인')],
+          lines: [head, ...hapLines(h.key, '성인'), ...orig(findHap(h.key))],
         })
       }
       for (const h of judgeJijiHap(saju)) {
@@ -197,7 +244,7 @@ export default function SourceReading(p: Props) {
         items.push({
           title: `지지 ${h.key}`,
           source: '명리적성 비법노트 78~83쪽',
-          lines: [head, ...hapLines(h.key, '성인')],
+          lines: [head, ...hapLines(h.key, '성인'), ...orig(findHap(h.key))],
         })
       }
       if (items.length) G.push({ key: 'hap', label: '합', items })
@@ -218,7 +265,7 @@ export default function SourceReading(p: Props) {
           items.push({
             title: `${key} (${a.pillar}-${b.pillar})`,
             source: '명리적성 비법노트 84~86쪽',
-            lines,
+            lines: [...lines, ...orig(findChung(key))],
           })
         }
       }
@@ -245,7 +292,7 @@ export default function SourceReading(p: Props) {
             items.push({
               title: `${r.alias ?? r.key} (${brs[i].pillar}-${brs[j].pillar})`,
               source: '명리적성 비법노트',
-              lines: relLines(r, '성인'),
+              lines: [...relLines(r, '성인'), ...orig(r)],
             })
           }
         }
@@ -257,7 +304,7 @@ export default function SourceReading(p: Props) {
         items.push({
           title: `${r.alias ?? r.key} (삼형)`,
           source: '명리적성 비법노트',
-          lines: relLines(r, '성인'),
+          lines: [...relLines(r, '성인'), ...orig(r)],
         })
       }
       if (items.length) G.push({ key: 'rel', label: '형·파·해·원진', items })
@@ -367,6 +414,16 @@ export default function SourceReading(p: Props) {
         if (r.caution) lines.push(`⚠️ ${r.caution}`)
         // ★교재 «원문» 이 따로 남아 있으면 그것도 폅니다 (상담사용이라)
         if (r.srcCaution) lines.push(`【교재 원문】 ${r.srcCaution}`)
+        // ★2026-08-05 (47부 41차) — 신살은 자료가 «둘» 입니다.
+        //   career/tables/sinsal(진로 쪽) · lib/saju/sinsalTable(다른 갈래)
+        //   ⚠️ 열두 살이 겹칩니다. ⇒ 따로 묶음을 만들면 «두 번» 나옵니다.
+        //      그래서 ★같은 꼭지에 sinsalTable 의 말을 «덧붙입니다».
+        //   ⚠️ 열쇠(key)가 서로 다릅니다 — 아래에서 맞춰 봅니다.
+        for (const l of salLines(SAL_KEY[r.key] ?? r.key, '성인')) lines.push(`[다른 자료] ${l}`)
+        // ⚠️ sinsalTable 은 ★«다른 갈래» 의 같은 신살 설명입니다 (교재 90~93쪽).
+        //    이름이 열둘 겹치므로 ★따로 묶음을 만들지 «않고» 여기에 «덧붙입니다».
+        //    ⛔ 따로 펴지 마십시오. 같은 신살이 두 번 나옵니다.
+        for (const l of salLines(r.key, '성인')) lines.push(`【다른 갈래】 ${l}`)
         items.push({
           title: `${r.name}${r.hanja ? ` (${r.hanja})` : ''}`,
           source: '명리적성 비법노트 90~93쪽',
@@ -429,6 +486,109 @@ export default function SourceReading(p: Props) {
         }
       }
       if (items.length) G.push({ key: 'gongmang', label: '공망', items })
+    }
+
+    // ── ⑫ 60갑자 일주 ────────────────────────────────────────────
+    //   교재 100~127쪽 「9. 60갑자 일주별 기질과 진로적성」
+    //   ⚠️ gijilFull 이 ★«교재 원문» 입니다 (gijil 은 손님용으로 말을 고른 것).
+    //      상담사 화면이라 ★원문을 폅니다.
+    {
+      const il = saju.find(x => x.pillar === '일주')
+      if (il && il.stem !== '?' && il.branch !== '?') {
+        const row = ILJU[il.stem + il.branch]
+        if (row) {
+          G.push({
+            key: 'ilju', label: '60갑자 일주', items: [{
+              title: `${il.stem}${il.branch} (${row.ko})`,
+              source: '명리적성 비법노트 100~127쪽',
+              lines: [
+                row.gijilFull ?? row.gijil,
+                row.jobs?.length ? `어울리는 일 — ${row.jobs.join(' · ')}` : '',
+              ].filter(Boolean),
+            }],
+          })
+        }
+      }
+    }
+
+    // ── ⑬ 육친(십성) ─────────────────────────────────────────────
+    //   ⚠️ ★사주 상담의 «뼈대» 입니다. 열 십성을 «전부» 폅니다.
+    //      개수가 0 인 것도 폅니다 — 「없다」 는 것도 상담사에게는 뜻입니다.
+    {
+      const items: Item[] = []
+      const ctx = ctxOf(saju)
+      for (const key of YUKCHIN_KEYS) {
+        const row = yukchinRowOf(key)
+        if (!row) continue
+        const n = sipsinCount(ctx, key)
+        const lines = [
+          `${n}개`,
+          ...yukchinLines(row, 'adult', ctx),
+          ...darununLines(row, ctx),
+          ...orig(row),
+        ].filter(Boolean)
+        if (lines.length <= 1) continue
+        items.push({
+          title: `${key} — ${n}개`,
+          source: '명리적성 비법노트 3장 六親論',
+          lines,
+        })
+      }
+      if (items.length) G.push({ key: 'yukchin', label: '육친(십성)', items })
+    }
+
+    // ── ⑭ 육친 짝(과다·없음) ─────────────────────────────────────
+    //   ⚠️⚠️ ★groupBrief 를 씁니다 — «이미 다듬어 내보내는» 함수입니다.
+    //      ⛔ row.original 을 쓰지 «마십시오». 그 자료에 이렇게 적혀 있습니다 —
+    //        「★교재 원문 — 화면에도 통변 재료에도 넣지 말 것」
+    //      [까닭]  앞 세션이 ★일곱 가지를 «일부러» 뺐습니다 (44부 교훈 CA) —
+    //        127쪽 단명·자살 · 129쪽 성범죄 피해자 탓 · 128쪽 실명
+    //        · 131쪽 낙태·유산·불임 판정 · 병명 · 센 말 · 종교 단정
+    //        ⇒ 「뜻은 안 뺐고 어투만 옮겼다」 고 적혀 있습니다.
+    //      ⛔ 스캔을 보고 「빠졌다」 며 되살리지 마십시오.
+    //   ⚠️ ★맺음말(PYEONJUNG_CLOSING)이 «반드시 맨 마지막» 에 와야 합니다.
+    //      withClosing: true 로 함께 받습니다. 앞에 두면 앞말이 변명처럼 들립니다.
+    {
+      const lines = groupBrief(saju, 'adult', {
+        cap: 99, 보완: true, 개운: true, 직업: true, withClosing: true,
+      })
+      if (lines.length) {
+        G.push({
+          key: 'yukchinGroup', label: '육친 짝 — 과다·없음',
+          items: [{
+            title: '다섯 짝의 치우침',
+            source: '명리적성 비법노트 116~131쪽',
+            lines,
+          }],
+        })
+      }
+    }
+
+    // ── ⑮ 오행 기질 — 다섯을 «전부» ──────────────────────────────
+    //   ⚠️ 발달·과다·결핍·개운을 한자리에 폅니다.
+    //      ★어느 오행이 많고 적은지는 위 «용신 · 오행 세력» 에 숫자로 있습니다.
+    {
+      const items: Item[] = []
+      for (const el of ['목', '화', '토', '금', '수'] as const) {
+        const row = OHAENG_TRAIT[el]
+        if (!row) continue
+        const lines = [
+          ...developLines(el).map(x => `[발달] ${x}`),
+          ...excessLines(el, '성인').map(x => `[과다] ${x}`),
+          ...lackLines(el, '성인').map(x => `[결핍] ${x}`),
+          ...gaeunLines(el).map(x => `[개운] ${x}`),
+          ...weaknessLines(el, '성인').map(x => `[약한 자리] ${x}`),
+          ...handlingLines(el).map(x => `[다루는 법] ${x}`),
+          ...orig(row),
+        ]
+        if (lines.length === 0) continue
+        items.push({
+          title: `${el}(${row.hanja ?? ''})`,
+          source: '명리적성 비법노트',
+          lines,
+        })
+      }
+      if (items.length) G.push({ key: 'ohaeng', label: '오행 — 발달·과다·결핍·개운', items })
     }
 
     return G
