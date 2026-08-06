@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import ConsultantForm, { ConsultantFormData, emptyForm } from './ConsultantForm'
 import ConsultantTable from './ConsultantTable'
@@ -39,6 +39,8 @@ export type PendingInfo = { count: number; names: string[] }
 export default function ConsultantManager() {
   const [list, setList] = useState<ConsultantFormData[]>([])
   const [form, setForm] = useState<ConsultantFormData>(emptyForm)
+  /** ★48부 7차 — 등록 폼 자리. 「수정」·「＋ 상담사 등록」이 여기로 내려갑니다 */
+  const formRef = useRef<HTMLDivElement>(null)
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(false)
   // ★2026-07-21 2차: 상담사별 진행중 예약을 목록에 미리 보여준다.
@@ -115,6 +117,9 @@ export default function ConsultantManager() {
     setEditing(false)
     setLoading(false)
     fetchList()
+    // ★48부 7차 — 저장하면 ★목록(위)으로 올려 «결과를 보이게» 합니다.
+    //   ⚠️ 폼이 아래로 갔으므로 그대로 두면 «빈 폼» 만 보고 있게 됩니다.
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   async function handleDelete(id: string) {
     const target = list.find(c => c.id === id)
@@ -202,22 +207,36 @@ export default function ConsultantManager() {
     //   ⚠️ null 이 그대로 들어오면 form.specialties.includes 에서 터집니다.
     setForm({ ...emptyForm, ...c, alias: c.alias ?? '', specialties: Array.isArray(c.specialties) ? c.specialties : [] })
     setEditing(true)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // ★48부 7차 — 목록이 «위» 로 갔으므로 ★폼 자리로 내려갑니다.
+    //   ⛔ scrollTo({ top: 0 }) 으로 되돌리지 마십시오. 폼이 안 보입니다.
+    goForm()
+  }
+
+  /** ★48부 7차 — 등록 폼 자리로 내려갑니다 (목록이 위로 가서 필요해졌습니다) */
+  function goForm() {
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
   return (
     <div>
-      <ConsultantForm
-        form={form} editing={editing} loading={loading}
-        onChange={setForm} onSave={handleSave}
-        onCancel={() => { setForm(emptyForm); setEditing(false) }}
-      />
-      <div className="rounded-2xl overflow-hidden"
+      {/* ★2026-08-07 (48부 7차) — ★목록을 «위» 로 [대표님 지시]
+          「상담사 리스트가 ★위로 가게 해야 관리하기 좋을 것 같은데」
+          ⚠️ 전에는 등록 폼이 위, 목록이 아래였습니다 —
+             상담사를 보려면 ★언제나 긴 폼을 지나 내려가야 했습니다.
+          ⚠️ 자리를 바꾸면서 ★handleEdit 의 «스크롤» 도 함께 고쳤습니다.
+             맨 위로 가면 이제 «목록» 이 나와 폼이 안 보입니다. */}
+      <div className="rounded-2xl overflow-hidden mb-4"
         style={{ background: '#2C2C2A', border: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="px-5 py-4 flex items-center justify-between"
           style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           <div className="text-sm font-bold text-white">
             상담사 목록 <span className="ml-2 text-xs" style={{ color: '#8a88a0' }}>총 {list.length}명</span>
           </div>
+          {/* ★폼이 «아래» 로 갔으니 바로 갈 수 있게 */}
+          <button type="button" onClick={goForm}
+            className="px-3 py-1 rounded-lg text-xs"
+            style={{ background: 'rgba(250,199,117,0.12)', border: '1px solid rgba(250,199,117,0.3)', color: '#FAC775' }}>
+            ＋ 상담사 등록
+          </button>
         </div>
         <ConsultantTable
           list={list}
@@ -226,6 +245,14 @@ export default function ConsultantManager() {
           onDelete={handleDelete}
           onToggleActive={handleToggleActive}
           onSaveSort={handleSaveSort}
+        />
+      </div>
+
+      <div ref={formRef}>
+        <ConsultantForm
+          form={form} editing={editing} loading={loading}
+          onChange={setForm} onSave={handleSave}
+          onCancel={() => { setForm(emptyForm); setEditing(false) }}
         />
       </div>
     </div>
