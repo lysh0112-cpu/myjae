@@ -36,6 +36,15 @@ import { judgeCheonganHap, judgeJijiHap } from '@/lib/saju/hapJudge'
 import { hapLines } from '@/lib/saju/hapMeaning'
 import { chungLines } from '@/lib/saju/chungMeaning'
 import { findRel, relLines, findSamhyeong } from '@/lib/saju/hyeongPaHae'
+import { calcYongsinNew, calcGyeokguk } from '@/lib/saju/yongsinNew'
+import { calcCareerGyeokguk } from '@/lib/saju/career/gyeokguk'
+import { GYEOKGUK_INFO } from '@/lib/saju/career/tables/gyeokguk'
+import { YONGSIN_NOTE, YONGSIN_OHAENG, YONGSIN_YUKCHIN } from '@/lib/saju/career/tables/yongsin'
+import { checkSinsal9 } from '@/lib/saju/career/sinsal9'
+import { getGwiinForBranch, getGwiinForStem } from '@/lib/saju/gwiin'
+import { GWIIN_MEANING } from '@/lib/saju/gwiinMeaning'
+import { getGongmang } from '@/lib/saju/gongmang'
+import { GONGMANG_INTRO, GONGMANG_BY_PILLAR } from '@/lib/saju/gongmangMeaning'
 import { LINE_OUTER, LINE_INNER } from '@/lib/ui/line'
 
 type Props = {
@@ -254,6 +263,174 @@ export default function SourceReading(p: Props) {
       if (items.length) G.push({ key: 'rel', label: '형·파·해·원진', items })
     }
 
+    // ── ⑦ 격국 ───────────────────────────────────────────────────
+    //   ⚠️ 판정은 ★이미 있는 calcCareerGyeokguk 을 그대로 씁니다.
+    //      (진로적성 화면이 쓰는 바로 그 함수 — 답이 갈릴 일이 없습니다)
+    if (dayStem) {
+      const items: Item[] = []
+      const g = calcCareerGyeokguk(saju, dayStem)
+      if (g.name) {
+        const info = GYEOKGUK_INFO[g.name]
+        const lines: string[] = []
+        lines.push(
+          `${g.name}${info?.hanja ? ` (${info.hanja})` : ''}` +
+          (g.element ? ` · ${g.element}` : '') +
+          (g.special ? ' · 특례로 잡힘' : '') +
+          (g.position ? ` · ${g.position}` : ''),
+        )
+        if (g.positionNote) lines.push(g.positionNote)
+        if (g.note) lines.push(g.note)
+        if (info?.gijil) lines.push(info.gijil)
+        if (info?.jobs?.length) lines.push(`어울리는 일 — ${info.jobs.join(' · ')}`)
+        if (info?.caution) lines.push(`⚠️ ${info.caution}`)
+        items.push({
+          title: `격국 — ${g.name}`,
+          source: `명리적성 비법노트 ${info?.src ?? '62~65쪽'}`,
+          lines,
+        })
+      }
+      if (items.length) G.push({ key: 'gyeokguk', label: '격국', items })
+    }
+
+    // ── ⑧ 용신 — 조후·억부·격국 셋 ────────────────────────────────
+    if (dayStem) {
+      const items: Item[] = []
+      const y = calcYongsinNew(saju, dayStem)
+      if (y) {
+        // 조후
+        if (y.johu.element) {
+          items.push({
+            title: `조후용신 — ${y.johu.element}`,
+            source: '명리적성 비법노트 94~97쪽',
+            lines: [
+              y.johu.note,
+              YONGSIN_NOTE[y.johu.element],
+              `어울리는 일 — ${(YONGSIN_OHAENG[y.johu.element] ?? []).join(' · ')}`,
+            ].filter(Boolean),
+          })
+        }
+        // 억부 5신
+        items.push({
+          title: '억부용신 — 다섯 신',
+          source: '명리적성 비법노트 94~97쪽',
+          lines: [
+            `용신 ${y.eokbu.yongsin} · 희신 ${y.eokbu.heesin} · 기신 ${y.eokbu.gisin}` +
+            ` · 구신 ${y.eokbu.gusin} · 한신 ${y.eokbu.hansin}`,
+            y.eokbu.note,
+            YONGSIN_NOTE[y.eokbu.yongsin],
+            `어울리는 일 — ${(YONGSIN_OHAENG[y.eokbu.yongsin] ?? []).join(' · ')}`,
+          ].filter(Boolean),
+        })
+        // 격국용신
+        const gk = calcGyeokguk(saju, dayStem)
+        if (gk.name) {
+          const yuk = YONGSIN_YUKCHIN[gk.name.replace('격', '')]
+          items.push({
+            title: `격국용신 — ${gk.name}`,
+            source: '명리적성 비법노트 94~97쪽',
+            lines: [
+              gk.note,
+              gk.element ? YONGSIN_NOTE[gk.element] : '',
+              yuk?.length ? `어울리는 일 — ${yuk.join(' · ')}` : '',
+            ].filter(Boolean),
+          })
+        }
+        // 세력
+        items.push({
+          title: `오행 세력 · ${y.status}`,
+          source: '명리적성 비법노트',
+          lines: [
+            Object.entries(y.score).map(([k, v]) => `${k} ${v}`).join(' · '),
+            `비겁+인성 ${y.inbiScore} · 일간 오행 ${y.dayElement}`,
+          ],
+        })
+      }
+      if (items.length) G.push({ key: 'yongsin', label: '용신', items })
+    }
+
+    // ── ⑨ 신살 ───────────────────────────────────────────────────
+    //   ⚠️ ★작용력이 없는(active=false) 것도 «함께» 폅니다.
+    //      대표님 — 「전문가인 상담사들이 알아서 볼 수 있으니 다 표시」
+    {
+      const items: Item[] = []
+      for (const h of checkSinsal9(saju)) {
+        if (h.count === 0) continue
+        const r = h.row
+        const lines: string[] = []
+        lines.push(
+          `${h.marks.map(m => `${m.ch}(${m.pillar}${m.semi ? '·준' : ''})`).join(' ')}` +
+          ` · ${h.count}개 · ${h.active ? '작용력 있음' : '작용력 약함'}` +
+          (h.powerNote ? ` · ${h.powerNote}` : ''),
+        )
+        if (r.gijil) lines.push(r.gijil)
+        if (r.jobs?.length) lines.push(`어울리는 일 — ${r.jobs.join(' · ')}`)
+        if (r.caution) lines.push(`⚠️ ${r.caution}`)
+        // ★교재 «원문» 이 따로 남아 있으면 그것도 폅니다 (상담사용이라)
+        if (r.srcCaution) lines.push(`【교재 원문】 ${r.srcCaution}`)
+        items.push({
+          title: `${r.name}${r.hanja ? ` (${r.hanja})` : ''}`,
+          source: '명리적성 비법노트 90~93쪽',
+          lines,
+        })
+      }
+      if (items.length) G.push({ key: 'sinsal', label: '신살', items })
+    }
+
+    // ── ⑩ 귀인 ───────────────────────────────────────────────────
+    if (dayStem) {
+      const items: Item[] = []
+      const monthBranch = saju.find(x => x.pillar === '월주')?.branch ?? ''
+      const seen = new Set<string>()
+      for (const pil of saju) {
+        const names = [
+          ...(pil.branch && pil.branch !== '?' ? getGwiinForBranch(dayStem, monthBranch, pil.branch) : []),
+          ...(pil.stem && pil.stem !== '?' ? getGwiinForStem(monthBranch, pil.stem) : []),
+        ]
+        for (const n of names) {
+          const k = `${n}|${pil.pillar}`
+          if (seen.has(k)) continue
+          seen.add(k)
+          const m = GWIIN_MEANING[n]
+          items.push({
+            title: `${n} (${pil.pillar})`,
+            source: '명리적성 비법노트',
+            lines: m ? [m.bless, m.life, m.tip].filter(Boolean) : [],
+          })
+        }
+      }
+      if (items.length) G.push({ key: 'gwiin', label: '귀인', items })
+    }
+
+    // ── ⑪ 공망 ───────────────────────────────────────────────────
+    if (dayStem) {
+      const items: Item[] = []
+      const iljji = saju.find(x => x.pillar === '일주')?.branch ?? ''
+      if (iljji && iljji !== '?') {
+        const gm = getGongmang(dayStem, iljji)
+        const hit = saju.filter(x => gm.includes(x.branch))
+        items.push({
+          title: `공망 — ${gm.join('·')}`,
+          source: '명리적성 비법노트',
+          lines: [
+            GONGMANG_INTRO,
+            hit.length
+              ? `원국에 걸린 자리 — ${hit.map(x => `${x.pillar}(${x.branch})`).join(' · ')}`
+              : '원국에 걸린 자리가 없습니다.',
+          ],
+        })
+        for (const x of hit) {
+          const info = GONGMANG_BY_PILLAR[x.pillar]
+          if (!info) continue
+          items.push({
+            title: `${x.pillar} 공망 — ${info.title}`,
+            source: '명리적성 비법노트',
+            lines: [info.desc],
+          })
+        }
+      }
+      if (items.length) G.push({ key: 'gongmang', label: '공망', items })
+    }
+
     return G
   }, [saju, dayStem, p.gender])
 
@@ -322,15 +499,15 @@ export default function SourceReading(p: Props) {
         })
       )}
 
-      {/* ⚠️ 아직 «안 편» 것 — 격국 · 용신 · 신살 · 귀인 · 공망 · 지장간 · 60갑자 일주
-          자료는 저장소에 있습니다 (career/tables/ 아래 · gwiinMeaning · gongmangMeaning …).
-          ⇒ 그것들은 «판정» 이 먼저라 진로적성·용신 계산기를 함께 불러야 합니다.
-             한 걸음 더 큰 일이라 대표님께 여쭙고 하십시오. */}
+      {/* ⚠️ 아직 «안 편» 것 — 지장간 · 60갑자 일주(ILJU) · 12운성 · 납음
+          자료는 저장소에 있습니다 (jijanggan · career/tables/ilju · sajuDetail).
+          ⇒ 필요하시면 더 얹을 수 있습니다. ⛔ 다만 «판정» 을 새로 만들지 마십시오 —
+             이미 있는 함수를 부르는 방식을 그대로 지키십시오. */}
       <div style={{
         fontSize: 10.5, color: '#a08d7d', textAlign: 'center',
         padding: '10px 6px', lineHeight: 1.7,
       }}>
-        격국·용신·신살·귀인·공망은 아직 안 폈습니다.<br />
+        지장간·60갑자 일주·12운성은 아직 안 폈습니다.<br />
         필요하시면 말씀해 주세요.
       </div>
     </div>

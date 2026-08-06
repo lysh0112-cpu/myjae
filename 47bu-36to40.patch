@@ -1,0 +1,1562 @@
+From 56cb39818ad8b7d8dea47a05a9e5ca4ea6b7d3ff Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Thu, 6 Aug 2026 03:44:13 +0000
+Subject: [PATCH 1/5] =?UTF-8?q?=EC=83=81=EB=8B=B4=EC=82=AC=20=EB=A7=8C?=
+ =?UTF-8?q?=EC=84=B8=EB=A0=A5=20=EC=B0=BD=EC=97=90=20=E3=80=8C=EA=B3=A0?=
+ =?UTF-8?q?=EB=A5=B8=20=EA=B3=A0=EA=B0=9D=E3=80=8D=20=EA=B0=88=EB=9E=98=20?=
+ =?UTF-8?q?=E2=80=94=20=EA=B3=A0=EA=B0=9D=20=EC=82=AC=EC=A3=BC=EA=B0=80=20?=
+ =?UTF-8?q?=EC=A0=80=EC=A0=88=EB=A1=9C=20(47=EB=B6=80=2036=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../consultant/components/ExpertFloating.tsx  | 126 ++++++++++++++++--
+ app/manseryeok/consultant/page.tsx            |  18 +++
+ hooks/useConsultantState.ts                   |  33 ++++-
+ 3 files changed, 167 insertions(+), 10 deletions(-)
+
+diff --git a/app/manseryeok/consultant/components/ExpertFloating.tsx b/app/manseryeok/consultant/components/ExpertFloating.tsx
+index 0435986..08332f9 100644
+--- a/app/manseryeok/consultant/components/ExpertFloating.tsx
++++ b/app/manseryeok/consultant/components/ExpertFloating.tsx
+@@ -14,7 +14,32 @@ import { useState, useRef, useEffect } from 'react'
+ //  ※ 기존 SajuFloating(십성·신살 탭 방식)을 대체한다.
+ // ============================================================
+ 
+-type Props = { open: boolean; onClose: () => void }
++/**
++ * ★2026-08-05 (47부 36차) — 「고른 고객」 갈래를 더했습니다. [대표님 지시]
++ *   「상담목록을 누르면 해당 상담신청한 고객의 전문가용 만세력이 자동으로 조회되게」
++ *   ⇒ 목업 셋 중 ★ⓒ(창은 하나, 안에서 두 갈래)로 확정하셨습니다.
++ *
++ *   [왜 창을 «더 만들지» 않았나]  메뉴바가 이미 빠듯합니다 —
++ *     명연재 | 나의 일정 | 상담목록 | 나의 정산 | 🔮 만세력 | 📋 상담내역
++ *     | 메뉴크기 | 매니저 대리 | ○○ 선생님 화면 | 로그아웃
++ *     ⇒ 하나 더 넣으면 좁은 화면에서 넘칩니다. 창이 셋이면 자리 다툼도 생깁니다.
++ *
++ *   ⚠️ customer 는 «상담 목록에서 고른 고객» 입니다. 안 골랐으면 null.
++ *   ⛔ 이 창은 원래 「고객 데이터와 무관한 ★독립 계산기」 였습니다.
++ *      그 성격은 ★「✏️ 직접 입력」 갈래에 «그대로» 살아 있습니다. 지우지 마십시오.
++ */
++export type FloatingCustomer = {
++  name?: string
++  year?: string
++  month?: string
++  day?: string
++  gender?: string
++  hour?: string        // ★숫자 문자열 또는 '모름'
++  calType?: string
++  leapMonth?: string
++} | null
++
++type Props = { open: boolean; onClose: () => void; customer?: FloatingCustomer }
+ 
+ // 시(時) 목록 — 30분법 (birthInput.ts 기준과 동일한 표기)
+ const HOUR_LABELS = [
+@@ -23,7 +48,7 @@ const HOUR_LABELS = [
+   '申 15:30-17:30', '酉 17:30-19:30', '戌 19:30-21:30', '亥 21:30-23:30',
+ ]
+ 
+-export default function ExpertFloating({ open, onClose }: Props) {
++export default function ExpertFloating({ open, onClose, customer }: Props) {
+   // ── 입력값 ──
+   const [name, setName] = useState('')
+   const [calType, setCalType] = useState<'양력' | '음력'>('양력')
+@@ -38,6 +63,41 @@ export default function ExpertFloating({ open, onClose }: Props) {
+   // ── 조회 결과 주소 (iframe src) ──
+   const [src, setSrc] = useState('')
+ 
++  // ★2026-08-05 (47부 36차) — 두 갈래 [대표님 확정 · 목업 ⓒ]
++  //   'customer' 고른 고객 것 (칸 없음)  ·  'manual' 손으로 치는 계산기 (지금 것 그대로)
++  const [tab, setTab] = useState<'customer' | 'manual'>('manual')
++  const hasCustomer = !!(customer?.year && customer?.month && customer?.day)
++
++  /** 고른 고객의 전문가용 만세력 주소. 위 search() 와 «같은 규칙» 입니다. */
++  const customerSrc = (() => {
++    if (!hasCustomer) return ''
++    const q = new URLSearchParams()
++    q.set('year', String(customer!.year)); q.set('month', String(customer!.month))
++    q.set('day', String(customer!.day))
++    q.set('gender', customer!.gender === '여' ? '여' : '남')
++    q.set('calType', customer!.calType === '음력' ? '음력' : '양력')
++    q.set('leapMonth', customer!.leapMonth === '1' ? '1' : '0')
++    // ⚠️ hour 는 ★숫자 문자열 또는 '모름' 입니다. 모르면 «안 넘깁니다» (시 미지정).
++    const h = customer!.hour
++    if (h && h !== '모름' && !Number.isNaN(Number(h))) q.set('hour', String(Number(h)))
++    if (customer!.name) q.set('name', customer!.name)
++    q.set('pro', '1')
++    q.set('mode', 'chart')
++    return `/manseryeok/result-new?${q.toString()}`
++  })()
++
++  // ★고객이 바뀌면 「고른 고객」 갈래로 옮겨 갑니다.
++  //   ⚠️⚠️ ★useEffect 로 하지 «않습니다» — eslint(react-hooks/purity)가
++  //      「효과 안에서 setState 를 부르면 그리기가 겹친다」고 막습니다.
++  //      ⇒ 대신 ★«그릴 때» 고객이 바뀌었는지 견주어 곧바로 옮깁니다.
++  //   ⚠️ 창이 «닫혀» 있어도 갈래만 바뀝니다. 열 때 바로 그 고객이 보입니다.
++  //   ⛔ 여기서 창을 «열지» 마십시오. 목록만 훑어보실 때도 창이 떠서 성가십니다.
++  const [lastSrc, setLastSrc] = useState('')
++  if (customerSrc !== lastSrc) {
++    setLastSrc(customerSrc)
++    setTab(hasCustomer ? 'customer' : 'manual')
++  }
++
+   // ── 창 위치·크기 ──
+   const [pos, setPos] = useState({ x: 80, y: 80 })
+   const [size, setSize] = useState({ w: 430, h: 640 })
+@@ -127,7 +187,9 @@ export default function ExpertFloating({ open, onClose }: Props) {
+           padding: '0 10px', gap: 8, fontSize: 12, fontWeight: 600,
+         }}>
+         <span>🔮 만세력 (전문가용)</span>
+-        {src && (
++        {/* ★2026-08-05 (47부 36차) — 「← 다시 입력」은 ★직접 입력 갈래에서만.
++            고른 고객 갈래에는 «칸이 없어» 돌아갈 자리가 없습니다. */}
++        {tab === 'manual' && src && (
+           <button type="button" onClick={() => setSrc('')}
+             style={{
+               marginLeft: 'auto', height: 22, padding: '0 8px', borderRadius: 5,
+@@ -138,15 +200,46 @@ export default function ExpertFloating({ open, onClose }: Props) {
+         )}
+         <button type="button" onClick={onClose}
+           style={{
+-            marginLeft: src ? 6 : 'auto', width: 22, height: 22, borderRadius: 5,
++            marginLeft: (tab === 'manual' && src) ? 6 : 'auto', width: 22, height: 22, borderRadius: 5,
+             border: 'none', background: 'rgba(255,255,255,.15)', color: '#fff',
+             cursor: 'pointer', fontSize: 13, fontFamily: 'inherit',
+             WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation',
+           }}>✕</button>
+       </div>
+ 
+-      {/* 입력부 — 결과가 없을 때만 보인다 */}
+-      {!src && (
++      {/* ★2026-08-05 (47부 36차) — 두 갈래 [대표님 확정 · 목업 ⓒ]
++          👤 고른 고객 — 상담 목록에서 고른 손님. ★칸이 «없어» 헷갈릴 일이 없습니다.
++          ✏️ 직접 입력 — 지금 그대로의 «독립 계산기».
++          ⚠️ 고객을 안 골랐으면 👤 는 «눌리지 않습니다» (그리고 안내를 띄웁니다).
++          ⛔ ✏️ 갈래를 지우지 마십시오. 상담사가 «가족 사주» 를 함께 보는 자리입니다. */}
++      <div style={{ display: 'flex', gap: 4, padding: '6px 8px 0', background: '#f7f5ef', flexShrink: 0 }}>
++        <button type="button" onClick={() => hasCustomer && setTab('customer')}
++          disabled={!hasCustomer}
++          title={hasCustomer ? '고른 고객의 만세력' : '상담 목록에서 고객을 먼저 골라 주세요'}
++          style={{
++            flex: 1, height: 28, borderRadius: 5, fontSize: 11.5, fontFamily: 'inherit',
++            border: tab === 'customer' ? '1px solid #2b2b2b' : '1px solid #ccc',
++            background: tab === 'customer' ? '#2b2b2b' : '#fff',
++            color: !hasCustomer ? '#aaa' : tab === 'customer' ? '#fff' : '#555',
++            fontWeight: tab === 'customer' ? 600 : 400,
++            cursor: hasCustomer ? 'pointer' : 'not-allowed',
++          }}>
++          👤 고른 고객{customer?.name ? ` · ${customer.name}` : ''}
++        </button>
++        <button type="button" onClick={() => setTab('manual')}
++          style={{
++            flex: 1, height: 28, borderRadius: 5, fontSize: 11.5, fontFamily: 'inherit',
++            border: tab === 'manual' ? '1px solid #2b2b2b' : '1px solid #ccc',
++            background: tab === 'manual' ? '#2b2b2b' : '#fff',
++            color: tab === 'manual' ? '#fff' : '#555',
++            fontWeight: tab === 'manual' ? 600 : 400, cursor: 'pointer',
++          }}>
++          ✏️ 직접 입력
++        </button>
++      </div>
++
++      {/* 입력부 — ★직접 입력 갈래에서 «결과가 없을 때만» 보인다 */}
++      {tab === 'manual' && !src && (
+         <div style={{ padding: 8, borderBottom: '1px solid #ddd', background: '#f7f5ef', flexShrink: 0 }}>
+           <div style={{ display: 'flex', gap: 4, marginBottom: 5 }}>
+             <button type="button" onClick={() => setCalType('양력')} style={{ ...toggle, ...(calType === '양력' ? toggleOn : {}) }}>양력</button>
+@@ -200,14 +293,31 @@ export default function ExpertFloating({ open, onClose }: Props) {
+       )}
+ 
+       {/* 결과부 — 전문가용 만세력 화면을 그대로 띄운다 */}
+-      {src ? (
++      {tab === 'customer' ? (
++        /* ★👤 고른 고객 — 칸 없이 «바로» 만세력이 나옵니다 */
++        hasCustomer ? (
++          <iframe
++            key={customerSrc}
++            src={customerSrc}
++            title="고른 고객의 전문가용 만세력"
++            style={{ flex: 1, width: '100%', border: 'none', background: '#FDF6F0' }}
++          />
++        ) : (
++          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
++            padding: 20, fontSize: 12.5, color: '#8a7461', textAlign: 'center', lineHeight: 1.8 }}>
++            상담 목록에서 고객을 먼저 골라 주세요.<br />
++            고르시면 그 손님의 만세력이 바로 나옵니다.
++          </div>
++        )
++      ) : src ? (
+         <iframe
+           src={src}
+           title="전문가용 만세력"
+           style={{ flex: 1, width: '100%', border: 'none', background: '#FDF6F0' }}
+         />
+       ) : (
+-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 12px', textAlign: 'center', color: '#a09a8c', fontSize: 12, lineHeight: 1.7 }}>
++        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
++          padding: 20, fontSize: 12.5, color: '#8a7461', textAlign: 'center', lineHeight: 1.8 }}>
+           생년월일·시간을 넣고 [조회]를 누르면<br />전문가용 만세력이 그대로 나옵니다.
+         </div>
+       )}
+diff --git a/app/manseryeok/consultant/page.tsx b/app/manseryeok/consultant/page.tsx
+index e520a22..cb26ff8 100644
+--- a/app/manseryeok/consultant/page.tsx
++++ b/app/manseryeok/consultant/page.tsx
+@@ -644,9 +644,27 @@ function ConsultantContent() {
+       {/* ===== 🔮 만세력 (전문가용 · 독립 플로팅 창) ===== */}
+       {/* 창 안에서 생년월일을 입력하면 전문가용 만세력 화면을 그대로 띄운다.
+           고객 데이터와 무관한 독립 계산기. */}
++      {/* ★2026-08-05 (47부 36차) — 고른 고객을 «넘깁니다». [대표님 지시]
++          「상담목록을 누르면 해당 상담신청한 고객의 전문가용 만세력이 자동으로 조회되게」
++          ⇒ 창 «안» 에서 [👤 고른 고객] · [✏️ 직접 입력] 두 갈래로 갈립니다 (목업 ⓒ).
++          ⚠️ 고객을 고르면 ★저절로 👤 갈래로 옮겨 갑니다. 다만 ★창을 «열지는» 않습니다 —
++             목록만 훑어보실 때 창이 뜨면 성가시기 때문입니다.
++          ⚠️ birth_data 는 상담 신청 때 담긴 값입니다 (consultant-select).
++             hour 는 ★숫자 문자열 또는 '모름' — 모르면 «시 미지정» 으로 봅니다.
++          ⛔ 「✏️ 직접 입력」을 지우지 마십시오. 상담사가 «가족 사주» 를 함께 보는 자리입니다. */}
+       <ExpertFloating
+         open={sajuOpen}
+         onClose={() => setSajuOpen(false)}
++        customer={selectedConsultation?.birth_data ? {
++          name: selectedConsultation.birth_data.customerName || selectedConsultation.customer_name,
++          year: selectedConsultation.birth_data.year,
++          month: selectedConsultation.birth_data.month,
++          day: selectedConsultation.birth_data.day,
++          gender: selectedConsultation.birth_data.gender,
++          hour: selectedConsultation.birth_data.hour,
++          calType: selectedConsultation.birth_data.calType,
++          leapMonth: selectedConsultation.birth_data.leapMonth,
++        } : null}
+       />
+ 
+       {/* ===== 📋 이전 상담 내역 (독립 플로팅 창) ===== */}
+diff --git a/hooks/useConsultantState.ts b/hooks/useConsultantState.ts
+index 578e629..4026542 100644
+--- a/hooks/useConsultantState.ts
++++ b/hooks/useConsultantState.ts
+@@ -7,7 +7,26 @@ export function useConsultantState() {
+   const [consultationId, setConsultationId] = useState<string | null>(null)
+   const [customerPhone, setCustomerPhone] = useState('')
+   const [customerName, setCustomerName] = useState('')
+-  const [selectedConsultation, setSelectedConsultation] = useState<{id:string;customer_phone:string;user_id?:string|null} | null>(null)
++  /**
++   * ★2026-08-05 (47부 36차) — birth_data · customer_name 을 «함께» 담습니다. [대표님 지시]
++   *   [까닭]  만세력 창이 고른 고객의 사주를 바로 그리려면 «생년월일» 이 필요합니다.
++   *     전에는 id · customer_phone · user_id 만 담아
++   *     ★상담사가 생년월일을 «손으로 다시» 쳐야 했습니다.
++   *   ⚠️ birth_data 는 상담 신청 때 담긴 값입니다 (consultant-select).
++   *      hour 는 ★숫자 문자열 또는 '모름'.
++   *   ⚠️ 전부 «있을 수도 없을 수도» 있어 물음표를 붙였습니다. 옛 기록에는 없을 수 있습니다.
++   */
++  const [selectedConsultation, setSelectedConsultation] = useState<{
++    id: string
++    customer_phone: string
++    user_id?: string | null
++    customer_name?: string
++    birth_data?: {
++      year?: string; month?: string; day?: string
++      gender?: string; hour?: string; calType?: string; leapMonth?: string
++      customerName?: string
++    }
++  } | null>(null)
+   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+   const [gender, setGender] = useState(searchParams.get('gender') || '')
+   const [calType, setCalType] = useState(searchParams.get('calType') || '')
+@@ -109,7 +128,17 @@ export function useConsultantState() {
+     setHourIdx(params.hour === '모름' ? null : parseInt(params.hour))
+     setCustomerName(params.customerName || '')
+   }
+-  function handleSelectConsultation(c: {id:string;customer_phone:string;user_id?:string|null}) {
++  function handleSelectConsultation(c: {
++    id: string
++    customer_phone: string
++    user_id?: string | null
++    customer_name?: string
++    birth_data?: {
++      year?: string; month?: string; day?: string
++      gender?: string; hour?: string; calType?: string; leapMonth?: string
++      customerName?: string
++    }
++  }) {
+     setSelectedConsultation(c)
+     setConsultationId(c.id)
+     setCustomerPhone(c.customer_phone)
+-- 
+2.43.0
+
+
+From e1ff194cd40e99a7345dfe864d91a79410ee41fb Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Thu, 6 Aug 2026 04:01:43 +0000
+Subject: [PATCH 2/5] =?UTF-8?q?=EC=A0=84=EB=AC=B8=EA=B0=80=EC=9A=A9=20?=
+ =?UTF-8?q?=EB=A7=8C=EC=84=B8=EB=A0=A5=EC=97=90=20=EB=8C=80=EC=9A=B4=C2=B7?=
+ =?UTF-8?q?=EC=84=B8=EC=9A=B4=C2=B7=EC=9B=94=EC=9A=B4=C2=B7=EC=9D=BC?=
+ =?UTF-8?q?=EC=9A=B4=20=EB=90=98=EC=82=B4=EB=A6=BC=20=C2=B7=20=EC=B0=BD=20?=
+ =?UTF-8?q?=ED=81=AC=EA=B8=B0=20=EC=A1=B0=EC=A0=88=20=EC=85=8B=20(47?=
+ =?UTF-8?q?=EB=B6=80=2037=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../consultant/components/ExpertFloating.tsx  | 39 ++++++++++++++++---
+ app/manseryeok/result-new/page.tsx            | 36 +++++++++++++----
+ 2 files changed, 61 insertions(+), 14 deletions(-)
+
+diff --git a/app/manseryeok/consultant/components/ExpertFloating.tsx b/app/manseryeok/consultant/components/ExpertFloating.tsx
+index 08332f9..a7c09d1 100644
+--- a/app/manseryeok/consultant/components/ExpertFloating.tsx
++++ b/app/manseryeok/consultant/components/ExpertFloating.tsx
+@@ -102,7 +102,8 @@ export default function ExpertFloating({ open, onClose, customer }: Props) {
+   const [pos, setPos] = useState({ x: 80, y: 80 })
+   const [size, setSize] = useState({ w: 430, h: 640 })
+   const drag = useRef<{ dx: number; dy: number } | null>(null)
+-  const resize = useRef<{ x: number; y: number; w: number; h: number } | null>(null)
++  // ★axis — 'x' 가로만 · 'y' 세로만 · 'both' 둘 다 (47부 37차)
++  const resize = useRef<{ x: number; y: number; w: number; h: number; axis: 'x' | 'y' | 'both' } | null>(null)
+ 
+   useEffect(() => {
+     const move = (e: MouseEvent) => {
+@@ -111,8 +112,8 @@ export default function ExpertFloating({ open, onClose, customer }: Props) {
+       } else if (resize.current) {
+         const r = resize.current
+         setSize({
+-          w: Math.max(340, r.w + (e.clientX - r.x)),
+-          h: Math.max(300, r.h + (e.clientY - r.y)),
++          w: r.axis === 'y' ? r.w : Math.max(340, r.w + (e.clientX - r.x)),
++          h: r.axis === 'x' ? r.h : Math.max(300, r.h + (e.clientY - r.y)),
+         })
+       }
+     }
+@@ -226,7 +227,11 @@ export default function ExpertFloating({ open, onClose, customer }: Props) {
+           }}>
+           👤 고른 고객{customer?.name ? ` · ${customer.name}` : ''}
+         </button>
+-        <button type="button" onClick={() => setTab('manual')}
++        {/* ★2026-08-05 (47부 37차) — 「직접 입력」으로 옮기면 ★옛 결과를 «지웁니다».
++            [까닭]  src 가 남아 있으면 «칸이 안 뜨고» 옛 만세력이 그대로 보여
++              어느 사람 것인지 헷갈립니다. 대표님 사진에서 그렇게 보였습니다.
++            ⇒ 옮길 때마다 ★«빈 칸» 부터 보여 드립니다. */}
++        <button type="button" onClick={() => { setTab('manual'); setSrc('') }}
+           style={{
+             flex: 1, height: 28, borderRadius: 5, fontSize: 11.5, fontFamily: 'inherit',
+             border: tab === 'manual' ? '1px solid #2b2b2b' : '1px solid #ccc',
+@@ -322,9 +327,31 @@ export default function ExpertFloating({ open, onClose, customer }: Props) {
+         </div>
+       )}
+ 
+-      {/* 크기 조절 손잡이 (오른쪽 아래 모서리) */}
++      {/* ★2026-08-05 (47부 37차) — 크기 조절을 «옆·아래·모서리» 셋으로. [대표님 지시]
++          「윗부분은 고정이 옆과 아래로는 자유롭게 늘리고 줄이고 가능」
++          [전]  ★오른쪽 «아래 모서리» 하나뿐이라 가로만·세로만 늘리기가 어려웠습니다.
++          [후]  ▶ 오른쪽 가장자리 — ★가로만
++                ▼ 아래 가장자리   — ★세로만
++                ◢ 오른쪽 아래     — 둘 다 (전에 있던 것)
++          ⚠️ ★위쪽·왼쪽은 «안» 붙였습니다 — 그쪽을 끌면 창이 «움직여» 보여
++             제목줄 끌기와 헷갈립니다. 대표님도 「윗부분은 고정」이라 하셨습니다.
++          ⚠️ 손잡이 폭 6px — 잡기 쉬우면서 화면을 안 가리는 값입니다. */}
++
++      {/* ▶ 오른쪽 가장자리 — 가로만 */}
++      <div
++        onMouseDown={e => { resize.current = { x: e.clientX, y: e.clientY, w: size.w, h: size.h, axis: 'x' } }}
++        style={{ position: 'absolute', right: 0, top: 32, bottom: 16, width: 6, cursor: 'ew-resize' }}
++        title="드래그로 가로 폭 조절"
++      />
++      {/* ▼ 아래 가장자리 — 세로만 */}
++      <div
++        onMouseDown={e => { resize.current = { x: e.clientX, y: e.clientY, w: size.w, h: size.h, axis: 'y' } }}
++        style={{ position: 'absolute', left: 0, right: 16, bottom: 0, height: 6, cursor: 'ns-resize' }}
++        title="드래그로 세로 높이 조절"
++      />
++      {/* ◢ 오른쪽 아래 모서리 — 둘 다 */}
+       <div
+-        onMouseDown={e => { resize.current = { x: e.clientX, y: e.clientY, w: size.w, h: size.h } }}
++        onMouseDown={e => { resize.current = { x: e.clientX, y: e.clientY, w: size.w, h: size.h, axis: 'both' } }}
+         style={{
+           position: 'absolute', right: 0, bottom: 0, width: 16, height: 16,
+           cursor: 'nwse-resize', background: 'linear-gradient(135deg, transparent 50%, #bbb 50%)',
+diff --git a/app/manseryeok/result-new/page.tsx b/app/manseryeok/result-new/page.tsx
+index e51faa4..aeba935 100644
+--- a/app/manseryeok/result-new/page.tsx
++++ b/app/manseryeok/result-new/page.tsx
+@@ -377,7 +377,7 @@ function ResultNewContent() {
+   //      (운을 얹은 삼합·천간합·복음이 안 나옵니다)
+   //    ⚠️ 손님 화면에는 영향이 없습니다 — 그 칸은 ★전문가용(?pro=1)에만 나옵니다.
+   //    ⛔ 되살리시려면 ★「운의 흐름」 칸과 onPick={setPickedUn} 을 «함께» 되살리십시오.
+-  const [pickedUn] = useState<{
++  const [pickedUn, setPickedUn] = useState<{
+     daeun: { stem: string; branch: string; age: number } | null
+     seyun: { stem: string; branch: string; year: number } | null
+   }>({ daeun: null, seyun: null })
+@@ -806,13 +806,33 @@ function ResultNewContent() {
+             ⛔ 되살리시려면 ★아래 섹션2 와 «겹치지 않게» 조건을 거십시오. */}
+ 
+         {/* ★2026-08-05 (47부 32차) — 「운의 흐름 (대운·세운·월운·일운)」 칸을
+-            «걷어냈습니다». [대표님 지시]
+-              「우측 이미지의 대운,세운,월운,일운 부분 중복되니 삭제…하단에 따로 나와있음」
+-            ⚠️ 아래 ★「나의 사주 이야기」 안에 대운 표·세운 표가 «그대로» 있습니다.
+-               (premiumSlots 의 섹션5 세운 · 섹션6 대운 — 통변 글과 짝을 이룹니다)
+-            ⚠️ ★월운·일운은 «이 칸에만» 있던 것이라 화면에서 사라집니다. 뜻한 대로입니다.
+-            ⛔ 되살리시려면 ★이 칸과 setPickedUn 을 «함께» 되살리십시오.
+-               (onPick={setPickedUn} — 46부 14차의 「운이 원국을 건드리는 자리」가 씁니다) */}
++            «손님 화면에서만» 걷어냈습니다. [대표님 지시]
++              「대운,세운,월운,일운 부분 중복되니 삭제…하단에 따로 나와있음」
++            ⇒ 손님 화면은 ★「나의 사주 이야기」 안에 대운 표·세운 표가 있어 겹쳤습니다.
++
++            🔴🔴 ★2026-08-05 (47부 37차) — «전문가용» 에서는 «되살렸습니다».
++              [겪은 일]  대표님 — 「대운,세월,월운,일운 4가지 표시 누락됨」
++              [까닭]  ★제가 32차에 손님 화면만 보고 지웠습니다.
++                mode=chart(전문가용)는 ★통변 블록을 «통째로 안 그립니다».
++                ⇒ 대운·세운이 통변 «안» 에만 있으니 전문가용에서 ★넷이 다 사라졌습니다.
++              [고침]  ★chartOnly 일 때만 이 칸을 그립니다.
++                ⇒ 손님 화면 : 통변 안의 대운·세운 (겹치지 않음)
++                ⇒ 전문가용   : ★이 칸 (대운·세운·월운·일운 넷 다)
++              ⛔ 조건에서 chartOnly 를 빼지 마십시오. 손님 화면에서 다시 겹칩니다.
++              ⚠️ onPick={setPickedUn} 이 돌아왔으므로 ★전문가 상세의
++                 「운이 원국을 건드리는 자리」도 다시 일합니다. */}
++        {chartOnly && dayStem && monthGanji && yearStem && solarYear && (
++          <Section title="운의 흐름 (대운·세운·월운·일운)" collapsible={false}>
++            <UnseFlow
++              solarYear={solarYear} solarMonth={solarMonth} solarDay={solarDay}
++              monthGanji={monthGanji} yearStem={yearStem} dayStem={dayStem}
++              gender={gender} birthYear={yearParam} currentYear={currentYear}
++              myMonthBranch={monthBranchForNote ?? ''} myDayBranch={iljji}
++              list={dayunList} hourIdx={hourIdx}
++              onPick={setPickedUn}
++            />
++          </Section>
++        )}
+ 
+         {/* ⑨ AI 통변 (고른 질문 기반). mode=chart(만세력만)면 통변 없음.
+             다시보기(recordId)면 저장된 통변·질문이 있을 때만(구버전 기록은 통변 숨김). */}
+-- 
+2.43.0
+
+
+From 5df505a5f7a62c70ae31798591ef2fe22c00397b Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Thu, 6 Aug 2026 04:23:16 +0000
+Subject: [PATCH 3/5] =?UTF-8?q?=EC=9E=90=EB=8F=99=20=EB=B6=88=EB=9F=AC?=
+ =?UTF-8?q?=EC=98=A4=EA=B8=B0=20=EA=B1=B7=EA=B3=A0=20=EA=B3=84=EC=82=B0?=
+ =?UTF-8?q?=EA=B8=B0+=EC=9B=90=EB=B3=B8=ED=95=B4=EC=84=A4=20=EB=91=90=20?=
+ =?UTF-8?q?=EA=B0=88=EB=9E=98=EB=A1=9C=20(47=EB=B6=80=2038=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../consultant/components/ExpertFloating.tsx  | 149 +++++----------
+ .../consultant/components/SourceReading.tsx   | 177 ++++++++++++++++++
+ app/manseryeok/consultant/page.tsx            |  28 +--
+ hooks/useConsultantState.ts                   |  36 +---
+ 4 files changed, 241 insertions(+), 149 deletions(-)
+ create mode 100644 app/manseryeok/consultant/components/SourceReading.tsx
+
+diff --git a/app/manseryeok/consultant/components/ExpertFloating.tsx b/app/manseryeok/consultant/components/ExpertFloating.tsx
+index a7c09d1..6cccce7 100644
+--- a/app/manseryeok/consultant/components/ExpertFloating.tsx
++++ b/app/manseryeok/consultant/components/ExpertFloating.tsx
+@@ -1,5 +1,6 @@
+ 'use client'
+ import { useState, useRef, useEffect } from 'react'
++import SourceReading from './SourceReading'
+ 
+ // ============================================================
+ // 전문가용 만세력 (독립 플로팅 창)
+@@ -15,31 +16,17 @@ import { useState, useRef, useEffect } from 'react'
+ // ============================================================
+ 
+ /**
+- * ★2026-08-05 (47부 36차) — 「고른 고객」 갈래를 더했습니다. [대표님 지시]
+- *   「상담목록을 누르면 해당 상담신청한 고객의 전문가용 만세력이 자동으로 조회되게」
+- *   ⇒ 목업 셋 중 ★ⓒ(창은 하나, 안에서 두 갈래)로 확정하셨습니다.
++ * ★2026-08-05 (47부 38차) — 두 갈래 [대표님 지시]
++ *   「자동불러오기 걷어 / 계산기 / 빈탭에 원본해설 불러오기」
+  *
+- *   [왜 창을 «더 만들지» 않았나]  메뉴바가 이미 빠듯합니다 —
+- *     명연재 | 나의 일정 | 상담목록 | 나의 정산 | 🔮 만세력 | 📋 상담내역
+- *     | 메뉴크기 | 매니저 대리 | ○○ 선생님 화면 | 로그아웃
+- *     ⇒ 하나 더 넣으면 좁은 화면에서 넘칩니다. 창이 셋이면 자리 다툼도 생깁니다.
++ *   [🔮 계산기]     생년월일을 손으로 넣어 전문가용 만세력을 봅니다 (전부터 있던 것)
++ *   [📖 원본 해설]  ★같은 생년월일로 «교재 원본» 해설을 죽 폅니다
+  *
+- *   ⚠️ customer 는 «상담 목록에서 고른 고객» 입니다. 안 골랐으면 null.
+- *   ⛔ 이 창은 원래 「고객 데이터와 무관한 ★독립 계산기」 였습니다.
+- *      그 성격은 ★「✏️ 직접 입력」 갈래에 «그대로» 살아 있습니다. 지우지 마십시오.
++ *   ⚠️ 36·37차의 「고른 고객 자동 불러오기」는 ★걷었습니다.
++ *      열 화면이 상담 신청 때 생년월일을 «안 실어 보내» 대개 비어 있었습니다.
++ *      ⛔ 되살리시려면 ★먼저 그 열 화면을 고치십시오.
+  */
+-export type FloatingCustomer = {
+-  name?: string
+-  year?: string
+-  month?: string
+-  day?: string
+-  gender?: string
+-  hour?: string        // ★숫자 문자열 또는 '모름'
+-  calType?: string
+-  leapMonth?: string
+-} | null
+-
+-type Props = { open: boolean; onClose: () => void; customer?: FloatingCustomer }
++type Props = { open: boolean; onClose: () => void }
+ 
+ // 시(時) 목록 — 30분법 (birthInput.ts 기준과 동일한 표기)
+ const HOUR_LABELS = [
+@@ -48,7 +35,7 @@ const HOUR_LABELS = [
+   '申 15:30-17:30', '酉 17:30-19:30', '戌 19:30-21:30', '亥 21:30-23:30',
+ ]
+ 
+-export default function ExpertFloating({ open, onClose, customer }: Props) {
++export default function ExpertFloating({ open, onClose }: Props) {
+   // ── 입력값 ──
+   const [name, setName] = useState('')
+   const [calType, setCalType] = useState<'양력' | '음력'>('양력')
+@@ -63,40 +50,10 @@ export default function ExpertFloating({ open, onClose, customer }: Props) {
+   // ── 조회 결과 주소 (iframe src) ──
+   const [src, setSrc] = useState('')
+ 
+-  // ★2026-08-05 (47부 36차) — 두 갈래 [대표님 확정 · 목업 ⓒ]
+-  //   'customer' 고른 고객 것 (칸 없음)  ·  'manual' 손으로 치는 계산기 (지금 것 그대로)
+-  const [tab, setTab] = useState<'customer' | 'manual'>('manual')
+-  const hasCustomer = !!(customer?.year && customer?.month && customer?.day)
+-
+-  /** 고른 고객의 전문가용 만세력 주소. 위 search() 와 «같은 규칙» 입니다. */
+-  const customerSrc = (() => {
+-    if (!hasCustomer) return ''
+-    const q = new URLSearchParams()
+-    q.set('year', String(customer!.year)); q.set('month', String(customer!.month))
+-    q.set('day', String(customer!.day))
+-    q.set('gender', customer!.gender === '여' ? '여' : '남')
+-    q.set('calType', customer!.calType === '음력' ? '음력' : '양력')
+-    q.set('leapMonth', customer!.leapMonth === '1' ? '1' : '0')
+-    // ⚠️ hour 는 ★숫자 문자열 또는 '모름' 입니다. 모르면 «안 넘깁니다» (시 미지정).
+-    const h = customer!.hour
+-    if (h && h !== '모름' && !Number.isNaN(Number(h))) q.set('hour', String(Number(h)))
+-    if (customer!.name) q.set('name', customer!.name)
+-    q.set('pro', '1')
+-    q.set('mode', 'chart')
+-    return `/manseryeok/result-new?${q.toString()}`
+-  })()
+-
+-  // ★고객이 바뀌면 「고른 고객」 갈래로 옮겨 갑니다.
+-  //   ⚠️⚠️ ★useEffect 로 하지 «않습니다» — eslint(react-hooks/purity)가
+-  //      「효과 안에서 setState 를 부르면 그리기가 겹친다」고 막습니다.
+-  //      ⇒ 대신 ★«그릴 때» 고객이 바뀌었는지 견주어 곧바로 옮깁니다.
+-  //   ⚠️ 창이 «닫혀» 있어도 갈래만 바뀝니다. 열 때 바로 그 고객이 보입니다.
+-  //   ⛔ 여기서 창을 «열지» 마십시오. 목록만 훑어보실 때도 창이 떠서 성가십니다.
+-  const [lastSrc, setLastSrc] = useState('')
+-  if (customerSrc !== lastSrc) {
+-    setLastSrc(customerSrc)
+-    setTab(hasCustomer ? 'customer' : 'manual')
+-  }
++  // ★2026-08-05 (47부 38차) — 두 갈래 [대표님 지시]
++  //   'calc'   손으로 넣는 전문가용 만세력 계산기 (전부터 있던 것)
++  //   'source' ★교재 «원본 해설» — 같은 생년월일로 죽 폅니다
++  const [tab, setTab] = useState<'calc' | 'source'>('calc')
+ 
+   // ── 창 위치·크기 ──
+   const [pos, setPos] = useState({ x: 80, y: 80 })
+@@ -190,7 +147,7 @@ export default function ExpertFloating({ open, onClose, customer }: Props) {
+         <span>🔮 만세력 (전문가용)</span>
+         {/* ★2026-08-05 (47부 36차) — 「← 다시 입력」은 ★직접 입력 갈래에서만.
+             고른 고객 갈래에는 «칸이 없어» 돌아갈 자리가 없습니다. */}
+-        {tab === 'manual' && src && (
++        {tab === 'calc' && src && (
+           <button type="button" onClick={() => setSrc('')}
+             style={{
+               marginLeft: 'auto', height: 22, padding: '0 8px', borderRadius: 5,
+@@ -201,50 +158,46 @@ export default function ExpertFloating({ open, onClose, customer }: Props) {
+         )}
+         <button type="button" onClick={onClose}
+           style={{
+-            marginLeft: (tab === 'manual' && src) ? 6 : 'auto', width: 22, height: 22, borderRadius: 5,
++            marginLeft: (tab === 'calc' && src) ? 6 : 'auto', width: 22, height: 22, borderRadius: 5,
+             border: 'none', background: 'rgba(255,255,255,.15)', color: '#fff',
+             cursor: 'pointer', fontSize: 13, fontFamily: 'inherit',
+             WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation',
+           }}>✕</button>
+       </div>
+ 
+-      {/* ★2026-08-05 (47부 36차) — 두 갈래 [대표님 확정 · 목업 ⓒ]
+-          👤 고른 고객 — 상담 목록에서 고른 손님. ★칸이 «없어» 헷갈릴 일이 없습니다.
+-          ✏️ 직접 입력 — 지금 그대로의 «독립 계산기».
+-          ⚠️ 고객을 안 골랐으면 👤 는 «눌리지 않습니다» (그리고 안내를 띄웁니다).
+-          ⛔ ✏️ 갈래를 지우지 마십시오. 상담사가 «가족 사주» 를 함께 보는 자리입니다. */}
++      {/* ★2026-08-05 (47부 38차) — 두 갈래 [대표님 지시]
++          🔮 계산기     생년월일을 손으로 넣어 «전문가용 만세력» 을 봅니다
++          📖 원본 해설  ★같은 생년월일로 «교재 원본» 해설을 죽 폅니다
++          ⚠️ 두 갈래가 ★«같은 입력값» 을 씁니다. 한 번 넣으면 둘 다 바로 봅니다. */}
+       <div style={{ display: 'flex', gap: 4, padding: '6px 8px 0', background: '#f7f5ef', flexShrink: 0 }}>
+-        <button type="button" onClick={() => hasCustomer && setTab('customer')}
+-          disabled={!hasCustomer}
+-          title={hasCustomer ? '고른 고객의 만세력' : '상담 목록에서 고객을 먼저 골라 주세요'}
++        <button type="button" onClick={() => setTab('calc')}
+           style={{
+             flex: 1, height: 28, borderRadius: 5, fontSize: 11.5, fontFamily: 'inherit',
+-            border: tab === 'customer' ? '1px solid #2b2b2b' : '1px solid #ccc',
+-            background: tab === 'customer' ? '#2b2b2b' : '#fff',
+-            color: !hasCustomer ? '#aaa' : tab === 'customer' ? '#fff' : '#555',
+-            fontWeight: tab === 'customer' ? 600 : 400,
+-            cursor: hasCustomer ? 'pointer' : 'not-allowed',
++            border: tab === 'calc' ? '1px solid #2b2b2b' : '1px solid #ccc',
++            background: tab === 'calc' ? '#2b2b2b' : '#fff',
++            color: tab === 'calc' ? '#fff' : '#555',
++            fontWeight: tab === 'calc' ? 600 : 400, cursor: 'pointer',
+           }}>
+-          👤 고른 고객{customer?.name ? ` · ${customer.name}` : ''}
++          🔮 만세력 계산기
+         </button>
+-        {/* ★2026-08-05 (47부 37차) — 「직접 입력」으로 옮기면 ★옛 결과를 «지웁니다».
+-            [까닭]  src 가 남아 있으면 «칸이 안 뜨고» 옛 만세력이 그대로 보여
+-              어느 사람 것인지 헷갈립니다. 대표님 사진에서 그렇게 보였습니다.
+-            ⇒ 옮길 때마다 ★«빈 칸» 부터 보여 드립니다. */}
+-        <button type="button" onClick={() => { setTab('manual'); setSrc('') }}
++        <button type="button" onClick={() => setTab('source')}
+           style={{
+             flex: 1, height: 28, borderRadius: 5, fontSize: 11.5, fontFamily: 'inherit',
+-            border: tab === 'manual' ? '1px solid #2b2b2b' : '1px solid #ccc',
+-            background: tab === 'manual' ? '#2b2b2b' : '#fff',
+-            color: tab === 'manual' ? '#fff' : '#555',
+-            fontWeight: tab === 'manual' ? 600 : 400, cursor: 'pointer',
++            border: tab === 'source' ? '1px solid #2b2b2b' : '1px solid #ccc',
++            background: tab === 'source' ? '#2b2b2b' : '#fff',
++            color: tab === 'source' ? '#fff' : '#555',
++            fontWeight: tab === 'source' ? 600 : 400, cursor: 'pointer',
+           }}>
+-          ✏️ 직접 입력
++          📖 원본 해설
+         </button>
+       </div>
+ 
+-      {/* 입력부 — ★직접 입력 갈래에서 «결과가 없을 때만» 보인다 */}
+-      {tab === 'manual' && !src && (
++      {/* 입력부 — ★계산기 갈래에서 «결과가 없을 때만» 보인다.
++          ⚠️ 원본 해설 갈래는 «따로» 입력부를 그립니다 (아래). */}
++      {/* ⚠️ 입력부는 ★두 갈래가 «함께» 씁니다 —
++          계산기는 결과가 없을 때, 원본 해설은 «언제나» 보입니다
++          (해설은 [조회] 없이 값이 바뀌면 바로 다시 폅니다). */}
++      {((tab === 'calc' && !src) || tab === 'source') && (
+         <div style={{ padding: 8, borderBottom: '1px solid #ddd', background: '#f7f5ef', flexShrink: 0 }}>
+           <div style={{ display: 'flex', gap: 4, marginBottom: 5 }}>
+             <button type="button" onClick={() => setCalType('양력')} style={{ ...toggle, ...(calType === '양력' ? toggleOn : {}) }}>양력</button>
+@@ -297,23 +250,15 @@ export default function ExpertFloating({ open, onClose, customer }: Props) {
+         </div>
+       )}
+ 
+-      {/* 결과부 — 전문가용 만세력 화면을 그대로 띄운다 */}
+-      {tab === 'customer' ? (
+-        /* ★👤 고른 고객 — 칸 없이 «바로» 만세력이 나옵니다 */
+-        hasCustomer ? (
+-          <iframe
+-            key={customerSrc}
+-            src={customerSrc}
+-            title="고른 고객의 전문가용 만세력"
+-            style={{ flex: 1, width: '100%', border: 'none', background: '#FDF6F0' }}
+-          />
+-        ) : (
+-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+-            padding: 20, fontSize: 12.5, color: '#8a7461', textAlign: 'center', lineHeight: 1.8 }}>
+-            상담 목록에서 고객을 먼저 골라 주세요.<br />
+-            고르시면 그 손님의 만세력이 바로 나옵니다.
+-          </div>
+-        )
++      {/* 결과부 */}
++      {tab === 'source' ? (
++        /* ★📖 원본 해설 — 위 계산기와 «같은 입력값» 을 그대로 씁니다.
++           ⚠️ 따로 입력받지 않습니다. 한 번 넣으면 두 갈래를 오가며 봅니다. */
++        <SourceReading
++          calType={calType} leap={leap} gender={gender}
++          year={year} month={month} day={day}
++          hourIdx={hourIdx} name={name}
++        />
+       ) : src ? (
+         <iframe
+           src={src}
+diff --git a/app/manseryeok/consultant/components/SourceReading.tsx b/app/manseryeok/consultant/components/SourceReading.tsx
+new file mode 100644
+index 0000000..c426bd3
+--- /dev/null
++++ b/app/manseryeok/consultant/components/SourceReading.tsx
+@@ -0,0 +1,177 @@
++'use client'
++// app/manseryeok/consultant/components/SourceReading.tsx
++//
++// ══════════════════════════════════════════════════════════════════
++//  📖 교재 «원본 해설» — 상담사용
++//
++//  ★2026-08-05 (47부 38차 · 대표님 지시)
++//    「인적사항을 넣으면, ai통변말고 ★교재 원본의 해설들이 죽 나오게 하고 싶은데」
++//    「상담사들은 고객들에게 상담을 해야하니 고객에게 보여주는 ai통변이 아닌
++//      ★원래의 원본해석들을 그대로 모두 노출을 해줬으면 좋겠는데」
++//
++//  ★새로 쓴 글이 «한 줄도» 없습니다.
++//    저장소에 이미 있는 자료 파일에서 «그대로» 꺼내 폅니다.
++//    ⚠️ 자료의 출처는 lib/saju/SOURCE_INDEX.ts 에 정리되어 있습니다.
++//       (『명리적성 비법노트』(심산) 등 — 책이 «둘» 이라 쪽 번호가 겹칩니다)
++//
++//  ⛔⛔ 이 화면은 ★«상담사용» 입니다. 손님에게 그대로 보여 주지 마십시오.
++//     교재 원문 그대로라 말이 거칠고, 손님이 겁먹을 표현이 섞여 있습니다.
++//     손님 화면은 AI 통변이 «부드럽게 옮겨» 보여 줍니다.
++//
++//  ⚠️ 여기서 «판정» 을 새로 하지 않습니다. 자료를 꺼내 늘어놓기만 합니다.
++//     ⇒ 통변·진로적성과 «다른 답» 이 나올 걱정이 없습니다.
++// ══════════════════════════════════════════════════════════════════
++
++import { useMemo } from 'react'
++import { useResultSaju } from '@/hooks/useResultSaju'
++import { cheonganLines } from '@/lib/saju/cheonganTrait'
++import { findByeongjon, sayOf as byeongjonSay } from '@/lib/saju/byeongjon'
++import { LINE_OUTER, LINE_INNER } from '@/lib/ui/line'
++
++type Props = {
++  calType: '양력' | '음력'
++  leap: boolean
++  gender: '남' | '여'
++  year: string
++  month: string
++  day: string
++  hourIdx: number | null
++  name: string
++}
++
++/** 한 꼭지 — 제목 · 출전 · 여러 줄 */
++function Block({ title, source, lines }: { title: string; source?: string; lines: string[] }) {
++  if (lines.length === 0) return null
++  return (
++    <div style={{
++      background: '#fff', border: LINE_OUTER, borderRadius: 10,
++      padding: '11px 13px', marginBottom: 9,
++    }}>
++      <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 7 }}>
++        <span style={{ fontSize: 12.5, fontWeight: 700, color: '#3a2e28' }}>{title}</span>
++        {/* ⚠️ 출전을 «반드시» 함께 보여 드립니다 —
++            상담사가 손님께 「어디 나온 말인가」 를 말할 수 있어야 합니다. */}
++        {source && (
++          <span style={{ fontSize: 10, color: '#a08d7d', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
++            {source}
++          </span>
++        )}
++      </div>
++      {lines.map((l, i) => (
++        <div key={i} style={{
++          fontSize: 12, color: '#4a3f38', lineHeight: 1.85,
++          paddingLeft: 9, borderLeft: LINE_INNER, marginBottom: 5,
++        }}>{l}</div>
++      ))}
++    </div>
++  )
++}
++
++export default function SourceReading(p: Props) {
++  const yearN = Number(p.year) || 0
++  const monthN = Number(p.month) || 0
++  const dayN = Number(p.day) || 0
++
++  // ⚠️ 만세력 계산은 ★손님 화면과 «똑같은» 훅을 씁니다.
++  //    따로 계산하면 답이 갈립니다 (교훈 — 계산은 한 곳에서).
++  const { saju, converting, dayStem } = useResultSaju(
++    p.calType, yearN, monthN, dayN, p.leap ? '1' : '0', p.hourIdx,
++  )
++
++  const blocks = useMemo(() => {
++    if (saju.length === 0) return []
++    const out: { title: string; source?: string; lines: string[] }[] = []
++
++    // ── ① 일간 성정 ──────────────────────────────────────────────
++    if (dayStem) {
++      const lines = cheonganLines(dayStem, p.gender === '여' ? '여' : '남')
++      out.push({
++        title: `일간 ${dayStem} — 타고난 성품`,
++        source: '명리적성 비법노트 40~41쪽',
++        lines,
++      })
++    }
++
++    // ── ② 천간 넷 ────────────────────────────────────────────────
++    for (const pil of saju) {
++      if (!pil.stem || pil.stem === '?') continue
++      if (pil.pillar === '일주') continue   // 위에서 이미 폈습니다
++      const lines = cheonganLines(pil.stem, p.gender === '여' ? '여' : '남')
++      if (lines.length === 0) continue
++      out.push({
++        title: `${pil.pillar} 천간 ${pil.stem}`,
++        source: '명리적성 비법노트 40~41쪽',
++        lines: lines.slice(0, 3),   // ⚠️ 일간만큼 길게 펴면 화면이 넘칩니다
++      })
++    }
++
++    // ── ③ 병존 ──────────────────────────────────────────────────
++    //   ⚠️ 병존은 손님 화면에서 «전문가용에만» 보이는 것입니다 (45부 확정).
++    //      여기는 상담사용이라 그대로 폅니다.
++    // ⚠️ sayOf 는 «학생/성인» 을 가릅니다. 상담사 화면이라 ★성인 말을 폅니다.
++    for (const h of findByeongjon(saju)) {
++      const say = byeongjonSay(h.row, 'adult')
++      if (!say) continue
++      out.push({
++        title: `병존 — ${h.row.ko} (${h.pillars.join('·')})`,
++        source: '명리적성 비법노트 74~75쪽 「07 天干의 병존」',
++        lines: [say],
++      })
++    }
++
++    return out
++  }, [saju, dayStem, p.gender])
++
++  if (!yearN || !monthN || !dayN) {
++    return (
++      <div style={{
++        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
++        padding: 20, fontSize: 12.5, color: '#8a7461', textAlign: 'center', lineHeight: 1.8,
++      }}>
++        생년월일을 넣으면<br />교재 원본 해설이 그대로 펼쳐집니다.
++      </div>
++    )
++  }
++
++  if (converting) {
++    return (
++      <div style={{
++        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
++        padding: 20, fontSize: 12.5, color: '#8a7461',
++      }}>사주를 뽑는 중…</div>
++    )
++  }
++
++  return (
++    <div style={{ flex: 1, overflowY: 'auto', padding: 10, background: '#FDF6F0' }}>
++      {/* ⛔ 상담사용이라는 것을 «화면에도» 적어 둡니다 */}
++      <div style={{
++        background: '#fdf0e8', border: LINE_OUTER, borderRadius: 9,
++        padding: '9px 11px', marginBottom: 10, fontSize: 11, color: '#8f3d0e', lineHeight: 1.7,
++      }}>
++        📖 교재 «원본» 그대로입니다. 손님께는 말을 골라 전해 주세요.
++        {p.name && <span style={{ marginLeft: 6, color: '#96502e' }}>· {p.name}</span>}
++      </div>
++
++      {blocks.length === 0 ? (
++        <div style={{ padding: 20, fontSize: 12, color: '#8a7461', textAlign: 'center', lineHeight: 1.8 }}>
++          이 사주에 걸리는 자료를 못 찾았습니다.
++        </div>
++      ) : (
++        blocks.map((b, i) => <Block key={i} {...b} />)
++      )}
++
++      {/* ⚠️ 지금 펴는 것은 «일부» 입니다. 자료는 SOURCE_INDEX.ts 에 40개 파일이 있습니다.
++          ⇒ 지지·격국·용신·신살·귀인·공망·합충형파해를 더 얹을 수 있습니다.
++          ⛔ 한 번에 다 얹지 마십시오. 화면이 길어져 상담사가 못 찾습니다.
++             대표님께 «무엇부터» 보실지 여쭙고 하나씩 더하십시오. */}
++      <div style={{
++        fontSize: 10.5, color: '#a08d7d', textAlign: 'center',
++        padding: '10px 6px', lineHeight: 1.7,
++      }}>
++        지지·격국·용신·신살·합충형파해는 아직 안 폈습니다.<br />
++        필요하시면 말씀해 주세요.
++      </div>
++    </div>
++  )
++}
+diff --git a/app/manseryeok/consultant/page.tsx b/app/manseryeok/consultant/page.tsx
+index cb26ff8..c045cce 100644
+--- a/app/manseryeok/consultant/page.tsx
++++ b/app/manseryeok/consultant/page.tsx
+@@ -644,27 +644,19 @@ function ConsultantContent() {
+       {/* ===== 🔮 만세력 (전문가용 · 독립 플로팅 창) ===== */}
+       {/* 창 안에서 생년월일을 입력하면 전문가용 만세력 화면을 그대로 띄운다.
+           고객 데이터와 무관한 독립 계산기. */}
+-      {/* ★2026-08-05 (47부 36차) — 고른 고객을 «넘깁니다». [대표님 지시]
+-          「상담목록을 누르면 해당 상담신청한 고객의 전문가용 만세력이 자동으로 조회되게」
+-          ⇒ 창 «안» 에서 [👤 고른 고객] · [✏️ 직접 입력] 두 갈래로 갈립니다 (목업 ⓒ).
+-          ⚠️ 고객을 고르면 ★저절로 👤 갈래로 옮겨 갑니다. 다만 ★창을 «열지는» 않습니다 —
+-             목록만 훑어보실 때 창이 뜨면 성가시기 때문입니다.
+-          ⚠️ birth_data 는 상담 신청 때 담긴 값입니다 (consultant-select).
+-             hour 는 ★숫자 문자열 또는 '모름' — 모르면 «시 미지정» 으로 봅니다.
+-          ⛔ 「✏️ 직접 입력」을 지우지 마십시오. 상담사가 «가족 사주» 를 함께 보는 자리입니다. */}
++      {/* 창 안에서 생년월일을 입력하면 전문가용 만세력 화면을 그대로 띄운다.
++          ★2026-08-05 (47부 38차) — 「고른 고객 자동 불러오기」를 «걷어냈습니다». [대표님 지시]
++            [까닭]  36·37차에 상담 목록의 고객을 자동으로 불러오게 했는데,
++              ★열 화면이 상담 신청 때 «생년월일을 안 실어 보내고» 있었습니다.
++              (사주 화면만 searchParams 를 넘깁니다)
++              ⇒ 궁합·작명·택일에서 신청한 고객은 birth_data 가 «비어» 있어
++                「고른 고객」 갈래가 ★눌리지도 않았습니다.
++            ⇒ 대표님이 「자동으로 불러오는 것은 없애고」 하셨습니다.
++            ⚠️ 되살리시려면 ★먼저 열 화면이 ConsultButton 에 searchParams 를 넘기게
++               고쳐야 합니다. 그러지 않으면 이번과 같은 일이 되풀이됩니다. */}
+       <ExpertFloating
+         open={sajuOpen}
+         onClose={() => setSajuOpen(false)}
+-        customer={selectedConsultation?.birth_data ? {
+-          name: selectedConsultation.birth_data.customerName || selectedConsultation.customer_name,
+-          year: selectedConsultation.birth_data.year,
+-          month: selectedConsultation.birth_data.month,
+-          day: selectedConsultation.birth_data.day,
+-          gender: selectedConsultation.birth_data.gender,
+-          hour: selectedConsultation.birth_data.hour,
+-          calType: selectedConsultation.birth_data.calType,
+-          leapMonth: selectedConsultation.birth_data.leapMonth,
+-        } : null}
+       />
+ 
+       {/* ===== 📋 이전 상담 내역 (독립 플로팅 창) ===== */}
+diff --git a/hooks/useConsultantState.ts b/hooks/useConsultantState.ts
+index 4026542..ac0017a 100644
+--- a/hooks/useConsultantState.ts
++++ b/hooks/useConsultantState.ts
+@@ -8,25 +8,13 @@ export function useConsultantState() {
+   const [customerPhone, setCustomerPhone] = useState('')
+   const [customerName, setCustomerName] = useState('')
+   /**
+-   * ★2026-08-05 (47부 36차) — birth_data · customer_name 을 «함께» 담습니다. [대표님 지시]
+-   *   [까닭]  만세력 창이 고른 고객의 사주를 바로 그리려면 «생년월일» 이 필요합니다.
+-   *     전에는 id · customer_phone · user_id 만 담아
+-   *     ★상담사가 생년월일을 «손으로 다시» 쳐야 했습니다.
+-   *   ⚠️ birth_data 는 상담 신청 때 담긴 값입니다 (consultant-select).
+-   *      hour 는 ★숫자 문자열 또는 '모름'.
+-   *   ⚠️ 전부 «있을 수도 없을 수도» 있어 물음표를 붙였습니다. 옛 기록에는 없을 수 있습니다.
++   * ⚠️ 2026-08-05 (47부 38차) — birth_data 를 담던 것은 «걷었습니다».
++   *   36·37차에 만세력 창이 고객을 자동으로 불러오게 하려고 담았는데,
++   *   ★열 화면이 상담 신청 때 생년월일을 «안 실어 보내» 대개 비어 있었습니다.
++   *   ⇒ 대표님 지시로 자동 불러오기를 걷으며 함께 되돌립니다.
++   *   ⛔ 되살리시려면 ★먼저 열 화면이 searchParams 를 넘기게 고치십시오.
+    */
+-  const [selectedConsultation, setSelectedConsultation] = useState<{
+-    id: string
+-    customer_phone: string
+-    user_id?: string | null
+-    customer_name?: string
+-    birth_data?: {
+-      year?: string; month?: string; day?: string
+-      gender?: string; hour?: string; calType?: string; leapMonth?: string
+-      customerName?: string
+-    }
+-  } | null>(null)
++  const [selectedConsultation, setSelectedConsultation] = useState<{id:string;customer_phone:string;user_id?:string|null} | null>(null)
+   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+   const [gender, setGender] = useState(searchParams.get('gender') || '')
+   const [calType, setCalType] = useState(searchParams.get('calType') || '')
+@@ -128,17 +116,7 @@ export function useConsultantState() {
+     setHourIdx(params.hour === '모름' ? null : parseInt(params.hour))
+     setCustomerName(params.customerName || '')
+   }
+-  function handleSelectConsultation(c: {
+-    id: string
+-    customer_phone: string
+-    user_id?: string | null
+-    customer_name?: string
+-    birth_data?: {
+-      year?: string; month?: string; day?: string
+-      gender?: string; hour?: string; calType?: string; leapMonth?: string
+-      customerName?: string
+-    }
+-  }) {
++  function handleSelectConsultation(c: {id:string;customer_phone:string;user_id?:string|null}) {
+     setSelectedConsultation(c)
+     setConsultationId(c.id)
+     setCustomerPhone(c.customer_phone)
+-- 
+2.43.0
+
+
+From e194ef40e691d1169d8c214efca59acb2afce8b6 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Thu, 6 Aug 2026 04:31:50 +0000
+Subject: [PATCH 4/5] =?UTF-8?q?=EC=9B=90=EB=B3=B8=20=ED=95=B4=EC=84=A4?=
+ =?UTF-8?q?=EC=97=90=20=EC=A7=80=EC=A7=80=C2=B7=ED=95=A9=C2=B7=EC=B6=A9?=
+ =?UTF-8?q?=C2=B7=ED=98=95=ED=8C=8C=ED=95=B4=EC=9B=90=EC=A7=84=EA=B9=8C?=
+ =?UTF-8?q?=EC=A7=80=20=E2=80=94=20=EC=97=AC=EC=84=AF=20=EB=AC=B6=EC=9D=8C?=
+ =?UTF-8?q?=20(47=EB=B6=80=2039=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../consultant/components/SourceReading.tsx   | 263 ++++++++++++++----
+ 1 file changed, 212 insertions(+), 51 deletions(-)
+
+diff --git a/app/manseryeok/consultant/components/SourceReading.tsx b/app/manseryeok/consultant/components/SourceReading.tsx
+index c426bd3..db8a2c3 100644
+--- a/app/manseryeok/consultant/components/SourceReading.tsx
++++ b/app/manseryeok/consultant/components/SourceReading.tsx
+@@ -4,28 +4,38 @@
+ // ══════════════════════════════════════════════════════════════════
+ //  📖 교재 «원본 해설» — 상담사용
+ //
+-//  ★2026-08-05 (47부 38차 · 대표님 지시)
+-//    「인적사항을 넣으면, ai통변말고 ★교재 원본의 해설들이 죽 나오게 하고 싶은데」
++//  ★2026-08-05 (47부 38·39차 · 대표님 지시)
++//    「인적사항을 넣으면, ai통변말고 ★교재 원본의 해설들이 죽 나오게」
+ //    「상담사들은 고객들에게 상담을 해야하니 고객에게 보여주는 ai통변이 아닌
+ //      ★원래의 원본해석들을 그대로 모두 노출을 해줬으면 좋겠는데」
++//    「전문가인 상담사들이 알아서 볼 수 있으니 ★다 표시를 우선 해보자」
+ //
+-//  ★새로 쓴 글이 «한 줄도» 없습니다.
++//  ★새로 쓴 «해설» 이 한 줄도 없습니다.
+ //    저장소에 이미 있는 자료 파일에서 «그대로» 꺼내 폅니다.
+-//    ⚠️ 자료의 출처는 lib/saju/SOURCE_INDEX.ts 에 정리되어 있습니다.
+-//       (『명리적성 비법노트』(심산) 등 — 책이 «둘» 이라 쪽 번호가 겹칩니다)
++//    ⚠️ 출처는 lib/saju/SOURCE_INDEX.ts 에 정리되어 있습니다.
++//       (『명리적성 비법노트』(심산) 등 — ★책이 «둘» 이라 쪽 번호가 겹칩니다)
+ //
+ //  ⛔⛔ 이 화면은 ★«상담사용» 입니다. 손님에게 그대로 보여 주지 마십시오.
+ //     교재 원문 그대로라 말이 거칠고, 손님이 겁먹을 표현이 섞여 있습니다.
+ //     손님 화면은 AI 통변이 «부드럽게 옮겨» 보여 줍니다.
+ //
+-//  ⚠️ 여기서 «판정» 을 새로 하지 않습니다. 자료를 꺼내 늘어놓기만 합니다.
++//  ⚠️ 여기서 «판정» 을 새로 하지 않습니다. 이미 있는 판정 함수를 부르고
++//     그 결과로 자료를 꺼내 늘어놓기만 합니다.
+ //     ⇒ 통변·진로적성과 «다른 답» 이 나올 걱정이 없습니다.
++//
++//  ⚠️ 말 상대는 ★«성인» 으로 폅니다 (Target/Audience = adult·성인).
++//     상담사가 보는 화면이고, 학생 손님이어도 상담사는 원문을 알아야 합니다.
+ // ══════════════════════════════════════════════════════════════════
+ 
+-import { useMemo } from 'react'
++import { useMemo, useState } from 'react'
+ import { useResultSaju } from '@/hooks/useResultSaju'
+ import { cheonganLines } from '@/lib/saju/cheonganTrait'
++import { traitsInSaju, traitLines, noteLines, ctxOf } from '@/lib/saju/jijiTrait'
+ import { findByeongjon, sayOf as byeongjonSay } from '@/lib/saju/byeongjon'
++import { judgeCheonganHap, judgeJijiHap } from '@/lib/saju/hapJudge'
++import { hapLines } from '@/lib/saju/hapMeaning'
++import { chungLines } from '@/lib/saju/chungMeaning'
++import { findRel, relLines, findSamhyeong } from '@/lib/saju/hyeongPaHae'
+ import { LINE_OUTER, LINE_INNER } from '@/lib/ui/line'
+ 
+ type Props = {
+@@ -39,13 +49,16 @@ type Props = {
+   name: string
+ }
+ 
++type Item = { title: string; source?: string; lines: string[] }
++type Group = { key: string; label: string; items: Item[] }
++
+ /** 한 꼭지 — 제목 · 출전 · 여러 줄 */
+-function Block({ title, source, lines }: { title: string; source?: string; lines: string[] }) {
++function Block({ title, source, lines }: Item) {
+   if (lines.length === 0) return null
+   return (
+     <div style={{
+       background: '#fff', border: LINE_OUTER, borderRadius: 10,
+-      padding: '11px 13px', marginBottom: 9,
++      padding: '11px 13px', marginBottom: 8,
+     }}>
+       <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 7 }}>
+         <span style={{ fontSize: 12.5, fontWeight: 700, color: '#3a2e28' }}>{title}</span>
+@@ -73,53 +86,175 @@ export default function SourceReading(p: Props) {
+   const dayN = Number(p.day) || 0
+ 
+   // ⚠️ 만세력 계산은 ★손님 화면과 «똑같은» 훅을 씁니다.
+-  //    따로 계산하면 답이 갈립니다 (교훈 — 계산은 한 곳에서).
++  //    따로 계산하면 답이 갈립니다. ⛔ 새로 계산하지 마십시오.
+   const { saju, converting, dayStem } = useResultSaju(
+     p.calType, yearN, monthN, dayN, p.leap ? '1' : '0', p.hourIdx,
+   )
+ 
+-  const blocks = useMemo(() => {
++  /** 접힌 묶음 — ⚠️ «담긴 것만» 접힘. 빈 Set 이라 처음엔 전부 펼쳐집니다. */
++  const [closed, setClosed] = useState<Set<string>>(new Set())
++  const toggle = (k: string) => setClosed(prev => {
++    const n = new Set(prev)
++    if (n.has(k)) n.delete(k); else n.add(k)
++    return n
++  })
++
++  const groups = useMemo<Group[]>(() => {
+     if (saju.length === 0) return []
+-    const out: { title: string; source?: string; lines: string[] }[] = []
+-
+-    // ── ① 일간 성정 ──────────────────────────────────────────────
+-    if (dayStem) {
+-      const lines = cheonganLines(dayStem, p.gender === '여' ? '여' : '남')
+-      out.push({
+-        title: `일간 ${dayStem} — 타고난 성품`,
+-        source: '명리적성 비법노트 40~41쪽',
+-        lines,
+-      })
++    const G: Group[] = []
++
++    // ── ① 천간 ───────────────────────────────────────────────────
++    {
++      const items: Item[] = []
++      if (dayStem) {
++        items.push({
++          title: `일간 ${dayStem} — 타고난 성품`,
++          source: '명리적성 비법노트 40~41쪽',
++          lines: cheonganLines(dayStem, p.gender),
++        })
++      }
++      for (const pil of saju) {
++        if (!pil.stem || pil.stem === '?' || pil.pillar === '일주') continue
++        const lines = cheonganLines(pil.stem, p.gender)
++        if (lines.length === 0) continue
++        items.push({
++          title: `${pil.pillar} 천간 ${pil.stem}`,
++          source: '명리적성 비법노트 40~41쪽',
++          lines,
++        })
++      }
++      if (items.length) G.push({ key: 'cheongan', label: '천간 — 성품', items })
+     }
+ 
+-    // ── ② 천간 넷 ────────────────────────────────────────────────
+-    for (const pil of saju) {
+-      if (!pil.stem || pil.stem === '?') continue
+-      if (pil.pillar === '일주') continue   // 위에서 이미 폈습니다
+-      const lines = cheonganLines(pil.stem, p.gender === '여' ? '여' : '남')
+-      if (lines.length === 0) continue
+-      out.push({
+-        title: `${pil.pillar} 천간 ${pil.stem}`,
+-        source: '명리적성 비법노트 40~41쪽',
+-        lines: lines.slice(0, 3),   // ⚠️ 일간만큼 길게 펴면 화면이 넘칩니다
+-      })
++    // ── ② 지지 ───────────────────────────────────────────────────
++    {
++      const items: Item[] = []
++      const ctx = ctxOf(saju)
++      for (const hit of traitsInSaju(saju)) {
++        const lines = [
++          ...traitLines(hit.row, 'adult', ctx),
++          ...noteLines(hit.row, 'adult', ctx),
++        ]
++        if (lines.length === 0) continue
++        items.push({
++          title: `${hit.pillar} ${hit.branch}`,
++          source: '명리적성 비법노트 50~73쪽',
++          lines,
++        })
++      }
++      if (items.length) G.push({ key: 'jiji', label: '지지 — 성정', items })
+     }
+ 
+-    // ── ③ 병존 ──────────────────────────────────────────────────
+-    //   ⚠️ 병존은 손님 화면에서 «전문가용에만» 보이는 것입니다 (45부 확정).
++    // ── ③ 병존 ───────────────────────────────────────────────────
++    //   ⚠️ 손님 화면에서는 «전문가용에만» 보이는 것입니다 (45부 확정).
+     //      여기는 상담사용이라 그대로 폅니다.
+-    // ⚠️ sayOf 는 «학생/성인» 을 가릅니다. 상담사 화면이라 ★성인 말을 폅니다.
+-    for (const h of findByeongjon(saju)) {
+-      const say = byeongjonSay(h.row, 'adult')
+-      if (!say) continue
+-      out.push({
+-        title: `병존 — ${h.row.ko} (${h.pillars.join('·')})`,
+-        source: '명리적성 비법노트 74~75쪽 「07 天干의 병존」',
+-        lines: [say],
+-      })
++    {
++      const items: Item[] = []
++      for (const h of findByeongjon(saju)) {
++        const say = byeongjonSay(h.row, 'adult')
++        if (!say) continue
++        items.push({
++          title: `${h.row.ko} (${h.pillars.join('·')})`,
++          source: '명리적성 비법노트 74~75쪽 「07 天干의 병존」',
++          lines: [say],
++        })
++      }
++      if (items.length) G.push({ key: 'byeongjon', label: '병존', items })
++    }
++
++    // ── ④ 합 ─────────────────────────────────────────────────────
++    {
++      const items: Item[] = []
++      for (const h of judgeCheonganHap(saju)) {
++        // ⚠️ 판정 결과(이루어졌나·화했나)를 «맨 앞» 에 한 줄로 적어 둡니다.
++        //    교재 78쪽의 조건을 상담사가 바로 알아보게 하려는 것입니다.
++        const head =
++          `${h.where} · ${h.seongrip ? '합 이룸' : '합 못 이룸'}` +
++          (h.block ? ` (${h.block.kind}: ${h.block.by})` : '') +
++          (h.dispute ? ` · ${h.dispute}` : '') +
++          (h.hwa ? ` · ${h.hwaEl}로 화함` : ' · 화하지 않음')
++        items.push({
++          title: `천간 ${h.key}`,
++          source: '명리적성 비법노트 78~83쪽',
++          lines: [head, ...hapLines(h.key, '성인')],
++        })
++      }
++      for (const h of judgeJijiHap(saju)) {
++        const head =
++          `${h.kind} · ${h.where}` +
++          (h.monthTied ? ' · 월지 걸림' : '') +
++          (h.hwaEl ? ` · ${h.hwaEl}` : '') +
++          (h.broken ? ` · ${h.broken}` : '')
++        items.push({
++          title: `지지 ${h.key}`,
++          source: '명리적성 비법노트 78~83쪽',
++          lines: [head, ...hapLines(h.key, '성인')],
++        })
++      }
++      if (items.length) G.push({ key: 'hap', label: '합', items })
+     }
+ 
+-    return out
++    // ── ⑤ 충 ─────────────────────────────────────────────────────
++    //   ⚠️ 충을 «찾아 주는» 함수가 없어 여기서 두 글자씩 짝지어 봅니다.
++    //      ⇒ chungLines 가 열쇠를 못 찾으면 빈 배열을 내므로 안전합니다.
++    {
++      const items: Item[] = []
++      const seen = new Set<string>()
++      const put = (a: { pillar: string; ch: string }, b: { pillar: string; ch: string }) => {
++        for (const key of [`${a.ch}${b.ch}沖`, `${b.ch}${a.ch}沖`]) {
++          if (seen.has(key)) continue
++          const lines = chungLines(key, '성인')
++          if (lines.length === 0) continue
++          seen.add(key)
++          items.push({
++            title: `${key} (${a.pillar}-${b.pillar})`,
++            source: '명리적성 비법노트 84~86쪽',
++            lines,
++          })
++        }
++      }
++      const stems = saju.filter(x => x.stem && x.stem !== '?').map(x => ({ pillar: x.pillar, ch: x.stem }))
++      const brs = saju.filter(x => x.branch && x.branch !== '?').map(x => ({ pillar: x.pillar, ch: x.branch }))
++      for (const arr of [stems, brs]) {
++        for (let i = 0; i < arr.length; i++) {
++          for (let j = i + 1; j < arr.length; j++) put(arr[i], arr[j])
++        }
++      }
++      if (items.length) G.push({ key: 'chung', label: '충', items })
++    }
++
++    // ── ⑥ 형·파·해·원진 ──────────────────────────────────────────
++    {
++      const items: Item[] = []
++      const seen = new Set<string>()
++      const brs = saju.filter(x => x.branch && x.branch !== '?')
++      for (let i = 0; i < brs.length; i++) {
++        for (let j = i + 1; j < brs.length; j++) {
++          for (const r of findRel(brs[i].branch, brs[j].branch)) {
++            if (seen.has(r.key)) continue
++            seen.add(r.key)
++            items.push({
++              title: `${r.alias ?? r.key} (${brs[i].pillar}-${brs[j].pillar})`,
++              source: '명리적성 비법노트',
++              lines: relLines(r, '성인'),
++            })
++          }
++        }
++      }
++      // ★삼형은 «세 글자» 라 따로 봅니다
++      for (const r of findSamhyeong(brs.map(x => x.branch))) {
++        if (seen.has(r.key)) continue
++        seen.add(r.key)
++        items.push({
++          title: `${r.alias ?? r.key} (삼형)`,
++          source: '명리적성 비법노트',
++          lines: relLines(r, '성인'),
++        })
++      }
++      if (items.length) G.push({ key: 'rel', label: '형·파·해·원진', items })
++    }
++
++    return G
+   }, [saju, dayStem, p.gender])
+ 
+   if (!yearN || !monthN || !dayN) {
+@@ -142,6 +277,8 @@ export default function SourceReading(p: Props) {
+     )
+   }
+ 
++  const total = groups.reduce((n, g) => n + g.items.length, 0)
++
+   return (
+     <div style={{ flex: 1, overflowY: 'auto', padding: 10, background: '#FDF6F0' }}>
+       {/* ⛔ 상담사용이라는 것을 «화면에도» 적어 둡니다 */}
+@@ -151,25 +288,49 @@ export default function SourceReading(p: Props) {
+       }}>
+         📖 교재 «원본» 그대로입니다. 손님께는 말을 골라 전해 주세요.
+         {p.name && <span style={{ marginLeft: 6, color: '#96502e' }}>· {p.name}</span>}
++        <span style={{ marginLeft: 6, color: '#a08d7d' }}>· 모두 {total}꼭지</span>
+       </div>
+ 
+-      {blocks.length === 0 ? (
++      {groups.length === 0 ? (
+         <div style={{ padding: 20, fontSize: 12, color: '#8a7461', textAlign: 'center', lineHeight: 1.8 }}>
+           이 사주에 걸리는 자료를 못 찾았습니다.
+         </div>
+       ) : (
+-        blocks.map((b, i) => <Block key={i} {...b} />)
++        groups.map(g => {
++          const open = !closed.has(g.key)
++          return (
++            <div key={g.key} style={{ marginBottom: 12 }}>
++              {/* 묶음 머리 — 눌러서 접습니다 (기본은 펼침) */}
++              <button type="button" onClick={() => toggle(g.key)}
++                style={{
++                  width: '100%', display: 'flex', alignItems: 'center', gap: 7,
++                  background: 'transparent', border: 'none', padding: '4px 2px 7px',
++                  cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
++                }}>
++                <span style={{ fontSize: 12.5, fontWeight: 700, color: '#96502e' }}>
++                  {g.label}
++                </span>
++                <span style={{ fontSize: 10.5, color: '#a08d7d' }}>{g.items.length}</span>
++                <span aria-hidden style={{
++                  marginLeft: 'auto', color: '#96502e', fontSize: 18, lineHeight: 1,
++                  transition: 'transform .2s', transform: `rotate(${open ? 180 : 0}deg)`,
++                }}>▾</span>
++              </button>
++              {open && g.items.map((it, i) => <Block key={i} {...it} />)}
++            </div>
++          )
++        })
+       )}
+ 
+-      {/* ⚠️ 지금 펴는 것은 «일부» 입니다. 자료는 SOURCE_INDEX.ts 에 40개 파일이 있습니다.
+-          ⇒ 지지·격국·용신·신살·귀인·공망·합충형파해를 더 얹을 수 있습니다.
+-          ⛔ 한 번에 다 얹지 마십시오. 화면이 길어져 상담사가 못 찾습니다.
+-             대표님께 «무엇부터» 보실지 여쭙고 하나씩 더하십시오. */}
++      {/* ⚠️ 아직 «안 편» 것 — 격국 · 용신 · 신살 · 귀인 · 공망 · 지장간 · 60갑자 일주
++          자료는 저장소에 있습니다 (career/tables/ 아래 · gwiinMeaning · gongmangMeaning …).
++          ⇒ 그것들은 «판정» 이 먼저라 진로적성·용신 계산기를 함께 불러야 합니다.
++             한 걸음 더 큰 일이라 대표님께 여쭙고 하십시오. */}
+       <div style={{
+         fontSize: 10.5, color: '#a08d7d', textAlign: 'center',
+         padding: '10px 6px', lineHeight: 1.7,
+       }}>
+-        지지·격국·용신·신살·합충형파해는 아직 안 폈습니다.<br />
++        격국·용신·신살·귀인·공망은 아직 안 폈습니다.<br />
+         필요하시면 말씀해 주세요.
+       </div>
+     </div>
+-- 
+2.43.0
+
+
+From 17ef80f396ff247499fdf76b8ba106bf08248bb5 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Thu, 6 Aug 2026 04:50:36 +0000
+Subject: [PATCH 5/5] =?UTF-8?q?=EC=9B=90=EB=B3=B8=20=ED=95=B4=EC=84=A4?=
+ =?UTF-8?q?=EC=97=90=20=EA=B2=A9=EA=B5=AD=C2=B7=EC=9A=A9=EC=8B=A0=C2=B7?=
+ =?UTF-8?q?=EC=8B=A0=EC=82=B4=C2=B7=EA=B7=80=EC=9D=B8=C2=B7=EA=B3=B5?=
+ =?UTF-8?q?=EB=A7=9D=EA=B9=8C=EC=A7=80=20=E2=80=94=20=EC=97=B4=ED=95=9C=20?=
+ =?UTF-8?q?=EB=AC=B6=EC=9D=8C=20(47=EB=B6=80=2040=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../consultant/components/SourceReading.tsx   | 187 +++++++++++++++++-
+ 1 file changed, 182 insertions(+), 5 deletions(-)
+
+diff --git a/app/manseryeok/consultant/components/SourceReading.tsx b/app/manseryeok/consultant/components/SourceReading.tsx
+index db8a2c3..27605e6 100644
+--- a/app/manseryeok/consultant/components/SourceReading.tsx
++++ b/app/manseryeok/consultant/components/SourceReading.tsx
+@@ -36,6 +36,15 @@ import { judgeCheonganHap, judgeJijiHap } from '@/lib/saju/hapJudge'
+ import { hapLines } from '@/lib/saju/hapMeaning'
+ import { chungLines } from '@/lib/saju/chungMeaning'
+ import { findRel, relLines, findSamhyeong } from '@/lib/saju/hyeongPaHae'
++import { calcYongsinNew, calcGyeokguk } from '@/lib/saju/yongsinNew'
++import { calcCareerGyeokguk } from '@/lib/saju/career/gyeokguk'
++import { GYEOKGUK_INFO } from '@/lib/saju/career/tables/gyeokguk'
++import { YONGSIN_NOTE, YONGSIN_OHAENG, YONGSIN_YUKCHIN } from '@/lib/saju/career/tables/yongsin'
++import { checkSinsal9 } from '@/lib/saju/career/sinsal9'
++import { getGwiinForBranch, getGwiinForStem } from '@/lib/saju/gwiin'
++import { GWIIN_MEANING } from '@/lib/saju/gwiinMeaning'
++import { getGongmang } from '@/lib/saju/gongmang'
++import { GONGMANG_INTRO, GONGMANG_BY_PILLAR } from '@/lib/saju/gongmangMeaning'
+ import { LINE_OUTER, LINE_INNER } from '@/lib/ui/line'
+ 
+ type Props = {
+@@ -254,6 +263,174 @@ export default function SourceReading(p: Props) {
+       if (items.length) G.push({ key: 'rel', label: '형·파·해·원진', items })
+     }
+ 
++    // ── ⑦ 격국 ───────────────────────────────────────────────────
++    //   ⚠️ 판정은 ★이미 있는 calcCareerGyeokguk 을 그대로 씁니다.
++    //      (진로적성 화면이 쓰는 바로 그 함수 — 답이 갈릴 일이 없습니다)
++    if (dayStem) {
++      const items: Item[] = []
++      const g = calcCareerGyeokguk(saju, dayStem)
++      if (g.name) {
++        const info = GYEOKGUK_INFO[g.name]
++        const lines: string[] = []
++        lines.push(
++          `${g.name}${info?.hanja ? ` (${info.hanja})` : ''}` +
++          (g.element ? ` · ${g.element}` : '') +
++          (g.special ? ' · 특례로 잡힘' : '') +
++          (g.position ? ` · ${g.position}` : ''),
++        )
++        if (g.positionNote) lines.push(g.positionNote)
++        if (g.note) lines.push(g.note)
++        if (info?.gijil) lines.push(info.gijil)
++        if (info?.jobs?.length) lines.push(`어울리는 일 — ${info.jobs.join(' · ')}`)
++        if (info?.caution) lines.push(`⚠️ ${info.caution}`)
++        items.push({
++          title: `격국 — ${g.name}`,
++          source: `명리적성 비법노트 ${info?.src ?? '62~65쪽'}`,
++          lines,
++        })
++      }
++      if (items.length) G.push({ key: 'gyeokguk', label: '격국', items })
++    }
++
++    // ── ⑧ 용신 — 조후·억부·격국 셋 ────────────────────────────────
++    if (dayStem) {
++      const items: Item[] = []
++      const y = calcYongsinNew(saju, dayStem)
++      if (y) {
++        // 조후
++        if (y.johu.element) {
++          items.push({
++            title: `조후용신 — ${y.johu.element}`,
++            source: '명리적성 비법노트 94~97쪽',
++            lines: [
++              y.johu.note,
++              YONGSIN_NOTE[y.johu.element],
++              `어울리는 일 — ${(YONGSIN_OHAENG[y.johu.element] ?? []).join(' · ')}`,
++            ].filter(Boolean),
++          })
++        }
++        // 억부 5신
++        items.push({
++          title: '억부용신 — 다섯 신',
++          source: '명리적성 비법노트 94~97쪽',
++          lines: [
++            `용신 ${y.eokbu.yongsin} · 희신 ${y.eokbu.heesin} · 기신 ${y.eokbu.gisin}` +
++            ` · 구신 ${y.eokbu.gusin} · 한신 ${y.eokbu.hansin}`,
++            y.eokbu.note,
++            YONGSIN_NOTE[y.eokbu.yongsin],
++            `어울리는 일 — ${(YONGSIN_OHAENG[y.eokbu.yongsin] ?? []).join(' · ')}`,
++          ].filter(Boolean),
++        })
++        // 격국용신
++        const gk = calcGyeokguk(saju, dayStem)
++        if (gk.name) {
++          const yuk = YONGSIN_YUKCHIN[gk.name.replace('격', '')]
++          items.push({
++            title: `격국용신 — ${gk.name}`,
++            source: '명리적성 비법노트 94~97쪽',
++            lines: [
++              gk.note,
++              gk.element ? YONGSIN_NOTE[gk.element] : '',
++              yuk?.length ? `어울리는 일 — ${yuk.join(' · ')}` : '',
++            ].filter(Boolean),
++          })
++        }
++        // 세력
++        items.push({
++          title: `오행 세력 · ${y.status}`,
++          source: '명리적성 비법노트',
++          lines: [
++            Object.entries(y.score).map(([k, v]) => `${k} ${v}`).join(' · '),
++            `비겁+인성 ${y.inbiScore} · 일간 오행 ${y.dayElement}`,
++          ],
++        })
++      }
++      if (items.length) G.push({ key: 'yongsin', label: '용신', items })
++    }
++
++    // ── ⑨ 신살 ───────────────────────────────────────────────────
++    //   ⚠️ ★작용력이 없는(active=false) 것도 «함께» 폅니다.
++    //      대표님 — 「전문가인 상담사들이 알아서 볼 수 있으니 다 표시」
++    {
++      const items: Item[] = []
++      for (const h of checkSinsal9(saju)) {
++        if (h.count === 0) continue
++        const r = h.row
++        const lines: string[] = []
++        lines.push(
++          `${h.marks.map(m => `${m.ch}(${m.pillar}${m.semi ? '·준' : ''})`).join(' ')}` +
++          ` · ${h.count}개 · ${h.active ? '작용력 있음' : '작용력 약함'}` +
++          (h.powerNote ? ` · ${h.powerNote}` : ''),
++        )
++        if (r.gijil) lines.push(r.gijil)
++        if (r.jobs?.length) lines.push(`어울리는 일 — ${r.jobs.join(' · ')}`)
++        if (r.caution) lines.push(`⚠️ ${r.caution}`)
++        // ★교재 «원문» 이 따로 남아 있으면 그것도 폅니다 (상담사용이라)
++        if (r.srcCaution) lines.push(`【교재 원문】 ${r.srcCaution}`)
++        items.push({
++          title: `${r.name}${r.hanja ? ` (${r.hanja})` : ''}`,
++          source: '명리적성 비법노트 90~93쪽',
++          lines,
++        })
++      }
++      if (items.length) G.push({ key: 'sinsal', label: '신살', items })
++    }
++
++    // ── ⑩ 귀인 ───────────────────────────────────────────────────
++    if (dayStem) {
++      const items: Item[] = []
++      const monthBranch = saju.find(x => x.pillar === '월주')?.branch ?? ''
++      const seen = new Set<string>()
++      for (const pil of saju) {
++        const names = [
++          ...(pil.branch && pil.branch !== '?' ? getGwiinForBranch(dayStem, monthBranch, pil.branch) : []),
++          ...(pil.stem && pil.stem !== '?' ? getGwiinForStem(monthBranch, pil.stem) : []),
++        ]
++        for (const n of names) {
++          const k = `${n}|${pil.pillar}`
++          if (seen.has(k)) continue
++          seen.add(k)
++          const m = GWIIN_MEANING[n]
++          items.push({
++            title: `${n} (${pil.pillar})`,
++            source: '명리적성 비법노트',
++            lines: m ? [m.bless, m.life, m.tip].filter(Boolean) : [],
++          })
++        }
++      }
++      if (items.length) G.push({ key: 'gwiin', label: '귀인', items })
++    }
++
++    // ── ⑪ 공망 ───────────────────────────────────────────────────
++    if (dayStem) {
++      const items: Item[] = []
++      const iljji = saju.find(x => x.pillar === '일주')?.branch ?? ''
++      if (iljji && iljji !== '?') {
++        const gm = getGongmang(dayStem, iljji)
++        const hit = saju.filter(x => gm.includes(x.branch))
++        items.push({
++          title: `공망 — ${gm.join('·')}`,
++          source: '명리적성 비법노트',
++          lines: [
++            GONGMANG_INTRO,
++            hit.length
++              ? `원국에 걸린 자리 — ${hit.map(x => `${x.pillar}(${x.branch})`).join(' · ')}`
++              : '원국에 걸린 자리가 없습니다.',
++          ],
++        })
++        for (const x of hit) {
++          const info = GONGMANG_BY_PILLAR[x.pillar]
++          if (!info) continue
++          items.push({
++            title: `${x.pillar} 공망 — ${info.title}`,
++            source: '명리적성 비법노트',
++            lines: [info.desc],
++          })
++        }
++      }
++      if (items.length) G.push({ key: 'gongmang', label: '공망', items })
++    }
++
+     return G
+   }, [saju, dayStem, p.gender])
+ 
+@@ -322,15 +499,15 @@ export default function SourceReading(p: Props) {
+         })
+       )}
+ 
+-      {/* ⚠️ 아직 «안 편» 것 — 격국 · 용신 · 신살 · 귀인 · 공망 · 지장간 · 60갑자 일주
+-          자료는 저장소에 있습니다 (career/tables/ 아래 · gwiinMeaning · gongmangMeaning …).
+-          ⇒ 그것들은 «판정» 이 먼저라 진로적성·용신 계산기를 함께 불러야 합니다.
+-             한 걸음 더 큰 일이라 대표님께 여쭙고 하십시오. */}
++      {/* ⚠️ 아직 «안 편» 것 — 지장간 · 60갑자 일주(ILJU) · 12운성 · 납음
++          자료는 저장소에 있습니다 (jijanggan · career/tables/ilju · sajuDetail).
++          ⇒ 필요하시면 더 얹을 수 있습니다. ⛔ 다만 «판정» 을 새로 만들지 마십시오 —
++             이미 있는 함수를 부르는 방식을 그대로 지키십시오. */}
+       <div style={{
+         fontSize: 10.5, color: '#a08d7d', textAlign: 'center',
+         padding: '10px 6px', lineHeight: 1.7,
+       }}>
+-        격국·용신·신살·귀인·공망은 아직 안 폈습니다.<br />
++        지장간·60갑자 일주·12운성은 아직 안 폈습니다.<br />
+         필요하시면 말씀해 주세요.
+       </div>
+     </div>
+-- 
+2.43.0
+
