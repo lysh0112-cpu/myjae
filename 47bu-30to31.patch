@@ -1,0 +1,121 @@
+From 8f4aac49f6f5bdadfeee30022fa9ab083f8ac3e2 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Thu, 6 Aug 2026 01:19:05 +0000
+Subject: [PATCH 1/2] =?UTF-8?q?=EB=B3=B4=EA=B4=80=ED=95=A8=C2=B7=EA=B2=B0?=
+ =?UTF-8?q?=EA=B3=BC=20=EC=A0=9C=EB=AA=A9=EC=9D=84=20=EA=B6=81=ED=95=A9=20?=
+ =?UTF-8?q?=EA=BC=B4=EB=A1=9C=20=E2=80=94=20=EB=91=90=20=EA=B0=88=EB=9E=98?=
+ =?UTF-8?q?=EB=A7=8C=20(47=EB=B6=80=2030=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/manseryeok/result-new/page.tsx   | 19 ++++++++++++++++++-
+ app/manseryeok/saju-storage/page.tsx |  9 +++++++--
+ 2 files changed, 25 insertions(+), 3 deletions(-)
+
+diff --git a/app/manseryeok/result-new/page.tsx b/app/manseryeok/result-new/page.tsx
+index a65b6dd..93ef8d7 100644
+--- a/app/manseryeok/result-new/page.tsx
++++ b/app/manseryeok/result-new/page.tsx
+@@ -302,7 +302,24 @@ function ResultNewContent() {
+   const personName=searchParams.get("name")||""
+   const _unse=searchParams.get("unse")
+   const _kindLabel=_unse==="daeun"?"대운":_unse==="seyun"?"세운":"만세력"
+-  const titleName=nimEuiTitle(personName,_kindLabel)
++  // ★2026-08-05 (47부 30차) — 이름이 «없을» 때만 제목을 바꿉니다. [대표님 지시]
++  //   [전]  나의 만세력
++  //   [후]  ★내 사주와 운세보기 결과
++  //   [까닭]  ★궁합과 «같은 꼴» 로 —
++  //       궁합  「부부 궁합 보관함」 · 「부부 궁합 결과」
++  //       사주  「내 사주와 운세보기 보관함」 · ★「내 사주와 운세보기 결과」
++  //
++  //   ⚠️⚠️ ★«이 한 갈래만» 바꿨습니다 [대표님 「우선 이 두개만 바꿔」]
++  //     이름 있음   「류승현님의 만세력」   ← ★그대로
++  //     대운        「나의 대운」          ← ★그대로
++  //     세운        「나의 세운」          ← ★그대로
++  //     전문가용(?pro=1)                  ← ★그대로 (상담사 화면)
++  //   ⇒ 대표님이 나머지를 «점검해 보시겠다» 하셨습니다. 손대지 마십시오.
++  //   ⛔ 되돌리시려면 ★nimEuiTitle(personName,_kindLabel) 하나로 돌리면 됩니다.
++  const titleName =
++    (!personName && !_unse)
++      ? '내 사주와 운세보기 결과'
++      : nimEuiTitle(personName, _kindLabel)
+   // 프로필 카드에는 제목을 되풀이하지 않고 "누구인지"만 적는다.
+   const cardName=personName?withNim(personName):"나"
+ 
+diff --git a/app/manseryeok/saju-storage/page.tsx b/app/manseryeok/saju-storage/page.tsx
+index 181537f..49f6447 100644
+--- a/app/manseryeok/saju-storage/page.tsx
++++ b/app/manseryeok/saju-storage/page.tsx
+@@ -55,7 +55,12 @@ const SERVICE_INFO: Record<Service, {
+     //   [바뀐 자취]
+     //     처음      「내 사주 & 운세 보관함」
+     //     22차      「나의 만세력 보관함」   ← 결과 화면(「나의 만세력」)과 이으려던 것
+-    //     ★29차     「내 사주와 운세 보관함」  ← 대표님이 다시 정하셨습니다
++    //     29차      「내 사주와 운세 보관함」
++    //     ★30차     「내 사주와 운세보기 보관함」  ← 대표님 확정
++    //   [까닭]  ★궁합과 «같은 꼴» 로 —
++    //       궁합  「부부 궁합 보관함」  ·  「부부 궁합 결과」
++    //       사주  「내 사주와 운세보기 보관함」 · 「내 사주와 운세보기 결과」
++    //     ⇒ ★홈 카드 이름(「내 사주와 운세보기」)이 «그대로» 앞에 옵니다.
+     //   [까닭]  ★다른 보관함들이 모두 «서비스 이름 + 보관함» 꼴입니다 —
+     //     출산택일 보관함 · 결혼택일 보관함 · 이사택일 보관함
+     //     · 내 사주 그림 보관함 · 연인/부부 궁합 보관함
+@@ -73,7 +78,7 @@ const SERVICE_INFO: Record<Service, {
+     //   ⚠️ ★결과 화면 제목(「나의 만세력」)은 «그대로» 입니다.
+     //      그 제목은 ?name · ?unse=daeun|seyun · ?pro=1 로 다섯 갈래로 갈립니다.
+     //      바꾸시려면 그 갈래를 함께 보셔야 합니다.
+-    title: '내 사주와 운세 보관함', badge: '사주 & 운세', accent: '#6e50a0',
++    title: '내 사주와 운세보기 보관함', badge: '사주 & 운세', accent: '#6e50a0',
+     resultPath: '/manseryeok/result-new',
+     headline: '누구의 사주와 운세를 볼까요?',
+     submitLabel: '저장하고 리포트 보기',
+-- 
+2.43.0
+
+
+From 13b9d63bae66bd4b265e6d9c9805b965e73de711 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Thu, 6 Aug 2026 01:26:55 +0000
+Subject: [PATCH 2/2] =?UTF-8?q?=EA=B2=B0=EA=B3=BC=20=EC=A0=9C=EB=AA=A9?=
+ =?UTF-8?q?=EC=9D=B4=20=EC=95=88=20=EB=B0=94=EB=80=8C=EB=8D=98=20=EA=B2=83?=
+ =?UTF-8?q?=20=E2=80=94=20=EC=9D=B4=EB=A6=84=EC=9D=B4=20=E3=80=8C=EB=82=98?=
+ =?UTF-8?q?=E3=80=8D=EC=9D=BC=20=EB=95=8C=EB=A5=BC=20=EB=AA=BB=20=EC=9E=A1?=
+ =?UTF-8?q?=EC=95=98=EC=9D=8C=20(47=EB=B6=80=2031=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/manseryeok/result-new/page.tsx | 12 ++++++++++--
+ 1 file changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/app/manseryeok/result-new/page.tsx b/app/manseryeok/result-new/page.tsx
+index 93ef8d7..6f5cd19 100644
+--- a/app/manseryeok/result-new/page.tsx
++++ b/app/manseryeok/result-new/page.tsx
+@@ -316,10 +316,18 @@ function ResultNewContent() {
+   //     전문가용(?pro=1)                  ← ★그대로 (상담사 화면)
+   //   ⇒ 대표님이 나머지를 «점검해 보시겠다» 하셨습니다. 손대지 마십시오.
+   //   ⛔ 되돌리시려면 ★nimEuiTitle(personName,_kindLabel) 하나로 돌리면 됩니다.
++  //   🔴 ★2026-08-05 (47부 31차) — 조건을 바로잡았습니다.
++  //     [겪은 일]  대표님 — 「아직도 "나의 만세력"으로 나오네」
++  //     [까닭]  보관함이 ★언제나 name 을 실어 보냅니다 (personToQuery).
++  //       사진의 기록은 이름이 ★「나」 였습니다.
++  //       ⇒ personName 이 «있는» 것으로 세어 (!personName) 조건이 «안 맞았습니다».
++  //     [고침]  ★nimEuiTitle 이 «나의 ○○» 를 내는 경우를 그대로 씁니다.
++  //       (「나」·「저」·「본인」… 은 honorific.ts 의 NO_NIM 에 있습니다)
++  const _base = nimEuiTitle(personName, _kindLabel)
+   const titleName =
+-    (!personName && !_unse)
++    (!_unse && _base === `나의 ${_kindLabel}`)
+       ? '내 사주와 운세보기 결과'
+-      : nimEuiTitle(personName, _kindLabel)
++      : _base
+   // 프로필 카드에는 제목을 되풀이하지 않고 "누구인지"만 적는다.
+   const cardName=personName?withNim(personName):"나"
+ 
+-- 
+2.43.0
+

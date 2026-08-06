@@ -316,10 +316,18 @@ function ResultNewContent() {
   //     전문가용(?pro=1)                  ← ★그대로 (상담사 화면)
   //   ⇒ 대표님이 나머지를 «점검해 보시겠다» 하셨습니다. 손대지 마십시오.
   //   ⛔ 되돌리시려면 ★nimEuiTitle(personName,_kindLabel) 하나로 돌리면 됩니다.
+  //   🔴 ★2026-08-05 (47부 31차) — 조건을 바로잡았습니다.
+  //     [겪은 일]  대표님 — 「아직도 "나의 만세력"으로 나오네」
+  //     [까닭]  보관함이 ★언제나 name 을 실어 보냅니다 (personToQuery).
+  //       사진의 기록은 이름이 ★「나」 였습니다.
+  //       ⇒ personName 이 «있는» 것으로 세어 (!personName) 조건이 «안 맞았습니다».
+  //     [고침]  ★nimEuiTitle 이 «나의 ○○» 를 내는 경우를 그대로 씁니다.
+  //       (「나」·「저」·「본인」… 은 honorific.ts 의 NO_NIM 에 있습니다)
+  const _base = nimEuiTitle(personName, _kindLabel)
   const titleName =
-    (!personName && !_unse)
+    (!_unse && _base === `나의 ${_kindLabel}`)
       ? '내 사주와 운세보기 결과'
-      : nimEuiTitle(personName, _kindLabel)
+      : _base
   // 프로필 카드에는 제목을 되풀이하지 않고 "누구인지"만 적는다.
   const cardName=personName?withNim(personName):"나"
 
