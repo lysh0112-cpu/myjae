@@ -11,7 +11,10 @@ import { getUnsung, getSinsal, unsungColor, getGongmang, SINSAL_HIGHLIGHT } from
 
 import { calcYongsinNew, calcYongsinCompat } from "@/lib/saju/yongsinNew";
 import { calcHapchungScore } from "@/lib/saju/hapchungScore";
-import { calcSimsanOhaeng, toPercentList, seasonConvertNote, hourConvertNote } from "@/lib/saju/simsanOhaeng";
+// ★2026-08-05 (47부 32차) — seasonConvertNote · hourConvertNote 를 «뺐습니다».
+//   「오행과 십성 분석」 칸을 걷으면서 «계절 치환 안내» 도 함께 사라져 아무도 안 부릅니다.
+//   ⛔ 그 안내를 되살리시려면 ★이 들여오기도 «함께» 되살리십시오.
+import { calcSimsanOhaeng, toPercentList } from "@/lib/saju/simsanOhaeng";
 import { calcSipsungDist, getSipsin, getSipsinBranch } from "@/lib/saju/sipsungDist";
 import AiAnalysisNew from "./components/AiAnalysisNew";
 import { withNim, nimEuiTitle } from "@/lib/saju/honorific";
@@ -192,9 +195,26 @@ function ResultNewContent() {
   const searchParams=useSearchParams()
   const router=useRouter()
   const [isPaid,setIsPaid]=useState(false)
-  // 아코디언: 한 번에 하나만 펼침. 사주 원국은 고정(항상 펼침)이라 대상 아님.
-  const [openSection,setOpenSection]=useState<string|null>(null)
-  const toggleSection=(key:string)=>setOpenSection(prev=>prev===key?null:key)
+  // ★2026-08-05 (47부 32차) — 접기 칸을 «펼친 채» 로 시작합니다. [대표님 지시]
+  //   「아코디언을 해제를 기본으로 하고, 누르면 접히는 걸로 해줘」
+  //
+  //   [전]  ★«한 번에 하나만» 펼침 + ★기본은 «전부 접힘»
+  //     const [openSection,setOpenSection]=useState<string|null>(null)
+  //     const toggleSection=(key)=>setOpenSection(prev=>prev===key?null:key)
+  //     ⇒ 손님이 하나를 열면 ★다른 것이 «닫혔습니다».
+  //
+  //   [후]  ★각자 따로 여닫히고, 기본은 «펼침» 입니다.
+  //     닫은 것만 closed 에 담습니다. 담기지 «않은» 것은 열려 있습니다.
+  //   ⚠️ 화면 이름(key)은 그대로입니다 — singang · yongsin · expert · hapchung.
+  //      전문가용 둘(expert · hapchung)도 «함께» 펼쳐집니다.
+  //   ⛔ 되돌리시려면 위 [전] 두 줄로 돌리고 open 을 openSection===key 로 바꾸십시오.
+  const [closedSections,setClosedSections]=useState<Set<string>>(new Set())
+  const isOpen=(key:string)=>!closedSections.has(key)
+  const toggleSection=(key:string)=>setClosedSections(prev=>{
+    const next=new Set(prev)
+    if(next.has(key)) next.delete(key); else next.add(key)
+    return next
+  })
   // 질문 선택: 아직 안 골랐으면 QuestionPicker를 먼저, 고르면 만세력+통변 표시.
   // null이면 질문 선택 화면 단계. 배열이면 결과 화면 단계.
   //
@@ -350,7 +370,14 @@ function ResultNewContent() {
   // ★2026-08-05 (46부 14차) — 「운의 흐름」에서 고른 대운·세운.
   //   전문가 상세의 「운이 원국을 건드리는 자리」가 이 값을 씁니다.
   //   ⚠️ UnseFlow 와 ExpertDetail 은 «형제» 라 서로 모릅니다. 여기서 이어 줍니다.
-  const [pickedUn, setPickedUn] = useState<{
+  //
+  // 🔴 ★2026-08-05 (47부 32차) — 「운의 흐름」 칸을 걷으면서 ★값을 «넣어 주던 곳» 이
+  //    사라졌습니다. 이제 언제나 { daeun: null, seyun: null } 입니다.
+  //    ⇒ 전문가 상세의 「운이 원국을 건드리는 자리」가 ★«원국만» 보게 됩니다.
+  //      (운을 얹은 삼합·천간합·복음이 안 나옵니다)
+  //    ⚠️ 손님 화면에는 영향이 없습니다 — 그 칸은 ★전문가용(?pro=1)에만 나옵니다.
+  //    ⛔ 되살리시려면 ★「운의 흐름」 칸과 onPick={setPickedUn} 을 «함께» 되살리십시오.
+  const [pickedUn] = useState<{
     daeun: { stem: string; branch: string; age: number } | null
     seyun: { stem: string; branch: string; year: number } | null
   }>({ daeun: null, seyun: null })
@@ -479,7 +506,18 @@ function ResultNewContent() {
       match: ['강점', '오행'],
       node: (
         <div key="s1" style={{ background: '#fff', border: '1px solid rgba(120,53,15,0.15)', borderRadius: 14, padding: 12 }}>
-          <OhaengPentagon ohaeng={ohaeng} dayElement={yongsinNew?.dayElement} />
+          {/* ★2026-08-05 (47부 32차) — 십성 표를 «여기로» 옮겼습니다. [대표님 지시]
+              위쪽 「오행과 십성 분석」 칸을 지우면서 ★십성 표를 잃지 않으려는 것입니다.
+              ⚠️ 오행 그림이 못 보여 주는 것(정관·편관·식신…)을 담고 있습니다.
+              ⛔ 지우지 마십시오. 위쪽 칸에는 이제 «없습니다». */}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <div style={{ flex: 1.45, minWidth: 0 }}>
+              <OhaengPentagon ohaeng={ohaeng} dayElement={yongsinNew?.dayElement} />
+            </div>
+            <div style={{ flex: 0.55, minWidth: 0 }}>
+              <SipsungTable sipsung={sipsung} />
+            </div>
+          </div>
         </div>
       ),
     } : null,
@@ -711,7 +749,7 @@ function ResultNewContent() {
 
         {/* ①-2 전문가 상세 (전문가 모드 + 토글 ON) — 지장간·납음·운성/신살 2기준·귀인·공망·형충회합 */}
         {isPro && hapchungOn && saju.length>0 && (
-          <Section title="전문가 상세" collapsible={!chartOnly} open={openSection==='expert'} onToggle={()=>toggleSection('expert')}>
+          <Section title="전문가 상세" collapsible={!chartOnly} open={isOpen('expert')} onToggle={()=>toggleSection('expert')}>
             <ExpertDetail
               saju={saju}
               dayStem={dayStem}
@@ -731,48 +769,23 @@ function ResultNewContent() {
             />
           </Section>
         )}
-        {(
-        <Section title="오행과 십성 분석" collapsible={!chartOnly} open={openSection==='ohaeng'} onToggle={()=>toggleSection('ohaeng')}>
-          {/* 계산 기준 안내 — 합충 반영 그래프와 숫자가 다른 이유 */}
-          <div style={{fontSize:'10.5px',color:'#b4785a',background:'#faf3ec',border:LINE_OUTER,borderRadius:'8px',padding:'7px 10px',marginBottom:'10px',lineHeight:1.6}}>
-            진로·적성·성격은 <b style={{color:'#96502e'}}>계절 치환</b>으로, 건강·궁합은 오행 그대로 봐요.
-            {(() => {
-              /* ★2026-08-02 — 월지 치환에 이어 «시지» 치환도 알려 드립니다 (대표님 지시)
-                 ⚠️ 이 화면은 진로·성격 쪽이라 시지 치환이 «걸립니다».
-                    걸렸는데 말해 주지 않으면 궁합 화면과 숫자가 다른 까닭을 알 수 없습니다. */
-              if (!(saju.length>0 && monthBranchForNote)) return null
-              const note = seasonConvertNote(monthBranchForNote, solarMonth, solarDay, hourBranch ?? '')
-              const hNote = hourConvertNote(monthBranchForNote, hourBranch ?? '')
-              if (!note && !hNote) return null
-              return (
-                <>
-                  {note ? <div style={{marginTop:'5px',color:'#c8783c'}}>↳ {note}</div> : null}
-                  {hNote ? <div style={{marginTop:'3px',color:'#c8783c'}}>↳ {hNote}</div> : null}
-                </>
-              )
-            })()}
-          </div>
-          {/* 오각형 그래프(왼쪽) + 십성표(오른쪽) 나란히 */}
-          <div style={{display:'flex',gap:'6px',alignItems:'center',marginBottom:'12px'}}>
-            <div style={{flex:1.45,minWidth:0}}>
-              <OhaengPentagon ohaeng={ohaeng} dayElement={yongsinNew?.dayElement}/>
-            </div>
-            <div style={{flex:0.55,minWidth:0}}>
-              <SipsungTable sipsung={sipsung}/>
-            </div>
-          </div>
-        </Section>
-        )}
+        {/* ★2026-08-05 (47부 32차) — 「오행과 십성 분석」 칸을 «걷어냈습니다». [대표님 지시]
+              「위쪽의 오행과 십성분석은 삭제, 아래쪽 오행분석과 중복됨」
+            ⚠️ ★십성 표(SipsungTable)는 «잃지 않았습니다» —
+               위 premiumSlots 섹션1(강점 지능·오행)로 ★옮겼습니다.
+            ⚠️ 함께 있던 «계절 치환 안내» 도 사라집니다.
+               (「진로·적성·성격은 계절 치환으로, 건강·궁합은 오행 그대로 봐요」)
+               ⇒ 다시 필요하시면 말씀해 주십시오. git 이력(47부 32차 이전)에 있습니다. */}
 
         {/* ③-2 합충 반영 (전문가 모드 + 토글 ON) */}
         {isPro && hapchungOn && saju.length>0 && (
-          <Section title="합충 반영 오행" collapsible={!chartOnly} open={openSection==='hapchung'} onToggle={()=>toggleSection('hapchung')}>
+          <Section title="합충 반영 오행" collapsible={!chartOnly} open={isOpen('hapchung')} onToggle={()=>toggleSection('hapchung')}>
             <HapchungView saju={saju}/>
           </Section>
         )}
 
         {/* ④ 신강/신약 */}
-        <Section title="신강 · 신약" collapsible={!chartOnly} open={openSection==='singang'} onToggle={()=>toggleSection('singang')}>
+        <Section title="신강 · 신약" collapsible={!chartOnly} open={isOpen('singang')} onToggle={()=>toggleSection('singang')}>
           {dayStem && (
             <SingangTable
               ilganEl={STEM_ELEMENT[dayStem] as '목'|'화'|'토'|'금'|'수'}
@@ -786,24 +799,19 @@ function ResultNewContent() {
         {/* ★2026-07-29 — 프리미엄은 이 표를 «섹션2 풀이 바로 위»로 옮겨 그립니다.
             여기서 또 그리면 같은 표가 두 번 나옵니다. */}
         {yongsinNew&&(
-        <Section title="나의 용신" collapsible={!chartOnly} open={openSection==='yongsin'} onToggle={()=>toggleSection('yongsin')}>
+        <Section title="나의 용신" collapsible={!chartOnly} open={isOpen('yongsin')} onToggle={()=>toggleSection('yongsin')}>
           <YongsinCard result={yongsinNew} saju={saju}/>
         </Section>
         )}
 
-        {/* ⑥ 대운·세운·월운·일운 (연동 흐름) */}
-        {dayStem&&monthGanji&&yearStem&&solarYear&&(
-          <Section title="운의 흐름 (대운·세운·월운·일운)" collapsible={!chartOnly} open={openSection==='daeun'} onToggle={()=>toggleSection('daeun')} hint="눌러서 흐름 보기">
-            <UnseFlow
-              solarYear={solarYear} solarMonth={solarMonth} solarDay={solarDay}
-              monthGanji={monthGanji} yearStem={yearStem} dayStem={dayStem}
-              gender={gender} birthYear={yearParam} currentYear={currentYear}
-              myMonthBranch={monthBranchForNote ?? ''} myDayBranch={iljji}
-              list={dayunList} hourIdx={hourIdx}
-              onPick={setPickedUn}
-            />
-          </Section>
-        )}
+        {/* ★2026-08-05 (47부 32차) — 「운의 흐름 (대운·세운·월운·일운)」 칸을
+            «걷어냈습니다». [대표님 지시]
+              「우측 이미지의 대운,세운,월운,일운 부분 중복되니 삭제…하단에 따로 나와있음」
+            ⚠️ 아래 ★「나의 사주 이야기」 안에 대운 표·세운 표가 «그대로» 있습니다.
+               (premiumSlots 의 섹션5 세운 · 섹션6 대운 — 통변 글과 짝을 이룹니다)
+            ⚠️ ★월운·일운은 «이 칸에만» 있던 것이라 화면에서 사라집니다. 뜻한 대로입니다.
+            ⛔ 되살리시려면 ★이 칸과 setPickedUn 을 «함께» 되살리십시오.
+               (onPick={setPickedUn} — 46부 14차의 「운이 원국을 건드리는 자리」가 씁니다) */}
 
         {/* ⑨ AI 통변 (고른 질문 기반). mode=chart(만세력만)면 통변 없음.
             다시보기(recordId)면 저장된 통변·질문이 있을 때만(구버전 기록은 통변 숨김). */}
