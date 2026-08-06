@@ -43,7 +43,7 @@ const GEN: Record<Ohaeng, Ohaeng> = { 수: '목', 목: '화', 화: '토', 토: '
 // 상극: A극B (A가 B를 극함)
 const CON: Record<Ohaeng, Ohaeng> = { 수: '화', 화: '금', 금: '목', 목: '토', 토: '수' }
 
-const ALL: Ohaeng[] = ['목', '화', '토', '금', '수']
+export const ALL: Ohaeng[] = ['목', '화', '토', '금', '수']
 /** x를 생하는 오행 (x의 인성 방향) */
 const saengOf = (x: Ohaeng): Ohaeng => (Object.keys(GEN) as Ohaeng[]).find(k => GEN[k] === x)!
 /** x를 극하는 오행 (x의 관성 방향) */
@@ -75,8 +75,8 @@ export function judgeStrength(x: number): Ganghyak {
 }
 
 // 일간 기준 오행 육친 관계
-interface Rel { bigeop: Ohaeng; insung: Ohaeng; siksang: Ohaeng; jaesung: Ohaeng; gwansung: Ohaeng }
-function relOf(dayEl: Ohaeng): Rel {
+export interface Rel { bigeop: Ohaeng; insung: Ohaeng; siksang: Ohaeng; jaesung: Ohaeng; gwansung: Ohaeng }
+export function relOf(dayEl: Ohaeng): Rel {
   return {
     bigeop: dayEl,
     insung: saengOf(dayEl),   // 나를 생
@@ -127,10 +127,10 @@ export interface EokbuResult {
 //      (p.150 정의는 원론이고, 실제 감명은 p.151 표를 따른다)
 //
 //   ※ 표 아래 단서: "90%의 명식은 위 공식을 따르지만 10% 정도는 예외가 있다."
-type Yukchin5 = '비겁' | '식상' | '재성' | '관성' | '인성'
+export type Yukchin5 = '비겁' | '식상' | '재성' | '관성' | '인성'
 interface GangTable { yong: Yukchin5; hee: Yukchin5; note: string }
 
-const P151_TABLE: Record<Yukchin5, GangTable> = {
+export const P151_TABLE: Record<Yukchin5, GangTable> = {
   // ── 신강한 사주 (인비가 강함) ──
   인성: { yong: '재성', hee: '식상', note: '인성이 강해 재성으로 눌러 줘요' },
   비겁: { yong: '식상', hee: '재성', note: '비겁이 강해 식상으로 흘려보내요' },
@@ -142,7 +142,7 @@ const P151_TABLE: Record<Yukchin5, GangTable> = {
 
 // 월지가 어느 육친인지 — 소스 p.141 "월지가 비겁·인성으로 통근하면 신강,
 // 월지가 식재관이면 신약". 즉 신강약도, 무엇이 강한지도 월지가 기준이다.
-function yukchinOfEl(dayEl: Ohaeng, el: Ohaeng): Yukchin5 {
+export function yukchinOfEl(dayEl: Ohaeng, el: Ohaeng): Yukchin5 {
   const r = relOf(dayEl)
   if (el === r.bigeop) return '비겁'
   if (el === r.insung) return '인성'
@@ -178,7 +178,7 @@ const TONGGEUN: Record<string, string[]> = {
 
 // 인성이 원국에 "뿌리"를 내리고 있는가 — p.151 관성 칸의 "인성 뿌리 X" 판정용.
 //   원국 천간에 인성 오행 글자가 있고, 그 글자가 지지에 통근했으면 뿌리 있음.
-function hasInsungRoot(saju: Pillar[], dayEl: Ohaeng): boolean {
+export function hasInsungRoot(saju: Pillar[], dayEl: Ohaeng): boolean {
   const insungEl = relOf(dayEl).insung
   const branches = saju.map(p => p.branch).filter(Boolean)
   for (const p of saju) {
@@ -191,7 +191,7 @@ function hasInsungRoot(saju: Pillar[], dayEl: Ohaeng): boolean {
 
 const YANG_BRANCH = new Set(['子', '寅', '辰', '午', '申', '戌'])
 const YANG_STEM_SET = new Set(['甲', '丙', '戊', '庚', '壬'])
-function countGeopjae(saju: Pillar[], dayStem: string): number {
+export function countGeopjae(saju: Pillar[], dayStem: string): number {
   const dayEl = STEM_EL[dayStem]
   if (!dayEl) return 0
   const dayIsYang = YANG_STEM_SET.has(dayStem)
@@ -289,7 +289,7 @@ export function sipsinOf(dayStem: string, other: string): string {
 //   교재 178쪽 "비견겁, 겁재격은 없다. 비견격이라 하지 않고 건록격이라 하며,
 //               겁재가 있을 때는 겁재격이 아니라 양인격이라고 하는 것이다"
 type Yukchin = '비겁' | '식상' | '재성' | '관성' | '인성'
-const GYEOK_SANGSIN: Record<string, Yukchin> = {
+export const GYEOK_SANGSIN: Record<string, Yukchin> = {
   건록격: '관성', 양인격: '관성',
   //   건록격 — 181쪽 "제1用神은 정관이고 제2用神은 편관"
   //   양인격 — 179쪽 "양인격은 무조건 관성이 用神이다"

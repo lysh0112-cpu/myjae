@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import SourceReading from './SourceReading'
+import YongsinReading from './YongsinReading'
 
 // ============================================================
 // 전문가용 만세력 (독립 플로팅 창)
@@ -53,7 +54,10 @@ export default function ExpertFloating({ open, onClose }: Props) {
   // ★2026-08-05 (47부 38차) — 두 갈래 [대표님 지시]
   //   'calc'   손으로 넣는 전문가용 만세력 계산기 (전부터 있던 것)
   //   'source' ★교재 «원본 해설» — 같은 생년월일로 죽 폅니다
-  const [tab, setTab] = useState<'calc' | 'source'>('calc')
+  // ★2026-08-06 (48부 1차) — 세 갈래로 [연재쌤 의견 · 대표님 지시]
+  //   'yongsin' ★용신 «로데이터» — 판정 근거를 그대로 폅니다
+  //   ⚠️ 세 갈래가 ★«같은 입력칸» 을 씁니다. 한 번 넣으면 셋 다 바로 봅니다.
+  const [tab, setTab] = useState<'calc' | 'source' | 'yongsin'>('calc')
 
   // ── 창 위치·크기 ──
   const [pos, setPos] = useState({ x: 80, y: 80 })
@@ -180,27 +184,28 @@ export default function ExpertFloating({ open, onClose }: Props) {
           🔮 계산기     생년월일을 손으로 넣어 «전문가용 만세력» 을 봅니다
           📖 원본 해설  ★같은 생년월일로 «교재 원본» 해설을 죽 폅니다
           ⚠️ 두 갈래가 ★«같은 입력값» 을 씁니다. 한 번 넣으면 둘 다 바로 봅니다. */}
+      {/* ★2026-08-06 (48부 1차) — 세 갈래로 [연재쌤 의견 · 대표님 지시]
+          ⚠️ ★문구를 줄였습니다 — 창이 430px 이라 탭 하나가 «약 138px» 입니다.
+             「🔮 만세력 계산기」 그대로 두면 셋이 안 들어가 글자가 잘립니다.
+          ⛔ 다시 늘리지 마십시오. ★320px 로 줄여 놓고 재 보십시오. */}
       <div style={{ display: 'flex', gap: 4, padding: '6px 8px 0', background: '#f7f5ef', flexShrink: 0 }}>
-        <button type="button" onClick={() => setTab('calc')}
-          style={{
-            flex: 1, height: 28, borderRadius: 5, fontSize: 11.5, fontFamily: 'inherit',
-            border: tab === 'calc' ? '1px solid #2b2b2b' : '1px solid #ccc',
-            background: tab === 'calc' ? '#2b2b2b' : '#fff',
-            color: tab === 'calc' ? '#fff' : '#555',
-            fontWeight: tab === 'calc' ? 600 : 400, cursor: 'pointer',
-          }}>
-          🔮 만세력 계산기
-        </button>
-        <button type="button" onClick={() => setTab('source')}
-          style={{
-            flex: 1, height: 28, borderRadius: 5, fontSize: 11.5, fontFamily: 'inherit',
-            border: tab === 'source' ? '1px solid #2b2b2b' : '1px solid #ccc',
-            background: tab === 'source' ? '#2b2b2b' : '#fff',
-            color: tab === 'source' ? '#fff' : '#555',
-            fontWeight: tab === 'source' ? 600 : 400, cursor: 'pointer',
-          }}>
-          📖 원본 해설
-        </button>
+        {([
+          ['calc', '🔮 만세력'],
+          ['source', '📖 원본 해설'],
+          ['yongsin', '⚖️ 용신'],
+        ] as const).map(([key, label]) => (
+          <button key={key} type="button" onClick={() => setTab(key)}
+            style={{
+              flex: 1, height: 28, borderRadius: 5, fontSize: 11, fontFamily: 'inherit',
+              border: tab === key ? '1px solid #2b2b2b' : '1px solid #ccc',
+              background: tab === key ? '#2b2b2b' : '#fff',
+              color: tab === key ? '#fff' : '#555',
+              fontWeight: tab === key ? 600 : 400, cursor: 'pointer',
+              whiteSpace: 'nowrap', overflow: 'hidden',
+            }}>
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* 입력부 — ★계산기 갈래에서 «결과가 없을 때만» 보인다.
@@ -208,7 +213,9 @@ export default function ExpertFloating({ open, onClose }: Props) {
       {/* ⚠️ 입력부는 ★두 갈래가 «함께» 씁니다 —
           계산기는 결과가 없을 때, 원본 해설은 «언제나» 보입니다
           (해설은 [조회] 없이 값이 바뀌면 바로 다시 폅니다). */}
-      {((tab === 'calc' && !src) || tab === 'source') && (
+      {/* ★48부 1차 — 용신 갈래도 «언제나» 입력부가 보입니다 (원본 해설과 같습니다).
+          [조회] 없이 값이 바뀌면 바로 다시 폅니다. */}
+      {((tab === 'calc' && !src) || tab === 'source' || tab === 'yongsin') && (
         <div style={{ padding: 8, borderBottom: '1px solid #ddd', background: '#f7f5ef', flexShrink: 0 }}>
           <div style={{ display: 'flex', gap: 4, marginBottom: 5 }}>
             <button type="button" onClick={() => setCalType('양력')} style={{ ...toggle, ...(calType === '양력' ? toggleOn : {}) }}>양력</button>
@@ -262,7 +269,15 @@ export default function ExpertFloating({ open, onClose }: Props) {
       )}
 
       {/* 결과부 */}
-      {tab === 'source' ? (
+      {tab === 'yongsin' ? (
+        /* ★⚖️ 용신 «로데이터» — 위 계산기와 «같은 입력값» 을 그대로 씁니다.
+           ⚠️ 판정 근거를 폅니다. ⛔ 손님 화면에 옮기지 마십시오. */
+        <YongsinReading
+          calType={calType} leap={leap} gender={gender}
+          year={year} month={month} day={day}
+          hourIdx={hourIdx} name={name}
+        />
+      ) : tab === 'source' ? (
         /* ★📖 원본 해설 — 위 계산기와 «같은 입력값» 을 그대로 씁니다.
            ⚠️ 따로 입력받지 않습니다. 한 번 넣으면 두 갈래를 오가며 봅니다. */
         <SourceReading
