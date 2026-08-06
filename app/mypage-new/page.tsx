@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { EL_BG, EL_BD, EL_C, EL_C_SUB, EL_HAN } from '@/lib/saju/ohaengColor'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { shownName } from '@/lib/consultantName'
 import { useResultSaju } from '@/hooks/useResultSaju'
 // ★2026-07-27 — 커플채팅(CoupleChatFab · InviteNotifier) 제거. 테스트였으므로 전부 삭제.
 //   ⚠️ 상담사–고객 채팅은 별개이며 살아 있다. 함께 지우지 말 것.
@@ -141,8 +142,9 @@ export default function MyPageNew() {
         const ids = Array.from(new Set(cs.map((c) => c.consultant_id).filter(Boolean)))
         let nameMap: Record<string, string> = {}
         if (ids.length > 0) {
-          const { data: cons } = await supabase.from('consultants').select('id, name').in('id', ids as string[])
-          if (cons) nameMap = Object.fromEntries(cons.map((c) => [c.id, c.name]))
+          const { data: cons } = await supabase.from('consultants').select('id, name, alias').in('id', ids as string[])
+          // ★48부 4차 — 손님에게는 ★별칭(호). ⛔ c.name 을 직접 쓰지 마십시오.
+          if (cons) nameMap = Object.fromEntries(cons.map((c) => [c.id, shownName(c)]))
         }
         setConsults(cs.map((c) => ({ ...c, consultant_name: c.consultant_id ? nameMap[c.consultant_id] : undefined })) as Consultation[])
       }

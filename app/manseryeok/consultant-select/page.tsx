@@ -2,6 +2,8 @@
 import { useRef, useState } from 'react'
 import { Suspense, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+// ★48부 4차 — 손님 화면은 ★본명 대신 별칭. ⛔ c.name 을 직접 쓰지 마십시오.
+import { shownName } from '@/lib/consultantName'
 import { supabase } from '@/lib/supabase'
 import SummaryBand from './SummaryBand'
 
@@ -9,6 +11,8 @@ type Consultant = {
   id: string
   name: string
   specialty: string
+  /** ★48부 4차 — 별칭(호). 손님 화면은 ★shownName() 으로만 씁니다 */
+  alias?: string | null
   photo_url: string
   career: string
   intro: string
@@ -66,7 +70,7 @@ function ConsultantSelectInner() {
     async function load() {
       const { data } = await supabase
         .from('consultants')
-        .select('id, name, specialty, photo_url, career, intro, rating, review_count, review_text, region')
+        .select('id, name, alias, specialty, photo_url, career, intro, rating, review_count, review_text, region')
         .eq('active', true)
         .order('sort')
         .order('created_at')
@@ -317,7 +321,7 @@ function ConsultantSelectInner() {
         sessionStorage.removeItem('birth_full')
       }
 
-      setDone({ consultantName: c.name, date: slot.slot_date, hour: slot.slot_hour })
+      setDone({ consultantName: shownName(c), date: slot.slot_date, hour: slot.slot_hour })
     } catch (e) {
       console.error(e)
       alert('예약 중 문제가 생겼어요. 다시 시도해 주세요.')
@@ -395,11 +399,11 @@ function ConsultantSelectInner() {
                     background: '#faede0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {c.photo_url
                       ? <img src={c.photo_url} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <span style={{ fontSize: 16, color: '#96502e' }}>{c.name?.[0] || '?'}</span>}
+                      : <span style={{ fontSize: 16, color: '#96502e' }}>{shownName(c)[0] || '?'}</span>}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="text-[15px] text-[#3a2e28] font-medium">
-                      {c.name} <span className="text-[12px] text-[#96502e]">선생님</span>
+                      {shownName(c)} <span className="text-[12px] text-[#96502e]">선생님</span>
                     </div>
                     <div className="text-[12px] text-[#6b5340] mt-0.5">{c.specialty || '명리 상담'}</div>
                     {first ? (

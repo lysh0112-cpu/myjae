@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { shownName } from '@/lib/consultantName'
 import ContactStep from './components/ContactStep'
 import PaymentStep from './components/PaymentStep'
 import ScheduleStep from './components/ScheduleStep'
@@ -87,8 +88,9 @@ function ConsultingContent() {
       let cname = ''
       if (c.consultant_id) {
         const { data: con } = await supabase
-          .from('consultants').select('name').eq('id', c.consultant_id).single()
-        cname = con?.name ?? ''
+          .from('consultants').select('name, alias').eq('id', c.consultant_id).single()
+        // ★48부 4차 — 손님 화면·채팅·AI 요약에 ★별칭이 나갑니다
+        cname = con ? shownName(con) : ''
       }
       if (cancelled) return
       setSelected({ id: c.consultant_id ?? '', name: cname, specialty: '', price: 0, active: true })

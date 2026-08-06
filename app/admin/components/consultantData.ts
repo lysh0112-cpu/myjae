@@ -42,6 +42,10 @@ export const SERVICE_SPECIALTIES = [
 
 export type ServiceKey = typeof SERVICE_SPECIALTIES[number]['key']
 
+// ★2026-08-06 (48부 4차) — 손님에게 보일 이름은 ★lib/consultantName.ts 에 있습니다.
+//   ⚠️ 손님 화면이 «관리자 폴더» 를 들여오지 않도록 옮겼습니다.
+export { shownName } from '@/lib/consultantName'
+
 /** key → 이름 (목록·CSV 에서 씁니다) */
 export function specialtyName(key: string): string {
   return SERVICE_SPECIALTIES.find(s => s.key === key)?.name ?? key

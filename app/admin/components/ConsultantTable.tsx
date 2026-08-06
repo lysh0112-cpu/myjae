@@ -52,7 +52,8 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, 
   }
 
   function downloadCSV() {
-    const headers = ['순번', '이름', '활성']
+    // ★48부 4차 — 별칭(호)을 이름 «바로 뒤» 에
+    const headers = ['순번', '이름', '별칭(호)', '활성']
     if (cols.email) headers.push('이메일')
     if (cols.phone) headers.push('전화번호')
     if (cols.specialty) headers.push('전문분야')
@@ -66,7 +67,7 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, 
     }
 
     const rows = list.map(c => {
-      const r = [String(c.sort ?? 0), c.name, c.active ? '활성' : '비활성']
+      const r = [String(c.sort ?? 0), c.name, c.alias || '', c.active ? '활성' : '비활성']
       if (cols.email) r.push(c.email || '')
       if (cols.phone) r.push(c.phone || '')
       if (cols.specialty) r.push(c.specialty || specialtyLabel(c.specialties ?? []) || '')
@@ -164,7 +165,11 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, 
               </div>
               {/* 이름 (누르면 펼침) */}
               <button type="button" onClick={() => setOpenId(openId === c.id ? null : c.id)}
-                style={{ flex: 1, minWidth: 80, fontSize: 13, fontWeight: 700, color: '#fff', cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}>{c.name}</button>
+                style={{ flex: 1, minWidth: 80, fontSize: 13, fontWeight: 700, color: '#fff', cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}>
+                {c.name}
+                {/* ★48부 4차 — 별칭은 «곁들여» 보입니다. 관리자는 ★본명이 먼저입니다. */}
+                {c.alias ? <span style={{ fontWeight: 400, color: '#FAC775', marginLeft: 5 }}>({c.alias})</span> : null}
+              </button>
 
               {/* ★진행중 예약 — 완료도 취소도 안 된 건. 있으면 삭제할 수 없다. (2026-07-21 2차) */}
               <span style={{ width: 210, fontSize: 11.5, lineHeight: 1.4 }}>
@@ -229,7 +234,7 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, 
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="flex items-center gap-2">
-                      <span style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{c.name} 선생님</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{c.name} 선생님{c.alias ? <span style={{ fontWeight: 400, color: '#FAC775', marginLeft: 5 }}>({c.alias})</span> : null}</span>
                       <span style={{ marginLeft: 'auto', fontSize: 12, color: '#FAC775' }}>
                         {c.rating ? `★ ${c.rating}` : '★ —'} {c.review_count ? `· ${c.review_count}건` : ''}
                       </span>

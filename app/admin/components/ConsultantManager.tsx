@@ -82,7 +82,10 @@ export default function ConsultantManager() {
     if (!form.name || !form.phone || !form.email) return alert('이름, 전화번호, 이메일은 필수입니다')
     setLoading(true)
     const payload = {
-      name: form.name, phone: form.phone, email: form.email,
+      name: form.name,
+      // ★48부 4차 — 별칭(호). 비면 손님 화면에 본명이 나갑니다.
+      alias: form.alias?.trim() || null,
+      phone: form.phone, email: form.email,
       // ★2026-08-06 (48부 3차) — 전문분야 «여러 개» [대표님 지시]
       //   specialties  ★price_key 배열 (예: ['saju','couple']) — 거르기에 쓸 값
       //   specialty    ★사람이 읽는 한 줄 — «손님 화면» 이 아직 이 칸을 읽습니다
@@ -197,7 +200,7 @@ export default function ConsultantManager() {
   function handleEdit(c: ConsultantFormData) {
     // ★2026-08-06 (48부 3차) — DB 의 specialties 가 «없는» 옛 자료면 빈 배열로.
     //   ⚠️ null 이 그대로 들어오면 form.specialties.includes 에서 터집니다.
-    setForm({ ...emptyForm, ...c, specialties: Array.isArray(c.specialties) ? c.specialties : [] })
+    setForm({ ...emptyForm, ...c, alias: c.alias ?? '', specialties: Array.isArray(c.specialties) ? c.specialties : [] })
     setEditing(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }

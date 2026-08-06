@@ -6,6 +6,14 @@ import { BANKS, SERVICE_SPECIALTIES, REGIONS, formatPhone } from './consultantDa
 export type ConsultantFormData = {
   id: string
   name: string
+  /**
+   * ★2026-08-06 (48부 4차) — 별칭(호) [대표님 지시]
+   *   「상담사는 ★본명은 «관리자만» 관리를 하고,
+   *     고객들은 ★별칭인 "호" 가 보이도록 하려고 해」
+   *   ⚠️ 비면 ★본명이 그대로 나갑니다 (지금 계신 분들이 안 사라지도록).
+   *   ⛔ 손님 화면에 name 을 «직접» 쓰지 마십시오. ★shownName(c) 을 쓰십시오.
+   */
+  alias: string
   phone: string
   email: string
   specialty: string
@@ -35,7 +43,7 @@ export type ConsultantFormData = {
 }
 
 export const emptyForm: ConsultantFormData = {
-  id: '', name: '', phone: '', email: '', specialty: '', specialties: [],
+  id: '', name: '', alias: '', phone: '', email: '', specialty: '', specialties: [],
   price: 0, bank: '', account: '', active: true,
   region: '', commission_rate: 0, commission_amount: 0,
   photo_url: '', career: '', intro: '',
@@ -98,9 +106,29 @@ export default function ConsultantForm({ form, editing, loading, onChange, onSav
       <div className="grid grid-cols-3 gap-3">
 
         <div>
-          <label className="text-xs mb-1 block" style={labelStyle}>이름</label>
+          <label className="text-xs mb-1 block" style={labelStyle}>
+            이름 <span style={{ color: '#8e8ba8' }}>(본명 · 관리자만 봅니다)</span>
+          </label>
           <input value={form.name} onChange={e => set('name', e.target.value)}
             className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
+        </div>
+
+        {/* ★2026-08-06 (48부 4차) — 별칭(호) [대표님 지시]
+            「상담사는 본명은 관리자만 관리를 하고,
+              고객들은 ★별칭인 "호" 가 보이도록 하려고 해」
+            ⚠️ 비워 두면 ★본명이 그대로 나갑니다. */}
+        <div>
+          <label className="text-xs mb-1 block" style={labelStyle}>
+            별칭 (호) <span style={{ color: '#FAC775' }}>— 고객에게 보입니다</span>
+          </label>
+          <input value={form.alias} onChange={e => set('alias', e.target.value)}
+            placeholder="예: 청산"
+            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
+          <div className="text-xs mt-1" style={{ color: '#8e8ba8' }}>
+            {form.alias
+              ? `고객 화면 — ${form.alias} 선생님`
+              : '비우면 본명이 그대로 보입니다'}
+          </div>
         </div>
 
         <div>
