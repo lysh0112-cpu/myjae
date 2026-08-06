@@ -75,7 +75,7 @@ export default function TeachersPage() {
       }}>
         <div style={{ fontSize: 17, fontWeight: 700, color: '#3a2e28' }}>선생님 소개</div>
         <div style={{ fontSize: 12, color: '#8a7461', marginTop: 4 }}>
-          명연재연구소와 함께하는 선생님들이에요
+          명카페와 함께하는 선생님들이세요
         </div>
       </div>
 
