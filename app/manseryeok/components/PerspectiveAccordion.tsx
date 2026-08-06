@@ -122,8 +122,16 @@ export default function PerspectiveAccordion({
 }) {
   /** key 로 별을 찾습니다. 순서에 기대지 않습니다 */
   const starOfKey = (k: string) => stars?.find((x) => x.key === k) ?? null
-  // 기본: 모두 접힘. 첫 관점만 펼쳐 시작하고 싶으면 useState(new Set([0]))로.
-  const [open, setOpen] = useState<Set<number>>(new Set())
+  // ★2026-08-05 (47부 34차) — 기본을 «모두 펼침» 으로 뒤집었습니다. [대표님 지시]
+  //   「아코디언을 해제를 기본으로 하고, 누르면 접히는 걸로 해줘」 → 「전체적으로 다 그래」
+  //
+  //   [전]  담긴 것만 «펼침». 빈 Set 이라 ★전부 접힌 채 시작했습니다.
+  //   [후]  ★closed 에 담긴 것만 «접힘». 빈 Set 이라 ★전부 펼친 채 시작합니다.
+  //
+  //   ⚠️ 이 부품은 ★두 화면이 씁니다 — 「내 이름 정밀분석」·「새 이름 결과」
+  //      (NameAnalysisResultView 를 거쳐서). ⇒ 둘 다 «함께» 펼쳐집니다.
+  //   ⛔ 되돌리시려면 ★closed 를 되돌리고 아래 세 자리도 «함께» 뒤집으십시오.
+  const [closed, setClosed] = useState<Set<number>>(new Set())
 
   // ★요약 카드에서 「여기 보여 줘」 하면 펼치고 그리로 미끄러져 갑니다
   useEffect(() => {
@@ -134,7 +142,8 @@ export default function PerspectiveAccordion({
     //    그리고 펼쳐지기 «전» 에 옮기면 엉뚱한 자리에 섭니다.
     //    ★한 박자 뒤에 «펼치고 옮깁니다» — 두 가지가 한 번에 풀립니다.
     const t = setTimeout(() => {
-      setOpen((prev) => new Set(prev).add(i))
+      // ★「여기 보여 줘」 하면 «펼칩니다» — 닫힌 목록에서 뺍니다
+      setClosed((prev) => { const n = new Set(prev); n.delete(i); return n })
       requestAnimationFrame(() => {
         document.getElementById(`persp-${String(focusKey)}`)
           ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -143,7 +152,7 @@ export default function PerspectiveAccordion({
     return () => clearTimeout(t)
   }, [focusKey, focusNonce])
   const toggle = (i: number) =>
-    setOpen((prev) => {
+    setClosed((prev) => {
       const next = new Set(prev)
       if (next.has(i)) next.delete(i)
       else next.add(i)
@@ -177,7 +186,7 @@ export default function PerspectiveAccordion({
       {/* 5관점 아코디언 */}
       {HEADS.map((h, i) => {
         const p = commentary[h.key] as Perspective
-        const isOpen = open.has(i)
+        const isOpen = !closed.has(i)   // ★담긴 것만 «접힘»
         const star = starOfKey(h.key as string)
         return (
           /* ★닻(id) — 요약 카드에서 «이리로» 미끄러져 옵니다 (43부 27차)

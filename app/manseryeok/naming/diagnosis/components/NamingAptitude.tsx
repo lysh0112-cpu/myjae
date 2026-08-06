@@ -60,7 +60,11 @@ const INK = '#5c3a1e'
 /** 五 · 六 을 한 벌로 내보냅니다 — 화면은 이 하나만 얹으면 됩니다 */
 export default function NamingAptitude(p: NamingAptitudeProps) {
   const ready = p.saju.length > 0 && !!p.dayStem && p.dayStem !== '?'
-  const [open, setOpen] = useState(false)   // ★六 은 «접힌 채» 시작합니다
+  // ★2026-08-05 (47부 34차) — 「六 사주 명리적성」도 «펼친 채» 로. [대표님 지시]
+  //   「아코디언을 해제를 기본으로 하고, 누르면 접히는 걸로」 → 「전체적으로 다 그래」
+  //   ⚠️ 전에는 false(접힌 채)였고 ★검사 그물(25-verify-manse-ui ②)이 그것을 지켰습니다.
+  //      그물도 «함께» 고쳤습니다.
+  const [open, setOpen] = useState(true)   // ★六 은 «펼친 채» 시작합니다
 
   const score = useMemo(
     () => (ready ? calcCareerScore(p.saju, p.solarMonth, p.solarDay, p.hourBranch) : null),

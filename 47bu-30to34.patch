@@ -1,0 +1,553 @@
+From 8f4aac49f6f5bdadfeee30022fa9ab083f8ac3e2 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Thu, 6 Aug 2026 01:19:05 +0000
+Subject: [PATCH 1/5] =?UTF-8?q?=EB=B3=B4=EA=B4=80=ED=95=A8=C2=B7=EA=B2=B0?=
+ =?UTF-8?q?=EA=B3=BC=20=EC=A0=9C=EB=AA=A9=EC=9D=84=20=EA=B6=81=ED=95=A9=20?=
+ =?UTF-8?q?=EA=BC=B4=EB=A1=9C=20=E2=80=94=20=EB=91=90=20=EA=B0=88=EB=9E=98?=
+ =?UTF-8?q?=EB=A7=8C=20(47=EB=B6=80=2030=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/manseryeok/result-new/page.tsx   | 19 ++++++++++++++++++-
+ app/manseryeok/saju-storage/page.tsx |  9 +++++++--
+ 2 files changed, 25 insertions(+), 3 deletions(-)
+
+diff --git a/app/manseryeok/result-new/page.tsx b/app/manseryeok/result-new/page.tsx
+index a65b6dd..93ef8d7 100644
+--- a/app/manseryeok/result-new/page.tsx
++++ b/app/manseryeok/result-new/page.tsx
+@@ -302,7 +302,24 @@ function ResultNewContent() {
+   const personName=searchParams.get("name")||""
+   const _unse=searchParams.get("unse")
+   const _kindLabel=_unse==="daeun"?"대운":_unse==="seyun"?"세운":"만세력"
+-  const titleName=nimEuiTitle(personName,_kindLabel)
++  // ★2026-08-05 (47부 30차) — 이름이 «없을» 때만 제목을 바꿉니다. [대표님 지시]
++  //   [전]  나의 만세력
++  //   [후]  ★내 사주와 운세보기 결과
++  //   [까닭]  ★궁합과 «같은 꼴» 로 —
++  //       궁합  「부부 궁합 보관함」 · 「부부 궁합 결과」
++  //       사주  「내 사주와 운세보기 보관함」 · ★「내 사주와 운세보기 결과」
++  //
++  //   ⚠️⚠️ ★«이 한 갈래만» 바꿨습니다 [대표님 「우선 이 두개만 바꿔」]
++  //     이름 있음   「류승현님의 만세력」   ← ★그대로
++  //     대운        「나의 대운」          ← ★그대로
++  //     세운        「나의 세운」          ← ★그대로
++  //     전문가용(?pro=1)                  ← ★그대로 (상담사 화면)
++  //   ⇒ 대표님이 나머지를 «점검해 보시겠다» 하셨습니다. 손대지 마십시오.
++  //   ⛔ 되돌리시려면 ★nimEuiTitle(personName,_kindLabel) 하나로 돌리면 됩니다.
++  const titleName =
++    (!personName && !_unse)
++      ? '내 사주와 운세보기 결과'
++      : nimEuiTitle(personName, _kindLabel)
+   // 프로필 카드에는 제목을 되풀이하지 않고 "누구인지"만 적는다.
+   const cardName=personName?withNim(personName):"나"
+ 
+diff --git a/app/manseryeok/saju-storage/page.tsx b/app/manseryeok/saju-storage/page.tsx
+index 181537f..49f6447 100644
+--- a/app/manseryeok/saju-storage/page.tsx
++++ b/app/manseryeok/saju-storage/page.tsx
+@@ -55,7 +55,12 @@ const SERVICE_INFO: Record<Service, {
+     //   [바뀐 자취]
+     //     처음      「내 사주 & 운세 보관함」
+     //     22차      「나의 만세력 보관함」   ← 결과 화면(「나의 만세력」)과 이으려던 것
+-    //     ★29차     「내 사주와 운세 보관함」  ← 대표님이 다시 정하셨습니다
++    //     29차      「내 사주와 운세 보관함」
++    //     ★30차     「내 사주와 운세보기 보관함」  ← 대표님 확정
++    //   [까닭]  ★궁합과 «같은 꼴» 로 —
++    //       궁합  「부부 궁합 보관함」  ·  「부부 궁합 결과」
++    //       사주  「내 사주와 운세보기 보관함」 · 「내 사주와 운세보기 결과」
++    //     ⇒ ★홈 카드 이름(「내 사주와 운세보기」)이 «그대로» 앞에 옵니다.
+     //   [까닭]  ★다른 보관함들이 모두 «서비스 이름 + 보관함» 꼴입니다 —
+     //     출산택일 보관함 · 결혼택일 보관함 · 이사택일 보관함
+     //     · 내 사주 그림 보관함 · 연인/부부 궁합 보관함
+@@ -73,7 +78,7 @@ const SERVICE_INFO: Record<Service, {
+     //   ⚠️ ★결과 화면 제목(「나의 만세력」)은 «그대로» 입니다.
+     //      그 제목은 ?name · ?unse=daeun|seyun · ?pro=1 로 다섯 갈래로 갈립니다.
+     //      바꾸시려면 그 갈래를 함께 보셔야 합니다.
+-    title: '내 사주와 운세 보관함', badge: '사주 & 운세', accent: '#6e50a0',
++    title: '내 사주와 운세보기 보관함', badge: '사주 & 운세', accent: '#6e50a0',
+     resultPath: '/manseryeok/result-new',
+     headline: '누구의 사주와 운세를 볼까요?',
+     submitLabel: '저장하고 리포트 보기',
+-- 
+2.43.0
+
+
+From 13b9d63bae66bd4b265e6d9c9805b965e73de711 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Thu, 6 Aug 2026 01:26:55 +0000
+Subject: [PATCH 2/5] =?UTF-8?q?=EA=B2=B0=EA=B3=BC=20=EC=A0=9C=EB=AA=A9?=
+ =?UTF-8?q?=EC=9D=B4=20=EC=95=88=20=EB=B0=94=EB=80=8C=EB=8D=98=20=EA=B2=83?=
+ =?UTF-8?q?=20=E2=80=94=20=EC=9D=B4=EB=A6=84=EC=9D=B4=20=E3=80=8C=EB=82=98?=
+ =?UTF-8?q?=E3=80=8D=EC=9D=BC=20=EB=95=8C=EB=A5=BC=20=EB=AA=BB=20=EC=9E=A1?=
+ =?UTF-8?q?=EC=95=98=EC=9D=8C=20(47=EB=B6=80=2031=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ app/manseryeok/result-new/page.tsx | 12 ++++++++++--
+ 1 file changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/app/manseryeok/result-new/page.tsx b/app/manseryeok/result-new/page.tsx
+index 93ef8d7..6f5cd19 100644
+--- a/app/manseryeok/result-new/page.tsx
++++ b/app/manseryeok/result-new/page.tsx
+@@ -316,10 +316,18 @@ function ResultNewContent() {
+   //     전문가용(?pro=1)                  ← ★그대로 (상담사 화면)
+   //   ⇒ 대표님이 나머지를 «점검해 보시겠다» 하셨습니다. 손대지 마십시오.
+   //   ⛔ 되돌리시려면 ★nimEuiTitle(personName,_kindLabel) 하나로 돌리면 됩니다.
++  //   🔴 ★2026-08-05 (47부 31차) — 조건을 바로잡았습니다.
++  //     [겪은 일]  대표님 — 「아직도 "나의 만세력"으로 나오네」
++  //     [까닭]  보관함이 ★언제나 name 을 실어 보냅니다 (personToQuery).
++  //       사진의 기록은 이름이 ★「나」 였습니다.
++  //       ⇒ personName 이 «있는» 것으로 세어 (!personName) 조건이 «안 맞았습니다».
++  //     [고침]  ★nimEuiTitle 이 «나의 ○○» 를 내는 경우를 그대로 씁니다.
++  //       (「나」·「저」·「본인」… 은 honorific.ts 의 NO_NIM 에 있습니다)
++  const _base = nimEuiTitle(personName, _kindLabel)
+   const titleName =
+-    (!personName && !_unse)
++    (!_unse && _base === `나의 ${_kindLabel}`)
+       ? '내 사주와 운세보기 결과'
+-      : nimEuiTitle(personName, _kindLabel)
++      : _base
+   // 프로필 카드에는 제목을 되풀이하지 않고 "누구인지"만 적는다.
+   const cardName=personName?withNim(personName):"나"
+ 
+-- 
+2.43.0
+
+
+From 5c65da750c1d18b0e9dbde52905e96dd1982240d Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Thu, 6 Aug 2026 01:59:56 +0000
+Subject: [PATCH 3/5] =?UTF-8?q?=EC=82=AC=EC=A3=BC=20=EA=B2=B0=EA=B3=BC=20?=
+ =?UTF-8?q?=E2=80=94=20=EA=B2=B9=EC=B9=98=EB=8A=94=20=EC=B9=B8=20=EB=91=98?=
+ =?UTF-8?q?=20=EA=B1=B7=EA=B3=A0=20=EC=A0=91=EA=B8=B0=EB=A5=BC=20=ED=8E=BC?=
+ =?UTF-8?q?=EC=B9=9C=20=EC=B1=84=EB=A1=9C=20(47=EB=B6=80=2032=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ 25-verify-manse-ui.ts              |  12 ++-
+ app/manseryeok/result-new/page.tsx | 118 +++++++++++++++--------------
+ 2 files changed, 73 insertions(+), 57 deletions(-)
+
+diff --git a/25-verify-manse-ui.ts b/25-verify-manse-ui.ts
+index f1dc191..3b5880b 100644
+--- a/25-verify-manse-ui.ts
++++ b/25-verify-manse-ui.ts
+@@ -45,8 +45,16 @@ console.log('\n━━ ⑯-a 🔴 만세력 표가 «어떤 길로 와도» 나
+ 
+ console.log('\n━━ ⑯-b 표 섹션이 «전부 있는가» ━━')
+ {
+-  const MUST = ['사주 원국', '오행과 십성 분석', '신강 · 신약', '나의 용신',
+-                '운의 흐름 (대운·세운·월운·일운)']
++  // ★2026-08-05 (47부 32차) — 두 섹션을 목록에서 «뺐습니다». [대표님 지시]
++  //   ⑴ 「오행과 십성 분석」 — 아래 «나의 사주 이야기» 의 오행 분석과 «겹칩니다».
++  //      ★십성 표는 잃지 않았습니다 — premiumSlots 섹션1(강점 지능·오행)로 «옮겼습니다».
++  //      ⚠️ 함께 있던 «계절 치환 안내» 는 사라졌습니다.
++  //   ⑵ 「운의 흐름 (대운·세운·월운·일운)」 — 아래 통변 안에 대운 표·세운 표가 «따로» 있습니다.
++  //      ★월운·일운은 이 칸에만 있던 것이라 화면에서 사라집니다. 뜻한 대로입니다.
++  //      ⚠️ setPickedUn 을 넣어 주던 곳이 없어져 ★전문가 상세의
++  //         「운이 원국을 건드리는 자리」가 «원국만» 보게 됩니다 (전문가용에만 나옵니다).
++  //   ⛔ 되살리시려면 ★화면과 이 목록을 «함께» 되돌리십시오.
++  const MUST = ['사주 원국', '신강 · 신약', '나의 용신']
+   for (const t of MUST) check(src.includes(`title="${t}"`), `「${t}」 섹션이 있습니다`)
+   // 전문가 상세는 ?pro=1 + 합충 토글일 때만
+   check(src.includes('title="전문가 상세"'), `「전문가 상세」 섹션이 있습니다`)
+diff --git a/app/manseryeok/result-new/page.tsx b/app/manseryeok/result-new/page.tsx
+index 6f5cd19..425c110 100644
+--- a/app/manseryeok/result-new/page.tsx
++++ b/app/manseryeok/result-new/page.tsx
+@@ -11,7 +11,10 @@ import { getUnsung, getSinsal, unsungColor, getGongmang, SINSAL_HIGHLIGHT } from
+ 
+ import { calcYongsinNew, calcYongsinCompat } from "@/lib/saju/yongsinNew";
+ import { calcHapchungScore } from "@/lib/saju/hapchungScore";
+-import { calcSimsanOhaeng, toPercentList, seasonConvertNote, hourConvertNote } from "@/lib/saju/simsanOhaeng";
++// ★2026-08-05 (47부 32차) — seasonConvertNote · hourConvertNote 를 «뺐습니다».
++//   「오행과 십성 분석」 칸을 걷으면서 «계절 치환 안내» 도 함께 사라져 아무도 안 부릅니다.
++//   ⛔ 그 안내를 되살리시려면 ★이 들여오기도 «함께» 되살리십시오.
++import { calcSimsanOhaeng, toPercentList } from "@/lib/saju/simsanOhaeng";
+ import { calcSipsungDist, getSipsin, getSipsinBranch } from "@/lib/saju/sipsungDist";
+ import AiAnalysisNew from "./components/AiAnalysisNew";
+ import { withNim, nimEuiTitle } from "@/lib/saju/honorific";
+@@ -192,9 +195,26 @@ function ResultNewContent() {
+   const searchParams=useSearchParams()
+   const router=useRouter()
+   const [isPaid,setIsPaid]=useState(false)
+-  // 아코디언: 한 번에 하나만 펼침. 사주 원국은 고정(항상 펼침)이라 대상 아님.
+-  const [openSection,setOpenSection]=useState<string|null>(null)
+-  const toggleSection=(key:string)=>setOpenSection(prev=>prev===key?null:key)
++  // ★2026-08-05 (47부 32차) — 접기 칸을 «펼친 채» 로 시작합니다. [대표님 지시]
++  //   「아코디언을 해제를 기본으로 하고, 누르면 접히는 걸로 해줘」
++  //
++  //   [전]  ★«한 번에 하나만» 펼침 + ★기본은 «전부 접힘»
++  //     const [openSection,setOpenSection]=useState<string|null>(null)
++  //     const toggleSection=(key)=>setOpenSection(prev=>prev===key?null:key)
++  //     ⇒ 손님이 하나를 열면 ★다른 것이 «닫혔습니다».
++  //
++  //   [후]  ★각자 따로 여닫히고, 기본은 «펼침» 입니다.
++  //     닫은 것만 closed 에 담습니다. 담기지 «않은» 것은 열려 있습니다.
++  //   ⚠️ 화면 이름(key)은 그대로입니다 — singang · yongsin · expert · hapchung.
++  //      전문가용 둘(expert · hapchung)도 «함께» 펼쳐집니다.
++  //   ⛔ 되돌리시려면 위 [전] 두 줄로 돌리고 open 을 openSection===key 로 바꾸십시오.
++  const [closedSections,setClosedSections]=useState<Set<string>>(new Set())
++  const isOpen=(key:string)=>!closedSections.has(key)
++  const toggleSection=(key:string)=>setClosedSections(prev=>{
++    const next=new Set(prev)
++    if(next.has(key)) next.delete(key); else next.add(key)
++    return next
++  })
+   // 질문 선택: 아직 안 골랐으면 QuestionPicker를 먼저, 고르면 만세력+통변 표시.
+   // null이면 질문 선택 화면 단계. 배열이면 결과 화면 단계.
+   //
+@@ -350,7 +370,14 @@ function ResultNewContent() {
+   // ★2026-08-05 (46부 14차) — 「운의 흐름」에서 고른 대운·세운.
+   //   전문가 상세의 「운이 원국을 건드리는 자리」가 이 값을 씁니다.
+   //   ⚠️ UnseFlow 와 ExpertDetail 은 «형제» 라 서로 모릅니다. 여기서 이어 줍니다.
+-  const [pickedUn, setPickedUn] = useState<{
++  //
++  // 🔴 ★2026-08-05 (47부 32차) — 「운의 흐름」 칸을 걷으면서 ★값을 «넣어 주던 곳» 이
++  //    사라졌습니다. 이제 언제나 { daeun: null, seyun: null } 입니다.
++  //    ⇒ 전문가 상세의 「운이 원국을 건드리는 자리」가 ★«원국만» 보게 됩니다.
++  //      (운을 얹은 삼합·천간합·복음이 안 나옵니다)
++  //    ⚠️ 손님 화면에는 영향이 없습니다 — 그 칸은 ★전문가용(?pro=1)에만 나옵니다.
++  //    ⛔ 되살리시려면 ★「운의 흐름」 칸과 onPick={setPickedUn} 을 «함께» 되살리십시오.
++  const [pickedUn] = useState<{
+     daeun: { stem: string; branch: string; age: number } | null
+     seyun: { stem: string; branch: string; year: number } | null
+   }>({ daeun: null, seyun: null })
+@@ -479,7 +506,18 @@ function ResultNewContent() {
+       match: ['강점', '오행'],
+       node: (
+         <div key="s1" style={{ background: '#fff', border: '1px solid rgba(120,53,15,0.15)', borderRadius: 14, padding: 12 }}>
+-          <OhaengPentagon ohaeng={ohaeng} dayElement={yongsinNew?.dayElement} />
++          {/* ★2026-08-05 (47부 32차) — 십성 표를 «여기로» 옮겼습니다. [대표님 지시]
++              위쪽 「오행과 십성 분석」 칸을 지우면서 ★십성 표를 잃지 않으려는 것입니다.
++              ⚠️ 오행 그림이 못 보여 주는 것(정관·편관·식신…)을 담고 있습니다.
++              ⛔ 지우지 마십시오. 위쪽 칸에는 이제 «없습니다». */}
++          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
++            <div style={{ flex: 1.45, minWidth: 0 }}>
++              <OhaengPentagon ohaeng={ohaeng} dayElement={yongsinNew?.dayElement} />
++            </div>
++            <div style={{ flex: 0.55, minWidth: 0 }}>
++              <SipsungTable sipsung={sipsung} />
++            </div>
++          </div>
+         </div>
+       ),
+     } : null,
+@@ -711,7 +749,7 @@ function ResultNewContent() {
+ 
+         {/* ①-2 전문가 상세 (전문가 모드 + 토글 ON) — 지장간·납음·운성/신살 2기준·귀인·공망·형충회합 */}
+         {isPro && hapchungOn && saju.length>0 && (
+-          <Section title="전문가 상세" collapsible={!chartOnly} open={openSection==='expert'} onToggle={()=>toggleSection('expert')}>
++          <Section title="전문가 상세" collapsible={!chartOnly} open={isOpen('expert')} onToggle={()=>toggleSection('expert')}>
+             <ExpertDetail
+               saju={saju}
+               dayStem={dayStem}
+@@ -731,48 +769,23 @@ function ResultNewContent() {
+             />
+           </Section>
+         )}
+-        {(
+-        <Section title="오행과 십성 분석" collapsible={!chartOnly} open={openSection==='ohaeng'} onToggle={()=>toggleSection('ohaeng')}>
+-          {/* 계산 기준 안내 — 합충 반영 그래프와 숫자가 다른 이유 */}
+-          <div style={{fontSize:'10.5px',color:'#b4785a',background:'#faf3ec',border:LINE_OUTER,borderRadius:'8px',padding:'7px 10px',marginBottom:'10px',lineHeight:1.6}}>
+-            진로·적성·성격은 <b style={{color:'#96502e'}}>계절 치환</b>으로, 건강·궁합은 오행 그대로 봐요.
+-            {(() => {
+-              /* ★2026-08-02 — 월지 치환에 이어 «시지» 치환도 알려 드립니다 (대표님 지시)
+-                 ⚠️ 이 화면은 진로·성격 쪽이라 시지 치환이 «걸립니다».
+-                    걸렸는데 말해 주지 않으면 궁합 화면과 숫자가 다른 까닭을 알 수 없습니다. */
+-              if (!(saju.length>0 && monthBranchForNote)) return null
+-              const note = seasonConvertNote(monthBranchForNote, solarMonth, solarDay, hourBranch ?? '')
+-              const hNote = hourConvertNote(monthBranchForNote, hourBranch ?? '')
+-              if (!note && !hNote) return null
+-              return (
+-                <>
+-                  {note ? <div style={{marginTop:'5px',color:'#c8783c'}}>↳ {note}</div> : null}
+-                  {hNote ? <div style={{marginTop:'3px',color:'#c8783c'}}>↳ {hNote}</div> : null}
+-                </>
+-              )
+-            })()}
+-          </div>
+-          {/* 오각형 그래프(왼쪽) + 십성표(오른쪽) 나란히 */}
+-          <div style={{display:'flex',gap:'6px',alignItems:'center',marginBottom:'12px'}}>
+-            <div style={{flex:1.45,minWidth:0}}>
+-              <OhaengPentagon ohaeng={ohaeng} dayElement={yongsinNew?.dayElement}/>
+-            </div>
+-            <div style={{flex:0.55,minWidth:0}}>
+-              <SipsungTable sipsung={sipsung}/>
+-            </div>
+-          </div>
+-        </Section>
+-        )}
++        {/* ★2026-08-05 (47부 32차) — 「오행과 십성 분석」 칸을 «걷어냈습니다». [대표님 지시]
++              「위쪽의 오행과 십성분석은 삭제, 아래쪽 오행분석과 중복됨」
++            ⚠️ ★십성 표(SipsungTable)는 «잃지 않았습니다» —
++               위 premiumSlots 섹션1(강점 지능·오행)로 ★옮겼습니다.
++            ⚠️ 함께 있던 «계절 치환 안내» 도 사라집니다.
++               (「진로·적성·성격은 계절 치환으로, 건강·궁합은 오행 그대로 봐요」)
++               ⇒ 다시 필요하시면 말씀해 주십시오. git 이력(47부 32차 이전)에 있습니다. */}
+ 
+         {/* ③-2 합충 반영 (전문가 모드 + 토글 ON) */}
+         {isPro && hapchungOn && saju.length>0 && (
+-          <Section title="합충 반영 오행" collapsible={!chartOnly} open={openSection==='hapchung'} onToggle={()=>toggleSection('hapchung')}>
++          <Section title="합충 반영 오행" collapsible={!chartOnly} open={isOpen('hapchung')} onToggle={()=>toggleSection('hapchung')}>
+             <HapchungView saju={saju}/>
+           </Section>
+         )}
+ 
+         {/* ④ 신강/신약 */}
+-        <Section title="신강 · 신약" collapsible={!chartOnly} open={openSection==='singang'} onToggle={()=>toggleSection('singang')}>
++        <Section title="신강 · 신약" collapsible={!chartOnly} open={isOpen('singang')} onToggle={()=>toggleSection('singang')}>
+           {dayStem && (
+             <SingangTable
+               ilganEl={STEM_ELEMENT[dayStem] as '목'|'화'|'토'|'금'|'수'}
+@@ -786,24 +799,19 @@ function ResultNewContent() {
+         {/* ★2026-07-29 — 프리미엄은 이 표를 «섹션2 풀이 바로 위»로 옮겨 그립니다.
+             여기서 또 그리면 같은 표가 두 번 나옵니다. */}
+         {yongsinNew&&(
+-        <Section title="나의 용신" collapsible={!chartOnly} open={openSection==='yongsin'} onToggle={()=>toggleSection('yongsin')}>
++        <Section title="나의 용신" collapsible={!chartOnly} open={isOpen('yongsin')} onToggle={()=>toggleSection('yongsin')}>
+           <YongsinCard result={yongsinNew} saju={saju}/>
+         </Section>
+         )}
+ 
+-        {/* ⑥ 대운·세운·월운·일운 (연동 흐름) */}
+-        {dayStem&&monthGanji&&yearStem&&solarYear&&(
+-          <Section title="운의 흐름 (대운·세운·월운·일운)" collapsible={!chartOnly} open={openSection==='daeun'} onToggle={()=>toggleSection('daeun')} hint="눌러서 흐름 보기">
+-            <UnseFlow
+-              solarYear={solarYear} solarMonth={solarMonth} solarDay={solarDay}
+-              monthGanji={monthGanji} yearStem={yearStem} dayStem={dayStem}
+-              gender={gender} birthYear={yearParam} currentYear={currentYear}
+-              myMonthBranch={monthBranchForNote ?? ''} myDayBranch={iljji}
+-              list={dayunList} hourIdx={hourIdx}
+-              onPick={setPickedUn}
+-            />
+-          </Section>
+-        )}
++        {/* ★2026-08-05 (47부 32차) — 「운의 흐름 (대운·세운·월운·일운)」 칸을
++            «걷어냈습니다». [대표님 지시]
++              「우측 이미지의 대운,세운,월운,일운 부분 중복되니 삭제…하단에 따로 나와있음」
++            ⚠️ 아래 ★「나의 사주 이야기」 안에 대운 표·세운 표가 «그대로» 있습니다.
++               (premiumSlots 의 섹션5 세운 · 섹션6 대운 — 통변 글과 짝을 이룹니다)
++            ⚠️ ★월운·일운은 «이 칸에만» 있던 것이라 화면에서 사라집니다. 뜻한 대로입니다.
++            ⛔ 되살리시려면 ★이 칸과 setPickedUn 을 «함께» 되살리십시오.
++               (onPick={setPickedUn} — 46부 14차의 「운이 원국을 건드리는 자리」가 씁니다) */}
+ 
+         {/* ⑨ AI 통변 (고른 질문 기반). mode=chart(만세력만)면 통변 없음.
+             다시보기(recordId)면 저장된 통변·질문이 있을 때만(구버전 기록은 통변 숨김). */}
+-- 
+2.43.0
+
+
+From 62716ebd9e4b7af5937c18755d5f1093b992b5fa Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Thu, 6 Aug 2026 02:10:56 +0000
+Subject: [PATCH 4/5] =?UTF-8?q?=EC=9C=84=EC=AA=BD=20=E3=80=8C=EB=82=98?=
+ =?UTF-8?q?=EC=9D=98=20=EC=9A=A9=EC=8B=A0=E3=80=8D=20=EC=B9=B8=EB=8F=84=20?=
+ =?UTF-8?q?=EA=B1=B7=EC=9D=8C=20=E2=80=94=20=EC=95=84=EB=9E=98=20=ED=86=B5?=
+ =?UTF-8?q?=EB=B3=80=EA=B3=BC=20=EA=B2=B9=EC=B9=A8=20(47=EB=B6=80=2033?=
+ =?UTF-8?q?=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ 25-verify-manse-ui.ts              |  6 +++++-
+ app/manseryeok/result-new/page.tsx | 17 +++++++++--------
+ 2 files changed, 14 insertions(+), 9 deletions(-)
+
+diff --git a/25-verify-manse-ui.ts b/25-verify-manse-ui.ts
+index 3b5880b..ed78767 100644
+--- a/25-verify-manse-ui.ts
++++ b/25-verify-manse-ui.ts
+@@ -54,7 +54,11 @@ console.log('\n━━ ⑯-b 표 섹션이 «전부 있는가» ━━')
+   //      ⚠️ setPickedUn 을 넣어 주던 곳이 없어져 ★전문가 상세의
+   //         「운이 원국을 건드리는 자리」가 «원국만» 보게 됩니다 (전문가용에만 나옵니다).
+   //   ⛔ 되살리시려면 ★화면과 이 목록을 «함께» 되돌리십시오.
+-  const MUST = ['사주 원국', '신강 · 신약', '나의 용신']
++  //   ⑶ ★2026-08-05 (47부 33차) — 「나의 용신」도 뺐습니다. [대표님 지시]
++  //      아래 «나의 사주 이야기» ②(격국과 용신)에 ★같은 YongsinCard 가 있습니다.
++  //      ⚠️ 앞 세션도 알고 있었습니다 — 화면에 「여기서 또 그리면 같은 표가 두 번
++  //         나옵니다」라 적혀 있었는데 ★조건을 안 걸어 둘 다 나오고 있었습니다.
++  const MUST = ['사주 원국', '신강 · 신약']
+   for (const t of MUST) check(src.includes(`title="${t}"`), `「${t}」 섹션이 있습니다`)
+   // 전문가 상세는 ?pro=1 + 합충 토글일 때만
+   check(src.includes('title="전문가 상세"'), `「전문가 상세」 섹션이 있습니다`)
+diff --git a/app/manseryeok/result-new/page.tsx b/app/manseryeok/result-new/page.tsx
+index 425c110..e51faa4 100644
+--- a/app/manseryeok/result-new/page.tsx
++++ b/app/manseryeok/result-new/page.tsx
+@@ -795,14 +795,15 @@ function ResultNewContent() {
+           )}
+         </Section>
+ 
+-        {/* ⑤ 나의 용신 (조후·억부·격국 3종) */}
+-        {/* ★2026-07-29 — 프리미엄은 이 표를 «섹션2 풀이 바로 위»로 옮겨 그립니다.
+-            여기서 또 그리면 같은 표가 두 번 나옵니다. */}
+-        {yongsinNew&&(
+-        <Section title="나의 용신" collapsible={!chartOnly} open={isOpen('yongsin')} onToggle={()=>toggleSection('yongsin')}>
+-          <YongsinCard result={yongsinNew} saju={saju}/>
+-        </Section>
+-        )}
++        {/* ★2026-08-05 (47부 33차) — 위쪽 「나의 용신」 칸을 «걷어냈습니다». [대표님 지시]
++              「나의 용신이 하단에 또 있어서 위쪽의 나의 용신도 삭제해줘」
++            ⚠️ 아래 ★「나의 사주 이야기」 ②(격국과 용신)에 ★같은 YongsinCard 가 있습니다.
++               (premiumSlots 의 match: ['격국','용신','그릇'] — 통변 글과 짝을 이룹니다)
++            ★앞 세션도 이미 알고 있었습니다 — 이 자리에 이렇게 적혀 있었습니다:
++               「2026-07-29 — 프리미엄은 이 표를 «섹션2 풀이 바로 위» 로 옮겨 그립니다.
++                 여기서 또 그리면 같은 표가 두 번 나옵니다」
++               ⇒ 그런데 조건을 안 걸어 «둘 다» 나오고 있었습니다.
++            ⛔ 되살리시려면 ★아래 섹션2 와 «겹치지 않게» 조건을 거십시오. */}
+ 
+         {/* ★2026-08-05 (47부 32차) — 「운의 흐름 (대운·세운·월운·일운)」 칸을
+             «걷어냈습니다». [대표님 지시]
+-- 
+2.43.0
+
+
+From cb3d40f07eaa5ee260c08e12edd68ec739f9e068 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Thu, 6 Aug 2026 02:32:14 +0000
+Subject: [PATCH 5/5] =?UTF-8?q?=ED=86=B5=EB=B3=80=C2=B7=EA=B6=81=ED=95=A9?=
+ =?UTF-8?q?=C2=B7=EB=AC=BC=EC=83=81=20=EC=A0=91=EA=B8=B0=EB=8F=84=20?=
+ =?UTF-8?q?=ED=8E=BC=EC=B9=9C=20=EC=B1=84=EB=A1=9C=20(47=EB=B6=80=2034?=
+ =?UTF-8?q?=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ 25-verify-manse-ui.ts                         |  6 ++++--
+ .../components/PerspectiveAccordion.tsx       | 19 ++++++++++++++-----
+ .../components/CoupleJudgeCard.tsx            |  4 +++-
+ app/manseryeok/mulsang/page.tsx               |  6 ++++--
+ .../diagnosis/components/NamingAptitude.tsx   |  6 +++++-
+ 5 files changed, 30 insertions(+), 11 deletions(-)
+
+diff --git a/25-verify-manse-ui.ts b/25-verify-manse-ui.ts
+index ed78767..82ebd37 100644
+--- a/25-verify-manse-ui.ts
++++ b/25-verify-manse-ui.ts
+@@ -160,8 +160,10 @@ console.log('\n━━ ⑯-f ★내이름 감정 화면 (41부 Step 3 · UI) ━
+     `★상단 요약은 «펼친 채» 입니다 (접기 없음)`)
+   check(/SajuWonguk/.test(sum), `상단 요약이 정본 원국표를 «가져다» 씁니다`)
+ 
+-  // ② 六 — «접힌 채» 시작
+-  check(/useState\(false\)/.test(apt), `★六 명리적성이 «접힌 채» 시작합니다`)
++  // ② 六 — ★2026-08-05 (47부 34차) «펼친 채» 로 바뀌었습니다 [대표님 지시]
++  //   「아코디언을 해제를 기본으로 하고, 누르면 접히는 걸로」
++  //   ⛔ 되돌리시려면 ★화면과 이 검사를 «함께» 되돌리십시오.
++  check(/useState\(true\)/.test(apt), `★六 명리적성이 «펼친 채» 시작합니다`)
+   check(/aria-expanded/.test(apt), `접기·펼치기에 aria-expanded 가 있습니다`)
+ 
+   // ③ ★2026-08-05 (47부 17차) — 「상세 진로·적성 분석 보러가기」 검사를 «걷었습니다».
+diff --git a/app/manseryeok/components/PerspectiveAccordion.tsx b/app/manseryeok/components/PerspectiveAccordion.tsx
+index 92fa408..41dd9a9 100644
+--- a/app/manseryeok/components/PerspectiveAccordion.tsx
++++ b/app/manseryeok/components/PerspectiveAccordion.tsx
+@@ -122,8 +122,16 @@ export default function PerspectiveAccordion({
+ }) {
+   /** key 로 별을 찾습니다. 순서에 기대지 않습니다 */
+   const starOfKey = (k: string) => stars?.find((x) => x.key === k) ?? null
+-  // 기본: 모두 접힘. 첫 관점만 펼쳐 시작하고 싶으면 useState(new Set([0]))로.
+-  const [open, setOpen] = useState<Set<number>>(new Set())
++  // ★2026-08-05 (47부 34차) — 기본을 «모두 펼침» 으로 뒤집었습니다. [대표님 지시]
++  //   「아코디언을 해제를 기본으로 하고, 누르면 접히는 걸로 해줘」 → 「전체적으로 다 그래」
++  //
++  //   [전]  담긴 것만 «펼침». 빈 Set 이라 ★전부 접힌 채 시작했습니다.
++  //   [후]  ★closed 에 담긴 것만 «접힘». 빈 Set 이라 ★전부 펼친 채 시작합니다.
++  //
++  //   ⚠️ 이 부품은 ★두 화면이 씁니다 — 「내 이름 정밀분석」·「새 이름 결과」
++  //      (NameAnalysisResultView 를 거쳐서). ⇒ 둘 다 «함께» 펼쳐집니다.
++  //   ⛔ 되돌리시려면 ★closed 를 되돌리고 아래 세 자리도 «함께» 뒤집으십시오.
++  const [closed, setClosed] = useState<Set<number>>(new Set())
+ 
+   // ★요약 카드에서 「여기 보여 줘」 하면 펼치고 그리로 미끄러져 갑니다
+   useEffect(() => {
+@@ -134,7 +142,8 @@ export default function PerspectiveAccordion({
+     //    그리고 펼쳐지기 «전» 에 옮기면 엉뚱한 자리에 섭니다.
+     //    ★한 박자 뒤에 «펼치고 옮깁니다» — 두 가지가 한 번에 풀립니다.
+     const t = setTimeout(() => {
+-      setOpen((prev) => new Set(prev).add(i))
++      // ★「여기 보여 줘」 하면 «펼칩니다» — 닫힌 목록에서 뺍니다
++      setClosed((prev) => { const n = new Set(prev); n.delete(i); return n })
+       requestAnimationFrame(() => {
+         document.getElementById(`persp-${String(focusKey)}`)
+           ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+@@ -143,7 +152,7 @@ export default function PerspectiveAccordion({
+     return () => clearTimeout(t)
+   }, [focusKey, focusNonce])
+   const toggle = (i: number) =>
+-    setOpen((prev) => {
++    setClosed((prev) => {
+       const next = new Set(prev)
+       if (next.has(i)) next.delete(i)
+       else next.add(i)
+@@ -177,7 +186,7 @@ export default function PerspectiveAccordion({
+       {/* 5관점 아코디언 */}
+       {HEADS.map((h, i) => {
+         const p = commentary[h.key] as Perspective
+-        const isOpen = open.has(i)
++        const isOpen = !closed.has(i)   // ★담긴 것만 «접힘»
+         const star = starOfKey(h.key as string)
+         return (
+           /* ★닻(id) — 요약 카드에서 «이리로» 미끄러져 옵니다 (43부 27차)
+diff --git a/app/manseryeok/couple-result-new/components/CoupleJudgeCard.tsx b/app/manseryeok/couple-result-new/components/CoupleJudgeCard.tsx
+index f4d866a..ce20d5c 100644
+--- a/app/manseryeok/couple-result-new/components/CoupleJudgeCard.tsx
++++ b/app/manseryeok/couple-result-new/components/CoupleJudgeCard.tsx
+@@ -57,7 +57,9 @@ function StarRow({ n }: { n: Stars }) {
+ }
+ 
+ function Card({ cat, extra, tong }: { cat: CategoryResult; extra?: React.ReactNode; tong?: string }) {
+-  const [open, setOpen] = useState(false)
++  // ★2026-08-05 (47부 34차) — 기본을 «펼침» 으로. [대표님 지시]
++  //   「아코디언을 해제를 기본으로 하고, 누르면 접히는 걸로」 → 「전체적으로 다 그래」
++  const [open, setOpen] = useState(true)
+   return (
+     <div style={{
+       background: '#fff', border: LINE_OUTER, borderRadius: 13,
+diff --git a/app/manseryeok/mulsang/page.tsx b/app/manseryeok/mulsang/page.tsx
+index 24716ef..d2c1932 100644
+--- a/app/manseryeok/mulsang/page.tsx
++++ b/app/manseryeok/mulsang/page.tsx
+@@ -272,8 +272,10 @@ function MulsangInner() {
+   const [tongLoading, setTongLoading] = useState(false)
+   const [tongResult, setTongResult] = useState<string | null>(null)
+   const [openCat, setOpenCat] = useState<string | null>(null)   // 아코디언: 열린 대분류
+-  const [openWonguk, setOpenWonguk] = useState(false)           // 사주 원국 아코디언
+-  const [openOhaeng, setOpenOhaeng] = useState(false)           // 오행도 아코디언
++  // ★2026-08-05 (47부 34차) — 기본을 «펼침» 으로. [대표님 지시]
++  //   「아코디언을 해제를 기본으로 하고, 누르면 접히는 걸로」 → 「전체적으로 다 그래」
++  const [openWonguk, setOpenWonguk] = useState(true)            // 사주 원국 아코디언
++  const [openOhaeng, setOpenOhaeng] = useState(true)            // 오행도 아코디언
+   const [openImage, setOpenImage] = useState(true)              // 그림 아코디언 (기본 펼침)
+   const [openPicker, setOpenPicker] = useState(false)           // 질문 고르기 부품 전체 아코디언
+   // 이미 답이 저장된(=본) 질문 id 집합. 모달 열 때 읽어와 체크 표시에 사용.
+diff --git a/app/manseryeok/naming/diagnosis/components/NamingAptitude.tsx b/app/manseryeok/naming/diagnosis/components/NamingAptitude.tsx
+index ff2316f..292043e 100644
+--- a/app/manseryeok/naming/diagnosis/components/NamingAptitude.tsx
++++ b/app/manseryeok/naming/diagnosis/components/NamingAptitude.tsx
+@@ -60,7 +60,11 @@ const INK = '#5c3a1e'
+ /** 五 · 六 을 한 벌로 내보냅니다 — 화면은 이 하나만 얹으면 됩니다 */
+ export default function NamingAptitude(p: NamingAptitudeProps) {
+   const ready = p.saju.length > 0 && !!p.dayStem && p.dayStem !== '?'
+-  const [open, setOpen] = useState(false)   // ★六 은 «접힌 채» 시작합니다
++  // ★2026-08-05 (47부 34차) — 「六 사주 명리적성」도 «펼친 채» 로. [대표님 지시]
++  //   「아코디언을 해제를 기본으로 하고, 누르면 접히는 걸로」 → 「전체적으로 다 그래」
++  //   ⚠️ 전에는 false(접힌 채)였고 ★검사 그물(25-verify-manse-ui ②)이 그것을 지켰습니다.
++  //      그물도 «함께» 고쳤습니다.
++  const [open, setOpen] = useState(true)   // ★六 은 «펼친 채» 시작합니다
+ 
+   const score = useMemo(
+     () => (ready ? calcCareerScore(p.saju, p.solarMonth, p.solarDay, p.hourBranch) : null),
+-- 
+2.43.0
+

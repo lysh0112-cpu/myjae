@@ -57,7 +57,9 @@ function StarRow({ n }: { n: Stars }) {
 }
 
 function Card({ cat, extra, tong }: { cat: CategoryResult; extra?: React.ReactNode; tong?: string }) {
-  const [open, setOpen] = useState(false)
+  // ★2026-08-05 (47부 34차) — 기본을 «펼침» 으로. [대표님 지시]
+  //   「아코디언을 해제를 기본으로 하고, 누르면 접히는 걸로」 → 「전체적으로 다 그래」
+  const [open, setOpen] = useState(true)
   return (
     <div style={{
       background: '#fff', border: LINE_OUTER, borderRadius: 13,

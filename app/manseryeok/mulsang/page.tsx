@@ -272,8 +272,10 @@ function MulsangInner() {
   const [tongLoading, setTongLoading] = useState(false)
   const [tongResult, setTongResult] = useState<string | null>(null)
   const [openCat, setOpenCat] = useState<string | null>(null)   // 아코디언: 열린 대분류
-  const [openWonguk, setOpenWonguk] = useState(false)           // 사주 원국 아코디언
-  const [openOhaeng, setOpenOhaeng] = useState(false)           // 오행도 아코디언
+  // ★2026-08-05 (47부 34차) — 기본을 «펼침» 으로. [대표님 지시]
+  //   「아코디언을 해제를 기본으로 하고, 누르면 접히는 걸로」 → 「전체적으로 다 그래」
+  const [openWonguk, setOpenWonguk] = useState(true)            // 사주 원국 아코디언
+  const [openOhaeng, setOpenOhaeng] = useState(true)            // 오행도 아코디언
   const [openImage, setOpenImage] = useState(true)              // 그림 아코디언 (기본 펼침)
   const [openPicker, setOpenPicker] = useState(false)           // 질문 고르기 부품 전체 아코디언
   // 이미 답이 저장된(=본) 질문 id 집합. 모달 열 때 읽어와 체크 표시에 사용.
