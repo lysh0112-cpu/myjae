@@ -302,7 +302,24 @@ function ResultNewContent() {
   const personName=searchParams.get("name")||""
   const _unse=searchParams.get("unse")
   const _kindLabel=_unse==="daeun"?"대운":_unse==="seyun"?"세운":"만세력"
-  const titleName=nimEuiTitle(personName,_kindLabel)
+  // ★2026-08-05 (47부 30차) — 이름이 «없을» 때만 제목을 바꿉니다. [대표님 지시]
+  //   [전]  나의 만세력
+  //   [후]  ★내 사주와 운세보기 결과
+  //   [까닭]  ★궁합과 «같은 꼴» 로 —
+  //       궁합  「부부 궁합 보관함」 · 「부부 궁합 결과」
+  //       사주  「내 사주와 운세보기 보관함」 · ★「내 사주와 운세보기 결과」
+  //
+  //   ⚠️⚠️ ★«이 한 갈래만» 바꿨습니다 [대표님 「우선 이 두개만 바꿔」]
+  //     이름 있음   「류승현님의 만세력」   ← ★그대로
+  //     대운        「나의 대운」          ← ★그대로
+  //     세운        「나의 세운」          ← ★그대로
+  //     전문가용(?pro=1)                  ← ★그대로 (상담사 화면)
+  //   ⇒ 대표님이 나머지를 «점검해 보시겠다» 하셨습니다. 손대지 마십시오.
+  //   ⛔ 되돌리시려면 ★nimEuiTitle(personName,_kindLabel) 하나로 돌리면 됩니다.
+  const titleName =
+    (!personName && !_unse)
+      ? '내 사주와 운세보기 결과'
+      : nimEuiTitle(personName, _kindLabel)
   // 프로필 카드에는 제목을 되풀이하지 않고 "누구인지"만 적는다.
   const cardName=personName?withNim(personName):"나"
 
