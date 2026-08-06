@@ -102,7 +102,8 @@ export default function ExpertFloating({ open, onClose, customer }: Props) {
   const [pos, setPos] = useState({ x: 80, y: 80 })
   const [size, setSize] = useState({ w: 430, h: 640 })
   const drag = useRef<{ dx: number; dy: number } | null>(null)
-  const resize = useRef<{ x: number; y: number; w: number; h: number } | null>(null)
+  // ★axis — 'x' 가로만 · 'y' 세로만 · 'both' 둘 다 (47부 37차)
+  const resize = useRef<{ x: number; y: number; w: number; h: number; axis: 'x' | 'y' | 'both' } | null>(null)
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
@@ -111,8 +112,8 @@ export default function ExpertFloating({ open, onClose, customer }: Props) {
       } else if (resize.current) {
         const r = resize.current
         setSize({
-          w: Math.max(340, r.w + (e.clientX - r.x)),
-          h: Math.max(300, r.h + (e.clientY - r.y)),
+          w: r.axis === 'y' ? r.w : Math.max(340, r.w + (e.clientX - r.x)),
+          h: r.axis === 'x' ? r.h : Math.max(300, r.h + (e.clientY - r.y)),
         })
       }
     }
@@ -226,7 +227,11 @@ export default function ExpertFloating({ open, onClose, customer }: Props) {
           }}>
           👤 고른 고객{customer?.name ? ` · ${customer.name}` : ''}
         </button>
-        <button type="button" onClick={() => setTab('manual')}
+        {/* ★2026-08-05 (47부 37차) — 「직접 입력」으로 옮기면 ★옛 결과를 «지웁니다».
+            [까닭]  src 가 남아 있으면 «칸이 안 뜨고» 옛 만세력이 그대로 보여
+              어느 사람 것인지 헷갈립니다. 대표님 사진에서 그렇게 보였습니다.
+            ⇒ 옮길 때마다 ★«빈 칸» 부터 보여 드립니다. */}
+        <button type="button" onClick={() => { setTab('manual'); setSrc('') }}
           style={{
             flex: 1, height: 28, borderRadius: 5, fontSize: 11.5, fontFamily: 'inherit',
             border: tab === 'manual' ? '1px solid #2b2b2b' : '1px solid #ccc',
@@ -322,9 +327,31 @@ export default function ExpertFloating({ open, onClose, customer }: Props) {
         </div>
       )}
 
-      {/* 크기 조절 손잡이 (오른쪽 아래 모서리) */}
+      {/* ★2026-08-05 (47부 37차) — 크기 조절을 «옆·아래·모서리» 셋으로. [대표님 지시]
+          「윗부분은 고정이 옆과 아래로는 자유롭게 늘리고 줄이고 가능」
+          [전]  ★오른쪽 «아래 모서리» 하나뿐이라 가로만·세로만 늘리기가 어려웠습니다.
+          [후]  ▶ 오른쪽 가장자리 — ★가로만
+                ▼ 아래 가장자리   — ★세로만
+                ◢ 오른쪽 아래     — 둘 다 (전에 있던 것)
+          ⚠️ ★위쪽·왼쪽은 «안» 붙였습니다 — 그쪽을 끌면 창이 «움직여» 보여
+             제목줄 끌기와 헷갈립니다. 대표님도 「윗부분은 고정」이라 하셨습니다.
+          ⚠️ 손잡이 폭 6px — 잡기 쉬우면서 화면을 안 가리는 값입니다. */}
+
+      {/* ▶ 오른쪽 가장자리 — 가로만 */}
       <div
-        onMouseDown={e => { resize.current = { x: e.clientX, y: e.clientY, w: size.w, h: size.h } }}
+        onMouseDown={e => { resize.current = { x: e.clientX, y: e.clientY, w: size.w, h: size.h, axis: 'x' } }}
+        style={{ position: 'absolute', right: 0, top: 32, bottom: 16, width: 6, cursor: 'ew-resize' }}
+        title="드래그로 가로 폭 조절"
+      />
+      {/* ▼ 아래 가장자리 — 세로만 */}
+      <div
+        onMouseDown={e => { resize.current = { x: e.clientX, y: e.clientY, w: size.w, h: size.h, axis: 'y' } }}
+        style={{ position: 'absolute', left: 0, right: 16, bottom: 0, height: 6, cursor: 'ns-resize' }}
+        title="드래그로 세로 높이 조절"
+      />
+      {/* ◢ 오른쪽 아래 모서리 — 둘 다 */}
+      <div
+        onMouseDown={e => { resize.current = { x: e.clientX, y: e.clientY, w: size.w, h: size.h, axis: 'both' } }}
         style={{
           position: 'absolute', right: 0, bottom: 0, width: 16, height: 16,
           cursor: 'nwse-resize', background: 'linear-gradient(135deg, transparent 50%, #bbb 50%)',

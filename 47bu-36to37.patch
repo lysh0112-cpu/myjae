@@ -1,0 +1,436 @@
+From 56cb39818ad8b7d8dea47a05a9e5ca4ea6b7d3ff Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Thu, 6 Aug 2026 03:44:13 +0000
+Subject: [PATCH 1/2] =?UTF-8?q?=EC=83=81=EB=8B=B4=EC=82=AC=20=EB=A7=8C?=
+ =?UTF-8?q?=EC=84=B8=EB=A0=A5=20=EC=B0=BD=EC=97=90=20=E3=80=8C=EA=B3=A0?=
+ =?UTF-8?q?=EB=A5=B8=20=EA=B3=A0=EA=B0=9D=E3=80=8D=20=EA=B0=88=EB=9E=98=20?=
+ =?UTF-8?q?=E2=80=94=20=EA=B3=A0=EA=B0=9D=20=EC=82=AC=EC=A3=BC=EA=B0=80=20?=
+ =?UTF-8?q?=EC=A0=80=EC=A0=88=EB=A1=9C=20(47=EB=B6=80=2036=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../consultant/components/ExpertFloating.tsx  | 126 ++++++++++++++++--
+ app/manseryeok/consultant/page.tsx            |  18 +++
+ hooks/useConsultantState.ts                   |  33 ++++-
+ 3 files changed, 167 insertions(+), 10 deletions(-)
+
+diff --git a/app/manseryeok/consultant/components/ExpertFloating.tsx b/app/manseryeok/consultant/components/ExpertFloating.tsx
+index 0435986..08332f9 100644
+--- a/app/manseryeok/consultant/components/ExpertFloating.tsx
++++ b/app/manseryeok/consultant/components/ExpertFloating.tsx
+@@ -14,7 +14,32 @@ import { useState, useRef, useEffect } from 'react'
+ //  ※ 기존 SajuFloating(십성·신살 탭 방식)을 대체한다.
+ // ============================================================
+ 
+-type Props = { open: boolean; onClose: () => void }
++/**
++ * ★2026-08-05 (47부 36차) — 「고른 고객」 갈래를 더했습니다. [대표님 지시]
++ *   「상담목록을 누르면 해당 상담신청한 고객의 전문가용 만세력이 자동으로 조회되게」
++ *   ⇒ 목업 셋 중 ★ⓒ(창은 하나, 안에서 두 갈래)로 확정하셨습니다.
++ *
++ *   [왜 창을 «더 만들지» 않았나]  메뉴바가 이미 빠듯합니다 —
++ *     명연재 | 나의 일정 | 상담목록 | 나의 정산 | 🔮 만세력 | 📋 상담내역
++ *     | 메뉴크기 | 매니저 대리 | ○○ 선생님 화면 | 로그아웃
++ *     ⇒ 하나 더 넣으면 좁은 화면에서 넘칩니다. 창이 셋이면 자리 다툼도 생깁니다.
++ *
++ *   ⚠️ customer 는 «상담 목록에서 고른 고객» 입니다. 안 골랐으면 null.
++ *   ⛔ 이 창은 원래 「고객 데이터와 무관한 ★독립 계산기」 였습니다.
++ *      그 성격은 ★「✏️ 직접 입력」 갈래에 «그대로» 살아 있습니다. 지우지 마십시오.
++ */
++export type FloatingCustomer = {
++  name?: string
++  year?: string
++  month?: string
++  day?: string
++  gender?: string
++  hour?: string        // ★숫자 문자열 또는 '모름'
++  calType?: string
++  leapMonth?: string
++} | null
++
++type Props = { open: boolean; onClose: () => void; customer?: FloatingCustomer }
+ 
+ // 시(時) 목록 — 30분법 (birthInput.ts 기준과 동일한 표기)
+ const HOUR_LABELS = [
+@@ -23,7 +48,7 @@ const HOUR_LABELS = [
+   '申 15:30-17:30', '酉 17:30-19:30', '戌 19:30-21:30', '亥 21:30-23:30',
+ ]
+ 
+-export default function ExpertFloating({ open, onClose }: Props) {
++export default function ExpertFloating({ open, onClose, customer }: Props) {
+   // ── 입력값 ──
+   const [name, setName] = useState('')
+   const [calType, setCalType] = useState<'양력' | '음력'>('양력')
+@@ -38,6 +63,41 @@ export default function ExpertFloating({ open, onClose }: Props) {
+   // ── 조회 결과 주소 (iframe src) ──
+   const [src, setSrc] = useState('')
+ 
++  // ★2026-08-05 (47부 36차) — 두 갈래 [대표님 확정 · 목업 ⓒ]
++  //   'customer' 고른 고객 것 (칸 없음)  ·  'manual' 손으로 치는 계산기 (지금 것 그대로)
++  const [tab, setTab] = useState<'customer' | 'manual'>('manual')
++  const hasCustomer = !!(customer?.year && customer?.month && customer?.day)
++
++  /** 고른 고객의 전문가용 만세력 주소. 위 search() 와 «같은 규칙» 입니다. */
++  const customerSrc = (() => {
++    if (!hasCustomer) return ''
++    const q = new URLSearchParams()
++    q.set('year', String(customer!.year)); q.set('month', String(customer!.month))
++    q.set('day', String(customer!.day))
++    q.set('gender', customer!.gender === '여' ? '여' : '남')
++    q.set('calType', customer!.calType === '음력' ? '음력' : '양력')
++    q.set('leapMonth', customer!.leapMonth === '1' ? '1' : '0')
++    // ⚠️ hour 는 ★숫자 문자열 또는 '모름' 입니다. 모르면 «안 넘깁니다» (시 미지정).
++    const h = customer!.hour
++    if (h && h !== '모름' && !Number.isNaN(Number(h))) q.set('hour', String(Number(h)))
++    if (customer!.name) q.set('name', customer!.name)
++    q.set('pro', '1')
++    q.set('mode', 'chart')
++    return `/manseryeok/result-new?${q.toString()}`
++  })()
++
++  // ★고객이 바뀌면 「고른 고객」 갈래로 옮겨 갑니다.
++  //   ⚠️⚠️ ★useEffect 로 하지 «않습니다» — eslint(react-hooks/purity)가
++  //      「효과 안에서 setState 를 부르면 그리기가 겹친다」고 막습니다.
++  //      ⇒ 대신 ★«그릴 때» 고객이 바뀌었는지 견주어 곧바로 옮깁니다.
++  //   ⚠️ 창이 «닫혀» 있어도 갈래만 바뀝니다. 열 때 바로 그 고객이 보입니다.
++  //   ⛔ 여기서 창을 «열지» 마십시오. 목록만 훑어보실 때도 창이 떠서 성가십니다.
++  const [lastSrc, setLastSrc] = useState('')
++  if (customerSrc !== lastSrc) {
++    setLastSrc(customerSrc)
++    setTab(hasCustomer ? 'customer' : 'manual')
++  }
++
+   // ── 창 위치·크기 ──
+   const [pos, setPos] = useState({ x: 80, y: 80 })
+   const [size, setSize] = useState({ w: 430, h: 640 })
+@@ -127,7 +187,9 @@ export default function ExpertFloating({ open, onClose }: Props) {
+           padding: '0 10px', gap: 8, fontSize: 12, fontWeight: 600,
+         }}>
+         <span>🔮 만세력 (전문가용)</span>
+-        {src && (
++        {/* ★2026-08-05 (47부 36차) — 「← 다시 입력」은 ★직접 입력 갈래에서만.
++            고른 고객 갈래에는 «칸이 없어» 돌아갈 자리가 없습니다. */}
++        {tab === 'manual' && src && (
+           <button type="button" onClick={() => setSrc('')}
+             style={{
+               marginLeft: 'auto', height: 22, padding: '0 8px', borderRadius: 5,
+@@ -138,15 +200,46 @@ export default function ExpertFloating({ open, onClose }: Props) {
+         )}
+         <button type="button" onClick={onClose}
+           style={{
+-            marginLeft: src ? 6 : 'auto', width: 22, height: 22, borderRadius: 5,
++            marginLeft: (tab === 'manual' && src) ? 6 : 'auto', width: 22, height: 22, borderRadius: 5,
+             border: 'none', background: 'rgba(255,255,255,.15)', color: '#fff',
+             cursor: 'pointer', fontSize: 13, fontFamily: 'inherit',
+             WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation',
+           }}>✕</button>
+       </div>
+ 
+-      {/* 입력부 — 결과가 없을 때만 보인다 */}
+-      {!src && (
++      {/* ★2026-08-05 (47부 36차) — 두 갈래 [대표님 확정 · 목업 ⓒ]
++          👤 고른 고객 — 상담 목록에서 고른 손님. ★칸이 «없어» 헷갈릴 일이 없습니다.
++          ✏️ 직접 입력 — 지금 그대로의 «독립 계산기».
++          ⚠️ 고객을 안 골랐으면 👤 는 «눌리지 않습니다» (그리고 안내를 띄웁니다).
++          ⛔ ✏️ 갈래를 지우지 마십시오. 상담사가 «가족 사주» 를 함께 보는 자리입니다. */}
++      <div style={{ display: 'flex', gap: 4, padding: '6px 8px 0', background: '#f7f5ef', flexShrink: 0 }}>
++        <button type="button" onClick={() => hasCustomer && setTab('customer')}
++          disabled={!hasCustomer}
++          title={hasCustomer ? '고른 고객의 만세력' : '상담 목록에서 고객을 먼저 골라 주세요'}
++          style={{
++            flex: 1, height: 28, borderRadius: 5, fontSize: 11.5, fontFamily: 'inherit',
++            border: tab === 'customer' ? '1px solid #2b2b2b' : '1px solid #ccc',
++            background: tab === 'customer' ? '#2b2b2b' : '#fff',
++            color: !hasCustomer ? '#aaa' : tab === 'customer' ? '#fff' : '#555',
++            fontWeight: tab === 'customer' ? 600 : 400,
++            cursor: hasCustomer ? 'pointer' : 'not-allowed',
++          }}>
++          👤 고른 고객{customer?.name ? ` · ${customer.name}` : ''}
++        </button>
++        <button type="button" onClick={() => setTab('manual')}
++          style={{
++            flex: 1, height: 28, borderRadius: 5, fontSize: 11.5, fontFamily: 'inherit',
++            border: tab === 'manual' ? '1px solid #2b2b2b' : '1px solid #ccc',
++            background: tab === 'manual' ? '#2b2b2b' : '#fff',
++            color: tab === 'manual' ? '#fff' : '#555',
++            fontWeight: tab === 'manual' ? 600 : 400, cursor: 'pointer',
++          }}>
++          ✏️ 직접 입력
++        </button>
++      </div>
++
++      {/* 입력부 — ★직접 입력 갈래에서 «결과가 없을 때만» 보인다 */}
++      {tab === 'manual' && !src && (
+         <div style={{ padding: 8, borderBottom: '1px solid #ddd', background: '#f7f5ef', flexShrink: 0 }}>
+           <div style={{ display: 'flex', gap: 4, marginBottom: 5 }}>
+             <button type="button" onClick={() => setCalType('양력')} style={{ ...toggle, ...(calType === '양력' ? toggleOn : {}) }}>양력</button>
+@@ -200,14 +293,31 @@ export default function ExpertFloating({ open, onClose }: Props) {
+       )}
+ 
+       {/* 결과부 — 전문가용 만세력 화면을 그대로 띄운다 */}
+-      {src ? (
++      {tab === 'customer' ? (
++        /* ★👤 고른 고객 — 칸 없이 «바로» 만세력이 나옵니다 */
++        hasCustomer ? (
++          <iframe
++            key={customerSrc}
++            src={customerSrc}
++            title="고른 고객의 전문가용 만세력"
++            style={{ flex: 1, width: '100%', border: 'none', background: '#FDF6F0' }}
++          />
++        ) : (
++          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
++            padding: 20, fontSize: 12.5, color: '#8a7461', textAlign: 'center', lineHeight: 1.8 }}>
++            상담 목록에서 고객을 먼저 골라 주세요.<br />
++            고르시면 그 손님의 만세력이 바로 나옵니다.
++          </div>
++        )
++      ) : src ? (
+         <iframe
+           src={src}
+           title="전문가용 만세력"
+           style={{ flex: 1, width: '100%', border: 'none', background: '#FDF6F0' }}
+         />
+       ) : (
+-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 12px', textAlign: 'center', color: '#a09a8c', fontSize: 12, lineHeight: 1.7 }}>
++        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
++          padding: 20, fontSize: 12.5, color: '#8a7461', textAlign: 'center', lineHeight: 1.8 }}>
+           생년월일·시간을 넣고 [조회]를 누르면<br />전문가용 만세력이 그대로 나옵니다.
+         </div>
+       )}
+diff --git a/app/manseryeok/consultant/page.tsx b/app/manseryeok/consultant/page.tsx
+index e520a22..cb26ff8 100644
+--- a/app/manseryeok/consultant/page.tsx
++++ b/app/manseryeok/consultant/page.tsx
+@@ -644,9 +644,27 @@ function ConsultantContent() {
+       {/* ===== 🔮 만세력 (전문가용 · 독립 플로팅 창) ===== */}
+       {/* 창 안에서 생년월일을 입력하면 전문가용 만세력 화면을 그대로 띄운다.
+           고객 데이터와 무관한 독립 계산기. */}
++      {/* ★2026-08-05 (47부 36차) — 고른 고객을 «넘깁니다». [대표님 지시]
++          「상담목록을 누르면 해당 상담신청한 고객의 전문가용 만세력이 자동으로 조회되게」
++          ⇒ 창 «안» 에서 [👤 고른 고객] · [✏️ 직접 입력] 두 갈래로 갈립니다 (목업 ⓒ).
++          ⚠️ 고객을 고르면 ★저절로 👤 갈래로 옮겨 갑니다. 다만 ★창을 «열지는» 않습니다 —
++             목록만 훑어보실 때 창이 뜨면 성가시기 때문입니다.
++          ⚠️ birth_data 는 상담 신청 때 담긴 값입니다 (consultant-select).
++             hour 는 ★숫자 문자열 또는 '모름' — 모르면 «시 미지정» 으로 봅니다.
++          ⛔ 「✏️ 직접 입력」을 지우지 마십시오. 상담사가 «가족 사주» 를 함께 보는 자리입니다. */}
+       <ExpertFloating
+         open={sajuOpen}
+         onClose={() => setSajuOpen(false)}
++        customer={selectedConsultation?.birth_data ? {
++          name: selectedConsultation.birth_data.customerName || selectedConsultation.customer_name,
++          year: selectedConsultation.birth_data.year,
++          month: selectedConsultation.birth_data.month,
++          day: selectedConsultation.birth_data.day,
++          gender: selectedConsultation.birth_data.gender,
++          hour: selectedConsultation.birth_data.hour,
++          calType: selectedConsultation.birth_data.calType,
++          leapMonth: selectedConsultation.birth_data.leapMonth,
++        } : null}
+       />
+ 
+       {/* ===== 📋 이전 상담 내역 (독립 플로팅 창) ===== */}
+diff --git a/hooks/useConsultantState.ts b/hooks/useConsultantState.ts
+index 578e629..4026542 100644
+--- a/hooks/useConsultantState.ts
++++ b/hooks/useConsultantState.ts
+@@ -7,7 +7,26 @@ export function useConsultantState() {
+   const [consultationId, setConsultationId] = useState<string | null>(null)
+   const [customerPhone, setCustomerPhone] = useState('')
+   const [customerName, setCustomerName] = useState('')
+-  const [selectedConsultation, setSelectedConsultation] = useState<{id:string;customer_phone:string;user_id?:string|null} | null>(null)
++  /**
++   * ★2026-08-05 (47부 36차) — birth_data · customer_name 을 «함께» 담습니다. [대표님 지시]
++   *   [까닭]  만세력 창이 고른 고객의 사주를 바로 그리려면 «생년월일» 이 필요합니다.
++   *     전에는 id · customer_phone · user_id 만 담아
++   *     ★상담사가 생년월일을 «손으로 다시» 쳐야 했습니다.
++   *   ⚠️ birth_data 는 상담 신청 때 담긴 값입니다 (consultant-select).
++   *      hour 는 ★숫자 문자열 또는 '모름'.
++   *   ⚠️ 전부 «있을 수도 없을 수도» 있어 물음표를 붙였습니다. 옛 기록에는 없을 수 있습니다.
++   */
++  const [selectedConsultation, setSelectedConsultation] = useState<{
++    id: string
++    customer_phone: string
++    user_id?: string | null
++    customer_name?: string
++    birth_data?: {
++      year?: string; month?: string; day?: string
++      gender?: string; hour?: string; calType?: string; leapMonth?: string
++      customerName?: string
++    }
++  } | null>(null)
+   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+   const [gender, setGender] = useState(searchParams.get('gender') || '')
+   const [calType, setCalType] = useState(searchParams.get('calType') || '')
+@@ -109,7 +128,17 @@ export function useConsultantState() {
+     setHourIdx(params.hour === '모름' ? null : parseInt(params.hour))
+     setCustomerName(params.customerName || '')
+   }
+-  function handleSelectConsultation(c: {id:string;customer_phone:string;user_id?:string|null}) {
++  function handleSelectConsultation(c: {
++    id: string
++    customer_phone: string
++    user_id?: string | null
++    customer_name?: string
++    birth_data?: {
++      year?: string; month?: string; day?: string
++      gender?: string; hour?: string; calType?: string; leapMonth?: string
++      customerName?: string
++    }
++  }) {
+     setSelectedConsultation(c)
+     setConsultationId(c.id)
+     setCustomerPhone(c.customer_phone)
+-- 
+2.43.0
+
+
+From e1ff194cd40e99a7345dfe864d91a79410ee41fb Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Thu, 6 Aug 2026 04:01:43 +0000
+Subject: [PATCH 2/2] =?UTF-8?q?=EC=A0=84=EB=AC=B8=EA=B0=80=EC=9A=A9=20?=
+ =?UTF-8?q?=EB=A7=8C=EC=84=B8=EB=A0=A5=EC=97=90=20=EB=8C=80=EC=9A=B4=C2=B7?=
+ =?UTF-8?q?=EC=84=B8=EC=9A=B4=C2=B7=EC=9B=94=EC=9A=B4=C2=B7=EC=9D=BC?=
+ =?UTF-8?q?=EC=9A=B4=20=EB=90=98=EC=82=B4=EB=A6=BC=20=C2=B7=20=EC=B0=BD=20?=
+ =?UTF-8?q?=ED=81=AC=EA=B8=B0=20=EC=A1=B0=EC=A0=88=20=EC=85=8B=20(47?=
+ =?UTF-8?q?=EB=B6=80=2037=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../consultant/components/ExpertFloating.tsx  | 39 ++++++++++++++++---
+ app/manseryeok/result-new/page.tsx            | 36 +++++++++++++----
+ 2 files changed, 61 insertions(+), 14 deletions(-)
+
+diff --git a/app/manseryeok/consultant/components/ExpertFloating.tsx b/app/manseryeok/consultant/components/ExpertFloating.tsx
+index 08332f9..a7c09d1 100644
+--- a/app/manseryeok/consultant/components/ExpertFloating.tsx
++++ b/app/manseryeok/consultant/components/ExpertFloating.tsx
+@@ -102,7 +102,8 @@ export default function ExpertFloating({ open, onClose, customer }: Props) {
+   const [pos, setPos] = useState({ x: 80, y: 80 })
+   const [size, setSize] = useState({ w: 430, h: 640 })
+   const drag = useRef<{ dx: number; dy: number } | null>(null)
+-  const resize = useRef<{ x: number; y: number; w: number; h: number } | null>(null)
++  // ★axis — 'x' 가로만 · 'y' 세로만 · 'both' 둘 다 (47부 37차)
++  const resize = useRef<{ x: number; y: number; w: number; h: number; axis: 'x' | 'y' | 'both' } | null>(null)
+ 
+   useEffect(() => {
+     const move = (e: MouseEvent) => {
+@@ -111,8 +112,8 @@ export default function ExpertFloating({ open, onClose, customer }: Props) {
+       } else if (resize.current) {
+         const r = resize.current
+         setSize({
+-          w: Math.max(340, r.w + (e.clientX - r.x)),
+-          h: Math.max(300, r.h + (e.clientY - r.y)),
++          w: r.axis === 'y' ? r.w : Math.max(340, r.w + (e.clientX - r.x)),
++          h: r.axis === 'x' ? r.h : Math.max(300, r.h + (e.clientY - r.y)),
+         })
+       }
+     }
+@@ -226,7 +227,11 @@ export default function ExpertFloating({ open, onClose, customer }: Props) {
+           }}>
+           👤 고른 고객{customer?.name ? ` · ${customer.name}` : ''}
+         </button>
+-        <button type="button" onClick={() => setTab('manual')}
++        {/* ★2026-08-05 (47부 37차) — 「직접 입력」으로 옮기면 ★옛 결과를 «지웁니다».
++            [까닭]  src 가 남아 있으면 «칸이 안 뜨고» 옛 만세력이 그대로 보여
++              어느 사람 것인지 헷갈립니다. 대표님 사진에서 그렇게 보였습니다.
++            ⇒ 옮길 때마다 ★«빈 칸» 부터 보여 드립니다. */}
++        <button type="button" onClick={() => { setTab('manual'); setSrc('') }}
+           style={{
+             flex: 1, height: 28, borderRadius: 5, fontSize: 11.5, fontFamily: 'inherit',
+             border: tab === 'manual' ? '1px solid #2b2b2b' : '1px solid #ccc',
+@@ -322,9 +327,31 @@ export default function ExpertFloating({ open, onClose, customer }: Props) {
+         </div>
+       )}
+ 
+-      {/* 크기 조절 손잡이 (오른쪽 아래 모서리) */}
++      {/* ★2026-08-05 (47부 37차) — 크기 조절을 «옆·아래·모서리» 셋으로. [대표님 지시]
++          「윗부분은 고정이 옆과 아래로는 자유롭게 늘리고 줄이고 가능」
++          [전]  ★오른쪽 «아래 모서리» 하나뿐이라 가로만·세로만 늘리기가 어려웠습니다.
++          [후]  ▶ 오른쪽 가장자리 — ★가로만
++                ▼ 아래 가장자리   — ★세로만
++                ◢ 오른쪽 아래     — 둘 다 (전에 있던 것)
++          ⚠️ ★위쪽·왼쪽은 «안» 붙였습니다 — 그쪽을 끌면 창이 «움직여» 보여
++             제목줄 끌기와 헷갈립니다. 대표님도 「윗부분은 고정」이라 하셨습니다.
++          ⚠️ 손잡이 폭 6px — 잡기 쉬우면서 화면을 안 가리는 값입니다. */}
++
++      {/* ▶ 오른쪽 가장자리 — 가로만 */}
++      <div
++        onMouseDown={e => { resize.current = { x: e.clientX, y: e.clientY, w: size.w, h: size.h, axis: 'x' } }}
++        style={{ position: 'absolute', right: 0, top: 32, bottom: 16, width: 6, cursor: 'ew-resize' }}
++        title="드래그로 가로 폭 조절"
++      />
++      {/* ▼ 아래 가장자리 — 세로만 */}
++      <div
++        onMouseDown={e => { resize.current = { x: e.clientX, y: e.clientY, w: size.w, h: size.h, axis: 'y' } }}
++        style={{ position: 'absolute', left: 0, right: 16, bottom: 0, height: 6, cursor: 'ns-resize' }}
++        title="드래그로 세로 높이 조절"
++      />
++      {/* ◢ 오른쪽 아래 모서리 — 둘 다 */}
+       <div
+-        onMouseDown={e => { resize.current = { x: e.clientX, y: e.clientY, w: size.w, h: size.h } }}
++        onMouseDown={e => { resize.current = { x: e.clientX, y: e.clientY, w: size.w, h: size.h, axis: 'both' } }}
+         style={{
+           position: 'absolute', right: 0, bottom: 0, width: 16, height: 16,
+           cursor: 'nwse-resize', background: 'linear-gradient(135deg, transparent 50%, #bbb 50%)',
+diff --git a/app/manseryeok/result-new/page.tsx b/app/manseryeok/result-new/page.tsx
+index e51faa4..aeba935 100644
+--- a/app/manseryeok/result-new/page.tsx
++++ b/app/manseryeok/result-new/page.tsx
+@@ -377,7 +377,7 @@ function ResultNewContent() {
+   //      (운을 얹은 삼합·천간합·복음이 안 나옵니다)
+   //    ⚠️ 손님 화면에는 영향이 없습니다 — 그 칸은 ★전문가용(?pro=1)에만 나옵니다.
+   //    ⛔ 되살리시려면 ★「운의 흐름」 칸과 onPick={setPickedUn} 을 «함께» 되살리십시오.
+-  const [pickedUn] = useState<{
++  const [pickedUn, setPickedUn] = useState<{
+     daeun: { stem: string; branch: string; age: number } | null
+     seyun: { stem: string; branch: string; year: number } | null
+   }>({ daeun: null, seyun: null })
+@@ -806,13 +806,33 @@ function ResultNewContent() {
+             ⛔ 되살리시려면 ★아래 섹션2 와 «겹치지 않게» 조건을 거십시오. */}
+ 
+         {/* ★2026-08-05 (47부 32차) — 「운의 흐름 (대운·세운·월운·일운)」 칸을
+-            «걷어냈습니다». [대표님 지시]
+-              「우측 이미지의 대운,세운,월운,일운 부분 중복되니 삭제…하단에 따로 나와있음」
+-            ⚠️ 아래 ★「나의 사주 이야기」 안에 대운 표·세운 표가 «그대로» 있습니다.
+-               (premiumSlots 의 섹션5 세운 · 섹션6 대운 — 통변 글과 짝을 이룹니다)
+-            ⚠️ ★월운·일운은 «이 칸에만» 있던 것이라 화면에서 사라집니다. 뜻한 대로입니다.
+-            ⛔ 되살리시려면 ★이 칸과 setPickedUn 을 «함께» 되살리십시오.
+-               (onPick={setPickedUn} — 46부 14차의 「운이 원국을 건드리는 자리」가 씁니다) */}
++            «손님 화면에서만» 걷어냈습니다. [대표님 지시]
++              「대운,세운,월운,일운 부분 중복되니 삭제…하단에 따로 나와있음」
++            ⇒ 손님 화면은 ★「나의 사주 이야기」 안에 대운 표·세운 표가 있어 겹쳤습니다.
++
++            🔴🔴 ★2026-08-05 (47부 37차) — «전문가용» 에서는 «되살렸습니다».
++              [겪은 일]  대표님 — 「대운,세월,월운,일운 4가지 표시 누락됨」
++              [까닭]  ★제가 32차에 손님 화면만 보고 지웠습니다.
++                mode=chart(전문가용)는 ★통변 블록을 «통째로 안 그립니다».
++                ⇒ 대운·세운이 통변 «안» 에만 있으니 전문가용에서 ★넷이 다 사라졌습니다.
++              [고침]  ★chartOnly 일 때만 이 칸을 그립니다.
++                ⇒ 손님 화면 : 통변 안의 대운·세운 (겹치지 않음)
++                ⇒ 전문가용   : ★이 칸 (대운·세운·월운·일운 넷 다)
++              ⛔ 조건에서 chartOnly 를 빼지 마십시오. 손님 화면에서 다시 겹칩니다.
++              ⚠️ onPick={setPickedUn} 이 돌아왔으므로 ★전문가 상세의
++                 「운이 원국을 건드리는 자리」도 다시 일합니다. */}
++        {chartOnly && dayStem && monthGanji && yearStem && solarYear && (
++          <Section title="운의 흐름 (대운·세운·월운·일운)" collapsible={false}>
++            <UnseFlow
++              solarYear={solarYear} solarMonth={solarMonth} solarDay={solarDay}
++              monthGanji={monthGanji} yearStem={yearStem} dayStem={dayStem}
++              gender={gender} birthYear={yearParam} currentYear={currentYear}
++              myMonthBranch={monthBranchForNote ?? ''} myDayBranch={iljji}
++              list={dayunList} hourIdx={hourIdx}
++              onPick={setPickedUn}
++            />
++          </Section>
++        )}
+ 
+         {/* ⑨ AI 통변 (고른 질문 기반). mode=chart(만세력만)면 통변 없음.
+             다시보기(recordId)면 저장된 통변·질문이 있을 때만(구버전 기록은 통변 숨김). */}
+-- 
+2.43.0
+

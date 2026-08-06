@@ -377,7 +377,7 @@ function ResultNewContent() {
   //      (운을 얹은 삼합·천간합·복음이 안 나옵니다)
   //    ⚠️ 손님 화면에는 영향이 없습니다 — 그 칸은 ★전문가용(?pro=1)에만 나옵니다.
   //    ⛔ 되살리시려면 ★「운의 흐름」 칸과 onPick={setPickedUn} 을 «함께» 되살리십시오.
-  const [pickedUn] = useState<{
+  const [pickedUn, setPickedUn] = useState<{
     daeun: { stem: string; branch: string; age: number } | null
     seyun: { stem: string; branch: string; year: number } | null
   }>({ daeun: null, seyun: null })
@@ -806,13 +806,33 @@ function ResultNewContent() {
             ⛔ 되살리시려면 ★아래 섹션2 와 «겹치지 않게» 조건을 거십시오. */}
 
         {/* ★2026-08-05 (47부 32차) — 「운의 흐름 (대운·세운·월운·일운)」 칸을
-            «걷어냈습니다». [대표님 지시]
-              「우측 이미지의 대운,세운,월운,일운 부분 중복되니 삭제…하단에 따로 나와있음」
-            ⚠️ 아래 ★「나의 사주 이야기」 안에 대운 표·세운 표가 «그대로» 있습니다.
-               (premiumSlots 의 섹션5 세운 · 섹션6 대운 — 통변 글과 짝을 이룹니다)
-            ⚠️ ★월운·일운은 «이 칸에만» 있던 것이라 화면에서 사라집니다. 뜻한 대로입니다.
-            ⛔ 되살리시려면 ★이 칸과 setPickedUn 을 «함께» 되살리십시오.
-               (onPick={setPickedUn} — 46부 14차의 「운이 원국을 건드리는 자리」가 씁니다) */}
+            «손님 화면에서만» 걷어냈습니다. [대표님 지시]
+              「대운,세운,월운,일운 부분 중복되니 삭제…하단에 따로 나와있음」
+            ⇒ 손님 화면은 ★「나의 사주 이야기」 안에 대운 표·세운 표가 있어 겹쳤습니다.
+
+            🔴🔴 ★2026-08-05 (47부 37차) — «전문가용» 에서는 «되살렸습니다».
+              [겪은 일]  대표님 — 「대운,세월,월운,일운 4가지 표시 누락됨」
+              [까닭]  ★제가 32차에 손님 화면만 보고 지웠습니다.
+                mode=chart(전문가용)는 ★통변 블록을 «통째로 안 그립니다».
+                ⇒ 대운·세운이 통변 «안» 에만 있으니 전문가용에서 ★넷이 다 사라졌습니다.
+              [고침]  ★chartOnly 일 때만 이 칸을 그립니다.
+                ⇒ 손님 화면 : 통변 안의 대운·세운 (겹치지 않음)
+                ⇒ 전문가용   : ★이 칸 (대운·세운·월운·일운 넷 다)
+              ⛔ 조건에서 chartOnly 를 빼지 마십시오. 손님 화면에서 다시 겹칩니다.
+              ⚠️ onPick={setPickedUn} 이 돌아왔으므로 ★전문가 상세의
+                 「운이 원국을 건드리는 자리」도 다시 일합니다. */}
+        {chartOnly && dayStem && monthGanji && yearStem && solarYear && (
+          <Section title="운의 흐름 (대운·세운·월운·일운)" collapsible={false}>
+            <UnseFlow
+              solarYear={solarYear} solarMonth={solarMonth} solarDay={solarDay}
+              monthGanji={monthGanji} yearStem={yearStem} dayStem={dayStem}
+              gender={gender} birthYear={yearParam} currentYear={currentYear}
+              myMonthBranch={monthBranchForNote ?? ''} myDayBranch={iljji}
+              list={dayunList} hourIdx={hourIdx}
+              onPick={setPickedUn}
+            />
+          </Section>
+        )}
 
         {/* ⑨ AI 통변 (고른 질문 기반). mode=chart(만세력만)면 통변 없음.
             다시보기(recordId)면 저장된 통변·질문이 있을 때만(구버전 기록은 통변 숨김). */}
