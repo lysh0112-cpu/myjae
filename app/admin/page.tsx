@@ -10,6 +10,7 @@ import KnowledgeManager from './components/KnowledgeManager'
 import SiteSettings from './components/SiteSettings'
 import AiErrorLog from './components/AiErrorLog'
 import ReviewManager from './components/ReviewManager'
+import InquiryManager from './components/InquiryManager'
 import ExpenseManager from './components/ExpenseManager'
 import ExpenseApproval from './components/ExpenseApproval'
 import MemberManager from './components/MemberManager'
@@ -21,7 +22,7 @@ import { useRoleGate, RoleGateScreen, type AppRole } from '@/hooks/useRoleGate'
 // 이 화면에 들어올 수 있는 등급 — 매니저만
 const ADMIN_ROLES: AppRole[] = ['master']
 
-type Tab = 'dashboard' | 'cancelled' | 'consultant' | 'price' | 'member' | 'settlement' | 'knowledge' | 'review' | 'accounting' | 'approval' | 'tone' | 'prompt' | 'aierror' | 'settings'
+type Tab = 'dashboard' | 'cancelled' | 'consultant' | 'price' | 'member' | 'settlement' | 'knowledge' | 'review' | 'inquiry' | 'accounting' | 'approval' | 'tone' | 'prompt' | 'aierror' | 'settings'
 const TABS = [
   { key: 'dashboard', label: '📊 대시보드' },
   { key: 'cancelled', label: '🗑 취소 내역' },
@@ -31,6 +32,8 @@ const TABS = [
   { key: 'settlement', label: '💰 정산 관리' },
   { key: 'knowledge', label: '🧠 연구 자료' },
   { key: 'review', label: '📝 후기 관리' },
+  // ★48부 8차 — 문의 관리 [대표님 「관리자 화면에 문의관리탭도 별도로」]
+  { key: 'inquiry', label: '💬 문의 관리' },
   { key: 'accounting', label: '💳 관리회계' },
   { key: 'approval', label: '🧾 지출결의서' },
   { key: 'tone', label: '💬 어투 관리' },
@@ -104,6 +107,7 @@ export default function AdminPage() {
         {tab === 'settlement' && <SettlementManager />}
         {tab === 'knowledge' && <KnowledgeManager />}
         {tab === 'review' && <ReviewManager />}
+        {tab === 'inquiry' && <InquiryManager />}
         {tab === 'accounting' && <ExpenseManager />}
         {tab === 'approval' && <ExpenseApproval />}
         {tab === 'tone' && <ToneManager />}

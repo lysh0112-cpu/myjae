@@ -1,4 +1,5 @@
 'use client'
+import HomeBottomNav from '@/app/components/HomeBottomNav'
 
 // ============================================================================
 // 보관함 — 나의 운명 아카이브 전용 화면
@@ -8,19 +9,12 @@
 // 이 파일은 헤더·하단네비 같은 껍데기만 씌운다.
 // ============================================================================
 
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import ArchiveList from '@/app/manseryeok/components/ArchiveList'
 
-const NAV = [
-  { icon: '🏠', label: '홈', href: '/home-new' },
-  { icon: '⊞', label: '서비스', href: '', wip: true },
-  { icon: '💬', label: '상담', href: '/manseryeok/reviews' },
-  { icon: '📚', label: '보관함', href: '/archive' },
-]
 
 export default function ArchivePage() {
   const router = useRouter()
-  const pathname = usePathname()
 
   return (
     <div style={{
@@ -48,35 +42,8 @@ export default function ArchivePage() {
         <ArchiveList />
       </main>
 
-      {/* 하단 고정 네비게이션 */}
-      <div style={{
-        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-        width: '100%', maxWidth: 430,
-        display: 'flex', background: '#FFFBF7',
-        borderTop: '0.5px solid #9c7a58', zIndex: 20,
-      }}>
-        {NAV.map((n) => {
-          const active = n.href === pathname
-          return (
-            <button
-              key={n.label}
-              onClick={() => { if (n.wip) { alert('작업 중이에요. 곧 만나요!') } else { router.push(n.href) } }}
-              style={{
-                flex: 1, padding: '10px 0', background: 'none', border: 'none',
-                cursor: 'pointer', display: 'flex', flexDirection: 'column',
-                alignItems: 'center', gap: 3,
-              }}
-            >
-              <span style={{ fontSize: 18 }}>{n.icon}</span>
-              <span style={{ fontSize: 10, color: active ? '#c8783c' : '#b09079', fontWeight: active ? 600 : 400 }}>
-                {n.label}
-              </span>
-              {/* 현재 위치 표시 — 아이콘을 흐리게 하는 대신 밑줄로 */}
-              <span style={{ height: 2, width: 22, borderRadius: 2, background: active ? '#c8783c' : 'transparent' }} />
-            </button>
-          )
-        })}
-      </div>
+      {/* ★48부 8차 — 하단바 ★부품 (HomeBottomNav). ⛔ 여기에 다시 적지 마십시오. */}
+      <HomeBottomNav />
     </div>
   )
 }

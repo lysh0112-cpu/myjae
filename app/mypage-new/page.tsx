@@ -5,6 +5,7 @@ import { EL_BG, EL_BD, EL_C, EL_C_SUB, EL_HAN } from '@/lib/saju/ohaengColor'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { shownName } from '@/lib/consultantName'
+import HomeBottomNav from '@/app/components/HomeBottomNav'
 import { useResultSaju } from '@/hooks/useResultSaju'
 // ★2026-07-27 — 커플채팅(CoupleChatFab · InviteNotifier) 제거. 테스트였으므로 전부 삭제.
 //   ⚠️ 상담사–고객 채팅은 별개이며 살아 있다. 함께 지우지 말 것.
@@ -692,27 +693,8 @@ export default function MyPageNew() {
       </main>
 
       {/* 하단 고정 네비게이션 (홈과 동일한 피치톤) */}
-      <div style={{
-        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-        width: '100%', maxWidth: 430,
-        display: 'flex', background: '#FFFBF7',
-        borderTop: '0.5px solid #9c7a58', zIndex: 20,
-      }}>
-        {[
-          { icon: '🏠', label: '홈', href: '/home-new', active: false },
-          { icon: '⊞', label: '서비스', href: '', wip: true, active: false },
-          { icon: '💬', label: '상담', href: '/manseryeok/reviews', active: false },
-          { icon: '📚', label: '보관함', href: '/archive', active: false },
-        ].map((n) => (
-          <button key={n.label} onClick={() => { if (n.wip) { alert('작업 중이에요. 곧 만나요!') } else { router.push(n.href) } }}
-            style={{ flex: 1, padding: '10px 0', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-            <span style={{ fontSize: 18 }}>{n.icon}</span>
-            <span style={{ fontSize: 10, color: n.active ? '#c8783c' : '#b09079', fontWeight: n.active ? 600 : 400 }}>{n.label}</span>
-            {/* 현재 위치 표시 — 아이콘을 흐리게 하는 대신 밑줄로 */}
-            <span style={{ height: 2, width: 22, borderRadius: 2, background: n.active ? '#c8783c' : 'transparent' }} />
-          </button>
-        ))}
-      </div>
+      {/* ★48부 8차 — 하단바 ★부품 (HomeBottomNav). ⛔ 여기에 다시 적지 마십시오. */}
+      <HomeBottomNav />
 
       <AiTalkFab />
     </div>

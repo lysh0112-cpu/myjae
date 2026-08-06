@@ -1,4 +1,5 @@
 'use client'
+import HomeBottomNav from '@/app/components/HomeBottomNav'
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
@@ -562,37 +563,9 @@ export default function HomeNew() {
         </div>
       </footer>
 
-      {/* 하단 고정 네비게이션 */}
-      <div style={{
-        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-        width: '100%', maxWidth: '430px',
-        display: 'flex', background: '#FFFBF7',
-        borderTop: '0.5px solid #9c7a58', zIndex: 20,
-      }}>
-        {[
-          { icon: '🏠', label: '홈', href: '/home-new', active: true },
-          { icon: '⊞', label: '서비스', href: '', wip: true, active: false },
-          { icon: '💬', label: '상담', href: '/manseryeok/reviews', active: false },
-          { icon: '📚', label: '보관함', href: '/archive', active: false },
-        ].map((n) => (
-          <button
-            key={n.label}
-            onClick={() => { if (n.wip) { alert('작업 중이에요. 곧 만나요!') } else { router.push(n.href) } }}
-            style={{
-              flex: 1, padding: '10px 0', background: 'none', border: 'none',
-              cursor: 'pointer', display: 'flex', flexDirection: 'column',
-              alignItems: 'center', gap: '3px',
-            }}
-          >
-            <span style={{ fontSize: '18px' }}>{n.icon}</span>
-            <span style={{ fontSize: '10px', color: n.active ? '#c8783c' : '#b09079', fontWeight: n.active ? 600 : 400 }}>
-              {n.label}
-            </span>
-            {/* 현재 위치 표시 — 아이콘을 흐리게 하는 대신 밑줄로 */}
-            <span style={{ height: '2px', width: '22px', borderRadius: '2px', background: n.active ? '#c8783c' : 'transparent' }} />
-          </button>
-        ))}
-      </div>
+      {/* ★48부 8차 — 하단바를 ★부품으로 모았습니다 (HomeBottomNav).
+          ⛔ 여기에 다시 적지 마십시오. 세 화면이 어긋납니다. */}
+      <HomeBottomNav />
 
       {/* 사람 선택 모달 (공용) */}
       {pickService && PICK_CONFIG[pickService] && (() => {
