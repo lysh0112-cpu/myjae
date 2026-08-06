@@ -1,0 +1,564 @@
+From c7998bb50db332604d21cf8c9a74347e16e1a5a7 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Thu, 6 Aug 2026 05:28:04 +0000
+Subject: [PATCH 1/4] =?UTF-8?q?=EC=9B=90=EB=B3=B8=20=ED=95=B4=EC=84=A4=20?=
+ =?UTF-8?q?=EC=97=B4=EB=8B=A4=EC=84=AF=20=EB=AC=B6=EC=9D=8C=20=C2=B7=20?=
+ =?UTF-8?q?=EA=B5=90=EC=9E=AC=20=EC=9B=90=EB=AC=B8(original)=EA=B9=8C?=
+ =?UTF-8?q?=EC=A7=80=20(47=EB=B6=80=2041=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../consultant/components/SourceReading.tsx   | 182 ++++++++++++++++--
+ 1 file changed, 171 insertions(+), 11 deletions(-)
+
+diff --git a/app/manseryeok/consultant/components/SourceReading.tsx b/app/manseryeok/consultant/components/SourceReading.tsx
+index 27605e6..b4e2568 100644
+--- a/app/manseryeok/consultant/components/SourceReading.tsx
++++ b/app/manseryeok/consultant/components/SourceReading.tsx
+@@ -29,12 +29,12 @@
+ 
+ import { useMemo, useState } from 'react'
+ import { useResultSaju } from '@/hooks/useResultSaju'
+-import { cheonganLines } from '@/lib/saju/cheonganTrait'
++import { cheonganLines, CHEONGAN_TRAIT } from '@/lib/saju/cheonganTrait'
+ import { traitsInSaju, traitLines, noteLines, ctxOf } from '@/lib/saju/jijiTrait'
+ import { findByeongjon, sayOf as byeongjonSay } from '@/lib/saju/byeongjon'
+ import { judgeCheonganHap, judgeJijiHap } from '@/lib/saju/hapJudge'
+-import { hapLines } from '@/lib/saju/hapMeaning'
+-import { chungLines } from '@/lib/saju/chungMeaning'
++import { hapLines, findHap } from '@/lib/saju/hapMeaning'
++import { chungLines, findChung } from '@/lib/saju/chungMeaning'
+ import { findRel, relLines, findSamhyeong } from '@/lib/saju/hyeongPaHae'
+ import { calcYongsinNew, calcGyeokguk } from '@/lib/saju/yongsinNew'
+ import { calcCareerGyeokguk } from '@/lib/saju/career/gyeokguk'
+@@ -45,6 +45,12 @@ import { getGwiinForBranch, getGwiinForStem } from '@/lib/saju/gwiin'
+ import { GWIIN_MEANING } from '@/lib/saju/gwiinMeaning'
+ import { getGongmang } from '@/lib/saju/gongmang'
+ import { GONGMANG_INTRO, GONGMANG_BY_PILLAR } from '@/lib/saju/gongmangMeaning'
++import { ILJU } from '@/lib/saju/career/tables/ilju'
++import { YUKCHIN_KEYS, rowOf as yukchinRowOf, yukchinLines, darununLines, sipsinCount } from '@/lib/saju/yukchinTable'
++import { groupBrief } from '@/lib/saju/yukchinGroup'
++import { OHAENG_TRAIT, excessLines, developLines, lackLines, gaeunLines } from '@/lib/saju/ohaengTrait'
++import { weaknessLines, handlingLines } from '@/lib/saju/ohaengNature'
++import { salLines } from '@/lib/saju/sinsalTable'
+ import { LINE_OUTER, LINE_INNER } from '@/lib/ui/line'
+ 
+ type Props = {
+@@ -58,6 +64,46 @@ type Props = {
+   name: string
+ }
+ 
++/**
++ * ★2026-08-05 (47부 41차) — 교재 «원문»(original)을 함께 폅니다. [대표님 지시]
++ *   「상담사용은 모든 것을 최대한 ★원본대로 다 내보내」
++ *
++ *   ⚠️⚠️ 자료 파일에는 「original 은 화면에도 통변 재료에도 넣지 말 것」이라
++ *      적혀 있습니다. 그것은 ★«손님 화면» 을 두고 한 말입니다.
++ *      ⇒ 여기는 «상담사용» 이라 대표님이 펴라 하셨습니다.
++ *      ⛔ ★손님 화면(통변·진로적성·궁합)에는 «절대» 이 값을 넣지 마십시오.
++ *
++ *   🔴 ★알아 두실 것 — 「담지 않기로 한 일곱」은 original 에도 «없습니다» —
++ *      127쪽 단명·자살 · 129쪽 성범죄 피해자 탓 · 128쪽 실명
++ *      · 131쪽 낙태·유산·불임 판정 · 병명 · 센 말 · 종교 단정
++ *      (44부 교훈 CA · yukchinGroup.ts 머리말)
++ *      ⇒ original 을 펴도 그 일곱은 안 나옵니다. 어투가 원문에 가까워질 뿐입니다.
++ *      ⛔ 스캔을 보고 「빠졌다」 며 되살리지 마십시오.
++ */
++function orig(row: unknown): string[] {
++  const o = (row as { original?: unknown })?.original
++  if (typeof o === 'string' && o.trim()) return [`【교재 원문】 ${o.trim()}`]
++  if (Array.isArray(o)) {
++    const arr = o.filter(x => typeof x === 'string' && x.trim())
++    if (arr.length) return [`【교재 원문】 ${arr.join(' ')}`]
++  }
++  return []
++}
++
++/**
++ * ★신살 자료 «둘» 의 열쇠를 맞춥니다 (47부 41차)
++ *   왼쪽  career/tables/sinsal 의 key   ·   오른쪽  lib/saju/sinsalTable 의 key
++ *   ⚠️ 이름이 같은 살도 열쇠가 달라 그대로 넘기면 «못 찾습니다».
++ *   ⚠️ 짝이 없는 것(귀문관살·탕화살·양인일주)은 여기 없어 그냥 지나갑니다.
++ */
++const SAL_KEY: Record<string, string> = {
++  yeokma: 'yeokma', dohwa: 'dohwa', hwagae: 'hwagae',
++  cheonmun: 'cheonmun', hyeonchim: 'hyeonchim',
++  cheonra: 'cheonra', jimang: 'jimang',
++  baekho: 'baekho', goegang: 'goegang',
++  munchang: 'munchang', cheonui: 'cheonui', samgi: 'samgi',
++}
++
+ type Item = { title: string; source?: string; lines: string[] }
+ type Group = { key: string; label: string; items: Item[] }
+ 
+@@ -119,7 +165,7 @@ export default function SourceReading(p: Props) {
+         items.push({
+           title: `일간 ${dayStem} — 타고난 성품`,
+           source: '명리적성 비법노트 40~41쪽',
+-          lines: cheonganLines(dayStem, p.gender),
++          lines: [...cheonganLines(dayStem, p.gender), ...orig(CHEONGAN_TRAIT[dayStem])],
+         })
+       }
+       for (const pil of saju) {
+@@ -129,7 +175,7 @@ export default function SourceReading(p: Props) {
+         items.push({
+           title: `${pil.pillar} 천간 ${pil.stem}`,
+           source: '명리적성 비법노트 40~41쪽',
+-          lines,
++          lines: [...lines, ...orig(CHEONGAN_TRAIT[pil.stem])],
+         })
+       }
+       if (items.length) G.push({ key: 'cheongan', label: '천간 — 성품', items })
+@@ -143,6 +189,7 @@ export default function SourceReading(p: Props) {
+         const lines = [
+           ...traitLines(hit.row, 'adult', ctx),
+           ...noteLines(hit.row, 'adult', ctx),
++          ...orig(hit.row),
+         ]
+         if (lines.length === 0) continue
+         items.push({
+@@ -165,7 +212,7 @@ export default function SourceReading(p: Props) {
+         items.push({
+           title: `${h.row.ko} (${h.pillars.join('·')})`,
+           source: '명리적성 비법노트 74~75쪽 「07 天干의 병존」',
+-          lines: [say],
++          lines: [say, ...orig(h.row)],
+         })
+       }
+       if (items.length) G.push({ key: 'byeongjon', label: '병존', items })
+@@ -185,7 +232,7 @@ export default function SourceReading(p: Props) {
+         items.push({
+           title: `천간 ${h.key}`,
+           source: '명리적성 비법노트 78~83쪽',
+-          lines: [head, ...hapLines(h.key, '성인')],
++          lines: [head, ...hapLines(h.key, '성인'), ...orig(findHap(h.key))],
+         })
+       }
+       for (const h of judgeJijiHap(saju)) {
+@@ -197,7 +244,7 @@ export default function SourceReading(p: Props) {
+         items.push({
+           title: `지지 ${h.key}`,
+           source: '명리적성 비법노트 78~83쪽',
+-          lines: [head, ...hapLines(h.key, '성인')],
++          lines: [head, ...hapLines(h.key, '성인'), ...orig(findHap(h.key))],
+         })
+       }
+       if (items.length) G.push({ key: 'hap', label: '합', items })
+@@ -218,7 +265,7 @@ export default function SourceReading(p: Props) {
+           items.push({
+             title: `${key} (${a.pillar}-${b.pillar})`,
+             source: '명리적성 비법노트 84~86쪽',
+-            lines,
++            lines: [...lines, ...orig(findChung(key))],
+           })
+         }
+       }
+@@ -245,7 +292,7 @@ export default function SourceReading(p: Props) {
+             items.push({
+               title: `${r.alias ?? r.key} (${brs[i].pillar}-${brs[j].pillar})`,
+               source: '명리적성 비법노트',
+-              lines: relLines(r, '성인'),
++              lines: [...relLines(r, '성인'), ...orig(r)],
+             })
+           }
+         }
+@@ -257,7 +304,7 @@ export default function SourceReading(p: Props) {
+         items.push({
+           title: `${r.alias ?? r.key} (삼형)`,
+           source: '명리적성 비법노트',
+-          lines: relLines(r, '성인'),
++          lines: [...relLines(r, '성인'), ...orig(r)],
+         })
+       }
+       if (items.length) G.push({ key: 'rel', label: '형·파·해·원진', items })
+@@ -367,6 +414,16 @@ export default function SourceReading(p: Props) {
+         if (r.caution) lines.push(`⚠️ ${r.caution}`)
+         // ★교재 «원문» 이 따로 남아 있으면 그것도 폅니다 (상담사용이라)
+         if (r.srcCaution) lines.push(`【교재 원문】 ${r.srcCaution}`)
++        // ★2026-08-05 (47부 41차) — 신살은 자료가 «둘» 입니다.
++        //   career/tables/sinsal(진로 쪽) · lib/saju/sinsalTable(다른 갈래)
++        //   ⚠️ 열두 살이 겹칩니다. ⇒ 따로 묶음을 만들면 «두 번» 나옵니다.
++        //      그래서 ★같은 꼭지에 sinsalTable 의 말을 «덧붙입니다».
++        //   ⚠️ 열쇠(key)가 서로 다릅니다 — 아래에서 맞춰 봅니다.
++        for (const l of salLines(SAL_KEY[r.key] ?? r.key, '성인')) lines.push(`[다른 자료] ${l}`)
++        // ⚠️ sinsalTable 은 ★«다른 갈래» 의 같은 신살 설명입니다 (교재 90~93쪽).
++        //    이름이 열둘 겹치므로 ★따로 묶음을 만들지 «않고» 여기에 «덧붙입니다».
++        //    ⛔ 따로 펴지 마십시오. 같은 신살이 두 번 나옵니다.
++        for (const l of salLines(r.key, '성인')) lines.push(`【다른 갈래】 ${l}`)
+         items.push({
+           title: `${r.name}${r.hanja ? ` (${r.hanja})` : ''}`,
+           source: '명리적성 비법노트 90~93쪽',
+@@ -431,6 +488,109 @@ export default function SourceReading(p: Props) {
+       if (items.length) G.push({ key: 'gongmang', label: '공망', items })
+     }
+ 
++    // ── ⑫ 60갑자 일주 ────────────────────────────────────────────
++    //   교재 100~127쪽 「9. 60갑자 일주별 기질과 진로적성」
++    //   ⚠️ gijilFull 이 ★«교재 원문» 입니다 (gijil 은 손님용으로 말을 고른 것).
++    //      상담사 화면이라 ★원문을 폅니다.
++    {
++      const il = saju.find(x => x.pillar === '일주')
++      if (il && il.stem !== '?' && il.branch !== '?') {
++        const row = ILJU[il.stem + il.branch]
++        if (row) {
++          G.push({
++            key: 'ilju', label: '60갑자 일주', items: [{
++              title: `${il.stem}${il.branch} (${row.ko})`,
++              source: '명리적성 비법노트 100~127쪽',
++              lines: [
++                row.gijilFull ?? row.gijil,
++                row.jobs?.length ? `어울리는 일 — ${row.jobs.join(' · ')}` : '',
++              ].filter(Boolean),
++            }],
++          })
++        }
++      }
++    }
++
++    // ── ⑬ 육친(십성) ─────────────────────────────────────────────
++    //   ⚠️ ★사주 상담의 «뼈대» 입니다. 열 십성을 «전부» 폅니다.
++    //      개수가 0 인 것도 폅니다 — 「없다」 는 것도 상담사에게는 뜻입니다.
++    {
++      const items: Item[] = []
++      const ctx = ctxOf(saju)
++      for (const key of YUKCHIN_KEYS) {
++        const row = yukchinRowOf(key)
++        if (!row) continue
++        const n = sipsinCount(ctx, key)
++        const lines = [
++          `${n}개`,
++          ...yukchinLines(row, 'adult', ctx),
++          ...darununLines(row, ctx),
++          ...orig(row),
++        ].filter(Boolean)
++        if (lines.length <= 1) continue
++        items.push({
++          title: `${key} — ${n}개`,
++          source: '명리적성 비법노트 3장 六親論',
++          lines,
++        })
++      }
++      if (items.length) G.push({ key: 'yukchin', label: '육친(십성)', items })
++    }
++
++    // ── ⑭ 육친 짝(과다·없음) ─────────────────────────────────────
++    //   ⚠️⚠️ ★groupBrief 를 씁니다 — «이미 다듬어 내보내는» 함수입니다.
++    //      ⛔ row.original 을 쓰지 «마십시오». 그 자료에 이렇게 적혀 있습니다 —
++    //        「★교재 원문 — 화면에도 통변 재료에도 넣지 말 것」
++    //      [까닭]  앞 세션이 ★일곱 가지를 «일부러» 뺐습니다 (44부 교훈 CA) —
++    //        127쪽 단명·자살 · 129쪽 성범죄 피해자 탓 · 128쪽 실명
++    //        · 131쪽 낙태·유산·불임 판정 · 병명 · 센 말 · 종교 단정
++    //        ⇒ 「뜻은 안 뺐고 어투만 옮겼다」 고 적혀 있습니다.
++    //      ⛔ 스캔을 보고 「빠졌다」 며 되살리지 마십시오.
++    //   ⚠️ ★맺음말(PYEONJUNG_CLOSING)이 «반드시 맨 마지막» 에 와야 합니다.
++    //      withClosing: true 로 함께 받습니다. 앞에 두면 앞말이 변명처럼 들립니다.
++    {
++      const lines = groupBrief(saju, 'adult', {
++        cap: 99, 보완: true, 개운: true, 직업: true, withClosing: true,
++      })
++      if (lines.length) {
++        G.push({
++          key: 'yukchinGroup', label: '육친 짝 — 과다·없음',
++          items: [{
++            title: '다섯 짝의 치우침',
++            source: '명리적성 비법노트 116~131쪽',
++            lines,
++          }],
++        })
++      }
++    }
++
++    // ── ⑮ 오행 기질 — 다섯을 «전부» ──────────────────────────────
++    //   ⚠️ 발달·과다·결핍·개운을 한자리에 폅니다.
++    //      ★어느 오행이 많고 적은지는 위 «용신 · 오행 세력» 에 숫자로 있습니다.
++    {
++      const items: Item[] = []
++      for (const el of ['목', '화', '토', '금', '수'] as const) {
++        const row = OHAENG_TRAIT[el]
++        if (!row) continue
++        const lines = [
++          ...developLines(el).map(x => `[발달] ${x}`),
++          ...excessLines(el, '성인').map(x => `[과다] ${x}`),
++          ...lackLines(el, '성인').map(x => `[결핍] ${x}`),
++          ...gaeunLines(el).map(x => `[개운] ${x}`),
++          ...weaknessLines(el, '성인').map(x => `[약한 자리] ${x}`),
++          ...handlingLines(el).map(x => `[다루는 법] ${x}`),
++          ...orig(row),
++        ]
++        if (lines.length === 0) continue
++        items.push({
++          title: `${el}(${row.hanja ?? ''})`,
++          source: '명리적성 비법노트',
++          lines,
++        })
++      }
++      if (items.length) G.push({ key: 'ohaeng', label: '오행 — 발달·과다·결핍·개운', items })
++    }
++
+     return G
+   }, [saju, dayStem, p.gender])
+ 
+-- 
+2.43.0
+
+
+From 93074b8dc00abfd4e2c34e86cc697809c92a541c Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Thu, 6 Aug 2026 06:50:03 +0000
+Subject: [PATCH 2/4] =?UTF-8?q?=EB=A7=8C=EC=84=B8=EB=A0=A5=20=EC=B0=BD=20?=
+ =?UTF-8?q?=E2=80=94=20=EC=9C=84=EB=A1=9C=EB=A7=8C=20=EB=AA=BB=20=EB=82=98?=
+ =?UTF-8?q?=EA=B0=80=EA=B2=8C=20(47=EB=B6=80=2042=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../consultant/components/ExpertFloating.tsx        | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/app/manseryeok/consultant/components/ExpertFloating.tsx b/app/manseryeok/consultant/components/ExpertFloating.tsx
+index 6cccce7..741911f 100644
+--- a/app/manseryeok/consultant/components/ExpertFloating.tsx
++++ b/app/manseryeok/consultant/components/ExpertFloating.tsx
+@@ -65,7 +65,18 @@ export default function ExpertFloating({ open, onClose }: Props) {
+   useEffect(() => {
+     const move = (e: MouseEvent) => {
+       if (drag.current) {
+-        setPos({ x: e.clientX - drag.current.dx, y: e.clientY - drag.current.dy })
++        // ★2026-08-05 (47부 42차) — 창이 «위로» 못 나가게 막습니다. [대표님 지시]
++        //   [겪은 일]  대표님 — 「상단으로 들어가 버리면 옮길 수가 없네」
++        //     제목줄이 화면 «위» 로 넘어가면 ★잡을 곳이 없어 다시 못 내렸습니다.
++        //   [고침]  ★y 를 0 밑으로 못 내려갑니다. 제목줄이 «언제나» 보입니다.
++        //   ⚠️⚠️ ★아래·왼쪽·오른쪽은 «안» 막았습니다 —
++        //      대표님 「아래로는 끝까지 늘려야 되거든」.
++        //      ⛔ 아래쪽에 제한을 걸지 마십시오. 긴 해설을 볼 때 답답해집니다.
++        //      ⛔ 좌우에도 걸지 마십시오. 옆으로 밀어 두고 쓰실 수 있어야 합니다.
++        setPos({
++          x: e.clientX - drag.current.dx,
++          y: Math.max(0, e.clientY - drag.current.dy),
++        })
+       } else if (resize.current) {
+         const r = resize.current
+         setSize({
+-- 
+2.43.0
+
+
+From 79d210e44fcf8ddc3e8936641d2e967a6bb63e19 Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Thu, 6 Aug 2026 07:01:37 +0000
+Subject: [PATCH 3/4] =?UTF-8?q?=EC=83=81=EB=8B=B4=EC=82=AC=20=ED=99=94?=
+ =?UTF-8?q?=EB=A9=B4=20=ED=83=9C=EC=96=B4=EB=82=9C=20=EC=8B=9C=EA=B0=81=20?=
+ =?UTF-8?q?=E2=80=94=20=EC=8B=9C=EC=A7=84=20=EB=B2=88=ED=98=B8=EB=A5=BC=20?=
+ =?UTF-8?q?=EC=8B=9C=EA=B0=81=EC=9C=BC=EB=A1=9C=20=EC=9E=98=EB=AA=BB=20?=
+ =?UTF-8?q?=EC=9D=BD=EB=8D=98=20=EA=B2=83=20(47=EB=B6=80=2043=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../components/CustomerAiAnalysis.tsx         | 32 +++++++++++++++++--
+ 1 file changed, 30 insertions(+), 2 deletions(-)
+
+diff --git a/app/manseryeok/consultant/components/CustomerAiAnalysis.tsx b/app/manseryeok/consultant/components/CustomerAiAnalysis.tsx
+index ce1bcdb..28d4a46 100644
+--- a/app/manseryeok/consultant/components/CustomerAiAnalysis.tsx
++++ b/app/manseryeok/consultant/components/CustomerAiAnalysis.tsx
+@@ -140,12 +140,40 @@ const WED_GRADE_COLOR: Record<string, string> = {
+   S: '#FAC775', A: '#9be29b', B: '#9bc0e2', C: '#c8b0ff', D: '#9a98b0',
+ }
+ 
++/**
++ * ★2026-08-06 (47부 43차) — 태어난 시각을 «잘못» 읽던 것을 고쳤습니다. [대표님 지적]
++ *   「태어난 시각을 두 사람 모두 잘 못 읽어온다」
++ *
++ *   [까닭]  birth_data 의 hour 는 ★«시각» 이 아니라 «시진 번호»(0~11) 입니다.
++ *     0 子(23~01) 1 丑(01~03) 2 寅(03~05) 3 卯(05~07) 4 辰(07~09) 5 巳(09~11)
++ *     6 午(11~13) 7 未(13~15) 8 申(15~17) 9 酉(17~19) 10 戌(19~21) 11 亥(21~23)
++ *   ⇒ 전에는 번호에 그냥 「시」를 붙여 ★「3시」·「6시」 로 나왔습니다.
++ *     ★실은 卯시(05~07) · 午시(11~13) 입니다.
++ *   ⚠️⚠️ 상담사가 「새벽 3시생」으로 읽으면 ★«완전히 다른 사주» 가 됩니다.
++ *
++ *   ⚠️ 손님 화면(result-new:317)도 ★번호로 읽습니다 — 그쪽이 «맞는» 방식입니다.
++ *   ⛔ 다시 「hour + '시'」 로 되돌리지 마십시오.
++ *
++ *   ⚠️ ★booking_hour · slot_hour 는 «예약 시각» 이라 «진짜 시» 가 맞습니다.
++ *      (mypage-new · consultant-select · ConsultTimer · ScheduleStep)
++ *      ⛔ 그쪽을 이 규칙으로 바꾸지 마십시오.
++ */
++const HOUR_BRANCH = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
++const HOUR_RANGE = ['23~01', '01~03', '03~05', '05~07', '07~09', '09~11',
++                    '11~13', '13~15', '15~17', '17~19', '19~21', '21~23']
++
++function hourText(hour?: string): string {
++  if (!hour || hour === '모름') return ''
++  const i = Number(hour)
++  if (!Number.isInteger(i) || i < 0 || i > 11) return ''
++  return ` ${HOUR_BRANCH[i]}시(${HOUR_RANGE[i]})`
++}
++
+ function birthText(b?: Record<string, string>): string {
+   if (!b) return '-'
+   const g = b.gender ? b.gender + ' · ' : ''
+   const cal = b.calType || '양력'
+-  const h = b.hour && b.hour !== '모름' ? ' ' + b.hour + '시' : ''
+-  return g + cal + ' ' + b.year + '.' + b.month + '.' + b.day + h
++  return g + cal + ' ' + b.year + '.' + b.month + '.' + b.day + hourText(b.hour)
+ }
+ 
+ function dayPrefKo(p?: string | null): string {
+-- 
+2.43.0
+
+
+From dbff7c59a9372ed9d1cd52008ee305e3cdd3904e Mon Sep 17 00:00:00 2001
+From: claude <claude@anthropic.com>
+Date: Thu, 6 Aug 2026 07:32:50 +0000
+Subject: [PATCH 4/4] =?UTF-8?q?=EC=83=81=EB=8B=B4=EC=82=AC=20=E3=80=8C?=
+ =?UTF-8?q?=EB=82=B4=20=EC=84=A4=EB=AA=85=20=EC=9E=85=EB=A0=A5=E3=80=8D?=
+ =?UTF-8?q?=EC=97=90=20=EB=A7=90=EB=A1=9C=20=EB=84=A3=EA=B8=B0=20(47?=
+ =?UTF-8?q?=EB=B6=80=2044=EC=B0=A8)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../consultant/components/ConsultantNote.tsx  | 105 +++++++++++++++++-
+ 1 file changed, 104 insertions(+), 1 deletion(-)
+
+diff --git a/app/manseryeok/consultant/components/ConsultantNote.tsx b/app/manseryeok/consultant/components/ConsultantNote.tsx
+index 266ee76..81afac1 100644
+--- a/app/manseryeok/consultant/components/ConsultantNote.tsx
++++ b/app/manseryeok/consultant/components/ConsultantNote.tsx
+@@ -30,6 +30,85 @@ export default function ConsultantNote({ consultationId, fontSize = 13, fontFami
+   const dragRef = useRef<{ startY: number; orig: number } | null>(null)
+   const wrapRef = useRef<HTMLDivElement | null>(null)
+ 
++  // ══════════════════════════════════════════════════════════════
++  //  🎤 말로 넣기 — ★2026-08-06 (47부 44차 · 대표님 지시)
++  //
++  //  [대표님]  「상담사 선생님들이 말로 하면 한말이 자동으로 타이핑되서 들어가면」
++  //
++  //  ⚠️⚠️ ★전에 «채팅창» 에 넣었다가 걷어내신 적이 있습니다 —
++  //     「고객과 채팅으로 하면서 녹취로 채팅창에 상담사가 말한 내용을 올리려 했더니
++  //       ★마음먹은 대로 «빨리 안 올라가는» 것 같더라구」
++  //     [까닭]  채팅은 ★말이 «확정» 되어야 보낼 수 있는데,
++  //       브라우저가 말을 다 듣고 판단하는 데 1~2초가 걸립니다.
++  //       손님이 «기다리는» 자리라 그 몇 초가 답답했던 것입니다.
++  //
++  //  ⇒ ★여기는 «다릅니다». 「내 설명 입력」은 손님이 기다리지 않습니다.
++  //     칸에 «쌓이는» 것을 보며 계속 말하면 됩니다.
++  //  ⇒ 그래도 «빠르게 보이도록» 이렇게 지었습니다 —
++  //     ① ★interimResults — 말하는 «도중» 에도 흐린 글씨로 먼저 보입니다
++  //     ② ★continuous — 잠깐 끊겨도 «안 꺼집니다»
++  //     ③ ★칸에 «덧붙입니다» — 손으로 친 글을 «안 지웁니다»
++  //     ④ 상담사가 ★켜고 끕니다. 저절로 켜지지 않습니다.
++  //
++  //  ⛔ ★「AI 정리 결과」 칸에는 «넣지 마십시오». 대표님 —
++  //     「고객이 봤던 내용과 상담사가 정리한 내용을 합쳐서 요약해 주는 기능」
++  //     ⇒ AI 가 채우고 상담사가 다듬어 손님께 톡으로 보내는 자리입니다.
++  //
++  //  ⚠️ ★못 알아듣는 것은 «막을 수 없습니다» — 사주 용어(丙寅·화개살…)는
++  //     브라우저가 하는 일이라 저희가 못 고칩니다. 말한 뒤 손으로 다듬는 것이 전제입니다.
++  //  ⚠️ 못 쓰는 브라우저(사파리·구형)에서는 ★버튼이 «아예 안 보입니다».
++  // ══════════════════════════════════════════════════════════════
++  const [listening, setListening] = useState(false)
++  const [interim, setInterim] = useState('')        // 말하는 «도중» 의 글 (흐리게 보임)
++  // ⚠️⚠️ ★useState + useEffect 로 하지 «않습니다» —
++  //    eslint(react-hooks/purity)가 「효과 안에서 setState 를 부르면
++  //    그리기가 겹친다」고 ★막습니다 (47부 36차에 같은 것을 겪었습니다).
++  //    ⇒ 대신 ★«그릴 때» 창을 살펴봅니다. 서버에서 그릴 때는 false 입니다.
++  //    ⛔ useEffect 로 바꾸지 마십시오. eslint 기준선이 깨집니다.
++  const canVoice =
++    typeof window !== 'undefined' &&
++    // eslint-disable-next-line @typescript-eslint/no-explicit-any
++    !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
++  // eslint-disable-next-line @typescript-eslint/no-explicit-any
++  const recRef = useRef<any>(null)
++
++  const toggleVoice = () => {
++    // eslint-disable-next-line @typescript-eslint/no-explicit-any
++    const w = window as any
++    const SR = w.SpeechRecognition || w.webkitSpeechRecognition
++    if (!SR) return
++    if (listening) { recRef.current?.stop(); return }
++
++    const rec = new SR()
++    rec.lang = 'ko-KR'
++    rec.continuous = true       // ★잠깐 끊겨도 «안 꺼집니다»
++    rec.interimResults = true   // ★도중에도 «먼저» 보입니다
++
++    // eslint-disable-next-line @typescript-eslint/no-explicit-any
++    rec.onresult = (e: any) => {
++      let live = ''
++      for (let i = e.resultIndex; i < e.results.length; i++) {
++        const t = e.results[i][0].transcript
++        if (e.results[i].isFinal) {
++          // ★확정된 것만 «칸에 덧붙입니다». 손으로 친 글을 안 지웁니다.
++          setNote(prev => (prev ? prev.replace(/\s*$/, '') + ' ' : '') + t.trim())
++          setNoteSaved(false)
++        } else {
++          live += t
++        }
++      }
++      setInterim(live)
++    }
++    rec.onend = () => { setListening(false); setInterim('') }
++    rec.onerror = () => { setListening(false); setInterim('') }
++    rec.start()
++    recRef.current = rec
++    setListening(true)
++  }
++
++  // ⚠️ 화면을 떠날 때 «반드시» 멈춥니다 — 안 그러면 마이크가 계속 켜져 있습니다.
++  useEffect(() => () => { recRef.current?.stop() }, [])
++
+   // 위/아래 경계선 드래그
+   function startVDrag(e: React.MouseEvent) {
+     e.preventDefault()
+@@ -213,15 +292,39 @@ ${(cons?.ai_analysis || cons?.ai_free_analysis || '').slice(0, 1500)}
+       <div style={{ height: topPct + '%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+         <div style={paneTitle}>
+           <span>✍️ 내 설명 입력</span>
++          {/* ★2026-08-06 (47부 44차) — 말로 넣기. 못 쓰는 브라우저면 «아예 안 보입니다». */}
++          {canVoice && (
++            <button onClick={toggleVoice}
++              title={listening ? '멈추면 말이 더 안 들어갑니다' : '말하면 아래 칸에 그대로 쌓입니다'}
++              style={{
++                ...miniBtn, marginLeft: 'auto', marginRight: 6,
++                background: listening ? '#5a1a1a' : '#2C2C2A',
++                borderColor: listening ? '#c14545' : '#5F5E5A',
++                color: listening ? '#ff9a9a' : '#FAC775',
++              }}>
++              {listening ? '⏹ 멈춤' : '🎤 말로 넣기'}
++            </button>
++          )}
+           <button onClick={saveNote} style={miniBtn}>{noteSaved ? '✓ 저장됨' : '저장'}</button>
+         </div>
+         <div style={{ flex: 1, padding: '10px', minHeight: 0 }}>
+           <textarea
+             value={note}
+             onChange={e => setNote(e.target.value)}
+-            placeholder="고객에게 전할 설명·상담사 의견을 입력하세요..."
++            placeholder={listening ? '말씀하시면 여기에 쌓입니다…' : '고객에게 전할 설명·상담사 의견을 입력하세요...'}
+             style={{ width: '100%', height: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', color: '#c8c0ff', fontSize: fontSize + 'px', fontFamily, lineHeight: 1.6 }}
+           />
++          {/* ★말하는 «도중» 의 글 — 흐린 색으로 «먼저» 보여 드립니다.
++              ⇒ 「멈춘 것처럼」 보이지 않게 하려는 것입니다.
++              ⚠️ 확정되면 위 칸으로 들어가고 여기는 비워집니다. */}
++          {listening && interim && (
++            <div style={{
++              marginTop: 4, padding: '4px 2px', fontSize: 13, lineHeight: 1.6,
++              color: '#8a88a0', fontStyle: 'italic',
++            }}>
++              {interim}…
++            </div>
++          )}
+         </div>
+       </div>
+ 
+-- 
+2.43.0
+
