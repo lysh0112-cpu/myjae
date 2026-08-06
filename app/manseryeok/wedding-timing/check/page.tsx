@@ -8,6 +8,8 @@ import type { PersonSaju } from '../lib/weddingFilterV7'
 import { saveWeddingRecord, getWeddingRecord } from '@/lib/saju/weddingRecords'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
 import WeddingCalendar from '../components/WeddingCalendar'
+import ConsultButton from '@/app/components/common/ConsultButton'
+import { LINE_OUTER } from '@/lib/ui/line'
 
 const cardBg = '#FFFBF7'
 const sub = '#b4785a'
@@ -269,27 +271,51 @@ function CheckInner() {
               </div>
             )}
 
-            {/* 보관함 저장 */}
-            <button
-              onClick={handleSave}
-              disabled={saveState !== 'idle'}
-              style={{ width: '100%', marginTop: '16px', padding: '13px', borderRadius: '12px',
-                background: saveState === 'saved' ? '#e8f0e0' : gold,
-                border: 'none', color: saveState === 'saved' ? '#5a8c5a' : '#1a1208',
-                fontSize: '14px', fontWeight: 600, cursor: saveState === 'idle' ? 'pointer' : 'default' }}>
-              {saveState === 'saved' ? '✓ 보관함에 저장됨' : saveState === 'saving' ? '저장 중…' : '💾 이 결과 보관함에 저장'}
-            </button>
-            <button
-              onClick={() => router.push('/manseryeok/wedding-timing/wedding-storage')}
-              style={{ width: '100%', marginTop: '8px', padding: '12px', borderRadius: '12px', background: '#faf3ec', border: '1px solid #9c7a58', color: '#96502e', fontSize: '13px', cursor: 'pointer' }}>
-              📋 결혼택일 보관함
-            </button>
+            {/* ★2026-08-05 (47부 27차) — 버튼 둘을 «나란히». [대표님 지시]
+                [전]  둘 다 width 100% 로 «세로» 로 쌓여 있었습니다.
+                      ⇒ 물상·사주·작명은 모두 «나란히 둘» 인데 여기만 달랐습니다.
+                ⚠️ 문구를 ★줄였습니다 — 한 줄에 둘이면 폭이 절반(약 200px)입니다.
+                   「💾 이 결과 보관함에 저장」 → ★「💾 보관함에 저장」
+                   ⛔ 다시 늘리지 마십시오. 바꾸실 때 ★320px 화면에서 재십시오.
+                ⚠️ minHeight 46 — ★둘이 «같은 높이» 입니다. 하나만 바꾸지 마십시오. */}
+            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+              <button
+                onClick={handleSave}
+                disabled={saveState !== 'idle'}
+                style={{ flex: 1, padding: '13px 6px', borderRadius: '12px',
+                  minHeight: 46, boxSizing: 'border-box',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: saveState === 'saved' ? '#e8f0e0' : gold,
+                  border: 'none', color: saveState === 'saved' ? '#5a8c5a' : '#1a1208',
+                  fontSize: '13px', fontWeight: 600, cursor: saveState === 'idle' ? 'pointer' : 'default' }}>
+                {saveState === 'saved' ? '✓ 저장됨' : saveState === 'saving' ? '저장 중…' : '💾 보관함에 저장'}
+              </button>
+              <button
+                onClick={() => router.push('/manseryeok/wedding-timing/wedding-storage')}
+                style={{ flex: 1, padding: '13px 6px', borderRadius: '12px',
+                  minHeight: 46, boxSizing: 'border-box',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: '#fff', border: LINE_OUTER, color: '#96502e',
+                  fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+                📋 결혼택일 보관함
+              </button>
+            </div>
           </>
         )}
 
         <div style={{ marginTop: '16px' }}>
           <Disclaimer />
         </div>
+
+        {/* ★2026-08-05 (47부 27차) — 전문가 상담 [대표님 지시]
+            ★화면의 «맨 끝» 입니다. 전에는 CheckResultV7 «안» 에 있어
+              진단표와 버튼 «사이» 에 끼어 보였습니다.
+            ⚠️ priceKey='wedding' — ★「좋은 날 찾기」와 «같은 줄» 입니다.
+               관리자 「결혼택일」 토글 하나로 ★두 화면이 «함께» 켜지고 꺼집니다.
+            ⛔ 이 화면만 다른 price_key 로 바꾸지 마십시오. 토글이 갈라집니다. */}
+        {done && results.length > 0 && (
+          <ConsultButton priceKey="wedding" mode="wedding" />
+        )}
       </div>
 
       {payOpen && (
