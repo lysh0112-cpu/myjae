@@ -78,7 +78,13 @@ export default function CheckResultV7({
   const [help, setHelp] = useState<string | null>(null)
 
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 16px 60px' }}>
+    // ★2026-08-05 (47부 28차) — 아래 여백을 60 → ★0 으로. [대표님 지시 「위아래 공간이 너무 벌어짐」]
+    //   [까닭]  60px 은 이 부품이 «화면의 맨 끝» 이던 때 둔 «바닥 여백» 입니다.
+    //     27차에 상담 카드를 화면 아래로 옮기면서 ★버튼·안내문·상담 카드가 더 오게 되어
+    //     60 + 버튼줄 marginTop 16 = ★76px 이 쓸데없이 벌어졌습니다.
+    //   ⚠️ 「좋은 날 찾기」(PickWeddingV7)는 ★부품이 «진짜 맨 끝» 이라 60px 이 «맞습니다».
+    //      ⛔ 그쪽을 함께 0 으로 바꾸지 마십시오. 화면 바닥이 답답해집니다.
+    <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 16px' }}>
       <div style={{
         background: 'rgba(255,120,120,.06)', border: '1px solid rgba(193,69,69,0.65)',
         borderRadius: 10, padding: '12px 14px', fontSize: 13, fontWeight: 600,
