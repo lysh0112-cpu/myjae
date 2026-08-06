@@ -1,5 +1,6 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
+import SourceReading from './SourceReading'
 
 // ============================================================
 // 전문가용 만세력 (독립 플로팅 창)
@@ -15,31 +16,17 @@ import { useState, useRef, useEffect } from 'react'
 // ============================================================
 
 /**
- * ★2026-08-05 (47부 36차) — 「고른 고객」 갈래를 더했습니다. [대표님 지시]
- *   「상담목록을 누르면 해당 상담신청한 고객의 전문가용 만세력이 자동으로 조회되게」
- *   ⇒ 목업 셋 중 ★ⓒ(창은 하나, 안에서 두 갈래)로 확정하셨습니다.
+ * ★2026-08-05 (47부 38차) — 두 갈래 [대표님 지시]
+ *   「자동불러오기 걷어 / 계산기 / 빈탭에 원본해설 불러오기」
  *
- *   [왜 창을 «더 만들지» 않았나]  메뉴바가 이미 빠듯합니다 —
- *     명연재 | 나의 일정 | 상담목록 | 나의 정산 | 🔮 만세력 | 📋 상담내역
- *     | 메뉴크기 | 매니저 대리 | ○○ 선생님 화면 | 로그아웃
- *     ⇒ 하나 더 넣으면 좁은 화면에서 넘칩니다. 창이 셋이면 자리 다툼도 생깁니다.
+ *   [🔮 계산기]     생년월일을 손으로 넣어 전문가용 만세력을 봅니다 (전부터 있던 것)
+ *   [📖 원본 해설]  ★같은 생년월일로 «교재 원본» 해설을 죽 폅니다
  *
- *   ⚠️ customer 는 «상담 목록에서 고른 고객» 입니다. 안 골랐으면 null.
- *   ⛔ 이 창은 원래 「고객 데이터와 무관한 ★독립 계산기」 였습니다.
- *      그 성격은 ★「✏️ 직접 입력」 갈래에 «그대로» 살아 있습니다. 지우지 마십시오.
+ *   ⚠️ 36·37차의 「고른 고객 자동 불러오기」는 ★걷었습니다.
+ *      열 화면이 상담 신청 때 생년월일을 «안 실어 보내» 대개 비어 있었습니다.
+ *      ⛔ 되살리시려면 ★먼저 그 열 화면을 고치십시오.
  */
-export type FloatingCustomer = {
-  name?: string
-  year?: string
-  month?: string
-  day?: string
-  gender?: string
-  hour?: string        // ★숫자 문자열 또는 '모름'
-  calType?: string
-  leapMonth?: string
-} | null
-
-type Props = { open: boolean; onClose: () => void; customer?: FloatingCustomer }
+type Props = { open: boolean; onClose: () => void }
 
 // 시(時) 목록 — 30분법 (birthInput.ts 기준과 동일한 표기)
 const HOUR_LABELS = [
@@ -48,7 +35,7 @@ const HOUR_LABELS = [
   '申 15:30-17:30', '酉 17:30-19:30', '戌 19:30-21:30', '亥 21:30-23:30',
 ]
 
-export default function ExpertFloating({ open, onClose, customer }: Props) {
+export default function ExpertFloating({ open, onClose }: Props) {
   // ── 입력값 ──
   const [name, setName] = useState('')
   const [calType, setCalType] = useState<'양력' | '음력'>('양력')
@@ -63,40 +50,10 @@ export default function ExpertFloating({ open, onClose, customer }: Props) {
   // ── 조회 결과 주소 (iframe src) ──
   const [src, setSrc] = useState('')
 
-  // ★2026-08-05 (47부 36차) — 두 갈래 [대표님 확정 · 목업 ⓒ]
-  //   'customer' 고른 고객 것 (칸 없음)  ·  'manual' 손으로 치는 계산기 (지금 것 그대로)
-  const [tab, setTab] = useState<'customer' | 'manual'>('manual')
-  const hasCustomer = !!(customer?.year && customer?.month && customer?.day)
-
-  /** 고른 고객의 전문가용 만세력 주소. 위 search() 와 «같은 규칙» 입니다. */
-  const customerSrc = (() => {
-    if (!hasCustomer) return ''
-    const q = new URLSearchParams()
-    q.set('year', String(customer!.year)); q.set('month', String(customer!.month))
-    q.set('day', String(customer!.day))
-    q.set('gender', customer!.gender === '여' ? '여' : '남')
-    q.set('calType', customer!.calType === '음력' ? '음력' : '양력')
-    q.set('leapMonth', customer!.leapMonth === '1' ? '1' : '0')
-    // ⚠️ hour 는 ★숫자 문자열 또는 '모름' 입니다. 모르면 «안 넘깁니다» (시 미지정).
-    const h = customer!.hour
-    if (h && h !== '모름' && !Number.isNaN(Number(h))) q.set('hour', String(Number(h)))
-    if (customer!.name) q.set('name', customer!.name)
-    q.set('pro', '1')
-    q.set('mode', 'chart')
-    return `/manseryeok/result-new?${q.toString()}`
-  })()
-
-  // ★고객이 바뀌면 「고른 고객」 갈래로 옮겨 갑니다.
-  //   ⚠️⚠️ ★useEffect 로 하지 «않습니다» — eslint(react-hooks/purity)가
-  //      「효과 안에서 setState 를 부르면 그리기가 겹친다」고 막습니다.
-  //      ⇒ 대신 ★«그릴 때» 고객이 바뀌었는지 견주어 곧바로 옮깁니다.
-  //   ⚠️ 창이 «닫혀» 있어도 갈래만 바뀝니다. 열 때 바로 그 고객이 보입니다.
-  //   ⛔ 여기서 창을 «열지» 마십시오. 목록만 훑어보실 때도 창이 떠서 성가십니다.
-  const [lastSrc, setLastSrc] = useState('')
-  if (customerSrc !== lastSrc) {
-    setLastSrc(customerSrc)
-    setTab(hasCustomer ? 'customer' : 'manual')
-  }
+  // ★2026-08-05 (47부 38차) — 두 갈래 [대표님 지시]
+  //   'calc'   손으로 넣는 전문가용 만세력 계산기 (전부터 있던 것)
+  //   'source' ★교재 «원본 해설» — 같은 생년월일로 죽 폅니다
+  const [tab, setTab] = useState<'calc' | 'source'>('calc')
 
   // ── 창 위치·크기 ──
   const [pos, setPos] = useState({ x: 80, y: 80 })
@@ -190,7 +147,7 @@ export default function ExpertFloating({ open, onClose, customer }: Props) {
         <span>🔮 만세력 (전문가용)</span>
         {/* ★2026-08-05 (47부 36차) — 「← 다시 입력」은 ★직접 입력 갈래에서만.
             고른 고객 갈래에는 «칸이 없어» 돌아갈 자리가 없습니다. */}
-        {tab === 'manual' && src && (
+        {tab === 'calc' && src && (
           <button type="button" onClick={() => setSrc('')}
             style={{
               marginLeft: 'auto', height: 22, padding: '0 8px', borderRadius: 5,
@@ -201,50 +158,46 @@ export default function ExpertFloating({ open, onClose, customer }: Props) {
         )}
         <button type="button" onClick={onClose}
           style={{
-            marginLeft: (tab === 'manual' && src) ? 6 : 'auto', width: 22, height: 22, borderRadius: 5,
+            marginLeft: (tab === 'calc' && src) ? 6 : 'auto', width: 22, height: 22, borderRadius: 5,
             border: 'none', background: 'rgba(255,255,255,.15)', color: '#fff',
             cursor: 'pointer', fontSize: 13, fontFamily: 'inherit',
             WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation',
           }}>✕</button>
       </div>
 
-      {/* ★2026-08-05 (47부 36차) — 두 갈래 [대표님 확정 · 목업 ⓒ]
-          👤 고른 고객 — 상담 목록에서 고른 손님. ★칸이 «없어» 헷갈릴 일이 없습니다.
-          ✏️ 직접 입력 — 지금 그대로의 «독립 계산기».
-          ⚠️ 고객을 안 골랐으면 👤 는 «눌리지 않습니다» (그리고 안내를 띄웁니다).
-          ⛔ ✏️ 갈래를 지우지 마십시오. 상담사가 «가족 사주» 를 함께 보는 자리입니다. */}
+      {/* ★2026-08-05 (47부 38차) — 두 갈래 [대표님 지시]
+          🔮 계산기     생년월일을 손으로 넣어 «전문가용 만세력» 을 봅니다
+          📖 원본 해설  ★같은 생년월일로 «교재 원본» 해설을 죽 폅니다
+          ⚠️ 두 갈래가 ★«같은 입력값» 을 씁니다. 한 번 넣으면 둘 다 바로 봅니다. */}
       <div style={{ display: 'flex', gap: 4, padding: '6px 8px 0', background: '#f7f5ef', flexShrink: 0 }}>
-        <button type="button" onClick={() => hasCustomer && setTab('customer')}
-          disabled={!hasCustomer}
-          title={hasCustomer ? '고른 고객의 만세력' : '상담 목록에서 고객을 먼저 골라 주세요'}
+        <button type="button" onClick={() => setTab('calc')}
           style={{
             flex: 1, height: 28, borderRadius: 5, fontSize: 11.5, fontFamily: 'inherit',
-            border: tab === 'customer' ? '1px solid #2b2b2b' : '1px solid #ccc',
-            background: tab === 'customer' ? '#2b2b2b' : '#fff',
-            color: !hasCustomer ? '#aaa' : tab === 'customer' ? '#fff' : '#555',
-            fontWeight: tab === 'customer' ? 600 : 400,
-            cursor: hasCustomer ? 'pointer' : 'not-allowed',
+            border: tab === 'calc' ? '1px solid #2b2b2b' : '1px solid #ccc',
+            background: tab === 'calc' ? '#2b2b2b' : '#fff',
+            color: tab === 'calc' ? '#fff' : '#555',
+            fontWeight: tab === 'calc' ? 600 : 400, cursor: 'pointer',
           }}>
-          👤 고른 고객{customer?.name ? ` · ${customer.name}` : ''}
+          🔮 만세력 계산기
         </button>
-        {/* ★2026-08-05 (47부 37차) — 「직접 입력」으로 옮기면 ★옛 결과를 «지웁니다».
-            [까닭]  src 가 남아 있으면 «칸이 안 뜨고» 옛 만세력이 그대로 보여
-              어느 사람 것인지 헷갈립니다. 대표님 사진에서 그렇게 보였습니다.
-            ⇒ 옮길 때마다 ★«빈 칸» 부터 보여 드립니다. */}
-        <button type="button" onClick={() => { setTab('manual'); setSrc('') }}
+        <button type="button" onClick={() => setTab('source')}
           style={{
             flex: 1, height: 28, borderRadius: 5, fontSize: 11.5, fontFamily: 'inherit',
-            border: tab === 'manual' ? '1px solid #2b2b2b' : '1px solid #ccc',
-            background: tab === 'manual' ? '#2b2b2b' : '#fff',
-            color: tab === 'manual' ? '#fff' : '#555',
-            fontWeight: tab === 'manual' ? 600 : 400, cursor: 'pointer',
+            border: tab === 'source' ? '1px solid #2b2b2b' : '1px solid #ccc',
+            background: tab === 'source' ? '#2b2b2b' : '#fff',
+            color: tab === 'source' ? '#fff' : '#555',
+            fontWeight: tab === 'source' ? 600 : 400, cursor: 'pointer',
           }}>
-          ✏️ 직접 입력
+          📖 원본 해설
         </button>
       </div>
 
-      {/* 입력부 — ★직접 입력 갈래에서 «결과가 없을 때만» 보인다 */}
-      {tab === 'manual' && !src && (
+      {/* 입력부 — ★계산기 갈래에서 «결과가 없을 때만» 보인다.
+          ⚠️ 원본 해설 갈래는 «따로» 입력부를 그립니다 (아래). */}
+      {/* ⚠️ 입력부는 ★두 갈래가 «함께» 씁니다 —
+          계산기는 결과가 없을 때, 원본 해설은 «언제나» 보입니다
+          (해설은 [조회] 없이 값이 바뀌면 바로 다시 폅니다). */}
+      {((tab === 'calc' && !src) || tab === 'source') && (
         <div style={{ padding: 8, borderBottom: '1px solid #ddd', background: '#f7f5ef', flexShrink: 0 }}>
           <div style={{ display: 'flex', gap: 4, marginBottom: 5 }}>
             <button type="button" onClick={() => setCalType('양력')} style={{ ...toggle, ...(calType === '양력' ? toggleOn : {}) }}>양력</button>
@@ -297,23 +250,15 @@ export default function ExpertFloating({ open, onClose, customer }: Props) {
         </div>
       )}
 
-      {/* 결과부 — 전문가용 만세력 화면을 그대로 띄운다 */}
-      {tab === 'customer' ? (
-        /* ★👤 고른 고객 — 칸 없이 «바로» 만세력이 나옵니다 */
-        hasCustomer ? (
-          <iframe
-            key={customerSrc}
-            src={customerSrc}
-            title="고른 고객의 전문가용 만세력"
-            style={{ flex: 1, width: '100%', border: 'none', background: '#FDF6F0' }}
-          />
-        ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: 20, fontSize: 12.5, color: '#8a7461', textAlign: 'center', lineHeight: 1.8 }}>
-            상담 목록에서 고객을 먼저 골라 주세요.<br />
-            고르시면 그 손님의 만세력이 바로 나옵니다.
-          </div>
-        )
+      {/* 결과부 */}
+      {tab === 'source' ? (
+        /* ★📖 원본 해설 — 위 계산기와 «같은 입력값» 을 그대로 씁니다.
+           ⚠️ 따로 입력받지 않습니다. 한 번 넣으면 두 갈래를 오가며 봅니다. */
+        <SourceReading
+          calType={calType} leap={leap} gender={gender}
+          year={year} month={month} day={day}
+          hourIdx={hourIdx} name={name}
+        />
       ) : src ? (
         <iframe
           src={src}

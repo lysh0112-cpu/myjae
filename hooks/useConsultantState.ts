@@ -8,25 +8,13 @@ export function useConsultantState() {
   const [customerPhone, setCustomerPhone] = useState('')
   const [customerName, setCustomerName] = useState('')
   /**
-   * ★2026-08-05 (47부 36차) — birth_data · customer_name 을 «함께» 담습니다. [대표님 지시]
-   *   [까닭]  만세력 창이 고른 고객의 사주를 바로 그리려면 «생년월일» 이 필요합니다.
-   *     전에는 id · customer_phone · user_id 만 담아
-   *     ★상담사가 생년월일을 «손으로 다시» 쳐야 했습니다.
-   *   ⚠️ birth_data 는 상담 신청 때 담긴 값입니다 (consultant-select).
-   *      hour 는 ★숫자 문자열 또는 '모름'.
-   *   ⚠️ 전부 «있을 수도 없을 수도» 있어 물음표를 붙였습니다. 옛 기록에는 없을 수 있습니다.
+   * ⚠️ 2026-08-05 (47부 38차) — birth_data 를 담던 것은 «걷었습니다».
+   *   36·37차에 만세력 창이 고객을 자동으로 불러오게 하려고 담았는데,
+   *   ★열 화면이 상담 신청 때 생년월일을 «안 실어 보내» 대개 비어 있었습니다.
+   *   ⇒ 대표님 지시로 자동 불러오기를 걷으며 함께 되돌립니다.
+   *   ⛔ 되살리시려면 ★먼저 열 화면이 searchParams 를 넘기게 고치십시오.
    */
-  const [selectedConsultation, setSelectedConsultation] = useState<{
-    id: string
-    customer_phone: string
-    user_id?: string | null
-    customer_name?: string
-    birth_data?: {
-      year?: string; month?: string; day?: string
-      gender?: string; hour?: string; calType?: string; leapMonth?: string
-      customerName?: string
-    }
-  } | null>(null)
+  const [selectedConsultation, setSelectedConsultation] = useState<{id:string;customer_phone:string;user_id?:string|null} | null>(null)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [gender, setGender] = useState(searchParams.get('gender') || '')
   const [calType, setCalType] = useState(searchParams.get('calType') || '')
@@ -128,17 +116,7 @@ export function useConsultantState() {
     setHourIdx(params.hour === '모름' ? null : parseInt(params.hour))
     setCustomerName(params.customerName || '')
   }
-  function handleSelectConsultation(c: {
-    id: string
-    customer_phone: string
-    user_id?: string | null
-    customer_name?: string
-    birth_data?: {
-      year?: string; month?: string; day?: string
-      gender?: string; hour?: string; calType?: string; leapMonth?: string
-      customerName?: string
-    }
-  }) {
+  function handleSelectConsultation(c: {id:string;customer_phone:string;user_id?:string|null}) {
     setSelectedConsultation(c)
     setConsultationId(c.id)
     setCustomerPhone(c.customer_phone)

@@ -644,27 +644,19 @@ function ConsultantContent() {
       {/* ===== 🔮 만세력 (전문가용 · 독립 플로팅 창) ===== */}
       {/* 창 안에서 생년월일을 입력하면 전문가용 만세력 화면을 그대로 띄운다.
           고객 데이터와 무관한 독립 계산기. */}
-      {/* ★2026-08-05 (47부 36차) — 고른 고객을 «넘깁니다». [대표님 지시]
-          「상담목록을 누르면 해당 상담신청한 고객의 전문가용 만세력이 자동으로 조회되게」
-          ⇒ 창 «안» 에서 [👤 고른 고객] · [✏️ 직접 입력] 두 갈래로 갈립니다 (목업 ⓒ).
-          ⚠️ 고객을 고르면 ★저절로 👤 갈래로 옮겨 갑니다. 다만 ★창을 «열지는» 않습니다 —
-             목록만 훑어보실 때 창이 뜨면 성가시기 때문입니다.
-          ⚠️ birth_data 는 상담 신청 때 담긴 값입니다 (consultant-select).
-             hour 는 ★숫자 문자열 또는 '모름' — 모르면 «시 미지정» 으로 봅니다.
-          ⛔ 「✏️ 직접 입력」을 지우지 마십시오. 상담사가 «가족 사주» 를 함께 보는 자리입니다. */}
+      {/* 창 안에서 생년월일을 입력하면 전문가용 만세력 화면을 그대로 띄운다.
+          ★2026-08-05 (47부 38차) — 「고른 고객 자동 불러오기」를 «걷어냈습니다». [대표님 지시]
+            [까닭]  36·37차에 상담 목록의 고객을 자동으로 불러오게 했는데,
+              ★열 화면이 상담 신청 때 «생년월일을 안 실어 보내고» 있었습니다.
+              (사주 화면만 searchParams 를 넘깁니다)
+              ⇒ 궁합·작명·택일에서 신청한 고객은 birth_data 가 «비어» 있어
+                「고른 고객」 갈래가 ★눌리지도 않았습니다.
+            ⇒ 대표님이 「자동으로 불러오는 것은 없애고」 하셨습니다.
+            ⚠️ 되살리시려면 ★먼저 열 화면이 ConsultButton 에 searchParams 를 넘기게
+               고쳐야 합니다. 그러지 않으면 이번과 같은 일이 되풀이됩니다. */}
       <ExpertFloating
         open={sajuOpen}
         onClose={() => setSajuOpen(false)}
-        customer={selectedConsultation?.birth_data ? {
-          name: selectedConsultation.birth_data.customerName || selectedConsultation.customer_name,
-          year: selectedConsultation.birth_data.year,
-          month: selectedConsultation.birth_data.month,
-          day: selectedConsultation.birth_data.day,
-          gender: selectedConsultation.birth_data.gender,
-          hour: selectedConsultation.birth_data.hour,
-          calType: selectedConsultation.birth_data.calType,
-          leapMonth: selectedConsultation.birth_data.leapMonth,
-        } : null}
       />
 
       {/* ===== 📋 이전 상담 내역 (독립 플로팅 창) ===== */}
