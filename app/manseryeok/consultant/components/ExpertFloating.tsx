@@ -65,7 +65,18 @@ export default function ExpertFloating({ open, onClose }: Props) {
   useEffect(() => {
     const move = (e: MouseEvent) => {
       if (drag.current) {
-        setPos({ x: e.clientX - drag.current.dx, y: e.clientY - drag.current.dy })
+        // ★2026-08-05 (47부 42차) — 창이 «위로» 못 나가게 막습니다. [대표님 지시]
+        //   [겪은 일]  대표님 — 「상단으로 들어가 버리면 옮길 수가 없네」
+        //     제목줄이 화면 «위» 로 넘어가면 ★잡을 곳이 없어 다시 못 내렸습니다.
+        //   [고침]  ★y 를 0 밑으로 못 내려갑니다. 제목줄이 «언제나» 보입니다.
+        //   ⚠️⚠️ ★아래·왼쪽·오른쪽은 «안» 막았습니다 —
+        //      대표님 「아래로는 끝까지 늘려야 되거든」.
+        //      ⛔ 아래쪽에 제한을 걸지 마십시오. 긴 해설을 볼 때 답답해집니다.
+        //      ⛔ 좌우에도 걸지 마십시오. 옆으로 밀어 두고 쓰실 수 있어야 합니다.
+        setPos({
+          x: e.clientX - drag.current.dx,
+          y: Math.max(0, e.clientY - drag.current.dy),
+        })
       } else if (resize.current) {
         const r = resize.current
         setSize({
