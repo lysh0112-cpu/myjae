@@ -1,7 +1,7 @@
 'use client'
 import { useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { BANKS, SPECIALTIES, REGIONS, formatPhone } from './consultantData'
+import { BANKS, SERVICE_SPECIALTIES, REGIONS, formatPhone } from './consultantData'
 
 export type ConsultantFormData = {
   id: string
@@ -9,6 +9,15 @@ export type ConsultantFormData = {
   phone: string
   email: string
   specialty: string
+  /**
+   * ★2026-08-06 (48부 3차) — 전문분야를 «여러 개» 고릅니다 [대표님 지시]
+   *   담기는 값은 ★consult_prices 의 price_key 입니다 (예: ['saju','couple']).
+   *   ⚠️ 위 specialty(한 칸)는 ★손님 화면(consultant-select)이 아직 읽습니다 —
+   *      상담사 이름 아래 한 줄로 나옵니다. 그래서 ★지우지 않고,
+   *      저장할 때 여기서 만든 한 줄을 «함께» 넣어 둡니다.
+   *   ⛔ specialty 칸을 지우지 마십시오. 손님 화면 한 줄이 빈칸이 됩니다.
+   */
+  specialties: string[]
   price: number
   bank: string
   account: string
@@ -26,7 +35,7 @@ export type ConsultantFormData = {
 }
 
 export const emptyForm: ConsultantFormData = {
-  id: '', name: '', phone: '', email: '', specialty: '',
+  id: '', name: '', phone: '', email: '', specialty: '', specialties: [],
   price: 0, bank: '', account: '', active: true,
   region: '', commission_rate: 0, commission_amount: 0,
   photo_url: '', career: '', intro: '',
@@ -108,15 +117,6 @@ export default function ConsultantForm({ form, editing, loading, onChange, onSav
         </div>
 
         <div>
-          <label className="text-xs mb-1 block" style={labelStyle}>전문분야</label>
-          <select value={form.specialty} onChange={e => set('specialty', e.target.value)}
-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={selectStyle}>
-            <option value="">선택</option>
-            {SPECIALTIES.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-
-        <div>
           <label className="text-xs mb-1 block" style={labelStyle}>거주지역</label>
           <select value={form.region} onChange={e => set('region', e.target.value)}
             className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={selectStyle}>
@@ -171,6 +171,65 @@ export default function ConsultantForm({ form, editing, loading, onChange, onSav
           </button>
         </div>
 
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════
+          ★2026-08-06 (48부 3차) — 전문분야 토글 «열 개» [대표님 지시]
+            「전문분야를 홈서비스 버튼에 맞춰서 각 상담사별로
+              토글로 연결할지 말지 버튼만 만들어 주면 된다」
+
+          ⚠️ ★3열 격자 «밖» 에 두었습니다 — 열 개가 한 칸에 안 들어갑니다.
+          ⚠️ 담기는 값은 ★price_key 입니다 (consult_prices 와 «같은» 값).
+             ⇒ 손님이 온 화면(ConsultButton 의 priceKey)과 그대로 짝이 맞습니다.
+          ⚠️ 차례는 ★대표님이 적어 주신 그대로입니다 (홈 카드 차례와 다릅니다).
+          ⛔ SERVICE_SPECIALTIES 의 key 를 바꾸지 마십시오 — 열두 화면과 어긋납니다.
+          ══════════════════════════════════════════════════════════════ */}
+      <div className="mt-4 rounded-2xl p-4"
+        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+
+        <div className="flex items-center gap-3 mb-3 flex-wrap">
+          <label className="text-xs" style={labelStyle}>
+            전문분야 <span style={{ color: '#8e8ba8' }}>— 여러 개 고를 수 있어요</span>
+          </label>
+          <button type="button"
+            onClick={() => set('specialties', SERVICE_SPECIALTIES.map(s => s.key))}
+            className="px-3 py-1 rounded-lg text-xs"
+            style={{ background: 'rgba(255,255,255,0.06)', color: '#b0aec8' }}>
+            전체 선택
+          </button>
+          <button type="button"
+            onClick={() => set('specialties', [])}
+            className="px-3 py-1 rounded-lg text-xs"
+            style={{ background: 'rgba(255,255,255,0.06)', color: '#b0aec8' }}>
+            전체 해제
+          </button>
+          <span className="text-xs ml-auto" style={{ color: '#8e8ba8' }}>
+            {form.specialties.length}개 선택됨
+          </span>
+        </div>
+
+        <div className="grid grid-cols-5 gap-2">
+          {SERVICE_SPECIALTIES.map(s => {
+            const on = form.specialties.includes(s.key)
+            return (
+              <button key={s.key} type="button"
+                onClick={() => set('specialties', on
+                  ? form.specialties.filter(k => k !== s.key)
+                  : [...form.specialties, s.key])}
+                className="rounded-xl px-3 py-2 text-left"
+                style={on
+                  ? { background: 'rgba(127,119,221,0.22)', border: '2px solid #7F77DD', color: '#CECBF6' }
+                  : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', color: '#8e8ba8' }}>
+                <div className="text-[13px] leading-tight">{s.icon} {s.name}</div>
+                <div className="text-[11px] mt-0.5" style={{ color: on ? '#AFA9EC' : '#6d6a85' }}>{s.key}</div>
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="text-xs mt-3" style={{ color: '#8e8ba8' }}>
+          고른 서비스의 결과 화면에서만 이 상담사가 보입니다.
+        </div>
       </div>
 
       {/* 고객 화면에 보일 정보 */}

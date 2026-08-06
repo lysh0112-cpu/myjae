@@ -1,0 +1,317 @@
+diff --git "a/_SQL_48bu_3\354\260\250_\354\203\201\353\213\264\354\202\254_\354\240\204\353\254\270\353\266\204\354\225\274_\353\263\265\354\210\230.sql" "b/_SQL_48bu_3\354\260\250_\354\203\201\353\213\264\354\202\254_\354\240\204\353\254\270\353\266\204\354\225\274_\353\263\265\354\210\230.sql"
+new file mode 100644
+index 0000000..af2ef08
+--- /dev/null
++++ "b/_SQL_48bu_3\354\260\250_\354\203\201\353\213\264\354\202\254_\354\240\204\353\254\270\353\266\204\354\225\274_\353\263\265\354\210\230.sql"
+@@ -0,0 +1,50 @@
++-- ══════════════════════════════════════════════════════════════════
++--  _SQL_48bu_3차_상담사_전문분야_복수.sql
++--
++--  ★2026-08-06 (48부 3차) [대표님 지시]
++--    「전문분야를 홈서비스 버튼에 맞춰서 각 상담사별로
++--      토글로 연결할지 말지 버튼만 만들어 주면 된다」
++--
++--  ★무엇을 합니까
++--    consultants 에 ★specialties 칸을 «더합니다» (글줄 여러 개).
++--    담기는 값은 ★consult_prices 의 price_key 와 «같은» 값입니다 —
++--      mulsang · career · couple · saju · wedding
++--      · birth · moving · naming · naming_baby · tarot
++--
++--  ⚠️⚠️ ★기존 specialty 칸은 «그대로 둡니다». 지우지 마십시오.
++--     손님 화면(consultant-select)이 ★아직 이 칸을 읽습니다 —
++--     상담사 이름 아래 한 줄로 나옵니다.
++--     ⇒ 관리자에서 저장하면 두 칸이 «함께» 채워집니다.
++--
++--  ⚠️ 이 SQL 은 ★몇 번을 돌려도 됩니다 (IF NOT EXISTS).
++-- ══════════════════════════════════════════════════════════════════
++
++-- ① 전문분야 여러 개를 담을 칸
++ALTER TABLE consultants
++  ADD COLUMN IF NOT EXISTS specialties text[] NOT NULL DEFAULT '{}';
++
++COMMENT ON COLUMN consultants.specialties IS
++  '전문분야 (consult_prices.price_key 와 같은 값). 48부 3차. 빈 배열이면 아직 안 고른 것';
++
++-- ② 거를 때 빠르도록
++CREATE INDEX IF NOT EXISTS idx_consultants_specialties
++  ON consultants USING GIN (specialties);
++
++-- ══════════════════════════════════════════════════════════════════
++--  ⚠️ ★옛 전문분야 여덟은 «버리기로» 하셨습니다 [대표님 「버리고 새 열 개로 갈음」]
++--     사주·운명 / 궁합·연애 / 재물·사업 / 신살·대운
++--     / 개명·작명 / 타로·점술 / 풍수·이사 / 전반적 상담
++--
++--  ⇒ 지금 등록된 분들은 specialties 가 ★«빈 배열» 입니다.
++--     관리자 화면에서 상담사마다 토글을 켜 주십시오.
++--
++--  ⚠️ 옛 값이 궁금하시면 «지우기 전» 에 아래로 보실 수 있습니다.
++--     SELECT name, specialty FROM consultants ORDER BY sort;
++--
++--  ⛔ ★specialty 칸을 DROP 하지 마십시오. 손님 화면이 읽습니다.
++-- ══════════════════════════════════════════════════════════════════
++
++-- ③ 잘 들어갔는지 확인
++SELECT name, specialty, specialties
++FROM consultants
++ORDER BY sort, created_at;
+diff --git a/app/admin/components/ConsultantForm.tsx b/app/admin/components/ConsultantForm.tsx
+index d022590..2df24e9 100644
+--- a/app/admin/components/ConsultantForm.tsx
++++ b/app/admin/components/ConsultantForm.tsx
+@@ -1,7 +1,7 @@
+ 'use client'
+ import { useRef, useState } from 'react'
+ import { supabase } from '@/lib/supabase'
+-import { BANKS, SPECIALTIES, REGIONS, formatPhone } from './consultantData'
++import { BANKS, SERVICE_SPECIALTIES, REGIONS, formatPhone } from './consultantData'
+ 
+ export type ConsultantFormData = {
+   id: string
+@@ -9,6 +9,15 @@ export type ConsultantFormData = {
+   phone: string
+   email: string
+   specialty: string
++  /**
++   * ★2026-08-06 (48부 3차) — 전문분야를 «여러 개» 고릅니다 [대표님 지시]
++   *   담기는 값은 ★consult_prices 의 price_key 입니다 (예: ['saju','couple']).
++   *   ⚠️ 위 specialty(한 칸)는 ★손님 화면(consultant-select)이 아직 읽습니다 —
++   *      상담사 이름 아래 한 줄로 나옵니다. 그래서 ★지우지 않고,
++   *      저장할 때 여기서 만든 한 줄을 «함께» 넣어 둡니다.
++   *   ⛔ specialty 칸을 지우지 마십시오. 손님 화면 한 줄이 빈칸이 됩니다.
++   */
++  specialties: string[]
+   price: number
+   bank: string
+   account: string
+@@ -26,7 +35,7 @@ export type ConsultantFormData = {
+ }
+ 
+ export const emptyForm: ConsultantFormData = {
+-  id: '', name: '', phone: '', email: '', specialty: '',
++  id: '', name: '', phone: '', email: '', specialty: '', specialties: [],
+   price: 0, bank: '', account: '', active: true,
+   region: '', commission_rate: 0, commission_amount: 0,
+   photo_url: '', career: '', intro: '',
+@@ -107,15 +116,6 @@ export default function ConsultantForm({ form, editing, loading, onChange, onSav
+             className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
+         </div>
+ 
+-        <div>
+-          <label className="text-xs mb-1 block" style={labelStyle}>전문분야</label>
+-          <select value={form.specialty} onChange={e => set('specialty', e.target.value)}
+-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={selectStyle}>
+-            <option value="">선택</option>
+-            {SPECIALTIES.map(s => <option key={s} value={s}>{s}</option>)}
+-          </select>
+-        </div>
+-
+         <div>
+           <label className="text-xs mb-1 block" style={labelStyle}>거주지역</label>
+           <select value={form.region} onChange={e => set('region', e.target.value)}
+@@ -173,6 +173,65 @@ export default function ConsultantForm({ form, editing, loading, onChange, onSav
+ 
+       </div>
+ 
++      {/* ══════════════════════════════════════════════════════════════
++          ★2026-08-06 (48부 3차) — 전문분야 토글 «열 개» [대표님 지시]
++            「전문분야를 홈서비스 버튼에 맞춰서 각 상담사별로
++              토글로 연결할지 말지 버튼만 만들어 주면 된다」
++
++          ⚠️ ★3열 격자 «밖» 에 두었습니다 — 열 개가 한 칸에 안 들어갑니다.
++          ⚠️ 담기는 값은 ★price_key 입니다 (consult_prices 와 «같은» 값).
++             ⇒ 손님이 온 화면(ConsultButton 의 priceKey)과 그대로 짝이 맞습니다.
++          ⚠️ 차례는 ★대표님이 적어 주신 그대로입니다 (홈 카드 차례와 다릅니다).
++          ⛔ SERVICE_SPECIALTIES 의 key 를 바꾸지 마십시오 — 열두 화면과 어긋납니다.
++          ══════════════════════════════════════════════════════════════ */}
++      <div className="mt-4 rounded-2xl p-4"
++        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
++
++        <div className="flex items-center gap-3 mb-3 flex-wrap">
++          <label className="text-xs" style={labelStyle}>
++            전문분야 <span style={{ color: '#8e8ba8' }}>— 여러 개 고를 수 있어요</span>
++          </label>
++          <button type="button"
++            onClick={() => set('specialties', SERVICE_SPECIALTIES.map(s => s.key))}
++            className="px-3 py-1 rounded-lg text-xs"
++            style={{ background: 'rgba(255,255,255,0.06)', color: '#b0aec8' }}>
++            전체 선택
++          </button>
++          <button type="button"
++            onClick={() => set('specialties', [])}
++            className="px-3 py-1 rounded-lg text-xs"
++            style={{ background: 'rgba(255,255,255,0.06)', color: '#b0aec8' }}>
++            전체 해제
++          </button>
++          <span className="text-xs ml-auto" style={{ color: '#8e8ba8' }}>
++            {form.specialties.length}개 선택됨
++          </span>
++        </div>
++
++        <div className="grid grid-cols-5 gap-2">
++          {SERVICE_SPECIALTIES.map(s => {
++            const on = form.specialties.includes(s.key)
++            return (
++              <button key={s.key} type="button"
++                onClick={() => set('specialties', on
++                  ? form.specialties.filter(k => k !== s.key)
++                  : [...form.specialties, s.key])}
++                className="rounded-xl px-3 py-2 text-left"
++                style={on
++                  ? { background: 'rgba(127,119,221,0.22)', border: '2px solid #7F77DD', color: '#CECBF6' }
++                  : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', color: '#8e8ba8' }}>
++                <div className="text-[13px] leading-tight">{s.icon} {s.name}</div>
++                <div className="text-[11px] mt-0.5" style={{ color: on ? '#AFA9EC' : '#6d6a85' }}>{s.key}</div>
++              </button>
++            )
++          })}
++        </div>
++
++        <div className="text-xs mt-3" style={{ color: '#8e8ba8' }}>
++          고른 서비스의 결과 화면에서만 이 상담사가 보입니다.
++        </div>
++      </div>
++
+       {/* 고객 화면에 보일 정보 */}
+       <div className="rounded-xl p-4 mt-5"
+         style={{ background: 'rgba(60,52,137,0.25)', border: '1px solid rgba(250,199,117,0.25)' }}>
+diff --git a/app/admin/components/ConsultantManager.tsx b/app/admin/components/ConsultantManager.tsx
+index c302c78..0f06d07 100644
+--- a/app/admin/components/ConsultantManager.tsx
++++ b/app/admin/components/ConsultantManager.tsx
+@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
+ import { supabase } from '@/lib/supabase'
+ import ConsultantForm, { ConsultantFormData, emptyForm } from './ConsultantForm'
+ import ConsultantTable from './ConsultantTable'
++import { specialtyLabel } from './consultantData'
+ // DB가 돌려주는 영어 오류를 우리말로 바꾼다. (2026-07-21 2차)
+ //   화면에 영어 원문이 그대로 뜨면 무슨 뜻인지 알 수 없다.
+ function friendlyDbError(msg: string, name: string): string {
+@@ -82,7 +83,15 @@ export default function ConsultantManager() {
+     setLoading(true)
+     const payload = {
+       name: form.name, phone: form.phone, email: form.email,
+-      specialty: form.specialty, price: form.price,
++      // ★2026-08-06 (48부 3차) — 전문분야 «여러 개» [대표님 지시]
++      //   specialties  ★price_key 배열 (예: ['saju','couple']) — 거르기에 쓸 값
++      //   specialty    ★사람이 읽는 한 줄 — «손님 화면» 이 아직 이 칸을 읽습니다
++      //                (consultant-select 의 상담사 이름 아래 한 줄)
++      //   ⚠️ 둘을 «함께» 넣습니다. ⛔ 한쪽만 넣지 마십시오 —
++      //      specialties 만 넣으면 손님 화면 한 줄이 «빈칸» 이 됩니다.
++      specialties: form.specialties,
++      specialty: specialtyLabel(form.specialties),
++      price: form.price,
+       bank: form.bank, account: form.account,
+       region: form.region, commission_rate: form.commission_rate,
+       commission_amount: form.commission_amount,
+@@ -186,7 +195,9 @@ export default function ConsultantManager() {
+     if (error) { alert('순번을 저장하지 못했어요.\n\n잠시 후 다시 시도해 주세요.\n(' + error.message + ')'); fetchList(); return }
+   }
+   function handleEdit(c: ConsultantFormData) {
+-    setForm({ ...emptyForm, ...c })
++    // ★2026-08-06 (48부 3차) — DB 의 specialties 가 «없는» 옛 자료면 빈 배열로.
++    //   ⚠️ null 이 그대로 들어오면 form.specialties.includes 에서 터집니다.
++    setForm({ ...emptyForm, ...c, specialties: Array.isArray(c.specialties) ? c.specialties : [] })
+     setEditing(true)
+     window.scrollTo({ top: 0, behavior: 'smooth' })
+   }
+diff --git a/app/admin/components/ConsultantTable.tsx b/app/admin/components/ConsultantTable.tsx
+index f0dd822..6d7f3c8 100644
+--- a/app/admin/components/ConsultantTable.tsx
++++ b/app/admin/components/ConsultantTable.tsx
+@@ -2,6 +2,7 @@
+ import { useState } from 'react'
+ import { useRouter } from 'next/navigation'
+ import { ConsultantFormData } from './ConsultantForm'
++import { specialtyLabel } from './consultantData'
+ 
+ // 상담사별 "아직 살아 있는 예약"(완료도 취소도 안 된 건)
+ type PendingInfo = { count: number; names: string[] }
+@@ -68,7 +69,7 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete,
+       const r = [String(c.sort ?? 0), c.name, c.active ? '활성' : '비활성']
+       if (cols.email) r.push(c.email || '')
+       if (cols.phone) r.push(c.phone || '')
+-      if (cols.specialty) r.push(c.specialty || '')
++      if (cols.specialty) r.push(c.specialty || specialtyLabel(c.specialties ?? []) || '')
+       if (cols.region) r.push(c.region || '')
+       if (cols.bank) r.push(c.bank || '', c.account || '')
+       if (cols.commission) r.push(String(c.commission_rate || 0) + '%', String(c.commission_amount || 0))
+@@ -211,7 +212,7 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete,
+               </span>
+               {cols.email && <span style={{ width: 130, fontSize: 12, color: '#b0aec8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email || '-'}</span>}
+               {cols.phone && <span style={{ width: 100, fontSize: 12, color: '#b0aec8' }}>{c.phone || '-'}</span>}
+-              {cols.specialty && <span style={{ width: 90, fontSize: 12, color: '#b0aec8' }}>{c.specialty || '-'}</span>}
++              {cols.specialty && <span style={{ width: 90, fontSize: 12, color: '#b0aec8' }}>{c.specialty || specialtyLabel(c.specialties ?? []) || '-'}</span>}
+               {cols.region && <span style={{ width: 60, fontSize: 12, color: '#b0aec8' }}>{c.region || '-'}</span>}
+               {cols.bank && <span style={{ width: 160, fontSize: 12, color: '#b0aec8' }}>{c.bank || '-'} {c.account || ''}</span>}
+               {cols.commission && <span style={{ width: 90, fontSize: 12, color: '#b0aec8' }}>{c.commission_rate || 0}% / {(c.commission_amount || 0).toLocaleString()}</span>}
+@@ -236,7 +237,7 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete,
+                     {c.career
+                       ? <div style={{ fontSize: 12, color: '#b0aec8', marginTop: 4, whiteSpace: 'pre-line' }}>{c.career}</div>
+                       : <div style={{ fontSize: 12, color: '#6a6880', marginTop: 4, fontStyle: 'italic' }}>경력 없음 — 수정에서 입력</div>}
+-                    <div style={{ fontSize: 12, color: '#b0aec8', marginTop: 2 }}>{c.specialty || '-'} · {c.region || '-'}</div>
++                    <div style={{ fontSize: 12, color: '#b0aec8', marginTop: 2 }}>{c.specialty || specialtyLabel(c.specialties ?? []) || '-'} · {c.region || '-'}</div>
+                   </div>
+                 </div>
+ 
+diff --git a/app/admin/components/consultantData.ts b/app/admin/components/consultantData.ts
+index 0f6ab37..36f8c1a 100644
+--- a/app/admin/components/consultantData.ts
++++ b/app/admin/components/consultantData.ts
+@@ -5,10 +5,53 @@ export const BANKS = [
+   '새마을금고', '신협', '우체국', '수협은행', '케이뱅크',
+ ]
+ 
+-export const SPECIALTIES = [
+-  '사주·운명', '궁합·연애', '재물·사업', '신살·대운',
+-  '개명·작명', '타로·점술', '풍수·이사', '전반적 상담',
+-]
++// ══════════════════════════════════════════════════════════════════
++//  ★2026-08-06 (48부 3차) — 전문분야를 «홈 서비스 열 개» 로 갈았습니다
++//    [대표님]  「전문분야를 홈서비스 버튼에 맞춰서 각 상담사별로
++//                토글로 연결할지 말지 버튼만 만들어 주면 된다」
++//              「지금 관리자 페이지에서 고객결과화면에 보여주는
++//                전문상담사 연결버튼을 보여줄지 말지를 결정하고 있으니」
++//
++//  ⚠️ ★옛 여덟(사주·운명 / 궁합·연애 / 재물·사업 / 신살·대운 /
++//     개명·작명 / 타로·점술 / 풍수·이사 / 전반적 상담)은 ★버렸습니다
++//     [대표님 「버리고 새 열 개로 갈음」]. 홈 서비스와 갈래가 안 맞았습니다.
++//
++//  ★key 는 ★consult_prices 의 price_key 와 «같은 값» 입니다 (47부 3-1 확정).
++//     ⇒ 손님이 어느 화면에서 왔는지(ConsultButton 이 실어 보내는 priceKey)와
++//        ★그대로 짝이 맞습니다. 새 배관을 깔 것이 없습니다.
++//  ⛔ ★key 를 바꾸지 마십시오. consult_prices · ConsultButton 열두 곳과 어긋납니다.
++//
++//  ⚠️ 차례는 ★대표님이 적어 주신 그대로입니다. 홈 카드 차례와는 다릅니다.
++//  ⛔ 마음대로 정렬하지 마십시오.
++//
++//  ⚠️ ★한 서비스에 화면이 «둘» 인 것 — 결혼택일·출산택일·이사택일.
++//     ★같은 price_key 를 씁니다. 그래서 토글은 «열 개» 입니다 (화면으로 세면 열둘).
++// ══════════════════════════════════════════════════════════════════
++export const SERVICE_SPECIALTIES = [
++  { key: 'mulsang',     name: '내사주그림',        icon: '🎨' },
++  { key: 'career',      name: '진로적성',          icon: '🧭' },
++  { key: 'couple',      name: '궁합',              icon: '💖' },
++  { key: 'saju',        name: '내 사주와 운세보기', icon: '🔮' },
++  { key: 'wedding',     name: '결혼택일',          icon: '💍' },
++  { key: 'birth',       name: '출산택일',          icon: '🍼' },
++  { key: 'moving',      name: '이사택일',          icon: '🏡' },
++  { key: 'naming',      name: '내 이름 정밀분석',   icon: '📇' },
++  { key: 'naming_baby', name: '내 아이 명품작명',   icon: '👶' },
++  { key: 'tarot',       name: '타로',              icon: '🃏' },
++] as const
++
++export type ServiceKey = typeof SERVICE_SPECIALTIES[number]['key']
++
++/** key → 이름 (목록·CSV 에서 씁니다) */
++export function specialtyName(key: string): string {
++  return SERVICE_SPECIALTIES.find(s => s.key === key)?.name ?? key
++}
++
++/** 고른 key 들을 사람이 읽는 한 줄로 — 손님 화면의 specialty 칸에 넣습니다 */
++export function specialtyLabel(keys: string[]): string {
++  if (!keys.length) return ''
++  return keys.map(specialtyName).join(' · ')
++}
+ 
+ export const REGIONS = [
+   '서울', '경기', '인천', '부산', '대구', '광주', '대전',

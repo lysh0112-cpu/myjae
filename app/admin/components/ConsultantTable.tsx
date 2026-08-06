@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ConsultantFormData } from './ConsultantForm'
+import { specialtyLabel } from './consultantData'
 
 // 상담사별 "아직 살아 있는 예약"(완료도 취소도 안 된 건)
 type PendingInfo = { count: number; names: string[] }
@@ -68,7 +69,7 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, 
       const r = [String(c.sort ?? 0), c.name, c.active ? '활성' : '비활성']
       if (cols.email) r.push(c.email || '')
       if (cols.phone) r.push(c.phone || '')
-      if (cols.specialty) r.push(c.specialty || '')
+      if (cols.specialty) r.push(c.specialty || specialtyLabel(c.specialties ?? []) || '')
       if (cols.region) r.push(c.region || '')
       if (cols.bank) r.push(c.bank || '', c.account || '')
       if (cols.commission) r.push(String(c.commission_rate || 0) + '%', String(c.commission_amount || 0))
@@ -211,7 +212,7 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, 
               </span>
               {cols.email && <span style={{ width: 130, fontSize: 12, color: '#b0aec8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email || '-'}</span>}
               {cols.phone && <span style={{ width: 100, fontSize: 12, color: '#b0aec8' }}>{c.phone || '-'}</span>}
-              {cols.specialty && <span style={{ width: 90, fontSize: 12, color: '#b0aec8' }}>{c.specialty || '-'}</span>}
+              {cols.specialty && <span style={{ width: 90, fontSize: 12, color: '#b0aec8' }}>{c.specialty || specialtyLabel(c.specialties ?? []) || '-'}</span>}
               {cols.region && <span style={{ width: 60, fontSize: 12, color: '#b0aec8' }}>{c.region || '-'}</span>}
               {cols.bank && <span style={{ width: 160, fontSize: 12, color: '#b0aec8' }}>{c.bank || '-'} {c.account || ''}</span>}
               {cols.commission && <span style={{ width: 90, fontSize: 12, color: '#b0aec8' }}>{c.commission_rate || 0}% / {(c.commission_amount || 0).toLocaleString()}</span>}
@@ -236,7 +237,7 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, 
                     {c.career
                       ? <div style={{ fontSize: 12, color: '#b0aec8', marginTop: 4, whiteSpace: 'pre-line' }}>{c.career}</div>
                       : <div style={{ fontSize: 12, color: '#6a6880', marginTop: 4, fontStyle: 'italic' }}>경력 없음 — 수정에서 입력</div>}
-                    <div style={{ fontSize: 12, color: '#b0aec8', marginTop: 2 }}>{c.specialty || '-'} · {c.region || '-'}</div>
+                    <div style={{ fontSize: 12, color: '#b0aec8', marginTop: 2 }}>{c.specialty || specialtyLabel(c.specialties ?? []) || '-'} · {c.region || '-'}</div>
                   </div>
                 </div>
 

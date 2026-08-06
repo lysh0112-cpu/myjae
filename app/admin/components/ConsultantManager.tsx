@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import ConsultantForm, { ConsultantFormData, emptyForm } from './ConsultantForm'
 import ConsultantTable from './ConsultantTable'
+import { specialtyLabel } from './consultantData'
 // DB가 돌려주는 영어 오류를 우리말로 바꾼다. (2026-07-21 2차)
 //   화면에 영어 원문이 그대로 뜨면 무슨 뜻인지 알 수 없다.
 function friendlyDbError(msg: string, name: string): string {
@@ -82,7 +83,15 @@ export default function ConsultantManager() {
     setLoading(true)
     const payload = {
       name: form.name, phone: form.phone, email: form.email,
-      specialty: form.specialty, price: form.price,
+      // ★2026-08-06 (48부 3차) — 전문분야 «여러 개» [대표님 지시]
+      //   specialties  ★price_key 배열 (예: ['saju','couple']) — 거르기에 쓸 값
+      //   specialty    ★사람이 읽는 한 줄 — «손님 화면» 이 아직 이 칸을 읽습니다
+      //                (consultant-select 의 상담사 이름 아래 한 줄)
+      //   ⚠️ 둘을 «함께» 넣습니다. ⛔ 한쪽만 넣지 마십시오 —
+      //      specialties 만 넣으면 손님 화면 한 줄이 «빈칸» 이 됩니다.
+      specialties: form.specialties,
+      specialty: specialtyLabel(form.specialties),
+      price: form.price,
       bank: form.bank, account: form.account,
       region: form.region, commission_rate: form.commission_rate,
       commission_amount: form.commission_amount,
@@ -186,7 +195,9 @@ export default function ConsultantManager() {
     if (error) { alert('순번을 저장하지 못했어요.\n\n잠시 후 다시 시도해 주세요.\n(' + error.message + ')'); fetchList(); return }
   }
   function handleEdit(c: ConsultantFormData) {
-    setForm({ ...emptyForm, ...c })
+    // ★2026-08-06 (48부 3차) — DB 의 specialties 가 «없는» 옛 자료면 빈 배열로.
+    //   ⚠️ null 이 그대로 들어오면 form.specialties.includes 에서 터집니다.
+    setForm({ ...emptyForm, ...c, specialties: Array.isArray(c.specialties) ? c.specialties : [] })
     setEditing(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
