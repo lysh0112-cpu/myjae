@@ -140,12 +140,40 @@ const WED_GRADE_COLOR: Record<string, string> = {
   S: '#FAC775', A: '#9be29b', B: '#9bc0e2', C: '#c8b0ff', D: '#9a98b0',
 }
 
+/**
+ * ★2026-08-06 (47부 43차) — 태어난 시각을 «잘못» 읽던 것을 고쳤습니다. [대표님 지적]
+ *   「태어난 시각을 두 사람 모두 잘 못 읽어온다」
+ *
+ *   [까닭]  birth_data 의 hour 는 ★«시각» 이 아니라 «시진 번호»(0~11) 입니다.
+ *     0 子(23~01) 1 丑(01~03) 2 寅(03~05) 3 卯(05~07) 4 辰(07~09) 5 巳(09~11)
+ *     6 午(11~13) 7 未(13~15) 8 申(15~17) 9 酉(17~19) 10 戌(19~21) 11 亥(21~23)
+ *   ⇒ 전에는 번호에 그냥 「시」를 붙여 ★「3시」·「6시」 로 나왔습니다.
+ *     ★실은 卯시(05~07) · 午시(11~13) 입니다.
+ *   ⚠️⚠️ 상담사가 「새벽 3시생」으로 읽으면 ★«완전히 다른 사주» 가 됩니다.
+ *
+ *   ⚠️ 손님 화면(result-new:317)도 ★번호로 읽습니다 — 그쪽이 «맞는» 방식입니다.
+ *   ⛔ 다시 「hour + '시'」 로 되돌리지 마십시오.
+ *
+ *   ⚠️ ★booking_hour · slot_hour 는 «예약 시각» 이라 «진짜 시» 가 맞습니다.
+ *      (mypage-new · consultant-select · ConsultTimer · ScheduleStep)
+ *      ⛔ 그쪽을 이 규칙으로 바꾸지 마십시오.
+ */
+const HOUR_BRANCH = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
+const HOUR_RANGE = ['23~01', '01~03', '03~05', '05~07', '07~09', '09~11',
+                    '11~13', '13~15', '15~17', '17~19', '19~21', '21~23']
+
+function hourText(hour?: string): string {
+  if (!hour || hour === '모름') return ''
+  const i = Number(hour)
+  if (!Number.isInteger(i) || i < 0 || i > 11) return ''
+  return ` ${HOUR_BRANCH[i]}시(${HOUR_RANGE[i]})`
+}
+
 function birthText(b?: Record<string, string>): string {
   if (!b) return '-'
   const g = b.gender ? b.gender + ' · ' : ''
   const cal = b.calType || '양력'
-  const h = b.hour && b.hour !== '모름' ? ' ' + b.hour + '시' : ''
-  return g + cal + ' ' + b.year + '.' + b.month + '.' + b.day + h
+  return g + cal + ' ' + b.year + '.' + b.month + '.' + b.day + hourText(b.hour)
 }
 
 function dayPrefKo(p?: string | null): string {
