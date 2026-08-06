@@ -7,7 +7,26 @@ export function useConsultantState() {
   const [consultationId, setConsultationId] = useState<string | null>(null)
   const [customerPhone, setCustomerPhone] = useState('')
   const [customerName, setCustomerName] = useState('')
-  const [selectedConsultation, setSelectedConsultation] = useState<{id:string;customer_phone:string;user_id?:string|null} | null>(null)
+  /**
+   * ★2026-08-05 (47부 36차) — birth_data · customer_name 을 «함께» 담습니다. [대표님 지시]
+   *   [까닭]  만세력 창이 고른 고객의 사주를 바로 그리려면 «생년월일» 이 필요합니다.
+   *     전에는 id · customer_phone · user_id 만 담아
+   *     ★상담사가 생년월일을 «손으로 다시» 쳐야 했습니다.
+   *   ⚠️ birth_data 는 상담 신청 때 담긴 값입니다 (consultant-select).
+   *      hour 는 ★숫자 문자열 또는 '모름'.
+   *   ⚠️ 전부 «있을 수도 없을 수도» 있어 물음표를 붙였습니다. 옛 기록에는 없을 수 있습니다.
+   */
+  const [selectedConsultation, setSelectedConsultation] = useState<{
+    id: string
+    customer_phone: string
+    user_id?: string | null
+    customer_name?: string
+    birth_data?: {
+      year?: string; month?: string; day?: string
+      gender?: string; hour?: string; calType?: string; leapMonth?: string
+      customerName?: string
+    }
+  } | null>(null)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [gender, setGender] = useState(searchParams.get('gender') || '')
   const [calType, setCalType] = useState(searchParams.get('calType') || '')
@@ -109,7 +128,17 @@ export function useConsultantState() {
     setHourIdx(params.hour === '모름' ? null : parseInt(params.hour))
     setCustomerName(params.customerName || '')
   }
-  function handleSelectConsultation(c: {id:string;customer_phone:string;user_id?:string|null}) {
+  function handleSelectConsultation(c: {
+    id: string
+    customer_phone: string
+    user_id?: string | null
+    customer_name?: string
+    birth_data?: {
+      year?: string; month?: string; day?: string
+      gender?: string; hour?: string; calType?: string; leapMonth?: string
+      customerName?: string
+    }
+  }) {
     setSelectedConsultation(c)
     setConsultationId(c.id)
     setCustomerPhone(c.customer_phone)
