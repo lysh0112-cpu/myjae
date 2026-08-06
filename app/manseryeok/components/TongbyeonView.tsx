@@ -182,7 +182,19 @@ export default function TongbyeonView({ input, questions, premium, premiumPrompt
   const [text, setText] = useState(savedText || '')
   const [loading, setLoading] = useState(!savedText)   // 저장본이면 로딩 없이 바로 표시
   const [err, setErr] = useState('')
-  const [openIdx, setOpenIdx] = useState<number>(0)
+  // ★2026-08-05 (47부 35차) — 통변을 «전부 펼친 채» 로. [대표님 지시]
+  //   「통변이 펼쳐져서 시작이 안되네」 / 「전체적으로 다 그래」
+  //
+  //   [전]  openIdx 하나만 열림 (0 = 첫 칸만). ★«한 번에 하나만» 이라
+  //         손님이 둘째를 열면 첫째가 «닫혔습니다».
+  //   [후]  ★closedIdx 에 «담긴 것만» 접힘. 빈 Set 이라 ★전부 펼친 채 시작합니다.
+  //
+  //   ⚠️ 이 부품은 ★세 화면이 씁니다 — 사주(만세력) · 궁합 · 합격운.
+  //      ⇒ 셋 다 «함께» 펼쳐집니다.
+  //   ⚠️ 34차에 고친 PerspectiveAccordion 은 ★«다른 부품» 입니다 (작명 쪽).
+  //      대표님이 사주 화면을 보셔서 이 자리가 드러났습니다.
+  //   ⛔ 되돌리시려면 ★closedIdx 를 openIdx 로 되돌리고 아래 셋도 «함께» 뒤집으십시오.
+  const [closedIdx, setClosedIdx] = useState<Set<number>>(new Set())
   const startedRef = useRef(false)
 
   useEffect(() => {
@@ -241,7 +253,10 @@ export default function TongbyeonView({ input, questions, premium, premiumPrompt
 
   const { intro, cards } = useMemo(() => parseCards(text), [text])
 
-  const effectiveOpen = loading && cards.length > 0 ? cards.length - 1 : openIdx
+  // ⚠️ 글이 «오는 중» 이면 ★마지막 칸만 열어 «지금 쓰이는 자리» 를 보여 줍니다.
+  //    다 오면 위 closedIdx 대로 — 즉 ★전부 펼침.
+  const isCardOpen = (i: number) =>
+    loading && cards.length > 0 ? i === cards.length - 1 : !closedIdx.has(i)
 
   return (
     <div style={{ background: C.cardBg, borderRadius: 18, border: LINE_OUTER, overflow: 'hidden' }}>
@@ -260,7 +275,7 @@ export default function TongbyeonView({ input, questions, premium, premiumPrompt
         )}
 
         {cards.map((c, i) => {
-          const open = effectiveOpen === i
+          const open = isCardOpen(i)
           return (
             <div key={i}>
             {/* ★그 카드의 도표를 풀이 «바로 위»에 얹는다 — 제목으로 찾는다 */}
@@ -271,7 +286,11 @@ export default function TongbyeonView({ input, questions, premium, premiumPrompt
             })()}
             <div style={{ background: C.card, border: LINE_OUTER, borderRadius: 12, marginBottom: 8, overflow: 'hidden' }}>
               <div
-                onClick={() => setOpenIdx(open ? -1 : i)}
+                onClick={() => setClosedIdx(prev => {
+                  const next = new Set(prev)
+                  if (next.has(i)) next.delete(i); else next.add(i)
+                  return next
+                })}
                 style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '13px 14px', cursor: 'pointer' }}
               >
                 <span style={{ fontSize: 16 }}>{c.icon}</span>
