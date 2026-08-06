@@ -112,6 +112,7 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, 
         순번을 고치고 옆의 저장 버튼을 누르세요 · 작을수록 위로 · 비활성은 고객 화면에 안 보여요 · 이름을 누르면 상세가 펼쳐집니다 · 진행중 예약이 있으면 삭제할 수 없어요
       </div>
 
+
       <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
         <div className="flex items-center gap-3 px-3 py-2 text-xs font-bold"
           style={{ background: 'rgba(60,52,137,0.3)', color: '#FAC775' }}>

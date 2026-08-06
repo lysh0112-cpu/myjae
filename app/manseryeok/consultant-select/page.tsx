@@ -13,6 +13,8 @@ type Consultant = {
   specialty: string
   /** ★48부 4차 — 별칭(호). 손님 화면은 ★shownName() 으로만 씁니다 */
   alias?: string | null
+  /** ★48부 5차 — 전문분야(price_key 배열). 비었으면 «전부» 에 나옵니다 */
+  specialties?: string[] | null
   photo_url: string
   career: string
   intro: string
@@ -44,6 +46,17 @@ function ConsultantSelectInner() {
   const mode  = params.get('mode')  || 'personal'
   const score = params.get('score') || ''
   const names = params.get('names') || ''
+  /**
+   * ★2026-08-06 (48부 5차) — ★손님이 «어느 서비스» 에서 왔는가  [대표님 지시]
+   *   「관리자가 지정해 준 상담사만 나오게 하겠다는 것이지」
+   *   ⚠️ ConsultButton 이 ★열두 화면 «전부» 에서 이 값을 실어 보냅니다
+   *      (params.set('priceKey', priceKey) — 새로 깐 배관이 아닙니다).
+   *   ⚠️ 값은 ★consult_prices 의 price_key 와 «같습니다» —
+   *      saju · couple · career · mulsang · wedding · birth · moving
+   *      · naming · naming_baby · tarot
+   *   ⛔ 이 이름을 바꾸지 마십시오. 열두 화면과 한꺼번에 어긋납니다.
+   */
+  const priceKey = params.get('priceKey') || ''
 
   const gender = params.get('gender') ?? ''
   const calType = params.get('calType') ?? '양력'
@@ -70,11 +83,33 @@ function ConsultantSelectInner() {
     async function load() {
       const { data } = await supabase
         .from('consultants')
-        .select('id, name, alias, specialty, photo_url, career, intro, rating, review_count, review_text, region')
+        .select('id, name, alias, specialty, specialties, photo_url, career, intro, rating, review_count, review_text, region')
         .eq('active', true)
         .order('sort')
         .order('created_at')
-      setConsultants((data ?? []) as Consultant[])
+
+      // ★2026-08-07 (48부 6차) — ★전문분야로 «거릅니다» [대표님 지시]
+      //   「관리자화면에서 "궁합"을 ★두 사람만 지정할 경우,
+      //     궁합보기 서비스에서 고객이 고를 수 있는 상담사는 ★2명만 나와야 하는데」
+      //   「★아무것도 안 고른 상담사는 안 나오게 해야지」
+      //
+      //   ⚠️⚠️ ★배려를 «둘 다» 뺐습니다 [대표님 「두번째 배려도 뺀다」] —
+      //     ① 아무 분야도 «안 고른» 상담사 → ★안 나옵니다
+      //     ② 걸러서 «0명» 이어도 → ★0명 그대로. 전체로 되돌리지 «않습니다».
+      //   ⇒ ★관리자가 켜 준 분만 나옵니다. 뜻한 대로입니다.
+      //
+      //   🔴 ★그래서 «0명» 이면 「현재 상담 가능한 상담사가 없습니다」가 뜹니다.
+      //      ⇒ 아직 아무도 안 켜 준 서비스는 ★가격 관리에서 «상담 버튼» 을 끄십시오
+      //        (consult_prices.active — 끄면 ★버튼 자체가 안 뜹니다 · ConsultButton:76).
+      //      ⛔ 「0명이면 전체를 보여 주는」 되돌림을 ★다시 넣지 마십시오.
+      //         대표님이 «일부러» 빼신 것입니다.
+      //
+      //   ⚠️ priceKey 가 «없으면» 거르지 않습니다 —
+      //      AI 채팅처럼 서비스를 안 타고 들어오는 길이 있습니다.
+      const all = (data ?? []) as Consultant[]
+      setConsultants(priceKey
+        ? all.filter(c => Array.isArray(c.specialties) && c.specialties.includes(priceKey))
+        : all)
 
       const today = new Date()
       const yyyy = today.getFullYear()
@@ -94,7 +129,9 @@ function ConsultantSelectInner() {
       setLoading(false)
     }
     load()
-  }, [])
+    // ★48부 5차 — priceKey 가 바뀌면 ★다시 불러야 합니다.
+    //   ⚠️ 전에는 [] 였습니다. 손님이 다른 서비스로 들어와도 «옛 목록» 이 남습니다.
+  }, [priceKey])
 
   function scheduleOf(consultantId: string): { date: string; slots: Slot[] }[] {
     const mine = slots.filter(s => s.consultant_id === consultantId)
