@@ -94,6 +94,15 @@ export default function TeachersPage() {
               background: '#fff', border: '1px solid #ea8c46', borderRadius: 12,
               padding: 14, marginBottom: 12,
             }}>
+              {/* ★2026-08-07 (48부 16차) — ★경력을 «이름 옆» 으로 [대표님 지시]
+                  「선생님 옆 공간이 많은데 ★효율적으로 사용할 방법」
+                  [전]  사진 | 이름·전문분야·지역   →  경력(따로 한 줄)
+                  [후]  ★사진 | 이름·전문분야·지역·★경력
+                  ⇒ ★빈 자리가 사라지고 세로도 짧아집니다.
+                  ⚠️ ★전문분야와 지역을 «한 줄» 로 합쳤습니다 — 둘 다 짧습니다.
+                  ⛔ 경력을 다시 «아래» 로 내리지 마십시오.
+                  □ 경력이 ★다섯 줄 넘게 긴 분이 오면 카드가 다시 길어집니다.
+                     그때는 ★세 줄까지만 보이고 「더 보기」를 붙이십시오. */}
               <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                 <div style={{
                   width: 58, height: 58, borderRadius: '50%', overflow: 'hidden',
@@ -122,23 +131,26 @@ export default function TeachersPage() {
                     )}
                   </div>
 
-                  {t.specialty && (
-                    <div style={{ fontSize: 12, color: '#6b5340', marginTop: 3 }}>{t.specialty}</div>
+                  {/* ★전문분야 · 지역을 «한 줄» 로 */}
+                  {(t.specialty || t.region) && (
+                    <div style={{ fontSize: 12, color: '#6b5340', marginTop: 3 }}>
+                      {t.specialty}
+                      {t.specialty && t.region && <span style={{ color: '#a08d7d' }}> · </span>}
+                      {t.region && <span style={{ color: '#a08d7d' }}>{t.region}</span>}
+                    </div>
                   )}
-                  {t.region && (
-                    <div style={{ fontSize: 11.5, color: '#a08d7d', marginTop: 2 }}>{t.region}</div>
+
+                  {/* ★경력 — 여기가 «비어 있던» 자리입니다 */}
+                  {t.career && (
+                    <div style={{
+                      marginTop: 7, fontSize: 12, color: '#4a3f38',
+                      lineHeight: 1.7, whiteSpace: 'pre-line',
+                    }}>
+                      {t.career}
+                    </div>
                   )}
                 </div>
               </div>
-
-              {t.career && (
-                <div style={{
-                  marginTop: 11, paddingTop: 10, borderTop: '1px solid #faf3ec',
-                  fontSize: 12.5, color: '#4a3f38', lineHeight: 1.85, whiteSpace: 'pre-line',
-                }}>
-                  {t.career}
-                </div>
-              )}
 
               {t.intro && (
                 <div style={{
