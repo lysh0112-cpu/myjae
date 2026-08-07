@@ -425,7 +425,20 @@ export default function MyPageNew() {
           </span>
         </div>
         <div style={{ display: 'flex', gap: 16, fontSize: 18, color: '#b49080' }}>
-          <span style={{ cursor: 'pointer' }} onClick={() => router.push('/home-new')} role="button" aria-label="홈으로">☰</span>
+          {/* ★48부 17차 — ☰ 를 ★알약 버튼으로 [홈과 «같은 결»]
+              🔴 여기 ☰ 는 「홈으로」 갔습니다 — 햄버거 뜻과 어긋납니다.
+              ⛔ 다시 ☰ 로 되돌리지 마십시오. */}
+          <button onClick={() => router.push('/home-new')} aria-label="홈으로"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              border: '0.5px solid #e0cdbb', borderRadius: 999,
+              padding: '5px 11px 5px 9px', background: '#FFFBF7',
+              cursor: 'pointer', fontFamily: 'inherit',
+              WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation',
+            }}>
+            <span style={{ fontSize: 13 }} aria-hidden="true">🏠</span>
+            <span style={{ fontSize: 12, color: '#6b5340' }}>홈</span>
+          </button>
         </div>
       </div>
 

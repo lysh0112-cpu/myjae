@@ -340,14 +340,36 @@ export default function HomeNew() {
             <span style={{ color: '#96502e' }}>Myung</span><span style={{ color: '#b46e46' }}>Cafe</span>
           </span>
         </div>
-        <div style={{ display: 'flex', gap: '16px', fontSize: '18px', color: '#b49080' }}>
-          <span
-            onClick={() => router.push('/mypage-new')}
-            role="button"
-            aria-label="마이페이지"
-            style={{ cursor: 'pointer' }}
-          >☰</span>
-        </div>
+        {/* ★2026-08-07 (48부 17차) — ☰ 를 ★알약 버튼으로 [대표님 지시]
+            「우측상단의 ★햄버거 버튼이 마이페이지로 가는 버튼인데」
+            🔴 ★햄버거(≡)는 「메뉴 목록이 «펼쳐진다»」는 뜻입니다.
+               눌렀더니 «다른 화면» 으로 넘어가면 손님이 잠깐 헷갈립니다.
+            ⚠️ ★동그라미에 첫 글자를 넣는 안은 «안» 썼습니다 —
+               홈 카드에 ★이미 같은 동그라미가 있어 한 화면에 둘이 됩니다
+               [대표님 「첨부한 이미지와 같아서 좀 그렇지?」]
+            ⚠️ ★닉네임을 새로 불러오지 «않습니다» — 화면 뜨는 것이 느려집니다.
+               이미 있는 isLoggedIn 으로만 가릅니다.
+            ⚠️ ★하단바에 마이페이지가 «없습니다». 여기가 «유일한» 길이라
+               뜻이 분명해야 합니다. ⛔ 다시 ☰ 로 되돌리지 마십시오. */}
+        <button
+          onClick={() => router.push(isLoggedIn ? '/mypage-new' : '/auth/login')}
+          aria-label={isLoggedIn ? '내 정보' : '로그인'}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '5px',
+            border: '0.5px solid #e0cdbb', borderRadius: '999px',
+            padding: '5px 11px 5px 7px', background: '#FFFBF7',
+            cursor: 'pointer', fontFamily: 'inherit',
+            WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation',
+          }}>
+          <span style={{
+            width: '20px', height: '20px', borderRadius: '50%', background: '#f2eee9',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '11px', color: '#96502e',
+          }} aria-hidden="true">👤</span>
+          <span style={{ fontSize: '12px', color: '#6b5340' }}>
+            {isLoggedIn ? '내 정보' : '로그인'}
+          </span>
+        </button>
       </div>
 
       <main>
