@@ -855,6 +855,25 @@ function CareerResultInner() {
                 ⚠️ 진로적성 통변(tong)을 상담사에게 넘깁니다.
                    ⛔ 판정 근거(cards)는 «넘기지 않습니다» — 44부 확정으로 «절대» 안 보입니다. */}
             <div>
+              {/* 🔴 ★2026-08-07 (48부 18차) — 통변이 «아직» 이면 알려 드립니다 [대표님 화면 확인]
+                  [겪은 일]  진로적성에서 신청했는데 상담사 화면에
+                     「이 고객이 조회한 풀이가 없습니다」가 떴습니다.
+                  [까닭]  이 화면이 넘기는 것은 ★프리미엄 통변(tong) «하나» 입니다.
+                     통변이 다 나오기 «전» 에 상담을 신청하면 ★빈 값이 갑니다.
+                  ⛔ 판정 근거(cards)를 대신 넘기지 «마십시오» —
+                     44부 확정으로 손님께도 상담사께도 «절대» 안 보입니다.
+                  ⇒ 대신 ★«기다려 주세요» 라고 적어 둡니다.
+                     상담사는 그래도 「AI 전체 분석 생성」으로 직접 만들 수 있습니다. */}
+              {tongState === 'loading' && (
+                <div style={{
+                  marginBottom: 8, padding: '9px 11px', background: '#fdf0e8',
+                  border: LINE_OUTER, borderRadius: 9,
+                  fontSize: 12, color: '#8f3d0e', lineHeight: 1.7,
+                }}>
+                  풀이를 쓰는 중이에요. 다 나온 뒤에 신청하시면
+                  상담사 선생님이 <b>회원님이 보신 풀이를 그대로</b> 보고 상담해 드려요.
+                </div>
+              )}
               <ConsultButton
                 priceKey="career"
                 mode="career"

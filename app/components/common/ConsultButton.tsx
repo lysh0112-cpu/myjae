@@ -79,6 +79,20 @@ export default function ConsultButton({ priceKey, mode, searchParams, payload }:
     // ★이동 직전에 지금 화면의 결과를 세션에 담는다.
     //   (물상도 goConsult() 와 같은 방식. consultant-select 가 이걸 꺼내 저장한다)
     try {
+      // 🔴🔴 ★2026-08-07 (48부 18차) — «먼저 지웁니다» [대표님 화면 확인]
+      //   [겪은 일]  진로적성에서 상담을 신청했는데 상담사 화면에
+      //      「이 고객이 조회한 풀이가 없습니다」가 떴습니다.
+      //   [까닭 ①]  진로적성의 payload 는 ★프리미엄 통변(tong) 만 넘깁니다.
+      //      통변이 «없는» 화면이면 undefined 라 아무것도 안 담겼습니다.
+      //   [까닭 ②]  🔴 ★전에 담긴 것이 «안 지워졌습니다» —
+      //      앞서 «다른 서비스·다른 사람» 을 본 풀이가 세션에 남아 있으면
+      //      ★엉뚱한 사람의 풀이가 그대로 저장됩니다.
+      //      ⚠️ 이것은 ★개인정보가 섞이는 일입니다. 반드시 지워야 합니다.
+      //   ⇒ ★언제나 «먼저 지우고» 이번 화면 것만 담습니다.
+      //   ⛔ 이 지우기를 빼지 마십시오.
+      for (const k of ['ai_analysis', 'ai_free_analysis', 'couple_full', 'mulsang_full']) {
+        sessionStorage.removeItem(k)
+      }
       const p = payload?.()
       if (p) {
         if (p.aiAnalysis) sessionStorage.setItem('ai_analysis', p.aiAnalysis)
