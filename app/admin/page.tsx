@@ -65,11 +65,6 @@ export default function AdminPage() {
   //  ⛔ useEffect 로 바꾸지 마십시오.
   // ══════════════════════════════════════════════════════════════════
   const [hashRead, setHashRead] = useState(false)
-  if (!hashRead && typeof window !== 'undefined') {
-    setHashRead(true)
-    const h = window.location.hash.replace('#', '')
-    if (h && TABS.some(t => t.key === h)) setTab(h as Tab)
-  }
   // ★권한 확인 (2026-07-21)
   //   이 화면은 지금까지 role 을 전혀 보지 않아 URL 만 알면 누구나 들어왔다.
   const gate = useRoleGate(ADMIN_ROLES)
@@ -87,6 +82,35 @@ export default function AdminPage() {
 
   // 매니저가 아니면 화면 자체를 그리지 않는다
   if (gate.state !== 'ok') return <RoleGateScreen gate={gate} />
+
+  // ══════════════════════════════════════════════════════════════════
+  //  🔴 ★어느 탭을 열지 «가리켜» 받습니다  [48부 10차 · ★두 번 되짚음]
+  //    [대표님]  「관리자화면으로 돌아가기를 누르면
+  //                ★상담사관리 화면으로 «바로» 가게」
+  //
+  //  🔴 ★처음엔 «주소 해시»(/admin#consultant)로 했다가 «안 됐습니다» —
+  //     router.push 는 ★화면 안에서 옮겨 가는 방식이라
+  //     주소창은 바뀌어도 이 부품이 그려지는 «때» 와 어긋났습니다.
+  //     대표님 — 「상담사관리 화면으로 돌아가지 않음」
+  //
+  //  ⇒ ★sessionStorage 로 «건네줍니다». 확실합니다.
+  //     보내는 쪽 : sessionStorage.setItem('adminTab', 'consultant')
+  //     받는 쪽   : ★한 번 읽고 «곧바로 지웁니다» —
+  //                 안 지우면 다음에 관리자 화면에 올 때도 그 탭이 열립니다.
+  //
+  //  ⚠️ ★해시도 «함께» 봅니다 — 즐겨찾기(/admin#inquiry)로 여실 수 있게.
+  //  ⚠️ ★useEffect 를 «안» 씁니다 — 안에서 setState 를 부르면
+  //     react-hooks 가 «오류» 로 잡아 기준선이 깨집니다 (47부 1-7).
+  //  ⛔ 주석에 Next 검색어 훅의 «이름» 을 적지 마십시오 —
+  //     검사 ⑯이 주석까지 읽어 실패로 잡습니다 (10차에 실제로 걸렸습니다).
+  // ══════════════════════════════════════════════════════════════════
+  if (!hashRead && typeof window !== 'undefined') {
+    setHashRead(true)
+    const asked = sessionStorage.getItem('adminTab')
+    if (asked) sessionStorage.removeItem('adminTab')
+    const want = asked || window.location.hash.replace('#', '')
+    if (want && TABS.some(t => t.key === want)) setTab(want as Tab)
+  }
 
   return (
     <div className="min-h-screen" style={{ background: '#1a1a18' }}>

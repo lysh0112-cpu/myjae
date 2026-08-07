@@ -312,6 +312,18 @@ function ConsultantContent() {
   // ══════════════════════════════════════════════════════════════════════
   const showAdminLink = isMaster && !back.href.startsWith('/admin')
 
+  /**
+   * ★48부 10차 — 관리자 화면의 ★「상담사 관리」 탭으로 «바로» 갑니다 [대표님 지시]
+   *   ⚠️ 어느 탭을 열지 ★sessionStorage 로 건네줍니다.
+   *      주소 해시로 했더니 router.push 와 «때가 어긋나» 안 됐습니다.
+   *   ⚠️ 해시도 함께 붙입니다 — 새로고침하거나 즐겨찾기로 와도 열리게.
+   *   ⛔ 세 곳이 «같은 일» 을 해야 합니다. 하나만 고치지 마십시오.
+   */
+  function goAdminConsultant() {
+    if (typeof window !== 'undefined') sessionStorage.setItem('adminTab', 'consultant')
+    router.push('/admin#consultant')
+  }
+
   async function handleDeleteRequest(id: string) {
     if (!confirm('삭제를 요청하시겠어요? 관리자 승인 후 최종 삭제됩니다.')) return
     setDeleteLoading(id)
@@ -500,7 +512,7 @@ function ConsultantContent() {
               {p.name} 선생님
             </button>
           ))}
-          <button onClick={() => router.push('/admin#consultant')}
+          <button onClick={goAdminConsultant}
             style={{padding:'11px 0', borderRadius:10, border:'0.5px solid #96502e',
               background:'#f4ece1', color:'#96502e', fontSize:13, cursor:'pointer', marginTop:4,
               fontFamily:'inherit'}}>
@@ -528,7 +540,11 @@ function ConsultantContent() {
                  길을 되찾는 버튼이라 가장 먼저 보여야 합니다.
             ⚠️ 메뉴바 높이가 40px 이라 44px 최소선을 못 맞춥니다. 마우스로 쓰는
                PC 화면이라 그대로 두되 padding 으로 누르는 자리를 넓혔습니다. */}
-        <button onClick={() => router.push(back.href)}
+        <button onClick={() => {
+            // ★48부 10차 — 관리자 화면으로 갈 때는 ★탭도 함께 건넵니다
+            if (back.href.startsWith('/admin')) { goAdminConsultant(); return }
+            router.push(back.href)
+          }}
           title={`${back.label}(으)로 돌아갑니다`}
           style={{
             fontSize:'12px', padding:'4px 8px', borderRadius:'5px',
@@ -544,7 +560,7 @@ function ConsultantContent() {
         {/* ★48부 9차 — 매니저는 «언제나» 관리자 화면으로 [대표님 지시]
             ⛔ 상담사에게는 안 보입니다. */}
         {showAdminLink && (
-          <button onClick={() => router.push('/admin#consultant')}
+          <button onClick={goAdminConsultant}
             title="관리자 화면으로 갑니다"
             style={{
               fontSize:'12px', padding:'4px 8px', borderRadius:'5px',
