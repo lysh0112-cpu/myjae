@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react'
 import SourceReading from './SourceReading'
 import YongsinReading from './YongsinReading'
+import SomuReading from './SomuReading'
 
 // ============================================================
 // 전문가용 만세력 (독립 플로팅 창)
@@ -57,7 +58,9 @@ export default function ExpertFloating({ open, onClose }: Props) {
   // ★2026-08-06 (48부 1차) — 세 갈래로 [연재쌤 의견 · 대표님 지시]
   //   'yongsin' ★용신 «로데이터» — 판정 근거를 그대로 폅니다
   //   ⚠️ 세 갈래가 ★«같은 입력칸» 을 씁니다. 한 번 넣으면 셋 다 바로 봅니다.
-  const [tab, setTab] = useState<'calc' | 'source' | 'yongsin'>('calc')
+  //   'somu'    ★🌿 소무승 물상론 — «완전 별도» 파이프라인 [49부 1차 · 연재쌤 의견]
+  //   ⚠️ 넷이 ★«같은 입력칸» 을 씁니다. 한 번 넣으면 넷 다 바로 봅니다.
+  const [tab, setTab] = useState<'calc' | 'source' | 'yongsin' | 'somu'>('calc')
 
   // ── 창 위치·크기 ──
   const [pos, setPos] = useState({ x: 80, y: 80 })
@@ -187,12 +190,17 @@ export default function ExpertFloating({ open, onClose }: Props) {
       {/* ★2026-08-06 (48부 1차) — 세 갈래로 [연재쌤 의견 · 대표님 지시]
           ⚠️ ★문구를 줄였습니다 — 창이 430px 이라 탭 하나가 «약 138px» 입니다.
              「🔮 만세력 계산기」 그대로 두면 셋이 안 들어가 글자가 잘립니다.
+          ★2026-08-07 (49부 1차) — ★넷이 되었습니다. 창 430px 기준 탭 하나가
+             «약 103px» 입니다. ★320px 로 줄이면 «약 76px» 이라 더는 못 늘립니다.
+             ⇒ 그래서 넷째는 「🌿 물상」 넉 자입니다. 온전한 이름
+               「소무승 물상론 해설」은 ★화면 «머리» 에 적어 두었습니다.
           ⛔ 다시 늘리지 마십시오. ★320px 로 줄여 놓고 재 보십시오. */}
       <div style={{ display: 'flex', gap: 4, padding: '6px 8px 0', background: '#f7f5ef', flexShrink: 0 }}>
         {([
           ['calc', '🔮 만세력'],
           ['source', '📖 원본 해설'],
           ['yongsin', '⚖️ 용신'],
+          ['somu', '🌿 물상'],
         ] as const).map(([key, label]) => (
           <button key={key} type="button" onClick={() => setTab(key)}
             style={{
@@ -215,7 +223,7 @@ export default function ExpertFloating({ open, onClose }: Props) {
           (해설은 [조회] 없이 값이 바뀌면 바로 다시 폅니다). */}
       {/* ★48부 1차 — 용신 갈래도 «언제나» 입력부가 보입니다 (원본 해설과 같습니다).
           [조회] 없이 값이 바뀌면 바로 다시 폅니다. */}
-      {((tab === 'calc' && !src) || tab === 'source' || tab === 'yongsin') && (
+      {((tab === 'calc' && !src) || tab === 'source' || tab === 'yongsin' || tab === 'somu') && (
         <div style={{ padding: 8, borderBottom: '1px solid #ddd', background: '#f7f5ef', flexShrink: 0 }}>
           <div style={{ display: 'flex', gap: 4, marginBottom: 5 }}>
             <button type="button" onClick={() => setCalType('양력')} style={{ ...toggle, ...(calType === '양력' ? toggleOn : {}) }}>양력</button>
@@ -269,7 +277,17 @@ export default function ExpertFloating({ open, onClose }: Props) {
       )}
 
       {/* 결과부 */}
-      {tab === 'yongsin' ? (
+      {tab === 'somu' ? (
+        /* ★🌿 소무승 물상론 — 위 계산기와 «같은 입력값» 을 그대로 씁니다.
+           ⚠️⚠️ ★기존 판정 함수를 «하나도» 부르지 않습니다 [대표님 지시 · 연재쌤 의견].
+              ⚖️ 용신 탭과 ★답이 달라도 어긋난 것이 «아닙니다». 보는 눈이 다릅니다.
+           ⛔ 교재 원문 그대로라 거친 말이 나옵니다. 손님 화면에 옮기지 마십시오. */
+        <SomuReading
+          calType={calType} leap={leap} gender={gender}
+          year={year} month={month} day={day}
+          hourIdx={hourIdx} name={name}
+        />
+      ) : tab === 'yongsin' ? (
         /* ★⚖️ 용신 «로데이터» — 위 계산기와 «같은 입력값» 을 그대로 씁니다.
            ⚠️ 판정 근거를 폅니다. ⛔ 손님 화면에 옮기지 마십시오. */
         <YongsinReading
