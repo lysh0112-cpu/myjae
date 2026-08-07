@@ -284,10 +284,29 @@ function ConsultantContent() {
   //      마이페이지에서 온 매니저가 관리자 화면으로 튕겨 «온 길을 잃습니다».
   // ══════════════════════════════════════════════════════════════════════
   const back = (() => {
+    // ★상담사 본인 — 관리자 화면에는 못 들어갑니다 (role 이 consultant)
     if (!isMaster) return { href: '/mypage-new', label: '마이페이지' }
     if (fromParam === 'admin') return { href: '/admin', label: '관리자 화면' }
     return { href: '/manseryeok/consultant', label: '상담사 고르기' }
   })()
+
+  // ══════════════════════════════════════════════════════════════════════
+  //  ★2026-08-07 (48부 9차) — 매니저는 «언제나» 관리자 화면으로  [대표님 지시]
+  //    「관리자(류승현, 오연희)는 ★관리자 페이지와 상담사 관리 화면을
+  //      왔다갔다 할 수 있게 해 줘 · 상담사는 상담사 페이지만」
+  //
+  //  🔴 ★무엇이 모자랐나 — back 은 «온 길»(from) 을 봅니다.
+  //     from=admin 으로 오면 관리자 화면으로 돌아가지만,
+  //     ★주소를 직접 치거나 북마크로 들어오면 from 이 «없어»
+  //     「상담사 고르기」로만 가고 ★관리자 화면으로 갈 길이 없습니다.
+  //  ⇒ 매니저에게는 ★온 길과 상관없이 «따로» 버튼을 답니다.
+  //
+  //  ⛔ 상담사(consultant)에게는 ★보이지 않습니다 — 들어가도 막힙니다
+  //     (/admin 은 useRoleGate(['master'])).
+  //  ⛔ back 을 /admin 으로 «바꾸지» 마십시오 —
+  //     마이페이지에서 온 매니저가 «온 길을 잃습니다» (위 주석 참조).
+  // ══════════════════════════════════════════════════════════════════════
+  const showAdminLink = isMaster && back.href !== '/admin'
 
   async function handleDeleteRequest(id: string) {
     if (!confirm('삭제를 요청하시겠어요? 관리자 승인 후 최종 삭제됩니다.')) return
@@ -517,6 +536,24 @@ function ConsultantContent() {
           <span style={{fontSize:'14px'}} aria-hidden="true">←</span>
           <span>{back.label}</span>
         </button>
+
+        {/* ★48부 9차 — 매니저는 «언제나» 관리자 화면으로 [대표님 지시]
+            ⛔ 상담사에게는 안 보입니다. */}
+        {showAdminLink && (
+          <button onClick={() => router.push('/admin')}
+            title="관리자 화면으로 갑니다"
+            style={{
+              fontSize:'12px', padding:'4px 8px', borderRadius:'5px',
+              border:'1px solid rgba(250,199,117,0.4)', background:'rgba(250,199,117,0.08)',
+              color:'#FAC775', cursor:'pointer', display:'flex', alignItems:'center', gap:'4px',
+              whiteSpace:'nowrap', marginRight:'6px', fontFamily:'inherit',
+              WebkitUserSelect:'none', userSelect:'none', touchAction:'manipulation',
+            }}>
+            <span style={{fontSize:'13px'}} aria-hidden="true">🔐</span>
+            <span>관리자</span>
+          </button>
+        )}
+
         <span style={{fontSize:'13px', fontWeight:'500', color:'#e8e4ff', marginRight:'6px'}}>명연재</span>
         <span style={{fontSize:'10px', color:'#333355', marginRight:'2px'}}>|</span>
 
