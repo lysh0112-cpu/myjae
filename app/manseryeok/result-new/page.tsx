@@ -18,6 +18,7 @@ import { calcSimsanOhaeng, toPercentList } from "@/lib/saju/simsanOhaeng";
 import { calcSipsungDist, getSipsin, getSipsinBranch } from "@/lib/saju/sipsungDist";
 import AiAnalysisNew from "./components/AiAnalysisNew";
 import { withNim, nimEuiTitle } from "@/lib/saju/honorific";
+import { openSajuCertificate } from "./components/SajuCertificate";
 import ConsultButton from "@/app/components/common/ConsultButton";
 import OhaengPentagon from "./OhaengPentagon";
 import HapchungView from "./HapchungView";
@@ -429,6 +430,34 @@ function ResultNewContent() {
   const ilgan=dayStem
   const [gm1,gm2]=ilgan&&iljji?getGongmang(ilgan,iljji):['','']
   const hourBranch=saju.find(p=>p.pillar==="시주")?.branch??null
+
+  /**
+   * ★2026-08-07 (48부 20차) — A4 PDF저장/인쇄 [대표님 지시]
+   *   ⚠️ 값을 ★«다시 계산하지 않습니다» — 화면이 쓰는 것을 그대로 넘깁니다.
+   *      두 벌로 세면 ★종이와 화면이 다른 말을 합니다 (교훈 CJ).
+   *   ⚠️ 통변은 ★새 조회면 tongText, 보관함 다시보기면 savedTong —
+   *      「해설 복사」와 «같은 글» 입니다.
+   *   ⛔ 여기서 window.open 을 부르지 마십시오. A4Print 가 맡습니다.
+   */
+  function onPrintSaju() {
+    const tong = (tongText || savedTong || '').trim()
+    if (!tong) return
+    const pillars = saju
+      .filter(p => p.stem && p.stem !== '?')
+      .map(p => ({
+        label: p.pillar,
+        stem: p.stem,
+        branch: p.branch,
+        stemEl: STEM_ELEMENT[p.stem] ?? '',
+        branchEl: BRANCH_ELEMENT[p.branch] ?? '',
+      }))
+    const birth = [
+      calType,
+      `${solarYear}.${solarMonth}.${solarDay}`,
+      hourBranch ? `${hourBranch}시` : '',
+    ].filter(Boolean).join(' · ')
+    openSajuCertificate({ title: titleName, birth, pillars, tong })
+  }
   const monthBranchForNote=saju.find(p=>p.pillar==="월주")?.branch??null
   const ohaeng=saju.length>0?toPercentList(calcSimsanOhaeng(saju,solarMonth,solarDay,hourBranch)):[]
   const sipsung=saju.length>0&&dayStem?calcSipsung(saju,dayStem):[]
@@ -898,6 +927,31 @@ function ResultNewContent() {
             🔴 저장 «실패» 안내는 아래에 «남겼습니다». ⛔ 그것까지 지우지 마십시오.
             ⚠️ 높이 44px · 글자 13 — 11차에 통일한 값. ⛔ 더 줄이지 마십시오.
             ══════════════════════════════════════════════════════════════ */}
+        {/* ══════════════════════════════════════════════════════════════
+            ★2026-08-07 (48부 20차) — A4 PDF저장/인쇄 [대표님 지시]
+              「"내 사주와 운세결과 보기"도 다른 서비스 결과처럼
+                ★"A4 PDF저장/인쇄"되게 해줘」
+
+            ⚠️ 틀은 ★app/components/common/A4Print.tsx «한 곳» 입니다.
+               속만 ./components/SajuCertificate.tsx 에 두었습니다.
+               ⛔ 여기서 window.open 이나 @page 를 다시 적지 마십시오.
+            ⚠️ ★통변이 «다 나온 뒤» 에만 보입니다 — 반쪽 인쇄물을 내지 않습니다.
+               (44부 37차 — 조건을 빠뜨려 «쓰다 만 글» 이 종이에 박힌 적이 있습니다)
+            ⚠️ ★한 줄을 «따로» 씁니다 — 아래 「해설 복사 | 보관함」과 합쳐
+               셋을 한 줄에 넣으면 320px 에서 글자가 잘립니다.
+            ⚠️ 높이 44px · 글자 13 — 47부 11차에 통일한 값. ⛔ 더 줄이지 마십시오.
+            ══════════════════════════════════════════════════════════════ */}
+        {!chartOnly && (tongText || savedTong || '').trim() && (
+          <button onClick={onPrintSaju}
+            style={{
+              width:'100%', marginTop:'8px', padding:'13px 10px', borderRadius:10,
+              minHeight:44, boxSizing:'border-box',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              background:'#b46e46', border:'none', color:'#fff',
+              fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+            }}>🖨️ A4 PDF저장/인쇄</button>
+        )}
+
         {!chartOnly && (
           <div style={{display:'flex', gap:'8px', marginTop:'8px'}}>
             <div style={{flex:1, display:'flex'}}>
@@ -948,6 +1002,24 @@ function ResultNewContent() {
               그 바를 걷어냈으므로 빈 자리만 남습니다. 24 는 그냥 아래 숨통입니다. */}
         {!chartOnly && (
           <div>
+            {/* 🔴 ★2026-08-07 (48부 19차) — 통변이 «아직» 이면 알려 드립니다 [대표님 지시]
+                「통변이 다 나오기 전에는 ★"풀이를 쓰는 중이에요" 안내를 붙여줘」
+                [까닭]  이 화면이 넘기는 것은 ★통변 글 «하나» 입니다.
+                   다 나오기 «전» 에 신청하면 ★빈 값이 가고
+                   상담사 화면에 「이 고객이 조회한 풀이가 없습니다」가 뜹니다.
+                ⚠️ ★보관함 다시보기(savedTong)면 «이미» 있으므로 안 뜹니다.
+                ⛔ 상담 버튼을 «막지» 마십시오 — 급한 손님이 못 넘어갑니다.
+                   알려만 드리고 «고르시게» 합니다. (진로적성과 «같은 결») */}
+            {!(tongText || savedTong || '').trim() && (
+              <div style={{
+                marginBottom: 8, padding: '9px 11px', background: '#fdf0e8',
+                border: LINE_OUTER, borderRadius: 9,
+                fontSize: 12, color: '#8f3d0e', lineHeight: 1.7,
+              }}>
+                풀이를 쓰는 중이에요. 다 나온 뒤에 신청하시면
+                상담사 선생님이 <b>회원님이 보신 풀이를 그대로</b> 보고 상담해 드려요.
+              </div>
+            )}
             <ConsultButton priceKey="saju" mode="personal" searchParams={searchParams}
               /* ★고객이 본 통변을 상담사에게 넘긴다 (2026-07-21)
                  새 조회면 tongText, 보관함 다시보기면 savedTong 을 쓴다.
