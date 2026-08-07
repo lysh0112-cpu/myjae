@@ -147,10 +147,14 @@ export function readSomu(input: SomuInput): SomuResult {
     }
     // ⚠️⚠️ ★장마다 «있는 것이 아닙니다» — 乙木 장에는 이 목록이 «없습니다».
     //    ⛔ 없는 장에 지어 넣지 말고, 여기서 «통째로» 걸러냅니다.
+    // 🔴 52부 고침 — 출전이 ★'017쪽'(甲木 자리)으로 «박혀» 있었습니다.
+    //    庚金이 224쪽에 같은 목록을 가지고 들어오면서 ★상담사 화면에 «甲木 쪽수» 가
+    //    찍히게 되어 ch.pages 로 바꾸었습니다. 甲木 하나뿐일 때는 드러나지 않던 것입니다.
+    //    ⚠️ 판정은 한 글자도 안 바뀝니다 — «출전 글자» 하나입니다.
     if (ch.likes.length || ch.dislikes.length) blocks.push({
       key: 'likes',
       title: '좋아하는 天干 / 싫어하는 天干',
-      source: '소무승 물상론 017쪽',
+      source: `소무승 물상론 ${ch.pages}`,
       lines: [
         `좋아하는 天干 : ${ch.likes.join(', ')}`,
         `싫어하는 天干 : ${ch.dislikes.join(', ')}`,
