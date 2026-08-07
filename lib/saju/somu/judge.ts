@@ -106,10 +106,17 @@ export function readSomu(input: SomuInput): SomuResult {
   const season = SEASON_OF[monthBranch] ?? null
 
   // ★원국에 실제로 있는 천간 (일간은 빼고, 차례 그대로 · 겹치면 한 번만)
+  //  ⚠️⚠️ ★일주 «한 자리만» 건너뜁니다. 같은 글자가 다른 기둥에 «또» 있으면
+  //     그것은 담깁니다 — 그래야 甲+甲·丙+丙·丁+丁 이 «둘일 때만» 뜹니다.
+  //  🔴 50부 고침 — 전에는 `presentStems.length === 0` 이 함께 걸려 있어
+  //     연간·월간이 «먼저» 담기고 나면 조건이 깨져 ★일간이 그대로 담겼습니다.
+  //     그래서 丁이 «하나뿐인» 원국에도 「丁 + 丁」이 떴습니다 (甲木·乙木도 같았습니다).
+  //  ⛔ `presentStems.length === 0` 을 다시 붙이지 마십시오.
   const presentStems: string[] = []
+  let daySkipped = false
   for (const p of saju) {
     if (!p.stem) continue
-    if (p.stem === dayStem && presentStems.length === 0 && p.pillar === '일주') continue
+    if (p.pillar === '일주' && p.stem === dayStem && !daySkipped) { daySkipped = true; continue }
     if (!presentStems.includes(p.stem)) presentStems.push(p.stem)
   }
 
