@@ -1,0 +1,2908 @@
+diff --git a/app/admin/components/ConsultantForm.tsx b/app/admin/components/ConsultantForm.tsx
+index d022590..d46efa6 100644
+--- a/app/admin/components/ConsultantForm.tsx
++++ b/app/admin/components/ConsultantForm.tsx
+@@ -1,14 +1,31 @@
+ 'use client'
+ import { useRef, useState } from 'react'
+ import { supabase } from '@/lib/supabase'
+-import { BANKS, SPECIALTIES, REGIONS, formatPhone } from './consultantData'
++import { BANKS, SERVICE_SPECIALTIES, REGIONS, formatPhone } from './consultantData'
+ 
+ export type ConsultantFormData = {
+   id: string
+   name: string
++  /**
++   * ★2026-08-06 (48부 4차) — 별칭(호) [대표님 지시]
++   *   「상담사는 ★본명은 «관리자만» 관리를 하고,
++   *     고객들은 ★별칭인 "호" 가 보이도록 하려고 해」
++   *   ⚠️ 비면 ★본명이 그대로 나갑니다 (지금 계신 분들이 안 사라지도록).
++   *   ⛔ 손님 화면에 name 을 «직접» 쓰지 마십시오. ★shownName(c) 을 쓰십시오.
++   */
++  alias: string
+   phone: string
+   email: string
+   specialty: string
++  /**
++   * ★2026-08-06 (48부 3차) — 전문분야를 «여러 개» 고릅니다 [대표님 지시]
++   *   담기는 값은 ★consult_prices 의 price_key 입니다 (예: ['saju','couple']).
++   *   ⚠️ 위 specialty(한 칸)는 ★손님 화면(consultant-select)이 아직 읽습니다 —
++   *      상담사 이름 아래 한 줄로 나옵니다. 그래서 ★지우지 않고,
++   *      저장할 때 여기서 만든 한 줄을 «함께» 넣어 둡니다.
++   *   ⛔ specialty 칸을 지우지 마십시오. 손님 화면 한 줄이 빈칸이 됩니다.
++   */
++  specialties: string[]
+   price: number
+   bank: string
+   account: string
+@@ -26,7 +43,7 @@ export type ConsultantFormData = {
+ }
+ 
+ export const emptyForm: ConsultantFormData = {
+-  id: '', name: '', phone: '', email: '', specialty: '',
++  id: '', name: '', alias: '', phone: '', email: '', specialty: '', specialties: [],
+   price: 0, bank: '', account: '', active: true,
+   region: '', commission_rate: 0, commission_amount: 0,
+   photo_url: '', career: '', intro: '',
+@@ -77,6 +94,9 @@ export default function ConsultantForm({ form, editing, loading, onChange, onSav
+   const inputStyle = { background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' } as const
+   const selectStyle = { background: '#2C2C2A', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' } as const
+   const labelStyle = { color: '#b0aec8' } as const
++  /** ★48부 14차 — 좁힌 칸. 높이 32px (전에는 42px) */
++  const fieldStyle = { ...inputStyle, height: 32 } as const
++  const fieldSelectStyle = { ...selectStyle, height: 32 } as const
+ 
+   return (
+     <div className="rounded-2xl p-5 mb-6"
+@@ -86,91 +106,177 @@ export default function ConsultantForm({ form, editing, loading, onChange, onSav
+       </div>
+ 
+       {/* 기본 정보 (기존 그대로) */}
+-      <div className="grid grid-cols-3 gap-3">
++      {/* ══════════════════════════════════════════════════════════════
++          ★2026-08-07 (48부 14차) — ★3열 → «6열» 로 좁혔습니다 [대표님 지시]
++            「입력하는 글자 대비 ★칸이 너무 커서 줄이고 ★한 행에 6개를 넣도록」
++
++          ⚠️ 칸 높이 ★42 → 32px · 글자 14 → 13px · 이름표 12 → 11px
++             ⇒ 세로가 ★절반쯤 짧아집니다. 실제 넣는 글자가 짧아 빈 자리가 많았습니다.
++          ⚠️ ★이메일·계좌번호만 «두 칸»(col-span-2) — 글자가 길어 한 칸이면 잘립니다.
++          ⚠️ ★「0원」 미리보기는 «칸 안 오른쪽» 으로 옮겼습니다 (아래 줄을 안 씁니다).
++          ⛔ 다시 3열로 되돌리지 마십시오. ⛔ 1400px 에서 재 보고 고치십시오.
++          ══════════════════════════════════════════════════════════════ */}
++      <div className="grid grid-cols-6 gap-2">
+ 
+         <div>
+-          <label className="text-xs mb-1 block" style={labelStyle}>이름</label>
++          <label className="text-[11px] mb-1 block" style={labelStyle}>
++            이름 <span style={{ color: '#8e8ba8' }}>본명</span>
++          </label>
+           <input value={form.name} onChange={e => set('name', e.target.value)}
+-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
++            className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldStyle} />
+         </div>
+ 
++        {/* ★48부 4차 — 별칭(호). ⚠️ 비우면 ★본명이 그대로 나갑니다. */}
+         <div>
+-          <label className="text-xs mb-1 block" style={labelStyle}>전화번호 (- 없이)</label>
+-          <input value={form.phone} onChange={e => set('phone', formatPhone(e.target.value))}
+-            placeholder="01012345678"
+-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
++          <label className="text-[11px] mb-1 block" style={labelStyle}>
++            별칭 (호) <span style={{ color: '#FAC775' }}>고객용</span>
++          </label>
++          <input value={form.alias} onChange={e => set('alias', e.target.value)}
++            placeholder="예: 청산"
++            className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldStyle} />
+         </div>
+ 
+         <div>
+-          <label className="text-xs mb-1 block" style={labelStyle}>이메일</label>
+-          <input type="email" value={form.email} onChange={e => set('email', e.target.value)}
+-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
++          <label className="text-[11px] mb-1 block" style={labelStyle}>전화번호</label>
++          <input value={form.phone} onChange={e => set('phone', formatPhone(e.target.value))}
++            placeholder="01012345678"
++            className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldStyle} />
+         </div>
+ 
+-        <div>
+-          <label className="text-xs mb-1 block" style={labelStyle}>전문분야</label>
+-          <select value={form.specialty} onChange={e => set('specialty', e.target.value)}
+-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={selectStyle}>
+-            <option value="">선택</option>
+-            {SPECIALTIES.map(s => <option key={s} value={s}>{s}</option>)}
+-          </select>
++        {/* ★두 칸 — 이메일은 글자가 깁니다 */}
++        <div className="col-span-2">
++          <label className="text-[11px] mb-1 block" style={labelStyle}>이메일</label>
++          <input type="email" value={form.email} onChange={e => set('email', e.target.value)}
++            className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldStyle} />
+         </div>
+ 
+         <div>
+-          <label className="text-xs mb-1 block" style={labelStyle}>거주지역</label>
++          <label className="text-[11px] mb-1 block" style={labelStyle}>거주지역</label>
+           <select value={form.region} onChange={e => set('region', e.target.value)}
+-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={selectStyle}>
++            className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldSelectStyle}>
+             <option value="">선택</option>
+             {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
+           </select>
+         </div>
+ 
+         <div>
+-          <label className="text-xs mb-1 block" style={labelStyle}>상담료 (원)</label>
+-          <input type="number" value={form.price} onChange={e => set('price', parseInt(e.target.value) || 0)}
+-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
+-          <div className="text-xs mt-1" style={{ color: '#FAC775' }}>{form.price.toLocaleString()}원</div>
++          <label className="text-[11px] mb-1 block" style={labelStyle}>상담료 (원)</label>
++          <div style={{ position: 'relative' }}>
++            <input type="number" value={form.price} onChange={e => set('price', parseInt(e.target.value) || 0)}
++              className="w-full rounded-lg pl-2 pr-11 text-[13px] outline-none" style={fieldStyle} />
++            {/* ★48부 14차 — 미리보기를 «칸 안» 으로. 아래 줄을 안 씁니다. */}
++            <span className="text-[10px]" style={{ position: 'absolute', right: 6, top: 9, color: '#FAC775', pointerEvents: 'none' }}>
++              {form.price.toLocaleString()}원
++            </span>
++          </div>
+         </div>
+ 
+         <div>
+-          <label className="text-xs mb-1 block" style={labelStyle}>은행</label>
++          <label className="text-[11px] mb-1 block" style={labelStyle}>은행</label>
+           <select value={form.bank} onChange={e => set('bank', e.target.value)}
+-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={selectStyle}>
++            className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldSelectStyle}>
+             <option value="">선택</option>
+             {BANKS.map(b => <option key={b} value={b}>{b}</option>)}
+           </select>
+         </div>
+ 
+-        <div>
+-          <label className="text-xs mb-1 block" style={labelStyle}>계좌번호</label>
++        {/* ★두 칸 — 계좌번호도 깁니다 */}
++        <div className="col-span-2">
++          <label className="text-[11px] mb-1 block" style={labelStyle}>계좌번호</label>
+           <input value={form.account} onChange={e => set('account', e.target.value)}
+-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
++            className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldStyle} />
+         </div>
+ 
+         <div>
+-          <label className="text-xs mb-1 block" style={labelStyle}>수수료율 (%)</label>
++          <label className="text-[11px] mb-1 block" style={labelStyle}>수수료율 (%)</label>
+           <input type="number" value={form.commission_rate} onChange={e => set('commission_rate', parseFloat(e.target.value) || 0)}
+-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
++            className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldStyle} />
+         </div>
+ 
+         <div>
+-          <label className="text-xs mb-1 block" style={labelStyle}>수수료 금액 (원)</label>
+-          <input type="number" value={form.commission_amount} onChange={e => set('commission_amount', parseInt(e.target.value) || 0)}
+-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
+-          <div className="text-xs mt-1" style={{ color: '#FAC775' }}>{form.commission_amount.toLocaleString()}원</div>
++          <label className="text-[11px] mb-1 block" style={labelStyle}>수수료 (원)</label>
++          <div style={{ position: 'relative' }}>
++            <input type="number" value={form.commission_amount} onChange={e => set('commission_amount', parseInt(e.target.value) || 0)}
++              className="w-full rounded-lg pl-2 pr-11 text-[13px] outline-none" style={fieldStyle} />
++            <span className="text-[10px]" style={{ position: 'absolute', right: 6, top: 9, color: '#FAC775', pointerEvents: 'none' }}>
++              {form.commission_amount.toLocaleString()}원
++            </span>
++          </div>
+         </div>
+ 
+-        <div className="flex items-center gap-3 pt-4">
+-          <label className="text-xs" style={labelStyle}>활성 여부</label>
+-          <button onClick={() => set('active', !form.active)}
+-            className="px-4 py-2 rounded-xl text-xs font-bold"
+-            style={form.active
+-              ? { background: 'rgba(76,175,80,0.2)', color: '#81c784' }
+-              : { background: 'rgba(255,100,100,0.2)', color: '#ff6464' }}>
+-            {form.active ? '✅ 활성' : '❌ 비활성'}
++      </div>
++
++      <div className="flex items-center gap-3 mt-3">
++        <label className="text-[11px]" style={labelStyle}>활성 여부</label>
++        <button onClick={() => set('active', !form.active)}
++          className="px-3 py-1.5 rounded-lg text-[11px] font-bold"
++          style={form.active
++            ? { background: 'rgba(76,175,80,0.2)', color: '#81c784' }
++            : { background: 'rgba(255,100,100,0.2)', color: '#ff6464' }}>
++          {form.active ? '✅ 활성' : '❌ 비활성'}
++        </button>
++        <span className="text-[11px]" style={{ color: '#8e8ba8' }}>
++          {form.alias ? `고객 화면 — ${form.alias} 선생님` : '별칭을 비우면 본명이 그대로 보입니다'}
++        </span>
++      </div>
++
++      {/* ══════════════════════════════════════════════════════════════
++          ★2026-08-06 (48부 3차) — 전문분야 토글 «열 개» [대표님 지시]
++            「전문분야를 홈서비스 버튼에 맞춰서 각 상담사별로
++              토글로 연결할지 말지 버튼만 만들어 주면 된다」
++
++          ⚠️ ★3열 격자 «밖» 에 두었습니다 — 열 개가 한 칸에 안 들어갑니다.
++          ⚠️ 담기는 값은 ★price_key 입니다 (consult_prices 와 «같은» 값).
++             ⇒ 손님이 온 화면(ConsultButton 의 priceKey)과 그대로 짝이 맞습니다.
++          ⚠️ 차례는 ★대표님이 적어 주신 그대로입니다 (홈 카드 차례와 다릅니다).
++          ⛔ SERVICE_SPECIALTIES 의 key 를 바꾸지 마십시오 — 열두 화면과 어긋납니다.
++          ══════════════════════════════════════════════════════════════ */}
++      <div className="mt-4 rounded-2xl p-4"
++        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
++
++        <div className="flex items-center gap-3 mb-3 flex-wrap">
++          <label className="text-xs" style={labelStyle}>
++            전문분야 <span style={{ color: '#8e8ba8' }}>— 여러 개 고를 수 있어요</span>
++          </label>
++          <button type="button"
++            onClick={() => set('specialties', SERVICE_SPECIALTIES.map(s => s.key))}
++            className="px-3 py-1 rounded-lg text-xs"
++            style={{ background: 'rgba(255,255,255,0.06)', color: '#b0aec8' }}>
++            전체 선택
++          </button>
++          <button type="button"
++            onClick={() => set('specialties', [])}
++            className="px-3 py-1 rounded-lg text-xs"
++            style={{ background: 'rgba(255,255,255,0.06)', color: '#b0aec8' }}>
++            전체 해제
+           </button>
++          <span className="text-xs ml-auto" style={{ color: '#8e8ba8' }}>
++            {form.specialties.length}개 선택됨
++          </span>
++        </div>
++
++        <div className="grid grid-cols-5 gap-2">
++          {SERVICE_SPECIALTIES.map(s => {
++            const on = form.specialties.includes(s.key)
++            return (
++              <button key={s.key} type="button"
++                onClick={() => set('specialties', on
++                  ? form.specialties.filter(k => k !== s.key)
++                  : [...form.specialties, s.key])}
++                className="rounded-xl px-3 py-2 text-left"
++                style={on
++                  ? { background: 'rgba(127,119,221,0.22)', border: '2px solid #7F77DD', color: '#CECBF6' }
++                  : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.10)', color: '#8e8ba8' }}>
++                <div className="text-[13px] leading-tight">{s.icon} {s.name}</div>
++                <div className="text-[11px] mt-0.5" style={{ color: on ? '#AFA9EC' : '#6d6a85' }}>{s.key}</div>
++              </button>
++            )
++          })}
+         </div>
+ 
++        <div className="text-xs mt-3" style={{ color: '#8e8ba8' }}>
++          고른 서비스의 결과 화면에서만 이 상담사가 보입니다.
++        </div>
+       </div>
+ 
+       {/* 고객 화면에 보일 정보 */}
+@@ -180,66 +286,86 @@ export default function ConsultantForm({ form, editing, loading, onChange, onSav
+           고객 화면에 보일 정보
+         </div>
+ 
+-        {/* 사진 */}
+-        <label className="text-xs mb-1 block" style={labelStyle}>사진</label>
+-        <div
+-          onClick={() => fileRef.current?.click()}
+-          onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+-          onDragLeave={() => setDragOver(false)}
+-          onDrop={onDrop}
+-          className="rounded-xl mb-4 flex items-center gap-4 cursor-pointer"
+-          style={{
+-            padding: '14px',
+-            border: dragOver ? '1.5px dashed #FAC775' : '1.5px dashed rgba(255,255,255,0.2)',
+-            background: 'rgba(255,255,255,0.04)',
+-          }}>
+-          {form.photo_url ? (
+-            <img src={form.photo_url} alt="상담사 사진"
+-              style={{ width: 64, height: 64, borderRadius: 12, objectFit: 'cover' }} />
+-          ) : (
+-            <div style={{ width: 64, height: 64, borderRadius: 12, background: 'rgba(255,255,255,0.06)',
+-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🖼️</div>
+-          )}
+-          <div className="text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>
+-            {uploading ? '올리는 중...' : form.photo_url ? '사진을 바꾸려면 다시 끌어다 놓거나 클릭' : '사진을 끌어다 놓거나 클릭해서 선택'}
++        {/* ══════════════════════════════════════════════════════════
++            ★2026-08-07 (48부 15차) — ★사진 «옆» 에 경력 [대표님 지시]
++              「사진 등록 옆으로 ★경력입력란을 나란히 배치 · 공간활용차원」
++            ⚠️ 사진칸이 가로로 넓기만 하고 ★빈 자리가 많았습니다.
++            ⚠️ 사진 ★320px 고정 · 경력이 ★남는 자리를 다 씁니다.
++            ⛔ 다시 «위아래» 로 쌓지 마십시오.
++            ══════════════════════════════════════════════════════════ */}
++        <div className="flex gap-3 mb-3" style={{ alignItems: 'flex-start' }}>
++
++          <div style={{ width: 320, flexShrink: 0 }}>
++            <label className="text-[11px] mb-1 block" style={labelStyle}>사진</label>
++            <div
++              onClick={() => fileRef.current?.click()}
++              onDragOver={e => { e.preventDefault(); setDragOver(true) }}
++              onDragLeave={() => setDragOver(false)}
++              onDrop={onDrop}
++              className="rounded-xl flex items-center gap-3 cursor-pointer"
++              style={{
++                padding: '10px 12px', height: 84,
++                border: dragOver ? '1.5px dashed #FAC775' : '1.5px dashed rgba(255,255,255,0.2)',
++                background: 'rgba(255,255,255,0.04)',
++              }}>
++              {form.photo_url ? (
++                // eslint-disable-next-line @next/next/no-img-element
++                <img src={form.photo_url} alt="상담사 사진"
++                  style={{ width: 58, height: 58, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
++              ) : (
++                <div style={{ width: 58, height: 58, borderRadius: 10, background: 'rgba(255,255,255,0.06)',
++                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🖼️</div>
++              )}
++              <div className="text-[11px]" style={{ color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>
++                {uploading ? '올리는 중...' : form.photo_url ? '바꾸려면 다시 끌어다 놓거나 클릭' : '끌어다 놓거나 클릭해서 선택'}
++              </div>
++              <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
++                onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(f) }} />
++            </div>
+           </div>
+-          <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
+-            onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(f) }} />
+-        </div>
+ 
+-        {/* 경력 */}
+-        <label className="text-xs mb-1 block" style={labelStyle}>경력 (줄바꿈으로 여러 줄)</label>
+-        <textarea value={form.career} onChange={e => set('career', e.target.value)}
+-          rows={2} placeholder={'명리학 20년\n○○대학교 동양철학'}
+-          className="w-full rounded-xl px-3 py-2 text-sm outline-none mb-4" style={inputStyle} />
++          <div style={{ flex: 1, minWidth: 0 }}>
++            <label className="text-[11px] mb-1 block" style={labelStyle}>경력 (줄바꿈으로 여러 줄)</label>
++            <textarea value={form.career} onChange={e => set('career', e.target.value)}
++              rows={3} placeholder={'명리학 20년\n○○대학교 동양철학'}
++              className="w-full rounded-lg px-2 py-1.5 text-[13px] outline-none"
++              style={{ ...inputStyle, height: 84, resize: 'vertical' }} />
++          </div>
+ 
+-        {/* 소개글 */}
+-        <label className="text-xs mb-1 block" style={labelStyle}>소개글</label>
+-        <textarea value={form.intro} onChange={e => set('intro', e.target.value)}
+-          rows={2} placeholder="사주와 물상도를 함께 풀어드립니다…"
+-          className="w-full rounded-xl px-3 py-2 text-sm outline-none mb-4" style={inputStyle} />
++        </div>
++
++        {/* 소개글 · 대표 후기 — ★나란히 (전에는 위아래였습니다) */}
++        <div className="grid grid-cols-2 gap-3 mb-3">
++          <div>
++            <label className="text-[11px] mb-1 block" style={labelStyle}>소개글</label>
++            <textarea value={form.intro} onChange={e => set('intro', e.target.value)}
++              rows={2} placeholder="사주와 물상도를 함께 풀어드립니다…"
++              className="w-full rounded-lg px-2 py-1.5 text-[13px] outline-none"
++              style={{ ...inputStyle, height: 60, resize: 'vertical' }} />
++          </div>
++          <div>
++            <label className="text-[11px] mb-1 block" style={labelStyle}>대표 후기 한 줄 (임시)</label>
++            <input value={form.review_text} onChange={e => set('review_text', e.target.value)}
++              placeholder="막막했던 부분을 차분히 짚어주셨어요"
++              className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldStyle} />
++          </div>
++        </div>
+ 
+-        {/* 별점 · 상담건수 · 대표후기 (임시값) */}
+-        <div className="grid grid-cols-2 gap-3">
++        {/* 별점 · 상담건수 (임시값) — ★좁은 두 칸이면 됩니다 */}
++        <div className="grid grid-cols-4 gap-3">
+           <div>
+-            <label className="text-xs mb-1 block" style={labelStyle}>별점 (임시, 예: 4.9)</label>
++            <label className="text-[11px] mb-1 block" style={labelStyle}>별점 (예: 4.9)</label>
+             <input type="number" step="0.1" value={form.rating}
+               onChange={e => set('rating', parseFloat(e.target.value) || 0)}
+-              className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
++              className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldStyle} />
+           </div>
+           <div>
+-            <label className="text-xs mb-1 block" style={labelStyle}>상담건수 (임시)</label>
++            <label className="text-[11px] mb-1 block" style={labelStyle}>상담건수</label>
+             <input type="number" value={form.review_count}
+               onChange={e => set('review_count', parseInt(e.target.value) || 0)}
+-              className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
++              className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldStyle} />
+           </div>
+         </div>
+-        <div className="mt-3">
+-          <label className="text-xs mb-1 block" style={labelStyle}>대표 후기 한 줄 (임시)</label>
+-          <input value={form.review_text} onChange={e => set('review_text', e.target.value)}
+-            placeholder="막막했던 부분을 차분히 짚어주셨어요"
+-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
+-        </div>
+       </div>
+ 
+       <div className="flex gap-2 mt-4">
+diff --git a/app/admin/components/ConsultantManager.tsx b/app/admin/components/ConsultantManager.tsx
+index c302c78..f413dea 100644
+--- a/app/admin/components/ConsultantManager.tsx
++++ b/app/admin/components/ConsultantManager.tsx
+@@ -1,8 +1,9 @@
+ 'use client'
+-import { useEffect, useState } from 'react'
++import { useEffect, useRef, useState } from 'react'
+ import { supabase } from '@/lib/supabase'
+ import ConsultantForm, { ConsultantFormData, emptyForm } from './ConsultantForm'
+ import ConsultantTable from './ConsultantTable'
++import { specialtyLabel } from './consultantData'
+ // DB가 돌려주는 영어 오류를 우리말로 바꾼다. (2026-07-21 2차)
+ //   화면에 영어 원문이 그대로 뜨면 무슨 뜻인지 알 수 없다.
+ function friendlyDbError(msg: string, name: string): string {
+@@ -38,6 +39,8 @@ export type PendingInfo = { count: number; names: string[] }
+ export default function ConsultantManager() {
+   const [list, setList] = useState<ConsultantFormData[]>([])
+   const [form, setForm] = useState<ConsultantFormData>(emptyForm)
++  /** ★48부 7차 — 등록 폼 자리. 「수정」·「＋ 상담사 등록」이 여기로 내려갑니다 */
++  const formRef = useRef<HTMLDivElement>(null)
+   const [editing, setEditing] = useState(false)
+   const [loading, setLoading] = useState(false)
+   // ★2026-07-21 2차: 상담사별 진행중 예약을 목록에 미리 보여준다.
+@@ -81,8 +84,19 @@ export default function ConsultantManager() {
+     if (!form.name || !form.phone || !form.email) return alert('이름, 전화번호, 이메일은 필수입니다')
+     setLoading(true)
+     const payload = {
+-      name: form.name, phone: form.phone, email: form.email,
+-      specialty: form.specialty, price: form.price,
++      name: form.name,
++      // ★48부 4차 — 별칭(호). 비면 손님 화면에 본명이 나갑니다.
++      alias: form.alias?.trim() || null,
++      phone: form.phone, email: form.email,
++      // ★2026-08-06 (48부 3차) — 전문분야 «여러 개» [대표님 지시]
++      //   specialties  ★price_key 배열 (예: ['saju','couple']) — 거르기에 쓸 값
++      //   specialty    ★사람이 읽는 한 줄 — «손님 화면» 이 아직 이 칸을 읽습니다
++      //                (consultant-select 의 상담사 이름 아래 한 줄)
++      //   ⚠️ 둘을 «함께» 넣습니다. ⛔ 한쪽만 넣지 마십시오 —
++      //      specialties 만 넣으면 손님 화면 한 줄이 «빈칸» 이 됩니다.
++      specialties: form.specialties,
++      specialty: specialtyLabel(form.specialties),
++      price: form.price,
+       bank: form.bank, account: form.account,
+       region: form.region, commission_rate: form.commission_rate,
+       commission_amount: form.commission_amount,
+@@ -103,6 +117,9 @@ export default function ConsultantManager() {
+     setEditing(false)
+     setLoading(false)
+     fetchList()
++    // ★48부 7차 — 저장하면 ★목록(위)으로 올려 «결과를 보이게» 합니다.
++    //   ⚠️ 폼이 아래로 갔으므로 그대로 두면 «빈 폼» 만 보고 있게 됩니다.
++    window.scrollTo({ top: 0, behavior: 'smooth' })
+   }
+   async function handleDelete(id: string) {
+     const target = list.find(c => c.id === id)
+@@ -186,24 +203,40 @@ export default function ConsultantManager() {
+     if (error) { alert('순번을 저장하지 못했어요.\n\n잠시 후 다시 시도해 주세요.\n(' + error.message + ')'); fetchList(); return }
+   }
+   function handleEdit(c: ConsultantFormData) {
+-    setForm({ ...emptyForm, ...c })
++    // ★2026-08-06 (48부 3차) — DB 의 specialties 가 «없는» 옛 자료면 빈 배열로.
++    //   ⚠️ null 이 그대로 들어오면 form.specialties.includes 에서 터집니다.
++    setForm({ ...emptyForm, ...c, alias: c.alias ?? '', specialties: Array.isArray(c.specialties) ? c.specialties : [] })
+     setEditing(true)
+-    window.scrollTo({ top: 0, behavior: 'smooth' })
++    // ★48부 7차 — 목록이 «위» 로 갔으므로 ★폼 자리로 내려갑니다.
++    //   ⛔ scrollTo({ top: 0 }) 으로 되돌리지 마십시오. 폼이 안 보입니다.
++    goForm()
++  }
++
++  /** ★48부 7차 — 등록 폼 자리로 내려갑니다 (목록이 위로 가서 필요해졌습니다) */
++  function goForm() {
++    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+   }
+   return (
+     <div>
+-      <ConsultantForm
+-        form={form} editing={editing} loading={loading}
+-        onChange={setForm} onSave={handleSave}
+-        onCancel={() => { setForm(emptyForm); setEditing(false) }}
+-      />
+-      <div className="rounded-2xl overflow-hidden"
++      {/* ★2026-08-07 (48부 7차) — ★목록을 «위» 로 [대표님 지시]
++          「상담사 리스트가 ★위로 가게 해야 관리하기 좋을 것 같은데」
++          ⚠️ 전에는 등록 폼이 위, 목록이 아래였습니다 —
++             상담사를 보려면 ★언제나 긴 폼을 지나 내려가야 했습니다.
++          ⚠️ 자리를 바꾸면서 ★handleEdit 의 «스크롤» 도 함께 고쳤습니다.
++             맨 위로 가면 이제 «목록» 이 나와 폼이 안 보입니다. */}
++      <div className="rounded-2xl overflow-hidden mb-4"
+         style={{ background: '#2C2C2A', border: '1px solid rgba(255,255,255,0.06)' }}>
+         <div className="px-5 py-4 flex items-center justify-between"
+           style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+           <div className="text-sm font-bold text-white">
+             상담사 목록 <span className="ml-2 text-xs" style={{ color: '#8a88a0' }}>총 {list.length}명</span>
+           </div>
++          {/* ★폼이 «아래» 로 갔으니 바로 갈 수 있게 */}
++          <button type="button" onClick={goForm}
++            className="px-3 py-1 rounded-lg text-xs"
++            style={{ background: 'rgba(250,199,117,0.12)', border: '1px solid rgba(250,199,117,0.3)', color: '#FAC775' }}>
++            ＋ 상담사 등록
++          </button>
+         </div>
+         <ConsultantTable
+           list={list}
+@@ -214,6 +247,14 @@ export default function ConsultantManager() {
+           onSaveSort={handleSaveSort}
+         />
+       </div>
++
++      <div ref={formRef}>
++        <ConsultantForm
++          form={form} editing={editing} loading={loading}
++          onChange={setForm} onSave={handleSave}
++          onCancel={() => { setForm(emptyForm); setEditing(false) }}
++        />
++      </div>
+     </div>
+   )
+ }
+diff --git a/app/admin/components/ConsultantTable.tsx b/app/admin/components/ConsultantTable.tsx
+index f0dd822..6061539 100644
+--- a/app/admin/components/ConsultantTable.tsx
++++ b/app/admin/components/ConsultantTable.tsx
+@@ -2,6 +2,7 @@
+ import { useState } from 'react'
+ import { useRouter } from 'next/navigation'
+ import { ConsultantFormData } from './ConsultantForm'
++import { specialtyLabel } from './consultantData'
+ 
+ // 상담사별 "아직 살아 있는 예약"(완료도 취소도 안 된 건)
+ type PendingInfo = { count: number; names: string[] }
+@@ -38,6 +39,15 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete,
+ 
+   const toggleCol = (k: ColKey) => setCols(prev => ({ ...prev, [k]: !prev[k] }))
+ 
++  /**
++   * ★2026-08-07 (48부 13차) — 「보일 열」에 ★전체 선택 [대표님 지시]
++   *   ⚠️ ★하나로 «오갑니다» — 다 켜져 있으면 「전체 해제」로 바뀝니다.
++   *      단추 둘을 나란히 두면 좁은 화면에서 줄이 넘어갑니다.
++   */
++  const allOn = COLUMNS.every(c => cols[c.key])
++  const toggleAll = () =>
++    setCols(Object.fromEntries(COLUMNS.map(c => [c.key, !allOn])) as Record<ColKey, boolean>)
++
+   function draftOf(c: ConsultantFormData): string {
+     return sortDraft[c.id!] !== undefined ? sortDraft[c.id!] : String(c.sort ?? 0)
+   }
+@@ -51,7 +61,8 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete,
+   }
+ 
+   function downloadCSV() {
+-    const headers = ['순번', '이름', '활성']
++    // ★48부 4차 — 별칭(호)을 이름 «바로 뒤» 에
++    const headers = ['순번', '이름', '별칭(호)', '활성']
+     if (cols.email) headers.push('이메일')
+     if (cols.phone) headers.push('전화번호')
+     if (cols.specialty) headers.push('전문분야')
+@@ -65,10 +76,10 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete,
+     }
+ 
+     const rows = list.map(c => {
+-      const r = [String(c.sort ?? 0), c.name, c.active ? '활성' : '비활성']
++      const r = [String(c.sort ?? 0), c.name, c.alias || '', c.active ? '활성' : '비활성']
+       if (cols.email) r.push(c.email || '')
+       if (cols.phone) r.push(c.phone || '')
+-      if (cols.specialty) r.push(c.specialty || '')
++      if (cols.specialty) r.push(c.specialty || specialtyLabel(c.specialties ?? []) || '')
+       if (cols.region) r.push(c.region || '')
+       if (cols.bank) r.push(c.bank || '', c.account || '')
+       if (cols.commission) r.push(String(c.commission_rate || 0) + '%', String(c.commission_amount || 0))
+@@ -93,6 +104,16 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete,
+     <div className="p-4">
+       <div className="flex items-center gap-2 mb-3 flex-wrap">
+         <span className="text-xs" style={{ color: '#8a88a0' }}>보일 열</span>
++        {/* ★48부 13차 — 전체 선택 [대표님 지시] */}
++        <button onClick={toggleAll}
++          className="px-3 py-1 rounded-full text-xs font-bold"
++          style={{
++            background: allOn ? 'rgba(250,199,117,0.15)' : 'rgba(255,255,255,0.05)',
++            border: `1px solid ${allOn ? 'rgba(250,199,117,0.4)' : 'rgba(255,255,255,0.1)'}`,
++            color: allOn ? '#FAC775' : '#8a88a0',
++          }}>
++          {allOn ? '전체 해제' : '전체 선택'}
++        </button>
+         {COLUMNS.map(col => (
+           <button key={col.key} onClick={() => toggleCol(col.key)}
+             className="px-3 py-1 rounded-full text-xs font-bold"
+@@ -110,6 +131,7 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete,
+         순번을 고치고 옆의 저장 버튼을 누르세요 · 작을수록 위로 · 비활성은 고객 화면에 안 보여요 · 이름을 누르면 상세가 펼쳐집니다 · 진행중 예약이 있으면 삭제할 수 없어요
+       </div>
+ 
++
+       <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+         <div className="flex items-center gap-3 px-3 py-2 text-xs font-bold"
+           style={{ background: 'rgba(60,52,137,0.3)', color: '#FAC775' }}>
+@@ -163,7 +185,11 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete,
+               </div>
+               {/* 이름 (누르면 펼침) */}
+               <button type="button" onClick={() => setOpenId(openId === c.id ? null : c.id)}
+-                style={{ flex: 1, minWidth: 80, fontSize: 13, fontWeight: 700, color: '#fff', cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}>{c.name}</button>
++                style={{ flex: 1, minWidth: 80, fontSize: 13, fontWeight: 700, color: '#fff', cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left', fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}>
++                {c.name}
++                {/* ★48부 4차 — 별칭은 «곁들여» 보입니다. 관리자는 ★본명이 먼저입니다. */}
++                {c.alias ? <span style={{ fontWeight: 400, color: '#FAC775', marginLeft: 5 }}>({c.alias})</span> : null}
++              </button>
+ 
+               {/* ★진행중 예약 — 완료도 취소도 안 된 건. 있으면 삭제할 수 없다. (2026-07-21 2차) */}
+               <span style={{ width: 210, fontSize: 11.5, lineHeight: 1.4 }}>
+@@ -211,7 +237,7 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete,
+               </span>
+               {cols.email && <span style={{ width: 130, fontSize: 12, color: '#b0aec8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email || '-'}</span>}
+               {cols.phone && <span style={{ width: 100, fontSize: 12, color: '#b0aec8' }}>{c.phone || '-'}</span>}
+-              {cols.specialty && <span style={{ width: 90, fontSize: 12, color: '#b0aec8' }}>{c.specialty || '-'}</span>}
++              {cols.specialty && <span style={{ width: 90, fontSize: 12, color: '#b0aec8' }}>{c.specialty || specialtyLabel(c.specialties ?? []) || '-'}</span>}
+               {cols.region && <span style={{ width: 60, fontSize: 12, color: '#b0aec8' }}>{c.region || '-'}</span>}
+               {cols.bank && <span style={{ width: 160, fontSize: 12, color: '#b0aec8' }}>{c.bank || '-'} {c.account || ''}</span>}
+               {cols.commission && <span style={{ width: 90, fontSize: 12, color: '#b0aec8' }}>{c.commission_rate || 0}% / {(c.commission_amount || 0).toLocaleString()}</span>}
+@@ -228,7 +254,7 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete,
+                   </div>
+                   <div style={{ flex: 1, minWidth: 0 }}>
+                     <div className="flex items-center gap-2">
+-                      <span style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{c.name} 선생님</span>
++                      <span style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{c.name} 선생님{c.alias ? <span style={{ fontWeight: 400, color: '#FAC775', marginLeft: 5 }}>({c.alias})</span> : null}</span>
+                       <span style={{ marginLeft: 'auto', fontSize: 12, color: '#FAC775' }}>
+                         {c.rating ? `★ ${c.rating}` : '★ —'} {c.review_count ? `· ${c.review_count}건` : ''}
+                       </span>
+@@ -236,7 +262,7 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete,
+                     {c.career
+                       ? <div style={{ fontSize: 12, color: '#b0aec8', marginTop: 4, whiteSpace: 'pre-line' }}>{c.career}</div>
+                       : <div style={{ fontSize: 12, color: '#6a6880', marginTop: 4, fontStyle: 'italic' }}>경력 없음 — 수정에서 입력</div>}
+-                    <div style={{ fontSize: 12, color: '#b0aec8', marginTop: 2 }}>{c.specialty || '-'} · {c.region || '-'}</div>
++                    <div style={{ fontSize: 12, color: '#b0aec8', marginTop: 2 }}>{c.specialty || specialtyLabel(c.specialties ?? []) || '-'} · {c.region || '-'}</div>
+                   </div>
+                 </div>
+ 
+diff --git a/app/admin/components/InquiryManager.tsx b/app/admin/components/InquiryManager.tsx
+new file mode 100644
+index 0000000..9c01398
+--- /dev/null
++++ b/app/admin/components/InquiryManager.tsx
+@@ -0,0 +1,218 @@
++'use client'
++// app/admin/components/InquiryManager.tsx
++//
++// ══════════════════════════════════════════════════════════════════
++//  ★2026-08-07 (48부 8차) — 💬 문의 관리  [대표님 지시]
++//    「관리자 화면에 ★문의관리탭도 별도로 만들어야 하고」
++//    「답변은 ★마스터인 류승현과 오연희 두 사람만 가능」
++//    「그 질문들 중 좋은 내용은 ★선별적으로 공유」
++//
++//  ★여기서 하는 일 셋
++//     ① 답변 달기        — 손님 화면에 「답변 완료」로 뜹니다
++//     ② 공개로 바꾸기     — ★모든 손님에게 보입니다 (기본은 나만 보임)
++//     ③ 예시 표시         — 언제나 맨 위에 보이는 본보기 질문
++//
++//  ⚠️⚠️ ★공개로 바꾸기 전에 «사적인 내용» 이 없는지 보십시오 —
++//     사주 문의에는 이혼·건강·돈 같은 이야기가 섞입니다.
++//     손님 화면에 ★이름은 안 나가지만, 내용만으로도 아는 사람은 압니다.
++//     ⛔ 망설여지면 «공개하지» 마십시오. 되돌려도 이미 본 사람은 압니다.
++//
++//  ⚠️ 마스터만 답할 수 있게 하는 것은 ★DB 정책(RLS)이 합니다 —
++//     inquiries_master_all : profiles.role = 'master'
++//     ⇒ 화면을 뚫어도 ★DB 가 막습니다.
++//     ⛔ 화면에서 다시 확인하지 마십시오. 두 겹이 되면 어긋납니다.
++// ══════════════════════════════════════════════════════════════════
++
++import { useEffect, useState } from 'react'
++import { supabase } from '@/lib/supabase'
++
++type Row = {
++  id: string
++  user_id: string | null
++  title: string
++  body: string
++  is_public: boolean
++  is_sample: boolean
++  answer: string | null
++  answered_at: string | null
++  created_at: string
++}
++
++function dt(s: string | null) {
++  if (!s) return '-'
++  const d = new Date(s)
++  return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`
++}
++
++export default function InquiryManager() {
++  const [list, setList] = useState<Row[]>([])
++  const [loading, setLoading] = useState(true)
++  const [nick, setNick] = useState<Record<string, string>>({})
++  const [openId, setOpenId] = useState<string | null>(null)
++  const [draft, setDraft] = useState('')
++  const [saving, setSaving] = useState(false)
++  const [only, setOnly] = useState<'all' | 'todo'>('all')
++
++  useEffect(() => { load() }, [])
++
++  async function load() {
++    const { data } = await supabase
++      .from('inquiries')
++      .select('id, user_id, title, body, is_public, is_sample, answer, answered_at, created_at')
++      .order('created_at', { ascending: false })
++    const rows = (data ?? []) as Row[]
++    setList(rows)
++
++    // 누가 남긴 문의인지 — ★관리자만 봅니다 (손님 화면에는 안 나갑니다)
++    const ids = [...new Set(rows.map(r => r.user_id).filter(Boolean))] as string[]
++    if (ids.length) {
++      const { data: ps } = await supabase.from('profiles').select('id, nickname').in('id', ids)
++      if (ps) setNick(Object.fromEntries(ps.map(p => [p.id, p.nickname || '(닉네임 없음)'])))
++    }
++    setLoading(false)
++  }
++
++  async function saveAnswer(id: string) {
++    if (!draft.trim()) { alert('답변을 적어 주세요.'); return }
++    setSaving(true)
++    const { data: me } = await supabase.auth.getUser()
++    const { error } = await supabase.from('inquiries')
++      .update({ answer: draft.trim(), answered_by: me.user?.id ?? null, answered_at: new Date().toISOString() })
++      .eq('id', id)
++    setSaving(false)
++    if (error) { alert('저장하지 못했어요.\n\n(' + error.message + ')'); return }
++    setOpenId(null); setDraft(''); load()
++  }
++
++  async function togglePublic(r: Row) {
++    if (!r.is_public && !confirm(
++      '이 문의를 모든 회원에게 보이게 할까요?\n\n'
++      + '· 이름은 나가지 않지만 내용만으로 알아볼 수 있습니다\n'
++      + '· 사적인 이야기가 섞여 있지 않은지 다시 봐 주세요',
++    )) return
++    const { error } = await supabase.from('inquiries').update({ is_public: !r.is_public }).eq('id', r.id)
++    if (error) { alert('바꾸지 못했어요.\n\n(' + error.message + ')'); return }
++    load()
++  }
++
++  async function toggleSample(r: Row) {
++    const { error } = await supabase.from('inquiries')
++      .update({ is_sample: !r.is_sample, is_public: !r.is_sample ? true : r.is_public })
++      .eq('id', r.id)
++    if (error) { alert('바꾸지 못했어요.\n\n(' + error.message + ')'); return }
++    load()
++  }
++
++  const shown = only === 'todo' ? list.filter(r => !r.answer && !r.is_sample) : list
++  const todoCount = list.filter(r => !r.answer && !r.is_sample).length
++
++  const chip = (on: boolean) => ({
++    padding: '3px 9px', borderRadius: 6, fontSize: 11,
++    background: on ? 'rgba(250,199,117,0.15)' : 'rgba(255,255,255,0.05)',
++    border: `1px solid ${on ? 'rgba(250,199,117,0.4)' : 'rgba(255,255,255,0.1)'}`,
++    color: on ? '#FAC775' : '#8a88a0',
++    cursor: 'pointer', fontFamily: 'inherit',
++  })
++
++  return (
++    <div className="rounded-2xl overflow-hidden"
++      style={{ background: '#2C2C2A', border: '1px solid rgba(255,255,255,0.06)' }}>
++      <div className="px-5 py-4 flex items-center gap-3 flex-wrap"
++        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
++        <div className="text-sm font-bold text-white">
++          문의 관리 <span className="ml-2 text-xs" style={{ color: '#8a88a0' }}>총 {list.length}건</span>
++        </div>
++        {todoCount > 0 && (
++          <span style={{ fontSize: 11, color: '#FAC775' }}>답변 대기 {todoCount}건</span>
++        )}
++        <div className="ml-auto flex gap-2">
++          <button onClick={() => setOnly('all')} style={chip(only === 'all')}>전체</button>
++          <button onClick={() => setOnly('todo')} style={chip(only === 'todo')}>답변 대기</button>
++        </div>
++      </div>
++
++      <div className="px-5 py-3 text-xs" style={{ color: '#6a6880', lineHeight: 1.8 }}>
++        손님 문의는 <b style={{ color: '#FAC775' }}>본인에게만</b> 보입니다 ·
++        「공개」로 바꾸면 모든 회원이 봅니다 (이름은 안 나갑니다) ·
++        「예시」는 언제나 보이는 본보기 질문입니다
++      </div>
++
++      {loading ? (
++        <div className="px-5 py-10 text-center text-sm" style={{ color: '#8a88a0' }}>불러오는 중…</div>
++      ) : shown.length === 0 ? (
++        <div className="px-5 py-10 text-center text-sm" style={{ color: '#8a88a0' }}>문의가 없어요.</div>
++      ) : (
++        shown.map((r) => (
++          <div key={r.id} className="px-5 py-4"
++            style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
++            <div className="flex items-center gap-2 flex-wrap mb-2">
++              {r.is_sample && (
++                <span style={{ fontSize: 10.5, padding: '2px 7px', borderRadius: 5, background: 'rgba(127,119,221,0.2)', color: '#CECBF6' }}>예시</span>
++              )}
++              {r.is_public
++                ? <span style={{ fontSize: 10.5, padding: '2px 7px', borderRadius: 5, background: 'rgba(29,158,117,0.18)', color: '#9FE1CB' }}>공개</span>
++                : <span style={{ fontSize: 10.5, padding: '2px 7px', borderRadius: 5, background: 'rgba(255,255,255,0.06)', color: '#8a88a0' }}>본인만</span>}
++              {!r.answer && !r.is_sample && (
++                <span style={{ fontSize: 10.5, padding: '2px 7px', borderRadius: 5, background: 'rgba(250,199,117,0.18)', color: '#FAC775' }}>답변 대기</span>
++              )}
++              <span className="ml-auto text-xs" style={{ color: '#6a6880' }}>
++                {r.user_id ? (nick[r.user_id] ?? '…') : '—'} · {dt(r.created_at)}
++              </span>
++            </div>
++
++            <div className="text-sm text-white mb-1">{r.title}</div>
++            <div className="text-xs" style={{ color: '#b0aec8', lineHeight: 1.8, whiteSpace: 'pre-line' }}>
++              {r.body}
++            </div>
++
++            {r.answer && openId !== r.id && (
++              <div className="mt-3 px-3 py-2 rounded-lg text-xs"
++                style={{ background: 'rgba(255,255,255,0.04)', color: '#b0aec8', lineHeight: 1.8, whiteSpace: 'pre-line' }}>
++                <span style={{ color: '#FAC775' }}>답변</span> · {dt(r.answered_at)}
++                <div className="mt-1">{r.answer}</div>
++              </div>
++            )}
++
++            {openId === r.id && (
++              <div className="mt-3">
++                <textarea value={draft} onChange={e => setDraft(e.target.value)} rows={5}
++                  placeholder="답변을 적어 주세요."
++                  style={{
++                    width: '100%', padding: '10px 12px', fontSize: 13, lineHeight: 1.8,
++                    background: 'rgba(255,255,255,0.05)', color: '#fff',
++                    border: '1px solid rgba(255,255,255,0.12)', borderRadius: 9,
++                    fontFamily: 'inherit', outline: 'none', resize: 'vertical',
++                  }} />
++                <div className="flex gap-2 mt-2">
++                  <button onClick={() => saveAnswer(r.id)} disabled={saving}
++                    className="px-4 py-2 rounded-lg text-xs"
++                    style={{ background: '#FAC775', color: '#2C2C2A', border: 'none', fontFamily: 'inherit', cursor: 'pointer' }}>
++                    {saving ? '저장 중…' : '답변 저장'}
++                  </button>
++                  <button onClick={() => { setOpenId(null); setDraft('') }}
++                    className="px-4 py-2 rounded-lg text-xs"
++                    style={{ background: 'rgba(255,255,255,0.06)', color: '#b0aec8', border: 'none', fontFamily: 'inherit', cursor: 'pointer' }}>
++                    취소
++                  </button>
++                </div>
++              </div>
++            )}
++
++            <div className="flex gap-2 mt-3 flex-wrap">
++              {openId !== r.id && (
++                <button onClick={() => { setOpenId(r.id); setDraft(r.answer ?? '') }}
++                  style={chip(false)}>{r.answer ? '답변 고치기' : '답변 달기'}</button>
++              )}
++              <button onClick={() => togglePublic(r)} style={chip(r.is_public)}>
++                {r.is_public ? '공개 중' : '공개로 바꾸기'}
++              </button>
++              <button onClick={() => toggleSample(r)} style={chip(r.is_sample)}>
++                {r.is_sample ? '예시' : '예시로 두기'}
++              </button>
++            </div>
++          </div>
++        ))
++      )}
++    </div>
++  )
++}
+diff --git a/app/admin/components/consultantData.ts b/app/admin/components/consultantData.ts
+index 0f6ab37..85b1553 100644
+--- a/app/admin/components/consultantData.ts
++++ b/app/admin/components/consultantData.ts
+@@ -5,10 +5,60 @@ export const BANKS = [
+   '새마을금고', '신협', '우체국', '수협은행', '케이뱅크',
+ ]
+ 
+-export const SPECIALTIES = [
+-  '사주·운명', '궁합·연애', '재물·사업', '신살·대운',
+-  '개명·작명', '타로·점술', '풍수·이사', '전반적 상담',
+-]
++// ══════════════════════════════════════════════════════════════════
++//  ★2026-08-06 (48부 3차) — 전문분야를 «홈 서비스 열 개» 로 갈았습니다
++//    [대표님]  「전문분야를 홈서비스 버튼에 맞춰서 각 상담사별로
++//                토글로 연결할지 말지 버튼만 만들어 주면 된다」
++//              「지금 관리자 페이지에서 고객결과화면에 보여주는
++//                전문상담사 연결버튼을 보여줄지 말지를 결정하고 있으니」
++//
++//  ⚠️ ★옛 여덟(사주·운명 / 궁합·연애 / 재물·사업 / 신살·대운 /
++//     개명·작명 / 타로·점술 / 풍수·이사 / 전반적 상담)은 ★버렸습니다
++//     [대표님 「버리고 새 열 개로 갈음」]. 홈 서비스와 갈래가 안 맞았습니다.
++//
++//  ★key 는 ★consult_prices 의 price_key 와 «같은 값» 입니다 (47부 3-1 확정).
++//     ⇒ 손님이 어느 화면에서 왔는지(ConsultButton 이 실어 보내는 priceKey)와
++//        ★그대로 짝이 맞습니다. 새 배관을 깔 것이 없습니다.
++//  ⛔ ★key 를 바꾸지 마십시오. consult_prices · ConsultButton 열두 곳과 어긋납니다.
++//
++//  ⚠️ 차례는 ★대표님이 적어 주신 그대로입니다. 홈 카드 차례와는 다릅니다.
++//  ⚠️ ★2026-08-07 (48부 14차) — 이름을 «줄였습니다» (폼이 6열로 좁아졌습니다).
++//     ⛔ 여기 name 은 ★관리자 토글에만 씁니다. 손님 화면 이름이 «아닙니다».
++//        손님 화면 이름은 홈 SERVICES 와 consult_prices 에 따로 있습니다.
++//  ⛔ 마음대로 정렬하지 마십시오.
++//
++//  ⚠️ ★한 서비스에 화면이 «둘» 인 것 — 결혼택일·출산택일·이사택일.
++//     ★같은 price_key 를 씁니다. 그래서 토글은 «열 개» 입니다 (화면으로 세면 열둘).
++// ══════════════════════════════════════════════════════════════════
++export const SERVICE_SPECIALTIES = [
++  { key: 'mulsang',     name: '사주그림',          icon: '🎨' },
++  { key: 'career',      name: '진로적성',          icon: '🧭' },
++  { key: 'couple',      name: '궁합',              icon: '💖' },
++  { key: 'saju',        name: '사주·운세',        icon: '🔮' },
++  { key: 'wedding',     name: '결혼택일',          icon: '💍' },
++  { key: 'birth',       name: '출산택일',          icon: '🍼' },
++  { key: 'moving',      name: '이사택일',          icon: '🏡' },
++  { key: 'naming',      name: '이름 정밀분석',     icon: '📇' },
++  { key: 'naming_baby', name: '명품작명',          icon: '👶' },
++  { key: 'tarot',       name: '타로',              icon: '🃏' },
++] as const
++
++export type ServiceKey = typeof SERVICE_SPECIALTIES[number]['key']
++
++// ★2026-08-06 (48부 4차) — 손님에게 보일 이름은 ★lib/consultantName.ts 에 있습니다.
++//   ⚠️ 손님 화면이 «관리자 폴더» 를 들여오지 않도록 옮겼습니다.
++export { shownName } from '@/lib/consultantName'
++
++/** key → 이름 (목록·CSV 에서 씁니다) */
++export function specialtyName(key: string): string {
++  return SERVICE_SPECIALTIES.find(s => s.key === key)?.name ?? key
++}
++
++/** 고른 key 들을 사람이 읽는 한 줄로 — 손님 화면의 specialty 칸에 넣습니다 */
++export function specialtyLabel(keys: string[]): string {
++  if (!keys.length) return ''
++  return keys.map(specialtyName).join(' · ')
++}
+ 
+ export const REGIONS = [
+   '서울', '경기', '인천', '부산', '대구', '광주', '대전',
+diff --git a/app/admin/page.tsx b/app/admin/page.tsx
+index 03af8a9..7c668c3 100644
+--- a/app/admin/page.tsx
++++ b/app/admin/page.tsx
+@@ -10,6 +10,7 @@ import KnowledgeManager from './components/KnowledgeManager'
+ import SiteSettings from './components/SiteSettings'
+ import AiErrorLog from './components/AiErrorLog'
+ import ReviewManager from './components/ReviewManager'
++import InquiryManager from './components/InquiryManager'
+ import ExpenseManager from './components/ExpenseManager'
+ import ExpenseApproval from './components/ExpenseApproval'
+ import MemberManager from './components/MemberManager'
+@@ -21,7 +22,7 @@ import { useRoleGate, RoleGateScreen, type AppRole } from '@/hooks/useRoleGate'
+ // 이 화면에 들어올 수 있는 등급 — 매니저만
+ const ADMIN_ROLES: AppRole[] = ['master']
+ 
+-type Tab = 'dashboard' | 'cancelled' | 'consultant' | 'price' | 'member' | 'settlement' | 'knowledge' | 'review' | 'accounting' | 'approval' | 'tone' | 'prompt' | 'aierror' | 'settings'
++type Tab = 'dashboard' | 'cancelled' | 'consultant' | 'price' | 'member' | 'settlement' | 'knowledge' | 'review' | 'inquiry' | 'accounting' | 'approval' | 'tone' | 'prompt' | 'aierror' | 'settings'
+ const TABS = [
+   { key: 'dashboard', label: '📊 대시보드' },
+   { key: 'cancelled', label: '🗑 취소 내역' },
+@@ -31,6 +32,8 @@ const TABS = [
+   { key: 'settlement', label: '💰 정산 관리' },
+   { key: 'knowledge', label: '🧠 연구 자료' },
+   { key: 'review', label: '📝 후기 관리' },
++  // ★48부 8차 — 문의 관리 [대표님 「관리자 화면에 문의관리탭도 별도로」]
++  { key: 'inquiry', label: '💬 문의 관리' },
+   { key: 'accounting', label: '💳 관리회계' },
+   { key: 'approval', label: '🧾 지출결의서' },
+   { key: 'tone', label: '💬 어투 관리' },
+@@ -41,6 +44,27 @@ const TABS = [
+ export default function AdminPage() {
+   const router = useRouter()
+   const [tab, setTab] = useState<Tab>('dashboard')
++
++  // ══════════════════════════════════════════════════════════════════
++  //  ★2026-08-07 (48부 10차) — 주소로 «탭을 가리켜» 열 수 있습니다 [대표님 지시]
++  //    「관리자화면으로 돌아가기를 누르면 ★상담사관리 화면으로 바로 가게」
++  //
++  //  ★쓰는 법 — /admin#consultant  ·  /admin#inquiry  …
++  //     TABS 의 key 를 그대로 씁니다.
++  //
++  //  ⚠️ ★«물음표(?tab=)» 가 아니라 «우물정(#)» 을 쓴 까닭 —
++  //     Next 의 «검색어 훅» 을 쓰면 ★Suspense 로 감싸라고 요구해
++  //     이 화면을 통째로 손봐야 합니다. 해시는 그럴 필요가 없습니다.
++  //  ⚠️⚠️ ★그 훅의 «이름» 을 주석에 적지 마십시오 —
++  //     검사 ⑯이 «주석까지» 읽어 「쓰면서 안 감쌌다」며 ★실패로 잡습니다.
++  //     (47부 9-1 「옛 줄을 주석으로 남기지 마십시오」와 같은 자리입니다)
++  //
++  //  ⚠️ ★useEffect 를 «안» 씁니다 — 안에서 setState 를 부르면
++  //     react-hooks 가 «오류» 로 잡아 기준선이 깨집니다 (47부 1-7).
++  //     ⇒ ★«그릴 때» 한 번만 견줍니다.
++  //  ⛔ useEffect 로 바꾸지 마십시오.
++  // ══════════════════════════════════════════════════════════════════
++  const [hashRead, setHashRead] = useState(false)
+   // ★권한 확인 (2026-07-21)
+   //   이 화면은 지금까지 role 을 전혀 보지 않아 URL 만 알면 누구나 들어왔다.
+   const gate = useRoleGate(ADMIN_ROLES)
+@@ -59,6 +83,35 @@ export default function AdminPage() {
+   // 매니저가 아니면 화면 자체를 그리지 않는다
+   if (gate.state !== 'ok') return <RoleGateScreen gate={gate} />
+ 
++  // ══════════════════════════════════════════════════════════════════
++  //  🔴 ★어느 탭을 열지 «가리켜» 받습니다  [48부 10차 · ★두 번 되짚음]
++  //    [대표님]  「관리자화면으로 돌아가기를 누르면
++  //                ★상담사관리 화면으로 «바로» 가게」
++  //
++  //  🔴 ★처음엔 «주소 해시»(/admin#consultant)로 했다가 «안 됐습니다» —
++  //     router.push 는 ★화면 안에서 옮겨 가는 방식이라
++  //     주소창은 바뀌어도 이 부품이 그려지는 «때» 와 어긋났습니다.
++  //     대표님 — 「상담사관리 화면으로 돌아가지 않음」
++  //
++  //  ⇒ ★sessionStorage 로 «건네줍니다». 확실합니다.
++  //     보내는 쪽 : sessionStorage.setItem('adminTab', 'consultant')
++  //     받는 쪽   : ★한 번 읽고 «곧바로 지웁니다» —
++  //                 안 지우면 다음에 관리자 화면에 올 때도 그 탭이 열립니다.
++  //
++  //  ⚠️ ★해시도 «함께» 봅니다 — 즐겨찾기(/admin#inquiry)로 여실 수 있게.
++  //  ⚠️ ★useEffect 를 «안» 씁니다 — 안에서 setState 를 부르면
++  //     react-hooks 가 «오류» 로 잡아 기준선이 깨집니다 (47부 1-7).
++  //  ⛔ 주석에 Next 검색어 훅의 «이름» 을 적지 마십시오 —
++  //     검사 ⑯이 주석까지 읽어 실패로 잡습니다 (10차에 실제로 걸렸습니다).
++  // ══════════════════════════════════════════════════════════════════
++  if (!hashRead && typeof window !== 'undefined') {
++    setHashRead(true)
++    const asked = sessionStorage.getItem('adminTab')
++    if (asked) sessionStorage.removeItem('adminTab')
++    const want = asked || window.location.hash.replace('#', '')
++    if (want && TABS.some(t => t.key === want)) setTab(want as Tab)
++  }
++
+   return (
+     <div className="min-h-screen" style={{ background: '#1a1a18' }}>
+       {/* sticky로 둔다. fixed면 탭이 두 줄이 될 때 아래 본문을 덮어버린다.
+@@ -79,7 +132,15 @@ export default function AdminPage() {
+           </div>
+           <div className="flex gap-2 flex-wrap">
+             {TABS.map((t) => (
+-              <button key={t.key} onClick={() => setTab(t.key as Tab)}
++              <button key={t.key}
++                onClick={() => {
++                  setTab(t.key as Tab)
++                  // ★48부 10차 — 주소도 함께 바꿉니다.
++                  //   ⇒ 새로고침하거나 즐겨찾기로 와도 «그 탭» 이 열립니다.
++                  if (typeof window !== 'undefined') {
++                    window.history.replaceState(null, '', `#${t.key}`)
++                  }
++                }}
+                 className="px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap"
+                 style={tab === t.key
+                   ? { background: 'rgba(250,199,117,0.3)', color: '#FAC775', border: '1px solid rgba(250,199,117,0.4)' }
+@@ -104,6 +165,7 @@ export default function AdminPage() {
+         {tab === 'settlement' && <SettlementManager />}
+         {tab === 'knowledge' && <KnowledgeManager />}
+         {tab === 'review' && <ReviewManager />}
++        {tab === 'inquiry' && <InquiryManager />}
+         {tab === 'accounting' && <ExpenseManager />}
+         {tab === 'approval' && <ExpenseApproval />}
+         {tab === 'tone' && <ToneManager />}
+diff --git a/app/archive/page.tsx b/app/archive/page.tsx
+index 86f219a..f5c0211 100644
+--- a/app/archive/page.tsx
++++ b/app/archive/page.tsx
+@@ -1,4 +1,5 @@
+ 'use client'
++import HomeBottomNav from '@/app/components/HomeBottomNav'
+ 
+ // ============================================================================
+ // 보관함 — 나의 운명 아카이브 전용 화면
+@@ -8,19 +9,12 @@
+ // 이 파일은 헤더·하단네비 같은 껍데기만 씌운다.
+ // ============================================================================
+ 
+-import { useRouter, usePathname } from 'next/navigation'
++import { useRouter } from 'next/navigation'
+ import ArchiveList from '@/app/manseryeok/components/ArchiveList'
+ 
+-const NAV = [
+-  { icon: '🏠', label: '홈', href: '/home-new' },
+-  { icon: '⊞', label: '서비스', href: '', wip: true },
+-  { icon: '💬', label: '상담', href: '/manseryeok/reviews' },
+-  { icon: '📚', label: '보관함', href: '/archive' },
+-]
+ 
+ export default function ArchivePage() {
+   const router = useRouter()
+-  const pathname = usePathname()
+ 
+   return (
+     <div style={{
+@@ -48,35 +42,8 @@ export default function ArchivePage() {
+         <ArchiveList />
+       </main>
+ 
+-      {/* 하단 고정 네비게이션 */}
+-      <div style={{
+-        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+-        width: '100%', maxWidth: 430,
+-        display: 'flex', background: '#FFFBF7',
+-        borderTop: '0.5px solid #9c7a58', zIndex: 20,
+-      }}>
+-        {NAV.map((n) => {
+-          const active = n.href === pathname
+-          return (
+-            <button
+-              key={n.label}
+-              onClick={() => { if (n.wip) { alert('작업 중이에요. 곧 만나요!') } else { router.push(n.href) } }}
+-              style={{
+-                flex: 1, padding: '10px 0', background: 'none', border: 'none',
+-                cursor: 'pointer', display: 'flex', flexDirection: 'column',
+-                alignItems: 'center', gap: 3,
+-              }}
+-            >
+-              <span style={{ fontSize: 18 }}>{n.icon}</span>
+-              <span style={{ fontSize: 10, color: active ? '#c8783c' : '#b09079', fontWeight: active ? 600 : 400 }}>
+-                {n.label}
+-              </span>
+-              {/* 현재 위치 표시 — 아이콘을 흐리게 하는 대신 밑줄로 */}
+-              <span style={{ height: 2, width: 22, borderRadius: 2, background: active ? '#c8783c' : 'transparent' }} />
+-            </button>
+-          )
+-        })}
+-      </div>
++      {/* ★48부 8차 — 하단바 ★부품 (HomeBottomNav). ⛔ 여기에 다시 적지 마십시오. */}
++      <HomeBottomNav />
+     </div>
+   )
+ }
+diff --git a/app/components/HomeBottomNav.tsx b/app/components/HomeBottomNav.tsx
+new file mode 100644
+index 0000000..5769cbf
+--- /dev/null
++++ b/app/components/HomeBottomNav.tsx
+@@ -0,0 +1,84 @@
++'use client'
++// app/components/HomeBottomNav.tsx
++//
++// ══════════════════════════════════════════════════════════════════
++//  ★2026-08-07 (48부 8차) — 손님 하단바 «한 곳으로»  [대표님 지시]
++//    「홈 · 선생님 소개 · 문의사항 · 보관함 — 이것이 좋네」
++//
++//  🔴 ★왜 부품으로 모았나
++//     전에는 ★세 화면이 «각자» 똑같은 목록을 적어 두었습니다 —
++//       app/home-new/page.tsx · app/archive/page.tsx · app/mypage-new/page.tsx
++//     ⇒ 사본이 셋이라 ★한 곳만 고치면 화면마다 하단바가 달라집니다.
++//     ⇒ 45부 교훈 BQ 「이 표는 사본입니다. 한쪽만 고치지 마십시오」와 같은 자리입니다.
++//  ⛔⛔ ★탭을 늘리거나 이름을 바꿀 때는 «여기만» 고치십시오.
++//       화면 쪽에 다시 적지 마십시오.
++//
++//  ⚠️ ★전에 있던 두 칸을 걷었습니다 —
++//     「⊞ 서비스」  ★아무 데도 안 갔습니다 (wip: true — 눌러도 알림만).
++//                   서비스 목록은 ★홈에서 조금만 내려가면 나옵니다.
++//                   [대표님 「서비스버튼은 삭제하고」]
++//     「💬 상담」   ★/manseryeok/reviews(후기)로 갔습니다 — 상담이 아니었습니다.
++//                   (47부 인수인계서 10-6에 「상담이 아닙니다」라고 적혀 있던 자리)
++//
++//  ⚠️ ★후기 등록은 하단바에 «안» 넣었습니다 —
++//     상담을 안 받은 사람에게는 평생 쓸 일 없는 칸이고,
++//     받은 분도 «한 번» 쓰고 다시 안 누릅니다.
++//     ⇒ 상담이 끝난 뒤 «그 자리» 에서 받는 것이 훨씬 많이 걷힙니다.
++//     ⛔ 하단바에 다시 넣지 마십시오. 대표님과 의논해 정한 것입니다.
++// ══════════════════════════════════════════════════════════════════
++
++import { useRouter, usePathname } from 'next/navigation'
++
++/**
++ * ★손님 하단바 — 네 칸  [대표님 확정 2026-08-07]
++ */
++export const HOME_NAV = [
++  { icon: '🏠', label: '홈',        href: '/home-new' },
++  { icon: '🧑‍🏫', label: '선생님 소개', href: '/teachers' },
++  { icon: '💬', label: '문의사항',   href: '/inquiry' },
++  { icon: '📚', label: '보관함',     href: '/archive' },
++] as const
++
++export default function HomeBottomNav() {
++  const router = useRouter()
++  const pathname = usePathname()
++
++  return (
++    <div style={{
++      position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
++      width: '100%', maxWidth: '430px',
++      display: 'flex', background: '#FFFBF7',
++      borderTop: '0.5px solid #9c7a58', zIndex: 20,
++    }}>
++      {HOME_NAV.map((n) => {
++        const active = pathname === n.href || pathname.startsWith(n.href + '/')
++        return (
++          <button
++            key={n.label}
++            onClick={() => router.push(n.href)}
++            style={{
++              flex: 1, padding: '10px 0', background: 'none', border: 'none',
++              cursor: 'pointer', display: 'flex', flexDirection: 'column',
++              alignItems: 'center', gap: '3px',
++            }}
++          >
++            <span style={{ fontSize: '18px' }}>{n.icon}</span>
++            <span style={{
++              fontSize: '10px',
++              color: active ? '#c8783c' : '#b09079',
++              fontWeight: active ? 600 : 400,
++              whiteSpace: 'nowrap',
++            }}>
++              {n.label}
++            </span>
++            {/* 지금 자리 — 아이콘을 흐리게 하는 대신 밑줄로 (전에 하던 그대로) */}
++            <span style={{
++              height: '2px', width: '22px', borderRadius: '2px',
++              background: active ? '#c8783c' : 'transparent',
++            }} />
++          </button>
++        )
++      })}
++    </div>
++  )
++}
+diff --git a/app/home-new/page.tsx b/app/home-new/page.tsx
+index f71608a..91de0a6 100644
+--- a/app/home-new/page.tsx
++++ b/app/home-new/page.tsx
+@@ -1,4 +1,5 @@
+ 'use client'
++import HomeBottomNav from '@/app/components/HomeBottomNav'
+ 
+ import { useState, useEffect, useRef } from 'react'
+ import { useRouter } from 'next/navigation'
+@@ -562,37 +563,9 @@ export default function HomeNew() {
+         </div>
+       </footer>
+ 
+-      {/* 하단 고정 네비게이션 */}
+-      <div style={{
+-        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+-        width: '100%', maxWidth: '430px',
+-        display: 'flex', background: '#FFFBF7',
+-        borderTop: '0.5px solid #9c7a58', zIndex: 20,
+-      }}>
+-        {[
+-          { icon: '🏠', label: '홈', href: '/home-new', active: true },
+-          { icon: '⊞', label: '서비스', href: '', wip: true, active: false },
+-          { icon: '💬', label: '상담', href: '/manseryeok/reviews', active: false },
+-          { icon: '📚', label: '보관함', href: '/archive', active: false },
+-        ].map((n) => (
+-          <button
+-            key={n.label}
+-            onClick={() => { if (n.wip) { alert('작업 중이에요. 곧 만나요!') } else { router.push(n.href) } }}
+-            style={{
+-              flex: 1, padding: '10px 0', background: 'none', border: 'none',
+-              cursor: 'pointer', display: 'flex', flexDirection: 'column',
+-              alignItems: 'center', gap: '3px',
+-            }}
+-          >
+-            <span style={{ fontSize: '18px' }}>{n.icon}</span>
+-            <span style={{ fontSize: '10px', color: n.active ? '#c8783c' : '#b09079', fontWeight: n.active ? 600 : 400 }}>
+-              {n.label}
+-            </span>
+-            {/* 현재 위치 표시 — 아이콘을 흐리게 하는 대신 밑줄로 */}
+-            <span style={{ height: '2px', width: '22px', borderRadius: '2px', background: n.active ? '#c8783c' : 'transparent' }} />
+-          </button>
+-        ))}
+-      </div>
++      {/* ★48부 8차 — 하단바를 ★부품으로 모았습니다 (HomeBottomNav).
++          ⛔ 여기에 다시 적지 마십시오. 세 화면이 어긋납니다. */}
++      <HomeBottomNav />
+ 
+       {/* 사람 선택 모달 (공용) */}
+       {pickService && PICK_CONFIG[pickService] && (() => {
+diff --git a/app/inquiry/page.tsx b/app/inquiry/page.tsx
+new file mode 100644
+index 0000000..5045bda
+--- /dev/null
++++ b/app/inquiry/page.tsx
+@@ -0,0 +1,283 @@
++'use client'
++// app/inquiry/page.tsx
++//
++// ══════════════════════════════════════════════════════════════════
++//  ★2026-08-07 (48부 8차) — 💬 문의사항  [대표님 지시]
++//    「질문 예시를 몇 개 만들어 놓고 계속 표시하되,
++//      특정 고객이 등록하면 ★본인 화면에만 보이고
++//      다른 고객 화면에는 안 보이는 걸로」
++//    「그 질문들 중 좋은 내용은 ★선별적으로 공유」
++//    「답변은 ★마스터인 류승현과 오연희 두 사람만 가능」
++//    「로그인 안 한 사람은 ★볼 필요가 없도록」
++//
++//  ★무엇이 보이나 — 셋을 합칩니다
++//     is_sample   대표님이 미리 넣어 둔 ★예시. 언제나 보입니다.
++//     is_public   대표님이 좋다고 골라 ★공개로 바꾼 것
++//     내가 쓴 것   ★나만 보입니다 (다른 손님에게는 안 보임)
++//
++//  ⚠️⚠️ ★거르기는 «DB 정책(RLS)» 이 합니다 — 화면이 아닙니다.
++//     inquiries_select : auth.uid() IS NOT NULL
++//                        AND (is_public OR is_sample OR user_id = auth.uid())
++//     ⇒ ★화면 코드를 뚫어도 남의 글은 «안 옵니다». 그래서 안전합니다.
++//     ⛔ 화면에서 다시 거르지 마십시오. 두 겹이 되면 어긋납니다.
++//
++//  ⚠️ ★공개된 글에 «이름을 안 냅니다» —
++//     사주 문의는 사적인 것이 섞이기 쉽고, 닉네임만으로도 아는 사람은 압니다.
++//     ⛔ 이름·닉네임을 붙이지 마십시오. 대표님과 의논해 정한 것입니다.
++//
++//  ⛔ ★답변·공개 전환은 «여기서 못 합니다». 관리자 「문의 관리」 탭에서 합니다.
++// ══════════════════════════════════════════════════════════════════
++
++import { useEffect, useState } from 'react'
++import { useRouter } from 'next/navigation'
++import { supabase } from '@/lib/supabase'
++import HomeBottomNav from '@/app/components/HomeBottomNav'
++
++type Inquiry = {
++  id: string
++  user_id: string | null
++  title: string
++  body: string
++  is_public: boolean
++  is_sample: boolean
++  answer: string | null
++  answered_at: string | null
++  created_at: string
++}
++
++function dateText(s: string) {
++  const d = new Date(s)
++  return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`
++}
++
++export default function InquiryPage() {
++  const router = useRouter()
++  const [uid, setUid] = useState<string | null>(null)
++  const [checked, setChecked] = useState(false)
++  const [list, setList] = useState<Inquiry[]>([])
++  const [loading, setLoading] = useState(true)
++  const [open, setOpen] = useState<Set<string>>(new Set())
++
++  const [writing, setWriting] = useState(false)
++  const [title, setTitle] = useState('')
++  const [body, setBody] = useState('')
++  const [saving, setSaving] = useState(false)
++
++  useEffect(() => {
++    supabase.auth.getUser().then(({ data }) => {
++      setUid(data.user?.id ?? null)
++      setChecked(true)
++    })
++  }, [])
++
++  // ⚠️⚠️ ★useEffect 안에서 setState 를 부르면 react-hooks 가 ★오류로 잡습니다
++  //    (47부 1-7 · eslint 기준선이 깨집니다).
++  //    ⇒ ★«그릴 때» 견주어 곧바로 바꿉니다.
++  //    ⛔ useEffect 로 되돌리지 마십시오.
++  const [lastKey, setLastKey] = useState('')
++  const key = `${checked}:${uid ?? ''}`
++  if (key !== lastKey) {
++    setLastKey(key)
++    if (checked) {
++      if (uid) load()
++      else setLoading(false)
++    }
++  }
++
++  async function load() {
++    // ⚠️ ★거르기는 RLS 가 합니다. 여기서 조건을 더 걸지 않습니다.
++    const { data } = await supabase
++      .from('inquiries')
++      .select('id, user_id, title, body, is_public, is_sample, answer, answered_at, created_at')
++      .order('created_at', { ascending: false })
++    setList((data ?? []) as Inquiry[])
++    setLoading(false)
++  }
++
++  async function submit() {
++    if (!title.trim() || !body.trim()) { alert('제목과 내용을 넣어 주세요.'); return }
++    if (!uid) return
++    setSaving(true)
++    const { error } = await supabase.from('inquiries').insert({
++      user_id: uid, title: title.trim(), body: body.trim(),
++    })
++    setSaving(false)
++    if (error) { alert('등록하지 못했어요.\n\n잠시 후 다시 시도해 주세요.\n(' + error.message + ')'); return }
++    setTitle(''); setBody(''); setWriting(false)
++    load()
++  }
++
++  const toggle = (id: string) => setOpen(prev => {
++    const n = new Set(prev)
++    if (n.has(id)) n.delete(id); else n.add(id)
++    return n
++  })
++
++  // ★로그인 안 하면 «아무것도» 안 보입니다 [대표님 지시]
++  if (checked && !uid) {
++    return (
++      <div style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 430, margin: '0 auto', paddingBottom: 76 }}>
++        <div style={{ padding: '18px 16px 12px', background: '#FFFBF7', borderBottom: '0.5px solid #e8d9c9' }}>
++          <div style={{ fontSize: 17, fontWeight: 700, color: '#3a2e28' }}>문의사항</div>
++        </div>
++        <div style={{ padding: '60px 24px', textAlign: 'center', fontSize: 13.5, color: '#8a7461', lineHeight: 1.9 }}>
++          로그인하시면 문의를 남기고<br />답변을 받아보실 수 있어요.
++          <button onClick={() => router.push('/auth/login')}
++            style={{
++              display: 'block', width: '100%', marginTop: 20, height: 44,
++              background: '#b46e46', color: '#fff', border: 'none', borderRadius: 10,
++              fontSize: 14, fontFamily: 'inherit', cursor: 'pointer',
++            }}>
++            로그인하기
++          </button>
++        </div>
++        <HomeBottomNav />
++      </div>
++    )
++  }
++
++  return (
++    <div style={{ minHeight: '100vh', background: '#FDF6F0', maxWidth: 430, margin: '0 auto', paddingBottom: 76 }}>
++      <div style={{ padding: '18px 16px 12px', background: '#FFFBF7', borderBottom: '0.5px solid #e8d9c9' }}>
++        <div style={{ display: 'flex', alignItems: 'center' }}>
++          <div>
++            <div style={{ fontSize: 17, fontWeight: 700, color: '#3a2e28' }}>문의사항</div>
++            <div style={{ fontSize: 12, color: '#8a7461', marginTop: 4 }}>
++              궁금한 것을 남겨 주시면 답변해 드려요
++            </div>
++          </div>
++          <button onClick={() => setWriting(v => !v)}
++            style={{
++              marginLeft: 'auto', height: 34, padding: '0 14px',
++              background: writing ? '#f2eee9' : '#b46e46',
++              color: writing ? '#8a7461' : '#fff',
++              border: 'none', borderRadius: 9, fontSize: 12.5,
++              fontFamily: 'inherit', cursor: 'pointer',
++            }}>
++            {writing ? '닫기' : '문의 남기기'}
++          </button>
++        </div>
++      </div>
++
++      {writing && (
++        <div style={{ padding: 14, background: '#FFFBF7', borderBottom: '0.5px solid #e8d9c9' }}>
++          <input value={title} onChange={e => setTitle(e.target.value)}
++            placeholder="어떤 것이 궁금하세요?"
++            style={{
++              width: '100%', height: 42, padding: '0 12px', fontSize: 13.5,
++              border: '1px solid #ea8c46', borderRadius: 9, background: '#fff',
++              fontFamily: 'inherit', color: '#3a2e28', outline: 'none',
++            }} />
++          <textarea value={body} onChange={e => setBody(e.target.value)}
++            placeholder="자세히 적어 주시면 더 정확히 답변해 드릴 수 있어요."
++            rows={5}
++            style={{
++              width: '100%', marginTop: 8, padding: '10px 12px', fontSize: 13.5,
++              border: '1px solid #ea8c46', borderRadius: 9, background: '#fff',
++              fontFamily: 'inherit', color: '#3a2e28', outline: 'none',
++              lineHeight: 1.8, resize: 'vertical',
++            }} />
++          {/* ★손님이 «누가 보는지» 알아야 마음 놓고 씁니다 */}
++          <div style={{ fontSize: 11.5, color: '#8a7461', margin: '8px 2px 0', lineHeight: 1.7 }}>
++            남기신 문의는 <b style={{ color: '#96502e' }}>회원님과 저희만</b> 봅니다.
++            다른 분들께 도움이 될 내용은 여쭤본 뒤 함께 나눌 수 있어요.
++          </div>
++          <button onClick={submit} disabled={saving}
++            style={{
++              width: '100%', marginTop: 10, height: 44,
++              background: saving ? '#d8c5b5' : '#b46e46', color: '#fff',
++              border: 'none', borderRadius: 10, fontSize: 14,
++              fontFamily: 'inherit', cursor: saving ? 'default' : 'pointer',
++            }}>
++            {saving ? '보내는 중…' : '문의 보내기'}
++          </button>
++        </div>
++      )}
++
++      <div style={{ padding: 14 }}>
++        {loading ? (
++          <div style={{ padding: 40, textAlign: 'center', fontSize: 13, color: '#8a7461' }}>불러오는 중…</div>
++        ) : list.length === 0 ? (
++          <div style={{ padding: 40, textAlign: 'center', fontSize: 13, color: '#8a7461' }}>
++            아직 문의가 없어요.
++          </div>
++        ) : (
++          list.map((q) => {
++            const isMine = !!uid && q.user_id === uid
++            const isOpen = open.has(q.id)
++            return (
++              <div key={q.id} style={{
++                background: '#fff', border: '1px solid #ea8c46', borderRadius: 12,
++                marginBottom: 10, overflow: 'hidden',
++              }}>
++                <button onClick={() => toggle(q.id)}
++                  style={{
++                    width: '100%', padding: '13px 14px', background: 'none', border: 'none',
++                    cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
++                    display: 'flex', alignItems: 'flex-start', gap: 8,
++                  }}>
++                  <div style={{ flex: 1, minWidth: 0 }}>
++                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
++                      {isMine && (
++                        <span style={{
++                          fontSize: 10.5, color: '#8f3d0e', background: '#fdf0e8',
++                          padding: '2px 7px', borderRadius: 5,
++                        }}>내 문의</span>
++                      )}
++                      {/* ⚠️ 내 글이 «아직 나만 보이는» 상태임을 알려 줍니다 */}
++                      {isMine && !q.is_public && (
++                        <span style={{ fontSize: 10.5, color: '#a08d7d' }}>나만 보임</span>
++                      )}
++                      {q.answer && (
++                        <span style={{
++                          fontSize: 10.5, color: '#0F6E56', background: '#E1F5EE',
++                          padding: '2px 7px', borderRadius: 5,
++                        }}>답변 완료</span>
++                      )}
++                    </div>
++                    <div style={{ fontSize: 14, color: '#3a2e28', marginTop: 4, lineHeight: 1.5 }}>
++                      {q.title}
++                    </div>
++                    <div style={{ fontSize: 11, color: '#a08d7d', marginTop: 3 }}>
++                      {dateText(q.created_at)}
++                    </div>
++                  </div>
++                  <span aria-hidden style={{
++                    color: '#96502e', fontSize: 16, lineHeight: 1, marginTop: 4,
++                    transition: 'transform .2s', transform: `rotate(${isOpen ? 180 : 0}deg)`,
++                  }}>▾</span>
++                </button>
++
++                {isOpen && (
++                  <div style={{ padding: '0 14px 14px' }}>
++                    <div style={{
++                      fontSize: 13, color: '#4a3f38', lineHeight: 1.9,
++                      paddingLeft: 10, borderLeft: '1px solid #ea8c46', whiteSpace: 'pre-line',
++                    }}>
++                      {q.body}
++                    </div>
++                    {q.answer ? (
++                      <div style={{
++                        marginTop: 11, padding: '11px 13px', background: '#faf3ec', borderRadius: 9,
++                        fontSize: 13, color: '#3a2e28', lineHeight: 1.9, whiteSpace: 'pre-line',
++                      }}>
++                        <div style={{ fontSize: 11.5, color: '#96502e', marginBottom: 5 }}>답변</div>
++                        {q.answer}
++                      </div>
++                    ) : (
++                      <div style={{ marginTop: 11, fontSize: 12, color: '#a08d7d' }}>
++                        답변을 준비하고 있어요.
++                      </div>
++                    )}
++                  </div>
++                )}
++              </div>
++            )
++          })
++        )}
++      </div>
++
++      <HomeBottomNav />
++    </div>
++  )
++}
+diff --git a/app/manseryeok/consultant-select/page.tsx b/app/manseryeok/consultant-select/page.tsx
+index 9dd09d9..2c28bac 100644
+--- a/app/manseryeok/consultant-select/page.tsx
++++ b/app/manseryeok/consultant-select/page.tsx
+@@ -2,6 +2,8 @@
+ import { useRef, useState } from 'react'
+ import { Suspense, useEffect } from 'react'
+ import { useSearchParams, useRouter } from 'next/navigation'
++// ★48부 4차 — 손님 화면은 ★본명 대신 별칭. ⛔ c.name 을 직접 쓰지 마십시오.
++import { shownName } from '@/lib/consultantName'
+ import { supabase } from '@/lib/supabase'
+ import SummaryBand from './SummaryBand'
+ 
+@@ -9,6 +11,10 @@ type Consultant = {
+   id: string
+   name: string
+   specialty: string
++  /** ★48부 4차 — 별칭(호). 손님 화면은 ★shownName() 으로만 씁니다 */
++  alias?: string | null
++  /** ★48부 5차 — 전문분야(price_key 배열). 비었으면 «전부» 에 나옵니다 */
++  specialties?: string[] | null
+   photo_url: string
+   career: string
+   intro: string
+@@ -40,6 +46,17 @@ function ConsultantSelectInner() {
+   const mode  = params.get('mode')  || 'personal'
+   const score = params.get('score') || ''
+   const names = params.get('names') || ''
++  /**
++   * ★2026-08-06 (48부 5차) — ★손님이 «어느 서비스» 에서 왔는가  [대표님 지시]
++   *   「관리자가 지정해 준 상담사만 나오게 하겠다는 것이지」
++   *   ⚠️ ConsultButton 이 ★열두 화면 «전부» 에서 이 값을 실어 보냅니다
++   *      (params.set('priceKey', priceKey) — 새로 깐 배관이 아닙니다).
++   *   ⚠️ 값은 ★consult_prices 의 price_key 와 «같습니다» —
++   *      saju · couple · career · mulsang · wedding · birth · moving
++   *      · naming · naming_baby · tarot
++   *   ⛔ 이 이름을 바꾸지 마십시오. 열두 화면과 한꺼번에 어긋납니다.
++   */
++  const priceKey = params.get('priceKey') || ''
+ 
+   const gender = params.get('gender') ?? ''
+   const calType = params.get('calType') ?? '양력'
+@@ -66,11 +83,33 @@ function ConsultantSelectInner() {
+     async function load() {
+       const { data } = await supabase
+         .from('consultants')
+-        .select('id, name, specialty, photo_url, career, intro, rating, review_count, review_text, region')
++        .select('id, name, alias, specialty, specialties, photo_url, career, intro, rating, review_count, review_text, region')
+         .eq('active', true)
+         .order('sort')
+         .order('created_at')
+-      setConsultants((data ?? []) as Consultant[])
++
++      // ★2026-08-07 (48부 6차) — ★전문분야로 «거릅니다» [대표님 지시]
++      //   「관리자화면에서 "궁합"을 ★두 사람만 지정할 경우,
++      //     궁합보기 서비스에서 고객이 고를 수 있는 상담사는 ★2명만 나와야 하는데」
++      //   「★아무것도 안 고른 상담사는 안 나오게 해야지」
++      //
++      //   ⚠️⚠️ ★배려를 «둘 다» 뺐습니다 [대표님 「두번째 배려도 뺀다」] —
++      //     ① 아무 분야도 «안 고른» 상담사 → ★안 나옵니다
++      //     ② 걸러서 «0명» 이어도 → ★0명 그대로. 전체로 되돌리지 «않습니다».
++      //   ⇒ ★관리자가 켜 준 분만 나옵니다. 뜻한 대로입니다.
++      //
++      //   🔴 ★그래서 «0명» 이면 「현재 상담 가능한 상담사가 없습니다」가 뜹니다.
++      //      ⇒ 아직 아무도 안 켜 준 서비스는 ★가격 관리에서 «상담 버튼» 을 끄십시오
++      //        (consult_prices.active — 끄면 ★버튼 자체가 안 뜹니다 · ConsultButton:76).
++      //      ⛔ 「0명이면 전체를 보여 주는」 되돌림을 ★다시 넣지 마십시오.
++      //         대표님이 «일부러» 빼신 것입니다.
++      //
++      //   ⚠️ priceKey 가 «없으면» 거르지 않습니다 —
++      //      AI 채팅처럼 서비스를 안 타고 들어오는 길이 있습니다.
++      const all = (data ?? []) as Consultant[]
++      setConsultants(priceKey
++        ? all.filter(c => Array.isArray(c.specialties) && c.specialties.includes(priceKey))
++        : all)
+ 
+       const today = new Date()
+       const yyyy = today.getFullYear()
+@@ -90,7 +129,9 @@ function ConsultantSelectInner() {
+       setLoading(false)
+     }
+     load()
+-  }, [])
++    // ★48부 5차 — priceKey 가 바뀌면 ★다시 불러야 합니다.
++    //   ⚠️ 전에는 [] 였습니다. 손님이 다른 서비스로 들어와도 «옛 목록» 이 남습니다.
++  }, [priceKey])
+ 
+   function scheduleOf(consultantId: string): { date: string; slots: Slot[] }[] {
+     const mine = slots.filter(s => s.consultant_id === consultantId)
+@@ -317,7 +358,7 @@ function ConsultantSelectInner() {
+         sessionStorage.removeItem('birth_full')
+       }
+ 
+-      setDone({ consultantName: c.name, date: slot.slot_date, hour: slot.slot_hour })
++      setDone({ consultantName: shownName(c), date: slot.slot_date, hour: slot.slot_hour })
+     } catch (e) {
+       console.error(e)
+       alert('예약 중 문제가 생겼어요. 다시 시도해 주세요.')
+@@ -395,11 +436,11 @@ function ConsultantSelectInner() {
+                     background: '#faede0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                     {c.photo_url
+                       ? <img src={c.photo_url} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+-                      : <span style={{ fontSize: 16, color: '#96502e' }}>{c.name?.[0] || '?'}</span>}
++                      : <span style={{ fontSize: 16, color: '#96502e' }}>{shownName(c)[0] || '?'}</span>}
+                   </div>
+                   <div style={{ flex: 1, minWidth: 0 }}>
+                     <div className="text-[15px] text-[#3a2e28] font-medium">
+-                      {c.name} <span className="text-[12px] text-[#96502e]">선생님</span>
++                      {shownName(c)} <span className="text-[12px] text-[#96502e]">선생님</span>
+                     </div>
+                     <div className="text-[12px] text-[#6b5340] mt-0.5">{c.specialty || '명리 상담'}</div>
+                     {first ? (
+diff --git a/app/manseryeok/consultant/components/ExpertFloating.tsx b/app/manseryeok/consultant/components/ExpertFloating.tsx
+index 741911f..fccbaee 100644
+--- a/app/manseryeok/consultant/components/ExpertFloating.tsx
++++ b/app/manseryeok/consultant/components/ExpertFloating.tsx
+@@ -1,6 +1,7 @@
+ 'use client'
+ import { useState, useRef, useEffect } from 'react'
+ import SourceReading from './SourceReading'
++import YongsinReading from './YongsinReading'
+ 
+ // ============================================================
+ // 전문가용 만세력 (독립 플로팅 창)
+@@ -53,7 +54,10 @@ export default function ExpertFloating({ open, onClose }: Props) {
+   // ★2026-08-05 (47부 38차) — 두 갈래 [대표님 지시]
+   //   'calc'   손으로 넣는 전문가용 만세력 계산기 (전부터 있던 것)
+   //   'source' ★교재 «원본 해설» — 같은 생년월일로 죽 폅니다
+-  const [tab, setTab] = useState<'calc' | 'source'>('calc')
++  // ★2026-08-06 (48부 1차) — 세 갈래로 [연재쌤 의견 · 대표님 지시]
++  //   'yongsin' ★용신 «로데이터» — 판정 근거를 그대로 폅니다
++  //   ⚠️ 세 갈래가 ★«같은 입력칸» 을 씁니다. 한 번 넣으면 셋 다 바로 봅니다.
++  const [tab, setTab] = useState<'calc' | 'source' | 'yongsin'>('calc')
+ 
+   // ── 창 위치·크기 ──
+   const [pos, setPos] = useState({ x: 80, y: 80 })
+@@ -180,27 +184,28 @@ export default function ExpertFloating({ open, onClose }: Props) {
+           🔮 계산기     생년월일을 손으로 넣어 «전문가용 만세력» 을 봅니다
+           📖 원본 해설  ★같은 생년월일로 «교재 원본» 해설을 죽 폅니다
+           ⚠️ 두 갈래가 ★«같은 입력값» 을 씁니다. 한 번 넣으면 둘 다 바로 봅니다. */}
++      {/* ★2026-08-06 (48부 1차) — 세 갈래로 [연재쌤 의견 · 대표님 지시]
++          ⚠️ ★문구를 줄였습니다 — 창이 430px 이라 탭 하나가 «약 138px» 입니다.
++             「🔮 만세력 계산기」 그대로 두면 셋이 안 들어가 글자가 잘립니다.
++          ⛔ 다시 늘리지 마십시오. ★320px 로 줄여 놓고 재 보십시오. */}
+       <div style={{ display: 'flex', gap: 4, padding: '6px 8px 0', background: '#f7f5ef', flexShrink: 0 }}>
+-        <button type="button" onClick={() => setTab('calc')}
+-          style={{
+-            flex: 1, height: 28, borderRadius: 5, fontSize: 11.5, fontFamily: 'inherit',
+-            border: tab === 'calc' ? '1px solid #2b2b2b' : '1px solid #ccc',
+-            background: tab === 'calc' ? '#2b2b2b' : '#fff',
+-            color: tab === 'calc' ? '#fff' : '#555',
+-            fontWeight: tab === 'calc' ? 600 : 400, cursor: 'pointer',
+-          }}>
+-          🔮 만세력 계산기
+-        </button>
+-        <button type="button" onClick={() => setTab('source')}
+-          style={{
+-            flex: 1, height: 28, borderRadius: 5, fontSize: 11.5, fontFamily: 'inherit',
+-            border: tab === 'source' ? '1px solid #2b2b2b' : '1px solid #ccc',
+-            background: tab === 'source' ? '#2b2b2b' : '#fff',
+-            color: tab === 'source' ? '#fff' : '#555',
+-            fontWeight: tab === 'source' ? 600 : 400, cursor: 'pointer',
+-          }}>
+-          📖 원본 해설
+-        </button>
++        {([
++          ['calc', '🔮 만세력'],
++          ['source', '📖 원본 해설'],
++          ['yongsin', '⚖️ 용신'],
++        ] as const).map(([key, label]) => (
++          <button key={key} type="button" onClick={() => setTab(key)}
++            style={{
++              flex: 1, height: 28, borderRadius: 5, fontSize: 11, fontFamily: 'inherit',
++              border: tab === key ? '1px solid #2b2b2b' : '1px solid #ccc',
++              background: tab === key ? '#2b2b2b' : '#fff',
++              color: tab === key ? '#fff' : '#555',
++              fontWeight: tab === key ? 600 : 400, cursor: 'pointer',
++              whiteSpace: 'nowrap', overflow: 'hidden',
++            }}>
++            {label}
++          </button>
++        ))}
+       </div>
+ 
+       {/* 입력부 — ★계산기 갈래에서 «결과가 없을 때만» 보인다.
+@@ -208,7 +213,9 @@ export default function ExpertFloating({ open, onClose }: Props) {
+       {/* ⚠️ 입력부는 ★두 갈래가 «함께» 씁니다 —
+           계산기는 결과가 없을 때, 원본 해설은 «언제나» 보입니다
+           (해설은 [조회] 없이 값이 바뀌면 바로 다시 폅니다). */}
+-      {((tab === 'calc' && !src) || tab === 'source') && (
++      {/* ★48부 1차 — 용신 갈래도 «언제나» 입력부가 보입니다 (원본 해설과 같습니다).
++          [조회] 없이 값이 바뀌면 바로 다시 폅니다. */}
++      {((tab === 'calc' && !src) || tab === 'source' || tab === 'yongsin') && (
+         <div style={{ padding: 8, borderBottom: '1px solid #ddd', background: '#f7f5ef', flexShrink: 0 }}>
+           <div style={{ display: 'flex', gap: 4, marginBottom: 5 }}>
+             <button type="button" onClick={() => setCalType('양력')} style={{ ...toggle, ...(calType === '양력' ? toggleOn : {}) }}>양력</button>
+@@ -262,7 +269,15 @@ export default function ExpertFloating({ open, onClose }: Props) {
+       )}
+ 
+       {/* 결과부 */}
+-      {tab === 'source' ? (
++      {tab === 'yongsin' ? (
++        /* ★⚖️ 용신 «로데이터» — 위 계산기와 «같은 입력값» 을 그대로 씁니다.
++           ⚠️ 판정 근거를 폅니다. ⛔ 손님 화면에 옮기지 마십시오. */
++        <YongsinReading
++          calType={calType} leap={leap} gender={gender}
++          year={year} month={month} day={day}
++          hourIdx={hourIdx} name={name}
++        />
++      ) : tab === 'source' ? (
+         /* ★📖 원본 해설 — 위 계산기와 «같은 입력값» 을 그대로 씁니다.
+            ⚠️ 따로 입력받지 않습니다. 한 번 넣으면 두 갈래를 오가며 봅니다. */
+         <SourceReading
+diff --git a/app/manseryeok/consultant/components/YongsinReading.tsx b/app/manseryeok/consultant/components/YongsinReading.tsx
+new file mode 100644
+index 0000000..54c2daa
+--- /dev/null
++++ b/app/manseryeok/consultant/components/YongsinReading.tsx
+@@ -0,0 +1,642 @@
++'use client'
++// app/manseryeok/consultant/components/YongsinReading.tsx
++//
++// ══════════════════════════════════════════════════════════════════
++//  ⚖️ 용신 «로데이터» — 상담사용
++//
++//  ★2026-08-06 (48부 1차 · 연재쌤 의견 · 대표님 지시)
++//    「용신에 대해서만 표시하는 탭을 별도로 만들었으면 한다」
++//    「교재에 입력된 격국용신·억부용신·조후용신 관련 내용을
++//      ★대고객 통변자료가 아닌 «로데이터»로 그대로 표시해서
++//      전문상담사가 판단하게 했으면」
++//    「파이프라인을 지나가면서 나오는 ★모든 자료를 교재 있는 내용 그대로」
++//    「① 격국용신 관련 내용도 «모두» ② 부정적인 내용도 «원문 자체»를」
++//
++//  ★무엇이 「원본 해설」탭과 다른가
++//    원본 해설  — 열다섯 갈래를 «넓게». 용신은 그중 한 묶음이라 결론만 나옵니다.
++//    여기       — 용신 «하나만». 대신 ★결론에 이른 «길» 을 다 폅니다.
++//       · 오행 점수 100점 (버려지던 값)
++//       · 육친 5분류 합산 점수 (코드 안에만 있고 화면에 나온 적 없음)
++//       · 교재 151쪽 표의 «어느 줄» 이 걸렸는가
++//       · 예외 규칙 둘이 걸렸는가 — ★안 걸려도 적습니다
++//       · 직업표를 «통째로» (전에는 한 줄로 뭉개 나갔습니다)
++//
++//  ⚠️ ★판정을 «새로» 만들지 않았습니다 — 이미 있는 함수·표만 부릅니다.
++//     calcYongsinScore · judgeStrength · calcYongsinNew · calcGyeokguk
++//     · calcCareerGyeokguk · relOf · yukchinOfEl · countGeopjae · hasInsungRoot
++//     · P151_TABLE · GYEOK_SANGSIN · GYEOKGUK_INFO · YONGSIN_*
++//     ⇒ 진로적성·통변·손님 화면과 ★«같은 답» 이 나옵니다.
++//     ⛔ 여기서 판정을 새로 짜지 마십시오. 답이 갈립니다.
++//
++//  ⚠️ yongsinNew.ts 는 「손대지 말 것」이라 ★export 한 낱말만 붙였습니다.
++//     로직은 한 글자도 안 건드렸습니다. 표를 «옮겨 적으면» 사본이 둘이 되어
++//     교훈 BQ(「한쪽만 고치지 마십시오」)를 또 만듭니다.
++//
++//  ⛔⛔ ★«상담사용» 입니다. 손님 화면에 옮기지 마십시오.
++//     교재 말이 거칠고, 판정 근거는 손님께 안 보이는 것이 확정입니다
++//     (진로적성 SHOW_WHY = false · 44부 확정).
++//
++//  ★2026-08-06 (48부 2차) — 「험한 말」에 대하여  [대표님 지시]
++//    「한량, 카사노바 등 이런 험한 말도 ★전문상담사는 모두 봐야 해」
++//    「편인격은 교재가 서로 어긋나도 ★그대로 표현해 줘 — 상담사가 알아서 판단」
++//
++//    ⇒ ★찾아보니 그 말들이 «저장소에 살아 있었습니다» — 격 자료가 아니라
++//       «육친» 자료 쪽이었습니다. 45부 주석이 「안 담았다」고 적은 것은
++//       ★손님 화면의 격 모달(GYEOK_DESC)을 두고 한 말입니다.
++//         yukchinTable.original   「한량기」·「주색잡기」·「별거, 이혼, 바람기」
++//         yukchinGroup.original   「거지, 노숙자가 많고 한량이다」
++//         ilju.gijilFull          「주색잡기와 구설수」
++//    ⇒ ★용신이 «가리키는 육친» 의 원문을 그대로 폅니다 (아래 ⑤·⑥ 묶음).
++//
++//    🔴 아직 «없는» 것 — A책 159~182쪽 격 본문 스캔이 저장소에 안 들어와 있습니다.
++//       「카사노바」·「일부다처형」 같은 ★격 본문 표현이 그 안에 있습니다.
++//       ⇒ 스캔을 넣어 주시면 ★자료 파일에 담고 여기서 «불러» 쓰십시오.
++//       ⛔ ★이 파일에 교재 말을 «직접» 적지 마십시오. 사본이 둘 되면 교훈 BQ 입니다.
++//
++//    ⚠️ 「담지 않기로 한 일곱」(44부 교훈 CA)은 ★이번 지시와 «다른» 것입니다 —
++//       127쪽 단명·자살 · 129쪽 성범죄 «피해자 탓» · 128쪽 실명
++//       · 131쪽 낙태·유산·불임 판정 · 병명 · 센 말 · 종교 단정
++//       그 일곱은 자료 파일에 ★애초에 «안 담겨» 있어 여기서도 안 나옵니다.
++//       ⛔ 되살리려면 ★대표님께 «따로» 여쭈십시오. 특히 ②는
++//          「성폭력 피해자가 자기 사주를 보러 왔을 때 이 말이 닿으면
++//            사람을 해칩니다」 라고 자료에 적혀 있습니다.
++// ══════════════════════════════════════════════════════════════════
++
++import { useMemo, useState } from 'react'
++import { useResultSaju } from '@/hooks/useResultSaju'
++import {
++  // ⚠️ judgeStrength 는 «들여오지 않습니다» — calcYongsinNew 가 status 를 이미 줍니다.
++  //    들여오면 eslint 경고가 늘어 기준선(82/137)이 깨집니다.
++  calcYongsinScore, calcYongsinNew, calcGyeokguk,
++  relOf, yukchinOfEl, countGeopjae, hasInsungRoot,
++  P151_TABLE, GYEOK_SANGSIN, ALL, sipsinOf,
++  type Ohaeng, type Yukchin5,
++} from '@/lib/saju/yongsinNew'
++import { calcCareerGyeokguk } from '@/lib/saju/career/gyeokguk'
++import { GYEOKGUK_INFO } from '@/lib/saju/career/tables/gyeokguk'
++import {
++  YONGSIN_OHAENG, YONGSIN_YUKCHIN, YONGSIN_NOTE, YONGSIN_SRC,
++} from '@/lib/saju/career/tables/yongsin'
++import { LINE_OUTER, LINE_INNER } from '@/lib/ui/line'
++// ★2026-08-06 (48부 2차) — 육친 «교재 원문» [대표님 「한량·카사노바 등 험한 말도 상담사는 모두 봐야해」]
++//   용신은 «육친» 을 가리킵니다. 그 육친의 교재 원문이 여기 살아 있습니다.
++//   ⚠️ original 은 ★교재 원문 그대로라 말이 셉니다 — 상담사용이라 폅니다.
++//   ⛔⛔ ★손님 화면에는 «절대» 넣지 마십시오 (자료 파일 머리말 · 47부 5-2).
++import {
++  rowOf as yukchinRowOf, yukchinLines, darununLines, cheobangLines,
++  sipsinCount, PAIR_OF, YUKCHIN_KEYS, type YukchinKey,
++} from '@/lib/saju/yukchinTable'
++import { groupBrief } from '@/lib/saju/yukchinGroup'
++import { ctxOf } from '@/lib/saju/jijiTrait'
++
++type Props = {
++  calType: '양력' | '음력'
++  leap: boolean
++  gender: '남' | '여'
++  year: string
++  month: string
++  day: string
++  hourIdx: number | null
++  name: string
++}
++
++const EL_HAN: Record<string, string> = { 목: '木', 화: '火', 토: '土', 금: '金', 수: '水' }
++
++/** 오행 → 한자를 함께 (로데이터라 둘 다 보입니다) */
++function el(e: string | null | undefined): string {
++  if (!e) return '—'
++  return `${e}${EL_HAN[e] ? `(${EL_HAN[e]})` : ''}`
++}
++
++type Item = { title: string; source?: string; lines: string[] }
++type Group = { key: string; label: string; items: Item[] }
++
++/**
++ * ★교재 원문(original)을 꺼냅니다 — SourceReading 과 «같은» 방식입니다.
++ *   ⚠️ 자료 파일에 「original 은 화면에도 통변 재료에도 넣지 말 것」이라 적혀 있습니다.
++ *      그것은 ★«손님 화면» 을 두고 한 말입니다. 여기는 «상담사용» 입니다.
++ *   ⛔ ★손님 화면(통변·진로적성·궁합)에는 «절대» 넣지 마십시오.
++ */
++function orig(row: unknown): string[] {
++  const o = (row as { original?: unknown })?.original
++  if (typeof o === 'string' && o.trim()) return [`【교재 원문】 ${o.trim()}`]
++  if (Array.isArray(o)) {
++    const arr = o.filter(x => typeof x === 'string' && x.trim())
++    if (arr.length) return [`【교재 원문】 ${arr.join(' ')}`]
++  }
++  return []
++}
++
++/** 5분류(비겁·식상…)에 딸린 십신 «둘» — 용신이 가리키는 육친을 원문까지 폅니다 */
++function keysOfPair(pair: string): YukchinKey[] {
++  return YUKCHIN_KEYS.filter(k => PAIR_OF[k] === pair)
++}
++
++/** 한 꼭지 — 제목 · 출전 · 여러 줄 */
++function Block({ title, source, lines }: Item) {
++  if (lines.length === 0) return null
++  return (
++    <div style={{
++      background: '#fff', border: LINE_OUTER, borderRadius: 10,
++      padding: '11px 13px', marginBottom: 8,
++    }}>
++      <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 7 }}>
++        <span style={{ fontSize: 12.5, fontWeight: 700, color: '#3a2e28' }}>{title}</span>
++        {source && (
++          <span style={{ fontSize: 10, color: '#a08d7d', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
++            {source}
++          </span>
++        )}
++      </div>
++      {lines.map((l, i) => (
++        <div key={i} style={{
++          fontSize: 12, color: '#4a3f38', lineHeight: 1.85,
++          paddingLeft: 9, borderLeft: LINE_INNER, marginBottom: 5,
++        }}>{l}</div>
++      ))}
++    </div>
++  )
++}
++
++export default function YongsinReading(p: Props) {
++  const yearN = Number(p.year) || 0
++  const monthN = Number(p.month) || 0
++  const dayN = Number(p.day) || 0
++
++  // ⚠️ 만세력 계산은 ★손님 화면·원본 해설과 «똑같은» 훅입니다.
++  //    ⛔ 새로 계산하지 마십시오. 답이 갈립니다.
++  const { saju, converting, dayStem } = useResultSaju(
++    p.calType, yearN, monthN, dayN, p.leap ? '1' : '0', p.hourIdx,
++  )
++
++  /** 접힌 묶음 — ⚠️ «담긴 것만» 접힘. 빈 Set 이라 처음엔 전부 펼쳐집니다. */
++  const [closed, setClosed] = useState<Set<string>>(new Set())
++  const toggle = (k: string) => setClosed(prev => {
++    const n = new Set(prev)
++    if (n.has(k)) n.delete(k); else n.add(k)
++    return n
++  })
++
++  const groups = useMemo<Group[]>(() => {
++    if (saju.length === 0 || !dayStem) return []
++    const G: Group[] = []
++
++    const dayEl = ({ 甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토', 己: '토',
++      庚: '금', 辛: '금', 壬: '수', 癸: '수' } as Record<string, Ohaeng>)[dayStem]
++    if (!dayEl) return []
++
++    const score = calcYongsinScore(saju)
++    const rel = relOf(dayEl)
++    const y = calcYongsinNew(saju, dayStem)
++    const monthBranch = saju.find(s => s.pillar === '월주')?.branch ?? ''
++    const hourMissing = p.hourIdx === null
++
++    // ── ⓪ 원국 · 점수 — 모든 판정이 딛는 «바닥» ───────────────────
++    {
++      const items: Item[] = []
++      items.push({
++        title: '원국 여덟 글자',
++        source: '만세력',
++        lines: [
++          saju.map(s => `${s.pillar} ${s.stem}${s.branch}`).join(' · '),
++          `일간 ${dayStem} · 일간 오행 ${el(dayEl)} · 월지 ${monthBranch || '—'}`,
++          hourMissing
++            ? '🔴 시간 «모름» — 시주가 빠졌습니다. 아래 점수·판정이 «모두» 달라집니다.'
++            : '시주까지 다 들어왔습니다.',
++        ],
++      })
++      items.push({
++        title: '오행 점수 (100점)',
++        source: 'simsanOhaeng — 원장님 수정판',
++        lines: [
++          ALL.map(e => `${el(e)} ${score[e] ?? 0}`).join(' · '),
++          `비겁 ${el(rel.bigeop)} · 인성 ${el(rel.insung)} · 식상 ${el(rel.siksang)}`
++          + ` · 재성 ${el(rel.jaesung)} · 관성 ${el(rel.gwansung)}`,
++        ],
++      })
++      if (y) {
++        items.push({
++          title: `신강약 — ${y.status}`,
++          source: 'A책 141쪽 · 문턱 30 / 42 / 47',
++          lines: [
++            `비겁+인성 = ${y.inbiScore}`,
++            '30 미만 극신약 · 42 미만 신약 · 47 이하 중화 · 47 초과 신강',
++            'A책 141쪽 — 월지가 비겁·인성으로 통근하면 신강, 월지가 식재관이면 신약',
++          ],
++        })
++      }
++      G.push({ key: 'base', label: '① 바닥 — 원국과 점수', items })
++    }
++
++    // ── ① 조후용신 ────────────────────────────────────────────────
++    if (y) {
++      const items: Item[] = []
++      items.push({
++        title: `조후용신 — ${y.johu.element ? el(y.johu.element) : '없음'}`,
++        source: 'A책 151쪽',
++        lines: [
++          `월지 ${monthBranch || '—'} → ${y.johu.note}`,
++          '【교재 원문】 조후용신: 건강, 궁합 판단 — 巳午未月 여름생(水), 亥子丑月 겨울생(火)',
++          '⚠️ 신강약과 무관하게 «계절만» 봅니다.',
++          '⚠️ 교재에 「90%는 이 공식, 10%는 예외」라 적혀 있으나 ★예외 규칙은 교재에 «안 적혀» 있습니다.',
++          '⚠️ 극신약 유예·가교오행은 교재에 없어 «뺐습니다».',
++        ],
++      })
++      if (y.johu.element) {
++        items.push({
++          title: `조후용신 ${el(y.johu.element)} — 결`,
++          source: 'B책 94~97쪽',
++          lines: [YONGSIN_NOTE[y.johu.element]],
++        })
++        items.push({
++          title: `조후용신 ${el(y.johu.element)} — 교재 직업표`,
++          source: 'B책 94~95쪽 (1) 오행 용신',
++          lines: [(YONGSIN_OHAENG[y.johu.element] ?? []).join(' · ')],
++        })
++      }
++      G.push({ key: 'johu', label: '② 조후용신 — 건강·궁합', items })
++    }
++
++    // ── ② 억부용신 — ★판정 «과정» 을 그대로 ────────────────────────
++    if (y) {
++      const items: Item[] = []
++
++      // 육친 5분류 합산 — ⚠️ calcEokbu 안에서 하는 것과 «같은» 셈입니다.
++      //   ⛔ 새 판정이 아닙니다. 오행 점수를 육친으로 «다시 묶어» 보여 줄 뿐입니다.
++      const byY: Record<Yukchin5, number> = { 비겁: 0, 식상: 0, 재성: 0, 관성: 0, 인성: 0 }
++      for (const e of ALL) byY[yukchinOfEl(dayEl, e)] += score[e] ?? 0
++      const ORDER: Yukchin5[] = ['비겁', '인성', '관성', '재성', '식상']
++      let gang: Yukchin5 = ORDER[0]
++      for (const k of ORDER) if (byY[k] > byY[gang]) gang = k
++      const row = P151_TABLE[gang]
++
++      items.push({
++        title: '육친 합산 — 오행 점수를 다섯으로 묶음',
++        source: 'A책 151쪽 표가 딛는 숫자',
++        lines: [
++          ORDER.map(k => `${k} ${byY[k]}`).join(' · '),
++          `가장 강한 육친 — ★${gang} ${byY[gang]}`,
++          '동점이면 비겁 > 인성 > 관성 > 재성 > 식상 차례로 잡습니다.',
++        ],
++      })
++
++      const geopjae = countGeopjae(saju, dayStem)
++      const insungRoot = hasInsungRoot(saju, dayEl)
++      const ex1 = gang === '비겁' && geopjae >= 2
++      const ex2 = gang === '관성' && !insungRoot
++
++      items.push({
++        title: `A책 151쪽 표 — ${gang} 강`,
++        source: 'A책 151쪽',
++        lines: [
++          `표 그대로 — 용신 ${row.yong} · 희신 ${row.hee}`,
++          `【표의 말】 ${row.note}`,
++          '─ 표 전체 ─',
++          ...ORDER.map(k => `${k} 강 → 용신 ${P151_TABLE[k].yong} · 희신 ${P151_TABLE[k].hee}`),
++        ],
++      })
++
++      items.push({
++        title: '예외 규칙 둘 — 걸렸는가',
++        source: 'A책 151쪽 표 각주 · 145쪽 통근',
++        lines: [
++          `① 비겁 강 + 겁재 2개 이상 → 관성 : ${ex1 ? '★걸림' : '안 걸림'}`,
++          `   【교재 원문】 식상(70%), 관성(겁재 2개 이상)`,
++          `   원국 겁재 ${geopjae}개 — ⚠️ 천간·지지에 «드러난 것만» 셉니다 (지장간 안 봄 · 연재쌤 확정)`,
++          `② 관성 강 + 인성 뿌리 없음 → 식상 : ${ex2 ? '★걸림' : '안 걸림'}`,
++          `   【교재 원문】 인성(90%), 인성 뿌리 X → 식상`,
++          `   인성 뿌리 ${insungRoot ? '있음' : '없음'} — 판정은 A책 145쪽 통근 순위표`,
++        ],
++      })
++
++      items.push({
++        title: '억부용신 — 다섯 신',
++        source: 'A책 150·151쪽',
++        lines: [
++          `용신 ${el(y.eokbu.yongsin)} · 희신 ${el(y.eokbu.heesin)} · 기신 ${el(y.eokbu.gisin)}`
++          + ` · 구신 ${el(y.eokbu.gusin)} · 한신 ${el(y.eokbu.hansin)}`,
++          `【판정 말】 ${y.eokbu.note}`,
++          '기신 = 용신을 극하는 것 · 구신 = 희신을 극하는 것 (A책 150쪽)',
++          `용신 ${el(y.eokbu.yongsin)}의 육친 — ${yukchinOfEl(dayEl, y.eokbu.yongsin)}`,
++        ],
++      })
++
++      items.push({
++        title: `억부용신 ${el(y.eokbu.yongsin)} — 결`,
++        source: 'B책 94~97쪽',
++        lines: [YONGSIN_NOTE[y.eokbu.yongsin]],
++      })
++      items.push({
++        title: `억부용신 ${el(y.eokbu.yongsin)} — 교재 직업표`,
++        source: 'B책 94~95쪽 (1) 오행 용신',
++        lines: [(YONGSIN_OHAENG[y.eokbu.yongsin] ?? []).join(' · ')],
++      })
++
++      G.push({ key: 'eokbu', label: '③ 억부용신 — 재물·현실', items })
++    }
++
++    // ── ③ 격국 · 격국용신 — ★「모두 표시」 [대표님 지시] ─────────────
++    {
++      const items: Item[] = []
++      const cg = calcCareerGyeokguk(saju, dayStem)
++      const gk = calcGyeokguk(saju, dayStem)
++
++      items.push({
++        title: '격 정하는 법',
++        source: 'B책 62쪽 · A책 157·178쪽',
++        lines: [
++          '【교재 원문】 격국이란 그 사람의 그릇으로 월지에서 투간된 오행이나 월지 오행 중에서 가장 힘이 있는 십성을 말한다.',
++          '【교재 원문】 A책 157쪽 — 비견과 겁재는 투간해도 格으로 잡지 않는다',
++          '【교재 원문】 A책 178쪽 — 비견겁, 겁재격은 없다. 비견격이라 하지 않고 건록격이라 하며, 겁재가 있을 때는 겁재격이 아니라 양인격이라고 하는 것이다',
++          '【교재 원문】 A책 158쪽 — 십정격 중에 격이 없는 無格과 破格이 많다',
++          '⚠️ 건록격·양인격은 ★투간과 무관하게 «월지 하나» 로 정합니다 (157쪽 ③ · 178쪽 · 181쪽).',
++        ],
++      })
++
++      if (cg.name) {
++        const info = GYEOKGUK_INFO[cg.name]
++        const lines: string[] = [
++          `${cg.name}${info?.hanja ? ` (${info.hanja})` : ''}`
++          + (cg.element ? ` · ${el(cg.element)}` : '')
++          + (cg.special ? ' · ★특례로 잡힘' : '')
++          + (cg.position ? ` · ${cg.position}` : ''),
++        ]
++        if (cg.positionNote) lines.push(cg.positionNote)
++        if (cg.note) lines.push(cg.note)
++        if (info?.gijil) lines.push(`【교재 원문】 ${info.gijil}`)
++        if (info?.jobs?.length) lines.push(`【교재 직업】 ${info.jobs.join(' · ')}`)
++        if (info?.caution) lines.push(`⚠️【교재 주의】 ${info.caution}`)
++        items.push({
++          title: `격 — ${cg.name}`,
++          source: `B책 ${info?.src ?? '62~65쪽'}`,
++          lines,
++        })
++      } else {
++        items.push({
++          title: '격 — 안 잡힘',
++          source: 'A책 158쪽',
++          lines: ['월지가 뚜렷한 격을 이루지 않았습니다.',
++            '【교재 원문】 십정격 중에 격이 없는 無格과 破格이 많다'],
++        })
++      }
++
++      // 격국용신 (상신)
++      if (gk.name) {
++        const sangsin = GYEOK_SANGSIN[gk.name]
++        const lines: string[] = [
++          `격국용신 — ${el(gk.element)}${sangsin ? ` (${sangsin})` : ''}`,
++          `【판정 말】 ${gk.note}`,
++        ]
++        if (gk.name === '건록격') lines.push('【교재 원문】 A책 181쪽 — 제1用神은 정관이고 제2用神은 편관')
++        if (gk.name === '양인격') lines.push('【교재 원문】 A책 179쪽 — 양인격은 무조건 관성이 用神이다')
++        if (gk.name === '식신격') lines.push('식신생재 (A책 159쪽)')
++        if (gk.name === '상관격') lines.push('상관패인 (A책 162쪽)')
++        if (gk.name === '편관격') lines.push('식신제살 (A책 171쪽)')
++        if (gk.name === '정관격') lines.push('관인상생 (A책 169쪽)')
++        if (gk.name === '편인격') {
++          lines.push('⚠️ ★교재가 «갈립니다» — A책 176쪽 본문은 「재성에 의해 제화되는 것이 중요」라 하는데'
++            + ' 151쪽 표는 «관성» 입니다. ★연재쌤 확인 대기 중이라 표(관성)를 그대로 둡니다.')
++        }
++        lines.push('─ 격별 상신표 전체 ─')
++        for (const [k, v] of Object.entries(GYEOK_SANGSIN)) lines.push(`${k} → ${v}`)
++        items.push({ title: `격국용신 — ${gk.name}`, source: 'A책 151·159~182쪽', lines })
++
++        if (gk.element) {
++          items.push({
++            title: `격국용신 ${el(gk.element)} — 결`,
++            source: 'B책 94~97쪽',
++            lines: [YONGSIN_NOTE[gk.element]],
++          })
++          items.push({
++            title: `격국용신 ${el(gk.element)} — 교재 직업표`,
++            source: 'B책 94~95쪽 (1) 오행 용신',
++            lines: [(YONGSIN_OHAENG[gk.element] ?? []).join(' · ')],
++          })
++        }
++        if (sangsin && YONGSIN_YUKCHIN[sangsin]) {
++          items.push({
++            title: `격국용신 육친 ${sangsin} — 교재 직업표`,
++            source: 'B책 96~97쪽 (2) 육친 용신',
++            lines: [YONGSIN_YUKCHIN[sangsin].join(' · ')],
++          })
++        }
++      }
++
++      // 십정격 표 «전체» — [대표님 「격국용신 관련 내용도 모두 표시」]
++      items.push({
++        title: '십정격 표 — 전체',
++        source: 'B책 62~65쪽',
++        lines: Object.entries(GYEOKGUK_INFO).map(([k, v]) =>
++          `${k}(${v.hanja}) — ${v.gijil}`
++          + (v.jobs.length ? ` / 직업 ${v.jobs.join('·')}` : '')
++          + (v.caution ? ` / ⚠️ ${v.caution}` : '')
++          + ` [${v.src}]`),
++      })
++
++      G.push({ key: 'gyeokguk', label: '④ 격국 · 격국용신 — 직업·명예', items })
++    }
++
++    // ── ⑤ ★용신이 가리키는 «육친» 의 교재 원문 ─────────────────────
++    //   [대표님 2026-08-06]  「한량, 카사노바 등 이런 험한 말도
++    //                          ★전문상담사는 모두 봐야 해」
++    //   ⚠️ 용신은 오행이지만 «뜻» 은 육친으로 옵니다. 그 육친의 원문을 폅니다.
++    //      원문에 「한량」·「주색잡기」·「이혼」·「바람기」 같은 말이 그대로 있습니다.
++    //   ⛔⛔ ★손님 화면으로 옮기지 마십시오.
++    if (y) {
++      const items: Item[] = []
++      const ctx = ctxOf(saju)
++      const gk = calcGyeokguk(saju, dayStem)
++
++      /** 어느 육친을 왜 펴는지 — 상담사가 «까닭» 을 알아야 합니다 */
++      const want: Array<{ pair: Yukchin5; why: string }> = []
++      const add = (pair: Yukchin5 | undefined, why: string) => {
++        if (!pair) return
++        const hit = want.find(w => w.pair === pair)
++        if (hit) { hit.why += ` · ${why}`; return }
++        want.push({ pair, why })
++      }
++      add(yukchinOfEl(dayEl, y.eokbu.yongsin), '억부 용신')
++      add(yukchinOfEl(dayEl, y.eokbu.heesin), '억부 희신')
++      add(yukchinOfEl(dayEl, y.eokbu.gisin), '억부 기신')
++      if (y.johu.element) add(yukchinOfEl(dayEl, y.johu.element), '조후 용신')
++      if (gk.element) add(yukchinOfEl(dayEl, gk.element), '격국 용신')
++
++      for (const w of want) {
++        for (const key of keysOfPair(w.pair)) {
++          const row = yukchinRowOf(key)
++          if (!row) continue
++          const n = sipsinCount(ctx, key)
++          const lines = [
++            `${w.pair} — ${w.why} · 원국에 ${n}개`,
++            ...yukchinLines(row, 'adult', ctx),
++            ...darununLines(row, ctx),
++            ...cheobangLines(row, ctx),
++            row.jobs?.length ? `【교재 직업】 ${row.jobs.join(' · ')}` : '',
++            row.keyword ? `【핵심어】 ${row.keyword}` : '',
++            row.social ? `【사회적 의미】 ${row.social}` : '',
++            ...orig(row),
++          ].filter(Boolean)
++          if (lines.length <= 1) continue
++          items.push({ title: `${key} — ${w.pair}`, source: row.src || 'B책 3장 六親論 106~115쪽', lines })
++        }
++      }
++      if (items.length) G.push({ key: 'yukchinOrig', label: '⑤ 용신이 가리키는 육친 — 교재 원문', items })
++    }
++
++    // ── ⑥ ★육친 짝 — 과다·없음 (교재 원문) ────────────────────────
++    //   ⚠️ ★맺음말(PYEONJUNG_CLOSING)이 «맨 마지막» 에 옵니다 (withClosing).
++    //      「앞에 두면 앞말이 변명처럼 들리고, 빼면 손님이 무서운 말만 안고 나갑니다」
++    //      ⛔ withClosing 을 끄지 마십시오.
++    {
++      const lines = groupBrief(saju, 'adult', {
++        cap: 99, 보완: true, 개운: true, 직업: true, withClosing: true,
++      })
++      if (lines.length) {
++        G.push({
++          key: 'group', label: '⑥ 육친 짝 — 과다·없음',
++          items: [{ title: '과다·없는 짝', source: 'B책 3장 六親論 116~131쪽', lines }],
++        })
++      }
++    }
++
++
++    {
++      const items: Item[] = []
++      const daySipsin = saju
++        .filter(s => s.stem && s.stem !== '?' && s.pillar !== '일주')
++        .map(s => `${s.pillar} ${s.stem} ${sipsinOf(dayStem, s.stem)}`)
++      if (daySipsin.length) {
++        items.push({
++          title: '원국 천간의 십신',
++          source: '일간 기준',
++          lines: [daySipsin.join(' · ')],
++        })
++      }
++      items.push({
++        title: '육친 용신 직업표 — 십신 열 가지 전부',
++        source: 'B책 96~97쪽 (2) 육친 용신',
++        lines: Object.entries(YONGSIN_YUKCHIN).map(([k, v]) => `${k} — ${v.join(' · ')}`),
++      })
++      items.push({
++        title: '오행 용신 직업표 — 다섯 오행 전부',
++        source: 'B책 94~95쪽 (1) 오행 용신',
++        lines: ALL.map(e => `${el(e)} — ${(YONGSIN_OHAENG[e] ?? []).join(' · ')}`),
++      })
++      G.push({ key: 'tables', label: '⑦ 교재 직업표 — 전체', items })
++    }
++
++    // ── ⑤ 세 용신 견주기 · 비중 ───────────────────────────────────
++    if (y) {
++      const gk = calcGyeokguk(saju, dayStem)
++      const items: Item[] = [{
++        title: '세 용신 — 값 그대로',
++        source: 'A책 151쪽 · B책 94~97쪽',
++        lines: [
++          `조후 ${y.johu.element ? el(y.johu.element) : '없음(봄·가을생)'} — 건강·궁합`,
++          `억부 ${el(y.eokbu.yongsin)} — 재물·현실`,
++          `격국 ${gk.element ? el(gk.element) : '없음'} — 직업·명예`,
++          '【교재 원문】 격국, 억부, 조후까지 用神이 같으면 좋은데 (…) 用神이 다 같으면 유리하다',
++        ],
++      }, {
++        title: '용신의 «비중»',
++        source: YONGSIN_SRC,
++        lines: [
++          '【교재 원문】 B책 133쪽 — 오행과 육친의 강점 지능이 진로적성인 경우가 70%이고, 용신이 진로적성인 경우는 30%이며, 격(格)과 용신(用神)의 통근 여부에 따라 그릇의 크기와 성공 가능성을 가늠한다.',
++          '⚠️ ★용신은 30%입니다. 강점 지능(70%)을 거들되 앞세우지 않는 것이 교재의 뜻입니다.',
++        ],
++      }]
++      G.push({ key: 'compare', label: '⑧ 세 용신 견주기', items })
++    }
++
++    return G
++  }, [saju, dayStem, p.hourIdx])
++
++  if (!yearN || !monthN || !dayN) {
++    return (
++      <div style={{
++        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
++        padding: 20, fontSize: 12.5, color: '#8a7461', textAlign: 'center', lineHeight: 1.8,
++      }}>
++        생년월일을 넣으면<br />용신 판정 근거가 그대로 펼쳐집니다.
++      </div>
++    )
++  }
++
++  if (converting) {
++    return (
++      <div style={{
++        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
++        padding: 20, fontSize: 12.5, color: '#8a7461',
++      }}>사주를 뽑는 중…</div>
++    )
++  }
++
++  const total = groups.reduce((n, g) => n + g.items.length, 0)
++
++  return (
++    <div style={{ flex: 1, overflowY: 'auto', padding: 10, background: '#FDF6F0' }}>
++      {/* ⛔ 상담사용이라는 것을 «화면에도» 적어 둡니다 */}
++      <div style={{
++        background: '#fdf0e8', border: LINE_OUTER, borderRadius: 9,
++        padding: '9px 11px', marginBottom: 10, fontSize: 11, color: '#8f3d0e', lineHeight: 1.7,
++      }}>
++        ⚖️ 판정 «근거» 를 그대로 폅니다. 손님께는 말을 골라 전해 주세요.
++        {p.name && <span style={{ marginLeft: 6, color: '#96502e' }}>· {p.name}</span>}
++        <span style={{ marginLeft: 6, color: '#a08d7d' }}>· 모두 {total}꼭지</span>
++      </div>
++
++      {/* ★2026-08-06 (48부 2차) — 「시간 모름」 빨간 알림을 ★걷었습니다.
++          [대표님]  「시간을 모르는 손님은 아예 접근이 안 되도록 할 테니
++                     이것은 신경쓰지마」
++          ⚠️ 다만 ①바닥 묶음 안에는 시주가 들어왔는지 «한 줄» 로 남겼습니다 —
++             값을 읽는 자리라 상담사가 알아야 합니다.
++          ⛔ 빨간 알림을 다시 붙이지 마십시오. 입구에서 막는 것이 대표님 뜻입니다. */}
++
++      {groups.length === 0 ? (
++        <div style={{ padding: 20, fontSize: 12, color: '#8a7461', textAlign: 'center', lineHeight: 1.8 }}>
++          사주를 못 뽑았습니다. 생년월일을 확인해 주세요.
++        </div>
++      ) : (
++        groups.map(g => {
++          const open = !closed.has(g.key)
++          return (
++            <div key={g.key} style={{ marginBottom: 12 }}>
++              {/* 묶음 머리 — 눌러서 접습니다 (기본은 펼침) */}
++              <button type="button" onClick={() => toggle(g.key)}
++                style={{
++                  width: '100%', display: 'flex', alignItems: 'center', gap: 7,
++                  background: 'transparent', border: 'none', padding: '4px 2px 7px',
++                  cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
++                }}>
++                <span style={{ fontSize: 12.5, fontWeight: 700, color: '#96502e' }}>
++                  {g.label}
++                </span>
++                <span style={{ fontSize: 10.5, color: '#a08d7d' }}>{g.items.length}</span>
++                <span aria-hidden style={{
++                  marginLeft: 'auto', color: '#96502e', fontSize: 18, lineHeight: 1,
++                  transition: 'transform .2s', transform: `rotate(${open ? 180 : 0}deg)`,
++                }}>▾</span>
++              </button>
++              {open && g.items.map((it, i) => <Block key={i} {...it} />)}
++            </div>
++          )
++        })
++      )}
++
++      {/* ★2026-08-06 (48부 2차) — 무엇이 «펴졌고» 무엇이 «아직 없는지».
++          ⛔ 여기에 교재 말을 «직접» 적지 마십시오. 자료 파일에 담아 부르십시오. */}
++      <div style={{
++        background: '#fff', border: LINE_OUTER, borderRadius: 10,
++        padding: '10px 12px', marginTop: 4, fontSize: 11, color: '#8a7461', lineHeight: 1.8,
++      }}>
++        <div style={{ fontWeight: 700, color: '#96502e', marginBottom: 5 }}>교재 원문 — 어디까지 폈나</div>
++        육친(3장 106~131쪽)·직업표(94~97쪽)·격국(62~65쪽)은 ★원문 그대로 폈습니다.
++        「한량」·「주색잡기」·「이혼」·「바람기」 같은 말이 다듬지 않고 나옵니다.
++        <br /><br />
++        아직 «없는» 것 — A책 159~182쪽 격 본문 스캔이 저장소에 안 들어와 있습니다.
++        지금은 62~65쪽 격국표와 151쪽 상신표로 폅니다.
++        그 쪽을 넣어 주시면 「카사노바」·「일부다처형」 같은 격 본문 표현까지 이 자리에 폅니다.
++      </div>
++    </div>
++  )
++}
+diff --git a/app/manseryeok/consultant/page.tsx b/app/manseryeok/consultant/page.tsx
+index c045cce..9a26641 100644
+--- a/app/manseryeok/consultant/page.tsx
++++ b/app/manseryeok/consultant/page.tsx
+@@ -284,11 +284,46 @@ function ConsultantContent() {
+   //      마이페이지에서 온 매니저가 관리자 화면으로 튕겨 «온 길을 잃습니다».
+   // ══════════════════════════════════════════════════════════════════════
+   const back = (() => {
++    // ★상담사 본인 — 관리자 화면에는 못 들어갑니다 (role 이 consultant)
+     if (!isMaster) return { href: '/mypage-new', label: '마이페이지' }
+-    if (fromParam === 'admin') return { href: '/admin', label: '관리자 화면' }
++    // ★48부 10차 — ★상담사 관리 탭으로 «바로» 갑니다 [대표님 지시]
++    //   「관리자화면으로 돌아가기를 누르면 ★상담사관리 화면으로 바로 가게」
++    //   ⚠️ #consultant 는 admin/page.tsx 의 TABS key 입니다.
++    //   ⛔ key 를 바꾸면 여기도 함께 고치십시오.
++    if (fromParam === 'admin') return { href: '/admin#consultant', label: '관리자 화면' }
+     return { href: '/manseryeok/consultant', label: '상담사 고르기' }
+   })()
+ 
++  // ══════════════════════════════════════════════════════════════════════
++  //  ★2026-08-07 (48부 9차) — 매니저는 «언제나» 관리자 화면으로  [대표님 지시]
++  //    「관리자(류승현, 오연희)는 ★관리자 페이지와 상담사 관리 화면을
++  //      왔다갔다 할 수 있게 해 줘 · 상담사는 상담사 페이지만」
++  //
++  //  🔴 ★무엇이 모자랐나 — back 은 «온 길»(from) 을 봅니다.
++  //     from=admin 으로 오면 관리자 화면으로 돌아가지만,
++  //     ★주소를 직접 치거나 북마크로 들어오면 from 이 «없어»
++  //     「상담사 고르기」로만 가고 ★관리자 화면으로 갈 길이 없습니다.
++  //  ⇒ 매니저에게는 ★온 길과 상관없이 «따로» 버튼을 답니다.
++  //
++  //  ⛔ 상담사(consultant)에게는 ★보이지 않습니다 — 들어가도 막힙니다
++  //     (/admin 은 useRoleGate(['master'])).
++  //  ⛔ back 을 /admin 으로 «바꾸지» 마십시오 —
++  //     마이페이지에서 온 매니저가 «온 길을 잃습니다» (위 주석 참조).
++  // ══════════════════════════════════════════════════════════════════════
++  const showAdminLink = isMaster && !back.href.startsWith('/admin')
++
++  /**
++   * ★48부 10차 — 관리자 화면의 ★「상담사 관리」 탭으로 «바로» 갑니다 [대표님 지시]
++   *   ⚠️ 어느 탭을 열지 ★sessionStorage 로 건네줍니다.
++   *      주소 해시로 했더니 router.push 와 «때가 어긋나» 안 됐습니다.
++   *   ⚠️ 해시도 함께 붙입니다 — 새로고침하거나 즐겨찾기로 와도 열리게.
++   *   ⛔ 세 곳이 «같은 일» 을 해야 합니다. 하나만 고치지 마십시오.
++   */
++  function goAdminConsultant() {
++    if (typeof window !== 'undefined') sessionStorage.setItem('adminTab', 'consultant')
++    router.push('/admin#consultant')
++  }
++
+   async function handleDeleteRequest(id: string) {
+     if (!confirm('삭제를 요청하시겠어요? 관리자 승인 후 최종 삭제됩니다.')) return
+     setDeleteLoading(id)
+@@ -477,7 +512,7 @@ function ConsultantContent() {
+               {p.name} 선생님
+             </button>
+           ))}
+-          <button onClick={() => router.push('/admin')}
++          <button onClick={goAdminConsultant}
+             style={{padding:'11px 0', borderRadius:10, border:'0.5px solid #96502e',
+               background:'#f4ece1', color:'#96502e', fontSize:13, cursor:'pointer', marginTop:4,
+               fontFamily:'inherit'}}>
+@@ -505,7 +540,11 @@ function ConsultantContent() {
+                  길을 되찾는 버튼이라 가장 먼저 보여야 합니다.
+             ⚠️ 메뉴바 높이가 40px 이라 44px 최소선을 못 맞춥니다. 마우스로 쓰는
+                PC 화면이라 그대로 두되 padding 으로 누르는 자리를 넓혔습니다. */}
+-        <button onClick={() => router.push(back.href)}
++        <button onClick={() => {
++            // ★48부 10차 — 관리자 화면으로 갈 때는 ★탭도 함께 건넵니다
++            if (back.href.startsWith('/admin')) { goAdminConsultant(); return }
++            router.push(back.href)
++          }}
+           title={`${back.label}(으)로 돌아갑니다`}
+           style={{
+             fontSize:'12px', padding:'4px 8px', borderRadius:'5px',
+@@ -517,6 +556,24 @@ function ConsultantContent() {
+           <span style={{fontSize:'14px'}} aria-hidden="true">←</span>
+           <span>{back.label}</span>
+         </button>
++
++        {/* ★48부 9차 — 매니저는 «언제나» 관리자 화면으로 [대표님 지시]
++            ⛔ 상담사에게는 안 보입니다. */}
++        {showAdminLink && (
++          <button onClick={goAdminConsultant}
++            title="관리자 화면으로 갑니다"
++            style={{
++              fontSize:'12px', padding:'4px 8px', borderRadius:'5px',
++              border:'1px solid rgba(250,199,117,0.4)', background:'rgba(250,199,117,0.08)',
++              color:'#FAC775', cursor:'pointer', display:'flex', alignItems:'center', gap:'4px',
++              whiteSpace:'nowrap', marginRight:'6px', fontFamily:'inherit',
++              WebkitUserSelect:'none', userSelect:'none', touchAction:'manipulation',
++            }}>
++            <span style={{fontSize:'13px'}} aria-hidden="true">🔐</span>
++            <span>관리자</span>
++          </button>
++        )}
++
+         <span style={{fontSize:'13px', fontWeight:'500', color:'#e8e4ff', marginRight:'6px'}}>명연재</span>
+         <span style={{fontSize:'10px', color:'#333355', marginRight:'2px'}}>|</span>
+ 
+diff --git a/app/manseryeok/consulting/page.tsx b/app/manseryeok/consulting/page.tsx
+index 1e73217..cbe3710 100644
+--- a/app/manseryeok/consulting/page.tsx
++++ b/app/manseryeok/consulting/page.tsx
+@@ -3,6 +3,7 @@
+ import { useEffect, useState, Suspense } from 'react'
+ import { useSearchParams, useRouter } from 'next/navigation'
+ import { supabase } from '@/lib/supabase'
++import { shownName } from '@/lib/consultantName'
+ import ContactStep from './components/ContactStep'
+ import PaymentStep from './components/PaymentStep'
+ import ScheduleStep from './components/ScheduleStep'
+@@ -87,8 +88,9 @@ function ConsultingContent() {
+       let cname = ''
+       if (c.consultant_id) {
+         const { data: con } = await supabase
+-          .from('consultants').select('name').eq('id', c.consultant_id).single()
+-        cname = con?.name ?? ''
++          .from('consultants').select('name, alias').eq('id', c.consultant_id).single()
++        // ★48부 4차 — 손님 화면·채팅·AI 요약에 ★별칭이 나갑니다
++        cname = con ? shownName(con) : ''
+       }
+       if (cancelled) return
+       setSelected({ id: c.consultant_id ?? '', name: cname, specialty: '', price: 0, active: true })
+diff --git a/app/mypage-new/page.tsx b/app/mypage-new/page.tsx
+index 541d3bf..f8524f6 100644
+--- a/app/mypage-new/page.tsx
++++ b/app/mypage-new/page.tsx
+@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
+ import { EL_BG, EL_BD, EL_C, EL_C_SUB, EL_HAN } from '@/lib/saju/ohaengColor'
+ import { useRouter } from 'next/navigation'
+ import { supabase } from '@/lib/supabase'
++import { shownName } from '@/lib/consultantName'
++import HomeBottomNav from '@/app/components/HomeBottomNav'
+ import { useResultSaju } from '@/hooks/useResultSaju'
+ // ★2026-07-27 — 커플채팅(CoupleChatFab · InviteNotifier) 제거. 테스트였으므로 전부 삭제.
+ //   ⚠️ 상담사–고객 채팅은 별개이며 살아 있다. 함께 지우지 말 것.
+@@ -141,8 +143,9 @@ export default function MyPageNew() {
+         const ids = Array.from(new Set(cs.map((c) => c.consultant_id).filter(Boolean)))
+         let nameMap: Record<string, string> = {}
+         if (ids.length > 0) {
+-          const { data: cons } = await supabase.from('consultants').select('id, name').in('id', ids as string[])
+-          if (cons) nameMap = Object.fromEntries(cons.map((c) => [c.id, c.name]))
++          const { data: cons } = await supabase.from('consultants').select('id, name, alias').in('id', ids as string[])
++          // ★48부 4차 — 손님에게는 ★별칭(호). ⛔ c.name 을 직접 쓰지 마십시오.
++          if (cons) nameMap = Object.fromEntries(cons.map((c) => [c.id, shownName(c)]))
+         }
+         setConsults(cs.map((c) => ({ ...c, consultant_name: c.consultant_id ? nameMap[c.consultant_id] : undefined })) as Consultation[])
+       }
+@@ -655,13 +658,14 @@ export default function MyPageNew() {
+           )}
+         </div>
+ 
+-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, marginBottom: 12 }}>
++        {/* ★2026-08-07 (48부 12차) — 「❓ 문의하기」를 ★지웠습니다 [대표님 지시]
++            ⚠️ 이름은 「문의하기」인데 ★/manseryeok/reviews/write(후기 쓰기)로 갔습니다.
++            ⇒ 문의는 ★하단바 「💬 문의사항」(/inquiry) 이 맡습니다. 겹칩니다.
++            ⛔ 여기에 다시 넣지 마십시오. */}
++        <div style={{ marginBottom: 12 }}>
+           <div onClick={() => { setEditMode(true); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }) }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 12px', background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 12, cursor: 'pointer' }}>
+             <span style={{ fontSize: 13, color: '#5a4a3e' }}>⚙️ 계정 설정</span>
+           </div>
+-          <div onClick={() => router.push('/manseryeok/reviews/write')} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 12px', background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 12, cursor: 'pointer' }}>
+-            <span style={{ fontSize: 13, color: '#5a4a3e' }}>❓ 문의하기</span>
+-          </div>
+         </div>
+ 
+         {isStaff && (
+@@ -671,7 +675,12 @@ export default function MyPageNew() {
+               router.push(c ? `/manseryeok/consultant?consultantId=${c.id}` : '/manseryeok/consultant')
+             }} style={{ flex: 1, textAlign: 'center', background: '#FFFBF7', border: '0.5px solid #b99a7d', borderRadius: 12, padding: '13px 8px', fontSize: 12.5, color: '#96502e', cursor: 'pointer' }}>🩺 상담 관리</button>
+             {isMaster ? (
+-              <button onClick={() => router.push('/admin')} style={{ flex: 1, textAlign: 'center', background: '#FFFBF7', border: '0.5px solid #b99a7d', borderRadius: 12, padding: '13px 8px', fontSize: 12.5, color: '#96502e', cursor: 'pointer' }}>🔐 관리자</button>
++              <button onClick={() => {
++                // ★48부 12차 — 관리자 화면의 ★「상담사 관리」 탭으로 바로
++                //   ⚠️ 상담사 화면의 goAdminConsultant() 와 «같은 방식» 입니다.
++                if (typeof window !== 'undefined') sessionStorage.setItem('adminTab', 'consultant')
++                router.push('/admin#consultant')
++              }} style={{ flex: 1, textAlign: 'center', background: '#FFFBF7', border: '0.5px solid #b99a7d', borderRadius: 12, padding: '13px 8px', fontSize: 12.5, color: '#96502e', cursor: 'pointer' }}>🔐 관리자</button>
+             ) : (
+               <div style={{ flex: 1 }} />
+             )}
+@@ -683,34 +692,17 @@ export default function MyPageNew() {
+           <button onClick={withdraw} style={{ flex: 1, textAlign: 'center', background: '#FFFBF7', border: '0.5px solid #d98b8b', borderRadius: 12, padding: 12, fontSize: 13, color: '#c05a5a', cursor: 'pointer' }}>회원 탈퇴</button>
+         </div>
+ 
+-        <div style={{ textAlign: 'center', fontSize: 10, color: '#6b5340', padding: '8px 0' }}>
+-          회사소개 &nbsp;|&nbsp; 이용약관 &nbsp;|&nbsp; 개인정보처리방침
+-        </div>
++        {/* ★48부 12차 — 「회사소개 · 이용약관 · 개인정보처리방침」을 ★지웠습니다 [대표님 지시]
++            ⚠️⚠️ ★그 셋은 «갈 곳이 없는» 글자였습니다 — 화면이 하나도 없습니다.
++            🔴 ★개인정보처리방침은 «결제를 붙이기 전» 에 ★법으로 필요합니다.
++               그때는 ★진짜 화면을 만들어 다시 다십시오 (47부 10-6에도 적혀 있습니다).
++               회사 이름은 ★(주)명연재 입니다 (명카페는 사업 분야 하나). */}
+ 
+       </main>
+ 
+       {/* 하단 고정 네비게이션 (홈과 동일한 피치톤) */}
+-      <div style={{
+-        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+-        width: '100%', maxWidth: 430,
+-        display: 'flex', background: '#FFFBF7',
+-        borderTop: '0.5px solid #9c7a58', zIndex: 20,
+-      }}>
+-        {[
+-          { icon: '🏠', label: '홈', href: '/home-new', active: false },
+-          { icon: '⊞', label: '서비스', href: '', wip: true, active: false },
+-          { icon: '💬', label: '상담', href: '/manseryeok/reviews', active: false },
+-          { icon: '📚', label: '보관함', href: '/archive', active: false },
+-        ].map((n) => (
+-          <button key={n.label} onClick={() => { if (n.wip) { alert('작업 중이에요. 곧 만나요!') } else { router.push(n.href) } }}
+-            style={{ flex: 1, padding: '10px 0', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+-            <span style={{ fontSize: 18 }}>{n.icon}</span>
+-            <span style={{ fontSize: 10, color: n.active ? '#c8783c' : '#b09079', fontWeight: n.active ? 600 : 400 }}>{n.label}</span>
+-            {/* 현재 위치 표시 — 아이콘을 흐리게 하는 대신 밑줄로 */}
+-            <span style={{ height: 2, width: 22, borderRadius: 2, background: n.active ? '#c8783c' : 'transparent' }} />
+-          </button>
+-        ))}
+-      </div>
++      {/* ★48부 8차 — 하단바 ★부품 (HomeBottomNav). ⛔ 여기에 다시 적지 마십시오. */}
++      <HomeBottomNav />
+ 
+       <AiTalkFab />
+     </div>
+diff --git a/app/teachers/page.tsx b/app/teachers/page.tsx
+new file mode 100644
+index 0000000..f305676
+--- /dev/null
++++ b/app/teachers/page.tsx
+@@ -0,0 +1,159 @@
++'use client'
++// app/teachers/page.tsx
++//
++// ══════════════════════════════════════════════════════════════════
++//  ★2026-08-07 (48부 8차) — 🧑‍🏫 선생님 소개  [대표님 지시]
++//    「상담=> "선생님 소개"로 하고, 소속 전체 상담사 프로필 보여줌」
++//    「선생님 프로필은 ★단순 프로필 소개만 하려고 해」
++//    「내가 1,2,3,4… 노출시킨 리스트가 ★그대로 나오면 됨.
++//      ★비노출로 놓으면 안 나와도 됨」
++//    「전문분야는 ★안 걸어도 됨」
++//
++//  ★조건 — 상담사 고르기 화면과 «같습니다»
++//     active = true   ★비활성은 안 나옵니다 (관리자 「비활」 버튼)
++//     order sort      ★관리자가 매긴 순번 그대로
++//  ⛔ ★전문분야(specialties)로 «거르지» 마십시오 [대표님 지시].
++//     여기는 서비스를 안 타고 들어오는 자리라 ★활성인 분 «전부» 가 나옵니다.
++//
++//  ⛔⛔ ★예약·상담 버튼을 넣지 마십시오 —
++//     「★단순 프로필 소개만」 이라 하셨습니다.
++//     상담 신청은 각 서비스 결과 화면의 ConsultButton 을 타야
++//     ★priceKey 가 실려 전문분야 거르기가 걸립니다.
++//     여기서 바로 보내면 그 배관이 끊깁니다.
++//
++//  ⚠️⚠️ ★이름은 «별칭(호)» 입니다 — shownName() 을 씁니다.
++//     ⛔ c.name 을 직접 쓰지 마십시오. ★본명이 샙니다.
++//     ⚠️ 조회에 ★alias 를 «반드시» 넣으십시오. 빠뜨리면
++//        ★화면은 멀쩡히 뜨고 본명만 «조용히» 나갑니다. 검사도 못 잡습니다.
++// ══════════════════════════════════════════════════════════════════
++
++import { useEffect, useState } from 'react'
++import { supabase } from '@/lib/supabase'
++import { shownName } from '@/lib/consultantName'
++import HomeBottomNav from '@/app/components/HomeBottomNav'
++
++type Teacher = {
++  id: string
++  name: string
++  alias?: string | null
++  specialty?: string | null
++  photo_url?: string | null
++  career?: string | null
++  intro?: string | null
++  rating?: number | null
++  review_count?: number | null
++  region?: string | null
++}
++
++export default function TeachersPage() {
++  const [list, setList] = useState<Teacher[]>([])
++  const [loading, setLoading] = useState(true)
++
++  useEffect(() => {
++    async function load() {
++      const { data } = await supabase
++        .from('consultants')
++        // ⚠️ ★alias 를 빠뜨리면 본명이 나갑니다.
++        .select('id, name, alias, specialty, photo_url, career, intro, rating, review_count, region')
++        .eq('active', true)
++        .order('sort')
++        .order('created_at')
++      setList((data ?? []) as Teacher[])
++      setLoading(false)
++    }
++    load()
++  }, [])
++
++  return (
++    <div style={{
++      minHeight: '100vh', background: '#FDF6F0',
++      maxWidth: 430, margin: '0 auto', paddingBottom: 76,
++    }}>
++      <div style={{
++        padding: '18px 16px 12px', background: '#FFFBF7',
++        borderBottom: '0.5px solid #e8d9c9',
++      }}>
++        <div style={{ fontSize: 17, fontWeight: 700, color: '#3a2e28' }}>선생님 소개</div>
++        <div style={{ fontSize: 12, color: '#8a7461', marginTop: 4 }}>
++          명카페와 함께하는 선생님들이세요
++        </div>
++      </div>
++
++      <div style={{ padding: 14 }}>
++        {loading ? (
++          <div style={{ padding: 40, textAlign: 'center', fontSize: 13, color: '#8a7461' }}>
++            불러오는 중…
++          </div>
++        ) : list.length === 0 ? (
++          <div style={{ padding: 40, textAlign: 'center', fontSize: 13, color: '#8a7461', lineHeight: 1.8 }}>
++            소개해 드릴 선생님을 준비하고 있어요.
++          </div>
++        ) : (
++          list.map((t) => (
++            <div key={t.id} style={{
++              background: '#fff', border: '1px solid #ea8c46', borderRadius: 12,
++              padding: 14, marginBottom: 12,
++            }}>
++              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
++                <div style={{
++                  width: 58, height: 58, borderRadius: '50%', overflow: 'hidden',
++                  background: '#f2eee9', flexShrink: 0,
++                  display: 'flex', alignItems: 'center', justifyContent: 'center',
++                }}>
++                  {t.photo_url
++                    // eslint-disable-next-line @next/next/no-img-element
++                    ? <img src={t.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
++                    : <span style={{ fontSize: 20, color: '#96502e' }}>{shownName(t)[0] || '?'}</span>}
++                </div>
++
++                <div style={{ flex: 1, minWidth: 0 }}>
++                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
++                    <span style={{ fontSize: 16, fontWeight: 700, color: '#3a2e28' }}>
++                      {shownName(t)}
++                    </span>
++                    <span style={{ fontSize: 12, color: '#96502e' }}>선생님</span>
++                    {(t.rating ?? 0) > 0 && (
++                      <span style={{ marginLeft: 'auto', fontSize: 12, color: '#d9a55f' }}>
++                        ★ {t.rating}
++                        {(t.review_count ?? 0) > 0 && (
++                          <span style={{ color: '#a08d7d' }}> ({t.review_count})</span>
++                        )}
++                      </span>
++                    )}
++                  </div>
++
++                  {t.specialty && (
++                    <div style={{ fontSize: 12, color: '#6b5340', marginTop: 3 }}>{t.specialty}</div>
++                  )}
++                  {t.region && (
++                    <div style={{ fontSize: 11.5, color: '#a08d7d', marginTop: 2 }}>{t.region}</div>
++                  )}
++                </div>
++              </div>
++
++              {t.career && (
++                <div style={{
++                  marginTop: 11, paddingTop: 10, borderTop: '1px solid #faf3ec',
++                  fontSize: 12.5, color: '#4a3f38', lineHeight: 1.85, whiteSpace: 'pre-line',
++                }}>
++                  {t.career}
++                </div>
++              )}
++
++              {t.intro && (
++                <div style={{
++                  marginTop: 9, padding: '9px 11px', background: '#faf3ec', borderRadius: 9,
++                  fontSize: 12.5, color: '#4a3f38', lineHeight: 1.85, whiteSpace: 'pre-line',
++                }}>
++                  {t.intro}
++                </div>
++              )}
++            </div>
++          ))
++        )}
++      </div>
++
++      <HomeBottomNav />
++    </div>
++  )
++}
+diff --git a/lib/consultantName.ts b/lib/consultantName.ts
+new file mode 100644
+index 0000000..0ae7c47
+--- /dev/null
++++ b/lib/consultantName.ts
+@@ -0,0 +1,23 @@
++// ══════════════════════════════════════════════════════════════════
++//  ★2026-08-06 (48부 4차) — 손님에게 보일 이름  [대표님 지시]
++//    「상담사는 ★본명은 «관리자만» 관리를 하고,
++//      고객들은 ★별칭인 "호" 가 보이도록 하려고 해」
++//
++//  ⚠️⚠️ ★손님 화면에서는 «언제나» 이 함수를 쓰십시오.
++//     c.name 을 «직접» 쓰면 ★본명이 샙니다.
++//     ⇒ 지금 이 함수를 쓰는 손님 화면은 ★넷입니다 —
++//        consultant-select(고르기·예약완료) · mypage-new(내 예약)
++//        · consulting(상담 진행·채팅) · api/summarize(★손님께 톡으로 갑니다)
++//     ⛔ 새 손님 화면을 지으실 때도 ★반드시 이것을 쓰십시오.
++//
++//  ⚠️ 별칭이 «비면» 본명이 그대로 나갑니다 —
++//     지금 계신 분들이 갑자기 「상담사」로 바뀌지 않도록 그렇게 두었습니다.
++//     ⛔ 빈 별칭을 '상담사' 같은 말로 바꾸지 마십시오. 대표님이 채우실 때까지의 자리입니다.
++//
++//  ⛔ ★관리자 화면·상담사 본인 화면에서는 쓰지 마십시오. 본명이 보여야 합니다.
++// ══════════════════════════════════════════════════════════════════
++export function shownName(c: { name?: string | null; alias?: string | null }): string {
++  const a = (c.alias ?? '').trim()
++  if (a) return a
++  return (c.name ?? '').trim()
++}
+diff --git a/lib/saju/yongsinNew.ts b/lib/saju/yongsinNew.ts
+index bb4af4f..a0c4809 100644
+--- a/lib/saju/yongsinNew.ts
++++ b/lib/saju/yongsinNew.ts
+@@ -43,7 +43,7 @@ const GEN: Record<Ohaeng, Ohaeng> = { 수: '목', 목: '화', 화: '토', 토: '
+ // 상극: A극B (A가 B를 극함)
+ const CON: Record<Ohaeng, Ohaeng> = { 수: '화', 화: '금', 금: '목', 목: '토', 토: '수' }
+ 
+-const ALL: Ohaeng[] = ['목', '화', '토', '금', '수']
++export const ALL: Ohaeng[] = ['목', '화', '토', '금', '수']
+ /** x를 생하는 오행 (x의 인성 방향) */
+ const saengOf = (x: Ohaeng): Ohaeng => (Object.keys(GEN) as Ohaeng[]).find(k => GEN[k] === x)!
+ /** x를 극하는 오행 (x의 관성 방향) */
+@@ -75,8 +75,8 @@ export function judgeStrength(x: number): Ganghyak {
+ }
+ 
+ // 일간 기준 오행 육친 관계
+-interface Rel { bigeop: Ohaeng; insung: Ohaeng; siksang: Ohaeng; jaesung: Ohaeng; gwansung: Ohaeng }
+-function relOf(dayEl: Ohaeng): Rel {
++export interface Rel { bigeop: Ohaeng; insung: Ohaeng; siksang: Ohaeng; jaesung: Ohaeng; gwansung: Ohaeng }
++export function relOf(dayEl: Ohaeng): Rel {
+   return {
+     bigeop: dayEl,
+     insung: saengOf(dayEl),   // 나를 생
+@@ -127,10 +127,10 @@ export interface EokbuResult {
+ //      (p.150 정의는 원론이고, 실제 감명은 p.151 표를 따른다)
+ //
+ //   ※ 표 아래 단서: "90%의 명식은 위 공식을 따르지만 10% 정도는 예외가 있다."
+-type Yukchin5 = '비겁' | '식상' | '재성' | '관성' | '인성'
++export type Yukchin5 = '비겁' | '식상' | '재성' | '관성' | '인성'
+ interface GangTable { yong: Yukchin5; hee: Yukchin5; note: string }
+ 
+-const P151_TABLE: Record<Yukchin5, GangTable> = {
++export const P151_TABLE: Record<Yukchin5, GangTable> = {
+   // ── 신강한 사주 (인비가 강함) ──
+   인성: { yong: '재성', hee: '식상', note: '인성이 강해 재성으로 눌러 줘요' },
+   비겁: { yong: '식상', hee: '재성', note: '비겁이 강해 식상으로 흘려보내요' },
+@@ -142,7 +142,7 @@ const P151_TABLE: Record<Yukchin5, GangTable> = {
+ 
+ // 월지가 어느 육친인지 — 소스 p.141 "월지가 비겁·인성으로 통근하면 신강,
+ // 월지가 식재관이면 신약". 즉 신강약도, 무엇이 강한지도 월지가 기준이다.
+-function yukchinOfEl(dayEl: Ohaeng, el: Ohaeng): Yukchin5 {
++export function yukchinOfEl(dayEl: Ohaeng, el: Ohaeng): Yukchin5 {
+   const r = relOf(dayEl)
+   if (el === r.bigeop) return '비겁'
+   if (el === r.insung) return '인성'
+@@ -178,7 +178,7 @@ const TONGGEUN: Record<string, string[]> = {
+ 
+ // 인성이 원국에 "뿌리"를 내리고 있는가 — p.151 관성 칸의 "인성 뿌리 X" 판정용.
+ //   원국 천간에 인성 오행 글자가 있고, 그 글자가 지지에 통근했으면 뿌리 있음.
+-function hasInsungRoot(saju: Pillar[], dayEl: Ohaeng): boolean {
++export function hasInsungRoot(saju: Pillar[], dayEl: Ohaeng): boolean {
+   const insungEl = relOf(dayEl).insung
+   const branches = saju.map(p => p.branch).filter(Boolean)
+   for (const p of saju) {
+@@ -191,7 +191,7 @@ function hasInsungRoot(saju: Pillar[], dayEl: Ohaeng): boolean {
+ 
+ const YANG_BRANCH = new Set(['子', '寅', '辰', '午', '申', '戌'])
+ const YANG_STEM_SET = new Set(['甲', '丙', '戊', '庚', '壬'])
+-function countGeopjae(saju: Pillar[], dayStem: string): number {
++export function countGeopjae(saju: Pillar[], dayStem: string): number {
+   const dayEl = STEM_EL[dayStem]
+   if (!dayEl) return 0
+   const dayIsYang = YANG_STEM_SET.has(dayStem)
+@@ -289,7 +289,7 @@ export function sipsinOf(dayStem: string, other: string): string {
+ //   교재 178쪽 "비견겁, 겁재격은 없다. 비견격이라 하지 않고 건록격이라 하며,
+ //               겁재가 있을 때는 겁재격이 아니라 양인격이라고 하는 것이다"
+ type Yukchin = '비겁' | '식상' | '재성' | '관성' | '인성'
+-const GYEOK_SANGSIN: Record<string, Yukchin> = {
++export const GYEOK_SANGSIN: Record<string, Yukchin> = {
+   건록격: '관성', 양인격: '관성',
+   //   건록격 — 181쪽 "제1用神은 정관이고 제2用神은 편관"
+   //   양인격 — 179쪽 "양인격은 무조건 관성이 用神이다"

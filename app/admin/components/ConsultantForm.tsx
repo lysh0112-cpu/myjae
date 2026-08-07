@@ -286,65 +286,85 @@ export default function ConsultantForm({ form, editing, loading, onChange, onSav
           고객 화면에 보일 정보
         </div>
 
-        {/* 사진 */}
-        <label className="text-xs mb-1 block" style={labelStyle}>사진</label>
-        <div
-          onClick={() => fileRef.current?.click()}
-          onDragOver={e => { e.preventDefault(); setDragOver(true) }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={onDrop}
-          className="rounded-xl mb-4 flex items-center gap-4 cursor-pointer"
-          style={{
-            padding: '14px',
-            border: dragOver ? '1.5px dashed #FAC775' : '1.5px dashed rgba(255,255,255,0.2)',
-            background: 'rgba(255,255,255,0.04)',
-          }}>
-          {form.photo_url ? (
-            <img src={form.photo_url} alt="상담사 사진"
-              style={{ width: 64, height: 64, borderRadius: 12, objectFit: 'cover' }} />
-          ) : (
-            <div style={{ width: 64, height: 64, borderRadius: 12, background: 'rgba(255,255,255,0.06)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🖼️</div>
-          )}
-          <div className="text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>
-            {uploading ? '올리는 중...' : form.photo_url ? '사진을 바꾸려면 다시 끌어다 놓거나 클릭' : '사진을 끌어다 놓거나 클릭해서 선택'}
+        {/* ══════════════════════════════════════════════════════════
+            ★2026-08-07 (48부 15차) — ★사진 «옆» 에 경력 [대표님 지시]
+              「사진 등록 옆으로 ★경력입력란을 나란히 배치 · 공간활용차원」
+            ⚠️ 사진칸이 가로로 넓기만 하고 ★빈 자리가 많았습니다.
+            ⚠️ 사진 ★320px 고정 · 경력이 ★남는 자리를 다 씁니다.
+            ⛔ 다시 «위아래» 로 쌓지 마십시오.
+            ══════════════════════════════════════════════════════════ */}
+        <div className="flex gap-3 mb-3" style={{ alignItems: 'flex-start' }}>
+
+          <div style={{ width: 320, flexShrink: 0 }}>
+            <label className="text-[11px] mb-1 block" style={labelStyle}>사진</label>
+            <div
+              onClick={() => fileRef.current?.click()}
+              onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={onDrop}
+              className="rounded-xl flex items-center gap-3 cursor-pointer"
+              style={{
+                padding: '10px 12px', height: 84,
+                border: dragOver ? '1.5px dashed #FAC775' : '1.5px dashed rgba(255,255,255,0.2)',
+                background: 'rgba(255,255,255,0.04)',
+              }}>
+              {form.photo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={form.photo_url} alt="상담사 사진"
+                  style={{ width: 58, height: 58, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+              ) : (
+                <div style={{ width: 58, height: 58, borderRadius: 10, background: 'rgba(255,255,255,0.06)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🖼️</div>
+              )}
+              <div className="text-[11px]" style={{ color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>
+                {uploading ? '올리는 중...' : form.photo_url ? '바꾸려면 다시 끌어다 놓거나 클릭' : '끌어다 놓거나 클릭해서 선택'}
+              </div>
+              <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(f) }} />
+            </div>
           </div>
-          <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
-            onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(f) }} />
+
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <label className="text-[11px] mb-1 block" style={labelStyle}>경력 (줄바꿈으로 여러 줄)</label>
+            <textarea value={form.career} onChange={e => set('career', e.target.value)}
+              rows={3} placeholder={'명리학 20년\n○○대학교 동양철학'}
+              className="w-full rounded-lg px-2 py-1.5 text-[13px] outline-none"
+              style={{ ...inputStyle, height: 84, resize: 'vertical' }} />
+          </div>
+
         </div>
 
-        {/* 경력 */}
-        <label className="text-xs mb-1 block" style={labelStyle}>경력 (줄바꿈으로 여러 줄)</label>
-        <textarea value={form.career} onChange={e => set('career', e.target.value)}
-          rows={2} placeholder={'명리학 20년\n○○대학교 동양철학'}
-          className="w-full rounded-xl px-3 py-2 text-sm outline-none mb-4" style={inputStyle} />
-
-        {/* 소개글 */}
-        <label className="text-xs mb-1 block" style={labelStyle}>소개글</label>
-        <textarea value={form.intro} onChange={e => set('intro', e.target.value)}
-          rows={2} placeholder="사주와 물상도를 함께 풀어드립니다…"
-          className="w-full rounded-xl px-3 py-2 text-sm outline-none mb-4" style={inputStyle} />
-
-        {/* 별점 · 상담건수 · 대표후기 (임시값) */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* 소개글 · 대표 후기 — ★나란히 (전에는 위아래였습니다) */}
+        <div className="grid grid-cols-2 gap-3 mb-3">
           <div>
-            <label className="text-xs mb-1 block" style={labelStyle}>별점 (임시, 예: 4.9)</label>
+            <label className="text-[11px] mb-1 block" style={labelStyle}>소개글</label>
+            <textarea value={form.intro} onChange={e => set('intro', e.target.value)}
+              rows={2} placeholder="사주와 물상도를 함께 풀어드립니다…"
+              className="w-full rounded-lg px-2 py-1.5 text-[13px] outline-none"
+              style={{ ...inputStyle, height: 60, resize: 'vertical' }} />
+          </div>
+          <div>
+            <label className="text-[11px] mb-1 block" style={labelStyle}>대표 후기 한 줄 (임시)</label>
+            <input value={form.review_text} onChange={e => set('review_text', e.target.value)}
+              placeholder="막막했던 부분을 차분히 짚어주셨어요"
+              className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldStyle} />
+          </div>
+        </div>
+
+        {/* 별점 · 상담건수 (임시값) — ★좁은 두 칸이면 됩니다 */}
+        <div className="grid grid-cols-4 gap-3">
+          <div>
+            <label className="text-[11px] mb-1 block" style={labelStyle}>별점 (예: 4.9)</label>
             <input type="number" step="0.1" value={form.rating}
               onChange={e => set('rating', parseFloat(e.target.value) || 0)}
-              className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
+              className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldStyle} />
           </div>
           <div>
-            <label className="text-xs mb-1 block" style={labelStyle}>상담건수 (임시)</label>
+            <label className="text-[11px] mb-1 block" style={labelStyle}>상담건수</label>
             <input type="number" value={form.review_count}
               onChange={e => set('review_count', parseInt(e.target.value) || 0)}
-              className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
+              className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldStyle} />
           </div>
-        </div>
-        <div className="mt-3">
-          <label className="text-xs mb-1 block" style={labelStyle}>대표 후기 한 줄 (임시)</label>
-          <input value={form.review_text} onChange={e => set('review_text', e.target.value)}
-            placeholder="막막했던 부분을 차분히 짚어주셨어요"
-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
         </div>
       </div>
 
