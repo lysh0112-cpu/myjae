@@ -94,6 +94,9 @@ export default function ConsultantForm({ form, editing, loading, onChange, onSav
   const inputStyle = { background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' } as const
   const selectStyle = { background: '#2C2C2A', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' } as const
   const labelStyle = { color: '#b0aec8' } as const
+  /** ★48부 14차 — 좁힌 칸. 높이 32px (전에는 42px) */
+  const fieldStyle = { ...inputStyle, height: 32 } as const
+  const fieldSelectStyle = { ...selectStyle, height: 32 } as const
 
   return (
     <div className="rounded-2xl p-5 mb-6"
@@ -103,102 +106,118 @@ export default function ConsultantForm({ form, editing, loading, onChange, onSav
       </div>
 
       {/* 기본 정보 (기존 그대로) */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* ══════════════════════════════════════════════════════════════
+          ★2026-08-07 (48부 14차) — ★3열 → «6열» 로 좁혔습니다 [대표님 지시]
+            「입력하는 글자 대비 ★칸이 너무 커서 줄이고 ★한 행에 6개를 넣도록」
+
+          ⚠️ 칸 높이 ★42 → 32px · 글자 14 → 13px · 이름표 12 → 11px
+             ⇒ 세로가 ★절반쯤 짧아집니다. 실제 넣는 글자가 짧아 빈 자리가 많았습니다.
+          ⚠️ ★이메일·계좌번호만 «두 칸»(col-span-2) — 글자가 길어 한 칸이면 잘립니다.
+          ⚠️ ★「0원」 미리보기는 «칸 안 오른쪽» 으로 옮겼습니다 (아래 줄을 안 씁니다).
+          ⛔ 다시 3열로 되돌리지 마십시오. ⛔ 1400px 에서 재 보고 고치십시오.
+          ══════════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-6 gap-2">
 
         <div>
-          <label className="text-xs mb-1 block" style={labelStyle}>
-            이름 <span style={{ color: '#8e8ba8' }}>(본명 · 관리자만 봅니다)</span>
+          <label className="text-[11px] mb-1 block" style={labelStyle}>
+            이름 <span style={{ color: '#8e8ba8' }}>본명</span>
           </label>
           <input value={form.name} onChange={e => set('name', e.target.value)}
-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
+            className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldStyle} />
         </div>
 
-        {/* ★2026-08-06 (48부 4차) — 별칭(호) [대표님 지시]
-            「상담사는 본명은 관리자만 관리를 하고,
-              고객들은 ★별칭인 "호" 가 보이도록 하려고 해」
-            ⚠️ 비워 두면 ★본명이 그대로 나갑니다. */}
+        {/* ★48부 4차 — 별칭(호). ⚠️ 비우면 ★본명이 그대로 나갑니다. */}
         <div>
-          <label className="text-xs mb-1 block" style={labelStyle}>
-            별칭 (호) <span style={{ color: '#FAC775' }}>— 고객에게 보입니다</span>
+          <label className="text-[11px] mb-1 block" style={labelStyle}>
+            별칭 (호) <span style={{ color: '#FAC775' }}>고객용</span>
           </label>
           <input value={form.alias} onChange={e => set('alias', e.target.value)}
             placeholder="예: 청산"
-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
-          <div className="text-xs mt-1" style={{ color: '#8e8ba8' }}>
-            {form.alias
-              ? `고객 화면 — ${form.alias} 선생님`
-              : '비우면 본명이 그대로 보입니다'}
-          </div>
+            className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldStyle} />
         </div>
 
         <div>
-          <label className="text-xs mb-1 block" style={labelStyle}>전화번호 (- 없이)</label>
+          <label className="text-[11px] mb-1 block" style={labelStyle}>전화번호</label>
           <input value={form.phone} onChange={e => set('phone', formatPhone(e.target.value))}
             placeholder="01012345678"
-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
+            className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldStyle} />
         </div>
 
-        <div>
-          <label className="text-xs mb-1 block" style={labelStyle}>이메일</label>
+        {/* ★두 칸 — 이메일은 글자가 깁니다 */}
+        <div className="col-span-2">
+          <label className="text-[11px] mb-1 block" style={labelStyle}>이메일</label>
           <input type="email" value={form.email} onChange={e => set('email', e.target.value)}
-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
+            className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldStyle} />
         </div>
 
         <div>
-          <label className="text-xs mb-1 block" style={labelStyle}>거주지역</label>
+          <label className="text-[11px] mb-1 block" style={labelStyle}>거주지역</label>
           <select value={form.region} onChange={e => set('region', e.target.value)}
-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={selectStyle}>
+            className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldSelectStyle}>
             <option value="">선택</option>
             {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
         </div>
 
         <div>
-          <label className="text-xs mb-1 block" style={labelStyle}>상담료 (원)</label>
-          <input type="number" value={form.price} onChange={e => set('price', parseInt(e.target.value) || 0)}
-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
-          <div className="text-xs mt-1" style={{ color: '#FAC775' }}>{form.price.toLocaleString()}원</div>
+          <label className="text-[11px] mb-1 block" style={labelStyle}>상담료 (원)</label>
+          <div style={{ position: 'relative' }}>
+            <input type="number" value={form.price} onChange={e => set('price', parseInt(e.target.value) || 0)}
+              className="w-full rounded-lg pl-2 pr-11 text-[13px] outline-none" style={fieldStyle} />
+            {/* ★48부 14차 — 미리보기를 «칸 안» 으로. 아래 줄을 안 씁니다. */}
+            <span className="text-[10px]" style={{ position: 'absolute', right: 6, top: 9, color: '#FAC775', pointerEvents: 'none' }}>
+              {form.price.toLocaleString()}원
+            </span>
+          </div>
         </div>
 
         <div>
-          <label className="text-xs mb-1 block" style={labelStyle}>은행</label>
+          <label className="text-[11px] mb-1 block" style={labelStyle}>은행</label>
           <select value={form.bank} onChange={e => set('bank', e.target.value)}
-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={selectStyle}>
+            className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldSelectStyle}>
             <option value="">선택</option>
             {BANKS.map(b => <option key={b} value={b}>{b}</option>)}
           </select>
         </div>
 
-        <div>
-          <label className="text-xs mb-1 block" style={labelStyle}>계좌번호</label>
+        {/* ★두 칸 — 계좌번호도 깁니다 */}
+        <div className="col-span-2">
+          <label className="text-[11px] mb-1 block" style={labelStyle}>계좌번호</label>
           <input value={form.account} onChange={e => set('account', e.target.value)}
-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
+            className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldStyle} />
         </div>
 
         <div>
-          <label className="text-xs mb-1 block" style={labelStyle}>수수료율 (%)</label>
+          <label className="text-[11px] mb-1 block" style={labelStyle}>수수료율 (%)</label>
           <input type="number" value={form.commission_rate} onChange={e => set('commission_rate', parseFloat(e.target.value) || 0)}
-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
+            className="w-full rounded-lg px-2 text-[13px] outline-none" style={fieldStyle} />
         </div>
 
         <div>
-          <label className="text-xs mb-1 block" style={labelStyle}>수수료 금액 (원)</label>
-          <input type="number" value={form.commission_amount} onChange={e => set('commission_amount', parseInt(e.target.value) || 0)}
-            className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle} />
-          <div className="text-xs mt-1" style={{ color: '#FAC775' }}>{form.commission_amount.toLocaleString()}원</div>
+          <label className="text-[11px] mb-1 block" style={labelStyle}>수수료 (원)</label>
+          <div style={{ position: 'relative' }}>
+            <input type="number" value={form.commission_amount} onChange={e => set('commission_amount', parseInt(e.target.value) || 0)}
+              className="w-full rounded-lg pl-2 pr-11 text-[13px] outline-none" style={fieldStyle} />
+            <span className="text-[10px]" style={{ position: 'absolute', right: 6, top: 9, color: '#FAC775', pointerEvents: 'none' }}>
+              {form.commission_amount.toLocaleString()}원
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 pt-4">
-          <label className="text-xs" style={labelStyle}>활성 여부</label>
-          <button onClick={() => set('active', !form.active)}
-            className="px-4 py-2 rounded-xl text-xs font-bold"
-            style={form.active
-              ? { background: 'rgba(76,175,80,0.2)', color: '#81c784' }
-              : { background: 'rgba(255,100,100,0.2)', color: '#ff6464' }}>
-            {form.active ? '✅ 활성' : '❌ 비활성'}
-          </button>
-        </div>
+      </div>
 
+      <div className="flex items-center gap-3 mt-3">
+        <label className="text-[11px]" style={labelStyle}>활성 여부</label>
+        <button onClick={() => set('active', !form.active)}
+          className="px-3 py-1.5 rounded-lg text-[11px] font-bold"
+          style={form.active
+            ? { background: 'rgba(76,175,80,0.2)', color: '#81c784' }
+            : { background: 'rgba(255,100,100,0.2)', color: '#ff6464' }}>
+          {form.active ? '✅ 활성' : '❌ 비활성'}
+        </button>
+        <span className="text-[11px]" style={{ color: '#8e8ba8' }}>
+          {form.alias ? `고객 화면 — ${form.alias} 선생님` : '별칭을 비우면 본명이 그대로 보입니다'}
+        </span>
       </div>
 
       {/* ══════════════════════════════════════════════════════════════

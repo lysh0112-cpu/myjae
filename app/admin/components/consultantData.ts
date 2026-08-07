@@ -22,21 +22,24 @@ export const BANKS = [
 //  ⛔ ★key 를 바꾸지 마십시오. consult_prices · ConsultButton 열두 곳과 어긋납니다.
 //
 //  ⚠️ 차례는 ★대표님이 적어 주신 그대로입니다. 홈 카드 차례와는 다릅니다.
+//  ⚠️ ★2026-08-07 (48부 14차) — 이름을 «줄였습니다» (폼이 6열로 좁아졌습니다).
+//     ⛔ 여기 name 은 ★관리자 토글에만 씁니다. 손님 화면 이름이 «아닙니다».
+//        손님 화면 이름은 홈 SERVICES 와 consult_prices 에 따로 있습니다.
 //  ⛔ 마음대로 정렬하지 마십시오.
 //
 //  ⚠️ ★한 서비스에 화면이 «둘» 인 것 — 결혼택일·출산택일·이사택일.
 //     ★같은 price_key 를 씁니다. 그래서 토글은 «열 개» 입니다 (화면으로 세면 열둘).
 // ══════════════════════════════════════════════════════════════════
 export const SERVICE_SPECIALTIES = [
-  { key: 'mulsang',     name: '내사주그림',        icon: '🎨' },
+  { key: 'mulsang',     name: '사주그림',          icon: '🎨' },
   { key: 'career',      name: '진로적성',          icon: '🧭' },
   { key: 'couple',      name: '궁합',              icon: '💖' },
-  { key: 'saju',        name: '내 사주와 운세보기', icon: '🔮' },
+  { key: 'saju',        name: '사주·운세',        icon: '🔮' },
   { key: 'wedding',     name: '결혼택일',          icon: '💍' },
   { key: 'birth',       name: '출산택일',          icon: '🍼' },
   { key: 'moving',      name: '이사택일',          icon: '🏡' },
-  { key: 'naming',      name: '내 이름 정밀분석',   icon: '📇' },
-  { key: 'naming_baby', name: '내 아이 명품작명',   icon: '👶' },
+  { key: 'naming',      name: '이름 정밀분석',     icon: '📇' },
+  { key: 'naming_baby', name: '명품작명',          icon: '👶' },
   { key: 'tarot',       name: '타로',              icon: '🃏' },
 ] as const
 
