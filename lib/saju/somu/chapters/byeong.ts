@@ -97,7 +97,7 @@ export const BYEONG: SomuChapter = {
       ],
       img: {
         ko: '한낮의 해가 열매 가득 달린 큰 나무를 비추는 모습',
-        prompt: 'a tall healthy tree heavy with ripe red fruit standing in an open field, bright midday sun high above casting warm light on the leaves, clear sky, hand-drawn colored ink illustration, simple flat shapes, no text, no people',
+        prompt: 'a tall healthy tree heavy with ripe red fruit standing in an open field, bright midday sun high above casting warm light on the leaves, clear sky, simple flat shapes',
       },
     },
     {
@@ -110,7 +110,7 @@ export const BYEONG: SomuChapter = {
       ],
       img: {
         ko: '너른 들판에 색색의 화초가 만발하고 그 위로 해가 비치는 모습',
-        prompt: 'a wide meadow of small colorful wildflowers in full bloom stretching to the horizon, soft sunlight washing over them from above, loose watercolor and ink style, flat pastel palette, no text, no people',
+        prompt: 'a wide meadow of small colorful wildflowers in full bloom stretching to the horizon, soft sunlight washing over them from above',
       },
     },
     {
@@ -127,7 +127,7 @@ export const BYEONG: SomuChapter = {
       ],
       img: {
         ko: '두 개의 해가 서로 노려보며 빛을 뻗치는 모습',
-        prompt: 'two suns facing each other in an empty pale sky, each radiating sharp spiky rays that collide in the middle, simple bold ink outlines with red and orange fill, cartoon-simple, tense mood, no text, no faces, no people',
+        prompt: 'two suns facing each other in an empty pale sky, each radiating sharp spiky rays that collide and clash in the middle, neither able to outshine the other, a tense charged air of rivalry between two equals',
       },
     },
     {
@@ -139,7 +139,7 @@ export const BYEONG: SomuChapter = {
       ],
       img: {
         ko: '해와 작은 모닥불이 나란히 놓여 함께 주위를 밝히는 모습',
-        prompt: 'a bright sun in the sky and a small crackling campfire on the ground below, both casting light across a dim landscape, warm yellow and orange, simple hand-drawn ink illustration, flat colors, no text, no people',
+        prompt: 'a bright sun in the sky and a small crackling campfire on the ground below, both casting light across a dim landscape, warm yellow and orange',
       },
     },
     {
@@ -152,7 +152,7 @@ export const BYEONG: SomuChapter = {
       ],
       img: {
         ko: '높고 검은 산봉우리에 반쯤 가려진 해',
-        prompt: 'a large dark mountain ridge occupying most of the frame with the sun half hidden behind its peak, long shadow spilling across the foreground, muted grey and ochre, hand-drawn ink and wash, no text, no people',
+        prompt: 'a large dark mountain ridge occupying most of the frame with the sun half hidden behind its peak, long shadow spilling across the foreground, muted grey and ochre',
       },
     },
     {
@@ -167,7 +167,7 @@ export const BYEONG: SomuChapter = {
       ],
       img: {
         ko: '가지런히 갈아 놓은 논밭 위에 낮게 내려앉은 작은 해',
-        prompt: 'neatly plowed rectangular farm fields seen from a low angle, a small dim sun sitting close to the ground at the far edge, flat green and brown patchwork, naive hand-drawn illustration, no text, no people',
+        prompt: 'neatly plowed rectangular farm fields seen from a low angle, a small dim sun sitting close to the ground at the far edge',
       },
     },
     {
@@ -181,7 +181,7 @@ export const BYEONG: SomuChapter = {
       ],
       img: {
         ko: '바위산 위로 해가 걸리고 그 아래 큰 쇠종이 놓인 모습',
-        prompt: 'a large bronze temple bell resting at the foot of a rocky grey mountain, the sun hanging just above the ridge line, cool grey stone and warm metal, hand-drawn ink and color illustration, no text, no people',
+        prompt: 'a large bronze temple bell resting at the foot of a rocky grey mountain, the sun hanging just above the ridge line, cool grey stone and warm metal',
       },
     },
     {
@@ -195,7 +195,7 @@ export const BYEONG: SomuChapter = {
       ],
       img: {
         ko: '두꺼운 구름 속으로 완전히 들어가 흐려진 해',
-        prompt: 'the sun almost entirely swallowed by a thick bank of grey cloud, only a faint pale disc showing through, dim overcast sky, soft ink wash, muted grey and silver palette, no text, no people',
+        prompt: 'the sun almost entirely swallowed by a thick bank of grey cloud, only a faint pale disc showing through, dim overcast sky',
       },
     },
     {
@@ -208,7 +208,7 @@ export const BYEONG: SomuChapter = {
       ],
       img: {
         ko: '넓은 바다 위로 해가 힘차게 떠오르며 물결에 빛이 길게 비치는 모습',
-        prompt: 'a brilliant sun rising over a wide calm sea, a long shimmering column of light reflected across the water toward the viewer, deep blue water and warm gold sky, hand-drawn watercolor illustration, no text, no people',
+        prompt: 'a brilliant sun rising over a wide calm sea, a long shimmering column of light reflected across the water toward the viewer, deep blue water and warm gold sky',
       },
     },
     {
@@ -228,7 +228,7 @@ export const BYEONG: SomuChapter = {
       ],
       img: {
         ko: '검은 비구름에서 굵은 빗줄기가 내려 해가 가려진 모습',
-        prompt: 'heavy dark rain clouds with long vertical streaks of falling rain filling the frame, a dull red disc of sun barely visible behind them, cold grey and crimson, loose ink brush illustration, no text, no people',
+        prompt: 'heavy dark rain clouds with long vertical streaks of falling rain filling the frame, a dull red disc of sun barely visible behind them, cold grey and crimson',
       },
     },
   ],
@@ -427,7 +427,7 @@ export const BYEONG: SomuChapter = {
       ],
       img: {
         ko: '호수 위로 두 개의 해와 달이 함께 뜬 모습',
-        prompt: 'a still lake at dusk with two suns and a crescent moon together in the sky above, their light doubled on the calm water, warm orange and deep blue, hand-drawn ink and watercolor, no text, no people',
+        prompt: 'a still lake at dusk with two suns and a crescent moon together in the sky above, their light doubled on the calm water, warm orange and deep blue',
       },
     },
     {
@@ -454,7 +454,7 @@ export const BYEONG: SomuChapter = {
       ],
       img: {
         ko: '가을 하늘에 해 둘이 뜨고 큰 바위 위로 찬비가 내리는 모습',
-        prompt: 'a large grey boulder on autumn ground with cold rain falling on it, two pale suns in the wide sky behind, sparse hail scattered around, cool grey and steel blue with faint gold, hand-drawn ink wash illustration, no text, no people',
+        prompt: 'a large grey boulder on autumn ground with cold rain falling on it, two pale suns in the wide sky behind, sparse hail scattered around, cool grey and steel blue with faint gold',
       },
     },
     {
@@ -474,7 +474,7 @@ export const BYEONG: SomuChapter = {
       ],
       img: {
         ko: '네 개의 해가 나란히 늘어선 텅 빈 하늘',
-        prompt: 'four identical suns arranged in a row across an empty washed-out sky, each drawn as a simple circle with short radiating strokes, flat pale background, minimal hand-drawn ink illustration, no text, no faces, no people',
+        prompt: 'four identical suns arranged in a row across an empty washed-out sky, each drawn as a simple circle with short radiating strokes, flat pale background',
       },
     },
     {
@@ -494,7 +494,7 @@ export const BYEONG: SomuChapter = {
       ],
       img: {
         ko: '메마른 논밭 위로 해와 달이 함께 떠 있고 그 옆에 한 그루 나무가 선 모습',
-        prompt: 'dry cracked farm fields with a single bare tree standing at the edge, a sun and a moon both hanging in the sky at once, parched brown earth under harsh light, hand-drawn colored ink illustration, no text, no people',
+        prompt: 'dry cracked farm fields with a single bare tree standing at the edge, a sun and a moon both hanging in the sky at once, parched brown earth under harsh light',
       },
     },
     {
@@ -522,7 +522,7 @@ export const BYEONG: SomuChapter = {
       ],
       img: {
         ko: '높은 산줄기 사이에 호수가 놓이고 그 위로 해가 뜬 모습',
-        prompt: 'a quiet mountain lake nestled between tall green ridges, a red sun above the peaks, still reflective water in the foreground, layered hand-painted landscape in ink and gouache, no text, no people',
+        prompt: 'a quiet mountain lake nestled between tall green ridges, a red sun above the peaks, still reflective water in the foreground',
       },
     },
     {
@@ -553,7 +553,7 @@ export const BYEONG: SomuChapter = {
       ],
       img: {
         ko: '먹구름과 폭우에 덮여 겨우 붉은 자국만 남은 해',
-        prompt: 'a mountain range almost lost behind sheets of heavy rain, dense dark cloud across the top of the frame with only a faint red smear of sun showing through, cold grey green palette, loose ink brush landscape, no text, no people',
+        prompt: 'a mountain range almost lost behind sheets of heavy rain, dense dark cloud across the top of the frame with only a faint red smear of sun showing through',
       },
     },
     {
@@ -577,7 +577,7 @@ export const BYEONG: SomuChapter = {
       ],
       img: {
         ko: '바위산 사이에 선 큰 나무와 그 위에 뜬 붉은 해',
-        prompt: 'a large full-crowned tree growing out of a rocky cliff face, jagged grey stone all around, a deep red sun low in the cold sky above, winter light, hand-drawn ink and color landscape, no text, no people',
+        prompt: 'a large full-crowned tree growing out of a rocky cliff face, jagged grey stone all around, a deep red sun low in the cold sky above',
       },
     },
   ],
