@@ -39,6 +39,15 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, 
 
   const toggleCol = (k: ColKey) => setCols(prev => ({ ...prev, [k]: !prev[k] }))
 
+  /**
+   * ★2026-08-07 (48부 13차) — 「보일 열」에 ★전체 선택 [대표님 지시]
+   *   ⚠️ ★하나로 «오갑니다» — 다 켜져 있으면 「전체 해제」로 바뀝니다.
+   *      단추 둘을 나란히 두면 좁은 화면에서 줄이 넘어갑니다.
+   */
+  const allOn = COLUMNS.every(c => cols[c.key])
+  const toggleAll = () =>
+    setCols(Object.fromEntries(COLUMNS.map(c => [c.key, !allOn])) as Record<ColKey, boolean>)
+
   function draftOf(c: ConsultantFormData): string {
     return sortDraft[c.id!] !== undefined ? sortDraft[c.id!] : String(c.sort ?? 0)
   }
@@ -95,6 +104,16 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, 
     <div className="p-4">
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         <span className="text-xs" style={{ color: '#8a88a0' }}>보일 열</span>
+        {/* ★48부 13차 — 전체 선택 [대표님 지시] */}
+        <button onClick={toggleAll}
+          className="px-3 py-1 rounded-full text-xs font-bold"
+          style={{
+            background: allOn ? 'rgba(250,199,117,0.15)' : 'rgba(255,255,255,0.05)',
+            border: `1px solid ${allOn ? 'rgba(250,199,117,0.4)' : 'rgba(255,255,255,0.1)'}`,
+            color: allOn ? '#FAC775' : '#8a88a0',
+          }}>
+          {allOn ? '전체 해제' : '전체 선택'}
+        </button>
         {COLUMNS.map(col => (
           <button key={col.key} onClick={() => toggleCol(col.key)}
             className="px-3 py-1 rounded-full text-xs font-bold"
