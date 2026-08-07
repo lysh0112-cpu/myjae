@@ -658,12 +658,13 @@ export default function MyPageNew() {
           )}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, marginBottom: 12 }}>
+        {/* ★2026-08-07 (48부 12차) — 「❓ 문의하기」를 ★지웠습니다 [대표님 지시]
+            ⚠️ 이름은 「문의하기」인데 ★/manseryeok/reviews/write(후기 쓰기)로 갔습니다.
+            ⇒ 문의는 ★하단바 「💬 문의사항」(/inquiry) 이 맡습니다. 겹칩니다.
+            ⛔ 여기에 다시 넣지 마십시오. */}
+        <div style={{ marginBottom: 12 }}>
           <div onClick={() => { setEditMode(true); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }) }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 12px', background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 12, cursor: 'pointer' }}>
             <span style={{ fontSize: 13, color: '#5a4a3e' }}>⚙️ 계정 설정</span>
-          </div>
-          <div onClick={() => router.push('/manseryeok/reviews/write')} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 12px', background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 12, cursor: 'pointer' }}>
-            <span style={{ fontSize: 13, color: '#5a4a3e' }}>❓ 문의하기</span>
           </div>
         </div>
 
@@ -674,7 +675,12 @@ export default function MyPageNew() {
               router.push(c ? `/manseryeok/consultant?consultantId=${c.id}` : '/manseryeok/consultant')
             }} style={{ flex: 1, textAlign: 'center', background: '#FFFBF7', border: '0.5px solid #b99a7d', borderRadius: 12, padding: '13px 8px', fontSize: 12.5, color: '#96502e', cursor: 'pointer' }}>🩺 상담 관리</button>
             {isMaster ? (
-              <button onClick={() => router.push('/admin')} style={{ flex: 1, textAlign: 'center', background: '#FFFBF7', border: '0.5px solid #b99a7d', borderRadius: 12, padding: '13px 8px', fontSize: 12.5, color: '#96502e', cursor: 'pointer' }}>🔐 관리자</button>
+              <button onClick={() => {
+                // ★48부 12차 — 관리자 화면의 ★「상담사 관리」 탭으로 바로
+                //   ⚠️ 상담사 화면의 goAdminConsultant() 와 «같은 방식» 입니다.
+                if (typeof window !== 'undefined') sessionStorage.setItem('adminTab', 'consultant')
+                router.push('/admin#consultant')
+              }} style={{ flex: 1, textAlign: 'center', background: '#FFFBF7', border: '0.5px solid #b99a7d', borderRadius: 12, padding: '13px 8px', fontSize: 12.5, color: '#96502e', cursor: 'pointer' }}>🔐 관리자</button>
             ) : (
               <div style={{ flex: 1 }} />
             )}
@@ -686,9 +692,11 @@ export default function MyPageNew() {
           <button onClick={withdraw} style={{ flex: 1, textAlign: 'center', background: '#FFFBF7', border: '0.5px solid #d98b8b', borderRadius: 12, padding: 12, fontSize: 13, color: '#c05a5a', cursor: 'pointer' }}>회원 탈퇴</button>
         </div>
 
-        <div style={{ textAlign: 'center', fontSize: 10, color: '#6b5340', padding: '8px 0' }}>
-          회사소개 &nbsp;|&nbsp; 이용약관 &nbsp;|&nbsp; 개인정보처리방침
-        </div>
+        {/* ★48부 12차 — 「회사소개 · 이용약관 · 개인정보처리방침」을 ★지웠습니다 [대표님 지시]
+            ⚠️⚠️ ★그 셋은 «갈 곳이 없는» 글자였습니다 — 화면이 하나도 없습니다.
+            🔴 ★개인정보처리방침은 «결제를 붙이기 전» 에 ★법으로 필요합니다.
+               그때는 ★진짜 화면을 만들어 다시 다십시오 (47부 10-6에도 적혀 있습니다).
+               회사 이름은 ★(주)명연재 입니다 (명카페는 사업 분야 하나). */}
 
       </main>
 
