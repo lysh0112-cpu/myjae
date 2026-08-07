@@ -286,7 +286,11 @@ function ConsultantContent() {
   const back = (() => {
     // ★상담사 본인 — 관리자 화면에는 못 들어갑니다 (role 이 consultant)
     if (!isMaster) return { href: '/mypage-new', label: '마이페이지' }
-    if (fromParam === 'admin') return { href: '/admin', label: '관리자 화면' }
+    // ★48부 10차 — ★상담사 관리 탭으로 «바로» 갑니다 [대표님 지시]
+    //   「관리자화면으로 돌아가기를 누르면 ★상담사관리 화면으로 바로 가게」
+    //   ⚠️ #consultant 는 admin/page.tsx 의 TABS key 입니다.
+    //   ⛔ key 를 바꾸면 여기도 함께 고치십시오.
+    if (fromParam === 'admin') return { href: '/admin#consultant', label: '관리자 화면' }
     return { href: '/manseryeok/consultant', label: '상담사 고르기' }
   })()
 
@@ -306,7 +310,7 @@ function ConsultantContent() {
   //  ⛔ back 을 /admin 으로 «바꾸지» 마십시오 —
   //     마이페이지에서 온 매니저가 «온 길을 잃습니다» (위 주석 참조).
   // ══════════════════════════════════════════════════════════════════════
-  const showAdminLink = isMaster && back.href !== '/admin'
+  const showAdminLink = isMaster && !back.href.startsWith('/admin')
 
   async function handleDeleteRequest(id: string) {
     if (!confirm('삭제를 요청하시겠어요? 관리자 승인 후 최종 삭제됩니다.')) return
@@ -496,7 +500,7 @@ function ConsultantContent() {
               {p.name} 선생님
             </button>
           ))}
-          <button onClick={() => router.push('/admin')}
+          <button onClick={() => router.push('/admin#consultant')}
             style={{padding:'11px 0', borderRadius:10, border:'0.5px solid #96502e',
               background:'#f4ece1', color:'#96502e', fontSize:13, cursor:'pointer', marginTop:4,
               fontFamily:'inherit'}}>
@@ -540,7 +544,7 @@ function ConsultantContent() {
         {/* ★48부 9차 — 매니저는 «언제나» 관리자 화면으로 [대표님 지시]
             ⛔ 상담사에게는 안 보입니다. */}
         {showAdminLink && (
-          <button onClick={() => router.push('/admin')}
+          <button onClick={() => router.push('/admin#consultant')}
             title="관리자 화면으로 갑니다"
             style={{
               fontSize:'12px', padding:'4px 8px', borderRadius:'5px',

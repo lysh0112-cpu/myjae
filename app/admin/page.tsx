@@ -44,6 +44,32 @@ const TABS = [
 export default function AdminPage() {
   const router = useRouter()
   const [tab, setTab] = useState<Tab>('dashboard')
+
+  // ══════════════════════════════════════════════════════════════════
+  //  ★2026-08-07 (48부 10차) — 주소로 «탭을 가리켜» 열 수 있습니다 [대표님 지시]
+  //    「관리자화면으로 돌아가기를 누르면 ★상담사관리 화면으로 바로 가게」
+  //
+  //  ★쓰는 법 — /admin#consultant  ·  /admin#inquiry  …
+  //     TABS 의 key 를 그대로 씁니다.
+  //
+  //  ⚠️ ★«물음표(?tab=)» 가 아니라 «우물정(#)» 을 쓴 까닭 —
+  //     Next 의 «검색어 훅» 을 쓰면 ★Suspense 로 감싸라고 요구해
+  //     이 화면을 통째로 손봐야 합니다. 해시는 그럴 필요가 없습니다.
+  //  ⚠️⚠️ ★그 훅의 «이름» 을 주석에 적지 마십시오 —
+  //     검사 ⑯이 «주석까지» 읽어 「쓰면서 안 감쌌다」며 ★실패로 잡습니다.
+  //     (47부 9-1 「옛 줄을 주석으로 남기지 마십시오」와 같은 자리입니다)
+  //
+  //  ⚠️ ★useEffect 를 «안» 씁니다 — 안에서 setState 를 부르면
+  //     react-hooks 가 «오류» 로 잡아 기준선이 깨집니다 (47부 1-7).
+  //     ⇒ ★«그릴 때» 한 번만 견줍니다.
+  //  ⛔ useEffect 로 바꾸지 마십시오.
+  // ══════════════════════════════════════════════════════════════════
+  const [hashRead, setHashRead] = useState(false)
+  if (!hashRead && typeof window !== 'undefined') {
+    setHashRead(true)
+    const h = window.location.hash.replace('#', '')
+    if (h && TABS.some(t => t.key === h)) setTab(h as Tab)
+  }
   // ★권한 확인 (2026-07-21)
   //   이 화면은 지금까지 role 을 전혀 보지 않아 URL 만 알면 누구나 들어왔다.
   const gate = useRoleGate(ADMIN_ROLES)
@@ -82,7 +108,15 @@ export default function AdminPage() {
           </div>
           <div className="flex gap-2 flex-wrap">
             {TABS.map((t) => (
-              <button key={t.key} onClick={() => setTab(t.key as Tab)}
+              <button key={t.key}
+                onClick={() => {
+                  setTab(t.key as Tab)
+                  // ★48부 10차 — 주소도 함께 바꿉니다.
+                  //   ⇒ 새로고침하거나 즐겨찾기로 와도 «그 탭» 이 열립니다.
+                  if (typeof window !== 'undefined') {
+                    window.history.replaceState(null, '', `#${t.key}`)
+                  }
+                }}
                 className="px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap"
                 style={tab === t.key
                   ? { background: 'rgba(250,199,117,0.3)', color: '#FAC775', border: '1px solid rgba(250,199,117,0.4)' }
