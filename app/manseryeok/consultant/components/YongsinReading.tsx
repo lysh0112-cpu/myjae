@@ -64,6 +64,9 @@
 
 import { useMemo, useState } from 'react'
 import { useResultSaju } from '@/hooks/useResultSaju'
+// 🔴 ★2026-08-08 — 음력 변환이 부본으로 넘어가면 «하루 밀린 원국» 이 됩니다.
+//   ⛔ 이 경고를 빼지 마십시오 (LunarSourceNote 머리말 참조).
+import LunarSourceNote from '@/app/components/common/LunarSourceNote'
 import {
   // ⚠️ judgeStrength 는 «들여오지 않습니다» — calcYongsinNew 가 status 를 이미 줍니다.
   //    들여오면 eslint 경고가 늘어 기준선(82/137)이 깨집니다.
@@ -165,7 +168,7 @@ export default function YongsinReading(p: Props) {
 
   // ⚠️ 만세력 계산은 ★손님 화면·원본 해설과 «똑같은» 훅입니다.
   //    ⛔ 새로 계산하지 마십시오. 답이 갈립니다.
-  const { saju, converting, dayStem } = useResultSaju(
+  const { saju, converting, dayStem, lunarSource, lunarReason, lunarMismatch } = useResultSaju(
     p.calType, yearN, monthN, dayN, p.leap ? '1' : '0', p.hourIdx,
   )
 
@@ -575,6 +578,12 @@ export default function YongsinReading(p: Props) {
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: 10, background: '#FDF6F0' }}>
+      {/* 🔴 ★원국을 읽기 «전» 에 보셔야 뜻이 있어 맨 위입니다 */}
+      <LunarSourceNote
+        source={lunarSource} reason={lunarReason} mismatch={lunarMismatch}
+        isLunar={p.calType === '음력'}
+      />
+
       {/* ⛔ 상담사용이라는 것을 «화면에도» 적어 둡니다 */}
       <div style={{
         background: '#fdf0e8', border: LINE_OUTER, borderRadius: 9,

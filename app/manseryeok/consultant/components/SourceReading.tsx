@@ -29,6 +29,9 @@
 
 import { useMemo, useState } from 'react'
 import { useResultSaju } from '@/hooks/useResultSaju'
+// 🔴 ★2026-08-08 — 음력 변환이 부본으로 넘어가면 «하루 밀린 원국» 이 됩니다.
+//   ⛔ 이 경고를 빼지 마십시오 (LunarSourceNote 머리말 참조).
+import LunarSourceNote from '@/app/components/common/LunarSourceNote'
 import { cheonganLines, CHEONGAN_TRAIT } from '@/lib/saju/cheonganTrait'
 import { traitsInSaju, traitLines, noteLines, ctxOf } from '@/lib/saju/jijiTrait'
 import { findByeongjon, sayOf as byeongjonSay } from '@/lib/saju/byeongjon'
@@ -145,7 +148,7 @@ export default function SourceReading(p: Props) {
 
   // ⚠️ 만세력 계산은 ★손님 화면과 «똑같은» 훅을 씁니다.
   //    따로 계산하면 답이 갈립니다. ⛔ 새로 계산하지 마십시오.
-  const { saju, converting, dayStem } = useResultSaju(
+  const { saju, converting, dayStem, lunarSource, lunarReason, lunarMismatch } = useResultSaju(
     p.calType, yearN, monthN, dayN, p.leap ? '1' : '0', p.hourIdx,
   )
 
@@ -668,6 +671,12 @@ export default function SourceReading(p: Props) {
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: 10, background: '#FDF6F0' }}>
+      {/* 🔴 ★원국을 읽기 «전» 에 보셔야 뜻이 있어 맨 위입니다 */}
+      <LunarSourceNote
+        source={lunarSource} reason={lunarReason} mismatch={lunarMismatch}
+        isLunar={p.calType === '음력'}
+      />
+
       {/* ⛔ 상담사용이라는 것을 «화면에도» 적어 둡니다 */}
       <div style={{
         background: '#fdf0e8', border: LINE_OUTER, borderRadius: 9,

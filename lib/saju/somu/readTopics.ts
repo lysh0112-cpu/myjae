@@ -75,6 +75,13 @@ export interface SomuTopicBlock {
   why?: string
   /** 그림 재료 (自然現象論 사례에 있습니다) */
   img?: string
+  /**
+   * ★그림 제목에 쓸 한글 한 줄.
+   * ⚠️ 일간 열 장은 img.ko 가 «따로» 있으나 自然現象論 사례에는 «없습니다».
+   *    그래서 물상 낱말을 이어 씁니다.
+   * ⛔ 블록 제목을 여기에 넣지 마십시오 — 「🖼 그림 — 　└ … 사례 1」처럼 됩니다.
+   */
+  imgKo?: string
 }
 
 /** 꼭지 하나 */
@@ -265,6 +272,7 @@ function readHyeongsang(forCustomer: boolean): SomuTopicGroup {
         title: `　└ ${h.name} 사례 ${i + 1}`,
         source: [c.birth, c.gender, c.chart].filter(Boolean).join(' · '),
         img: c.img,
+        imgKo: [...c.stemWords, ...(c.branchWords ?? [])].filter(Boolean).join(' · '),
         lines: [
           `【원국】 ${c.chart}　【물상】 ${c.stemWords.filter(Boolean).join(' · ') || '—'}`,
           ...(c.branchWords?.length

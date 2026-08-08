@@ -19,6 +19,20 @@ export function useResultSaju(
   const [dayStem, setDayStem] = useState("")
   const [monthGanji, setMonthGanji] = useState("")
   const [yearStem, setYearStem] = useState("")
+  // 🔴🔴 ★2026-08-08 — 음력 변환이 «어디서» 나온 값인가.
+  //   [겪은 일]  대표님 화면 — 같은 사람(1966 음 1/12)을 두 번 조회했는데
+  //     ★일간이 辛 → 壬 으로 «갈렸습니다». 장이 통째로 달라집니다.
+  //   [까닭]  ★1966년은 한국 설날(1/22)과 중국 설날(1/21)이 «하루» 다른 해입니다.
+  //     정본 KASI      → 음 1/12 = 양 1966-02-02 → 일주 壬辰   ✅ 한국 역법
+  //     부본 lunar-js  → 음 1/12 = 양 1966-02-01 → 일주 辛卯   ❌ 중국 역법
+  //   ⇒ KASI 가 늦거나(3초) 키가 비면 ★조용히 부본으로 넘어가
+  //     «하루 밀린 원국» 으로 상담이 그대로 나갑니다.
+  //   ⚠️ /api/lunar 는 41부부터 source·fallbackReason·mismatch 를 «돌려주고» 있었는데
+  //     ★읽는 화면이 하나도 없었습니다 (서버 console.warn 뿐).
+  //   ⛔ 이 셋을 다시 버리지 마십시오. 값이 틀린 것보다 «틀린 줄 모르는 것» 이 나쁩니다.
+  const [lunarSource, setLunarSource] = useState<string | null>(null)
+  const [lunarReason, setLunarReason] = useState<string | null>(null)
+  const [lunarMismatch, setLunarMismatch] = useState<string | null>(null)
   useEffect(() => {
     // ══════════════════════════════════════════════════════════════
     //  🔴 2026-08-02 — 「사주 불러오는 중…」 이 «영영» 멈춰 있던 자리
@@ -57,6 +71,10 @@ export function useResultSaju(
         const res = await fetch(apiUrl)
         const d = await res.json()
         if (d.error) { console.error('API 오류:', d.error); return }
+        // ★음력 변환 출처를 «버리지 않고» 담습니다 (위 머리말 참조)
+        setLunarSource(d.source ?? null)
+        setLunarReason(d.fallbackReason ?? null)
+        setLunarMismatch(d.mismatch ?? null)
         // solar = "양력 생년월일". 심산 오행 점수의 월지 계절 치환에 필요하다.
         //   음력 입력이면 변환 결과를, 양력 입력이면 입력값을 그대로 담는다.
         //   ★양력일 때 비워 두면 호출부의 solar?.month 가 undefined 가 되어
@@ -90,5 +108,9 @@ export function useResultSaju(
   }, [calType, yearParam, monthParam, dayParam, leapMonth, hourIdx])
   const iljji = saju[1]?.branch ?? ""
   const yeonjji = saju[3]?.branch ?? ""
-  return { saju, solar, converting, dayStem, monthGanji, yearStem, iljji, yeonjji }
+  return {
+    saju, solar, converting, dayStem, monthGanji, yearStem, iljji, yeonjji,
+    // ★더한 것입니다 — 쓰지 않는 화면은 그냥 무시하면 됩니다 (여섯 화면 안 흔듭니다)
+    lunarSource, lunarReason, lunarMismatch,
+  }
 }

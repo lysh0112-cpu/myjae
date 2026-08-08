@@ -47,6 +47,9 @@ import { readSomu } from '@/lib/saju/somu/judge'
 // ★2026-08-08 — 주제별 다섯 꼭지(十一·十二·十四·十五·十六).
 //   ⚠️ 이것이 없을 때 자료 ★3,692줄이 «담겨만» 있고 아무도 못 보고 있었습니다.
 import { readSomuTopics } from '@/lib/saju/somu/readTopics'
+// 🔴 ★2026-08-08 — 음력 변환이 부본으로 넘어가면 «하루 밀린 원국» 이 됩니다.
+//   ⛔ 이 경고를 빼지 마십시오 (LunarSourceNote 머리말 참조).
+import LunarSourceNote from '@/app/components/common/LunarSourceNote'
 
 type Props = {
   calType: '양력' | '음력'
@@ -122,7 +125,7 @@ export default function SomuReading(p: Props) {
   // ⚠️ 만세력 계산은 ★손님 화면·원본 해설·용신 탭과 «똑같은» 훅입니다.
   //    ⛔ 새로 계산하지 마십시오. 원국이 갈리면 아래가 전부 어긋납니다.
   //    ⚠️ 이것은 «판정» 이 아니라 «원국 뽑기» 라 별도 원칙에 어긋나지 않습니다.
-  const { saju, converting, dayStem } = useResultSaju(
+  const { saju, converting, dayStem, lunarSource, lunarReason, lunarMismatch } = useResultSaju(
     p.calType, yearN, monthN, dayN, p.leap ? '1' : '0', p.hourIdx,
   )
 
@@ -201,6 +204,12 @@ export default function SomuReading(p: Props) {
         </div>
       ) : (
         <>
+          {/* 🔴 ★원국 «위» 에 냅니다 — 원국을 읽기 «전» 에 보셔야 뜻이 있습니다 */}
+          <LunarSourceNote
+            source={lunarSource} reason={lunarReason} mismatch={lunarMismatch}
+            isLunar={p.calType === '음력'}
+          />
+
           {/* 원국 — 무엇을 딛고 폈는지 먼저 */}
           <div style={{
             background: '#fff', border: LINE_OUTER, borderRadius: 10,
@@ -283,7 +292,7 @@ export default function SomuReading(p: Props) {
                   <div style={{ marginTop: 8 }}>
                     {g.blocks.map(b => (
                       <Block key={b.key} title={b.title} source={b.source} lines={b.lines}
-                        img={b.img ? { ko: b.title, prompt: b.img } : undefined}
+                        img={b.img ? { ko: b.imgKo || '물상 낱말로 그릴 그림', prompt: b.img } : undefined}
                         open={isOpen(b.key, b.matched)} onToggle={() => flip(b.key, b.matched)} />
                     ))}
                     {/* ⚠️ 스캔이 흐려 원문 대조가 필요한 자리 — 상담사가 알고 읽어야 합니다.
