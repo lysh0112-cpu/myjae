@@ -44,6 +44,9 @@ import { useMemo, useState } from 'react'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { LINE_OUTER, LINE_INNER } from '@/lib/ui/line'
 import { readSomu } from '@/lib/saju/somu/judge'
+// ★2026-08-08 — 주제별 다섯 꼭지(十一·十二·十四·十五·十六).
+//   ⚠️ 이것이 없을 때 자료 ★3,692줄이 «담겨만» 있고 아무도 못 보고 있었습니다.
+import { readSomuTopics } from '@/lib/saju/somu/readTopics'
 
 type Props = {
   calType: '양력' | '음력'
@@ -136,10 +139,27 @@ export default function SomuReading(p: Props) {
     return readSomu({ saju, dayStem, gender: p.gender })
   }, [saju, dayStem, p.gender])
 
-  const isOpen = (key: string) =>
-    key.startsWith('case-') ? closed.has(`open:${key}`) : !closed.has(key)
-  const flip = (key: string) =>
-    toggle(key.startsWith('case-') ? `open:${key}` : key)
+  /** ★주제별 다섯 꼭지 — 일간을 «안 고르고도» 읽는 글입니다 */
+  const topics = useMemo(() => {
+    if (saju.length === 0 || !dayStem) return []
+    return readSomuTopics({ saju, dayStem })
+  }, [saju, dayStem])
+
+  /** 어느 꼭지를 펴 놓았는가 — ★걸린 자리가 «있는» 꼭지만 처음부터 펼칩니다 */
+  const [openTopic, setOpenTopic] = useState<Set<string>>(new Set())
+
+  // ★2026-08-08 — 접힘 규칙이 «셋» 이 되었습니다.
+  //   ① 通辯論 사례      — 접은 채 (남의 사례라 길어서 · 49부부터)
+  //   ② 안 걸린 자리      — 접은 채 (원국에 없는 天干論 짝 · 다른 계절 · 안 걸린 神殺)
+  //   ③ 그 밖             — 펼친 채 (47부 6-2 「펼친 채로 시작」)
+  //   ⛔ ②를 «빼지» 마십시오. 안 걸린 것까지 다 펼치면 한 화면이 1,400줄이 됩니다.
+  //      ★안 걸렸다고 «없애지는» 않습니다 — 접어서 «둡니다». 눌러서 보십니다.
+  const startsClosed = (key: string, matched?: boolean) =>
+    key.startsWith('case-') ? !matched : matched === false
+  const isOpen = (key: string, matched?: boolean) =>
+    startsClosed(key, matched) ? closed.has(`open:${key}`) : !closed.has(key)
+  const flip = (key: string, matched?: boolean) =>
+    toggle(startsClosed(key, matched) ? `open:${key}` : key)
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', background: '#FDF6F0', padding: 12 }}>
@@ -176,9 +196,8 @@ export default function SomuReading(p: Props) {
         }}>
           일간이 <b>{res.stem}</b> 입니다 — 이 장은 <b>아직 안 담겼습니다</b>.
           <br /><br />
-          지금 담긴 것은 <b>甲木 한 장(015~042쪽)</b> 뿐입니다.
-          나머지 아홉 장(乙木·丙火·丁火·戊土·己土·庚金·辛金·壬水·癸水)은
-          교재 스캔이 들어오는 대로 채웁니다.
+          일간 열 장(甲乙丙丁戊己庚辛壬癸)은 모두 담겨 있습니다.
+          여기에 걸렸다면 <b>일간을 못 뽑은 것</b>입니다 — 생년월일과 시를 확인해 주십시오.
         </div>
       ) : (
         <>
@@ -208,8 +227,84 @@ export default function SomuReading(p: Props) {
 
           {res.blocks.map(b => (
             <Block key={b.key} title={b.title} source={b.source} lines={b.lines} img={b.img}
-              open={isOpen(b.key)} onToggle={() => flip(b.key)} />
+              open={isOpen(b.key, b.matched)} onToggle={() => flip(b.key, b.matched)} />
           ))}
+
+          {/* ── ★주제별 다섯 꼭지 ────────────────────────────────
+              ⚠️ 일간을 «안 고르고도» 읽는 글이라 본장과 «갈라» 둡니다.
+              ⛔ SOMU_CHAPTERS 에 섞지 마십시오 — 뿌리가 다릅니다. */}
+          {topics.length > 0 && (
+            <div style={{
+              background: '#fff', border: LINE_OUTER, borderRadius: 10,
+              padding: '11px 13px', marginTop: 12, marginBottom: 8,
+            }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: '#3a2e28' }}>
+                주제별 꼭지 — 일간을 안 가리고 읽는 글
+              </div>
+              <div style={{ fontSize: 11, color: '#8a7461', lineHeight: 1.8, marginTop: 4 }}>
+                十一 自然現象論 · 十二 変證論 · 十四 十二運星 · 十五 十二支神殺 · 十六 通辯要論
+                <br />★표는 이 손님 원국에 <b>걸린</b> 자리입니다.
+                <span style={{ color: '#a08d7d' }}>　（十三 神殺論은 아직 안 담겼습니다）</span>
+              </div>
+            </div>
+          )}
+
+          {topics.map(g => {
+            const on = openTopic.has(g.key)
+            return (
+              <div key={g.key} style={{ marginBottom: 8 }}>
+                <button type="button"
+                  onClick={() => setOpenTopic(prev => {
+                    const n = new Set(prev)
+                    if (n.has(g.key)) n.delete(g.key); else n.add(g.key)
+                    return n
+                  })}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'baseline', gap: 7,
+                    background: '#fff', border: LINE_OUTER, borderRadius: 10,
+                    padding: '10px 12px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                  }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: '#96502e' }}>
+                    {g.no} {g.label}
+                  </span>
+                  <span style={{ fontSize: 10.5, color: '#a08d7d' }}>
+                    {g.hits > 0 ? `★걸린 자리 ${g.hits}` : `덩이 ${g.blocks.length}`}
+                  </span>
+                  <span style={{ fontSize: 10, color: '#a08d7d', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+                    {g.pages}쪽
+                  </span>
+                  <span aria-hidden style={{
+                    color: '#96502e', fontSize: 15, lineHeight: 1, marginLeft: 5,
+                    transition: 'transform .2s', transform: `rotate(${on ? 180 : 0}deg)`,
+                  }}>▾</span>
+                </button>
+
+                {on && (
+                  <div style={{ marginTop: 8 }}>
+                    {g.blocks.map(b => (
+                      <Block key={b.key} title={b.title} source={b.source} lines={b.lines}
+                        img={b.img ? { ko: b.title, prompt: b.img } : undefined}
+                        open={isOpen(b.key, b.matched)} onToggle={() => flip(b.key, b.matched)} />
+                    ))}
+                    {/* ⚠️ 스캔이 흐려 원문 대조가 필요한 자리 — 상담사가 알고 읽어야 합니다.
+                        ⛔ 지우지 마십시오. 교재를 고친 것이 아니라 «그대로 두었다» 는 표시입니다. */}
+                    {g.notes?.length ? (
+                      <div style={{
+                        background: '#fff', border: LINE_OUTER, borderRadius: 10,
+                        padding: '10px 12px', marginBottom: 8,
+                        fontSize: 11, color: '#8a7461', lineHeight: 1.8,
+                      }}>
+                        <div style={{ fontWeight: 700, color: '#96502e', marginBottom: 4 }}>
+                          ⚠️ 원문 대조가 필요한 자리 {g.notes.length}
+                        </div>
+                        {g.notes.map((n, i) => <div key={i}>· {n}</div>)}
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </>
       )}
 
@@ -227,7 +322,11 @@ export default function SomuReading(p: Props) {
         <br /><br />
         通辯論은 <b>교재에 실린 남의 사례</b>입니다. 이 손님 것이 아닙니다 — 견주어 보시는 자료입니다.
         <br /><br />
-        지금 담긴 것은 <b>甲木 한 장</b>입니다. 나머지 아홉 장은 스캔이 들어오는 대로 채웁니다.
+        <b>★표가 없는 자리</b>는 이 원국에 안 걸리는 것입니다. 지우지 않고 <b>접어서</b> 두었습니다 —
+        대운·세운으로 그 글자가 들어오면 눌러서 보십시오.
+        <br /><br />
+        일간 <b>열 장</b>(甲乙丙丁戊己庚辛壬癸)과 주제별 <b>다섯 꼭지</b>가 담겨 있습니다.
+        <b>十三 神殺論</b>만 아직 안 담겼습니다.
       </div>
     </div>
   )

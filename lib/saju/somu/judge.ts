@@ -59,6 +59,15 @@ export interface SomuBlock {
   lines: string[]
   /** 그림이 있는 자리 */
   img?: { ko: string; prompt: string }
+  /**
+   * ★2026-08-08 — 이 원국에 «걸린» 자리인가.
+   *   true  : 원국에 있는 천간의 짝 · 월지가 걸린 계절 · 계절이 맞는 사례
+   *   false : 교재에는 있으나 이 원국에는 «안 걸리는» 자리
+   *   ⚠️ 안 걸린다고 «빼지» 않습니다 — 상담사가 운을 짚을 때 봐야 합니다.
+   *      화면이 ★접은 채로 아래에 둡니다 (SomuReading).
+   *   ⛔ 손님 쪽(forCustomer)에는 ★걸린 것만 갑니다.
+   */
+  matched?: boolean
 }
 
 export interface SomuResult {
@@ -89,6 +98,14 @@ function pick(lines: SomuLine[], forCustomer: boolean): string[] {
  * ★남녀를 가릅니다 — 교재가 「女命」·「男命」이라 못 박은 줄만 걸러냅니다.
  *   ⚠️ 성별을 «안» 주면 거르지 않습니다 (둘 다 보입니다).
  *   ⛔ 낱말이 아니라 «머리에 붙은 표시» 만 봅니다. 문장 속 「여자」는 안 건드립니다.
+ *
+ *   🔴 ★2026-08-08 — 이제 ★«손님 쪽에서만» 거릅니다.
+ *      [까닭]  대표님 「★전문상담사는 모두 봐야 해」.
+ *        남자 손님 화면에서 「女命 …」 줄이 조용히 빠지고 있었습니다
+ *        (辛金 장에서 값으로 확인 — 세 줄).
+ *        상담사는 배우자·자녀를 함께 봅니다. 원문에 ★「女命」이라 적혀 있으니
+ *        상담사가 보고 가릅니다.
+ *      ⛔ 손님 쪽 거르기는 «그대로» 입니다 — 빼지 마십시오.
  */
 function genderOk(text: string, gender?: '남' | '여'): boolean {
   if (!gender) return true
@@ -123,7 +140,8 @@ export function readSomu(input: SomuInput): SomuResult {
   const blocks: SomuBlock[] = []
   if (!ch) return { chapter: null, stem: dayStem, monthBranch, season, presentStems, blocks }
 
-  const g = (arr: string[]) => arr.filter(t => genderOk(t, gender))
+  // ★상담사 화면에서는 «안» 거릅니다 (genderOk 머리말 참조). 손님 쪽만 거릅니다.
+  const g = (arr: string[]) => (forCustomer ? arr.filter(t => genderOk(t, gender)) : arr)
 
   // ── ① 개관 ────────────────────────────────────────────────
   {
@@ -165,30 +183,54 @@ export function readSomu(input: SomuInput): SomuResult {
     })
   }
 
-  // ── ② 天干論 — ★원국에 있는 천간만 ─────────────────────────
-  for (const stem of presentStems) {
-    const pair: SomuPair | undefined = ch.pairs.find(p => p.with === stem)
-    if (!pair) continue
-    const lines = g(pick(pair.lines, forCustomer))
-    if (!lines.length) continue
-    blocks.push({
-      key: `pair-${stem}`,
-      title: `天干論 — ${ch.stem} + ${stem}`,
-      source: '소무승 물상론 天干論',
-      lines,
-      img: pair.img,
-    })
+  // ── ② 天干論 ────────────────────────────────────────────────
+  //   ★2026-08-08 — 전에는 «원국에 있는 천간만» 폈습니다.
+  //     ⇒ 辛金 장에서 값으로 재니 ★일곱 짝 43줄이 «아예 안 나오고» 있었습니다.
+  //   [왜 바꿨나]  ① 대운·세운으로 그 천간이 «들어오면» 상담사가 봐야 합니다.
+  //               ② 교재에 있는데 화면에 없으면 상담사는 «없는 줄» 압니다.
+  //   ⇒ ★원국에 걸린 짝을 «먼저», 나머지 짝을 «그 뒤에» 전부 폅니다.
+  //     화면이 matched:false 를 ★접은 채로 아래에 둡니다.
+  //   ⛔ 손님 쪽(forCustomer)은 ★걸린 것만 갑니다 — 늘리지 마십시오.
+  {
+    const rest = ch.pairs.map(p => p.with).filter(s => !presentStems.includes(s))
+    for (const stem of [...presentStems, ...rest]) {
+      const matched = presentStems.includes(stem)
+      if (!matched && forCustomer) continue
+      const pair: SomuPair | undefined = ch.pairs.find(p => p.with === stem)
+      if (!pair) continue
+      const lines = g(pick(pair.lines, forCustomer))
+      if (!lines.length) continue
+      blocks.push({
+        key: `pair-${stem}`,
+        title: `天干論 — ${ch.stem} + ${stem}${matched ? '　★원국에 있음' : ''}`,
+        source: '소무승 물상론 天干論',
+        lines,
+        img: pair.img,
+        matched,
+      })
+    }
   }
 
-  // ── ③ 地支論 — ★걸린 계절 하나 ──────────────────────────────
-  if (season) {
-    const lines = g(pick(ch.seasons[season], forCustomer))
-    if (lines.length) {
+  // ── ③ 地支論 ────────────────────────────────────────────────
+  //   ★2026-08-08 — 전에는 «걸린 계절 하나» 만 폈습니다.
+  //     ⇒ 값으로 재니 ★나머지 세 계절 119줄이 안 나오고 있었습니다 (辛金 기준).
+  //   ⇒ 걸린 계절을 «먼저», 나머지 셋을 «그 뒤에».
+  //     ⚠️ 대운이 계절을 바꿔 짚을 때 상담사가 봐야 하는 자리입니다.
+  //   ⛔ 손님 쪽은 ★걸린 계절 하나만 — 그대로입니다.
+  {
+    const all = Object.keys(ch.seasons) as SomuSeasonKey[]
+    const order = season ? [season, ...all.filter(k => k !== season)] : all
+    for (const key of order) {
+      const matched = key === season
+      if (!matched && forCustomer) continue
+      const lines = g(pick(ch.seasons[key], forCustomer))
+      if (!lines.length) continue
       blocks.push({
-        key: `season-${season}`,
-        title: `地支論 — ${SEASON_LABEL[season]}`,
-        source: `소무승 물상론 地支論 · 월지 ${monthBranch}`,
+        key: `season-${key}`,
+        title: `地支論 — ${SEASON_LABEL[key]}${matched ? `　★월지 ${monthBranch}` : ''}`,
+        source: '소무승 물상론 地支論',
         lines,
+        matched,
       })
     }
   }
@@ -212,6 +254,7 @@ export function readSomu(input: SomuInput): SomuResult {
       blocks.push({
         key: `case-${c.label}`,
         title: `通辯論 — ${c.label}${same ? '  ★같은 계절' : ''}`,
+        matched: same,
         source: `${c.birth} · ${c.chart}`,
         lines: [
           `【원국】 ${c.chart}   【물상】 ${c.words.join(' · ')}`,
