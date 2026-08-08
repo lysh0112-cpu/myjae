@@ -36,7 +36,10 @@ import { judgeCheonganHap, judgeJijiHap } from '@/lib/saju/hapJudge'
 import { hapLines, findHap } from '@/lib/saju/hapMeaning'
 import { chungLines, findChung } from '@/lib/saju/chungMeaning'
 import { findRel, relLines, findSamhyeong } from '@/lib/saju/hyeongPaHae'
-import { calcYongsinNew, calcGyeokguk } from '@/lib/saju/yongsinNew'
+import { calcYongsinNew, calcGyeokguk, JIJANGAN } from '@/lib/saju/yongsinNew'
+// ★2026-08-08 — 지장간·납음을 펴며 더했습니다. 자료는 «이미» 있었습니다.
+//   ⛔ 표를 이 화면에 다시 적지 마십시오 — 사본이 둘 됩니다.
+import { nabeum } from '@/lib/saju/sajuDetail'
 import { calcCareerGyeokguk } from '@/lib/saju/career/gyeokguk'
 import { GYEOKGUK_INFO } from '@/lib/saju/career/tables/gyeokguk'
 import { YONGSIN_NOTE, YONGSIN_OHAENG, YONGSIN_YUKCHIN } from '@/lib/saju/career/tables/yongsin'
@@ -591,6 +594,53 @@ export default function SourceReading(p: Props) {
       if (items.length) G.push({ key: 'ohaeng', label: '오행 — 발달·과다·결핍·개운', items })
     }
 
+    // ── ⑯ 지장간(支藏干) — ★2026-08-08 신설 ────────────────────
+    //   ⚠️ 「아직 안 폈다」고 화면 아래에 적어 두고 ★여덟 부째 그대로였습니다.
+    //      자료는 lib/saju/yongsinNew.ts 의 JIJANGAN 에 «있었습니다».
+    //   ⛔⛔ ★사령(司令) — 「어느 지장간이 잡았는가」는 «안 폅니다».
+    //      splitJijanggan 이 ★절입일로부터 «경과 일수» 를 받아야 하는데
+    //      이 화면에는 절입 시각이 «없습니다». 없는 값을 짐작해 넣으면
+    //      ★교재가 하지 않은 판정이 됩니다.
+    //      □ 연재쌤 「지장간 날수 배분표(특히 午 10·9·11)」가 아직 대기 중입니다.
+    //   ⛔ 지장간 표를 여기에 «다시 적지» 마십시오 — JIJANGAN 을 부릅니다.
+    {
+      const items: Item[] = []
+      for (const pil of saju) {
+        if (!pil.branch || pil.branch === '?') continue
+        const hidden = JIJANGAN[pil.branch]
+        if (!hidden?.length) continue
+        // 교재 차례 그대로 — 여기(餘氣) · 중기(中氣) · 정기(正氣)
+        const stage = hidden.length === 3 ? ['여기(餘氣)', '중기(中氣)', '정기(正氣)'] : ['여기(餘氣)', '정기(正氣)']
+        items.push({
+          title: `${pil.pillar} ${pil.branch} — ${hidden.join(' · ')}`,
+          source: '지장간표',
+          lines: [
+            ...hidden.map((s, i) => `${stage[i] ?? ''} ${s}${s === dayStem ? '　★일간과 같은 글자' : ''}`),
+            hidden.includes(dayStem)
+              ? `★일간 ${dayStem} 이 ${pil.branch} 속에 «뿌리» 를 두고 있습니다.`
+              : '',
+          ].filter(Boolean),
+        })
+      }
+      if (items.length) G.push({ key: 'jijanggan', label: '지장간(支藏干)', items })
+    }
+
+    // ── ⑰ 납음오행(納音五行) — ★2026-08-08 신설 ────────────────
+    //   ⚠️ 자료는 lib/saju/sajuDetail.ts 의 nabeum() 에 «있었습니다».
+    //   ⛔ 60갑자 납음표를 여기에 «다시 적지» 마십시오. 사본이 둘 됩니다.
+    {
+      const lines = saju
+        .filter(x => x.stem !== '?' && x.branch !== '?')
+        .map(x => `${x.pillar} ${x.stem}${x.branch} — ${nabeum(x.stem, x.branch) || '—'}`)
+      if (lines.length) {
+        G.push({
+          key: 'nabeum',
+          label: '납음오행(納音五行)',
+          items: [{ title: '넉 기둥의 납음', source: '60갑자 납음표', lines }],
+        })
+      }
+    }
+
     return G
   }, [saju, dayStem, p.gender])
 
@@ -667,10 +717,12 @@ export default function SourceReading(p: Props) {
         fontSize: 10.5, color: '#a08d7d', textAlign: 'center',
         padding: '10px 6px', lineHeight: 1.7,
       }}>
-        지장간·12운성·납음은 아직 안 폈습니다. 필요하시면 말씀해 주세요.<br />
-        {/* ★2026-08-08 — 「60갑자 일주」를 이 줄에서 뺐습니다.
-            이미 위에 «펴져 있는데» 안 폈다고 적혀 있어 상담사가 없는 줄 알 수 있었습니다. */}
-        12운성은 🌿 물상 탭의 <b>十四 十二運星</b>에 교재 원문이 있습니다.
+        지장간·납음까지 폈습니다. <b>12운성</b>은 아직입니다 —<br />
+        {/* ★2026-08-08 — 「60갑자 일주」는 «이미 펴져» 있는데 안 폈다고 적혀 있었습니다.
+            지장간·납음은 이번에 폈습니다. ⛔ 12운성은 «순행·역행» 이 교재에 없어
+            계산해 채우면 교재가 안 한 판정이 됩니다. 연재쌤 대조 뒤에 하십시오. */}
+        교재에 순행·역행이 없어 <b>지어 채우지 않았습니다</b>.
+        장생지 원문은 🌿 물상 탭 <b>十四 十二運星</b>에 있습니다.
       </div>
     </div>
   )
