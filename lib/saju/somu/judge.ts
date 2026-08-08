@@ -29,7 +29,7 @@
 //     通辯論 사례는 to 와 무관하게 ★손님 쪽에서 통째로 빠집니다 (실존 인물 사생활).
 
 import {
-  SOMU_CHAPTERS, SEASON_OF, SEASON_LABEL,
+  SOMU_CHAPTERS, SEASON_OF, SEASON_LABEL, SOMU_SHOW_CASES,
   type SomuChapter, type SomuLine, type SomuPair, type SomuCase, type SomuSeasonKey,
 } from './data'
 
@@ -235,11 +235,14 @@ export function readSomu(input: SomuInput): SomuResult {
     }
   }
 
-  // ── ④ 通辯論 사례 — ⛔ 손님 쪽에서는 «통째로» 빠집니다 ──────────
-  //   ⚠️ ★계절이 «맞는» 사례를 위로 올립니다 (乙木은 사례가 열이라 다 붙으면 깁니다).
-  //   ⛔ 사례를 «지우지» 마십시오 — 교재에 있는 것을 상담사가 못 보면 안 됩니다.
-  //      ★차례만 바꿉니다. 안 맞는 사례도 아래에 그대로 남습니다.
-  if (!forCustomer) {
+  // ── ④ 通辯論 사례 ─────────────────────────────────────────────
+  //   ⛔ 손님 쪽에서는 «통째로» 빠집니다 — ★이 문지기는 그대로입니다.
+  //   🔴 ★2026-08-08 — 상담사 쪽에서도 «안 냅니다» [대표님·연재쌤 「너무 무겁고 불필요」].
+  //      ⛔⛔ ★자료는 «한 줄도» 안 지웠습니다. ch.cases 는 그대로 있습니다.
+  //         되살리시려면 ★data.ts 의 SOMU_SHOW_CASES 를 true 로 «한 줄» 만.
+  //      ⚠️ 아래 «계절이 맞는 사례를 위로» 는 그대로 두었습니다 —
+  //         스위치를 켜면 예전처럼 돕니다.
+  if (!forCustomer && SOMU_SHOW_CASES) {
     const seasonOfCase = (c: SomuCase): SomuSeasonKey | null => {
       // 교재 표기는 ★«시일월년» 차례라 월주가 «셋째» 입니다
       const wol = c.chart.split('/')[2]?.trim() ?? ''

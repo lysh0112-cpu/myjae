@@ -60,6 +60,7 @@ import {
   BYEONJEUNG, BYEONJEUNG_TITLE, BYEONJEUNG_PAGES,
   SCAN_NOTES as BYEONJEUNG_NOTES,
 } from './byeonjeung/data'
+import { SOMU_SHOW_CASES } from './data'
 import type { SomuLine } from './data'
 import type { SomuPillar } from './judge'
 
@@ -265,7 +266,10 @@ function readHyeongsang(forCustomer: boolean): SomuTopicGroup {
       lines: head,
     })
     // 사례 — ⛔ 손님 쪽에서는 통째로 빠집니다
-    if (forCustomer) continue
+    //   🔴 ★2026-08-08 — 상담사 쪽에서도 «안 냅니다» [대표님·연재쌤 「너무 무겁고 불필요」].
+    //      ⛔⛔ ★자료(h.cases)는 «한 줄도» 안 지웠습니다.
+    //         되살리시려면 data.ts 의 SOMU_SHOW_CASES 를 true 로.
+    if (forCustomer || !SOMU_SHOW_CASES) continue
     h.cases.forEach((c, i) => {
       blocks.push({
         key: `hyeongsang-${h.name}-case-${i}`,
@@ -320,7 +324,9 @@ function readByeonjeung(saju: SomuPillar[], forCustomer: boolean): SomuTopicGrou
       for (const f of r.formula ?? []) lines.push(`　▸ ${f}`)
     }
     if (b.summary) lines.push(`※ ${b.summary}`)
-    if (!forCustomer) {
+    // 🔴 ★2026-08-08 — 예시 원국 상자를 «안 냅니다» (위와 같은 까닭).
+    //   ⛔ b.cases 자료는 그대로입니다. SOMU_SHOW_CASES 한 줄로 되살아납니다.
+    if (!forCustomer && SOMU_SHOW_CASES) {
       for (const c of b.cases) {
         lines.push(
           `【원국】 ${c.chart}`
