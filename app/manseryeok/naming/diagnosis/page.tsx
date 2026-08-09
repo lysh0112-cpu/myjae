@@ -10,7 +10,7 @@ import type { DiagnoseResult, NameChar } from '@/lib/saju/naming'
 // ★2026-07-30 (3단계) — hanja 표 읽기 단일 창구. 2단계 DB 컬럼을 하위호환으로 읽습니다.
 import {
   HANJA_SELECT, isAvoidChar as isAvoidCharShared,
-  rowOhaeng, rowStrokes, rowHanja, type HanjaRow,
+  rowOhaeng, rowStrokes, rowHanja, toNameChar, type HanjaRow,
   fetchHanjaReadings,
 } from '@/lib/saju/hanjaRow'
 // ★2026-07-31 (40부 3차) 두음법칙 안내 — «판정은 바꾸지 않습니다» (교재는 표기음 그대로)
@@ -32,6 +32,8 @@ import { dueumPairIfReal, dueumNotice } from '@/lib/saju/sound/dueum'
 import { surnameRank } from '@/lib/saju/surnameHanja'
 // ★2026-08-09 — 성씨 칸 거르기 (대표님 510 목록)
 import { isSurnameAllowed, shouldFilterSurname } from '@/lib/saju/surnameAllowed'
+// ★2026-08-10 — 복성(두 글자 성씨)을 «한 장으로» 고르기 [대표님 지시]
+import { findCompoundSurname, type CompoundSurname } from '@/lib/saju/surname'
 // ★2026-08-01 (41부 Step 3 · UI) — 사주 요약 · 이름에 담을 기운 · 명리적성
 import NamingSajuSummary from './components/NamingSajuSummary'
 import NamingAptitude from './components/NamingAptitude'
@@ -207,6 +209,19 @@ function PitchHeader({ title, onBack, onHome }: { title: string; onBack: () => v
   )
 }
 
+
+// ══════════════════════════════════════════════════════════════════
+//  ★2026-08-10 — 앞 두 소리가 «복성» 인가 [대표님 지시]
+//
+//   ⚠️ 판단은 lib/saju/surname.ts «한 곳» 만 봅니다 (findCompoundSurname).
+//      ⛔ 여기에 복성 목록을 다시 적지 마십시오 — 두 벌이 되면 갈립니다.
+//   ⚠️ 한글만으로 봅니다 — 한자를 아직 안 고르신 때에 부르기 때문입니다.
+// ══════════════════════════════════════════════════════════════════
+function compoundOf(syllables: string[]): CompoundSurname | null {
+  if (syllables.length < 3) return null   // ★성 두 자 + 이름 한 자는 되어야 합니다
+  return findCompoundSurname({ hangul: syllables[0] }, { hangul: syllables[1] })
+}
+
 function DiagnosisInner() {
   const router = useRouter()
   const sp = useSearchParams()
@@ -299,6 +314,16 @@ function DiagnosisInner() {
   const [nameInput, setNameInput] = useState('')
   const [syllables, setSyllables] = useState<string[]>([])
   const [chars, setChars] = useState<(NameChar | null)[]>([])
+  /**
+   * ★2026-08-10 — 복성 한 쌍 (대표님 지시 「두 글자를 같이 고르도록」)
+   *
+   *  ⚠️⚠️ 두 글자를 «한 칸» 에 담는 것이 «아닙니다».
+   *     한 번 눌러 ★두 칸을 «함께 채웁니다». 칸은 그대로 둘입니다.
+   *     ⛔ 한 칸에 「南宮」을 넣지 마십시오 — 획수·수리 4격이 통째로 어긋납니다.
+   *  ⚠️ 판정은 이미 맞게 돌고 있었습니다 — /api/naming 이 splitSurname 으로
+   *     다시 가릅니다 (route.ts:101). ★이번에 고친 것은 «고르는 길» 뿐입니다.
+   */
+  const [compoundRows, setCompoundRows] = useState<{ a: HanjaRow; b: HanjaRow } | null>(null)
   /**
    * ★2026-08-01 (43부 26차) — 보관함에서 열었을 때 «작명 기록인가» (대표님 지적)
    *
@@ -496,6 +521,47 @@ function DiagnosisInner() {
   }
 
   async function openPicker(idx: number) {
+    // ══════════════════════════════════════════════════════════════
+    //  ★2026-08-10 — 복성이면 «앞 두 칸» 을 한 번에 엽니다 [대표님 지시]
+    //
+    //   「남궁민수」에서 남·궁을 «따로» 고르시게 하던 것을
+    //   ★「南宮」 한 장으로 고르시게 합니다.
+    //   ⚠️ 어느 칸을 누르셔도 ★0번 칸으로 모읍니다 — 같은 성이니 창이 둘일 까닭이 없습니다.
+    //   ⚠️ 두 글자 가운데 «하나라도» 표에서 못 찾으면 ★예전처럼 낱글자로 고르게 둡니다.
+    //      (막아 버리면 그 집안이 아예 못 넘어갑니다)
+    // ══════════════════════════════════════════════════════════════
+    const comp = compoundOf(syllables)
+    if (comp && idx <= 1) {
+      setPickerIdx(0)
+      setSearching(true)
+      setCompoundRows(null)
+      try {
+        const [g1, g2] = [...comp.hangul]
+        const [h1, h2] = [...comp.hanja]
+        const { data, error } = await supabase
+          .from('hanja')
+          .select(HANJA_SELECT)
+          .in('hangul', [g1, g2])
+        if (!error && data) {
+          const rows = data as HanjaRow[]
+          const a = rows.find((r) => r.hangul === g1 && rowHanja(r) === h1)
+          const b = rows.find((r) => r.hangul === g2 && rowHanja(r) === h2)
+          if (a && b) {
+            setCompoundRows({ a, b })
+            setHanjaList([])
+            setSearching(false)
+            return
+          }
+          // ⚠️ 못 찾았습니다 — 낱글자 고르기로 «내려갑니다». 아래로 이어집니다.
+          console.warn('복성 한자를 표에서 못 찾았습니다 — 낱글자로 고릅니다', comp.hanja)
+        }
+      } catch (e) {
+        console.error(e)
+      }
+      setSearching(false)
+    }
+
+    setCompoundRows(null)
     setPickerIdx(idx)
     const hangul = syllables[idx]
     if (!hangul) { setHanjaList([]); return }
@@ -514,6 +580,18 @@ function DiagnosisInner() {
     } finally {
       setSearching(false)
     }
+  }
+
+  /** ★두 칸을 «함께» 채웁니다. 한 칸에 두 글자를 넣지 «않습니다» */
+  function pickCompound(a: HanjaRow, b: HanjaRow) {
+    const next = [...chars]
+    next[0] = toNameChar(a) as NameChar
+    next[1] = toNameChar(b) as NameChar
+    setChars(next)
+    setPickerIdx(null)
+    setCompoundRows(null)
+    // ⚠️ 두음 안내는 «단성» 자리의 것입니다 — 복성은 표기가 하나라 띄우지 않습니다.
+    setDueumMsg(null)
   }
 
   function pickHanja(row: HanjaRow) {
@@ -805,7 +883,13 @@ function DiagnosisInner() {
       ? `일간 ${dayStem} · ${info.calType} ${info.year}.${info.month}.${info.day}${info.calType === '음력' && info.leapMonth === '1' ? ' (윤달)' : ''}`
       : '저장된 이름 풀이')
 
-  const slotLabel = (i: number) => i === 0 ? '성(姓)' : `이름 ${i}글자`
+  // ★2026-08-10 — 복성이면 «앞 두 칸» 이 성입니다 [대표님 지시]
+  //   ⚠️ 전에는 「궁」 칸에 «이름 1글자» 라고 적혀 있었습니다.
+  //      판정은 맞게 돌고 있었는데 ★화면 글자만 틀렸습니다 (/api/naming 이 다시 가릅니다).
+  const compound = compoundOf(syllables)
+  const surCount = compound ? 2 : 1
+  const slotLabel = (i: number) =>
+    i < surCount ? '성(姓)' : `이름 ${i - surCount + 1}글자`
 
   // ══════════════════════════════════════════════════════════════
   //  ★2026-08-02 — 성씨 칸은 «거르지 않습니다» (대표님 지시 ①②)
@@ -941,7 +1025,7 @@ function DiagnosisInner() {
                     //   ⚠️ 성씨 칸(i===0) 자신은 «언제나» 열려 있습니다 —
                     //      잠그면 열 길이 없어집니다.
                     // ══════════════════════════════════════════════════
-                    const locked = i > 0 && !chars[0]
+                    const locked = i >= surCount && !chars[0]   // ★복성이면 앞 두 칸이 성
                     return (
                       <div key={i} style={{ textAlign: 'center' }}>
                         <button
@@ -1315,7 +1399,7 @@ function DiagnosisInner() {
 
       {pickerIdx !== null && (
         <div
-          onClick={() => { setPickerIdx(null); setHanjaList([]) }}
+          onClick={() => { setPickerIdx(null); setHanjaList([]); setCompoundRows(null) }}
           style={{
             position: 'fixed', inset: 0, background: 'rgba(40,28,22,0.35)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px',
@@ -1328,20 +1412,63 @@ function DiagnosisInner() {
               maxHeight: '80vh', display: 'flex', flexDirection: 'column',
             }}>
             <div style={{ fontSize: '15px', fontWeight: 'bold', color: gold, marginBottom: '4px' }}>
-              &lsquo;{syllables[pickerIdx]}&rsquo; {isSurnameSlot ? '성씨 한자 고르기' : '한자 고르기'}
+              {compoundRows
+                ? `‘${compound?.hangul}’ 성씨 한자 고르기`
+                : <>&lsquo;{syllables[pickerIdx]}&rsquo; {isSurnameSlot ? '성씨 한자 고르기' : '한자 고르기'}</>}
             </div>
             {/* ★2026-08-02 — 성씨 칸에서는 «거르지 않았다» 는 것을 밝혀 둡니다.
                 ⚠️ 낯선 글자가 함께 보이는 것이 «잘못» 이 아니라는 것을 알려야
                    손님이 「왜 이런 게 나오지」 하고 헤매지 않으십니다. */}
             <div style={{ fontSize: '11px', color: '#5c3a1e', marginBottom: '14px', lineHeight: 1.6 }}>
-              {isSurnameSlot
-                ? '집안에서 쓰시는 한자를 골라주세요. 흔한 성씨 한자가 위에 있어요'
-                : '\u00a0'}
+              {compoundRows
+                ? '두 글자 성씨예요. 한 번 누르면 두 글자가 함께 채워져요'
+                : isSurnameSlot
+                  ? '집안에서 쓰시는 한자를 골라주세요. 흔한 성씨 한자가 위에 있어요'
+                  : '\u00a0'}
             </div>
 
             <div style={{ overflowY: 'auto', flex: 1 }}>
               {searching && <div style={{ textAlign: 'center', color: '#5c3a1e', padding: '20px' }}>찾는 중...</div>}
-              {!searching && hanjaList.length === 0 && (
+
+              {/* ══════════════════════════════════════════════════════
+                  ★2026-08-10 — 복성 «한 장» [대표님 지시]
+                    「지금은 한자를 따로 고르는 것을, 두 글자를 같이 고르도록」
+                  ⚠️ 눌러도 «한 칸에 두 글자» 가 들어가지 «않습니다» —
+                     pickCompound 가 ★두 칸을 각각 채웁니다. 획수가 살아 있습니다.
+                  ⚠️ 복성은 표기가 하나뿐이라 «고를 것이 한 장» 입니다.
+                     그래도 «보여 드리고 누르게» 합니다 — 성씨는 손님이 고르는 것입니다 (43부).
+                  ══════════════════════════════════════════════════════ */}
+              {!searching && compoundRows && (
+                <button
+                  onClick={() => pickCompound(compoundRows.a, compoundRows.b)}
+                  className="active:scale-95"
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: '14px',
+                    padding: '16px 14px', borderRadius: '14px', background: '#fffbf7',
+                    border: LINE_OUTER, cursor: 'pointer', textAlign: 'left',
+                    transition: 'transform 0.15s ease',
+                  }}>
+                  <span style={{
+                    fontSize: '34px', fontWeight: 'bold', color: gold,
+                    letterSpacing: '2px', lineHeight: 1.1, minWidth: '80px', textAlign: 'center',
+                  }}>
+                    {rowHanja(compoundRows.a)}{rowHanja(compoundRows.b)}
+                  </span>
+                  <span style={{ flex: 1 }}>
+                    <span style={{ display: 'block', fontSize: '13px', color: '#5c3a1e', fontWeight: 'bold' }}>
+                      {compoundRows.a.hangul}{compoundRows.b.hangul} · 두 글자 성씨
+                    </span>
+                    <span style={{ display: 'block', fontSize: '11px', color: '#5c3a1e', marginTop: '5px', lineHeight: 1.6 }}>
+                      {rowHanja(compoundRows.a)} {rowOhaeng(compoundRows.a) ?? ''}·{rowStrokes(compoundRows.a)}획
+                      {' / '}
+                      {rowHanja(compoundRows.b)} {rowOhaeng(compoundRows.b) ?? ''}·{rowStrokes(compoundRows.b)}획
+                      {' → 성 '}{rowStrokes(compoundRows.a) + rowStrokes(compoundRows.b)}획
+                    </span>
+                  </span>
+                </button>
+              )}
+
+              {!searching && !compoundRows && hanjaList.length === 0 && (
                 <div style={{ textAlign: 'center', color: '#5c3a1e', padding: '20px', fontSize: '13px' }}>
                   &lsquo;{syllables[pickerIdx]}&rsquo; 음의 인명용 한자를 찾을 수 없어요
                 </div>

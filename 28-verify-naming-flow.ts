@@ -1488,8 +1488,13 @@ console.log('\n━━ ㉑-b 🔴 성씨 칸에서는 «거르지 않는가» (�
 console.log('\n━━ ㉑-c ★성씨를 고르기 «전» 에는 이름 칸이 잠기는가 ━━')
 {
   const diag = codeOf(read('app/manseryeok/naming/diagnosis/page.tsx'))
-  check(/const locked = i > 0 && !chars\[0\]/.test(diag),
+  // ★2026-08-10 — 복성 대응으로 「i > 0」 이 「i >= surCount」 가 되었습니다.
+  //   ⚠️ 뜻은 그대로입니다 — «성씨 칸을 뺀 나머지» 를 잠급니다.
+  //      복성이면 surCount 가 2 라 앞 두 칸이 성씨입니다.
+  check(/const locked = i >= surCount && !chars\[0\]/.test(diag),
     `★성씨가 비면 이름 칸이 잠깁니다`)
+  check(/const surCount = compound \? 2 : 1/.test(diag),
+    `★복성이면 앞 «두 칸» 이 성씨입니다`)
   check(/disabled=\{locked\}/.test(diag) && /opacity: locked \? 0\.4 : 1/.test(diag),
     `★잠긴 칸은 흐리고 «눌리지 않습니다»`)
   check(/먼저 <b>성씨 한자<\/b>를 골라주세요/.test(diag),
@@ -1498,7 +1503,22 @@ console.log('\n━━ ㉑-c ★성씨를 고르기 «전» 에는 이름 칸이 
   check(!/setChars\(\[\]\)/.test(diag) || !/locked[\s\S]{0,200}setChars\(\[\]\)/.test(diag),
     `⚠️ 잠글 때 이미 고른 이름 글자를 «지우지» 않습니다`)
   // ★성씨 칸 자신은 «언제나» 열려 있어야 합니다 — 잠그면 열 길이 없습니다
-  check(/i > 0/.test(diag), `★성씨 칸(i===0)은 언제나 열려 있습니다`)
+  check(/i >= surCount/.test(diag), `★성씨 칸(i < surCount)은 언제나 열려 있습니다`)
+
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-10 ㉑-c-2 — 복성을 «한 장으로» 고르는가 [대표님 지시]
+  //    「지금은 한자를 따로 고르는 것을, 두 글자를 같이 고르도록」
+  // ══════════════════════════════════════════════════════════════
+  check(/function pickCompound\(/.test(diag), `★복성 고르기 pickCompound 가 있습니다`)
+  // ⛔⛔ 한 칸에 두 글자를 «넣지» 않습니다 — 두 칸을 각각 채웁니다
+  check(/next\[0\] = toNameChar\(a\)[\s\S]{0,120}next\[1\] = toNameChar\(b\)/.test(diag),
+    `⛔ 한 칸에 두 글자를 넣지 않고 ★두 칸을 각각 채웁니다 (획수 보존)`)
+  // ⚠️ 복성 판단은 surname.ts «한 곳» 만 봅니다 — 목록을 다시 적지 않았는가
+  check(/findCompoundSurname/.test(diag) && !/南宮/.test(diag),
+    `★복성 목록을 화면에 다시 적지 않았습니다 (surname.ts 단일 창구)`)
+  // ⚠️ 두 글자 가운데 하나라도 못 찾으면 «낱글자» 로 내려가야 합니다 (막지 않기)
+  check(/낱글자로 고릅니다/.test(diag),
+    `⚠️ 표에서 못 찾으면 ★낱글자 고르기로 내려갑니다 (막지 않습니다)`)
 }
 
 console.log('\n━━ ㉑-d ★성씨 표 차례 — 통계청 인구수 순인가 (대표님 확정) ━━')
