@@ -22,6 +22,8 @@ import {
 import { dueumPairIfReal, dueumNotice } from '@/lib/saju/sound/dueum'
 // ★2026-08-01 (43부 23차) — 성씨는 «전용 표» 를 씁니다 (이름용 잣대로 거르지 않습니다)
 import { surnameHanjaOf, surnameRank } from '@/lib/saju/surnameHanja'
+// ★2026-08-09 — 성씨 칸 거르기 (대표님 510 목록) · diagnosis 와 «같은 규칙»
+import { isSurnameAllowed, shouldFilterSurname } from '@/lib/saju/surnameAllowed'
 // ★2026-08-01 (43부 6차) — 「한 번에 이름 하나」 정책 (대표님 확정)
 //   ⚠️ 부품은 두고 «배선만» 끊었습니다. lib/saju/namingPolicy.ts 의 값 하나로 되돌아옵니다.
 import { clampTryLimit, isSingleName } from '@/lib/saju/namingPolicy'
@@ -661,7 +663,14 @@ function NewHanjaInner() {
     // ══════════════════════════════════════════════════════════
     if (slots[activeIdx]?.role === '성') {
       const h = slots[activeIdx].hangul
-      const bySurname = [...scored].sort((a, b) =>
+      // ★2026-08-09 — 성씨 칸은 «510 목록에 있는 것만» [대표님 지시]
+      //   ⚠️ 정밀분석(diagnosis)과 «같은 규칙» 입니다. 한쪽만 고치지 마십시오.
+      //   ⚠️ 목록에 그 소리가 아예 없으면 거르지 않습니다 (아래 known 빈 자리 처리와 이어집니다).
+      const scopedAll = shouldFilterSurname(h)
+        ? scored.filter((x) => isSurnameAllowed(h, rowHanja(x.row)))
+        : scored
+      const scoped = scopedAll.length > 0 ? scopedAll : scored
+      const bySurname = [...scoped].sort((a, b) =>
         surnameRank(h, rowHanja(a.row)) - surnameRank(h, rowHanja(b.row))
         || rowStrokes(a.row) - rowStrokes(b.row))
       let known = bySurname.filter((x) => surnameRank(h, rowHanja(x.row)) < 999)

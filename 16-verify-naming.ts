@@ -878,23 +878,33 @@ head('⑧-d ★복성 · 3글자 이상 · 순화 해설 (2026-07-31 3차)')
   // ── 복성 목록
   const bookCnt = COMPOUND_SURNAMES.filter(x => x.source === 'book').length
   const extraCnt = COMPOUND_SURNAMES.filter(x => x.source === 'extra').length
+  // ★2026-08-09 대표님 지시 — 어금·순우·즙수·부여를 걷었습니다 (교재 밖 7 → 3 · 합계 27 → 23)
   check(bookCnt === 20, `교재 139~150쪽 복성 ${bookCnt}개 (20)`)
-  check(extraCnt === 7, `교재 밖 복성 ${extraCnt}개 (7)`)
-  check(COMPOUND_SURNAMES.length === 27, `복성 합계 ${COMPOUND_SURNAMES.length}개 (27)`)
-  check(new Set(COMPOUND_SURNAMES.map(x => x.hangul)).size === 27, `한글 표기 겹침 없음`)
-  check(new Set(COMPOUND_SURNAMES.map(x => x.hanja)).size === 27, `한자 표기 겹침 없음`)
+  check(extraCnt === 3, `교재 밖 복성 ${extraCnt}개 (★3)`)
+  check(COMPOUND_SURNAMES.length === 23, `복성 합계 ${COMPOUND_SURNAMES.length}개 (★23)`)
+  check(new Set(COMPOUND_SURNAMES.map(x => x.hangul)).size === 23, `한글 표기 겹침 없음`)
+  check(new Set(COMPOUND_SURNAMES.map(x => x.hanja)).size === 23, `한자 표기 겹침 없음`)
   check(!!COMPOUND_SURNAMES.find(x => x.hangul === '망절'), `교재 밖 — 망절(網切) 등재`)
-  check(!!COMPOUND_SURNAMES.find(x => x.hangul === '순우'), `교재 밖 — 순우(淳于) 등재`)
-  // ★6차 대표님 확정
-  check(!!COMPOUND_SURNAMES.find(x => x.hangul === '명림' && x.hanja === '明臨' && x.bookStrokes === 25),
-    `25획 성 — 명림(明臨) 등재`)
+  // ★걷어낸 넷이 «되살아나지» 않았는가 — 다음 세션이 넣기 쉬운 자리입니다
+  for (const h of ['어금', '순우', '즙수', '부여'])
+    check(!COMPOUND_SURNAMES.find(x => x.hangul === h),
+      `★${h} 은(는) 걷어낸 채입니다 (2026-08-09 대표님 지시)`)
+  // ★6차 대표님 확정 · ★2026-08-09 표기를 «명임» 으로 통일
+  check(!!COMPOUND_SURNAMES.find(x => x.hangul === '명임' && x.hanja === '明臨' && x.bookStrokes === 25),
+    `25획 성 — ★명임(明臨) 등재`)
+  check(!COMPOUND_SURNAMES.some(x => (x.altHangul ?? []).includes('명림')),
+    `★「명림」 갈래 표기를 걷었습니다 (대표님 지시)`)
+  // ★이선은 以先 입니다 (엑셀의 以仙 이 아닙니다) — 대표님 확정
+  check(!!COMPOUND_SURNAMES.find(x => x.hangul === '이선' && x.hanja === '以先'),
+    `★이선 = 以先 (以仙 아님)`)
   check(!COMPOUND_SURNAMES.find(x => x.hanja === '明衛'), `★명위(明衛)는 제 오독이라 뺐습니다`)
   // 한글 읽기가 갈려도 잡혀야 합니다
   const mkc = (h: string, j: string) => ({ hangul: h, hanja: j })
+  check(splitSurname([mkc('명', '明'), mkc('임', '臨'), mkc('가', '佳')]).surname.length === 2,
+    `★명임 — 복성으로 잡힘`)
+  // ★한자로도 잡힙니다 — 한글을 뭐라 읽든 明臨 이면 복성입니다
   check(splitSurname([mkc('명', '明'), mkc('림', '臨'), mkc('가', '佳')]).surname.length === 2,
-    `명림 — 복성으로 잡힘`)
-  check(splitSurname([mkc('명', '?'), mkc('임', '?'), mkc('가', '?')]).surname.length === 2,
-    `★명임으로 읽어도 잡힙니다 (altHangul)`)
+    `★한자(明臨)로도 잡힙니다`)
   check(!!COMPOUND_SURNAMES.find(x => x.hanja === '令孤'), `13획 성 — 영고(令孤)`)
   check(!COMPOUND_SURNAMES.find(x => x.hanja === '令狐'), `★영호(令狐)는 교재에 없어 뺐습니다`)
 

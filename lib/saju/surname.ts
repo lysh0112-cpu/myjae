@@ -22,6 +22,24 @@
 //    ⚠️ 제가 스캔에서 「남입(南臨)」으로 흐리게 읽던 자리입니다.
 //       臨 은 맞았고 앞 글자를 南 으로 잘못 봤습니다. 대표님 판독으로 明 확정.
 //       한글 읽기가 명림/명임으로 갈릴 수 있어 altHangul 로 둘 다 받습니다.
+//
+// ══════════════════════════════════════════════════════════════════
+//  ★2026-08-09 — 대표님 지시로 «성씨 자료를 엑셀에 맞췄습니다»
+//    근거 : ___통합_인명용한자_성씨.xlsx (복성 23)
+//
+//    ① 「어금 魚金 · 순우 淳于 · 즙수 汁水 · 부여 扶餘 는 성씨 자료에서 삭제」
+//       ⇒ 교재 밖 복성이 ★7 → 3 (강전·망절·소봉) · 합계 ★27 → 23 이 되었습니다.
+//       ⛔⛔ 되살리지 마십시오. 다음 세션이 「빠졌네」 하고 넣기 쉬운 자리입니다.
+//          ⚠️ lib/saju/surnameHanja.ts 의 「어금」도 함께 걷었습니다.
+//       ⚠️ 이제 「부여○○」는 복성으로 «안» 갈립니다 — 단성 「부」 로 봅니다.
+//
+//    ② 「명림 => 명임 으로」  ⇒ hangul 을 명임 으로 두고 altHangul 을 걷었습니다.
+//
+//    ③ 「이선은 以先이 맞다」  ⇒ ★이 파일이 맞았습니다. 그대로 두었습니다.
+//       ⚠️ 엑셀 쪽이 以仙 으로 되어 있습니다 — ★엑셀을 고치셔야 합니다.
+//
+//    ⚠️ 이제 이 표(23)와 엑셀 복성(23)이 «수와 내용이 같습니다» — 以仙 한 곳만 빼고.
+// ══════════════════════════════════════════════════════════════════
 
 export interface CompoundSurname {
   /** 한글 두 글자 — 예: "남궁" */
@@ -59,19 +77,18 @@ export const COMPOUND_SURNAMES: CompoundSurname[] = [
   { hangul: "선우", hanja: "鮮于", bookStrokes: 20, source: "book" },
   { hangul: "부정", hanja: "負鼎", bookStrokes: 22, source: "book" },
   { hangul: "독고", hanja: "獨孤", bookStrokes: 25, source: "book" },
-  { hangul: "명림", hanja: "明臨", bookStrokes: 25, source: "book",
-    altHangul: ["명임"], note: "明8 + 臨17 = 25획 — 교재 25획 성과 맞습니다" },
+  // ★2026-08-09 대표님 지시 「명림 => 명임 으로」 — 표기를 «명임» 으로 확정했습니다.
+  //   ⚠️ altHangul(「명림」)을 «걷었습니다». 이제 「명림」으로 적으면 복성으로 «안» 갈립니다.
+  //      ⛔ 되살리지 마십시오. 대표님이 표기를 하나로 정하신 자리입니다.
+  { hangul: "명임", hanja: "明臨", bookStrokes: 25, source: "book",
+    note: "明8 + 臨17 = 25획 — 교재 25획 성과 맞습니다 · 표기는 명임 (2026-08-09 확정)" },
   { hangul: "제갈", hanja: "諸葛", bookStrokes: 31, source: "book" },
 
-  // ── 교재 밖 — 실제 쓰이는 복성 (8)
+  // ── 교재 밖 — 실제 쓰이는 복성 (★3)
   //    ★bookStrokes 를 비웠습니다. 획수는 DB 원획을 씁니다.
-  { hangul: "어금", hanja: "魚金", bookStrokes: null, source: "extra" },
   { hangul: "강전", hanja: "岡田", bookStrokes: null, source: "extra" },
   { hangul: "망절", hanja: "網切", bookStrokes: null, source: "extra" },
   { hangul: "소봉", hanja: "小峰", bookStrokes: null, source: "extra" },
-  { hangul: "순우", hanja: "淳于", bookStrokes: null, source: "extra" },
-  { hangul: "즙수", hanja: "汁水", bookStrokes: null, source: "extra" },
-  { hangul: "부여", hanja: "扶餘", bookStrokes: null, source: "extra" },
 ];
 
 const BY_HANGUL = new Map<string, CompoundSurname>();

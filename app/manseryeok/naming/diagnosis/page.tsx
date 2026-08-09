@@ -30,6 +30,8 @@ import { dueumPairIfReal, dueumNotice } from '@/lib/saju/sound/dueum'
 //     28-verify 의 ㉑ 그물이 이제 «세 창구» 를 함께 셉니다.
 // ══════════════════════════════════════════════════════════════════
 import { surnameRank } from '@/lib/saju/surnameHanja'
+// ★2026-08-09 — 성씨 칸 거르기 (대표님 510 목록)
+import { isSurnameAllowed, shouldFilterSurname } from '@/lib/saju/surnameAllowed'
 // ★2026-08-01 (41부 Step 3 · UI) — 사주 요약 · 이름에 담을 기운 · 명리적성
 import NamingSajuSummary from './components/NamingSajuSummary'
 import NamingAptitude from './components/NamingAptitude'
@@ -817,11 +819,26 @@ function DiagnosisInner() {
   //      드문 집안 글자가 이 표에 없을 수 있습니다. 막으면 그 집안이 못 씁니다.
   //   ⚠️ 획수 차례는 «그 다음» 입니다 — 성씨가 아닌 것끼리는 예전 그대로입니다.
   // ══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-09 — 성씨 칸은 «510 목록에 있는 것만» 보입니다 [대표님 지시]
+  //
+  //   🔴 [무엇이 있었나]  「류」를 고르면 柳·劉 뒤에
+  //      硫(유황)·瘤(군더더기,혹)·謬(그릇될)·遛·瀏 가 줄줄이 따라 나왔습니다.
+  //      성씨가 아닌 글자입니다. hanja 표에서 «그 소리를 전부» 꺼냈기 때문입니다.
+  //   ⇒ lib/saju/surnameAllowed.ts 의 510자로 거릅니다.
+  //   ⚠️ 목록에 그 «소리» 가 아예 없으면 거르지 «않습니다» —
+  //      거르면 그 손님이 성씨를 하나도 못 골라 다음으로 못 넘어갑니다.
+  //      (귀화 성씨·드문 본관. shouldFilterSurname 주석을 보십시오)
+  //   ⛔ 거르기를 이 화면에 «다시 적지» 마십시오. surnameAllowed.ts 한 곳입니다.
+  // ══════════════════════════════════════════════════════════════
   const isSurnameSlot = pickerIdx === 0
   const surnameSorted = (() => {
     if (!isSurnameSlot) return hanjaList
     const syl = syllables[0] ?? ''
-    return [...hanjaList].sort((a, b) => {
+    const picked = shouldFilterSurname(syl)
+      ? hanjaList.filter((r) => isSurnameAllowed(syl, rowHanja(r)))
+      : hanjaList
+    return [...picked].sort((a, b) => {
       const ra = surnameRank(syl, rowHanja(a))
       const rb = surnameRank(syl, rowHanja(b))
       if (ra !== rb) return ra - rb
