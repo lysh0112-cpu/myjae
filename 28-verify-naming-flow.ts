@@ -1519,6 +1519,29 @@ console.log('\n━━ ㉑-c ★성씨를 고르기 «전» 에는 이름 칸이 
   // ⚠️ 두 글자 가운데 하나라도 못 찾으면 «낱글자» 로 내려가야 합니다 (막지 않기)
   check(/낱글자로 고릅니다/.test(diag),
     `⚠️ 표에서 못 찾으면 ★낱글자 고르기로 내려갑니다 (막지 않습니다)`)
+
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-10 ㉑-c-3 — 신생아 작명(newhanja)도 «같은 규칙» 인가
+  //    ⚠️ 두 화면이 갈리면 「정밀분석은 한 장인데 작명은 두 번」이 됩니다.
+  // ══════════════════════════════════════════════════════════════
+  {
+    const nh = codeOf(read('app/manseryeok/naming/rename/newhanja/page.tsx'))
+    check(/function pickCompound\(/.test(nh), `★작명도 복성 고르기가 있습니다`)
+    // ⛔⛔ 한 칸에 두 글자를 «넣지» 않습니다 — 두 칸을 각각 채웁니다
+    check(/setChosen\(\(prev\) => \(\{ \.\.\.prev, 0: a, 1: b \}\)\)/.test(nh),
+      `⛔ 작명도 ★두 칸을 각각 채웁니다 (한 칸에 두 글자 아님)`)
+    check(/findCompoundSurname/.test(nh) && !/南宮/.test(nh),
+      `★작명도 복성 목록을 다시 적지 않았습니다 (surname.ts 단일 창구)`)
+    // ⚠️ 낱글자 목록을 «지우지» 않았는가 — 표기가 다른 집안이 있습니다
+    check(/집안에서 다른 한자를 쓰신다면/.test(nh),
+      `⚠️ 작명은 낱글자 목록을 ★그대로 두고 «곁들여» 냅니다`)
+    // ⛔⛔ useEffect 안에서 setState 를 곧바로 부르지 않았는가 (47부 1-7)
+    check(!/useEffect\(\(\) => \{\s*if \(!compound\) \{ setCompoundRows/.test(nh),
+      `⛔ useEffect 안에서 setState 를 «곧바로» 부르지 않습니다`)
+    // ⚠️ 칸(slots)을 «있다 없다» 하게 만들지 않았는가 — chosen 번호가 밀립니다
+    check(/\.\.\.Array\.from\(wantSurname\)\.map/.test(nh),
+      `⚠️ 성씨 칸은 ★그대로 둘입니다 (칸을 없애지 않았습니다)`)
+  }
 }
 
 console.log('\n━━ ㉑-d ★성씨 표 차례 — 통계청 인구수 순인가 (대표님 확정) ━━')

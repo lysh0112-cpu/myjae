@@ -24,6 +24,9 @@ import { dueumPairIfReal, dueumNotice } from '@/lib/saju/sound/dueum'
 import { surnameHanjaOf, surnameRank } from '@/lib/saju/surnameHanja'
 // ★2026-08-09 — 성씨 칸 거르기 (대표님 510 목록) · diagnosis 와 «같은 규칙»
 import { isSurnameAllowed, shouldFilterSurname } from '@/lib/saju/surnameAllowed'
+// ★2026-08-10 — 복성(두 글자 성씨)을 «한 장으로» 고르기 [대표님 지시]
+//   ⚠️ 정밀분석(diagnosis)과 «같은 규칙» 입니다. 한쪽만 고치지 마십시오.
+import { findCompoundSurname } from '@/lib/saju/surname'
 // ★2026-08-01 (43부 6차) — 「한 번에 이름 하나」 정책 (대표님 확정)
 //   ⚠️ 부품은 두고 «배선만» 끊었습니다. lib/saju/namingPolicy.ts 의 값 하나로 되돌아옵니다.
 import { clampTryLimit, isSingleName } from '@/lib/saju/namingPolicy'
@@ -172,6 +175,16 @@ function NewHanjaInner() {
   const [restored, setRestored] = useState(false)
 
   const [chosen, setChosen] = useState<Record<number, HanjaRow>>({})
+  /**
+   * ★2026-08-10 — 복성 한 쌍 (대표님 지시 「신생아 작명도 같이」)
+   *
+   *  ⚠️⚠️ 한 «칸» 에 두 글자를 담는 것이 «아닙니다».
+   *     한 번 눌러 ★chosen[0] 과 chosen[1] 을 «함께» 채웁니다. 칸은 그대로 둘입니다.
+   *     ⛔ 한 칸에 「南宮」을 넣으면 획수·수리 4격이 통째로 어긋납니다.
+   *  ⚠️ slots 은 손대지 «않았습니다» — 성씨 칸 둘이 그대로 있습니다.
+   *     (칸을 «있다 없다» 하게 만들면 chosen 의 번호가 밀립니다 — 위 slots 주석)
+   */
+  const [compoundRows, setCompoundRows] = useState<{ a: HanjaRow; b: HanjaRow } | null>(null)
 
   const [hanjaList, setHanjaList] = useState<HanjaRow[]>([])
   const [loadingList, setLoadingList] = useState(false)
@@ -355,6 +368,50 @@ function NewHanjaInner() {
   ], [wantSurname, syllables])
 
   const surnameSlotCount = Array.from(wantSurname).length
+
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-10 — 복성이면 «두 글자를 한 장으로» 고르게 합니다 [대표님 지시]
+  //
+  //   [전]  남궁민수 → 「남」 칸에서 南, 「궁」 칸에서 宮 을 «따로» 골랐습니다.
+  //   [후]  ★「南宮」 한 장을 누르면 두 칸이 «함께» 찹니다.
+  //
+  //   ⚠️ 복성 판단은 lib/saju/surname.ts «한 곳» 만 봅니다 (findCompoundSurname).
+  //      ⛔ 여기에 복성 목록을 다시 적지 마십시오 — 두 벌이 되면 갈립니다.
+  //   ⚠️ 성씨 칸이 «둘» 인 것은 이미 wantSurname 이 두 글자라는 뜻입니다.
+  //      surnameOfHangul 이 복성 표를 보고 두 글자로 떼어 주었습니다.
+  // ══════════════════════════════════════════════════════════════
+  const compound = useMemo(() => {
+    const g = Array.from(wantSurname)
+    if (g.length !== 2) return null
+    return findCompoundSurname({ hangul: g[0] }, { hangul: g[1] })
+  }, [wantSurname])
+
+  //   ⚠️ 두 글자를 «따로» 물어봅니다 — hanjaList 는 지금 칸 것 하나뿐이라 모자랍니다.
+  //   ⚠️ 하나라도 표에서 못 찾으면 ★compoundRows 를 비운 채 둡니다.
+  //      그러면 예전처럼 «낱글자» 로 고르게 됩니다. ⛔ 막지 않습니다.
+  //  ⛔⛔ ★useEffect 안에서 setState 를 «곧바로» 부르지 마십시오 —
+  //     react-hooks/set-state-in-effect 가 잡습니다 (47부 1-7 · 48부 8장 그 자리).
+  //     ⇒ 여기서는 «부르지 않고», 아래 그릴 때 compound 와 «견줍니다».
+  useEffect(() => {
+    if (!compound) return
+    let cancelled = false
+    const [g1, g2] = [...compound.hangul]
+    const [h1, h2] = [...compound.hanja]
+    supabase.from('hanja').select(HANJA_SELECT).in('hangul', [g1, g2])
+      .then(({ data, error }) => {
+        if (cancelled) return
+        if (error || !data) { setCompoundRows(null); return }
+        const rows = data as SharedHanjaRow[]
+        const a = rows.find((r) => r.hangul === g1 && rowHanja(r) === h1)
+        const b = rows.find((r) => r.hangul === g2 && rowHanja(r) === h2)
+        if (a && b) setCompoundRows({ a, b })
+        else {
+          console.warn('복성 한자를 표에서 못 찾았습니다 — 낱글자로 고릅니다', compound.hanja)
+          setCompoundRows(null)
+        }
+      })
+    return () => { cancelled = true }
+  }, [compound])
 
   /**
    * 지금의 성씨 글자들.
@@ -699,6 +756,19 @@ function NewHanjaInner() {
     const oth = sorted.map((s) => s.row).filter((r) => !recSet.has(r.hanja + r.strokes))
     return { recommend: rec, others: oth }
   }, [scored, activeIdx, slots])
+
+  /**
+   * ★두 칸을 «함께» 채웁니다 (복성). 한 칸에 두 글자를 넣지 «않습니다».
+   *
+   * ⚠️ 채운 뒤 «첫 이름 칸» 으로 옮깁니다 — 성씨를 다 골랐으니 다음은 이름입니다.
+   *    (proceed 의 「성씨가 먼저」 규칙과 결이 같습니다)
+   * ⚠️ 두음 안내는 띄우지 않습니다 — 복성은 표기가 하나뿐입니다.
+   */
+  function pickCompound(a: HanjaRow, b: HanjaRow) {
+    setChosen((prev) => ({ ...prev, 0: a, 1: b }))
+    setDueumMsg(null)
+    if (slots.length > surnameSlotCount) setActiveIdx(surnameSlotCount)
+  }
 
   function pickHanja(row: HanjaRow) {
     // ★소리가 «맞는지» 맞대어 봅니다 (43부 32차 · 두 번째 겹 · 예방)
@@ -1052,6 +1122,59 @@ function NewHanjaInner() {
           <span style={{ fontSize: 10.5, color: '#8a7063' }}>
             (이름의 다른 글자가 {yongsin} 기운을 담고 있으면 괜찮습니다)
           </span>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════
+          ★2026-08-10 — 복성 «한 장» [대표님 지시 「신생아 작명도 같이」]
+            「지금은 한자를 따로 선택하는 것을, 두 글자를 같이 고르도록」
+
+          ⚠️ 눌러도 «한 칸에 두 글자» 가 들어가지 «않습니다» —
+             pickCompound 가 ★chosen[0]·chosen[1] 을 각각 채웁니다. 획수가 삽니다.
+          ⚠️ 아래 낱글자 목록을 «지우지 않았습니다» —
+             표기가 다른 집안이 있을 수 있고, 막으면 그 집안이 못 넘어갑니다.
+          ⚠️ 성씨 칸에서만 보입니다. 이름 칸에서는 나오지 않습니다.
+          ══════════════════════════════════════════════════════════ */}
+      {/* ⚠️ ★«그릴 때» 견줍니다 — 성씨가 바뀌면 옛 쌍이 잠깐 남을 수 있습니다.
+             (useEffect 안에서 지우면 검사 그물에 걸립니다 · 47부 1-7) */}
+      {slots[activeIdx]?.role === '성' && compoundRows && compound
+        && rowHanja(compoundRows.a) + rowHanja(compoundRows.b) === compound.hanja && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD, display: 'inline-block' }} />
+            <span style={{ fontSize: 11, color: SUB }}>
+              ★두 글자 성씨예요 · 한 번 누르면 두 글자가 함께 채워져요
+            </span>
+          </div>
+          <button
+            onClick={() => pickCompound(compoundRows.a, compoundRows.b)}
+            className="active:scale-95"
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 14,
+              padding: '14px 13px', borderRadius: 16, textAlign: 'left',
+              background: (chosen[0]?.hanja === compoundRows.a.hanja && chosen[1]?.hanja === compoundRows.b.hanja)
+                ? 'rgba(200,120,60,0.12)' : CARD,
+              border: '1px solid ' + ((chosen[0]?.hanja === compoundRows.a.hanja && chosen[1]?.hanja === compoundRows.b.hanja) ? GOLD : LINE),
+              cursor: 'pointer', transition: 'transform 0.15s ease',
+            }}>
+            <span style={{ fontSize: 30, fontWeight: 600, color: GOLD, letterSpacing: 2, minWidth: 76, textAlign: 'center', lineHeight: 1.1 }}>
+              {rowHanja(compoundRows.a)}{rowHanja(compoundRows.b)}
+            </span>
+            <span style={{ flex: 1 }}>
+              <span style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: '#1a1a1a' }}>
+                {compoundRows.a.hangul}{compoundRows.b.hangul} · 두 글자 성씨
+              </span>
+              <span style={{ display: 'block', fontSize: 11, color: SUB, marginTop: 5, lineHeight: 1.6 }}>
+                {rowHanja(compoundRows.a)} {rowOhaeng(compoundRows.a) ?? ''}·{rowStrokes(compoundRows.a)}획
+                {' / '}
+                {rowHanja(compoundRows.b)} {rowOhaeng(compoundRows.b) ?? ''}·{rowStrokes(compoundRows.b)}획
+                {' → 성 '}{rowStrokes(compoundRows.a) + rowStrokes(compoundRows.b)}획
+              </span>
+            </span>
+          </button>
+          <div style={{ fontSize: 10.5, color: '#8a7063', marginTop: 8, lineHeight: 1.6 }}>
+            집안에서 다른 한자를 쓰신다면 아래에서 한 글자씩 골라 주세요.
+          </div>
         </div>
       )}
 
