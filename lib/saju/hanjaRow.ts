@@ -77,6 +77,14 @@ export interface HanjaRow {
   court_name_use?: boolean | null
   review_note?: string | null
 
+  /**
+   * ★값이 «어디서 왔는가» — 2026-08-12 새 책 대조가 채웁니다 ('새책'·'덕암'·'DB보충').
+   * ⚠️ 같은 한자가 두 소리에 있을 때(두음법칙) «어느 줄을 쓸지» 를 이것으로 가립니다.
+   *    ⇒ lib/saju/surnameDb.ts 의 pickBest.
+   * ⛔ 판정에 쓰지 마십시오 — 「어느 줄이 미더운가」를 고를 때만 봅니다.
+   */
+  source?: string | null
+
   /** id 는 표에 있으나 화면이 쓰지 않습니다 */
   id?: string | number
 }

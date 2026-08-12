@@ -421,8 +421,16 @@ console.log('\n━━ ⑲-G 🔴 성씨는 «가문 선택» 이지 «사주 추
     `★소리가 어긋나는 한자(刑·鄭)를 넣지 않았습니다`)
 
   // ② 🔴 성씨 칸에서 «거르지 않는가» — 李 가 사라지던 자리
-  check(/setHanjaList\(isSurnameSlot \? rows : rows\.filter/.test(nh),
-    `★★성씨 칸은 이름용 잣대(listPolicy)로 «거르지 않습니다»`)
+  //   ★2026-08-12 (58부) — 모양이 바뀌었습니다.
+  //     [전] 한 줄에서 갈랐습니다  setHanjaList(isSurnameSlot ? rows : rows.filter(…))
+  //     [후] 성씨 칸은 ★위에서 «먼저 끝내고 돌아갑니다». 이름 칸만 아래로 옵니다.
+  //   ⛔ 느슨하게 풀지 않고 «새 모양» 으로 다시 조였습니다.
+  check(/if \(isSurnameSlot\) \{[\s\S]{0,1200}?fetchSurnameChoices/.test(nh),
+    `★★성씨 칸은 «성씨 DB» 에서 가져옵니다 (이름용 잣대를 안 탑니다)`)
+  check(/setHanjaList\(rows\.filter\(\(row\) => listPolicy\(row\)\.show\)\)/.test(nh),
+    `★★이름 칸은 예전 그대로 listPolicy 로 거릅니다`)
+  check(!/isSurnameSlot \? rows :/.test(nh),
+    `⚠️ 옛 «한 줄 가르기» 가 남아 있지 않습니다`)
   check(/성씨는 «고르는 것» 이 아니라 «타고나는 것»/.test(S.nh),
     `⚠️ 그 까닭이 적혀 있습니다`)
   // 대표 성씨를 앞으로
@@ -1446,8 +1454,12 @@ console.log('\n━━ ㉑-a ★성씨 전용 표 — 성씨를 «고르는» 창
   ]
   for (const [label, path] of SURNAME_DOORS) {
     const src = codeOf(read(path))
-    check(/from '@\/lib\/saju\/surnameHanja'/.test(src),
-      `★${label} 이 성씨 전용 표를 씁니다`)
+    // ★2026-08-12 (58부) — 성씨는 «성씨 DB에서만» 가져옵니다 [대표님 지시]
+    //   ⛔ surnameHanja.ts 직접 들여오기에서 ★surnameDb.ts 창구로 바뀌었습니다.
+    check(/from '@\/lib\/saju\/surnameDb'/.test(src),
+      `★${label} 이 ★성씨 DB 창구(surnameDb)를 씁니다`)
+    check(/fetchSurnameChoices/.test(src),
+      `★${label} 이 성씨 목록을 «표에서» 받습니다`)
   }
   // ⚠️ 셋째가 «말없이» 성씨를 고르게 바뀌면 여기서 막힙니다
   check(/성씨는 개명 대상이 아닙니다/.test(read('app/manseryeok/naming/rename/hanja/page.tsx')),
@@ -1458,12 +1470,57 @@ console.log('\n━━ ㉑-a ★성씨 전용 표 — 성씨를 «고르는» 창
   check(/surnameHanja: surnameHanja \|\| null/.test(codeOf(S.nn)),
     `⚠️ 작명 Step 0 은 성씨 한자를 «나르기만» 합니다 (고르지 않습니다)`)
 
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-12 (58부) — 성씨를 «성씨 DB에서만» 가져오는가
+  //
+  //   🔴 [무엇이 있었나]  「이여진」 손님이 성씨를 고르면
+  //      李 · 異 · 伊 뒤에 ★以 가 따라 나왔습니다 (복성 이선 以仙 의 앞 글자).
+  //      hanja 표에서 «그 소리를 전부» 꺼낸 뒤 걸렀기 때문입니다.
+  //   ⇒ 이제 surname_hanja 표가 «보일 글자» 를 정하고,
+  //     값은 hanja 표에서 ★«한자로» 찾습니다.
+  // ══════════════════════════════════════════════════════════════
+  const sdb = codeOf(read('lib/saju/surnameDb.ts'))
+
+  // ⓐ ★한자로 찾는가 — 소리로 찾으면 두음 짝이 옛 값에 묶입니다
+  check(/\.in\('hanja', hanjaList\)/.test(sdb),
+    `★성씨 값을 «한자로» 찾습니다 (소리로 안 찾습니다 — 두음 짝)`)
+
+  // ⓑ ⛔⛔ 가장 중요 — 돌려주는 줄의 소리를 «손님이 쓴 것» 으로 덮는가
+  //    빠뜨리면 「나」로 쓴 손님이 「라」(火)로 판정됩니다. 화면은 멀쩡히 뜹니다.
+  check(/row, hangul: sori/.test(sdb),
+    `⛔⛔ ★돌려주는 줄의 소리를 «손님이 쓴 소리» 로 덮어씁니다 (판정이 안 갈립니다)`)
+  check(/a, hangul: hangul1/.test(sdb) && /b, hangul: hangul2/.test(sdb),
+    `⛔ 복성도 «손님이 쓴 소리» 로 덮어씁니다`)
+
+  // ⓒ ⛔ ref_* 를 «판정에» 쓰지 않는가 — 값의 정본은 hanja 표입니다
+  check(!/ref_strokes|ref_resource_ohaeng/.test(sdb),
+    `⛔ ★성씨 표의 ref_* 를 «한 번도» 읽지 않습니다 (값의 정본은 hanja 표)`)
+
+  // ⓓ ⛔ 품격을 안 보는가 — 성씨는 «타고나는 것» 이라 不用 이 뜻이 없습니다
+  check(/품격\(不用\)은 보지 «않습니다»/.test(read('lib/saju/surnameDb.ts')),
+    `⛔ 성씨는 품격(不用)을 «안 봅니다» — 그 까닭이 적혀 있습니다`)
+
+  // ⓔ ⛔⛔ 「0개면 전체로 되돌리기」 가 «없는가» (48부 4-2 와 같은 모양)
+  const nhSrc = codeOf(S.nh)
+  const diagSrc = codeOf(read('app/manseryeok/naming/diagnosis/page.tsx'))
+  check(!/scopedAll\.length > 0 \? scopedAll : scored/.test(nhSrc),
+    `⛔⛔ ★「걸러서 0개면 전체를 도로 보여 주는」 되돌림이 «없습니다»`)
+  check(!/isSurnameAllowed/.test(nhSrc) && !/isSurnameAllowed/.test(diagSrc),
+    `⛔ 두 화면이 «다시» 거르지 않습니다 (거르기는 표 한 곳)`)
+
+  // ⓕ ⚠️ 안전망 — 복성 카드가 못 떴을 때 낱글자로 내려가는 길 (57부)
+  check(/extraHanja/.test(sdb),
+    `⚠️ ★복성 안전망이 있습니다 (카드가 못 떠도 그 집안이 막히지 않습니다)`)
+
+  // ⓖ ⛔ 성씨 목록을 화면에 «다시 적지» 않았는가 — 以 가 화면 소스에 없어야 합니다
+  check(!/'以'/.test(nhSrc) && !/'以'/.test(diagSrc),
+    `⛔ 성씨 한자를 화면에 «직접 적지» 않았습니다`)
+
   // ⚠️ «들여오기만» 하고 안 쓰면 소용이 없습니다 — 실제로 줄 세우는지 봅니다
-  const diag = codeOf(read('app/manseryeok/naming/diagnosis/page.tsx'))
-  check(/surnameRank\(syl, rowHanja\(a\)\)/.test(diag),
-    `★정밀분석이 성씨 «흔한 차례» 로 줄을 세웁니다`)
+  check(/rank - b\.rank/.test(sdb),
+    `★성씨 차례(rank)로 줄을 세웁니다 — 표가 정한 차례입니다`)
   check(/surnameRank/.test(codeOf(S.nh)),
-    `★작명 Step 3 도 같은 잣대로 줄을 세웁니다`)
+    `★작명 Step 3 은 «추천 / 그 외» 를 가를 때 아직 옛 차례표를 씁니다`)
 }
 
 console.log('\n━━ ㉑-b 🔴 성씨 칸에서는 «거르지 않는가» (李가 밝은 칸에) ━━')

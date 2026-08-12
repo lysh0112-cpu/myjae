@@ -23,7 +23,9 @@ import { dueumPairIfReal, dueumNotice } from '@/lib/saju/sound/dueum'
 // ★2026-08-01 (43부 23차) — 성씨는 «전용 표» 를 씁니다 (이름용 잣대로 거르지 않습니다)
 import { surnameHanjaOf, surnameRank } from '@/lib/saju/surnameHanja'
 // ★2026-08-09 — 성씨 칸 거르기 (대표님 510 목록) · diagnosis 와 «같은 규칙»
-import { isSurnameAllowed, shouldFilterSurname } from '@/lib/saju/surnameAllowed'
+// ★2026-08-12 (58부) — 성씨는 «성씨 DB에서만» 가져옵니다 [대표님 지시]
+//   ⛔ 성씨 목록·차례를 이 화면에 «다시 적지» 마십시오. 판단은 surnameDb.ts 한 곳입니다.
+import { fetchSurnameChoices, fetchCompoundRows } from '@/lib/saju/surnameDb'
 // ★2026-08-10 — 복성(두 글자 성씨)을 «한 장으로» 고르기 [대표님 지시]
 //   ⚠️ 정밀분석(diagnosis)과 «같은 규칙» 입니다. 한쪽만 고치지 마십시오.
 import { findCompoundSurname } from '@/lib/saju/surname'
@@ -397,14 +399,12 @@ function NewHanjaInner() {
     let cancelled = false
     const [g1, g2] = [...compound.hangul]
     const [h1, h2] = [...compound.hanja]
-    supabase.from('hanja').select(HANJA_SELECT).in('hangul', [g1, g2])
-      .then(({ data, error }) => {
+    // ★2026-08-12 (58부) — «한자로» 찾습니다 (소리로 안 찾습니다).
+    //   두음 짝(나 羅 ↔ 라 羅)도 함께 잡히고, 소리는 손님이 쓴 것으로 덮입니다.
+    fetchCompoundRows(g1, h1, g2, h2)
+      .then((pair) => {
         if (cancelled) return
-        if (error || !data) { setCompoundRows(null); return }
-        const rows = data as SharedHanjaRow[]
-        const a = rows.find((r) => r.hangul === g1 && rowHanja(r) === h1)
-        const b = rows.find((r) => r.hangul === g2 && rowHanja(r) === h2)
-        if (a && b) setCompoundRows({ a, b })
+        if (pair) setCompoundRows(pair)
         else {
           console.warn('복성 한자를 표에서 못 찾았습니다 — 낱글자로 고릅니다', compound.hanja)
           setCompoundRows(null)
@@ -531,6 +531,41 @@ function NewHanjaInner() {
     // ══════════════════════════════════════════════════════════
     setHanjaList([])
     setLoadingList(true)
+    // ══════════════════════════════════════════════════════════
+    //  ★2026-08-12 (58부) — 성씨 칸은 «성씨 DB에서만» 가져옵니다 [대표님 지시]
+    //
+    //   🔴 [무엇이 있었나]  성씨를 고르면 «그 소리 한자를 전부» 꺼낸 뒤 걸렀습니다.
+    //      그래서 「이」에 ★以(복성 이선 以仙 의 앞 글자)가 따라 나왔습니다.
+    //   ⇒ 이제 ★surname_hanja 표가 «보일 글자» 와 «차례» 를 정합니다.
+    //     값은 hanja 표에서 «한자로» 찾아 붙입니다 (두음 짝도 함께 잡힙니다).
+    //
+    //   ⚠️ null 이면 「이 소리는 성씨 표에 없다」 — 귀화하신 분·드문 본관입니다.
+    //      ★그때만 예전처럼 그 소리 전체를 냅니다. ⛔ 막지 마십시오.
+    //   ⚠️ ★안전망 — 복성인데 카드가 못 떴으면 그 자리 글자를 곁들입니다 (57부).
+    //   ⛔ 성씨 목록·차례를 이 화면에 «다시 적지» 마십시오. surnameDb.ts 한 곳입니다.
+    //   ⛔⛔ ★「걸러서 0개면 전체를 도로 보여 주는」 되돌림을 다시 넣지 마십시오 —
+    //      성씨가 아닌 글자가 다시 나옵니다 (48부 4-2 와 같은 모양).
+    // ══════════════════════════════════════════════════════════
+    const isSurnameSlot = slots[activeIdx]?.role === '성'
+    if (isSurnameSlot) {
+      const cIdx = compound ? slots.slice(0, activeIdx + 1).filter((s) => s.role === '성').length - 1 : -1
+      const extra = compound && cIdx >= 0 && [...compound.hangul][cIdx] === hangul
+        ? [[...compound.hanja][cIdx]] : []
+      fetchSurnameChoices(hangul, extra).then((choices) => {
+        if (cancelled) return
+        if (choices) { setHanjaList(choices.map((c) => c.row)); setLoadingList(false); return }
+        // ⚠️ 성씨 표에 «없는 소리» — 예전처럼 그 소리 전체를 냅니다 (거르지 않습니다)
+        supabase.from('hanja').select(HANJA_SELECT).eq('hangul', hangul)
+          .order('strokes', { ascending: true })
+          .then(({ data, error }) => {
+            if (cancelled) return
+            if (error) { console.error(error); setHanjaList([]) }
+            else setHanjaList((data as HanjaRow[]) ?? [])
+            setLoadingList(false)
+          })
+      })
+      return () => { cancelled = true }
+    }
     supabase
       .from('hanja')
       .select(HANJA_SELECT)   // ★'*' — 마이그레이션 전에도 안 깨집니다
@@ -558,15 +593,17 @@ function NewHanjaInner() {
           //   ★[이제]  성씨 칸이면 표가 준 것을 «그대로» 냅니다.
           //     사주·수리 잣대는 «고른 뒤 풀이» 에만 씁니다 (대표님 지시).
           //   ⚠️ 이름 칸은 예전 그대로 거릅니다 — 거기는 «고르는» 자리입니다.
+          //   ★2026-08-12 (58부) — 성씨 칸은 ★위에서 «이미» 끝나고 돌아갔습니다.
+          //      여기까지 오는 것은 «이름 칸» 뿐입니다.
           // ══════════════════════════════════════════════════════
-          const isSurnameSlot = slots[activeIdx]?.role === '성'
           const rows = (data as HanjaRow[]) ?? []
-          setHanjaList(isSurnameSlot ? rows : rows.filter((row) => listPolicy(row).show))
+          setHanjaList(rows.filter((row) => listPolicy(row).show))
         }
         setLoadingList(false)
       })
     return () => { cancelled = true }
-  }, [activeIdx, slots, restored])
+    // ★compound 는 «복성 안전망» 에 쓰입니다 (58부). 빠뜨리면 옛 값이 남습니다.
+  }, [activeIdx, slots, restored, compound])
 
   /**
    * ★2026-08-01 (43부) — 어느 칸을 고르는 중인지에 따라 «성/이름» 을 다시 엮습니다.
@@ -720,14 +757,20 @@ function NewHanjaInner() {
     // ══════════════════════════════════════════════════════════
     if (slots[activeIdx]?.role === '성') {
       const h = slots[activeIdx].hangul
-      // ★2026-08-09 — 성씨 칸은 «510 목록에 있는 것만» [대표님 지시]
-      //   ⚠️ 정밀분석(diagnosis)과 «같은 규칙» 입니다. 한쪽만 고치지 마십시오.
-      //   ⚠️ 목록에 그 소리가 아예 없으면 거르지 않습니다 (아래 known 빈 자리 처리와 이어집니다).
-      const scopedAll = shouldFilterSurname(h)
-        ? scored.filter((x) => isSurnameAllowed(h, rowHanja(x.row)))
-        : scored
-      const scoped = scopedAll.length > 0 ? scopedAll : scored
-      const bySurname = [...scoped].sort((a, b) =>
+      // ══════════════════════════════════════════════════════════
+      //  ★2026-08-12 (58부) — 거르기는 ★조회에서 «이미» 끝났습니다.
+      //     surname_hanja 표가 «보일 글자» 를 정해 hanjaList 로 넘겨줍니다.
+      //   ⛔⛔ 여기서 «다시» 거르지 마십시오 —
+      //      복성 안전망 글자(57부)가 도로 사라집니다.
+      //   ⛔⛔ ★「걸러서 0개면 전체를 도로 보여 주는」 되돌림을 «다시 넣지» 마십시오 —
+      //         const scoped = scopedAll.length > 0 ? scopedAll : scored   ← ★걷어냈습니다
+      //      성씨가 아닌 글자(硫·瘤·謬)가 다시 나옵니다.
+      //      ⚠️ 정밀분석(diagnosis)에는 «없던» 줄입니다 — 주석엔 「같은 규칙」이라
+      //         적혀 있었는데 ★실제로는 두 화면이 어긋나 있었습니다.
+      //      ⚠️ 48부 4-2 에서 대표님이 상담사 쪽 「0명이면 전체」를
+      //         «일부러» 빼신 것과 ★같은 모양입니다.
+      // ══════════════════════════════════════════════════════════
+      const bySurname = [...scored].sort((a, b) =>
         surnameRank(h, rowHanja(a.row)) - surnameRank(h, rowHanja(b.row))
         || rowStrokes(a.row) - rowStrokes(b.row))
       let known = bySurname.filter((x) => surnameRank(h, rowHanja(x.row)) < 999)

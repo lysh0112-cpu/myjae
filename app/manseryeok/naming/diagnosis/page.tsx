@@ -29,9 +29,14 @@ import { dueumPairIfReal, dueumNotice } from '@/lib/saju/sound/dueum'
 //   ★교훈 [다 세고 옮길 것] — 값을 쓰는 곳을 «모두» 세고 옮길 것.
 //     28-verify 의 ㉑ 그물이 이제 «세 창구» 를 함께 셉니다.
 // ══════════════════════════════════════════════════════════════════
-import { surnameRank } from '@/lib/saju/surnameHanja'
+// ★2026-08-12 (58부) — surnameRank 임포트를 걷었습니다.
+//   차례는 이제 ★surname_hanja 표의 rank 칸이 정합니다 (surnameDb.ts).
+//   ⚠️ lib/saju/surnameHanja.ts 파일 자체는 ★지우지 마십시오 —
+//      작명 화면(newhanja)이 아직 «추천/그 외» 를 가를 때 씁니다.
 // ★2026-08-09 — 성씨 칸 거르기 (대표님 510 목록)
-import { isSurnameAllowed, shouldFilterSurname } from '@/lib/saju/surnameAllowed'
+// ★2026-08-12 (58부) — 성씨는 «성씨 DB에서만» 가져옵니다 [대표님 지시]
+//   ⛔ 성씨 목록·차례를 이 화면에 «다시 적지» 마십시오. 판단은 surnameDb.ts 한 곳입니다.
+import { fetchSurnameChoices, fetchCompoundRows } from '@/lib/saju/surnameDb'
 // ★2026-08-10 — 복성(두 글자 성씨)을 «한 장으로» 고르기 [대표님 지시]
 import { findCompoundSurname, type CompoundSurname } from '@/lib/saju/surname'
 // ★2026-08-01 (41부 Step 3 · UI) — 사주 요약 · 이름에 담을 기운 · 명리적성
@@ -538,23 +543,18 @@ function DiagnosisInner() {
       try {
         const [g1, g2] = [...comp.hangul]
         const [h1, h2] = [...comp.hanja]
-        const { data, error } = await supabase
-          .from('hanja')
-          .select(HANJA_SELECT)
-          .in('hangul', [g1, g2])
-        if (!error && data) {
-          const rows = data as HanjaRow[]
-          const a = rows.find((r) => r.hangul === g1 && rowHanja(r) === h1)
-          const b = rows.find((r) => r.hangul === g2 && rowHanja(r) === h2)
-          if (a && b) {
-            setCompoundRows({ a, b })
-            setHanjaList([])
-            setSearching(false)
-            return
-          }
-          // ⚠️ 못 찾았습니다 — 낱글자 고르기로 «내려갑니다». 아래로 이어집니다.
-          console.warn('복성 한자를 표에서 못 찾았습니다 — 낱글자로 고릅니다', comp.hanja)
+        // ★2026-08-12 (58부) — «한자로» 찾습니다 (소리로 안 찾습니다).
+        //   두음 짝(나 羅 ↔ 라 羅)도 함께 잡히고, 소리는 손님이 쓴 것으로 덮입니다.
+        const pair = await fetchCompoundRows(g1, h1, g2, h2)
+        if (pair) {
+          setCompoundRows(pair)
+          setHanjaList([])
+          setSearching(false)
+          return
         }
+        // ⚠️ 못 찾았습니다 — 낱글자 고르기로 «내려갑니다». 아래로 이어집니다.
+        //   ⛔ 막지 마십시오 (57부) — 표기가 다른 집안이 못 넘어갑니다.
+        console.warn('복성 한자를 표에서 못 찾았습니다 — 낱글자로 고릅니다', comp.hanja)
       } catch (e) {
         console.error(e)
       }
@@ -567,6 +567,31 @@ function DiagnosisInner() {
     if (!hangul) { setHanjaList([]); return }
     setSearching(true)
     try {
+      // ══════════════════════════════════════════════════════════════
+      //  ★2026-08-12 (58부) — 성씨 칸은 «성씨 DB에서만» 가져옵니다 [대표님 지시]
+      //
+      //   🔴 [무엇이 있었나]  「이여진」 손님이 성씨를 고르면
+      //      李 · 異 · 伊 뒤에 ★以 가 따라 나왔습니다 (복성 이선 以仙 의 앞 글자).
+      //      hanja 표에서 «그 소리를 전부» 꺼낸 뒤 걸러냈기 때문입니다.
+      //   ⇒ 이제 ★surname_hanja 표가 «보일 글자» 를 정하고,
+      //     값은 hanja 표에서 «한자로» 찾아 붙입니다.
+      //
+      //   ⚠️ null 이면 「이 소리는 성씨 표에 없다」 는 뜻입니다 —
+      //      귀화하신 분·드문 본관. ★예전처럼 그 소리 전체를 보여 줍니다.
+      //      ⛔ 막지 마십시오. 막으면 그 집안이 다음으로 못 넘어갑니다.
+      //   ⚠️ ★안전망 — 복성인데 카드가 못 떴으면 그 자리 글자를 곁들입니다 (57부).
+      //   ⛔ 성씨 목록을 이 화면에 «다시 적지» 마십시오. lib/saju/surnameDb.ts 한 곳입니다.
+      // ══════════════════════════════════════════════════════════════
+      if (idx <= 1) {
+        const extra = comp && [...comp.hangul][idx] === hangul
+          ? [[...comp.hanja][idx]] : []
+        const choices = await fetchSurnameChoices(hangul, extra)
+        if (choices) {
+          setHanjaList(choices.map((c) => c.row))
+          setSearching(false)
+          return
+        }
+      }
       const { data, error } = await supabase
         .from('hanja')
         .select(HANJA_SELECT)   // ★'*' — 마이그레이션 전에도 안 깨집니다
@@ -915,20 +940,18 @@ function DiagnosisInner() {
   //      (귀화 성씨·드문 본관. shouldFilterSurname 주석을 보십시오)
   //   ⛔ 거르기를 이 화면에 «다시 적지» 마십시오. surnameAllowed.ts 한 곳입니다.
   // ══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════
+  //  ★2026-08-12 (58부) — 거르기·차례는 ★위 조회에서 «이미» 끝났습니다.
+  //
+  //   surname_hanja 표가 «보일 글자» 와 «차례» 를 함께 정해 돌려줍니다.
+  //   ⛔⛔ 여기서 «다시» 거르지 마십시오 — 두 겹이 되면
+  //      ★복성 안전망 글자가 도로 사라지고, 표의 차례도 덮입니다.
+  //   ⚠️ 성씨 칸은 품격(不用)을 «안 거릅니다» — 「타고나는 것」이기 때문입니다
+  //      (43부 23차 대표님 지시 · 그대로입니다).
+  //   ⛔ 성씨 목록을 이 화면에 다시 적지 마십시오. lib/saju/surnameDb.ts 한 곳입니다.
+  // ══════════════════════════════════════════════════════════════
   const isSurnameSlot = pickerIdx === 0
-  const surnameSorted = (() => {
-    if (!isSurnameSlot) return hanjaList
-    const syl = syllables[0] ?? ''
-    const picked = shouldFilterSurname(syl)
-      ? hanjaList.filter((r) => isSurnameAllowed(syl, rowHanja(r)))
-      : hanjaList
-    return [...picked].sort((a, b) => {
-      const ra = surnameRank(syl, rowHanja(a))
-      const rb = surnameRank(syl, rowHanja(b))
-      if (ra !== rb) return ra - rb
-      return rowStrokes(a) - rowStrokes(b)
-    })
-  })()
+  const surnameSorted = hanjaList
 
   const normalList = isSurnameSlot ? surnameSorted : hanjaList.filter((r) => !isAvoidChar(r))
   const avoidList = isSurnameSlot ? [] : hanjaList.filter((r) => isAvoidChar(r))
