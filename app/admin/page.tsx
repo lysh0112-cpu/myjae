@@ -17,17 +17,21 @@ import MemberManager from './components/MemberManager'
 import ToneManager from './components/ToneManager'
 import PromptViewer from './components/PromptViewer'
 import PriceManager from './components/PriceManager'
+import WalletManager from './components/WalletManager'
 import { useRoleGate, RoleGateScreen, type AppRole } from '@/hooks/useRoleGate'
 
 // 이 화면에 들어올 수 있는 등급 — 매니저만
 const ADMIN_ROLES: AppRole[] = ['master']
 
-type Tab = 'dashboard' | 'cancelled' | 'consultant' | 'price' | 'member' | 'settlement' | 'knowledge' | 'review' | 'inquiry' | 'accounting' | 'approval' | 'tone' | 'prompt' | 'aierror' | 'settings'
+type Tab = 'dashboard' | 'cancelled' | 'consultant' | 'price' | 'wallet' | 'member' | 'settlement' | 'knowledge' | 'review' | 'inquiry' | 'accounting' | 'approval' | 'tone' | 'prompt' | 'aierror' | 'settings'
 const TABS = [
   { key: 'dashboard', label: '📊 대시보드' },
   { key: 'cancelled', label: '🗑 취소 내역' },
   { key: 'consultant', label: '👤 상담사 관리' },
   { key: 'price', label: '💰 가격 관리' },
+  // ★2026-09-05 신설 — 지갑·요금 [대표님 「가격 설정화면은 변동하면 안 되고 별도 탭」]
+  //   ⛔ 위의 '💰 가격 관리'(PriceManager)는 «한 줄도» 건드리지 않았습니다.
+  { key: 'wallet', label: '🪙 지갑·요금' },
   { key: 'member', label: '👥 회원 관리' },
   { key: 'settlement', label: '💰 정산 관리' },
   { key: 'knowledge', label: '🧠 연구 자료' },
@@ -161,6 +165,7 @@ export default function AdminPage() {
         {tab === 'cancelled' && <CancelledHistory />}
         {tab === 'consultant' && <ConsultantManager />}
         {tab === 'price' && <PriceManager />}
+        {tab === 'wallet' && <WalletManager />}
         {tab === 'member' && <MemberManager />}
         {tab === 'settlement' && <SettlementManager />}
         {tab === 'knowledge' && <KnowledgeManager />}
