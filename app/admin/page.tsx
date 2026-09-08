@@ -17,13 +17,17 @@ import MemberManager from './components/MemberManager'
 import ToneManager from './components/ToneManager'
 import PromptViewer from './components/PromptViewer'
 import PriceManager from './components/PriceManager'
-import WalletManager from './components/WalletManager'
+//  ★2026-09-09 — 회원 목록 + 회원 지갑을 «한 탭» 으로 묶었습니다 [대표님 지시]
+//  ⚠️ WalletManager 는 이제 안 부릅니다. ⛔ 파일은 지우지 마십시오 (요금표 되살릴 때).
+import MemberHub, { type MemberInner } from './components/MemberHub'
 import { useRoleGate, RoleGateScreen, type AppRole } from '@/hooks/useRoleGate'
 
 // 이 화면에 들어올 수 있는 등급 — 매니저만
 const ADMIN_ROLES: AppRole[] = ['master']
 
-type Tab = 'dashboard' | 'cancelled' | 'consultant' | 'price' | 'wallet' | 'member' | 'settlement' | 'knowledge' | 'review' | 'inquiry' | 'accounting' | 'approval' | 'tone' | 'prompt' | 'aierror' | 'settings'
+//  ⚠️ 'wallet' 을 뺐습니다 — 'member' 안쪽 탭이 되었습니다 (MemberHub).
+//     ⛔ 주소 /admin#wallet 은 «그대로» 됩니다. 아래 해시 읽는 자리를 보십시오.
+type Tab = 'dashboard' | 'cancelled' | 'consultant' | 'price' | 'member' | 'settlement' | 'knowledge' | 'review' | 'inquiry' | 'accounting' | 'approval' | 'tone' | 'prompt' | 'aierror' | 'settings'
 const TABS = [
   { key: 'dashboard', label: '📊 대시보드' },
   { key: 'cancelled', label: '🗑 취소 내역' },
@@ -34,7 +38,9 @@ const TABS = [
   //   요금표를 「💰 가격 관리」 오른쪽으로 옮겨서 여기엔 «요금이 없습니다».
   //   ⛔ 이름만 옛것으로 되돌리지 마십시오.
   //   ⛔ 위의 '💰 가격 관리'(PriceManager)는 «한 줄도» 건드리지 않았습니다.
-  { key: 'wallet', label: '🪙 회원 지갑' },
+  //  ★2026-09-09 — 「🪙 회원 지갑」 을 «여기로 묶었습니다» [대표님 「탭들이 너무 많아서 헷갈려」]
+  //     ⇒ 안에서 [👥 회원 목록] [🪙 회원 지갑] 으로 갈립니다 (MemberHub).
+  //     ⛔ 지갑을 다시 «위 탭» 으로 꺼내지 마십시오.
   { key: 'member', label: '👥 회원 관리' },
   { key: 'settlement', label: '💰 정산 관리' },
   { key: 'knowledge', label: '🧠 연구 자료' },
@@ -73,26 +79,11 @@ export default function AdminPage() {
   // ══════════════════════════════════════════════════════════════════
   const [hashRead, setHashRead] = useState(false)
 
-  // ══════════════════════════════════════════════════════════════════
-  //  ★2026-09-09 — 회원 관리에서 «이름» 을 누르면 그 회원의 지갑으로 [대표님 지시]
-  //    「회원관리화면에서 해당 회원의 줄을 누르면
-  //      회원지갑화면의 해당고객이 자동으로 찾도록 연결해보자」
-  //
-  //  ⚠️ ★sessionStorage('adminTab') 를 «안» 씁니다 —
-  //     그건 «다른 화면» 에서 /admin 으로 들어올 때 쓰는 길입니다.
-  //     여기는 이미 이 화면 안이라, 그 길로 가면 ★새로고침이 생겨 느립니다.
-  //  ⇒ 탭과 «누구인지» 를 여기서 함께 쥐고 아래로 내려 줍니다.
-  //
-  //  ⛔ 「이름」 칸만 누르게 했습니다 — 줄 전체로 넓히지 마십시오.
-  //     한 줄 안에 [등급▾] · [수정] · [삭제] 와 수정 중 입력 칸이 있어
-  //     ★등급을 바꾸려다 지갑으로 튑니다.
-  // ══════════════════════════════════════════════════════════════════
-  const [walletUserId, setWalletUserId] = useState<string | null>(null)
+  //  ★2026-09-09 — 묶인 탭이 «어느 안쪽 탭» 으로 열릴지.
+  //     ⚠️ 회원을 «누구로» 볼지는 MemberHub 가 스스로 쥡니다.
+  //        ⛔ 그것까지 여기로 끌어올리지 마십시오 — 이 화면이 탭 열다섯을 다 알게 됩니다.
+  const [memberInner, setMemberInner] = useState<MemberInner>('list')
 
-  const openWallet = (userId: string) => {
-    setWalletUserId(userId)
-    setTab('wallet')
-  }
   // ★권한 확인 (2026-07-21)
   //   이 화면은 지금까지 role 을 전혀 보지 않아 URL 만 알면 누구나 들어왔다.
   const gate = useRoleGate(ADMIN_ROLES)
@@ -137,7 +128,14 @@ export default function AdminPage() {
     const asked = sessionStorage.getItem('adminTab')
     if (asked) sessionStorage.removeItem('adminTab')
     const want = asked || window.location.hash.replace('#', '')
-    if (want && TABS.some(t => t.key === want)) setTab(want as Tab)
+    //  ★2026-09-09 — /admin#wallet 은 «묶인 탭 · 지갑 쪽» 으로 엽니다.
+    //     ⛔ 이 갈래를 없애지 마십시오 — 즐겨찾기 해 두셨을 수 있습니다 [48부 10차].
+    if (want === 'wallet') {
+      setTab('member')
+      setMemberInner('wallet')
+    } else if (want && TABS.some(t => t.key === want)) {
+      setTab(want as Tab)
+    }
   }
 
   return (
@@ -163,6 +161,11 @@ export default function AdminPage() {
               <button key={t.key}
                 onClick={() => {
                   setTab(t.key as Tab)
+                  //  ★2026-09-09 — 탭을 «눌러» 오시면 언제나 «회원 목록» 부터.
+                  //     ⚠️ 이 줄이 없으면, /admin#wallet 으로 한 번 들어오신 뒤에는
+                  //        「회원 관리」를 누를 때마다 ★지갑이 먼저 열립니다.
+                  //     ⇒ 주소로 오면 지정한 쪽, 눌러서 오면 목록.
+                  if (t.key === 'member') setMemberInner('list')
                   // ★48부 10차 — 주소도 함께 바꿉니다.
                   //   ⇒ 새로고침하거나 즐겨찾기로 와도 «그 탭» 이 열립니다.
                   if (typeof window !== 'undefined') {
@@ -189,18 +192,7 @@ export default function AdminPage() {
         {tab === 'cancelled' && <CancelledHistory />}
         {tab === 'consultant' && <ConsultantManager />}
         {tab === 'price' && <PriceManager />}
-        {/* ★2026-09-09 — 회원 관리 → 회원 지갑 잇기.
-            ⚠️ backTo 는 «어디서 왔는지» 입니다. 회원 관리에서 온 경우에만
-               지갑에 「← 회원 관리로」 단추가 뜹니다.
-            ⛔ 넘긴 뒤 walletUserId 를 «지우지» 마십시오 —
-               지우면 지갑 안에서 다른 분을 찾다가 돌아올 때 자리가 풀립니다. */}
-        {tab === 'wallet' && (
-          <WalletManager
-            userId={walletUserId}
-            onBackToMember={walletUserId ? () => setTab('member') : undefined}
-          />
-        )}
-        {tab === 'member' && <MemberManager onOpenWallet={openWallet} />}
+        {tab === 'member' && <MemberHub initial={memberInner} />}
         {tab === 'settlement' && <SettlementManager />}
         {tab === 'knowledge' && <KnowledgeManager />}
         {tab === 'review' && <ReviewManager />}

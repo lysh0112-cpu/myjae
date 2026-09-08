@@ -21,9 +21,14 @@ import WalletMember from './WalletMember'
 //    안쪽 탭 둘: 🪙 회원 지갑 / 🏷 요금표
 //    ⛔ 그때도 「요금표」를 «먼저» 두지 마십시오. 열자마자 회원 찾기가 나와야 합니다.
 
-//  ★2026-09-09 — 회원 관리에서 «이름» 을 누르면 여기로 옵니다 [대표님 지시].
-//    이 파일은 ★받은 것을 그대로 내려 주기만 합니다 (껍데기).
-//    ⛔ 여기서 회원을 불러오지 마십시오 — 불러오는 곳은 WalletMember «한 곳» 입니다.
+//  🔴 ★2026-09-09 — 이 파일은 이제 «아무도 안 부릅니다» [대표님 지시]
+//    「회원관리 탭과 회원지갑을 하나의 탭으로 묶는다」
+//    ⇒ 지갑은 ★app/admin/components/MemberHub.tsx 의 «안쪽 탭» 이 되었습니다.
+//      MemberHub 가 WalletMember 를 «바로» 부릅니다.
+//
+//  ⛔ 그래도 ★지우지 마십시오 —
+//     위 머리말에 「요금표(WalletPrice)를 되살리는 법」이 적혀 있습니다.
+//     지우면 그 자국이 사라집니다 (48부 「안 부르지만 지우지 마십시오」와 같은 결).
 export default function WalletManager({
   userId,
   onBackToMember,
