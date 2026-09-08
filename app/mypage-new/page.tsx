@@ -10,6 +10,7 @@ import { useResultSaju } from '@/hooks/useResultSaju'
 // ★2026-07-27 — 커플채팅(CoupleChatFab · InviteNotifier) 제거. 테스트였으므로 전부 삭제.
 //   ⚠️ 상담사–고객 채팅은 별개이며 살아 있다. 함께 지우지 말 것.
 import AiTalkFab from '@/app/manseryeok/components/AiTalkFab'
+import WalletPanel from '@/app/components/common/WalletPanel'
 import {
   hourLabelOf, normalizeHourLabel, toStoredHour,
   TIME_BANDS, MONTHS, dayOptions, clampDay, isValidBirthDate,
@@ -107,19 +108,13 @@ export default function MyPageNew() {
 
   const [cashOpen, setCashOpen] = useState(false)
 
-  /* ★2026-09-08 [대표님 지시] — 지갑 잔액과 내역을 «실제로» 보여 줍니다.
-     [전]  「0원 · 0P · 0회」가 ★코드에 박혀 있었습니다. DB 를 안 읽었습니다.
-     ⚠️ mc_wallet · mc_ledger 는 ★RLS 로 «본인 줄만» 나옵니다. 남의 것은 안 보입니다.
-     ⚠️ 지갑 줄이 «없는» 회원이 있습니다 (충전을 한 번도 안 한 분).
-        ⇒ ★.maybeSingle() 입니다. .single() 로 바꾸지 마십시오 — 오류가 납니다.
-     ⛔ 「포인트(0P)」와 「이용권(0회)」를 도로 넣지 마십시오 —
-        ★없는 기능입니다. 늘 0으로 적혀 있으면 손님이 「내 포인트는?」 하십니다. */
+  /* ★2026-09-08 — 지갑은 ★공용 부품(WalletPanel)이 «스스로» 읽습니다.
+     ⛔ 여기에 잔액·내역 상태를 다시 만들지 마십시오 — 값이 두 벌이 됩니다.
+     ⇒ 고치실 것은 app/components/common/WalletPanel.tsx 한 곳입니다. */
   const [balance, setBalance] = useState<number | null>(null)
-  const [ledger, setLedger] = useState<{
-    id: string; kind: string; item: string | null; amount: number
-    after: number; memo: string | null; at: string
-  }[]>([])
-  const [ledgerAll, setLedgerAll] = useState(false)
+  /* ⚠️ 「결제 내역 · 쿠폰 등록」 칸을 내리면서 ★안 쓰게 되었습니다 (2026-09-08).
+     ⛔ 지우지 마십시오 — 되살리실 때 씁니다. */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [payOpen, setPayOpen] = useState(false)
 
   const { saju } = useResultSaju(
@@ -148,13 +143,6 @@ export default function MyPageNew() {
       supabase.from('mc_wallet').select('balance').eq('user_id', data.user.id)
         .maybeSingle()
         .then(({ data: w }) => setBalance(w?.balance ?? 0))
-
-      supabase.from('mc_ledger')
-        .select('id, kind, item, amount, after, memo, at')
-        .eq('user_id', data.user.id)
-        .order('at', { ascending: false })
-        .limit(50)
-        .then(({ data: rows }) => { if (rows) setLedger(rows as typeof ledger) })
 
       supabase.from('my_names')
         .select('id, hangul_name, hanja_name, kind, created_at')
@@ -680,68 +668,20 @@ export default function MyPageNew() {
           </button>
           {cashOpen && (
             <div style={{ padding: '0 14px 14px' }}>
-              <button
-                onClick={() => alert('충전 기능을 준비하고 있어요.\n지금은 관리자에게 말씀해 주시면 넣어 드립니다.')}
-                style={{ width: '100%', height: 44, background: '#b46e46', border: 'none', borderRadius: 10, color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>☕ 캐시 충전하기</button>
-              <div style={{ fontSize: 10, color: '#6b5340', marginTop: 7, textAlign: 'center' }}>
-                5,000 · 10,000 · 20,000 · 50,000 · 100,000원
-              </div>
-
-              <div style={{ fontSize: 11, color: '#8a7565', marginTop: 14 }}>최근 내역</div>
-
-              {ledger.length === 0 ? (
-                <div style={{ padding: '14px 0', fontSize: 12, color: '#a2907f', textAlign: 'center' }}>
-                  아직 내역이 없어요
-                </div>
-              ) : (
-                <>
-                  {(ledgerAll ? ledger : ledger.slice(0, 5)).map(r => {
-                    const plus = r.amount > 0
-                    return (
-                      <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 0', borderTop: '0.5px solid #e8dccf' }}>
-                        <span style={{ fontSize: 11, color: '#8a7565', width: 44, flex: 'none' }}>
-                          {r.at.slice(5, 10).replace('-', '.')}
-                        </span>
-                        <span style={{ fontSize: 12, color: '#5a4a3e', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {r.memo || r.item || (plus ? '충전' : '이용')}
-                        </span>
-                        <span style={{ fontSize: 12, width: 62, textAlign: 'right', color: plus ? '#4a7c4e' : '#96502e' }}>
-                          {plus ? '+' : ''}{r.amount.toLocaleString()}
-                        </span>
-                        {/* ★그때 «남은 잔액» — 「왜 돈이 줄었냐」는 문의에 이 줄만 보여 드리면 끝납니다 */}
-                        <span style={{ fontSize: 10, width: 58, textAlign: 'right', color: '#a2907f' }}>
-                          {r.after.toLocaleString()}원
-                        </span>
-                      </div>
-                    )
-                  })}
-                  {ledger.length > 5 && (
-                    <div style={{ textAlign: 'center', marginTop: 10 }}>
-                      <button onClick={() => setLedgerAll(v => !v)}
-                        style={{ background: 'none', border: 'none', fontSize: 11, color: '#96502e', borderBottom: '0.5px solid #d8b89e', paddingBottom: 1, cursor: 'pointer' }}>
-                        {ledgerAll ? '접기' : `내역 더 보기 (${ledger.length})`}
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
+              {/* ★공용 부품 — /wallet 화면과 «같은 것» 입니다 (2026-09-08).
+                  ⛔ 여기에 잔액·내역을 다시 그리지 마십시오. 부품 한 곳만 고치십시오. */}
+              <WalletPanel />
             </div>
           )}
         </div>
 
-        <div style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}>
-          <button onClick={() => setPayOpen(v => !v)}
-            style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 14, background: 'none', border: 'none', cursor: 'pointer' }}>
-            <span style={{ fontSize: 13, color: '#5a4a3e' }}><span aria-hidden style={{ fontSize: 22, lineHeight: 1, verticalAlign: '-4px', display: 'inline-block', margin: '0 1px' }}>{payOpen ? '▾' : '▸'}</span> 결제 내역 · 쿠폰 등록</span>
-            <span style={{ fontSize: 16, color: '#d0b8a5' }}>{payOpen ? '' : '›'}</span>
-          </button>
-          {payOpen && (
-            <div style={{ padding: '0 14px 14px' }}>
-              <div style={{ padding: '10px 12px', background: '#faede0', borderRadius: 8, fontSize: 12, color: '#6f6053', textAlign: 'center', marginBottom: 8 }}>결제 내역이 여기에 표시됩니다</div>
-              <button style={{ width: '100%', padding: '10px 0', background: 'none', border: '0.5px solid #9c7a58', borderRadius: 10, color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>🎁 쿠폰 등록하기</button>
-            </div>
-          )}
-        </div>
+        {/* ⛔ ★2026-09-08 [대표님 지시] — 「결제 내역 · 쿠폰 등록」 칸을 «내렸습니다».
+            [왜]  손님이 충전하면 그게 ★«곧 결제» 입니다. 내역이 두 곳에 나뉘어 있었고,
+                  이 칸은 ★읽는 데가 «없어» 빈 안내문뿐이었습니다.
+            ⇒ 쿠폰 등록은 위 「캐시 · 이용권」 안으로 옮겼습니다.
+            ⛔ 다시 만들지 마십시오 — 위 내역과 «같은 것» 입니다.
+            ⚠️ 나중에 PG 영수증(환불·세금계산서)이 생기면 그때 따로 가르십시오.
+            ⇒ 되살리시려면 payOpen 상태와 아래 주석을 되돌리면 됩니다. */}
 
         {/* ★2026-08-07 (48부 12차) — 「❓ 문의하기」를 ★지웠습니다 [대표님 지시]
             ⚠️ 이름은 「문의하기」인데 ★/manseryeok/reviews/write(후기 쓰기)로 갔습니다.
