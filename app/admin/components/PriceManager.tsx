@@ -53,6 +53,55 @@ const PAIRS: { consult: string; ai: { k: string; short: string }[] }[] = [
   { consult: 'tarot',       ai: [{ k: 'tarot_ai',       short: '카드 리딩' }] },
 ]
 
+/* ══════════════════════════════════════════════════════════════════
+ *  값 칸 + 노출 토글  (상담 쪽·AI 쪽이 «똑같이» 생기도록 한 곳에서 그립니다)
+ *
+ *  ⛔⛔ ★이 부품을 MergedPriceTable «안» 으로 옮기지 마십시오 —
+ *      React 가 글자 한 자마다 «새 부품» 으로 보고 다시 그려서
+ *      ★커서가 빠져나갑니다. 숫자를 한 자밖에 못 칩니다 (2026-09-08 겪음).
+ *
+ *  ⚠️ ★치는 «동안» 은 쉼표를 찍지 않습니다 (draft).
+ *     ⛔ value 를 늘 toLocaleString() 으로 되돌리지 마십시오 —
+ *        쉼표가 끼면서 ★커서가 맨 뒤로 튀고, 칸을 «비울» 수도 없습니다.
+ *     ⇒ 칸에서 손을 떼면(onBlur) 그때 쉼표를 찍습니다.
+ * ══════════════════════════════════════════════════════════════════ */
+function PriceCell({ r, short, onPrice, onToggle }: {
+  r: Price | undefined
+  short?: string
+  onPrice: (id: string, raw: string) => void
+  onToggle: (id: string) => void
+}) {
+  const [draft, setDraft] = useState<string | null>(null)
+
+  if (!r) return <span style={{ fontSize: 11, color: '#8a88a0' }}>—</span>
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: r.active ? 1 : 0.45 }}>
+      {short !== undefined && (
+        <span style={{ width: 74, flex: 'none', fontSize: 10, color: '#8a88a0' }}>{short}</span>
+      )}
+      <input type="text" inputMode="numeric"
+        value={draft ?? r.price.toLocaleString()}
+        onFocus={ev => { setDraft(String(r.price)); ev.target.select() }}
+        onChange={ev => {
+          const raw = ev.target.value.replace(/[^0-9]/g, '')
+          setDraft(raw)
+          onPrice(r.id, raw)
+        }}
+        onBlur={() => setDraft(null)}
+        className="rounded-lg px-2 py-1 text-xs text-right outline-none"
+        style={{ width: 78, background: 'rgba(255,255,255,0.08)', color: '#fff',
+          border: '1px solid rgba(255,255,255,0.1)' }} />
+      <button onClick={() => onToggle(r.id)} aria-label={r.label + ' 노출'}
+        style={{ width: 34, height: 18, borderRadius: 20, position: 'relative', flex: 'none',
+          background: r.active ? '#FAC775' : 'rgba(255,255,255,0.2)' }}>
+        <span style={{ position: 'absolute', top: 2, [r.active ? 'right' : 'left']: 2,
+          width: 14, height: 14, borderRadius: '50%', background: '#fff' } as CSSProperties} />
+      </button>
+    </div>
+  )
+}
+
 function MergedPriceTable() {
   const [consult, setConsult] = useState<Price[]>([])
   const [ai, setAi] = useState<Price[]>([])
@@ -105,30 +154,6 @@ function MergedPriceTable() {
   const pairedKeys = new Set(PAIRS.flatMap(p => p.ai.map(x => x.k)))
   const leftovers = ai.filter(r => !pairedKeys.has(r.price_key))
 
-  // 값 칸 + 토글 (두 쪽이 «똑같이» 생기도록 한 곳에서 그립니다)
-  const Cell = ({ r, e, short }:
-    { r: Price | undefined; e: ReturnType<typeof edit>; short?: string }) => {
-    if (!r) return <span style={{ fontSize: 11, color: '#8a88a0' }}>—</span>
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: r.active ? 1 : 0.45 }}>
-        {short !== undefined && (
-          <span style={{ width: 74, flex: 'none', fontSize: 10, color: '#8a88a0' }}>{short}</span>
-        )}
-        <input type="text" inputMode="numeric" value={r.price.toLocaleString()}
-          onChange={ev => e.price(r.id, ev.target.value)}
-          className="rounded-lg px-2 py-1 text-xs text-right outline-none"
-          style={{ width: 78, background: 'rgba(255,255,255,0.08)', color: '#fff',
-            border: '1px solid rgba(255,255,255,0.1)' }} />
-        <button onClick={() => e.toggle(r.id)} aria-label={r.label + ' 노출'}
-          style={{ width: 34, height: 18, borderRadius: 20, position: 'relative', flex: 'none',
-            background: r.active ? '#FAC775' : 'rgba(255,255,255,0.2)' }}>
-          <span style={{ position: 'absolute', top: 2, [r.active ? 'right' : 'left']: 2,
-            width: 14, height: 14, borderRadius: '50%', background: '#fff' } as CSSProperties} />
-        </button>
-      </div>
-    )
-  }
-
   /* ★2026-09-08 — 칸 폭을 «글자에 맞춰» 고정했습니다 [대표님 「가깝게 붙여줘」].
      ⛔ 1fr 로 되돌리지 마십시오 — 남는 자리를 반씩 나눠 가져
         상담 값과 AI 값이 ★화면 끝과 끝으로 벌어집니다. 눈이 건너뛰게 됩니다.
@@ -158,10 +183,13 @@ function MergedPriceTable() {
                 opacity: c.active ? 1 : 0.45 }}>
                 {c.label}{!c.active && <span style={{ fontSize: 10, color: '#8a88a0' }}> (숨김)</span>}
               </span>
-              <div style={{ paddingTop: 1 }}><Cell r={c} e={eC} /></div>
+              <div style={{ paddingTop: 1 }}>
+                <PriceCell r={c} onPrice={eC.price} onToggle={eC.toggle} />
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {p.ai.map(x => (
-                  <Cell key={x.k} r={ai.find(r => r.price_key === x.k)} e={eA} short={x.short} />
+                  <PriceCell key={x.k} r={ai.find(r => r.price_key === x.k)}
+                    onPrice={eA.price} onToggle={eA.toggle} short={x.short} />
                 ))}
               </div>
             </div>
@@ -174,7 +202,8 @@ function MergedPriceTable() {
             <span style={{ fontSize: 11, color: '#8a88a0', paddingTop: 5 }}>짝이 없는 AI 줄</span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {leftovers.map(r => (
-                <Cell key={r.id} r={r} e={eA} short={r.label} />
+                <PriceCell key={r.id} r={r}
+                  onPrice={eA.price} onToggle={eA.toggle} short={r.label} />
               ))}
             </div>
           </div>
