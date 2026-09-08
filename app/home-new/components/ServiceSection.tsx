@@ -103,7 +103,28 @@ const C = {
   /** 4면 경계가 칼같이 보이도록 그림자는 촘촘하게 (퍼지면 선이 흐려집니다) */
   shadow: '0 2px 8px rgba(0,0,0,0.04)',
   shadowUp: '0 3px 12px rgba(0,0,0,0.06)',
+  /** ★왼쪽 색 띠 — 일반 카드용 (2026-09-08 · 대표님 목업 승낙) */
+  stripe: '#c9a06a',
 }
+
+/* ══════════════════════════════════════════════════════════════════
+ *  ★2026-09-08 — 카드 왼쪽 «색 띠»  [대표님 지시 · 목업 4px 로 확정]
+ *
+ *  [어떻게]  칸을 새로 넣지 않고 ★inset box-shadow 로 냅니다.
+ *    inset 4px 0 0 <색>  ⇒ 카드 «안쪽 왼편» 에 4px 세로 띠가 그려집니다.
+ *    ✅ border-radius 를 «저절로 따라» 위아래 끝이 둥글어집니다.
+ *    ✅ JSX 구조를 한 곳도 안 건드립니다 — 폴더 카드(접히는 목록)도 그대로.
+ *    ⚠️ 그림자와 «같은 칸» 을 씁니다. 그래서 «쉼표로 이어» 적어야 합니다.
+ *       inset 을 먼저, 바깥 그림자를 뒤에.
+ *
+ *  ⛔ 띠를 border-left 로 바꾸지 마십시오 —
+ *     둥근 모서리에서 띠가 «잘려» 찌그러집니다. 그래서 inset 을 씁니다.
+ *  ⚠️ 카드 padding 이 좌 13px(일반)·15px(BEST) 이라 ★글자와 안 겹칩니다.
+ *     padding 을 4px 아래로 줄이면 겹칩니다.
+ *  ⚠️ 폴더를 «열면» 띠가 안쪽 목록까지 내려갑니다. 그렇게 보이는 것이 맞습니다.
+ *     ⇒ 안쪽 서브 카드에는 ★띠를 «안 넣었습니다» (겹쳐 보입니다).
+ * ══════════════════════════════════════════════════════════════════ */
+const STRIPE_W = '4px'
 
 /** 맨 위에 큰 카드로 세울 둘 (대표님 지정) */
 const BEST_NAMES = ['내사주그림', '진로적성']
@@ -122,7 +143,9 @@ const BEST_COPY: Record<string, string> = {
  *   ⚠️ 테두리는 진짜 그라데이션입니다. padding-box / border-box 두 겹으로 냅니다.
  *      단색 테두리로 바꾸시려면 border 를 `1.5px solid <색>` 으로 두면 됩니다.
  */
-interface BestTheme { bg: string; glow: string; badge: string; arrow: string; iconBg: string; iconEdge: string }
+// ⚠️ glow 는 ★2026-09-08 부터 «안 씁니다» (선 통일). 되돌리실 때 쓰시라고 남겨 둡니다.
+//    ⛔ 지우지 마십시오 — 지우면 옛 모양으로 되돌리는 값이 사라집니다.
+interface BestTheme { bg: string; glow: string; badge: string; arrow: string; iconBg: string; iconEdge: string; stripe: string }
 /* ★2026-08-04 (45부 · 대표님 지시) — BEST 카드도 «대비 2단계» 로 올렸습니다.
  *
  *   [까닭]  아래 카드들만 진해지고 BEST 둘이 옛 대비로 남아 «따로 놀았습니다».
@@ -142,20 +165,20 @@ interface BestTheme { bg: string; glow: string; badge: string; arrow: string; ic
  */
 const BEST_THEME: Record<string, BestTheme> = {
   '내사주그림': {
-    bg:
-      'linear-gradient(135deg, rgba(255,251,235,0.94) 0%, rgba(255,241,242,0.86) 100%) padding-box,' +
-      ' linear-gradient(135deg, #e0697a 0%, #d69a1f 52%, #e0697a 100%) border-box',
+    // ★2026-09-08 — 그라데이션 «테두리» 를 걷었습니다 (아래 카드들과 선을 통일).
+    //   바탕 그라데이션은 ★그대로 둡니다 [45부 「흐려서 안 보인다」 되돌리지 말 것].
+    bg: 'linear-gradient(135deg, rgba(255,251,235,0.94) 0%, rgba(255,241,242,0.86) 100%)',
     glow: '0 6px 22px -6px rgba(224,105,122,0.30), 0 2px 8px rgba(0,0,0,0.04)',
+    stripe: '#e0697a',
     badge: 'linear-gradient(100deg, #cf6b56, #b57f37)',
     arrow: '#8a5049',
     iconBg: '#ffffff',
     iconEdge: '#e8cfc4',
   },
   '진로적성': {
-    bg:
-      'linear-gradient(135deg, rgba(250,245,255,0.94) 0%, rgba(238,242,255,0.86) 100%) padding-box,' +
-      ' linear-gradient(135deg, #a86fd8 0%, #6f80e0 52%, #a86fd8 100%) border-box',
+    bg: 'linear-gradient(135deg, rgba(250,245,255,0.94) 0%, rgba(238,242,255,0.86) 100%)',
     glow: '0 6px 22px -6px rgba(168,111,216,0.28), 0 2px 8px rgba(0,0,0,0.04)',
+    stripe: '#a86fd8',
     badge: 'linear-gradient(100deg, #7d5cb8, #5f6bc4)',
     arrow: '#5b4d8c',
     iconBg: '#ffffff',
@@ -300,7 +323,8 @@ export default function ServiceSection({
     background: C.white,
     border: `1.5px solid ${C.border}`,
     borderRadius: 16,
-    boxShadow: pinnedOn ? C.shadowUp : C.shadow,
+    // ★왼쪽 색 띠 + 기존 그림자 (2026-09-08). inset 이 «앞», 바깥 그림자가 «뒤».
+    boxShadow: `inset ${STRIPE_W} 0 0 ${C.stripe}, ${pinnedOn ? C.shadowUp : C.shadow}`,
     overflow: 'hidden',
   })
 
@@ -363,11 +387,14 @@ export default function ServiceSection({
                 style={{
                   display: 'flex', alignItems: 'center', gap: 13,
                   width: '100%', textAlign: 'left', cursor: 'pointer',
-                  padding: '16px 15px', borderRadius: 18,
-                  // ★진짜 그라데이션 테두리 — 안쪽은 배경, 바깥쪽은 테두리
+                  // ★2026-09-08 [대표님 목업 승낙] — 아래 카드들과 «선을 통일» 했습니다.
+                  //   모서리 18 → 16 · 그라데이션 테두리 → C.border · 색 글로우 → C.shadow
+                  //   ⇒ 갈리는 것은 이제 «바탕색» 과 «왼쪽 띠» 입니다.
+                  //   ⛔ t.glow(색 번짐)로 되돌리지 마십시오 — 그것 때문에 굵어 보였습니다.
+                  padding: '16px 15px', borderRadius: 16,
                   background: t.bg,
-                  border: '1.5px solid transparent',
-                  boxShadow: t.glow,
+                  border: `1.5px solid ${C.border}`,
+                  boxShadow: `inset ${STRIPE_W} 0 0 ${t.stripe}, ${C.shadow}`,
                   backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
                 }}
               >
