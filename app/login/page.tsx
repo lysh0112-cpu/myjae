@@ -19,7 +19,30 @@ export default function LoginPage() {
   //     고객 화면은 전부 피치톤이어야 하므로(인수인계서 3부) 연결을 끊고
   //     마이페이지로 보낸다. 거기서 닉네임·사주를 수정할 수 있다.
   //     (/auth/* 폴더는 상담사 화면들이 아직 쓰므로 삭제하지 않고 남겨 둠)
+  /* ★2026-09-08 — 로그인 뒤 ★«왔던 자리» 로 돌려보냅니다.
+   *   [겪은 일]  골프온·큐보드에서 /wallet?from=glf 로 넘어온 손님이
+   *     로그인을 안 했으면 로그인 화면으로 보내는데,
+   *     로그인하고 나면 ★명카페 마이페이지에 «떨어졌습니다». 골프온으로 못 돌아갔습니다.
+   *   ⇒ /login?next=/wallet%3Ffrom%3Dglf  처럼 «갈 곳» 을 받아 그리로 보냅니다.
+   *
+   *   ⛔⛔ ★«/» 로 시작하는 «우리 집 주소» 만 받습니다.
+   *       http://… 를 그대로 받으면 ★남의 사이트로 손님을 보낼 수 있습니다
+   *       (열린 넘기기 · open redirect). 「//」로 시작하는 것도 막습니다.
+   *   ⚠️ Next.js 의 «주소 읽기 훅» 을 ★쓰지 않고, 그때그때 주소창을 직접 읽습니다.
+   *      ⇒ Suspense 로 감쌀 일이 없어 빌드가 안 깨집니다.
+   *      ⛔ 그 훅으로 바꾸지 마십시오 — 바꾸면 ★Suspense 로 감싸야 합니다
+   *        (검사 ⑯-l 이 지킵니다. 낱말을 «글자로» 찾으니 주석에도 쓰지 마십시오).
+   */
+  const nextPath = (): string | null => {
+    if (typeof window === 'undefined') return null
+    const raw = new URLSearchParams(window.location.search).get('next')
+    if (!raw) return null
+    if (!raw.startsWith('/') || raw.startsWith('//')) return null
+    return raw
+  }
+
   const routeAfterLogin = async (userId: string) => {
+    const back = nextPath()
     const { data: profile } = await supabase
       .from('profiles')
       .select('nickname, privacy_agreed')
@@ -27,9 +50,12 @@ export default function LoginPage() {
       .single()
 
     if (!profile || !profile.nickname || !profile.privacy_agreed) {
+      // ⚠️ 프로필이 덜 찬 분은 ★마이페이지가 먼저입니다. next 보다 앞섭니다.
       router.push('/mypage-new')
       return
     }
+
+    if (back) { router.push(back); return }
     // ★2026-07-27 — 커플채팅 초대 링크(?invite=) 자동연결을 제거했다.
     //   커플채팅이 테스트였으므로 통째로 삭제되었고, 연결할 방이 사라졌다.
     //   ?invite= 가 붙은 옛 링크로 들어와도 그냥 홈으로 간다(오류 없음).
