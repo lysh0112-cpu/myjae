@@ -1,11 +1,16 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { memberName } from '@/lib/memberName'
 
 type Member = {
   id: string
   email: string
   nickname: string | null
+  //  ★2026-09-08 — memberName() 차례에 쓰는 두 칸 [대표님 「닉네임 그대로 부르면 돼」]
+  //     ⛔ 지우지 마십시오. 카카오 뒤에는 email 이 «빕니다».
+  hangul_name: string | null
+  meta_nickname: string | null
   role: string | null
   created_at: string | null
   last_sign_in_at: string | null
@@ -114,7 +119,7 @@ export default function MemberManager() {
 
   const handleRoleChange = async (member: Member, role: string) => {
     if (role === (member.role || 'customer')) return
-    const name = member.nickname || member.email || '(이름 없음)'
+    const name = memberName(member)
     const label = role === 'master' ? '매니저' : role === 'consultant' ? '상담사' : '일반회원'
     if (!confirm(`"${name}" 님의 등급을 "${label}"(으)로 바꿀까요?`)) return
     setRoleSavingId(member.id)
@@ -225,7 +230,7 @@ export default function MemberManager() {
   }
 
   const handleDelete = async (member: Member) => {
-    const name = member.nickname || member.email || '(이름 없음)'
+    const name = memberName(member)
     if (!confirm(`정말 "${name}" 회원을 삭제할까요?\n\n로그인 정보와 프로필이 모두 삭제되며 되돌릴 수 없습니다.`)) {
       return
     }
@@ -278,10 +283,10 @@ export default function MemberManager() {
   }
 
   const downloadCSV = () => {
-    const header = ['등급', '닉네임', '이메일', '생년월일', '음양력', '윤/평달', '남/여', '생시', '가입일', '마지막 로그인']
+    const header = ['등급', '이름', '이메일', '생년월일', '음양력', '윤/평달', '남/여', '생시', '가입일', '마지막 로그인']
     const rows = members.map(m => [
       roleLabelText(m.role),
-      m.nickname || '',
+      memberName(m),
       m.email || '',
       fmtBirth(m),
       fmtCalType(m.cal_type),
@@ -403,7 +408,8 @@ export default function MemberManager() {
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', textAlign: 'left' }}>
                 <th style={th}>등급</th>
-                <th style={th}>닉네임</th>
+                {/* ★2026-09-08 — memberName() 이 고른 «부를 이름» 입니다 (닉네임만이 아닙니다) */}
+                <th style={th}>이름</th>
                 <th style={th}>이메일</th>
                 <th style={th}>생년월일</th>
                 <th style={th}>음양력</th>
@@ -441,7 +447,7 @@ export default function MemberManager() {
                       {isEdit ? (
                         <input value={editNick} onChange={e => setEditNick(e.target.value)} maxLength={20} placeholder="닉네임"
                           style={{ width: 100, background: '#1a1a18', color: '#fff', borderRadius: 6, padding: '6px 8px', border: '1px solid rgba(250,199,117,0.4)', fontSize: 13 }} />
-                      ) : (member.nickname || '(없음)')}
+                      ) : memberName(member)}
                     </td>
 
                     <td style={{ ...td, color: 'rgba(255,255,255,0.7)' }}>{member.email || '-'}</td>

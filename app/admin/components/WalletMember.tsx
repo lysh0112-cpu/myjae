@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { memberName } from '@/lib/memberName'
 
 //  ★회원 지갑 — 2026-09-05 신설 (HANDOVER-WALLET.md 4장)
 //
@@ -44,7 +45,10 @@ export default function WalletMember() {
     setBusy(true)
     setSearched(true)
 
-    //  ★이름 · 닉네임으로 찾습니다.
+    //  ★닉네임 · 이름으로 찾습니다.
+    //  ★2026-09-08 — 보일 이름은 memberName() 이 고릅니다 (닉네임이 «맨 앞»).
+    //    ⛔ 찾을 때는 두 칸을 «다» 훑어야 합니다 —
+    //       화면엔 닉네임이 떠도 대표님은 통장에 찍힌 «이름» 으로 치실 수 있습니다.
     //  ⚠️ 카카오 로그인이 붙으면 «회원번호 뒷자리» 도 여기서 찾게 됩니다 (아직 없음).
     const { data, error } = await supabase
       .from('profiles')
@@ -84,7 +88,7 @@ export default function WalletMember() {
   async function charge(amount: number) {
     if (!picked) return
     const memo = window.prompt(
-      `${picked.hangul_name ?? picked.nickname} 님에게 ${amount.toLocaleString()}원을 올립니다.\n메모(입금자명 등)를 적어 주십시오.`,
+      `${memberName(picked)} 님에게 ${amount.toLocaleString()}원을 올립니다.\n메모(입금자명 등)를 적어 주십시오.`,
       '계좌이체')
     if (memo === null) return
 
@@ -143,8 +147,8 @@ export default function WalletMember() {
               className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left"
               style={{ color: '#e8e6f0' }}>
               <span className="text-sm">
-                {m.hangul_name ?? '(이름 없음)'}
-                <span className="text-xs ml-2" style={{ color: '#8a88a0' }}>{m.nickname ?? ''}</span>
+                {memberName(m)}
+                <span className="text-xs ml-2" style={{ color: '#8a88a0' }}>{m.hangul_name ?? ''}</span>
               </span>
               <span className="text-sm font-bold" style={{ color: '#FAC775' }}>
                 {m.balance.toLocaleString()}원
@@ -164,7 +168,7 @@ export default function WalletMember() {
           <div className="rounded-2xl p-5 mb-4 flex items-center justify-between flex-wrap gap-3" style={box}>
             <div>
               <div className="text-sm" style={{ color: '#8a88a0' }}>
-                {picked.hangul_name ?? '(이름 없음)'} {picked.nickname ? '· ' + picked.nickname : ''}
+                {memberName(picked)}{picked.hangul_name ? ' · ' + picked.hangul_name : ''}
               </div>
               <div className="text-2xl font-bold mt-1" style={{ color: '#FAC775' }}>
                 {picked.balance.toLocaleString()}원

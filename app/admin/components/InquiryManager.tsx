@@ -25,6 +25,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { memberName } from '@/lib/memberName'
 
 type Row = {
   id: string
@@ -66,8 +67,10 @@ export default function InquiryManager() {
     // 누가 남긴 문의인지 — ★관리자만 봅니다 (손님 화면에는 안 나갑니다)
     const ids = [...new Set(rows.map(r => r.user_id).filter(Boolean))] as string[]
     if (ids.length) {
-      const { data: ps } = await supabase.from('profiles').select('id, nickname').in('id', ids)
-      if (ps) setNick(Object.fromEntries(ps.map(p => [p.id, p.nickname || '(닉네임 없음)'])))
+      //  ★2026-09-08 — 이름은 memberName() 이 고릅니다 (닉네임이 «맨 앞»).
+      //     ⛔ p.nickname 을 직접 쓰지 마십시오 — 카카오 뒤에는 빈 분이 생깁니다.
+      const { data: ps } = await supabase.from('profiles').select('id, nickname, hangul_name').in('id', ids)
+      if (ps) setNick(Object.fromEntries(ps.map(p => [p.id, memberName(p)])))
     }
     setLoading(false)
   }
