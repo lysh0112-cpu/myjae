@@ -333,10 +333,13 @@ export default function LandingPage() {
               }}>{s}</div>
             ))}
           </div>
+          {/* ★2026-09-08 — 사업자등록증(2026-09-04 발급)대로 채웠습니다.
+              ⚠️ 이 푸터는 ★home-new/page.tsx 의 «사본» 입니다.
+                 ⛔ 한쪽만 고치지 마십시오. 두 곳을 «함께» 고쳐야 합니다. */}
           <div style={{ fontSize: '11px', color: '#6b5340', lineHeight: 1.9 }}>
             (주)명연재 &nbsp;|&nbsp; 대표 오연희<br />
-            사업자등록번호 000-00-0000<br />
-            서울시 강북구 솔매로45길 95, 201호
+            사업자등록번호 296-86-04182<br />
+            서울특별시 강북구 솔매로45길 95, 2층(미아동)
           </div>
           <div style={{ marginTop: '12px', fontSize: '11px', color: '#5c3a1e', lineHeight: 1.9 }}>
             <strong style={{ color: '#6f6053' }}>고객센터</strong><br />
