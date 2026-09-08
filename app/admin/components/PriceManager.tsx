@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { supabase } from '@/lib/supabase'
 
 type Price = {
@@ -21,7 +21,175 @@ type HomePrice = {
   sort: number
 }
 
+/* ══════════════════════════════════════════════════════════════════
+ *  ★2026-09-08 [대표님 지시 · 목업 승낙] — 상담과 AI 분석을 «한 표» 로
+ *
+ *  [왜]  「왼쪽은 상담사와 이어졌을 때 값, 오른쪽은 손님이 혼자 볼 때 값」
+ *        ⇒ 같은 서비스의 두 값을 «같은 줄» 에서 보고 고치실 수 있어야 합니다.
+ *
+ *  ⚠️ ★1:1 이 아닙니다. 결혼·이사·이름은 화면이 «둘 이상» 이라 AI 줄도 여럿입니다.
+ *     ⛔ 억지로 한 줄로 합치지 마십시오 — 화면 둘을 하나로 묶는 셈이라 값이 어긋납니다.
+ *
+ *  ⛔⛔ ★consult 의 price_key 를 바꾸지 마십시오 —
+ *      SERVICE_SPECIALTIES · ConsultButton 등 열두 곳과 어긋납니다 (48부 4-1).
+ *
+ *  ⚠️ ★PAIRS 에 «없는» analysis 줄은 맨 아래 「그 밖」 에 나옵니다.
+ *     ⇒ 줄이 «조용히 사라지지» 않게 하려고 그렇게 했습니다. 지우지 마십시오.
+ * ══════════════════════════════════════════════════════════════════ */
+const PAIRS: { consult: string; ai: { k: string; short: string }[] }[] = [
+  { consult: 'mulsang',     ai: [{ k: 'mulsang_ai',     short: '그림 생성' }] },
+  { consult: 'career',      ai: [{ k: 'career_ai',      short: '적성 분석' }] },
+  { consult: 'couple',      ai: [{ k: 'couple_ai',      short: '궁합 분석' }] },
+  { consult: 'saju',        ai: [{ k: 'saju_deep',      short: '심층분석' }] },
+  { consult: 'wedding',     ai: [{ k: 'wedding_check',  short: '정한날 진단' },
+                                 { k: 'wedding_pick',   short: '길일 택일' }] },
+  { consult: 'birth',       ai: [{ k: 'birth_pick',     short: '시기 택일' }] },
+  { consult: 'moving',      ai: [{ k: 'moving_pick',    short: '좋은날 찾기' },
+                                 { k: 'moving_check',   short: '정한날 진단' }] },
+  { consult: 'naming',      ai: [{ k: 'naming_read',    short: '이름 풀이' },
+                                 { k: 'naming_hanja',   short: '한자 바꾸기' },
+                                 { k: 'naming_ai',      short: '개명 분석' }] },
+  { consult: 'naming_baby', ai: [{ k: 'naming_baby_ai', short: '작명 분석' }] },
+  { consult: 'tarot',       ai: [{ k: 'tarot_ai',       short: '카드 리딩' }] },
+]
+
+function MergedPriceTable() {
+  const [consult, setConsult] = useState<Price[]>([])
+  const [ai, setAi] = useState<Price[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => { load() }, [])
+
+  async function load() {
+    const [c, a] = await Promise.all([
+      supabase.from('consult_prices').select('*').order('sort'),
+      supabase.from('analysis_prices').select('*').order('sort'),
+    ])
+    if (c.error) { alert('상담 가격 불러오기 실패: ' + c.error.message); return }
+    if (a.error) { alert('AI 분석 가격 불러오기 실패: ' + a.error.message); return }
+    setConsult((c.data ?? []) as Price[])
+    setAi((a.data ?? []) as Price[])
+    setLoading(false)
+  }
+
+  const edit = (
+    set: (fn: (prev: Price[]) => Price[]) => void,
+  ) => ({
+    price: (id: string, raw: string) => {
+      const num = parseInt(raw.replace(/[^0-9]/g, '')) || 0
+      set(prev => prev.map(r => r.id === id ? { ...r, price: num } : r))
+    },
+    toggle: (id: string) => set(prev => prev.map(r => r.id === id ? { ...r, active: !r.active } : r)),
+  })
+  const eC = edit(setConsult)
+  const eA = edit(setAi)
+
+  async function saveAll() {
+    setSaving(true)
+    for (const [table, rows] of [['consult_prices', consult], ['analysis_prices', ai]] as const) {
+      for (const r of rows) {
+        const { error } = await supabase.from(table)
+          .update({ price: r.price, active: r.active, updated_at: new Date().toISOString() })
+          .eq('id', r.id)
+        if (error) { alert('저장 실패(' + r.label + '): ' + error.message); setSaving(false); return }
+      }
+    }
+    setSaving(false)
+    alert('가격이 저장되었습니다')
+    load()
+  }
+
+  if (loading) return <div className="text-sm" style={{ color: '#8a88a0' }}>불러오는 중...</div>
+
+  const pairedKeys = new Set(PAIRS.flatMap(p => p.ai.map(x => x.k)))
+  const leftovers = ai.filter(r => !pairedKeys.has(r.price_key))
+
+  // 값 칸 + 토글 (두 쪽이 «똑같이» 생기도록 한 곳에서 그립니다)
+  const Cell = ({ r, e, short }:
+    { r: Price | undefined; e: ReturnType<typeof edit>; short?: string }) => {
+    if (!r) return <span style={{ fontSize: 11, color: '#8a88a0' }}>—</span>
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: r.active ? 1 : 0.45 }}>
+        {short !== undefined && (
+          <span style={{ width: 74, flex: 'none', fontSize: 10, color: '#8a88a0' }}>{short}</span>
+        )}
+        <input type="text" inputMode="numeric" value={r.price.toLocaleString()}
+          onChange={ev => e.price(r.id, ev.target.value)}
+          className="rounded-lg px-2 py-1 text-xs text-right outline-none"
+          style={{ width: 78, background: 'rgba(255,255,255,0.08)', color: '#fff',
+            border: '1px solid rgba(255,255,255,0.1)' }} />
+        <button onClick={() => e.toggle(r.id)} aria-label={r.label + ' 노출'}
+          style={{ width: 34, height: 18, borderRadius: 20, position: 'relative', flex: 'none',
+            background: r.active ? '#FAC775' : 'rgba(255,255,255,0.2)' }}>
+          <span style={{ position: 'absolute', top: 2, [r.active ? 'right' : 'left']: 2,
+            width: 14, height: 14, borderRadius: '50%', background: '#fff' } as CSSProperties} />
+        </button>
+      </div>
+    )
+  }
+
+  const row = { display: 'grid', gridTemplateColumns: '132px 1fr 1fr', gap: 12,
+    alignItems: 'start', padding: '9px 12px',
+    borderTop: '1px solid rgba(255,255,255,0.05)' } as CSSProperties
+
+  return (
+    <div style={{ width: '100%' }}>
+      <div className="rounded-xl overflow-hidden"
+        style={{ background: '#2C2C2A', border: '1px solid rgba(255,255,255,0.06)' }}>
+
+        <div style={{ ...row, borderTop: 'none', alignItems: 'center',
+          background: 'rgba(60,52,137,0.3)', color: '#FAC775', fontSize: 12, fontWeight: 700 }}>
+          <span>종류</span>
+          <span>🔮 전문가 상담 — 상담사 연결</span>
+          <span>✨ AI 분석 — 손님이 혼자 조회</span>
+        </div>
+
+        {PAIRS.map(p => {
+          const c = consult.find(r => r.price_key === p.consult)
+          if (!c) return null
+          return (
+            <div key={p.consult} style={row}>
+              <span style={{ fontSize: 12, color: '#fff', paddingTop: 5,
+                opacity: c.active ? 1 : 0.45 }}>
+                {c.label}{!c.active && <span style={{ fontSize: 10, color: '#8a88a0' }}> (숨김)</span>}
+              </span>
+              <div style={{ paddingTop: 1 }}><Cell r={c} e={eC} /></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {p.ai.map(x => (
+                  <Cell key={x.k} r={ai.find(r => r.price_key === x.k)} e={eA} short={x.short} />
+                ))}
+              </div>
+            </div>
+          )
+        })}
+
+        {leftovers.length > 0 && (
+          <div style={row}>
+            <span style={{ fontSize: 12, color: '#8a88a0', paddingTop: 5 }}>그 밖</span>
+            <span style={{ fontSize: 11, color: '#8a88a0', paddingTop: 5 }}>짝이 없는 AI 줄</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {leftovers.map(r => (
+                <Cell key={r.id} r={r} e={eA} short={r.label} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <button onClick={saveAll} disabled={saving}
+        className="py-2 px-5 rounded-xl text-sm font-bold mt-3"
+        style={{ background: '#FAC775', color: '#1a1a18' }}>
+        {saving ? '저장중...' : '저장'}
+      </button>
+    </div>
+  )
+}
+
 // 상담/분석 공용 표
+// ⚠️ ★2026-09-08 부터 화면에서는 «안 씁니다» (MergedPriceTable 로 합쳤습니다).
+//    ⛔ 지우지 마십시오 — 되돌리실 때 쓰고, 표 하나만 보고 싶을 때도 씁니다.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function PriceTable({ title, table }: { title: string; table: 'consult_prices' | 'analysis_prices' }) {
   const [rows, setRows] = useState<Price[]>([])
   const [loading, setLoading] = useState(true)
@@ -107,6 +275,9 @@ function PriceTable({ title, table }: { title: string; table: 'consult_prices' |
 }
 
 // 타로 전용 표 (무료횟수 칸 포함)
+// ⚠️ ★2026-09-08 부터 화면에서 «안 씁니다» — 값을 하나로 합쳤습니다 [대표님 지시].
+//    ⛔ 지우지 마십시오. tarot_prices 의 무료횟수를 되살리실 때 이 함수를 씁니다.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function TarotTable() {
   const [rows, setRows] = useState<TarotPrice[]>([])
   const [loading, setLoading] = useState(true)
@@ -370,27 +541,30 @@ export default function PriceManager() {
         전문가 상담 · AI 분석 · 타로 가격입니다. 노출을 끄면 고객 화면에서 해당 버튼이 숨겨집니다.
       </p>
 
-      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-        <div style={{ flex: 1, minWidth: 300, display: 'flex', flexDirection: 'column' }}>
-          <PriceTable title="🔮 전문가 상담 가격" table="consult_prices" />
-          {/* 이름 짓기 조회 횟수 — 2026-07 화면에서 숨김 (대표님 지시).
-              함수(NamingTryLimitBox)는 그대로 두었으니 되살리려면 아래 한 줄만 풀면 된다.
-              ※ 숨겨도 고객 화면은 그대로 동작한다.
-                app_settings의 naming_try_limit 행이 남아 있고,
-                어른 개명 3화면(newname·newhanja·newresult)이 그 값을 읽는다.
-                행이 없어도 코드 기본값 3회로 떨어지므로 문제없다.
-                값을 바꾸려면 Supabase에서 직접 수정할 것. */}
-          {/* <NamingTryLimitBox /> */}
-        </div>
-        <PriceTable title="✨ AI 분석 가격" table="analysis_prices" />
-        <div style={{ flex: 1, minWidth: 320 }}>
-          <TarotTable />
-          <HomePriceTable />
-        </div>
+      <MergedPriceTable />
+
+      {/* 이름 짓기 조회 횟수 — 2026-07 화면에서 숨김 (대표님 지시).
+          함수(NamingTryLimitBox)는 그대로 두었으니 되살리려면 아래 한 줄만 풀면 된다.
+          ※ 숨겨도 고객 화면은 그대로 동작한다.
+            app_settings의 naming_try_limit 행이 남아 있고,
+            어른 개명 3화면(newname·newhanja·newresult)이 그 값을 읽는다.
+            행이 없어도 코드 기본값 3회로 떨어지므로 문제없다.
+            값을 바꾸려면 Supabase에서 직접 수정할 것. */}
+      {/* <NamingTryLimitBox /> */}
+
+      {/* ⛔ ★2026-09-08 [대표님 지시] — 타로 표를 «내렸습니다».
+          「장수와 횟수 구분 없애고 가격 칸 하나만」 ⇒ 위 표의 «타로 · 카드 리딩» 한 칸입니다.
+          ⚠️ tarot_prices 표와 TarotTable 함수는 ★«지우지 않았습니다» —
+             무료 횟수 값이 들어 있고, 되살리실 때 씁니다.
+          ⇒ 되살리시려면 아래 주석 한 줄만 푸십시오.
+          <TarotTable /> */}
+
+      <div style={{ marginTop: 28, maxWidth: 420 }}>
+        <HomePriceTable />
       </div>
 
       <div className="text-xs mt-4" style={{ color: '#8a88a0' }}>
-        💡 켜짐 = 고객에게 버튼 보임 · 꺼짐 = 숨김 · 각 표는 따로 저장합니다
+        💡 켜짐 = 고객에게 버튼 보임 · 꺼짐 = 숨김 · 왼쪽·오른쪽을 한 번에 저장합니다
       </div>
     </div>
   )
