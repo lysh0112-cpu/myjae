@@ -706,6 +706,10 @@ function NewResultInner() {
             「불러오기 버튼」만 계속 봤습니다. */}
       {cur.commentary && cur.commentary.yinyang?.meaning ? (
         <NameAnalysisResultView
+          //  ★2026-09-09 [대표님] — 아기 작명에는 「六 사주 명리적성」을 안 보입니다.
+          //    「내 아기 명품이름작명에 ★결이 안 맞는데 보여주고 있어」
+          //  ⛔ 어른 개명에는 «그대로» 보입니다. 통째로 끄지 마십시오.
+          showAptitude={namingKind !== '신생아'}
           hanjaName={fullName}
           hangulName={hangulName}
           // ★2026-08-01 (43부 20차) — 라벨을 «하나» 로 통일했습니다 (대표님 지시).

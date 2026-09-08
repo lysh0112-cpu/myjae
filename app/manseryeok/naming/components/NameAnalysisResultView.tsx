@@ -29,7 +29,7 @@
 
 import React, { useState } from 'react'
 import NamingSajuSummary from '@/app/manseryeok/naming/diagnosis/components/NamingSajuSummary'
-import NamingAptitude from '@/app/manseryeok/naming/diagnosis/components/NamingAptitude'
+import NamingAptitude, { NameFillCard } from '@/app/manseryeok/naming/diagnosis/components/NamingAptitude'
 import PerspectiveAccordion, { Stars, type PerspectiveCommentary } from '@/app/manseryeok/components/PerspectiveAccordion'
 import type { StarResult, PerspectiveStar } from '@/lib/saju/starRating'
 import type { Ohaeng } from '@/lib/saju/ohaeng'
@@ -122,6 +122,13 @@ export interface NameAnalysisResultViewProps {
   gisin?: Ohaeng | null
   /** 상단 칩 「이름에 담을 기운」 */
   fillElements?: Ohaeng[]
+  /**
+   *  ★2026-09-09 [대표님] — 「六 사주 명리적성」을 보일지.
+   *    「내 아기 명품이름작명에 ★결이 안 맞는데 보여주고 있어」
+   *  ⇒ 아기(신생아) 작명이면 false 로 넘깁니다. ⛔ 부품을 지우지 않았습니다.
+   *  ⚠️ 안 넘기면 «보입니다» — 어른 개명·정밀분석은 그대로입니다.
+   */
+  showAptitude?: boolean
   /** 「상세 진로·적성 분석 보러가기」 */
 
   /** 작명일 때 — [다른 추천 한자 보기] */
@@ -268,12 +275,33 @@ export default function NameAnalysisResultView(p: NameAnalysisResultViewProps) {
           // ★위 요약 카드에서 누른 관점을 펼치고 그리로 미끄러져 갑니다 (43부 27차)
           focusKey={focusKey}
           focusNonce={focusNonce}
+          //  ★2026-09-09 [대표님] — 「이름에 담을 기운」을 ★자원오행 «바로 뒤» 로.
+          //    「순서가 엉망이야」 ⇒ 자원오행(한자에 담긴 기운) 다음에
+          //     「무엇을 담을까」가 오도록 자리를 옮겼습니다.
+          //  ⛔ 아래 ③ 의 NamingAptitude 에 showFill 을 도로 켜지 마십시오 —
+          //     켜면 «같은 카드가 두 번» 나옵니다.
+          afterJawon={ready ? (
+            <NameFillCard
+              saju={p.saju}
+              solarMonth={p.solarMonth}
+              solarDay={p.solarDay}
+              hourBranch={hourBranch}
+              dayStem={p.dayStem}
+              yongsin={p.yongsin}
+              heeksin={p.heeksin}
+              gisin={p.gisin}
+            />
+          ) : null}
         />
       )}
 
-      {/* ── ③ 이름에 담을 기운 · 六 명리적성 (六 은 접힌 채) ── */}
-      {ready && (
+      {/* ── ③ 六 명리적성 ──
+          ★2026-09-09 — 「이름에 담을 기운」(五)은 ★위 아코디언 안으로 옮겼습니다.
+          ⛔ showFill 을 도로 켜지 마십시오 — 같은 카드가 두 번 나옵니다.
+          ⛔ 아기(신생아)면 통째로 안 그립니다 [대표님 「결이 안 맞는데」]. */}
+      {ready && p.showAptitude !== false && (
         <NamingAptitude
+          showFill={false}
           saju={p.saju}
           solarYear={p.solarYear}
           solarMonth={p.solarMonth}

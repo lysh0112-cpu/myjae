@@ -8,7 +8,7 @@
 // 데이터는 route.ts의 commentary(5관점 3단 통변)를 그대로 받는다.
 // 이름/한글이름 등 상단·하단은 page.tsx가 담당. 이 부품은 "해설 블록"만.
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Stars from '@/app/components/common/StarRating'
 // ★2026-07-30 (3단계-b) — 관점별 별점 (대표님 지시)
 import { starGlyphs, type PerspectiveStar, type StarResult } from '@/lib/saju/starRating'
@@ -119,6 +119,16 @@ export default function PerspectiveAccordion({
   focusKey?: keyof PerspectiveCommentary | null
   focusNonce?: number
   overallStar?: StarResult | null
+  /**
+   *  ★2026-09-09 — 「자원오행」 바로 뒤에 끼워 넣을 것 [대표님 지시]
+   *    「내 이름에 담을 기운은 ★자원오행 아랫쪽으로 옮겨야할듯 / 순서가 엉망이야」
+   *
+   *  ⚠️ 이 부품은 ★두 화면이 씁니다 —「내 이름 정밀분석」·「새 이름 결과」.
+   *     ⇒ 안 넘기면 «아무 일도» 안 일어납니다. 정밀분석은 그대로입니다.
+   *  ⛔ 여기에 「이름에 담을 기운」 그림을 «직접 적지» 마십시오 —
+   *     그림은 NamingAptitude.tsx 의 FillBlock «한 곳» 입니다.
+   */
+  afterJawon?: React.ReactNode
 }) {
   /** key 로 별을 찾습니다. 순서에 기대지 않습니다 */
   const starOfKey = (k: string) => stars?.find((x) => x.key === k) ?? null
@@ -190,8 +200,11 @@ export default function PerspectiveAccordion({
         const star = starOfKey(h.key as string)
         return (
           /* ★닻(id) — 요약 카드에서 «이리로» 미끄러져 옵니다 (43부 27차)
-             ⚠️ scroll-margin-top 을 두어 «머리글에 가려지지» 않게 합니다 */
-          <div key={h.key} id={`persp-${String(h.key)}`}
+             ⚠️ scroll-margin-top 을 두어 «머리글에 가려지지» 않게 합니다
+             ★2026-09-09 — 자원오행 뒤에 끼워 넣을 자리가 있어 조각(Fragment)으로 감쌌습니다.
+                ⛔ key 를 조각으로 «올려» 두었습니다. 안쪽 div 로 되돌리지 마십시오. */
+          <React.Fragment key={h.key}>
+          <div id={`persp-${String(h.key)}`}
             style={{
               background: cardBg, border, borderRadius: '16px', marginBottom: '12px',
               overflow: 'hidden', scrollMarginTop: '64px',
@@ -242,6 +255,11 @@ export default function PerspectiveAccordion({
               </div>
             )}
           </div>
+          {/* ★2026-09-09 — 「이름에 담을 기운」이 여기 들어옵니다 [대표님 지시].
+              ⛔ 자리를 «수리오행 뒤» 로 옮기지 마십시오 —
+                 자원오행(한자에 담긴 기운) 다음에 「무엇을 담을까」가 와야 말이 이어집니다. */}
+          {h.key === 'jawon' && afterJawon}
+          </React.Fragment>
         )
       })}
 

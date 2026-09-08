@@ -50,12 +50,62 @@ export interface NamingAptitudeProps {
   /** 진로적성 화면으로 넘길 주소 */
   /** 학생이면 계열, 성인이면 직무를 보여 줍니다 */
   target?: 'student' | 'adult'
+  //  ★2026-09-09 [대표님 지시] — 화면마다 «보일 것» 이 다릅니다.
+  //    ⚠️ 둘 다 «기본이 보임» 입니다 — 「내 이름 정밀분석」은 ★한 글자도 안 바뀝니다.
+  /** 五 이름에 담을 기운을 여기서 그릴지. 새 이름 결과는 ★아코디언 안으로 옮겼습니다 */
+  showFill?: boolean
+  /** 六 사주 명리적성을 그릴지. ⛔ 아기 작명(신생아)에는 «결이 안 맞아» 끕니다 [대표님] */
+  showAptitude?: boolean
 }
 
 const CARD = '#FFFBF7'
 // ★2026-08-05 (47부 18차) — 옛 선 상수를 걷었습니다. 값은 lib/ui/line.ts 에 있습니다.
 const GOLD = '#c8783c'
 const INK = '#5c3a1e'
+
+/**
+ *  ★2026-09-09 — 「五. 이름에 담을 기운」 «한 벌»  [대표님 지시]
+ *    「내 이름에 담을 기운은 ★자원오행 아랫쪽으로 옮겨야할듯」
+ *
+ *  ⚠️ 새 이름 결과에서는 ★아코디언 «안», 자원오행 바로 뒤에 들어갑니다.
+ *     내 이름 정밀분석은 ★예전 자리 그대로입니다.
+ *  ⛔⛔ 이 그림을 «복사» 하지 마십시오 — 두 화면이 이 하나를 씁니다.
+ *  ⛔ 부품을 다른 부품 «안» 에 만들지 마십시오 (2부 1-2).
+ */
+function FillBlock({ naming }: { naming: NamingBridgeResult }) {
+  if (naming.fill.length === 0 && naming.avoid.length === 0) return null
+  return (
+              <div style={{
+          background: CARD, border: LINE_OUTER, borderRadius: 14,
+          padding: '13px 12px', marginBottom: 12,
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: GOLD, marginBottom: 9 }}>
+            이름에 담을 기운
+          </div>
+          <div style={{ borderLeft: LINE_INNER, paddingLeft: 9 }}>
+            <div style={{ fontSize: 11.5, color: INK, lineHeight: 1.8 }}>
+              {naming.fill.length > 0 && (
+                <>이름에 먼저 담아 보실 기운은{' '}
+                  <b style={{ color: GOLD }}>{naming.fill.slice(0, 3).join(' · ')}</b>입니다.{' '}</>
+              )}
+              {naming.avoid.length > 0 && (
+                <>{naming.avoid.slice(0, 2).join('·')}는 이미 넉넉하거나 조심스러운 자리라,
+                  굳이 더 보태지 않는 편이 좋겠습니다.</>
+              )}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 9 }}>
+              {naming.fill.slice(0, 3).map((el) => <ElChip key={el} el={el} label="담을 것" />)}
+              {naming.avoid.slice(0, 2).map((el) => <ElChip key={el} el={el} label="피할 것" muted />)}
+            </div>
+            {/* ★교재 4장 107쪽 — 상극은 잣대가 아닙니다 */}
+            <div style={{ fontSize: 10.5, color: '#a8927e', marginTop: 9, lineHeight: 1.65 }}>
+              자원오행은 사주가 바라는 기운을 채우는 것이 본래 목적이라고 봅니다.
+              상극이 있다 하여 흠으로 볼 일은 아니라는 견해를 실무에서 널리 따릅니다.
+            </div>
+          </div>
+        </div>
+  )
+}
 
 /** 五 · 六 을 한 벌로 내보냅니다 — 화면은 이 하나만 얹으면 됩니다 */
 export default function NamingAptitude(p: NamingAptitudeProps) {
@@ -105,39 +155,12 @@ export default function NamingAptitude(p: NamingAptitudeProps) {
   return (
     <>
       {/* ── 五. 이름에 담을 기운 ── */}
-      {naming && (naming.fill.length > 0 || naming.avoid.length > 0) && (
-        <div style={{
-          background: CARD, border: LINE_OUTER, borderRadius: 14,
-          padding: '13px 12px', marginBottom: 12,
-        }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: GOLD, marginBottom: 9 }}>
-            이름에 담을 기운
-          </div>
-          <div style={{ borderLeft: LINE_INNER, paddingLeft: 9 }}>
-            <div style={{ fontSize: 11.5, color: INK, lineHeight: 1.8 }}>
-              {naming.fill.length > 0 && (
-                <>이름에 먼저 담아 보실 기운은{' '}
-                  <b style={{ color: GOLD }}>{naming.fill.slice(0, 3).join(' · ')}</b>입니다.{' '}</>
-              )}
-              {naming.avoid.length > 0 && (
-                <>{naming.avoid.slice(0, 2).join('·')}는 이미 넉넉하거나 조심스러운 자리라,
-                  굳이 더 보태지 않는 편이 좋겠습니다.</>
-              )}
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 9 }}>
-              {naming.fill.slice(0, 3).map((el) => <ElChip key={el} el={el} label="담을 것" />)}
-              {naming.avoid.slice(0, 2).map((el) => <ElChip key={el} el={el} label="피할 것" muted />)}
-            </div>
-            {/* ★교재 4장 107쪽 — 상극은 잣대가 아닙니다 */}
-            <div style={{ fontSize: 10.5, color: '#a8927e', marginTop: 9, lineHeight: 1.65 }}>
-              자원오행은 사주가 바라는 기운을 채우는 것이 본래 목적이라고 봅니다.
-              상극이 있다 하여 흠으로 볼 일은 아니라는 견해를 실무에서 널리 따릅니다.
-            </div>
-          </div>
-        </div>
-      )}
+      {p.showFill !== false && naming && <FillBlock naming={naming} />}
 
-      {/* ── 六. 사주 명리적성 — ★접힌 채 시작 ── */}
+      {/* ── 六. 사주 명리적성 — ★접힌 채 시작 ──
+          ⛔ 2026-09-09 [대표님] 아기 작명(신생아)에는 «결이 안 맞아» 끕니다.
+             ⚠️ 어른 개명·정밀분석에는 «그대로» 보입니다. 통째로 지우지 마십시오. */}
+      {p.showAptitude !== false && (
       <div style={{
         background: CARD, border: LINE_OUTER, borderRadius: 14,
         padding: '13px 12px', marginBottom: 14,
@@ -223,8 +246,41 @@ export default function NamingAptitude(p: NamingAptitudeProps) {
           </div>
         )}
       </div>
+      )}
     </>
   )
+}
+
+/**
+ *  ★2026-09-09 — 「이름에 담을 기운」만 «따로» 얹을 때 씁니다 [대표님 지시]
+ *    새 이름 결과가 ★아코디언 안(자원오행 뒤)에 넣으려고 부릅니다.
+ *
+ *  ⚠️ 셈은 ★lib 의 같은 함수를 씁니다 (calcCareerScore → gradeAll → calcNamingBridge).
+ *     ⛔ 여기서 «다시» 판정하지 마십시오. 그리기만 합니다.
+ *  ⚠️ 그림은 ★FillBlock 하나입니다 — NamingAptitude 와 «같은 것» 을 씁니다.
+ */
+export function NameFillCard(p: {
+  saju: Pillar[]
+  solarMonth: number
+  solarDay: number
+  hourBranch: string | null
+  dayStem: string
+  yongsin: Ohaeng | null
+  heeksin?: Ohaeng | null
+  gisin?: Ohaeng | null
+}) {
+  const ready = p.saju.length > 0 && !!p.dayStem && p.dayStem !== '?'
+  const naming = useMemo(() => {
+    if (!ready) return null
+    const score = calcCareerScore(p.saju, p.solarMonth, p.solarDay, p.hourBranch)
+    if (!score) return null
+    const grades = gradeAll(score)
+    if (!grades) return null
+    return calcNamingBridge({ grades, yongsin: p.yongsin, heeksin: p.heeksin, gisin: p.gisin })
+  }, [ready, p.saju, p.solarMonth, p.solarDay, p.hourBranch, p.yongsin, p.heeksin, p.gisin])
+
+  if (!naming) return null
+  return <FillBlock naming={naming} />
 }
 
 /** 오행 칩 — 색은 정본에서만 가져옵니다 */
