@@ -1007,7 +1007,20 @@ function DiagnosisInner() {
                 ＋ 다른 사람 진단
               </button>
             </div>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: syllables.length > 0 ? '26px' : '20px' }}>
+            {/* ══════════════════════════════════════════════════════════
+                🔴 ★2026-09-09 — [확인] 이 «화면 밖으로 밀려나» 있었습니다 [대표님 사진]
+                  「김성곤 덩그러니 남아있고 한자 고르기 화면이 없음」
+
+                [까닭]  <input> 은 flex 안에서 ★제 최소 너비 밑으로 «안 줄어듭니다».
+                        flex:1 만 주고 ★minWidth:0 을 안 주면 그렇습니다.
+                  ⇒ 좁은 폰에서 입력 칸이 안 줄어들어 [확인] 이 ★오른쪽 밖으로 나갔습니다.
+                  ⚠️ 넓은 화면에서는 «멀쩡히» 보입니다. 그래서 여태 안 드러났습니다.
+
+                ⛔⛔ ★minWidth: 0 을 «빼지» 마십시오 — 빼는 순간 단추가 다시 사라집니다.
+                ⛔ 단추의 flexShrink: 0 도 빼지 마십시오 — 대신 글자가 세로로 접힙니다.
+                ⚠️ 이 자리는 ★폰에서만 납니다. 고친 뒤 «폰으로» 확인하십시오.
+               ══════════════════════════════════════════════════════════ */}
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch', marginBottom: syllables.length > 0 ? '26px' : '20px' }}>
               <input
                 value={nameInput}
                 onChange={(e) => setNameInput(e.target.value)}
@@ -1015,11 +1028,16 @@ function DiagnosisInner() {
                 placeholder="예: 홍길동"
                 maxLength={5}
                 style={{
-                  flex: 1, padding: '13px', borderRadius: '12px', background: '#FDF6F0',
+                  flex: 1, minWidth: 0, width: '100%',
+                  padding: '13px', borderRadius: '12px', background: '#FDF6F0',
                   border: LINE_OUTER, color: '#1a1a1a', fontSize: '16px',
                 }} />
               <button onClick={applyName}
-                style={{ padding: '13px 20px', borderRadius: '12px', background: gold, border: 'none', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>
+                style={{
+                  flexShrink: 0, whiteSpace: 'nowrap',
+                  padding: '13px 20px', borderRadius: '12px', background: gold,
+                  border: 'none', color: '#fff', fontWeight: 'bold', cursor: 'pointer',
+                }}>
                 확인
               </button>
             </div>
