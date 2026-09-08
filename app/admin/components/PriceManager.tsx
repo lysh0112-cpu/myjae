@@ -135,6 +135,26 @@ function MergedPriceTable() {
   const eC = edit(setConsult)
   const eA = edit(setAi)
 
+  /* ★2026-09-08 [대표님 확정] — 저장하면 ★mc_price 에도 «함께» 씁니다.
+   *
+   *  [왜]  손님이 이용권을 충전해 두고, 서비스를 쓸 때마다 ★지갑에서 빠집니다.
+   *        상담료도 «지갑에서» 뺍니다 [대표님 「일관성 있게」].
+   *        ⇒ 그런데 wallet_use 는 ★mc_price 를 보고 뺍니다.
+   *          ⛔ 인자에 «금액» 을 못 넣습니다 (남의 지갑·값 조작을 막으려고 그렇게 만든 것).
+   *        ⇒ 그래서 여기서 정한 값이 ★mc_price 에 «가 있어야» 합니다.
+   *
+   *  ⛔⛔ ★이 부분을 «빼지» 마십시오 —
+   *      빼면 대표님이 값을 고치셔도 ★지갑은 «옛 값» 으로 뺍니다.
+   *      화면은 «멀쩡히» 뜨고 돈만 조용히 어긋납니다.
+   *
+   *  ⚠️ 낱말이 «겹치지 않습니다» —
+   *      상담료  mulsang · saju · wedding …        (consult_prices 와 같은 낱말)
+   *      AI분석  saju_deep · wedding_check …       (analysis_prices 와 같은 낱말)
+   *      ⇒ tarot(4만) 과 tarot_ai(1천) 처럼 «다른 줄» 입니다.
+   *
+   *  ⚠️ mc_price 쓰기는 ★master 만 됩니다 (RLS). 관리자 화면이라 괜찮습니다.
+   *  ⚠️ ★실패해도 «앞의 저장은 이미 끝났습니다». 그래서 알림만 띄우고 멈춥니다.
+   */
   async function saveAll() {
     setSaving(true)
     for (const [table, rows] of [['consult_prices', consult], ['analysis_prices', ai]] as const) {
@@ -145,8 +165,22 @@ function MergedPriceTable() {
         if (error) { alert('저장 실패(' + r.label + '): ' + error.message); setSaving(false); return }
       }
     }
+
+    // ★지갑 요금표에도 같은 값을 씁니다 (줄은 이미 스물넷 다 있습니다)
+    for (const r of [...consult, ...ai]) {
+      const { error } = await supabase.from('mc_price')
+        .update({ price: r.price, label: r.label, up_at: new Date().toISOString() })
+        .eq('service', 'myc').eq('item', r.price_key)
+      if (error) {
+        alert('가격은 저장됐지만 ★지갑 요금표 반영에 실패했습니다 ('
+          + r.label + '): ' + error.message
+          + '\n\n⚠️ 이대로 두면 지갑이 옛 값으로 뺍니다. 다시 저장해 주세요.')
+        setSaving(false); load(); return
+      }
+    }
+
     setSaving(false)
-    alert('가격이 저장되었습니다')
+    alert('가격이 저장되었습니다 (지갑 요금표에도 반영)')
     load()
   }
 
