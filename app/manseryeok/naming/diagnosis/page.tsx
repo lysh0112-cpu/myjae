@@ -245,6 +245,26 @@ function compoundOf(syllables: string[]): CompoundSurname | null {
 //   ⚠️ ★복성(남궁·선우…)이면 «둘» 입니다 — 카드가 못 떠서 낱글자로 내려올 때
 //      앞 두 칸이 다 성씨여야 합니다 (57부 안전망). 그래서 2 가 맞습니다.
 // ══════════════════════════════════════════════════════════════════
+/**
+ *  ★본인 profiles 로 사주를 읽습니다 — 두 곳(첫 진입 · 보관함 되돌림)이 씁니다.
+ *  ⛔ 이 함수를 부품 «안» 에 만들지 마십시오 (2부 1-2).
+ */
+async function fetchProfileInfo(): Promise<MyInfo | null> {
+  try {
+    const { data: u } = await supabase.auth.getUser()
+    if (!u?.user) return null
+    const { data: p } = await supabase
+      .from('profiles')
+      .select('birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, saju_saved')
+      .eq('id', u.user.id)
+      .maybeSingle()
+    return fromProfile(p)
+  } catch (e) {
+    console.error(e)
+    return null
+  }
+}
+
 function surnameSlotCount(syllables: string[]): number {
   return compoundOf(syllables) ? 2 : 1
 }
@@ -293,31 +313,32 @@ function DiagnosisInner() {
     let cancelled = false
 
     async function loadInfo() {
+      // ══════════════════════════════════════════════════════════════
+      //  🔴🔴 ★2026-09-09 — 보관함에서 열 때는 ★«저장해 둔 그 사람» 사주입니다
+      //     [대표님]  「아이 사주를 넣었는데 보관함에 보니
+      //                ★남의 사주명식을 불러오고 있어」
+      //
+      //   [까닭]  보관함 주소에는 ?recordId= 만 실립니다. 사람 정보가 «없습니다».
+      //      ⇒ 여기서 «본인 profiles» 로 떨어져, 아기 기록을 열어도
+      //        ★대표님 사주가 「내 사주」 칸에 떴습니다.
+      //      ⚠️ 기록에는 person 이 «제대로» 담겨 있었습니다 (input_data.person).
+      //         ★화면이 그걸 «한 번도 안 읽은» 것입니다.
+      //
+      //   ⛔⛔ ★이 줄을 빼지 마십시오 — 빼면 남의 사주가 다시 뜹니다.
+      //      ⇒ 아래 loadByRecordId 가 «그 사람» 으로 채웁니다.
+      // ══════════════════════════════════════════════════════════════
+      //  ⚠️ ★sp 에서 «그때그때» 읽습니다 — 바깥 recordId 를 쓰면
+      //     react-hooks 가 의존 배열에 넣으라며 ★경고를 냅니다 (기준선 135 가 깨집니다).
+      if (sp.get('recordId')) return
+
       const urlInfo = fromUrl(sp)
       if (urlInfo) {
         if (!cancelled) setInfo(urlInfo)
         return
       }
 
-      try {
-        const { data: u } = await supabase.auth.getUser()
-        if (u?.user) {
-          const { data: p } = await supabase
-            .from('profiles')
-            .select('birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, saju_saved')
-            .eq('id', u.user.id)
-            .single()
-          const profInfo = fromProfile(p)
-          if (profInfo) {
-            if (!cancelled) setInfo(profInfo)
-            return
-          }
-        }
-      } catch (e) {
-        console.error(e)
-      }
-
-      if (!cancelled) setInfo(null)
+      const profInfo = await fetchProfileInfo()
+      if (!cancelled) setInfo(profInfo)
     }
 
     loadInfo()
@@ -514,6 +535,19 @@ function DiagnosisInner() {
       try {
         const rec = await getNamingRecord(recordId!)
         if (cancelled || !rec) return
+
+        //  🔴 ★2026-09-09 — «저장해 둔 그 사람» 사주를 씁니다 [대표님 지시]
+        //     NamingPerson 과 MyInfo 는 칸이 «똑같습니다» (gender·calType·year·
+        //     month·day·leapMonth·hour). 그대로 옮겨 담습니다.
+        //  ⚠️ person 이 «없는» 옛 기록도 있습니다 (43부 전에 저장된 것) —
+        //     그때만 예전처럼 본인 사주로 내려갑니다. ⛔ 막지 마십시오.
+        if (rec.person) {
+          if (!cancelled) setInfo({ ...rec.person })
+        } else {
+          const profInfo = await fetchProfileInfo()
+          if (!cancelled) setInfo(profInfo)
+        }
+
         const snap = rec.snapshot
         if (snap?.result) {
           setResult(snap.result)
