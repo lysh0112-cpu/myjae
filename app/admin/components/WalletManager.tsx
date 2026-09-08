@@ -21,6 +21,15 @@ import WalletMember from './WalletMember'
 //    안쪽 탭 둘: 🪙 회원 지갑 / 🏷 요금표
 //    ⛔ 그때도 「요금표」를 «먼저» 두지 마십시오. 열자마자 회원 찾기가 나와야 합니다.
 
-export default function WalletManager() {
-  return <WalletMember />
+//  ★2026-09-09 — 회원 관리에서 «이름» 을 누르면 여기로 옵니다 [대표님 지시].
+//    이 파일은 ★받은 것을 그대로 내려 주기만 합니다 (껍데기).
+//    ⛔ 여기서 회원을 불러오지 마십시오 — 불러오는 곳은 WalletMember «한 곳» 입니다.
+export default function WalletManager({
+  userId,
+  onBackToMember,
+}: {
+  userId?: string | null
+  onBackToMember?: () => void
+} = {}) {
+  return <WalletMember userId={userId} onBackToMember={onBackToMember} />
 }

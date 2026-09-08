@@ -40,7 +40,14 @@ const HOUR_LABELS = [
   '申시(15:30~17:30)', '酉시(17:30~19:30)', '戌시(19:30~21:30)', '亥시(21:30~23:30)',
 ]
 
-export default function MemberManager() {
+//  ★2026-09-09 — 「이름」 을 누르면 그 회원의 지갑으로 [대표님 지시]
+//    ⛔ 줄 전체로 넓히지 마십시오 — 한 줄에 [등급▾]·[수정]·[삭제] 와
+//       수정 중 입력 칸이 있어 ★등급을 바꾸려다 지갑으로 튑니다.
+export default function MemberManager({
+  onOpenWallet,
+}: {
+  onOpenWallet?: (userId: string) => void
+} = {}) {
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -447,6 +454,21 @@ export default function MemberManager() {
                       {isEdit ? (
                         <input value={editNick} onChange={e => setEditNick(e.target.value)} maxLength={20} placeholder="닉네임"
                           style={{ width: 100, background: '#1a1a18', color: '#fff', borderRadius: 6, padding: '6px 8px', border: '1px solid rgba(250,199,117,0.4)', fontSize: 13 }} />
+                      ) : onOpenWallet ? (
+                        //  ★2026-09-09 — 눌러서 그 회원의 지갑으로 [대표님 지시]
+                        //    ⚠️ 수정 중(isEdit)에는 «안» 보입니다 — 입력 칸이 우선입니다.
+                        //    ⛔ 밑줄과 › 를 빼지 마십시오 — 없으면 누를 수 있는 줄 모릅니다
+                        //       (지갑 찾기 결과에서 겪은 것과 같은 자리입니다).
+                        <button type="button" onClick={() => onOpenWallet(member.id)}
+                          title="이 회원의 지갑 보기"
+                          className="cursor-pointer"
+                          style={{
+                            background: 'none', border: 'none', padding: 0,
+                            font: 'inherit', color: '#FAC775',
+                            borderBottom: '1px solid rgba(250,199,117,0.45)',
+                          }}>
+                          {memberName(member)} ›
+                        </button>
                       ) : memberName(member)}
                     </td>
 

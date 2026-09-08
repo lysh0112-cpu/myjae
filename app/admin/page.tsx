@@ -72,6 +72,27 @@ export default function AdminPage() {
   //  ⛔ useEffect 로 바꾸지 마십시오.
   // ══════════════════════════════════════════════════════════════════
   const [hashRead, setHashRead] = useState(false)
+
+  // ══════════════════════════════════════════════════════════════════
+  //  ★2026-09-09 — 회원 관리에서 «이름» 을 누르면 그 회원의 지갑으로 [대표님 지시]
+  //    「회원관리화면에서 해당 회원의 줄을 누르면
+  //      회원지갑화면의 해당고객이 자동으로 찾도록 연결해보자」
+  //
+  //  ⚠️ ★sessionStorage('adminTab') 를 «안» 씁니다 —
+  //     그건 «다른 화면» 에서 /admin 으로 들어올 때 쓰는 길입니다.
+  //     여기는 이미 이 화면 안이라, 그 길로 가면 ★새로고침이 생겨 느립니다.
+  //  ⇒ 탭과 «누구인지» 를 여기서 함께 쥐고 아래로 내려 줍니다.
+  //
+  //  ⛔ 「이름」 칸만 누르게 했습니다 — 줄 전체로 넓히지 마십시오.
+  //     한 줄 안에 [등급▾] · [수정] · [삭제] 와 수정 중 입력 칸이 있어
+  //     ★등급을 바꾸려다 지갑으로 튑니다.
+  // ══════════════════════════════════════════════════════════════════
+  const [walletUserId, setWalletUserId] = useState<string | null>(null)
+
+  const openWallet = (userId: string) => {
+    setWalletUserId(userId)
+    setTab('wallet')
+  }
   // ★권한 확인 (2026-07-21)
   //   이 화면은 지금까지 role 을 전혀 보지 않아 URL 만 알면 누구나 들어왔다.
   const gate = useRoleGate(ADMIN_ROLES)
@@ -168,8 +189,18 @@ export default function AdminPage() {
         {tab === 'cancelled' && <CancelledHistory />}
         {tab === 'consultant' && <ConsultantManager />}
         {tab === 'price' && <PriceManager />}
-        {tab === 'wallet' && <WalletManager />}
-        {tab === 'member' && <MemberManager />}
+        {/* ★2026-09-09 — 회원 관리 → 회원 지갑 잇기.
+            ⚠️ backTo 는 «어디서 왔는지» 입니다. 회원 관리에서 온 경우에만
+               지갑에 「← 회원 관리로」 단추가 뜹니다.
+            ⛔ 넘긴 뒤 walletUserId 를 «지우지» 마십시오 —
+               지우면 지갑 안에서 다른 분을 찾다가 돌아올 때 자리가 풀립니다. */}
+        {tab === 'wallet' && (
+          <WalletManager
+            userId={walletUserId}
+            onBackToMember={walletUserId ? () => setTab('member') : undefined}
+          />
+        )}
+        {tab === 'member' && <MemberManager onOpenWallet={openWallet} />}
         {tab === 'settlement' && <SettlementManager />}
         {tab === 'knowledge' && <KnowledgeManager />}
         {tab === 'review' && <ReviewManager />}

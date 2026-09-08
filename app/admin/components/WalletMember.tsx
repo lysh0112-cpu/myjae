@@ -64,7 +64,15 @@ function fmtAt(at: string): string {
   return `${p.year}-${p.month}-${p.day} ${hh}:${p.minute}`
 }
 
-export default function WalletMember() {
+export default function WalletMember({
+  userId,
+  onBackToMember,
+}: {
+  //  ★2026-09-09 — 회원 관리에서 «이름» 을 눌러 넘어온 회원 [대표님 지시]
+  userId?: string | null
+  //  «회원 관리에서 왔을 때만» 들어옵니다. 없으면 돌아가기 단추도 안 뜹니다.
+  onBackToMember?: () => void
+} = {}) {
   const [q, setQ] = useState('')
   const [list, setList] = useState<Found[]>([])
   const [picked, setPicked] = useState<Found | null>(null)
@@ -74,6 +82,54 @@ export default function WalletMember() {
   //  ★2026-09-08 — 마우스가 올라간 줄. «눌러지는» 것을 보이게 하려는 것뿐입니다.
   //    ⚠️ 이 저장소는 tailwind 의 hover: 유틸을 «한 곳도» 쓰지 않아 state 로 했습니다.
   const [hoverId, setHoverId] = useState<string | null>(null)
+
+  // ══════════════════════════════════════════════════════════════════
+  //  ★2026-09-09 — 넘어온 회원을 «스스로» 불러옵니다 [대표님 지시]
+  //    「회원지갑화면의 해당고객이 자동으로 찾도록」
+  //
+  //  ⚠️⚠️ ★useEffect 를 «안» 씁니다 — 안에서 setState 를 부르면
+  //     react-hooks 가 «오류» 로 잡아 기준선(82/135)이 깨집니다 (47부 1-7).
+  //     ⇒ admin/page.tsx 가 해시를 읽는 방식 그대로 ★«그릴 때» 한 번만 견줍니다.
+  //  ⛔ useEffect 로 바꾸지 마십시오.
+  //
+  //  ⚠️ takenId 는 «이미 받아 처리한» 회원입니다.
+  //     이것이 없으면 다시 그릴 때마다 또 불러와 ★끝없이 돕니다.
+  // ══════════════════════════════════════════════════════════════════
+  //  ★회원 하나를 «id 로» 불러옵니다 (찾기 칸을 안 거칩니다).
+  //  ⚠️ 잔액이 «없는» 분은 mc_wallet 에 줄이 아직 없습니다 → 0원으로 봅니다.
+  //     ⛔ 오류로 다루지 마십시오. 충전을 «한 번도 안 받은» 분입니다.
+  async function loadOne(id: string) {
+    setBusy(true)
+    setSearched(false)
+    setList([])
+    const { data: p, error } = await supabase
+      .from('profiles')
+      .select('id, nickname, hangul_name')
+      .eq('id', id)
+      .maybeSingle()
+    if (error || !p) {
+      setBusy(false)
+      alert('그 회원을 못 찾았습니다.')
+      return
+    }
+    const { data: w } = await supabase
+      .from('mc_wallet').select('balance').eq('user_id', id).maybeSingle()
+    const found: Found = {
+      id: p.id,
+      nickname: p.nickname,
+      hangul_name: p.hangul_name,
+      balance: w?.balance ?? 0,
+    }
+    setQ(memberName(found))
+    setBusy(false)
+    await pick(found)
+  }
+
+  const [takenId, setTakenId] = useState<string | null>(null)
+  if (userId && userId !== takenId) {
+    setTakenId(userId)
+    void loadOne(userId)
+  }
 
   async function search() {
     const key = q.trim()
@@ -207,10 +263,20 @@ export default function WalletMember() {
 
       {picked && (
         <>
-          <button onClick={() => { setPicked(null); setLedger([]) }}
-            className="text-xs mb-3" style={{ color: '#8a88a0' }}>
-            ← 목록으로
-          </button>
+          {/* ★2026-09-09 — 「← 목록으로」는 «찾기 결과» 로 갑니다.
+              회원 관리에서 넘어오신 경우엔 찾기 결과가 «없어서» 빈 화면이 됩니다.
+              ⇒ 그때는 ★「← 회원 관리로」 를 대신 보입니다. ⛔ 둘을 합치지 마십시오. */}
+          {onBackToMember ? (
+            <button onClick={onBackToMember}
+              className="text-xs mb-3" style={{ color: '#8a88a0' }}>
+              ← 회원 관리로
+            </button>
+          ) : (
+            <button onClick={() => { setPicked(null); setLedger([]) }}
+              className="text-xs mb-3" style={{ color: '#8a88a0' }}>
+              ← 목록으로
+            </button>
+          )}
 
           <div className="rounded-2xl p-5 mb-4 flex items-center justify-between flex-wrap gap-3" style={box}>
             <div>
