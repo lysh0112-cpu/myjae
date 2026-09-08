@@ -1531,8 +1531,26 @@ console.log('\n━━ ㉑-b 🔴 성씨 칸에서는 «거르지 않는가» (�
     `★성씨 칸에서는 «흐린 칸» 이 아예 없습니다`)
   check(/const normalList = isSurnameSlot \? surnameSorted :/.test(diag),
     `★성씨 칸은 표가 준 것을 «그대로» 냅니다`)
-  check(/const isSurnameSlot = pickerIdx === 0/.test(diag),
-    `성씨 칸은 «첫 글자» 입니다`)
+  // ══════════════════════════════════════════════════════════════
+  //  🔴 ★2026-09-09 — «새 모양» 으로 다시 조였습니다 [대표님 사진]
+  //
+  //   [무엇이 있었나]  「김성곤」의 ★「성」 을 누르면 성씨로 쓰는 成 · 星 ★둘만 나왔습니다.
+  //      화면 이름표는 「이름 1글자」라 적어 놓고, 목록은 ★«성씨 목록» 이었습니다.
+  //   [까닭]  「성씨가 몇 칸인가」를 ★두 곳에서 «따로» 셌습니다 —
+  //      이름표  compound ? 2 : 1     한자 고르기  ★idx <= 1
+  //   ⇒ ★surnameSlotCount() «한 곳» 으로 모았습니다.
+  //
+  //   ⚠️⚠️ ★옛 검사는 이 어긋남을 «못 잡았습니다» —
+  //      두 줄을 «따로» 붙잡고 있어서, 둘이 어긋나 있어도 둘 다 통과했습니다.
+  //   ⇒ 그래서 ★「같은 함수를 쓰는가」 를 세는 모양으로 바꿉니다.
+  //   ⛔ 느슨하게 풀지 마십시오 (57·58부 방식).
+  // ══════════════════════════════════════════════════════════════
+  check(/function surnameSlotCount\(/.test(diag),
+    `★성씨 칸 수를 «한 곳»(surnameSlotCount)에서 셉니다`)
+  check(/const isSurnameSlot = pickerIdx !== null && pickerIdx < surnameSlotCount\(syllables\)/.test(diag),
+    `성씨 칸 판정이 «그 함수» 를 씁니다`)
+  check(/if \(idx < surnameSlotCount\(syllables\)\) \{/.test(diag),
+    `★한자 고르기도 «그 함수» 를 씁니다 (idx <= 1 로 되돌아가지 않았습니다)`)
   // ⚠️ 이름 칸은 «예전 그대로» 걸러야 합니다 — 거기는 «고르는» 자리입니다
   check(/hanjaList\.filter\(\(r\) => isAvoidChar\(r\)\)/.test(diag),
     `⚠️ 이름 칸은 예전 그대로 거릅니다 (성씨만 예외입니다)`)
@@ -1550,8 +1568,10 @@ console.log('\n━━ ㉑-c ★성씨를 고르기 «전» 에는 이름 칸이 
   //      복성이면 surCount 가 2 라 앞 두 칸이 성씨입니다.
   check(/const locked = i >= surCount && !chars\[0\]/.test(diag),
     `★성씨가 비면 이름 칸이 잠깁니다`)
-  check(/const surCount = compound \? 2 : 1/.test(diag),
-    `★복성이면 앞 «두 칸» 이 성씨입니다`)
+  //  ★2026-09-09 — 이름표도 ★같은 함수를 씁니다 (위 ㉑-b 머리말을 보십시오).
+  //   ⛔ compound ? 2 : 1 로 되돌리지 마십시오 — 한자 고르기와 «두 벌» 이 됩니다.
+  check(/const surCount = surnameSlotCount\(syllables\)/.test(diag),
+    `★복성이면 앞 «두 칸» 이 성씨입니다 (이름표도 같은 함수)`)
   check(/disabled=\{locked\}/.test(diag) && /opacity: locked \? 0\.4 : 1/.test(diag),
     `★잠긴 칸은 흐리고 «눌리지 않습니다»`)
   check(/먼저 <b>성씨 한자<\/b>를 골라주세요/.test(diag),
