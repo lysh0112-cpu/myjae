@@ -77,10 +77,12 @@ function cardsKey(picked: Picked[]): string {
   return picked.map(p => `${p.card.id}${p.reversed ? 'R' : 'U'}@${p.position}`).join('|')
 }
 
-// 뱃지 문구: 무료횟수 있으면 "N회 무료 · 이후 X원", 없으면 "X원"
+/* ★2026-09-08 [대표님 지시] — 뽑기 «장수마다 다른 값 · 무료 횟수» 를 걷었습니다.
+   ⇒ 이제 넷 다 analysis_prices 의 ★tarot_ai 값 «하나» 를 씁니다.
+   ⛔ tarot_prices 표는 «지우지 않았습니다» — 되살리실 때 씁니다.
+   ⚠️ 그래서 「N회 무료」 알약이 «없어졌습니다». 값 알약만 남습니다. */
 function badgeText(price?: TarotPrice): string {
   if (!price) return ''
-  if (price.free_count > 0) return `${price.free_count}회 무료 · 이후 ${price.price.toLocaleString()}원`
   return `${price.price.toLocaleString()}원`
 }
 
@@ -183,14 +185,20 @@ function TarotInner() {
     return () => { cancelled = true }
   }, [searchParams])
 
+  /* ★2026-09-08 — 값을 tarot_prices 가 아니라 ★analysis_prices 의 tarot_ai 에서 읽습니다.
+     ⇒ 네 갈래(한 장·세 장·네 장·열 장)가 «모두 같은 값» 이 됩니다 [대표님 지시].
+     ⛔ tarot_prices 로 되돌리지 마십시오 — 그러면 관리자 화면과 «값이 두 벌» 이 됩니다. */
   useEffect(() => {
-    supabase.from('tarot_prices').select('price_key, price, free_count, active')
+    supabase.from('analysis_prices').select('price, active').eq('price_key', 'tarot_ai')
+      .maybeSingle()
       .then(({ data }) => {
-        if (data) {
-          const map: Record<string, TarotPrice> = {}
-          for (const r of data as TarotPrice[]) map[r.price_key] = r
-          setPrices(map)
+        if (!data) return
+        const one: TarotPrice = {
+          price_key: 'tarot_ai', price: data.price, free_count: 0, active: data.active,
         }
+        const map: Record<string, TarotPrice> = {}
+        for (const s of SPREADS) map[s.key] = one
+        setPrices(map)
       })
   }, [])
 
@@ -281,7 +289,10 @@ function TarotInner() {
 
   const hasCachedInterp = interp !== null && interpKey === cardsKey(picked)
 
-  // 노출된(active) 스프레드만 보이기
+  /* 노출된(active) 스프레드만 보이기
+     ⚠️ ★2026-09-08 부터 값이 «하나» 라, active 도 하나입니다.
+        ⇒ 끄면 ★네 갈래가 «다» 사라집니다. 갈래마다 숨기던 것은 이제 안 됩니다.
+        ⛔ 갈래별로 숨기고 싶으시면 tarot_prices 를 되살려야 합니다. */
   const visibleSpreads = SPREADS.filter(s => {
     const p = prices[s.key]
     return !p || p.active
