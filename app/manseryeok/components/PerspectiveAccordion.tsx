@@ -105,6 +105,7 @@ export default function PerspectiveAccordion({
   focusKey,
   focusNonce,
   overallStar,
+  afterJawon,
 }: {
   commentary: PerspectiveCommentary
   /** ★선택값 — 옛 보관함 기록에는 없습니다. 없으면 별을 안 그립니다 */
