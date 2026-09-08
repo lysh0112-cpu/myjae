@@ -1,46 +1,26 @@
 'use client'
-import { useState } from 'react'
 import WalletMember from './WalletMember'
-import WalletPrice from './WalletPrice'
 
-//  ★지갑·요금 — 2026-09-05 신설 (HANDOVER-WALLET.md 4장)
+//  ★지갑 — 2026-09-05 신설 (HANDOVER-WALLET.md 4장)
 //
-//  ⛔⛔ 기존 「💰 가격 관리」(PriceManager)는 «한 줄도» 건드리지 않았습니다.
-//      consult_prices · analysis_prices · home_prices · tarot_prices 그대로입니다.
-//      [대표님 「가격 설정화면은 변동하면 안 되고 별도의 탭을 만들어 달라」]
+//  ★2026-09-08 [대표님 지시] — ★「🏷 요금표」 를 «내렸습니다».
+//    [왜]  요금표가 「💰 가격 관리」와 ★값이 겹쳤습니다 (명카페 열 줄이 두 곳).
+//          ⇒ 대표님이 어디에 넣어야 하는지 갈렸습니다.
+//    ⇒ 요금표(WalletPrice)는 ★「💰 가격 관리」 «오른쪽» 으로 옮겼습니다.
+//       ⇒ 이제 «가격표는 한 화면» 입니다. 여기는 «회원 지갑» 만 다룹니다.
+//    ⛔ WalletPrice.tsx 는 ★지우지 않았습니다 — 옮겨서 그대로 씁니다.
+//    ⇒ 되돌리시려면 아래 주석과 안쪽 탭을 되살리면 됩니다.
 //
-//  ⚠️ 안을 «둘» 로 가른 까닭 —
-//      회원 지갑  ★매일 씁니다 (통장 보고 충전해 주는 일)
-//      요금표     ★거의 안 씁니다 (값을 정할 때 한 번)
-//     한 화면에 붙이면 매일 쓰는 것 아래로 안 쓰는 것이 깔립니다.
-//  ⛔ 「요금표」를 «먼저» 두지 마십시오. 열자마자 회원 찾기가 나와야 합니다.
-
-type Inner = 'member' | 'price'
+//  ⚠️ ★admin/page.tsx 의 탭 이름도 「🪙 지갑·요금」 → 「🪙 회원 지갑」 으로 바꿨습니다.
+//     ⛔ 이름만 옛것으로 되돌리지 마십시오 — 요금이 없는데 「요금」이라 적히면 헷갈립니다.
+//
+//  [옛 모양 — 되살리실 때]
+//    import { useState } from 'react'
+//    import WalletPrice from './WalletPrice'
+//    type Inner = 'member' | 'price'
+//    안쪽 탭 둘: 🪙 회원 지갑 / 🏷 요금표
+//    ⛔ 그때도 「요금표」를 «먼저» 두지 마십시오. 열자마자 회원 찾기가 나와야 합니다.
 
 export default function WalletManager() {
-  const [inner, setInner] = useState<Inner>('member')
-
-  const btn = (on: boolean) => on
-    ? { background: 'rgba(250,199,117,0.25)', color: '#FAC775', border: '1px solid rgba(250,199,117,0.4)' }
-    : { background: 'rgba(255,255,255,0.05)', color: '#8a88a0', border: '1px solid rgba(255,255,255,0.08)' }
-
-  return (
-    <div>
-      <div className="flex gap-2 mb-5">
-        <button onClick={() => setInner('member')}
-          className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
-          style={btn(inner === 'member')}>
-          🪙 회원 지갑
-        </button>
-        <button onClick={() => setInner('price')}
-          className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
-          style={btn(inner === 'price')}>
-          🏷 요금표
-        </button>
-      </div>
-
-      {inner === 'member' && <WalletMember />}
-      {inner === 'price' && <WalletPrice />}
-    </div>
-  )
+  return <WalletMember />
 }

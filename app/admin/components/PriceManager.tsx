@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, type CSSProperties } from 'react'
 import { supabase } from '@/lib/supabase'
+import WalletPrice from './WalletPrice'
 
 type Price = {
   id: string
@@ -574,14 +575,21 @@ export default function PriceManager() {
         전문가 상담 · AI 분석 · 타로 가격입니다. 노출을 끄면 고객 화면에서 해당 버튼이 숨겨집니다.
       </p>
 
-      {/* ★2026-09-08 — 표를 «왼쪽에 붙이고» 오른쪽을 비워 둡니다.
-          [대표님] 「우측 공간에는 당구나 골프도 넣을 예정이야」
-          ⚠️⚠️ ★당구·골프 값은 «이미» 있습니다 — 🪙 지갑·요금 탭의 mc_price 표입니다
-             (bil/game 200 · bil/replay 100 · glf/round 4,000 · photo 200 · award 4,000).
-          ⛔ 여기에 «값을 새로 만들지» 마십시오 — 값이 두 벌이 되어 어느 쪽이 맞는지 갈립니다.
-          ⇒ 넣으실 때는 ★mc_price 를 «읽어와» 보여 주는 방식이어야 합니다. */}
-      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+      {/* ★2026-09-08 [대표님 지시 · 목업 승낙] — 가격표를 «한 화면» 에 모았습니다.
+            왼쪽  명카페 (consult_prices · analysis_prices) — 손님 화면이 ★«지금» 읽는 값
+            오른쪽 큐보드·골프온 (mc_price) — ★지갑이 «나중에» 뺄 값 (아직 안 붙음)
+
+          ⚠️ 성격이 «다릅니다». 그래서 ★가운데를 비우고 오른쪽에 안내를 두었습니다.
+             안 그러면 「당구 200원도 지금 도는 값」으로 보입니다.
+          ⛔ 저장 단추를 ★«하나로» 묶지 마십시오 — 표가 다릅니다.
+             하나로 묶으면 한쪽이 실패했을 때 «어느 쪽이 저장됐는지» 모릅니다.
+          ⚠️ 좁은 화면에서는 오른쪽 덩어리가 ★«아래로» 내려갑니다 (flexWrap). */}
+      <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start',
+        flexWrap: 'wrap', justifyContent: 'space-between' }}>
         <MergedPriceTable />
+        <div style={{ width: 300, minWidth: 260, flex: '0 1 auto' }}>
+          <WalletPrice />
+        </div>
       </div>
 
       {/* 이름 짓기 조회 횟수 — 2026-07 화면에서 숨김 (대표님 지시).

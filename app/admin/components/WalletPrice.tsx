@@ -13,6 +13,20 @@ import { supabase } from '@/lib/supabase'
 //
 //  ⚠️ 0원 = 무료입니다. ⛔ 줄을 «지우지» 마십시오 —
 //     지우면 wallet_use 가 no_price 로 «거절» 합니다.
+//
+//  ★2026-09-08 [대표님 지시] — ★「🔮 명카페」 칸을 «내렸습니다».
+//    [왜]  명카페 값이 ★두 곳에 있었습니다 —
+//          「💰 가격 관리」(consult/analysis_prices) · 여기(mc_price myc 열 줄)
+//          ⇒ 대표님이 어디에 넣어야 하는지 갈렸습니다.
+//    ⇒ 명카페 값은 ★「💰 가격 관리」 한 곳에서만 정합니다.
+//    ⛔⛔ ★DB 의 mc_price myc 열 줄은 «지우지 마십시오» —
+//        나중에 지갑을 붙일 때 wallet_use 가 그 줄을 찾습니다.
+//        없으면 ★no_price 로 거절합니다. 화면에서만 감춘 것입니다.
+//    ⛔ saveAll 도 ★myc 줄은 «안 건드립니다» (화면에 없는 값을 덮어쓰지 않게).
+//    ⇒ 되살리시려면 GROUPS 에 myc 한 줄을 도로 넣으면 됩니다.
+//
+//  ⚠️ 이 부품은 ★2026-09-08 부터 「💰 가격 관리」 ★오른쪽에 붙습니다.
+//     (지갑 탭이 아니라) — PriceManager.tsx 를 보십시오.
 
 type Row = {
   service: string
@@ -25,8 +39,33 @@ type Row = {
 const GROUPS: { key: string; title: string; hint?: string }[] = [
   { key: 'bil', title: '🎱 큐보드' },
   { key: 'glf', title: '⛳ 골프온' },
-  { key: 'myc', title: '🔮 명카페', hint: '서비스마다 따로 정합니다 · 0원이면 무료' },
+  // ⛔ { key: 'myc', … } — 2026-09-08 내림. 위 머리말을 보십시오.
 ]
+const SHOWN = new Set(GROUPS.map(g => g.key))
+
+/* 값 칸 — ⛔ 이 부품을 WalletPrice «안» 으로 옮기지 마십시오.
+   글자 한 자마다 다시 그려져 ★커서가 빠집니다 (PriceManager 에서 겪은 그 일).
+   ⚠️ 치는 «동안» 은 쉼표를 안 찍습니다. 손을 떼면 그때 찍습니다. */
+function WalletPriceInput({ r, onPrice }: {
+  r: Row
+  onPrice: (service: string, item: string, raw: string) => void
+}) {
+  const [draft, setDraft] = useState<string | null>(null)
+  return (
+    <input type="text" inputMode="numeric"
+      value={draft ?? r.price.toLocaleString()}
+      onFocus={ev => { setDraft(String(r.price)); ev.target.select() }}
+      onChange={ev => {
+        const raw = ev.target.value.replace(/[^0-9]/g, '')
+        setDraft(raw)
+        onPrice(r.service, r.item, raw)
+      }}
+      onBlur={() => setDraft(null)}
+      className="rounded-lg px-2 text-xs text-right"
+      style={{ width: 62, height: 28, background: 'rgba(255,255,255,0.05)',
+        border: '1px solid rgba(255,255,255,0.12)', color: '#e8e6f0' }} />
+  )
+}
 
 export default function WalletPrice() {
   const [rows, setRows] = useState<Row[]>([])
@@ -54,7 +93,8 @@ export default function WalletPrice() {
 
   async function saveAll() {
     setSaving(true)
-    for (const r of rows) {
+    // ⛔ 화면에 «안 보이는» 갈래(myc)는 건드리지 않습니다.
+    for (const r of rows.filter(x => SHOWN.has(x.service))) {
       const { error } = await supabase.from('mc_price')
         .update({ price: r.price, up_at: new Date().toISOString() })
         .eq('service', r.service).eq('item', r.item)
@@ -69,47 +109,42 @@ export default function WalletPrice() {
 
   return (
     <div>
-      {GROUPS.map(g => {
-        const list = rows.filter(r => r.service === g.key)
-        if (list.length === 0) return null
-        return (
-          <div key={g.key} className="mb-6 rounded-2xl p-5"
-            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            <div className="text-sm font-bold mb-1" style={{ color: '#e8e6f0' }}>{g.title}</div>
-            {g.hint && (
-              <div className="text-xs mb-3" style={{ color: '#8a88a0' }}>{g.hint}</div>
-            )}
+      <div className="text-xs mb-3" style={{ color: '#8a88a0', lineHeight: 1.6 }}>
+        아래 둘은 <span style={{ color: '#FAC775' }}>지갑에서 빠지는 값</span>입니다.<br />
+        카카오 로그인을 붙이기 전까지는 아직 돌지 않습니다.
+      </div>
 
-            <div className="mt-3">
+      {/* ★큐보드·골프온을 «나란히» — 세로로 길어지지 않게 (2026-09-08 목업 승낙) */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        {GROUPS.map(g => {
+          const list = rows.filter(r => r.service === g.key)
+          if (list.length === 0) return null
+          return (
+            <div key={g.key} className="rounded-xl p-3"
+              style={{ flex: '1 1 160px', minWidth: 160,
+                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="text-xs font-bold mb-2" style={{ color: '#e8e6f0' }}>{g.title}</div>
+              {g.hint && (
+                <div className="text-xs mb-2" style={{ color: '#8a88a0' }}>{g.hint}</div>
+              )}
               {list.map(r => (
                 <div key={r.service + r.item}
-                  className="flex items-center gap-3 py-2"
+                  className="flex items-center gap-2 py-1.5"
                   style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  <span className="text-sm" style={{ width: 150, color: '#e8e6f0' }}>{r.label}</span>
-                  <span className="text-xs flex-1 font-mono" style={{ color: '#6a6880' }}>{r.item}</span>
-                  <input
-                    value={r.price.toLocaleString()}
-                    onChange={e => setPrice(r.service, r.item, e.target.value)}
-                    className="rounded-lg px-3 text-sm text-right"
-                    style={{
-                      width: 96, height: 32,
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.12)',
-                      color: '#e8e6f0',
-                    }} />
-                  <span className="text-xs" style={{ color: '#8a88a0', width: 18 }}>원</span>
+                  <span className="text-xs" style={{ flex: 1, color: '#e8e6f0' }}>{r.label}</span>
+                  <WalletPriceInput r={r} onPrice={setPrice} />
+                  <span className="text-xs" style={{ color: '#8a88a0' }}>원</span>
                 </div>
               ))}
             </div>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
 
-      <div className="rounded-xl px-4 py-3 mb-4 text-xs"
-        style={{ background: 'rgba(250,199,117,0.10)', color: '#FAC775', border: '1px solid rgba(250,199,117,0.25)' }}>
+      <div className="rounded-xl px-3 py-2 my-3 text-xs"
+        style={{ background: 'rgba(250,199,117,0.10)', color: '#FAC775',
+          border: '1px solid rgba(250,199,117,0.25)', lineHeight: 1.6 }}>
         고치면 그 뒤부터 바뀐 값으로 빠집니다. 지난 내역은 안 바뀝니다.
-        <br />
-        가운데 영문(price_key)은 상담사 전문분야·상담 가격과 같은 낱말이라 바꾸지 않습니다.
       </div>
 
       <button onClick={saveAll} disabled={saving}
