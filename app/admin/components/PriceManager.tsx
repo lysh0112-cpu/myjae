@@ -129,20 +129,24 @@ function MergedPriceTable() {
     )
   }
 
-  const row = { display: 'grid', gridTemplateColumns: '132px 1fr 1fr', gap: 12,
+  /* ★2026-09-08 — 칸 폭을 «글자에 맞춰» 고정했습니다 [대표님 「가깝게 붙여줘」].
+     ⛔ 1fr 로 되돌리지 마십시오 — 남는 자리를 반씩 나눠 가져
+        상담 값과 AI 값이 ★화면 끝과 끝으로 벌어집니다. 눈이 건너뛰게 됩니다.
+     ⚠️ 오른쪽 빈자리는 ★당구·골프 요금을 넣으실 자리로 비워 둡니다. */
+  const row = { display: 'grid', gridTemplateColumns: '148px 150px 224px', gap: 14,
     alignItems: 'start', padding: '9px 12px',
     borderTop: '1px solid rgba(255,255,255,0.05)' } as CSSProperties
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: 'fit-content', minWidth: 560 }}>
       <div className="rounded-xl overflow-hidden"
         style={{ background: '#2C2C2A', border: '1px solid rgba(255,255,255,0.06)' }}>
 
         <div style={{ ...row, borderTop: 'none', alignItems: 'center',
           background: 'rgba(60,52,137,0.3)', color: '#FAC775', fontSize: 12, fontWeight: 700 }}>
           <span>종류</span>
-          <span>🔮 전문가 상담 — 상담사 연결</span>
-          <span>✨ AI 분석 — 손님이 혼자 조회</span>
+          <span>🔮 전문가 상담</span>
+          <span>✨ AI 분석 (혼자 조회)</span>
         </div>
 
         {PAIRS.map(p => {
@@ -541,7 +545,15 @@ export default function PriceManager() {
         전문가 상담 · AI 분석 · 타로 가격입니다. 노출을 끄면 고객 화면에서 해당 버튼이 숨겨집니다.
       </p>
 
-      <MergedPriceTable />
+      {/* ★2026-09-08 — 표를 «왼쪽에 붙이고» 오른쪽을 비워 둡니다.
+          [대표님] 「우측 공간에는 당구나 골프도 넣을 예정이야」
+          ⚠️⚠️ ★당구·골프 값은 «이미» 있습니다 — 🪙 지갑·요금 탭의 mc_price 표입니다
+             (bil/game 200 · bil/replay 100 · glf/round 4,000 · photo 200 · award 4,000).
+          ⛔ 여기에 «값을 새로 만들지» 마십시오 — 값이 두 벌이 되어 어느 쪽이 맞는지 갈립니다.
+          ⇒ 넣으실 때는 ★mc_price 를 «읽어와» 보여 주는 방식이어야 합니다. */}
+      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <MergedPriceTable />
+      </div>
 
       {/* 이름 짓기 조회 횟수 — 2026-07 화면에서 숨김 (대표님 지시).
           함수(NamingTryLimitBox)는 그대로 두었으니 되살리려면 아래 한 줄만 풀면 된다.
