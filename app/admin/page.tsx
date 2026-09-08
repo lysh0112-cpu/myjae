@@ -8,18 +8,18 @@ import Dashboard from './components/Dashboard'
 import CancelledHistory from './components/CancelledHistory'
 import KnowledgeManager from './components/KnowledgeManager'
 import SiteSettings from './components/SiteSettings'
-import AiErrorLog from './components/AiErrorLog'
 import ReviewManager from './components/ReviewManager'
 import InquiryManager from './components/InquiryManager'
-import ExpenseManager from './components/ExpenseManager'
-import ExpenseApproval from './components/ExpenseApproval'
 import MemberManager from './components/MemberManager'
-import ToneManager from './components/ToneManager'
-import PromptViewer from './components/PromptViewer'
 import PriceManager from './components/PriceManager'
 //  ★2026-09-09 — 회원 목록 + 회원 지갑을 «한 탭» 으로 묶었습니다 [대표님 지시]
 //  ⚠️ WalletManager 는 이제 안 부릅니다. ⛔ 파일은 지우지 마십시오 (요금표 되살릴 때).
 import MemberHub, { type MemberInner } from './components/MemberHub'
+//  ★2026-09-09 — 관리회계+지출결의서 · AI 셋을 각각 «한 탭» 으로 [대표님 지시]
+//  ⛔ ExpenseManager/ExpenseApproval/ToneManager/PromptViewer/AiErrorLog 를
+//     여기서 «직접» 부르지 마십시오 — 각 Hub 가 부릅니다.
+import AccountingHub, { type AccountingInner } from './components/AccountingHub'
+import AiHub, { type AiInner } from './components/AiHub'
 import { useRoleGate, RoleGateScreen, type AppRole } from '@/hooks/useRoleGate'
 
 // 이 화면에 들어올 수 있는 등급 — 매니저만
@@ -27,7 +27,9 @@ const ADMIN_ROLES: AppRole[] = ['master']
 
 //  ⚠️ 'wallet' 을 뺐습니다 — 'member' 안쪽 탭이 되었습니다 (MemberHub).
 //     ⛔ 주소 /admin#wallet 은 «그대로» 됩니다. 아래 해시 읽는 자리를 보십시오.
-type Tab = 'dashboard' | 'cancelled' | 'consultant' | 'price' | 'member' | 'settlement' | 'knowledge' | 'review' | 'inquiry' | 'accounting' | 'approval' | 'tone' | 'prompt' | 'aierror' | 'settings'
+//  ⚠️ 'approval' · 'tone' · 'prompt' · 'aierror' 를 뺐습니다 — 안쪽 탭이 되었습니다.
+//     ⛔ 주소 /admin#approval · #tone · #prompt · #aierror 는 «그대로» 됩니다 (HASH_INNER).
+type Tab = 'dashboard' | 'cancelled' | 'consultant' | 'price' | 'member' | 'settlement' | 'knowledge' | 'review' | 'inquiry' | 'accounting' | 'ai' | 'settings'
 const TABS = [
   { key: 'dashboard', label: '📊 대시보드' },
   { key: 'cancelled', label: '🗑 취소 내역' },
@@ -47,11 +49,10 @@ const TABS = [
   { key: 'review', label: '📝 후기 관리' },
   // ★48부 8차 — 문의 관리 [대표님 「관리자 화면에 문의관리탭도 별도로」]
   { key: 'inquiry', label: '💬 문의 관리' },
-  { key: 'accounting', label: '💳 관리회계' },
-  { key: 'approval', label: '🧾 지출결의서' },
-  { key: 'tone', label: '💬 어투 관리' },
-  { key: 'prompt', label: '🔍 AI 통변 구조' },
-  { key: 'aierror', label: '🚨 AI 오류' },
+  //  ★2026-09-09 [대표님 「관리회계와 AI도 하나로 묶어줘」] — 위 탭 ★열다섯 → 열둘.
+  //     ⛔ 안쪽 탭을 다시 «위 탭» 으로 꺼내지 마십시오.
+  { key: 'accounting', label: '💳 관리회계 및 지출결의서' },
+  { key: 'ai', label: '🤖 AI관리' },
   { key: 'settings', label: '⚙️ 사이트 설정' },
 ]
 export default function AdminPage() {
@@ -83,6 +84,8 @@ export default function AdminPage() {
   //     ⚠️ 회원을 «누구로» 볼지는 MemberHub 가 스스로 쥡니다.
   //        ⛔ 그것까지 여기로 끌어올리지 마십시오 — 이 화면이 탭 열다섯을 다 알게 됩니다.
   const [memberInner, setMemberInner] = useState<MemberInner>('list')
+  const [accountingInner, setAccountingInner] = useState<AccountingInner>('expense')
+  const [aiInner, setAiInner] = useState<AiInner>('tone')
 
   // ★권한 확인 (2026-07-21)
   //   이 화면은 지금까지 role 을 전혀 보지 않아 URL 만 알면 누구나 들어왔다.
@@ -128,14 +131,15 @@ export default function AdminPage() {
     const asked = sessionStorage.getItem('adminTab')
     if (asked) sessionStorage.removeItem('adminTab')
     const want = asked || window.location.hash.replace('#', '')
-    //  ★2026-09-09 — /admin#wallet 은 «묶인 탭 · 지갑 쪽» 으로 엽니다.
-    //     ⛔ 이 갈래를 없애지 마십시오 — 즐겨찾기 해 두셨을 수 있습니다 [48부 10차].
-    if (want === 'wallet') {
-      setTab('member')
-      setMemberInner('wallet')
-    } else if (want && TABS.some(t => t.key === want)) {
-      setTab(want as Tab)
-    }
+    //  ★2026-09-09 — «묶기 전» 주소를 그대로 살립니다 [48부 10차].
+    //     ⛔ 이 갈래를 없애지 마십시오 — 즐겨찾기 해 두셨을 수 있습니다.
+    //     ⚠️ 새 주소도 됩니다 — /admin#member · #accounting · #ai
+    if (want === 'wallet') { setTab('member'); setMemberInner('wallet') }
+    else if (want === 'approval') { setTab('accounting'); setAccountingInner('approval') }
+    else if (want === 'tone') { setTab('ai'); setAiInner('tone') }
+    else if (want === 'prompt') { setTab('ai'); setAiInner('prompt') }
+    else if (want === 'aierror') { setTab('ai'); setAiInner('aierror') }
+    else if (want && TABS.some(t => t.key === want)) { setTab(want as Tab) }
   }
 
   return (
@@ -166,6 +170,8 @@ export default function AdminPage() {
                   //        「회원 관리」를 누를 때마다 ★지갑이 먼저 열립니다.
                   //     ⇒ 주소로 오면 지정한 쪽, 눌러서 오면 목록.
                   if (t.key === 'member') setMemberInner('list')
+                  if (t.key === 'accounting') setAccountingInner('expense')
+                  if (t.key === 'ai') setAiInner('tone')
                   // ★48부 10차 — 주소도 함께 바꿉니다.
                   //   ⇒ 새로고침하거나 즐겨찾기로 와도 «그 탭» 이 열립니다.
                   if (typeof window !== 'undefined') {
@@ -197,11 +203,8 @@ export default function AdminPage() {
         {tab === 'knowledge' && <KnowledgeManager />}
         {tab === 'review' && <ReviewManager />}
         {tab === 'inquiry' && <InquiryManager />}
-        {tab === 'accounting' && <ExpenseManager />}
-        {tab === 'approval' && <ExpenseApproval />}
-        {tab === 'tone' && <ToneManager />}
-        {tab === 'prompt' && <PromptViewer />}
-        {tab === 'aierror' && <AiErrorLog />}
+        {tab === 'accounting' && <AccountingHub initial={accountingInner} />}
+        {tab === 'ai' && <AiHub initial={aiInner} />}
         {tab === 'settings' && <SiteSettings />}
       </main>
     </div>
