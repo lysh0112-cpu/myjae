@@ -31,6 +31,39 @@ const SERVICE_NAME: Record<string, string> = {
   bil: '큐보드', glf: '골프온', myc: '명카페',
 }
 
+//  ★2026-09-08 — 앱 딱지 색 [대표님 「골프온과 큐보드도 같이 나오도록」]
+//    ⚠️ 내역은 «이미» 세 앱이 다 나옵니다 — 조회에 service 거르개가 «없습니다».
+//       지금 명카페만 보이는 것은 큐보드·골프온이 아직 wallet_use 를 «안 부르기» 때문입니다
+//       (카카오 뒤에 그쪽 창에서 붙입니다 · 2부 7장). ⛔ 여기에 거르개를 넣지 마십시오.
+const SERVICE_TAG: Record<string, { bg: string; fg: string }> = {
+  charge: { bg: 'rgba(250,199,117,0.16)', fg: '#FAC775' },   // 충전
+  myc: { bg: 'rgba(176,141,255,0.16)', fg: '#b08dff' },      // 명카페
+  bil: { bg: 'rgba(110,168,254,0.16)', fg: '#6ea8fe' },      // 큐보드
+  glf: { bg: 'rgba(122,199,122,0.16)', fg: '#7ac77a' },      // 골프온
+}
+
+//  ★한국 시각으로 보입니다 — 2026-09-05 14:32
+//  ⛔⛔ ★at.slice(5,10) 처럼 «글자를 잘라» 쓰지 마십시오 —
+//     Supabase 는 시각을 ★세계표준시(UTC)로 돌려줍니다.
+//     잘라 쓰면 ★아홉 시간 이른 시각이 나오고, 아침 기록은 ★날짜가 «하루» 어긋납니다.
+//  ⚠️ ★시간대를 'Asia/Seoul' 로 «못박았습니다» — 보시는 분이 어디에 계시든
+//     돈이 오간 시각은 «한국 시각» 이어야 손님 문의와 맞아떨어집니다.
+//  ⚠️ ko-KR 은 「2026. 09. 05.」 모양으로 내놓습니다.
+//     ⛔ 그 결과를 «글자로 잘라» 쓰지 마십시오 — 조각(parts)을 직접 맞춥니다.
+function fmtAt(at: string): string {
+  const d = new Date(at)
+  if (isNaN(d.getTime())) return at.slice(0, 16).replace('T', ' ')
+  const p: Record<string, string> = {}
+  for (const x of new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(d)) p[x.type] = x.value
+  //  ⚠️ hour12:false 가 자정을 '24' 로 내놓는 곳이 있어 '00' 으로 맞춥니다.
+  const hh = p.hour === '24' ? '00' : p.hour
+  return `${p.year}-${p.month}-${p.day} ${hh}:${p.minute}`
+}
+
 export default function WalletMember() {
   const [q, setQ] = useState('')
   const [list, setList] = useState<Found[]>([])
@@ -38,6 +71,9 @@ export default function WalletMember() {
   const [ledger, setLedger] = useState<Ledger[]>([])
   const [busy, setBusy] = useState(false)
   const [searched, setSearched] = useState(false)
+  //  ★2026-09-08 — 마우스가 올라간 줄. «눌러지는» 것을 보이게 하려는 것뿐입니다.
+  //    ⚠️ 이 저장소는 tailwind 의 hover: 유틸을 «한 곳도» 쓰지 않아 state 로 했습니다.
+  const [hoverId, setHoverId] = useState<string | null>(null)
 
   async function search() {
     const key = q.trim()
@@ -143,15 +179,26 @@ export default function WalletMember() {
       {list.length > 0 && !picked && (
         <div className="rounded-2xl p-2" style={box}>
           {list.map(m => (
+            //  ★2026-09-08 [대표님] — 「누를 수 있는 줄」 인 것이 안 보였습니다.
+            //    ⇒ 손가락 커서 · 오른쪽 › · 마우스 올리면 밝아지게 했습니다.
+            //    ⛔ › 를 빼지 마십시오 — 이것이 없으면 그냥 «글자 두 줄» 로 보입니다.
             <button key={m.id} onClick={() => pick(m)}
-              className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left"
-              style={{ color: '#e8e6f0' }}>
+              onMouseEnter={() => setHoverId(m.id)}
+              onMouseLeave={() => setHoverId(null)}
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left cursor-pointer"
+              style={{
+                color: '#e8e6f0',
+                background: hoverId === m.id ? 'rgba(255,255,255,0.06)' : 'transparent',
+              }}>
               <span className="text-sm">
                 {memberName(m)}
                 <span className="text-xs ml-2" style={{ color: '#8a88a0' }}>{m.hangul_name ?? ''}</span>
               </span>
-              <span className="text-sm font-bold" style={{ color: '#FAC775' }}>
-                {m.balance.toLocaleString()}원
+              <span className="flex items-center gap-2">
+                <span className="text-sm font-bold" style={{ color: '#FAC775' }}>
+                  {m.balance.toLocaleString()}원
+                </span>
+                <span className="text-sm" style={{ color: '#6a6880' }}>›</span>
               </span>
             </button>
           ))}
@@ -173,6 +220,12 @@ export default function WalletMember() {
               <div className="text-2xl font-bold mt-1" style={{ color: '#FAC775' }}>
                 {picked.balance.toLocaleString()}원
               </div>
+              {/* ★2026-09-08 [대표님] — 「골프온과 큐보드도 같이 나오도록」
+                  ⇒ mc_wallet 은 회원당 «줄 하나» 라 잔액이 «셋 공용» 입니다.
+                  ⛔ 이 줄을 빼지 마십시오 — 없으면 「명카페 잔액」 으로 오해합니다. */}
+              <div className="text-xs mt-1" style={{ color: '#6a6880' }}>
+                명카페 · 큐보드 · 골프온 공용 잔액입니다
+              </div>
             </div>
             <div className="flex gap-2 flex-wrap">
               {[5000, 10000, 20000].map(v => (
@@ -192,18 +245,35 @@ export default function WalletMember() {
 
           <div className="text-sm font-bold mb-2" style={{ color: '#e8e6f0' }}>내역</div>
           {ledger.length === 0 ? (
-            <div className="text-sm" style={{ color: '#8a88a0' }}>아직 내역이 없습니다.</div>
+            <div className="text-sm" style={{ color: '#8a88a0' }}>
+              아직 내역이 없습니다.
+              {/* ⚠️ 큐보드·골프온이 «안 보이는» 것은 고장이 아닙니다 —
+                  아직 wallet_use 를 안 부릅니다 (카카오 뒤 · 2부 7장). */}
+              <div className="text-xs mt-1" style={{ color: '#6a6880' }}>
+                큐보드·골프온은 카카오 로그인이 붙으면 여기에 함께 나옵니다
+              </div>
+            </div>
           ) : (
             <div className="rounded-2xl p-2" style={box}>
               {ledger.map(l => (
                 <div key={l.id} className="flex items-center px-3 py-2 text-sm"
                   style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                  <span style={{ width: 56, color: '#6a6880' }} className="text-xs">
-                    {l.at.slice(5, 10)}
+                  {/* ★2026-09-08 [대표님 「몇시에 썼는지도 확인하게」] — 한국 시각까지.
+                      ⛔ at.slice() 로 되돌리지 마십시오 — UTC 라 아홉 시간 어긋납니다 (fmtAt). */}
+                  <span style={{ width: 118, color: '#6a6880' }} className="text-xs">
+                    {fmtAt(l.at)}
                   </span>
-                  <span style={{ width: 64, color: '#8a88a0' }} className="text-xs">
-                    {l.kind === 'charge' ? '충전' : SERVICE_NAME[l.service] ?? l.service}
-                  </span>
+                  {(() => {
+                    const key = l.kind === 'charge' ? 'charge' : l.service
+                    const tag = SERVICE_TAG[key] ?? { bg: 'rgba(255,255,255,0.06)', fg: '#8a88a0' }
+                    const label = l.kind === 'charge' ? '충전' : SERVICE_NAME[l.service] ?? l.service
+                    return (
+                      <span className="text-xs rounded-md px-2 py-0.5 mr-2"
+                        style={{ background: tag.bg, color: tag.fg, minWidth: 52, textAlign: 'center' }}>
+                        {label}
+                      </span>
+                    )
+                  })()}
                   <span className="flex-1" style={{ color: '#e8e6f0' }}>
                     {l.memo || l.item}
                   </span>
