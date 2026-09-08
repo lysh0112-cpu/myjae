@@ -227,6 +227,28 @@ function compoundOf(syllables: string[]): CompoundSurname | null {
   return findCompoundSurname({ hangul: syllables[0] }, { hangul: syllables[1] })
 }
 
+// ══════════════════════════════════════════════════════════════════
+//  🔴 ★2026-09-09 — 「성씨가 몇 칸인가」를 ★«한 곳» 에서 정합니다 [대표님 사진]
+//
+//   [무엇이 있었나]  「김성곤」의 ★「성」 을 누르면
+//      성씨로 쓰는 成 · 星 ★둘만 나왔습니다.
+//      이름 글자로 쓰는 聖 · 誠 · 城 · 晟 · 盛 … 이 ★통째로 빠졌습니다.
+//
+//   [까닭]  두 곳이 «다른 셈» 을 하고 있었습니다 —
+//      화면 이름표    surCount = compound ? 2 : 1   ⇒ 김만 성 ✅
+//      한자 고르기    ★if (idx <= 1)                ⇒ ★성까지 성씨로 봄 ❌
+//      ⇒ 화면엔 「이름 1글자」라 적어 놓고 «성씨 목록» 을 보여 준 것입니다.
+//      ⚠️ 58부에 「이」에 以 가 붙던 것과 ★같은 뿌리입니다 —
+//         성씨 창구와 이름 창구가 어긋난 자리.
+//
+//   ⛔⛔ ★이 함수를 «두 벌» 로 만들지 마십시오. 갈리면 또 어긋납니다.
+//   ⚠️ ★복성(남궁·선우…)이면 «둘» 입니다 — 카드가 못 떠서 낱글자로 내려올 때
+//      앞 두 칸이 다 성씨여야 합니다 (57부 안전망). 그래서 2 가 맞습니다.
+// ══════════════════════════════════════════════════════════════════
+function surnameSlotCount(syllables: string[]): number {
+  return compoundOf(syllables) ? 2 : 1
+}
+
 function DiagnosisInner() {
   const router = useRouter()
   const sp = useSearchParams()
@@ -582,7 +604,10 @@ function DiagnosisInner() {
       //   ⚠️ ★안전망 — 복성인데 카드가 못 떴으면 그 자리 글자를 곁들입니다 (57부).
       //   ⛔ 성씨 목록을 이 화면에 «다시 적지» 마십시오. lib/saju/surnameDb.ts 한 곳입니다.
       // ══════════════════════════════════════════════════════════════
-      if (idx <= 1) {
+      //  ★2026-09-09 — «성씨 칸» 에서만 성씨 목록을 씁니다 [대표님 사진].
+      //     ⛔ idx <= 1 로 되돌리지 마십시오 —
+      //        단성(김·이·박…)일 때 ★이름 첫 글자가 «성씨 목록» 으로 떨어집니다.
+      if (idx < surnameSlotCount(syllables)) {
         const extra = comp && [...comp.hangul][idx] === hangul
           ? [[...comp.hanja][idx]] : []
         const choices = await fetchSurnameChoices(hangul, extra)
@@ -912,7 +937,9 @@ function DiagnosisInner() {
   //   ⚠️ 전에는 「궁」 칸에 «이름 1글자» 라고 적혀 있었습니다.
   //      판정은 맞게 돌고 있었는데 ★화면 글자만 틀렸습니다 (/api/naming 이 다시 가릅니다).
   const compound = compoundOf(syllables)
-  const surCount = compound ? 2 : 1
+  //  ★2026-09-09 — 한자 고르기와 ★«같은 셈» 을 쓰게 했습니다.
+  //     ⛔ 여기서 따로 세지 마십시오 — 두 벌이 되면 또 어긋납니다.
+  const surCount = surnameSlotCount(syllables)
   const slotLabel = (i: number) =>
     i < surCount ? '성(姓)' : `이름 ${i - surCount + 1}글자`
 
@@ -950,7 +977,10 @@ function DiagnosisInner() {
   //      (43부 23차 대표님 지시 · 그대로입니다).
   //   ⛔ 성씨 목록을 이 화면에 다시 적지 마십시오. lib/saju/surnameDb.ts 한 곳입니다.
   // ══════════════════════════════════════════════════════════════
-  const isSurnameSlot = pickerIdx === 0
+  //  ★2026-09-09 — 창 제목·안내도 ★같은 셈을 씁니다.
+  //     ⚠️ 복성인데 카드가 못 떠 낱글자로 내려온 때는 «둘째 칸도» 성씨입니다.
+  //     ⛔ pickerIdx === 0 으로 되돌리지 마십시오.
+  const isSurnameSlot = pickerIdx !== null && pickerIdx < surnameSlotCount(syllables)
   const surnameSorted = hanjaList
 
   const normalList = isSurnameSlot ? surnameSorted : hanjaList.filter((r) => !isAvoidChar(r))
