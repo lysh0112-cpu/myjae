@@ -10,7 +10,11 @@ import { toResultQuery, type SavedPerson } from '@/lib/saju/savedPeople'
 //   ⚠️ 상담사–고객 채팅은 별개이며 살아 있다. 함께 지우지 말 것.
 import AiTalkFab from '@/app/manseryeok/components/AiTalkFab'
 import TodayFortuneCard from '@/app/manseryeok/components/TodayFortuneCard'
-import EmotionPicker from '@/app/manseryeok/components/EmotionPicker'
+// ⛔ 2026-09-08 [연재쌤 지시] — ★「오늘 기분은 어떠세요?」를 홈에서 «내렸습니다».
+//    EmotionPicker · MoodHistoryModal · lib/saju/emotionLog.ts · emotion_logs 표는
+//    ★«지우지 않았습니다» — 손님이 남긴 기록이 표에 들어 있습니다.
+//    ⇒ 되살리시려면 이 줄과 아래 ⑥ 자리의 주석을 되돌리면 그만입니다.
+// import EmotionPicker from '@/app/manseryeok/components/EmotionPicker'
 import UserCard from '@/app/manseryeok/components/UserCard'
 import { listPinnedServices, togglePinnedService, MAX_PINS } from '@/lib/saju/pinnedServices'
 import HomeBottomSheet from '@/app/home-new/components/HomeBottomSheet'
@@ -111,14 +115,19 @@ const SLIDES = [
     sparkles: ['#d8b4ff', '#ffd97a', '#fff'],
     href: '/tarot',
   },
-  {
-    tag: '감정 기록부', title: '명리로 보는 나,\n감정으로 쓰는 나',
-    sub: '사주와 마음이 함께 쌓여요', link: '기록하러 가기 →',
-    img: '/banner/slide7.jpg', video: '',
-    accent: '#ffc9a0', sub2: '#f0e0d5',
-    sparkles: ['#ffc9a0', '#ffd97a', '#fff'],
-    href: '/mypage-new',
-  },
+  // ⛔ 2026-09-08 [연재쌤 지시] — ★「감정 기록부」 배너를 «내렸습니다» (일곱 → 여섯 장).
+  //    [왜 함께 내렸나]  홈의 기분 칸을 내리면서 배너만 남기면
+  //      손님이 눌러 들어갔다가 ★기록할 곳이 없어 «빈손으로» 돌아옵니다.
+  //    ⚠️ /banner/slide7.jpg 는 ★지우지 않았습니다. 되살리실 때 씁니다.
+  //    ⇒ 되살리시려면 아래 주석만 푸십시오.
+  // {
+  //   tag: '감정 기록부', title: '명리로 보는 나,\n감정으로 쓰는 나',
+  //   sub: '사주와 마음이 함께 쌓여요', link: '기록하러 가기 →',
+  //   img: '/banner/slide7.jpg', video: '',
+  //   accent: '#ffc9a0', sub2: '#f0e0d5',
+  //   sparkles: ['#ffc9a0', '#ffd97a', '#fff'],
+  //   href: '/mypage-new',
+  // },
 ]
 
 
@@ -511,10 +520,11 @@ export default function HomeNew() {
           onOpen={(s) => { if (PICK_CONFIG[s.name]) setPickService(s.name); else router.push(s.href) }}
         />
 
-        {/* ⑥ 감정 기록부 (공용 부품 — props 없음) */}
-        <div style={{ padding: '0 16px 12px' }}>
-          <EmotionPicker />
-        </div>
+        {/* ⑥ ⛔ 감정 기록부 — 2026-09-08 [연재쌤 지시] «내렸습니다».
+            ⇒ 되살리시려면 아래 두 줄의 주석을 풀고, 맨 위 import 도 함께 푸십시오.
+            <div style={{ padding: '0 16px 12px' }}>
+              <EmotionPicker />
+            </div> */}
 
         {/* ⑦ 전문가용 만세력 계산기 (서비스 12개와 성격이 달라 별도 카드) */}
         <div style={{ padding: '0 16px 20px' }}>
