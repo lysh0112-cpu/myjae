@@ -2,8 +2,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import ConsultantManager from './components/ConsultantManager'
-import SettlementManager from './components/SettlementManager'
 import Dashboard from './components/Dashboard'
 import CancelledHistory from './components/CancelledHistory'
 import KnowledgeManager from './components/KnowledgeManager'
@@ -20,6 +18,7 @@ import MemberHub, { type MemberInner } from './components/MemberHub'
 //     여기서 «직접» 부르지 마십시오 — 각 Hub 가 부릅니다.
 import AccountingHub, { type AccountingInner } from './components/AccountingHub'
 import AiHub, { type AiInner } from './components/AiHub'
+import ConsultantHub, { type ConsultantInner } from './components/ConsultantHub'
 import { useRoleGate, RoleGateScreen, type AppRole } from '@/hooks/useRoleGate'
 
 // 이 화면에 들어올 수 있는 등급 — 매니저만
@@ -27,13 +26,18 @@ const ADMIN_ROLES: AppRole[] = ['master']
 
 //  ⚠️ 'wallet' 을 뺐습니다 — 'member' 안쪽 탭이 되었습니다 (MemberHub).
 //     ⛔ 주소 /admin#wallet 은 «그대로» 됩니다. 아래 해시 읽는 자리를 보십시오.
-//  ⚠️ 'approval' · 'tone' · 'prompt' · 'aierror' 를 뺐습니다 — 안쪽 탭이 되었습니다.
+//  ⚠️ 'settlement' · 'approval' · 'tone' · 'prompt' · 'aierror' 를 뺐습니다 — 안쪽 탭이 되었습니다.
+//  🔴 ⛔ 'consultant' 는 ★«그대로 두십시오» — 두 화면이 이 열쇠로 들어옵니다
+//     (mypage-new:706 · manseryeok/consultant:323 · 48부 10차).
 //     ⛔ 주소 /admin#approval · #tone · #prompt · #aierror 는 «그대로» 됩니다 (HASH_INNER).
-type Tab = 'dashboard' | 'cancelled' | 'consultant' | 'price' | 'member' | 'settlement' | 'knowledge' | 'review' | 'inquiry' | 'accounting' | 'ai' | 'settings'
+type Tab = 'dashboard' | 'cancelled' | 'consultant' | 'price' | 'member' | 'knowledge' | 'review' | 'inquiry' | 'accounting' | 'ai' | 'settings'
 const TABS = [
   { key: 'dashboard', label: '📊 대시보드' },
   { key: 'cancelled', label: '🗑 취소 내역' },
-  { key: 'consultant', label: '👤 상담사 관리' },
+  //  ★2026-09-09 [대표님] — 「💰 정산 관리」 를 «여기로 묶었습니다».
+  //     ⇒ 안에서 [👤 상담사 관리] [💰 정산 관리] 로 갈립니다 (ConsultantHub).
+  //     ⛔ 열쇠는 'consultant' 그대로입니다. 바꾸면 「관리자 화면으로」 단추가 깨집니다.
+  { key: 'consultant', label: '👤 상담사 관리+정산관리' },
   { key: 'price', label: '💰 가격 관리' },
   // ★2026-09-05 신설 — 지갑 [대표님 「가격 설정화면은 변동하면 안 되고 별도 탭」]
   // ★2026-09-08 — 「지갑·요금」 → ★「회원 지갑」 으로 이름 바꿈.
@@ -44,7 +48,6 @@ const TABS = [
   //     ⇒ 안에서 [👥 회원 목록] [🪙 회원 지갑] 으로 갈립니다 (MemberHub).
   //     ⛔ 지갑을 다시 «위 탭» 으로 꺼내지 마십시오.
   { key: 'member', label: '👥 회원 관리' },
-  { key: 'settlement', label: '💰 정산 관리' },
   { key: 'knowledge', label: '🧠 연구 자료' },
   { key: 'review', label: '📝 후기 관리' },
   // ★48부 8차 — 문의 관리 [대표님 「관리자 화면에 문의관리탭도 별도로」]
@@ -86,6 +89,7 @@ export default function AdminPage() {
   const [memberInner, setMemberInner] = useState<MemberInner>('list')
   const [accountingInner, setAccountingInner] = useState<AccountingInner>('expense')
   const [aiInner, setAiInner] = useState<AiInner>('tone')
+  const [consultantInner, setConsultantInner] = useState<ConsultantInner>('consultant')
 
   // ★권한 확인 (2026-07-21)
   //   이 화면은 지금까지 role 을 전혀 보지 않아 URL 만 알면 누구나 들어왔다.
@@ -135,6 +139,7 @@ export default function AdminPage() {
     //     ⛔ 이 갈래를 없애지 마십시오 — 즐겨찾기 해 두셨을 수 있습니다.
     //     ⚠️ 새 주소도 됩니다 — /admin#member · #accounting · #ai
     if (want === 'wallet') { setTab('member'); setMemberInner('wallet') }
+    else if (want === 'settlement') { setTab('consultant'); setConsultantInner('settlement') }
     else if (want === 'approval') { setTab('accounting'); setAccountingInner('approval') }
     else if (want === 'tone') { setTab('ai'); setAiInner('tone') }
     else if (want === 'prompt') { setTab('ai'); setAiInner('prompt') }
@@ -172,6 +177,7 @@ export default function AdminPage() {
                   if (t.key === 'member') setMemberInner('list')
                   if (t.key === 'accounting') setAccountingInner('expense')
                   if (t.key === 'ai') setAiInner('tone')
+                  if (t.key === 'consultant') setConsultantInner('consultant')
                   // ★48부 10차 — 주소도 함께 바꿉니다.
                   //   ⇒ 새로고침하거나 즐겨찾기로 와도 «그 탭» 이 열립니다.
                   if (typeof window !== 'undefined') {
@@ -196,10 +202,9 @@ export default function AdminPage() {
       <main className="max-w-7xl mx-auto px-6 pt-6 pb-10">
         {tab === 'dashboard' && <Dashboard />}
         {tab === 'cancelled' && <CancelledHistory />}
-        {tab === 'consultant' && <ConsultantManager />}
+        {tab === 'consultant' && <ConsultantHub initial={consultantInner} />}
         {tab === 'price' && <PriceManager />}
         {tab === 'member' && <MemberHub initial={memberInner} />}
-        {tab === 'settlement' && <SettlementManager />}
         {tab === 'knowledge' && <KnowledgeManager />}
         {tab === 'review' && <ReviewManager />}
         {tab === 'inquiry' && <InquiryManager />}
