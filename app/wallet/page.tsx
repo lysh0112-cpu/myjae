@@ -11,8 +11,10 @@ import WalletPanel from '@/app/components/common/WalletPanel'
  *  ⇒ 잔액·내역을 보는 화면도 ★한 벌만 둡니다.
  *
  *  [다른 앱에서 부르는 법]  단추 하나에 이 주소만 걸면 됩니다 —
- *      https://myjae.vercel.app/wallet?from=glf   (골프온)
- *      https://myjae.vercel.app/wallet?from=bil   (큐보드)
+ *      https://myjae.kr/wallet?from=glf   (골프온)
+ *      https://myjae.kr/wallet?from=bil   (큐보드)
+ *      ⚠️ 2026-09-09 — 도메인을 사서 주소가 바뀌었습니다 (전 myjae.vercel.app).
+ *         ⇒ 큐보드·골프온 쪽 코드에도 ★이 주소로 고쳐야 합니다 (그쪽 창에서).
  *  ⛔⛔ ★큐보드·골프온에 지갑 화면을 «따로 만들지» 마십시오.
  *      같은 것을 셋 만들고 셋 고치게 됩니다 [1부 4-1과 같은 결].
  *
@@ -26,9 +28,22 @@ import WalletPanel from '@/app/components/common/WalletPanel'
  *     ⛔ Suspense 를 빼지 마십시오 — 빌드가 깨집니다.
  * ══════════════════════════════════════════════════════════════════ */
 
+// ══════════════════════════════════════════════════════════════════
+//  🔴 ★2026-09-09 — 새 주소로 바꿨습니다  [대표님이 도메인을 사셨습니다]
+//    myjae.kr  ·  cue.myjae.kr  ·  golf.myjae.kr   (2026-09-09 · 3년 · 법인 명의)
+//
+//   [까닭]  세 앱이 ★서브도메인으로 한 지붕에 들어왔습니다.
+//      ⇒ 「한 번 로그인하면 셋 다 열림」 이 되는 바탕입니다 (1부 10-2).
+//   ⚠️ 옛 주소(vercel.app)도 ★여전히 열립니다 — 그래서 없애도 손님이 막히진 않습니다.
+//      다만 지갑에서 돌아갈 때는 ★새 주소로 보내는 것이 맞습니다.
+//
+//   ⛔⛔ ★이 표가 «세 앱 주소를 적어 두는 유일한 자리» 입니다.
+//      주소가 또 바뀌면 여기만 고치십시오. 다른 곳에 적지 마십시오.
+//   ⚠️ 낱말(glf·bil)은 ★mc_ledger.service 와 같은 것입니다. ⛔ 바꾸지 마십시오 (1부 3-1).
+// ══════════════════════════════════════════════════════════════════
 const BACK: Record<string, { label: string; href: string }> = {
-  glf: { label: '골프온으로 돌아가기', href: 'https://my-score-golf.vercel.app' },
-  bil: { label: '큐보드로 돌아가기', href: 'https://my-score-billiard.vercel.app' },
+  glf: { label: '골프온으로 돌아가기', href: 'https://golf.myjae.kr' },
+  bil: { label: '큐보드로 돌아가기', href: 'https://cue.myjae.kr' },
 }
 
 function WalletInner() {

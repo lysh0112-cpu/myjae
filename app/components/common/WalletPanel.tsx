@@ -10,7 +10,8 @@ import { supabase } from '@/lib/supabase'
  *    ⇒ 잔액·내역 화면을 앱마다 만들면 «같은 것을 셋» 만들고 셋 고칩니다.
  *    ⛔⛔ ★큐보드·골프온에 지갑 화면을 «따로 만들지» 마십시오.
  *        1부 4-1 「회원 관리는 명카페 한 곳」과 같은 결입니다.
- *    ⇒ 그쪽 앱에서는 ★https://myjae.vercel.app/wallet?from=glf 로 «넘겨» 주십시오.
+ *    ⇒ 그쪽 앱에서는 ★https://myjae.kr/wallet?from=glf 로 «넘겨» 주십시오.
+ *       ⚠️ 2026-09-09 — 도메인을 사서 주소가 바뀌었습니다 (전 myjae.vercel.app).
  *
  *  [쓰는 곳 «둘»]
  *    app/wallet/page.tsx        공용 화면 (다른 앱에서 넘어옴) · big = true

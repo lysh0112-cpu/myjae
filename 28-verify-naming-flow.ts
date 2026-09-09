@@ -2160,6 +2160,26 @@ console.log('\n━━ ㉒-j 🔴 작명 — 아기와 개명의 «값» 이 갈�
     `★결과 화면도 남은 이용권을 «지웁니다»`)
 }
 
+// ══════════════════════════════════════════════════════════════════
+//  🔴 ★2026-09-09 — 세 앱 주소  [대표님이 도메인을 사셨습니다]
+//    myjae.kr · cue.myjae.kr · golf.myjae.kr   (3년 · 법인 명의 · 만기 2029-09-09)
+//
+//   ⚠️ 세 앱 주소를 적어 두는 곳은 ★app/wallet/page.tsx 의 BACK 표 «한 곳» 입니다.
+//      ⛔ 다른 곳에 주소를 적지 마십시오 — 바뀔 때 찾아다니게 됩니다.
+//   ⚠️ 옛 주소(vercel.app)도 여전히 열립니다. Supabase Redirect URLs 에도
+//      옛 주소를 «남겨» 두었습니다 (그쪽으로 들어온 분이 막히지 않게).
+// ══════════════════════════════════════════════════════════════════
+console.log('\n━━ ㉒-k 🔴 세 앱 주소가 «새 도메인» 인가 (2026-09-09) ━━')
+{
+  const w = codeOf(read('app/wallet/page.tsx'))
+  check(/href: 'https:\/\/golf\.myjae\.kr'/.test(w), `★골프온 — golf.myjae.kr`)
+  check(/href: 'https:\/\/cue\.myjae\.kr'/.test(w), `★큐보드 — cue.myjae.kr`)
+  check(!/vercel\.app/.test(w), `⛔ 돌아가기 주소에 옛 vercel.app 이 «없습니다»`)
+  //  ⚠️ 낱말(glf·bil)은 mc_ledger.service 와 짝입니다 — 바뀌면 지갑 내역이 갈립니다
+  check(/glf: \{/.test(w) && /bil: \{/.test(w),
+    `⛔ 앱 딱지(glf·bil)를 «바꾸지» 않았습니다 (mc_ledger 와 짝입니다)`)
+}
+
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail > 0) {
   console.log('  ┌────────────────────────────────────────────────────────────┐')
