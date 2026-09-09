@@ -661,7 +661,7 @@ export default function MyPageNew() {
         <div style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}>
           <button onClick={() => setCashOpen(v => !v)}
             style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 14, background: 'none', border: 'none', cursor: 'pointer' }}>
-            <span style={{ fontSize: 13, color: '#5a4a3e' }}><span aria-hidden style={{ fontSize: 22, lineHeight: 1, verticalAlign: '-4px', display: 'inline-block', margin: '0 1px' }}>{cashOpen ? '▾' : '▸'}</span> 캐시 · 이용권</span>
+            <span style={{ fontSize: 13, color: '#5a4a3e' }}><span aria-hidden style={{ fontSize: 22, lineHeight: 1, verticalAlign: '-4px', display: 'inline-block', margin: '0 1px' }}>{cashOpen ? '▾' : '▸'}</span> 지갑 · 쿠폰</span>
             <span style={{ fontSize: 15, color: '#96502e', fontWeight: 600 }}>
               {balance == null ? '…' : `${balance.toLocaleString()}원`}
             </span>
@@ -678,7 +678,10 @@ export default function MyPageNew() {
         {/* ⛔ ★2026-09-08 [대표님 지시] — 「결제 내역 · 쿠폰 등록」 칸을 «내렸습니다».
             [왜]  손님이 충전하면 그게 ★«곧 결제» 입니다. 내역이 두 곳에 나뉘어 있었고,
                   이 칸은 ★읽는 데가 «없어» 빈 안내문뿐이었습니다.
-            ⇒ 쿠폰 등록은 위 「캐시 · 이용권」 안으로 옮겼습니다.
+            ⇒ 쿠폰 등록은 위 「지갑 · 쿠폰」 안으로 옮겼습니다.
+            ★2026-09-09 [대표님 「지갑으로 통일하자」] — 「캐시 · 이용권」에서 바꿨습니다.
+              ⚠️ 이 칸에 실제로 든 것은 ★지갑과 쿠폰입니다.
+                 「이용권」은 작명 화면의 «다른 물건» 이라 이름이 겹쳤습니다.
             ⛔ 다시 만들지 마십시오 — 위 내역과 «같은 것» 입니다.
             ⚠️ 나중에 PG 영수증(환불·세금계산서)이 생기면 그때 따로 가르십시오.
             ⇒ 되살리시려면 payOpen 상태와 아래 주석을 되돌리면 됩니다. */}

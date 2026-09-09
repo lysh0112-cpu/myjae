@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabase'
  *
  *  [쓰는 곳 «둘»]
  *    app/wallet/page.tsx        공용 화면 (다른 앱에서 넘어옴) · big = true
- *    app/mypage-new/page.tsx    「캐시 · 이용권」 칸 안         · big = false
+ *    app/mypage-new/page.tsx    「지갑 · 쿠폰」 칸 안           · big = false
  *    ⇒ ★같은 부품입니다. 고치실 때 이 파일 «하나» 만 보시면 됩니다.
  *
  *  ⚠️ mc_wallet · mc_ledger 는 ★RLS 로 «본인 줄만» 옵니다. 남의 것은 안 보입니다.
@@ -92,7 +92,12 @@ export default function WalletPanel({ big = false }: { big?: boolean }) {
         style={{
           width: '100%', height: 44, background: C.btn, border: 'none', borderRadius: 10,
           color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer',
-        }}>☕ 캐시 충전하기</button>
+        //  ★2026-09-09 [대표님 「지갑으로 통일하자」] — 「캐시」를 걷었습니다.
+        //    ⚠️ 바로 위에 「내 지갑」이라 적혀 있는데 단추만 「캐시」였습니다.
+        //       ★한 화면에서 손님이 두 말을 봤습니다.
+        //    ⛔ 「캐시」·「이용권」을 돈 이름으로 되살리지 마십시오 —
+        //       「이용권」은 ★작명 화면의 «다른 물건» 입니다 (개명 횟수권).
+        }}>☕ 충전하기</button>
       <div style={{ fontSize: 10, color: '#6b5340', marginTop: 7, textAlign: 'center' }}>
         {CHARGE_AMOUNTS.map(n => n.toLocaleString()).join(' · ')}원
       </div>

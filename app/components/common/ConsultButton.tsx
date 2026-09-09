@@ -1,5 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
+//  ★2026-09-09 — 지갑 관문은 ★lib/wallet/consultGate.ts «한 곳» 입니다 [대표님 지시]
+import { checkConsultBalance, WALLET_MSG } from '@/lib/wallet/consultGate'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { LINE_OUTER } from '@/lib/ui/line'
@@ -55,6 +57,8 @@ export interface ConsultPayload {
 }
 
 export default function ConsultButton({ priceKey, mode, searchParams, payload }: Props) {
+  //  ★2026-09-09 — 잔액을 보는 동안 단추를 두 번 못 누르게 [대표님 지시]
+  const [checking, setChecking] = useState(false)
   const router = useRouter()
   const [price, setPrice] = useState<number | null>(null)
   const [active, setActive] = useState<boolean>(false)
@@ -75,7 +79,50 @@ export default function ConsultButton({ priceKey, mode, searchParams, payload }:
   // 아직 로딩 전이거나, 노출이 꺼진 상담이면 버튼 자체를 숨김
   if (!loaded || !active) return null
 
-  function go() {
+  // ══════════════════════════════════════════════════════════════════
+  //  ★2026-09-09 — 「전문가와 상담하기 · 50,000원」 을 누른 «그 순간» 잔액을 봅니다
+  //    [대표님]  「잔액확인은 "전문가와 상담신청하기"를 누를 때 ★먼저 확인하는 걸로」
+  //
+  //   [까닭]  여기서 막으면 상담사·시간·이름·전화를 ★고르기 «전» 에 알게 됩니다.
+  //      뒤에서 막으면 다 해 놓고 「돈이 모자라요」가 되어 헛수고가 됩니다.
+  //   ★이 부품 «하나» 를 손님 화면 열일곱 곳이 씁니다
+  //     ⇒ 여기 한 번 넣으면 ★모든 서비스가 저절로 통일됩니다 [대표님 「모두 통일해줘」].
+  //     ⛔ 화면마다 잔액 보기를 «다시 적지» 마십시오.
+  //
+  //   ⛔⛔ ★여기서 «빼지» 마십시오 — 보기만 합니다 (wallet_check).
+  //      상담사 일정이 안 맞아 못 잡으면 되돌려 드려야 합니다 [대표님].
+  //      실제 차감은 ★예약이 다 끝난 뒤 consultant-select 에서 합니다.
+  //
+  //   ⚠️ WALLET_GATE_ON 이 false 인 동안에는 ★아무 일도 안 합니다 (지금과 똑같습니다).
+  // ══════════════════════════════════════════════════════════════════
+  async function go() {
+    if (checking) return
+    setChecking(true)
+    try {
+      const r = await checkConsultBalance(priceKey)
+      if (r.gate === 'on' && !r.ok) {
+        if (r.reason === 'no_login') { alert(WALLET_MSG.needLogin); return }
+        if (r.reason === 'not_enough') {
+          //  ⛔⛔ ★[그냥 닫기] 를 «꼭» 두십시오 [2부 4장 원칙 ③] —
+          //     못 나가게 막으면 화가 납니다. confirm 의 [취소] 가 그 자리입니다.
+          const goCharge = confirm(
+            `${WALLET_MSG.short(price ?? 0, r.balance)}
+
+충전하러 가시겠어요?`,
+          )
+          if (goCharge) router.push('/wallet')
+          return
+        }
+        alert('잔액을 확인하지 못했어요.\n잠시 뒤에 다시 해 주세요.')
+        return
+      }
+      goNext()
+    } finally {
+      setChecking(false)
+    }
+  }
+
+  function goNext() {
     // ★이동 직전에 지금 화면의 결과를 세션에 담는다.
     //   (물상도 goConsult() 와 같은 방식. consultant-select 가 이걸 꺼내 저장한다)
     try {

@@ -1,5 +1,7 @@
 'use client'
 import { useRef, useState } from 'react'
+//  ★2026-09-09 — 지갑 관문은 lib/wallet/consultGate.ts «한 곳» 입니다 [대표님 지시]
+import { useConsultFee, WALLET_MSG, won } from '@/lib/wallet/consultGate'
 import { Suspense, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 // ★48부 4차 — 손님 화면은 ★본명 대신 별칭. ⛔ c.name 을 직접 쓰지 마십시오.
@@ -77,7 +79,11 @@ function ConsultantSelectInner() {
   const [custPhone, setCustPhone] = useState('')
   const [pickedSlotId, setPickedSlotId] = useState<string | null>(null)
   const [booking, setBooking] = useState(false)
-  const [done, setDone] = useState<{ consultantName: string; date: string; hour: number } | null>(null)
+  const [done, setDone] = useState<{
+    consultantName: string; date: string; hour: number
+    /** ★지갑에서 뺀 돈. 관문이 꺼져 있으면 null 이라 «아무것도 안 보입니다» */
+    paid?: { used: number; balance: number } | null
+  } | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -347,6 +353,40 @@ function ConsultantSelectInner() {
         .from('consultant_slots').update({ is_booked: true }).eq('id', slot.id)
       if (slotErr) throw slotErr
 
+      // ══════════════════════════════════════════════════════════════
+      //  🔴🔴 ★2026-09-09 — 상담료는 «여기서» 뺍니다  [대표님 확정]
+      //    「이름과 핸드폰 번호 넣고 저장 버튼을 누르는 순간」
+      //    「지갑에서 비용을 빼가고 … "o,ooo원이 차감되었습니다" 나오게」
+      //
+      //   [까닭 — 대표님]  「상담사 연결하기 버튼만 누르고 결제를 한 경우에는
+      //      ★일정이 가능한 상담사가 없을 경우, 환불해야 되는 복잡한 문제가」
+      //   ⇒ 예약(customers·consultations·bookings·슬롯)이 ★«다 끝난 뒤» 입니다.
+      //      여기까지 왔으면 시간이 이미 잠겼습니다. 되돌려 드릴 일이 없습니다.
+      //   ⇒ 2부 4장 「차감을 맨 마지막에 두고, 실패하면 반드시 되돌리십시오」와 같습니다.
+      //
+      //   ⛔⛔ ★이 자리를 위로 올리지 마십시오 —
+      //      올리면 「돈은 빠졌는데 예약이 안 된」 «가장 나쁜» 경우가 생깁니다.
+      //   ⚠️ 여기서 모자라면 ★예약을 «되돌리고» 아무것도 안 뺍니다 (아래 catch 가 아니라
+      //      바로 이 자리에서 되돌립니다 — 손님에게는 「빠진 돈은 없어요」라고 말합니다).
+      //   ⚠️ ConsultButton 에서 «이미» 봤는데 또 보는 까닭 —
+      //      ★지갑은 세 앱 공용입니다. 그 사이 큐보드·골프온에서 쓰면 잔액이 줍니다.
+      // ══════════════════════════════════════════════════════════════
+      const fee = await useConsultFee(
+        priceKey,
+        cons.id,
+        `${shownName(c)} 선생님 · ${slot.slot_date} ${slot.slot_hour}시`,
+      )
+      if (fee.gate === 'on' && !fee.ok) {
+        //  ★되돌리기 — 잠근 시간을 풀고, 예약과 상담 건을 걷습니다.
+        //  ⛔ 순서를 바꾸지 마십시오: 슬롯을 «먼저» 풀어야 다른 손님이 잡을 수 있습니다.
+        await supabase.from('consultant_slots').update({ is_booked: false }).eq('id', slot.id)
+        await supabase.from('bookings').delete().eq('consultation_id', cons.id)
+        await supabase.from('consultations').delete().eq('id', cons.id)
+        alert(WALLET_MSG.rolledBack)
+        setBooking(false)
+        return
+      }
+
       // 전달 완료된 해설은 세션에서 정리
       if (typeof window !== 'undefined') {
         sessionStorage.removeItem('ai_analysis')
@@ -358,7 +398,12 @@ function ConsultantSelectInner() {
         sessionStorage.removeItem('birth_full')
       }
 
-      setDone({ consultantName: shownName(c), date: slot.slot_date, hour: slot.slot_hour })
+      setDone({
+        consultantName: shownName(c), date: slot.slot_date, hour: slot.slot_hour,
+        //  ★빠진 돈과 «남은 잔액» 을 완료 화면에 함께 보입니다 [대표님 지시 · 1부 3-1]
+        //  ⛔ 「남은 잔액」을 빼지 마십시오 — 「왜 돈이 줄었냐」는 문의를 이 줄이 막습니다.
+        paid: fee.gate === 'on' && fee.ok ? { used: fee.used, balance: fee.balance } : null,
+      })
     } catch (e) {
       console.error(e)
       alert('예약 중 문제가 생겼어요. 다시 시도해 주세요.')
@@ -375,7 +420,21 @@ function ConsultantSelectInner() {
         <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
         <div className="text-[20px] text-[#3a2e28] font-bold mb-2">예약이 완료됐어요</div>
         <div className="text-[14px] text-[#5c3a1e] mb-1">{done.consultantName} 선생님</div>
-        <div className="text-[14px] text-[#8f3d0e] mb-8">{fmtDate(done.date)} {done.hour}시</div>
+        <div className="text-[14px] text-[#8f3d0e] mb-4">{fmtDate(done.date)} {done.hour}시</div>
+
+        {/* ★2026-09-09 [대표님] — 지갑에서 얼마를 냈고 얼마가 남았는지.
+            ⚠️ 관문이 꺼져 있으면 paid 가 null 이라 ★아무것도 안 보입니다 (지금 상태).
+            ⛔ 「남은 잔액」을 빼지 마십시오 [1부 3-1]. */}
+        {done.paid && (
+          <div className="mb-6 pt-4" style={{ borderTop: '1px solid rgba(0,0,0,0.07)' }}>
+            <div className="text-[14px] text-[#3a2e28]">
+              지갑에서 <b>{won(done.paid.used)}</b>을 냈어요
+            </div>
+            <div className="text-[12px] text-[#8a7063] mt-1">
+              남은 잔액 {won(done.paid.balance)}
+            </div>
+          </div>
+        )}
         <div className="text-[12px] text-[#6b5340] mb-8 leading-relaxed">
           상담 시간에 마이페이지 → 내 상담 내역에서<br />채팅방으로 입장하실 수 있어요.
         </div>
