@@ -7,11 +7,13 @@
 //
 //   [흐름] 두 사람 선택 → 기간 입력(find) → (여기) 날짜 고르기 → 보관함 저장
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useState, useRef } from 'react'
+//  ★2026-09-09 — 보관함 자리는 공용 부품 «한 곳» 입니다 [대표님 「색상 통일」]
+import StorageLinkRow from '@/app/components/common/StorageLinkRow'
 import { useRouter, useSearchParams } from 'next/navigation'
 import PickWeddingV7 from '../components/PickWeddingV7'
 import { runWeddingV7, type WeddingV7Result, type RawPerson, type DayResult } from '../lib/recommendV7'
-import { saveWeddingRecord, getWeddingRecord } from '@/lib/saju/weddingRecords'
+import { saveWeddingRecord, getWeddingRecord, updateWeddingRecord } from '@/lib/saju/weddingRecords'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
 
 const C = { bg: '#FDF6F0', sub: '#B4785A', brand: '#96502E', line: '#9c7a58' }
@@ -35,6 +37,10 @@ function PickInner() {
   const [result, setResult] = useState<WeddingV7Result | null>(null)
   const [errMsg, setErrMsg] = useState('')
   const [savedMsg, setSavedMsg] = useState('')
+  //  ★담아 둔 줄의 id — 날짜를 누르면 «이 줄을 덮어씁니다»
+  const savedIdRef = useRef<string | null>(null)
+  //  ⛔ useState 로 막지 마십시오 — «다시 그릴 때» 반영되어 «샙니다»
+  const savingRef = useRef(false)
 
   useEffect(() => {
     let cancelled = false
@@ -47,6 +53,8 @@ function PickInner() {
       //   기간은 saveWeddingRecord 인자에 없어 result_data 안에 넣어 두었다.
       const recordId = sp.get('recordId')
       if (recordId && !survey) {
+        //  ★다시보기 — 이미 담긴 것입니다. ⛔ 또 담지 마십시오.
+        savedIdRef.current = recordId
         const rec = await getWeddingRecord(recordId)
         if (cancelled) return
         const snap = rec?.resultData as { survey?: WeddingSurvey } | undefined
@@ -64,6 +72,9 @@ function PickInner() {
         if (cancelled) return
         if (r.error) setErrMsg(r.error)
         setResult(r)
+        //  🔴 ★결과가 나오면 «저절로» 담습니다 [대표님 「보관함에 없어」]
+        //     ⛔ 이 줄을 빼면 ★날짜를 눌러야만 담기던 예전으로 돌아갑니다.
+        void keepRecord(r, '좋은 날을 찾았어요')
       } catch {
         if (!cancelled) setErrMsg('날짜를 찾는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.')
       } finally {
@@ -75,34 +86,59 @@ function PickInner() {
   }, [sp])
 
   /** 날짜를 누르면 보관함에 저장한다. 같은 두 사람·같은 기간이면 덮어쓴다. */
-  async function handlePick(day: DayResult) {
+  // ══════════════════════════════════════════════════════════════════
+  //  🔴 ★2026-09-09 — 결과가 나오면 «저절로» 담습니다  [대표님 지시]
+  //    「조회하고 하단의 보관함에 저장을 하면 ★보관함에 없어」
+  //    「★선택된 날자를 눌러야만 저장이 되는 건가?」  ⇒ 그랬습니다.
+  //
+  //   [무엇이 있었나]
+  //     ① ★«날짜를 누를 때» 만 담겼습니다 — 조회만 하고 나가면 아무것도 안 남았습니다.
+  //     ② saveWeddingRecord 는 언제나 ★«새 줄» 을 만듭니다 —
+  //        날짜를 여럿 눌러 보시면 그만큼 쌓였습니다.
+  //   ⇒ 결과가 나오면 한 줄 담고, 날짜를 누르시면 ★그 줄을 «덮어씁니다».
+  //   ⛔ 날짜마다 새 줄을 만들지 마십시오.
+  //   ⚠️ 다시보기(recordId)는 ★이미 담긴 것입니다 — 또 담지 않습니다.
+  // ══════════════════════════════════════════════════════════════════
+  async function keepRecord(res2: WeddingV7Result, summary: string, picked?: DayResult) {
     const groom = parseJson<RawPerson>(sp.get('p1'))
     const bride = parseJson<RawPerson>(sp.get('p2'))
     const survey = parseJson<WeddingSurvey>(sp.get('survey'))
-    if (!groom || !bride || !survey || !result) return
-    setSavedMsg('')
-    try {
-      const res = await saveWeddingRecord({
-        kind: 'find',
-        name1: '신랑', name2: '신부',
-        summary: `${day.fullLabel} ${day.weekday}요일 · ${day.ganji}`,
-        input1: groom as unknown as SavedInputData,
-        input2: bride as unknown as SavedInputData,
-        // ★survey 는 saveWeddingRecord 인자에 없다. 다시보기 때 기간이 필요하므로
-        //   result_data 안에 함께 넣는다.
-        resultData: {
-          version: 'v7',
-          survey,
-          picked: {
-            dateKey: day.dateKey, y: day.y, m: day.m, d: day.d,
-            weekday: day.weekday, ganji: day.ganji, detail: day.detail,
-          },
-        },
-      })
-      setSavedMsg(res?.ok ? `${day.dateLabel}을 보관함에 담았어요` : '저장하지 못했어요')
-    } catch {
-      setSavedMsg('저장하지 못했어요')
+    if (!groom || !bride || !survey) return
+    if (savingRef.current) return
+
+    const snap = {
+      version: 'v7',
+      survey,
+      picked: picked ? {
+        dateKey: picked.dateKey, y: picked.y, m: picked.m, d: picked.d,
+        weekday: picked.weekday, ganji: picked.ganji, detail: picked.detail,
+      } : null,
+      days: res2,
     }
+
+    if (savedIdRef.current) {
+      const ok = await updateWeddingRecord(savedIdRef.current, { summary, resultData: snap })
+      setSavedMsg(ok ? summary + ' 담았어요' : '저장하지 못했어요')
+      return
+    }
+    savingRef.current = true
+    const res = await saveWeddingRecord({
+      kind: 'find',
+      name1: '신랑', name2: '신부',
+      summary,
+      input1: groom as unknown as SavedInputData,
+      input2: bride as unknown as SavedInputData,
+      resultData: snap,
+    })
+    savingRef.current = false
+    if (res?.ok && res.id) savedIdRef.current = res.id
+    setSavedMsg(res?.ok ? summary + ' 담았어요' : '저장하지 못했어요')
+  }
+
+  async function handlePick(day: DayResult) {
+    if (!result) return
+    //  ★담아 둔 줄에 «고르신 날짜» 를 얹습니다 — ⛔ 새 줄을 만들지 않습니다.
+    await keepRecord(result, `${day.fullLabel} ${day.weekday}요일 · ${day.ganji}`, day)
   }
 
   if (loading) {
@@ -150,6 +186,19 @@ function PickInner() {
       </div>
 
       <PickWeddingV7 result={result} onPickDay={handlePick} />
+
+      {/* 🔴 ★2026-09-09 — 결과 맨 아래 「보관함」 자리 [대표님 「보관함 버튼을 만들면 어때」]
+          ⚠️ 이 화면에는 보관함으로 가는 길이 ★«아예 없었습니다».
+          ⛔ 단추를 «직접 만들지» 마십시오 — StorageLinkRow 한 곳입니다. */}
+      <div style={{ padding: '0 16px 24px' }}>
+        <StorageLinkRow
+          label="결혼택일 보관함"
+          href="/manseryeok/wedding-timing/wedding-storage"
+          state={savedIdRef.current ? 'saved' : savedMsg === '저장하지 못했어요' ? 'failed' : 'saving'}
+          onRetry={() => { if (result) void keepRecord(result, '좋은 날을 찾았어요') }}
+          accent={C.brand}
+        />
+      </div>
 
       {savedMsg && (
         <div style={{

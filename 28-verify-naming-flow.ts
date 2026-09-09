@@ -2052,6 +2052,44 @@ console.log('\n━━ ㉒-h 🔴 보관함 자리 · 색 통일 1단계 (2026-09
     `⛔ 이사 진단에 ★저장 막이(useRef)가 있습니다 (두 번 담기지 않습니다)`)
 }
 
+// ══════════════════════════════════════════════════════════════════
+//  🔴🔴 ★2026-09-09 — 「날짜를 눌러야만 담기던」 것을 고쳤습니다  [대표님 지시]
+//    「이렇게 조회하고 하단의 보관함에 저장을 하면 ★보관함에 없어」
+//    「★선택된 날자를 눌러야만 저장이 되는 건가?」  ⇒ 그랬습니다.
+//
+//   [무엇이 있었나 — 이사 날짜 · 결혼 날짜 둘 다]
+//     ① ★«날짜를 누를 때» 만 담겼습니다 — 조회만 하고 나가면 아무것도 안 남았습니다.
+//     ② 저장이 언제나 ★«새 줄» 이라, 날짜를 여럿 눌러 보면 그만큼 쌓였습니다.
+//        ⚠️ pairKey(같은 두 사람 표지)를 담아 두고도 ★안 쓰고 있었습니다.
+//   ⇒ 결과가 나오면 «저절로» 한 줄 담고, 날짜를 누르면 ★그 줄을 «덮어씁니다».
+//
+//   ⚠️ 「보관함에 없다」와 「보관함에 여러 개」가 ★같은 뿌리였습니다.
+// ══════════════════════════════════════════════════════════════════
+console.log('\n━━ ㉒-i 🔴 택일 결과가 «저절로» 담기는가 (2026-09-09) ━━')
+{
+  for (const [name, path, lib] of [
+    ['이사 날짜', 'app/manseryeok/moving-timing/pick/page.tsx', 'lib/saju/movingRecords.ts'],
+    ['결혼 날짜', 'app/manseryeok/wedding-timing/pick/page.tsx', 'lib/saju/weddingRecords.ts'],
+  ] as const) {
+    const src = read(path)
+    check(/void keepRecord\(r/.test(src),
+      `★${name} — 결과가 나오면 «저절로» 담습니다`)
+    check(/if \(savedIdRef\.current\)/.test(src),
+      `⛔ ${name} — 날짜를 누르면 «새 줄» 이 아니라 ★그 줄을 덮어씁니다`)
+    check(/savedIdRef\.current = recordId/.test(src),
+      `⚠️ ${name} — 다시보기는 «또» 담지 않습니다`)
+    check(/const savingRef = useRef/.test(src),
+      `⛔ ${name} — 막이가 ★useRef 입니다 (useState 는 «새서» 두 줄이 생깁니다)`)
+    check(/export async function update(Moving|Wedding)Record/.test(read(lib)),
+      `★${name} — 덮어쓰는 함수가 있습니다`)
+    check(/result_data = patch\.resultData \?\? \{\}/.test(read(lib)),
+      `⛔ ${name} — 덮어쓸 때도 result_data 를 «null 로» 두지 않습니다`)
+  }
+  //  ⚠️ 결혼 날짜에도 보관함 자리를 붙였습니다
+  check(/StorageLinkRow/.test(read('app/manseryeok/wedding-timing/pick/page.tsx')),
+    `결혼 날짜에 「보관함」 자리가 있습니다`)
+}
+
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail > 0) {
   console.log('  ┌────────────────────────────────────────────────────────────┐')

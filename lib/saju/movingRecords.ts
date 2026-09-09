@@ -219,3 +219,44 @@ export function daysAgoLabel(iso: string): string {
   if (days < 365) return `${Math.floor(days / 30)}개월 전`
   return `${Math.floor(days / 365)}년 전`
 }
+
+// ══════════════════════════════════════════════════════════════════
+//  🔴 ★2026-09-09 — 담아 둔 줄을 «덮어씁니다»  [대표님 지시]
+//    「이렇게 조회하고 하단의 보관함에 저장을 하면 ★보관함에 없어」
+//
+//   [무엇이 있었나]
+//     ① 이사 날짜(pick) 는 ★«날짜를 누를 때» 만 담겼습니다 —
+//        조회만 하고 나가시면 ★아무것도 안 남았습니다.
+//     ② saveMovingRecord 는 언제나 ★«새 줄» 을 만듭니다 —
+//        날짜를 여럿 눌러 보시면 그만큼 줄이 쌓입니다.
+//   ⇒ 결과가 나오면 «저절로» 한 줄 담고, 날짜를 누르시면 ★그 줄을 덮어씁니다.
+//
+//   ⛔ 이 함수로 «새 줄» 을 만들지 마십시오 — 덮어쓰기 전용입니다.
+//   ⚠️ user_id 를 함께 걸어 ★남의 줄을 못 고치게 합니다.
+// ══════════════════════════════════════════════════════════════════
+export async function updateMovingRecord(
+  id: string, patch: { summary?: string; resultData?: unknown },
+): Promise<boolean> {
+  const { data: auth } = await supabase.auth.getUser()
+  const uid = auth?.user?.id
+  if (!uid) return false
+
+  //  ⚠️ summary 는 input_data(blob) 안에 있습니다 — 통째로 다시 담습니다.
+  const { data: cur } = await supabase
+    .from('saju_records').select('input_data')
+    .eq('user_id', uid).eq('id', id).maybeSingle()
+  if (!cur) return false
+
+  const blob = { ...(cur.input_data as Record<string, unknown> ?? {}) }
+  if (patch.summary !== undefined) blob.summary = patch.summary
+
+  const row: Record<string, unknown> = { input_data: blob }
+  //  ⛔ result_data 를 null 로 두지 마십시오 — 목록에서 사라집니다 (recordQuery.ts).
+  if (patch.resultData !== undefined) row.result_data = patch.resultData ?? {}
+
+  const { data, error } = await supabase
+    .from('saju_records').update(row)
+    .eq('user_id', uid).eq('id', id).select('id')
+  //  ⚠️ update 는 조건이 안 맞아도 오류를 «안» 냅니다 → 건수로 봅니다 (14부)
+  return !error && (data?.length ?? 0) > 0
+}

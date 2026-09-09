@@ -10,13 +10,13 @@
  *   일주는 자체 계산, 음력은 내장 대조표라 호출이 없다.
  */
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useState, useRef } from 'react'
 //  ★2026-09-09 — 보관함 자리는 공용 부품 «한 곳» 입니다 [대표님 「색상 통일」]
 import StorageLinkRow from '@/app/components/common/StorageLinkRow'
 import { useRouter, useSearchParams } from 'next/navigation'
 import PickMovingV1 from '../components/PickMovingV1'
 import { runMovingV1, type MovingV1Result, type DayResult, type RawPerson } from '../lib/recommendV1'
-import { getMovingRecord, saveMovingRecord } from '@/lib/saju/movingRecords'
+import { getMovingRecord, saveMovingRecord, updateMovingRecord } from '@/lib/saju/movingRecords'
 import type { Direction } from '../lib/movingTables'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
 
@@ -35,6 +35,10 @@ function PickInner() {
   //  ★2026-09-09 — 보관함에 담겼는가 [대표님 「보관함 버튼」]
   //  ⚠️ 이 화면은 ★날짜를 «누를 때» 담깁니다 — 처음에는 아직 안 담긴 상태입니다.
   const [saveState, setSaveState] = useState<'saving' | 'saved' | 'failed'>('saving')
+  //  ★담아 둔 줄의 id — 날짜를 누르시면 «이 줄을 덮어씁니다» (새 줄을 안 만듭니다)
+  const savedIdRef = useRef<string | null>(null)
+  //  ⛔ useState 로 막지 마십시오 — «다시 그릴 때» 반영되어 «샙니다» (두 줄이 생깁니다)
+  const savingRef = useRef(false)
 
   useEffect(() => {
     let cancelled = false
@@ -48,6 +52,9 @@ function PickInner() {
         const rec = await getMovingRecord(recordId)
         if (!cancelled && rec?.resultData) {
           setResult(rec.resultData as MovingV1Result)
+          //  ★다시보기 — 이미 담긴 것입니다. ⛔ 또 담지 마십시오.
+          savedIdRef.current = recordId
+          setSaveState('saved')
           setLoading(false)
           return
         }
@@ -81,41 +88,73 @@ function PickInner() {
         direction,
       })
 
-      if (!cancelled) { setResult(r); setLoading(false) }
+      if (!cancelled) {
+        setResult(r)
+        setLoading(false)
+        //  🔴 ★결과가 나오면 «저절로» 담습니다 [대표님 「보관함에 없어」]
+        //     ⛔ 이 줄을 빼면 ★날짜를 눌러야만 담기던 예전으로 돌아갑니다.
+        if (!r.error && r.contractor) {
+          void keepRecord(r, `${r.days.length}일 가운데 고르실 수 있어요`)
+        }
+      }
     }
 
     run()
     return () => { cancelled = true }
   }, [sp])
 
-  /** 날짜를 누르면 보관함에 저장한다. */
-  async function handlePick(day: DayResult) {
-    if (!result?.contractor) return
-    const unpack = (key: string): (SavedInputData & { name?: string }) | null => {
-      try {
-        const raw = sp.get(key)
-        return raw ? JSON.parse(decodeURIComponent(raw)) : null
-      } catch { return null }
-    }
-    const in1 = unpack('p1')
-    const in2 = unpack('p2')
+  // ══════════════════════════════════════════════════════════════════
+  //  🔴 ★2026-09-09 — 결과가 나오면 «저절로» 담습니다  [대표님 지시]
+  //    「이렇게 조회하고 하단의 보관함에 저장을 하면 ★보관함에 없어」
+  //
+  //   [까닭]  전에는 ★«날짜를 누를 때» 만 담겼습니다.
+  //      조회만 하고 나가시면 ★아무것도 안 남았습니다.
+  //   ⇒ 결과가 나오면 한 줄 담고, 날짜를 누르시면 ★그 줄을 «덮어씁니다».
+  //   ⛔ 날짜마다 «새 줄» 을 만들지 마십시오 — 눌러 본 만큼 쌓입니다.
+  //   ⚠️ 다시보기(recordId)로 들어오면 ★담지 않습니다 — 이미 담긴 것입니다.
+  // ══════════════════════════════════════════════════════════════════
+  async function keepRecord(res2: MovingV1Result, summary: string) {
+    if (savingRef.current) return
+    const in1 = ((): (SavedInputData & { name?: string }) | null => {
+      try { const raw = sp.get('p1'); return raw ? JSON.parse(decodeURIComponent(raw)) : null } catch { return null }
+    })()
+    const in2 = ((): (SavedInputData & { name?: string }) | null => {
+      try { const raw = sp.get('p2'); return raw ? JSON.parse(decodeURIComponent(raw)) : null } catch { return null }
+    })()
     if (!in1) return
+    //  ⚠️ 계약자가 없으면 담을 것이 없습니다 — 조용히 넘어갑니다.
+    if (!res2.contractor) return
 
-    const res = await saveMovingRecord({
+    //  ★이미 담아 둔 줄이 있으면 «덮어씁니다»
+    if (savedIdRef.current) {
+      const ok = await updateMovingRecord(savedIdRef.current, { summary, resultData: res2 })
+      setSaveState(ok ? 'saved' : 'failed')
+      return
+    }
+    savingRef.current = true
+    const r = await saveMovingRecord({
       kind: 'find',
-      name1: result.contractor.name,
-      name2: result.spouse?.name ?? '',
-      summary: `${day.fullLabel} 외 ${Math.max(result.days.length - 1, 0)}일`,
+      name1: res2.contractor.name,
+      name2: res2.spouse?.name ?? '',
+      summary,
       input1: in1,
       input2: in2 ?? in1,
-      ownerMode: result.ownerMode,
+      ownerMode: res2.ownerMode,
       ownerWho: sp.get('who') === 'spouse' ? 'spouse' : 'contractor',
-      direction: result.direction,
-      resultData: result,
+      direction: res2.direction,
+      resultData: res2,
     })
-    //  ★2026-09-09 — 담겼는지를 아래 「보관함」 줄도 함께 씁니다 [대표님 지시]
-    setSaveState(res.ok ? 'saved' : 'failed')
-    setSaved(res.ok ? `${day.fullLabel}을 보관함에 담았어요.` : (res.message ?? '저장하지 못했어요.'))
+    savingRef.current = false
+    if (r.ok && r.id) { savedIdRef.current = r.id; setSaveState('saved') }
+    else setSaveState('failed')
+  }
+
+  /** 날짜를 누르면 «담아 둔 줄» 에 그 날짜를 얹습니다. */
+  async function handlePick(day: DayResult) {
+    if (!result?.contractor) return
+    //  ★담아 둔 줄에 «고르신 날짜» 를 얹습니다 — ⛔ 새 줄을 만들지 않습니다.
+    await keepRecord(result, `${day.fullLabel} 외 ${Math.max(result.days.length - 1, 0)}일`)
+    setSaved(`${day.fullLabel}을 보관함에 담았어요.`)
     setTimeout(() => setSaved(null), 2600)
   }
 
