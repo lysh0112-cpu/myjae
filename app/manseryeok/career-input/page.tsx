@@ -15,6 +15,8 @@
  */
 
 import { Suspense, useMemo, useState } from 'react'
+//  ★2026-09-09 — 지갑 관문은 lib/wallet/consultGate.ts «한 곳» 입니다
+import { askBeforeAi } from '@/lib/wallet/consultGate'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ageOf } from '@/lib/saju/career/calcPerson'
 import MbtiSelect from '@/app/manseryeok/components/MbtiSelect'
@@ -116,7 +118,26 @@ function CareerInputInner() {
         {/* ★2026-08-03 (44부 35차) — MBTI 를 안 고르셨으면 «한 번» 여쭙습니다.
             ⚠️ 「이번엔 넣지 않고 볼게요」를 고르시면 그대로 갑니다 —
                길을 «막지 않습니다». 다만 「사주로 본 성향」 대목이 빠집니다. */}
-        <button onClick={() => { if (!mbti) { setAsk(true); return } router.push(`/manseryeok/career-result?${query}`) }}
+        {/* ══════════════════════════════════════════════════════════
+            🔴 ★2026-09-09 — 「진로적성 보기」 를 누를 때 «여쭙습니다»  [대표님 지시]
+              「ai결제창이 ★진로적성보기 클릭시 나오는 걸로 해보자」
+              ⇒ 2부 4장 확정표의 ★career_ai · 「분석 시작 누를 때」 자리입니다.
+
+            ⚠️ 여기서는 ★«묻기만» 합니다. 실제 차감은 결과 화면에서
+               ★AI 가 «돌기 직전» 에 합니다 (career-result).
+               ⇒ 여기서 빼면 MBTI 를 고르러 가시거나 되돌아가실 때
+                 ★「돈은 빠졌는데 안 봤다」 가 됩니다.
+
+            ⛔ MBTI 물음 «뒤» 로 옮기지 마십시오 —
+               돈이 모자란 분께 MBTI 부터 고르게 하면 ★헛수고가 됩니다.
+            ⚠️ WALLET_GATE_ON 이 false 인 동안에는 ★아무 일도 안 합니다.
+            ══════════════════════════════════════════════════════════ */}
+        <button onClick={async () => {
+          const go = await askBeforeAi('career_ai', '진로적성 분석', () => router.push('/wallet'))
+          if (!go) return
+          if (!mbti) { setAsk(true); return }
+          router.push(`/manseryeok/career-result?${query}`)
+        }}
           style={{
             width: '100%', marginTop: 14, padding: 15, borderRadius: 12,
             background: ACCENT, border: 'none', color: '#fff',
@@ -129,6 +150,8 @@ function CareerInputInner() {
           open={ask}
           accent={ACCENT}
           onPick={() => setAsk(false)}
+          //  ⚠️ 여기서는 ★다시 안 여쭙습니다 — 위 단추에서 «이미» 여쭸습니다.
+          //     ⛔ 여기에 또 넣으면 손님이 ★두 번 확인하게 됩니다.
           onSkip={() => { setAsk(false); router.push(`/manseryeok/career-result?${query}`) }}
         />
 

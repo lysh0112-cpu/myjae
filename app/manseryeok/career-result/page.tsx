@@ -18,6 +18,8 @@
  */
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+//  ★2026-09-09 — 지갑 관문은 lib/wallet/consultGate.ts «한 곳» 입니다
+import { useAiFee, refundAiFee, WALLET_MSG } from '@/lib/wallet/consultGate'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   judgeOhaengGijil, judgeYukchin, judgeGyeokguk,
@@ -266,6 +268,34 @@ function CareerResultInner() {
 
     ;(async () => {
       setTongState('loading')
+
+      // ══════════════════════════════════════════════════════════════
+      //  🔴 ★2026-09-09 — AI 가 «돌기 직전» 에 지갑에서 뺍니다  [대표님 지시]
+      //    2부 4장 원칙 ① — 「AI 분석은 «단추를 누를 때» 뺍니다.
+      //                     ⇒ 실패하면 ★wallet_refund 로 되돌립니다」
+      //
+      //   ⚠️ 얼마가 드는지는 career-input 의 「진로적성 보기」 에서 ★이미 여쭀습니다.
+      //      ⛔ 여기서 «또» 묻지 마십시오 — 손님이 두 번 확인하게 됩니다.
+      //   ⚠️ 다시보기(recordId)는 위에서 «이미» 빠져나갔습니다 — ★두 번 안 뺍니다.
+      //   ⛔ 이 자리를 useEffect 밖으로 옮기지 마십시오 —
+      //      tongStartedRef 가 ★「한 번만」 을 지키는 자리입니다.
+      // ══════════════════════════════════════════════════════════════
+      const fee = await useAiFee('career_ai', person.name || '진로적성', '진로적성 분석')
+      if (fee.gate === 'on' && !fee.ok) {
+        //  ⚠️ 여기서는 ★되돌릴 것이 «없습니다» — 애초에 못 뺐습니다.
+        alert(WALLET_MSG.aiRolledBack)
+        if (!cancelled) setTongState('failed')
+        return
+      }
+      const ledgerId = fee.gate === 'on' && fee.ok ? fee.ledgerId : undefined
+
+      //  🔴 AI 가 실패한 «모든» 길에서 되돌립니다.
+      //  ⚠️ 1부 8-3 — 「API 셋이 실패해도 status 200」 인 자리가 있습니다.
+      //     ★실패를 «성공으로 알고» 돈을 두면 안 됩니다.
+      //  ⛔ 되돌리기를 빼지 마십시오 — 「돈은 빠졌는데 못 봤다」 가 «가장 나쁩니다».
+      const giveBack = async () => {
+        if (ledgerId) await refundAiFee(ledgerId, '진로적성 분석 실패 — 되돌림')
+      }
       // ★2026-07-29 — 프리미엄이면 모듈2(6섹션), 아니면 예전 카드형 프롬프트.
       //   ⚠️ 결제 관문이 붙기 전까지 isPremium() 이 true 를 돌려줍니다.
       //      결제가 붙으면 lib/saju/premium/config.ts 한 곳만 고치면 됩니다.
@@ -317,6 +347,7 @@ function CareerResultInner() {
         })
         if (!res.ok || !res.body) {
           console.error('진로적성 통변 실패', res.status)
+          await giveBack()                    // ★돈을 되돌립니다
           setTongState('failed'); return
         }
         const reader = res.body.getReader()
@@ -360,6 +391,7 @@ function CareerResultInner() {
         }
       } catch (e) {
         console.error('진로적성 통변 오류', e)
+        await giveBack()                      // ★돈을 되돌립니다
         if (!cancelled) setTongState('failed')
       }
     })()

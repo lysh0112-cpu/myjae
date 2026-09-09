@@ -66,6 +66,23 @@ export const WALLET_MSG = {
 
   /** 로그인이 없을 때 */
   needLogin: '상담 예약은 로그인 후에 하실 수 있어요.',
+
+  // ── AI 분석 (2026-09-09 · 대표님 「ai결제창이 진로적성보기 클릭시 나오는 걸로」) ──
+  //  ⚠️ 2부 4장 원칙 ① — ★AI 분석은 «단추를 누를 때» 뺍니다. 실패하면 되돌립니다.
+  //  ⛔ 「차감되었습니다」처럼 딱딱하게 쓰지 마십시오 — 이 앱은 ~해요체입니다.
+
+  /** ★보시기 «전» 에 여쭙습니다 — 얼마가 드는지·얼마가 남는지 «미리» 보여 드립니다 */
+  aiAsk: (label: string, need: number, balance: number) =>
+    `${label}에 ${won(need)}이 들어요.\n지갑에서 빠집니다.\n\n` +
+    `지금 ${won(balance)} → 보시면 ${won(balance - need)}\n\n` +
+    `보시겠어요?`,
+
+  /** AI 를 못 돌렸을 때 — «돈은 안 빠졌다» 를 «먼저» 말합니다 */
+  aiRolledBack:
+    '분석을 마치지 못했어요.\n잠시 뒤에 다시 해 주세요.\n\n지갑에서 빠진 돈은 없어요.',
+
+  /** 로그인이 없을 때 (AI) */
+  aiNeedLogin: 'AI 분석은 로그인 후에 보실 수 있어요.',
 }
 
 /** 1234567 → 「1,234,567원」 */
@@ -75,7 +92,7 @@ export function won(n: number): string {
 
 export type CheckResult =
   | { gate: 'off' }
-  | { gate: 'on'; ok: true; balance: number }
+  | { gate: 'on'; ok: true; balance: number; need: number }
   | { gate: 'on'; ok: false; reason: 'no_login' | 'not_enough' | 'error'; balance: number; need: number }
 
 /**
@@ -95,7 +112,7 @@ export async function checkConsultBalance(priceKey: string): Promise<CheckResult
     if (error || !data) return { gate: 'on', ok: false, reason: 'error', balance: 0, need: 0 }
 
     const r = data as { ok: boolean; need: number; balance: number }
-    if (r.ok) return { gate: 'on', ok: true, balance: r.balance ?? 0 }
+    if (r.ok) return { gate: 'on', ok: true, balance: r.balance ?? 0, need: r.need ?? 0 }
     return { gate: 'on', ok: false, reason: 'not_enough', balance: r.balance ?? 0, need: r.need ?? 0 }
   } catch (e) {
     console.error('[wallet] check 실패', e)
@@ -103,9 +120,28 @@ export async function checkConsultBalance(priceKey: string): Promise<CheckResult
   }
 }
 
+// ══════════════════════════════════════════════════════════════════
+//  ★2026-09-09 — AI 분석 차감  [대표님 「ai결제창이 진로적성보기 클릭시 나오는 걸로」]
+//
+//   ★때가 «둘» 입니다 — 상담과 «같은 모양» 입니다 [대표님 「모두 통일해줘」]
+//     ① 「진로적성 보기」 를 누를 때  → ★보고 여쭙기만 합니다 (안 뺍니다)
+//        ⇒ 얼마가 드는지·얼마가 남는지 미리 보여 드립니다.
+//        ⇒ 여기서 빼면, MBTI 를 고르러 가시거나 되돌아가실 때
+//          ★「돈은 빠졌는데 안 봤다」 가 됩니다.
+//     ② 결과 화면에서 ★AI 가 «실제로 돌기 직전» → 뺍니다
+//        ⇒ AI 가 실패하면 ★wallet_refund 로 «되돌립니다» (2부 4장 원칙 ①).
+//
+//   🔴🔴 ⚠️ 1부 8-3 — 「API 셋이 실패해도 status 200」 인 자리가 있습니다.
+//      ★실패를 «성공으로 알고» 돈을 빼면 안 됩니다.
+//      ⇒ 화면이 setTongState('failed') 로 가는 «모든» 길에서 되돌리십시오.
+//
+//   ⛔ 낱말은 mc_price 의 것을 그대로 쓰십시오 — career_ai · saju_deep · couple_ai …
+//      2부 5-2 에 스물넷이 적혀 있습니다. ⛔ 새로 지어내지 마십시오.
+// ══════════════════════════════════════════════════════════════════
+
 export type UseResult =
   | { gate: 'off' }
-  | { gate: 'on'; ok: true; used: number; balance: number }
+  | { gate: 'on'; ok: true; used: number; balance: number; ledgerId?: string }
   | { gate: 'on'; ok: false }
 
 /**
@@ -127,5 +163,59 @@ export async function useConsultFee(
   } catch (e) {
     console.error('[wallet] use 실패', e)
     return { gate: 'on', ok: false }
+  }
+}
+
+/**
+ *  ① AI 를 보시기 «전» — 잔액을 보고 «여쭙습니다». ★빼지 않습니다.
+ *  @returns true 면 그대로 진행, false 면 «멈춥니다» (모자라거나 손님이 취소).
+ */
+export async function askBeforeAi(
+  item: string, label: string, onCharge: () => void,
+): Promise<boolean> {
+  const r = await checkAiBalance(item)
+  if (r.gate === 'off') return true
+  if (!r.ok) {
+    if (r.reason === 'no_login') { alert(WALLET_MSG.aiNeedLogin); return false }
+    if (r.reason === 'not_enough') {
+      //  ⛔⛔ ★[그냥 닫기] 를 «꼭» 두십시오 [2부 4장 원칙 ③] — 가두면 화가 납니다.
+      if (confirm(`${WALLET_MSG.short(r.need, r.balance)}\n\n충전하러 가시겠어요?`)) onCharge()
+      return false
+    }
+    alert('잔액을 확인하지 못했어요.\n잠시 뒤에 다시 해 주세요.')
+    return false
+  }
+  return confirm(WALLET_MSG.aiAsk(label, r.need, r.balance))
+}
+
+/** 잔액 보기 — 상담과 «같은 함수» 를 씁니다. 낱말만 다릅니다. */
+export async function checkAiBalance(item: string): Promise<CheckResult> {
+  return checkConsultBalance(item)
+}
+
+/**
+ *  ② AI 가 «돌기 직전» — 뺍니다.
+ *  ⚠️ 돌려주는 ledgerId 를 ★들고 계십시오. 실패하면 그것으로 되돌립니다.
+ */
+export async function useAiFee(item: string, ref: string, memo: string): Promise<UseResult> {
+  return useConsultFee(item, ref, memo)
+}
+
+/**
+ *  ③ AI 가 «실패» 했을 때 — 되돌립니다.
+ *  ⛔ 되돌리기를 빼지 마십시오 — 「돈은 빠졌는데 못 봤다」 가 «가장 나쁩니다».
+ *  ⚠️ 이미 되돌린 것은 다시 안 됩니다 (서버가 막습니다) — 두 번 불러도 안전합니다.
+ */
+export async function refundAiFee(ledgerId: string, memo: string): Promise<boolean> {
+  if (!WALLET_GATE_ON) return true
+  try {
+    const { data, error } = await supabase.rpc('wallet_refund', {
+      p_ledger_id: ledgerId, p_memo: memo,
+    })
+    if (error || !data) return false
+    return !!(data as { ok: boolean }).ok
+  } catch (e) {
+    console.error('[wallet] refund 실패', e)
+    return false
   }
 }
