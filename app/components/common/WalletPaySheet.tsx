@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { checkAiBalance, WALLET_GATE_ON, won } from '@/lib/wallet/consultGate'
 
@@ -52,8 +52,8 @@ export default function WalletPaySheet(p: {
   open: boolean
   /** 「사주 그림 생성」 */
   title: string
-  /** 한 줄 설명 */
-  subtitle?: string
+  /** 한 줄 설명. ⚠️ 글자만이 아니라 «꾸민 글» 도 넣을 수 있습니다 (작명이 씁니다) */
+  subtitle?: React.ReactNode
   /** 「포함 내용」 — 없으면 그 칸을 안 그립니다 */
   includes?: string[]
   /** ★mc_price·analysis_prices 의 낱말 (mulsang_ai · career_ai …). ⛔ 지어내지 마십시오 */
@@ -64,6 +64,11 @@ export default function WalletPaySheet(p: {
   onClose: () => void
   /** 충전하러 갈 곳. 없으면 /wallet 으로 갑니다 */
   onCharge?: () => void
+  /**
+   *  맨 아래에 덧붙일 것 — ★결혼·출산이 <Disclaimer /> 를 붙입니다.
+   *  ⛔ 여기에 «결제 단추» 를 넣지 마십시오. 안내 글만 넣는 자리입니다.
+   */
+  footer?: React.ReactNode
 }) {
   const [price, setPrice] = useState<number | null>(null)
   const [balance, setBalance] = useState<number | null>(null)
@@ -194,6 +199,9 @@ export default function WalletPaySheet(p: {
           }}>
           {short ? '그냥 닫기' : '취소'}
         </button>
+
+        {/* ⚠️ 화면이 덧붙이는 안내 (결혼·출산의 고지문 등) */}
+        {p.footer && <div style={{ marginTop: 14 }}>{p.footer}</div>}
       </div>
     </div>
   )

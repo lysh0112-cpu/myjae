@@ -1,5 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, Suspense, CSSProperties } from 'react'
+//  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
+import WalletPaySheet from '@/app/components/common/WalletPaySheet'
 import { splitSurname, surnameOfHangul } from '@/lib/saju/surname'
 // ★2026-08-01 (43부 8차) — 「한 번에 이름 하나」 정책.
 //   🔴 6차에 여기를 «빠뜨렸습니다». 결제 팝업이 여전히 「3개의 이름을 지어보고」 라고
@@ -570,41 +572,25 @@ function NewNameInner() {
       />
 
       {/* ★ 개명 이용권 결제 팝업 (선결제 → tryLimit회 조회) */}
-      {payOpen && (
-        <div onClick={() => setPayOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
-          <div onClick={(e) => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: 360, background: '#fffbf7', borderRadius: 18, padding: '24px 20px', boxShadow: '0 16px 40px rgba(90,50,30,0.2)', textAlign: 'center' }}>
-            <div style={{ fontSize: 28, marginBottom: 10 }}>✍️</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: INK, marginBottom: 6 }}>이름 지어보기 이용권</div>
-            {/* ★2026-08-01 (43부 8차) — 「한 번에 하나」면 «개수를 말하지 않습니다».
-                ⚠️ 「3개」라고 해 놓고 하나만 주면 그것은 «약속을 어기는» 것입니다. */}
-            <div style={{ fontSize: 13, color: SUB, marginBottom: 16, lineHeight: 1.7 }}>
-              {isSingleName ? (
-                <>결제하시면 사주에 맞는 한자로<br />
-                  <b style={{ color: GOLD }}>이름 하나</b>를 지어 드리고<br />
-                  상세 풀이까지 확인하실 수 있어요.</>
-              ) : (
-                <>결제하시면 사주에 맞는 한자로<br />
-                  <b style={{ color: GOLD }}>{tryLimit}개</b>의 이름을 지어보고<br />
-                  상세 풀이까지 확인하실 수 있어요.</>
-              )}
-            </div>
-            <div style={{ background: CARD, borderRadius: 12, padding: '14px', marginBottom: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 14, color: SUB }}>결제 금액</span>
-              <span style={{ fontSize: 20, fontWeight: 700, color: GOLD }}>{hanjaPrice.toLocaleString()}원</span>
-            </div>
-            <button onClick={payAndProceed}
-              style={{ width: '100%', padding: 15, borderRadius: 12, background: '#c8783c', border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>
-              💳 {hanjaPrice.toLocaleString()}원 결제하고 시작하기
-            </button>
-            <button onClick={() => setPayOpen(false)}
-              style={{ width: '100%', padding: 12, borderRadius: 12, background: 'transparent', border: `1px solid ${LINE}`, color: SUB, fontSize: 13, cursor: 'pointer' }}>
-              다음에 할게요
-            </button>
-          </div>
-        </div>
-      )}
+      {/* 🔴 ★2026-09-09 — 여기 있던 «자기 결제 팝업» 을 ★공용 시트로 바꿨습니다
+          [대표님]  「궁합부터 타로까지 ai결제화면을 ★동일하게 붙여줘」
+          ⚠️ 이 화면만 «가운데 뜨는» 창이었습니다 — 다른 여덟은 아래에서 올라오는 시트.
+             ⇒ ★올라오는 시트로 맞췄습니다.
+          ⚠️ 「한 번에 하나면 개수를 말하지 않습니다」 (43부 8차) — ★그 말은 그대로 살렸습니다.
+          ⛔⛔ 여기에 결제 팝업을 «다시 만들지» 마십시오. */}
+      <WalletPaySheet
+        open={payOpen}
+        title="✍️ 이름 지어보기"
+        subtitle={isSingleName ? (
+          <>사주에 맞는 한자로 <b style={{ color: GOLD }}>이름 하나</b>를 지어 드리고<br />상세 풀이까지 확인하실 수 있어요.</>
+        ) : (
+          <>사주에 맞는 한자로 <b style={{ color: GOLD }}>{tryLimit}개</b>의 이름을 지어보고<br />상세 풀이까지 확인하실 수 있어요.</>
+        )}
+        item="naming_hanja"
+        actionLabel="이름 지어보기"
+        onClose={() => setPayOpen(false)}
+        onConfirm={() => { setPayOpen(false); payAndProceed() }}
+      />
     </main>
   )
 }

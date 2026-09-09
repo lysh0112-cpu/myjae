@@ -1,5 +1,7 @@
 'use client'
 import { Suspense, useState, useEffect, useRef } from 'react'
+//  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
+import WalletPaySheet from '@/app/components/common/WalletPaySheet'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import ConsultButton from '@/app/components/common/ConsultButton'
@@ -93,6 +95,8 @@ function TarotInner() {
   const searchParams = useSearchParams()
 
   const [step, setStep] = useState<Step>('question')
+  //  ★2026-09-09 — 뽑기 «전» 결제 시트 [대표님 지시]
+  const [payOpen, setPayOpen] = useState(false)
   const [question, setQuestion] = useState('')
   const [category, setCategory] = useState<TarotCategory>('기타')
   const [savedId, setSavedId] = useState<string | null>(null)
@@ -209,7 +213,26 @@ function TarotInner() {
     setUsesReversed(data.deck?.usesReversed ?? true)
   }
 
+  // ══════════════════════════════════════════════════════════════════
+  //  🔴 ★2026-09-09 — 카드를 «뽑기 전» 에 여쭙습니다  [대표님 지시]
+  //    「타로는 ★카드를 뽑기 전으로 하자」
+  //
+  //   ⚠️⚠️ ★2부 4장 원칙 ② 를 «바꾼» 것입니다 —
+  //      전 확정  「타로는 ★카드 뒤집기 «직전»」
+  //      새 확정  「★카드를 뽑기 «전»」  [대표님 2026-09-09]
+  //      [까닭]  오늘 정하신 다른 것들과 결이 맞습니다 —
+  //         상담도 진로적성도 ★«하기 전» 에 여쭙고 헛수고를 없앱니다.
+  //   ⛔ 「뒤집기 직전」으로 되돌리지 마십시오. 대표님이 바꾸신 것입니다.
+  //
+  //   ⚠️ 시트는 ★«묻기만» 합니다 — 실제 차감은 풀이를 부를 때 합니다.
+  //      ⇒ 카드만 뽑고 안 보시면 ★돈이 안 빠집니다.
+  // ══════════════════════════════════════════════════════════════════
   function startDraw() {
+    setPayOpen(true)
+  }
+
+  //  ★시트에서 [확인] 을 누르신 뒤 — 여기서 «진짜로» 뽑기가 시작됩니다.
+  function reallyStartDraw() {
     if (picked.length !== spread.count) {
       setPicked([]); setInterp(null); setInterpKey('')
     }
@@ -680,6 +703,18 @@ function TarotInner() {
 
         </div>
       )}
+    {/* 🔴 ★2026-09-09 — 공용 결제 시트 [대표님 「동일하게 붙여줘」]
+        ⛔ 타로만 «다른» 창을 만들지 마십시오. 아홉 화면이 이 하나를 씁니다. */}
+    <WalletPaySheet
+      open={payOpen}
+      title="🔮 타로 카드 리딩"
+      subtitle="지금 궁금한 것을 카드에 물어보고, 풀이를 받아 보세요"
+      includes={['고르신 방식대로 카드 뽑기', '카드마다 자리의 뜻 풀이', '지금 물음에 맞춘 전체 풀이', '보관함 저장']}
+      item="tarot_ai"
+      actionLabel="카드 뽑기"
+      onClose={() => setPayOpen(false)}
+      onConfirm={() => { setPayOpen(false); reallyStartDraw() }}
+    />
     </main>
   )
 }

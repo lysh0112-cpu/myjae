@@ -1883,9 +1883,18 @@ console.log('\n━━ ㉒-d 🔴 결제 시트가 «한 벌» 인가 (2026-09-09
   check(/지갑 잔액/.test(sheet) && /보시고 나면/.test(sheet),
     `★잔액과 «남을 값» 을 함께 보입니다 (1부 3-1)`)
 
+  //  ★2026-09-09 2차 [대표님 「궁합부터 타로까지 ai결제화면을 동일하게 붙여줘」]
+  //     ⇒ 일곱 화면이 «같은 시트» 를 씁니다.
+  //     □ 남은 것 — 궁합 · 이사 진단 · 이사 찾기 · 이름 풀이 · 명품작명
+  //                 사주 정밀(PaidLockSection 이 꺼져 있음) · 개명 분석(화면 없음)
   for (const [name, path] of [
     ['진로적성', 'app/manseryeok/career-input/page.tsx'],
     ['사주그림', 'app/manseryeok/mulsang/page.tsx'],
+    ['결혼 진단', 'app/manseryeok/wedding-timing/check/page.tsx'],
+    ['결혼 택일', 'app/manseryeok/wedding-timing/find/page.tsx'],
+    ['출산 택일', 'app/manseryeok/birth-timing/page.tsx'],
+    ['한자 바꾸기', 'app/manseryeok/naming/rename/newname/page.tsx'],
+    ['타로', 'app/tarot/page.tsx'],
   ] as const) {
     const src = read(path)
     check(/WalletPaySheet/.test(src), `${name} 이 «그 시트» 를 씁니다`)
@@ -1893,8 +1902,27 @@ console.log('\n━━ ㉒-d 🔴 결제 시트가 «한 벌» 인가 (2026-09-09
       `⛔ ${name} 이 브라우저 confirm 으로 되돌아가지 않았습니다`)
   }
   //  ⚠️ 사주그림은 «자기 팝업» 을 갖고 있었습니다 — 되살아나지 않았는지 봅니다
-  check(!/결제 금액/.test(codeOf(read('app/manseryeok/mulsang/page.tsx'))),
-    `⛔ 사주그림이 «자기 결제 팝업» 을 다시 만들지 않았습니다`)
+  //  ⚠️ 「결제 금액」은 «자기 팝업» 의 자국입니다 — 되살아나지 않았는지 봅니다
+  for (const [name, path] of [
+    ['사주그림', 'app/manseryeok/mulsang/page.tsx'],
+    ['결혼 진단', 'app/manseryeok/wedding-timing/check/page.tsx'],
+    ['결혼 택일', 'app/manseryeok/wedding-timing/find/page.tsx'],
+    ['출산 택일', 'app/manseryeok/birth-timing/page.tsx'],
+    ['한자 바꾸기', 'app/manseryeok/naming/rename/newname/page.tsx'],
+  ] as const) {
+    check(!/결제 금액/.test(codeOf(read(path))),
+      `⛔ ${name} 이 «자기 결제 팝업» 을 다시 만들지 않았습니다`)
+  }
+
+  //  🔴 타로 — 2026-09-09 대표님이 ★확정을 바꾸셨습니다
+  //     전  「카드 뒤집기 «직전»」 (2부 4장 원칙 ②)
+  //     후  ★「카드를 뽑기 «전»」
+  //     ⛔ 되돌리지 마십시오.
+  const tarot = read('app/tarot/page.tsx')
+  check(/function startDraw\(\) \{\n    setPayOpen\(true\)/.test(tarot),
+    `★타로는 «카드를 뽑기 전» 에 여쭙습니다 [대표님 2026-09-09]`)
+  check(/function reallyStartDraw/.test(tarot),
+    `★[확인] 뒤에 «진짜로» 뽑기가 시작됩니다`)
 }
 
 // ══════════════════════════════════════════════════════════════════

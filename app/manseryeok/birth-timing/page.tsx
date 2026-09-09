@@ -1,5 +1,7 @@
 'use client'
 import { Suspense, useState, useEffect, type ReactNode } from 'react'
+//  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
+import WalletPaySheet from '@/app/components/common/WalletPaySheet'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { displayName } from '@/lib/saju/personName'
@@ -259,44 +261,24 @@ function BirthTimingInner() {
         </div>
       </div>
 
-      {payOpen && (
-        <div onClick={() => setPayOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(40,28,22,0.35)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }}>
-          <div onClick={e => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: '480px', background: '#FFFBF7', borderRadius: '20px 20px 0 0', padding: '10px 20px 28px', boxShadow: '0 -8px 30px rgba(90,50,30,0.2)' }}>
-            <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: '#e8d5c6', margin: '0 auto 18px' }} />
-
-            <div style={{ fontSize: '17px', fontWeight: 700, color: text, marginBottom: '4px' }}>🍼 출산 시기 택일 분석</div>
-            <div style={{ fontSize: '13px', color: sub, marginBottom: '16px', lineHeight: 1.6 }}>
-              아기에게 좋은 출산일 5곳을 찾아드려요
-            </div>
-
-            <div style={{ background: '#fdf6f0', borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '0.5px solid #9c7a58' }}>
-              <div style={{ fontSize: '12px', color: sub, marginBottom: '8px' }}>분석 내용</div>
-              {['추천 출산일 5순위', '각 날짜의 아기 사주 풀이', '피하면 좋은 날 안내', '부모와의 관계 분석'].map((t, i) => (
-                <div key={i} style={{ fontSize: '13px', color: '#96502e', lineHeight: 1.9 }}>· {t}</div>
-              ))}
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <span style={{ fontSize: '14px', color: sub }}>결제 금액</span>
-              <span style={{ fontSize: '20px', fontWeight: 700, color: accent }}>{price.toLocaleString()}원</span>
-            </div>
-
-            <button onClick={handlePay}
-              style={{ width: '100%', padding: '15px', borderRadius: '12px', background: accent, border: 'none', color: '#fff', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginBottom: '8px' }}>
-              💳 {price.toLocaleString()}원 결제하기
-            </button>
-
-            <button onClick={() => setPayOpen(false)}
-              style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#f3e6db', border: 'none', color: '#96502e', fontSize: '13px', cursor: 'pointer', marginBottom: '14px' }}>
-              취소
-            </button>
-
-            <Disclaimer />
-          </div>
-        </div>
-      )}
+      {/* 🔴 ★2026-09-09 — 여기 있던 «자기 결제 팝업» 을 ★공용 시트로 바꿨습니다
+          [대표님]  「기존에 있던 결제화면과 다르다 · ★통일시켜야 하는 것 아닌가?」
+                    「궁합부터 타로까지 ai결제화면을 ★동일하게 붙여줘」
+          ⚠️ 아홉 화면이 «저마다» 팝업을 갖고 있어서 결이 갈렸습니다.
+          ⚠️ 늘어난 것 — ★「지갑 잔액」 · 「보시고 나면」 두 줄 (1부 3-1)
+          ⛔⛔ 여기에 결제 팝업을 ★«다시 만들지» 마십시오 — 시트는 한 곳입니다.
+          ⛔ 낱말(item)을 지어내지 마십시오 — mc_price 의 것입니다 (2부 5-2). */}
+      <WalletPaySheet
+        open={payOpen}
+        title="🍼 출산 시기 택일"
+        subtitle={"아기에게 좋은 출산일 5곳을 찾아드려요"}
+        includes={['추천 출산일 5순위', '각 날짜의 아기 사주 풀이', '피하면 좋은 날 안내', '부모와의 관계 분석']}
+        item="birth_pick"
+        actionLabel="시기 찾기"
+        onClose={() => setPayOpen(false)}
+        onConfirm={() => { setPayOpen(false); handlePay() }}
+          footer={<Disclaimer />}
+      />
     </main>
   )
 }
