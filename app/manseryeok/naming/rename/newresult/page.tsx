@@ -167,16 +167,17 @@ function NewResultInner() {
 
   const [detailLoading, setDetailLoading] = useState(false)
 
-  const [remaining, setRemaining] = useState(0)   // ★ 남은 조회 횟수(이용권)
 
-  // 이용권 남은 횟수 읽기 (uid 확정 후)
+  // ══════════════════════════════════════════════════════════════════
+  //  🔴 ★2026-09-09 — 남아 있는 «이용권» 을 지웁니다  [대표님 지시]
+  //    「★남아있는 이용권은 삭제하자」 · 「플로우가 이상하다」
+  //   전에는 여기서 남은 횟수를 «읽어» 회차와 «다시 내라는 칸» 을 띄웠습니다.
+  //   ⇒ 지갑 방식으로 바뀌었으니 그 표는 ★남아 있으면 안 됩니다.
+  //   ⛔ 되살리지 마십시오 — 옛 이용권이 남은 분은 ★공짜로 보십니다.
+  // ══════════════════════════════════════════════════════════════════
   useEffect(() => {
     if (!uid) return
-    try {
-      const p = JSON.parse(localStorage.getItem(NAMING_PASS_KEY) || '{}')
-      if (p.userId === uid && typeof p.remaining === 'number') setRemaining(p.remaining)
-      else setRemaining(0)
-    } catch { setRemaining(0) }
+    try { localStorage.removeItem(NAMING_PASS_KEY) } catch {}
   }, [uid])
 
   useEffect(() => {
@@ -570,14 +571,9 @@ function NewResultInner() {
         return nextTries
       })
 
-      // ★ 이용권 1회 차감 (상세 풀이를 실제로 받은 경우에만)
-      setRemaining((prev) => {
-        const next = Math.max(0, prev - 1)
-        try {
-          localStorage.setItem(NAMING_PASS_KEY, JSON.stringify({ userId: uid, remaining: next }))
-        } catch {}
-        return next
-      })
+      //  🔴 ★2026-09-09 — 이용권 차감을 «걷었습니다» [대표님 「이용권은 삭제하자」]
+      //     값은 한자 고르기의 「이 이름으로 확정하기」 에서 «한 번» 받습니다.
+      //     ⛔ 여기에 횟수 차감을 되살리지 마십시오.
     } catch (e) {
       console.error('detail error:', e)
     } finally {
@@ -748,33 +744,30 @@ function NewResultInner() {
         />
       ) : (
         <div style={{ marginBottom: 14 }}>
-          {remaining > 0 ? (
-            <>
-              {/* ★2026-08-01 (43부 8차) — 「한 번에 하나」면 «회차를 말하지 않습니다».
-                  ⚠️ 「남은 2회」라고 적어 놓고 두 번째를 못 쓰면 «거짓말» 이 됩니다. */}
-              <button onClick={loadDetail} disabled={detailLoading} className="active:scale-95"
-                style={{ width: '100%', background: 'rgba(200,120,60,0.12)', border: '1px solid ' + GOLD, borderRadius: 14, padding: 14, color: GOLD, fontWeight: 700, fontSize: 14, cursor: detailLoading ? 'default' : 'pointer' }}>
-                {detailLoading
-                  ? <><span style={{ display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span> 이름을 정성껏 풀이하는 중…</>
-                  : isSingleName
-                    ? <>✨ 이 이름 자세히 풀이 보기</>
-                    : <>✨ 이 이름 자세히 풀이 보기 · 남은 {remaining}회</>}
-              </button>
-              <div style={{ fontSize: 11, color: SUB, textAlign: 'center', marginTop: 8, lineHeight: 1.6 }}>
-                결제하신 이용권으로 상세 풀이를 확인하실 수 있어요.
-              </div>
-            </>
-          ) : (
-            <div style={{ background: CARD, border: LINE_OUTER, borderRadius: 14, padding: '16px', textAlign: 'center' }}>
-              <div style={{ fontSize: 13, color: INK, lineHeight: 1.7, marginBottom: 12 }}>
-                이용 가능 횟수를 모두 사용했어요.<br />다시 결제하시면 이어서 이용하실 수 있어요.
-              </div>
-              <button onClick={() => router.push('/manseryeok/naming/rename/newname')} className="active:scale-95"
-                style={{ width: '100%', background: '#c8783c', border: 'none', borderRadius: 12, padding: 13, color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-                다시 결제하고 이어하기 →
-              </button>
-            </div>
-          )}
+          {/* ══════════════════════════════════════════════════════
+              🔴 ★2026-09-09 — 「이용권」 을 걷었습니다  [대표님 지시]
+                「★플로우가 이상하다」 · 「지갑 방식으로 모두 변경하기로 했잖아」
+                「★남아있는 이용권은 삭제하자」
+
+              [무엇이 있었나]  횟수를 다 쓰면 ★「다시 내고 이어 쓰라」는 칸이 떴습니다 —
+                 localStorage 「N번 이용권」이 떨어졌을 때 나오던 것입니다.
+                 ⚠️⚠️ ★그때 쓰던 문구를 여기에 «그대로 적지» 마십시오 —
+                    검사가 «주석의 낱말» 을 글자로 잡습니다 (2부 1-6).
+              ⇒ 이제 값은 ★한자 고르기의 「이 이름으로 확정하기」 에서 «한 번» 받습니다.
+                 그 값에 ★상세 풀이가 «들어 있습니다».
+
+              ⚠️ 상세 풀이는 한 번 부르면 ★저장되어 다시 볼 때 «안 부릅니다»
+                 (loadDetail:520 — cur.commentary 가 있으면 그냥 돌아갑니다).
+                 ⇒ 그래서 횟수를 셀 까닭이 없습니다.
+              ⛔ 회차를 세거나, 다시 내라는 칸을 ★되살리지 마십시오.
+              ⚠️ 43부 8차 「한 번에 하나면 «회차를 말하지 않습니다»」 — 그대로 지킵니다.
+              ══════════════════════════════════════════════════════ */}
+          <button onClick={loadDetail} disabled={detailLoading} className="active:scale-95"
+            style={{ width: '100%', background: 'rgba(200,120,60,0.12)', border: '1px solid ' + GOLD, borderRadius: 14, padding: 14, color: GOLD, fontWeight: 700, fontSize: 14, cursor: detailLoading ? 'default' : 'pointer' }}>
+            {detailLoading
+              ? <><span style={{ display: 'inline-block', animation: 'spin 1.2s linear infinite' }}>✦</span> 이름을 정성껏 풀이하는 중…</>
+              : <>✨ 이 이름 자세히 풀이 보기</>}
+          </button>
         </div>
       )}
 
