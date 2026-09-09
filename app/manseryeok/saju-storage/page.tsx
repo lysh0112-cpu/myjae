@@ -14,6 +14,8 @@
  */
 
 import { Suspense, useEffect, useState } from 'react'
+//  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
+import WalletPaySheet from '@/app/components/common/WalletPaySheet'
 import { useRouter } from 'next/navigation'
 import {
   listRecordsByService, deleteRecord, daysAgoLabel,
@@ -114,6 +116,12 @@ function SajuStorageInner() {
   const [confirmDel, setConfirmDel] = useState<SajuRecord | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
+  //  ★2026-09-09 — 결제 시트 [대표님 「결과화면 통째로 유료로」]
+  //  ⚠️ 「무엇을 하려던 참인가」를 들고 있다가, [확인] 을 누르시면 그때 합니다.
+  //     ⛔ 시트를 두 개 만들지 마십시오 — 「나」와 「고른 사람」이 같은 시트를 씁니다.
+  const [payOpen, setPayOpen] = useState(false)
+  const [pending, setPending] = useState<null | (() => void)>(null)
+  const askThenGo = (go: () => void) => { setPending(() => go); setPayOpen(true) }
 
   useEffect(() => {
     let cancelled = false
@@ -179,21 +187,38 @@ function SajuStorageInner() {
         ))}
 
       {/* 사람 선택 모달 (나 / 가족·지인 / 새 입력) — 검증된 공용 부품 */}
+      {/* ══════════════════════════════════════════════════════════
+          🔴 ★2026-09-09 — ① 사람 갈래를 «결과» 와 갈랐습니다
+             [대표님]  「조회한 1건에 대해 ★2개 이상 복수로 보관함에 들어가 있네」
+             ⚠️ 여기만 ★중괄호로 적혀 있어 앞서 일곱 곳을 고칠 때 «못 잡았습니다».
+             ⛔ 'integrated_saju' 로 되돌리지 마십시오 — 보관함에 두 개로 보입니다.
+
+          🔴 ★2026-09-09 — ② 결과가 «나오기 전» 에 결제합니다
+             [대표님]  「★결과화면이 나오기전에 최종적으로 결제창에서 결제를 진행해야만
+                        결과가 나오도록」 · 「★b 결과화면 통째로 유료로」
+             ⚠️ 사주는 원국표·만세력·무료 AI 가 ★무료로 보이던 서비스입니다.
+                대표님이 ★통째로 유료로 정하셨습니다.
+             ⇒ 사람을 «고른 뒤», 결과로 넘어가기 ★직전에 여쭙습니다.
+             ⛔⛔ ★다시보기(recordId)에는 «붙이지» 마십시오 —
+                이미 값을 치르고 보신 것을 또 받으면 안 됩니다.
+             ⛔ 마이페이지 「내 원국표」(mode=chart)에도 붙이지 마십시오.
+             ⛔ 이 주석을 ★속성 «사이» 에 넣지 마십시오 — 화면이 통째로 안 뜹니다 (58부).
+          ══════════════════════════════════════════════════════════ */}
       <PersonPickerModal
         open={pickerOpen}
         serviceLabel={info.title}
-        serviceType={'integrated_saju'}
+        serviceType="integrated_saju_person"
         headline={info.headline}
         submitLabel={info.submitLabel}
         onPick={(person: SavedPerson) => {
           setPickerOpen(false)
-          goResult(toResultQuery(person))
+          askThenGo(() => goResult(toResultQuery(person)))
         }}
         onPickMe={() => {
           // "나" → 생년월일 URL 없이 이동 → result-new가 profiles(내 정보)를 띄움.
           setPickerOpen(false)
           const unseQS = info.unse ? `?unse=${info.unse}` : ''
-          router.push(`${info.resultPath}${unseQS}`)
+          askThenGo(() => router.push(`${info.resultPath}${unseQS}`))
         }}
         onClose={() => setPickerOpen(false)}
       />
@@ -208,6 +233,18 @@ function SajuStorageInner() {
           onConfirm={handleDelete}
         />
       )}
+      {/* ★공용 결제 시트 — ⛔ 여기에 팝업을 «따로 만들지» 마십시오 */}
+      <WalletPaySheet
+        open={payOpen}
+        title="🔮 내 사주와 운세보기"
+        subtitle="여덟 글자로 타고난 결과 지금의 운을 풀어 드려요"
+        includes={['사주 원국표와 만세력', '오행·십성·신강신약 풀이', '대운·세운의 흐름', 'AI 가 풀어 주는 이야기', '보관함 저장']}
+        item="saju_deep"
+        actionLabel="사주 보기"
+        onClose={() => { setPayOpen(false); setPending(null) }}
+        onConfirm={() => { setPayOpen(false); const go = pending; setPending(null); go?.() }}
+      />
+
     </StorageShell>
   )
 }

@@ -1854,6 +1854,8 @@ console.log('\n━━ ㉒-c 🔴 보관함에 «같은 것이 두 개» 로 안 
     ['결혼', 'app/manseryeok/wedding-timing/input/page.tsx', 'wedding'],
     ['이사', 'app/manseryeok/moving-timing/input/page.tsx', 'moving'],
     ['사주그림', 'app/manseryeok/mulsang-storage/page.tsx', 'mulsang'],
+    //  ⚠️ 2026-09-09 2차 — 여기만 «중괄호» 로 적혀 있어 1차 때 «못 잡았습니다»
+    ['내 사주', 'app/manseryeok/saju-storage/page.tsx', 'integrated_saju'],
   ] as const
   for (const [name, path, key] of personScreens) {
     const src = read(path)
@@ -1896,6 +1898,7 @@ console.log('\n━━ ㉒-d 🔴 결제 시트가 «한 벌» 인가 (2026-09-09
     ['한자 바꾸기', 'app/manseryeok/naming/rename/newname/page.tsx'],
     ['타로', 'app/tarot/page.tsx'],
     ['궁합', 'app/manseryeok/couple-input-new/page.tsx'],
+    ['내 사주와 운세보기', 'app/manseryeok/saju-storage/page.tsx'],
   ] as const) {
     const src = read(path)
     check(/WalletPaySheet/.test(src), `${name} 이 «그 시트» 를 씁니다`)
@@ -1924,6 +1927,14 @@ console.log('\n━━ ㉒-d 🔴 결제 시트가 «한 벌» 인가 (2026-09-09
   check(/useAiFee\('couple_ai'/.test(cres), `★궁합 — AI 가 돌기 직전에 뺍니다`)
   check(/여기서 되돌리지 마십시오/.test(cres),
     `⛔ 글자 조각이 깨진 것으로 «되돌리지» 않습니다 (풀이는 나오는데 돈만 돌아가는 일)`)
+
+  //  🔴 사주 — 대표님이 ★「결과화면 통째로 유료로」 정하셨습니다 (2026-09-09)
+  //     ⛔ 다시보기·내 원국표에는 붙이지 마십시오 — 이미 치르신 것입니다.
+  const ss = read('app/manseryeok/saju-storage/page.tsx')
+  check(/askThenGo\(\(\) => goResult/.test(ss) && /askThenGo\(\(\) => router\.push/.test(ss),
+    `★사주 — 「나」와 「고른 사람」 ★둘 다 결제를 거칩니다`)
+  check(!/askThenGo/.test(ss.split('StorageRow')[1] ?? ''),
+    `⛔ 다시보기(보관함 줄)에는 결제를 «안» 붙였습니다`)
 
   const tarot = read('app/tarot/page.tsx')
   check(/function startDraw\(\) \{\n    setPayOpen\(true\)/.test(tarot),
