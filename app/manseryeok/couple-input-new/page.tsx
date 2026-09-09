@@ -15,7 +15,9 @@
  *   PersonPickerModal (나+가족지인+새입력) / SavedPerson·toResultQuery
  */
 
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
+//  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
+import WalletPaySheet from '@/app/components/common/WalletPaySheet'
 import { coupleKindOfPair, coupleTitleOf } from '@/lib/saju/coupleRelation'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -53,6 +55,16 @@ function CoupleInputInner() {
   const mode: Mode = kind === 'married' ? 'married' : 'couple'
   const info = MODE_INFO[kind === 'married' ? 'married' : 'couple']
   const [pickerFor, setPickerFor] = useState<1 | 2 | null>(null)
+  //  ★2026-09-09 — 결제 시트 [대표님 「궁합보기 버튼을 클릭할 때」]
+  const [payOpen, setPayOpen] = useState(false)
+  //  ★단추에 값을 보이기 위한 것뿐입니다 — ⛔ 이 값으로 «빼지» 마십시오.
+  const [aiPrice, setAiPrice] = useState<number | null>(null)
+  useEffect(() => {
+    let dead = false
+    supabase.from('analysis_prices').select('price').eq('price_key', 'couple_ai').maybeSingle()
+      .then(({ data }) => { if (!dead) setAiPrice(data?.price ?? null) })
+    return () => { dead = true }
+  }, [])
   const [meErr, setMeErr] = useState('')
 
   const setSlot = (n: 1 | 2, v: Slot | null) => (n === 1 ? setSlot1(v) : setSlot2(v))
@@ -149,14 +161,35 @@ function CoupleInputInner() {
           </div>
         )}
 
-        <button onClick={goResult} disabled={!bothReady}
+        {/* ══════════════════════════════════════════════════════════
+            🔴 ★2026-09-09 — 「궁합 보기」 를 누를 때 결제 시트  [대표님 지시]
+              「두 사람을 입력하거나 고른 후 ★하단의 궁합보기 버튼을 클릭할 때
+                결제화면이 나타나면 되는 거잖아」
+            ⚠️ 결과 화면(couple-result-new)은 ★열리자마자 AI 가 «저절로» 돕니다 —
+               누를 단추가 없어서 ★여기(앞 화면)에 붙였습니다.
+               진로적성을 「진로적성 보기」에 붙인 것과 «같은 모양» 입니다.
+            ⚠️ 시트는 ★«묻기만» 합니다. 실제 차감은 결과 화면에서 AI 가 돌기 직전입니다.
+            ══════════════════════════════════════════════════════════ */}
+        <button onClick={() => setPayOpen(true)} disabled={!bothReady}
           style={{
             width: '100%', marginTop: 18, border: 'none', borderRadius: 11, padding: 14, fontSize: 14, fontWeight: 500,
             color: '#fff', cursor: bothReady ? 'pointer' : 'default',
             background: bothReady ? '#b46e46' : '#e8d5c6',
           }}>
-          궁합 보기
+          궁합 보기{aiPrice != null ? ` · ${aiPrice.toLocaleString()}원` : ''}
         </button>
+
+        {/* ★공용 결제 시트 — ⛔ 여기에 팝업을 «따로 만들지» 마십시오 */}
+        <WalletPaySheet
+          open={payOpen}
+          title="💞 궁합 풀이"
+          subtitle="두 분의 사주로 인연의 결을 봐드려요"
+          includes={['두 분 사주의 어울림 판정', '다섯 관점으로 본 궁합 풀이', '고르신 물음에 맞춘 이야기', '보관함 저장']}
+          item="couple_ai"
+          actionLabel="궁합 보기"
+          onClose={() => setPayOpen(false)}
+          onConfirm={() => { setPayOpen(false); goResult() }}
+        />
       </div>
 
       {/* 슬롯 선택 모달 (나 / 가족·지인 / 새 입력) — 검증된 공용 부품 재사용 */}

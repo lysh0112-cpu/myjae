@@ -21,6 +21,8 @@
  */
 
 import { Suspense, useMemo, useState, useEffect, useRef } from 'react'
+//  ★2026-09-09 — 지갑 관문은 lib/wallet/consultGate.ts «한 곳» 입니다
+import { useAiFee, refundAiFee, WALLET_MSG } from '@/lib/wallet/consultGate'
 // ⚠️ spouseSectionTitle 은 CoupleJudgeCard 가 쓰던 것입니다. 되살릴 때 필요해 «남겨 둡니다» (2026-08-02)
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { coupleKindOfPair, coupleTitleOf, spouseFortuneTitle, spouseSectionTitle, COUPLE_PRICE_KEY, type CoupleKind } from '@/lib/saju/coupleRelation'
@@ -821,6 +823,29 @@ function CoupleResultView({
     setTongLoading(true)
     setTongResult(null)
     let acc = ''
+
+    // ══════════════════════════════════════════════════════════════
+    //  🔴 ★2026-09-09 — AI 가 «돌기 직전» 에 지갑에서 뺍니다  [대표님 지시]
+    //    「궁합부터 타로까지 ai결제화면을 ★동일하게 붙여줘」
+    //
+    //   ⚠️ 이 화면은 ★단추가 «없습니다» — 열리자마자 AI 가 저절로 돕니다.
+    //      ⇒ 그래서 «여쭙는 시트» 는 ★앞 화면(couple-input-new 「궁합 보기」)에 있습니다.
+    //      ⛔ 여기에 시트를 «또» 띄우지 마십시오 — 손님이 두 번 확인하게 됩니다.
+    //
+    //   ⚠️ 다시보기(recordId)면 위에서 이미 빠져나갑니다 — ★두 번 안 뺍니다.
+    //   ⛔ 되돌리기를 빼지 마십시오 — 「돈은 빠졌는데 못 봤다」 가 «가장 나쁩니다».
+    // ══════════════════════════════════════════════════════════════
+    const fee = await useAiFee('couple_ai', recordId || 'couple', '궁합 분석')
+    if (fee.gate === 'on' && !fee.ok) {
+      alert(WALLET_MSG.aiRolledBack)
+      setTongLoading(false)
+      return
+    }
+    const ledgerId = fee.gate === 'on' && fee.ok ? fee.ledgerId : undefined
+    const giveBack = async () => {
+      if (ledgerId) await refundAiFee(ledgerId, '궁합 분석 실패 — 되돌림')
+    }
+
     try {
       const material = toCoupleTongbyeonMaterial(
         toCoupleInput(person1, saju1, solar1),
@@ -840,6 +865,7 @@ function CoupleResultView({
         let why = ''
         try { why = (await res.text()).slice(0, 200) } catch (e) { console.error('tongbyeon read fail', e) }
         console.error('궁합 통변 실패', res.status, why)
+        await giveBack()                      // ★돈을 되돌립니다
         setTongResult('풀이를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
         return
       }
@@ -862,7 +888,11 @@ function CoupleResultView({
           try {
             const parsed = JSON.parse(d)
             if (parsed.text) { acc += parsed.text; setTongResult(acc) }
-          } catch (e) { console.error('tongbyeon parse', e) }
+          } catch (e) {
+            //  ⚠️ 글자 조각 하나가 깨진 것뿐입니다 — ⛔ 여기서 되돌리지 마십시오.
+            //     되돌리면 «풀이는 나오는데 돈은 돌아간» 꼴이 됩니다.
+            console.error('tongbyeon parse', e)
+          }
         }
       }
       // ★2026-07-26 — 통변을 보관함에 남긴다. (v19c 까지 여기가 조용히 실패하고 있었다)
@@ -882,7 +912,11 @@ function CoupleResultView({
       await persistTongbyeon(acc)
     } catch (e) {
       console.error('궁합 통변 오류', e)
-      setTongResult('풀이를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
+      //  🔴 ★풀이가 «통째로» 실패했습니다 — 돈을 되돌립니다.
+      //     ⚠️ 1부 8-3 — 「API 셋이 실패해도 status 200」 인 자리가 있습니다.
+      //     ⛔ 이 줄을 빼지 마십시오 — 「돈은 빠졌는데 못 봤다」 가 «가장 나쁩니다».
+      await giveBack()
+      setTongResult('풀이를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.\n\n지갑에서 빠진 돈은 없어요.')
     } finally {
       setTongLoading(false)
     }

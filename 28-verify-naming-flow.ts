@@ -1895,6 +1895,7 @@ console.log('\n━━ ㉒-d 🔴 결제 시트가 «한 벌» 인가 (2026-09-09
     ['출산 택일', 'app/manseryeok/birth-timing/page.tsx'],
     ['한자 바꾸기', 'app/manseryeok/naming/rename/newname/page.tsx'],
     ['타로', 'app/tarot/page.tsx'],
+    ['궁합', 'app/manseryeok/couple-input-new/page.tsx'],
   ] as const) {
     const src = read(path)
     check(/WalletPaySheet/.test(src), `${name} 이 «그 시트» 를 씁니다`)
@@ -1918,6 +1919,12 @@ console.log('\n━━ ㉒-d 🔴 결제 시트가 «한 벌» 인가 (2026-09-09
   //     전  「카드 뒤집기 «직전»」 (2부 4장 원칙 ②)
   //     후  ★「카드를 뽑기 «전»」
   //     ⛔ 되돌리지 마십시오.
+  //  ⚠️ 궁합은 결과 화면에 «단추가 없어» 앞 화면에 붙였습니다 [대표님 확인]
+  const cres = read('app/manseryeok/couple-result-new/page.tsx')
+  check(/useAiFee\('couple_ai'/.test(cres), `★궁합 — AI 가 돌기 직전에 뺍니다`)
+  check(/여기서 되돌리지 마십시오/.test(cres),
+    `⛔ 글자 조각이 깨진 것으로 «되돌리지» 않습니다 (풀이는 나오는데 돈만 돌아가는 일)`)
+
   const tarot = read('app/tarot/page.tsx')
   check(/function startDraw\(\) \{\n    setPayOpen\(true\)/.test(tarot),
     `★타로는 «카드를 뽑기 전» 에 여쭙습니다 [대표님 2026-09-09]`)
