@@ -1,5 +1,7 @@
 'use client'
 import { Suspense, useState, useEffect, useMemo, useRef } from 'react'
+//  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
+import WalletPaySheet from '@/app/components/common/WalletPaySheet'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsinCompat as calcYongsin } from '@/lib/saju/yongsinNew'
@@ -780,37 +782,28 @@ function MulsangInner() {
   //   (그림만 실패해도 해설은 보여야 하고, 옛 기록은 commentary만 있을 수 있어 함께 본다)
   const hasResult = !loading && (!!imageUrl || !!tongResult || tongLoading || !!commentary)
 
-  const PayPopup = payOpen ? (
-    <div onClick={() => setPayOpen(false)}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }}>
-      <div onClick={e => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: '430px', background: '#fffbf7', borderRadius: '20px 20px 0 0', padding: '10px 20px 28px', boxShadow: '0 -8px 30px rgba(0,0,0,0.15)' }}>
-        <div style={{ width: '40px', height: '4px', borderRadius: '2px', background: '#e4d4be', margin: '0 auto 18px' }} />
-        <div style={{ fontSize: '17px', fontWeight: 700, color: '#96502e', marginBottom: '4px' }}>🖼️ 사주 그림 생성</div>
-        <div style={{ fontSize: '13px', color: '#5c3a1e', marginBottom: '16px', lineHeight: 1.6 }}>
-          당신의 사주를 한 폭의 풍경화로 그려드려요
-        </div>
-        <div style={{ background: '#fdf6f0', borderRadius: '12px', padding: '14px', marginBottom: '18px', border: '0.5px solid #9c7a58' }}>
-          <div style={{ fontSize: '12px', color: '#5c3a1e', marginBottom: '8px' }}>포함 내용</div>
-          {['사주 8글자 기반 맞춤 풍경화', '그림에 담긴 뜻을 풀어주는 해설', '보관함 저장 · 공유 가능'].map((t, i) => (
-            <div key={i} style={{ fontSize: '13px', color: '#3a2e28', lineHeight: 1.9 }}>· {t}</div>
-          ))}
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <span style={{ fontSize: '14px', color: '#5c3a1e' }}>결제 금액</span>
-          <span style={{ fontSize: '20px', fontWeight: 700, color: '#8f3d0e' }}>{drawPrice.toLocaleString()}원</span>
-        </div>
-        <button onClick={doGenerate}
-          style={{ width: '100%', padding: '15px', borderRadius: '12px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginBottom: '8px' }}>
-          💳 {drawPrice.toLocaleString()}원 결제하고 그림 그리기
-        </button>
-        <button onClick={() => setPayOpen(false)}
-          style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: '0.5px solid #e4d4be', color: '#5c3a1e', fontSize: '13px', cursor: 'pointer' }}>
-          취소
-        </button>
-      </div>
-    </div>
-  ) : null
+  // ══════════════════════════════════════════════════════════════════
+  //  🔴 ★2026-09-09 — 여기 있던 «자기 결제 팝업» 을 ★공용 시트로 바꿨습니다
+  //    [대표님]  「기존에 있던 결제화면과 다르다 · ★통일시켜야 하는 것 아닌가?」
+  //
+  //   ⚠️ 이 화면의 팝업이 ★«원본» 이었습니다 — 공용 시트가 그 모양을 그대로 물려받았습니다.
+  //      ⇒ 손님 눈에는 ★거의 그대로입니다. 「지갑 잔액」과 「보시고 나면」 두 줄이 늘었습니다.
+  //   ⛔⛔ 여기에 결제 팝업을 ★«다시 만들지» 마십시오 —
+  //      아홉 화면이 저마다 갖고 있어서 이 일이 났습니다.
+  //   ⚠️ 값은 시트가 스스로 읽습니다 — mulsang_ai (⛔ 낱말을 지어내지 마십시오).
+  // ══════════════════════════════════════════════════════════════════
+  const PayPopup = (
+    <WalletPaySheet
+      open={payOpen}
+      title="사주 그림 생성"
+      subtitle="당신의 사주를 한 폭의 풍경화로 그려드려요"
+      includes={['사주 8글자 기반 맞춤 풍경화', '그림에 담긴 뜻을 풀어주는 해설', '보관함 저장 · 공유 가능']}
+      item="mulsang_ai"
+      actionLabel="그림 그리기"
+      onClose={() => setPayOpen(false)}
+      onConfirm={() => { setPayOpen(false); doGenerate() }}
+    />
+  )
 
   // ── 질문 고르기 모달 (하단 시트) — 두 화면(결과·생성전)에서 공용 ──
   const pickerModal = openPicker ? (

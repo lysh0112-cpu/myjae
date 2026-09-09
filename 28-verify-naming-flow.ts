@@ -1864,6 +1864,39 @@ console.log('\n━━ ㉒-c 🔴 보관함에 «같은 것이 두 개» 로 안 
   }
 }
 
+// ══════════════════════════════════════════════════════════════════
+//  🔴 ★2026-09-09 — 결제 시트가 «한 벌» 인가  [대표님 지시]
+//    「기존에 있던 결제화면과 다르다 · ★통일시켜야 하는 것 아닌가?」
+//   ⚠️ 결제 팝업을 ★아홉 화면이 «저마다» 갖고 있었습니다.
+//      ⇒ 공용 시트(WalletPaySheet)로 모으는 중입니다.
+//      ⇒ 2026-09-09 현재 ★진로적성 · 사주그림 «둘» 을 옮겼습니다 [대표님 「c로 해줘」].
+//   □ 남은 일곱 — 출산택일 · 이름 풀이 · 한자 바꾸기 · 개명 결과
+//                 결혼 진단 · 결혼 택일 · 마이페이지
+// ══════════════════════════════════════════════════════════════════
+console.log('\n━━ ㉒-d 🔴 결제 시트가 «한 벌» 인가 (2026-09-09) ━━')
+{
+  const sheet = read('app/components/common/WalletPaySheet.tsx')
+  check(/export default function WalletPaySheet/.test(sheet),
+    `★결제 시트가 «한 곳» 에 있습니다`)
+  check(/충전하러 가기/.test(sheet) && /그냥 닫기/.test(sheet),
+    `⛔ 모자랄 때 «그냥 닫는» 길이 있습니다 (2부 4장 원칙 ③)`)
+  check(/지갑 잔액/.test(sheet) && /보시고 나면/.test(sheet),
+    `★잔액과 «남을 값» 을 함께 보입니다 (1부 3-1)`)
+
+  for (const [name, path] of [
+    ['진로적성', 'app/manseryeok/career-input/page.tsx'],
+    ['사주그림', 'app/manseryeok/mulsang/page.tsx'],
+  ] as const) {
+    const src = read(path)
+    check(/WalletPaySheet/.test(src), `${name} 이 «그 시트» 를 씁니다`)
+    check(!/confirm\(/.test(codeOf(src)),
+      `⛔ ${name} 이 브라우저 confirm 으로 되돌아가지 않았습니다`)
+  }
+  //  ⚠️ 사주그림은 «자기 팝업» 을 갖고 있었습니다 — 되살아나지 않았는지 봅니다
+  check(!/결제 금액/.test(codeOf(read('app/manseryeok/mulsang/page.tsx'))),
+    `⛔ 사주그림이 «자기 결제 팝업» 을 다시 만들지 않았습니다`)
+}
+
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail > 0) {
   console.log('  ┌────────────────────────────────────────────────────────────┐')

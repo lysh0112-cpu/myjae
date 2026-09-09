@@ -14,9 +14,10 @@
  * 나이로 미리 골라 두되 바꿀 수 있게 한다. (만 19세 미만이면 학생)
  */
 
-import { Suspense, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 //  ★2026-09-09 — 지갑 관문은 lib/wallet/consultGate.ts «한 곳» 입니다
-import { askBeforeAi } from '@/lib/wallet/consultGate'
+import WalletPaySheet from '@/app/components/common/WalletPaySheet'
+import { supabase } from '@/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ageOf } from '@/lib/saju/career/calcPerson'
 import MbtiSelect from '@/app/manseryeok/components/MbtiSelect'
@@ -49,6 +50,17 @@ function CareerInputInner() {
   const [mbti, setMbti] = useState('')
   /** ★MBTI 를 안 고르셨을 때 한 번 여쭙는 팝업 (44부 35차) */
   const [ask, setAsk] = useState(false)
+  //  ★2026-09-09 — 결제 시트 [대표님 「ai결제창이 진로적성보기 클릭시」]
+  const [payOpen, setPayOpen] = useState(false)
+  //  ★단추에 값을 보이기 위한 것뿐입니다 — 실제 차감은 mc_price 를 봅니다.
+  //  ⛔ 이 값으로 «빼지» 마십시오. 보이기용입니다.
+  const [aiPrice, setAiPrice] = useState<number | null>(null)
+  useEffect(() => {
+    let dead = false
+    supabase.from('analysis_prices').select('price').eq('price_key', 'career_ai').maybeSingle()
+      .then(({ data }) => { if (!dead) setAiPrice(data?.price ?? null) })
+    return () => { dead = true }
+  }, [])
 
   const query = useMemo(() => {
     const p = new URLSearchParams()
@@ -119,32 +131,42 @@ function CareerInputInner() {
             ⚠️ 「이번엔 넣지 않고 볼게요」를 고르시면 그대로 갑니다 —
                길을 «막지 않습니다». 다만 「사주로 본 성향」 대목이 빠집니다. */}
         {/* ══════════════════════════════════════════════════════════
-            🔴 ★2026-09-09 — 「진로적성 보기」 를 누를 때 «여쭙습니다»  [대표님 지시]
+            🔴 ★2026-09-09 — 「진로적성 보기」 를 누르면 «결제 시트» 가 뜹니다 [대표님 지시]
               「ai결제창이 ★진로적성보기 클릭시 나오는 걸로 해보자」
-              ⇒ 2부 4장 확정표의 ★career_ai · 「분석 시작 누를 때」 자리입니다.
+              「★기존에 있던 결제화면과 다르다 · ★통일시켜야 하는 것 아닌가?」
 
-            ⚠️ 여기서는 ★«묻기만» 합니다. 실제 차감은 결과 화면에서
-               ★AI 가 «돌기 직전» 에 합니다 (career-result).
-               ⇒ 여기서 빼면 MBTI 를 고르러 가시거나 되돌아가실 때
-                 ★「돈은 빠졌는데 안 봤다」 가 됩니다.
-
-            ⛔ MBTI 물음 «뒤» 로 옮기지 마십시오 —
-               돈이 모자란 분께 MBTI 부터 고르게 하면 ★헛수고가 됩니다.
-            ⚠️ WALLET_GATE_ON 이 false 인 동안에는 ★아무 일도 안 합니다.
+            ⚠️ 처음에는 브라우저 confirm 을 썼는데 ★기존 아홉 화면과 결이 달랐습니다.
+               ⇒ ★공용 시트(WalletPaySheet)로 바꿨습니다. 사주그림 시트와 «같은 모양» 입니다.
+            ⚠️ 시트는 ★«묻기만» 합니다. 실제 차감은 결과 화면에서
+               AI 가 «돌기 직전» 에 합니다 (career-result).
+            ⛔ MBTI 물음 «뒤» 로 옮기지 마십시오 — 헛수고가 됩니다.
             ══════════════════════════════════════════════════════════ */}
-        <button onClick={async () => {
-          const go = await askBeforeAi('career_ai', '진로적성 분석', () => router.push('/wallet'))
-          if (!go) return
-          if (!mbti) { setAsk(true); return }
-          router.push(`/manseryeok/career-result?${query}`)
-        }}
+        <button onClick={() => setPayOpen(true)}
           style={{
             width: '100%', marginTop: 14, padding: 15, borderRadius: 12,
             background: ACCENT, border: 'none', color: '#fff',
             fontSize: 14.5, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
           }}>
-          진로적성 보기
+          {/* ★값을 «단추에» 보입니다 — 사주그림·타로와 같은 모양입니다 [대표님 「통일」] */}
+          진로적성 보기{aiPrice != null ? ` · ${aiPrice.toLocaleString()}원` : ''}
         </button>
+
+        {/* ★공용 결제 시트 — ⛔ 여기에 팝업을 «따로 만들지» 마십시오 */}
+        <WalletPaySheet
+          open={payOpen}
+          title="진로적성 분석"
+          subtitle="타고난 기질과 어울리는 자리를 사주로 짚어 드려요"
+          includes={['강점 지능과 타고난 결', '어울리는 계열·학과', '잘 맞는 직무와 조직 성향']}
+          item="career_ai"
+          actionLabel="진로적성 보기"
+          onClose={() => setPayOpen(false)}
+          onCharge={() => router.push('/wallet')}
+          onConfirm={() => {
+            setPayOpen(false)
+            if (!mbti) { setAsk(true); return }
+            router.push(`/manseryeok/career-result?${query}`)
+          }}
+        />
 
         <MbtiAskDialog
           open={ask}
