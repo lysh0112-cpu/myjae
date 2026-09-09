@@ -1835,6 +1835,33 @@ console.log('\n━━ ㉒-c 🔴 보관함에 «같은 것이 두 개» 로 안 
   }
   check(/result_data: snapshot/.test(read('lib/saju/namingRecords.ts')),
     `★작명은 스냅샷을 통째로 담습니다`)
+
+  // ══════════════════════════════════════════════════════════════
+  //  🔴🔴 ★2026-09-09 2차 — «사람» 갈래를 «결과» 와 갈랐습니다  [대표님 「여전히 2개」]
+  //
+  //   ⚠️ 1차(result_data 로 거르기)만으로는 «부족했습니다» —
+  //      그 칸에 DB 가 기본값을 넣어 두면 사람 줄도 «비어 있지 않아» 통과합니다.
+  //   ⇒ 궁합이 이미 쓰던 방식(couple_person)을 ★모든 서비스에 폈습니다.
+  //      이 길은 ★DB 사정과 상관없이 돕니다.
+  //   ⛔ serviceType 에서 «_person» 을 떼지 마십시오 — 두 개로 다시 보입니다.
+  // ══════════════════════════════════════════════════════════════
+  const personScreens = [
+    ['출산', 'app/manseryeok/birth-timing/input/page.tsx', 'birth'],
+    ['진로적성', 'app/manseryeok/career/page.tsx', 'career'],
+    ['시험운', 'app/manseryeok/exam-luck/page.tsx', 'examluck'],
+    ['작명 보관함', 'app/manseryeok/naming/components/NamingStorageView.tsx', 'naming'],
+    ['이름 풀이', 'app/manseryeok/naming/diagnosis/page.tsx', 'naming'],
+    ['결혼', 'app/manseryeok/wedding-timing/input/page.tsx', 'wedding'],
+    ['이사', 'app/manseryeok/moving-timing/input/page.tsx', 'moving'],
+    ['사주그림', 'app/manseryeok/mulsang-storage/page.tsx', 'mulsang'],
+  ] as const
+  for (const [name, path, key] of personScreens) {
+    const src = read(path)
+    check(new RegExp(`serviceType="${key}_person"`).test(src),
+      `★${name} — 사람을 «${key}_person» 으로 담습니다`)
+    check(!new RegExp(`serviceType="${key}"`).test(codeOf(src)),
+      `⛔ ${name} — «${key}» 로 되돌아가지 않았습니다`)
+  }
 }
 
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)

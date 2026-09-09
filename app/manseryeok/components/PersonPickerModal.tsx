@@ -20,7 +20,9 @@
 //     open={open}
 //     serviceLabel="사주해설"
 //     headline="누구의 사주를 볼까요?"
-//     serviceType="saju"
+//     serviceType="saju_person"      ← 🔴 ★«_person» 을 «꼭» 붙이십시오 (2026-09-09)
+//        ⛔ 'saju' 처럼 «결과와 같은 이름» 을 쓰면 보관함 목록에 사람이 섞여
+//           ★한 번 조회에 «두 개» 로 보입니다 [대표님 지시].
 //     submitLabel="저장하고 사주 보기"
 //     onPick={(person) => { /* 그 사람 결과 화면으로 이동 */ }}
 //     onClose={() => setOpen(false)}

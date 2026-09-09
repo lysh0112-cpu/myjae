@@ -1619,11 +1619,19 @@ function DiagnosisInner() {
           고른 사람의 생년월일을 URL로 실어 이 화면을 다시 열면(fromUrl 우선),
           그 사람 사주로 이름풀이를 진행한다. name·relation 도 함께 실어
           보관함 저장 시 관계로 구분되게 한다. */}
+      {/* 🔴 ★2026-09-09 — «사람» 갈래를 «결과» 와 갈랐습니다  [대표님 지시]
+          「조회한 1건에 대해 ★2개 이상 복수로 보관함에 들어가 있네」
+          [까닭]  saju_records 한 표에 「사람」과 「결과」가 «함께» 들어가는데
+             둘이 ★같은 갈래 이름을 써서 보관함 목록에 둘 다 나왔습니다.
+          ⇒ 궁합이 «이미» 쓰던 방식(couple_person)을 그대로 따릅니다.
+          ⛔⛔ serviceType 을 ★'naming' 로 되돌리지 마십시오 — 두 개로 다시 보입니다.
+          ⚠️ 사람 목록(listSavedPeople)도 ★이 값으로 찾습니다 — 저장·조회가 한 짝입니다.
+          ⛔ 이 주석을 ★속성 «사이» 에 넣지 마십시오 — 화면이 통째로 안 뜹니다 (58부). */}
       <PersonPickerModal
         open={pickerOpen}
         serviceLabel="이름풀이"
         headline="누구의 이름을 볼까요?"
-        serviceType="naming"
+        serviceType="naming_person"
         submitLabel="저장하고 이름 보기"
         onClose={() => setPickerOpen(false)}
         onPick={(person: SavedPerson) => {
