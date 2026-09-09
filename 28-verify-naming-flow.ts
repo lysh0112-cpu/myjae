@@ -1814,11 +1814,27 @@ console.log('\n━━ ㉒-c 🔴 보관함에 «같은 것이 두 개» 로 안 
   check((arc.match(/onlyResultRows\(/g) ?? []).length >= 2,
     `★개수 세는 곳도 «결과» 만 셉니다 (목록과 안 갈립니다)`)
 
-  //  ⛔ 이 거르기가 도는 «전제» — 저장이 언제나 result_data 를 담아야 합니다
+  // ══════════════════════════════════════════════════════════════
+  //  🔴🔴 ★이 거르기가 도는 «전제» — 저장이 «언제나» result_data 를 담아야 합니다
+  //
+  //   ⚠️⚠️ 2026-09-09 — 처음에는 「파일에 result_data 라는 «글자» 가 있는가」만 봤습니다.
+  //      ★허술한 검사였습니다 — 「result_data: args.resultData ?? null」 도 통과합니다.
+  //      실제로 ★진로적성이 resultData 를 «안 넘겨» null 로 저장되고 있었고,
+  //      그대로 올렸으면 ★진로적성 보관함이 «통째로 비었을» 것입니다.
+  //   ⇒ 이제 ★「?? null 이 «없는가»」 를 봅니다.
+  //   ⛔ 이 검사를 글자 있는지 보는 것으로 되돌리지 마십시오.
+  // ══════════════════════════════════════════════════════════════
   for (const [name, path] of lists) {
     if (path.includes('archiveRecords')) continue   // 읽기 전용
-    check(/result_data/.test(read(path)), `⚠️ ${name} 은 저장할 때 result_data 를 담습니다`)
+    if (path.includes('namingRecords')) continue    // snapshot 을 통째로 담습니다
+    const src = read(path)
+    check(/result_data: args\.resultData \?\? \{\}/.test(src),
+      `★${name} 은 «빈 것이라도» 담습니다`)
+    check(!/resultData \?\? null/.test(src),
+      `⛔ ${name} 이 «?? null» 로 되돌아가지 않았습니다`)
   }
+  check(/result_data: snapshot/.test(read('lib/saju/namingRecords.ts')),
+    `★작명은 스냅샷을 통째로 담습니다`)
 }
 
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)

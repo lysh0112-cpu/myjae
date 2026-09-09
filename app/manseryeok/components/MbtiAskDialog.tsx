@@ -92,13 +92,20 @@ export default function MbtiAskDialog({ open, accent = '#785aaa', onPick, onSkip
           }}>MBTI 를 고르러 갈게요</button>
 
         {/* ⚠️ 「그래도 진행」 길을 «막지 않습니다» — 손님을 가두면 안 됩니다.
-            다만 무엇이 빠지는지 미리 알려 드립니다. */}
+            다만 무엇이 빠지는지 미리 알려 드립니다.
+
+            ★2026-09-09 [대표님] — 「배경색을 선명하게 넣어줘 · ★모르고 넘어가기가 쉬워」
+              [무엇이 문제였나]  바탕이 «없고»(none) 글자가 흐린 회색(#94a3b8)이라
+                 ★단추로 보이지 않았습니다. 위 둘만 단추처럼 보였습니다.
+              ⇒ 바탕을 넣고 테두리를 둘러 ★«세 번째 길» 이 있다는 것이 보이게 했습니다.
+            ⛔ 그렇다고 위 둘보다 «눈에 띄게» 만들지는 마십시오 —
+               MBTI 를 넣으시는 쪽이 결과가 낫습니다. 세기는 ★셋째가 맞습니다. */}
         <button
           onClick={onSkip}
           style={{
-            width: '100%', padding: 11, borderRadius: 10, marginTop: 4,
-            background: 'none', border: 'none', color: '#94a3b8',
-            fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit',
+            width: '100%', padding: 12, borderRadius: 10, marginTop: 7,
+            background: '#f1efec', border: '1px solid #ddd6cf', color: '#6b6259',
+            fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
           }}>이번엔 넣지 않고 볼게요</button>
       </div>
     </div>

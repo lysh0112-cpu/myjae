@@ -122,7 +122,14 @@ export async function saveTarotRecord(args: {
       // relation 칸에 관심사(category)를 넣어 목록·트렌드 집계에서 바로 구분.
       relation: category,
       input_data: blob,
-      result_data: args.resultData ?? null,
+      //  🔴 ★2026-09-09 — «빈 것이라도» 담습니다 (null 로 두지 않습니다)
+      //     [까닭]  보관함 목록은 「result_data 가 있는 것 = 결과 줄」로 가립니다
+      //        (lib/saju/recordQuery.ts). null 로 두면 ★그 기록이 목록에서 «사라집니다».
+      //     ⚠️ 진로적성처럼 ★결과를 «나중에» 채우는 화면이 있습니다
+      //        (saveRecord 로 줄만 먼저 만들고 updateRecordResult 로 채움).
+      //        그때 null 이면 통변이 끝나기 전까지 보관함에서 안 보입니다.
+      //     ⛔⛔ ★«?? null» 로 되돌리지 마십시오. 화면은 멀쩡한데 기록이 사라집니다.
+      result_data: args.resultData ?? {},
     })
     .select('id')
     .maybeSingle()
