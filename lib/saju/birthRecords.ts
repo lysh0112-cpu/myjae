@@ -17,6 +17,7 @@
 // ============================================================================
 
 import { supabase } from '@/lib/supabase'
+import { onlyResultRows } from './recordQuery'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
 
 // 출산 설문 (입구 화면에서 받는 정보)
@@ -179,12 +180,16 @@ export async function listBirthRecords(): Promise<BirthRecord[]> {
   const uid = auth?.user?.id
   if (!uid) return []
 
-  const { data, error } = await supabase
-    .from('saju_records')
-    .select('id, relation, title, input_data, created_at')
-    .eq('user_id', uid)
-    .eq('service_type', 'birth')
-    .order('created_at', { ascending: false })
+  //  ★2026-09-09 [대표님] — 「사람」 줄을 걷고 «결과 기록» 만 보입니다.
+  //     ⛔ onlyResultRows 를 빼면 보관함에 ★같은 것이 «두 개» 로 보입니다.
+  //     ⛔ 거르기를 여기에 «직접 적지» 마십시오 — lib/saju/recordQuery.ts 한 곳입니다.
+  const { data, error } = await onlyResultRows(
+    supabase
+      .from('saju_records')
+      .select('id, relation, title, input_data, created_at')
+      .eq('user_id', uid)
+      .eq('service_type', 'birth')
+      .order('created_at', { ascending: false }))
 
   if (error || !data) return []
 

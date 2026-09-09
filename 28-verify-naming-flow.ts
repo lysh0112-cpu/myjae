@@ -1775,6 +1775,52 @@ console.log('\n━━ ㉒-b ⛔ 「六 사주 명리적성」이 이름 풀이�
     `⚠️ 부품은 «지우지 않았습니다» (되살릴 수 있습니다)`)
 }
 
+// ══════════════════════════════════════════════════════════════════
+//  🔴🔴 ★2026-09-09 — 보관함에 «같은 것이 두 개» 로 보이지 않는가  [대표님 지시]
+//    「조회한 1건에 대해 ★2개 이상 복수로 보관함에 들어가 있네」
+//    「★통일할 필요가 있을 것 같아 … 이런 사소한 곳에서 프로그램이 이상하면
+//      ★고객 신뢰성이 깨지거든」
+//
+//   [까닭]  saju_records 한 표에 ★「사람」과 「결과 기록」이 «함께» 들어갑니다.
+//     일곱 서비스가 사람과 결과에 ★«같은 갈래 이름» 을 써서 목록에 둘 다 나왔습니다
+//     (이사·결혼·출산·사주그림·진로적성·시험운·작명).
+//   ⇒ 목록·개수 조회에 ★onlyResultRows 를 붙여 «결과» 만 보이게 했습니다.
+//
+//   ⚠️ 이 자리는 ★눈으로만 보면 «멀쩡해 보입니다» — 줄이 두 개일 뿐 화면은 정상입니다.
+//      그래서 그물이 필요합니다.
+//   ⚠️ 여기(작명 그물)에 둔 까닭은 2026-09-09 에 친 그물이 여기 모여 있어서입니다.
+// ══════════════════════════════════════════════════════════════════
+console.log('\n━━ ㉒-c 🔴 보관함에 «같은 것이 두 개» 로 안 보이는가 (2026-09-09) ━━')
+{
+  check(/export function onlyResultRows/.test(read('lib/saju/recordQuery.ts')),
+    `★거르는 부품이 «한 곳»(recordQuery.ts) 에 있습니다`)
+
+  const lists = [
+    ['이사', 'lib/saju/movingRecords.ts'],
+    ['결혼', 'lib/saju/weddingRecords.ts'],
+    ['출산', 'lib/saju/birthRecords.ts'],
+    ['작명', 'lib/saju/namingRecords.ts'],
+    ['타로', 'lib/saju/tarotRecords.ts'],
+    ['궁합', 'lib/saju/coupleRecords.ts'],
+    ['사주·그림·적성', 'lib/saju/sajuRecords.ts'],
+    ['전체 보관함', 'lib/saju/archiveRecords.ts'],
+  ] as const
+  for (const [name, path] of lists) {
+    check(/onlyResultRows\(/.test(read(path)), `${name} 목록이 «그 부품» 을 씁니다`)
+  }
+
+  //  ⚠️ 목록과 개수가 갈리면 「12건인데 여섯 개」가 됩니다
+  const arc = read('lib/saju/archiveRecords.ts')
+  check((arc.match(/onlyResultRows\(/g) ?? []).length >= 2,
+    `★개수 세는 곳도 «결과» 만 셉니다 (목록과 안 갈립니다)`)
+
+  //  ⛔ 이 거르기가 도는 «전제» — 저장이 언제나 result_data 를 담아야 합니다
+  for (const [name, path] of lists) {
+    if (path.includes('archiveRecords')) continue   // 읽기 전용
+    check(/result_data/.test(read(path)), `⚠️ ${name} 은 저장할 때 result_data 를 담습니다`)
+  }
+}
+
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail > 0) {
   console.log('  ┌────────────────────────────────────────────────────────────┐')

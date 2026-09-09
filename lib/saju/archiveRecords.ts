@@ -16,6 +16,7 @@
 // ============================================================================
 
 import { supabase } from '@/lib/supabase'
+import { onlyResultRows } from './recordQuery'
 
 export interface ArchiveItem {
   id: string
@@ -142,13 +143,17 @@ const ARCHIVE_TYPES = [
 export async function listArchive(limit = 50, offset = 0): Promise<ArchiveItem[]> {
   const user_id = await uid()
   if (!user_id) return []
-  const { data, error } = await supabase
-    .from('saju_records')
-    .select('id, service_type, title, relation, input_data, result_data, created_at')
-    .eq('user_id', user_id)
-    .in('service_type', ARCHIVE_TYPES)
-    .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1)
+  //  ★2026-09-09 [대표님] — 「사람」 줄을 걷고 «결과 기록» 만 보입니다.
+  //     ⛔ onlyResultRows 를 빼면 보관함에 ★같은 것이 «두 개» 로 보입니다.
+  //     ⛔ 거르기를 여기에 «직접 적지» 마십시오 — lib/saju/recordQuery.ts 한 곳입니다.
+  const { data, error } = await onlyResultRows(
+    supabase
+      .from('saju_records')
+      .select('id, service_type, title, relation, input_data, result_data, created_at')
+      .eq('user_id', user_id)
+      .in('service_type', ARCHIVE_TYPES)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1))
   if (error || !data) {
     if (error) console.error('[archive] list error', error.message)
     return []
@@ -168,11 +173,14 @@ export async function listArchive(limit = 50, offset = 0): Promise<ArchiveItem[]
 export async function countArchive(): Promise<number> {
   const user_id = await uid()
   if (!user_id) return 0
-  const { count, error } = await supabase
-    .from('saju_records')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', user_id)
-    .in('service_type', ARCHIVE_TYPES)
+  //  ★2026-09-09 [대표님] — 개수도 «결과 기록» 만 셉니다.
+  //     ⛔ 빼면 목록은 여섯인데 「12건」이라 뜹니다. ★목록과 개수가 갈립니다.
+  const { count, error } = await onlyResultRows(
+    supabase
+      .from('saju_records')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user_id)
+      .in('service_type', ARCHIVE_TYPES))
   if (error || count == null) return 0
   return count
 }

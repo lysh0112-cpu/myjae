@@ -16,6 +16,7 @@
 // ============================================================================
 
 import { supabase } from '@/lib/supabase'
+import { onlyResultRows } from './recordQuery'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
 
 export type CoupleMode = 'couple' | 'married'
@@ -155,7 +156,12 @@ export async function listCoupleRecords(mode?: CoupleMode): Promise<CoupleRecord
     ? base.eq('service_type', mode)                    // 연인이면 couple만, 부부면 married만
     : base.in('service_type', ['couple', 'married'])   // 전체(두 종류)
 
-  const { data, error } = await filtered.order('created_at', { ascending: false })
+  //  ★2026-09-09 [대표님] — 다른 보관함과 «같은 규칙» 을 씁니다.
+  //     ⚠️ 궁합은 사람(couple_person)과 결과(couple·married)의 갈래가 «이미» 달라
+  //        지금도 안 겹칩니다. 그래도 ★한 규칙으로 통일해 둡니다 —
+  //        나중에 갈래를 손대도 여기서 다시 새지 않게.
+  const { data, error } = await onlyResultRows(
+    filtered.order('created_at', { ascending: false }))
 
   if (error || !data) return []
 

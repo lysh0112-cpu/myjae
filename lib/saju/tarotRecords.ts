@@ -19,6 +19,7 @@
 // ============================================================================
 
 import { supabase } from '@/lib/supabase'
+import { onlyResultRows } from './recordQuery'
 
 // 관심사 5종 (홈 스크린샷의 칩과 동일) + 직접입력 폴백 '기타'
 export type TarotCategory =
@@ -157,12 +158,16 @@ export async function listTarotRecords(): Promise<TarotRecord[]> {
   const uid = auth?.user?.id
   if (!uid) return []
 
-  const { data, error } = await supabase
-    .from('saju_records')
-    .select('id, relation, title, input_data, created_at')
-    .eq('user_id', uid)
-    .eq('service_type', 'tarot')
-    .order('created_at', { ascending: false })
+  //  ★2026-09-09 [대표님] — 「사람」 줄을 걷고 «결과 기록» 만 보입니다.
+  //     ⛔ onlyResultRows 를 빼면 보관함에 ★같은 것이 «두 개» 로 보입니다.
+  //     ⛔ 거르기를 여기에 «직접 적지» 마십시오 — lib/saju/recordQuery.ts 한 곳입니다.
+  const { data, error } = await onlyResultRows(
+    supabase
+      .from('saju_records')
+      .select('id, relation, title, input_data, created_at')
+      .eq('user_id', uid)
+      .eq('service_type', 'tarot')
+      .order('created_at', { ascending: false }))
 
   if (error || !data) return []
 
