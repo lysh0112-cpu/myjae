@@ -163,7 +163,14 @@ function NewNameInner() {
   const [pendingName, setPendingName] = useState('')    // 결제 후 이동할 이름
 
   useEffect(() => {
-    supabase.from('analysis_prices').select('price').eq('price_key', 'naming_hanja').maybeSingle()
+    //  🔴 ★2026-09-09 — 이 화면은 «둘» 을 그립니다 [대표님 「내 아이 명품작명은 ai결제하기가 있나?」]
+    //     아기(신생아)  → ★naming_baby_ai   (내 아이 명품작명 · 작명 분석)
+    //     그 밖(개명)    → ★naming_hanja     (내 이름 정밀분석 · 한자 바꾸기)
+    //   ⚠️ 2026-09-09 처음 붙일 때 ★언제나 naming_hanja 로 받게 해 두었습니다 —
+    //      아기 작명도 «한자 바꾸기 값» 으로 받을 뻔했습니다.
+    //   ⛔ 낱말을 하나로 되돌리지 마십시오. 값이 다릅니다 (2부 5-2).
+    supabase.from('analysis_prices').select('price')
+      .eq('price_key', kind === '신생아' ? 'naming_baby_ai' : 'naming_hanja').maybeSingle()
       .then(({ data }) => { if (data) setHanjaPrice(data.price) })
     supabase.from('app_settings').select('value').eq('key', 'naming_try_limit').maybeSingle()
       // ⚠️ 관리자 설정 값도 «정책을 지나» 옵니다 — 설정으로 3개가 되살아나지 않습니다
@@ -580,14 +587,14 @@ function NewNameInner() {
           ⛔⛔ 여기에 결제 팝업을 «다시 만들지» 마십시오. */}
       <WalletPaySheet
         open={payOpen}
-        title="✍️ 이름 지어보기"
+        title={isNewborn ? '👶 내 아이 명품작명' : '✍️ 이름 지어보기'}
         subtitle={isSingleName ? (
           <>사주에 맞는 한자로 <b style={{ color: GOLD }}>이름 하나</b>를 지어 드리고<br />상세 풀이까지 확인하실 수 있어요.</>
         ) : (
           <>사주에 맞는 한자로 <b style={{ color: GOLD }}>{tryLimit}개</b>의 이름을 지어보고<br />상세 풀이까지 확인하실 수 있어요.</>
         )}
-        item="naming_hanja"
-        actionLabel="이름 지어보기"
+        item={isNewborn ? 'naming_baby_ai' : 'naming_hanja'}
+        actionLabel={isNewborn ? '이름 지어보기' : '한자 바꿔보기'}
         onClose={() => setPayOpen(false)}
         onConfirm={() => { setPayOpen(false); payAndProceed() }}
       />
