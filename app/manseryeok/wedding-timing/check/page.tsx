@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useRef } from 'react'
 //  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
 import WalletPaySheet from '@/app/components/common/WalletPaySheet'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -152,6 +152,11 @@ function CheckInner() {
       setResults(result.results)
       setPair({ bride: result.bride, groom: result.groom })
       setDone(true)
+      //  ★진단이 끝나면 «곧바로» 담습니다 [대표님 지시].
+      //  ⛔ 이 줄을 빼지 마십시오 — 손님이 [저장]을 눌러야 하는 줄 모르십니다.
+      //  ⚠️ setResults 가 아직 반영되기 «전» 이라 state 를 못 읽습니다 —
+      //     그래서 결과를 ★인자로 넘깁니다.
+      void saveResults(result.results)
     } catch {
       setError('진단 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.')
     } finally {
@@ -172,22 +177,47 @@ function CheckInner() {
     year: p?.year || '', month: p?.month || '', day: p?.day || '',
     leapMonth: '0', hour: p?.hour || '모름',
   })
-  async function handleSave() {
-    if (saveState !== 'idle' || results.length === 0) return
+  // ══════════════════════════════════════════════════════════════════
+  //  🔴 ★2026-09-09 — 진단이 끝나면 «저절로» 보관함에 담습니다  [대표님 지시]
+  //    「기간을 정하고 택일을 하면 보관함저장이 되고,
+  //      ★날짜를 세개를 택한 경우에는 보관함에 저장이 안됨」
+  //
+  //   [까닭]  저장이 «안 되는» 것이 아니라 ★[저장] 단추를 «눌러야» 됐습니다.
+  //      길일 택일(pick)은 날짜를 누르면 저절로 담기는데, 이 화면만 손으로 눌러야 했습니다.
+  //      ⇒ 눌러야 하는 줄 모르면 그냥 나가시게 됩니다.
+  //
+  //   ⚠️⚠️ 막이를 ★useRef 로 둡니다 — ⛔ useState 로 막지 마십시오.
+  //      setSaveState 는 «다시 그릴 때» 반영되어, 짧은 사이에 두 번 불리면
+  //      ★둘 다 「아직 idle 이네」 하고 통과해 보관함에 «두 줄» 이 생깁니다.
+  //      (2026-09-09 보관함 「2개」 건과 같은 결입니다)
+  //
+  //   ⚠️ [저장] 단추는 ★그대로 둡니다 — 저장이 실패했을 때 다시 누르실 자리입니다.
+  // ══════════════════════════════════════════════════════════════════
+  const savedRef = useRef(!!recordId)
+
+  /** [저장] 단추가 부릅니다 — 화면에 있는 결과를 씁니다 */
+  async function handleSave() { await saveResults(results) }
+
+  /** ★결과를 «인자로» 받습니다 — 진단 직후에는 state 가 아직 안 바뀌었습니다 */
+  async function saveResults(rows: typeof results) {
+    if (savedRef.current || rows.length === 0) return
+    savedRef.current = true
+    if (saveState !== 'idle') return
     setSaveState('saving')
     const name1 = groom?.name || '신랑'
     const name2 = bride?.name || '신부'
-    const okCount = results.filter(r => r.detail.passFixed).length
+    const okCount = rows.filter(r => r.detail.passFixed).length
     const res = await saveWeddingRecord({
       kind: 'check',
       name1, name2,
-      summary: `${results.length}일 중 ${okCount}일 좋음`,
+      summary: `${rows.length}일 중 ${okCount}일 좋음`,
       input1: { ...toInput(groom), name: name1 },
       input2: { ...toInput(bride), name: name2 },
-      resultData: { version: 'v7', results, dates: dates.filter(d => d && d.trim()), groom, bride },
+      resultData: { version: 'v7', results: rows, dates: dates.filter(d => d && d.trim()), groom, bride },
     })
     setSaveState(res.ok ? 'saved' : 'idle')
-    if (!res.ok) alert(res.message || '저장하지 못했어요.')
+    //  ⚠️ 실패하면 ★막이를 풀어 [저장] 단추로 다시 하실 수 있게 합니다.
+    if (!res.ok) { savedRef.current = false; alert(res.message || '저장하지 못했어요.') }
   }
 
   const anyAvoid = done && results.some(r => !r.detail.passFixed)

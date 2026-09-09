@@ -1988,6 +1988,28 @@ console.log('\n━━ ㉒-f 🔴 「아직 안 돌려준 돈」 (2026-09-09) ━
   check(!/돌려주기<\/button>/.test(ch), `⛔ «눌러도 안 되는» [돌려주기] 단추가 없습니다`)
 }
 
+// ══════════════════════════════════════════════════════════════════
+//  🔴 ★2026-09-09 — 결혼 「정한 날 진단」 이 «저절로» 담기는가  [대표님 지시]
+//    「기간을 정하고 택일을 하면 보관함저장이 되고,
+//      ★날짜를 세개를 택한 경우에는 보관함에 저장이 안됨」
+//   [까닭]  저장이 «안 되는» 것이 아니라 ★[저장] 단추를 «눌러야» 됐습니다.
+//   ⚠️ 막이는 ★useRef 여야 합니다 — useState 막이는 «샙니다» (두 줄이 생깁니다).
+// ══════════════════════════════════════════════════════════════════
+console.log('\n━━ ㉒-g 🔴 결혼 「정한 날 진단」 자동 저장 (2026-09-09) ━━')
+{
+  const wc = read('app/manseryeok/wedding-timing/check/page.tsx')
+  check(/void saveResults\(result\.results\)/.test(wc),
+    `★진단이 끝나면 «저절로» 담습니다`)
+  check(/const savedRef = useRef/.test(wc),
+    `⛔ 막이가 ★useRef 입니다 (useState 는 «새서» 두 줄이 생깁니다)`)
+  check(/async function saveResults\(rows/.test(wc),
+    `★결과를 «인자로» 받습니다 (진단 직후 state 는 아직 안 바뀝니다)`)
+  check(/savedRef\.current = false/.test(wc),
+    `⚠️ 저장이 실패하면 [저장] 단추로 다시 하실 수 있습니다`)
+  check(/onClick=\{handleSave\}/.test(wc),
+    `⚠️ [저장] 단추를 «지우지» 않았습니다 (실패했을 때 쓸 자리)`)
+}
+
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail > 0) {
   console.log('  ┌────────────────────────────────────────────────────────────┐')
