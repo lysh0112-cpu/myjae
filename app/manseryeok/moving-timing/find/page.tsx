@@ -16,6 +16,8 @@
  */
 
 import { Suspense, useState } from 'react'
+//  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
+import WalletPaySheet from '@/app/components/common/WalletPaySheet'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 const accent = '#967850'
@@ -36,6 +38,8 @@ function FindInner() {
   const [start, setStart] = useState(iso(today))
   const [end, setEnd] = useState(iso(in3m))
   const [err, setErr] = useState('')
+  //  ★2026-09-09 — 결제 시트 [대표님 「이사택일 ai결제창」]
+  const [payOpen, setPayOpen] = useState(false)
   // 어느 프리셋을 골랐는지 — 눌린 것이 보이도록. 직접 고르면 해제된다.
   const [picked, setPicked] = useState<number | null>(3)
 
@@ -159,8 +163,16 @@ function FindInner() {
           </div>
         )}
 
+        {/* ══════════════════════════════════════════════════════
+            🔴 ★2026-09-09 — 「찾기」 를 누를 때 결제 시트  [대표님 지시]
+              「이사택일 ai결제창은 어디있는지 확인해봐」  ⇒ ★없었습니다.
+            ⚠️ 앞선 창이 「이사택일은 나중에 한꺼번에 붙이기로 했다」라
+               자리만 표시해 두었습니다 (price_key = 'moving_pick').
+            ⚠️ 결혼택일과 ★«같은 모양» 입니다 — 시트는 «묻기만» 합니다.
+            ⛔ 낱말을 지어내지 마십시오 — mc_price 의 것입니다 (2부 5-2).
+            ══════════════════════════════════════════════════════ */}
         <button
-          onClick={goPick}
+          onClick={() => setPayOpen(true)}
           style={{
             width: '100%', marginTop: 26, padding: '15px 0',
             background: accent, color: '#fff', border: 'none', borderRadius: 13,
@@ -190,6 +202,18 @@ function FindInner() {
           너무 짧으면 남는 날이 없을 수도 있어요.
         </div>
       </div>
+      {/* ★공용 결제 시트 — ⛔ 여기에 팝업을 «따로 만들지» 마십시오 */}
+      <WalletPaySheet
+        open={payOpen}
+        title="🏡 이사 좋은 날 찾기"
+        subtitle="고르신 기간에서 이사하기 좋은 날을 모두 찾아드려요"
+        includes={['기간의 모든 날을 하루씩 판정', '손 없는 날·삼살·대장군을 걸러낸 목록', '날짜마다 왜 괜찮은지 설명', '보관함 저장']}
+        item="moving_pick"
+        actionLabel="좋은 날 찾기"
+        onClose={() => setPayOpen(false)}
+        onConfirm={() => { setPayOpen(false); goPick() }}
+      />
+
     </main>
   )
 }

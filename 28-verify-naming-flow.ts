@@ -1899,6 +1899,9 @@ console.log('\n━━ ㉒-d 🔴 결제 시트가 «한 벌» 인가 (2026-09-09
     ['타로', 'app/tarot/page.tsx'],
     ['궁합', 'app/manseryeok/couple-input-new/page.tsx'],
     ['내 사주와 운세보기', 'app/manseryeok/saju-storage/page.tsx'],
+    //  ★2026-09-09 [대표님 「이사택일 ai결제창은 어디있는지」] — 없어서 붙였습니다
+    ['이사 진단', 'app/manseryeok/moving-timing/check/page.tsx'],
+    ['이사 찾기', 'app/manseryeok/moving-timing/find/page.tsx'],
   ] as const) {
     const src = read(path)
     check(/WalletPaySheet/.test(src), `${name} 이 «그 시트» 를 씁니다`)

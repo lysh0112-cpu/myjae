@@ -12,6 +12,8 @@
  */
 
 import { Suspense, useEffect, useState, useRef } from 'react'
+//  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
+import WalletPaySheet from '@/app/components/common/WalletPaySheet'
 //  ★2026-09-09 — 보관함 자리는 공용 부품 «한 곳» 입니다 [대표님 「색상 통일」]
 import StorageLinkRow from '@/app/components/common/StorageLinkRow'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -38,6 +40,8 @@ function CheckInner() {
   const [loading, setLoading] = useState(() => !!sp.get('recordId'))
   const [err, setErr] = useState('')
   const [saved, setSaved] = useState<string | null>(null)
+  //  ★2026-09-09 — 결제 시트 [대표님 「이사택일 ai결제창」]
+  const [payOpen, setPayOpen] = useState(false)
   //  ★2026-09-09 — 보관함에 담겼는가 [대표님 「보관함 버튼」]
   const [saveState, setSaveState] = useState<'saving' | 'saved' | 'failed'>('saving')
   const savedRef = useRef(!!sp.get('recordId'))
@@ -227,8 +231,16 @@ function CheckInner() {
             </div>
           )}
 
+          {/* ══════════════════════════════════════════════════════
+              🔴 ★2026-09-09 — 「진단」 를 누를 때 결제 시트  [대표님 지시]
+                「이사택일 ai결제창은 어디있는지 확인해봐」  ⇒ ★없었습니다.
+              ⚠️ 앞선 창이 「이사택일은 나중에 한꺼번에 붙이기로 했다」라
+                 자리만 표시해 두었습니다 (price_key = 'moving_check').
+              ⚠️ 결혼택일과 ★«같은 모양» 입니다 — 시트는 «묻기만» 합니다.
+              ⛔ 낱말을 지어내지 마십시오 — mc_price 의 것입니다 (2부 5-2).
+              ══════════════════════════════════════════════════════ */}
           <button
-            onClick={runDiagnose}
+            onClick={() => setPayOpen(true)}
             style={{
               width: '100%', marginTop: 22, padding: '15px 0',
               background: accent, color: '#fff', border: 'none', borderRadius: 13,
@@ -288,6 +300,18 @@ function CheckInner() {
           {saved}
         </div>
       )}
+      {/* ★공용 결제 시트 — ⛔ 여기에 팝업을 «따로 만들지» 마십시오 */}
+      <WalletPaySheet
+        open={payOpen}
+        title="🏡 이사 정한 날 진단"
+        subtitle="생각해 둔 날짜가 이사에 괜찮은 날인지 봐드려요"
+        includes={['고르신 날짜를 하루씩 판정', '손 없는 날·삼살·대장군 확인', '계약자와 배우자 각각의 결', '보관함 저장']}
+        item="moving_check"
+        actionLabel="진단 보기"
+        onClose={() => setPayOpen(false)}
+        onConfirm={() => { setPayOpen(false); void runDiagnose() }}
+      />
+
     </main>
   )
 }
