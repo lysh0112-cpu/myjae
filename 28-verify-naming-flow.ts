@@ -1897,6 +1897,30 @@ console.log('\n━━ ㉒-d 🔴 결제 시트가 «한 벌» 인가 (2026-09-09
     `⛔ 사주그림이 «자기 결제 팝업» 을 다시 만들지 않았습니다`)
 }
 
+// ══════════════════════════════════════════════════════════════════
+//  🔴 ★2026-09-09 — 예약을 취소하면 돈이 «지갑으로» 돌아가는가  [대표님 지시]
+//    「상담예약했다 취소하면 ★본인 지갑 잔액으로 되돌아가야되는 거잖아」
+//    「취소는 ★마이페이지에서 취소버튼이 있어」
+//   ⚠️ 되돌릴 줄은 ★mc_ledger 의 ref(상담 건 id)로 찾습니다 —
+//      차감할 때 p_ref 에 넣어 둔 값입니다. ⛔ 그 값을 바꾸면 길이 끊깁니다.
+// ══════════════════════════════════════════════════════════════════
+console.log('\n━━ ㉒-e 🔴 예약 취소가 «지갑으로» 돌아가는가 (2026-09-09) ━━')
+{
+  const gate = read('lib/wallet/consultGate.ts')
+  const my = read('app/mypage-new/page.tsx')
+  const sel = read('app/manseryeok/consultant-select/page.tsx')
+  check(/export async function refundConsultByRef/.test(gate), `★되돌리는 부품이 «한 곳» 에 있습니다`)
+  check(/\.eq\('ref', consultationId\)/.test(gate) && /\.eq\('kind', 'use'\)/.test(gate),
+    `★«쓴 줄» 만 골라 되돌립니다 (충전·되돌림 줄을 안 잡습니다)`)
+  check(/refundConsultByRef\(c\.id/.test(my), `★마이페이지 취소가 그것을 부릅니다 [대표님]`)
+  check(/cons\.id,/.test(sel), `⛔ 차감할 때 ref 에 «상담 건 id» 를 넣습니다 (되돌릴 길)`)
+  check(/refundFailed/.test(gate) && /refundFailed/.test(my),
+    `⛔ 되돌리기가 실패하면 «조용히» 넘어가지 않습니다`)
+  //  ⚠️ 관리자 취소는 «안» 돌아갑니다 — 그 사실을 화면이 말해야 합니다
+  check(/회원 지갑에서 손으로 넣어 주십시오/.test(read('app/admin/components/useDashboardTable.ts')),
+    `⚠️ 관리자 취소는 «손으로» 넣으라고 알려 줍니다`)
+}
+
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail > 0) {
   console.log('  ┌────────────────────────────────────────────────────────────┐')

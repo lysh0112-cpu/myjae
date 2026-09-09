@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+//  ★2026-09-09 — 지갑 관문은 lib/wallet/consultGate.ts «한 곳» 입니다
+import { refundConsultByRef, WALLET_MSG } from '@/lib/wallet/consultGate'
 import { EL_BG, EL_BD, EL_C, EL_C_SUB, EL_HAN } from '@/lib/saju/ohaengColor'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -234,6 +236,25 @@ export default function MyPageNew() {
       const { error: cErr } = await supabase.from('consultations').update({ status: 'cancelled' }).eq('id', c.id)
       if (cErr) { alert('취소 실패: ' + cErr.message); setCancelingId(null); return }
       setConsults(prev => prev.filter(x => x.id !== c.id))
+
+      // ══════════════════════════════════════════════════════════
+      //  🔴 ★2026-09-09 — 돈을 «지갑으로» 되돌립니다  [대표님 지시]
+      //    「상담예약했다 취소하면 ★본인 지갑 잔액으로 되돌아가야되는 거잖아」
+      //
+      //   ⚠️ ★취소가 «다 끝난 뒤» 에 되돌립니다 —
+      //      차감을 «맨 마지막» 에 두는 것과 짝입니다. 되돌리기가 실패해도
+      //      ★취소는 이미 되어 있어야 합니다 (예약이 살아 있으면 더 나쁩니다).
+      //   ⛔ 되돌리기가 실패했다고 «조용히» 넘어가지 마십시오 —
+      //      손님이 「돈은 어디 갔냐」 하십니다. 말씀드리고 관리자에게 넘깁니다.
+      //   ⚠️ 관문이 꺼져 있던 때 잡은 예약은 ★애초에 안 빠졌습니다 —
+      //      그때는 back 이 없어 «예약이 취소되었습니다» 만 뜹니다.
+      // ══════════════════════════════════════════════════════════
+      const back = await refundConsultByRef(c.id, '상담 예약 취소 — 되돌림')
+      if (!back.ok) { alert(WALLET_MSG.refundFailed); return }
+      if (back.back != null && back.balance != null) {
+        alert(WALLET_MSG.refunded(back.back, back.balance))
+        return
+      }
       alert('예약이 취소되었습니다.')
     } catch (e) {
       alert('취소 중 오류가 발생했어요. 다시 시도해 주세요.')

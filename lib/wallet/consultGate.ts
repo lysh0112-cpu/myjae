@@ -87,6 +87,15 @@ export const WALLET_MSG = {
 
   /** 로그인이 없을 때 (AI) */
   aiNeedLogin: 'AI 분석은 로그인 후에 보실 수 있어요.',
+
+  /** ★예약을 취소해 돈이 지갑으로 돌아갔을 때 [대표님 지시] */
+  refunded: (back: number, balance: number) =>
+    `예약이 취소됐어요.\n\n${won(back)}이 지갑으로 돌아갔어요.\n지금 잔액 ${won(balance)}`,
+
+  /** ★취소는 됐는데 되돌리기가 안 됐을 때 — ⛔ 숨기지 마십시오 */
+  refundFailed:
+    '예약은 취소됐어요.\n다만 지갑으로 돌려드리는 데 문제가 있었어요.\n' +
+    '관리자에게 말씀해 주시면 바로 넣어 드립니다.',
 }
 
 /** 1234567 → 「1,234,567원」 */
@@ -221,5 +230,57 @@ export async function refundAiFee(ledgerId: string, memo: string): Promise<boole
   } catch (e) {
     console.error('[wallet] refund 실패', e)
     return false
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  🔴🔴 ★2026-09-09 — 예약을 «취소» 하면 지갑으로 되돌립니다  [대표님 지시]
+//    「상담예약했다 취소하면 ★본인 지갑 잔액으로 되돌아가야되는 거잖아」
+//
+//   [어떻게 찾나]  차감할 때 ★p_ref 에 «상담 건 id» 를 넣어 두었습니다
+//      (consultant-select 의 useConsultFee 두 번째 인자).
+//      ⇒ mc_ledger 에서 ref 로 그 줄을 찾아 되돌립니다.
+//      ⛔ p_ref 에 다른 것을 넣지 마십시오 — 되돌릴 길이 끊깁니다.
+//
+//   ⚠️ 되돌릴 것이 «없어도» true 를 줍니다 —
+//      관문이 꺼져 있던 때에 잡은 예약은 ★애초에 돈이 안 빠졌습니다.
+//      ⛔ 그것을 «실패» 로 다루지 마십시오. 취소가 막혀 버립니다.
+//
+//   🔴 ★관리자가 대신 취소할 때는 이 함수가 «안 됩니다» —
+//      지갑 함수는 ★«자기 것» 만 만집니다 (인자에 user_id 를 못 넣습니다 · 1부 3-3).
+//      ⇒ 관리자 취소는 ★회원 지갑에서 «손으로» 충전해 돌려주십시오.
+//      □ 나중에 — 관리자용 되돌리기 함수를 서버에 하나 더 두면 됩니다.
+// ══════════════════════════════════════════════════════════════════
+
+/**
+ *  상담 예약을 취소할 때 — 그 예약에 쓴 돈을 «지갑으로» 되돌립니다.
+ *  @returns 되돌렸거나 «되돌릴 것이 없으면» true. 되돌리기가 실패하면 false.
+ */
+export async function refundConsultByRef(
+  consultationId: string, memo: string,
+): Promise<{ ok: boolean; back?: number; balance?: number }> {
+  if (!WALLET_GATE_ON) return { ok: true }
+  try {
+    //  ⚠️ 「쓴 줄」만 봅니다 — 충전·되돌림 줄을 잡으면 안 됩니다.
+    const { data, error } = await supabase
+      .from('mc_ledger')
+      .select('id')
+      .eq('ref', consultationId)
+      .eq('kind', 'use')
+      .order('at', { ascending: false })
+      .limit(1)
+    if (error) return { ok: false }
+    const row = (data ?? [])[0] as { id: string } | undefined
+    if (!row) return { ok: true }        // ★빠진 돈이 없습니다 — 되돌릴 것도 없습니다
+
+    const { data: r, error: e2 } = await supabase.rpc('wallet_refund', {
+      p_ledger_id: row.id, p_memo: memo,
+    })
+    if (e2 || !r) return { ok: false }
+    const rr = r as { ok: boolean; back?: number; balance?: number }
+    return rr.ok ? { ok: true, back: rr.back, balance: rr.balance } : { ok: false }
+  } catch (e) {
+    console.error('[wallet] 예약 취소 되돌리기 실패', e)
+    return { ok: false }
   }
 }
