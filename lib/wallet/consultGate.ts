@@ -40,7 +40,7 @@ import { supabase } from '@/lib/supabase'
 //     ⚠️ 켜면 ★상담료 관문도 «함께» 켜집니다 — 값이 하나입니다.
 //        ⇒ 켜 두는 동안 ★비회원은 상담 예약을 «못 합니다» (지갑은 로그인한 사람 것만 봅니다).
 //     ⛔ 손님을 받기 시작하시면, 카카오가 붙기 «전» 에는 ★false 로 되돌리십시오.
-export const WALLET_GATE_ON = false
+export const WALLET_GATE_ON = true
 
 /** 명카페 앱 딱지 — mc_ledger 의 service 칸에 들어갑니다 */
 const SERVICE = 'myc'
