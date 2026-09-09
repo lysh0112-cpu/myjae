@@ -37,6 +37,8 @@ export default function WelcomePage() {
   const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
   const [nickname, setNickname] = useState('')
+  /** ★카카오가 준 이메일 — profiles 에 «옮겨 담습니다» (아래 base 참조) */
+  const [kakaoEmail, setKakaoEmail] = useState<string | null>(null)
 
   // ── 사주 입력 상태 ──
   const [gender, setGender] = useState<'남' | '여'>('남')
@@ -82,8 +84,23 @@ export default function WelcomePage() {
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) { router.push('/auth/login'); return }
       setUserId(data.user.id)
+      /* ★2026-09-10 — 카카오가 준 것을 «미리 채워» 둡니다.
+       *   ⚠️ 카카오는 ★nickname 칸을 «안 줍니다» — 값으로 잰 칸 열하나에 없었습니다.
+       *      이름값은 name · full_name · user_name · preferred_username 에 옵니다.
+       *   ⇒ 손님이 그대로 두시면 카카오 이름이, 고치시면 고친 이름이 담깁니다.
+       *   ⛔ 이 자리를 «닉네임 칸만» 보게 좁히지 마십시오 (list-users 와 같은 결).
+       */
+      const meta = data.user.user_metadata ?? {}
+      setKakaoEmail(data.user.email ?? null)
+      const metaName =
+        (meta.nickname as string | undefined) ||
+        (meta.name as string | undefined) ||
+        (meta.full_name as string | undefined) ||
+        (meta.user_name as string | undefined) ||
+        (meta.preferred_username as string | undefined) ||
+        ''
       supabase.from('profiles').select('nickname').eq('id', data.user.id).maybeSingle()
-        .then(({ data: p }) => { if (p?.nickname) setNickname(p.nickname) })
+        .then(({ data: p }) => { setNickname(p?.nickname || metaName) })
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -125,6 +142,12 @@ export default function WelcomePage() {
     const base = {
       id: userId,
       nickname: nickname.trim(),
+      /* 🔴 ★2026-09-10 — 이메일을 profiles 에 «담습니다».
+       *   [겪은 일]  auth.users 에는 이메일이 «있는데» profiles.email 이 ★NULL 이었습니다.
+       *      옮겨 담는 자리가 «없었습니다». 그래서 회원 관리에서 사람을 못 가렸습니다.
+       *   ⚠️ 값이 «없으면» 담지 않습니다 — 빈 글자로 덮어쓰면 있던 것이 지워집니다.
+       */
+      ...(kakaoEmail ? { email: kakaoEmail } : {}),
       privacy_agreed: true,
       privacy_agreed_at: now,
       terms_agreed: true,

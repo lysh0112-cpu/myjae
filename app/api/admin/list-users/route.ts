@@ -38,9 +38,23 @@ export async function GET() {
         //  ★카카오 «첫 로그인» 순간에는 profiles 줄이 아직 없습니다.
         //    그때는 user_metadata 의 닉네임이 그 사람의 «유일한» 이름입니다 [1부 2-3].
         //  ⛔ 이 줄을 빼지 마십시오.
+        //
+        //  🔴 ★2026-09-10 — 읽는 칸을 «넓혔습니다» (값으로 잰 것)
+        //     카카오가 실제로 주는 칸 열하나를 auth.users 에서 꺼내 봤더니 —
+        //       iss · sub · ★name · ★email · ★full_name · ★user_name · avatar_url
+        //       · provider_id · email_verified · phone_verified · ★preferred_username
+        //     ⇒ ★nickname 이라는 칸이 «없습니다». 이름값은 name 쪽에 들어옵니다.
+        //     ⇒ 전에는 nickname·name 둘만 봐서 ★다른 소셜이 붙으면 또 새어 나갑니다.
+        //  ⛔ 차례 다섯 줄(nickname → hangul_name → 메타 → 이메일앞 → '회원')은
+        //     ★한 줄도 안 바꿨습니다. «셋째 칸이 읽는 자리» 만 넓힌 것입니다.
+        //  ⚠️ 골프온이 pickName 을 ★같은 모양으로 고쳤습니다 (검사 13 → 27항목).
+        //     큐보드도 같은 날 맞춥니다. ⛔ 한 곳만 바꾸지 마십시오 [3부 6-1].
         meta_nickname:
           (u.user_metadata?.nickname as string | undefined) ||
           (u.user_metadata?.name as string | undefined) ||
+          (u.user_metadata?.full_name as string | undefined) ||
+          (u.user_metadata?.user_name as string | undefined) ||
+          (u.user_metadata?.preferred_username as string | undefined) ||
           null,
         role: p?.role || 'customer',
         created_at: p?.created_at || u.created_at || null,
