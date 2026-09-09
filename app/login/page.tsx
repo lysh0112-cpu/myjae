@@ -80,8 +80,37 @@ export default function LoginPage() {
     await routeAfterLogin(data.user.id)
   }
 
-  const handleSocial = (provider: string) => {
-    setError(`${provider} 로그인은 준비 중이에요. 이메일로 로그인해주세요.`)
+  /* ★2026-09-09 — 카카오 로그인을 «실제로» 잇습니다.
+   *   [전]  단추는 «있었는데» 「준비 중이에요」 라고 말만 했습니다 (handleSocial).
+   *   [후]  supabase 가 카카오로 보내고, 돌아올 때 ★/auth/callback 이 받습니다.
+   *
+   *   ⚠️ /auth/callback 은 ★58부 이전부터 «이미» 있습니다. 새로 만들지 않았습니다.
+   *   ⚠️ 첫 로그인이면 profiles 줄이 «없어» callback 이 ★/auth/welcome 으로 보냅니다.
+   *      ⛔ 그 길을 막지 마십시오 — ★카카오 길입니다 (3부 10-2).
+   *
+   *   ⛔⛔ ★redirectTo 를 다른 주소로 바꾸지 마십시오 —
+   *      카카오 콘솔의 Redirect URI · Supabase Callback URL 과 ★한 벌입니다.
+   *      한 곳만 바꾸면 로그인이 통째로 막히는데, ★까닭을 안 알려 줍니다.
+   *
+   *   ⚠️ ★next(왔던 자리)는 카카오 길에서는 «아직» 안 이어집니다 —
+   *      callback 이 서버 쪽이라 주소를 못 물고 갑니다. 이메일 로그인은 그대로 됩니다.
+   *      ⇒ /wallet?from=glf 로 오신 분이 카카오로 들어오면 홈으로 갑니다. 다음 창의 일입니다.
+   */
+  const [social, setSocial] = useState(false)
+
+  const handleKakao = async () => {
+    setError('')
+    setSocial(true)
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: 'kakao',
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    })
+    // ⚠️ 잘 되면 «카카오 화면으로 떠나» 아래 줄까지 못 옵니다.
+    //    여기 닿았다는 것은 ★출발조차 못 했다는 뜻입니다. 조용히 넘기지 않습니다.
+    if (oauthError) {
+      setError('카카오 로그인을 시작하지 못했어요. 잠시 뒤 다시 해보시거나 이메일로 로그인해주세요.')
+      setSocial(false)
+    }
   }
 
   const inputWrap: React.CSSProperties = {
@@ -194,14 +223,24 @@ export default function LoginPage() {
           <div style={{ flex: 1, height: '0.5px', background: '#e8d5c5' }} />
         </div>
 
-        {/* 소셜 (준비중) */}
-        <button onClick={() => handleSocial('카카오')}
-          style={{ width: '100%', height: 50, background: '#FEE500', border: 'none', borderRadius: 14, color: '#3C1E1E', fontSize: 14, fontWeight: 600, cursor: 'pointer', marginBottom: 10 }}>💬 카카오로 로그인</button>
+        {/* 소셜 — ★카카오 «하나» 만 (2026-09-09) */}
+        <button onClick={handleKakao} disabled={social}
+          style={{ width: '100%', height: 50, background: '#FEE500', border: 'none', borderRadius: 14, color: '#3C1E1E', fontSize: 14, fontWeight: 600, cursor: social ? 'default' : 'pointer', opacity: social ? 0.6 : 1, marginBottom: 26 }}>
+          {social ? '카카오로 넘어가는 중…' : '💬 카카오로 로그인'}
+        </button>
+
+        {/* ★네이버·구글은 «내렸습니다» [대표님 2026-09-09] — ⛔ 지우지 않았습니다.
+              [까닭] 네이버는 Supabase 가 «지원하지 않습니다» (목록에 없음).
+                     구글은 Supabase 에서 Enabled 로 «켜져» 있는데 앱을 만든 적이 없어,
+                     ★손님이 누르면 반쯤 되다 말고 «다른 계정» 으로 잡힐 수 있습니다.
+                     ⇒ 그러면 그 사람의 지갑·보관함이 «갈라집니다». 되돌리기 어렵습니다.
+              ⇒ 붙이실 때는 이 주석을 풀고 handleSocial 을 그 갈래로 이으십시오.
         <button onClick={() => handleSocial('네이버')}
           style={{ width: '100%', height: 50, background: '#03C75A', border: 'none', borderRadius: 14, color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', marginBottom: 10 }}>Ｎ 네이버로 로그인</button>
         <button onClick={() => handleSocial('구글')}
           style={{ width: '100%', height: 50, background: '#fff', border: '0.5px solid #e0ddd6', borderRadius: 14, color: '#333', fontSize: 14, fontWeight: 500, cursor: 'pointer', marginBottom: 8 }}>Ｇ 구글로 로그인</button>
         <div style={{ textAlign: 'center', fontSize: 10, color: '#6b5340', marginBottom: 26 }}>소셜 로그인은 준비 중이에요</div>
+        */}
 
         {/* 회원가입 링크 */}
         <div style={{ textAlign: 'center', fontSize: 13, color: '#6f6053', paddingTop: 18, borderTop: '0.5px solid #9c7a58' }}>
