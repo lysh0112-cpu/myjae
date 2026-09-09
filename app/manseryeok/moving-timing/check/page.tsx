@@ -11,7 +11,9 @@
  *    붙일 자리는 아래 runDiagnose() 안이다.
  */
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useState, useRef } from 'react'
+//  ★2026-09-09 — 보관함 자리는 공용 부품 «한 곳» 입니다 [대표님 「색상 통일」]
+import StorageLinkRow from '@/app/components/common/StorageLinkRow'
 import { useRouter, useSearchParams } from 'next/navigation'
 import CheckResultV1 from '../components/CheckResultV1'
 import { runDiagnoseV1, type DiagnoseV1Result, type RawPerson } from '../lib/recommendV1'
@@ -36,6 +38,9 @@ function CheckInner() {
   const [loading, setLoading] = useState(() => !!sp.get('recordId'))
   const [err, setErr] = useState('')
   const [saved, setSaved] = useState<string | null>(null)
+  //  ★2026-09-09 — 보관함에 담겼는가 [대표님 「보관함 버튼」]
+  const [saveState, setSaveState] = useState<'saving' | 'saved' | 'failed'>('saving')
+  const savedRef = useRef(!!sp.get('recordId'))
 
   // 보관함 다시보기 — 스냅샷을 그대로 쓴다
   //   ★setState 를 effect 본문이 아니라 비동기 콜백 안에서만 부른다.
@@ -100,7 +105,11 @@ function CheckInner() {
       }
       const in1 = unpack('p1')
       const in2 = unpack('p2')
-      if (in1) {
+      //  🔴 ★2026-09-09 — 저장 막이 [대표님 「보관함」 건]
+      //     ⛔ 이 막이를 빼면 ★두 번 담길 수 있습니다 (보관함에 두 줄).
+      //     ⚠️ useState 로 막지 마십시오 — «다시 그릴 때» 반영되어 «샙니다».
+      if (in1 && !savedRef.current) {
+        savedRef.current = true
         const okCount = r.results.filter(x => x.detail.passFixed).length
         const res = await saveMovingRecord({
           kind: 'check',
@@ -114,9 +123,16 @@ function CheckInner() {
           direction: r.direction,
           resultData: r,
         })
+        //  🔴 ★2026-09-09 — 실패해도 «아무 말이 없던» 자리입니다 (14부 「조용히 실패하는 코드」)
+        //     ⇒ 손님은 담긴 줄 알고 나가시고 보관함은 «비어» 있었습니다.
+        //     ⛔ else 를 지우지 마십시오.
         if (res.ok) {
+          setSaveState('saved')
           setSaved('보관함에 담았어요.')
           setTimeout(() => setSaved(null), 2600)
+        } else {
+          savedRef.current = false        // ★다시 담으실 수 있게 막이를 풉니다
+          setSaveState('failed')
         }
       }
     }
@@ -246,6 +262,22 @@ function CheckInner() {
       )}
 
       {!loading && result && !result.error && <CheckResultV1 result={result} />}
+
+      {/* 🔴 ★2026-09-09 — 결과 맨 아래 「보관함」 자리  [대표님 지시]
+          「최종결과화면에서 ★보관함 버튼을 만들면 어때」
+          ⚠️ 이 화면에는 보관함으로 가는 길이 ★«아예 없었습니다».
+          ⛔ 단추를 여기에 «직접 만들지» 마십시오 — StorageLinkRow 한 곳입니다. */}
+      {!loading && result && !result.error && (
+        <div style={{ padding: '0 16px 24px' }}>
+          <StorageLinkRow
+            label="이사택일 보관함"
+            href="/manseryeok/moving-timing/moving-storage"
+            state={saveState}
+            onRetry={() => { savedRef.current = false; void runDiagnose() }}
+            accent={accent}
+          />
+        </div>
+      )}
 
       {saved && (
         <div style={{

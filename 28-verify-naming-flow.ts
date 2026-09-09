@@ -2006,8 +2006,50 @@ console.log('\n━━ ㉒-g 🔴 결혼 「정한 날 진단」 자동 저장 (2
     `★결과를 «인자로» 받습니다 (진단 직후 state 는 아직 안 바뀝니다)`)
   check(/savedRef\.current = false/.test(wc),
     `⚠️ 저장이 실패하면 [저장] 단추로 다시 하실 수 있습니다`)
-  check(/onClick=\{handleSave\}/.test(wc),
-    `⚠️ [저장] 단추를 «지우지» 않았습니다 (실패했을 때 쓸 자리)`)
+  //  ★2026-09-09 2차 — [저장] 단추가 ★공용 부품(StorageLinkRow)의 「다시 담기」로 옮겨졌습니다.
+  //     ⚠️ 저장이 «저절로» 되니 늘 「✓ 저장됨」이던 단추를 걷고,
+  //        ★실패했을 때만 나오는 「다시 담기」에 handleSave 를 넘깁니다.
+  //     ⛔ 느슨하게 풀지 말고 «새 모양» 으로 조입니다 (57·58부 방식).
+  check(/onRetry=\{handleSave\}/.test(wc),
+    `⚠️ 실패했을 때 다시 담을 길이 «남아» 있습니다 (StorageLinkRow 의 onRetry)`)
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  🔴 ★2026-09-09 — 결과 화면의 「보관함」 자리와 ★색  [대표님 지시]
+//    「최종결과화면에서 ★보관함 버튼을 만들면 어때」 · 「보기 흉하지 않게」
+//    「★색상들을 모두 통일해줘 … 이런 사소한 것들이 우리 앱의 품질을 좌우하거든」
+//
+//   [값으로 잰 것]  색을 «직접 적은» 곳 ★4,131 군데 · 서로 다른 색 ★718 가지
+//     ⇒ 한 번에 못 바꿉니다. ★1단계 — 부품을 만들고 «보관함 자리부터» [대표님 지시]
+//   ★색 규칙 — «가는 단추» 는 «가는 곳» 색 · «하는 단추» 는 «그 화면» 색
+// ══════════════════════════════════════════════════════════════════
+console.log('\n━━ ㉒-h 🔴 보관함 자리 · 색 통일 1단계 (2026-09-09) ━━')
+{
+  check(/export const STORAGE_LINK/.test(read('lib/ui/color.ts')),
+    `★색 부품이 «한 곳»(lib/ui/color.ts) 에 있습니다`)
+  const row = read('app/components/common/StorageLinkRow.tsx')
+  check(/export default function StorageLinkRow/.test(row),
+    `★보관함 자리가 «한 벌» 입니다`)
+  check(/STORAGE_LINK\.bg/.test(row) && /LINE_OUTER/.test(row),
+    `★「보관함」 단추는 «가는 곳» 색과 정본 선을 씁니다`)
+  check(/다시 담기/.test(row) && /failed/.test(row),
+    `⚠️ 담기지 «못했을» 때만 「다시 담기」가 나옵니다`)
+
+  for (const [name, path] of [
+    ['결혼 진단', 'app/manseryeok/wedding-timing/check/page.tsx'],
+    ['이사 진단', 'app/manseryeok/moving-timing/check/page.tsx'],
+    ['이사 날짜', 'app/manseryeok/moving-timing/pick/page.tsx'],
+    ['타로', 'app/tarot/page.tsx'],
+  ] as const) {
+    check(/StorageLinkRow/.test(read(path)), `${name} 이 «그 부품» 을 씁니다`)
+  }
+
+  //  🔴 이사 진단 — «조용히 실패하던» 자리 (14부)
+  const mc = read('app/manseryeok/moving-timing/check/page.tsx')
+  check(/setSaveState\('failed'\)/.test(mc),
+    `⛔ 이사 진단이 저장 실패를 «조용히» 넘기지 않습니다`)
+  check(/const savedRef = useRef/.test(mc),
+    `⛔ 이사 진단에 ★저장 막이(useRef)가 있습니다 (두 번 담기지 않습니다)`)
 }
 
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)

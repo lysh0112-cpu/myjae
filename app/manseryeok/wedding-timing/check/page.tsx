@@ -1,5 +1,7 @@
 'use client'
 import { Suspense, useState, useEffect, useRef } from 'react'
+//  ★2026-09-09 — 보관함 자리는 공용 부품 «한 곳» 입니다 [대표님 「색상 통일」]
+import StorageLinkRow from '@/app/components/common/StorageLinkRow'
 //  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
 import WalletPaySheet from '@/app/components/common/WalletPaySheet'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -310,28 +312,20 @@ function CheckInner() {
                    「💾 이 결과 보관함에 저장」 → ★「💾 보관함에 저장」
                    ⛔ 다시 늘리지 마십시오. 바꾸실 때 ★320px 화면에서 재십시오.
                 ⚠️ minHeight 46 — ★둘이 «같은 높이» 입니다. 하나만 바꾸지 마십시오. */}
-            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-              <button
-                onClick={handleSave}
-                disabled={saveState !== 'idle'}
-                style={{ flex: 1, padding: '13px 6px', borderRadius: '12px',
-                  minHeight: 46, boxSizing: 'border-box',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: saveState === 'saved' ? '#e8f0e0' : gold,
-                  border: 'none', color: saveState === 'saved' ? '#5a8c5a' : '#1a1208',
-                  fontSize: '13px', fontWeight: 600, cursor: saveState === 'idle' ? 'pointer' : 'default' }}>
-                {saveState === 'saved' ? '✓ 저장됨' : saveState === 'saving' ? '저장 중…' : '💾 보관함에 저장'}
-              </button>
-              <button
-                onClick={() => router.push('/manseryeok/wedding-timing/wedding-storage')}
-                style={{ flex: 1, padding: '13px 6px', borderRadius: '12px',
-                  minHeight: 46, boxSizing: 'border-box',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: '#fff', border: LINE_OUTER, color: '#96502e',
-                  fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
-                📋 결혼택일 보관함
-              </button>
-            </div>
+            {/* 🔴 ★2026-09-09 — 단추 둘을 ★공용 부품으로 바꿨습니다  [대표님 지시]
+                「보기 흉하지 않게 버튼하되」 · 「★색상들을 모두 통일해줘」
+                ⚠️ 저장이 «저절로» 되게 바뀌어 [저장] 단추가 늘 「✓ 저장됨」이었습니다.
+                   ⇒ 아무 일도 안 하는 단추를 걷고 ★담겼다는 것을 한 줄로 말합니다.
+                ⚠️ 「보관함」 단추 색을 ★보관함 정본(StorageShell 의 S)으로 맞췄습니다 —
+                   전에는 #fff·#96502e 를 «직접» 적어 두었습니다.
+                ⛔ 여기에 단추를 «다시 만들지» 마십시오 — StorageLinkRow 한 곳입니다. */}
+            <StorageLinkRow
+              label="결혼택일 보관함"
+              href="/manseryeok/wedding-timing/wedding-storage"
+              state={saveState === 'saved' ? 'saved' : saveState === 'saving' ? 'saving' : 'failed'}
+              onRetry={handleSave}
+              accent={gold}
+            />
           </>
         )}
 

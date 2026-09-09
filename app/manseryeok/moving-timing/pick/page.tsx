@@ -11,6 +11,8 @@
  */
 
 import { Suspense, useEffect, useState } from 'react'
+//  ★2026-09-09 — 보관함 자리는 공용 부품 «한 곳» 입니다 [대표님 「색상 통일」]
+import StorageLinkRow from '@/app/components/common/StorageLinkRow'
 import { useRouter, useSearchParams } from 'next/navigation'
 import PickMovingV1 from '../components/PickMovingV1'
 import { runMovingV1, type MovingV1Result, type DayResult, type RawPerson } from '../lib/recommendV1'
@@ -30,6 +32,9 @@ function PickInner() {
   const [result, setResult] = useState<MovingV1Result | null>(null)
   const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState<string | null>(null)
+  //  ★2026-09-09 — 보관함에 담겼는가 [대표님 「보관함 버튼」]
+  //  ⚠️ 이 화면은 ★날짜를 «누를 때» 담깁니다 — 처음에는 아직 안 담긴 상태입니다.
+  const [saveState, setSaveState] = useState<'saving' | 'saved' | 'failed'>('saving')
 
   useEffect(() => {
     let cancelled = false
@@ -108,6 +113,8 @@ function PickInner() {
       direction: result.direction,
       resultData: result,
     })
+    //  ★2026-09-09 — 담겼는지를 아래 「보관함」 줄도 함께 씁니다 [대표님 지시]
+    setSaveState(res.ok ? 'saved' : 'failed')
     setSaved(res.ok ? `${day.fullLabel}을 보관함에 담았어요.` : (res.message ?? '저장하지 못했어요.'))
     setTimeout(() => setSaved(null), 2600)
   }
@@ -173,6 +180,17 @@ function PickInner() {
           {saved}
         </div>
       )}
+      {/* 🔴 ★2026-09-09 — 결과 맨 아래 「보관함」 자리 [대표님 「보관함 버튼을 만들면 어때」]
+          ⚠️ 이 화면에는 보관함으로 가는 길이 ★«아예 없었습니다».
+          ⛔ 단추를 «직접 만들지» 마십시오 — StorageLinkRow 한 곳입니다. */}
+      <div style={{ padding: '0 16px 24px' }}>
+        <StorageLinkRow
+          label="이사택일 보관함"
+          href="/manseryeok/moving-timing/moving-storage"
+          state={saveState}
+          accent={accent}
+        />
+      </div>
     </main>
   )
 }

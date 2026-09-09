@@ -1,5 +1,7 @@
 'use client'
 import { Suspense, useState, useEffect, useRef } from 'react'
+//  ★2026-09-09 — 보관함 자리는 공용 부품 «한 곳» 입니다 [대표님 「색상 통일」]
+import StorageLinkRow from '@/app/components/common/StorageLinkRow'
 //  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
 import WalletPaySheet from '@/app/components/common/WalletPaySheet'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -100,6 +102,8 @@ function TarotInner() {
   const [question, setQuestion] = useState('')
   const [category, setCategory] = useState<TarotCategory>('기타')
   const [savedId, setSavedId] = useState<string | null>(null)
+  //  ★2026-09-09 — 보관함에 담겼는가 [대표님 「보관함 버튼을 만들면 어때」]
+  const [saveState, setSaveState] = useState<'saving' | 'saved' | 'failed'>('saving')
   const [viewOnly, setViewOnly] = useState(false)
   /**
    * ★2026-08-05 (46부 16차) — 덱 고르는 화면을 걷어내며 정리했습니다.
@@ -296,7 +300,12 @@ function TarotInner() {
           spreadTitle: spread.title,
           cards: savedCards,
           resultData: data.interpretation,
-        }).then(res => { if (res.ok && res.id) setSavedId(res.id) })
+        //  🔴 ★2026-09-09 — 담겼는지를 아래 「보관함」 줄이 씁니다 [대표님 지시]
+        //     ⛔ 실패를 «조용히» 넘기지 마십시오 — 담긴 줄 알고 나가시게 됩니다.
+        }).then(res => {
+          if (res.ok && res.id) { setSavedId(res.id); setSaveState('saved') }
+          else setSaveState('failed')
+        })
       }
     } catch (e) {
       console.error(e)
@@ -701,6 +710,20 @@ function TarotInner() {
             </a>
           </div>
 
+        </div>
+      )}
+
+      {/* 🔴 ★2026-09-09 — 결과 맨 아래 「보관함」 자리 [대표님 「보관함 버튼을 만들면 어때」]
+          ⚠️ 타로에는 보관함으로 가는 길이 ★«아예 없었습니다» (화면은 /tarot/storage 에 있습니다).
+          ⛔ 단추를 «직접 만들지» 마십시오 — StorageLinkRow 한 곳입니다. */}
+      {step === 'result' && interp && (
+        <div style={{ padding: '0 16px 24px' }}>
+          <StorageLinkRow
+            label="타로 보관함"
+            href="/tarot/storage"
+            state={saveState}
+            accent={gold}
+          />
         </div>
       )}
     {/* 🔴 ★2026-09-09 — 공용 결제 시트 [대표님 「동일하게 붙여줘」]
