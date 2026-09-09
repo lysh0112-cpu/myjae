@@ -92,18 +92,24 @@ export default function LoginPage() {
    *      카카오 콘솔의 Redirect URI · Supabase Callback URL 과 ★한 벌입니다.
    *      한 곳만 바꾸면 로그인이 통째로 막히는데, ★까닭을 안 알려 줍니다.
    *
-   *   ⚠️ ★next(왔던 자리)는 카카오 길에서는 «아직» 안 이어집니다 —
-   *      callback 이 서버 쪽이라 주소를 못 물고 갑니다. 이메일 로그인은 그대로 됩니다.
-   *      ⇒ /wallet?from=glf 로 오신 분이 카카오로 들어오면 홈으로 갑니다. 다음 창의 일입니다.
+   *   ⚠️ ★next(왔던 자리)를 카카오 길에도 «실어» 보냅니다 (2026-09-10) —
+   *      redirectTo 에 ?next= 를 붙이면 callback 이 받아 welcome 으로 넘깁니다.
+   *      ⇒ /wallet?from=glf 로 오신 분이 카카오로 들어와도 ★그리로 돌아갑니다.
+   *      ⛔ nextPath() 를 거치지 «않고» 주소창 값을 그대로 싣지 마십시오 —
+   *         「//」·http:// 를 그대로 실으면 ★남의 사이트로 손님을 보냅니다.
    */
   const [social, setSocial] = useState(false)
 
   const handleKakao = async () => {
     setError('')
     setSocial(true)
+    // ★next 는 «걸러진 것» 만 싣습니다 (nextPath 가 「/」로 시작하는 것만 돌려줍니다)
+    const back = nextPath()
+    const cb = `${window.location.origin}/auth/callback`
+      + (back ? `?next=${encodeURIComponent(back)}` : '')
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'kakao',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: cb },
     })
     // ⚠️ 잘 되면 «카카오 화면으로 떠나» 아래 줄까지 못 옵니다.
     //    여기 닿았다는 것은 ★출발조차 못 했다는 뜻입니다. 조용히 넘기지 않습니다.
