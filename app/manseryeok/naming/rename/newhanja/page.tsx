@@ -1,5 +1,7 @@
 'use client'
 import { Suspense, useState, useEffect, useMemo } from 'react'
+//  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
+import WalletPaySheet from '@/app/components/common/WalletPaySheet'
 import { splitSurname } from '@/lib/saju/surname'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
@@ -193,6 +195,8 @@ function NewHanjaInner() {
 
   // ★ 최종 저장 확인 팝업
   const [confirmOpen, setConfirmOpen] = useState(false)
+  //  ★2026-09-09 — 결제 시트 [대표님 「이 이름으로 버튼을 클릭할 때」]
+  const [payOpen, setPayOpen] = useState(false)
 
   // ★ 이름 짓기 조회 횟수 (관리자 설정값 · app_settings)
   const [TRY_LIMIT, setTryLimit] = useState(DEFAULT_TRY_LIMIT)
@@ -1364,7 +1368,15 @@ function NewHanjaInner() {
                   ? <>이 이름으로 <b style={{ color: GOLD }}>풀이를 받습니다</b>.<br />다른 이름은 새로 조회하시면 돼요.</>
                   : <>저장하면 남은 횟수가 <b style={{ color: GOLD }}>{leftAfter}회</b>가 돼요.<br />(총 {TRY_LIMIT}회까지 지어볼 수 있어요)</>}
             </div>
-            <button onClick={confirmSave}
+            {/* ══════════════════════════════════════════════════════
+                🔴 ★2026-09-09 — 확정 뒤에 «결제 시트» 가 이어집니다  [대표님 지시]
+                  「지갑 방식으로 모두 변경하기로 했잖아 …
+                    ★"이 이름으로" 버튼을 클릭할 때 결제버튼 나오게 하자」
+                ⚠️ 이 팝업은 ★고른 글자·획수·자원오행을 보여 주는 자리라 «남깁니다».
+                   ⇒ 무엇을 고르셨는지 보고 → 얼마를 내는지 보고 → 정하십니다.
+                ⛔ 두 창을 «겹쳐» 띄우지 마십시오 — 이 팝업을 «닫고» 시트를 엽니다.
+                ══════════════════════════════════════════════════════ */}
+            <button onClick={() => { setConfirmOpen(false); setPayOpen(true) }}
               style={{ width: '100%', padding: 14, borderRadius: 12, background: '#c8783c', border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>
               이 이름으로 확정하기
             </button>
@@ -1375,6 +1387,18 @@ function NewHanjaInner() {
           </div>
         </div>
       )}
+      {/* ★공용 결제 시트 — ⛔ 여기에 팝업을 «따로 만들지» 마십시오 */}
+      <WalletPaySheet
+        open={payOpen}
+        title={isNewborn ? '👶 내 아이 명품작명' : '✍️ 한자 바꾸기'}
+        subtitle={previewHanja ? `${previewHanja} · ${previewHangul}` : undefined}
+        includes={['고르신 한자로 이름 확정', '수리 4격·자원오행 풀이', '종합 성명학 점수', '보관함 저장']}
+        item={isNewborn ? 'naming_baby_ai' : 'naming_hanja'}
+        actionLabel="이 이름으로 하기"
+        onClose={() => setPayOpen(false)}
+        onConfirm={() => { setPayOpen(false); confirmSave() }}
+      />
+
     </main>
   )
 }

@@ -386,8 +386,15 @@ console.log('\n━━ ⑯-k ★Step 2 — 한글 이름을 «고르는» 화면 
   check(/manual=\{<>/.test(nn), `★「직접 쓰기」 가 그대로 살아 있습니다`)
   check(/function pickName/.test(nn), `고르면 다음으로 넘기는 길이 있습니다`)
   // ⚠️ 이용권·결제 흐름이 «갈리지» 않아야 합니다
-  check(/pickName[\s\S]{0,300}readRemaining\(\) > 0[\s\S]{0,200}setPayOpen\(true\)/.test(nn),
-    `★추천으로 고를 때도 «같은» 이용권·결제 길을 씁니다`)
+  //  🔴 ★2026-09-09 — «새 모양» 으로 다시 조였습니다  [대표님 지시]
+  //     「지갑 방식으로 모두 변경하기로 했잖아 …
+  //       ★"이 이름으로" 버튼을 클릭할 때 결제버튼 나오게 하자」
+  //     전  이 화면(newname)에서 ★이용권(readRemaining) 을 보고 결제 팝업을 띄웠습니다.
+  //     후  ★값은 «다음 화면»(newhanja)에서 한자를 다 고른 뒤 받습니다.
+  //     ⇒ 여기서는 추천이든 직접 쓰기든 ★«똑같이» goHanja 로 갑니다.
+  //     ⛔ 느슨하게 풀지 말고 새 모양으로 조입니다 (57·58부 방식).
+  check(/function pickName[\s\S]{0,400}goHanja\(/.test(nn),
+    `★추천으로 고를 때도 «같은» 문(goHanja)으로 갑니다 — 값은 다음 화면에서 받습니다`)
 
   // ⑤ 추천에 쓸 사주·용신을 구하는가
   check(/useResultSaju/.test(nn), `사주를 구합니다`)

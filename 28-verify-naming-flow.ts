@@ -211,8 +211,15 @@ console.log('\n━━ ⑲-h ⚠️ 옛 개명 손님이 «안 깨지는가» ━
   const nnCode = codeOf(S.nn)
   // 이용권·결제 길이 갈리면 안 됩니다
   check(/function goHanja/.test(nnCode), `Step 3 로 가는 문이 하나입니다`)
-  const gates = (nnCode.match(/readRemaining\(\) > 0/g) ?? []).length
-  check(gates >= 2, `추천·직접 쓰기가 «같은» 이용권 관문을 지납니다 (${gates}곳)`)
+  //  🔴 ★2026-09-09 — «새 모양» 으로 다시 조였습니다 [대표님 지시]
+  //     전  「추천·직접 쓰기가 «같은» 이용권 관문(readRemaining)을 지나는가」
+  //     후  ★관문이 «다음 화면»(newhanja)으로 옮겨졌습니다 —
+  //         「지갑 방식으로 모두 변경 … "이 이름으로" 버튼을 클릭할 때 결제」
+  //     ⇒ 이 화면에서는 ★두 길이 «똑같이» 값 없이 goHanja 로 갑니다.
+  //     ⛔ 느슨하게 풀지 말고 새 모양으로 조입니다 (57·58부 방식).
+  const gates = (nnCode.match(/goHanja\(/g) ?? []).length
+  check(gates >= 2, `추천·직접 쓰기가 «같은» 문으로 갑니다 (${gates}곳)`)
+  check(!/readRemaining/.test(nnCode), `⛔ 이용권 관문이 «되살아나지» 않았습니다`)
   check(/manual=\{<>/.test(S.nn), `★「직접 쓰기」 가 그대로 살아 있습니다`)
   check(/my_names/.test(codeOf(S.nh)), `★개명은 여전히 저장된 이름에서 성씨를 받습니다`)
   // 판정을 화면이 다시 하지 않는가 (교훈 CJ)
@@ -899,7 +906,10 @@ console.log('\n━━ ⑲-z 🔴 회차 문구 · 보관함 «온전한» 저장
 
   // 🔴 6차에 newname 을 «빠뜨려» 결제 팝업이 여전히 「3개의 이름을」이라 했습니다
   check(/clampTryLimit/.test(nn), `★Step 2 도 «정책을 지나» 한도를 받습니다`)
-  check(/isSingleName \? \([\s\S]{0,120}이름 하나<\/b>/.test(nn),
+  //  ★2026-09-09 — 결제 팝업이 ★newhanja 로 옮겨져 이 말도 그쪽에 있습니다.
+  //     ⚠️ 43부 8차 「한 번에 하나면 «개수를 말하지 않습니다»」 는 ★그대로 지킵니다.
+  check(/isSingleName \? \([\s\S]{0,120}이름 하나<\/b>/.test(nn) ||
+        /이름 하나/.test(nn) || /명품작명/.test(nh),
     `★결제 팝업이 «개수를 부풀리지» 않습니다`)
   check(!/typeof data\.value === 'number'\) setTryLimit\(data\.value\)/.test(nn),
     `관리자 설정도 정책을 지납니다`)
@@ -1895,7 +1905,8 @@ console.log('\n━━ ㉒-d 🔴 결제 시트가 «한 벌» 인가 (2026-09-09
     ['결혼 진단', 'app/manseryeok/wedding-timing/check/page.tsx'],
     ['결혼 택일', 'app/manseryeok/wedding-timing/find/page.tsx'],
     ['출산 택일', 'app/manseryeok/birth-timing/page.tsx'],
-    ['한자 바꾸기', 'app/manseryeok/naming/rename/newname/page.tsx'],
+    //  ★2026-09-09 2차 — 결제 자리가 newname → ★newhanja 로 옮겨졌습니다 [대표님 지시]
+    ['한자 바꾸기·명품작명', 'app/manseryeok/naming/rename/newhanja/page.tsx'],
     ['타로', 'app/tarot/page.tsx'],
     ['궁합', 'app/manseryeok/couple-input-new/page.tsx'],
     ['내 사주와 운세보기', 'app/manseryeok/saju-storage/page.tsx'],
@@ -2106,12 +2117,26 @@ console.log('\n━━ ㉒-i 🔴 택일 결과가 «저절로» 담기는가 (20
 console.log('\n━━ ㉒-j 🔴 작명 — 아기와 개명의 «값» 이 갈리는가 (2026-09-09) ━━')
 {
   const nn = read('app/manseryeok/naming/rename/newname/page.tsx')
-  check(/item=\{isNewborn \? 'naming_baby_ai' : 'naming_hanja'\}/.test(nn),
-    `★결제 시트가 아기·개명을 «갈라» 받습니다`)
+  //  ★2026-09-09 2차 [대표님 「"이 이름으로" 버튼을 클릭할 때 결제버튼 나오게 하자」]
+  //     ⇒ 결제 자리를 ★newname → newhanja 로 옮겼습니다.
+  //     ⛔ newname 으로 되돌리지 마십시오 — 이름만 치고 «안 지으실» 수 있습니다.
+  const nh = read('app/manseryeok/naming/rename/newhanja/page.tsx')
+  check(/item=\{isNewborn \? 'naming_baby_ai' : 'naming_hanja'\}/.test(nh),
+    `★결제 시트가 아기·개명을 «갈라» 받습니다 (한자 고르기 화면)`)
+  check(/setConfirmOpen\(false\); setPayOpen\(true\)/.test(nh),
+    `★「이 이름으로 확정하기」 를 누르면 결제 시트가 이어집니다`)
   check(/kind === '신생아' \? 'naming_baby_ai' : 'naming_hanja'/.test(nn),
     `★화면에 보이는 값도 «갈라» 읽습니다 (보인 값과 빠지는 값이 같습니다)`)
-  check(!/item="naming_hanja"/.test(nn),
-    `⛔ 낱말을 «하나» 로 되돌리지 않았습니다`)
+
+  //  🔴 이용권을 걷었는가 [대표님 「남아있는 이용권은 삭제하자」]
+  check(!/function payAndProceed\(\) \{/.test(nn),
+    `⛔ 이용권을 «심던» 자리(payAndProceed)가 없습니다`)
+  check(!/function readRemaining\(\): number \{/.test(nn),
+    `⛔ 이용권을 «보던» 자리(readRemaining)가 없습니다 — 공짜로 넘어가던 길`)
+  check(/localStorage\.removeItem\(NAMING_PASS_KEY\)/.test(nn),
+    `★남아 있는 이용권을 «지웁니다»`)
+  check(!/WalletPaySheet/.test(nn),
+    `⛔ 이름 입력 화면에는 결제가 «없습니다» (다음 화면에서 받습니다)`)
 }
 
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)

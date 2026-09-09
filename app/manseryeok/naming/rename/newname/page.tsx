@@ -1,7 +1,5 @@
 'use client'
 import { useState, useEffect, useRef, Suspense, CSSProperties } from 'react'
-//  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
-import WalletPaySheet from '@/app/components/common/WalletPaySheet'
 import { splitSurname, surnameOfHangul } from '@/lib/saju/surname'
 // ★2026-08-01 (43부 8차) — 「한 번에 이름 하나」 정책.
 //   🔴 6차에 여기를 «빠뜨렸습니다». 결제 팝업이 여전히 「3개의 이름을 지어보고」 라고
@@ -159,8 +157,6 @@ function NewNameInner() {
   const [uid, setUid] = useState('')
   const [hanjaPrice, setHanjaPrice] = useState(20000)   // 한자바꾸기(개명) 가격
   const [tryLimit, setTryLimit] = useState(DEFAULT_TRY_LIMIT)  // 결제 1회당 조회 횟수
-  const [payOpen, setPayOpen] = useState(false)
-  const [pendingName, setPendingName] = useState('')    // 결제 후 이동할 이름
 
   useEffect(() => {
     //  🔴 ★2026-09-09 — 이 화면은 «둘» 을 그립니다 [대표님 「내 아이 명품작명은 ai결제하기가 있나?」]
@@ -179,13 +175,25 @@ function NewNameInner() {
   }, [])
 
   // 현재 남은 조회 횟수 읽기 (이 user의 이용권)
-  function readRemaining(): number {
+  //  🔴 ★2026-09-09 — readRemaining() 을 «걷었습니다» — 이용권을 보던 자리입니다.
+  //     ⛔ 되살리지 마십시오. 남은 횟수로 «공짜로 넘어가던» 길이었습니다.
+
+  // ══════════════════════════════════════════════════════════════════
+  //  🔴 ★2026-09-09 — 남아 있는 «이용권» 을 지웁니다  [대표님 지시]
+  //    「★남아있는 이용권은 삭제하자」
+  //
+  //   [까닭]  전에는 localStorage 에 「N번 지어보기 이용권」을 심어 두고
+  //      남아 있으면 ★결제 없이 넘어갔습니다.
+  //      ⇒ 지갑 방식으로 바꿨으니 그 표는 ★남아 있으면 안 됩니다.
+  //   ⛔ 이 지우기를 빼지 마십시오 — 옛 이용권이 남은 분은 ★공짜로 지으십니다.
+  //   ⚠️ 한 번 지우면 그만입니다 — 이제 아무도 이 표를 «심지» 않습니다.
+  // ══════════════════════════════════════════════════════════════════
+  useEffect(() => {
     try {
-      const p = JSON.parse(localStorage.getItem(NAMING_PASS_KEY) || '{}')
-      if (p.userId === uid && typeof p.remaining === 'number') return p.remaining
+      localStorage.removeItem(NAMING_PASS_KEY)
+      localStorage.removeItem('newname_history_v1')
     } catch {}
-    return 0
-  }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -295,26 +303,19 @@ function NewNameInner() {
     const a = firstHangul(c1)
     const b = firstHangul(c2)
     const name = count === 1 ? a : a + b
-    // 남은 조회 횟수가 있으면 바로 진입, 없으면 결제 팝업
-    if (readRemaining() > 0) {
-      goHanja(name)
-    } else {
-      setPendingName(name)
-      setPayOpen(true)
-    }
+    // 🔴 ★2026-09-09 — 여기서는 «값을 안 받습니다»  [대표님 지시]
+    //   「지갑 방식으로 모두 변경하기로 했잖아 …
+    //     ★"이 이름으로" 버튼을 클릭할 때 결제버튼 나오게 하자」
+    //   ⇒ 값은 ★다음 화면(newhanja)에서 «한자를 다 고른 뒤» 받습니다.
+    //   ⛔ 여기에 결제를 «되돌리지» 마십시오 — 이름만 치고 안 지으실 수 있습니다.
+    goHanja(name)
   }
 
   // 결제(지금은 실제 PG 없이 통과) → 이용권 충전 후 진입
   // ★ 나중에 실제 결제 붙일 때 이 함수 안 "결제 통과" 자리에 PG 호출을 넣으면 됨
-  function payAndProceed() {
-    try {
-      localStorage.setItem(NAMING_PASS_KEY, JSON.stringify({ userId: uid, remaining: tryLimit }))
-      // 결제하면 새 이용권이므로 지난 시도기록 초기화
-      localStorage.removeItem('newname_history_v1')
-    } catch {}
-    setPayOpen(false)
-    goHanja(pendingName)
-  }
+  //  🔴 ★2026-09-09 — payAndProceed() 를 «걷었습니다» [대표님 「남아있는 이용권은 삭제하자」]
+  //     localStorage 에 「N번 지어보기 이용권」을 심던 자리였습니다.
+  //     ⛔ 되살리지 마십시오 — 지갑 방식으로 바뀌었습니다 (newhanja 에서 받습니다).
 
   // ══════════════════════════════════════════════════════════════
   //  ★2026-08-01 (Phase 2-B) — 갈림길 화면(start)에서 실어 온 «작명 옵션»
@@ -438,12 +439,12 @@ function NewNameInner() {
   function pickName(name: string) {
     const n = name.trim()
     if (!n) return
-    if (readRemaining() > 0) {
-      goHanja(n)
-    } else {
-      setPendingName(n)
-      setPayOpen(true)
-    }
+    // 🔴 ★2026-09-09 — 여기서는 «값을 안 받습니다»  [대표님 지시]
+    //   「지갑 방식으로 모두 변경하기로 했잖아 …
+    //     ★"이 이름으로" 버튼을 클릭할 때 결제버튼 나오게 하자」
+    //   ⇒ 값은 ★다음 화면(newhanja)에서 «한자를 다 고른 뒤» 받습니다.
+    //   ⛔ 여기에 결제를 «되돌리지» 마십시오 — 이름만 치고 안 지으실 수 있습니다.
+    goHanja(n)
   }
 
   const inputStyle: CSSProperties = {
@@ -578,26 +579,10 @@ function NewNameInner() {
         </>}
       />
 
-      {/* ★ 개명 이용권 결제 팝업 (선결제 → tryLimit회 조회) */}
-      {/* 🔴 ★2026-09-09 — 여기 있던 «자기 결제 팝업» 을 ★공용 시트로 바꿨습니다
-          [대표님]  「궁합부터 타로까지 ai결제화면을 ★동일하게 붙여줘」
-          ⚠️ 이 화면만 «가운데 뜨는» 창이었습니다 — 다른 여덟은 아래에서 올라오는 시트.
-             ⇒ ★올라오는 시트로 맞췄습니다.
-          ⚠️ 「한 번에 하나면 개수를 말하지 않습니다」 (43부 8차) — ★그 말은 그대로 살렸습니다.
-          ⛔⛔ 여기에 결제 팝업을 «다시 만들지» 마십시오. */}
-      <WalletPaySheet
-        open={payOpen}
-        title={isNewborn ? '👶 내 아이 명품작명' : '✍️ 이름 지어보기'}
-        subtitle={isSingleName ? (
-          <>사주에 맞는 한자로 <b style={{ color: GOLD }}>이름 하나</b>를 지어 드리고<br />상세 풀이까지 확인하실 수 있어요.</>
-        ) : (
-          <>사주에 맞는 한자로 <b style={{ color: GOLD }}>{tryLimit}개</b>의 이름을 지어보고<br />상세 풀이까지 확인하실 수 있어요.</>
-        )}
-        item={isNewborn ? 'naming_baby_ai' : 'naming_hanja'}
-        actionLabel={isNewborn ? '이름 지어보기' : '한자 바꿔보기'}
-        onClose={() => setPayOpen(false)}
-        onConfirm={() => { setPayOpen(false); payAndProceed() }}
-      />
+      {/* 🔴 ★2026-09-09 — 여기 있던 결제 시트를 ★«다음 화면» 으로 옮겼습니다 [대표님 지시]
+          「지갑 방식으로 모두 변경 … ★"이 이름으로" 버튼을 클릭할 때 결제버튼」
+          ⇒ 값은 newhanja 에서 «한자를 다 고른 뒤» 받습니다.
+          ⛔ 여기에 결제를 되돌리지 마십시오 — 이름만 치고 안 지으실 수 있습니다. */}
     </main>
   )
 }
