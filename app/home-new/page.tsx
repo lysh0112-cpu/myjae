@@ -1,5 +1,7 @@
 'use client'
 import HomeBottomNav from '@/app/components/HomeBottomNav'
+/* ★2026-09-10 — 머리 로고를 넣으려고 더했습니다 (public/logo-myjae.png) */
+import Image from 'next/image'
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
@@ -335,22 +337,23 @@ export default function HomeNew() {
         borderBottom: '0.5px solid #9c7a58',
         position: 'sticky', top: 0, zIndex: 20,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <svg width="30" height="34" viewBox="0 0 46 50" style={{ overflow: 'visible' }}>
-            <g>
-              <path className="mc-steam-a" d="M16 14 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
-              <path className="mc-steam-b" d="M23 13 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
-              <path className="mc-steam-c" d="M30 14 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
-            </g>
-            <g className="mc-cup">
-              <path d="M8 20 L38 20 L36 40 Q35 45 30 45 L16 45 Q11 45 10 40 Z" fill="#b46e46" />
-              <path d="M8 20 L38 20 L37.5 24 L8.5 24 Z" fill="#c8783c" />
-              <path d="M38 24 Q45 24 45 30 Q45 36 38 36 L37 32 Q41 32 41 30 Q41 28 37.5 28 Z" fill="#b46e46" />
-              <ellipse cx="23" cy="21" rx="14" ry="2.5" fill="#96502e" />
-            </g>
-          </svg>
-          <span style={{ fontSize: '18px', fontWeight: 900, fontStyle: 'italic' }}>
-            <span style={{ color: '#96502e' }}>Myung</span><span style={{ color: '#b46e46' }}>Cafe</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+          {/* ★2026-09-10 — 커피잔 SVG + MyungCafe 를 ★새 로고 + 「명연재(明然載)」 로 바꿨습니다.
+              [대표님 목업 승낙 · 「다」안 · 2026-09-10]
+
+              ⚠️ 옛 머리는 ★커피잔 그림(김 세 줄 + 잔)이었습니다.
+                 mc-steam-a/b/c · mc-cup 이라는 ★애니메이션 클래스를 쓰고 있었으니,
+                 CSS 쪽에 그 이름이 남아 있으면 ★이제 쓰는 곳이 없습니다.
+                 ⛔ 다만 «찾아서 지우지» 않았습니다 — 다른 화면이 쓸 수도 있어서입니다.
+
+              ⛔ 로고 파일을 바꾸지 마십시오 — public/logo-myjae.png
+                 ★흰 바탕을 지운 «투명» png 입니다. 흰 네모가 있는 원본을 쓰면
+                 피치톤 위에 ★네모가 떠 보입니다.
+              ⚠️ 카카오 콘솔의 앱 아이콘과 ★같은 그림입니다. 한쪽만 바꾸지 마십시오. */}
+          <Image src="/logo-myjae.png" alt="명연재" width={34} height={34} priority />
+          <span style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+            <span style={{ fontSize: '22px', fontWeight: 600, color: '#38414B', letterSpacing: '3px' }}>명연재</span>
+            <span style={{ fontSize: '12px', color: '#68112E' }}>(明然載)</span>
           </span>
         </div>
         {/* ★2026-08-07 (48부 17차) — ☰ 를 ★알약 버튼으로 [대표님 지시]
@@ -383,6 +386,23 @@ export default function HomeNew() {
             {isLoggedIn ? '내 정보' : '로그인'}
           </span>
         </button>
+      </div>
+
+      {/* ★2026-09-10 — 꼬리말 띠 [대표님 「사주·적성·택일·작명」 · 「다」안]
+          ⚠️ 머리 «안» 에 넣으면 글자가 9.5px 로 작아져 안 보입니다.
+             ⇒ 아래 띠로 내려 ★12px 로 키우고 자간을 벌렸습니다.
+          ⚠️ ★손님에게 «무엇을 파는지» 알려 주는 줄입니다.
+             PG 심사원도 첫 화면에서 이것을 봅니다. ⛔ 지우지 마십시오.
+          ⚠️ 위 금빛 선(#B2803C)은 ★로고 Y 의 색입니다. ⛔ 새 색이 아닙니다. */}
+      <div style={{
+        background: '#FFFBF7',
+        borderBottom: '0.5px solid #9c7a58',
+        borderTop: '1px solid #B2803C',
+        padding: '7px 14px', textAlign: 'center',
+      }}>
+        <span style={{ fontSize: '12px', color: '#8a7565', letterSpacing: '5px' }}>
+          사주 · 적성 · 택일 · 작명
+        </span>
       </div>
 
       <main>
