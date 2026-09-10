@@ -141,6 +141,33 @@ export default function MyPageNew() {
       if (p) setProfile({ ...(p as Profile), email: (p as Profile).email || data.user.email || null })
       setLoading(false)
 
+      /* ★2026-09-10 (밤) — 주소에 ?edit=saju 가 있으면 ★사주 칸을 «펼친 채» 로 엽니다.
+       *   [대표님] 홈 카드의 「생년월일시를 넣으면…」을 누르면 «바로» 넣을 수 있게.
+       *   ⇒ 「계정 설정」을 «또» 누르지 않아도 됩니다 (네 걸음 → 세 걸음).
+       *
+       *   ⚠️ ★profile 을 «담은 뒤» 에 엽니다 — 그래야 값이 채워집니다.
+       *      ⛔ 위쪽 useEffect 처음에 부르면 ★빈 칸으로 열립니다 (아까 겪은 그 일).
+       *   ⚠️ Next 의 «주소 읽기 훅» 을 «안 쓰고» 주소창을 직접 읽습니다 —
+       *      쓰면 Suspense 로 감싸야 하는데 이 화면은 그 틀이 아닙니다.
+       *      /login · /auth/welcome 도 ★같은 방식입니다.
+       *   ⚠️ 🔴 그 훅 이름을 ★주석에도 «적지» 마십시오 —
+       *      ⑯-l 검사가 grep 으로 낱말만 찾아 ★주석에 걸립니다.
+       *      (큐보드가 같은 함정에 걸린 것을 알려 주었고, 여기서 제가 또 밟았습니다)
+       *   ⛔ 낱말 edit=saju 를 바꾸지 마십시오 — UserCard 가 그 낱말을 보냅니다. */
+      if (typeof window !== 'undefined'
+          && new URLSearchParams(window.location.search).get('edit') === 'saju') {
+        const q = p as Profile | null
+        setEYear(q?.birth_year ? String(q.birth_year) : '')
+        setEMonth(q?.birth_month ? String(q.birth_month) : '')
+        setEDay(q?.birth_day ? String(q.birth_day) : '')
+        const hIdx = normalizeHourLabel(q?.birth_hour ?? null)
+        setEHour(hIdx == null ? '' : String(hIdx))
+        setEBand(null)
+        setECal((q?.cal_type as '양력' | '음력') || '양력')
+        setEGender((q?.gender as '남' | '여') || '남')
+        setEditMode(true)
+      }
+
       /* ★지갑 — 잔액과 내역. 둘 다 RLS 로 «본인 것만» 옵니다.
          ⚠️ 잔액 줄이 «없으면» null 이 옵니다 ⇒ 0원으로 봅니다. 오류가 아닙니다. */
       supabase.from('mc_wallet').select('balance').eq('user_id', data.user.id)
@@ -594,9 +621,14 @@ export default function MyPageNew() {
                 {msg && <div style={{ color: '#c05a5a', fontSize: 12, marginBottom: 10 }}>{msg}</div>}
                 {/* ⚠️ ★2026-09-10 — [저장]을 «AI 상담» 동그라미가 가렸습니다 [대표님 화면].
                     ⇒ AI 단추는 화면에 «떠 있어»(fixed) 자리를 옮기면 다른 화면이 다 흔들립니다.
-                       ⇒ ★여기서 오른쪽을 비켜 줍니다. paddingRight 로 «단추만» 좁힙니다.
+                    ⇒ ★여기서 오른쪽을 비켜 줍니다.
+                    🔴 ★2026-09-10 (밤) 다시 고침 —
+                       paddingRight 를 «늘 76px» 로 두었더니 ★태블릿·PC 에서
+                       단추가 «가운데로 몰리고» 오른쪽이 텅 비었습니다 [대표님 화면].
+                       ⇒ AI 동그라미는 화면 오른쪽 끝에 붙으므로,
+                          ★카드가 좁을 때«만» 겹칩니다. clamp 로 좁을 때만 비킵니다.
                     ⛔ AiTalkFab 의 right·bottom 을 만지지 마십시오 — 온 화면에 걸립니다. */}
-                <div style={{ display: 'flex', gap: 8, paddingRight: 76 }}>
+                <div style={{ display: 'flex', gap: 8, paddingRight: 'clamp(0px, calc((460px - 100vw) * 10), 76px)', marginBottom: 4 }}>
                   <button onClick={() => setEditMode(false)} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '0.5px solid #9c7a58', background: 'none', color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>취소</button>
                   <button onClick={saveSaju} disabled={saving} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', background: '#b46e46', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>{saving ? '저장 중…' : '저장'}</button>
                 </div>
@@ -724,7 +756,14 @@ export default function MyPageNew() {
               [고침] ★openEdit() 을 부릅니다. setEditMode(true) 는 그 안에 있습니다.
               ⛔ setEditMode(true) 를 «직접» 부르지 마십시오 — 또 빈 칸으로 열립니다. */}
           <div onClick={() => { openEdit(); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }) }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 12px', background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 12, cursor: 'pointer' }}>
-            <span style={{ fontSize: 13, color: '#5a4a3e' }}>⚙️ 계정 설정</span>
+            {/* ★2026-09-10 (밤) — 「⚙️ 계정 설정」 → ★「✦ 내 사주 넣기 · 고치기」 [대표님]
+                [까닭] 손님은 ★「계정 설정」을 «사주 넣는 곳» 이라고 생각하지 않습니다.
+                       ⇒ 사주가 없는 분이 ★여기를 못 찾고 헤맵니다.
+                ⚠️ 「탈퇴」는 ★이름에 «안» 넣었습니다 —
+                   사주를 넣으려는 분이 탈퇴를 떠올리게 됩니다. 단추는 아래에 따로 있습니다.
+                ★오른쪽 › 는 «누르는 것» 임을 알리는 표시입니다. ⛔ 빼지 마십시오. */}
+            <span style={{ fontSize: 13, color: '#5a4a3e' }}>✦ 내 사주 넣기 · 고치기</span>
+            <span style={{ marginLeft: 'auto', color: '#9c7a58', fontSize: 15, lineHeight: 1 }} aria-hidden="true">›</span>
           </div>
         </div>
 

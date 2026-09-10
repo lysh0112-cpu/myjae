@@ -163,7 +163,15 @@ export default function UserCard({ footer }: { footer?: ReactNode | ((info: User
 
   // 내 사주 상세 화면 주소 (마이페이지 sajuDetailUrl 과 같은 규칙)
   const sajuDetailUrl = () => {
-    if (!hasSaju) return '/mypage-new'
+    /* ★2026-09-10 (밤) — 사주가 «없는» 분은 ★사주 칸이 «펼쳐진 채» 로 열리게 보냅니다.
+     *   [대표님] 「신규회원이 이 화면에서 등록하는 것인가?」
+     *   [전]  /mypage-new  로만 보내서 —
+     *         손님이 마이페이지에 닿은 뒤 ★「계정 설정」을 «또» 눌러야 했습니다.
+     *         ⇒ 홈 → 카드 → 마이페이지 → 계정 설정 → 사주 칸  = ★네 걸음
+     *   [후]  ?edit=saju 를 붙여 ★사주 칸이 «이미 펼쳐진» 채로 엽니다. = ★세 걸음
+     *   ⛔ 낱말 edit=saju 를 바꾸지 마십시오 — 마이페이지가 그 낱말을 읽습니다
+     *      (app/mypage-new/page.tsx). 한쪽만 고치면 «다시 네 걸음» 이 됩니다. */
+    if (!hasSaju) return '/mypage-new?edit=saju'
     const g = profile?.gender === '여' ? '여' : '남'
     const cal = profile?.cal_type || '양력'
     const hourIdx = toHourIdx(profile?.birth_hour ?? null)
