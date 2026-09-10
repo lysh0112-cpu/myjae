@@ -619,16 +619,14 @@ export default function MyPageNew() {
                   </div>
                 )}
                 {msg && <div style={{ color: '#c05a5a', fontSize: 12, marginBottom: 10 }}>{msg}</div>}
-                {/* ⚠️ ★2026-09-10 — [저장]을 «AI 상담» 동그라미가 가렸습니다 [대표님 화면].
-                    ⇒ AI 단추는 화면에 «떠 있어»(fixed) 자리를 옮기면 다른 화면이 다 흔들립니다.
-                    ⇒ ★여기서 오른쪽을 비켜 줍니다.
-                    🔴 ★2026-09-10 (밤) 다시 고침 —
-                       paddingRight 를 «늘 76px» 로 두었더니 ★태블릿·PC 에서
-                       단추가 «가운데로 몰리고» 오른쪽이 텅 비었습니다 [대표님 화면].
-                       ⇒ AI 동그라미는 화면 오른쪽 끝에 붙으므로,
-                          ★카드가 좁을 때«만» 겹칩니다. clamp 로 좁을 때만 비킵니다.
+                {/* ⚠️ ★2026-09-11 — [저장]을 «AI 상담» 동그라미가 가려 오른쪽을 비켜 뒀었는데,
+                    ★대표님이 AI 단추를 «숨기셨습니다» (AiTalkFab.tsx · AI_FAB_ON = false).
+                    ⇒ 가릴 것이 «없어져» 비켜 두기를 «되돌렸습니다».
+                    ⚠️ ★AI 단추를 다시 켜시면 이 자리도 «함께» 봐 주십시오 —
+                       안 그러면 [저장]이 또 동그라미에 가립니다.
+                       (되돌리실 값: paddingRight: 'clamp(0px, calc((460px - 100vw) * 10), 76px)')
                     ⛔ AiTalkFab 의 right·bottom 을 만지지 마십시오 — 온 화면에 걸립니다. */}
-                <div style={{ display: 'flex', gap: 8, paddingRight: 'clamp(0px, calc((460px - 100vw) * 10), 76px)', marginBottom: 4 }}>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
                   <button onClick={() => setEditMode(false)} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '0.5px solid #9c7a58', background: 'none', color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>취소</button>
                   <button onClick={saveSaju} disabled={saving} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', background: '#b46e46', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>{saving ? '저장 중…' : '저장'}</button>
                 </div>

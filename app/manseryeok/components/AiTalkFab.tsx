@@ -24,6 +24,26 @@ type FabProfile = {
   saju_saved: boolean | null
 }
 
+/* ══════════════════════════════════════════════════════════════════
+ *  🔴 ★AI 상담 단추 «끄고 켜는 스위치»    [대표님 2026-09-11 「숨겨버리자」]
+ *
+ *    false  →  ★화면에 «안 나옵니다» (지금)
+ *    true   →  다시 나옵니다
+ *
+ *  [왜 껐나]  「혹시 나중에 쓸 일이 있으면 그때 가서 수정해서 쓰든지」
+ *     ⇒ ⛔ 코드를 «지우지 않았습니다». 되살릴 때 ★이 한 줄만 true 로 바꾸십시오.
+ *
+ *  ⚠️ 이 단추는 ★홈과 마이페이지 «두 곳» 에 있습니다.
+ *     ⇒ 여기 «한 곳» 만 바꾸면 ★둘 다 한꺼번에 꺼지고 켜집니다.
+ *     ⛔ 두 화면에서 <AiTalkFab /> 을 «지우지» 마십시오 — 되살릴 때 또 찾아야 합니다.
+ *
+ *  ⚠️ 되살리실 때 «함께» 보실 것 —
+ *     · 마이페이지의 [저장] 단추가 이 동그라미에 가려 오른쪽을 비켜 두었습니다
+ *       (app/mypage-new/page.tsx · paddingRight clamp)
+ *       ⇒ 영영 안 쓰시기로 하면 ★그 비켜 둔 것도 되돌리십시오.
+ * ══════════════════════════════════════════════════════════════════ */
+const AI_FAB_ON = false
+
 export default function AiTalkFab() {
   const router = useRouter()
   const [profile, setProfile] = useState<FabProfile | null>(null)
@@ -62,6 +82,11 @@ export default function AiTalkFab() {
     }))
     router.push(`/manseryeok/ai-talk?person1=${p1}`)
   }
+
+  /* ★스위치가 꺼져 있으면 «아예 안 그립니다» [대표님 2026-09-11]
+     ⛔ 이 줄을 지우지 마십시오 — 위 AI_FAB_ON 이 뜻을 잃습니다.
+     ⚠️ 위쪽 훅(useEffect)들은 그대로 돕니다. 껐다 켜기가 «바로» 되게 하려는 것입니다. */
+  if (!AI_FAB_ON) return null
 
   // 로그인 확인 전에는 안 그린다 (깜빡임 방지)
   if (isLoggedIn === null) return null
