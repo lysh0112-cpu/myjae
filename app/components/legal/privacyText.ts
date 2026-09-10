@@ -19,7 +19,9 @@
 import { COMPANY } from '../common/companyInfo'
 import type { LegalArticle } from './termsText'
 
-export const PRIVACY_UPDATED = '★시행일 미정'
+/* ★2026-09-10 시행 [대표님 「오늘부터」]
+ *   ⚠️ 방침을 고치실 때는 제11조에 따라 7일 전(불리한 변경은 30일 전) 공지가 필요합니다. */
+export const PRIVACY_UPDATED = '시행일 2026년 9월 10일'
 
 export const PRIVACY: LegalArticle[] = [
   {

@@ -19,7 +19,10 @@ import { COMPANY } from '../common/companyInfo'
 
 export type LegalArticle = { title: string; paras: string[] }
 
-export const TERMS_UPDATED = '★시행일 미정'
+/* ★2026-09-10 시행 [대표님 「오늘부터」]
+ *   ⚠️ 약관을 «고치실 때» 는 제4조에 따라 7일 전(불리한 개정은 30일 전) 공지가 필요합니다.
+ *      ⇒ 그때 이 날짜도 «함께» 바꾸십시오. 워드 원본도 같이 고쳐야 합니다. */
+export const TERMS_UPDATED = '시행일 2026년 9월 10일'
 
 export const TERMS: LegalArticle[] = [
   {
@@ -35,16 +38,7 @@ export const TERMS: LegalArticle[] = [
     ],
   },
   {
-    title: '제3조 (용어의 정의)',
-    paras: [
-      '1. "회원"이란 이 약관에 동의하고 카카오 계정으로 가입하신 분을 말합니다.',
-      '2. "충전금"이란 회원이 미리 충전하여 유료 서비스 이용 시 차감되는 선불 이용 대금을 말합니다.',
-      '3. "전문가 상담"이란 회사에 소속된 상담사가 직접 진행하는 유료 상담을 말합니다.',
-      '4. "AI 콘텐츠"란 회사가 생성형 AI 를 이용해 만들어 드리는 사주·작명·타로 등의 결과물을 말합니다.',
-    ],
-  },
-  {
-    title: '제4조 (회사 정보)',
+    title: '제3조 (회사 정보)',
     paras: [
       `${COMPANY.name} · 대표 ${COMPANY.ceo} · 사업자등록번호 ${COMPANY.bizNo}`,
       COMPANY.addr,
@@ -52,6 +46,15 @@ export const TERMS: LegalArticle[] = [
         ? `통신판매업 신고번호 ${COMPANY.mailOrderNo}`
         : '통신판매업 신고번호 (신고 진행 중)',
       COMPANY.tel ? `${COMPANY.email} · ${COMPANY.tel}` : COMPANY.email,
+    ],
+  },
+  {
+    title: '제4조 (약관의 개정)',
+    paras: [
+      /* 🔴 ★2026-09-10 — 이 조항이 «코드에만 빠져» 있었습니다. 워드와 대조하다 찾았습니다.
+       *   ⛔ 빼지 마십시오 — ★약관을 고칠 수 있는 «근거» 가 이 조항입니다.
+       *      통신판매업 신고번호·시행일을 나중에 채우려면 개정 절차가 있어야 합니다. */
+      '회사는 관련 법령을 위배하지 않는 범위에서 약관을 개정할 수 있으며, 적용일과 사유를 밝혀 7일 전부터 공지합니다. 회원에게 불리한 개정은 30일 전에 공지합니다. 회원이 개정 약관에 동의하지 않을 경우 탈퇴할 수 있습니다.',
     ],
   },
   {
