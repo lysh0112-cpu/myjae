@@ -50,8 +50,25 @@ export const COMPANY: CompanyInfo = {
   },
 }
 
-/** 자매 서비스 — ★주소는 4부 5장이 「바꾸지 마십시오」라 한 값입니다. */
-export const SISTER_APPS = [
-  { key: 'bil', name: '큐보드', desc: '당구 점수판', href: 'https://cue.myjae.kr' },
-  { key: 'glf', name: '골프온', desc: '골프 스코어', href: 'https://golf.myjae.kr' },
-] as const
+/* ══════════════════════════════════════════════════════════════════
+ *  🔴🔴 ★세 앱 주소를 적어 두는 «유일한 자리» 입니다.
+ *
+ *   ⚠️ 원래 app/wallet/page.tsx 의 BACK 표에 있던 것을 ★여기로 옮겼습니다
+ *      (2026-09-10). 자매 바로가기와 약관 화면이 «같은 주소» 를 쓰게 되면서
+ *      제가 companyInfo 에 «또» 적어 두 벌이 되었던 것을 합친 것입니다.
+ *      ⇒ 지갑 파일은 이제 여기서 «가져다» 씁니다.
+ *
+ *   ⛔⛔ 주소가 또 바뀌면 ★여기만 고치십시오. 다른 곳에 적지 마십시오.
+ *   ⚠️ 낱말(myc·bil·glf)은 ★mc_ledger.service 와 같은 것입니다.
+ *      ⛔ 바꾸지 마십시오 (1부 3-1 · 4부 5장).
+ * ══════════════════════════════════════════════════════════════════ */
+export type AppKey = 'myc' | 'bil' | 'glf'
+
+export const APPS: Record<AppKey, { name: string; desc: string; href: string; back: string }> = {
+  myc: { name: '명연재', desc: '사주·상담',   href: 'https://myjae.kr',      back: '명연재로 돌아가기' },
+  bil: { name: '큐보드', desc: '당구 점수판', href: 'https://cue.myjae.kr',  back: '큐보드로 돌아가기' },
+  glf: { name: '골프온', desc: '골프 스코어', href: 'https://golf.myjae.kr', back: '골프온으로 돌아가기' },
+}
+
+/** 명카페 홈에 보여 줄 «상대편» 둘 — ⛔ 주소를 여기 적지 말고 APPS 를 가리키십시오 */
+export const SISTER_KEYS: AppKey[] = ['bil', 'glf']

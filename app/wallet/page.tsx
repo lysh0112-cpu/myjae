@@ -3,6 +3,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import WalletPanel from '@/app/components/common/WalletPanel'
+import { APPS } from '@/app/components/common/companyInfo'
 
 /* ══════════════════════════════════════════════════════════════════
  *  ★공용 지갑 화면 — 2026-09-08 신설 [대표님 지시]
@@ -41,9 +42,16 @@ import WalletPanel from '@/app/components/common/WalletPanel'
 //      주소가 또 바뀌면 여기만 고치십시오. 다른 곳에 적지 마십시오.
 //   ⚠️ 낱말(glf·bil)은 ★mc_ledger.service 와 같은 것입니다. ⛔ 바꾸지 마십시오 (1부 3-1).
 // ══════════════════════════════════════════════════════════════════
+//  🔴🔴 ★2026-09-10 — 이 표를 ★app/components/common/companyInfo.ts 의 APPS 로 «옮겼습니다».
+//
+//   [까닭]  약관 화면(/terms · /privacy)과 자매 바로가기도 «같은 주소» 를 쓰게 되어
+//      세 곳에 같은 주소가 적히려 했습니다. ⇒ 한 표로 합쳤습니다.
+//   ⛔⛔ 주소가 또 바뀌면 ★companyInfo.ts 의 APPS «한 곳» 만 고치십시오.
+//   ⚠️ 낱말(glf·bil)은 ★mc_ledger.service 와 같은 것입니다. ⛔ 바꾸지 마십시오 (1부 3-1).
+// ══════════════════════════════════════════════════════════════════
 const BACK: Record<string, { label: string; href: string }> = {
-  glf: { label: '골프온으로 돌아가기', href: 'https://golf.myjae.kr' },
-  bil: { label: '큐보드로 돌아가기', href: 'https://cue.myjae.kr' },
+  glf: { label: APPS.glf.back, href: APPS.glf.href },
+  bil: { label: APPS.bil.back, href: APPS.bil.href },
 }
 
 function WalletInner() {

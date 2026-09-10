@@ -18,7 +18,7 @@
 //   ⛔ 새 색을 짓지 않았습니다 — 홈·환영 화면과 «같은» 피치톤입니다 (3부 5장 결).
 // ==========================================================================
 
-import { SISTER_APPS } from './companyInfo'
+import { APPS, SISTER_KEYS } from './companyInfo'
 
 const C = {
   head: '#96502e',
@@ -51,9 +51,11 @@ export default function SisterLinks() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        {SISTER_APPS.map(app => (
+        {SISTER_KEYS.map(key => {
+          const app = APPS[key]
+          return (
           <a
-            key={app.key}
+            key={key}
             href={app.href}
             style={{
               background: C.card,
@@ -70,17 +72,18 @@ export default function SisterLinks() {
               aria-hidden="true"
               style={{
                 width: 10, height: 10, borderRadius: '50%',
-                background: TINT[app.key] ?? C.faint, flexShrink: 0,
+                background: TINT[key] ?? C.faint, flexShrink: 0,
               }}
             />
             <span style={{ fontSize: 13.5, color: C.ink }}>{app.name}</span>
             <span style={{ marginLeft: 'auto', color: C.chev, fontSize: 15, lineHeight: 1 }} aria-hidden="true">›</span>
           </a>
-        ))}
+          )
+        })}
       </div>
 
       <div style={{ fontSize: 10.5, color: C.faint, textAlign: 'center', marginTop: 9 }}>
-        {SISTER_APPS.map(a => a.desc).join(' · ')} — 지갑은 세 곳이 함께 씁니다
+        {SISTER_KEYS.map(k => APPS[k].desc).join(' · ')} — 지갑은 세 곳이 함께 씁니다
       </div>
     </section>
   )

@@ -2171,13 +2171,21 @@ console.log('\n━━ ㉒-j 🔴 작명 — 아기와 개명의 «값» 이 갈�
 // ══════════════════════════════════════════════════════════════════
 console.log('\n━━ ㉒-k 🔴 세 앱 주소가 «새 도메인» 인가 (2026-09-09) ━━')
 {
+  //  🔴 ★2026-09-10 — 주소 표가 ★app/components/common/companyInfo.ts 로 «옮겨졌습니다».
+  //     [까닭] 지갑 «말고도» 자매 바로가기(SisterLinks)와 약관 화면(/terms·/privacy)이
+  //            같은 주소를 쓰게 되어, 세 곳에 같은 주소가 적히려 했습니다.
+  //     ⛔ 검사를 «느슨하게 풀지 않았습니다» — 보는 자리를 옮기고 ★한 줄 더 엄하게 했습니다.
+  const a = codeOf(read('app/components/common/companyInfo.ts'))
   const w = codeOf(read('app/wallet/page.tsx'))
-  check(/href: 'https:\/\/golf\.myjae\.kr'/.test(w), `★골프온 — golf.myjae.kr`)
-  check(/href: 'https:\/\/cue\.myjae\.kr'/.test(w), `★큐보드 — cue.myjae.kr`)
-  check(!/vercel\.app/.test(w), `⛔ 돌아가기 주소에 옛 vercel.app 이 «없습니다»`)
+  check(/href: 'https:\/\/golf\.myjae\.kr'/.test(a), `★골프온 — golf.myjae.kr`)
+  check(/href: 'https:\/\/cue\.myjae\.kr'/.test(a), `★큐보드 — cue.myjae.kr`)
+  check(!/vercel\.app/.test(a) && !/vercel\.app/.test(w), `⛔ 돌아가기 주소에 옛 vercel.app 이 «없습니다»`)
   //  ⚠️ 낱말(glf·bil)은 mc_ledger.service 와 짝입니다 — 바뀌면 지갑 내역이 갈립니다
-  check(/glf: \{/.test(w) && /bil: \{/.test(w),
+  check(/glf: \{/.test(a) && /bil: \{/.test(a),
     `⛔ 앱 딱지(glf·bil)를 «바꾸지» 않았습니다 (mc_ledger 와 짝입니다)`)
+  //  ★새로 더한 줄 — 지갑이 표를 «가져다» 쓰는지. 제 손으로 또 적으면 두 벌이 됩니다.
+  check(/companyInfo/.test(w),
+    `⛔ 지갑이 ★주소 표를 «가져다» 씁니다 (다시 적어 두 벌이 되지 않았습니다)`)
 }
 
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
