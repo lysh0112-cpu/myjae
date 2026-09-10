@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { memberName } from '@/lib/memberName'
+/* ★2026-09-11 — 부르기 «직전» 에 세션을 새로 받습니다 (오래 켜 둔 화면의 401 을 막습니다) */
+import { freshSession } from './callAdmin'
 
 type Member = {
   id: string
@@ -73,6 +75,9 @@ export default function MemberManager({
     setLoading(true)
     setMsg('')
     try {
+      /* ⛔ 이 줄을 빼지 마십시오 — 화면을 오래 켜 두면 토큰이 1시간에 죽습니다.
+         middleware 는 «화면을 옮길 때» 만 돌아 fetch 는 갱신될 기회가 없습니다. */
+      if (!await freshSession()) { setMsg('로그인이 풀렸어요. 다시 로그인해 주세요.'); return }
       const res = await fetch('/api/admin/list-users')
       const result = await res.json()
       if (!res.ok) {
@@ -103,6 +108,9 @@ export default function MemberManager({
     setAdding(true)
     setMsg('')
     try {
+      /* ⛔ 이 줄을 빼지 마십시오 — 화면을 오래 켜 두면 토큰이 1시간에 죽습니다.
+         middleware 는 «화면을 옮길 때» 만 돌아 fetch 는 갱신될 기회가 없습니다. */
+      if (!await freshSession()) { setMsg('로그인이 풀렸어요. 다시 로그인해 주세요.'); return }
       const res = await fetch('/api/admin/create-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -132,6 +140,9 @@ export default function MemberManager({
     setRoleSavingId(member.id)
     setMsg('')
     try {
+      /* ⛔ 이 줄을 빼지 마십시오 — 화면을 오래 켜 두면 토큰이 1시간에 죽습니다.
+         middleware 는 «화면을 옮길 때» 만 돌아 fetch 는 갱신될 기회가 없습니다. */
+      if (!await freshSession()) { setMsg('로그인이 풀렸어요. 다시 로그인해 주세요.'); return }
       const res = await fetch('/api/admin/update-role', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -182,6 +193,9 @@ export default function MemberManager({
     setMsg('')
     try {
       // 1) 닉네임 저장
+      /* ⛔ 이 줄을 빼지 마십시오 — 화면을 오래 켜 두면 토큰이 1시간에 죽습니다.
+         middleware 는 «화면을 옮길 때» 만 돌아 fetch 는 갱신될 기회가 없습니다. */
+      if (!await freshSession()) { setMsg('로그인이 풀렸어요. 다시 로그인해 주세요.'); return }
       const resNick = await fetch('/api/admin/update-nickname', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -244,6 +258,9 @@ export default function MemberManager({
     setDeletingId(member.id)
     setMsg('')
     try {
+      /* ⛔ 이 줄을 빼지 마십시오 — 화면을 오래 켜 두면 토큰이 1시간에 죽습니다.
+         middleware 는 «화면을 옮길 때» 만 돌아 fetch 는 갱신될 기회가 없습니다. */
+      if (!await freshSession()) { setMsg('로그인이 풀렸어요. 다시 로그인해 주세요.'); return }
       const res = await fetch('/api/admin/delete-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

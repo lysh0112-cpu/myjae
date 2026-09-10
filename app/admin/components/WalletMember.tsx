@@ -1,6 +1,8 @@
 'use client'
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
+/* ★2026-09-11 — 관리자 API 는 ★callAdmin 으로 부릅니다 (오래 켜 둔 화면의 401 을 막습니다) */
+import { callAdmin } from './callAdmin'
 import { memberName } from '@/lib/memberName'
 
 //  ★회원 지갑 — 2026-09-05 신설 (HANDOVER-WALLET.md 4장)
@@ -109,15 +111,12 @@ export default function WalletMember({
        [고침]    app/api/admin/wallet/member 가 ★서버에서 대신 읽어 줍니다.
        ⛔ 다시 supabase.from('profiles') 로 되돌리지 마십시오 — 또 막힙니다.
        ⚠️ 그 정책을 «푸는» 것으로 고치지 마십시오 — 손님이 남의 사주를 봅니다. */
-    const r = await fetch('/api/admin/wallet/member', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ what: 'one', userId: id }),
-    })
-    const j = await r.json()
-    const p = j?.member as { id: string; nickname: string | null; hangul_name: string | null; balance: number } | undefined
+    const r = await callAdmin<{ member: { id: string; nickname: string | null; hangul_name: string | null; balance: number } }>(
+      '/api/admin/wallet/member', { what: 'one', userId: id })
+    const p = r.ok ? r.data.member : undefined
     if (!r.ok || !p) {
       setBusy(false)
-      alert(j?.error ?? '그 회원을 못 찾았습니다.')
+      alert(r.ok ? '그 회원을 못 찾았습니다.' : r.message)
       return
     }
     /* ⚠️ 잔액도 ★서버가 «함께» 줍니다 (mc_wallet 도 RLS 에 막힙니다).
@@ -153,13 +152,10 @@ export default function WalletMember({
     /* 🔴 ★2026-09-10 (밤) — 서버 길로 옮겼습니다 (RLS · 위 loadOne 주석 참고).
        ⚠️ 두 칸(닉네임·이름)을 «다» 훑는 규칙은 ★서버 쪽으로 옮겨 두었습니다.
        ⛔ 여기서 profiles·mc_wallet 을 곧장 부르지 마십시오 — 막힙니다. */
-    const r = await fetch('/api/admin/wallet/member', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ what: 'search', keyword: key }),
-    })
-    const j = await r.json()
-    if (!r.ok) { alert('찾기 실패: ' + (j?.error ?? '알 수 없음')); setBusy(false); return }
-    setList((j?.list ?? []) as Found[])
+    const r = await callAdmin<{ list: Found[] }>(
+      '/api/admin/wallet/member', { what: 'search', keyword: key })
+    if (!r.ok) { alert(r.message); setBusy(false); return }
+    setList(r.data.list ?? [])
     setPicked(null)
     setLedger([])
     setBusy(false)
@@ -168,13 +164,10 @@ export default function WalletMember({
   async function pick(m: Found) {
     setPicked(m)
     /* 🔴 ★2026-09-10 (밤) — 서버 길로 (RLS · 위 loadOne 주석 참고). */
-    const r = await fetch('/api/admin/wallet/member', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ what: 'ledger', userId: m.id }),
-    })
-    const j = await r.json()
-    if (!r.ok) { alert('내역 불러오기 실패: ' + (j?.error ?? '알 수 없음')); return }
-    setLedger((j?.ledger ?? []) as Ledger[])
+    const r = await callAdmin<{ ledger: Ledger[] }>(
+      '/api/admin/wallet/member', { what: 'ledger', userId: m.id })
+    if (!r.ok) { alert(r.message); return }
+    setLedger(r.data.ledger ?? [])
   }
 
   async function charge(amount: number) {
