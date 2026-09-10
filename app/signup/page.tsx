@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -100,19 +101,43 @@ export default function SignupPage() {
   }
 
   // 소셜 로그인 (아직 준비 중)
-  const handleSocial = (provider: string) => {
-    setMsg(`${provider} 로그인은 준비 중입니다. 이메일로 가입해주세요.`)
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+  /* 🔴 ★2026-09-10 (밤) — 「준비 중입니다」라고만 하던 handleSocial 을
+   *   ★«진짜로 도는» 카카오 가입으로 갈아 끼웠습니다.
+   *   ⚠️ app/login/page.tsx 의 handleKakao 와 «같은 방식» 입니다.
+   *      ⛔ 한쪽만 고치지 마십시오 — 둘이 어긋나면 한쪽에서만 로그인이 됩니다.
+   *   ⚠️ 카카오로 오시면 ★/auth/callback → /auth/welcome 으로 가서
+   *      닉네임·약관·만 14세를 받습니다. ⇒ ★이 화면의 긴 칸들은 «안 봅니다». */
+  const [social, setSocial] = useState(false)
+  const handleKakao = async () => {
+    setMsg('')
+    setSocial(true)
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'kakao',
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    })
+    /* ⚠️ 잘 되면 «카카오 화면으로 떠나» 아래 줄까지 못 옵니다.
+       여기 닿았다는 것은 ★출발조차 못 했다는 뜻입니다. 조용히 넘기지 않습니다. */
+    if (error) {
+      setMsg('카카오 가입을 시작하지 못했어요. 잠시 뒤 다시 해보시거나 이메일로 가입해주세요.')
+      setSocial(false)
+    }
   }
 
   // 회원가입 실행
   const handleSignup = async () => {
     setMsg('')
-    if (!hangulName) { setMsg('이름(한글)을 입력해주세요.'); return }
-    if (!gender) { setMsg('성별을 선택해주세요.'); return }
-    if (year.length !== 4 || !month || !day) { setMsg('생년월일을 정확히 입력해주세요.'); return }
-    if (!isValidBirthDate(year, month, day, calType)) { setMsg('생년월일이 올바르지 않아요. 다시 확인해주세요.'); return }
-    if (!hour) { setMsg('태어난 시간을 선택해주세요. 정확히 모르시면 시간대 버튼으로 골라주세요.'); return }
+    /* 🔴 ★2026-09-10 (밤) — 사주와 이름을 ★«선택» 으로 바꿨습니다.
+     *   [대표님] 「회원가입은 모두 통일하고, 명연재 정보 입력을 따로 가져가자」
+     *   ⇒ 가입은 ★계정만 만듭니다. 사주는 «쓸 때» 마이페이지에서 받습니다.
+     *   ⚠️ 넣으시다 «만» 경우는 막습니다 — 반쯤 든 사주는 풀이가 틀립니다. */
+    if (!nickname && !hangulName) { setMsg('닉네임을 입력해주세요.'); return }
+    const sajuTyped = !!(year || month || day || hour || gender)
+    if (sajuTyped) {
+      if (!gender) { setMsg('성별을 선택해주세요.'); return }
+      if (year.length !== 4 || !month || !day) { setMsg('생년월일을 정확히 입력해주세요.'); return }
+      if (!isValidBirthDate(year, month, day, calType)) { setMsg('생년월일이 올바르지 않아요. 다시 확인해주세요.'); return }
+      if (!hour) { setMsg('태어난 시간을 선택해주세요. 정확히 모르시면 시간대 버튼으로 골라주세요.'); return }
+    }
     if (!email || !email.includes('@')) { setMsg('올바른 이메일을 입력해주세요.'); return }
     if (password.length < 6) { setMsg('비밀번호는 6자 이상으로 입력해주세요.'); return }
     if (password !== passwordConfirm) { setMsg('비밀번호가 일치하지 않습니다.'); return }
@@ -146,19 +171,23 @@ export default function SignupPage() {
 
     const { error: profileError } = await supabase.from('profiles').upsert({
       id: userId,
-      hangul_name: hangulName,
+      hangul_name: hangulName || null,
       hanja_name: hanjaName || null,
       nickname: nickname || hangulName,
       email,
-      birth_year: parseInt(year, 10),
-      birth_month: parseInt(month, 10),
-      birth_day: parseInt(day, 10),
-      birth_hour: hourValue,
-      cal_type: calType,
-      gender: genderValue,
-      leap_month: leapValue,
+      /* ⚠️ 사주를 «안 넣으셨으면» 칸을 null 로 둡니다.
+         ⛔ 0 이나 빈 문자열을 넣지 마십시오 — 풀이 쪽이 «있는 값» 으로 읽습니다. */
+      birth_year: sajuTyped ? parseInt(year, 10) : null,
+      birth_month: sajuTyped ? parseInt(month, 10) : null,
+      birth_day: sajuTyped ? parseInt(day, 10) : null,
+      birth_hour: sajuTyped ? hourValue : null,
+      cal_type: sajuTyped ? calType : null,
+      gender: sajuTyped ? genderValue : null,
+      leap_month: sajuTyped ? leapValue : null,
       birth_city: city || null,
-      saju_saved: true,
+      /* ★saju_saved 가 홈 카드의 «갈림길» 입니다 (UserCard:157).
+         false 면 「생년월일시를 넣으면…」이 뜨고 마이페이지로 갑니다. */
+      saju_saved: sajuTyped,
       privacy_agreed: true,
       privacy_agreed_at: now,
       terms_agreed: true,
@@ -170,6 +199,11 @@ export default function SignupPage() {
       setMsg('계정은 생성됐지만 사주 정보 저장에 실패했습니다: ' + profileError.message)
       return
     }
+
+    /* ★2026-09-10 (밤) — 사주를 «넣으신 분» 만 만세력 결과로 보냅니다.
+     *   ⚠️ 안 넣으신 분을 결과 화면으로 보내면 ★빈 원국표가 뜹니다.
+     *   ⇒ 홈으로 보냅니다. 홈 카드가 「생년월일시를 넣으면…」이라 데려갑니다. */
+    if (!sajuTyped) { router.push('/'); return }
 
     // 3) 만세력 결과로 이동 (저장 확인)
     const leapMonth = leapValue ? '1' : '0'
@@ -213,22 +247,13 @@ export default function SignupPage() {
           }}
           aria-label="뒤로가기"
         >‹</button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <svg width="28" height="32" viewBox="0 0 46 50" style={{ overflow: 'visible' }}>
-            <g>
-              <path className="mc-steam-a" d="M16 14 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
-              <path className="mc-steam-b" d="M23 13 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
-              <path className="mc-steam-c" d="M30 14 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
-            </g>
-            <g className="mc-cup">
-              <path d="M8 20 L38 20 L36 40 Q35 45 30 45 L16 45 Q11 45 10 40 Z" fill="#b46e46" />
-              <path d="M8 20 L38 20 L37.5 24 L8.5 24 Z" fill="#c8783c" />
-              <path d="M38 24 Q45 24 45 30 Q45 36 38 36 L37 32 Q41 32 41 30 Q41 28 37.5 28 Z" fill="#b46e46" />
-              <ellipse cx="23" cy="21" rx="14" ry="2.5" fill="#96502e" />
-            </g>
-          </svg>
-          <span style={{ fontSize: 17, fontWeight: 900, fontStyle: 'italic' }}>
-            <span style={{ color: '#96502e' }}>Myung</span><span style={{ color: '#b46e46' }}>Cafe</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          {/* ★2026-09-10 — 커피잔 + MyungCafe 를 ★새 로고 + 「명연재(明然載)」 로.
+              홈·로그인 화면과 «같은 모양» 입니다. ⛔ 옛 커피잔으로 되돌리지 마십시오. */}
+          <Image src="/logo-myjae.png" alt="명연재" width={26} height={26} priority />
+          <span style={{ display: 'flex', alignItems: 'flex-end', gap: 4 }}>
+            <span style={{ fontSize: 17, fontWeight: 600, color: '#38414B', letterSpacing: 2, lineHeight: 1 }}>명연재</span>
+            <span style={{ fontSize: 10, color: '#68112E', lineHeight: 1 }}>(明然載)</span>
           </span>
         </div>
       </div>
@@ -236,15 +261,43 @@ export default function SignupPage() {
       <main style={{ padding: '26px 20px 60px' }}>
         <div style={{ marginBottom: '28px' }}>
           <h1 style={{ fontSize: '22px', fontWeight: 700, lineHeight: 1.4, margin: '0 0 6px' }}>
-            나의 사주와<br />계정을 만들어주세요
+            계정을 만들어주세요
           </h1>
           <p style={{ fontSize: '12px', color: '#6b5340', margin: 0 }}>
             가입 한 번으로 내 사주를 영구 저장해요
           </p>
         </div>
 
+        {/* ★2026-09-10 (밤) — 카카오를 «맨 위» 로 [대표님 목업 승낙]
+            ⚠️ 손님 대부분은 카카오로 오십니다. 긴 칸을 먼저 보면 «나가 버립니다».
+            ⛔ 아래 이메일 가입 칸보다 «뒤» 로 내리지 마십시오. */}
+        <button onClick={handleKakao} disabled={social}
+          style={{
+            width: '100%', height: '52px', background: '#FEE500', border: 'none',
+            borderRadius: '14px', color: '#3C1E1E', fontSize: '15px', fontWeight: 600,
+            cursor: social ? 'default' : 'pointer', opacity: social ? 0.6 : 1, marginBottom: '9px',
+          }}>
+          {social ? '카카오로 넘어가는 중…' : '카카오톡으로 회원가입'}
+        </button>
+        <div style={{ fontSize: '11.5px', color: '#6b5340', lineHeight: 1.6, marginBottom: '8px' }}>
+          큐보드 · 골프온과 같은 계정입니다. 한 번 가입하면 세 곳에서 그대로 쓰입니다.
+        </div>
+        <div style={{
+          background: '#FFFBF7', border: '0.5px solid #e8dccf', borderRadius: '10px',
+          padding: '9px 11px', fontSize: '11px', color: '#8a7565', lineHeight: 1.6, marginBottom: '22px',
+        }}>
+          3초면 끝나요. 이름과 사주는 나중에 넣으셔도 됩니다.
+        </div>
+
+        {/* 가르는 줄 — /login 과 «같은 말» 입니다 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+          <div style={{ flex: 1, height: '0.5px', background: '#e8d5c5' }} />
+          <span style={{ fontSize: '11px', color: '#6b5340' }}>또는 이메일로</span>
+          <div style={{ flex: 1, height: '0.5px', background: '#e8d5c5' }} />
+        </div>
+
         {/* 이름(한글) */}
-        <Field label="이름 (한글)">
+        <Field label="이름 (한글) · 선택">
           <input value={hangulName} onChange={e => setHangulName(e.target.value.slice(0, 20))}
             placeholder="성함을 입력하세요" style={inputStyle} />
         </Field>
@@ -262,13 +315,13 @@ export default function SignupPage() {
         </div>
 
         {/* 닉네임 */}
-        <Field label="닉네임">
+        <Field label="닉네임 · 필수">
           <input value={nickname} onChange={e => setNickname(e.target.value.slice(0, 12))}
             placeholder="서비스에서 사용할 이름" style={inputStyle} />
         </Field>
 
         {/* 성별 */}
-        <Field label="성별">
+        <Field label="성별 · 선택">
           <div style={{ display: 'flex', gap: '8px' }}>
             {(['여자', '남자'] as const).map(g => (
               <button key={g} onClick={() => setGender(g)} style={{
@@ -283,7 +336,7 @@ export default function SignupPage() {
         </Field>
 
         {/* 생년월일 */}
-        <Field label="생년월일">
+        <Field label="생년월일 · 선택">
           <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
             {(['양력', '음력'] as const).map(c => (
               <button key={c} onClick={() => applyCalType(c)} style={{
@@ -331,7 +384,7 @@ export default function SignupPage() {
         </Field>
 
         {/* 태어난 시간 — 반드시 하나 고르게 한다 ('모름' 없음) */}
-        <Field label="태어난 시간">
+        <Field label="태어난 시간 · 선택">
           <select value={hour} onChange={e => setHour(e.target.value)}
             style={{ ...selectStyle, color: hour ? '#1a1a1a' : '#bbb' }}>
             <option value="">시간을 선택해주세요</option>
@@ -383,25 +436,17 @@ export default function SignupPage() {
             placeholder="도시명을 입력하세요 (예: 서울)" style={inputStyle} />
         </div>
 
-        {/* 소셜 구분선 */}
-        <Divider text="간편하게 시작하기" />
-
-        {/* 소셜 버튼 3개 (준비 중) */}
-        <button onClick={() => handleSocial('카카오')} style={{
-          width: '100%', height: '50px', background: '#FEE500', border: 'none',
-          borderRadius: '14px', color: '#3C1E1E', fontSize: '14px', fontWeight: 600,
-          cursor: 'pointer', marginBottom: '10px',
-        }}>💬 카카오로 시작하기</button>
-        <button onClick={() => handleSocial('네이버')} style={{
-          width: '100%', height: '50px', background: '#03C75A', border: 'none',
-          borderRadius: '14px', color: '#fff', fontSize: '14px', fontWeight: 600,
-          cursor: 'pointer', marginBottom: '10px',
-        }}>Ｎ 네이버로 시작하기</button>
-        <button onClick={() => handleSocial('구글')} style={{
-          width: '100%', height: '50px', background: '#fff', border: '0.5px solid #e0ddd6',
-          borderRadius: '14px', color: '#333', fontSize: '14px', fontWeight: 500,
-          cursor: 'pointer', marginBottom: '24px',
-        }}>Ｇ 구글로 시작하기</button>
+        {/* 🔴 ★2026-09-10 (밤) — 소셜 단추 셋을 «걷어냈습니다».
+            [까닭] 셋 다 ★«가짜» 였습니다 — handleSocial() 이
+                   「○○ 로그인은 준비 중입니다」라고 말만 했습니다.
+                   ⇒ 손님이 ★노란 카카오 단추를 누르고 «안 되는» 것을 겪었습니다.
+                      정작 /login 에서는 카카오가 «진짜로» 도는데 말입니다.
+            [고침] ★카카오를 이 화면 «맨 위» 로 올려 «진짜로» 잇고,
+                   네이버·구글은 지웠습니다.
+                   ⚠️ 네이버는 ★Supabase 가 «지원하지 않습니다». 되살릴 방법이 없습니다.
+                   ⚠️ 구글은 Supabase 에 켜져 있지만 앱이 없어 ★계정이 갈라집니다 (4부 9장).
+            ⛔ 「준비 중입니다」라고만 하는 단추를 다시 만들지 마십시오 —
+               손님은 그것을 ★고장으로 봅니다. */}
 
         {/* 이메일 구분선 */}
         <Divider text="또는 이메일로 가입" />

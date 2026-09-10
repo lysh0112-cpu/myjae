@@ -9,7 +9,8 @@
 //
 // 담긴 것: 로그인 확인 → 프로필 조회 → 명식 계산 → 아바타·이름·등급·생년월일·일주
 //   - 비회원이면 로그인/회원가입 버튼
-//   - 사주 미등록이면 "사주 미등록"으로 표시(일주 자리는 비움)
+//   - 사주 미등록이면 ★「생년월일시를 넣으면 오늘의 운세를 볼 수 있어요 →」로 표시하고
+//     누르면 ★마이페이지로 보낸다 (일주 자리는 비움)  [2026-09-10 대표님]
 //
 // ⚠ 이 부품은 "보여주기"만 한다. 사주 수정 같은 편집은 footer 로 받아서 붙인다.
 //   (마이페이지 편집 로직을 여기 옮기지 않는다 — 되돌리기 어려워짐)
@@ -173,9 +174,20 @@ export default function UserCard({ footer }: { footer?: ReactNode | ((info: User
     return `/manseryeok/result-new?gender=${g}&calType=${cal}&year=${profile?.birth_year}&month=${profile?.birth_month}&day=${profile?.birth_day}&leapMonth=${leap}${hourParam}&mode=chart`
   }
 
+  /* ★2026-09-10 [대표님 「생년월일시를 넣으면 오늘의 운세를 볼 수 있어요 를
+   *   터치하면 마이페이지로 가게」]
+   *
+   *   [전]  「사주 미등록」
+   *         ⇒ 딱딱하고, ★손님이 «무엇을 하라는 말인지» 알기 어려웠습니다.
+   *   [후]  ★「생년월일시를 넣으면 오늘의 운세를 볼 수 있어요」
+   *         ⇒ 누르면 마이페이지로 갑니다 (sajuDetailUrl 이 이미 그렇게 되어 있습니다).
+   *
+   *   ⚠️ 앞으로 가입할 때 사주를 «건너뛸 수» 있게 되면, 이 줄이 ★손님을 데려오는
+   *      유일한 길이 됩니다. ⛔ 지우지 마십시오.
+   *   ⛔ 「사주 미등록」 같은 «알림투» 로 되돌리지 마십시오. */
   const subLine = hasSaju
     ? `${profile?.cal_type || '양력'} ${profile?.birth_year}.${profile?.birth_month}.${profile?.birth_day} · ${hourText} · ${profile?.gender === '여' ? '여성' : '남성'}`
-    : '사주 미등록'
+    : '생년월일시를 넣으면 오늘의 운세를 볼 수 있어요 →'
 
   return (
     <div style={wrap}>

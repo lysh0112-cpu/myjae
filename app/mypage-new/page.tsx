@@ -489,9 +489,14 @@ export default function MyPageNew() {
                 <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 10, background: rc.bg, color: rc.fg, fontWeight: 500, flexShrink: 0 }}>{roleLabel(profile?.role || null)}</span>
               </div>
               <div style={{ fontSize: 10.5, color: '#7d6a5b', marginTop: 2 }}>
+                {/* ★2026-09-10 — 「사주 미등록」을 손님 말로 바꿨습니다 [대표님].
+                    ⚠️ 홈 카드(UserCard)와 «말이 다릅니다». 일부러 그렇습니다 —
+                       홈은 ★데려오는 말(「…볼 수 있어요 →」),
+                       여기는 ★이미 오신 자리라 «아래에서 넣으시라» 는 말입니다.
+                    ⛔ 「사주 미등록」 같은 알림투로 되돌리지 마십시오. */}
                 {profile?.saju_saved && profile?.birth_year
                   ? `${profile.cal_type || '양력'} ${profile.birth_year}.${profile.birth_month}.${profile.birth_day} · ${hourTextFull(profile.birth_hour).split('(')[0]} · ${profile.gender === '여' ? '여성' : '남성'}`
-                  : '사주 미등록'}
+                  : '아래에서 생년월일시를 넣어주세요'}
               </div>
             </div>
             {profile?.saju_saved && dayPillar && dayPillar.stem !== '?' && (
