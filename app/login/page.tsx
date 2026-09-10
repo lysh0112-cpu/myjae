@@ -8,12 +8,6 @@ import { supabase } from '@/lib/supabase'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail] = useState('')
-  const [pw, setPw] = useState('')
-  const [showPw, setShowPw] = useState(false)
-  const [keepLogin, setKeepLogin] = useState(false)
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
 
   // 로그인 후 이동: 프로필 미완료면 마이페이지(내 사주 수정), 아니면 신버전 홈
   //   ★ 2026-07: 예전에는 미완료 시 /auth/welcome(구버전 다크 화면)으로 보냈는데,
@@ -43,44 +37,7 @@ export default function LoginPage() {
     return raw
   }
 
-  const routeAfterLogin = async (userId: string) => {
-    const back = nextPath()
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('nickname, privacy_agreed')
-      .eq('id', userId)
-      .single()
 
-    if (!profile || !profile.nickname || !profile.privacy_agreed) {
-      // ⚠️ 프로필이 덜 찬 분은 ★마이페이지가 먼저입니다. next 보다 앞섭니다.
-      router.push('/mypage-new')
-      return
-    }
-
-    if (back) { router.push(back); return }
-    // ★2026-07-27 — 커플채팅 초대 링크(?invite=) 자동연결을 제거했다.
-    //   커플채팅이 테스트였으므로 통째로 삭제되었고, 연결할 방이 사라졌다.
-    //   ?invite= 가 붙은 옛 링크로 들어와도 그냥 홈으로 간다(오류 없음).
-    //   ⚠️ 상담사–고객 채팅은 별개이며 살아 있다. 함께 지우지 말 것.
-
-    // 등급과 무관하게 신버전 홈으로. 상담사·관리자 화면은 마이페이지에서 진입.
-    router.push('/home-new')
-  }
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email || !pw) { setError('이메일과 비밀번호를 입력해주세요.'); return }
-    if (!email.includes('@')) { setError('올바른 이메일 형식을 입력해주세요.'); return }
-    setError('')
-    setLoading(true)
-    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password: pw })
-    if (authError || !data.user) {
-      setError('이메일 또는 비밀번호가 올바르지 않습니다.')
-      setLoading(false)
-      return
-    }
-    await routeAfterLogin(data.user.id)
-  }
 
   /* ★2026-09-09 — 카카오 로그인을 «실제로» 잇습니다.
    *   [전]  단추는 «있었는데» 「준비 중이에요」 라고 말만 했습니다 (handleSocial).
@@ -101,6 +58,10 @@ export default function LoginPage() {
    *         「//」·http:// 를 그대로 실으면 ★남의 사이트로 손님을 보냅니다.
    */
   const [social, setSocial] = useState(false)
+  /* ⚠️ 이메일 로그인을 걷어내면서 error 상태만 남겼습니다 —
+     ★카카오가 «출발조차 못 했을 때» 를 손님에게 알려야 하기 때문입니다.
+     ⛔ 조용히 넘기지 마십시오. 손님은 «눌렀는데 아무 일도 안 난다» 고 느낍니다. */
+  const [error, setError] = useState('')
 
   const handleKakao = async () => {
     setError('')
@@ -116,19 +77,11 @@ export default function LoginPage() {
     // ⚠️ 잘 되면 «카카오 화면으로 떠나» 아래 줄까지 못 옵니다.
     //    여기 닿았다는 것은 ★출발조차 못 했다는 뜻입니다. 조용히 넘기지 않습니다.
     if (oauthError) {
-      setError('카카오 로그인을 시작하지 못했어요. 잠시 뒤 다시 해보시거나 이메일로 로그인해주세요.')
+      setError('카카오 로그인을 시작하지 못했어요. 잠시 뒤 다시 해주세요.')
       setSocial(false)
     }
   }
 
-  const inputWrap: React.CSSProperties = {
-    height: 50, background: '#fff', border: '0.5px solid #9c7a58', borderRadius: 12,
-    display: 'flex', alignItems: 'center', padding: '0 14px',
-  }
-  const inputStyle: React.CSSProperties = {
-    flex: 1, border: 'none', outline: 'none', background: 'transparent',
-    fontSize: 14, color: '#3a2e28', minWidth: 0,
-  }
 
   return (
     <div style={{
@@ -190,58 +143,42 @@ export default function LoginPage() {
           큐보드 · 골프온과 같은 계정입니다. 한 번 로그인하면 세 곳에서 그대로 쓰입니다.
         </div>
 
-        {/* 가르는 줄 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-          <div style={{ flex: 1, height: '0.5px', background: '#e8d5c5' }} />
-          <span style={{ fontSize: 11, color: '#6b5340' }}>또는 이메일로</span>
-          <div style={{ flex: 1, height: '0.5px', background: '#e8d5c5' }} />
-        </div>
-
-        <form onSubmit={handleLogin}>
-          {/* 이메일 */}
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 11, color: '#5c3a1e', marginBottom: 6 }}>이메일</div>
-            <div style={inputWrap}>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="name@example.com" style={inputStyle} autoComplete="email" />
-            </div>
+        {/* ⚠️ 카카오가 «출발조차 못 했을 때» 만 뜹니다.
+            ⛔ 지우지 마십시오 — 조용히 넘기면 손님은 «고장» 으로 봅니다. */}
+        {error && (
+          <div style={{ color: '#c05a5a', fontSize: 12, marginBottom: 14, textAlign: 'center', lineHeight: 1.6 }}>
+            {error}
           </div>
+        )}
 
-          {/* 비밀번호 */}
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 11, color: '#5c3a1e', marginBottom: 6 }}>비밀번호</div>
-            <div style={inputWrap}>
-              <input type={showPw ? 'text' : 'password'} value={pw} onChange={e => setPw(e.target.value)}
-                placeholder="비밀번호 입력" style={inputStyle} autoComplete="current-password" />
-              <button type="button" onClick={() => setShowPw(v => !v)}
-                style={{ background: 'none', border: 'none', color: '#6b5340', cursor: 'pointer', fontSize: 15 }}>
-                {showPw ? '🙈' : '👁'}
-              </button>
-            </div>
-          </div>
+        {/* 🔴 ★2026-09-10 (밤) — 이메일 로그인을 ★«걷어냈습니다» [대표님 「카카오 하나로 통일」]
+            [까닭] 같은 분이 ★카카오와 이메일로 «따로» 가입하면
+                   auth.users 가 둘이 되어 ★user_id 가 갈립니다.
+                   ⇒ 지갑(mc_wallet)·보관함·상담 내역이 ★통째로 갈라집니다.
+                   ⇒ 4부 5장의 「카카오 앱을 셋으로 만들면 지갑이 셋으로 갈라집니다」와
+                      ★같은 종류의 사고입니다. 되돌리기 매우 어렵습니다.
 
-          {/* 로그인 유지 / 비번찾기 */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#5c3a1e', cursor: 'pointer' }}>
-              <input type="checkbox" checked={keepLogin} onChange={e => setKeepLogin(e.target.checked)}
-                style={{ width: 14, height: 14, accentColor: '#b46e46' }} />
-              로그인 유지
-            </label>
-            <button type="button" style={{ background: 'none', border: 'none', fontSize: 12, color: '#5c3a1e', cursor: 'pointer' }}>비밀번호 찾기</button>
-          </div>
+            [값으로 확인한 것]
+              · Supabase 「Allow users without an email」이 ★ON 이라
+                이메일이 없어도 카카오 로그인이 됩니다 (4부 1-2).
+              · profiles.email 은 ★관리자 화면에서 «보여 주는» 용도뿐이고
+                로그인·지갑·사주 어디에도 안 쓰입니다.
+              · 카카오 동의항목에 이메일이 ★필수라 어차피 들어옵니다.
+                ⇒ ★이메일 로그인을 지워도 이메일은 계속 들어옵니다.
 
-          {error && <div style={{ color: '#c05a5a', fontSize: 12, marginBottom: 14, textAlign: 'center' }}>{error}</div>}
+            ⛔⛔ Supabase 의 «Email» Provider 를 «끄지» 마십시오 —
+                 화면에서 단추만 없앤 것입니다. 설정은 그대로 두어야
+                 나중에 되살릴 수 있습니다.
+            ⛔ 「Allow users without an email」도 끄지 마십시오 (4부 9장).
 
-          {/* 로그인 버튼 */}
-          <button type="submit" disabled={loading}
-            style={{
-              width: '100%', height: 52, background: '#b46e46', border: 'none', borderRadius: 14,
-              color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer',
-              marginBottom: 22, opacity: loading ? 0.6 : 1,
-            }}>
-            {loading ? '로그인 중…' : '로그인'}
-          </button>
-        </form>
+            ⚠️ ★master 둘이 이메일 계정입니다 —
+               류승현(a@naver.com) · 오연희(b@naver.com)
+               ⇒ ★그 계정으로는 이제 «못 들어옵니다».
+               ⇒ 대표님 카카오(류버럭)는 이미 master 라 괜찮습니다.
+               🔴 ★연재쌤은 카카오 계정을 만들고 role 을 master 로 바꿔 주셔야 합니다
+                  [대표님 2026-09-10 「내가 나중에 변경해주면 되잖아」].
+
+            ⛔ 여기에 이메일 칸을 «다시» 만들지 마십시오 — 계정이 또 갈라집니다. */}
 
         {/* ★네이버·구글은 «내렸습니다» [대표님 2026-09-09] — ⛔ 지우지 않았습니다.
               [까닭] 네이버는 Supabase 가 «지원하지 않습니다» (목록에 없음).
@@ -256,10 +193,13 @@ export default function LoginPage() {
         <div style={{ textAlign: 'center', fontSize: 10, color: '#6b5340', marginBottom: 26 }}>소셜 로그인은 준비 중이에요</div>
         */}
 
-        {/* 회원가입 링크 */}
-        <div style={{ textAlign: 'center', fontSize: 13, color: '#6f6053', paddingTop: 18, borderTop: '0.5px solid #9c7a58' }}>
-          아직 회원이 아니신가요?{' '}
-          <button type="button" onClick={() => router.push('/signup')} style={{ color: '#8f3d0e', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}>회원가입</button>
+        {/* ★2026-09-10 (밤) — 「회원가입」 링크를 «안내 문구» 로 바꿨습니다.
+            ⚠️ 카카오는 ★가입과 로그인이 «같은 길» 입니다 —
+               profiles 가 없으면 가입(환영 화면), 있으면 로그인(홈)으로 갈립니다.
+               ⇒ 따로 가입할 곳이 «없습니다». /signup 도 없앴습니다. */}
+        <div style={{ textAlign: 'center', fontSize: 12, color: '#8a7565', paddingTop: 18, borderTop: '0.5px solid #9c7a58', lineHeight: 1.7 }}>
+          처음 오셨어도 위 카카오 단추 하나면 됩니다.<br />
+          따로 가입하실 것이 없어요.
         </div>
 
       </div>

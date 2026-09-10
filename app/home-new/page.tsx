@@ -421,7 +421,7 @@ export default function HomeNew() {
         {/* ② 슬라이드 배너 */}
         <div style={{ padding: '14px 16px 0' }}>
           <div
-            onClick={() => { if (!isLoggedIn) router.push('/signup') }}
+            onClick={() => { if (!isLoggedIn) router.push('/login') }}
             style={{
               position: 'relative', borderRadius: '18px', overflow: 'hidden',
               minHeight: '175px', height: '175px', cursor: isLoggedIn ? 'default' : 'pointer',

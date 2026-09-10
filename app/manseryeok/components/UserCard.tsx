@@ -136,16 +136,14 @@ export default function UserCard({ footer }: { footer?: ReactNode | ((info: User
             <div style={{ fontSize: 11, color: '#8f3d0e' }}>로그인하고 내 사주를 확인하세요</div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => router.push('/login')} style={{
-            flex: 1, height: 44, background: '#b46e46', border: 'none', borderRadius: 10,
-            color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-          }}>로그인</button>
-          <button onClick={() => router.push('/signup')} style={{
-            flex: 1, height: 44, background: '#fff', border: '0.5px solid #c7966a', borderRadius: 10,
-            color: '#96502e', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-          }}>회원가입</button>
-        </div>
+        {/* ★2026-09-10 (밤) — [로그인] · [회원가입] 두 단추를 ★«하나» 로 합쳤습니다.
+            ⚠️ 카카오는 ★가입과 로그인이 «같은 길» 이라 둘 다 /login 으로 갑니다.
+               ⇒ 같은 곳으로 가는 단추가 둘이면 손님이 «다른 곳» 인 줄 알고 헷갈립니다.
+            ⛔ 「회원가입」 단추를 다시 만들지 마십시오 — 갈 곳이 같습니다. */}
+        <button onClick={() => router.push('/login')} style={{
+          width: '100%', height: 44, background: '#b46e46', border: 'none', borderRadius: 10,
+          color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+        }}>카카오로 3초 만에 시작</button>
       </div>
     )
   }
