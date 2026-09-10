@@ -102,23 +102,31 @@ export default function WalletMember({
     setBusy(true)
     setSearched(false)
     setList([])
-    const { data: p, error } = await supabase
-      .from('profiles')
-      .select('id, nickname, hangul_name')
-      .eq('id', id)
-      .maybeSingle()
-    if (error || !p) {
+    /* 🔴 ★2026-09-10 (밤) — 브라우저에서 «곧장» DB 를 부르던 것을 ★서버 길로 옮겼습니다.
+       [겪은 일] 회원 목록에서 이름을 눌렀는데 ★「그 회원을 못 찾았습니다」만 떴습니다.
+       [까닭]    RLS 정책이 ★profiles_select_own = (auth.uid() = id) 라
+                 ★«본인 것만» 읽힙니다. 관리자라도 남의 줄은 «안 보입니다».
+       [고침]    app/api/admin/wallet/member 가 ★서버에서 대신 읽어 줍니다.
+       ⛔ 다시 supabase.from('profiles') 로 되돌리지 마십시오 — 또 막힙니다.
+       ⚠️ 그 정책을 «푸는» 것으로 고치지 마십시오 — 손님이 남의 사주를 봅니다. */
+    const r = await fetch('/api/admin/wallet/member', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ what: 'one', userId: id }),
+    })
+    const j = await r.json()
+    const p = j?.member as { id: string; nickname: string | null; hangul_name: string | null; balance: number } | undefined
+    if (!r.ok || !p) {
       setBusy(false)
-      alert('그 회원을 못 찾았습니다.')
+      alert(j?.error ?? '그 회원을 못 찾았습니다.')
       return
     }
-    const { data: w } = await supabase
-      .from('mc_wallet').select('balance').eq('user_id', id).maybeSingle()
+    /* ⚠️ 잔액도 ★서버가 «함께» 줍니다 (mc_wallet 도 RLS 에 막힙니다).
+       ⛔ 여기서 mc_wallet 을 따로 부르지 마십시오. */
     const found: Found = {
       id: p.id,
       nickname: p.nickname,
       hangul_name: p.hangul_name,
-      balance: w?.balance ?? 0,
+      balance: p.balance,
     }
     setQ(memberName(found))
     setBusy(false)
@@ -142,24 +150,16 @@ export default function WalletMember({
     //    ⛔ 찾을 때는 두 칸을 «다» 훑어야 합니다 —
     //       화면엔 닉네임이 떠도 대표님은 통장에 찍힌 «이름» 으로 치실 수 있습니다.
     //  ⚠️ 카카오 로그인이 붙으면 «회원번호 뒷자리» 도 여기서 찾게 됩니다 (아직 없음).
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, nickname, hangul_name')
-      .or(`hangul_name.ilike.%${key}%,nickname.ilike.%${key}%`)
-      .limit(20)
-    if (error) { alert('찾기 실패: ' + error.message); setBusy(false); return }
-
-    const ids = (data ?? []).map(r => r.id)
-    const { data: wallets } = await supabase
-      .from('mc_wallet').select('user_id, balance').in('user_id', ids)
-
-    const bal = new Map((wallets ?? []).map(w => [w.user_id, w.balance]))
-    setList((data ?? []).map(r => ({
-      id: r.id,
-      nickname: r.nickname,
-      hangul_name: r.hangul_name,
-      balance: bal.get(r.id) ?? 0,
-    })))
+    /* 🔴 ★2026-09-10 (밤) — 서버 길로 옮겼습니다 (RLS · 위 loadOne 주석 참고).
+       ⚠️ 두 칸(닉네임·이름)을 «다» 훑는 규칙은 ★서버 쪽으로 옮겨 두었습니다.
+       ⛔ 여기서 profiles·mc_wallet 을 곧장 부르지 마십시오 — 막힙니다. */
+    const r = await fetch('/api/admin/wallet/member', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ what: 'search', keyword: key }),
+    })
+    const j = await r.json()
+    if (!r.ok) { alert('찾기 실패: ' + (j?.error ?? '알 수 없음')); setBusy(false); return }
+    setList((j?.list ?? []) as Found[])
     setPicked(null)
     setLedger([])
     setBusy(false)
@@ -167,14 +167,14 @@ export default function WalletMember({
 
   async function pick(m: Found) {
     setPicked(m)
-    const { data, error } = await supabase
-      .from('mc_ledger')
-      .select('id, service, kind, item, amount, after, memo, at')
-      .eq('user_id', m.id)
-      .order('at', { ascending: false })
-      .limit(50)
-    if (error) { alert('내역 불러오기 실패: ' + error.message); return }
-    setLedger((data ?? []) as Ledger[])
+    /* 🔴 ★2026-09-10 (밤) — 서버 길로 (RLS · 위 loadOne 주석 참고). */
+    const r = await fetch('/api/admin/wallet/member', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ what: 'ledger', userId: m.id }),
+    })
+    const j = await r.json()
+    if (!r.ok) { alert('내역 불러오기 실패: ' + (j?.error ?? '알 수 없음')); return }
+    setLedger((j?.ledger ?? []) as Ledger[])
   }
 
   async function charge(amount: number) {
