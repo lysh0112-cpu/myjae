@@ -57,7 +57,7 @@ export default function Dashboard() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `명카페_상담내역_${new Date().toLocaleDateString('ko-KR')}.csv`
+    a.download = `명연재_상담내역_${new Date().toLocaleDateString('ko-KR')}.csv`
     a.click()
   }
   if (loading) return <div className="text-center py-10" style={{ color: '#FAC775' }}>불러오는 중...</div>

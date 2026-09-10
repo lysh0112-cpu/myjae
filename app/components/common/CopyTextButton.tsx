@@ -60,7 +60,8 @@ export default function CopyTextButton({
     const raw = (name ?? '').trim()
     const usable = raw && !['나', '본인', '나님'].includes(raw) ? raw : ''
     const who = usable ? `${usable}님의 ` : ''
-    const full = `[명카페] ${who}${label}\n\n${body}`
+    /* ★2026-09-10 — 「[명카페]」 → 「[명연재]」 (손님이 복사해 남에게 보내는 글머리입니다) */
+    const full = `[명연재] ${who}${label}\n\n${body}`
     try {
       await navigator.clipboard.writeText(full)
       setCopied(true)

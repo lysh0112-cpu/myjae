@@ -238,13 +238,13 @@ export default function LandingPage() {
             fontSize: '10px', fontWeight: 700,
             padding: '3px 10px', borderRadius: '10px',
             marginBottom: '16px', letterSpacing: '1px',
-          }}>WHY MyungCafe</div>
+          }}>WHY 명연재</div>
           <h2 style={{
             fontSize: '22px', fontWeight: 300, lineHeight: 1.5,
             color: '#3a2e28', margin: '0 0 8px', letterSpacing: '-0.3px',
           }}>
             비싼 상담, 꼭 필요할까요?<br />
-            <strong style={{ fontWeight: 700, color: '#8f3d0e' }}>MyungCafe가 더 깊게 알려드립니다</strong>
+            <strong style={{ fontWeight: 700, color: '#8f3d0e' }}>명연재가 더 깊게 알려드립니다</strong>
           </h2>
           <p style={{ fontSize: '12px', color: '#5c3a1e', lineHeight: 1.8, margin: '0 0 24px' }}>
             20만원짜리 대면 상담보다 정확하고 세밀하게.<br />
@@ -254,7 +254,7 @@ export default function LandingPage() {
 
           {[
             { title: '정통 명리 3대 고전 기반', desc: '적천수·자평진전·궁통보감을 학습한 AI가 분석합니다' },
-            { title: '사주·궁합·이름·택일 통합', desc: '한 플랫폼에서 명리의 모든 것을 해결하세요' },
+            { title: '사주·적성·택일·작명 통합', desc: '한 플랫폼에서 명리의 모든 것을 해결하세요' },
             { title: '검증된 전문가 직접 상담', desc: 'AI 분석 후 더 깊은 해석이 필요할 때만 연결' },
             { title: '내 사주 영구 저장', desc: '매번 입력 없이, 로그인하면 바로 내 분석 확인' },
           ].map((item) => (

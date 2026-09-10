@@ -74,7 +74,7 @@ const SLIDES_OLD = [
 //   sparkles=별 반짝임 색(장별 포인트). accent=태그·강조 글자색.
 const SLIDES = [
   {
-    tag: '오늘의 명카페', title: '운명의 지도를 아는 자\n내 삶의 주인공이고,\n운명의 지도를 모르는 자\n내 삶의 조연이다',
+    tag: '오늘의 명연재', title: '운명의 지도를 아는 자\n내 삶의 주인공이고,\n운명의 지도를 모르는 자\n내 삶의 조연이다',
     sub: '', link: '지금 무료로 시작 →',
     img: '/banner/slide1.jpg', video: '',
     accent: '#ffd97a', sub2: '#c3b49a',
@@ -99,15 +99,15 @@ const SLIDES = [
   },
   {
     tag: '커플 채팅', title: '연인과 함께,\nAI 조언까지',
-    sub: '우리 사주를 아는 커플 채팅,\n명카페에서만', link: '궁합 보러가기 →',
+    sub: '우리 사주를 아는 커플 채팅,\n명연재에서만', link: '궁합 보러가기 →',
     img: '/banner/slide4.jpg', video: '',
     accent: '#ffc0d8', sub2: '#f0d5e0',
     sparkles: ['#ffb0d0', '#ffd97a', '#fff'],
     href: '/manseryeok/couple-storage',
   },
   {
-    tag: '한 곳에서', title: '사주 한 잔\n하고 갈래요?',
-    sub: '사주·궁합·이름·택일,\n필요한 만큼만', link: '지금 시작하기 →',
+    tag: '한 곳에서', title: '사주 한번\n봐보세요',
+    sub: '사주·적성·택일·작명,\n필요한 만큼만', link: '지금 시작하기 →',
     img: '/banner/slide5.jpg', video: '',
     accent: '#ffe0a0', sub2: '#e8ddc8',
     sparkles: ['#ffe0a0', '#fff', '#ffd97a'],
@@ -337,7 +337,7 @@ export default function HomeNew() {
         borderBottom: '0.5px solid #9c7a58',
         position: 'sticky', top: 0, zIndex: 20,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {/* ★2026-09-10 — 커피잔 SVG + MyungCafe 를 ★새 로고 + 「명연재(明然載)」 로 바꿨습니다.
               [대표님 목업 승낙 · 「다」안 · 2026-09-10]
 
@@ -351,9 +351,11 @@ export default function HomeNew() {
                  피치톤 위에 ★네모가 떠 보입니다.
               ⚠️ 카카오 콘솔의 앱 아이콘과 ★같은 그림입니다. 한쪽만 바꾸지 마십시오. */}
           <Image src="/logo-myjae.png" alt="명연재" width={34} height={34} priority />
-          <span style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-            <span style={{ fontSize: '22px', fontWeight: 600, color: '#38414B', letterSpacing: '3px' }}>명연재</span>
-            <span style={{ fontSize: '12px', color: '#68112E' }}>(明然載)</span>
+          <span style={{ display: 'flex', alignItems: 'flex-end', gap: '6px' }}>
+            <span style={{ fontSize: '22px', fontWeight: 600, color: '#38414B', letterSpacing: '3px', lineHeight: 1 }}>명연재</span>
+            {/* ⚠️ alignItems: flex-end 와 lineHeight 1 로 ★아래끝을 맞췄습니다.
+                baseline 으로 두면 한자가 «떠 보입니다» [대표님 2026-09-10 지적] */}
+            <span style={{ fontSize: '12px', color: '#68112E', lineHeight: 1 }}>(明然載)</span>
           </span>
         </div>
         {/* ★2026-08-07 (48부 17차) — ☰ 를 ★알약 버튼으로 [대표님 지시]

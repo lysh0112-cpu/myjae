@@ -28,7 +28,7 @@ function AiTalkInner() {
   const gender1 = person1?.gender || '남'
 
   const [messages, setMessages] = useState<Msg[]>([
-    { role: 'assistant', content: '안녕하세요, 저는 명카페 AI예요. 사주를 바탕으로 편하게 이야기 나눠요. 요즘 어떤 게 궁금하세요?' },
+    { role: 'assistant', content: '안녕하세요, 저는 명연재 AI예요. 사주를 바탕으로 편하게 이야기 나눠요. 요즘 어떤 게 궁금하세요?' },
   ])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
@@ -166,7 +166,7 @@ function AiTalkInner() {
       <div style={{ padding: '13px 16px', background: '#FFFBF7', borderBottom: '0.5px solid #9c7a58', display: 'flex', alignItems: 'center', gap: 10, position: 'sticky', top: 0, zIndex: 10 }}>
         <button onClick={() => router.back()} style={{ fontSize: 22, color: '#b46e46', background: 'none', border: 'none', cursor: 'pointer' }}>‹</button>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 600, color: '#96502e' }}>명카페 AI</div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: '#96502e' }}>명연재 AI</div>
           <div style={{ fontSize: 11, color: '#5c3a1e' }}>내 사주를 바탕으로 대화해요</div>
         </div>
         <button onClick={() => { setVoiceOn(v => !v); if (voiceOn && window.speechSynthesis) window.speechSynthesis.cancel() }}

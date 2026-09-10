@@ -355,7 +355,7 @@ export default function ServiceSection({
         marginBottom: 11, padding: '0 16px',
       }}>
         <span style={{ fontSize: 16, fontWeight: 700, color: C.text, letterSpacing: '-0.3px' }}>
-          MyungCafe 서비스
+          명연재 서비스
         </span>
         {pinnedSvcs.length > 0 && (
           <span style={{ fontSize: 11, color: C.sub }}>📌 {pinnedSvcs.length}/{maxPins}</span>

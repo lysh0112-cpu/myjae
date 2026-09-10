@@ -165,7 +165,7 @@ function DetailModal({ day, hour, note, onClose, onViewSaju }: {
     try {
       const { toPng } = await import('html-to-image')
       const png = await toPng(node, { pixelRatio: 2, cacheBust: true, backgroundColor: C.card })
-      const fileName = `명카페_출산택일_${day.dateLabel.replace(/[^0-9가-힣]/g, '')}.png`
+      const fileName = `명연재_출산택일_${day.dateLabel.replace(/[^0-9가-힣]/g, '')}.png`
       // 바로 이미지 파일로 저장(다운로드). 저장한 파일을 카톡 등에 직접 첨부해 보내면 된다.
       //   (공유 시트는 PC에서 카톡 전송이 잘 안 돼 혼란을 줘서 제거함)
       const a = document.createElement('a')
@@ -268,7 +268,7 @@ function DetailModal({ day, hour, note, onClose, onViewSaju }: {
 
         {/* 카드 하단 로고 (캡처 이미지에 들어감) */}
         <div style={{ textAlign: 'center', marginBottom: 4 }}>
-          <span style={{ fontSize: 11, color: C.accent, fontWeight: 700 }}>🌸 명카페</span>
+          <span style={{ fontSize: 11, color: C.accent, fontWeight: 700 }}>명연재</span>
           <span style={{ fontSize: 10, color: C.sub, marginLeft: 6 }}>전통 사주명리 출산택일</span>
         </div>
         </div>{/* ← captureRef 끝 */}

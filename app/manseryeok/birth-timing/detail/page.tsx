@@ -213,7 +213,7 @@ function DetailInner() {
       const label = `${day.m}월${day.d}일_${hour.hourLabel.split('(')[0]}`
       const a = document.createElement('a')
       a.href = png
-      a.download = `명카페_출산택일_${label}.png`
+      a.download = `명연재_출산택일_${label}.png`
       document.body.appendChild(a); a.click(); document.body.removeChild(a)
     } catch (e) {
       console.error('이미지 저장 실패:', e)

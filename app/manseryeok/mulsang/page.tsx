@@ -681,7 +681,7 @@ function MulsangInner() {
       const a = document.createElement('a')
       const who = (info?.name || '나').replace(/[\\/:*?"<>|]/g, '')
       a.href = url
-      a.download = `명카페_사주그림_${who}_${STYLE_CONFIGS[style]?.label ?? ''}.png`
+      a.download = `명연재_사주그림_${who}_${STYLE_CONFIGS[style]?.label ?? ''}.png`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -760,7 +760,7 @@ function MulsangInner() {
       const a = document.createElement('a')
       const who = (info?.name || '나').replace(/[\\/:*?"<>|]/g, '')
       a.href = png
-      a.download = `명카페_사주그림카드_${who}.png`
+      a.download = `명연재_사주그림카드_${who}.png`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -1151,7 +1151,7 @@ function MulsangInner() {
                 </div>
               </div>
               <div style={{ borderTop: '1px solid #9c7a58', padding: '15px 26px 20px', textAlign: 'center' }}>
-                <span style={{ fontSize: '15px', fontWeight: 700, color: '#96502e' }}>☕ 명카페</span>
+                <span style={{ fontSize: '15px', fontWeight: 700, color: '#96502e' }}>명연재</span>
               </div>
             </div>
           </div>
