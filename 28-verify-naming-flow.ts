@@ -2252,6 +2252,10 @@ console.log('\n━━ ㉒-m 🔴 관리자 화면이 «바뀐 줄» 을 세는�
     'app/admin/components/ConsultantManager.tsx',
     'app/admin/components/ExpenseApproval.tsx',
     'app/admin/components/ExpenseManager.tsx',
+    /* ★2026-09-11 — 여기가 «지갑 요금표(mc_price)» 에도 함께 쓰는 자리입니다.
+       ⚠️ 스스로 「이대로 두면 지갑이 옛 값으로 뺍니다」라 경고하면서
+          ★0줄일 때는 그 경고가 «안 떴습니다». */
+    'app/admin/components/PriceManager.tsx',
   ]
   for (const f of files) {
     const c = codeOf(read(f))
@@ -2267,6 +2271,9 @@ console.log('\n━━ ㉒-m 🔴 관리자 화면이 «바뀐 줄» 을 세는�
     `⛔ 가격 저장이 ★.select() 로 바뀐 줄을 받습니다 (4부 0-5 「가장 위험한 자리」)`)
   check(/data\.length === 0/.test(wp),
     `⛔ 가격 저장이 ★0줄이면 «말합니다»`)
+  const pm = codeOf(read('app/admin/components/PriceManager.tsx'))
+  check(/\.select\('item'\)/.test(pm),
+    `⛔ ★지갑 요금표(mc_price) 반영도 «바뀐 줄» 을 받습니다`)
 
   //  ★관리자 API 를 부르기 «직전» 에 세션을 새로 받는가
   //    ⚠️ access token 은 1시간짜리인데 middleware 는 «화면을 옮길 때» 만 돕니다.

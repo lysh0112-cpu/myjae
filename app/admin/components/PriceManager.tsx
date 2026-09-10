@@ -159,21 +159,32 @@ function MergedPriceTable() {
     setSaving(true)
     for (const [table, rows] of [['consult_prices', consult], ['analysis_prices', ai]] as const) {
       for (const r of rows) {
-        const { error } = await supabase.from(table)
+        /* 🔴 ★2026-09-11 — 「바뀐 줄 세기」 [큐보드 회신 ⑥]
+           ⚠️ Supabase 는 ★권한이 없어도 오류를 «안 냅니다». 0줄이어도 error 는 null 입니다. */
+        const { data, error } = await supabase.from(table)
           .update({ price: r.price, active: r.active, updated_at: new Date().toISOString() })
           .eq('id', r.id)
+          .select('id')
         if (error) { alert('저장 실패(' + r.label + '): ' + error.message); setSaving(false); return }
+        if (!data || data.length === 0) {
+          alert('저장되지 않았습니다 (' + r.label + ').\n로그인이 풀렸거나 권한이 없습니다.\n로그아웃 후 다시 로그인해 주세요.')
+          setSaving(false); return
+        }
       }
     }
 
     // ★지갑 요금표에도 같은 값을 씁니다 (줄은 이미 스물넷 다 있습니다)
     for (const r of [...consult, ...ai]) {
-      const { error } = await supabase.from('mc_price')
+      /* 🔴 ★2026-09-11 — 여기도 «셉니다».
+         ⚠️ 아래 알림이 「이대로 두면 지갑이 옛 값으로 뺍니다」라 경고하는데,
+            ★0줄일 때는 그 경고가 «안 떴습니다». 그것이 더 위험합니다. */
+      const { data, error } = await supabase.from('mc_price')
         .update({ price: r.price, label: r.label, up_at: new Date().toISOString() })
         .eq('service', 'myc').eq('item', r.price_key)
-      if (error) {
+        .select('item')
+      if (error || !data || data.length === 0) {
         alert('가격은 저장됐지만 ★지갑 요금표 반영에 실패했습니다 ('
-          + r.label + '): ' + error.message
+          + r.label + '): ' + (error ? error.message : '바뀐 줄이 없습니다 — 로그인이 풀렸거나 권한이 없습니다')
           + '\n\n⚠️ 이대로 두면 지갑이 옛 값으로 뺍니다. 다시 저장해 주세요.')
         setSaving(false); load(); return
       }
