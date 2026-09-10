@@ -181,7 +181,10 @@ export default function SignupPage() {
             계정을 만들어주세요
           </h1>
           <p style={{ fontSize: '12px', color: '#6b5340', margin: 0 }}>
-            가입 한 번으로 내 사주를 영구 저장해요
+            {/* ★2026-09-10 (밤) — 옛말을 고쳤습니다.
+                [전] 「가입 한 번으로 ★내 사주를 영구 저장해요」
+                     ⇒ 이제 가입할 때 ★사주를 «안 받습니다». 사실과 달랐습니다. */}
+            한 번 가입하면 명연재 · 큐보드 · 골프온에서 그대로 쓰입니다
           </p>
         </div>
 
@@ -303,7 +306,10 @@ export default function SignupPage() {
 
         <button onClick={handleSignup} disabled={loading} style={{
           width: '100%', height: '54px',
-          background: loading ? '#e0ddd6' : '#1a1a1a',
+          /* ★2026-09-10 (밤) — 검정(#1a1a1a) → ★피치톤 갈색.
+             ⇒ 로그인 화면의 [로그인]과 «같은 값» 입니다 (#b46e46).
+             ⛔ 명연재에 검정 단추는 없습니다. 되돌리지 마십시오. */
+          background: loading ? '#e0ddd6' : '#b46e46',
           border: 'none', borderRadius: '14px',
           color: loading ? '#bbb' : '#fff',
           fontSize: '15px', fontWeight: 600,
