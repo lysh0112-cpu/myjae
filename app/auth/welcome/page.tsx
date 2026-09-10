@@ -50,6 +50,12 @@ export default function WelcomePage() {
   const [birthHour, setBirthHour] = useState('')   // HOURS 중 하나(라벨)
 
   const [agreeRequired, setAgreeRequired] = useState(false)
+  /* ★2026-09-10 — 만 14세 확인 [대표님 판단]
+   *   ⚠️ 카카오는 생일·연령대를 «주지 않습니다» (동의항목 「권한 없음」).
+   *      그래서 나이를 알 길이 없어 ★스스로 확인하는 줄을 둡니다.
+   *   ⛔ 이 줄을 빼지 마십시오 — 약관 제5조가 「가입 시 확인합니다」라고 적고 있습니다.
+   *   ⛔ signup 화면에도 «같은 줄» 이 있습니다. 한쪽만 고치면 뚫린 문이 남습니다. */
+  const [agreeAge, setAgreeAge] = useState(false)
   const [agreeMarketing, setAgreeMarketing] = useState(false)
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
@@ -133,6 +139,7 @@ export default function WelcomePage() {
       }
     }
     if (!agreeRequired) { setMsg('필수 약관에 동의해주세요.'); return }
+    if (!agreeAge) { setMsg('만 14세 이상만 가입하실 수 있어요.'); return }
 
     const now = new Date().toISOString()
 
@@ -308,13 +315,29 @@ export default function WelcomePage() {
           <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 12 }}>
             <input type="checkbox" checked={agreeRequired} onChange={e => setAgreeRequired(e.target.checked)} style={{ marginTop: 3 }} />
             <span style={{ color: INK, fontSize: 14, fontWeight: 600 }}>
-              <span style={{ color: ACCENT }}>[필수]</span> 개인정보 수집·이용 및 이용약관에 동의합니다
+              {/* ★2026-09-10 — 「약관」이라 써 놓고 갈 화면이 없던 것을 «이었습니다».
+                  ⛔ 링크를 빼지 마십시오 — 동의를 받으려면 볼 수 있어야 합니다.
+                  ⚠️ 체크박스 안에서 눌리면 체크가 토글되므로 ★stopPropagation 이 필요합니다. */}
+              <span style={{ color: ACCENT }}>[필수]</span>{' '}
+              <a href="/privacy" target="_blank" rel="noopener noreferrer"
+                 onClick={e => e.stopPropagation()}
+                 style={{ color: INK, textDecoration: 'underline' }}>개인정보 수집·이용</a>
+              {' 및 '}
+              <a href="/terms" target="_blank" rel="noopener noreferrer"
+                 onClick={e => e.stopPropagation()}
+                 style={{ color: INK, textDecoration: 'underline' }}>이용약관</a>
+              에 동의합니다
             </span>
           </label>
 
           <div style={{ background: '#FDF6F0', borderRadius: 8, padding: '12px 14px', fontSize: 12, color: INK_SOFT, lineHeight: 1.7, maxHeight: 180, overflowY: 'auto', marginBottom: 12 }}>
+            {/* ★2026-09-10 — 카카오 콘솔 동의항목·개인정보처리방침과 «낱말을 맞췄습니다».
+                ⛔ 카카오 심사가 이 자리를 봅니다. 콘솔에서 동의항목을 바꾸시면
+                   ★여기와 개인정보처리방침 제2조를 «함께» 고치십시오. */}
             <b style={{ color: INK }}>· 수집 항목</b><br />
-            이메일, 닉네임, 생년월일·출생시간·성별(사주 분석용), 상담·결제 내역<br /><br />
+            [카카오] 회원번호, 닉네임, 카카오계정(이메일) / 프로필 사진(선택)<br />
+            [직접 입력] 생년월일·출생시간·성별(사주 분석용)<br />
+            [이용 중 생성] 상담·결제 내역<br /><br />
             <b style={{ color: INK }}>· 이용 목적</b><br />
             사주·작명·궁합 등 명리 분석 서비스 제공, AI 분석 및 전문가 상담 연결, 결제·정산 처리<br /><br />
             <b style={{ color: INK }}>· 보유 기간</b><br />
@@ -323,6 +346,14 @@ export default function WelcomePage() {
             입력하신 사주 정보는 AI 분석에 활용되며, 분석 결과는 참고용입니다.<br /><br />
             동의를 거부할 수 있으나, 거부 시 서비스 이용이 제한됩니다.
           </div>
+
+          {/* ★만 14세 확인 — ⛔ 빼지 마십시오 (약관 제5조가 이 줄을 근거로 삼습니다) */}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 12 }}>
+            <input type="checkbox" checked={agreeAge} onChange={e => setAgreeAge(e.target.checked)} />
+            <span style={{ color: INK, fontSize: 14, fontWeight: 600 }}>
+              <span style={{ color: ACCENT }}>[필수]</span> 만 14세 이상입니다
+            </span>
+          </label>
 
           <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
             <input type="checkbox" checked={agreeMarketing} onChange={e => setAgreeMarketing(e.target.checked)} />

@@ -61,6 +61,10 @@ export default function SignupPage() {
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [agreed, setAgreed] = useState(false)
+  /* ★2026-09-10 — 만 14세 확인 [대표님 판단]
+   *   ⛔ 빼지 마십시오 — 약관 제5조가 「가입 시 확인합니다」라고 적고 있습니다.
+   *   ⛔ app/auth/welcome/page.tsx 에도 «같은 줄» 이 있습니다. 두 곳을 함께 고치십시오. */
+  const [agreedAge, setAgreedAge] = useState(false)
 
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
@@ -113,6 +117,7 @@ export default function SignupPage() {
     if (password.length < 6) { setMsg('비밀번호는 6자 이상으로 입력해주세요.'); return }
     if (password !== passwordConfirm) { setMsg('비밀번호가 일치하지 않습니다.'); return }
     if (!agreed) { setMsg('필수 약관에 동의해주세요.'); return }
+    if (!agreedAge) { setMsg('만 14세 이상만 가입하실 수 있습니다.'); return }
 
     setLoading(true)
 
@@ -431,7 +436,33 @@ export default function SignupPage() {
             background: agreed ? '#1a1a1a' : '#fff',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>{agreed && <span style={{ color: '#fff', fontSize: '12px' }}>✓</span>}</div>
-          <span style={{ fontSize: '13px', color: '#333' }}>서비스 이용약관 및 개인정보처리방침 동의 (필수)</span>
+          {/* ★2026-09-10 — 갈 화면이 없던 「약관」을 «이었습니다».
+              ⚠️ 바깥 div 에 onClick 토글이 있어 ★stopPropagation 이 필요합니다. */}
+          <span style={{ fontSize: '13px', color: '#333' }}>
+            <a href="/terms" target="_blank" rel="noopener noreferrer"
+               onClick={e => e.stopPropagation()}
+               style={{ color: '#333', textDecoration: 'underline' }}>서비스 이용약관</a>
+            {' 및 '}
+            <a href="/privacy" target="_blank" rel="noopener noreferrer"
+               onClick={e => e.stopPropagation()}
+               style={{ color: '#333', textDecoration: 'underline' }}>개인정보처리방침</a>
+            {' 동의 (필수)'}
+          </span>
+        </div>
+
+        {/* ★만 14세 확인 — ⛔ 빼지 마십시오 (약관 제5조가 이 줄을 근거로 삼습니다) */}
+        <div onClick={() => setAgreedAge(!agreedAge)} style={{
+          display: 'flex', alignItems: 'center', gap: '10px',
+          background: '#fff', border: '0.5px solid #e8e5de',
+          borderRadius: '14px', padding: '16px', marginBottom: '20px', cursor: 'pointer',
+        }}>
+          <div style={{
+            width: '20px', height: '20px', borderRadius: '6px',
+            border: agreedAge ? 'none' : '1.5px solid #e0ddd6',
+            background: agreedAge ? '#1a1a1a' : '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>{agreedAge && <span style={{ color: '#fff', fontSize: '12px' }}>✓</span>}</div>
+          <span style={{ fontSize: '13px', color: '#333' }}>만 14세 이상입니다 (필수)</span>
         </div>
 
         {msg && (

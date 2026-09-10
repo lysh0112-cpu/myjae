@@ -19,6 +19,10 @@ import UserCard from '@/app/manseryeok/components/UserCard'
 import { listPinnedServices, togglePinnedService, MAX_PINS } from '@/lib/saju/pinnedServices'
 import HomeBottomSheet from '@/app/home-new/components/HomeBottomSheet'
 import ServiceSection from '@/app/home-new/components/ServiceSection'
+/* ★2026-09-10 — 자매 앱 바로가기 [대표님 목업 승낙 · 「나안」] */
+import SisterLinks from '@/app/components/common/SisterLinks'
+/* ★2026-09-10 — 회사 정보를 «한 곳» 에서 가져옵니다 (⛔ 여기에 다시 적지 마십시오) */
+import { COMPANY } from '@/app/components/common/companyInfo'
 
 // ── 사람 선택 모달을 여는 서비스 설정 ──
 // 사주 + 대운 + 세운(연월운세) 연결. 셋 다 같은 흐름:
@@ -544,6 +548,11 @@ export default function HomeNew() {
         </HomeBottomSheet>
       </main>
 
+      {/* ★2026-09-10 — 자매 앱 바로가기 (큐보드 · 골프온)
+          자리는 </main> «뒤», 푸터 «앞» 입니다.
+          ⛔ 랜딩에는 넣지 않았습니다 [대표님 「홈에만 두자」 2026-09-10]. */}
+      <SisterLinks />
+
       {/* ═══════════════════════════════════════════════════════════
           ★2026-08-04 (45부 · 대표님 지시) — 회사 정보 푸터
             자리는 </main> «뒤», 하단바 «앞» 입니다.
@@ -561,16 +570,31 @@ export default function HomeNew() {
              지금은 어디에도 없습니다. 그때 다시 여쭙겠습니다.
           ═══════════════════════════════════════════════════════════ */}
       <footer style={{ background: '#f2f0ea', padding: '20px 20px 12px', borderTop: '1.5px solid #a89f8d' }}>
+        {/* ★2026-09-10 — 45부가 「갈 화면이 없습니다」라 빼 두었던 링크 줄을 «되살립니다».
+            ⇒ /terms · /privacy 가 생겼습니다.
+            ⛔ 지우지 마십시오 —
+               · 전자상거래법이 신원 정보 표시를 요구합니다.
+               · ★PG 심사가 이 줄을 봅니다 (약관·방침이 열리는지).
+               · ★카카오 콘솔에 넣을 방침 주소가 여기서 나옵니다. */}
+        <div style={{ display: 'flex', gap: '14px', marginBottom: '10px' }}>
+          <a href="/terms" style={{ fontSize: '11px', color: '#5c4a34', textDecoration: 'underline' }}>이용약관</a>
+          <a href="/privacy" style={{ fontSize: '11px', color: '#5c4a34', textDecoration: 'underline' }}>개인정보처리방침</a>
+        </div>
+
         {/* 사업자 정보
             ★2026-08-04 (45부) — 대비 2단계. #888888(3.33:1) → #6b6b6b(5.66:1)
             ⚠️ 옅게 되돌리지 마십시오 — 대표님이 「흐려서 안 보인다」 하신 자리입니다. */}
         <div style={{ fontSize: '11px', color: '#6b6b6b', lineHeight: 1.6 }}>
-          <div>(주)명연재 <span style={{ color: '#8f8878' }}>|</span> 대표 오연희</div>
-          {/* ★2026-09-08 — 사업자등록증(2026-09-04 도봉세무서장 발급)대로 채웠습니다.
-              ⛔ 임의로 고치지 마십시오. 등록증과 «글자 하나까지» 같아야 합니다.
-              ⚠️ 「201호」로 되어 있던 것을 등록증의 ★「2층(미아동)」으로 바로잡았습니다. */}
-          <div>사업자등록번호 296-86-04182</div>
-          <div>서울특별시 강북구 솔매로45길 95, 2층(미아동)</div>
+          <div>{COMPANY.name} <span style={{ color: '#8f8878' }}>|</span> 대표 {COMPANY.ceo}</div>
+          <div>사업자등록번호 {COMPANY.bizNo}</div>
+          {/* ★통신판매업 신고번호 — 번호가 없으면 «아예 안 나옵니다».
+              ⇒ PG 계약 → 에스크로 확인증 → 정부24 신고 «뒤» 에 companyInfo.ts 를 채우십시오.
+              ⛔ 「신고 준비 중」 같은 글을 대신 넣지 마십시오 — 없는 것이 낫습니다. */}
+          {COMPANY.mailOrderNo && <div>통신판매업 신고번호 {COMPANY.mailOrderNo}</div>}
+          <div>{COMPANY.addr}</div>
+          {/* ⚠️ 값은 ★app/components/common/companyInfo.ts 로 옮겼습니다 (2026-09-10).
+              등록증(2026-09-04 도봉세무서장 발급)대로이며 ⛔ 임의로 고치지 마십시오.
+              ⚠️ 「201호」로 되어 있던 것을 등록증의 「2층(미아동)」으로 바로잡은 자국이 있습니다. */}
         </div>
 
         {/* 고객센터 — ★이름과 메일을 «한 줄» 로 (대표님 지시)
@@ -580,9 +604,29 @@ export default function HomeNew() {
           display: 'flex', gap: '6px', alignItems: 'baseline', flexWrap: 'wrap',
         }}>
           <strong style={{ color: '#3d3d3d', fontWeight: 600, flex: 'none' }}>고객센터</strong>
-          <a href="mailto:lysh6728@naver.com" style={{ color: '#6b6b6b', textDecoration: 'none' }}>
-            lysh6728@naver.com
+          <a href={`mailto:${COMPANY.email}`} style={{ color: '#6b6b6b', textDecoration: 'none' }}>
+            {COMPANY.email}
           </a>
+          {/* ★전화번호 — companyInfo.ts 의 tel 이 비어 있으면 «안 나옵니다».
+              ⛔ 가짜 번호를 넣지 마십시오 (랜딩의 070-0000-0000 이 그 자국입니다).
+              ⚠️ 전자상거래법 제13조가 전화번호 표시를 요구합니다 — 손님 받기 전에 채우십시오. */}
+          {COMPANY.tel && (
+            <a href={`tel:${COMPANY.tel.replace(/[^0-9]/g, '')}`} style={{ color: '#6b6b6b', textDecoration: 'none' }}>
+              {COMPANY.tel}
+            </a>
+          )}
+        </div>
+
+        {/* ★2026-09-10 — 개인정보 보호책임자 [대표님 2026-09-10]
+            ⛔ 지우지 마십시오 —
+               · 지정하지 않는 것 자체가 법 위반입니다 (개인정보보호법 제31조).
+               · ★PG 심사가 이 표시를 봅니다. */}
+        <div style={{
+          marginTop: '6px', fontSize: '11px', color: '#6b6b6b', lineHeight: 1.6,
+          display: 'flex', gap: '6px', alignItems: 'baseline', flexWrap: 'wrap',
+        }}>
+          <strong style={{ color: '#3d3d3d', fontWeight: 600, flex: 'none' }}>개인정보 보호책임자</strong>
+          <span>{COMPANY.privacyOfficer.name} ({COMPANY.privacyOfficer.title})</span>
         </div>
 
         {/* 카피라이트
