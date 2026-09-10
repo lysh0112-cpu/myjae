@@ -93,12 +93,29 @@ export default function WalletPrice() {
 
   async function saveAll() {
     setSaving(true)
-    // ⛔ 화면에 «안 보이는» 갈래(myc)는 건드리지 않습니다.
+    /* 🔴 ★2026-09-11 — 「바뀐 줄 세기」를 넣었습니다 [큐보드 회신 ⑥ 지적]
+     *
+     *   [전]  error 만 보고 「요금표가 저장되었습니다」라 했습니다.
+     *         ⇒ ★0줄이 바뀌어도 «저장됐다» 고 말했습니다.
+     *   [까닭] Supabase 는 ★권한이 없어도 «오류를 안 냅니다» —
+     *          RLS 가 걸러 «0줄» 이 되어도 error 는 null 입니다.
+     *          ⇒ 4부 0-5 「관리자 화면이 조용히 0줄」이 ★여기 그대로 있었습니다.
+     *   [고침] ★.select() 로 «바뀐 줄» 을 받아 «셉니다». 0이면 말합니다.
+     *
+     *   ⚠️ 큐보드가 admin.html 에서 같은 것을 찾았습니다 —
+     *      「Supabase 는 권한이 없어도 200 OK + ★빈 배열을 줍니다」
+     *   ⛔ .select() 를 빼지 마십시오 — 빼면 다시 «조용히» 실패합니다.
+     *   ⛔ 「화면에 친 값」을 서버 답인 척 쓰지 마십시오 (큐보드 2-1 ②). */
     for (const r of rows.filter(x => SHOWN.has(x.service))) {
-      const { error } = await supabase.from('mc_price')
+      const { data, error } = await supabase.from('mc_price')
         .update({ price: r.price, up_at: new Date().toISOString() })
         .eq('service', r.service).eq('item', r.item)
+        .select('service, item')
       if (error) { alert('저장 실패(' + r.label + '): ' + error.message); setSaving(false); return }
+      if (!data || data.length === 0) {
+        alert('저장되지 않았습니다 (' + r.label + ').\n로그인이 풀렸거나 권한이 없습니다.\n로그아웃 후 다시 로그인해 주세요.')
+        setSaving(false); return
+      }
     }
     setSaving(false)
     alert('요금표가 저장되었습니다')

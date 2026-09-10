@@ -137,17 +137,28 @@ export default function ExpenseManager() {
   }
 
   const approve = async (id: string) => {
-    const { error } = await supabase.from('expenses')
+    /* ★2026-09-11 — 바뀐 줄 세기 [큐보드 회신 ⑥] · ★돈이 오가는 자리입니다 */
+    const { data, error } = await supabase.from('expenses')
       .update({ approval_status: '승인', approved_by: '관리자', approved_at: new Date().toISOString() })
       .eq('id', id)
+      .select('id')
     if (error) { alert('승인 실패: ' + error.message); return }
+    if (!error && (!data || data.length === 0)) {
+      alert('승인되지 않았습니다.\n로그인이 풀렸거나 권한이 없습니다.\n로그아웃 후 다시 로그인해 주세요.')
+      return
+    }
     load()
   }
 
   const remove = async (id: string) => {
     if (!confirm('이 지출 내역을 삭제할까요?')) return
-    const { error } = await supabase.from('expenses').delete().eq('id', id)
+    /* ★2026-09-11 — 지운 줄도 «셉니다» (큐보드가 DELETE 도 세라고 알려 주었습니다) */
+    const { data, error } = await supabase.from('expenses').delete().eq('id', id).select('id')
     if (error) { alert('삭제 실패: ' + error.message); return }
+    if (!error && (!data || data.length === 0)) {
+      alert('삭제되지 않았습니다.\n로그인이 풀렸거나 권한이 없습니다.\n로그아웃 후 다시 로그인해 주세요.')
+      return
+    }
     load()
   }
 

@@ -104,10 +104,24 @@ export default function ConsultantManager() {
       rating: form.rating, review_count: form.review_count, review_text: form.review_text,
     }
     if (editing) {
-      const { error } = await supabase.from('consultants')
+      /* 🔴 ★2026-09-11 — 「바뀐 줄 세기」 [큐보드 회신 ⑥ 지적]
+       *   ⚠️ ★대표님이 4부 0-5 에서 «실제로» 겪으신 자리입니다 —
+       *      「상담사 정보를 고쳐도 저장이 안 됐습니다.
+       *        오류도 «안 나고» 알림창도 «안 떴습니다». 화면은 멀쩡했습니다」
+       *   [까닭] Supabase 는 ★권한이 없어도 오류를 «안 냅니다».
+       *          RLS(consultants_update_auth · {authenticated})가 걸러 «0줄» 이 되어도
+       *          error 는 null 입니다.
+       *   [고침] ★.select() 로 바뀐 줄을 받아 «셉니다». 0이면 말합니다.
+       *   ⛔ .select() 를 빼지 마십시오 — 빼면 다시 «조용히» 실패합니다. */
+      const { data, error } = await supabase.from('consultants')
         .update({ ...payload, active: form.active })
         .eq('id', form.id)
+        .select('id')
       if (error) { alert('수정하지 못했어요.\n\n잠시 후 다시 시도해 주세요.\n(' + error.message + ')'); setLoading(false); return }
+      if (!data || data.length === 0) {
+        alert('저장되지 않았습니다.\n로그인이 풀렸거나 권한이 없습니다.\n로그아웃 후 다시 로그인해 주세요.')
+        setLoading(false); return
+      }
     } else {
       const { error } = await supabase.from('consultants')
         .insert({ ...payload, active: true })
@@ -193,13 +207,25 @@ export default function ConsultantManager() {
     fetchPending()
   }
   async function handleToggleActive(c: ConsultantFormData) {
-    const { error } = await supabase.from('consultants').update({ active: !c.active }).eq('id', c.id)
+    /* ★2026-09-11 — 바뀐 줄 세기 (위 수정 자리와 같은 까닭) */
+    const { data, error } = await supabase.from('consultants')
+      .update({ active: !c.active }).eq('id', c.id).select('id')
+    if (!error && (!data || data.length === 0)) {
+      alert('바뀌지 않았습니다.\n로그인이 풀렸거나 권한이 없습니다.\n로그아웃 후 다시 로그인해 주세요.')
+      return
+    }
     if (error) { alert('활성 상태를 바꾸지 못했어요.\n\n잠시 후 다시 시도해 주세요.\n(' + error.message + ')'); return }
     fetchList()
   }
   async function handleSaveSort(id: string, sort: number) {
     setList(prev => prev.map(c => c.id === id ? { ...c, sort } : c))
-    const { error } = await supabase.from('consultants').update({ sort }).eq('id', id)
+    /* ★2026-09-11 — 바뀐 줄 세기 */
+    const { data, error } = await supabase.from('consultants')
+      .update({ sort }).eq('id', id).select('id')
+    if (!error && (!data || data.length === 0)) {
+      alert('바뀌지 않았습니다.\n로그인이 풀렸거나 권한이 없습니다.')
+      return
+    }
     if (error) { alert('순번을 저장하지 못했어요.\n\n잠시 후 다시 시도해 주세요.\n(' + error.message + ')'); fetchList(); return }
   }
   function handleEdit(c: ConsultantFormData) {

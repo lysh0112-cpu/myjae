@@ -81,9 +81,16 @@ export default function ExpenseApproval() {
 
   const saveNames = async () => {
     if (!selected) return
-    const { error } = await supabase.from('expenses')
+    /* ★2026-09-11 — 바뀐 줄 세기 [큐보드 회신 ⑥]
+       ⚠️ Supabase 는 ★권한이 없어도 오류를 «안 냅니다». 0줄이 되어도 error 는 null 입니다. */
+    const { data, error } = await supabase.from('expenses')
       .update({ handler: handler || null, approver: approver || null }).eq('id', selected.id)
+      .select('id')
     if (error) { alert('저장 실패: ' + error.message); return }
+    if (!error && (!data || data.length === 0)) {
+      alert('저장되지 않았습니다.\n로그인이 풀렸거나 권한이 없습니다.\n로그아웃 후 다시 로그인해 주세요.')
+      return
+    }
     alert('저장되었습니다.'); load()
   }
 

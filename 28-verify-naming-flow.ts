@@ -2231,6 +2231,55 @@ console.log('\n━━ ㉒-l 🔴 약관·방침이 «워드 원본과 짝» 인�
   check(!fake.test(t) && !fake.test(v), `⛔ 가짜 사업자번호·전화·옛 주소가 «없습니다»`)
 }
 
+console.log('\n━━ ㉒-m 🔴 관리자 화면이 «바뀐 줄» 을 세는가 (2026-09-11) ━━')
+{
+  //  🔴 [왜 이 그물이 필요한가]
+  //     Supabase 는 ★권한이 없어도 «오류를 안 냅니다» —
+  //     RLS 가 걸러 «0줄» 이 되어도 error 는 null 이고, 200 OK 가 옵니다.
+  //     ⇒ error 만 보고 「저장되었습니다」라 하면 ★사장님 눈에는 «된 것처럼» 보이는데
+  //        서버에는 «안 들어갑니다».
+  //
+  //     [실제로 겪은 일]
+  //       · 4부 0-5 — 대표님이 ★상담사 정보를 고쳤는데 «조용히» 안 들어갔습니다.
+  //         「오류도 안 나고 알림창도 안 떴습니다. 화면은 멀쩡했습니다」
+  //       · 2026-09-11 — 큐보드가 ★admin.html 에서 «같은 것» 을 찾아 알려 주었습니다.
+  //         「PATCH 가 200 OK + ★빈 배열을 돌려주는데 화면에 친 값을 서버 답인 척 썼다」
+  //
+  //  ⛔ .select() 를 빼지 마십시오 — 빼면 «몇 줄 바뀌었는지 알 길이 없습니다».
+  //  ⛔ DELETE 도 세십시오 — 안 세면 「지웠습니다」라 해 놓고 안 지워집니다.
+  const files = [
+    'app/admin/components/WalletPrice.tsx',
+    'app/admin/components/ConsultantManager.tsx',
+    'app/admin/components/ExpenseApproval.tsx',
+    'app/admin/components/ExpenseManager.tsx',
+  ]
+  for (const f of files) {
+    const c = codeOf(read(f))
+    //  update / delete 를 부르는데 .select() 가 «한 번도» 없으면 못 셉니다
+    const hasWrite = /\.update\(|\.delete\(\)/.test(c)
+    const hasCount = /\.select\(/.test(c) && /data\.length === 0|!data \|\|/.test(c)
+    check(!hasWrite || hasCount,
+      `★${f.split('/').pop()} 가 «바뀐 줄» 을 셉니다`)
+  }
+  //  ★가격 저장은 4부가 「가장 위험한 자리」라 한 곳입니다 — 따로 봅니다
+  const wp = codeOf(read('app/admin/components/WalletPrice.tsx'))
+  check(/\.select\('service, item'\)/.test(wp),
+    `⛔ 가격 저장이 ★.select() 로 바뀐 줄을 받습니다 (4부 0-5 「가장 위험한 자리」)`)
+  check(/data\.length === 0/.test(wp),
+    `⛔ 가격 저장이 ★0줄이면 «말합니다»`)
+
+  //  ★관리자 API 를 부르기 «직전» 에 세션을 새로 받는가
+  //    ⚠️ access token 은 1시간짜리인데 middleware 는 «화면을 옮길 때» 만 돕니다.
+  //       fetch 는 middleware 를 «안 거칩니다» ⇒ 오래 켜 둔 화면이 죽은 토큰을 보냅니다.
+  const ca = codeOf(read('app/admin/components/callAdmin.ts'))
+  check(/getSession\(\)/.test(ca), `★callAdmin 이 부르기 직전에 세션을 새로 받습니다`)
+  check(/status === 401/.test(ca), `⛔ 401 을 ★「로그인이 풀렸어요」 로 «가려» 말합니다`)
+  check(/catch\s*\{[\s\S]{0,400}?끊/.test(ca),
+    `⛔ ★신호 끊김과 «서버 거절» 을 가릅니다 (끊겼을 때 로그아웃시키지 않습니다)`)
+  const mm = codeOf(read('app/admin/components/MemberManager.tsx'))
+  check(/freshSession\(\)/.test(mm), `★회원 관리가 부르기 직전에 세션을 새로 받습니다`)
+}
+
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail > 0) {
   console.log('  ┌────────────────────────────────────────────────────────────┐')
