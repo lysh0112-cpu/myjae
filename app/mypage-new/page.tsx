@@ -11,6 +11,7 @@ import HomeBottomNav from '@/app/components/HomeBottomNav'
 import { useResultSaju } from '@/hooks/useResultSaju'
 // ★2026-07-27 — 커플채팅(CoupleChatFab · InviteNotifier) 제거. 테스트였으므로 전부 삭제.
 //   ⚠️ 상담사–고객 채팅은 별개이며 살아 있다. 함께 지우지 말 것.
+import Image from 'next/image'
 import AiTalkFab from '@/app/manseryeok/components/AiTalkFab'
 import WalletPanel from '@/app/components/common/WalletPanel'
 import {
@@ -442,22 +443,14 @@ export default function MyPageNew() {
       `}</style>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', background: '#FFFBF7', borderBottom: '0.5px solid #9c7a58', position: 'sticky', top: 0, zIndex: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <svg width="30" height="34" viewBox="0 0 46 50" style={{ overflow: 'visible' }}>
-            <g>
-              <path className="mc-steam-a" d="M16 14 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
-              <path className="mc-steam-b" d="M23 13 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
-              <path className="mc-steam-c" d="M30 14 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
-            </g>
-            <g className="mc-cup">
-              <path d="M8 20 L38 20 L36 40 Q35 45 30 45 L16 45 Q11 45 10 40 Z" fill="#b46e46" />
-              <path d="M8 20 L38 20 L37.5 24 L8.5 24 Z" fill="#c8783c" />
-              <path d="M38 24 Q45 24 45 30 Q45 36 38 36 L37 32 Q41 32 41 30 Q41 28 37.5 28 Z" fill="#b46e46" />
-              <ellipse cx="23" cy="21" rx="14" ry="2.5" fill="#96502e" />
-            </g>
-          </svg>
-          <span style={{ fontSize: 18, fontWeight: 900, fontStyle: 'italic' }}>
-            <span style={{ color: '#96502e' }}>Myung</span><span style={{ color: '#8F5433' }}>Cafe</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* ★2026-09-10 — 커피잔 + MyungCafe 를 ★새 로고 + 「명연재(明然載)」 로.
+              홈·로그인·가입 화면과 «같은 모양» 입니다.
+              ⛔ 옛 커피잔으로 되돌리지 마십시오 — 손님이 두 이름을 보게 됩니다. */}
+          <Image src="/logo-myjae.png" alt="명연재" width={30} height={30} priority />
+          <span style={{ display: 'flex', alignItems: 'flex-end', gap: 5 }}>
+            <span style={{ fontSize: 19, fontWeight: 600, color: '#38414B', letterSpacing: 2, lineHeight: 1 }}>명연재</span>
+            <span style={{ fontSize: 11, color: '#68112E', lineHeight: 1 }}>(明然載)</span>
           </span>
         </div>
         <div style={{ display: 'flex', gap: 16, fontSize: 18, color: '#b49080' }}>
@@ -599,7 +592,11 @@ export default function MyPageNew() {
                   </div>
                 )}
                 {msg && <div style={{ color: '#c05a5a', fontSize: 12, marginBottom: 10 }}>{msg}</div>}
-                <div style={{ display: 'flex', gap: 8 }}>
+                {/* ⚠️ ★2026-09-10 — [저장]을 «AI 상담» 동그라미가 가렸습니다 [대표님 화면].
+                    ⇒ AI 단추는 화면에 «떠 있어»(fixed) 자리를 옮기면 다른 화면이 다 흔들립니다.
+                       ⇒ ★여기서 오른쪽을 비켜 줍니다. paddingRight 로 «단추만» 좁힙니다.
+                    ⛔ AiTalkFab 의 right·bottom 을 만지지 마십시오 — 온 화면에 걸립니다. */}
+                <div style={{ display: 'flex', gap: 8, paddingRight: 76 }}>
                   <button onClick={() => setEditMode(false)} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '0.5px solid #9c7a58', background: 'none', color: '#5c3a1e', fontSize: 13, cursor: 'pointer' }}>취소</button>
                   <button onClick={saveSaju} disabled={saving} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', background: '#b46e46', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>{saving ? '저장 중…' : '저장'}</button>
                 </div>
@@ -717,7 +714,16 @@ export default function MyPageNew() {
             ⇒ 문의는 ★하단바 「💬 문의사항」(/inquiry) 이 맡습니다. 겹칩니다.
             ⛔ 여기에 다시 넣지 마십시오. */}
         <div style={{ marginBottom: 12 }}>
-          <div onClick={() => { setEditMode(true); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }) }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 12px', background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 12, cursor: 'pointer' }}>
+          {/* 🔴 ★2026-09-10 (밤) [대표님이 화면으로 찾아 주셨습니다]
+              [전]  setEditMode(true) «만» 불렀습니다.
+                    ⇒ 수정 칸이 ★«텅 빈 채로» 열려, 카드 위에는 「음력 1966.1.12·卯시」가
+                       있는데 아래 칸은 비어 있었습니다.
+                    ⇒ 손님이 ★자기 사주를 처음부터 다시 넣어야 했습니다.
+              [까닭] 값을 채우는 일은 ★openEdit() 이 합니다 (315줄).
+                     카드의 [수정] 단추는 그것을 부르는데 ★여기만 안 불렀습니다.
+              [고침] ★openEdit() 을 부릅니다. setEditMode(true) 는 그 안에 있습니다.
+              ⛔ setEditMode(true) 를 «직접» 부르지 마십시오 — 또 빈 칸으로 열립니다. */}
+          <div onClick={() => { openEdit(); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }) }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 12px', background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 12, cursor: 'pointer' }}>
             <span style={{ fontSize: 13, color: '#5a4a3e' }}>⚙️ 계정 설정</span>
           </div>
         </div>
