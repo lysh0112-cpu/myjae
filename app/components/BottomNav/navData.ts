@@ -9,5 +9,5 @@ export const NAV_TABS = [
   { href: '/',            label: '홈',      icon: 'home' },
   { href: '/mypage-new', label: '마이',    icon: 'profile' },
   { href: '/category',    label: '카테고리', icon: 'grid' },
-  { href: '/auth/login',  label: '로그인',   icon: 'user' },
+  { href: '/login',  label: '로그인',   icon: 'user' },
 ]

@@ -9,7 +9,7 @@ export default function AuthMainPage() {
   // 소셜 로그인은 준비 중이라, 이 화면은 이메일 로그인으로 자동 이동시킵니다.
   // (소셜 로그인을 다시 쓸 때는 아래 useEffect만 지우면 됩니다.)
   useEffect(() => {
-    router.replace('/auth/login')
+    router.replace('/login')
   }, [router])
 
   return (

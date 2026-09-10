@@ -1,105 +1,53 @@
 'use client'
-import { useState, Suspense } from 'react'
+
+// ==========================================================================
+// /auth/login — ★옛 «어두운» 로그인 화면이 있던 자리입니다.
+//
+//   🔴 [2026-09-10 대표님 지적]
+//      「명연재의 로그인도 골프온·큐보드와 «동일하게» 떠야 되는 것 아닌가」
+//
+//   [무엇이 문제였나]
+//      · 배경이 ★#1a1a18 어두운 화면이었습니다 (45부가 「흐름이 끊긴다」 한 그 색)
+//      · 🔴 ★카카오 단추가 «없었습니다»
+//        ⇒ 카카오로 가입하신 분은 비밀번호를 만든 적이 없어
+//           ★들어갈 문이 «아예» 없었습니다.
+//      · 홈 머리의 [로그인]을 비롯해 ★열 곳이 이리로 오고 있었습니다.
+//
+//   [고침]  ★/login «하나» 로 모았습니다. 이 자리는 «보내기만» 합니다.
+//      ⛔ 여기에 로그인 화면을 다시 만들지 마십시오 —
+//         두 벌이 되면 ★한쪽에만 카카오가 빠지는 일이 또 생깁니다.
+//         (지갑·약관을 명연재 한 곳으로 모은 것과 «같은 까닭» 입니다)
+//
+//   ⚠️ 파일을 «지우지» 않았습니다 — 이 주소를 북마크해 두신 분이 있을 수 있습니다.
+//      ⇒ 지우면 그분들이 404 를 봅니다.
+//   ⚠️ next(왔던 자리)를 ★그대로 실어 보냅니다. 안 그러면 지갑 손님이 길을 잃습니다.
+// ==========================================================================
+
+import { useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { Suspense } from 'react'
 
-function LoginForm() {
+function Redirect() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const type = searchParams.get('type') || 'customer'
-  const isConsultant = type === 'consultant'
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const sp = useSearchParams()
 
-  const routeAfterLogin = async (userId: string) => {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('nickname, privacy_agreed')
-      .eq('id', userId)
-      .single()
+  useEffect(() => {
+    const raw = sp.get('next')
+    /* ⛔ 「/」로 시작하는 «우리 집 주소» 만 실어 보냅니다 (「//」도 막습니다).
+       ★열린 넘기기(open redirect)를 막는 자리입니다 — /login 과 같은 규칙입니다. */
+    const safe = raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : null
+    router.replace(safe ? `/login?next=${encodeURIComponent(safe)}` : '/login')
+  }, [router, sp])
 
-    // 가입 직후(닉네임·약관 미완료)면 환영 화면으로
-    if (!profile || !profile.nickname || !profile.privacy_agreed) {
-      router.push('/auth/welcome')
-      return
-    }
-
-    // 그 외에는 등급과 무관하게 무조건 홈으로.
-    // 상담사·관리자 화면은 로그인 후 '마이페이지'에서 들어간다.
-    router.push('/')
-  }
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error || !data.user) {
-      setError('이메일 또는 비밀번호가 올바르지 않습니다.')
-      setLoading(false)
-      return
-    }
-    await routeAfterLogin(data.user.id)
-  }
-
-  return (
-    <div className="min-h-screen flex items-center justify-center px-4"
-      style={{ background: '#1a1a18' }}>
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold" style={{ color: '#FAC775' }}>명연재</h1>
-          <p className="text-sm mt-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
-            {isConsultant ? '🔮 상담사 로그인' : '👤 로그인'}
-          </p>
-        </div>
-        <div className="rounded-2xl p-8"
-          style={{ background: '#2C2C2A', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm mb-1" style={{ color: 'rgba(255,255,255,0.6)' }}>이메일</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
-                className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none"
-                style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.12)' }}
-                placeholder="example@email.com" />
-            </div>
-            <div>
-              <label className="block text-sm mb-1" style={{ color: 'rgba(255,255,255,0.6)' }}>비밀번호</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
-                className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none"
-                style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.12)' }}
-                placeholder="비밀번호 입력" />
-            </div>
-            {error && <p className="text-sm" style={{ color: '#ff8080' }}>{error}</p>}
-            <button type="submit" disabled={loading}
-              className="w-full py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg, #FAC775, #f0a030)', color: '#1a1a18' }}>
-              {loading ? '로그인 중...' : '로그인'}
-            </button>
-          </form>
-
-          <button onClick={() => router.push(`/auth/signup${isConsultant ? '?type=consultant' : ''}`)}
-            className="w-full mt-3 py-3 rounded-xl text-sm font-bold"
-            style={{ color: '#FAC775', background: 'rgba(250,199,117,0.1)', border: '1px solid rgba(250,199,117,0.25)' }}>
-            처음이세요? 회원가입하기
-          </button>
-
-          <button onClick={() => router.back()}
-            className="w-full mt-2 py-3 rounded-xl text-sm"
-            style={{ color: '#8a88a0' }}>
-            ← 돌아가기
-          </button>
-        </div>
-      </div>
-    </div>
-  )
+  return null
 }
 
-export default function LoginPage() {
+export default function AuthLoginRedirect() {
   return (
-    <Suspense>
-      <LoginForm />
+    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#FDF6F0' }} />}>
+      <div style={{ minHeight: '100vh', background: '#FDF6F0' }}>
+        <Redirect />
+      </div>
     </Suspense>
   )
 }

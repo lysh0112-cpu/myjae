@@ -370,7 +370,7 @@ export default function HomeNew() {
             ⚠️ ★하단바에 마이페이지가 «없습니다». 여기가 «유일한» 길이라
                뜻이 분명해야 합니다. ⛔ 다시 ☰ 로 되돌리지 마십시오. */}
         <button
-          onClick={() => router.push(isLoggedIn ? '/mypage-new' : '/auth/login')}
+          onClick={() => router.push(isLoggedIn ? '/mypage-new' : '/login')}
           aria-label={isLoggedIn ? '내 정보' : '로그인'}
           style={{
             display: 'flex', alignItems: 'center', gap: '5px',

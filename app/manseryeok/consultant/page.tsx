@@ -128,7 +128,7 @@ function ConsultantContent() {
       // 로그인 안 됨 → 로그인 화면으로
       if (!u.user) {
         setAuthState('denied')
-        router.replace('/auth/login')
+        router.replace('/login')
         return
       }
 
@@ -254,7 +254,7 @@ function ConsultantContent() {
 
   async function handleLogout() {
     await supabase.auth.signOut()
-    router.push('/auth/login')
+    router.push('/login')
   }
 
   // ══════════════════════════════════════════════════════════════════════

@@ -122,7 +122,7 @@ export default function InquiryPage() {
         </div>
         <div style={{ padding: '60px 24px', textAlign: 'center', fontSize: 13.5, color: '#8a7461', lineHeight: 1.9 }}>
           로그인하시면 문의를 남기고<br />답변을 받아보실 수 있어요.
-          <button onClick={() => router.push('/auth/login')}
+          <button onClick={() => router.push('/login')}
             style={{
               display: 'block', width: '100%', marginTop: 20, height: 44,
               background: '#b46e46', color: '#fff', border: 'none', borderRadius: 10,

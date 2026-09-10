@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+/* ★2026-09-10 — 머리 로고를 넣으려고 더했습니다 (public/logo-myjae.png) */
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -153,27 +155,46 @@ export default function LoginPage() {
 
       <div style={{ padding: '36px 24px 24px' }}>
 
-        {/* 로고 */}
-        <div style={{ textAlign: 'center', marginBottom: 30 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, marginBottom: 12 }}>
-            <svg width="38" height="42" viewBox="0 0 46 50" style={{ overflow: 'visible' }}>
-              <g>
-                <path className="mc-steam-a" d="M16 14 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
-                <path className="mc-steam-b" d="M23 13 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
-                <path className="mc-steam-c" d="M30 14 q-3 -5 0 -10 q3 -5 0 -10" stroke="#c8a890" strokeWidth="2" fill="none" strokeLinecap="round" transform="translate(0,2)" />
-              </g>
-              <g className="mc-cup">
-                <path d="M8 20 L38 20 L36 40 Q35 45 30 45 L16 45 Q11 45 10 40 Z" fill="#b46e46" />
-                <path d="M8 20 L38 20 L37.5 24 L8.5 24 Z" fill="#c8783c" />
-                <path d="M38 24 Q45 24 45 30 Q45 36 38 36 L37 32 Q41 32 41 30 Q41 28 37.5 28 Z" fill="#b46e46" />
-                <ellipse cx="23" cy="21" rx="14" ry="2.5" fill="#96502e" />
-              </g>
-            </svg>
-            <span style={{ fontSize: 23, fontWeight: 900, fontStyle: 'italic' }}>
-              <span style={{ color: '#96502e' }}>Myung</span><span style={{ color: '#b46e46' }}>Cafe</span>
+        {/* ★2026-09-10 — 커피잔 + MyungCafe 를 ★새 로고 + 「명연재(明然載)」 로.
+            홈 머리(app/home-new/page.tsx)와 «같은 모양» 입니다.
+            ⛔ 옛 커피잔으로 되돌리지 마십시오 — 손님이 두 이름을 보게 됩니다. */}
+        <div style={{ textAlign: 'center', marginBottom: 22 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
+            <Image src="/logo-myjae.png" alt="명연재" width={30} height={30} priority />
+            <span style={{ display: 'flex', alignItems: 'flex-end', gap: 5 }}>
+              <span style={{ fontSize: 20, fontWeight: 600, color: '#38414B', letterSpacing: 2, lineHeight: 1 }}>명연재</span>
+              <span style={{ fontSize: 11, color: '#68112E', lineHeight: 1 }}>(明然載)</span>
             </span>
           </div>
           <div style={{ fontSize: 13, color: '#5c3a1e' }}>다시 오신 걸 환영해요 ✦</div>
+        </div>
+
+        {/* ★2026-09-10 — 카카오를 «맨 위» 로 올렸습니다 [대표님 목업 승낙]
+            [까닭] 큐보드·골프온이 «카카오 먼저» 인데 명연재만 이메일이 먼저라
+                   손님이 세 앱을 오가며 ★다른 앱처럼 느꼈습니다.
+            ⚠️ 색은 ★명연재 피치톤 그대로입니다. 두 앱의 남색을 가져오지 «않았습니다».
+               ⇒ 짜임과 문구만 맞추고 ★색은 각 앱 것을 지킵니다 [대표님 2026-09-10].
+            ⛔ 노랑 #FEE500 은 ★카카오가 정한 색입니다. 바꾸지 마십시오. */}
+        <button onClick={handleKakao} disabled={social}
+          style={{
+            width: '100%', height: 52, background: '#FEE500', border: 'none', borderRadius: 14,
+            color: '#3C1E1E', fontSize: 15, fontWeight: 600,
+            cursor: social ? 'default' : 'pointer', opacity: social ? 0.6 : 1, marginBottom: 9,
+          }}>
+          {social ? '카카오로 넘어가는 중…' : '카카오로 3초 만에 시작'}
+        </button>
+
+        {/* ⚠️ 「자기를 뺀 둘」을 적습니다 — 큐보드·골프온도 «같은 규칙» 입니다.
+            ⛔ 앱이 늘거나 줄면 ★세 앱을 함께 고치십시오. */}
+        <div style={{ fontSize: 11.5, color: '#6b5340', lineHeight: 1.6, marginBottom: 20 }}>
+          큐보드 · 골프온과 같은 계정입니다. 한 번 로그인하면 세 곳에서 그대로 쓰입니다.
+        </div>
+
+        {/* 가르는 줄 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+          <div style={{ flex: 1, height: '0.5px', background: '#e8d5c5' }} />
+          <span style={{ fontSize: 11, color: '#6b5340' }}>또는 이메일로</span>
+          <div style={{ flex: 1, height: '0.5px', background: '#e8d5c5' }} />
         </div>
 
         <form onSubmit={handleLogin}>
@@ -221,19 +242,6 @@ export default function LoginPage() {
             {loading ? '로그인 중…' : '로그인'}
           </button>
         </form>
-
-        {/* 구분선 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-          <div style={{ flex: 1, height: '0.5px', background: '#e8d5c5' }} />
-          <span style={{ fontSize: 11, color: '#6b5340' }}>간편하게 로그인</span>
-          <div style={{ flex: 1, height: '0.5px', background: '#e8d5c5' }} />
-        </div>
-
-        {/* 소셜 — ★카카오 «하나» 만 (2026-09-09) */}
-        <button onClick={handleKakao} disabled={social}
-          style={{ width: '100%', height: 50, background: '#FEE500', border: 'none', borderRadius: 14, color: '#3C1E1E', fontSize: 14, fontWeight: 600, cursor: social ? 'default' : 'pointer', opacity: social ? 0.6 : 1, marginBottom: 26 }}>
-          {social ? '카카오로 넘어가는 중…' : '💬 카카오로 로그인'}
-        </button>
 
         {/* ★네이버·구글은 «내렸습니다» [대표님 2026-09-09] — ⛔ 지우지 않았습니다.
               [까닭] 네이버는 Supabase 가 «지원하지 않습니다» (목록에 없음).

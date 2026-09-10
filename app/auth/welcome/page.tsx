@@ -88,7 +88,7 @@ export default function WelcomePage() {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) { router.push('/auth/login'); return }
+      if (!data.user) { router.push('/login'); return }
       setUserId(data.user.id)
       /* ★2026-09-10 — 카카오가 준 것을 «미리 채워» 둡니다.
        *   ⚠️ 카카오는 ★nickname 칸을 «안 줍니다» — 값으로 잰 칸 열하나에 없었습니다.

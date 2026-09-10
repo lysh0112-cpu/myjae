@@ -35,7 +35,7 @@ export default function ReviewWritePage() {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) {
         // 로그인 안 했으면 로그인 화면으로
-        router.push('/auth/login')
+        router.push('/login')
         return
       }
       setUserId(data.user.id)
