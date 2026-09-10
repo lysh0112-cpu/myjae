@@ -4,23 +4,11 @@ import Image from 'next/image'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import {
-  hourLabelOf, normalizeHourLabel, toStoredHour,
-  TIME_BANDS, MONTHS, dayOptions, clampDay, isValidBirthDate,
-  crossesMidnight, type TimeBand,
-} from '@/lib/saju/birthInput'
 
 // 시(時) 목록 — 공용 birthInput.ts 기준 (30분법 · 공백없음).
 //   ★ '모름'은 두지 않는다. 시를 반드시 입력받는다(대표님 확정 2026-07).
 //     정확히 모르는 사람은 아래 시간대 버튼으로 3개까지 좁혀서 고른다.
-const HOUR_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
-  value: String(i),
-  label: hourLabelOf(i),
-}))
 
-function genderToValue(g: '여자' | '남자' | ''): '남' | '여' {
-  return g === '여자' ? '여' : '남'
-}
 
 const inputStyle: React.CSSProperties = {
   width: '100%', height: '48px', padding: '0 14px',
@@ -30,32 +18,12 @@ const inputStyle: React.CSSProperties = {
 }
 
 // 드롭다운 공통 (기본 화살표 숨기고 직접 그림)
-const selectStyle: React.CSSProperties = {
-  ...inputStyle,
-  appearance: 'none',
-  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23bbb' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
-  backgroundRepeat: 'no-repeat',
-  backgroundPosition: 'right 10px center',
-  paddingRight: '28px',
-  cursor: 'pointer',
-}
 
 export default function SignupPage() {
   const router = useRouter()
 
   // 사주 정보
-  const [hangulName, setHangulName] = useState('')
-  const [hanjaName, setHanjaName] = useState('')
   const [nickname, setNickname] = useState('')
-  const [gender, setGender] = useState<'여자' | '남자' | ''>('')
-  const [calType, setCalType] = useState<'양력' | '음력'>('양력')
-  const [leap, setLeap] = useState(false)
-  const [year, setYear] = useState('')
-  const [month, setMonth] = useState('')
-  const [day, setDay] = useState('')
-  const [hour, setHour] = useState('')       // '0'~'11' (인덱스 문자열)
-  const [band, setBand] = useState<TimeBand | null>(null)  // 시간대 보조 필터
-  const [city, setCity] = useState('')
 
   // 계정 정보
   const [email, setEmail] = useState('')
@@ -70,35 +38,12 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
 
-  const onlyNum = (v: string, len: number) => v.replace(/[^0-9]/g, '').slice(0, len)
 
   // 연/월이 바뀌면 이미 고른 '일'이 범위를 벗어날 수 있다 (3/31 → 2월).
-  const applyYear = (v: string) => {
-    const y = onlyNum(v, 4)
-    setYear(y)
-    if (month && day) setDay(clampDay(day, parseInt(y, 10), parseInt(month, 10), calType))
-  }
-  const applyMonth = (m: string) => {
-    setMonth(m)
-    if (day) setDay(clampDay(day, parseInt(year, 10), parseInt(m, 10), calType))
-  }
-  const applyCalType = (c: '양력' | '음력') => {
-    setCalType(c)
-    if (month && day) setDay(clampDay(day, parseInt(year, 10), parseInt(month, 10), c))
-  }
 
   // 시간대를 고르면 그 안의 3개 시진만 목록에 남긴다.
   // 시간대를 고르면 그 안의 3개만. band.hours 순서를 그대로 따른다
   //   (밤 = 戌·亥·子 순. 인덱스 오름차순으로 뽑으면 子가 앞으로 와서 어색함)
-  const visibleHours = band
-    ? band.hours.map(i => HOUR_OPTIONS[i])
-    : HOUR_OPTIONS
-
-  const pickBand = (b: TimeBand) => {
-    if (band?.key === b.key) { setBand(null); return }   // 다시 누르면 해제
-    setBand(b)
-    if (hour && !b.hours.includes(Number(hour))) setHour('')  // 범위 밖이면 초기화
-  }
 
   // 소셜 로그인 (아직 준비 중)
   /* 🔴 ★2026-09-10 (밤) — 「준비 중입니다」라고만 하던 handleSocial 을
@@ -126,18 +71,12 @@ export default function SignupPage() {
   // 회원가입 실행
   const handleSignup = async () => {
     setMsg('')
-    /* 🔴 ★2026-09-10 (밤) — 사주와 이름을 ★«선택» 으로 바꿨습니다.
+    /* 🔴 ★2026-09-10 (밤) — 가입은 ★«계정만» 만듭니다.
      *   [대표님] 「회원가입은 모두 통일하고, 명연재 정보 입력을 따로 가져가자」
-     *   ⇒ 가입은 ★계정만 만듭니다. 사주는 «쓸 때» 마이페이지에서 받습니다.
-     *   ⚠️ 넣으시다 «만» 경우는 막습니다 — 반쯤 든 사주는 풀이가 틀립니다. */
-    if (!nickname && !hangulName) { setMsg('닉네임을 입력해주세요.'); return }
-    const sajuTyped = !!(year || month || day || hour || gender)
-    if (sajuTyped) {
-      if (!gender) { setMsg('성별을 선택해주세요.'); return }
-      if (year.length !== 4 || !month || !day) { setMsg('생년월일을 정확히 입력해주세요.'); return }
-      if (!isValidBirthDate(year, month, day, calType)) { setMsg('생년월일이 올바르지 않아요. 다시 확인해주세요.'); return }
-      if (!hour) { setMsg('태어난 시간을 선택해주세요. 정확히 모르시면 시간대 버튼으로 골라주세요.'); return }
-    }
+     *            「접어두지 말고 ★완전 분리를 하고」
+     *   ⇒ 사주는 ★마이페이지 «한 곳» 에서만 받습니다.
+     *   ⛔ 여기에 사주 저장을 «다시» 넣지 마십시오 — 두 곳이 되면 어긋납니다. */
+    if (!nickname) { setMsg('닉네임을 입력해주세요.'); return }
     if (!email || !email.includes('@')) { setMsg('올바른 이메일을 입력해주세요.'); return }
     if (password.length < 6) { setMsg('비밀번호는 6자 이상으로 입력해주세요.'); return }
     if (password !== passwordConfirm) { setMsg('비밀번호가 일치하지 않습니다.'); return }
@@ -149,7 +88,7 @@ export default function SignupPage() {
     // 1) 계정 생성
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email, password,
-      options: { data: { nickname: nickname || hangulName } },
+      options: { data: { nickname } },
     })
     if (signUpError) {
       setLoading(false)
@@ -163,31 +102,17 @@ export default function SignupPage() {
       return
     }
 
-    // 2) profiles 저장
-    const hourValue = toStoredHour(normalizeHourLabel(hour))
-    const genderValue = genderToValue(gender)
-    const leapValue = calType === '음력' && leap
+    // 2) profiles 저장 — ★닉네임·이메일·동의 «만»
     const now = new Date().toISOString()
-
     const { error: profileError } = await supabase.from('profiles').upsert({
       id: userId,
-      hangul_name: hangulName || null,
-      hanja_name: hanjaName || null,
-      nickname: nickname || hangulName,
+      nickname,
       email,
-      /* ⚠️ 사주를 «안 넣으셨으면» 칸을 null 로 둡니다.
-         ⛔ 0 이나 빈 문자열을 넣지 마십시오 — 풀이 쪽이 «있는 값» 으로 읽습니다. */
-      birth_year: sajuTyped ? parseInt(year, 10) : null,
-      birth_month: sajuTyped ? parseInt(month, 10) : null,
-      birth_day: sajuTyped ? parseInt(day, 10) : null,
-      birth_hour: sajuTyped ? hourValue : null,
-      cal_type: sajuTyped ? calType : null,
-      gender: sajuTyped ? genderValue : null,
-      leap_month: sajuTyped ? leapValue : null,
-      birth_city: city || null,
-      /* ★saju_saved 가 홈 카드의 «갈림길» 입니다 (UserCard:157).
-         false 면 「생년월일시를 넣으면…」이 뜨고 마이페이지로 갑니다. */
-      saju_saved: sajuTyped,
+      /* ⚠️ 사주 칸은 ★건드리지 «않습니다». 마이페이지에서 넣으면 그때 찹니다.
+         ⛔ 0 이나 빈 문자열을 넣지 마십시오 — 풀이 쪽이 «있는 값» 으로 읽습니다.
+         ★saju_saved 가 홈 카드의 갈림길입니다 (UserCard:157) —
+           false 면 「생년월일시를 넣으면…」이 뜨고 마이페이지로 데려갑니다. */
+      saju_saved: false,
       privacy_agreed: true,
       privacy_agreed_at: now,
       terms_agreed: true,
@@ -196,21 +121,13 @@ export default function SignupPage() {
 
     setLoading(false)
     if (profileError) {
-      setMsg('계정은 생성됐지만 사주 정보 저장에 실패했습니다: ' + profileError.message)
+      setMsg('계정은 생성됐지만 정보 저장에 실패했습니다: ' + profileError.message)
       return
     }
 
-    /* ★2026-09-10 (밤) — 사주를 «넣으신 분» 만 만세력 결과로 보냅니다.
-     *   ⚠️ 안 넣으신 분을 결과 화면으로 보내면 ★빈 원국표가 뜹니다.
-     *   ⇒ 홈으로 보냅니다. 홈 카드가 「생년월일시를 넣으면…」이라 데려갑니다. */
-    if (!sajuTyped) { router.push('/'); return }
-
-    // 3) 만세력 결과로 이동 (저장 확인)
-    const leapMonth = leapValue ? '1' : '0'
-    const params = new URLSearchParams({
-      gender: genderValue, calType, year, month, day, leapMonth, hour: hourValue,
-    })
-    router.push(`/manseryeok/result-new?${params.toString()}`)
+    /* ★홈으로 보냅니다. 홈 카드가 「생년월일시를 넣으면…」이라 데려갑니다.
+       ⛔ 만세력 결과로 보내지 마십시오 — 사주가 없어 ★빈 원국표가 뜹니다. */
+    router.push('/')
   }
 
   return (
@@ -296,160 +213,30 @@ export default function SignupPage() {
           <div style={{ flex: 1, height: '0.5px', background: '#e8d5c5' }} />
         </div>
 
-        {/* 이름(한글) */}
-        <Field label="이름 (한글) · 선택">
-          <input value={hangulName} onChange={e => setHangulName(e.target.value.slice(0, 20))}
-            placeholder="성함을 입력하세요" style={inputStyle} />
-        </Field>
+        {/* 🔴 ★2026-09-10 (밤) — 사주 칸 여섯을 ★«통째로 뺐습니다».
+            [대표님] 「너무 복잡해 보이지 않아? 내가 손님이라도 질리겠는데」
+                     「접어두지 말고 ★완전 분리를 하고」
 
-        {/* 이름(한자) + 권장 멘트 */}
-        <div style={{ marginBottom: '18px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: '#555', marginBottom: '4px' }}>
-            이름 (한자) <span style={{ fontSize: '10px', color: '#8B6914', fontWeight: 500 }}>선택</span>
-          </div>
-          <div style={{ fontSize: '10px', color: '#999', marginBottom: '8px' }}>
-            정확한 이름풀이를 위해 한자를 함께 입력해 주시면 좋아요
-          </div>
-          <input value={hanjaName} onChange={e => setHanjaName(e.target.value.slice(0, 20))}
-            placeholder="예: 洪吉童 (한자 이름)" style={inputStyle} />
-        </div>
+            [뺀 것]  이름(한글) · 이름(한자) · 성별 · 생년월일 · 태어난 시간 · 태어난 도시
+            [남긴 것] ★닉네임 «하나» — 손님을 부를 이름이라 꼭 있어야 합니다.
 
-        {/* 닉네임 */}
-        <Field label="닉네임 · 필수">
+            [사주는 어디서 넣나]
+              ★마이페이지 «한 곳» 입니다 (app/mypage-new/page.tsx · ⚙️ 계정 설정).
+              홈 카드가 「생년월일시를 넣으면 오늘의 운세를 볼 수 있어요 →」로 데려갑니다.
+              ⇒ 넣는 자리가 ★하나가 되었습니다. 전에는 여기와 마이페이지 «둘» 이었습니다.
+              ⛔ 여기에 사주 칸을 «다시» 만들지 마십시오 — 두 곳이 되면 반드시 어긋납니다.
+                 (로그인 화면이 셋이던 것과 «같은 문제» 입니다)
+
+            ⚠️ 세 앱 가입 화면이 ★같은 짜임이 되었습니다 —
+               카카오 맨 위 · 「같은 계정입니다」 · 「또는 이메일로」 · 넉 칸.
+               ⛔ 색만 각자 것입니다. 명연재는 피치톤. */}
+        <Field label="닉네임">
           <input value={nickname} onChange={e => setNickname(e.target.value.slice(0, 12))}
             placeholder="서비스에서 사용할 이름" style={inputStyle} />
         </Field>
 
-        {/* 성별 */}
-        <Field label="성별 · 선택">
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {(['여자', '남자'] as const).map(g => (
-              <button key={g} onClick={() => setGender(g)} style={{
-                flex: 1, height: '46px', borderRadius: '12px',
-                border: gender === g ? '1.5px solid #1a1a1a' : '0.5px solid #e0ddd6',
-                background: gender === g ? '#1a1a1a' : '#fff',
-                color: gender === g ? '#fff' : '#888',
-                fontSize: '14px', fontWeight: gender === g ? 600 : 400, cursor: 'pointer',
-              }}>{g}</button>
-            ))}
-          </div>
-        </Field>
-
-        {/* 생년월일 */}
-        <Field label="생년월일 · 선택">
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
-            {(['양력', '음력'] as const).map(c => (
-              <button key={c} onClick={() => applyCalType(c)} style={{
-                padding: '6px 18px', borderRadius: '20px',
-                border: calType === c ? '1.5px solid #1a1a1a' : '0.5px solid #e0ddd6',
-                background: calType === c ? '#1a1a1a' : '#fff',
-                color: calType === c ? '#fff' : '#888',
-                fontSize: '12px', cursor: 'pointer',
-              }}>{c}</button>
-            ))}
-          </div>
-          {calType === '음력' && (
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
-              {([['평달', false], ['윤달', true]] as const).map(([lbl, val]) => (
-                <button key={lbl} onClick={() => setLeap(val)} style={{
-                  padding: '6px 18px', borderRadius: '20px',
-                  border: leap === val ? '1.5px solid #8B6914' : '0.5px solid #e0ddd6',
-                  background: leap === val ? '#8B6914' : '#fff',
-                  color: leap === val ? '#fff' : '#888',
-                  fontSize: '12px', cursor: 'pointer',
-                }}>{lbl}</button>
-              ))}
-            </div>
-          )}
-          {/* 연도는 손 입력, 월·일은 드롭다운 (전 화면 통일 규칙) */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <input value={year} onChange={e => applyYear(e.target.value)}
-              inputMode="numeric" placeholder="1990"
-              style={{ ...inputStyle, flex: 1.5, textAlign: 'center' as const }} />
-            <span style={{ color: '#6b5340', fontSize: '13px' }}>년</span>
-            <select value={month} onChange={e => applyMonth(e.target.value)}
-              style={{ ...selectStyle, flex: 1, color: month ? '#1a1a1a' : '#bbb' }}>
-              <option value="">월</option>
-              {MONTHS.map(m => <option key={m} value={String(m)}>{m}</option>)}
-            </select>
-            <span style={{ color: '#6b5340', fontSize: '13px' }}>월</span>
-            <select value={day} onChange={e => setDay(e.target.value)}
-              style={{ ...selectStyle, flex: 1, color: day ? '#1a1a1a' : '#bbb' }}>
-              <option value="">일</option>
-              {dayOptions(parseInt(year, 10), parseInt(month, 10), calType)
-                .map(d => <option key={d} value={String(d)}>{d}</option>)}
-            </select>
-            <span style={{ color: '#6b5340', fontSize: '13px' }}>일</span>
-          </div>
-        </Field>
-
-        {/* 태어난 시간 — 반드시 하나 고르게 한다 ('모름' 없음) */}
-        <Field label="태어난 시간 · 선택">
-          <select value={hour} onChange={e => setHour(e.target.value)}
-            style={{ ...selectStyle, color: hour ? '#1a1a1a' : '#bbb' }}>
-            <option value="">시간을 선택해주세요</option>
-            {visibleHours.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
-          </select>
-
-          {/* 시를 정확히 모르는 사람용 — 시간대를 고르면 3개로 좁혀진다 */}
-          <div style={{ marginTop: '10px' }}>
-            <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '6px' }}>
-              시를 정확히 모르시나요? 대략 언제쯤인지 골라보세요
-            </div>
-            <div style={{ display: 'flex', gap: '5px' }}>
-              {TIME_BANDS.map(b => {
-                const on = band?.key === b.key
-                return (
-                  <button key={b.key} type="button" onClick={() => pickBand(b)} style={{
-                    flex: 1, padding: '9px 2px', borderRadius: '10px',
-                    border: on ? '1.5px solid #1a1a1a' : '0.5px solid #e0ddd6',
-                    background: on ? '#1a1a1a' : '#fff',
-                    color: on ? '#fff' : '#888',
-                    cursor: 'pointer', lineHeight: 1.35,
-                  }}>
-                    <div style={{ fontSize: '12px' }}>{b.label}</div>
-                    <div style={{ fontSize: '9px', opacity: 0.75 }}>{b.range}</div>
-                  </button>
-                )
-              })}
-            </div>
-            {band && (
-              <div style={{ fontSize: '11px', color: '#8B6914', marginTop: '7px', lineHeight: 1.6 }}>
-                {band.label} 시간대의 3개 중에서 골라주세요. 다시 누르면 전체가 보여요.
-              </div>
-            )}
-            {hour !== '' && crossesMidnight(Number(hour)) && (
-              <div style={{ fontSize: '11px', color: '#c0392b', marginTop: '7px', lineHeight: 1.6 }}>
-                子시는 밤 11시 30분부터 다음 날 새벽 1시 30분까지예요.
-                자정을 넘겨 태어나셨다면 생년월일을 다시 확인해주세요.
-              </div>
-            )}
-          </div>
-        </Field>
-
-        {/* 태어난 도시 */}
-        <div style={{ marginBottom: '26px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: '#555', marginBottom: '8px' }}>
-            태어난 도시 <span style={{ fontSize: '10px', color: '#8B6914' }}>일출·일몰 정밀 계산에 사용</span>
-          </div>
-          <input value={city} onChange={e => setCity(e.target.value)}
-            placeholder="도시명을 입력하세요 (예: 서울)" style={inputStyle} />
-        </div>
-
-        {/* 🔴 ★2026-09-10 (밤) — 소셜 단추 셋을 «걷어냈습니다».
-            [까닭] 셋 다 ★«가짜» 였습니다 — handleSocial() 이
-                   「○○ 로그인은 준비 중입니다」라고 말만 했습니다.
-                   ⇒ 손님이 ★노란 카카오 단추를 누르고 «안 되는» 것을 겪었습니다.
-                      정작 /login 에서는 카카오가 «진짜로» 도는데 말입니다.
-            [고침] ★카카오를 이 화면 «맨 위» 로 올려 «진짜로» 잇고,
-                   네이버·구글은 지웠습니다.
-                   ⚠️ 네이버는 ★Supabase 가 «지원하지 않습니다». 되살릴 방법이 없습니다.
-                   ⚠️ 구글은 Supabase 에 켜져 있지만 앱이 없어 ★계정이 갈라집니다 (4부 9장).
-            ⛔ 「준비 중입니다」라고만 하는 단추를 다시 만들지 마십시오 —
-               손님은 그것을 ★고장으로 봅니다. */}
-
         {/* 이메일 구분선 */}
-        <Divider text="또는 이메일로 가입" />
+        
 
         {/* 이메일 가입폼 */}
         <Field label="이메일">
@@ -537,16 +324,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div style={{ marginBottom: '18px' }}>
       <div style={{ fontSize: '12px', fontWeight: 600, color: '#555', marginBottom: '8px' }}>{label}</div>
       {children}
-    </div>
-  )
-}
-
-function Divider({ text }: { text: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-      <div style={{ flex: 1, height: '0.5px', background: '#e8e5de' }} />
-      <span style={{ fontSize: '11px', color: '#aaa' }}>{text}</span>
-      <div style={{ flex: 1, height: '0.5px', background: '#e8e5de' }} />
     </div>
   )
 }
