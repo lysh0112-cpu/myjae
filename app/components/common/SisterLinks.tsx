@@ -23,10 +23,18 @@ import { SISTER_APPS } from './companyInfo'
 const C = {
   head: '#96502e',
   card: '#FFFBF7',
-  line: '#e8dccf',
+  /* ★2026-09-10 [대표님 「테두리가 너무 희미하다 · 홈 다른 버튼들처럼 통일해줘」]
+   *   [전] 0.5px solid #e8dccf  ← 거의 보이지 않았습니다
+   *   [후] ★1.5px solid #9c7a58 — 홈 서비스 카드와 «같은 값» 입니다
+   *        (app/home-new/components/ServiceSection.tsx:324 · 45부 값 · 흰 위에서 3.93:1)
+   *
+   *   ⛔ 새 색을 짓지 않았습니다. 홈에 이미 있는 값을 그대로 가져왔습니다.
+   *   ⚠️ 47부 선 부품(lib/ui/line.ts · #ea8c46)은 ★홈이 아직 안 씁니다.
+   *      홈이 그리로 옮겨 갈 때 ★이 파일도 «함께» 옮기십시오. 혼자 남으면 또 어긋납니다. */
+  line: '#9c7a58',
   ink: '#5a4a3e',
   faint: '#a2907f',
-  chev: '#c0a898',
+  chev: '#9c7a58',
 }
 
 /** 앱마다 아이콘 빛깔 — ⚠️ 지갑 화면의 딱지 색과 «맞춰» 두었습니다 (WalletPanel:39) */
@@ -49,7 +57,7 @@ export default function SisterLinks() {
             href={app.href}
             style={{
               background: C.card,
-              border: `0.5px solid ${C.line}`,
+              border: `1.5px solid ${C.line}`,
               borderRadius: 12,
               padding: '13px 12px',
               display: 'flex',
