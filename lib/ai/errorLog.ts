@@ -17,6 +17,7 @@
 // ----------------------------------------------------------------------------
 
 import { createClient } from '@supabase/supabase-js'
+import { alertKindOf, ALERT_TEXT, type AlertKind } from './alertKind'
 
 /**
  * 영어 오류 메시지를 보고 우리말 짐작 원인을 붙인다.
@@ -27,6 +28,13 @@ export function guessHint(status: number | null, message: string): string {
 
   if (m.includes('credit balance is too low') || m.includes('billing hard limit')) {
     return '결제 잔액이 바닥났어요. 크레딧을 충전해 주세요.'
+  }
+  //  ★6부 — 9월 11일에 실제로 받은 문장 「You have reached your specified API usage limits」
+  if (m.includes('usage limit') || m.includes('regain access')) {
+    return '월 지출 한도에 닿았어요. Claude 콘솔 → 결제 → 월별 지출 한도를 올리거나 다음 달 1일까지 기다려야 해요.'
+  }
+  if (m.includes('과속 방지턱')) {
+    return '한 사람이 너무 자주 불러 서버가 막았어요. 화면 버그로 되풀이해 부르고 있을 수 있어요 — 그 화면을 닫아 주세요.'
   }
   if (status === 401 || m.includes('invalid x-api-key') || m.includes('authentication')) {
     return 'API 키가 잘못됐거나 만료됐어요. Vercel 환경변수를 확인해 주세요.'
@@ -73,6 +81,10 @@ export async function logAiError(
     const supabase = createClient(url, key, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
+    //  ★6부 — 대표님이 곧바로 아셔야 할 일이면 메일도 보냅니다 (열쇠가 있을 때만 · 30분에 한 번)
+    const kind = alertKindOf(apiName, status ?? null, trimmed)
+    if (kind) await sendAlertMail(kind, apiName, trimmed)
+
     await supabase.from('ai_error_logs').insert({
       api_name: apiName,
       status: status ?? null,
@@ -82,4 +94,34 @@ export async function logAiError(
   } catch {
     // 기록 자체가 실패해도 원래 기능을 막지 않는다.
   }
+}
+
+/* ★2026-09-11 (6부) [대표님 「알림은 여기서 해결」] — 메일 알림 (검사 48)
+ *   Resend(무료 메일 발송) 열쇠를 Vercel 환경변수에 넣으면 켜집니다. 없으면 조용히 건너뜁니다.
+ *     RESEND_API_KEY   Resend 에서 받은 열쇠
+ *     ALERT_EMAIL      받을 주소 (예: lysh0112@gmail.com)
+ *     ALERT_FROM       (선택) 보내는 이름 · 주소 — 없으면 Resend 시험용 주소
+ *   ⚠️ 같은 종류는 30분에 한 번만 (폭주할 때 메일이 수백 통 오지 않게). 서버가 여러 대면 몇 통 겹칠 수 있습니다.
+ *   ⚠️ 메일이 실패해도 오류 기록은 그대로 남깁니다 (여기서 던지지 않음). */
+const lastMail = new Map<AlertKind, number>()
+async function sendAlertMail(kind: AlertKind, apiName: string, message: string): Promise<void> {
+  const keyR = process.env.RESEND_API_KEY
+  const to = process.env.ALERT_EMAIL
+  if (!keyR || !to) return
+  const now = Date.now()
+  if (now - (lastMail.get(kind) ?? 0) < 30 * 60 * 1000) return
+  lastMail.set(kind, now)
+  const t = ALERT_TEXT[kind]
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${keyR}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: process.env.ALERT_FROM || '명연재 알림 <onboarding@resend.dev>',
+        to: [to],
+        subject: `[명연재] ${t.title}`,
+        text: `${t.title}\n\n할 일: ${t.todo}\n\n창구: ${apiName}\n원문: ${message.slice(0, 300)}\n\n관리자 화면 → AI관리 → AI 오류 탭에서 자세히 볼 수 있어요.`,
+      }),
+    })
+  } catch { /* 메일이 안 가도 기록은 남깁니다 */ }
 }

@@ -13,6 +13,7 @@ import { createClient } from '@supabase/supabase-js'
 import { withNim } from '@/lib/saju/honorific'
 import { logAiError } from '@/lib/ai/errorLog'
 import { requireUser } from '../admin/_guard'
+import { aiSpeedBump } from '@/lib/ai/speedBump'
 
 // 간지 문자열 → {stem, branch} (기존 splitGanji 방식 동일)
 function splitGanji(ganji: string): { stem: string; branch: string } {
@@ -55,6 +56,9 @@ export async function POST(req: NextRequest) {
    *   ⛔ 몸통을 읽기 «전» 에 둡니다 — 검사 ㉒-o 가 순서를 봅니다. */
   const g = await requireUser()
   if (!g.ok) return g.res
+  //  🔴 ★6부 — AI 과속 방지턱: 한 사람이 10분에 20번을 넘게 부르면 막습니다 (검사 48 · 9월 11일 비용 사고)
+  const bump = await aiSpeedBump(g.userId, 'daily-fortune')
+  if (!bump.ok) return bump.res
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logAiError } from '@/lib/ai/errorLog'
 import { requireMaster } from '../admin/_guard'
+import { aiSpeedBump } from '@/lib/ai/speedBump'
 
 // ★2026-07-21: maxDuration 이 없으면 Vercel 기본값(10초)으로 돌아
 //   긴 AI 응답이 도중에 잘린다. 오류도 안 나서 원인을 찾기 어렵다.
@@ -14,6 +15,9 @@ export async function POST(req: NextRequest) {
    *   ⛔ 몸통을 읽기 «전» 에 둡니다 — 검사 ㉒-o 가 순서를 봅니다. */
   const g = await requireMaster()
   if (!g.ok) return g.res
+  //  🔴 ★6부 — AI 과속 방지턱: 한 사람이 10분에 20번을 넘게 부르면 막습니다 (검사 48 · 9월 11일 비용 사고)
+  const bump = await aiSpeedBump(g.userId, 'summarize')
+  if (!bump.ok) return bump.res
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) return NextResponse.json({ error: 'API key not set' }, { status: 500 })

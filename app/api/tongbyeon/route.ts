@@ -1,5 +1,6 @@
 import { logAiError } from '@/lib/ai/errorLog'
 import { requireUser } from '../admin/_guard'
+import { aiSpeedBump } from '@/lib/ai/speedBump'
 // app/api/tongbyeon/route.ts
 // ============================================================================
 // AI 통변 스트리밍 API.
@@ -34,6 +35,9 @@ export async function POST(req: Request) {
    *   ⛔ 몸통을 읽기 «전» 에 둡니다 — 검사 ㉒-o 가 순서를 봅니다. */
   const g = await requireUser()
   if (!g.ok) return g.res
+  //  🔴 ★6부 — AI 과속 방지턱: 한 사람이 10분에 20번을 넘게 부르면 막습니다 (검사 48 · 9월 11일 비용 사고)
+  const bump = await aiSpeedBump(g.userId, 'tongbyeon')
+  if (!bump.ok) return bump.res
 
   // ★2026-07-29 — userPrompt 를 열었습니다. (프리미엄 리포트)
   //   [왜] 프리미엄 프롬프트는 «지시(system)»와 «이 사람의 재료(user)»를 나눠 보냅니다.

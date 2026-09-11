@@ -20,6 +20,7 @@ import AccountingHub, { type AccountingInner } from './components/AccountingHub'
 import AiHub, { type AiInner } from './components/AiHub'
 import ConsultantHub, { type ConsultantInner } from './components/ConsultantHub'
 import { useRoleGate, RoleGateScreen, type AppRole } from '@/hooks/useRoleGate'
+import AiAlertBanner from './components/AiAlertBanner'
 
 // 이 화면에 들어올 수 있는 등급 — 매니저만
 const ADMIN_ROLES: AppRole[] = ['master']
@@ -149,6 +150,8 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen" style={{ background: '#1a1a18' }}>
+      {/* 🔴 ★6부 — AI 잔액 · 한도 · 열쇠 · 과속 방지턱 알림 (검사 48) — 최근 24시간에 있으면 맨 위에 빨간 띠 */}
+      <AiAlertBanner />
       {/* sticky로 둔다. fixed면 탭이 두 줄이 될 때 아래 본문을 덮어버린다.
           (2026-07-20 "AI 오류" 탭을 늘리면서 제목이 가려지는 일이 있었음) */}
       <header className="sticky top-0 z-50 w-full"

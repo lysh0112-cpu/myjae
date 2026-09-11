@@ -34,6 +34,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { WALLET_GATE_ON_SERVER, SERVICE_GLF } from '@/lib/wallet/serverGate'
 import { APPS } from '@/app/components/common/companyInfo'
+import { aiSpeedBump } from '@/lib/ai/speedBump'
 
 // ★2026-07-21 자국 — maxDuration 이 없으면 Vercel 기본 10초에 잘립니다.
 //   사진 읽기는 오래 걸립니다. ⛔ 줄이지 마십시오.
@@ -103,6 +104,9 @@ async function readPhoto(req: NextRequest): Promise<NextResponse> {
 
     const { data: userData } = await supa.auth.getUser()
     if (!userData?.user) return fail('로그인이 풀렸어요. 다시 로그인해 주세요.', 401)
+    //  🔴 ★6부 — AI 과속 방지턱 (검사 48 · 9월 11일 비용 사고) — 골프온 손님도 한 사람이 10분에 20번까지
+    const bump = await aiSpeedBump(userData.user.id, 'golf/read-photo')
+    if (!bump.ok) return fail('사진 읽기 요청이 너무 잦아요. 10분쯤 뒤에 다시 해 주세요.', 429)
 
     // ── ② 무엇을 보내셨나 ───────────────────────────────────────
     const body = await req.json().catch(() => null)
