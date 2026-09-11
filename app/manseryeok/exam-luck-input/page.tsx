@@ -85,6 +85,10 @@ function ExamLuckInputInner() {
   const [wish, setWish] = useState<string>('')
   /** ★시험 날짜 — 몰라도 된다. 알면 그 달·그 날까지 짚어 준다 (교재 195쪽) */
   const [examDate, setExamDate] = useState<string>('')
+  /* 🔴 ★2026-09-12 (6부) [대표님 「연말로 잡았는데 12.15 로 특정하네」] — 정해진 날인가 · 어림 시기인가 (검사 46 ⑥)
+   *   [상반기] · [하반기] · [연말] 단추는 «어림» — 그날 일진 · 공망은 보지 않고 그 달의 흐름으로만 봅니다.
+   *   달력에서 고르면 «정해진 날» — 그날의 일진 · 공망 · 당일 수칙까지 봅니다. */
+  const [dateApprox, setDateApprox] = useState<boolean>(false)
   /**
    * ★2026-07-29 — 학생 목표 (2단 드롭다운). 대표님 지시.
    *   [왜] «어디를 목표로 하는지» 를 알면 그 자리에 쓰이는 힘을 짚어 줄 수 있습니다.
@@ -150,6 +154,7 @@ function ExamLuckInputInner() {
     //  ★6부 [대표님 알약] 지금 상황 · 거쳐야 할 관문 — 빈 관문도 «,» 없이 빈 값으로 실어 «옛 기록» 과 가립니다
     if (target !== 'student' && kind === 'job') { if (situation) p.set('sit', situation); p.set('gates', gates.join(',')) }
     if (examDate) p.set('examDate', examDate)
+    if (examDate && dateApprox) p.set('dateApprox', '1')   // ★6부 — 어림 시기 (그날 일진은 보지 않음)
     // ★학생 목표 — 학생일 때만 싣는다
     if (target === 'student' && studentGrade) p.set('studentGrade', studentGrade)
     if (target === 'student' && needsLevel) {
@@ -164,7 +169,7 @@ function ExamLuckInputInner() {
       }
     }
     return p.toString()
-  }, [sp, kind, target, examKind, examDate, studentGrade, needsLevel, gradeLevel, track, examCategory, targetType, targetCustomText, field, way, situation, gates, picks])
+  }, [sp, kind, target, examKind, examDate, dateApprox, studentGrade, needsLevel, gradeLevel, track, examCategory, targetType, targetCustomText, field, way, situation, gates, picks])
 
 
   const Btn = ({ on, title, sub, onClick }: { on: boolean; title: string; sub: string; onClick: () => void }) => (
@@ -503,7 +508,7 @@ function ExamLuckInputInner() {
         <div style={{ fontSize: 12.5, color: '#8a7063', margin: '14px 2px 9px' }}>
           {target !== 'student' && kind === 'job' ? dateLabelFor(gates) : '시험(또는 발표) 날짜'} <span style={{ color: ACCENT, fontWeight: 600 }}>*</span>
         </div>
-        <input type="date" value={examDate} onChange={e => setExamDate(e.target.value)}
+        <input type="date" value={examDate} onChange={e => { setExamDate(e.target.value); setDateApprox(false) }}
           style={{
             width: '100%', padding: '13px 14px', borderRadius: 12,
             background: CARD,
@@ -514,7 +519,7 @@ function ExamLuckInputInner() {
         {/* 모르는 손님을 위한 빠른 선택 */}
         <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
           {quickDates.map(q => (
-            <button key={q.v} onClick={() => setExamDate(q.v)}
+            <button key={q.v} onClick={() => { setExamDate(q.v); setDateApprox(true) }}
               style={{
                 flex: 1, padding: '9px 4px', borderRadius: 10, cursor: 'pointer',
                 background: examDate === q.v ? '#fdeef4' : CARD,
@@ -525,8 +530,9 @@ function ExamLuckInputInner() {
           ))}
         </div>
         <div style={{ fontSize: 11.5, color: '#8a7063', lineHeight: 1.7, margin: '8px 2px 0' }}>
-          * 그날의 일진(日辰)과 월운을 짚어 드리려면 날짜가 필요합니다.
-          정확히 모르시면 위 단추로 어림잡아 고르셔도 됩니다.
+          {dateApprox
+            ? '* 어림으로 고르셨어요. 그날의 일진은 보지 않고, 그 무렵(그 달)의 흐름으로 봐 드립니다. 날짜가 정해지면 다시 보세요.'
+            : '* 그날의 일진(日辰)과 월운을 짚어 드리려면 날짜가 필요합니다. 정확히 모르시면 위 단추로 어림잡아 고르셔도 됩니다.'}
         </div>
 
         {/* ★2026-09-11 (6부) [대표님 「희망사항을 자유롭게 기술하게」] — 궁금한 것이나 고민 (선택 · 검사 44)

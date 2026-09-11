@@ -88,6 +88,9 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
     : (sp.get('kind') === 'job' ? 'job' : 'exam')
   const examKind = sp.get('examKind') || null
   const examDateRaw = sp.get('examDate') || ''
+  /* 🔴 ★6부 [대표님 「연말로 잡았는데 12.15 로 특정하네」] 어림 시기(상반기 · 하반기 · 연말 단추)인가 — 검사 46 ⑥
+   *   어림이면 그날의 일진 · 공망 · 당일 수칙을 계산하지 않고, 그 달의 흐름으로만 봅니다. */
+  const dateApprox = sp.get('dateApprox') === '1'
   const recordId = sp.get('recordId') || ''
   /** ★2026-09-11 (6부) — 두 단계 콤보의 ② 일하는 방식 (① 분야는 examKind 'field:…' 로 옵니다) */
   const wayRaw = sp.get('way') || 'unknown'
@@ -272,7 +275,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       : []
     // 시험 날짜 — 넣었을 때만
     let examDay: ReturnType<typeof judgeExamDay> = null
-    if (examDateRaw) {
+    if (examDateRaw && !dateApprox) {
       const [yy, mm, dd] = examDateRaw.split('-').map(Number)
       if (yy && mm && dd) examDay = judgeExamDay(calc.saju, yy, mm, dd, '시험일', kind)
     }
@@ -281,7 +284,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       natal, byYear, examDay, purpose: kind,
       grade: studentGrade,
     })
-  }, [input, calc, dayunList, thisYear, kind, examDateRaw, studentGrade])
+  }, [input, calc, dayunList, thisYear, kind, examDateRaw, dateApprox, studentGrade])
 
   /* ★2026-09-11 (6부) — 「고르신 일하는 방식과 사주」 카드 (교재 202~204쪽 · 검사 44)
    *   분야를 고른 취업 손님에게만 붙입니다. 진로적성 엔진의 구조 판정을 그대로 씁니다. */
@@ -365,7 +368,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
   //   위 useMemo 안에서 만든 examDay 는 카드용이라 밖에서 못 씁니다.
   //   ⚠️ judgeExamDay 는 순수 함수라 두 번 불러도 같은 답이 나옵니다. (재계산 아님)
   const examDayForPrompt = useMemo(() => {
-    if (!examDateRaw || !calc?.saju?.length) return null
+    if (!examDateRaw || dateApprox || !calc?.saju?.length) return null   // ★6부 — 어림이면 그날 기운 없음
     const [yy, mm, dd] = examDateRaw.split('-').map(Number)
     if (!yy || !mm || !dd) return null
     const r = judgeExamDay(calc.saju, yy, mm, dd, '시험일', kind)
@@ -377,7 +380,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       r.isGongmang ? '★시험일이 공망에 듭니다 — 기운이 비는 날이니 대비책을 함께 주세요' : '',
       ...(r.reasons ?? []).slice(0, 3),
     ].filter(Boolean).join(' · ')
-  }, [examDateRaw, calc, kind])
+  }, [examDateRaw, dateApprox, calc, kind])
 
   // ── ④ 판정을 먼저 저장한다 (교훈 AQ) ──────────────────────
   useEffect(() => {
@@ -396,7 +399,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         //  ★2026-09-11 (6부) — 고른 직종·날짜·학년 등도 함께 저장합니다 (검사 ㉓-a).
         //     [전] 안 남겨, 다시보기·[풀이 다시 받기] 때 «직종 가산» 과 «시험 날짜» 카드가 빠졌습니다.
         //     ⚠️ 보관함(exam-luck/page.tsx)이 이 값들을 주소에 다시 싣습니다 — 짝입니다.
-        examKind, examDate: examDateRaw || null,
+        examKind, examDate: examDateRaw || null, dateApprox: dateApprox ? '1' : null,
         studentGrade: studentGrade || null, gradeLevel: gradeLevel || null, track: trackSel || null,
         examCategory: examCategory || null, targetType: targetType || null,
         targetCustomText: targetCustomText || null,
@@ -413,7 +416,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       //  ★6부 — 건넴을 다 썼으니 지웁니다 (다음 사람에게 섞이지 않게)
       if (typeof window !== 'undefined') sessionStorage.removeItem(WISH_KEY)
     })
-  }, [calc, cards, recordId, person, target, kind, examKind, examDateRaw, studentGrade, gradeLevel,
+  }, [calc, cards, recordId, person, target, kind, examKind, examDateRaw, dateApprox, studentGrade, gradeLevel,
       trackSel, examCategory, targetType, targetCustomText, way, wayRaw, wishForSave, sit, gates, picks, jobTextForSave, certsForSave])
 
   // ── ⑤ 통변 (SSE) ─────────────────────────────────────────
@@ -472,6 +475,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         jobText: jobTextForSave || null,   // ★6부 — 직접 적은 일하는 방식 · 직업
         certs: certsForSave || null,       // ★6부 — 가진 자격증
         plan,   // ★6부 — 엔진이 정한 유형 · 비율 · 달 · 당일 수칙 (useMemo · 검사 49)
+        examDateApprox: dateApprox,   // ★6부 — 어림 시기면 특정한 날을 말하지 않게 (검사 46 ⑥)
         //  ★6부 [대표님 알약] — 고르지 않은 관문 이야기를 쓰지 않게
         jobSituation: sit,
         jobGates: gates,
@@ -805,7 +809,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
     // ★2026-07-30 — signalBlock·upsangMaterial·kind 도 함께 넣었습니다.
     //   빠뜨리면 재료가 바뀌어도 옛 통변이 그대로 남습니다.
   }, [calc, cards, recordId, person, target, kind, studentGrade, gradeLevel, trackSel,
-      examCategory, targetType, targetCustomText, examDateRaw, examDayForPrompt, thisYear,
+      examCategory, targetType, targetCustomText, examDateRaw, dateApprox, examDayForPrompt, thisYear,
       signalBlock, upsangMaterial, dayunReady, retryRecord, examKind, cardsAll, way, wishForSave, wishHeavy, sit, gates, picks, jobTextForSave, certsForSave, plan])
 
   // ── ⑥ 다시보기 — 저장본 불러오기 ──────────────────────────
@@ -889,7 +893,9 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
             {certsForSave && ` 가진 자격증: ${certsForSave}.`}
             {/* ★6부 [대표님 알약] 고른 상황 · 관문 */}
             {sit && ` ${JOB_SITUATIONS.find(o => o.key === sit)?.label}${gates && gates.length ? ` · ${gates.map(g => JOB_GATES.find(o => o.key === g)?.label).join(' · ')}` : ''}.`}
-            {examDateRaw && ` 시험 날짜 ${examDateRaw} 도 함께 짚었어요.`}
+            {examDateRaw && (dateApprox
+              ? ` 시험 시기는 ${examDateRaw.slice(0, 4)}년 ${Number(examDateRaw.slice(5, 7))}월경으로 보았어요.`
+              : ` 시험 날짜 ${examDateRaw} 도 함께 짚었어요.`)}
             {/* ★6부 — 「고르신 일하는 방식과 사주」 첫 줄 (교재 202~204쪽) */}
             {cardsAll.find(c => c.key === 'jobfit')?.lines[0] && (
               <div style={{ marginTop: 4 }}>{cardsAll.find(c => c.key === 'jobfit')!.lines[0]}</div>

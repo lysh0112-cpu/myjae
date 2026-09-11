@@ -77,6 +77,8 @@ export interface SevenArgs {
   examDate?: string | null
   /** 시험 당일 일진·월운·십성 (examDay 가 낸 것) */
   examDayNote?: string | null
+  /** ★6부 [대표님] 시험(발표) 날짜가 «어림 시기» 인가 (상반기 · 하반기 · 연말 단추) — 그날 일진을 말하지 않습니다 */
+  examDateApprox?: boolean
   /** ★2026-07-30 — 원국 합격 신호 (passSignal.passSignalBlock) */
   signalBlock?: string | null
   /** ★2026-07-30 — 업상대체 세부 전공 (upsang.upsangBlock) */
@@ -320,6 +322,15 @@ const MATERIAL_NEEDS: Record<SevenKey | LegacyKey, string[]> = {
 /* ★2026-09-11 (6부 봉투 B) — 4갈래 쓰기 지시 (학생 · 성인)
  *   옛 7갈래의 쓸 만한 지시를 넷으로 모았습니다. 되풀이를 막으려고 갈래마다 «맡은 일» 을 못 박습니다.
  *   ⚠️ 14번 검사가 「숫자로 내세요」 같은 핵심 지시가 살아 있는지 봅니다. */
+/* ★6부 [대표님] 어림 시기 — 「2026년 12월경」 · 특정한 날을 말하지 않게 (검사 46 ⑥) */
+function approxLabel(date: string): string {
+  const [y, m] = date.split('-').map(Number)
+  return y && m ? `${y}년 ${m}월경` : date
+}
+function approxHint(date: string): string {
+  return `· 시험(발표)은 «${approxLabel(date)}» 입니다. 날짜가 아직 정해지지 않았으니 특정한 날(며칠)을 말하지 마세요. 그날의 일진 대신 그 무렵(그 달)의 마음가짐으로 말하고, «날짜가 정해지면 그날을 다시 보시라» 는 말을 한 줄 넣으세요.`
+}
+
 function hintStudent(key: SevenKey, v: SevenArgs): string[] {
   const L: string[] = []
   const major = v.targetMajor ? `«${v.targetMajor}»` : ''
@@ -346,7 +357,7 @@ function hintStudent(key: SevenKey, v: SevenArgs): string[] {
       L.push('· 아래 [달별 흐름] 에서 «가장 좋은 달» 하나와 «조심할 달» 하나를 콕 집으세요. 몇 월인지 숫자로. 목록에 없는 달을 지어내지 마세요.')
       L.push('· 공부운 · 말하고 글 쓰는 재주가 드는 달은 몰입이 잘되는 달, 친구와 견주는 마음 · 바깥일에 끌리는 마음이 드는 달은 흔들리기 쉬운 달입니다.')
       L.push('· 좋은 달에는 무엇을 몰아서 할지, 조심할 달에는 어떻게 버틸지 (친구와 비교하지 않기 등) 주세요.')
-      if (v.examDate) L.push(`· ${v.examDate} 시험 날의 흐름을 한 문장으로 — 재료 [시험 날짜와 실전 준비] 근거. 공망이면 «집중이 잠깐씩 흐트러지기 쉬운 날 — 나쁜 날이 아니다» 로 풀어 주세요.`)
+      if (v.examDate) L.push(v.examDateApprox ? approxHint(v.examDate) : `· ${v.examDate} 시험 날의 흐름을 한 문장으로 — 재료 [시험 날짜와 실전 준비] 근거. 공망이면 «집중이 잠깐씩 흐트러지기 쉬운 날 — 나쁜 날이 아니다» 로 풀어 주세요.`)
       L.push('· 당일 수칙 넷을 구체적으로 — 1교시 입실 직후 마음 가라앉히기 / 실수하기 쉬운 과목과 막는 법 / 흔들릴 때 할 행동 하나 / 그날 아침.')
       L.push('· 교재는 달과 날보다 한 해의 흐름을 더 크게 봅니다. 달과 날은 «마음가짐의 참고» 로만 말하세요.')
       break
@@ -406,7 +417,7 @@ function hintAdult(key: SevenKey, v: SevenArgs): string[] {
       L.push('· 아래 [달별 흐름] 에서 «가장 좋은 달» 하나와 «조심할 달» 하나를 콕 집으세요. 몇 월인지 숫자로. 목록에 없는 달을 지어내지 마세요.')
       L.push('· 직장 · 합격운 · 공부운이 드는 달은 힘을 몰아 쓸 달, 남과 견주는 마음이 드는 달은 흔들리기 쉬운 달입니다.')
       L.push('· 좋은 달에는 무엇을 몰아서 할지, 조심할 달에는 어떻게 버틸지 (남과 비교하지 않기 등) 주세요.')
-      if (v.examDate) L.push(`· ${v.examDate} 그날의 흐름을 한 문장으로 — 재료 [시험 날짜와 실전 준비] 근거. 공망이면 «집중이 잠깐씩 흐트러지기 쉬운 날 — 나쁜 날이 아니다» 로 풀어 주세요.`)
+      if (v.examDate) L.push(v.examDateApprox ? approxHint(v.examDate) : `· ${v.examDate} 그날의 흐름을 한 문장으로 — 재료 [시험 날짜와 실전 준비] 근거. 공망이면 «집중이 잠깐씩 흐트러지기 쉬운 날 — 나쁜 날이 아니다» 로 풀어 주세요.`)
       if (!isJob) L.push('· 당일 수칙 넷을 구체적으로 — 시작 직후 마음 가라앉히기 / 실수하기 쉬운 영역과 막는 법 / 흔들릴 때 할 행동 하나 / 그날 아침.')
       else if (gExam && gInt) L.push('· 두 날의 수칙을 짧게 나눠 주세요 — 시험장: 시작 직후 마음 가라앉히기 · 실수 막는 법 / 면접장: 들어서기 직전 마음 가라앉히기 · 대답이 길어지지 않게 하는 법.')
       else if (gExam) L.push('· 당일 수칙 넷을 구체적으로 — 시험장에서 시작 직후 마음 가라앉히기 / 실수하기 쉬운 영역과 막는 법 / 흔들릴 때 할 행동 하나 / 그날 아침.')
@@ -539,8 +550,10 @@ export function buildSevenPrompt(v: SevenArgs, group: SevenKey[]): SevenPrompt |
     !isStudentWho && v.kind === 'job' && v.jobGates && !v.jobGates.includes('exam') ? '★고르지 않은 시험 · 필기 · 문제 풀이 · 답안 이야기는 쓰지 마세요.' : '',
     !isStudentWho && v.kind === 'job' && v.jobGates && !v.jobGates.includes('interview') ? '★고르지 않은 면접 이야기는 쓰지 마세요.' : '',
     !isStudentWho && v.kind === 'job' && v.jobSituation === 'new' ? '★처음 일자리를 구하는 분입니다. 이직 · 직장 옮기기 이야기를 쓰지 마세요.' : '',
-    v.examDate ? `· 시험(발표) 날짜: ${v.examDate}` : '',
-    v.examDayNote ? `· 그날 기운: ${v.examDayNote}` : '',
+    //  ★6부 [대표님 「연말로 잡았는데 12.15 로 특정하네」] 어림 시기면 날짜 숫자 대신 «몇 월경» · 그날 기운은 싣지 않음 (검사 46 ⑥)
+    v.examDate && v.examDateApprox ? `· 시험(발표) 시기: ${approxLabel(v.examDate)} (★정확한 날짜가 아닙니다 — 손님이 어림으로 고른 시기입니다. 특정한 날(며칠)을 말하지 마세요)` : '',
+    v.examDate && !v.examDateApprox ? `· 시험(발표) 날짜: ${v.examDate}` : '',
+    v.examDayNote && !v.examDateApprox ? `· 그날 기운: ${v.examDayNote}` : '',
     v.hourUnknown ? '★태어난 시(時)를 모릅니다. 시주가 필요한 이야기는 단정하지 마세요.' : '',
   ].filter(Boolean).join('\n')
 

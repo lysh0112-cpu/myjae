@@ -10,6 +10,7 @@
 import * as fs from 'fs'
 import { JOB_SITUATIONS, JOB_GATES, parseGates, dateLabelFor } from './lib/saju/examLuck/tables/jobFields'
 import { buildSevenPrompt } from './lib/saju/examLuck/buildExamSeven'
+import { buildPlan } from './lib/saju/examLuck/engineCalc'
 import type { ExamCard } from './lib/saju/examLuck/types'
 
 let pass = 0, fail = 0
@@ -95,6 +96,26 @@ console.log('\n━━ ⑤ 🔴 AI 가 끝없이 다시 불리지 않는가 (대�
   }
   ok(unstable.length === 0, `⛔ 매번 새로 만들어지는 목록 · 객체가 AI effect 의존 목록에 없습니다${unstable.length ? ' — ' + unstable.join(' / ') : ''}`)
   ok(/const gates = useMemo\(\(\) => parseGates\(gatesParam\), \[gatesParam\]\)/.test(ex), '관문 목록은 useMemo 로 한 번만')
+}
+
+console.log('\n━━ ⑥ 정해진 날인가 · 어림 시기인가 [대표님 「연말로 잡았는데 12.15 로 특정하네」] ━━')
+{
+  //  [겪음] 「연말 (12월경)」 단추가 12월 15일을 채워 넣고, 그 뒤로는 정확한 날처럼 일진 · 공망 · 당일 수칙까지 말했습니다.
+  const saju = [{ pillar: '시주', stem: '己', branch: '卯' }, { pillar: '일주', stem: '庚', branch: '子' }, { pillar: '월주', stem: '己', branch: '卯' }, { pillar: '년주', stem: '乙', branch: '亥' }]
+  const b = { name: '가', gender: '남', age: 31, target: 'adult', kind: 'job', cards: [], saju, hourUnknown: false, year: 2026, month: 9, examDate: '2026-12-15', jobGates: ['interview'], jobSituation: 'new' }
+  const ap = buildSevenPrompt({ ...b, examDateApprox: true } as never, ['pace'] as never)!
+  const ex = buildSevenPrompt({ ...b, examDateApprox: false, examDayNote: '일진 丁未' } as never, ['pace'] as never)!
+  ok(/시험\(발표\) 시기: 2026년 12월경/.test(ap.user) && /정확한 날짜가 아닙니다/.test(ap.user) && !ap.user.includes('2026-12-15'), '어림 — 「2026년 12월경 · 정확한 날짜가 아닙니다」 · 날짜 숫자를 싣지 않음')
+  ok(/특정한 날\(며칠\)을 말하지 마세요/.test(ap.user) && !/그날의 흐름을 한 문장으로/.test(ap.user), '어림 — 「그날의 흐름」 대신 「특정한 날을 말하지 말라」')
+  ok(/시험\(발표\) 날짜: 2026-12-15/.test(ex.user) && /그날의 흐름을 한 문장으로/.test(ex.user), '정해진 날 — 지금처럼 그날의 흐름까지')
+  const pl = buildPlan({ saju: saju as never, ohaeng: { 목: 50, 화: 0, 토: 20, 금: 10, 수: 20 }, year: 2026, month: 9, examDate: '2026-12-15', target: 'adult', kind: 'job', grade: '아주 좋음', dayunOrder: 4, examDayGanji: null })
+  ok(pl.dday === null && !!pl.months, '어림이면 엔진이 당일 수칙을 정하지 않음 (달은 그대로 봄)')
+  const ip = fs.readFileSync('app/manseryeok/exam-luck-input/page.tsx', 'utf8'), rs = fs.readFileSync('app/manseryeok/exam-luck-result/components/ExamResultShell.tsx', 'utf8')
+  const st = fs.readFileSync('app/manseryeok/exam-luck/page.tsx', 'utf8')
+  ok(/onClick=\{\(\) => \{ setExamDate\(q\.v\); setDateApprox\(true\) \}\}/.test(ip) && /setExamDate\(e\.target\.value\); setDateApprox\(false\)/.test(ip), '입력 — 단추는 «어림», 달력은 «정해진 날»')
+  ok(/p\.set\('dateApprox', '1'\)/.test(ip), '입력 — 어림이면 주소에 표시')
+  ok(/const dateApprox = sp\.get\('dateApprox'\) === '1'/.test(rs) && /examDateRaw && !dateApprox/.test(rs), '결과 — 어림이면 그날 일진 · 공망을 계산하지 않음')
+  ok(/examDateApprox: dateApprox/.test(rs) && /'dateApprox'/.test(st), '결과 → AI · 보관함이 다시 열 때도 어림을 기억')
 }
 
 console.log(`\n━━ 지금 상황 · 거쳐야 할 관문 — 통과 ${pass} · 실패 ${fail} ━━\n`)
