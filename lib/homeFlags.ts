@@ -5,7 +5,8 @@
 //  [대표님 2026-09-11]  「나) 단독카드로 하되, 관리화면에 취업운/합격운을 넣을지 말지를
 //                        결정하는 토글버튼을 만들어줄래」
 //
-//  [어디에 담나]  app_settings 표의 한 줄 — key 'home_exam_luck' · value true/false
+//  [어디에 담나]  app_settings 표의 한 줄 — key 'home_exam_luck' · value ★1(켜짐) / 0(꺼짐)
+//                 ⚠️ value 는 «숫자 칸» 입니다 — 참/거짓은 거절됩니다 (2026-09-11 대표님 화면에서 확인)
 //                 ★읽기·쓰기 모두 «서버 길» 로 합니다 (권한에 조용히 막히지 않게)
 //                   읽기  GET  /api/home-flags          (손님 누구나 · 정해진 낱말만)
 //                   쓰기  POST /api/admin/home-flags    (관리자만)

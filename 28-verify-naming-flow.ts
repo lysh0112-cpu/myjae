@@ -2608,7 +2608,10 @@ console.log('\n━━ ㉒-u 🔴 합격운/취업운 — 관리자 토글로 «�
   // ④ 처음 값은 «꺼짐» — 못 읽으면 «꺼짐» 으로 떨어집니다
   check(/HOME_FLAGS_OFF/.test(fl) && /return HOME_FLAGS_OFF/.test(fl),
     `⛔ 못 읽으면 ★«꺼짐» 으로 떨어집니다 (켜진 채로 새지 않게)`)
-  check(/value === true/.test(pub), `⛔ 서버도 «정확히 true» 일 때만 켜짐으로 봅니다`)
+  //  ⚠️ app_settings.value 는 ★숫자 칸 — 처음 true 를 넣었다가 거절됐습니다 (2026-09-11 대표님 화면).
+  check(/Number\(data\?\.value\) === 1/.test(pub), `⛔ 서버도 «정확히 1» 일 때만 켜짐으로 봅니다`)
+  check(/const v = examLuck \? 1 : 0/.test(adm) && /value: v,/.test(adm) && !/value: examLuck/.test(adm),
+    `⛔ ★숫자 칸에 «1 · 0» 으로 담습니다 (참/거짓은 거절됩니다)`)
   // ⑤ 손님용 읽기 길 — ★정해진 낱말 «하나» 만 읽고, 쓰는 길이 없습니다
   check(/export async function GET/.test(pub) && !/export async function (POST|PUT|PATCH|DELETE)/.test(pub),
     `⛔ 손님용 길은 «읽기» 만 합니다`)

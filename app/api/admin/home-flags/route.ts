@@ -31,14 +31,19 @@ export async function POST(request: Request) {
     )
     const k = HOME_FLAG_KEYS.examLuck
     const now = new Date().toISOString()
+    /* ★2026-09-11 (6부) — app_settings.value 는 ★«숫자 칸» 입니다 (대표님 화면에서 값으로 확인).
+     *   처음 true/false 를 넣었다가 「invalid input syntax for type integer: "true"」 로 거절됐습니다.
+     *   ⇒ 켜짐 1 · 꺼짐 0 으로 담습니다. 이름 짓기 횟수(naming_try_limit)도 같은 칸의 숫자입니다.
+     *   ⛔ true/false 로 되돌리지 마십시오 (검사 ㉒-u). */
+    const v = examLuck ? 1 : 0
 
     // ── 있으면 고치고, 없으면 만듭니다 (★바뀐 줄을 셉니다) ──────────
     const { data: had, error: readErr } = await sb.from('app_settings').select('key').eq('key', k).maybeSingle()
     if (readErr) return NextResponse.json({ error: '설정을 읽지 못했어요: ' + readErr.message }, { status: 500 })
 
     const { data, error } = had
-      ? await sb.from('app_settings').update({ value: examLuck, updated_at: now }).eq('key', k).select('key')
-      : await sb.from('app_settings').insert({ key: k, value: examLuck, updated_at: now }).select('key')
+      ? await sb.from('app_settings').update({ value: v, updated_at: now }).eq('key', k).select('key')
+      : await sb.from('app_settings').insert({ key: k, value: v, updated_at: now }).select('key')
     if (error) return NextResponse.json({ error: '저장하지 못했어요: ' + error.message }, { status: 500 })
     if (!data || data.length === 0) {
       return NextResponse.json({ error: '저장되지 않았어요. 다시 해 주세요.' }, { status: 500 })
