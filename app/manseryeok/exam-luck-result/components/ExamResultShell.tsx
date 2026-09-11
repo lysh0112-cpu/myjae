@@ -133,6 +133,14 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
   const [calc, setCalc] = useState<PersonCalc | null>(null)
   const [err, setErr] = useState('')
   const [dayunList, setDayunList] = useState<DayunItem[]>([])
+  /* ★2026-09-11 (6부) — 대운이 «도착했는지» (성공이든 실패든). AI 는 이게 참이 된 뒤에 시작합니다.
+   *   [전] 카드가 대운 없이 먼저 생기자마자 AI 를 불렀고, 대운이 오면 카드가 다시 만들어져
+   *        돌던 AI 가 «멈추고» 다시 시작도 안 해 ★「지금 쓰고 있어요」 에서 굳었습니다 (검사 ㉒-z). */
+  const [dayunReady, setDayunReady] = useState(false)
+  /** ★6부 — 다시보기로 연 기록에 풀이가 «없을 때» [풀이 다시 받기] 를 보입니다 */
+  const [emptyRecord, setEmptyRecord] = useState(false)
+  /** ★6부 — [풀이 다시 받기] 를 누르면 참 — 그 기록(recordId)에 풀이를 채웁니다 */
+  const [retryRecord, setRetryRecord] = useState(false)
   const [tong, setTong] = useState('')
   const [tongState, setTongState] = useState<'idle' | 'loading' | 'done' | 'failed'>('idle')
   /**
@@ -200,8 +208,8 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         hourIdx: person.hour === '모름' ? null : parseInt(person.hour),
       }),
     }).then(r => r.json())
-      .then(v => { if (alive) setDayunList(v.dayunList || []) })
-      .catch(() => { if (alive) setDayunList([]) })
+      .then(v => { if (alive) { setDayunList(v.dayunList || []); setDayunReady(true) } })
+      .catch(() => { if (alive) { setDayunList([]); setDayunReady(true) } })
     return () => { alive = false }
   }, [calc, person])
 
@@ -330,10 +338,18 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
 
   // ── ⑤ 통변 (SSE) ─────────────────────────────────────────
   useEffect(() => {
-    if (!calc || !cards.length || tongStartedRef.current) return
-    if (recordId) return          // 다시보기 — 아래 effect 가 저장본을 불러온다
+    /* ★2026-09-11 (6부) — 대운이 «도착한 뒤» 에만 시작합니다 (!dayunReady). 검사 ㉒-z.
+     *   [전] 대운이 늦게 와 카드가 다시 만들어지면서 돌던 AI 가 멈추고 «굳었습니다». */
+    if (!calc || !cards.length || !dayunReady || tongStartedRef.current) return
+    //  다시보기 — 아래 effect 가 저장본을 불러옵니다.
+    //  ★6부 — 다만 [풀이 다시 받기] 를 누르면(retryRecord) «그 기록» 에 풀이를 새로 채웁니다.
+    if (recordId && !retryRecord) return
     tongStartedRef.current = true
     let cancelled = false
+    /** ★6부 — 돌고 있는 AI 호출들 — 되돌릴 때(cleanup) 끊습니다 (헛돈 막기) */
+    const acs: AbortController[] = []
+    //  ⚠️ 빈 기록 상자는 «그리는 쪽» 이 retryRecord 로 숨깁니다 — 여기서 상태를 바꾸지 않습니다 (eslint 규칙).
+    if (recordId && retryRecord) savedIdRef.current = recordId
 
     ;(async () => {
       setTongState('loading')
@@ -471,6 +487,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
 
         // ★멈춤 감지 — 조각이 올 때마다 시계를 되감습니다
         const ac = new AbortController()
+        acs.push(ac)
         let stallTimer: ReturnType<typeof setTimeout> | null = null
         const hardTimer = setTimeout(() => ac.abort('hard'), HARD_MS)
         const armStall = () => {
@@ -613,6 +630,17 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
           acc = partsRef.filter(Boolean).join('\n\n')
           setTong(acc)
         }
+        /* ★2026-09-11 (6부) — 갈래가 끝날 «때마다» 저장합니다 (검사 ㉒-z).
+         *   [전] 일곱이 «다 끝난 뒤» 에만 저장해, 중간에 떠나거나 굳으면 ★빈 기록만 남았습니다
+         *        (15:37 류희준 기록 — SQL 로 풀이 NULL 확인).
+         *   ⚠️ 기록 번호가 아직 없으면(방금 저장 중) 5초까지 기다립니다. */
+        const saveTong = async () => {
+          for (let i = 0; i < 10 && !savedIdRef.current; i++) {
+            await new Promise(r => setTimeout(r, 500))
+          }
+          const id = savedIdRef.current
+          if (id && acc.trim() && !cancelled) await updateRecordResult(id, { tong: acc } as never)
+        }
 
         // ★★2026-07-30 (2차) — «물결(wave)» 을 버리고 «굴러가는 창» 으로 바꿨습니다.
         //
@@ -638,6 +666,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
             setRunning(new Set(inFlight))
             setDoneGroups(partsRef.filter(Boolean).length)
             joinParts()
+            await saveTong()
           }
         }
         // ★일꾼 CONCURRENCY 명이 각자 «다음 것» 을 집어 갑니다
@@ -657,10 +686,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         if (failNotes.length) setFailWhy(failNotes.join(' · '))
         setTongState('done')
 
-        for (let i = 0; i < 10 && !savedIdRef.current; i++) {
-          await new Promise(r => setTimeout(r, 500))
-        }
-        if (savedIdRef.current) await updateRecordResult(savedIdRef.current, { tong: acc } as never)
+        await saveTong()   // ★마지막 한 번 더 — 위에서 갈래마다 저장했지만, 끝난 모양을 확실히 남깁니다
       } catch (e) {
         if (!cancelled) {
           setFailWhy(failNotes.join(' · ') || String(e))
@@ -668,14 +694,21 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         }
       }
     })()
-    return () => { cancelled = true }
+    /* ★2026-09-11 (6부) — 되돌릴 때 ★「시작했음」 표시도 풉니다 (검사 ㉒-z).
+     *   [전] cancelled 만 켜고 tongStartedRef 는 그대로 둬서, 다시 시작도 못 하고 «굳었습니다».
+     *   ⚠️ 돌던 AI 호출도 끊습니다 — 다시 시작하면 처음부터 새로 받으니 옛 호출은 헛돈입니다. */
+    return () => {
+      cancelled = true
+      acs.forEach(a => a.abort('cancel'))
+      tongStartedRef.current = false
+    }
     // ★2026-07-29 — 폼에서 고른 값이 바뀌면 통변을 다시 받아야 합니다.
     //   빠뜨리면 «학년을 바꿨는데 리포트는 그대로» 가 됩니다.
     // ★2026-07-30 — signalBlock·upsangMaterial·kind 도 함께 넣었습니다.
     //   빠뜨리면 재료가 바뀌어도 옛 통변이 그대로 남습니다.
   }, [calc, cards, recordId, person, target, kind, studentGrade, gradeLevel, trackSel,
       examCategory, targetType, targetCustomText, examDateRaw, examDayForPrompt, thisYear,
-      signalBlock, upsangMaterial])
+      signalBlock, upsangMaterial, dayunReady, retryRecord])
 
   // ── ⑥ 다시보기 — 저장본 불러오기 ──────────────────────────
   useEffect(() => {
@@ -683,8 +716,12 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
     let alive = true
     getRecord(recordId).then(r => {
       if (!alive || !r) return
-      const t = (r as { result?: { tong?: string } }).result?.tong ?? ''
+      /* ★2026-09-11 (6부) — 풀이는 ★resultData 에 있습니다 (getRecord 가 주는 이름 · 진로적성과 같음).
+       *   [전] «result» 로 꺼내 ★저장돼 있어도 늘 빈 칸이었습니다 (검사 ㉒-z).
+       *   ⚠️ 풀이가 정말 없는 기록(굳었던 옛 기록)이면 [풀이 다시 받기] 를 보입니다. */
+      const t = (r.resultData as { tong?: string } | undefined)?.tong ?? ''
       if (t) { setTong(t); setTongState('done') }
+      else setEmptyRecord(true)
     }).catch(() => {})
     return () => { alive = false }
   }, [recordId])
@@ -907,6 +944,29 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
                「멈췄다」와 「한도가 찼다」와 「키가 없다」는 대응이 전혀 다릅니다.
              ⚠️ 손님에게는 부드럽게. 자세한 말(HTTP 429 …)은 title 에 담아
                 필요할 때만 마우스를 올려 보게 합니다. */}
+        {/* ★2026-09-11 (6부) — 풀이가 «없는» 기록을 다시 열었을 때 (검사 ㉒-z).
+            [전] 빈 칸만 보이고 할 수 있는 것이 없었습니다 (15:37 류희준 기록).
+            [지금] [풀이 다시 받기] — 같은 기록에 풀이를 새로 받아 채웁니다 (새 기록을 또 만들지 않음). */}
+        {emptyRecord && !retryRecord && tongState !== 'loading' && (
+          <div style={{
+            background: '#fdf4e8', border: '0.5px solid #cb964d', borderRadius: 12,
+            padding: '12px 14px', margin: '4px 0 12px', fontSize: 12.5, color: '#8a6a3c',
+            lineHeight: 1.75, textAlign: 'center',
+          }}>
+            이 기록에는 저장된 풀이가 없어요.
+            <div style={{ fontSize: 11.5, color: '#a58a6a', marginTop: 2 }}>
+              풀이를 받는 중에 화면을 떠났거나, 받다가 멈췄던 기록이에요.
+            </div>
+            <button onClick={() => setRetryRecord(true)}
+              style={{
+                display: 'inline-block', marginTop: 10, background: ACCENT, color: '#fff', border: 'none',
+                borderRadius: 9, padding: '8px 18px', fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit',
+              }}>
+              풀이 다시 받기
+            </button>
+          </div>
+        )}
+
         {tongState === 'failed' && (
           <div style={{ textAlign: 'center', padding: '14px 0', color: '#8a6a3c', fontSize: 12.5 }}
             title={failWhy}>

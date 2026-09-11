@@ -2755,6 +2755,31 @@ console.log('\n━━ ㉒-y 🔴 가격 표의 합격운 줄이 «토글을 따�
   check(/홈 카드 · 보관함 · 가격 표 줄/.test(ui), `★토글 설명이 움직이는 세 곳을 말합니다`)
 }
 
+console.log('\n━━ ㉒-z 🔴 합격운·취업운 풀이가 «굳지 않고» 끝까지 오는가 (2026-09-11 · 6부) ━━')
+{
+  //  🔴 [대표님 휴대폰에서 겪음 — 17:12] 「풀이를 계속 쓰고만 있다고 하고 진척이 없어」
+  //     Vercel 기록 — /api/tongbyeon «한 번» 200 · 20초에 끝 · 그 뒤 7분 동안 둘째가 안 불림
+  //  [원인] ① 카드가 생기자마자 AI 를 부름 (대운은 아직 안 옴)
+  //         ② 대운이 오면 카드가 «다시» 만들어져 effect 가 되돌림(cancelled) → 돌던 것이 멈춤
+  //         ③ 그런데 「이미 시작」 표시(tongStartedRef)가 남아 «다시 시작도 안 함» → 굳음
+  //         ④ 풀이는 «다 끝난 뒤» 에만 저장 → 굳으면 «빈 기록» 만 남음 (15:37 류희준 기록 · SQL 로 NULL 확인)
+  //  [또] 다시보기가 풀이를 «result» 로 꺼냈는데 getRecord 는 «resultData» 로 줍니다 → 늘 빈 칸
+  const ex = codeOf(read('app/manseryeok/exam-luck-result/components/ExamResultShell.tsx'))
+  const ai = ex.slice(ex.indexOf("setTongState('loading')") - 900, ex.indexOf('// ── ⑥'))
+  check(/!dayunReady/.test(ai) && /setDayunReady\(true\)/.test(ex),
+    `⛔ 대운이 «도착한 뒤» 에 AI 를 시작합니다 (카드가 중간에 바뀌지 않게)`)
+  check(/cancelled = true[\s\S]{0,120}tongStartedRef\.current = false/.test(ex),
+    `⛔ 중간에 멈추면 「시작했음」 표시도 풉니다 (굳지 않고 다시 받음)`)
+  check(/acs\.forEach\(a => a\.abort\(/.test(ex), `★멈출 때 돌던 AI 호출도 «끊습니다» (헛돈 막기)`)
+  check(/await saveTong\(\)/.test(ex) && /updateRecordResult\(id, \{ tong: acc \}/.test(ex),
+    `★갈래가 끝날 «때마다» 저장합니다 (중간에 떠나도 받은 데까지 남음)`)
+  check(/r\.resultData as \{ tong\?: string \}/.test(ex) && !/\.result\?\.tong/.test(ex),
+    `⛔ 다시보기가 풀이를 «resultData» 에서 꺼냅니다 (진로적성과 같은 이름)`)
+  check(/setEmptyRecord\(true\)/.test(ex) && /풀이 다시 받기/.test(ex) && /retryRecord/.test(ex),
+    `★빈 기록을 열면 [풀이 다시 받기] 가 뜹니다`)
+  check(/recordId && !retryRecord/.test(ex), `★다시 받기는 «그 기록» 에 채웁니다 (새 기록을 또 만들지 않음)`)
+}
+
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail > 0) {
   console.log('  ┌────────────────────────────────────────────────────────────┐')
