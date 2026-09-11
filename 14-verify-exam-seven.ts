@@ -1,4 +1,5 @@
-// 14-verify-exam-seven.ts — 합격운 7대 카테고리를 «두 벌 다» 끝까지 관통시킨다
+// 14-verify-exam-seven.ts — 합격운 «4갈래» 를 «두 벌 다» 끝까지 관통시킨다
+//   ★2026-09-11 (6부 봉투 B) — 7갈래 → 4갈래로 줄였습니다 (대표님 「중언부언」). 옛 7갈래는 다시보기 전용.
 //   npx tsx 14-verify-exam-seven.ts
 //
 // 교훈 CK — 자료를 얹은 날에는 한 명을 끝까지 통과시켜 보라
@@ -116,17 +117,17 @@ function argsFor(target: ExamTarget): SevenArgs {
 
 // ════════════════════════════════════════════════════════════════
 console.log('════════════════════════════════════════════════════════')
-console.log('  합격운 7대 카테고리 — 진학/취업 두 벌 관통 검사')
+console.log('  합격운 4갈래 — 진학/취업 두 벌 관통 검사 (6부 봉투 B)')
 console.log('════════════════════════════════════════════════════════\n')
 
 // ── ① 갈래가 빠짐없이 한 번씩 ─────────────────────────────────────
-console.log('① 일곱 갈래가 묶음에 빠짐없이 한 번씩 들어가는가')
+console.log('① 네 갈래가 묶음에 빠짐없이 한 번씩 들어가는가')
 {
   const flat = SEVEN_GROUPS.flat()
   const dupe = flat.filter((k, i) => flat.indexOf(k) !== i)
   for (const table of [SEVEN_STUDENT, SEVEN_ADULT]) {
     const keys = table.map(s => s.key)
-    const missing = keys.filter(k => !flat.includes(k))
+    const missing = keys.filter(k => !(flat as string[]).includes(k))
     const extra = flat.filter(k => !keys.includes(k))
     if (missing.length) bad(`빠진 갈래: ${missing.join(', ')}`)
     if (extra.length) bad(`표에 없는 갈래: ${extra.join(', ')}`)
@@ -198,11 +199,11 @@ for (const target of ['student', 'adult'] as ExamTarget[]) {
 
   // AI 가 제목을 흘려 쓴 경우
   const sloppy: Array<[string, SevenKey]> = target === 'student'
-    ? [['■ 1. 타고난 공부 DNA', 'dna'], ['■ 타고난 공부 DNA와 적성', 'dna'],
-       ['■ 🗓️ 열두 달 마음 페이스메이커', 'monthly'], ['■ 5. D-Day 시험 당일 실전 수칙', 'dday'],
-       ['■ 수험생과 부모님께', 'mentor'], ['■ ⚖️ 3. 수시와 정시', 'ratio']]
-    : [['■ 타고난 일의 결', 'dna'], ['■ 어디를 노릴까', 'apply'],
-       ['■ 3. 시험 준비와 실무 경력', 'ratio'], ['■ 마지막으로 드리고 싶은 말', 'mentor']]
+    ? [['■ 1. 한눈에 보는 나의 흐름', 'flow'], ['■ 한눈에 보는 흐름과 강점', 'flow'],
+       ['■ 🗓️ 월별 페이스메이커', 'pace'], ['■ 3. D-Day 수칙', 'pace'],
+       ['■ 마지막 응원', 'cheer'], ['■ 🎯 2. 실전 전략', 'strategy']]
+    : [['■ 나의 흐름과 강점', 'flow'], ['■ 합격과 성취를 위한 전략', 'strategy'],
+       ['■ 3. 월별 페이스메이커', 'pace'], ['■ 오늘의 실천', 'cheer']]
   const sl = sloppy.filter(([t, k]) => sevenKeyOf(t, target) !== k)
   if (sl.length) bad(`흘려 쓴 제목 못 잡음: ${sl.map(x => x[0]).join(' / ')}`)
   else ok(`흘려 쓴 제목 ${sloppy.length}가지 전부 잡음 (교훈 CY)`)
@@ -363,7 +364,7 @@ console.log('\n──────── 부분 도착(스트리밍) 글이 갈�
     const table = sevenOf(target)
     // 세 묶음이 각각 쓸 글을 흉내 낸다
     for (const g of SEVEN_GROUPS) {
-      const full = sample(table.filter(x => g.includes(x.key)).map(x => x.title))
+      const full = sample(table.filter(x => (g as string[]).includes(x.key)).map(x => x.title))
       // 1자씩 늘려 가며 — 잡힌 갈래가 «그 묶음 안» 것이어야 합니다
       for (let n = 1; n <= full.length; n++) {
         const parsed = parseExamTongbyeon(full.slice(0, n))
@@ -372,7 +373,7 @@ console.log('\n──────── 부분 도착(스트리밍) 글이 갈�
           const k = sevenKeyOf(title, target)
           if (!k) { miss++; continue }
           // ★엉뚱한 갈래로 잡히면 도표가 딴 곳에 붙습니다 (교훈 CY)
-          if (!g.includes(k)) {
+          if (!(g as string[]).includes(k)) {
             bad(`부분 도착 «${title.slice(0, 20)}» → ${k} (이 묶음에 없는 갈래)`)
             n = full.length
             break

@@ -38,7 +38,7 @@ import { judgeJobChangeNatal, judgeJobChangeLuck } from '@/lib/saju/examLuck/job
 import { judgeExamDay } from '@/lib/saju/examLuck/examDay'
 import { buildAllCards } from '@/lib/saju/examLuck/buildCards'
 import { parseExamTongbyeon } from '@/lib/saju/examLuck/buildExamPrompt'
-import { buildSevenPrompt, sevenOf, SEVEN_GROUPS, sevenKeyOf } from '@/lib/saju/examLuck/buildExamSeven'
+import { buildSevenPrompt, sevenOf, legacyOf, isLegacyTong, SEVEN_GROUPS, sevenKeyOf } from '@/lib/saju/examLuck/buildExamSeven'
 // ★2026-07-30 — 지시서 2장 «사정 평가 로직» 을 재료로 만들어 싣습니다. (교훈 CU)
 import { judgePassSignal, passSignalBlock } from '@/lib/saju/examLuck/passSignal'
 import { upsangBlock as buildUpsangBlock } from '@/lib/saju/examLuck/tables/upsang'
@@ -429,6 +429,8 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         examDate: examDateRaw || null,
         examDayNote: examDayForPrompt,
         year: thisYear,
+        //  ★6부 봉투 B — 이번 달부터 열두 달을 「월별 페이스메이커」 재료로 (달을 짐작하지 않게)
+        month: new Date().getMonth() + 1,
       }
 
       // ══════════════════════════════════════════════════════════
@@ -782,19 +784,21 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
    *   parseExamTongbyeon 은 ■ 로 자르기만 합니다. 갈래 열쇠는 sevenKeyOf 가 붙입니다.
    *   ⚠️ AI 가 제목을 조금 바꿔 써도 낱말로 잡습니다. 못 잡으면 그 갈래는 안 그립니다.
    */
+  /* ★6부 봉투 B — 저장된 풀이가 옛 7갈래 글이면 옛 표로 그립니다 (옛 기록 다시보기가 깨지지 않게) */
+  const legacy = useMemo(() => isLegacyTong(tong), [tong])
   const sevenBody = useMemo(() => {
     const out: Record<string, string> = {}
     if (!parsed) return out
     for (const [title, body] of Object.entries(parsed.byTitle)) {
       // ★2026-07-30 — target 을 넘겨 그 벌의 제목을 먼저 맞춰 봅니다.
       //   제목에 이모지·번호가 붙었으므로 sevenKeyOf 가 그것을 떼고 맞춥니다.
-      const k = sevenKeyOf(title, target)
+      const k = sevenKeyOf(title, target, legacy)
       if (k && body.trim()) out[k] = body
     }
     return out
-  }, [parsed, target])
-  /** ★이 화면이 그릴 일곱 갈래 — 진학과 취업이 이름과 결이 다릅니다 */
-  const sections = useMemo(() => sevenOf(target), [target])
+  }, [parsed, target, legacy])
+  /** ★이 화면이 그릴 갈래 — 새 풀이는 4갈래, 옛 기록은 옛 7갈래 (6부 봉투 B) */
+  const sections = useMemo(() => (legacy ? legacyOf(target) : sevenOf(target)), [target, legacy])
   const kindLabel = examKindOf(examKind)?.label
 
   // ★훅은 여기까지. 아래부터 조기 return.
@@ -930,8 +934,9 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
           if (body) {
             return (
               <div key={sec.key}>
-                {sec.key === 'subject' && <YearStrip cards={cards} />}
-                {sec.key === 'dday' && examMonth && (
+                {/* ★6부 봉투 B — 해별 흐름표는 1번(흐름) 갈래 위에, 달별 흐름표는 3번(월별) 갈래 위에 · 옛 기록은 옛 자리 */}
+                {(sec.key === 'flow' || sec.key === 'subject') && <YearStrip cards={cards} />}
+                {(sec.key === 'pace' || sec.key === 'dday') && examMonth && (
                   <MonthStrip dayStem={dayStemForStrip} year={examMonth.y} mark={examMonth.m} />
                 )}
                 <ExamJudgeCard
