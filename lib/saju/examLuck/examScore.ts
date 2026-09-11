@@ -24,7 +24,7 @@ import { getUnsung } from '../unsung'
 // ★2026-07-27 — 조후·기신·격국을 얻는다. 셋 다 이 한 번의 호출로 나온다.
 //   ⚠️ yongsinNew.ts 는 손대지 않는다. 부르기만 한다. (작업지시 12장)
 import { calcYongsinNew } from '../yongsinNew'
-import { isCheonganHap } from './hapchung'
+import { isCheonganHap, isJijiChung } from './hapchung'
 import type { ExamInput, YearLuck, Grade, Pillar } from './types'
 import {
   readNatal, ilganGwanHap, ilganGwanChung, cheonhapJihap, cheongeukJichung,
@@ -171,6 +171,13 @@ export function judgeYear(
         const yong = ys.eokbu.yongsin
         if (STEM_EL_[yStem] === yong || BRANCH_EL_[yBranch] === yong) add('상관격용신운')
       }
+      // ★2026-09-11 (6부) [연재쌤 — 규칙 보충 ②] 교재 230쪽 5번 — 위 목화·금수와 짝
+      //   丙丁 일간(화토상관) · 戊己 일간(토금상관)이면서 상관격 → 용신운인 해에 −1
+      const hwato = dayEl === '화', togeum = dayEl === '토'
+      if (hwato || togeum) {
+        const yong = ys.eokbu.yongsin
+        if (STEM_EL_[yStem] === yong || BRANCH_EL_[yBranch] === yong) add('화토토금상관')
+      }
     }
   }
 
@@ -204,8 +211,18 @@ export function judgeYear(
   if (n.bigyeopChars.length && n.gwanChars.length && chungedBy(n.gwanChars, yStem, yBranch)) add('비겁관성충')
   if (both.includes('겁재')) add('겁재운')
   // 합거 — 기대던 인성·관성이 합에 묶여 자리를 비운다
-  if (n.gwanChars.length && hapedBy(n.gwanChars, yStem, yBranch)) add('용신관인합거')
-  if (n.inChars.length && hapedBy(n.inChars, yStem, yBranch)) add('용신관인합거')
+  // ★2026-09-11 (6부) [연재쌤 — 규칙 보충 ④] 교재 230쪽 7번 — «용신일 때» 만 −3, 아니면 −1
+  //   [전] 용신인지 따지지 않고 늘 −3 이었습니다.
+  //   ⚠️ 한 해에 용신인 글자와 아닌 글자가 함께 묶이면 −3 «하나만» 겁니다 (겹쳐 빼지 않음).
+  {
+    const hapedChars = [...n.gwanChars, ...n.inChars].filter(c => hapedBy([c], yStem, yBranch))
+    if (hapedChars.length) {
+      const yong = ys?.eokbu.yongsin
+      const elOf = (c: string) => STEM_EL_[c] ?? BRANCH_EL_[c]
+      if (yong && hapedChars.some(c => elOf(c) === yong)) add('용신관인합거')
+      else add('관인합거')
+    }
+  }
   // 재극인 · 식상극관
   // ★재극인 — 원본 195쪽 「신약한 관살혼잡 사주에 인성이 재성에 의해 재극인을 당하거나」
   //   교재는 조건을 셋 붙였다. 전에는 "재성운 + 원국에 인성" 만 보고 앞의 둘을 빠뜨렸다.
@@ -256,7 +273,18 @@ export function judgeYear(
     }
   }
 
-  const score = hits.reduce((s, h) => s + h.weight, 0)
+  // ★2026-09-11 (6부) [연재쌤 — 규칙 보충 ③] 교재 230쪽 8번
+  //   원국에 천간합(甲己 · 乙庚 …)과 지지충(子午 · 卯酉 …)이 «함께» 있으면 → 점수를 절반으로.
+  //   ⚠️ 합만 · 충만 있을 때는 줄이지 않습니다 (검사 43 이 3,000명으로 잽니다).
+  //   ⚠️ 표의 점수는 0 이라 hits 합에는 안 들어가고, 여기서 한꺼번에 반으로 나눕니다.
+  const natalStems = saju.map(p => p.stem).filter(c => c && c !== '?')
+  const natalBranches = saju.map(p => p.branch).filter(c => c && c !== '?')
+  const natalHap = natalStems.some((a, i) => natalStems.some((b, j) => j > i && isCheonganHap(a, b)))
+  const natalChung = natalBranches.some((a, i) => natalBranches.some((b, j) => j > i && isJijiChung(a, b)))
+  if (natalHap && natalChung) add('원국합충혼재')
+
+  const raw = hits.reduce((s, h) => s + h.weight, 0)
+  const score = natalHap && natalChung ? Math.round(raw / 2 * 10) / 10 : raw
   return {
     year, stem: yStem, branch: yBranch, ganSipsin, jiSipsin,
     score, seyunScore: score, hits, grade: gradeOf(score),
@@ -316,11 +344,33 @@ export function judgeYears(
     return v
   }
 
+  /* ★2026-09-11 (6부) [연재쌤 — 규칙 보충 ⑤] 교재 202쪽
+   *   「5급 이상 고위직 공무원은 2대운과 3대운에 관성용신운이 오면 유리하다」
+   *   ⇒ 목표가 goui(5급 공채 · 고위직) 이고, 2·3대운(목록의 둘째 · 셋째 칸)의 천간이나 지지가
+   *     관성(정관 · 편관)이면서 그 오행이 용신이면 → 5년 «모두» +1.
+   *   ⚠️ 대운 목록이 없으면(서버가 못 받아 왔으면) 걸지 않습니다 — 모르는 것을 지어내지 않습니다. */
+  const gouiBonus = (() => {
+    if (examKind !== 'goui' || !dayunList || dayunList.length < 3) return false
+    const ys = calcYongsinNew(input.saju, dayStem)
+    if (!ys) return false
+    const yong = ys.eokbu.yongsin
+    return [dayunList[1], dayunList[2]].some(d =>
+      ([[d.cheongan, d.ganYukchin], [d.jiji, d.jiYukchin]] as const).some(([ch, sip]) =>
+        (sip === '정관' || sip === '편관') && (STEM_EL_[ch] ?? BRANCH_EL_[ch]) === yong))
+  })()
+  const withGoui = (y: YearLuck): YearLuck => {
+    if (!gouiBonus) return y
+    const r = rule('고위직대운')
+    const hits = [...y.hits, { key: r.key, say: r.say, weight: r.weight, src: r.src }]
+    const score = Math.round((y.score + r.weight) * 10) / 10
+    return { ...y, hits, score, seyunScore: score, grade: gradeOf(score) }
+  }
+
   const all = calcSeyunList(dayStem, thisYear)
   return all
     .filter(s => s.year >= thisYear && s.year < thisYear + span)
     .map(s => {
-      const base = judgeYear(input.saju, s.year, s.cheongan, s.jiji, purpose, examKind)
+      const base = withGoui(judgeYear(input.saju, s.year, s.cheongan, s.jiji, purpose, examKind))
       if (!dayunList?.length) return base
       // 그해에 몇 살이었나 → 그때 흐르던 대운
       const ageThatYear = s.year - input.birthYear
