@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { requireMaster } from '../_guard'
 
 // ★2026-07-21: maxDuration 이 없으면 Vercel 기본값(10초)으로 돌아
 //   긴 AI 응답이 도중에 잘린다. 오류도 안 나서 원인을 찾기 어렵다.
@@ -7,6 +8,13 @@ export const maxDuration = 60
 
 export async function POST(req: Request) {
   try {
+    /* ★관리자 권한 확인 (2026-09-11 · 6부)
+     *   ⚠️ 이 줄이 «없었습니다». 몸통 글이 그대로 프롬프트로 가서
+     *      ★누구든 사장님 AI 열쇠를 쓸 수 있었습니다 (1부 10-6 「누가 부르든 사장님 돈」).
+     *   ⛔ 몸통을 읽기 «전» 에 둡니다 — 검사 ㉒-n 이 순서를 봅니다. */
+    const g = await requireMaster()
+    if (!g.ok) return g.res
+
     const { tone_rules, easy_terms, saju_info } = await req.json()
 
     const toneBlock = `${(tone_rules || '').trim()}\n\n${(easy_terms || '').trim()}`

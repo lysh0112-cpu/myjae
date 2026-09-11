@@ -50,6 +50,7 @@ import { calcSeyunList, calcWolunList, type DayunItem } from '@/lib/saju/dayun'
 import SajuWonguk from '@/app/manseryeok/components/SajuWonguk'
 import ExamJudgeCard, { GRADE_STYLE } from './ExamJudgeCard'
 import type { ExamCard, ExamInput, ExamTarget, YearLuck } from '@/lib/saju/examLuck/types'
+import { refreshBeforeAi } from '@/lib/ai/freshCall'
 
 const ACCENT = '#c85a8c'
 const BG = '#FDF6F0'
@@ -488,6 +489,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         }
 
         try {
+          await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
           const res = await fetch('/api/tongbyeon', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             signal: ac.signal,

@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { DEFAULT_TONE_RULES_TEXT, DEFAULT_EASY_TERMS_TEXT } from '@/lib/ai/tonePrompt'
+import { requireMaster } from '../_guard'
 
 function admin() {
   return createClient(
@@ -47,6 +48,14 @@ export async function GET() {
 // 저장 — 관리자가 편집한 지시문을 tone_settings(id=1)에 저장(upsert).
 export async function POST(req: Request) {
   try {
+    /* ★관리자 권한 확인 (2026-09-11 · 6부) — «쓰기» 만 막습니다.
+     *   ⚠️ 이 줄이 «없었습니다». 누구든 AI 말투 지시문을 덮어써
+     *      ★손님이 받는 AI 답 «전부» 를 바꿀 수 있었습니다.
+     *   ⛔ 위 «읽기»(GET) 에는 넣지 마십시오 — 손님 화면(출산택일 결과)이 부릅니다.
+     *   ⛔ 몸통을 읽기 «전» 에 둡니다 — 검사 ㉒-n 이 순서를 봅니다. */
+    const g = await requireMaster()
+    if (!g.ok) return g.res
+
     const { tone_rules, easy_terms, mulsang_guide, tarot_guide, naming_guide, fortune_guide } = await req.json()
     const supabase = admin()
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { freshSession } from './callAdmin'
 
 export default function ToneManager() {
   const [rules, setRules] = useState('')
@@ -50,6 +51,10 @@ export default function ToneManager() {
     setSaving(true)
     setMsg('')
     try {
+      /* ★2026-09-11 (6부) — 서버가 이제 «관리자인지» 봅니다 (검사 ㉒-n).
+         ⇒ 화면을 오래 켜 두면 토큰이 1시간에 죽어 ★401 이 납니다.
+         ⛔ 이 줄을 빼지 마십시오 — 회원 관리(MemberManager)와 같은 자리입니다. */
+      if (!await freshSession()) { setMsg('로그인이 풀렸어요. 다시 로그인해 주세요.'); setSaving(false); return }
       const res = await fetch('/api/admin/tone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -84,6 +89,10 @@ export default function ToneManager() {
     setPreview('')
     setMsg('')
     try {
+      /* ★2026-09-11 (6부) — 서버가 이제 «관리자인지» 봅니다 (검사 ㉒-n).
+         ⇒ 화면을 오래 켜 두면 토큰이 1시간에 죽어 ★401 이 납니다.
+         ⛔ 이 줄을 빼지 마십시오 — 회원 관리(MemberManager)와 같은 자리입니다. */
+      if (!await freshSession()) { setMsg('로그인이 풀렸어요. 다시 로그인해 주세요.'); setPreviewing(false); return }
       const res = await fetch('/api/admin/tone-preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

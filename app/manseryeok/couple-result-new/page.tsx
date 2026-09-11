@@ -72,6 +72,7 @@ import ConsultButton from '@/app/components/common/ConsultButton'
 import CopyTextButton from '@/app/components/common/CopyTextButton'
 import { withNim } from '@/lib/saju/honorific'
 import { LINE_OUTER, LINE_OUTER_COLOR } from '@/lib/ui/line'
+import { refreshBeforeAi } from '@/lib/ai/freshCall'
 
 type Mode = 'couple' | 'married'
 
@@ -856,6 +857,7 @@ function CoupleResultView({
         { questionCategories: pickedQuestions?.map(q => q.category) },
       )
       const { systemPrompt } = buildCouplePrompt(material, { relation: relationKindOf(kind) })
+      await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
       const res = await fetch('/api/tongbyeon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1008,6 +1010,7 @@ function CoupleResultView({
         relation: relationKindOf(kind),
         question,
       })
+      await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
       const res = await fetch('/api/tongbyeon', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ systemPrompt, premium: true }),

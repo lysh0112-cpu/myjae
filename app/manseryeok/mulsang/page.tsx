@@ -17,6 +17,7 @@ import ConsultButton from '@/app/components/common/ConsultButton'
 import CopyTextButton from '@/app/components/common/CopyTextButton'
 import { supabase } from '@/lib/supabase'
 import type { SajuQuestion } from '@/lib/saju/questions'
+import { refreshBeforeAi } from '@/lib/ai/freshCall'
 
 interface Commentary {
   title: string
@@ -557,6 +558,7 @@ function MulsangInner() {
         questions,
       )
       // 기존 사주 통변과 같은 /api/tongbyeon 재사용 (스트리밍)
+      await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
       const res = await fetch('/api/tongbyeon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -707,6 +709,7 @@ function MulsangInner() {
       if (!summary) {
         setCardStep('요약을 만드는 중…')
         try {
+          await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
           const sres = await fetch('/api/tongbyeon', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

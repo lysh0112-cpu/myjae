@@ -1,4 +1,5 @@
 import { logAiError } from '@/lib/ai/errorLog'
+import { requireUser } from '../admin/_guard'
 // app/api/tongbyeon/route.ts
 // ============================================================================
 // AI 통변 스트리밍 API.
@@ -27,6 +28,13 @@ export const runtime = 'nodejs'
 export const maxDuration = 300
 
 export async function POST(req: Request) {
+  /* ★로그인 확인 (2026-09-11 · 6부) — 몸통에 «AI 에게 시킬 글» 이 통째로 옵니다.
+   *   ⚠️ 이 줄이 «없었습니다». 누구든 사장님 AI 열쇠로 아무 일이나 시킬 수 있었습니다.
+   *   ⚠️ 정상적인 손님은 이미 «로그인 + 결제» 를 거쳐 옵니다 ⇒ 불편해질 손님이 없습니다.
+   *   ⛔ 몸통을 읽기 «전» 에 둡니다 — 검사 ㉒-o 가 순서를 봅니다. */
+  const g = await requireUser()
+  if (!g.ok) return g.res
+
   // ★2026-07-29 — userPrompt 를 열었습니다. (프리미엄 리포트)
   //   [왜] 프리미엄 프롬프트는 «지시(system)»와 «이 사람의 재료(user)»를 나눠 보냅니다.
   //        한 덩이로 붙여 system 에 다 넣으면 모델이 지시와 자료를 구분하기 어렵습니다.

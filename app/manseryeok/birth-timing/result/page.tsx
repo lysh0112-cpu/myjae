@@ -11,6 +11,7 @@ import {
 } from '@/lib/saju/birthRecords'
 import { calcYongsinCompat } from '@/lib/saju/yongsinNew'
 import type { SavedInputData } from '@/lib/saju/savedPeople'
+import { refreshBeforeAi } from '@/lib/ai/freshCall'
 
 // 피치톤 (신버전 · 결혼택일과 통일)
 const accent = '#b45a78'   // 출산택일 포인트(로즈핑크)
@@ -146,6 +147,7 @@ ${list}
 {${recs.map(r => `"${r.rank}":{"oneLine":"...","detail":"..."}`).join(",")}}`
 
   try {
+    await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
     const res = await fetch('/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -22,6 +22,7 @@ import { buildTongbyeonPrompt, type TongbyeonInput } from '@/lib/saju/tongbyeonP
 import type { SajuQuestion } from '@/lib/saju/questions'
 import { withNim } from '@/lib/saju/honorific'
 import { LINE_OUTER } from '@/lib/ui/line'
+import { refreshBeforeAi } from '@/lib/ai/freshCall'
 
 const C = {
   cardBg: '#FFFBF7',
@@ -208,6 +209,7 @@ export default function TongbyeonView({ input, questions, premium, premiumPrompt
       setLoading(true); setErr(''); setText('')
       let acc = ''   // finally에서 onComplete로 넘기려고 try 밖에 둔다.
       try {
+        await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
         const res = await fetch('/api/tongbyeon', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -217,6 +219,10 @@ export default function TongbyeonView({ input, questions, premium, premiumPrompt
             premium: !!premium,
           }),
         })
+        /* ★2026-09-11 (6부) — 서버가 이제 «로그인한 사람» 만 받습니다 (검사 ㉒-o).
+         *   ⇒ 401 이면 까닭을 «가려서» 말합니다. 「불러오지 못했어요」만으로는
+         *     손님이 무엇을 해야 할지 모릅니다 (5부 0-5 「가려서 말하기」). */
+        if (res.status === 401) { setErr('로그인이 풀렸어요. 다시 로그인하시면 이어서 보실 수 있어요.'); setLoading(false); return }
         if (!res.ok || !res.body) { setErr('통변을 불러오지 못했어요.'); setLoading(false); return }
 
         const reader = res.body.getReader()

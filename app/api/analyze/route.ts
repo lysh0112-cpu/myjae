@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logAiError } from '@/lib/ai/errorLog'
+import { requireUser } from '../admin/_guard'
 
 // ★2026-07-21: maxDuration 이 없으면 Vercel 기본값(10초)으로 돌아
 //   긴 AI 응답이 도중에 잘린다. 오류도 안 나서 원인을 찾기 어렵다.
@@ -8,6 +9,13 @@ export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
   try {
+    /* ★로그인 확인 (2026-09-11 · 6부) — 몸통에 «AI 에게 시킬 글» 이 통째로 옵니다.
+     *   ⚠️ 이 줄이 «없었습니다». 누구든 사장님 AI 열쇠로 아무 일이나 시킬 수 있었습니다.
+     *   ⚠️ 정상적인 손님은 이미 «로그인 + 결제» 를 거쳐 옵니다 ⇒ 불편해질 손님이 없습니다.
+     *   ⛔ 몸통을 읽기 «전» 에 둡니다 — 검사 ㉒-o 가 순서를 봅니다. */
+    const g = await requireUser()
+    if (!g.ok) return g.res
+
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) {
       return NextResponse.json({ error: 'API key not set' }, { status: 500 })

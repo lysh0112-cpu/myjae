@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { getFreePrompt, getPaidPrompt } from './prompts'
 import PaidLockSection from './PaidLockSection'
+import { refreshBeforeAi } from '@/lib/ai/freshCall'
 
 function cleanMarkdown(text: string): string {
   return text
@@ -51,6 +52,7 @@ export default function AiAnalysisNew({
   const handleFreeAnalysis = async () => {
     setLoading(true)
     try {
+      await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -76,6 +78,7 @@ export default function AiAnalysisNew({
     setIsPaidLocal(true)
     setLoading(true)
     try {
+      await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { refreshBeforeAi } from '@/lib/ai/freshCall'
 
 function cleanMarkdown(text: string): string {
   return text
@@ -280,6 +281,7 @@ export default function CustomerAiAnalysis({
         + '태어난 시: ' + hourText + ' / 사주: ' + sajuText + '\n\n'
         + '1 용신 2 성격 3 건강 4 연애결혼 5 직업 6 재물 7 사업 8 자녀 9 노후 10 10년운세'
 
+      await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

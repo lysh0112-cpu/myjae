@@ -53,6 +53,7 @@ import CareerJudgeCard from './components/CareerJudgeCard'
 import SajuTableSlot, { type SajuTableKind } from '@/app/manseryeok/components/SajuTableSlot'
 import ConsultButton from '@/app/components/common/ConsultButton'
 import { LINE_OUTER, LINE_INNER } from '@/lib/ui/line'
+import { refreshBeforeAi } from '@/lib/ai/freshCall'
 
 const ACCENT = '#785aaa'
 const BG = '#FDF6F0'
@@ -340,6 +341,7 @@ function CareerResultInner() {
       })
       let acc = ''
       try {
+        await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
         const res = await fetch('/api/tongbyeon', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

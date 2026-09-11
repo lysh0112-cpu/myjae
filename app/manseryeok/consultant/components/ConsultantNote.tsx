@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
+import { refreshBeforeAi } from '@/lib/ai/freshCall'
 
 interface Props {
   consultationId: string
@@ -232,6 +233,7 @@ ${(cons?.ai_analysis || cons?.ai_free_analysis || '').slice(0, 1500)}
 
 위 내용을 종합하되, 상담사의 관점과 표현을 최우선으로 존중해 상담 요약을 작성하세요.`
 
+      await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

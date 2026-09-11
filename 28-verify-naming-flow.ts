@@ -17,7 +17,7 @@
 //      → 그래서 «이어지는 자리» 를 검사로 못 박습니다. (교훈 [조건겹침])
 // ══════════════════════════════════════════════════════════════════
 
-import { readFileSync, existsSync } from 'fs'
+import { readFileSync, existsSync, readdirSync, statSync } from 'fs'
 // ★2026-08-02 — 성씨 표는 «정규식» 이 아니라 «값» 으로 봅니다.
 //   ⚠️ 주석에 「인구수 순」이라 적혀 있어도 값이 흩어져 있으면 소용없습니다.
 import { SURNAME_HANJA } from './lib/saju/surnameHanja'
@@ -2285,6 +2285,135 @@ console.log('\n━━ ㉒-m 🔴 관리자 화면이 «바뀐 줄» 을 세는�
     `⛔ ★신호 끊김과 «서버 거절» 을 가릅니다 (끊겼을 때 로그아웃시키지 않습니다)`)
   const mm = codeOf(read('app/admin/components/MemberManager.tsx'))
   check(/freshSession\(\)/.test(mm), `★회원 관리가 부르기 직전에 세션을 새로 받습니다`)
+}
+
+console.log('\n━━ ㉒-n 🔴 관리자 API 가 «문 앞에서» 관리자인지 보는가 (2026-09-11 · 6부) ━━')
+{
+  //  🔴 [왜 이 그물이 필요한가]
+  //     관리자 길은 service_role 로 DB 를 부릅니다 — RLS 를 «통째로» 무시하는 열쇠입니다.
+  //     ⇒ 문 앞에서 「누가 불렀나」를 안 보면 ★아무나 남의 줄을 고칩니다.
+  //
+  //     [실제로 있던 일 — 6부가 쿠키 없이 불러 «값으로» 잼]
+  //       update-role · wallet/member  → 401 로 막힘 (정상)
+  //       tone(쓰기) · update-nickname · update-saju · tone-preview
+  //                                    → ★안 막히고 DB·AI 단계까지 들어감
+  //       · tone 쓰기    — 누구나 «AI 말투 지시문» 을 덮어씀 ⇒ 손님 AI 답 «전부» 가 바뀜
+  //       · tone-preview — 몸통 글이 그대로 프롬프트로 ⇒ ★사장님 AI 열쇠를 누구나 씀
+  //     ⇒ 58부가 문지기를 만들 때 ★이 넷이 «빠졌습니다».
+  //
+  //  ★이 그물은 길 «이름» 이 아니라 ★폴더 전체를 훑습니다.
+  //     ⇒ 새 관리자 길을 만들고 문지기를 잊으면 «그 자리에서» 걸립니다.
+  //  ★「맨 앞」 을 봅니다 — 몸통을 읽거나 DB·AI 를 부르기 «전» 이어야 합니다.
+  const walk = (d: string): string[] =>
+    readdirSync(d).flatMap((n) => {
+      const p = `${d}/${n}`
+      return statSync(p).isDirectory() ? walk(p) : n === 'route.ts' ? [p] : []
+    })
+  const routes = existsSync('app/api/admin') ? walk('app/api/admin').sort() : []
+  check(routes.length >= 9, `관리자 길을 «폴더째» 읽었습니다 (${routes.length}개)`)
+
+  //  ⚠️ «읽기» 를 열어 두는 곳 — ★이름과 까닭을 함께 적습니다
+  //     tone 읽기 — 손님 화면(출산택일 결과)이 AI 말투를 가져갈 때 부릅니다.
+  //                 여기를 막으면 ★손님 화면이 깨집니다. 쓰기(POST) 만 막습니다.
+  const OPEN_GET = new Set(['app/api/admin/tone/route.ts'])
+  for (const f of routes) {
+    const c = codeOf(read(f))
+    const heads = [...c.matchAll(/export async function (GET|POST|PUT|PATCH|DELETE)\b/g)]
+    for (let i = 0; i < heads.length; i++) {
+      const method = heads[i][1]
+      if (method === 'GET' && OPEN_GET.has(f)) continue
+      const body = c.slice(heads[i].index ?? 0, heads[i + 1]?.index ?? c.length)
+      const guard = body.search(/await requireMaster\(\)/)
+      const work = body.search(/\.json\(\)|createClient\(|fetch\(|admin\(\)/)
+      check(guard >= 0 && (work < 0 || guard < work),
+        `⛔ ${f.replace('app/api/admin/', '').replace('/route.ts', '')} ${method} 가 ★맨 앞에서 관리자를 봅니다`)
+    }
+  }
+  const tone = codeOf(read('app/api/admin/tone/route.ts'))
+  const toneGet = tone.slice(Math.max(0, tone.search(/export async function GET/)),
+    tone.search(/export async function POST/))
+  check(toneGet.length > 0 && !/requireMaster/.test(toneGet),
+    `⛔ 말투 «읽기» 는 열어 둡니다 — 손님 화면(출산택일 결과)이 부릅니다`)
+  const bt = codeOf(read('app/manseryeok/birth-timing/result/page.tsx'))
+  check(/fetch\('\/api\/admin\/tone'\)/.test(bt),
+    `★(짝) 출산택일 결과가 말투를 «읽기» 로만 부릅니다`)
+
+  //  ★문을 잠갔으니 «열쇠를 새로 받는» 자리도 함께 봅니다
+  //    ⚠️ 문지기가 없을 때는 죽은 토큰으로도 저장이 «됐습니다». 이제는 401 입니다.
+  //    ⇒ 오래 켜 둔 말투 관리 화면이 ★저장·미리보기 직전에 세션을 새로 받아야 합니다.
+  const tm = codeOf(read('app/admin/components/ToneManager.tsx'))
+  check((tm.match(/await freshSession\(\)/g) ?? []).length >= 2,
+    `★말투 관리가 저장·미리보기 «직전» 에 세션을 새로 받습니다`)
+}
+
+console.log('\n━━ ㉒-o 🔴 AI 창구가 «로그인한 사람» 만 받는가 (2026-09-11 · 6부) ━━')
+{
+  //  🔴 [왜 이 그물이 필요한가]
+  //     analyze · tongbyeon 은 ★「AI 에게 무엇을 시킬지」를 몸통으로 받습니다.
+  //     ⇒ 로그인을 안 보면 ★누구든 사장님 AI 열쇠로 아무 일이나 시킵니다.
+  //        (tongbyeon 은 한 번에 16,000 토큰까지 — 새면 가장 비싼 자리)
+  //     ⚠️ 로그인만으로 «다» 막히지는 않습니다 — 카카오 가입은 누구나 합니다.
+  //        다만 ★익명으로 막 쓰는 길이 닫히고 «누가 썼는지» 남습니다.
+  //        완전히 막는 것은 「서버가 프롬프트를 만든다」 — 별도의 큰 일입니다.
+  //
+  //  ★정상적인 손님은 이미 «로그인 + 결제» 를 거쳐 여기 옵니다 (6부가 길을 따라가 잼).
+  //     ⇒ 로그인 확인을 넣어도 ★불편해질 손님이 없습니다.
+  const LOCKED = ['app/api/analyze/route.ts', 'app/api/tongbyeon/route.ts']
+  for (const f of LOCKED) {
+    const c = codeOf(read(f))
+    const body = c.slice(Math.max(0, c.search(/export async function POST/)))
+    const guard = body.search(/await requireUser\(\)/)
+    const work = body.search(/\.json\(\)|fetch\(/)
+    check(c.length > 0 && guard >= 0 && guard < work,
+      `⛔ ${f.split('/')[2]} 가 ★맨 앞에서 로그인을 봅니다`)
+  }
+
+  //  ★부르는 자리가 «직전에» 세션을 새로 받는가
+  //    ⚠️ 문을 잠갔으니 — 오래 켜 둔 화면이 죽은 토큰을 보내면 ★401 입니다.
+  //       middleware 는 «화면을 옮길 때» 만 돌아 fetch 는 갱신될 기회가 없습니다 (5부 0-5).
+  //    ★폴더째 훑습니다 — 새로 부르는 자리를 만들고 잊으면 그 자리에서 걸립니다.
+  const walkApp = (d: string): string[] =>
+    readdirSync(d).flatMap((n) => {
+      const p = `${d}/${n}`
+      if (statSync(p).isDirectory()) return p === 'app/api' ? [] : walkApp(p)
+      return /\.(tsx|ts)$/.test(n) ? [p] : []
+    })
+  let callers = 0
+  for (const f of walkApp('app').sort()) {
+    const c = codeOf(read(f))
+    for (const m of c.matchAll(/fetch\('\/api\/(tongbyeon|analyze)'/g)) {
+      callers++
+      const before = c.slice(Math.max(0, (m.index ?? 0) - 700), m.index)
+      check(/await refreshBeforeAi\(\)/.test(before),
+        `★${f.replace(/^app\//, '')} → ${m[1]} 를 부르기 «직전» 에 세션을 새로 받습니다`)
+    }
+  }
+  check(callers >= 11, `부르는 자리를 «폴더째» 셌습니다 (${callers}곳)`)
+  const tv = codeOf(read('app/manseryeok/components/TongbyeonView.tsx'))
+  check(/res\.status === 401/.test(tv),
+    `★사주 통변이 401 을 「로그인이 풀렸어요」로 «가려» 말합니다`)
+
+  //  ★AI 를 부르는 서버 길이 «몰래» 열리지 않게
+  //    ⚠️ 아래 목록은 ★«아직 로그인을 안 보는» 길입니다 (2026-09-11 현재).
+  //       ⇒ 잠그면 목록에서 «빼십시오». ⛔ 새 길을 여기에 «그냥 보태지» 마십시오.
+  //    ★여기 없는 AI 길이 로그인을 안 보면 ★그 자리에서 걸립니다.
+  const STILL_OPEN = new Set([
+    'chat-stream', 'daily-fortune', 'extract-pdf', 'monthly-fortune',
+    'mulsang', 'naming-chat', 'naming', 'summarize', 'tarot',
+  ])
+  const walkApi = (d: string): string[] =>
+    readdirSync(d).flatMap((n) => {
+      const p = `${d}/${n}`
+      return statSync(p).isDirectory() ? walkApi(p) : n === 'route.ts' ? [p] : []
+    })
+  for (const f of walkApi('app/api').sort()) {
+    const c = codeOf(read(f))
+    if (!/api\.anthropic\.com|api\.openai\.com/.test(c)) continue
+    const name = f.replace('app/api/', '').replace('/route.ts', '')
+    const guarded = /await require(User|Master)\(\)/.test(c) || /Bearer /.test(c) && /auth\.getUser\(\)/.test(c)
+    check(guarded || STILL_OPEN.has(name),
+      `⛔ AI 길 ${name} 가 ${guarded ? '★로그인을 봅니다' : '«아직 열린 길» 목록에 올라 있습니다'}`)
+  }
 }
 
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
