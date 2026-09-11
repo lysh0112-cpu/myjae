@@ -53,7 +53,7 @@ import type { ExamCard, ExamInput, ExamTarget, YearLuck } from '@/lib/saju/examL
 import { refreshBeforeAi } from '@/lib/ai/freshCall'
 import { cardJobFit } from '@/lib/saju/examLuck/buildCards'
 import { pickStructure } from '@/lib/saju/career/jobStructure'
-import { goalLabel, sanitizeWish, wishLooksHeavy, WISH_KEY, readWishHandoff, parseGates, parseSituation, JOB_SITUATIONS, JOB_GATES } from '@/lib/saju/examLuck/tables/jobFields'
+import { goalLabel, sanitizeWish, wishLooksHeavy, WISH_KEY, readWishHandoff, parseGates, parseSituation, JOB_SITUATIONS, JOB_GATES, parsePicks, wayFromPicks, readJobTextHandoff, sanitizeJobText } from '@/lib/saju/examLuck/tables/jobFields'
 
 const ACCENT = '#c85a8c'
 const BG = '#FDF6F0'
@@ -89,7 +89,12 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
   const examDateRaw = sp.get('examDate') || ''
   const recordId = sp.get('recordId') || ''
   /** ★2026-09-11 (6부) — 두 단계 콤보의 ② 일하는 방식 (① 분야는 examKind 'field:…' 로 옵니다) */
-  const way = sp.get('way') || 'unknown'
+  const wayRaw = sp.get('way') || 'unknown'
+  /* ★6부 [대표님] 고른 직업 — 교재 표로 다시 걸러 받습니다 (주소를 고쳐 글을 넣어도 AI 에 안 감 · 검사 47) */
+  const fieldKey = (sp.get('examKind') || '').startsWith('field:') ? (sp.get('examKind') || '').slice(6) : ''
+  const picks = useMemo(() => parsePicks(fieldKey, sp.get('jobs')), [fieldKey, sp])
+  //  ② 방식을 모르거나 직접 적었으면, 고른 직업의 딱지로 사주 구조를 봅니다
+  const way = wayRaw === 'unknown' || wayRaw === 'custom' ? (wayFromPicks(fieldKey, picks) ?? wayRaw) : wayRaw
   /* ★6부 [대표님 알약] 지금 상황 · 거쳐야 할 관문 — 값이 없으면 옛 기록(null) · «모두 고른 것» (검사 46) */
   const sit = parseSituation(sp.get('sit'))
   const gates = parseGates(sp.get('gates'))
@@ -99,6 +104,9 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
    *   ⚠️ 보관함에서 다시 열면 기록에 저장된 글을 씁니다 (아래 다시보기 effect). */
   const [wish, setWish] = useState<string>(() => (recordId ? '' : readWishHandoff()))
   const wishForSave = sanitizeWish(wish)
+  /* ★6부 [대표님] ② 방식 칸에 직접 적은 말 (요리사 · 간호사처럼 애매한 분) — 주소가 아니라 건넴 · 기록에서 */
+  const [jobText, setJobText] = useState<string>(() => (recordId ? '' : readJobTextHandoff()))
+  const jobTextForSave = sanitizeJobText(jobText)
   const wishHeavy = wishLooksHeavy(wishForSave)
   // ★2026-07-29 — 학생이 고른 목표 (2단 드롭다운)
   const examCategory = sp.get('examCategory') || ''
@@ -366,7 +374,9 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         targetCustomText: targetCustomText || null,
         //  ★6부 — 두 단계 콤보의 방식 · 직접 적은 고민 (다시보기 · [풀이 다시 받기] 에 쓰임)
         //     ⚠️ 고민 글은 민감할 수 있어 «기록에만» 둡니다 — 보관함이 주소에 싣지 않습니다.
-        way, wish: wishForSave || null,
+        way: wayRaw, wish: wishForSave || null,
+        //  ★6부 — 고른 직업 · 직접 적은 방식 (보관함 · [풀이 다시 받기])
+        jobs: picks.join('|') || null, jobText: jobTextForSave || null,
         //  ★6부 [대표님 알약] 지금 상황 · 관문 (보관함이 다시 열 때 주소에 실음)
         sit, gates: gates ? gates.join(',') : null,
       },
@@ -376,7 +386,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       if (typeof window !== 'undefined') sessionStorage.removeItem(WISH_KEY)
     })
   }, [calc, cards, recordId, person, target, kind, examKind, examDateRaw, studentGrade, gradeLevel,
-      trackSel, examCategory, targetType, targetCustomText, way, wishForSave, sit, gates])
+      trackSel, examCategory, targetType, targetCustomText, way, wayRaw, wishForSave, sit, gates, picks, jobTextForSave])
 
   // ── ⑤ 통변 (SSE) ─────────────────────────────────────────
   useEffect(() => {
@@ -425,12 +435,13 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         //     「그 밖의 시험」 은 이름이 아니라 «안 정함» 이라 넘기지 않습니다.
         examKindLabel: target === 'adult' && examKind && examKind !== 'etc'
           ? (examKind.startsWith('field:')
-              ? goalLabel(examKind.slice(6), way)      // ★6부 — 두 단계 콤보: 「금융 · 보험 · 회사원 (은행 · …)」
+              ? goalLabel(examKind.slice(6), way, picks)      // ★6부 — 두 단계 콤보 · 고른 직업
               : (examKindOf(examKind)?.label ?? null))
           : null,
         //  ★6부 — 손님이 직접 적은 고민 (거른 글) · 마음이 힘든 글인지
         wish: wishForSave || null,
         wishHeavy,
+        jobText: jobTextForSave || null,   // ★6부 — 직접 적은 일하는 방식 · 직업
         //  ★6부 [대표님 알약] — 고르지 않은 관문 이야기를 쓰지 않게
         jobSituation: sit,
         jobGates: gates,
@@ -765,7 +776,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
     //   빠뜨리면 재료가 바뀌어도 옛 통변이 그대로 남습니다.
   }, [calc, cards, recordId, person, target, kind, studentGrade, gradeLevel, trackSel,
       examCategory, targetType, targetCustomText, examDateRaw, examDayForPrompt, thisYear,
-      signalBlock, upsangMaterial, dayunReady, retryRecord, examKind, cardsAll, way, wishForSave, wishHeavy, sit, gates])
+      signalBlock, upsangMaterial, dayunReady, retryRecord, examKind, cardsAll, way, wishForSave, wishHeavy, sit, gates, picks, jobTextForSave])
 
   // ── ⑥ 다시보기 — 저장본 불러오기 ──────────────────────────
   useEffect(() => {
@@ -779,6 +790,8 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       //  ★6부 — 기록에 저장된 고민 글 ([풀이 다시 받기] 가 이 글로 다시 씁니다)
       const savedWish = (r.inputData as { wish?: string } | undefined)?.wish
       if (savedWish) setWish(savedWish)
+      const savedJobText = (r.inputData as { jobText?: string } | undefined)?.jobText
+      if (savedJobText) setJobText(savedJobText)
       const t = (r.resultData as { tong?: string } | undefined)?.tong ?? ''
       if (t) { setTong(t); setTongState('done') }
       else setEmptyRecord(true)
@@ -839,7 +852,8 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
             background: '#f7e6ee', border: '0.5px solid #d38caa', borderRadius: 12,
             padding: '10px 14px', marginBottom: 12, fontSize: 12.5, color: '#8c4a63', lineHeight: 1.7,
           }}>
-            {examKind?.startsWith('field:') ? goalLabel(examKind.slice(6), way) : kindLabel}을(를) 기준으로 보았습니다.
+            {examKind?.startsWith('field:') ? goalLabel(examKind.slice(6), way, picks) : kindLabel}을(를) 기준으로 보았습니다.
+            {jobTextForSave && ` 적어 주신 방식: ${jobTextForSave}.`}
             {/* ★6부 [대표님 알약] 고른 상황 · 관문 */}
             {sit && ` ${JOB_SITUATIONS.find(o => o.key === sit)?.label}${gates && gates.length ? ` · ${gates.map(g => JOB_GATES.find(o => o.key === g)?.label).join(' · ')}` : ''}.`}
             {examDateRaw && ` 시험 날짜 ${examDateRaw} 도 함께 짚었어요.`}

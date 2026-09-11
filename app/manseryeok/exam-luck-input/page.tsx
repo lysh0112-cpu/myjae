@@ -21,7 +21,7 @@ import { exactAge } from '@/lib/saju/ageDayun'
 // ★2026-07-27 — 손님이 시험 종류를 고르면 교재 230쪽 짝에 따라 볼 십신이 정해진다.
 import { EXAM_KINDS } from '@/lib/saju/examLuck/tables/rules'
 import { EXAM_CATEGORIES, TARGETS, STUDENT_GRADES, GRADE_LEVELS, TRACKS, examKindFromTarget } from '@/lib/saju/examLuck/tables/studentTarget'
-import { JOB_FIELDS, JOB_WAYS, itemsFor, WISH_MAX, writeWishHandoff, JOB_SITUATIONS, JOB_GATES, dateLabelFor, type JobSituation, type JobGate } from '@/lib/saju/examLuck/tables/jobFields'
+import { JOB_FIELDS, JOB_WAYS, itemsFor, WISH_MAX, writeWishHandoff, JOB_SITUATIONS, JOB_GATES, dateLabelFor, PICK_MAX, JOB_TEXT_MAX, type JobSituation, type JobGate } from '@/lib/saju/examLuck/tables/jobFields'
 
 const ACCENT = '#c85a8c'
 const SOFT = '#f7e6ee'
@@ -73,6 +73,12 @@ function ExamLuckInputInner() {
   const [situation, setSituation] = useState<JobSituation | ''>('')
   const [gates, setGates] = useState<JobGate[]>([])
   const toggleGate = (g: JobGate) => setGates(prev => (prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]))
+  /* ★6부 [대표님 「이 분야의 일을 버튼으로 · 선택하게」] 직업 알약 고르기 — 최대 셋 (검사 47) */
+  const [picks, setPicks] = useState<string[]>([])
+  const togglePick = (n: string) => setPicks(prev =>
+    prev.includes(n) ? prev.filter(x => x !== n) : (prev.length >= PICK_MAX ? prev : [...prev, n]))
+  /* ★6부 [대표님] ② 방식 «직접 적기» — 요리사 · 간호사처럼 소속 · 프리랜서가 섞인 분 (30자 · 주소에 싣지 않음) */
+  const [jobText, setJobText] = useState<string>('')
   /** ★6부 [대표님 「희망사항을 자유롭게」] 궁금한 것이나 고민 — 선택 · 200자 */
   const [wish, setWish] = useState<string>('')
   /** ★시험 날짜 — 몰라도 된다. 알면 그 달·그 날까지 짚어 준다 (교재 195쪽) */
@@ -137,6 +143,8 @@ function ExamLuckInputInner() {
       : (kind === 'job' ? (field ? `field:${field}` : '') : examKind)
     if (autoKind) p.set('examKind', autoKind)
     if (target !== 'student' && kind === 'job' && field) p.set('way', way)
+    //  ★6부 — 고른 직업 (결과 화면이 교재 표로 다시 걸러 받습니다 · parsePicks)
+    if (target !== 'student' && kind === 'job' && field && picks.length) p.set('jobs', picks.join('|'))
     //  ★6부 [대표님 알약] 지금 상황 · 거쳐야 할 관문 — 빈 관문도 «,» 없이 빈 값으로 실어 «옛 기록» 과 가립니다
     if (target !== 'student' && kind === 'job') { if (situation) p.set('sit', situation); p.set('gates', gates.join(',')) }
     if (examDate) p.set('examDate', examDate)
@@ -154,7 +162,7 @@ function ExamLuckInputInner() {
       }
     }
     return p.toString()
-  }, [sp, kind, target, examKind, examDate, studentGrade, needsLevel, gradeLevel, track, examCategory, targetType, targetCustomText, field, way, situation, gates])
+  }, [sp, kind, target, examKind, examDate, studentGrade, needsLevel, gradeLevel, track, examCategory, targetType, targetCustomText, field, way, situation, gates, picks])
 
 
   const Btn = ({ on, title, sub, onClick }: { on: boolean; title: string; sub: string; onClick: () => void }) => (
@@ -207,7 +215,7 @@ function ExamLuckInputInner() {
                   setTab(t.key)
                   // ★탭을 바꾸면 반대쪽 값을 비웁니다.
                   //   안 비우면 진학에서 고른 «과학고» 가 취업 결과에 실려 갑니다.
-                  setExamKind(''); setField(''); setWay('unknown'); setSituation(''); setGates([]); setStudentGrade(''); setGradeLevel(''); setTrack('')
+                  setExamKind(''); setField(''); setWay('unknown'); setSituation(''); setGates([]); setPicks([]); setJobText(''); setStudentGrade(''); setGradeLevel(''); setTrack('')
                   setExamCategory(''); setTargetType(''); setTargetCustomText('')
                 }}
                 style={{
@@ -394,7 +402,7 @@ function ExamLuckInputInner() {
             <div style={{ fontSize: 12.5, color: '#8a7063', margin: '18px 2px 9px' }}>
               ① 어떤 분야인가요? <span style={{ color: ACCENT, fontWeight: 600 }}>*</span>
             </div>
-            <select value={field} onChange={e => setField(e.target.value)}
+            <select value={field} onChange={e => { setField(e.target.value); setPicks([]) }}
               style={{
                 width: '100%', padding: '13px 14px', borderRadius: 12, marginBottom: 10,
                 background: CARD, border: field ? `0.5px solid ${LINE}` : `1.5px solid ${ACCENT}55`,
@@ -406,26 +414,48 @@ function ExamLuckInputInner() {
             <div style={{ fontSize: 12.5, color: '#8a7063', margin: '6px 2px 9px' }}>
               ② 어떤 방식으로 일하고 싶으세요? <span style={{ color: '#a3907f' }}>(몰라도 됩니다)</span>
             </div>
-            <select value={way} onChange={e => setWay(e.target.value)}
+            <select value={way} onChange={e => {
+                const w = e.target.value
+                setWay(w)
+                //  ⚠️ 방식이 바뀌면 좁혀진 목록에 없는 직업은 풀어 줍니다
+                if (field) { const keep = new Set(itemsFor(field, w).items.map(i => i.name)); setPicks(p => p.filter(n => keep.has(n))) }
+              }}
               style={{
                 width: '100%', padding: '13px 14px', borderRadius: 12, marginBottom: 10,
                 background: CARD, border: `0.5px solid ${LINE}`,
                 color: '#3a2e28', fontSize: 14, fontFamily: 'inherit', appearance: 'none',
               }}>
               {JOB_WAYS.map(w => <option key={w.key} value={w.key}>{w.label}</option>)}
+              {/* ★6부 [대표님] 딱 고르기 어려운 분(요리사 · 간호사 등) — 직접 적기 */}
+              <option value="custom">직접 적기</option>
             </select>
+            {way === 'custom' && (
+              <input type="text" value={jobText} onChange={e => setJobText(e.target.value)} maxLength={JOB_TEXT_MAX}
+                placeholder="예: 병원 소속 간호사인데 프리랜서도 생각 중"
+                style={{ width: '100%', padding: '12px 14px', borderRadius: 12, marginBottom: 10, boxSizing: 'border-box',
+                  background: CARD, border: `1.5px solid ${ACCENT}55`, color: '#3a2e28', fontSize: 13.5, fontFamily: 'inherit' }} />
+            )}
             {field && (() => {
               const { items, narrowed } = itemsFor(field, way)
               return (
                 <div style={{ background: '#fff', border: `0.5px solid ${LINE}`, borderRadius: 12, padding: '10px 12px', marginBottom: 6 }}>
-                  <div style={{ fontSize: 11.5, color: '#8a7063', marginBottom: 4 }}>
-                    {narrowed ? '이런 일이 해당돼요' : '이 분야의 일 (방식을 고르면 좁혀져요)'}
+                  <div style={{ fontSize: 11.5, color: '#8a7063', marginBottom: 6 }}>
+                    {narrowed ? '이런 일이 해당돼요' : '이 분야의 일'} — 원하는 일을 눌러 고르세요 <span style={{ color: '#a3907f' }}>(최대 {PICK_MAX}개 · 안 골라도 돼요)</span>
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                    {items.map(i => (
-                      <span key={i.name} style={{ fontSize: 11.5, color: '#8c4a63', background: SOFT,
-                        border: `0.5px solid ${ACCENT}44`, borderRadius: 10, padding: '3px 8px' }}>{i.name}</span>
-                    ))}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {items.map(i => {
+                      const picked = picks.includes(i.name)
+                      const full = !picked && picks.length >= PICK_MAX
+                      return (
+                        <button key={i.name} type="button" onClick={() => togglePick(i.name)} aria-pressed={picked} disabled={full}
+                          style={{ fontSize: 12, borderRadius: 999, padding: '5px 11px', fontFamily: 'inherit',
+                            cursor: full ? 'not-allowed' : 'pointer', opacity: full ? 0.45 : 1,
+                            border: `1px solid ${picked ? ACCENT : `${ACCENT}44`}`,
+                            background: picked ? ACCENT : SOFT, color: picked ? '#fff' : '#8c4a63', fontWeight: picked ? 600 : 400 }}>
+                          {picked ? '✓ ' : ''}{i.name}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               )
@@ -532,7 +562,7 @@ function ExamLuckInputInner() {
             const to = target === 'student'
               ? '/manseryeok/exam-luck-result'
               : '/manseryeok/job-luck-result'
-            writeWishHandoff(wish)   // ★6부 — 고민 글은 주소 대신 여기로 건넵니다
+            writeWishHandoff(wish, way === 'custom' ? jobText : '')   // ★6부 — 고민 글 · 직접 적은 방식은 주소 대신 여기로
             router.push(`${to}?${query}`)
           }}
           disabled={!canGo}

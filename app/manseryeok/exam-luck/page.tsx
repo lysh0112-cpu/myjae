@@ -49,7 +49,7 @@ function personToQuery(d: SavedInputData, name: string): string {
 /** ★6부 — 결과 화면(ExamResultShell)이 saveRecord 에 함께 저장하는 값들 — 짝입니다 */
 //  ★6부 — 두 단계 콤보의 방식(way)도 싣습니다. ⛔ 고민 글은 싣지 않습니다 (결과 화면이 기록에서 읽음).
 const EXTRA_KEYS = ['examKind', 'examDate', 'studentGrade', 'gradeLevel', 'track',
-  'examCategory', 'targetType', 'targetCustomText', 'way', 'sit', 'gates'] as const
+  'examCategory', 'targetType', 'targetCustomText', 'way', 'sit', 'gates', 'jobs'] as const
 
 function ExamLuckStorageInner() {
   const router = useRouter()

@@ -114,10 +114,30 @@ export function itemsFor(field: string, way?: string | null): { items: JobItem[]
   return hit.length ? { items: hit, narrowed: true } : { items: all, narrowed: false }
 }
 
-/** AI 와 화면에 넘길 목표 이름 — 예: 「금융 · 보험 회사원 (은행 · 증권사 · …)」 */
-export function goalLabel(field: string, way?: string | null): string {
+/* ★2026-09-11 (6부) [대표님 「이 분야의 일을 버튼으로 만들고 선택하게」] — 직업 알약 고르기 (검사 47)
+ *   ⚠️ 주소로 넘어오는 이름은 «이 분야의 교재 표에 있는 이름만» 받습니다 — 주소를 고쳐 글을 넣어도 AI 에 안 갑니다. */
+export const PICK_MAX = 3
+export function parsePicks(field: string, raw: string | null | undefined): string[] {
+  if (!field || !raw) return []
+  const names = new Set(JOB_ITEMS.filter(i => i.field === field).map(i => i.name))
+  const out: string[] = []
+  for (const n of raw.split('|')) if (names.has(n) && !out.includes(n)) out.push(n)
+  return out.slice(0, PICK_MAX)
+}
+/** 방식을 «모르겠어요» 로 두었을 때 — 고른 직업의 딱지 가운데 가장 많은 방식 */
+export function wayFromPicks(field: string, picks: string[]): string | null {
+  const ways = JOB_ITEMS.filter(i => i.field === field && picks.includes(i.name)).map(i => i.way)
+  if (!ways.length) return null
+  const count = new Map<string, number>()
+  for (const w of ways) count.set(w, (count.get(w) ?? 0) + 1)
+  return [...count.entries()].sort((a, b) => b[1] - a[1])[0][0]
+}
+
+/** AI 와 화면에 넘길 목표 이름 — 예: 「금융 · 보험 회사원 (은행 · 증권사 · …)」 · 고른 직업이 있으면 「분야 — 고른 직업」 */
+export function goalLabel(field: string, way?: string | null, picks?: string[]): string {
   const f = fieldOf(field)
   if (!f) return ''
+  if (picks && picks.length) return `${f.label} — ${picks.join(' · ')}`
   const w = wayOf(way)
   const { items, narrowed } = itemsFor(field, way)
   const names = items.slice(0, 5).map(i => i.name).join(' · ')
@@ -159,19 +179,29 @@ export function wishLooksHeavy(wish: string): boolean {
  *   ⚠️ 결과 화면이 기록을 저장한 뒤 지웁니다 (ExamResultShell). */
 export const WISH_KEY = 'examluck:wish'
 const WISH_TTL_MS = 10 * 60 * 1000
-export function writeWishHandoff(wish: string): void {
+export function writeWishHandoff(wish: string, jobText = ''): void {
   if (typeof window === 'undefined') return
-  const w = sanitizeWish(wish)
-  if (w) sessionStorage.setItem(WISH_KEY, JSON.stringify({ w, at: Date.now() }))
+  const w = sanitizeWish(wish), j = sanitizeJobText(jobText)
+  //  ★6부 — 직접 적은 희망 직업(j)도 같은 길로 건넵니다 (주소에 싣지 않음)
+  if (w || j) sessionStorage.setItem(WISH_KEY, JSON.stringify({ w, j, at: Date.now() }))
   else sessionStorage.removeItem(WISH_KEY)
 }
-export function readWishHandoff(): string {
-  if (typeof window === 'undefined') return ''
+function readHandoff(): { w?: string; j?: string; at?: number } | null {
+  if (typeof window === 'undefined') return null
   try {
-    const v = JSON.parse(sessionStorage.getItem(WISH_KEY) ?? 'null') as { w?: string; at?: number } | null
-    if (!v?.w || !v.at || Date.now() - v.at > WISH_TTL_MS) return ''
-    return sanitizeWish(v.w)
-  } catch { return '' }
+    const v = JSON.parse(sessionStorage.getItem(WISH_KEY) ?? 'null') as { w?: string; j?: string; at?: number } | null
+    return v?.at && Date.now() - v.at <= WISH_TTL_MS ? v : null
+  } catch { return null }
+}
+export function readWishHandoff(): string { return sanitizeWish(readHandoff()?.w ?? '') }
+/** ★6부 — 직접 적은 희망 직업 */
+export function readJobTextHandoff(): string { return sanitizeJobText(readHandoff()?.j ?? '') }
+
+/* ★6부 [대표님 「직접 넣을 수도 있게」] 목록에 없는 일 «직접 적기» — 30자 · 고민 칸과 같은 거르기 (검사 47)
+ *   ⚠️ 교재 표에 없는 이름이라 점수는 «분야» 로 봅니다. AI 에게는 «손님이 적은 희망 직업» 으로만 넘깁니다. */
+export const JOB_TEXT_MAX = 30
+export function sanitizeJobText(raw: unknown): string {
+  return sanitizeWish(raw).slice(0, JOB_TEXT_MAX)
 }
 
 // ════════════════════════════════════════════════════════════════
