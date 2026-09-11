@@ -36,8 +36,19 @@ function personToQuery(d: SavedInputData, name: string): string {
   p.set('gender', d.gender); p.set('calType', d.calType)
   p.set('leapMonth', d.leapMonth || '0'); p.set('hour', d.hour || '모름')
   if (name) p.set('name', name)
+  //  ★2026-09-11 (6부) — 저장해 둔 직종·날짜·학년 등도 주소에 다시 싣습니다 (검사 ㉓-a).
+  //     결과 화면이 이 값들로 판정 카드를 «처음과 같이» 다시 만듭니다. 옛 기록에는 없을 수 있습니다.
+  const extra = d as unknown as Record<string, unknown>
+  for (const k of EXTRA_KEYS) {
+    const v = extra[k]
+    if (typeof v === 'string' && v) p.set(k, v)
+  }
   return p.toString()
 }
+
+/** ★6부 — 결과 화면(ExamResultShell)이 saveRecord 에 함께 저장하는 값들 — 짝입니다 */
+const EXTRA_KEYS = ['examKind', 'examDate', 'studentGrade', 'gradeLevel', 'track',
+  'examCategory', 'targetType', 'targetCustomText'] as const
 
 function ExamLuckStorageInner() {
   const router = useRouter()

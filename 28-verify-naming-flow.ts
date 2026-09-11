@@ -2780,6 +2780,37 @@ console.log('\n━━ ㉒-z 🔴 합격운·취업운 풀이가 «굳지 않고�
   check(/recordId && !retryRecord/.test(ex), `★다시 받기는 «그 기록» 에 채웁니다 (새 기록을 또 만들지 않음)`)
 }
 
+console.log('\n━━ ㉓-a 🔴 취업운 — 고른 직종이 «AI 에게 실제로» 전해지는가 (2026-09-11 · 6부) ━━')
+{
+  //  🔴 [6부가 점검] 성인이 고른 직종(examKind)을 AI 에게 넘기는 칸이 «없었습니다».
+  //     · AI 가 직종을 알 길은 「앞으로 5년 중 그 십신이 드는 해」 한 줄뿐 — 없으면 «모른 채» 씀
+  //     · 지원 전략의 「목표는 «○○»」 지시는 학생에게만 돌았습니다
+  //     · 「어떤 시험에 힘이 실리나」 카드는 고른 직종을 안 보고, 어른 재료에 «대입» 까지 실었습니다
+  //     · 14번 검사는 성인 목표 칸을 «채워서» 시험해 통과했지만, 실제 화면은 비워 두었습니다
+  //  ★[대표님 2026-09-11 「가)부터」] — 교재 230쪽을 함께 받아 대조했습니다.
+  const ex = codeOf(read('app/manseryeok/exam-luck-result/components/ExamResultShell.tsx'))
+  const sv = codeOf(read('lib/saju/examLuck/buildExamSeven.ts'))
+  const bc = codeOf(read('lib/saju/examLuck/buildCards.ts'))
+  const ip = codeOf(read('app/manseryeok/exam-luck-input/page.tsx'))
+  const st = codeOf(read('app/manseryeok/exam-luck/page.tsx'))
+  const t14 = codeOf(read('14-verify-exam-seven.ts'))
+  check(/examKindLabel\?: string \| null/.test(sv), `★AI 재료에 «목표 시험·직종» 칸이 있습니다`)
+  check(/examKindLabel:/.test(ex.slice(ex.indexOf('const sevenArgs = {'), ex.indexOf('year: thisYear'))),
+    `★화면이 고른 직종 이름을 AI 에게 넘깁니다`)
+  check(/목표 시험·직종: \$\{v\.examKindLabel\}/.test(sv), `★AI 에게 가는 «누구를 보는가» 에 직종이 실립니다`)
+  check(/v\.targetAcademic \|\| v\.targetMajor \|\| v\.examKindLabel/.test(sv),
+    `★성인 지원 전략도 「목표는 «○○»」 로 시작합니다`)
+  check(/cardExamKind\(a\.years, t, a\.input\.examKind\)/.test(bc) && /고르신 목표/.test(bc),
+    `★「어떤 시험」 카드가 고른 직종을 «맨 앞» 에 둡니다`)
+  check(/!x\.includes\('대입'\)/.test(bc), `⛔ 어른 재료에 «대입» 이 실리지 않습니다`)
+  check(/k\.key !== 'daeip'/.test(ip), `⛔ 성인 「시험 준비」 목록에 «대입» 이 없습니다`)
+  check(/examKind, examDate:/.test(ex.slice(ex.indexOf("serviceType: 'examluck'"), ex.indexOf("serviceType: 'examluck'") + 900)),
+    `★기록에 직종·날짜를 함께 저장합니다 (다시보기·다시 받기에도 직종이 실림)`)
+  check(/for \(const k of EXTRA_KEYS\)/.test(st), `★보관함이 저장된 직종·날짜를 주소에 싣고 엽니다`)
+  check(/targetAcademic: target === 'student' \? '주요 상위권 대학' : null/.test(t14) && /examKindLabel: target === 'adult'/.test(t14),
+    `⛔ 14번 검사가 «실제 화면과 같은 모양» 으로 시험합니다 (성인 목표 칸을 채워 넣지 않음)`)
+}
+
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail > 0) {
   console.log('  ┌────────────────────────────────────────────────────────────┐')

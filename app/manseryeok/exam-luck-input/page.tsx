@@ -354,6 +354,8 @@ function ExamLuckInputInner() {
               {/* ★고른 갈래에 맞는 것만. «일자리를 구해요» 인데 「로스쿨」이 있으면 어수선합니다.
                    ⚠️ '그 밖의 시험'(etc)은 어느 쪽에든 남깁니다. 빠져나갈 길이 있어야 합니다. */}
               {EXAM_KINDS
+                //  ★2026-09-11 (6부) — 성인 목록에서 «대입» 을 뺍니다 (이 칸은 성인에게만 그려짐 · 검사 ㉓-a)
+                .filter(k => k.key !== 'daeip')
                 .filter(k => k.key === 'etc' || k.purpose === kind)
                 .map(k => <option key={k.key} value={k.key}>{k.label}</option>)}
             </select>

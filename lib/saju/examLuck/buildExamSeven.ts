@@ -53,6 +53,10 @@ export interface SevenArgs {
   targetMajor?: string | null
   targetType?: string | null
   targetAcademic?: string | null
+  /** ★2026-09-11 (6부) — 성인이 고른 «목표 시험·직종» 이름 (EXAM_KINDS 의 label).
+   *   [전] 이 칸이 없어 AI 는 손님이 무엇을 골랐는지 «모른 채» 썼습니다 (검사 ㉓-a).
+   *   ⚠️ 「그 밖의 시험」 이면 비웁니다 — 이름이 아니라 «안 정함» 이라서. */
+  examKindLabel?: string | null
   examDate?: string | null
   /** 시험 당일 일진·월운·십성 (examDay 가 낸 것) */
   examDayNote?: string | null
@@ -325,7 +329,9 @@ function hintStudent(key: SevenKey, v: SevenArgs): string[] {
 function hintAdult(key: SevenKey, v: SevenArgs): string[] {
   const L: string[] = []
   const isJob = v.kind === 'job'
-  const goal = v.targetAcademic || v.targetMajor || ''
+  //  ★2026-09-11 (6부) — 성인은 targetAcademic·targetMajor 가 늘 비어 있어 «목표는 ○○» 가 안 돌았습니다.
+  //     고른 직종 이름을 함께 봅니다 (검사 ㉓-a).
+  const goal = v.targetAcademic || v.targetMajor || v.examKindLabel || ''
   switch (key) {
     case 'dna':
       L.push('원국의 십성으로 «어떻게 일하고 어떻게 익히는 사람인가» 를 먼저 한 가지로 정하세요.')
@@ -439,6 +445,7 @@ export function buildSevenPrompt(v: SevenArgs, group: SevenKey[]): SevenPrompt |
 
   // ★지시서 1장 — 폼 여섯 변수를 빠짐없이 싣습니다.
   //   ⚠️ 값이 없는 줄은 아예 넣지 않습니다. «미입력» 이라 적으면 AI 가 그 말을 손님에게 씁니다.
+  const isStudentWho = v.target === 'student'
   const who = [
     `${v.name}님 · 만 ${v.age}세 · ${v.gender}`,
     myeongsik ? `명식 ${myeongsik}` : '',
@@ -447,6 +454,8 @@ export function buildSevenPrompt(v: SevenArgs, group: SevenKey[]): SevenPrompt |
     v.targetMajor ? `· 희망 계열: ${v.targetMajor}` : '',
     v.targetType ? `· 전형 목표: ${v.targetType}` : '',
     v.targetAcademic ? `· 목표: ${v.targetAcademic}` : '',
+    //  ★2026-09-11 (6부) — 성인이 고른 직종을 «직접» 싣습니다 (검사 ㉓-a)
+    !isStudentWho && v.examKindLabel ? `· 목표 시험·직종: ${v.examKindLabel}` : '',
     v.examDate ? `· 시험(발표) 날짜: ${v.examDate}` : '',
     v.examDayNote ? `· 그날 기운: ${v.examDayNote}` : '',
     v.hourUnknown ? '★태어난 시(時)를 모릅니다. 시주가 필요한 이야기는 단정하지 마세요.' : '',

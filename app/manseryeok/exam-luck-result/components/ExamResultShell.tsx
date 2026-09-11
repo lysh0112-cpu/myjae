@@ -332,9 +332,17 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         //   [왜] 전에는 target 을 안 남겨, 다시보기가 늘 성인 화면으로 갔습니다.
         //   ⚠️ 이 두 줄이 없는 옛 기록도 있습니다. 보관함이 없으면 진학으로 보냅니다.
         target, kind,
+        //  ★2026-09-11 (6부) — 고른 직종·날짜·학년 등도 함께 저장합니다 (검사 ㉓-a).
+        //     [전] 안 남겨, 다시보기·[풀이 다시 받기] 때 «직종 가산» 과 «시험 날짜» 카드가 빠졌습니다.
+        //     ⚠️ 보관함(exam-luck/page.tsx)이 이 값들을 주소에 다시 싣습니다 — 짝입니다.
+        examKind, examDate: examDateRaw || null,
+        studentGrade: studentGrade || null, gradeLevel: gradeLevel || null, track: trackSel || null,
+        examCategory: examCategory || null, targetType: targetType || null,
+        targetCustomText: targetCustomText || null,
       },
     } as never).then(r => { if (r && (r as { id?: string }).id) savedIdRef.current = (r as { id: string }).id })
-  }, [calc, cards, recordId, person, target, kind])
+  }, [calc, cards, recordId, person, target, kind, examKind, examDateRaw, studentGrade, gradeLevel,
+      trackSel, examCategory, targetType, targetCustomText])
 
   // ── ⑤ 통변 (SSE) ─────────────────────────────────────────
   useEffect(() => {
@@ -379,6 +387,10 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         targetAcademic: targetType === 'custom'
           ? (targetCustomText || null)
           : (targetOf(examCategory, targetType)?.label ?? null),
+        //  ★2026-09-11 (6부) — 성인이 고른 직종 이름을 AI 에게 «직접» 넘깁니다 (검사 ㉓-a).
+        //     「그 밖의 시험」 은 이름이 아니라 «안 정함» 이라 넘기지 않습니다.
+        examKindLabel: target === 'adult' && examKind && examKind !== 'etc'
+          ? (examKindOf(examKind)?.label ?? null) : null,
         examDate: examDateRaw || null,
         examDayNote: examDayForPrompt,
         year: thisYear,
@@ -708,7 +720,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
     //   빠뜨리면 재료가 바뀌어도 옛 통변이 그대로 남습니다.
   }, [calc, cards, recordId, person, target, kind, studentGrade, gradeLevel, trackSel,
       examCategory, targetType, targetCustomText, examDateRaw, examDayForPrompt, thisYear,
-      signalBlock, upsangMaterial, dayunReady, retryRecord])
+      signalBlock, upsangMaterial, dayunReady, retryRecord, examKind])
 
   // ── ⑥ 다시보기 — 저장본 불러오기 ──────────────────────────
   useEffect(() => {

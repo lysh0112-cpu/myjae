@@ -100,7 +100,12 @@ function argsFor(target: ExamTarget): SevenArgs {
     scoreRange: target === 'student' ? '상위권 (1~2등급대)' : null,
     targetMajor: '자연 · 공학',
     targetType: target === 'student' ? '대입 수시 (학종 · 교과 · 논술)' : null,
-    targetAcademic: target === 'student' ? '주요 상위권 대학' : '공사·공기업 시험',
+    //  ★2026-09-11 (6부) — «실제 화면과 같은 모양» 으로 시험합니다.
+    //     [전] 성인 targetAcademic 에 '공사·공기업 시험' 을 «채워서» 통과했지만, 실제 화면은 비워 두어
+    //          AI 가 직종을 몰랐습니다 (검사가 틀린 모양을 맞다고 박던 자리 — 5부 골프온 교훈의 거울).
+    //     ⇒ 성인은 examKindLabel 로 넘깁니다 (ExamResultShell 과 같음).
+    targetAcademic: target === 'student' ? '주요 상위권 대학' : null,
+    examKindLabel: target === 'adult' ? '공사·공기업 시험' : null,
     examDate: '2026-11-15',
     examDayNote: '일진 癸巳 · 월운 己亥',
     signalBlock: sig || null,
@@ -151,6 +156,7 @@ for (const target of ['student', 'adult'] as ExamTarget[]) {
     ['studentGrade', v.studentGrade], ['scoreRange', v.scoreRange],
     ['targetMajor', v.targetMajor], ['targetType', v.targetType],
     ['targetAcademic', v.targetAcademic], ['examDate', v.examDate],
+    ['examKindLabel', v.examKindLabel],
   ]
   const miss = need.filter(([, val]) => val).filter(([, val]) => !all.includes(String(val)))
   if (miss.length) bad(`프롬프트에 안 실린 폼 변수: ${miss.map(x => x[0]).join(', ')}`)

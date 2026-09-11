@@ -21,7 +21,7 @@ import {
   EXAM_BY_SIPSIN, EXAM_BY_SIPSIN_STUDENT, YEAR_SAY_STUDENT, hasStudentBan,
   HIGHSCHOOL, HIGHSCHOOL_SRC,
   SUSI_JEONGSI, SUSI_JEONGSI_SRC, STUDY_TREND_SRC, HAKMA, HAKMA_SAY,
-  CLOSING, CLOSING_STUDENT, CLOSING_SRC,
+  CLOSING, CLOSING_STUDENT, CLOSING_SRC, examKindOf,
 } from './tables/rules'
 import { dayunTrend } from './examScore'
 import { verdictOf, jobChangeReasons, type JobChangeHit } from './jobChange'
@@ -229,21 +229,41 @@ export function cardDayun(
  *      학생 표(EXAM_BY_SIPSIN_STUDENT)는 같은 십성을 «학생의 말» 로 옮긴 것입니다.
  *   ⚠️ reasons(AI 재료)도 함께 갈아야 합니다. 재료에 남으면 AI 가 꺼내 씁니다. (교훈 BF)
  */
-export function cardExamKind(years: YearLuck[], target: ExamTarget = 'adult'): ExamCard {
+export function cardExamKind(years: YearLuck[], target: ExamTarget = 'adult', examKind?: string | null): ExamCard {
   const sipsins = new Set<string>()
   for (const y of years) { if (y.ganSipsin) sipsins.add(y.ganSipsin); if (y.jiSipsin) sipsins.add(y.jiSipsin) }
   const isStudent = target === 'student'
-  const table = isStudent ? EXAM_BY_SIPSIN_STUDENT : EXAM_BY_SIPSIN
+  /* ★2026-09-11 (6부) — 어른 재료에서 «대입» 을 뺍니다 (검사 ㉓-a).
+   *   [전] 교재 230쪽 목록을 그대로 실어, 취업 준비 중인 어른에게도 「대입 수시·정시」 가 갔습니다. */
+  const table = isStudent
+    ? EXAM_BY_SIPSIN_STUDENT
+    : EXAM_BY_SIPSIN
+      .map(e => ({ ...e, exams: e.exams.filter(x => !x.includes('대입')) }))
+      .filter(e => e.exams.length)
   const hit = table.filter(e => sipsins.has(e.sipsin))
   const lines = hit.length
     ? hit.map(e => `${e.sipsin}의 기운이 드는 해에는 ${e.exams.join(' · ')} 쪽에 힘이 실립니다.`)
     : ['앞으로 몇 해에는 특정 시험으로 힘이 쏠리는 결이 뚜렷하지 않아요. 준비하시는 쪽에 그대로 힘을 쓰시면 됩니다.']
+  const reasons = hit.map(e =>
+    `${e.sipsin} → ${e.exams.join('·')}${'src' in e ? ` (${(e as { src: string }).src})` : ' (교재 230쪽을 학생 말로)'}`)
+
+  /* ★2026-09-11 (6부) — 어른이 고른 직종을 «맨 앞» 에 둡니다 (검사 ㉓-a).
+   *   [전] 이 카드는 고른 직종을 «안 보고» 교재 목록만 늘어놓았습니다.
+   *   ⚠️ 「그 밖의 시험」 은 짝 십신이 없어(교재에 없음) 이 줄을 만들지 않습니다 — 지어내지 않습니다. */
+  const mine = isStudent ? null : examKindOf(examKind)
+  if (mine && mine.sipsins.length) {
+    const want = mine.sipsins as string[]
+    const yrs = years.filter(y => want.includes(y.ganSipsin ?? '') || want.includes(y.jiSipsin ?? '')).map(y => y.year)
+    lines.unshift(yrs.length
+      ? `고르신 목표 «${mine.label}» — ${want.join('·')}의 기운이 드는 해에 힘이 실립니다: ${yrs.join('·')}년.`
+      : `고르신 목표 «${mine.label}» — 힘을 싣는 ${want.join('·')}의 기운이 앞으로 몇 해 동안 뚜렷하지 않아요. 준비한 만큼 꾸준히 가시면 됩니다.`)
+    reasons.unshift(`★손님이 고른 목표: ${mine.label} → ${want.join('·')} (${mine.src || '교재 230쪽'}) · 그 기운이 드는 해: ${yrs.join(', ') || '없음'}`)
+  }
   return {
     key: 'examkind',
     title: isStudent ? '어떤 공부·시험에 힘이 실리나' : '어떤 시험에 힘이 실리나',
     lines,
-    reasons: hit.map(e =>
-      `${e.sipsin} → ${e.exams.join('·')}${'src' in e ? ` (${(e as { src: string }).src})` : ' (교재 230쪽을 학생 말로)'}`),
+    reasons,
     data: { hit },
   }
 }
@@ -355,7 +375,7 @@ export function buildAllCards(a: BuildAllArgs): ExamCard[] {
     cardDayun(a.dayun, a.order, t,
       // ★나이는 lib/saju/ageDayun.exactAge 한 곳만 씁니다. 화면마다 다르면 안 됩니다. (30부 5장)
       exactAge(a.input.birthYear, a.input.birthMonth, a.input.birthDay)),
-    cardExamKind(a.years, t),
+    cardExamKind(a.years, t, a.input.examKind),
   ]
   const day = cardExamDay(a.examDay)
   if (day) out.push(day)
