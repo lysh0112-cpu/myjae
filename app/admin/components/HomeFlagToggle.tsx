@@ -14,16 +14,20 @@ import { useEffect, useState } from 'react'
 import { callAdmin } from './callAdmin'
 import { EXAM_LUCK_NAME, fetchHomeFlags } from '@/lib/homeFlags'
 
-export default function HomeFlagToggle() {
+/* ★2026-09-11 (6부) — onChange: 값을 «읽었을 때 · 바꿨을 때» 가격 관리 화면에 알립니다.
+ *   가격 표의 합격운 줄이 이 값을 따라 보이고 숨습니다 (검사 ㉒-y). */
+export default function HomeFlagToggle({ onChange }: { onChange?: (on: boolean) => void } = {}) {
   const [on, setOn] = useState<boolean | null>(null)   // null = 읽는 중
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
+  //  ⚠️ onChange 를 목록에 적습니다 — 가격 관리가 넘기는 것은 useState 의 set 함수라 «바뀌지 않아»
+  //     처음 읽기가 다시 돌지 않습니다. ⛔ ref 로 붙잡는 방식은 새 eslint 규칙에서 «오류» 입니다 (기준선을 늘림).
   useEffect(() => {
     let alive = true
-    fetchHomeFlags().then((f) => { if (alive) setOn(f.examLuck) })
+    fetchHomeFlags().then((f) => { if (alive) { setOn(f.examLuck); onChange?.(f.examLuck) } })
     return () => { alive = false }
-  }, [])
+  }, [onChange])
 
   async function flip() {
     if (on === null || busy) return
@@ -38,6 +42,7 @@ export default function HomeFlagToggle() {
     setBusy(false)
     if (!r.ok) { setMsg({ ok: false, text: '저장 실패: ' + r.message }); return }
     setOn(r.data.examLuck)
+    onChange?.(r.data.examLuck)
     setMsg({
       ok: true,
       text: r.data.examLuck
@@ -55,7 +60,7 @@ export default function HomeFlagToggle() {
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 13, color: '#e8e4ff' }}>{EXAM_LUCK_NAME}</div>
             <div style={{ fontSize: 11, color: '#8a88a0', marginTop: 3 }}>
-              홈 화면 · 궁합 바로 아래 카드 · 보관함 기록도 함께
+              홈 카드 · 보관함 · 가격 표 줄
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>

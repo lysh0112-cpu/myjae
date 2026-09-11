@@ -38,9 +38,14 @@ type HomePrice = {
  *  ⚠️ ★PAIRS 에 «없는» analysis 줄은 맨 아래 「그 밖」 에 나옵니다.
  *     ⇒ 줄이 «조용히 사라지지» 않게 하려고 그렇게 했습니다. 지우지 마십시오.
  * ══════════════════════════════════════════════════════════════════ */
-const PAIRS: { consult: string; ai: { k: string; short: string }[] }[] = [
+/* ★2026-09-11 (6부) — onlyWhen: 'examLuck' 인 줄은 «숨겨 둔 서비스» 토글이 켜졌을 때만 보입니다 (검사 ㉒-y).
+ *   ⚠️ 숨겨도 가격은 DB 에 «그대로» 남습니다 — 다시 켜면 그 값으로 돌아옵니다. */
+const PAIRS: { consult: string; ai: { k: string; short: string }[]; onlyWhen?: 'examLuck' }[] = [
   { consult: 'mulsang',     ai: [{ k: 'mulsang_ai',     short: '그림 생성' }] },
   { consult: 'career',      ai: [{ k: 'career_ai',      short: '적성 분석' }] },
+  //  ★2026-09-11 (6부) [대표님 · 목업 승낙] — 「진로적성 바로 아래」. 토글이 켜졌을 때만.
+  //     DB 줄 — consult_prices 'examluck' · analysis_prices 'examluck_ai' · mc_price myc 두 줄
+  { consult: 'examluck',    ai: [{ k: 'examluck_ai',    short: '합격·취업 분석' }], onlyWhen: 'examLuck' },
   { consult: 'couple',      ai: [{ k: 'couple_ai',      short: '궁합 분석' }] },
   { consult: 'saju',        ai: [{ k: 'saju_deep',      short: '심층분석' }] },
   { consult: 'wedding',     ai: [{ k: 'wedding_check',  short: '정한날 진단' },
@@ -104,7 +109,7 @@ function PriceCell({ r, short, onPrice, onToggle }: {
   )
 }
 
-function MergedPriceTable() {
+function MergedPriceTable({ showExamLuck = false }: { showExamLuck?: boolean }) {
   const [consult, setConsult] = useState<Price[]>([])
   const [ai, setAi] = useState<Price[]>([])
   const [loading, setLoading] = useState(true)
@@ -198,6 +203,8 @@ function MergedPriceTable() {
 
   if (loading) return <div className="text-sm" style={{ color: '#8a88a0' }}>불러오는 중...</div>
 
+  //  ⛔ 짝 목록은 «전체» PAIRS 로 봅니다 (거른 목록 아님) — 토글을 끈 동안
+  //     합격운 AI 줄이 아래 「그 밖 · 짝이 없는 AI 줄」 로 새지 않게 (검사 ㉒-y).
   const pairedKeys = new Set(PAIRS.flatMap(p => p.ai.map(x => x.k)))
   const leftovers = ai.filter(r => !pairedKeys.has(r.price_key))
 
@@ -221,7 +228,8 @@ function MergedPriceTable() {
           <span>✨ AI 분석 (혼자 조회)</span>
         </div>
 
-        {PAIRS.map(p => {
+        {/* ★2026-09-11 (6부) — 토글이 꺼지면 합격운 줄을 «그리지 않습니다» (값은 그대로) */}
+        {PAIRS.filter(p => !p.onlyWhen || showExamLuck).map(p => {
           const c = consult.find(r => r.price_key === p.consult)
           if (!c) return null
           return (
@@ -614,6 +622,9 @@ function NamingTryLimitBox() {
 }
 
 export default function PriceManager() {
+  /* ★2026-09-11 (6부) — 「숨겨 둔 서비스」 토글과 가격 표가 «한 값» 을 봅니다.
+   *   토글을 누르면 새로고침 없이 표의 합격운 줄이 «바로» 생기고 사라집니다 (검사 ㉒-y). */
+  const [examLuck, setExamLuck] = useState(false)
   return (
     <div style={{ maxWidth: 1200 }}>
       <div className="text-base font-bold mb-1" style={{ color: '#FAC775' }}>💰 가격 관리</div>
@@ -632,7 +643,7 @@ export default function PriceManager() {
           ⚠️ 좁은 화면에서는 오른쪽 덩어리가 ★«아래로» 내려갑니다 (flexWrap). */}
       <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start',
         flexWrap: 'wrap', justifyContent: 'space-between' }}>
-        <MergedPriceTable />
+        <MergedPriceTable showExamLuck={examLuck} />
         <div style={{ width: 300, minWidth: 260, flex: '0 1 auto' }}>
           <WalletPrice />
         </div>
@@ -658,7 +669,7 @@ export default function PriceManager() {
             ⚠️ 홈 가격표 «바로 위» 에 둡니다 — 둘 다 «홈에 무엇이 보이나» 를 정하는 자리입니다.
             ⚠️ 이 토글은 «누르면 바로» 저장합니다 (아래 [저장] 과 따로입니다). */}
       <div style={{ marginTop: 28, maxWidth: 420 }}>
-        <HomeFlagToggle />
+        <HomeFlagToggle onChange={setExamLuck} />
       </div>
 
       <div style={{ marginTop: 28, maxWidth: 420 }}>

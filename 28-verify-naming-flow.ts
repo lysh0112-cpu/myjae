@@ -2626,7 +2626,8 @@ console.log('\n━━ ㉒-u 🔴 합격운/취업운 — 관리자 토글로 «�
     `★저장한 줄을 «셉니다» (조용히 0줄 막기)`)
   // ⑦ 관리 화면 — 결과 글이 «단추 바로 옆» 에 뜹니다 (말투 관리에서 대표님이 못 보신 교훈)
   check(/callAdmin(<[^>]*>)?\(\s*'\/api\/admin\/home-flags'/.test(ui), `★관리 화면이 서버 길로 저장합니다`)
-  check(/<HomeFlagToggle \/>/.test(pm), `★가격 관리 화면에 토글이 있습니다`)
+  //  ★6부 뒤 — 토글이 가격 표에 값을 넘기게 되어(onChange) 모양이 달라졌습니다. «토글이 있는가» 만 봅니다.
+  check(/<HomeFlagToggle\b[^>]*\/>/.test(pm), `★가격 관리 화면에 토글이 있습니다`)
   check(/aria-live/.test(ui), `★결과 글이 토글 «바로 옆» 에 뜹니다`)
 }
 
@@ -2730,6 +2731,28 @@ console.log('\n━━ ㉒-x 🔴 사람 고르기 창에 «본인» 이 늘 뜨�
     `⛔ 마이페이지 사주 저장이 «바뀐 줄» 을 셉니다 (0줄인데 돌려보내지 않게)`)
   check(/safeNextPath\(/.test(save) && /router\.push\(back\)/.test(save),
     `★저장 뒤 «원래 서비스» 로 돌려보냅니다 (남의 사이트는 거름)`)
+}
+
+console.log('\n━━ ㉒-y 🔴 가격 표의 합격운 줄이 «토글을 따라» 보이고 숨는가 (2026-09-11 · 6부) ━━')
+{
+  //  ★[대표님 2026-09-11 · 목업 승낙] 「토글을 켜면 진로적성 바로 아래 줄이 생기고, 끄면 사라지고」
+  //     까닭 — 「취업운 합격운이 애매해서 넣을지 고민 중이고, 더 개발하면 바꿀 것이 많아서」
+  //  ⚠️ 줄은 DB 에서 옵니다 — consult_prices 'examluck' · analysis_prices 'examluck_ai'
+  //     + ★지갑 요금표(mc_price)에 «두 줄» (저장이 상담·AI 둘 다 mc_price 에 씁니다 — 하나라도 없으면 저장이 멈춤)
+  //  ⚠️ «숨긴다» 는 가격을 지우는 것이 아닙니다 — 값은 DB 에 그대로 남습니다.
+  const pm = codeOf(read('app/admin/components/PriceManager.tsx'))
+  const iCareer = pm.indexOf("{ consult: 'career'"), iExam = pm.indexOf("{ consult: 'examluck'"), iCouple = pm.indexOf("{ consult: 'couple'")
+  check(iCareer >= 0 && iExam > iCareer && iCouple > iExam, `★합격운 줄이 «진로적성 바로 아래» 입니다 [대표님]`)
+  check(/k: 'examluck_ai'/.test(pm) && /onlyWhen: 'examLuck'/.test(pm), `★합격운 줄은 «토글이 켜졌을 때만» 입니다`)
+  check(/PAIRS\.filter\(p => !p\.onlyWhen \|\| showExamLuck\)/.test(pm), `★표가 토글 값으로 줄을 거릅니다`)
+  //  🔴 숨긴 동안 AI 줄이 «그 밖 · 짝이 없는 AI 줄» 로 새지 않게 — 짝 목록은 «전체» 로 봅니다
+  check(/const pairedKeys = new Set\(PAIRS\.flatMap/.test(pm), `⛔ 숨긴 동안 합격운 AI 줄이 «그 밖» 으로 새지 않습니다`)
+  //  ★토글과 표가 «한 값» 을 봅니다 — 누르자마자 표가 바뀝니다 (새로고침 없이)
+  check(/<HomeFlagToggle onChange=\{setExamLuck\} \/>/.test(pm) && /<MergedPriceTable showExamLuck=\{examLuck\} \/>/.test(pm),
+    `★토글을 누르면 가격 표가 «바로» 따라 바뀝니다`)
+  const ui = codeOf(read('app/admin/components/HomeFlagToggle.tsx'))
+  check((ui.match(/onChange(Ref\.current)?\?\.\(/g) ?? []).length >= 2, `★토글이 «읽을 때 · 바꿀 때» 둘 다 알립니다`)
+  check(/홈 카드 · 보관함 · 가격 표 줄/.test(ui), `★토글 설명이 움직이는 세 곳을 말합니다`)
 }
 
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
