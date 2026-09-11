@@ -2628,6 +2628,39 @@ console.log('\n━━ ㉒-u 🔴 합격운/취업운 — 관리자 토글로 «�
   check(/aria-live/.test(ui), `★결과 글이 토글 «바로 옆» 에 뜹니다`)
 }
 
+console.log('\n━━ ㉒-v 🔴 이달의 운세가 «자기 말투 칸» 을 읽는가 (2026-09-11 · 6부) ━━')
+{
+  //  🔴 [있던 일] 이달의 운세(월운)가 ★설정 표(app_settings)의 tone_fortune 줄을 읽었습니다.
+  //     그 표의 값 칸은 «숫자 칸» 이라 글을 담을 수 없습니다 (2026-09-11 대표님 화면에서 DB 가 거절).
+  //     ⇒ 2026-07-20 월운이 생긴 뒤로 ★운세 전용 지시문을 «한 번도» 못 받았습니다.
+  //     오늘의 운세는 07-02 부터 말투 표(tone_settings)의 fortune_guide 를 읽어 왔습니다 — «두 벌» 이 갈린 자리.
+  //  ★[대표님 2026-09-11 「나)」] — 「이달의 운세 전용」 칸(monthly_guide)을 «따로» 둡니다.
+  //     오늘의 운세 글은 「매일 아침 · 오늘 일진」 처럼 하루짜리라 그대로 붙이지 않았습니다.
+  const mf = codeOf(read('app/api/monthly-fortune/route.ts'))
+  const df = codeOf(read('app/api/daily-fortune/route.ts'))
+  const tr = codeOf(read('app/api/admin/tone/route.ts'))
+  const tm = codeOf(read('app/admin/components/ToneManager.tsx'))
+  check(!/app_settings/.test(mf) && !/tone_fortune/.test(mf),
+    `⛔ 월운이 설정 표(숫자 칸)를 «더는» 읽지 않습니다`)
+  check(/from\('tone_settings'\)/.test(mf) && /monthly_guide/.test(mf),
+    `★월운이 말투 표의 «이달의 운세 전용» 칸을 읽습니다`)
+  check(/select\('fortune_guide'\)/.test(df),
+    `★(짝) 오늘의 운세는 그대로 «오늘의 운세 전용» 칸을 읽습니다`)
+  //  ★칸이 «아직 없어도» 깨지지 않는가 — DB 칸은 SQL 로 대표님이 더합니다 (코드와 순서가 어긋날 수 있음)
+  //    ⚠️ 칸 이름을 적어 읽으면, 없는 칸 하나 때문에 «줄 전체» 를 못 읽습니다.
+  check(/select\('\*'\)/.test(mf), `★월운은 줄 «전체» 를 읽습니다 (칸이 없어도 안 깨짐)`)
+  const trGet = tr.slice(Math.max(0, tr.search(/export async function GET/)), tr.search(/export async function POST/))
+  check(/select\('\*'\)/.test(trGet), `★말투 읽기도 줄 «전체» 를 읽습니다 (칸이 없어도 안 깨짐)`)
+  //  🔴 말투 읽기가 DB 오류를 «안 보고» 기본값을 돌려주면, 그대로 [저장] 해 ★대표님 글이 기본값으로 덮입니다.
+  check(/load_error/.test(trGet) && /if \(error\)/.test(trGet), `⛔ 말투 읽기가 DB 오류를 «알립니다» (기본값으로 덮지 않게)`)
+  check(/loadFailed/.test(tm) && /disabled=\{saving \|\| loadFailed/.test(tm),
+    `⛔ 못 읽었으면 말투 관리의 [저장하기] 가 «잠깁니다»`)
+  check(/has_monthly/.test(trGet) && /hasMonthly/.test(tm) && /hasMonthly \? \{ monthly_guide: monthly \}/.test(tm),
+    `★칸이 «있을 때만» 이달의 운세 글을 보냅니다 (없으면 다른 말투 저장이 안 막힘)`)
+  check(/monthly_guide !== undefined/.test(tr), `★말투 저장이 이달의 운세 칸을 받습니다`)
+  check(/이달의 운세 전용/.test(tm), `★말투 관리에 「이달의 운세 전용」 칸이 있습니다`)
+}
+
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail > 0) {
   console.log('  ┌────────────────────────────────────────────────────────────┐')

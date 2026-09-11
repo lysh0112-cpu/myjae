@@ -27,8 +27,15 @@ import { findRel, relLines } from '@/lib/saju/hyeongPaHae'
 import { logAiError } from '@/lib/ai/errorLog'
 import { requireUser } from '../admin/_guard'
 
-// 오늘운세 전용 지시문 읽기 (관리자 화면에서 관리)
-async function loadFortuneGuide(): Promise<string> {
+/* ★2026-09-11 (6부) — 「이달의 운세 전용」 지시문을 ★말투 표(tone_settings)의 monthly_guide 에서 읽습니다.
+ *   [전]  설정 표(app_settings)의 tone_fortune 줄을 읽었습니다.
+ *         ⚠️ 그 표의 값 칸은 «숫자 칸» 이라 글을 담을 수 없습니다 (2026-09-11 DB 가 거절해 드러남).
+ *         ⇒ 07-20 이 창구가 생긴 뒤로 ★운세 지시문을 «한 번도» 못 받았습니다.
+ *   [지금] 대표님 결정 「나)」 — 이달의 운세 «전용» 칸을 따로 둡니다.
+ *         오늘의 운세 칸(fortune_guide)은 「매일 아침 · 오늘 일진」 처럼 하루짜리라 쓰지 않습니다.
+ *   ★줄 «전체» 를 읽습니다 — DB 에 칸이 아직 없어도 «빈 글» 로 떨어질 뿐 안 깨집니다.
+ *   ⛔ 설정 표(app_settings)로 되돌리지 마십시오 — 검사 ㉒-v 가 봅니다. */
+async function loadMonthlyGuide(): Promise<string> {
   try {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -37,11 +44,12 @@ async function loadFortuneGuide(): Promise<string> {
       auth: { autoRefreshToken: false, persistSession: false },
     })
     const { data } = await supabase
-      .from('app_settings')
-      .select('value')
-      .eq('key', 'tone_fortune')
+      .from('tone_settings')
+      .select('*')
+      .eq('id', 1)
       .maybeSingle()
-    return (data?.value as string) || ''
+    const v = (data as { monthly_guide?: unknown } | null)?.monthly_guide
+    return typeof v === 'string' ? v.trim() : ''
   } catch {
     return ''
   }
@@ -80,7 +88,7 @@ export async function POST(req: NextRequest) {
     }
 
     const toneBlock = await buildToneBlockFromDB()
-    const fortuneGuide = await loadFortuneGuide()
+    const monthlyGuide = await loadMonthlyGuide()   // ★이달의 운세 전용 (6부)
 
     // 지지 관계 재료 — 월지·일지가 같으면 하나만 넘긴다
     const branchMaterial = sameBranch
@@ -128,7 +136,7 @@ export async function POST(req: NextRequest) {
 
     const prompt = `${toneBlock}
 
-${fortuneGuide}
+${monthlyGuide}
 
 당신은 따뜻하고 지혜로운 명리 상담가입니다. 아래 계산 결과를 바탕으로 "이달의 운세"를 작성하세요.
 

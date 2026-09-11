@@ -10,6 +10,13 @@ export default function ToneManager() {
   const [tarot, setTarot] = useState('')
   const [naming, setNaming] = useState('')
   const [fortune, setFortune] = useState('')
+  /* ★2026-09-11 (6부) — 「이달의 운세 전용」 칸 (검사 ㉒-v)
+   *   hasMonthly  DB 에 칸이 «있는지» — 없으면 칸 대신 안내를 보이고, 저장 때 이 값을 «안» 보냅니다
+   *               (없는 칸을 보내면 ★다른 말투까지 저장이 막힙니다).
+   *   loadFailed  말투를 «못 읽었으면» [저장하기]를 잠급니다 — 기본값으로 대표님 글을 덮지 않게. */
+  const [monthly, setMonthly] = useState('')
+  const [hasMonthly, setHasMonthly] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [defaultRules, setDefaultRules] = useState('')
   const [defaultTerms, setDefaultTerms] = useState('')
   const [loading, setLoading] = useState(true)
@@ -27,8 +34,15 @@ export default function ToneManager() {
     try {
       const res = await fetch('/api/admin/tone')
       const d = await res.json()
-      if (!res.ok) { setMsg('불러오기 실패: ' + (d.error || '알 수 없음')) }
+      if (!res.ok) { setMsg('불러오기 실패: ' + (d.error || '알 수 없음')); setLoadFailed(true) }
+      else if (d.load_error) {
+        setMsg('불러오기 실패: ' + d.load_error + ' — 저장을 잠갔어요 (기본값으로 덮이지 않게). 새로고침해 주세요.')
+        setLoadFailed(true)
+      }
       else {
+        setLoadFailed(false)
+        setMonthly(d.monthly_guide || '')
+        setHasMonthly(d.has_monthly === true)
         setRules(d.tone_rules || '')
         setTerms(d.easy_terms || '')
         setMulsang(d.mulsang_guide || '')
@@ -65,6 +79,7 @@ export default function ToneManager() {
           tarot_guide: tarot,
           naming_guide: naming,
           fortune_guide: fortune,
+          ...(hasMonthly ? { monthly_guide: monthly } : {}),
         }),
       })
       const d = await res.json()
@@ -181,14 +196,30 @@ export default function ToneManager() {
 
       <div style={{ marginBottom: 20 }}>
         <div style={label}>🌅 오늘의 운세 전용</div>
-        <div style={hint}>마이페이지 오늘의 운세에만 추가로 적용됩니다. 매일 아침 짧고 힘나게, 명리 한 조각 등.</div>
+        <div style={hint}>홈 오늘의 운세 카드의 「오늘의 운세」 탭에만 추가로 적용됩니다. 매일 아침 짧고 힘나게, 명리 한 조각 등.</div>
         <textarea value={fortune} onChange={e => setFortune(e.target.value)} style={textarea} placeholder="오늘의 운세 해설 전용 지침" />
+      </div>
+
+      {/* ★2026-09-11 (6부) [대표님 「나)」] — 이달의 운세 «전용» 칸.
+          ⚠️ 전에는 이달의 운세가 엉뚱한 곳을 읽어 ★운세 지시문을 «한 번도» 못 받았습니다 (검사 ㉒-v).
+          ⚠️ DB 에 칸이 아직 없으면 칸 대신 안내가 뜹니다 (SQL 한 줄 뒤에 나타남). */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={label}>🌙 이달의 운세 전용</div>
+        <div style={hint}>홈 오늘의 운세 카드의 「이달의 운세」 탭에만 추가로 적용됩니다. 한 달의 흐름을 차분하게, 달마다 새롭게.</div>
+        {hasMonthly ? (
+          <textarea value={monthly} onChange={e => setMonthly(e.target.value)} style={textarea}
+            placeholder="이달의 운세 해설 전용 지침 (비워 두면 공통 말투만 적용됩니다)" />
+        ) : (
+          <div style={{ ...hint, padding: '10px 12px', borderRadius: 8, border: '1px dashed rgba(250,199,117,0.4)', color: '#FAC775' }}>
+            {loading ? '불러오는 중…' : '이 칸은 DB 에 아직 없어요. 안내받은 SQL 한 줄을 돌린 뒤 새로고침하면 나타나요.'}
+          </div>
+        )}
       </div>
 
       {/* 저장 / 되돌리기 */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 30, flexWrap: 'wrap' }}>
-        <button onClick={save} disabled={saving}
-          style={{ padding: '11px 22px', borderRadius: 10, border: 'none', background: gold, color: '#1a1a18', fontWeight: 700, fontSize: 14, cursor: 'pointer', opacity: saving ? 0.5 : 1 }}>
+        <button onClick={save} disabled={saving || loadFailed}
+          style={{ padding: '11px 22px', borderRadius: 10, border: 'none', background: gold, color: '#1a1a18', fontWeight: 700, fontSize: 14, cursor: saving || loadFailed ? 'default' : 'pointer', opacity: saving || loadFailed ? 0.5 : 1 }}>
           {saving ? '저장 중...' : '💾 저장하기'}
         </button>
         <button onClick={resetToDefault}

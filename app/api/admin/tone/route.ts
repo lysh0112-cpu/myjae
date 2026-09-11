@@ -15,11 +15,21 @@ function admin() {
 export async function GET() {
   try {
     const supabase = admin()
-    const { data } = await supabase
+    /* ★2026-09-11 (6부) — 줄 «전체» 를 읽습니다 (검사 ㉒-v).
+     *   [전]  칸 이름을 적어 읽었습니다. 없는 칸이 하나라도 있으면 «줄 전체» 를 못 읽는데,
+     *         그 오류를 «안 봐서» 기본값만 돌려줬습니다.
+     *         ⇒ 그 화면에서 [저장]을 누르면 ★대표님이 쓰신 말투가 «기본값으로 덮입니다».
+     *   [지금] ① 칸 이름을 적지 않습니다 — 이달의 운세 칸(monthly_guide)이 DB 에 «아직 없어도» 안 깨집니다.
+     *          ② 오류가 나면 load_error 로 «알립니다» — 말투 관리가 [저장]을 잠급니다.
+     *          ⚠️ 손님 화면(출산택일 결과)은 그대로 기본값을 받아 씁니다 (200 은 그대로). */
+    const { data, error } = await supabase
       .from('tone_settings')
-      .select('tone_rules, easy_terms, mulsang_guide, tarot_guide, naming_guide, fortune_guide, updated_at')
+      .select('*')
       .eq('id', 1)
       .maybeSingle()
+    const load_error = error ? error.message : null
+    if (error) console.error('[tone] 불러오기 오류:', error.message)
+    const has_monthly = !!data && Object.prototype.hasOwnProperty.call(data, 'monthly_guide')
 
     const tone_rules = (data?.tone_rules || '').trim() || DEFAULT_TONE_RULES_TEXT
     const easy_terms = (data?.easy_terms || '').trim() || DEFAULT_EASY_TERMS_TEXT
@@ -27,6 +37,7 @@ export async function GET() {
     const tarot_guide = (data?.tarot_guide || '')      // 타로 전용
     const naming_guide = (data?.naming_guide || '')    // 작명·개명 전용
     const fortune_guide = (data?.fortune_guide || '')  // 오늘의 운세 전용
+    const monthly_guide = (data?.monthly_guide || '')  // ★이달의 운세 전용 (2026-09-11 · 6부)
 
     return NextResponse.json({
       tone_rules,
@@ -35,6 +46,9 @@ export async function GET() {
       tarot_guide,
       naming_guide,
       fortune_guide,
+      monthly_guide,
+      has_monthly,
+      load_error,
       updated_at: data?.updated_at || null,
       default_rules: DEFAULT_TONE_RULES_TEXT,
       default_terms: DEFAULT_EASY_TERMS_TEXT,
@@ -56,7 +70,7 @@ export async function POST(req: Request) {
     const g = await requireMaster()
     if (!g.ok) return g.res
 
-    const { tone_rules, easy_terms, mulsang_guide, tarot_guide, naming_guide, fortune_guide } = await req.json()
+    const { tone_rules, easy_terms, mulsang_guide, tarot_guide, naming_guide, fortune_guide, monthly_guide } = await req.json()
     const supabase = admin()
 
     // 넘어온 값만 갱신 (undefined면 기존 값 유지)
@@ -67,6 +81,8 @@ export async function POST(req: Request) {
     if (tarot_guide !== undefined) patch.tarot_guide = tarot_guide ?? ''
     if (naming_guide !== undefined) patch.naming_guide = naming_guide ?? ''
     if (fortune_guide !== undefined) patch.fortune_guide = fortune_guide ?? ''
+    //  ★2026-09-11 (6부) — 말투 관리는 DB 에 칸이 «있을 때만» 이 값을 보냅니다 (has_monthly).
+    if (monthly_guide !== undefined) patch.monthly_guide = monthly_guide ?? ''
 
     const { error } = await supabase
       .from('tone_settings')
