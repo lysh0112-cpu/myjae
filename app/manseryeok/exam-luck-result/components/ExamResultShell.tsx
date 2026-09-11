@@ -53,7 +53,7 @@ import type { ExamCard, ExamInput, ExamTarget, YearLuck } from '@/lib/saju/examL
 import { refreshBeforeAi } from '@/lib/ai/freshCall'
 import { cardJobFit } from '@/lib/saju/examLuck/buildCards'
 import { pickStructure } from '@/lib/saju/career/jobStructure'
-import { goalLabel, sanitizeWish, wishLooksHeavy, WISH_KEY, readWishHandoff } from '@/lib/saju/examLuck/tables/jobFields'
+import { goalLabel, sanitizeWish, wishLooksHeavy, WISH_KEY, readWishHandoff, parseGates, parseSituation, JOB_SITUATIONS, JOB_GATES } from '@/lib/saju/examLuck/tables/jobFields'
 
 const ACCENT = '#c85a8c'
 const BG = '#FDF6F0'
@@ -90,6 +90,9 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
   const recordId = sp.get('recordId') || ''
   /** ★2026-09-11 (6부) — 두 단계 콤보의 ② 일하는 방식 (① 분야는 examKind 'field:…' 로 옵니다) */
   const way = sp.get('way') || 'unknown'
+  /* ★6부 [대표님 알약] 지금 상황 · 거쳐야 할 관문 — 값이 없으면 옛 기록(null) · «모두 고른 것» (검사 46) */
+  const sit = parseSituation(sp.get('sit'))
+  const gates = parseGates(sp.get('gates'))
   /* ★2026-09-11 (6부) [대표님 「희망사항을 자유롭게」] — 손님이 직접 적은 고민 (검사 44)
    *   ⚠️ 주소(URL)에 싣지 않습니다 — 방문 기록에 고민 글이 남지 않게. 입력 화면이 sessionStorage 로 건넵니다.
    *   ⚠️ 10분이 지난 건넴은 버립니다 (다른 사람을 보다가 남은 옛 글이 섞이지 않게 · readWishHandoff).
@@ -364,6 +367,8 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         //  ★6부 — 두 단계 콤보의 방식 · 직접 적은 고민 (다시보기 · [풀이 다시 받기] 에 쓰임)
         //     ⚠️ 고민 글은 민감할 수 있어 «기록에만» 둡니다 — 보관함이 주소에 싣지 않습니다.
         way, wish: wishForSave || null,
+        //  ★6부 [대표님 알약] 지금 상황 · 관문 (보관함이 다시 열 때 주소에 실음)
+        sit, gates: gates ? gates.join(',') : null,
       },
     } as never).then(r => {
       if (r && (r as { id?: string }).id) savedIdRef.current = (r as { id: string }).id
@@ -371,7 +376,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       if (typeof window !== 'undefined') sessionStorage.removeItem(WISH_KEY)
     })
   }, [calc, cards, recordId, person, target, kind, examKind, examDateRaw, studentGrade, gradeLevel,
-      trackSel, examCategory, targetType, targetCustomText, way, wishForSave])
+      trackSel, examCategory, targetType, targetCustomText, way, wishForSave, sit, gates])
 
   // ── ⑤ 통변 (SSE) ─────────────────────────────────────────
   useEffect(() => {
@@ -426,6 +431,9 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         //  ★6부 — 손님이 직접 적은 고민 (거른 글) · 마음이 힘든 글인지
         wish: wishForSave || null,
         wishHeavy,
+        //  ★6부 [대표님 알약] — 고르지 않은 관문 이야기를 쓰지 않게
+        jobSituation: sit,
+        jobGates: gates,
         examDate: examDateRaw || null,
         examDayNote: examDayForPrompt,
         year: thisYear,
@@ -757,7 +765,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
     //   빠뜨리면 재료가 바뀌어도 옛 통변이 그대로 남습니다.
   }, [calc, cards, recordId, person, target, kind, studentGrade, gradeLevel, trackSel,
       examCategory, targetType, targetCustomText, examDateRaw, examDayForPrompt, thisYear,
-      signalBlock, upsangMaterial, dayunReady, retryRecord, examKind, cardsAll, way, wishForSave, wishHeavy])
+      signalBlock, upsangMaterial, dayunReady, retryRecord, examKind, cardsAll, way, wishForSave, wishHeavy, sit, gates])
 
   // ── ⑥ 다시보기 — 저장본 불러오기 ──────────────────────────
   useEffect(() => {
@@ -832,6 +840,8 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
             padding: '10px 14px', marginBottom: 12, fontSize: 12.5, color: '#8c4a63', lineHeight: 1.7,
           }}>
             {examKind?.startsWith('field:') ? goalLabel(examKind.slice(6), way) : kindLabel}을(를) 기준으로 보았습니다.
+            {/* ★6부 [대표님 알약] 고른 상황 · 관문 */}
+            {sit && ` ${JOB_SITUATIONS.find(o => o.key === sit)?.label}${gates && gates.length ? ` · ${gates.map(g => JOB_GATES.find(o => o.key === g)?.label).join(' · ')}` : ''}.`}
             {examDateRaw && ` 시험 날짜 ${examDateRaw} 도 함께 짚었어요.`}
             {/* ★6부 — 「고르신 일하는 방식과 사주」 첫 줄 (교재 202~204쪽) */}
             {cardsAll.find(c => c.key === 'jobfit')?.lines[0] && (

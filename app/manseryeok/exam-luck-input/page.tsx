@@ -21,7 +21,7 @@ import { exactAge } from '@/lib/saju/ageDayun'
 // ★2026-07-27 — 손님이 시험 종류를 고르면 교재 230쪽 짝에 따라 볼 십신이 정해진다.
 import { EXAM_KINDS } from '@/lib/saju/examLuck/tables/rules'
 import { EXAM_CATEGORIES, TARGETS, STUDENT_GRADES, GRADE_LEVELS, TRACKS, examKindFromTarget } from '@/lib/saju/examLuck/tables/studentTarget'
-import { JOB_FIELDS, JOB_WAYS, itemsFor, WISH_MAX, writeWishHandoff } from '@/lib/saju/examLuck/tables/jobFields'
+import { JOB_FIELDS, JOB_WAYS, itemsFor, WISH_MAX, writeWishHandoff, JOB_SITUATIONS, JOB_GATES, dateLabelFor, type JobSituation, type JobGate } from '@/lib/saju/examLuck/tables/jobFields'
 
 const ACCENT = '#c85a8c'
 const SOFT = '#f7e6ee'
@@ -69,6 +69,10 @@ function ExamLuckInputInner() {
    *   ① 분야 (교재 206~210쪽 · 시기) — 꼭 고름   ② 일하는 방식 (202~204쪽 · 적성) — 기본 「아직 모르겠어요」 */
   const [field, setField] = useState<string>('')
   const [way, setWay] = useState<string>('unknown')
+  /* ★6부 [대표님 알약] 일자리를 구해요 — 지금 상황(하나 · 꼭) · 거쳐야 할 관문(여러 개 · 선택) (검사 46) */
+  const [situation, setSituation] = useState<JobSituation | ''>('')
+  const [gates, setGates] = useState<JobGate[]>([])
+  const toggleGate = (g: JobGate) => setGates(prev => (prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]))
   /** ★6부 [대표님 「희망사항을 자유롭게」] 궁금한 것이나 고민 — 선택 · 200자 */
   const [wish, setWish] = useState<string>('')
   /** ★시험 날짜 — 몰라도 된다. 알면 그 달·그 날까지 짚어 준다 (교재 195쪽) */
@@ -103,7 +107,7 @@ function ExamLuckInputInner() {
   const gradeOk = target !== 'student' || !!studentGrade
   const targetOk = target === 'student'
     ? !!examCategory && !!targetType && (targetType !== 'custom' || !!targetCustomText.trim())
-    : (kind === 'job' ? !!field : !!examKind)   // ★6부 — 일자리는 ① 분야만 꼭
+    : (kind === 'job' ? !!field && !!situation : !!examKind)   // ★6부 — 일자리는 지금 상황 · ① 분야를 꼭
   const dateOk = !!examDate
   const canGo = gradeOk && targetOk && dateOk
 
@@ -133,6 +137,8 @@ function ExamLuckInputInner() {
       : (kind === 'job' ? (field ? `field:${field}` : '') : examKind)
     if (autoKind) p.set('examKind', autoKind)
     if (target !== 'student' && kind === 'job' && field) p.set('way', way)
+    //  ★6부 [대표님 알약] 지금 상황 · 거쳐야 할 관문 — 빈 관문도 «,» 없이 빈 값으로 실어 «옛 기록» 과 가립니다
+    if (target !== 'student' && kind === 'job') { if (situation) p.set('sit', situation); p.set('gates', gates.join(',')) }
     if (examDate) p.set('examDate', examDate)
     // ★학생 목표 — 학생일 때만 싣는다
     if (target === 'student' && studentGrade) p.set('studentGrade', studentGrade)
@@ -148,7 +154,7 @@ function ExamLuckInputInner() {
       }
     }
     return p.toString()
-  }, [sp, kind, target, examKind, examDate, studentGrade, needsLevel, gradeLevel, track, examCategory, targetType, targetCustomText, field, way])
+  }, [sp, kind, target, examKind, examDate, studentGrade, needsLevel, gradeLevel, track, examCategory, targetType, targetCustomText, field, way, situation, gates])
 
 
   const Btn = ({ on, title, sub, onClick }: { on: boolean; title: string; sub: string; onClick: () => void }) => (
@@ -201,7 +207,7 @@ function ExamLuckInputInner() {
                   setTab(t.key)
                   // ★탭을 바꾸면 반대쪽 값을 비웁니다.
                   //   안 비우면 진학에서 고른 «과학고» 가 취업 결과에 실려 갑니다.
-                  setExamKind(''); setField(''); setWay('unknown'); setStudentGrade(''); setGradeLevel(''); setTrack('')
+                  setExamKind(''); setField(''); setWay('unknown'); setSituation(''); setGates([]); setStudentGrade(''); setGradeLevel(''); setTrack('')
                   setExamCategory(''); setTargetType(''); setTargetCustomText('')
                 }}
                 style={{
@@ -232,7 +238,7 @@ function ExamLuckInputInner() {
               { key: 'job' as Kind, title: '일자리를 구해요', sub: '취업 · 이직 · 면접' },
             ]).map(o => (
               <Btn key={o.key} on={jobMode === o.key} title={o.title} sub={o.sub}
-                onClick={() => { setJobMode(o.key); setExamKind(''); setField(''); setWay('unknown') }} />
+                onClick={() => { setJobMode(o.key); setExamKind(''); setField(''); setWay('unknown'); setSituation(''); setGates([]) }} />
             ))}
           </>
         )}
@@ -355,6 +361,36 @@ function ExamLuckInputInner() {
              두 개를 고르면 교재에 나온 직업 가운데 딱지가 맞는 것만 보입니다. */}
         {target !== 'student' && kind === 'job' && (
           <>
+            {/* ★2026-09-11 (6부) [대표님] 알약 두 줄 — 「면접만 보는 사람에게 시험 이야기가 나오지 않게」 (검사 46)
+                 지금 상황은 하나만(신규 취업 / 이직) · 거쳐야 할 관문은 여러 개(시험 / 면접) */}
+            <div style={{ fontSize: 12.5, color: '#8a7063', margin: '18px 2px 8px' }}>
+              지금 상황 <span style={{ color: ACCENT, fontWeight: 600 }}>*</span>
+            </div>
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+              {JOB_SITUATIONS.map(o => {
+                const on = situation === o.key
+                return (
+                  <button key={o.key} type="button" onClick={() => setSituation(o.key)} aria-pressed={on}
+                    style={{ fontSize: 13, borderRadius: 999, padding: '8px 16px', cursor: 'pointer', fontFamily: 'inherit',
+                      border: `1px solid ${on ? ACCENT : '#e2cfc2'}`, background: on ? ACCENT : CARD,
+                      color: on ? '#fff' : '#8a7063', fontWeight: on ? 600 : 400 }}>{o.label}</button>
+                )
+              })}
+            </div>
+            <div style={{ fontSize: 12.5, color: '#8a7063', margin: '14px 2px 8px' }}>
+              거쳐야 할 관문 <span style={{ color: '#a3907f' }}>(여러 개 고를 수 있어요)</span>
+            </div>
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+              {JOB_GATES.map(o => {
+                const on = gates.includes(o.key)
+                return (
+                  <button key={o.key} type="button" onClick={() => toggleGate(o.key)} aria-pressed={on}
+                    style={{ fontSize: 13, borderRadius: 999, padding: '8px 16px', cursor: 'pointer', fontFamily: 'inherit',
+                      border: `1px solid ${on ? ACCENT : '#e2cfc2'}`, background: on ? ACCENT : CARD,
+                      color: on ? '#fff' : '#8a7063', fontWeight: on ? 600 : 400 }}>{o.label}</button>
+                )
+              })}
+            </div>
             <div style={{ fontSize: 12.5, color: '#8a7063', margin: '18px 2px 9px' }}>
               ① 어떤 분야인가요? <span style={{ color: ACCENT, fontWeight: 600 }}>*</span>
             </div>
@@ -424,7 +460,7 @@ function ExamLuckInputInner() {
         {/* ★시험 날짜 — 교재 195쪽 「세운 > 대운 > 월운 > 일진」·「시험일이 공망일이면」
              ★2026-07-29 «필수» 로 돌렸습니다. 대신 모를 때 고를 단추를 함께 둡니다. */}
         <div style={{ fontSize: 12.5, color: '#8a7063', margin: '14px 2px 9px' }}>
-          시험(또는 발표) 날짜 <span style={{ color: ACCENT, fontWeight: 600 }}>*</span>
+          {target !== 'student' && kind === 'job' ? dateLabelFor(gates) : '시험(또는 발표) 날짜'} <span style={{ color: ACCENT, fontWeight: 600 }}>*</span>
         </div>
         <input type="date" value={examDate} onChange={e => setExamDate(e.target.value)}
           style={{
@@ -479,7 +515,7 @@ function ExamLuckInputInner() {
             fontSize: 11.5, color: '#8c4a63', lineHeight: 1.7,
           }}>
             {!gradeOk && <div>· 학년·신분을 골라 주세요.</div>}
-            {!targetOk && <div>· {target === 'student' ? '가고자 하는 목표' : (kind === 'job' ? '① 분야' : '목표 시험·직종')}를 골라 주세요.</div>}
+            {!targetOk && <div>· {target === 'student' ? '가고자 하는 목표' : (kind === 'job' ? (situation ? '① 분야' : '지금 상황(신규 취업 / 이직)') : '목표 시험·직종')}를 골라 주세요.</div>}
             {!dateOk && <div>· 시험(또는 발표) 날짜를 골라 주세요.</div>}
           </div>
         )}

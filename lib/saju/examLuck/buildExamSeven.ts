@@ -35,6 +35,7 @@
 
 import type { ExamCard, ExamTarget } from './types'
 import { calcWolunList } from '../dayun'
+import type { JobSituation, JobGate } from './tables/jobFields'
 
 export interface SevenArgs {
   name: string
@@ -62,6 +63,10 @@ export interface SevenArgs {
   wish?: string | null
   /** ★6부 — 마음이 많이 힘든 글인가 (wishLooksHeavy) — 첫 갈래 · 마지막 갈래가 먼저 마음을 받습니다 */
   wishHeavy?: boolean
+  /** ★6부 [대표님 알약] 일자리를 구해요 — 지금 상황 (없으면 옛 기록) */
+  jobSituation?: JobSituation | null
+  /** ★6부 [대표님 알약] 일자리를 구해요 — 거쳐야 할 관문 (null 이면 옛 기록 · «모두 고른 것») */
+  jobGates?: JobGate[] | null
   examDate?: string | null
   /** 시험 당일 일진·월운·십성 (examDay 가 낸 것) */
   examDayNote?: string | null
@@ -352,6 +357,10 @@ function hintStudent(key: SevenKey, v: SevenArgs): string[] {
 function hintAdult(key: SevenKey, v: SevenArgs): string[] {
   const L: string[] = []
   const isJob = v.kind === 'job'
+  //  ★6부 [대표님 알약] — 일자리를 구해요의 관문. 옛 기록(null)은 «시험 · 면접 모두» 로 봅니다.
+  const gates = isJob ? (v.jobGates ?? ['exam', 'interview']) : null
+  const gExam = !gates || gates.includes('exam'), gInt = !!gates && gates.includes('interview')
+  const isMove = isJob && v.jobSituation !== 'new'   // 옛 기록(값 없음)은 지금처럼 이직 재료를 씁니다
   const goal = v.targetAcademic || v.targetMajor || v.examKindLabel || ''
   switch (key) {
     case 'flow':
@@ -369,11 +378,17 @@ function hintAdult(key: SevenKey, v: SevenArgs): string[] {
         ? `· ${v.year}년에 가장 먼저 할 일 하나를 고르세요 — 서류 · 직무 경험 정리 · 자격 가운데 지금 손대면 결과가 가장 빨리 나오는 것.`
         : `· ${v.year}년에 가장 먼저 할 과목이나 영역 하나를 고르세요.`)
       L.push('· 지금 손대면 시간만 쓰는 일도 하나 짚으세요.')
-      L.push(isJob
-        ? '· 시간 배분을 숫자로 내세요. (보기 — 실제 지원 · 면접 준비 60 : 시험공부 40) 왜 그런지 원국으로 밝히세요.'
-        : '· 시간 배분을 숫자로 내세요. (보기 — 시험 준비 70 : 실무 · 경력 30) 왜 그런지 원국으로 밝히세요.')
+      L.push(!isJob
+        ? '· 시간 배분을 숫자로 내세요. (보기 — 시험 준비 70 : 실무 · 경력 30) 왜 그런지 원국으로 밝히세요.'
+        : gExam && gInt
+          ? '· 필기 공부와 면접 연습을 몇 대 몇으로 나눌지 숫자로 내세요. (보기 — 필기 공부 60 : 면접 연습 40) 왜 그런지 원국으로 밝히세요.'
+          : gExam
+            ? '· 시간 배분을 숫자로 내세요. (보기 — 시험공부 70 : 지원서 · 서류 30) 왜 그런지 원국으로 밝히세요.'
+            : gInt
+              ? '· 시간 배분을 숫자로 내세요. (보기 — 지원서 · 경력 정리 60 : 면접 연습 40) 왜 그런지 원국으로 밝히세요.'
+              : '· 지원서 · 서류 준비에 쓸 시간을 숫자로 내세요. (보기 — 하루 2시간 · 주 5일) 왜 그런지 원국으로 밝히세요.')
       L.push('· 지원은 조금 높은 곳 · 맞는 곳 · 쉬운 곳을 몇 대 몇 둘지 숫자로 내세요. 한 곳만 보지 말고 몇 갈래를 나란히 두게 하세요.')
-      L.push('· 재료 [이직과 직업 변동] 이 있으면 «옮기기 전에 전할 말» 하나를 녹이세요.')
+      if (isMove || !isJob) L.push('· 재료 [이직과 직업 변동] 이 있으면 «옮기기 전에 전할 말» 하나를 녹이세요.')
       L.push('· 지금까지 쌓아 온 경력과 나이가 먼저입니다. 흐름은 그 위에 얹는 것입니다. ⚠️ «붙는다 · 떨어진다» 로 단정하지 마세요.')
       break
     case 'pace':
@@ -382,9 +397,11 @@ function hintAdult(key: SevenKey, v: SevenArgs): string[] {
       L.push('· 직장 · 합격운 · 공부운이 드는 달은 힘을 몰아 쓸 달, 남과 견주는 마음이 드는 달은 흔들리기 쉬운 달입니다.')
       L.push('· 좋은 달에는 무엇을 몰아서 할지, 조심할 달에는 어떻게 버틸지 (남과 비교하지 않기 등) 주세요.')
       if (v.examDate) L.push(`· ${v.examDate} 그날의 흐름을 한 문장으로 — 재료 [시험 날짜와 실전 준비] 근거. 공망이면 «집중이 잠깐씩 흐트러지기 쉬운 날 — 나쁜 날이 아니다» 로 풀어 주세요.`)
-      L.push(isJob
-        ? '· 당일 수칙 넷을 구체적으로 — 들어서기 직전 마음 가라앉히기 / 면접에서 말이 길어지기 쉬운 곳과 막는 법 / 흔들릴 때 할 행동 하나 / 그날 아침.'
-        : '· 당일 수칙 넷을 구체적으로 — 시작 직후 마음 가라앉히기 / 실수하기 쉬운 영역과 막는 법 / 흔들릴 때 할 행동 하나 / 그날 아침.')
+      if (!isJob) L.push('· 당일 수칙 넷을 구체적으로 — 시작 직후 마음 가라앉히기 / 실수하기 쉬운 영역과 막는 법 / 흔들릴 때 할 행동 하나 / 그날 아침.')
+      else if (gExam && gInt) L.push('· 두 날의 수칙을 짧게 나눠 주세요 — 시험장: 시작 직후 마음 가라앉히기 · 실수 막는 법 / 면접장: 들어서기 직전 마음 가라앉히기 · 대답이 길어지지 않게 하는 법.')
+      else if (gExam) L.push('· 당일 수칙 넷을 구체적으로 — 시험장에서 시작 직후 마음 가라앉히기 / 실수하기 쉬운 영역과 막는 법 / 흔들릴 때 할 행동 하나 / 그날 아침.')
+      else if (gInt) L.push('· 당일 수칙 넷을 구체적으로 — 면접장에 들어서기 직전 마음 가라앉히기 / 대답이 길어지기 쉬운 질문과 막는 법 / 긴장될 때 할 행동 하나 / 그날 아침.')
+      else L.push('· 발표를 기다리는 날의 마음가짐을 구체적으로 — 결과를 기다리며 할 일 하나 / 비교하지 않는 법 / 다음 준비 하나.')
       L.push('· 교재는 달과 날보다 한 해의 흐름을 더 크게 봅니다. 달과 날은 «마음가짐의 참고» 로만 말하세요.')
       break
     case 'cheer':
@@ -455,7 +472,10 @@ export function buildSevenPrompt(v: SevenArgs, group: SevenKey[]): SevenPrompt |
   //   ⚠️ plan[0] 것만 쓰면 뒤 갈래들이 재료 없이 글을 씁니다(지어냅니다).
   const needSet = new Set<string>()
   for (const sec of plan) for (const k of MATERIAL_NEEDS[sec.key] ?? []) needSet.add(k)
+  //  ★6부 [대표님 알약] 신규 취업이면 이직 재료를 아예 빼 둡니다 (재료에 있으면 AI 가 꺼내 씁니다 — 교훈 BF)
+  const dropJobChange = v.kind === 'job' && v.jobSituation === 'new'
   const material = v.cards
+    .filter(c => !(dropJobChange && c.key === 'jobchange'))
     .filter(c => needSet.has(c.key) || !ALL_CARD_KEYS.includes(c.key))
     .map(c => `[${c.title}]\n` + c.reasons.map(r => `- ${r}`).join('\n'))
     .join('\n\n')
@@ -477,6 +497,12 @@ export function buildSevenPrompt(v: SevenArgs, group: SevenKey[]): SevenPrompt |
     v.targetAcademic ? `· 목표: ${v.targetAcademic}` : '',
     //  ★2026-09-11 (6부) — 성인이 고른 직종을 «직접» 싣습니다 (검사 ㉓-a)
     !isStudentWho && v.examKindLabel ? `· 목표 시험·직종: ${v.examKindLabel}` : '',
+    //  ★6부 [대표님 알약] 지금 상황 · 거쳐야 할 관문 — 그리고 «고르지 않은 것은 말하지 말라» (검사 46)
+    !isStudentWho && v.kind === 'job' && v.jobSituation ? `· 지금 상황: ${v.jobSituation === 'new' ? '신규 취업 (처음 일자리를 구하는 분)' : '이직 (다니던 곳을 옮기려는 분)'}` : '',
+    !isStudentWho && v.kind === 'job' && v.jobGates ? `· 거쳐야 할 관문: ${v.jobGates.length ? v.jobGates.map(g => (g === 'exam' ? '시험' : '면접')).join(' · ') : '없음 (서류 · 발표만)'}` : '',
+    !isStudentWho && v.kind === 'job' && v.jobGates && !v.jobGates.includes('exam') ? '★고르지 않은 시험 · 필기 · 문제 풀이 · 답안 이야기는 쓰지 마세요.' : '',
+    !isStudentWho && v.kind === 'job' && v.jobGates && !v.jobGates.includes('interview') ? '★고르지 않은 면접 이야기는 쓰지 마세요.' : '',
+    !isStudentWho && v.kind === 'job' && v.jobSituation === 'new' ? '★처음 일자리를 구하는 분입니다. 이직 · 직장 옮기기 이야기를 쓰지 마세요.' : '',
     v.examDate ? `· 시험(발표) 날짜: ${v.examDate}` : '',
     v.examDayNote ? `· 그날 기운: ${v.examDayNote}` : '',
     v.hourUnknown ? '★태어난 시(時)를 모릅니다. 시주가 필요한 이야기는 단정하지 마세요.' : '',

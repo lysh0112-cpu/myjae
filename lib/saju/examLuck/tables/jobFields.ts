@@ -173,3 +173,35 @@ export function readWishHandoff(): string {
     return sanitizeWish(v.w)
   } catch { return '' }
 }
+
+// ════════════════════════════════════════════════════════════════
+//  ★2026-09-11 (6부) [대표님] 「일자리를 구해요」 알약 두 줄 (검사 46)
+//    「면접만 보는 사람에게 시험 이야기가 나오는 것을 막자」 · 「신규 취업, 이직으로 표시」
+//    지금 상황(하나) · 거쳐야 할 관문(여러 개)
+//    ⚠️ 한 줄에 넷을 두면 «신규 취업 + 이직» 이 함께 눌려 오히려 생뚱맞은 답이 나옵니다 — 두 줄로 둡니다.
+// ════════════════════════════════════════════════════════════════
+export type JobSituation = 'new' | 'move'
+export type JobGate = 'exam' | 'interview'
+export const JOB_SITUATIONS: Array<{ key: JobSituation; label: string }> = [
+  { key: 'new', label: '신규 취업' },
+  { key: 'move', label: '이직' },
+]
+export const JOB_GATES: Array<{ key: JobGate; label: string }> = [
+  { key: 'exam', label: '시험' },
+  { key: 'interview', label: '면접' },
+]
+/** 주소의 gates 값 → 관문 목록. 값이 없으면(옛 기록) null — «모두 고른 것» 으로 봅니다 */
+export function parseGates(raw: string | null | undefined): JobGate[] | null {
+  if (raw == null) return null
+  const keys = JOB_GATES.map(g => g.key)
+  return raw.split(',').filter((x): x is JobGate => (keys as string[]).includes(x))
+}
+export function parseSituation(raw: string | null | undefined): JobSituation | null {
+  return raw === 'new' || raw === 'move' ? raw : null
+}
+/** 날짜 칸 이름 — 고른 관문을 따라갑니다 */
+export function dateLabelFor(gates: JobGate[] | null): string {
+  if (!gates) return '시험(또는 발표) 날짜'
+  const e = gates.includes('exam'), i = gates.includes('interview')
+  return e && i ? '시험 또는 면접 날짜' : e ? '시험 날짜' : i ? '면접 날짜' : '발표 날짜'
+}
