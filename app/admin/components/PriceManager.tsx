@@ -2,6 +2,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { supabase } from '@/lib/supabase'
 import WalletPrice from './WalletPrice'
+import HomeFlagToggle from './HomeFlagToggle'
 
 type Price = {
   id: string
@@ -652,6 +653,13 @@ export default function PriceManager() {
              무료 횟수 값이 들어 있고, 되살리실 때 씁니다.
           ⇒ 되살리시려면 아래 주석 한 줄만 푸십시오.
           <TarotTable /> */}
+
+      {/* ★2026-09-11 (6부) [대표님] — 숨겨 둔 「합격운/취업운」 을 켜고 끄는 토글.
+            ⚠️ 홈 가격표 «바로 위» 에 둡니다 — 둘 다 «홈에 무엇이 보이나» 를 정하는 자리입니다.
+            ⚠️ 이 토글은 «누르면 바로» 저장합니다 (아래 [저장] 과 따로입니다). */}
+      <div style={{ marginTop: 28, maxWidth: 420 }}>
+        <HomeFlagToggle />
+      </div>
 
       <div style={{ marginTop: 28, maxWidth: 420 }}>
         <HomePriceTable />

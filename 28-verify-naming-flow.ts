@@ -578,8 +578,11 @@ console.log('\n━━ ⑲-D ★서비스 이름 개편 · 압핀 지키기 (43�
   check(/desc: '내 이름 분석부터 아기 명품작명까지'/.test(svc), `폴더 설명이 맞습니다`)
   check(/names: \['내 이름 정밀분석', '내 아이 명품작명'\]/.test(svc),
     `★둘이 그 폴더 «안» 에 있습니다`)
-  check(/SOLO_NAMES = \['궁합'\]/.test(svc),
-    `★낱장에서 빠졌습니다 (궁합만 홀로 남습니다)`)
+  //  ★2026-09-11 (6부) [대표님 「나) 단독카드로」] — 낱장이 «궁합 + 합격운/취업운» 둘이 되었습니다.
+  //     ⚠️ 이 줄이 지키는 것은 «이름 둘이 낱장이 아니다» 입니다 — 그 뜻은 그대로입니다.
+  //     ⛔ 목록을 «아무거나» 받게 풀지 않았습니다 — 정확히 이 둘만 허락합니다.
+  check(/SOLO_NAMES = \['궁합'(, '합격운\/취업운')?\]/.test(svc),
+    `★낱장에서 빠졌습니다 (낱장은 궁합 · 합격운/취업운 뿐입니다)`)
   // ⚠️ 낱장과 폴더에 «겹쳐» 적으면 같은 카드가 두 번 뜹니다
   check(!/SOLO_NAMES = \[[^\]]*정밀분석/.test(svc), `낱장과 폴더에 겹쳐 있지 않습니다`)
 
@@ -1184,7 +1187,8 @@ console.log('\n━━ ⑲-n ★홈 — 폴더를 «열지 않고» 바로 들어
   check(/const SOLO_NAMES = \[/.test(svc), `낱장 카드 목록이 있습니다`)
   // ★2026-08-01 (43부 13차) — 이름 둘은 «폴더» 로 옮겼습니다 (위 ⑲-D 가 봅니다).
   //   ⚠️ 이 검사가 옛 배치를 «요구» 하고 있었습니다. 낱장은 이제 궁합뿐입니다.
-  check(/SOLO_NAMES = \['궁합'\]/.test(svc), `★「궁합」이 낱장입니다`)
+  //  ★2026-09-11 (6부) — 합격운/취업운이 두 번째 낱장입니다 (대표님 「나) 단독카드」). 정확히 이 둘만.
+  check(/SOLO_NAMES = \['궁합'(, '합격운\/취업운')?\]/.test(svc), `★「궁합」이 낱장입니다`)
   for (const n of ['내 이름 정밀분석', '내 아이 명품작명']) {
     check(new RegExp(`names: \\[[^\\]]*'${n}'`).test(svc), `★「${n}」이 폴더 안에 있습니다`)
   }
@@ -2567,6 +2571,58 @@ console.log('\n━━ ㉒-t 🔴 로그인 안 한 손님에게 결제 시트가
   check(/\/login\?next=/.test(sh) && /encodeURIComponent\(/.test(sh),
     `★[로그인하러 가기] 가 «지금 화면» 으로 돌아오게 next 를 싣습니다`)
   check(/그냥 닫기|취소/.test(sh), `⛔ «그냥 닫는» 길은 그대로입니다`)
+}
+
+console.log('\n━━ ㉒-u 🔴 합격운/취업운 — 관리자 토글로 «켜고 끄는가» (2026-09-11 · 6부) ━━')
+{
+  //  ★[대표님 2026-09-11] 「나) 단독카드로 하되, 관리화면에 넣을지 말지를 결정하는 토글」
+  //     45부(2026-08-04)에 숨긴 합격운/취업운을 ★토글 «하나» 로 켜고 끕니다.
+  //     45부 메모 「셋이 한 벌」 — 홈 카드 · 서비스 낱장 · 보관함 종류 — 를 ★토글 하나에 묶었습니다.
+  //  ⚠️ 처음 값은 «꺼짐» — 코드를 올려도 대표님이 켜기 전까지 손님 화면은 그대로입니다.
+  const home = codeOf(read('app/home-new/page.tsx'))
+  const svc = codeOf(read('app/home-new/components/ServiceSection.tsx'))
+  const arc = codeOf(read('lib/saju/archiveRecords.ts'))
+  const fl = codeOf(read('lib/homeFlags.ts'))
+  const pub = codeOf(read('app/api/home-flags/route.ts'))
+  const adm = codeOf(read('app/api/admin/home-flags/route.ts'))
+  const ui = codeOf(read('app/admin/components/HomeFlagToggle.tsx'))
+  const pm = codeOf(read('app/admin/components/PriceManager.tsx'))
+
+  // ① 홈 카드 — 45부 메모의 값 그대로
+  check(/name: '합격운\/취업운', color: '#c85a8c', bg: '#f7e6ee', href: '\/manseryeok\/exam-luck'/.test(home)
+     && /sub: '시험과 일자리', icon: '🎯', grad: \['#34d399', '#5eead4'\]/.test(home),
+    `★홈 카드가 45부 메모 값 그대로입니다 (색 · 주소 · 소개 · 아이콘)`)
+  check(/SOLO_NAMES = \['궁합', '합격운\/취업운'\]/.test(svc),
+    `★궁합 «바로 아래» 단독 카드입니다 [대표님 「나)」]`)
+  // ② 토글이 «보이는 것» 만 거릅니다 — 압핀 정리(alive)는 «전체» 로 봅니다
+  //    ⚠️ alive 까지 거르면, 꺼 둔 동안 회원이 고정해 둔 합격운 압핀이 ★«말없이» 지워집니다.
+  check(/services=\{visibleServices\}/.test(home) && /EXAM_LUCK_NAME/.test(home) && /flags\.examLuck/.test(home),
+    `★홈이 토글 값으로 카드를 «보이고 숨깁니다»`)
+  check(/const alive = new Set\(SERVICES\.map/.test(home),
+    `⛔ 압핀 정리는 «전체 목록» 으로 봅니다 (꺼 둔 동안 압핀이 지워지지 않게)`)
+  // ③ 보관함도 «같은 토글» — 45부 「홈에서만 빼면 보관함에 그대로 뜬다」
+  check(!/'examluck'/.test(arc.slice(arc.indexOf('const ARCHIVE_TYPES'), arc.indexOf(']', arc.indexOf('const ARCHIVE_TYPES')))),
+    `⛔ 보관함 기본 목록에는 examluck 이 «없습니다» (토글이 켜질 때만 더함)`)
+  check((arc.match(/await archiveTypes\(\)/g) ?? []).length >= 2 && !/\.in\('service_type', ARCHIVE_TYPES\)/.test(arc),
+    `★보관함 두 곳이 모두 «토글을 본 목록» 으로 거릅니다`)
+  // ④ 처음 값은 «꺼짐» — 못 읽으면 «꺼짐» 으로 떨어집니다
+  check(/HOME_FLAGS_OFF/.test(fl) && /return HOME_FLAGS_OFF/.test(fl),
+    `⛔ 못 읽으면 ★«꺼짐» 으로 떨어집니다 (켜진 채로 새지 않게)`)
+  check(/value === true/.test(pub), `⛔ 서버도 «정확히 true» 일 때만 켜짐으로 봅니다`)
+  // ⑤ 손님용 읽기 길 — ★정해진 낱말 «하나» 만 읽고, 쓰는 길이 없습니다
+  check(/export async function GET/.test(pub) && !/export async function (POST|PUT|PATCH|DELETE)/.test(pub),
+    `⛔ 손님용 길은 «읽기» 만 합니다`)
+  check(!/searchParams|req\.url|request\.url/.test(pub) && /HOME_FLAG_KEYS/.test(pub),
+    `⛔ 손님이 «다른 설정» 을 골라 읽을 수 없습니다 (정해진 낱말만)`)
+  check(/no-store/.test(pub), `★캐시하지 않습니다 (켜자마자 손님 화면에 반영)`)
+  // ⑥ 관리자 쓰기 길 — 문지기 · 참/거짓만 · 바뀐 줄 세기
+  check(/typeof examLuck !== 'boolean'/.test(adm), `⛔ 참/거짓 «말고는» 받지 않습니다`)
+  check(/\.select\('key'\)/.test(adm) && /data\.length === 0|!data \|\|/.test(adm),
+    `★저장한 줄을 «셉니다» (조용히 0줄 막기)`)
+  // ⑦ 관리 화면 — 결과 글이 «단추 바로 옆» 에 뜹니다 (말투 관리에서 대표님이 못 보신 교훈)
+  check(/callAdmin(<[^>]*>)?\(\s*'\/api\/admin\/home-flags'/.test(ui), `★관리 화면이 서버 길로 저장합니다`)
+  check(/<HomeFlagToggle \/>/.test(pm), `★가격 관리 화면에 토글이 있습니다`)
+  check(/aria-live/.test(ui), `★결과 글이 토글 «바로 옆» 에 뜹니다`)
 }
 
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)

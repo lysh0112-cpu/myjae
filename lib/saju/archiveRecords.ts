@@ -17,6 +17,7 @@
 
 import { supabase } from '@/lib/supabase'
 import { onlyResultRows } from './recordQuery'
+import { fetchHomeFlags } from '@/lib/homeFlags'
 
 export interface ArchiveItem {
   id: string
@@ -134,10 +135,19 @@ const ARCHIVE_TYPES = [
   //   BADGES·reviewUrl 만 채우고 이걸 빠뜨리면 조용히 안 보인다. (2026-07-27)
   // ⛔ 2026-08-04 (45부) — ★'examluck' 을 «뺐습니다» (대표님 지시 · 서비스 안 함)
   //   [까닭] 홈에서만 빼면 ★보관함에는 합격운 기록이 그대로 뜹니다. (44부 1-6 교훈)
-  //   ⚠️ 아래 reviewUrl 의 case 'examluck' 과 BADGES 는 «남겨 두었습니다» —
-  //      지우면 되살릴 때 다시 지어야 합니다. 여기 한 곳이 문지기입니다.
+  //   ⚠️ 아래 reviewUrl 의 case 'examluck' 과 BADGES 는 «남겨 두었습니다».
+  // ★2026-09-11 (6부) — 이제 ★관리자 토글이 켜졌을 때만 아래 archiveTypes() 가 «더합니다».
+  //   ⛔ 여기(기본 목록)에 'examluck' 을 다시 적지 마십시오 — 토글을 꺼도 보관함에 뜹니다 (검사 ㉒-u).
   'career',
 ]
+
+/* ★2026-09-11 (6부) — 보관함이 거를 종류 = 기본 목록 + (토글이 켜졌으면) 합격운.
+ *   45부 메모 「셋이 한 벌」 의 셋째 자리를 ★홈과 «같은 토글» 에 묶었습니다.
+ *   ⚠️ 못 읽으면 «숨김» — 기본 목록만 씁니다. */
+async function archiveTypes(): Promise<string[]> {
+  const f = await fetchHomeFlags()
+  return f.examLuck ? [...ARCHIVE_TYPES, 'examluck'] : ARCHIVE_TYPES
+}
 
 // 전 서비스 통합 조회 (최신순). limit로 페이지네이션 가능.
 export async function listArchive(limit = 50, offset = 0): Promise<ArchiveItem[]> {
@@ -151,7 +161,7 @@ export async function listArchive(limit = 50, offset = 0): Promise<ArchiveItem[]
       .from('saju_records')
       .select('id, service_type, title, relation, input_data, result_data, created_at')
       .eq('user_id', user_id)
-      .in('service_type', ARCHIVE_TYPES)
+      .in('service_type', await archiveTypes())
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1))
   if (error || !data) {
@@ -180,7 +190,7 @@ export async function countArchive(): Promise<number> {
       .from('saju_records')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user_id)
-      .in('service_type', ARCHIVE_TYPES))
+      .in('service_type', await archiveTypes()))
   if (error || count == null) return 0
   return count
 }
