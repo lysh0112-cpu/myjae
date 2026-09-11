@@ -33,6 +33,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { WALLET_GATE_ON_SERVER, SERVICE_GLF } from '@/lib/wallet/serverGate'
+import { APPS } from '@/app/components/common/companyInfo'
 
 // ★2026-07-21 자국 — maxDuration 이 없으면 Vercel 기본 10초에 잘립니다.
 //   사진 읽기는 오래 걸립니다. ⛔ 줄이지 마십시오.
@@ -78,7 +79,7 @@ function promptQuick(holes: number): string {
 - 홀별 타수는 왼쪽 홀부터 순서대로 ${holes}개를 채우세요.`
 }
 
-export async function POST(req: NextRequest) {
+async function readPhoto(req: NextRequest): Promise<NextResponse> {
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) return fail('서버 설정이 아직 안 됐어요. 관리자에게 알려 주세요.', 500)
@@ -187,4 +188,61 @@ export async function POST(req: NextRequest) {
     console.error('[golf/read-photo]', m)
     return fail('사진을 읽지 못했어요. 잠시 뒤 다시 해주세요.', 500)
   }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+ *  ★2026-09-11 (6부) — 「다른 주소에서 불러도 된다」(CORS) 허락 표시
+ *
+ *  [왜]  골프온(golf.myjae.kr)은 명연재(myjae.kr)와 ★주소가 다릅니다.
+ *        표시가 없으면 브라우저가 «미리 묻기» 에서 막아, 본 요청이 ★아예 안 나갑니다.
+ *        ⇒ 골프온 화면에는 「Failed to fetch」 만 뜹니다 (골프온 회신 쪽지 07 ②).
+ *
+ *  [값]  골프온 회신 ④ 그대로 —
+ *        허락 주소   APPS.glf.href 하나 (companyInfo.ts · ⛔ 여기 따로 적지 마십시오)
+ *        허락 방식   POST, OPTIONS
+ *        허락 머리   authorization, content-type
+ *        Vary: Origin  (주소마다 답이 달라 캐시가 섞이지 않게)
+ *        ⚠️ 쿠키를 안 받으므로 Credentials 표시는 «안» 붙입니다.
+ *
+ *  ⛔⛔ 아무 주소나(*) 허락하지 마십시오 —
+ *       남의 사이트가 손님 토큰을 실어 ★사장님 AI 열쇠와 손님 지갑을 씁니다.
+ *  ⚠️ 옛 주소 my-score-golf.vercel.app 은 ★«일부러» 뺐습니다 [골프온 회신 ③].
+ *     로그인·기록이 따로 놀아 golf.myjae.kr 로 넘기는 편이 낫다고 봤습니다 (대표님 판단 대기).
+ *  ⛔ POST 가 일을 «감싸는» 모양을 풀지 마십시오 —
+ *     ★오류(401·402·500)에도 표시가 붙어야 「잔액이 모자라요」가 제대로 뜹니다 (골프온 회신 ④).
+ *     검사 ㉒-p 가 봅니다.
+ * ══════════════════════════════════════════════════════════════════ */
+const CORS_ORIGINS = new Set<string>([APPS.glf.href])
+
+function corsHeaders(origin: string | null): Record<string, string> {
+  const h: Record<string, string> = { Vary: 'Origin' }
+  if (origin && CORS_ORIGINS.has(origin)) {
+    h['Access-Control-Allow-Origin'] = origin
+    h['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+    h['Access-Control-Allow-Headers'] = 'authorization, content-type'
+    h['Access-Control-Max-Age'] = '600'
+  }
+  return h
+}
+
+function withCors(res: NextResponse, origin: string | null): NextResponse {
+  for (const [k, v] of Object.entries(corsHeaders(origin))) res.headers.set(k, v)
+  return res
+}
+
+/** 브라우저의 «미리 묻기» — 허락된 주소면 표시를 붙여 204 */
+export async function OPTIONS(req: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: corsHeaders(req.headers.get('origin')) })
+}
+
+/** ★모든 답(성공·오류·터짐)에 허락 표시를 붙입니다 */
+export async function POST(req: NextRequest) {
+  const origin = req.headers.get('origin')
+  let res: NextResponse
+  try {
+    res = await readPhoto(req)
+  } catch {
+    res = fail('사진을 읽지 못했어요. 잠시 뒤 다시 해주세요.', 500)
+  }
+  return withCors(res, origin)
 }

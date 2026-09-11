@@ -2416,6 +2416,39 @@ console.log('\n━━ ㉒-o 🔴 AI 창구가 «로그인한 사람» 만 받는
   }
 }
 
+console.log('\n━━ ㉒-p 🔴 골프온이 사진 읽기를 «다른 주소에서» 부를 수 있는가 (2026-09-11 · 6부) ━━')
+{
+  //  🔴 [왜 이 그물이 필요한가]
+  //     골프온(golf.myjae.kr)이 명연재(myjae.kr)의 사진 읽기 길을 부릅니다 — ★주소가 다릅니다.
+  //     ⇒ 서버가 「이 주소는 불러도 된다」(CORS) 를 안 붙이면 ★브라우저가 막습니다.
+  //     [6부가 잰 것]  허락 표시 0곳 · 로컬에서 golf 인 척 불러 봄 → 표시 없음
+  //     [골프온 회신 쪽지 07 — 줄 번호로]
+  //        · 부르는 곳 47-read.jsx 65줄 «하나뿐» · Authorization 머리가 있어 «미리 묻기» 가 먼저 감
+  //        · 표시가 없으면 본 요청이 «아예» 안 나감 ⇒ 화면에 「Failed to fetch」
+  //        · ★오류 응답(401·402·500)에도 표시가 붙어야 합니다 —
+  //          안 붙으면 「잔액이 모자라요」 대신 「Failed to fetch」 가 뜹니다.
+  //  ⛔ 「*」(아무 주소나) 로 열지 마십시오 — 남의 사이트가 손님 토큰으로 사장님 돈을 씁니다.
+  //  ⛔ 주소를 여기 «적지» 마십시오 — companyInfo.ts 의 APPS 한 곳에서 가져옵니다 (5부 10장).
+  const rp = codeOf(read('app/api/golf/read-photo/route.ts'))
+  check(/export async function OPTIONS/.test(rp),
+    `★«미리 묻기»(OPTIONS) 에 답합니다`)
+  check(/APPS\.glf\.href/.test(rp) && !/'https:\/\/golf\.myjae\.kr'/.test(rp),
+    `⛔ 골프온 주소를 ★companyInfo 의 APPS 에서 가져옵니다 (따로 안 적음)`)
+  check(!/Allow-Origin['"]?\s*[:,]\s*['"]\*/.test(rp),
+    `⛔ 아무 주소나(*) 허락하지 «않습니다»`)
+  check(/Access-Control-Allow-Headers[\s\S]{0,40}authorization, content-type/.test(rp),
+    `★허락 머리 — authorization, content-type (골프온 회신 ④)`)
+  check(/Vary/.test(rp), `★Vary: Origin 을 붙입니다`)
+  check(!/Allow-Credentials/.test(rp),
+    `★Allow-Credentials 는 «안» 씁니다 (골프온은 쿠키를 안 보냅니다)`)
+  //  ★오류 응답까지 «빠짐없이» — POST 가 일을 «감싸서» 모든 답에 표시를 붙이는가
+  const post = rp.slice(Math.max(0, rp.search(/export async function POST/)))
+  check(/await readPhoto\(/.test(post) && /withCors\(/.test(post),
+    `⛔ ★오류(401·402·500) 까지 «모든 답» 에 허락 표시가 붙습니다 (POST 가 일을 감쌈)`)
+  check(!/export async function readPhoto/.test(rp),
+    `★안쪽 일(readPhoto) 은 «밖으로 안 내보냅니다» (Next 가 길로 착각하지 않게)`)
+}
+
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail > 0) {
   console.log('  ┌────────────────────────────────────────────────────────────┐')
