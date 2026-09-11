@@ -138,6 +138,7 @@ async function readPhoto(req: NextRequest): Promise<NextResponse> {
     //   ⚠️ model 은 ★골프온이 쓰던 것 그대로입니다 (도는 것이 확인된 값).
     //      ⚠️ 명카페의 다른 열두 길은 claude-sonnet-4-6 을 씁니다. ★일부러 다릅니다.
     const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+      signal: req.signal,   // ★6부 — 화면이 끊으면 AI 호출도 끊습니다 (검사 48 · 9월 11일 비용 사고)
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

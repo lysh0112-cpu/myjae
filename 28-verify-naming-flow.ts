@@ -2820,6 +2820,7 @@ console.log('\n━━ ㉓-b 🔴 연재쌤 규칙 보충 검사(43번)가 «전�
   check(/tsx 45-verify-exam-four\.ts/.test(pkg), `★npm run verify 가 45번 검사(4갈래 · 쉬운 말투 · 달별 재료)를 돕니다`)
   check(/tsx 46-verify-exam-gates\.ts/.test(pkg), `★npm run verify 가 46번 검사(지금 상황 · 거쳐야 할 관문 알약)를 돕니다`)
   check(/tsx 47-verify-exam-jobpick\.ts/.test(pkg), `★npm run verify 가 47번 검사(직업 알약 고르기 · 방식 직접 적기)를 돕니다`)
+  check(/tsx 48-verify-ai-abort\.ts/.test(pkg), `★npm run verify 가 48번 검사(화면이 끊으면 AI 호출도 끊기)를 돕니다`)
 }
 
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)

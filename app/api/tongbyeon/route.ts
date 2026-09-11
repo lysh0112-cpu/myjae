@@ -47,10 +47,18 @@ export async function POST(req: Request) {
 
   const encoder = new TextEncoder()
 
+  /* 🔴 ★2026-09-11 (6부) — 화면이 끊으면 AI 호출도 끊습니다 (검사 48).
+   *   [겪음] 9월 11일 하루 입력 1,977만 · 출력 435만 토큰 (미납 US$113.59).
+   *          화면이 끊어도 이 창구는 AI 글을 끝까지 받아 내어, 끊긴 호출마다 출력 비용이 온전히 나갔습니다.
+   *   ⛔ 이 두 곳(req.signal · cancel)을 빼지 마십시오. */
+  const upstream = new AbortController()
+  req.signal?.addEventListener('abort', () => upstream.abort())
   const stream = new ReadableStream({
+    cancel() { upstream.abort() },
     async start(controller) {
       try {
         const res = await fetch('https://api.anthropic.com/v1/messages', {
+          signal: upstream.signal,   // ★6부 — 화면이 끊거나 흐름이 취소되면 AI 호출도 끊습니다 (검사 48)
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -139,7 +147,7 @@ export async function POST(req: Request) {
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()
       } catch (err) {
-        controller.error(err)
+        try { controller.error(err) } catch { /* 이미 취소된 흐름 — 화면이 떠났습니다 */ }
       }
     },
   })

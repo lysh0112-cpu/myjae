@@ -106,6 +106,7 @@ ${body.sceneDesc || body.prompt}
       if (!anthropicKey) return
       try {
         const cRes = await fetch('https://api.anthropic.com/v1/messages', {
+      signal: req.signal,   // ★6부 — 화면이 끊으면 AI 호출도 끊습니다 (검사 48 · 9월 11일 비용 사고)
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
