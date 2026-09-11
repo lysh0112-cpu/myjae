@@ -9,7 +9,7 @@
  */
 import * as fs from 'fs'
 import { SEVEN_GROUPS, sevenOf, legacyOf, isLegacyTong, sevenKeyOf, buildSevenPrompt, monthlyMaterial } from './lib/saju/examLuck/buildExamSeven'
-import { STUDENT_BAN_WORDS } from './lib/saju/examLuck/tables/rules'
+import { STUDENT_BAN_WORDS, CLOSING, CLOSING_STUDENT } from './lib/saju/examLuck/tables/rules'
 
 let pass = 0, fail = 0
 const ok = (c: boolean, m: string) => { if (c) { pass++; console.log('  ✅ ' + m) } else { fail++; console.log('  🔴 ' + m) } }
@@ -62,6 +62,19 @@ console.log('\n━━ ④ 옛 7갈래 기록 — 다시보기가 깨지지 않�
   const ex = fs.readFileSync('app/manseryeok/exam-luck-result/components/ExamResultShell.tsx', 'utf8')
   ok(/legacy \? legacyOf\(target\) : sevenOf\(target\)/.test(ex) && /sevenKeyOf\(title, target, legacy\)/.test(ex), '결과 화면이 옛 기록은 옛 7갈래로 그립니다')
   ok(/month: new Date\(\)\.getMonth\(\) \+ 1/.test(ex), '결과 화면이 이번 달을 AI 재료에 싣습니다')
+}
+
+console.log('\n━━ ⑤ 맺음말 — 「흉할 것도 길할 것도 없다」 를 뺐는가 [대표님 2026-09-11] ━━')
+{
+  //  「시험 안 보는 사람에게는 생뚱맞고, 이 말이 없어도 아래 말들이 다 덮는다」
+  const all = [...CLOSING, ...CLOSING_STUDENT].join(' ')
+  ok(!/흉할 것도 길할 것도|시험의 본질은/.test(all), '맺음말 상자와 AI 재료에서 그 문장이 사라졌습니다')
+  ok(CLOSING.length === 3 && CLOSING_STUDENT.length === 3 && /일희일비/.test(CLOSING[2]), '나머지 세 줄(채우는 때 · 노력 · 일희일비)은 그대로')
+  const cheer = buildSevenPrompt({ name: '가', gender: '남', age: 30, target: 'adult', kind: 'job', cards: [], saju: [], hourUnknown: false, year: 2026 } as never, ['cheer'])!
+  ok(!/흉할 것도 길할 것도/.test(cheer.system + cheer.user), '응원 갈래 지시문에도 그 문장이 없습니다')
+  const exs = fs.readFileSync('app/manseryeok/exam-luck-result/components/ExamResultShell.tsx', 'utf8')
+  ok(!/CLOSING/.test(exs.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')), '★맨 아래 상자에서 교재 맺음말 줄을 뺐습니다 (4번 갈래와 겹치지 않게) [대표님]')
+  ok(/마지막으로 드리고 싶은 말/.test(exs) && /사주는 지도일 뿐, 걷는 것은/.test(exs), '상자에는 「사주는 지도일 뿐 …」 한 줄만 남음')
 }
 
 console.log(`\n━━ 4갈래 · 쉬운 말투 · 달별 재료 — 통과 ${pass} · 실패 ${fail} ━━\n`)

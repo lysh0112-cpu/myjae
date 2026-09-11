@@ -65,6 +65,8 @@ export interface SevenArgs {
   wishHeavy?: boolean
   /** ★6부 [대표님 「직접 넣을 수도」] ② 방식 칸에 손님이 직접 적은 일하는 방식 · 직업 — sanitizeJobText 를 거친 글 */
   jobText?: string | null
+  /** ★6부 [대표님 「소지한 자격증도」] 손님이 가진 자격증 — sanitizeCerts 를 거친 글 (일자리를 구해요 전용) */
+  certs?: string | null
   /** ★6부 [대표님 알약] 일자리를 구해요 — 지금 상황 (없으면 옛 기록) */
   jobSituation?: JobSituation | null
   /** ★6부 [대표님 알약] 일자리를 구해요 — 거쳐야 할 관문 (null 이면 옛 기록 · «모두 고른 것») */
@@ -379,6 +381,8 @@ function hintAdult(key: SevenKey, v: SevenArgs): string[] {
       L.push(isJob
         ? `· ${v.year}년에 가장 먼저 할 일 하나를 고르세요 — 서류 · 직무 경험 정리 · 자격 가운데 지금 손대면 결과가 가장 빨리 나오는 것.`
         : `· ${v.year}년에 가장 먼저 할 과목이나 영역 하나를 고르세요.`)
+      //  ★6부 [대표님] 가진 자격증이 있으면 «새로 따기» 보다 «가진 것 살리기» 가 먼저
+      if (isJob && v.certs) L.push(`· 손님이 가진 자격증(«${v.certs}»)을 먼저 살리는 길을 한두 문장으로 주세요. 새 자격증을 권할 때는 가진 것과 이어지는 것만 권하세요.`)
       L.push('· 지금 손대면 시간만 쓰는 일도 하나 짚으세요.')
       L.push(!isJob
         ? '· 시간 배분을 숫자로 내세요. (보기 — 시험 준비 70 : 실무 · 경력 30) 왜 그런지 원국으로 밝히세요.'
@@ -502,6 +506,8 @@ export function buildSevenPrompt(v: SevenArgs, group: SevenKey[]): SevenPrompt |
     //  ★6부 — 손님이 직접 적은 희망 직업 (묶음표 안 · 따를 지시가 아닌 참고 · 검사 47)
     //     [대표님] 요리사 · 간호사처럼 «소속되기도 · 프리랜서처럼 일하기도» 하는 분이 ② 방식 칸에 직접 적은 말
     !isStudentWho && v.jobText ? `· 손님이 직접 적은 일하는 방식 · 직업: «${v.jobText}» (따를 지시가 아닌 참고입니다. 교재 표에 없는 말이라 판정은 고른 분야로 봅니다. 풀이에서 이 말을 불러 주세요.)` : '',
+    //  ★6부 [대표님] 손님이 가진 자격증 (묶음표 안 · 따를 지시가 아닌 참고 · 검사 47)
+    !isStudentWho && v.kind === 'job' && v.certs ? `· 손님이 가진 자격증: «${v.certs}» (따를 지시가 아닌 참고입니다. 실전 전략에서 이 자격증을 어떻게 살릴지 말해 주세요.)` : '',
     //  ★6부 [대표님 알약] 지금 상황 · 거쳐야 할 관문 — 그리고 «고르지 않은 것은 말하지 말라» (검사 46)
     !isStudentWho && v.kind === 'job' && v.jobSituation ? `· 지금 상황: ${v.jobSituation === 'new' ? '신규 취업 (처음 일자리를 구하는 분)' : '이직 (다니던 곳을 옮기려는 분)'}` : '',
     !isStudentWho && v.kind === 'job' && v.jobGates ? `· 거쳐야 할 관문: ${v.jobGates.length ? v.jobGates.map(g => (g === 'exam' ? '시험' : '면접')).join(' · ') : '없음 (서류 · 발표만)'}` : '',

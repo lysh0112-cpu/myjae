@@ -21,7 +21,7 @@ import { exactAge } from '@/lib/saju/ageDayun'
 // ★2026-07-27 — 손님이 시험 종류를 고르면 교재 230쪽 짝에 따라 볼 십신이 정해진다.
 import { EXAM_KINDS } from '@/lib/saju/examLuck/tables/rules'
 import { EXAM_CATEGORIES, TARGETS, STUDENT_GRADES, GRADE_LEVELS, TRACKS, examKindFromTarget } from '@/lib/saju/examLuck/tables/studentTarget'
-import { JOB_FIELDS, JOB_WAYS, itemsFor, WISH_MAX, writeWishHandoff, JOB_SITUATIONS, JOB_GATES, dateLabelFor, PICK_MAX, JOB_TEXT_MAX, type JobSituation, type JobGate } from '@/lib/saju/examLuck/tables/jobFields'
+import { JOB_FIELDS, JOB_WAYS, itemsFor, WISH_MAX, writeWishHandoff, JOB_SITUATIONS, JOB_GATES, dateLabelFor, PICK_MAX, JOB_TEXT_MAX, CERT_MAX, type JobSituation, type JobGate } from '@/lib/saju/examLuck/tables/jobFields'
 
 const ACCENT = '#c85a8c'
 const SOFT = '#f7e6ee'
@@ -79,6 +79,8 @@ function ExamLuckInputInner() {
     prev.includes(n) ? prev.filter(x => x !== n) : (prev.length >= PICK_MAX ? prev : [...prev, n]))
   /* ★6부 [대표님] ② 방식 «직접 적기» — 요리사 · 간호사처럼 소속 · 프리랜서가 섞인 분 (30자 · 주소에 싣지 않음) */
   const [jobText, setJobText] = useState<string>('')
+  /* ★6부 [대표님 「취업 · 이직이면 소지한 자격증도」] 가진 자격증 — 선택 · 60자 · 주소에 싣지 않음 */
+  const [certs, setCerts] = useState<string>('')
   /** ★6부 [대표님 「희망사항을 자유롭게」] 궁금한 것이나 고민 — 선택 · 200자 */
   const [wish, setWish] = useState<string>('')
   /** ★시험 날짜 — 몰라도 된다. 알면 그 달·그 날까지 짚어 준다 (교재 195쪽) */
@@ -215,7 +217,7 @@ function ExamLuckInputInner() {
                   setTab(t.key)
                   // ★탭을 바꾸면 반대쪽 값을 비웁니다.
                   //   안 비우면 진학에서 고른 «과학고» 가 취업 결과에 실려 갑니다.
-                  setExamKind(''); setField(''); setWay('unknown'); setSituation(''); setGates([]); setPicks([]); setJobText(''); setStudentGrade(''); setGradeLevel(''); setTrack('')
+                  setExamKind(''); setField(''); setWay('unknown'); setSituation(''); setGates([]); setPicks([]); setJobText(''); setCerts(''); setStudentGrade(''); setGradeLevel(''); setTrack('')
                   setExamCategory(''); setTargetType(''); setTargetCustomText('')
                 }}
                 style={{
@@ -460,6 +462,15 @@ function ExamLuckInputInner() {
                 </div>
               )
             })()}
+            {/* ★2026-09-11 (6부) [대표님 「취업 · 이직이면 소지한 자격증도 물어보면」] — 가진 자격증 (검사 47)
+                 적으면 실전 전략이 «새로 따라» 대신 «가진 것을 어떻게 살릴지» 를 말합니다. */}
+            <div style={{ fontSize: 12.5, color: '#8a7063', margin: '14px 2px 8px' }}>
+              가지고 있는 자격증 <span style={{ color: '#a3907f' }}>(선택 · 없으면 비워 두세요)</span>
+            </div>
+            <input type="text" value={certs} onChange={e => setCerts(e.target.value)} maxLength={CERT_MAX}
+              placeholder="예: 정보처리기사, 토익 850, 운전면허 1종"
+              style={{ width: '100%', padding: '12px 14px', borderRadius: 12, marginBottom: 6, boxSizing: 'border-box',
+                background: CARD, border: `0.5px solid ${LINE}`, color: '#3a2e28', fontSize: 13.5, fontFamily: 'inherit' }} />
           </>
         )}
 
@@ -562,7 +573,7 @@ function ExamLuckInputInner() {
             const to = target === 'student'
               ? '/manseryeok/exam-luck-result'
               : '/manseryeok/job-luck-result'
-            writeWishHandoff(wish, way === 'custom' ? jobText : '')   // ★6부 — 고민 글 · 직접 적은 방식은 주소 대신 여기로
+            writeWishHandoff(wish, way === 'custom' ? jobText : '', kind === 'job' ? certs : '')   // ★6부 — 고민 · 직접 적은 방식 · 자격증은 주소 대신 여기로
             router.push(`${to}?${query}`)
           }}
           disabled={!canGo}

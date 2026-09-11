@@ -179,23 +179,33 @@ export function wishLooksHeavy(wish: string): boolean {
  *   ⚠️ 결과 화면이 기록을 저장한 뒤 지웁니다 (ExamResultShell). */
 export const WISH_KEY = 'examluck:wish'
 const WISH_TTL_MS = 10 * 60 * 1000
-export function writeWishHandoff(wish: string, jobText = ''): void {
+export function writeWishHandoff(wish: string, jobText = '', certs = ''): void {
   if (typeof window === 'undefined') return
-  const w = sanitizeWish(wish), j = sanitizeJobText(jobText)
-  //  ★6부 — 직접 적은 희망 직업(j)도 같은 길로 건넵니다 (주소에 싣지 않음)
-  if (w || j) sessionStorage.setItem(WISH_KEY, JSON.stringify({ w, j, at: Date.now() }))
+  const w = sanitizeWish(wish), j = sanitizeJobText(jobText), c = sanitizeCerts(certs)
+  //  ★6부 — 직접 적은 방식(j) · 가진 자격증(c)도 같은 길로 건넵니다 (주소에 싣지 않음)
+  if (w || j || c) sessionStorage.setItem(WISH_KEY, JSON.stringify({ w, j, c, at: Date.now() }))
   else sessionStorage.removeItem(WISH_KEY)
 }
-function readHandoff(): { w?: string; j?: string; at?: number } | null {
+function readHandoff(): { w?: string; j?: string; c?: string; at?: number } | null {
   if (typeof window === 'undefined') return null
   try {
-    const v = JSON.parse(sessionStorage.getItem(WISH_KEY) ?? 'null') as { w?: string; j?: string; at?: number } | null
+    const v = JSON.parse(sessionStorage.getItem(WISH_KEY) ?? 'null') as { w?: string; j?: string; c?: string; at?: number } | null
     return v?.at && Date.now() - v.at <= WISH_TTL_MS ? v : null
   } catch { return null }
 }
 export function readWishHandoff(): string { return sanitizeWish(readHandoff()?.w ?? '') }
 /** ★6부 — 직접 적은 희망 직업 */
 export function readJobTextHandoff(): string { return sanitizeJobText(readHandoff()?.j ?? '') }
+/** ★6부 — 가진 자격증 */
+export function readCertsHandoff(): string { return sanitizeCerts(readHandoff()?.c ?? '') }
+
+/* ★6부 [대표님 「취업이나 이직의 경우 소지한 자격증도 물어보면」] — 가진 자격증 (선택 · 60자 · 검사 47)
+ *   실전 전략 갈래가 «새로 따라» 대신 «이미 가진 것을 어떻게 살릴지» 를 말하게 합니다.
+ *   ⚠️ 고민 칸과 같은 거르기 · 주소에 싣지 않음 · 묶음표 안에 «따를 지시가 아닌 참고» 로. */
+export const CERT_MAX = 60
+export function sanitizeCerts(raw: unknown): string {
+  return sanitizeWish(raw).slice(0, CERT_MAX)
+}
 
 /* ★6부 [대표님 「직접 넣을 수도 있게」] 목록에 없는 일 «직접 적기» — 30자 · 고민 칸과 같은 거르기 (검사 47)
  *   ⚠️ 교재 표에 없는 이름이라 점수는 «분야» 로 봅니다. AI 에게는 «손님이 적은 희망 직업» 으로만 넘깁니다. */

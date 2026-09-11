@@ -88,7 +88,7 @@ console.log('\n━━ ⑤ 🔴 AI 가 끝없이 다시 불리지 않는가 (대�
     const rhs = decl[1]
     //  한 번만 만들어지는 것: useMemo · useState · useRef · 글자 · 숫자 · 참거짓 · sp.get
     if (/^use(Memo|State|Ref|Callback)\b/.test(rhs)) continue
-    if (/^(sp\.get|parseSituation|sanitizeWish|sanitizeJobText|wishLooksHeavy|typeof|new Date\(\)\.getFullYear|exactAge)/.test(rhs)) continue
+    if (/^(sp\.get|parseSituation|sanitizeWish|sanitizeJobText|sanitizeCerts|wishLooksHeavy|typeof|new Date\(\)\.getFullYear|exactAge)/.test(rhs)) continue
     if (/^['"`\d]|^(true|false)|^mode ===|^sp\.get\(/.test(rhs)) continue
     if (/\|\| '|\?\s*\(?\s*wayFromPicks|=== 'unknown'/.test(rhs)) continue   // 글자로 끝나는 식
     if (/^(parse|\[|\{|new |[A-Za-z_]+\()/.test(rhs)) unstable.push(`${d} = ${rhs.slice(0, 40)}`)

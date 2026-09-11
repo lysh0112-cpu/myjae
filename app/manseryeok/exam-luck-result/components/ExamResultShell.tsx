@@ -43,7 +43,7 @@ import { buildSevenPrompt, sevenOf, legacyOf, isLegacyTong, SEVEN_GROUPS, sevenK
 import { judgePassSignal, passSignalBlock } from '@/lib/saju/examLuck/passSignal'
 import { upsangBlock as buildUpsangBlock } from '@/lib/saju/examLuck/tables/upsang'
 import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
-import { examKindOf, CLOSING, CLOSING_STUDENT } from '@/lib/saju/examLuck/tables/rules'
+import { examKindOf } from '@/lib/saju/examLuck/tables/rules'
 import { GRADE_PROMPT, gradeLabel, levelLabel, trackOf, categoryLabel, targetOf } from '@/lib/saju/examLuck/tables/studentTarget'
 import { saveRecord, updateRecordResult, getRecord } from '@/lib/saju/sajuRecords'
 import { calcSeyunList, calcWolunList, type DayunItem } from '@/lib/saju/dayun'
@@ -53,7 +53,7 @@ import type { ExamCard, ExamInput, ExamTarget, YearLuck } from '@/lib/saju/examL
 import { refreshBeforeAi } from '@/lib/ai/freshCall'
 import { cardJobFit } from '@/lib/saju/examLuck/buildCards'
 import { pickStructure } from '@/lib/saju/career/jobStructure'
-import { goalLabel, sanitizeWish, wishLooksHeavy, WISH_KEY, readWishHandoff, parseGates, parseSituation, JOB_SITUATIONS, JOB_GATES, parsePicks, wayFromPicks, readJobTextHandoff, sanitizeJobText } from '@/lib/saju/examLuck/tables/jobFields'
+import { goalLabel, sanitizeWish, wishLooksHeavy, WISH_KEY, readWishHandoff, parseGates, parseSituation, JOB_SITUATIONS, JOB_GATES, parsePicks, wayFromPicks, readJobTextHandoff, sanitizeJobText, readCertsHandoff, sanitizeCerts } from '@/lib/saju/examLuck/tables/jobFields'
 
 const ACCENT = '#c85a8c'
 const BG = '#FDF6F0'
@@ -113,6 +113,9 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
   /* ★6부 [대표님] ② 방식 칸에 직접 적은 말 (요리사 · 간호사처럼 애매한 분) — 주소가 아니라 건넴 · 기록에서 */
   const [jobText, setJobText] = useState<string>(() => (recordId ? '' : readJobTextHandoff()))
   const jobTextForSave = sanitizeJobText(jobText)
+  /* ★6부 [대표님] 가진 자격증 — 주소가 아니라 건넴 · 기록에서 */
+  const [certs, setCerts] = useState<string>(() => (recordId ? '' : readCertsHandoff()))
+  const certsForSave = sanitizeCerts(certs)
   const wishHeavy = wishLooksHeavy(wishForSave)
   // ★2026-07-29 — 학생이 고른 목표 (2단 드롭다운)
   const examCategory = sp.get('examCategory') || ''
@@ -382,7 +385,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         //     ⚠️ 고민 글은 민감할 수 있어 «기록에만» 둡니다 — 보관함이 주소에 싣지 않습니다.
         way: wayRaw, wish: wishForSave || null,
         //  ★6부 — 고른 직업 · 직접 적은 방식 (보관함 · [풀이 다시 받기])
-        jobs: picks.join('|') || null, jobText: jobTextForSave || null,
+        jobs: picks.join('|') || null, jobText: jobTextForSave || null, certs: certsForSave || null,
         //  ★6부 [대표님 알약] 지금 상황 · 관문 (보관함이 다시 열 때 주소에 실음)
         sit, gates: gates ? gates.join(',') : null,
       },
@@ -392,7 +395,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       if (typeof window !== 'undefined') sessionStorage.removeItem(WISH_KEY)
     })
   }, [calc, cards, recordId, person, target, kind, examKind, examDateRaw, studentGrade, gradeLevel,
-      trackSel, examCategory, targetType, targetCustomText, way, wayRaw, wishForSave, sit, gates, picks, jobTextForSave])
+      trackSel, examCategory, targetType, targetCustomText, way, wayRaw, wishForSave, sit, gates, picks, jobTextForSave, certsForSave])
 
   // ── ⑤ 통변 (SSE) ─────────────────────────────────────────
   useEffect(() => {
@@ -448,6 +451,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         wish: wishForSave || null,
         wishHeavy,
         jobText: jobTextForSave || null,   // ★6부 — 직접 적은 일하는 방식 · 직업
+        certs: certsForSave || null,       // ★6부 — 가진 자격증
         //  ★6부 [대표님 알약] — 고르지 않은 관문 이야기를 쓰지 않게
         jobSituation: sit,
         jobGates: gates,
@@ -782,7 +786,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
     //   빠뜨리면 재료가 바뀌어도 옛 통변이 그대로 남습니다.
   }, [calc, cards, recordId, person, target, kind, studentGrade, gradeLevel, trackSel,
       examCategory, targetType, targetCustomText, examDateRaw, examDayForPrompt, thisYear,
-      signalBlock, upsangMaterial, dayunReady, retryRecord, examKind, cardsAll, way, wishForSave, wishHeavy, sit, gates, picks, jobTextForSave])
+      signalBlock, upsangMaterial, dayunReady, retryRecord, examKind, cardsAll, way, wishForSave, wishHeavy, sit, gates, picks, jobTextForSave, certsForSave])
 
   // ── ⑥ 다시보기 — 저장본 불러오기 ──────────────────────────
   useEffect(() => {
@@ -798,6 +802,8 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       if (savedWish) setWish(savedWish)
       const savedJobText = (r.inputData as { jobText?: string } | undefined)?.jobText
       if (savedJobText) setJobText(savedJobText)
+      const savedCerts = (r.inputData as { certs?: string } | undefined)?.certs
+      if (savedCerts) setCerts(savedCerts)
       const t = (r.resultData as { tong?: string } | undefined)?.tong ?? ''
       if (t) { setTong(t); setTongState('done') }
       else setEmptyRecord(true)
@@ -860,6 +866,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
           }}>
             {examKind?.startsWith('field:') ? goalLabel(examKind.slice(6), way, picks) : kindLabel}을(를) 기준으로 보았습니다.
             {jobTextForSave && ` 적어 주신 방식: ${jobTextForSave}.`}
+            {certsForSave && ` 가진 자격증: ${certsForSave}.`}
             {/* ★6부 [대표님 알약] 고른 상황 · 관문 */}
             {sit && ` ${JOB_SITUATIONS.find(o => o.key === sit)?.label}${gates && gates.length ? ` · ${gates.map(g => JOB_GATES.find(o => o.key === g)?.label).join(' · ')}` : ''}.`}
             {examDateRaw && ` 시험 날짜 ${examDateRaw} 도 함께 짚었어요.`}
@@ -1109,7 +1116,10 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
                [왜] 리포트 맨 끝은 손님이 «그래서 나는 어떻게 하지» 하고 덮는 자리입니다.
                     운에 일희일비하지 말라는 말이 여기서 가장 힘이 있습니다.
                     전에는 다른 카드와 같은 결이라 그냥 지나쳤습니다.
-             ⚠️ 문구는 교재 195쪽 그대로입니다. 손대지 마십시오. (CLOSING·CLOSING_STUDENT) */}
+             ★2026-09-11 (6부) [대표님 「겹치지 · 아예 빼버리자」] 교재 맺음말 줄을 이 상자에서 뺐습니다.
+               [왜] 4번 갈래(마지막 응원)가 이미 맺음말을 풀어 쓰는데, 이 상자가 같은 말을 한 번 더 보여 줬습니다.
+               ⇒ 상자에는 «사주는 지도일 뿐 …» 한 줄만 남깁니다 (검사 45).
+               ⚠️ 교재 맺음말(CLOSING)은 AI 재료로는 그대로 갑니다 — 4번 갈래가 풀어 씁니다. */}
         <div style={{
           marginTop: 14,
           background: 'linear-gradient(135deg, rgba(253,238,244,0.95) 0%, rgba(250,244,238,0.9) 100%)',
@@ -1124,16 +1134,9 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
               마지막으로 드리고 싶은 말
             </span>
           </div>
-          {(target === 'student' ? CLOSING_STUDENT : CLOSING).map((l, i) => (
-            <p key={i} style={{
-              margin: i === 0 ? 0 : '8px 0 0',
-              fontSize: 12.8, color: '#7a4055', lineHeight: 1.9,
-              wordBreak: 'keep-all', overflowWrap: 'anywhere',
-            }}>{l}</p>
-          ))}
           <div style={{
-            marginTop: 13, paddingTop: 12, borderTop: '1px solid rgba(200,90,140,0.18)',
-            fontSize: 12, color: '#96607a', lineHeight: 1.8,
+            fontSize: 13, color: '#7a4055', lineHeight: 1.9,
+            wordBreak: 'keep-all', overflowWrap: 'anywhere',
           }}>
             사주는 지도일 뿐, 걷는 것은 {target === 'student' ? '학생' : '본인'} 자신입니다.
             좋은 때라도 손을 놓으면 지나가고, 더딘 때라도 쌓아 두면 다음 때에 터집니다.
