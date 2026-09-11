@@ -27,6 +27,8 @@ import { dayunTrend } from './examScore'
 import { verdictOf, jobChangeReasons, type JobChangeHit } from './jobChange'
 import { pickAdvice } from './tables/jobChange'
 import type { ExamDayResult } from './examDay'
+import { wayOf, STRUCT_PLAIN } from './tables/jobFields'
+import type { StructHit } from '../career/jobStructure'
 
 type DayunLite = { age: number; cheongan: string; jiji: string; ganYukchin: string; jiYukchin: string }
 
@@ -354,6 +356,34 @@ export function cardExamDay(r: ExamDayResult | null): ExamCard | null {
 // ══════════════════════════════════════════════════════════════
 //  카드를 한 번에 만든다 — 화면은 이것만 부르면 된다
 // ══════════════════════════════════════════════════════════════
+
+/* ★2026-09-11 (6부) [대표님 — 두 단계 콤보] 「고르신 일하는 방식과 사주」 카드 — 교재 202~204쪽 (검사 44)
+ *   진로적성 엔진의 pickStructure(직업별 사주 구조) 판정을 그대로 받아, 고른 방식과 견줍니다.
+ *   ⚠️ 겁주지 않습니다 — 다른 구조가 더 뚜렷해도 「안 맞는다」 대신 「함께 살리면 좋다」 로 씁니다.
+ *   ⚠️ 이 카드는 «적성» 입니다. 해마다 점수(시기)에는 넣지 않습니다. */
+export function cardJobFit(hits: StructHit[], way?: string | null): ExamCard {
+  const w = wayOf(way)
+  const top = hits.slice(0, 2)
+  const topPlain = top.map(h => STRUCT_PLAIN[h.key] ?? h.name)
+  const mine = hits.find(h => w.structKeys.includes(h.key))
+  const lines: string[] = []
+  if (w.key === 'unknown') {
+    lines.push(top.length
+      ? `사주 구조로 보면 ${topPlain.join(' · ')} 쪽이 가장 잘 맞습니다.`
+      : '사주 구조로는 어느 한쪽이 뚜렷하게 드러나지 않습니다. 끌리는 길을 편하게 고르셔도 됩니다.')
+  } else if (mine) {
+    lines.push(`고르신 «${w.label}»는 사주 구조와 잘 맞습니다.`)
+  } else if (top.length) {
+    lines.push(`사주 구조로는 ${topPlain.join(' · ')} 쪽이 더 뚜렷합니다. 고르신 «${w.label}» 길을 가시면서, 그 장점을 함께 살리면 좋습니다.`)
+  } else {
+    lines.push(`사주 구조로는 어느 한쪽이 뚜렷하게 드러나지 않습니다. 고르신 «${w.label}» 길을 편하게 가셔도 됩니다.`)
+  }
+  const reasons = [
+    `[교재 202~204쪽 직업별 사주 구조] 고른 방식: ${w.label}`,
+    ...hits.slice(0, 3).map(h => `- ${h.name} (${h.score}점): ${h.why.slice(0, 3).join(' · ')}`),
+  ]
+  return { key: 'jobfit', title: '고르신 일하는 방식과 사주', lines, reasons }
+}
 
 export interface BuildAllArgs {
   input: ExamInput

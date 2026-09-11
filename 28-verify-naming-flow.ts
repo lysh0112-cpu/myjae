@@ -2816,6 +2816,7 @@ console.log('\n━━ ㉓-b 🔴 연재쌤 규칙 보충 검사(43번)가 «전�
   //  ⚠️ 43번은 실제 사주로 점수를 돌려 재는 검사입니다. 전체 검사에서 빠지면 규칙이 틀어져도 모릅니다.
   const pkg = read('package.json')
   check(/tsx 43-verify-exam-rules-yeonjae\.ts/.test(pkg), `★npm run verify 가 43번 검사를 돕니다`)
+  check(/tsx 44-verify-exam-jobfield\.ts/.test(pkg), `★npm run verify 가 44번 검사(두 단계 콤보 · 고민 칸)를 돕니다`)
 }
 
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)

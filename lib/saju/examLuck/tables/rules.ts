@@ -11,6 +11,7 @@
 //    잠정값으로 돌리고 있으니 확인 뒤 고쳐 주십시오.
 
 import type { Sipsin } from '../types'
+import { fieldOf } from './jobFields'
 
 /** 규칙 한 줄 */
 export interface RuleRow {
@@ -286,6 +287,13 @@ export const EXAM_KINDS: ExamKindRow[] = [
 
 export function examKindOf(key?: string | null): ExamKindRow | null {
   if (!key) return null
+  /* ★2026-09-11 (6부) — 「field:분야」 도 알아봅니다 (취업운 두 단계 콤보 · 검사 44).
+   *   분야 표(jobFields.ts)의 십신을 그대로 써서, 판정(고른시험십신 +2)과 카드가 옛 목록과 똑같이 돕니다.
+   *   ⚠️ 옛 기록의 gongsa · chwieop · gyoyuk 은 아래 EXAM_KINDS 에 그대로 남아 열립니다. */
+  if (key.startsWith('field:')) {
+    const f = fieldOf(key.slice(6))
+    return f ? { key, label: f.label, sipsins: f.sipsins, purpose: 'job', src: f.src } : null
+  }
   return EXAM_KINDS.find(k => k.key === key) ?? null
 }
 

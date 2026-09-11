@@ -21,6 +21,7 @@ import { exactAge } from '@/lib/saju/ageDayun'
 // ★2026-07-27 — 손님이 시험 종류를 고르면 교재 230쪽 짝에 따라 볼 십신이 정해진다.
 import { EXAM_KINDS } from '@/lib/saju/examLuck/tables/rules'
 import { EXAM_CATEGORIES, TARGETS, STUDENT_GRADES, GRADE_LEVELS, TRACKS, examKindFromTarget } from '@/lib/saju/examLuck/tables/studentTarget'
+import { JOB_FIELDS, JOB_WAYS, itemsFor, WISH_MAX, writeWishHandoff } from '@/lib/saju/examLuck/tables/jobFields'
 
 const ACCENT = '#c85a8c'
 const SOFT = '#f7e6ee'
@@ -64,6 +65,12 @@ function ExamLuckInputInner() {
   const kind: Kind = tab === 'jinhak' ? 'exam' : jobMode
   /** ★어떤 시험인가 — 교재 230쪽이 십신마다 시험을 짝지어 놨다 */
   const [examKind, setExamKind] = useState<string>('')
+  /* ★2026-09-11 (6부) [대표님 「직종별로 세분화 · 콤보 두 개로 좁혀지게」] — 일자리를 구해요 쪽 두 단계 콤보
+   *   ① 분야 (교재 206~210쪽 · 시기) — 꼭 고름   ② 일하는 방식 (202~204쪽 · 적성) — 기본 「아직 모르겠어요」 */
+  const [field, setField] = useState<string>('')
+  const [way, setWay] = useState<string>('unknown')
+  /** ★6부 [대표님 「희망사항을 자유롭게」] 궁금한 것이나 고민 — 선택 · 200자 */
+  const [wish, setWish] = useState<string>('')
   /** ★시험 날짜 — 몰라도 된다. 알면 그 달·그 날까지 짚어 준다 (교재 195쪽) */
   const [examDate, setExamDate] = useState<string>('')
   /**
@@ -96,7 +103,7 @@ function ExamLuckInputInner() {
   const gradeOk = target !== 'student' || !!studentGrade
   const targetOk = target === 'student'
     ? !!examCategory && !!targetType && (targetType !== 'custom' || !!targetCustomText.trim())
-    : !!examKind
+    : (kind === 'job' ? !!field : !!examKind)   // ★6부 — 일자리는 ① 분야만 꼭
   const dateOk = !!examDate
   const canGo = gradeOk && targetOk && dateOk
 
@@ -120,8 +127,12 @@ function ExamLuckInputInner() {
     p.set('kind', kind)
     p.set('target', target)
     // ★진학 탭이면 목표에서 자동으로 이어 줍니다. 손님이 두 번 고를 일이 없습니다.
-    const autoKind = target === 'student' ? examKindFromTarget(examCategory) : examKind
+    //  ★6부 — 일자리를 구해요는 두 단계 콤보: examKind='field:분야' · way=방식
+    //     ⚠️ 고민 글(wish)은 주소에 싣지 않습니다 — [보기] 누를 때 writeWishHandoff 로 건넵니다.
+    const autoKind = target === 'student' ? examKindFromTarget(examCategory)
+      : (kind === 'job' ? (field ? `field:${field}` : '') : examKind)
     if (autoKind) p.set('examKind', autoKind)
+    if (target !== 'student' && kind === 'job' && field) p.set('way', way)
     if (examDate) p.set('examDate', examDate)
     // ★학생 목표 — 학생일 때만 싣는다
     if (target === 'student' && studentGrade) p.set('studentGrade', studentGrade)
@@ -137,7 +148,7 @@ function ExamLuckInputInner() {
       }
     }
     return p.toString()
-  }, [sp, kind, target, examKind, examDate, studentGrade, needsLevel, gradeLevel, track, examCategory, targetType, targetCustomText])
+  }, [sp, kind, target, examKind, examDate, studentGrade, needsLevel, gradeLevel, track, examCategory, targetType, targetCustomText, field, way])
 
 
   const Btn = ({ on, title, sub, onClick }: { on: boolean; title: string; sub: string; onClick: () => void }) => (
@@ -190,7 +201,7 @@ function ExamLuckInputInner() {
                   setTab(t.key)
                   // ★탭을 바꾸면 반대쪽 값을 비웁니다.
                   //   안 비우면 진학에서 고른 «과학고» 가 취업 결과에 실려 갑니다.
-                  setExamKind(''); setStudentGrade(''); setGradeLevel(''); setTrack('')
+                  setExamKind(''); setField(''); setWay('unknown'); setStudentGrade(''); setGradeLevel(''); setTrack('')
                   setExamCategory(''); setTargetType(''); setTargetCustomText('')
                 }}
                 style={{
@@ -221,7 +232,7 @@ function ExamLuckInputInner() {
               { key: 'job' as Kind, title: '일자리를 구해요', sub: '취업 · 이직 · 면접' },
             ]).map(o => (
               <Btn key={o.key} on={jobMode === o.key} title={o.title} sub={o.sub}
-                onClick={() => { setJobMode(o.key); setExamKind('') }} />
+                onClick={() => { setJobMode(o.key); setExamKind(''); setField(''); setWay('unknown') }} />
             ))}
           </>
         )}
@@ -338,7 +349,55 @@ function ExamLuckInputInner() {
                  바로 아래에 또 「어떤 시험인가요?」가 떠서 같은 것을 두 번 물었습니다.
                  게다가 목록이 성인용이라 중학생에게 «공무원 시험·로스쿨·영양사» 가 보였습니다.
                → 진학 탭은 위 «목표 2단 드롭다운» 이 이 역할을 이미 합니다. 여기서는 뺍니다. */}
-        {target !== 'student' && (
+        {/* ★2026-09-11 (6부) [대표님] 일자리를 구해요 — 두 단계 콤보 (검사 44)
+             ① 분야(17) → 그 분야에 힘을 싣는 해를 봅니다 (교재 206~210쪽)
+             ② 일하는 방식(8) → 사주 구조와 맞는지 봅니다 (202~204쪽)
+             두 개를 고르면 교재에 나온 직업 가운데 딱지가 맞는 것만 보입니다. */}
+        {target !== 'student' && kind === 'job' && (
+          <>
+            <div style={{ fontSize: 12.5, color: '#8a7063', margin: '18px 2px 9px' }}>
+              ① 어떤 분야인가요? <span style={{ color: ACCENT, fontWeight: 600 }}>*</span>
+            </div>
+            <select value={field} onChange={e => setField(e.target.value)}
+              style={{
+                width: '100%', padding: '13px 14px', borderRadius: 12, marginBottom: 10,
+                background: CARD, border: field ? `0.5px solid ${LINE}` : `1.5px solid ${ACCENT}55`,
+                color: '#3a2e28', fontSize: 14, fontFamily: 'inherit', appearance: 'none',
+              }}>
+              <option value="">골라 주세요</option>
+              {JOB_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+            </select>
+            <div style={{ fontSize: 12.5, color: '#8a7063', margin: '6px 2px 9px' }}>
+              ② 어떤 방식으로 일하고 싶으세요? <span style={{ color: '#a3907f' }}>(몰라도 됩니다)</span>
+            </div>
+            <select value={way} onChange={e => setWay(e.target.value)}
+              style={{
+                width: '100%', padding: '13px 14px', borderRadius: 12, marginBottom: 10,
+                background: CARD, border: `0.5px solid ${LINE}`,
+                color: '#3a2e28', fontSize: 14, fontFamily: 'inherit', appearance: 'none',
+              }}>
+              {JOB_WAYS.map(w => <option key={w.key} value={w.key}>{w.label}</option>)}
+            </select>
+            {field && (() => {
+              const { items, narrowed } = itemsFor(field, way)
+              return (
+                <div style={{ background: '#fff', border: `0.5px solid ${LINE}`, borderRadius: 12, padding: '10px 12px', marginBottom: 6 }}>
+                  <div style={{ fontSize: 11.5, color: '#8a7063', marginBottom: 4 }}>
+                    {narrowed ? '이런 일이 해당돼요' : '이 분야의 일 (방식을 고르면 좁혀져요)'}
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                    {items.map(i => (
+                      <span key={i.name} style={{ fontSize: 11.5, color: '#8c4a63', background: SOFT,
+                        border: `0.5px solid ${ACCENT}44`, borderRadius: 10, padding: '3px 8px' }}>{i.name}</span>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
+          </>
+        )}
+
+        {target !== 'student' && kind !== 'job' && (
           <>
             <div style={{ fontSize: 12.5, color: '#8a7063', margin: '18px 2px 9px' }}>
               목표 시험·직종 <span style={{ color: ACCENT, fontWeight: 600 }}>*</span>
@@ -393,6 +452,25 @@ function ExamLuckInputInner() {
           정확히 모르시면 위 단추로 어림잡아 고르셔도 됩니다.
         </div>
 
+        {/* ★2026-09-11 (6부) [대표님 「희망사항을 자유롭게 기술하게」] — 궁금한 것이나 고민 (선택 · 검사 44)
+             적으면 풀이에 「적어 주신 고민에 대한 답」 단락이 한 번 들어갑니다.
+             ⚠️ 주소에 싣지 않습니다 (writeWishHandoff) · 결과 화면이 기록에만 저장합니다. */}
+        <div style={{ fontSize: 12.5, color: '#8a7063', margin: '18px 2px 9px' }}>
+          궁금한 것이나 고민을 적어 주세요 <span style={{ color: '#a3907f' }}>(선택)</span>
+        </div>
+        <textarea value={wish} onChange={e => setWish(e.target.value)} maxLength={WISH_MAX} rows={3}
+          placeholder={target === 'student'
+            ? '예: 수시와 정시 중 어디에 더 힘을 써야 할지 고민이에요'
+            : '예: 회사를 그만두고 준비할지, 다니면서 준비할지 고민이에요'}
+          style={{
+            width: '100%', padding: '12px 14px', borderRadius: 12, boxSizing: 'border-box',
+            background: CARD, border: `0.5px solid ${LINE}`, color: '#3a2e28',
+            fontSize: 13.5, fontFamily: 'inherit', lineHeight: 1.6, resize: 'vertical',
+          }} />
+        <div style={{ fontSize: 11, color: '#a3907f', textAlign: 'right', margin: '3px 2px 0' }}>
+          {wish.length} / {WISH_MAX}
+        </div>
+
         {/* ★못 넘어가는 까닭을 알려 준다. 단추만 흐리면 손님이 왜 안 되는지 모릅니다. */}
         {!canGo && (
           <div style={{
@@ -401,7 +479,7 @@ function ExamLuckInputInner() {
             fontSize: 11.5, color: '#8c4a63', lineHeight: 1.7,
           }}>
             {!gradeOk && <div>· 학년·신분을 골라 주세요.</div>}
-            {!targetOk && <div>· {target === 'student' ? '가고자 하는 목표' : '목표 시험·직종'}를 골라 주세요.</div>}
+            {!targetOk && <div>· {target === 'student' ? '가고자 하는 목표' : (kind === 'job' ? '① 분야' : '목표 시험·직종')}를 골라 주세요.</div>}
             {!dateOk && <div>· 시험(또는 발표) 날짜를 골라 주세요.</div>}
           </div>
         )}
@@ -418,6 +496,7 @@ function ExamLuckInputInner() {
             const to = target === 'student'
               ? '/manseryeok/exam-luck-result'
               : '/manseryeok/job-luck-result'
+            writeWishHandoff(wish)   // ★6부 — 고민 글은 주소 대신 여기로 건넵니다
             router.push(`${to}?${query}`)
           }}
           disabled={!canGo}

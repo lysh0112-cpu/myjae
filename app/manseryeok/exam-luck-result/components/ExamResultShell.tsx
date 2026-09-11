@@ -51,6 +51,9 @@ import SajuWonguk from '@/app/manseryeok/components/SajuWonguk'
 import ExamJudgeCard, { GRADE_STYLE } from './ExamJudgeCard'
 import type { ExamCard, ExamInput, ExamTarget, YearLuck } from '@/lib/saju/examLuck/types'
 import { refreshBeforeAi } from '@/lib/ai/freshCall'
+import { cardJobFit } from '@/lib/saju/examLuck/buildCards'
+import { pickStructure } from '@/lib/saju/career/jobStructure'
+import { goalLabel, sanitizeWish, wishLooksHeavy, WISH_KEY, readWishHandoff } from '@/lib/saju/examLuck/tables/jobFields'
 
 const ACCENT = '#c85a8c'
 const BG = '#FDF6F0'
@@ -85,6 +88,15 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
   const examKind = sp.get('examKind') || null
   const examDateRaw = sp.get('examDate') || ''
   const recordId = sp.get('recordId') || ''
+  /** ★2026-09-11 (6부) — 두 단계 콤보의 ② 일하는 방식 (① 분야는 examKind 'field:…' 로 옵니다) */
+  const way = sp.get('way') || 'unknown'
+  /* ★2026-09-11 (6부) [대표님 「희망사항을 자유롭게」] — 손님이 직접 적은 고민 (검사 44)
+   *   ⚠️ 주소(URL)에 싣지 않습니다 — 방문 기록에 고민 글이 남지 않게. 입력 화면이 sessionStorage 로 건넵니다.
+   *   ⚠️ 10분이 지난 건넴은 버립니다 (다른 사람을 보다가 남은 옛 글이 섞이지 않게 · readWishHandoff).
+   *   ⚠️ 보관함에서 다시 열면 기록에 저장된 글을 씁니다 (아래 다시보기 effect). */
+  const [wish, setWish] = useState<string>(() => (recordId ? '' : readWishHandoff()))
+  const wishForSave = sanitizeWish(wish)
+  const wishHeavy = wishLooksHeavy(wishForSave)
   // ★2026-07-29 — 학생이 고른 목표 (2단 드롭다운)
   const examCategory = sp.get('examCategory') || ''
   const targetType = sp.get('targetType') || ''
@@ -250,6 +262,16 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
     })
   }, [input, calc, dayunList, thisYear, kind, examDateRaw, studentGrade])
 
+  /* ★2026-09-11 (6부) — 「고르신 일하는 방식과 사주」 카드 (교재 202~204쪽 · 검사 44)
+   *   분야를 고른 취업 손님에게만 붙입니다. 진로적성 엔진의 구조 판정을 그대로 씁니다. */
+  const cardsAll: ExamCard[] = useMemo(() => {
+    if (!calc || !cards.length) return cards
+    if (target !== 'adult' || kind !== 'job' || !examKind?.startsWith('field:')) return cards
+    const hits = pickStructure({ saju: calc.saju, solarMonth: calc.solarMonth, solarDay: calc.solarDay,
+      hourBranch: calc.hourBranch, target: 'adult' })
+    return [...cards, cardJobFit(hits, way)]
+  }, [calc, cards, target, kind, examKind, way])
+
   /** 시험이 있는 해·달 — 달별 흐름표에 표시할 자리 */
   const examMonth = useMemo(() => {
     if (!examDateRaw) return null
@@ -339,10 +361,17 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         studentGrade: studentGrade || null, gradeLevel: gradeLevel || null, track: trackSel || null,
         examCategory: examCategory || null, targetType: targetType || null,
         targetCustomText: targetCustomText || null,
+        //  ★6부 — 두 단계 콤보의 방식 · 직접 적은 고민 (다시보기 · [풀이 다시 받기] 에 쓰임)
+        //     ⚠️ 고민 글은 민감할 수 있어 «기록에만» 둡니다 — 보관함이 주소에 싣지 않습니다.
+        way, wish: wishForSave || null,
       },
-    } as never).then(r => { if (r && (r as { id?: string }).id) savedIdRef.current = (r as { id: string }).id })
+    } as never).then(r => {
+      if (r && (r as { id?: string }).id) savedIdRef.current = (r as { id: string }).id
+      //  ★6부 — 건넴을 다 썼으니 지웁니다 (다음 사람에게 섞이지 않게)
+      if (typeof window !== 'undefined') sessionStorage.removeItem(WISH_KEY)
+    })
   }, [calc, cards, recordId, person, target, kind, examKind, examDateRaw, studentGrade, gradeLevel,
-      trackSel, examCategory, targetType, targetCustomText])
+      trackSel, examCategory, targetType, targetCustomText, way, wishForSave])
 
   // ── ⑤ 통변 (SSE) ─────────────────────────────────────────
   useEffect(() => {
@@ -375,7 +404,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       const sevenArgs = {
         name: person.name, gender: person.gender,
         age: exactAge(calc.solarYear, calc.solarMonth, calc.solarDay),
-        target, kind, cards, saju: calc.saju, hourUnknown: person.hour === '모름',
+        target, kind, cards: cardsAll, saju: calc.saju, hourUnknown: person.hour === '모름',
         // ★2026-07-30 — 지시서 2장 평가 결과를 재료로 싣습니다.
         signalBlock, upsangBlock: upsangMaterial,
         studentGrade: studentGrade ? gradeLabel(studentGrade) : null,
@@ -390,7 +419,13 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         //  ★2026-09-11 (6부) — 성인이 고른 직종 이름을 AI 에게 «직접» 넘깁니다 (검사 ㉓-a).
         //     「그 밖의 시험」 은 이름이 아니라 «안 정함» 이라 넘기지 않습니다.
         examKindLabel: target === 'adult' && examKind && examKind !== 'etc'
-          ? (examKindOf(examKind)?.label ?? null) : null,
+          ? (examKind.startsWith('field:')
+              ? goalLabel(examKind.slice(6), way)      // ★6부 — 두 단계 콤보: 「금융 · 보험 · 회사원 (은행 · …)」
+              : (examKindOf(examKind)?.label ?? null))
+          : null,
+        //  ★6부 — 손님이 직접 적은 고민 (거른 글) · 마음이 힘든 글인지
+        wish: wishForSave || null,
+        wishHeavy,
         examDate: examDateRaw || null,
         examDayNote: examDayForPrompt,
         year: thisYear,
@@ -720,7 +755,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
     //   빠뜨리면 재료가 바뀌어도 옛 통변이 그대로 남습니다.
   }, [calc, cards, recordId, person, target, kind, studentGrade, gradeLevel, trackSel,
       examCategory, targetType, targetCustomText, examDateRaw, examDayForPrompt, thisYear,
-      signalBlock, upsangMaterial, dayunReady, retryRecord, examKind])
+      signalBlock, upsangMaterial, dayunReady, retryRecord, examKind, cardsAll, way, wishForSave, wishHeavy])
 
   // ── ⑥ 다시보기 — 저장본 불러오기 ──────────────────────────
   useEffect(() => {
@@ -731,6 +766,9 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       /* ★2026-09-11 (6부) — 풀이는 ★resultData 에 있습니다 (getRecord 가 주는 이름 · 진로적성과 같음).
        *   [전] «result» 로 꺼내 ★저장돼 있어도 늘 빈 칸이었습니다 (검사 ㉒-z).
        *   ⚠️ 풀이가 정말 없는 기록(굳었던 옛 기록)이면 [풀이 다시 받기] 를 보입니다. */
+      //  ★6부 — 기록에 저장된 고민 글 ([풀이 다시 받기] 가 이 글로 다시 씁니다)
+      const savedWish = (r.inputData as { wish?: string } | undefined)?.wish
+      if (savedWish) setWish(savedWish)
       const t = (r.resultData as { tong?: string } | undefined)?.tong ?? ''
       if (t) { setTong(t); setTongState('done') }
       else setEmptyRecord(true)
@@ -789,8 +827,22 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
             background: '#f7e6ee', border: '0.5px solid #d38caa', borderRadius: 12,
             padding: '10px 14px', marginBottom: 12, fontSize: 12.5, color: '#8c4a63', lineHeight: 1.7,
           }}>
-            {kindLabel}을(를) 기준으로 보았습니다.
+            {examKind?.startsWith('field:') ? goalLabel(examKind.slice(6), way) : kindLabel}을(를) 기준으로 보았습니다.
             {examDateRaw && ` 시험 날짜 ${examDateRaw} 도 함께 짚었어요.`}
+            {/* ★6부 — 「고르신 일하는 방식과 사주」 첫 줄 (교재 202~204쪽) */}
+            {cardsAll.find(c => c.key === 'jobfit')?.lines[0] && (
+              <div style={{ marginTop: 4 }}>{cardsAll.find(c => c.key === 'jobfit')!.lines[0]}</div>
+            )}
+          </div>
+        )}
+        {/* ★6부 — 적어 주신 고민 (손님이 «내 고민을 보고 썼구나» 를 알게) */}
+        {wishForSave && (
+          <div style={{
+            background: '#fff', border: `0.5px solid ${LINE}`, borderRadius: 12,
+            padding: '10px 14px', marginBottom: 12, fontSize: 12.5, color: '#5c3a1e', lineHeight: 1.7,
+          }}>
+            <div style={{ fontSize: 11, color: '#a3907f', marginBottom: 2 }}>적어 주신 고민</div>
+            {wishForSave}
           </div>
         )}
 
