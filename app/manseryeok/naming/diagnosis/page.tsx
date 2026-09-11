@@ -65,6 +65,7 @@ import NamingCertificateButton, {
 } from '@/app/manseryeok/naming/components/NamingCertificate'
 import { soundOhaengOf } from '@/lib/saju/sound/normalize'
 import { LINE_OUTER, LINE_WARN } from '@/lib/ui/line'
+import { refreshBeforeAi } from '@/lib/ai/freshCall'
 
 const NAMING_RESULT_KEY = 'naming_last_result_v1'
 
@@ -778,6 +779,7 @@ function DiagnosisInner() {
         saju.find(p => p.pillar === '시주')?.branch ?? null,
       )
       const sajuText = saju.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(', ')
+      await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
       const res = await fetch('/api/naming', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

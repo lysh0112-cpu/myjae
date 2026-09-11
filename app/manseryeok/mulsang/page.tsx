@@ -415,6 +415,7 @@ function MulsangInner() {
       const sajuText = saju.map(p => `${p.pillar}:${p.stem}${p.branch}`).join(', ')
       const seasonKo = SEASON_LABEL[monthBranch] ?? '계절 정보 없음'
       const hourKo = info && info.hourIdx !== null ? HOUR_LABEL[info.hourIdx] : '시간 모름'
+      await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
       const res = await fetch('/api/mulsang', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -434,6 +435,12 @@ function MulsangInner() {
           elementScores: yongsinResult.score,
         }),
       })
+      /* ★2026-09-11 (6부 둘째) — 서버가 «로그인한 사람» 만 받습니다 (㉒-o).
+       *   401 이면 뭉뚱그린 오류 대신 «까닭» 을 말합니다. 아래 finally 가 돌기 표시를 풉니다. */
+      if (res.status === 401) {
+        setImageError('로그인이 풀렸어요. 다시 로그인하시면 이어서 그릴 수 있어요.')
+        return
+      }
       const data = await res.json()
       setImageUrl(data.imageUrl ?? null)
       setCommentary(data.commentary ?? null)

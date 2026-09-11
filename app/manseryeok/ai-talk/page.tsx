@@ -13,6 +13,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { calcSaju } from '@/app/manseryeok/ai-chat/useSaju'
+import { refreshBeforeAi } from '@/lib/ai/freshCall'
 
 type Msg = { role: 'user' | 'assistant'; content: string }
 
@@ -111,6 +112,7 @@ function AiTalkInner() {
     setMessages((m) => [...m, { role: 'assistant', content: '' }])
 
     try {
+      await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
       const res = await fetch('/api/chat-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -123,6 +125,16 @@ function AiTalkInner() {
           userQuestion: text,
         }),
       })
+      /* ★2026-09-11 (6부 둘째) — 서버가 «로그인한 사람» 만 받습니다 (㉒-o).
+       *   401 은 대화 글이 아니라 «까닭» 이라 말풍선에 «가려서» 말합니다 (안 그러면 빈 말풍선만 남음). */
+      if (res.status === 401) {
+        setMessages((m) => {
+          const copy = [...m]
+          copy[copy.length - 1] = { role: 'assistant', content: '로그인이 필요해요. 로그인하시면 이어서 이야기할 수 있어요.' }
+          return copy
+        })
+        return
+      }
       if (!res.body) throw new Error('no stream')
       const reader = res.body.getReader()
       const decoder = new TextDecoder()

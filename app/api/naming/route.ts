@@ -25,6 +25,7 @@ import { W_FLOW, W_YONGSIN, W_BALANCE } from '@/lib/saju/resourceJudge'
 import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
 // ★2026-07-30 (3단계) — 관리자 🚨 AI 오류 탭에 남깁니다. naming 만 이것을 안 불렀습니다.
 import { logAiError, guessHint } from '@/lib/ai/errorLog'
+import { requireUser } from '../admin/_guard'
 
 /** NameChar(문자열 오행) → JudgeChar(정규화된 Ohaeng|null) */
 function toJudgeChar(c: NameChar): JudgeChar {
@@ -86,6 +87,12 @@ function emptyCommentary() {
 }
 
 export async function POST(req: Request) {
+  /* ★로그인 확인 (2026-09-11 · 6부 둘째) — 이 창구는 사장님 AI 열쇠로 돕니다.
+   *   ⚠️ 이 줄이 «없었습니다». 로그인 없이 누구든 부를 수 있었습니다.
+   *   ⚠️ 정상 손님은 이미 «로그인한 뒤» 여기 옵니다 (6부가 부르는 화면을 따라가 잼).
+   *   ⛔ 몸통을 읽기 «전» 에 둡니다 — 검사 ㉒-o 가 순서를 봅니다. */
+  const g = await requireUser()
+  if (!g.ok) return g.res
   try {
     const body = (await req.json()) as Body
 

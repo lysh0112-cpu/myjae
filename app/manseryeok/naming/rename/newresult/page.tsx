@@ -27,6 +27,7 @@ import {
   resolveNamingTarget, hasSaju, type NamingTarget,
 } from '@/lib/saju/namingSession'
 import { LINE_OUTER } from '@/lib/ui/line'
+import { refreshBeforeAi } from '@/lib/ai/freshCall'
 
 const GOLD = '#c8783c'
 // ══════════════════════════════════════════════════════════════════
@@ -536,6 +537,7 @@ function NewResultInner() {
       const sajuText = Array.isArray(saju)
         ? (saju as { pillar: string; stem: string; branch: string }[]).map((p) => `${p.pillar}:${p.stem}${p.branch}`).join(', ')
         : ''
+      await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
       const res = await fetch('/api/naming', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

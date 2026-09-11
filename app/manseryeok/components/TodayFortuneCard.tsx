@@ -31,6 +31,7 @@ import {
   scoreMonthlyFortune, monthTrend, pickGoodDays,
   MONTH_GRADE_LABEL, MONTH_GRADE_COLOR,
 } from '@/lib/saju/monthlyFortune'
+import { refreshBeforeAi } from '@/lib/ai/freshCall'
 
 type Fortune = {
   fortune_date: string
@@ -236,6 +237,7 @@ export default function TodayFortuneCard() {
     ;(async () => {
       setFortuneLoading(true)
       try {
+        await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
         const res = await fetch('/api/daily-fortune', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -357,6 +359,7 @@ export default function TodayFortuneCard() {
         // ② 없으면 AI로 만든다
         const ms = monthly.score
         const same = ms.area.envTag === ms.area.selfTag && ms.area.env === ms.area.self
+        await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
         const res = await fetch('/api/monthly-fortune', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

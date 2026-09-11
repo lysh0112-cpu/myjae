@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logAiError } from '@/lib/ai/errorLog'
+import { requireMaster } from '../admin/_guard'
 
 // ★2026-07-21: maxDuration 이 없으면 Vercel 기본값(10초)으로 돌아
 //   긴 AI 응답이 도중에 잘린다. 오류도 안 나서 원인을 찾기 어렵다.
@@ -7,6 +8,12 @@ export const runtime = 'nodejs'
 export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
+  /* ★관리자 확인 (2026-09-11 · 6부 둘째) — 부르는 곳이 «0곳» 인데 열려 있었습니다.
+   *   ⇒ 쓰는 사람이 없으니 ★관리자만 쓰게 잠갔습니다.
+   *   ⚠️ 상담사 화면이 쓰게 되면 그때 문지기를 «직원» 으로 바꾸십시오.
+   *   ⛔ 몸통을 읽기 «전» 에 둡니다 — 검사 ㉒-o 가 순서를 봅니다. */
+  const g = await requireMaster()
+  if (!g.ok) return g.res
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) return NextResponse.json({ error: 'API key not set' }, { status: 500 })

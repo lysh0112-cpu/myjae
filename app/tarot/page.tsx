@@ -11,6 +11,7 @@ import {
   saveTarotRecord, getTarotRecord,
   type TarotCategory, type TarotSavedCard,
 } from '@/lib/saju/tarotRecords'
+import { refreshBeforeAi } from '@/lib/ai/freshCall'
 
 const TAROT_MODE: 'ai' | 'consultant' = 'ai'
 
@@ -266,6 +267,7 @@ function TarotInner() {
     if (interp && interpKey === key) { setStep('result'); return }
     setLoading(true)
     try {
+      await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
       const res = await fetch('/api/tarot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

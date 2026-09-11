@@ -15,6 +15,7 @@ import {
 import {
   buildSajuOhaengProfile, judgeResource, candidateScore, compareCandidates,
 } from '@/lib/saju/resourceJudge'
+import { refreshBeforeAi } from '@/lib/ai/freshCall'
 
 const GOLD = '#FAC775'
 const CARD = '#2C2C2A'
@@ -348,6 +349,7 @@ function HanjaInner() {
     }
 
     try {
+      await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
       const res = await fetch('/api/naming-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

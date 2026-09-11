@@ -2,6 +2,7 @@
 // AI 작명 도우미 채팅 — 개명/새이름 추천 화면용
 import { NextResponse } from 'next/server'
 import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
+import { requireUser } from '../admin/_guard'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -27,6 +28,12 @@ const SYSTEM_PROMPT = `당신은 '명연재'의 작명 도우미입니다. 사�
 const FAIL_REPLY = '연결이 잠시 불안정해요. 다시 한 번 여쭤봐 주세요.'
 
 export async function POST(req: Request) {
+  /* ★로그인 확인 (2026-09-11 · 6부 둘째) — 이 창구는 사장님 AI 열쇠로 돕니다.
+   *   ⚠️ 이 줄이 «없었습니다». 로그인 없이 누구든 부를 수 있었습니다.
+   *   ⚠️ 정상 손님은 이미 «로그인한 뒤» 여기 옵니다 (6부가 부르는 화면을 따라가 잼).
+   *   ⛔ 몸통을 읽기 «전» 에 둡니다 — 검사 ㉒-o 가 순서를 봅니다. */
+  const g = await requireUser()
+  if (!g.ok) return g.res
   try {
     const body = (await req.json()) as Body
     const { messages, context } = body

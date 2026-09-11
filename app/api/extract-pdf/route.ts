@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireMaster } from '../admin/_guard'
 
 export async function POST(req: NextRequest) {
+  /* ★관리자 확인 (2026-09-11 · 6부 둘째) — 부르는 곳이 «0곳» 인데 열려 있었습니다.
+   *   ⇒ 쓰는 사람이 없으니 ★관리자만 쓰게 잠갔습니다.
+   *   ⚠️ 상담사 화면이 쓰게 되면 그때 문지기를 «직원» 으로 바꾸십시오.
+   *   ⛔ 몸통을 읽기 «전» 에 둡니다 — 검사 ㉒-o 가 순서를 봅니다. */
+  const g = await requireMaster()
+  if (!g.ok) return g.res
   try {
     const formData = await req.formData()
     const file = formData.get('file') as File

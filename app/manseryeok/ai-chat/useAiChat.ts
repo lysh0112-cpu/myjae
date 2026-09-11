@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Message, ChatMode } from './data'
+import { refreshBeforeAi } from '@/lib/ai/freshCall'
 
 export function useAiChat({
   mode, storageKey, userQuestion,
@@ -75,6 +76,7 @@ export function useAiChat({
 
     try {
       abortRef.current = new AbortController()
+      await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
       const res = await fetch('/api/chat-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -88,6 +90,16 @@ export function useAiChat({
         signal: abortRef.current.signal,
       })
 
+      /* ★2026-09-11 (6부 둘째) — 서버가 «로그인한 사람» 만 받습니다 (㉒-o).
+       *   401 은 대화 글이 아니라 «까닭» 이라 말풍선에 «가려서» 말합니다 (안 그러면 빈 말풍선만 남음). */
+      if (res.status === 401) {
+        setMessages(prev => {
+          const updated = [...prev]
+          updated[updated.length - 1] = { role: 'assistant', content: '로그인이 필요해요. 로그인하시면 이어서 이야기할 수 있어요.' }
+          return updated
+        })
+        return
+      }
       const reader = res.body!.getReader()
       const decoder = new TextDecoder()
       let aiText = ''

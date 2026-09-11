@@ -12,6 +12,7 @@ import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
 import { createClient } from '@supabase/supabase-js'
 import { withNim } from '@/lib/saju/honorific'
 import { logAiError } from '@/lib/ai/errorLog'
+import { requireUser } from '../admin/_guard'
 
 // 간지 문자열 → {stem, branch} (기존 splitGanji 방식 동일)
 function splitGanji(ganji: string): { stem: string; branch: string } {
@@ -48,6 +49,12 @@ export const runtime = 'nodejs'
 export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
+  /* ★로그인 확인 (2026-09-11 · 6부 둘째) — 이 창구는 사장님 AI 열쇠로 돕니다.
+   *   ⚠️ 이 줄이 «없었습니다». 로그인 없이 누구든 부를 수 있었습니다.
+   *   ⚠️ 정상 손님은 이미 «로그인한 뒤» 여기 옵니다 (6부가 부르는 화면을 따라가 잼).
+   *   ⛔ 몸통을 읽기 «전» 에 둡니다 — 검사 ㉒-o 가 순서를 봅니다. */
+  const g = await requireUser()
+  if (!g.ok) return g.res
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) {

@@ -2359,14 +2359,23 @@ console.log('\n━━ ㉒-o 🔴 AI 창구가 «로그인한 사람» 만 받는
   //
   //  ★정상적인 손님은 이미 «로그인 + 결제» 를 거쳐 여기 옵니다 (6부가 길을 따라가 잼).
   //     ⇒ 로그인 확인을 넣어도 ★불편해질 손님이 없습니다.
-  const LOCKED = ['app/api/analyze/route.ts', 'app/api/tongbyeon/route.ts']
-  for (const f of LOCKED) {
-    const c = codeOf(read(f))
-    const body = c.slice(Math.max(0, c.search(/export async function POST/)))
-    const guard = body.search(/await requireUser\(\)/)
-    const work = body.search(/\.json\(\)|fetch\(/)
-    check(c.length > 0 && guard >= 0 && guard < work,
-      `⛔ ${f.split('/')[2]} 가 ★맨 앞에서 로그인을 봅니다`)
+  //  ★2026-09-11 (6부 둘째) — 나머지 아홉도 잠갔습니다 [대표님 「8번 해줘」]
+  //     6부가 부르는 화면을 하나씩 따라가 «정상 손님은 모두 로그인한 뒤» 임을 확인하고 잠갔습니다.
+  //     🔴 가장 위험했던 곳 — mulsang : 몸통의 그림 주문을 ★그대로 그림 AI(OpenAI)에 넘겼습니다.
+  //     ⚪ summarize · extract-pdf 는 부르는 곳이 «0곳» — ★관리자만 쓰게 잠갔습니다.
+  //        (상담사 화면이 쓰게 되면 그때 문지기를 «직원» 으로 바꾸십시오)
+  const LOCKED_USER = ['analyze', 'tongbyeon', 'chat-stream', 'daily-fortune', 'monthly-fortune',
+    'mulsang', 'naming', 'naming-chat', 'tarot']
+  const LOCKED_MASTER = ['summarize', 'extract-pdf']
+  for (const [names, who] of [[LOCKED_USER, 'User'], [LOCKED_MASTER, 'Master']] as const) {
+    for (const n of names) {
+      const c = codeOf(read(`app/api/${n}/route.ts`))
+      const body = c.slice(Math.max(0, c.search(/export async function POST/)))
+      const guard = body.search(new RegExp(`await require${who}\\(\\)`))
+      const work = body.search(/\.json\(\)|\.formData\(\)|fetch\(/)
+      check(c.length > 0 && guard >= 0 && (work < 0 || guard < work),
+        `⛔ ${n} 가 ★맨 앞에서 ${who === 'User' ? '로그인을' : '관리자를'} 봅니다`)
+    }
   }
 
   //  ★부르는 자리가 «직전에» 세션을 새로 받는가
@@ -2382,26 +2391,29 @@ console.log('\n━━ ㉒-o 🔴 AI 창구가 «로그인한 사람» 만 받는
   let callers = 0
   for (const f of walkApp('app').sort()) {
     const c = codeOf(read(f))
-    for (const m of c.matchAll(/fetch\('\/api\/(tongbyeon|analyze)'/g)) {
+    for (const m of c.matchAll(/fetch\('\/api\/(tongbyeon|analyze|chat-stream|daily-fortune|monthly-fortune|mulsang|naming|naming-chat|tarot)'/g)) {
       callers++
       const before = c.slice(Math.max(0, (m.index ?? 0) - 700), m.index)
       check(/await refreshBeforeAi\(\)/.test(before),
         `★${f.replace(/^app\//, '')} → ${m[1]} 를 부르기 «직전» 에 세션을 새로 받습니다`)
     }
   }
-  check(callers >= 11, `부르는 자리를 «폴더째» 셌습니다 (${callers}곳)`)
+  check(callers >= 20, `부르는 자리를 «폴더째» 셌습니다 (${callers}곳)`)
+  //  ★거절(401)을 «빈 말풍선» 이나 뭉뚱그린 오류로 두지 않고 까닭을 말하는가 (6부 둘째)
+  for (const f of ['app/manseryeok/ai-chat/useAiChat.ts', 'app/manseryeok/ai-talk/page.tsx',
+    'app/manseryeok/mulsang/page.tsx']) {
+    check(/res\.status === 401/.test(codeOf(read(f))),
+      `★${f.replace(/^app\/manseryeok\//, '')} 가 401 을 «가려» 말합니다`)
+  }
   const tv = codeOf(read('app/manseryeok/components/TongbyeonView.tsx'))
   check(/res\.status === 401/.test(tv),
     `★사주 통변이 401 을 「로그인이 풀렸어요」로 «가려» 말합니다`)
 
   //  ★AI 를 부르는 서버 길이 «몰래» 열리지 않게
-  //    ⚠️ 아래 목록은 ★«아직 로그인을 안 보는» 길입니다 (2026-09-11 현재).
-  //       ⇒ 잠그면 목록에서 «빼십시오». ⛔ 새 길을 여기에 «그냥 보태지» 마십시오.
+  //    ★2026-09-11 (6부 둘째) — «아직 로그인을 안 보는» AI 길 ★0곳 (아홉을 다 잠갔습니다).
+  //    ⛔ 이 목록에 새 길을 «보태지» 마십시오 — 보태야 한다면 까닭을 적고 대표님께 여쭈십시오.
   //    ★여기 없는 AI 길이 로그인을 안 보면 ★그 자리에서 걸립니다.
-  const STILL_OPEN = new Set([
-    'chat-stream', 'daily-fortune', 'extract-pdf', 'monthly-fortune',
-    'mulsang', 'naming-chat', 'naming', 'summarize', 'tarot',
-  ])
+  const STILL_OPEN = new Set<string>([])
   const walkApi = (d: string): string[] =>
     readdirSync(d).flatMap((n) => {
       const p = `${d}/${n}`

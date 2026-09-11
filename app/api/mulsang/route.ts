@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { buildToneBlockFromDB } from '@/lib/ai/tonePrompt'
 import { logAiError } from '@/lib/ai/errorLog'
+import { requireUser } from '../admin/_guard'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -24,6 +25,14 @@ interface Body {
 }
 
 export async function POST(req: Request) {
+  /* ★로그인 확인 (2026-09-11 · 6부 둘째)
+   *   🔴 아홉 창구 중 «가장 위험» 했습니다 — 몸통의 그림 주문(prompt)을 ★그대로 그림 AI(OpenAI)에 넘깁니다.
+   *      이 줄이 없어 누구든 사장님 OpenAI 열쇠로 «아무 그림이나» 그릴 수 있었습니다.
+   *   ⚠️ 정상 손님은 결제 시트(로그인 필요)를 지나 옵니다.
+   *   ⚠️ 로그인만으로 «다» 막히지는 않습니다 — 그림 주문을 서버가 만드는 것은 별도의 일입니다.
+   *   ⛔ 몸통을 읽기 «전» 에 둡니다 — 검사 ㉒-o 가 순서를 봅니다. */
+  const g = await requireUser()
+  if (!g.ok) return g.res
   try {
     const body = (await req.json()) as Body
 
