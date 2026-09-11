@@ -2661,6 +2661,27 @@ console.log('\n━━ ㉒-v 🔴 이달의 운세가 «자기 말투 칸» 을 �
   check(/이달의 운세 전용/.test(tm), `★말투 관리에 「이달의 운세 전용」 칸이 있습니다`)
 }
 
+console.log('\n━━ ㉒-w 🔴 매니저 «상담사 고르기» 단추 차례 (2026-09-11 · 6부) ━━')
+{
+  //  ★[대표님 2026-09-11 · 목업 승낙] 「홈화면으로 가는 버튼도 만들어줘야 하지 않을까?」
+  //     차례 — ① 홈 화면으로(새로) ② 관리자 화면으로 ③ 상담사들 (「숫자가 늘어날 수도 있거든」)
+  //  ⚠️ 상담사 단추는 consultants 표(활동 중 · sort 차례)에서 «저절로» 늘어납니다 — 따로 적지 않습니다.
+  //  ⚠️ 길 찾기 둘을 «맨 위» 에 둔 까닭 — 상담사가 늘어 목록이 길어져도 스크롤 없이 누릅니다.
+  const cs = codeOf(read('app/manseryeok/consultant/page.tsx'))
+  const a = cs.indexOf('if (isMaster && !consultantId) {')
+  const blk = a >= 0 ? cs.slice(a, cs.indexOf('\n  return (', a + 40)) : ''
+  //  ⚠️ 단추 글자를 «그림 글자까지» 찾습니다 — 주석 속 낱말에 걸리지 않게 (5부 교훈 · 6부가 또 밟을 뻔함)
+  const iHome = blk.indexOf('🏠 홈 화면으로'), iAdmin = blk.indexOf('⚙️ 관리자 화면으로'), iList = blk.indexOf('pickList.map(')
+  check(blk.length > 200, `고르기 화면을 찾았습니다`)
+  check(iHome >= 0 && iAdmin > iHome && iList > iAdmin,
+    `★차례가 «홈 → 관리자 → 상담사들» 입니다 [대표님]`)
+  check(/router\.push\('\/'\)/.test(blk), `★홈 화면으로 가 «/» 로 갑니다`)
+  check(/onClick=\{goAdminConsultant\}/.test(blk), `★관리자 화면으로 는 그대로 «상담사 관리» 탭으로 갑니다`)
+  check(/상담사 \{pickList\.length\}명/.test(blk), `★상담사 수를 «저절로» 셉니다 (늘어나도 고칠 곳 없음)`)
+  check(/from\('consultants'\)\.select\('id, name'\)\.eq\('active', true\)\.order\('sort'\)/.test(cs),
+    `★(짝) 상담사 단추는 표에서 «활동 중» 인 분을 차례대로 읽습니다`)
+}
+
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail > 0) {
   console.log('  ┌────────────────────────────────────────────────────────────┐')

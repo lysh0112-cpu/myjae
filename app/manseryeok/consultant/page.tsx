@@ -279,7 +279,7 @@ function ConsultantContent() {
   //
   //   ⚠️ from 이 «없는» 길도 있습니다 — 마이페이지 「🩺 상담 관리」·로그인 직후 welcome.
   //      그때 매니저는 ★고르기 화면으로 보냅니다. «막다른 길이 아닌» 자리이기 때문입니다.
-  //      (고르기 화면에는 「← 관리자 화면으로」가 있어 어디로든 갈 수 있습니다)
+  //      (고르기 화면 맨 위에 홈·관리자 단추가 있어 어디로든 갈 수 있습니다 — 2026-09-11 6부)
   //   ⛔ 매니저의 기본값을 /admin 으로 바꾸지 마십시오.
   //      마이페이지에서 온 매니저가 관리자 화면으로 튕겨 «온 길을 잃습니다».
   // ══════════════════════════════════════════════════════════════════════
@@ -500,7 +500,31 @@ function ConsultantContent() {
         fontFamily:"'Apple SD Gothic Neo','Noto Sans KR',sans-serif", boxSizing:'border-box'}}>
         <div style={{color:'#3a2e28', fontSize:16, fontWeight:600}}>어느 상담사의 화면을 볼까요?</div>
         <div style={{color:'#7d6a5b', fontSize:12, textAlign:'center', lineHeight:1.6}}>매니저는 점검·대리를 위해 상담사 화면에 들어갈 수 있어요.</div>
+        {/* ★2026-09-11 (6부) [대표님 · 목업 승낙] — 단추 차례를 바꾸고 «홈 가기» 단추를 더했습니다 (검사 ㉒-w).
+              ① 홈 (새로)  ② 관리자  ③ 상담사들
+              ⚠️ 이 주석에 단추 글자를 «그대로» 적지 마십시오 — 검사가 글자로 찾습니다 (5부 교훈).
+            [까닭]  「상담사들은 숫자가 늘어날 수도 있거든」 — 길 찾기 둘을 «맨 위» 에 두면
+                    목록이 길어져도 스크롤 없이 누릅니다. 전에는 관리자 단추가 «맨 아래» 였습니다.
+            ⚠️ 상담사 단추는 consultants 표(활동 중 · sort 차례)에서 «저절로» 늘어납니다.
+            ⚠️ 홈·관리자 단추는 «같은 모양» — 둘 다 «다른 곳으로 가는 길» 입니다. */}
         <div style={{display:'flex', flexDirection:'column', gap:8, width:'100%', maxWidth:320, marginTop:6}}>
+          <button onClick={() => router.push('/')}
+            style={{padding:'11px 0', borderRadius:10, border:'0.5px solid #96502e',
+              background:'#f4ece1', color:'#96502e', fontSize:13, cursor:'pointer',
+              fontFamily:'inherit'}}>
+            🏠 홈 화면으로
+          </button>
+          <button onClick={goAdminConsultant}
+            style={{padding:'11px 0', borderRadius:10, border:'0.5px solid #96502e',
+              background:'#f4ece1', color:'#96502e', fontSize:13, cursor:'pointer',
+              fontFamily:'inherit'}}>
+            ⚙️ 관리자 화면으로
+          </button>
+          <div style={{display:'flex', alignItems:'center', gap:8, margin:'8px 2px 0',
+            color:'#7d6a5b', fontSize:12}}>
+            <span style={{whiteSpace:'nowrap'}}>상담사 {pickList.length}명</span>
+            <span aria-hidden="true" style={{flex:1, height:0.5, background:'#c4af95'}} />
+          </div>
           {pickList.length === 0 ? (
             <div style={{color:'#7d6a5b', fontSize:13, textAlign:'center'}}>등록된 상담사가 없어요.</div>
           ) : pickList.map(p => (
@@ -512,12 +536,6 @@ function ConsultantContent() {
               {p.name} 선생님
             </button>
           ))}
-          <button onClick={goAdminConsultant}
-            style={{padding:'11px 0', borderRadius:10, border:'0.5px solid #96502e',
-              background:'#f4ece1', color:'#96502e', fontSize:13, cursor:'pointer', marginTop:4,
-              fontFamily:'inherit'}}>
-            ← 관리자 화면으로
-          </button>
         </div>
       </div>
     )
