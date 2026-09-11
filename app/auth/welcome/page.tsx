@@ -41,6 +41,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { HOURS, HOUR_INDEX } from '@/lib/saju/myInfo'
+import { safeNextPath } from '@/lib/safeNext'
 
 export default function WelcomePage() {
   const router = useRouter()
@@ -80,9 +81,9 @@ export default function WelcomePage() {
   const rawNext = typeof window === 'undefined'
     ? null
     : new URLSearchParams(window.location.search).get('next')
-  const backTo = rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//')
-    ? rawNext
-    : null
+  /* ★2026-09-11 (6부) — 규칙은 lib/safeNext.ts «한 곳» 입니다 (검사 ㉒-q).
+   *   ⚠️ 여기가 「/\evil」 이 «실제로» 새던 자리였습니다 — router.push 가 남의 사이트로 갔습니다. */
+  const backTo = safeNextPath(rawNext)
   const fromApp: 'bil' | 'glf' | null =
     backTo?.includes('from=bil') ? 'bil'
     : backTo?.includes('from=glf') ? 'glf'

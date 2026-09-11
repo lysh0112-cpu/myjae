@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { safeNextPath } from '@/lib/safeNext'
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
@@ -43,9 +44,8 @@ export async function GET(request: NextRequest) {
        *      /login 의 nextPath() 와 «같은» 규칙입니다. ⛔ 한쪽만 풀지 마십시오.
        */
       const rawNext = requestUrl.searchParams.get('next')
-      const safeNext = rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//')
-        ? rawNext
-        : null
+      /* ★2026-09-11 (6부) — 규칙은 lib/safeNext.ts «한 곳» (검사 ㉒-q) */
+      const safeNext = safeNextPath(rawNext)
 
       // 2) 프로필 확인
       const { data: profile } = await supabase

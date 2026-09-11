@@ -24,6 +24,7 @@ import { SURNAME_HANJA } from './lib/saju/surnameHanja'
 // ★2026-08-02 — 사전과 추천은 «돌려서» 봅니다. 붙박이 표본이 아니라 실제 결과를 잽니다.
 import { NAME_DICT } from './lib/saju/tables/nameDict'
 import { recommendNames } from './lib/saju/nameRecommend'
+import { safeNextPath } from './lib/safeNext'
 
 let pass = 0, fail = 0
 const check = (ok: boolean, msg: string) => {
@@ -2447,6 +2448,113 @@ console.log('\n━━ ㉒-p 🔴 골프온이 사진 읽기를 «다른 주소�
     `⛔ ★오류(401·402·500) 까지 «모든 답» 에 허락 표시가 붙습니다 (POST 가 일을 감쌈)`)
   check(!/export async function readPhoto/.test(rp),
     `★안쪽 일(readPhoto) 은 «밖으로 안 내보냅니다» (Next 가 길로 착각하지 않게)`)
+}
+
+console.log('\n━━ ㉒-q 🔴 로그인 뒤 «남의 사이트» 로 보내지 않는가 (2026-09-11 · 6부) ━━')
+{
+  //  🔴 [있던 일] 「/ 로 시작하고 // 가 아니면 우리 집」 규칙을 ★「/\evil.com」 이 통과했습니다.
+  //     브라우저는 \ 를 / 로 읽어 https://evil.com 으로 갑니다 (6부가 node 로 잼).
+  //  ★규칙을 «값으로» 돌려 봅니다 — 코드 모양이 아니라 «답» 을 봅니다.
+  const ok: [string, string | null][] = [
+    ['/wallet?from=bil', '/wallet?from=bil'],
+    ['/wallet?from=glf', '/wallet?from=glf'],
+    ['/mypage-new?edit=saju', '/mypage-new?edit=saju'],
+    ['//evil.com', null],
+    ['/\\evil.com', null],
+    ['/\\/evil.com', null],
+    ['/\t/evil.com', null],
+    ['/\n/evil.com', null],
+    ['https://evil.com', null],
+    ['evil.com', null],
+    [' /wallet', null],
+    ['', null],
+  ]
+  for (const [raw, want] of ok) {
+    check(safeNextPath(raw) === want,
+      `${want ? '★통과' : '⛔ 막음'} — ${JSON.stringify(raw)}`)
+  }
+  //  ★다섯 자리가 «같은 규칙 한 곳» 을 쓰는가 · 옛 규칙이 «남지» 않았는가
+  for (const f of [
+    'app/login/page.tsx', 'app/auth/login/page.tsx', 'app/signup/page.tsx',
+    'app/auth/callback/route.ts', 'app/auth/welcome/page.tsx', 'app/auth/signup/page.tsx',
+  ]) {
+    const c = codeOf(read(f))
+    const usesNext = /get\('next'\)/.test(c)
+    check(c.length > 0 && (!usesNext || /safeNextPath\(/.test(c)) && !/startsWith\('\/\/'\)/.test(c),
+      `⛔ ${f.replace(/^app\//, '')} 가 ★safeNextPath 한 곳을 씁니다 (옛 규칙 없음)`)
+  }
+}
+
+console.log('\n━━ ㉒-r 🔴 관리자 화면 «남은 자리» 도 바뀐 줄을 세는가 (2026-09-11 · 6부) ━━')
+{
+  //  ★5부 ㉒-m 의 «뒤를 잇는» 그물입니다 — 5부가 여섯 곳을 고치고 남은 자리.
+  //  ⚠️ «고치기(update)» 와 «지우기(delete)» 만 조용히 0줄이 됩니다.
+  //     새로 넣기(insert) · 덮어쓰기(upsert) 는 권한이 없으면 ★오류를 냅니다 — 그래서 뺐습니다.
+  //  ★자리마다 «그 줄의 사슬» 을 봅니다 — 파일에 .select( 가 «하나라도» 있으면 통과하는 게 아닙니다.
+  const chainAfter = (c: string, at: number): string => {
+    const rest = c.slice(at).split('\n')
+    const out = [rest[0]]
+    for (const l of rest.slice(1)) { if (/^\s*\./.test(l)) out.push(l); else break }
+    return out.join('\n')
+  }
+  for (const f of [
+    'app/admin/components/CancelledHistory.tsx',
+    'app/admin/components/InquiryManager.tsx',
+    'app/admin/components/KnowledgeManager.tsx',
+    'app/admin/components/ReviewManager.tsx',
+  ]) {
+    const c = codeOf(read(f))
+    const hits = [...c.matchAll(/\.update\(|\.delete\(\)/g)]
+    let bad = 0
+    for (const m of hits) if (!/\.select\(/.test(chainAfter(c, m.index ?? 0))) bad++
+    check(c.length > 0 && bad === 0 && (hits.length === 0 || /data\.length === 0/.test(c)),
+      `★${f.split('/').pop()} — 고치기·지우기 ${hits.length}곳이 «바뀐 줄» 을 셉니다${bad ? ` (못 세는 곳 ${bad})` : ''}`)
+  }
+  //  ★영구삭제는 «서버 길» 로 — 여러 표를 차례로 지우는데, 화면에서 하면
+  //     권한에 막혀 ★중간에 «조용히» 멈추고 반쯤만 지워질 수 있었습니다.
+  const ch = codeOf(read('app/admin/components/CancelledHistory.tsx'))
+  check(/callAdmin(<[^>]*>)?\(\s*'\/api\/admin\/consultation-purge'/.test(ch) && !/from\('payments'\)\.delete/.test(ch),
+    `⛔ 영구삭제를 ★서버 길(consultation-purge) 로 부릅니다 (화면에서 표를 지우지 않음)`)
+  const pg = codeOf(read('app/api/admin/consultation-purge/route.ts'))
+  check(/PURGE_ORDER/.test(pg) && /for \(const t of PURGE_ORDER\)/.test(pg),
+    `★서버가 «정해진 차례» 로 지웁니다`)
+  check(/if \(error\)[\s\S]{0,200}stoppedAt/.test(pg),
+    `⛔ ★한 표라도 막히면 «그 자리에서 멈추고» 어느 표인지 말합니다`)
+  check(/from\('consultations'\)\s*\.delete\(\)[\s\S]{0,80}\.select\('id'\)/.test(pg),
+    `★마지막(상담 건) 지우기는 «바뀐 줄» 을 셉니다`)
+}
+
+console.log('\n━━ ㉒-s 🔴 이메일 가입 문이 «모두» 닫혔는가 (2026-09-11 · 6부) ━━')
+{
+  //  🔴 [있던 일] /auth/signup 이 ★이메일 가입을 그대로 받고 있었습니다 (링크 0곳 · 주소로는 열림).
+  //     ⇒ 그렇게 가입하면 ★로그인할 문이 없고 계정만 갈라집니다 (5부 0-1).
+  //  ⛔ 파일을 «지우지» 않았습니다 — 북마크하신 분이 404 를 봅니다. /login 으로 보냅니다.
+  const as = codeOf(read('app/auth/signup/page.tsx'))
+  check(as.length > 0 && !/signUp\(/.test(as), `⛔ /auth/signup 이 ★이메일 가입을 «안» 받습니다`)
+  check(/router\.replace\(/.test(as) && /\/login/.test(as), `★/auth/signup 이 /login 으로 보냅니다`)
+  check(/<Suspense/.test(as), `★주소 읽기를 Suspense 로 감쌌습니다 (⑯-l 과 같은 규칙)`)
+  let left = 0
+  const walkAll = (d: string): string[] =>
+    readdirSync(d).flatMap((n) => {
+      const p = `${d}/${n}`
+      return statSync(p).isDirectory() ? walkAll(p) : /\.(tsx|ts)$/.test(n) ? [p] : []
+    })
+  for (const f of walkAll('app')) if (/auth\.signUp\(/.test(codeOf(read(f)))) left++
+  check(left === 0, `⛔ 화면 어디에도 이메일 가입(signUp) 이 «없습니다» (${left}곳)`)
+}
+
+console.log('\n━━ ㉒-t 🔴 로그인 안 한 손님에게 결제 시트가 «까닭» 을 말하는가 (2026-09-11 · 6부) ━━')
+{
+  //  🔴 [있던 일] 로그인을 안 했는데 「잔액을 확인하지 못했어요. 잠시 뒤에 다시 해 주세요」.
+  //     ⇒ 잠시 뒤에 해도 «안 됩니다». 손님이 무엇을 해야 할지 모릅니다.
+  //  ★까닭을 «가려서» 말합니다 (5부 0-5 · 골프온 1판-49 ④ 와 같은 결).
+  const sh = codeOf(read('app/components/common/WalletPaySheet.tsx'))
+  check(/reason === 'no_login'/.test(sh) && /setState\('login'\)/.test(sh),
+    `★로그인 안 함 을 «따로» 가립니다`)
+  check(/로그인이 필요해요/.test(sh), `★「로그인이 필요해요」 라고 말합니다`)
+  check(/\/login\?next=/.test(sh) && /encodeURIComponent\(/.test(sh),
+    `★[로그인하러 가기] 가 «지금 화면» 으로 돌아오게 next 를 싣습니다`)
+  check(/그냥 닫기|취소/.test(sh), `⛔ «그냥 닫는» 길은 그대로입니다`)
 }
 
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)

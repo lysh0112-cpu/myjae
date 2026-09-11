@@ -23,17 +23,22 @@ export default function KnowledgeManager() {
     if (!form.title) return alert('제목을 입력해주세요')
     setLoading(true)
     // 오류를 받아서 확인한다. 안 그러면 실패해도 저장된 것처럼 보인다.
-    const { error } = editing
-      ? await supabase.from('knowledge_docs').update({
-          title: form.title, content: form.content,
-          category: form.category, is_active: form.is_active,
-        }).eq('id', form.id)
-      : await supabase.from('knowledge_docs').insert({
-          title: form.title, content: form.content,
-          category: form.category, is_active: form.is_active,
-        })
-    setLoading(false)
-    if (error) { alert('저장하지 못했어요: ' + error.message); return }
+    /* ★2026-09-11 (6부) — 고칠 때는 «바뀐 줄» 을 셉니다 (㉒-r).
+     *   ⚠️ 새로 넣기(insert)는 권한이 없으면 오류를 «냅니다» — 셀 필요가 없습니다. */
+    const row = { title: form.title, content: form.content, category: form.category, is_active: form.is_active }
+    if (editing) {
+      const { data, error } = await supabase.from('knowledge_docs')
+        .update(row)
+        .eq('id', form.id)
+        .select('id')
+      setLoading(false)
+      if (error) { alert('저장하지 못했어요: ' + error.message); return }
+      if (!data || data.length === 0) { alert('저장되지 않았습니다.\n로그인이 풀렸거나 권한이 없습니다.\n로그아웃 후 다시 로그인해 주세요.'); return }
+    } else {
+      const { error } = await supabase.from('knowledge_docs').insert(row)
+      setLoading(false)
+      if (error) { alert('저장하지 못했어요: ' + error.message); return }
+    }
     setForm(emptyDoc)
     setEditing(false)
     fetchList()
@@ -50,15 +55,19 @@ export default function KnowledgeManager() {
 
   async function handleDelete(id: string) {
     if (!confirm('삭제하시겠습니까?')) return
-    const { error } = await supabase.from('knowledge_docs').delete().eq('id', id)
+    /* ★2026-09-11 (6부) — 바뀐 줄 세기 (㉒-r) · 권한이 없어도 오류가 «안» 납니다 */
+    const { data, error } = await supabase.from('knowledge_docs').delete().eq('id', id).select('id')
     if (error) { alert('지우지 못했어요: ' + error.message); return }
+    if (!data || data.length === 0) { alert('지워지지 않았습니다.\n로그인이 풀렸거나 권한이 없습니다.\n로그아웃 후 다시 로그인해 주세요.'); return }
     fetchList()
   }
 
   async function handleToggleActive(doc: DocForm) {
-    const { error } = await supabase.from('knowledge_docs')
-      .update({ is_active: !doc.is_active }).eq('id', doc.id)
+    /* ★2026-09-11 (6부) — 바뀐 줄 세기 (㉒-r) · 권한이 없어도 오류가 «안» 납니다 */
+    const { data, error } = await supabase.from('knowledge_docs')
+      .update({ is_active: !doc.is_active }).eq('id', doc.id).select('id')
     if (error) { alert('바꾸지 못했어요: ' + error.message); return }
+    if (!data || data.length === 0) { alert('바뀌지 않았습니다.\n로그인이 풀렸거나 권한이 없습니다.\n로그아웃 후 다시 로그인해 주세요.'); return }
     fetchList()
   }
 

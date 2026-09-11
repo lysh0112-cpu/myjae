@@ -79,11 +79,14 @@ export default function InquiryManager() {
     if (!draft.trim()) { alert('답변을 적어 주세요.'); return }
     setSaving(true)
     const { data: me } = await supabase.auth.getUser()
-    const { error } = await supabase.from('inquiries')
+    /* ★2026-09-11 (6부) — 바뀐 줄 세기 (㉒-r) · 권한이 없어도 오류가 «안» 납니다 */
+    const { data, error } = await supabase.from('inquiries')
       .update({ answer: draft.trim(), answered_by: me.user?.id ?? null, answered_at: new Date().toISOString() })
       .eq('id', id)
+      .select('id')
     setSaving(false)
     if (error) { alert('저장하지 못했어요.\n\n(' + error.message + ')'); return }
+    if (!data || data.length === 0) { alert('저장되지 않았습니다.\n로그인이 풀렸거나 권한이 없습니다.\n로그아웃 후 다시 로그인해 주세요.'); return }
     setOpenId(null); setDraft(''); load()
   }
 
@@ -93,16 +96,21 @@ export default function InquiryManager() {
       + '· 이름은 나가지 않지만 내용만으로 알아볼 수 있습니다\n'
       + '· 사적인 이야기가 섞여 있지 않은지 다시 봐 주세요',
     )) return
-    const { error } = await supabase.from('inquiries').update({ is_public: !r.is_public }).eq('id', r.id)
+    /* ★2026-09-11 (6부) — 바뀐 줄 세기 (㉒-r) · 권한이 없어도 오류가 «안» 납니다 */
+    const { data, error } = await supabase.from('inquiries').update({ is_public: !r.is_public }).eq('id', r.id).select('id')
     if (error) { alert('바꾸지 못했어요.\n\n(' + error.message + ')'); return }
+    if (!data || data.length === 0) { alert('바뀌지 않았습니다.\n로그인이 풀렸거나 권한이 없습니다.\n로그아웃 후 다시 로그인해 주세요.'); return }
     load()
   }
 
   async function toggleSample(r: Row) {
-    const { error } = await supabase.from('inquiries')
+    /* ★2026-09-11 (6부) — 바뀐 줄 세기 (㉒-r) · 권한이 없어도 오류가 «안» 납니다 */
+    const { data, error } = await supabase.from('inquiries')
       .update({ is_sample: !r.is_sample, is_public: !r.is_sample ? true : r.is_public })
       .eq('id', r.id)
+      .select('id')
     if (error) { alert('바꾸지 못했어요.\n\n(' + error.message + ')'); return }
+    if (!data || data.length === 0) { alert('바뀌지 않았습니다.\n로그인이 풀렸거나 권한이 없습니다.\n로그아웃 후 다시 로그인해 주세요.'); return }
     load()
   }
 

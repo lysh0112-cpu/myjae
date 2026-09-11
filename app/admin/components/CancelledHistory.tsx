@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getConsultTypeLabel } from './useDashboardTable'
+import { callAdmin } from './callAdmin'
 
 type Cancelled = {
   id: string
@@ -107,10 +108,17 @@ export default function CancelledHistory() {
     if (!confirm('이 예약을 되살릴까요?\n\n다시 정상 예약으로 돌아갑니다.\n(그 시간이 이미 다른 분께 예약됐을 수 있으니, 예약 시간은 확인해 주세요)')) return
     setBusyId(c.id)
     try {
-      const { error } = await supabase.from('consultations')
+      /* ★2026-09-11 (6부) — 바뀐 줄 세기 (5부 ㉒-m 의 뒤를 잇는 ㉒-r)
+       *   Supabase 는 권한이 없어도 오류를 «안 냅니다» — 0줄이면 «말합니다». */
+      const { data, error } = await supabase.from('consultations')
         .update({ status: 'booked', deleted_at: null })
         .eq('id', c.id)
+        .select('id')
       if (error) { alert('되살리기 실패: ' + error.message); return }
+      if (!data || data.length === 0) {
+        alert('되살리지 못했어요.\n로그인이 풀렸거나 권한이 없습니다.\n로그아웃 후 다시 로그인해 주세요.')
+        return
+      }
       await fetchAll()
     } finally {
       setBusyId(null)
@@ -123,18 +131,13 @@ export default function CancelledHistory() {
     if (!confirm('한 번 더 확인합니다. 정말 영구삭제합니다.')) return
     setBusyId(c.id)
     try {
-      // 연관 테이블 먼저 삭제 (외래키 제약 해제)
-      await supabase.from('payments').delete().eq('consultation_id', c.id)
-      await supabase.from('chat_messages').delete().eq('consultation_id', c.id)
-      await supabase.from('commentaries').delete().eq('consultation_id', c.id)
-      await supabase.from('couples').delete().eq('consultation_id', c.id)
-      await supabase.from('mulsang_images').delete().eq('consultation_id', c.id)
-      await supabase.from('namings').delete().eq('consultation_id', c.id)
-      await supabase.from('weddings').delete().eq('consultation_id', c.id)
-      await supabase.from('births').delete().eq('consultation_id', c.id)
-      await supabase.from('bookings').delete().eq('consultation_id', c.id)
-      const { error } = await supabase.from('consultations').delete().eq('id', c.id)
-      if (error) { alert('영구삭제 실패: ' + error.message); return }
+      /* ★2026-09-11 (6부) — 영구삭제를 «서버 길» 로 옮겼습니다 (검사 ㉒-r).
+       *   [전]  여기서 표 열 개를 차례로 지웠는데, 앞의 아홉은 결과를 «안 봤습니다».
+       *         권한에 막히면 «조용히» 0줄이 되어 ★반쯤만 지워진 채 끝날 수 있었습니다.
+       *   [후]  서버가 관리자인지 보고, 정해진 차례로 지우고, 막히면 «어느 표» 인지 말합니다.
+       *   ⛔ 여기로 표 지우기를 «되돌리지» 마십시오 — app/api/admin/consultation-purge */
+      const r = await callAdmin<{ ok: true; done: string[] }>('/api/admin/consultation-purge', { id: c.id })
+      if (!r.ok) { alert('영구삭제 실패: ' + r.message); if (!r.expired) await fetchAll(); return }
       await fetchAll()
     } finally {
       setBusyId(null)

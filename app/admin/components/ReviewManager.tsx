@@ -40,19 +40,25 @@ export default function ReviewManager() {
   useEffect(() => { load() }, [])
 
   const toggleApprove = async (r: Review) => {
-    const { error } = await supabase.from('reviews').update({ is_approved: !r.is_approved }).eq('id', r.id)
+    /* ★2026-09-11 (6부) — 바뀐 줄 세기 (㉒-r) · 권한이 없어도 오류가 «안» 납니다 */
+    const { data, error } = await supabase.from('reviews').update({ is_approved: !r.is_approved }).eq('id', r.id).select('id')
     if (error) { alert('변경 실패'); return }
+    if (!data || data.length === 0) { alert('바뀌지 않았습니다.\n로그인이 풀렸거나 권한이 없습니다.\n로그아웃 후 다시 로그인해 주세요.'); return }
     load()
   }
   const togglePin = async (r: Review) => {
-    const { error } = await supabase.from('reviews').update({ is_pinned: !r.is_pinned }).eq('id', r.id)
+    /* ★2026-09-11 (6부) — 바뀐 줄 세기 (㉒-r) · 권한이 없어도 오류가 «안» 납니다 */
+    const { data, error } = await supabase.from('reviews').update({ is_pinned: !r.is_pinned }).eq('id', r.id).select('id')
     if (error) { alert('변경 실패'); return }
+    if (!data || data.length === 0) { alert('바뀌지 않았습니다.\n로그인이 풀렸거나 권한이 없습니다.\n로그아웃 후 다시 로그인해 주세요.'); return }
     load()
   }
   const remove = async (r: Review) => {
     if (!confirm(`'${r.nickname}'님의 후기를 삭제할까요?\n삭제하면 되돌릴 수 없습니다.`)) return
-    const { error } = await supabase.from('reviews').delete().eq('id', r.id)
+    /* ★2026-09-11 (6부) — 바뀐 줄 세기 (㉒-r) · 권한이 없어도 오류가 «안» 납니다 */
+    const { data, error } = await supabase.from('reviews').delete().eq('id', r.id).select('id')
     if (error) { alert('삭제 실패'); return }
+    if (!data || data.length === 0) { alert('지워지지 않았습니다.\n로그인이 풀렸거나 권한이 없습니다.\n로그아웃 후 다시 로그인해 주세요.'); return }
     load()
   }
 

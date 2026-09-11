@@ -72,7 +72,7 @@ export default function WalletPaySheet(p: {
 }) {
   const [price, setPrice] = useState<number | null>(null)
   const [balance, setBalance] = useState<number | null>(null)
-  const [state, setState] = useState<'loading' | 'ok' | 'short' | 'error'>('loading')
+  const [state, setState] = useState<'loading' | 'ok' | 'short' | 'error' | 'login'>('loading')
 
   useEffect(() => {
     if (!p.open) return
@@ -91,6 +91,11 @@ export default function WalletPaySheet(p: {
         if (r.gate === 'on' && !r.ok && r.reason === 'not_enough') {
           setPrice(r.need); setBalance(r.balance); setState('short'); return
         }
+        /* ★2026-09-11 (6부) — «로그인 안 함» 을 따로 가립니다 (검사 ㉒-t).
+         *   [전]  로그인을 안 해도 「잔액을 확인하지 못했어요. 잠시 뒤에 다시 해 주세요」.
+         *         ⇒ 잠시 뒤에 해도 «안 됩니다». 손님이 무엇을 해야 할지 몰랐습니다.
+         *   ⚠️ 5부 0-5 「가려서 말하기」 · 골프온 1판-49 ④ 와 같은 결입니다. */
+        if (r.gate === 'on' && !r.ok && r.reason === 'no_login') { setState('login'); return }
         if (r.gate === 'on' && !r.ok) { setState('error'); return }
       }
       //  관문이 꺼져 있을 때 — 값만 보여 드립니다 (잔액은 안 봅니다).
@@ -154,6 +159,12 @@ export default function WalletPaySheet(p: {
           <div style={{ fontSize: 13, color: C.sub, padding: '10px 0 18px' }}>값을 불러오는 중이에요…</div>
         )}
 
+        {state === 'login' && (
+          <div style={{ fontSize: 13, color: C.ink, padding: '10px 0 18px', lineHeight: 1.7 }}>
+            로그인이 필요해요.<br />카카오로 로그인하시면 이 화면으로 다시 돌아와요.
+          </div>
+        )}
+
         {state === 'error' && (
           <div style={{ fontSize: 13, color: C.red, padding: '10px 0 18px', lineHeight: 1.7 }}>
             잔액을 확인하지 못했어요.<br />잠시 뒤에 다시 해 주세요.
@@ -180,6 +191,14 @@ export default function WalletPaySheet(p: {
                 return
               }
               if (state === 'error') { p.onClose(); return }
+              /* ★로그인하고 «지금 화면» 으로 돌아오게 — /login 이 next 를 거릅니다 (lib/safeNext.ts) */
+              if (state === 'login') {
+                if (typeof window !== 'undefined') {
+                  const here = window.location.pathname + window.location.search
+                  window.location.href = `/login?next=${encodeURIComponent(here)}`
+                }
+                return
+              }
               p.onConfirm()
             }}
             style={{
@@ -187,7 +206,7 @@ export default function WalletPaySheet(p: {
               border: 'none', color: '#fff', fontSize: 15, fontWeight: 700,
               cursor: 'pointer', marginBottom: 8, fontFamily: 'inherit',
             }}>
-            {short ? '충전하러 가기' : state === 'error' ? '확인' : `${won(need)} 내고 ${p.actionLabel}`}
+            {short ? '충전하러 가기' : state === 'error' ? '확인' : state === 'login' ? '카카오로 로그인하러 가기' : `${won(need)} 내고 ${p.actionLabel}`}
           </button>
         )}
 

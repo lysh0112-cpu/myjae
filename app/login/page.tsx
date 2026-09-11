@@ -5,6 +5,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { safeNextPath } from '@/lib/safeNext'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -31,10 +32,8 @@ export default function LoginPage() {
    */
   const nextPath = (): string | null => {
     if (typeof window === 'undefined') return null
-    const raw = new URLSearchParams(window.location.search).get('next')
-    if (!raw) return null
-    if (!raw.startsWith('/') || raw.startsWith('//')) return null
-    return raw
+    /* ★2026-09-11 (6부) — 거르는 규칙은 lib/safeNext.ts «한 곳» (「/\evil」 틈을 막음 · 검사 ㉒-q) */
+    return safeNextPath(new URLSearchParams(window.location.search).get('next'))
   }
 
 

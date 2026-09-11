@@ -32,6 +32,7 @@
 
 import { Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { safeNextPath } from '@/lib/safeNext'
 
 function Redirect() {
   const router = useRouter()
@@ -41,7 +42,8 @@ function Redirect() {
     const raw = sp.get('next')
     /* ⛔ 「/」로 시작하는 «우리 집 주소» 만 실어 보냅니다 (「//」도 막습니다).
        ★열린 넘기기(open redirect)를 막는 자리입니다 — /login 과 같은 규칙입니다. */
-    const safe = raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : null
+    /* ★2026-09-11 (6부) — 규칙은 lib/safeNext.ts «한 곳» (검사 ㉒-q) */
+    const safe = safeNextPath(raw)
     router.replace(safe ? `/login?next=${encodeURIComponent(safe)}` : '/login')
   }, [router, sp])
 
