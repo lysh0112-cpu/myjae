@@ -349,7 +349,7 @@ export function cardExamDay(r: ExamDayResult | null): ExamCard | null {
     key: 'examday', title: '시험 날짜와 실전 준비',
     badge: r.isGongmang ? '공망일' : undefined,
     lines: r.lines, reasons: r.reasons,
-    data: { isGongmang: r.isGongmang },
+    data: { isGongmang: r.isGongmang, dayGanji: r.dayGanji },   // ★6부 — 엔진 계산의 당일 수칙 종류가 일진을 씁니다 (검사 49)
   }
 }
 

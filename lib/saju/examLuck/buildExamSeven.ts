@@ -36,6 +36,7 @@
 import type { ExamCard, ExamTarget } from './types'
 import { calcWolunList } from '../dayun'
 import type { JobSituation, JobGate } from './tables/jobFields'
+import { planBlock, type ExamPlan } from './engineCalc'
 
 export interface SevenArgs {
   name: string
@@ -65,6 +66,8 @@ export interface SevenArgs {
   wishHeavy?: boolean
   /** ★6부 [대표님 「직접 넣을 수도」] ② 방식 칸에 손님이 직접 적은 일하는 방식 · 직업 — sanitizeJobText 를 거친 글 */
   jobText?: string | null
+  /** ★6부 [대표님 「엔진 계산까지」] 엔진이 정한 유형 · 비율 · 달 · 당일 수칙 (engineCalc.buildPlan · 검사 49) */
+  plan?: ExamPlan | null
   /** ★6부 [대표님 「소지한 자격증도」] 손님이 가진 자격증 — sanitizeCerts 를 거친 글 (일자리를 구해요 전용) */
   certs?: string | null
   /** ★6부 [대표님 알약] 일자리를 구해요 — 지금 상황 (없으면 옛 기록) */
@@ -256,6 +259,7 @@ const toneFor = (isStudent: boolean) => `[말투 — 처음 읽는 사람도 한
 · 존댓말로 다정하되 담담하게. 겁주지 마세요. "불합격"·"떨어진다"·"안 된다" 를 쓰지 마세요.
 · 사주 말은 생활 말로 쓰세요 — ${isStudent ? PLAIN_MAP_STUDENT : PLAIN_MAP_ADULT}.
 · 사주 말이 처음 나올 때 한 번은 무슨 뜻인지 풀어 주세요. (예: 공부운은 공부, 자격, 문서를 뜻합니다.)
+· 원국(태어난 사주)은 «타고난 그릇» 이라고 부르세요. (예: 타고난 그릇으로 보면 …)
 · 두 가지 운을 한 표현에 뭉치지 마세요. 운마다 «어떤 마음이 들고, 어떤 일이 생기기 쉬운지» 를 따로 쓰세요.
 · 뜻이 흐린 말을 쓰지 마세요 — 결 · 값이 붙는다 · 두 겹 · 살려 준다 · 말이 앞선다 · 밀어 볼 때 · 빛난다 · 힘을 보탠다 · 받쳐 준다 · 기운이 열린다 · 바람이 불어온다.
 · 한 문장에는 한 가지만. 문장은 짧게 쓰세요.
@@ -441,6 +445,27 @@ export function monthlyMaterial(dayStem: string, year: number, month = 1, examDa
   ].join('\n')
 }
 
+/* ★2026-09-12 (6부) [대표님 「엔진 계산까지」] — 엔진이 정한 값이 있으면 «고르라» 는 지시를 «그대로 쓰라» 로 바꿉니다 (검사 49)
+ *   ⚠️ 계획이 없으면(옛 흐름 · 검사 14) 지시를 그대로 둡니다. */
+function withPlan(lines: string[], key: SevenKey, v: SevenArgs): string[] {
+  if (!v.plan) return lines
+  if (key === 'flow') {
+    return lines.map(l => /한 가지로 정하세요/.test(l)
+      ? '· ★유형은 위 [엔진이 정한 값] 그대로 쓰고, 왜 그런지 타고난 그릇으로 쉬운 말로 풀어 주세요. 둘째 유형이 적혀 있으면 두 유형을 함께 말하세요.' : l)
+  }
+  if (key === 'strategy') {
+    const keep = lines.filter(l => !/숫자로 내세요/.test(l))
+    return [...keep, '· ★비율은 모두 위 [엔진이 정한 값]의 숫자로 내세요 — 숫자를 바꾸지 마세요. 왜 그 비율인지 타고난 그릇과 올해 흐름으로 쉬운 말로 밝히세요.']
+  }
+  if (key === 'pace') {
+    return lines.map(l => /콕 집으세요/.test(l)
+      ? '· ★가장 좋은 달 · 조심할 달은 위 [엔진이 정한 값]의 달을 그대로 쓰세요. 목록에 없는 달을 지어내지 마세요. 아래 [달별 흐름] 은 까닭을 풀 때만 쓰세요.'
+      : /당일 수칙|두 날의 수칙|마음가짐을 구체적으로/.test(l) && v.plan?.dday
+        ? l + ' ★그날이 어떤 날인지는 위 [엔진이 정한 값] 의 «시험(면접) 날» 대로 말하세요.' : l)
+  }
+  return lines
+}
+
 /** 한 호출에 보낼 두 덩이 — 진로적성(buildCareerMbtiPrompt)과 같은 모양입니다. */
 export type SevenPrompt = { system: string; user: string }
 
@@ -589,7 +614,7 @@ ${wishBlock}${careBlock}
 [판정 재료 — 이것만 근거로 쓰세요. 없는 것을 지어내지 마세요]
 ${material}
 ${v.signalBlock ? `\n[합격 신호 — 원국을 본 것]\n${v.signalBlock}` : ''}
-${v.upsangBlock ? `\n[세부 적성 — ★계열 안에서 «어느 자리» 가 극대화되는가]\n${v.upsangBlock}` : ''}${group.includes('pace') ? `\n${monthlyMaterial(v.saju?.find(p => p.pillar === '일주')?.stem ?? '', v.year, v.month ?? 1, v.examDate, v.target === 'student')}` : ''}
+${v.upsangBlock ? `\n[세부 적성 — ★계열 안에서 «어느 자리» 가 극대화되는가]\n${v.upsangBlock}` : ''}${planBlock(v.plan, group[0])}${group.includes('pace') ? `\n${monthlyMaterial(v.saju?.find(p => p.pillar === '일주')?.stem ?? '', v.year, v.month ?? 1, v.examDate, v.target === 'student')}` : ''}
 
 ════════════════════════════════════════
 [답변 형식 — ${plan.length}장의 카드]
@@ -603,7 +628,7 @@ ${plan.map(s => `■ ${s.title}
 [태그] (낱말 · 낱말 · 낱말 — 두셋, 쉬운 말로)
 
 (본문 ${s.len}. 단락마다 빈 줄로 나눠 쓰세요.)
-${hint(s.key, v).map(x => '  · ' + x).join('\n')}
+${withPlan(hint(s.key, v), s.key, v).map(x => '  · ' + x).join('\n')}
 
 [실천] (지금 바로 해볼 수 있는 일 한 문장)`).join('\n\n')}
 

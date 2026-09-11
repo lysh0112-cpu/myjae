@@ -52,6 +52,7 @@ import ExamJudgeCard, { GRADE_STYLE } from './ExamJudgeCard'
 import type { ExamCard, ExamInput, ExamTarget, YearLuck } from '@/lib/saju/examLuck/types'
 import { refreshBeforeAi } from '@/lib/ai/freshCall'
 import { cardJobFit } from '@/lib/saju/examLuck/buildCards'
+import { buildPlan } from '@/lib/saju/examLuck/engineCalc'
 import { pickStructure } from '@/lib/saju/career/jobStructure'
 import { goalLabel, sanitizeWish, wishLooksHeavy, WISH_KEY, readWishHandoff, parseGates, parseSituation, JOB_SITUATIONS, JOB_GATES, parsePicks, wayFromPicks, readJobTextHandoff, sanitizeJobText, readCertsHandoff, sanitizeCerts } from '@/lib/saju/examLuck/tables/jobFields'
 
@@ -324,6 +325,24 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
     return calcSimsanOhaeng(calc.saju, calc.solarMonth, calc.solarDay, calc.hourBranch)
   }, [calc])
 
+  /* 🔴 ★2026-09-12 (6부) [대표님 「엔진 계산까지」] — 엔진이 정한 유형 · 비율 · 달 · 당일 수칙 (검사 49)
+   *   ⛔ 반드시 useMemo 로 «한 번만» 만듭니다 — AI effect 가 이 값에 기댑니다.
+   *      매번 새로 만들면 9월 11일처럼 AI 를 끝없이 다시 부릅니다 (검사 46 ⑤). */
+  const plan = useMemo(() => {
+    if (!calc?.saju?.length || !ohaengScore || !cards.length) return null
+    const years = (cards.find(c => c.key === 'years')?.data?.years ?? []) as YearLuck[]
+    const order = Number((cards.find(c => c.key === 'dayun')?.data as { order?: number } | undefined)?.order ?? 0)
+    const ex = cards.find(c => c.key === 'examday')?.data as { dayGanji?: string; isGongmang?: boolean } | undefined
+    const now = new Date()
+    return buildPlan({
+      saju: calc.saju, ohaeng: ohaengScore as Record<string, number>, year: now.getFullYear(), month: now.getMonth() + 1,
+      examDate: examDateRaw || null, target, kind: kind === 'job' ? 'job' : 'exam',
+      grade: years[0]?.grade ?? '보통', dayunOrder: order,
+      examDayGanji: ex?.dayGanji ?? null, examGongmang: !!ex?.isGongmang,
+      highSchoolSenior: target === 'student' ? ['high3', 'nsu'].includes(studentGrade) : undefined,
+    })
+  }, [calc, ohaengScore, cards, examDateRaw, target, kind, studentGrade])
+
   /** 원국 합격 신호 — Positive / Warning (지시서 2-B) */
   const signalBlock = useMemo(() => {
     if (!calc?.saju?.length || !ohaengScore) return null
@@ -452,6 +471,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         wishHeavy,
         jobText: jobTextForSave || null,   // ★6부 — 직접 적은 일하는 방식 · 직업
         certs: certsForSave || null,       // ★6부 — 가진 자격증
+        plan,   // ★6부 — 엔진이 정한 유형 · 비율 · 달 · 당일 수칙 (useMemo · 검사 49)
         //  ★6부 [대표님 알약] — 고르지 않은 관문 이야기를 쓰지 않게
         jobSituation: sit,
         jobGates: gates,
@@ -786,7 +806,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
     //   빠뜨리면 재료가 바뀌어도 옛 통변이 그대로 남습니다.
   }, [calc, cards, recordId, person, target, kind, studentGrade, gradeLevel, trackSel,
       examCategory, targetType, targetCustomText, examDateRaw, examDayForPrompt, thisYear,
-      signalBlock, upsangMaterial, dayunReady, retryRecord, examKind, cardsAll, way, wishForSave, wishHeavy, sit, gates, picks, jobTextForSave, certsForSave])
+      signalBlock, upsangMaterial, dayunReady, retryRecord, examKind, cardsAll, way, wishForSave, wishHeavy, sit, gates, picks, jobTextForSave, certsForSave, plan])
 
   // ── ⑥ 다시보기 — 저장본 불러오기 ──────────────────────────
   useEffect(() => {
