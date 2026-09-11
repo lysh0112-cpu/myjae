@@ -72,5 +72,30 @@ console.log('\n━━ ④ 화면 · 저장 짝 ━━')
   ok(/'sit', 'gates'/.test(st), '보관함이 다시 열 때 상황 · 관문을 실음')
 }
 
+console.log('\n━━ ⑤ 🔴 AI 가 끝없이 다시 불리지 않는가 (대표님 「풀이가 안나와」 · 6부) ━━')
+{
+  //  [겪음] gates 를 useMemo 없이 만들어, 다시 그릴 때마다 «새 목록» → AI effect 가 끊고 다시 부르기를 되풀이
+  //  ⇒ AI effect 의존 목록의 이름마다, 그 값이 «매번 새로 만들어지는 목록 · 객체» 가 아닌지 봅니다.
+  const ex = fs.readFileSync('app/manseryeok/exam-luck-result/components/ExamResultShell.tsx', 'utf8')
+  const start = ex.indexOf("setTongState('loading')")
+  const depsAt = ex.indexOf('}, [', ex.indexOf('return () => {', start))
+  const deps = ex.slice(depsAt + 4, ex.indexOf('])', depsAt)).split(',').map(x => x.trim()).filter(Boolean)
+  ok(deps.includes('gates') && deps.length > 10, `AI effect 의존 목록을 찾았습니다 (${deps.length}개)`)
+  const unstable: string[] = []
+  for (const d of deps) {
+    const decl = new RegExp(`const (?:\\[)?\\s*${d}\\b[^=\\n]*=\\s*([^\\n]+)`).exec(ex)
+    if (!decl) continue                                       // useState · useRef · props 등 (안정)
+    const rhs = decl[1]
+    //  한 번만 만들어지는 것: useMemo · useState · useRef · 글자 · 숫자 · 참거짓 · sp.get
+    if (/^use(Memo|State|Ref|Callback)\b/.test(rhs)) continue
+    if (/^(sp\.get|parseSituation|sanitizeWish|sanitizeJobText|wishLooksHeavy|typeof|new Date\(\)\.getFullYear|exactAge)/.test(rhs)) continue
+    if (/^['"`\d]|^(true|false)|^mode ===|^sp\.get\(/.test(rhs)) continue
+    if (/\|\| '|\?\s*\(?\s*wayFromPicks|=== 'unknown'/.test(rhs)) continue   // 글자로 끝나는 식
+    if (/^(parse|\[|\{|new |[A-Za-z_]+\()/.test(rhs)) unstable.push(`${d} = ${rhs.slice(0, 40)}`)
+  }
+  ok(unstable.length === 0, `⛔ 매번 새로 만들어지는 목록 · 객체가 AI effect 의존 목록에 없습니다${unstable.length ? ' — ' + unstable.join(' / ') : ''}`)
+  ok(/const gates = useMemo\(\(\) => parseGates\(gatesParam\), \[gatesParam\]\)/.test(ex), '관문 목록은 useMemo 로 한 번만')
+}
+
 console.log(`\n━━ 지금 상황 · 거쳐야 할 관문 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail) process.exit(1)

@@ -97,7 +97,13 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
   const way = wayRaw === 'unknown' || wayRaw === 'custom' ? (wayFromPicks(fieldKey, picks) ?? wayRaw) : wayRaw
   /* ★6부 [대표님 알약] 지금 상황 · 거쳐야 할 관문 — 값이 없으면 옛 기록(null) · «모두 고른 것» (검사 46) */
   const sit = parseSituation(sp.get('sit'))
-  const gates = parseGates(sp.get('gates'))
+  /* 🔴 ★2026-09-11 (6부) — 반드시 useMemo 로 «한 번만» 만듭니다 (검사 46).
+   *   [겪음] parseGates 는 부를 때마다 «새 목록» 을 돌려줍니다. 그대로 두면 화면이 다시 그려질 때마다
+   *          AI effect 가 «관문이 바뀌었다» 고 보고 돌던 AI 를 끊고 처음부터 다시 불러, 풀이가 끝없이 안 나왔습니다.
+   *          (끊긴 호출도 비용이 나갑니다) — 대표님 「화면 조정은 되었는데 풀이가 안나와」
+   *   ⛔ AI effect 의 의존 목록에는 «매번 새로 만들어지는 목록 · 객체» 를 넣지 마십시오. */
+  const gatesParam = sp.get('gates')
+  const gates = useMemo(() => parseGates(gatesParam), [gatesParam])
   /* ★2026-09-11 (6부) [대표님 「희망사항을 자유롭게」] — 손님이 직접 적은 고민 (검사 44)
    *   ⚠️ 주소(URL)에 싣지 않습니다 — 방문 기록에 고민 글이 남지 않게. 입력 화면이 sessionStorage 로 건넵니다.
    *   ⚠️ 10분이 지난 건넴은 버립니다 (다른 사람을 보다가 남은 옛 글이 섞이지 않게 · readWishHandoff).
