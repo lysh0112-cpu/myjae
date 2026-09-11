@@ -30,6 +30,7 @@
 // ============================================================================
 
 import { useEffect, useMemo, useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { fromProfile, personKey, type MyInfo } from '@/lib/saju/myInfo'
 import {
@@ -126,6 +127,12 @@ export default function PersonPickerModal({
 }: PersonPickerModalProps) {
   const [people, setPeople] = useState<SavedPerson[]>([])
   const [me, setMe] = useState<MeInfo | null>(null)
+  /* ★2026-09-11 (6부) [대표님 · 목업 승낙] — 사주를 «아직 안 넣은» 회원의 「나」 줄.
+   *   [전]  5부 0-2 부터 가입이 사주를 안 받는데, 사주가 없으면 「나」 가 ★«조용히» 사라졌습니다.
+   *         ⇒ 손님이 자기를 「새로운 사람 추가」 로 넣어 ★남처럼 저장됐습니다.
+   *   [지금] 닉네임 + 「아직 내 사주를 안 넣었어요」 + [넣으러 가기] (검사 ㉒-x). */
+  const [meNoSaju, setMeNoSaju] = useState<{ nickname: string; avatarChar: string } | null>(null)
+  const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<View>({ mode: 'list' })
   const [editing, setEditing] = useState(false)     // 편집 모드 토글
@@ -150,6 +157,7 @@ export default function PersonPickerModal({
       const list = await listSavedPeople(serviceType ?? undefined)
       if (cancelled) return
       setPeople(list)
+      setMeNoSaju(null)
 
       // "나" 표시: onPickMe가 있을 때만 (없으면 "나" 항목 자체를 안 씀)
       if (onPickMeRef.current) {
@@ -168,7 +176,10 @@ export default function PersonPickerModal({
               setMe({ nickname: nick, birthLine: `${date} · ${h}`, avatarChar: avatarChar(nick),
                       dedupKey: personKey(info) })
             } else if (!cancelled) {
-              setMe(null)   // 사주 미등록 회원 → "나" 항목 숨김
+              setMe(null)
+              //  ★2026-09-11 (6부) — 사주 미등록 회원도 «숨기지 않고» 「나 — 넣으러 가기」 를 보입니다.
+              const nick = (p?.nickname as string) || (p?.hangul_name as string) || '나'
+              setMeNoSaju({ nickname: nick, avatarChar: avatarChar(nick) })
             }
           }
         } catch (e) { console.error(e) }
@@ -310,7 +321,9 @@ export default function PersonPickerModal({
         <div style={{ overflowY: 'auto', flex: 1, borderTop: `0.5px solid ${C.divider}` }}>
           {loading ? (
             <div style={{ padding: 40, textAlign: 'center', color: C.sub, fontSize: 13 }}>불러오는 중…</div>
-          ) : (people.length === 0 && !me) ? (
+          ) : (people.length === 0 && !me && !(meNoSaju && onPickMe)) ? (
+            /* ★2026-09-11 (6부) — «사주 없는 나» 도 조건에 넣었습니다.
+               ⚠️ 빼면 새 회원(저장한 사람 0명 · 사주 없음)에게 「나」 줄이 ★안 뜹니다 — 6부가 짜다 찾은 자리. */
             <div style={{ padding: '36px 24px', textAlign: 'center' }}>
               <div style={{ fontSize: 14, color: C.title, fontWeight: 500, marginBottom: 6 }}>아직 저장한 사람이 없어요</div>
               <div style={{ fontSize: 12, color: C.sub, lineHeight: 1.6 }}>아래 버튼으로 사람을 추가하면<br />다음부터 바로 골라서 볼 수 있어요.</div>
@@ -334,6 +347,45 @@ export default function PersonPickerModal({
                     </div>
                     {!editing && <span style={{ color: C.chevron, fontSize: 16 }}>›</span>}
                   </div>
+                </div>
+              )}
+
+              {/* ★2026-09-11 (6부) [대표님 · 목업 승낙] — 사주를 아직 안 넣은 회원의 「나」 줄.
+                  누르면 마이페이지 사주 칸이 «펼친 채» 열리고, 저장하면 «지금 화면» 으로 돌아옵니다.
+                  ⚠️ 돌아올 곳(next)은 마이페이지가 lib/safeNext.ts 로 거릅니다. */}
+              {!me && meNoSaju && onPickMe && !query.trim() && (
+                <div>
+                  <div style={{ fontSize: 11, color: C.point, fontWeight: 500, padding: '12px 18px 6px' }}>나</div>
+                  <div
+                    onClick={() => {
+                      if (editing || typeof window === 'undefined') return
+                      const here = window.location.pathname + window.location.search
+                      router.push(`/mypage-new?edit=saju&next=${encodeURIComponent(here)}`)
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 18px', cursor: editing ? 'default' : 'pointer' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 12, background: '#f0e6d8', color: '#96502e',
+                      border: '1px dashed #c4af95', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 15, fontWeight: 500, flexShrink: 0, boxSizing: 'border-box' }}>
+                      {meNoSaju.avatarChar}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, color: C.title, fontWeight: 500 }}>
+                        {meNoSaju.nickname} <span style={{ fontSize: 10, color: C.point, background: '#fff3e9', border: `0.5px solid ${C.searchBorder}`, borderRadius: 6, padding: '1px 6px', marginLeft: 3 }}>본인</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: C.sub }}>아직 내 사주를 안 넣었어요</div>
+                    </div>
+                    {!editing && (
+                      <span style={{ fontSize: 12, color: '#fff', background: C.point, borderRadius: 8,
+                        padding: '6px 10px', whiteSpace: 'nowrap', flexShrink: 0 }}>넣으러 가기 ›</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {people.length === 0 && !query.trim() && (
+                <div style={{ padding: '22px 24px 8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 13, color: C.title, fontWeight: 500, marginBottom: 4 }}>아직 저장한 사람이 없어요</div>
+                  <div style={{ fontSize: 12, color: C.sub, lineHeight: 1.6 }}>가족·지인은 아래 버튼으로<br />따로 넣어 주세요.</div>
                 </div>
               )}
 

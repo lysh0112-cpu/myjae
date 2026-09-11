@@ -20,6 +20,7 @@ import {
   crossesMidnight, type TimeBand,
 } from '@/lib/saju/birthInput'
 import { withNim } from '@/lib/saju/honorific'
+import { safeNextPath } from '@/lib/safeNext'
 
 // 시(時) 목록 — 공용 birthInput.ts 기준 (30분법 · 공백없음).
 //   ★ '모름'은 두지 않는다. 시를 반드시 고르게 한다(대표님 확정 2026-07).
@@ -366,14 +367,29 @@ export default function MyPageNew() {
     if (!eHour) { setMsg('시(시주)를 선택해주세요. 정확히 모르시면 시간대 버튼으로 골라주세요.'); return }
     const hourValue = toStoredHour(normalizeHourLabel(eHour))
     setSaving(true)
-    const { error } = await supabase.from('profiles').update({
+    /* ★2026-09-11 (6부) — «바뀐 줄» 을 셉니다 (5부 0-5 · 검사 ㉒-x).
+     *   ⚠️ 아래에서 «원래 서비스로 돌려보내기» 를 붙였습니다. 조용히 0줄인데 돌려보내면
+     *      손님은 「넣었는데 왜 안 뜨지?」 가 됩니다. 그래서 저장이 «확인된 뒤» 에만 돌려보냅니다. */
+    const { data: savedRows, error } = await supabase.from('profiles').update({
       birth_year: y, birth_month: m, birth_day: d,
       birth_hour: hourValue, cal_type: eCal, gender: eGender, saju_saved: true,
-    }).eq('id', userId)
+    }).eq('id', userId).select('id')
     setSaving(false)
     if (error) { setMsg('저장 실패: ' + error.message); return }
+    if (!savedRows || savedRows.length === 0) {
+      setMsg('저장되지 않았어요. 로그아웃 후 다시 로그인해 주세요.')
+      return
+    }
     setProfile(prev => prev ? { ...prev, birth_year: y, birth_month: m, birth_day: d, birth_hour: hourValue, cal_type: eCal, gender: eGender, saju_saved: true } : prev)
     setEditMode(false)
+    /* ★2026-09-11 (6부) [대표님 · 목업 승낙] — 사람 고르기 창의 [넣으러 가기] 로 왔으면 ★그 화면으로 돌려보냅니다.
+     *   주소의 next 를 lib/safeNext.ts 로 거릅니다 (남의 사이트로 못 보냄).
+     *   ⚠️ 마이페이지에 곧장 와서 저장하면 next 가 없어 «그대로» 머뭅니다 (전과 같음).
+     *   ⚠️ 주소창을 직접 읽습니다 — 이 화면은 Suspense 틀이 아닙니다 (위 edit=saju 와 같은 까닭). */
+    const back = typeof window !== 'undefined'
+      ? safeNextPath(new URLSearchParams(window.location.search).get('next'))
+      : null
+    if (back) router.push(back)
   }
 
   const openNickEdit = () => { setENick(profile?.nickname || ''); setNickMsg(''); setNickEdit(true) }

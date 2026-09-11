@@ -2493,6 +2493,8 @@ console.log('\n━━ ㉒-q 🔴 로그인 뒤 «남의 사이트» 로 보내�
   for (const f of [
     'app/login/page.tsx', 'app/auth/login/page.tsx', 'app/signup/page.tsx',
     'app/auth/callback/route.ts', 'app/auth/welcome/page.tsx', 'app/auth/signup/page.tsx',
+    //  ★6부 — 마이페이지도 이제 next 로 «돌려보냅니다» (사람 고르기 창의 [넣으러 가기])
+    'app/mypage-new/page.tsx',
   ]) {
     const c = codeOf(read(f))
     const usesNext = /get\('next'\)/.test(c)
@@ -2680,6 +2682,54 @@ console.log('\n━━ ㉒-w 🔴 매니저 «상담사 고르기» 단추 차례
   check(/상담사 \{pickList\.length\}명/.test(blk), `★상담사 수를 «저절로» 셉니다 (늘어나도 고칠 곳 없음)`)
   check(/from\('consultants'\)\.select\('id, name'\)\.eq\('active', true\)\.order\('sort'\)/.test(cs),
     `★(짝) 상담사 단추는 표에서 «활동 중» 인 분을 차례대로 읽습니다`)
+}
+
+console.log('\n━━ ㉒-x 🔴 사람 고르기 창에 «본인» 이 늘 뜨는가 (2026-09-11 · 6부) ━━')
+{
+  //  ★[대표님 2026-09-11 · 목업 승낙] 「사람을 고르는 창에 항상 본인의 인적사항은 기본적으로 나와야」
+  //  [6부가 전수로 셈]  창을 여는 여덟 서비스 중 ★진로적성·합격운 둘에 「나」가 없었습니다.
+  //  [더 큰 것]  5부 0-2 — 가입이 «사주를 안 받습니다». 사주가 없는 회원에게는
+  //     「나」 가 ★«조용히» 사라져, 손님이 자기를 「새로 입력」 으로 넣고 ★남처럼 저장됐습니다.
+  //  ⇒ ① 두 곳에 「나」  ② 사주가 없어도 「나 — 넣으러 가기」  ③ 마이페이지가 저장 뒤 «돌려보냄»
+  const walkAll = (d: string): string[] =>
+    readdirSync(d).flatMap((n) => {
+      const p = `${d}/${n}`
+      return statSync(p).isDirectory() ? walkAll(p) : /\.tsx$/.test(n) ? [p] : []
+    })
+  //  ⚠️ 「나」 를 «일부러» 안 넘기는 창 — 이름과 까닭을 함께 적습니다
+  //     naming/diagnosis — 화면이 이미 «본인 이름» 으로 열려 있고, 이 창은 「다른 사람 보기」 전용
+  const OTHERS_ONLY = new Set(['app/manseryeok/naming/diagnosis/page.tsx'])
+  let opened = 0
+  for (const f of walkAll('app').sort()) {
+    if (f.endsWith('PersonPickerModal.tsx')) continue
+    const c = codeOf(read(f))
+    for (const m of c.matchAll(/<PersonPickerModal\b/g)) {
+      opened++
+      const tag = c.slice(m.index ?? 0, c.indexOf('/>', m.index ?? 0))
+      if (OTHERS_ONLY.has(f)) continue
+      check(/onPickMe=/.test(tag), `★${f.replace(/^app\//, '')} — 창에 «나» 를 넘깁니다`)
+    }
+  }
+  check(opened >= 11, `사람 고르기 창을 «폴더째» 셌습니다 (${opened}곳)`)
+  const pk = codeOf(read('app/manseryeok/components/PersonPickerModal.tsx'))
+  check(/setMeNoSaju\(/.test(pk) && /meNoSaju && onPickMe/.test(pk),
+    `★사주가 없어도 «나» 줄이 뜹니다 (조용히 사라지지 않음)`)
+  check(/아직 내 사주를 안 넣었어요/.test(pk) && /넣으러 가기/.test(pk), `★「넣으러 가기」 로 안내합니다`)
+  //  🔴 저장한 사람이 0명일 때 «빈 화면» 이 「나」 줄까지 가리지 않는가 — 새 회원이 정확히 이 경우입니다
+  check(/people\.length === 0 && !me && !\(meNoSaju && onPickMe\)/.test(pk),
+    `⛔ 저장한 사람이 없어도 «나» 줄이 가려지지 않습니다 (새 회원)`)
+  check(/\/mypage-new\?edit=saju&next=\$\{encodeURIComponent\(/.test(pk),
+    `★마이페이지 사주 칸을 «펼친 채» 열고, 돌아올 곳(next)을 싣습니다`)
+  const sp = codeOf(read('lib/saju/savedPeople.ts'))
+  check(/export async function myResultQuery/.test(sp) && /fromProfile\(/.test(sp),
+    `★「나」 의 주소는 회원 정보에서 «한 곳» 으로 만듭니다 (myResultQuery)`)
+  const mp = codeOf(read('app/mypage-new/page.tsx'))
+  const save = mp.slice(mp.indexOf('const saveSaju'), mp.indexOf('const openNickEdit'))
+  //  ⚠️ 받는 이름(data·savedRows 등)에 매이지 않고 «.select('id') + 0줄 검사» 를 봅니다
+  check(/\.select\('id'\)/.test(save) && /!\w+ \|\| \w+\.length === 0/.test(save),
+    `⛔ 마이페이지 사주 저장이 «바뀐 줄» 을 셉니다 (0줄인데 돌려보내지 않게)`)
+  check(/safeNextPath\(/.test(save) && /router\.push\(back\)/.test(save),
+    `★저장 뒤 «원래 서비스» 로 돌려보냅니다 (남의 사이트는 거름)`)
 }
 
 console.log(`\n━━ 작명 동선 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)

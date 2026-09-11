@@ -25,7 +25,7 @@
 
 import { supabase } from '@/lib/supabase'
 import { isResultRecord } from './personName'
-import { personKey, type MyInfo } from '@/lib/saju/myInfo'
+import { personKey, fromProfile, type MyInfo } from '@/lib/saju/myInfo'
 
 // ── input_data(jsonb)에 저장하는 사주 정보 형태 ──
 // MyInfo와 동일 필드. (표준 규격을 그대로 저장해 조회 시 바로 쓰게)
@@ -342,4 +342,22 @@ export function toResultQuery(p: SavedPerson): string {
   // 이름을 결과 화면 상단에 표시하고 싶을 때 대비 (선택)
   if (p.title) params.set('name', p.title)
   return params.toString()
+}
+
+/* ★2026-09-11 (6부) [대표님 「사람 고르기 창에 본인이 늘 나와야」] — 「나」 의 주소를 «한 곳» 에서 만듭니다.
+ *   진로적성·합격운처럼 «입력 화면이 주소로 사람을 받는» 서비스가 「나」 를 누르면 부릅니다.
+ *   ⚠️ 회원 정보(profiles)에 사주가 «있을 때만» 주소를 줍니다 — 없으면 null.
+ *      (사주가 없으면 창이 「나 — 넣으러 가기」 를 대신 보이므로, 여기까지 안 옵니다)
+ *   ⚠️ 규칙은 창이 「나」 를 띄울 때 쓰는 fromProfile 과 «같습니다» — 둘이 어긋나면
+ *      「나」 는 보이는데 누르면 안 가는 일이 생깁니다. */
+export async function myResultQuery(): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const { data: p } = await supabase.from('profiles')
+    .select('nickname, hangul_name, birth_year, birth_month, birth_day, birth_hour, cal_type, gender, leap_month, saju_saved')
+    .eq('id', user.id).maybeSingle()
+  const info = fromProfile(p)
+  if (!info || !p) return null
+  const name = (p.nickname as string) || (p.hangul_name as string) || '나'
+  return toResultQuery({ input_data: info, title: name } as unknown as SavedPerson)
 }

@@ -19,7 +19,7 @@ import {
   listRecordsByService, deleteRecord, daysAgoLabel, type SajuRecord,
 } from '@/lib/saju/sajuRecords'
 import PersonPickerModal from '@/app/manseryeok/components/PersonPickerModal'
-import { toResultQuery, type SavedPerson, type SavedInputData } from '@/lib/saju/savedPeople'
+import { toResultQuery, myResultQuery, type SavedPerson, type SavedInputData } from '@/lib/saju/savedPeople'
 import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
 import StorageShell, { S } from '@/app/components/common/StorageShell'
 import StorageRow from '@/app/components/common/StorageRow'
@@ -115,6 +115,17 @@ function CareerStorageInner() {
         onPick={(person: SavedPerson) => {
           setPickerOpen(false)
           router.push(`/manseryeok/career-input?${toResultQuery(person)}`)
+        }}
+        onPickMe={async () => {
+          // ★2026-09-11 (6부) [대표님 · 목업 승낙] — 「나」 를 넘깁니다 (다른 여섯 서비스와 같이).
+          //   [전] 이 창만 「나」 가 없어, 본인을 보려면 자기를 사람으로 따로 저장해야 했습니다.
+          //   ⚠️ 입력 화면이 주소로 사람을 받으므로, 회원 정보로 주소를 만들어 넘깁니다 (myResultQuery).
+          //   ⛔ 빼지 마십시오 — 검사 ㉒-x 가 창마다 봅니다.
+          //   ⛔ 이 주석을 창의 속성 «사이» 로 옮기지 마십시오 (58부 — 화면이 통째로 안 뜬 일).
+          const q = await myResultQuery()
+          setPickerOpen(false)
+          if (!q) { alert('내 사주 정보를 불러오지 못했어요. 마이페이지에서 먼저 저장해 주세요.'); return }
+          router.push(`/manseryeok/career-input?${q}`)
         }}
         onClose={() => setPickerOpen(false)}
       />
