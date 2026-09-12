@@ -170,7 +170,9 @@ for (const target of ['student', 'adult'] as ExamTarget[]) {
     ['주로 보는 기운', all.includes('주로 보는 기운')],
     ['학업 몰입도', all.includes('학업 몰입도')],
     ['세부 적성(업상대체)', all.includes('[세부 적성')],
-    ['숫자 비율 지시', all.includes('숫자로 내세요')],
+    //  ★2026-09-12 (6부) [대표님 「숫자를 다루는 것은 위험해 · 두루뭉술하게」] — 방침이 «뒤집혔습니다».
+    //     「수시 80 : 정시 20」 같은 숫자는 근거를 댈 수 없고 제도가 해마다 바뀌어, 이제 «말로» 만 씁니다.
+    ['비율은 말로 (숫자 금지)', all.includes('숫자로 나눈 비율을 쓰지 마세요') && !all.includes('숫자로 내세요')],
     ['마침표 완결 지시', all.includes('마침표로 맺으세요')],
   ]
   for (const [n, hit] of rules) hit ? ok(n) : bad(`${n} — 프롬프트에 없음`)

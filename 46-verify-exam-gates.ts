@@ -50,7 +50,8 @@ const hintOf = (u: string) => u.slice(u.indexOf('(본문'), u.indexOf('[실천]'
   const s = P('strategy', { jobSituation: 'new', jobGates: ['exam', 'interview'] }), d = P('pace', { jobSituation: 'new', jobGates: ['exam', 'interview'] })
   ok(/필기 공부/.test(hintOf(s.user)) && /면접 연습/.test(hintOf(s.user)), '시험 + 면접 — 필기와 면접을 나누는 시간 배분')
   ok(/시험장/.test(hintOf(d.user)) && /면접장/.test(hintOf(d.user)), '시험 + 면접 — 두 날의 수칙')
-  ok(/숫자로 내세요/.test(hintOf(s.user)), '비율은 여전히 숫자로 (14번 검사와 짝)')
+  //  ★2026-09-12 (6부) [대표님 「숫자를 다루는 것은 위험해」] — 방침이 뒤집혔습니다 (검사 45 ⑰)
+  ok(/시간을 어떻게 나눌지 말로 알려 주세요/.test(hintOf(s.user)) && !/몇 대 몇으로 나눌지 숫자/.test(s.user), '비율은 말로 (45 ⑰ 과 짝)')
 }
 {
   const s = P('strategy', {}), d = P('pace', {})

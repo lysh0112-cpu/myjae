@@ -65,7 +65,9 @@ console.log('\n━━ ⑤ AI 에게 «정해진 값» 으로 넘어가는가 —
   const base = { name: '가', gender: '남', age: 31, target: 'adult', kind: 'job', cards: [], saju: doyun, hourUnknown: false, year: 2026, month: 9, examDate: '2026-11-15', plan }
   const f = buildSevenPrompt(base as never, ['flow'] as never)!, s = buildSevenPrompt(base as never, ['strategy'] as never)!, p = buildSevenPrompt(base as never, ['pace'] as never)!
   ok(/엔진이 정한 값/.test(f.user) && f.user.includes('실전형') && /바꾸거나 다른 값을 지어내지 마세요/.test(f.user) && /유형은 위 \[엔진이 정한 값\] 그대로/.test(f.user), '1번 갈래 — 유형이 정해진 값으로 · 쓰기 지시도 «그대로»')
-  ok(s.user.includes('실전 60 : 공부 40') && s.user.includes('3 : 4 : 3') && /숫자로 내세요/.test(s.user), '2번 갈래 — 비율이 정해진 값으로 (숫자로 내세요 · 14번과 짝)')
+  //  ★2026-09-12 (6부) [대표님 「숫자를 다루는 것은 위험해」] — 비율은 «말로» 넘깁니다 (검사 45 ⑰)
+  ok(/시간을 쓰시면 됩니다/.test(s.user) && /가장 많이 두시고/.test(s.user) && !/\d+ : \d+/.test(s.user),
+    '2번 갈래 — 시간 배분 · 지원 안배가 정해진 값으로 (숫자 없이 말로)')
   ok(p.user.includes('2026년 10월') && p.user.includes('2026년 12월') && p.user.includes('말이 빨라지'), '3번 갈래 — 가장 좋은 달 · 조심할 달 · 당일 수칙이 정해진 값으로')
   ok(!f.user.includes('3 : 4 : 3') && !s.user.includes('2026년 12월'), '갈래마다 제 몫만 (되풀이 막기)')
   const none = buildSevenPrompt({ ...base, plan: null } as never, ['strategy'] as never)!

@@ -12,7 +12,7 @@ import { SEVEN_GROUPS, sevenOf, legacyOf, isLegacyTong, sevenKeyOf, buildSevenPr
 import { STUDENT_BAN_WORDS, CLOSING, CLOSING_STUDENT } from './lib/saju/examLuck/tables/rules'
 import { STUDENT_GRADES, GRADE_PROMPT, gradeMismatch, SCHOOL_EXAMS, asksSchoolExam, isFinalYear } from './lib/saju/examLuck/tables/studentTarget'
 import { cardJobFit } from './lib/saju/examLuck/buildCards'
-import { buildPlan, planBlock } from './lib/saju/examLuck/engineCalc'
+import { buildPlan, planBlock, susiRatio } from './lib/saju/examLuck/engineCalc'
 const buildPlan45 = () => buildPlan({
   saju: ['시주', '일주', '월주', '년주'].map((n, i) => ({ pillar: n, stem: ['己卯', '庚子', '己卯', '乙亥'][i][0], branch: ['己卯', '庚子', '己卯', '乙亥'][i][1] })) as never,
   ohaeng: { 목: 50, 화: 0, 토: 20, 금: 10, 수: 20 }, year: 2026, month: 9, examDate: '2026-12-15',
@@ -237,6 +237,41 @@ console.log('\n━━ ⑮ 고3 · 재수생이 아니면 «무슨 시험인지»
   ok(/SCHOOL_EXAMS\.map/.test(ip) && /examTypeOk/.test(ip), '입력 화면 — 시험 종류 알약 · 꼭 고르게')
   ok(/schoolExam === 'none' \? true : !!examDate/.test(ip), '「아직 시험이 없어요」 면 날짜를 받지 않습니다')
   ok(/진로적성» 서비스도 함께/.test(ip), '시험이 없으면 진로적성을 권합니다')
+}
+
+console.log('\n━━ ⑯ 고르신 전형을 뒤집지 않는가 [대표님 실측 2026-09-12 — 수시를 골랐는데 「정시 6」] ━━')
+{
+  const P = (a: string[]) => ['시주', '일주', '월주', '년주'].map((n, i) => ({ pillar: n, stem: a[i][0], branch: a[i][1] }))
+  const even = P(['丙午', '甲子', '乙丑', '己巳'])   // 오행이 고른 사주 — 사주로는 정시 쪽
+  const a = susiRatio(even as never, 'susi'), b = susiRatio(even as never, 'jeongsi'), c = susiRatio(even as never, null)
+  ok(a.susi > a.jeongsi, `수시를 고르면 수시가 더 큼 — 수시 ${a.susi} : 정시 ${a.jeongsi}`)
+  ok(b.jeongsi > b.susi && b.flipped, `정시를 고르면 정시가 더 큼 — 수시 ${b.susi} : 정시 ${b.jeongsi}`)
+  ok(c.susi === 70 && !c.flipped, '안 고르면 사주 판정 그대로')
+  const plan = buildPlan({ saju: even as never, ohaeng: { 목: 20, 화: 20, 토: 20, 금: 20, 수: 20 }, year: 2026, month: 9,
+    target: 'student', kind: 'exam', grade: '좋음', dayunOrder: 2, highSchoolSenior: true, pickedTransfer: 'jeongsi' })
+  const blk = planBlock(plan, 'strategy')
+  ok(/사주로는 반대가 낫다」 는 말을 쓰지 마세요/.test(blk) && !/\d+ : \d+/.test(blk), '★뒤집힌 경우 — 「사주로는 반대」 를 말하지 말라고 (숫자 없이)')
+  const sys = buildSevenPrompt({ name: '가', gender: '여', age: 17, target: 'student', kind: 'exam', cards: [], saju: [], hourUnknown: false, year: 2026 } as never, ['flow'])!.system
+  ok(/「수시보다 정시에 무게를」 처럼 고른 것과 반대로 권하지 말고/.test(sys), '★고른 전형과 반대로 권하지 않기')
+  ok(/학년을 정확히 부르세요/.test(sys), '★고2에게 「지금 3학년」 처럼 쓰지 않기')
+  const ex = fs.readFileSync('app/manseryeok/exam-luck-result/components/ExamResultShell.tsx', 'utf8')
+  ok(/pickedTransfer: examCategory === 'susi'/.test(ex), '결과 화면이 고른 전형을 엔진에 넘깁니다')
+}
+
+console.log('\n━━ ⑰ 🔴 비율 숫자를 쓰지 않는가 [대표님 2026-09-12 「숫자를 다루는 것은 위험해」] ━━')
+{
+  const blk = planBlock45(buildPlan45(), 'strategy')
+  ok(!/\d+ : \d+/.test(blk), `★엔진이 «몇 대 몇» 을 넘기지 않습니다 — ${blk.split('\n').find(l => l.includes('시간 배분'))?.slice(0, 66)}`)
+  ok(/시간을 쓰시면 됩니다/.test(blk) && /가장 많이 두시고/.test(blk), '시간 배분 · 지원 안배를 말로 넘깁니다')
+  ok(/숫자로 나눈 비율을 글에 쓰지 마세요/.test(blk), '재료에도 「숫자를 쓰지 말라」')
+  const stuBlk = planBlock45(buildPlan({
+    saju: ['시주', '일주', '월주', '년주'].map((n, i) => ({ pillar: n, stem: ['庚申', '戊申', '庚申', '戊子'][i][0], branch: ['庚申', '戊申', '庚申', '戊子'][i][1] })) as never,
+    ohaeng: { 목: 0, 화: 25, 토: 15, 금: 55, 수: 5 }, year: 2026, month: 9, target: 'student', kind: 'exam', grade: '좋음', dayunOrder: 2, highSchoolSenior: true,
+  }), 'strategy')
+  ok(!/수시 \d+|정시 \d+/.test(stuBlk) && /편한 결|고른 결|그대로 밀어/.test(stuBlk), `★「수시 80 : 정시 20」 이 사라졌습니다 — ${stuBlk.split('\n').find(l => l.includes('전형'))?.slice(0, 60)}`)
+  const sys = buildSevenPrompt({ name: '가', gender: '남', age: 30, target: 'adult', kind: 'job', cards: [], saju: [], hourUnknown: false, year: 2026 } as never, ['strategy'])!
+  ok(/비율을 숫자로 쓰지 마세요/.test(sys.system), '말투 규칙에도 「비율 숫자 금지」')
+  ok(!/숫자로 내세요/.test(sys.user), '쓰기 지시에서 「숫자로 내세요」 가 사라졌습니다')
 }
 
 console.log(`\n━━ 4갈래 · 쉬운 말투 · 달별 재료 — 통과 ${pass} · 실패 ${fail} ━━\n`)

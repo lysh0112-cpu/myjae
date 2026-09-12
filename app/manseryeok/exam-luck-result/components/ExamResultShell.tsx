@@ -357,8 +357,10 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       examDayGanji: ex?.dayGanji ?? null, examGongmang: !!ex?.isGongmang,
       //  ★6부 — 수시 : 정시 비율은 고2부터 (학년 세분화 · 옛 high12 포함)
       highSchoolSenior: target === 'student' ? ['high2', 'high3', 'nsu', 'high12'].includes(studentGrade) : undefined,
+      //  ★6부 [대표님] 손님이 고른 전형을 뒤집지 않습니다 (수시를 고르셨으면 수시가 더 크게)
+      pickedTransfer: examCategory === 'susi' ? 'susi' : examCategory === 'jeongsi' ? 'jeongsi' : null,
     })
-  }, [calc, ohaengScore, cards, examDateRaw, target, kind, studentGrade])
+  }, [calc, ohaengScore, cards, examDateRaw, target, kind, studentGrade, examCategory])
 
   /** 원국 합격 신호 — Positive / Warning (지시서 2-B) */
   const signalBlock = useMemo(() => {

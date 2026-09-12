@@ -70,12 +70,24 @@ export function practiceRatio(yuk: Record<Yuk, number>): number {
   const raw = PRACTICE.base + ((yuk.식상 + yuk.재성) - (yuk.인성 + yuk.관성)) * PRACTICE.factor
   return Math.max(PRACTICE.min, Math.min(PRACTICE.max, Math.round(raw / 10) * 10))
 }
-export function susiRatio(saju: Pillar[]) {
+/* ★2026-09-12 (6부) [대표님 실측 — 수시를 고른 학생에게 「수시 4 : 정시 6」 이 나왔습니다]
+ *   손님이 이미 고른 전형을 뒤집지 않습니다. 고른 쪽이 «늘 더 크게» 나오도록 뒤집어 줍니다.
+ *   ⚠️ 사주 판정(어느 쪽이 편한가)은 그대로 두고, «어느 쪽에 무게를 둘지» 만 손님 선택을 따릅니다.
+ *   ⚠️ 숫자 자체는 연재쌤 확인 대기 (초안 · engineRules.SUSI) */
+export function susiRatio(saju: Pillar[], picked?: 'susi' | 'jeongsi' | null) {
   const cnt: Record<string, number> = { 목: 0, 화: 0, 토: 0, 금: 0, 수: 0 }
   for (const p of saju) for (const c of [p.stem, p.branch]) if (c && c !== '?' && EL[c]) cnt[EL[c]]++
   const noGeum = cnt.금 === 0, skew = Math.max(...Object.values(cnt)) >= 4
-  const [susi, jeongsi] = noGeum && skew ? SUSI.both : (noGeum || skew) ? SUSI.one : SUSI.none
-  return { susi, jeongsi, why: noGeum && skew ? '금이 없고 오행이 한쪽으로 몰림' : noGeum ? '금이 없음' : skew ? '오행이 한쪽으로 몰림' : '금이 있고 오행이 고름' }
+  const pair = noGeum && skew ? SUSI.both : (noGeum || skew) ? SUSI.one : SUSI.none
+  let susi: number = pair[0], jeongsi: number = pair[1]
+  const fitsSusi = susi > jeongsi
+  //  ★손님이 고른 쪽이 늘 더 크게 (고른 것을 뒤집지 않습니다)
+  const flipped = !!picked && ((picked === 'susi' && susi < jeongsi) || (picked === 'jeongsi' && jeongsi < susi))
+  if (flipped) [susi, jeongsi] = [jeongsi, susi]
+  return {
+    susi, jeongsi, fitsSusi, flipped,
+    why: noGeum && skew ? '금이 없고 오행이 한쪽으로 몰림' : noGeum ? '금이 없음' : skew ? '오행이 한쪽으로 몰림' : '금이 있고 오행이 고름',
+  }
 }
 export function applyRatio(grade: string, target: 'adult' | 'student'): string {
   return APPLY[target][grade] ?? APPLY[target]['보통']
@@ -135,6 +147,8 @@ export interface ExamPlan {
 export function buildPlan(a: {
   saju: Pillar[]; ohaeng: Record<string, number>; year: number; month: number; examDate?: string | null
   target: 'adult' | 'student'; kind: 'exam' | 'job'; grade: string; dayunOrder: number
+  /** ★6부 — 손님이 고른 전형 (수시 · 정시) — 고른 쪽을 뒤집지 않습니다 */
+  pickedTransfer?: 'susi' | 'jeongsi' | null
   examDayGanji?: string | null; examGongmang?: boolean; highSchoolSenior?: boolean
 }): ExamPlan {
   const ds = dayStemOf(a.saju)
@@ -142,7 +156,7 @@ export function buildPlan(a: {
   return {
     type,
     practice: a.target === 'adult' ? practiceRatio(type.yuk) : null,
-    susi: a.target === 'student' && a.highSchoolSenior !== false ? susiRatio(a.saju) : null,
+    susi: a.target === 'student' && a.highSchoolSenior !== false ? susiRatio(a.saju, a.pickedTransfer ?? null) : null,
     apply: applyRatio(a.grade, a.target),
     grade: a.grade,
     months: ds && ds !== '?' ? pickMonths({ dayStem: ds, year: a.year, month: a.month, examDate: a.examDate, target: a.target, kind: a.kind, earlyDayun: a.dayunOrder > 0 && a.dayunOrder <= 2 }) : null,
@@ -177,10 +191,26 @@ export function planBlock(plan: ExamPlan | null | undefined, section: 'flow' | '
       : '- ★어느 한쪽이 특별히 크지는 않은, 고르게 갖춘 그릇입니다. «고르게 갖추셨다» 로 말하고 모자란 쪽을 짚지 마세요.')
   }
   if (section === 'strategy') {
-    if (plan.practice != null) L.push(`- 시간 배분: 실전 ${plan.practice} : 공부 ${100 - plan.practice}   (면접만 준비하면 «지원서 · 경력 정리 ${plan.practice} : 면접 연습 ${100 - plan.practice}» 로 부르세요)`)
-    if (plan.susi) L.push(`- 수시 ${plan.susi.susi} : 정시 ${plan.susi.jeongsi} — 까닭: ${plan.susi.why} (교재 131쪽)`)
-    //  ★6부 [대표님] 면접만 보는 분께 «열 곳 응시» 처럼 들리지 않게 — 「지원할 곳 열 곳」 으로
-    L.push(`- 지원 비율 (조금 높은 곳 : 맞는 곳 : 쉬운 곳): ${plan.apply} — 올해 ${plan.grade} (${plan.target === 'student' ? '수시 여섯 장' : '지원할 곳 열 곳'} 기준)`)
+    /* 🔴 ★2026-09-12 (6부) [대표님 「숫자를 다루는 것은 위험해 · 두루뭉술하게 넘어가게」]
+     *   [왜] 「수시 80 : 정시 20」 · 「50 : 50」 같은 숫자는 근거를 댈 수 없고, 입시 제도는 해마다 바뀝니다.
+     *        바뀔 때마다 찾아 고칠 수도 없고, 틀리면 프로그램 전체가 의심받습니다.
+     *   ⇒ 엔진은 계산을 그대로 하되(연재쌤 확인 대기), AI 에게는 «숫자 대신 말» 로 넘깁니다.
+     *   ⛔ 여기에 숫자를 다시 넣지 마십시오 (검사 45 ⑰). */
+    if (plan.practice != null) {
+      const p = plan.practice
+      L.push(`- 시간 배분: ${p >= 60 ? '직접 지원하고 부딪히는 쪽에 조금 더' : p <= 40 ? '앉아서 준비하는 쪽에 조금 더' : '두 가지에 비슷하게'} 시간을 쓰시면 됩니다.`)
+    }
+    if (plan.susi) {
+      const lean = plan.susi.susi >= 70 ? '그동안 쌓아 온 것을 보여 주는 쪽이 조금 더 편한 결'
+        : plan.susi.susi <= 40 ? '한 번의 시험으로 실력을 보이는 쪽도 잘 맞는 결' : '어느 한쪽으로 크게 기울지 않은 고른 결'
+      L.push(plan.susi.flipped
+        ? `- 전형: 손님이 고르신 전형을 그대로 밀어 주세요. 「사주로는 반대가 낫다」 는 말을 쓰지 마세요. 다른 쪽도 «함께 챙기면 더 든든하다» 로만 한 문장 덧붙이세요.`
+        : `- 전형: ${lean}입니다. 고르신 전형을 밀어 주고, 다른 쪽은 «함께 챙기면 든든하다» 로만 쓰세요.`)
+    }
+    const [hi, mid, low] = plan.apply.split(' : ').map(Number)
+    const most = hi >= mid && hi >= low ? '조금 높은 곳' : low >= mid ? '부담이 적은 곳' : '조건이 잘 맞는 곳'
+    L.push(`- 지원 안배: ${most} 쪽을 가장 많이 두시고 나머지를 나눠 두시면 됩니다.${hi <= 1 ? ' 조금 높은 곳은 한두 곳만 두세요.' : ''} (${plan.target === 'student' ? '수시 여섯 장' : '지원할 곳'} 기준)`)
+    L.push('★위 세 줄은 «말로만» 쓰세요. ⛔ 「몇 대 몇」 처럼 숫자로 나눈 비율을 글에 쓰지 마세요.')
   }
   if (section === 'pace') {
     if (plan.months) {
