@@ -380,7 +380,8 @@ export function cardJobFit(hits: StructHit[], way?: string | null): ExamCard {
   }
   const reasons = [
     `[교재 202~204쪽 직업별 사주 구조] 고른 방식: ${w.label}`,
-    ...hits.slice(0, 3).map(h => `- ${h.name} (${h.score}점): ${h.why.slice(0, 3).join(' · ')}`),
+    //  ★6부 [대표님 실측] 구조 이름(사업가 · 활인업 …)을 그대로 넘기면 AI 가 「사업가형 기질」 처럼 씁니다 — 생활 말로 (검사 45)
+    ...hits.slice(0, 3).map(h => `- ${STRUCT_PLAIN[h.key] ?? h.name} 쪽: ${h.why.slice(0, 3).join(' · ')}`),
   ]
   return { key: 'jobfit', title: '고르신 일하는 방식과 사주', lines, reasons }
 }

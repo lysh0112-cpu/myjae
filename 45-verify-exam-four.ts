@@ -10,6 +10,7 @@
 import * as fs from 'fs'
 import { SEVEN_GROUPS, sevenOf, legacyOf, isLegacyTong, sevenKeyOf, buildSevenPrompt, monthlyMaterial, dedupeBody } from './lib/saju/examLuck/buildExamSeven'
 import { STUDENT_BAN_WORDS, CLOSING, CLOSING_STUDENT } from './lib/saju/examLuck/tables/rules'
+import { cardJobFit } from './lib/saju/examLuck/buildCards'
 
 let pass = 0, fail = 0
 const ok = (c: boolean, m: string) => { if (c) { pass++; console.log('  ✅ ' + m) } else { fail++; console.log('  🔴 ' + m) } }
@@ -103,6 +104,19 @@ console.log('\n━━ ⑦ 손님 편에 서서 말하기 [대표님 2026-09-12 �
   ok(/올해 안 되면 그 해까지 두 해로/.test(sys.system), '올해가 가장 좋은 해가 아니면 더 좋은 해를 함께')
   ok(/밀고 가셔도 됩니다/.test(sys.user), '2번 갈래 — 그 결정을 먼저 받아 주기')
   ok(/바람에 맞춰 판정을 바꾸지 마세요/.test(buildSevenPrompt({ name: '가', gender: '남', age: 30, target: 'adult', kind: 'job', cards: [], saju: [], hourUnknown: false, year: 2026, wish: '올해 꼭 옮기고 싶어요' } as never, ['strategy'])!.user), '⛔ 다만 판정 자체는 바꾸지 않습니다 (그대로)')
+}
+
+console.log('\n━━ ⑧ 한자말 · 판정 이름이 그대로 나오지 않는가 [대표님 실측 2026-09-12 · 2] ━━')
+{
+  const sys = buildSevenPrompt({ name: '가', gender: '남', age: 30, target: 'adult', kind: 'job', cards: [], saju: [], hourUnknown: false, year: 2026 } as never, ['flow'])!
+  ok(/괄호로 덧붙이지 마세요/.test(sys.system) && /식상/.test(sys.system), '★「말하고 글 쓰는 재주(식상)」 처럼 괄호로 덧붙이지 않기')
+  ok(/판정 이름\(사업가[\s\S]{0,80}그대로 쓰지 마세요/.test(sys.system), '★재료의 판정 이름(사업가 · 상관견관 …)을 그대로 쓰지 않기')
+  const st = buildSevenPrompt({ name: '가', gender: '남', age: 30, target: 'adult', kind: 'job', cards: [], saju: [], hourUnknown: false, year: 2026 } as never, ['flow'])!.user
+  ok(/«한 해» 와 «한 달» 을 섞어/.test(buildSevenPrompt({ name: '가', gender: '남', age: 30, target: 'adult', kind: 'job', cards: [], saju: [], hourUnknown: false, year: 2026 } as never, ['strategy'])!.user), '★「2026년 12월은 … 해라」 처럼 해와 달을 섞지 않기')
+  ok(/「조심하는 해」 라 쓰지 말고/.test(st), '★등급을 겁주는 말로 옮기지 않기')
+  //  적성 카드 — 구조 이름 대신 생활 말
+  const card = cardJobFit([{ key: 'saeobga', name: '사업가', score: 7, why: ['재성이 강해요'], note: '' }] as never, 'chang')
+  ok(card.reasons.some(r => r.includes('사업') && !r.includes('사업가 (')), `적성 카드 재료가 생활 말로 — ${card.reasons[1]}`)
 }
 
 console.log(`\n━━ 4갈래 · 쉬운 말투 · 달별 재료 — 통과 ${pass} · 실패 ${fail} ━━\n`)
