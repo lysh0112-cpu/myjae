@@ -10,6 +10,7 @@
 import * as fs from 'fs'
 import { SEVEN_GROUPS, sevenOf, legacyOf, isLegacyTong, sevenKeyOf, buildSevenPrompt, monthlyMaterial, dedupeBody } from './lib/saju/examLuck/buildExamSeven'
 import { STUDENT_BAN_WORDS, CLOSING, CLOSING_STUDENT } from './lib/saju/examLuck/tables/rules'
+import { STUDENT_GRADES, GRADE_PROMPT, gradeMismatch } from './lib/saju/examLuck/tables/studentTarget'
 import { cardJobFit } from './lib/saju/examLuck/buildCards'
 import { buildPlan, planBlock } from './lib/saju/examLuck/engineCalc'
 const buildPlan45 = () => buildPlan({
@@ -180,6 +181,37 @@ console.log('\n━━ ⑫ 학생(합격운)도 같은 규칙을 받는가 [대�
     ok(re2.test(sys), `학생도 — ${name}`)
   }
   ok(/부모님/.test(buildSevenPrompt(stu as never, ['cheer'])!.user), '학생 전용 — 부모님께 드리는 말은 그대로')
+}
+
+console.log('\n━━ ⑬ 학생에게 성인 말 · 교재 말이 새지 않는가 [대표님 실측 2026-09-12 · 학생판] ━━')
+{
+  const plan = buildPlan({
+    saju: ['시주', '일주', '월주', '년주'].map((n, i) => ({ pillar: n, stem: ['庚申', '戊申', '庚申', '戊子'][i][0], branch: ['庚申', '戊申', '庚申', '戊子'][i][1] })) as never,
+    ohaeng: { 목: 0, 화: 25, 토: 15, 금: 55, 수: 5 }, year: 2026, month: 9, examDate: '2026-11-19',
+    target: 'student', kind: 'exam', grade: '좋음', dayunOrder: 2, highSchoolSenior: true,
+  })
+  const blk = planBlock45(plan, 'flow') + planBlock45(plan, 'pace')
+  ok(!/직장|돈을 다루는|이직|취업/.test(blk), `★학생 재료에 성인 말(직장 · 돈)이 없습니다 — ${blk.split('\n').find(l => l.includes('힘'))?.slice(0, 60)}`)
+  ok(/규칙을 지키는 힘|공부운|친구와 견주는|바깥일에 끌리는/.test(blk), '학생 재료는 학생 말로')
+  const sys = buildSevenPrompt({ name: '가', gender: '여', age: 18, target: 'student', kind: 'exam', cards: [], saju: [], hourUnknown: false, year: 2026 } as never, ['flow'])!.system
+  ok(/「옷을 갖춰 입는 때」 · 「12운성」/.test(sys), '★교재 설명 문장(옷을 갖춰 입는 때 · 12운성 · 관대)을 그대로 쓰지 않기')
+}
+
+console.log('\n━━ ⑭ 학년 세분화 · 고3 · 재수생에게 먼 해를 말하지 않기 [대표님 2026-09-12] ━━')
+{
+  const keys = STUDENT_GRADES.map(g => g.key).filter(Boolean)
+  ok(keys.join() === 'elementary,middle1,middle2,middle3,high1,high2,high3,nsu,other',
+    `학년 아홉 — ${STUDENT_GRADES.filter(g => g.key).map(g => g.label).join(' · ')}`)
+  ok(keys.every(k => !!GRADE_PROMPT[k as keyof typeof GRADE_PROMPT]), '학년마다 AI 문구가 있습니다')
+  ok(!!GRADE_PROMPT.middle && !!GRADE_PROMPT.high12, '⚠️ 옛 기록용 문구(중학생 · 고1~2)는 남아 있습니다')
+  ok(!gradeMismatch(14, 'middle2') && gradeMismatch(19, 'middle2'), '학년마다 나이 범위 (중2는 13~15세)')
+  for (const g of ['high3', 'nsu'] as const) {
+    ok(/«내년 · 내후년 · 몇 년 뒤» 를 말하지 마세요/.test(GRADE_PROMPT[g]), `${g === 'high3' ? '고3' : '재수생'} 문구에 「내년 · 내후년 금지」`)
+    const u = buildSevenPrompt({ name: '가', gender: '여', age: 18, target: 'student', kind: 'exam', cards: [], saju: [], hourUnknown: false, year: 2026, gradeBlock: GRADE_PROMPT[g] } as never, ['flow'])!.user
+    ok(/올해\(2026년\) «한 해만» 말하세요/.test(u), `${g === 'high3' ? '고3' : '재수생'} — 1번 갈래가 올해 한 해만`)
+  }
+  const u2 = buildSevenPrompt({ name: '가', gender: '여', age: 16, target: 'student', kind: 'exam', cards: [], saju: [], hourUnknown: false, year: 2026, gradeBlock: GRADE_PROMPT.high1 } as never, ['flow'])!.user
+  ok(!/«한 해만» 말하세요/.test(u2) && /가장 좋은 해와 보통인 해/.test(u2), '고1 등 아래 학년은 5년 흐름을 그대로 (아직 시간이 있음)')
 }
 
 console.log(`\n━━ 4갈래 · 쉬운 말투 · 달별 재료 — 통과 ${pass} · 실패 ${fail} ━━\n`)

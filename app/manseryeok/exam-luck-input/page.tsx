@@ -115,7 +115,8 @@ function ExamLuckInputInner() {
    *     날짜는 [상반기]·[하반기]·[연말] 단추로, 목표는 «그 밖의 시험» 으로.
    */
   /** 고교를 이미 다니거나 마친 학년인가 — 성적·계열을 묻는 자리 */
-  const needsLevel = ['high12', 'high3', 'nsu'].includes(studentGrade)
+  //  ★6부 — 학년을 세분화하면서 고1 · 고2 도 성적대를 받습니다 (옛 high12 는 기록용)
+  const needsLevel = ['high1', 'high2', 'high3', 'nsu', 'high12'].includes(studentGrade)
   const gradeOk = target !== 'student' || !!studentGrade
   const targetOk = target === 'student'
     ? !!examCategory && !!targetType && (targetType !== 'custom' || !!targetCustomText.trim())

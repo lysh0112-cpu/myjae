@@ -342,7 +342,8 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       examDate: examDateRaw || null, target, kind: kind === 'job' ? 'job' : 'exam',
       grade: years[0]?.grade ?? '보통', dayunOrder: order,
       examDayGanji: ex?.dayGanji ?? null, examGongmang: !!ex?.isGongmang,
-      highSchoolSenior: target === 'student' ? ['high3', 'nsu'].includes(studentGrade) : undefined,
+      //  ★6부 — 수시 : 정시 비율은 고2부터 (학년 세분화 · 옛 high12 포함)
+      highSchoolSenior: target === 'student' ? ['high2', 'high3', 'nsu', 'high12'].includes(studentGrade) : undefined,
     })
   }, [calc, ohaengScore, cards, examDateRaw, target, kind, studentGrade])
 
