@@ -38,7 +38,7 @@ import { judgeJobChangeNatal, judgeJobChangeLuck } from '@/lib/saju/examLuck/job
 import { judgeExamDay } from '@/lib/saju/examLuck/examDay'
 import { buildAllCards } from '@/lib/saju/examLuck/buildCards'
 import { parseExamTongbyeon } from '@/lib/saju/examLuck/buildExamPrompt'
-import { buildSevenPrompt, sevenOf, legacyOf, isLegacyTong, SEVEN_GROUPS, sevenKeyOf, dedupeBody } from '@/lib/saju/examLuck/buildExamSeven'
+import { buildSevenPrompt, sevenOf, legacyOf, isLegacyTong, SEVEN_GROUPS, sevenKeyOf, dedupeBody, promoTidy } from '@/lib/saju/examLuck/buildExamSeven'
 // ★2026-07-30 — 지시서 2장 «사정 평가 로직» 을 재료로 만들어 싣습니다. (교훈 CU)
 import { judgePassSignal, passSignalBlock } from '@/lib/saju/examLuck/passSignal'
 import { upsangBlock as buildUpsangBlock } from '@/lib/saju/examLuck/tables/upsang'
@@ -55,7 +55,7 @@ import { refreshBeforeAi } from '@/lib/ai/freshCall'
 import { cardJobFit } from '@/lib/saju/examLuck/buildCards'
 import { buildPlan } from '@/lib/saju/examLuck/engineCalc'
 import { pickStructure } from '@/lib/saju/career/jobStructure'
-import { promoJobOf, isGateStep, PROMO_YEARS, PROMO_SEASONS, watchMonthOf, PROMO_BIGYEOP_SAY } from '@/lib/saju/examLuck/tables/promotion'
+import { promoJobOf, isGateStep, PROMO_YEARS, PROMO_SEASONS, watchMonthOf } from '@/lib/saju/examLuck/tables/promotion'
 import { goalLabel, sanitizeWish, wishLooksHeavy, WISH_KEY, readWishHandoff, parseGates, parseSituation, JOB_SITUATIONS, JOB_GATES, parsePicks, wayFromPicks, readJobTextHandoff, sanitizeJobText, readCertsHandoff, sanitizeCerts } from '@/lib/saju/examLuck/tables/jobFields'
 
 const ACCENT = '#c85a8c'
@@ -173,10 +173,28 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
     watch
       ? `· ★눈여겨볼 달은 ${watch}월입니다 (발표 앞이 정해지는 때). 이 달을 중심에 두고 지금 달부터 이어서 쓰세요.`
       : '· 인사 시기를 모르시거나 수시라 하셨습니다 — ⛔특정한 달을 못 박지 말고 흐름으로만 쓰세요.',
-    `· 비겁(같은 자리를 바라보는 분)이 드는 때면 ★«${PROMO_BIGYEOP_SAY}» 로 옮겨 적으세요. ⛔「경쟁자」 라는 낱말은 쓰지 마세요.`,
+    /*  🔴 ★2026-09-12 (7부 · 대표님 실측) — 여기에 «완성된 문장» 을 주었더니
+     *    AI 가 그것을 ★«글자 그대로» 세 곳에 복사했습니다 (2번 · 3번 · 3번 안에서 또).
+     *    ⇒ 지시문에 ★«쓸 문장» 을 주면 안 됩니다. «무엇을 말할지» 만 줍니다.
+     *    ⛔ PROMO_BIGYEOP_SAY 를 여기에 그대로 넣지 마십시오 (검사 51 ⑭). */
+    '· 비겁(같은 자리를 바라보는 분)이 드는 때가 있으면 ★«그 달 한 곳에서만» 한 번 다루세요. '
+      + '⛔「경쟁자」 라는 낱말은 쓰지 말고, 겁주지 말고, ★«내가 한 일을 누구 것인지 남겨 두는 일» 쪽으로 옮겨 적으세요. '
+      + '⛔같은 말을 갈래마다 되풀이하지 마세요 — 매번 «다른 말» 로 쓰세요.',
     '· ⛔올해와 내년 «두 해» 까지만 말하세요. 그 뒤 해는 말하지 마세요.',
-    '· ⛔「승진하십니다」 · 「○월에 발표가 납니다」 같은 약속을 하지 마세요. ★맺음은 「정하는 것은 사람과 조직입니다」.',
-    '· ★사주 용어는 «한 갈래에 한 개» 까지, 꼭 필요할 때만. 쓰면 반드시 뜻을 한 번 풀어 주세요. 4번 갈래에는 0개. [연재쌤 2026-09-12]',
+    '· ⛔「승진하십니다」 · 「○월에 발표가 납니다」 같은 약속을 하지 마세요.',
+    /*  ★2026-09-12 (7부 · 대표님 실측) — 2번 갈래 끝에 「사주가 모든 것을 결정하지는
+     *    않습니다 … 일희일비하지 마세요」 가 들어가고, 4번에서 «거의 같은 말» 이 또 나왔습니다.
+     *    ⇒ 6부 규칙 「맺음말은 ★4번 갈래에서만」 을 승진에도 못 박습니다. */
+    '· 🔴★「정하는 것은 사람과 조직입니다」 는 ★«4번 갈래 맨 끝에서 한 번만» 쓰세요. '
+      + '⛔1·2·3번 갈래에서 쓰지 마세요. 「사주가 다 결정하지 않는다」 · 「일희일비하지 마세요」 같은 '
+      + '★마무리하는 말도 ⛔4번 갈래에서만 쓰세요.',
+    '· 🔴★사주 용어는 «이 갈래 통틀어 한 개» 까지입니다. 두 개 쓰면 안 됩니다. 0개여도 좋습니다. [연재쌤 2026-09-12]',
+    '· ⛔아래 말은 ★한 번도 쓰지 마세요 — 「말하고 글 쓰는 재주」 · 「말하고 글로 설득하는 힘」 · '
+      + '「남과 견주는 마음」 · 「자리가 나를 부르는 흐름」 · 「짜임」 · 「기운이 열린다」 · 「결이」. '
+      + '★같은 뜻을 «그때그때 다른 생활 말» 로 풀어 쓰세요.',
+    '· ⛔「직장운」 · 「합격운」 · 「직책운」 을 ★한 갈래에 두 번 이상 쓰지 마세요. '
+      + '처음 한 번만 뜻을 풀고, 그다음부터는 ★«그 힘» · «그것» 처럼 받아 쓰세요.',
+    '· ⛔4번 갈래(응원)에는 사주 용어를 ★한 개도 쓰지 마세요.',
         ].filter(Boolean).join('\n')
   }, [isPromo, pJobRaw, pCurRaw, pNextRaw, pGateRaw, pYearsRaw, pSeasonRaw, jobTextForSave])
   /* ★6부 [대표님] 가진 자격증 — 주소가 아니라 건넴 · 기록에서 */
@@ -927,10 +945,12 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       //   제목에 이모지·번호가 붙었으므로 sevenKeyOf 가 그것을 떼고 맞춥니다.
       const k = sevenKeyOf(title, target, legacy)
       //  ★6부 — AI 가 제 몫을 두 번 쓴 글에서 되풀이 단락을 걷어냅니다 (대표님 실측 · 검사 45)
-      if (k && body.trim()) out[k] = dedupeBody(body)
+      /*  ★2026-09-12 (7부) — 승진은 받은 «뒤» 에 값으로 다듬습니다.
+       *    지시문만으로는 사주 용어가 지켜지지 않았습니다 (대표님 실측). */
+      if (k && body.trim()) out[k] = isPromo ? promoTidy(dedupeBody(body), k) : dedupeBody(body)
     }
     return out
-  }, [parsed, target, legacy])
+  }, [parsed, target, legacy, isPromo])
   /** ★이 화면이 그릴 갈래 — 새 풀이는 4갈래, 옛 기록은 옛 7갈래 (6부 봉투 B) */
   /*  ★2026-09-12 (7부) — 승진은 제목이 다릅니다 (SEVEN_PROMO).
    *  ⚠️ 옛 기록(legacy)은 그대로 옛 제목으로 엽니다. */

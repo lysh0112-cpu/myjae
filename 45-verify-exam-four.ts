@@ -98,7 +98,9 @@ console.log('\n━━ ⑥ 🔴 같은 내용이 두 번 나오지 않는가 [대
   ok(dedupeBody(`${para}\n\n${other}`) === `${para}\n\n${other}`, '다른 단락은 그대로 둡니다')
   ok(dedupeBody('[실천] 오늘 한 가지.\n\n[실천] 오늘 한 가지.').split('\n\n').length === 2, '짧은 줄은 건드리지 않습니다')
   const ex = fs.readFileSync('app/manseryeok/exam-luck-result/components/ExamResultShell.tsx', 'utf8')
-  ok(/out\[k\] = dedupeBody\(body\)/.test(ex), '화면이 글을 그릴 때 되풀이를 걷어냅니다')
+  //  ★2026-09-12 (7부) — 승진은 dedupeBody 뒤에 promoTidy 를 한 번 더 겁니다.
+  //    ⚠️ 그래도 «되풀이 걷어내기» 는 ★언제나 돕니다 — 그것이 이 검사의 뜻입니다.
+  ok(/dedupeBody\(body\)/.test(ex) && /out\[k\] =/.test(ex), '화면이 글을 그릴 때 되풀이를 걷어냅니다')
   const sys = buildSevenPrompt({ name: '가', gender: '남', age: 30, target: 'adult', kind: 'job', cards: [], saju: [], hourUnknown: false, year: 2026 } as never, ['strategy'])!.system
   ok(/같은 내용을 두 번 쓰지 마세요/.test(sys), 'AI 에게도 「두 번 쓰지 말라」')
   ok(/맺음말은[\s\S]{0,40}마지막 갈래에서만/.test(sys), '★맺음말은 마지막 갈래에서만 (2 · 3번 갈래에 되풀이되던 것)')

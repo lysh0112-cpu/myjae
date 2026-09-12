@@ -8,7 +8,7 @@
 import { readFileSync } from 'fs'
 import { JOB_SITUATIONS, parseSituation } from './lib/saju/examLuck/tables/jobFields'
 import { PROMO_USE_JOBCHANGE } from './lib/saju/examLuck/tables/promotion'
-import { sevenOf, SEVEN_PROMO, SEVEN_ADULT } from './lib/saju/examLuck/buildExamSeven'
+import { sevenOf, SEVEN_PROMO, SEVEN_ADULT, promoTidy } from './lib/saju/examLuck/buildExamSeven'
 import { planBlock } from './lib/saju/examLuck/engineCalc'
 
 let pass = 0, fail = 0
@@ -105,14 +105,14 @@ ok(/아직 연차가 안 되신 분입니다\. ★시기를 짚지 마세요/.te
   '★연차가 안 되신 분께 시기를 말하지 않습니다')
 ok(/눈여겨볼 달은 \$\{watch\}월/.test(shell), '★인사 시기의 두 달 앞을 짚습니다')
 ok(/특정한 달을 못 박지 말고 흐름으로만/.test(shell), '모르시면 달을 짚지 않습니다')
-ok(/「경쟁자」 라는 낱말은 쓰지 마세요/.test(shell),
+ok(/⛔「경쟁자」 라는 낱말은 쓰지 말고/.test(shell),
   '🔴 ★비겁은 경쟁자로 «보되» 그 낱말은 쓰지 않습니다 [연재쌤 ④]')
 ok(/올해와 내년 «두 해» 까지만/.test(shell), '★두 해까지만 (6부 「고3은 올해만」 과 같은 결)')
 ok(/「승진하십니다」 · 「○월에 발표가 납니다」 같은 약속을 하지 마세요/.test(shell),
   '⛔ 점쟁이 말투를 막습니다 [대표님 「점쟁이는 아니잖아」]')
 ok(/정하는 것은 사람과 조직입니다/.test(shell), '★맺음말이 실립니다')
-ok(/«한 갈래에 한 개» 까지/.test(shell), '🔴 ★사주 용어는 한 갈래에 하나까지 [연재쌤 ⑦]')
-ok(/4번 갈래에는 0개/.test(shell), '⛔ 응원 갈래에는 사주 용어 0개')
+ok(/«이 갈래 통틀어 한 개» 까지입니다/.test(shell), '🔴 ★사주 용어는 한 갈래에 하나까지 [연재쌤 ⑦]')
+ok(/4번 갈래\(응원\)에는 사주 용어를 ★한 개도 쓰지 마세요/.test(shell), '⛔ 응원 갈래에는 사주 용어 0개')
 
 head('⑨ 손님이 보는 이름')
 ok(/합격운 · 취업운 · 승진운/.test(input), '★입력 머리글에 승진이 들어갔습니다')
@@ -177,6 +177,38 @@ head('⑬ 🔴 승진에 «지원 안배 · 전형 · 시간 배분» 이 안 �
   ok(/planBlock\(v\.plan, group\[0\], v\.jobSituation === 'promote'\)/.test(seven),
     '★지시문이 승진임을 planBlock 에 넘깁니다')
 }
+
+
+head('⑭ 🔴 사주 용어를 «값으로» 다듬는가 (말로만 막았더니 안 지켜진 자리)')
+{
+  /*  [대표님 실측 2026-09-12] 지시문에 「한 갈래에 한 개까지」 라 적었는데
+   *    1번에 둘, 2번에 다섯, 3번에 넷이 나왔습니다. ⇒ ★값으로 셉니다. */
+  const t2 = promoTidy('타고난 그릇에 직책운이 있고, 말하고 글로 설득하는 힘도 있는 짜임입니다. 직책운이 이어집니다.', 'strategy')
+  ok(!/말하고 글로 설득하는 힘/.test(t2), '⛔ 「말하고 글로 설득하는 힘」 이 생활 말로 바뀝니다')
+  ok(!/짜임/.test(t2), '⛔ 「짜임」 이 「바탕」 으로 바뀝니다')
+  ok((t2.match(/직책운/g) ?? []).length === 1, '🔴 ★「직책운」 이 한 갈래에 «한 번» 만 남습니다')
+  const t3 = promoTidy('직장 · 합격운이 드는 달입니다. 직장 · 합격운이 이어집니다. 남과 견주는 마음과 말하고 글 쓰는 재주가 듭니다.', 'pace')
+  ok((t3.match(/직장 · 합격운/g) ?? []).length === 1, '★두 번째부터 «그 힘» 으로 받아 씁니다')
+  ok(!/남과 견주는 마음|말하고 글 쓰는 재주/.test(t3), '⛔ 6부 금지어가 생활 말로 바뀝니다')
+  const t4 = promoTidy('타고난 그릇이 먼저입니다. 직장운도 있습니다.', 'cheer')
+  ok(!/타고난 그릇/.test(t4) && !/직장운/.test(t4), '🔴 ★4번 갈래(응원)에는 사주 용어가 «한 개도» 안 남습니다')
+  ok(/promoTidy\(dedupeBody\(body\), k\)/.test(shell), '★화면이 받은 뒤에 다듬습니다')
+  ok(/isPromo \? promoTidy/.test(shell), '⚠️ 승진에서만 다듬습니다 (합격운·취업운은 그대로)')
+}
+
+head('⑮ 🔴 같은 문장을 «복사» 하게 만들지 않는가')
+ok(!/PROMO_BIGYEOP_SAY/.test(shell),
+  '🔴 ⛔ 지시문에 «완성된 문장» 을 주지 않습니다 — AI 가 그것을 세 곳에 그대로 복사했습니다')
+ok(/그 달 한 곳에서만» 한 번 다루세요/.test(shell), '★«어디서 한 번» 만 정해 주고 문장은 AI 가 씁니다')
+ok(/같은 말을 갈래마다 되풀이하지 마세요/.test(shell), '★되풀이를 막습니다')
+
+head('⑯ 🔴 맺음말이 2번 갈래로 새지 않는가')
+ok(/«4번 갈래 맨 끝에서 한 번만» 쓰세요/.test(shell),
+  '★「정하는 것은 사람과 조직입니다」 는 4번에서 한 번만')
+ok(/일희일비하지 마세요」 같은/.test(shell) && /4번 갈래에서만 쓰세요/.test(shell),
+  '★마무리하는 말도 4번 갈래에서만 (2번 끝에 새던 자리)')
+ok(/4번 갈래\(응원\)에는 사주 용어를 ★한 개도 쓰지 마세요/.test(shell),
+  '⛔ 응원 갈래 0개를 지시문에도 못 박았습니다')
 
 console.log(`\n━━ 승진운 동선 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 process.exit(fail ? 1 : 0)

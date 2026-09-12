@@ -174,6 +174,53 @@ export function legacyOf(target: ExamTarget): SevenSection[] {
  *   AI 가 제 몫을 쓰고 «또» 쓴 글입니다. 화면은 갈래마다 한 자리만 그리므로 글 «안» 의 되풀이입니다.
  *   ⇒ 단락 단위로 앞에 나온 것과 같으면 뒤엣것을 버립니다 (검사 45).
  *   ⚠️ 짧은 줄([실천] · 한 문장)은 원래 비슷할 수 있어 스무 자 넘는 단락만 봅니다. */
+/*  🔴🔴 ★2026-09-12 (7부 · 대표님 실측) — 승진 통변에서 «말로만» 막은 것이 안 지켜졌습니다.
+ *
+ *  [겪은 일]  지시문에 「사주 용어는 한 갈래에 한 개까지」 라 적었는데
+ *    1번 갈래에 «직장운 · 타고난 그릇»이, 2번에 «직책운 ×2 · 짜임 ×2 ·
+ *    말하고 글로 설득하는 힘»이, 3번에 «직장·합격운 ×2 · 말하고 글 쓰는 재주»가 나왔습니다.
+ *  [교훈]  6부 0장과 같은 자리입니다 — ★«말» 이 아니라 «값» 으로 세야 합니다.
+ *    ⇒ 화면이 글을 받은 «뒤» 에 세어, 넘치면 ★뒤엣것을 «생활 말» 로 바꿉니다.
+ *  ⛔ 지우지 마십시오. 이것이 없으면 지시문만으로는 안 지켜집니다. */
+
+/** 승진 통변에서 ★아예 쓰지 않는 말 → 바꿔 쓸 생활 말 */
+export const PROMO_SWAP: Array<[RegExp, string]> = [
+  [/말하고 글로 설득하는 힘/g, '설명하고 설득하는 힘'],
+  [/말하고 글 쓰는 재주/g, '말과 글로 풀어내는 솜씨'],
+  [/남과 견주는 마음/g, '옆을 살피게 되는 마음'],
+  [/자리가 나를 부르는 흐름/g, '자리가 열리는 때'],
+  [/짜임/g, '바탕'],
+  [/기운이 열린다/g, '문이 열린다'],
+]
+
+/** ★한 갈래에 «한 개» 까지만 남기는 말 — 두 번째부터 받아 쓰는 말로 바꿉니다 */
+export const PROMO_TERM_ONCE: Array<[RegExp, string]> = [
+  [/직장 · 합격운|직장·합격운|직장과 합격운/g, '그 힘'],
+  [/직책운/g, '그 힘'],
+  [/직장운/g, '그 힘'],
+  [/타고난 그릇/g, '본래 바탕'],
+]
+
+/**
+ * 승진 통변을 «값으로» 다듬는다.
+ *
+ *   ① PROMO_SWAP — 금지어를 «언제나» 바꿉니다
+ *   ② PROMO_TERM_ONCE — 갈래마다 ★첫 번째만 남기고 그다음은 받아 쓰는 말로
+ *   ③ cheer(4번 갈래) 는 ★사주 용어를 «한 개도» 안 둡니다
+ *
+ * ⚠️ 글자를 «지우지» 않고 «바꿉니다». 문장이 무너지지 않게 하려는 것입니다.
+ */
+export function promoTidy(body: string, key: string): string {
+  let t = body
+  for (const [re, to] of PROMO_SWAP) t = t.replace(re, to)
+  const onceOnly = key === 'cheer' ? 0 : 1
+  for (const [re, to] of PROMO_TERM_ONCE) {
+    let n = 0
+    t = t.replace(re, m => (++n <= onceOnly ? m : to))
+  }
+  return t
+}
+
 export function dedupeBody(body: string): string {
   const seen = new Set<string>()
   const out: string[] = []
