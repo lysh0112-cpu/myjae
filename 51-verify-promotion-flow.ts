@@ -8,7 +8,7 @@
 import { readFileSync } from 'fs'
 import { JOB_SITUATIONS, parseSituation } from './lib/saju/examLuck/tables/jobFields'
 import { PROMO_USE_JOBCHANGE } from './lib/saju/examLuck/tables/promotion'
-import { sevenOf, SEVEN_PROMO, SEVEN_ADULT, promoTidy } from './lib/saju/examLuck/buildExamSeven'
+import { sevenOf, SEVEN_PROMO, SEVEN_ADULT, promoTidy, dropFarNextYearMonth, monthlyMaterial } from './lib/saju/examLuck/buildExamSeven'
 import { planBlock } from './lib/saju/examLuck/engineCalc'
 
 let pass = 0, fail = 0
@@ -103,7 +103,7 @@ ok(/관성과 인성을 ★함께 보되 관성\(직책\) 쪽이 중심/.test(sh
   '★문이 아니어도 둘을 «함께» 봅니다')
 ok(/아직 연차가 안 되신 분입니다\. ★시기를 짚지 마세요/.test(shell),
   '★연차가 안 되신 분께 시기를 말하지 않습니다')
-ok(/눈여겨볼 달은 \$\{watch\}월/.test(shell), '★인사 시기의 두 달 앞을 짚습니다')
+ok(/눈여겨볼 달은 \$\{promoWatchMonth\}월/.test(shell), '★인사 시기의 두 달 앞을 짚습니다')
 ok(/특정한 달을 못 박지 말고 흐름으로만/.test(shell), '모르시면 달을 짚지 않습니다')
 ok(/⛔「경쟁자」 라는 낱말은 쓰지 말고/.test(shell),
   '🔴 ★비겁은 경쟁자로 «보되» 그 낱말은 쓰지 않습니다 [연재쌤 ④]')
@@ -188,12 +188,16 @@ head('⑭ 🔴 사주 용어를 «값으로» 다듬는가 (말로만 막았더�
   ok(!/짜임/.test(t2), '⛔ 「짜임」 이 「바탕」 으로 바뀝니다')
   ok((t2.match(/직책운/g) ?? []).length === 1, '🔴 ★「직책운」 이 한 갈래에 «한 번» 만 남습니다')
   const t3 = promoTidy('직장 · 합격운이 드는 달입니다. 직장 · 합격운이 이어집니다. 남과 견주는 마음과 말하고 글 쓰는 재주가 듭니다.', 'pace')
-  ok((t3.match(/직장 · 합격운/g) ?? []).length === 1, '★두 번째부터 «그 힘» 으로 받아 씁니다')
+  //  ⚠️ 「직장 · 합격운」 은 먼저 「자리와 직책을 맡는 힘」 으로 바뀌고, 두 번째부터 «그 힘» 이 됩니다
+  ok((t3.match(/자리와 직책을 맡는 힘/g) ?? []).length === 1 && /그 힘/.test(t3),
+    '★두 번째부터 «그 힘» 으로 받아 씁니다')
   ok(!/남과 견주는 마음|말하고 글 쓰는 재주/.test(t3), '⛔ 6부 금지어가 생활 말로 바뀝니다')
   const t4 = promoTidy('타고난 그릇이 먼저입니다. 직장운도 있습니다.', 'cheer')
   ok(!/타고난 그릇/.test(t4) && !/직장운/.test(t4), '🔴 ★4번 갈래(응원)에는 사주 용어가 «한 개도» 안 남습니다')
-  ok(/promoTidy\(dedupeBody\(body\), k\)/.test(shell), '★화면이 받은 뒤에 다듬습니다')
-  ok(/isPromo \? promoTidy/.test(shell), '⚠️ 승진에서만 다듬습니다 (합격운·취업운은 그대로)')
+  ok(/promoTidy\(dropFarNextYearMonth\(dedupeBody\(body\), promoWatchMonth\), k\)/.test(shell),
+    '★화면이 받은 뒤에 다듬습니다 (되풀이 걷어내기 → 먼 달 → 말 다듬기)')
+  ok(/\? promoTidy\(dropFarNextYearMonth/.test(shell) && /: dedupeBody\(body\)/.test(shell),
+    '⚠️ 승진에서만 다듬습니다 (합격운·취업운은 그대로)')
 }
 
 head('⑮ 🔴 같은 문장을 «복사» 하게 만들지 않는가')
@@ -209,6 +213,49 @@ ok(/일희일비하지 마세요」 같은/.test(shell) && /4번 갈래에서만
   '★마무리하는 말도 4번 갈래에서만 (2번 끝에 새던 자리)')
 ok(/4번 갈래\(응원\)에는 사주 용어를 ★한 개도 쓰지 마세요/.test(shell),
   '⛔ 응원 갈래 0개를 지시문에도 못 박았습니다')
+
+
+head('⑰ 🔴 「합격운」 이 승진 통변에 나오지 않는가 [대표님 「왜 합격운이 나오냐」]')
+{
+  //  [뿌리] PLAIN_MAP_ADULT 가 관성을 「직장 · 합격운」 으로 풀게 되어 있었습니다.
+  //    ⇒ ★말 바꿈표를 «주는 자리» 부터 갈랐습니다 (나온 뒤에 지우는 것은 절반입니다).
+  ok(/PLAIN_MAP_PROMO/.test(seven), '★승진 전용 말 바꿈표가 있습니다')
+  ok(/관성 → 자리와 직책을 맡는 힘/.test(seven), '관성 = 자리와 직책 (★합격운이 아님)')
+  ok(/인성 → 결재하고 문서를 다루는 힘/.test(seven), '인성 = 결재·문서 (★공부운이 아님)')
+  ok(/재성 → 실적과 바깥일/.test(seven), '재성 = 실적 (★「돈 · 바깥일」 이 아님)')
+  ok(/비겁 → 같은 자리를 바라보는 분/.test(seven), '비겁 = 같은 자리를 바라보는 분')
+  ok(/isPromo \? PLAIN_MAP_PROMO : PLAIN_MAP_ADULT/.test(seven), '★승진이면 그 표를 씁니다')
+  ok(/toneFor\(isStudent, v\.jobSituation === 'promote'\)/.test(seven), '★말투가 승진을 압니다')
+  const mp = monthlyMaterial('庚', 2026, 9, null, false, true)
+  ok(!/합격운|공부운|돈 · 바깥일/.test(mp), '🔴 ★달별 흐름표 재료에 «합격운 · 공부운 · 돈» 이 없습니다')
+  ok(/자리와 직책을 맡는 힘/.test(mp), '★달별 재료도 «자리» 의 말입니다')
+  const ma = monthlyMaterial('庚', 2026, 9, null, false, false)
+  ok(/직장 · 합격운/.test(ma), '⚠️ 취업운은 그대로입니다 (건드리지 않았습니다)')
+  ok(!/합격운/.test(promoTidy('직장 · 합격운이 드는 달입니다. 합격운도 좋습니다.', 'pace')),
+    '★값으로도 한 번 더 막습니다 (지시문이 뚫려도)')
+}
+
+head('⑱ 🔴 세 해째 · 딴 이야기 · 약한 것 짚기 [대표님 실측 2판]')
+{
+  const b = promoTidy('올해가 가장 힘 있는 해는 아닙니다. 내년과 내후년으로 이어지는 흐름입니다. 그 다음 해들이 있습니다.', 'strategy')
+  ok(!/내후년/.test(b), '🔴 ⛔ 「내후년」 이 사라집니다 (두 해 규칙)')
+  ok(!/그 다음 해들/.test(b), '⛔ 「그 다음 해들」 도 사라집니다')
+  ok(!/가장 힘 있는 해는 아닙니다/.test(b),
+    '🔴 ⛔ ★약한 것을 짚는 말이 사라집니다 [대표님 「이것도 장사야」]')
+  ok(/두 해 다 자리가 움직이는 때/.test(b), '★두 해 다 «열려 있다» 로 바뀝니다')
+  const c = promoTidy('9월은 돈 · 바깥일과 공부운이 함께 드는 달입니다.', 'pace')
+  ok(!/돈 · 바깥일|공부운/.test(c), '⛔ 승진과 관계없는 풀이말이 사라집니다')
+  const d = dropFarNextYearMonth(
+    '10월이 가장 힘이 실리는 달입니다.\n\n내년 8월에는 그 힘이 다시 듭니다.\n\n내년 2월은 한 가지만 지키면 됩니다.', 10)
+  ok(!/내년 8월/.test(d), '🔴 ★인사와 «먼 달»(내년 8월)은 걷어냅니다')
+  ok(/내년 2월/.test(d), '⚠️ 발표 앞뒤 달(내년 2월)은 ★남깁니다 — 마음을 다루는 자리입니다')
+  ok(/10월이 가장 힘이 실리는 달/.test(d), '★올해 달은 그대로 둡니다')
+  ok(dropFarNextYearMonth('내년 8월에 듭니다.', null) === '내년 8월에 듭니다.',
+    '⚠️ 인사 시기를 모르시면 걷어내지 않습니다')
+  ok(/내후년」 · 「내년 이후」/.test(shell), '★지시문에도 못 박았습니다 (말과 값 «둘 다»)')
+  ok(/「돈 · 바깥일」 · 「재물운」/.test(shell), '★딴 이야기도 지시문에')
+  ok(/약한 것을 «짚지» 마세요/.test(shell), '★약한 것 짚기도 지시문에')
+}
 
 console.log(`\n━━ 승진운 동선 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 process.exit(fail ? 1 : 0)

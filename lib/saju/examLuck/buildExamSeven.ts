@@ -193,8 +193,53 @@ export const PROMO_SWAP: Array<[RegExp, string]> = [
   [/기운이 열린다/g, '문이 열린다'],
 ]
 
+/*  🔴 ★2026-09-12 (7부 · 대표님 실측 2판) — 「두 해까지만」 을 «말로만» 적었더니
+ *    「★내후년 으로 이어지는 흐름」 · 「★내년 8월 에는 그 힘이 다시 드니」 가 나왔습니다.
+ *    ⇒ 「내후년」 은 세 해째이고, 「내년 ○월」 은 인사와 관계없는 달입니다.
+ *    ⇒ ★값으로 막습니다. (지시문에도 함께 적었습니다 — 둘 다 필요합니다) */
+export const PROMO_YEAR_SWAP: Array<[RegExp, string]> = [
+  [/내년과 내후년으로/g, '내년까지'],
+  [/내년과 내후년/g, '내년'],
+  [/내후년(으로|에는|에|도|까지|부터)?/g, '내년'],
+  [/그 다음 해들이|그다음 해들이/g, '내년이'],
+  [/두 해를 넉넉히|세 해를 넉넉히/g, '올해와 내년을 넉넉히'],
+]
+
+/*  ⛔ 승진과 «관계없는» 풀이말 — 손님이 「이게 왜 나오지」 합니다.
+ *    [실측] 「9월 지금은 ★돈 · 바깥일 과 공부운이 함께 드는 달입니다」 */
+export const PROMO_OFFTOPIC: Array<[RegExp, string]> = [
+  [/돈 · 바깥일과 공부운이 함께 드는 달/g, '정리하기 좋은 달'],
+  [/돈 · 바깥일과 공부운/g, '바깥일과 문서'],
+  [/돈 · 바깥일/g, '바깥일'],
+  [/재물운|금전운/g, '바깥일'],
+  [/공부운/g, '문서와 자료를 챙기는 힘'],
+  //  🔴 ★2026-09-12 (7부 2판) [대표님 「승진운인데 왜 합격운이 나오냐」]
+  [/직장 · 합격운|직장·합격운|직장과 합격운/g, '자리와 직책을 맡는 힘'],
+  [/합격운/g, '자리를 맡는 힘'],
+  [/불합격|합격 여부|합격하는/g, '결과'],
+  [/연애운|애정운|건강운/g, '요즘의 흐름'],
+]
+
+/*  ⛔ ★약한 것을 «짚는» 말 — [대표님 6부 3-3 「이것도 장사야」]
+ *    [실측] 2번 갈래 첫 줄 「★올해가 가장 힘 있는 해는 아닙니다」
+ *      ⇒ 그런데 3번 갈래는 「10월이 올해 가장 힘이 실리는 달」 이라 합니다. ★어긋납니다. */
+export const PROMO_WEAK_SWAP: Array<[RegExp, string]> = [
+  [/올해가 가장 힘 있는 해는 아닙니다/g, '올해와 내년, 두 해 다 자리가 움직이는 때입니다'],
+  [/가장 힘 있는 해는 아니지만/g, '두 해 다 열려 있고'],
+  [/흐름이 (특별히 )?강하게 밀어 주는 해는 아니지만/g, '준비한 만큼 나오는 해이고'],
+  [/크게 치고 올라가는 해는 아니지만/g, '쌓아 온 것이 드러나는 해이고'],
+  [/(직장|직책)[^。.\n]{0,12}운이 크지 않(지만|습니다)/g, '준비하신 것이 그대로 쓰입니다'],
+  [/약한 편입니다|크지 않습니다|부족한 편입니다/g, '준비한 만큼 나옵니다'],
+]
+
 /** ★한 갈래에 «한 개» 까지만 남기는 말 — 두 번째부터 받아 쓰는 말로 바꿉니다 */
 export const PROMO_TERM_ONCE: Array<[RegExp, string]> = [
+  /*  ⚠️ PROMO_SWAP 이 먼저 「직장·합격운」 을 「자리와 직책을 맡는 힘」 으로 바꿉니다.
+   *    그러니 «한 번만» 규칙은 ★바뀐 뒤의 말도 함께 봐야 합니다.
+   *    (안 그러면 두 번 다 남습니다 — 검사가 잡은 자리) */
+  [/자리와 직책을 맡는 힘/g, '그 힘'],
+  [/결재하고 문서를 다루는 힘/g, '그 힘'],
+  [/자리를 맡는 힘/g, '그 힘'],
   [/직장 · 합격운|직장·합격운|직장과 합격운/g, '그 힘'],
   [/직책운/g, '그 힘'],
   [/직장운/g, '그 힘'],
@@ -210,9 +255,36 @@ export const PROMO_TERM_ONCE: Array<[RegExp, string]> = [
  *
  * ⚠️ 글자를 «지우지» 않고 «바꿉니다». 문장이 무너지지 않게 하려는 것입니다.
  */
+/*  🔴 «내년 ○월» — 인사와 관계없는 달을 짚는 것을 막습니다.
+ *    [실측] 「★내년 8월 에는 그 힘이 다시 드니…」 — 인사는 연말인데 8월을 짚었습니다.
+ *    ⇒ 손님이 ★«그래서 뭘 하라는 거지» 가 됩니다.
+ *    ⚠️ 「내년 2월」 처럼 «발표 직후» 는 남깁니다 — 마음을 다루는 자리라 뜻이 있습니다.
+ *       남길 달은 ★발표 달의 앞뒤 석 달까지로 봅니다. */
+export function dropFarNextYearMonth(body: string, watchMonth: number | null): string {
+  if (!watchMonth) return body
+  const near = new Set<number>()
+  for (let d = -1; d <= 4; d++) {            // 눈여겨볼 달 ~ 그 뒤 넉 달 (발표 + 마음 정리)
+    let m = ((watchMonth + d - 1) % 12) + 1
+    if (m <= 0) m += 12
+    near.add(m)
+  }
+  return body.split(/\n{2,}/)
+    .filter(para => {
+      const m = para.match(/내년\s*(\d{1,2})월|20\d\d년\s*(\d{1,2})월/)
+      if (!m) return true
+      const mm = Number(m[1] ?? m[2])
+      return near.has(mm)
+    })
+    .join('\n\n')
+}
+
 export function promoTidy(body: string, key: string): string {
   let t = body
   for (const [re, to] of PROMO_SWAP) t = t.replace(re, to)
+  //  ★7부 2판 — 세 해째 · 딴 이야기 · 약한 것 짚기 를 «값으로» 막습니다
+  for (const [re, to] of PROMO_YEAR_SWAP) t = t.replace(re, to)
+  for (const [re, to] of PROMO_OFFTOPIC) t = t.replace(re, to)
+  for (const [re, to] of PROMO_WEAK_SWAP) t = t.replace(re, to)
   const onceOnly = key === 'cheer' ? 0 : 1
   for (const [re, to] of PROMO_TERM_ONCE) {
     let n = 0
@@ -341,12 +413,25 @@ const WEIGHT_RULE = `[가장 중요 — 말하는 무게]
  *   쉬운 말 규칙 여섯 + 옛 금지(단정 · 겁주기 · 마크다운). 예시 문서 「합격운취업운_예시풀이_4갈래」 의 말투입니다.
  *   ⚠️ 학생 판에는 「직장」 같은 학생 금지어가 섞이지 않게 대응표를 따로 둡니다 (14번 검사가 봅니다). */
 const PLAIN_MAP_ADULT = '관성 → 직장 · 합격운 / 인성 → 공부운 / 식상 → 말하고 글 쓰는 재주 / 재성 → 돈을 다루는 현실 감각 / 비겁 → 남과 견주는 마음'
+/*  🔴 ★2026-09-12 (7부 2판) [대표님 「승진운인데 왜 중간에 합격운이란 용어가 나오냐」]
+ *
+ *  [뿌리]  PLAIN_MAP_ADULT 가 관성을 ★「직장 · 합격운」 으로, 인성을 ★「공부운」 으로,
+ *    재성을 ★「돈 · 바깥일」 로 풀게 되어 있었습니다. ★취업운·합격운용 표입니다.
+ *    ⇒ 그래서 승진 통변에 「합격운」 · 「공부운」 · 「돈 · 바깥일」 이 계속 나왔습니다.
+ *  ⚠️ 제가 promoTidy 로 «나온 뒤» 에 지웠는데, ★애초에 «주지 말았어야» 했습니다.
+ *    (5부 교훈 — 절반만 고치지 말 것)
+ *
+ *  ★승진 말 — 손님은 «자리» 를 물으러 오셨습니다.
+ *    관성 = 자리와 직책 · 인성 = 결재와 문서 · 식상 = 풀어내는 솜씨 ·
+ *    재성 = 실적과 바깥일 · 비겁 = 같은 자리를 바라보는 분 */
+const PLAIN_MAP_PROMO = '관성 → 자리와 직책을 맡는 힘 / 인성 → 결재하고 문서를 다루는 힘 / 식상 → 말과 글로 풀어내는 솜씨 / 재성 → 실적과 바깥일 / 비겁 → 같은 자리를 바라보는 분'
+
 const PLAIN_MAP_STUDENT = '관성 → 규칙을 지키는 힘 · 합격운 / 인성 → 공부운 / 식상 → 말하고 글 쓰는 재주 / 재성 → 바깥일에 끌리는 마음 / 비겁 → 친구와 견주는 마음'
-const toneFor = (isStudent: boolean) => `[말투 — 처음 읽는 사람도 한 번에 알아듣게]
+const toneFor = (isStudent: boolean, isPromo = false) => `[말투 — 처음 읽는 사람도 한 번에 알아듣게]
 · ★손님을 부를 때는 «이름 + 님» 한 가지로만 쓰세요 (보기 — 희준님). 「류희준 님」 처럼 성을 붙이거나 띄어 쓰지 말고, 한 글에서 부르는 법을 바꾸지 마세요.
 · 존댓말로 다정하되 담담하게. 겁주지 마세요. "불합격"·"떨어진다"·"안 된다" 를 쓰지 마세요.
-· 사주 말은 생활 말로 쓰세요 — ${isStudent ? PLAIN_MAP_STUDENT : PLAIN_MAP_ADULT}.
-· 사주 말이 처음 나올 때 한 번은 무슨 뜻인지 풀어 주세요. (예: 공부운은 공부, 자격, 문서를 뜻합니다.)
+· 사주 말은 생활 말로 쓰세요 — ${isStudent ? PLAIN_MAP_STUDENT : isPromo ? PLAIN_MAP_PROMO : PLAIN_MAP_ADULT}.
+· 사주 말이 처음 나올 때 한 번은 무슨 뜻인지 풀어 주세요. (예: 공부운은 공부, 자격, 문서를 뜻합니다.)${isPromo ? '\n· 🔴⛔승진운입니다 — ★「합격운」 · 「공부운」 · 「돈 · 바깥일」 · 「불합격」 을 «한 번도» 쓰지 마세요. 손님은 시험이 아니라 ★«자리» 를 물으러 오셨습니다.' : ''}
 · 원국(태어난 사주)은 «타고난 그릇» 이라고 부르세요. (예: 타고난 그릇으로 보면 …)
 · 두 가지 운을 한 표현에 뭉치지 마세요. 운마다 «어떤 마음이 들고, 어떤 일이 생기기 쉬운지» 를 따로 쓰세요.
 · 뜻이 흐린 말을 쓰지 마세요 — 결 · 값이 붙는다 · 두 겹 · 살려 준다 · 말이 앞선다 · 밀어 볼 때 · 빛난다 · 힘을 보탠다 · 받쳐 준다 · 기운이 열린다 · 바람이 불어온다 · 배움의 기운 · 자리의 기운 · 원국.
@@ -517,7 +602,9 @@ function hintAdult(key: SevenKey, v: SevenArgs): string[] {
       L.push('· ★한 해를 두고 좋다 · 아쉽다를 섞어 말하지 마세요. 재료의 등급 하나로만 말하고, 뒤 갈래에서도 같게 말합니다.')
       L.push('· ★등급을 말할 때 겁주지 마세요 — 「조심하는 해」 라 쓰지 말고 「한 가지만 지키면 되는 해」, 「보통」 은 「준비한 만큼 나오는 해」 로 쓰세요.')
       L.push('· 원국으로 «어떻게 일하고 익히는 사람인가» 를 한 가지로 정하세요 — 직접 해 보며 익히는 사람 / 차근차근 쌓는 사람 / 깊이 파고드는 사람 / 틀을 지키는 사람.')
-      L.push('· 재료 [주로 보는 기운] 이 직장 · 합격운임을 짚고, 원국에 많고 적음이 무슨 뜻인지 쉬운 말로 풀어 주세요.')
+      L.push(v.jobSituation === 'promote'
+        ? '· 재료 [주로 보는 기운] 이 ★«자리와 직책을 맡는 힘» 임을 짚고, 원국에 많고 적음이 무슨 뜻인지 쉬운 말로 풀어 주세요. ⛔「합격운」 이라 쓰지 마세요.'
+        : '· 재료 [주로 보는 기운] 이 직장 · 합격운임을 짚고, 원국에 많고 적음이 무슨 뜻인지 쉬운 말로 풀어 주세요.')
       L.push('· [고르신 일하는 방식과 사주] 재료가 있으면 한 문장으로 녹이세요. 다른 쪽이 더 뚜렷해도 겁주지 말고 «함께 살리면 좋다» 로.')
       if (v.upsangBlock) L.push('· 아래 [세부 적성] 재료로 «어느 세부 분야» 가 잘 맞는지 이름을 대어 짚으세요.')
       break
@@ -550,7 +637,9 @@ function hintAdult(key: SevenKey, v: SevenArgs): string[] {
     case 'pace':
       L.push('★이 갈래가 맡은 일 — 가장 좋은 달 · 조심할 달 · 시험(면접) 날 행동.')
       L.push('· 아래 [달별 흐름] 에서 «가장 좋은 달» 하나와 «조심할 달» 하나를 콕 집으세요. 몇 월인지 숫자로. 목록에 없는 달을 지어내지 마세요.')
-      L.push('· 직장 · 합격운 · 공부운이 드는 달은 힘을 몰아 쓸 달, 남과 견주는 마음이 드는 달은 흔들리기 쉬운 달입니다.')
+      L.push(v.jobSituation === 'promote'
+        ? '· ★자리와 직책을 맡는 힘 · 결재하고 문서를 다루는 힘이 드는 달은 힘을 몰아 쓸 달, 같은 자리를 바라보는 분이 드는 달은 흔들리기 쉬운 달입니다. ⛔「합격운」 · 「공부운」 이라 쓰지 마세요.'
+        : '· 직장 · 합격운 · 공부운이 드는 달은 힘을 몰아 쓸 달, 남과 견주는 마음이 드는 달은 흔들리기 쉬운 달입니다.')
       L.push('· 좋은 달에는 무엇을 몰아서 할지, 조심할 달에는 어떻게 버틸지 (남과 비교하지 않기 등) 주세요.')
       if (v.examDate) L.push(v.examDateApprox ? approxHint(v.examDate) : `· ${v.examDate} 그날의 흐름을 한 문장으로 — 재료 [시험 날짜와 실전 준비] 근거. 공망이면 «집중이 잠깐씩 흐트러지기 쉬운 날 — 나쁜 날이 아니다» 로 풀어 주세요.`)
       if (!isJob) L.push('· 당일 수칙 넷을 구체적으로 — 시작 직후 마음 가라앉히기 / 실수하기 쉬운 영역과 막는 법 / 흔들릴 때 할 행동 하나 / 그날 아침.')
@@ -574,7 +663,7 @@ function hintAdult(key: SevenKey, v: SevenArgs): string[] {
 /* ★6부 봉투 B — 「월별 페이스메이커」 재료: 이번 달부터 열두 달의 월운과 십성
  *   [전] 「재료의 달별 흐름을 보고 정하세요」 라 시키면서 정작 달별 흐름을 넘기지 않아, AI 가 달을 짐작했습니다.
  *   ⚠️ 화면의 달별 흐름표(MonthStrip)와 같은 계산(calcWolunList)입니다. */
-export function monthlyMaterial(dayStem: string, year: number, month = 1, examDate?: string | null, isStudent = false): string {
+export function monthlyMaterial(dayStem: string, year: number, month = 1, examDate?: string | null, isStudent = false, isPromo = false): string {
   if (!dayStem || dayStem === '?') return ''
   const rows = [...calcWolunList(dayStem, year).map(w => ({ ...w, y: year })),
     ...calcWolunList(dayStem, year + 1).map(w => ({ ...w, y: year + 1 }))]
@@ -586,7 +675,10 @@ export function monthlyMaterial(dayStem: string, year: number, month = 1, examDa
     //  ⚠️ 학생에게는 학생 말로 — 「직장」 같은 학생 금지어가 섞이지 않게 (14번 검사가 봅니다)
     isStudent
       ? '· 십성 → 생활 말: 정관 · 편관 = 규칙을 지키는 힘 · 합격운 / 정인 · 편인 = 공부운 / 식신 · 상관 = 말하고 글 쓰는 재주 / 정재 · 편재 = 바깥일에 끌리는 마음 / 비견 · 겁재 = 친구와 견주는 마음'
-      : '· 십성 → 생활 말: 정관 · 편관 = 직장 · 합격운 / 정인 · 편인 = 공부운 / 식신 · 상관 = 말하고 글 쓰는 재주 / 정재 · 편재 = 돈 · 바깥일 / 비견 · 겁재 = 남과 견주는 마음',
+      //  🔴 ★2026-09-12 (7부 2판) — 승진에는 «자리» 의 말로. 「합격운」 · 「공부운」 · 「돈」 을 주지 않습니다.
+      : isPromo
+        ? '· 십성 → 생활 말: 정관 · 편관 = 자리와 직책을 맡는 힘 / 정인 · 편인 = 결재하고 문서를 다루는 힘 / 식신 · 상관 = 말과 글로 풀어내는 솜씨 / 정재 · 편재 = 실적과 바깥일 / 비견 · 겁재 = 같은 자리를 바라보는 분'
+        : '· 십성 → 생활 말: 정관 · 편관 = 직장 · 합격운 / 정인 · 편인 = 공부운 / 식신 · 상관 = 말하고 글 쓰는 재주 / 정재 · 편재 = 돈 · 바깥일 / 비견 · 겁재 = 남과 견주는 마음',
     ...pick.map(r => `- ${r.y}년 ${r.month}월 — 천간 ${r.ganYukchin} · 지지 ${r.jiYukchin}${r.y === ey && r.month === em ? '  ← 시험(발표) 달' : ''}`),
   ].join('\n')
 }
@@ -722,7 +814,7 @@ export function buildSevenPrompt(v: SevenArgs, group: SevenKey[]): SevenPrompt |
   // ══════════════════════════════════════════════════════════════
 
   const system = `${role}
-${toneFor(isStudent)}
+${toneFor(isStudent, v.jobSituation === 'promote')}
 
 ${WEIGHT_RULE}
 ${isStudent ? `
@@ -767,7 +859,7 @@ ${wishBlock}${careBlock}
 [판정 재료 — 이것만 근거로 쓰세요. 없는 것을 지어내지 마세요]
 ${material}
 ${v.signalBlock ? `\n[합격 신호 — 원국을 본 것]\n${v.signalBlock}` : ''}
-${v.upsangBlock ? `\n[세부 적성 — ★계열 안에서 «어느 자리» 가 극대화되는가]\n${v.upsangBlock}` : ''}${planBlock(v.plan, group[0], v.jobSituation === 'promote')}${group.includes('pace') ? `\n${monthlyMaterial(v.saju?.find(p => p.pillar === '일주')?.stem ?? '', v.year, v.month ?? 1, v.examDate, v.target === 'student')}` : ''}
+${v.upsangBlock ? `\n[세부 적성 — ★계열 안에서 «어느 자리» 가 극대화되는가]\n${v.upsangBlock}` : ''}${planBlock(v.plan, group[0], v.jobSituation === 'promote')}${group.includes('pace') ? `\n${monthlyMaterial(v.saju?.find(p => p.pillar === '일주')?.stem ?? '', v.year, v.month ?? 1, v.examDate, v.target === 'student', v.jobSituation === 'promote')}` : ''}
 
 ════════════════════════════════════════
 [답변 형식 — ${plan.length}장의 카드]

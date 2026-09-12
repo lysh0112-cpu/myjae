@@ -38,7 +38,7 @@ import { judgeJobChangeNatal, judgeJobChangeLuck } from '@/lib/saju/examLuck/job
 import { judgeExamDay } from '@/lib/saju/examLuck/examDay'
 import { buildAllCards } from '@/lib/saju/examLuck/buildCards'
 import { parseExamTongbyeon } from '@/lib/saju/examLuck/buildExamPrompt'
-import { buildSevenPrompt, sevenOf, legacyOf, isLegacyTong, SEVEN_GROUPS, sevenKeyOf, dedupeBody, promoTidy } from '@/lib/saju/examLuck/buildExamSeven'
+import { buildSevenPrompt, sevenOf, legacyOf, isLegacyTong, SEVEN_GROUPS, sevenKeyOf, dedupeBody, promoTidy, dropFarNextYearMonth } from '@/lib/saju/examLuck/buildExamSeven'
 // ★2026-07-30 — 지시서 2장 «사정 평가 로직» 을 재료로 만들어 싣습니다. (교훈 CU)
 import { judgePassSignal, passSignalBlock } from '@/lib/saju/examLuck/passSignal'
 import { upsangBlock as buildUpsangBlock } from '@/lib/saju/examLuck/tables/upsang'
@@ -131,6 +131,8 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
    *     effect 는 이 문자열 하나만 봅니다. (검사 46 ⑤ 가 지킵니다) */
   const pJobRaw = sp.get('pJob'), pCurRaw = sp.get('pCur'), pNextRaw = sp.get('pNext')
   const pGateRaw = sp.get('pGate'), pYearsRaw = sp.get('pYears'), pSeasonRaw = sp.get('pSeason')
+  /** 눈여겨볼 달 — 인사 발표의 두 달 앞. ★숫자 하나라 effect 에 넣어도 안전합니다 */
+  const promoWatchMonth = watchMonthOf(pSeasonRaw)
   /* 🔴 ★2026-09-11 (6부) — 반드시 useMemo 로 «한 번만» 만듭니다 (검사 46).
    *   [겪음] parseGates 는 부를 때마다 «새 목록» 을 돌려줍니다. 그대로 두면 화면이 다시 그려질 때마다
    *          AI effect 가 «관문이 바뀌었다» 고 보고 돌던 AI 를 끊고 처음부터 다시 불러, 풀이가 끝없이 안 나왔습니다.
@@ -156,7 +158,6 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
     const gateOn = isGateStep(pJobRaw, nextIdx, pGateRaw === 'yes' ? true : pGateRaw === 'no' ? false : null)
     const years = PROMO_YEARS.find(y => y.key === pYearsRaw)?.label ?? null
     const season = PROMO_SEASONS.find(x => x.key === pSeasonRaw)?.label ?? null
-    const watch = watchMonthOf(pSeasonRaw)
     return [
     row ? `· 하시는 일: ${row.key === 'etc' ? (jobTextForSave || '직접 적으심') : row.label}` : '',
     row && curIdx != null && curIdx >= 0 ? `· 지금 직급: ${row.ranks[curIdx] ?? ''}` : '',
@@ -170,8 +171,8 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       ? '· ⛔아직 연차가 안 되신 분입니다. ★시기를 짚지 마세요. 연차가 차오르는 동안 무엇을 쌓아 둘지로 쓰세요.'
       : '',
     season ? `· 인사 발표 시기: ${season}` : '',
-    watch
-      ? `· ★눈여겨볼 달은 ${watch}월입니다 (발표 앞이 정해지는 때). 이 달을 중심에 두고 지금 달부터 이어서 쓰세요.`
+    promoWatchMonth
+      ? `· ★눈여겨볼 달은 ${promoWatchMonth}월입니다 (발표 앞이 정해지는 때). 이 달을 중심에 두고 지금 달부터 이어서 쓰세요.`
       : '· 인사 시기를 모르시거나 수시라 하셨습니다 — ⛔특정한 달을 못 박지 말고 흐름으로만 쓰세요.',
     /*  🔴 ★2026-09-12 (7부 · 대표님 실측) — 여기에 «완성된 문장» 을 주었더니
      *    AI 가 그것을 ★«글자 그대로» 세 곳에 복사했습니다 (2번 · 3번 · 3번 안에서 또).
@@ -180,7 +181,21 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
     '· 비겁(같은 자리를 바라보는 분)이 드는 때가 있으면 ★«그 달 한 곳에서만» 한 번 다루세요. '
       + '⛔「경쟁자」 라는 낱말은 쓰지 말고, 겁주지 말고, ★«내가 한 일을 누구 것인지 남겨 두는 일» 쪽으로 옮겨 적으세요. '
       + '⛔같은 말을 갈래마다 되풀이하지 마세요 — 매번 «다른 말» 로 쓰세요.',
-    '· ⛔올해와 내년 «두 해» 까지만 말하세요. 그 뒤 해는 말하지 마세요.',
+    /*  ★2026-09-12 (7부 2판 · 대표님 실측) — 「두 해까지만」 을 말로만 적었더니
+     *    「내후년」 · 「내년 8월」 이 나왔습니다. 말과 값 «둘 다» 막습니다. */
+    '· 🔴⛔올해와 내년 «두 해» 까지만 말하세요. ★「내후년」 · 「내년 이후」 · '
+      + '「그 다음 해들」 · 세 해째를 뜻하는 말을 ★한 번도 쓰지 마세요.',
+    promoWatchMonth
+      ? `· ⛔내년의 달은 ★인사 발표 앞뒤(${promoWatchMonth}월 언저리)만 말하세요. `
+        + '그 밖의 달(보기: 한여름 · 봄)을 «내년 ○월에 힘이 든다» 처럼 짚지 마세요. '
+        + '손님이 ★«그래서 뭘 하라는 거지» 가 됩니다.'
+      : '· ⛔내년의 «특정한 달» 을 짚지 마세요.',
+    '· ⛔승진과 관계없는 풀이를 쓰지 마세요 — ★「돈 · 바깥일」 · 「재물운」 · 「연애운」 · '
+      + '「건강운」 · 「공부운」. 손님은 ★«자리» 를 물으러 오셨습니다.',
+    '· 🔴⛔★약한 것을 «짚지» 마세요 [대표님 「이것도 장사야」] — '
+      + '「올해가 가장 힘 있는 해는 아닙니다」 · 「크게 치고 올라가는 해는 아니지만」 · '
+      + '「○○운이 크지 않지만」 을 ★쓰지 마세요. '
+      + '★두 해 다 «열려 있다» 로 말하고, 그중 어느 쪽이 더 또렷한지만 고르세요.',
     '· ⛔「승진하십니다」 · 「○월에 발표가 납니다」 같은 약속을 하지 마세요.',
     /*  ★2026-09-12 (7부 · 대표님 실측) — 2번 갈래 끝에 「사주가 모든 것을 결정하지는
      *    않습니다 … 일희일비하지 마세요」 가 들어가고, 4번에서 «거의 같은 말» 이 또 나왔습니다.
@@ -196,7 +211,9 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       + '처음 한 번만 뜻을 풀고, 그다음부터는 ★«그 힘» · «그것» 처럼 받아 쓰세요.',
     '· ⛔4번 갈래(응원)에는 사주 용어를 ★한 개도 쓰지 마세요.',
         ].filter(Boolean).join('\n')
-  }, [isPromo, pJobRaw, pCurRaw, pNextRaw, pGateRaw, pYearsRaw, pSeasonRaw, jobTextForSave])
+  //  ⚠️ promoWatchMonth 는 ★«숫자 하나» 입니다 (watchMonthOf 가 number|null 을 줍니다).
+  //     매번 새로 만들어지는 값이 아니므로 여기 넣어도 끝없이 다시 돌지 않습니다 (6부 0장 ②-①).
+  }, [isPromo, pJobRaw, pCurRaw, pNextRaw, pGateRaw, pYearsRaw, pSeasonRaw, jobTextForSave, promoWatchMonth])
   /* ★6부 [대표님] 가진 자격증 — 주소가 아니라 건넴 · 기록에서 */
   const [certs, setCerts] = useState<string>(() => (recordId ? '' : readCertsHandoff()))
   const certsForSave = sanitizeCerts(certs)
@@ -947,10 +964,14 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       //  ★6부 — AI 가 제 몫을 두 번 쓴 글에서 되풀이 단락을 걷어냅니다 (대표님 실측 · 검사 45)
       /*  ★2026-09-12 (7부) — 승진은 받은 «뒤» 에 값으로 다듬습니다.
        *    지시문만으로는 사주 용어가 지켜지지 않았습니다 (대표님 실측). */
-      if (k && body.trim()) out[k] = isPromo ? promoTidy(dedupeBody(body), k) : dedupeBody(body)
+      if (k && body.trim()) {
+        out[k] = isPromo
+          ? promoTidy(dropFarNextYearMonth(dedupeBody(body), promoWatchMonth), k)
+          : dedupeBody(body)
+      }
     }
     return out
-  }, [parsed, target, legacy, isPromo])
+  }, [parsed, target, legacy, isPromo, promoWatchMonth])
   /** ★이 화면이 그릴 갈래 — 새 풀이는 4갈래, 옛 기록은 옛 7갈래 (6부 봉투 B) */
   /*  ★2026-09-12 (7부) — 승진은 제목이 다릅니다 (SEVEN_PROMO).
    *  ⚠️ 옛 기록(legacy)은 그대로 옛 제목으로 엽니다. */
