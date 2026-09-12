@@ -55,6 +55,7 @@ import { refreshBeforeAi } from '@/lib/ai/freshCall'
 import { cardJobFit } from '@/lib/saju/examLuck/buildCards'
 import { buildPlan } from '@/lib/saju/examLuck/engineCalc'
 import { pickStructure } from '@/lib/saju/career/jobStructure'
+import { promoJobOf, isGateStep, PROMO_YEARS, PROMO_SEASONS, watchMonthOf, PROMO_BIGYEOP_SAY } from '@/lib/saju/examLuck/tables/promotion'
 import { goalLabel, sanitizeWish, wishLooksHeavy, WISH_KEY, readWishHandoff, parseGates, parseSituation, JOB_SITUATIONS, JOB_GATES, parsePicks, wayFromPicks, readJobTextHandoff, sanitizeJobText, readCertsHandoff, sanitizeCerts } from '@/lib/saju/examLuck/tables/jobFields'
 
 const ACCENT = '#c85a8c'
@@ -62,8 +63,10 @@ const BG = '#FDF6F0'
 const CARD = '#FFFBF7'
 const LINE = '#f0e0d5'
 
-/** 진학 화면인가 취업 화면인가 — ★page.tsx 가 정해서 넘깁니다 */
-export type ExamMode = 'jinhak' | 'chwieop'
+/*  진학 · 취업 · ★승진 — page.tsx 가 정해서 넘깁니다.
+ *  ★2026-09-12 (7부) [대표님 「따로 입구를 만들되 같은 엔진으로」] — seungjin 을 더했습니다.
+ *  ⚠️ 승진도 target='adult' · kind='job' 입니다. 엔진은 «그대로» 돕니다. */
+export type ExamMode = 'jinhak' | 'chwieop' | 'seungjin'
 
 function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
   const router = useRouter()
@@ -86,7 +89,12 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
   /** 취업 화면 안에서만 갈립니다 — 시험 준비냐 일자리냐 */
   const kind: 'exam' | 'job' = mode === 'jinhak'
     ? 'exam'
+    : mode === 'seungjin' ? 'job'
     : (sp.get('kind') === 'job' ? 'job' : 'exam')
+  /*  ★2026-09-12 (7부) — 승진 화면인가.
+   *  ⛔ 승진에서는 이직 여섯 갈래(jobChange)를 «부르지 않습니다» [연재쌤 2026-09-12]
+   *     「승진을 물었는데 나가는 자국이 있더라도 ★넣지 말 것」 */
+  const isPromo = mode === 'seungjin'
   const examKind = sp.get('examKind') || null
   const examDateRaw = sp.get('examDate') || ''
   /* 🔴 ★6부 [대표님 「연말로 잡았는데 12.15 로 특정하네」] 어림 시기(상반기 · 하반기 · 연말 단추)인가 — 검사 46 ⑥
@@ -114,6 +122,15 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
   const way = wayRaw === 'unknown' || wayRaw === 'custom' ? (wayFromPicks(fieldKey, picks) ?? wayRaw) : wayRaw
   /* ★6부 [대표님 알약] 지금 상황 · 거쳐야 할 관문 — 값이 없으면 옛 기록(null) · «모두 고른 것» (검사 46) */
   const sit = parseSituation(sp.get('sit'))
+
+  /*  ★2026-09-12 (7부) — 승진 재료.  ⛔ 직접 적은 직업·직급은 «주소에 없습니다» —
+   *    입력 화면이 writeWishHandoff 의 둘째 칸으로 건넵니다 (6부 9장 · 방문 기록 보호). */
+  /*  🔴🔴 ★6부 0장 ②-① — AI 부르는 effect 의 의존 목록에 «매번 새로 만들어지는 값» 을
+   *     넣으면 ★끝없이 다시 부릅니다 (하루에 US$113.59 가 나간 그 자리).
+   *  ⇒ 승진 값 «전부» 를 여기서 ★한 번만 만들어 «문자열 하나» 로 내보냅니다.
+   *     effect 는 이 문자열 하나만 봅니다. (검사 46 ⑤ 가 지킵니다) */
+  const pJobRaw = sp.get('pJob'), pCurRaw = sp.get('pCur'), pNextRaw = sp.get('pNext')
+  const pGateRaw = sp.get('pGate'), pYearsRaw = sp.get('pYears'), pSeasonRaw = sp.get('pSeason')
   /* 🔴 ★2026-09-11 (6부) — 반드시 useMemo 로 «한 번만» 만듭니다 (검사 46).
    *   [겪음] parseGates 는 부를 때마다 «새 목록» 을 돌려줍니다. 그대로 두면 화면이 다시 그려질 때마다
    *          AI effect 가 «관문이 바뀌었다» 고 보고 돌던 AI 를 끊고 처음부터 다시 불러, 풀이가 끝없이 안 나왔습니다.
@@ -130,6 +147,38 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
   /* ★6부 [대표님] ② 방식 칸에 직접 적은 말 (요리사 · 간호사처럼 애매한 분) — 주소가 아니라 건넴 · 기록에서 */
   const [jobText, setJobText] = useState<string>(() => (recordId ? '' : readJobTextHandoff()))
   const jobTextForSave = sanitizeJobText(jobText)
+
+  const promoNote = useMemo(() => {
+    if (!isPromo) return null
+    const row = promoJobOf(pJobRaw)
+    const curIdx = pCurRaw != null ? Number(pCurRaw) : null
+    const nextIdx = pNextRaw != null ? Number(pNextRaw) : null
+    const gateOn = isGateStep(pJobRaw, nextIdx, pGateRaw === 'yes' ? true : pGateRaw === 'no' ? false : null)
+    const years = PROMO_YEARS.find(y => y.key === pYearsRaw)?.label ?? null
+    const season = PROMO_SEASONS.find(x => x.key === pSeasonRaw)?.label ?? null
+    const watch = watchMonthOf(pSeasonRaw)
+    return [
+    row ? `· 하시는 일: ${row.key === 'etc' ? (jobTextForSave || '직접 적으심') : row.label}` : '',
+    row && curIdx != null && curIdx >= 0 ? `· 지금 직급: ${row.ranks[curIdx] ?? ''}` : '',
+    row && nextIdx != null && nextIdx >= 0 ? `· 바라보는 다음 직급: ${row.ranks[nextIdx] ?? ''}` : '',
+    nextIdx === -1 ? '· 다음 직급을 «아직 모르겠다» 고 하셨습니다 — ⛔직급 이름을 부르지 말고 «한 단계 오르는 일» 로만 쓰세요.' : '',
+    gateOn
+      ? '· 🔴 ★다음 자리는 «결재하고 사람을 맡는 자리» 입니다 — 관성(직책)과 인성(문서·도장)을 ★«함께» 보되 인성 쪽에 무게를 더 두세요. [연재쌤 2026-09-12]'
+      : '· 다음 자리는 실무를 이어 가는 자리입니다 — 관성과 인성을 ★함께 보되 관성(직책) 쪽이 중심입니다.',
+    years ? `· 승진 대상연차: ${years}` : '',
+    pYearsRaw === 'notyet'
+      ? '· ⛔아직 연차가 안 되신 분입니다. ★시기를 짚지 마세요. 연차가 차오르는 동안 무엇을 쌓아 둘지로 쓰세요.'
+      : '',
+    season ? `· 인사 발표 시기: ${season}` : '',
+    watch
+      ? `· ★눈여겨볼 달은 ${watch}월입니다 (발표 앞이 정해지는 때). 이 달을 중심에 두고 지금 달부터 이어서 쓰세요.`
+      : '· 인사 시기를 모르시거나 수시라 하셨습니다 — ⛔특정한 달을 못 박지 말고 흐름으로만 쓰세요.',
+    `· 비겁(같은 자리를 바라보는 분)이 드는 때면 ★«${PROMO_BIGYEOP_SAY}» 로 옮겨 적으세요. ⛔「경쟁자」 라는 낱말은 쓰지 마세요.`,
+    '· ⛔올해와 내년 «두 해» 까지만 말하세요. 그 뒤 해는 말하지 마세요.',
+    '· ⛔「승진하십니다」 · 「○월에 발표가 납니다」 같은 약속을 하지 마세요. ★맺음은 「정하는 것은 사람과 조직입니다」.',
+    '· ★사주 용어는 «한 갈래에 한 개» 까지, 꼭 필요할 때만. 쓰면 반드시 뜻을 한 번 풀어 주세요. 4번 갈래에는 0개. [연재쌤 2026-09-12]',
+        ].filter(Boolean).join('\n')
+  }, [isPromo, pJobRaw, pCurRaw, pNextRaw, pGateRaw, pYearsRaw, pSeasonRaw, jobTextForSave])
   /* ★6부 [대표님] 가진 자격증 — 주소가 아니라 건넴 · 기록에서 */
   const [certs, setCerts] = useState<string>(() => (recordId ? '' : readCertsHandoff()))
   const certsForSave = sanitizeCerts(certs)
@@ -279,9 +328,12 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
     const years: YearLuck[] = judgeYears(input, thisYear, dayunList, kind)
     const cur = currentDayunOf(input, dayunList)
     const dayStem = calc.saju.find(p => p.pillar === '일주')?.stem ?? ''
-    // 이직 — 앞으로 몇 해를 함께 본다
-    const natal = judgeJobChangeNatal(calc.saju)
-    const byYear = dayStem && dayStem !== '?'
+    /*  이직 — 앞으로 몇 해를 함께 본다.
+     *  ⛔⛔ ★2026-09-12 (7부) [연재쌤] — 승진 화면에서는 «부르지 않습니다».
+     *     「승진을 물었는데 나가는 자국이 있더라도 ★넣지 말 것」
+     *     ⇒ 물으신 것만 답합니다. (검사 50 · PROMO_USE_JOBCHANGE = false) */
+    const natal = isPromo ? [] : judgeJobChangeNatal(calc.saju)
+    const byYear = !isPromo && dayStem && dayStem !== '?'
       ? calcSeyunList(dayStem, thisYear)
         .filter(s => s.year >= thisYear && s.year < thisYear + 5)
         .map(s => ({ year: s.year, hits: judgeJobChangeLuck(calc.saju, s.cheongan, s.jiji) }))
@@ -297,7 +349,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       natal, byYear, examDay, purpose: kind,
       grade: studentGrade,
     })
-  }, [input, calc, dayunList, thisYear, kind, examDateRaw, dateApprox, studentGrade])
+  }, [input, calc, dayunList, thisYear, kind, examDateRaw, dateApprox, studentGrade, isPromo])
 
   /* ★2026-09-11 (6부) — 「고르신 일하는 방식과 사주」 카드 (교재 202~204쪽 · 검사 44)
    *   분야를 고른 취업 손님에게만 붙입니다. 진로적성 엔진의 구조 판정을 그대로 씁니다. */
@@ -497,6 +549,8 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         schoolExamNote: schoolExam?.note || null,
         //  ★6부 [대표님 알약] — 고르지 않은 관문 이야기를 쓰지 않게
         jobSituation: sit,
+        //  ★7부 — 승진 재료 (⛔ 직접 적은 직업·직급은 jobText 로 옵니다)
+        promoNote,
         jobGates: gates,
         examDate: examDateRaw || null,
         examDayNote: examDayForPrompt,
@@ -829,7 +883,10 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
     //   빠뜨리면 재료가 바뀌어도 옛 통변이 그대로 남습니다.
   }, [calc, cards, recordId, person, target, kind, studentGrade, gradeLevel, trackSel,
       examCategory, targetType, targetCustomText, examDateRaw, dateApprox, examDayForPrompt, thisYear,
-      signalBlock, upsangMaterial, dayunReady, retryRecord, examKind, cardsAll, way, wishForSave, wishHeavy, sit, gates, picks, jobTextForSave, certsForSave, plan, schoolExam])
+      signalBlock, upsangMaterial, dayunReady, retryRecord, examKind, cardsAll, way, wishForSave, wishHeavy, sit, gates, picks, jobTextForSave, certsForSave, plan, schoolExam,
+      //  ★7부 — 승진 재료. ⛔«문자열 하나» 입니다 (useMemo 로 한 번만 만듭니다).
+      //     배열이나 객체를 여기 넣으면 ★끝없이 다시 부릅니다 (6부 0장 ②-①).
+      promoNote])
 
   // ── ⑥ 다시보기 — 저장본 불러오기 ──────────────────────────
   useEffect(() => {
@@ -898,6 +955,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
           {/* ★2026-07-30 — 화면마다 이름이 다릅니다. 손님이 «내가 무엇을 보는지» 알아야 합니다. */}
           {person.name}님의 {mode === 'jinhak'
             ? '진학 합격운'
+            : isPromo ? '승진운'
             : (kind === 'job' ? '취업운' : '시험 합격운')}
         </div>
       </div>

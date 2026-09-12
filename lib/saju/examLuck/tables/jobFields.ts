@@ -220,12 +220,18 @@ export function sanitizeJobText(raw: unknown): string {
 //    지금 상황(하나) · 거쳐야 할 관문(여러 개)
 //    ⚠️ 한 줄에 넷을 두면 «신규 취업 + 이직» 이 함께 눌려 오히려 생뚱맞은 답이 나옵니다 — 두 줄로 둡니다.
 // ════════════════════════════════════════════════════════════════
-export type JobSituation = 'new' | 'move'
+/*  ★2026-09-12 (7부) — 승진을 더했습니다.
+ *  ⛔⛔ buildExamSeven 의 isMove 를 «함께» 고쳐야 합니다 —
+ *     'promote' !== 'new' 라 «이직» 으로 읽히면 승진 손님께
+ *     「몸담은 곳을 옮기실 수 있습니다」 가 나갑니다 (검사 50 ⑪). */
+export type JobSituation = 'new' | 'move' | 'promote'
 export type JobGate = 'exam' | 'interview'
 export const JOB_SITUATIONS: Array<{ key: JobSituation; label: string }> = [
   { key: 'new', label: '신규 취업' },
   { key: 'move', label: '이직' },
 ]
+/** ⚠️ 승진은 «승진 탭» 에서만 씁니다 — 취업 탭 알약에는 넣지 않습니다 */
+export const JOB_SITUATION_PROMOTE: JobSituation = 'promote'
 export const JOB_GATES: Array<{ key: JobGate; label: string }> = [
   { key: 'exam', label: '시험' },
   { key: 'interview', label: '면접' },
@@ -237,7 +243,7 @@ export function parseGates(raw: string | null | undefined): JobGate[] | null {
   return raw.split(',').filter((x): x is JobGate => (keys as string[]).includes(x))
 }
 export function parseSituation(raw: string | null | undefined): JobSituation | null {
-  return raw === 'new' || raw === 'move' ? raw : null
+  return raw === 'new' || raw === 'move' || raw === 'promote' ? raw : null
 }
 /** 날짜 칸 이름 — 고른 관문을 따라갑니다 */
 export function dateLabelFor(gates: JobGate[] | null): string {

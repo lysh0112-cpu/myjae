@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * 합격운 · 취업운 입력 — 무엇을 볼지 고르기
+ * 합격운 · 취업운 · 승진운 입력 — 무엇을 볼지 고르기
  * ─────────────────────────────────────────────
  * 진입: exam-luck(보관함) > 사람 선택 모달 > 이 화면
  * 다음: ★2026-07-30 — 탭에 따라 «다른 화면» 으로 보냅니다. (대표님 지시)
@@ -17,6 +17,10 @@
 
 import { Suspense, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import {
+  PROMO_JOBS, promoJobOf, defaultNextIdx, PROMO_YEARS, PROMO_SEASONS,
+  PROMO_WISH_SAMPLES, PROMO_WISH_MAX, PROMO_WISH_NUDGE_UNDER,
+} from '@/lib/saju/examLuck/tables/promotion'
 import { exactAge } from '@/lib/saju/ageDayun'
 // ★2026-07-27 — 손님이 시험 종류를 고르면 교재 230쪽 짝에 따라 볼 십신이 정해진다.
 import { EXAM_KINDS } from '@/lib/saju/examLuck/tables/rules'
@@ -55,14 +59,45 @@ function ExamLuckInputInner() {
    *   ★성인이 공무원·자격증을 준비하는 경우는 취업 탭 «안에서» 갈래를 둡니다.
    *     그분들이 갈 곳이 없어지면 안 되기 때문입니다. (EXAM_KINDS 를 그대로 씁니다)
    */
-  const [tab, setTab] = useState<'jinhak' | 'chwieop'>(
+  /*  ★2026-09-12 (7부) [대표님] — ★«승진» 탭을 더했습니다.
+   *    진학 = 학생 + 시험 · 취업 = 성인 + (시험 또는 일자리) · ★승진 = 성인 + 일자리(지금 회사)
+   *    ⚠️ 승진도 target='adult' · kind='job' 입니다 — 엔진은 «그대로» 씁니다.
+   *      갈리는 것은 jobSituation='promote' 하나뿐입니다. */
+  const [tab, setTab] = useState<'jinhak' | 'chwieop' | 'seungjin'>(
     age !== null && age < 20 ? 'jinhak' : 'chwieop',
   )
   /** 취업 탭 안의 갈래 — 시험 준비냐 일자리 구하기냐 */
   const [jobMode, setJobMode] = useState<Kind>('job')
 
   const target: Target = tab === 'jinhak' ? 'student' : 'adult'
-  const kind: Kind = tab === 'jinhak' ? 'exam' : jobMode
+  const kind: Kind = tab === 'jinhak' ? 'exam' : tab === 'seungjin' ? 'job' : jobMode
+  const isPromo = tab === 'seungjin'
+
+  /*  ★승진 입력 — 표는 lib/saju/examLuck/tables/promotion.ts «한 곳» 에 있습니다.
+   *  ⛔ 직급 이름을 여기 붙박이로 적지 마십시오. */
+  const [pJob, setPJob] = useState<string>('hoesa')
+  const [pCur, setPCur] = useState<number>(0)      // -2 = 직접 적기
+  const [pNext, setPNext] = useState<number>(1)    // -2 = 직접 적기 · -1 = 아직 모르겠어요
+  const [pJobText, setPJobText] = useState('')     // 「그 밖」 일 때 직업 이름
+  const [pCurText, setPCurText] = useState('')
+  const [pNextText, setPNextText] = useState('')
+  const [pGate, setPGate] = useState<'yes' | 'no' | 'unknown'>('unknown')
+  const [pYears, setPYears] = useState<string>('yes')
+  const [pSeason, setPSeason] = useState<string>('year_end')
+  /** 🔴 고민 칸은 승진에서 ★«꼭» 입니다 [대표님 2026-09-12] */
+  const [pWish, setPWish] = useState('')
+  const pRanks = promoJobOf(pJob)?.ranks ?? []
+  const pIsEtc = pJob === 'etc'
+  /** 표를 못 쓰면 «문인지» 를 직접 여쭙습니다 */
+  const pAsksGate = pIsEtc || pCur === -2 || pNext === -2
+  const pCurLabel = pIsEtc || pCur === -2 ? pCurText.trim() : (pRanks[pCur] ?? '')
+  const pNextLabel = pIsEtc || pNext === -2 ? pNextText.trim()
+    : pNext === -1 ? '아직 모르겠어요' : (pRanks[pNext] ?? '')
+  const pOk = !isPromo || (
+    (!pIsEtc || pJobText.trim().length > 0)
+    && pCurLabel.length > 0 && pNextLabel.length > 0
+    && pWish.trim().length > 0
+  )
   /** ★어떤 시험인가 — 교재 230쪽이 십신마다 시험을 짝지어 놨다 */
   const [examKind, setExamKind] = useState<string>('')
   /* ★2026-09-11 (6부) [대표님 「직종별로 세분화 · 콤보 두 개로 좁혀지게」] — 일자리를 구해요 쪽 두 단계 콤보
@@ -129,7 +164,9 @@ function ExamLuckInputInner() {
   const examTypeOk = !asksExam || (!!schoolExam && (schoolExam !== 'etc' || !!schoolExamText.trim()))
   //  「아직 정해진 시험이 없어요」 면 날짜를 받지 않습니다
   const dateOk = schoolExam === 'none' ? true : !!examDate
-  const canGo = gradeOk && targetOk && dateOk && examTypeOk
+  /*  ★2026-09-12 (7부) — 승진은 «다른 칸» 을 봅니다.
+   *    진학·취업의 목표·날짜·시험종류는 승진에 없으므로 그 검사를 건너뜁니다. */
+  const canGo = isPromo ? pOk : (gradeOk && targetOk && dateOk && examTypeOk)
 
   /** 모르는 손님을 위한 빠른 날짜 — 그 달의 대표 하루 */
   const quickDates = useMemo(() => {
@@ -160,7 +197,19 @@ function ExamLuckInputInner() {
     //  ★6부 — 고른 직업 (결과 화면이 교재 표로 다시 걸러 받습니다 · parsePicks)
     if (target !== 'student' && kind === 'job' && field && picks.length) p.set('jobs', picks.join('|'))
     //  ★6부 [대표님 알약] 지금 상황 · 거쳐야 할 관문 — 빈 관문도 «,» 없이 빈 값으로 실어 «옛 기록» 과 가립니다
-    if (target !== 'student' && kind === 'job') { if (situation) p.set('sit', situation); p.set('gates', gates.join(',')) }
+    if (target !== 'student' && kind === 'job' && !isPromo) { if (situation) p.set('sit', situation); p.set('gates', gates.join(',')) }
+    /*  ★2026-09-12 (7부) — 승진.  ⛔ 고민 글(pWish) · 직접 적은 직업·직급은 «주소에 싣지 않습니다»
+     *    (방문 기록에 남습니다 — 6부 9장). 건네기는 [보기] 누를 때 따로 합니다. */
+    if (isPromo) {
+      p.set('sit', 'promote')
+      p.set('gates', '')
+      p.set('pJob', pJob)
+      if (!pIsEtc && pCur >= 0) p.set('pCur', String(pCur))
+      if (!pIsEtc && pNext >= -1) p.set('pNext', String(pNext))
+      if (pAsksGate) p.set('pGate', pGate)
+      p.set('pYears', pYears)
+      p.set('pSeason', pSeason)
+    }
     if (examDate) p.set('examDate', examDate)
     if (examDate && dateApprox) p.set('dateApprox', '1')   // ★6부 — 어림 시기 (그날 일진은 보지 않음)
     //  ★6부 — 고3 · 재수생이 아닌 학생이 고른 시험 종류 (직접 적기는 글자를 그대로)
@@ -179,7 +228,7 @@ function ExamLuckInputInner() {
       }
     }
     return p.toString()
-  }, [sp, kind, target, examKind, examDate, dateApprox, studentGrade, needsLevel, gradeLevel, track, examCategory, targetType, targetCustomText, field, way, situation, gates, picks, asksExam, schoolExam, schoolExamText])
+  }, [sp, kind, target, isPromo, pJob, pCur, pNext, pAsksGate, pGate, pYears, pSeason, pIsEtc, examKind, examDate, dateApprox, studentGrade, needsLevel, gradeLevel, track, examCategory, targetType, targetCustomText, field, way, situation, gates, picks, asksExam, schoolExam, schoolExamText])
 
 
   const Btn = ({ on, title, sub, onClick }: { on: boolean; title: string; sub: string; onClick: () => void }) => (
@@ -205,7 +254,7 @@ function ExamLuckInputInner() {
       }}>
         <button onClick={() => router.back()}
           style={{ background: 'none', border: 'none', color: '#96502e', fontSize: 17, cursor: 'pointer', padding: 0 }}>←</button>
-        <div style={{ fontSize: 16, fontWeight: 500, color: '#3a2e28' }}>합격운 · 취업운</div>
+        <div style={{ fontSize: 16, fontWeight: 500, color: '#3a2e28' }}>합격운 · 취업운 · 승진운</div>
       </div>
 
       <div style={{ padding: '22px 16px 0' }}>
@@ -224,7 +273,8 @@ function ExamLuckInputInner() {
         }}>
           {([
             { key: 'jinhak' as const, label: '진학', sub: '학생 · 입시' },
-            { key: 'chwieop' as const, label: '취업', sub: '성인 · 시험 · 일자리' },
+            { key: 'chwieop' as const, label: '취업', sub: '시험 · 일자리' },
+            { key: 'seungjin' as const, label: '승진', sub: '직장 · 자리' },
           ]).map(t => {
             const on = tab === t.key
             return (
@@ -267,6 +317,123 @@ function ExamLuckInputInner() {
             ))}
           </>
         )}
+
+        {/* ★2026-09-12 (7부) 승진 — 다섯 칸 + 고민 칸(꼭).
+             ⛔ 직급 이름을 여기 적지 마십시오 — promotion.ts 에서 옵니다. */}
+        {isPromo && (() => {
+          const L = { fontSize: 12.5, color: '#8a7063', margin: '18px 2px 9px' } as const
+          const SEL = {
+            width: '100%', padding: '12px 13px', borderRadius: 12, background: CARD,
+            border: `0.5px solid ${LINE}`, fontSize: 14, color: '#3a2e28', fontFamily: 'inherit',
+          } as const
+          const TX = (hi?: boolean) => ({ ...SEL, marginTop: 8, border: `0.5px solid ${hi ? ACCENT : '#d9b9a6'}`, color: hi ? ACCENT : '#3a2e28' })
+          const Pill = (t: string, on: boolean, f: () => void) => (
+            <button key={t} onClick={f} style={{
+              padding: '9px 13px', borderRadius: 11, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+              background: on ? SOFT : CARD, color: on ? ACCENT : '#6b5d53',
+              border: on ? `1.5px solid ${ACCENT}` : `0.5px solid ${LINE}`,
+            }}>{t}</button>
+          )
+          return (
+            <>
+              <div style={L}>어떤 일을 하십니까 <span style={{ color: ACCENT, fontWeight: 600 }}>*</span></div>
+              <select value={pJob} style={SEL} onChange={e => {
+                setPJob(e.target.value); setPCur(0); setPNext(defaultNextIdx(e.target.value, 0))
+                setPJobText(''); setPCurText(''); setPNextText('')
+              }}>
+                {PROMO_JOBS.map(j => <option key={j.key} value={j.key}>{j.label}</option>)}
+              </select>
+              {pIsEtc && (
+                <input value={pJobText} maxLength={30} placeholder="예) 대학병원 간호사"
+                  onChange={e => setPJobText(e.target.value)} style={TX()} />
+              )}
+
+              <div style={L}>지금 직급이 어떻게 되시나요 <span style={{ color: ACCENT, fontWeight: 600 }}>*</span></div>
+              {pIsEtc ? (
+                <input value={pCurText} maxLength={30} placeholder="예) 책임간호사"
+                  onChange={e => setPCurText(e.target.value)} style={SEL} />
+              ) : (
+                <>
+                  <select value={pCur} style={SEL} onChange={e => {
+                    const v = Number(e.target.value); setPCur(v)
+                    setPNext(v === -2 ? -2 : defaultNextIdx(pJob, v))
+                  }}>
+                    {pRanks.map((t, i) => <option key={i} value={i}>{t}</option>)}
+                    <option value={-2}>없어요 (직접 적기)</option>
+                  </select>
+                  {pCur === -2 && (
+                    <input value={pCurText} maxLength={30} placeholder="예) 책임역 3년차"
+                      onChange={e => setPCurText(e.target.value)} style={TX()} />
+                  )}
+                </>
+              )}
+
+              <div style={L}>다음 직급이 어떻게 되시나요 <span style={{ color: ACCENT, fontWeight: 600 }}>*</span></div>
+              <div style={{ fontSize: 11.5, color: '#b09a8b', margin: '-4px 2px 8px' }}>
+                한 계단 위를 미리 골라 두었어요. 없으면 직접 적으셔도 됩니다.
+              </div>
+              {pIsEtc || pCur === -2 ? (
+                <input value={pNextText} maxLength={30} placeholder="예) 파트장"
+                  onChange={e => setPNextText(e.target.value)} style={{ ...SEL, border: `0.5px solid ${ACCENT}`, color: ACCENT }} />
+              ) : (
+                <>
+                  <select value={pNext} style={{ ...SEL, border: `0.5px solid ${ACCENT}`, color: ACCENT }}
+                    onChange={e => setPNext(Number(e.target.value))}>
+                    {pRanks.map((t, i) => <option key={i} value={i}>{t}</option>)}
+                    <option value={-2}>없어요 (직접 적기)</option>
+                    <option value={-1}>아직 모르겠어요</option>
+                  </select>
+                  {pNext === -2 && (
+                    <input value={pNextText} maxLength={30} placeholder="예) 수석역"
+                      onChange={e => setPNextText(e.target.value)} style={TX(true)} />
+                  )}
+                </>
+              )}
+
+              {pAsksGate && (
+                <>
+                  <div style={L}>그 자리에 오르면 결재하거나 사람을 맡게 되시나요</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                    {([['yes', '네'], ['no', '아니요'], ['unknown', '잘 모르겠어요']] as const)
+                      .map(([k, t]) => Pill(t, pGate === k, () => setPGate(k)))}
+                  </div>
+                </>
+              )}
+
+              <div style={L}>이번에 승진 대상연차이신가요 <span style={{ color: ACCENT, fontWeight: 600 }}>*</span></div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                {PROMO_YEARS.map(y => Pill(y.label, pYears === y.key, () => setPYears(y.key)))}
+              </div>
+
+              <div style={L}>인사 발표가 보통 언제인가요 <span style={{ color: ACCENT, fontWeight: 600 }}>*</span></div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                {PROMO_SEASONS.map(x => Pill(x.label, pSeason === x.key, () => setPSeason(x.key)))}
+              </div>
+
+              {/* 🔴 고민 칸 — 승진에서는 «꼭» 입니다 [대표님 2026-09-12] */}
+              <div style={L}>궁금한 것이나 고민 <span style={{ color: ACCENT, fontWeight: 600 }}>*</span></div>
+              <textarea value={pWish} maxLength={PROMO_WISH_MAX} rows={3}
+                placeholder="예) 이번에 안 되면 다음이 있을지 궁금합니다"
+                onChange={e => setPWish(e.target.value)}
+                style={{ ...SEL, resize: 'vertical', lineHeight: 1.7 }} />
+              <div style={{ fontSize: 11.5, color: '#b09a8b', margin: '7px 2px 8px' }}>
+                이런 것이 궁금하실 수 있어요 — 눌러서 고쳐 쓰셔도 됩니다
+              </div>
+              {PROMO_WISH_SAMPLES.map(x => (
+                <button key={x.text} onClick={() => setPWish(x.text)} style={{
+                  display: 'block', width: '100%', textAlign: 'left', marginBottom: 6,
+                  padding: '10px 12px', borderRadius: 11, cursor: 'pointer', fontFamily: 'inherit',
+                  background: CARD, border: `0.5px solid ${LINE}`, fontSize: 12.5, color: '#6b5d53',
+                }}>{x.text}</button>
+              ))}
+              {pWish.trim().length > 0 && pWish.trim().length < PROMO_WISH_NUDGE_UNDER && (
+                <div style={{ fontSize: 12, color: ACCENT, margin: '4px 2px 0' }}>
+                  한 줄만 더 적어 주시면 그 이야기로 풀어 드릴 수 있어요.
+                </div>
+              )}
+            </>
+          )
+        })()}
 
         {/* ★2026-07-29 — 학생 목표 2단 드롭다운. (대표님 지시)
              학생일 때만 뜹니다. 성인에게는 «자사고·수시» 가 뜻이 안 맞습니다. */}
@@ -609,10 +776,16 @@ function ExamLuckInputInner() {
             background: '#fdf4f7', border: `1px solid ${ACCENT}33`,
             fontSize: 11.5, color: '#8c4a63', lineHeight: 1.7,
           }}>
-            {!gradeOk && <div>· 학년·신분을 골라 주세요.</div>}
-            {!examTypeOk && <div>· 어떤 시험인지 골라 주세요.</div>}
-            {!targetOk && <div>· {target === 'student' ? '가고자 하는 목표' : (kind === 'job' ? (situation ? '① 분야' : '지금 상황(신규 취업 / 이직)') : '목표 시험·직종')}를 골라 주세요.</div>}
-            {!dateOk && <div>· 시험(또는 발표) 날짜를 골라 주세요.</div>}
+            {isPromo && <>
+              {pIsEtc && !pJobText.trim() && <div>· 어떤 일을 하시는지 적어 주세요.</div>}
+              {!pCurLabel && <div>· 지금 직급을 골라 주시거나 적어 주세요.</div>}
+              {!pNextLabel && <div>· 다음 직급을 골라 주시거나 적어 주세요.</div>}
+              {!pWish.trim() && <div>· 궁금한 것이나 고민을 한 줄 적어 주세요. 아래 보기를 눌러도 됩니다.</div>}
+            </>}
+            {!isPromo && !gradeOk && <div>· 학년·신분을 골라 주세요.</div>}
+            {!isPromo && !examTypeOk && <div>· 어떤 시험인지 골라 주세요.</div>}
+            {!isPromo && !targetOk && <div>· {target === 'student' ? '가고자 하는 목표' : (kind === 'job' ? (situation ? '① 분야' : '지금 상황(신규 취업 / 이직)') : '목표 시험·직종')}를 골라 주세요.</div>}
+            {!isPromo && !dateOk && <div>· 시험(또는 발표) 날짜를 골라 주세요.</div>}
           </div>
         )}
 
@@ -627,8 +800,19 @@ function ExamLuckInputInner() {
             //      «잘못 들어온 손님» 을 서로에게 되돌려 줍니다. (옛 링크 보호)
             const to = target === 'student'
               ? '/manseryeok/exam-luck-result'
+              : isPromo ? '/manseryeok/promotion-luck-result'
               : '/manseryeok/job-luck-result'
-            writeWishHandoff(wish, way === 'custom' ? jobText : '', kind === 'job' ? certs : '')   // ★6부 — 고민 · 직접 적은 방식 · 자격증은 주소 대신 여기로
+            /*  ★6부 — 고민 · 직접 적은 방식 · 자격증은 주소 대신 여기로.
+             *  ★7부 — 승진도 같습니다. 고민 글과 «직접 적은 직업·직급» 을 주소에 싣지 않습니다. */
+            if (isPromo) {
+              writeWishHandoff(
+                pWish,
+                [pIsEtc ? pJobText.trim() : '', pCurLabel, pNextLabel].filter(Boolean).join(' · '),
+                '',
+              )
+            } else {
+              writeWishHandoff(wish, way === 'custom' ? jobText : '', kind === 'job' ? certs : '')
+            }
             router.push(`${to}?${query}`)
           }}
           disabled={!canGo}
@@ -638,7 +822,7 @@ function ExamLuckInputInner() {
             fontSize: 14.5, fontWeight: 500, fontFamily: 'inherit',
             cursor: canGo ? 'pointer' : 'not-allowed',
           }}>
-          {kind === 'job' ? '취업운 보기' : '합격운 보기'}
+          {isPromo ? '승진운 보기' : kind === 'job' ? '취업운 보기' : '합격운 보기'}
         </button>
 
         {/* ★이직·직업 변동은 교재 190~191쪽 자료를 아직 못 받았다. (작업지시 5장)
