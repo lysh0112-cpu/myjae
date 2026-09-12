@@ -168,7 +168,10 @@ export function planBlock(plan: ExamPlan | null | undefined, section: 'flow' | '
     const NAME: Record<string, string> = plan.target === 'student'
       ? { 인성: '공부운', 관성: '규칙을 지키는 힘', 식상: '말하고 글 쓰는 재주', 재성: '바깥일에 끌리는 마음', 비겁: '스스로 밀고 가는 힘' }
       : { 인성: '공부운', 관성: '직장 · 합격운', 식상: '말하고 글 쓰는 재주', 재성: '돈을 다루는 현실 감각', 비겁: '스스로 밀고 가는 힘' }
-    const strong = (Object.entries(y) as Array<[string, number]>).filter(([, n]) => n >= 20).sort((a, b) => b[1] - a[1])
+    //  ★6부 [대표님 실측] 학생에게 «바깥일에 끌리는 마음(재성)» 은 장점이 아닙니다 — 넉넉한 힘에서 뺍니다
+    const skip = plan.target === 'student' ? ['재성', '비겁'] : []
+    const strong = (Object.entries(y) as Array<[string, number]>)
+      .filter(([k, n]) => n >= 20 && !skip.includes(k)).sort((a, b) => b[1] - a[1])
     L.push(strong.length
       ? `- 넉넉하게 갖추신 힘: ${strong.map(([k]) => NAME[k]).join(' · ')}   ★이 힘들로만 말하세요. 적은 힘은 «짚지 마세요» (「크지 않다 · 부족하다」 로 쓰지 않습니다).`
       : '- ★어느 한쪽이 특별히 크지는 않은, 고르게 갖춘 그릇입니다. «고르게 갖추셨다» 로 말하고 모자란 쪽을 짚지 마세요.')

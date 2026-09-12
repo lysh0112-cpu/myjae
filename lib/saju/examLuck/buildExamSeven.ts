@@ -66,6 +66,10 @@ export interface SevenArgs {
   wishHeavy?: boolean
   /** ★6부 [대표님 「직접 넣을 수도」] ② 방식 칸에 손님이 직접 적은 일하는 방식 · 직업 — sanitizeJobText 를 거친 글 */
   jobText?: string | null
+  /** ★6부 [대표님] 고3 · 재수생이 아닌 학생이 고른 «무슨 시험인가» — 「내신 (중간 · 기말)」 등 (검사 45 ⑮) */
+  schoolExam?: string | null
+  /** ★6부 — 그 시험을 어떻게 다룰지 (SCHOOL_EXAMS.note) */
+  schoolExamNote?: string | null
   /** ★6부 [대표님 「엔진 계산까지」] 엔진이 정한 유형 · 비율 · 달 · 당일 수칙 (engineCalc.buildPlan · 검사 49) */
   plan?: ExamPlan | null
   /** ★6부 [대표님 「소지한 자격증도」] 손님이 가진 자격증 — sanitizeCerts 를 거친 글 (일자리를 구해요 전용) */
@@ -381,7 +385,7 @@ function hintStudent(key: SevenKey, v: SevenArgs): string[] {
       //  ★6부 [대표님] 고3 · 재수생은 «올해 한 해만» — 재수 · 삼수를 권하는 말로 들립니다 (검사 45 ⑭)
       L.push(v.gradeBlock && /^(고등학교 3학년|N수생)/.test(v.gradeBlock.trim())
         ? `· 🔴 ★올해(${v.year}년) «한 해만» 말하세요. 5년을 늘어놓지 말고, «내년 · 내후년 · 몇 년 뒤» 도 말하지 마세요 [대표님]. 재수 · 삼수를 권하는 말로 들립니다. 재료의 올해 등급으로 «올해 최선을 다하면 좋은 결과가 있다» 는 쪽으로 쓰세요.`
-        : '· 재료 [앞으로의 흐름] 에서 가장 좋은 해와 보통인 해를 한두 문장으로 먼저 정리하세요. 등급 그대로입니다.')
+        : `· 재료 [앞으로의 흐름] 에서 올해와 내년만 한두 문장으로 정리하세요. 등급 그대로입니다. ★${v.year + 2}년 뒤의 해는 말하지 마세요 — 그때는 이미 대학에 간 뒤라 지금 목표와 상관이 없습니다 [대표님].`)
       L.push('· ★한 해를 두고 좋다 · 아쉽다를 섞어 말하지 마세요. 재료의 등급 하나로만 말하고, 뒤 갈래에서도 같게 말합니다.')
       L.push('· 원국으로 «어떻게 배우는 학생인가» 를 한 가지로 정하세요 — 이해로 뚫는 학생 / 여러 번 돌려 쌓는 학생 / 문제를 풀며 익히는 학생. 왜 그런지 쉬운 말로.')
       L.push('· 재료 [학업 몰입도] 등급을 옮기지 말고, 공부 습관 이야기로 푸세요.')
@@ -606,6 +610,9 @@ export function buildSevenPrompt(v: SevenArgs, group: SevenKey[]): SevenPrompt |
     !isStudentWho && v.kind === 'job' && v.jobGates && !v.jobGates.includes('interview') ? '★고르지 않은 면접 이야기는 쓰지 마세요.' : '',
     !isStudentWho && v.kind === 'job' && v.jobSituation === 'new' ? '★처음 일자리를 구하는 분입니다. 이직 · 직장 옮기기 이야기를 쓰지 마세요.' : '',
     //  ★6부 [대표님 「연말로 잡았는데 12.15 로 특정하네」] 어림 시기면 날짜 숫자 대신 «몇 월경» · 그날 기운은 싣지 않음 (검사 46 ⑥)
+    //  ★6부 [대표님] 고3 · 재수생이 아니면 «무슨 시험인지» 를 그대로 부릅니다 (수능 · 발표로 잘못 부르지 않게)
+    v.schoolExam ? `· 보려는 시험: ${v.schoolExam}   ★«수능» · «수시 발표» 로 부르지 마세요. 이 이름 그대로 부르세요.` : '',
+    v.schoolExamNote ? `· ${v.schoolExamNote}` : '',
     v.examDate && v.examDateApprox ? `· 시험(발표) 시기: ${approxLabel(v.examDate)} (★정확한 날짜가 아닙니다 — 손님이 어림으로 고른 시기입니다. 특정한 날(며칠)을 말하지 마세요)` : '',
     v.examDate && !v.examDateApprox ? `· 시험(발표) 날짜: ${v.examDate}` : '',
     v.examDayNote && !v.examDateApprox ? `· 그날 기운: ${v.examDayNote}` : '',

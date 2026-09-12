@@ -10,7 +10,7 @@
 import * as fs from 'fs'
 import { SEVEN_GROUPS, sevenOf, legacyOf, isLegacyTong, sevenKeyOf, buildSevenPrompt, monthlyMaterial, dedupeBody } from './lib/saju/examLuck/buildExamSeven'
 import { STUDENT_BAN_WORDS, CLOSING, CLOSING_STUDENT } from './lib/saju/examLuck/tables/rules'
-import { STUDENT_GRADES, GRADE_PROMPT, gradeMismatch } from './lib/saju/examLuck/tables/studentTarget'
+import { STUDENT_GRADES, GRADE_PROMPT, gradeMismatch, SCHOOL_EXAMS, asksSchoolExam, isFinalYear } from './lib/saju/examLuck/tables/studentTarget'
 import { cardJobFit } from './lib/saju/examLuck/buildCards'
 import { buildPlan, planBlock } from './lib/saju/examLuck/engineCalc'
 const buildPlan45 = () => buildPlan({
@@ -211,7 +211,32 @@ console.log('\n━━ ⑭ 학년 세분화 · 고3 · 재수생에게 먼 해를
     ok(/올해\(2026년\) «한 해만» 말하세요/.test(u), `${g === 'high3' ? '고3' : '재수생'} — 1번 갈래가 올해 한 해만`)
   }
   const u2 = buildSevenPrompt({ name: '가', gender: '여', age: 16, target: 'student', kind: 'exam', cards: [], saju: [], hourUnknown: false, year: 2026, gradeBlock: GRADE_PROMPT.high1 } as never, ['flow'])!.user
-  ok(!/«한 해만» 말하세요/.test(u2) && /가장 좋은 해와 보통인 해/.test(u2), '고1 등 아래 학년은 5년 흐름을 그대로 (아직 시간이 있음)')
+  //  ⚠️ 6부 ⑮ 에서 고2 이하도 «올해와 내년만» 으로 바뀌었습니다 (그 뒤 해는 대학 간 뒤라 상관없음)
+  ok(!/«한 해만» 말하세요/.test(u2) && /올해와 내년만/.test(u2), '고1 등 아래 학년은 올해와 내년까지 (고3 · 재수생은 올해만)')
+}
+
+console.log('\n━━ ⑮ 고3 · 재수생이 아니면 «무슨 시험인지» [대표님 2026-09-12] ━━')
+{
+  ok(SCHOOL_EXAMS.length === 6 && SCHOOL_EXAMS.some(e => e.key === 'none'), `시험 종류 여섯 — ${SCHOOL_EXAMS.map(e => e.label).join(' · ')}`)
+  ok(isFinalYear('high3') && isFinalYear('nsu') && !isFinalYear('high2'), '고3 · 재수생만 수능 전제')
+  ok(asksSchoolExam('high2') && asksSchoolExam('middle1') && !asksSchoolExam('high3'), '고2 이하에게만 시험 종류를 묻습니다')
+  const u = buildSevenPrompt({ name: '가', gender: '여', age: 17, target: 'student', kind: 'exam', cards: [], saju: [], hourUnknown: false,
+    year: 2026, gradeBlock: GRADE_PROMPT.high2, schoolExam: '내신 (중간 · 기말)', schoolExamNote: SCHOOL_EXAMS[0].note } as never, ['pace'])!.user
+  ok(u.includes('보려는 시험: 내신 (중간 · 기말)') && /«수능» · «수시 발표» 로 부르지 마세요/.test(u), '★AI 가 「수능 · 수시 발표」 로 잘못 부르지 않게')
+  ok(/범위를 나눠 도는 계획/.test(u), '시험마다 다루는 법이 함께 갑니다')
+  //  고2 이하 — 먼 해 금지
+  const f2 = buildSevenPrompt({ name: '가', gender: '여', age: 17, target: 'student', kind: 'exam', cards: [], saju: [], hourUnknown: false, year: 2026, gradeBlock: GRADE_PROMPT.high2 } as never, ['flow'])!.user
+  ok(/올해와 내년만/.test(f2) && /2028년 뒤의 해는 말하지 마세요/.test(f2), '★고2 — 올해와 내년만 (2028년은 대학 간 뒤)')
+  //  학생에게 «바깥일에 끌리는 마음» 을 장점으로 넘기지 않기
+  const blk = planBlock45(buildPlan({
+    saju: ['시주', '일주', '월주', '년주'].map((n, i) => ({ pillar: n, stem: ['庚申', '戊申', '庚申', '戊子'][i][0], branch: ['庚申', '戊申', '庚申', '戊子'][i][1] })) as never,
+    ohaeng: { 목: 0, 화: 25, 토: 15, 금: 55, 수: 5 }, year: 2026, month: 9, target: 'student', kind: 'exam', grade: '좋음', dayunOrder: 2,
+  }), 'flow')
+  ok(!/바깥일에 끌리는 마음|친구와 견주는 마음/.test(blk), `★학생에게 «바깥일 · 친구와 견주는 마음» 을 넉넉한 힘으로 넘기지 않습니다`)
+  const ip = fs.readFileSync('app/manseryeok/exam-luck-input/page.tsx', 'utf8')
+  ok(/SCHOOL_EXAMS\.map/.test(ip) && /examTypeOk/.test(ip), '입력 화면 — 시험 종류 알약 · 꼭 고르게')
+  ok(/schoolExam === 'none' \? true : !!examDate/.test(ip), '「아직 시험이 없어요」 면 날짜를 받지 않습니다')
+  ok(/진로적성» 서비스도 함께/.test(ip), '시험이 없으면 진로적성을 권합니다')
 }
 
 console.log(`\n━━ 4갈래 · 쉬운 말투 · 달별 재료 — 통과 ${pass} · 실패 ${fail} ━━\n`)

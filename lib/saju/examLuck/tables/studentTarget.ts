@@ -392,3 +392,22 @@ export function conditionalRules(a: {
 
   return out.join('\n\n')
 }
+
+// ════════════════════════════════════════════════════════════════
+//  ★2026-09-12 (6부) [대표님] 「고3 · 재수생이 아니면 어떤 시험인지를 넣게 하자」 (검사 45 ⑮)
+//    [겪음] 고2 학생에게 「2026년 12월 발표 · 발표 당일 수칙」 이 나왔습니다. 고2는 수시 발표가 없습니다.
+//    ⇒ 고3 · 재수생은 지금처럼 수능 날짜만. 그 아래 학년은 «무슨 시험인지» 를 고릅니다.
+// ════════════════════════════════════════════════════════════════
+export const SCHOOL_EXAMS: Array<{ key: string; label: string; note: string }> = [
+  { key: 'naesin', label: '내신 (중간 · 기말)', note: '학교 내신 시험입니다. 범위가 정해진 시험이라, 범위를 나눠 도는 계획과 실수 줄이기를 중심으로 말해 주세요.' },
+  { key: 'mock', label: '모의고사', note: '모의고사입니다. 등수보다 «무엇이 틀렸는지» 를 보는 시험이니, 오답 정리와 시간 배분을 중심으로 말해 주세요.' },
+  { key: 'lang', label: '어학 시험 (토익 · 토플 · 한국사 등)', note: '어학 · 자격 시험입니다. 정해진 날에 한 번 보는 시험이니 막판 정리와 컨디션을 중심으로 말해 주세요.' },
+  { key: 'contest', label: '대회 · 경시 · 수행평가', note: '대회 · 경시 · 수행평가입니다. 준비한 것을 «내놓는» 자리이니 마무리와 발표 · 제출 점검을 중심으로 말해 주세요.' },
+  { key: 'etc', label: '그 밖의 시험 (직접 적기)', note: '' },
+  { key: 'none', label: '아직 정해진 시험이 없어요', note: '' },
+]
+export const schoolExamOf = (k?: string | null) => SCHOOL_EXAMS.find(e => e.key === k) ?? null
+/** 고3 · 재수생인가 — 이들만 «수능» 을 전제로 날짜만 받습니다 */
+export const isFinalYear = (g?: string | null) => g === 'high3' || g === 'nsu'
+/** 시험 종류를 물어야 하는 학년인가 (고2 이하 · 기타 · 옛 기록) */
+export const asksSchoolExam = (g?: string | null) => !!g && !isFinalYear(g)

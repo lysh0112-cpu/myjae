@@ -20,7 +20,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { exactAge } from '@/lib/saju/ageDayun'
 // ★2026-07-27 — 손님이 시험 종류를 고르면 교재 230쪽 짝에 따라 볼 십신이 정해진다.
 import { EXAM_KINDS } from '@/lib/saju/examLuck/tables/rules'
-import { EXAM_CATEGORIES, TARGETS, STUDENT_GRADES, GRADE_LEVELS, TRACKS, examKindFromTarget } from '@/lib/saju/examLuck/tables/studentTarget'
+import { EXAM_CATEGORIES, TARGETS, STUDENT_GRADES, GRADE_LEVELS, TRACKS, examKindFromTarget, SCHOOL_EXAMS, asksSchoolExam } from '@/lib/saju/examLuck/tables/studentTarget'
 import { JOB_FIELDS, JOB_WAYS, itemsFor, WISH_MAX, writeWishHandoff, JOB_SITUATIONS, JOB_GATES, dateLabelFor, PICK_MAX, JOB_TEXT_MAX, CERT_MAX, type JobSituation, type JobGate } from '@/lib/saju/examLuck/tables/jobFields'
 
 const ACCENT = '#c85a8c'
@@ -89,6 +89,9 @@ function ExamLuckInputInner() {
    *   [상반기] · [하반기] · [연말] 단추는 «어림» — 그날 일진 · 공망은 보지 않고 그 달의 흐름으로만 봅니다.
    *   달력에서 고르면 «정해진 날» — 그날의 일진 · 공망 · 당일 수칙까지 봅니다. */
   const [dateApprox, setDateApprox] = useState<boolean>(false)
+  /* ★6부 [대표님] 고3 · 재수생이 아닌 학생 — 무슨 시험인지 (검사 45 ⑮) */
+  const [schoolExam, setSchoolExam] = useState<string>('')
+  const [schoolExamText, setSchoolExamText] = useState<string>('')
   /**
    * ★2026-07-29 — 학생 목표 (2단 드롭다운). 대표님 지시.
    *   [왜] «어디를 목표로 하는지» 를 알면 그 자리에 쓰이는 힘을 짚어 줄 수 있습니다.
@@ -121,8 +124,12 @@ function ExamLuckInputInner() {
   const targetOk = target === 'student'
     ? !!examCategory && !!targetType && (targetType !== 'custom' || !!targetCustomText.trim())
     : (kind === 'job' ? !!field && !!situation : !!examKind)   // ★6부 — 일자리는 지금 상황 · ① 분야를 꼭
-  const dateOk = !!examDate
-  const canGo = gradeOk && targetOk && dateOk
+  //  ★6부 [대표님] 고3 · 재수생이 아닌 학생에게만 «무슨 시험인가» 를 묻습니다 (검사 45 ⑮)
+  const asksExam = target === 'student' && asksSchoolExam(studentGrade)
+  const examTypeOk = !asksExam || (!!schoolExam && (schoolExam !== 'etc' || !!schoolExamText.trim()))
+  //  「아직 정해진 시험이 없어요」 면 날짜를 받지 않습니다
+  const dateOk = schoolExam === 'none' ? true : !!examDate
+  const canGo = gradeOk && targetOk && dateOk && examTypeOk
 
   /** 모르는 손님을 위한 빠른 날짜 — 그 달의 대표 하루 */
   const quickDates = useMemo(() => {
@@ -156,6 +163,8 @@ function ExamLuckInputInner() {
     if (target !== 'student' && kind === 'job') { if (situation) p.set('sit', situation); p.set('gates', gates.join(',')) }
     if (examDate) p.set('examDate', examDate)
     if (examDate && dateApprox) p.set('dateApprox', '1')   // ★6부 — 어림 시기 (그날 일진은 보지 않음)
+    //  ★6부 — 고3 · 재수생이 아닌 학생이 고른 시험 종류 (직접 적기는 글자를 그대로)
+    if (asksExam && schoolExam) p.set('schoolExam', schoolExam === 'etc' ? `etc:${schoolExamText.slice(0, 20)}` : schoolExam)
     // ★학생 목표 — 학생일 때만 싣는다
     if (target === 'student' && studentGrade) p.set('studentGrade', studentGrade)
     if (target === 'student' && needsLevel) {
@@ -170,7 +179,7 @@ function ExamLuckInputInner() {
       }
     }
     return p.toString()
-  }, [sp, kind, target, examKind, examDate, dateApprox, studentGrade, needsLevel, gradeLevel, track, examCategory, targetType, targetCustomText, field, way, situation, gates, picks])
+  }, [sp, kind, target, examKind, examDate, dateApprox, studentGrade, needsLevel, gradeLevel, track, examCategory, targetType, targetCustomText, field, way, situation, gates, picks, asksExam, schoolExam, schoolExamText])
 
 
   const Btn = ({ on, title, sub, onClick }: { on: boolean; title: string; sub: string; onClick: () => void }) => (
@@ -504,11 +513,47 @@ function ExamLuckInputInner() {
           </>
         )}
 
+        {/* ★2026-09-12 (6부) [대표님] 고3 · 재수생이 아닌 학생 — «무슨 시험인가» (검사 45 ⑮)
+             [겪음] 고2 학생에게 「2026년 12월 수시 발표 · 발표 당일 수칙」 이 나왔습니다. 고2는 수시 발표가 없습니다. */}
+        {asksExam && (
+          <>
+            <div style={{ fontSize: 12.5, color: '#8a7063', margin: '18px 2px 8px' }}>
+              어떤 시험인가요? <span style={{ color: ACCENT, fontWeight: 600 }}>*</span>
+            </div>
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+              {SCHOOL_EXAMS.map(o => {
+                const on = schoolExam === o.key
+                return (
+                  <button key={o.key} type="button" onClick={() => { setSchoolExam(o.key); if (o.key === 'none') { setExamDate(''); setDateApprox(false) } }} aria-pressed={on}
+                    style={{ fontSize: 12.5, borderRadius: 999, padding: '7px 13px', cursor: 'pointer', fontFamily: 'inherit',
+                      border: `1px solid ${on ? ACCENT : '#e2cfc2'}`, background: on ? ACCENT : CARD,
+                      color: on ? '#fff' : '#8a7063', fontWeight: on ? 600 : 400 }}>{o.label}</button>
+                )
+              })}
+            </div>
+            {schoolExam === 'etc' && (
+              <input type="text" value={schoolExamText} onChange={e => setSchoolExamText(e.target.value)} maxLength={20}
+                placeholder="예: 한국사능력검정시험" 
+                style={{ width: '100%', padding: '12px 14px', borderRadius: 12, marginTop: 8, boxSizing: 'border-box',
+                  background: CARD, border: `1.5px solid ${ACCENT}55`, color: '#3a2e28', fontSize: 13.5, fontFamily: 'inherit' }} />
+            )}
+            {schoolExam === 'none' && (
+              <div style={{ background: SOFT, border: `0.5px solid ${ACCENT}44`, borderRadius: 12, padding: '10px 12px', marginTop: 8, fontSize: 12.5, color: '#8c4a63', lineHeight: 1.7 }}>
+                시험 날짜 없이, 공부하는 결과 방향을 중심으로 봐 드립니다. 진로를 더 깊이 보고 싶으시면 «진로적성» 서비스도 함께 보세요.
+              </div>
+            )}
+          </>
+        )}
+
         {/* ★시험 날짜 — 교재 195쪽 「세운 > 대운 > 월운 > 일진」·「시험일이 공망일이면」
              ★2026-07-29 «필수» 로 돌렸습니다. 대신 모를 때 고를 단추를 함께 둡니다. */}
+        {schoolExam !== 'none' && (
         <div style={{ fontSize: 12.5, color: '#8a7063', margin: '14px 2px 9px' }}>
-          {target !== 'student' && kind === 'job' ? dateLabelFor(gates) : '시험(또는 발표) 날짜'} <span style={{ color: ACCENT, fontWeight: 600 }}>*</span>
-        </div>
+          {target !== 'student' && kind === 'job' ? dateLabelFor(gates)
+            : asksExam && schoolExam && schoolExam !== 'etc' ? `${SCHOOL_EXAMS.find(e => e.key === schoolExam)?.label} 날짜`
+            : '시험(또는 발표) 날짜'} <span style={{ color: ACCENT, fontWeight: 600 }}>*</span>
+        </div>)}
+        {schoolExam !== 'none' && (<>
         <input type="date" value={examDate} onChange={e => { setExamDate(e.target.value); setDateApprox(false) }}
           style={{
             width: '100%', padding: '13px 14px', borderRadius: 12,
@@ -535,6 +580,8 @@ function ExamLuckInputInner() {
             ? '* 어림으로 고르셨어요. 그날의 일진은 보지 않고, 그 무렵(그 달)의 흐름으로 봐 드립니다. 날짜가 정해지면 다시 보세요.'
             : '* 그날의 일진(日辰)과 월운을 짚어 드리려면 날짜가 필요합니다. 정확히 모르시면 위 단추로 어림잡아 고르셔도 됩니다.'}
         </div>
+
+        </>)}
 
         {/* ★2026-09-11 (6부) [대표님 「희망사항을 자유롭게 기술하게」] — 궁금한 것이나 고민 (선택 · 검사 44)
              적으면 풀이에 「적어 주신 고민에 대한 답」 단락이 한 번 들어갑니다.
@@ -563,6 +610,7 @@ function ExamLuckInputInner() {
             fontSize: 11.5, color: '#8c4a63', lineHeight: 1.7,
           }}>
             {!gradeOk && <div>· 학년·신분을 골라 주세요.</div>}
+            {!examTypeOk && <div>· 어떤 시험인지 골라 주세요.</div>}
             {!targetOk && <div>· {target === 'student' ? '가고자 하는 목표' : (kind === 'job' ? (situation ? '① 분야' : '지금 상황(신규 취업 / 이직)') : '목표 시험·직종')}를 골라 주세요.</div>}
             {!dateOk && <div>· 시험(또는 발표) 날짜를 골라 주세요.</div>}
           </div>

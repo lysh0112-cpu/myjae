@@ -44,6 +44,7 @@ import { judgePassSignal, passSignalBlock } from '@/lib/saju/examLuck/passSignal
 import { upsangBlock as buildUpsangBlock } from '@/lib/saju/examLuck/tables/upsang'
 import { calcSimsanOhaeng } from '@/lib/saju/simsanOhaeng'
 import { examKindOf } from '@/lib/saju/examLuck/tables/rules'
+import { schoolExamOf } from '@/lib/saju/examLuck/tables/studentTarget'
 import { GRADE_PROMPT, gradeLabel, levelLabel, trackOf, categoryLabel, targetOf } from '@/lib/saju/examLuck/tables/studentTarget'
 import { saveRecord, updateRecordResult, getRecord } from '@/lib/saju/sajuRecords'
 import { calcSeyunList, calcWolunList, type DayunItem } from '@/lib/saju/dayun'
@@ -91,6 +92,18 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
   /* 🔴 ★6부 [대표님 「연말로 잡았는데 12.15 로 특정하네」] 어림 시기(상반기 · 하반기 · 연말 단추)인가 — 검사 46 ⑥
    *   어림이면 그날의 일진 · 공망 · 당일 수칙을 계산하지 않고, 그 달의 흐름으로만 봅니다. */
   const dateApprox = sp.get('dateApprox') === '1'
+  /* ★6부 [대표님] 고3 · 재수생이 아닌 학생이 고른 시험 종류 — 「내신 (중간 · 기말)」 등 (검사 45 ⑮)
+   *   'etc:한국사능력검정시험' 처럼 직접 적은 것도 옵니다. 표에 없는 값은 버립니다. */
+  const schoolExamRaw = sp.get('schoolExam') || ''
+  const schoolExam = useMemo(() => {
+    if (!schoolExamRaw) return null
+    if (schoolExamRaw.startsWith('etc:')) {
+      const t = sanitizeJobText(schoolExamRaw.slice(4))
+      return t ? { label: t, note: '' } : null
+    }
+    const e = schoolExamOf(schoolExamRaw)
+    return e && e.key !== 'none' ? { label: e.label, note: e.note } : null
+  }, [schoolExamRaw])
   const recordId = sp.get('recordId') || ''
   /** ★2026-09-11 (6부) — 두 단계 콤보의 ② 일하는 방식 (① 분야는 examKind 'field:…' 로 옵니다) */
   const wayRaw = sp.get('way') || 'unknown'
@@ -400,7 +413,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         //  ★2026-09-11 (6부) — 고른 직종·날짜·학년 등도 함께 저장합니다 (검사 ㉓-a).
         //     [전] 안 남겨, 다시보기·[풀이 다시 받기] 때 «직종 가산» 과 «시험 날짜» 카드가 빠졌습니다.
         //     ⚠️ 보관함(exam-luck/page.tsx)이 이 값들을 주소에 다시 싣습니다 — 짝입니다.
-        examKind, examDate: examDateRaw || null, dateApprox: dateApprox ? '1' : null,
+        examKind, examDate: examDateRaw || null, dateApprox: dateApprox ? '1' : null, schoolExam: schoolExamRaw || null,
         studentGrade: studentGrade || null, gradeLevel: gradeLevel || null, track: trackSel || null,
         examCategory: examCategory || null, targetType: targetType || null,
         targetCustomText: targetCustomText || null,
@@ -418,7 +431,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       if (typeof window !== 'undefined') sessionStorage.removeItem(WISH_KEY)
     })
   }, [calc, cards, recordId, person, target, kind, examKind, examDateRaw, dateApprox, studentGrade, gradeLevel,
-      trackSel, examCategory, targetType, targetCustomText, way, wayRaw, wishForSave, sit, gates, picks, jobTextForSave, certsForSave])
+      trackSel, examCategory, targetType, targetCustomText, way, wayRaw, wishForSave, sit, gates, picks, jobTextForSave, certsForSave, schoolExamRaw])
 
   // ── ⑤ 통변 (SSE) ─────────────────────────────────────────
   useEffect(() => {
@@ -477,6 +490,9 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         certs: certsForSave || null,       // ★6부 — 가진 자격증
         plan,   // ★6부 — 엔진이 정한 유형 · 비율 · 달 · 당일 수칙 (useMemo · 검사 49)
         examDateApprox: dateApprox,   // ★6부 — 어림 시기면 특정한 날을 말하지 않게 (검사 46 ⑥)
+        //  ★6부 — 무슨 시험인지 (수능 · 발표로 잘못 부르지 않게)
+        schoolExam: schoolExam?.label ?? null,
+        schoolExamNote: schoolExam?.note || null,
         //  ★6부 [대표님 알약] — 고르지 않은 관문 이야기를 쓰지 않게
         jobSituation: sit,
         jobGates: gates,
@@ -811,7 +827,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
     //   빠뜨리면 재료가 바뀌어도 옛 통변이 그대로 남습니다.
   }, [calc, cards, recordId, person, target, kind, studentGrade, gradeLevel, trackSel,
       examCategory, targetType, targetCustomText, examDateRaw, dateApprox, examDayForPrompt, thisYear,
-      signalBlock, upsangMaterial, dayunReady, retryRecord, examKind, cardsAll, way, wishForSave, wishHeavy, sit, gates, picks, jobTextForSave, certsForSave, plan])
+      signalBlock, upsangMaterial, dayunReady, retryRecord, examKind, cardsAll, way, wishForSave, wishHeavy, sit, gates, picks, jobTextForSave, certsForSave, plan, schoolExam])
 
   // ── ⑥ 다시보기 — 저장본 불러오기 ──────────────────────────
   useEffect(() => {
@@ -892,6 +908,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
           }}>
             {examKind?.startsWith('field:') ? goalLabel(examKind.slice(6), way, picks) : kindLabel}을(를) 기준으로 보았습니다.
             {jobTextForSave && ` 적어 주신 방식: ${jobTextForSave}.`}
+            {schoolExam && ` 보려는 시험: ${schoolExam.label}.`}
             {certsForSave && ` 가진 자격증: ${certsForSave}.`}
             {/* ★6부 [대표님 알약] 고른 상황 · 관문 */}
             {sit && ` ${JOB_SITUATIONS.find(o => o.key === sit)?.label}${gates && gates.length ? ` · ${gates.map(g => JOB_GATES.find(o => o.key === g)?.label).join(' · ')}` : ''}.`}
