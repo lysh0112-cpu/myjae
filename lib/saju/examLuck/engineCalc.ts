@@ -147,7 +147,8 @@ export function planBlock(plan: ExamPlan | null | undefined, section: 'flow' | '
   if (section === 'strategy') {
     if (plan.practice != null) L.push(`- 시간 배분: 실전 ${plan.practice} : 공부 ${100 - plan.practice}   (면접만 준비하면 «지원서 · 경력 정리 ${plan.practice} : 면접 연습 ${100 - plan.practice}» 로 부르세요)`)
     if (plan.susi) L.push(`- 수시 ${plan.susi.susi} : 정시 ${plan.susi.jeongsi} — 까닭: ${plan.susi.why} (교재 131쪽)`)
-    L.push(`- 지원 비율 (조금 높은 곳 : 맞는 곳 : 쉬운 곳): ${plan.apply} — 올해 ${plan.grade} (${plan.target === 'student' ? '수시 여섯 장' : '열 곳 기준'})`)
+    //  ★6부 [대표님] 면접만 보는 분께 «열 곳 응시» 처럼 들리지 않게 — 「지원할 곳 열 곳」 으로
+    L.push(`- 지원 비율 (조금 높은 곳 : 맞는 곳 : 쉬운 곳): ${plan.apply} — 올해 ${plan.grade} (${plan.target === 'student' ? '수시 여섯 장' : '지원할 곳 열 곳'} 기준)`)
   }
   if (section === 'pace') {
     if (plan.months) {

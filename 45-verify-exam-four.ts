@@ -8,7 +8,7 @@
  *  ⚠️ 옛 7갈래 기록은 다시보기 때 옛 모양 그대로 열려야 합니다.
  */
 import * as fs from 'fs'
-import { SEVEN_GROUPS, sevenOf, legacyOf, isLegacyTong, sevenKeyOf, buildSevenPrompt, monthlyMaterial } from './lib/saju/examLuck/buildExamSeven'
+import { SEVEN_GROUPS, sevenOf, legacyOf, isLegacyTong, sevenKeyOf, buildSevenPrompt, monthlyMaterial, dedupeBody } from './lib/saju/examLuck/buildExamSeven'
 import { STUDENT_BAN_WORDS, CLOSING, CLOSING_STUDENT } from './lib/saju/examLuck/tables/rules'
 
 let pass = 0, fail = 0
@@ -75,6 +75,34 @@ console.log('\n━━ ⑤ 맺음말 — 「흉할 것도 길할 것도 없다」
   const exs = fs.readFileSync('app/manseryeok/exam-luck-result/components/ExamResultShell.tsx', 'utf8')
   ok(!/CLOSING/.test(exs.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')), '★맨 아래 상자에서 교재 맺음말 줄을 뺐습니다 (4번 갈래와 겹치지 않게) [대표님]')
   ok(/마지막으로 드리고 싶은 말/.test(exs) && /사주는 지도일 뿐, 걷는 것은/.test(exs), '상자에는 「사주는 지도일 뿐 …」 한 줄만 남음')
+}
+
+console.log('\n━━ ⑥ 🔴 같은 내용이 두 번 나오지 않는가 [대표님 실측 2026-09-12] ━━')
+{
+  const para = '2026년에 가장 먼저 할 일은 지금까지의 직무 경력을 한 장으로 정리하는 것입니다. 시간순으로 묶어 두면 지원서 쓰기가 빨라집니다.'
+  const other = '자리를 옮기기로 마음을 굳히셨다면 새 일터에서 최소 3년은 익히겠다는 마음으로 들어가세요.'
+  ok(dedupeBody(`${para}\n\n${other}\n\n${para}`) === `${para}\n\n${other}`, '★같은 단락이 두 번 나오면 뒤엣것을 버립니다')
+  ok(dedupeBody(`${para}\n\n${other}`) === `${para}\n\n${other}`, '다른 단락은 그대로 둡니다')
+  ok(dedupeBody('[실천] 오늘 한 가지.\n\n[실천] 오늘 한 가지.').split('\n\n').length === 2, '짧은 줄은 건드리지 않습니다')
+  const ex = fs.readFileSync('app/manseryeok/exam-luck-result/components/ExamResultShell.tsx', 'utf8')
+  ok(/out\[k\] = dedupeBody\(body\)/.test(ex), '화면이 글을 그릴 때 되풀이를 걷어냅니다')
+  const sys = buildSevenPrompt({ name: '가', gender: '남', age: 30, target: 'adult', kind: 'job', cards: [], saju: [], hourUnknown: false, year: 2026 } as never, ['strategy'])!.system
+  ok(/같은 내용을 두 번 쓰지 마세요/.test(sys), 'AI 에게도 「두 번 쓰지 말라」')
+  ok(/맺음말은[\s\S]{0,40}마지막 갈래에서만/.test(sys), '★맺음말은 마지막 갈래에서만 (2 · 3번 갈래에 되풀이되던 것)')
+  const st = buildSevenPrompt({ name: '가', gender: '남', age: 30, target: 'adult', kind: 'job', cards: [], saju: [], hourUnknown: false, year: 2026, jobSituation: 'move',
+    cards2: null } as never, ['strategy'])!.user
+  ok(/옮긴 뒤 최소 3년/.test(st), '★이직 — 「옮긴 뒤 3년」 (「3년 지켜본 뒤 옮기라」 가 아님)')
+}
+
+console.log('\n━━ ⑦ 손님 편에 서서 말하기 [대표님 2026-09-12 — 「용기를 가지라고 해 줘야지」] ━━')
+{
+  const sys = buildSevenPrompt({ name: '가', gender: '남', age: 30, target: 'adult', kind: 'job', cards: [], saju: [], hourUnknown: false, year: 2026 } as never, ['strategy'])!
+  ok(/이미 정한 일[\s\S]{0,60}말리지 마세요/.test(sys.system), '★손님이 이미 정한 일은 말리지 않습니다')
+  ok(/«보통» 은 나쁜 해가 아닙니다/.test(sys.system) && /준비한 만큼 나오는 해/.test(sys.system), '★「보통」 을 나쁜 해로 말하지 않습니다')
+  ok(/아쉬운 점은 «반드시 막는 법과 함께»/.test(sys.system), '아쉬운 점은 막는 법과 함께')
+  ok(/올해 안 되면 그 해까지 두 해로/.test(sys.system), '올해가 가장 좋은 해가 아니면 더 좋은 해를 함께')
+  ok(/밀고 가셔도 됩니다/.test(sys.user), '2번 갈래 — 그 결정을 먼저 받아 주기')
+  ok(/바람에 맞춰 판정을 바꾸지 마세요/.test(buildSevenPrompt({ name: '가', gender: '남', age: 30, target: 'adult', kind: 'job', cards: [], saju: [], hourUnknown: false, year: 2026, wish: '올해 꼭 옮기고 싶어요' } as never, ['strategy'])!.user), '⛔ 다만 판정 자체는 바꾸지 않습니다 (그대로)')
 }
 
 console.log(`\n━━ 4갈래 · 쉬운 말투 · 달별 재료 — 통과 ${pass} · 실패 ${fail} ━━\n`)

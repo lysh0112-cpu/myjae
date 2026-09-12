@@ -38,7 +38,7 @@ import { judgeJobChangeNatal, judgeJobChangeLuck } from '@/lib/saju/examLuck/job
 import { judgeExamDay } from '@/lib/saju/examLuck/examDay'
 import { buildAllCards } from '@/lib/saju/examLuck/buildCards'
 import { parseExamTongbyeon } from '@/lib/saju/examLuck/buildExamPrompt'
-import { buildSevenPrompt, sevenOf, legacyOf, isLegacyTong, SEVEN_GROUPS, sevenKeyOf } from '@/lib/saju/examLuck/buildExamSeven'
+import { buildSevenPrompt, sevenOf, legacyOf, isLegacyTong, SEVEN_GROUPS, sevenKeyOf, dedupeBody } from '@/lib/saju/examLuck/buildExamSeven'
 // ★2026-07-30 — 지시서 2장 «사정 평가 로직» 을 재료로 만들어 싣습니다. (교훈 CU)
 import { judgePassSignal, passSignalBlock } from '@/lib/saju/examLuck/passSignal'
 import { upsangBlock as buildUpsangBlock } from '@/lib/saju/examLuck/tables/upsang'
@@ -850,7 +850,8 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       // ★2026-07-30 — target 을 넘겨 그 벌의 제목을 먼저 맞춰 봅니다.
       //   제목에 이모지·번호가 붙었으므로 sevenKeyOf 가 그것을 떼고 맞춥니다.
       const k = sevenKeyOf(title, target, legacy)
-      if (k && body.trim()) out[k] = body
+      //  ★6부 — AI 가 제 몫을 두 번 쓴 글에서 되풀이 단락을 걷어냅니다 (대표님 실측 · 검사 45)
+      if (k && body.trim()) out[k] = dedupeBody(body)
     }
     return out
   }, [parsed, target, legacy])
