@@ -143,8 +143,14 @@ export function planBlock(plan: ExamPlan | null | undefined, section: 'flow' | '
     if (plan.type.close && plan.type.second) L.push(`- 둘째 유형 «${plan.type.second}» 도 거의 같은 크기입니다 — ★두 유형을 함께 말하세요 (한쪽으로 단정하지 마세요)`)
     //  ★6부 [대표님 실측] 점수를 그대로 넘기면 AI 가 「전체의 15 정도」 처럼 숫자를 글에 씁니다 — «크기 말» 로 넘깁니다 (검사 45)
     const y = plan.type.yuk
-    const size = (n: number) => n >= 40 ? '아주 넉넉함' : n >= 25 ? '넉넉함' : n >= 15 ? '보통' : n > 0 ? '적음' : '드러나지 않음'
-    L.push(`- 근거(타고난 그릇을 육친으로 묶은 크기): 공부운 ${size(y.인성)} · 직장 · 합격운 ${size(y.관성)} · 말하고 글 쓰는 재주 ${size(y.식상)} · 돈을 다루는 현실 감각 ${size(y.재성)} · 남과 견주는 마음 ${size(y.비겁)}`)
+    /*  ★2026-09-12 (6부) [대표님 「없는 희망도 있게 만드는 것을 좋아해 · 이것도 장사야」]
+     *    작은 기운은 «넘기지 않습니다». 넘기면 AI 가 「직장 · 합격운이 크지 않지만」 처럼 씁니다.
+     *    ⇒ 넉넉한 것만 이름을 대어 넘기고, 나머지는 말하지 않습니다 (없다고 하지도 · 약하다고 하지도 않음). */
+    const NAME: Record<string, string> = { 인성: '공부운', 관성: '직장 · 합격운', 식상: '말하고 글 쓰는 재주', 재성: '돈을 다루는 현실 감각', 비겁: '스스로 밀고 가는 힘' }
+    const strong = (Object.entries(y) as Array<[string, number]>).filter(([, n]) => n >= 20).sort((a, b) => b[1] - a[1])
+    L.push(strong.length
+      ? `- 넉넉하게 갖추신 힘: ${strong.map(([k]) => NAME[k]).join(' · ')}   ★이 힘들로만 말하세요. 적은 힘은 «짚지 마세요» (「크지 않다 · 부족하다」 로 쓰지 않습니다).`
+      : '- ★어느 한쪽이 특별히 크지는 않은, 고르게 갖춘 그릇입니다. «고르게 갖추셨다» 로 말하고 모자란 쪽을 짚지 마세요.')
   }
   if (section === 'strategy') {
     if (plan.practice != null) L.push(`- 시간 배분: 실전 ${plan.practice} : 공부 ${100 - plan.practice}   (면접만 준비하면 «지원서 · 경력 정리 ${plan.practice} : 면접 연습 ${100 - plan.practice}» 로 부르세요)`)

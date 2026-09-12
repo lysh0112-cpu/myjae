@@ -119,7 +119,7 @@ console.log('\n━━ ⑧ 한자말 · 판정 이름이 그대로 나오지 않�
 {
   const sys = buildSevenPrompt({ name: '가', gender: '남', age: 30, target: 'adult', kind: 'job', cards: [], saju: [], hourUnknown: false, year: 2026 } as never, ['flow'])!
   ok(/괄호로 덧붙이지 마세요/.test(sys.system) && /식상/.test(sys.system), '★「말하고 글 쓰는 재주(식상)」 처럼 괄호로 덧붙이지 않기')
-  ok(/판정 이름\(사업가[\s\S]{0,80}그대로 쓰지 마세요/.test(sys.system), '★재료의 판정 이름(사업가 · 상관견관 …)을 그대로 쓰지 않기')
+  ok(/판정 이름\(비겁[\s\S]{0,140}그대로 쓰지 마세요/.test(sys.system), '★재료의 판정 이름(비겁 · 사업가 · 상관견관 …)을 그대로 쓰지 않기')
   const st = buildSevenPrompt({ name: '가', gender: '남', age: 30, target: 'adult', kind: 'job', cards: [], saju: [], hourUnknown: false, year: 2026 } as never, ['flow'])!.user
   ok(/«한 해» 와 «한 달» 을 섞어/.test(buildSevenPrompt({ name: '가', gender: '남', age: 30, target: 'adult', kind: 'job', cards: [], saju: [], hourUnknown: false, year: 2026 } as never, ['strategy'])!.user), '★「2026년 12월은 … 해라」 처럼 해와 달을 섞지 않기')
   ok(/「조심하는 해」 라 쓰지 말고/.test(st), '★등급을 겁주는 말로 옮기지 않기')
@@ -135,9 +135,23 @@ console.log('\n━━ ⑨ 점수 숫자 · 옛 말투 · 달 늘어놓기 [대�
   ok(/「전체의 15 정도」 처럼 점수 숫자를 글에 쓰지 말고/.test(sys), '★점수 숫자를 글에 쓰지 않기 (비율은 숫자로)')
   const plan = buildPlan45()
   const blk = planBlock45(plan, 'flow')
-  ok(!/\d{2}/.test(blk.replace(/\d+년|\d+월/g, '')) && /넉넉함|보통|적음|드러나지 않음/.test(blk), `엔진이 점수 대신 크기 말로 넘깁니다 — ${blk.split('\n').find(l => l.includes('근거'))?.slice(0, 70)}`)
+  ok(!/\d{2}/.test(blk.replace(/\d+년|\d+월/g, '')) && /넉넉하게 갖추신 힘|고르게 갖춘/.test(blk), `엔진이 점수 대신 «가진 힘» 으로 넘깁니다 — ${blk.split('\n').find(l => l.includes('힘'))?.slice(0, 70)}`)
   const pace = buildSevenPrompt({ name: '가', gender: '남', age: 30, target: 'adult', kind: 'job', cards: [], saju: [], hourUnknown: false, year: 2026, month: 9, plan } as never, ['pace'])!.user
   ok(/달은 이 «둘» 만 짚고/.test(pace), '★달은 좋은 달 · 조심할 달 둘만 (줄줄이 늘어놓지 않기)')
+}
+
+console.log('\n━━ ⑩ 희망 쪽으로 — 약한 것을 짚지 않는가 [대표님 2026-09-12 「이것도 장사야」] ━━')
+{
+  const sys = buildSevenPrompt({ name: '가', gender: '남', age: 30, target: 'adult', kind: 'job', cards: [], saju: [], hourUnknown: false, year: 2026 } as never, ['flow'])!.system
+  ok(/답보다 «용기» 를 얻으러 옵니다/.test(sys), '★손님은 용기를 얻으러 온다 — 다 읽고 「할 수 있겠다」 가 남게')
+  ok(/크지 않지만[\s\S]{0,60}쓰지 마세요|모자란 쪽을 말하지 마세요/.test(sys), '★「크지 않지만 · 부족하지만」 을 쓰지 않기')
+  ok(/고르신 목표와 «다른 길» 을 권하지 마세요/.test(sys) && /체질이다/.test(sys), '★창업 권유 · 「○○ 체질」 처럼 결정을 흔드는 말 금지')
+  ok(/상관없는 힘» 을 끌어들이지 마세요/.test(sys), '★면접만 보는 분께 「공부운」 처럼 상관없는 힘을 끌어들이지 않기')
+  ok(/비겁 · 식상 · 재성 · 관성 · 인성/.test(sys), '★육친 이름(비겁 등)도 판정 이름 금지 목록에')
+  //  엔진 — 작은 기운은 아예 넘기지 않음
+  const blk = planBlock45(buildPlan45(), 'flow')
+  ok(/넉넉하게 갖추신 힘/.test(blk) && !/드러나지 않음|적음/.test(blk), `엔진이 넉넉한 힘만 넘깁니다 — ${blk.split('\n').find(l => l.includes('넉넉하게'))?.slice(0, 80)}`)
+  ok(/적은 힘은 «짚지 마세요»/.test(blk), '엔진 재료에도 「적은 힘은 짚지 말라」')
 }
 
 console.log(`\n━━ 4갈래 · 쉬운 말투 · 달별 재료 — 통과 ${pass} · 실패 ${fail} ━━\n`)
