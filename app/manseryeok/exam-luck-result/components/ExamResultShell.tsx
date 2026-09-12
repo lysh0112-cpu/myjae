@@ -49,6 +49,7 @@ import { GRADE_PROMPT, gradeLabel, levelLabel, trackOf, categoryLabel, targetOf 
 import { saveRecord, updateRecordResult, getRecord } from '@/lib/saju/sajuRecords'
 import { calcSeyunList, calcWolunList, type DayunItem } from '@/lib/saju/dayun'
 import SajuWonguk from '@/app/manseryeok/components/SajuWonguk'
+import ConsultButton from '@/app/components/common/ConsultButton'
 import ExamJudgeCard, { GRADE_STYLE } from './ExamJudgeCard'
 import type { ExamCard, ExamInput, ExamTarget, YearLuck } from '@/lib/saju/examLuck/types'
 import { refreshBeforeAi } from '@/lib/ai/freshCall'
@@ -1310,6 +1311,31 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
             사주는 지도일 뿐, 걷는 것은 {target === 'student' ? '학생' : '본인'} 자신입니다.
             좋은 때라도 손을 놓으면 지나가고, 더딘 때라도 쌓아 두면 다음 때에 터집니다.
           </div>
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════
+            🔴 ★2026-09-13 (7부) [대표님 「결과표 하단에 ★전문상담사 연결화면이 나와야 해」]
+              ⇒ 진로적성 결과 화면과 ★«같은 모양» 입니다 (ConsultButton · priceKey="examluck").
+              ⛔ 여기에 상담 신청 화면을 «따로 만들지» 마십시오 — 공용 부품을 씁니다.
+              ⚠️ 풀이를 «쓰는 중» 에도 신청하실 수 있습니다. 다만 그때는 상담사 선생님이
+                 «회원님이 보신 글» 을 못 봅니다 — 그래서 아래에 한 줄 알려 드립니다.
+            ══════════════════════════════════════════════════════════ */}
+        <div style={{ marginTop: 16 }}>
+          {tongState === 'loading' && (
+            <div style={{
+              marginBottom: 8, padding: '9px 11px', background: '#fdf0e8',
+              border: `0.5px solid ${LINE}`, borderRadius: 9,
+              fontSize: 12, color: '#8f3d0e', lineHeight: 1.7,
+            }}>
+              풀이를 쓰는 중이에요. 다 나온 뒤에 신청하시면
+              상담사 선생님이 <b>회원님이 보신 풀이를 그대로</b> 보고 상담해 드려요.
+            </div>
+          )}
+          <ConsultButton
+            priceKey="examluck"
+            mode={isPromo ? 'seungjin' : kind === 'job' ? 'chwieop' : 'hapgyeok'}
+            payload={() => ({ aiAnalysis: tong || undefined })}
+          />
         </div>
       </div>
 

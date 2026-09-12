@@ -23,6 +23,8 @@ const shell = code(read('app/manseryeok/exam-luck-result/components/ExamResultSh
 const page = code(read('app/manseryeok/promotion-luck-result/page.tsx'))
 const seven = code(read('lib/saju/examLuck/buildExamSeven.ts'))
 const store = code(read('app/manseryeok/exam-luck/page.tsx'))
+const price = code(read('app/admin/components/PriceManager.tsx'))
+const gate = code(read('lib/wallet/consultGate.ts'))
 
 head('① 🔴 지뢰 — 승진을 «이직» 으로 읽지 않는가')
 ok(/isPromote = isJob && v\.jobSituation === 'promote'/.test(seven),
@@ -367,6 +369,40 @@ head('㉑ 🔴 「직장운」 과 «내년 달» [대표님 실측 3판]')
   ok(/내년 같은 시기/.test(promoTidy('내년 10월 언저리는 올해와 비슷합니다.', 'pace')), '「내년 10월」 도')
   ok(/10월은 자리/.test(promoTidy('10월은 자리를 맡는 힘이 드는 달입니다.', 'pace')),
     '⚠️ ★올해 달은 그대로 둡니다 — 지금 하실 일이 거기 있습니다')
+}
+
+
+head('㉒ 🔴 가격표 [대표님 「셋 각각 항목 · 결과 직전에 AI 가격표」]')
+{
+  for (const k of ['examluck_pass', 'examluck_job', 'examluck_promo'])
+    ok(new RegExp(k).test(price), `★관리자 가격표에 ${k} 가 있습니다`)
+  ok(/examluck_ai/.test(price), '⛔ 기본값 examluck_ai 를 지우지 않았습니다 (떨어질 자리)')
+  ok(/EXAM_PRICE_FALLBACK = 'examluck_ai'/.test(gate), '★값이 없으면 기본값으로 떨어집니다')
+  ok(/export async function examPriceKey/.test(gate), '★DB 에 그 줄이 있는지 보고 고릅니다')
+  ok(/WalletPaySheet/.test(input), '🔴 ★입력 화면에 «공용» 결제 시트가 붙었습니다')
+  ok(/const openPay = async/.test(input) && /setPayOpen\(true\)/.test(input),
+    '★[보기] 를 누르면 값을 «먼저» 보여 드립니다')
+  ok(/EXAM_PRICE_KEYS\.promo/.test(input) && /EXAM_PRICE_KEYS\.job/.test(input) && /EXAM_PRICE_KEYS\.exam/.test(input),
+    '🔴 ★셋이 «각각» 다른 값을 봅니다')
+  ok(/onConfirm=\{\(\) => \{ setPayOpen\(false\); goResult\(\) \}\}/.test(input),
+    '★시트에서 눌러야 결과로 갑니다 (그 전에는 안 갑니다)')
+  ok(/승진운 분석/.test(input) && /취업운 분석/.test(input) && /합격운 분석/.test(input),
+    '★시트 제목이 셋 다 다릅니다')
+  ok(!/confirm\(/.test(input.slice(input.indexOf('const openPay'))),
+    '⛔ 브라우저 confirm 을 쓰지 않습니다 (아홉 화면과 결이 달라집니다)')
+}
+
+head('㉓ 🔴 결과 아래 «전문상담사 연결» [대표님]')
+{
+  ok(/import ConsultButton from/.test(shell), '★공용 상담 부품을 씁니다')
+  ok(/priceKey="examluck"/.test(shell), '★상담 값은 examluck 을 봅니다')
+  ok(/mode=\{isPromo \? 'seungjin'/.test(shell), '★승진 · 취업 · 합격을 가려 넘깁니다')
+  ok(/aiAnalysis: tong \|\| undefined/.test(shell),
+    '🔴 ★손님이 보신 «그 글» 을 상담사께 그대로 넘깁니다')
+  ok(/풀이를 쓰는 중이에요/.test(shell),
+    '⚠️ 아직 쓰는 중이면 «그 글을 못 본다» 고 알려 드립니다')
+  ok(shell.indexOf('<ConsultButton') > shell.indexOf('사주는 지도일 뿐'),
+    '★맺음말 «아래» 에 있습니다 (결과표 하단)')
 }
 
 console.log(`\n━━ 승진운 동선 — 통과 ${pass} · 실패 ${fail} ━━\n`)

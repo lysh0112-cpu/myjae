@@ -21,6 +21,8 @@ import {
   PROMO_JOBS, promoJobOf, defaultNextIdx, PROMO_YEARS, PROMO_SEASONS,
   PROMO_WISH_SAMPLES, PROMO_WISH_MAX, PROMO_WISH_NUDGE_UNDER,
 } from '@/lib/saju/examLuck/tables/promotion'
+import WalletPaySheet from '@/app/components/common/WalletPaySheet'
+import { EXAM_PRICE_KEYS, examPriceKey } from '@/lib/wallet/consultGate'
 import { exactAge } from '@/lib/saju/ageDayun'
 // ★2026-07-27 — 손님이 시험 종류를 고르면 교재 230쪽 짝에 따라 볼 십신이 정해진다.
 import { EXAM_KINDS } from '@/lib/saju/examLuck/tables/rules'
@@ -86,6 +88,12 @@ function ExamLuckInputInner() {
   const [pSeason, setPSeason] = useState<string>('year_end')
   /** 🔴 고민 칸은 승진에서 ★«꼭» 입니다 [대표님 2026-09-12] */
   const [pWish, setPWish] = useState('')
+  /*  🔴 ★2026-09-13 (7부) [대표님 「결과표가 나오기 «직전» 화면에 AI 가격표가 나와야 함」]
+   *    [보기] 를 누르면 ★결제 시트가 먼저 뜹니다 — 진로적성 · 사주그림과 «같은 모양».
+   *    ⛔ 팝업을 «따로 만들지» 마십시오. 공용 시트(WalletPaySheet)를 씁니다.
+   *    ⚠️ 시트는 ★«묻기만» 합니다. 실제 차감은 결과 화면이 AI 를 부르기 직전에 합니다. */
+  const [payOpen, setPayOpen] = useState(false)
+  const [priceItem, setPriceItem] = useState<string>('examluck_ai')
   const pRanks = promoJobOf(pJob)?.ranks ?? []
   const pIsEtc = pJob === 'etc'
   /** 표를 못 쓰면 «문인지» 를 직접 여쭙습니다 */
@@ -230,6 +238,45 @@ function ExamLuckInputInner() {
     return p.toString()
   }, [sp, kind, target, isPromo, pJob, pCur, pNext, pAsksGate, pGate, pYears, pSeason, pIsEtc, examKind, examDate, dateApprox, studentGrade, needsLevel, gradeLevel, track, examCategory, targetType, targetCustomText, field, way, situation, gates, picks, asksExam, schoolExam, schoolExamText])
 
+
+  /** [보기] 를 누르면 — ★값을 먼저 보여 드립니다 */
+  const openPay = async () => {
+    if (!canGo) return
+    /*  ⚠️ 셋(합격운 · 취업운 · 승진운)이 ★각각 값을 가집니다.
+     *    대표님이 그 값을 «아직 안 넣으셨으면» 기본값(examluck_ai)으로 떨어집니다. */
+    const want = isPromo ? EXAM_PRICE_KEYS.promo
+      : kind === 'job' ? EXAM_PRICE_KEYS.job
+      : EXAM_PRICE_KEYS.exam
+    setPriceItem(await examPriceKey(want))
+    setPayOpen(true)
+  }
+
+  /** 시트에서 [보기] 를 누르시면 — 결과 화면으로 */
+  const goResult = () => {
+            if (!canGo) return
+            // ★2026-07-30 — 학생과 성인을 «다른 화면» 으로 보냅니다.
+            //   [왜] 갈래 이름과 개수 자체가 다릅니다. 학생에게 「수시:정시 비율」을,
+            //     성인에게 「시험 준비:실무 경력 비율」을 묻습니다. 한 화면에 둘을 담으면
+            //     어느 한쪽 손님에게는 늘 어긋난 제목이 보입니다.
+            //   ⚠️ query 에 target 이 이미 실려 있습니다. 두 화면이 그 값으로
+            //      «잘못 들어온 손님» 을 서로에게 되돌려 줍니다. (옛 링크 보호)
+            const to = target === 'student'
+              ? '/manseryeok/exam-luck-result'
+              : isPromo ? '/manseryeok/promotion-luck-result'
+              : '/manseryeok/job-luck-result'
+            /*  ★6부 — 고민 · 직접 적은 방식 · 자격증은 주소 대신 여기로.
+             *  ★7부 — 승진도 같습니다. 고민 글과 «직접 적은 직업·직급» 을 주소에 싣지 않습니다. */
+            if (isPromo) {
+              writeWishHandoff(
+                pWish,
+                [pIsEtc ? pJobText.trim() : '', pCurLabel, pNextLabel].filter(Boolean).join(' · '),
+                '',
+              )
+            } else {
+              writeWishHandoff(wish, way === 'custom' ? jobText : '', kind === 'job' ? certs : '')
+            }
+            router.push(`${to}?${query}`)
+  }
 
   const Btn = ({ on, title, sub, onClick }: { on: boolean; title: string; sub: string; onClick: () => void }) => (
     <button onClick={onClick}
@@ -795,31 +842,7 @@ function ExamLuckInputInner() {
         )}
 
         <button
-          onClick={() => {
-            if (!canGo) return
-            // ★2026-07-30 — 학생과 성인을 «다른 화면» 으로 보냅니다.
-            //   [왜] 갈래 이름과 개수 자체가 다릅니다. 학생에게 「수시:정시 비율」을,
-            //     성인에게 「시험 준비:실무 경력 비율」을 묻습니다. 한 화면에 둘을 담으면
-            //     어느 한쪽 손님에게는 늘 어긋난 제목이 보입니다.
-            //   ⚠️ query 에 target 이 이미 실려 있습니다. 두 화면이 그 값으로
-            //      «잘못 들어온 손님» 을 서로에게 되돌려 줍니다. (옛 링크 보호)
-            const to = target === 'student'
-              ? '/manseryeok/exam-luck-result'
-              : isPromo ? '/manseryeok/promotion-luck-result'
-              : '/manseryeok/job-luck-result'
-            /*  ★6부 — 고민 · 직접 적은 방식 · 자격증은 주소 대신 여기로.
-             *  ★7부 — 승진도 같습니다. 고민 글과 «직접 적은 직업·직급» 을 주소에 싣지 않습니다. */
-            if (isPromo) {
-              writeWishHandoff(
-                pWish,
-                [pIsEtc ? pJobText.trim() : '', pCurLabel, pNextLabel].filter(Boolean).join(' · '),
-                '',
-              )
-            } else {
-              writeWishHandoff(wish, way === 'custom' ? jobText : '', kind === 'job' ? certs : '')
-            }
-            router.push(`${to}?${query}`)
-          }}
+          onClick={openPay}
           disabled={!canGo}
           style={{
             width: '100%', marginTop: 14, padding: 15, borderRadius: 12,
@@ -829,6 +852,29 @@ function ExamLuckInputInner() {
           }}>
           {isPromo ? '승진운 보기' : kind === 'job' ? '취업운 보기' : '합격운 보기'}
         </button>
+
+        {/* ★공용 결제 시트 — ⛔ 여기에 팝업을 «따로 만들지» 마십시오.
+            ⚠️ 셋이 ★각각 값을 가집니다 (examluck_pass · examluck_job · examluck_promo).
+               값이 아직 없으면 ★기본값(examluck_ai)으로 떨어집니다. */}
+        <WalletPaySheet
+          open={payOpen}
+          title={isPromo ? '승진운 분석' : kind === 'job' ? '취업운 분석' : '합격운 분석'}
+          subtitle={isPromo
+            ? '지금 자리에서 다음 자리로 가는 길을 사주로 짚어 드려요'
+            : kind === 'job'
+              ? '일자리와 이직의 흐름을 사주로 짚어 드려요'
+              : '시험과 합격의 흐름을 사주로 짚어 드려요'}
+          includes={isPromo
+            ? ['타고난 그릇과 지금 자리', '다음 자리가 요구하는 것', '인사 시기에 맞춘 달별 수칙']
+            : kind === 'job'
+              ? ['타고난 일의 결과 강점', '올해와 내년의 흐름', '달별 준비 수칙']
+              : ['타고난 공부의 결', '올해와 내년의 흐름', '시험 날 실전 수칙']}
+          item={priceItem}
+          actionLabel={isPromo ? '승진운 보기' : kind === 'job' ? '취업운 보기' : '합격운 보기'}
+          onClose={() => setPayOpen(false)}
+          onCharge={() => router.push('/wallet')}
+          onConfirm={() => { setPayOpen(false); goResult() }}
+        />
 
         {/* ★이직·직업 변동은 교재 190~191쪽 자료를 아직 못 받았다. (작업지시 5장)
               "곧 나옵니다" 같은 예고는 화면에 적지 않는다. (교훈 BL) */}

@@ -202,6 +202,30 @@ export async function askBeforeAi(
 }
 
 /** 잔액 보기 — 상담과 «같은 함수» 를 씁니다. 낱말만 다릅니다. */
+/*  🔴 ★2026-09-13 (7부) [대표님 「취업운/합격운/승진운 ★각각 항목을 넣고」]
+ *
+ *  셋을 갈랐지만, 대표님이 값을 «넣기 전» 에는 DB 에 그 줄이 «없습니다».
+ *  ⇒ 값이 없으면 ★기본값(examluck_ai)으로 떨어집니다. 그래야 그동안에도 돕니다.
+ *  ⛔ examluck_ai 를 지우지 마십시오 — ★떨어질 자리가 없어집니다.
+ *  ⚠️ 서버(wallet_check)는 «낱말 하나» 만 봅니다. 그래서 ★화면이 먼저 고릅니다. */
+export const EXAM_PRICE_FALLBACK = 'examluck_ai'
+export const EXAM_PRICE_KEYS = {
+  exam: 'examluck_pass',    // 합격운
+  job: 'examluck_job',      // 취업운
+  promo: 'examluck_promo',  // 승진운
+} as const
+
+/** 그 낱말의 값이 DB 에 있는가 — 없으면 기본값으로 */
+export async function examPriceKey(want: string): Promise<string> {
+  try {
+    const { data } = await supabase
+      .from('analysis_prices').select('price_key').eq('price_key', want).maybeSingle()
+    return data?.price_key ? want : EXAM_PRICE_FALLBACK
+  } catch {
+    return EXAM_PRICE_FALLBACK
+  }
+}
+
 export async function checkAiBalance(item: string): Promise<CheckResult> {
   return checkConsultBalance(item)
 }

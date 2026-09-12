@@ -45,7 +45,15 @@ const PAIRS: { consult: string; ai: { k: string; short: string }[]; onlyWhen?: '
   { consult: 'career',      ai: [{ k: 'career_ai',      short: '적성 분석' }] },
   //  ★2026-09-11 (6부) [대표님 · 목업 승낙] — 「진로적성 바로 아래」. 토글이 켜졌을 때만.
   //     DB 줄 — consult_prices 'examluck' · analysis_prices 'examluck_ai' · mc_price myc 두 줄
-  { consult: 'examluck',    ai: [{ k: 'examluck_ai',    short: '합격·취업 분석' }], onlyWhen: 'examLuck' },
+  /*  🔴 ★2026-09-13 (7부) [대표님 「취업운/합격운/승진운 ★각각 항목을 넣고」]
+   *    [전] examluck_ai ★하나 — 셋이 같은 값을 썼습니다.
+   *    [지금] ★셋으로 갈랐습니다. 값을 따로 매기실 수 있습니다.
+   *    ⛔ examluck_ai 를 «지우지» 마십시오 — 옛 기록과 옛 값이 그 낱말로 남아 있습니다.
+   *       셋 중 «자기 값이 없으면» examluck_ai 로 떨어집니다 (consultGate.aiPriceOf). */
+  { consult: 'examluck',    ai: [{ k: 'examluck_ai',    short: '합격·취업·승진 (기본값)' },
+                                 { k: 'examluck_pass',  short: '합격운' },
+                                 { k: 'examluck_job',   short: '취업운' },
+                                 { k: 'examluck_promo', short: '승진운' }], onlyWhen: 'examLuck' },
   { consult: 'couple',      ai: [{ k: 'couple_ai',      short: '궁합 분석' }] },
   { consult: 'saju',        ai: [{ k: 'saju_deep',      short: '심층분석' }] },
   { consult: 'wedding',     ai: [{ k: 'wedding_check',  short: '정한날 진단' },
