@@ -551,7 +551,10 @@ function ExamLuckInputInner() {
              ① 분야(17) → 그 분야에 힘을 싣는 해를 봅니다 (교재 206~210쪽)
              ② 일하는 방식(8) → 사주 구조와 맞는지 봅니다 (202~204쪽)
              두 개를 고르면 교재에 나온 직업 가운데 딱지가 맞는 것만 보입니다. */}
-        {target !== 'student' && kind === 'job' && (
+        {/*  🔴 ★2026-09-12 (7부) — !isPromo 를 «반드시» 두십시오.
+             안 두면 승진 손님에게 «지금 상황 · 관문 · 분야 · 방식 · 자격증» 이
+             ★함께 보입니다. 무엇을 채워야 할지 모르게 됩니다. */}
+        {target !== 'student' && kind === 'job' && !isPromo && (
           <>
             {/* ★2026-09-11 (6부) [대표님] 알약 두 줄 — 「면접만 보는 사람에게 시험 이야기가 나오지 않게」 (검사 46)
                  지금 상황은 하나만(신규 취업 / 이직) · 거쳐야 할 관문은 여러 개(시험 / 면접) */}
@@ -714,13 +717,13 @@ function ExamLuckInputInner() {
 
         {/* ★시험 날짜 — 교재 195쪽 「세운 > 대운 > 월운 > 일진」·「시험일이 공망일이면」
              ★2026-07-29 «필수» 로 돌렸습니다. 대신 모를 때 고를 단추를 함께 둡니다. */}
-        {schoolExam !== 'none' && (
+        {!isPromo && schoolExam !== 'none' && (
         <div style={{ fontSize: 12.5, color: '#8a7063', margin: '14px 2px 9px' }}>
           {target !== 'student' && kind === 'job' ? dateLabelFor(gates)
             : asksExam && schoolExam && schoolExam !== 'etc' ? `${SCHOOL_EXAMS.find(e => e.key === schoolExam)?.label} 날짜`
             : '시험(또는 발표) 날짜'} <span style={{ color: ACCENT, fontWeight: 600 }}>*</span>
         </div>)}
-        {schoolExam !== 'none' && (<>
+        {!isPromo && schoolExam !== 'none' && (<>
         <input type="date" value={examDate} onChange={e => { setExamDate(e.target.value); setDateApprox(false) }}
           style={{
             width: '100%', padding: '13px 14px', borderRadius: 12,
@@ -753,6 +756,7 @@ function ExamLuckInputInner() {
         {/* ★2026-09-11 (6부) [대표님 「희망사항을 자유롭게 기술하게」] — 궁금한 것이나 고민 (선택 · 검사 44)
              적으면 풀이에 「적어 주신 고민에 대한 답」 단락이 한 번 들어갑니다.
              ⚠️ 주소에 싣지 않습니다 (writeWishHandoff) · 결과 화면이 기록에만 저장합니다. */}
+        {!isPromo && (<>
         <div style={{ fontSize: 12.5, color: '#8a7063', margin: '18px 2px 9px' }}>
           궁금한 것이나 고민을 적어 주세요 <span style={{ color: '#a3907f' }}>(선택)</span>
         </div>
@@ -768,6 +772,7 @@ function ExamLuckInputInner() {
         <div style={{ fontSize: 11, color: '#a3907f', textAlign: 'right', margin: '3px 2px 0' }}>
           {wish.length} / {WISH_MAX}
         </div>
+        </>)}
 
         {/* ★못 넘어가는 까닭을 알려 준다. 단추만 흐리면 손님이 왜 안 되는지 모릅니다. */}
         {!canGo && (

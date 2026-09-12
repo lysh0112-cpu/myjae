@@ -117,5 +117,24 @@ ok(/합격운 · 취업운 · 승진운/.test(input), '★입력 머리글에 �
 ok(/isPromo \? '승진운 보기'/.test(input), '단추가 «승진운 보기» 입니다')
 ok(/isPromo \? '승진운'/.test(shell), '결과 머리글이 «승진운» 입니다')
 
+
+head('⑩ 🔴 승진 화면에 «취업 칸» 이 새지 않는가 (7부 봉투 3 에서 밟은 자리)')
+{
+  /*  [겪은 일] 승진 칸을 «더하기» 만 하고 취업 칸을 «가리지» 않아
+   *    지금 상황 · 관문 · 분야 · 방식 · 자격증 · 발표 날짜 · 옛 고민 칸이
+   *    ★함께 보였습니다. 손님은 무엇을 채워야 할지 모릅니다.
+   *  ⇒ 5부 「절반만 고치고 끝났다」 와 같은 자리라 그물로 박습니다. */
+  ok(/target !== 'student' && kind === 'job' && !isPromo && \(/.test(input),
+    "🔴 ★일자리 블록(지금 상황 · 관문 · 분야 · 방식 · 자격증)이 승진에서 «숨습니다»")
+  ok(/\{!isPromo && schoolExam !== 'none' && \(\s*\n\s*<div/.test(input),
+    '★시험 날짜 «이름표» 가 승진에서 숨습니다 (날짜는 회사가 정합니다)')
+  ok(/\{!isPromo && schoolExam !== 'none' && \(<>/.test(input),
+    '★시험 날짜 «칸» 도 승진에서 숨습니다')
+  ok(/\{!isPromo && \(<>\s*\n\s*<div[^>]*>\s*\n\s*궁금한 것이나 고민을 적어 주세요/.test(input),
+    '🔴 ★옛 «선택» 고민 칸이 승진에서 숨습니다 — 고민 칸이 «둘» 보이면 안 됩니다')
+  const promoOnly = input.slice(input.indexOf('이런 것이 궁금하실 수 있어요'))
+  ok(promoOnly.length > 0, '승진 고민 칸(꼭)이 있습니다')
+}
+
 console.log(`\n━━ 승진운 동선 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 process.exit(fail ? 1 : 0)
