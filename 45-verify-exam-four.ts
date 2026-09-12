@@ -11,6 +11,13 @@ import * as fs from 'fs'
 import { SEVEN_GROUPS, sevenOf, legacyOf, isLegacyTong, sevenKeyOf, buildSevenPrompt, monthlyMaterial, dedupeBody } from './lib/saju/examLuck/buildExamSeven'
 import { STUDENT_BAN_WORDS, CLOSING, CLOSING_STUDENT } from './lib/saju/examLuck/tables/rules'
 import { cardJobFit } from './lib/saju/examLuck/buildCards'
+import { buildPlan, planBlock } from './lib/saju/examLuck/engineCalc'
+const buildPlan45 = () => buildPlan({
+  saju: ['시주', '일주', '월주', '년주'].map((n, i) => ({ pillar: n, stem: ['己卯', '庚子', '己卯', '乙亥'][i][0], branch: ['己卯', '庚子', '己卯', '乙亥'][i][1] })) as never,
+  ohaeng: { 목: 50, 화: 0, 토: 20, 금: 10, 수: 20 }, year: 2026, month: 9, examDate: '2026-12-15',
+  target: 'adult', kind: 'job', grade: '보통', dayunOrder: 4,
+})
+const planBlock45 = planBlock
 
 let pass = 0, fail = 0
 const ok = (c: boolean, m: string) => { if (c) { pass++; console.log('  ✅ ' + m) } else { fail++; console.log('  🔴 ' + m) } }
@@ -32,7 +39,9 @@ console.log('\n━━ ② 쉬운 말 여섯 규칙이 AI 에게 실제로 가는
   ok(/결 · 값이 붙는다 · 두 겹 · 살려 준다 · 말이 앞선다/.test(adult), '뜻이 흐린 말 금지 목록')
   ok(/한 문장에는 한 가지만/.test(adult) && /그래서 이렇게 하세요/.test(adult), '한 문장 한 가지 · 단락마다 «그래서 이렇게 하세요»')
   ok(/좋은지 아닌지는 또렷하게/.test(adult) && /«대운» 이라는 말도 쓰지 말고/.test(adult), '좋고 나쁨은 또렷하게 · «대운» 이라는 말 쓰지 않기')
-  ok(!/자리의 기운|배움의 기운/.test(adult + stu), '⛔ 옛 대응표(자리의 기운 · 배움의 기운)는 사라졌습니다')
+  //  ⚠️ 「흐린 말 금지 목록」 에는 그 낱말이 «쓰지 말라» 는 뜻으로 적혀 있으므로 그 줄은 빼고 봅니다 (6부)
+  const noBan = (x: string) => x.split('\n').filter(l => !/쓰지 마세요|흐린 말/.test(l)).join('\n')
+  ok(!/자리의 기운|배움의 기운/.test(noBan(adult) + noBan(stu)), '⛔ 옛 대응표(자리의 기운 · 배움의 기운)는 사라졌습니다')
   const body = stu.replace(/★이 손님은 학생입니다[\s\S]*?\n\n/g, '')
   ok(!STUDENT_BAN_WORDS.some(w => body.replace(/\s/g, '').includes(w.replace(/\s/g, ''))), '⛔ 학생 판 말투 규칙에 학생 금지어(직장 등)가 섞이지 않습니다')
 }
@@ -117,6 +126,18 @@ console.log('\n━━ ⑧ 한자말 · 판정 이름이 그대로 나오지 않�
   //  적성 카드 — 구조 이름 대신 생활 말
   const card = cardJobFit([{ key: 'saeobga', name: '사업가', score: 7, why: ['재성이 강해요'], note: '' }] as never, 'chang')
   ok(card.reasons.some(r => r.includes('사업') && !r.includes('사업가 (')), `적성 카드 재료가 생활 말로 — ${card.reasons[1]}`)
+}
+
+console.log('\n━━ ⑨ 점수 숫자 · 옛 말투 · 달 늘어놓기 [대표님 실측 2026-09-12 · 3] ━━')
+{
+  const sys = buildSevenPrompt({ name: '가', gender: '남', age: 30, target: 'adult', kind: 'job', cards: [], saju: [], hourUnknown: false, year: 2026 } as never, ['flow'])!.system
+  ok(/배움의 기운 · 자리의 기운 · 원국/.test(sys), '★「배움의 기운 · 자리의 기운 · 원국」 을 흐린 말 목록에 넣음')
+  ok(/「전체의 15 정도」 처럼 점수 숫자를 글에 쓰지 말고/.test(sys), '★점수 숫자를 글에 쓰지 않기 (비율은 숫자로)')
+  const plan = buildPlan45()
+  const blk = planBlock45(plan, 'flow')
+  ok(!/\d{2}/.test(blk.replace(/\d+년|\d+월/g, '')) && /넉넉함|보통|적음|드러나지 않음/.test(blk), `엔진이 점수 대신 크기 말로 넘깁니다 — ${blk.split('\n').find(l => l.includes('근거'))?.slice(0, 70)}`)
+  const pace = buildSevenPrompt({ name: '가', gender: '남', age: 30, target: 'adult', kind: 'job', cards: [], saju: [], hourUnknown: false, year: 2026, month: 9, plan } as never, ['pace'])!.user
+  ok(/달은 이 «둘» 만 짚고/.test(pace), '★달은 좋은 달 · 조심할 달 둘만 (줄줄이 늘어놓지 않기)')
 }
 
 console.log(`\n━━ 4갈래 · 쉬운 말투 · 달별 재료 — 통과 ${pass} · 실패 ${fail} ━━\n`)
