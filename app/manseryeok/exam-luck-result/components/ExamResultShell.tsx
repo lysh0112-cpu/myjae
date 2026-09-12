@@ -513,6 +513,11 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
         jobs: picks.join('|') || null, jobText: jobTextForSave || null, certs: certsForSave || null,
         //  ★6부 [대표님 알약] 지금 상황 · 관문 (보관함이 다시 열 때 주소에 실음)
         sit, gates: gates ? gates.join(',') : null,
+        /*  ★2026-09-13 (7부) — 승진 값. ⛔ 없으면 다시보기가 «취업운» 으로 열립니다
+         *    (대표님이 보관함에서 찾아내신 자리). 보관함이 이 값을 주소에 다시 싣습니다 — 짝입니다.
+         *  ⚠️ 직접 적은 직업·직급은 «기록에만» 둡니다 (jobText 로 갑니다). */
+        pJob: isPromo ? pJobRaw : null, pCur: isPromo ? pCurRaw : null, pNext: isPromo ? pNextRaw : null,
+        pGate: isPromo ? pGateRaw : null, pYears: isPromo ? pYearsRaw : null, pSeason: isPromo ? pSeasonRaw : null,
       },
     } as never).then(r => {
       if (r && (r as { id?: string }).id) savedIdRef.current = (r as { id: string }).id
@@ -520,7 +525,8 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
       if (typeof window !== 'undefined') sessionStorage.removeItem(WISH_KEY)
     })
   }, [calc, cards, recordId, person, target, kind, examKind, examDateRaw, dateApprox, studentGrade, gradeLevel,
-      trackSel, examCategory, targetType, targetCustomText, way, wayRaw, wishForSave, sit, gates, picks, jobTextForSave, certsForSave, schoolExamRaw])
+      trackSel, examCategory, targetType, targetCustomText, way, wayRaw, wishForSave, sit, gates, picks, jobTextForSave, certsForSave, schoolExamRaw,
+      isPromo, pJobRaw, pCurRaw, pNextRaw, pGateRaw, pYearsRaw, pSeasonRaw])
 
   // ── ⑤ 통변 (SSE) ─────────────────────────────────────────
   useEffect(() => {

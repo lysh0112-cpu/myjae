@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * 합격운 · 취업운 보관함
+ * 합격운 · 취업운 · 승진운 보관함
  * ─────────────────────────────────────────────
  * 진입: 홈 > [합격운/취업운 🐍] → /manseryeok/exam-luck
  * 흐름: 이 목록 > 카드 선택(그때 본 사람으로 다시보기)
@@ -79,14 +79,14 @@ function ExamLuckStorageInner() {
 
   return (
     <StorageShell
-      title="합격운 · 취업운 보관함"
+      title="합격운 · 취업운 · 승진운 보관함"
       count={records ? records.length : null}
       loading={records === null}
       showEmpty={!!records && records.length === 0}
       emptyIcon="🍀"
       emptyTitle={"아직 저장된 합격운 기록이 없어요"}
       emptyDesc={"새로 보면 여기에 차곡차곡 쌓여요"}
-      actionLabel={"+ 새 합격운 보기"}
+      actionLabel={"+ 새로 보기"}
       onAction={() => setPickerOpen(true)}
     >
         {records && records.map(r => (
@@ -97,12 +97,34 @@ function ExamLuckStorageInner() {
                *      진학 화면이 저장본을 그대로 보여 주므로 글이 사라지지는 않습니다.
                *      (성인 기록이면 화면 제목과 맺음말만 학생 결로 보입니다 — 새로 발행하면 맞아집니다)
                */
-              const d = r.inputData as { target?: string; kind?: string }
-              const to = d?.target === 'adult'
-                ? '/manseryeok/job-luck-result'
-                : '/manseryeok/exam-luck-result'
+              /*  🔴 ★2026-09-13 (7부) [대표님이 보관함에서 찾아내심] —
+               *    승진운으로 본 기록을 다시 열면 ★«취업운» 화면으로 갔습니다.
+               *    제목 · 연표(다섯 해) · 머리글이 다 취업운 것이 되었습니다.
+               *    ⇒ 저장해 둔 sit='promote' 를 보고 ★승진 화면으로 보냅니다.
+               *    ⛔ 이 갈래를 지우지 마십시오 (검사 51 ⑲). */
+              const d = r.inputData as {
+                target?: string; kind?: string; sit?: string
+                pJob?: string; pCur?: string | number; pNext?: string | number
+                pGate?: string; pYears?: string; pSeason?: string
+              }
+              const isPromo = d?.sit === 'promote'
+              const to = isPromo
+                ? '/manseryeok/promotion-luck-result'
+                : d?.target === 'adult'
+                  ? '/manseryeok/job-luck-result'
+                  : '/manseryeok/exam-luck-result'
               const extra = d?.kind ? `&kind=${d.kind}` : ''
-              router.push(`${to}?${personToQuery(r.inputData, r.title)}&recordId=${r.id}${extra}`)
+              //  ★승진은 재료(직업 · 직급 · 문 · 대상연차 · 인사 시기)를 함께 실어야
+              //    다시 열 때도 «같은 글» 이 나옵니다. ⛔ 고민 글은 싣지 않습니다.
+              const promo = isPromo
+                ? '&sit=promote&gates=' + ([
+                    ['pJob', d.pJob], ['pCur', d.pCur], ['pNext', d.pNext],
+                    ['pGate', d.pGate], ['pYears', d.pYears], ['pSeason', d.pSeason],
+                  ] as Array<[string, unknown]>)
+                    .filter(([, v]) => v != null && v !== '')
+                    .map(([k, v]) => `&${k}=${encodeURIComponent(String(v))}`).join('')
+                : ''
+              router.push(`${to}?${personToQuery(r.inputData, r.title)}&recordId=${r.id}${extra}${promo}`)
             }} onDelete={() => setConfirmDel(r)}>
             <div style={{
               minWidth: 44, height: 44, borderRadius: 10, flexShrink: 0,
@@ -127,7 +149,7 @@ function ExamLuckStorageInner() {
           marginTop: 14, background: S.card, border: `0.5px solid ${S.line}`, borderRadius: 12,
           padding: '11px 14px', fontSize: 11.5, color: S.sub, lineHeight: 1.7,
         }}>
-          시험과 일자리의 흐름을 봅니다. 사주가 말해 주는 건 흐름이고,
+          시험 · 일자리 · 자리의 흐름을 봅니다. 사주가 말해 주는 건 흐름이고,
           결과를 만드는 건 준비한 시간이에요.
         </div>
 

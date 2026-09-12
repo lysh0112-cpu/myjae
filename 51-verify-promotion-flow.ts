@@ -22,6 +22,7 @@ const input = code(read('app/manseryeok/exam-luck-input/page.tsx'))
 const shell = code(read('app/manseryeok/exam-luck-result/components/ExamResultShell.tsx'))
 const page = code(read('app/manseryeok/promotion-luck-result/page.tsx'))
 const seven = code(read('lib/saju/examLuck/buildExamSeven.ts'))
+const store = code(read('app/manseryeok/exam-luck/page.tsx'))
 
 head('① 🔴 지뢰 — 승진을 «이직» 으로 읽지 않는가')
 ok(/isPromote = isJob && v\.jobSituation === 'promote'/.test(seven),
@@ -255,6 +256,33 @@ head('⑱ 🔴 세 해째 · 딴 이야기 · 약한 것 짚기 [대표님 실�
   ok(/내후년」 · 「내년 이후」/.test(shell), '★지시문에도 못 박았습니다 (말과 값 «둘 다»)')
   ok(/「돈 · 바깥일」 · 「재물운」/.test(shell), '★딴 이야기도 지시문에')
   ok(/약한 것을 «짚지» 마세요/.test(shell), '★약한 것 짚기도 지시문에')
+}
+
+
+head('⑲ 🔴 보관함에서 «다시 열 때» 도 승진으로 열리는가 [대표님이 찾아내심]')
+{
+  /*  [겪은 일]  승진운으로 본 기록을 보관함에서 열었더니 ★«취업운» 으로 열렸습니다 —
+   *    머리글 「류승현님의 취업운」 · 제목 「한눈에 보는 나의 흐름과 강점」 ·
+   *    연표 ★다섯 해(2026~2030). 글만 승진이고 ★껍데기가 전부 취업운이었습니다.
+   *  [까닭]  ★«새로 보는 길» 만 만들고 «다시 보는 길» 을 안 만들었습니다.
+   *    5부 교훈 「절반만 고치지 말 것」 — 오늘만 세 번째입니다. */
+  ok(/const isPromo = d\?\.sit === 'promote'/.test(store),
+    '🔴 ★보관함이 저장된 sit 을 보고 승진 기록을 가려냅니다')
+  ok(/isPromo\s*\?\s*'\/manseryeok\/promotion-luck-result'/.test(store),
+    '🔴 ★승진 기록은 «승진 화면» 으로 돌아갑니다')
+  ok(/'&sit=promote&gates='/.test(store), '★sit 을 주소에 다시 싣습니다')
+  for (const k of ['pJob', 'pCur', 'pNext', 'pGate', 'pYears', 'pSeason'])
+    ok(new RegExp("'" + k + "'").test(store), `★${k} 를 다시 싣습니다 (같은 글이 나오게)`)
+  ok(!/pWish|wish/.test(store.slice(store.indexOf('&sit=promote'), store.indexOf('&sit=promote') + 600)),
+    '⛔ 고민 글은 주소에 싣지 않습니다 (방문 기록 보호)')
+  ok(/pJob: isPromo \? pJobRaw : null/.test(shell), '★결과 화면이 기록에 승진 값을 남깁니다')
+  ok(/pSeason: isPromo \? pSeasonRaw : null/.test(shell), '★인사 시기도 남깁니다')
+  ok(/합격운 · 취업운 · 승진운 보관함/.test(store), '★보관함 이름에 승진운이 들어갔습니다')
+  ok(/actionLabel=\{"\+ 새로 보기"\}/.test(store),
+    '★단추가 «+ 새 합격운 보기» 가 아니라 «+ 새로 보기» 입니다')
+  ok(/시험 · 일자리 · 자리의 흐름/.test(store), '★안내문에 «자리» 가 들어갔습니다')
+  ok(/if \(recordId && !retryRecord\) return/.test(shell),
+    '🔴 ⛔ 다시보기는 ★AI 를 «안 부릅니다» — 저장본을 그립니다 (돈이 듭니다)')
 }
 
 console.log(`\n━━ 승진운 동선 — 통과 ${pass} · 실패 ${fail} ━━\n`)
