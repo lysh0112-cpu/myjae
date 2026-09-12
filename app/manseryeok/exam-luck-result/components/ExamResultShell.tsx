@@ -38,7 +38,7 @@ import { judgeJobChangeNatal, judgeJobChangeLuck } from '@/lib/saju/examLuck/job
 import { judgeExamDay } from '@/lib/saju/examLuck/examDay'
 import { buildAllCards } from '@/lib/saju/examLuck/buildCards'
 import { parseExamTongbyeon } from '@/lib/saju/examLuck/buildExamPrompt'
-import { buildSevenPrompt, sevenOf, legacyOf, isLegacyTong, SEVEN_GROUPS, sevenKeyOf, dedupeBody, promoTidy, dropFarNextYearMonth } from '@/lib/saju/examLuck/buildExamSeven'
+import { buildSevenPrompt, sevenOf, legacyOf, isLegacyTong, SEVEN_GROUPS, sevenKeyOf, dedupeBody, promoTidy, dropFarNextYearMonth, fixPromoName, fixPromoRank } from '@/lib/saju/examLuck/buildExamSeven'
 // ★2026-07-30 — 지시서 2장 «사정 평가 로직» 을 재료로 만들어 싣습니다. (교훈 CU)
 import { judgePassSignal, passSignalBlock } from '@/lib/saju/examLuck/passSignal'
 import { upsangBlock as buildUpsangBlock } from '@/lib/saju/examLuck/tables/upsang'
@@ -133,6 +133,15 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
   const pGateRaw = sp.get('pGate'), pYearsRaw = sp.get('pYears'), pSeasonRaw = sp.get('pSeason')
   /** 눈여겨볼 달 — 인사 발표의 두 달 앞. ★숫자 하나라 effect 에 넣어도 안전합니다 */
   const promoWatchMonth = watchMonthOf(pSeasonRaw)
+  /*  ★2026-09-13 (7부 3판) — 다듬을 때 쓸 «지금/다음 직급 이름». 둘 다 ★문자열입니다. */
+  const promoCurLabel = (() => {
+    const r = promoJobOf(pJobRaw); const i = pCurRaw != null ? Number(pCurRaw) : -1
+    return r && i >= 0 ? (r.ranks[i] ?? '') : ''
+  })()
+  const promoNextLabel = (() => {
+    const r = promoJobOf(pJobRaw); const i = pNextRaw != null ? Number(pNextRaw) : -1
+    return r && i >= 0 ? (r.ranks[i] ?? '') : ''
+  })()
   /* 🔴 ★2026-09-11 (6부) — 반드시 useMemo 로 «한 번만» 만듭니다 (검사 46).
    *   [겪음] parseGates 는 부를 때마다 «새 목록» 을 돌려줍니다. 그대로 두면 화면이 다시 그려질 때마다
    *          AI effect 가 «관문이 바뀌었다» 고 보고 돌던 AI 를 끊고 처음부터 다시 불러, 풀이가 끝없이 안 나왔습니다.
@@ -972,12 +981,18 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
        *    지시문만으로는 사주 용어가 지켜지지 않았습니다 (대표님 실측). */
       if (k && body.trim()) {
         out[k] = isPromo
-          ? promoTidy(dropFarNextYearMonth(dedupeBody(body), promoWatchMonth), k)
+          ? fixPromoRank(
+              fixPromoName(
+                promoTidy(dropFarNextYearMonth(dedupeBody(body), promoWatchMonth), k),
+                person.name,
+              ),
+              promoCurLabel, promoNextLabel,
+            )
           : dedupeBody(body)
       }
     }
     return out
-  }, [parsed, target, legacy, isPromo, promoWatchMonth])
+  }, [parsed, target, legacy, isPromo, promoWatchMonth, person.name, promoCurLabel, promoNextLabel])
   /** ★이 화면이 그릴 갈래 — 새 풀이는 4갈래, 옛 기록은 옛 7갈래 (6부 봉투 B) */
   /*  ★2026-09-12 (7부) — 승진은 제목이 다릅니다 (SEVEN_PROMO).
    *  ⚠️ 옛 기록(legacy)은 그대로 옛 제목으로 엽니다. */

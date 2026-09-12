@@ -8,7 +8,7 @@
 import { readFileSync } from 'fs'
 import { JOB_SITUATIONS, parseSituation } from './lib/saju/examLuck/tables/jobFields'
 import { PROMO_USE_JOBCHANGE } from './lib/saju/examLuck/tables/promotion'
-import { sevenOf, SEVEN_PROMO, SEVEN_ADULT, promoTidy, dropFarNextYearMonth, monthlyMaterial } from './lib/saju/examLuck/buildExamSeven'
+import { sevenOf, SEVEN_PROMO, SEVEN_ADULT, promoTidy, dropFarNextYearMonth, monthlyMaterial, fixPromoName, fixPromoRank } from './lib/saju/examLuck/buildExamSeven'
 import { planBlock } from './lib/saju/examLuck/engineCalc'
 
 let pass = 0, fail = 0
@@ -187,7 +187,11 @@ head('⑭ 🔴 사주 용어를 «값으로» 다듬는가 (말로만 막았더�
   const t2 = promoTidy('타고난 그릇에 직책운이 있고, 말하고 글로 설득하는 힘도 있는 짜임입니다. 직책운이 이어집니다.', 'strategy')
   ok(!/말하고 글로 설득하는 힘/.test(t2), '⛔ 「말하고 글로 설득하는 힘」 이 생활 말로 바뀝니다')
   ok(!/짜임/.test(t2), '⛔ 「짜임」 이 「바탕」 으로 바뀝니다')
-  ok((t2.match(/직책운/g) ?? []).length === 1, '🔴 ★「직책운」 이 한 갈래에 «한 번» 만 남습니다')
+  //  ★2026-09-13 (3판) — 「직책운」 은 이제 «언제나» 바뀝니다 (갈래마다 새던 자리를 막음).
+  //    첫 번째는 「자리와 직책을 맡는 힘」, 두 번째부터 「그 힘」 으로 받아 씁니다.
+  ok(!/직책운/.test(t2), '🔴 ★「직책운」 이 한 번도 안 남습니다')
+  ok((t2.match(/자리와 직책을 맡는 힘/g) ?? []).length === 1 && /그 힘/.test(t2),
+    '★두 번째부터 «그 힘» 으로 받아 씁니다')
   const t3 = promoTidy('직장 · 합격운이 드는 달입니다. 직장 · 합격운이 이어집니다. 남과 견주는 마음과 말하고 글 쓰는 재주가 듭니다.', 'pace')
   //  ⚠️ 「직장 · 합격운」 은 먼저 「자리와 직책을 맡는 힘」 으로 바뀌고, 두 번째부터 «그 힘» 이 됩니다
   ok((t3.match(/자리와 직책을 맡는 힘/g) ?? []).length === 1 && /그 힘/.test(t3),
@@ -196,8 +200,8 @@ head('⑭ 🔴 사주 용어를 «값으로» 다듬는가 (말로만 막았더�
   const t4 = promoTidy('타고난 그릇이 먼저입니다. 직장운도 있습니다.', 'cheer')
   ok(!/타고난 그릇/.test(t4) && !/직장운/.test(t4), '🔴 ★4번 갈래(응원)에는 사주 용어가 «한 개도» 안 남습니다')
   ok(/promoTidy\(dropFarNextYearMonth\(dedupeBody\(body\), promoWatchMonth\), k\)/.test(shell),
-    '★화면이 받은 뒤에 다듬습니다 (되풀이 걷어내기 → 먼 달 → 말 다듬기)')
-  ok(/\? promoTidy\(dropFarNextYearMonth/.test(shell) && /: dedupeBody\(body\)/.test(shell),
+    '★화면이 받은 뒤에 다듬습니다 (되풀이 → 먼 달 → 말 → 이름 → 직급)')
+  ok(/\? fixPromoRank\(/.test(shell) && /: dedupeBody\(body\)/.test(shell),
     '⚠️ 승진에서만 다듬습니다 (합격운·취업운은 그대로)')
 }
 
@@ -283,6 +287,86 @@ head('⑲ 🔴 보관함에서 «다시 열 때» 도 승진으로 열리는가 
   ok(/시험 · 일자리 · 자리의 흐름/.test(store), '★안내문에 «자리» 가 들어갔습니다')
   ok(/if \(recordId && !retryRecord\) return/.test(shell),
     '🔴 ⛔ 다시보기는 ★AI 를 «안 부릅니다» — 저장본을 그립니다 (돈이 듭니다)')
+}
+
+
+head('⑳ 🔴 대표님 실측 3판 — 직장운 · 내년 달 · 이름 · 직급')
+{
+  //  ① 「직장운」 이 «갈래마다 한 번씩» 살아남던 자리
+  ok(!/직장운/.test(promoTidy('직장운, 즉 자리와 직책에 힘이 실리는가.', 'flow')),
+    '🔴 ★「직장운, 즉」 이 사라집니다')
+  ok(!/직장운/.test(promoTidy('직장운이란 자리와 직책을 향한 흐름을 뜻하는데.', 'pace')),
+    '🔴 ★「직장운이란」 도 사라집니다 (다른 갈래에서 또 나오던 자리)')
+  ok(!/직장운/.test(promoTidy('직장운이 좋습니다. 직장운도 좋습니다.', 'strategy')),
+    '⛔ ★«언제나» 바꿉니다 — 한 갈래에 한 번씩 남지 않습니다')
+
+  //  ② 내년은 «달 없이» [대표님 2026-09-13]
+  const a = promoTidy('2026년보다 2027년 10월 언저리에 더 또렷합니다.', 'strategy')
+  ok(/내년 같은 시기에/.test(a) && !/2027년|10월 언저리/.test(a),
+    '🔴 ★「2027년 10월 언저리」 → 「내년 같은 시기」 [대표님 「내년은 달 없이」]')
+  const b = promoTidy('내년 10월 언저리는 올해와 비슷한 흐름입니다.', 'pace')
+  ok(/내년 같은 시기는/.test(b) && !/10월/.test(b), '★「내년 10월」 도 «시기» 로 바뀝니다')
+  ok(/10월은/.test(promoTidy('10월은 힘이 드는 달입니다.', 'pace')),
+    '⚠️ ★올해 달은 «숫자 그대로» 둡니다 (대표님이 짚으실 달입니다)')
+
+  //  ③ 🔴 손님 이름
+  ok(fixPromoName('승진님이 쌓아 온 것들이 큰 힘입니다.', '승현') === '승현님이 쌓아 온 것들이 큰 힘입니다.',
+    '🔴🔴 ★「승진님」 → 「승현님」 (AI 가 목표 낱말에 끌려 이름을 틀린 자리)')
+  ok(fixPromoName('올해 승진을 바라보십니다.', '승현') === '올해 승진을 바라보십니다.',
+    '⚠️ 본문의 «승진» 은 ★그대로 둡니다 (이름 자리만 고칩니다)')
+  ok(fixPromoName('아무 글', '') === '아무 글', '이름을 모르면 건드리지 않습니다')
+
+  //  ④ 🔴 다음 직급을 «지금» 인 것처럼 쓰지 않기
+  ok(fixPromoRank('오늘, 임원으로서 조직에 기여한 일을 적어 두세요.', '본부장', '임원')
+      === '오늘, 본부장으로서 조직에 기여한 일을 적어 두세요.',
+    '🔴 ★「임원으로서 조직에 기여한」 → 「본부장으로서」 (아직 임원이 아니십니다)')
+  ok(fixPromoRank('임원 자리는 방향을 잡는 자리입니다.', '본부장', '임원')
+      === '임원 자리는 방향을 잡는 자리입니다.',
+    '⚠️ ★«바라보는 자리» 를 말하는 정상 문장은 그대로 둡니다')
+  ok(fixPromoRank('아무 글', '', '') === '아무 글', '직급을 모르면 건드리지 않습니다')
+
+  ok(/fixPromoRank\(\s*\n?\s*fixPromoName\(/.test(shell), '★화면이 셋을 차례로 겁니다')
+  ok(/person\.name,/.test(shell), '★손님 이름을 넘깁니다')
+  ok(/promoCurLabel, promoNextLabel,/.test(shell), '★지금·다음 직급 이름을 넘깁니다')
+}
+
+
+head('⑳ 🔴🔴 손님 이름 · 직급 시제 [대표님 실측 3판 — 「승진님」 이 나왔습니다]')
+{
+  ok(fixPromoName('승진님이 지금 본부장 자리에서 쌓아 온 것들이', '류승현').startsWith('승현님'),
+    '🔴 ★「승진님」 → 「승현님」 (AI 가 «승진» 이라는 말에 끌린 자리)')
+  ok(fixPromoName('승현님, 고맙습니다.', '류승현') === '승현님, 고맙습니다.', '맞는 이름은 안 건드립니다')
+  ok(fixPromoName('연재님께 여쭤 보세요.', '류승현') === '연재님께 여쭤 보세요.',
+    '⚠️ 두 글자 이상 다르면 «다른 사람» 일 수 있어 안 건드립니다')
+  ok(fixPromoName('류승진님은', '류승현').includes('승현님'), '성이 붙어 와도 바로잡습니다')
+  ok(fixPromoName('아무개님', '') === '아무개님', '이름을 모르면 안 건드립니다')
+
+  ok(fixPromoRank('오늘, 임원으로서 조직에 기여한 일', '본부장', '임원').includes('본부장으로서'),
+    '🔴 ★「임원으로서 기여한」 → 「본부장으로서」 (아직 임원이 아니십니다)')
+  ok(fixPromoRank('임원 자리는 방향을 잡는 자리입니다.', '본부장', '임원') === '임원 자리는 방향을 잡는 자리입니다.',
+    '⚠️ «앞날» 이야기는 그대로 둡니다 — 바라보시는 자리니까요')
+  ok(fixPromoRank('임원 재임 기간 동안', '본부장', '임원').includes('본부장 재임 기간'), '재임 기간도 바로잡습니다')
+  ok(fixPromoRank('무엇이든', '', '') === '무엇이든', '직급을 모르면 안 건드립니다')
+  ok(/fixPromoRank\(\s*\n?\s*fixPromoName\(/.test(shell),
+    '★화면이 «말 다듬기 뒤» 에 이름·직급을 바로잡습니다 (차례가 중요합니다)')
+}
+
+head('㉑ 🔴 「직장운」 과 «내년 달» [대표님 실측 3판]')
+{
+  ok(!/직장운/.test(promoTidy('직장운, 즉 자리와 직책에 힘이 실리는가를 봅니다.', 'flow')),
+    '🔴 ★「직장운」 이 «언제나» 바뀝니다 (갈래마다 한 번씩 새던 자리)')
+  ok(promoTidy('직장운, 즉 자리와 직책에 힘이 실리는가를 봅니다.', 'flow') === '자리와 직책에 힘이 실리는가를 봅니다.',
+    '⚠️ 뜻풀이가 붙어 와도 ★말이 겹치지 않습니다')
+  ok(!/직장운/.test(promoTidy('직장운이란 자리와 직책을 향한 흐름을 뜻합니다.', 'pace')), '「직장운이란」 꼴도')
+  ok(promoTidy('올해는 직장운이 좋습니다.', 'flow').includes('자리와 직책을 맡는 힘'), '홀로 나와도 바뀝니다')
+  ok(promoTidy('직장운, 즉 자리와 직책에 힘이 실리는가를 봅니다.', 'flow').length > 10,
+    '⛔ ★문장을 «삼키지» 않습니다 (마침표까지 먹는 규칙을 쓰지 않습니다)')
+
+  ok(/내년 같은 시기/.test(promoTidy('2027년 10월 언저리에 더 또렷합니다.', 'pace')),
+    '🔴 ★「2027년 10월 언저리」 → 「내년 같은 시기」 [대표님 「내년은 달 없이」]')
+  ok(/내년 같은 시기/.test(promoTidy('내년 10월 언저리는 올해와 비슷합니다.', 'pace')), '「내년 10월」 도')
+  ok(/10월은 자리/.test(promoTidy('10월은 자리를 맡는 힘이 드는 달입니다.', 'pace')),
+    '⚠️ ★올해 달은 그대로 둡니다 — 지금 하실 일이 거기 있습니다')
 }
 
 console.log(`\n━━ 승진운 동선 — 통과 ${pass} · 실패 ${fail} ━━\n`)
