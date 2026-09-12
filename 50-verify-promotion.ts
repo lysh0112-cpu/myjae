@@ -7,6 +7,7 @@
 
 import {
   PROMO_JOBS, promoJobOf, isGateStep, defaultNextIdx,
+  PROMO_BIGYEOP_AS_RIVAL, PROMO_BIGYEOP_SAY, PROMO_USE_JOBCHANGE,
   PROMO_YEARS, PROMO_SEASONS, watchMonthOf,
   PROMO_WISH_SAMPLES, PROMO_WISH_REQUIRED, PROMO_WISH_MAX, PROMO_WISH_NUDGE_UNDER,
   PROMO_TERMS_OK, PROMO_TERMS_BAN, PROMO_BAN_WORDS,
@@ -47,7 +48,7 @@ ok(bank.ranks.indexOf('차장') + 1 === bank.ranks.indexOf('부지점장 (부부
 head('③ 🔴 «문» — 여섯 벌이 다 같은 자리를 가리키는가')
 const GATE_EXPECT: Array<[string, string]> = [
   ['hoesa', '부장'], ['gong', '5급 사무관'], ['bank', '부지점장 (부부장)'],
-  ['police', '경위'], ['fire', '소방위'], ['army', '소위 · 중위'],
+  ['police', '경정'], ['fire', '소방령'], ['army', '중령'],
 ]
 for (const [k, name] of GATE_EXPECT) {
   const j = promoJobOf(k)!
@@ -60,8 +61,8 @@ ok(PROMO_JOBS.every(j => j.gates.every(g => g > 0)), '맨 아래 직급이 문�
 head('④ isGateStep — 직접 적으신 분도 «똑같이» 판정되는가')
 ok(isGateStep('hoesa', 5) === true, '회사원 차장→부장 = 문')
 ok(isGateStep('hoesa', 3) === false, '회사원 대리→과장 = 문 아님')
-ok(isGateStep('police', 3) === true, '경찰 경사→경위 = 문')
-ok(isGateStep('police', 4) === false, '경찰 경위→경감 = 문 아님')
+ok(isGateStep('police', 5) === true, '★경찰 경감→경정 = 문 (경정 = 5급 사무관 = 중령 = 소방령)')
+ok(isGateStep('police', 3) === false, '⛔ 경사→경위는 문이 «아닙니다» — 근속승진으로 실무 경위·경감이 많습니다')
 ok(isGateStep('etc', -2, true) === true, '★직접 적기 + 「네」 → 문으로 봄 (직급 이름을 몰라도 판정이 돕니다)')
 ok(isGateStep('etc', -2, false) === false, '직접 적기 + 「아니요」 → 문 아님')
 ok(isGateStep('hoesa', 3, true) === true, '★손님 답이 표보다 앞섭니다 (본인이 제일 잘 아십니다)')
@@ -71,7 +72,7 @@ ok(isGateStep(null, 5) === false, '직업이 없으면 문으로 보지 않음')
 
 head('⑤ defaultNextIdx — 「넌지시」 한 계단 위가 미리')
 ok(defaultNextIdx('hoesa', 4) === 5, '차장을 고르면 부장이 미리 골라짐')
-ok(defaultNextIdx('police', 2) === 3, '경사를 고르면 경위가 미리 골라짐')
+ok(defaultNextIdx('police', 4) === 5, '경감을 고르면 경정이 미리 골라짐')
 ok(defaultNextIdx('hoesa', 6) === 6, '맨 위에서는 그 자리에 머무름 (더 위가 없습니다)')
 ok(defaultNextIdx('etc', 0) === -2, '직접 적기면 -2 (글 칸으로 엽니다)')
 
@@ -99,13 +100,20 @@ ok(stay.note.includes('나가지 마세요') && stay.note.includes('금지'),
   '★「더 버틸지」 보기에 «결정을 흔드는 말 금지» 가 박혀 있음')
 ok(PROMO_WISH_SAMPLES.every(s => s.text.length <= PROMO_WISH_MAX), '보기가 글자 수 안에 들어감')
 
+head('⑦-b 🔴 연재쌤 답 — 비겁 · 이직')
+ok(PROMO_BIGYEOP_AS_RIVAL === true, '★비겁은 «겨루는 사람 · 경쟁자» [연재쌤] — 이직 신호가 아닙니다')
+ok(!PROMO_BIGYEOP_SAY.includes('경쟁자'), '⛔ 손님 글에는 «경쟁자» 라는 낱말을 쓰지 않습니다 (할 일로 옮겨 적습니다)')
+ok(PROMO_USE_JOBCHANGE === false, '🔴 ★승진운에서는 이직 여섯 갈래를 «부르지 않습니다» [연재쌤 「넣지 말 것」]')
+ok(stay.note.includes('부르지 마십시오'), '★「더 버틸지」 보기에도 «이직 갈래 금지» 가 박혀 있음')
+ok(stay.note.includes('승진 쪽으로만'), '★물으신 것만 답합니다')
+
 head('⑧ 🔴 말투 — 사주 용어를 «과하지 않게» [대표님 2026-09-12]')
 ok(PROMO_TERMS_OK.length >= 15, '풀어 주면 쓸 수 있는 말이 충분히 있음')
 ok(PROMO_TERMS_OK.every(t => t.gloss.length > 0), '★쓸 수 있는 말은 모두 «뜻» 이 달려 있음 (뜻 없이 쓰면 무안합니다)')
 ok(PROMO_TERMS_OK.every(t => !PROMO_TERMS_BAN.includes(t.term)), '쓸 수 있는 말과 못 쓰는 말이 겹치지 않음')
 for (const t of ['관인상생', '상관견관', '용신', '격국', '12운성', '조후', '신약'])
   ok(PROMO_TERMS_BAN.includes(t), `⛔ «${t}» 은 못 쓰는 말에 들어 있음`)
-ok(PROMO_TERM_MAX_PER_SECTION === 3, '한 갈래에 한자말 셋까지 (어림값 — 재고 고칠 것)')
+ok(PROMO_TERM_MAX_PER_SECTION === 1, '🔴 ★한 갈래에 한자말 «하나» 까지 [연재쌤 「꼭 필요한 말이 아니면 쓰지 말자」]')
 ok(PROMO_TERM_FREE_SECTIONS.includes('cheer'), '★4번 갈래(응원)는 사주 용어 0개')
 
 head('⑨ ⛔ 승진운에서 쓰지 않는 말')
