@@ -24,6 +24,14 @@ const GROUP: Record<string, Yuk> = { 정인: '인성', 편인: '인성', 정관:
 
 const dayStemOf = (saju: Pillar[]) => saju.find(p => p.pillar === '일주')?.stem ?? ''
 
+/** 십성 → 손님 말 (★AI 가 「정인 · 편관」 을 그대로 쓰지 않게) */
+const PLAIN_SIPSIN: Record<string, string> = {
+  정인: '공부운', 편인: '공부운', 정관: '직장 · 합격운', 편관: '직장 · 합격운',
+  식신: '말하고 글 쓰는 재주', 상관: '말하고 글 쓰는 재주',
+  정재: '돈을 다루는 현실 감각', 편재: '돈을 다루는 현실 감각',
+  비견: '남과 견주는 마음', 겁재: '남과 견주는 마음',
+}
+
 // ── 1. 유형 ─────────────────────────────────────────────────────
 export function judgeType(saju: Pillar[], ohaeng: Record<string, number>) {
   const ds = dayStemOf(saju)
@@ -161,8 +169,10 @@ export function planBlock(plan: ExamPlan | null | undefined, section: 'flow' | '
   if (section === 'pace') {
     if (plan.months) {
       const b = plan.months.best, w = plan.months.worst
-      L.push(`- 가장 좋은 달: ${b.label} (천간 ${b.gan} · 지지 ${b.ji})`)
-      L.push(`- 조심할 달: ${w.label} (천간 ${w.gan} · 지지 ${w.ji})${w.notes.length ? ' — ' + w.notes.join(' · ') : ''}`)
+      //  ★6부 [대표님 실측] «천간 · 지지» 를 넘기면 AI 가 그 말을 손님 글에 씁니다 — 무엇이 드는지만 넘깁니다
+      const drawn = (m: { gan: string; ji: string }) => [...new Set([m.gan, m.ji].map(x => PLAIN_SIPSIN[x] ?? x))].join(' · ')
+      L.push(`- 가장 좋은 달: ${b.label} — 이 달에 드는 것: ${drawn(b)}`)
+      L.push(`- 조심할 달: ${w.label} — 이 달에 드는 것: ${drawn(w)}${w.notes.length ? ' · ' + w.notes.join(' · ') : ''}`)
     }
     if (plan.dday) L.push(`- 시험(면접) 날: ${plan.dday}`)
   }

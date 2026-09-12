@@ -55,11 +55,11 @@ const hintOf = (u: string) => u.slice(u.indexOf('(본문'), u.indexOf('[실천]'
 {
   const s = P('strategy', {}), d = P('pace', {})
   ok(s.user.includes('이직 표본') && /필기|시험/.test(hintOf(s.user)) && /면접/.test(hintOf(s.user)), '옛 기록(알약 없음) — 지금처럼 «모두 고른 것» 으로')
-  ok(!/고르지 않은/.test(s.user + s.system + d.user), '옛 기록에는 «고르지 않은» 금지 줄을 넣지 않음')
+  ok(!/고르지 않은 시험|고르지 않은 면접/.test(s.user + s.system + d.user), '옛 기록에는 «고르지 않은 시험 · 면접» 금지 줄을 넣지 않음')
 }
 {
   const e = buildSevenPrompt({ ...base, kind: 'exam', jobGates: ['interview'] } as never, ['pace'] as never)!
-  ok(!/고르지 않은/.test(e.user + e.system), '«시험 준비 중이에요» 쪽에는 알약이 끼어들지 않음')
+  ok(!/고르지 않은 시험|고르지 않은 면접/.test(e.user + e.system), '«시험 준비 중이에요» 쪽에는 알약이 끼어들지 않음')
 }
 
 console.log('\n━━ ④ 화면 · 저장 짝 ━━')

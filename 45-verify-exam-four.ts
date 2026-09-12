@@ -154,5 +154,16 @@ console.log('\n━━ ⑩ 희망 쪽으로 — 약한 것을 짚지 않는가 [�
   ok(/적은 힘은 «짚지 마세요»/.test(blk), '엔진 재료에도 「적은 힘은 짚지 말라」')
 }
 
+console.log('\n━━ ⑪ 천간 · 지지 · 창업 · 호칭 [대표님 실측 2026-09-12 · 4] ━━')
+{
+  const sys = buildSevenPrompt({ name: '가', gender: '남', age: 30, target: 'adult', kind: 'job', cards: [], saju: [], hourUnknown: false, year: 2026 } as never, ['flow'])!.system
+  ok(/«천간 · 지지 · 일진 · 월운 · 세운» 같은 말도 손님 글에 쓰지 마세요/.test(sys), '★「천간에는 · 지지에는」 을 손님 글에 쓰지 않기')
+  ok(/고르지 않은 길의 낱말\(창업/.test(sys), '★「창업」 낱말을 아예 쓰지 않기 (스쳐 지나가듯도 안 됨)')
+  ok(/«이름 \+ 님» 한 가지로만/.test(sys), '★호칭은 「희준님」 한 가지로 (「류희준 님」 과 섞지 않기)')
+  const blk = planBlock45(buildPlan45(), 'pace')
+  ok(/이 달에 드는 것/.test(blk) && !/천간|지지/.test(blk) && !/정인|편관|비견|겁재/.test(blk),
+    `엔진이 달 재료를 생활 말로 넘깁니다 — ${blk.split('\n').find(l => l.includes('가장 좋은 달'))?.slice(0, 70)}`)
+}
+
 console.log(`\n━━ 4갈래 · 쉬운 말투 · 달별 재료 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail) process.exit(1)
