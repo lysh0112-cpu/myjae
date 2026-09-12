@@ -581,7 +581,7 @@ console.log('\n━━ ⑲-D ★서비스 이름 개편 · 압핀 지키기 (43�
   //  ★2026-09-11 (6부) [대표님 「나) 단독카드로」] — 낱장이 «궁합 + 합격운/취업운» 둘이 되었습니다.
   //     ⚠️ 이 줄이 지키는 것은 «이름 둘이 낱장이 아니다» 입니다 — 그 뜻은 그대로입니다.
   //     ⛔ 목록을 «아무거나» 받게 풀지 않았습니다 — 정확히 이 둘만 허락합니다.
-  check(/SOLO_NAMES = \['궁합'(, '합격운\/취업운')?\]/.test(svc),
+  check(/SOLO_NAMES = \['궁합'(, EXAM_LUCK_NAME)?\]/.test(svc),
     `★낱장에서 빠졌습니다 (낱장은 궁합 · 합격운/취업운 뿐입니다)`)
   // ⚠️ 낱장과 폴더에 «겹쳐» 적으면 같은 카드가 두 번 뜹니다
   check(!/SOLO_NAMES = \[[^\]]*정밀분석/.test(svc), `낱장과 폴더에 겹쳐 있지 않습니다`)
@@ -1188,7 +1188,7 @@ console.log('\n━━ ⑲-n ★홈 — 폴더를 «열지 않고» 바로 들어
   // ★2026-08-01 (43부 13차) — 이름 둘은 «폴더» 로 옮겼습니다 (위 ⑲-D 가 봅니다).
   //   ⚠️ 이 검사가 옛 배치를 «요구» 하고 있었습니다. 낱장은 이제 궁합뿐입니다.
   //  ★2026-09-11 (6부) — 합격운/취업운이 두 번째 낱장입니다 (대표님 「나) 단독카드」). 정확히 이 둘만.
-  check(/SOLO_NAMES = \['궁합'(, '합격운\/취업운')?\]/.test(svc), `★「궁합」이 낱장입니다`)
+  check(/SOLO_NAMES = \['궁합'(, EXAM_LUCK_NAME)?\]/.test(svc), `★「궁합」이 낱장입니다`)
   for (const n of ['내 이름 정밀분석', '내 아이 명품작명']) {
     check(new RegExp(`names: \\[[^\\]]*'${n}'`).test(svc), `★「${n}」이 폴더 안에 있습니다`)
   }
@@ -2591,13 +2591,17 @@ console.log('\n━━ ㉒-u 🔴 합격운/취업운 — 관리자 토글로 «�
   const pm = codeOf(read('app/admin/components/PriceManager.tsx'))
 
   // ① 홈 카드 — 45부 메모의 값 그대로
-  check(/name: '합격운\/취업운', color: '#c85a8c', bg: '#f7e6ee', href: '\/manseryeok\/exam-luck'/.test(home)
-     && /sub: '시험과 일자리', icon: '🎯', grad: \['#34d399', '#5eead4'\]/.test(home),
+  check(/name: EXAM_LUCK_NAME, color: '#c85a8c', bg: '#f7e6ee', href: '\/manseryeok\/exam-luck'/.test(home)
+     && /icon: '🎯', grad: \['#34d399', '#5eead4'\]/.test(home),
     `★홈 카드가 45부 메모 값 그대로입니다 (색 · 주소 · 소개 · 아이콘)`)
-  check(/SOLO_NAMES = \['궁합', '합격운\/취업운'\]/.test(svc),
+  check(/SOLO_NAMES = \['궁합', EXAM_LUCK_NAME\]/.test(svc),
     `★궁합 «바로 아래» 단독 카드입니다 [대표님 「나)」]`)
   // ② 토글이 «보이는 것» 만 거릅니다 — 압핀 정리(alive)는 «전체» 로 봅니다
   //    ⚠️ alive 까지 거르면, 꺼 둔 동안 회원이 고정해 둔 합격운 압핀이 ★«말없이» 지워집니다.
+  check(/EXAM_LUCK_NAME = '합격운\/취업운\/승진운'/.test(fl),
+    `★카드 이름이 「합격운/취업운/승진운」 입니다 [대표님 2026-09-12]`)
+  check(/EXAM_LUCK_NAME_OLD = '합격운\/취업운'/.test(fl) && /isExamLuckName/.test(home),
+    `⛔ 옛 이름을 남겨 두어 «이미 찜해 두신 분» 의 압핀이 풀리지 않습니다`)
   check(/services=\{visibleServices\}/.test(home) && /EXAM_LUCK_NAME/.test(home) && /flags\.examLuck/.test(home),
     `★홈이 토글 값으로 카드를 «보이고 숨깁니다»`)
   check(/const alive = new Set\(SERVICES\.map/.test(home),

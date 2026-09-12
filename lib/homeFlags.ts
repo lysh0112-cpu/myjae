@@ -16,7 +16,21 @@
 // ══════════════════════════════════════════════════════════════════
 
 /** 홈 카드 이름 — 홈 · 서비스 낱장 · 관리 화면이 «이 글자» 로 맞춥니다 */
-export const EXAM_LUCK_NAME = '합격운/취업운'
+/*  ★2026-09-12 (7부) [대표님] — 승진운을 더하면서 카드 이름을 바꿨습니다.
+ *    [전] 합격운/취업운   [지금] 합격운/취업운/승진운
+ *  ⛔ 압핀(찜)은 saju_records 의 title 에 ★«이름 그대로» 저장됩니다
+ *     (lib/saju/pinnedServices.ts — service_type='pinned' · title=serviceName).
+ *     그래서 이름만 바꾸면 ★이미 찜해 두신 분의 압핀이 «말없이» 풀립니다.
+ *  ⇒ 옛 이름을 아래에 남겨 두고, 홈이 «둘 다» 내 것으로 읽습니다. */
+export const EXAM_LUCK_NAME = '합격운/취업운/승진운'
+
+/** ⛔ 지우지 마십시오 — 7부 이전에 찜해 두신 분들의 압핀 이름입니다 */
+export const EXAM_LUCK_NAME_OLD = '합격운/취업운'
+
+/** 이 카드의 이름인가 — 옛 이름도 «내 것» 으로 봅니다 */
+export function isExamLuckName(name: string): boolean {
+  return name === EXAM_LUCK_NAME || name === EXAM_LUCK_NAME_OLD
+}
 
 /** app_settings 의 낱말 — ⛔ 바꾸면 켜 둔 값이 «꺼짐» 으로 돌아갑니다 */
 export const HOME_FLAG_KEYS = {

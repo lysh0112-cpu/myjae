@@ -25,7 +25,7 @@ import ServiceSection from '@/app/home-new/components/ServiceSection'
 import SisterLinks from '@/app/components/common/SisterLinks'
 /* ★2026-09-10 — 회사 정보를 «한 곳» 에서 가져옵니다 (⛔ 여기에 다시 적지 마십시오) */
 import { COMPANY } from '@/app/components/common/companyInfo'
-import { EXAM_LUCK_NAME, HOME_FLAGS_OFF, fetchHomeFlags, type HomeFlags } from '@/lib/homeFlags'
+import { EXAM_LUCK_NAME, isExamLuckName, HOME_FLAGS_OFF, fetchHomeFlags, type HomeFlags } from '@/lib/homeFlags'
 
 // ── 사람 선택 모달을 여는 서비스 설정 ──
 // 사주 + 대운 + 세운(연월운세) 연결. 셋 다 같은 흐름:
@@ -186,7 +186,7 @@ const SERVICES = [
   //   ⛔ 이 줄을 지우거나 «주석으로» 돌리지 마십시오 — 끄는 것은 토글로 합니다.
   //      (주석 속 카드 꼴은 검사 ⑲-D 가 «살아 있는 서비스» 로 읽습니다 — 44부 1-1 교훈)
   //   ⚠️ 켜면 로그인한 손님께 «무료» 로 보입니다 — 결제 시트는 아직 없습니다 (가격 정할 때 붙일 자리).
-  { name: '합격운/취업운', color: '#c85a8c', bg: '#f7e6ee', href: '/manseryeok/exam-luck', cat: '기타', sub: '시험과 일자리', icon: '🎯', grad: ['#34d399', '#5eead4'] },
+  { name: EXAM_LUCK_NAME, color: '#c85a8c', bg: '#f7e6ee', href: '/manseryeok/exam-luck', cat: '기타', sub: '시험 · 일자리 · 자리', icon: '🎯', grad: ['#34d399', '#5eead4'] },
   // ★택일 셋은 지시에 없어 제가 골랐습니다. 바꾸실 자리입니다.
   { name: '결혼택일',   color: '#96643c', bg: '#f0e8df', href: '/manseryeok/wedding-timing/wedding-storage', cat: '택일', sub: '좋은 날 잡기', icon: '💍', grad: ['#fbbf24', '#fda4af'] },
   { name: '출산택일',   color: '#b45a78', bg: '#f6e5eb', href: '/manseryeok/birth-timing/birth-storage', cat: '택일', sub: '아기 맞을 날', icon: '🍼', grad: ['#f9a8d4', '#fed7aa'] },
@@ -244,7 +244,7 @@ export default function HomeNew() {
     fetchHomeFlags().then((f) => { if (alive) setFlags(f) })
     return () => { alive = false }
   }, [])
-  const visibleServices = SERVICES.filter((s) => s.name !== EXAM_LUCK_NAME || flags.examLuck)
+  const visibleServices = SERVICES.filter((s) => !isExamLuckName(s.name) || flags.examLuck)
 
   // 찜(고정)한 서비스 목록 로드 (로그인 회원만 값이 있음)
   //

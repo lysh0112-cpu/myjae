@@ -221,7 +221,12 @@ const ALWAYS_OPEN = ['saju']
  *   ⚠️ 보일지 말지는 여기서 정하지 «않습니다» — 홈이 토글(lib/homeFlags.ts)로 목록에서 거릅니다.
  *      목록에 없으면 이 줄은 아무것도 그리지 않습니다 (위 solo 가 filter 로 걸러 냄).
  *   ⛔ 폴더(GROUPS)에 «또» 적지 마십시오 — 같은 카드가 두 번 뜹니다 (검사가 봅니다). */
-const SOLO_NAMES = ['궁합', '합격운/취업운']
+/*  ★2026-09-12 (7부) [대표님] — 승진운을 더하며 이름이 바뀌었습니다.
+ *  ⛔ 이름을 여기 «붙박이» 로 적지 마십시오 — 홈 · 낱장 · 관리 화면 «셋» 이 갈립니다.
+ *     lib/homeFlags.ts 의 EXAM_LUCK_NAME «한 곳» 에서만 옵니다 (검사 ㉒-u). */
+import { EXAM_LUCK_NAME } from '@/lib/homeFlags'
+
+const SOLO_NAMES = ['궁합', EXAM_LUCK_NAME]
 
 /** 낱장 카드에만 쓰는 한 줄 — SERVICES 의 sub 보다 «이 자리에» 맞게 */
 const SOLO_COPY: Record<string, string> = {
