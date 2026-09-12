@@ -358,6 +358,59 @@ export function fixPromoRank(body: string, curRank: string, nextRank: string): s
     .replace(new RegExp(n + '\\s*재임\\s*기간', 'g'), cur + ' 재임 기간')
 }
 
+/*  🔴🔴 ★2026-09-13 (7부 4판 · 대표님 실측) — AI 가 ★연도를 틀렸습니다.
+ *
+ *  [나온 글]  「★올해 2025년 과 내년 2026년, 두 해를 함께 보겠습니다」
+ *    ⇒ 바로 다음 줄은 「2026년은 보통인 해입니다」 — ★스스로 어긋났습니다.
+ *  [까닭]  값(thisYear)은 제대로 갔는데, AI 가 ★«자기가 배운 시절» 을 올해로 여겼습니다.
+ *    ⇒ 지시문을 더 세게 써서는 못 막습니다. ★값으로 바로잡습니다.
+ *  [왜 아픈가]  연도를 틀리면 ★글 «전체» 가 의심받습니다.
+ *
+ *  ⚠️ 「올해 ○○년」 · 「내년 ○○년」 꼴에서 ★숫자만 바로잡습니다.
+ *     그 밖의 연도(2028년처럼 스스로 쓴 것)는 ★건드리지 않습니다 — 다른 규칙이 봅니다. */
+export function fixPromoYear(body: string, thisYear: number): string {
+  if (!thisYear) return body
+  return body
+    .replace(/올해\s*(20\d\d)년/g, `올해 ${thisYear}년`)
+    .replace(/(20\d\d)년\s*올해/g, `${thisYear}년 올해`)
+    .replace(/내년\s*(20\d\d)년/g, `내년 ${thisYear + 1}년`)
+    .replace(/올해\s*\((20\d\d)년\)/g, `올해 (${thisYear}년)`)
+    .replace(/내년\s*\((20\d\d)년\)/g, `내년 (${thisYear + 1}년)`)
+}
+
+/*  🔴 «내년 … ○월» — 앞판 규칙이 «내년» 과 «10월» 이 붙어 있을 때만 잡았습니다.
+ *    [나온 글]  「내년 ★인사 발표 시기인 10월 언저리 도…」
+ *               「내년 ★인사 발표 앞뒤인 10월 언저리 에도…」
+ *    ⇒ 사이에 말이 끼면 못 잡았습니다. ★한 문장 안에서 «내년» 뒤의 달을 봅니다.
+ *  ⚠️ 올해 달은 ★그대로 둡니다 — 지금 하실 일이 거기 있습니다. */
+export function dropNextYearMonthWord(body: string): string {
+  return body.split(/(?<=[.。])\s*/).map(sent => {
+    const i = sent.indexOf('내년')
+    if (i < 0) return sent
+    const after = sent.slice(i)
+    if (!/\d{1,2}월/.test(after)) return sent
+    return sent.slice(0, i) + after
+      //  ⚠️ 「시기인 10월 언저리」 → 「시기인 같은 시기」 처럼 말이 겹치지 않게
+      //     앞말이 «시기 · 무렵 · 때 · 앞뒤» 면 달을 ★그냥 지웁니다.
+      //  「인사 발표 시기인 10월 언저리」 → 「인사 발표 시기」 (달만 지웁니다)
+      .replace(/(시기|무렵|때|앞뒤|즈음)인\s*\d{1,2}월\s*(언저리|무렵|경|쯤)?/g, '$1')
+      .replace(/\s*\d{1,2}월\s*(언저리|무렵|경|쯤)/g, ' 같은 시기')
+      .replace(/\s*\d{1,2}월/g, ' 같은 시기')
+      .replace(/같은 시기\s+같은 시기/g, '같은 시기')
+  }).join('')
+}
+
+/*  ⛔ ★«잃을 것» 을 말하지 않습니다 [대표님 「약한 것을 짚지 마세요 · 이것도 장사야」]
+ *    [나온 글]  「무엇인가를 얻은 자리에서는 ★그만큼 내어 줘야 할 때가 오기도 합니다」
+ *    ⇒ 승진을 앞둔 분께 «잃을 것» 을 미리 말하는 자리입니다. */
+export const PROMO_LOSS_SWAP: Array<[RegExp, string]> = [
+  [/무엇인가를 얻은 자리에서는 그만큼 내어 줘야 할 때가 오기도 합니다\.?/g,
+    '오르신 자리에서는 그만큼 넓게 보시게 됩니다.'],
+  [/내어 줘야 할 때가 오기도 합니다/g, '새로 맡으실 일이 늘어납니다'],
+  [/잃는 것도 있습니다|잃게 되는 것도/g, '달라지는 것도 있습니다'],
+  [/대가를 치르/g, '품이 들'],
+]
+
 export function promoTidy(body: string, key: string): string {
   let t = body
   for (const [re, to] of PROMO_SWAP) t = t.replace(re, to)
@@ -366,6 +419,8 @@ export function promoTidy(body: string, key: string): string {
   for (const [re, to] of PROMO_NEXTYEAR_MONTH) t = t.replace(re, to)
   for (const [re, to] of PROMO_OFFTOPIC) t = t.replace(re, to)
   for (const [re, to] of PROMO_WEAK_SWAP) t = t.replace(re, to)
+  for (const [re, to] of PROMO_LOSS_SWAP) t = t.replace(re, to)
+  t = dropNextYearMonthWord(t)
   const onceOnly = key === 'cheer' ? 0 : 1
   for (const [re, to] of PROMO_TERM_ONCE) {
     let n = 0
@@ -699,7 +754,18 @@ function hintAdult(key: SevenKey, v: SevenArgs): string[] {
         : `· ${v.year}년에 가장 먼저 할 과목이나 영역 하나를 고르세요.`)
       //  ★6부 [대표님] 가진 자격증이 있으면 «새로 따기» 보다 «가진 것 살리기» 가 먼저
       if (isJob && v.certs) L.push(`· 손님이 가진 자격증(«${v.certs}»)을 먼저 살리는 길을 한두 문장으로 주세요. 새 자격증을 권할 때는 가진 것과 이어지는 것만 권하세요.`)
-      L.push('· 지금 손대면 시간만 쓰는 일도 하나 짚으세요.')
+      /*  🔴 ★2026-09-13 (7부 4판 · 대표님 실측) — 한 단락 «안» 에서 말이 뒤집혔습니다.
+       *    [나온 글] 「지금 시간을 쓰면 ★오히려 늦는 일이 있습니다. …간담회 같은 자리가 그것입니다」
+       *              「그 자리에서 직접 말하는 것이 ★서류보다 먼저 인상을 남깁니다」
+       *      ⇒ ★«하지 말라» 해 놓고 «그게 낫다» 고 합니다. 손님이 헷갈립니다.
+       *    [까닭] ★「하나 짚으세요」 라고 AI 에게 «고르게» 했습니다. 고르다 마음이 바뀝니다.
+       *    ⇒ ★우리가 «정해서» 줍니다. (6부에서 유형·달을 엔진이 정하게 바꾼 것과 같은 일) */
+      L.push(v.jobSituation === 'promote'
+        ? '· 지금 덜 필요한 일 ★하나를 «아래에서 그대로» 쓰세요 — '
+          + '«새로운 분야를 새로 공부하거나, 지금 자리와 이어지지 않는 자격을 더하는 것». '
+          + '⛔다른 것을 고르지 마세요. ⛔그 문장 뒤에 «다만 그것이 낫다» 처럼 ★말을 뒤집지 마세요. '
+          + '⛔사람을 만나는 자리 · 보고 · 발표를 «하지 말라» 고 쓰지 마세요 — ★그건 10월에 하실 일입니다.'
+        : '· 지금 손대면 시간만 쓰는 일도 하나 짚으세요.')
       //  ★6부 [대표님] 시간 배분은 «말로» — 고른 관문에 맞는 일 이름으로 (검사 46 ③ · 45 ⑰)
       L.push(!isJob
         ? '· 시험 준비와 실무 · 경력 정리에 시간을 어떻게 나눌지 말로 알려 주세요.'

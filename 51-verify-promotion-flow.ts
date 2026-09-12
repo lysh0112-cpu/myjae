@@ -8,7 +8,7 @@
 import { readFileSync } from 'fs'
 import { JOB_SITUATIONS, parseSituation } from './lib/saju/examLuck/tables/jobFields'
 import { PROMO_USE_JOBCHANGE } from './lib/saju/examLuck/tables/promotion'
-import { sevenOf, SEVEN_PROMO, SEVEN_ADULT, promoTidy, dropFarNextYearMonth, monthlyMaterial, fixPromoName, fixPromoRank } from './lib/saju/examLuck/buildExamSeven'
+import { sevenOf, SEVEN_PROMO, SEVEN_ADULT, promoTidy, dropFarNextYearMonth, monthlyMaterial, fixPromoName, fixPromoRank, fixPromoYear, dropNextYearMonthWord } from './lib/saju/examLuck/buildExamSeven'
 import { planBlock } from './lib/saju/examLuck/engineCalc'
 
 let pass = 0, fail = 0
@@ -203,7 +203,7 @@ head('⑭ 🔴 사주 용어를 «값으로» 다듬는가 (말로만 막았더�
   ok(!/타고난 그릇/.test(t4) && !/직장운/.test(t4), '🔴 ★4번 갈래(응원)에는 사주 용어가 «한 개도» 안 남습니다')
   ok(/promoTidy\(dropFarNextYearMonth\(dedupeBody\(body\), promoWatchMonth\), k\)/.test(shell),
     '★화면이 받은 뒤에 다듬습니다 (되풀이 → 먼 달 → 말 → 이름 → 직급)')
-  ok(/\? fixPromoRank\(/.test(shell) && /: dedupeBody\(body\)/.test(shell),
+  ok(/\? fixPromoYear\(fixPromoRank\(/.test(shell) && /: dedupeBody\(body\)/.test(shell),
     '⚠️ 승진에서만 다듬습니다 (합격운·취업운은 그대로)')
 }
 
@@ -403,6 +403,53 @@ head('㉓ 🔴 결과 아래 «전문상담사 연결» [대표님]')
     '⚠️ 아직 쓰는 중이면 «그 글을 못 본다» 고 알려 드립니다')
   ok(shell.indexOf('<ConsultButton') > shell.indexOf('사주는 지도일 뿐'),
     '★맺음말 «아래» 에 있습니다 (결과표 하단)')
+}
+
+
+head('㉔ 🔴🔴 연도 [대표님 실측 4판 — AI 가 「올해 2025년」 이라 썼습니다]')
+{
+  //  [까닭] 값은 제대로 갔는데 AI 가 «자기가 배운 시절» 을 올해로 여겼습니다.
+  //    ⇒ 지시문을 세게 써서는 못 막습니다. ★맨 앞에 못 박고 «값으로도» 바로잡습니다.
+  ok(fixPromoYear('올해 2025년과 내년 2026년, 두 해를 보겠습니다.', 2026)
+    === '올해 2026년과 내년 2027년, 두 해를 보겠습니다.',
+    '🔴 ★「올해 2025년」 → 「올해 2026년」 · 「내년 2026년」 → 「내년 2027년」')
+  ok(fixPromoYear('2026년은 보통인 해입니다.', 2026) === '2026년은 보통인 해입니다.',
+    '⚠️ 「올해」 가 안 붙은 연도는 안 건드립니다')
+  ok(fixPromoYear('올해 (2025년)', 2026).includes('2026'), '괄호 꼴도 바로잡습니다')
+  ok(fixPromoYear('아무거나', 0) === '아무거나', '올해를 모르면 안 건드립니다')
+  ok(/★올해는 «\$\{nowYear\}년» 입니다/.test(shell),
+    '🔴 ★지시문 «맨 앞» 에 올해를 못 박았습니다 (재료 속에만 있었습니다)')
+  ok(/⛔다른 해를 «올해» 라고 쓰지 마세요/.test(shell), '⛔ 연도를 지어내지 말라고 못 박았습니다')
+  ok(/fixPromoYear\(fixPromoRank\(/.test(shell), '★다듬기 맨 끝에서 연도를 바로잡습니다')
+}
+
+head('㉕ 🔴 «내년 … ○월» — 말이 끼어 있어도 잡는가 [실측 4판]')
+{
+  const a = dropNextYearMonthWord('내년 인사 발표 시기인 10월 언저리도 그 힘이 드는 때입니다.')
+  ok(!/10월/.test(a), '🔴 ★「내년 인사 발표 시기인 10월 언저리」 에서 달이 사라집니다')
+  ok(!/같은 시기인|시기인 때/.test(a), '⚠️ ★말이 겹치지 않습니다 (「시기인 같은 시기」 ✗)')
+  ok(/인사 발표 시기도/.test(a), '★문장이 자연스럽게 이어집니다')
+  const b = dropNextYearMonthWord('내년 인사 발표 앞뒤인 10월 언저리에도 다시 들어옵니다.')
+  ok(!/10월/.test(b) && /앞뒤에도/.test(b), '「앞뒤인 10월 언저리」 도')
+  ok(/내년 같은 시기/.test(dropNextYearMonthWord('내년 10월 언저리는 올해와 비슷합니다.')),
+    '붙어 있는 꼴도 그대로 잡습니다')
+  ok(/10월은 올해/.test(dropNextYearMonthWord('10월은 올해 가장 힘이 모이는 달입니다.')),
+    '⚠️ ★올해 달은 그대로 둡니다 — 지금 하실 일이 거기 있습니다')
+}
+
+head('㉖ ⛔ «잃을 것» 과 «말 뒤집기» [실측 4판]')
+{
+  ok(!/내어 줘야 할 때/.test(promoTidy('무엇인가를 얻은 자리에서는 그만큼 내어 줘야 할 때가 오기도 합니다.', 'cheer')),
+    '⛔ ★승진을 앞둔 분께 «잃을 것» 을 말하지 않습니다 [대표님 「이것도 장사야」]')
+  ok(/넓게 보시게 됩니다|새로 맡으실 일이 늘어납니다/.test(
+      promoTidy('무엇인가를 얻은 자리에서는 그만큼 내어 줘야 할 때가 오기도 합니다.', 'cheer')),
+    '★앞으로 좋아지는 쪽으로 옮겨 적습니다')
+  ok(/지금 덜 필요한 일 ★하나를 «아래에서 그대로» 쓰세요/.test(seven),
+    '🔴 ★«덜 필요한 일» 을 AI 가 «고르지» 않고 ★우리가 정해서 줍니다')
+  ok(/말을 뒤집지 마세요/.test(seven),
+    '⛔ ★한 단락 안에서 «하지 말라» → «그게 낫다» 로 뒤집는 것을 막습니다')
+  ok(/그건 10월에 하실 일입니다/.test(seven),
+    '⚠️ ★보고 · 발표를 «하지 말라» 고 쓰지 않게 (10월에 하실 일입니다)')
 }
 
 console.log(`\n━━ 승진운 동선 — 통과 ${pass} · 실패 ${fail} ━━\n`)

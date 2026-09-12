@@ -38,7 +38,7 @@ import { judgeJobChangeNatal, judgeJobChangeLuck } from '@/lib/saju/examLuck/job
 import { judgeExamDay } from '@/lib/saju/examLuck/examDay'
 import { buildAllCards } from '@/lib/saju/examLuck/buildCards'
 import { parseExamTongbyeon } from '@/lib/saju/examLuck/buildExamPrompt'
-import { buildSevenPrompt, sevenOf, legacyOf, isLegacyTong, SEVEN_GROUPS, sevenKeyOf, dedupeBody, promoTidy, dropFarNextYearMonth, fixPromoName, fixPromoRank } from '@/lib/saju/examLuck/buildExamSeven'
+import { buildSevenPrompt, sevenOf, legacyOf, isLegacyTong, SEVEN_GROUPS, sevenKeyOf, dedupeBody, promoTidy, dropFarNextYearMonth, fixPromoName, fixPromoRank, fixPromoYear } from '@/lib/saju/examLuck/buildExamSeven'
 // ★2026-07-30 — 지시서 2장 «사정 평가 로직» 을 재료로 만들어 싣습니다. (교훈 CU)
 import { judgePassSignal, passSignalBlock } from '@/lib/saju/examLuck/passSignal'
 import { upsangBlock as buildUpsangBlock } from '@/lib/saju/examLuck/tables/upsang'
@@ -162,13 +162,19 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
 
   const promoNote = useMemo(() => {
     if (!isPromo) return null
+    const nowYear = new Date().getFullYear()
     const row = promoJobOf(pJobRaw)
+    //  🔴 ★2026-09-13 (7부 4판) — AI 가 「올해 2025년」 이라 썼습니다.
+    //     재료 «속» 에만 연도가 있어 못 봤습니다. ★맨 앞에 못 박습니다.
+    //     ⚠️ AI 는 «자기가 배운 시절» 을 올해로 여기는 버릇이 있습니다.
     const curIdx = pCurRaw != null ? Number(pCurRaw) : null
     const nextIdx = pNextRaw != null ? Number(pNextRaw) : null
     const gateOn = isGateStep(pJobRaw, nextIdx, pGateRaw === 'yes' ? true : pGateRaw === 'no' ? false : null)
     const years = PROMO_YEARS.find(y => y.key === pYearsRaw)?.label ?? null
     const season = PROMO_SEASONS.find(x => x.key === pSeasonRaw)?.label ?? null
     return [
+      `· 🔴🔴 ★올해는 «${nowYear}년» 입니다. 내년은 «${nowYear + 1}년» 입니다. `
+        + `⛔다른 해를 «올해» 라고 쓰지 마세요. 연도를 지어내지 마세요.`,
     row ? `· 하시는 일: ${row.key === 'etc' ? (jobTextForSave || '직접 적으심') : row.label}` : '',
     row && curIdx != null && curIdx >= 0 ? `· 지금 직급: ${row.ranks[curIdx] ?? ''}` : '',
     row && nextIdx != null && nextIdx >= 0 ? `· 바라보는 다음 직급: ${row.ranks[nextIdx] ?? ''}` : '',
@@ -982,18 +988,18 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
        *    지시문만으로는 사주 용어가 지켜지지 않았습니다 (대표님 실측). */
       if (k && body.trim()) {
         out[k] = isPromo
-          ? fixPromoRank(
+          ? fixPromoYear(fixPromoRank(
               fixPromoName(
                 promoTidy(dropFarNextYearMonth(dedupeBody(body), promoWatchMonth), k),
                 person.name,
               ),
               promoCurLabel, promoNextLabel,
-            )
+            ), thisYear)
           : dedupeBody(body)
       }
     }
     return out
-  }, [parsed, target, legacy, isPromo, promoWatchMonth, person.name, promoCurLabel, promoNextLabel])
+  }, [parsed, target, legacy, isPromo, promoWatchMonth, person.name, promoCurLabel, promoNextLabel, thisYear])
   /** ★이 화면이 그릴 갈래 — 새 풀이는 4갈래, 옛 기록은 옛 7갈래 (6부 봉투 B) */
   /*  ★2026-09-12 (7부) — 승진은 제목이 다릅니다 (SEVEN_PROMO).
    *  ⚠️ 옛 기록(legacy)은 그대로 옛 제목으로 엽니다. */
