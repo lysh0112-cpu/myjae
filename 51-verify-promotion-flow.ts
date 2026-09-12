@@ -8,6 +8,8 @@
 import { readFileSync } from 'fs'
 import { JOB_SITUATIONS, parseSituation } from './lib/saju/examLuck/tables/jobFields'
 import { PROMO_USE_JOBCHANGE } from './lib/saju/examLuck/tables/promotion'
+import { sevenOf, SEVEN_PROMO, SEVEN_ADULT } from './lib/saju/examLuck/buildExamSeven'
+import { planBlock } from './lib/saju/examLuck/engineCalc'
 
 let pass = 0, fail = 0
 const ok = (c: boolean, m: string) => { if (c) { pass++; console.log('  ✅ ' + m) } else { fail++; console.log('  ❌ ' + m) } }
@@ -134,6 +136,46 @@ head('⑩ 🔴 승진 화면에 «취업 칸» 이 새지 않는가 (7부 봉투
     '🔴 ★옛 «선택» 고민 칸이 승진에서 숨습니다 — 고민 칸이 «둘» 보이면 안 됩니다')
   const promoOnly = input.slice(input.indexOf('이런 것이 궁금하실 수 있어요'))
   ok(promoOnly.length > 0, '승진 고민 칸(꼭)이 있습니다')
+}
+
+
+head('⑪ 🔴 네 갈래 «제목» 이 승진 것인가 (실제 통변에서 틀렸던 자리)')
+{
+  const t = SEVEN_PROMO.map(x => x.title)
+  ok(t[0].includes('지금 자리에서의 나'), '1. 지금 자리에서의 나')
+  ok(t[1].includes('다음 자리로 가는 길'), '★2. «합격과 성취» 가 아니라 «다음 자리로 가는 길»')
+  ok(t[2].includes('인사 시기'), '★3. «D-Day» 가 아니라 «인사 시기» (날짜는 회사가 정합니다)')
+  ok(t[3].includes('마지막 응원'), '4. 마지막 응원과 오늘의 실천')
+  ok(!t.some(x => /D-Day|합격과 성취/.test(x)), '⛔ 승진에 안 맞는 말이 제목에 없습니다')
+  ok(SEVEN_PROMO.map(x => x.key).join('|') === SEVEN_ADULT.map(x => x.key).join('|'),
+    '★뼈대(key)는 취업운과 «같습니다» — 엔진이 그대로 돕니다')
+  ok(sevenOf('adult', true)[1].title === t[1], '★sevenOf(target, true) 가 승진 제목을 줍니다')
+  ok(sevenOf('adult')[1].title !== t[1], '⚠️ promo 를 안 넘기면 옛 제목 그대로 (옛 기록 보호)')
+  ok(/sevenOf\(target, isPromo\)/.test(shell), '🔴 ★화면이 승진 제목을 씁니다')
+}
+
+head('⑫ 🔴 연표가 «두 해» 까지인가')
+ok(/function YearStrip\(\{ cards, maxYears \}/.test(shell), '연표가 몇 해까지인지 받습니다')
+ok(/maxYears \? all\.slice\(0, maxYears\) : all/.test(shell), '받은 수만큼만 자릅니다')
+ok(/<YearStrip cards=\{cards\} maxYears=\{isPromo \? 2 : undefined\} \/>/.test(shell),
+  '🔴 ★승진이면 «두 해» 만 (2026~2030 다섯 해가 나왔던 자리)')
+
+head('⑬ 🔴 승진에 «지원 안배 · 전형 · 시간 배분» 이 안 나오는가')
+{
+  const plan = {
+    target: 'adult', type: '실전형', practice: 60,
+    susi: { susi: 70, jeongsi: 30, flipped: false },
+    apply: '3 : 4 : 3', months: null,
+  } as never
+  const asJob = planBlock(plan, 'strategy')
+  const asPromo = planBlock(plan, 'strategy', true)
+  ok(/지원 안배/.test(asJob), '취업에는 지원 안배가 그대로 나옵니다')
+  ok(!/지원 안배: /.test(asPromo), '🔴 ★승진에는 «지원 안배» 가 안 나옵니다')
+  ok(!/시간 배분: /.test(asPromo), '🔴 ★승진에는 «시간 배분» 이 안 나옵니다')
+  ok(!/- 전형: /.test(asPromo), '🔴 ★승진에는 «전형» 이 안 나옵니다')
+  ok(/바라보는 자리가 «하나»/.test(asPromo), '★대신 «자리가 하나» 라고 못 박습니다')
+  ok(/planBlock\(v\.plan, group\[0\], v\.jobSituation === 'promote'\)/.test(seven),
+    '★지시문이 승진임을 planBlock 에 넘깁니다')
 }
 
 console.log(`\n━━ 승진운 동선 — 통과 ${pass} · 실패 ${fail} ━━\n`)

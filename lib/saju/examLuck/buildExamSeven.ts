@@ -125,6 +125,18 @@ export const SEVEN_ADULT: SevenSection[] = [
   { key: 'cheer', title: '💌 4. 마지막 응원과 오늘의 실천', len: '4~6문장' },
 ]
 
+/*  🔴 ★2026-09-12 (7부) [대표님 「승진운은 다른 목차를 가져야겠지」] — 승진 네 갈래.
+ *    뼈대(flow · strategy · pace · cheer)는 ★합격운·취업운과 «같습니다» — 엔진이 그대로 돕니다.
+ *    ★이름과 속만 다릅니다.
+ *    ⛔ 「합격과 성취」 · 「D-Day」 는 승진에 안 맞습니다 —
+ *       승진은 합격·불합격이 아니고, 날짜는 ★회사가 정합니다. */
+export const SEVEN_PROMO: SevenSection[] = [
+  { key: 'flow', title: '🧬 1. 지금 자리에서의 나', len: '6~9문장' },
+  { key: 'strategy', title: '🚪 2. 다음 자리로 가는 길', len: '7~10문장' },
+  { key: 'pace', title: '🗓️ 3. 올해와 내년 · 인사 시기에 맞춘 달', len: '6~9문장' },
+  { key: 'cheer', title: '💌 4. 마지막 응원과 오늘의 실천', len: '4~6문장' },
+]
+
 /** ⚠️ 옛 7갈래 — 6부 봉투 B 이전에 저장된 기록을 다시 열 때만 씁니다 */
 export const LEGACY_STUDENT: SevenSection[] = [
   { key: 'dna', title: '🧬 1. 타고난 공부 DNA와 적성', len: '6~8문장' },
@@ -148,7 +160,10 @@ export const LEGACY_ADULT: SevenSection[] = [
 ]
 
 /** target 에 맞는 갈래 표 */
-export function sevenOf(target: ExamTarget): SevenSection[] {
+/*  ★2026-09-12 (7부) — 승진이면 제목표가 «다릅니다».
+ *  ⚠️ promo 를 안 넘기면 옛 그대로 돕니다 (옛 기록 다시보기가 깨지지 않게). */
+export function sevenOf(target: ExamTarget, promo?: boolean): SevenSection[] {
+  if (promo) return SEVEN_PROMO
   return target === 'student' ? SEVEN_STUDENT : SEVEN_ADULT
 }
 /** 옛 7갈래 표 — 다시보기에서 옛 글을 그릴 때만 */
@@ -705,7 +720,7 @@ ${wishBlock}${careBlock}
 [판정 재료 — 이것만 근거로 쓰세요. 없는 것을 지어내지 마세요]
 ${material}
 ${v.signalBlock ? `\n[합격 신호 — 원국을 본 것]\n${v.signalBlock}` : ''}
-${v.upsangBlock ? `\n[세부 적성 — ★계열 안에서 «어느 자리» 가 극대화되는가]\n${v.upsangBlock}` : ''}${planBlock(v.plan, group[0])}${group.includes('pace') ? `\n${monthlyMaterial(v.saju?.find(p => p.pillar === '일주')?.stem ?? '', v.year, v.month ?? 1, v.examDate, v.target === 'student')}` : ''}
+${v.upsangBlock ? `\n[세부 적성 — ★계열 안에서 «어느 자리» 가 극대화되는가]\n${v.upsangBlock}` : ''}${planBlock(v.plan, group[0], v.jobSituation === 'promote')}${group.includes('pace') ? `\n${monthlyMaterial(v.saju?.find(p => p.pillar === '일주')?.stem ?? '', v.year, v.month ?? 1, v.examDate, v.target === 'student')}` : ''}
 
 ════════════════════════════════════════
 [답변 형식 — ${plan.length}장의 카드]
@@ -776,7 +791,10 @@ export function sevenKeyOf(title: string, target?: ExamTarget, legacy = false): 
   //  ★6부 봉투 B — legacy 면 옛 7갈래 표 · 옛 낱말로, 아니면 새 4갈래로 먼저 봅니다
   const tables = legacy
     ? (target ? [legacyOf(target)] : [LEGACY_STUDENT, LEGACY_ADULT])
-    : (target ? [sevenOf(target)] : [SEVEN_STUDENT, SEVEN_ADULT, LEGACY_STUDENT, LEGACY_ADULT])
+    //  ★2026-09-12 (7부) — 승진 제목(SEVEN_PROMO)도 «늘» 봅니다.
+    //    ⚠️ target 만으로는 승진인지 알 수 없어, 표를 함께 훑습니다.
+    //       뼈대 key 가 같으므로 잘못 읽힐 일이 없습니다.
+    : (target ? [sevenOf(target), SEVEN_PROMO] : [SEVEN_STUDENT, SEVEN_ADULT, SEVEN_PROMO, LEGACY_STUDENT, LEGACY_ADULT])
   for (const tb of tables) {
     for (const s of tb) {
       const b = bareTitle(s.title)

@@ -932,7 +932,9 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
     return out
   }, [parsed, target, legacy])
   /** ★이 화면이 그릴 갈래 — 새 풀이는 4갈래, 옛 기록은 옛 7갈래 (6부 봉투 B) */
-  const sections = useMemo(() => (legacy ? legacyOf(target) : sevenOf(target)), [target, legacy])
+  /*  ★2026-09-12 (7부) — 승진은 제목이 다릅니다 (SEVEN_PROMO).
+   *  ⚠️ 옛 기록(legacy)은 그대로 옛 제목으로 엽니다. */
+  const sections = useMemo(() => (legacy ? legacyOf(target) : sevenOf(target, isPromo)), [target, legacy, isPromo])
   const kindLabel = examKindOf(examKind)?.label
 
   // ★훅은 여기까지. 아래부터 조기 return.
@@ -1077,7 +1079,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
             return (
               <div key={sec.key}>
                 {/* ★6부 봉투 B — 해별 흐름표는 1번(흐름) 갈래 위에, 달별 흐름표는 3번(월별) 갈래 위에 · 옛 기록은 옛 자리 */}
-                {(sec.key === 'flow' || sec.key === 'subject') && <YearStrip cards={cards} />}
+                {(sec.key === 'flow' || sec.key === 'subject') && <YearStrip cards={cards} maxYears={isPromo ? 2 : undefined} />}
                 {(sec.key === 'pace' || sec.key === 'dday') && examMonth && (
                   <MonthStrip dayStem={dayStemForStrip} year={examMonth.y} mark={examMonth.m} />
                 )}
@@ -1365,8 +1367,12 @@ function MonthStrip({ dayStem, year, mark }: { dayStem: string; year: number; ma
   )
 }
 
-function YearStrip({ cards }: { cards: ExamCard[] }) {
-  const years = (cards.find(c => c.key === 'years')?.data?.years ?? []) as YearLuck[]
+/*  ★2026-09-12 (7부) — 승진은 ★올해와 내년 «두 해» 까지만 그립니다.
+ *    [연재쌤·대표님] 「올해와 내년까지만」 — 지시문만 막고 ★연표를 안 막아
+ *    5년(2026~2030)이 그대로 보였습니다. 또 «절반» 이었습니다. */
+function YearStrip({ cards, maxYears }: { cards: ExamCard[]; maxYears?: number }) {
+  const all = (cards.find(c => c.key === 'years')?.data?.years ?? []) as YearLuck[]
+  const years = maxYears ? all.slice(0, maxYears) : all
   if (!years.length) return null
   return (
     <div style={{

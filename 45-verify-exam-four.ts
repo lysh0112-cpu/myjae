@@ -71,7 +71,9 @@ console.log('\n━━ ④ 옛 7갈래 기록 — 다시보기가 깨지지 않�
   ok(sevenKeyOf('■ 💌 7. 마지막으로 드리고 싶은 말', 'adult', true) === 'mentor', '옛 제목 → 옛 갈래로 읽힘')
   ok(sevenKeyOf('■ 💌 4. 마지막 응원과 오늘의 실천', 'adult') === 'cheer', '새 제목 → 새 갈래로 읽힘')
   const ex = fs.readFileSync('app/manseryeok/exam-luck-result/components/ExamResultShell.tsx', 'utf8')
-  ok(/legacy \? legacyOf\(target\) : sevenOf\(target\)/.test(ex) && /sevenKeyOf\(title, target, legacy\)/.test(ex), '결과 화면이 옛 기록은 옛 7갈래로 그립니다')
+  //  ★2026-09-12 (7부) — sevenOf 가 «승진» 인자를 하나 받게 되었습니다.
+  //    ⚠️ 그래도 «legacy 면 legacyOf» 는 그대로여야 합니다 — 옛 기록 보호가 이 검사의 뜻입니다.
+  ok(/legacy \? legacyOf\(target\) : sevenOf\(target(, isPromo)?\)/.test(ex) && /sevenKeyOf\(title, target, legacy\)/.test(ex), '결과 화면이 옛 기록은 옛 7갈래로 그립니다')
   ok(/month: new Date\(\)\.getMonth\(\) \+ 1/.test(ex), '결과 화면이 이번 달을 AI 재료에 싣습니다')
 }
 

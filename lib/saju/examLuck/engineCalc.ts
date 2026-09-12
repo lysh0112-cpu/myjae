@@ -166,7 +166,12 @@ export function buildPlan(a: {
 }
 
 /** AI 에게 넘기는 글 — 갈래마다 제 몫만 (되풀이 막기) */
-export function planBlock(plan: ExamPlan | null | undefined, section: 'flow' | 'strategy' | 'pace' | 'cheer'): string {
+/*  🔴 ★2026-09-12 (7부) — 승진에서는 «지원 안배 · 전형 · 시간 배분» 을 «빼야» 합니다.
+ *    [겪은 일] 실제 통변에 ★「지원 안배는 조건이 잘 맞는 자리를 가장 많이 두시고…」
+ *      「한 자리만 바라보고 모든 것을 거는 방식보다 몇 갈래를…」 이 나왔습니다.
+ *    ⇒ 이건 ★«취업 지원» 이야기입니다. 승진은 ★지원할 자리가 «하나» 입니다.
+ *    ⛔ promo 를 빼지 마십시오 (검사 51). */
+export function planBlock(plan: ExamPlan | null | undefined, section: 'flow' | 'strategy' | 'pace' | 'cheer', promo?: boolean): string {
   if (!plan || section === 'cheer') return ''
   const head = '[엔진이 정한 값 — ★이 값을 그대로 쓰세요. 바꾸거나 다른 값을 지어내지 마세요. 까닭만 쉬운 말로 풀어 주세요]'
   const L: string[] = []
@@ -196,21 +201,28 @@ export function planBlock(plan: ExamPlan | null | undefined, section: 'flow' | '
      *        바뀔 때마다 찾아 고칠 수도 없고, 틀리면 프로그램 전체가 의심받습니다.
      *   ⇒ 엔진은 계산을 그대로 하되(연재쌤 확인 대기), AI 에게는 «숫자 대신 말» 로 넘깁니다.
      *   ⛔ 여기에 숫자를 다시 넣지 마십시오 (검사 45 ⑰). */
-    if (plan.practice != null) {
+    if (promo) {
+      //  ★승진 — 지원할 곳도 전형도 없습니다. «다음 자리 하나» 를 봅니다.
+      L.push('- ⛔지원 안배 · 전형 · 시간 배분을 쓰지 마세요. 승진은 ★바라보는 자리가 «하나» 입니다.')
+      L.push('- 대신 ★«다음 자리가 요구하는 것» 과 «지금 보여 둘 것» 을 쓰세요.')
+    }
+    if (!promo && plan.practice != null) {
       const p = plan.practice
       L.push(`- 시간 배분: ${p >= 60 ? '직접 지원하고 부딪히는 쪽에 조금 더' : p <= 40 ? '앉아서 준비하는 쪽에 조금 더' : '두 가지에 비슷하게'} 시간을 쓰시면 됩니다.`)
     }
-    if (plan.susi) {
+    if (!promo && plan.susi) {
       const lean = plan.susi.susi >= 70 ? '그동안 쌓아 온 것을 보여 주는 쪽이 조금 더 편한 결'
         : plan.susi.susi <= 40 ? '한 번의 시험으로 실력을 보이는 쪽도 잘 맞는 결' : '어느 한쪽으로 크게 기울지 않은 고른 결'
       L.push(plan.susi.flipped
         ? `- 전형: 손님이 고르신 전형을 그대로 밀어 주세요. 「사주로는 반대가 낫다」 는 말을 쓰지 마세요. 다른 쪽도 «함께 챙기면 더 든든하다» 로만 한 문장 덧붙이세요.`
         : `- 전형: ${lean}입니다. 고르신 전형을 밀어 주고, 다른 쪽은 «함께 챙기면 든든하다» 로만 쓰세요.`)
     }
-    const [hi, mid, low] = plan.apply.split(' : ').map(Number)
-    const most = hi >= mid && hi >= low ? '조금 높은 곳' : low >= mid ? '부담이 적은 곳' : '조건이 잘 맞는 곳'
-    L.push(`- 지원 안배: ${most} 쪽을 가장 많이 두시고 나머지를 나눠 두시면 됩니다.${hi <= 1 ? ' 조금 높은 곳은 한두 곳만 두세요.' : ''} (${plan.target === 'student' ? '수시 여섯 장' : '지원할 곳'} 기준)`)
-    L.push('★위 세 줄은 «말로만» 쓰세요. ⛔ 「몇 대 몇」 처럼 숫자로 나눈 비율을 글에 쓰지 마세요.')
+    if (!promo) {
+      const [hi, mid, low] = plan.apply.split(' : ').map(Number)
+      const most = hi >= mid && hi >= low ? '조금 높은 곳' : low >= mid ? '부담이 적은 곳' : '조건이 잘 맞는 곳'
+      L.push(`- 지원 안배: ${most} 쪽을 가장 많이 두시고 나머지를 나눠 두시면 됩니다.${hi <= 1 ? ' 조금 높은 곳은 한두 곳만 두세요.' : ''} (${plan.target === 'student' ? '수시 여섯 장' : '지원할 곳'} 기준)`)
+      L.push('★위 세 줄은 «말로만» 쓰세요. ⛔ 「몇 대 몇」 처럼 숫자로 나눈 비율을 글에 쓰지 마세요.')
+    }
   }
   if (section === 'pace') {
     if (plan.months) {
