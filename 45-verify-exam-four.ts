@@ -165,5 +165,22 @@ console.log('\n━━ ⑪ 천간 · 지지 · 창업 · 호칭 [대표님 실측
     `엔진이 달 재료를 생활 말로 넘깁니다 — ${blk.split('\n').find(l => l.includes('가장 좋은 달'))?.slice(0, 70)}`)
 }
 
+console.log('\n━━ ⑫ 학생(합격운)도 같은 규칙을 받는가 [대표님 2026-09-12] ━━')
+{
+  const stu = { name: '가', gender: '여', age: 18, target: 'student', kind: 'exam', cards: [], saju: [], hourUnknown: false, year: 2026, studentGrade: '고3', targetAcademic: '주요 상위권 대학' }
+  const sys = buildSevenPrompt(stu as never, ['flow'])!.system
+  const st = buildSevenPrompt(stu as never, ['strategy'])!.user
+  //  성인 쪽에만 넣었다가 빠졌던 두 가지
+  ok(/밀고 가셔도 됩니다/.test(st), '★학생도 — 이미 정한 것을 먼저 받아 주기')
+  ok(/«한 해» 와 «한 달» 을 섞어/.test(st), '★학생도 — 해와 달을 섞어 부르지 않기')
+  //  성인과 같은 말투 규칙이 학생에게도 (금지 목록 줄은 빼고 셉니다)
+  for (const [name, re2] of [['용기를 얻으러 온다', /답보다 «용기»/], ['약한 것 짚지 않기', /모자란 쪽을 말하지 마세요/],
+    ['천간 · 지지 금지', /천간 · 지지 · 일진/], ['호칭 한 가지', /«이름 \+ 님» 한 가지로만/],
+    ['판정 이름 금지', /판정 이름\(비겁/], ['점수 숫자 금지', /점수 숫자를 글에 쓰지 말고/]] as Array<[string, RegExp]>) {
+    ok(re2.test(sys), `학생도 — ${name}`)
+  }
+  ok(/부모님/.test(buildSevenPrompt(stu as never, ['cheer'])!.user), '학생 전용 — 부모님께 드리는 말은 그대로')
+}
+
 console.log(`\n━━ 4갈래 · 쉬운 말투 · 달별 재료 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail) process.exit(1)
