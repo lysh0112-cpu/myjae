@@ -287,7 +287,9 @@ function sayOf(
  */
 export function timelineBlock(rows: YearRow[]): string {
   if (!rows.length) return ''
-  const out: string[] = ['[앞으로의 열 해 — 두 분 것을 나란히 놓았습니다]']
+  /*  ★2026-09-13 (7부) [연재쌤] — 「앞으로의 열 해」 → ★「앞으로의 십년의 운」
+   *  ⛔ 이 이름은 ★buildCouplePrompt 가 «그대로» 찾습니다. 한쪽만 고치면 재료를 못 찾습니다. */
+  const out: string[] = ['[앞으로의 십년의 운 — 두 분 것을 나란히 놓았습니다]']
   out.push('※ ★「두 분이 동시에 어려운 해」라고 «판정하지» 마세요. 교재에 그런 대조법이 없습니다.')
   // ⚠️ 「위기」라는 낱말을 «여기 적지 않습니다» — 금지 지시문 안에 적으면
   //    금지어 검사가 그것을 잡습니다. toneGuard 를 지을 때 겪은 것과 같은 함정입니다.
