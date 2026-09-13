@@ -268,5 +268,67 @@ console.log('\n━━ ⑩ 🔴 정재·편재 — 지지를 «본기 천간» �
     '⛔ 옛 모양(지지를 글자 그대로 보기)이 되살아나지 않았습니다')
 }
 
+
+// ══════════════════════════════════════════════════════════════
+//  🔴 ★2026-09-13 (7부) — «본기 천간 표» 가 ★여섯 벌입니다.
+//
+//    오늘 정재·편재가 뒤바뀐 까닭이 ★«지지를 보는 방식이 둘» 이어서였습니다.
+//    표 자체는 지금 여섯 벌이 다 같지만, ★누가 한 벌만 고치면 또 갈립니다.
+//    ⇒ «같은지» 를 값으로 박아 둡니다.
+//
+//  ⚠️ 이 표는 ★«십성을 가릴 때» 쓰는 것입니다 (교재 48쪽 도표 · 96쪽).
+//     ⛔ 음양 «비율» 을 셀 때 쓰는 YANG_BRANCH(子=양)와 ★다른 물건입니다.
+//        하나로 합치지 마십시오 (sajuMbti.ts:76 · 교재 260쪽 양팔통 사례).
+// ══════════════════════════════════════════════════════════════
+console.log('\n━━ ⑪ 🔴 본기 천간 표 여섯 벌이 «같은 값» 인가 ━━')
+{
+  const TABLES: Array<[string, string]> = [
+    ['lib/saju/career/sajuMbti.ts', 'BRANCH_BONGI'],
+    ['lib/saju/premium/deepJudge.ts', 'BRANCH_BONGI'],
+    ['lib/saju/yukchinTable.ts', 'BONGI'],
+    ['lib/saju/examLuck/sipsin.ts', 'BONGI'],
+    ['app/manseryeok/birth-timing/lib/sajuTables.ts', 'BRANCH_MAIN_STEM'],
+    ['app/manseryeok/birth-timing/lib/gyeokgukSungpae.ts', 'BRANCH_MAIN_STEM'],
+  ]
+  const BR = '子丑寅卯辰巳午未申酉戌亥'.split('')
+  /** 교재 48쪽 도표 — ★이 값이 정답입니다 */
+  const WANT = '癸己甲乙戊丙丁己庚辛戊壬'
+
+  const read = (file: string, name: string) => {
+    const t = readFileSync(file, 'utf8')
+    const i = t.indexOf('const ' + name)
+    if (i < 0) return ''
+    const seg = t.slice(i, i + 400)
+    return BR.map(b => {
+      const m = seg.match(new RegExp(b + ": '(.)'"))
+      return m ? m[1] : '?'
+    }).join('')
+  }
+
+  for (const [file, name] of TABLES) {
+    const got = read(file, name)
+    check(got === WANT, `★${name} @ ${file.split('/').pop()} — 교재 48쪽 값 그대로`)
+  }
+  check(TABLES.every(([f, n]) => read(f, n) === read(TABLES[0][0], TABLES[0][1])),
+    '🔴 ⛔ ★여섯 벌이 «모두 같습니다» — 한 벌만 고치면 정재·편재가 또 갈립니다')
+
+  //  ⚠️ 겉과 속이 다른 네 글자 — 이 넷이 틀리면 십성이 뒤바뀝니다
+  for (const [b, want, why] of [
+    ['巳', '丙', '겉 음 · ★속 양'], ['亥', '壬', '겉 음 · ★속 양'],
+    ['子', '癸', '겉 양 · ★속 음'], ['午', '丁', '겉 양 · ★속 음'],
+  ] as Array<[string, string, string]>) {
+    const i = BR.indexOf(b)
+    check(WANT[i] === want, `★${b} 의 본기는 ${want} — ${why}`)
+  }
+
+  //  ⛔ 음양 비율 표(YANG_BRANCH)와 섞이지 않았는가
+  const mbti = readFileSync('lib/saju/career/sajuMbti.ts', 'utf8')
+  check(/하나로 합치지 마십시오/.test(mbti),
+    '⚠️ ★「음양 비율」 표와 「십성」 표를 «갈라 두라」 는 경고가 남아 있습니다')
+  const deep = readFileSync('lib/saju/premium/deepJudge.ts', 'utf8')
+  check(/YANG_BRANCH\.has\(c\.ch\)/.test(deep),
+    '⚠️ ★judgeEumyang(음양 비율)은 YANG_BRANCH 를 그대로 씁니다 — 고치면 안 됩니다')
+}
+
 console.log(`\n━━ 진로적성 잇기 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
 if (fail > 0) process.exit(1)
