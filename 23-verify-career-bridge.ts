@@ -1,3 +1,4 @@
+import { readFileSync } from 'fs'
 // 23-verify-career-bridge.ts
 // 진로적성 «잇기» 그물 — 2026-07-31 (41부 Step 3)
 //
@@ -5,6 +6,7 @@
 //   잇기는 «덧붙이는» 일이라, 기존 파이프라인이 흔들리면 그 자체가 실패입니다.
 
 import { calcCareerScore, gradeAll, pickStrong } from './lib/saju/career/careerScore'
+import { judgeYukchin } from './lib/saju/career/yukchin'
 import {
   findJolip, calcJijangganBridge, buildJijangganCard, jijangganElementRatio,
   CAREER_JIJANGGAN_SPEC,
@@ -134,6 +136,57 @@ console.log('\n━━ ⑭-g 두 잣대가 어긋나면 «남기는가» ━━')
   } else {
     check(true, `이 표본은 두 잣대가 같습니다`)
   }
+}
+
+
+// ══════════════════════════════════════════════════════════════
+//  🔴🔴 ★2026-09-13 (7부) [대표님이 «본인 사주» 에서 찾아내심]
+//    「위 아래가 상호 모순되지 않니?」
+//
+//    수 55(과다) · 토 25(발달) 인 사주에서 —
+//      「비겁과 관성이 ★강점 지능입니다 · 추진력과 결단력이 있습니다」
+//      「수 비겁 — 생각은 많은데 ★실천력이 부족해요」   ← ★나란히 났습니다
+//    ⇒ 교재 40쪽은 ★25~45(발달)만 «강점 지능» 입니다. 50↑ 은 «과다» 입니다.
+// ══════════════════════════════════════════════════════════════
+console.log('\n━━ ⑧ 🔴 과다를 «강점 지능» 이라 부르지 않는가 ━━')
+{
+  //  대표님 사주 — 乙巳 · 己丑 · 壬辰 · 癸卯 (일간 壬수 · 수 55 과다 · 토 25 발달)
+  const saju = [
+    { pillar: '년주', stem: '乙', branch: '巳' },
+    { pillar: '월주', stem: '己', branch: '丑' },
+    { pillar: '일주', stem: '壬', branch: '辰' },
+    { pillar: '시주', stem: '癸', branch: '卯' },
+  ] as never
+  const card = judgeYukchin({ saju } as never) as { lines?: string[] }
+  const L = card.lines ?? []
+  const all = L.join('\n')
+
+  check(L.some(x => x.includes('관성') && x.includes('강점 지능')),
+    '★발달(토 25)인 관성이 «강점 지능» 입니다')
+  //  ★2026-09-13 [대표님] — 「과다는 ★강점이기는 하지만 단점으로 작용할 수도 있으니 주의」
+  //    ⇒ ⛔ 과다를 «강점 지능» 에서 «빼지» 않습니다.
+  check(L.some(x => x.includes('비겁') && x.includes('강점 지능')),
+    '★과다(수 55)인 비겁도 «강점 지능» 그대로입니다 [대표님 「과다도 강점이다」]')
+  check(all.includes('강점이기는 하지만 장점이 넘쳐 단점으로 나타날 수도 있으니'),
+    '🔴 ★「강점이기는 하지만 … 살펴 두시면 좋습니다」 [대표님 2026-09-13]')
+  check(!all.includes('독립심과 경쟁심과 승부욕이 강해요'),
+    '⛔ ★과다에는 79쪽 «묶음 강점 설명» 을 붙이지 않습니다 (아래 칸과 어긋납니다)')
+  check(all.includes('수 비겁'), '⚠️ 오행별 설명(수 비겁)은 ★그대로 둡니다')
+  check(all.includes('매사 많은 것을 고려하고, 실천으로 옮기는 데 신중함이 큽니다'),
+    '🔴 ★「실천력이 부족」 → 「많은 것을 고려하고 신중함이 크다」 [대표님 2026-09-13]')
+  check(!all.includes('실천력이 부족') && !all.includes('평정심을 잃고'),
+    '⛔ 손님 글에 교재 원문의 «깎는 말» 이 안 나옵니다')
+  check(all.includes('인성(금)이 타고나지 않았어요'), '⚠️ 결핍 안내도 그대로입니다')
+
+  //  ⛔ 뽑는 규칙은 «안 건드렸습니다» — 교재 책 사례 아홉 건이 걸려 있습니다
+  const src = readFileSync('lib/saju/career/careerScore.ts', 'utf8')
+  check(/grade === '발달' \|\| g\[e\]\.grade === '과다'/.test(src),
+    '⛔ ★pickStrong 은 그대로입니다 (과다도 후보에 남습니다 — 책 사례 아홉 건)')
+
+  //  ⚠️ 두 칸이 «같은 말» 을 하는가 — 오행 칸도 같은 뜻이어야 합니다
+  const ohSrc = readFileSync('lib/saju/career/tables/ohaeng.ts', 'utf8')
+  check(ohSrc.includes('장점이 넘쳐서 오히려 걸림돌이 될 때가 있습니다'),
+    '⚠️ 오행 칸도 «장점이 넘쳐» 로 말합니다 — 두 칸이 갈리면 손님이 헷갈립니다')
 }
 
 console.log(`\n━━ 진로적성 잇기 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
