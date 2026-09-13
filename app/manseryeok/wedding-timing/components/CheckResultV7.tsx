@@ -48,13 +48,29 @@ function reasonOf(key: string, d: DayResult['detail'], branch: string): string {
 }
 
 /** 한 줄 요약 — 가장 무거운 것 하나만 말한다 */
-function summaryOf(d: DayResult['detail']): { tone: 'good' | 'soso' | 'bad'; head: string; msg: string } {
+/*  ★2026-09-13 (7부) — sub 는 «한 줄 더» 붙이는 말입니다.
+ *    [왜] 요약은 12~16자짜리 한 줄로 잡혀 있는데(굵게 14.5px),
+ *      공망 설명을 붙이니 52자가 «굵게 두 줄» 이 되어 소리치는 느낌이 됐습니다.
+ *    ⇒ ★첫 줄은 굵게, 뒷말은 «부드럽게» 아래에 둡니다. */
+function summaryOf(d: DayResult['detail']): { tone: 'good' | 'soso' | 'bad'; head: string; msg: string; sub?: string } {
   const blocked = !d.passFixed
   if (blocked) {
     if (!d.fixMyeongjeol) return { tone: 'bad', head: '아쉬운 날', msg: '명절 연휴라 예식이 어려워요' }
     if (d.hyeongWho.length) return { tone: 'bad', head: '아쉬운 날', msg: `${d.hyeongWho.join('·')}분과 모나는 날이에요` }
     if (d.chungWho.length) return { tone: 'bad', head: '아쉬운 날', msg: `${d.chungWho.join('·')}분과 부딪히는 날이에요` }
-    if (d.gongmangWho.length) return { tone: 'bad', head: '아쉬운 날', msg: `${d.gongmangWho.join('·')}분께 빈자리인 날이에요` }
+    /*  🔴 ★2026-09-13 (7부) [대표님 전체 점검] — 「빈자리인 날이에요」 만 있어
+     *    ★손님이 «빈자리가 뭔지» 알 길이 없었습니다.
+     *    게다가 아래 근거 칸은 「공망」 이라 적어 ★한 화면에서 «두 말» 을 썼습니다.
+     *  ⇒ ★공망을 쓰고 · 뜻을 괄호로 풀고 · «왜 피하는지» 까지 말합니다 [대표님 문장].
+     *  ⚠️ 이사택일(movingExplainV1.ts)도 「공망은 기운이 비는 자리예요」 라 합니다 — ★한 집안입니다.
+     *  ⛔ 「공망」 을 빼지 마십시오. 근거 칸과 다시 갈립니다. */
+    if (d.gongmangWho.length) {
+      return {
+        tone: 'bad', head: '아쉬운 날',
+        msg: `${d.gongmangWho.join('·')}분께 공망(기운이 비는 자리)인 날이에요`,
+        sub: '힘이 실리지 않는 자리라, 큰일을 시작하는 날로는 피합니다.',
+      }
+    }
   }
   if (d.optBoth) return { tone: 'good', head: '두 분 모두에게 좋은 날', msg: '일곱 가지를 모두 통과했어요' }
   if (d.optBride) return { tone: 'good', head: '신부에게 좋은 날', msg: '피할 것 없이 기운도 맞아요' }
@@ -142,7 +158,13 @@ export default function CheckResultV7({
 
             <div style={{ background: box.bg, border: box.bd, borderRadius: 11, padding: '13px 14px', marginTop: 12 }}>
               <div style={{ fontSize: 11, color: box.lab, fontWeight: 700, marginBottom: 4 }}>{s.head}</div>
-              <div style={{ fontSize: 14.5, color: box.txt, fontWeight: 700, lineHeight: 1.5 }}>{s.msg}</div>
+              <div style={{ fontSize: 14.5, color: box.txt, fontWeight: 700, lineHeight: 1.5, wordBreak: 'keep-all' }}>{s.msg}</div>
+              {/* ★뒷말 — 굵지 않게, 한 칸 띄워서. 「왜 그런지」 를 여기서 말합니다 */}
+              {s.sub && (
+                <div style={{ fontSize: 12.5, color: box.txt, opacity: 0.8, lineHeight: 1.75, marginTop: 5, wordBreak: 'keep-all' }}>
+                  {s.sub}
+                </div>
+              )}
             </div>
 
             <div style={{ marginTop: 14 }}>
