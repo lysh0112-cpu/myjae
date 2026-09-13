@@ -7,6 +7,7 @@ import { readFileSync } from 'fs'
 
 import { calcCareerScore, gradeAll, pickStrong } from './lib/saju/career/careerScore'
 import { judgeYukchin } from './lib/saju/career/yukchin'
+import { judgeWealthStyle } from './lib/saju/premium/deepJudge'
 import {
   findJolip, calcJijangganBridge, buildJijangganCard, jijangganElementRatio,
   CAREER_JIJANGGAN_SPEC,
@@ -187,6 +188,84 @@ console.log('\n━━ ⑧ 🔴 과다를 «강점 지능» 이라 부르지 않�
   const ohSrc = readFileSync('lib/saju/career/tables/ohaeng.ts', 'utf8')
   check(ohSrc.includes('장점이 넘쳐서 오히려 걸림돌이 될 때가 있습니다'),
     '⚠️ 오행 칸도 «장점이 넘쳐» 로 말합니다 — 두 칸이 갈리면 손님이 헷갈립니다')
+}
+
+
+// ══════════════════════════════════════════════════════════════
+//  🔴🔴 ★2026-09-13 (7부) [대표님이 «본인 사주» 에서 찾아내심 · 연재쌤 확인]
+//    「을사에 사화가 ★편재인데 정재라고 잘못 해석을 해서 아래쪽 해설도 틀렸다」
+//
+//    화면 위 십성 표 — 편재 14.3% · 정재 없음
+//    화면 아래 재물 — 「★정재 5점으로 안정형」          ⇒ ★뒤바뀜
+//
+//  [까닭] 지지를 보는 방식이 «둘» 이었습니다 —
+//    십성 표  지지 → ★본기 천간으로 바꿔 봄 (巳 → 丙 양)
+//    재물     지지 → ★글자 그대로 봄        (巳 겉은 음)
+//  🔴 겉과 속이 다른 글자 ★넷 — 巳(丙 양) · 亥(壬 양) · 子(癸 음) · 午(丁 음)
+// ══════════════════════════════════════════════════════════════
+console.log('\n━━ ⑩ 🔴 정재·편재 — 지지를 «본기 천간» 으로 보는가 ━━')
+{
+  const SC = { 목: 20, 화: 20, 토: 20, 금: 20, 수: 20 } as never
+  /** 재성 지지 하나만 두고 나머지는 비겁으로 채운 시험 사주 */
+  const only = (day: string, el: string, br: string) => {
+    /*  ⚠️ 채움 글자는 ★«재성이 아닌» 오행으로 골라야 합니다.
+     *     제가 처음 «재성과 같은 오행» 으로 채웠다가 값이 섞여 검사가 걸렸습니다.
+     *     ⇒ 일간과 «같은 오행»(비겁)으로 채웁니다 — 재성에 안 섞입니다. */
+    const SELF: Record<string, string> = { 목: '寅', 화: '午', 토: '辰', 금: '申', 수: '子' }
+    const DAY_EL: Record<string, string> = {
+      甲: '목', 乙: '목', 丙: '화', 丁: '화', 戊: '토',
+      己: '토', 庚: '금', 辛: '금', 壬: '수', 癸: '수',
+    }
+    const f = SELF[DAY_EL[day]]
+    void el
+    return [
+      { pillar: '년주', stem: day, branch: br },
+      { pillar: '월주', stem: day, branch: f },
+      { pillar: '일주', stem: day, branch: f },
+      { pillar: '시주', stem: day, branch: f },
+    ] as never
+  }
+
+  //  ★대표님 사주 — 乙巳 · 己丑 · 壬辰 · 癸卯
+  const daepyo = [
+    { pillar: '년주', stem: '乙', branch: '巳' },
+    { pillar: '월주', stem: '己', branch: '丑' },
+    { pillar: '일주', stem: '壬', branch: '辰' },
+    { pillar: '시주', stem: '癸', branch: '卯' },
+  ] as never
+  const w = judgeWealthStyle(daepyo, '壬', { 목: 15, 화: 5, 토: 25, 금: 0, 수: 55 } as never)
+  check(w.pyeonJae > 0 && w.jeongJae === 0,
+    '🔴 ★대표님 사주(壬 일간 · 巳) — «편재» 입니다 (정재가 아닙니다)')
+  check(w.label === '확장형', '★딱지가 «확장형» 입니다 (안정형이 아닙니다)')
+  check(w.say.includes('편재가 우세합니다'), '★손님 글도 «편재» 로 나갑니다')
+
+  //  ★겉과 속이 다른 네 글자 — 일간 음양을 바꿔 가며 봅니다
+  const CASES: Array<[string, string, string, '정' | '편', string]> = [
+    ['壬', '화', '巳', '편', '巳 속 丙(양) · 壬(양) ⇒ 같음'],
+    ['癸', '화', '巳', '정', '巳 속 丙(양) · 癸(음) ⇒ 다름'],
+    ['戊', '수', '子', '정', '子 속 癸(음) · 戊(양) ⇒ 다름'],
+    ['己', '수', '子', '편', '子 속 癸(음) · 己(음) ⇒ 같음'],
+    ['壬', '화', '午', '정', '午 속 丁(음) · 壬(양) ⇒ 다름'],
+    ['癸', '화', '午', '편', '午 속 丁(음) · 癸(음) ⇒ 같음'],
+    ['戊', '수', '亥', '편', '亥 속 壬(양) · 戊(양) ⇒ 같음'],
+    ['己', '수', '亥', '정', '亥 속 壬(양) · 己(음) ⇒ 다름'],
+  ]
+  for (const [day, el, br, want, why] of CASES) {
+    const r = judgeWealthStyle(only(day, el, br), day, SC)
+    const got = r.jeongJae >= r.pyeonJae ? '정' : '편'
+    check(got === want, `★${day} 일간 + ${br} → ${want}재   [${why}]`)
+  }
+
+  //  ⚠️ 두 표가 «같은 값» 이어야 합니다 — 한쪽만 고치면 또 갈립니다
+  const a = readFileSync('lib/saju/career/sajuMbti.ts', 'utf8')
+  const b = readFileSync('lib/saju/premium/deepJudge.ts', 'utf8')
+  const pick = (t: string) => (t.match(/子: '癸'[^}]*\}/) ?? [''])[0].replace(/\s/g, '')
+  check(pick(a) !== '' && pick(a) === pick(b),
+    '🔴 ⛔ 십성 표와 재물 판정이 ★«같은 본기 표» 를 씁니다 (한쪽만 고치면 또 갈립니다)')
+  check(/const asStem = isStem \? ch : \(BRANCH_BONGI\[ch\] \?\? ch\)/.test(b),
+    '★지지를 본기 천간으로 바꿔서 음양을 봅니다')
+  check(!/chYang = isStem \? YANG_STEM\.has\(ch\) : YANG_BRANCH\.has\(ch\)/.test(b),
+    '⛔ 옛 모양(지지를 글자 그대로 보기)이 되살아나지 않았습니다')
 }
 
 console.log(`\n━━ 진로적성 잇기 그물 — 통과 ${pass} · 실패 ${fail} ━━\n`)
