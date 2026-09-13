@@ -151,6 +151,11 @@ function Section({
   hint?:string
 }) {
   const isOpen = collapsible ? !!open : true
+  /*  ★펴는 애니메이션이 «끝났는가». 끝나면 maxHeight 를 풀어 내용을 다 보입니다.
+   *  ⚠️ 접힌 상태면 «언제나» false 입니다 — effect 로 되돌릴 필요가 없습니다.
+   *     (effect 안에서 setState 를 부르면 린트가 막습니다) */
+  const [settledRaw, setSettled] = useState(!collapsible)
+  const settled = isOpen && settledRaw
   return (
     <div style={{background:'#fff',border:LINE_OUTER,borderRadius:'16px',overflow:'hidden',marginBottom:'10px'}}>
       <div
@@ -182,7 +187,33 @@ function Section({
           <span aria-hidden style={{color:'#96502e',fontSize:'22px',lineHeight:1,padding:'4px 2px',display:'inline-block',transition:'transform .25s',
             transform:`rotate(${isOpen?'180':'0'}deg)`}}>▾</span>}
       </div>
-      <div style={{maxHeight: isOpen?'2000px':'0',overflow:'hidden',transition:'max-height .3s ease'}}>
+      {/*  🔴🔴 ★2026-09-13 (7부) [대표님이 «전문가용 만세력» 화면에서 찾아내심]
+             「외곽 라인이 전체를 담지 못하고 ★일부가 가려 있다」
+
+           [겪은 일]  전문가 상세를 펼치면 ★「공망 — 두 기준」 칸이 «잘려» 나왔습니다.
+             바깥 주황 테두리가 그 줄을 못 감싸고 아래로 삐져나왔습니다.
+
+           [까닭]  ★maxHeight 를 «2000px» 로 못 박아 두었습니다.
+             그 위는 overflow:hidden 이라 ★그냥 «잘립니다».
+             ⇒ 전문가 상세는 지장간 · 납음 · 12운성 · 신살 2기준 · 귀인 ·
+               형충회합 · 공망 이 다 들어가 ★2000px 를 넘습니다.
+
+           [고침]  ★펼쳤을 때는 «자르지 않습니다» (maxHeight: 'none').
+             ⚠️ 그러면 «펴는 애니메이션» 이 안 돕니다. 그래서 —
+               · 접힐 때(0)와 접는 동안에는 ★그대로 maxHeight 로 다룹니다
+               · ★펴는 동안만 2000px 로 열고, 다 펴진 «뒤» 에 none 으로 풉니다
+             ⇒ 애니메이션은 그대로, 내용은 ★안 잘립니다.
+
+           ⛔ maxHeight 에 ★숫자를 «다시» 못 박지 마십시오.
+              내용이 길어지면 ★또 잘립니다 (검사 53). */}
+      <div
+        style={{
+          maxHeight: isOpen ? (settled ? 'none' : '2000px') : '0',
+          overflow: isOpen && settled ? 'visible' : 'hidden',
+          transition: 'max-height .3s ease',
+        }}
+        onTransitionEnd={() => { setSettled(isOpen) }}
+      >
         <div style={{padding:'12px 14px'}}>{children}</div>
       </div>
     </div>
