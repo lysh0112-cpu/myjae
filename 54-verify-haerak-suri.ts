@@ -432,6 +432,47 @@ async function jaeryoNet() {
     ok([...vals].every(v => v === 29 || v === 30), '⛔ ★29 또는 30 뿐입니다 (음력에 31일은 없습니다)')
   }
 
+  /* ══ ㉑ 🔴 화면 셋과 셈 창구 — 있는가 · 규칙을 지키는가 ══ */
+  head('㉑ 🔴 화면 셋 — 보관함 · 입력 · 결과')
+  const R = (p: string) => { try { return readFileSync(p, 'utf8') } catch { return '' } }
+  const stor = R('app/manseryeok/haerak/page.tsx')
+  const inp = R('app/manseryeok/haerak-input/page.tsx')
+  const res = R('app/manseryeok/haerak-result/page.tsx')
+  const api = R('app/api/haerak/route.ts')
+  ok(!!stor && !!inp && !!res && !!api, '★보관함 · 입력 · 결과 · 셈 창구가 «다» 있습니다')
+  //  ⛔ 틀을 다시 짓지 않았는가 — 공용 부품을 쓰는가
+  ok(/StorageShell/.test(stor) && /PersonPickerModal/.test(stor),
+    '⛔ 보관함이 ★공용 부품(StorageShell · PersonPickerModal)을 씁니다')
+  ok(/actionLabel=\{'새로운 사람 보기'\}/.test(stor),
+    '★아래 단추는 「새로운 사람 보기」 입니다 [대표님 2026-09-14]')
+  ok(/listRecordsByService\('haerak'\)/.test(stor) && /serviceType="haerak_person"/.test(stor),
+    '⛔ 기록과 «사람» 갈래를 갈랐습니다 (목록에 두 번 안 뜹니다)')
+  //  ⛔ 입력 화면이 생년월일을 «다시 묻지» 않는가
+  ok(!/생년월일[\s\S]{0,80}<input/.test(inp), '⛔ 입력 화면이 생년월일을 ★«다시 묻지» 않습니다')
+  ok(/쓰지 않습니다/.test(inp), '★「태어난 시 — 쓰지 않습니다」 를 보여 드립니다')
+  ok(/WalletPaySheet/.test(inp) && /item="haerak_ai"/.test(inp),
+    '⛔ 결제는 ★공용 시트를 씁니다 (팝업을 따로 안 만들었습니다)')
+  //  🔴 손님 화면에 「원당」 이 «한 글자도» 없는가
+  ok(!/원당|元堂/.test(stor + inp + res.replace(/\/\*[\s\S]*?\*\//g, '')),
+    '🔴 ⛔ ★손님 화면에 「원당」 이 «한 글자도» 없습니다 [대표님 2026-09-14]')
+  //  ⛔ 화면이 «다시 셈하지» 않는가 — 창구 한 곳
+  ok(!/calcHaerak/.test(res) && /fetch\('\/api\/haerak'/.test(res),
+    '⛔ 결과 화면이 ★«다시 셈하지» 않습니다 — /api/haerak 한 곳입니다')
+  //  ⛔ 창구가 AI 를 안 부르는가
+  ok(!/anthropic|openai|claude/i.test(api), '⛔ ★셈 창구가 AI 를 «안 부릅니다»')
+  //  ⛔ 가린 갈래가 손님에게 안 나가는가
+  ok(/filter\(\(p: GwaePart\) => !p\.hide\)/.test(api),
+    '⛔ ★가린 갈래(hide)는 손님에게 «안 보냅니다»')
+  //  ⛔ 글이 없으면 지어내지 않는가
+  ok(/옮기는 중/.test(res) && /parts === null/.test(res),
+    '⛔ 글이 없으면 ★«지어내지» 않고 사실대로 말합니다')
+  //  ★다시보기 — 저장본을 열되 다시 저장하지 않는가
+  ok(/recordId/.test(stor) && /if \(!data \|\| recordId\) return/.test(res),
+    '★다시보기로 들어오면 ⛔ «또» 저장하지 않습니다')
+  //  ★나이는 보러 오시는 그때
+  ok(/todayYear: new Date\(\)\.getFullYear\(\)/.test(api),
+    '🔴 ★나이는 «보러 오시는 그때» 기준입니다 (볼 해로 안 셉니다)')
+
   console.log(`\n━━ 하락이수 수리 — 통과 ${pass} · 실패 ${fail} ━━\n`)
   process.exit(fail ? 1 : 0)
 }
