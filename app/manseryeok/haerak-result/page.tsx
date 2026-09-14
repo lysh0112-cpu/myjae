@@ -58,6 +58,12 @@ interface Out {
   su: { nyeon: number; wol: number; il: number }
   /** ★나머지 수 — 연재쌤 노트의 붉은 동그라미 ③⑥① (9부) */
   namu: { nyeon: number; wol: number; il: number }
+  /** ★수가 «어떻게» 나왔는가 — 윗수 + 천간 + 지지 (9부) */
+  kan: {
+    nyeon: { top: number; gan: number; ji: number }
+    wol: { top: number; gan: number; ji: number }
+    il: { top: number; gan: number; ji: number }
+  }
   seoncheon: GwaeOut
   hucheon: GwaeOut
   geunggeo: {
@@ -191,6 +197,7 @@ function HaerakResultInner() {
   }
 
   const g = data.geunggeo
+  const k = data.kan
   return (
     <Wrap>
       <button type="button" onClick={() => router.push('/manseryeok/haerak')} style={backBtn} aria-label="뒤로">‹</button>
@@ -261,16 +268,27 @@ function HaerakResultInner() {
           </span>
         </summary>
         <div style={{ marginTop: 9, fontSize: 11.5, color: SUB, lineHeight: 1.9 }}>
+          {/*  ⚠️ 나이·월말·생일은 ★아래 세 줄이 «이름을 붙여» 다시 보여 드립니다.
+            *     여기서는 ★한눈에 보시라고 한 줄로 둡니다. */}
           음력 생월·생일 {g.eumWol}월 {g.eumIl}일 · 나이 {g.nai}세 · 그 달 마지막 날 {g.wolLastDay}일<br />
-          간지 {g.nyeonGanji} · {g.wolGanji} · {g.ilGanji}<br />
-          {/*  🔴 ★수 · 나누기 · 나머지 «세 줄» — [대표님 2026-09-14]
-            *     연재쌤 노트의 붉은 동그라미 ③⑥① 을 대조하실 자리입니다.
-            *  ⛔ 나누는 수(8·6·3)는 ★하락이수의 «붙박이» 입니다 (년÷8 · 월÷6 · 일÷3).
-            *     ⚠️ 그래도 «글자» 로 적지 말고 열쇠 하나로 두었습니다 — 셋이 어긋나지 않게.
+          {/*  🔴 ★수가 «어떻게» 나왔는지 — 줄마다 한 줄씩 [대표님 2026-09-14]
+            *
+            *  ⚠️ ★윗수가 칸마다 «다릅니다» — 년은 나이 · 월은 그 달 마지막 날 · 일은 음력 생일.
+            *     그래서 ★이름을 붙여 둡니다. 안 붙이면 「62가 어디서 나왔지?」 하십니다.
+            *  ⚠️ ★지지 수도 칸마다 «표가 다릅니다» — 같은 未 라도 월 8 · 년 13 · 일 11.
+            *     ⇒ 줄을 나눠 놓아야 그것이 보입니다.
+            *  ⛔ 나누는 수(8·6·3)는 ★하락이수의 «붙박이» 입니다.
+            *     ⚠️ 글자로 적지 말고 ★열쇠(DIV) 하나로 두었습니다 — 창구와 어긋나지 않게.
             *  ⛔ 여기서 «다시 셈하지» 않습니다 — 창구가 보낸 값을 그대로 그립니다. */}
-          수 　　 년 {data.su.nyeon} · 월 {data.su.wol} · 일 {data.su.il}<br />
-          나누기 　년 ÷{DIV.nyeon} · 월 ÷{DIV.wol} · 일 ÷{DIV.il}<br />
-          나머지 　년 {data.namu.nyeon} · 월 {data.namu.wol} · 일 {data.namu.il}
+          <div style={{ marginTop: 4 }}>
+            년　{g.nyeonGanji}　나이 {k.nyeon.top} + {g.nyeonGanji[0]} {k.nyeon.gan} + {g.nyeonGanji[1]} {k.nyeon.ji} = {data.su.nyeon}　÷{DIV.nyeon} → {data.namu.nyeon}
+          </div>
+          <div>
+            월　{g.wolGanji}　월말 {k.wol.top} + {g.wolGanji[0]} {k.wol.gan} + {g.wolGanji[1]} {k.wol.ji} = {data.su.wol}　÷{DIV.wol} → {data.namu.wol}
+          </div>
+          <div>
+            일　{g.ilGanji}　생일 {k.il.top} + {g.ilGanji[0]} {k.il.gan} + {g.ilGanji[1]} {k.il.ji} = {data.su.il}　÷{DIV.il} → {data.namu.il}
+          </div>
           <div style={{ marginTop: 6, fontSize: 11, opacity: 0.8 }}>
             ※ 나눈 숫자가 정확히 떨어지면, 나눈 숫자를 그대로 표시한다.
           </div>

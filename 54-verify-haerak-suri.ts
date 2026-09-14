@@ -946,11 +946,12 @@ async function jaeryoNet() {
       '★창구가 나머지 수를 «셈해서» 보냅니다')
     ok(/namuji\(r\.su\.wol, 6\)/.test(route) && /namuji\(r\.su\.il, 3\)/.test(route),
       '★년÷8 · 월÷6 · 일÷3 입니다')
-    ok(/나머지 .*\{data\.namu\.nyeon\}/.test(result),
-      '🔴 ★결과 화면이 나머지를 «그립니다» [대표님 2026-09-14]')
-    //  🔴 ★나누는 수(8·6·3)도 보입니다 [대표님]
-    ok(/나누기 .*÷\{DIV\.nyeon\}/.test(result) && /÷\{DIV\.wol\}/.test(result) && /÷\{DIV\.il\}/.test(result),
-      '🔴 ★「나누기 년 ÷8 · 월 ÷6 · 일 ÷3」 줄이 있습니다 [대표님]')
+    ok(/\{data\.namu\.nyeon\}/.test(result) && /\{data\.namu\.wol\}/.test(result)
+      && /\{data\.namu\.il\}/.test(result),
+      '🔴 ★결과 화면이 나머지 셋을 «그립니다» [대표님 2026-09-14]')
+    //  🔴 ★나누는 수(8·6·3)도 줄마다 보입니다 [대표님]
+    ok(/÷\{DIV\.nyeon\}/.test(result) && /÷\{DIV\.wol\}/.test(result) && /÷\{DIV\.il\}/.test(result),
+      '🔴 ★줄마다 「÷8 · ÷6 · ÷3」 이 보입니다 [대표님]')
     //  ⛔ 화면의 나누는 수와 창구의 나누는 수가 «같아야» 합니다
     {
       const m = result.match(/const DIV = \{ nyeon: (\d+), wol: (\d+), il: (\d+) \}/)
@@ -964,6 +965,41 @@ async function jaeryoNet() {
       '★꼬리말이 붙어 있습니다 — 「딱 떨어지면 나눈 수를 그대로」 [대표님]')
     ok(!/namuji\(/.test(result),
       '⛔ ★화면이 «다시 셈하지» 않습니다 — 창구가 보낸 값을 그대로 그립니다')
+
+    //  🔴 ★수가 «어떻게» 나왔는지 줄마다 보이는가 [대표님 2026-09-14]
+    //  ⛔ ★세 줄이 «각각 제 칸» 을 써야 합니다 —
+    //     년 줄에 월의 지지 수가 섞이면 ★화면이 «거짓말» 을 합니다 (합이 안 맞습니다).
+    //     ⚠️ 9부에 이것을 «되살려 보고» 알았습니다 — 느슨한 그물은 못 잡았습니다.
+    {
+      const line = (k: string) => new RegExp(
+        `${k}: \\{ top: r\\.kan\\.${k}\\.top, gan: r\\.kan\\.${k}\\.ganSu, ji: r\\.kan\\.${k}\\.jiSu \\}`)
+      const bad = (['nyeon', 'wol', 'il'] as const).filter(k => !line(k).test(route))
+      ok(bad.length === 0,
+        `🔴 ⛔ ★창구의 세 줄이 «각각 제 칸» 을 씁니다 ${bad.join(' ')}`)
+    }
+    ok(/나이 \{k\.nyeon\.top\}/.test(result) && /월말 \{k\.wol\.top\}/.test(result)
+      && /생일 \{k\.il\.top\}/.test(result),
+      '🔴 ★윗수에 «이름» 이 붙습니다 — 년은 나이 · 월은 월말 · 일은 생일 [대표님]')
+    ok(/= \{data\.su\.nyeon\}/.test(result) && /→ \{data\.namu\.nyeon\}/.test(result),
+      '★한 줄에 «= 수  ÷나누기 → 나머지» 까지 이어집니다')
+
+    //  🔴 ⛔ 쪼갠 값이 «합쳐서 수가 되는가» — 틀린 쪼개기를 잡습니다
+    {
+      const bad: string[] = []
+      for (const n of NOTES) {
+        const a = kanSu('nyeon', n.nyeon, n.nai)
+        const b = kanSu('wol', n.wol, n.wolLast)
+        const c = kanSu('il', n.il, n.eumIl)
+        for (const [nm, x, tot] of [['년', a, n.suN], ['월', b, n.suW], ['일', c, n.suI]] as const) {
+          if (!x || x.top + x.ganSu + x.jiSu !== tot) bad.push(`${n.who}${n.year} ${nm}`)
+        }
+      }
+      ok(bad.length === 0, `🔴 ⛔ ★«윗수+천간+지지» 가 노트의 수와 «딱» 맞습니다 ${bad.join(' ')}`)
+    }
+    //  ⚠️ ★같은 지지라도 칸마다 수가 다릅니다 — 화면이 줄을 나눈 까닭입니다
+    ok(kanSu('wol', '丁未', 0)?.jiSu === 8 && kanSu('nyeon', '丁未', 0)?.jiSu === 13
+      && kanSu('il', '丁未', 0)?.jiSu === 11,
+      '⚠️ ★같은 未 라도 월 8 · 년 13 · 일 11 입니다 (칸마다 표가 다릅니다)')
 
     //  🔴 값으로 — 희준 2028 이 ★3·6·1 인가 (연재쌤 노트)
     ok(namuji(51, 8) === 3, '★년 51 ÷8 → 3   [노트 ③]')

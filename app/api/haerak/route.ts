@@ -178,6 +178,17 @@ export async function POST(request: Request) {
         wol: namuji(r.su.wol, 6),
         il: namuji(r.su.il, 3),
       },
+      /*  🔴 ★수가 «어떻게» 나왔는지 — 2026-09-14 (9부) [대표님]
+       *     윗수 + 천간 수 + 지지 수 = 칸의 수.
+       *  ⚠️ ★윗수가 칸마다 «다른 것» 입니다 —
+       *     년 = 나이 · 월 = 그 달 마지막 날 · 일 = 음력 생일.
+       *  ⚠️ ★지지 수도 칸마다 «표가 다릅니다» — 같은 未 라도 월 8 · 년 13 · 일 11.
+       *     ⇒ 그래서 화면이 «줄을 나눠» 보여 드립니다. */
+      kan: {
+        nyeon: { top: r.kan.nyeon.top, gan: r.kan.nyeon.ganSu, ji: r.kan.nyeon.jiSu },
+        wol: { top: r.kan.wol.top, gan: r.kan.wol.ganSu, ji: r.kan.wol.jiSu },
+        il: { top: r.kan.il.top, gan: r.kan.il.ganSu, ji: r.kan.il.jiSu },
+      },
       seoncheon: dress(r.seoncheon.no, r.seoncheon.name, r.seoncheon.nameKo,
         r.seoncheon.sangKo, r.seoncheon.haKo, sixOf(r.seoncheon.sang, r.seoncheon.ha)),
       hucheon: dress(r.hucheon.no, r.hucheon.name, r.hucheon.nameKo,
