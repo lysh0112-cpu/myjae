@@ -971,6 +971,40 @@ async function jaeryoNet() {
     ok(namuji(25, 3) === 1, '★일 25 ÷3 → 1   [노트 ①] — 동효와 같은 값입니다')
   }
 
+  /* ══ ㉚ 🔴🔴 지갑 차감 · 상담 단추 — 2026-09-14 (9부) [대표님] ═════
+   *  [무엇이 빠져 있었나]  ★결과 화면이 wallet_use 를 «한 번도» 안 불렀습니다.
+   *     결제 시트는 «잔액이 되는지» 만 보고(wallet_check) 화면을 넘깁니다.
+   *     ⇒ 대표님 지갑에서 ★하락이수만 «안 빠졌습니다».
+   * ══════════════════════════════════════════════════════════════ */
+  head('㉚ 🔴🔴 지갑에서 «빼는가» · 상담 단추')
+  {
+    const result = R('app/manseryeok/haerak-result/page.tsx')
+    const input = R('app/manseryeok/haerak-input/page.tsx')
+
+    ok(/payFee\('haerak_ai'/.test(result) && /const payFee = useAiFee/.test(result),
+      "🔴 ⛔ ★결과 화면이 지갑에서 «뺍니다» (useAiFee → payFee 'haerak_ai')")
+    ok(/eslint 가 「use…」/.test(result),
+      '⚠️ ★이름을 바꿔 부르는 «까닭» 이 적혀 있습니다 (eslint 가 훅으로 착각합니다)')
+    ok(/item="haerak_ai"/.test(input),
+      '★결제 시트와 «같은 열쇠» 입니다 — 여쭌 값과 빼는 값이 같아야 합니다')
+    ok(/refundAiFee\(/.test(result),
+      '⛔ ★셈이 실패하면 «되돌립니다» — 「돈은 빠졌는데 못 봤다」 를 막습니다')
+    ok(/!recordId && !paidRef\.current/.test(result),
+      '⛔ ★다시보기(recordId)에서는 «안 뺍니다» — 이미 내신 것입니다')
+    ok(/paidRef/.test(result) && /useRef\(false\)/.test(result),
+      '⛔ ★«한 번만» 뺍니다 (화면이 다시 그려져도 또 안 빠집니다)')
+    ok(/paidRef\.current = false/.test(result),
+      '★되돌린 뒤에는 «다시 눌러» 보실 수 있습니다')
+
+    //  🔴 상담 단추 [대표님 2026-09-14]
+    ok(/<ConsultButton/.test(result) && /priceKey="haerak"/.test(result),
+      '🔴 ★하락이수 전담 상담사 연결 단추가 있습니다 [대표님]')
+    ok(/from '@\/app\/components\/common\/ConsultButton'/.test(result),
+      '⛔ ★공용 부품을 씁니다 — 화면마다 다시 짓지 않았습니다 (8부 §6④)')
+    ok(/consult: 'haerak'/.test(R('app/admin/components/PriceManager.tsx')),
+      '★관리 화면에 상담료 줄(consult_prices haerak)이 있습니다')
+  }
+
   console.log(`\n━━ 하락이수 수리 — 통과 ${pass} · 실패 ${fail} ━━\n`)
   process.exit(fail ? 1 : 0)
 }

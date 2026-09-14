@@ -13,11 +13,15 @@
  * ⚠️ ★글이 아직 없는 괘는 «지어내지» 않습니다 — 「옮기는 중」 이라고 말합니다.
  *    (지금은 64괘가 다 들어와 있어 빈 곳이 없습니다. 그래도 길은 남겨 둡니다.)
  */
-import { Suspense, useCallback, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { saveRecord } from '@/lib/saju/sajuRecords'
 //  ⚠️ ★글은 «한 곳» 에서 옵니다 — ⛔ 여기에 문장을 적지 마십시오
 import { HAERAK_PLAIN_NOTE } from '@/lib/saju/haerak/intro'
+//  ★지갑 관문은 lib/wallet/consultGate.ts «한 곳» 입니다
+import { useAiFee, refundAiFee, WALLET_MSG } from '@/lib/wallet/consultGate'
+//  ★상담 단추도 «공용 부품» 입니다 — ⛔ 화면마다 다시 짓지 마십시오
+import ConsultButton from '@/app/components/common/ConsultButton'
 
 const ACCENT = '#3f6fa8'
 const BG = '#FDF6F0'
@@ -41,6 +45,12 @@ interface GwaeOut {
  *     ⇒ 검사 54 ㉙ 가 둘이 어긋나는지 봅니다.
  */
 const DIV = { nyeon: 8, wol: 6, il: 3 } as const
+
+/*  ⚠️ ★eslint 가 「use…」 로 시작하는 이름을 «React 훅» 으로 착각합니다.
+ *     useAiFee 는 ★훅이 아니라 «그냥 함수» 입니다 (지갑에서 빼는 일만 합니다).
+ *  ⇒ ★이름을 바꿔 부릅니다. eslint-disable 을 뿌리지 않으려는 것입니다.
+ *  ⛔ 되돌려서 useAiFee 를 «직접» 부르지 마십시오 — 기준선(85/147)이 늘어납니다. */
+const payFee = useAiFee
 
 interface Out {
   target: number
@@ -66,11 +76,43 @@ function HaerakResultInner() {
 
   const [data, setData] = useState<Out | null>(null)
   const [err, setErr] = useState<string | null>(null)
+  /*  ⛔ ★셈을 «한 번만» 부르게 지키는 자리입니다 (돈이 빠지는 자리입니다).
+   *     ⚠️ 이것을 빼면 화면이 다시 그려질 때마다 ★또 빠집니다. */
+  const paidRef = useRef(false)
 
   /*  ⚠️ ★여기서 setErr(null) 을 «맨 위» 에 두지 마십시오.
    *     화면이 뜨자마자 값을 바꾸는 꼴이 되어 검사(react-hooks)가 막습니다.
    *     ⇒ 기다린 «뒤» 에 바꿉니다. */
   const load = useCallback(async () => {
+    /* ══════════════════════════════════════════════════════════════
+     *  🔴🔴 ★2026-09-14 (9부) — 지갑에서 «빼는» 자리
+     *
+     *  [무엇이 빠져 있었나]  8부에 ★이 한 토막이 «통째로» 없었습니다.
+     *     결제 시트는 ★«잔액이 되는지» 만 보고(wallet_check) 화면을 넘깁니다.
+     *     ⇒ 실제로 빼는 것(wallet_use)은 ★이 화면이 해야 합니다.
+     *     ⇒ 그래서 대표님 지갑에서 ★하락이수만 «안 빠졌습니다».
+     *
+     *  ⚠️ 얼마가 드는지는 입력 화면에서 ★이미 여쭀습니다.
+     *     ⛔ 여기서 «또» 묻지 마십시오 — 손님이 두 번 확인하게 됩니다.
+     *  ⛔ ★다시보기(recordId)는 «안 뺍니다» — 이미 내신 것입니다.
+     *  ⛔ ★셈이 실패하면 «되돌립니다» — 「돈은 빠졌는데 못 봤다」 가 가장 나쁩니다.
+     * ══════════════════════════════════════════════════════════════ */
+    let ledgerId: string | undefined
+    if (!recordId && !paidRef.current) {
+      paidRef.current = true
+      const fee = await payFee('haerak_ai', name || '하락이수', '하락이수 풀이')
+      if (fee.gate === 'on' && !fee.ok) {
+        //  ⚠️ 여기서는 ★되돌릴 것이 «없습니다» — 애초에 못 뺐습니다.
+        setErr(WALLET_MSG.aiRolledBack)
+        return
+      }
+      ledgerId = fee.gate === 'on' && fee.ok ? fee.ledgerId : undefined
+    }
+    //  🔴 셈이 실패한 ★«모든» 길에서 되돌립니다
+    const giveBack = async () => {
+      if (ledgerId) await refundAiFee(ledgerId, '하락이수 셈 실패 — 되돌림')
+    }
+
     try {
       const res = await fetch('/api/haerak', {
         method: 'POST',
@@ -84,13 +126,21 @@ function HaerakResultInner() {
         }),
       })
       const j = await res.json()
-      if (!res.ok) { setErr(j?.error || '셈하지 못했어요.'); return }
+      if (!res.ok) {
+        await giveBack()
+        //  ⛔ 되돌렸으니 ★다시 눌러 보실 수 있게 문을 엽니다
+        paidRef.current = false
+        setErr(j?.error || '셈하지 못했어요.')
+        return
+      }
       setErr(null)
       setData(j as Out)
     } catch {
+      await giveBack()
+      paidRef.current = false
       setErr('불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
     }
-  }, [sp])
+  }, [sp, recordId, name])
 
   /*  ⚠️ ★effect 안에서 «곧바로» 값을 바꾸면 검사가 막습니다 (cascading render).
    *     ⇒ 한 박자 미뤄서 부릅니다. 화면이 먼저 뜨고, 그다음 셈이 옵니다.
@@ -185,6 +235,17 @@ function HaerakResultInner() {
         background: CARD, border: `1px solid ${LINE}`, borderRadius: 12,
         fontSize: 11.5, color: SUB, lineHeight: 1.75,
       }}>{HAERAK_PLAIN_NOTE}</div>
+
+      {/*  🔴 ★하락이수 전담 상담사 연결 — 2026-09-14 (9부) [대표님]
+        *
+        *  ⛔ ★공용 부품(ConsultButton)을 씁니다. 화면마다 다시 짓지 마십시오 (8부 §6④).
+        *  ⚠️ priceKey 는 ★consult_prices 의 'haerak' 줄을 읽습니다 —
+        *     관리 화면에서 «상담료» 를 정해 두셔야 단추가 제대로 열립니다.
+        *  ⚠️ ★알림 한 줄 «위» 에 둡니다 — 글을 다 읽으신 «바로 뒤» 가 눌리는 자리입니다.
+        *     (승진운도 맺음말 바로 아래에 두었습니다 — 7부 1-5) */}
+      <div style={{ marginTop: 18 }}>
+        <ConsultButton priceKey="haerak" mode="haerak" />
+      </div>
 
       {/* ── 셈한 값 — ★대표님·연재쌤 대조용. 작게 둡니다 ── */}
       <details style={{ marginTop: 16, background: CARD, border: `1px solid ${LINE}`, borderRadius: 12, padding: '11px 13px' }}>
