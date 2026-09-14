@@ -19,7 +19,7 @@ import {
 import {
   splitGanjiHaerak, jiOfEumnyeokWol, namuji, kanSu, bakkunHagwae, calcHaerak,
 } from './lib/saju/haerak/haerakSuri'
-import { gwaeTextOf, hyoTextOf, gwaeTextCount } from './lib/saju/haerak/tables/gwaeText'
+import { gwaeTextOf, hyoTextOf, gwaeTextCount, gwaeTextHave, allChecks } from './lib/saju/haerak/tables/gwaeText'
 import { readFileSync } from 'fs'
 
 let pass = 0, fail = 0
@@ -251,7 +251,7 @@ head('⑯ 🔴 다음에 여쭐 것을 «적어 두었는가» (2단계)')
 
 head('⑰ 🔴 괘 풀이 글 — 교재와 «글자 그대로» 인가 (2단계 첫걸음)')
 {
-  ok(gwaeTextCount() === 1, `★글이 들어온 괘 — ${gwaeTextCount()} / 64 (나머지는 스캔이 오는 대로)`)
+  ok(gwaeTextCount() === 36, `★글이 들어온 괘 — ${gwaeTextCount()} / 64 (도표 1 ~ 52)`)
 
   const sa = gwaeTextOf(10)
   ok(!!sa && sa.name === '師', '★師(사) 10 이 들어왔습니다')
@@ -283,6 +283,44 @@ head('⑰ 🔴 괘 풀이 글 — 교재와 «글자 그대로» 인가 (2단계
   //  ⛔ 4·5·6효를 담지 않았는가
   ok(hyoTextOf(10, 4) === null && hyoTextOf(10, 6) === null, '⛔ 4·5·6효는 담지 않았습니다 (영영 안 쓰입니다)')
   ok(hyoTextOf(67, 1) === null, '⛔ 아직 안 들어온 괘(升 67)는 ★null 입니다 — 「준비 중」 을 지어내지 않습니다')
+
+  //  🔴 들어온 서른여섯 괘 «전부» — 효 이름이 하괘의 음양과 맞는가
+  const O2 = ['乾', '兌', '離', '震', '巽', '坎', '艮', '坤']
+  const partsOf = (nm: string) => {
+    for (const s2 of O2) for (const h of O2) if (gwaeName(s2, h) === nm) return { s: s2, h }
+    return null
+  }
+  const wantLab = (ha: string, n: number) => {
+    const b = PALGWAE_HYO[ha]
+    return (n === 1 ? '初' : '') + (b[n - 1] ? '九' : '六') + (n === 1 ? '' : n === 2 ? '二' : '三')
+  }
+  {
+    const bad: string[] = []
+    let cells = 0
+    gwaeTextHave().forEach(no => {
+      const g = gwaeTextOf(no)!
+      const p = partsOf(g.name)
+      if (!p) { bad.push(`${g.name} — 64괘 표에 없음`); return }
+      for (const n of [1, 2, 3] as const) {
+        cells++
+        if (g.hyo[n].label !== wantLab(p.h, n)) bad.push(`${g.name} ${n}효 ${g.hyo[n].label} ≠ ${wantLab(p.h, n)}`)
+      }
+    })
+    ok(bad.length === 0, `🔴 ★효 이름 ${cells}칸이 하괘의 음양과 «다 맞습니다» ${bad.join(' / ')}`)
+  }
+  //  ⛔ 번호가 도표와 어긋난 괘가 없는가
+  ok(gwaeTextHave().every(no => gwaeTextOf(no)!.no === no && GWAE_NO[gwaeTextOf(no)!.name] === no),
+    '⛔ ★서른여섯 괘의 번호가 도표 번호와 «다 같습니다»')
+  //  ⛔ 빈 글 · 출처 없는 괘가 없는가
+  ok(gwaeTextHave().every(no => !!gwaeTextOf(no)!.src), '★서른여섯 괘가 다 «교재 출처» 를 갖고 있습니다')
+  ok(gwaeTextHave().every(no => [1, 2, 3].every(n => {
+    const h = gwaeTextOf(no)!.hyo[n as 1 | 2 | 3]
+    return (h.lead ?? '').length + h.parts.length > 0 && h.parts.every(x => x.who && x.text)
+  })), '⛔ 빈 효 · 빈 갈래가 한 칸도 없습니다')
+  //  🔴 못 읽은 자리를 «숨기지 않는가»
+  ok(allChecks().length >= 10,
+    `🔴 ★제가 «못 읽은» 자리를 ${allChecks().length}곳 적어 두었습니다 — 대표님이 여기만 보시면 됩니다`)
+  ok(allChecks().every(c => c.name && c.note), '★어느 괘의 어디인지까지 적혀 있습니다')
 
   //  ⛔ 글을 지어내지 않았는가 — 갈래 이름이 교재 말인지
   const whos = new Set([1, 2, 3].flatMap(n => hyoTextOf(10, n)!.parts.map(p => p.who)))

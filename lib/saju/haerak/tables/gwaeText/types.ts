@@ -48,4 +48,10 @@ export interface GwaeText {
   hyo: { 1: HyoText; 2: HyoText; 3: HyoText }
   /** 교재 어디서 왔는지 — ★근거를 남깁니다 (연재쌤 검수에 씁니다) */
   src: string
+  /**
+   *  🔴 ★제가 «손글씨를 잘 못 읽은» 자리.
+   *     ⛔ 비워 두지 마십시오 — 모르는 것을 «모른다» 고 적는 칸입니다.
+   *     ⇒ 대표님이 이 자리만 눈으로 대조해 주시면 됩니다.
+   */
+  check?: string[]
 }
