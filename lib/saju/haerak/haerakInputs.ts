@@ -15,12 +15,35 @@
  *  ★맞춰 본 것 — 손글씨 노트 일곱 건의 «간지 스물한 개» 와 «윗수 스물한 개»
  *     (검사 54 에서 값으로 잽니다)
  *
- *  ⛔ AI 를 한 번도 부르지 않습니다. 바깥 창구(KASI)도 안 부릅니다.
- *     ⇒ 부본(lunar-javascript)만으로 셉니다. 값이 늘 같습니다.
+ *  ┌──────────────────────────────────────────────────────────────────┐
+ *  │  🔴🔴 ★2026-09-14 (9부) — «부본만 쓰던 것» 을 고쳤습니다          │
+ *  │                                                                  │
+ *  │  [8부에 있던 일]  이 파일이 ★일부러 빈 키('')를 넘겨              │
+ *  │     부본(lunar-javascript)만으로 셈했습니다.                      │
+ *  │     「바깥을 안 부르니 값이 늘 같다」 는 까닭이었습니다.            │
+ *  │                                                                  │
+ *  │  [무엇이 틀렸나]  ★그 부본이 «한국천문연구원 달력과 다릅니다».     │
+ *  │     · 양 2026-10-10 → 부본 「음 9.1」 · ★한국 「음 8.30」          │
+ *  │     · 양 2027-02-06 → 부본 「음 1.1」 · ★한국 「음 12.30」(섣달그믐)│
+ *  │     ⇒ 손글씨 노트 일곱 건 중 ★월말 넷 · 일진 하나가 어긋났습니다.  │
+ *  │     ⇒ 괘가 통째로 바뀝니다 (희준 26년은 선천·후천이 «맞바뀜»).     │
+ *  │                                                                  │
+ *  │  [누가 찾았나]  ★대표님이 「초하루 9/11, 말일 10/10 — 30일 아니냐」 │
+ *  │     한 줄 물어 주셔서 드러났습니다 (2026-09-14).                   │
+ *  │                                                                  │
+ *  │  ⛔ ★규칙은 «처음부터 맞았습니다». 틀린 것은 «달력» 이었습니다.    │
+ *  │     ⇒ 8부에 적힌 「−2달 · +2달」 따위로 ⛔ 규칙을 비틀지 마십시오. │
+ *  └──────────────────────────────────────────────────────────────────┘
+ *
+ *  ⛔ AI 는 한 번도 부르지 않습니다.
+ *  🔴 ★달력은 «정본(KASI)» 을 씁니다 — apiKey 를 ★반드시 넘기십시오.
+ *     ⇒ 빈 키를 넘기면 부본으로 떨어지고 ★괘가 틀립니다.
+ *     ⇒ 그래서 apiKey 를 «기본값 없는 필수 인자» 로 두었습니다.
+ *       (빠뜨리면 tsc 가 잡습니다 — 말이 아니라 값으로 막습니다)
  */
 
 import { getDayGanji } from '@/lib/saju/ganji'
-import { solarToLunar, lunarToSolar } from '@/lib/saju/lunarConvert'
+import { solarToLunar, lunarToSolar, type LunarSource, type SolarYmd } from '@/lib/saju/lunarConvert'
 import { EUMNYEOK_WOL_JI } from './tables/suri'
 
 const GAN = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'] as const
@@ -56,15 +79,21 @@ export function wolGanjiOf(year: number, eumWol: number): string {
 
 /* ── ③ 그 해 · 그 음력 날의 간지 (일진) ────────────────────────────
  *  음력 → 양력으로 옮긴 뒤 일진을 셉니다.
- *  ⛔ 부본만 씁니다 (바깥 창구를 안 부릅니다).
+ *  🔴 ★달력이 하루만 어긋나도 일진이 통째로 바뀝니다.
+ *     류 님 27년 — 음 2027.1.12 를
+ *        부본 「양 2.17」 ⇒ 丁卯   ❌
+ *        ★한국 「양 2.18」 ⇒ 戊辰  ✅ 노트와 같습니다
+ *     ⇒ 8부에 「연재쌤께 여쭐 것」 으로 남아 있던 자리가 ★이것이었습니다.
  * ─────────────────────────────────────────────────────────────── */
-export async function ilGanjiOf(year: number, eumWol: number, eumIl: number, isLeap = false): Promise<string> {
-  //  ⚠️ 이 부품은 { value, source, … } 를 줍니다. ★ok 가 «없습니다».
-  //     키를 안 넘기면 부본(lunar-javascript)으로 셉니다 — 바깥 창구를 안 부릅니다.
-  const r = await lunarToSolar({ year, month: eumWol, day: eumIl, isLeap }, '')
+export async function ilGanjiOf(
+  year: number, eumWol: number, eumIl: number, isLeap: boolean,
+  /** ⛔ 빈 문자열이면 부본으로 떨어집니다 — source 를 «반드시» 보십시오 */
+  apiKey: string,
+): Promise<{ ganji: string; source: LunarSource }> {
+  const r = await lunarToSolar({ year, month: eumWol, day: eumIl, isLeap }, apiKey)
   const s = r.value
-  if (!s) return ''
-  return getDayGanji(s.year, s.month, s.day)
+  if (!s) return { ganji: '', source: r.source }
+  return { ganji: getDayGanji(s.year, s.month, s.day), source: r.source }
 }
 
 /* ── ④ 그 음력 달의 «마지막 날» ────────────────────────────────────
@@ -74,21 +103,57 @@ export async function ilGanjiOf(year: number, eumWol: number, eumIl: number, isL
  *     ⇒ 태어난 «달 번호» 는 평생 고정이고, 그 달의 «대소» 는 해마다 달력이 정합니다.
  *     ⇒ ★달력만 있으면 누구든 셀 수 있는 값입니다. 사람이 적어 넣지 않습니다.
  *  ⛔ ★29 또는 30 뿐입니다. 31은 «없습니다» — 음력에는 31일이 아예 없습니다.
- *  ⚠️ ★손글씨 노트 일곱 건 중 «넷» 이 이 규칙과 어긋납니다.
- *     ⇒ 연재쌤이 ★「노트 쪽 착오」 라 확인해 주셨습니다 (2026-09-14).
- *     ⇒ ⛔ 노트에 맞추려고 이 셈을 비틀지 마십시오.
- *  [어떻게]  그 달 30일이 «있는지» 물어봅니다.
- *     30일을 양력으로 옮겼다가 다시 음력으로 되돌렸을 때
- *     ★그대로 30일이면 큰달(30) · 아니면 작은달(29) 입니다.
+ *
+ *  🔴🔴 ★2026-09-14 (9부) — 8부의 기록을 «바로잡습니다»
+ *     8부에는 「노트 넷이 규칙과 어긋난다 · 연재쌤이 ★노트 쪽 착오라 확인」
+ *     이라 적혀 있었습니다. ⛔ ★그것이 틀렸습니다.
+ *     ⇒ ★노트가 «다 맞았습니다». 틀린 것은 ★부본 달력이었습니다 —
+ *        희준26 음8월  30 ✅  (양 2026-10-10 이 음 8.30 · 한국천문연구원)
+ *        도이26 음12월 30 ✅  (양 2027-02-06 이 음 12.30 · 섣달그믐)
+ *        도이27 음12월 30 ✅  (2028 설날 1/27 · 그 전날 1/26 이 음 12.30)
+ *        류  27 음1월  29 ✅  (음 2월 1일이 양 2027-03-08)
+ *     ⇒ ⛔ 연재쌤께 ★틀린 전제로 여쭈어 틀린 확인을 받은 것입니다.
+ *       답을 «듣고 닫지» 말고 ★그 자리에서 값으로 재라 — 8부 §2② 그대로였습니다.
+ *
+ *  [어떻게]  🔴 ★«있는 날짜» 만 물어봅니다.
+ *     초하루 → 양력 A  ·  A 에서 29일 뒤 → 양력 C
+ *     C 를 음력으로 되돌려 ★아직 그 달 30일이면 큰달 · 다음 달이면 작은달.
+ *  ⛔ ★「그 달 30일이 있느냐」 고 «묻지» 마십시오 (8부 방식) —
+ *     ★없는 날짜입니다. 부본은 null 을 주지만 ★KASI 는 그렇게 답해 주지 않습니다.
+ *     ⇒ 정본이 못 알아듣고 «부본으로 떨어져» 고친 보람이 사라집니다.
+ *     ⇒ 검사 54 ㉓ 이 day: 30 을 «묻는 코드» 가 되살아나는지 봅니다.
  * ─────────────────────────────────────────────────────────────── */
-export async function wolLastDayOf(year: number, eumWol: number, isLeap = false): Promise<29 | 30> {
-  const r = await lunarToSolar({ year, month: eumWol, day: 30, isLeap }, '')
-  if (!r.value) return 29
-  const back = await solarToLunar(r.value, '')
+export async function wolLastDayOf(
+  year: number, eumWol: number, isLeap: boolean,
+  /** ⛔ 빈 문자열이면 부본으로 떨어집니다 — source 를 «반드시» 보십시오 */
+  apiKey: string,
+): Promise<{ last: 29 | 30 | null; source: LunarSource }> {
+  //  ① 그 달 «초하루» 의 양력 날짜 — ★있는 날짜입니다
+  const first = await lunarToSolar({ year, month: eumWol, day: 1, isLeap }, apiKey)
+  if (!first.value) return { last: null, source: first.source }
+
+  //  ② 거기서 «29일 뒤» 도 ★반드시 있는 날짜입니다 (달은 29일보다 짧지 않습니다)
+  const c = plusDays(first.value, 29)
+  const back = await solarToLunar(c, apiKey)
+  const src = worse(first.source, back.source)
+  if (!back.value) return { last: null, source: src }
+
+  //  ③ 그날이 «아직 그 달 30일» 이면 큰달, 벌써 다음 달로 넘어갔으면 작은달
   const b = back.value
-  if (!b) return 29
-  const same = b.year === year && b.month === eumWol && b.day === 30 && b.isLeap === isLeap
-  return same ? 30 : 29
+  const still = b.year === year && b.month === eumWol && b.isLeap === isLeap && b.day === 30
+  return { last: still ? 30 : 29, source: src }
+}
+
+/** 양력 날짜에 며칠을 더합니다 (⛔ 시간대에 흔들리지 않게 UTC 로 셉니다) */
+function plusDays(s: SolarYmd, n: number): SolarYmd {
+  const t = Date.UTC(s.year, s.month - 1, s.day) + n * 86400000
+  const d = new Date(t)
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() }
+}
+
+/** 둘 중 «못 미더운» 쪽 — 하나라도 부본이면 부본입니다 */
+function worse(a: LunarSource, b: LunarSource): LunarSource {
+  return a === 'KASI' && b === 'KASI' ? 'KASI' : 'FALLBACK_LUNAR_JS'
 }
 
 /* ── ⑤ 나이 ───────────────────────────────────────────────────────
@@ -108,6 +173,11 @@ export interface HaerakJaeryo {
   nai: number
   wolLastDay: 29 | 30
   eumIl: number
+  /**
+   * 🔴 ★이 재료가 «어느 달력» 에서 나왔는가.
+   *    'FALLBACK_LUNAR_JS' 이면 ⛔ 괘가 틀릴 수 있습니다 — 손님에게 내보내지 마십시오.
+   */
+  dalRyeok: LunarSource
 }
 
 /**
@@ -127,8 +197,13 @@ export async function jaeryoOf(args: {
   todayYear: number
   /** 태어난 달이 윤달이었는가 */
   birthLeap?: boolean
+  /**
+   * 🔴 ★KASI 키. ⛔ 빈 문자열을 넘기지 마십시오 — 부본으로 떨어져 괘가 틀립니다.
+   *    (검사에서 «부본이 어떻게 다른지» 를 재려고 일부러 '' 를 넘길 때만 씁니다)
+   */
+  apiKey: string
 }): Promise<HaerakJaeryo | null> {
-  const { eumWol, eumIl, birthSolarYear, year, todayYear } = args
+  const { eumWol, eumIl, birthSolarYear, year, todayYear, apiKey } = args
   if (eumWol < 1 || eumWol > 12) return null
   if (eumIl < 1 || eumIl > 30) return null
 
@@ -136,9 +211,16 @@ export async function jaeryoOf(args: {
   const wolGanji = wolGanjiOf(year, eumWol)
   //  ⚠️ «볼 해» 의 그 달을 봅니다. 태어난 해가 윤달이었어도 볼 해에는 없을 수 있어
   //     ★윤달을 들고 가지 «않습니다» (평달로 봅니다).
-  const ilGanji = await ilGanjiOf(year, eumWol, eumIl, false)
-  const wolLastDay = await wolLastDayOf(year, eumWol, false)
-  if (!nyeonGanji || !wolGanji || !ilGanji) return null
+  const il = await ilGanjiOf(year, eumWol, eumIl, false, apiKey)
+  const wl = await wolLastDayOf(year, eumWol, false, apiKey)
+  if (!nyeonGanji || !wolGanji || !il.ganji) return null
+  //  ⛔ 못 재면 ★29 로 «때려 넣지» 않습니다 (8부는 그랬습니다) — 없는 채로 돌려보냅니다.
+  if (wl.last === null) return null
 
-  return { nyeonGanji, wolGanji, ilGanji, nai: naiOf(birthSolarYear, todayYear), wolLastDay, eumIl }
+  return {
+    nyeonGanji, wolGanji, ilGanji: il.ganji,
+    nai: naiOf(birthSolarYear, todayYear),
+    wolLastDay: wl.last, eumIl,
+    dalRyeok: worse(il.source, wl.source),
+  }
 }

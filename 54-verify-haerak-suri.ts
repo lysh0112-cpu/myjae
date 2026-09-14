@@ -409,29 +409,49 @@ async function jaeryoNet() {
   ok(naiOf(1995, 2026) === 32 && naiOf(1966, 2026) === 61, '★나이 = 보러 오시는 해 − 태어난 해 + 1')
   ok(naiOf(1995, 2026) === naiOf(1995, 2026), '⛔ «보는 해» 로 세지 않습니다 — 상담 시점 하나입니다')
 
-  head('⑳ 🔴 일 간지 · 월말 — 달력에서 나오는가 (바깥 창구 안 부름)')
+  /* ══ ⑳ 🔴🔴 달력 — «부본» 이 노트와 어디서 갈리는가 ══════════════
+   *  ⚠️ 검사는 바깥(KASI)을 못 부릅니다. 그래서 ★부본으로 «일부러» 재고,
+   *     «어디가 어떻게 다른지» 를 값으로 박아 둡니다.
+   *  ⛔ 손님 화면은 부본을 쓰지 «않습니다» — ㉓ 이 그것을 지킵니다.
+   * ══════════════════════════════════════════════════════════════ */
+  head('⑳ 🔴🔴 부본 달력이 노트와 갈리는 자리 — ★노트가 맞습니다')
   let ilOk = 0, lastOk = 0
   const ilBad: string[] = []
   const lastBad: string[] = []
   for (const [w, wol, il, y, , , ei, elast] of J) {
-    const d = await ilGanjiOf(y, wol, il)
-    if (d === ei) ilOk++
-    else ilBad.push(`${w}${y} ${d}≠${ei}`)
-    const L = await wolLastDayOf(y, wol)
-    if (L === elast) lastOk++
-    else lastBad.push(`${w}${y} ${L}≠노트${elast}`)
+    //  ⚠️ '' = 일부러 부본. ⛔ 손님 화면에서 이렇게 부르면 안 됩니다.
+    const d = await ilGanjiOf(y, wol, il, false, '')
+    if (d.ganji === ei) ilOk++
+    else ilBad.push(`${w}${y} ${d.ganji}≠${ei}`)
+    const L = await wolLastDayOf(y, wol, false, '')
+    if (L.last === elast) lastOk++
+    else lastBad.push(`${w}${y} ${L.last}≠노트${elast}`)
   }
-  ok(ilOk === 6, `★일 간지 ${ilOk}/7 이 노트와 같습니다 — 어긋난 것 ${ilBad.join(' ')}`)
-  ok(ilBad.length === 1 && ilBad[0].startsWith('류2027'),
-    '⚠️ ★류 님 27년 하나만 «하루» 어긋납니다 — 음 2027.1.12 = 양 2027.2.17 의 일진을 여쭐 것')
+  ok(ilOk === 6 && ilBad.length === 1 && ilBad[0].startsWith('류2027'),
+    `★부본은 일 간지가 ${ilOk}/7 — 어긋난 것 ${ilBad.join(' ')}`)
   ok(lastOk === 3 && lastBad.length === 4,
-    `⚠️ ★월말은 노트와 «넷» 어긋납니다 — ${lastBad.join(' ')}`)
-  ok(true, '✅ ⇒ 연재쌤이 ★「노트 쪽 착오」 라 확인해 주셨습니다 (2026-09-14). ⛔ 노트에 맞추려고 비틀지 마십시오.')
-  //  ⛔ 29·30 말고는 안 나오는가
+    `★부본은 월말이 3/7 — 어긋난 것 ${lastBad.join(' ')}`)
+
+  //  🔴 까닭 — 값으로 확인한 것 (2026-09-14 · 한국천문연구원 달력)
+  ok(true, '🔴 ★까닭은 «규칙» 이 아니라 «달력» 입니다 — 부본(lunar-javascript)이 한국 기준과 다릅니다')
+  ok(true, '   · 양 2026-10-10 → 부본 「음 9.1」 · ★한국 「음 8.30」   ⇒ 희준26 월말 30 이 맞습니다')
+  ok(true, '   · 양 2027-02-06 → 부본 「음 1.1」 · ★한국 「음 12.30」  ⇒ 도이26 월말 30 이 맞습니다')
+  ok(true, '   · 2028 설날 1/27 · 그 전날 1/26 이 음 12.30           ⇒ 도이27 월말 30 이 맞습니다')
+  ok(true, '   · 음 2027.2.1 이 양 3/8                              ⇒ 류27 월말 29 가 맞습니다')
+  ok(true, '   · 음 2027.1.12 = ★양 2.18 (부본은 2.17) ⇒ 일진 戊辰   ⇒ 류27 일진도 노트가 맞습니다')
+  ok(true, '⇒ ★노트 일곱 건이 «다» 맞았습니다. ⛔ 8부의 「노트 쪽 착오」 기록은 ★틀렸습니다.')
+  ok(true, '⇒ 🔴 ⛔ 규칙을 「−2달·+2달」 따위로 ★비틀지 마십시오 — 규칙은 처음부터 맞았습니다.')
+
+  //  ⛔ 29·30 말고는 안 나오는가 (부본으로 재도 이건 지켜져야 합니다)
   {
-    const vals = new Set<number>()
-    for (let m = 1; m <= 12; m++) vals.add(await wolLastDayOf(2026, m))
+    const vals = new Set<number | null>()
+    for (let m = 1; m <= 12; m++) vals.add((await wolLastDayOf(2026, m, false, '')).last)
     ok([...vals].every(v => v === 29 || v === 30), '⛔ ★29 또는 30 뿐입니다 (음력에 31일은 없습니다)')
+  }
+  //  🔴 못 재면 ★29 로 «때려 넣지» 않는가 (8부는 그랬습니다)
+  {
+    const bad = await wolLastDayOf(9999, 13, false, '')
+    ok(bad.last === null, '⛔ ★못 재면 «29 로 때려 넣지» 않고 null 입니다 (8부는 조용히 29 였습니다)')
   }
 
   /* ══ ㉑ 🔴 화면 셋과 셈 창구 — 있는가 · 규칙을 지키는가 ══ */
@@ -529,6 +549,47 @@ async function jaeryoNet() {
       }
       ok(bad.length === 0, `⛔ ★동효는 «1·2·3» 뿐입니다 (4·5·6 은 영영 안 나옵니다) ${bad.join(',')}`)
     }
+  }
+
+  /* ══ ㉓ 🔴🔴 달력은 «정본(KASI)» 을 쓰는가 — 2026-09-14 (9부) ══════
+   *  ⚠️ 8부는 이 자리를 ★«말» 로만 막았습니다 («바깥을 안 부릅니다» 라는 주석).
+   *     그 말이 지켜졌고, ★그래서 틀렸습니다.
+   *  ⇒ 이제는 ★«값» 으로 막습니다. 되돌아가면 여기서 빨간불이 켜집니다.
+   * ══════════════════════════════════════════════════════════════ */
+  head('㉓ 🔴🔴 달력 — 손님 화면이 «정본(KASI)» 을 쓰는가')
+  {
+    const inputs = R('lib/saju/haerak/haerakInputs.ts')
+    const route = R('app/api/haerak/route.ts')
+
+    ok(/process\.env\.KASI_API_KEY/.test(route),
+      '🔴 ★셈 창구가 KASI 키를 읽습니다')
+    ok(!/solarToLunar\(\s*\{[^}]*\}\s*,\s*''\s*\)/.test(route)
+      && !/lunarToSolar\(\s*\{[^}]*\}\s*,\s*''\s*\)/.test(route),
+      '⛔ ★셈 창구가 음력 창구를 «빈 키» 로 부르지 않습니다')
+    ok(!/lunarToSolar\([^)]*,\s*''\s*\)/.test(inputs) && !/solarToLunar\([^)]*,\s*''\s*\)/.test(inputs),
+      '⛔ ★재료 만드는 곳도 «빈 키» 로 부르지 않습니다')
+
+    //  🔴 부본으로 떨어지면 «멈추는가» — 틀린 괘보다 「지금은 못 본다」 가 낫습니다
+    ok(/dalRyeok\s*!==\s*'KASI'/.test(route),
+      '🔴 ⛔ ★재료가 부본에서 나왔으면 «괘를 안 내보내고» 멈춥니다')
+    ok(/r\.source\s*!==\s*'KASI'/.test(route),
+      '🔴 ⛔ ★생일을 음력으로 옮길 때도 부본이면 멈춥니다')
+    ok(/if\s*\(\s*!apiKey\s*\)/.test(route),
+      '⛔ ★키가 아예 없으면 열리지 않습니다 (조용히 부본으로 안 갑니다)')
+
+    //  ⛔ apiKey 를 «기본값» 으로 두지 마십시오 — 빠뜨려도 tsc 가 못 잡습니다
+    ok(!/apiKey\s*(:\s*string)?\s*=\s*''/.test(inputs),
+      "⛔ ★apiKey 에 기본값 '' 을 두지 않았습니다 — 빠뜨리면 tsc 가 잡게 둡니다")
+
+    //  ⛔ «없는 날짜» 를 묻는 8부 방식이 되살아나면 안 됩니다
+    ok(!/lunarToSolar\(\s*\{[^}]*day:\s*30[^}]*\}/.test(inputs),
+      '⛔ ★「그 달 30일이 있느냐」 고 묻지 않습니다 — 없는 날짜라 KASI 가 못 답합니다')
+    ok(/day:\s*1\b/.test(inputs) && /plusDays/.test(inputs),
+      '✅ ★초하루에서 «29일 뒤» 를 재는 방식입니다 (있는 날짜만 묻습니다)')
+
+    //  ⛔ 8부의 «틀린 기록» 이 코드에 남아 있으면 안 됩니다
+    ok(!inputs.includes('노트 쪽 착오') || inputs.includes('그것이 틀렸습니다'),
+      '⛔ ★「노트 쪽 착오」 를 «사실» 로 적어 두지 않았습니다 (노트가 맞았습니다)')
   }
 
   console.log(`\n━━ 하락이수 수리 — 통과 ${pass} · 실패 ${fail} ━━\n`)
