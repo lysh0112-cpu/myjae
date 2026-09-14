@@ -22,7 +22,7 @@ import {
 import { gwaeTextOf, hyoTextOf, gwaeTextCount, gwaeTextHave, allChecks } from './lib/saju/haerak/tables/gwaeText'
 import { nyeonGanjiOf, wolGanjiOf, ilGanjiOf, wolLastDayOf, naiOf } from './lib/saju/haerak/haerakInputs'
 import { solarToLunarKR, lunarToSolarKR, lunarMonthSizeKR } from './lib/saju/koreanLunarTable'
-import { WHO_PLAIN, TEXT_PLAIN, plainWho, plainText, draftRows } from './lib/saju/haerak/tables/plainMap'
+import { WHO_PLAIN, TEXT_PLAIN, LEAD, plainWho, plainText, plainLead, draftRows } from './lib/saju/haerak/tables/plainMap'
 import { solarToLunar as movingS2L } from './app/manseryeok/moving-timing/lib/lunarTable'
 import { fallbackSolarToLunar } from './lib/saju/lunarConvert'
 import { readFileSync } from 'fs'
@@ -817,30 +817,55 @@ async function jaeryoNet() {
     const miss: string[] = []
     for (const r of TEXT_PLAIN) {
       const t = hyoTextOf(r.no, r.hyo)
-      const hit = (t?.parts ?? []).find(p => p.who === r.who && p.text === r.src)
+      //  ⚠️ ★머리글은 parts 가 아니라 lead 에 있습니다
+      const hit = r.who === LEAD
+        ? t?.lead === r.src
+        : (t?.parts ?? []).some(p => p.who === r.who && p.text === r.src)
       if (!hit) miss.push(`${r.no}괘 ${r.hyo}효 [${r.who}]`)
     }
     ok(miss.length === 0,
       `🔴 ⛔ ★순화표의 원문이 교재와 «한 글자도» 안 다릅니다 ${miss.join(' · ')}`)
-    ok(TEXT_PLAIN.length === 20, `★본문 순화 ${TEXT_PLAIN.length}칸`)
-    ok(Object.keys(WHO_PLAIN).length === 11, `★갈래 이름 순화 ${Object.keys(WHO_PLAIN).length}가지`)
+    ok(TEXT_PLAIN.length === 21, `★본문 순화 ${TEXT_PLAIN.length}칸`)
+    ok(Object.keys(WHO_PLAIN).length === 21, `★갈래 이름 순화 ${Object.keys(WHO_PLAIN).length}가지`)
 
     //  ② 🔴 ★손님께 나가는 글에 «순화 안 된 말» 이 남아 있지 않은가
+    /*  ⚠️ ★검사를 «둘» 로 가릅니다 — 9부에 한 벌로 했다가 헛불이 났습니다.
+     *     「또한」 은 ★갈래 «이름» 으로는 어색하지만, 본문 «문장 속» 에서는 멀쩡한 말입니다.
+     *     ⇒ 한 벌로 훑으면 「… 또한 이롭다」 까지 잡혀 ★엉뚱한 빨간불이 켜집니다. */
+
+    /*  ㉮ 갈래 «이름» — ⛔ ★«정확히 같은지» 로 봅니다.
+     *     ⚠️ 「포함」 으로 보면 ★「벼슬 길에 있는 사람」 같은 «멀쩡한 이름» 까지 잡힙니다
+     *        (9부에 실제로 겪었습니다). */
+    const BAD_WHO_EXACT = ['수가 흉한 사람', '수가 길한 사람', '수가 공망에 들어간 사람',
+      '수가 험한 사람', '흉한 수를 만난 사람', '수가 흉하면', '흉한 사람',
+      '남녀를 불문하고 수가 흉한 자', '화와 액이 있는 사람', '병이 있는 자', '병이 있는 사람',
+      '또한', '그 나머지', '일반적으로', '「칠일(七日)」 의 뜻', '이 효를 만난 사람',
+      '벼슬길', '벼슬 길', '장사', '운이 맞는 사람', '운이 맞지 않는 사람']
+
+    //  ㉯ 본문·머리글에 — ⛔ 손님을 다치게 할 말
     //  ⚠️ ★'수가' 만으로 찾으면 「구설수가」·「승진하는 수가」 까지 잡힙니다 — «다른 말» 입니다.
     //     ⛔ 「움직이면 흉하다」 같은 주역의 보통 말도 안 건드립니다 (다 바꾸면 물건이 안 됩니다).
     const BAD = ['수가 흉', '수가 길', '수가 공망', '수가 험한', '흉한 수', '수가 흉하면',
       '구이효가', '뇌화풍괘', '비괘의 육',
+      //  ★머리글에 있던 것
+      '부모의 상을 당해',
       '수명을 다하게', '요절한다', '죽게 된다', '시체를 한 수레', '죽어서 교외',
       '수명을 단축', '상을 당하고 망할', '죽을 기일', '가정이 파괴']
     const leak: string[] = []
     for (let no = 1; no <= 94; no++) for (const h of [1, 2, 3] as const) {
       const t = hyoTextOf(no, h)
       if (!t) continue
+      //  🔴 ★머리글도 «함께» 훑습니다 — 9부에 이것을 빠뜨려 원문이 나갔습니다
+      if (t.lead) {
+        const L = plainLead(no, h, t.lead)
+        for (const b of BAD) if (L.includes(b)) leak.push(`${no}괘 ${h}효 머리글 「${b}」`)
+      }
       for (const p of (t.parts ?? [])) {
         if (p.hide) continue   // ⛔ 가린 것은 애초에 안 나갑니다
         const w = plainWho(p.who)
         const x = plainText(no, h, p.who, p.text)
-        for (const b of BAD) if (w.includes(b) || x.includes(b)) leak.push(`${no}괘 ${h}효 「${b}」`)
+        if (BAD_WHO_EXACT.includes(w)) leak.push(`${no}괘 ${h}효 이름「${w}」`)
+        for (const b of BAD) if (x.includes(b)) leak.push(`${no}괘 ${h}효 「${b}」`)
       }
     }
     ok(leak.length === 0,
@@ -869,6 +894,10 @@ async function jaeryoNet() {
         '🔴 ⛔ ★셈 창구가 «순화해서» 내보냅니다')
       ok(!/who: p\.who, text: p\.text/.test(route),
         '⛔ ★원문을 «그대로» 내보내던 줄로 되돌아가지 않았습니다')
+      ok(/plainLead\(no, r\.dongHyo/.test(route),
+        '🔴 ⛔ ★머리글도 순화를 거칩니다 (9부에 이 한 줄을 빠뜨렸습니다)')
+      ok(!/lead: t\?\.lead \?\? null/.test(route),
+        '⛔ ★머리글을 «그대로» 내보내던 줄로 되돌아가지 않았습니다')
     }
 
     //  ⑥ ⚠️ 아직 «제 초안» 인 줄 — 연재쌤 검수 때 여기를 보시면 됩니다

@@ -29,7 +29,7 @@ import { hyoTextOf, type GwaePart } from '@/lib/saju/haerak/tables/gwaeText'
 import { solarToLunarKR, lunarRangeKR } from '@/lib/saju/koreanLunarTable'
 import { PALGWAE_HYO } from '@/lib/saju/haerak/tables/suri'
 //  🔴 ★손님께 나가는 말을 순화합니다 — 표는 tables/plainMap.ts «한 곳» 입니다
-import { plainWho, plainText } from '@/lib/saju/haerak/tables/plainMap'
+import { plainWho, plainText, plainLead } from '@/lib/saju/haerak/tables/plainMap'
 
 export const dynamic = 'force-dynamic'
 const NO_STORE = { 'Cache-Control': 'no-store' }
@@ -133,7 +133,9 @@ export async function POST(request: Request) {
       return {
         no, name, ko, sang, ha, hyo,
         label: t?.label ?? null,
-        lead: t?.lead ?? null,
+        //  🔴 ⛔ ★머리글도 «반드시» 순화를 거칩니다 —
+        //     9부에 이 한 줄을 빠뜨려 「부모의 상을 당해…」 가 그대로 나갔습니다.
+        lead: t?.lead ? plainLead(no, r.dongHyo, t.lead) : null,
         /*  🔴 ★2026-09-14 (9부) [대표님] — «교재 원문» 이 아니라 «순화한 말» 을 내보냅니다.
          *     ⛔ 교재 파일은 «한 글자도» 안 고쳤습니다 — 원문은 거기 그대로 있습니다.
          *     ⛔ 여기서 p.who · p.text 를 «그대로» 내보내던 것으로 되돌리지 마십시오.
