@@ -7,16 +7,17 @@
  *
  *  ⛔ AI 를 한 번도 부르지 않습니다.
  *
- *  🔴🔴 ★2026-09-14 (9부) — 달력을 «정본(KASI)» 으로 바꿨습니다
- *     8부에는 「바깥 창구(KASI)도 안 부릅니다 ⇒ 값이 늘 같습니다」 라 적혀 있었는데,
- *     ★그 «늘 같은 값» 이 «틀린 값» 이었습니다.
- *     부본(lunar-javascript)이 한국천문연구원 달력과 어긋나
- *     ★노트 일곱 건 중 월말 넷 · 일진 하나가 틀렸습니다 (haerakInputs 머리말 참고).
+ *  🔴🔴 ★2026-09-14 (9부) — 달력을 «한국 표» 로 바꿨습니다
+ *     8부에는 「바깥을 안 부르니 값이 늘 같습니다」 라 적혀 있었는데,
+ *     ★그 «늘 같은 값» 이 «틀린 값» 이었습니다 (부본이 중국 기준).
+ *     ⇒ 노트 일곱 건 중 ★월말 넷 · 일진 하나가 틀렸습니다.
+ *     ⇒ 이제 ★lib/saju/koreanLunarTable.ts 를 봅니다 —
+ *       한국천문연구원 음양력을 담은 ★오프라인 표입니다.
  *
- *  ⛔ ★부본으로 떨어지면 «괘를 내보내지 않고» 멈춥니다.
+ *  ✅ 바깥 창구를 ★한 번도 안 부릅니다 (KASI 도 안 부릅니다).
+ *     ⇒ 호출 0번 · 지연 0 · 일일 한도 걱정 없음 · 값이 늘 같습니다.
+ *  ⛔ 표 범위(1900~2051) 밖이면 ★괘를 내보내지 않고 «멈춥니다».
  *     ⇒ 틀린 괘를 드리는 것보다 ★「지금은 못 본다」 가 낫습니다.
- *     ⇒ 그러므로 ★KASI_API_KEY 가 없으면 하락이수는 «아예 안 열립니다».
- *       (토글을 켜기 «전» 에 키가 들어 있는지 확인하십시오)
  *
  *  ⛔ 못 셈하면 ★빈 값을 «지어내지» 않고 까닭을 적어 돌려줍니다.
  *  ⛔ 손님에게 나가는 값에 ★「원당」 이라는 낱말을 넣지 마십시오 [대표님 2026-09-14]
@@ -25,7 +26,7 @@ import { NextResponse } from 'next/server'
 import { calcHaerak } from '@/lib/saju/haerak/haerakSuri'
 import { jaeryoOf } from '@/lib/saju/haerak/haerakInputs'
 import { hyoTextOf, type GwaePart } from '@/lib/saju/haerak/tables/gwaeText'
-import { solarToLunar } from '@/lib/saju/lunarConvert'
+import { solarToLunarKR, lunarRangeKR } from '@/lib/saju/koreanLunarTable'
 import { PALGWAE_HYO } from '@/lib/saju/haerak/tables/suri'
 
 export const dynamic = 'force-dynamic'
@@ -69,27 +70,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '볼 해가 이상해요.' }, { status: 400, headers: NO_STORE })
     }
 
-    /*  🔴 ★달력 정본. ⛔ 없으면 셈하지 않습니다 — 부본은 값이 틀립니다. */
-    const apiKey = process.env.KASI_API_KEY ?? ''
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: '지금은 달력을 확인할 수 없어 셈을 멈췄어요. 잠시 뒤에 다시 해 주세요.' },
-        { status: 503, headers: NO_STORE })
-    }
-
     /*  ── ① 태어난 «음력» 달·날 구하기 ──────────────────────────────
      *  ⛔ 하락이수는 ★음력으로만 셉니다. 양력으로 넣으면 달이 통째로 어긋납니다. */
     let eumWol = m, eumIl = d
     if (String(b.calType ?? '양력') !== '음력') {
-      const r = await solarToLunar({ year: y, month: m, day: d }, apiKey)
-      //  ⛔ ★부본으로 떨어졌으면 «생일 음력» 부터 틀립니다. 여기서 멈춥니다.
-      if (!r.value || r.source !== 'KASI') {
+      const r = solarToLunarKR(y, m, d)
+      //  ⛔ ★표 범위 밖이면 «생일 음력» 부터 알 수 없습니다. 여기서 멈춥니다.
+      if (!r) {
+        const g = lunarRangeKR()
         return NextResponse.json(
-          { error: '지금은 달력을 확인할 수 없어 셈을 멈췄어요. 잠시 뒤에 다시 해 주세요.' },
-          { status: 503, headers: NO_STORE })
+          { error: `${g.start.getUTCFullYear()}년 ~ ${g.end.getUTCFullYear()}년 사이만 볼 수 있어요.` },
+          { status: 400, headers: NO_STORE })
       }
-      eumWol = r.value.month
-      eumIl = r.value.day
+      eumWol = r.lunarMonth
+      eumIl = r.lunarDay
     }
     //  ⚠️ 윤달에 태어나셨어도 «볼 해» 에는 그 윤달이 없을 수 있어 ★평달로 봅니다.
     void b.leapMonth
@@ -100,17 +94,9 @@ export async function POST(request: Request) {
       //  🔴 나이는 ★«보러 오시는 그때» 기준입니다 [대표님 2026-09-14]
       //     ⛔ target 으로 세지 마십시오 — 괘가 달라집니다.
       todayYear: new Date().getFullYear(),
-      apiKey,
     })
     if (!jae) {
       return NextResponse.json({ error: '셈에 쓸 값을 만들지 못했어요.' }, { status: 500, headers: NO_STORE })
-    }
-    /*  🔴 ⛔ ★부본으로 떨어진 재료로는 괘를 «짓지 않습니다».
-     *     월말이 하루만 달라져도 선천·후천이 통째로 맞바뀝니다 (희준 26년). */
-    if (jae.dalRyeok !== 'KASI') {
-      return NextResponse.json(
-        { error: '지금은 달력을 확인할 수 없어 셈을 멈췄어요. 잠시 뒤에 다시 해 주세요.' },
-        { status: 503, headers: NO_STORE })
     }
 
     /*  ── ③ 괘 짓기 ─────────────────────────────────────────────── */
