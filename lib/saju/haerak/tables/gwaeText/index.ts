@@ -5,7 +5,7 @@
  *  ★괘가 들어올 때마다 여기에 «한 줄» 씩 더합니다.
  *     ⇒ 봉투마다 이 파일과 새 괘 파일만 바뀝니다. 다른 괘는 안 흔들립니다.
  *
- *  ⚠️ 지금 ★47 / 64 입니다 (도표 1 ~ 68).
+ *  ⚠️ 지금 ★64 / 64 입니다 — ★다 찼습니다 (도표 1 ~ 94).
  *  ⛔ 글이 «없는» 괘를 억지로 채우지 마십시오 — 없으면 «없다» 고 답합니다.
  */
 
@@ -69,6 +69,40 @@ import { G67_SEUNG } from './g67-seung'
 
 import { G68_GON2 } from './g68-gon2'
 
+import { G70_JEONG } from './g70-jeong'
+
+import { G71_HYEOK } from './g71-hyeok'
+
+import { G73_JEONG2 } from './g73-jeong2'
+
+import { G74_JIN } from './g74-jin'
+
+import { G76_GAN } from './g76-gan'
+
+import { G77_JEOM } from './g77-jeom'
+
+import { G79_GWIMAE } from './g79-gwimae'
+
+import { G80_PUNG } from './g80-pung'
+
+import { G82_YEO } from './g82-yeo'
+
+import { G83_SON2 } from './g83-son2'
+
+import { G85_TAE } from './g85-tae'
+
+import { G86_HWAN } from './g86-hwan'
+
+import { G88_JEOL } from './g88-jeol'
+
+import { G89_JUNGBU } from './g89-jungbu'
+
+import { G91_SOGWA } from './g91-sogwa'
+
+import { G92_GIJE } from './g92-gije'
+
+import { G94_MIJE } from './g94-mije'
+
 /** 도표 번호 → 괘 글 */
 const ALL: Readonly<Record<number, GwaeText>> = {
   1: G1_GEON,
@@ -118,6 +152,23 @@ const ALL: Readonly<Record<number, GwaeText>> = {
   65: G65_CHWE,
   67: G67_SEUNG,
   68: G68_GON2,
+  70: G70_JEONG,
+  71: G71_HYEOK,
+  73: G73_JEONG2,
+  74: G74_JIN,
+  76: G76_GAN,
+  77: G77_JEOM,
+  79: G79_GWIMAE,
+  80: G80_PUNG,
+  82: G82_YEO,
+  83: G83_SON2,
+  85: G85_TAE,
+  86: G86_HWAN,
+  88: G88_JEOL,
+  89: G89_JUNGBU,
+  91: G91_SOGWA,
+  92: G92_GIJE,
+  94: G94_MIJE,
 }
 
 /** 글이 들어온 괘가 몇 개인가 (64가 되면 다 찬 것입니다) */

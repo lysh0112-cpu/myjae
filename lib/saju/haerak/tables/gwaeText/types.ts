@@ -23,6 +23,15 @@ export interface GwaePart {
   who: string
   /** 그 갈래에 붙은 글 — ★교재 원문 그대로 */
   text: string
+  /**
+   *  ⛔ ★손님 화면에 «안 보이는» 갈래.
+   *     교재 원문은 ★지우지 않고 그대로 두되, 손님에게만 가리는 자리입니다.
+   *     (신살 표에서 srcGijil 은 남기고 gijil 만 바꾼 것과 «같은 결»)
+   *  ⚠️ 쓸 때는 ★why 에 «왜 가리는지» 를 반드시 적으십시오.
+   */
+  hide?: true
+  /** hide 를 쓴 까닭 — ⛔ 비워 두지 마십시오 */
+  why?: string
 }
 
 /** 한 효 */

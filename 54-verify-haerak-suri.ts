@@ -244,14 +244,22 @@ head('⑮ 🔴 대표님이 정하신 두 가지 (2026-09-14)')
 
 head('⑯ 🔴 다음에 여쭐 것을 «적어 두었는가» (2단계)')
 {
-  ok(NEXT_ASK_YEONJAE.length === 3, `★2단계에 여쭐 것이 ${NEXT_ASK_YEONJAE.length}가지 적혀 있습니다`)
+  ok(NEXT_ASK_YEONJAE.length === 5, `★2단계에 여쭐 것이 ${NEXT_ASK_YEONJAE.length}가지 적혀 있습니다`)
   ok(NEXT_ASK_YEONJAE.some(q => /192|풀이/.test(q)), '★풀이 글을 어디서 가져오는지 여쭙니다')
+  ok(NEXT_ASK_YEONJAE.some(q => /원당/.test(q)), '⚠️ 교재 갈래 이름 「원당과…」 을 어떻게 부를지 여쭙니다')
+  ok(NEXT_ASK_YEONJAE.some(q => /재수/.test(q)), '🔴 ★「수가 흉한 사람」 스무 칸을 손님께 보일지 여쭙니다 [대표님 2026-09-14]')
+  //  🔴 ⛔ 손님에게 나가는 «값» 에 「원당」 이 섞이지 않는가 [대표님 2026-09-14]
+  {
+    const r = calcHaerak({ nyeonGanji: '丙午', wolGanji: '丁酉', ilGanji: '乙未', nai: 32, wolLastDay: 30, eumIl: 8 })
+    ok(!!r && !/원당|元堂/.test(JSON.stringify({ su: r.su, dongHyo: r.dongHyo, seoncheon: r.seoncheon, hucheon: r.hucheon })),
+      '⛔ ★셈이 내놓는 값에 「원당」 이 «한 글자도» 없습니다 (대표님 2026-09-14)')
+  }
   ok(NEXT_ASK_YEONJAE.some(q => /상반기/.test(q)), '★선천=상반기 · 후천=하반기가 맞는지 여쭙니다')
 }
 
 head('⑰ 🔴 괘 풀이 글 — 교재와 «글자 그대로» 인가 (2단계 첫걸음)')
 {
-  ok(gwaeTextCount() === 47, `★글이 들어온 괘 — ${gwaeTextCount()} / 64 (도표 1 ~ 68)`)
+  ok(gwaeTextCount() === 64, `🎉 ★글이 들어온 괘 — ${gwaeTextCount()} / 64 — ★다 찼습니다`)
 
   const sa = gwaeTextOf(10)
   ok(!!sa && sa.name === '師', '★師(사) 10 이 들어왔습니다')
@@ -282,7 +290,7 @@ head('⑰ 🔴 괘 풀이 글 — 교재와 «글자 그대로» 인가 (2단계
 
   //  ⛔ 4·5·6효를 담지 않았는가
   ok(hyoTextOf(10, 4) === null && hyoTextOf(10, 6) === null, '⛔ 4·5·6효는 담지 않았습니다 (영영 안 쓰입니다)')
-  ok(hyoTextOf(77, 1) === null, '⛔ 아직 안 들어온 괘(漸 77)는 ★null 입니다 — 「준비 중」 을 지어내지 않습니다')
+  ok(hyoTextOf(2, 1) === null && hyoTextOf(99, 1) === null, '⛔ 도표에 «없는» 번호(2 · 99)는 ★null 입니다 — 지어내지 않습니다')
 
   //  🔴 들어온 서른여섯 괘 «전부» — 효 이름이 하괘의 음양과 맞는가
   const O2 = ['乾', '兌', '離', '震', '巽', '坎', '艮', '坤']
@@ -333,6 +341,20 @@ head('⑰ 🔴 괘 풀이 글 — 교재와 «글자 그대로» 인가 (2단계
   ok(allChecks().length >= 30,
     `🔴 ★제가 «못 읽은» 자리를 ${allChecks().length}곳 적어 두었습니다 — 대표님이 여기만 보시면 됩니다`)
   ok(allChecks().every(c => c.name && c.note), '★어느 괘의 어디인지까지 적혀 있습니다')
+
+  //  🔴 ⛔ 손님에게 «가린» 갈래 — 교재 원문은 남기고 화면에서만 뺍니다 [대표님 2026-09-14]
+  {
+    const hidden = gwaeTextHave().flatMap(no => {
+      const g = gwaeTextOf(no)!
+      return ([1, 2, 3] as const).flatMap(n => g.hyo[n].parts.filter(p => p.hide).map(p => ({ no, name: g.name, who: p.who, why: p.why })))
+    })
+    ok(hidden.length === 2, `⛔ ★손님에게 가린 갈래 ${hidden.length}개 — ${hidden.map(h => h.name + h.no + ' 「' + h.who + '」').join(' / ')}`)
+    ok(hidden.every(h => !!h.why && h.why.length > 10), '⛔ ★가린 까닭이 «다» 적혀 있습니다 (why 를 비우지 마십시오)')
+    ok(hidden.every(h => /원당/.test(h.who)), '★가린 것은 «원당» 이 들어간 갈래뿐입니다 — 연재쌤도 모르시는 말이라서입니다')
+    //  ⛔ 교재 원문을 «지우지» 않았는가
+    ok(gwaeTextOf(9)!.hyo[2].parts.some(p => p.who === '원당과 수가 흉한 사람' && p.text.length > 10),
+      '⛔ ★교재 원문은 «그대로» 남아 있습니다 (가리기만 했습니다)')
+  }
 
   //  ⛔ 글을 지어내지 않았는가 — 갈래 이름이 교재 말인지
   const whos = new Set([1, 2, 3].flatMap(n => hyoTextOf(10, n)!.parts.map(p => p.who)))

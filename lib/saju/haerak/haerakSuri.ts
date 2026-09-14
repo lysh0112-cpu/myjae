@@ -162,7 +162,14 @@ export interface HaerakInput {
 export interface HaerakResult {
   su: { nyeon: number; wol: number; il: number }
   kan: { nyeon: KanSu; wol: KanSu; il: KanSu }
-  /** 동효 — 1·2·3 (노트 ⑦번 「일 ÷3」) */
+  /**
+   *  동효(動爻) — 1·2·3 (노트 ⑦번 「일 ÷3」)
+   *  🔴 ★원당(元堂)과 «같은 것» 으로 봅니다 [대표님 2026-09-14]
+   *     원당 = 그 괘에서 «나를 대표하는 중심 효».
+   *  ⛔ ★손님 화면에 「원당」 이라는 낱말을 «쓰지 마십시오» [대표님 2026-09-14]
+   *     ⇒ 손님이 뜻을 모르는 말입니다. 6부 「한자말을 쓰지 마십시오」 와 같은 결입니다.
+   *     ⇒ 화면에는 「세 번째 자리」 처럼 «숫자와 쉬운 말» 로만 보이십시오.
+   */
   dongHyo: number
   seoncheon: Gwae
   hucheon: Gwae
