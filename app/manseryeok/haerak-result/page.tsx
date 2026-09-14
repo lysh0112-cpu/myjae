@@ -130,7 +130,8 @@ function HaerakResultInner() {
         {name ? `${name} 님` : ''} {data.target}년
       </div>
       <div style={{ fontSize: 12, color: SUB, marginBottom: 16, lineHeight: 1.6 }}>
-        한 해를 앞뒤로 나누어 두 괘로 봅니다. 움직이는 자리는 ★{data.dongHyo}번째 줄입니다.
+        한 해를 앞뒤로 나누어 두 괘로 봅니다 — 상반기는 <b>선천괘</b>, 하반기는 <b>후천괘</b>입니다.
+        움직이는 자리는 {data.dongHyo}번째 줄이에요.
       </div>
 
       {/*  🔴🔴 ★상반기 · 하반기가 «어느 괘» 인가 — 여기 «한 곳» 에서 정합니다
@@ -144,9 +145,9 @@ function HaerakResultInner() {
         *       월칸 윗수(29/30) 규칙 때문에 노트와 두 괘가 «맞바뀌는» 사람이 있습니다.
         *       ⛔ 여기 두 줄을 맞바꿔서 «가리려고» 하지 마십시오 — 다른 사람 것이 틀어집니다.
         *       ⇒ 고칠 곳은 ★월칸 윗수 규칙(haerakInputs.wolLastDayOf)입니다. */}
-      <GwaeCard half="상반기" g={data.seoncheon} move={data.dongHyo} />
+      <GwaeCard half="상반기" kind="선천괘" g={data.seoncheon} move={data.dongHyo} />
       <div style={{ height: 12 }} />
-      <GwaeCard half="하반기" g={data.hucheon} move={data.dongHyo} />
+      <GwaeCard half="하반기" kind="후천괘" g={data.hucheon} move={data.dongHyo} />
 
       {/* ── 셈한 값 — ★대표님·연재쌤 대조용. 작게 둡니다 ── */}
       <details style={{ marginTop: 16, background: CARD, border: `1px solid ${LINE}`, borderRadius: 12, padding: '11px 13px' }}>
@@ -164,7 +165,11 @@ function HaerakResultInner() {
 }
 
 /** 괘 한 장 */
-function GwaeCard({ half, g, move }: { half: string; g: GwaeOut; move: number }) {
+/*  ★2026-09-14 [연재쌤 · 대표님] — 「선천괘 · 후천괘」 라는 말을 ★«반드시» 보이십시오.
+ *    ⚠️ 6부 「한자말을 쓰지 마십시오」 와 부딪히는 듯하나, 이 둘은 ★하락이수의 «이름» 입니다.
+ *       연재쌤이 손님께 말씀하실 때 쓰시는 말이라 ⛔ 빼면 말이 어긋납니다.
+ *    ⇒ 대신 ★「상반기 · 하반기」 를 «먼저» 두어 손님이 뜻을 바로 알게 합니다. */
+function GwaeCard({ half, kind, g, move }: { half: string; kind: string; g: GwaeOut; move: number }) {
   return (
     <div style={{ background: CARD, border: `1.5px solid ${LINE}`, borderRadius: 16, padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -187,7 +192,14 @@ function GwaeCard({ half, g, move }: { half: string; g: GwaeOut; move: number })
           })}
         </div>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 11, color: SUB }}>{half}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: ACCENT }}>{half}</span>
+            {/* ⛔ 이 말을 빼지 마십시오 [연재쌤 · 대표님 2026-09-14] */}
+            <span style={{
+              fontSize: 10, color: SUB, background: '#f0f4f8',
+              border: `1px solid ${LINE}`, borderRadius: 20, padding: '1px 7px',
+            }}>{kind}</span>
+          </div>
           <div style={{ fontSize: 17, fontWeight: 700, color: INK, letterSpacing: '-0.3px' }}>
             {g.ko} <span style={{ fontSize: 12, color: SUB, fontWeight: 400 }}>{g.name}</span>
           </div>
