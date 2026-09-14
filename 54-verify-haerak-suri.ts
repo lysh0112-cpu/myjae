@@ -756,6 +756,41 @@ async function jaeryoNet() {
       '★볼 해가 있을 때만 결과 화면으로 갑니다')
   }
 
+  /* ══ ㉗ 🔴 홈 소개 팝업 — 2026-09-14 (9부) [대표님] ══════════════ */
+  head('㉗ 🔴 홈 — 카드 글귀와 소개 팝업')
+  {
+    const svc = R('app/home-new/components/ServiceSection.tsx')
+    const intro = R('lib/saju/haerak/intro.ts')
+    const dlg = R('app/components/common/ServiceIntroDialog.tsx')
+
+    ok(/해마다 바뀌는 운을 주역의 괘로 풀이/.test(svc),
+      '★홈 카드 글귀가 바뀌었습니다 [대표님 2026-09-14]')
+    ok(intro.length > 300 && /HAERAK_INTRO_LEAD/.test(intro),
+      '★소개문이 «한 곳»(lib/saju/haerak/intro.ts) 에 있습니다')
+    ok(dlg.length > 500 && /role="dialog"/.test(dlg),
+      '★소개 팝업이 «공용 부품» 입니다 (⛔ 화면마다 다시 짓지 않습니다)')
+
+    //  🔴 들어가는 «문» 이 하나인가 — 한 군데만 달면 압핀으로 들어간 손님이 설명을 못 봅니다
+    ok(!/onClick=\{\(\) => onOpen\(s\)\}/.test(svc),
+      '🔴 ⛔ ★카드가 onOpen 을 «바로» 부르지 않습니다 (문이 하나입니다)')
+    ok((svc.match(/enter\(s\)/g) ?? []).length >= 5,
+      `★들어가는 길 ${(svc.match(/enter\(s\)/g) ?? []).length} 군데가 «같은 문» 을 씁니다`)
+    ok(/INTRO_OF\[s\.name\]/.test(svc),
+      '★소개를 띄울 서비스는 «표» 로 정합니다 (다른 서비스도 한 줄로 붙입니다)')
+
+    //  ⛔ 글을 화면 코드에 «복사» 하면 안 됩니다 (7부 교훈)
+    ok(!/진희이/.test(svc) && !/적중률/.test(svc),
+      '⛔ ★소개 문장을 화면 코드에 «박지» 않았습니다 — 고칠 곳이 한 곳입니다')
+    //  ⚠️ ★주석의 설명까지 잡으면 안 됩니다 (7부 교훈) — «손님께 나가는 글» 만 봅니다
+    const dlgCode = dlg.split('\n').filter(l => !/^\s*(\*|\/\/|\/\*)/.test(l)).join('\n')
+    ok(!/진희이/.test(dlgCode) && !/적중률/.test(dlgCode) && !/河洛/.test(dlgCode),
+      '⛔ ★공용 팝업에 하락이수 «문장» 이 안 박혀 있습니다 (다른 서비스도 씁니다)')
+
+    //  ★닫고 들어가는 길이 둘 다 있는가
+    ok(/onStart=/.test(svc) && /onClose=/.test(svc),
+      '★「보러 가기」 와 「닫기」 가 둘 다 있습니다 (막다른 길이 아닙니다)')
+  }
+
   console.log(`\n━━ 하락이수 수리 — 통과 ${pass} · 실패 ${fail} ━━\n`)
   process.exit(fail ? 1 : 0)
 }
