@@ -19,6 +19,7 @@ import {
 import {
   splitGanjiHaerak, jiOfEumnyeokWol, namuji, kanSu, bakkunHagwae, calcHaerak,
 } from './lib/saju/haerak/haerakSuri'
+import { gwaeTextOf, hyoTextOf, gwaeTextCount } from './lib/saju/haerak/tables/gwaeText'
 import { readFileSync } from 'fs'
 
 let pass = 0, fail = 0
@@ -248,7 +249,50 @@ head('⑯ 🔴 다음에 여쭐 것을 «적어 두었는가» (2단계)')
   ok(NEXT_ASK_YEONJAE.some(q => /상반기/.test(q)), '★선천=상반기 · 후천=하반기가 맞는지 여쭙니다')
 }
 
-head('⑰ ⛔ 수리표를 «베껴 적은 곳» 이 또 없는가')
+head('⑰ 🔴 괘 풀이 글 — 교재와 «글자 그대로» 인가 (2단계 첫걸음)')
+{
+  ok(gwaeTextCount() === 1, `★글이 들어온 괘 — ${gwaeTextCount()} / 64 (나머지는 스캔이 오는 대로)`)
+
+  const sa = gwaeTextOf(10)
+  ok(!!sa && sa.name === '師', '★師(사) 10 이 들어왔습니다')
+  ok(!!sa && sa.no === GWAE_NO['師'], '★글의 번호가 도표 번호(10)와 «같습니다»')
+  ok(!!sa && !!sa.src, '★교재 어디서 왔는지 적혀 있습니다 (연재쌤 검수 근거)')
+
+  //  🔴 노트 두 건과 «글자 그대로» 맞는지 — 이것이 이 그물의 핵심입니다
+  const h1 = hyoTextOf(10, 1)
+  ok(!!h1 && h1.label === '初六', '師 1효 이름이 「初六」 입니다 (하괘 坎의 첫 줄이 음)')
+  ok(!!h1 && h1.parts[0].text.startsWith('아랫 사람 된 도리를 다하여'),
+    '★류 님 27년 노트 「아랫사람 된 도리를 다하여…」 와 같습니다')
+  ok(!!h1 && h1.parts.some(p => p.who === '수가 흉한 사람'),
+    '★「수가 흉한 사람」 갈래도 빠뜨리지 않았습니다')
+
+  const h3 = hyoTextOf(10, 3)
+  ok(!!h3 && h3.label === '六三', '師 3효 이름이 「六三」 입니다 (하괘 坎의 셋째 줄이 음)')
+  ok(!!h3 && h3.lead === '슬픔과 근심이 많이 생기며 혹 부모의 상을 당해 상복을 입게 된다.',
+    '★희준 님 26년 노트의 첫 줄과 «글자 그대로» 같습니다')
+  ok(!!h3 && h3.parts[1].text.startsWith('직책을 받아 결원을 기다린다'),
+    '★「직책을 받아 결원을 기다린다」 까지 같습니다')
+
+  //  ⛔ 효 이름의 음양이 «하괘» 와 맞는가 — 어긋나면 다른 괘 글을 붙인 것입니다
+  const bits = PALGWAE_HYO['坎']
+  const wantLabel = (n: number) =>
+    (n === 1 ? '初' : '') + (bits[n - 1] ? '九' : '六') + (n === 1 ? '' : n === 2 ? '二' : '三')
+  ok([1, 2, 3].every(n => hyoTextOf(10, n)!.label === wantLabel(n)),
+    '🔴 ★효 이름 셋이 하괘(坎)의 음양과 «다 맞습니다» — 남의 괘 글이 섞이지 않았습니다')
+
+  //  ⛔ 4·5·6효를 담지 않았는가
+  ok(hyoTextOf(10, 4) === null && hyoTextOf(10, 6) === null, '⛔ 4·5·6효는 담지 않았습니다 (영영 안 쓰입니다)')
+  ok(hyoTextOf(67, 1) === null, '⛔ 아직 안 들어온 괘(升 67)는 ★null 입니다 — 「준비 중」 을 지어내지 않습니다')
+
+  //  ⛔ 글을 지어내지 않았는가 — 갈래 이름이 교재 말인지
+  const whos = new Set([1, 2, 3].flatMap(n => hyoTextOf(10, n)!.parts.map(p => p.who)))
+  ok(whos.has('벼슬한 사람') && whos.has('선비') && whos.has('일반인'),
+    `★갈래 ${whos.size}가지 — 벼슬한 사람 · 선비 · 일반인이 다 있습니다`)
+  ok([1, 2, 3].every(n => hyoTextOf(10, n)!.parts.every(p => p.text.trim().length > 0)),
+    '⛔ 빈 글이 한 칸도 없습니다')
+}
+
+head('⑱ ⛔ 수리표를 «베껴 적은 곳» 이 또 없는가')
 {
   const src = code(readFileSync('lib/saju/haerak/haerakSuri.ts', 'utf8'))
   ok(!/甲:\s*9/.test(src), '⛔ 셈하는 파일에 수리표를 «다시» 적지 않았습니다')
