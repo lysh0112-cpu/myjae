@@ -35,6 +35,13 @@ interface GwaeOut {
   parts: { who: string; text: string }[] | null
   label: string | null
 }
+/**
+ *  ★나누는 수 — 하락이수의 «붙박이» 입니다 [교재]
+ *  ⛔ 바꾸면 괘가 통째로 달라집니다. 창구(app/api/haerak/route.ts)와 ★같은 값이어야 합니다.
+ *     ⇒ 검사 54 ㉙ 가 둘이 어긋나는지 봅니다.
+ */
+const DIV = { nyeon: 8, wol: 6, il: 3 } as const
+
 interface Out {
   target: number
   dongHyo: number
@@ -195,10 +202,14 @@ function HaerakResultInner() {
         <div style={{ marginTop: 9, fontSize: 11.5, color: SUB, lineHeight: 1.9 }}>
           음력 생월·생일 {g.eumWol}월 {g.eumIl}일 · 나이 {g.nai}세 · 그 달 마지막 날 {g.wolLastDay}일<br />
           간지 {g.nyeonGanji} · {g.wolGanji} · {g.ilGanji}<br />
-          수 년 {data.su.nyeon} · 월 {data.su.wol} · 일 {data.su.il}<br />
-          {/*  🔴 ★나머지 수 — [대표님 2026-09-14] 연재쌤 노트의 ③⑥① 입니다.
+          {/*  🔴 ★수 · 나누기 · 나머지 «세 줄» — [대표님 2026-09-14]
+            *     연재쌤 노트의 붉은 동그라미 ③⑥① 을 대조하실 자리입니다.
+            *  ⛔ 나누는 수(8·6·3)는 ★하락이수의 «붙박이» 입니다 (년÷8 · 월÷6 · 일÷3).
+            *     ⚠️ 그래도 «글자» 로 적지 말고 열쇠 하나로 두었습니다 — 셋이 어긋나지 않게.
             *  ⛔ 여기서 «다시 셈하지» 않습니다 — 창구가 보낸 값을 그대로 그립니다. */}
-          나머지 년 {data.namu.nyeon} · 월 {data.namu.wol} · 일 {data.namu.il}
+          수 　　 년 {data.su.nyeon} · 월 {data.su.wol} · 일 {data.su.il}<br />
+          나누기 　년 ÷{DIV.nyeon} · 월 ÷{DIV.wol} · 일 ÷{DIV.il}<br />
+          나머지 　년 {data.namu.nyeon} · 월 {data.namu.wol} · 일 {data.namu.il}
           <div style={{ marginTop: 6, fontSize: 11, opacity: 0.8 }}>
             ※ 나눈 숫자가 정확히 떨어지면, 나눈 숫자를 그대로 표시한다.
           </div>

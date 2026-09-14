@@ -946,8 +946,20 @@ async function jaeryoNet() {
       '★창구가 나머지 수를 «셈해서» 보냅니다')
     ok(/namuji\(r\.su\.wol, 6\)/.test(route) && /namuji\(r\.su\.il, 3\)/.test(route),
       '★년÷8 · 월÷6 · 일÷3 입니다')
-    ok(/나머지 년 \{data\.namu\.nyeon\}/.test(result),
+    ok(/나머지 .*\{data\.namu\.nyeon\}/.test(result),
       '🔴 ★결과 화면이 나머지를 «그립니다» [대표님 2026-09-14]')
+    //  🔴 ★나누는 수(8·6·3)도 보입니다 [대표님]
+    ok(/나누기 .*÷\{DIV\.nyeon\}/.test(result) && /÷\{DIV\.wol\}/.test(result) && /÷\{DIV\.il\}/.test(result),
+      '🔴 ★「나누기 년 ÷8 · 월 ÷6 · 일 ÷3」 줄이 있습니다 [대표님]')
+    //  ⛔ 화면의 나누는 수와 창구의 나누는 수가 «같아야» 합니다
+    {
+      const m = result.match(/const DIV = \{ nyeon: (\d+), wol: (\d+), il: (\d+) \}/)
+      ok(!!m && m[1] === '8' && m[2] === '6' && m[3] === '3',
+        `⛔ ★화면의 나누는 수가 8·6·3 입니다 (${m ? m.slice(1, 4).join('·') : '못 찾음'})`)
+      ok(/namuji\(r\.su\.nyeon, 8\)/.test(route) && /namuji\(r\.su\.wol, 6\)/.test(route)
+        && /namuji\(r\.su\.il, 3\)/.test(route),
+        '⛔ ★창구의 나누는 수와 «같습니다» — 어긋나면 화면이 거짓말을 합니다')
+    }
     ok(/나눈 숫자가 정확히 떨어지면/.test(result),
       '★꼬리말이 붙어 있습니다 — 「딱 떨어지면 나눈 수를 그대로」 [대표님]')
     ok(!/namuji\(/.test(result),
