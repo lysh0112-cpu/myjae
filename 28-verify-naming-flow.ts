@@ -2791,9 +2791,13 @@ console.log('\n━━ ㉒-y 🔴 가격 표의 합격운 줄이 «토글을 따�
     const pr = codeOf(read('app/api/admin/price-row/route.ts'))
     check(/const ALLOW/.test(pr) && /haerak_ai: \{ table: 'analysis_prices'/.test(pr),
       `⛔ ★정해진 낱말만 만듭니다 (아무 줄이나 못 만듭니다)`)
-    check(/if \(had\) return NextResponse\.json\(\{ ok: true, made: false \}\)/.test(pr),
+    check(/if \(had\) return NextResponse\.json\(\{ ok: true, made: !hadMc \}\)/.test(pr)
+      && /if \(!hadMc\) \{/.test(pr),
       `⛔ ★이미 있으면 «건드리지» 않습니다 (넣어 두신 값이 안 덮입니다)`)
     check(/requireMaster/.test(pr), `⛔ ★관리자만 만들 수 있습니다`)
+    //  🔴 지갑 요금표 줄이 «빠지면» 저장이 안 끝납니다 (2026-09-14 대표님 화면에서 확인)
+    check(/from\('mc_price'\)[\s\S]{0,200}insert\(\{ service: 'myc', item: key/.test(pr),
+      `🔴 ⛔ ★지갑 요금표(mc_price) 줄도 «함께» 만듭니다 — 안 그러면 저장이 실패합니다`)
   }
   {
     const sec = codeOf(read('app/home-new/components/ServiceSection.tsx'))

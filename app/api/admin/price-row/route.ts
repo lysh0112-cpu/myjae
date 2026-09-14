@@ -9,8 +9,10 @@
  *
  *  ⛔ ★정해진 낱말만 만듭니다 (ALLOW). 아무 줄이나 못 만듭니다.
  *  ⛔ ★이미 있으면 «건드리지» 않습니다 — 넣어 두신 값이 0으로 덮이지 않게.
- *  ⚠️ 실제 차감은 ★mc_price 를 봅니다 — 여기서는 «보이기용 두 표» 만 만듭니다.
- *     mc_price 줄은 지금까지처럼 대표님이 따로 넣으셔야 합니다.
+ *  🔴 ★mc_price 줄도 «함께» 만듭니다 (service='myc' · item=낱말).
+ *     [까닭]  실제 차감은 ★mc_price 를 봅니다. 그 줄이 없으면 저장할 때
+ *       「지갑 요금표 반영에 실패했습니다」 가 뜹니다 (2026-09-14 대표님 화면에서 확인).
+ *     ⛔ 세 표를 «다» 만들어야 끝납니다 — 하나라도 빠지면 저장이 안 끝납니다.
  */
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
@@ -45,7 +47,22 @@ export async function POST(request: Request) {
     if (readErr) {
       return NextResponse.json({ error: '표를 읽지 못했어요: ' + readErr.message }, { status: 500 })
     }
-    if (had) return NextResponse.json({ ok: true, made: false })
+    /*  🔴 ★지갑 요금표(mc_price) 줄도 «함께» 봅니다.
+     *     보이기용 표에 줄이 있어도 여기가 비어 있으면 저장이 안 끝납니다. */
+    const { data: hadMc, error: mcReadErr } = await sb.from('mc_price')
+      .select('item').eq('service', 'myc').eq('item', key).maybeSingle()
+    if (mcReadErr) {
+      return NextResponse.json({ error: '지갑 요금표를 읽지 못했어요: ' + mcReadErr.message }, { status: 500 })
+    }
+    if (!hadMc) {
+      const { error: mcErr } = await sb.from('mc_price')
+        .insert({ service: 'myc', item: key, label: spec.label, price: 0, up_at: new Date().toISOString() })
+      if (mcErr) {
+        return NextResponse.json({ error: '지갑 요금표 줄을 만들지 못했어요: ' + mcErr.message }, { status: 500 })
+      }
+    }
+
+    if (had) return NextResponse.json({ ok: true, made: !hadMc })
 
     /*  ★처음 값 — 가격 0 · 꺼짐.
      *  ⛔ 0 으로 두는 것은 «공짜» 가 아니라 «아직 안 정했다» 는 뜻입니다.
