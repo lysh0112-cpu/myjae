@@ -934,6 +934,31 @@ async function jaeryoNet() {
     ok(true, `⚠️ ★연재쌤 검수가 남은 줄 — ${draftRows().length}개 (by: '초안')`)
   }
 
+  /* ══ ㉙ 🔴 나머지 수 — 2026-09-14 (9부) [대표님·연재쌤] ═══════════
+   *  연재쌤 노트에 ★붉게 동그라미 친 ③⑥① 을 화면에도 냅니다.
+   * ══════════════════════════════════════════════════════════════ */
+  head('㉙ 🔴 나머지 수 — 연재쌤 노트의 ③⑥①')
+  {
+    const route = R('app/api/haerak/route.ts')
+    const result = R('app/manseryeok/haerak-result/page.tsx')
+
+    ok(/namu: \{/.test(route) && /namuji\(r\.su\.nyeon, 8\)/.test(route),
+      '★창구가 나머지 수를 «셈해서» 보냅니다')
+    ok(/namuji\(r\.su\.wol, 6\)/.test(route) && /namuji\(r\.su\.il, 3\)/.test(route),
+      '★년÷8 · 월÷6 · 일÷3 입니다')
+    ok(/나머지 년 \{data\.namu\.nyeon\}/.test(result),
+      '🔴 ★결과 화면이 나머지를 «그립니다» [대표님 2026-09-14]')
+    ok(/나눈 숫자가 정확히 떨어지면/.test(result),
+      '★꼬리말이 붙어 있습니다 — 「딱 떨어지면 나눈 수를 그대로」 [대표님]')
+    ok(!/namuji\(/.test(result),
+      '⛔ ★화면이 «다시 셈하지» 않습니다 — 창구가 보낸 값을 그대로 그립니다')
+
+    //  🔴 값으로 — 희준 2028 이 ★3·6·1 인가 (연재쌤 노트)
+    ok(namuji(51, 8) === 3, '★년 51 ÷8 → 3   [노트 ③]')
+    ok(namuji(42, 6) === 6, '🔴 ★월 42 ÷6 → 6   [노트 ⑥] — 딱 떨어지면 «나눈 수» 입니다 (0 아님)')
+    ok(namuji(25, 3) === 1, '★일 25 ÷3 → 1   [노트 ①] — 동효와 같은 값입니다')
+  }
+
   console.log(`\n━━ 하락이수 수리 — 통과 ${pass} · 실패 ${fail} ━━\n`)
   process.exit(fail ? 1 : 0)
 }

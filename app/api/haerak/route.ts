@@ -23,7 +23,7 @@
  *  ⛔ 손님에게 나가는 값에 ★「원당」 이라는 낱말을 넣지 마십시오 [대표님 2026-09-14]
  */
 import { NextResponse } from 'next/server'
-import { calcHaerak } from '@/lib/saju/haerak/haerakSuri'
+import { calcHaerak, namuji } from '@/lib/saju/haerak/haerakSuri'
 import { jaeryoOf } from '@/lib/saju/haerak/haerakInputs'
 import { hyoTextOf, type GwaePart } from '@/lib/saju/haerak/tables/gwaeText'
 import { solarToLunarKR, lunarRangeKR } from '@/lib/saju/koreanLunarTable'
@@ -168,6 +168,16 @@ export async function POST(request: Request) {
       //  ⛔ 「원당」 이라는 낱말을 내보내지 않습니다 — 숫자로만 보냅니다
       dongHyo: r.dongHyo,
       su: r.su,
+      /*  🔴 ★나머지 수 — 2026-09-14 (9부) [대표님·연재쌤]
+       *     연재쌤 노트에 붉게 동그라미 친 ★③⑥① 이 이것입니다.
+       *  ⚠️ ★딱 떨어지면 «나눈 수» 를 그대로 씁니다 (42÷6 은 0 이 아니라 ★6).
+       *     ⇒ namuji() 가 그 규칙을 갖고 있습니다. ⛔ 화면에서 다시 셈하지 마십시오.
+       *  ⚠️ 일의 나머지는 ★동효와 «같은 값» 입니다 (따로 보내는 것은 대조를 쉽게 하려는 것). */
+      namu: {
+        nyeon: namuji(r.su.nyeon, 8),
+        wol: namuji(r.su.wol, 6),
+        il: namuji(r.su.il, 3),
+      },
       seoncheon: dress(r.seoncheon.no, r.seoncheon.name, r.seoncheon.nameKo,
         r.seoncheon.sangKo, r.seoncheon.haKo, sixOf(r.seoncheon.sang, r.seoncheon.ha)),
       hucheon: dress(r.hucheon.no, r.hucheon.name, r.hucheon.nameKo,

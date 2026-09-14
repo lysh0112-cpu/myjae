@@ -39,6 +39,8 @@ interface Out {
   target: number
   dongHyo: number
   su: { nyeon: number; wol: number; il: number }
+  /** ★나머지 수 — 연재쌤 노트의 붉은 동그라미 ③⑥① (9부) */
+  namu: { nyeon: number; wol: number; il: number }
   seoncheon: GwaeOut
   hucheon: GwaeOut
   geunggeo: {
@@ -193,7 +195,13 @@ function HaerakResultInner() {
         <div style={{ marginTop: 9, fontSize: 11.5, color: SUB, lineHeight: 1.9 }}>
           음력 생월·생일 {g.eumWol}월 {g.eumIl}일 · 나이 {g.nai}세 · 그 달 마지막 날 {g.wolLastDay}일<br />
           간지 {g.nyeonGanji} · {g.wolGanji} · {g.ilGanji}<br />
-          수 년 {data.su.nyeon} · 월 {data.su.wol} · 일 {data.su.il}
+          수 년 {data.su.nyeon} · 월 {data.su.wol} · 일 {data.su.il}<br />
+          {/*  🔴 ★나머지 수 — [대표님 2026-09-14] 연재쌤 노트의 ③⑥① 입니다.
+            *  ⛔ 여기서 «다시 셈하지» 않습니다 — 창구가 보낸 값을 그대로 그립니다. */}
+          나머지 년 {data.namu.nyeon} · 월 {data.namu.wol} · 일 {data.namu.il}
+          <div style={{ marginTop: 6, fontSize: 11, opacity: 0.8 }}>
+            ※ 나눈 숫자가 정확히 떨어지면, 나눈 숫자를 그대로 표시한다.
+          </div>
         </div>
       </details>
 
