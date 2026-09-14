@@ -2625,11 +2625,14 @@ console.log('\n━━ ㉒-u 🔴 합격운/취업운 — 관리자 토글로 «�
     `⛔ 손님이 «다른 설정» 을 골라 읽을 수 없습니다 (정해진 낱말만)`)
   check(/no-store/.test(pub), `★캐시하지 않습니다 (켜자마자 손님 화면에 반영)`)
   // ⑥ 관리자 쓰기 길 — 문지기 · 참/거짓만 · 바뀐 줄 세기
-  check(/typeof examLuck !== 'boolean'/.test(adm), `⛔ 참/거짓 «말고는» 받지 않습니다`)
+  //  ★2026-09-14 (8부) — 낱말이 «둘»(examLuck·haerak)이 되며 모양이 바뀌었습니다. 뜻은 그대로입니다.
+  check(/typeof body\.examLuck === 'boolean'/.test(adm) && /typeof body\.haerak === 'boolean'/.test(adm),
+    `⛔ 참/거짓 «말고는» 받지 않습니다 (낱말 둘 다)`)
+  check(/const k = HOME_FLAG_KEYS\[which\]/.test(adm), `⛔ ★정해진 낱말만 저장합니다 (손님이 다른 설정을 못 건드립니다)`)
   check(/\.select\('key'\)/.test(adm) && /data\.length === 0|!data \|\|/.test(adm),
     `★저장한 줄을 «셉니다» (조용히 0줄 막기)`)
   // ⑦ 관리 화면 — 결과 글이 «단추 바로 옆» 에 뜹니다 (말투 관리에서 대표님이 못 보신 교훈)
-  check(/callAdmin(<[^>]*>)?\(\s*'\/api\/admin\/home-flags'/.test(ui), `★관리 화면이 서버 길로 저장합니다`)
+  check(/callAdmin[\s\S]{0,40}?\(\s*'\/api\/admin\/home-flags'/.test(ui), `★관리 화면이 서버 길로 저장합니다`)
   //  ★6부 뒤 — 토글이 가격 표에 값을 넘기게 되어(onChange) 모양이 달라졌습니다. «토글이 있는가» 만 봅니다.
   check(/<HomeFlagToggle\b[^>]*\/>/.test(pm), `★가격 관리 화면에 토글이 있습니다`)
   check(/aria-live/.test(ui), `★결과 글이 토글 «바로 옆» 에 뜹니다`)
@@ -2748,12 +2751,52 @@ console.log('\n━━ ㉒-y 🔴 가격 표의 합격운 줄이 «토글을 따�
   const iCareer = pm.indexOf("{ consult: 'career'"), iExam = pm.indexOf("{ consult: 'examluck'"), iCouple = pm.indexOf("{ consult: 'couple'")
   check(iCareer >= 0 && iExam > iCareer && iCouple > iExam, `★합격운 줄이 «진로적성 바로 아래» 입니다 [대표님]`)
   check(/k: 'examluck_ai'/.test(pm) && /onlyWhen: 'examLuck'/.test(pm), `★합격운 줄은 «토글이 켜졌을 때만» 입니다`)
-  check(/PAIRS\.filter\(p => !p\.onlyWhen \|\| showExamLuck\)/.test(pm), `★표가 토글 값으로 줄을 거릅니다`)
+  //  ★2026-09-14 (8부) — 숨겨 둔 서비스가 «둘» 이 되며 flags[p.onlyWhen] 로 넓어졌습니다.
+  check(/PAIRS\.filter\(p => !p\.onlyWhen \|\| flags\[p\.onlyWhen\]\)/.test(pm), `★표가 토글 값으로 줄을 거릅니다`)
   //  🔴 숨긴 동안 AI 줄이 «그 밖 · 짝이 없는 AI 줄» 로 새지 않게 — 짝 목록은 «전체» 로 봅니다
   check(/const pairedKeys = new Set\(PAIRS\.flatMap/.test(pm), `⛔ 숨긴 동안 합격운 AI 줄이 «그 밖» 으로 새지 않습니다`)
   //  ★토글과 표가 «한 값» 을 봅니다 — 누르자마자 표가 바뀝니다 (새로고침 없이)
-  check(/<HomeFlagToggle onChange=\{setExamLuck\} \/>/.test(pm) && /<MergedPriceTable showExamLuck=\{examLuck\} \/>/.test(pm),
+  check(/<HomeFlagToggle onChange=\{setExamLuck\} \/>/.test(pm)
+    && /<MergedPriceTable flags=\{\{ examLuck, haerak \}\} \/>/.test(pm),
     `★토글을 누르면 가격 표가 «바로» 따라 바뀝니다`)
+
+  /* ══ 🔴 ★2026-09-14 (8부) — 하락이수도 «같은 방식» 으로 켜고 끄는가 ══
+   *    [대표님]  「완전한 검증이 될 때까지 … 넣을지 말지를 결정하는 토글버튼을 만들어줘」
+   *              「전담상담사가격과 ai가격 토글버튼도 같이」
+   *              「내사주그림…진로적성…하락이수 순으로」 · 「뱃지는 붙이지 마」            */
+  check(/haerak: 'home_haerak'/.test(codeOf(read('lib/homeFlags.ts'))), `★하락이수 토글 낱말이 있습니다 (home_haerak)`)
+  check(/HOME_FLAGS_OFF: HomeFlags = \{ examLuck: false, haerak: false \}/.test(codeOf(read('lib/homeFlags.ts'))),
+    `⛔ ★못 읽으면 «둘 다 꺼짐» 입니다 (켜진 채로 안 샙니다)`)
+  check(/consult: 'haerak'[\s\S]{0,120}onlyWhen: 'haerak'/.test(pm),
+    `★가격 표에 하락이수 줄이 있고 «토글이 켜졌을 때만» 보입니다`)
+  check(/k: 'haerak_ai'/.test(pm), `★AI 분석 가격 칸도 있습니다 (haerak_ai)`)
+  {
+    const iCareer = pm.indexOf("consult: 'career'")
+    const iHaerak = pm.indexOf("consult: 'haerak'")
+    const iExam = pm.indexOf("consult: 'examluck'")
+    check(iCareer > 0 && iHaerak > iCareer && iExam > iHaerak,
+      `★가격 표 차례 — 진로적성 → ★하락이수 → 합격운 [대표님 2026-09-14]`)
+  }
+  check(/<HomeFlagToggle flag="haerak" onChange=\{setHaerak\} \/>/.test(pm),
+    `★하락이수 토글이 «같은 부품» 을 씁니다 (복사하지 않았습니다)`)
+  {
+    const sec = codeOf(read('app/home-new/components/ServiceSection.tsx'))
+    check(/const BEST_NAMES = \['내사주그림', '진로적성', HAERAK_NAME\]/.test(sec),
+      `★홈 차례 — 내사주그림 → 진로적성 → ★하락이수 [대표님 2026-09-14]`)
+    check(/badgeText\?: string/.test(sec) && /t\.badgeText \? \(/.test(sec),
+      `⛔ ★뱃지는 «값이 있을 때만» 그립니다 [대표님 「뱃지는 붙이지 마」]`)
+    const th = sec.slice(sec.indexOf('[HAERAK_NAME]: {'))
+    check(!/badgeText/.test(th.slice(0, 400)), `⛔ ★하락이수에는 뱃지를 «안 붙였습니다»`)
+    check(/'내사주그림'[\s\S]{0,400}badgeText: 'BEST'/.test(sec),
+      `⛔ 기존 둘의 «BEST» 뱃지는 그대로입니다 (말없이 사라지지 않았습니다)`)
+  }
+  {
+    const home = codeOf(read('app/home-new/page.tsx'))
+    check(/isHaerakName\(s\.name\) \|\| flags\.haerak/.test(home),
+      `★홈이 하락이수를 «토글로» 거릅니다`)
+    check(/name: HAERAK_NAME,[\s\S]{0,200}href: '\/manseryeok\/haerak'/.test(home),
+      `★하락이수 카드가 갈 곳이 있습니다`)
+  }
   const ui = codeOf(read('app/admin/components/HomeFlagToggle.tsx'))
   check((ui.match(/onChange(Ref\.current)?\?\.\(/g) ?? []).length >= 2, `★토글이 «읽을 때 · 바꿀 때» 둘 다 알립니다`)
   check(/홈 카드 · 보관함 · 가격 표 줄/.test(ui), `★토글 설명이 움직이는 세 곳을 말합니다`)

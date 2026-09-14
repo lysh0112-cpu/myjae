@@ -12,24 +12,32 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { requireMaster } from '../_guard'
-import { HOME_FLAG_KEYS } from '@/lib/homeFlags'
+import { HOME_FLAG_KEYS, type HomeFlagKey } from '@/lib/homeFlags'
 
 export async function POST(request: Request) {
   try {
     const g = await requireMaster()
     if (!g.ok) return g.res
 
-    const { examLuck } = await request.json().catch(() => ({ examLuck: undefined }))
-    if (typeof examLuck !== 'boolean') {
+    /*  ★2026-09-14 (8부) — 낱말이 «둘» 이 되었습니다 (examLuck · haerak).
+     *    ⚠️ 한 번에 ★하나만 받습니다 — 어느 것을 눌렀는지가 또렷해야 합니다.
+     *    ⛔ 정해진 낱말 말고는 거절합니다 (손님이 다른 설정을 건드릴 수 없게). */
+    const body = await request.json().catch(() => ({})) as Partial<Record<HomeFlagKey, unknown>>
+    const which: HomeFlagKey | null =
+      typeof body.examLuck === 'boolean' ? 'examLuck'
+      : typeof body.haerak === 'boolean' ? 'haerak'
+      : null
+    if (!which) {
       return NextResponse.json({ error: '켜기/끄기 값이 이상해요.' }, { status: 400 })
     }
+    const examLuck = body[which] as boolean
 
     const sb = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       { auth: { autoRefreshToken: false, persistSession: false } },
     )
-    const k = HOME_FLAG_KEYS.examLuck
+    const k = HOME_FLAG_KEYS[which]
     const now = new Date().toISOString()
     /* ★2026-09-11 (6부) — app_settings.value 는 ★«숫자 칸» 입니다 (대표님 화면에서 값으로 확인).
      *   처음 true/false 를 넣었다가 「invalid input syntax for type integer: "true"」 로 거절됐습니다.
@@ -48,7 +56,8 @@ export async function POST(request: Request) {
     if (!data || data.length === 0) {
       return NextResponse.json({ error: '저장되지 않았어요. 다시 해 주세요.' }, { status: 500 })
     }
-    return NextResponse.json({ ok: true, examLuck })
+    //  ⚠️ 누른 «그 낱말» 로 돌려줍니다 — 화면이 자기 값을 받아야 합니다.
+    return NextResponse.json({ ok: true, [which]: examLuck })
   } catch (e: unknown) {
     const m = e instanceof Error ? e.message : ''
     return NextResponse.json({ error: '저장 중 문제가 생겼어요: ' + (m || '알 수 없음') }, { status: 500 })

@@ -12,7 +12,7 @@
 // ══════════════════════════════════════════════════════════════════
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { HOME_FLAG_KEYS } from '@/lib/homeFlags'
+import { HOME_FLAG_KEYS, HOME_FLAGS_OFF } from '@/lib/homeFlags'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,7 +22,7 @@ export async function GET() {
   try {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!url || !key) return NextResponse.json({ examLuck: false }, { headers: NO_STORE })
+    if (!url || !key) return NextResponse.json(HOME_FLAGS_OFF, { headers: NO_STORE })
 
     const sb = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
     const { data } = await sb.from('app_settings')
@@ -30,6 +30,6 @@ export async function GET() {
 
     return NextResponse.json({ examLuck: Number(data?.value) === 1 }, { headers: NO_STORE })
   } catch {
-    return NextResponse.json({ examLuck: false }, { headers: NO_STORE })
+    return NextResponse.json(HOME_FLAGS_OFF, { headers: NO_STORE })
   }
 }

@@ -25,7 +25,7 @@ import ServiceSection from '@/app/home-new/components/ServiceSection'
 import SisterLinks from '@/app/components/common/SisterLinks'
 /* ★2026-09-10 — 회사 정보를 «한 곳» 에서 가져옵니다 (⛔ 여기에 다시 적지 마십시오) */
 import { COMPANY } from '@/app/components/common/companyInfo'
-import { EXAM_LUCK_NAME, isExamLuckName, HOME_FLAGS_OFF, fetchHomeFlags, type HomeFlags } from '@/lib/homeFlags'
+import { EXAM_LUCK_NAME, isExamLuckName, HAERAK_NAME, isHaerakName, HOME_FLAGS_OFF, fetchHomeFlags, type HomeFlags } from '@/lib/homeFlags'
 
 // ── 사람 선택 모달을 여는 서비스 설정 ──
 // 사주 + 대운 + 세운(연월운세) 연결. 셋 다 같은 흐름:
@@ -214,6 +214,10 @@ const SERVICES = [
   { name: '타로',       color: '#b45a78', bg: '#f6e5eb', href: '/tarot', cat: '기타', sub: '오늘의 카드', icon: '🃏', grad: ['#8b5cf6', '#e879f9'] },
   // 🧭 BEST — purple-500 → pink-400
   { name: '진로적성',   color: '#785aaa', bg: '#efeaf7', href: '/manseryeok/career', cat: '적성', sub: '내 길과 그릇', icon: '🧭', grad: ['#a855f7', '#f472b6'] },
+  /*  ★2026-09-14 (8부) [대표님 「내사주그림…진로적성…하락이수 순」 · 목업 승낙]
+   *    ⛔ 보일지 말지는 여기서 정하지 «않습니다» — 아래 visibleServices 가 토글로 거릅니다.
+   *    ⛔ 검증이 끝날 때까지 ★꺼짐입니다. 켜면 손님께 바로 보입니다. */
+  { name: HAERAK_NAME, color: '#3f6fa8', bg: '#eaf2f9', href: '/manseryeok/haerak', cat: '적성', sub: '해마다 바뀌는 운', icon: '☯️', grad: ['#3f6fa8', '#4a8f86'] },
 ]
 
 // ★2026-07-29 — `type Service` 와 `COLLAPSED_COUNT` 를 걷어냈습니다.
@@ -244,7 +248,10 @@ export default function HomeNew() {
     fetchHomeFlags().then((f) => { if (alive) setFlags(f) })
     return () => { alive = false }
   }, [])
-  const visibleServices = SERVICES.filter((s) => !isExamLuckName(s.name) || flags.examLuck)
+  //  ★2026-09-14 (8부) — 숨겨 둔 서비스가 «둘» 이 되었습니다.
+  //  ⛔ 못 읽으면 HOME_FLAGS_OFF(둘 다 꺼짐)라 ★켜진 채로 새지 않습니다.
+  const visibleServices = SERVICES.filter((s) =>
+    (!isExamLuckName(s.name) || flags.examLuck) && (!isHaerakName(s.name) || flags.haerak))
 
   // 찜(고정)한 서비스 목록 로드 (로그인 회원만 값이 있음)
   //

@@ -32,16 +32,32 @@ export function isExamLuckName(name: string): boolean {
   return name === EXAM_LUCK_NAME || name === EXAM_LUCK_NAME_OLD
 }
 
+/*  ★2026-09-14 (8부) [대표님 「완전한 검증이 될 때까지 … 넣을지 말지를 결정하는 토글」]
+ *    하락이수를 «합격운과 똑같은 방식» 으로 켜고 끕니다.
+ *  ⛔ 하락이수는 ★뱃지를 «붙이지» 않습니다 [대표님 「나중에 필요하면 넣도록 할께」]. */
+export const HAERAK_NAME = '하락이수'
+/** 이 카드의 이름인가 */
+export function isHaerakName(name: string): boolean {
+  return name === HAERAK_NAME
+}
+
 /** app_settings 의 낱말 — ⛔ 바꾸면 켜 둔 값이 «꺼짐» 으로 돌아갑니다 */
 export const HOME_FLAG_KEYS = {
   examLuck: 'home_exam_luck',
+  haerak: 'home_haerak',
 } as const
 
 export interface HomeFlags {
   examLuck: boolean
+  /** ★2026-09-14 (8부) — 하락이수. ⛔ 검증 끝날 때까지 «꺼짐» 으로 나갑니다 [대표님] */
+  haerak: boolean
 }
 
-export const HOME_FLAGS_OFF: HomeFlags = { examLuck: false }
+export const HOME_FLAGS_OFF: HomeFlags = { examLuck: false, haerak: false }
+
+/** 토글 낱말 — 화면·창구·검사가 «이 목록» 으로 맞춥니다 */
+export type HomeFlagKey = keyof HomeFlags
+export const HOME_FLAG_LIST: HomeFlagKey[] = ['examLuck', 'haerak']
 
 /** 화면에서 부릅니다 — 못 읽으면 «꺼짐» */
 export async function fetchHomeFlags(): Promise<HomeFlags> {
@@ -49,7 +65,7 @@ export async function fetchHomeFlags(): Promise<HomeFlags> {
     const r = await fetch('/api/home-flags', { cache: 'no-store' })
     if (!r.ok) return HOME_FLAGS_OFF
     const d = (await r.json()) as Partial<HomeFlags> | null
-    return { examLuck: d?.examLuck === true }
+    return { examLuck: d?.examLuck === true, haerak: d?.haerak === true }
   } catch {
     return HOME_FLAGS_OFF
   }

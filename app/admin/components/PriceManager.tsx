@@ -3,6 +3,7 @@ import { useEffect, useState, type CSSProperties } from 'react'
 import { supabase } from '@/lib/supabase'
 import WalletPrice from './WalletPrice'
 import HomeFlagToggle from './HomeFlagToggle'
+import type { HomeFlagKey } from '@/lib/homeFlags'
 
 type Price = {
   id: string
@@ -40,9 +41,14 @@ type HomePrice = {
  * ══════════════════════════════════════════════════════════════════ */
 /* ★2026-09-11 (6부) — onlyWhen: 'examLuck' 인 줄은 «숨겨 둔 서비스» 토글이 켜졌을 때만 보입니다 (검사 ㉒-y).
  *   ⚠️ 숨겨도 가격은 DB 에 «그대로» 남습니다 — 다시 켜면 그 값으로 돌아옵니다. */
-const PAIRS: { consult: string; ai: { k: string; short: string }[]; onlyWhen?: 'examLuck' }[] = [
+const PAIRS: { consult: string; ai: { k: string; short: string }[]; onlyWhen?: HomeFlagKey }[] = [
   { consult: 'mulsang',     ai: [{ k: 'mulsang_ai',     short: '그림 생성' }] },
   { consult: 'career',      ai: [{ k: 'career_ai',      short: '적성 분석' }] },
+  /*  ★2026-09-14 (8부) [대표님 「내사주그림…진로적성…하락이수 순으로」 · 목업 승낙]
+   *    ⇒ ★진로적성 «바로 아래» 입니다. 합격운이 한 칸 밀립니다.
+   *    DB 줄 — consult_prices 'haerak' · analysis_prices 'haerak_ai'
+   *    ⛔ 토글(home_haerak)이 켜졌을 때만 보입니다. 숨겨도 ★값은 그대로 남습니다. */
+  { consult: 'haerak',      ai: [{ k: 'haerak_ai',      short: '하락이수 분석' }], onlyWhen: 'haerak' },
   //  ★2026-09-11 (6부) [대표님 · 목업 승낙] — 「진로적성 바로 아래」. 토글이 켜졌을 때만.
   //     DB 줄 — consult_prices 'examluck' · analysis_prices 'examluck_ai' · mc_price myc 두 줄
   /*  🔴 ★2026-09-13 (7부) [대표님 「취업운/합격운/승진운 ★각각 항목을 넣고」]
@@ -117,7 +123,7 @@ function PriceCell({ r, short, onPrice, onToggle }: {
   )
 }
 
-function MergedPriceTable({ showExamLuck = false }: { showExamLuck?: boolean }) {
+function MergedPriceTable({ flags }: { flags: { examLuck: boolean; haerak: boolean } }) {
   const [consult, setConsult] = useState<Price[]>([])
   const [ai, setAi] = useState<Price[]>([])
   const [loading, setLoading] = useState(true)
@@ -237,7 +243,7 @@ function MergedPriceTable({ showExamLuck = false }: { showExamLuck?: boolean }) 
         </div>
 
         {/* ★2026-09-11 (6부) — 토글이 꺼지면 합격운 줄을 «그리지 않습니다» (값은 그대로) */}
-        {PAIRS.filter(p => !p.onlyWhen || showExamLuck).map(p => {
+        {PAIRS.filter(p => !p.onlyWhen || flags[p.onlyWhen]).map(p => {
           const c = consult.find(r => r.price_key === p.consult)
           if (!c) return null
           return (
@@ -633,6 +639,8 @@ export default function PriceManager() {
   /* ★2026-09-11 (6부) — 「숨겨 둔 서비스」 토글과 가격 표가 «한 값» 을 봅니다.
    *   토글을 누르면 새로고침 없이 표의 합격운 줄이 «바로» 생기고 사라집니다 (검사 ㉒-y). */
   const [examLuck, setExamLuck] = useState(false)
+  //  ★2026-09-14 (8부) — 하락이수 토글. 꺼져 있으면 가격 줄도 안 그립니다.
+  const [haerak, setHaerak] = useState(false)
   return (
     <div style={{ maxWidth: 1200 }}>
       <div className="text-base font-bold mb-1" style={{ color: '#FAC775' }}>💰 가격 관리</div>
@@ -651,7 +659,7 @@ export default function PriceManager() {
           ⚠️ 좁은 화면에서는 오른쪽 덩어리가 ★«아래로» 내려갑니다 (flexWrap). */}
       <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start',
         flexWrap: 'wrap', justifyContent: 'space-between' }}>
-        <MergedPriceTable showExamLuck={examLuck} />
+        <MergedPriceTable flags={{ examLuck, haerak }} />
         <div style={{ width: 300, minWidth: 260, flex: '0 1 auto' }}>
           <WalletPrice />
         </div>
@@ -678,6 +686,11 @@ export default function PriceManager() {
             ⚠️ 이 토글은 «누르면 바로» 저장합니다 (아래 [저장] 과 따로입니다). */}
       <div style={{ marginTop: 28, maxWidth: 420 }}>
         <HomeFlagToggle onChange={setExamLuck} />
+        {/*  ★2026-09-14 (8부) [대표님 「완전한 검증이 될 때까지 … 토글버튼」]
+         *    ⛔ 부품을 복사하지 «않았습니다» — 같은 HomeFlagToggle 에 낱말만 다르게 넘깁니다. */}
+        <div style={{ marginTop: 12 }}>
+          <HomeFlagToggle flag="haerak" onChange={setHaerak} />
+        </div>
       </div>
 
       <div style={{ marginTop: 28, maxWidth: 420 }}>

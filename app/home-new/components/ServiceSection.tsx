@@ -127,11 +127,16 @@ const C = {
 const STRIPE_W = '4px'
 
 /** 맨 위에 큰 카드로 세울 둘 (대표님 지정) */
-const BEST_NAMES = ['내사주그림', '진로적성']
+/*  ★2026-09-14 (8부) [대표님 「내사주그림…진로적성…하락이수 순으로 들어가게 해줘」]
+ *    ⚠️ 차례가 ★이 배열 그대로 화면에 뜹니다. 바꾸면 홈이 바뀝니다.
+ *    ⛔ 하락이수는 토글(home_haerak)이 꺼져 있으면 목록에서 «걸러집니다» —
+ *       홈(page.tsx)의 visibleServices 가 미리 빼므로 여기 이름이 있어도 안 그려집니다. */
+const BEST_NAMES = ['내사주그림', '진로적성', HAERAK_NAME]
 
 const BEST_COPY: Record<string, string> = {
   '내사주그림': '어려운 내 사주를 한 장의 그림으로',
   '진로적성': '타고난 직무 역량과 사주 MBTI',
+  [HAERAK_NAME]: '해마다 바뀌는 운의 흐름을 괘로',
 }
 
 /**
@@ -145,7 +150,12 @@ const BEST_COPY: Record<string, string> = {
  */
 // ⚠️ glow 는 ★2026-09-08 부터 «안 씁니다» (선 통일). 되돌리실 때 쓰시라고 남겨 둡니다.
 //    ⛔ 지우지 마십시오 — 지우면 옛 모양으로 되돌리는 값이 사라집니다.
-interface BestTheme { bg: string; glow: string; badge: string; arrow: string; iconBg: string; iconEdge: string; stripe: string }
+interface BestTheme {
+  bg: string; glow: string; badge: string; arrow: string; iconBg: string; iconEdge: string; stripe: string
+  /*  ★2026-09-14 (8부) [대표님 「뱃지는 붙이지 마…나중에 필요하면 넣도록 할께」]
+   *    ⛔ 비워 두면 뱃지를 ★그리지 않습니다. 붙이시려면 여기에 글자만 적으시면 됩니다. */
+  badgeText?: string
+}
 /* ★2026-08-04 (45부 · 대표님 지시) — BEST 카드도 «대비 2단계» 로 올렸습니다.
  *
  *   [까닭]  아래 카드들만 진해지고 BEST 둘이 옛 대비로 남아 «따로 놀았습니다».
@@ -171,6 +181,7 @@ const BEST_THEME: Record<string, BestTheme> = {
     glow: '0 6px 22px -6px rgba(224,105,122,0.30), 0 2px 8px rgba(0,0,0,0.04)',
     stripe: '#e0697a',
     badge: 'linear-gradient(100deg, #cf6b56, #b57f37)',
+    badgeText: 'BEST',
     arrow: '#8a5049',
     iconBg: '#ffffff',
     iconEdge: '#e8cfc4',
@@ -180,9 +191,22 @@ const BEST_THEME: Record<string, BestTheme> = {
     glow: '0 6px 22px -6px rgba(168,111,216,0.28), 0 2px 8px rgba(0,0,0,0.04)',
     stripe: '#a86fd8',
     badge: 'linear-gradient(100deg, #7d5cb8, #5f6bc4)',
+    badgeText: 'BEST',
     arrow: '#5b4d8c',
     iconBg: '#ffffff',
     iconEdge: '#d5cde8',
+  },
+  /*  ★2026-09-14 (8부) — 하락이수 ★청람(靑藍).
+   *    샴페인(붉은 기) · 라벤더(보랏빛) 다음이라 «푸른 기» 로 잡았습니다. 셋이 안 겹칩니다.
+   *    ⛔ badgeText 를 «비워 두었습니다» — 대표님이 「뱃지는 붙이지 마」 하셨습니다. */
+  [HAERAK_NAME]: {
+    bg: 'linear-gradient(135deg, rgba(240,249,255,0.94) 0%, rgba(236,244,242,0.86) 100%)',
+    glow: '0 6px 22px -6px rgba(77,127,181,0.28), 0 2px 8px rgba(0,0,0,0.04)',
+    stripe: '#4d7fb5',
+    badge: 'linear-gradient(100deg, #3f6fa8, #4a8f86)',
+    arrow: '#3f5c80',
+    iconBg: '#ffffff',
+    iconEdge: '#c9d8e6',
   },
 }
 
@@ -224,7 +248,7 @@ const ALWAYS_OPEN = ['saju']
 /*  ★2026-09-12 (7부) [대표님] — 승진운을 더하며 이름이 바뀌었습니다.
  *  ⛔ 이름을 여기 «붙박이» 로 적지 마십시오 — 홈 · 낱장 · 관리 화면 «셋» 이 갈립니다.
  *     lib/homeFlags.ts 의 EXAM_LUCK_NAME «한 곳» 에서만 옵니다 (검사 ㉒-u). */
-import { EXAM_LUCK_NAME } from '@/lib/homeFlags'
+import { EXAM_LUCK_NAME, HAERAK_NAME } from '@/lib/homeFlags'
 
 const SOLO_NAMES = ['궁합', EXAM_LUCK_NAME]
 
@@ -413,10 +437,12 @@ export default function ServiceSection({
                     <span style={{ fontSize: 15.5, fontWeight: 700, color: C.text, letterSpacing: '-0.3px' }}>
                       {s.name}
                     </span>
-                    <span style={{
-                      fontSize: 9.5, fontWeight: 700, color: '#fff', background: t.badge,
-                      padding: '2px 7px', borderRadius: 20, letterSpacing: '0.3px',
-                    }}>BEST</span>
+                    {t.badgeText ? (
+                      <span style={{
+                        fontSize: 9.5, fontWeight: 700, color: '#fff', background: t.badge,
+                        padding: '2px 7px', borderRadius: 20, letterSpacing: '0.3px',
+                      }}>{t.badgeText}</span>
+                    ) : null}
                   </span>
                   <span style={{ fontSize: 11.5, color: C.sub, lineHeight: 1.45 }}>
                     {BEST_COPY[s.name] ?? s.sub}

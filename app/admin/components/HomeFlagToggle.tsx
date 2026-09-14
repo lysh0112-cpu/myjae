@@ -12,11 +12,24 @@
 // ══════════════════════════════════════════════════════════════════
 import { useEffect, useState } from 'react'
 import { callAdmin } from './callAdmin'
-import { EXAM_LUCK_NAME, fetchHomeFlags } from '@/lib/homeFlags'
+import { EXAM_LUCK_NAME, HAERAK_NAME, fetchHomeFlags, type HomeFlagKey } from '@/lib/homeFlags'
 
 /* ★2026-09-11 (6부) — onChange: 값을 «읽었을 때 · 바꿨을 때» 가격 관리 화면에 알립니다.
  *   가격 표의 합격운 줄이 이 값을 따라 보이고 숨습니다 (검사 ㉒-y). */
-export default function HomeFlagToggle({ onChange }: { onChange?: (on: boolean) => void } = {}) {
+/*  ★2026-09-14 (8부) [대표님 「하락이수도 넣을지 말지 결정하는 토글」]
+ *    ★낱말(flag)을 받게 넓혔습니다. 안 넘기면 «합격운» 입니다 — 옛 자리가 그대로 돕니다.
+ *  ⛔ 카드마다 부품을 «복사» 하지 마십시오. 여기 한 곳입니다. */
+const LABEL: Record<HomeFlagKey, string> = { examLuck: EXAM_LUCK_NAME, haerak: HAERAK_NAME }
+/** 켤 때 한 번 여쭙는 말 — ⛔ 비워 두면 안 묻습니다 */
+const ASK: Record<HomeFlagKey, string> = {
+  examLuck: '⚠️ 지금은 결제 시트가 없어, 로그인한 손님께 무료로 보입니다.',
+  haerak: '⚠️ 아직 ★검증 중입니다. 화면이 준비되지 않았으면 손님이 눌러도 갈 데가 없습니다.',
+}
+
+export default function HomeFlagToggle(
+  { flag = 'examLuck', onChange }: { flag?: HomeFlagKey; onChange?: (on: boolean) => void } = {},
+) {
+  const NAME = LABEL[flag]
   const [on, setOn] = useState<boolean | null>(null)   // null = 읽는 중
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -25,27 +38,26 @@ export default function HomeFlagToggle({ onChange }: { onChange?: (on: boolean) 
   //     처음 읽기가 다시 돌지 않습니다. ⛔ ref 로 붙잡는 방식은 새 eslint 규칙에서 «오류» 입니다 (기준선을 늘림).
   useEffect(() => {
     let alive = true
-    fetchHomeFlags().then((f) => { if (alive) { setOn(f.examLuck); onChange?.(f.examLuck) } })
+    fetchHomeFlags().then((f) => { if (alive) { setOn(f[flag]); onChange?.(f[flag]) } })
     return () => { alive = false }
-  }, [onChange])
+  }, [onChange, flag])
 
   async function flip() {
     if (on === null || busy) return
     const next = !on
     if (next && !window.confirm(
-      `홈 화면에 「${EXAM_LUCK_NAME}」 카드를 보이게 할까요?\n\n` +
-      '⚠️ 지금은 결제 시트가 없어, 로그인한 손님께 무료로 보입니다.',
+      `홈 화면에 「${NAME}」 카드를 보이게 할까요?\n\n` + ASK[flag],
     )) return
     setBusy(true)
     setMsg(null)
-    const r = await callAdmin<{ ok: true; examLuck: boolean }>('/api/admin/home-flags', { examLuck: next })
+    const r = await callAdmin<Record<string, boolean>>('/api/admin/home-flags', { [flag]: next })
     setBusy(false)
     if (!r.ok) { setMsg({ ok: false, text: '저장 실패: ' + r.message }); return }
-    setOn(r.data.examLuck)
-    onChange?.(r.data.examLuck)
+    setOn(r.data[flag])
+    onChange?.(r.data[flag])
     setMsg({
       ok: true,
-      text: r.data.examLuck
+      text: r.data[flag]
         ? '✓ 홈에 보이게 했어요 (손님 화면은 새로고침하면 보여요)'
         : '✓ 홈에서 숨겼어요',
     })
@@ -58,7 +70,7 @@ export default function HomeFlagToggle({ onChange }: { onChange?: (on: boolean) 
       <div style={{ background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.15)', borderRadius: 12, padding: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 13, color: '#e8e4ff' }}>{EXAM_LUCK_NAME}</div>
+            <div style={{ fontSize: 13, color: '#e8e4ff' }}>{NAME}</div>
             <div style={{ fontSize: 11, color: '#8a88a0', marginTop: 3 }}>
               홈 카드 · 보관함 · 가격 표 줄
             </div>
@@ -70,7 +82,7 @@ export default function HomeFlagToggle({ onChange }: { onChange?: (on: boolean) 
             <button
               onClick={flip}
               disabled={on === null || busy}
-              aria-label={`${EXAM_LUCK_NAME} 홈 노출 ${knobOn ? '끄기' : '켜기'}`}
+              aria-label={`${NAME} 홈 노출 ${knobOn ? '끄기' : '켜기'}`}
               aria-pressed={knobOn}
               style={{
                 position: 'relative', width: 36, height: 20, borderRadius: 10, border: 'none',
