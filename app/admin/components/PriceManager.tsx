@@ -3,6 +3,7 @@ import { useEffect, useState, type CSSProperties } from 'react'
 import { supabase } from '@/lib/supabase'
 import WalletPrice from './WalletPrice'
 import HomeFlagToggle from './HomeFlagToggle'
+import { callAdmin } from './callAdmin'
 import type { HomeFlagKey } from '@/lib/homeFlags'
 
 type Price = {
@@ -124,6 +125,17 @@ function PriceCell({ r, short, onPrice, onToggle }: {
 }
 
 function MergedPriceTable({ flags }: { flags: { examLuck: boolean; haerak: boolean } }) {
+  /*  ★2026-09-14 (8부) — 없는 가격 줄을 «화면에서» 만듭니다.
+   *    ⛔ 낱말은 창구(ALLOW)가 막습니다 — 아무 줄이나 안 만들어집니다. */
+  async function makeRow(consultKey: string, aiKeys: string[]) {
+    for (const k of [consultKey, ...aiKeys]) {
+      const r = await callAdmin<{ ok: true }>('/api/admin/price-row', { key: k })
+      if (!r.ok) { alert('만들지 못했어요: ' + r.message); return }
+    }
+    alert('가격 줄을 만들었어요. 값을 넣고 저장해 주세요.')
+    location.reload()
+  }
+
   const [consult, setConsult] = useState<Price[]>([])
   const [ai, setAi] = useState<Price[]>([])
   const [loading, setLoading] = useState(true)
@@ -245,7 +257,26 @@ function MergedPriceTable({ flags }: { flags: { examLuck: boolean; haerak: boole
         {/* ★2026-09-11 (6부) — 토글이 꺼지면 합격운 줄을 «그리지 않습니다» (값은 그대로) */}
         {PAIRS.filter(p => !p.onlyWhen || flags[p.onlyWhen]).map(p => {
           const c = consult.find(r => r.price_key === p.consult)
-          if (!c) return null
+          /*  🔴 ★2026-09-14 (8부) — 전에는 여기서 «조용히» null 이었습니다.
+           *     ⇒ 토글을 켜도 줄이 «안 보여» 왜 그런지 알 수 없었습니다 (대표님 화면에서 확인).
+           *     ⛔ 사라지게 두지 마십시오. «없다» 고 말하고 만들 자리를 줍니다. */
+          if (!c) return (
+            <div key={p.consult} style={row}>
+              <span style={{ fontSize: 12, color: '#fff', paddingTop: 5 }}>{p.consult}</span>
+              <span style={{ fontSize: 11, color: '#f0a05a', paddingTop: 6 }}>
+                아직 표에 줄이 없어요
+              </span>
+              <div>
+                <button type="button" onClick={() => makeRow(p.consult, p.ai.map(x => x.k))}
+                  style={{
+                    padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
+                    background: '#FAC775', border: 'none', color: '#2C2C2A', fontSize: 11.5, fontWeight: 700,
+                  }}>
+                  가격 줄 만들기
+                </button>
+              </div>
+            </div>
+          )
           return (
             <div key={p.consult} style={row}>
               <span style={{ fontSize: 12, color: '#fff', paddingTop: 5,
@@ -689,7 +720,7 @@ export default function PriceManager() {
         {/*  ★2026-09-14 (8부) [대표님 「완전한 검증이 될 때까지 … 토글버튼」]
          *    ⛔ 부품을 복사하지 «않았습니다» — 같은 HomeFlagToggle 에 낱말만 다르게 넘깁니다. */}
         <div style={{ marginTop: 12 }}>
-          <HomeFlagToggle flag="haerak" onChange={setHaerak} />
+          <HomeFlagToggle flag="haerak" showTitle={false} onChange={setHaerak} />
         </div>
       </div>
 

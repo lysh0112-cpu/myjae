@@ -2777,8 +2777,24 @@ console.log('\n━━ ㉒-y 🔴 가격 표의 합격운 줄이 «토글을 따�
     check(iCareer > 0 && iHaerak > iCareer && iExam > iHaerak,
       `★가격 표 차례 — 진로적성 → ★하락이수 → 합격운 [대표님 2026-09-14]`)
   }
-  check(/<HomeFlagToggle flag="haerak" onChange=\{setHaerak\} \/>/.test(pm),
+  check(/<HomeFlagToggle flag="haerak" showTitle=\{false\} onChange=\{setHaerak\} \/>/.test(pm),
     `★하락이수 토글이 «같은 부품» 을 씁니다 (복사하지 않았습니다)`)
+  //  ⚠️ ★제목이 «두 번» 뜨지 않는가 (2026-09-14 대표님 화면에서 확인)
+  {
+    const tg = codeOf(read('app/admin/components/HomeFlagToggle.tsx'))
+    check(/showTitle \? \(/.test(tg), `⚠️ ★「숨겨 둔 서비스」 제목이 «한 번만» 뜹니다`)
+  }
+  //  🔴 ★가격 줄이 «조용히 사라지지» 않는가 — 없으면 만들 자리를 보입니다
+  check(/아직 표에 줄이 없어요/.test(pm) && /가격 줄 만들기/.test(pm),
+    `🔴 ⛔ DB 에 줄이 없어도 ★«조용히 사라지지» 않습니다 (만들 자리를 보입니다)`)
+  {
+    const pr = codeOf(read('app/api/admin/price-row/route.ts'))
+    check(/const ALLOW/.test(pr) && /haerak_ai: \{ table: 'analysis_prices'/.test(pr),
+      `⛔ ★정해진 낱말만 만듭니다 (아무 줄이나 못 만듭니다)`)
+    check(/if \(had\) return NextResponse\.json\(\{ ok: true, made: false \}\)/.test(pr),
+      `⛔ ★이미 있으면 «건드리지» 않습니다 (넣어 두신 값이 안 덮입니다)`)
+    check(/requireMaster/.test(pr), `⛔ ★관리자만 만들 수 있습니다`)
+  }
   {
     const sec = codeOf(read('app/home-new/components/ServiceSection.tsx'))
     check(/const BEST_NAMES = \['내사주그림', '진로적성', HAERAK_NAME\]/.test(sec),

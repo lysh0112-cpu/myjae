@@ -27,7 +27,8 @@ const ASK: Record<HomeFlagKey, string> = {
 }
 
 export default function HomeFlagToggle(
-  { flag = 'examLuck', onChange }: { flag?: HomeFlagKey; onChange?: (on: boolean) => void } = {},
+  { flag = 'examLuck', showTitle = true, onChange }:
+  { flag?: HomeFlagKey; showTitle?: boolean; onChange?: (on: boolean) => void } = {},
 ) {
   const NAME = LABEL[flag]
   const [on, setOn] = useState<boolean | null>(null)   // null = 읽는 중
@@ -66,7 +67,11 @@ export default function HomeFlagToggle(
   const knobOn = on === true
   return (
     <div>
-      <div className="text-sm font-bold mb-2" style={{ color: '#fff' }}>🎯 숨겨 둔 서비스</div>
+      {/*  ⚠️ ★2026-09-14 (8부) — 토글이 «둘» 이 되며 제목이 두 번 떴습니다 (대표님 화면에서 확인).
+        *     ⇒ 둘째부터는 showTitle={false} 로 제목을 숨깁니다. */}
+      {showTitle ? (
+        <div className="text-sm font-bold mb-2" style={{ color: '#fff' }}>🎯 숨겨 둔 서비스</div>
+      ) : null}
       <div style={{ background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.15)', borderRadius: 12, padding: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ minWidth: 0 }}>
