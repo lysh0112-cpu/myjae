@@ -537,9 +537,12 @@ async function jaeryoNet() {
   //  ★다시보기 — 저장본을 열되 다시 저장하지 않는가
   ok(/recordId/.test(stor) && /if \(!data \|\| recordId\) return/.test(res),
     '★다시보기로 들어오면 ⛔ «또» 저장하지 않습니다')
-  //  ★나이는 보러 오시는 그때
-  ok(/todayYear: new Date\(\)\.getFullYear\(\)/.test(api),
-    '🔴 ★나이는 «보러 오시는 그때» 기준입니다 (볼 해로 안 셉니다)')
+  //  ★나이는 «보러 오시는 그때» — ⛔ «볼 해(target)» 로 세면 안 됩니다
+  //  ⚠️ 9부에 baseYear 로 바뀌었습니다. ★기본값이 «오늘» 인 것은 그대로입니다.
+  ok(/todayYear: baseYear/.test(api) && !/todayYear: target/.test(api),
+    '🔴 ★나이를 «볼 해» 로 세지 않습니다 (기준 해로 셉니다)')
+  ok(/baseYear\s*[\s\S]{0,120}new Date\(\)\.getFullYear\(\)/.test(api),
+    '🔴 ★기준 해가 없으면 «오늘» 입니다 [대표님 2026-09-14]')
 
   /* ══ 🔴🔴 ★상반기 · 하반기 짝 ══
    *    ✅ [대표님 2026-09-14 확정]  ★상반기 = 선천괘 · 하반기 = 후천괘
@@ -674,8 +677,54 @@ async function jaeryoNet() {
     ok(seen.size >= 2, `★해마다 괘가 달라집니다 — ${seen.size} 가지 (한 값에 굳어 있지 않습니다)`)
 
     //  ⛔ 나이는 «볼 해» 로 세지 않습니다 — 다섯 해가 돼도 그대로여야 합니다
-    ok(/todayYear: new Date\(\)\.getFullYear\(\)/.test(R('app/api/haerak/route.ts')),
-      '⛔ ★나이는 «보러 오시는 그때» 기준 하나입니다 [대표님] — 볼 해로 안 셉니다')
+    ok(!/todayYear: target/.test(R('app/api/haerak/route.ts')),
+      '⛔ ★다섯 해로 넓혀도 나이를 «볼 해» 로 세지 않습니다 [대표님]')
+  }
+
+  /* ══ ㉕ 🔴🔴 나이 기준 해(baseYear) — «다시 봐도 같은 괘» 인가 ══════
+   *  ★2026-09-14 (9부) [대표님]
+   *
+   *  [무엇을 찾았나]  다시보기가 ★저장본을 그리는 줄 알았는데,
+   *     ⛔ ★/api/haerak 을 «다시 부르고» 있었습니다. 저장만 안 할 뿐입니다.
+   *     ⇒ 창구가 «오늘» 로 나이를 세므로, ★해가 바뀌면 옛 기록의 괘가 달라집니다.
+   *  [어떻게 막았나]  ★baseYear 를 기록에 남기고 다시보기 때 되돌려 줍니다.
+   * ══════════════════════════════════════════════════════════════ */
+  head('㉕ 🔴🔴 나이 기준 해 — 다시 봐도 «같은 괘» 인가')
+  {
+    const route = R('app/api/haerak/route.ts')
+    const result = R('app/manseryeok/haerak-result/page.tsx')
+    const stor = R('app/manseryeok/haerak/page.tsx')
+
+    ok(/baseYear/.test(route), '🔴 ★셈 창구가 baseYear 를 받습니다')
+    ok(/todayYear: baseYear/.test(route),
+      '🔴 ⛔ ★나이를 «넘어온 기준 해» 로 셉니다 (오늘로 굳어 있지 않습니다)')
+    ok(/baseYear: sp\.get\('baseYear'\)/.test(result),
+      '🔴 ★결과 화면이 baseYear 를 창구로 넘깁니다')
+    ok(/baseYear: data\.geunggeo\.baseYear/.test(result),
+      '🔴 ⛔ ★저장할 때 baseYear 를 «남깁니다» (없으면 다시보기 때 괘가 달라집니다)')
+    ok(/function baseYearOf/.test(stor) && /&baseYear=\$\{by\}/.test(stor),
+      '🔴 ★보관함이 그때 그 해를 «되돌려» 줍니다')
+    ok(/년 기준 나이 \{g\.nai\}세로 보았습니다/.test(result),
+      '🔴 ★화면이 «몇 년 기준 몇 세» 로 보았는지 밝힙니다 [대표님 2026-09-14]')
+    ok(/baseYear\?: unknown/.test(route) && />= 1900 && bRaw <= 2200/.test(route),
+      '⛔ ★이상한 baseYear 는 받지 않습니다 (1900~2200 밖이면 오늘로 둡니다)')
+
+    //  🔴 값으로 — 기준 해를 붙들면 «몇 해 뒤에 열어도» 같은 괘인가
+    {
+      const fixed = calcHaerak({
+        nyeonGanji: nyeonGanjiOf(2027), wolGanji: wolGanjiOf(2027, 8),
+        ilGanji: ilGanjiOf(2027, 8, 8), nai: 32, wolLastDay: wolLastDayOf(2027, 8) ?? 29, eumIl: 8,
+      })
+      const drift = calcHaerak({
+        nyeonGanji: nyeonGanjiOf(2027), wolGanji: wolGanjiOf(2027, 8),
+        ilGanji: ilGanjiOf(2027, 8, 8), nai: 33, wolLastDay: wolLastDayOf(2027, 8) ?? 29, eumIl: 8,
+      })
+      ok(fixed?.seoncheon.no === 55 && fixed?.hucheon.no === 20,
+        `★희준 27년 — 기준 32세면 ${fixed?.seoncheon.name}/${fixed?.hucheon.name} (노트 睽/大有)`)
+      ok(drift?.seoncheon.no !== fixed?.seoncheon.no,
+        `🔴 ⛔ ★기준을 놓치면 «다른 괘» 가 됩니다 — 33세면 ${drift?.seoncheon.name}/${drift?.hucheon.name}`)
+      ok(true, '⇒ ★그래서 baseYear 를 기록에 남깁니다. ⛔ 빼지 마십시오.')
+    }
   }
 
   console.log(`\n━━ 하락이수 수리 — 통과 ${pass} · 실패 ${fail} ━━\n`)

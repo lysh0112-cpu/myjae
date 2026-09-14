@@ -36,6 +36,12 @@ interface Body {
   year?: unknown; month?: unknown; day?: unknown
   calType?: unknown; leapMonth?: unknown
   target?: unknown
+  /**
+   * ★나이를 «어느 해» 기준으로 셀 것인가 — 2026-09-14 (9부)
+   *  ⛔ 없으면 «오늘» 입니다 (처음 보실 때).
+   *  🔴 ★다시보기는 «그때 그 해» 를 넘겨야 괘가 안 바뀝니다.
+   */
+  baseYear?: unknown
 }
 
 const num = (v: unknown) => {
@@ -70,6 +76,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '볼 해가 이상해요.' }, { status: 400, headers: NO_STORE })
     }
 
+    /*  🔴 ★나이를 세는 «기준 해».
+     *     처음 보실 때는 «오늘» · ★다시보기는 «그때 그 해» 가 넘어옵니다.
+     *  ⛔ 안 받으면 해가 바뀔 때 ★옛 기록의 괘가 «달라져» 보입니다 (9부에 찾았습니다). */
+    const bRaw = num(b.baseYear)
+    const baseYear = Number.isInteger(bRaw) && bRaw >= 1900 && bRaw <= 2200
+      ? bRaw : new Date().getFullYear()
+
     /*  ── ① 태어난 «음력» 달·날 구하기 ──────────────────────────────
      *  ⛔ 하락이수는 ★음력으로만 셉니다. 양력으로 넣으면 달이 통째로 어긋납니다. */
     let eumWol = m, eumIl = d
@@ -92,8 +105,9 @@ export async function POST(request: Request) {
     const jae = await jaeryoOf({
       eumWol, eumIl, birthSolarYear: y, year: target,
       //  🔴 나이는 ★«보러 오시는 그때» 기준입니다 [대표님 2026-09-14]
-      //     ⛔ target 으로 세지 마십시오 — 괘가 달라집니다.
-      todayYear: new Date().getFullYear(),
+      //     ⛔ target(볼 해)으로 세지 마십시오 — 괘가 달라집니다.
+      //  ⚠️ ★다시보기는 «그때 그 해» 가 넘어옵니다 — 안 그러면 해가 바뀔 때 괘가 달라집니다.
+      todayYear: baseYear,
     })
     if (!jae) {
       //  ⛔ 볼 해가 표 밖일 수도 있습니다 — 「셈 못 함」 보다 ★까닭을 말해 드립니다
@@ -139,6 +153,8 @@ export async function POST(request: Request) {
       geunggeo: {
         nyeonGanji: jae.nyeonGanji, wolGanji: jae.wolGanji, ilGanji: jae.ilGanji,
         nai: jae.nai, wolLastDay: jae.wolLastDay, eumWol, eumIl,
+        //  ★«몇 년 기준 몇 세» 로 보았는지 — 화면이 이 둘을 손님께 보여 드립니다
+        baseYear,
       },
     }
     return NextResponse.json(out, { headers: NO_STORE })

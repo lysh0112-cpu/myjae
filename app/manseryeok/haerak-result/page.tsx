@@ -42,6 +42,8 @@ interface Out {
   geunggeo: {
     nyeonGanji: string; wolGanji: string; ilGanji: string
     nai: number; wolLastDay: number; eumWol: number; eumIl: number
+    /** ★나이를 «어느 해» 기준으로 세었는가 (9부) */
+    baseYear: number
   }
 }
 
@@ -66,6 +68,9 @@ function HaerakResultInner() {
           year: sp.get('year'), month: sp.get('month'), day: sp.get('day'),
           calType: sp.get('calType'), leapMonth: sp.get('leapMonth'),
           target: sp.get('target'),
+          //  🔴 ★다시보기는 «그때 그 해» 를 넘깁니다 — 안 넘기면 해가 바뀔 때 괘가 달라집니다.
+          //     ⛔ 처음 보실 때는 없습니다 (그때는 창구가 «오늘» 로 둡니다).
+          baseYear: sp.get('baseYear'),
         }),
       })
       const j = await res.json()
@@ -102,7 +107,11 @@ function HaerakResultInner() {
         hour: sp.get('hour') || '모름',
       },
       //  ⚠️ ★볼 해를 여기에 담습니다 — 보관함 딱지가 이 값을 읽습니다.
-      resultData: { year: data.target, seoncheon: data.seoncheon.no, hucheon: data.hucheon.no, dongHyo: data.dongHyo },
+      //  🔴 ★baseYear 를 «반드시» 남깁니다 — 이것이 없으면 다시보기 때 괘가 달라집니다 (9부)
+      resultData: {
+        year: data.target, seoncheon: data.seoncheon.no, hucheon: data.hucheon.no,
+        dongHyo: data.dongHyo, baseYear: data.geunggeo.baseYear,
+      },
     })
   }, [data, recordId, name, sp])
 
@@ -156,7 +165,17 @@ function HaerakResultInner() {
 
       {/* ── 셈한 값 — ★대표님·연재쌤 대조용. 작게 둡니다 ── */}
       <details style={{ marginTop: 16, background: CARD, border: `1px solid ${LINE}`, borderRadius: 12, padding: '11px 13px' }}>
-        <summary style={{ fontSize: 11.5, color: SUB, cursor: 'pointer' }}>셈한 값 보기</summary>
+        <summary style={{ fontSize: 11.5, color: SUB, cursor: 'pointer' }}>
+          셈한 값 보기
+          {/*  🔴 ★2026-09-14 (9부) [대표님] — «몇 년 기준 몇 세» 로 보았는지 밝힙니다.
+            *  [까닭]  하락이수는 ★«상담 시점의 나이» 로 앞날을 봅니다.
+            *     ⇒ 같은 2027년이라도 2026년에 보면 32세 · 2027년에 보면 33세로 셈해
+            *       ★괘가 달라집니다. 손님이 「작년과 다른데요」 하실 자리입니다.
+            *  ⛔ 이 줄을 빼지 마십시오 — 근거가 사라집니다. */}
+          <span style={{ marginLeft: 8, color: SUB, opacity: 0.85 }}>
+            · {g.baseYear}년 기준 나이 {g.nai}세로 보았습니다
+          </span>
+        </summary>
         <div style={{ marginTop: 9, fontSize: 11.5, color: SUB, lineHeight: 1.9 }}>
           음력 생월·생일 {g.eumWol}월 {g.eumIl}일 · 나이 {g.nai}세 · 그 달 마지막 날 {g.wolLastDay}일<br />
           간지 {g.nyeonGanji} · {g.wolGanji} · {g.ilGanji}<br />
