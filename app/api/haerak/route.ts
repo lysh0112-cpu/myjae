@@ -96,7 +96,11 @@ export async function POST(request: Request) {
       todayYear: new Date().getFullYear(),
     })
     if (!jae) {
-      return NextResponse.json({ error: '셈에 쓸 값을 만들지 못했어요.' }, { status: 500, headers: NO_STORE })
+      //  ⛔ 볼 해가 표 밖일 수도 있습니다 — 「셈 못 함」 보다 ★까닭을 말해 드립니다
+      const g = lunarRangeKR()
+      return NextResponse.json(
+        { error: `${g.start.getUTCFullYear()}년 ~ ${g.end.getUTCFullYear()}년 사이만 볼 수 있어요.` },
+        { status: 400, headers: NO_STORE })
     }
 
     /*  ── ③ 괘 짓기 ─────────────────────────────────────────────── */

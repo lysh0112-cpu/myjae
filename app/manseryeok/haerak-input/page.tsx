@@ -20,16 +20,35 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 //  ★지갑 관문은 lib/wallet/consultGate.ts «한 곳» 입니다 — 여기에 팝업을 따로 만들지 마십시오
 import WalletPaySheet from '@/app/components/common/WalletPaySheet'
+//  ★달력 표 — «답할 수 있는 해» 만 손님께 보여 드리려고 씁니다 (호출 0번 · 234바이트)
+import { lunarMonthSizeKR } from '@/lib/saju/koreanLunarTable'
 
 const ACCENT = '#3f6fa8'        // ★청람 — 홈 BEST 카드와 «같은 결»
 const BG = '#FDF6F0'
 const CARD = '#FFFBF7'
 const LINE = '#f0e0d5'
 
-/** 볼 수 있는 해 — ★올해와 내년 둘 [대표님 2026-09-14] */
-function yearChoices(): { y: number; label: string }[] {
+/**
+ *  볼 수 있는 해 — ★앞으로 다섯 해 (올해 ~ +4년)  [대표님 2026-09-14]
+ *
+ *  ⚠️ 2026-09-14 (9부) 에 «둘 → 다섯» 으로 넓혔습니다.
+ *     8부에는 올해·내년 둘뿐이었습니다.
+ *
+ *  🔴 ⛔ ★달력 표가 «답할 수 있는 해» 만 내놓습니다.
+ *     표는 1900~2051 입니다. 2047년쯤 되면 뒤쪽 해가 ★저절로 줄어듭니다.
+ *     ⇒ 손님이 «고를 수 있는데 셈은 안 되는» 해가 생기지 않게 합니다.
+ *     ⇒ 그 해 ★음력 12월까지 표에 있는지로 가립니다.
+ */
+function yearChoices(): { y: number; label: string; lead: boolean }[] {
   const now = new Date().getFullYear()
-  return [{ y: now, label: `올해 ${now}` }, { y: now + 1, label: `내년 ${now + 1}` }]
+  const all = [
+    { y: now, label: `올해 ${now}`, lead: true },
+    { y: now + 1, label: `내년 ${now + 1}`, lead: true },
+    { y: now + 2, label: `${now + 2}`, lead: false },
+    { y: now + 3, label: `${now + 3}`, lead: false },
+    { y: now + 4, label: `${now + 4}`, lead: false },
+  ]
+  return all.filter(c => lunarMonthSizeKR(c.y, 12) !== null)
 }
 
 function HaerakInputInner() {
@@ -103,30 +122,47 @@ function HaerakInputInner() {
             <Row k="태어난 시" v="쓰지 않습니다" muted />
           </div>
 
-          {/* ── 어느 해 ── */}
+          {/* ── 어느 해 ──
+            *  ★2026-09-14 (9부) — 다섯 해로 넓혔습니다.
+            *  ⚠️ 5개를 한 줄에 넣으면 ★「올해 2026」 이 안 들어갑니다 (폭 380px 화면).
+            *     ⇒ ★이름 있는 둘(올해·내년)은 «2열» · 나머지 셋은 «3열» 로 나눕니다.
+            *       빈칸이 안 생기고, «가까운 해» 가 눈에 먼저 들어옵니다. */}
           <div style={{ fontSize: 12.5, fontWeight: 700, color: '#141c28', marginBottom: 8 }}>
             어느 해를 보시겠어요?
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 8, marginBottom: 8 }}>
-            {choices.map(c => {
-              const on = c.y === target
-              return (
-                <button
-                  key={c.y}
-                  type="button"
-                  onClick={() => setTarget(c.y)}
-                  aria-pressed={on}
-                  style={{
-                    padding: 11, borderRadius: 12, textAlign: 'center', cursor: 'pointer',
-                    fontSize: 13, fontWeight: on ? 700 : 400, fontFamily: 'inherit',
-                    background: on ? '#eaf2f9' : '#fff',
-                    border: `1.5px solid ${on ? ACCENT : LINE}`,
-                    color: on ? ACCENT : '#55636f',
-                  }}
-                >{c.label}</button>
-              )
-            })}
-          </div>
+          {([true, false] as const).map(lead => {
+            const row = choices.filter(c => c.lead === lead)
+            if (row.length === 0) return null
+            return (
+              <div
+                key={lead ? 'lead' : 'rest'}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${lead ? 2 : 3}, minmax(0,1fr))`,
+                  gap: 8, marginBottom: 8,
+                }}
+              >
+                {row.map(c => {
+                  const on = c.y === target
+                  return (
+                    <button
+                      key={c.y}
+                      type="button"
+                      onClick={() => setTarget(c.y)}
+                      aria-pressed={on}
+                      style={{
+                        padding: 11, borderRadius: 12, textAlign: 'center', cursor: 'pointer',
+                        fontSize: lead ? 13 : 13.5, fontWeight: on ? 700 : 400, fontFamily: 'inherit',
+                        background: on ? '#eaf2f9' : '#fff',
+                        border: `1.5px solid ${on ? ACCENT : LINE}`,
+                        color: on ? ACCENT : '#55636f',
+                      }}
+                    >{c.label}</button>
+                  )
+                })}
+              </div>
+            )
+          })}
           <div style={{ fontSize: 11, color: '#55636f', lineHeight: 1.6, marginBottom: 6 }}>
             한 해에 상반기·하반기 두 괘가 나옵니다.
           </div>

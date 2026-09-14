@@ -642,6 +642,42 @@ async function jaeryoNet() {
       '⛔ ★「노트 쪽 착오」 를 «사실» 로 적어 두지 않았습니다 (노트가 맞았습니다)')
   }
 
+  /* ══ ㉔ 🔴 볼 해 — «다섯 해» 인가 · 표가 답할 수 있는 해인가 ════════
+   *  ★2026-09-14 (9부) — 대표님이 «둘 → 다섯» 으로 넓히라 하셨습니다.
+   * ══════════════════════════════════════════════════════════════ */
+  head('㉔ 🔴 볼 해 — 앞으로 «다섯 해»')
+  {
+    const input = R('app/manseryeok/haerak-input/page.tsx')
+    ok(/now \+ 4/.test(input), '★올해부터 «다섯 해» 를 내놓습니다 (now ~ now+4)')
+    ok(/lunarMonthSizeKR/.test(input),
+      '🔴 ⛔ ★달력 표가 «답할 수 있는 해» 만 손님께 보입니다 (고를 수는 있는데 셈이 안 되는 해가 없게)')
+    ok(/repeat\(\$\{lead \? 2 : 3\}/.test(input),
+      '★이름 있는 둘은 2열 · 나머지 셋은 3열 — ⛔ 빈칸이 안 생깁니다')
+
+    //  🔴 다섯 해가 «실제로» 셈해지는가 — 류 님으로 값을 재봅니다
+    const now = new Date().getFullYear()
+    const years: number[] = []
+    for (let i = 0; i < 5; i++) years.push(now + i)
+    let calcOk = 0
+    const seen = new Set<string>()
+    for (const y of years) {
+      const sz = wolLastDayOf(y, 1)
+      const g = ilGanjiOf(y, 1, 12)
+      if (sz !== null && g !== '') calcOk++
+      const r = calcHaerak({
+        nyeonGanji: nyeonGanjiOf(y), wolGanji: wolGanjiOf(y, 1),
+        ilGanji: g, nai: 61, wolLastDay: sz ?? 30, eumIl: 12,
+      })
+      if (r) seen.add(`${r.seoncheon.name}/${r.hucheon.name}`)
+    }
+    ok(calcOk === 5, `🔴 ★다섯 해가 «다» 셈해집니다 ${calcOk}/5 (${years[0]}~${years[4]})`)
+    ok(seen.size >= 2, `★해마다 괘가 달라집니다 — ${seen.size} 가지 (한 값에 굳어 있지 않습니다)`)
+
+    //  ⛔ 나이는 «볼 해» 로 세지 않습니다 — 다섯 해가 돼도 그대로여야 합니다
+    ok(/todayYear: new Date\(\)\.getFullYear\(\)/.test(R('app/api/haerak/route.ts')),
+      '⛔ ★나이는 «보러 오시는 그때» 기준 하나입니다 [대표님] — 볼 해로 안 셉니다')
+  }
+
   console.log(`\n━━ 하락이수 수리 — 통과 ${pass} · 실패 ${fail} ━━\n`)
   process.exit(fail ? 1 : 0)
 }
