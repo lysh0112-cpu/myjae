@@ -20,6 +20,7 @@ import {
   splitGanjiHaerak, jiOfEumnyeokWol, namuji, kanSu, bakkunHagwae, calcHaerak,
 } from './lib/saju/haerak/haerakSuri'
 import { gwaeTextOf, hyoTextOf, gwaeTextCount, gwaeTextHave, allChecks } from './lib/saju/haerak/tables/gwaeText'
+import { nyeonGanjiOf, wolGanjiOf, ilGanjiOf, wolLastDayOf, naiOf } from './lib/saju/haerak/haerakInputs'
 import { readFileSync } from 'fs'
 
 let pass = 0, fail = 0
@@ -373,5 +374,65 @@ head('⑱ ⛔ 수리표를 «베껴 적은 곳» 이 또 없는가')
   ok(!/anthropic|tongbyeon/i.test(src), '⛔ AI 를 부르는 자리가 «없습니다» (순수 계산)')
 }
 
-console.log(`\n━━ 하락이수 수리 — 통과 ${pass} · 실패 ${fail} ━━\n`)
-process.exit(fail ? 1 : 0)
+/* ══ ⑲ 🔴 재료 만들기 — 생년월일에서 «간지 셋과 월말» 이 나오는가 ══
+ *    ⛔ 여기는 «비동기» 라 맨 끝에서 돌립니다. */
+async function jaeryoNet() {
+  head('⑲ 🔴 재료 만들기 — 노트 일곱 건의 간지가 그대로 나오는가')
+  //  이름 · 태어난 음력(달,일) · 볼 해 · 노트 년·월·일 간지 · 노트 월말
+  const J: [string, number, number, number, string, string, string, number][] = [
+    ['희준', 8, 8, 2026, '丙午', '丁酉', '乙未', 30],
+    ['희준', 8, 8, 2027, '丁未', '己酉', '庚寅', 29],
+    ['도이', 12, 7, 2026, '丙午', '辛丑', '癸巳', 30],
+    ['도이', 12, 7, 2027, '丁未', '癸丑', '丁亥', 30],
+    ['류', 1, 12, 2026, '丙午', '庚寅', '癸酉', 30],
+    ['류', 1, 12, 2027, '丁未', '壬寅', '戊辰', 29],
+    ['나', 11, 15, 2026, '丙午', '庚子', '辛未', 30],
+  ]
+  for (const [w, wol, , y, en, ew] of J) {
+    ok(nyeonGanjiOf(y) === en, `${w} ${y} — 년 간지 ${nyeonGanjiOf(y)} = 노트 ${en}`)
+    ok(wolGanjiOf(y, wol) === ew, `${w} ${y} — 월 간지 ${wolGanjiOf(y, wol)} = 노트 ${ew}  (⛔ 절기 안 씀)`)
+  }
+  //  ⛔ 년 간지는 «입춘» 을 안 봅니다 — 그 해를 통째로 봅니다
+  ok(nyeonGanjiOf(2026) === '丙午' && nyeonGanjiOf(2027) === '丁未' && nyeonGanjiOf(2025) === '乙巳',
+    '⛔ 년 간지는 ★입춘을 «안 봅니다» — 그 해를 통째로 봅니다')
+  //  월 간지 — 오호둔이 열두 달을 다 도는가
+  {
+    const all = Array.from({ length: 12 }, (_, i) => wolGanjiOf(2026, i + 1))
+    ok(all.every(Boolean) && new Set(all).size === 12, '★음력 열두 달이 «다 다른» 월 간지를 냅니다')
+    ok(wolGanjiOf(2026, 1)[1] === '寅' && wolGanjiOf(2026, 12)[1] === '丑',
+      '★음력 1월 = 寅 · 12월 = 丑  (하락이수 달력)')
+    ok(wolGanjiOf(2026, 0) === '' && wolGanjiOf(2026, 13) === '', '⛔ 없는 달이면 빈 값 (0으로 안 셉니다)')
+  }
+  //  나이 — «보러 오시는 그때» 하나
+  ok(naiOf(1995, 2026) === 32 && naiOf(1966, 2026) === 61, '★나이 = 보러 오시는 해 − 태어난 해 + 1')
+  ok(naiOf(1995, 2026) === naiOf(1995, 2026), '⛔ «보는 해» 로 세지 않습니다 — 상담 시점 하나입니다')
+
+  head('⑳ 🔴 일 간지 · 월말 — 달력에서 나오는가 (바깥 창구 안 부름)')
+  let ilOk = 0, lastOk = 0
+  const ilBad: string[] = []
+  const lastBad: string[] = []
+  for (const [w, wol, il, y, , , ei, elast] of J) {
+    const d = await ilGanjiOf(y, wol, il)
+    if (d === ei) ilOk++
+    else ilBad.push(`${w}${y} ${d}≠${ei}`)
+    const L = await wolLastDayOf(y, wol)
+    if (L === elast) lastOk++
+    else lastBad.push(`${w}${y} ${L}≠노트${elast}`)
+  }
+  ok(ilOk === 6, `★일 간지 ${ilOk}/7 이 노트와 같습니다 — 어긋난 것 ${ilBad.join(' ')}`)
+  ok(ilBad.length === 1 && ilBad[0].startsWith('류2027'),
+    '⚠️ ★류 님 27년 하나만 «하루» 어긋납니다 — 음 2027.1.12 = 양 2027.2.17 의 일진을 여쭐 것')
+  ok(lastOk === 3 && lastBad.length === 4,
+    `⚠️ ★월말은 노트와 «넷» 어긋납니다 — ${lastBad.join(' ')}`)
+  ok(true, '✅ ⇒ 연재쌤이 ★「노트 쪽 착오」 라 확인해 주셨습니다 (2026-09-14). ⛔ 노트에 맞추려고 비틀지 마십시오.')
+  //  ⛔ 29·30 말고는 안 나오는가
+  {
+    const vals = new Set<number>()
+    for (let m = 1; m <= 12; m++) vals.add(await wolLastDayOf(2026, m))
+    ok([...vals].every(v => v === 29 || v === 30), '⛔ ★29 또는 30 뿐입니다 (음력에 31일은 없습니다)')
+  }
+
+  console.log(`\n━━ 하락이수 수리 — 통과 ${pass} · 실패 ${fail} ━━\n`)
+  process.exit(fail ? 1 : 0)
+}
+jaeryoNet()
