@@ -727,6 +727,35 @@ async function jaeryoNet() {
     }
   }
 
+  /* ══ ㉖ 🔴🔴 보관함이 «볼 해» 를 읽는가 — 2026-09-14 (9부) ══════════
+   *  [무엇이 깨져 있었나]  보관함 목록이 ★result_data 를 «안 실었습니다».
+   *     ⇒ 볼 해가 언제나 null → 주소에 target 이 안 붙음
+   *     ⇒ 열 때마다 ★「볼 해가 이상해요」 · 딱지도 「26년」 이 아니었습니다.
+   *  ⚠️ 8부 문서에는 «된다» 고 적혀 있었지만 ★한 번도 동작한 적이 없습니다.
+   *     ⇒ 🔴 ★«말» 로 적어 두고 «값» 으로 안 센 자리였습니다 (7부 0-1 그대로).
+   * ══════════════════════════════════════════════════════════════ */
+  head('㉖ 🔴🔴 보관함 — «볼 해» 를 실제로 읽는가')
+  {
+    const stor = R('app/manseryeok/haerak/page.tsx')
+    const rec = R('lib/saju/sajuRecords.ts')
+
+    ok(/withResult/.test(rec),
+      '🔴 ★목록 함수가 «결과도 실을지» 를 고를 수 있습니다')
+    ok(/withResult = false/.test(rec),
+      '⛔ ★기본은 «안 싣습니다» — 다른 보관함 넷은 한 줄도 안 바뀝니다')
+    ok(/listRecordsByService\('haerak', true\)/.test(stor),
+      '🔴 ⛔ ★하락이수 보관함은 «싣고» 부릅니다 (빼면 「볼 해가 이상해요」)')
+    ok(/result_data/.test(rec) && /resultData: withResult/.test(rec),
+      '★실을 때만 resultData 를 채웁니다')
+
+    //  ⛔ 볼 해가 없는 옛 기록이 «막다른 길» 로 가면 안 됩니다
+    ok(/haerak-input\?\$\{personToQuery/.test(stor),
+      '⛔ ★볼 해가 없는 옛 기록은 «입력 화면» 으로 모십니다 (막다른 길을 안 만듭니다)')
+    ok(/y\s*\n?\s*\?\s*`\/manseryeok\/haerak-result/.test(stor)
+      || /y$/m.test(stor) || /\? `\/manseryeok\/haerak-result/.test(stor),
+      '★볼 해가 있을 때만 결과 화면으로 갑니다')
+  }
+
   console.log(`\n━━ 하락이수 수리 — 통과 ${pass} · 실패 ${fail} ━━\n`)
   process.exit(fail ? 1 : 0)
 }

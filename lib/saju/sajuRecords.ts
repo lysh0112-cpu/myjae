@@ -88,23 +88,45 @@ export async function latestRecord(
 // ── 보관함용: 특정 서비스의 내 기록 전체 (사람 무관, 최신순) ──
 //   holds saju-storage 화면에서 사용. 한 사람 필터 없이 그 서비스 기록을 다 보여준다.
 export async function listRecordsByService(
-  serviceType: string
+  serviceType: string,
+  /**
+   *  🔴 ★결과 스냅샷(result_data)도 «함께» 실을지 — 2026-09-14 (9부)
+   *
+   *  ⛔ 기본은 «안 싣습니다». 통변 전체가 들어 있어 목록이 무거워집니다.
+   *
+   *  [왜 더했나]  ★하락이수 보관함이 «볼 해» 를 result_data 에 담아 두는데,
+   *     목록이 그것을 «안 실어» 서 ★열 때마다 「볼 해가 이상해요」 가 났습니다.
+   *     딱지도 「26년」 이 아니라 이름 두 글자로 나왔습니다.
+   *     ⇒ 8부 문서에는 «된다» 고 적혀 있었지만 ★한 번도 동작한 적이 없었습니다.
+   *
+   *  ⚠️ ★켜는 쪽이 «가벼운 기록인지» 보고 켜십시오.
+   *     하락이수는 담는 것이 ★다섯 뿐이라(볼 해·괘 둘·동효·기준 해) 가볍습니다.
+   *     ⛔ 통변을 통째로 담는 서비스에는 켜지 마십시오.
+   */
+  withResult = false,
 ): Promise<SajuRecord[]> {
   const { data: auth } = await supabase.auth.getUser()
   const uid = auth?.user?.id
   if (!uid) return []
 
-  // 목록은 result_data(통변 전체)를 가져오지 않는다 — 대규모에서 가볍게.
-  const { data, error } = await supabase
-    .from('saju_records')
-    .select('id, service_type, title, relation, input_data, created_at')
-    .eq('user_id', uid)
-    .eq('service_type', serviceType)
-    .order('created_at', { ascending: false })
+  /*  ⚠️ ★select 문자열을 «만들어» 넘기면 안 됩니다 —
+   *     supabase 타입이 그 «글자» 를 읽어 칸을 알아냅니다.
+   *     ⇒ 두 갈래로 «따로» 적습니다. */
+  const base = supabase.from('saju_records')
+  const res = withResult
+    ? await base.select('id, service_type, title, relation, input_data, result_data, created_at')
+      .eq('user_id', uid).eq('service_type', serviceType).order('created_at', { ascending: false })
+    : await base.select('id, service_type, title, relation, input_data, created_at')
+      .eq('user_id', uid).eq('service_type', serviceType).order('created_at', { ascending: false })
 
-  if (error || !data) return []
+  if (res.error || !res.data) return []
 
-  return data
+  interface Row {
+    id: string; service_type: string; title: string
+    relation: string | null; input_data: unknown
+    result_data?: unknown; created_at: string
+  }
+  return (res.data as unknown as Row[])
     .filter(r => r.input_data)   // 사람 정보 있는 것만
     .map(r => ({
       id: r.id,
@@ -112,7 +134,8 @@ export async function listRecordsByService(
       title: r.title,
       relation: r.relation ?? undefined,
       inputData: r.input_data as SavedInputData,
-      resultData: undefined,   // 목록에선 안 실음(다시보기 getRecord에서 로드)
+      //  ⛔ 안 켰으면 undefined 그대로 — 옛 동작과 «똑같습니다»
+      resultData: withResult ? r.result_data : undefined,
       createdAt: r.created_at,
     }))
 }

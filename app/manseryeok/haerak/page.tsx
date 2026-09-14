@@ -77,7 +77,9 @@ function HaerakStorageInner() {
 
   useEffect(() => {
     let cancelled = false
-    listRecordsByService('haerak').then(list => { if (!cancelled) setRecords(list) })
+    //  🔴 ★true — «볼 해» 와 «기준 해» 가 result_data 에 있습니다 (9부).
+    //     ⛔ 빼면 목록이 그 값을 못 읽어 ★「볼 해가 이상해요」 가 납니다.
+    listRecordsByService('haerak', true).then(list => { if (!cancelled) setRecords(list) })
     return () => { cancelled = true }
   }, [])
 
@@ -113,11 +115,16 @@ function HaerakStorageInner() {
           <StorageRow
             key={r.id}
             onClick={() => router.push(
-              `/manseryeok/haerak-result?${personToQuery(r.inputData, r.title)}`
-              + (y ? `&target=${y}` : '')
-              //  🔴 ★그때 그 해를 함께 넘깁니다 — 안 넘기면 괘가 달라집니다
-              + (by ? `&baseYear=${by}` : '')
-              + `&recordId=${r.id}`,
+              /*  ⛔ ★볼 해가 없는 «옛 기록» 은 결과로 보내지 «않습니다».
+               *     보내 봐야 창구가 「볼 해가 이상해요」 로 막습니다 — ★막다른 길입니다.
+               *     ⇒ 해를 고르실 수 있게 ★입력 화면으로 모십니다. */
+              y
+                ? `/manseryeok/haerak-result?${personToQuery(r.inputData, r.title)}`
+                  + `&target=${y}`
+                  //  🔴 ★그때 그 해를 함께 넘깁니다 — 안 넘기면 괘가 달라집니다
+                  + (by ? `&baseYear=${by}` : '')
+                  + `&recordId=${r.id}`
+                : `/manseryeok/haerak-input?${personToQuery(r.inputData, r.title)}`,
             )}
             onDelete={() => setConfirmDel(r)}
           >
@@ -127,6 +134,7 @@ function HaerakStorageInner() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               {/* ★같은 분이 해마다 따로 쌓이므로 «본 해» 를 딱지에 씁니다 */}
+              {/*  ⚠️ 볼 해가 없는 옛 기록은 ★이름 두 글자로 둡니다 (지어내지 않습니다) */}
               {y ? `${String(y).slice(2)}년` : (r.title || '?').slice(0, 2)}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
