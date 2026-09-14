@@ -35,7 +35,7 @@ import ServiceIntroDialog from '@/app/components/common/ServiceIntroDialog'
 //  ⚠️ ★글은 «한 곳» 에서 옵니다 — ⛔ 여기에 문장을 적지 마십시오
 import {
   HAERAK_INTRO_TITLE, HAERAK_INTRO_LEAD, HAERAK_INTRO_POINTS,
-  HAERAK_INTRO_TAIL, HAERAK_INTRO_CTA,
+  HAERAK_INTRO_TAIL, HAERAK_INTRO_CTA, HAERAK_PLAIN_NOTE,
 } from '@/lib/saju/haerak/intro'
 
 /** 저장된 입력값 → 결과 화면이 읽는 주소 */
@@ -210,6 +210,7 @@ function HaerakStorageInner() {
         lead={HAERAK_INTRO_LEAD}
         points={HAERAK_INTRO_POINTS}
         tail={HAERAK_INTRO_TAIL}
+        note={HAERAK_PLAIN_NOTE}
         ctaLabel={HAERAK_INTRO_CTA}
         /*  ★여기서는 이미 «하락이수 안» 이므로, 들어가는 단추가
          *     ⇒ 바로 «사람 고르기» 로 이어집니다. ⛔ 막다른 길이 아닙니다. */

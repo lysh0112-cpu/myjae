@@ -16,6 +16,8 @@
 import { Suspense, useCallback, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { saveRecord } from '@/lib/saju/sajuRecords'
+//  ⚠️ ★글은 «한 곳» 에서 옵니다 — ⛔ 여기에 문장을 적지 마십시오
+import { HAERAK_PLAIN_NOTE } from '@/lib/saju/haerak/intro'
 
 const ACCENT = '#3f6fa8'
 const BG = '#FDF6F0'
@@ -162,6 +164,18 @@ function HaerakResultInner() {
       <GwaeCard half="상반기" kind="선천괘" g={data.seoncheon} move={data.dongHyo} />
       <div style={{ height: 12 }} />
       <GwaeCard half="하반기" kind="후천괘" g={data.hucheon} move={data.dongHyo} />
+
+      {/*  🔴 ★말 순화 알림 — 2026-09-14 (9부) [대표님]
+        *  ⛔ ★여기가 «가장 중요한» 자리입니다 —
+        *     소개 팝업은 «안 누르면» 안 보입니다. 결과는 ★누구나 봅니다.
+        *     ⇒ 「생명이 위태로울 만큼」 같은 «남겨 둔» 대목을 읽고
+        *       놀라신 손님이 ★까닭을 찾을 자리입니다.
+        *  ⛔ 이 줄을 빼지 마십시오. 빼면 손님이 «왜 이런 말이 나오는지» 모르십니다. */}
+      <div style={{
+        marginTop: 16, padding: '11px 13px',
+        background: CARD, border: `1px solid ${LINE}`, borderRadius: 12,
+        fontSize: 11.5, color: SUB, lineHeight: 1.75,
+      }}>{HAERAK_PLAIN_NOTE}</div>
 
       {/* ── 셈한 값 — ★대표님·연재쌤 대조용. 작게 둡니다 ── */}
       <details style={{ marginTop: 16, background: CARD, border: `1px solid ${LINE}`, borderRadius: 12, padding: '11px 13px' }}>

@@ -900,7 +900,29 @@ async function jaeryoNet() {
         '⛔ ★머리글을 «그대로» 내보내던 줄로 되돌아가지 않았습니다')
     }
 
-    //  ⑥ ⚠️ 아직 «제 초안» 인 줄 — 연재쌤 검수 때 여기를 보시면 됩니다
+    //  ⑥ 🔴 ★순화했다는 것을 «손님께 말해 두는가» [대표님 2026-09-14]
+    {
+      const introFile = R('lib/saju/haerak/intro.ts')
+      const result = R('app/manseryeok/haerak-result/page.tsx')
+      const dlg = R('app/components/common/ServiceIntroDialog.tsx')
+      const stor = R('app/manseryeok/haerak/page.tsx')
+      const input = R('app/manseryeok/haerak-input/page.tsx')
+
+      ok(/HAERAK_PLAIN_NOTE/.test(introFile) && /일부러 남겨 두었습니다/.test(introFile),
+        '★알림 글이 «한 곳»(intro.ts) 에 있습니다 [대표님이 정하신 글]')
+      //  ⚠️ ★import 줄만 보면 안 됩니다 — «실제로 그리는지» 를 봐야 합니다.
+      //     (9부에 이걸 «값으로» 재보고 알았습니다 — 빼도 그물이 안 잡았습니다)
+      ok(/>\{HAERAK_PLAIN_NOTE\}</.test(result),
+        '🔴 ⛔ ★결과 화면이 알림을 «그립니다» — 팝업은 «안 누르면» 안 보입니다')
+      ok(/note=\{HAERAK_PLAIN_NOTE\}/.test(stor) && /note=\{HAERAK_PLAIN_NOTE\}/.test(input),
+        '★보관함·입력 화면의 팝업에 «넘겨» 줍니다')
+      ok(/note\?: string/.test(dlg) && /\{note\}/.test(dlg),
+        '★공용 팝업이 알림 칸을 받습니다')
+      ok(!/일부러 남겨 두었습니다/.test(result) && !/일부러 남겨 두었습니다/.test(dlg),
+        '⛔ ★글을 화면 코드에 «박지» 않았습니다 — 고칠 곳이 한 곳입니다')
+    }
+
+    //  ⑦ ⚠️ 아직 «제 초안» 인 줄 — 연재쌤 검수 때 여기를 보시면 됩니다
     ok(true, `⚠️ ★연재쌤 검수가 남은 줄 — ${draftRows().length}개 (by: '초안')`)
   }
 

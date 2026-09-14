@@ -42,6 +42,11 @@ interface Props {
   points?: { head: string; body: string }[]
   /** 맺음 문단 — 없으면 안 그립니다 */
   tail?: string
+  /**
+   * ★맨 끝에 «작게» 붙이는 알림 — 없으면 안 그립니다.
+   *  ⚠️ 파는 말이 아니라 ★«일러 드리는 말» 입니다. 그래서 작고 흐리게 둡니다.
+   */
+  note?: string
   /** 들어가는 단추 글자 */
   ctaLabel: string
   /** 들어가는 단추를 누르면 */
@@ -53,7 +58,7 @@ interface Props {
 }
 
 export default function ServiceIntroDialog({
-  open, title, lead, points, tail, ctaLabel, onStart, onClose, children,
+  open, title, lead, points, tail, note, ctaLabel, onStart, onClose, children,
 }: Props) {
   /*  ⚠️ 팝업이 떠 있는 동안 ★뒤 화면이 안 밀리게 막습니다.
    *     ⛔ 이 되돌리기(cleanup)를 빼지 마십시오 — 닫은 뒤에도 못 움직이게 됩니다. */
@@ -137,6 +142,13 @@ export default function ServiceIntroDialog({
 
         {tail ? (
           <div style={{ marginTop: 13, fontSize: 12.5, color: BODY_C, lineHeight: 1.75 }}>{tail}</div>
+        ) : null}
+
+        {note ? (
+          <div style={{
+            marginTop: 13, paddingTop: 11, borderTop: `1px solid ${LINE}`,
+            fontSize: 11.5, color: BODY_C, opacity: 0.8, lineHeight: 1.7,
+          }}>{note}</div>
         ) : null}
 
         <button

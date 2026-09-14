@@ -26,7 +26,7 @@ import ServiceIntroDialog from '@/app/components/common/ServiceIntroDialog'
 //  ⚠️ ★글은 «한 곳» 에서 옵니다 — ⛔ 여기에 문장을 적지 마십시오
 import {
   HAERAK_INTRO_TITLE, HAERAK_INTRO_LEAD, HAERAK_INTRO_POINTS,
-  HAERAK_INTRO_TAIL, HAERAK_INTRO_CTA,
+  HAERAK_INTRO_TAIL, HAERAK_INTRO_CTA, HAERAK_PLAIN_NOTE,
 } from '@/lib/saju/haerak/intro'
 
 const ACCENT = '#3f6fa8'        // ★청람 — 홈 BEST 카드와 «같은 결»
@@ -207,6 +207,7 @@ function HaerakInputInner() {
           lead={HAERAK_INTRO_LEAD}
           points={HAERAK_INTRO_POINTS}
           tail={HAERAK_INTRO_TAIL}
+        note={HAERAK_PLAIN_NOTE}
           ctaLabel={HAERAK_INTRO_CTA}
           /*  ★여기서 「보러 가기」 는 ⇒ 곧바로 ★결제 시트로 잇습니다.
            *     ⛔ 읽고 나서 다시 찾아 누르게 하지 않습니다. */
