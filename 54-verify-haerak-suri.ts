@@ -22,6 +22,7 @@ import {
 import { gwaeTextOf, hyoTextOf, gwaeTextCount, gwaeTextHave, allChecks } from './lib/saju/haerak/tables/gwaeText'
 import { nyeonGanjiOf, wolGanjiOf, ilGanjiOf, wolLastDayOf, naiOf } from './lib/saju/haerak/haerakInputs'
 import { solarToLunarKR, lunarToSolarKR, lunarMonthSizeKR } from './lib/saju/koreanLunarTable'
+import { WHO_PLAIN, TEXT_PLAIN, plainWho, plainText, draftRows } from './lib/saju/haerak/tables/plainMap'
 import { solarToLunar as movingS2L } from './app/manseryeok/moving-timing/lib/lunarTable'
 import { fallbackSolarToLunar } from './lib/saju/lunarConvert'
 import { readFileSync } from 'fs'
@@ -802,6 +803,76 @@ async function jaeryoNet() {
     const dlgCode = dlg.split('\n').filter(l => !/^\s*(\*|\/\/|\/\*)/.test(l)).join('\n')
     ok(!/진희이/.test(dlgCode) && !/적중률/.test(dlgCode) && !/河洛/.test(dlgCode),
       '⛔ ★공용 팝업에 하락이수 «문장» 이 안 박혀 있습니다 (다른 서비스도 씁니다)')
+  }
+
+  /* ══ ㉘ 🔴🔴 말 순화 — 2026-09-14 (9부) [대표님] ══════════════════
+   *  [무엇을 했나]  「수가 흉한 사람 — 오래지 않아 수명을 다하게 된다」 처럼
+   *     ★손님을 다치게 할 말을 «순화» 했습니다. ⛔ 가리지 않았습니다.
+   *  [어디서]  tables/plainMap.ts «한 곳» · 교재 파일 64개는 ★안 건드렸습니다.
+   * ══════════════════════════════════════════════════════════════ */
+  head('㉘ 🔴🔴 말 순화 — 원문은 그대로 두고 «내보낼 때» 만 바꿉니다')
+  {
+    //  ① 🔴 ★src 가 «교재 파일의 실제 글자» 와 같은가
+    //     ⇒ 이것이 있어야 「원문이 보존되어 있다」 가 ★«값» 이 됩니다
+    const miss: string[] = []
+    for (const r of TEXT_PLAIN) {
+      const t = hyoTextOf(r.no, r.hyo)
+      const hit = (t?.parts ?? []).find(p => p.who === r.who && p.text === r.src)
+      if (!hit) miss.push(`${r.no}괘 ${r.hyo}효 [${r.who}]`)
+    }
+    ok(miss.length === 0,
+      `🔴 ⛔ ★순화표의 원문이 교재와 «한 글자도» 안 다릅니다 ${miss.join(' · ')}`)
+    ok(TEXT_PLAIN.length === 20, `★본문 순화 ${TEXT_PLAIN.length}칸`)
+    ok(Object.keys(WHO_PLAIN).length === 11, `★갈래 이름 순화 ${Object.keys(WHO_PLAIN).length}가지`)
+
+    //  ② 🔴 ★손님께 나가는 글에 «순화 안 된 말» 이 남아 있지 않은가
+    //  ⚠️ ★'수가' 만으로 찾으면 「구설수가」·「승진하는 수가」 까지 잡힙니다 — «다른 말» 입니다.
+    //     ⛔ 「움직이면 흉하다」 같은 주역의 보통 말도 안 건드립니다 (다 바꾸면 물건이 안 됩니다).
+    const BAD = ['수가 흉', '수가 길', '수가 공망', '수가 험한', '흉한 수', '수가 흉하면',
+      '구이효가', '뇌화풍괘', '비괘의 육',
+      '수명을 다하게', '요절한다', '죽게 된다', '시체를 한 수레', '죽어서 교외',
+      '수명을 단축', '상을 당하고 망할', '죽을 기일', '가정이 파괴']
+    const leak: string[] = []
+    for (let no = 1; no <= 94; no++) for (const h of [1, 2, 3] as const) {
+      const t = hyoTextOf(no, h)
+      if (!t) continue
+      for (const p of (t.parts ?? [])) {
+        if (p.hide) continue   // ⛔ 가린 것은 애초에 안 나갑니다
+        const w = plainWho(p.who)
+        const x = plainText(no, h, p.who, p.text)
+        for (const b of BAD) if (w.includes(b) || x.includes(b)) leak.push(`${no}괘 ${h}효 「${b}」`)
+      }
+    }
+    ok(leak.length === 0,
+      `🔴 ⛔ ★손님께 나가는 글에 «센 말» 이 ${leak.length}건 남았습니다 ${leak.slice(0, 6).join(' · ')}`)
+
+    //  ③ ⛔ 교재 파일은 «한 글자도» 안 건드렸는가 — 원문이 그대로 있어야 합니다
+    {
+      const t9 = hyoTextOf(9, 1)
+      const p9 = (t9?.parts ?? []).find(p => p.who === '수가 흉한 사람')
+      ok(p9?.text === '오래지 않아 수명을 다하게 된다.',
+        '⛔ ★교재 원문은 «그대로» 있습니다 (나중에 전문가용 화면에 씁니다) [대표님]')
+    }
+
+    //  ④ 순화가 «실제로» 갈아끼워지는가 — 값으로
+    ok(plainWho('수가 흉한 사람') === '운수가 안 좋아 어려운 시기를 지나고 있다면',
+      '★갈래 이름이 바뀝니다')
+    ok(plainText(9, 1, '수가 흉한 사람', '오래지 않아 수명을 다하게 된다.')
+      .startsWith('가까운 시일 안에'), '★본문이 바뀝니다')
+    ok(plainWho('선비') === '선비' && plainText(9, 1, '선비', '아무 말') === '아무 말',
+      '⛔ ★표에 없는 말은 «그대로» 나갑니다 (지어내지 않습니다)')
+
+    //  ⑤ 창구가 순화를 거치는가 — ⛔ 되돌리면 원문이 새어 나갑니다
+    {
+      const route = R('app/api/haerak/route.ts')
+      ok(/plainWho\(p\.who\)/.test(route) && /plainText\(/.test(route),
+        '🔴 ⛔ ★셈 창구가 «순화해서» 내보냅니다')
+      ok(!/who: p\.who, text: p\.text/.test(route),
+        '⛔ ★원문을 «그대로» 내보내던 줄로 되돌아가지 않았습니다')
+    }
+
+    //  ⑥ ⚠️ 아직 «제 초안» 인 줄 — 연재쌤 검수 때 여기를 보시면 됩니다
+    ok(true, `⚠️ ★연재쌤 검수가 남은 줄 — ${draftRows().length}개 (by: '초안')`)
   }
 
   console.log(`\n━━ 하락이수 수리 — 통과 ${pass} · 실패 ${fail} ━━\n`)
