@@ -2808,8 +2808,26 @@ console.log('\n━━ ㉒-y 🔴 가격 표의 합격운 줄이 «토글을 따�
       && /if \(!hadMc\) \{/.test(pr),
       `⛔ ★이미 있으면 «건드리지» 않습니다 (넣어 두신 값이 안 덮입니다)`)
     check(/requireMaster/.test(pr), `⛔ ★관리자만 만들 수 있습니다`)
+    check(/body\.fill === true/.test(pr) && /from\('mc_price'\)\.insert\(/.test(pr),
+      `🔴 ★「지갑 요금표 채우기」 — 빠진 mc_price 줄을 한꺼번에 채웁니다`)
+    check(/const have = new Set\(\(mc\.data \?\? \[\]\)\.map\(r => r\.item\)\)/.test(pr),
+      `⛔ ★이미 있는 지갑 요금표 줄은 «건드리지» 않습니다`)
+  }
+  /*  🔴 ★2026-09-14 (8부) — 「잔액이 있는데 안 넘어간다」 를 다시 겪지 않게 */
+  {
+    const gate = codeOf(read('lib/wallet/consultGate.ts'))
+    const sheet = codeOf(read('app/components/common/WalletPaySheet.tsx'))
+    check(/'no_price'/.test(gate) && /from\('mc_price'\)[\s\S]{0,160}maybeSingle\(\)/.test(gate),
+      `🔴 ⛔ ★요금표에 줄이 «없는» 것을 따로 가려냅니다 (뭉뚱그려 error 로 안 넘깁니다)`)
+    check(/state === 'noprice'/.test(sheet) && /요금이 정해지지 않았어요/.test(sheet),
+      `🔴 ★손님께 «까닭» 을 말합니다 — 「잠시 뒤에 다시」 라고만 하지 않습니다`)
+    check(/충전하신 잔액과는 관계없어요/.test(sheet),
+      `⛔ ★「충전 잔액과 관계없다」 고 말해 드립니다 (더 충전하시지 않게)`)
+    check(/onClick=\{fillWallet\}/.test(codeOf(read('app/admin/components/PriceManager.tsx'))),
+      `★관리 화면에서 «화면으로» 채울 수 있습니다 (DB 안 들어가셔도 됩니다)`)
     //  🔴 지갑 요금표 줄이 «빠지면» 저장이 안 끝납니다 (2026-09-14 대표님 화면에서 확인)
-    check(/from\('mc_price'\)[\s\S]{0,200}insert\(\{ service: 'myc', item: key/.test(pr),
+    check(/from\('mc_price'\)[\s\S]{0,200}insert\(\{ service: 'myc', item: key/.test(
+      codeOf(read('app/api/admin/price-row/route.ts'))),
       `🔴 ⛔ ★지갑 요금표(mc_price) 줄도 «함께» 만듭니다 — 안 그러면 저장이 실패합니다`)
   }
   {

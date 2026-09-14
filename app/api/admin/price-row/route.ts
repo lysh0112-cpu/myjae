@@ -29,7 +29,43 @@ export async function POST(request: Request) {
     const g = await requireMaster()
     if (!g.ok) return g.res
 
-    const { key } = (await request.json().catch(() => ({}))) as { key?: unknown }
+    const body = (await request.json().catch(() => ({}))) as { key?: unknown; fill?: unknown }
+
+    /*  🔴 ★2026-09-14 (8부) — 「지갑 요금표 채우기」
+     *    [까닭]  가격 표에 줄이 있어도 ★mc_price 에 줄이 없으면 —
+     *      · 저장할 때 「지갑 요금표 반영에 실패」 가 뜨고
+     *      · 손님 결제 시트가 ★얼마인지 몰라 «안 열립니다» (지갑에 돈이 있어도)
+     *      ⇒ 2026-09-14 대표님이 겪으신 일입니다.
+     *    [무엇을]  ★이미 가격 표에 «있는» 낱말만 골라 mc_price 줄을 만듭니다.
+     *      ⛔ 없던 낱말을 지어내지 않습니다. 값은 가격 표의 값을 그대로 옮깁니다.
+     *      ⛔ 이미 있는 mc_price 줄은 «건드리지» 않습니다. */
+    if (body.fill === true) {
+      const sbF = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } },
+      )
+      const [c, a, mc] = await Promise.all([
+        sbF.from('consult_prices').select('price_key, label, price'),
+        sbF.from('analysis_prices').select('price_key, label, price'),
+        sbF.from('mc_price').select('item').eq('service', 'myc'),
+      ])
+      const have = new Set((mc.data ?? []).map(r => r.item))
+      const want = [...(c.data ?? []), ...(a.data ?? [])].filter(r => !have.has(r.price_key))
+      if (want.length === 0) return NextResponse.json({ ok: true, made: 0, names: [] })
+      const { error } = await sbF.from('mc_price').insert(
+        want.map(r => ({
+          service: 'myc', item: r.price_key, label: r.label,
+          price: r.price ?? 0, up_at: new Date().toISOString(),
+        })),
+      )
+      if (error) {
+        return NextResponse.json({ error: '지갑 요금표를 채우지 못했어요: ' + error.message }, { status: 500 })
+      }
+      return NextResponse.json({ ok: true, made: want.length, names: want.map(r => r.label) })
+    }
+
+    const { key } = body
     const spec = typeof key === 'string' ? ALLOW[key] : undefined
     if (!spec) {
       return NextResponse.json({ error: '만들 수 없는 낱말이에요.' }, { status: 400 })

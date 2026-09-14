@@ -72,7 +72,7 @@ export default function WalletPaySheet(p: {
 }) {
   const [price, setPrice] = useState<number | null>(null)
   const [balance, setBalance] = useState<number | null>(null)
-  const [state, setState] = useState<'loading' | 'ok' | 'short' | 'error' | 'login'>('loading')
+  const [state, setState] = useState<'loading' | 'ok' | 'short' | 'error' | 'login' | 'noprice'>('loading')
 
   useEffect(() => {
     if (!p.open) return
@@ -96,6 +96,12 @@ export default function WalletPaySheet(p: {
          *         ⇒ 잠시 뒤에 해도 «안 됩니다». 손님이 무엇을 해야 할지 몰랐습니다.
          *   ⚠️ 5부 0-5 「가려서 말하기」 · 골프온 1판-49 ④ 와 같은 결입니다. */
         if (r.gate === 'on' && !r.ok && r.reason === 'no_login') { setState('login'); return }
+        /*  🔴 ★2026-09-14 (8부) — 요금표(mc_price)에 줄이 «없을» 때를 따로 가립니다.
+         *    [전]  「잔액을 확인하지 못했어요. ★잠시 뒤에 다시 해 주세요」 라고 말했는데
+         *          ★잠시 뒤에 해도 «영영» 안 됩니다.
+         *    ⇒ 2026-09-14 대표님이 «지갑에 9만원이 있는데 안 넘어간다» 고 겪으신 일입니다.
+         *    ⛔ 'error' 로 되돌리지 마십시오 — 손님이 충전만 더 하시게 됩니다. */
+        if (r.gate === 'on' && !r.ok && r.reason === 'no_price') { setState('noprice'); return }
         if (r.gate === 'on' && !r.ok) { setState('error'); return }
       }
       //  관문이 꺼져 있을 때 — 값만 보여 드립니다 (잔액은 안 봅니다).
@@ -165,6 +171,13 @@ export default function WalletPaySheet(p: {
           </div>
         )}
 
+        {state === 'noprice' && (
+          <div style={{ fontSize: 13, color: C.red, padding: '10px 0 18px', lineHeight: 1.7 }}>
+            아직 이 서비스의 요금이 정해지지 않았어요.<br />
+            <span style={{ color: C.sub }}>충전하신 잔액과는 관계없어요. 잠시 후 다시 확인해 주세요.</span>
+          </div>
+        )}
+
         {state === 'error' && (
           <div style={{ fontSize: 13, color: C.red, padding: '10px 0 18px', lineHeight: 1.7 }}>
             잔액을 확인하지 못했어요.<br />잠시 뒤에 다시 해 주세요.
@@ -190,7 +203,7 @@ export default function WalletPaySheet(p: {
                 else if (typeof window !== 'undefined') window.location.href = '/wallet'
                 return
               }
-              if (state === 'error') { p.onClose(); return }
+              if (state === 'error' || state === 'noprice') { p.onClose(); return }
               /* ★로그인하고 «지금 화면» 으로 돌아오게 — /login 이 next 를 거릅니다 (lib/safeNext.ts) */
               if (state === 'login') {
                 if (typeof window !== 'undefined') {
@@ -206,7 +219,7 @@ export default function WalletPaySheet(p: {
               border: 'none', color: '#fff', fontSize: 15, fontWeight: 700,
               cursor: 'pointer', marginBottom: 8, fontFamily: 'inherit',
             }}>
-            {short ? '충전하러 가기' : state === 'error' ? '확인' : state === 'login' ? '카카오로 로그인하러 가기' : `${won(need)} 내고 ${p.actionLabel}`}
+            {short ? '충전하러 가기' : (state === 'error' || state === 'noprice') ? '확인' : state === 'login' ? '카카오로 로그인하러 가기' : `${won(need)} 내고 ${p.actionLabel}`}
           </button>
         )}
 

@@ -125,6 +125,19 @@ function PriceCell({ r, short, onPrice, onToggle }: {
 }
 
 function MergedPriceTable({ flags }: { flags: { examLuck: boolean; haerak: boolean } }) {
+  /*  🔴 ★2026-09-14 (8부) — 「지갑 요금표 채우기」  [대표님이 겪으신 일]
+   *    mc_price 에 줄이 없으면 ★손님 결제 시트가 «안 열립니다» (지갑에 돈이 있어도).
+   *    ⇒ 한 번 눌러 두면 «빠진 줄» 을 한꺼번에 채웁니다. 이미 있는 줄은 안 건드립니다. */
+  async function fillWallet() {
+    const r = await callAdmin<{ ok: true; made: number; names: string[] }>(
+      '/api/admin/price-row', { fill: true })
+    if (!r.ok) { alert('채우지 못했어요: ' + r.message); return }
+    alert(r.data.made === 0
+      ? '지갑 요금표에 빠진 줄이 없어요.'
+      : `지갑 요금표에 ${r.data.made}줄을 채웠어요 — ${r.data.names.join(' · ')}\n\n값이 0인 줄은 위에서 가격을 넣고 [저장]해 주세요.`)
+    location.reload()
+  }
+
   /*  ★2026-09-14 (8부) — 없는 가격 줄을 «화면에서» 만듭니다.
    *    ⛔ 낱말은 창구(ALLOW)가 막습니다 — 아무 줄이나 안 만들어집니다. */
   async function makeRow(consultKey: string, aiKeys: string[]) {
@@ -310,11 +323,24 @@ function MergedPriceTable({ flags }: { flags: { examLuck: boolean; haerak: boole
         )}
       </div>
 
-      <button onClick={saveAll} disabled={saving}
-        className="py-2 px-5 rounded-xl text-sm font-bold mt-3"
-        style={{ background: '#FAC775', color: '#1a1a18' }}>
-        {saving ? '저장중...' : '저장'}
-      </button>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12, flexWrap: 'wrap' }}>
+        <button onClick={saveAll} disabled={saving}
+          className="py-2 px-5 rounded-xl text-sm font-bold"
+          style={{ background: '#FAC775', color: '#1a1a18' }}>
+          {saving ? '저장중...' : '저장'}
+        </button>
+        {/*  🔴 ★2026-09-14 (8부) — mc_price 에 줄이 없으면 손님 결제 시트가 «안 열립니다».
+          *    ⛔ 이 단추를 지우지 마십시오 — 새 서비스를 넣을 때마다 필요합니다. */}
+        <button onClick={fillWallet} disabled={saving}
+          className="py-2 px-4 rounded-xl text-sm font-bold"
+          style={{ background: '#2C2C2A', color: '#FAC775', border: '1px solid rgba(250,199,117,0.35)' }}>
+          지갑 요금표 채우기
+        </button>
+      </div>
+      <div style={{ fontSize: 11, color: '#8a88a0', marginTop: 6, lineHeight: 1.7 }}>
+        💡 새 서비스를 넣으면 «지갑 요금표(mc_price)» 줄이 없어 손님 결제 창이 안 열려요.
+        위 단추를 한 번 눌러 빠진 줄을 채워 주세요. 이미 있는 줄은 건드리지 않아요.
+      </div>
     </div>
   )
 }
@@ -398,11 +424,17 @@ function PriceTable({ title, table }: { title: string; table: 'consult_prices' |
         ))}
       </div>
 
-      <button onClick={saveAll} disabled={saving}
-        className="py-2 px-5 rounded-xl text-sm font-bold mt-3"
-        style={{ background: '#FAC775', color: '#1a1a18' }}>
-        {saving ? '저장중...' : '저장'}
-      </button>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12, flexWrap: 'wrap' }}>
+        <button onClick={saveAll} disabled={saving}
+          className="py-2 px-5 rounded-xl text-sm font-bold"
+          style={{ background: '#FAC775', color: '#1a1a18' }}>
+          {saving ? '저장중...' : '저장'}
+        </button>
+      </div>
+      <div style={{ fontSize: 11, color: '#8a88a0', marginTop: 6, lineHeight: 1.7 }}>
+        💡 새 서비스를 넣으면 «지갑 요금표(mc_price)» 줄이 없어 손님 결제 창이 안 열려요.
+        위 단추를 한 번 눌러 빠진 줄을 채워 주세요. 이미 있는 줄은 건드리지 않아요.
+      </div>
     </div>
   )
 }
@@ -525,6 +557,7 @@ function HomePriceTable() {
     setRows((data ?? []) as HomePrice[])
     setLoading(false)
   }
+
 
   function setPrice(key: string, raw: string) {
     const num = parseInt(raw.replace(/[^0-9]/g, '')) || 0

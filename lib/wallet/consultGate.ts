@@ -106,7 +106,13 @@ export function won(n: number): string {
 export type CheckResult =
   | { gate: 'off' }
   | { gate: 'on'; ok: true; balance: number; need: number }
-  | { gate: 'on'; ok: false; reason: 'no_login' | 'not_enough' | 'error'; balance: number; need: number }
+  /*  ★2026-09-14 (8부) — 'no_price' 를 더했습니다.
+   *    [까닭]  요금표(mc_price)에 줄이 «없으면» 지금까지 'error' 로 떨어졌습니다.
+   *      ⇒ 화면이 「잔액을 확인하지 못했어요. ★잠시 뒤에 다시 해 주세요」 라고 말했는데
+   *        ★잠시 뒤에 해도 «영영» 안 됩니다. 손님이 무엇을 해야 할지 몰랐습니다.
+   *      ⇒ 2026-09-14 대표님이 «지갑에 9만원이 있는데 안 넘어간다» 고 겪으신 일입니다.
+   *    ⛔ 'error' 로 되돌리지 마십시오 — 까닭이 다시 묻힙니다. */
+  | { gate: 'on'; ok: false; reason: 'no_login' | 'not_enough' | 'error' | 'no_price'; balance: number; need: number }
 
 /**
  *  ① 「전문가와 상담하기」 를 누른 «그 순간» — ★보기만 합니다.
@@ -122,7 +128,14 @@ export async function checkConsultBalance(priceKey: string): Promise<CheckResult
     const { data, error } = await supabase.rpc('wallet_check', {
       p_service: SERVICE, p_item: priceKey, p_qty: 1,
     })
-    if (error || !data) return { gate: 'on', ok: false, reason: 'error', balance: 0, need: 0 }
+    if (error || !data) {
+      //  🔴 ★왜 실패했는지 «한 번 더» 봅니다 — 요금표에 줄이 없는 것인지.
+      //     ⛔ 뭉뚱그려 'error' 로 넘기지 마십시오.
+      const { data: row } = await supabase.from('mc_price')
+        .select('item').eq('service', SERVICE).eq('item', priceKey).maybeSingle()
+      if (!row) return { gate: 'on', ok: false, reason: 'no_price', balance: 0, need: 0 }
+      return { gate: 'on', ok: false, reason: 'error', balance: 0, need: 0 }
+    }
 
     const r = data as { ok: boolean; need: number; balance: number }
     if (r.ok) return { gate: 'on', ok: true, balance: r.balance ?? 0, need: r.need ?? 0 }
@@ -193,6 +206,10 @@ export async function askBeforeAi(
     if (r.reason === 'not_enough') {
       //  ⛔⛔ ★[그냥 닫기] 를 «꼭» 두십시오 [2부 4장 원칙 ③] — 가두면 화가 납니다.
       if (confirm(`${WALLET_MSG.short(r.need, r.balance)}\n\n충전하러 가시겠어요?`)) onCharge()
+      return false
+    }
+    if (r.reason === 'no_price') {
+      alert('아직 이 서비스의 요금이 정해지지 않았어요.\n잠시 후 다시 확인해 주세요.')
       return false
     }
     alert('잔액을 확인하지 못했어요.\n잠시 뒤에 다시 해 주세요.')
