@@ -25,10 +25,19 @@ export async function GET() {
     if (!url || !key) return NextResponse.json(HOME_FLAGS_OFF, { headers: NO_STORE })
 
     const sb = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-    const { data } = await sb.from('app_settings')
-      .select('value').eq('key', HOME_FLAG_KEYS.examLuck).maybeSingle()
+    /*  🔴 ★2026-09-14 (8부) — 낱말이 «둘» 이 되었습니다 (examLuck · haerak).
+     *    ⛔ 하나만 읽으면 ★나머지가 «말없이 꺼짐» 이 됩니다 —
+     *       홈에서 하락이수 카드가 안 뜬 까닭이 이것이었습니다 (대표님 화면에서 확인).
+     *    ⚠️ 낱말을 더하시거든 ★여기도 «함께» 고치십시오. keys 가 곧 답입니다.
+     *    ⛔ 정해진 낱말만 읽는 규칙은 그대로입니다 — in() 에 HOME_FLAG_KEYS 값만 넘깁니다. */
+    const keys = [HOME_FLAG_KEYS.examLuck, HOME_FLAG_KEYS.haerak]
+    const { data } = await sb.from('app_settings').select('key, value').in('key', keys)
+    const on = (k: string) => Number((data ?? []).find(r => r.key === k)?.value) === 1
 
-    return NextResponse.json({ examLuck: Number(data?.value) === 1 }, { headers: NO_STORE })
+    return NextResponse.json(
+      { examLuck: on(HOME_FLAG_KEYS.examLuck), haerak: on(HOME_FLAG_KEYS.haerak) },
+      { headers: NO_STORE },
+    )
   } catch {
     return NextResponse.json(HOME_FLAGS_OFF, { headers: NO_STORE })
   }

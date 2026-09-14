@@ -2615,7 +2615,9 @@ console.log('\n━━ ㉒-u 🔴 합격운/취업운 — 관리자 토글로 «�
   check(/HOME_FLAGS_OFF/.test(fl) && /return HOME_FLAGS_OFF/.test(fl),
     `⛔ 못 읽으면 ★«꺼짐» 으로 떨어집니다 (켜진 채로 새지 않게)`)
   //  ⚠️ app_settings.value 는 ★숫자 칸 — 처음 true 를 넣었다가 거절됐습니다 (2026-09-11 대표님 화면).
-  check(/Number\(data\?\.value\) === 1/.test(pub), `⛔ 서버도 «정확히 1» 일 때만 켜짐으로 봅니다`)
+  //  ★2026-09-14 (8부) — 낱말이 둘이 되며 «찾아 읽는» 모양으로 바뀌었습니다. 뜻은 그대로입니다.
+  check(/Number\(\(data \?\? \[\]\)\.find\(r => r\.key === k\)\?\.value\) === 1/.test(pub),
+    `⛔ 서버도 «정확히 1» 일 때만 켜짐으로 봅니다`)
   check(/const v = examLuck \? 1 : 0/.test(adm) && /value: v,/.test(adm) && !/value: examLuck/.test(adm),
     `⛔ ★숫자 칸에 «1 · 0» 으로 담습니다 (참/거짓은 거절됩니다)`)
   // ⑤ 손님용 읽기 길 — ★정해진 낱말 «하나» 만 읽고, 쓰는 길이 없습니다
@@ -2765,6 +2767,17 @@ console.log('\n━━ ㉒-y 🔴 가격 표의 합격운 줄이 «토글을 따�
    *              「전담상담사가격과 ai가격 토글버튼도 같이」
    *              「내사주그림…진로적성…하락이수 순으로」 · 「뱃지는 붙이지 마」            */
   check(/haerak: 'home_haerak'/.test(codeOf(read('lib/homeFlags.ts'))), `★하락이수 토글 낱말이 있습니다 (home_haerak)`)
+  /*  🔴 ★2026-09-14 (8부) — 읽기 창구가 «낱말 하나만» 읽어 홈에서 카드가 안 떴습니다.
+   *    ⛔ 낱말을 더하시거든 ★읽기 창구도 «함께» 고치십시오. 여기가 그것을 셉니다. */
+  {
+    const rd = codeOf(read('app/api/home-flags/route.ts'))
+    const hfKeys = (codeOf(read('lib/homeFlags.ts')).match(/^\s+(\w+): '[\w_]+',$/gm) ?? [])
+      .map(x => x.trim().split(':')[0])
+    check(hfKeys.every(k => rd.includes(`HOME_FLAG_KEYS.${k}`)),
+      `🔴 ⛔ ★읽기 창구가 «낱말을 다» 읽습니다 — ${hfKeys.join(' · ')}`)
+    check(/\.in\('key', keys\)/.test(rd), `⛔ ★정해진 낱말만 읽습니다 (in 으로 묶어서)`)
+    check(/haerak: on\(HOME_FLAG_KEYS\.haerak\)/.test(rd), `★하락이수 값을 «돌려줍니다»`)
+  }
   check(/HOME_FLAGS_OFF: HomeFlags = \{ examLuck: false, haerak: false \}/.test(codeOf(read('lib/homeFlags.ts'))),
     `⛔ ★못 읽으면 «둘 다 꺼짐» 입니다 (켜진 채로 안 샙니다)`)
   check(/consult: 'haerak'[\s\S]{0,120}onlyWhen: 'haerak'/.test(pm),
