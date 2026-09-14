@@ -31,6 +31,12 @@ import { toResultQuery, myResultQuery, type SavedPerson, type SavedInputData } f
 import ConfirmDeleteDialog from '@/app/components/common/ConfirmDeleteDialog'
 import StorageShell, { S } from '@/app/components/common/StorageShell'
 import StorageRow from '@/app/components/common/StorageRow'
+import ServiceIntroDialog from '@/app/components/common/ServiceIntroDialog'
+//  ⚠️ ★글은 «한 곳» 에서 옵니다 — ⛔ 여기에 문장을 적지 마십시오
+import {
+  HAERAK_INTRO_TITLE, HAERAK_INTRO_LEAD, HAERAK_INTRO_POINTS,
+  HAERAK_INTRO_TAIL, HAERAK_INTRO_CTA,
+} from '@/lib/saju/haerak/intro'
 
 /** 저장된 입력값 → 결과 화면이 읽는 주소 */
 function personToQuery(d: SavedInputData, name: string): string {
@@ -74,6 +80,9 @@ function HaerakStorageInner() {
   const [confirmDel, setConfirmDel] = useState<SajuRecord | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
+  /*  🔴 ★2026-09-14 (9부) [대표님] — 「하락이수란?」 을 «눌렀을 때» 뜹니다.
+   *     ⛔ 홈 카드를 누를 때는 «안 띄웁니다» — 대표님이 그렇게 정하셨습니다. */
+  const [introOpen, setIntroOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -107,6 +116,18 @@ function HaerakStorageInner() {
       emptyDesc={'새로 보면 여기에 차곡차곡 쌓여요'}
       actionLabel={'새로운 사람 보기'}
       onAction={() => setPickerOpen(true)}
+      /*  ★아래 단추 «뒤» 에 붙습니다 — StorageShell 을 손대지 않았습니다 */
+      footer={
+        <button
+          type="button"
+          onClick={() => setIntroOpen(true)}
+          style={{
+            width: '100%', marginTop: 10, padding: 11, borderRadius: 12,
+            background: 'transparent', border: '1px solid #d9e3ec',
+            color: '#3f6fa8', fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >하락이수란? 河洛理數</button>
+      }
     >
       {records && records.map(r => {
         const y = targetYearOf(r)
@@ -183,6 +204,18 @@ function HaerakStorageInner() {
           onConfirm={handleDelete}
         />
       )}
+      <ServiceIntroDialog
+        open={introOpen}
+        title={HAERAK_INTRO_TITLE}
+        lead={HAERAK_INTRO_LEAD}
+        points={HAERAK_INTRO_POINTS}
+        tail={HAERAK_INTRO_TAIL}
+        ctaLabel={HAERAK_INTRO_CTA}
+        /*  ★여기서는 이미 «하락이수 안» 이므로, 들어가는 단추가
+         *     ⇒ 바로 «사람 고르기» 로 이어집니다. ⛔ 막다른 길이 아닙니다. */
+        onStart={() => { setIntroOpen(false); setPickerOpen(true) }}
+        onClose={() => setIntroOpen(false)}
+      />
     </StorageShell>
   )
 }

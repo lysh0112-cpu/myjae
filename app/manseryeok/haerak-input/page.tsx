@@ -22,6 +22,12 @@ import { supabase } from '@/lib/supabase'
 import WalletPaySheet from '@/app/components/common/WalletPaySheet'
 //  ★달력 표 — «답할 수 있는 해» 만 손님께 보여 드리려고 씁니다 (호출 0번 · 234바이트)
 import { lunarMonthSizeKR } from '@/lib/saju/koreanLunarTable'
+import ServiceIntroDialog from '@/app/components/common/ServiceIntroDialog'
+//  ⚠️ ★글은 «한 곳» 에서 옵니다 — ⛔ 여기에 문장을 적지 마십시오
+import {
+  HAERAK_INTRO_TITLE, HAERAK_INTRO_LEAD, HAERAK_INTRO_POINTS,
+  HAERAK_INTRO_TAIL, HAERAK_INTRO_CTA,
+} from '@/lib/saju/haerak/intro'
 
 const ACCENT = '#3f6fa8'        // ★청람 — 홈 BEST 카드와 «같은 결»
 const BG = '#FDF6F0'
@@ -64,6 +70,10 @@ function HaerakInputInner() {
   const choices = useMemo(() => yearChoices(), [])
   const [target, setTarget] = useState<number>(choices[0].y)
   const [payOpen, setPayOpen] = useState(false)
+  /*  🔴 ★2026-09-14 (9부) [대표님] — 「하락이수란?」 을 «눌렀을 때» 뜹니다.
+   *     ⚠️ 여기가 ★처음 오신 손님이 «돈을 내기 직전» 에 서 계신 자리입니다.
+   *        보관함보다 여기가 더 필요합니다. */
+  const [introOpen, setIntroOpen] = useState(false)
 
   /*  🔴 ★나이는 «보러 오시는 그때» 기준 하나입니다  [대표님 2026-09-14]
    *     ⇒ 한 분이 올해와 내년을 «함께» 보셔도 나이는 ★하나입니다.
@@ -167,6 +177,17 @@ function HaerakInputInner() {
             한 해에 상반기·하반기 두 괘가 나옵니다.
           </div>
 
+          {/*  🔴 ★「하락이수란?」 — 낯선 이름이라 «사기 전» 에 보실 수 있게 둡니다 [대표님] */}
+          <button
+            type="button"
+            onClick={() => setIntroOpen(true)}
+            style={{
+              width: '100%', padding: 10, borderRadius: 12, marginTop: 2,
+              background: 'transparent', border: `1px solid ${LINE}`,
+              color: ACCENT, fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >하락이수란? 河洛理數</button>
+
           <button
             type="button"
             onClick={() => setPayOpen(true)}
@@ -179,6 +200,19 @@ function HaerakInputInner() {
             하락이수 보기{aiPrice != null ? ` · ${aiPrice.toLocaleString()}원` : ''}
           </button>
         </div>
+
+        <ServiceIntroDialog
+          open={introOpen}
+          title={HAERAK_INTRO_TITLE}
+          lead={HAERAK_INTRO_LEAD}
+          points={HAERAK_INTRO_POINTS}
+          tail={HAERAK_INTRO_TAIL}
+          ctaLabel={HAERAK_INTRO_CTA}
+          /*  ★여기서 「보러 가기」 는 ⇒ 곧바로 ★결제 시트로 잇습니다.
+           *     ⛔ 읽고 나서 다시 찾아 누르게 하지 않습니다. */
+          onStart={() => { setIntroOpen(false); setPayOpen(true) }}
+          onClose={() => setIntroOpen(false)}
+        />
 
         {/* ★공용 결제 시트 — ⛔ 여기에 팝업을 «따로 만들지» 마십시오 */}
         <WalletPaySheet

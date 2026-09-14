@@ -250,12 +250,7 @@ const ALWAYS_OPEN = ['saju']
  *  ⛔ 이름을 여기 «붙박이» 로 적지 마십시오 — 홈 · 낱장 · 관리 화면 «셋» 이 갈립니다.
  *     lib/homeFlags.ts 의 EXAM_LUCK_NAME «한 곳» 에서만 옵니다 (검사 ㉒-u). */
 import { EXAM_LUCK_NAME, HAERAK_NAME } from '@/lib/homeFlags'
-import ServiceIntroDialog from '@/app/components/common/ServiceIntroDialog'
-//  ⚠️ ★글은 «한 곳» 에서 옵니다 — ⛔ 여기에 문장을 적지 마십시오
-import {
-  HAERAK_INTRO_TITLE, HAERAK_INTRO_LEAD, HAERAK_INTRO_POINTS,
-  HAERAK_INTRO_TAIL, HAERAK_INTRO_CTA,
-} from '@/lib/saju/haerak/intro'
+
 
 const SOLO_NAMES = ['궁합', EXAM_LUCK_NAME]
 
@@ -304,25 +299,12 @@ export default function ServiceSection({
     Object.fromEntries(ALWAYS_OPEN.map(k => [k, true])),
   )
 
-  /*  🔴 ★2026-09-14 (9부) [대표님 「하락이수를 누르면 모달로 설명문을」]
-   *
-   *  ⛔ ★카드마다 따로 달지 «않았습니다».
-   *     홈에서 서비스로 들어가는 길이 ★다섯 군데입니다
-   *     (BEST · 압핀 칩 · 낱장 · 폴더 안 · 그 밖).
-   *     한 군데만 달면 ★«압핀으로 들어간 손님» 은 설명을 못 보십니다.
-   *     ⇒ 7부 「절반만 고치기」 를 안 밟으려고 ★«들어가는 문 하나» 로 묶었습니다.
-   *
-   *  ⚠️ 다른 서비스에도 붙이시려면 ★INTRO_OF 에 한 줄만 더하십시오. */
-  const [intro, setIntro] = useState<HomeService | null>(null)
-
-  /** 소개 팝업을 띄울 서비스 — ⛔ 없으면 바로 들어갑니다 */
-  const INTRO_OF: Record<string, boolean> = { [HAERAK_NAME]: true }
-
-  /** ★서비스로 들어가는 «문 하나» — 모든 카드가 이것을 부릅니다 */
-  const enter = (s: HomeService) => {
-    if (INTRO_OF[s.name]) { setIntro(s); return }
-    onOpen(s)
-  }
+  /*  ⚠️ ★2026-09-14 (9부) — 홈에서는 소개 팝업을 «안 띄웁니다» [대표님]
+   *     처음에는 홈 카드를 누르면 뜨게 했는데, 대표님이
+   *     ★「여기 말고 «다른 화면에서 눌렀을 때» 나오게 하라」 하셨습니다.
+   *     ⇒ 소개 팝업은 ★하락이수 «보관함» 과 «입력 화면» 의
+   *       「하락이수란?」 을 누르셨을 때 뜹니다.
+   *     ⛔ 홈 카드는 ★바로 들어갑니다 — 다른 서비스와 같습니다. */
 
   const byName = new Map(services.map(s => [s.name, s]))
   const pinnedSvcs = pinned.map(n => byName.get(n)).filter((s): s is HomeService => !!s)
@@ -443,7 +425,7 @@ export default function ServiceSection({
               <button
                 key={s.name}
                 className="svcTap svcBest"
-                onClick={() => enter(s)}
+                onClick={() => onOpen(s)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 13,
                   width: '100%', textAlign: 'left', cursor: 'pointer',
@@ -493,7 +475,7 @@ export default function ServiceSection({
               <button
                 key={s.name}
                 className="svcTap svcChip"
-                onClick={() => enter(s)}
+                onClick={() => onOpen(s)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '8px 14px 8px 10px', borderRadius: 20, cursor: 'pointer',
@@ -534,7 +516,7 @@ export default function ServiceSection({
             }}>
               <button
                 className="svcTap svcRow"
-                onClick={() => enter(s)}
+                onClick={() => onOpen(s)}
                 style={{
                   flex: 1, display: 'flex', alignItems: 'center', gap: 11,
                   background: 'none', border: 'none', cursor: 'pointer',
@@ -569,7 +551,7 @@ export default function ServiceSection({
                 }}>
                   <button
                     className="svcTap svcRow"
-                    onClick={() => enter(s)}
+                    onClick={() => onOpen(s)}
                     style={{
                       flex: 1, display: 'flex', alignItems: 'center', gap: 11,
                       background: 'none', border: 'none', cursor: 'pointer',
@@ -668,7 +650,7 @@ export default function ServiceSection({
                       >
                         <button
                           className="svcTap svcRow"
-                          onClick={() => enter(s)}
+                          onClick={() => onOpen(s)}
                           style={{
                             flex: 1, display: 'flex', alignItems: 'center', gap: 8,
                             background: 'none', border: 'none', cursor: 'pointer',
@@ -696,19 +678,6 @@ export default function ServiceSection({
         </div>
       </div>
 
-      {/*  🔴 ★서비스 소개 팝업 — 2026-09-14 (9부) [대표님]
-        *  ⛔ 글은 lib/saju/haerak/intro.ts 에 있습니다. 여기에 적지 마십시오.
-        *  ⚠️ 「보러 가기」 를 누르면 ★원래 가던 곳으로 그대로 갑니다 (onOpen). */}
-      <ServiceIntroDialog
-        open={!!intro}
-        title={HAERAK_INTRO_TITLE}
-        lead={HAERAK_INTRO_LEAD}
-        points={HAERAK_INTRO_POINTS}
-        tail={HAERAK_INTRO_TAIL}
-        ctaLabel={HAERAK_INTRO_CTA}
-        onStart={() => { const s = intro; setIntro(null); if (s) onOpen(s) }}
-        onClose={() => setIntro(null)}
-      />
     </div>
   )
 }

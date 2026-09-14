@@ -756,39 +756,52 @@ async function jaeryoNet() {
       '★볼 해가 있을 때만 결과 화면으로 갑니다')
   }
 
-  /* ══ ㉗ 🔴 홈 소개 팝업 — 2026-09-14 (9부) [대표님] ══════════════ */
-  head('㉗ 🔴 홈 — 카드 글귀와 소개 팝업')
+  /* ══ ㉗ 🔴 홈 글귀 · 소개 팝업 — 2026-09-14 (9부) [대표님] ══════════
+   *  ⚠️ 처음에는 ★홈 카드를 누르면 팝업이 뜨게 했는데,
+   *     대표님이 ★「여기 말고 «다른 화면에서 눌렀을 때» 나오게 하라」 하셨습니다.
+   *     ⇒ 홈 카드는 ★바로 들어가고, 팝업은 ★보관함·입력 화면의 단추로 엽니다.
+   * ══════════════════════════════════════════════════════════════ */
+  head('㉗ 🔴 홈 글귀와 「하락이수란?」 팝업')
   {
     const svc = R('app/home-new/components/ServiceSection.tsx')
     const intro = R('lib/saju/haerak/intro.ts')
     const dlg = R('app/components/common/ServiceIntroDialog.tsx')
+    const stor = R('app/manseryeok/haerak/page.tsx')
+    const input = R('app/manseryeok/haerak-input/page.tsx')
 
     ok(/해마다 바뀌는 운을 주역의 괘로 풀이/.test(svc),
       '★홈 카드 글귀가 바뀌었습니다 [대표님 2026-09-14]')
-    ok(intro.length > 300 && /HAERAK_INTRO_LEAD/.test(intro),
-      '★소개문이 «한 곳»(lib/saju/haerak/intro.ts) 에 있습니다')
-    ok(dlg.length > 500 && /role="dialog"/.test(dlg),
-      '★소개 팝업이 «공용 부품» 입니다 (⛔ 화면마다 다시 짓지 않습니다)')
 
-    //  🔴 들어가는 «문» 이 하나인가 — 한 군데만 달면 압핀으로 들어간 손님이 설명을 못 봅니다
-    ok(!/onClick=\{\(\) => onOpen\(s\)\}/.test(svc),
-      '🔴 ⛔ ★카드가 onOpen 을 «바로» 부르지 않습니다 (문이 하나입니다)')
-    ok((svc.match(/enter\(s\)/g) ?? []).length >= 5,
-      `★들어가는 길 ${(svc.match(/enter\(s\)/g) ?? []).length} 군데가 «같은 문» 을 씁니다`)
-    ok(/INTRO_OF\[s\.name\]/.test(svc),
-      '★소개를 띄울 서비스는 «표» 로 정합니다 (다른 서비스도 한 줄로 붙입니다)')
+    //  ⛔ 홈에서는 «안 띄웁니다» [대표님]
+    ok(!/ServiceIntroDialog/.test(svc),
+      '⛔ ★홈 카드를 누르면 팝업이 «안 뜹니다» — 바로 들어갑니다 [대표님]')
+
+    //  🔴 «눌렀을 때» 뜨는 자리가 둘
+    ok(/ServiceIntroDialog/.test(stor) && /하락이수란\?/.test(stor),
+      '🔴 ★보관함에 「하락이수란?」 단추가 있습니다')
+    ok(/ServiceIntroDialog/.test(input) && /하락이수란\?/.test(input),
+      '🔴 ★입력 화면에도 있습니다 (돈 내시기 «전» 에 보실 수 있게)')
+    ok(/setPayOpen\(true\)/.test(input) && /onStart=/.test(input),
+      '★입력 화면에서 「보러 가기」 는 ⇒ 곧바로 결제 시트로 이어집니다')
+
+    //  🔴 스크롤 — 글이 길어도 «닫기» 에 손이 닿아야 합니다
+    ok(/overflowY: 'auto'/.test(dlg) && /alignItems: 'flex-start'/.test(dlg),
+      '🔴 ★덮개가 위아래로 굴러갑니다 (긴 글이어도 닫기까지 내려갑니다) [대표님]')
+    ok(!/maxHeight: '8/.test(dlg),
+      "⛔ ★maxHeight 로 막지 않았습니다 — vh 로 막으면 휴대폰에서 아래가 잘립니다")
+    ok(/zIndex: 4000/.test(dlg),
+      '⛔ ★아래 띠(HomeBottomNav)보다 위에 뜹니다')
 
     //  ⛔ 글을 화면 코드에 «복사» 하면 안 됩니다 (7부 교훈)
-    ok(!/진희이/.test(svc) && !/적중률/.test(svc),
-      '⛔ ★소개 문장을 화면 코드에 «박지» 않았습니다 — 고칠 곳이 한 곳입니다')
-    //  ⚠️ ★주석의 설명까지 잡으면 안 됩니다 (7부 교훈) — «손님께 나가는 글» 만 봅니다
+    ok(intro.length > 300 && /HAERAK_INTRO_LEAD/.test(intro),
+      '★소개문이 «한 곳»(lib/saju/haerak/intro.ts) 에 있습니다')
+    for (const [nm, t] of [['보관함', stor], ['입력', input], ['홈', svc]] as const) {
+      ok(!/진희이/.test(t) && !/적중률/.test(t),
+        `⛔ ★${nm} 화면에 소개 문장을 «박지» 않았습니다`)
+    }
     const dlgCode = dlg.split('\n').filter(l => !/^\s*(\*|\/\/|\/\*)/.test(l)).join('\n')
     ok(!/진희이/.test(dlgCode) && !/적중률/.test(dlgCode) && !/河洛/.test(dlgCode),
       '⛔ ★공용 팝업에 하락이수 «문장» 이 안 박혀 있습니다 (다른 서비스도 씁니다)')
-
-    //  ★닫고 들어가는 길이 둘 다 있는가
-    ok(/onStart=/.test(svc) && /onClose=/.test(svc),
-      '★「보러 가기」 와 「닫기」 가 둘 다 있습니다 (막다른 길이 아닙니다)')
   }
 
   console.log(`\n━━ 하락이수 수리 — 통과 ${pass} · 실패 ${fail} ━━\n`)

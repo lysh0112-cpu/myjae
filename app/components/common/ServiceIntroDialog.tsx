@@ -80,18 +80,36 @@ export default function ServiceIntroDialog({
       aria-modal="true"
       aria-label={title}
       onClick={onClose}
+      /*  🔴 ★2026-09-14 (9부) [대표님 「모달 안이 위아래로 스크롤되어야
+       *     하단에서 닫을 수 있을 것 같아」]
+       *
+       *  [무엇이 문제였나]  글이 길어 팝업이 화면보다 커지면
+       *     ★아래 「닫기」 가 «화면 밖» 으로 나가 손님이 못 닫으셨습니다.
+       *     홈 아래 띠(HomeBottomNav)에도 가렸습니다.
+       *
+       *  [어떻게 고쳤나]  ⛔ 가운데 정렬을 «버렸습니다» —
+       *     ★덮개 자체가 위아래로 굴러갑니다 (overflowY: auto).
+       *     ⇒ 팝업이 아무리 길어도 ★끝까지 내려가 닫을 수 있습니다.
+       *  ⚠️ ★alignItems: 'center' 로 되돌리지 마십시오 — 긴 글이 잘립니다.
+       *  ⚠️ ★zIndex 는 아래 띠(HomeBottomNav)보다 높아야 합니다. */
       style={{
-        position: 'fixed', inset: 0, zIndex: 1000, background: OVERLAY,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18,
+        position: 'fixed', inset: 0, zIndex: 4000, background: OVERLAY,
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+        padding: '24px 16px 40px',
+        overflowY: 'auto', WebkitOverflowScrolling: 'touch',
       }}
     >
       {/*  ⚠️ 안쪽을 눌렀을 때는 ★안 닫히게 합니다 (글을 읽다 눌릴 수 있습니다) */}
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: 380, maxHeight: '82vh', overflowY: 'auto',
-          background: CARD_BG, borderRadius: 18, padding: '20px 18px 16px',
+          //  ⛔ ★maxHeight 를 두지 «않습니다» — 덮개가 굴러가므로 팝업은 «다 펼칩니다».
+          //     (vh 로 막으면 휴대폰 주소창 때문에 아래가 잘립니다)
+          width: '100%', maxWidth: 380,
+          background: CARD_BG, borderRadius: 18, padding: '20px 18px 18px',
           boxShadow: '0 12px 40px -8px rgba(0,0,0,0.25)',
+          //  ★위아래로 굴려도 «끝» 이 손에 닿게 합니다
+          marginTop: 'auto', marginBottom: 'auto',
         }}
       >
         <div style={{ fontSize: 15, fontWeight: 700, color: TITLE_C, lineHeight: 1.5, marginBottom: 12 }}>
