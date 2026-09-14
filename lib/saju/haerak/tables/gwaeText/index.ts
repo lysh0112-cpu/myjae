@@ -5,7 +5,7 @@
  *  ★괘가 들어올 때마다 여기에 «한 줄» 씩 더합니다.
  *     ⇒ 봉투마다 이 파일과 새 괘 파일만 바뀝니다. 다른 괘는 안 흔들립니다.
  *
- *  ⚠️ 지금 ★36 / 64 입니다 (도표 1 ~ 52).
+ *  ⚠️ 지금 ★47 / 64 입니다 (도표 1 ~ 68).
  *  ⛔ 글이 «없는» 괘를 억지로 채우지 마십시오 — 없으면 «없다» 고 답합니다.
  */
 
@@ -47,6 +47,28 @@ import { G49_DAEJANG } from './g49-daejang'
 import { G50_JIN } from './g50-jin'
 import { G52_MYEONGI } from './g52-myeongi'
 
+import { G53_GAIN } from './g53-gain'
+
+import { G55_GYU } from './g55-gyu'
+
+import { G56_GEON2 } from './g56-geon2'
+
+import { G58_HAE } from './g58-hae'
+
+import { G59_SON } from './g59-son'
+
+import { G61_IK } from './g61-ik'
+
+import { G62_KWAE } from './g62-kwae'
+
+import { G64_GU } from './g64-gu'
+
+import { G65_CHWE } from './g65-chwe'
+
+import { G67_SEUNG } from './g67-seung'
+
+import { G68_GON2 } from './g68-gon2'
+
 /** 도표 번호 → 괘 글 */
 const ALL: Readonly<Record<number, GwaeText>> = {
   1: G1_GEON,
@@ -85,6 +107,17 @@ const ALL: Readonly<Record<number, GwaeText>> = {
   49: G49_DAEJANG,
   50: G50_JIN,
   52: G52_MYEONGI,
+  53: G53_GAIN,
+  55: G55_GYU,
+  56: G56_GEON2,
+  58: G58_HAE,
+  59: G59_SON,
+  61: G61_IK,
+  62: G62_KWAE,
+  64: G64_GU,
+  65: G65_CHWE,
+  67: G67_SEUNG,
+  68: G68_GON2,
 }
 
 /** 글이 들어온 괘가 몇 개인가 (64가 되면 다 찬 것입니다) */

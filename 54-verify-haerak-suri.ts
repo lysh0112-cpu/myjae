@@ -251,7 +251,7 @@ head('⑯ 🔴 다음에 여쭐 것을 «적어 두었는가» (2단계)')
 
 head('⑰ 🔴 괘 풀이 글 — 교재와 «글자 그대로» 인가 (2단계 첫걸음)')
 {
-  ok(gwaeTextCount() === 36, `★글이 들어온 괘 — ${gwaeTextCount()} / 64 (도표 1 ~ 52)`)
+  ok(gwaeTextCount() === 47, `★글이 들어온 괘 — ${gwaeTextCount()} / 64 (도표 1 ~ 68)`)
 
   const sa = gwaeTextOf(10)
   ok(!!sa && sa.name === '師', '★師(사) 10 이 들어왔습니다')
@@ -282,7 +282,7 @@ head('⑰ 🔴 괘 풀이 글 — 교재와 «글자 그대로» 인가 (2단계
 
   //  ⛔ 4·5·6효를 담지 않았는가
   ok(hyoTextOf(10, 4) === null && hyoTextOf(10, 6) === null, '⛔ 4·5·6효는 담지 않았습니다 (영영 안 쓰입니다)')
-  ok(hyoTextOf(67, 1) === null, '⛔ 아직 안 들어온 괘(升 67)는 ★null 입니다 — 「준비 중」 을 지어내지 않습니다')
+  ok(hyoTextOf(77, 1) === null, '⛔ 아직 안 들어온 괘(漸 77)는 ★null 입니다 — 「준비 중」 을 지어내지 않습니다')
 
   //  🔴 들어온 서른여섯 괘 «전부» — 효 이름이 하괘의 음양과 맞는가
   const O2 = ['乾', '兌', '離', '震', '巽', '坎', '艮', '坤']
@@ -308,6 +308,18 @@ head('⑰ 🔴 괘 풀이 글 — 교재와 «글자 그대로» 인가 (2단계
     })
     ok(bad.length === 0, `🔴 ★효 이름 ${cells}칸이 하괘의 음양과 «다 맞습니다» ${bad.join(' / ')}`)
   }
+  //  ⚠️ 교재에 «다르게» 적힌 효 이름 — 고치지 않고 둘 다 남긴 자리
+  {
+    const src = gwaeTextHave().flatMap(no => {
+      const g = gwaeTextOf(no)!
+      return ([1, 2, 3] as const).filter(n => g.hyo[n].labelSrc).map(n => `${g.name}${no} ${n}효 교재「${g.hyo[n].labelSrc}」 셈「${g.hyo[n].label}」`)
+    })
+    ok(src.length === 1, `⚠️ ★교재와 어긋난 효 이름 ${src.length}곳 — ${src.join(' / ')}`)
+    ok(gwaeTextHave().every(no => ([1, 2, 3] as const).every(n => {
+      const h = gwaeTextOf(no)!.hyo[n]
+      return !h.labelSrc || h.labelSrc !== h.label
+    })), '⛔ labelSrc 는 «다를 때만» 넣습니다 (같으면 군더더기)')
+  }
   //  ⛔ 번호가 도표와 어긋난 괘가 없는가
   ok(gwaeTextHave().every(no => gwaeTextOf(no)!.no === no && GWAE_NO[gwaeTextOf(no)!.name] === no),
     '⛔ ★서른여섯 괘의 번호가 도표 번호와 «다 같습니다»')
@@ -318,7 +330,7 @@ head('⑰ 🔴 괘 풀이 글 — 교재와 «글자 그대로» 인가 (2단계
     return (h.lead ?? '').length + h.parts.length > 0 && h.parts.every(x => x.who && x.text)
   })), '⛔ 빈 효 · 빈 갈래가 한 칸도 없습니다')
   //  🔴 못 읽은 자리를 «숨기지 않는가»
-  ok(allChecks().length >= 10,
+  ok(allChecks().length >= 30,
     `🔴 ★제가 «못 읽은» 자리를 ${allChecks().length}곳 적어 두었습니다 — 대표님이 여기만 보시면 됩니다`)
   ok(allChecks().every(c => c.name && c.note), '★어느 괘의 어디인지까지 적혀 있습니다')
 
