@@ -1035,6 +1035,14 @@ async function jaeryoNet() {
     //  🔴 상담 단추 [대표님 2026-09-14]
     ok(/<ConsultButton/.test(result) && /priceKey="haerak"/.test(result),
       '🔴 ★하락이수 전담 상담사 연결 단추가 있습니다 [대표님]')
+    //  🔴 ⛔ ★«어디에» 있는지까지 봅니다 — 있는지만 보면 위로 올라가도 못 잡습니다
+    {
+      const iNote = result.indexOf('{HAERAK_PLAIN_NOTE}')
+      const iDetail = result.indexOf('</details>')
+      const iBtn = result.indexOf('<ConsultButton')
+      ok(iNote > 0 && iDetail > iNote && iBtn > iDetail,
+        '🔴 ⛔ ★차례가 «알림 → 셈한 값 → 상담 단추» 입니다 — 단추가 «맨 아래» [대표님]')
+    }
     ok(/from '@\/app\/components\/common\/ConsultButton'/.test(result),
       '⛔ ★공용 부품을 씁니다 — 화면마다 다시 짓지 않았습니다 (8부 §6④)')
     ok(/consult: 'haerak'/.test(R('app/admin/components/PriceManager.tsx')),

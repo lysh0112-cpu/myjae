@@ -243,17 +243,6 @@ function HaerakResultInner() {
         fontSize: 11.5, color: SUB, lineHeight: 1.75,
       }}>{HAERAK_PLAIN_NOTE}</div>
 
-      {/*  🔴 ★하락이수 전담 상담사 연결 — 2026-09-14 (9부) [대표님]
-        *
-        *  ⛔ ★공용 부품(ConsultButton)을 씁니다. 화면마다 다시 짓지 마십시오 (8부 §6④).
-        *  ⚠️ priceKey 는 ★consult_prices 의 'haerak' 줄을 읽습니다 —
-        *     관리 화면에서 «상담료» 를 정해 두셔야 단추가 제대로 열립니다.
-        *  ⚠️ ★알림 한 줄 «위» 에 둡니다 — 글을 다 읽으신 «바로 뒤» 가 눌리는 자리입니다.
-        *     (승진운도 맺음말 바로 아래에 두었습니다 — 7부 1-5) */}
-      <div style={{ marginTop: 18 }}>
-        <ConsultButton priceKey="haerak" mode="haerak" />
-      </div>
-
       {/* ── 셈한 값 — ★대표님·연재쌤 대조용. 작게 둡니다 ── */}
       <details style={{ marginTop: 16, background: CARD, border: `1px solid ${LINE}`, borderRadius: 12, padding: '11px 13px' }}>
         <summary style={{ fontSize: 11.5, color: SUB, cursor: 'pointer' }}>
@@ -294,6 +283,20 @@ function HaerakResultInner() {
           </div>
         </div>
       </details>
+
+      {/*  🔴 ★하락이수 전담 상담사 연결 — 2026-09-14 (9부) [대표님]
+        *
+        *  ⛔ ★공용 부품(ConsultButton)을 씁니다. 화면마다 다시 짓지 마십시오 (8부 §6④).
+        *  ⚠️ priceKey 는 ★consult_prices 의 'haerak' 줄을 읽습니다 —
+        *     관리 화면에서 «상담료» 를 정해 두셔야 단추가 제대로 열립니다.
+        *  🔴 ★2026-09-14 (9부) — 「셈한 값 보기」 «아래» 로 내렸습니다 [대표님].
+        *     처음에는 위에 두었는데, 그러면 ★셈 값이 단추 «뒤» 에 덧붙은 꼴이 됩니다.
+        *     ⇒ ★맨 아래가 맞습니다 — 다 읽고 «더 물어보고 싶을 때» 누르는 자리입니다.
+        *  ⛔ 다시 위로 올리지 마십시오. */}
+      <div style={{ marginTop: 18 }}>
+        <ConsultButton priceKey="haerak" mode="haerak" />
+      </div>
+
 
       <div style={{ height: 26 }} />
     </Wrap>
