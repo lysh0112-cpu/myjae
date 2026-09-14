@@ -255,7 +255,9 @@ head('⑯ 🔴 다음에 여쭐 것을 «적어 두었는가» (2단계)')
     ok(!!r && !/원당|元堂/.test(JSON.stringify({ su: r.su, dongHyo: r.dongHyo, seoncheon: r.seoncheon, hucheon: r.hucheon })),
       '⛔ ★셈이 내놓는 값에 「원당」 이 «한 글자도» 없습니다 (대표님 2026-09-14)')
   }
-  ok(NEXT_ASK_YEONJAE.some(q => /상반기/.test(q)), '★선천=상반기 · 후천=하반기가 맞는지 여쭙니다')
+  //  ⚠️ ★남은 큰 물음은 «월칸 윗수(29/30)» 하나입니다 (2026-09-14)
+  ok(NEXT_ASK_YEONJAE.some(q => /월칸 윗수|29\/30|29 \/ 30/.test(q)),
+    '🔴 ★월칸 윗수(29/30)를 무엇을 보고 적는지 여쭙니다 — 지금 노트와 «넷» 어긋납니다')
 }
 
 head('⑰ 🔴 괘 풀이 글 — 교재와 «글자 그대로» 인가 (2단계 첫걸음)')
@@ -472,6 +474,53 @@ async function jaeryoNet() {
   //  ★나이는 보러 오시는 그때
   ok(/todayYear: new Date\(\)\.getFullYear\(\)/.test(api),
     '🔴 ★나이는 «보러 오시는 그때» 기준입니다 (볼 해로 안 셉니다)')
+
+  /* ══ 🔴🔴 ★상반기 · 하반기 짝 ══
+   *    ✅ [대표님 2026-09-14 확정]  ★상반기 = 선천괘 · 하반기 = 후천괘
+   *    ⚠️ 연재쌤이 「상·하반기가 바뀌었다」 하신 적이 있으나, 그것은 ★«라벨» 이 아니라
+   *       월칸 윗수(29/30) 때문에 «괘 자체» 가 맞바뀐 것을 보신 것이었습니다.
+   *    ⛔ 여기를 뒤집어 «가리려고» 하지 마십시오 — 다른 분 것이 틀어집니다. */
+  ok(/half="상반기" g=\{data\.seoncheon\}/.test(res),
+    '🔴 ★상반기 = «선천괘» 입니다 [대표님 2026-09-14]')
+  ok(/half="하반기" g=\{data\.hucheon\}/.test(res),
+    '🔴 ★하반기 = «후천괘» 입니다 [대표님 2026-09-14]')
+  //  ⚠️ 화면에는 ★상반기가 «위» 에 옵니다 — 손님이 읽는 차례입니다
+  ok(res.indexOf('half="상반기"') < res.indexOf('half="하반기"'),
+    '★화면에 상반기가 «위» 에 옵니다')
+
+  /* ══ ㉒ 🔴🔴 류 님 손글씨 스캔 «한 장» 을 값으로 못 박습니다 ══
+   *    (희준.pdf — 류씨 음 66.1.12 · 26년 丙午 · 2026-09-14 대표님 보내 주심)
+   *
+   *    ★이 한 건이 «년·월을 어디에 놓는가» 를 정합니다.
+   *    ⛔ 여기가 빨간불이면 ★배치를 되돌리십시오. 다른 것을 고치지 마십시오. */
+  head('㉒ 🔴🔴 류 님 스캔 한 장 — 년은 «위» · 월은 «아래»')
+  {
+    const g = calcHaerak({ nyeonGanji: '丙午', wolGanji: '庚寅', ilGanji: '癸酉', nai: 61, wolLastDay: 30, eumIl: 12 })
+    ok(!!g, '★류 님 26년이 셈해집니다')
+    ok(g!.su.nyeon === 77 && g!.su.wol === 45 && g!.su.il === 27,
+      `★수 — 년 ${g!.su.nyeon} · 월 ${g!.su.wol} · 일 ${g!.su.il}  [스캔 77 · 45 · 27]`)
+    ok(g!.su.nyeon % 8 === 5 && g!.su.wol % 6 === 3, '★나머지 — 년 5 · 월 3  [스캔에 붉게 5 · 3]')
+    //  🔴 여기가 핵심 — 년이 «위» · 월이 «아래»
+    ok(g!.seoncheon.sang === '巽' && g!.seoncheon.ha === '離',
+      '🔴 ★년(巽)이 «위» · 월(離)이 «아래» — ⛔ 맞바꾸면 가인이 정(鼎)이 됩니다')
+    ok(g!.seoncheon.no === 53 && g!.seoncheon.name === '家人',
+      `🔴 ★선천괘 ${g!.seoncheon.name} ${g!.seoncheon.no}  [스캔 53 가인]`)
+    ok(g!.hucheon.no === 61 && g!.hucheon.name === '益',
+      `🔴 ★후천괘 ${g!.hucheon.name} ${g!.hucheon.no}  [스캔 61 익]`)
+    ok(g!.dongHyo === 3, `★동효 ${g!.dongHyo}  [스캔 ③]`)
+    //  ⛔ 뒤집힌 것은 «아래» 괘뿐인가 — 위는 그대로여야 합니다
+    ok(g!.hucheon.sang === g!.seoncheon.sang && g!.hucheon.ha !== g!.seoncheon.ha,
+      '⛔ ★«아래» 괘만 뒤집었습니다 — 위 괘는 그대로입니다')
+    //  ⛔ 동효는 1·2·3 만 — 열두 달·서른 날을 다 돌려 봅니다
+    {
+      const bad: number[] = []
+      for (let d = 1; d <= 30; d++) {
+        const x = calcHaerak({ nyeonGanji: '丙午', wolGanji: '庚寅', ilGanji: '癸酉', nai: 61, wolLastDay: 30, eumIl: d })
+        if (x && ![1, 2, 3].includes(x.dongHyo)) bad.push(d)
+      }
+      ok(bad.length === 0, `⛔ ★동효는 «1·2·3» 뿐입니다 (4·5·6 은 영영 안 나옵니다) ${bad.join(',')}`)
+    }
+  }
 
   console.log(`\n━━ 하락이수 수리 — 통과 ${pass} · 실패 ${fail} ━━\n`)
   process.exit(fail ? 1 : 0)
