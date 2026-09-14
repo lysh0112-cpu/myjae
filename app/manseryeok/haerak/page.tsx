@@ -59,20 +59,10 @@ function targetYearOf(r: SajuRecord): number | null {
   return Number.isInteger(y) && y > 1900 && y < 2200 ? y : null
 }
 
-/**
- *  🔴 나이를 «어느 해» 기준으로 세었는가 — ★2026-09-14 (9부)
- *
- *  ⛔ 이 값을 안 넘기면 ★다시보기 때 «오늘» 로 새로 세어 괘가 달라집니다.
- *     하락이수는 «상담 시점의 나이» 로 앞날을 보기 때문입니다.
- *     ⇒ 해가 바뀌면 옛 기록이 ★다른 괘로 열립니다.
- *  ⚠️ 9부 «전» 에 만든 기록에는 이 값이 없습니다 — 그때는 null 입니다.
- *     (지어내지 않습니다. 창구가 «오늘» 로 두고, 화면이 그 해를 밝혀 드립니다)
+/*  ⚠️ ★2026-09-14 (9부) — baseYearOf 를 없앴습니다.
+ *     나이가 «보려는 해» 기준으로 바뀌어, 볼 해만 넘기면 나이도 정해집니다 [연재쌤 확정].
+ *     ⛔ 「그때 그 해」 를 따로 들고 다닐 까닭이 사라졌습니다.
  */
-function baseYearOf(r: SajuRecord): number | null {
-  const rd = r.resultData as { baseYear?: unknown } | null | undefined
-  const y = Number(rd?.baseYear)
-  return Number.isInteger(y) && y > 1900 && y < 2200 ? y : null
-}
 
 function HaerakStorageInner() {
   const router = useRouter()
@@ -131,7 +121,6 @@ function HaerakStorageInner() {
     >
       {records && records.map(r => {
         const y = targetYearOf(r)
-        const by = baseYearOf(r)
         return (
           <StorageRow
             key={r.id}
@@ -142,8 +131,6 @@ function HaerakStorageInner() {
               y
                 ? `/manseryeok/haerak-result?${personToQuery(r.inputData, r.title)}`
                   + `&target=${y}`
-                  //  🔴 ★그때 그 해를 함께 넘깁니다 — 안 넘기면 괘가 달라집니다
-                  + (by ? `&baseYear=${by}` : '')
                   + `&recordId=${r.id}`
                 : `/manseryeok/haerak-input?${personToQuery(r.inputData, r.title)}`,
             )}

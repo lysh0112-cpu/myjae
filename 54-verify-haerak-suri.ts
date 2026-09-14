@@ -43,6 +43,17 @@ interface Note {
   /** ★하락이수 도표 번호 (「표」 노트) */
   seonNo: number; huNo: number
 }
+/*  ⚠️⚠️ ★2026-09-14 (9부) — 이 표를 읽으실 때 «반드시» 아셔야 할 것
+ *
+ *  🔴 ★나이는 «보려는 해» 의 나이입니다 [연재쌤 확정].
+ *     그런데 아래 «2027년 세 장»(희준·도이·류)은 ★나이를 «안 올린 채» 적혀 있습니다.
+ *     연재쌤이 2026년에 26·27년을 한자리에서 뽑으시며 나이 하나로 쓰신 것입니다.
+ *     ⇒ ★연재쌤이 「나이를 먹은 만큼 모두 고쳐야 한다」 고 하셨습니다 (2026-09-14).
+ *
+ *  ⛔ 그래서 이 표는 ★«수 → 괘» 공식을 재는 데만 씁니다 (노트 값을 그대로 넣습니다).
+ *     ★«나이를 스스로 뽑아» 맞는지는 ⑳-e 가 따로 잽니다.
+ *     ⇒ 8부 §2① 「노트 값을 넣어 노트 답이 나온 것을 맞췄다고 말했다」 를 안 밟으려는 것입니다.
+ */
 const NOTES: Note[] = [
   { who: '희준', year: 2026, nai: 32, wolLast: 30, eumIl: 8,
     nyeon: '丙午', wol: '丁酉', il: '乙未', suN: 48, suW: 42, suI: 27, seon: '師', hyo: 3, hu: '升', seonNo: 10, huNo: 67 },
@@ -56,6 +67,10 @@ const NOTES: Note[] = [
     nyeon: '丙午', wol: '庚寅', il: '癸酉', suN: 77, suW: 45, suI: 27, seon: '家人', hyo: 3, hu: '益', seonNo: 53, huNo: 61 },
   { who: '류', year: 2027, nai: 61, wolLast: 29, eumIl: 12,
     nyeon: '丁未', wol: '壬寅', il: '戊辰', suN: 80, suW: 42, suI: 28, seon: '師', hyo: 1, hu: '臨', seonNo: 10, huNo: 27 },
+  //  🔴 ★2028년 — 연재쌤이 «나이 34세» 로 새로 셈해 주신 것 (2026-09-14)
+  //     ⇒ 이 한 장이 ★「나이는 보려는 해 기준」 을 «값으로» 증명합니다.
+  { who: '희준', year: 2028, nai: 34, wolLast: 29, eumIl: 8,
+    nyeon: '戊申', wol: '辛酉', il: '甲寅', suN: 51, suW: 42, suI: 25, seon: '未濟', hyo: 1, hu: '睽', seonNo: 94, huNo: 55 },
   { who: '나', year: 2026, nai: 60, wolLast: 30, eumIl: 15,
     nyeon: '丙午', wol: '庚子', il: '辛未', suN: 76, suW: 47, suI: 33, seon: '恒', hyo: 3, hu: '解', seonNo: 46, huNo: 58 },
 ]
@@ -538,12 +553,12 @@ async function jaeryoNet() {
   //  ★다시보기 — 저장본을 열되 다시 저장하지 않는가
   ok(/recordId/.test(stor) && /if \(!data \|\| recordId\) return/.test(res),
     '★다시보기로 들어오면 ⛔ «또» 저장하지 않습니다')
-  //  ★나이는 «보러 오시는 그때» — ⛔ «볼 해(target)» 로 세면 안 됩니다
-  //  ⚠️ 9부에 baseYear 로 바뀌었습니다. ★기본값이 «오늘» 인 것은 그대로입니다.
-  ok(/todayYear: baseYear/.test(api) && !/todayYear: target/.test(api),
-    '🔴 ★나이를 «볼 해» 로 세지 않습니다 (기준 해로 셉니다)')
-  ok(/baseYear\s*[\s\S]{0,120}new Date\(\)\.getFullYear\(\)/.test(api),
-    '🔴 ★기준 해가 없으면 «오늘» 입니다 [대표님 2026-09-14]')
+  //  🔴🔴 ★나이는 «보려는 해» 의 나이입니다 [연재쌤 2026-09-14 확정]
+  //     ⛔ «오늘» 이나 «상담 시점» 으로 세면 2027년부터 괘가 통째로 달라집니다.
+  ok(/const baseYear = target/.test(api),
+    '🔴 ★나이를 «보려는 해» 로 셉니다 [연재쌤 확정]')
+  ok(!/new Date\(\)\.getFullYear\(\)/.test(api),
+    '⛔ ★「오늘」 로 나이를 세던 줄이 남아 있지 않습니다')
 
   /* ══ 🔴🔴 ★상반기 · 하반기 짝 ══
    *    ✅ [대표님 2026-09-14 확정]  ★상반기 = 선천괘 · 하반기 = 후천괘
@@ -677,55 +692,48 @@ async function jaeryoNet() {
     ok(calcOk === 5, `🔴 ★다섯 해가 «다» 셈해집니다 ${calcOk}/5 (${years[0]}~${years[4]})`)
     ok(seen.size >= 2, `★해마다 괘가 달라집니다 — ${seen.size} 가지 (한 값에 굳어 있지 않습니다)`)
 
-    //  ⛔ 나이는 «볼 해» 로 세지 않습니다 — 다섯 해가 돼도 그대로여야 합니다
-    ok(!/todayYear: target/.test(R('app/api/haerak/route.ts')),
-      '⛔ ★다섯 해로 넓혀도 나이를 «볼 해» 로 세지 않습니다 [대표님]')
+    //  🔴 다섯 해를 보실 때 ★해마다 나이가 «함께» 올라가야 합니다
+    ok(/const baseYear = target/.test(R('app/api/haerak/route.ts')),
+      '🔴 ★다섯 해가 «해마다 나이를 올려» 셈됩니다 [연재쌤 확정]')
   }
 
-  /* ══ ㉕ 🔴🔴 나이 기준 해(baseYear) — «다시 봐도 같은 괘» 인가 ══════
-   *  ★2026-09-14 (9부) [대표님]
+  /* ══ ㉕ 🔴🔴 나이 — «보려는 해» 의 나이인가 (2026-09-14 · 9부) ══════
    *
-   *  [무엇을 찾았나]  다시보기가 ★저장본을 그리는 줄 알았는데,
-   *     ⛔ ★/api/haerak 을 «다시 부르고» 있었습니다. 저장만 안 할 뿐입니다.
-   *     ⇒ 창구가 «오늘» 로 나이를 세므로, ★해가 바뀌면 옛 기록의 괘가 달라집니다.
-   *  [어떻게 막았나]  ★baseYear 를 기록에 남기고 다시보기 때 되돌려 줍니다.
+   *  [무엇이 틀렸었나]  8부는 ★「보러 오시는 그때 기준 하나」 였습니다.
+   *     옛 노트의 «2027년 세 장» 이 나이를 «안 올린 채» 라 그걸 규칙으로 읽은 것입니다.
+   *  [어떻게 밝혀졌나]  ★연재쌤이 2028년을 «34세» 로 셈해 주셨습니다.
+   *     ⇒ 프로그램은 32세로 «송/이», 34세로 넣으니 ★«미제/규» — 노트와 같았습니다.
+   *     ⇒ ★연재쌤 확정 — 「나이를 먹은 만큼 모두 고쳐야 한다」
    * ══════════════════════════════════════════════════════════════ */
-  head('㉕ 🔴🔴 나이 기준 해 — 다시 봐도 «같은 괘» 인가')
+  head('㉕ 🔴🔴 나이 — «보려는 해» 의 나이로 세는가')
   {
     const route = R('app/api/haerak/route.ts')
-    const result = R('app/manseryeok/haerak-result/page.tsx')
-    const stor = R('app/manseryeok/haerak/page.tsx')
+    ok(/const baseYear = target/.test(route),
+      '🔴 ★나이를 «보려는 해» 로 셉니다 [연재쌤 2026-09-14 확정]')
+    ok(!/baseYear: sp\.get\('baseYear'\)/.test(R('app/manseryeok/haerak-result/page.tsx')),
+      '⛔ ★기준 해를 «따로 넘기지» 않습니다 — 볼 해가 정해지면 나이도 정해집니다')
 
-    ok(/baseYear/.test(route), '🔴 ★셈 창구가 baseYear 를 받습니다')
-    ok(/todayYear: baseYear/.test(route),
-      '🔴 ⛔ ★나이를 «넘어온 기준 해» 로 셉니다 (오늘로 굳어 있지 않습니다)')
-    ok(/baseYear: sp\.get\('baseYear'\)/.test(result),
-      '🔴 ★결과 화면이 baseYear 를 창구로 넘깁니다')
-    ok(/baseYear: data\.geunggeo\.baseYear/.test(result),
-      '🔴 ⛔ ★저장할 때 baseYear 를 «남깁니다» (없으면 다시보기 때 괘가 달라집니다)')
-    ok(/function baseYearOf/.test(stor) && /&baseYear=\$\{by\}/.test(stor),
-      '🔴 ★보관함이 그때 그 해를 «되돌려» 줍니다')
-    ok(/년 기준 나이 \{g\.nai\}세로 보았습니다/.test(result),
-      '🔴 ★화면이 «몇 년 기준 몇 세» 로 보았는지 밝힙니다 [대표님 2026-09-14]')
-    ok(/baseYear\?: unknown/.test(route) && />= 1900 && bRaw <= 2200/.test(route),
-      '⛔ ★이상한 baseYear 는 받지 않습니다 (1900~2200 밖이면 오늘로 둡니다)')
-
-    //  🔴 값으로 — 기준 해를 붙들면 «몇 해 뒤에 열어도» 같은 괘인가
+    //  🔴 값으로 — 해가 바뀌면 나이도 «함께» 올라가는가
     {
-      const fixed = calcHaerak({
-        nyeonGanji: nyeonGanjiOf(2027), wolGanji: wolGanjiOf(2027, 8),
-        ilGanji: ilGanjiOf(2027, 8, 8), nai: 32, wolLastDay: wolLastDayOf(2027, 8) ?? 29, eumIl: 8,
+      const mk = (y: number, nai: number) => calcHaerak({
+        nyeonGanji: nyeonGanjiOf(y), wolGanji: wolGanjiOf(y, 8),
+        ilGanji: ilGanjiOf(y, 8, 8), nai, wolLastDay: (wolLastDayOf(y, 8) ?? 29) as 29 | 30, eumIl: 8,
       })
-      const drift = calcHaerak({
-        nyeonGanji: nyeonGanjiOf(2027), wolGanji: wolGanjiOf(2027, 8),
-        ilGanji: ilGanjiOf(2027, 8, 8), nai: 33, wolLastDay: wolLastDayOf(2027, 8) ?? 29, eumIl: 8,
-      })
-      ok(fixed?.seoncheon.no === 55 && fixed?.hucheon.no === 20,
-        `★희준 27년 — 기준 32세면 ${fixed?.seoncheon.name}/${fixed?.hucheon.name} (노트 睽/大有)`)
-      ok(drift?.seoncheon.no !== fixed?.seoncheon.no,
-        `🔴 ⛔ ★기준을 놓치면 «다른 괘» 가 됩니다 — 33세면 ${drift?.seoncheon.name}/${drift?.hucheon.name}`)
-      ok(true, '⇒ ★그래서 baseYear 를 기록에 남깁니다. ⛔ 빼지 마십시오.')
+      //  희준 님 1995년생 — 2028년이면 ★34세
+      const a2 = mk(2028, 2028 - 1995 + 1)
+      ok(a2?.seoncheon.no === 94 && a2?.hucheon.no === 55,
+        `🔴 ★희준 26년→28년 나이 34 ⇒ ${a2?.seoncheon.name}/${a2?.hucheon.name} (연재쌤 노트 未濟/睽)`)
+      const bad = mk(2028, 32)   // ⛔ 옛 규칙(상담 시점 32세)
+      ok(bad?.seoncheon.no !== 94,
+        `⛔ ★나이를 «안 올리면» 다른 괘가 됩니다 — 32세면 ${bad?.seoncheon.name}/${bad?.hucheon.name}`)
+      ok(mk(2026, 32)?.seoncheon.no === 10,
+        '★2026년(32세)은 그대로 師 입니다 — 첫해는 두 규칙이 «같은 답» 이라 안 바뀝니다')
     }
+
+    //  ⚠️ 옛 노트 세 장은 «나이를 안 올린» 것 — 기록으로 남깁니다
+    ok(true, '⚠️ ★옛 노트 2027년 세 장(희준·도이·류)은 나이를 «안 올린» 것입니다')
+    ok(true, '   ⇒ 나이를 올리면 희준 歸妹/大壯 · 도이 乾/姤 · 류 訟/履 가 됩니다')
+    ok(true, '   ⇒ ⛔ 그 세 장에 맞추려고 ★나이 규칙을 되돌리지 마십시오 [연재쌤 확정]')
   }
 
   /* ══ ㉖ 🔴🔴 보관함이 «볼 해» 를 읽는가 — 2026-09-14 (9부) ══════════

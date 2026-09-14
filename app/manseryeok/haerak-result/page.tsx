@@ -69,10 +69,9 @@ function HaerakResultInner() {
         body: JSON.stringify({
           year: sp.get('year'), month: sp.get('month'), day: sp.get('day'),
           calType: sp.get('calType'), leapMonth: sp.get('leapMonth'),
+          //  ⚠️ ★2026-09-14 (9부) — baseYear 를 «안 넘깁니다».
+          //     나이가 «보려는 해» 기준이라, target 하나면 나이도 정해집니다 [연재쌤 확정].
           target: sp.get('target'),
-          //  🔴 ★다시보기는 «그때 그 해» 를 넘깁니다 — 안 넘기면 해가 바뀔 때 괘가 달라집니다.
-          //     ⛔ 처음 보실 때는 없습니다 (그때는 창구가 «오늘» 로 둡니다).
-          baseYear: sp.get('baseYear'),
         }),
       })
       const j = await res.json()
@@ -109,7 +108,8 @@ function HaerakResultInner() {
         hour: sp.get('hour') || '모름',
       },
       //  ⚠️ ★볼 해를 여기에 담습니다 — 보관함 딱지가 이 값을 읽습니다.
-      //  🔴 ★baseYear 를 «반드시» 남깁니다 — 이것이 없으면 다시보기 때 괘가 달라집니다 (9부)
+      //  ⚠️ baseYear 도 함께 남깁니다 — «그때 몇 세로 보았는지» 의 기록입니다.
+      //     ⛔ 다시볼 때 «쓰지는» 않습니다 (볼 해가 나이를 정합니다).
       resultData: {
         year: data.target, seoncheon: data.seoncheon.no, hucheon: data.hucheon.no,
         dongHyo: data.dongHyo, baseYear: data.geunggeo.baseYear,
