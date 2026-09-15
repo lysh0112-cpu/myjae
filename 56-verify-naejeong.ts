@@ -25,6 +25,8 @@ import { PURPOSES, SINSAL_DIR, findPurpose } from './lib/saju/naejeong/tables/pu
 import { lookup, LOOKUP_ALL, LOOKUP_CASE } from './lib/saju/naejeong/tables/lookup'
 import { CASE_TEXT, caseTextOf, caseLinesFor } from './lib/saju/naejeong/tables/caseText'
 import { getSinsal } from './lib/saju/sinsal'
+import { findTerms, TERM_SRC } from './lib/saju/naejeong/tables/terms'
+import { YUKCHIN_KEYS } from './lib/saju/yukchinTable'
 
 let pass = 0, fail = 0
 const ok = (c: boolean, m: string) => { if (c) { pass++; console.log(`  ✅ ${m}`) } else { fail++; console.log(`  ❌ ${m}`) } }
@@ -653,6 +655,64 @@ function main() {
       '🔴 ★자리별 풀이가 없는 넷은 «교재 사례» 로 채웁니다')
     ok(/좋은 신궁' : '나쁜 신궁/.test(page2),
       '★좋고 나쁨도 밝힙니다 (교재 7쪽)')
+  }
+
+  /* ══ ⑭ 🔴🔴 본문 용어 모달 — 2026-09-15 [대표님] ════════════════
+   *  「중간중간 나오는 용어들도 모달로 해설을 담아 주면 좋겠다」
+   *
+   *  🔴 [9부에 겪은 것]  제가 ★「십성 뜻이 없다」 · 「신살은 여섯뿐」 이라 했는데
+   *     ★대표님이 두 번 다 「이미 정리된 자료가 있을 것」 이라 짚어 주셨습니다.
+   *     ⇒ yukchinTable.ts(십성 열) · sinsal12.ts(신살 열둘) 이 ★있었습니다.
+   *     ⛔ 「없다」 고 말하기 «전» 에 저장소를 먼저 뒤지십시오.
+   * ══════════════════════════════════════════════════════════════ */
+  head('⑭ 🔴🔴 본문 용어 — 눌러서 설명 보기')
+  {
+    const page3 = R('app/naejeong/page.tsx')
+
+    //  ★셋을 다 찾는가
+    const t1 = findTerms('연지가 퇴식(쇠퇴)이니 조상의 덕이 없다')
+    ok(t1.length === 1 && t1[0].hit.kind === 'singung',
+      `★12신궁을 찾습니다 · 「퇴식(쇠퇴)」 에서 «하나만» (${t1.length}개)`)
+    const t2 = findTerms('운시가 겁재이면 동지간을 위해 희생당한다')
+    ok(t2.some(x => x.hit.kind === 'sipsung'), '★십성을 찾습니다 (겁재)')
+    const t3 = findTerms('반안살 방향이 좋고 장성살 방향은 피한다')
+    ok(t3.filter(x => x.hit.kind === 'sinsal').length === 2, '★신살을 찾습니다 (반안살·장성살)')
+
+    //  ⛔ 긴 말이 «먼저» — 「해결신」 이 「해결」 로 잘리면 안 됩니다
+    const t4 = findTerms('일지에 해결신이 있으니')
+    ok(t4.length === 1 && t4[0].hit.word === '해결신',
+      `⛔ ★긴 말을 먼저 찾습니다 — 「해결신」 이 「해결」 로 «안» 잘립니다 (${t4[0]?.hit.word})`)
+
+    //  ⛔ 같은 말은 «첫 번째만» — 온통 밑줄이면 읽기가 나쁩니다
+    const t5 = findTerms('공망이니 헛되고 공망이라 채워지지 않고 공망이다')
+    ok(t5.length === 1, `⛔ ★같은 말은 «첫 번째만» 눌립니다 (${t5.length}개)`)
+
+    //  ⛔ 자리가 겹치면 건너뜁니다
+    ok(findTerms('천록(양인)이니').length === 1,
+      '⛔ ★「천록(양인)」 에서 «하나만» 잡습니다 (겹치면 건너뜀)')
+
+    //  🔴 십성 열 가지가 «다» 있는가 — 대표님이 짚어 주신 표
+    ok(YUKCHIN_KEYS.length === 10, `★십성 열 가지 표가 있습니다 (${YUKCHIN_KEYS.length})`)
+
+    //  ⛔⛔ ★출전을 «반드시» 밝히는가 — 책이 셋입니다
+    ok(/TERM_SRC\[t\.kind\]/.test(page3) || /let src = TERM_SRC/.test(page3),
+      '⛔ ★모달이 «어느 책» 인지 밝힙니다')
+    ok(/일진내정법 교재가 아닙니다/.test(TERM_SRC.sipsung)
+      && /일진내정법 교재가 아닙니다/.test(TERM_SRC.sinsal),
+      '🔴 ⛔ ★십성·신살은 «다른 책» 임을 못 박습니다 (오해를 막습니다)')
+    ok(/교재 441~454쪽 · 12신살/.test(page3),
+      '★12신살은 그 쪽수를 따로 밝힙니다')
+
+    //  ★화면이 본문에 붙였는가
+    ok(/const withTerms = /.test(page3), '🔴 ★글 속 용어를 «눌리게» 만듭니다')
+    ok((page3.match(/withTerms\(/g) ?? []).length >= 6,
+      '★네 자리 풀이 · 사례 · 운시 · 달 · 띠 에 «다» 붙였습니다')
+    ok(/borderBottom: `1px dotted \$\{ACCENT\}`/.test(page3),
+      '★밑줄은 «점선» 으로 옅게 — 글 읽기를 방해하지 않게')
+    ok(!/setTimeout/.test(page3),
+      '⛔ ★렌더 «중» 에 상태를 바꾸지 않습니다 (누를 때 가릅니다)')
+    ok(/이 말의 설명이 저장소에 아직 없습니다/.test(page3),
+      '⛔ ★설명이 없으면 «사실대로» 말합니다 (지어내지 않습니다)')
   }
 
   console.log(`\n━━ 일진내정법 — 통과 ${pass} · 실패 ${fail} ━━\n`)

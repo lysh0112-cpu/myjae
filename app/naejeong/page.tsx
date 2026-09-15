@@ -32,6 +32,14 @@ import { getSinsal } from '@/lib/saju/sinsal'
 //  ★신궁 뜻 — 열두 지지 칸을 눌렀을 때 띄웁니다 (교재 3~7쪽)
 import { SINGUNG_TEXT } from '@/lib/saju/naejeong/tables/sinGungText'
 import { isGoodSin, type SinGung } from '@/lib/saju/naejeong/sinGung'
+//  ★용어 사전 — 본문 속 낱말을 눌러 설명을 봅니다 [대표님 2026-09-15]
+import {
+  findTerms, isSinGungName, isSipsungName, TERM_SRC, type TermHit,
+} from '@/lib/saju/naejeong/tables/terms'
+import { YUKCHIN_TABLE, type YukchinKey } from '@/lib/saju/yukchinTable'
+import { findSal, salLines } from '@/lib/saju/sinsalTable'
+//  ★12신살 — 교재 441~454쪽 (⛔ 또 다른 책입니다)
+import { SINSAL12 } from '@/lib/saju/somu/topics/sinsal12'
 
 const ONLY: AppRole[] = ['master']
 
@@ -114,6 +122,8 @@ export default function NaejeongPage() {
   /*  🔴 ★열두 지지 칸을 누르면 뜨는 설명 — 2026-09-15 [대표님]
    *  ⛔ 안 누르면 «안» 뜹니다. 화면이 길어지지 않게. */
   const [openSin, setOpenSin] = useState<SinGung | null>(null)
+  /*  ★본문에서 누른 용어 — 12신궁·십성·신살 셋 다 옵니다 */
+  const [openTerm, setOpenTerm] = useState<TermHit | null>(null)
   const [data, setData] = useState<Out | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -165,6 +175,42 @@ export default function NaejeongPage() {
         return ra - rb
       })
     : []
+
+  /*  🔴 ★글 속 «용어» 를 눌리게 만듭니다 — 2026-09-15 [대표님]
+   *
+   *  ⚠️ 글을 «쪼개서» 용어만 단추로 감쌉니다.
+   *  ⛔ [지킨 것]
+   *   · 같은 말은 ★«첫 번째만» — 온통 밑줄이면 읽기가 나쁩니다
+   *   · 긴 말을 먼저 — 「해결신」 이 「해결」 로 «잘리지» 않게
+   *   · ★밑줄은 «점선» 으로 옅게 — 글 읽기를 방해하지 않게
+   *  ⚠️ 이 부품을 쓰지 «않는» 자리도 있습니다 (교재 원문을 그대로 두고 싶은 곳). */
+  const withTerms = (text: string) => {
+    const hits = findTerms(text)
+    if (hits.length === 0) return text
+    const out: React.ReactNode[] = []
+    let at = 0
+    hits.forEach((h, i) => {
+      if (h.start > at) out.push(text.slice(at, h.start))
+      out.push(
+        <button key={i} type="button"
+          onClick={() => {
+            /*  ⛔ ★12신궁이면 «이미 있는» 신궁 모달을 그대로 씁니다 —
+              *     두 벌 만들지 않으려는 것입니다.
+              *  ⚠️ 렌더 «중» 에 상태를 바꾸지 않고 ★누를 때 가릅니다. */
+            if (h.hit.kind === 'singung' && isSinGungName(h.hit.key)) setOpenSin(h.hit.key as SinGung)
+            else setOpenTerm(h.hit)
+          }}
+          style={{
+            background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
+            font: 'inherit', color: 'inherit', fontFamily: 'inherit',
+            borderBottom: `1px dotted ${ACCENT}`,
+          }}>{h.hit.word}</button>,
+      )
+      at = h.end
+    })
+    if (at < text.length) out.push(text.slice(at))
+    return <>{out}</>
+  }
 
   if (gate.state !== 'ok') return <RoleGateScreen gate={gate} dark={false} />
 
@@ -631,7 +677,7 @@ export default function NaejeongPage() {
                   </div>
                 )}
                 {h.tteut && (
-                  <div style={{ fontSize: 12.5, color: INK, lineHeight: 1.75, marginBottom: 8 }}>{h.tteut}</div>
+                  <div style={{ fontSize: 12.5, color: INK, lineHeight: 1.75, marginBottom: 8 }}>{withTerms(h.tteut)}</div>
                 )}
                 {/*  🔴 ⛔ 교재에 «자리별 풀이가 없는» 신궁이 넷(공망·원진·해결·퇴식) 있습니다.
                   *     ⇒ ★사실대로 말합니다. 지어내지 않습니다. */}
@@ -639,7 +685,7 @@ export default function NaejeongPage() {
                   ? <div style={{
                       fontSize: 13, color: INK, lineHeight: 1.8,
                       background: '#fbf6f1', borderRadius: 10, padding: '10px 11px',
-                    }}>{h.jariText}</div>
+                    }}>{withTerms(h.jariText)}</div>
                   : (() => {
                       /*  🔴 ★교재 4~7쪽에 «자리별 풀이가 없는» 넷(공망·원진·해결·퇴식) —
                         *     ⇒ 교재 «사례» 에서 «같은 자리 × 같은 신궁» 문장을 찾아 보여 드립니다.
@@ -656,7 +702,7 @@ export default function NaejeongPage() {
                               marginTop: 7, fontSize: 12.5, color: INK, lineHeight: 1.8,
                               background: '#fbf6f1', borderRadius: 10, padding: '9px 11px',
                             }}>
-                              {l.text}
+                              {withTerms(l.text)}
                               <span style={{ marginLeft: 6, fontSize: 11, color: SUB }}>
                                 ({l.page} · {l.iljin})
                               </span>
@@ -695,7 +741,7 @@ export default function NaejeongPage() {
                     <div style={{
                       fontSize: 13, color: INK, lineHeight: 1.8,
                       background: '#fbf6f1', borderRadius: 10, padding: '10px 11px', marginBottom: 8,
-                    }}>{data.unsi.sipsungText}</div>
+                    }}>{withTerms(data.unsi.sipsungText)}</div>
                   )}
                   {/*  ⚠️ 해당될 때만 보입니다 — ⛔ 아닌 것을 «있는 척» 하지 않습니다 */}
                   {([
@@ -804,7 +850,7 @@ export default function NaejeongPage() {
                 </div>
                 {/*  ⛔ 교재 9쪽에 «줄이 없는» 신궁(상문·공망)은 ★사실대로 말합니다 */}
                 {data.tti.text
-                  ? <div style={{ fontSize: 12.5, color: INK, lineHeight: 1.75 }}>{data.tti.text}</div>
+                  ? <div style={{ fontSize: 12.5, color: INK, lineHeight: 1.75 }}>{withTerms(data.tti.text)}</div>
                   : <div style={{ fontSize: 11.5, color: SUB, marginTop: 6, lineHeight: 1.6 }}>
                       교재 9쪽에 이 신궁의 줄은 없습니다. 위 자리별 풀이로 보십시오.
                     </div>}
@@ -830,7 +876,7 @@ export default function NaejeongPage() {
                       <b style={{ marginLeft: 7, color: INK, fontSize: 13 }}>{m.sin}</b>
                     </div>
                     {m.text && (
-                      <div style={{ fontSize: 12.5, color: INK, lineHeight: 1.75 }}>{m.text}</div>
+                      <div style={{ fontSize: 12.5, color: INK, lineHeight: 1.75 }}>{withTerms(m.text)}</div>
                     )}
                   </div>
                 ))}
@@ -916,6 +962,90 @@ export default function NaejeongPage() {
                     교재 4~7쪽에 이 신궁의 «자리별» 풀이는 없어, 교재 «사례» 에서 옮겨 왔습니다.
                   </div>
                 )}
+              </div>
+            </div>
+          )
+        })()}
+
+        {/*  🔴 ★용어 모달 — 2026-09-15 [대표님]
+          *     본문 속 낱말을 누르면 뜹니다. ★12신궁 · 십성 · 신살 셋 다.
+          *  ⛔⛔ ★출전이 «셋» 이라 «어느 책인지» 를 «반드시» 밝힙니다.
+          *     안 밝히면 연재쌤이 「일진내정법 교재에 있는 말」 로 오해하십니다.
+          *  ⛔ 순화 «안» 합니다 — 연재쌤 전용입니다 [대표님]. */}
+        {openTerm && (() => {
+          const t = openTerm
+          //  ⚠️ 12신궁은 ★«누를 때» 신궁 모달로 갑니다 (위 withTerms) — 여기 안 옵니다
+
+          let title = t.word
+          let src = TERM_SRC[t.kind]
+          let lines: string[] = []
+          let sub = ''
+
+          if (t.kind === 'sipsung' && isSipsungName(t.key)) {
+            const r = YUKCHIN_TABLE[t.key as YukchinKey]
+            title = `${t.key} · ${r.pair}`
+            sub = r.keyword
+            //  ⚠️ 조건이 붙은 줄({t, when})은 ★조건을 모르니 «안» 보여 줍니다
+            lines = r.say.filter((x): x is string => typeof x === 'string')
+          } else if (t.kind === 'sinsal') {
+            if (t.key.startsWith('s12:')) {
+              const k = t.key.slice(4)
+              const sec = (SINSAL12 as unknown as { sections: { key: string; label: string; lines?: string[] }[] })
+                .sections.find(x => x.key === k)
+              title = sec?.label ?? t.word
+              lines = sec?.lines ?? []
+              src = '교재 441~454쪽 · 12신살 — ⚠️ 일진내정법 교재가 아닙니다'
+            } else {
+              const r = findSal(t.key)
+              title = r?.name ? `${r.name} ${r.hanja ?? ''}`.trim() : t.word
+              lines = salLines(t.key, '성인')
+              src = '사주 교재 94~97쪽 — ⚠️ 일진내정법 교재가 아닙니다'
+            }
+          }
+
+          return (
+            <div role="dialog" aria-modal="true" aria-label={`${t.word} 설명`}
+              onClick={() => setOpenTerm(null)}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 60,
+                background: 'rgba(40,30,24,0.42)',
+                display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+              }}>
+              <div onClick={e => e.stopPropagation()}
+                style={{
+                  width: '100%', maxWidth: 440, maxHeight: '82vh', overflowY: 'auto',
+                  background: BG, borderRadius: '18px 18px 0 0', padding: '16px 16px 28px',
+                }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 3 }}>
+                  <span style={{ fontSize: 17, fontWeight: 700, color: INK }}>{title}</span>
+                  <button type="button" onClick={() => setOpenTerm(null)}
+                    style={{
+                      marginLeft: 'auto', background: 'transparent', border: 'none',
+                      color: SUB, fontSize: 18, cursor: 'pointer', fontFamily: 'inherit', padding: 0,
+                    }} aria-label="닫기">×</button>
+                </div>
+                {sub && (
+                  <div style={{ fontSize: 11.5, color: SUB, lineHeight: 1.6, marginBottom: 10 }}>{sub}</div>
+                )}
+
+                {lines.length > 0 ? (
+                  lines.map((l, i) => (
+                    <div key={i} style={{
+                      fontSize: 12.5, color: INK, lineHeight: 1.85, marginBottom: 7,
+                    }}>{l}</div>
+                  ))
+                ) : (
+                  //  ⛔ 표에 없으면 ★사실대로 — 지어내지 않습니다
+                  <div style={{ fontSize: 12.5, color: SUB, lineHeight: 1.7 }}>
+                    이 말의 설명이 저장소에 아직 없습니다.
+                  </div>
+                )}
+
+                {/*  ⛔⛔ ★어느 책에서 온 말인지 «반드시» 밝힙니다 */}
+                <div style={{
+                  marginTop: 12, paddingTop: 10, borderTop: `1px solid ${LINE}`,
+                  fontSize: 11, color: SUB, lineHeight: 1.6,
+                }}>{src}</div>
               </div>
             </div>
           )
