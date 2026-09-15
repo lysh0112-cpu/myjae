@@ -20,6 +20,7 @@ import {
   UNSI_SIPSUNG, GWAEGANG_PILLARS, BAEKHO_PILLARS, samhapOf,
 } from './lib/saju/naejeong/tables/unsiText'
 import { TTI_HOME, WOL_HOME } from './lib/saju/naejeong/tables/homeText'
+import { solarToLunarKR } from './lib/saju/koreanLunarTable'
 
 let pass = 0, fail = 0
 const ok = (c: boolean, m: string) => { if (c) { pass++; console.log(`  ✅ ${m}`) } else { fail++; console.log(`  ❌ ${m}`) } }
@@ -346,8 +347,33 @@ function main() {
       '★안 고르셨으면 «고르시라» 고 말합니다 (빈 화면을 안 둡니다)')
     ok(/ttiData\.note/.test(card),
       '⛔ ★순화했다는 것을 홈에서도 밝힙니다')
-    ok(/이번 달 \(\{ttiData\.month\.wol\}월\)/.test(card),
+    ok(/이번 달 · 음력 /.test(card),
       '★이번 달 «하나만» 보여 드립니다 [대표님]')
+
+    /*  🔴🔴 ★이번 달은 «음력» 입니다 — 2026-09-15 (9부)
+     *  [9부에 겪은 일]  처음에 ★양력 달을 그대로 썼습니다.
+     *     2026-09-15 은 음력 ★8월 인데 9월로 보아 ★다른 신궁이 나왔습니다.
+     *     (戌 약일충 「흔들리기 쉬운 달」 ↔ 酉 공망 「쉬어 가는 달」)
+     *  ⇒ 음력·양력은 «거의 늘» 한 달쯤 어긋나므로 ★거의 늘 틀렸습니다. */
+    ok(/solarToLunarKR\(y, m, d\)/.test(api),
+      '🔴 ⛔ ★이번 달을 «음력» 으로 구합니다 (양력 달을 그대로 쓰면 틀립니다)')
+    ok(/lun\.lunarMonth - 1/.test(api),
+      '★음력 달로 지지를 고릅니다 (1월=寅 … 12월=丑 · 교재 10쪽)')
+    ok(/lun && wolSin && wolText/.test(api),
+      '⛔ ★음력 달을 못 구하면 «지어내지» 않고 null 입니다')
+    ok(/음력 \{ttiData\.month\.leap[\s\S]{0,40}\{ttiData\.month\.wol\}월/.test(card),
+      '⛔ ★화면이 «음력» 이라고 밝힙니다 · 윤달이면 «윤» 도 붙습니다')
+    ok(/달은 <b>음력<\/b> 기준이에요/.test(R('app/naejeong/page.tsx')),
+      '★연재쌤 화면도 «음력» 기준임을 밝힙니다')
+
+    //  🔴 값으로 — 오늘이 실제로 «음력 달» 로 나오는가
+    {
+      const now = new Date()
+      const lun = solarToLunarKR(now.getFullYear(), now.getMonth() + 1, now.getDate())
+      ok(!!lun, '★오늘의 음력 달을 구할 수 있습니다')
+      ok(!!lun && lun.lunarMonth >= 1 && lun.lunarMonth <= 12,
+        `★음력 달이 1~12 안입니다 (오늘 음력 ${lun?.lunarMonth}월)`)
+    }
   }
 
   console.log(`\n━━ 일진내정법 — 통과 ${pass} · 실패 ${fail} ━━\n`)

@@ -25,7 +25,7 @@ interface TtiOut {
   ilGanji: string
   ilJi: string
   tti: { ji: string; sin: string | null; head: string | null; body: string | null; good: boolean | null }[]
-  month: { wol: number; ji: string; sin: string | null; head: string; body: string; good: boolean } | null
+  month: { wol: number; leap: boolean; ji: string; sin: string | null; head: string; body: string; good: boolean } | null
   note: string
 }
 /** 열두 띠 — ⛔ 차례를 바꾸지 마십시오 */
@@ -585,8 +585,11 @@ export default function TodayFortuneCard() {
               <div style={{
                 marginTop: 14, paddingTop: 12, borderTop: '0.5px solid #f0ddcb',
               }}>
+                {/*  ⛔ ★«음력» 달이라고 «밝혀» 둡니다 —
+                  *     양력 9월에 「8월」 이라 뜨면 손님이 ★잘못 본 줄 아십니다.
+                  *     교재가 음력 달(1월=寅) 기준이기 때문입니다. */}
                 <div style={{ fontSize: 11, color: '#8a6a52', marginBottom: 4 }}>
-                  이번 달 ({ttiData.month.wol}월)
+                  이번 달 · 음력 {ttiData.month.leap ? '윤' : ''}{ttiData.month.wol}월 ({ttiData.month.ji})
                 </div>
                 <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 4,
                   color: ttiData.month.good ? '#2f6b4f' : '#a8443c' }}>

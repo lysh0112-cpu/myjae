@@ -356,8 +356,11 @@ export default function NaejeongPage() {
                 달로 보는 한 해 <span style={{ fontWeight: 400, color: SUB }}>(교재 10~11쪽)</span>
               </div>
               {/*  ⚠️ 교재가 ★「상담하러 방문한 날을 기준으로 한다」 고 못 박았습니다 */}
+              {/*  ⛔ ★«음력» 달입니다 (1월=寅 … 12월=丑 · 교재 10쪽).
+                *     밝혀 두지 않으면 ★양력 달로 보십니다. */}
               <div style={{ fontSize: 11, color: SUB, marginBottom: 8, lineHeight: 1.6 }}>
                 문점일을 기준으로 잡습니다. 날을 바꾸면 열두 달이 함께 바뀝니다.
+                달은 <b>음력</b> 기준이에요 (1월 寅 … 12월 丑).
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                 {data.months.map(m => (
@@ -365,7 +368,7 @@ export default function NaejeongPage() {
                     border: `1px solid ${LINE}`, borderRadius: 10, padding: '9px 11px',
                   }}>
                     <div style={{ fontSize: 12, marginBottom: m.text ? 5 : 0 }}>
-                      <span style={{ color: SUB }}>{m.wol}월 {m.ji}</span>
+                      <span style={{ color: SUB }}>음력 {m.wol}월 {m.ji}</span>
                       <b style={{ marginLeft: 7, color: INK, fontSize: 13 }}>{m.sin}</b>
                     </div>
                     {m.text && (

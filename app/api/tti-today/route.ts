@@ -24,6 +24,8 @@
 
 import { NextResponse } from 'next/server'
 import { getDayGanji } from '@/lib/saju/ganji'
+//  ★음력 달을 알아야 합니다 — 오프라인 한국 표라 바깥을 «안» 부릅니다
+import { solarToLunarKR } from '@/lib/saju/koreanLunarTable'
 import { sinGungOf, JIJI } from '@/lib/saju/naejeong/sinGung'
 import { TTI_HOME, WOL_HOME, HOME_PLAIN_NOTE } from '@/lib/saju/naejeong/tables/homeText'
 
@@ -37,7 +39,13 @@ interface Payload {
   /** 열두 띠 — ★하루 동안 «모두에게 같은» 값입니다 */
   tti: Row[]
   /** 이번 달 — 교재 10~11쪽 (홈에서는 «이번 달 하나» 만) [대표님] */
-  month: { wol: number; ji: string; sin: string | null; head: string; body: string; good: boolean } | null
+  month: {
+    /** ★음력 달 (교재 기준) */
+    wol: number
+    /** ★윤달인가 — 교재에 따로 말이 없어 «같은 달» 로 봅니다 */
+    leap: boolean
+    ji: string; sin: string | null; head: string; body: string; good: boolean
+  } | null
   note: string
 }
 
@@ -63,22 +71,34 @@ function build(now: Date): Payload {
     return { ji, sin, head: t?.head ?? null, body: t?.body ?? null, good: t?.good ?? null }
   })
 
-  /*  ⚠️ ★이번 «달» — 홈에서는 하나만 보여 드립니다 [대표님].
-   *     ⛔ 양력 달을 그대로 쓰지 않습니다. 교재는 ★음력 달(1월=寅) 기준입니다.
-   *     ⚠️ 여기서는 «오늘이 몇 번째 달인가» 를 ★양력 달로 어림합니다 —
-   *       홈 카드는 «가볍게 보는» 자리이고, 정확한 달은 /naejeong 에서 봅니다.
-   *       ⇒ 🔴 이 어림을 «정확히» 하려면 음력 달이 필요하고 그러면 표를 봐야 합니다.
-   *         대표님이 원하시면 그때 바꾸십시오. 지금은 ★어림임을 화면에 밝힙니다. */
-  const wolIdx = m - 1
-  const wolJi = WOL_JI[wolIdx]
-  const wolSin = ilJi ? sinGungOf(ilJi, wolJi) : null
+  /*  🔴 ★이번 «달» — 홈에서는 하나만 보여 드립니다 [대표님].
+   *
+   *  ⛔⛔ ★«양력 달» 을 그대로 쓰면 «틀립니다». 교재는 ★음력 달 기준입니다
+   *     (1월=寅 · 2월=卯 … 12월=丑 — 교재 10쪽).
+   *
+   *  [9부에 겪은 일]  처음에 ★양력 달을 그대로 썼습니다.
+   *     ⇒ 2026-09-15 은 음력 ★8월 인데 양력 9월로 보아
+   *       戌(약일충 「흔들리기 쉬운 달」) 이 나왔습니다.
+   *       교재대로면 酉(공망 「쉬어 가는 달」) 입니다. ★다른 신궁입니다.
+   *     ⇒ 음력과 양력은 «거의 늘» 한 달쯤 어긋나므로 ★거의 늘 틀립니다.
+   *     ⇒ ⛔ 「홈은 가볍게 보는 자리니 어림으로」 는 ★핑계였습니다.
+   *
+   *  ✅ solarToLunarKR 은 ★오프라인 표라 바깥을 «안» 부릅니다. 값도 안 비쌉니다. */
+  const lun = solarToLunarKR(y, m, d)
+  const wolIdx = lun ? lun.lunarMonth - 1 : -1
+  const wolJi = wolIdx >= 0 ? WOL_JI[wolIdx] : ''
+  const wolSin = ilJi && wolJi ? sinGungOf(ilJi, wolJi) : null
   const wolText = wolSin ? WOL_HOME[wolSin] : null
 
   return {
     dayKey: `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
     ilGanji, ilJi, tti,
-    month: wolSin && wolText
-      ? { wol: m, ji: wolJi, sin: wolSin, head: wolText.head, body: wolText.body, good: wolText.good }
+    //  ⛔ 음력 달을 못 구하면 ★«지어내지» 않고 null 입니다 (표 범위 밖 등)
+    month: lun && wolSin && wolText
+      ? {
+          wol: lun.lunarMonth, leap: lun.isLeapMonth, ji: wolJi, sin: wolSin,
+          head: wolText.head, body: wolText.body, good: wolText.good,
+        }
       : null,
     note: HOME_PLAIN_NOTE,
   }
