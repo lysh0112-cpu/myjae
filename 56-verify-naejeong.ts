@@ -16,6 +16,9 @@ import {
 } from './lib/saju/naejeong/sinGung'
 import { SINGUNG_TEXT, hasJariText } from './lib/saju/naejeong/tables/sinGungText'
 import { TTI_TEXT, WOL_TEXT } from './lib/saju/naejeong/tables/dayYearText'
+import {
+  UNSI_SIPSUNG, GWAEGANG_PILLARS, BAEKHO_PILLARS, samhapOf,
+} from './lib/saju/naejeong/tables/unsiText'
 
 let pass = 0, fail = 0
 const ok = (c: boolean, m: string) => { if (c) { pass++; console.log(`  ✅ ${m}`) } else { fail++; console.log(`  ❌ ${m}`) } }
@@ -211,6 +214,57 @@ function main() {
       '★사주를 몰라도 쓰는 자리임을 밝힙니다 (연지와 겹쳐 보이던 것)')
     ok(/교재 9쪽에 이 신궁의 줄은 없습니다/.test(page),
       '⛔ ★글이 없으면 «없다» 고 말합니다 (빈칸을 숨기지 않습니다)')
+  }
+
+  /* ══ ⑨ 🔴 운시(運始) — 교재 8쪽 ═══════════════════════════════ */
+  head('⑨ 🔴 운시 — 첫 대운 (교재 8쪽)')
+  {
+    //  ★십성 열 가지가 «다» 있어야 합니다
+    const TEN = ['비견', '겁재', '식신', '상관', '편재', '정재', '편관', '정관', '편인', '정인']
+    const miss = TEN.filter(t => !UNSI_SIPSUNG[t])
+    ok(miss.length === 0, `★십성 열 가지 풀이가 «다» 있습니다 ${miss.join(' ')}`)
+    ok(Object.keys(UNSI_SIPSUNG).length === 10,
+      '⛔ ★열 가지뿐입니다 (교재에 없는 것을 더하지 않았습니다)')
+
+    //  🔴 ⛔ 괴강·백호 목록이 ★기존 표와 «같은 값» 인가
+    //     ⇒ 두 곳에 같은 목록이 생겼습니다. 어긋나면 화면이 거짓말을 합니다.
+    {
+      const a2 = R('lib/saju/career/tables/sinsal.ts')
+      const b2 = R('lib/saju/sinsalTable.ts')
+      const pull = (t: string, first: string) => {
+        const m2 = t.match(new RegExp(`pillars: \\[('${first}'[^\\]]*)\\]`))
+        return m2 ? m2[1].replace(/['\s]/g, '').split(',') : []
+      }
+      const gOld = pull(a2, '戊辰'), bOld = pull(b2, '甲辰')
+      ok(gOld.length > 0 && gOld.join() === [...GWAEGANG_PILLARS].join(),
+        `🔴 ⛔ ★괴강 목록이 기존 표와 같습니다 (${gOld.join(' ')})`)
+      ok(bOld.length > 0 && bOld.join() === [...BAEKHO_PILLARS].join(),
+        `🔴 ⛔ ★백호 목록이 기존 표와 같습니다 (${bOld.join(' ')})`)
+    }
+
+    //  ★삼합 — 교재 8쪽 예시 (丁未 → 亥卯未)
+    ok(samhapOf('未').join('') === '亥卯未', '★삼합이 교재 예시와 맞습니다 (未 → 亥卯未)')
+    ok(samhapOf('X').length === 0, '⛔ ★모르는 글자면 «지어내지» 않고 빈 채로 둡니다')
+
+    //  🔴 성별이 없으면 ★운시를 «지어내지» 않는가
+    const api = R('app/api/naejeong/route.ts')
+    ok(/b\.gender === '남' \|\| b\.gender === '여'/.test(api),
+      '★성별은 남·여만 받습니다')
+    ok(/if \(gender\) \{/.test(api),
+      '🔴 ⛔ ★성별이 없으면 운시를 «안» 셈합니다 (대운이 남녀로 갈립니다)')
+    ok(/let unsi[\s\S]{0,200}\| null = null/.test(api),
+      '⛔ ★기본값이 null 입니다 (지어내지 않습니다)')
+    ok(/UNSI_SIPSUNG\[sip\] \?\? null/.test(api),
+      '⛔ ★표에 없는 십성이면 글을 «지어내지» 않습니다')
+
+    //  ★화면이 «언제 보이는지 · 왜 없는지» 를 말하는가
+    const page = R('app/naejeong/page.tsx')
+    ok(/문점일과 상관없이 평생 그대로입니다/.test(page),
+      '🔴 ★「문점일과 무관 · 평생 고정」 을 밝힙니다 (교재 8쪽)')
+    ok(/성별을 고르시면 운시를 보여 드려요/.test(page),
+      '⛔ ★성별이 없으면 «까닭을 말하고» 안 보여 줍니다')
+    ok(/filter\(\(\[on\]\) => on\)/.test(page),
+      '⛔ ★해당될 때만 보여 줍니다 (아닌 것을 «있는 척» 하지 않습니다)')
   }
 
   console.log(`\n━━ 일진내정법 — 통과 ${pass} · 실패 ${fail} ━━\n`)

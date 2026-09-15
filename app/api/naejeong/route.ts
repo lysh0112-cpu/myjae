@@ -30,6 +30,14 @@ import { judgeWonguk, sinGungTable, sinGungByMonth, sinGungOf, JARI_MEANING } fr
 import { SINGUNG_TEXT } from '@/lib/saju/naejeong/tables/sinGungText'
 //  ★교재 9쪽(띠로 보는 오늘) · 10~11쪽(달로 보는 한 해) 글
 import { TTI_TEXT, WOL_TEXT } from '@/lib/saju/naejeong/tables/dayYearText'
+//  ★운시 — 교재 8쪽
+import { calcDayunList } from '@/lib/saju/dayun'
+import { getSipsin } from '@/lib/saju/sipsungDist'
+import { getSinsal } from '@/lib/saju/sinsal'
+import {
+  UNSI_SIPSUNG, UNSI_PILLAR_NOTE, UNSI_JIJI_NOTE,
+  GWAEGANG_PILLARS, BAEKHO_PILLARS, samhapOf,
+} from '@/lib/saju/naejeong/tables/unsiText'
 
 export const dynamic = 'force-dynamic'
 const NO_STORE = { 'Cache-Control': 'no-store' }
@@ -114,7 +122,45 @@ export async function POST(req: Request) {
       }
     })
 
-    /* ── ④ 곁들이 — 오늘의 운세(띠)와 신년 운세(달) ─────────────
+    /* ── ④ ★운시(運始) — 교재 8쪽 ────────────────────────────────
+     *  🔴 «첫 대운» 이 곧 운시입니다.
+     *  ⚠️ ★문점일과 «무관» 합니다 — 평생 고정입니다.
+     *  ⚠️ 대운은 ★남녀에 따라 순행·역행이 갈립니다 ⇒ 성별이 있어야 합니다.
+     *  ⛔ 성별을 안 주시면 ★운시를 «지어내지» 않고 null 로 돌려보냅니다. */
+    const gender = b.gender === '남' || b.gender === '여' ? String(b.gender) : null
+    let unsi: {
+      ganji: string; age: number; sipsung: string; sipsungText: string | null
+      gwaegang: boolean; baekho: boolean; sameYeonji: boolean; banan: boolean
+      samhap: string[]
+    } | null = null
+
+    if (gender) {
+      //  ⚠️ 태어난 시를 모르면 «절입일 당일 태생» 을 못 가립니다 — 시작 나이가 흔들릴 수 있습니다
+      const birthMinute = hIdx !== null && Number.isInteger(hIdx) ? hIdx * 120 : null
+      const list = await calcDayunList(
+        sy, sm, sd, monthGanji, yearGanji[0], gender, dayGanji[0], apiKey, birthMinute,
+      )
+      const first = list[0]
+      if (first) {
+        const gj = `${first.cheongan}${first.jiji}`
+        const sip = getSipsin(dayGanji[0], first.cheongan)
+        unsi = {
+          ganji: gj,
+          age: first.age,
+          sipsung: sip,
+          //  ⛔ 표에 없으면 null — 지어내지 않습니다
+          sipsungText: UNSI_SIPSUNG[sip] ?? null,
+          gwaegang: (GWAEGANG_PILLARS as readonly string[]).includes(gj),
+          baekho: (BAEKHO_PILLARS as readonly string[]).includes(gj),
+          sameYeonji: first.jiji === yearGanji[1],
+          //  ⚠️ 반안은 ★연지를 기준으로 봅니다 (신살의 기준 자리)
+          banan: getSinsal(yearGanji[1], first.jiji) === '반안',
+          samhap: samhapOf(first.jiji),
+        }
+      }
+    }
+
+    /* ── ⑤ 곁들이 — 오늘의 운세(띠)와 신년 운세(달) ─────────────
      *  교재 9쪽 · 10~11쪽. ★같은 셈을 씁니다. */
     const ttiSin = sinGungOf(ilJi, yearGanji[1])
 
@@ -142,6 +188,16 @@ export async function POST(req: Request) {
       months: sinGungByMonth(ilJi).map(m => ({
         ...m, text: m.sin ? WOL_TEXT[m.sin] : null,
       })),
+      /**
+       * ★운시 — 교재 8쪽. ⛔ 성별을 안 주시면 null 입니다 (지어내지 않습니다).
+       * ⚠️ 문점일과 «무관» 합니다 — 평생 고정입니다.
+       */
+      unsi,
+      unsiNote: {
+        괴강: UNSI_PILLAR_NOTE['괴강'], 백호: UNSI_PILLAR_NOTE['백호'],
+        연지동일: UNSI_JIJI_NOTE.연지동일, 반안: UNSI_JIJI_NOTE.반안,
+        고초살: UNSI_JIJI_NOTE.gochosal,
+      },
     }, { headers: NO_STORE })
 
   } catch {

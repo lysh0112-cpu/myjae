@@ -52,6 +52,12 @@ interface Out {
   hits: Hit[]
   table: { ji: string; sin: string }[]
   tti: { ji: string; sin: string | null; text: string | null }
+  unsi: {
+    ganji: string; age: number; sipsung: string; sipsungText: string | null
+    gwaegang: boolean; baekho: boolean; sameYeonji: boolean; banan: boolean
+    samhap: string[]
+  } | null
+  unsiNote: Record<string, string>
   months: { wol: number; ji: string; sin: string | null; text: string | null }[]
 }
 
@@ -71,6 +77,9 @@ export default function NaejeongPage() {
   const [leap, setLeap] = useState(false)
   const [birth, setBirth] = useState('')
   const [hourIdx, setHourIdx] = useState<string>('')
+  /*  🔴 ★대운은 «남녀» 에 따라 순행·역행이 갈립니다 — 운시를 보려면 있어야 합니다.
+   *     ⛔ 안 고르시면 ★운시를 «지어내지» 않고 안 보여 드립니다. */
+  const [gender, setGender] = useState<'남' | '여' | ''>('')
   const [data, setData] = useState<Out | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -95,6 +104,7 @@ export default function NaejeongPage() {
           birthYear: by, birthMonth: bm, birthDay: bd,
           calType: cal, leapMonth: leap,
           hourIdx: hourIdx === '' ? null : Number(hourIdx),
+          gender: gender === '' ? null : gender,
         }),
       })
       const j = await res.json()
@@ -103,7 +113,7 @@ export default function NaejeongPage() {
     } catch {
       setErr('불러오지 못했어요.')
     } finally { setBusy(false) }
-  }, [mun, birth, cal, leap, hourIdx])
+  }, [mun, birth, cal, leap, hourIdx, gender])
 
   if (gate.state !== 'ok') return <RoleGateScreen gate={gate} dark={false} />
 
@@ -166,6 +176,23 @@ export default function NaejeongPage() {
             <option value="">모름 (시지를 안 봅니다)</option>
             {HOURS.map((h, i) => <option key={i} value={i}>{h}</option>)}
           </select>
+
+          <label style={{ fontSize: 12.5, fontWeight: 700, color: INK, display: 'block', margin: '14px 0 6px' }}>
+            성별 <span style={{ fontWeight: 400, color: SUB, fontSize: 11 }}>(운시를 보려면 필요해요)</span>
+          </label>
+          {/*  ⚠️ ★대운이 남녀로 갈려서 «운시» 에만 쓰입니다.
+            *     ⛔ 안 고르셔도 «내정» 은 그대로 나옵니다. */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            {(['남', '여'] as const).map(gd => (
+              <button key={gd} type="button" onClick={() => { clear(); setGender(gender === gd ? '' : gd) }}
+                style={{
+                  flex: 1, padding: 9, borderRadius: 10, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit',
+                  background: gender === gd ? '#f5e7dc' : '#fff',
+                  border: `1.5px solid ${gender === gd ? ACCENT : LINE}`,
+                  color: gender === gd ? ACCENT : SUB, fontWeight: gender === gd ? 700 : 400,
+                }}>{gd}</button>
+            ))}
+          </div>
 
           <button type="button" onClick={run} disabled={busy}
             style={{
@@ -234,6 +261,56 @@ export default function NaejeongPage() {
                 )}
               </div>
             ))}
+
+            {/*  🔴 ★운시(運始) — 교재 8쪽
+              *  ⚠️ ★문점일과 «무관» 합니다 — 평생 고정입니다. 화면이 그것을 밝힙니다.
+              *  ⛔ 성별을 안 고르시면 ★안 보여 드립니다 (지어내지 않습니다). */}
+            <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: 14, marginBottom: 14 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: INK, marginBottom: 3 }}>
+                운시 運始 <span style={{ fontWeight: 400, color: SUB }}>(교재 8쪽)</span>
+              </div>
+              <div style={{ fontSize: 11, color: SUB, marginBottom: 8, lineHeight: 1.6 }}>
+                첫 대운이에요. 문점일과 상관없이 평생 그대로입니다.
+              </div>
+
+              {!data.unsi ? (
+                <div style={{ fontSize: 12.5, color: SUB, lineHeight: 1.7 }}>
+                  성별을 고르시면 운시를 보여 드려요. 대운이 남녀에 따라 갈리기 때문이에요.
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontSize: 17, fontWeight: 700, color: INK }}>{data.unsi.ganji}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: ACCENT }}>{data.unsi.sipsung}</span>
+                    <span style={{ fontSize: 11.5, color: SUB }}>{data.unsi.age}세부터</span>
+                  </div>
+                  {data.unsi.sipsungText && (
+                    <div style={{
+                      fontSize: 13, color: INK, lineHeight: 1.8,
+                      background: '#fbf6f1', borderRadius: 10, padding: '10px 11px', marginBottom: 8,
+                    }}>{data.unsi.sipsungText}</div>
+                  )}
+                  {/*  ⚠️ 해당될 때만 보입니다 — ⛔ 아닌 것을 «있는 척» 하지 않습니다 */}
+                  {([
+                    [data.unsi.gwaegang, data.unsiNote['괴강']],
+                    [data.unsi.baekho, data.unsiNote['백호']],
+                    [data.unsi.sameYeonji, data.unsiNote['연지동일']],
+                    [data.unsi.banan, data.unsiNote['반안']],
+                  ] as const).filter(([on]) => on).map(([, t]) => (
+                    <div key={t} style={{
+                      fontSize: 12.5, color: INK, lineHeight: 1.75,
+                      borderLeft: `2px solid ${ACCENT}`, paddingLeft: 9, marginBottom: 7,
+                    }}>{t}</div>
+                  ))}
+                  <div style={{ fontSize: 12, color: SUB, lineHeight: 1.7, marginTop: 8 }}>
+                    {data.unsiNote['고초살']}
+                    {data.unsi.samhap.length > 0 && (
+                      <> <b style={{ color: INK }}>({data.unsi.ganji[1]} 삼합 — {data.unsi.samhap.join(' · ')})</b></>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* ── 열두 지지 표 (교재 3쪽) ── */}
             <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: 14, marginBottom: 14 }}>
