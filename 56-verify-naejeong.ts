@@ -634,6 +634,25 @@ function main() {
     }
     ok(caseLinesFor('시지', '공망').every(l => /교재 \d+쪽/.test(l.page)),
       '⛔ ★오려 온 문장마다 «교재 쪽» 이 붙습니다')
+
+    /*  🔴 ★열두 지지를 누르면 설명이 뜹니다 [대표님 2026-09-15] */
+    ok(/const \[openSin, setOpenSin\]/.test(page2), '🔴 ★신궁 설명이 뜹니다 [대표님]')
+    ok(/onClick=\{\(\) => setOpenSin\(x\.sin as SinGung\)\}/.test(page2),
+      '★열두 지지 칸을 «눌러» 엽니다')
+    ok(/눌러 보시면 뜻이 나와요/.test(page2),
+      '★누를 수 있다는 것을 «알려» 줍니다 (안 그러면 못 누르십니다)')
+    ok(/role="dialog" aria-modal="true"/.test(page2),
+      '★화면 읽어 주는 장치가 «창» 인 줄 압니다')
+    ok(/e\.stopPropagation\(\)/.test(page2),
+      '⛔ ★안쪽을 눌렀을 때는 «안» 닫힙니다')
+    ok(/onClick=\{\(\) => setOpenSin\(null\)\}/.test(page2),
+      '★바깥이나 × 를 누르면 닫힙니다')
+    ok(/SINGUNG_TEXT\[openSin\]/.test(page2),
+      '⛔ ★교재 글(뜻·통변·자리별)을 «그대로» 보여 줍니다')
+    ok(/caseLinesFor\(j as JariKey, openSin/.test(page2),
+      '🔴 ★자리별 풀이가 없는 넷은 «교재 사례» 로 채웁니다')
+    ok(/좋은 신궁' : '나쁜 신궁/.test(page2),
+      '★좋고 나쁨도 밝힙니다 (교재 7쪽)')
   }
 
   console.log(`\n━━ 일진내정법 — 통과 ${pass} · 실패 ${fail} ━━\n`)

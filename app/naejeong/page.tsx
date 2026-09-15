@@ -29,6 +29,9 @@ import { lookup, type LookupHit } from '@/lib/saju/naejeong/tables/lookup'
 //  ★교재 사례 풀이 — 1차(11~24쪽). ⛔ 순화 없이 교재 그대로.
 import { caseTextOf, caseLinesFor, CASE_TEXT, type JariKey } from '@/lib/saju/naejeong/tables/caseText'
 import { getSinsal } from '@/lib/saju/sinsal'
+//  ★신궁 뜻 — 열두 지지 칸을 눌렀을 때 띄웁니다 (교재 3~7쪽)
+import { SINGUNG_TEXT } from '@/lib/saju/naejeong/tables/sinGungText'
+import { isGoodSin, type SinGung } from '@/lib/saju/naejeong/sinGung'
 
 const ONLY: AppRole[] = ['master']
 
@@ -108,6 +111,9 @@ export default function NaejeongPage() {
    *     「교재 안에 있는 사례들을 모두 정리해서 보여 주자」
    *  ⚠️ 찾기 칸에 «말을 적어야만» 볼 수 있던 것을 ★목록으로도 엽니다. */
   const [showAll, setShowAll] = useState(false)
+  /*  🔴 ★열두 지지 칸을 누르면 뜨는 설명 — 2026-09-15 [대표님]
+   *  ⛔ 안 누르면 «안» 뜹니다. 화면이 길어지지 않게. */
+  const [openSin, setOpenSin] = useState<SinGung | null>(null)
   const [data, setData] = useState<Out | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -761,15 +767,20 @@ export default function NaejeongPage() {
 
             {/* ── 열두 지지 표 (교재 3쪽) ── */}
             <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: 14, marginBottom: 14 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: INK, marginBottom: 8 }}>열두 지지</div>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: INK, marginBottom: 3 }}>열두 지지</div>
+              <div style={{ fontSize: 11, color: SUB, marginBottom: 8 }}>눌러 보시면 뜻이 나와요.</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                {/*  ★누르면 그 신궁 설명이 뜹니다 [대표님 2026-09-15] */}
                 {data.table.map(x => (
-                  <div key={x.ji} style={{
-                    border: `1px solid ${LINE}`, borderRadius: 9, padding: '7px 4px', textAlign: 'center',
-                  }}>
+                  <button key={x.ji} type="button"
+                    onClick={() => setOpenSin(x.sin as SinGung)}
+                    style={{
+                      border: `1px solid ${LINE}`, borderRadius: 9, padding: '7px 4px', textAlign: 'center',
+                      background: '#fff', cursor: 'pointer', fontFamily: 'inherit',
+                    }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: INK }}>{x.ji}</div>
                     <div style={{ fontSize: 10.5, color: SUB }}>{x.sin}</div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -827,6 +838,89 @@ export default function NaejeongPage() {
             </div>
           </>
         )}
+        {/*  🔴 ★신궁 설명 모달 — 2026-09-15 [대표님]
+          *     열두 지지 칸을 누르면 뜹니다.
+          *  ⛔ 교재 3~7쪽 글을 «그대로» 보여 줍니다 (연재쌤 전용이라 순화 없음).
+          *  ⚠️ ★자리별 풀이가 «없는» 넷(공망·원진·해결·퇴식)은
+          *     교재 «사례» 문장으로 채웁니다 — 쪽수와 함께. ⛔ 지어내지 않습니다. */}
+        {openSin && (() => {
+          const t = SINGUNG_TEXT[openSin]
+          const good = isGoodSin(openSin)
+          return (
+            <div
+              role="dialog" aria-modal="true" aria-label={`${openSin} 설명`}
+              onClick={() => setOpenSin(null)}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 60,
+                background: 'rgba(40,30,24,0.42)',
+                display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+              }}>
+              {/*  ⛔ 안쪽을 눌렀을 때는 «안» 닫히게 합니다 */}
+              <div onClick={e => e.stopPropagation()}
+                style={{
+                  width: '100%', maxWidth: 440, maxHeight: '82vh', overflowY: 'auto',
+                  background: BG, borderRadius: '18px 18px 0 0', padding: '16px 16px 28px',
+                }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: good ? GOOD : BAD }}>{openSin}</span>
+                  <span style={{ fontSize: 13, color: SUB }}>{t.hanja}</span>
+                  {t.alias.length > 0 && (
+                    <span style={{ fontSize: 11.5, color: SUB }}>· {t.alias.join(' · ')}</span>
+                  )}
+                  <button type="button" onClick={() => setOpenSin(null)}
+                    style={{
+                      marginLeft: 'auto', background: 'transparent', border: 'none',
+                      color: SUB, fontSize: 18, cursor: 'pointer', fontFamily: 'inherit', padding: 0,
+                    }} aria-label="닫기">×</button>
+                </div>
+                <div style={{ fontSize: 11.5, color: SUB, marginBottom: 12 }}>
+                  {good ? '좋은 신궁' : '나쁜 신궁'} · 교재 7쪽
+                </div>
+
+                <div style={{ fontSize: 13, color: INK, lineHeight: 1.85, marginBottom: 12 }}>{t.tteut}</div>
+                <div style={{
+                  fontSize: 12.5, color: INK, lineHeight: 1.85,
+                  background: CARD, border: `1px solid ${LINE}`, borderRadius: 12, padding: '11px 12px',
+                  marginBottom: 12,
+                }}>{t.lead}</div>
+
+                {/*  ★네 자리별로 — 교재에 있으면 그대로, 없으면 «사례» 로 */}
+                {(['연지', '월지', '일지', '시지'] as const).map(j => {
+                  const one = t.jari ? t.jari[j] : null
+                  const lines = one ? [] : caseLinesFor(j as JariKey, openSin, 2)
+                  return (
+                    <div key={j} style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: ACCENT, marginBottom: 4 }}>{j}</div>
+                      {one ? (
+                        <div style={{ fontSize: 12.5, color: INK, lineHeight: 1.8 }}>{one}</div>
+                      ) : lines.length > 0 ? (
+                        lines.map(l => (
+                          <div key={l.page + l.text.slice(0, 8)} style={{
+                            fontSize: 12.5, color: INK, lineHeight: 1.8, marginBottom: 5,
+                          }}>
+                            {l.text}
+                            <span style={{ marginLeft: 5, fontSize: 11, color: SUB }}>({l.page} · {l.iljin})</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ fontSize: 12, color: SUB, lineHeight: 1.7 }}>
+                          교재에 이 자리의 풀이가 없습니다.
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {!t.jari && (
+                  <div style={{ fontSize: 11, color: SUB, lineHeight: 1.7, marginTop: 4 }}>
+                    교재 4~7쪽에 이 신궁의 «자리별» 풀이는 없어, 교재 «사례» 에서 옮겨 왔습니다.
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })()}
+
         {/*  ★글이 길어 아래까지 내려오신 분을 위해 «한 번 더» 둡니다 */}
         <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
           <button type="button" onClick={() => router.push('/mypage-new')}
