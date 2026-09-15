@@ -40,7 +40,7 @@
 import Image from 'next/image'
 
 /** ★화면에 보이는 이름 — ⛔ 법인 이름(COMPANY.name)과 «다른 것» 입니다 */
-export const BRAND_TITLE = '명연재사주연구소'
+export const BRAND_TITLE = '명연재 사주연구소'
 /** ★한자 표기 — 괄호까지 포함합니다 */
 export const BRAND_HANJA = '(明然載)'
 

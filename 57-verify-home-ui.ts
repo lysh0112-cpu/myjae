@@ -224,8 +224,10 @@ function main() {
     const login = liveOf(R('app/login/page.tsx'))
     const mypage = liveOf(R('app/mypage-new/page.tsx'))
 
-    ok(/BRAND_TITLE = '명연재사주연구소'/.test(brandSrc),
-      '🔴 ★이름이 「명연재사주연구소」 입니다 [대표님]')
+    ok(/BRAND_TITLE = '명연재 사주연구소'/.test(brandSrc),
+      '🔴 ★이름이 「명연재 사주연구소」 입니다 [대표님 2026-09-15 · 한 칸 띄움]')
+    ok(/명연재 사주연구소/.test(brandSrc) && !/'명연재사주연구소'/.test(brandSrc),
+      '⛔ ★붙여 쓴 옛 이름으로 되돌아가지 않았습니다')
     ok(/BRAND_HANJA = '\(明然載\)'/.test(brandSrc),
       '★한자 표기가 함께 있습니다')
 
@@ -249,12 +251,14 @@ function main() {
     const company = R('app/components/common/companyInfo.ts')
     ok(/name: '\(주\)명연재'/.test(company),
       "⛔⛔ ★법적 상호는 «(주)명연재» 그대로입니다 (사업자등록증 · PG 심사)")
-    ok(!/명연재사주연구소/.test(company),
+    /*  ⛔ ★띄어쓰기가 있든 없든 잡습니다 — 「사주연구소」 네 글자로 셉니다.
+      *     (2026-09-15 에 「명연재사주연구소」 → 「명연재 사주연구소」 로 바뀌었습니다) */
+    ok(!/사주연구소/.test(company),
       '⛔ ★회사 정보에 새 이름이 «섞여 들어가지» 않았습니다')
     const layout = R('app/layout.tsx')
     ok(/title: "명연재"/.test(layout) && /applicationName: "명연재"/.test(layout),
       '⛔⛔ ★앱·홈 화면 아이콘 이름은 «명연재» 그대로입니다 (2026-09-10 에 일부러 줄인 자리)')
-    ok(!/명연재사주연구소/.test(layout),
+    ok(!/사주연구소/.test(layout),
       '⛔ ★manifest 쪽에 새 이름이 «섞여 들어가지» 않았습니다')
 
     /*  ★모양 — 「엑셀 느낌 없이」 [대표님]
