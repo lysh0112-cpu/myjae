@@ -22,6 +22,9 @@
 import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRoleGate, RoleGateScreen, type AppRole } from '@/hooks/useRoleGate'
+//  ★상담 목적 — 표는 tables/purposes.ts «한 곳» 입니다
+import { PURPOSES, SINSAL_DIR, findPurpose } from '@/lib/saju/naejeong/tables/purposes'
+import { getSinsal } from '@/lib/saju/sinsal'
 
 const ONLY: AppRole[] = ['master']
 
@@ -82,6 +85,10 @@ export default function NaejeongPage() {
   /*  🔴 ★대운은 «남녀» 에 따라 순행·역행이 갈립니다 — 운시를 보려면 있어야 합니다.
    *     ⛔ 안 고르시면 ★운시를 «지어내지» 않고 안 보여 드립니다. */
   const [gender, setGender] = useState<'남' | '여' | ''>('')
+  /*  🔴 ★상담 목적 — 2026-09-15 (9부) [대표님]
+   *     고르면 ★그 «자리» 가 맨 위로 올라오고 테두리로 도드라집니다.
+   *  ⛔ 안 고르셔도 됩니다 — 그때는 연지→월지→일지→시지 «차례대로» 나옵니다. */
+  const [purpose, setPurpose] = useState<string>('')
   const [data, setData] = useState<Out | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -116,6 +123,23 @@ export default function NaejeongPage() {
       setErr('불러오지 못했어요.')
     } finally { setBusy(false) }
   }, [mun, birth, cal, leap, hourIdx, gender])
+
+  /*  🔴 ★고른 목적의 «자리» 를 맨 위로 — 2026-09-15 [대표님]
+   *  ⛔ 원래 차례(연지→월지→일지→시지)를 «버리지» 않습니다 —
+   *     고른 자리만 앞으로 끌어오고 나머지는 ★그대로입니다.
+   *  ⚠️ 목적을 안 고르시면 ★아무것도 안 바뀝니다. */
+  const pickedJari: string[] = (() => {
+    const pu = purpose ? findPurpose(purpose) : null
+    return pu && pu.kind === 'singung' ? (pu.jari ?? []) : []
+  })()
+  const sortedHits = data
+    ? [...data.hits].sort((a, b) => {
+        const ia = pickedJari.indexOf(a.jari), ib = pickedJari.indexOf(b.jari)
+        //  ⚠️ 고른 자리가 «둘» 이면 표에 적힌 차례대로 (맨 앞이 으뜸)
+        const ra = ia < 0 ? 99 : ia, rb = ib < 0 ? 99 : ib
+        return ra - rb
+      })
+    : []
 
   if (gate.state !== 'ok') return <RoleGateScreen gate={gate} dark={false} />
 
@@ -214,6 +238,19 @@ export default function NaejeongPage() {
             ))}
           </div>
 
+          <label style={{ fontSize: 12.5, fontWeight: 700, color: INK, display: 'block', margin: '14px 0 6px' }}>
+            상담 목적 <span style={{ fontWeight: 400, color: SUB, fontSize: 11 }}>(고르면 그 자리가 먼저 보여요)</span>
+          </label>
+          {/*  ⛔ ★안 고르셔도 됩니다 — 그때는 네 자리가 «차례대로» 나옵니다. */}
+          <select value={purpose} onChange={e => { clear(); setPurpose(e.target.value) }} style={inputStyle}>
+            <option value="">고르지 않음 (네 자리를 차례대로)</option>
+            {PURPOSES.map(g => (
+              <optgroup key={g.group} label={g.group}>
+                {g.items.map(i => <option key={i.id} value={i.id}>{i.label}</option>)}
+              </optgroup>
+            ))}
+          </select>
+
           <button type="button" onClick={run} disabled={busy}
             style={{
               width: '100%', marginTop: 14, padding: 13, borderRadius: 12, border: 'none',
@@ -243,10 +280,33 @@ export default function NaejeongPage() {
               </div>
             </div>
 
+            {/*  🔴 ★상담 목적을 고르셨으면 — 2026-09-15 (9부) [대표님]
+              *     ㉮ 그 자리를 ★«맨 위» 로 올리고
+              *     ㉯ 테두리로 ★도드라지게 합니다
+              *  ⛔ 안 고르셨으면 ★차례(연지→월지→일지→시지) 그대로입니다.
+              *  ⚠️ 자리 짝은 «제 초안» 입니다 — tables/purposes.ts 에서 고치십시오. */}
+            {(() => {
+              const pu = purpose ? findPurpose(purpose) : null
+              if (!pu || pu.kind !== 'singung' || !pu.jari?.length) return null
+              return (
+                <div style={{
+                  fontSize: 11.5, color: ACCENT, background: '#fff3ec',
+                  border: `1px solid ${LINE}`, borderRadius: 10,
+                  padding: '8px 10px', marginBottom: 10, lineHeight: 1.6,
+                }}>
+                  <b>{pu.label}</b> — {pu.jari.join(' · ')} 를 봅니다 · {pu.page}
+                  {/*  ⛔ 12신궁 밖의 것은 ★답을 «단정하지» 않고 «메모» 만 보여 드립니다 */}
+                  {pu.note && <div style={{ marginTop: 5, color: SUB }}>⚠️ {pu.note}</div>}
+                </div>
+              )
+            })()}
+
             {/* ── 🔴 네 자리 풀이 — 교재 그대로 ── */}
-            {data.hits.map(h => (
+            {sortedHits.map(h => (
               <div key={h.jari} style={{
-                background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: 14, marginBottom: 10,
+                background: CARD, borderRadius: 14, padding: 14, marginBottom: 10,
+                //  ★고른 목적의 자리는 테두리로 도드라집니다
+                border: pickedJari.includes(h.jari) ? `2px solid ${ACCENT}` : `1px solid ${LINE}`,
               }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2 }}>
                   <b style={{ fontSize: 13.5, color: INK }}>{h.jari}</b>
@@ -256,6 +316,13 @@ export default function NaejeongPage() {
                       fontSize: 13.5, fontWeight: 700,
                       color: h.good ? GOOD : BAD,
                     }}>{h.sin}{h.hanja ? ` ${h.hanja}` : ''}</span>
+                  )}
+                  {pickedJari.includes(h.jari) && (
+                    <span style={{
+                      marginLeft: 'auto', fontSize: 10.5, color: ACCENT,
+                      background: '#fff3ec', border: `1px solid ${LINE}`,
+                      borderRadius: 999, padding: '2px 8px',
+                    }}>이 질문의 자리</span>
                   )}
                 </div>
                 <div style={{ fontSize: 11.5, color: SUB, marginBottom: 8 }}>{h.jariMeaning}</div>
@@ -331,6 +398,52 @@ export default function NaejeongPage() {
                 </>
               )}
             </div>
+
+            {/*  🔴 ★방향·자리 — 신살로 봅니다 (교재 16~17쪽 · 45쪽) · 2026-09-15 [대표님]
+              *
+              *  ⚠️⚠️ ★기준이 «다릅니다» —
+              *     12신궁 : ★문점일 일진 기준
+              *     신살   : ★손님의 «띠(연지)» 기준
+              *     ⇒ 그래서 ★«따로» 그립니다. 위 네 자리와 섞지 마십시오.
+              *  ⛔ 교재에 «없는» 방향을 지어내지 않았습니다. */}
+            {(() => {
+              const pu = purpose ? findPurpose(purpose) : null
+              if (!pu || pu.kind !== 'sinsal') return null
+              const rows = SINSAL_DIR[pu.id] ?? []
+              const tti = data.saju.yeon[1]
+              return (
+                <div style={{
+                  background: CARD, border: `2px solid ${ACCENT}`, borderRadius: 14,
+                  padding: 14, marginBottom: 14,
+                }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: INK, marginBottom: 3 }}>
+                    {pu.label} <span style={{ fontWeight: 400, color: SUB }}>({pu.page})</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: SUB, marginBottom: 10, lineHeight: 1.6 }}>
+                    이건 <b>띠(연지 {tti})</b> 를 기준으로 봅니다. 위 네 자리(문점일 기준)와는 다른 셈이에요.
+                  </div>
+                  {rows.map(r => (
+                    <div key={r.head} style={{ marginBottom: 9 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 700, color: ACCENT, marginBottom: 3 }}>
+                        {r.head}
+                      </div>
+                      <div style={{ fontSize: 12.5, color: INK, lineHeight: 1.75 }}>{r.body}</div>
+                    </div>
+                  ))}
+                  {/*  ★그 띠에서 각 신살이 «어느 지지» 인지 — 방향을 찾으실 때 쓰십니다 */}
+                  <div style={{
+                    marginTop: 10, paddingTop: 10, borderTop: `1px solid ${LINE}`,
+                    fontSize: 11.5, color: SUB, lineHeight: 1.8,
+                  }}>
+                    {(['반안', '망신', '역마', '화개', '지살', '장성', '연살', '육해', '월살', '천살'] as const).map(nm => {
+                      const ji = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
+                        .find(j => getSinsal(tti, j) === nm)
+                      return ji ? <span key={nm} style={{ marginRight: 10 }}>{nm} <b style={{ color: INK }}>{ji}</b></span> : null
+                    })}
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* ── 열두 지지 표 (교재 3쪽) ── */}
             <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: 14, marginBottom: 14 }}>

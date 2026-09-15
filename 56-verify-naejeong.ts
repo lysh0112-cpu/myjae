@@ -21,6 +21,8 @@ import {
 } from './lib/saju/naejeong/tables/unsiText'
 import { TTI_HOME, WOL_HOME } from './lib/saju/naejeong/tables/homeText'
 import { solarToLunarKR } from './lib/saju/koreanLunarTable'
+import { PURPOSES, SINSAL_DIR, findPurpose } from './lib/saju/naejeong/tables/purposes'
+import { getSinsal } from './lib/saju/sinsal'
 
 let pass = 0, fail = 0
 const ok = (c: boolean, m: string) => { if (c) { pass++; console.log(`  ✅ ${m}`) } else { fail++; console.log(`  ❌ ${m}`) } }
@@ -387,6 +389,64 @@ function main() {
       ok(!!lun && lun.lunarMonth >= 1 && lun.lunarMonth <= 12,
         `★음력 달이 1~12 안입니다 (오늘 음력 ${lun?.lunarMonth}월)`)
     }
+  }
+
+  /* ══ ⑪ 🔴🔴 상담 목적 콤보 — 2026-09-15 (9부) [대표님] ═══════════ */
+  head('⑪ 🔴🔴 상담 목적 고르기')
+  {
+    const all = PURPOSES.flatMap(g => g.items)
+    ok(PURPOSES.length === 6 && all.length === 27,
+      `★대분류 ${PURPOSES.length} · 질문 ${all.length}개 [대표님 확정]`)
+    ok(new Set(all.map(i => i.id)).size === all.length, '⛔ ★열쇠(id)가 겹치지 않습니다')
+
+    //  ★12신궁 질문은 «자리» 가 있어야 합니다
+    const noJari = all.filter(i => i.kind === 'singung' && !i.jari?.length)
+    ok(noJari.length === 0, `⛔ ★12신궁 질문은 «자리» 가 다 있습니다 ${noJari.map(i => i.id).join(' ')}`)
+    //  ★신살 질문은 «자리» 가 없어야 합니다 (띠 기준이라 궁위와 무관)
+    const badSinsal = all.filter(i => i.kind === 'sinsal' && i.jari?.length)
+    ok(badSinsal.length === 0, '⛔ ★신살 질문에 궁위를 붙이지 않았습니다 (기준이 다릅니다)')
+    //  ★신살 질문은 풀이가 있어야 합니다
+    const noDir = all.filter(i => i.kind === 'sinsal' && !SINSAL_DIR[i.id]?.length)
+    ok(noDir.length === 0, `⛔ ★신살 질문에 풀이가 다 있습니다 ${noDir.map(i => i.id).join(' ')}`)
+    //  ★근거 쪽이 다 적혀 있는가
+    ok(all.every(i => /교재/.test(i.page)), '★질문마다 «교재 쪽» 이 적혀 있습니다')
+
+    /*  ⛔⛔ ★넣지 «않기로» 한 여섯이 되살아나면 안 됩니다 [대표님 2026-09-15]
+     *     도주자·부적/주술·금액 단정·성씨로 사람 고르기·폭력 단정 */
+    const txt = JSON.stringify(PURPOSES) + JSON.stringify(SINSAL_DIR)
+    const BAN = ['도주', '숨어', '은닉', '삼겹살', '소주', '소금', '부적',
+      '억을', '억 정도', '성씨', '때린다', '맞고 산다']
+    const back = BAN.filter(b => txt.includes(b))
+    ok(back.length === 0,
+      `🔴 ⛔ ★빼기로 한 것이 «되살아나지» 않았습니다 ${back.join(' · ')}`)
+
+    //  ⚠️ 12신궁 밖의 것은 «메모» 로만 — 답을 단정하지 않습니다
+    const notes = all.filter(i => i.note)
+    ok(notes.length >= 4 && notes.every(i => /교재/.test(i.note!)),
+      `⚠️ ★12신궁 밖(시기 등)은 «메모» 로만 둡니다 — ${notes.length}개`)
+
+    //  🔴 화면 — 고르면 «맨 위 + 강조»
+    const page = R('app/naejeong/page.tsx')
+    ok(/const \[purpose, setPurpose\]/.test(page), '★화면에 상담 목적 고르기가 있습니다')
+    ok(/<optgroup/.test(page), '★대분류로 묶여 있습니다')
+    ok(/const sortedHits/.test(page) && /pickedJari\.indexOf/.test(page),
+      '🔴 ★고른 자리가 «맨 위» 로 올라옵니다 [대표님]')
+    ok(/pickedJari\.includes\(h\.jari\) \? `2px solid \$\{ACCENT\}`/.test(page),
+      '🔴 ★고른 자리가 테두리로 «도드라집니다» [대표님]')
+    ok(/이 질문의 자리/.test(page), '★어느 자리인지 «딱지» 로도 알려 줍니다')
+    ok(/기준으로 봅니다. 위 네 자리\(문점일 기준\)와는 다른 셈이에요/.test(page),
+      '⚠️ ★신살은 «띠 기준» 이라고 밝힙니다 (12신궁과 섞이지 않게)')
+    ok(/pu\.note && /.test(page), '⛔ ★메모가 있는 질문은 그 메모를 보여 줍니다')
+
+    //  🔴 값으로 — 신살이 교재 예시와 맞는가 (교재 27·45쪽)
+    ok(getSinsal('亥', '辰') === '반안' && getSinsal('亥', '巳') === '역마'
+      && getSinsal('亥', '卯') === '장성',
+      '★신살이 교재 예시와 맞습니다 (亥卯未 기준 辰 반안 · 巳 역마 · 卯 장성)')
+    ok(findPurpose('land')?.jari?.[0] === '연지'
+      && findPurpose('house')?.jari?.[0] === '월지'
+      && findPurpose('marry')?.jari?.[0] === '일지'
+      && findPurpose('bizStart')?.jari?.[0] === '시지',
+      '★자리 짝이 교재 4쪽대로입니다 (땅=연지 · 집=월지 · 결혼=일지 · 사업=시지)')
   }
 
   console.log(`\n━━ 일진내정법 — 통과 ${pass} · 실패 ${fail} ━━\n`)
