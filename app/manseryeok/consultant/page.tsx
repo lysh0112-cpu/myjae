@@ -520,6 +520,20 @@ function ConsultantContent() {
               fontFamily:'inherit'}}>
             ⚙️ 관리자 화면으로
           </button>
+          {/*  🔴 ★일진내정법 — 2026-09-15 (9부) [대표님 「여기 화면에 들어가는 버튼을」]
+            *
+            *  ⚠️ 이 대목은 ★isMaster 일 때만 그려집니다 (위 if 문).
+            *     ⇒ 상담사는 이 화면 자체를 안 봅니다. 단추를 따로 가릴 것이 없습니다.
+            *  ⛔ 그렇다고 ★이 단추가 «막는 장치» 인 것은 아닙니다 —
+            *     진짜 막는 곳은 ★/api/naejeong 의 requireMaster() 입니다.
+            *     단추를 숨기는 것만으로는 «막는 것이 아닙니다» (주소를 치면 열립니다).
+            *  ⚠️ 이 주석에 단추 글자를 «그대로» 적지 마십시오 — 검사가 글자로 찾습니다 (5부 교훈). */}
+          <button onClick={() => router.push('/naejeong')}
+            style={{padding:'11px 0', borderRadius:10, border:'0.5px solid #96502e',
+              background:'#f4ece1', color:'#96502e', fontSize:13, cursor:'pointer',
+              fontFamily:'inherit'}}>
+            🗓 일진내정법
+          </button>
           <div style={{display:'flex', alignItems:'center', gap:8, margin:'8px 2px 0',
             color:'#7d6a5b', fontSize:12}}>
             <span style={{whiteSpace:'nowrap'}}>상담사 {pickList.length}명</span>

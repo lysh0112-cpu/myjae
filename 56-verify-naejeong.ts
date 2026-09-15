@@ -133,6 +133,22 @@ function main() {
     ok(!/naejeong/.test(home), '⛔ ★홈에 «길» 을 내지 않았습니다 (손님 화면이 아닙니다)')
     ok(/연재쌤 전용 화면이에요/.test(page),
       '★화면에도 «전용» 임을 밝혀 둡니다 (실수로 공유되는 것을 막습니다)')
+
+    /*  🔴 ★들어가는 길 — 2026-09-15 [대표님]
+     *     상담사 고르기 화면(매니저만 보는 곳)에 단추를 두었습니다.
+     *  ⛔ 단추를 «숨기는 것» 은 막는 것이 아닙니다 — 위 창구 문지기가 «진짜» 입니다. */
+    const pick = R('app/manseryeok/consultant/page.tsx')
+    const livePick = pick.split('\n')
+      .filter(l => !/^\s*(\/\/|\*|\/\*|\{\/\*)/.test(l)).join('\n')
+    ok(/router\.push\('\/naejeong'\)/.test(livePick),
+      '🔴 ★상담사 고르기 화면에 «들어가는 단추» 가 있습니다 [대표님]')
+    //  ⛔ 그 대목이 «매니저만» 보는 자리인지 — isMaster 안쪽이어야 합니다
+    {
+      const iIf = pick.indexOf('if (isMaster && !consultantId)')
+      const iBtn = pick.indexOf("router.push('/naejeong')")
+      ok(iIf > 0 && iBtn > iIf,
+        '⛔ ★그 단추는 «매니저만» 보는 대목 안에 있습니다 (상담사에게는 안 보입니다)')
+    }
   }
 
   /* ══ ⑥ ⚠️ 순화 — 여기는 «안» 합니다 [대표님] ═══════════════════ */
