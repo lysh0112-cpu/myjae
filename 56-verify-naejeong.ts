@@ -157,6 +157,19 @@ function main() {
       .filter(l => !/^\s*(\/\/|\*|\/\*|\{\/\*)/.test(l)).join('\n')
     ok(/router\.push\('\/naejeong'\)/.test(liveMy),
       '🔴 ★마이페이지에 «바로 가는» 단추가 있습니다 [대표님]')
+    /*  ⛔ ★«하나» 뿐이어야 합니다 — 2026-09-15
+     *     제가 이미 있는 것을 «못 보고» 한 벌 더 만들어 ★둘로 보였습니다. */
+    ok((liveMy.match(/router\.push\('\/naejeong'\)/g) ?? []).length === 1,
+      `⛔ ★마이페이지의 들어가는 단추가 «하나» 뿐입니다 (${(liveMy.match(/router\.push\('\/naejeong'\)/g) ?? []).length}개)`)
+
+    /*  🔴 ★되돌아가는 길 — [대표님] 「홈으로 되돌아가는 버튼」
+     *  ⚠️ 이 화면은 홈 카드에 «없어서», 안 두면 브라우저 «뒤로» 밖에 길이 없습니다. */
+    ok(/router\.push\('\/home-new'\)/.test(page),
+      '🔴 ★홈으로 되돌아가는 단추가 있습니다 [대표님]')
+    ok(/router\.push\('\/mypage-new'\)/.test(page),
+      '★들어온 길(내 정보)로도 돌아갑니다')
+    ok((page.match(/router\.push\('\/home-new'\)/g) ?? []).length === 2,
+      '★위·아래 «둘 다» 있습니다 (글이 길어 아래까지 내려가면 위가 안 보입니다)')
     //  ⛔ 그 단추가 «매니저만» 보는 자리인가 — isMaster 안쪽이어야 합니다
     {
       const iBtn = my.indexOf("router.push('/naejeong')")

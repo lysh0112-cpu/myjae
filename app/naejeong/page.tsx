@@ -20,6 +20,7 @@
  */
 
 import { useCallback, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useRoleGate, RoleGateScreen, type AppRole } from '@/hooks/useRoleGate'
 
 const ONLY: AppRole[] = ['master']
@@ -69,6 +70,7 @@ const HOURS = [
 
 export default function NaejeongPage() {
   const gate = useRoleGate(ONLY)
+  const router = useRouter()
 
   const today = new Date()
   const [mun, setMun] = useState(
@@ -126,6 +128,24 @@ export default function NaejeongPage() {
   return (
     <main style={{ minHeight: '100vh', background: BG, padding: '16px 14px 40px' }}>
       <div style={{ maxWidth: 440, margin: '0 auto' }}>
+
+        {/*  🔴 ★되돌아가는 길 — 2026-09-15 (9부) [대표님]
+          *     「일진내정법 화면으로 갔다가 홈으로 되돌아가는 버튼이 필요할 것 같다」
+          *  ⚠️ 이 화면은 ★홈 카드에 «없는» 자리라, 안 두면 브라우저 «뒤로» 밖에 길이 없습니다.
+          *  ⛔ 위·아래 «둘 다» 둡니다 — 글이 길어 아래까지 내려가면 위가 안 보입니다. */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <button type="button" onClick={() => router.push('/mypage-new')}
+            style={{
+              background: 'transparent', border: 'none', color: SUB, fontSize: 12.5,
+              cursor: 'pointer', fontFamily: 'inherit', padding: 0,
+            }}>‹ 내 정보</button>
+          <button type="button" onClick={() => router.push('/home-new')}
+            style={{
+              background: CARD, border: `1px solid ${LINE}`, borderRadius: 999,
+              color: ACCENT, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+              padding: '6px 13px',
+            }}>🏠 홈</button>
+        </div>
 
         <div style={{ fontSize: 11.5, color: SUB, marginBottom: 2 }}>일진내정법 日辰 來情法</div>
         <h1 style={{ fontSize: 19, fontWeight: 700, color: INK, margin: '0 0 4px' }}>
@@ -380,6 +400,21 @@ export default function NaejeongPage() {
             </div>
           </>
         )}
+        {/*  ★글이 길어 아래까지 내려오신 분을 위해 «한 번 더» 둡니다 */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
+          <button type="button" onClick={() => router.push('/mypage-new')}
+            style={{
+              flex: 1, padding: 12, borderRadius: 12, background: CARD,
+              border: `1px solid ${LINE}`, color: SUB, fontSize: 13,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}>내 정보로</button>
+          <button type="button" onClick={() => router.push('/home-new')}
+            style={{
+              flex: 1, padding: 12, borderRadius: 12, background: ACCENT,
+              border: 'none', color: '#fff', fontSize: 13, fontWeight: 600,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}>🏠 홈으로</button>
+        </div>
       </div>
     </main>
   )

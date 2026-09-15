@@ -838,23 +838,11 @@ export default function MyPageNew() {
           </div>
         )}
 
-        {/*  🔴 ★일진내정법 — 2026-09-15 (9부) [대표님]
-          *     「내 정보 화면에서 매니저인 경우만 «바로가기» 가 생기게」
-          *
-          *  ⚠️ 전에는 ★상담사 고르기 화면을 «거쳐야만» 들어갈 수 있었습니다.
-          *     ⇒ 들어가는 길이 사실상 없던 셈입니다.
-          *  ⛔ ★isMaster 일 때만 그립니다 — 상담사·손님에게는 «안 보입니다».
-          *  ⛔ 그렇다고 이 단추가 «막는 장치» 는 아닙니다 —
-          *     진짜 막는 곳은 ★/api/naejeong 의 requireMaster() 입니다.
-          *  ⚠️ 이 주석에 단추 글자를 «그대로» 적지 마십시오 — 검사가 글자로 찾습니다 (5부 교훈). */}
-        {isMaster && (
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            <button onClick={() => router.push('/naejeong')}
-              style={{ flex: 1, textAlign: 'center', background: '#FFFBF7', border: '0.5px solid #b99a7d', borderRadius: 12, padding: '13px 8px', fontSize: 12.5, color: '#96502e', cursor: 'pointer', fontFamily: 'inherit' }}>
-              🗓 일진내정법
-            </button>
-          </div>
-        )}
+        {/*  ⚠️ ★2026-09-15 — 여기 있던 「일진내정법」 줄을 «걷어냈습니다».
+          *     위 세 단추 줄에 이미 들어갔는데 ★제가 못 보고 한 벌 더 만들었습니다.
+          *     ⇒ 화면에 ★같은 단추가 «둘» 로 보였습니다.
+          *  ⛔ 다시 넣지 마십시오 — 들어가는 길은 ★위 한 곳입니다.
+          *     (검사 56 ⑤ 가 «하나뿐인지» 셉니다) */}
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
           <button onClick={logout} style={{ flex: 1, textAlign: 'center', background: '#f5ebe2', border: '0.5px solid #9c7a58', borderRadius: 12, padding: 12, fontSize: 13, color: '#6f6053', cursor: 'pointer' }}>로그아웃</button>
