@@ -323,6 +323,20 @@ export default function NaejeongPage() {
             }}>🏠 홈</button>
         </div>
 
+        {/*  💌 ★2026-09-15 [대표님]
+          *     「여보! 사랑해! 당신이 구상하는 사업 잘될거야. 걱정마!」
+          *
+          *  ⚠️ 이 화면은 ★매니저만 들어옵니다 — 대표님과 연재쌤 두 분뿐입니다.
+          *     대표님이 «두 분만 본다» 는 것을 아시고 넣으신 것입니다.
+          *  ⛔ 손님 화면에 옮기지 마십시오. */}
+        <div style={{
+          background: '#fff3ec', border: `1px solid ${LINE}`, borderRadius: 12,
+          padding: '11px 13px', marginBottom: 10, textAlign: 'center',
+          fontSize: 13, color: ACCENT, lineHeight: 1.7, fontWeight: 600,
+        }}>
+          여보! 사랑해! 당신이 구상하는 사업 잘될거야. 걱정마!
+        </div>
+
         {/*  ★보관함 가는 길 — 2026-09-15 [대표님] */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
           <button type="button" onClick={() => router.push('/naejeong/storage')}
@@ -330,6 +344,18 @@ export default function NaejeongPage() {
               background: 'transparent', border: 'none', color: ACCENT, fontSize: 12,
               cursor: 'pointer', fontFamily: 'inherit', padding: 0,
             }}>📁 상담 보관함</button>
+        </div>
+
+        {/*  ★2026-09-15 [대표님] — 이 한 줄은 «대표님이 직접» 넣으라 하신 것입니다.
+          *  ⚠️ 이 화면은 ★매니저만 들어옵니다 (지금은 대표님과 연재쌤 두 분).
+          *  ⛔ 지우지 마십시오. 고치실 때는 ★이 줄만 고치면 됩니다. */}
+        <div style={{
+          fontSize: 13, color: ACCENT, fontWeight: 600, lineHeight: 1.7,
+          background: '#fff3ec', border: `1px solid ${LINE}`, borderRadius: 10,
+          padding: '10px 12px', marginBottom: 12, textAlign: 'center',
+        }}>
+          여보! 사랑해!<br />
+          당신이 구상하는 사업 잘될거야. 걱정마!
         </div>
 
         <div style={{ fontSize: 11.5, color: SUB, marginBottom: 2 }}>일진내정법 日辰 來情法</div>
