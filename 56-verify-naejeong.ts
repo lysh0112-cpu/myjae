@@ -313,8 +313,16 @@ function main() {
     ok(/띠로 보는 오늘/.test(card), '★셋째 탭 이름이 있습니다')
     ok(/if \(tab !== 'tti' \|\| ttiData\) return/.test(card),
       '🔴 ⛔ ★탭을 «눌러야» 부르고, 한 번 받으면 «다시 안» 부릅니다')
-    ok(/saju\.find\(p => p\.pillar === '년주'\)\?\.branch/.test(card),
-      '★손님 사주가 있으면 띠를 «저절로» 채웁니다')
+    /*  ⛔ ★띠를 «저절로» 채우지 않습니다 [대표님 2026-09-15]
+     *     사주 연지는 ★입춘으로 갈려, 손님이 아시는 띠와 다를 수 있습니다.
+     *     (음 1966.1.12 = 양 2/2 ⇒ 입춘 전이라 연주 乙巳 = 뱀띠 · 손님은 범띠로 아심)
+     *  ⇒ 손님이 «직접» 고르시게 둡니다. */
+    ok(!/const myTti/.test(card) && !/ttiJi \|\| myTti/.test(card),
+      '⛔ ★띠를 «저절로» 채우지 않습니다 — 손님이 고르십니다 [대표님]')
+    ok(/const shownTti = ttiJi$/m.test(card),
+      '★고르신 띠만 씁니다')
+    ok(/위에서 띠를 골라 보세요/.test(card),
+      '★안 고르셨으면 «고르시라» 고 말합니다 (빈 화면을 안 둡니다)')
     ok(/ttiData\.note/.test(card),
       '⛔ ★순화했다는 것을 홈에서도 밝힙니다')
     ok(/이번 달 \(\{ttiData\.month\.wol\}월\)/.test(card),
