@@ -184,6 +184,23 @@ export default function NaejeongPage() {
    *   · 긴 말을 먼저 — 「해결신」 이 「해결」 로 «잘리지» 않게
    *   · ★밑줄은 «점선» 으로 옅게 — 글 읽기를 방해하지 않게
    *  ⚠️ 이 부품을 쓰지 «않는» 자리도 있습니다 (교재 원문을 그대로 두고 싶은 곳). */
+  /*  ★신궁 «이름» 을 누르게 만듭니다 (제목 줄용) — 2026-09-15 [대표님]
+   *  ⚠️ withTerms 는 «글 속» 낱말을 찾는 것이고,
+   *     이것은 ★«이름만 있는 자리»(제목 줄)에 씁니다. 둘은 쓰임이 다릅니다.
+   *  ⛔ 못 읽는 이름이면 «그냥 글자» 로 둡니다 — 눌러도 빈 창이 뜨면 안 됩니다. */
+  const sinButton = (name: string | null | undefined, style?: React.CSSProperties) => {
+    if (!name) return <span style={style}>—</span>
+    if (!isSinGungName(name)) return <span style={style}>{name}</span>
+    return (
+      <button type="button" onClick={() => setOpenSin(name as SinGung)}
+        style={{
+          background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
+          font: 'inherit', fontFamily: 'inherit', color: 'inherit',
+          borderBottom: `1px dotted ${ACCENT}`, ...style,
+        }}>{name}</button>
+    )
+  }
+
   const withTerms = (text: string) => {
     const hits = findTerms(text)
     if (hits.length === 0) return text
@@ -481,7 +498,9 @@ export default function NaejeongPage() {
                                       <div style={{ fontSize: 9.5, color: SUB }}>{k}</div>
                                       <div style={{ fontSize: 13, fontWeight: 700, color: INK }}>{gj}</div>
                                       {/*  ⛔ 교재가 «안 적은» 사례는 빈칸 — 지어내지 않습니다 */}
-                                      <div style={{ fontSize: 10, color: one ? ACCENT : '#c4b5a8' }}>{one ?? '—'}</div>
+                                      <div style={{ fontSize: 10, color: one ? ACCENT : '#c4b5a8' }}>
+                                        {sinButton(one)}
+                                      </div>
                                     </div>
                                   ))}
                                 </div>
@@ -576,7 +595,9 @@ export default function NaejeongPage() {
                                   <div key={k} style={{ border: `1px solid ${LINE}`, borderRadius: 8, padding: '6px 3px' }}>
                                     <div style={{ fontSize: 9.5, color: SUB }}>{k}</div>
                                     <div style={{ fontSize: 13, fontWeight: 700, color: INK }}>{gj}</div>
-                                    <div style={{ fontSize: 10, color: one ? ACCENT : '#c4b5a8' }}>{one ?? '—'}</div>
+                                    <div style={{ fontSize: 10, color: one ? ACCENT : '#c4b5a8' }}>
+                                      {sinButton(one)}
+                                    </div>
                                   </div>
                                 ))}
                               </div>
@@ -665,7 +686,9 @@ export default function NaejeongPage() {
                     <span style={{
                       fontSize: 13.5, fontWeight: 700,
                       color: h.good ? GOOD : BAD,
-                    }}>{h.sin}{h.hanja ? ` ${h.hanja}` : ''}</span>
+                    }}>
+                      {sinButton(h.sin)}{h.hanja ? ` ${h.hanja}` : ''}
+                    </span>
                   )}
                   {pickedJari.includes(h.jari) && (
                     <span style={{
@@ -740,7 +763,20 @@ export default function NaejeongPage() {
                 <>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
                     <span style={{ fontSize: 17, fontWeight: 700, color: INK }}>{data.unsi.ganji}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: ACCENT }}>{data.unsi.sipsung}</span>
+                    {/*  ⚠️ 이건 ★십성입니다 — 신궁이 «아닙니다». 용어 모달로 보냅니다. */}
+                    {isSipsungName(data.unsi.sipsung) ? (
+                      <button type="button"
+                        onClick={() => setOpenTerm({
+                          word: data.unsi!.sipsung, key: data.unsi!.sipsung, kind: 'sipsung',
+                        })}
+                        style={{
+                          background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
+                          fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: ACCENT,
+                          borderBottom: `1px dotted ${ACCENT}`,
+                        }}>{data.unsi.sipsung}</button>
+                    ) : (
+                      <span style={{ fontSize: 13, fontWeight: 700, color: ACCENT }}>{data.unsi.sipsung}</span>
+                    )}
                     <span style={{ fontSize: 11.5, color: SUB }}>{data.unsi.age}세부터</span>
                   </div>
                   {data.unsi.sipsungText && (
@@ -831,7 +867,7 @@ export default function NaejeongPage() {
                       background: '#fff', cursor: 'pointer', fontFamily: 'inherit',
                     }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: INK }}>{x.ji}</div>
-                    <div style={{ fontSize: 10.5, color: SUB }}>{x.sin}</div>
+                    <div style={{ fontSize: 10.5, color: SUB, borderBottom: `1px dotted ${LINE}` }}>{x.sin}</div>
                   </button>
                 ))}
               </div>
@@ -852,7 +888,7 @@ export default function NaejeongPage() {
                 border: `1px solid ${LINE}`, borderRadius: 10, padding: '10px 11px', marginBottom: 16,
               }}>
                 <div style={{ fontSize: 13, color: INK, marginBottom: data.tti.text ? 6 : 0 }}>
-                  {data.tti.ji} → <b>{data.tti.sin ?? '—'}</b>
+                  {data.tti.ji} → {sinButton(data.tti.sin, { fontWeight: 700 })}
                 </div>
                 {/*  ⛔ 교재 9쪽에 «줄이 없는» 신궁(상문·공망)은 ★사실대로 말합니다 */}
                 {data.tti.text
@@ -879,7 +915,7 @@ export default function NaejeongPage() {
                   }}>
                     <div style={{ fontSize: 12, marginBottom: m.text ? 5 : 0 }}>
                       <span style={{ color: SUB }}>음력 {m.wol}월 {m.ji}</span>
-                      <b style={{ marginLeft: 7, color: INK, fontSize: 13 }}>{m.sin}</b>
+                      {sinButton(m.sin, { marginLeft: 7, color: INK, fontSize: 13, fontWeight: 700 })}
                     </div>
                     {m.text && (
                       <div style={{ fontSize: 12.5, color: INK, lineHeight: 1.75 }}>{withTerms(m.text)}</div>
