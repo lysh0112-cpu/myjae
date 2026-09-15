@@ -309,19 +309,92 @@ export default function NaejeongPage() {
             ))}
           </div>
 
+          {/*  🔴 ★상담 목적 — 두 걸음으로 고릅니다 [대표님 2026-09-15]
+            *     ① 대분류를 누르면  ② 세부 질문이 «펼쳐집니다»
+            *  ⚠️ 세부는 ★«한 줄에 하나» 입니다 [대표님] —
+            *     「가게·사업을 접거나 업종을 바꿀지」 같이 긴 질문이 «안 잘립니다».
+            *  ⛔ 안 고르셔도 됩니다 — 그때는 네 자리가 «차례대로» 나옵니다. */}
+          <label style={{ fontSize: 12.5, fontWeight: 700, color: INK, display: 'block', margin: '14px 0 6px' }}>
+            상담 목적 <span style={{ fontWeight: 400, color: SUB, fontSize: 11 }}>(고르면 그 자리가 먼저 보여요)</span>
+          </label>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 6 }}>
+            {PURPOSES.map(g => {
+              const on = g.group === group
+              return (
+                <button key={g.group} type="button"
+                  onClick={() => {
+                    clear()
+                    //  ⛔ 대분류를 바꾸면 ★세부 질문을 «지웁니다» (옛 질문이 남으면 헷갈립니다)
+                    setPurpose('')
+                    setGroup(on ? '' : g.group)
+                  }}
+                  style={{
+                    padding: '10px 6px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
+                    fontSize: 12, lineHeight: 1.35,
+                    background: on ? '#f5e7dc' : '#fff',
+                    border: `1.5px solid ${on ? ACCENT : LINE}`,
+                    color: on ? ACCENT : '#55636f', fontWeight: on ? 700 : 400,
+                  }}>{g.group}</button>
+              )
+            })}
+          </div>
+
+          {/*  ★세부 질문 — 대분류를 «고르셨을 때만» 펼쳐집니다 */}
+          {group && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7,
+                fontSize: 11.5, color: SUB,
+              }}>
+                <span style={{ whiteSpace: 'nowrap' }}>{group}</span>
+                <span aria-hidden="true" style={{ flex: 1, height: 1, background: LINE }} />
+                {purpose && (
+                  <button type="button" onClick={() => { clear(); setPurpose('') }}
+                    style={{
+                      background: 'transparent', border: 'none', color: ACCENT,
+                      fontSize: 11.5, cursor: 'pointer', fontFamily: 'inherit', padding: 0,
+                    }}>지우기</button>
+                )}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {(PURPOSES.find(g => g.group === group)?.items ?? []).map(i => {
+                  const on = i.id === purpose
+                  return (
+                    <button key={i.id} type="button"
+                      onClick={() => { clear(); setPurpose(on ? '' : i.id) }}
+                      style={{
+                        padding: '11px 12px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
+                        textAlign: 'left', fontSize: 13, lineHeight: 1.45,
+                        background: on ? ACCENT : '#fff',
+                        border: `1px solid ${on ? ACCENT : LINE}`,
+                        color: on ? '#fff' : INK, fontWeight: on ? 600 : 400,
+                      }}>{i.label}</button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/*  🔴 ★교재에서 찾기 — 2026-09-15 [대표님]
+            *
+            *  ⚠️ ★차례를 «바꿨습니다» (2026-09-15) —
+            *     처음에는 이것이 «위» 에 있었는데, 대표님이 써 보시고
+            *     ★「써 보니 이상하다」 고 하셨습니다.
+            *     ⇒ ★«넓은 갈래를 먼저 고르고, 없을 때 찾는» 것이 자연스럽습니다.
+            *     ⛔ 다시 위로 올리지 마십시오.
             *  ⚠️ 손님 말은 ★«주소에 싣지도 저장하지도» 않습니다 (7부 ⛔ 교훈).
             *     그 자리에서 찾고 «버립니다».
             *  ⛔ 못 찾으면 ★「못 찾았어요」 라고 합니다 — «가장 가까운 것» 을 억지로 안 내밉니다. */}
           <label style={{ fontSize: 12.5, fontWeight: 700, color: INK, display: 'block', margin: '14px 0 6px' }}>
-            교재에서 찾기 <span style={{ fontWeight: 400, color: SUB, fontSize: 11 }}>(손님 말을 그대로 적어 보세요)</span>
+            교재에서 찾기 <span style={{ fontWeight: 400, color: SUB, fontSize: 11 }}>(위에 없는 질문이면 여기에)</span>
           </label>
           <div style={{ display: 'flex', gap: 6 }}>
             <input
               value={q}
               onChange={e => setQ(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') setFound(lookup(q)) }}
-              placeholder="아들이 유학 간다는데 형편이…"
+              placeholder="손님 말을 그대로 — 아들이 유학 간다는데…"
               style={{ ...inputStyle, flex: 1 }}
             />
             <button type="button" onClick={() => setFound(lookup(q))}
@@ -336,7 +409,7 @@ export default function NaejeongPage() {
             <div style={{ marginTop: 8 }}>
               {found.length === 0 ? (
                 <div style={{ fontSize: 12.5, color: SUB, lineHeight: 1.7 }}>
-                  교재에서 못 찾았어요. 아래 대분류에서 골라 보세요.
+                  교재에서 못 찾았어요. 위 대분류에서 골라 보세요.
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -525,73 +598,6 @@ export default function NaejeongPage() {
                   </div>
                 )
               })}
-            </div>
-          )}
-
-          {/*  🔴 ★상담 목적 — 두 걸음으로 고릅니다 [대표님 2026-09-15]
-            *     ① 대분류를 누르면  ② 세부 질문이 «펼쳐집니다»
-            *  ⚠️ 세부는 ★«한 줄에 하나» 입니다 [대표님] —
-            *     「가게·사업을 접거나 업종을 바꿀지」 같이 긴 질문이 «안 잘립니다».
-            *  ⛔ 안 고르셔도 됩니다 — 그때는 네 자리가 «차례대로» 나옵니다. */}
-          <label style={{ fontSize: 12.5, fontWeight: 700, color: INK, display: 'block', margin: '14px 0 6px' }}>
-            상담 목적 <span style={{ fontWeight: 400, color: SUB, fontSize: 11 }}>(고르면 그 자리가 먼저 보여요)</span>
-          </label>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 6 }}>
-            {PURPOSES.map(g => {
-              const on = g.group === group
-              return (
-                <button key={g.group} type="button"
-                  onClick={() => {
-                    clear()
-                    //  ⛔ 대분류를 바꾸면 ★세부 질문을 «지웁니다» (옛 질문이 남으면 헷갈립니다)
-                    setPurpose('')
-                    setGroup(on ? '' : g.group)
-                  }}
-                  style={{
-                    padding: '10px 6px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
-                    fontSize: 12, lineHeight: 1.35,
-                    background: on ? '#f5e7dc' : '#fff',
-                    border: `1.5px solid ${on ? ACCENT : LINE}`,
-                    color: on ? ACCENT : '#55636f', fontWeight: on ? 700 : 400,
-                  }}>{g.group}</button>
-              )
-            })}
-          </div>
-
-          {/*  ★세부 질문 — 대분류를 «고르셨을 때만» 펼쳐집니다 */}
-          {group && (
-            <div style={{ marginTop: 10 }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7,
-                fontSize: 11.5, color: SUB,
-              }}>
-                <span style={{ whiteSpace: 'nowrap' }}>{group}</span>
-                <span aria-hidden="true" style={{ flex: 1, height: 1, background: LINE }} />
-                {purpose && (
-                  <button type="button" onClick={() => { clear(); setPurpose('') }}
-                    style={{
-                      background: 'transparent', border: 'none', color: ACCENT,
-                      fontSize: 11.5, cursor: 'pointer', fontFamily: 'inherit', padding: 0,
-                    }}>지우기</button>
-                )}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {(PURPOSES.find(g => g.group === group)?.items ?? []).map(i => {
-                  const on = i.id === purpose
-                  return (
-                    <button key={i.id} type="button"
-                      onClick={() => { clear(); setPurpose(on ? '' : i.id) }}
-                      style={{
-                        padding: '11px 12px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
-                        textAlign: 'left', fontSize: 13, lineHeight: 1.45,
-                        background: on ? ACCENT : '#fff',
-                        border: `1px solid ${on ? ACCENT : LINE}`,
-                        color: on ? '#fff' : INK, fontWeight: on ? 600 : 400,
-                      }}>{i.label}</button>
-                  )
-                })}
-              </div>
             </div>
           )}
 
