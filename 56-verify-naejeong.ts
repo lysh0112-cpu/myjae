@@ -744,6 +744,27 @@ function main() {
       '⚠️ ★운시 십성은 «용어» 모달로 갑니다 (신궁이 아닙니다)')
     ok(/if \(!isSinGungName\(name\)\) return <span/.test(page3),
       '⛔ ★못 읽는 이름은 «그냥 글자» 로 둡니다 (눌러도 빈 창이 뜨면 안 됩니다)')
+
+    /*  🔴 ★사주 원국표 — 2026-09-15 [연재쌤 요청]
+     *     「우리가 만들어 놓은 사주명식을 넣어 달라」
+     *  ⛔ ★공용 부품을 씁니다 — 새로 짓지 않았습니다 (8부 §6④). */
+    ok(/<SajuWonguk/.test(page3), '🔴 ★사주 원국표가 있습니다 [연재쌤]')
+    ok(/from '@\/app\/manseryeok\/components\/SajuWonguk'/.test(page3),
+      '⛔ ★공용 부품을 씁니다 (만세력·진로적성과 «같은 표»)')
+    //  ⛔ 태어난 시를 모르면 시주를 «빼고» 넘깁니다 — 가짜 글자를 넣으면 십성이 틀립니다
+    ok(/data\.saju\.si\s*\n?\s*\? \[\{ pillar: '시주'/.test(page3),
+      '⛔ ★시를 모르면 시주를 «빼고» 그립니다 (가짜 글자를 안 넣습니다)')
+    ok(/태어난 시를 몰라 시주는 빼고 그렸어요/.test(page3),
+      '★그 까닭을 «말해» 줍니다')
+    //  ⛔ 옛 «네 기둥 카드» 와 겹치지 않는가
+    ok(!/\['연주', data\.saju\.yeon\]/.test(page3),
+      '⛔ ★옛 네 기둥 카드를 «걷어냈습니다» — 같은 것이 두 번 보였습니다')
+    //  ★차례 — 원국표가 «문점일 위»
+    {
+      const iW = page3.indexOf('<SajuWonguk')
+      const iM = page3.indexOf('문점일 <b')
+      ok(iW > 0 && iM > iW, '★차례가 «원국표 → 문점일» 입니다 [연재쌤 자리]')
+    }
   }
 
   console.log(`\n━━ 일진내정법 — 통과 ${pass} · 실패 ${fail} ━━\n`)

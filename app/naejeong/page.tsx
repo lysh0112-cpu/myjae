@@ -40,6 +40,8 @@ import { YUKCHIN_TABLE, type YukchinKey } from '@/lib/saju/yukchinTable'
 import { findSal, salLines } from '@/lib/saju/sinsalTable'
 //  ★12신살 — 교재 441~454쪽 (⛔ 또 다른 책입니다)
 import { SINSAL12 } from '@/lib/saju/somu/topics/sinsal12'
+//  ★사주 원국표 — ⛔ 공용 부품입니다. 새로 짓지 마십시오 (8부 §6④)
+import SajuWonguk from '@/app/manseryeok/components/SajuWonguk'
 
 const ONLY: AppRole[] = ['master']
 
@@ -634,20 +636,48 @@ export default function NaejeongPage() {
 
         {data && (
           <>
-            {/* ── 문점일 · 사주 ── */}
-            <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: 14, marginBottom: 14 }}>
-              <div style={{ fontSize: 12.5, color: SUB, marginBottom: 8 }}>
+            {/*  🔴 ★사주 원국표 — 2026-09-15 [연재쌤 요청, 대표님 전달]
+              *     「우리가 만들어 놓은 사주명식을 넣어 달라」
+              *
+              *  ⛔ ★공용 부품(SajuWonguk)을 «그대로» 씁니다 — 새로 짓지 않았습니다.
+              *     ⇒ 만세력·진로적성과 «같은 표» 라 눈에 익으십니다.
+              *  ⚠️ ★태어난 시를 모르면 시주를 «빼고» 넘깁니다 —
+              *     ⛔ '?' 같은 가짜 글자를 넣지 마십시오. 십성이 엉뚱하게 나옵니다.
+              *  ⚠️ 부품이 ★«시→일→월→연» 차례를 받습니다 (교재 차례와 같습니다). */}
+            {(() => {
+              const P = [
+                ...(data.saju.si
+                  ? [{ pillar: '시주', stem: data.saju.si[0], branch: data.saju.si[1] }]
+                  : []),
+                { pillar: '일주', stem: data.saju.il[0], branch: data.saju.il[1] },
+                { pillar: '월주', stem: data.saju.wol[0], branch: data.saju.wol[1] },
+                { pillar: '년주', stem: data.saju.yeon[0], branch: data.saju.yeon[1] },
+              ]
+              return (
+                <div style={{ marginBottom: 14 }}>
+                  <SajuWonguk
+                    saju={P}
+                    dayStem={data.saju.il[0]}
+                    yeonjji={data.saju.yeon[1]}
+                    iljji={data.saju.il[1]}
+                  />
+                  {!data.saju.si && (
+                    <div style={{ fontSize: 11, color: SUB, marginTop: 6, lineHeight: 1.6 }}>
+                      태어난 시를 몰라 시주는 빼고 그렸어요.
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+
+            {/*  ── 문점일 ──
+              *  ⚠️ ★2026-09-15 — 여기 있던 «네 기둥 카드» 를 걷어냈습니다.
+              *     ★위 원국표에 «더 자세히» 나오므로 같은 것이 «두 번» 보였습니다.
+              *  ⛔ 다시 넣지 마십시오. 문점일 한 줄만 남깁니다. */}
+            <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: '11px 14px', marginBottom: 14 }}>
+              <div style={{ fontSize: 12.5, color: SUB }}>
                 문점일 <b style={{ color: INK, fontSize: 15 }}>{data.mun.ganji}</b>
                 <span style={{ marginLeft: 8 }}>강일진 <b style={{ color: ACCENT }}>{data.mun.ilJi}</b></span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, textAlign: 'center' }}>
-                {([['연주', data.saju.yeon], ['월주', data.saju.wol], ['일주', data.saju.il], ['시주', data.saju.si]] as const)
-                  .map(([k, v]) => (
-                    <div key={k} style={{ border: `1px solid ${LINE}`, borderRadius: 10, padding: '8px 4px' }}>
-                      <div style={{ fontSize: 10.5, color: SUB }}>{k}</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: v ? INK : '#c4b5a8' }}>{v ?? '—'}</div>
-                    </div>
-                  ))}
               </div>
             </div>
 
