@@ -428,7 +428,22 @@ function main() {
     //  🔴 화면 — 고르면 «맨 위 + 강조»
     const page = R('app/naejeong/page.tsx')
     ok(/const \[purpose, setPurpose\]/.test(page), '★화면에 상담 목적 고르기가 있습니다')
-    ok(/<optgroup/.test(page), '★대분류로 묶여 있습니다')
+
+    /*  🔴 ★두 걸음으로 고릅니다 [대표님 2026-09-15]
+     *     ① 대분류를 누르면 ② 세부가 펼쳐집니다.
+     *  ⛔ 옛 «드롭다운» 으로 되돌리지 마십시오 — 27개가 한꺼번에 떴습니다. */
+    ok(/const \[group, setGroup\]/.test(page), '🔴 ★대분류를 «따로» 고릅니다 [대표님]')
+    ok(!/<optgroup/.test(page), '⛔ ★옛 드롭다운(optgroup)으로 되돌아가지 않았습니다')
+    ok(/\{group && \(/.test(page),
+      '★세부 질문은 대분류를 «고르셨을 때만» 펼쳐집니다')
+    ok(/setGroup\(on \? '' : g\.group\)/.test(page),
+      '★같은 대분류를 다시 누르면 접힙니다')
+    //  ⛔ 대분류를 바꾸면 세부를 «지워야» 합니다
+    ok(/setPurpose\(''\)\s*\n\s*setGroup/.test(page),
+      '🔴 ⛔ ★대분류를 바꾸면 «앞서 고른 질문» 을 지웁니다 (헷갈리지 않게)')
+    ok(/flexDirection: 'column', gap: 6/.test(page),
+      '★세부는 «한 줄에 하나» 입니다 [대표님] — 긴 질문이 안 잘립니다')
+    ok(/지우기/.test(page), '★고른 것을 «지우는» 길이 있습니다')
     ok(/const sortedHits/.test(page) && /pickedJari\.indexOf/.test(page),
       '🔴 ★고른 자리가 «맨 위» 로 올라옵니다 [대표님]')
     ok(/pickedJari\.includes\(h\.jari\) \? `2px solid \$\{ACCENT\}`/.test(page),

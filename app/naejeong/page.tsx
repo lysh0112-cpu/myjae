@@ -89,6 +89,10 @@ export default function NaejeongPage() {
    *     고르면 ★그 «자리» 가 맨 위로 올라오고 테두리로 도드라집니다.
    *  ⛔ 안 고르셔도 됩니다 — 그때는 연지→월지→일지→시지 «차례대로» 나옵니다. */
   const [purpose, setPurpose] = useState<string>('')
+  /*  ★대분류 — 2026-09-15 [대표님 「큰 카테고리를 고르면 서브가 생겨서 터치」]
+   *  ⛔ 대분류를 바꾸면 ★앞서 고른 세부 질문을 «지웁니다» —
+   *     안 지우면 «재정» 에서 고른 것이 «애정» 갈래에 남아 헷갈립니다. */
+  const [group, setGroup] = useState<string>('')
   const [data, setData] = useState<Out | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -238,18 +242,72 @@ export default function NaejeongPage() {
             ))}
           </div>
 
+          {/*  🔴 ★상담 목적 — 두 걸음으로 고릅니다 [대표님 2026-09-15]
+            *     ① 대분류를 누르면  ② 세부 질문이 «펼쳐집니다»
+            *  ⚠️ 세부는 ★«한 줄에 하나» 입니다 [대표님] —
+            *     「가게·사업을 접거나 업종을 바꿀지」 같이 긴 질문이 «안 잘립니다».
+            *  ⛔ 안 고르셔도 됩니다 — 그때는 네 자리가 «차례대로» 나옵니다. */}
           <label style={{ fontSize: 12.5, fontWeight: 700, color: INK, display: 'block', margin: '14px 0 6px' }}>
             상담 목적 <span style={{ fontWeight: 400, color: SUB, fontSize: 11 }}>(고르면 그 자리가 먼저 보여요)</span>
           </label>
-          {/*  ⛔ ★안 고르셔도 됩니다 — 그때는 네 자리가 «차례대로» 나옵니다. */}
-          <select value={purpose} onChange={e => { clear(); setPurpose(e.target.value) }} style={inputStyle}>
-            <option value="">고르지 않음 (네 자리를 차례대로)</option>
-            {PURPOSES.map(g => (
-              <optgroup key={g.group} label={g.group}>
-                {g.items.map(i => <option key={i.id} value={i.id}>{i.label}</option>)}
-              </optgroup>
-            ))}
-          </select>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 6 }}>
+            {PURPOSES.map(g => {
+              const on = g.group === group
+              return (
+                <button key={g.group} type="button"
+                  onClick={() => {
+                    clear()
+                    //  ⛔ 대분류를 바꾸면 ★세부 질문을 «지웁니다» (옛 질문이 남으면 헷갈립니다)
+                    setPurpose('')
+                    setGroup(on ? '' : g.group)
+                  }}
+                  style={{
+                    padding: '10px 6px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
+                    fontSize: 12, lineHeight: 1.35,
+                    background: on ? '#f5e7dc' : '#fff',
+                    border: `1.5px solid ${on ? ACCENT : LINE}`,
+                    color: on ? ACCENT : '#55636f', fontWeight: on ? 700 : 400,
+                  }}>{g.group}</button>
+              )
+            })}
+          </div>
+
+          {/*  ★세부 질문 — 대분류를 «고르셨을 때만» 펼쳐집니다 */}
+          {group && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7,
+                fontSize: 11.5, color: SUB,
+              }}>
+                <span style={{ whiteSpace: 'nowrap' }}>{group}</span>
+                <span aria-hidden="true" style={{ flex: 1, height: 1, background: LINE }} />
+                {purpose && (
+                  <button type="button" onClick={() => { clear(); setPurpose('') }}
+                    style={{
+                      background: 'transparent', border: 'none', color: ACCENT,
+                      fontSize: 11.5, cursor: 'pointer', fontFamily: 'inherit', padding: 0,
+                    }}>지우기</button>
+                )}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {(PURPOSES.find(g => g.group === group)?.items ?? []).map(i => {
+                  const on = i.id === purpose
+                  return (
+                    <button key={i.id} type="button"
+                      onClick={() => { clear(); setPurpose(on ? '' : i.id) }}
+                      style={{
+                        padding: '11px 12px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
+                        textAlign: 'left', fontSize: 13, lineHeight: 1.45,
+                        background: on ? ACCENT : '#fff',
+                        border: `1px solid ${on ? ACCENT : LINE}`,
+                        color: on ? '#fff' : INK, fontWeight: on ? 600 : 400,
+                      }}>{i.label}</button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           <button type="button" onClick={run} disabled={busy}
             style={{
