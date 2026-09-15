@@ -25,6 +25,7 @@ import { PURPOSES, SINSAL_DIR, findPurpose } from './lib/saju/naejeong/tables/pu
 import { lookup, LOOKUP_ALL, LOOKUP_CASE } from './lib/saju/naejeong/tables/lookup'
 import { CASE_TEXT, caseTextOf, caseLinesFor } from './lib/saju/naejeong/tables/caseText'
 import { getSinsal } from './lib/saju/sinsal'
+import { chongpyeong } from './lib/saju/naejeong/sinGung'
 import { findTerms, TERM_SRC } from './lib/saju/naejeong/tables/terms'
 import { YUKCHIN_KEYS } from './lib/saju/yukchinTable'
 
@@ -735,8 +736,10 @@ function main() {
      *     띠로 보는 오늘 · 달로 보는 한 해 · 네 자리 제목 ·
      *     사례 네 기둥(찾기 결과 · 모두 보기) ★둘
      *  ⛔ 이 수를 «어림» 으로 적지 마십시오. 9부에 6이라 적었다가 틀렸습니다. */
-    ok((page3.match(/sinButton\(/g) ?? []).length === 5,
-      `★띠·달·자리별·사례 네 기둥 «다섯» 자리에 붙었습니다 (${(page3.match(/sinButton\(/g) ?? []).length})`)
+    /*  ⚠️ ★붙는 자리 — 띠 · 달 · 자리별 제목 · 사례 네 기둥 둘 · ★종합 리포트
+     *  ⛔ 자리가 늘면 이 수도 «함께» 고치십시오. 어림으로 적지 마십시오. */
+    ok((page3.match(/sinButton\(/g) ?? []).length === 6,
+      `★여섯 자리에 붙었습니다 (${(page3.match(/sinButton\(/g) ?? []).length})`)
     ok(/sinButton\(data\.tti\.sin/.test(page3), '★「띠로 보는 오늘」 의 신궁이 눌립니다')
     ok(/sinButton\(m\.sin/.test(page3), '★「달로 보는 한 해」 의 신궁이 눌립니다')
     ok(/sinButton\(h\.sin\)/.test(page3), '★네 자리 제목의 신궁이 눌립니다')
@@ -765,6 +768,81 @@ function main() {
       const iM = page3.indexOf('문점일 <b')
       ok(iW > 0 && iM > iW, '★차례가 «원국표 → 문점일» 입니다 [연재쌤 자리]')
     }
+  }
+
+  /* ══ ⑮ 🔴🔴 종합 리포트 · 메모 · 보관함 — 2026-09-15 [대표님] ═════
+   *  ㉮ 자동 — 원국을 «읽어» 냅니다. ⛔ 지어낸 것이 «하나도» 없습니다.
+   *  ㉯ 메모 — 연재쌤이 상담 중에 적으시는 자리.
+   *  ③ 보관함 — 담고 다시 봅니다.
+   * ══════════════════════════════════════════════════════════════ */
+  head('⑮ 🔴🔴 종합 리포트 · 상담 메모 · 보관함')
+  {
+    const page = R('app/naejeong/page.tsx')
+    const store = R('app/naejeong/storage/page.tsx')
+
+    /*  🔴 ★총괄 줄은 «세어» 낸 것입니다 — 교재가 실제로 쓰는 말투
+     *     「4支가 모두 좋은 신궁이다」(6건) · 「해결신이 원국에 없다」(9건) 등 */
+    {
+      //  교재 20쪽 — 모두 좋은 신궁
+      const a1 = chongpyeong(judgeWonguk('酉', { yeon: '酉', wol: '巳', il: '戌', si: '子' }))
+      ok(a1.lines[0] === '4지가 모두 좋은 신궁입니다.' && a1.hasHaegyeol,
+        `★교재 20쪽(모두 좋은 신궁)과 같은 말이 나옵니다 — ${a1.lines[0]}`)
+      //  교재 20쪽 — 모두 나쁜 신궁 · 해결신 없음
+      const a2 = chongpyeong(judgeWonguk('未', { yeon: '午', wol: '辰', il: '子', si: '寅' }))
+      ok(a2.lines[0] === '4지가 모두 나쁜 신궁입니다.' && !a2.hasHaegyeol,
+        '★교재 20쪽(모두 나쁜 · 해결신 없음)과 같습니다')
+      //  ⛔ 시를 모르면 «세 자리» 로 — 지어내지 않습니다
+      const a3 = chongpyeong(judgeWonguk('辰', { yeon: '丑', wol: '子', il: '子', si: null }))
+      ok(a3.total === 3 && a3.lines.some(l => /세 자리만 보았습니다/.test(l)),
+        '⛔ ★시를 모르면 «세 자리» 로 세고 그 사실을 밝힙니다')
+      //  ★겹친 신궁 — 교재 「2개나 있으므로」
+      ok(a3.repeated.some(r => r.sin === '해결' && r.count === 2),
+        '★겹친 신궁을 셉니다 (교재 「2개나 있으므로」)')
+    }
+    ok(/chongpyeong\(hits\)/.test(R('app/api/naejeong/route.ts')),
+      '★창구가 총괄을 실어 보냅니다')
+    ok(/종합 내정 리포트/.test(page), '🔴 ★종합 내정 리포트가 있습니다 [대표님]')
+
+    //  ★차례 — 원국표 → 리포트 → 메모 → 문점일
+    {
+      /*  ⛔ ★«주석» 을 세면 안 됩니다 — 파일 위쪽 주석에도 「상담 메모」 가 있어
+       *     9부에 ★차례가 틀린 것처럼 보였습니다. 오늘 두 번째로 밟은 자리입니다. */
+      const live = page.split('\n')
+        .filter(l => !/^\s*(\/\/|\*|\/\*|\{\/\*)/.test(l)).join('\n')
+      const iW = live.indexOf('<SajuWonguk')
+      const iR = live.indexOf('종합 내정 리포트')
+      const iM = live.indexOf('상담 메모')
+      const iMun = live.indexOf('문점일 <b')
+      ok(iW > 0 && iR > iW && iM > iR && iMun > iM,
+        `🔴 ★차례가 «원국표 → 리포트 → 메모 → 문점일» 입니다 [대표님] (${iW}/${iR}/${iM}/${iMun})`)
+    }
+
+    //  🔴 ㉯ 메모
+    ok(/const \[memo, setMemo\]/.test(page) && /<textarea/.test(page),
+      '🔴 ★상담 메모 칸이 있습니다 [대표님]')
+
+    //  🔴 보관함
+    ok(/saveRecord\(\{/.test(page) && /serviceType: 'naejeong'/.test(page),
+      '🔴 ★보관함에 담습니다')
+    ok(/listRecordsByService\('naejeong', true\)/.test(store),
+      '⛔ ★result_data 를 «함께» 싣습니다 (8부 하락이수가 빠뜨렸던 자리)')
+    ok(/useRoleGate\(ONLY\)/.test(store) && /'master'/.test(store),
+      '⛔ ★보관함도 매니저만 봅니다')
+    ok(/naejeong\/storage/.test(page), '★보관함 가는 길이 있습니다')
+
+    /*  ⛔⛔ [개인정보] ★손님 «이름» 을 안 받고 주소에 안 싣습니다 (7부 교훈) */
+    ok(/const title = `\$\{d\.getMonth\(\) \+ 1\}\/\$\{d\.getDate\(\)\} · \$\{data\.saju\.il\}생`/.test(page),
+      '⛔ ★딱지를 «사주로만» 적습니다 (손님 이름을 안 넣습니다)')
+    ok(!/memo=\$\{/.test(page) && !/set\('memo'/.test(page),
+      '⛔ ★메모를 «주소에» 싣지 않습니다')
+    ok(/손님 이름은 따로 받지 않습니다/.test(page),
+      '★손님께도 그 사실을 밝혀 둡니다')
+    ok(/손님 사주와 상담 메모가 담겨 있으니/.test(store),
+      '⚠️ ★보관함이 «개인정보가 있음» 을 알립니다')
+
+    //  ⛔ 담기 «전» 에는 서버에 안 갑니다
+    ok(/저장하기 «전» 에는 서버에 안 갑니다|저장하기 «전» 에는 서버에 «안» 갑니다/.test(page),
+      '⚠️ ★담기 전에는 서버에 «안» 간다는 것을 적어 두었습니다')
   }
 
   console.log(`\n━━ 일진내정법 — 통과 ${pass} · 실패 ${fail} ━━\n`)

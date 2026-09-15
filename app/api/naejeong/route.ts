@@ -26,7 +26,7 @@ import { requireMaster } from '../admin/_guard'
 import { getDayGanji, getYearGanji, getMonthGanji } from '@/lib/saju/ganji'
 import { calcHourPillar } from '@/lib/saju/hourPillar'
 import { solarToLunarKR, lunarToSolarKR, lunarRangeKR } from '@/lib/saju/koreanLunarTable'
-import { judgeWonguk, sinGungTable, sinGungByMonth, sinGungOf, JARI_MEANING } from '@/lib/saju/naejeong/sinGung'
+import { judgeWonguk, sinGungTable, sinGungByMonth, sinGungOf, JARI_MEANING, chongpyeong } from '@/lib/saju/naejeong/sinGung'
 import { SINGUNG_TEXT } from '@/lib/saju/naejeong/tables/sinGungText'
 //  ★교재 9쪽(띠로 보는 오늘) · 10~11쪽(달로 보는 한 해) 글
 import { TTI_TEXT, WOL_TEXT } from '@/lib/saju/naejeong/tables/dayYearText'
@@ -173,6 +173,11 @@ export async function POST(req: Request) {
         lunar: solarToLunarKR(sy, sm, sd),
       },
       hits: dressed,
+      /**
+       * ★총괄 — 네 자리를 «세어» 낸 줄들 (2026-09-15 · 9부)
+       * ⛔ 지어낸 것이 «아닙니다» — 교재 사례가 실제로 쓰는 말입니다.
+       */
+      chongpyeong: chongpyeong(hits),
       /** 열두 지지 표 — 교재 3쪽 */
       table: sinGungTable(ilJi).map(x => ({ ...x, good: SINGUNG_TEXT[x.sin] ? undefined : undefined })),
       /**

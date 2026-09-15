@@ -131,3 +131,66 @@ export const WOL_JI: Jiji[] = ['寅', '卯', '辰', '巳', '午', '未', '申', 
 export function sinGungByMonth(ilJi: string): { wol: number; ji: Jiji; sin: SinGung | null }[] {
   return WOL_JI.map((ji, i) => ({ wol: i + 1, ji, sin: sinGungOf(ilJi, ji) }))
 }
+
+/* ══════════════════════════════════════════════════════════════════
+ *  ★총괄 — 네 자리를 «세어» 한 줄로  · 2026-09-15 (9부)
+ *  [대표님] 「사주원국을 읽어 총괄 문구를 지어냄 없이 100% 교재 그대로」
+ *
+ *  ⛔⛔ ★지어내는 것이 «아닙니다» — 교재 사례가 «실제로 쓰는» 말입니다 —
+ *     「4支가 모두 좋은 신궁이다」            교재 20·29쪽 등 ★6건
+ *     「4 지지중 3 지가 괜찮은 신궁이다」      교재 49·53쪽 ★2건
+ *     「해결신이 원국에 없다. 합격이 힘들겠다」  교재 20·48쪽 등 ★9건
+ *     「천록(양인)인 卯가 원국에 2개나 있으므로」 교재 12·54쪽 ★2건
+ *  ⇒ ★«세면» 나오는 것만 담았습니다. 사람이 판단한 말은 ⛔ 안 담았습니다.
+ *
+ *  ⚠️ 태어난 시를 모르면 ★«세 자리» 로 셉니다 (시지를 지어내지 않습니다).
+ * ══════════════════════════════════════════════════════════════════ */
+
+export interface Chongpyeong {
+  /** 본 자리 수 — 시를 모르면 3 */
+  total: number
+  good: number
+  bad: number
+  /** 해결신이 원국에 있는가 — 교재가 «합격·매매» 를 볼 때 가장 먼저 봅니다 */
+  hasHaegyeol: boolean
+  /** 두 자리 이상 겹친 신궁 — 교재 「2개나 있으므로」 */
+  repeated: { sin: SinGung; count: number }[]
+  /** 교재 말투로 만든 줄들 — ⛔ 모두 «셈» 에서 나온 것입니다 */
+  lines: string[]
+}
+
+export function chongpyeong(hits: JariHit[]): Chongpyeong {
+  const seen = hits.filter(h => h.sin !== null)
+  const total = seen.length
+  const good = seen.filter(h => h.good === true).length
+  const bad = total - good
+  const hasHaegyeol = seen.some(h => h.sin === '해결')
+
+  //  ★겹친 신궁 — 교재 「卯가 원국에 2개나 있으므로」
+  const cnt = new Map<SinGung, number>()
+  for (const h of seen) if (h.sin) cnt.set(h.sin, (cnt.get(h.sin) ?? 0) + 1)
+  const repeated = [...cnt.entries()]
+    .filter(([, c]) => c >= 2)
+    .map(([sin, count]) => ({ sin, count }))
+    .sort((a, b) => b.count - a.count)
+
+  const lines: string[] = []
+  const jaStr = total === 4 ? '4지' : `${total}지`
+
+  //  ⚠️ 교재 말투 그대로 — 「모두」 · 「중 몇 지가」
+  if (total > 0) {
+    if (good === total) lines.push(`${jaStr}가 모두 좋은 신궁입니다.`)
+    else if (bad === total) lines.push(`${jaStr}가 모두 나쁜 신궁입니다.`)
+    else lines.push(`${jaStr} 중 ${good}지가 좋은 신궁이고 ${bad}지가 나쁜 신궁입니다.`)
+  }
+  //  ★해결신 — 교재가 가장 자주 짚는 자리
+  lines.push(hasHaegyeol
+    ? '해결신이 원국에 있습니다.'
+    : '해결신이 원국에 없습니다.')
+  //  ★겹친 것
+  for (const r of repeated) lines.push(`${r.sin}이 원국에 ${r.count}개 있습니다.`)
+  //  ⚠️ 시를 모를 때는 «그 사실» 을 밝힙니다
+  if (total < 4) lines.push('태어난 시를 몰라 세 자리만 보았습니다.')
+
+  return { total, good, bad, hasHaegyeol, repeated, lines }
+}

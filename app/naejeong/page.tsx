@@ -42,6 +42,8 @@ import { findSal, salLines } from '@/lib/saju/sinsalTable'
 import { SINSAL12 } from '@/lib/saju/somu/topics/sinsal12'
 //  ★사주 원국표 — ⛔ 공용 부품입니다. 새로 짓지 마십시오 (8부 §6④)
 import SajuWonguk from '@/app/manseryeok/components/SajuWonguk'
+//  ★보관함 — ⛔ 공용 부품입니다 (다른 서비스 열다섯이 같은 것을 씁니다)
+import { saveRecord } from '@/lib/saju/sajuRecords'
 
 const ONLY: AppRole[] = ['master']
 
@@ -79,6 +81,8 @@ interface Out {
     samhap: string[]
   } | null
   unsiNote: Record<string, string>
+  /** ★총괄 — 네 자리를 «세어» 낸 줄들 (9부) */
+  chongpyeong: { total: number; good: number; bad: number; hasHaegyeol: boolean; lines: string[] }
   months: { wol: number; ji: string; sin: string | null; text: string | null }[]
 }
 
@@ -126,6 +130,12 @@ export default function NaejeongPage() {
   const [openSin, setOpenSin] = useState<SinGung | null>(null)
   /*  ★본문에서 누른 용어 — 12신궁·십성·신살 셋 다 옵니다 */
   const [openTerm, setOpenTerm] = useState<TermHit | null>(null)
+  /*  🔴 ★상담 메모 — 2026-09-15 [대표님]
+   *     「연재쌤이 상담 중 자유롭게 실전 통변과 특이사항을 기록」
+   *  ⛔ 손님 «이름» 은 받지 않습니다. 메모에 적으실지는 연재쌤 판단입니다.
+   *  ⚠️ 저장하기 «전» 에는 서버에 안 갑니다 — 화면에만 있습니다. */
+  const [memo, setMemo] = useState('')
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle')
   const [data, setData] = useState<Out | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -231,6 +241,48 @@ export default function NaejeongPage() {
     return <>{out}</>
   }
 
+  /*  🔴 ★보관함에 담기 — 2026-09-15 [대표님]
+   *
+   *  ⛔⛔ [개인정보]  손님의 «생년월일» 과 «상담 메모» 가 서버에 남습니다.
+   *     · ★손님 «이름» 은 «안» 받습니다 — 딱지를 «사주로만» 적습니다.
+   *     · ⛔ 메모를 ★«주소에» 싣지 않습니다 (7부 교훈).
+   *     · ⚠️ 연재쌤 계정에 쌓입니다 — 다른 사람은 못 봅니다(saju_records).
+   *  ⛔ 딱지에 손님 이름을 넣지 마십시오. 검사 56 ⑮ 가 지킵니다. */
+  const save = useCallback(async () => {
+    if (!data) return
+    setSaveState('saving')
+    try {
+      //  ★딱지 — 「9/15 · 丁丑생 · 여」 처럼 «사주로만»
+      const d = new Date()
+      const title = `${d.getMonth() + 1}/${d.getDate()} · ${data.saju.il}생`
+        + (gender ? ` · ${gender}` : '')
+      const r = await saveRecord({
+        serviceType: 'naejeong',
+        title,
+        inputData: {
+          birthYear: Number(birth.slice(0, 4)),
+          birthMonth: Number(birth.slice(5, 7)),
+          birthDay: Number(birth.slice(8, 10)),
+          calendarType: cal,
+          isLeapMonth: leap,
+          gender: gender || undefined,
+          birthTimeIndex: hourIdx === '' ? undefined : Number(hourIdx),
+        } as never,
+        //  ★리포트와 메모를 «함께» 담습니다 — 다시 열면 그대로 보십니다
+        resultData: {
+          mun: data.mun, saju: data.saju,
+          chongpyeong: data.chongpyeong.lines,
+          hits: data.hits.map(h => ({ jari: h.jari, ji: h.ji, sin: h.sin })),
+          purpose: purpose || null,
+          memo,
+        },
+      })
+      setSaveState(r.ok ? 'saved' : 'failed')
+    } catch {
+      setSaveState('failed')
+    }
+  }, [data, birth, cal, leap, gender, hourIdx, purpose, memo])
+
   if (gate.state !== 'ok') return <RoleGateScreen gate={gate} dark={false} />
 
   const inputStyle = {
@@ -259,6 +311,15 @@ export default function NaejeongPage() {
               color: ACCENT, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
               padding: '6px 13px',
             }}>🏠 홈</button>
+        </div>
+
+        {/*  ★보관함 가는 길 — 2026-09-15 [대표님] */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
+          <button type="button" onClick={() => router.push('/naejeong/storage')}
+            style={{
+              background: 'transparent', border: 'none', color: ACCENT, fontSize: 12,
+              cursor: 'pointer', fontFamily: 'inherit', padding: 0,
+            }}>📁 상담 보관함</button>
         </div>
 
         <div style={{ fontSize: 11.5, color: SUB, marginBottom: 2 }}>일진내정법 日辰 來情法</div>
@@ -669,6 +730,107 @@ export default function NaejeongPage() {
                 </div>
               )
             })()}
+
+            {/* ══ 🔴 종합 내정 리포트 — 2026-09-15 [대표님] ══════════════
+              *  ㉮ ★자동 — 프로그램이 원국을 «읽어» 냅니다.
+              *     ⛔ 지어낸 것이 «하나도» 없습니다 —
+              *       총괄 줄은 ★«세어» 낸 것이고 (교재가 실제로 쓰는 말투),
+              *       자리별 글은 ★교재 원문 또는 «교재 사례» 문장입니다.
+              *  ㉯ ★메모 — 연재쌤이 상담 중에 적으시는 자리 (아래에 따로).
+              * ══════════════════════════════════════════════════════════ */}
+            <div style={{
+              background: CARD, border: `2px solid ${ACCENT}`, borderRadius: 14,
+              padding: 14, marginBottom: 14,
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: INK, marginBottom: 3 }}>
+                종합 내정 리포트
+              </div>
+              <div style={{ fontSize: 11, color: SUB, marginBottom: 10, lineHeight: 1.6 }}>
+                원국을 읽어 낸 것이에요. 교재에 있는 말만 씁니다.
+              </div>
+
+              {/*  ★총괄 — «세어» 낸 줄들 */}
+              <div style={{
+                background: '#fbf6f1', borderRadius: 10, padding: '10px 11px', marginBottom: 11,
+              }}>
+                {data.chongpyeong.lines.map(l => (
+                  <div key={l} style={{ fontSize: 12.5, color: INK, lineHeight: 1.8 }}>
+                    {withTerms(l)}
+                  </div>
+                ))}
+              </div>
+
+              {/*  ★자리별 — 고르신 목적이 있으면 «그 자리부터» */}
+              {sortedHits.filter(h => h.sin).map(h => {
+                const lines = h.jariText ? [] : caseLinesFor(h.jari as JariKey, h.sin as never, 1)
+                return (
+                  <div key={h.jari} style={{ marginBottom: 9 }}>
+                    <div style={{ fontSize: 12, marginBottom: 3 }}>
+                      <b style={{ color: INK }}>{h.jari}</b>
+                      <span style={{ marginLeft: 5 }}>{h.ji}</span>
+                      <span style={{ marginLeft: 5, color: h.good ? GOOD : BAD, fontWeight: 700 }}>
+                        {sinButton(h.sin)}
+                      </span>
+                      {pickedJari.includes(h.jari) && (
+                        <span style={{ marginLeft: 6, fontSize: 10, color: ACCENT }}>← 이 질문의 자리</span>
+                      )}
+                    </div>
+                    {h.jariText ? (
+                      <div style={{ fontSize: 12.5, color: INK, lineHeight: 1.8 }}>{withTerms(h.jariText)}</div>
+                    ) : lines.length > 0 ? (
+                      lines.map(l => (
+                        <div key={l.page} style={{ fontSize: 12.5, color: INK, lineHeight: 1.8 }}>
+                          {withTerms(l.text)}
+                          <span style={{ marginLeft: 5, fontSize: 11, color: SUB }}>({l.page})</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ fontSize: 12, color: SUB, lineHeight: 1.7 }}>
+                        교재에 이 자리의 풀이가 없습니다.
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+
+              {/*  🔴 ㉯ ★상담 메모 — 연재쌤이 적으시는 자리 [대표님]
+                *  ⚠️ 저장하기 «전» 에는 서버에 «안» 갑니다. */}
+              <div style={{ marginTop: 13, paddingTop: 12, borderTop: `1px solid ${LINE}` }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: INK, marginBottom: 5 }}>
+                  상담 메모
+                </div>
+                <textarea
+                  value={memo}
+                  onChange={e => { setMemo(e.target.value); setSaveState('idle') }}
+                  placeholder="상담하시며 적어 두실 것 — 손님 사정 · 통변 · 다음에 볼 것…"
+                  rows={5}
+                  style={{
+                    width: '100%', padding: '10px 11px', borderRadius: 10,
+                    border: `1px solid ${LINE}`, background: '#fff', fontSize: 13,
+                    color: INK, fontFamily: 'inherit', lineHeight: 1.7,
+                    boxSizing: 'border-box', resize: 'vertical',
+                  }}
+                />
+                {/*  ⛔ ★손님 «이름» 은 안 받습니다 — 적으실지는 연재쌤 판단입니다 */}
+                <div style={{ fontSize: 10.5, color: SUB, marginTop: 5, lineHeight: 1.6 }}>
+                  담으시면 보관함에 남아요. 손님 이름은 따로 받지 않습니다.
+                </div>
+
+                <button type="button" onClick={save} disabled={saveState === 'saving'}
+                  style={{
+                    width: '100%', marginTop: 9, padding: 11, borderRadius: 11, border: 'none',
+                    background: saveState === 'saving' ? '#c9b6a8' : ACCENT, color: '#fff',
+                    fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                  }}>
+                  {saveState === 'saving' ? '담는 중…' : saveState === 'saved' ? '✓ 보관함에 담았어요' : '보관함에 담기'}
+                </button>
+                {saveState === 'failed' && (
+                  <div style={{ marginTop: 7, fontSize: 12, color: BAD, lineHeight: 1.7 }}>
+                    담지 못했어요. 잠시 뒤 다시 눌러 보세요.
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/*  ── 문점일 ──
               *  ⚠️ ★2026-09-15 — 여기 있던 «네 기둥 카드» 를 걷어냈습니다.
@@ -1138,6 +1300,12 @@ export default function NaejeongPage() {
               cursor: 'pointer', fontFamily: 'inherit',
             }}>🏠 홈으로</button>
         </div>
+        <button type="button" onClick={() => router.push('/naejeong/storage')}
+          style={{
+            width: '100%', marginTop: 8, padding: 11, borderRadius: 12,
+            background: CARD, border: `1px solid ${LINE}`, color: ACCENT,
+            fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+          }}>📁 상담 보관함</button>
       </div>
     </main>
   )
