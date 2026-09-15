@@ -21,7 +21,13 @@
 import { APPS, SISTER_KEYS } from './companyInfo'
 
 const C = {
-  head: '#96502e',
+  /* 🔴 ★2026-09-15 (10부) [대표님 「함께 쓰는 서비스 제목을 전체 서비스와 «완벽하게» 통일」]
+   *   [전] fontSize 12 · 굵기 없음 · 색 #96502e (벽돌빛)
+   *   [후] ★fontSize 12 · fontWeight 700 · 색 #55636f
+   *        ⇒ ServiceSection 의 「전체 서비스」(C.sub)와 ★한 값도 안 다릅니다.
+   *   ⛔ 여기만 고치지 마십시오 — ★두 곳이 «같은 값» 이라야 합니다.
+   *      검사 57 ① 이 두 파일을 «대조» 합니다. 어긋나면 멈춥니다. */
+  head: '#55636f',
   card: '#FFFBF7',
   /* ★2026-09-10 [대표님 「테두리가 너무 희미하다 · 홈 다른 버튼들처럼 통일해줘」]
    *   [전] 0.5px solid #e8dccf  ← 거의 보이지 않았습니다
@@ -43,11 +49,25 @@ const TINT: Record<string, string> = {
   glf: '#3B6D11',
 }
 
+/*  ★앱 아이콘 — 2026-09-15 (10부)
+ *  ⚠️ ★companyInfo 의 APPS 에는 아이콘 칸이 «없습니다». 여기만 씁니다.
+ *     ⛔ APPS 에 억지로 칸을 만들지 마십시오 — 큐보드·골프온 쪽 코드도 그 표를 씁니다.
+ *  ⛔ 상표 그림이 아니라 ★«무엇을 하는 앱인가» 로 골랐습니다 (당구 · 골프). */
+const ICON: Record<string, string> = {
+  bil: '🎱',
+  glf: '⛳',
+}
+
 export default function SisterLinks() {
   return (
     <section style={{ padding: '0 20px', marginBottom: 20 }} aria-labelledby="sister-head">
-      <div id="sister-head" style={{ fontSize: 12, color: C.head, marginBottom: 10 }}>
-        함께 쓰는 서비스
+      {/*  ★제목 — 「전체 서비스」와 «같은 모양» 입니다
+        *     아이콘 + gap 6 + marginBottom 9 + 12px/700/C.head 까지 그대로 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 9 }}>
+        <span style={{ fontSize: 12 }} aria-hidden="true">🤝</span>
+        <span id="sister-head" style={{ fontSize: 12, fontWeight: 700, color: C.head }}>
+          함께 쓰는 서비스
+        </span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -58,24 +78,38 @@ export default function SisterLinks() {
             key={key}
             href={app.href}
             style={{
+              /*  🔴 ★2026-09-15 (10부) [대표님 「다른 카드들처럼 완성도 높게 다듬어 줘」]
+               *    [전] 모서리 12 · 그림자 없음 · 왼쪽 띠 없음 · 아이콘이 «점» 하나
+               *         ⇒ 위 서비스 카드들과 «마감» 이 달라 덜 만든 것처럼 보였습니다.
+               *    [후] ★ServiceSection 의 cardStyle 과 «같은 값» —
+               *         모서리 ★16 · inset 4px 왼쪽 띠 · 0 2px 8px rgba(0,0,0,0.04)
+               *    ⚠️ 왼쪽 띠만 ★앱 빛깔(보라·초록)로 둡니다 —
+               *       마감은 같게, 어느 앱인지는 갈리게. 지갑 딱지 색과 맞춰 둔 값입니다.
+               *    ⛔ 모서리 12 로 되돌리지 마십시오 — 검사 57 ② 가 셉니다. */
               background: C.card,
               border: `1.5px solid ${C.line}`,
-              borderRadius: 12,
-              padding: '13px 12px',
+              borderRadius: 16,
+              boxShadow: `inset 4px 0 0 ${TINT[key] ?? C.faint}, 0 2px 8px rgba(0,0,0,0.04)`,
+              overflow: 'hidden',
+              padding: '12px 12px 12px 14px',
               display: 'flex',
               alignItems: 'center',
               gap: 9,
               textDecoration: 'none',
             }}
           >
+            {/*  ★아이콘 타일 — 홈 카드의 Tile 과 «같은 결» 입니다
+              *    ⚠️ 옛것은 지름 10px «점» 이라 카드가 비어 보였습니다. */}
             <span
               aria-hidden="true"
               style={{
-                width: 10, height: 10, borderRadius: '50%',
-                background: TINT[key] ?? C.faint, flexShrink: 0,
+                width: 32, height: 32, borderRadius: 11, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: '#f0e6d8', border: '1px solid #c4af95',
+                fontSize: 15, lineHeight: 1,
               }}
-            />
-            <span style={{ fontSize: 13.5, color: C.ink }}>{app.name}</span>
+            >{ICON[key] ?? '•'}</span>
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: C.ink, letterSpacing: '-0.2px' }}>{app.name}</span>
             <span style={{ marginLeft: 'auto', color: C.chev, fontSize: 15, lineHeight: 1 }} aria-hidden="true">›</span>
           </a>
           )

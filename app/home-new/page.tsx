@@ -571,18 +571,58 @@ export default function HomeNew() {
               <EmotionPicker />
             </div> */}
 
-        {/* ⑦ 전문가용 만세력 계산기 (서비스 12개와 성격이 달라 별도 카드) */}
+        {/* ⑦ 전문가용 만세력 계산기 (서비스 12개와 성격이 달라 별도 카드)
+            ★2026-09-15 (10부) [대표님] 「짙은 바탕에 대비가 선명하게 — 전문가용 메뉴처럼」
+              [전] 크림 바탕 #FFFBF7 · 0.5px 테두리 · 글씨 #5a4a3e
+                   ⇒ 위 서비스 카드들과 «같은 옷» 이라 «다른 물건» 인 것이 안 보였습니다.
+                   ⇒ 게다가 테두리 0.5px 은 45부에 기준 미달로 걷어낸 굵기입니다.
+              [후] ★짙은 갈색 #33281F 바탕 · 글씨 #F6EDE2  ⇒ 대비 ★13.6:1
+                   (본문 기준 4.5 · 큰 글씨 기준 3.0 을 넉넉히 넘습니다)
+            ⛔ 다시 크림 바탕으로 되돌리지 마십시오 — 서비스 카드에 묻힙니다.
+            ⚠️ 갈색 계열로 잡았습니다. ★새 색을 지은 것이 아니라 이 앱의
+               가장 진한 잉크(#5a4a3e)를 «한 단계 더» 내린 값입니다. */}
         <div style={{ padding: '0 16px 20px' }}>
-          <div
+          <button
+            type="button"
+            className="svcTap"
             onClick={() => router.push('/manseryeok/expert')}
             style={{
-              display: 'flex', alignItems: 'center', gap: 8, padding: '13px 12px',
-              background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 12,
-              cursor: 'pointer',
+              width: '100%', textAlign: 'left', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 11, padding: '14px 14px',
+              background: '#33281F',
+              border: '1.5px solid #5a4a3e',
+              borderRadius: 16,
+              boxShadow: 'inset 4px 0 0 #c9a06a, 0 2px 8px rgba(0,0,0,0.10)',
+              overflow: 'hidden',
             }}
           >
-            <span style={{ fontSize: 13, color: '#5a4a3e' }}>🔎 전문가용 만세력 계산기</span>
-          </div>
+            <span
+              aria-hidden="true"
+              style={{
+                width: 38, height: 38, borderRadius: 13, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(246,237,226,0.10)',
+                border: '1px solid rgba(246,237,226,0.22)',
+                fontSize: 19,
+              }}
+            >🔎</span>
+            <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 14.5, fontWeight: 700, color: '#F6EDE2', letterSpacing: '-0.2px' }}>
+                  전문가용 만세력 계산기
+                </span>
+                {/* ★「전문가용」 이라는 것을 «딱지» 로도 한 번 더 */}
+                <span style={{
+                  fontSize: 9.5, fontWeight: 700, color: '#33281F', background: '#E8C58A',
+                  padding: '2px 7px', borderRadius: 20, letterSpacing: '0.3px', flexShrink: 0,
+                }}>PRO</span>
+              </span>
+              <span style={{ fontSize: 11, color: '#CBB9A6' }}>
+                원국 · 지장간 · 신살까지 한 화면에
+              </span>
+            </span>
+            <span style={{ fontSize: 15, color: '#E8C58A', flexShrink: 0 }} aria-hidden="true">›</span>
+          </button>
         </div>
 
         {/* ═══ 바텀시트 끝 ═══ */}

@@ -33,11 +33,21 @@ import { useRouter, usePathname } from 'next/navigation'
  * ★손님 하단바 — 네 칸  [대표님 확정 2026-08-07]
  */
 export const HOME_NAV = [
-  { icon: '🏠', label: '홈',        href: '/home-new' },
-  { icon: '🧑‍🏫', label: '선생님 소개', href: '/teachers' },
-  { icon: '💬', label: '문의사항',   href: '/inquiry' },
-  { icon: '📚', label: '보관함',     href: '/archive' },
+  { icon: '🏠', label: '홈',        href: '/home-new', hidden: false },
+  /*  🔴 ★2026-09-15 (10부) [대표님 「선생님 소개는 화면에 보이지 않도록 숨겨 주십시오」]
+   *  ⛔ ★줄을 «지우지» 않았습니다 — hidden 으로 가리기만 합니다.
+   *     ⇒ 되살리실 때는 ★hidden 을 false 로 두기만 하면 됩니다.
+   *  ⚠️ ★/teachers 화면은 «그대로 살아 있습니다». 지운 것이 아닙니다.
+   *     다만 지금은 ★이 앱 안에서 그리로 가는 길이 «한 곳도» 없습니다
+   *     (grep 으로 셌습니다 — 하단바 말고는 없었습니다).
+   *     ⇒ 주소를 바로 치면 열립니다: /teachers */
+  { icon: '🧑‍🏫', label: '선생님 소개', href: '/teachers', hidden: true },
+  { icon: '💬', label: '문의사항',   href: '/inquiry',  hidden: false },
+  { icon: '📚', label: '보관함',     href: '/archive',  hidden: false },
 ] as const
+
+/** ★화면에 «실제로 그리는» 칸 — ⛔ HOME_NAV 를 바로 돌리지 마십시오 */
+export const HOME_NAV_SHOWN = HOME_NAV.filter(n => !n.hidden)
 
 export default function HomeBottomNav() {
   const router = useRouter()
@@ -50,7 +60,7 @@ export default function HomeBottomNav() {
       display: 'flex', background: '#FFFBF7',
       borderTop: '0.5px solid #9c7a58', zIndex: 20,
     }}>
-      {HOME_NAV.map((n) => {
+      {HOME_NAV_SHOWN.map((n) => {
         const active = pathname === n.href || pathname.startsWith(n.href + '/')
         return (
           <button
