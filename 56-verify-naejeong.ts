@@ -22,6 +22,7 @@ import {
 import { TTI_HOME, WOL_HOME } from './lib/saju/naejeong/tables/homeText'
 import { solarToLunarKR } from './lib/saju/koreanLunarTable'
 import { PURPOSES, SINSAL_DIR, findPurpose } from './lib/saju/naejeong/tables/purposes'
+import { lookup, LOOKUP_ALL, LOOKUP_CASE } from './lib/saju/naejeong/tables/lookup'
 import { getSinsal } from './lib/saju/sinsal'
 
 let pass = 0, fail = 0
@@ -462,6 +463,66 @@ function main() {
       && findPurpose('marry')?.jari?.[0] === '일지'
       && findPurpose('bizStart')?.jari?.[0] === '시지',
       '★자리 짝이 교재 4쪽대로입니다 (땅=연지 · 집=월지 · 결혼=일지 · 사업=시지)')
+  }
+
+  /* ══ ⑫ 🔴🔴 교재에서 찾기 (로컬) — 2026-09-15 [대표님] ══════════
+   *  「외부 AI 를 거치지 않고 프로그램 자체의 데이터 검색으로」
+   *  ⇒ 값 0 · 즉시 · 늘 같은 답 · ★지어낼 여지 없음
+   * ══════════════════════════════════════════════════════════════ */
+  head('⑫ 🔴🔴 교재에서 찾기 — 로컬 (AI 안 부름)')
+  {
+    ok(LOOKUP_ALL.length > 70, `★찾기 표 ${LOOKUP_ALL.length}줄 (콤보 + 교재 사례)`)
+    ok(LOOKUP_CASE.length > 40, `★교재 사례 ${LOOKUP_CASE.length}건`)
+    ok(new Set(LOOKUP_ALL.map(r => r.id)).size === LOOKUP_ALL.length, '⛔ ★열쇠가 겹치지 않습니다')
+    ok(LOOKUP_ALL.every(r => r.must.length > 0),
+      '⛔ ★모든 줄에 must 가 있습니다 (없으면 아무 말에나 걸립니다)')
+    ok(LOOKUP_ALL.every(r => /교재/.test(r.page)), '★줄마다 교재 쪽이 있습니다')
+    ok(LOOKUP_CASE.every(r => !!r.iljin), '★사례에는 문점일이 적혀 있습니다')
+
+    //  🔴 값으로 — 자연스러운 말이 걸리는가
+    const Q: [string, string][] = [
+      ['아들이 유학 간다는데 형편이 안 돼요', 'study'],
+      ['가게를 계속할까요 접을까요', 'bizEnd'],
+      ['남편이 바람난 것 같아요', 'affair'],
+      ['친구가 동업하자는데 괜찮을까요', 'partner'],
+      ['며느리가 아들을 낳을 수 있을까요', 'birth'],
+      ['사직서를 언제 내면 좋을까요', 'quit'],
+    ]
+    const miss = Q.filter(([q, want]) => !lookup(q, 5).some(h => h.row.purposeId === want))
+    ok(miss.length === 0, `🔴 ★자연스러운 말이 «다» 걸립니다 ${miss.map(x => x[0]).join(' / ')}`)
+
+    //  ⛔ 엉뚱한 말은 «안» 걸려야 합니다 [대표님 ㉮]
+    ok(lookup('오늘 날씨가 어떤가요').length === 0,
+      '⛔ ★엉뚱한 말에는 «못 찾았어요» — 억지로 안 내밉니다 [대표님]')
+    ok(lookup('ㅁ').length === 0, '⛔ ★한 글자로는 안 찾습니다')
+
+    //  🔴 ⛔ 곁가지 막기 — 「아들이 유학」 이 «출산» 에 걸리면 안 됩니다
+    ok(!lookup('아들이 유학 간다는데', 9).some(h => h.row.purposeId === 'birth'),
+      '🔴 ⛔ ★「아들」 하나로 «출산» 이 걸리지 않습니다 (must·not 이 막습니다)')
+    ok(!lookup('아들 군대 보내는데', 9).some(h => h.row.purposeId === 'study'),
+      '⛔ ★「군대」 가 «유학» 으로 안 걸립니다 (not)')
+
+    //  ⛔ 빼기로 한 것이 «사례» 로 되살아나면 안 됩니다
+    const txt = JSON.stringify(LOOKUP_ALL)
+    const BAN = ['도주', '숨어', '은닉', '삼겹살', '소금', '부적', '억을', '성씨']
+    const back = BAN.filter(b => txt.includes(b))
+    ok(back.length === 0, `🔴 ⛔ ★빼기로 한 것이 «되살아나지» 않았습니다 ${back.join(' · ')}`)
+
+    //  ⛔ 사례에 «풀이» 를 옮겨 적지 않았는가 — 지금은 «이정표» 입니다 [대표님 ㉮]
+    ok(LOOKUP_CASE.every(r => (r.summary ?? '').length < 60),
+      '⛔ ★사례는 «제목 한 줄» 뿐입니다 (풀이를 옮기면 두 벌이 됩니다)')
+
+    //  🔴 화면 — AI 를 안 부르는가 · 손님 말을 안 싣는가
+    const page = R('app/naejeong/page.tsx')
+    ok(/lookup\(q\)/.test(page), '🔴 ★화면이 «로컬 찾기» 를 씁니다')
+    ok(!/fetch\('\/api\/(tongbyeon|chat)/.test(page) && !/anthropic/i.test(page),
+      '✅ ⛔ ★AI 를 «한 번도» 안 부릅니다 [대표님]')
+    ok(!/router\.push\([^)]*\$\{q\}/.test(page) && !/searchParams[\s\S]{0,40}set\('q'/.test(page),
+      '⛔ ★손님 말을 «주소에» 싣지 않습니다 (7부 교훈)')
+    ok(/교재에서 못 찾았어요/.test(page),
+      '⛔ ★못 찾으면 사실대로 말합니다 [대표님 ㉮]')
+    ok(/풀이는 교재를 펴 보셔야 합니다/.test(page),
+      '⚠️ ★사례는 «쪽수만» 이라는 것을 밝힙니다')
   }
 
   console.log(`\n━━ 일진내정법 — 통과 ${pass} · 실패 ${fail} ━━\n`)

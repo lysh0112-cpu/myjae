@@ -24,6 +24,8 @@ import { useRouter } from 'next/navigation'
 import { useRoleGate, RoleGateScreen, type AppRole } from '@/hooks/useRoleGate'
 //  ★상담 목적 — 표는 tables/purposes.ts «한 곳» 입니다
 import { PURPOSES, SINSAL_DIR, findPurpose } from '@/lib/saju/naejeong/tables/purposes'
+//  ★교재 찾기 — 로컬입니다. ⛔ AI 도 바깥도 «안» 부릅니다 [대표님 2026-09-15]
+import { lookup, type LookupHit } from '@/lib/saju/naejeong/tables/lookup'
 import { getSinsal } from '@/lib/saju/sinsal'
 
 const ONLY: AppRole[] = ['master']
@@ -93,6 +95,11 @@ export default function NaejeongPage() {
    *  ⛔ 대분류를 바꾸면 ★앞서 고른 세부 질문을 «지웁니다» —
    *     안 지우면 «재정» 에서 고른 것이 «애정» 갈래에 남아 헷갈립니다. */
   const [group, setGroup] = useState<string>('')
+  /*  🔴 ★교재에서 찾기 — 2026-09-15 [대표님]
+   *     「정형화되지 않은 질문도 많을 것이다 — 교재 내용을 쉽게 찾을 수 있게」
+   *  ⛔ AI 를 «안» 부릅니다. 표를 뒤지는 것뿐이라 ★값 0 · 즉시 · 늘 같은 답입니다. */
+  const [q, setQ] = useState('')
+  const [found, setFound] = useState<LookupHit[] | null>(null)
   const [data, setData] = useState<Out | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -241,6 +248,80 @@ export default function NaejeongPage() {
                 }}>{gd}</button>
             ))}
           </div>
+
+          {/*  🔴 ★교재에서 찾기 — 2026-09-15 [대표님]
+            *  ⚠️ 손님 말은 ★«주소에 싣지도 저장하지도» 않습니다 (7부 ⛔ 교훈).
+            *     그 자리에서 찾고 «버립니다».
+            *  ⛔ 못 찾으면 ★「못 찾았어요」 라고 합니다 — «가장 가까운 것» 을 억지로 안 내밉니다. */}
+          <label style={{ fontSize: 12.5, fontWeight: 700, color: INK, display: 'block', margin: '14px 0 6px' }}>
+            교재에서 찾기 <span style={{ fontWeight: 400, color: SUB, fontSize: 11 }}>(손님 말을 그대로 적어 보세요)</span>
+          </label>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <input
+              value={q}
+              onChange={e => setQ(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') setFound(lookup(q)) }}
+              placeholder="아들이 유학 간다는데 형편이…"
+              style={{ ...inputStyle, flex: 1 }}
+            />
+            <button type="button" onClick={() => setFound(lookup(q))}
+              style={{
+                padding: '11px 14px', borderRadius: 10, border: `1.5px solid ${ACCENT}`,
+                background: '#fff', color: ACCENT, fontSize: 13, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+              }}>찾기</button>
+          </div>
+
+          {found !== null && (
+            <div style={{ marginTop: 8 }}>
+              {found.length === 0 ? (
+                <div style={{ fontSize: 12.5, color: SUB, lineHeight: 1.7 }}>
+                  교재에서 못 찾았어요. 아래 대분류에서 골라 보세요.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {found.map(h => (
+                    <button key={h.row.id} type="button"
+                      onClick={() => {
+                        clear()
+                        //  ★콤보와 이어진 것이면 «그 질문» 으로 골라 드립니다
+                        if (h.row.purposeId) {
+                          const g = PURPOSES.find(x => x.items.some(i => i.id === h.row.purposeId))
+                          if (g) setGroup(g.group)
+                          setPurpose(h.row.purposeId)
+                        }
+                      }}
+                      style={{
+                        textAlign: 'left', padding: '10px 11px', borderRadius: 10,
+                        background: '#fff', border: `1px solid ${LINE}`,
+                        cursor: 'pointer', fontFamily: 'inherit',
+                      }}>
+                      <div style={{ fontSize: 13, color: INK, marginBottom: 3 }}>
+                        {h.row.label}
+                        {/*  ⚠️ 사례는 ★«쪽수만» 있습니다 — 풀이는 교재를 펴 보셔야 합니다 */}
+                        {h.row.iljin && (
+                          <span style={{
+                            marginLeft: 6, fontSize: 10.5, color: ACCENT,
+                            background: '#fff3ec', borderRadius: 999, padding: '2px 7px',
+                          }}>{h.row.iljin} 사례</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: SUB }}>
+                        {h.row.page}
+                        {h.row.jari?.length ? ` · ${h.row.jari.join(' · ')}` : ''}
+                      </div>
+                    </button>
+                  ))}
+                  {/*  ⛔ 사례는 «이정표» 일 뿐임을 밝혀 둡니다 */}
+                  {found.some(h => h.row.iljin) && (
+                    <div style={{ fontSize: 11, color: SUB, lineHeight: 1.6, marginTop: 2 }}>
+                      「사례」 는 교재 쪽만 알려 드려요. 풀이는 교재를 펴 보셔야 합니다.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/*  🔴 ★상담 목적 — 두 걸음으로 고릅니다 [대표님 2026-09-15]
             *     ① 대분류를 누르면  ② 세부 질문이 «펼쳐집니다»
