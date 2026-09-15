@@ -144,6 +144,8 @@ export const LOOKUP_CASE: LookupRow[] = [
     must: ['동업'], more: ['빚', '돈을 잘 벌'], summary: '빚을 내 동업을 시작했는데 돈을 벌까' },
   { id: 'c14c', label: '친구와 호프집', iljin: '乙巳', page: '교재 14쪽', purposeId: 'partner', jari: ['시지'],
     must: ['호프', '술집'], more: ['친구', '동업'], summary: '젊은 여자가 친구와 호프집을 하려는데' },
+  { id: 'c15', label: '동업을 해도 될까 (신구)', iljin: '乙巳', page: '교재 15쪽', purposeId: 'partner', jari: ['시지'],
+    must: ['동업'], more: ['별로', '이동수'], summary: '동업에 대하여 상담' },
   { id: 'c17', label: '업종을 바꿀까 계속할까', iljin: '乙丑', page: '교재 17쪽', purposeId: 'bizEnd', jari: ['시지'],
     must: ['업종'], more: ['바꿀', '계속'], summary: '사업 업종을 바꿀까 그냥 계속할까' },
   { id: 'c18a', label: '물건을 지금 팔까 기다릴까', iljin: '辛未', page: '교재 18쪽', purposeId: 'sellNow', jari: ['월지'],

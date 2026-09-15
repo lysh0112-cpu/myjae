@@ -23,6 +23,7 @@ import { TTI_HOME, WOL_HOME } from './lib/saju/naejeong/tables/homeText'
 import { solarToLunarKR } from './lib/saju/koreanLunarTable'
 import { PURPOSES, SINSAL_DIR, findPurpose } from './lib/saju/naejeong/tables/purposes'
 import { lookup, LOOKUP_ALL, LOOKUP_CASE } from './lib/saju/naejeong/tables/lookup'
+import { CASE_TEXT, caseTextOf } from './lib/saju/naejeong/tables/caseText'
 import { getSinsal } from './lib/saju/sinsal'
 
 let pass = 0, fail = 0
@@ -523,6 +524,64 @@ function main() {
       '⛔ ★못 찾으면 사실대로 말합니다 [대표님 ㉮]')
     ok(/풀이는 교재를 펴 보셔야 합니다/.test(page),
       '⚠️ ★사례는 «쪽수만» 이라는 것을 밝힙니다')
+  }
+
+  /* ══ ⑬ 🔴🔴 교재 사례 풀이 — ★교재가 «제 셈» 을 검증합니다 ═══════
+   *  [대표님 ㉰ 2026-09-15] 「교재 안 사례들을 모두 정리해서 보여 주자」
+   *
+   *  🔴 [9부에 잡힌 것]  제가 사례를 옮겨 적으며 ★사주 «차례» 를 뒤집었습니다.
+   *     교재는 ★«시 일 월 연» 으로 적는데 (오른쪽이 연주)
+   *     제가 ★왼쪽부터 연주로 읽어 c13b 네 자리가 «통째로» 어긋났습니다.
+   *     ⇒ ★이 그물이 «값으로» 잡았습니다. 눈으로는 못 봤습니다.
+   * ══════════════════════════════════════════════════════════════ */
+  head('⑬ 🔴🔴 교재 사례 — 교재 값과 «내 셈» 이 같은가')
+  {
+    ok(CASE_TEXT.length >= 18, `★1차 사례 ${CASE_TEXT.length}건 (교재 11~24쪽)`)
+
+    //  🔴 ⛔ 사례마다 «네 자리» 를 교재와 대조합니다
+    let good = 0
+    const bad: string[] = []
+    for (const c of CASE_TEXT) {
+      if (!c.saju) continue
+      for (const k of ['yeon', 'wol', 'il', 'si'] as const) {
+        const raw = c.saju.pillars[k]
+        const ji = raw.length === 2 ? raw[1] : raw
+        const got = sinGungOf(c.iljin[1], ji)
+        if (got === c.saju.sin[k]) good++
+        else bad.push(`${c.id} ${k} ${ji} 셈:${got}≠교재:${c.saju.sin[k]}`)
+      }
+    }
+    ok(bad.length === 0,
+      `🔴 ⛔ ★교재가 적은 신궁과 «내 셈» 이 ${good}자리 모두 같습니다 ${bad.slice(0, 3).join(' / ')}`)
+    ok(good >= 70, `★대조한 자리 ${good}개`)
+
+    //  ⛔ 사례 열쇠가 찾기 표와 «이어져» 있어야 합니다
+    const orphan = CASE_TEXT.filter(c => !LOOKUP_CASE.some(r => r.id === c.id))
+    ok(orphan.length === 0, `⛔ ★풀이가 찾기 표와 이어져 있습니다 ${orphan.map(c => c.id).join(' ')}`)
+
+    //  ⛔ 도려낸 자리를 «숨기지» 않았는가
+    const cuts = CASE_TEXT.filter(c => c.cut)
+    ok(cuts.length >= 3, `⚠️ ★도려낸 대목을 «밝힌» 사례 ${cuts.length}건`)
+    ok(cuts.every(c => /교재 \d+쪽/.test(c.cut!)),
+      '⛔ ★도려낸 자리마다 «교재 몇 쪽» 인지 적어 두었습니다')
+
+    //  ⛔ 빼기로 한 것이 «풀이 글» 로 새어 들지 않았는가
+    const txt = CASE_TEXT.map(c => c.text).join(' ')
+    const BAN = ['성씨', '도주', '숨어', '삼겹살', '소금을 뿌', '억은 벌', '억 정도']
+    const leak = BAN.filter(b => txt.includes(b))
+    ok(leak.length === 0, `🔴 ⛔ ★빼기로 한 것이 «풀이 글» 에 없습니다 ${leak.join(' · ')}`)
+
+    ok(caseTextOf('c12') !== null && caseTextOf('없는것') === null,
+      '⛔ ★없는 사례는 «지어내지» 않고 null 입니다')
+
+    //  🔴 화면이 «펼쳐» 보여 주는가
+    const page2 = R('app/naejeong/page.tsx')
+    ok(/caseTextOf\(h\.row\.id\)/.test(page2), '🔴 ★찾기 결과에서 «교재 풀이» 를 펼칩니다')
+    ok(/openCase === h\.row\.id/.test(page2), '★누른 것만 펼칩니다 (목록이 길어지지 않게)')
+    ok(/c\.cut &&/.test(page2), '⛔ ★도려낸 대목을 «숨기지» 않고 보여 줍니다')
+    ok(/아직 풀이를 안 옮겼어요/.test(page2),
+      '⚠️ ★아직 안 옮긴 쪽은 «사실대로» 말합니다 (25~54쪽)')
+    ok(/c\.saju &&/.test(page2), '★사례의 네 기둥과 신궁도 보여 줍니다')
   }
 
   console.log(`\n━━ 일진내정법 — 통과 ${pass} · 실패 ${fail} ━━\n`)

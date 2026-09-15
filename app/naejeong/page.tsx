@@ -26,6 +26,8 @@ import { useRoleGate, RoleGateScreen, type AppRole } from '@/hooks/useRoleGate'
 import { PURPOSES, SINSAL_DIR, findPurpose } from '@/lib/saju/naejeong/tables/purposes'
 //  ★교재 찾기 — 로컬입니다. ⛔ AI 도 바깥도 «안» 부릅니다 [대표님 2026-09-15]
 import { lookup, type LookupHit } from '@/lib/saju/naejeong/tables/lookup'
+//  ★교재 사례 풀이 — 1차(11~24쪽). ⛔ 순화 없이 교재 그대로.
+import { caseTextOf } from '@/lib/saju/naejeong/tables/caseText'
 import { getSinsal } from '@/lib/saju/sinsal'
 
 const ONLY: AppRole[] = ['master']
@@ -100,6 +102,8 @@ export default function NaejeongPage() {
    *  ⛔ AI 를 «안» 부릅니다. 표를 뒤지는 것뿐이라 ★값 0 · 즉시 · 늘 같은 답입니다. */
   const [q, setQ] = useState('')
   const [found, setFound] = useState<LookupHit[] | null>(null)
+  /*  ★펼쳐 볼 사례 — 눌렀을 때만 풀이가 보입니다 (목록이 길어지지 않게) */
+  const [openCase, setOpenCase] = useState<string>('')
   const [data, setData] = useState<Out | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -283,6 +287,8 @@ export default function NaejeongPage() {
                   {found.map(h => (
                     <button key={h.row.id} type="button"
                       onClick={() => {
+                        //  ★사례이면 «풀이를 펼칩니다» (교재 11~24쪽은 글이 들어 있습니다)
+                        if (h.row.iljin) setOpenCase(openCase === h.row.id ? '' : h.row.id)
                         clear()
                         //  ★콤보와 이어진 것이면 «그 질문» 으로 골라 드립니다
                         if (h.row.purposeId) {
@@ -309,13 +315,63 @@ export default function NaejeongPage() {
                       <div style={{ fontSize: 11.5, color: SUB }}>
                         {h.row.page}
                         {h.row.jari?.length ? ` · ${h.row.jari.join(' · ')}` : ''}
+                        {h.row.iljin && caseTextOf(h.row.id) && (
+                          <span style={{ marginLeft: 6, color: ACCENT }}>
+                            {openCase === h.row.id ? '▲ 접기' : '▼ 교재 풀이'}
+                          </span>
+                        )}
                       </div>
+
+                      {/*  🔴 ★교재 풀이 — 눌렀을 때만 펼칩니다 [대표님 ㉰]
+                        *  ⛔ 순화하지 «않습니다». 연재쌤 전용입니다.
+                        *  ⚠️ «도려낸» 대목은 ★숨기지 않고 밝힙니다. */}
+                      {openCase === h.row.id && (() => {
+                        const c = caseTextOf(h.row.id)
+                        if (!c) return (
+                          <div style={{ marginTop: 8, fontSize: 11.5, color: SUB, lineHeight: 1.7 }}>
+                            이 사례는 아직 풀이를 안 옮겼어요. 교재 {h.row.page.replace('교재 ', '')}을 보십시오.
+                          </div>
+                        )
+                        return (
+                          <div style={{ marginTop: 9, paddingTop: 9, borderTop: `1px solid ${LINE}` }}>
+                            <div style={{ fontSize: 11.5, color: SUB, lineHeight: 1.7, marginBottom: 7 }}>
+                              {c.q}
+                            </div>
+                            {c.saju && (
+                              <div style={{
+                                display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5,
+                                textAlign: 'center', marginBottom: 8,
+                              }}>
+                                {([['연', c.saju.pillars.yeon, c.saju.sin.yeon],
+                                   ['월', c.saju.pillars.wol, c.saju.sin.wol],
+                                   ['일', c.saju.pillars.il, c.saju.sin.il],
+                                   ['시', c.saju.pillars.si, c.saju.sin.si]] as const).map(([k, gj, sg]) => (
+                                  <div key={k} style={{ border: `1px solid ${LINE}`, borderRadius: 8, padding: '6px 3px' }}>
+                                    <div style={{ fontSize: 9.5, color: SUB }}>{k}</div>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: INK }}>{gj}</div>
+                                    <div style={{ fontSize: 10, color: ACCENT }}>{sg}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <div style={{
+                              fontSize: 12.5, color: INK, lineHeight: 1.85,
+                              background: '#fbf6f1', borderRadius: 10, padding: '10px 11px',
+                            }}>{c.text}</div>
+                            {c.cut && (
+                              <div style={{ marginTop: 7, fontSize: 11.5, color: BAD, lineHeight: 1.7 }}>
+                                {c.cut}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })()}
                     </button>
                   ))}
                   {/*  ⛔ 사례는 «이정표» 일 뿐임을 밝혀 둡니다 */}
                   {found.some(h => h.row.iljin) && (
                     <div style={{ fontSize: 11, color: SUB, lineHeight: 1.6, marginTop: 2 }}>
-                      「사례」 는 교재 쪽만 알려 드려요. 풀이는 교재를 펴 보셔야 합니다.
+                      「사례」 를 누르면 교재 풀이가 펼쳐져요. 아직 안 옮긴 쪽은 쪽수만 알려 드립니다.
                     </div>
                   )}
                 </div>
