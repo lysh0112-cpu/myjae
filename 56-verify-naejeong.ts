@@ -19,6 +19,7 @@ import { TTI_TEXT, WOL_TEXT } from './lib/saju/naejeong/tables/dayYearText'
 import {
   UNSI_SIPSUNG, GWAEGANG_PILLARS, BAEKHO_PILLARS, samhapOf,
 } from './lib/saju/naejeong/tables/unsiText'
+import { TTI_HOME, WOL_HOME } from './lib/saju/naejeong/tables/homeText'
 
 let pass = 0, fail = 0
 const ok = (c: boolean, m: string) => { if (c) { pass++; console.log(`  ✅ ${m}`) } else { fail++; console.log(`  ❌ ${m}`) } }
@@ -265,6 +266,59 @@ function main() {
       '⛔ ★성별이 없으면 «까닭을 말하고» 안 보여 줍니다')
     ok(/filter\(\(\[on\]\) => on\)/.test(page),
       '⛔ ★해당될 때만 보여 줍니다 (아닌 것을 «있는 척» 하지 않습니다)')
+  }
+
+  /* ══ ⑩ 🔴🔴 홈 화면 — «순화한» 말로 나가는가 [대표님 2026-09-15] ══
+   *  ⛔ /naejeong 은 «교재 원문» · 홈은 «순화한 말» — ★일부러 다릅니다.
+   * ══════════════════════════════════════════════════════════════ */
+  head('⑩ 🔴🔴 홈 — 순화한 말 · 하루 한 번 셈')
+  {
+    //  ★홈 말이 열둘 «다» 있는가 (달) · 교재에 없는 둘은 null (띠)
+    const wolMiss = SINGUNG.filter(s2 => !WOL_HOME[s2])
+    ok(wolMiss.length === 0, `★달 순화 글이 열둘 다 있습니다 ${wolMiss.join(' ')}`)
+    const ttiNull = SINGUNG.filter(s2 => TTI_HOME[s2] === null)
+    ok(ttiNull.length === 2 && ttiNull.includes('상문') && ttiNull.includes('공망'),
+      `⛔ ★교재에 «없는» 둘은 홈에서도 null 입니다 — ${ttiNull.join(' · ')}`)
+
+    //  🔴 ⛔ «순화» 가 실제로 됐는가 — 교재의 센 말이 홈 글에 «남아 있으면» 안 됩니다
+    const BAD = ['만사가 귀찮', '모든 것이 바닥', '바람이 날 수도', '여자를 조심',
+      '관재 구실', '정신이 혼미', '낭패를 보게']
+    const leak: string[] = []
+    for (const s2 of SINGUNG) {
+      for (const t of [TTI_HOME[s2]?.body, WOL_HOME[s2]?.body]) {
+        if (!t) continue
+        for (const b of BAD) if (t.includes(b)) leak.push(`${s2}「${b}」`)
+      }
+    }
+    ok(leak.length === 0, `🔴 ⛔ ★홈 글에 교재의 «센 말» 이 ${leak.length}건 남았습니다 ${leak.join(' ')}`)
+
+    //  ⛔ 그런데 «교재 원문» 쪽은 ★그대로여야 합니다 (연재쌤 전용)
+    ok(WOL_TEXT['상문']?.includes('바람이 날 수도') === true,
+      '⛔ ★교재 원문(/naejeong)은 «그대로» 입니다 — 순화는 홈에만 합니다')
+
+    //  🔴 하루 한 번만 셈하는가 [대표님]
+    const api = R('app/api/tti-today/route.ts')
+    ok(/let cache: \{ key: string; body: Payload \} \| null = null/.test(api),
+      '🔴 ★하루치를 담아 둡니다 [대표님]')
+    ok(/cache && cache\.key === key/.test(api),
+      '🔴 ★오늘 것이 있으면 «다시 셈하지» 않습니다')
+    ok(/const key = `\$\{now\.getFullYear\(\)\}-\$\{now\.getMonth\(\) \+ 1\}-\$\{now\.getDate\(\)\}`/.test(api),
+      '⛔ ★담는 열쇠에 «날짜» 가 들어 있습니다 (다음 날 옛것이 안 나갑니다)')
+    ok(!/KASI_API_KEY/.test(api) && !/anthropic/i.test(api),
+      '✅ ★AI 도 KASI 도 «한 번도» 안 부릅니다')
+
+    //  🔴 홈 카드 — 탭 셋 · 띠 자동 · 탭을 눌러야 부름
+    const card = R('app/manseryeok/components/TodayFortuneCard.tsx')
+    ok(/'day' \| 'month' \| 'tti'/.test(card), '🔴 ★탭이 셋입니다 [대표님]')
+    ok(/띠로 보는 오늘/.test(card), '★셋째 탭 이름이 있습니다')
+    ok(/if \(tab !== 'tti' \|\| ttiData\) return/.test(card),
+      '🔴 ⛔ ★탭을 «눌러야» 부르고, 한 번 받으면 «다시 안» 부릅니다')
+    ok(/saju\.find\(p => p\.pillar === '년주'\)\?\.branch/.test(card),
+      '★손님 사주가 있으면 띠를 «저절로» 채웁니다')
+    ok(/ttiData\.note/.test(card),
+      '⛔ ★순화했다는 것을 홈에서도 밝힙니다')
+    ok(/이번 달 \(\{ttiData\.month\.wol\}월\)/.test(card),
+      '★이번 달 «하나만» 보여 드립니다 [대표님]')
   }
 
   console.log(`\n━━ 일진내정법 — 통과 ${pass} · 실패 ${fail} ━━\n`)

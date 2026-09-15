@@ -18,6 +18,23 @@
 // ============================================================================
 
 import { useEffect, useRef, useState } from 'react'
+
+/** ★띠로 보는 오늘 — /api/tti-today 가 주는 것 (9부) */
+interface TtiOut {
+  dayKey: string
+  ilGanji: string
+  ilJi: string
+  tti: { ji: string; sin: string | null; head: string | null; body: string | null; good: boolean | null }[]
+  month: { wol: number; ji: string; sin: string | null; head: string; body: string; good: boolean } | null
+  note: string
+}
+/** 열두 띠 — ⛔ 차례를 바꾸지 마십시오 */
+const TTI_LIST: { ji: string; name: string }[] = [
+  { ji: '子', name: '쥐' }, { ji: '丑', name: '소' }, { ji: '寅', name: '범' },
+  { ji: '卯', name: '토끼' }, { ji: '辰', name: '용' }, { ji: '巳', name: '뱀' },
+  { ji: '午', name: '말' }, { ji: '未', name: '양' }, { ji: '申', name: '원숭이' },
+  { ji: '酉', name: '닭' }, { ji: '戌', name: '개' }, { ji: '亥', name: '돼지' },
+]
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useResultSaju } from '@/hooks/useResultSaju'
@@ -156,7 +173,13 @@ export default function TodayFortuneCard() {
   const fortuneShown = fortune ?? (cache.getDaily(todayKST()) as Fortune | null)
   const [fortuneLoading, setFortuneLoading] = useState(false)
   const [open, setOpen] = useState(false)
-  const [tab, setTab] = useState<'day' | 'month'>('day')
+  /*  🔴 ★2026-09-15 (9부) [대표님] — 탭 셋째 「띠로 보는 오늘」 을 더했습니다.
+   *  ⚠️ 앞 둘은 ★로그인·사주가 있어야 보이지만, 띠 탭은 ★띠만 있으면 됩니다.
+   *     ⇒ 그래서 «비회원도» 볼 수 있습니다 (아래 비회원 대목에서 가릅니다). */
+  const [tab, setTab] = useState<'day' | 'month' | 'tti'>('day')
+  /** 고른 띠 — ⛔ 안 고르시면 손님 사주에서 «있으면» 저절로 채웁니다 */
+  const [ttiJi, setTtiJi] = useState<string>('')
+  const [ttiData, setTtiData] = useState<TtiOut | null>(null)
   // ⚠ state 로 "이미 불렀나"를 판단하면, monthly 가 렌더마다 새 객체가 되는 탓에
   //   setState → 렌더 → 조건에 걸려 return → 로딩이 영영 안 풀리는 일이 생긴다.
   //   그래서 ref 에 "시도한 달"을 적어둔다. (2026-07-20 수정)
@@ -418,13 +441,43 @@ export default function TodayFortuneCard() {
     borderRadius: 14, padding: 15,
   }
 
+  /*  🔴 ★띠로 보는 오늘 — 탭을 «열 때» 한 번만 받아 옵니다 [대표님 2026-09-15]
+   *
+   *  ⚠️ 창구가 ★하루치를 담아 두므로, 여러 손님이 눌러도 셈은 «하루 한 번» 입니다.
+   *  ⛔ 탭을 안 누르시면 ★아예 안 부릅니다 (홈이 무거워지지 않게).
+   *  ⚠️ 받아 온 뒤에는 ★다시 안 부릅니다 (ttiData 가 있으면 건너뜁니다). */
+  useEffect(() => {
+    if (tab !== 'tti' || ttiData) return
+    let alive = true
+    ;(async () => {
+      try {
+        const res = await fetch('/api/tti-today')
+        if (!res.ok) return
+        const j = (await res.json()) as TtiOut
+        if (alive) setTtiData(j)
+      } catch { /* 조용히 둡니다 — 홈이 깨지면 안 됩니다 */ }
+    })()
+    return () => { alive = false }
+  }, [tab, ttiData])
+
+  /*  ★내 띠를 «저절로» 채웁니다 — 사주가 있으면 연지가 곧 띠입니다.
+   *  ⛔ 사주가 없으면(비회원 등) 그냥 비워 둡니다. 손님이 고르시면 됩니다. */
+  const myTti = saju.find(p => p.pillar === '년주')?.branch ?? ''
+  const shownTti = ttiJi || myTti
+
   // 로그인 확인 전에는 아무것도 그리지 않는다(깜빡임 방지)
   if (isLoggedIn === null) return null
 
-  // 탭 (오늘 / 이달) — 월운 계산이 가능할 때만 탭을 띄운다
-  const tabBar = monthly ? (
+  /*  탭 — ★2026-09-15 (9부) [대표님] 셋으로 넓혔습니다.
+   *  ⚠️ 앞 둘(오늘·이달)은 ★월운 계산이 될 때만 떴습니다.
+   *     ⇒ 「띠로 보는 오늘」 은 ★사주가 없어도 되므로 «언제나» 띄웁니다. */
+  type TabKey = 'day' | 'month' | 'tti'
+  const TABS: [TabKey, string][] = monthly
+    ? [['day', '오늘의 운세'], ['month', '이달의 운세'], ['tti', '띠로 보는 오늘']]
+    : [['day', '오늘의 운세'], ['tti', '띠로 보는 오늘']]
+  const tabBar = (
     <div style={{ display: 'flex', gap: 4, background: '#f5ebe2', borderRadius: 9, padding: 3, marginBottom: 12 }}>
-      {([['day', '오늘의 운세'], ['month', '이달의 운세']] as const).map(([k, label]) => {
+      {TABS.map(([k, label]) => {
         const on = tab === k
         return (
           <button key={k} onClick={() => { setTab(k); setOpen(false) }}
@@ -437,7 +490,7 @@ export default function TodayFortuneCard() {
         )
       })}
     </div>
-  ) : null
+  )
 
   const header = (
     <>
@@ -457,6 +510,95 @@ export default function TodayFortuneCard() {
       </div>
     </>
   )
+
+  /* ══ 🔴 띠로 보는 오늘 — 2026-09-15 (9부) [대표님] ═══════════════
+   *  ⚠️ ★로그인·사주가 없어도 봅니다 — 띠 하나만 고르시면 됩니다.
+   *     ⇒ 그래서 «비회원 대목» 보다 ★«먼저» 둡니다.
+   *  ⛔ 말은 ★순화한 것입니다 (tables/homeText.ts).
+   *     교재 원문은 ★/naejeong(연재쌤 전용)에서만 봅니다.
+   * ══════════════════════════════════════════════════════════════ */
+  if (tab === 'tti') {
+    const hit = ttiData?.tti.find(t => t.ji === shownTti) ?? null
+    const pick = TTI_LIST.find(t => t.ji === shownTti)
+    return (
+      <div style={wrap}>
+        {header}
+
+        {/* ★띠 고르기 — 열둘을 한눈에 */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 5, marginBottom: 12 }}>
+          {TTI_LIST.map(t => {
+            const on = t.ji === shownTti
+            return (
+              <button key={t.ji} onClick={() => setTtiJi(t.ji)}
+                style={{
+                  padding: '7px 0', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit',
+                  border: `1px solid ${on ? '#b46e46' : '#f0ddcb'}`,
+                  background: on ? '#b46e46' : '#fff',
+                  color: on ? '#fff' : '#8a6a52',
+                }}>
+                <div style={{ fontSize: 13, fontWeight: 700 }}>{t.ji}</div>
+                <div style={{ fontSize: 9.5 }}>{t.name}</div>
+              </button>
+            )
+          })}
+        </div>
+
+        {!ttiData ? (
+          <div style={{ fontSize: 12.5, color: '#8a6a52', textAlign: 'center', padding: '14px 0' }}>
+            불러오는 중이에요…
+          </div>
+        ) : !shownTti ? (
+          <div style={{ fontSize: 12.5, color: '#8a6a52', textAlign: 'center', padding: '14px 0', lineHeight: 1.7 }}>
+            위에서 띠를 골라 보세요.
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+              <span style={{ fontSize: 10, color: '#5c3a1e', background: '#faede0', padding: '3px 9px', borderRadius: 10 }}>
+                {ttiData.dayKey.slice(5).replace('-', '.')} · {ttiData.ilGanji}일
+              </span>
+            </div>
+
+            {/*  ⛔ 교재 9쪽에 «줄이 없는» 신궁(상문·공망)은 ★사실대로 말합니다 */}
+            {hit && hit.head && hit.body ? (
+              <>
+                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6,
+                  color: hit.good ? '#2f6b4f' : '#a8443c' }}>
+                  {pick?.name}띠 — {hit.head}
+                </div>
+                <div style={{ fontSize: 13, color: '#5c3a1e', lineHeight: 1.85 }}>{hit.body}</div>
+              </>
+            ) : (
+              <div style={{ fontSize: 13, color: '#8a6a52', lineHeight: 1.8 }}>
+                {pick?.name}띠는 오늘 따로 전해 드릴 풀이가 없어요. 평소처럼 지내시면 됩니다.
+              </div>
+            )}
+
+            {/*  ★이번 달 하나만 — [대표님] 「이번 달에 해당하는 내용 하나만 컴팩트하게」 */}
+            {ttiData.month && (
+              <div style={{
+                marginTop: 14, paddingTop: 12, borderTop: '0.5px solid #f0ddcb',
+              }}>
+                <div style={{ fontSize: 11, color: '#8a6a52', marginBottom: 4 }}>
+                  이번 달 ({ttiData.month.wol}월)
+                </div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 4,
+                  color: ttiData.month.good ? '#2f6b4f' : '#a8443c' }}>
+                  {ttiData.month.head}
+                </div>
+                <div style={{ fontSize: 12.5, color: '#5c3a1e', lineHeight: 1.8 }}>{ttiData.month.body}</div>
+              </div>
+            )}
+
+            {/*  ⛔ 순화했다는 것을 ★밝혀 둡니다 (하락이수와 같은 결) */}
+            <div style={{ marginTop: 12, fontSize: 10.5, color: '#9c8270', lineHeight: 1.6 }}>
+              {ttiData.note}
+            </div>
+          </>
+        )}
+      </div>
+    )
+  }
 
   // 비회원
   if (!isLoggedIn) {
