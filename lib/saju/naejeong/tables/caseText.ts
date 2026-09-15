@@ -604,3 +604,73 @@ export const CASE_TEXT: CaseText[] = [
 export function caseTextOf(id: string): CaseText | null {
   return CASE_TEXT.find(c => c.id === id) ?? null
 }
+
+/* ══════════════════════════════════════════════════════════════════
+ *  ★교재 사례에서 «자리별 문장» 을 뽑아 쓰기  · 2026-09-15 (9부)
+ *
+ *  🔴 [왜 만들었나]  교재 4~7쪽은 ★공망·원진·해결·퇴식 의
+ *     «자리별 풀이» 를 적어 두지 않았습니다 (16칸이 빕니다).
+ *     ⇒ 그 넷이 걸린 손님은 화면이 «거의 빈 채» 로 보였습니다.
+ *     ⇒ 그런데 ★교재 «사례» 에는 저 넷이 어떻게 풀렸는지 «실제로» 적혀 있습니다 —
+ *       「월지가 해결신이니 매매가 해결되겠다」 (44쪽)
+ *       「연지가 퇴식(쇠퇴)이니 조상의 덕이 없다」 (13쪽)
+ *
+ *  ⛔⛔ ★지어내는 것이 «아닙니다» —
+ *     교재 사례의 «문장을 그대로» 오려서 보여 드릴 뿐입니다.
+ *     ⇒ 어느 쪽에서 왔는지 ★«쪽수를 함께» 붙입니다.
+ *
+ *  ⚠️ ★교재가 딴이름으로 적은 것도 함께 찾습니다 —
+ *     천록=양인 · 목적=합식 · 해결=해결신 · 퇴식=쇠퇴 · 금조건=조객 · 백병주=병부
+ * ══════════════════════════════════════════════════════════════════ */
+
+/** 신궁의 딴이름 — ⛔ 교재가 섞어 쓰므로 «다» 찾아야 합니다 */
+const ALIAS: Record<SinGung, string[]> = {
+  강일진: ['강일진'],
+  천록: ['천록', '양인'],
+  상문: ['상문', '사살신'],
+  목적: ['목적', '합식'],
+  비부: ['비부', '기러기'],
+  공망: ['공망'],
+  약일충: ['약일충'],
+  원진: ['원진'],
+  해결: ['해결신', '해결'],
+  퇴식: ['퇴식', '쇠퇴'],
+  금조건: ['금조건', '조객'],
+  백병주: ['백병주', '병부'],
+}
+
+const JARI_WORD = { 연지: '연지', 월지: '월지', 일지: '일지', 시지: '시지' } as const
+export type JariKey = keyof typeof JARI_WORD
+
+export interface CaseLine {
+  /** ★교재 문장 «그대로» */
+  text: string
+  page: string
+  iljin: string
+}
+
+/**
+ *  🔴 «그 자리 × 그 신궁» 이 교재 사례에서 어떻게 풀렸는가.
+ *  ⛔ 못 찾으면 «빈 배열» — 지어내지 않습니다.
+ */
+export function caseLinesFor(jari: JariKey, sin: SinGung, limit = 3): CaseLine[] {
+  const words = ALIAS[sin]
+  const out: CaseLine[] = []
+  for (const c of CASE_TEXT) {
+    //  문장 단위로 잘라 «그 자리 + 그 신궁» 이 한 문장에 함께 있는 것만
+    for (const raw of c.text.split(/(?<=\.)\s*/)) {
+      const t = raw.trim()
+      if (t.length < 8) continue
+      if (!t.includes(JARI_WORD[jari])) continue
+      if (!words.some(w => t.includes(w))) continue
+      /*  ⚠️ 한 문장에 ★자리가 둘 이상이면 어느 것이 그 신궁인지 헷갈립니다 —
+       *     ⛔ 그런 문장은 «버립니다». 엉뚱한 풀이를 보여 드리지 않으려는 것입니다. */
+      const jariCount = (['연지', '월지', '일지', '시지'] as const)
+        .filter(j => t.includes(j)).length
+      if (jariCount > 1) continue
+      out.push({ text: t, page: c.page, iljin: c.iljin })
+      if (out.length >= limit) return out
+    }
+  }
+  return out
+}

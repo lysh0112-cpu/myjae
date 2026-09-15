@@ -27,7 +27,7 @@ import { PURPOSES, SINSAL_DIR, findPurpose } from '@/lib/saju/naejeong/tables/pu
 //  ★교재 찾기 — 로컬입니다. ⛔ AI 도 바깥도 «안» 부릅니다 [대표님 2026-09-15]
 import { lookup, type LookupHit } from '@/lib/saju/naejeong/tables/lookup'
 //  ★교재 사례 풀이 — 1차(11~24쪽). ⛔ 순화 없이 교재 그대로.
-import { caseTextOf } from '@/lib/saju/naejeong/tables/caseText'
+import { caseTextOf, caseLinesFor, CASE_TEXT, type JariKey } from '@/lib/saju/naejeong/tables/caseText'
 import { getSinsal } from '@/lib/saju/sinsal'
 
 const ONLY: AppRole[] = ['master']
@@ -104,6 +104,10 @@ export default function NaejeongPage() {
   const [found, setFound] = useState<LookupHit[] | null>(null)
   /*  ★펼쳐 볼 사례 — 눌렀을 때만 풀이가 보입니다 (목록이 길어지지 않게) */
   const [openCase, setOpenCase] = useState<string>('')
+  /*  🔴 ★사례 «모두 보기» — 2026-09-15 [대표님]
+   *     「교재 안에 있는 사례들을 모두 정리해서 보여 주자」
+   *  ⚠️ 찾기 칸에 «말을 적어야만» 볼 수 있던 것을 ★목록으로도 엽니다. */
+  const [showAll, setShowAll] = useState(false)
   const [data, setData] = useState<Out | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -389,6 +393,89 @@ export default function NaejeongPage() {
             </div>
           )}
 
+          {/*  ★교재 사례를 «목록» 으로도 봅니다 — 찾기 말을 몰라도 됩니다 */}
+          <button type="button" onClick={() => { setShowAll(!showAll); setFound(null) }}
+            style={{
+              width: '100%', marginTop: 8, padding: '9px 0', borderRadius: 10,
+              background: 'transparent', border: `1px dashed ${LINE}`,
+              color: ACCENT, fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit',
+            }}>
+            {showAll ? '▲ 사례 목록 닫기' : `▼ 교재 사례 ${CASE_TEXT.length}건 모두 보기`}
+          </button>
+
+          {showAll && (
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {/*  ★쪽 차례 그대로 — 교재를 펼친 것과 같은 순서입니다 */}
+              {CASE_TEXT.map((c, i) => {
+                const prev = i > 0 ? CASE_TEXT[i - 1] : null
+                //  ⚠️ 갈래가 바뀌는 자리에 줄을 넣어 «어디쯤인지» 보이게 합니다
+                const band = !prev ? '교재 11~24쪽 · 사업 · 동업 · 송사'
+                  : (prev.id.startsWith('c2') && c.id === 'c25a') ? '교재 25~41쪽 · 자녀 · 결혼 · 부부'
+                  : (c.id === 'c42') ? '교재 42~54쪽 · 집 · 직장 · 학업' : null
+                const on = openCase === c.id
+                return (
+                  <div key={c.id}>
+                    {band && (
+                      <div style={{
+                        fontSize: 11, color: SUB, margin: '10px 0 6px',
+                        paddingBottom: 4, borderBottom: `1px solid ${LINE}`,
+                      }}>{band}</div>
+                    )}
+                    <button type="button" onClick={() => setOpenCase(on ? '' : c.id)}
+                      style={{
+                        width: '100%', textAlign: 'left', padding: '9px 11px', borderRadius: 10,
+                        background: on ? '#fff3ec' : '#fff',
+                        border: `1px solid ${on ? ACCENT : LINE}`,
+                        cursor: 'pointer', fontFamily: 'inherit',
+                      }}>
+                      <div style={{ fontSize: 12.5, color: INK }}>
+                        <span style={{ color: SUB, fontSize: 11 }}>
+                          {c.page.replace('교재 ', '')} · {c.iljin}
+                        </span>
+                        <span style={{ marginLeft: 7 }}>{c.q.slice(0, 30)}{c.q.length > 30 ? '…' : ''}</span>
+                      </div>
+                      {on && (
+                        <div style={{ marginTop: 9, paddingTop: 9, borderTop: `1px solid ${LINE}` }}>
+                          <div style={{ fontSize: 11.5, color: SUB, lineHeight: 1.7, marginBottom: 7 }}>{c.q}</div>
+                          {c.saju && (() => {
+                            const sg = c.saju.sin
+                            return (
+                              <div style={{
+                                display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5,
+                                textAlign: 'center', marginBottom: 8,
+                              }}>
+                                {([['연', c.saju.pillars.yeon, sg?.yeon],
+                                   ['월', c.saju.pillars.wol, sg?.wol],
+                                   ['일', c.saju.pillars.il, sg?.il],
+                                   ['시', c.saju.pillars.si, sg?.si]] as const).map(([k, gj, one]) => (
+                                  <div key={k} style={{ border: `1px solid ${LINE}`, borderRadius: 8, padding: '6px 3px' }}>
+                                    <div style={{ fontSize: 9.5, color: SUB }}>{k}</div>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: INK }}>{gj}</div>
+                                    <div style={{ fontSize: 10, color: one ? ACCENT : '#c4b5a8' }}>{one ?? '—'}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            )
+                          })()}
+                          {c.note && (
+                            <div style={{ fontSize: 11.5, color: SUB, lineHeight: 1.7, marginBottom: 7 }}>{c.note}</div>
+                          )}
+                          <div style={{
+                            fontSize: 12.5, color: INK, lineHeight: 1.85,
+                            background: '#fbf6f1', borderRadius: 10, padding: '10px 11px',
+                          }}>{c.text}</div>
+                          {c.cut && (
+                            <div style={{ marginTop: 7, fontSize: 11.5, color: BAD, lineHeight: 1.7 }}>{c.cut}</div>
+                          )}
+                        </div>
+                      )}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
           {/*  🔴 ★상담 목적 — 두 걸음으로 고릅니다 [대표님 2026-09-15]
             *     ① 대분류를 누르면  ② 세부 질문이 «펼쳐집니다»
             *  ⚠️ 세부는 ★«한 줄에 하나» 입니다 [대표님] —
@@ -547,9 +634,31 @@ export default function NaejeongPage() {
                       fontSize: 13, color: INK, lineHeight: 1.8,
                       background: '#fbf6f1', borderRadius: 10, padding: '10px 11px',
                     }}>{h.jariText}</div>
-                  : <div style={{ fontSize: 12, color: SUB, lineHeight: 1.7 }}>
-                      교재에 이 신궁의 «자리별» 풀이는 없습니다. 위 뜻으로 보십시오.
-                    </div>
+                  : (() => {
+                      /*  🔴 ★교재 4~7쪽에 «자리별 풀이가 없는» 넷(공망·원진·해결·퇴식) —
+                        *     ⇒ 교재 «사례» 에서 «같은 자리 × 같은 신궁» 문장을 찾아 보여 드립니다.
+                        *  ⛔ 지어내는 것이 «아닙니다» — 교재 문장을 «그대로» 오려서, ★쪽수와 함께. */
+                      const lines = caseLinesFor(h.jari as JariKey, h.sin as never)
+                      return (
+                        <>
+                          <div style={{ fontSize: 12, color: SUB, lineHeight: 1.7 }}>
+                            교재에 이 신궁의 «자리별» 풀이는 없습니다.
+                            {lines.length > 0 && ' 교재 사례에서는 이렇게 풀었습니다 —'}
+                          </div>
+                          {lines.map(l => (
+                            <div key={l.page + l.text.slice(0, 10)} style={{
+                              marginTop: 7, fontSize: 12.5, color: INK, lineHeight: 1.8,
+                              background: '#fbf6f1', borderRadius: 10, padding: '9px 11px',
+                            }}>
+                              {l.text}
+                              <span style={{ marginLeft: 6, fontSize: 11, color: SUB }}>
+                                ({l.page} · {l.iljin})
+                              </span>
+                            </div>
+                          ))}
+                        </>
+                      )
+                    })()
                 )}
               </div>
             ))}

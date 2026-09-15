@@ -23,7 +23,7 @@ import { TTI_HOME, WOL_HOME } from './lib/saju/naejeong/tables/homeText'
 import { solarToLunarKR } from './lib/saju/koreanLunarTable'
 import { PURPOSES, SINSAL_DIR, findPurpose } from './lib/saju/naejeong/tables/purposes'
 import { lookup, LOOKUP_ALL, LOOKUP_CASE } from './lib/saju/naejeong/tables/lookup'
-import { CASE_TEXT, caseTextOf } from './lib/saju/naejeong/tables/caseText'
+import { CASE_TEXT, caseTextOf, caseLinesFor } from './lib/saju/naejeong/tables/caseText'
 import { getSinsal } from './lib/saju/sinsal'
 
 let pass = 0, fail = 0
@@ -607,6 +607,33 @@ function main() {
     ok(/아직 풀이를 안 옮겼어요/.test(page2),
       '⚠️ ★아직 안 옮긴 쪽은 «사실대로» 말합니다 (25~54쪽)')
     ok(/c\.saju &&/.test(page2), '★사례의 네 기둥과 신궁도 보여 줍니다')
+
+    /*  🔴 ★교재 사례를 «목록» 으로도 봅니다 [대표님 2026-09-15]
+     *     찾기 칸에 «말을 적어야만» 볼 수 있던 것을 ★목록으로도 엽니다. */
+    ok(/const \[showAll, setShowAll\]/.test(page2), '🔴 ★사례 «모두 보기» 가 있습니다 [대표님]')
+    ok(/모두 보기/.test(page2) && /CASE_TEXT\.map/.test(page2),
+      '★쪽 차례 그대로 목록이 펼쳐집니다')
+
+    /*  🔴 ★자리별 풀이가 «없는» 넷을 교재 «사례» 로 채웁니다
+     *     ⛔ 지어내는 것이 아니라 교재 문장을 «그대로» 오려 옵니다 (쪽수와 함께). */
+    ok(/caseLinesFor\(h\.jari as JariKey/.test(page2),
+      '🔴 ★빈 자리를 «교재 사례 문장» 으로 채웁니다')
+    ok(/\(\{l\.page\} · \{l\.iljin\}\)/.test(page2),
+      '⛔ ★어느 쪽에서 왔는지 «쪽수» 를 함께 보여 줍니다 (지어낸 것이 아님을 알 수 있게)')
+
+    //  🔴 값으로 — 빈 넷이 실제로 채워지는가
+    {
+      const empty: string[] = []
+      for (const sg of ['공망', '원진', '해결', '퇴식'] as const)
+        for (const j of ['연지', '월지', '일지', '시지'] as const)
+          if (caseLinesFor(j, sg).length === 0) empty.push(`${j}×${sg}`)
+      //  ⚠️ ★열여섯 칸이 «다» 채워지지는 않습니다 — 교재 사례에 없는 짝이 있습니다.
+      //     ⛔ 그런 자리는 «빈 채» 로 둡니다. 억지로 채우지 않습니다.
+      ok(empty.length < 16,
+        `★빈 16칸 가운데 ${16 - empty.length}칸이 교재 사례로 채워집니다 (못 채운 것 ${empty.join(' ')})`)
+    }
+    ok(caseLinesFor('시지', '공망').every(l => /교재 \d+쪽/.test(l.page)),
+      '⛔ ★오려 온 문장마다 «교재 쪽» 이 붙습니다')
   }
 
   console.log(`\n━━ 일진내정법 — 통과 ${pass} · 실패 ${fail} ━━\n`)
