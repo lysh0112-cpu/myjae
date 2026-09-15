@@ -536,13 +536,24 @@ function main() {
    * ══════════════════════════════════════════════════════════════ */
   head('⑬ 🔴🔴 교재 사례 — 교재 값과 «내 셈» 이 같은가')
   {
-    ok(CASE_TEXT.length >= 18, `★1차 사례 ${CASE_TEXT.length}건 (교재 11~24쪽)`)
+    ok(CASE_TEXT.length >= 41, `★사례 ${CASE_TEXT.length}건 (교재 11~41쪽 · 1·2차)`)
+
+    /*  ⛔⛔ ★교재가 «안 적은» 신궁을 지어내지 않았는가 — 2026-09-15
+     *  [9부에 잡힌 것]  c29a(교재 29쪽)는 사주만 적혀 있고 ★신궁이 «없습니다».
+     *     (풀이도 문점일이 아니라 ★«일지 기준 양인» 으로 다르게 풉니다)
+     *     ⇒ 그런데 제가 ★신궁 넷을 «지어내» 적었습니다.
+     *     ⇒ ★이 그물이 «값으로» 잡았습니다 — 교재 값과 «하나도» 안 맞았습니다.
+     *  ⛔ 지어내면 ★교재와 어긋나므로 «반드시» 걸립니다. 그것이 이 그물의 힘입니다. */
+    const noSin = CASE_TEXT.filter(c => c.saju && !c.saju.sin)
+    ok(noSin.every(c => !!c.note),
+      `⛔ ★교재가 신궁을 «안 적은» 사례는 그 까닭을 밝힙니다 (${noSin.map(c => c.id).join(' ')})`)
 
     //  🔴 ⛔ 사례마다 «네 자리» 를 교재와 대조합니다
     let good = 0
     const bad: string[] = []
     for (const c of CASE_TEXT) {
-      if (!c.saju) continue
+      //  ⛔ ★교재가 신궁을 «안 적은» 사례는 대조할 것이 없습니다 (지어내면 안 됩니다)
+      if (!c.saju || !c.saju.sin) continue
       for (const k of ['yeon', 'wol', 'il', 'si'] as const) {
         const raw = c.saju.pillars[k]
         const ji = raw.length === 2 ? raw[1] : raw

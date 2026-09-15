@@ -337,21 +337,31 @@ export default function NaejeongPage() {
                             <div style={{ fontSize: 11.5, color: SUB, lineHeight: 1.7, marginBottom: 7 }}>
                               {c.q}
                             </div>
-                            {c.saju && (
-                              <div style={{
-                                display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5,
-                                textAlign: 'center', marginBottom: 8,
-                              }}>
-                                {([['연', c.saju.pillars.yeon, c.saju.sin.yeon],
-                                   ['월', c.saju.pillars.wol, c.saju.sin.wol],
-                                   ['일', c.saju.pillars.il, c.saju.sin.il],
-                                   ['시', c.saju.pillars.si, c.saju.sin.si]] as const).map(([k, gj, sg]) => (
-                                  <div key={k} style={{ border: `1px solid ${LINE}`, borderRadius: 8, padding: '6px 3px' }}>
-                                    <div style={{ fontSize: 9.5, color: SUB }}>{k}</div>
-                                    <div style={{ fontSize: 13, fontWeight: 700, color: INK }}>{gj}</div>
-                                    <div style={{ fontSize: 10, color: ACCENT }}>{sg}</div>
-                                  </div>
-                                ))}
+                            {c.saju && (() => {
+                              const sg = c.saju.sin
+                              return (
+                                <div style={{
+                                  display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5,
+                                  textAlign: 'center', marginBottom: 8,
+                                }}>
+                                  {([['연', c.saju.pillars.yeon, sg?.yeon],
+                                     ['월', c.saju.pillars.wol, sg?.wol],
+                                     ['일', c.saju.pillars.il, sg?.il],
+                                     ['시', c.saju.pillars.si, sg?.si]] as const).map(([k, gj, one]) => (
+                                    <div key={k} style={{ border: `1px solid ${LINE}`, borderRadius: 8, padding: '6px 3px' }}>
+                                      <div style={{ fontSize: 9.5, color: SUB }}>{k}</div>
+                                      <div style={{ fontSize: 13, fontWeight: 700, color: INK }}>{gj}</div>
+                                      {/*  ⛔ 교재가 «안 적은» 사례는 빈칸 — 지어내지 않습니다 */}
+                                      <div style={{ fontSize: 10, color: one ? ACCENT : '#c4b5a8' }}>{one ?? '—'}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )
+                            })()}
+                            {/*  ⚠️ 교재가 «다르게» 푸는 사례라는 표시 */}
+                            {c.note && (
+                              <div style={{ fontSize: 11.5, color: SUB, lineHeight: 1.7, marginBottom: 7 }}>
+                                {c.note}
                               </div>
                             )}
                             <div style={{
