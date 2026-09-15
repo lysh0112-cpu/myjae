@@ -78,6 +78,19 @@ function toHourIdx(h: string | null): number | null {
   return isNaN(n) ? null : n
 }
 
+/*  ★매니저·상담사 단추 셋이 «같은 모양» 이어야 합니다 — 2026-09-15 (9부)
+ *  ⛔ 단추마다 색·여백을 따로 적지 마십시오. 하나만 고치면 셋이 함께 바뀝니다.
+ *  ⚠️ 아이콘을 «위» 로 올린 두 줄 짜임입니다 — 좁은 화면(320px)에서 글자가 안 잘리게. */
+const staffBtn: React.CSSProperties = {
+  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+  background: '#FFFBF7', border: '0.5px solid #b99a7d', borderRadius: 12,
+  padding: '9px 4px', fontSize: 11.5, color: '#96502e', cursor: 'pointer',
+  fontFamily: 'inherit', lineHeight: 1.3,
+  //  ⚠️ 손가락으로 누를 최소선을 지킵니다 (45부 3-6 교훈)
+  minHeight: 52,
+}
+const staffIcon: React.CSSProperties = { fontSize: 16, lineHeight: 1 }
+
 export default function MyPageNew() {
   const router = useRouter()
   const [email, setEmail] = useState('')
@@ -781,22 +794,65 @@ export default function MyPageNew() {
           </div>
         </div>
 
+        {/*  🔴 ★2026-09-15 (9부) [대표님] — 한 줄에 «셋» 으로 넓혔습니다.
+          *     [상담 관리] [★일진내정법] [관리자]
+          *
+          *  ⚠️ ★폭을 재고 정했습니다 — 가장 좁은 320px 화면에서
+          *     단추 하나에 쓸 수 있는 폭이 ★90.7px 입니다.
+          *     「🗓 일진내정법」 을 «한 줄» 로 넣으면 ★97px 라 넘칩니다.
+          *     ⇒ 그래서 ★아이콘을 «위» 로 올리고 글자를 아래에 두었습니다 (두 줄).
+          *     ⛔ 한 줄로 되돌리지 마십시오 — 좁은 화면에서 글자가 잘립니다.
+          *     ⚠️ 글자를 더 늘리실 때는 ★다시 재 보십시오.
+          *
+          *  🔴 ⛔ 일진내정법은 ★매니저만 보입니다 (isMaster).
+          *     그런데 ★단추를 숨기는 것은 «막는 것이 아닙니다» —
+          *     진짜 막는 곳은 ★/api/naejeong 의 requireMaster() 입니다. */}
         {isStaff && (
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
             <button onClick={async () => {
               const { data: c } = await supabase.from('consultants').select('id').eq('email', email).single()
               router.push(c ? `/manseryeok/consultant?consultantId=${c.id}` : '/manseryeok/consultant')
-            }} style={{ flex: 1, textAlign: 'center', background: '#FFFBF7', border: '0.5px solid #b99a7d', borderRadius: 12, padding: '13px 8px', fontSize: 12.5, color: '#96502e', cursor: 'pointer' }}>🩺 상담 관리</button>
+            }} style={staffBtn}>
+              <span style={staffIcon} aria-hidden="true">🩺</span>
+              상담 관리
+            </button>
+            {isMaster && (
+              <button onClick={() => router.push('/naejeong')} style={staffBtn}>
+                <span style={staffIcon} aria-hidden="true">🗓</span>
+                일진내정법
+              </button>
+            )}
             {isMaster ? (
               <button onClick={() => {
                 // ★48부 12차 — 관리자 화면의 ★「상담사 관리」 탭으로 바로
                 //   ⚠️ 상담사 화면의 goAdminConsultant() 와 «같은 방식» 입니다.
                 if (typeof window !== 'undefined') sessionStorage.setItem('adminTab', 'consultant')
                 router.push('/admin#consultant')
-              }} style={{ flex: 1, textAlign: 'center', background: '#FFFBF7', border: '0.5px solid #b99a7d', borderRadius: 12, padding: '13px 8px', fontSize: 12.5, color: '#96502e', cursor: 'pointer' }}>🔐 관리자</button>
+              }} style={staffBtn}>
+                <span style={staffIcon} aria-hidden="true">🔐</span>
+                관리자
+              </button>
             ) : (
               <div style={{ flex: 1 }} />
             )}
+          </div>
+        )}
+
+        {/*  🔴 ★일진내정법 — 2026-09-15 (9부) [대표님]
+          *     「내 정보 화면에서 매니저인 경우만 «바로가기» 가 생기게」
+          *
+          *  ⚠️ 전에는 ★상담사 고르기 화면을 «거쳐야만» 들어갈 수 있었습니다.
+          *     ⇒ 들어가는 길이 사실상 없던 셈입니다.
+          *  ⛔ ★isMaster 일 때만 그립니다 — 상담사·손님에게는 «안 보입니다».
+          *  ⛔ 그렇다고 이 단추가 «막는 장치» 는 아닙니다 —
+          *     진짜 막는 곳은 ★/api/naejeong 의 requireMaster() 입니다.
+          *  ⚠️ 이 주석에 단추 글자를 «그대로» 적지 마십시오 — 검사가 글자로 찾습니다 (5부 교훈). */}
+        {isMaster && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <button onClick={() => router.push('/naejeong')}
+              style={{ flex: 1, textAlign: 'center', background: '#FFFBF7', border: '0.5px solid #b99a7d', borderRadius: 12, padding: '13px 8px', fontSize: 12.5, color: '#96502e', cursor: 'pointer', fontFamily: 'inherit' }}>
+              🗓 일진내정법
+            </button>
           </div>
         )}
 

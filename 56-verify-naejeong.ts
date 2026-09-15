@@ -147,6 +147,27 @@ function main() {
       .filter(l => !/^\s*(\/\/|\*|\/\*|\{\/\*)/.test(l)).join('\n')
     ok(/router\.push\('\/naejeong'\)/.test(livePick),
       '🔴 ★상담사 고르기 화면에 «들어가는 단추» 가 있습니다 [대표님]')
+
+    /*  🔴 ★마이페이지에도 «들어가는 길» — 2026-09-15 [대표님]
+     *     「내 정보 화면에서 매니저인 경우만 … 들어가도록」
+     *  ⚠️ 상담사 고르기 화면을 «거치지 않고» 바로 들어갑니다. */
+    const my = R('app/mypage-new/page.tsx')
+    const liveMy = my.split('\n')
+      .filter(l => !/^\s*(\/\/|\*|\/\*|\{\/\*)/.test(l)).join('\n')
+    ok(/router\.push\('\/naejeong'\)/.test(liveMy),
+      '🔴 ★마이페이지에 «바로 가는» 단추가 있습니다 [대표님]')
+    //  ⛔ 그 단추가 «매니저만» 보는 자리인가 — isMaster 안쪽이어야 합니다
+    {
+      const iBtn = my.indexOf("router.push('/naejeong')")
+      const before = my.slice(0, iBtn)
+      const iMaster = before.lastIndexOf('{isMaster')
+      const iClose = before.lastIndexOf(')}')
+      ok(iMaster > 0 && iMaster > iClose,
+        '⛔ ★그 단추는 «매니저만» 보입니다 (상담사·손님에게는 안 보입니다)')
+    }
+    //  ⚠️ 셋이 «같은 모양» 인가 — 단추마다 색을 따로 적으면 어긋납니다
+    ok(/const staffBtn/.test(my) && (liveMy.match(/style=\{staffBtn\}/g) ?? []).length === 3,
+      '★단추 셋이 «같은 꼴»(staffBtn)을 씁니다 — 하나만 고치면 셋이 함께 바뀝니다')
     //  ⛔ 그 대목이 «매니저만» 보는 자리인지 — isMaster 안쪽이어야 합니다
     {
       const iIf = pick.indexOf('if (isMaster && !consultantId)')
