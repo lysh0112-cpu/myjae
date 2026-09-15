@@ -26,6 +26,8 @@ import { useRoleGate, RoleGateScreen, type AppRole } from '@/hooks/useRoleGate'
 import { PURPOSES, SINSAL_DIR, findPurpose } from '@/lib/saju/naejeong/tables/purposes'
 //  ★교재 찾기 — 로컬입니다. ⛔ AI 도 바깥도 «안» 부릅니다 [대표님 2026-09-15]
 import { lookup, type LookupHit } from '@/lib/saju/naejeong/tables/lookup'
+//  ⚠️ ★교재가 «아닌» 초안 한 줄 — 화면이 색을 달리해 보여 줍니다
+import { bridgeOf, BRIDGE_NOTE } from '@/lib/saju/naejeong/tables/bridge'
 //  ★교재 사례 풀이 — 1차(11~24쪽). ⛔ 순화 없이 교재 그대로.
 import { caseTextOf, caseLinesFor, CASE_TEXT, type JariKey } from '@/lib/saju/naejeong/tables/caseText'
 import { getSinsal } from '@/lib/saju/sinsal'
@@ -748,6 +750,40 @@ export default function NaejeongPage() {
               <div style={{ fontSize: 11, color: SUB, marginBottom: 10, lineHeight: 1.6 }}>
                 원국을 읽어 낸 것이에요. 교재에 있는 말만 씁니다.
               </div>
+
+              {/*  🔴 ★고른 질문에 «맞춘» 한 줄 — 2026-09-15 [대표님]
+                *     「사귄 남자친구와 잘될까를 물으면 거기에 맞게끔 연결되어야 한다」
+                *
+                *  ⛔⛔ ★이 한 줄은 «교재 글이 아닙니다» — 제가 쓴 초안입니다.
+                *     ⇒ 그래서 ★색과 테두리를 «달리» 하고 «그렇다고 적어» 둡니다.
+                *     ⇒ 연재쌤이 ★어느 것이 교재이고 어느 것이 초안인지 아셔야 합니다.
+                *  ⛔ 이 표시를 «지우지» 마십시오. 검사 56 ⑯ 이 지킵니다. */}
+              {(() => {
+                const pu = purpose ? findPurpose(purpose) : null
+                if (!pu || pu.kind !== 'singung' || !pu.jari?.length) return null
+                //  ★으뜸 자리의 신궁이 좋은가 나쁜가로 가릅니다
+                const head = data.hits.find(h => h.jari === pu.jari![0])
+                if (!head || head.good === null) return null
+                const line = bridgeOf(pu.id, head.good)
+                if (!line) return null
+                return (
+                  <div style={{
+                    border: `1px dashed ${ACCENT}`, borderRadius: 10,
+                    padding: '10px 11px', marginBottom: 11, background: '#fff',
+                  }}>
+                    <div style={{ fontSize: 11, color: SUB, marginBottom: 4 }}>
+                      {pu.label} — {pu.jari[0]}를 봅니다
+                    </div>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: head.good ? GOOD : BAD, lineHeight: 1.7 }}>
+                      {head.jari}가 {sinButton(head.sin)}이니, {line}
+                    </div>
+                    {/*  ⛔ ★교재가 아니라는 것을 «반드시» 밝힙니다 */}
+                    <div style={{ fontSize: 10.5, color: SUB, marginTop: 6, lineHeight: 1.6 }}>
+                      {BRIDGE_NOTE}
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/*  ★총괄 — «세어» 낸 줄들 */}
               <div style={{

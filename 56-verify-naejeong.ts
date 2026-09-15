@@ -26,6 +26,7 @@ import { lookup, LOOKUP_ALL, LOOKUP_CASE } from './lib/saju/naejeong/tables/look
 import { CASE_TEXT, caseTextOf, caseLinesFor } from './lib/saju/naejeong/tables/caseText'
 import { getSinsal } from './lib/saju/sinsal'
 import { chongpyeong } from './lib/saju/naejeong/sinGung'
+import { BRIDGE, bridgeOf, BRIDGE_NOTE } from './lib/saju/naejeong/tables/bridge'
 import { findTerms, TERM_SRC } from './lib/saju/naejeong/tables/terms'
 import { YUKCHIN_KEYS } from './lib/saju/yukchinTable'
 
@@ -736,10 +737,12 @@ function main() {
      *     띠로 보는 오늘 · 달로 보는 한 해 · 네 자리 제목 ·
      *     사례 네 기둥(찾기 결과 · 모두 보기) ★둘
      *  ⛔ 이 수를 «어림» 으로 적지 마십시오. 9부에 6이라 적었다가 틀렸습니다. */
-    /*  ⚠️ ★붙는 자리 — 띠 · 달 · 자리별 제목 · 사례 네 기둥 둘 · ★종합 리포트
-     *  ⛔ 자리가 늘면 이 수도 «함께» 고치십시오. 어림으로 적지 마십시오. */
-    ok((page3.match(/sinButton\(/g) ?? []).length === 6,
-      `★여섯 자리에 붙었습니다 (${(page3.match(/sinButton\(/g) ?? []).length})`)
+    /*  ⚠️ ★붙는 자리 «일곱» —
+     *     띠 · 달 · 자리별 제목 · 사례 네 기둥 둘 · 종합 리포트 · ★이은 줄
+     *  ⛔ 자리가 늘면 이 수도 «함께» 고치십시오. 어림으로 적지 마십시오.
+     *     (9부에 5 → 6 → 7 로 «두 번» 고쳤습니다) */
+    ok((page3.match(/sinButton\(/g) ?? []).length === 7,
+      `★일곱 자리에 붙었습니다 (${(page3.match(/sinButton\(/g) ?? []).length})`)
     ok(/sinButton\(data\.tti\.sin/.test(page3), '★「띠로 보는 오늘」 의 신궁이 눌립니다')
     ok(/sinButton\(m\.sin/.test(page3), '★「달로 보는 한 해」 의 신궁이 눌립니다')
     ok(/sinButton\(h\.sin\)/.test(page3), '★네 자리 제목의 신궁이 눌립니다')
@@ -843,6 +846,62 @@ function main() {
     //  ⛔ 담기 «전» 에는 서버에 안 갑니다
     ok(/저장하기 «전» 에는 서버에 안 갑니다|저장하기 «전» 에는 서버에 «안» 갑니다/.test(page),
       '⚠️ ★담기 전에는 서버에 «안» 간다는 것을 적어 두었습니다')
+  }
+
+  /* ══ ⑯ 🔴🔴 질문에 «맞춘» 한 줄 — 2026-09-15 [대표님] ═══════════
+   *  「사귄 남자친구와 잘될까를 물으면 거기에 맞게끔 연결되어야 한다」
+   *
+   *  ⛔⛔ ★이 줄들은 «교재가 아닙니다» — 제가 쓴 초안입니다.
+   *     ⇒ 화면이 «색을 달리» 하고 «그렇다고 적어» 둡니다.
+   *     ⇒ 그 표시가 «살아 있는지» 를 이 그물이 지킵니다.
+   * ══════════════════════════════════════════════════════════════ */
+  head('⑯ 🔴🔴 질문에 맞춘 한 줄 (⚠️ 교재가 아님)')
+  {
+    const page = R('app/naejeong/page.tsx')
+    const ids = PURPOSES.flatMap(g => g.items).filter(i => i.kind === 'singung').map(i => i.id)
+
+    //  ⛔ 콤보와 «한 칸도» 어긋나면 안 됩니다
+    const miss = ids.filter(i => !BRIDGE[i])
+    ok(miss.length === 0, `⛔ ★12신궁 질문 ${ids.length}개에 «다» 이을 줄이 있습니다 ${miss.join(' ')}`)
+    const extra = Object.keys(BRIDGE).filter(k => !ids.includes(k))
+    ok(extra.length === 0, `⛔ ★콤보에 «없는» 열쇠가 남아 있지 않습니다 ${extra.join(' ')}`)
+    ok(Object.keys(BRIDGE).length === 24, `★스물넷입니다 (${Object.keys(BRIDGE).length})`)
+
+    //  ⚠️ 신살 셋은 «좋고 나쁨» 이 아니라 이을 줄이 «없어야» 합니다
+    ok(!BRIDGE['moveDir'] && !BRIDGE['bizDir'] && !BRIDGE['homePlace'],
+      '⚠️ ★방향 셋은 «좋고 나쁨» 이 아니라 이을 줄이 없습니다 (억지로 안 만들었습니다)')
+
+    //  🔴 ⛔ «단정» 하지 않는가 — 자리를 짚을 뿐 결과를 찍지 않습니다
+    const all = Object.values(BRIDGE).flatMap(b => [b.good, b.bad])
+    /*  ⚠️ ★외도만 말투가 다릅니다 — 「잘 풀리는 자리」 라 쓸 수 «없는» 질문입니다.
+     *     ⇒ 그래도 ★「…자리입니다」 로는 끝납니다 (결과를 안 찍는다는 결은 같습니다). */
+    const notPlace = all.filter(l => !/자리입니다\.$/.test(l))
+    ok(notPlace.length === 0,
+      `🔴 ⛔ ★모두 «…자리입니다» 로 끝납니다 (결과를 «찍지» 않습니다) ${notPlace.join(' / ')}`)
+    const BAN = ['됩니다', '안 됩니다', '벌겠', '못 합니다', '틀림없', '반드시', '꼭 ']
+    const hard = all.filter(l => BAN.some(b => l.includes(b)))
+    ok(hard.length === 0, `⛔ ★단정하는 말이 없습니다 ${hard.join(' / ')}`)
+    //  ⛔ 숫자·시기·금액을 말하지 않습니다
+    ok(!all.some(l => /\d/.test(l)), '⛔ ★숫자를 말하지 않습니다 (시기·금액)')
+
+    //  🔴 값으로 — 대표님이 드신 사례
+    ok(bridgeOf('dating', true) === '사귀는 일은 잘 풀리는 자리입니다.',
+      `★「사귀는 사람과 잘될지」 + 좋은 신궁 ⇒ ${bridgeOf('dating', true)}`)
+    ok(bridgeOf('없는것', true) === null, '⛔ ★모르는 질문이면 «지어내지» 않고 null 입니다')
+
+    //  ⛔⛔ ★교재가 «아니라는» 표시가 살아 있는가 — 가장 중요한 자리
+    /*  🔴 ⛔ ★«쓰는지» 까지 봐야 합니다 —
+     *     9부에 {BRIDGE_NOTE} 를 {null} 로 바꿔 봤더니 ★그물이 통과했습니다.
+     *     불러오기(import)만 남아 있어도 «있다» 고 본 것입니다.
+     *     ⇒ ★화면에 «그려 넣는» 자리를 봅니다. 여기는 가장 중요한 그물입니다. */
+    ok(/\{BRIDGE_NOTE\}/.test(page),
+      '🔴 ⛔ ★교재가 아니라는 «표시» 를 화면에 «그립니다» (import 만으로는 안 됩니다)')
+    ok(/교재 글이 아니라 질문에 맞춰 붙인 초안/.test(BRIDGE_NOTE),
+      '🔴 ⛔ ★그 표시가 «교재가 아님» 을 분명히 말합니다')
+    ok(/border: `1px dashed \$\{ACCENT\}`/.test(page),
+      '★교재 글과 «테두리를 달리» 해 한눈에 갈립니다')
+    ok(/이 파일의 글은 «교재가 아닙니다»/.test(R('lib/saju/naejeong/tables/bridge.ts')),
+      '⛔ ★파일 머리에도 «교재가 아님» 을 못 박았습니다')
   }
 
   console.log(`\n━━ 일진내정법 — 통과 ${pass} · 실패 ${fail} ━━\n`)
