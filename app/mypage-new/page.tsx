@@ -11,7 +11,7 @@ import HomeBottomNav from '@/app/components/HomeBottomNav'
 import { useResultSaju } from '@/hooks/useResultSaju'
 // ★2026-07-27 — 커플채팅(CoupleChatFab · InviteNotifier) 제거. 테스트였으므로 전부 삭제.
 //   ⚠️ 상담사–고객 채팅은 별개이며 살아 있다. 함께 지우지 말 것.
-import Image from 'next/image'
+import BrandLockup from '@/app/components/common/BrandLockup'
 import AiTalkFab from '@/app/manseryeok/components/AiTalkFab'
 import WalletPanel from '@/app/components/common/WalletPanel'
 import {
@@ -498,16 +498,11 @@ export default function MyPageNew() {
         .mc-steam-c { animation: mcSteamA 2.8s ease-out infinite 1.6s; }
       `}</style>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', background: '#FFFBF7', borderBottom: '0.5px solid #9c7a58', position: 'sticky', top: 0, zIndex: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {/* ★2026-09-10 — 커피잔 + MyungCafe 를 ★새 로고 + 「명연재(明然載)」 로.
-              홈·로그인·가입 화면과 «같은 모양» 입니다.
-              ⛔ 옛 커피잔으로 되돌리지 마십시오 — 손님이 두 이름을 보게 됩니다. */}
-          <Image src="/logo-myjae.png" alt="명연재" width={30} height={30} priority />
-          <span style={{ display: 'flex', alignItems: 'flex-end', gap: 5 }}>
-            <span style={{ fontSize: 19, fontWeight: 600, color: '#38414B', letterSpacing: 2, lineHeight: 1 }}>명연재</span>
-            <span style={{ fontSize: 11, color: '#68112E', lineHeight: 1 }}>(明然載)</span>
-          </span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 16px', gap: 12, background: '#FFFBF7', borderBottom: '0.5px solid #9c7a58', position: 'sticky', top: 0, zIndex: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+          {/*  🔴 ★2026-09-15 (10부) — 홈·로그인과 «같은 부품» 입니다.
+              ⛔ 여기에 이름을 다시 적지 마십시오 (검사 57 ⑤). */}
+          <BrandLockup variant="bar" />
         </div>
         <div style={{ display: 'flex', gap: 16, fontSize: 18, color: '#b49080' }}>
           {/* ★48부 17차 — ☰ 를 ★알약 버튼으로 [홈과 «같은 결»]

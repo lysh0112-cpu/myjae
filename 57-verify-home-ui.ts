@@ -210,6 +210,73 @@ function main() {
       '⚠️ ★홈 본문에도 「선생님 소개」 로 가는 길이 없습니다 (사실 확인)')
   }
 
+  /* ══ ⑤ 🔴🔴 브랜드 머리 — «한 부품» 이라야 합니다 ═══════════════════
+   *  [대표님 2026-09-15] 「로고가 왼쪽에 · 타이틀과 한자가 정돈된 구조로
+   *                        엑셀 느낌 없이 모바일 앱 상단바에 걸맞게」
+   *
+   *  ⚠️ 전에는 ★세 화면이 «각자» 적어 두어 ★이미 어긋나 있었습니다 —
+   *     글자 22 · 20 · 19px · 로고 34 · 30 · 30px · 자간 3 · 2 · 2
+   *  ⇒ 9부 ⑤ 「공용 부품을 복사하지 마십시오」 를 그대로 밟고 있던 자리입니다.
+   * ════════════════════════════════════════════════════════════════ */
+  head('⑤ 🔴🔴 브랜드 머리 — 한 부품 [대표님]')
+  {
+    const brandSrc = R('app/components/common/BrandLockup.tsx')
+    const login = liveOf(R('app/login/page.tsx'))
+    const mypage = liveOf(R('app/mypage-new/page.tsx'))
+
+    ok(/BRAND_TITLE = '명연재사주연구소'/.test(brandSrc),
+      '🔴 ★이름이 「명연재사주연구소」 입니다 [대표님]')
+    ok(/BRAND_HANJA = '\(明然載\)'/.test(brandSrc),
+      '★한자 표기가 함께 있습니다')
+
+    //  🔴🔴 ⛔ ★사본이 «한 벌도» 없어야 합니다 — 이름을 화면에 다시 적지 않았는지
+    for (const [name, src] of [
+      ['홈', home], ['로그인', login], ['마이페이지', mypage],
+    ] as const) {
+      ok(/<BrandLockup/.test(src), `★${name} 이 부품을 «씁니다»`)
+      ok(!/明然載/.test(src), `⛔ ★${name} 에 한자를 «다시 적지» 않았습니다`)
+      ok(!/logo-myjae\.png/.test(src), `⛔ ★${name} 이 로고를 «직접» 그리지 않습니다`)
+    }
+    //  ⛔ 저장소 어디에도 «또 다른» 묶음이 없는지 — 값으로 셉니다
+    {
+      const files = ['app/home-new/page.tsx', 'app/login/page.tsx',
+        'app/mypage-new/page.tsx', 'app/components/common/BrandLockup.tsx']
+      const n = files.filter(f => /明然載/.test(R(f))).length
+      ok(n === 1, `🔴🔴 ★한자를 적은 파일이 «하나» 뿐입니다 (${n})`)
+    }
+
+    /*  ⛔⛔ ★건드리면 안 되는 이름 둘 — «화면 이름» 과 «법인·앱 이름» 은 다릅니다 */
+    const company = R('app/components/common/companyInfo.ts')
+    ok(/name: '\(주\)명연재'/.test(company),
+      "⛔⛔ ★법적 상호는 «(주)명연재» 그대로입니다 (사업자등록증 · PG 심사)")
+    ok(!/명연재사주연구소/.test(company),
+      '⛔ ★회사 정보에 새 이름이 «섞여 들어가지» 않았습니다')
+    const layout = R('app/layout.tsx')
+    ok(/title: "명연재"/.test(layout) && /applicationName: "명연재"/.test(layout),
+      '⛔⛔ ★앱·홈 화면 아이콘 이름은 «명연재» 그대로입니다 (2026-09-10 에 일부러 줄인 자리)')
+    ok(!/명연재사주연구소/.test(layout),
+      '⛔ ★manifest 쪽에 새 이름이 «섞여 들어가지» 않았습니다')
+
+    /*  ★모양 — 「엑셀 느낌 없이」 [대표님]
+     *  ⚠️ 옛 이름(석 자)은 자간을 3px 벌려 두었습니다.
+     *     여덟 글자에 그대로 벌리면 ★칸칸이 떨어져 보입니다. */
+    const ls = brandSrc.match(/letterSpacing: '(-?[\d.]+)px',\n\s*lineHeight: 1\.15/)?.[1]
+    ok(!!ls && parseFloat(ls) <= 0,
+      `🔴 ★이름 자간을 «벌리지» 않았습니다 (${ls}px · 옛 값 +3px)`)
+    ok(/whiteSpace: 'nowrap'/.test(brandSrc),
+      '⛔ ★이름이 «중간에 끊기지» 않습니다')
+    ok(/minWidth: 0/.test(brandSrc),
+      '⛔ ★minWidth 0 — 이름이 옆 단추를 «밀어내지» 않습니다')
+
+    /*  ★「내 정보」 단추와의 사이 [대표님] */
+    ok(/flexShrink: 0, whiteSpace: 'nowrap',/.test(home),
+      '🔴 ★「내 정보」 단추가 «찌그러지지» 않습니다 (좁은 폰 320px)')
+    for (const [name, src] of [['홈', home], ['마이페이지', mypage]] as const) {
+      const pad = src.match(/padding: '11px 16px', gap: 12/)
+      ok(!!pad, `★${name} 머리띠 여백이 정돈됐습니다 (11/16 · 사이 12)`)
+    }
+  }
+
   console.log(`\n━━ 홈 화면 마감 — 통과 ${pass} · 실패 ${fail} ━━\n`)
   if (fail > 0) process.exit(1)
 }

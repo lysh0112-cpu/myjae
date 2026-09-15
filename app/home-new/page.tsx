@@ -1,7 +1,7 @@
 'use client'
 import HomeBottomNav from '@/app/components/HomeBottomNav'
-/* ★2026-09-10 — 머리 로고를 넣으려고 더했습니다 (public/logo-myjae.png) */
-import Image from 'next/image'
+/*  ⚠️ ★2026-09-15 (10부) — next/image 를 여기서 «직접» 안 씁니다.
+ *     로고는 BrandLockup 부품 안으로 들어갔습니다. ⛔ 다시 여기에 그리지 마십시오. */
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
@@ -23,6 +23,7 @@ import HomeBottomSheet from '@/app/home-new/components/HomeBottomSheet'
 import ServiceSection from '@/app/home-new/components/ServiceSection'
 /* ★2026-09-10 — 자매 앱 바로가기 [대표님 목업 승낙 · 「나안」] */
 import SisterLinks from '@/app/components/common/SisterLinks'
+import BrandLockup from '@/app/components/common/BrandLockup'
 /* ★2026-09-10 — 회사 정보를 «한 곳» 에서 가져옵니다 (⛔ 여기에 다시 적지 마십시오) */
 import { COMPANY } from '@/app/components/common/companyInfo'
 import { EXAM_LUCK_NAME, isExamLuckName, HAERAK_NAME, isHaerakName, HOME_FLAGS_OFF, fetchHomeFlags, type HomeFlags } from '@/lib/homeFlags'
@@ -352,30 +353,19 @@ export default function HomeNew() {
       {/* ① 네비게이션 */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 18px', background: '#FFFBF7',
+        /*  ★2026-09-15 (10부) [대표님 「내 정보 버튼과 간격이 자연스럽게」]
+          *    이름이 두 줄이 되어 띠가 높아지므로 위아래를 14 → ★11 로 줄이고,
+          *    좌우는 18 → ★16 으로 줄여 ★단추와의 사이(gap 12)를 벌었습니다. */
+        padding: '11px 16px', gap: 12, background: '#FFFBF7',
         borderBottom: '0.5px solid #9c7a58',
         position: 'sticky', top: 0, zIndex: 20,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* ★2026-09-10 — 커피잔 SVG + MyungCafe 를 ★새 로고 + 「명연재(明然載)」 로 바꿨습니다.
-              [대표님 목업 승낙 · 「다」안 · 2026-09-10]
-
-              ⚠️ 옛 머리는 ★커피잔 그림(김 세 줄 + 잔)이었습니다.
-                 mc-steam-a/b/c · mc-cup 이라는 ★애니메이션 클래스를 쓰고 있었으니,
-                 CSS 쪽에 그 이름이 남아 있으면 ★이제 쓰는 곳이 없습니다.
-                 ⛔ 다만 «찾아서 지우지» 않았습니다 — 다른 화면이 쓸 수도 있어서입니다.
-
-              ⛔ 로고 파일을 바꾸지 마십시오 — public/logo-myjae.png
-                 ★흰 바탕을 지운 «투명» png 입니다. 흰 네모가 있는 원본을 쓰면
-                 피치톤 위에 ★네모가 떠 보입니다.
-              ⚠️ 카카오 콘솔의 앱 아이콘과 ★같은 그림입니다. 한쪽만 바꾸지 마십시오. */}
-          <Image src="/logo-myjae.png" alt="명연재" width={34} height={34} priority />
-          <span style={{ display: 'flex', alignItems: 'flex-end', gap: '6px' }}>
-            <span style={{ fontSize: '22px', fontWeight: 600, color: '#38414B', letterSpacing: '3px', lineHeight: 1 }}>명연재</span>
-            {/* ⚠️ alignItems: flex-end 와 lineHeight 1 로 ★아래끝을 맞췄습니다.
-                baseline 으로 두면 한자가 «떠 보입니다» [대표님 2026-09-10 지적] */}
-            <span style={{ fontSize: '12px', color: '#68112E', lineHeight: 1 }}>(明然載)</span>
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+          {/*  🔴 ★2026-09-15 (10부) [대표님] — 머리 묶음을 ★한 부품으로 모았습니다.
+            ⚠️ 전에는 홈·로그인·마이페이지가 ★«각자» 적어 두어 이미 어긋나 있었습니다
+               (글자 22 · 20 · 19px · 로고 34 · 30 · 30px).
+            ⛔ 이름·크기를 바꾸실 때는 ★BrandLockup.tsx «한 곳» 만 고치십시오. */}
+          <BrandLockup variant="bar" />
         </div>
         {/* ★2026-08-07 (48부 17차) — ☰ 를 ★알약 버튼으로 [대표님 지시]
             「우측상단의 ★햄버거 버튼이 마이페이지로 가는 버튼인데」
@@ -393,8 +383,12 @@ export default function HomeNew() {
           aria-label={isLoggedIn ? '내 정보' : '로그인'}
           style={{
             display: 'flex', alignItems: 'center', gap: '5px',
+            /*  ⛔ ★2026-09-15 (10부) — 이름이 길어졌으므로 «줄어들지 않게» 못 박습니다.
+              *    [대표님] 「내 정보 버튼과 간격이 자연스럽게 어우러지도록」
+              *    ⚠️ 없으면 좁은 폰(320px)에서 ★단추가 찌그러집니다. */
+            flexShrink: 0, whiteSpace: 'nowrap',
             border: '0.5px solid #e0cdbb', borderRadius: '999px',
-            padding: '5px 11px 5px 7px', background: '#FFFBF7',
+            padding: '6px 11px 6px 7px', background: '#FFFBF7',
             cursor: 'pointer', fontFamily: 'inherit',
             WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation',
           }}>

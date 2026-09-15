@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-/* ★2026-09-10 — 머리 로고를 넣으려고 더했습니다 (public/logo-myjae.png) */
-import Image from 'next/image'
+/*  ⚠️ ★2026-09-15 (10부) — 로고는 BrandLockup 부품 안에 있습니다. */
+import BrandLockup from '@/app/components/common/BrandLockup'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { safeNextPath } from '@/lib/safeNext'
@@ -107,16 +107,11 @@ export default function LoginPage() {
 
       <div style={{ padding: '36px 24px 24px' }}>
 
-        {/* ★2026-09-10 — 커피잔 + MyungCafe 를 ★새 로고 + 「명연재(明然載)」 로.
-            홈 머리(app/home-new/page.tsx)와 «같은 모양» 입니다.
-            ⛔ 옛 커피잔으로 되돌리지 마십시오 — 손님이 두 이름을 보게 됩니다. */}
+        {/*  🔴 ★2026-09-15 (10부) — 홈과 «같은 부품» 을 씁니다.
+            ⛔ 여기에 이름을 다시 적지 마십시오 (검사 57 ⑤). */}
         <div style={{ textAlign: 'center', marginBottom: 22 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
-            <Image src="/logo-myjae.png" alt="명연재" width={30} height={30} priority />
-            <span style={{ display: 'flex', alignItems: 'flex-end', gap: 5 }}>
-              <span style={{ fontSize: 20, fontWeight: 600, color: '#38414B', letterSpacing: 2, lineHeight: 1 }}>명연재</span>
-              <span style={{ fontSize: 11, color: '#68112E', lineHeight: 1 }}>(明然載)</span>
-            </span>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+            <BrandLockup variant="hero" />
           </div>
           <div style={{ fontSize: 13, color: '#5c3a1e' }}>다시 오신 걸 환영해요 ✦</div>
         </div>
