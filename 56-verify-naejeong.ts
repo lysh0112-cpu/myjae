@@ -29,6 +29,8 @@ import { chongpyeong } from './lib/saju/naejeong/sinGung'
 import { BRIDGE, bridgeOf, BRIDGE_NOTE } from './lib/saju/naejeong/tables/bridge'
 import { findTerms, TERM_SRC } from './lib/saju/naejeong/tables/terms'
 import { YUKCHIN_KEYS } from './lib/saju/yukchinTable'
+//  ★띠 이름 — ⛔ 화면이 «또» 만들지 않았는지 값으로 봅니다 (10부)
+import { JIJI_TRAIT } from './lib/saju/jijiTrait'
 
 let pass = 0, fail = 0
 const ok = (c: boolean, m: string) => { if (c) { pass++; console.log(`  ✅ ${m}`) } else { fail++; console.log(`  ❌ ${m}`) } }
@@ -930,6 +932,116 @@ function main() {
       '⛔ ★짝을 «꽂아» 줍니다 — 두 파일이 서로 부르지 않게')
     ok(!/require\(/.test(R('lib/saju/naejeong/tables/caseText.ts')),
       '⛔ ★require 를 쓰지 않습니다 (eslint 기준선을 지킵니다)')
+  }
+
+  /* ══ ⑰ 🔴🔴 화면 정리 — «두 벌» 을 걷어냄 (10부) [대표님 2026-09-15] ══
+   *  대표님이 화면 사진 다섯 장을 보시고 넷을 짚어 주셨습니다 —
+   *    ① 「여보 사랑해가 중복」
+   *    ② 「리포트 내용과 하단이 중복 — 눌러서 모달로」
+   *    ③ 「열두지지 표는 여기 위치가 맞나? 사람마다 다른가?」
+   *    ④ 「달은 알약 열두 개로 만들고 눌러서 모달로」
+   *
+   *  ⛔ ★주석을 세면 안 됩니다 — 주석에 「여보 사랑해」 · 「자리별」 이 남아 있습니다.
+   *     ⇒ live(주석 걷어낸 줄)로만 셉니다. (9부에 세 번 밟은 자리입니다)
+   * ══════════════════════════════════════════════════════════════ */
+  head('⑰ 🔴🔴 화면 정리 — 되풀이를 걷어냄 (10부)')
+  {
+    const page = R('app/naejeong/page.tsx')
+    const live = page.split('\n')
+      .filter(l => !/^\s*(\/\/|\*|\/\*|\{\/\*)/.test(l)).join('\n')
+
+    /*  ① 💌 ★한 벌만 — 2026-09-15 [대표님 「여보 사랑해가 중복」]
+     *     ⚠️ 똑같은 문장이 «두 블록» 에 들어 있었습니다. */
+    {
+      const n = (live.match(/여보! 사랑해/g) ?? []).length
+      ok(n === 1, `🔴 ★💌 한 줄이 «한 벌» 뿐입니다 (${n}벌)`)
+    }
+
+    /*  ② 🔴 ★자리별 상세가 «모달» 에만 있습니다 —
+     *     옛 화면은 리포트에 한 번 · 아래 카드에 또 한 번 그렸습니다. */
+    ok(/const \[openJari, setOpenJari\]/.test(page) && /setOpenJari\(h\)/.test(live),
+      '🔴 ★리포트 줄을 누르면 «자리 모달» 이 열립니다 [대표님]')
+    ok(/const \[openUnsi, setOpenUnsi\]/.test(page) && /setOpenUnsi\(true\)/.test(live),
+      '🔴 ★운시도 «모달» 로 열립니다 [대표님]')
+    {
+      /*  ⛔ ★«리포트 밖 · 모달 밖» 에 자리별 상세가 또 있으면 «두 벌» 입니다.
+       *     ⇒ 자리별 글을 그리는 곳이 ★리포트와 모달 «둘» 뿐인지 셉니다. */
+      const nJariText = (live.match(/withTerms\(h\.jariText\)/g) ?? []).length
+      ok(nJariText === 2,
+        `⛔ ★자리별 풀이를 그리는 곳이 «둘»(리포트·모달)뿐입니다 (${nJariText})`)
+      const nMeaning = (live.match(/h\.jariMeaning/g) ?? []).length
+      ok(nMeaning === 1,
+        `⛔ ★자리 뜻은 «모달» 한 곳에서만 그립니다 (${nMeaning})`)
+    }
+    //  ⛔ 옛 카드에만 있던 문장이 ★모달 안으로 «따라왔는지»
+    {
+      const iModal = live.indexOf('setOpenJari(null)')
+      const iSi = live.indexOf('태어난 시를 몰라 시지를 보지 않았어요')
+      const iNo = live.indexOf('교재에 이 신궁의 «자리별» 풀이는 없습니다')
+      ok(iModal > 0 && iSi > iModal && iNo > iModal,
+        `⛔ ★옛 카드의 두 문장이 «모달 안» 으로 따라왔습니다 (${iModal}/${iSi}/${iNo})`)
+    }
+    //  ★모달은 «세 줄», 리포트는 «두 줄» — 훑는 자리와 짚는 자리를 나눕니다
+    ok(/caseLinesFor\(h\.jari as JariKey, h\.sin as never, 3, purpose \|\| null\)/.test(live),
+      '★모달은 사례를 «세 줄» 보여 줍니다 (리포트는 두 줄)')
+
+    /*  ③ 🔴🔴 ★열두 지지는 «문점일 칸» 안에 있습니다.
+     *     ⚠️ 이 표는 ★문점일 하나로 정해집니다 — 손님 사주와 «무관» 합니다.
+     *       그래서 «손님 풀이» 들 사이가 아니라 문점일 바로 아래가 제자리입니다. */
+    {
+      const iMun = live.indexOf('문점일 <b')
+      const iTbl = live.indexOf('data.table.map')
+      const iTti = live.indexOf('띠로 보는 오늘')
+      ok(iMun > 0 && iTbl > iMun && iTti > iTbl,
+        `🔴 ★차례가 «문점일 → 열두 지지 → 띠» 입니다 [대표님] (${iMun}/${iTbl}/${iTti})`)
+    }
+    ok(/문점일 하나로 정해집니다/.test(live),
+      '🔴 ★「사람마다 다르지 않다」 는 것을 «화면이» 말합니다 [대표님이 물으신 것]')
+    //  🔴 값으로 — 정말 문점일 하나로만 정해지는가 (사주가 달라도 같은가)
+    {
+      const a = sinGungTable('辰').map(x => `${x.ji}${x.sin}`).join()
+      const b = sinGungTable('辰').map(x => `${x.ji}${x.sin}`).join()
+      const c = sinGungTable('巳').map(x => `${x.ji}${x.sin}`).join()
+      ok(a === b && a !== c,
+        '🔴 ★열두 칸은 «문점일» 로만 갈립니다 (손님이 달라도 같은 날이면 같습니다)')
+    }
+    ok(/myJi\.includes\(x\.ji\)/.test(live),
+      '🔴 ★손님의 네 자리에 «표시» 를 합니다 (표가 손님과 무슨 상관인지 알 수 있게)')
+    ok(/data\.hits\.filter\(h => h\.ji\)/.test(live),
+      '⛔ ★hits 에서 가져옵니다 — 시를 모르면 «저절로» 빠집니다 (saju 를 쪼개지 않습니다)')
+
+    /*  ④ 🔴 ★띠 열둘 · 달 열둘을 «알약» 으로 [대표님]
+     *     ⛔ 다시 «풀어 늘어놓지» 마십시오 — 열두 덩이 글이 한꺼번에 펼쳐졌습니다. */
+    ok(/setOpenTti\(\{ ji: x\.ji, sin: x\.sin \}\)/.test(live),
+      '🔴 ★열두 띠가 «알약» 입니다 [대표님]')
+    ok(/setOpenWol\(m\)/.test(live),
+      '🔴 ★열두 달이 «알약» 입니다 [대표님]')
+    ok(/TTI_TEXT\[t\.sin as SinGung\]/.test(live),
+      '★띠 모달이 교재 9쪽 글을 그대로 보여 줍니다')
+    ok(/gridTemplateColumns: 'repeat\(4, 1fr\)'/.test(live),
+      '★알약이 «넉 줄 짜리» 격자입니다 (한 손에 들어오게)')
+    //  ⛔ 옛 «펼쳐 놓기» 로 되돌아가지 않았는지
+    ok(!/data\.months\.map\(m => \(\s*\n\s*<div/.test(live),
+      '⛔ ★열두 달을 다시 «펼쳐» 놓지 않았습니다')
+
+    /*  ⛔ ★띠 이름을 «새로» 만들지 않았습니다 — 이미 있는 표를 씁니다 (9부 교훈 ⑤).
+     *     ⚠️ 저장소에 띠 이름이 ★두 곳 있습니다 (jijiTrait · TodayFortuneCard).
+     *       세 번째를 만들지 않았습니다. */
+    ok(/JIJI_TRAIT/.test(page) && !/'쥐띠'|'쥐'/.test(page),
+      '⛔ ★띠 이름 표를 «또» 만들지 않았습니다 (jijiTrait.ts 를 씁니다)')
+    ok(JIJI_TRAIT.filter(r => r.tti).length === 12,
+      `★띠 이름이 열둘 다 있습니다 (${JIJI_TRAIT.filter(r => r.tti).length})`)
+    ok(JIJI_TRAIT.find(r => r.key === '丑')?.tti === '소띠',
+      '★丑 이 «소띠» 입니다')
+
+    //  🔴 모달 넷이 «다» 창인 줄 알고, 바깥을 누르면 닫히는가
+    for (const [name, close] of [
+      ['자리', 'setOpenJari(null)'], ['운시', 'setOpenUnsi(false)'],
+      ['띠', 'setOpenTti(null)'], ['달', 'setOpenWol(null)'],
+    ] as const) {
+      const n = (live.match(new RegExp(close.replace(/[()]/g, '\\$&'), 'g')) ?? []).length
+      ok(n >= 2, `★${name} 모달은 «바깥» 과 «×» 둘로 닫힙니다 (${n})`)
+    }
   }
 
   console.log(`\n━━ 일진내정법 — 통과 ${pass} · 실패 ${fail} ━━\n`)

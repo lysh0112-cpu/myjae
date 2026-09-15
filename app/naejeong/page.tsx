@@ -42,6 +42,12 @@ import { getSinsal } from '@/lib/saju/sinsal'
 //  ★신궁 뜻 — 열두 지지 칸을 눌렀을 때 띄웁니다 (교재 3~7쪽)
 import { SINGUNG_TEXT } from '@/lib/saju/naejeong/tables/sinGungText'
 import { isGoodSin, type SinGung } from '@/lib/saju/naejeong/sinGung'
+/*  ★띠로 보는 오늘 — 교재 9쪽. 열두 띠를 «다» 보여 드리려고 표를 직접 봅니다.
+ *  ⛔ 순화 «안» 합니다 — 연재쌤 전용 화면입니다 (홈은 TTI_HOME 을 씁니다). */
+import { TTI_TEXT } from '@/lib/saju/naejeong/tables/dayYearText'
+/*  ⛔ ★띠 이름을 «새로» 적지 않습니다 — 이미 있는 표를 씁니다 (9부 교훈 ⑤).
+ *     lib/saju/jijiTrait.ts 의 tti («쥐띠» · «소띠» …) */
+import { JIJI_TRAIT } from '@/lib/saju/jijiTrait'
 //  ★용어 사전 — 본문 속 낱말을 눌러 설명을 봅니다 [대표님 2026-09-15]
 import {
   findTerms, isSinGungName, isSipsungName, TERM_SRC, type TermHit,
@@ -56,6 +62,13 @@ import SajuWonguk from '@/app/manseryeok/components/SajuWonguk'
 import { saveRecord } from '@/lib/saju/sajuRecords'
 
 const ONLY: AppRole[] = ['master']
+
+/*  ★지지 한 글자 → 띠 이름 («子» → «쥐띠»)
+ *  ⛔ 못 찾으면 ★지지 글자를 그대로 돌려줍니다 — «지어내지» 않습니다. */
+function ttiNameOf(ji: string | null): string {
+  if (!ji) return '—'
+  return JIJI_TRAIT.find(r => r.key === ji)?.tti ?? ji
+}
 
 /* ── 꼴 ── */
 const BG = '#FDF6F0'
@@ -140,6 +153,20 @@ export default function NaejeongPage() {
   const [openSin, setOpenSin] = useState<SinGung | null>(null)
   /*  ★본문에서 누른 용어 — 12신궁·십성·신살 셋 다 옵니다 */
   const [openTerm, setOpenTerm] = useState<TermHit | null>(null)
+  /*  🔴 ★2026-09-15 (10부) [대표님] 「리포트의 일지·연지·월지·시지·운시를
+   *     누르면 모달로 각각 나오게 하면 어떨까」
+   *
+   *  ⚠️ 그 전에는 ★«같은 것이 두 번» 나왔습니다 —
+   *     종합 리포트에 한 번 · 아래 카드 다섯 장에 또 한 번.
+   *  ⇒ ★아래 카드 다섯 장을 걷어내고 이 모달로 옮겼습니다.
+   *  ⛔ 아래 카드를 다시 만들지 마십시오. «두 벌» 이 됩니다. */
+  const [openJari, setOpenJari] = useState<Hit | null>(null)
+  const [openUnsi, setOpenUnsi] = useState(false)
+  /*  🔴 ★띠 열둘 · 달 열둘을 «알약» 으로 — 2026-09-15 (10부) [대표님]
+   *  ⚠️ 띠는 ★교재 9쪽이 원래 「사주를 몰라도 띠만으로」 라 한 자리인데
+   *     그 전에는 ★손님 띠 «하나» 만 나왔습니다. 열둘을 다 볼 수 있게 했습니다. */
+  const [openTti, setOpenTti] = useState<{ ji: string; sin: string } | null>(null)
+  const [openWol, setOpenWol] = useState<Out['months'][number] | null>(null)
   /*  🔴 ★상담 메모 — 2026-09-15 [대표님]
    *     「연재쌤이 상담 중 자유롭게 실전 통변과 특이사항을 기록」
    *  ⛔ 손님 «이름» 은 받지 않습니다. 메모에 적으실지는 연재쌤 판단입니다.
@@ -189,6 +216,14 @@ export default function NaejeongPage() {
     const pu = purpose ? findPurpose(purpose) : null
     return pu && pu.kind === 'singung' ? (pu.jari ?? []) : []
   })()
+  /*  🔴 ★열두 지지 범례에 «손님의 자리» 를 표시하기 위한 것 — 2026-09-15 (10부)
+   *  ⚠️ ★data.hits 에서 가져옵니다 (data.saju 를 다시 쪼개지 «않습니다») —
+   *     ⛔ 시를 모르면 hits 의 시지가 ji: null 이라 ★저절로 빠집니다.
+   *       saju 문자열을 쪼개면 «없는 시지» 를 표시할 뻔합니다. */
+  const myJi: string[] = data ? data.hits.filter(h => h.ji).map(h => h.ji as string) : []
+  const myJariOf = (ji: string): string[] =>
+    data ? data.hits.filter(h => h.ji === ji).map(h => h.jari) : []
+
   const sortedHits = data
     ? [...data.hits].sort((a, b) => {
         const ia = pickedJari.indexOf(a.jari), ib = pickedJari.indexOf(b.jari)
@@ -315,36 +350,27 @@ export default function NaejeongPage() {
               background: 'transparent', border: 'none', color: SUB, fontSize: 12.5,
               cursor: 'pointer', fontFamily: 'inherit', padding: 0,
             }}>‹ 내 정보</button>
-          <button type="button" onClick={() => router.push('/home-new')}
-            style={{
-              background: CARD, border: `1px solid ${LINE}`, borderRadius: 999,
-              color: ACCENT, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
-              padding: '6px 13px',
-            }}>🏠 홈</button>
+          {/*  🔴 ★보관함을 «이 줄» 로 올렸습니다 — 2026-09-15 (10부) [대표님]
+            *     ⚠️ 옛 자리는 «따로 한 줄» 이었습니다. 줄 하나를 줄였습니다. */}
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button type="button" onClick={() => router.push('/naejeong/storage')}
+              style={{
+                background: CARD, border: `1px solid ${LINE}`, borderRadius: 999,
+                color: ACCENT, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                padding: '6px 13px',
+              }}>📁 상담 보관함</button>
+            <button type="button" onClick={() => router.push('/home-new')}
+              style={{
+                background: CARD, border: `1px solid ${LINE}`, borderRadius: 999,
+                color: ACCENT, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                padding: '6px 13px',
+              }}>🏠 홈</button>
+          </div>
         </div>
 
-        {/*  💌 ★2026-09-15 [대표님]
-          *     「여보! 사랑해! 당신이 구상하는 사업 잘될거야. 걱정마!」
-          *
-          *  ⚠️ 이 화면은 ★매니저만 들어옵니다 — 대표님과 연재쌤 두 분뿐입니다.
-          *     대표님이 «두 분만 본다» 는 것을 아시고 넣으신 것입니다.
-          *  ⛔ 손님 화면에 옮기지 마십시오. */}
-        <div style={{
-          background: '#fff3ec', border: `1px solid ${LINE}`, borderRadius: 12,
-          padding: '11px 13px', marginBottom: 10, textAlign: 'center',
-          fontSize: 13, color: ACCENT, lineHeight: 1.7, fontWeight: 600,
-        }}>
-          여보! 사랑해! 당신이 구상하는 사업 잘될거야. 걱정마!
-        </div>
-
-        {/*  ★보관함 가는 길 — 2026-09-15 [대표님] */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
-          <button type="button" onClick={() => router.push('/naejeong/storage')}
-            style={{
-              background: 'transparent', border: 'none', color: ACCENT, fontSize: 12,
-              cursor: 'pointer', fontFamily: 'inherit', padding: 0,
-            }}>📁 상담 보관함</button>
-        </div>
+        {/*  🔴 ★2026-09-15 (10부) [대표님] 「여보 사랑해가 중복」
+          *     ⇒ 똑같은 문장이 ★«두 벌» 있었습니다. 한 벌을 지웠습니다.
+          *  ⛔ 다시 두 벌로 만들지 마십시오. 고치실 때는 ★아래 한 곳만 고치면 됩니다. */}
 
         {/*  ★2026-09-15 [대표님] — 이 한 줄은 «대표님이 직접» 넣으라 하신 것입니다.
           *  ⚠️ 이 화면은 ★매니저만 들어옵니다 (지금은 대표님과 연재쌤 두 분).
@@ -835,16 +861,32 @@ export default function NaejeongPage() {
                 //  ★고르신 질문의 갈래를 넘겨 «같은 갈래» 사례를 앞에 놓습니다
                 const lines = h.jariText ? [] : caseLinesFor(h.jari as JariKey, h.sin as never, 2, purpose || null)
                 return (
-                  <div key={h.jari} style={{ marginBottom: 9 }}>
-                    <div style={{ fontSize: 12, marginBottom: 3 }}>
+                  /*  🔴 ★고른 자리를 «테두리» 로 도드라지게 — [대표님 2026-09-15]
+                   *  ⚠️ 옛 «자리별 카드» 가 하던 일입니다. 카드를 걷어내며 ★이 줄로 옮겼습니다.
+                   *  ⛔ 지우지 마십시오 — 검사 56 ⑪ 이 이 모양을 지킵니다. */
+                  <div key={h.jari} style={{
+                    marginBottom: 9,
+                    border: pickedJari.includes(h.jari) ? `2px solid ${ACCENT}` : 'none',
+                    borderRadius: pickedJari.includes(h.jari) ? 12 : 0,
+                    padding: pickedJari.includes(h.jari) ? '9px 10px' : 0,
+                  }}>
+                    <div style={{ fontSize: 12, marginBottom: 3, display: 'flex', alignItems: 'center', gap: 5 }}>
                       <b style={{ color: INK }}>{h.jari}</b>
-                      <span style={{ marginLeft: 5 }}>{h.ji}</span>
-                      <span style={{ marginLeft: 5, color: h.good ? GOOD : BAD, fontWeight: 700 }}>
+                      <span>{h.ji}</span>
+                      <span style={{ color: h.good ? GOOD : BAD, fontWeight: 700 }}>
                         {sinButton(h.sin)}
                       </span>
                       {pickedJari.includes(h.jari) && (
-                        <span style={{ marginLeft: 6, fontSize: 10, color: ACCENT }}>← 이 질문의 자리</span>
+                        <span style={{ fontSize: 10, color: ACCENT }}>← 이 질문의 자리</span>
                       )}
+                      {/*  🔴 ★2026-09-15 (10부) [대표님] — 자세한 것은 «모달» 로 갑니다.
+                        *  ⛔ 화면 아래에 «같은 것» 을 또 그리지 마십시오 (그래서 걷어냈습니다). */}
+                      <button type="button" onClick={() => setOpenJari(h)}
+                        style={{
+                          marginLeft: 'auto', background: 'transparent', border: 'none',
+                          color: ACCENT, fontSize: 11.5, cursor: 'pointer', fontFamily: 'inherit',
+                          padding: '2px 0',
+                        }}>자세히 ›</button>
                     </div>
                     {/*  🔴 ★뜻·통변을 «먼저» — 2026-09-15 [대표님 ㉰]
                       *     사례 문장은 «다른 갈래» 것이 끌려와 어색했습니다
@@ -880,6 +922,45 @@ export default function NaejeongPage() {
                   </div>
                 )
               })}
+
+              {/*  🔴 ★운시 한 줄 — 2026-09-15 (10부) [대표님]
+                *     「일지·연지·월지·시지·★운시 를 누르면 모달로」
+                *  ⚠️ ★운시는 문점일과 «무관» 합니다 — 평생 고정입니다. 줄에 그렇게 적습니다.
+                *  ⛔ 성별을 안 고르시면 ★«지어내지» 않고 까닭만 말합니다. */}
+              <div style={{ marginTop: 4, paddingTop: 9, borderTop: `1px solid ${LINE}` }}>
+                {!data.unsi ? (
+                  <div style={{ fontSize: 12, color: SUB, lineHeight: 1.7 }}>
+                    운시 — 성별을 고르시면 운시를 보여 드려요. 대운이 남녀에 따라 갈리기 때문이에요.
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <b style={{ color: INK }}>운시</b>
+                    <span>{data.unsi.ganji}</span>
+                    {/*  ⚠️ 이건 ★십성입니다 — 신궁이 «아닙니다». 용어 모달로 보냅니다.
+                      *  ⛔ 옛 «운시 카드» 가 하던 일입니다. 카드를 걷어내며 이 줄로 옮겼습니다. */}
+                    {isSipsungName(data.unsi.sipsung) ? (
+                      <button type="button"
+                        onClick={() => setOpenTerm({
+                          word: data.unsi!.sipsung, key: data.unsi!.sipsung, kind: 'sipsung',
+                        })}
+                        style={{
+                          background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
+                          fontFamily: 'inherit', fontSize: 12, fontWeight: 700, color: ACCENT,
+                          borderBottom: `1px dotted ${ACCENT}`,
+                        }}>{data.unsi.sipsung}</button>
+                    ) : (
+                      <span style={{ color: ACCENT, fontWeight: 700 }}>{data.unsi.sipsung}</span>
+                    )}
+                    <span style={{ fontSize: 11, color: SUB }}>{data.unsi.age}세부터</span>
+                    <button type="button" onClick={() => setOpenUnsi(true)}
+                      style={{
+                        marginLeft: 'auto', background: 'transparent', border: 'none',
+                        color: ACCENT, fontSize: 11.5, cursor: 'pointer', fontFamily: 'inherit',
+                        padding: '2px 0',
+                      }}>자세히 ›</button>
+                  </div>
+                )}
+              </div>
 
               {/*  🔴 ㉯ ★상담 메모 — 연재쌤이 적으시는 자리 [대표님]
                 *  ⚠️ 저장하기 «전» 에는 서버에 «안» 갑니다. */}
@@ -929,6 +1010,43 @@ export default function NaejeongPage() {
                 문점일 <b style={{ color: INK, fontSize: 15 }}>{data.mun.ganji}</b>
                 <span style={{ marginLeft: 8 }}>강일진 <b style={{ color: ACCENT }}>{data.mun.ilJi}</b></span>
               </div>
+
+              {/*  🔴 ★열두 지지 (교재 3쪽) — 2026-09-15 (10부) [대표님]
+                *  ⚠️⚠️ ★이 열두 칸은 «문점일 하나» 로 정해집니다 (sinGungTable(ilJi)).
+                *     ⇒ ★같은 날 오신 분은 «누구나» 똑같습니다. 손님 사주와 무관합니다.
+                *     ⇒ 그래서 ★«손님 풀이» 가 아니라 «그날의 범례» 이고,
+                *       문점일 바로 아래가 제자리입니다.
+                *  🔴 ★손님의 네 자리에 «표시» 를 합니다 [대표님] —
+                *     안 하면 「이 표가 이 손님과 무슨 상관인가」 를 알 수 없습니다. */}
+              <div style={{ fontSize: 11.5, color: SUB, margin: '10px 0 7px', lineHeight: 1.65 }}>
+                아래 열두 칸은 <b style={{ color: INK }}>문점일 하나로 정해집니다.</b> 같은 날 오신 분은 모두 같아요.
+                <b style={{ color: ACCENT }}> 진한 칸</b>이 이 손님의 자리입니다.
+              </div>
+              <div style={{ fontSize: 11, color: SUB, marginBottom: 8 }}>눌러 보시면 뜻이 나와요.</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                {/*  ★누르면 그 신궁 설명이 뜹니다 [대표님 2026-09-15] */}
+                {data.table.map(x => {
+                  //  ★손님의 네 자리인가 — ⛔ 시를 모르면 시지는 «없습니다» (지어내지 않습니다)
+                  const mine = myJi.includes(x.ji)
+                  return (
+                    <button key={x.ji} type="button"
+                      onClick={() => setOpenSin(x.sin as SinGung)}
+                      style={{
+                        border: `${mine ? 1.5 : 1}px solid ${mine ? ACCENT : LINE}`,
+                        borderRadius: 9, padding: '7px 4px', textAlign: 'center',
+                        background: mine ? '#fff3ec' : '#fff', cursor: 'pointer', fontFamily: 'inherit',
+                      }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: mine ? ACCENT : INK }}>{x.ji}</div>
+                      <div style={{ fontSize: 10.5, color: SUB, borderBottom: `1px dotted ${LINE}` }}>{x.sin}</div>
+                      {mine && (
+                        <div style={{ fontSize: 9.5, color: ACCENT, marginTop: 2 }}>
+                          {myJariOf(x.ji).join('·')}
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
             {/*  🔴 ★상담 목적을 고르셨으면 — 2026-09-15 (9부) [대표님]
@@ -952,141 +1070,17 @@ export default function NaejeongPage() {
               )
             })()}
 
-            {/* ── 🔴 네 자리 풀이 — 교재 그대로 ── */}
-            {sortedHits.map(h => (
-              <div key={h.jari} style={{
-                background: CARD, borderRadius: 14, padding: 14, marginBottom: 10,
-                //  ★고른 목적의 자리는 테두리로 도드라집니다
-                border: pickedJari.includes(h.jari) ? `2px solid ${ACCENT}` : `1px solid ${LINE}`,
-              }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2 }}>
-                  <b style={{ fontSize: 13.5, color: INK }}>{h.jari}</b>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: INK }}>{h.ji ?? '—'}</span>
-                  {h.sin && (
-                    <span style={{
-                      fontSize: 13.5, fontWeight: 700,
-                      color: h.good ? GOOD : BAD,
-                    }}>
-                      {sinButton(h.sin)}{h.hanja ? ` ${h.hanja}` : ''}
-                    </span>
-                  )}
-                  {pickedJari.includes(h.jari) && (
-                    <span style={{
-                      marginLeft: 'auto', fontSize: 10.5, color: ACCENT,
-                      background: '#fff3ec', border: `1px solid ${LINE}`,
-                      borderRadius: 999, padding: '2px 8px',
-                    }}>이 질문의 자리</span>
-                  )}
-                </div>
-                <div style={{ fontSize: 11.5, color: SUB, marginBottom: 8 }}>{h.jariMeaning}</div>
-
-                {!h.ji && (
-                  <div style={{ fontSize: 12.5, color: SUB }}>
-                    태어난 시를 몰라 시지를 보지 않았어요.
-                  </div>
-                )}
-                {h.tteut && (
-                  <div style={{ fontSize: 12.5, color: INK, lineHeight: 1.75, marginBottom: 8 }}>{withTerms(h.tteut)}</div>
-                )}
-                {/*  🔴 ⛔ 교재에 «자리별 풀이가 없는» 신궁이 넷(공망·원진·해결·퇴식) 있습니다.
-                  *     ⇒ ★사실대로 말합니다. 지어내지 않습니다. */}
-                {h.sin && (h.jariText
-                  ? <div style={{
-                      fontSize: 13, color: INK, lineHeight: 1.8,
-                      background: '#fbf6f1', borderRadius: 10, padding: '10px 11px',
-                    }}>{withTerms(h.jariText)}</div>
-                  : (() => {
-                      /*  🔴 ★교재 4~7쪽에 «자리별 풀이가 없는» 넷(공망·원진·해결·퇴식) —
-                        *     ⇒ 교재 «사례» 에서 «같은 자리 × 같은 신궁» 문장을 찾아 보여 드립니다.
-                        *  ⛔ 지어내는 것이 «아닙니다» — 교재 문장을 «그대로» 오려서, ★쪽수와 함께. */
-                      //  ★여기도 갈래를 넘깁니다 — 리포트와 «같은 사례» 가 나오게
-                      const lines = caseLinesFor(h.jari as JariKey, h.sin as never, 3, purpose || null)
-                      return (
-                        <>
-                          <div style={{ fontSize: 12, color: SUB, lineHeight: 1.7 }}>
-                            교재에 이 신궁의 «자리별» 풀이는 없습니다.
-                            {lines.length > 0 && ' 교재 사례에서는 이렇게 풀었습니다 —'}
-                          </div>
-                          {lines.map(l => (
-                            <div key={l.page + l.text.slice(0, 10)} style={{
-                              marginTop: 7, fontSize: 12.5, color: INK, lineHeight: 1.8,
-                              background: '#fbf6f1', borderRadius: 10, padding: '9px 11px',
-                            }}>
-                              {withTerms(l.text)}
-                              <span style={{ marginLeft: 6, fontSize: 11, color: SUB }}>
-                                ({l.page} · {l.iljin})
-                              </span>
-                            </div>
-                          ))}
-                        </>
-                      )
-                    })()
-                )}
-              </div>
-            ))}
-
-            {/*  🔴 ★운시(運始) — 교재 8쪽
-              *  ⚠️ ★문점일과 «무관» 합니다 — 평생 고정입니다. 화면이 그것을 밝힙니다.
-              *  ⛔ 성별을 안 고르시면 ★안 보여 드립니다 (지어내지 않습니다). */}
-            <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: 14, marginBottom: 14 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: INK, marginBottom: 3 }}>
-                운시 運始 <span style={{ fontWeight: 400, color: SUB }}>(교재 8쪽)</span>
-              </div>
-              <div style={{ fontSize: 11, color: SUB, marginBottom: 8, lineHeight: 1.6 }}>
-                첫 대운이에요. 문점일과 상관없이 평생 그대로입니다.
-              </div>
-
-              {!data.unsi ? (
-                <div style={{ fontSize: 12.5, color: SUB, lineHeight: 1.7 }}>
-                  성별을 고르시면 운시를 보여 드려요. 대운이 남녀에 따라 갈리기 때문이에요.
-                </div>
-              ) : (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
-                    <span style={{ fontSize: 17, fontWeight: 700, color: INK }}>{data.unsi.ganji}</span>
-                    {/*  ⚠️ 이건 ★십성입니다 — 신궁이 «아닙니다». 용어 모달로 보냅니다. */}
-                    {isSipsungName(data.unsi.sipsung) ? (
-                      <button type="button"
-                        onClick={() => setOpenTerm({
-                          word: data.unsi!.sipsung, key: data.unsi!.sipsung, kind: 'sipsung',
-                        })}
-                        style={{
-                          background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
-                          fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: ACCENT,
-                          borderBottom: `1px dotted ${ACCENT}`,
-                        }}>{data.unsi.sipsung}</button>
-                    ) : (
-                      <span style={{ fontSize: 13, fontWeight: 700, color: ACCENT }}>{data.unsi.sipsung}</span>
-                    )}
-                    <span style={{ fontSize: 11.5, color: SUB }}>{data.unsi.age}세부터</span>
-                  </div>
-                  {data.unsi.sipsungText && (
-                    <div style={{
-                      fontSize: 13, color: INK, lineHeight: 1.8,
-                      background: '#fbf6f1', borderRadius: 10, padding: '10px 11px', marginBottom: 8,
-                    }}>{withTerms(data.unsi.sipsungText)}</div>
-                  )}
-                  {/*  ⚠️ 해당될 때만 보입니다 — ⛔ 아닌 것을 «있는 척» 하지 않습니다 */}
-                  {([
-                    [data.unsi.gwaegang, data.unsiNote['괴강']],
-                    [data.unsi.baekho, data.unsiNote['백호']],
-                    [data.unsi.sameYeonji, data.unsiNote['연지동일']],
-                    [data.unsi.banan, data.unsiNote['반안']],
-                  ] as const).filter(([on]) => on).map(([, t]) => (
-                    <div key={t} style={{
-                      fontSize: 12.5, color: INK, lineHeight: 1.75,
-                      borderLeft: `2px solid ${ACCENT}`, paddingLeft: 9, marginBottom: 7,
-                    }}>{t}</div>
-                  ))}
-                  <div style={{ fontSize: 12, color: SUB, lineHeight: 1.7, marginTop: 8 }}>
-                    {data.unsiNote['고초살']}
-                    {data.unsi.samhap.length > 0 && (
-                      <> <b style={{ color: INK }}>({data.unsi.ganji[1]} 삼합 — {data.unsi.samhap.join(' · ')})</b></>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
+            {/*  🔴🔴 ★여기 있던 «자리별 카드 넷 + 운시 카드» 를 걷어냈습니다 —
+              *     2026-09-15 (10부) [대표님] 「종합 내정 리포트의 내용과 하단이 중복」
+              *
+              *  ⚠️ ★같은 재료(h.tteut · h.jariText · caseLinesFor)를 «두 번» 그리고 있었습니다.
+              *  ⇒ 리포트 줄의 ★[자세히] 를 누르면 «모달» 로 나옵니다 (openJari · openUnsi).
+              *  ⛔ 다시 만들지 마십시오. 만들면 또 «두 벌» 이 됩니다.
+              *  ⚠️ 옛 카드에만 있던 것은 ★모달이 «다» 물려받았습니다 —
+              *     자리 뜻 · 신궁 한자 · 딴이름 · 통변(lead) · 사례 ★세 줄 ·
+              *     「태어난 시를 몰라 시지를 보지 않았어요」 ·
+              *     「교재에 이 신궁의 «자리별» 풀이는 없습니다」 · 운시 네 가지 덧말
+              *  ⇒ 검사 56 이 그 문장들을 ★모달 안에서 지킵니다. */}
 
             {/*  🔴 ★방향·자리 — 신살로 봅니다 (교재 16~17쪽 · 45쪽) · 2026-09-15 [대표님]
               *
@@ -1134,25 +1128,12 @@ export default function NaejeongPage() {
               )
             })()}
 
-            {/* ── 열두 지지 표 (교재 3쪽) ── */}
-            <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: 14, marginBottom: 14 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: INK, marginBottom: 3 }}>열두 지지</div>
-              <div style={{ fontSize: 11, color: SUB, marginBottom: 8 }}>눌러 보시면 뜻이 나와요.</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
-                {/*  ★누르면 그 신궁 설명이 뜹니다 [대표님 2026-09-15] */}
-                {data.table.map(x => (
-                  <button key={x.ji} type="button"
-                    onClick={() => setOpenSin(x.sin as SinGung)}
-                    style={{
-                      border: `1px solid ${LINE}`, borderRadius: 9, padding: '7px 4px', textAlign: 'center',
-                      background: '#fff', cursor: 'pointer', fontFamily: 'inherit',
-                    }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: INK }}>{x.ji}</div>
-                    <div style={{ fontSize: 10.5, color: SUB, borderBottom: `1px dotted ${LINE}` }}>{x.sin}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/*  🔴 ★열두 지지 표는 «문점일 칸» 으로 올렸습니다 — 2026-09-15 (10부) [대표님]
+              *     「열두지지 표는 여기 위치가 맞나? 사람마다 모두 다른가?」
+              *  ⇒ ★사람마다 «다르지 않습니다». sinGungTable(ilJi) 하나로만 정해집니다.
+              *    생년월일·시·성별을 ★한 글자도 안 씁니다.
+              *  ⇒ 그러니 이것은 «손님 풀이» 가 아니라 ★그날의 «범례» 입니다.
+              *    ⛔ 맨 아래로 다시 내리지 마십시오 — 읽는 차례가 거꾸로가 됩니다. */}
 
             {/* ── 곁들이 : 오늘의 운세(띠) · 신년 운세(달) ── */}
             <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: 14 }}>
@@ -1165,18 +1146,45 @@ export default function NaejeongPage() {
               <div style={{ fontSize: 11, color: SUB, marginBottom: 8, lineHeight: 1.6 }}>
                 사주를 모르실 때 띠만으로 보는 법이에요. 문점일 그날에만 씁니다.
               </div>
+              {/*  ★손님 띠는 «요약 한 줄» 로 먼저 — 열둘 속에서 찾지 않으셔도 되게 */}
               <div style={{
-                border: `1px solid ${LINE}`, borderRadius: 10, padding: '10px 11px', marginBottom: 16,
+                border: `1.5px solid ${ACCENT}`, background: '#fff3ec',
+                borderRadius: 10, padding: '9px 11px', marginBottom: 9,
               }}>
-                <div style={{ fontSize: 13, color: INK, marginBottom: data.tti.text ? 6 : 0 }}>
-                  {data.tti.ji} → {sinButton(data.tti.sin, { fontWeight: 700 })}
+                <div style={{ fontSize: 13, color: INK }}>
+                  <span style={{ fontSize: 11.5, color: SUB, marginRight: 6 }}>이 손님</span>
+                  {ttiNameOf(data.tti.ji)} {data.tti.ji} → {sinButton(data.tti.sin, { fontWeight: 700 })}
                 </div>
-                {/*  ⛔ 교재 9쪽에 «줄이 없는» 신궁(상문·공망)은 ★사실대로 말합니다 */}
-                {data.tti.text
-                  ? <div style={{ fontSize: 12.5, color: INK, lineHeight: 1.75 }}>{withTerms(data.tti.text)}</div>
-                  : <div style={{ fontSize: 11.5, color: SUB, marginTop: 6, lineHeight: 1.6 }}>
-                      교재 9쪽에 이 신궁의 줄은 없습니다. 위 자리별 풀이로 보십시오.
-                    </div>}
+              </div>
+
+              {/*  🔴 ★열두 띠를 «알약» 으로 — 2026-09-15 (10부) [대표님]
+                *  ⚠️ 교재 9쪽은 원래 ★「사주를 몰라도 띠만으로」 보는 자리인데
+                *     그 전에는 ★손님 띠 «하나» 만 나와 그 쓰임이 죽어 있었습니다.
+                *     ⇒ 전화로 물어 오시는 분께 바로 짚어 드릴 수 있습니다.
+                *  ⛔ ★띠 이름을 여기서 «새로» 적지 마십시오 —
+                *     lib/saju/jijiTrait.ts 에 이미 있습니다 (9부 교훈 ⑤ 공용 부품). */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 16 }}>
+                {data.table.map(x => {
+                  const mine = x.ji === data.tti.ji
+                  return (
+                    <button key={x.ji} type="button"
+                      onClick={() => setOpenTti({ ji: x.ji, sin: x.sin })}
+                      style={{
+                        border: `${mine ? 1.5 : 1}px solid ${mine ? ACCENT : LINE}`,
+                        borderRadius: 9, padding: '7px 3px', textAlign: 'center',
+                        background: mine ? '#fff3ec' : '#fff', cursor: 'pointer', fontFamily: 'inherit',
+                      }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 700, color: mine ? ACCENT : INK }}>
+                        {ttiNameOf(x.ji)}
+                      </div>
+                      <div style={{ fontSize: 10, color: SUB }}>{x.ji}</div>
+                      <div style={{
+                        fontSize: 10.5, color: isGoodSin(x.sin as SinGung) ? GOOD : BAD,
+                        borderBottom: `1px dotted ${LINE}`,
+                      }}>{x.sin}</div>
+                    </button>
+                  )
+                })}
               </div>
 
               <div style={{ fontSize: 12.5, fontWeight: 700, color: INK, marginBottom: 3 }}>
@@ -1189,24 +1197,297 @@ export default function NaejeongPage() {
                 문점일을 기준으로 잡습니다. 날을 바꾸면 열두 달이 함께 바뀝니다.
                 달은 <b>음력</b> 기준이에요 (1월 寅 … 12월 丑).
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                {data.months.map(m => (
-                  <div key={m.wol} style={{
-                    border: `1px solid ${LINE}`, borderRadius: 10, padding: '9px 11px',
-                  }}>
-                    <div style={{ fontSize: 12, marginBottom: m.text ? 5 : 0 }}>
-                      <span style={{ color: SUB }}>음력 {m.wol}월 {m.ji}</span>
-                      {sinButton(m.sin, { marginLeft: 7, color: INK, fontSize: 13, fontWeight: 700 })}
-                    </div>
-                    {m.text && (
-                      <div style={{ fontSize: 12.5, color: INK, lineHeight: 1.75 }}>{withTerms(m.text)}</div>
-                    )}
-                  </div>
-                ))}
+              {/*  🔴 ★열두 달을 «알약» 으로 — 2026-09-15 (10부) [대표님]
+                *  ⚠️ 그 전에는 ★열두 덩이 글이 «한꺼번에» 펼쳐져 화면이 길었습니다
+                *     (대표님 사진 두 장이 이 부분뿐이었습니다).
+                *  ⛔ 다시 풀어 늘어놓지 마십시오. */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                {data.months.map(m => {
+                  //  ★문점일이 든 달 — 어디부터 보는지 알 수 있게 표시합니다
+                  const now = m.ji === data.mun.ilJi
+                  return (
+                    <button key={m.wol} type="button" onClick={() => setOpenWol(m)}
+                      style={{
+                        border: `${now ? 1.5 : 1}px solid ${now ? ACCENT : LINE}`,
+                        borderRadius: 9, padding: '7px 3px', textAlign: 'center',
+                        background: now ? '#fff3ec' : '#fff', cursor: 'pointer', fontFamily: 'inherit',
+                      }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 700, color: now ? ACCENT : INK }}>
+                        {m.wol}월
+                      </div>
+                      <div style={{ fontSize: 10, color: SUB }}>{m.ji}</div>
+                      <div style={{
+                        fontSize: 10.5, color: m.sin && isGoodSin(m.sin as SinGung) ? GOOD : BAD,
+                        borderBottom: `1px dotted ${LINE}`,
+                      }}>{m.sin}</div>
+                    </button>
+                  )
+                })}
               </div>
             </div>
           </>
         )}
+        {/*  🔴🔴 ★자리 모달 — 2026-09-15 (10부) [대표님]
+          *     「리포트의 일지·연지·월지·시지를 누르면 모달로 각각 나오게」
+          *
+          *  ⚠️ ★옛 «자리별 카드» 가 담던 것을 «다» 물려받았습니다 —
+          *     자리 뜻 · 신궁 한자 · 딴이름 · 통변(lead) · 사례 ★세 줄(쪽수·일진).
+          *  ⛔ 사례를 ★«두 줄» 로 줄이지 마십시오 — 리포트가 두 줄, 여기가 세 줄입니다.
+          *    (리포트는 «훑는» 자리, 여기는 «짚는» 자리입니다) */}
+        {openJari && (() => {
+          const h = openJari
+          const lines = h.jariText ? [] : caseLinesFor(h.jari as JariKey, h.sin as never, 3, purpose || null)
+          return (
+            <div role="dialog" aria-modal="true" aria-label={`${h.jari} 풀이`}
+              onClick={() => setOpenJari(null)}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 60,
+                background: 'rgba(40,30,24,0.42)',
+                display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+              }}>
+              <div onClick={e => e.stopPropagation()}
+                style={{
+                  width: '100%', maxWidth: 440, maxHeight: '82vh', overflowY: 'auto',
+                  background: BG, borderRadius: '18px 18px 0 0', padding: '16px 16px 28px',
+                }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 3 }}>
+                  <span style={{ fontSize: 17, fontWeight: 700, color: INK }}>{h.jari}</span>
+                  <span style={{ fontSize: 16, color: INK }}>{h.ji ?? '—'}</span>
+                  {h.sin && (
+                    <span style={{ fontSize: 15, fontWeight: 700, color: h.good ? GOOD : BAD }}>
+                      {sinButton(h.sin)}{h.hanja ? ` ${h.hanja}` : ''}
+                    </span>
+                  )}
+                  <button type="button" onClick={() => setOpenJari(null)}
+                    style={{
+                      marginLeft: 'auto', background: 'transparent', border: 'none',
+                      color: SUB, fontSize: 18, cursor: 'pointer', fontFamily: 'inherit', padding: 0,
+                    }} aria-label="닫기">×</button>
+                </div>
+                <div style={{ fontSize: 11.5, color: SUB, marginBottom: 12, lineHeight: 1.6 }}>
+                  {h.jariMeaning}
+                  {h.alias.length > 0 && <> · {h.alias.join(' · ')}</>}
+                  {pickedJari.includes(h.jari) && (
+                    <span style={{ marginLeft: 6, color: ACCENT }}>이 질문의 자리</span>
+                  )}
+                </div>
+
+                {/*  ⛔ ★시를 모르면 «사실대로» — 지어내지 않습니다 */}
+                {!h.ji && (
+                  <div style={{ fontSize: 12.5, color: SUB, lineHeight: 1.7 }}>
+                    태어난 시를 몰라 시지를 보지 않았어요.
+                  </div>
+                )}
+                {h.lead && (
+                  <div style={{
+                    fontSize: 12.5, color: INK, lineHeight: 1.85,
+                    background: CARD, border: `1px solid ${LINE}`, borderRadius: 12,
+                    padding: '11px 12px', marginBottom: 11,
+                  }}>{withTerms(h.lead)}</div>
+                )}
+                {h.tteut && (
+                  <div style={{ fontSize: 13, color: INK, lineHeight: 1.85, marginBottom: 11 }}>
+                    {withTerms(h.tteut)}
+                  </div>
+                )}
+                {h.sin && (h.jariText
+                  ? <div style={{
+                      fontSize: 13, color: INK, lineHeight: 1.8,
+                      background: CARD, borderRadius: 12, padding: '11px 12px',
+                      border: `1px solid ${LINE}`,
+                    }}>{withTerms(h.jariText)}</div>
+                  : (
+                    <>
+                      {/*  🔴 ⛔ 교재에 «자리별 풀이가 없는» 넷(공망·원진·해결·퇴식) */}
+                      <div style={{ fontSize: 12, color: SUB, lineHeight: 1.7 }}>
+                        교재에 이 신궁의 «자리별» 풀이는 없습니다.
+                        {lines.length > 0 && ' 교재 사례에서는 이렇게 풀었습니다 —'}
+                      </div>
+                      {lines.map(l => (
+                        <div key={l.page + l.text.slice(0, 10)} style={{
+                          marginTop: 7, fontSize: 12.5, color: INK, lineHeight: 1.8,
+                          background: CARD, border: `1px solid ${LINE}`,
+                          borderRadius: 12, padding: '10px 12px',
+                        }}>
+                          {withTerms(l.text)}
+                          <span style={{ marginLeft: 6, fontSize: 11, color: SUB }}>
+                            ({l.page} · {l.iljin})
+                          </span>
+                        </div>
+                      ))}
+                    </>
+                  )
+                )}
+              </div>
+            </div>
+          )
+        })()}
+
+        {/*  🔴 ★운시 모달 — 2026-09-15 (10부) [대표님]
+          *  ⚠️ ★문점일과 «무관» 합니다 — 평생 고정입니다. 모달이 그것을 밝힙니다.
+          *  ⛔ 해당되지 «않는» 덧말(괴강·백호·연지동일·반안)은 안 보여 줍니다. */}
+        {openUnsi && data?.unsi && (() => {
+          const u = data.unsi
+          return (
+            <div role="dialog" aria-modal="true" aria-label="운시 풀이"
+              onClick={() => setOpenUnsi(false)}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 60,
+                background: 'rgba(40,30,24,0.42)',
+                display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+              }}>
+              <div onClick={e => e.stopPropagation()}
+                style={{
+                  width: '100%', maxWidth: 440, maxHeight: '82vh', overflowY: 'auto',
+                  background: BG, borderRadius: '18px 18px 0 0', padding: '16px 16px 28px',
+                }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 3 }}>
+                  <span style={{ fontSize: 17, fontWeight: 700, color: INK }}>운시 運始</span>
+                  <span style={{ fontSize: 16, color: INK }}>{u.ganji}</span>
+                  {/*  ⚠️ 이건 ★십성입니다 — 신궁이 «아닙니다». 용어 모달로 보냅니다. */}
+                  {isSipsungName(u.sipsung) ? (
+                    <button type="button"
+                      onClick={() => setOpenTerm({ word: u.sipsung, key: u.sipsung, kind: 'sipsung' })}
+                      style={{
+                        background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
+                        fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: ACCENT,
+                        borderBottom: `1px dotted ${ACCENT}`,
+                      }}>{u.sipsung}</button>
+                  ) : (
+                    <span style={{ fontSize: 14, fontWeight: 700, color: ACCENT }}>{u.sipsung}</span>
+                  )}
+                  <span style={{ fontSize: 11.5, color: SUB }}>{u.age}세부터</span>
+                  <button type="button" onClick={() => setOpenUnsi(false)}
+                    style={{
+                      marginLeft: 'auto', background: 'transparent', border: 'none',
+                      color: SUB, fontSize: 18, cursor: 'pointer', fontFamily: 'inherit', padding: 0,
+                    }} aria-label="닫기">×</button>
+                </div>
+                <div style={{ fontSize: 11.5, color: SUB, marginBottom: 12, lineHeight: 1.6 }}>
+                  첫 대운이에요. 문점일과 상관없이 평생 그대로입니다. · 교재 8쪽
+                </div>
+
+                {u.sipsungText && (
+                  <div style={{
+                    fontSize: 13, color: INK, lineHeight: 1.85,
+                    background: CARD, border: `1px solid ${LINE}`, borderRadius: 12,
+                    padding: '11px 12px', marginBottom: 11,
+                  }}>{withTerms(u.sipsungText)}</div>
+                )}
+                {/*  ⚠️ 해당될 때만 보입니다 — ⛔ 아닌 것을 «있는 척» 하지 않습니다 */}
+                {([
+                  [u.gwaegang, data.unsiNote['괴강']],
+                  [u.baekho, data.unsiNote['백호']],
+                  [u.sameYeonji, data.unsiNote['연지동일']],
+                  [u.banan, data.unsiNote['반안']],
+                ] as const).filter(([on]) => on).map(([, t]) => (
+                  <div key={t} style={{
+                    fontSize: 12.5, color: INK, lineHeight: 1.75,
+                    borderLeft: `2px solid ${ACCENT}`, paddingLeft: 9, marginBottom: 8,
+                  }}>{t}</div>
+                ))}
+                <div style={{ fontSize: 12, color: SUB, lineHeight: 1.7, marginTop: 8 }}>
+                  {data.unsiNote['고초살']}
+                  {u.samhap.length > 0 && (
+                    <> <b style={{ color: INK }}>({u.ganji[1]} 삼합 — {u.samhap.join(' · ')})</b></>
+                  )}
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
+        {/*  🔴 ★띠 모달 — 2026-09-15 (10부) [대표님]
+          *  ⛔ 교재 9쪽에 «줄이 없는» 둘(상문·공망)은 ★사실대로 말합니다. */}
+        {openTti && (() => {
+          const t = openTti
+          const text = TTI_TEXT[t.sin as SinGung]
+          return (
+            <div role="dialog" aria-modal="true" aria-label={`${ttiNameOf(t.ji)} 오늘`}
+              onClick={() => setOpenTti(null)}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 60,
+                background: 'rgba(40,30,24,0.42)',
+                display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+              }}>
+              <div onClick={e => e.stopPropagation()}
+                style={{
+                  width: '100%', maxWidth: 440, maxHeight: '82vh', overflowY: 'auto',
+                  background: BG, borderRadius: '18px 18px 0 0', padding: '16px 16px 28px',
+                }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 3 }}>
+                  <span style={{ fontSize: 17, fontWeight: 700, color: INK }}>{ttiNameOf(t.ji)}</span>
+                  <span style={{ fontSize: 15, color: INK }}>{t.ji}</span>
+                  <span style={{
+                    fontSize: 15, fontWeight: 700,
+                    color: isGoodSin(t.sin as SinGung) ? GOOD : BAD,
+                  }}>{t.sin}</span>
+                  <button type="button" onClick={() => setOpenTti(null)}
+                    style={{
+                      marginLeft: 'auto', background: 'transparent', border: 'none',
+                      color: SUB, fontSize: 18, cursor: 'pointer', fontFamily: 'inherit', padding: 0,
+                    }} aria-label="닫기">×</button>
+                </div>
+                <div style={{ fontSize: 11.5, color: SUB, marginBottom: 12, lineHeight: 1.6 }}>
+                  문점일 {data?.mun.ganji} 기준 · 교재 9쪽
+                  {t.ji === data?.tti.ji && <span style={{ marginLeft: 6, color: ACCENT }}>이 손님의 띠</span>}
+                </div>
+                {text
+                  ? <div style={{
+                      fontSize: 13, color: INK, lineHeight: 1.85,
+                      background: CARD, border: `1px solid ${LINE}`, borderRadius: 12, padding: '11px 12px',
+                    }}>{withTerms(text)}</div>
+                  : <div style={{ fontSize: 12.5, color: SUB, lineHeight: 1.7 }}>
+                      교재 9쪽에 이 신궁의 줄은 없습니다. 위 자리별 풀이로 보십시오.
+                    </div>}
+              </div>
+            </div>
+          )
+        })()}
+
+        {/*  🔴 ★달 모달 — 2026-09-15 (10부) [대표님]
+          *  ⛔ ★음력 달입니다 (1월=寅 … 12월=丑 · 교재 10쪽). */}
+        {openWol && (() => {
+          const m = openWol
+          return (
+            <div role="dialog" aria-modal="true" aria-label={`음력 ${m.wol}월`}
+              onClick={() => setOpenWol(null)}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 60,
+                background: 'rgba(40,30,24,0.42)',
+                display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+              }}>
+              <div onClick={e => e.stopPropagation()}
+                style={{
+                  width: '100%', maxWidth: 440, maxHeight: '82vh', overflowY: 'auto',
+                  background: BG, borderRadius: '18px 18px 0 0', padding: '16px 16px 28px',
+                }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 3 }}>
+                  <span style={{ fontSize: 17, fontWeight: 700, color: INK }}>음력 {m.wol}월</span>
+                  <span style={{ fontSize: 15, color: INK }}>{m.ji}</span>
+                  {sinButton(m.sin, { fontSize: 15, fontWeight: 700 })}
+                  <button type="button" onClick={() => setOpenWol(null)}
+                    style={{
+                      marginLeft: 'auto', background: 'transparent', border: 'none',
+                      color: SUB, fontSize: 18, cursor: 'pointer', fontFamily: 'inherit', padding: 0,
+                    }} aria-label="닫기">×</button>
+                </div>
+                <div style={{ fontSize: 11.5, color: SUB, marginBottom: 12, lineHeight: 1.6 }}>
+                  문점일 {data?.mun.ganji} 기준 · 교재 10~11쪽 · 달은 음력입니다
+                </div>
+                {m.text
+                  ? <div style={{
+                      fontSize: 13, color: INK, lineHeight: 1.85,
+                      background: CARD, border: `1px solid ${LINE}`, borderRadius: 12, padding: '11px 12px',
+                    }}>{withTerms(m.text)}</div>
+                  : <div style={{ fontSize: 12.5, color: SUB, lineHeight: 1.7 }}>
+                      교재 10~11쪽에 이 신궁의 줄은 없습니다.
+                    </div>}
+              </div>
+            </div>
+          )
+        })()}
+
         {/*  🔴 ★신궁 설명 모달 — 2026-09-15 [대표님]
           *     열두 지지 칸을 누르면 뜹니다.
           *  ⛔ 교재 3~7쪽 글을 «그대로» 보여 줍니다 (연재쌤 전용이라 순화 없음).
