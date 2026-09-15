@@ -2058,14 +2058,29 @@ console.log('\n━━ ㉒-h 🔴 보관함 자리 · 색 통일 1단계 (2026-09
   check(/다시 담기/.test(row) && /failed/.test(row),
     `⚠️ 담기지 «못했을» 때만 「다시 담기」가 나옵니다`)
 
+  /*  ⚠️ ★2026-09-15 (9부) — 목록에서 «타로» 를 뺐습니다 [대표님]
+   *
+   *  [왜]  타로는 보관함 가는 길이 ★«둘» 이었습니다 —
+   *     위의 「📜 내 타로 보관함」 과 아래의 StorageLinkRow.
+   *     ⛔ 게다가 아래 줄이 ★음악 크레디트(CC BY 4.0) «아래» 에 있어서
+   *       「크레디트는 맨 아래」 라는 라이선스 규칙이 깨져 있었습니다.
+   *     ⇒ 대표님이 ★아래 줄을 걷어내라 하셨습니다.
+   *
+   *  🔴 ⛔ 다만 그 줄은 ★저장 «실패» 도 알려 주던 것이라, 알림은 «위» 로 옮겨 살렸습니다.
+   *     ⇒ 그것이 살아 있는지는 ★검사 55(55-verify-tarot-layout.ts)가 «값으로» 지킵니다.
+   *     ⇒ ⛔ 여기서 그냥 빼기만 한 것이 «아닙니다». 지키는 자리를 옮긴 것입니다. */
   for (const [name, path] of [
     ['결혼 진단', 'app/manseryeok/wedding-timing/check/page.tsx'],
     ['이사 진단', 'app/manseryeok/moving-timing/check/page.tsx'],
     ['이사 날짜', 'app/manseryeok/moving-timing/pick/page.tsx'],
-    ['타로', 'app/tarot/page.tsx'],
   ] as const) {
     check(/StorageLinkRow/.test(read(path)), `${name} 이 «그 부품» 을 씁니다`)
   }
+  //  🔴 ★타로는 «다른 검사» 가 지킵니다 — 여기서 조용히 사라지지 않게 못 박아 둡니다
+  check(/보관함에 담지 못했어요/.test(read('app/tarot/page.tsx')),
+    '⚠️ 타로는 그 부품을 걷어냈지만 ★«저장 실패 알림» 은 살아 있습니다 (검사 55가 지킵니다)')
+  check(/55-verify-tarot-layout/.test(read('package.json')),
+    '★npm run verify 가 55번 검사(타로 화면 차례)를 돕니다')
 
   //  🔴 이사 진단 — «조용히 실패하던» 자리 (14부)
   const mc = read('app/manseryeok/moving-timing/check/page.tsx')

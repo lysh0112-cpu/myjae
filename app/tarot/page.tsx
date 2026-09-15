@@ -1,12 +1,13 @@
 'use client'
 import { Suspense, useState, useEffect, useRef } from 'react'
 //  ★2026-09-09 — 보관함 자리는 공용 부품 «한 곳» 입니다 [대표님 「색상 통일」]
-import StorageLinkRow from '@/app/components/common/StorageLinkRow'
 //  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
 import WalletPaySheet from '@/app/components/common/WalletPaySheet'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import ConsultButton from '@/app/components/common/ConsultButton'
+//  ★저장 알림 색 — 공용입니다 (⛔ 색을 직접 적지 마십시오)
+import { SAVE_STATE } from '@/lib/ui/color'
 import {
   saveTarotRecord, getTarotRecord,
   type TarotCategory, type TarotSavedCard,
@@ -658,6 +659,26 @@ function TarotInner() {
                 「새로운 질문하기」121px · 「📜 내 타로 보관함」128px 로 ★둘 다 들어갑니다.
                 ⇒ 아이콘을 그대로 두었습니다.
               ⚠️ 글자를 더 늘리면 넘칩니다. 문구를 바꾸실 때 다시 재 보십시오. */}
+          {/*  🔴 ★2026-09-15 (9부) — 저장 알림을 «여기로» 옮겼습니다 [대표님]
+            *
+            *  [왜]  아래에 「타로 보관함」 줄이 «또» 있었습니다 (보관함 가는 길이 ★둘).
+            *     ⇒ 대표님이 「하단 보관함은 삭제해도 될 듯」 하셨습니다.
+            *     ⛔ 그런데 그 줄은 «단순 링크가 아니라» ★저장 «실패» 도 알려 주었습니다.
+            *       그냥 지우면 ★손님이 «못 담긴 것을 모르게» 됩니다.
+            *     ⇒ 그래서 ★«알림만» 살려서 이 자리로 올렸습니다.
+            *  ⚠️ 담기는 «중» 에는 아무 말도 안 합니다 — 곧 끝나는 일에 말을 걸면 시끄럽습니다.
+            *     (걷어낸 줄이 쓰던 규칙 그대로입니다) */}
+          {saveState === 'saved' && (
+            <div style={{ fontSize: '12.5px', color: SAVE_STATE.ok, marginBottom: '10px' }}>
+              ✓ 보관함에 담았어요
+            </div>
+          )}
+          {saveState === 'failed' && (
+            <div style={{ fontSize: '12.5px', color: SAVE_STATE.fail, marginBottom: '10px' }}>
+              ⚠ 보관함에 담지 못했어요
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={startNew}
               style={{ flex: 1, padding: '13px 8px', borderRadius: '12px', background: cardBg, border, color: sub, fontSize: '14px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
@@ -715,19 +736,13 @@ function TarotInner() {
         </div>
       )}
 
-      {/* 🔴 ★2026-09-09 — 결과 맨 아래 「보관함」 자리 [대표님 「보관함 버튼을 만들면 어때」]
-          ⚠️ 타로에는 보관함으로 가는 길이 ★«아예 없었습니다» (화면은 /tarot/storage 에 있습니다).
-          ⛔ 단추를 «직접 만들지» 마십시오 — StorageLinkRow 한 곳입니다. */}
-      {step === 'result' && interp && (
-        <div style={{ padding: '0 16px 24px' }}>
-          <StorageLinkRow
-            label="타로 보관함"
-            href="/tarot/storage"
-            state={saveState}
-            accent={gold}
-          />
-        </div>
-      )}
+      {/*  ⚠️ ★2026-09-15 (9부) — 여기 있던 「타로 보관함」 줄을 «걷어냈습니다» [대표님]
+        *     · 보관함 가는 길이 ★둘이었습니다 (위의 「📜 내 타로 보관함」 과 겹침)
+        *     · ⛔ 게다가 ★음악 크레디트 «아래» 에 있어서,
+        *       「크레디트는 맨 아래에 남아야 한다」 는 규칙이 깨져 있었습니다 (CC BY 4.0).
+        *     ⇒ ★저장 알림(✓ 담았어요 / ⚠ 못 담았어요)은 «위» 로 옮겨 살렸습니다.
+        *  ⛔ 다시 넣지 마십시오 — 넣으시려면 ★크레디트 «위» 에 두십시오. */}
+
     {/* 🔴 ★2026-09-09 — 공용 결제 시트 [대표님 「동일하게 붙여줘」]
         ⛔ 타로만 «다른» 창을 만들지 마십시오. 아홉 화면이 이 하나를 씁니다. */}
     <WalletPaySheet
