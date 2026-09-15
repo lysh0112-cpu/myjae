@@ -647,16 +647,53 @@ export interface CaseLine {
   text: string
   page: string
   iljin: string
+  /** ⚠️ 고르신 질문과 «같은 갈래» 인가 — 화면이 밝혀 줍니다 */
+  sameKind?: boolean
+}
+
+/*  ⚠️ 사례가 어느 콤보 질문에 속하는지 — ★lookup.ts 에 적혀 있습니다.
+ *  ⛔ 여기에 «또» 적지 마십시오. 두 벌이 되면 어긋납니다.
+ *  ⚠️ 처음엔 require 로 불러왔다가 ★eslint 가 막았습니다 (기준선을 늘리면 안 됩니다).
+ *     ⇒ ★«부르는 쪽» 이 짝을 넘겨 주게 바꿨습니다. 더 단순합니다. */
+let PURPOSE_OF: (id: string) => string | undefined = () => undefined
+/** ⛔ 화면이 «한 번» 꽂아 줍니다 — lookup 을 이 파일이 «안» 불러도 되게 */
+export function setCasePurposeLookup(fn: (id: string) => string | undefined) {
+  PURPOSE_OF = fn
+}
+function LOOKUP_PURPOSE_OF(caseId: string): string | undefined {
+  return PURPOSE_OF(caseId)
 }
 
 /**
  *  🔴 «그 자리 × 그 신궁» 이 교재 사례에서 어떻게 풀렸는가.
  *  ⛔ 못 찾으면 «빈 배열» — 지어내지 않습니다.
  */
-export function caseLinesFor(jari: JariKey, sin: SinGung, limit = 3): CaseLine[] {
+export function caseLinesFor(
+  jari: JariKey,
+  sin: SinGung,
+  limit = 3,
+  /**
+   * 🔴 ★고르신 질문의 갈래 — 2026-09-15 [대표님 ㉰]
+   *
+   *  [왜 더했나]  연애를 물으셨는데 ★「월지가 해결신이니 «매매» 가 해결되겠다」
+   *     (집 파는 사례) 가 나왔습니다. 「일지 ★부인이…」 (남자 손님 사례)도요.
+   *     ⇒ 문장이 «아무 갈래» 에서나 끌려온 탓입니다.
+   *  ⇒ ★같은 갈래 사례를 «먼저» 놓습니다. ⛔ 다른 갈래를 «버리지는» 않습니다
+   *    (그마저 없으면 아무것도 못 보여 드리니까요).
+   */
+  preferPurpose?: string | null,
+): CaseLine[] {
   const words = ALIAS[sin]
   const out: CaseLine[] = []
-  for (const c of CASE_TEXT) {
+  //  ★갈래가 맞는 사례를 «앞» 으로 끌어옵니다
+  const ordered = preferPurpose
+    ? [...CASE_TEXT].sort((a, b) => {
+        const pa = LOOKUP_PURPOSE_OF(a.id) === preferPurpose ? 0 : 1
+        const pb = LOOKUP_PURPOSE_OF(b.id) === preferPurpose ? 0 : 1
+        return pa - pb
+      })
+    : CASE_TEXT
+  for (const c of ordered) {
     //  문장 단위로 잘라 «그 자리 + 그 신궁» 이 한 문장에 함께 있는 것만
     for (const raw of c.text.split(/(?<=\.)\s*/)) {
       const t = raw.trim()
@@ -668,7 +705,10 @@ export function caseLinesFor(jari: JariKey, sin: SinGung, limit = 3): CaseLine[]
       const jariCount = (['연지', '월지', '일지', '시지'] as const)
         .filter(j => t.includes(j)).length
       if (jariCount > 1) continue
-      out.push({ text: t, page: c.page, iljin: c.iljin })
+      out.push({
+        text: t, page: c.page, iljin: c.iljin,
+        sameKind: preferPurpose ? LOOKUP_PURPOSE_OF(c.id) === preferPurpose : undefined,
+      })
       if (out.length >= limit) return out
     }
   }

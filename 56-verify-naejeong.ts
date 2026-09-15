@@ -902,6 +902,34 @@ function main() {
       '★교재 글과 «테두리를 달리» 해 한눈에 갈립니다')
     ok(/이 파일의 글은 «교재가 아닙니다»/.test(R('lib/saju/naejeong/tables/bridge.ts')),
       '⛔ ★파일 머리에도 «교재가 아님» 을 못 박았습니다')
+
+    /*  🔴 ★뜻·통변을 «먼저», 사례는 갈래를 맞춰 — 2026-09-15 [대표님 ㉰]
+     *     연애를 물었는데 ★「매매가 해결되겠다」(집 사례) · 「부인의 조언」(남자 사례)
+     *     이 나와 어색했습니다. */
+    /*  ⛔ ★«리포트 안» 만 봅니다 —
+     *     화면 아래쪽 «자리별 상세» 에도 h.tteut 이 있어
+     *     9부에 ★리포트에서 빼도 그물이 «통과» 했습니다. 오늘 세 번째로 밟은 자리입니다. */
+    {
+      const iR = page.indexOf('종합 내정 리포트')
+      const iEnd = page.indexOf('상담 메모', iR)
+      const report = iR > 0 && iEnd > iR ? page.slice(iR, iEnd) : ''
+      ok(/\{h\.tteut &&/.test(report) && /withTerms\(h\.tteut\)/.test(report),
+        '🔴 ★리포트가 «뜻·통변» 을 먼저 보여 줍니다 (갈래를 안 탑니다)')
+      /*  ★차례 — «그리는» 곳에서 뜻이 사례보다 앞이어야 합니다.
+       *  ⚠️ lines.map 은 «셈하는» 줄(const lines = …)이 위에 있어 그걸로 재면 틀립니다.
+       *     ⇒ ★그리는 자리(withTerms(l.text))로 잽니다. */
+      const iT = report.indexOf('withTerms(h.tteut)')
+      const iC = report.indexOf('withTerms(l.text)')
+      ok(iT > 0 && iC > iT, `★뜻·통변이 사례 «앞» 에 옵니다 (${iT}/${iC})`)
+    }
+    ok(/caseLinesFor\(h\.jari as JariKey, h\.sin as never, 2, purpose \|\| null\)/.test(page),
+      '🔴 ★사례를 «고른 갈래» 에 맞춰 고릅니다')
+    ok(/l\.sameKind === false \? ' · 다른 갈래' : ''/.test(page),
+      '⚠️ ★«다른 갈래» 사례면 그렇다고 밝힙니다 (어색해 보이는 까닭입니다)')
+    ok(/setCasePurposeLookup/.test(page),
+      '⛔ ★짝을 «꽂아» 줍니다 — 두 파일이 서로 부르지 않게')
+    ok(!/require\(/.test(R('lib/saju/naejeong/tables/caseText.ts')),
+      '⛔ ★require 를 쓰지 않습니다 (eslint 기준선을 지킵니다)')
   }
 
   console.log(`\n━━ 일진내정법 — 통과 ${pass} · 실패 ${fail} ━━\n`)

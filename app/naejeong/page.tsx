@@ -29,7 +29,15 @@ import { lookup, type LookupHit } from '@/lib/saju/naejeong/tables/lookup'
 //  ⚠️ ★교재가 «아닌» 초안 한 줄 — 화면이 색을 달리해 보여 줍니다
 import { bridgeOf, BRIDGE_NOTE } from '@/lib/saju/naejeong/tables/bridge'
 //  ★교재 사례 풀이 — 1차(11~24쪽). ⛔ 순화 없이 교재 그대로.
-import { caseTextOf, caseLinesFor, CASE_TEXT, type JariKey } from '@/lib/saju/naejeong/tables/caseText'
+import {
+  caseTextOf, caseLinesFor, CASE_TEXT, setCasePurposeLookup, type JariKey,
+} from '@/lib/saju/naejeong/tables/caseText'
+import { LOOKUP_CASE } from '@/lib/saju/naejeong/tables/lookup'
+
+/*  ⛔ ★사례 ↔ 콤보 질문 짝을 «한 번» 꽂아 줍니다.
+ *     caseText.ts 가 lookup.ts 를 «안» 불러도 되게 (서로 부르지 않게). */
+const CASE_PURPOSE = new Map(LOOKUP_CASE.map(r => [r.id, r.purposeId]))
+setCasePurposeLookup(id => CASE_PURPOSE.get(id))
 import { getSinsal } from '@/lib/saju/sinsal'
 //  ★신궁 뜻 — 열두 지지 칸을 눌렀을 때 띄웁니다 (교재 3~7쪽)
 import { SINGUNG_TEXT } from '@/lib/saju/naejeong/tables/sinGungText'
@@ -798,7 +806,8 @@ export default function NaejeongPage() {
 
               {/*  ★자리별 — 고르신 목적이 있으면 «그 자리부터» */}
               {sortedHits.filter(h => h.sin).map(h => {
-                const lines = h.jariText ? [] : caseLinesFor(h.jari as JariKey, h.sin as never, 1)
+                //  ★고르신 질문의 갈래를 넘겨 «같은 갈래» 사례를 앞에 놓습니다
+                const lines = h.jariText ? [] : caseLinesFor(h.jari as JariKey, h.sin as never, 2, purpose || null)
                 return (
                   <div key={h.jari} style={{ marginBottom: 9 }}>
                     <div style={{ fontSize: 12, marginBottom: 3 }}>
@@ -811,15 +820,32 @@ export default function NaejeongPage() {
                         <span style={{ marginLeft: 6, fontSize: 10, color: ACCENT }}>← 이 질문의 자리</span>
                       )}
                     </div>
+                    {/*  🔴 ★뜻·통변을 «먼저» — 2026-09-15 [대표님 ㉰]
+                      *     사례 문장은 «다른 갈래» 것이 끌려와 어색했습니다
+                      *     (연애를 물었는데 「매매가 해결되겠다」 · 「부인의 조언」).
+                      *     ⇒ ★갈래를 «안 타는» 뜻·통변을 앞에 놓습니다. */}
+                    {h.tteut && (
+                      <div style={{ fontSize: 12.5, color: INK, lineHeight: 1.8, marginBottom: 5 }}>
+                        {withTerms(h.tteut)}
+                      </div>
+                    )}
                     {h.jariText ? (
                       <div style={{ fontSize: 12.5, color: INK, lineHeight: 1.8 }}>{withTerms(h.jariText)}</div>
                     ) : lines.length > 0 ? (
-                      lines.map(l => (
-                        <div key={l.page} style={{ fontSize: 12.5, color: INK, lineHeight: 1.8 }}>
-                          {withTerms(l.text)}
-                          <span style={{ marginLeft: 5, fontSize: 11, color: SUB }}>({l.page})</span>
+                      <>
+                        <div style={{ fontSize: 11, color: SUB, lineHeight: 1.6, marginBottom: 3 }}>
+                          교재에 이 자리의 풀이는 없어 사례에서 옮깁니다 —
                         </div>
-                      ))
+                        {lines.map(l => (
+                          <div key={l.page + l.text.slice(0, 8)} style={{ fontSize: 12.5, color: INK, lineHeight: 1.8 }}>
+                            {withTerms(l.text)}
+                            {/*  ⚠️ ★«다른 갈래» 사례면 밝혀 둡니다 — 어색해 보이는 까닭입니다 */}
+                            <span style={{ marginLeft: 5, fontSize: 11, color: SUB }}>
+                              ({l.page}{l.sameKind === false ? ' · 다른 갈래' : ''})
+                            </span>
+                          </div>
+                        ))}
+                      </>
                     ) : (
                       <div style={{ fontSize: 12, color: SUB, lineHeight: 1.7 }}>
                         교재에 이 자리의 풀이가 없습니다.
@@ -947,7 +973,8 @@ export default function NaejeongPage() {
                       /*  🔴 ★교재 4~7쪽에 «자리별 풀이가 없는» 넷(공망·원진·해결·퇴식) —
                         *     ⇒ 교재 «사례» 에서 «같은 자리 × 같은 신궁» 문장을 찾아 보여 드립니다.
                         *  ⛔ 지어내는 것이 «아닙니다» — 교재 문장을 «그대로» 오려서, ★쪽수와 함께. */
-                      const lines = caseLinesFor(h.jari as JariKey, h.sin as never)
+                      //  ★여기도 갈래를 넘깁니다 — 리포트와 «같은 사례» 가 나오게
+                      const lines = caseLinesFor(h.jari as JariKey, h.sin as never, 3, purpose || null)
                       return (
                         <>
                           <div style={{ fontSize: 12, color: SUB, lineHeight: 1.7 }}>
