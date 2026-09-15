@@ -51,8 +51,8 @@ interface Out {
   saju: { yeon: string; wol: string; il: string; si: string | null }
   hits: Hit[]
   table: { ji: string; sin: string }[]
-  tti: { ji: string; sin: string | null }
-  months: { wol: number; ji: string; sin: string | null }[]
+  tti: { ji: string; sin: string | null; text: string | null }
+  months: { wol: number; ji: string; sin: string | null; text: string | null }[]
 }
 
 const HOURS = [
@@ -252,22 +252,48 @@ export default function NaejeongPage() {
 
             {/* ── 곁들이 : 오늘의 운세(띠) · 신년 운세(달) ── */}
             <div style={{ background: CARD, border: `1px solid ${LINE}`, borderRadius: 14, padding: 14 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: INK, marginBottom: 6 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: INK, marginBottom: 3 }}>
                 띠로 보는 오늘 <span style={{ fontWeight: 400, color: SUB }}>(교재 9쪽)</span>
               </div>
-              <div style={{ fontSize: 13, color: INK, marginBottom: 12 }}>
-                {data.tti.ji} → <b>{data.tti.sin ?? '—'}</b>
+              {/*  ⚠️ ★교재 제목이 「그날에만 유용」 입니다 — 문점일이 바뀌면 값도 바뀝니다.
+                *     ⇒ 그 단서를 «화면에» 둡니다. 안 두면 언제 쓰는 것인지 모릅니다.
+                *  ⚠️ 사주를 몰라도 ★띠만으로 봅니다 (전화로 물어 오실 때 쓰는 자리). */}
+              <div style={{ fontSize: 11, color: SUB, marginBottom: 8, lineHeight: 1.6 }}>
+                사주를 모르실 때 띠만으로 보는 법이에요. 문점일 그날에만 씁니다.
               </div>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: INK, marginBottom: 6 }}>
+              <div style={{
+                border: `1px solid ${LINE}`, borderRadius: 10, padding: '10px 11px', marginBottom: 16,
+              }}>
+                <div style={{ fontSize: 13, color: INK, marginBottom: data.tti.text ? 6 : 0 }}>
+                  {data.tti.ji} → <b>{data.tti.sin ?? '—'}</b>
+                </div>
+                {/*  ⛔ 교재 9쪽에 «줄이 없는» 신궁(상문·공망)은 ★사실대로 말합니다 */}
+                {data.tti.text
+                  ? <div style={{ fontSize: 12.5, color: INK, lineHeight: 1.75 }}>{data.tti.text}</div>
+                  : <div style={{ fontSize: 11.5, color: SUB, marginTop: 6, lineHeight: 1.6 }}>
+                      교재 9쪽에 이 신궁의 줄은 없습니다. 위 자리별 풀이로 보십시오.
+                    </div>}
+              </div>
+
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: INK, marginBottom: 3 }}>
                 달로 보는 한 해 <span style={{ fontWeight: 400, color: SUB }}>(교재 10~11쪽)</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+              {/*  ⚠️ 교재가 ★「상담하러 방문한 날을 기준으로 한다」 고 못 박았습니다 */}
+              <div style={{ fontSize: 11, color: SUB, marginBottom: 8, lineHeight: 1.6 }}>
+                문점일을 기준으로 잡습니다. 날을 바꾸면 열두 달이 함께 바뀝니다.
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                 {data.months.map(m => (
                   <div key={m.wol} style={{
-                    border: `1px solid ${LINE}`, borderRadius: 9, padding: '6px 4px', textAlign: 'center',
+                    border: `1px solid ${LINE}`, borderRadius: 10, padding: '9px 11px',
                   }}>
-                    <div style={{ fontSize: 11, color: SUB }}>{m.wol}월 {m.ji}</div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: INK }}>{m.sin}</div>
+                    <div style={{ fontSize: 12, marginBottom: m.text ? 5 : 0 }}>
+                      <span style={{ color: SUB }}>{m.wol}월 {m.ji}</span>
+                      <b style={{ marginLeft: 7, color: INK, fontSize: 13 }}>{m.sin}</b>
+                    </div>
+                    {m.text && (
+                      <div style={{ fontSize: 12.5, color: INK, lineHeight: 1.75 }}>{m.text}</div>
+                    )}
                   </div>
                 ))}
               </div>

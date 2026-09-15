@@ -15,6 +15,7 @@ import {
   SINGUNG, JIJI, isGoodSin, GOOD_SIN, BAD_SIN,
 } from './lib/saju/naejeong/sinGung'
 import { SINGUNG_TEXT, hasJariText } from './lib/saju/naejeong/tables/sinGungText'
+import { TTI_TEXT, WOL_TEXT } from './lib/saju/naejeong/tables/dayYearText'
 
 let pass = 0, fail = 0
 const ok = (c: boolean, m: string) => { if (c) { pass++; console.log(`  ✅ ${m}`) } else { fail++; console.log(`  ❌ ${m}`) } }
@@ -175,6 +176,41 @@ function main() {
     ok(/koreanLunarTable/.test(api),
       '★음력은 «오프라인 한국 표» 를 씁니다 (바깥 안 부름)')
     ok(/getDayGanji/.test(api), '★일진은 계산으로 냅니다 (바깥 안 부름)')
+  }
+
+  /* ══ ⑧ 🔴 띠로 보는 오늘 · 달로 보는 한 해 — 교재 9쪽 · 10~11쪽 ═══ */
+  head('⑧ 🔴 띠로 보는 오늘 · 달로 보는 한 해 (교재 9쪽 · 10~11쪽)')
+  {
+    //  ★달 글은 열둘이 «다» 있어야 합니다 (교재 10~11쪽이 열두 달을 다 적었습니다)
+    const wolNone = SINGUNG.filter(s2 => WOL_TEXT[s2] === null)
+    ok(wolNone.length === 0, `★달 글이 열둘 «다» 있습니다 ${wolNone.join(' ')}`)
+
+    //  ⛔ 띠 글은 교재에 ★«둘이 빠져» 있습니다 — 지어내지 않았습니다
+    const ttiNone = SINGUNG.filter(s2 => TTI_TEXT[s2] === null)
+    ok(ttiNone.length === 2 && ttiNone.includes('상문') && ttiNone.includes('공망'),
+      `⛔ ★교재 9쪽에 «없는» 둘(상문·공망)을 null 로 두었습니다 — ${ttiNone.join(' · ')}`)
+
+    //  ⚠️ 교재가 «묶어 적은» 짝은 ★같은 글이어야 합니다
+    ok(TTI_TEXT['강일진'] === TTI_TEXT['천록'],
+      '⚠️ ★교재 9쪽이 「강일진과 천록」 을 묶어 적어 같은 글입니다 (나눠 지어내지 않았습니다)')
+    ok(TTI_TEXT['비부'] === TTI_TEXT['약일충'],
+      '⚠️ ★교재 9쪽이 「비부나 약일충」 을 묶어 적어 같은 글입니다')
+
+    //  ★창구가 글을 실어 보내는가
+    const api = R('app/api/naejeong/route.ts')
+    ok(/TTI_TEXT\[ttiSin\]/.test(api) && /WOL_TEXT\[m\.sin\]/.test(api),
+      '★창구가 두 글을 실어 보냅니다')
+
+    //  ★화면이 «언제 쓰는 것인지» 를 밝히는가 — 교재가 못 박은 두 가지
+    const page = R('app/naejeong/page.tsx')
+    ok(/문점일 그날에만 씁니다/.test(page),
+      '🔴 ★「그날에만」 이라고 밝힙니다 (교재 9쪽 제목)')
+    ok(/문점일을 기준으로 잡습니다/.test(page),
+      '🔴 ★「문점일 기준」 이라고 밝힙니다 (교재 10쪽)')
+    ok(/띠만으로 보는 법이에요/.test(page),
+      '★사주를 몰라도 쓰는 자리임을 밝힙니다 (연지와 겹쳐 보이던 것)')
+    ok(/교재 9쪽에 이 신궁의 줄은 없습니다/.test(page),
+      '⛔ ★글이 없으면 «없다» 고 말합니다 (빈칸을 숨기지 않습니다)')
   }
 
   console.log(`\n━━ 일진내정법 — 통과 ${pass} · 실패 ${fail} ━━\n`)

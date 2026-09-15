@@ -28,6 +28,8 @@ import { calcHourPillar } from '@/lib/saju/hourPillar'
 import { solarToLunarKR, lunarToSolarKR, lunarRangeKR } from '@/lib/saju/koreanLunarTable'
 import { judgeWonguk, sinGungTable, sinGungByMonth, sinGungOf, JARI_MEANING } from '@/lib/saju/naejeong/sinGung'
 import { SINGUNG_TEXT } from '@/lib/saju/naejeong/tables/sinGungText'
+//  ★교재 9쪽(띠로 보는 오늘) · 10~11쪽(달로 보는 한 해) 글
+import { TTI_TEXT, WOL_TEXT } from '@/lib/saju/naejeong/tables/dayYearText'
 
 export const dynamic = 'force-dynamic'
 const NO_STORE = { 'Cache-Control': 'no-store' }
@@ -127,10 +129,19 @@ export async function POST(req: Request) {
       hits: dressed,
       /** 열두 지지 표 — 교재 3쪽 */
       table: sinGungTable(ilJi).map(x => ({ ...x, good: SINGUNG_TEXT[x.sin] ? undefined : undefined })),
-      /** 오늘의 운세 — 띠(연지)로 보는 것 (교재 9쪽) */
-      tti: { ji: yearGanji[1], sin: ttiSin },
-      /** 신년 운세 — 달마다 (교재 10~11쪽) */
-      months: sinGungByMonth(ilJi),
+      /**
+       * 오늘의 운세 — 띠(연지)로 보는 것 (교재 9쪽)
+       * ⚠️ 교재 제목이 ★「그날에만 유용」 입니다 — 문점일이 바뀌면 값도 바뀝니다.
+       * ⛔ 교재에 «줄이 없는» 신궁(상문·공망)은 ★null 입니다. 지어내지 않습니다.
+       */
+      tti: { ji: yearGanji[1], sin: ttiSin, text: ttiSin ? TTI_TEXT[ttiSin] : null },
+      /**
+       * 신년 운세 — 달마다 (교재 10~11쪽)
+       * ⚠️ 교재가 ★「상담하러 방문한 날을 기준으로 한다」 고 못 박았습니다.
+       */
+      months: sinGungByMonth(ilJi).map(m => ({
+        ...m, text: m.sin ? WOL_TEXT[m.sin] : null,
+      })),
     }, { headers: NO_STORE })
 
   } catch {
