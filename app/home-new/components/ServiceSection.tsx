@@ -47,6 +47,10 @@ export interface HomeService {
 
 interface Props {
   services: HomeService[]
+  /*  🔴 ★2026-09-18 (10부) [대표님] — 홈 카드에 「10,000원~」
+   *  ⚠️ 카드 «이름» 으로 찾습니다. 없으면 ★안 그립니다 (지어내지 않습니다).
+   *  ⛔ 값을 여기서 «셈하지» 마십시오 — /api/home-prices 가 정해 줍니다. */
+  prices?: Record<string, { won: number; show: boolean }>
   pinned: string[]
   pinMsg: string
   maxPins: number
@@ -293,8 +297,21 @@ const GROUPS: Group[] = [
 ]
 
 export default function ServiceSection({
-  services, pinned, pinMsg, maxPins, onTogglePin, onOpen,
+  services, prices, pinned, pinMsg, maxPins, onTogglePin, onOpen,
 }: Props) {
+  /*  ★가격 한 줄 — 토글이 꺼져 있거나 값이 없으면 ★아무것도 안 그립니다.
+   *  ⛔ 「가격 문의」 같은 글로 «대신» 채우지 마십시오 —
+   *     PG 심사 FAQ 가 ★「가격 명시 없이 문의·상담 창구만」 을 입점 불가로 봅니다.
+   *     ⇒ 없는 편이 «틀린 값» 보다 낫습니다. */
+  const PriceLine = ({ name, size = 11 }: { name: string; size?: number }) => {
+    const p = prices?.[name]
+    if (!p || !p.show || p.won <= 0) return null
+    return (
+      <span style={{ fontSize: size, fontWeight: 700, color: '#96502e', whiteSpace: 'nowrap' }}>
+        {p.won.toLocaleString()}원~
+      </span>
+    )
+  }
   const [open, setOpen] = useState<Record<string, boolean>>(
     Object.fromEntries(ALWAYS_OPEN.map(k => [k, true])),
   )
@@ -529,6 +546,8 @@ export default function ServiceSection({
                     {s.name}
                   </span>
                   <span style={{ fontSize: 11, color: C.sub }}>{SOLO_COPY[s.name] ?? s.sub}</span>
+                  {/* ★홈 카드 가격 — 토글이 켜졌을 때만 (10부) */}
+                  <PriceLine name={s.name} />
                 </span>
                 <span style={{ fontSize: 15, color: C.text, flexShrink: 0 }}>›</span>
               </button>
@@ -568,6 +587,7 @@ export default function ServiceSection({
                         <span style={{ fontSize: 10, opacity: 0.45 }}>{g.icon}</span>
                       </span>
                       <span style={{ fontSize: 11, color: C.sub }}>{s.sub}</span>
+                      <PriceLine name={s.name} />
                     </span>
                     <span style={{ fontSize: 15, color: C.text, flexShrink: 0 }}>›</span>
                   </button>
@@ -664,6 +684,7 @@ export default function ServiceSection({
                             </span>
                             {/* ⚠️ 11 «그대로» — 10 으로 내리지 마십시오 (읽기 어려워집니다) */}
                             <span style={{ fontSize: 11, color: C.faint }}>{s.sub}</span>
+                            <PriceLine name={s.name} size={10.5} />
                           </span>
                           <span style={{ fontSize: 11, color: C.sub, flexShrink: 0 }}>›</span>
                         </button>

@@ -5,6 +5,8 @@ import WalletPrice from './WalletPrice'
 import HomeFlagToggle from './HomeFlagToggle'
 import { callAdmin } from './callAdmin'
 import type { HomeFlagKey } from '@/lib/homeFlags'
+/*  🔴 ★2026-09-18 (10부) [대표님 「여기 맨우측란에 붙여줘」] */
+import { HOME_PRICE_SERVICES, cheapestAi } from '@/lib/homePrices'
 
 type Price = {
   id: string
@@ -124,6 +126,59 @@ function PriceCell({ r, short, onPrice, onToggle }: {
   )
 }
 
+/* ══════════════════════════════════════════════════════════════════
+ *  🏠 홈 카드 칸 — ★2026-09-18 (10부) [대표님]
+ *    「홈화면 가격표도 만들어줘 · 토글버튼이 있어야 해 ·
+ *      나중에 토글을 꺼서 홈화면의 가격을 숨길 수도 있어야 해」
+ *
+ *  🔴 ★값 칸이 «없는» 까닭 —
+ *     홈에 보일 값을 따로 적어 두면 가격이 ★«네 곳» 이 됩니다.
+ *     대표님이 왼쪽 AI 값을 고치셔도 홈만 옛 값으로 남습니다.
+ *     ⇒ ★왼쪽 AI 값 중 «켜져 있는 것의 가장 싼 값» 을 그대로 씁니다.
+ *       (「~」 가 «더 비싼 갈래도 있다» 는 뜻입니다)
+ *  ⛔ 여기에 값 칸을 만들지 마십시오. 까닭은 lib/homePrices.ts 머리글에 있습니다.
+ *
+ *  ⚠️ ★0원이거나 AI 줄이 다 꺼져 있으면 «켤 수 없습니다» —
+ *     PG 심사에서 ★0원 상품은 «심사 불가» 사유입니다.
+ * ══════════════════════════════════════════════════════════════════ */
+function HomeCell({ serviceKey, ai, row, onToggle }: {
+  serviceKey: string
+  ai: Price[]
+  row: { service_key: string; show_price: boolean } | undefined
+  onToggle: (key: string) => void
+}) {
+  const svc = HOME_PRICE_SERVICES.find(x => x.key === serviceKey)
+  const won = svc ? cheapestAi(ai, svc.ai) : null
+
+  if (!svc) return <span style={{ fontSize: 11, color: '#8a88a0' }}>—</span>
+  if (!row) return (
+    <span style={{ fontSize: 10.5, color: '#f0a05a', lineHeight: 1.5 }}>
+      홈 가격표에 줄이 없어요
+    </span>
+  )
+  if (won === null) return (
+    <span style={{ fontSize: 10.5, color: '#8a88a0', lineHeight: 1.5 }}>
+      AI 값이 0이거나 꺼져 있어요
+    </span>
+  )
+
+  const on = row.show_price
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: on ? 1 : 0.45 }}>
+      <span style={{ width: 78, textAlign: 'right', fontSize: 12, fontWeight: 700,
+        color: on ? '#FAC775' : '#8a88a0' }}>
+        {won.toLocaleString()}원~
+      </span>
+      <button onClick={() => onToggle(serviceKey)} aria-label={svc.name + ' 홈 가격 표시'}
+        style={{ width: 34, height: 18, borderRadius: 20, position: 'relative', flex: 'none',
+          background: on ? '#FAC775' : 'rgba(255,255,255,0.2)' }}>
+        <span style={{ position: 'absolute', top: 2, [on ? 'right' : 'left']: 2,
+          width: 14, height: 14, borderRadius: '50%', background: '#fff' } as CSSProperties} />
+      </button>
+    </div>
+  )
+}
+
 function MergedPriceTable({ flags }: { flags: { examLuck: boolean; haerak: boolean } }) {
   /*  🔴 ★2026-09-14 (8부) — 「지갑 요금표 채우기」  [대표님이 겪으신 일]
    *    mc_price 에 줄이 없으면 ★손님 결제 시트가 «안 열립니다» (지갑에 돈이 있어도).
@@ -151,20 +206,29 @@ function MergedPriceTable({ flags }: { flags: { examLuck: boolean; haerak: boole
 
   const [consult, setConsult] = useState<Price[]>([])
   const [ai, setAi] = useState<Price[]>([])
+  /*  🔴 ★홈 카드 표시 여부 — 2026-09-18 (10부). show_price «만» 씁니다. */
+  const [homeRows, setHomeRows] = useState<HomePrice[]>([])
+  const toggleHome = (key: string) =>
+    setHomeRows(prev => prev.map(r =>
+      r.service_key === key ? { ...r, show_price: !r.show_price } : r))
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => { load() }, [])
 
   async function load() {
-    const [c, a] = await Promise.all([
+    const [c, a, h] = await Promise.all([
       supabase.from('consult_prices').select('*').order('sort'),
       supabase.from('analysis_prices').select('*').order('sort'),
+      supabase.from('home_prices').select('*').order('sort'),
     ])
     if (c.error) { alert('상담 가격 불러오기 실패: ' + c.error.message); return }
     if (a.error) { alert('AI 분석 가격 불러오기 실패: ' + a.error.message); return }
     setConsult((c.data ?? []) as Price[])
     setAi((a.data ?? []) as Price[])
+    /*  ⚠️ ★홈 가격표는 «못 읽어도» 멈추지 않습니다 — 표가 아직 없을 수 있습니다.
+     *     ⇒ 그때는 칸에 「홈 가격표에 줄이 없어요」 라고 «말합니다». */
+    setHomeRows((h.data ?? []) as HomePrice[])
     setLoading(false)
   }
 
@@ -235,8 +299,22 @@ function MergedPriceTable({ flags }: { flags: { examLuck: boolean; haerak: boole
       }
     }
 
+    /*  🔴 ★홈 카드 표시 여부도 «함께» 저장합니다 — 2026-09-18 (10부)
+     *  ⛔ 따로 저장 단추를 두지 마십시오. 대표님이 한 번만 누르시게. */
+    for (const r of homeRows) {
+      const { data, error } = await supabase.from('home_prices')
+        .update({ show_price: r.show_price, updated_at: new Date().toISOString() })
+        .eq('service_key', r.service_key)
+        .select('service_key')
+      if (error || !data || data.length === 0) {
+        alert('가격은 저장됐지만 ★홈 카드 표시 저장에 실패했습니다 ('
+          + r.label + '): ' + (error ? error.message : '바뀐 줄이 없습니다 — 로그인이 풀렸거나 권한이 없습니다'))
+        setSaving(false); load(); return
+      }
+    }
+
     setSaving(false)
-    alert('가격이 저장되었습니다 (지갑 요금표에도 반영)')
+    alert('가격이 저장되었습니다 (지갑 요금표 · 홈 카드 표시에도 반영)')
     load()
   }
 
@@ -251,7 +329,10 @@ function MergedPriceTable({ flags }: { flags: { examLuck: boolean; haerak: boole
      ⛔ 1fr 로 되돌리지 마십시오 — 남는 자리를 반씩 나눠 가져
         상담 값과 AI 값이 ★화면 끝과 끝으로 벌어집니다. 눈이 건너뛰게 됩니다.
      ⚠️ 오른쪽 빈자리는 ★당구·골프 요금을 넣으실 자리로 비워 둡니다. */
-  const row = { display: 'grid', gridTemplateColumns: '148px 150px 224px', gap: 14,
+  /*  🔴 ★2026-09-18 (10부) [대표님 「여기 맨우측란에 붙여줘」] —
+   *    네 번째 칸 «🏠 홈 카드» 를 붙였습니다. 아래에 따로 있던 표를 여기로 옮긴 것입니다.
+   *  ⛔ 따로 있던 표를 다시 만들지 마십시오 — «두 벌» 이 됩니다 (검사 58 ⑤). */
+  const row = { display: 'grid', gridTemplateColumns: '148px 150px 224px 132px', gap: 14,
     alignItems: 'start', padding: '9px 12px',
     borderTop: '1px solid rgba(255,255,255,0.05)' } as CSSProperties
 
@@ -265,6 +346,7 @@ function MergedPriceTable({ flags }: { flags: { examLuck: boolean; haerak: boole
           <span>종류</span>
           <span>🔮 전문가 상담</span>
           <span>✨ AI 분석 (혼자 조회)</span>
+          <span>🏠 홈 카드</span>
         </div>
 
         {/* ★2026-09-11 (6부) — 토글이 꺼지면 합격운 줄을 «그리지 않습니다» (값은 그대로) */}
@@ -288,6 +370,7 @@ function MergedPriceTable({ flags }: { flags: { examLuck: boolean; haerak: boole
                   가격 줄 만들기
                 </button>
               </div>
+              <span />
             </div>
           )
           return (
@@ -305,6 +388,12 @@ function MergedPriceTable({ flags }: { flags: { examLuck: boolean; haerak: boole
                     onPrice={eA.price} onToggle={eA.toggle} short={x.short} />
                 ))}
               </div>
+              {/*  🔴 ★홈 카드 — 값은 «왼쪽 AI 값에서 저절로» 옵니다. 토글만 여기서 켭니다. */}
+              <div style={{ paddingTop: 1 }}>
+                <HomeCell serviceKey={p.consult} ai={ai}
+                  row={homeRows.find(h => h.service_key === p.consult)}
+                  onToggle={toggleHome} />
+              </div>
             </div>
           )
         })}
@@ -319,6 +408,7 @@ function MergedPriceTable({ flags }: { flags: { examLuck: boolean; haerak: boole
                   onPrice={eA.price} onToggle={eA.toggle} short={r.label} />
               ))}
             </div>
+            <span />
           </div>
         )}
       </div>
@@ -544,94 +634,13 @@ function TarotTable() {
 }
 
 // 홈화면 핵심서비스 가격표 (표시 토글 + 가격) — 타로 아래에 배치
-function HomePriceTable() {
-  const [rows, setRows] = useState<HomePrice[]>([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-
-  useEffect(() => { load() }, [])
-
-  async function load() {
-    const { data, error } = await supabase.from('home_prices').select('*').order('sort')
-    if (error) { alert('불러오기 실패: ' + error.message); return }
-    setRows((data ?? []) as HomePrice[])
-    setLoading(false)
-  }
-
-
-  function setPrice(key: string, raw: string) {
-    const num = parseInt(raw.replace(/[^0-9]/g, '')) || 0
-    setRows(prev => prev.map(r => r.service_key === key ? { ...r, price: num } : r))
-  }
-  function toggle(key: string) {
-    setRows(prev => prev.map(r => r.service_key === key ? { ...r, show_price: !r.show_price } : r))
-  }
-
-  async function saveAll() {
-    setSaving(true)
-    for (const r of rows) {
-      const { error } = await supabase.from('home_prices')
-        .update({ price: r.price, show_price: r.show_price, updated_at: new Date().toISOString() })
-        .eq('service_key', r.service_key)
-      if (error) { alert('저장 실패(' + r.label + '): ' + error.message); setSaving(false); return }
-    }
-    setSaving(false)
-    alert('홈화면 가격표 저장되었습니다')
-    load()
-  }
-
-  if (loading) return <div className="text-sm mt-6" style={{ color: '#8a88a0' }}>불러오는 중...</div>
-
-  return (
-    <div style={{ marginTop: 20 }}>
-      <div className="text-sm font-bold mb-2" style={{ color: '#FAC775' }}>🏠 홈화면 가격표</div>
-      <div className="rounded-xl overflow-hidden"
-        style={{ background: '#2C2C2A', border: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="flex items-center px-3 py-2 text-xs font-bold"
-          style={{ background: 'rgba(60,52,137,0.3)', color: '#FAC775',
-            borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <span style={{ flex: 1 }}>서비스</span>
-          <span style={{ width: 100, textAlign: 'right' }}>가격</span>
-          <span style={{ width: 44, textAlign: 'center' }}>표시</span>
-        </div>
-
-        {rows.map(r => (
-          <div key={r.service_key} className="flex items-center px-3 py-2"
-            style={{ borderTop: '1px solid rgba(255,255,255,0.05)', opacity: r.show_price ? 1 : 0.45 }}>
-            <span style={{ flex: 1, fontSize: 12, color: '#fff' }}>
-              {r.label}{!r.show_price && <span style={{ fontSize: 10, color: '#8a88a0' }}> (숨김)</span>}
-            </span>
-            <div style={{ width: 100, textAlign: 'right' }}>
-              <input type="text" inputMode="numeric" value={r.price.toLocaleString()}
-                onChange={e => setPrice(r.service_key, e.target.value)}
-                className="rounded-lg px-2 py-1 text-xs text-right outline-none"
-                style={{ width: 88, background: 'rgba(255,255,255,0.08)', color: '#fff',
-                  border: '1px solid rgba(255,255,255,0.1)' }} />
-            </div>
-            <div style={{ width: 44, display: 'flex', justifyContent: 'center' }}>
-              <button onClick={() => toggle(r.service_key)}
-                style={{ width: 34, height: 18, borderRadius: 20, position: 'relative',
-                  background: r.show_price ? '#FAC775' : 'rgba(255,255,255,0.2)' }}>
-                <span style={{ position: 'absolute', top: 2, [r.show_price ? 'right' : 'left']: 2,
-                  width: 14, height: 14, borderRadius: '50%', background: '#fff' } as any} />
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="text-xs mt-2" style={{ color: '#8a88a0' }}>
-        💡 표시 켜짐 = 홈 카드에 &quot;○○원~&quot; 노출 · 꺼짐 = 가격 줄 숨김
-      </div>
-
-      <button onClick={saveAll} disabled={saving}
-        className="py-2 px-5 rounded-xl text-sm font-bold mt-2"
-        style={{ background: '#FAC775', color: '#1a1a18' }}>
-        {saving ? '저장중...' : '저장'}
-      </button>
-    </div>
-  )
-}
+/*  🔴🔴 ★여기 있던 «🏠 홈화면 가격표» 를 걷어냈습니다 — 2026-09-18 (10부)
+  *    [대표님 「여기 맨우측란에 붙여줘」]
+  *  ⇒ 위 가격 표의 ★네 번째 칸 «🏠 홈 카드» 로 옮겼습니다 (HomeCell).
+  *  ⛔ 다시 만들지 마십시오 — 같은 것을 «두 곳» 에서 고치게 됩니다.
+  *  ⚠️ 값 칸은 ★일부러 없앴습니다. 홈 값은 «왼쪽 AI 값» 에서 저절로 옵니다
+  *     (까닭은 lib/homePrices.ts 머리글).
+  *  ⚠️ home_prices 표는 그대로 씁니다 — ★show_price 칸만 봅니다. */
 
 // 이름 짓기 조회 횟수 (개명) — app_settings 테이블의 naming_try_limit 하나만 저장
 function NamingTryLimitBox() {
@@ -758,7 +767,6 @@ export default function PriceManager() {
       </div>
 
       <div style={{ marginTop: 28, maxWidth: 420 }}>
-        <HomePriceTable />
       </div>
 
       <div className="text-xs mt-4" style={{ color: '#8a88a0' }}>

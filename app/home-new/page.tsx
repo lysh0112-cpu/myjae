@@ -24,6 +24,8 @@ import ServiceSection from '@/app/home-new/components/ServiceSection'
 /* ★2026-09-10 — 자매 앱 바로가기 [대표님 목업 승낙 · 「나안」] */
 import SisterLinks from '@/app/components/common/SisterLinks'
 import BrandLockup from '@/app/components/common/BrandLockup'
+/*  🔴 ★2026-09-18 (10부) — 홈 카드 가격 [대표님] */
+import { HOME_PRICES_NONE, type HomePriceMap } from '@/lib/homePrices'
 /* ★2026-09-10 — 회사 정보를 «한 곳» 에서 가져옵니다 (⛔ 여기에 다시 적지 마십시오) */
 import { COMPANY } from '@/app/components/common/companyInfo'
 import { EXAM_LUCK_NAME, isExamLuckName, HAERAK_NAME, isHaerakName, HOME_FLAGS_OFF, fetchHomeFlags, type HomeFlags } from '@/lib/homeFlags'
@@ -247,6 +249,19 @@ export default function HomeNew() {
   const router = useRouter()
   const [slide, setSlide] = useState(0)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  /*  🔴 ★홈 카드 가격 — 2026-09-18 (10부) [대표님]
+   *  ⚠️ ★로그인과 «상관없이» 부릅니다 — PG 심사관이 비회원으로 봅니다.
+   *  ⛔ 못 읽으면 ★빈 표입니다 (가격이 «안 보일» 뿐, 화면은 그대로 뜹니다). */
+  const [prices, setPrices] = useState<HomePriceMap>(HOME_PRICES_NONE)
+
+  useEffect(() => {
+    let alive = true
+    fetch('/api/home-prices')
+      .then(r => r.json())
+      .then((d: HomePriceMap) => { if (alive) setPrices(d ?? HOME_PRICES_NONE) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
   // 사람 선택 모달: 어떤 서비스로 열렸는지 (null이면 닫힘)
   const [pickService, setPickService] = useState<string | null>(null)
   const [pinned, setPinned] = useState<string[]>([])      // 찜한 서비스 이름들 (찜한 순서)
@@ -572,6 +587,7 @@ export default function HomeNew() {
           pinMsg={pinMsg}
           maxPins={MAX_PINS}
           onTogglePin={handleTogglePin}
+          prices={prices}
           onOpen={(s) => { if (PICK_CONFIG[s.name]) setPickService(s.name); else router.push(s.href) }}
         />
 
