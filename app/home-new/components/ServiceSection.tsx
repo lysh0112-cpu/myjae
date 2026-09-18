@@ -324,9 +324,13 @@ export default function ServiceSection({
         borderTop: `1px solid ${C.borderSub}`,
         background: C.well,
         padding: small ? '5px 10px' : '7px 14px',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
       }}>
-        <span style={{ fontSize: small ? 10 : 10.5, color: C.faint }}>혼자 보기</span>
+        {/*  🔴 ★2026-09-18 [대표님] — 라벨을 «뺐습니다».
+          *    처음에 「혼자 보기」 라 적었는데 ★대표님이 무슨 뜻이냐 물으셨습니다.
+          *    ⇒ ★대표님이 물으시면 손님은 더 모르십니다. 값만 둡니다.
+          *  ⛔ 설명하는 말을 다시 붙이지 마십시오 (검사 58 ⑤).
+          *  ⛔ 「가격 문의」 같은 글로 채우지도 마십시오 — PG 입점 불가 사유입니다. */}
         <span style={{
           fontSize: small ? 11.5 : 12.5, fontWeight: 700, color: '#96502e',
           whiteSpace: 'nowrap',
@@ -461,8 +465,18 @@ export default function ServiceSection({
             const t = BEST_THEME[s.name]
             if (!t) return null
             return (
+              /*  🔴 ★2026-09-18 [대표님 「위에 세 개만 아래 가격표시가 안 나온다」]
+               *  ⚠️ 카드 모양이 ★«셋» 인 줄 알고 셋만 붙였는데 ★다섯이었습니다.
+               *     BEST 카드가 빠져 있었습니다 — 7부 0-3 «절반만 고치기» 를 또 밟았습니다.
+               *  ⚠️ BEST 는 카드 «통째» 가 단추라 ★겉을 한 겹 감싸야 값 칸이 들어갑니다.
+               *  ⛔ 값 칸을 이 단추 «안» 으로 넣지 마십시오 (읽어 주기가 길게 읽습니다). */
+              <div key={s.name} style={{
+                borderRadius: 16, overflow: 'hidden',
+                border: `1.5px solid ${C.border}`,
+                boxShadow: `inset ${STRIPE_W} 0 0 ${t.stripe}, ${C.shadow}`,
+                background: t.bg,
+              }}>
               <button
-                key={s.name}
                 className="svcTap svcBest"
                 onClick={() => onOpen(s)}
                 style={{
@@ -472,10 +486,9 @@ export default function ServiceSection({
                   //   모서리 18 → 16 · 그라데이션 테두리 → C.border · 색 글로우 → C.shadow
                   //   ⇒ 갈리는 것은 이제 «바탕색» 과 «왼쪽 띠» 입니다.
                   //   ⛔ t.glow(색 번짐)로 되돌리지 마십시오 — 그것 때문에 굵어 보였습니다.
-                  padding: '16px 15px', borderRadius: 16,
-                  background: t.bg,
-                  border: `1.5px solid ${C.border}`,
-                  boxShadow: `inset ${STRIPE_W} 0 0 ${t.stripe}, ${C.shadow}`,
+                  //  ⚠️ 테두리·그림자·왼쪽 띠는 ★겉 상자가 맡습니다 (값 칸까지 감싸게).
+                  padding: '16px 15px', borderRadius: 0,
+                  background: 'transparent', border: 'none',
                   backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
                 }}
               >
@@ -498,6 +511,8 @@ export default function ServiceSection({
                 </span>
                 <span style={{ fontSize: 16, color: t.arrow, flexShrink: 0 }}>›</span>
               </button>
+              <PriceRow name={s.name} />
+              </div>
             )
           })}
         </div>
