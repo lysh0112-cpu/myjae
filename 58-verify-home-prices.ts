@@ -143,13 +143,36 @@ function main() {
   head('⑤ 🔴 토글로 끄면 홈에서 숨음 [대표님]')
   {
     const live = liveOf(svcSrc)
-    ok(/const PriceLine =/.test(live), '★가격 줄 부품이 있습니다')
+    ok(/const PriceRow =/.test(live), '★가격 칸 부품이 있습니다')
     ok(/if \(!p \|\| !p\.show \|\| p\.won <= 0\) return null/.test(live),
-      '🔴🔴 ★토글이 꺼져 있으면 «아무것도» 안 그립니다 [대표님]')
+      '🔴🔴 ★토글이 꺼져 있으면 칸이 «통째로» 사라집니다 [대표님]')
     ok(/원~/.test(live), '★「○○원~」 로 보여 줍니다 [대표님]')
-    //  ⛔ 카드가 «세 가지 모양» 입니다 — 낱장 · 폴더 · 접힌 목록. 다 붙었는지.
-    const n = (live.match(/<PriceLine/g) ?? []).length
-    ok(n === 3, `🔴 ★세 가지 카드 모양에 «다» 붙었습니다 (${n}) — 낱장·폴더·목록`)
+    ok(/혼자 보기/.test(live), '★무슨 값인지 왼쪽에 밝힙니다 (「혼자 보기」)')
+
+    /*  🔴 ★2026-09-18 [대표님 「자리가 없다고 할 것이 아니라 «자리를 만들어야지»」]
+     *    ⛔ 설명 줄 밑에 «끼워» 넣는 것으로 되돌리지 마십시오 —
+     *       카드 «맨 아래 한 칸» 이라야 합니다. */
+    ok(/borderTop: `1px solid \$\{C\.borderSub\}`/.test(live)
+      && /justifyContent: 'space-between'/.test(live),
+      '🔴 ★«윗선이 있는 한 칸» 입니다 (설명 줄에 얹은 것이 아닙니다)')
+    ok(!/<PriceLine/.test(live),
+      '⛔ ★옛 «얹기» 모양으로 되돌아가지 않았습니다')
+
+    //  ⛔ 카드가 «세 가지 모양» 입니다 — 낱장 · 폴더 밖 · 폴더 속. 다 붙었는지.
+    const n = (live.match(/<PriceRow/g) ?? []).length
+    ok(n === 3, `🔴 ★세 가지 카드 모양에 «다» 붙었습니다 (${n})`)
+
+    /*  🔴 ⛔ ★누르는 <button> «바깥» 이라야 합니다 —
+     *     안에 두면 읽어 주기가 단추 이름을 「궁합 두 사람의 결 10,000원~」 으로 읽습니다. */
+    {
+      let bad = 0
+      for (const m of live.matchAll(/<PriceRow/g)) {
+        const before = live.slice(0, m.index)
+        if (before.lastIndexOf('<button') > before.lastIndexOf('</button>')) bad++
+      }
+      ok(bad === 0, `🔴 ⛔ ★값 칸이 «단추 바깥» 에 있습니다 (안에 든 것 ${bad}개)`)
+    }
+
     //  ⛔ 값이 없을 때 «가격 문의» 같은 글로 채우지 않았는지 (PG 입점 불가 사유)
     ok(!/가격 문의|문의하세요|상담 문의/.test(live),
       '⛔ ★「가격 문의」 로 대신 채우지 않습니다 (PG 입점 불가 사유)')

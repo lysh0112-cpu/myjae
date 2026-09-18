@@ -303,13 +303,35 @@ export default function ServiceSection({
    *  ⛔ 「가격 문의」 같은 글로 «대신» 채우지 마십시오 —
    *     PG 심사 FAQ 가 ★「가격 명시 없이 문의·상담 창구만」 을 입점 불가로 봅니다.
    *     ⇒ 없는 편이 «틀린 값» 보다 낫습니다. */
-  const PriceLine = ({ name, size = 11 }: { name: string; size?: number }) => {
+  /*  🔴🔴 ★홈 카드 가격 — «밑줄 한 칸» — 2026-09-18 (10부) [대표님]
+   *
+   *    「홈화면에 자리가 없다고 할 것이 아니라 ★자리를 만들어야지」
+   *  ⚠️ 처음에는 ★설명 줄 밑에 «얹기만» 했습니다. 그것은 자리를 «낸» 것이 아니라
+   *     남의 자리에 «끼워 넣은» 것이었습니다. ⇒ 카드 «맨 아래에 칸 하나» 를 냅니다.
+   *  ⛔ 다시 설명 줄 밑으로 «끼워» 넣지 마십시오 (검사 58 ⑤).
+   *
+   *  ⚠️ ★카드 «바깥» 에 놓습니다 — 누르는 <button> «안» 이 아닙니다.
+   *     ⇒ 읽어 주기가 단추 이름을 「궁합 두 사람의 결 10,000원~」 으로 읽지 않습니다.
+   *  ⛔ 토글이 꺼져 있거나 값이 없으면 ★칸이 «통째로» 사라집니다.
+   *     「가격 문의」 같은 글로 채우지 마십시오 —
+   *     PG 심사 FAQ 가 ★「가격 명시 없이 문의·상담 창구만」 을 입점 불가로 봅니다.
+   */
+  const PriceRow = ({ name, small = false }: { name: string; small?: boolean }) => {
     const p = prices?.[name]
     if (!p || !p.show || p.won <= 0) return null
     return (
-      <span style={{ fontSize: size, fontWeight: 700, color: '#96502e', whiteSpace: 'nowrap' }}>
-        {p.won.toLocaleString()}원~
-      </span>
+      <div style={{
+        borderTop: `1px solid ${C.borderSub}`,
+        background: C.well,
+        padding: small ? '5px 10px' : '7px 14px',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      }}>
+        <span style={{ fontSize: small ? 10 : 10.5, color: C.faint }}>혼자 보기</span>
+        <span style={{
+          fontSize: small ? 11.5 : 12.5, fontWeight: 700, color: '#96502e',
+          whiteSpace: 'nowrap',
+        }}>{p.won.toLocaleString()}원~</span>
+      </div>
     )
   }
   const [open, setOpen] = useState<Record<string, boolean>>(
@@ -527,10 +549,8 @@ export default function ServiceSection({
               ⚠️ 압핀(📌)은 그대로 답니다 — 회원 설정을 말없이 없애면 안 됩니다.
               ══════════════════════════════════════════════════════ */}
           {solo.map((s) => (
-            <div key={s.name} style={{
-              ...cardStyle(pinned.includes(s.name)),
-              display: 'flex', alignItems: 'center', gap: 11, padding: '13px 13px',
-            }}>
+            <div key={s.name} style={cardStyle(pinned.includes(s.name))}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 13px' }}>
               <button
                 className="svcTap svcRow"
                 onClick={() => onOpen(s)}
@@ -546,12 +566,13 @@ export default function ServiceSection({
                     {s.name}
                   </span>
                   <span style={{ fontSize: 11, color: C.sub }}>{SOLO_COPY[s.name] ?? s.sub}</span>
-                  {/* ★홈 카드 가격 — 토글이 켜졌을 때만 (10부) */}
-                  <PriceLine name={s.name} />
                 </span>
                 <span style={{ fontSize: 15, color: C.text, flexShrink: 0 }}>›</span>
               </button>
               <Pin name={s.name} />
+             </div>
+             {/* ★값 칸 — 카드 «맨 아래» 한 줄 [대표님 2026-09-18] */}
+             <PriceRow name={s.name} />
             </div>
           ))}
 
@@ -566,8 +587,8 @@ export default function ServiceSection({
               return (
                 <div key={g.key} style={{
                   ...cardStyle(pinned.includes(s.name)),
-                  display: 'flex', alignItems: 'center', gap: 11, padding: '13px 13px',
                 }}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 13px' }}>
                   <button
                     className="svcTap svcRow"
                     onClick={() => onOpen(s)}
@@ -587,11 +608,12 @@ export default function ServiceSection({
                         <span style={{ fontSize: 10, opacity: 0.45 }}>{g.icon}</span>
                       </span>
                       <span style={{ fontSize: 11, color: C.sub }}>{s.sub}</span>
-                      <PriceLine name={s.name} />
                     </span>
                     <span style={{ fontSize: 15, color: C.text, flexShrink: 0 }}>›</span>
                   </button>
                   <Pin name={s.name} />
+                 </div>
+                 <PriceRow name={s.name} />
                 </div>
               )
             }
@@ -659,15 +681,14 @@ export default function ServiceSection({
                         style={{
                           // ★서브임이 한눈에 보이도록 «좁게 + 가운데»
                           width: '92%', margin: '0 auto',
-                          display: 'flex', alignItems: 'center', gap: 8,
-                          padding: '7px 9px',
-                          borderRadius: 11,
+                          borderRadius: 11, overflow: 'hidden',
                           // ★순백(메인)보다 «한 톤 연하게» — 바닥과 메인 사이에 놓습니다
                           background: C.subCard,
                           border: `1px solid ${C.borderSub}`,
                           boxShadow: pinned.includes(s.name) ? C.shadowUp : C.shadow,
                         }}
                       >
+                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px' }}>
                         <button
                           className="svcTap svcRow"
                           onClick={() => onOpen(s)}
@@ -684,11 +705,12 @@ export default function ServiceSection({
                             </span>
                             {/* ⚠️ 11 «그대로» — 10 으로 내리지 마십시오 (읽기 어려워집니다) */}
                             <span style={{ fontSize: 11, color: C.faint }}>{s.sub}</span>
-                            <PriceLine name={s.name} size={10.5} />
                           </span>
                           <span style={{ fontSize: 11, color: C.sub, flexShrink: 0 }}>›</span>
                         </button>
                         <Pin name={s.name} small />
+                       </div>
+                       <PriceRow name={s.name} small />
                       </div>
                     ))}
                   </div>
