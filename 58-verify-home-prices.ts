@@ -21,9 +21,25 @@ import { EXAM_LUCK_NAME, HAERAK_NAME } from './lib/homeFlags'
 
 const ROOT = process.cwd()
 const R = (p: string) => readFileSync(join(ROOT, p), 'utf-8')
-/** ⛔ ★주석을 걷어냅니다 — 주석에 옛 값이 그대로 남아 있습니다 (9부 교훈 ②) */
+/** ⛔ ★주석을 «줄 머리» 로만 걷어냅니다 (빠른 것 · 대부분 여기로 충분) */
 const liveOf = (src: string) =>
   src.split('\n').filter(l => !/^\s*(\/\/|\*|\/\*|\{\/\*|--)/.test(l)).join('\n')
+
+/**
+ *  🔴🔴 ★주석 «덩이» 를 통째로 걷어냅니다 — 2026-09-18 (10부)
+ *
+ *  ⚠️ 위 liveOf 는 ★«줄 머리» 만 봅니다. 그래서 이런 줄을 «못 거릅니다» —
+ *        {* 추천 탭은 이미 좋음만 냅니다. 그런데 사전 탭은
+ *           교재 1장의 이름을 그대로 늘어놓습니다.        ← ★줄 머리가 «글자» 입니다
+ *  ⇒ 손님에게 «안 보이는» 글인데 ★보이는 것으로 세었습니다.
+ *  ⇒ 🔴 그래서 ★«여는 표시부터 닫는 표시까지» 통째로 걷어냅니다.
+ *  ⛔ 이것이 필요한 자리(손님 글을 세는 곳)에서는 ★strip 을 쓰십시오.
+ */
+const strip = (src: string) =>
+  src
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')   //  JSX 주석 {/* … */}
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')        //  여러 줄 주석 /* … */
+    .replace(/^\s*\/\/.*$/gm, ' ')            //  한 줄 주석 //
 
 let pass = 0
 let fail = 0
@@ -280,6 +296,50 @@ function main() {
     //  ⛔ 결제 시트는 «한 곳» 입니다 — 화면마다 다시 만들지 않았는지
     ok(!/결과를 확인하신 뒤에는/.test(R('app/home-new/page.tsx')),
       '⛔ ★이 글을 화면마다 «다시 적지» 않았습니다 (공용 시트 한 곳)')
+  }
+
+  /* ══ ⑧ 🔴 손님 화면에 「교재」 라는 말을 안 씁니다 ════════════════
+   *  [대표님 2026-09-18]
+   *    「"교재 원문 그대로의 풀이" 이 말은 삭제」 · 「작명쪽도 모두 지워」
+   *
+   *  ⚠️ 까닭 셋 —
+   *    ① 손님은 ★«무슨 책» 인지 모르십니다.
+   *    ② 「원문 그대로」 는 자랑이 아니라 ★「안 다듬었다」 로 읽힙니다.
+   *    ③ 🔴 ★사실과도 달랐습니다 — 손님 화면은 plainMap 으로 «순화해» 나갑니다.
+   *       원문 그대로 보시는 곳은 ★연재쌤 전용 화면입니다.
+   *
+   *  ⛔ ★«그리는» 글만 봅니다 — 주석의 「교재」 는 근거를 적어 둔 것이라 남깁니다.
+   *     (9부 ② 「주석을 걸러내십시오」)
+   * ════════════════════════════════════════════════════════════════ */
+  head('⑧ 🔴 손님 화면에 「교재」 를 안 씁니다 [대표님]')
+  {
+    /*  ⚠️ ★손님이 여는 화면만 봅니다 —
+     *    consultant(상담사용)와 naejeong(연재쌤 전용)은 ★교재 원문을 씁니다. */
+    const files = [
+      'app/manseryeok/haerak-input/page.tsx',
+      'app/manseryeok/naming/components/NamePicker.tsx',
+      'app/manseryeok/naming/start/page.tsx',
+      'app/manseryeok/naming/rename/newborn/page.tsx',
+      'app/manseryeok/naming/diagnosis/page.tsx',
+      'app/manseryeok/naming/rename/newname/page.tsx',
+    ]
+    for (const f of files) {
+      //  ⛔ ★strip 을 씁니다 — 주석 «덩이» 를 통째로 걷어내야 «보이는 글» 만 남습니다
+      const live = strip(R(f))
+      const hit = live.includes('교재')
+      ok(!hit, `⛔ ★${f.split('/').slice(-2).join('/')} — 손님 글에 「교재」 없음`)
+    }
+    //  ★결제 시트에서 지운 그 줄
+    const haerak = strip(R('app/manseryeok/haerak-input/page.tsx'))
+    ok(!/교재 원문 그대로의 풀이/.test(haerak),
+      '🔴 ★「교재 원문 그대로의 풀이」 를 지웠습니다 [대표님]')
+    ok(/상반기·하반기 두 괘/.test(haerak) && /나에게 움직이는 자리/.test(haerak),
+      '★남은 두 줄은 그대로입니다')
+
+    /*  ⚠️ ★상담사·연재쌤 화면은 «그대로» 여야 합니다 —
+     *    거기서까지 지우면 «출전이 어디인지» 를 잃습니다 (9부 ⑩). */
+    ok(/교재 원문 그대로/.test(R('app/manseryeok/consultant/components/SomuReading.tsx')),
+      '⛔ ★상담사 화면의 「교재 원문 그대로」 는 «남겨» 둡니다 (출전 밝히기)')
   }
 
   console.log(`\n━━ 홈 카드 가격 — 통과 ${pass} · 실패 ${fail} ━━\n`)
