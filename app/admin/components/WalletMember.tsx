@@ -15,6 +15,10 @@ type Found = {
   id: string
   nickname: string | null
   hangul_name: string | null
+  /*  🔴 ★2026-09-21 (10부) [대표님 「회원이름이 나와야 되는데 없어서 헷갈리네」]
+   *    ⚠️ 이 칸이 «없어» memberName 이 마지막 '회원' 까지 내려갔습니다.
+   *    ⛔ 빼지 마십시오 — 누구 지갑인지 모르면 ★남의 지갑에 충전합니다. */
+  email: string | null
   balance: number
 }
 
@@ -111,7 +115,7 @@ export default function WalletMember({
        [고침]    app/api/admin/wallet/member 가 ★서버에서 대신 읽어 줍니다.
        ⛔ 다시 supabase.from('profiles') 로 되돌리지 마십시오 — 또 막힙니다.
        ⚠️ 그 정책을 «푸는» 것으로 고치지 마십시오 — 손님이 남의 사주를 봅니다. */
-    const r = await callAdmin<{ member: { id: string; nickname: string | null; hangul_name: string | null; balance: number } }>(
+    const r = await callAdmin<{ member: { id: string; nickname: string | null; hangul_name: string | null; email: string | null; balance: number } }>(
       '/api/admin/wallet/member', { what: 'one', userId: id })
     const p = r.ok ? r.data.member : undefined
     if (!r.ok || !p) {
@@ -125,6 +129,7 @@ export default function WalletMember({
       id: p.id,
       nickname: p.nickname,
       hangul_name: p.hangul_name,
+      email: p.email,
       balance: p.balance,
     }
     setQ(memberName(found))
@@ -239,9 +244,14 @@ export default function WalletMember({
                 color: '#e8e6f0',
                 background: hoverId === m.id ? 'rgba(255,255,255,0.06)' : 'transparent',
               }}>
+              {/*  ★2026-09-21 (10부) — 목록에도 «이메일» 을 붙입니다.
+                *    ⚠️ 닉네임이 같은 분이 둘이면 ★어느 분인지 못 가립니다. */}
               <span className="text-sm">
                 {memberName(m)}
                 <span className="text-xs ml-2" style={{ color: '#8a88a0' }}>{m.hangul_name ?? ''}</span>
+                <span className="text-xs ml-2" style={{ color: '#6a6880' }}>
+                  {m.email ?? '회원번호 ' + m.id.slice(0, 8)}
+                </span>
               </span>
               <span className="flex items-center gap-2">
                 <span className="text-sm font-bold" style={{ color: '#FAC775' }}>
@@ -273,8 +283,16 @@ export default function WalletMember({
 
           <div className="rounded-2xl p-5 mb-4 flex items-center justify-between flex-wrap gap-3" style={box}>
             <div>
-              <div className="text-sm" style={{ color: '#8a88a0' }}>
+              {/*  🔴 ★2026-09-21 (10부) [대표님] — 「누구 지갑인지」 를 «또렷이».
+                *    [전] 작은 회색 글씨 한 줄. 게다가 이름이 «회원» 으로 떨어져
+                *         ★어느 분 지갑인지 알 수 없었습니다.
+                *    [후] ★이름을 «크게» · 그 아래 «이메일» · 못 찾으면 «회원번호 앞자리».
+                *    ⛔ 이름만 두지 마십시오 — 닉네임이 같은 분이 둘일 수 있습니다. */}
+              <div className="text-base font-bold" style={{ color: '#e8e6f0' }}>
                 {memberName(picked)}{picked.hangul_name ? ' · ' + picked.hangul_name : ''}
+              </div>
+              <div className="text-xs mt-0.5" style={{ color: '#8a88a0' }}>
+                {picked.email ?? '회원번호 ' + picked.id.slice(0, 8)}
               </div>
               <div className="text-2xl font-bold mt-1" style={{ color: '#FAC775' }}>
                 {picked.balance.toLocaleString()}원

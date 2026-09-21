@@ -52,7 +52,13 @@ export async function POST(request: Request) {
     if (what === 'one') {
       if (!userId) return NextResponse.json({ error: '회원 ID 가 필요합니다.' }, { status: 400 })
       const { data: p, error } = await sb
-        .from('profiles').select('id, nickname, hangul_name').eq('id', userId).maybeSingle()
+        /*  🔴 ★2026-09-21 (10부) [대표님 「회원이름이 나와야 되는데 없어서 헷갈리네」]
+         *    ⚠️ email 을 «안» 가져와 ★이름이 「회원」 으로 떨어졌습니다.
+         *       memberName 은 nickname → hangul_name → 메타 → ★이메일앞 → '회원' 차례인데,
+         *       이메일 칸을 «안 주니» 마지막 '회원' 까지 내려간 것입니다.
+         *    ⇒ ★누구 지갑인지 모르면 «남의 지갑에 충전» 할 수 있습니다. 위험한 자리였습니다.
+         *  ⛔ email 을 빼지 마십시오 (검사 58 ⑩). */
+        .from('profiles').select('id, nickname, hangul_name, email').eq('id', userId).maybeSingle()
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       if (!p) return NextResponse.json({ error: '그 회원을 못 찾았습니다.' }, { status: 404 })
 
@@ -71,8 +77,9 @@ export async function POST(request: Request) {
       /* ⚠️ 두 칸을 «다» 훑습니다 — 화면엔 닉네임이 떠도
          대표님은 통장에 찍힌 «이름» 으로 치실 수 있습니다. */
       const { data, error } = await sb
-        .from('profiles').select('id, nickname, hangul_name')
-        .or(`hangul_name.ilike.%${key}%,nickname.ilike.%${key}%`)
+        //  ★찾기 결과도 «같은 칸» 을 줍니다 — ⛔ 한쪽만 고치면 목록과 상세가 갈립니다
+        .from('profiles').select('id, nickname, hangul_name, email')
+        .or(`hangul_name.ilike.%${key}%,nickname.ilike.%${key}%,email.ilike.%${key}%`)
         .limit(20)
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

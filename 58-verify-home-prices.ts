@@ -440,6 +440,40 @@ function main() {
       "⛔ ★가격 표에는 이 낱말을 «못» 씁니다 (홈 카드 둘로 좁힘)")
   }
 
+  /* ══ ⑩ 🔴 회원 지갑 — «누구 지갑인지» 보입니다 ═══════════════════
+   *  [대표님 2026-09-21] 「회원관리에서 회원이름을 클릭하면
+   *                       이 화면에 회원이름이 나와야 되는데 없어서 헷갈리네」
+   *
+   *  [까닭]  창구가 ★email 을 «안» 주어 memberName 이 마지막 '회원' 까지 내려갔습니다.
+   *    ⇒ 🔴 누구 지갑인지 모르면 ★«남의 지갑에 충전» 할 수 있습니다. 위험한 자리였습니다.
+   *  ⚠️ 👥 회원 목록 탭은 ★이미 email 을 보여 주고 있었습니다 — 🪙 지갑 탭만 빠졌습니다.
+   * ════════════════════════════════════════════════════════════════ */
+  head('⑩ 🔴 회원 지갑 — «누구 지갑인지» [대표님]')
+  {
+    const api = R('app/api/admin/wallet/member/route.ts')
+    const ui = strip(R('app/admin/components/WalletMember.tsx'))
+
+    //  ★창구가 «두 길» 다 email 을 주는가 — 하나만 고치면 목록과 상세가 갈립니다
+    const sels = api.match(/\.from\('profiles'\)\.select\('([^']+)'\)/g) ?? []
+    ok(sels.length >= 2 && sels.every(x => x.includes('email')),
+      `🔴 ★창구의 «두 길»(하나 보기·찾기)이 다 email 을 줍니다 (${sels.length})`)
+    ok(/email\.ilike/.test(api),
+      '★이메일로도 «찾을» 수 있습니다 (카카오가 아닌 분은 이름이 없습니다)')
+
+    //  ★화면이 그 값을 «그리는가» — 받아만 두면 소용없습니다
+    ok(/email: string \| null/.test(ui), '★화면이 email 칸을 받습니다')
+    ok(/picked\.email \?\? '회원번호 ' \+ picked\.id\.slice\(0, 8\)/.test(ui),
+      '🔴 ⛔ ★지갑 카드에 «누구인지» 를 그립니다 (없으면 회원번호 앞자리)')
+    ok(/m\.email \?\? '회원번호 ' \+ m\.id\.slice\(0, 8\)/.test(ui),
+      '★찾기 «목록» 에도 그립니다 (닉네임이 같은 분이 둘일 수 있습니다)')
+    //  ⛔ 이름을 «크게» — 작은 회색 한 줄이라 대표님이 못 보셨습니다
+    ok(/text-base font-bold[\s\S]{0,120}memberName\(picked\)/.test(ui),
+      '⛔ ★이름을 «크게» 그립니다 (작은 회색 글씨로 되돌리지 마십시오)')
+    //  ⛔ memberName 을 안 거치고 칸을 «직접» 쓰지 않았는지
+    ok(!/\{picked\.nickname\}|\{m\.nickname\}/.test(ui),
+      '⛔ ★memberName 을 거칩니다 (칸을 직접 쓰면 사람이 «사라집니다»)')
+  }
+
   console.log(`\n━━ 홈 카드 가격 — 통과 ${pass} · 실패 ${fail} ━━\n`)
   if (fail > 0) process.exit(1)
 }
