@@ -489,6 +489,59 @@ function main() {
       '⛔ ★memberName 을 거칩니다 (칸을 직접 쓰면 사람이 «사라집니다»)')
   }
 
+  /* ══ ⑪ 🔴 상담사 관리 — 탭 셋 [대표님 2026-09-21] ═══════════════
+   *  「상담사관리 + 상담사등록(별도 탭) + 정산관리 로 변경해줄래… 너무 헷갈려」
+   *  「상담사 몇 명을 안 둘 거니 그렇게 복잡하게 안 해도 될 듯」
+   *    ⇒ ★이름을 치게 하는 확인은 «안» 넣었습니다. 확인 한 번이면 됩니다.
+   * ════════════════════════════════════════════════════════════════ */
+  head('⑪ 🔴 상담사 관리 — 탭 셋 [대표님]')
+  {
+    const hub = strip(R('app/admin/components/ConsultantHub.tsx'))
+    const mgr = R('app/admin/components/ConsultantManager.tsx')
+    const mgrLive = strip(mgr)
+    const tbl = strip(R('app/admin/components/ConsultantTable.tsx'))
+
+    //  ★탭 셋
+    ok(/'consultant' \| 'form' \| 'settlement'/.test(hub), '🔴 ★탭이 «셋» 입니다 [대표님]')
+    ok(/➕ 상담사 등록/.test(hub), '★「➕ 상담사 등록」 탭이 있습니다')
+    ok(/👤 상담사 관리/.test(hub) && /💰 정산 관리/.test(hub),
+      '⛔ ★옛 탭 둘은 «그대로» 입니다 (낱말을 바꾸면 다른 화면이 깨집니다)')
+
+    //  🔴 ★[수정] 이 «탭을 옮기는가» — 이것이 없으면 아무 일도 안 일어나 보입니다
+    ok(/onEdit=\{\(\) => \{ setEditSeq\(n => n \+ 1\); setInner\('form'\) \}\}/.test(hub),
+      '🔴 ★[수정] 을 누르면 «등록» 탭으로 넘어갑니다')
+    ok(/editSeq !== tookSeq/.test(mgrLive),
+      '⚠️ ★같은 분을 «다시» 눌러도 폼이 채워집니다 (숫자를 올려 셉니다)')
+    ok(/pickedRef\.current = c/.test(mgrLive) && /pickedRef\.current = null/.test(mgrLive),
+      '★[수정] 은 그 사람을, [＋등록] 은 «빈 폼» 을 엽니다')
+
+    //  🔴🔴 ★저장·삭제가 «됐을 때만» 목록으로 — 실패했는데 넘어가면 적은 것이 사라집니다
+    ok(/async function handleSave\(\): Promise<boolean>/.test(mgr),
+      '🔴 ★저장이 «됐는지» 를 돌려줍니다')
+    ok(/async function handleDelete\(id: string\): Promise<boolean>/.test(mgr),
+      '🔴 ★삭제가 «됐는지» 를 돌려줍니다')
+    ok(/if \(await handleSave\(\)\) onDone\?\.\(\)/.test(mgrLive),
+      '🔴🔴 ⛔ ★저장이 «됐을 때만» 목록으로 갑니다 (실패하면 머뭅니다)')
+    ok(/if \(await handleDelete\(form\.id!\)\) onDone\?\.\(\)/.test(mgrLive),
+      '🔴🔴 ⛔ ★삭제가 «됐을 때만» 목록으로 갑니다 (막히면 까닭을 보십니다)')
+
+    //  ⛔ 삭제는 «등록/수정» 탭 맨 아래에 «하나» 뿐인가
+    ok(!/onDelete/.test(tbl), '⛔⛔ ★목록 줄에 삭제가 «없습니다» [대표님]')
+    ok(/handleDelete\(form\.id!\)/.test(mgrLive) && /editing && form\.id/.test(mgrLive),
+      '⛔ ★삭제는 «수정할 때» 만 보입니다 (새로 등록 중에는 지울 것이 없습니다)')
+    ok(/비활/.test(mgrLive),
+      '⚠️ ★막히면 «비활» 을 권합니다 (지우는 것과 같은 효과 · 기록은 지킴)')
+
+    //  ⚠️ 「진행중 예약」 은 «있을 때만»
+    ok(!/진행중 예약<\/span>/.test(tbl), '⚠️ ★「진행중 예약」 «칸» 을 뺐습니다 [대표님]')
+    ok(/if \(!p \|\| p\.count === 0\) return null/.test(tbl),
+      '⛔ ★예약이 «있을 때만» 표시가 뜹니다 (삭제가 왜 막히는지 알 수 있게)')
+
+    //  ⚠️ 한 화면에 «한 가지» 만 — 목록과 폼을 함께 그리지 않는가
+    ok(/view === 'list' &&/.test(mgrLive) && /view === 'form' &&/.test(mgrLive),
+      '🔴 ★목록과 폼을 «함께» 그리지 않습니다 (한 번에 한 가지)')
+  }
+
   console.log(`\n━━ 홈 카드 가격 — 통과 ${pass} · 실패 ${fail} ━━\n`)
   if (fail > 0) process.exit(1)
 }

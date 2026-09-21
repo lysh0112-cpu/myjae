@@ -12,7 +12,8 @@ type Props = {
   /** ★2026-07-21 2차: 진행중 예약을 목록에 미리 보여준다 */
   pending?: Record<string, PendingInfo>
   onEdit: (c: ConsultantFormData) => void
-  onDelete: (id: string) => void
+  /*  ⚠️ ★2026-09-21 (10부) — 삭제는 «등록/수정» 탭 맨 아래로 갔습니다.
+   *    ⇒ 여기서는 «안» 받습니다. ⛔ 목록 줄에 삭제를 다시 넣지 마십시오. */
   onToggleActive: (c: ConsultantFormData) => void
   onSaveSort: (id: string, sort: number) => void
 }
@@ -27,7 +28,7 @@ const COLUMNS = [
 ] as const
 type ColKey = typeof COLUMNS[number]['key']
 
-export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, onToggleActive, onSaveSort }: Props) {
+export default function ConsultantTable({ list, pending = {}, onEdit, onToggleActive, onSaveSort }: Props) {
   const router = useRouter()
   const [cols, setCols] = useState<Record<ColKey, boolean>>({
     email: false, phone: false, specialty: true,
@@ -128,7 +129,7 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, 
         </button>
       </div>
       <div className="text-xs mb-3" style={{ color: '#6a6880' }}>
-        순번을 고치고 옆의 저장 버튼을 누르세요 · 작을수록 위로 · 비활성은 고객 화면에 안 보여요 · 이름을 누르면 상세가 펼쳐집니다 · 진행중 예약이 있으면 삭제할 수 없어요
+        순번을 고치고 옆의 저장 버튼을 누르세요 · 작을수록 위로 · 비활성은 고객 화면에 안 보여요 · 이름을 누르면 상세가 펼쳐집니다 · 삭제는 [수정] 을 눌러 «등록» 탭 맨 아래에서
       </div>
 
 
@@ -138,7 +139,10 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, 
           <span style={{ width: 92, textAlign: 'center' }}>순번</span>
           <span style={{ width: 34 }}></span>
           <span style={{ flex: 1, minWidth: 80 }}>이름</span>
-          <span style={{ width: 210 }}>진행중 예약</span>
+          {/*  ⚠️ ★2026-09-21 (10부) — 「진행중 예약」 칸을 «뺐습니다» [대표님].
+            *    늘 「없음 · 삭제 가능」 이라 ★눈에 안 들어왔고, 전문분야 칸을 좁혔습니다.
+            *  ⇒ ★예약이 «있을 때만» 이름 옆에 표시가 뜹니다 (아래 참고).
+            *  ⛔ 칸을 다시 만들지 마십시오. */}
           <span style={{ width: 50, textAlign: 'center' }}>활성</span>
           {/* ★2026-08-05 (47부 4차) — 「화면」 칸 [대표님 지시]
               「관리자 화면 상담사목록에 버튼란을 하나 만들어서
@@ -191,22 +195,25 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, 
                 {c.alias ? <span style={{ fontWeight: 400, color: '#FAC775', marginLeft: 5 }}>({c.alias})</span> : null}
               </button>
 
-              {/* ★진행중 예약 — 완료도 취소도 안 된 건. 있으면 삭제할 수 없다. (2026-07-21 2차) */}
-              <span style={{ width: 210, fontSize: 11.5, lineHeight: 1.4 }}>
-                {(() => {
-                  const p = pending[c.id!]
-                  if (!p || p.count === 0) {
-                    return <span style={{ color: '#6a6880' }}>없음 · 삭제 가능</span>
-                  }
-                  const head = p.names.slice(0, 2).join(' · ')
-                  const rest = p.count - Math.min(2, p.names.length)
-                  return (
-                    <span style={{ color: '#FAC775' }}>
-                      {p.count}건 — {head}{rest > 0 ? ` 외 ${rest}명` : ''}
-                    </span>
-                  )
-                })()}
-              </span>
+              {/*  ★진행중 예약 — 완료도 취소도 안 된 건. 있으면 삭제할 수 없습니다 (2026-07-21 2차).
+                *  🔴 ★2026-09-21 (10부) — «있을 때만» 보여 줍니다 [대표님 「빼기」].
+                *    ⇒ 「없음」 을 늘 적어 두니 ★아무 뜻이 없었습니다.
+                *  ⛔ 지우지 마십시오 — 삭제가 왜 막히는지 알려 주는 «유일한» 표시입니다. */}
+              {(() => {
+                const p = pending[c.id!]
+                if (!p || p.count === 0) return null
+                const head = p.names.slice(0, 2).join(' · ')
+                const rest = p.count - Math.min(2, p.names.length)
+                return (
+                  <span title={`진행중 예약 ${p.count}건 — 삭제할 수 없어요`}
+                    style={{
+                      fontSize: 10.5, color: '#FAC775', whiteSpace: 'nowrap',
+                      background: 'rgba(250,199,117,0.12)', borderRadius: 999, padding: '2px 8px',
+                    }}>
+                    예약 {p.count}건 — {head}{rest > 0 ? ` 외 ${rest}명` : ''}
+                  </span>
+                )
+              })()}
               <span style={{ width: 50, textAlign: 'center' }}>
                 <button onClick={() => onToggleActive(c)}
                   className="px-2 py-0.5 rounded-lg text-xs font-bold"
@@ -298,11 +305,13 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onDelete, 
                     style={{ background: 'rgba(100,150,255,0.15)', color: '#7fa8ff' }}>
                     🔮 화면 보기
                   </button>
-                  <button onClick={() => onDelete(c.id!)}
-                    className="flex-1 py-2 rounded-lg text-xs font-bold"
-                    style={{ background: 'rgba(255,100,100,0.15)', color: '#ff6464' }}>
-                    🗑️ 삭제
-                  </button>
+                  {/*  ⚠️ ★2026-09-21 (10부) — 여기 있던 [🗑️ 삭제] 를 «걷어냈습니다».
+                    *    ⇒ ★«등록/수정» 탭 «맨 아래» 로 옮겼습니다.
+                    *    [까닭] 되돌릴 수 없는 일인데 ★[수정] 과 나란히 크게 있었습니다.
+                    *      게다가 ★«펼쳐야» 보여 대표님이 못 찾으셨습니다.
+                    *    ⇒ 수정 탭에 들어가면 ★그 사람 내용이 다 보이므로
+                    *      «누구를 지우는지» 를 눈으로 확인한 뒤 누르게 됩니다.
+                    *  ⛔ 목록 줄에 삭제를 다시 넣지 마십시오. */}
                 </div>
               </div>
             )}

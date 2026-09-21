@@ -37,10 +37,20 @@ import SettlementManager from './SettlementManager'
 //        /admin#settlement → ★정산으로 «바로»
 // ══════════════════════════════════════════════════════════════════
 
-export type ConsultantInner = 'consultant' | 'settlement'
+/*  🔴 ★2026-09-21 (10부) [대표님] — 「상담사관리 + 상담사등록(별도 탭) + 정산관리」
+ *    「너무 헷갈려… UI 개선을 해야겠어」
+ *  ⚠️ 전에는 ★등록 폼이 «목록 바로 아래» 에 붙어 있었습니다.
+ *     ⇒ 상담사를 보려 해도 ★긴 폼이 함께 보였습니다.
+ *  ⛔ 'consultant' · 'settlement' 은 ★그대로 두십시오 —
+ *     마이페이지·상담사 화면이 이 낱말로 들어옵니다 (48부 10차). */
+export type ConsultantInner = 'consultant' | 'form' | 'settlement'
 
 export default function ConsultantHub({ initial }: { initial?: ConsultantInner } = {}) {
   const [inner, setInner] = useState<ConsultantInner>(initial ?? 'consultant')
+  /*  🔴 ★[수정] 을 누르면 «등록» 탭으로 «저절로» 넘어갑니다 [대표님 목업 승낙].
+   *  ⛔ 이것이 없으면 대표님이 [수정] 을 눌러도 ★«아무 일도 안 일어나» 보입니다.
+   *  ⚠️ 숫자를 하나 올려 ★«같은 사람을 다시 눌러도» 폼이 다시 채워지게 합니다. */
+  const [editSeq, setEditSeq] = useState(0)
 
   const tabStyle = (on: boolean) => ({
     background: 'none',
@@ -61,13 +71,26 @@ export default function ConsultantHub({ initial }: { initial?: ConsultantInner }
         <button type="button" onClick={() => setInner('consultant')} style={tabStyle(inner === 'consultant')}>
           👤 상담사 관리
         </button>
+        <button type="button" onClick={() => setInner('form')} style={tabStyle(inner === 'form')}>
+          ➕ 상담사 등록
+        </button>
         <button type="button" onClick={() => setInner('settlement')} style={tabStyle(inner === 'settlement')}>
           💰 정산 관리
         </button>
       </div>
 
-      {/* ⚠️ 둘을 «함께» 그리지 않습니다 — 안 보이는 쪽까지 조회가 돕니다. */}
-      {inner === 'consultant' && <ConsultantManager />}
+      {/*  ⚠️ «함께» 그리지 않습니다 — 안 보이는 쪽까지 조회가 돕니다.
+        *  ⚠️ ★상담사 관리와 등록은 «한 부품»(ConsultantManager)입니다 —
+        *     목록과 폼이 ★같은 자료를 씁니다. 나누면 두 번 읽습니다.
+        *     ⇒ ★view 로 «어느 쪽을 그릴지» 만 알려 줍니다. */}
+      {(inner === 'consultant' || inner === 'form') && (
+        <ConsultantManager
+          view={inner === 'form' ? 'form' : 'list'}
+          editSeq={editSeq}
+          onEdit={() => { setEditSeq(n => n + 1); setInner('form') }}
+          onDone={() => setInner('consultant')}
+        />
+      )}
       {inner === 'settlement' && <SettlementManager />}
     </div>
   )

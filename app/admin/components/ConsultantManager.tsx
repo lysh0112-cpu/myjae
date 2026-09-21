@@ -36,11 +36,36 @@ function friendlyDbError(msg: string, name: string): string {
 // 상담사별 "아직 살아 있는 예약" — 완료도 취소도 안 된 건들
 export type PendingInfo = { count: number; names: string[] }
 
-export default function ConsultantManager() {
+/*  🔴 ★2026-09-21 (10부) [대표님 「상담사관리 + 상담사등록(별도 탭) + 정산관리」]
+ *    「너무 헷갈려」
+ *
+ *  ⚠️ 전에는 ★한 화면에 «목록 + 긴 등록 폼» 이 세로로 붙어 있었습니다.
+ *     ⇒ 상담사를 보려면 폼을 지나야 하고, 폼을 쓰려면 목록을 지나야 했습니다.
+ *  ⇒ ★등록 폼을 «셋째 탭» 으로 내보냅니다.
+ *
+ *  🔴 다만 ★「수정」 과 «같은 폼» 입니다 —
+ *     목록에서 [수정] 을 누르면 ★그 탭으로 «저절로» 넘어가야 합니다.
+ *     ⛔ 안 그러면 눌러도 «아무 일도 안 일어난» 것처럼 보입니다.
+ *  ⇒ 그래서 바깥(ConsultantHub)이 ★탭을 옮길 수 있게 onEdit 을 받습니다. */
+export default function ConsultantManager(
+  { view = 'list', editSeq = 0, onEdit, onDone }:
+  {
+    /** 'list' = 상담사 목록 · 'form' = 등록/수정 폼 */
+    view?: 'list' | 'form'
+    /** ★[수정] 을 누를 때마다 올라갑니다 — 같은 사람을 다시 눌러도 폼이 채워지게 */
+    editSeq?: number
+    /** 목록에서 [수정] 을 눌렀을 때 — 허브가 «등록» 탭으로 넘겨 줍니다 */
+    onEdit?: (c: ConsultantFormData) => void
+    /** 저장·취소·삭제가 끝났을 때 — 허브가 «목록» 탭으로 돌려보냅니다 */
+    onDone?: () => void
+  } = {},
+) {
   const [list, setList] = useState<ConsultantFormData[]>([])
   const [form, setForm] = useState<ConsultantFormData>(emptyForm)
   /** ★48부 7차 — 등록 폼 자리. 「수정」·「＋ 상담사 등록」이 여기로 내려갑니다 */
-  const formRef = useRef<HTMLDivElement>(null)
+  /*  ★[수정] 으로 고른 분을 «잠시» 들고 있습니다 —
+   *  ⚠️ 허브는 탭만 옮기고, 실제로 폼을 채우는 것은 ★여기입니다. */
+  const pickedRef = useRef<ConsultantFormData | null>(null)
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(false)
   // ★2026-07-21 2차: 상담사별 진행중 예약을 목록에 미리 보여준다.
@@ -80,8 +105,16 @@ export default function ConsultantManager() {
     if (error) { alert('상담사 목록을 불러오지 못했어요.\n\n잠시 후 새로고침해 주세요.\n(' + error.message + ')'); return }
     if (data) setList(data)
   }
-  async function handleSave() {
-    if (!form.name || !form.phone || !form.email) return alert('이름, 전화번호, 이메일은 필수입니다')
+  /*  🔴 ★2026-09-21 (10부) — «됐는지» 를 돌려줍니다.
+   *    ⚠️ 폼이 «다른 탭» 으로 갔으므로, 실패했는데도 목록으로 돌아가면
+   *       ★대표님이 적으신 내용이 «사라집니다».
+   *    ⇒ 참이면 목록으로, 거짓이면 ★폼에 그대로 머뭅니다.
+   *  ⛔ void 로 되돌리지 마십시오. */
+  async function handleSave(): Promise<boolean> {
+    if (!form.name || !form.phone || !form.email) {
+      alert('이름, 전화번호, 이메일은 필수입니다')
+      return false
+    }
     setLoading(true)
     const payload = {
       name: form.name,
@@ -117,25 +150,28 @@ export default function ConsultantManager() {
         .update({ ...payload, active: form.active })
         .eq('id', form.id)
         .select('id')
-      if (error) { alert('수정하지 못했어요.\n\n잠시 후 다시 시도해 주세요.\n(' + error.message + ')'); setLoading(false); return }
+      if (error) { alert('수정하지 못했어요.\n\n잠시 후 다시 시도해 주세요.\n(' + error.message + ')'); setLoading(false); return false }
       if (!data || data.length === 0) {
         alert('저장되지 않았습니다.\n로그인이 풀렸거나 권한이 없습니다.\n로그아웃 후 다시 로그인해 주세요.')
-        setLoading(false); return
+        setLoading(false); return false
       }
     } else {
       const { error } = await supabase.from('consultants')
         .insert({ ...payload, active: true })
-      if (error) { alert('등록하지 못했어요.\n\n이미 같은 이메일로 등록된 상담사가 있는지 확인해 주세요.\n(' + error.message + ')'); setLoading(false); return }
+      if (error) { alert('등록하지 못했어요.\n\n이미 같은 이메일로 등록된 상담사가 있는지 확인해 주세요.\n(' + error.message + ')'); setLoading(false); return false }
     }
     setForm(emptyForm)
     setEditing(false)
     setLoading(false)
     fetchList()
-    // ★48부 7차 — 저장하면 ★목록(위)으로 올려 «결과를 보이게» 합니다.
-    //   ⚠️ 폼이 아래로 갔으므로 그대로 두면 «빈 폼» 만 보고 있게 됩니다.
+    //  ★2026-09-21 (10부) — 목록은 «다른 탭» 이라 바깥(onDone)이 옮겨 줍니다.
     window.scrollTo({ top: 0, behavior: 'smooth' })
+    return true
   }
-  async function handleDelete(id: string) {
+  /*  🔴 ★2026-09-21 (10부) — «지워졌는지» 를 돌려줍니다.
+   *    ⚠️ 막혔는데 목록으로 돌아가면 ★대표님이 «지워진 줄» 아십니다.
+   *    ⇒ 참이면 목록으로, 거짓이면 ★그 자리에 머물러 까닭을 보시게 합니다. */
+  async function handleDelete(id: string): Promise<boolean> {
     const target = list.find(c => c.id === id)
     const name = target?.name || '이 상담사'
 
@@ -146,7 +182,7 @@ export default function ConsultantManager() {
       .from('consultations')
       .select('id', { count: 'exact', head: true })
       .eq('consultant_id', id)
-    if (cntErr) { alert('상담 기록을 확인하지 못했어요.\n\n잠시 후 다시 시도해 주세요.'); return }
+    if (cntErr) { alert('상담 기록을 확인하지 못했어요.\n\n잠시 후 다시 시도해 주세요.'); return false }
     if ((count ?? 0) > 0) {
       // 목록에 표시한 것과 같은 정보를 안내에도 넣는다.
       const p = pending[id]
@@ -159,7 +195,7 @@ export default function ConsultantManager() {
         '지우면 정산·취소내역에서 상담사 이름이 사라집니다.\n' +
         '대신 [비활] 로 바꾸면 고객 화면에는 보이지 않아요.'
       )
-      return
+      return false
     }
 
     // ★② 회원 계정과의 연결을 확인한다.
@@ -169,7 +205,7 @@ export default function ConsultantManager() {
     //   (hooks/useConsultantState.ts) 연결만 끊으면 된다. 계정은 그대로 남는다.
     const { data: linked, error: linkErr } = await supabase
       .from('profiles').select('id, nickname').eq('consultant_id', id)
-    if (linkErr) { alert('회원 연결을 확인하지 못했어요.\n\n잠시 후 다시 시도해 주세요.'); return }
+    if (linkErr) { alert('회원 연결을 확인하지 못했어요.\n\n잠시 후 다시 시도해 주세요.'); return false }
 
     const who = (linked ?? []).map(p => p.nickname || '이름없음').join(', ')
     const msg = (linked && linked.length > 0)
@@ -177,13 +213,13 @@ export default function ConsultantManager() {
         `회원 계정(${who})과의 상담사 연결이 함께 끊어져요.\n` +
         '로그인 계정과 등급은 그대로 남습니다.\n\n되돌릴 수 없어요.'
       : `${name} 선생님을 삭제할까요?\n\n되돌릴 수 없어요.`
-    if (!confirm(msg)) return
+    if (!confirm(msg)) return false
 
     // ③ 연결 끊기 — 이걸 먼저 해야 외래키에 안 걸린다.
     if (linked && linked.length > 0) {
       const { error: unlinkErr } = await supabase
         .from('profiles').update({ consultant_id: null }).eq('consultant_id', id)
-      if (unlinkErr) { alert('회원 연결을 끊지 못했어요.\n\n잠시 후 다시 시도해 주세요.'); return }
+      if (unlinkErr) { alert('회원 연결을 끊지 못했어요.\n\n잠시 후 다시 시도해 주세요.'); return false }
     }
 
     // ④ 열어둔 시간(슬롯)도 정리한다. 안 그러면 고아로 남는다.
@@ -197,13 +233,14 @@ export default function ConsultantManager() {
     //   (14부 "조용히 실패하는 코드")
     const { data, error } = await supabase
       .from('consultants').delete().eq('id', id).select('id')
-    if (error) { alert(friendlyDbError(error.message, name)); return }
+    if (error) { alert(friendlyDbError(error.message, name)); return false }
     if (!data || data.length === 0) {
       alert('삭제되지 않았어요.\n\n권한(RLS 정책)을 확인해 주세요.\n우선 [비활] 로 바꿔두셔도 됩니다.')
-      return
+      return false
     }
 
     fetchList()
+    return true
     fetchPending()
   }
   async function handleToggleActive(c: ConsultantFormData) {
@@ -228,19 +265,35 @@ export default function ConsultantManager() {
     }
     if (error) { alert('순번을 저장하지 못했어요.\n\n잠시 후 다시 시도해 주세요.\n(' + error.message + ')'); fetchList(); return }
   }
+  /*  🔴 ★2026-09-21 (10부) — [수정] 은 이제 «탭을 옮깁니다».
+   *    ⛔ 스크롤로 되돌리지 마십시오 — 폼이 «다른 탭» 에 있어 아무 일도 안 일어납니다. */
   function handleEdit(c: ConsultantFormData) {
-    // ★2026-08-06 (48부 3차) — DB 의 specialties 가 «없는» 옛 자료면 빈 배열로.
-    //   ⚠️ null 이 그대로 들어오면 form.specialties.includes 에서 터집니다.
-    setForm({ ...emptyForm, ...c, alias: c.alias ?? '', specialties: Array.isArray(c.specialties) ? c.specialties : [] })
-    setEditing(true)
-    // ★48부 7차 — 목록이 «위» 로 갔으므로 ★폼 자리로 내려갑니다.
-    //   ⛔ scrollTo({ top: 0 }) 으로 되돌리지 마십시오. 폼이 안 보입니다.
-    goForm()
+    pickedRef.current = c
+    onEdit?.(c)
+  }
+  /** ＋ 상담사 등록 — ★빈 폼으로 «등록» 탭을 엽니다 */
+  function goNew() {
+    pickedRef.current = null
+    onEdit?.(emptyForm)
   }
 
-  /** ★48부 7차 — 등록 폼 자리로 내려갑니다 (목록이 위로 가서 필요해졌습니다) */
-  function goForm() {
-    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  /*  🔴 ★허브가 넘겨 준 사람을 폼에 «채웁니다» — 2026-09-21 (10부)
+   *  ⚠️ editSeq 는 [수정] 을 누를 때마다 «올라갑니다» —
+   *     같은 분을 다시 눌러도 ★폼이 다시 채워지게 하려는 것입니다.
+   *  ⛔ 목록을 보고 있을 때(view==='list')는 ★건드리지 않습니다.
+   *  ⚠️ ★DB 의 specialties 가 «없는» 옛 자료면 빈 배열로 —
+   *     null 이 그대로 들어오면 form.specialties.includes 에서 터집니다 (48부 3차). */
+  const [tookSeq, setTookSeq] = useState(-1)
+  if (view === 'form' && editSeq !== tookSeq) {
+    setTookSeq(editSeq)
+    const c = pickedRef.current
+    if (c && c.id) {
+      setForm({ ...emptyForm, ...c, alias: c.alias ?? '', specialties: Array.isArray(c.specialties) ? c.specialties : [] })
+      setEditing(true)
+    } else {
+      setForm(emptyForm)
+      setEditing(false)
+    }
   }
   return (
     <div>
@@ -250,6 +303,7 @@ export default function ConsultantManager() {
              상담사를 보려면 ★언제나 긴 폼을 지나 내려가야 했습니다.
           ⚠️ 자리를 바꾸면서 ★handleEdit 의 «스크롤» 도 함께 고쳤습니다.
              맨 위로 가면 이제 «목록» 이 나와 폼이 안 보입니다. */}
+      {view === 'list' && (
       <div className="rounded-2xl overflow-hidden mb-4"
         style={{ background: '#2C2C2A', border: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="px-5 py-4 flex items-center justify-between"
@@ -257,30 +311,64 @@ export default function ConsultantManager() {
           <div className="text-sm font-bold text-white">
             상담사 목록 <span className="ml-2 text-xs" style={{ color: '#8a88a0' }}>총 {list.length}명</span>
           </div>
-          {/* ★폼이 «아래» 로 갔으니 바로 갈 수 있게 */}
-          <button type="button" onClick={goForm}
+          {/* ★2026-09-21 (10부) — 누르면 «등록» 탭이 «빈 폼» 으로 열립니다 */}
+          <button type="button" onClick={goNew}
             className="px-3 py-1 rounded-lg text-xs"
             style={{ background: 'rgba(250,199,117,0.12)', border: '1px solid rgba(250,199,117,0.3)', color: '#FAC775' }}>
             ＋ 상담사 등록
           </button>
         </div>
+        {/*  ⚠️ ★2026-09-21 (10부) — 삭제는 ★«등록/수정» 탭 «맨 아래» 로 옮겼습니다.
+          *    ⇒ 목록 줄에서 바로 못 지웁니다. 되돌릴 수 없는 일이라 «한 걸음» 둡니다.
+          *  ⚠️ 「진행중 예약」 칸도 ★뺐습니다 — 늘 「없음」 이라 눈에 안 들어왔습니다.
+          *     ⇒ ★막히면 «그때» 까닭을 말해 줍니다 (friendlyDbError). */}
         <ConsultantTable
           list={list}
           pending={pending}
           onEdit={handleEdit}
-          onDelete={handleDelete}
           onToggleActive={handleToggleActive}
           onSaveSort={handleSaveSort}
         />
       </div>
+      )}
 
-      <div ref={formRef}>
+      {view === 'form' && (
+      <div>
         <ConsultantForm
           form={form} editing={editing} loading={loading}
-          onChange={setForm} onSave={handleSave}
-          onCancel={() => { setForm(emptyForm); setEditing(false) }}
+          onChange={setForm}
+          /*  ⛔ ★«됐을 때만» 목록으로 갑니다 —
+            *    실패했는데 넘어가면 적으신 내용이 «사라집니다». */
+          onSave={async () => { if (await handleSave()) onDone?.() }}
+          onCancel={() => { setForm(emptyForm); setEditing(false); onDone?.() }}
         />
+
+        {/*  🔴 ★삭제 — 2026-09-21 (10부) [대표님 목업 승낙]
+          *    「상담사 몇 명을 안 둘 거니 그렇게 복잡하게 안 해도 될 듯」
+          *    ⇒ ★이름을 치게 하는 것은 «안» 넣었습니다. 확인 한 번이면 됩니다.
+          *  ⚠️ ★«수정할 때» 만 보입니다 — 새로 등록하는 중에는 지울 것이 없습니다.
+          *  ⛔ [저장하기] 와 «멀리» 둡니다. 실수로 눌리지 않게.
+          *  ⚠️ 삭제는 ★거의 막힙니다 (상담 기록·예약·회원 연결).
+          *     ⇒ 그때는 «왜 막혔는지» 를 말해 주고 [비활] 을 권합니다. */}
+        {editing && form.id && (
+          <div className="rounded-2xl mt-4 p-4"
+            style={{ background: '#2C2C2A', border: '1px solid rgba(163,45,45,0.35)' }}>
+            <div className="text-xs mb-3" style={{ color: '#8a88a0', lineHeight: 1.7 }}>
+              ⚠️ 지우면 되돌릴 수 없어요. 상담 기록이나 예약이 있으면 지울 수 없습니다.
+              <br />
+              손님 화면에서만 감추시려면 목록에서 <b style={{ color: '#e8e6f0' }}>[비활]</b> 로 바꾸세요.
+            </div>
+            <button type="button"
+              /*  ⛔ ★«지워졌을 때만» 목록으로 — 막혔으면 까닭을 보시게 머뭅니다 */
+              onClick={async () => { if (await handleDelete(form.id!)) onDone?.() }}
+              className="px-4 py-2 rounded-xl text-sm font-bold"
+              style={{ background: 'rgba(163,45,45,0.15)', border: '1px solid rgba(163,45,45,0.5)', color: '#e88' }}>
+              🗑 {form.name || '이 상담사'} 삭제
+            </button>
+          </div>
+        )}
       </div>
+      )}
     </div>
   )
 }
