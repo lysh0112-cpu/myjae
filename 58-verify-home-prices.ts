@@ -525,6 +525,16 @@ function main() {
     ok(/if \(await handleDelete\(form\.id!\)\) onDone\?\.\(\)/.test(mgrLive),
       '🔴🔴 ⛔ ★삭제가 «됐을 때만» 목록으로 갑니다 (막히면 까닭을 보십니다)')
 
+    /*  🔴 ★목록 «줄» 에서 바로 수정할 수 있는가 — 2026-09-21
+     *    ⚠️ 전에는 ★이름을 «눌러 펼쳐야» [수정] 이 나왔습니다.
+     *       ⇒ 삭제가 «등록» 탭으로 간 지금은, [수정] 을 못 찾으면
+     *         ★삭제로 가는 길도 «막힙니다». (대표님 화면에서 확인)
+     *    ⇒ ★「화면」 칸 옆에 «수정» 칸을 두었습니다. */
+    ok(/<span style=\{\{ width: 58, textAlign: 'center' \}\}>수정<\/span>/.test(tbl),
+      '🔴 ★목록에 «수정» 칸이 있습니다 (펼치지 않아도 보입니다)')
+    ok((tbl.match(/✏️ 수정/g) ?? []).length === 2,
+      '★목록 줄과 «펼친 상세» 둘 다에서 수정할 수 있습니다')
+
     //  ⛔ 삭제는 «등록/수정» 탭 맨 아래에 «하나» 뿐인가
     ok(!/onDelete/.test(tbl), '⛔⛔ ★목록 줄에 삭제가 «없습니다» [대표님]')
     ok(/handleDelete\(form\.id!\)/.test(mgrLive) && /editing && form\.id/.test(mgrLive),

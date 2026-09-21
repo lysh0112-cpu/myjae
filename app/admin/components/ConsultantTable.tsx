@@ -150,6 +150,12 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onToggleAc
               ⚠️ 전에도 「🔮 화면 보기」가 있었지만 ★이름을 눌러 «펼쳐야» 나오는
                  상세 안에 숨어 있어 목록에서는 안 보였습니다. */}
           <span style={{ width: 64, textAlign: 'center' }}>화면</span>
+          {/*  🔴 ★2026-09-21 (10부) [대표님 목업 승낙] — 「수정」 칸.
+            *    ⚠️ 전에는 ★이름을 «눌러 펼쳐야» [수정] 이 나왔습니다.
+            *       ⇒ 삭제가 «등록» 탭으로 간 지금은, [수정] 을 못 찾으면
+            *         ★삭제로 가는 길도 «막힙니다».
+            *  ⛔ 이 칸을 빼지 마십시오 (검사 58 ⑪). */}
+          <span style={{ width: 58, textAlign: 'center' }}>수정</span>
           {cols.email && <span style={{ width: 130 }}>이메일</span>}
           {cols.phone && <span style={{ width: 100 }}>전화번호</span>}
           {cols.specialty && <span style={{ width: 90 }}>전문분야</span>}
@@ -240,6 +246,18 @@ export default function ConsultantTable({ list, pending = {}, onEdit, onToggleAc
                     border: '1px solid rgba(127,168,255,0.55)', cursor: 'pointer', whiteSpace: 'nowrap',
                     fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}>
                   🔮 화면
+                </button>
+              </span>
+              {/*  🔴 ★목록에서 «바로» 수정 — 누르면 «등록» 탭이 열리며 내용이 채워집니다 */}
+              <span style={{ width: 58, textAlign: 'center' }}>
+                <button type="button"
+                  onClick={() => onEdit(c)}
+                  title={`${c.name} 선생님을 수정합니다 (삭제도 그 화면 맨 아래에 있습니다)`}
+                  className="rounded-lg text-xs font-bold"
+                  style={{ padding: '5px 8px', background: 'rgba(250,199,117,0.15)', color: '#FAC775',
+                    border: '1px solid rgba(250,199,117,0.55)', cursor: 'pointer', whiteSpace: 'nowrap',
+                    fontFamily: 'inherit', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation' }}>
+                  ✏️ 수정
                 </button>
               </span>
               {cols.email && <span style={{ width: 130, fontSize: 12, color: '#b0aec8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email || '-'}</span>}
