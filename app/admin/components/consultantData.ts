@@ -41,6 +41,21 @@ export const SERVICE_SPECIALTIES = [
   { key: 'naming',      name: '이름 정밀분석',     icon: '📇' },
   { key: 'naming_baby', name: '명품작명',          icon: '👶' },
   { key: 'tarot',       name: '타로',              icon: '🃏' },
+  /*  🔴🔴 ★2026-09-21 (10부) [대표님 「하락이수 버튼이 없는 것 같네?」]
+   *
+   *  ⚠️ 새 서비스를 만들면서 ★여기를 «안» 고쳤습니다 —
+   *     합격운(6·7부) · 하락이수(8부) 둘이 빠져 있었습니다.
+   *  ⇒ 🔴 그 둘은 ★상담사를 «한 명도» 지정할 수 없어,
+   *    손님이 [상담 신청하기] 를 누르면 ★「상담 가능한 상담사가 없습니다」 가 떴습니다.
+   *    (ConsultButton 은 붙어 있습니다 — haerak-result:297 · ExamResultShell:1341)
+   *  ⇒ ⛔ PG 심사관이 그 화면을 보면 ★반려 사유입니다.
+   *
+   *  ⛔⛔ ★새 서비스를 넣을 때마다 «여기도» 고치십시오.
+   *     표가 넷입니다 — consult_prices · analysis_prices · mc_price · ★이 표.
+   *     ⇒ 검사 58 ⑫ 가 ★가격 표와 «대조» 합니다. 빠뜨리면 멈춥니다.
+   *  ⛔ key 는 ★consult_prices.price_key 와 «같은 낱말» 이라야 합니다. */
+  { key: 'examluck',    name: '합격·취업·승진',    icon: '🎯' },
+  { key: 'haerak',      name: '하락이수',          icon: '☯️' },
 ] as const
 
 export type ServiceKey = typeof SERVICE_SPECIALTIES[number]['key']

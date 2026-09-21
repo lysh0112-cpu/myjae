@@ -565,6 +565,45 @@ function main() {
       '🔴 ★목록과 폼을 «함께» 그리지 않습니다 (한 번에 한 가지)')
   }
 
+  /* ══ ⑫ 🔴🔴 전문분야 표 — 서비스와 «짝이 맞는가» ═══════════════
+   *  [대표님 2026-09-21] 「하락이수 버튼이 없는 것 같네?」
+   *
+   *  ⚠️ 새 서비스를 만들면서 ★SERVICE_SPECIALTIES 를 «안» 고쳤습니다 —
+   *     합격운(6·7부) · 하락이수(8부) 둘이 ★빠져 있었습니다.
+   *  ⇒ 🔴 그 둘은 상담사를 «한 명도» 지정할 수 없어,
+   *    손님이 [상담 신청하기] 를 누르면 ★「상담 가능한 상담사가 없습니다」.
+   *  ⇒ ⛔ PG 심사관이 그 화면을 보면 ★반려 사유입니다.
+   *
+   *  ⇒ ★이제 «가격 표(PAIRS)» 와 «전문분야 표» 를 대조합니다.
+   *    ⛔ 새 서비스를 넣고 한쪽만 고치면 «멈춥니다».
+   * ════════════════════════════════════════════════════════════════ */
+  head('⑫ 🔴🔴 전문분야 표 = 서비스 열둘 [대표님]')
+  {
+    const cd = R('app/admin/components/consultantData.ts')
+    const spec = [...liveOf(cd).matchAll(/\{ key: '([a-z_]+)',/g)].map(m => m[1])
+    const pm = R('app/admin/components/PriceManager.tsx')
+    const blk = liveOf(pm.slice(pm.indexOf('const PAIRS'), pm.indexOf('\n]', pm.indexOf('const PAIRS'))))
+    const consults = [...blk.matchAll(/consult: '([a-z_]+)'/g)].map(m => m[1])
+
+    ok(spec.length === 12, `🔴 ★전문분야가 «열둘» 입니다 (${spec.length})`)
+    ok(spec.includes('haerak'), '🔴 ★「하락이수」 가 있습니다 [대표님이 찾아내신 것]')
+    ok(spec.includes('examluck'), '🔴 ★「합격·취업·승진」 도 있습니다 (함께 빠져 있었습니다)')
+    ok(JSON.stringify([...spec].sort()) === JSON.stringify([...consults].sort()),
+      `🔴🔴 ★가격 표와 «한 낱말도» 안 다릅니다 (전문분야 ${spec.length} ↔ 가격 ${consults.length})`)
+
+    /*  🔴 ⛔ ★상담 단추가 붙은 화면은 «반드시» 이 표에 있어야 합니다 —
+     *    단추만 있고 표에 없으면 ★「상담 가능한 상담사가 없습니다」 가 뜹니다. */
+    const files = [
+      'app/manseryeok/haerak-result/page.tsx',
+      'app/manseryeok/exam-luck-result/components/ExamResultShell.tsx',
+    ]
+    for (const f of files) {
+      const m = strip(R(f)).match(/priceKey="([a-z_]+)"/)
+      ok(!!m && spec.includes(m[1]),
+        `⛔ ★${f.split('/').slice(-1)[0]} 의 상담 단추(${m?.[1]})가 표에 있습니다`)
+    }
+  }
+
   console.log(`\n━━ 홈 카드 가격 — 통과 ${pass} · 실패 ${fail} ━━\n`)
   if (fail > 0) process.exit(1)
 }
