@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import HomeFlagToggle from './HomeFlagToggle'
 
 type Setting = { key: string; value: string }
 
@@ -61,6 +62,34 @@ export default function SiteSettings() {
 
   return (
     <div className="space-y-4">
+      {/*  🔴🔴 ★심사용 이메일 로그인 문 — 2026-09-21 (10부) [대표님]
+        *    「관리자 화면에 토글을 만들고 열었다 닫았다 하게」
+        *
+        *  [까닭]  토스 계약 메일 —
+        *    「★소셜 로그인 테스트 계정 사용 불가(카카오톡, 구글 등)」
+        *    ⇒ 우리는 카카오뿐이라 ★PG 심사관이 들어올 길이 «없습니다».
+        *
+        *  ⛔ 부품을 ★복사하지 «않았습니다» — 홈 토글과 «같은» HomeFlagToggle 입니다.
+        *     낱말(reviewLogin)만 다르게 넘깁니다 (9부 교훈 ⑤).
+        *  ⛔ 이 상자를 ★«맨 위» 에 둡니다 — 켜 두고 잊으시면 안 되기 때문입니다. */}
+      <div className="rounded-2xl p-4"
+        style={{ background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.35)' }}>
+        <div className="text-sm font-bold mb-1" style={{ color: '#FAC775' }}>
+          🔑 심사용 이메일 로그인
+        </div>
+        <div className="text-xs mb-3" style={{ color: 'rgba(255,255,255,0.45)', lineHeight: 1.7 }}>
+          PG 카드사 <b>심사관</b>이 들어오는 문이에요. 주소는 <b>/login/review</b> 이고,
+          손님 화면 어디에도 걸려 있지 않아요.
+          <br />
+          <span style={{ color: '#f0a05a' }}>
+            ⛔ 심사가 끝나면 반드시 꺼 주세요. 열어 두면 이메일로 로그인할 수 있어요.
+          </span>
+          <br />
+          ⚠️ Supabase → Authentication → Providers 의 <b>Email</b>도 켜져 있어야 동작해요.
+        </div>
+        <HomeFlagToggle flag="reviewLogin" showTitle={false} />
+      </div>
+
       <div className="rounded-2xl p-4"
         style={{ background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.2)' }}>
         <div className="text-sm font-bold mb-1" style={{ color: '#FAC775' }}>⚙️ 사이트 테마 설정</div>

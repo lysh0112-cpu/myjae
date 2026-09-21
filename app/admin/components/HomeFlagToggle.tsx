@@ -19,11 +19,19 @@ import { EXAM_LUCK_NAME, HAERAK_NAME, fetchHomeFlags, type HomeFlagKey } from '@
 /*  ★2026-09-14 (8부) [대표님 「하락이수도 넣을지 말지 결정하는 토글」]
  *    ★낱말(flag)을 받게 넓혔습니다. 안 넘기면 «합격운» 입니다 — 옛 자리가 그대로 돕니다.
  *  ⛔ 카드마다 부품을 «복사» 하지 마십시오. 여기 한 곳입니다. */
-const LABEL: Record<HomeFlagKey, string> = { examLuck: EXAM_LUCK_NAME, haerak: HAERAK_NAME }
+const LABEL: Record<HomeFlagKey, string> = {
+  examLuck: EXAM_LUCK_NAME,
+  haerak: HAERAK_NAME,
+  //  ★2026-09-21 (10부) — 홈 카드가 «아닙니다». 심사관이 들어오는 문입니다.
+  reviewLogin: '심사용 이메일 로그인',
+}
 /** 켤 때 한 번 여쭙는 말 — ⛔ 비워 두면 안 묻습니다 */
 const ASK: Record<HomeFlagKey, string> = {
   examLuck: '⚠️ 지금은 결제 시트가 없어, 로그인한 손님께 무료로 보입니다.',
   haerak: '⚠️ 아직 ★검증 중입니다. 화면이 준비되지 않았으면 손님이 눌러도 갈 데가 없습니다.',
+  /*  🔴 켤 때 반드시 여쭙습니다 — ★열어 두면 «아무나» 이메일로 들어올 수 있습니다 */
+  reviewLogin: '⚠️ PG 카드사 «심사관» 이 들어오는 문입니다.\n'
+    + '⛔ 심사가 끝나면 ★반드시 «끄십시오». 열어 두면 이메일로 로그인할 수 있습니다.',
 }
 
 export default function HomeFlagToggle(
@@ -46,9 +54,12 @@ export default function HomeFlagToggle(
   async function flip() {
     if (on === null || busy) return
     const next = !on
-    if (next && !window.confirm(
-      `홈 화면에 「${NAME}」 카드를 보이게 할까요?\n\n` + ASK[flag],
-    )) return
+    /*  ⚠️ ★묻는 말이 낱말마다 다릅니다 —
+     *     reviewLogin 은 «홈 카드» 가 아니라 «문» 이라 「보이게 할까요」 가 안 맞습니다. */
+    const ask = flag === 'reviewLogin'
+      ? `★심사용 이메일 로그인 문을 «열까요»?\n\n`
+      : `홈 화면에 「${NAME}」 카드를 보이게 할까요?\n\n`
+    if (next && !window.confirm(ask + ASK[flag])) return
     setBusy(true)
     setMsg(null)
     const r = await callAdmin<Record<string, boolean>>('/api/admin/home-flags', { [flag]: next })

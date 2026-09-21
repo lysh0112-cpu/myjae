@@ -342,6 +342,80 @@ function main() {
       '⛔ ★상담사 화면의 「교재 원문 그대로」 는 «남겨» 둡니다 (출전 밝히기)')
   }
 
+  /* ══ ⑨ 🔴🔴 심사용 이메일 로그인 문 ══════════════════════════════
+   *  [대표님 2026-09-21] 「심사관만 들어오게 이메일 로그인을 하나만 만들어주자」
+   *                      「관리자 화면에 토글을 만들고 열었다 닫았다 하게」
+   *
+   *  [까닭]  토스 계약 메일 — 「★소셜 로그인 테스트 계정 사용 불가(카카오톡, 구글 등)」
+   *         ⇒ 우리는 카카오뿐이라 심사관이 들어올 길이 «없습니다».
+   * ════════════════════════════════════════════════════════════════ */
+  head('⑨ 🔴🔴 심사용 이메일 로그인 문 [대표님]')
+  {
+    const page = R('app/login/review/page.tsx')
+    const live = strip(page)
+    const flags = R('lib/homeFlags.ts')
+    const toggle = R('app/admin/components/HomeFlagToggle.tsx')
+    const settings = R('app/admin/components/SiteSettings.tsx')
+
+    //  ★낱말이 표에 있고, 못 읽으면 «닫힘» 인가
+    ok(/reviewLogin: 'review_login'/.test(flags), '★낱말이 표에 있습니다')
+    ok(/HOME_FLAGS_OFF: HomeFlags = \{[^}]*reviewLogin: false/.test(flags),
+      '🔴 ⛔ ★못 읽으면 «닫힘» 입니다')
+    ok(/reviewLogin: d\?\.reviewLogin === true/.test(flags),
+      '⛔ ★«true 일 때만» 열립니다 (이상한 값이면 닫힘)')
+    ok(/'reviewLogin'/.test(flags.slice(flags.indexOf('HOME_FLAG_LIST'))),
+      '★목록에 들어 있습니다 (창구·검사가 함께 봅니다)')
+
+    //  🔴 ⛔ ★손님 화면 어디에도 «걸려 있지 않은가» — 이것이 핵심입니다
+    {
+      const linked = [
+        'app/home-new/page.tsx', 'app/login/page.tsx', 'app/mypage-new/page.tsx',
+        'app/components/HomeBottomNav.tsx', 'app/home-new/components/ServiceSection.tsx',
+        'app/landing/page.tsx',
+      ].filter(f => strip(R(f)).includes('/login/review'))
+      ok(linked.length === 0,
+        `🔴🔴 ⛔ ★손님 화면에 이 문으로 가는 길이 «한 곳도» 없습니다 (${linked.length})`)
+    }
+
+    //  🔴 ★닫혀 있으면 «없는 화면» 처럼 — 칸도 단추도 안 그립니다
+    ok(/if \(!open\) \{/.test(live) && /찾으시는 화면이 없어요/.test(live),
+      '🔴 ⛔ ★닫히면 «없는 화면» 처럼 굽니다')
+    ok(/fetchHomeFlags\(\)\.then\(f => \{ if \(alive\) setOpen\(f\.reviewLogin\) \}\)/.test(live),
+      '★토글을 보고 열고 닫습니다')
+    ok(/open === null/.test(live),
+      '⚠️ ★읽는 동안은 빈 화면입니다 (문이 «깜빡» 열려 보이지 않게)')
+
+    //  ⛔ 들어오는 길만 — 가입·비밀번호 찾기를 붙이지 않았는지
+    ok(!/signUp|회원가입|비밀번호 찾기/.test(live),
+      '⛔⛔ ★회원가입·비밀번호 찾기가 «없습니다» (들어오는 길만)')
+    ok(/signInWithPassword/.test(live), '★이메일·비밀번호로 들어옵니다')
+    //  ⛔ 무엇이 틀렸는지 «가려서» 말하는가 — 아이디가 있는지 알려 주면 안 됩니다
+    ok(!/없는 이메일|가입되지 않은|비밀번호가 틀/.test(live),
+      '⛔ ★무엇이 틀렸는지 «가려서» 말합니다')
+    //  ⚠️ 카카오와 달리 callback 을 안 거치므로 profiles 를 «직접» 봅니다
+    ok(/auth\/welcome/.test(live) && /from\('profiles'\)/.test(live),
+      '⚠️ ★profiles 가 없으면 welcome 으로 보냅니다 (callback 을 안 거칩니다)')
+
+    //  ★토글 — 부품을 «복사하지 않고» 낱말만 다르게 넘기는가
+    ok(/flag="reviewLogin"/.test(strip(settings)),
+      '🔴 ★사이트 설정에 토글이 있습니다 [대표님]')
+    ok(/import HomeFlagToggle/.test(settings),
+      '⛔ ★부품을 «복사하지» 않았습니다 (홈 토글과 같은 것)')
+    ok(/reviewLogin: '심사용 이메일 로그인'/.test(toggle), '★토글 이름이 있습니다')
+    //  🔴 켤 때 «반드시» 여쭙는가 — 열어 두고 잊으면 안 됩니다
+    ok(/reviewLogin: '⚠️ PG 카드사/.test(toggle) && /반드시 «끄십시오»/.test(toggle),
+      '🔴 ⛔ ★켤 때 「심사 끝나면 끄라」 고 여쭙니다')
+    //  ⚠️ 「홈 카드를 보이게 할까요」 가 아니라 «문을 열까요» 로 묻는가
+    ok(/flag === 'reviewLogin'/.test(toggle),
+      '⚠️ ★묻는 말이 «문» 에 맞습니다 (홈 카드가 아닙니다)')
+
+    /*  ⛔ ★onlyWhen(가격 표)에는 이 낱말을 못 쓰게 좁혀 두었는가 —
+     *    홈 카드가 아니므로 가격 줄을 여닫는 데 쓰이면 안 됩니다. */
+    ok(/type CardFlag = Extract<HomeFlagKey, 'examLuck' \| 'haerak'>/
+      .test(R('app/admin/components/PriceManager.tsx')),
+      "⛔ ★가격 표에는 이 낱말을 «못» 씁니다 (홈 카드 둘로 좁힘)")
+  }
+
   console.log(`\n━━ 홈 카드 가격 — 통과 ${pass} · 실패 ${fail} ━━\n`)
   if (fail > 0) process.exit(1)
 }

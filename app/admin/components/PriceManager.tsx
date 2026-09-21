@@ -44,7 +44,12 @@ type HomePrice = {
  * ══════════════════════════════════════════════════════════════════ */
 /* ★2026-09-11 (6부) — onlyWhen: 'examLuck' 인 줄은 «숨겨 둔 서비스» 토글이 켜졌을 때만 보입니다 (검사 ㉒-y).
  *   ⚠️ 숨겨도 가격은 DB 에 «그대로» 남습니다 — 다시 켜면 그 값으로 돌아옵니다. */
-const PAIRS: { consult: string; ai: { k: string; short: string }[]; onlyWhen?: HomeFlagKey }[] = [
+/*  ⚠️ ★2026-09-21 (10부) — onlyWhen 은 «홈 카드» 낱말만 씁니다.
+ *     HomeFlagKey 에 ★reviewLogin(심사용 문)이 더해졌는데, 그것은 «카드» 가 아니라
+ *     가격 표에 쓰일 일이 없습니다. ⇒ 쓸 수 있는 낱말을 «둘» 로 좁혀 둡니다.
+ *  ⛔ 다시 HomeFlagKey 로 넓히지 마십시오 — 엉뚱한 낱말을 적을 수 있게 됩니다. */
+type CardFlag = Extract<HomeFlagKey, 'examLuck' | 'haerak'>
+const PAIRS: { consult: string; ai: { k: string; short: string }[]; onlyWhen?: CardFlag }[] = [
   { consult: 'mulsang',     ai: [{ k: 'mulsang_ai',     short: '그림 생성' }] },
   { consult: 'career',      ai: [{ k: 'career_ai',      short: '적성 분석' }] },
   /*  ★2026-09-14 (8부) [대표님 「내사주그림…진로적성…하락이수 순으로」 · 목업 승낙]

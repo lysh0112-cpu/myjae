@@ -45,19 +45,32 @@ export function isHaerakName(name: string): boolean {
 export const HOME_FLAG_KEYS = {
   examLuck: 'home_exam_luck',
   haerak: 'home_haerak',
+  /*  🔴 ★2026-09-21 (10부) [대표님] — PG 카드사 «심사관» 이 들어오는 문.
+   *  ⚠️ 토스 메일 — 「★소셜 로그인 테스트 계정 사용 불가(카카오톡, 구글 등)」
+   *     ⇒ 우리는 ★카카오뿐이라 심사관이 들어올 길이 «없습니다».
+   *  ⇒ 이메일 로그인 화면(/login/review)을 ★이 토글로 «열었다 닫았다» 합니다.
+   *  ⛔ 심사가 끝나면 ★끄십시오. 끄면 그 화면이 «없는 것처럼» 굽니다. */
+  reviewLogin: 'review_login',
 } as const
 
 export interface HomeFlags {
   examLuck: boolean
   /** ★2026-09-14 (8부) — 하락이수. ⛔ 검증 끝날 때까지 «꺼짐» 으로 나갑니다 [대표님] */
   haerak: boolean
+  /**
+   *  ★2026-09-21 (10부) — 심사관 전용 이메일 로그인 문.
+   *  ⚠️ 이것은 «홈 카드» 가 아닙니다. 홈 화면은 이 값을 ★쓰지 않습니다.
+   *     같은 «켜고 끄는 장치» 라 표를 함께 쓸 뿐입니다 (⛔ 부품을 복사하지 않으려고).
+   *  ⛔ 기본값은 ★«꺼짐». 심사 끝나면 반드시 끄십시오.
+   */
+  reviewLogin: boolean
 }
 
-export const HOME_FLAGS_OFF: HomeFlags = { examLuck: false, haerak: false }
+export const HOME_FLAGS_OFF: HomeFlags = { examLuck: false, haerak: false, reviewLogin: false }
 
 /** 토글 낱말 — 화면·창구·검사가 «이 목록» 으로 맞춥니다 */
 export type HomeFlagKey = keyof HomeFlags
-export const HOME_FLAG_LIST: HomeFlagKey[] = ['examLuck', 'haerak']
+export const HOME_FLAG_LIST: HomeFlagKey[] = ['examLuck', 'haerak', 'reviewLogin']
 
 /** 화면에서 부릅니다 — 못 읽으면 «꺼짐» */
 export async function fetchHomeFlags(): Promise<HomeFlags> {
@@ -65,7 +78,12 @@ export async function fetchHomeFlags(): Promise<HomeFlags> {
     const r = await fetch('/api/home-flags', { cache: 'no-store' })
     if (!r.ok) return HOME_FLAGS_OFF
     const d = (await r.json()) as Partial<HomeFlags> | null
-    return { examLuck: d?.examLuck === true, haerak: d?.haerak === true }
+    return {
+      examLuck: d?.examLuck === true,
+      haerak: d?.haerak === true,
+      //  ⛔ ★«true 일 때만» 켜집니다 — 못 읽거나 이상하면 «닫힘» 입니다
+      reviewLogin: d?.reviewLogin === true,
+    }
   } catch {
     return HOME_FLAGS_OFF
   }

@@ -30,12 +30,20 @@ export async function GET() {
      *       홈에서 하락이수 카드가 안 뜬 까닭이 이것이었습니다 (대표님 화면에서 확인).
      *    ⚠️ 낱말을 더하시거든 ★여기도 «함께» 고치십시오. keys 가 곧 답입니다.
      *    ⛔ 정해진 낱말만 읽는 규칙은 그대로입니다 — in() 에 HOME_FLAG_KEYS 값만 넘깁니다. */
-    const keys = [HOME_FLAG_KEYS.examLuck, HOME_FLAG_KEYS.haerak]
+    /*  ★2026-09-21 (10부) — 낱말이 «셋» 이 되었습니다 (+ reviewLogin).
+     *    🔴 낱말만 더하고 여기를 안 고쳤다가 ★검사 28 이 저를 «멈춰 세웠습니다».
+     *       9부 ⑥ 「낱말을 더하면 읽는 창구도 «함께» 고치십시오」 그대로였습니다. */
+    const keys = [HOME_FLAG_KEYS.examLuck, HOME_FLAG_KEYS.haerak, HOME_FLAG_KEYS.reviewLogin]
     const { data } = await sb.from('app_settings').select('key, value').in('key', keys)
     const on = (k: string) => Number((data ?? []).find(r => r.key === k)?.value) === 1
 
     return NextResponse.json(
-      { examLuck: on(HOME_FLAG_KEYS.examLuck), haerak: on(HOME_FLAG_KEYS.haerak) },
+      {
+        examLuck: on(HOME_FLAG_KEYS.examLuck),
+        haerak: on(HOME_FLAG_KEYS.haerak),
+        //  ★심사용 문 — ⛔ 줄이 없으면 «닫힘» 입니다 (on() 이 false 를 돌려줍니다)
+        reviewLogin: on(HOME_FLAG_KEYS.reviewLogin),
+      },
       { headers: NO_STORE },
     )
   } catch {

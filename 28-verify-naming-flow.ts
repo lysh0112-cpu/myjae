@@ -2793,8 +2793,17 @@ console.log('\n━━ ㉒-y 🔴 가격 표의 합격운 줄이 «토글을 따�
     check(/\.in\('key', keys\)/.test(rd), `⛔ ★정해진 낱말만 읽습니다 (in 으로 묶어서)`)
     check(/haerak: on\(HOME_FLAG_KEYS\.haerak\)/.test(rd), `★하락이수 값을 «돌려줍니다»`)
   }
-  check(/HOME_FLAGS_OFF: HomeFlags = \{ examLuck: false, haerak: false \}/.test(codeOf(read('lib/homeFlags.ts'))),
-    `⛔ ★못 읽으면 «둘 다 꺼짐» 입니다 (켜진 채로 안 샙니다)`)
+  /*  ⚠️ ★2026-09-21 (10부) — 낱말이 «셋» 이 되었습니다 (+ reviewLogin · 심사용 문).
+   *    ⛔ 「둘 다 꺼짐」 을 «글자 그대로» 세던 것을 ★«낱말마다 false 인지» 로 넓혔습니다.
+   *      ⇒ 낱말이 늘어도 ★저절로 따라옵니다. «느슨해진 것이 아닙니다» —
+   *        전에는 둘만 보았고, 이제는 ★있는 낱말을 «다» 봅니다. */
+  {
+    const hf = codeOf(read('lib/homeFlags.ts'))
+    const offBlock = hf.slice(hf.indexOf('HOME_FLAGS_OFF'), hf.indexOf('\n', hf.indexOf('HOME_FLAGS_OFF')) + 1)
+    const keys = (hf.match(/^\s+(\w+): '[\w_]+',$/gm) ?? []).map(x => x.trim().split(':')[0])
+    check(keys.length > 0 && keys.every(k => new RegExp(`${k}: false`).test(offBlock)),
+      `⛔ ★못 읽으면 «다 꺼짐» 입니다 — ${keys.join(' · ')}`)
+  }
   check(/consult: 'haerak'[\s\S]{0,120}onlyWhen: 'haerak'/.test(pm),
     `★가격 표에 하락이수 줄이 있고 «토글이 켜졌을 때만» 보입니다`)
   check(/k: 'haerak_ai'/.test(pm), `★AI 분석 가격 칸도 있습니다 (haerak_ai)`)
