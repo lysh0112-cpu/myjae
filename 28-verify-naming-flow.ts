@@ -2643,8 +2643,15 @@ console.log('\n━━ ㉒-u 🔴 합격운/취업운 — 관리자 토글로 «�
   check(/no-store/.test(pub), `★캐시하지 않습니다 (켜자마자 손님 화면에 반영)`)
   // ⑥ 관리자 쓰기 길 — 문지기 · 참/거짓만 · 바뀐 줄 세기
   //  ★2026-09-14 (8부) — 낱말이 «둘»(examLuck·haerak)이 되며 모양이 바뀌었습니다. 뜻은 그대로입니다.
-  check(/typeof body\.examLuck === 'boolean'/.test(adm) && /typeof body\.haerak === 'boolean'/.test(adm),
-    `⛔ 참/거짓 «말고는» 받지 않습니다 (낱말 둘 다)`)
+  /*  🔴🔴 ★2026-09-21 (10부) — 낱말 이름을 «글자 그대로» 세던 것을 고쳤습니다.
+   *    ⚠️ reviewLogin 을 더하며 창구를 «낱말을 돌면서 찾는» 모양으로 바꿨더니
+   *       이 검사가 ★옛 모양을 못 찾아 멈췄습니다.
+   *    ⇒ 🔴 지키려던 «뜻» 은 ★「참/거짓 말고는 안 받는다」 입니다.
+   *      ⇒ 모양이 아니라 ★그 «뜻» 을 셉니다. «느슨해진 것이 아닙니다» —
+   *        전에는 낱말 둘만 보았고, 이제는 ★있는 낱말을 «다» 봅니다.
+   *  ⛔ 다시 낱말 이름을 붙박이로 세지 마십시오. */
+  check(/typeof body\[k\] === 'boolean'/.test(adm) && /HOME_FLAG_LIST/.test(adm),
+    `⛔ 참/거짓 «말고는» 받지 않습니다 (낱말을 «돌면서» 봅니다)`)
   check(/const k = HOME_FLAG_KEYS\[which\]/.test(adm), `⛔ ★정해진 낱말만 저장합니다 (손님이 다른 설정을 못 건드립니다)`)
   check(/\.select\('key'\)/.test(adm) && /data\.length === 0|!data \|\|/.test(adm),
     `★저장한 줄을 «셉니다» (조용히 0줄 막기)`)

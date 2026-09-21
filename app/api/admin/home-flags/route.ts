@@ -12,7 +12,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { requireMaster } from '../_guard'
-import { HOME_FLAG_KEYS, type HomeFlagKey } from '@/lib/homeFlags'
+import { HOME_FLAG_KEYS, HOME_FLAG_LIST, type HomeFlagKey } from '@/lib/homeFlags'
 
 export async function POST(request: Request) {
   try {
@@ -21,12 +21,18 @@ export async function POST(request: Request) {
 
     /*  ★2026-09-14 (8부) — 낱말이 «둘» 이 되었습니다 (examLuck · haerak).
      *    ⚠️ 한 번에 ★하나만 받습니다 — 어느 것을 눌렀는지가 또렷해야 합니다.
-     *    ⛔ 정해진 낱말 말고는 거절합니다 (손님이 다른 설정을 건드릴 수 없게). */
+     *    ⛔ 정해진 낱말 말고는 거절합니다 (손님이 다른 설정을 건드릴 수 없게).
+     *
+     *  🔴🔴 ★2026-09-21 (10부) — 낱말 이름을 «붙박이» 로 적어 두었던 것을 고쳤습니다.
+     *    ⚠️ reviewLogin 을 더했더니 여기가 «못 알아듣고»
+     *       ★「저장 실패: 켜기/끄기 값이 이상해요」 가 떴습니다 (대표님 화면에서 확인).
+     *    ⇒ 9부 ⑥ 「낱말을 더하면 ★«읽는» 창구도 함께」 에 이어,
+     *      ★«쓰는» 창구도 있었습니다. 제가 읽는 쪽만 보고 쓰는 쪽을 빠뜨렸습니다.
+     *    ⇒ 이제 ★HOME_FLAG_LIST 를 «돌면서» 찾습니다. 낱말이 늘어도 저절로 따라옵니다.
+     *  ⛔ 다시 낱말 이름을 붙박이로 적지 마십시오 (검사 58 ⑨). */
     const body = await request.json().catch(() => ({})) as Partial<Record<HomeFlagKey, unknown>>
     const which: HomeFlagKey | null =
-      typeof body.examLuck === 'boolean' ? 'examLuck'
-      : typeof body.haerak === 'boolean' ? 'haerak'
-      : null
+      HOME_FLAG_LIST.find(k => typeof body[k] === 'boolean') ?? null
     if (!which) {
       return NextResponse.json({ error: '켜기/끄기 값이 이상해요.' }, { status: 400 })
     }

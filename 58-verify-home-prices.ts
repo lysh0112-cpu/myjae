@@ -409,6 +409,30 @@ function main() {
     ok(/flag === 'reviewLogin'/.test(toggle),
       '⚠️ ★묻는 말이 «문» 에 맞습니다 (홈 카드가 아닙니다)')
 
+    /*  🔴🔴 ★2026-09-21 — 낱말을 더하면 «창구가 둘» 입니다.
+     *    ⚠️ 저는 «읽는» 창구만 고치고 ★«쓰는» 창구를 빠뜨렸습니다.
+     *       ⇒ 대표님 화면에 ★「저장 실패: 켜기/끄기 값이 이상해요」 가 떴습니다.
+     *    ⇒ 이제 ★둘 다 «낱말을 돌면서» 찾는지 봅니다. 붙박이로 적으면 멈춥니다. */
+    {
+      const wr = R('app/api/admin/home-flags/route.ts')
+      ok(/HOME_FLAG_LIST\.find\(k => typeof body\[k\] === 'boolean'\)/.test(wr),
+        '🔴🔴 ★«쓰는» 창구가 낱말을 «돌면서» 찾습니다 (붙박이 아님)')
+      ok(!/body\.examLuck === 'boolean' \? 'examLuck'/.test(wr),
+        '⛔ ★낱말 이름을 «붙박이» 로 적지 않았습니다')
+      const rd = R('app/api/home-flags/route.ts')
+      ok(/HOME_FLAG_KEYS\.reviewLogin/.test(rd),
+        '⛔ ★«읽는» 창구도 새 낱말을 읽습니다')
+    }
+
+    /*  ⚠️ ★토글 밑 설명이 낱말마다 «다른가» —
+     *    붙박이로 두었다가 심사용 문에 「홈 카드 · 보관함 · 가격 표 줄」 이
+     *    ★그대로 따라와 엉뚱한 말이 되었습니다 (대표님 화면에서 확인). */
+    ok(/const SUB: Record<HomeFlagKey, string>/.test(toggle)
+      && /reviewLogin: '\/login\/review 화면을 열고 닫습니다'/.test(toggle),
+      '⚠️ ★토글 밑 설명이 낱말마다 다릅니다 (홈 카드 말이 안 따라옵니다)')
+    ok(/knobOn \? '열림' : '닫힘'/.test(toggle),
+      "⚠️ ★심사용 문은 «열림/닫힘» 으로 말합니다 (보임/숨김이 아닙니다)")
+
     /*  ⛔ ★onlyWhen(가격 표)에는 이 낱말을 못 쓰게 좁혀 두었는가 —
      *    홈 카드가 아니므로 가격 줄을 여닫는 데 쓰이면 안 됩니다. */
     ok(/type CardFlag = Extract<HomeFlagKey, 'examLuck' \| 'haerak'>/

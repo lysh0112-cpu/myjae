@@ -25,6 +25,14 @@ const LABEL: Record<HomeFlagKey, string> = {
   //  ★2026-09-21 (10부) — 홈 카드가 «아닙니다». 심사관이 들어오는 문입니다.
   reviewLogin: '심사용 이메일 로그인',
 }
+/** 토글 밑에 붙는 «무엇을 켜고 끄는가» — ⛔ 낱말마다 «다릅니다» */
+const SUB: Record<HomeFlagKey, string> = {
+  examLuck: '홈 카드 · 보관함 · 가격 표 줄',
+  haerak: '홈 카드 · 보관함 · 가격 표 줄',
+  //  ★홈 카드가 «아닙니다» — 심사관이 들어오는 문입니다
+  reviewLogin: '/login/review 화면을 열고 닫습니다',
+}
+
 /** 켤 때 한 번 여쭙는 말 — ⛔ 비워 두면 안 묻습니다 */
 const ASK: Record<HomeFlagKey, string> = {
   examLuck: '⚠️ 지금은 결제 시트가 없어, 로그인한 손님께 무료로 보입니다.',
@@ -87,13 +95,20 @@ export default function HomeFlagToggle(
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 13, color: '#e8e4ff' }}>{NAME}</div>
+            {/*  🔴 ★2026-09-21 (10부) — 밑줄 설명이 «붙박이» 였습니다.
+              *    ⚠️ 심사용 문에도 「홈 카드 · 보관함 · 가격 표 줄」 이 그대로 따라와
+              *       ★엉뚱한 말이 되었습니다 (대표님 화면에서 확인).
+              *    ⇒ 7부 0-3 «절반만 고치기» — 낱말만 바꾸고 «설명» 을 안 셌습니다.
+              *  ⛔ 새 낱말을 더하시거든 ★여기 SUB 에도 한 줄 넣으십시오. */}
             <div style={{ fontSize: 11, color: '#8a88a0', marginTop: 3 }}>
-              홈 카드 · 보관함 · 가격 표 줄
+              {SUB[flag]}
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             <span style={{ fontSize: 12, color: knobOn ? '#FAC775' : '#8a88a0', minWidth: 42, textAlign: 'right' }}>
-              {on === null ? '읽는 중' : knobOn ? '보임' : '숨김'}
+              {on === null ? '읽는 중'
+                : flag === 'reviewLogin' ? (knobOn ? '열림' : '닫힘')
+                : knobOn ? '보임' : '숨김'}
             </span>
             <button
               onClick={flip}
