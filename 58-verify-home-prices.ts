@@ -604,6 +604,51 @@ function main() {
     }
   }
 
+  /* ══ ⑬ 🔴 큐보드·골프온 바로가기 — 심사 동안 숨김 ═══════════════
+   *  [대표님 2026-09-22] 「골프온과 큐보드는 우선 승인 전까지 숨겼다가
+   *                       승인 후 추가하는 걸로 하자」
+   *
+   *  [까닭]  누르면 ★cue.myjae.kr · golf.myjae.kr 로 «떠납니다».
+   *    ⇒ PG 심사관이 ★심사 대상이 «아닌» 도메인을 봅니다.
+   *    ⇒ 그쪽은 사업자정보가 «한 곳» 뿐이고,
+   *      골프온에는 ★「200원이 빠집니다」 가 «실제와 다르게» 적혀 있습니다
+   *      (골프온 회신 2026-09-22 — 47-read 166·182줄 · 실제로는 안 빠짐).
+   * ════════════════════════════════════════════════════════════════ */
+  head('⑬ 🔴 큐보드·골프온 바로가기 — 토글 [대표님]')
+  {
+    const flags = R('lib/homeFlags.ts')
+    const home = strip(R('app/home-new/page.tsx'))
+    const st = strip(R('app/admin/components/SiteSettings.tsx'))
+    const tg = R('app/admin/components/HomeFlagToggle.tsx')
+
+    ok(/sisterLinks: 'sister_links'/.test(flags), '★낱말이 표에 있습니다')
+    ok(/sisterLinks: false/.test(flags), '🔴 ⛔ ★기본값이 «숨김» 입니다')
+    ok(/sisterLinks: d\?\.sisterLinks === true/.test(flags),
+      '⛔ ★«true 일 때만» 보입니다 (못 읽으면 숨김)')
+    ok(/'sisterLinks'/.test(flags.slice(flags.indexOf('HOME_FLAG_LIST'))),
+      '★목록에 들어 있습니다 (두 창구가 함께 봅니다)')
+
+    //  🔴 ★홈이 «그 값을 보고» 그리는가 — 낱말만 더하면 소용없습니다
+    ok(/\{flags\.sisterLinks && <SisterLinks \/>\}/.test(home),
+      '🔴🔴 ★홈이 토글을 보고 «그립니다» (끄면 줄이 사라집니다)')
+    ok(!/^\s*<SisterLinks \/>\s*$/m.test(home),
+      '⛔ ★조건 없이 그리던 옛 모양이 «남아 있지 않습니다»')
+
+    //  ★읽는 창구도 함께 (9부 ⑥ · 10부에 두 번 밟은 자리)
+    ok(/HOME_FLAG_KEYS\.sisterLinks/.test(R('app/api/home-flags/route.ts')),
+      '⛔ ★«읽는» 창구가 새 낱말도 읽습니다')
+
+    //  ★관리 화면 토글 — 부품을 복사하지 않았는가
+    ok(/flag="sisterLinks"/.test(st), '🔴 ★사이트 설정에 토글이 있습니다')
+    ok(/sisterLinks: '큐보드·골프온 바로가기'/.test(tg), '★토글 이름이 있습니다')
+    ok(/sisterLinks: '⚠️ 누르면/.test(tg) && /심사 «중» 에는 켜지 마십시오/.test(tg),
+      '🔴 ⛔ ★켤 때 「심사 중에는 켜지 마라」 고 여쭙습니다')
+    ok(/flag === 'sisterLinks'/.test(tg),
+      '⚠️ ★묻는 말이 «줄» 에 맞습니다 (카드도 문도 아닙니다)')
+    ok(/sisterLinks: '홈 맨 아래 「함께 쓰는 서비스」 줄'/.test(tg),
+      '⚠️ ★토글 밑 설명이 «이 줄» 을 가리킵니다')
+  }
+
   console.log(`\n━━ 홈 카드 가격 — 통과 ${pass} · 실패 ${fail} ━━\n`)
   if (fail > 0) process.exit(1)
 }

@@ -2806,7 +2806,12 @@ console.log('\n━━ ㉒-y 🔴 가격 표의 합격운 줄이 «토글을 따�
    *        전에는 둘만 보았고, 이제는 ★있는 낱말을 «다» 봅니다. */
   {
     const hf = codeOf(read('lib/homeFlags.ts'))
-    const offBlock = hf.slice(hf.indexOf('HOME_FLAGS_OFF'), hf.indexOf('\n', hf.indexOf('HOME_FLAGS_OFF')) + 1)
+    /*  ⚠️ ★2026-09-22 — «한 줄» 만 잘라내던 것을 고쳤습니다.
+     *    낱말이 넷이 되며 HOME_FLAGS_OFF 를 ★«여러 줄» 로 적었더니
+     *    첫 줄만 보고 ★못 찾아 «헛 실패» 가 났습니다.
+     *    ⇒ ★여는 { 부터 닫는 } 까지 «덩이» 로 봅니다. 줄이 늘어도 안 흔들립니다. */
+    const offAt = hf.indexOf('HOME_FLAGS_OFF')
+    const offBlock = hf.slice(offAt, hf.indexOf('}', offAt) + 1)
     const keys = (hf.match(/^\s+(\w+): '[\w_]+',$/gm) ?? []).map(x => x.trim().split(':')[0])
     check(keys.length > 0 && keys.every(k => new RegExp(`${k}: false`).test(offBlock)),
       `⛔ ★못 읽으면 «다 꺼짐» 입니다 — ${keys.join(' · ')}`)

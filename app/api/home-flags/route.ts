@@ -33,7 +33,7 @@ export async function GET() {
     /*  ★2026-09-21 (10부) — 낱말이 «셋» 이 되었습니다 (+ reviewLogin).
      *    🔴 낱말만 더하고 여기를 안 고쳤다가 ★검사 28 이 저를 «멈춰 세웠습니다».
      *       9부 ⑥ 「낱말을 더하면 읽는 창구도 «함께» 고치십시오」 그대로였습니다. */
-    const keys = [HOME_FLAG_KEYS.examLuck, HOME_FLAG_KEYS.haerak, HOME_FLAG_KEYS.reviewLogin]
+    const keys = [HOME_FLAG_KEYS.examLuck, HOME_FLAG_KEYS.haerak, HOME_FLAG_KEYS.reviewLogin, HOME_FLAG_KEYS.sisterLinks]
     const { data } = await sb.from('app_settings').select('key, value').in('key', keys)
     const on = (k: string) => Number((data ?? []).find(r => r.key === k)?.value) === 1
 
@@ -43,6 +43,8 @@ export async function GET() {
         haerak: on(HOME_FLAG_KEYS.haerak),
         //  ★심사용 문 — ⛔ 줄이 없으면 «닫힘» 입니다 (on() 이 false 를 돌려줍니다)
         reviewLogin: on(HOME_FLAG_KEYS.reviewLogin),
+        //  ★자매 앱 바로가기 — ⛔ 줄이 없으면 «숨김» 입니다
+        sisterLinks: on(HOME_FLAG_KEYS.sisterLinks),
       },
       { headers: NO_STORE },
     )

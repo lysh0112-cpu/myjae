@@ -51,6 +51,19 @@ export const HOME_FLAG_KEYS = {
    *  ⇒ 이메일 로그인 화면(/login/review)을 ★이 토글로 «열었다 닫았다» 합니다.
    *  ⛔ 심사가 끝나면 ★끄십시오. 끄면 그 화면이 «없는 것처럼» 굽니다. */
   reviewLogin: 'review_login',
+  /*  🔴 ★2026-09-22 (10부) [대표님] — 「골프온과 큐보드는 우선 승인 전까지 숨겼다가
+   *    승인 후 추가하는 걸로 하자」
+   *
+   *  [까닭]  홈 맨 아래 「함께 쓰는 서비스」 단추를 누르면
+   *    ★cue.myjae.kr · golf.myjae.kr 로 «떠납니다» (같은 창).
+   *    ⇒ PG 심사관이 ★심사 대상이 아닌 다른 도메인을 보게 됩니다.
+   *    ⇒ 그쪽은 사업자정보가 «한 곳» 뿐이고,
+   *      골프온에는 ★「200원이 빠집니다」 가 적혀 있는데 «실제로는 안 빠집니다».
+   *
+   *  ⛔ ★심사 «접수 전» 에 끄고, «통과 뒤» 에 켜십시오.
+   *     심사 «중» 에 켜고 끄면 «홈페이지 수정» 으로 보여 반려됩니다.
+   *  ⚠️ 이것은 «홈 카드» 가 아닙니다 — 자매 앱 바로가기입니다. */
+  sisterLinks: 'sister_links',
 } as const
 
 export interface HomeFlags {
@@ -64,13 +77,20 @@ export interface HomeFlags {
    *  ⛔ 기본값은 ★«꺼짐». 심사 끝나면 반드시 끄십시오.
    */
   reviewLogin: boolean
+  /**
+   *  ★2026-09-22 (10부) — 홈 맨 아래 「함께 쓰는 서비스」(큐보드·골프온).
+   *  ⛔ 기본값은 ★«꺼짐». 심사가 끝난 «뒤» 에 켜십시오 [대표님].
+   */
+  sisterLinks: boolean
 }
 
-export const HOME_FLAGS_OFF: HomeFlags = { examLuck: false, haerak: false, reviewLogin: false }
+export const HOME_FLAGS_OFF: HomeFlags = {
+  examLuck: false, haerak: false, reviewLogin: false, sisterLinks: false,
+}
 
 /** 토글 낱말 — 화면·창구·검사가 «이 목록» 으로 맞춥니다 */
 export type HomeFlagKey = keyof HomeFlags
-export const HOME_FLAG_LIST: HomeFlagKey[] = ['examLuck', 'haerak', 'reviewLogin']
+export const HOME_FLAG_LIST: HomeFlagKey[] = ['examLuck', 'haerak', 'reviewLogin', 'sisterLinks']
 
 /** 화면에서 부릅니다 — 못 읽으면 «꺼짐» */
 export async function fetchHomeFlags(): Promise<HomeFlags> {
@@ -83,6 +103,8 @@ export async function fetchHomeFlags(): Promise<HomeFlags> {
       haerak: d?.haerak === true,
       //  ⛔ ★«true 일 때만» 켜집니다 — 못 읽거나 이상하면 «닫힘» 입니다
       reviewLogin: d?.reviewLogin === true,
+      //  ⛔ ★«true 일 때만» 보입니다 — 못 읽으면 «숨김» 입니다
+      sisterLinks: d?.sisterLinks === true,
     }
   } catch {
     return HOME_FLAGS_OFF

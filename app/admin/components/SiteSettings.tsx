@@ -90,6 +90,25 @@ export default function SiteSettings() {
         <HomeFlagToggle flag="reviewLogin" showTitle={false} />
       </div>
 
+      {/*  🔴 ★2026-09-22 (10부) [대표님] — 자매 앱 바로가기 여닫기.
+        *  ⛔ 부품을 복사하지 «않았습니다» — 같은 HomeFlagToggle 에 낱말만 다르게. */}
+      <div className="rounded-2xl p-4"
+        style={{ background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.35)' }}>
+        <div className="text-sm font-bold mb-1" style={{ color: '#FAC775' }}>
+          🤝 큐보드·골프온 바로가기
+        </div>
+        <div className="text-xs mb-3" style={{ color: 'rgba(255,255,255,0.45)', lineHeight: 1.7 }}>
+          홈 맨 아래 <b>「함께 쓰는 서비스」</b> 줄이에요. 누르면 cue.myjae.kr · golf.myjae.kr 로 넘어가요.
+          <br />
+          <span style={{ color: '#f0a05a' }}>
+            ⛔ PG 심사 중에는 꺼 두세요. 심사 대상이 아닌 도메인을 심사관이 보게 됩니다.
+          </span>
+          <br />
+          ⚠️ 심사가 통과한 뒤에 켜세요. 심사 중에 켜고 끄면 「홈페이지 수정」으로 보여 반려됩니다.
+        </div>
+        <HomeFlagToggle flag="sisterLinks" showTitle={false} />
+      </div>
+
       <div className="rounded-2xl p-4"
         style={{ background: '#2C2C2A', border: '1px solid rgba(250,199,117,0.2)' }}>
         <div className="text-sm font-bold mb-1" style={{ color: '#FAC775' }}>⚙️ 사이트 테마 설정</div>

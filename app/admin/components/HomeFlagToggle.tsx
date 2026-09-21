@@ -24,6 +24,8 @@ const LABEL: Record<HomeFlagKey, string> = {
   haerak: HAERAK_NAME,
   //  ★2026-09-21 (10부) — 홈 카드가 «아닙니다». 심사관이 들어오는 문입니다.
   reviewLogin: '심사용 이메일 로그인',
+  //  ★2026-09-22 (10부) — 홈 맨 아래 «함께 쓰는 서비스» (큐보드·골프온)
+  sisterLinks: '큐보드·골프온 바로가기',
 }
 /** 토글 밑에 붙는 «무엇을 켜고 끄는가» — ⛔ 낱말마다 «다릅니다» */
 const SUB: Record<HomeFlagKey, string> = {
@@ -31,6 +33,7 @@ const SUB: Record<HomeFlagKey, string> = {
   haerak: '홈 카드 · 보관함 · 가격 표 줄',
   //  ★홈 카드가 «아닙니다» — 심사관이 들어오는 문입니다
   reviewLogin: '/login/review 화면을 열고 닫습니다',
+  sisterLinks: '홈 맨 아래 「함께 쓰는 서비스」 줄',
 }
 
 /** 켤 때 한 번 여쭙는 말 — ⛔ 비워 두면 안 묻습니다 */
@@ -40,6 +43,10 @@ const ASK: Record<HomeFlagKey, string> = {
   /*  🔴 켤 때 반드시 여쭙습니다 — ★열어 두면 «아무나» 이메일로 들어올 수 있습니다 */
   reviewLogin: '⚠️ PG 카드사 «심사관» 이 들어오는 문입니다.\n'
     + '⛔ 심사가 끝나면 ★반드시 «끄십시오». 열어 두면 이메일로 로그인할 수 있습니다.',
+  /*  ⚠️ 켤 때 여쭙습니다 — ★심사 «중» 에 켜면 반려입니다 */
+  sisterLinks: '⚠️ 누르면 ★cue.myjae.kr · golf.myjae.kr 로 «떠납니다».\n'
+    + '⛔ PG 심사 «중» 에는 켜지 마십시오 — 심사 대상이 아닌 도메인을 보게 됩니다.\n'
+    + '⇒ 심사가 «통과한 뒤» 에 켜십시오.',
 }
 
 export default function HomeFlagToggle(
@@ -64,9 +71,13 @@ export default function HomeFlagToggle(
     const next = !on
     /*  ⚠️ ★묻는 말이 낱말마다 다릅니다 —
      *     reviewLogin 은 «홈 카드» 가 아니라 «문» 이라 「보이게 할까요」 가 안 맞습니다. */
+    /*  ⚠️ ★낱말마다 묻는 말이 다릅니다 —
+     *     reviewLogin 은 «문», sisterLinks 는 «줄», 나머지는 «카드» 입니다. */
     const ask = flag === 'reviewLogin'
       ? `★심사용 이메일 로그인 문을 «열까요»?\n\n`
-      : `홈 화면에 「${NAME}」 카드를 보이게 할까요?\n\n`
+      : flag === 'sisterLinks'
+        ? `홈 맨 아래에 「함께 쓰는 서비스」 줄을 «보이게» 할까요?\n\n`
+        : `홈 화면에 「${NAME}」 카드를 보이게 할까요?\n\n`
     if (next && !window.confirm(ask + ASK[flag])) return
     setBusy(true)
     setMsg(null)
