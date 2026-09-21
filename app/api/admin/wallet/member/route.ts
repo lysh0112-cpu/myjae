@@ -39,6 +39,39 @@ function admin() {
   )
 }
 
+
+/**
+ *  🔴🔴 ★profiles.email 이 «비었을 때» auth 쪽에서 채워 옵니다 — 2026-09-21 (10부)
+ *
+ *  [겪은 일]  대표님 화면에 ★「회원 · 회원번호 d498454e」 로만 떴습니다.
+ *    ⇒ auth.users 에는 review@myjae.kr 이 ★있는데 profiles.email 은 «비어» 있었습니다.
+ *  [까닭]  profiles.email 을 채우는 곳은 ★/auth/welcome «한 곳» 뿐인데,
+ *    review 계정은 profiles 줄이 «이미 있어» ★welcome 을 안 거쳤습니다.
+ *    ⚠️ ★옛 이메일 회원 열둘도 «같을 수» 있습니다.
+ *
+ *  ⇒ ★auth.users 가 «늘 맞는 값» 입니다. 비었으면 거기서 가져옵니다.
+ *  ⛔ profiles 에 «되써 넣지» 않습니다 — 읽어서 보여 주기만 합니다.
+ *     (고치는 일은 손님 자료를 건드리는 것이라 대표님 승낙 없이 하지 않습니다)
+ *  ⚠️ 관리자 화면 «안» 에서만 씁니다. requireMaster 를 지난 뒤입니다.
+ */
+type WithEmail = { id: string; email?: string | null }
+async function fillEmail<T extends WithEmail>(
+  sb: ReturnType<typeof admin>, rows: T[],
+): Promise<T[]> {
+  const need = rows.filter(r => !(r.email ?? '').trim())
+  if (need.length === 0) return rows
+  const found = new Map<string, string>()
+  //  ⚠️ ★하나씩 물어봅니다 — 한 화면에 많아야 몇 줄입니다 (찾기 결과도 20줄 안팎).
+  for (const r of need) {
+    try {
+      const { data } = await sb.auth.admin.getUserById(r.id)
+      const e = (data?.user?.email ?? '').trim()
+      if (e) found.set(r.id, e)
+    } catch { /* ⛔ 못 읽어도 «멈추지» 않습니다 — 회원번호로 보여 주면 됩니다 */ }
+  }
+  return rows.map(r => (found.has(r.id) ? { ...r, email: found.get(r.id)! } : r))
+}
+
 export async function POST(request: Request) {
   try {
     /* ⛔⛔ 이 두 줄을 «맨 앞» 에서 빼지 마십시오 — 남의 지갑이 열립니다. */
@@ -66,7 +99,9 @@ export async function POST(request: Request) {
          ⛔ 오류로 다루지 마십시오. 충전을 «한 번도 안 받은» 분입니다. */
       const { data: w } = await sb
         .from('mc_wallet').select('balance').eq('user_id', userId).maybeSingle()
-      return NextResponse.json({ member: { ...p, balance: w?.balance ?? 0 } })
+      //  ★email 이 비었으면 auth 에서 채워 옵니다 (위 fillEmail 설명 참고)
+      const [pf] = await fillEmail(sb, [p as { id: string; email?: string | null }])
+      return NextResponse.json({ member: { ...pf, balance: w?.balance ?? 0 } })
     }
 
     // ── 닉네임·이름으로 찾기 ───────────────────────────────────────
@@ -83,14 +118,37 @@ export async function POST(request: Request) {
         .limit(20)
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-      const ids = (data ?? []).map(r => r.id)
+      /*  🔴🔴 ★2026-09-21 (10부) — profiles 만 훑으면 «못 찾는 분» 이 있습니다.
+       *    ⚠️ profiles.email 이 «비어» 있으면 「review」 로 쳐도 ★안 걸립니다.
+       *       (email 을 채우는 곳이 /auth/welcome 한 곳뿐이라 안 거친 분은 빕니다)
+       *    ⇒ ★auth 쪽에서도 이메일로 찾아 «보태» 줍니다.
+       *  ⛔ 이쪽을 빼지 마십시오 — 카카오가 아닌 분(심사용 계정 등)을 못 찾습니다.
+       *  ⚠️ ★한 쪽(1~1000명)만 봅니다. 회원이 아주 많아지면 그때 다시 보십시오. */
+      const rowsRaw = [...(data ?? [])] as { id: string; nickname: string | null; hangul_name: string | null; email: string | null }[]
+      try {
+        const { data: au } = await sb.auth.admin.listUsers({ page: 1, perPage: 1000 })
+        const hit = (au?.users ?? []).filter(u =>
+          (u.email ?? '').toLowerCase().includes(key.toLowerCase()))
+        const have = new Set(rowsRaw.map(r => r.id))
+        for (const u of hit) {
+          if (have.has(u.id) || rowsRaw.length >= 20) continue
+          //  ⚠️ profiles 줄이 «있어야» 회원입니다 — 없으면 지갑도 없습니다
+          const { data: pr } = await sb
+            .from('profiles').select('id, nickname, hangul_name, email').eq('id', u.id).maybeSingle()
+          if (pr) rowsRaw.push({ ...pr, email: pr.email ?? u.email ?? null })
+        }
+      } catch { /* ⛔ 못 읽어도 «멈추지» 않습니다 — profiles 쪽 결과만 보여 줍니다 */ }
+
+      const ids = rowsRaw.map(r => r.id)
       const { data: wallets } = ids.length
         ? await sb.from('mc_wallet').select('user_id, balance').in('user_id', ids)
         : { data: [] as { user_id: string; balance: number }[] }
 
       const bal = new Map((wallets ?? []).map(w => [w.user_id, w.balance]))
+      //  ★찾기 결과도 «같은 길» 로 채웁니다 — ⛔ 한쪽만 고치면 목록과 상세가 갈립니다
+      const rows = await fillEmail(sb, rowsRaw)
       return NextResponse.json({
-        list: (data ?? []).map(r => ({ ...r, balance: bal.get(r.id) ?? 0 })),
+        list: rows.map(r => ({ ...r, balance: bal.get(r.id) ?? 0 })),
       })
     }
 

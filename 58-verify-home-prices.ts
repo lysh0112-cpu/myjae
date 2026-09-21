@@ -469,6 +469,21 @@ function main() {
     //  ⛔ 이름을 «크게» — 작은 회색 한 줄이라 대표님이 못 보셨습니다
     ok(/text-base font-bold[\s\S]{0,120}memberName\(picked\)/.test(ui),
       '⛔ ★이름을 «크게» 그립니다 (작은 회색 글씨로 되돌리지 마십시오)')
+    /*  🔴🔴 ★2026-09-21 — profiles.email 이 «비어» 있는 분이 있습니다.
+     *    ⚠️ 그 칸을 채우는 곳은 ★/auth/welcome «한 곳» 뿐인데,
+     *       profiles 줄이 «이미 있는» 분은 welcome 을 안 거쳐 ★영영 빕니다.
+     *       ⇒ 대표님 화면에 ★「회원 · 회원번호 d498454e」 로만 떴습니다.
+     *    ⇒ ★auth.users 가 «늘 맞는 값» 입니다. 비었으면 거기서 가져옵니다. */
+    ok(/async function fillEmail/.test(api) && /auth\.admin\.getUserById/.test(api),
+      '🔴🔴 ★email 이 비면 auth 에서 «채워» 옵니다 (profiles 만 믿지 않습니다)')
+    ok(/const \[pf\] = await fillEmail/.test(api) && /const rows = await fillEmail/.test(api),
+      '⛔ ★«두 길»(하나 보기·찾기)에 다 붙였습니다')
+    ok(!/from\('profiles'\)[\s\S]{0,200}update\(/.test(api),
+      '⛔ ★읽어서 «보여 주기만» 합니다 (손님 자료를 되써 넣지 않습니다)')
+    //  ⛔ profiles 만 훑으면 «못 찾는 분» 이 있습니다 — auth 쪽에서도 찾는가
+    ok(/auth\.admin\.listUsers/.test(api),
+      '🔴 ★auth 쪽에서도 «이메일로 찾습니다» (email 이 빈 분도 찾힙니다)')
+
     //  ⛔ memberName 을 안 거치고 칸을 «직접» 쓰지 않았는지
     ok(!/\{picked\.nickname\}|\{m\.nickname\}/.test(ui),
       '⛔ ★memberName 을 거칩니다 (칸을 직접 쓰면 사람이 «사라집니다»)')
