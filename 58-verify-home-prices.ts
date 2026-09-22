@@ -722,6 +722,41 @@ function main() {
       '⚠️ ★충전은 «7일 내 청약철회» 입니다 (약관 제8조 1항)')
     ok(!/결과를 확인하신 뒤에는/.test(payLive),
       '⛔ ★AI 콘텐츠용 문구를 «가져다 쓰지» 않았습니다 (물건이 아닙니다)')
+
+    /*  ══ 🔴🔴 ④ 결제수단을 «두 번» 그리지 않는가 ════════════════════
+     *  [대표님 2026-09-22] 「카드는 여기서 막히네」
+     *    금액 단추(10만원)를 누르면 ★「결제 수단을 불러오지 못했어요」 가 뜨고
+     *    [충전하기] 가 ★«영영» 안 켜졌습니다.
+     *  [까닭] 토스는 ★한 페이지에 결제 UI 를 «두 번» 못 그립니다 —
+     *    두 번째 render 는 PaymentMethodsWidgetAlreadyRenderedError 로 «던집니다»
+     *    (tosspayments-sdk/types/index.d.ts:528 · 약관은 561).
+     *    ⇒ 그리는 effect 가 ★amount 를 목록에 달고 있어, 금액이 바뀔 때마다
+     *      다시 그렸고, catch 로 빠져 ready 가 «안» 켜졌습니다.
+     *  ⛔ ★낱말을 못 박지 않고 «effect 를 갈라» 그 «목록» 을 봅니다.
+     * ══════════════════════════════════════════════════════════════ */
+    const effects = payLive.split('useEffect(').slice(1)
+    const depsOf = (b: string) => (b.match(/\},\s*\[([^\]]*)\]\s*\)/) || [])[1] ?? ''
+    const drawBlk = effects.find(b => /renderPaymentMethods/.test(b)) ?? ''
+    const amtBlk = effects.find(b => /setAmount/.test(b) && !/renderPaymentMethods/.test(b)) ?? ''
+
+    ok(drawBlk !== '',
+      '★결제수단을 «그리는» 자리가 있습니다 (renderPaymentMethods)')
+    ok(drawBlk !== '' && !/\bamount\b/.test(depsOf(drawBlk)),
+      '🔴🔴 ⛔ ★그리는 effect 가 «amount 를 안 봅니다» (다시 그리면 토스가 던집니다)')
+    /*  ⚠️ ★«있는지» 만 보면 안 됩니다 — 처음 만들 때 그렇게 했다가
+     *     자물쇠를 통째로 빼도 ★통과했습니다 (catch 의 «풀어 주는» 줄만 남아서).
+     *     ⇒ ★«막는 자리»(되돌아가는 줄)와 «거는 자리» 를 «따로» 봅니다. */
+    ok(/if \([^)]*drawn\.current[^)]*\)\s*return/.test(drawBlk) && /drawn\.current = true/.test(drawBlk),
+      '🔴 ⛔ ★한 번만 그리게 «자물쇠(ref)» 로 «되돌아갑니다» (setState 는 곧바로 안 바뀝니다)')
+    ok(amtBlk !== '' && /\bamount\b/.test(depsOf(amtBlk)),
+      '🔴 ★금액이 바뀌면 «setAmount 만» 부르는 자리가 «따로» 있습니다')
+    ok(!/setReady\(false\)/.test(payLive),
+      '⛔ ★금액을 고를 때 ready 를 «내리지» 않습니다 ([충전하기] 가 영영 안 켜집니다)')
+
+    /*  ⚠️ 바꾸자마자 누르면 «옛 금액» 이 갈 수 있습니다 — 직전에 한 번 더 알립니다 */
+    const payFn = (payLive.match(/async function pay\(\)[\s\S]*?requestPayment/) || [''])[0]
+    ok(/setAmount/.test(payFn),
+      '🔴 ⛔ ★결제 «직전» 에 금액을 한 번 더 알려 줍니다 («옛 금액» 결제를 막습니다)')
   }
 
   /* ══ ⑮ 🔴🔴 «값을 받는가» — 결제 시트 = 실제 차감 ═══════════════

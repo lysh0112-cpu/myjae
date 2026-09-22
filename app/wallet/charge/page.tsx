@@ -53,6 +53,16 @@ export default function ChargePage() {
   const [err, setErr] = useState('')
   /** ★손님마다 다른 열쇠 — 토스가 «누구의 결제인지» 를 가릅니다 */
   const custKey = useRef<string>('')
+  /**
+   *  ⛔ ★결제수단·약관은 «한 번만» 그립니다.
+   *  🔴 토스는 ★한 페이지에 결제 UI 를 «두 번» 못 그립니다 —
+   *     두 번째 render 는 ★PaymentMethodsWidgetAlreadyRenderedError 로 «던집니다»
+   *     (tosspayments-sdk/types/index.d.ts:528 · 약관은 561).
+   *  ⇒ 다시 그리려면 ★destroy() 부터 해야 합니다. 우리는 «안 그립니다».
+   */
+  const drawn = useRef(false)
+  /** ★지금 고른 금액 — 그리는 effect 가 «다시 돌지» 않게 값만 들고 다닙니다 */
+  const amountRef = useRef(CHARGE_AMOUNTS[1])
 
   /*  ① 로그인 확인 + 결제위젯 준비
    *  ⚠️ ★로그인해야 합니다 — 누구 지갑에 넣을지 알아야 하기 때문입니다. */
@@ -78,27 +88,53 @@ export default function ChargePage() {
     return () => { alive = false }
   }, [router])
 
-  /*  ② 금액이 정해지면 결제수단·약관을 그립니다
-   *  ⚠️ ★금액을 «먼저» 알려 줘야 합니다 (setAmount). 안 그러면 위젯이 안 그려집니다.
-   *  ⛔ 금액이 바뀌면 ★다시 알려 줘야 합니다 — 안 그러면 «옛 금액» 으로 결제됩니다. */
+  /*  ② 결제수단·약관을 ★«한 번만» 그립니다
+   *  ⚠️ ★금액을 «먼저» 알려 줘야 합니다 (setAmount). 안 그러면 NotSetupAmountError.
+   *
+   *  🔴🔴 [2026-09-22 대표님] 「카드는 여기서 막히네」 —
+   *     금액 단추(10만원)를 누르면 ★「결제 수단을 불러오지 못했어요」 가 뜨고
+   *     [충전하기] 가 ★«영영» 안 켜졌습니다.
+   *     [까닭] 이 effect 가 ★amount 를 목록에 달고 있어, 금액이 바뀔 때마다
+   *       ★render 를 «다시» 불렀습니다 ⇒ 토스가 «이미 그렸다» 며 던졌고,
+   *       catch 로 빠져 ★setReady(true) 를 «못» 지났습니다.
+   *     ⇒ 처음 뜬 금액(10,000)으로는 되고, ★«바꾸면» 막혔습니다.
+   *  ⛔ 이 목록에 ★amount 를 «다시 넣지» 마십시오. 같은 자리가 다시 막힙니다.
+   *  ⇒ 금액이 바뀌면 ★setAmount 만 부릅니다 (아래 ③). */
   useEffect(() => {
-    if (!widgets || amount <= 0) return
+    if (!widgets || drawn.current) return
+    drawn.current = true
     let alive = true
     ;(async () => {
       try {
-        await widgets.setAmount({ currency: 'KRW', value: amount })
+        await widgets.setAmount({ currency: 'KRW', value: amountRef.current })
         await Promise.all([
           //  ⚠️ ★variantKey 를 안 줍니다 — 토스가 «주는 대로 다» 보여 줍니다 [대표님]
           widgets.renderPaymentMethods({ selector: '#toss-methods' }),
           widgets.renderAgreement({ selector: '#toss-agreement' }),
         ])
-        if (alive) setReady(true)
+        if (alive) { setReady(true); setErr('') }
       } catch {
+        //  ⚠️ ★자물쇠를 풀어 둡니다 — 다시 들어올 길이 «막히지» 않게
+        drawn.current = false
         if (alive) setErr('결제 수단을 불러오지 못했어요.')
       }
     })()
     return () => { alive = false }
-  }, [widgets, amount])
+  }, [widgets])
+
+  /*  ③ 금액이 바뀌면 ★«알려만» 줍니다 — 다시 «그리지» 않습니다
+   *  ⚠️ 직접 입력은 글자마다 바뀌므로 ★조금 기다렸다 보냅니다 (250ms).
+   *  ⛔ 여기에 render 를 부르지 마십시오 — ②의 까닭 그대로입니다. */
+  useEffect(() => {
+    if (!widgets || !ready || amount < 1000) return
+    let alive = true
+    const t = setTimeout(() => {
+      widgets.setAmount({ currency: 'KRW', value: amount })
+        .then(() => { if (alive) setErr('') })
+        .catch(() => { if (alive) setErr('금액을 바꾸지 못했어요. 새로고침한 뒤 다시 해 주세요.') })
+    }, 250)
+    return () => { alive = false; clearTimeout(t) }
+  }, [widgets, ready, amount])
 
   /*  ③ 결제창 띄우기
    *  ⚠️ orderId 는 ★«겹치지 않는» 값이라야 합니다 (토스 규칙 6~64자).
@@ -109,6 +145,9 @@ export default function ChargePage() {
     setErr('')
     const orderId = `myjae_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
     try {
+      //  🔴 ⛔ ★결제 «직전» 에 금액을 한 번 더 알려 줍니다 —
+      //     ③이 조금 기다렸다 보내므로, 바꾸자마자 누르면 ★«옛 금액» 이 갈 수 있습니다.
+      await widgets.setAmount({ currency: 'KRW', value: amount })
       await widgets.requestPayment({
         orderId,
         orderName: `명연재 지갑 충전 ${amount.toLocaleString()}원`,
@@ -123,7 +162,14 @@ export default function ChargePage() {
     }
   }
 
-  const pick = (n: number) => { setAmount(n); setCustom(''); setReady(false) }
+  /*  ⛔ ★ready 를 «내리지» 않습니다 — 위젯은 그대로 있고 «금액만» 바뀝니다.
+   *     내리면 ②가 다시 안 돌아 [충전하기] 가 ★영영 안 켜집니다 (대표님이 밟으신 자리). */
+  const pick = (n: number) => {
+    setAmount(n)
+    amountRef.current = n
+    setCustom('')
+    setErr('')
+  }
 
   return (
     <main style={{
@@ -177,9 +223,11 @@ export default function ChargePage() {
             onChange={e => {
               const v = e.target.value
               setCustom(v)
-              setReady(false)
+              setErr('')
               const n = Number(v)
-              setAmount(Number.isFinite(n) ? Math.floor(n) : 0)
+              const got = Number.isFinite(n) ? Math.floor(n) : 0
+              setAmount(got)
+              amountRef.current = got
             }}
             style={{
               flex: 1, height: 42, borderRadius: 10, padding: '0 12px',
