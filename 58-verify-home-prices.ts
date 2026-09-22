@@ -791,6 +791,23 @@ function main() {
         ok(!/사업자등록번호 \{COMPANY\.bizNo\}/.test(src),
           `⛔ ★${name} — «부품» 을 씁니다 (값을 베껴 적지 않았습니다)`)
       }
+      /*  🔴🔴 ★«어디에» 들어갔는지도 봅니다 — «있는지» 만으로는 모자랍니다.
+       *  ⚠️ [2026-09-23] 제가 ★세 번 엉뚱한 자리에 넣었습니다 —
+       *     ① 맨 마지막 </div> 앞 ⇒ ★«회원 카드 안» 에 들어가 화면이 깨졌습니다
+       *     ② 첫 100vh 상자     ⇒ ★«로딩 화면 안»
+       *     ③ 첫 <main>        ⇒ ★«빈 화면 갈래 안»
+       *     ⇒ 대표님이 ★화면을 보고 찾으셨습니다. 그물은 못 잡았습니다.
+       *  ⇒ ★푸터 «앞» 에 «진짜 내용» 이 있는지, «로딩 갈래» 가 아닌지 봅니다. */
+      for (const [path, name] of FOOT) {
+        const src = strip(R(path))
+        const at = src.indexOf('<CompanyFooter />')
+        const seg = at < 0 ? '' : src.slice(Math.max(0, at - 1400), at)
+        const real = /<\/main>|button|HomeBottomNav|WalletPanel/.test(seg)
+        const loading = /if \(loading\)|=== null\)|불러오는 중|return <div[^>]*\/>/.test(seg.slice(-900))
+        ok(at >= 0 && real && !loading,
+          `🔴🔴 ⛔ ★${name} — 푸터가 «진짜 화면» 에 있습니다 (로딩·빈 갈래가 아닙니다)`)
+      }
+
       //  ⛔ 값은 ★한 곳에서만 — 신고번호가 나오면 그 한 곳만 채우면 됩니다
       const foot = strip(R('app/components/common/CompanyFooter.tsx'))
       ok(/COMPANY\.bizNo/.test(foot) && /COMPANY\.mailOrderNo/.test(foot),

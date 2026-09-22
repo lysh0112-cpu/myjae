@@ -79,6 +79,8 @@ function WalletInner() {
         <div style={{ fontSize: 13, color: '#8a7565', textAlign: 'center', marginTop: 60 }}>
           불러오는 중…
         </div>
+      
+
       </main>
     )
   }
@@ -105,11 +107,15 @@ function WalletInner() {
         borderRadius: 14, padding: 16,
       }}>
         <WalletPanel big />
-        {/*  🔴 ★2026-09-23 (11부) [대표님 「홈이 아닌 화면에 사업자정보는 없는데」]
-          *  ⛔ PG 심사가 ★«모든 화면 하단» 을 봅니다. 지우지 마십시오.
-          *  ⛔ 값을 여기에 적지 마십시오 — companyInfo.ts 한 곳에서 옵니다. */}
-        <CompanyFooter />
+        
       </div>
+
+      {/*  🔴 ★2026-09-23 (11부) [대표님 「홈이 아닌 화면에 사업자정보는 없는데」]
+        *  ⛔ PG 심사가 ★«모든 화면 하단» 을 봅니다. 지우지 마십시오.
+        *  ⚠️ ★자리는 «진짜 화면» 의 </main> 앞입니다.
+        *     ⛔ 이 파일에는 ★다른 갈래(빈 화면·로딩)가 «둘» 더 있습니다.
+        *       기계로 찾으면 그쪽에 들어갑니다 — 2026-09-23 에 제가 그랬습니다. */}
+      <CompanyFooter />
     </main>
   )
 }

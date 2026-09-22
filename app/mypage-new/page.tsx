@@ -450,7 +450,10 @@ export default function MyPageNew() {
   const isMaster = profile?.role === 'master'
 
   if (loading) {
-    return <div style={{ minHeight: '100vh', background: '#FDF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5c3a1e', fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>불러오는 중…</div>
+    return <div style={{ minHeight: '100vh', background: '#FDF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5c3a1e', fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>불러오는 중…
+        
+      
+      </div>
   }
 
   const card: React.CSSProperties = { background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 14, padding: 14, marginBottom: 12 }
@@ -869,6 +872,15 @@ export default function MyPageNew() {
 
       </main>
 
+      {/*  🔴 ★2026-09-23 (11부) [대표님 「홈이 아닌 화면에 사업자정보는 없는데」]
+        *  ⛔ PG 심사가 ★«모든 화면 하단» 을 봅니다. 지우지 마십시오.
+        *  ⛔ 값을 여기에 적지 마십시오 — companyInfo.ts 한 곳에서 옵니다.
+        *  ⚠️ ★자리는 «</main> 뒤 · 하단바 앞» — 홈과 «같은» 자리입니다.
+        *     ⛔ 기계로 «맨 마지막 </div> 앞» 이나 «첫 100vh 상자» 에 넣지 마십시오 —
+        *       그러면 ★회원 카드 «안» 이나 «로딩 화면» 안으로 들어갑니다.
+        *       (2026-09-23 에 제가 두 번 그랬고, 대표님이 화면에서 찾으셨습니다) */}
+      <CompanyFooter />
+
       {/* 하단 고정 네비게이션 (홈과 동일한 피치톤) */}
       {/* ★48부 8차 — 하단바 ★부품 (HomeBottomNav). ⛔ 여기에 다시 적지 마십시오. */}
       <HomeBottomNav />
@@ -888,10 +900,7 @@ function GanjiBox({ char, el }: { char: string; el: string }) {
     <div style={{ width: 38, height: 46, borderRadius: 7, background: bg, border: `1px solid ${bd}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
       <span style={{ fontSize: 19, fontWeight: 600, color, lineHeight: 1 }}>{char}</span>
       {el && <span style={{ fontSize: 10.5, fontWeight: 600, color: sub, marginTop: 1 }}>{EL_HAN[el]}</span>}
-      {/*  🔴 ★2026-09-23 (11부) [대표님 「홈이 아닌 화면에 사업자정보는 없는데」]
-          *  ⛔ PG 심사가 ★«모든 화면 하단» 을 봅니다. 지우지 마십시오.
-          *  ⛔ 값을 여기에 적지 마십시오 — companyInfo.ts 한 곳에서 옵니다. */}
-        <CompanyFooter />
+      
       </div>
   )
 }
