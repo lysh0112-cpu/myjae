@@ -24,6 +24,7 @@
 // ══════════════════════════════════════════════════════════════════════
 
 import { useEffect, useRef, useState } from 'react'
+import CompanyFooter from '@/app/components/common/CompanyFooter'
 import { useRouter } from 'next/navigation'
 import { loadTossPayments, type TossPaymentsWidgets } from '@tosspayments/tosspayments-sdk'
 import { supabase } from '@/lib/supabase'
@@ -270,6 +271,10 @@ export default function ChargePage() {
         충전한 금액은 1년간 쓰실 수 있어요.
         <br />
         쓰지 않은 충전금은 충전일로부터 7일 안에 취소하실 수 있고, 그 뒤에도 환불을 요청하실 수 있어요.
+        {/*  🔴 ★2026-09-23 (11부) [대표님 「홈이 아닌 화면에 사업자정보는 없는데」]
+          *  ⛔ PG 심사가 ★«모든 화면 하단» 을 봅니다. 지우지 마십시오.
+          *  ⛔ 값을 여기에 적지 마십시오 — companyInfo.ts 한 곳에서 옵니다. */}
+        <CompanyFooter />
       </div>
 
       <button type="button" onClick={pay}

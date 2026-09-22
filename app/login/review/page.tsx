@@ -30,6 +30,7 @@
 // ══════════════════════════════════════════════════════════════════════
 
 import { useEffect, useState } from 'react'
+import CompanyFooter from '@/app/components/common/CompanyFooter'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { fetchHomeFlags } from '@/lib/homeFlags'
@@ -159,6 +160,10 @@ export default function ReviewLoginPage() {
 
         {/*  ⛔ ★들어오는 길만 둡니다. 가입하거나 비밀번호를 찾는 길은 없습니다. */}
       </div>
-    </div>
+      {/*  🔴 ★2026-09-23 (11부) [대표님 「홈이 아닌 화면에 사업자정보는 없는데」]
+          *  ⛔ PG 심사가 ★«모든 화면 하단» 을 봅니다. 지우지 마십시오.
+          *  ⛔ 값을 여기에 적지 마십시오 — companyInfo.ts 한 곳에서 옵니다. */}
+        <CompanyFooter />
+      </div>
   )
 }

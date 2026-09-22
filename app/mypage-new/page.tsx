@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import CompanyFooter from '@/app/components/common/CompanyFooter'
 //  ★2026-09-09 — 지갑 관문은 lib/wallet/consultGate.ts «한 곳» 입니다
 import { refundConsultByRef, WALLET_MSG } from '@/lib/wallet/consultGate'
 import { EL_BG, EL_BD, EL_C, EL_C_SUB, EL_HAN } from '@/lib/saju/ohaengColor'
@@ -887,6 +888,10 @@ function GanjiBox({ char, el }: { char: string; el: string }) {
     <div style={{ width: 38, height: 46, borderRadius: 7, background: bg, border: `1px solid ${bd}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
       <span style={{ fontSize: 19, fontWeight: 600, color, lineHeight: 1 }}>{char}</span>
       {el && <span style={{ fontSize: 10.5, fontWeight: 600, color: sub, marginTop: 1 }}>{EL_HAN[el]}</span>}
-    </div>
+      {/*  🔴 ★2026-09-23 (11부) [대표님 「홈이 아닌 화면에 사업자정보는 없는데」]
+          *  ⛔ PG 심사가 ★«모든 화면 하단» 을 봅니다. 지우지 마십시오.
+          *  ⛔ 값을 여기에 적지 마십시오 — companyInfo.ts 한 곳에서 옵니다. */}
+        <CompanyFooter />
+      </div>
   )
 }

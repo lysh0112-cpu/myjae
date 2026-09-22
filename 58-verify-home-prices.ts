@@ -770,6 +770,32 @@ function main() {
           `🔴 ⛔ ★${name} — 손님에게 «상담» 을 말하지 않습니다`)
       }
 
+      /*  ══ 🔴🔴 사업자정보가 «모든 화면 하단» 에 있는가 ═══════════
+       *  [대표님 2026-09-23] 「홈이 아닌 화면에 사업자정보는 없는데」
+       *  [까닭] 45부에 ★홈 파일 «안» 에 박아 두어, 다른 화면에는 «한 줄도» 없었습니다.
+       *  ⇒ 🔴 PG 심사가 ★「모든 화면 하단」 을 봅니다 (10부 6-3 에도 적혀 있습니다).
+       *  ⛔ ★부품을 «복사» 하지 않았는지도 봅니다 — 값은 companyInfo.ts 한 곳뿐입니다. */
+      const FOOT: [string, string][] = [
+        ['app/home-new/page.tsx', '홈'],
+        ['app/wallet/page.tsx', '내 지갑'],
+        ['app/wallet/charge/page.tsx', '충전 화면'],
+        ['app/inquiry/page.tsx', '문의사항'],
+        ['app/login/page.tsx', '로그인'],
+        ['app/login/review/page.tsx', '심사용 로그인'],
+        ['app/mypage-new/page.tsx', '마이페이지'],
+      ]
+      for (const [path, name] of FOOT) {
+        const src = strip(R(path))
+        ok(/<CompanyFooter \/>/.test(src),
+          `🔴 ⛔ ★${name} 아래에 «사업자정보» 가 있습니다 (PG 심사가 봅니다)`)
+        ok(!/사업자등록번호 \{COMPANY\.bizNo\}/.test(src),
+          `⛔ ★${name} — «부품» 을 씁니다 (값을 베껴 적지 않았습니다)`)
+      }
+      //  ⛔ 값은 ★한 곳에서만 — 신고번호가 나오면 그 한 곳만 채우면 됩니다
+      const foot = strip(R('app/components/common/CompanyFooter.tsx'))
+      ok(/COMPANY\.bizNo/.test(foot) && /COMPANY\.mailOrderNo/.test(foot),
+        '⛔ ★푸터가 companyInfo 에서 값을 가져옵니다 (통신판매업 번호 자리도 있습니다)')
+
       //  ⚠️ 연재쌤 작업 화면은 ★«살아» 있어야 합니다 [대표님]
       const staff = strip(R('app/manseryeok/consultant/page.tsx'))
       ok(!/CONSULT_OPEN/.test(staff) && staff.length > 0,

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import CompanyFooter from '@/app/components/common/CompanyFooter'
 /*  ⚠️ ★2026-09-15 (10부) — 로고는 BrandLockup 부품 안에 있습니다. */
 import BrandLockup from '@/app/components/common/BrandLockup'
 import { useSisterLinks } from '@/app/components/common/useSisterLinks'
@@ -204,6 +205,10 @@ export default function LoginPage() {
         </div>
 
       </div>
-    </div>
+      {/*  🔴 ★2026-09-23 (11부) [대표님 「홈이 아닌 화면에 사업자정보는 없는데」]
+          *  ⛔ PG 심사가 ★«모든 화면 하단» 을 봅니다. 지우지 마십시오.
+          *  ⛔ 값을 여기에 적지 마십시오 — companyInfo.ts 한 곳에서 옵니다. */}
+        <CompanyFooter />
+      </div>
   )
 }
