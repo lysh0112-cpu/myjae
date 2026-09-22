@@ -98,7 +98,10 @@ export default function SiteSettings() {
           🤝 큐보드·골프온 바로가기
         </div>
         <div className="text-xs mb-3" style={{ color: 'rgba(255,255,255,0.45)', lineHeight: 1.7 }}>
-          홈 맨 아래 <b>「함께 쓰는 서비스」</b> 줄이에요. 누르면 cue.myjae.kr · golf.myjae.kr 로 넘어가요.
+          큐보드·골프온이 나오는 <b>일곱 자리</b>를 한꺼번에 여닫아요 —
+          홈 줄 · 로그인 화면 · 로그인 시트 · 지갑 거르개 · 지갑 내역 딱지 · 충전 안내 · 약관 제2조.
+          <br />
+          홈 줄을 누르면 cue.myjae.kr · golf.myjae.kr 로 넘어가요.
           <br />
           <span style={{ color: '#f0a05a' }}>
             ⛔ PG 심사 중에는 꺼 두세요. 심사 대상이 아닌 도메인을 심사관이 보게 됩니다.

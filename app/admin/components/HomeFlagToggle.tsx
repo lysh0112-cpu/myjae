@@ -76,7 +76,8 @@ export default function HomeFlagToggle(
     const ask = flag === 'reviewLogin'
       ? `★심사용 이메일 로그인 문을 «열까요»?\n\n`
       : flag === 'sisterLinks'
-        ? `홈 맨 아래에 「함께 쓰는 서비스」 줄을 «보이게» 할까요?\n\n`
+        ? `큐보드·골프온을 손님 화면에 «보이게» 할까요?\n\n`
+          + `(홈 줄 · 로그인 · 지갑 · 충전 · 약관 — ★일곱 자리가 «함께» 돌아옵니다)\n\n`
         : `홈 화면에 「${NAME}」 카드를 보이게 할까요?\n\n`
     if (next && !window.confirm(ask + ASK[flag])) return
     setBusy(true)
@@ -88,9 +89,16 @@ export default function HomeFlagToggle(
     onChange?.(r.data[flag])
     setMsg({
       ok: true,
-      text: r.data[flag]
-        ? '✓ 홈에 보이게 했어요 (손님 화면은 새로고침하면 보여요)'
-        : '✓ 홈에서 숨겼어요',
+      /*  ⚠️ ★2026-09-22 (11부) — sisterLinks 는 «홈» 하나가 아닙니다.
+       *     ⇒ 「홈에서 숨겼어요」 라고만 하면 ★대표님이 «홈만» 숨긴 줄 아십니다.
+       *       실제로 10부에 그렇게 믿고 넘어가 ★여섯 자리가 남아 있었습니다. */
+      text: flag === 'sisterLinks'
+        ? (r.data[flag]
+          ? '✓ 일곱 자리에 모두 다시 보이게 했어요 (손님 화면은 새로고침하면 보여요)'
+          : '✓ 일곱 자리에서 모두 숨겼어요 (홈 · 로그인 · 지갑 · 충전 · 약관)')
+        : (r.data[flag]
+          ? '✓ 홈에 보이게 했어요 (손님 화면은 새로고침하면 보여요)'
+          : '✓ 홈에서 숨겼어요'),
     })
   }
 
