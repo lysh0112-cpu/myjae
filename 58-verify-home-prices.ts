@@ -649,6 +649,81 @@ function main() {
       '⚠️ ★토글 밑 설명이 «이 줄» 을 가리킵니다')
   }
 
+  /* ══ ⑭ 🔴🔴 토스 결제 — 충전(지갑에 «넣는» 길) ═══════════════════
+   *  ★2026-09-22 (10부) 신설.
+   *
+   *  ⚠️ 지금까지 지갑은 ★«빼는» 것만 있었습니다. «넣는» 길은
+   *     관리자가 손으로 [+5천] 을 누르는 것뿐이었습니다.
+   *
+   *  🔴🔴 돈이 오가는 자리라 ★지켜야 할 것이 셋입니다 —
+   *     ① 시크릿 키가 ★화면에 «없어야» 합니다
+   *     ② 금액은 ★토스가 «돌려준» 값만 써야 합니다 (손님이 보낸 값 ❌)
+   *     ③ 새로고침해도 ★«두 번» 안 들어가야 합니다
+   * ════════════════════════════════════════════════════════════════ */
+  head('⑭ 🔴🔴 토스 결제 — 충전')
+  {
+    const pay = R('app/wallet/charge/page.tsx')
+    const payLive = strip(pay)
+    const api = R('app/api/toss/confirm/route.ts')
+    const apiLive = strip(api)
+    const done = strip(R('app/wallet/charge/done/page.tsx'))
+    const panel = strip(R('app/components/common/WalletPanel.tsx'))
+
+    /*  🔴🔴 ① 시크릿 키가 화면에 «없는가» — 가장 위험한 자리 */
+    /*  ⚠️ ★주석을 걷어내고 봅니다 — 주석에 «시크릿 키를 적지 말라» 는
+     *     경고문이 있어서, 그것까지 세면 ★«헛 실패» 가 납니다. */
+    ok(!/gsk_|sk_live|_sk_/.test(payLive),
+      '🔴🔴 ⛔ ★충전 화면에 «시크릿 키» 가 없습니다 (손님에게 드러나면 안 됩니다)')
+    ok(/test_gck_/.test(pay),
+      '★클라이언트 키는 «주문서형»(gck)입니다 (구버전 ck 와 섞으면 오류)')
+    ok(/process\.env\.TOSS_SECRET_KEY/.test(api),
+      '⛔ ★시크릿 키는 «서버» 에서만 읽습니다')
+    ok(!/TOSS_SECRET_KEY/.test(payLive),
+      '⛔ ★화면 코드가 시크릿 키를 «쳐다보지도» 않습니다')
+
+    /*  🔴🔴 ② 금액을 «토스가 돌려준 값» 으로 쓰는가
+     *    손님이 100원 내고 「10만원 넣어 달라」 고 보낼 수 있습니다. */
+    ok(/const won = Number\(paid\.totalAmount\)/.test(apiLive),
+      '🔴🔴 ⛔ ★토스가 «돌려준» 금액만 씁니다 (손님이 보낸 값이 아닙니다)')
+    ok(/p_amount: won/.test(apiLive),
+      '⛔ ★지갑에 넣는 값도 «그 금액» 입니다')
+
+    /*  🔴 ③ 새로고침해도 두 번 안 들어가는가 */
+    ok(/\.eq\('memo', orderId\)/.test(apiLive) && /already/.test(apiLive),
+      '🔴 ⛔ ★이미 넣은 결제면 «다시 안» 넣습니다 (새로고침 두 번 방지)')
+    ok(/'Idempotency-Key': orderId/.test(apiLive),
+      '★토스에도 «멱등키» 를 보냅니다 (같은 승인이 두 번 안 가게)')
+    ok(/sent\.current/.test(done),
+      '★성공 화면도 승인을 «한 번만» 부릅니다')
+
+    /*  ⛔ 누구의 지갑인가 — 화면이 보낸 user_id 를 믿지 않는가 */
+    ok(/auth\.user\?\.id/.test(apiLive) && !/body\.userId|body\.user_id/.test(apiLive),
+      '⛔⛔ ★로그인한 «그 사람» 의 지갑에만 넣습니다 (화면 값을 안 믿습니다)')
+    //  ⛔ 지갑은 wallet_charge 로만 — 표를 직접 고치면 조용히 0줄이 바뀝니다
+    ok(/rpc\('wallet_charge'/.test(apiLive) && !/from\('mc_wallet'\)/.test(apiLive),
+      '⛔ ★wallet_charge 로 넣습니다 (mc_wallet 을 직접 고치지 않습니다)')
+
+    /*  ⚠️ 돈은 빠졌는데 «안 들어간» 경우 — 성공이라 하지 않는가 */
+    ok(/승인됐으나 충전 실패/.test(api) && /고객센터로 알려/.test(apiLive),
+      '🔴 ⛔ ★넣기에 실패하면 «성공» 이라 하지 않습니다 (사실대로 알립니다)')
+
+    /*  ⚠️ 충전 금액 — 대표님이 정하신 표를 «그대로» 쓰는가 */
+    ok(/CHARGE_AMOUNTS/.test(payLive) && !/\[5000, 10000/.test(pay),
+      '⛔ ★금액을 «다시 적지» 않았습니다 (CHARGE_AMOUNTS 한 곳 · 대표님 2026-09-08)')
+
+    /*  🔴 충전 단추가 «실제로» 이어졌는가 — 옛 알림으로 되돌아가지 않았는지 */
+    ok(/window\.location\.href = '\/wallet\/charge'/.test(panel),
+      "🔴 ★[충전하기] 가 «충전 화면» 으로 갑니다")
+    ok(!/충전 기능을 준비하고 있어요/.test(panel),
+      '⛔ ★「준비하고 있어요」 알림으로 되돌아가지 않았습니다')
+
+    /*  ⚠️ 충전은 «물건» 이 아닙니다 — 청약철회 문구가 달라야 합니다 */
+    ok(/충전일로부터 7일/.test(payLive),
+      '⚠️ ★충전은 «7일 내 청약철회» 입니다 (약관 제8조 1항)')
+    ok(!/결과를 확인하신 뒤에는/.test(payLive),
+      '⛔ ★AI 콘텐츠용 문구를 «가져다 쓰지» 않았습니다 (물건이 아닙니다)')
+  }
+
   console.log(`\n━━ 홈 카드 가격 — 통과 ${pass} · 실패 ${fail} ━━\n`)
   if (fail > 0) process.exit(1)
 }

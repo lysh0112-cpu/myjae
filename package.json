@@ -37,6 +37,7 @@
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.0",
+    "@tosspayments/tosspayments-sdk": "^2.8.1",
     "html-to-image": "^1.11.13",
     "lunar-javascript": "^1.7.7",
     "next": "16.2.9",

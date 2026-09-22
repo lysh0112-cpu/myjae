@@ -1,0 +1,233 @@
+'use client'
+
+// ══════════════════════════════════════════════════════════════════════
+//  /wallet/charge — ★충전 화면 (토스페이먼츠 결제위젯)   2026-09-22 (10부)
+//
+//  ┌──────────────────────────────────────────────────────────────────┐
+//  │  [까닭]  지금까지 지갑은 ★«빼는» 것만 있었습니다.                  │
+//  │    «넣는» 길은 관리자가 손으로 [+5천] 을 누르는 것뿐이었습니다.     │
+//  │    ⇒ 손님이 «스스로» 충전할 길이 «한 곳도» 없었습니다.             │
+//  └──────────────────────────────────────────────────────────────────┘
+//
+//  ⚠️ ★충전 금액은 «대표님이 2026-09-08 에 정하신» 다섯 그대로입니다 —
+//     CHARGE_AMOUNTS (WalletPanel.tsx:45). ⛔ 여기에 숫자를 «다시 적지» 마십시오.
+//     ⇒ 화면 아래 안내 줄도 «같은 표» 를 봅니다. 한쪽만 고치면 어긋납니다.
+//
+//  🔴 흐름 —
+//     ① 금액 고르기 → ② 토스 결제창 → ③ 성공하면 /wallet/charge/done 으로
+//     ④ 거기서 ★/api/toss/confirm 을 불러 «승인» 하고 지갑에 넣습니다
+//     ⛔ ★«승인» 을 화면에서 하지 마십시오 — 시크릿 키가 드러납니다. 서버 몫입니다.
+//
+//  ⚠️ ★테스트 키(test_gck_…)입니다. 진짜 돈은 «안» 빠집니다.
+//     라이브로 바꾸실 때는 ★이 파일의 CLIENT_KEY 와
+//     Vercel 의 TOSS_SECRET_KEY 를 «함께» 바꾸십시오. 섞으면 INVALID_API_KEY 입니다.
+// ══════════════════════════════════════════════════════════════════════
+
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { loadTossPayments, type TossPaymentsWidgets } from '@tosspayments/tosspayments-sdk'
+import { supabase } from '@/lib/supabase'
+import { CHARGE_AMOUNTS } from '@/app/components/common/WalletPanel'
+
+/**
+ *  ★결제위젯 «클라이언트» 키 (test_gck_…).
+ *  ⚠️ 이 값은 ★손님 브라우저에 «드러나는» 것이 정상입니다. 숨길 값이 아닙니다.
+ *  ⛔ «시크릿» 키(test_gsk_…)는 ★여기에 «절대» 적지 마십시오 —
+ *     그것은 Vercel 의 TOSS_SECRET_KEY 에만 있고, 서버만 씁니다.
+ *  ⚠️ ★주문서형·결제창형 키(gck)입니다. 구버전 키(ck)와 «섞으면» INVALID_API_KEY.
+ */
+const CLIENT_KEY = 'test_gck_Poxy1XQL8RJvqkojNak587nO5Wml'
+
+const C = {
+  bg: '#FDF6F0', card: '#FFFBF7', line: '#9c7a58', thin: '#e8dccf',
+  ink: '#5a4a3e', sub: '#8a7565', gold: '#96502e', btn: '#b46e46',
+}
+
+export default function ChargePage() {
+  const router = useRouter()
+  const [amount, setAmount] = useState<number>(CHARGE_AMOUNTS[1])
+  const [custom, setCustom] = useState('')
+  const [widgets, setWidgets] = useState<TossPaymentsWidgets | null>(null)
+  const [ready, setReady] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  /** ★손님마다 다른 열쇠 — 토스가 «누구의 결제인지» 를 가릅니다 */
+  const custKey = useRef<string>('')
+
+  /*  ① 로그인 확인 + 결제위젯 준비
+   *  ⚠️ ★로그인해야 합니다 — 누구 지갑에 넣을지 알아야 하기 때문입니다. */
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      const { data } = await supabase.auth.getUser()
+      if (!data.user) {
+        router.replace('/login?next=' + encodeURIComponent('/wallet/charge'))
+        return
+      }
+      if (!alive) return
+      custKey.current = data.user.id
+      try {
+        const toss = await loadTossPayments(CLIENT_KEY)
+        const w = toss.widgets({ customerKey: data.user.id })
+        if (!alive) return
+        setWidgets(w)
+      } catch {
+        if (alive) setErr('결제 창을 불러오지 못했어요. 잠시 뒤 다시 해 주세요.')
+      }
+    })()
+    return () => { alive = false }
+  }, [router])
+
+  /*  ② 금액이 정해지면 결제수단·약관을 그립니다
+   *  ⚠️ ★금액을 «먼저» 알려 줘야 합니다 (setAmount). 안 그러면 위젯이 안 그려집니다.
+   *  ⛔ 금액이 바뀌면 ★다시 알려 줘야 합니다 — 안 그러면 «옛 금액» 으로 결제됩니다. */
+  useEffect(() => {
+    if (!widgets || amount <= 0) return
+    let alive = true
+    ;(async () => {
+      try {
+        await widgets.setAmount({ currency: 'KRW', value: amount })
+        await Promise.all([
+          //  ⚠️ ★variantKey 를 안 줍니다 — 토스가 «주는 대로 다» 보여 줍니다 [대표님]
+          widgets.renderPaymentMethods({ selector: '#toss-methods' }),
+          widgets.renderAgreement({ selector: '#toss-agreement' }),
+        ])
+        if (alive) setReady(true)
+      } catch {
+        if (alive) setErr('결제 수단을 불러오지 못했어요.')
+      }
+    })()
+    return () => { alive = false }
+  }, [widgets, amount])
+
+  /*  ③ 결제창 띄우기
+   *  ⚠️ orderId 는 ★«겹치지 않는» 값이라야 합니다 (토스 규칙 6~64자).
+   *  ⛔ 손님 이름·사주를 ★orderId 나 orderName 에 싣지 마십시오 (9부 ⑨). */
+  async function pay() {
+    if (!widgets || busy) return
+    setBusy(true)
+    setErr('')
+    const orderId = `myjae_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+    try {
+      await widgets.requestPayment({
+        orderId,
+        orderName: `명연재 지갑 충전 ${amount.toLocaleString()}원`,
+        successUrl: `${window.location.origin}/wallet/charge/done`,
+        failUrl: `${window.location.origin}/wallet/charge/fail`,
+      })
+    } catch (e: unknown) {
+      //  ⚠️ 손님이 «닫은» 것도 여기로 옵니다 — ⛔ 놀라게 하지 않습니다
+      setBusy(false)
+      const m = e instanceof Error ? e.message : ''
+      if (m && !/취소|USER_CANCEL/i.test(m)) setErr('결제를 시작하지 못했어요. 잠시 뒤 다시 해 주세요.')
+    }
+  }
+
+  const pick = (n: number) => { setAmount(n); setCustom(''); setReady(false) }
+
+  return (
+    <main style={{
+      minHeight: '100vh', background: C.bg, maxWidth: 430, margin: '0 auto',
+      padding: '14px 16px 40px',
+      fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif", color: C.ink,
+    }}>
+      <button onClick={() => router.push('/wallet')}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8, padding: '9px 4px',
+          background: 'none', border: 'none', cursor: 'pointer', marginBottom: 8,
+          fontFamily: 'inherit',
+        }}>
+        <span style={{ fontSize: 13, color: C.gold }}>←</span>
+        <span style={{ fontSize: 12, color: C.ink }}>내 지갑으로</span>
+      </button>
+
+      <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 3 }}>지갑 충전</div>
+      <div style={{ fontSize: 12, color: C.sub, marginBottom: 16, lineHeight: 1.7 }}>
+        충전하신 금액은 명연재·큐보드·골프온에서 함께 쓰실 수 있어요.
+      </div>
+
+      {/*  ★금액 고르기 — ⛔ 숫자를 여기 적지 «않습니다». CHARGE_AMOUNTS 를 봅니다. */}
+      <div style={{
+        background: C.card, border: `0.5px solid ${C.line}`, borderRadius: 14,
+        padding: 14, marginBottom: 12,
+      }}>
+        <div style={{ fontSize: 12, color: C.sub, marginBottom: 9 }}>얼마를 충전하실까요?</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7 }}>
+          {CHARGE_AMOUNTS.map(n => {
+            const on = amount === n && custom === ''
+            return (
+              <button key={n} type="button" onClick={() => pick(n)}
+                style={{
+                  padding: '11px 4px', borderRadius: 10, cursor: 'pointer',
+                  border: `${on ? 1.5 : 0.5}px solid ${on ? C.gold : C.thin}`,
+                  background: on ? '#fff3ec' : '#fff',
+                  color: on ? C.gold : C.ink, fontWeight: on ? 700 : 500,
+                  fontSize: 13.5, fontFamily: 'inherit',
+                }}>
+                {n.toLocaleString()}
+              </button>
+            )
+          })}
+        </div>
+
+        {/*  ★직접 입력 — ⚠️ 토스는 «100원 미만» 을 안 받습니다. 1,000원부터로 둡니다. */}
+        <div style={{ marginTop: 9, display: 'flex', alignItems: 'center', gap: 7 }}>
+          <input
+            type="number" inputMode="numeric" value={custom} placeholder="직접 입력"
+            onChange={e => {
+              const v = e.target.value
+              setCustom(v)
+              setReady(false)
+              const n = Number(v)
+              setAmount(Number.isFinite(n) ? Math.floor(n) : 0)
+            }}
+            style={{
+              flex: 1, height: 42, borderRadius: 10, padding: '0 12px',
+              border: `0.5px solid ${C.thin}`, background: '#fff',
+              fontSize: 14, fontFamily: 'inherit', color: C.ink,
+            }}
+          />
+          <span style={{ fontSize: 13, color: C.sub }}>원</span>
+        </div>
+        {custom !== '' && amount < 1000 && (
+          <div style={{ fontSize: 11, color: '#A32D2D', marginTop: 6 }}>
+            1,000원부터 충전하실 수 있어요.
+          </div>
+        )}
+      </div>
+
+      {/*  ★결제수단 · 약관 — 토스가 그립니다 */}
+      <div id="toss-methods" />
+      <div id="toss-agreement" />
+
+      {err && (
+        <div style={{
+          fontSize: 12.5, color: '#A32D2D', background: '#fff3ec',
+          border: `0.5px solid ${C.thin}`, borderRadius: 10,
+          padding: '10px 12px', margin: '10px 0', lineHeight: 1.6,
+        }}>{err}</div>
+      )}
+
+      {/*  ⚠️ ★충전은 «물건» 이 아니라 «돈을 넣는» 것이라 청약철회 문구가 다릅니다.
+        *     ⇒ 약관 제8조 1항 — 충전일로부터 7일 이내 «미사용» 충전금 청약철회.
+        *  ⛔ 「결과를 확인하신 뒤에는」 같은 말을 여기에 쓰지 마십시오. 물건이 아닙니다. */}
+      <div style={{ fontSize: 11, color: C.sub, lineHeight: 1.7, margin: '12px 2px' }}>
+        충전한 금액은 1년간 쓰실 수 있어요.
+        <br />
+        쓰지 않은 충전금은 충전일로부터 7일 안에 취소하실 수 있고, 그 뒤에도 환불을 요청하실 수 있어요.
+      </div>
+
+      <button type="button" onClick={pay}
+        disabled={!ready || busy || amount < 1000}
+        style={{
+          width: '100%', height: 52, borderRadius: 14, border: 'none',
+          background: C.btn, color: '#fff', fontSize: 15, fontWeight: 700,
+          cursor: !ready || busy || amount < 1000 ? 'default' : 'pointer',
+          opacity: !ready || busy || amount < 1000 ? 0.5 : 1, fontFamily: 'inherit',
+        }}>
+        {busy ? '결제창을 여는 중…'
+          : amount >= 1000 ? `${amount.toLocaleString()}원 충전하기` : '금액을 골라 주세요'}
+      </button>
+    </main>
+  )
+}

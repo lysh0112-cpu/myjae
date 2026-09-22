@@ -88,8 +88,15 @@ export default function WalletPanel({ big = false }: { big?: boolean }) {
         </>
       )}
 
+      {/*  🔴 ★2026-09-22 (10부) — 충전을 «붙였습니다».
+        *    [전] 「충전 기능을 준비하고 있어요」 알림만 떴습니다.
+        *    [후] ★/wallet/charge 로 갑니다 (토스 결제위젯).
+        *  ⚠️ ★테스트 키입니다 — 진짜 돈은 «안» 빠집니다.
+        *     라이브로 바꾸실 때는 charge/page.tsx 의 CLIENT_KEY 와
+        *     Vercel 의 TOSS_SECRET_KEY 를 ★«함께» 바꾸십시오.
+        *  ⛔ 이 단추를 다시 alert 로 되돌리지 마십시오 (검사 58 ⑭). */}
       <button
-        onClick={() => alert('충전 기능을 준비하고 있어요.\n지금은 관리자에게 말씀해 주시면 넣어 드립니다.')}
+        onClick={() => { window.location.href = '/wallet/charge' }}
         style={{
           width: '100%', height: 44, background: C.btn, border: 'none', borderRadius: 10,
           color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer',
