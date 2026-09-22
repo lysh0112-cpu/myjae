@@ -479,7 +479,14 @@ export default function ServiceSection({
                   *  ⇒ ★C.stripe 로 맞췄습니다. ⛔ t.stripe 로 되돌리지 마십시오.
                   *  ⚠️ t.stripe 값은 ★«지우지 않고» 남겨 두었습니다 (되살리실 때 씁니다). */
                 boxShadow: `inset ${STRIPE_W} 0 0 ${C.stripe}, ${C.shadow}`,
-                background: t.bg,
+                /*  🔴 ★2026-09-22 (11부) [대표님 «안 ②» 확정 — 목업 보시고]
+                  *     「위쪽 세 가지도 하단의 전체 서비스 버튼들처럼」
+                  *  ⇒ 바탕을 ★C.white 로. ⛔ t.bg(장마다 다른 연한 색)로 되돌리지 마십시오.
+                  *  ⚠️ t.bg 값은 ★«지우지 않고» 남겨 두었습니다 (되살리실 때 씁니다).
+                  *  ⚠️ 45부 「흐려서 안 보인다」 로 넣었던 바탕입니다 —
+                  *     지금은 ★선·띠·값 칸이 또렷해져 바탕 없이도 보입니다.
+                  *  ⇒ 남는 차이는 ★BEST 뱃지 «하나» 뿐입니다. */
+                background: C.white,
               }}>
               <button
                 className="svcTap svcBest"
@@ -500,7 +507,9 @@ export default function ServiceSection({
                   backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
                 }}
               >
-                <Tile icon={s.icon} size={44} bg={t.iconBg} edge={t.iconEdge} />
+                {/*  ⛔ ★bg·edge 를 «넘기지» 않습니다 — 넘기면 아래 카드와 달라집니다.
+                  *     기본값이 곧 C.iconBg · C.iconEdge 입니다 (Tile 의 기본 인자). */}
+                <Tile icon={s.icon} size={44} />
                 <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontSize: 14.5, fontWeight: 700, color: C.text, letterSpacing: '-0.2px' }}>
@@ -517,7 +526,7 @@ export default function ServiceSection({
                     {BEST_COPY[s.name] ?? s.sub}
                   </span>
                 </span>
-                <span style={{ fontSize: 15, color: t.arrow, flexShrink: 0 }}>›</span>
+                <span style={{ fontSize: 15, color: C.text, flexShrink: 0 }}>›</span>
               </button>
               <PriceRow name={s.name} />
               </div>

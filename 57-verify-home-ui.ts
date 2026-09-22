@@ -370,6 +370,20 @@ function main() {
       ok(vb !== '?' && vb === vs, `🔴 ★${name} 가 «같습니다» (특화 ${vb} · 전체 ${vs})`)
     }
 
+    /*  🔴 바탕 · 아이콘 타일 · 화살표 — «안 ②» [대표님 2026-09-22 · 목업 보시고 확정]
+     *  ⛔ 남겨 둔 차이는 ★BEST 뱃지 «하나» 뿐입니다.
+     *  ⚠️ 옛 값(t.bg · t.iconBg · t.arrow)은 «지우지 않았습니다» — 되살리실 때 씁니다. */
+    ok(/background: C\.white,/.test(best) && /background: C\.white,/.test(svc.slice(svc.indexOf('const cardStyle'), svc.indexOf('const cardStyle') + 420)),
+      '🔴 ⛔ ★카드 바탕이 아래 카드와 «같은 흰색» 입니다 (장마다 다른 색이 아닙니다)')
+    ok(!/\{t\.bg\}/.test(svc) && !/background: t\.bg/.test(svc),
+      '⛔ ★장마다 다른 바탕(t.bg)으로 되돌아가지 않았습니다')
+    ok(!/bg=\{t\.iconBg\}/.test(best) && !/edge=\{t\.iconEdge\}/.test(best),
+      '🔴 ⛔ ★아이콘 타일이 아래 카드와 «같습니다» (BEST 전용 색을 안 넘깁니다)')
+    ok(!/color: t\.arrow/.test(best),
+      '⛔ ★화살표 색도 아래 카드와 «같습니다»')
+    ok(/t\.badge/.test(best) && /bg: 'linear-gradient/.test(svc),
+      '⚠️ ★남긴 차이는 «BEST 뱃지» 하나 · 옛 색 값은 «지우지 않았습니다»')
+
     //  🔴 왼쪽 띠 — 너비도 «색» 도 같아야 합니다 [대표님]
     ok(/inset \$\{STRIPE_W\} 0 0 \$\{C\.stripe\}/.test(best),
       '🔴 ⛔ ★왼쪽 띠 색이 아래 카드와 «같습니다» (C.stripe · 장마다 다른 색이 아닙니다)')
