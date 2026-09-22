@@ -72,6 +72,13 @@ export async function POST(request: Request) {
      *  ⛔ 이 검사를 빼지 마십시오. */
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
     const srv = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    /*  ⚠️ ★열쇠가 «없으면» 여기서 말하게 합니다 —
+     *     없으면 ②의 조회도 «조용히» 실패하고, 넣기도 실패해
+     *     「지갑에 넣지 못했어요」 만 남아 ★무엇이 막혔는지 알 수 없습니다. */
+    if (!url || !srv) {
+      console.error('[toss/confirm] ★SUPABASE_SERVICE_ROLE_KEY 가 없습니다 (Vercel 환경변수)')
+      return fail('결제를 마무리하지 못했어요. 잠시 뒤 다시 해 주세요.', 500)
+    }
     const sb = createClient(url, srv, { auth: { autoRefreshToken: false, persistSession: false } })
 
     const { data: already } = await sb
@@ -102,22 +109,53 @@ export async function POST(request: Request) {
       return fail(paid.message || '결제 승인에 실패했어요.', 400)
     }
 
-    /*  ── ④ 지갑에 넣기 ─────────────────────────────────────────
+    /*  ── ④ 🔴🔴 ★«진짜로 받은» 돈인가 ──────────────────────────
+     *  [2026-09-22 찾음] 결제수단을 «토스가 주는 대로 다» 보여 주므로
+     *    손님이 ★«가상계좌» 를 고를 수 있습니다 (충전 화면에 단추가 있습니다).
+     *  🔴 가상계좌는 승인해도 ★status 가 'WAITING_FOR_DEPOSIT' 입니다 —
+     *     «아직 입금하지 않은» 것인데 ★totalAmount 는 «적혀서» 옵니다.
+     *     ⇒ 그대로 넣으면 ★한 푼도 «안 내고» 지갑이 채워집니다.
+     *  ⛔ ★'DONE' 일 때만 넣습니다. 낱말을 느슨하게 풀지 마십시오.
+     *  ⚠️ 입금을 «나중에» 받아 넣으려면 ★웹훅이 있어야 합니다 (지금 없습니다).
+     *     ⇒ 그 전까지는 결제위젯 어드민에서 ★가상계좌를 «꺼» 두는 편이 낫습니다. */
+    if (paid.status !== 'DONE') {
+      console.error('[toss/confirm] 아직 받지 못한 결제', orderId, paid.status, paid.method)
+      return fail(
+        paid.status === 'WAITING_FOR_DEPOSIT'
+          ? '아직 입금이 확인되지 않았어요. 입금이 확인되면 넣어 드릴게요.'
+          : '결제가 아직 끝나지 않았어요. 잠시 뒤 지갑에서 확인해 주세요.',
+        400,
+      )
+    }
+
+    /*  ── ⑤ 지갑에 넣기 ─────────────────────────────────────────
      *  🔴 ★토스가 «돌려준» 금액만 씁니다 (totalAmount). 손님이 보낸 값이 아닙니다.
-     *  ⚠️ wallet_charge 가 ★관리자 화면과 «같은» 함수입니다 (WalletMember.tsx:186). */
+     *  🔴🔴 [2026-09-22 고침] 처음에는 ★wallet_charge 를 불렀는데, 그 함수는
+     *     ★«master 만» 부를 수 있습니다 (auth.uid() → profiles.role 검사).
+     *     서버 열쇠로 부르면 auth.uid() 가 «없어» ★늘 'not_master' 로 거절당했습니다.
+     *     ⇒ 「결제는 됐는데 지갑에 넣지 못했어요」 가 그것이었습니다.
+     *  ⇒ ★«서버만» 부를 수 있는 함수를 따로 만들어 씁니다 — wallet_charge_paid
+     *     (_SQL_wallet_charge_paid.sql · anon·authenticated 에게서 권한을 걷었습니다).
+     *  ⛔ ★wallet_charge 로 되돌리지 마십시오. 관리자 화면 몫입니다.
+     *  ⛔ 기존 wallet_charge 에 「auth.uid() 가 없으면 통과」 를 넣지 «마십시오» —
+     *     로그인 «안 한» 손님도 없습니다 ⇒ ★누구나 무한 충전이 됩니다. */
     const won = Number(paid.totalAmount)
     if (!Number.isFinite(won) || won <= 0) {
       console.error('[toss/confirm] 승인은 됐는데 금액이 이상합니다', paid)
       return fail('결제는 됐는데 금액 확인에 실패했어요. 고객센터로 알려 주세요.', 500)
     }
 
-    const { data: chg, error: chgErr } = await sb.rpc('wallet_charge', {
+    const { data: chg, error: chgErr } = await sb.rpc('wallet_charge_paid', {
       p_user_id: userId, p_amount: won, p_service: 'myc', p_memo: orderId,
     })
-    if (chgErr || !(chg as { ok?: boolean } | null)?.ok) {
+    const chgRes = chg as { ok?: boolean; reason?: string; balance?: number } | null
+    if (chgErr || !chgRes?.ok) {
       /*  🔴 ★가장 나쁜 자리입니다 — 돈은 빠졌는데 지갑에 «안» 들어갔습니다.
-       *  ⛔ 손님에게 «성공» 이라 하지 마십시오. 기록을 남기고 사실대로 알립니다. */
-      console.error('[toss/confirm] 승인됐으나 충전 실패', orderId, won, chgErr?.message)
+       *  ⛔ 손님에게 «성공» 이라 하지 마십시오. 기록을 남기고 사실대로 알립니다.
+       *  ⚠️ [2026-09-22] ★«까닭»(reason)을 버리고 있어서 무엇이 막혔는지
+       *     로그만 보고는 알 수 없었습니다. ⛔ 이 줄에서 reason 을 빼지 마십시오. */
+      console.error('[toss/confirm] 승인됐으나 충전 실패', orderId, won,
+        '· 오류:', chgErr?.message ?? '-', '· 까닭:', chgRes?.reason ?? '-')
       return fail(
         '결제는 됐는데 지갑에 넣지 못했어요. 고객센터로 알려 주시면 바로 넣어 드릴게요.',
         500,
@@ -127,7 +165,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       amount: won,
-      balance: (chg as { balance?: number }).balance ?? null,
+      balance: chgRes.balance ?? null,
     })
   } catch (e: unknown) {
     console.error('[toss/confirm]', e instanceof Error ? e.message : e)

@@ -699,9 +699,16 @@ function main() {
     /*  ⛔ 누구의 지갑인가 — 화면이 보낸 user_id 를 믿지 않는가 */
     ok(/auth\.user\?\.id/.test(apiLive) && !/body\.userId|body\.user_id/.test(apiLive),
       '⛔⛔ ★로그인한 «그 사람» 의 지갑에만 넣습니다 (화면 값을 안 믿습니다)')
-    //  ⛔ 지갑은 wallet_charge 로만 — 표를 직접 고치면 조용히 0줄이 바뀝니다
-    ok(/rpc\('wallet_charge'/.test(apiLive) && !/from\('mc_wallet'\)/.test(apiLive),
-      '⛔ ★wallet_charge 로 넣습니다 (mc_wallet 을 직접 고치지 않습니다)')
+    /*  ⛔ 지갑은 «함수» 로만 — 표를 직접 고치면 조용히 0줄이 바뀝니다.
+     *  🔴🔴 [2026-09-22] ★«어느» 함수인지가 중요합니다 —
+     *     wallet_charge 는 ★master 만 부를 수 있어(auth.uid() 검사),
+     *     서버 열쇠로 부르면 ★늘 'not_master' 로 거절당했습니다.
+     *     ⇒ ★서버 전용 함수(wallet_charge_paid)를 부릅니다.
+     *  ⛔ 관리자용으로 «되돌리면» 여기서 멈춥니다. */
+    ok(/rpc\('wallet_charge_paid'/.test(apiLive) && !/from\('mc_wallet'\)/.test(apiLive),
+      '🔴 ⛔ ★«서버 전용» 충전 함수로 넣습니다 (master 전용 함수가 아닙니다)')
+    ok(!/rpc\('wallet_charge'[^_]/.test(apiLive),
+      '⛔ ★master 전용 wallet_charge 를 «안» 부릅니다 (서버에는 auth.uid() 가 없습니다)')
 
     /*  ⚠️ 돈은 빠졌는데 «안 들어간» 경우 — 성공이라 하지 않는가 */
     ok(/승인됐으나 충전 실패/.test(api) && /고객센터로 알려/.test(apiLive),
@@ -757,6 +764,18 @@ function main() {
     const payFn = (payLive.match(/async function pay\(\)[\s\S]*?requestPayment/) || [''])[0]
     ok(/setAmount/.test(payFn),
       '🔴 ⛔ ★결제 «직전» 에 금액을 한 번 더 알려 줍니다 («옛 금액» 결제를 막습니다)')
+
+    /*  ══ 🔴🔴 ⑤ «아직 안 받은» 돈을 넣지 않는가 ══════════════════
+     *  [2026-09-22 찾음] 결제수단을 «주는 대로 다» 보여 주므로
+     *    손님이 ★가상계좌를 고를 수 있습니다.
+     *    가상계좌는 승인해도 ★status 가 'WAITING_FOR_DEPOSIT' —
+     *    «입금 전» 인데 totalAmount 는 적혀서 옵니다.
+     *    ⇒ 그대로 넣으면 ★한 푼도 안 내고 지갑이 채워집니다.
+     *  ⛔ ★넣는 줄(wallet_charge)보다 «먼저» 막아야 합니다. 차례를 봅니다. */
+    const gate = apiLive.indexOf("paid.status !== 'DONE'")
+    const fill = apiLive.indexOf("rpc('wallet_charge_paid'")
+    ok(gate >= 0 && fill >= 0 && gate < fill,
+      "🔴🔴 ⛔ ★승인 상태가 «DONE» 일 때만 넣습니다 (가상계좌 «입금 전» 을 막습니다)")
   }
 
   /* ══ ⑮ 🔴🔴 «값을 받는가» — 결제 시트 = 실제 차감 ═══════════════
