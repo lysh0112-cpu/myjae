@@ -715,6 +715,27 @@ function main() {
         '⛔ ★뺀 조항을 «지우지 않고» 보관해 두었습니다 (승인 뒤 되살립니다)')
       ok(/시행일 2026년 9월 23일/.test(tx),
         '⚠️ ★시행일을 «고친 날» 로 바꿨습니다 (약관이 바뀌면 날짜도 바뀝니다)')
+
+      /*  🔴🔴 ★항 번호가 «건너뛰지» 않는가
+       *  ⚠️ [2026-09-23] 상담 조항을 빼면서 ★번호를 안 고쳐
+       *     화면에 제8조가 «1 · 2 · ★4» 로, 제10조가 «1 · ★3» 으로 나왔습니다.
+       *     ⇒ ★대표님이 «심사용 사진» 에서 찾으셨습니다. 제 그물은 못 잡았습니다.
+       *  ⛔ 조문을 빼거나 더하면 ★번호를 «다시» 매기십시오. */
+      {
+        const body = tx.slice(tx.indexOf('export const TERMS: LegalArticle[] = ['))
+        const arts = body.split("title: '").slice(1)
+        const bad: string[] = []
+        for (const a of arts) {
+          const title = a.split("'")[0]
+          const seg = a.includes('paras: [') ? a.split('paras: [')[1].split(']')[0] : ''
+          const nums = [...seg.matchAll(/'(\d+)\. /g)].map(m => Number(m[1]))
+          if (nums.length === 0) continue
+          const ok2 = nums.every((n, k) => n === k + 1)
+          if (!ok2) bad.push(`${title} → ${nums.join('·')}`)
+        }
+        ok(bad.length === 0,
+          `🔴🔴 ⛔ ★약관 «항 번호» 가 1부터 빠짐없이 이어집니다${bad.length ? ' — ' + bad.join(' / ') : ''}`)
+      }
     }
 
     /*  ══ 🔴🔴 손님이 «상담에 닿는 길» 이 끊겼는가 ════════════════
