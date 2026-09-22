@@ -504,7 +504,16 @@ export default function ServiceSection({
                   //    ⛔ 갈리는 것은 ★바탕색 · BEST 뱃지 «둘» 뿐입니다.
                   padding: '13px 13px', borderRadius: 0,
                   background: 'transparent', border: 'none',
-                  backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                  /*  🔴🔴 ★2026-09-22 (11부) [대표님 「여기 테두리들을 어떻게 처리했지?」]
+                    *  ⛔ ★backdropFilter 를 «걷었습니다». 다시 넣지 마십시오 —
+                    *     ① backdrop-filter 는 «뒤» 를 흐립니다. 가장자리 바깥의
+                    *        페이지 바탕(#FDF6F0 베이지)까지 끌어와 ★카드 위에 뿌렸습니다.
+                    *        ⇒ 바탕이 순백이 아니라 ★«뿌연 크림» 으로 보였습니다.
+                    *     ② 이 속성은 ★«새 바탕 층» 을 만들어 부모의 inset 띠를 «덮습니다».
+                    *        ⇒ ★왼쪽 금빛 띠가 «안 보였습니다».
+                    *  ⚠️ 바탕이 «반투명 그라데이션» 이던 시절의 값입니다.
+                    *     지금은 불투명 흰색이라 ★할 일이 없고 해만 끼칩니다.
+                    *  ⚠️ 대표님이 ★가장자리를 잘라 보내 주셔서 잡혔습니다. */
                 }}
               >
                 {/*  ⛔ ★bg·edge 를 «넘기지» 않습니다 — 넘기면 아래 카드와 달라집니다.
