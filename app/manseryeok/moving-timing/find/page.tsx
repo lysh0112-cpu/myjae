@@ -18,6 +18,8 @@
 import { Suspense, useState } from 'react'
 //  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
 import WalletPaySheet from '@/app/components/common/WalletPaySheet'
+//  ★지갑 관문은 lib/wallet/consultGate.ts «한 곳» 입니다 [대표님 2026-09-09]
+import { useAiFee, WALLET_MSG } from '@/lib/wallet/consultGate'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 const accent = '#967850'
@@ -56,14 +58,27 @@ function FindInner() {
     return Math.round((e.getTime() - s.getTime()) / 86400000) + 1
   })()
 
-  const goPick = () => {
+  /*  ⚠️ ★useAiFee 는 «훅이 아니라» 그냥 함수입니다 — 이름이 use… 라 eslint 가 오해합니다. */
+  const payFee = useAiFee
+
+  const goPick = async () => {
     if (!start || !end) { setErr('기간을 입력해 주세요.'); return }
     if (dayCount <= 0) { setErr('종료일이 시작일보다 빠를 수 없어요.'); return }
     if (dayCount > 400) { setErr('한 번에 400일까지 볼 수 있어요. 기간을 줄여 주세요.'); return }
 
-    // ⚠️ 결제 관문이 들어올 자리.
-    //    결혼택일 find/page.tsx 의 결제 모달을 그대로 참고하면 된다.
-    //    price_key = 'moving_pick'
+    /* ══ 🔴🔴 ★지갑에서 «빼기» — 2026-09-22 (10부) ══════════════════
+     *  ⚠️ ★여기가 「결제 관문이 들어올 자리」 라고 «적혀 있던» 곳입니다. 그대로 넣었습니다.
+     *
+     *  [무엇이 빠져 있었나]  결제 시트는 ★«잔액이 되는지» 만 봅니다(wallet_check).
+     *     실제로 빼는 것(wallet_use)은 ★이 화면이 해야 하는데 «없었습니다».
+     *  ⚠️ ★이사택일은 AI 를 «안» 부릅니다 — 사주 셈으로 날을 고릅니다.
+     *     그래도 손님이 «받아 가는 것» 이 있으므로 값을 받습니다 [대표님 2026-09-22].
+     *  ⛔ 되돌리기가 «없습니다» — AI 가 없어 «실패할 자리» 가 없습니다. */
+    const fee = await payFee('moving_pick', '이사택일 좋은 날 찾기', '이사택일 좋은 날 찾기')
+    if (fee.gate === 'on' && !fee.ok) {
+      setErr(WALLET_MSG.aiRolledBack)
+      return
+    }
 
     const q = new URLSearchParams(sp.toString())
     q.set('start', start)

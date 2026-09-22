@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense, useEffect, useMemo } from "react";
+import { useState, Suspense, useEffect, useMemo, useRef } from "react";
 import { EL_BG as ELEMENT_BG, EL_TEXT as ELEMENT_COLOR, EL_C, EL_C_SUB, EL_HAN as OH_HAN } from '@/lib/saju/ohaengColor'
 import { useSearchParams, useRouter } from "next/navigation";
 import { useResultSaju } from "@/hooks/useResultSaju";
@@ -28,6 +28,8 @@ import UnseFlow from "./UnseFlow";
 import SingangTable from "./SingangTable";
 import QuestionPicker from "../components/QuestionPicker";
 import TongbyeonView from "../components/TongbyeonView";
+//  ★지갑 관문은 lib/wallet/consultGate.ts «한 곳» 입니다 [대표님 2026-09-09]
+import { useAiFee, refundAiFee, WALLET_MSG } from '@/lib/wallet/consultGate';
 import CopyTextButton from '@/app/components/common/CopyTextButton';
 import { birthYearToGroup, genderToFilter, type SajuQuestion } from "@/lib/saju/questions";
 import { type UnseEntry } from "@/lib/saju/unseQuestions";
@@ -276,6 +278,10 @@ function ResultNewContent() {
   // ── 통변 스냅샷 ──
   //   새 조회: TongbyeonView가 완성한 통변을 tongText로 받아 저장에 쓴다.
   //   다시보기(recordId): getRecord로 저장된 통변(savedTong)·질문을 불러와 그대로 표시.
+  /*  ⚠️ ★useAiFee 는 «훅이 아니라» 그냥 함수입니다 — 이름이 use… 라 eslint 가 오해합니다. */
+  const payFee = useAiFee
+  /** ★빼 둔 기록 — 통변이 실패하면 이것으로 «되돌립니다» */
+  const feeRef = useRef<string | undefined>(undefined)
   const [tongText,setTongText]=useState('')
   const [savedTong,setSavedTong]=useState<string|undefined>(undefined)
   // recordId면 스냅샷 로드가 끝날 때까지 질문선택/결과를 잠깐 보류
@@ -713,7 +719,30 @@ function ResultNewContent() {
           personName={personName||undefined}
           ageLabel={`${new Date().getFullYear()-yearParam}세`}
           unseEntry={unseEntry}
-          onSubmit={(qs)=>setPickedQuestions(qs)}
+          /* ══ 🔴🔴 ★지갑에서 «빼기» — 2026-09-22 (10부) ══════════════
+           *
+           *  [무엇이 빠져 있었나]  결제 시트(saju-storage)는
+           *     ★«잔액이 되는지» 만 봅니다(wallet_check).
+           *     실제로 빼는 것(wallet_use)은 ★이 화면이 해야 하는데 «없었습니다».
+           *     ⇒ 「내 사주와 운세보기」 가 ★돈을 «안 받고» 나가고 있었습니다.
+           *
+           *  ⚠️ ★여기가 «AI 를 부르기 직전» 입니다 — 질문을 고르고 [보기] 를 누르면
+           *     아래 TongbyeonView 가 /api/tongbyeon 을 부릅니다.
+           *  🔴🔴 ⛔ ★TongbyeonView «안» 에 넣으면 «안 됩니다» —
+           *     그 부품은 ★궁합·합격운도 «함께» 씁니다.
+           *     궁합은 «밖에서» 이미 빼고 있어 ★두 번 빠집니다.
+           *  ⛔ 다시보기(recordId)면 ★이 화면 자체가 안 뜹니다 (707줄) ⇒ 안 뺍니다.
+           *  ⛔ 되돌리기를 빼지 마십시오 — 「돈은 빠졌는데 못 봤다」 가 가장 나쁩니다. */
+          onSubmit={async (qs)=>{
+            const fee = await payFee('saju_deep', personName || '사주', '내 사주와 운세보기')
+            if (fee.gate === 'on' && !fee.ok) {
+              //  ⚠️ 애초에 못 뺐으니 ★되돌릴 것이 «없습니다»
+              alert(WALLET_MSG.aiRolledBack)
+              return
+            }
+            if (fee.gate === 'on' && fee.ok && fee.ledgerId) feeRef.current = fee.ledgerId
+            setPickedQuestions(qs)
+          }}
           onBack={()=>router.back()}
         />
       </div>
@@ -935,6 +964,18 @@ function ResultNewContent() {
               slots={premiumSlots}
               savedText={savedTong}
               onComplete={(t)=>{
+                /*  🔴 ⛔ ★풀이가 «안» 나왔으면 «되돌립니다» — 2026-09-22 (10부)
+                 *     「돈은 빠졌는데 못 봤다」 가 «가장 나쁩니다».
+                 *  ⚠️ onComplete 는 ★성공·실패 «둘 다» 불립니다 (TongbyeonView:251).
+                 *     ⇒ 글이 «비었으면» 실패입니다.
+                 *  ⛔ 한 번 되돌린 뒤에는 ★비웁니다 — 두 번 되돌리지 않게. */
+                if (!t || !t.trim()) {
+                  const id = feeRef.current
+                  feeRef.current = undefined
+                  if (id) void refundAiFee(id, '사주 통변 실패 — 되돌림')
+                  return
+                }
+                feeRef.current = undefined
                 setTongText(t)
                 // ★통변이 완성되면 바로 보관함에 저장한다. (2026-07-21 2차)
                 //   다시보기(recordId)면 이미 'saved' 라 handleSaveRecord 가 그냥 빠져나온다.

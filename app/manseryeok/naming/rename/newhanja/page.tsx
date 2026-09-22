@@ -2,6 +2,8 @@
 import { Suspense, useState, useEffect, useMemo } from 'react'
 //  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
 import WalletPaySheet from '@/app/components/common/WalletPaySheet'
+//  ★지갑 관문은 lib/wallet/consultGate.ts «한 곳» 입니다 [대표님 2026-09-09]
+import { useAiFee, WALLET_MSG } from '@/lib/wallet/consultGate'
 import { splitSurname } from '@/lib/saju/surname'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
@@ -882,7 +884,10 @@ function NewHanjaInner() {
   }
 
   // 팝업에서 "확정"을 눌렀을 때만 실제 저장 + 결과로 이동
-  function confirmSave() {
+  /*  ⚠️ ★useAiFee 는 «훅이 아니라» 그냥 함수입니다 — 이름이 use… 라 eslint 가 오해합니다. */
+  const payFee = useAiFee
+
+  async function confirmSave() {
     const nameChars = buildNameChars()
     if (!nameChars) return
     const hangulName = syllables.join('')
@@ -917,6 +922,24 @@ function NewHanjaInner() {
           setConfirmOpen(false)
           // ⚠️ 이 갈래도 «대상을 실어» 보냅니다 (28-verify 가 잡았던 자리)
           router.push(gotoResult())
+          return
+        }
+        /* ══ 🔴🔴 ★지갑에서 «빼기» — 2026-09-22 (10부) ══════════════
+         *  [무엇이 빠져 있었나]  결제 시트는 ★«잔액이 되는지» 만 봅니다(wallet_check).
+         *     실제로 빼는 것(wallet_use)은 ★이 화면이 해야 하는데 «없었습니다».
+         *     ⇒ 작명이 ★돈을 «안 받고» 나가고 있었습니다.
+         *
+         *  🔴 ⚠️ ★«새 이름을 더할 때» 만 받습니다 —
+         *     · 이미 본 이름을 다시 고르면(existIdx) ★안 받습니다 (아래 else)
+         *     · 한도를 다 썼으면 ★안 받습니다 (위에서 빠져나갑니다)
+         *     ⇒ 손님이 «한 번 값을 내고» 목록을 오갈 수 있어야 합니다.
+         *  ⛔ 되돌리기가 «없습니다» — 다음 화면은 «셈» 이라 반드시 나옵니다. */
+        const fee = await payFee(
+          isNewborn ? 'naming_baby_ai' : 'naming_hanja',
+          hangulName, isNewborn ? '내 아이 명품작명' : '내 이름 정밀분석')
+        if (fee.gate === 'on' && !fee.ok) {
+          alert(WALLET_MSG.aiRolledBack)
+          setConfirmOpen(false)
           return
         }
         tries.push({ name: hangulName, chars: nameChars })

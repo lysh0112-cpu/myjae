@@ -2,6 +2,8 @@
 import { Suspense, useState, useEffect, useMemo, useRef } from 'react'
 //  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
 import WalletPaySheet from '@/app/components/common/WalletPaySheet'
+//  ★지갑 관문은 lib/wallet/consultGate.ts «한 곳» 입니다 [대표님 2026-09-09]
+import { useAiFee, refundAiFee, WALLET_MSG } from '@/lib/wallet/consultGate'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useResultSaju } from '@/hooks/useResultSaju'
 import { calcYongsinCompat as calcYongsin } from '@/lib/saju/yongsinNew'
@@ -383,6 +385,12 @@ function MulsangInner() {
     )
   }
 
+  /*  ⚠️ ★useAiFee 는 «훅이 아니라» 그냥 함수입니다 (지갑에서 빼는 일만 합니다).
+   *     이름이 use… 로 시작해 eslint 가 «훅» 으로 오해합니다.
+   *     ⇒ 하락이수와 «같은 수법» 으로 이름을 바꿔 둡니다.
+   *  ⛔ 되돌려서 useAiFee 를 «직접» 부르지 마십시오 — 기준선(84/147)이 늘어납니다. */
+  const payFee = useAiFee
+
   async function doGenerate() {
     setPayOpen(false)
     if (!saju || saju.length === 0 || !dayStem) return
@@ -395,6 +403,36 @@ function MulsangInner() {
     setTongResult(null)
     setShowTongbyeon(false)
     savedIdRef.current = null
+
+    /* ══ 🔴🔴 ★지갑에서 «빼기» — 2026-09-22 (10부) ══════════════════
+     *
+     *  [무엇이 빠져 있었나]  ★이 한 토막이 «통째로» 없었습니다.
+     *     결제 시트는 ★«잔액이 되는지» 만 보고(wallet_check) 화면을 넘깁니다.
+     *     ⇒ 실제로 빼는 것(wallet_use)은 ★이 화면이 해야 합니다.
+     *     ⇒ 그래서 대표님 지갑에서 ★사주그림이 «안 빠졌습니다»
+     *       [대표님 2026-09-22 「사주그림을 누르면 10,000원이 결제되어야 하는데
+     *        80,000원(상담)만 결제되네」]
+     *     ⚠️ 하락이수가 8부에 «똑같은» 것이 빠져 있었습니다 — ★같은 자국입니다.
+     *
+     *  ⚠️ 얼마가 드는지는 ★결제 시트에서 이미 여쭀습니다.
+     *     ⛔ 여기서 «또» 묻지 마십시오 — 손님이 두 번 확인하게 됩니다.
+     *  ⛔ ★셈이 실패하면 «되돌립니다» — 「돈은 빠졌는데 못 봤다」 가 가장 나쁩니다.
+     *  ⚠️ ★그림은 «다시 그릴 때마다» 새로 만듭니다 ⇒ 누를 때마다 «받습니다».
+     *     (하락이수는 다시보기가 있어 recordId 로 갈랐지만, 여기는 갈래가 없습니다)
+     * ══════════════════════════════════════════════════════════════ */
+    const fee = await payFee('mulsang_ai', info?.name || '사주그림', '내 사주 그림')
+    if (fee.gate === 'on' && !fee.ok) {
+      //  ⚠️ 여기서는 ★되돌릴 것이 «없습니다» — 애초에 못 뺐습니다.
+      setLoading(false)
+      setImageError(WALLET_MSG.aiRolledBack)
+      return
+    }
+    const ledgerId = fee.gate === 'on' && fee.ok ? fee.ledgerId : undefined
+    //  🔴 ★그리기가 실패한 «모든» 길에서 되돌립니다
+    const giveBack = async () => {
+      if (ledgerId) await refundAiFee(ledgerId, '사주그림 실패 — 되돌림')
+    }
+
     try {
       const monthBranch = saju.find(p => p.pillar === '월주')?.branch ?? ''
       const yongsinResult = calcYongsin(saju, dayStem, solarMonth, solarDay,
@@ -438,6 +476,7 @@ function MulsangInner() {
       /* ★2026-09-11 (6부 둘째) — 서버가 «로그인한 사람» 만 받습니다 (㉒-o).
        *   401 이면 뭉뚱그린 오류 대신 «까닭» 을 말합니다. 아래 finally 가 돌기 표시를 풉니다. */
       if (res.status === 401) {
+        await giveBack()   //  ⛔ ★못 그렸으니 «되돌립니다»
         setImageError('로그인이 풀렸어요. 다시 로그인하시면 이어서 그릴 수 있어요.')
         return
       }
@@ -448,6 +487,8 @@ function MulsangInner() {
       if (!data.imageUrl) {
         // ★영어 원문(OpenAI 오류)은 화면에 띄우지 않는다. (2부 화면 문구 원칙 6)
         //   원인은 관리자 → 🚨 AI 오류 탭에 그대로 기록되므로 추적에 지장 없다.
+        //  ⛔ ★그림이 «안 왔습니다» — 되돌립니다
+        await giveBack()
         const note = data.imageNote || ''
         setImageError(
           note === 'no_openai_key'
@@ -480,6 +521,8 @@ function MulsangInner() {
       if (data.imageUrl) handleSaveRecord(data.imageUrl, '')
     } catch (e) {
       console.error(e)
+      await giveBack()   //  ⛔ ★터졌으니 «되돌립니다»
+      setImageError('그림을 그리지 못했어요. 잠시 뒤 다시 해 주세요.')
     } finally {
       setLoading(false)
       // ★그림 요청이 끝나면 해설을 이어서 자동 생성한다.

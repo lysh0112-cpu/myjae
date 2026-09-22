@@ -724,6 +724,89 @@ function main() {
       '⛔ ★AI 콘텐츠용 문구를 «가져다 쓰지» 않았습니다 (물건이 아닙니다)')
   }
 
+  /* ══ ⑮ 🔴🔴 «값을 받는가» — 결제 시트 = 실제 차감 ═══════════════
+   *  [대표님 2026-09-22]
+   *    「사주그림을 누르면 10,000원이 결제되어야 하고 상담사 연결은 80,000원이
+   *      따로 결제되어야 하는데 80,000원만 결제되네… 뭔가 이상해」
+   *    「모두 철저히 점검해」
+   *
+   *  [무엇이 있었나]  ★결제 시트는 «열셋» 이 띄우는데 «실제로 빼는» 곳은 ★«셋» 뿐이었습니다.
+   *     · 시트는 ★«잔액이 되는지» 만 봅니다 (wallet_check)
+   *     · 실제로 빼는 것(wallet_use)은 ★«결과를 만드는 화면» 이 해야 합니다
+   *     ⇒ ★열한 갈래가 «돈을 안 받고» 나가고 있었습니다.
+   *     ⇒ ⛔ PG 심사에도 걸립니다 — 「적힌 값과 실제가 다르다」.
+   *
+   *  ⇒ ★이제 «시트를 띄우는 화면» 마다 «빼는 곳» 이 있는지 봅니다.
+   *  ⛔ 새 서비스를 넣고 시트만 띄우면 ★멈춥니다.
+   * ════════════════════════════════════════════════════════════════ */
+  head('⑮ 🔴🔴 값을 «받는가» — 열두 갈래 [대표님]')
+  {
+    /*  ★「시트를 띄우는 화면」 ↔ 「실제로 빼는 화면」 짝.
+     *  ⚠️ 시트와 차감이 ★«다른 화면» 인 것이 많습니다 —
+     *     시트는 «입력» 화면, 차감은 «결과» 화면이기 때문입니다. */
+    const PAIRS_PAY: { name: string; file: string; item: string }[] = [
+      { name: '내사주그림',        file: 'app/manseryeok/mulsang/page.tsx',                              item: 'mulsang_ai' },
+      { name: '타로',              file: 'app/tarot/page.tsx',                                           item: 'tarot_ai' },
+      { name: '내 사주와 운세보기', file: 'app/manseryeok/result-new/page.tsx',                           item: 'saju_deep' },
+      { name: '진로적성',          file: 'app/manseryeok/career-result/page.tsx',                         item: 'career_ai' },
+      { name: '궁합',              file: 'app/manseryeok/couple-result-new/page.tsx',                     item: 'couple_ai' },
+      { name: '하락이수',          file: 'app/manseryeok/haerak-result/page.tsx',                         item: 'haerak_ai' },
+      { name: '결혼택일 찾기',      file: 'app/manseryeok/wedding-timing/find/page.tsx',                   item: 'wedding_pick' },
+      { name: '결혼택일 보기',      file: 'app/manseryeok/wedding-timing/check/page.tsx',                  item: 'wedding_check' },
+      { name: '출산택일',          file: 'app/manseryeok/birth-timing/page.tsx',                          item: 'birth_pick' },
+      { name: '이사택일 찾기',      file: 'app/manseryeok/moving-timing/find/page.tsx',                    item: 'moving_pick' },
+      { name: '이사택일 보기',      file: 'app/manseryeok/moving-timing/check/page.tsx',                   item: 'moving_check' },
+      { name: '작명(정밀·아기)',    file: 'app/manseryeok/naming/rename/newhanja/page.tsx',                item: 'naming_hanja' },
+    ]
+    for (const q of PAIRS_PAY) {
+      const live = strip(R(q.file))
+      ok(new RegExp(`(payFee|useAiFee)\\(\\s*['\`]?${q.item}`).test(live)
+        || live.includes(q.item),
+        `🔴 ★${q.name} — 값을 «뺍니다» (${q.item})`)
+    }
+
+    //  ★합격운은 낱말이 셋으로 갈립니다 — examPriceKey 가 골라 줍니다
+    {
+      const shell = strip(R('app/manseryeok/exam-luck-result/components/ExamResultShell.tsx'))
+      ok(/examPriceKey\(want\)/.test(shell) && /payFee\(item/.test(shell),
+        '🔴 ★합격·취업·승진 — 값을 «뺍니다» (examPriceKey 가 낱말을 고릅니다)')
+      ok(/EXAM_PRICE_KEYS\.promo/.test(shell),
+        '⛔ ★낱말을 «붙박이» 로 적지 않았습니다 (셋으로 갈립니다)')
+    }
+
+    /*  🔴🔴 ★AI 를 부르는 갈래는 «실패하면 되돌려야» 합니다 —
+     *    「돈은 빠졌는데 못 봤다」 가 «가장 나쁩니다».
+     *  ⚠️ 택일·작명은 ★AI 를 «안» 부릅니다 ⇒ 되돌릴 자리가 «없습니다». 여기서 뺍니다. */
+    const AI_FILES = [
+      'app/manseryeok/mulsang/page.tsx',
+      'app/tarot/page.tsx',
+      'app/manseryeok/result-new/page.tsx',
+      'app/manseryeok/career-result/page.tsx',
+      'app/manseryeok/couple-result-new/page.tsx',
+      'app/manseryeok/haerak-result/page.tsx',
+      'app/manseryeok/exam-luck-result/components/ExamResultShell.tsx',
+    ]
+    for (const f of AI_FILES) {
+      ok(/refundAiFee/.test(strip(R(f))),
+        `🔴 ⛔ ★${f.split('/').slice(-2)[0]} — 실패하면 «되돌립니다»`)
+    }
+
+    /*  🔴🔴 ⛔ ★TongbyeonView «안» 에서 빼면 «안 됩니다» —
+     *    그 부품은 ★사주·궁합·합격운이 «함께» 씁니다.
+     *    궁합·합격운은 «밖에서» 빼므로 ★«두 번» 빠집니다. */
+    ok(!/useAiFee|payFee\(/.test(strip(R('app/manseryeok/components/TongbyeonView.tsx'))),
+      '🔴🔴 ⛔ ★공용 부품(TongbyeonView) «안» 에서 빼지 않습니다 (세 화면이 씁니다)')
+
+    /*  ⛔ ★다시보기는 «안» 받습니다 — AI 를 안 부르기 때문입니다 [대표님].
+     *    ⇒ 「저장된 것을 보는데 또 돈이 빠진다」 가 가장 나쁩니다. */
+    ok(/if \(recordId && !retryRecord\) return/.test(strip(R('app/manseryeok/exam-luck-result/components/ExamResultShell.tsx'))),
+      '⛔ ★합격운 다시보기는 «안» 받습니다')
+    ok(/if \(interp && interpKey === key\)/.test(strip(R('app/tarot/page.tsx'))),
+      '⛔ ★타로는 «이미 읽은 카드» 를 다시 안 받습니다')
+    ok(/!recordId && !paidRef\.current/.test(strip(R('app/manseryeok/haerak-result/page.tsx'))),
+      '⛔ ★하락이수 다시보기는 «안» 받습니다')
+  }
+
   console.log(`\n━━ 홈 카드 가격 — 통과 ${pass} · 실패 ${fail} ━━\n`)
   if (fail > 0) process.exit(1)
 }

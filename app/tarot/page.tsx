@@ -3,6 +3,8 @@ import { Suspense, useState, useEffect, useRef } from 'react'
 //  ★2026-09-09 — 보관함 자리는 공용 부품 «한 곳» 입니다 [대표님 「색상 통일」]
 //  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
 import WalletPaySheet from '@/app/components/common/WalletPaySheet'
+//  ★지갑 관문은 lib/wallet/consultGate.ts «한 곳» 입니다 [대표님 2026-09-09]
+import { useAiFee, refundAiFee, WALLET_MSG } from '@/lib/wallet/consultGate'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import ConsultButton from '@/app/components/common/ConsultButton'
@@ -263,10 +265,37 @@ function TarotInner() {
 
   const allFlipped = picked.length > 0 && picked.every(p => p.flipped)
 
+  /*  ⚠️ ★useAiFee 는 «훅이 아니라» 그냥 함수입니다 — 이름이 use… 라 eslint 가 오해합니다.
+   *  ⛔ 되돌려서 «직접» 부르지 마십시오 — 기준선(84/147)이 늘어납니다. */
+  const payFee = useAiFee
+
   async function getInterpretation() {
     const key = cardsKey(picked)
+    /*  ⛔ ★이미 읽은 카드면 «안 뺍니다» — AI 를 «안» 부르기 때문입니다.
+     *     손님이 결과 화면을 오가도 값이 다시 빠지지 않습니다. */
     if (interp && interpKey === key) { setStep('result'); return }
     setLoading(true)
+
+    /* ══ 🔴🔴 ★지갑에서 «빼기» — 2026-09-22 (10부) ══════════════════
+     *  [무엇이 빠져 있었나]  결제 시트는 ★«잔액이 되는지» 만 봅니다(wallet_check).
+     *     실제로 빼는 것(wallet_use)은 ★이 화면이 해야 하는데 «없었습니다».
+     *     ⇒ 타로가 ★돈을 «안 받고» 나가고 있었습니다.
+     *  ⚠️ ★여기가 «AI 를 부르는» 자리라 여기서 뺍니다.
+     *     ⛔ 보관함 다시보기(recordId)는 AI 를 «안» 부르므로 ★안 뺍니다 (181줄).
+     *  ⛔ 실패하면 ★«되돌립니다» — 「돈은 빠졌는데 못 봤다」 가 가장 나쁩니다. */
+    const fee = await payFee('tarot_ai', question || '타로', '타로 카드 리딩')
+    if (fee.gate === 'on' && !fee.ok) {
+      //  ⚠️ 애초에 못 뺐으니 ★되돌릴 것이 «없습니다»
+      setLoading(false)
+      alert(WALLET_MSG.aiRolledBack)
+      return
+    }
+    const ledgerId = fee.gate === 'on' && fee.ok ? fee.ledgerId : undefined
+    //  🔴 ★읽기가 실패한 «모든» 길에서 되돌립니다
+    const giveBack = async () => {
+      if (ledgerId) await refundAiFee(ledgerId, '타로 읽기 실패 — 되돌림')
+    }
+
     try {
       await refreshBeforeAi()   // ★직전에 세션을 새로 받습니다 (6부 · ㉒-o)
       const res = await fetch('/api/tarot', {
@@ -282,6 +311,11 @@ function TarotInner() {
         }),
       })
       const data = await res.json()
+      //  ⛔ ★풀이가 «안» 왔습니다 — 되돌립니다
+      if (!data.interpretation) {
+        await giveBack()
+        alert('카드를 읽지 못했어요. 잠시 뒤 다시 해 주세요.')
+      }
       if (data.interpretation) {
         setInterp(data.interpretation)
         setInterpKey(key)
@@ -312,6 +346,8 @@ function TarotInner() {
       }
     } catch (e) {
       console.error(e)
+      await giveBack()   //  ⛔ ★터졌으니 «되돌립니다»
+      alert('카드를 읽지 못했어요. 잠시 뒤 다시 해 주세요.')
     } finally {
       setLoading(false)
     }

@@ -31,6 +31,8 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+//  ★지갑 관문은 lib/wallet/consultGate.ts «한 곳» 입니다 [대표님 2026-09-09]
+import { useAiFee, refundAiFee, examPriceKey, EXAM_PRICE_KEYS, WALLET_MSG } from '@/lib/wallet/consultGate'
 import { calcPerson, type PersonCalc } from '@/lib/saju/career/calcPerson'
 import { exactAge } from '@/lib/saju/ageDayun'
 import { judgeYears, currentDayunOf } from '@/lib/saju/examLuck/examScore'
@@ -559,8 +561,40 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
     //  ⚠️ 빈 기록 상자는 «그리는 쪽» 이 retryRecord 로 숨깁니다 — 여기서 상태를 바꾸지 않습니다 (eslint 규칙).
     if (recordId && retryRecord) savedIdRef.current = recordId
 
+    /*  ⚠️ ★useAiFee 는 «훅이 아니라» 그냥 함수입니다 — 이름이 use… 라 eslint 가 오해합니다. */
+    const payFee = useAiFee
+    /** ★빼 둔 기록 — 통변이 실패하면 이것으로 «되돌립니다» */
+    let ledgerId: string | undefined
+    const giveBack = async () => {
+      if (ledgerId) { const id = ledgerId; ledgerId = undefined; await refundAiFee(id, '합격운 풀이 실패 — 되돌림') }
+    }
+
     ;(async () => {
       setTongState('loading')
+
+      /* ══ 🔴🔴 ★지갑에서 «빼기» — 2026-09-22 (10부) ══════════════════
+       *  [무엇이 빠져 있었나]  결제 시트(exam-luck-input)는
+       *     ★«잔액이 되는지» 만 봅니다(wallet_check).
+       *     실제로 빼는 것(wallet_use)은 ★이 화면이 해야 하는데 «없었습니다».
+       *     ⇒ 합격운·취업운·승진운이 ★돈을 «안 받고» 나가고 있었습니다.
+       *
+       *  ⚠️ ★값 낱말이 셋으로 갈립니다 — examPriceKey 가 «떨어질 자리» 를 골라 줍니다.
+       *     ⛔ 낱말을 여기에 «붙박이» 로 적지 마십시오 (7부 1-5).
+       *  ⛔ 다시보기(recordId)면 ★위에서 이미 빠져나갑니다 (554줄) ⇒ 안 뺍니다.
+       *     ⚠️ 다만 ★[풀이 다시 받기](retryRecord)는 «새로» 부르므로 «받습니다».
+       *  ⛔ 되돌리기를 빼지 마십시오 — 「돈은 빠졌는데 못 봤다」 가 가장 나쁩니다. */
+      const want = mode === 'jinhak' ? EXAM_PRICE_KEYS.exam
+        : mode === 'seungjin' ? EXAM_PRICE_KEYS.promo
+        : EXAM_PRICE_KEYS.job
+      const item = await examPriceKey(want)
+      const fee = await payFee(item, recordId || 'examluck', '합격·취업·승진 분석')
+      if (fee.gate === 'on' && !fee.ok) {
+        //  ⚠️ 애초에 못 뺐으니 ★되돌릴 것이 «없습니다»
+        setFailWhy(WALLET_MSG.aiRolledBack)
+        setTongState('failed')
+        return
+      }
+      ledgerId = fee.gate === 'on' && fee.ok ? fee.ledgerId : undefined
       // ★2026-07-29 — 초입 폼에서 고른 넷을 프롬프트까지 실어 보냅니다. (대표님 지시)
       //   [무엇이 문제였나] kind·examKind·examDate 가 URL 에는 있는데
       //     여기서 안 넘겨 프롬프트가 못 봤습니다. 그래서 학생에게도
@@ -909,6 +943,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
 
         // ★하나도 못 받았을 때만 실패로 봅니다. 일부라도 왔으면 보여 줍니다.
         if (!acc.trim()) {
+          await giveBack()   //  ⛔ ★하나도 못 받았습니다 — 되돌립니다
           setFailWhy(failNotes.join(' · ') || '까닭을 알 수 없습니다')
           setTongState('failed')
           return
@@ -920,6 +955,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
 
         await saveTong()   // ★마지막 한 번 더 — 위에서 갈래마다 저장했지만, 끝난 모양을 확실히 남깁니다
       } catch (e) {
+        await giveBack()   //  ⛔ ★터졌으니 «되돌립니다»
         if (!cancelled) {
           setFailWhy(failNotes.join(' · ') || String(e))
           setTongState('failed')
@@ -938,7 +974,9 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
     //   빠뜨리면 «학년을 바꿨는데 리포트는 그대로» 가 됩니다.
     // ★2026-07-30 — signalBlock·upsangMaterial·kind 도 함께 넣었습니다.
     //   빠뜨리면 재료가 바뀌어도 옛 통변이 그대로 남습니다.
-  }, [calc, cards, recordId, person, target, kind, studentGrade, gradeLevel, trackSel,
+    //  ★2026-09-22 (10부) — 지갑에서 뺄 때 ★mode 로 «값 낱말» 을 고릅니다.
+    //     ⛔ 빼면 eslint 경고가 하나 늘어납니다 (기준선 84/147).
+  }, [calc, cards, recordId, person, target, kind, mode, studentGrade, gradeLevel, trackSel,
       examCategory, targetType, targetCustomText, examDateRaw, dateApprox, examDayForPrompt, thisYear,
       signalBlock, upsangMaterial, dayunReady, retryRecord, examKind, cardsAll, way, wishForSave, wishHeavy, sit, gates, picks, jobTextForSave, certsForSave, plan, schoolExam,
       //  ★7부 — 승진 재료. ⛔«문자열 하나» 입니다 (useMemo 로 한 번만 만듭니다).

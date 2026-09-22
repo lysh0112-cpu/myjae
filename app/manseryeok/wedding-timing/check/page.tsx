@@ -4,6 +4,8 @@ import { Suspense, useState, useEffect, useRef } from 'react'
 import StorageLinkRow from '@/app/components/common/StorageLinkRow'
 //  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
 import WalletPaySheet from '@/app/components/common/WalletPaySheet'
+//  ★지갑 관문은 lib/wallet/consultGate.ts «한 곳» 입니다 [대표님 2026-09-09]
+import { useAiFee, WALLET_MSG } from '@/lib/wallet/consultGate'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { runDiagnoseV7, type DayResult } from '../lib/recommendV7'
@@ -143,10 +145,26 @@ function CheckInner() {
     setPayOpen(true)
   }
 
+  /*  ⚠️ ★useAiFee 는 «훅이 아니라» 그냥 함수입니다 — 이름이 use… 라 eslint 가 오해합니다. */
+  const payFee = useAiFee
+
   async function runCheck() {
     setPayOpen(false)
     const filled = dates.filter(d => d && d.trim())
     setLoading(true)
+
+    /* ══ 🔴🔴 ★지갑에서 «빼기» — 2026-09-22 (10부) ══════════════════
+     *  [무엇이 빠져 있었나]  결제 시트는 ★«잔액이 되는지» 만 봅니다(wallet_check).
+     *     실제로 빼는 것(wallet_use)은 ★이 화면이 해야 하는데 «없었습니다».
+     *  ⚠️ ★AI 를 «안» 부릅니다 — 사주 셈으로 날을 봅니다.
+     *     그래도 손님이 «받아 가는 것» 이 있으므로 값을 받습니다 [대표님 2026-09-22].
+     *  ⛔ 다시보기(recordId)는 ★위에서 저장본을 불러옵니다 ⇒ 여기를 안 지납니다. */
+    const fee = await payFee('wedding_check', '결혼택일 정한 날 보기', '결혼택일 정한 날 보기')
+    if (fee.gate === 'on' && !fee.ok) {
+      setLoading(false)
+      setError(WALLET_MSG.aiRolledBack)
+      return
+    }
     setDone(false)
     try {
       const result = await runDiagnoseV7({ dates: filled, groom, bride })

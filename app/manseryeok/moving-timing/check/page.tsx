@@ -14,6 +14,8 @@
 import { Suspense, useEffect, useState, useRef } from 'react'
 //  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
 import WalletPaySheet from '@/app/components/common/WalletPaySheet'
+//  ★지갑 관문은 lib/wallet/consultGate.ts «한 곳» 입니다 [대표님 2026-09-09]
+import { useAiFee, WALLET_MSG } from '@/lib/wallet/consultGate'
 //  ★2026-09-09 — 보관함 자리는 공용 부품 «한 곳» 입니다 [대표님 「색상 통일」]
 import StorageLinkRow from '@/app/components/common/StorageLinkRow'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -75,11 +77,23 @@ function CheckInner() {
     } catch { return null }
   }
 
+  /*  ⚠️ ★useAiFee 는 «훅이 아니라» 그냥 함수입니다 — 이름이 use… 라 eslint 가 오해합니다. */
+  const payFee = useAiFee
+
   async function runDiagnose() {
     const clean = dates.filter(d => d && d.trim())
     if (clean.length === 0) { setErr('봐드릴 날짜를 한 개 이상 골라 주세요.'); return }
 
-    // ⚠️ 결제 관문이 들어올 자리. price_key = 'moving_check'
+    /* ══ 🔴🔴 ★지갑에서 «빼기» — 2026-09-22 (10부) ══════════════════
+     *  ⚠️ ★여기가 「결제 관문이 들어올 자리」 라고 «적혀 있던» 곳입니다. 그대로 넣었습니다.
+     *  ⚠️ ★AI 를 «안» 부릅니다 — 사주 셈으로 날을 봅니다.
+     *     그래도 손님이 «받아 가는 것» 이 있으므로 값을 받습니다 [대표님 2026-09-22].
+     *  ⛔ 다시보기(recordId)는 ★저장본을 불러옵니다 ⇒ 여기를 안 지납니다. */
+    const fee = await payFee('moving_check', '이사택일 정한 날 보기', '이사택일 정한 날 보기')
+    if (fee.gate === 'on' && !fee.ok) {
+      setErr(WALLET_MSG.aiRolledBack)
+      return
+    }
 
     setErr('')
     setLoading(true)

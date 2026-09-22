@@ -2,6 +2,8 @@
 import { Suspense, useState, useEffect, type ReactNode } from 'react'
 //  ★2026-09-09 — 결제 시트는 공용 부품 «한 곳» 입니다 [대표님 「통일」]
 import WalletPaySheet from '@/app/components/common/WalletPaySheet'
+//  ★지갑 관문은 lib/wallet/consultGate.ts «한 곳» 입니다 [대표님 2026-09-09]
+import { useAiFee, WALLET_MSG } from '@/lib/wallet/consultGate'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import WeddingRangeCalendar from '../components/WeddingRangeCalendar'
@@ -129,13 +131,31 @@ function WeddingFindInner() {
     setPayOpen(true)
   }
 
-  function handlePay() {
+  /*  ⚠️ ★useAiFee 는 «훅이 아니라» 그냥 함수입니다 — 이름이 use… 라 eslint 가 오해합니다. */
+  const payFee = useAiFee
+
+  async function handlePay() {
     const params = new URLSearchParams()
     params.set('p1', JSON.stringify(groom))
     params.set('p2', JSON.stringify(bride))
     params.set('survey', JSON.stringify(survey))
     // ★v7: 옛 /result(점수제 화면)를 접고 /pick(필터 화면)으로 보낸다.
     //   되돌리려면 이 경로만 바꾸면 된다.
+    /* ══ 🔴🔴 ★지갑에서 «빼기» — 2026-09-22 (10부) ══════════════════
+     *  [무엇이 빠져 있었나]  결제 시트는 ★«잔액이 되는지» 만 봅니다(wallet_check).
+     *     실제로 빼는 것(wallet_use)은 ★이 화면이 해야 하는데 «없었습니다».
+     *     ⇒ 택일이 ★돈을 «안 받고» 나가고 있었습니다.
+     *
+     *  ⚠️ ★택일은 AI 를 «안» 부릅니다 — 사주 셈과 교재 값으로 날을 고릅니다.
+     *     그래도 ★손님이 «받아 가는 것» 이 있으므로 값을 받습니다 [대표님 2026-09-22].
+     *  ⛔ 되돌리기가 «없습니다» — AI 가 없어 «실패할 자리» 가 없기 때문입니다.
+     *     ⇒ 다음 화면은 «셈» 이라 반드시 나옵니다.
+     *  ⚠️ 다시보기는 ★보관함에서 «다른 길» 로 들어옵니다 ⇒ 여기를 안 지납니다. */
+    const fee = await payFee('wedding_pick', '결혼택일 좋은 날 찾기', '결혼택일 좋은 날 찾기')
+    if (fee.gate === 'on' && !fee.ok) {
+      alert(WALLET_MSG.aiRolledBack)
+      return
+    }
     router.push('/manseryeok/wedding-timing/pick?' + params.toString())
   }
 
