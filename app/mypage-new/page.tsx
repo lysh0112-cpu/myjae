@@ -6,6 +6,7 @@ import { refundConsultByRef, WALLET_MSG } from '@/lib/wallet/consultGate'
 import { EL_BG, EL_BD, EL_C, EL_C_SUB, EL_HAN } from '@/lib/saju/ohaengColor'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { CONSULT_OPEN } from '@/lib/consultOpen'
 import { shownName } from '@/lib/consultantName'
 import HomeBottomNav from '@/app/components/HomeBottomNav'
 import { useResultSaju } from '@/hooks/useResultSaju'
@@ -659,6 +660,12 @@ export default function MyPageNew() {
           </div>
         </div>
 
+        {/*  🔴🔴 ★2026-09-23 (11부) — 전문가 상담 «운영 종료» [대표님]
+          *  ⚠️ 기존 손님은 ★«한 분도» 없습니다 (대표님 시험뿐).
+          *  ⛔ 지난 기록을 «지우지» 않았습니다 — 정산 근거이고,
+          *     상담사·관리자 화면에는 ★그대로 남습니다.
+          *  ⇒ 손님 화면에서만 «안 보이게» 합니다. */}
+        {CONSULT_OPEN && (
         <div style={card}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>내 상담 내역</div>
           {(() => {
@@ -734,6 +741,7 @@ export default function MyPageNew() {
             )
           })()}
         </div>
+        )}
 
         <div style={{ background: '#FFFBF7', border: '0.5px solid #9c7a58', borderRadius: 14, overflow: 'hidden', marginBottom: 12 }}>
           <button onClick={() => setCashOpen(v => !v)}

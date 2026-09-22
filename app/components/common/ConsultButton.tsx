@@ -5,6 +5,7 @@ import { checkConsultBalance, WALLET_MSG } from '@/lib/wallet/consultGate'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { LINE_OUTER } from '@/lib/ui/line'
+import { CONSULT_OPEN } from '@/lib/consultOpen'
 
 type Props = {
   priceKey: string                  // consult_prices의 price_key (예: 'saju')
@@ -215,6 +216,17 @@ export default function ConsultButton({ priceKey, mode, searchParams, payload }:
   //   ⚠️ 물상(mulsang/page.tsx:1070)에는 ★따로 만든 상담 버튼이 있습니다.
   //      지금 false && 로 «꺼져» 있어 안 건드렸습니다. 되살리실 때 이 부품으로 바꾸십시오.
   // ══════════════════════════════════════════════════════════════════════
+  /*  🔴🔴 ★2026-09-23 (11부) — 전문가 상담 «운영 종료» [대표님]
+   *  [토스 회신] 사람이 개입하는 1:1 상담이 포함되면 ★입점 불가.
+   *  ⇒ 이 부품 ★하나를 막으면 결과 화면 ★열한 곳의 단추가 «한꺼번에» 사라집니다.
+   *  ⛔ 화면마다 지우지 «마십시오» — 공용 부품입니다 (9부 ⑤).
+   *  ⇒ 다시 여실 때는 ★lib/consultOpen.ts «한 줄» 만 true 로.
+   *
+   *  ⚠️ ★«훅보다 앞» 에 두었다가 eslint 가 멈춰 세웠습니다 —
+   *     조건부로 돌아가면 훅 차례가 어긋납니다 (rules-of-hooks).
+   *     ⇒ ⛔ 위로 올리지 «마십시오». «그리는» 자리에서 막는 것이 맞습니다. */
+  if (!CONSULT_OPEN) return null
+
   return (
     // ★2026-08-05 (47부 17차) — 위아래 여백을 ★«부품 안» 에서 잡습니다. [대표님 지시]
     //   [무엇이 문제였나]  부르는 쪽 «열두 곳» 이 각자 여백을 정하고 있었습니다 —

@@ -699,6 +699,61 @@ function main() {
     ok(/useState\(false\)/.test(hook) && /f\.sisterLinks/.test(hook),
       '🔴 ⛔ ★못 읽으면 «숨김» 입니다 (기본값이 꺼짐)')
 
+    /*  ══ 🔴🔴 약관에서 «전문가 상담» 이 빠졌는가 ═══════════════════
+     *  [토스페이먼츠 회신 2026-09-22 22:06] 입점 «불가» 확정 —
+     *    「AI 가 ★자동으로 분석해 결과를 제공하는 서비스에 한해서만 입점 가능.
+     *      ★사람(상담사)이 직접 개입하는 … 1:1 상담이 포함된 경우 입점 불가」
+     *  [대표님 회신 09-23] 전문가 상담 ★전면 제외 · 「약관에서도 삭제합니다」
+     *  ⇒ 🔴 심사관이 ★약관을 «읽습니다». 한 줄이라도 남으면 «말과 글» 이 어긋납니다.
+     *  ⛔ ★«손님이 읽는 본문»(TERMS) 만 봅니다 — 보관해 둔 옛 조항은 «남아야» 합니다. */
+    {
+      const tx = R('app/components/legal/termsText.ts')
+      const body = tx.slice(tx.indexOf('export const TERMS: LegalArticle[] = ['))
+      ok(!/상담/.test(body),
+        '🔴🔴 ⛔ ★약관 «본문» 에 «상담» 이 «한 줄도» 없습니다 (토스 기준)')
+      ok(/OLD_CONSULT_PARAS/.test(tx) && /전문가 상담은 상담 시작 3시간/.test(tx),
+        '⛔ ★뺀 조항을 «지우지 않고» 보관해 두었습니다 (승인 뒤 되살립니다)')
+      ok(/시행일 2026년 9월 23일/.test(tx),
+        '⚠️ ★시행일을 «고친 날» 로 바꿨습니다 (약관이 바뀌면 날짜도 바뀝니다)')
+    }
+
+    /*  ══ 🔴🔴 손님이 «상담에 닿는 길» 이 끊겼는가 ════════════════
+     *  [대표님 2026-09-23] 「정말로 상담을 그만둘 거야 · 향후에도 운영하지 않을 거야
+     *    · 기존 손님은 전혀 없어 · ★연재쌤 작업화면은 남기고 «손님 길만» 끊기」
+     *  ⛔ ★스위치는 «한 곳»(lib/consultOpen.ts) 이라야 합니다 —
+     *     화면마다 손으로 지우면 «어딘가 하나» 가 반드시 남습니다.
+     *  ⛔ ★«단추를 숨기는 것» 만으로는 «막는 것이 아닙니다» (9부 ⑥) —
+     *     들어오는 «문» 두 곳도 막았는지 «따로» 봅니다. */
+    {
+      const sw = R('lib/consultOpen.ts')
+      ok(/export const CONSULT_OPEN = false/.test(sw),
+        '🔴🔴 ⛔ ★상담이 «닫혀» 있습니다 (스위치 한 곳)')
+      /*  ⚠️ ★파일 «전체» 를 보다가 «제 주석» 을 세어 헛 실패가 났습니다.
+       *     ⇒ ★«손님에게 보이는 말» «그 한 줄» 만 봅니다. */
+      const msg = (sw.match(/CONSULT_CLOSED_MSG = '([^']*)'/) || [])[1] ?? ''
+      ok(msg.length > 0 && !/잠시|당분간|곧 다시|준비/.test(msg),
+        '⚠️ ★손님에게 「잠시」 같은 말을 안 합니다 (다시 열 계획이 없습니다)')
+
+      const CUT: [string, string][] = [
+        ['app/components/common/ConsultButton.tsx', '[상담 신청하기] 단추(열한 곳)'],
+        ['app/manseryeok/consultant-select/page.tsx', '상담사 고르기 «문»'],
+        ['app/manseryeok/consulting/page.tsx', '예약·결제·일정 «문»'],
+        ['app/mypage-new/page.tsx', '마이페이지 「내 상담 내역」'],
+      ]
+      /*  ⚠️ ★«있는지» 만 보면 안 됩니다 — 처음에 그렇게 했다가
+       *     막는 줄을 통째로 지워도 ★import 가 남아 «통과» 했습니다.
+       *     ⇒ ★«막는 자리» 를 봅니다 — 돌아가거나(return) 조건으로 감싸거나. */
+      for (const [path, name] of CUT) {
+        const src = strip(R(path))
+        ok(/if \(!CONSULT_OPEN\)\s*return|\{CONSULT_OPEN && /.test(src),
+          `🔴 ⛔ ★${name} — 스위치가 «실제로 막습니다» (있기만 한 것이 아닙니다)`)
+      }
+      //  ⚠️ 연재쌤 작업 화면은 ★«살아» 있어야 합니다 [대표님]
+      const staff = strip(R('app/manseryeok/consultant/page.tsx'))
+      ok(!/CONSULT_OPEN/.test(staff) && staff.length > 0,
+        '⚠️ ★연재쌤 작업 화면은 «그대로» 삽니다 (손님 길만 끊었습니다)')
+    }
+
     /*  ⛔ ★약관 글을 «지우지» 않았는가 — 승인 뒤 되살려야 할 «고지 사항» 입니다 */
     const terms = R('app/components/legal/termsText.ts')
     ok(/TERMS_SCOPE_SISTERS/.test(terms) && /큐보드\(cue\.myjae\.kr\)/.test(terms),

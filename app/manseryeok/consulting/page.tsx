@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
+import { CONSULT_OPEN, CONSULT_CLOSED_MSG } from '@/lib/consultOpen'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { shownName } from '@/lib/consultantName'
@@ -232,7 +233,40 @@ function ConsultingContent() {
   return null
 }
 
+
+/*  🔴🔴 ★2026-09-23 (11부) — 전문가 상담 «운영 종료» [대표님]
+ *  [토스 회신 2026-09-22] 사람(상담사)이 개입하는 1:1 상담이 포함되면 ★입점 불가.
+ *  ⛔ ★단추를 숨기는 것만으로는 «막는 것이 아닙니다» (9부 ⑥) —
+ *     주소를 직접 치면 열립니다. 그래서 ★«문» 을 막습니다.
+ *  ⇒ 다시 여실 때는 ★lib/consultOpen.ts «한 줄» 만 true 로. */
+function ConsultClosed() {
+  const router = useRouter()
+  return (
+    <div style={{
+      minHeight: '100vh', background: '#FDF6F0',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', gap: 18, padding: '0 28px', textAlign: 'center',
+    }}>
+      <div style={{ fontSize: 15, fontWeight: 700, color: '#141c28' }}>
+        {CONSULT_CLOSED_MSG}
+      </div>
+      <div style={{ fontSize: 12.5, color: '#55636f', lineHeight: 1.8 }}>
+        사주·운세 분석 콘텐츠는 그대로 이용하실 수 있어요.
+      </div>
+      <button
+        onClick={() => router.replace('/home-new')}
+        style={{
+          marginTop: 6, padding: '14px 26px', borderRadius: 12,
+          background: '#b46e46', color: '#fff', border: 'none',
+          fontSize: 14, fontWeight: 600, cursor: 'pointer',
+        }}
+      >홈으로</button>
+    </div>
+  )
+}
+
 export default function ConsultingPage() {
+  if (!CONSULT_OPEN) return <ConsultClosed />
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-stone-950 flex items-center justify-center">
