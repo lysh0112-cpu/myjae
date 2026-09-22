@@ -273,7 +273,7 @@ export function openCoupleCertificate(d: CoupleCertInput): { ok: boolean; messag
     ${d.outro.trim() ? `<div class="end"><h2>맺음말</h2>${paraHtml(d.outro)}</div>` : ''}
 
     <div class="foot">
-      이 풀이는 흔한 기준으로 본 것이니, 상담사와 한 번 더 맞춰 보시면 더 정확해집니다.<br>
+      이 풀이는 흔한 기준으로 본 것이니, 두 분의 사정과 함께 보시면 더 정확해집니다.<br>
       사주는 참고입니다. 길은 두 분이 함께 만들어 가시는 것입니다.
     </div>
   </div>

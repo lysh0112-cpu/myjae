@@ -62,7 +62,7 @@ function DayCard({ day, note, onOpenHour }: {
           <span style={{ fontSize: 15, color: C.text, fontWeight: 700 }}>{day.dateLabel}</span>
         </div>
         <div style={{ fontSize: 12, color: C.accent, lineHeight: 1.6 }}>
-          이 아기 사주는 특수한 구성이라, 정확한 건 전문가 상담을 권해요.
+          이 아기 사주는 특수한 구성이라, 아래 풀이는 참고로 봐 주세요.
         </div>
       </div>
     )

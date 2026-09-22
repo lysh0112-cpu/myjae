@@ -364,7 +364,7 @@ export default function WelcomePage() {
             [직접 입력] 생년월일·출생시간·성별(사주 분석용)<br />
             [이용 중 생성] 상담·결제 내역<br /><br />
             <b style={{ color: INK }}>· 이용 목적</b><br />
-            사주·작명·궁합 등 명리 분석 서비스 제공, AI 분석 및 전문가 상담 연결, 결제·정산 처리<br /><br />
+            사주·작명·궁합 등 명리 분석 서비스 제공, AI 분석 결과 제공, 결제·정산 처리<br /><br />
             <b style={{ color: INK }}>· 보유 기간</b><br />
             회원 탈퇴 시까지. 관련 법령에 따라 일정 기간 보관될 수 있습니다.<br /><br />
             <b style={{ color: INK }}>· AI 분석 안내</b><br />

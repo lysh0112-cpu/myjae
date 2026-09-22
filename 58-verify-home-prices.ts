@@ -748,6 +748,28 @@ function main() {
         ok(/if \(!CONSULT_OPEN\)\s*return|\{CONSULT_OPEN && /.test(src),
           `🔴 ⛔ ★${name} — 스위치가 «실제로 막습니다» (있기만 한 것이 아닙니다)`)
       }
+      /*  🔴 손님 화면 글에도 «상담» 이 남지 않았는가 [대표님 2026-09-23 「상담 관련 내용 삭제」]
+       *  ⚠️ ★단추를 막아도 «글» 은 남습니다 — 가입 화면 · 타로 권유 · 후기 분류 ·
+       *     결과 화면 안내까지 ★여덟 자리에 흩어져 있었습니다.
+       *  ⛔ ★주석은 걸러냅니다 (왜 뺐는지 적어 두었기 때문입니다). */
+      const TEXTS: [string, string][] = [
+        ['app/auth/welcome/page.tsx', '가입 화면 이용 목적'],
+        ['app/api/tarot/route.ts', '타로 손님 권유'],
+        ['app/manseryeok/naming/rename/result/page.tsx', '작명 확정 단추'],
+        ['app/manseryeok/reviews/write/page.tsx', '후기 쓰기 분류'],
+        ['app/manseryeok/birth-timing/components/ResultV5.tsx', '출산택일 안내'],
+        ['app/manseryeok/couple-result-new/components/CoupleCertificate.tsx', '궁합 증명서'],
+        ['lib/saju/career/special.ts', '진로적성 특수 구성'],
+        ['app/manseryeok/result-new/page.tsx', '사주 결과 안내'],
+        ['app/manseryeok/career-result/page.tsx', '진로 결과 안내'],
+        ['app/manseryeok/exam-luck-result/components/ExamResultShell.tsx', '합격운 결과 안내'],
+      ]
+      for (const [path, name] of TEXTS) {
+        const live = strip(R(path))
+        ok(!/전문가 상담|상담사 선생님|상담사와 한 번|상담을 권해|상담해 드려요/.test(live),
+          `🔴 ⛔ ★${name} — 손님에게 «상담» 을 말하지 않습니다`)
+      }
+
       //  ⚠️ 연재쌤 작업 화면은 ★«살아» 있어야 합니다 [대표님]
       const staff = strip(R('app/manseryeok/consultant/page.tsx'))
       ok(!/CONSULT_OPEN/.test(staff) && staff.length > 0,

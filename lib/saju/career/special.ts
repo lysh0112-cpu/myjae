@@ -111,7 +111,8 @@ export function judgeSpecial(input: CareerInput): CareerCard | null {
   const lines = [
     '이 사주는 한 기운으로 뚜렷하게 모여 있어요. 흔한 잣대로만 재기 어려운 구조입니다.',
     ...flags.map(f => f.detail),
-    '아래 풀이는 흔한 기준으로 본 것이니, 상담사와 한 번 더 맞춰 보시면 더 정확해집니다.',
+    //  🔴 ★2026-09-23 (11부) — 전문가 상담 «운영 종료» [대표님]. ⛔ 상담 권유로 되돌리지 마십시오.
+    '아래 풀이는 흔한 기준으로 본 것이니, 참고로 봐 주세요.',
   ]
   const reasons = [
     `특수격 의심 : ${flags.map(f => f.label).join(' · ')}`,

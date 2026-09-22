@@ -1371,8 +1371,7 @@ function ExamLuckResultInner({ mode }: { mode: ExamMode }) {
               border: `0.5px solid ${LINE}`, borderRadius: 9,
               fontSize: 12, color: '#8f3d0e', lineHeight: 1.7,
             }}>
-              풀이를 쓰는 중이에요. 다 나온 뒤에 신청하시면
-              상담사 선생님이 <b>회원님이 보신 풀이를 그대로</b> 보고 상담해 드려요.
+              풀이를 쓰는 중이에요. 다 나올 때까지 잠시 기다려 주세요.
             </div>
           )}
           <ConsultButton

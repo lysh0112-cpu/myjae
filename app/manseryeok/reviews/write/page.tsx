@@ -16,7 +16,9 @@ const TITLE = '#3a2e28'      // 본문 텍스트
 const BROWN = '#b46e46'      // 메인 버튼
 
 // 후기 대상 서비스 (칩 선택)
-const SERVICES = ['사주분석', '물상도', '작명', '궁합', '전문가 상담', '기타']
+//  🔴 ★2026-09-23 (11부) — '전문가 상담' 을 뺐습니다 (운영 종료) [대표님]
+//  ⚠️ 옛 후기에 그 값이 남아 있어도 ★목록에는 그대로 보입니다. 글은 안 지웁니다.
+const SERVICES = ['사주분석', '물상도', '작명', '궁합', '기타']
 
 export default function ReviewWritePage() {
   const router = useRouter()

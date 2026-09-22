@@ -812,6 +812,13 @@ export default function MyPageNew() {
           *     진짜 막는 곳은 ★/api/naejeong 의 requireMaster() 입니다. */}
         {isStaff && (
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            {/*  🔴 ★2026-09-23 (11부) — 전문가 상담 «운영 종료» [대표님]
+              *  ⚠️ 이 단추는 ★매니저·상담사에게«만» 보이던 것이라 심사관 눈에는
+              *     원래 안 띕니다. 그래도 상담을 그만두시므로 ★입구를 닫습니다.
+              *  ⛔ ★화면(/manseryeok/consultant)은 «지우지» 않았습니다 —
+              *     주소로는 들어가실 수 있습니다 [대표님 「작업화면은 남기고」].
+              *  ⇒ 다시 여실 때는 ★lib/consultOpen.ts 한 줄만 true 로. */}
+            {CONSULT_OPEN && (
             <button onClick={async () => {
               const { data: c } = await supabase.from('consultants').select('id').eq('email', email).single()
               router.push(c ? `/manseryeok/consultant?consultantId=${c.id}` : '/manseryeok/consultant')
@@ -819,6 +826,7 @@ export default function MyPageNew() {
               <span style={staffIcon} aria-hidden="true">🩺</span>
               상담 관리
             </button>
+            )}
             {isMaster && (
               <button onClick={() => router.push('/naejeong')} style={staffBtn}>
                 <span style={staffIcon} aria-hidden="true">🗓</span>

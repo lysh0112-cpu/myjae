@@ -277,7 +277,7 @@ function ResultInner() {
         다른 한자 다시 고르기
       </button>
       <div style={{ border: '1px dashed rgba(250,199,117,0.35)', borderRadius: 14, padding: 14, textAlign: 'center', marginTop: 10, color: SUB, fontSize: 13 }}>
-        전문가 상담으로 확정하기 (준비 중)
+        이름 확정하기 (준비 중)
       </div>
     </main>
   )
