@@ -332,6 +332,53 @@ function main() {
     console.log(`  ⚠️  타로 칸의 「AI」 — ${tarot ? '★아직 있습니다 (대표님 답 대기)' : '없습니다'}`)
   }
 
+  /* ══ ④ 🔴 특화 분석(BEST) = 전체 서비스 카드 «같은 모양» ══════════
+   *  [대표님 2026-09-22] 「특화분석과 전체서비스 버튼들이 모양이 약간 다르지
+   *    통일부터 하고 가자」 · 「왼쪽 음영처리… 그 모양도 같이 해줘」
+   *
+   *  ⚠️ 2026-09-08 에 ★«선»(모서리·테두리·그림자)만 통일하고
+   *     ★«크기» 는 안 맞췄습니다. 그것이 반년 뒤 대표님 눈에 띄었습니다.
+   *
+   *  ⛔ ★숫자를 못 박지 않습니다 — «두 자리에서 뽑아» 견줍니다.
+   *     아래 카드 값을 바꾸면 BEST 도 «함께» 바꾸라고 멈춥니다.
+   *  ⚠️ ★갈려도 되는 것 — 바탕색(t.bg) · BEST 뱃지. 그 둘은 «일부러» 다릅니다.
+   * ═════════════════════════════════════════ */
+  head('④ 🔴 특화 분석 = 전체 서비스 «같은 모양» [대표님]')
+  {
+    /*  ★BEST 카드를 그리는 토막 — ⚠️ 단추«부터» 자르면 안 됩니다.
+     *     왼쪽 띠는 단추 «밖» 겉 상자가 그립니다 (값 칸까지 감싸려고).
+     *     ⇒ 처음에 단추부터 잘랐다가 ★띠를 «못 보고» 헛 실패가 났습니다. */
+    const bStart = svc.indexOf('{best.map((s) => {')
+    const best = svc.slice(bStart, svc.indexOf('<PriceRow', bStart))
+    //  ★낱장 카드를 그리는 토막 — 「solo.map」 부터 값 칸까지
+    const sStart = svc.indexOf('{solo.map((s) => (')
+    const solo = svc.slice(sStart, svc.indexOf('<PriceRow', sStart))
+
+    ok(bStart > 0 && sStart > 0, '★두 카드를 그리는 자리를 찾았습니다')
+
+    const pick = (src: string, re: RegExp) => src.match(re)?.[1] ?? '?'
+    const PAIRS: [string, RegExp, RegExp][] = [
+      ['카드 안쪽 여백', /padding: '([^']+)'/, /padding: '([^']+)'/],
+      ['아이콘 크기', /size=\{(\d+)\}/, /size=\{(\d+)\}/],
+      ['제목 글자', /fontSize: ([\d.]+), fontWeight: 700, color: C\.text/, /fontSize: ([\d.]+), fontWeight: 700, color: C\.text/],
+      ['설명 글자', /fontSize: ([\d.]+), color: C\.sub/, /fontSize: ([\d.]+), color: C\.sub/],
+      ['화살표 크기', /fontSize: (\d+), color: [^,]+, flexShrink/, /fontSize: (\d+), color: [^,]+, flexShrink/],
+    ]
+    for (const [name, reB, reS] of PAIRS) {
+      const vb = pick(best, reB)
+      const vs = pick(solo, reS)
+      ok(vb !== '?' && vb === vs, `🔴 ★${name} 가 «같습니다» (특화 ${vb} · 전체 ${vs})`)
+    }
+
+    //  🔴 왼쪽 띠 — 너비도 «색» 도 같아야 합니다 [대표님]
+    ok(/inset \$\{STRIPE_W\} 0 0 \$\{C\.stripe\}/.test(best),
+      '🔴 ⛔ ★왼쪽 띠 색이 아래 카드와 «같습니다» (C.stripe · 장마다 다른 색이 아닙니다)')
+    ok(!/\$\{t\.stripe\}/.test(svc),
+      '⛔ ★장마다 다른 띠 색(t.stripe)으로 되돌아가지 않았습니다')
+    ok(/stripe: '#/.test(svc),
+      '⚠️ ★옛 띠 색 값은 «지우지 않고» 남겨 두었습니다 (되살리실 때 씁니다)')
+  }
+
   console.log(`\n━━ 홈 화면 마감 — 통과 ${pass} · 실패 ${fail} ━━\n`)
   if (fail > 0) process.exit(1)
 }

@@ -473,29 +473,37 @@ export default function ServiceSection({
               <div key={s.name} style={{
                 borderRadius: 16, overflow: 'hidden',
                 border: `1.5px solid ${C.border}`,
-                boxShadow: `inset ${STRIPE_W} 0 0 ${t.stripe}, ${C.shadow}`,
+                /*  🔴 ★2026-09-22 (11부) [대표님 「왼쪽 음영처리… 그 모양도 같이 해줘」]
+                  *  ⚠️ 띠는 ★둘 다 «있었고» 너비도 4px 로 «같았습니다». 다른 것은 ★«색» 이었습니다 —
+                  *     아래 카드는 C.stripe 금빛 하나, BEST 는 장마다 다른 색(t.stripe).
+                  *  ⇒ ★C.stripe 로 맞췄습니다. ⛔ t.stripe 로 되돌리지 마십시오.
+                  *  ⚠️ t.stripe 값은 ★«지우지 않고» 남겨 두었습니다 (되살리실 때 씁니다). */
+                boxShadow: `inset ${STRIPE_W} 0 0 ${C.stripe}, ${C.shadow}`,
                 background: t.bg,
               }}>
               <button
                 className="svcTap svcBest"
                 onClick={() => onOpen(s)}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 13,
+                  display: 'flex', alignItems: 'center', gap: 11,
                   width: '100%', textAlign: 'left', cursor: 'pointer',
                   // ★2026-09-08 [대표님 목업 승낙] — 아래 카드들과 «선을 통일» 했습니다.
                   //   모서리 18 → 16 · 그라데이션 테두리 → C.border · 색 글로우 → C.shadow
                   //   ⇒ 갈리는 것은 이제 «바탕색» 과 «왼쪽 띠» 입니다.
                   //   ⛔ t.glow(색 번짐)로 되돌리지 마십시오 — 그것 때문에 굵어 보였습니다.
                   //  ⚠️ 테두리·그림자·왼쪽 띠는 ★겉 상자가 맡습니다 (값 칸까지 감싸게).
-                  padding: '16px 15px', borderRadius: 0,
+                  //  ★2026-09-22 (11부) [대표님 「모양이 약간 다르지 통일부터」]
+                  //    ⇒ ★아래(전체 서비스) 값에 맞췄습니다 — 13px 13px · 타일 44 · 제목 14.5
+                  //    ⛔ 갈리는 것은 ★바탕색 · BEST 뱃지 «둘» 뿐입니다.
+                  padding: '13px 13px', borderRadius: 0,
                   background: 'transparent', border: 'none',
                   backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
                 }}
               >
-                <Tile icon={s.icon} size={52} bg={t.iconBg} edge={t.iconEdge} />
-                <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+                <Tile icon={s.icon} size={44} bg={t.iconBg} edge={t.iconEdge} />
+                <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 15.5, fontWeight: 700, color: C.text, letterSpacing: '-0.3px' }}>
+                    <span style={{ fontSize: 14.5, fontWeight: 700, color: C.text, letterSpacing: '-0.2px' }}>
                       {s.name}
                     </span>
                     {t.badgeText ? (
@@ -505,11 +513,11 @@ export default function ServiceSection({
                       }}>{t.badgeText}</span>
                     ) : null}
                   </span>
-                  <span style={{ fontSize: 11.5, color: C.sub, lineHeight: 1.45 }}>
+                  <span style={{ fontSize: 11, color: C.sub }}>
                     {BEST_COPY[s.name] ?? s.sub}
                   </span>
                 </span>
-                <span style={{ fontSize: 16, color: t.arrow, flexShrink: 0 }}>›</span>
+                <span style={{ fontSize: 15, color: t.arrow, flexShrink: 0 }}>›</span>
               </button>
               <PriceRow name={s.name} />
               </div>
