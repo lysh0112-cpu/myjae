@@ -314,6 +314,19 @@ function MulsangInner() {
   const [imgSaving, setImgSaving] = useState(false)
   // 자동 저장된 보관함 기록 id — 해설이 완성되면 여기에 덧붙인다.
   const savedIdRef = useRef<string | null>(null)
+  /*  🔴🔴 ★2026-09-22 (10부) [대표님 「다른 종류의 그림을 두 번 저장하면 하나밖에 안 된다」]
+   *
+   *  [무엇이 있었나]  handleSaveRecord 가 ★saveState 로 «두 번 저장» 을 막았는데,
+   *     React 의 setState 는 ★«곧바로» 안 바뀝니다 (다음 그리기 때 바뀝니다).
+   *     ⇒ doGenerate 가 setSaveState('idle') 을 불러도
+   *       «같은 회차» 안에서 부르는 handleSaveRecord 는 ★아직 'saved' 를 봅니다.
+   *     ⇒ 🔴 그래서 ★둘째 그림이 «저장되지 않았습니다».
+   *     ⚠️ 주석에 「안 하면 두 번째 그림이 saved 로 남아 자동 저장이 안 된다」 고
+   *        적혀 있었는데 ★고친 방법이 «듣지 않았습니다».
+   *
+   *  ⇒ ★ref 는 «곧바로» 바뀝니다. 막는 일은 ref 가 맡습니다.
+   *  ⛔ saveState 로 되돌리지 마십시오 — 화면에 보여 주는 데만 쓰십시오. */
+  const savingRef = useRef(false)
   const [tongTick, setTongTick] = useState(0)
 
   // ★그림 뒤 해설 자동 생성.
@@ -400,6 +413,7 @@ function MulsangInner() {
     // ★새로 그리는 것이므로 저장 상태·해설도 초기화한다.
     //   (안 하면 두 번째 그림이 'saved' 로 남아 자동 저장이 안 된다)
     setSaveState('idle')
+    savingRef.current = false   //  🔴 ★ref 도 «함께» 풀어야 둘째 그림이 저장됩니다
     setTongResult(null)
     setShowTongbyeon(false)
     savedIdRef.current = null
@@ -676,7 +690,9 @@ function MulsangInner() {
   //   (19-2부 "고객들이 돈들여 봤는데 그냥 빠져 나가면 아깝잖아")
   async function handleSaveRecord(imgUrl?: string, tong?: string) {
     const url = imgUrl ?? imageUrl
-    if (saveState !== 'idle' || !info || !url) return
+    /*  ⛔ ★«ref» 로 막습니다 — saveState 는 곧바로 안 바뀌어 둘째 그림을 삼켰습니다. */
+    if (savingRef.current || !info || !url) return
+    savingRef.current = true
     const pk = personKeyOf(info)
     if (!pk) return
     setSaveState('saving')
@@ -714,6 +730,8 @@ function MulsangInner() {
     // 저장 실패는 alert 로 막지 않는다 — 버튼이 'idle' 로 돌아가 다시 누를 수 있다. (19-2부)
     // 자동 저장이라 alert 로 막지 않는다 — 실패하면 화면에 [다시 저장]이 뜬다. (19-2부)
     setSaveState(res.ok ? 'saved' : 'failed')
+    //  ⛔ ★실패했으면 자물쇠를 «풉니다» — [다시 저장] 을 누르실 수 있게
+    if (!res.ok) savingRef.current = false
     if (res.ok && res.id) savedIdRef.current = res.id
     if (!res.ok) console.error('보관함 저장 실패:', res.message)
   }
@@ -1140,7 +1158,7 @@ function MulsangInner() {
             <div style={{ marginTop: '12px' }}>
               <div style={{ background: '#fdf0e8', border: '0.5px solid #f0d5c0', borderRadius: '12px', padding: '13px', textAlign: 'center' }}>
                 <div style={{ fontSize: '13px', color: '#8f3d0e', marginBottom: '8px' }}>보관함에 저장하지 못했어요</div>
-                <button onClick={() => { setSaveState('idle'); handleSaveRecord() }}
+                <button onClick={() => { setSaveState('idle'); savingRef.current = false; handleSaveRecord() }}
                   style={{ padding: '9px 20px', borderRadius: '9px', background: '#b46e46', border: 'none', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
                   다시 저장
                 </button>

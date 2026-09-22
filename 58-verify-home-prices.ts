@@ -791,6 +791,27 @@ function main() {
         `🔴 ⛔ ★${f.split('/').slice(-2)[0]} — 실패하면 «되돌립니다»`)
     }
 
+    /*  🔴🔴 ★사주그림 — «둘째 그림» 이 저장되는가  2026-09-22 (10부)
+     *  [대표님]  「동일한 사주로 다른 종류의 그림을 두 번 저장하면 하나밖에 안 된다」
+     *
+     *  [까닭]  handleSaveRecord 가 ★saveState 로 «두 번 저장» 을 막았는데,
+     *     React 의 setState 는 ★«곧바로» 안 바뀝니다.
+     *     ⇒ setSaveState('idle') 을 불러도 «같은 회차» 에서는 아직 'saved' 라
+     *       ★둘째 그림이 «그냥 빠져나갔습니다».
+     *  ⇒ ★ref 로 막습니다 — ref 는 «곧바로» 바뀝니다.
+     *  ⛔ saveState 로 되돌리지 마십시오. */
+    {
+      const ms = strip(R('app/manseryeok/mulsang/page.tsx'))
+      ok(/if \(savingRef\.current \|\| !info \|\| !url\) return/.test(ms),
+        '🔴🔴 ★사주그림 — «ref» 로 막습니다 (둘째 그림이 저장됩니다)')
+      ok(!/if \(saveState !== 'idle' \|\| !info/.test(ms),
+        "⛔ ★saveState 로 막던 옛 모양이 «없습니다» (곧바로 안 바뀝니다)")
+      ok(/savingRef\.current = false[\s\S]{0,80}setTongResult\(null\)/.test(ms),
+        '⛔ ★새로 그릴 때 «자물쇠도 함께» 풉니다')
+      ok(/if \(!res\.ok\) savingRef\.current = false/.test(ms),
+        '⛔ ★저장에 실패하면 «다시 누를 수» 있게 풉니다')
+    }
+
     /*  🔴🔴 ⛔ ★TongbyeonView «안» 에서 빼면 «안 됩니다» —
      *    그 부품은 ★사주·궁합·합격운이 «함께» 씁니다.
      *    궁합·합격운은 «밖에서» 빼므로 ★«두 번» 빠집니다. */
