@@ -3,11 +3,14 @@
 import { useState } from 'react'
 /*  ⚠️ ★2026-09-15 (10부) — 로고는 BrandLockup 부품 안에 있습니다. */
 import BrandLockup from '@/app/components/common/BrandLockup'
+import { useSisterLinks } from '@/app/components/common/useSisterLinks'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { safeNextPath } from '@/lib/safeNext'
 
 export default function LoginPage() {
+  /** 🔴 ★승인 전에는 큐보드·골프온 이름을 «안» 보입니다 [대표님 2026-09-22] */
+  const sisterOn = useSisterLinks()
   const router = useRouter()
 
   // 로그인 후 이동: 프로필 미완료면 마이페이지(내 사주 수정), 아니면 신버전 홈
@@ -132,9 +135,13 @@ export default function LoginPage() {
         </button>
 
         {/* ⚠️ 「자기를 뺀 둘」을 적습니다 — 큐보드·골프온도 «같은 규칙» 입니다.
-            ⛔ 앱이 늘거나 줄면 ★세 앱을 함께 고치십시오. */}
+            ⛔ 앱이 늘거나 줄면 ★세 앱을 함께 고치십시오.
+            🔴 ★2026-09-22 (11부) [대표님] — PG 승인 «전» 에는 두 이름을 «안» 보입니다.
+               ⛔ 글귀를 지우지 «마십시오». 토글(sisterLinks)을 켜면 돌아옵니다. */}
         <div style={{ fontSize: 11.5, color: '#6b5340', lineHeight: 1.6, marginBottom: 20 }}>
-          큐보드 · 골프온과 같은 계정입니다. 한 번 로그인하면 세 곳에서 그대로 쓰입니다.
+          {sisterOn
+            ? '큐보드 · 골프온과 같은 계정입니다. 한 번 로그인하면 세 곳에서 그대로 쓰입니다.'
+            : '한 번 로그인하시면 다음에도 그대로 쓰실 수 있어요.'}
         </div>
 
         {/* ⚠️ 카카오가 «출발조차 못 했을 때» 만 뜹니다.

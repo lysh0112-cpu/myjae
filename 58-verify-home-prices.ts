@@ -645,8 +645,65 @@ function main() {
       '🔴 ⛔ ★켤 때 「심사 중에는 켜지 마라」 고 여쭙습니다')
     ok(/flag === 'sisterLinks'/.test(tg),
       '⚠️ ★묻는 말이 «줄» 에 맞습니다 (카드도 문도 아닙니다)')
-    ok(/sisterLinks: '홈 맨 아래 「함께 쓰는 서비스」 줄'/.test(tg),
-      '⚠️ ★토글 밑 설명이 «이 줄» 을 가리킵니다')
+    /*  ⚠️ ★글자를 못 박지 않습니다 — 처음엔 「홈 맨 아래 … 줄」 을 «그대로» 세었는데,
+     *     자리가 «일곱» 으로 늘자 ★그물이 저를 멈춰 세웠습니다 (10부 ⑤ 그대로).
+     *  ⇒ ★«토글이 여닫는 자리를 다 일러 주는가» 를 봅니다. */
+    const sub = (tg.match(/sisterLinks: '([^']*)'/g) || []).join(' ')
+    const SUB_MUST = ['홈', '로그인', '지갑', '약관']
+    ok(SUB_MUST.every(w => sub.includes(w)),
+      '⚠️ ★토글 밑 설명이 «여닫는 자리를 다» 일러 줍니다 (홈·로그인·지갑·약관)')
+
+    /*  ══ 🔴🔴 [대표님 2026-09-22] 「이 두 서비스는 어디에서 당분간
+     *     나오지 않아야 되지 않아?」 ═══════════════════════════════
+     *  10부에서 숨긴 것은 ★홈 «바로가기 단추» 하나뿐이었습니다.
+     *  ⇒ ★네 자리에 두 이름이 «그대로» 남아 있었습니다 —
+     *    로그인 화면 · 로그인 시트 · 지갑 거르개 · 충전 안내.
+     *  ⛔ ★«낱말이 있는지» 가 아니라 «토글에 묶였는지» 를 봅니다 —
+     *     글귀는 «지우지 않고» 남겨 두어야 승인 뒤 되살릴 수 있습니다. */
+    /*  ⚠️ ★«첫 큐보드» 를 세면 안 됩니다 — 처음 그렇게 했다가
+     *     지갑의 «내역 딱지 이름표»(bil: '큐보드')까지 세어 ★헛 실패가 났습니다.
+     *     ⇒ ★«손님에게 보이는 그 줄» 을 «따로» 짚어 그 «앞» 에 토글이 있는지 봅니다. */
+    const SIS_SCREENS: [string, string, string][] = [
+      ['app/login/page.tsx', '로그인 화면', '큐보드 · 골프온과 같은 계정입니다. 한 번'],
+      ['app/components/BottomNav/LoginSheet.tsx', '로그인 시트', '큐보드 · 골프온과 같은 계정입니다'],
+      ['app/components/common/WalletPanel.tsx', '지갑 거르개', "['bil', '큐보드']"],
+      ['app/components/common/WalletPanel.tsx', '지갑 내역 딱지', "r.service === 'myc'"],
+      ['app/wallet/charge/page.tsx', '충전 안내', '명연재·큐보드·골프온에서 함께'],
+      ['app/components/legal/LegalShell.tsx', '약관 제2조', 'TERMS_SCOPE_SISTERS ?'],
+      ['app/components/legal/LegalShell.tsx', '법무 돌아가기 단추', "from === 'bil'"],
+    ]
+    for (const [path, name, mark] of SIS_SCREENS) {
+      const src = strip(R(path))
+      const where = src.indexOf(mark)
+      const near = where < 0 ? '' : src.slice(Math.max(0, where - 700), where)
+      ok(where >= 0 && /sisterOn/.test(near),
+        `🔴 ⛔ ★${name} — 큐보드·골프온이 «토글 뒤» 에 있습니다 (승인 전에는 안 보입니다)`)
+      ok(/useSisterLinks/.test(src),
+        `⛔ ★${name} — «공용 훅» 을 씁니다 (부품을 복사하지 않았습니다)`)
+    }
+    //  ⛔ 못 읽으면 «숨김» 이라야 합니다 — 켜짐으로 새면 심사 중에 드러납니다
+    const hook = strip(R('app/components/common/useSisterLinks.ts'))
+    ok(/useState\(false\)/.test(hook) && /f\.sisterLinks/.test(hook),
+      '🔴 ⛔ ★못 읽으면 «숨김» 입니다 (기본값이 꺼짐)')
+
+    /*  ⛔ ★약관 글을 «지우지» 않았는가 — 승인 뒤 되살려야 할 «고지 사항» 입니다 */
+    const terms = R('app/components/legal/termsText.ts')
+    ok(/TERMS_SCOPE_SISTERS/.test(terms) && /큐보드\(cue\.myjae\.kr\)/.test(terms),
+      '🔴 ⛔ ★약관의 «세 서비스» 문장을 «지우지» 않았습니다 (숨겼을 뿐입니다)')
+    ok(/TERMS_SCOPE_SOLO/.test(terms) && !/큐보드/.test(terms.slice(terms.indexOf('TERMS_SCOPE_SOLO'), terms.indexOf('TERMS_SCOPE_SOLO') + 200)),
+      '★숨길 때 쓰는 문장에는 두 이름이 «없습니다»')
+
+    /*  🔴 ★메모 — 「승인 뒤 되살린다」 는 약속이 «값으로» 남아 있는가
+     *  ⚠️ [대표님] 「메모를 잘 남겼다 승인 후 바로 다시 올리는 것으로 하자」
+     *  ⛔ ★자리 수를 못 박지 않고, 메모가 «일곱 자리를 다 적었는지» 를 «세어» 봅니다. */
+    const memo = R('_RESTORE-AFTER-PG.md')
+    const MEMO_MUST = ['SisterLinks', 'login/page.tsx', 'LoginSheet.tsx',
+      'WalletPanel.tsx', 'charge/page.tsx', 'termsText.ts', 'LegalShell.tsx']
+    const missed = MEMO_MUST.filter(m => !memo.includes(m))
+    ok(memo.length > 0 && missed.length === 0,
+      `🔴 ⛔ ★되살릴 메모가 «일곱 자리를 다» 적었습니다 (_RESTORE-AFTER-PG.md)`)
+    ok(/useSisterLinks/.test(memo) && /docx/.test(memo),
+      '⛔ ★토글로는 «안» 되는 것(워드 원본)도 메모에 적혔습니다')
   }
 
   /* ══ ⑭ 🔴🔴 토스 결제 — 충전(지갑에 «넣는» 길) ═══════════════════

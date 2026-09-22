@@ -28,6 +28,7 @@ import { useRouter } from 'next/navigation'
 import { loadTossPayments, type TossPaymentsWidgets } from '@tosspayments/tosspayments-sdk'
 import { supabase } from '@/lib/supabase'
 import { CHARGE_AMOUNTS } from '@/app/components/common/WalletPanel'
+import { useSisterLinks } from '@/app/components/common/useSisterLinks'
 
 /**
  *  ★결제위젯 «클라이언트» 키 (test_gck_…).
@@ -46,6 +47,8 @@ const C = {
 export default function ChargePage() {
   const router = useRouter()
   const [amount, setAmount] = useState<number>(CHARGE_AMOUNTS[1])
+  /** 🔴 ★승인 전에는 큐보드·골프온 이름을 «안» 보입니다 [대표님 2026-09-22] */
+  const sisterOn = useSisterLinks()
   const [custom, setCustom] = useState('')
   const [widgets, setWidgets] = useState<TossPaymentsWidgets | null>(null)
   const [ready, setReady] = useState(false)
@@ -188,8 +191,12 @@ export default function ChargePage() {
       </button>
 
       <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 3 }}>지갑 충전</div>
+      {/*  🔴 ★2026-09-22 (11부) [대표님] — 승인 «전» 에는 두 이름을 «안» 보입니다.
+        *     ⛔ 글귀를 지우지 마십시오. 토글(sisterLinks)을 켜면 돌아옵니다. */}
       <div style={{ fontSize: 12, color: C.sub, marginBottom: 16, lineHeight: 1.7 }}>
-        충전하신 금액은 명연재·큐보드·골프온에서 함께 쓰실 수 있어요.
+        {sisterOn
+          ? '충전하신 금액은 명연재·큐보드·골프온에서 함께 쓰실 수 있어요.'
+          : '충전하신 금액은 명연재에서 쓰실 수 있어요.'}
       </div>
 
       {/*  ★금액 고르기 — ⛔ 숫자를 여기 적지 «않습니다». CHARGE_AMOUNTS 를 봅니다. */}

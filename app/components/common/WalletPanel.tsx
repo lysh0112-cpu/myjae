@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useSisterLinks } from '@/app/components/common/useSisterLinks'
 
 /* ══════════════════════════════════════════════════════════════════
  *  ★공용 지갑 부품 — 2026-09-08 신설 [대표님 지시 · 목업 승낙]
@@ -54,6 +55,8 @@ export default function WalletPanel({ big = false }: { big?: boolean }) {
   const [balance, setBalance] = useState<number | null>(null)
   const [rows, setRows] = useState<Row[]>([])
   const [filter, setFilter] = useState<string>('all')
+  /** 🔴 ★승인 전에는 큐보드·골프온 거르개를 «안» 보입니다 [대표님 2026-09-22] */
+  const sisterOn = useSisterLinks()
   const [showAll, setShowAll] = useState(false)
 
   useEffect(() => {
@@ -110,7 +113,11 @@ export default function WalletPanel({ big = false }: { big?: boolean }) {
         {CHARGE_AMOUNTS.map(n => n.toLocaleString()).join(' · ')}원
       </div>
 
-      {/* 거르개 — ⚠️ 줄이 없는 앱을 골라도 «아직 내역이 없어요» 가 뜹니다. 정상입니다. */}
+      {/* 거르개 — ⚠️ 줄이 없는 앱을 골라도 «아직 내역이 없어요» 가 뜹니다. 정상입니다.
+          🔴 ★2026-09-22 (11부) [대표님] — 승인 «전» 에는 거르개를 통째로 «안» 보입니다.
+             ⇒ 큐보드·골프온 딱지가 심사관 눈에 띄지 않게 합니다.
+             ⛔ 칸을 «지우지» 마십시오. 토글(sisterLinks)을 켜면 넷이 돌아옵니다. */}
+      {sisterOn && (
       <div style={{ display: 'flex', gap: 5, marginTop: 15, flexWrap: 'wrap' }}>
         {[['all', '전체'], ['myc', '명카페'], ['bil', '큐보드'], ['glf', '골프온']].map(([k, label]) => {
           const on = filter === k
@@ -125,6 +132,7 @@ export default function WalletPanel({ big = false }: { big?: boolean }) {
           )
         })}
       </div>
+      )}
 
       <div style={{ fontSize: 11, color: C.sub, marginTop: 14 }}>최근 내역</div>
 
@@ -145,10 +153,17 @@ export default function WalletPanel({ big = false }: { big?: boolean }) {
                 <span style={{ fontSize: 11, color: C.sub, width: 38, flex: 'none' }}>
                   {r.at.slice(5, 10).replace('-', '.')}
                 </span>
+                {/*  🔴 ★2026-09-22 (11부) [대표님] — 승인 «전» 에는 큐보드·골프온 딱지를
+                  *     «안» 보입니다. ⚠️ ★줄(날짜·내용·금액·잔액)은 «그대로» 둡니다 —
+                  *     손님 «본인 돈 기록» 이라 가리면 안 됩니다.
+                  *  ⛔ 딱지를 «명카페» 로 바꿔 달지 «마십시오» — 사실이 아닙니다.
+                  *     ⇒ 숨길 때는 ★«딱지만» 없앱니다. 토글을 켜면 돌아옵니다. */}
+                {(sisterOn || r.service === 'myc') && (
                 <span style={{
                   fontSize: 9, padding: '2px 5px', borderRadius: 9, flex: 'none',
                   background: tag.bg, color: tag.fg,
                 }}>{SERVICE_NAME[r.service] ?? r.service}</span>
+                )}
                 <span style={{
                   fontSize: 12, color: C.ink, flex: 1, minWidth: 0,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',

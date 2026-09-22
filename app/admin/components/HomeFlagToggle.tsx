@@ -33,7 +33,7 @@ const SUB: Record<HomeFlagKey, string> = {
   haerak: '홈 카드 · 보관함 · 가격 표 줄',
   //  ★홈 카드가 «아닙니다» — 심사관이 들어오는 문입니다
   reviewLogin: '/login/review 화면을 열고 닫습니다',
-  sisterLinks: '홈 맨 아래 「함께 쓰는 서비스」 줄',
+  sisterLinks: '큐보드·골프온이 나오는 일곱 자리 (홈 줄 · 로그인 · 지갑 · 충전 · 약관)',
 }
 
 /** 켤 때 한 번 여쭙는 말 — ⛔ 비워 두면 안 묻습니다 */

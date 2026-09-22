@@ -14,9 +14,12 @@
 // ==========================================================================
 
 import { useRouter } from 'next/navigation'
+import { useSisterLinks } from '@/app/components/common/useSisterLinks'
 
 export default function LoginSheet({ onClose }: { onClose: () => void }) {
   const router = useRouter()
+  /** 🔴 ★승인 전에는 큐보드·골프온 이름을 «안» 보입니다 [대표님 2026-09-22] */
+  const sisterOn = useSisterLinks()
   const go = () => {
     onClose()
     router.push('/login')
@@ -32,9 +35,11 @@ export default function LoginSheet({ onClose }: { onClose: () => void }) {
             로그인 / 회원가입
           </p>
           {/* ⚠️ 「이메일로 간편하게」였는데 ★카카오가 먼저입니다. 말을 사실에 맞췄습니다. */}
+          {/*  🔴 ★2026-09-22 (11부) [대표님] — 승인 «전» 에는 두 이름을 «안» 보입니다.
+               ⛔ 글귀를 지우지 마십시오. 토글(sisterLinks)을 켜면 돌아옵니다. */}
           <p className="text-center text-xs mb-4" style={{ color: '#6b5340', lineHeight: 1.6 }}>
-            카카오로 3초 만에 시작하세요<br />
-            큐보드 · 골프온과 같은 계정입니다
+            카카오로 3초 만에 시작하세요
+            {sisterOn && <><br />큐보드 · 골프온과 같은 계정입니다</>}
           </p>
           <button onClick={go}
             className="w-full py-4 rounded-2xl text-sm"

@@ -24,6 +24,17 @@ export type LegalArticle = { title: string; paras: string[] }
  *      ⇒ 그때 이 날짜도 «함께» 바꾸십시오. 워드 원본도 같이 고쳐야 합니다. */
 export const TERMS_UPDATED = '시행일 2026년 9월 10일'
 
+/*  🔴🔴 ★2026-09-22 (11부) [대표님] — PG 승인 «전» 에는 «명연재만» 적습니다.
+ *  ⛔ ★두 벌을 «둘 다» 남겨 둡니다. 승인 뒤 토글(sisterLinks)을 켜면
+ *     ★SISTERS 쪽이 돌아옵니다 (LegalShell 이 고릅니다).
+ *  ⛔ 지우지 «마십시오» — 세 서비스가 «같은 지갑» 을 쓰는 것은 사실이고,
+ *     승인 뒤에는 ★반드시 다시 적어야 할 «고지 사항» 입니다.
+ *  ⚠️ 워드 원본(01-이용약관…docx)도 ★승인 뒤 «함께» 되돌리십시오. */
+export const TERMS_SCOPE_SISTERS =
+  '이 약관은 회사가 운영하는 명연재(myjae.kr), 큐보드(cue.myjae.kr), 골프온(golf.myjae.kr)에 공통으로 적용되며, 회원 자격과 충전금은 세 서비스가 함께 사용합니다.'
+export const TERMS_SCOPE_SOLO =
+  '이 약관은 회사가 운영하는 명연재(myjae.kr)의 서비스 이용에 적용됩니다.'
+
 export const TERMS: LegalArticle[] = [
   {
     title: '제1조 (목적)',
@@ -34,7 +45,7 @@ export const TERMS: LegalArticle[] = [
   {
     title: '제2조 (적용 범위)',
     paras: [
-      '이 약관은 회사가 운영하는 명연재(myjae.kr), 큐보드(cue.myjae.kr), 골프온(golf.myjae.kr)에 공통으로 적용되며, 회원 자격과 충전금은 세 서비스가 함께 사용합니다.',
+      TERMS_SCOPE_SISTERS,
     ],
   },
   {

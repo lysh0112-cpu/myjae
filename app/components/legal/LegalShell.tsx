@@ -25,6 +25,8 @@
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { APPS } from '../common/companyInfo'
+import { useSisterLinks } from '../common/useSisterLinks'
+import { TERMS_SCOPE_SISTERS, TERMS_SCOPE_SOLO } from './termsText'
 import type { LegalArticle } from './termsText'
 
 const C = {
@@ -56,7 +58,12 @@ export default function LegalShell({ which, articles, updated }: Props) {
      ⛔ from 값을 그대로 href 에 넣지 마십시오 — 남의 사이트로 보내는 길이 됩니다.
         ★표에 있는 것만 씁니다 (4부 9장의 「열린 넘기기」와 같은 까닭). */
   const from = useSearchParams().get('from') ?? ''
-  const back = from === 'bil' || from === 'glf' ? APPS[from] : null
+  /*  🔴 ★2026-09-22 (11부) [대표님] — PG 승인 «전» 에는 큐보드·골프온을 «안» 보입니다.
+   *  ⚠️ 돌아가기 단추는 ?from=bil·glf 로 «들어온 손님만» 보던 것이라
+   *     심사관 눈에는 원래 안 띕니다. 그래도 ★같은 토글에 묶어 «한꺼번에» 여닫습니다.
+   *  ⛔ 단추를 «지우지» 마십시오 — 승인 뒤 큐보드·골프온 손님의 «돌아갈 길» 입니다. */
+  const sisterOn = useSisterLinks()
+  const back = sisterOn && (from === 'bil' || from === 'glf') ? APPS[from] : null
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
@@ -108,6 +115,8 @@ export default function LegalShell({ which, articles, updated }: Props) {
           background: C.card, border: `0.5px solid ${C.line}`,
           borderRadius: 12, padding: 16,
         }}>
+          {/*  🔴 ★약관 제2조 — 승인 «전» 에는 «명연재만» 적습니다 [대표님 2026-09-22].
+            *     ⛔ 글을 «지우지» 않았습니다. 토글을 켜면 세 서비스 문장이 돌아옵니다. */}
           {articles.map(a => (
             <section key={a.title} style={{ marginBottom: 16 }}>
               <h2 style={{ fontSize: 13.5, color: C.head, margin: '0 0 5px', fontWeight: 600 }}>
@@ -115,7 +124,7 @@ export default function LegalShell({ which, articles, updated }: Props) {
               </h2>
               {a.paras.map((p, i) => (
                 <p key={i} style={{ fontSize: 12.5, color: C.ink, lineHeight: 1.8, margin: '0 0 5px' }}>
-                  {p}
+                  {!sisterOn && p === TERMS_SCOPE_SISTERS ? TERMS_SCOPE_SOLO : p}
                 </p>
               ))}
             </section>
