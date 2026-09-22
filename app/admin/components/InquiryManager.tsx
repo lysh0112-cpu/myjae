@@ -114,6 +114,35 @@ export default function InquiryManager() {
     load()
   }
 
+  /*  🔴 ★2026-09-23 (11부) [대표님 「삭제 버튼만 만들어줘」]
+   *  [까닭] 미리 넣어 둔 예시 문답에 ★상담 관련이 섞여 있는데,
+   *    이 화면에 ★지우는 길이 «없었습니다» (답변·공개·예시 셋뿐).
+   *  ⛔ ★되돌릴 수 없으므로 «두 번» 묻습니다 —
+   *     ① 제목을 보여 주며 묻고 ② 「지웁니다」 를 한 번 더 확인합니다.
+   *  ⚠️ 손님이 «실제로» 남긴 문의라면 ★한 번 더 일러 줍니다 (예시가 아닌 글).
+   *  ⛔ 화면에서만 감추는 것이 «아닙니다». 표에서 «정말로» 지웁니다. */
+  async function removeRow(r: Row) {
+    const real = !r.is_sample && !!r.user_id
+    if (!confirm(
+      '이 문의를 «정말로» 지울까요?\n\n'
+      + `· ${r.title}\n\n`
+      + (real
+        ? '🔴 이것은 «회원이 직접 남긴» 문의입니다.\n  지우면 되돌릴 수 없습니다.\n\n'
+        : '· 지우면 되돌릴 수 없습니다.\n\n')
+      + '· 손님 화면에서만 감추려면 [공개 중] 을 눌러 «비공개» 로 두셔도 됩니다.',
+    )) return
+    if (!confirm('마지막 확인입니다.\n\n지우면 «되살릴 수 없습니다».\n그래도 지울까요?')) return
+
+    /* ★2026-09-11 (6부) — 바뀐 줄 세기 (㉒-r) · 권한이 없어도 오류가 «안» 납니다 */
+    const { data, error } = await supabase.from('inquiries').delete().eq('id', r.id).select('id')
+    if (error) { alert('지우지 못했어요.\n\n(' + error.message + ')'); return }
+    if (!data || data.length === 0) {
+      alert('지워지지 않았습니다.\n로그인이 풀렸거나 권한이 없습니다.\n로그아웃 후 다시 들어와 주세요.')
+      return
+    }
+    load()
+  }
+
   const shown = only === 'todo' ? list.filter(r => !r.answer && !r.is_sample) : list
   const todoCount = list.filter(r => !r.answer && !r.is_sample).length
 
@@ -220,6 +249,13 @@ export default function InquiryManager() {
               <button onClick={() => toggleSample(r)} style={chip(r.is_sample)}>
                 {r.is_sample ? '예시' : '예시로 두기'}
               </button>
+              {/*  ⛔ ★«맨 오른쪽» 에 떼어 둡니다 — 옆 단추와 붙으면 잘못 눌립니다.
+                *  ⚠️ 색을 «붉게» 하여 다른 셋과 «다른 일» 임을 알립니다. */}
+              <button onClick={() => removeRow(r)}
+                style={{
+                  ...chip(false), marginLeft: 'auto',
+                  color: '#E88C8C', border: '1px solid rgba(232,140,140,0.35)',
+                }}>삭제</button>
             </div>
           </div>
         ))
