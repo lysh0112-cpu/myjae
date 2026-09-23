@@ -1,0 +1,2056 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>다알아 전자결재</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+/* ═══════════════════════════════════════════════════════════
+   다알아 (Da-Ara) — 전자결재
+   ───────────────────────────────────────────────────────────
+   ★ PC 와 휴대폰에서 모두 쓴다.
+     PC   : 왼쪽 메뉴 + 본문
+     휴대폰 : 메뉴가 숨고, 결재 대기 목록과 승인/반려만 크게 보인다.
+
+   ★ 조합원 앱(index.html) · 직원 화면(admin.html) · 운영자 콘솔(console.html)
+     과 분리돼 있다. 결재는 조합 임원이 쓰는 기능이라 따로 둔다.
+
+   ★ 3단계 순차 결재
+       1 담당자 → 2 총무이사 → 3 조합장
+     앞 단계가 승인해야 다음 사람에게 넘어간다.
+     중간에 반려되면 기안자에게 돌아가고, 뒤 단계는 열리지 않는다.
+
+   ★ Supabase 로 옮길 때
+       doc_classes   ← CLASSES   (분류 마스터 · 채번 일련번호 포함)
+       doc_templates ← TEMPLATES (표준 품의문 양식)
+       documents     ← DOCS      (문서 본문 · 상태)
+       doc_approvals ← DOCS[].line (결재선 단계별 상태 · 시각)
+       doc_files     ← DOCS[].files(증빙 PDF)
+
+   ★ 지금은 화면 안에서만 돈다. 새로고침하면 초기값으로 돌아간다.
+     파일 첨부도 흉내만 낸다. 실제 업로드는 Supabase Storage 로 붙여야 한다.
+   ═══════════════════════════════════════════════════════════ */
+:root{
+  --ink:#0B1F3A; --navy:#12365F; --blue:#2563EB; --amber:#F26419;
+  /* ★ 2026-09-16 밤 — 테두리가 너무 흐려 안 보인다는 말씀.
+     #E2E7EE 는 흰 바탕 위에서 거의 사라진다. 특히 밝은 사무실 화면에서.
+     ★ 두 단계로 나눈다 —
+       --line   칸을 가르는 얇은 줄 (표 · 목록)
+       --edge   상자를 두르는 진한 줄 (박스 · 입력칸)
+     둘을 같은 색으로 두면 「무엇이 한 덩이인지」가 안 보인다. */
+  --paper:#FFF; --mist:#F5F7FA; --line:#A9B7C8; --edge:#8695AA; --muted:#5F6B7A;
+  --ok:#0EA97A; --red:#A83232;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Pretendard Variable',Pretendard,-apple-system,sans-serif;
+  background:var(--mist);color:var(--ink);-webkit-font-smoothing:antialiased}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
+input,select,textarea{font:inherit}
+
+.gate{min-height:100vh;display:grid;place-items:center;padding:20px}
+.gate-box{width:340px;max-width:100%;background:var(--paper);border-radius:16px;
+  padding:30px 26px;border:1px solid var(--line)}
+.gate-box h1{font-size:1.1rem;font-weight:800;margin-bottom:4px}
+.gate-box p.sub{font-size:.8rem;color:var(--muted);margin-bottom:20px}
+.f{margin-bottom:11px}
+.f label{display:block;font-size:.76rem;color:var(--muted);margin-bottom:5px}
+.f input,.f select,.f textarea{width:100%;border:1px solid var(--line);border-radius:9px;
+  padding:10px 12px;font-size:.86rem;outline:none;background:#fff;color:var(--ink)}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--navy)}
+.f textarea{min-height:150px;line-height:1.9;resize:vertical}
+.btn{display:block;width:100%;background:var(--navy);color:#fff;border-radius:10px;
+  padding:12px;font-size:.88rem;font-weight:700;text-align:center}
+.btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--line)}
+.btn.red{background:#fff;color:var(--red);border:1.5px solid #E8C0C0}
+.btn.off{background:#B9C0C9;pointer-events:none}
+.btn.sm{width:auto;display:inline-block;padding:9px 16px;font-size:.8rem}
+.err{font-size:.76rem;color:var(--amber);margin-top:9px;min-height:17px}
+
+.wrap{display:none;min-height:100vh}
+.wrap.on{display:flex}
+aside{width:200px;background:#0B1F3A;flex-shrink:0;padding:16px 0;
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{padding:0 17px 14px;border-bottom:1px solid rgba(255,255,255,.12)}
+.brand b{display:block;color:#fff;font-size:.95rem;font-weight:800}
+.brand span{display:block;color:#8FA3BA;font-size:.74rem;margin-top:3px}
+
+/* ── 돌아가는 단추 (2026-08-22 오후) ─────────────────────
+   ★ 전자결재는 새 창으로 열린다. 그래서 나갈 길이 없었다.
+     브라우저 뒤로가기는 이 창에는 앞 기록이 없어 아무 일도 안 한다.
+     결국 창을 닫는 수밖에 없었는데, 처음 오신 분은
+     원래 화면이 뒤에 살아 있는 줄도 모르신다.
+
+   ★ 메뉴 위가 아니라 이름표(brand) 바로 아래에 둔다.
+     "여기가 어디인가" 다음에 "어디로 나가는가" 가 온다.
+     메뉴 사이에 끼워 두면 결재 메뉴 중 하나로 보인다. */
+.back{display:flex;align-items:center;gap:8px;width:100%;text-align:left;
+  margin:12px 12px 0;width:calc(100% - 24px);
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);
+  border-radius:9px;padding:9px 11px;color:#C3D3E5;font-size:.79rem;font-weight:700}
+.back:hover{background:rgba(255,255,255,.13);color:#fff}
+.back i{font-style:normal;font-size:.9rem;line-height:1}
+.back em{font-style:normal;display:block;font-size:.69rem;font-weight:600;
+  color:#7B93AE;margin-top:2px}
+.back b{display:block;font-weight:700}
+nav{padding:9px 0;flex:1;overflow:auto}
+nav button{display:block;width:100%;text-align:left;color:#B9C9DD;font-size:.83rem;
+  padding:10px 17px;border-left:3px solid transparent}
+nav button.on{color:#fff;background:rgba(255,255,255,.1);border-left-color:var(--amber);font-weight:700}
+nav .bdg{float:right;background:var(--amber);color:#fff;font-size:.68rem;font-weight:800;
+  padding:1px 7px;border-radius:99px}
+.who{padding:13px 17px 0;border-top:1px solid rgba(255,255,255,.12)}
+.who b{display:block;color:#C3D3E5;font-size:.78rem;font-weight:700}
+.who span{display:block;color:#5F7B99;font-size:.72rem;margin-top:3px}
+.who button{color:#8FA3BA;font-size:.72rem;margin-top:9px;text-decoration:underline}
+
+main{flex:1;padding:24px 28px;min-width:0;max-width:900px}
+
+/* ★ 입력칸을 내용에 맞게 잡는다.
+   한 줄짜리 칸이 화면 끝까지 늘어나면 엉성해 보이고
+   눈이 왼쪽 끝에서 오른쪽 끝까지 오가야 해서 읽기도 나쁘다. */
+.f input,.f select,.f textarea{max-width:420px}
+.f.wide input,.f.wide select,.f.wide textarea{max-width:100%}
+.f.mini input,.f.mini select{max-width:170px}
+.f.half input,.f.half select{max-width:280px}
+.g2 .f input,.g2 .f select,.g3 .f input,.g3 .f select{max-width:100%}
+.frow{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+.frow .f{margin-bottom:0}
+.frow .grow{flex:1;min-width:220px}
+.frow .grow input{max-width:100%}
+.topbar{display:none}
+h2.pt{font-size:1.15rem;font-weight:800;margin-bottom:3px}
+p.pd{font-size:.82rem;color:var(--muted);margin-bottom:18px}
+.sec{font-size:.88rem;font-weight:800;margin:20px 0 9px;display:flex;
+  justify-content:space-between;align-items:center;gap:10px}
+.sec em{font-style:normal;font-size:.76rem;font-weight:400;color:var(--muted)}
+.box{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:15px 17px}
+.row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;
+  border-bottom:1px dashed var(--line);font-size:.82rem}
+.row:last-child{border-bottom:0}
+.row span{color:var(--muted);flex-shrink:0}
+.row b{font-weight:700;text-align:right;word-break:keep-all}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.mono{font-family:ui-monospace,Menlo,monospace}
+.note{font-size:.78rem;color:var(--muted);line-height:1.7;margin-top:11px}
+.warn{background:#FFF4EC;border:1px solid #F3C7AC;border-radius:11px;padding:12px 14px;margin-top:14px}
+.warn > b:first-child{display:block;font-size:.82rem;color:#8C3A12;margin-bottom:3px}
+.warn p b{font-weight:800;color:#8C3A12}
+.warn p{font-size:.78rem;color:#A85B33;line-height:1.65}
+.sample{background:#FFF4EC;border:1px solid #F3C7AC;border-radius:11px;padding:11px 14px;margin-bottom:16px}
+.sample > b:first-child{display:block;font-size:.82rem;color:#8C3A12;margin-bottom:3px}
+.sample p b{font-weight:800;color:#8C3A12}
+.sample p{font-size:.78rem;color:#A85B33;line-height:1.6}
+
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:var(--mist);color:var(--muted);font-size:.76rem;font-weight:700;
+  text-align:left;padding:9px 11px}
+td{padding:10px 11px;border-top:1px solid var(--line)}
+tr.tap{cursor:pointer}
+tr.tap:hover{background:var(--mist)}
+tr.dim{opacity:.5}
+.pill{display:inline-block;font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.p-ok{background:rgba(14,169,122,.13);color:var(--ok)}
+.p-wait{background:#EEE;color:var(--muted)}
+.p-warn{background:#FFF0E6;color:#8C3A12}
+.p-red{background:#FBEBEB;color:var(--red)}
+.p-blue{background:#E8EEF7;color:var(--navy)}
+
+.filt{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.filt input,.filt select{border:1px solid var(--line);border-radius:8px;padding:8px 10px;
+  font-size:.8rem;background:#fff;outline:none}
+.chipb{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 12px;font-size:.8rem}
+.chipb.on{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:700}
+
+.line{display:flex;align-items:stretch;gap:8px;margin:12px 0}
+.step{flex:1;border:1px solid var(--line);border-radius:10px;padding:11px 12px;min-width:0}
+.step.ok{border:1.5px solid var(--ok)}
+.step.now{border:1.5px solid var(--amber);background:#FFFBF7}
+.step.no{border:1.5px solid #E8C0C0;background:#FDF6F6}
+.step em{font-style:normal;display:block;font-size:.68rem;color:var(--muted);letter-spacing:.02em}
+.step b{display:block;font-size:.82rem;font-weight:700;margin-top:3px}
+.step i{font-style:normal;display:block;font-size:.74rem;font-weight:700;margin-top:5px}
+.arrow{align-self:center;color:#B9C0C9;flex-shrink:0}
+
+.doclist{border-radius:11px;overflow:hidden}
+.doclist.pend{border:1px solid #F3C7AC;background:#FFFBF7}
+.doclist.done{border:1px solid var(--line);background:#fff}
+.docrow{display:flex;gap:11px;align-items:center;padding:11px 13px;font-size:.8rem;cursor:pointer}
+.docrow+.docrow{border-top:1px dashed var(--line)}
+.doclist.pend .docrow+.docrow{border-top-color:#F0D6C4}
+.docrow .no{width:112px;flex-shrink:0}
+.docrow .ti{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.docrow .dt{width:86px;flex-shrink:0;color:var(--muted)}
+.docrow .st{width:78px;flex-shrink:0;text-align:right}
+
+.ev{display:flex;gap:10px;align-items:center;padding:10px 12px;font-size:.8rem}
+.ev+.ev{border-top:1px solid var(--line)}
+.ev .ck{width:19px;height:19px;border-radius:5px;flex-shrink:0;display:grid;place-items:center;
+  font-size:.7rem;color:#fff;background:var(--ok)}
+.ev .ck.miss{background:#fff;border:1.5px solid var(--amber)}
+.ev .nm{flex:1;min-width:0}
+.ev .fs{width:120px;flex-shrink:0;color:var(--muted);font-size:.74rem}
+.ev .ac{width:76px;flex-shrink:0;text-align:right;color:var(--blue);font-weight:700;font-size:.76rem}
+
+.tpl{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tplc{border:1px solid var(--line);border-radius:11px;padding:12px 14px;text-align:left;width:100%;
+  position:relative;transition:border-color .12s,background .12s}
+.tplc:hover{border-color:var(--navy);background:#F8FAFD}
+.tplc:active{background:#F0F5FB}
+.tplc b{display:block;font-size:.85rem;font-weight:700;padding-right:34px}
+.tplc em{font-style:normal;position:absolute;top:12px;right:13px;font-size:.7rem;
+  color:var(--muted);font-family:ui-monospace,monospace}
+.tplc p{font-size:.76rem;color:var(--muted);margin-top:3px;line-height:1.5}
+.tplc i{font-style:normal;display:block;font-size:.72rem;color:var(--navy);margin-top:7px}
+.tplc .ar{position:absolute;right:13px;bottom:11px;color:#C6CEDA;font-size:.9rem}
+/* 고른 양식을 얹어 두는 줄 */
+.picked{display:flex;align-items:center;gap:12px;border:1.5px solid var(--navy);
+  background:#F0F5FB;border-radius:11px;padding:11px 13px;margin-bottom:16px}
+.picked .pc{font-family:ui-monospace,Menlo,monospace;font-size:.72rem;font-weight:700;
+  color:#fff;background:var(--navy);padding:3px 8px;border-radius:6px;flex-shrink:0}
+.picked b{flex:1;min-width:0;font-size:.86rem;font-weight:700}
+.picked button{font-size:.76rem;color:var(--blue);font-weight:700;flex-shrink:0}
+.diff{font-family:ui-monospace,Menlo,monospace;font-size:.76rem}
+.diff s{color:var(--muted);text-decoration:line-through}
+.diff b{color:var(--navy)}
+
+.mask{position:absolute;inset:0;background:rgba(11,31,58,.55);display:none;
+  align-items:center;justify-content:center;padding:20px;z-index:40}
+.mask.on{display:flex}
+.modal{background:#fff;border-radius:14px;width:520px;max-width:100%;max-height:86vh;
+  overflow:auto;padding:20px 22px}
+.pdfbox{background:#4A5462;border-radius:11px;padding:16px;display:flex;justify-content:center}
+.pdfpg{width:230px;min-height:318px;background:#fff;border-radius:2px;padding:18px 16px}
+.pdfpg h4{text-align:center;font-size:.78rem;font-weight:800;padding-bottom:8px;
+  border-bottom:1.5px solid var(--ink);margin-bottom:10px}
+.pdfpg div{font-size:.7rem;color:#41576B;line-height:2.1}
+
+/* ── 알림 배너 (시연) ──────────────────────────────────── */
+.noti{position:fixed;right:18px;bottom:18px;width:340px;max-width:calc(100% - 36px);
+  z-index:60;display:flex;flex-direction:column;gap:10px}
+.ncard{background:#fff;border:1px solid var(--ok);border-radius:12px;padding:13px 14px;
+  box-shadow:0 6px 22px rgba(11,31,58,.13)}
+.ncard.hold{border-color:var(--amber)}
+.ncard .nh{display:flex;justify-content:space-between;align-items:flex-start;gap:9px}
+.ncard .nh b{font-size:.8rem;font-weight:800;color:#0A7A57}
+.ncard.hold .nh b{color:#8C3A12}
+.ncard .nh button{color:var(--muted);font-size:.9rem;line-height:1}
+.ncard .meta{font-size:.76rem;color:#41576B;line-height:1.7;margin-top:6px}
+.ncard .msg{background:var(--mist);border-radius:8px;padding:9px 10px;margin-top:9px;
+  font-size:.74rem;color:#41576B;line-height:1.75;font-family:ui-monospace,Menlo,monospace;
+  white-space:pre-wrap;word-break:break-all}
+@media (max-width:760px){ .noti{right:10px;left:10px;bottom:10px;width:auto} }
+
+/* ── A4 인쇄용 ─────────────────────────────────────────── */
+.paper{display:none;background:#fff;color:#0B1F3A}
+.paper .ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
+.paper .stamp{display:flex;border:1px solid #0B1F3A}
+.paper .stamp>div{width:62px;text-align:center;border-right:1px solid #0B1F3A}
+.paper .stamp>div:last-child{border-right:0}
+.paper .stamp .lb{font-size:8pt;padding:3px 0;border-bottom:1px solid #0B1F3A}
+.paper .stamp .sg{height:46px;display:grid;place-items:center}
+.paper .stamp .sg span{width:30px;height:30px;border-radius:50%;border:1.5px solid #A83232;
+  color:#A83232;font-size:9pt;display:grid;place-items:center}
+.paper .stamp .dt{font-size:7pt;color:#5F6B7A;padding-bottom:3px}
+.paper h1{text-align:center;font-size:17pt;font-weight:600;letter-spacing:.25em;
+  padding:12px 0;border-top:2px solid #0B1F3A;border-bottom:1px solid #0B1F3A}
+.paper .fr{display:flex;font-size:9.5pt;border-bottom:1px solid #D8DEE6}
+.paper .fr .k{width:80px;background:#F5F7FA;padding:8px 10px;color:#41576B}
+.paper .fr .v{flex:1;padding:8px 10px}
+.paper .bd{font-size:9.5pt;line-height:2.1;padding:14px 10px 16px;white-space:pre-wrap}
+.paper .att{border-top:1px solid #D8DEE6;padding-top:11px;font-size:9.5pt;line-height:1.95}
+.paper .ft{text-align:center;font-size:8pt;color:#8A94A0;margin-top:22px;
+  padding-top:9px;border-top:1px solid #E9EDF2}
+
+@media print{
+  @page{size:A4;margin:16mm}
+  body{background:#fff}
+  .gate,.wrap,.mask,.topbar,.noti{display:none !important}
+  .paper{display:block !important}
+}
+
+/* ── 휴대폰 ────────────────────────────────────────────── */
+@media (max-width:760px){
+  aside{display:none}
+  main{padding:0 0 40px;max-width:100%}
+  .topbar{display:block;position:sticky;top:0;z-index:20;background:#0B1F3A;color:#fff;
+    padding:13px 16px}
+  .topbar b{display:block;font-size:.95rem;font-weight:800}
+  .topbar span{display:block;font-size:.74rem;color:#8FA3BA;margin-top:2px}
+  .mtabs{display:flex;background:#12365F}
+  .mtabs button{flex:1;color:#B9C9DD;font-size:.8rem;padding:11px 0;border-bottom:2px solid transparent}
+  .mtabs button.on{color:#fff;font-weight:700;border-bottom-color:var(--amber)}
+  .inner{padding:16px}
+  h2.pt{font-size:1.05rem}
+  .g2,.g3,.tpl{grid-template-columns:1fr}
+  .line{flex-direction:row;gap:6px}
+  .step{padding:8px 7px;text-align:center}
+  .step em{font-size:.64rem}
+  .step b{font-size:.74rem}
+  .step i{font-size:.7rem}
+  .arrow{display:none}
+  table{font-size:.76rem}
+  th,td{padding:8px 8px}
+  .docrow{flex-wrap:wrap}
+  .docrow .no{width:100%;font-size:.74rem}
+  .docrow .ti{flex-basis:100%;white-space:normal}
+  .docrow .dt{width:auto}
+  .docrow .st{width:auto;margin-left:auto}
+  .actbar{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--line);
+    padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px;z-index:20}
+}
+@media (min-width:761px){ .mtabs{display:none} .inner{padding:0} }
+/* ── 테두리에 힘을 준다 (2026-09-16 밤) ──────────────────
+   ★ 「외곽 테두리가 너무 희미해서 안 보인다」는 말씀.
+     칸을 가르는 줄(--line)과 상자를 두르는 줄(--edge)을 갈랐다.
+     흰 바탕 대비 1.24 : 1 → 상자선 3.05 : 1 (권장 3:1)
+   ★ 이 덩이는 맨 아래에 둔다. 위의 규칙을 덮어써야 한다. */
+.box,.card,.panel,.warn,.fold{border-color:var(--edge)}
+th{border-bottom:2px solid var(--edge)}
+td{border-top:1px solid var(--line)}
+tbody tr:nth-child(even) > td{background:#FAFCFE}
+input,select,textarea{border-color:var(--edge)}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--navy);box-shadow:0 0 0 3px rgba(18,54,95,.12)}
+.btn.ghost,.btn.sm,.chipb{border-color:var(--edge)}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <div class="gate-box">
+    <h1>다알아 전자결재</h1>
+    <p class="sub">미아2재정비촉진구역 · 조합</p>
+    <div class="f"><label>이름</label><input id="g-name" type="text" placeholder="이름"></div>
+    <div class="f"><label>암호</label><input id="g-pw" type="password" placeholder="6자리"></div>
+    <button class="btn" id="g-go">로그인</button>
+    <div class="err" id="g-err"></div>
+    <p class="note">시연용 화면입니다. 실제 문서를 올리지 마십시오.<br>
+      휴대폰으로 접속하면 결재 화면으로 바로 열립니다.</p>
+  </div>
+</div>
+
+<div class="wrap" id="wrap">
+  <aside>
+    <div class="brand"><b>전자결재</b><span>미아2재정비촉진구역</span></div>
+    <button class="back" id="back" style="display:none"></button>
+    <nav id="nav"></nav>
+    <div class="who">
+      <b id="who-name">사용자</b><span id="who-role">권한</span>
+      <button id="logout">로그아웃</button>
+    </div>
+  </aside>
+  <main>
+    <div class="topbar">
+      <b id="m-title">전자결재</b><span id="m-sub">미아2재정비촉진구역</span>
+    </div>
+    <div class="mtabs" id="mtabs"></div>
+    <div class="inner" id="main"></div>
+  </main>
+</div>
+
+<div class="noti" id="noti"></div>
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+<div class="paper" id="paper"></div>
+
+<script src="hub.js"></script>
+<script src="roster-demo.js"></script>
+<script src="archive-demo.js"></script>
+<script src="survey-demo.js"></script>
+<script src="roster-change.js"></script>
+<script src="consent-demo.js"></script>
+<script>
+/* ── 계정 ─────────────────────────────────────────────────
+   암호를 소스에 그대로 적지 않기 위해 해시로만 둔다.
+   화면 안에서만 하는 검사라 진짜 보안이 아니다.
+   개발 단계라 암호는 전부 111111 로 통일했다. */
+const hsh = t => { let x=5381; for(const c of t){ x=((x*33)^c.codePointAt(0))>>>0 } return x.toString(36); };
+const USERS = [
+  {hash:hsh("류승현2|111111"), name:"류승현2", role:"담당자",   step:1},
+  {hash:hsh("박총무|111111"),   name:"박총무",   role:"총무이사", step:2},
+  {hash:hsh("김조합장|111111"), name:"김조합장", role:"조합장",   step:3},
+  {hash:hsh("류승현|111111"),   name:"류승현",   role:"운영자",   step:0}
+];
+const S = {name:"", role:"", step:0};
+const isDrafter = () => S.step === 1 || S.step === 0;
+
+/* ── 문서 분류 마스터 (CRUD) ─────────────────────────────
+   지우지 않고 active:false 로 둔다. 지우면 옛 문서의 분류번호가 미아가 된다.
+   seq 는 연도별 마지막 일련번호. 채번은 [코드]-[연도]-[3자리]. */
+const CLASSES = [
+  {code:"ADM", name:"조합 행정",  keep:"5년", active:true,  year:2026, seq:14},
+  {code:"CON", name:"용역 · 계약", keep:"영구", active:true,  year:2026, seq:8},
+  {code:"MTG", name:"총회 관련",  keep:"영구", active:true,  year:2026, seq:7},
+  {code:"WDR", name:"투표 철회",  keep:"영구", active:true,  year:2026, seq:3},
+  {code:"DOC", name:"공문 발송",  keep:"5년", active:true,  year:2026, seq:5},
+  {code:"CVL", name:"민원 처리",  keep:"3년", active:true,  year:2026, seq:2},
+  {code:"SEL", name:"인감 날인",  keep:"영구", active:true,  year:2026, seq:3},
+  {code:"MBR", name:"명부 변경",  keep:"영구", active:true,  year:2026, seq:6},
+  {code:"CSN", name:"동의서 징구", keep:"영구", active:true,  year:2026, seq:0},
+  {code:"TMP", name:"임시 서식",  keep:"3년", active:false, year:2025, seq:21}
+];
+const cls = c => CLASSES.find(x => x.code === c);
+const nextNo = code => {          /* 저장하는 순간 확정된다. 이후 바뀌지 않는다. */
+  const c = cls(code); if(!c) return "";
+  const y = new Date().getFullYear();
+  if(c.year !== y){ c.year = y; c.seq = 0; }
+  c.seq += 1;
+  return `${c.code}-${c.year}-${String(c.seq).padStart(3,"0")}`;
+};
+const peekNo = code => {
+  const c = cls(code); if(!c) return "";
+  const y = new Date().getFullYear();
+  const seq = (c.year === y ? c.seq : 0) + 1;
+  return `${c.code}-${y}-${String(seq).padStart(3,"0")}`;
+};
+
+/* ── 결재자 관리 ─────────────────────────────────────────
+   결재선에 들어갈 사람. 단계는 고정(1 담당자 → 2 총무이사 → 3 조합장),
+   사람만 바꾼다. 겸직·위임이 잦은 조합 사정을 고려한 것이다. */
+const APPROVERS = [
+  {step:1, role:"담당자",   name:"류승현2", phone:"010-****-6317", active:true},
+  {step:2, role:"총무이사", name:"박총무",   phone:"010-****-2841", active:true},
+  {step:3, role:"조합장",   name:"김조합장", phone:"010-****-9075", active:true},
+  {step:2, role:"총무이사", name:"정부이사", phone:"010-****-3312", active:false}
+];
+const approverOf = step => APPROVERS.find(a => a.step === step && a.active) || {role:"미지정", name:"—"};
+
+/* ── 표준 품의문 양식 ────────────────────────────────────
+   양식마다 필수 증빙이 정해져 있다.
+   증빙 없는 지출 품의는 감사에서 가장 먼저 지적된다. */
+const TEMPLATES = [
+  {id:"T1", code:"ADM", name:"일반 지출 품의서", desc:"사무용품 · 공과금 등 일반 경비",
+   need:["견적서","영수증"],
+   title:"○○ 구입(지출)의 건",
+   body:`1. 조합 운영에 필요한 아래 물품(용역)의 구입을 품의합니다.
+  가. 품 명 : 
+  나. 수 량 : 
+  다. 금 액 : 일금 ○○○원정 (₩000,000)
+  라. 구입처 : 
+2. 예산 과목 : 조합운영비 - 
+3. 붙임 : 아래 증빙 참조`},
+
+  {id:"T2", code:"CON", name:"용역비 · 기성고 지급", desc:"설계 · 감리 · 정비업체 대금",
+   need:["용역계약서","기성검사조서","세금계산서"],
+   title:"○○ 용역비 ○차 기성고 지급의 건",
+   body:`1. 관련 : ○○ 용역계약(2025-00-00)
+2. 위 건과 관련하여 아래와 같이 기성고 대금 지급을 품의합니다.
+  가. 지급 대상 : 
+  나. 지급 금액 : 일금 ○○○원정 (₩000,000)
+  다. 기성 비율 : ○○% (누계 ○○%)
+  라. 지급 근거 : 계약서 제○조 · 기성검사조서
+3. 예산 과목 : 조합운영비 - 용역비
+4. 붙임 : 아래 증빙 참조`},
+
+  {id:"T3", code:"MTG", name:"총회 계약 품의서", desc:"총회 장소 · 전자투표 대행 등",
+   need:["견적 비교표","계약서(안)"],
+   title:"2026년 정기총회 ○○ 계약의 건",
+   body:`1. 2026년 정기총회 개최와 관련하여 아래와 같이 계약을 품의합니다.
+  가. 계약 건명 : 
+  나. 계약 상대 : 
+  다. 계약 금액 : 일금 ○○○원정 (₩000,000)
+  라. 계약 기간 : 
+  마. 선정 방법 : 견적 비교(3개 업체)
+2. 예산 과목 : 총회비
+3. 붙임 : 아래 증빙 참조`},
+
+  {id:"T4", code:"DOC", name:"공문 발송", desc:"구청 · 시행사 · 조합원 발송 공문",
+   need:["발송 대상 목록"],
+   title:"○○에 관한 공문 발송의 건",
+   body:`1. 아래와 같이 공문 발송을 품의합니다.
+  가. 수 신 : 
+  나. 제 목 : 
+  다. 발송 방법 : 등기우편 · 전자문서
+  라. 발송 부수 : 
+2. 발송 사유 : 
+3. 붙임 : 발송 대상 목록 1부`},
+
+  {id:"T5", code:"CVL", name:"민원 처리 보고", desc:"조합원 민원 접수 · 처리 결과",
+   need:[],
+   title:"조합원 민원 처리 결과 보고의 건",
+   body:`1. 접수 개요
+  가. 접수일 : 
+  나. 민원인 : ○*○ (제 0000 호)
+  다. 민원 요지 : 
+2. 처리 경과
+  가. 
+  나. 
+3. 처리 결과 및 향후 조치
+4. 붙임 : 관련 자료`},
+
+  {id:"T7", code:"SEL", name:"인감 날인 품의서", desc:"지출 · 계약 없이 날인만",
+   need:["날인 대상 문서 사본"], seal:true,
+   title:"○○ 날인의 건",
+   body:`1. 아래와 같이 조합 인감 날인을 품의합니다.
+  가. 날인 대상 : 
+  나. 인감 종류 : 조합 인감
+  다. 날인 매수 : ○매
+  라. 반출 여부 : 사무실 내 날인
+2. 사유 : 
+3. 붙임 : 날인 대상 문서 사본 1부`},
+
+  {id:"T6", code:"WDR", name:"투표 철회 승인", desc:"전자투표 철회 · 현장 재접수",
+   need:["철회신청서 원본"],
+   title:"전자투표 철회 및 현장투표 재접수의 건",
+   body:`1. 2026년 정기총회 전자투표와 관련하여 아래 조합원의 철회 및 재접수를 품의합니다.
+  가. 조합원 : ○*○ (제 0000 호)
+  나. 철회 대상 : V-2026-0000
+  다. 철회 접수 : R-2026-0000
+  라. 재접수 : O-2026-0000 (현장투표)
+2. 확인 사항
+  가. 본인 서명·날인 : 확인
+  나. 신분 확인 : 신분증 대조
+3. 붙임 : 철회신청서 원본 1부`}
+];
+
+/* ══════════════════════════════════════════════════════════
+   알림 발송 (문자 · 카카오 알림톡)
+   ──────────────────────────────────────────────────────────
+   ★ 지금은 시연 모드다. 실제로 발송하지 않고
+     화면 오른쪽 아래 배너 + 브라우저 콘솔에만 남긴다.
+     운영으로 바꾸려면 NOTIFY.mode 를 "live" 로 두고
+     sendReal() 안에서 Edge Function 을 부르면 된다.
+
+   ★ 발송 시점
+       기안 상신    → 2단계 결재자에게
+       승인(중간)   → 다음 단계 결재자에게
+       승인(최종)   → 기안자에게 완료 알림
+       반려         → 기안자에게 사유와 함께
+
+   ★ 알림톡이 실패하면 문자로 대체한다.
+     카카오톡을 안 쓰거나 채널을 차단한 분이 조합 임원 중에 꼭 있다.
+
+   ★ 밤 9시~아침 8시에는 보류했다가 아침에 보낸다.
+     조합장 폰이 새벽에 울리면 그다음부터 알림을 꺼 버리신다.
+
+   ★ 링크는 1회용이고 24시간 뒤 만료된다.
+     문자는 남에게 전달되기 쉽다. 영구 링크면 캡처 한 장으로 아무나 들어온다.
+
+   ★ Supabase 대응
+       NOTIFY_LOG      → notify_log        (발송 이력)
+       TOKENS          → approval_tokens   (1회용 링크)
+       실제 발송        → Edge Function notify-approval
+                          (supabase-notify 폴더의 예시 코드 참조)
+   ══════════════════════════════════════════════════════════ */
+
+const NOTIFY = {
+  mode      : "demo",          /* demo · live */
+  quietFrom : 21,              /* 이 시각부터 보류 */
+  quietTo   : 8,               /* 이 시각에 발송 */
+  remindDays: 3,               /* 미결 독촉 (1회) */
+  sender    : "02-000-0000",   /* 발신번호 · 사전등록 필요 */
+  base      : location.origin + location.pathname
+};
+
+/* 1회용 링크 토큰 */
+const TOKENS = [];
+function makeToken(docNo, who){
+  const t = Math.random().toString(36).slice(2,10).toUpperCase();
+  const exp = new Date(Date.now() + 24*60*60*1000);
+  TOKENS.push({token:t, doc:docNo, approver:who, expires:exp, used:false});
+  return t;
+}
+const linkOf = (docNo, who) => `${NOTIFY.base}?d=${docNo}&t=${makeToken(docNo,who)}`;
+
+/* 발송 이력 */
+let NOTIFY_LOG = [
+  {at:"2026-03-11 17:25", to:"류승현2", phone:"010-****-6317", reason:"반려",
+   doc:"ADM-2026-013", channel:"알림톡", result:"fail"},
+  {at:"2026-03-11 17:26", to:"류승현2", phone:"010-****-6317", reason:"반려",
+   doc:"ADM-2026-013", channel:"문자",   result:"fallback"},
+  {at:"2026-03-18 09:13", to:"박총무",   phone:"010-****-2841", reason:"신규 기안",
+   doc:"MTG-2026-007", channel:"알림톡", result:"ok"},
+  {at:"2026-03-20 14:16", to:"박총무",   phone:"010-****-2841", reason:"신규 기안",
+   doc:"WDR-2026-004", channel:"알림톡", result:"ok"}
+];
+const RESULT_LAB  = {ok:"성공", fallback:"대체 발송", fail:"실패", hold:"보류"};
+const RESULT_PILL = {ok:"p-ok", fallback:"p-blue", fail:"p-warn", hold:"p-warn"};
+
+const stamp = () => { const d=new Date(), z=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+const isQuiet = () => { const h=new Date().getHours();
+  return h >= NOTIFY.quietFrom || h < NOTIFY.quietTo; };
+
+/* 메시지 조립 — 알림톡 템플릿과 같은 모양이어야 한다.
+   템플릿은 카카오 심사를 받아야 하고, 변수 자리만 채울 수 있다. */
+function buildMsg(kind, o){
+  const head = "[다알아 전자결재]";
+  if(kind === "reject")
+    return `${head}\n[${o.to}님] 상신하신 문서가 반려되었습니다.\n`
+         + `문서 : ${o.doc}\n제목 : ${o.title}\n반려 : ${o.by}\n사유 : ${o.comment}\n▶ 문서 보기\n${o.link}`;
+  if(kind === "done")
+    return `${head}\n[${o.to}님] 상신하신 문서의 결재가 완료되었습니다.\n`
+         + `문서 : ${o.doc}\n제목 : ${o.title}\n▶ 문서 보기\n${o.link}`;
+  if(kind === "final")
+    return `${head}\n[${o.to}님] 최종 결재 차례입니다.\n`
+         + `문서 : ${o.doc}\n제목 : ${o.title}\n앞 결재 : ${o.prev}\n▶ 바로 결재하기\n${o.link}`;
+  return `${head}\n[${o.to}님] 처리해야 할 대기 문서가 있습니다.\n`
+       + `문서 : ${o.doc}\n제목 : ${o.title}\n기안 : ${o.drafter}\n▶ 바로 결재하기\n${o.link}`;
+}
+
+/* 실제 발송 자리 — 운영으로 바꿀 때 여기만 채우면 된다 */
+async function sendReal(payload){
+  /* 예시
+     const r = await fetch(SUPABASE_URL + "/functions/v1/notify-approval", {
+       method:"POST",
+       headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + ANON_KEY },
+       body: JSON.stringify(payload)
+     });
+     return r.ok ? "ok" : "fail";
+  */
+  return "ok";
+}
+
+/* 알림 보내기 (시연) */
+function notify(kind, o){
+  const link = linkOf(o.doc, o.to);
+  const msg  = buildMsg(kind, Object.assign({}, o, {link}));
+  const hold = isQuiet();
+
+  /* 알림톡을 우선 쓰고, 실패하면 문자로 대체한다.
+     시연에서는 이름에 '조합장'이 들어가면 차단된 것으로 가정해 대체 발송을 보여준다. */
+  const blocked = /조합장/.test(o.to);
+  const channel = hold ? "보류" : blocked ? "문자" : "알림톡";
+  const result  = hold ? "hold" : blocked ? "fallback" : "ok";
+
+  NOTIFY_LOG.push({at:stamp(), to:o.to, phone:o.phone||"010-****-0000",
+    reason:o.reason, doc:o.doc, channel, result});
+
+  console.log("[다알아 알림 · 시연]", {받는사람:o.to, 사유:o.reason,
+    채널:channel, 결과:RESULT_LAB[result], 메시지:msg});
+
+  if(NOTIFY.mode === "live") sendReal({kind, ...o, msg});
+  banner({to:o.to, phone:o.phone, reason:o.reason, channel, hold, msg});
+}
+
+/* 오른쪽 아래 배너 */
+function banner(b){
+  const box = document.getElementById('noti'); if(!box) return;
+  const el = document.createElement('div');
+  el.className = "ncard" + (b.hold ? " hold" : "");
+  el.innerHTML = `
+    <div class="nh">
+      <b>${b.hold ? "야간 · 아침에 발송합니다" : "알림 발송 (시연 · 실제로 나가지 않음)"}</b>
+      <button onclick="this.closest('.ncard').remove()">✕</button></div>
+    <div class="meta">
+      <b style="font-weight:700">받는 사람</b> ${b.to} · ${b.phone||"010-****-0000"}<br>
+      <b style="font-weight:700">채널</b> ${b.hold ? `보류 → 아침 ${NOTIFY.quietTo}시` : b.channel==="문자" ? "알림톡 실패 → 문자 대체" : "알림톡"}<br>
+      <b style="font-weight:700">사유</b> ${b.reason}</div>
+    <div class="msg">${b.msg}</div>`;
+  box.appendChild(el);
+  setTimeout(()=>{ if(el.parentNode) el.remove(); }, 14000);
+}
+
+/* 결재자 연락처 */
+const phoneOf = name => {
+  const a = APPROVERS.find(x => x.name === name);
+  if(a) return a.phone;
+  const u = USERS.find(x => x.name === name);
+  return u ? "010-****-0000" : "010-****-0000";
+};
+
+/* ── 문서 (documents + doc_approvals + doc_files) ────────── */
+const mkLine = () => [1,2,3].map(st => {
+  const a = approverOf(st);
+  return {step:st, role:a.role, approver:a.name, status:"wait", acted_at:null, comment:null};
+});
+/* ★ 조합 직원 화면에서 올린 결재가 여기 나타나야 한다.
+   예전에는 화면 안 변수라, 결재를 올려도 총무이사·조합장 폰에 뜨지 않았다.
+   결재는 조합 일의 뼈대다. 서버에 담아 어느 기기에서나 같은 것을 본다. */
+const DOCS_SEED = [
+  {no:"ADM-2026-012", code:"ADM", title:"조합 사무실 임대차 계약 연장의 건",
+   amount:"6,000,000", drafted:"2026-03-05", drafter:"류승현2", status:"approved",
+   body:"1. 조합 사무실 임대차 계약 연장을 품의합니다.\n  가. 소재지 : 미아동 000-0\n  나. 기 간 : 2026-04-01 ~ 2027-03-31\n  다. 보증금 : 6,000,000원\n2. 예산 과목 : 조합운영비 - 임차료",
+   files:[{name:"임대차계약서.pdf", size:"820KB", kind:"계약서", required:true}],
+   line:[{step:1,role:"담당자",approver:"류승현2",status:"ok",acted_at:"2026-03-05 10:20",comment:null},
+         {step:2,role:"총무이사",approver:"박총무",status:"ok",acted_at:"2026-03-05 15:02",comment:null},
+         {step:3,role:"조합장",approver:"김조합장",status:"ok",acted_at:"2026-03-06 09:11",comment:null}]},
+
+  {no:"ADM-2026-013", code:"ADM", title:"용역업체 대금 지급의 건",
+   amount:"12,400,000", drafted:"2026-03-11", drafter:"류승현2", status:"rejected",
+   body:"1. 아래와 같이 대금 지급을 품의합니다.\n  가. 지급 대상 : ○○기획\n  나. 금 액 : 12,400,000원",
+   files:[],
+   line:[{step:1,role:"담당자",approver:"류승현2",status:"ok",acted_at:"2026-03-11 09:40",comment:null},
+         {step:2,role:"총무이사",approver:"박총무",status:"no",acted_at:"2026-03-11 17:25",
+          comment:"세금계산서와 계약서가 첨부되지 않았습니다. 증빙 보완 후 재상신 바랍니다."},
+         {step:3,role:"조합장",approver:"김조합장",status:"wait",acted_at:null,comment:null}]},
+
+  {no:"MTG-2026-006", code:"MTG", title:"총회 안건 확정의 건",
+   amount:"", drafted:"2026-03-16", drafter:"류승현2", status:"approved",
+   body:"1. 2026년 정기총회 안건을 아래와 같이 확정하고자 품의합니다.\n  가. 제1호 사업시행계획 변경의 건\n  나. 제2호 2026년도 예산안 승인의 건\n  다. 제3호 조합 임원 선임의 건\n  라. 제4호 시공자 선정 관련 보고\n  마. 제5호 기타 안건",
+   files:[{name:"안건별_설명자료.pdf", size:"1.4MB", kind:"설명자료", required:false}],
+   line:[{step:1,role:"담당자",approver:"류승현2",status:"ok",acted_at:"2026-03-16 11:05",comment:null},
+         {step:2,role:"총무이사",approver:"박총무",status:"ok",acted_at:"2026-03-16 14:30",comment:null},
+         {step:3,role:"조합장",approver:"김조합장",status:"ok",acted_at:"2026-03-17 08:55",comment:null}]},
+
+  {no:"MTG-2026-007", code:"MTG", title:"2026년 정기총회 소집공고의 건",
+   amount:"", drafted:"2026-03-18", drafter:"류승현2", status:"pending",
+   body:"1. 2026년 정기총회 소집공고를 아래와 같이 품의합니다.\n  가. 일 시 : 2026-03-20 14:00\n  나. 장 소 : 강북구민회관 대강당\n  다. 공고 방법 : 등기우편 · 앱 알림 · 게시판\n2. 붙임 : 소집통지서(안) 1부",
+   files:[{name:"소집통지서_안.pdf", size:"310KB", kind:"통지서(안)", required:true}],
+   line:[{step:1,role:"담당자",approver:"류승현2",status:"ok",acted_at:"2026-03-18 09:12",comment:null},
+         {step:2,role:"총무이사",approver:"박총무",status:"wait",acted_at:null,comment:null},
+         {step:3,role:"조합장",approver:"김조합장",status:"wait",acted_at:null,comment:null}]},
+
+  {no:"CON-2026-008", code:"CON", title:"정비사업전문관리 용역계약 체결의 건",
+   amount:"128,300,000", item:"용역비", payee:"○○정비사업전문관리(주)",
+   drafted:"2026-03-19", drafter:"류승현2", status:"approved",
+   body:"1. 총회 의결(2026-03-20 제3호)에 따라 아래와 같이 용역계약 체결을 품의합니다.\n  가. 계약 상대 : ○○정비사업전문관리(주)\n  나. 계약 금액 : 128,300,000원\n  다. 계약 기간 : 2026-04-01 ~ 2029-03-31\n2. 조합 인감 날인이 필요합니다. (계약서 원본 2부)",
+   files:[{name:"용역계약서_안.pdf", size:"1.6MB", kind:"계약서(안)", required:true}],
+   seal:{on:true, kind:"조합 인감", count:2, carry:false,
+         place:"○○정비사업전문관리(주) 용역계약서 원본 2부",
+         reason:"총회 의결(2026-03-20 제3호)에 따른 용역계약 체결",
+         keep:"계약서 사본 1부 회수"},
+   line:[{step:1,role:"담당자",approver:"류승현2",status:"ok",acted_at:"2026-03-19 10:02",comment:null},
+         {step:2,role:"총무이사",approver:"박총무",status:"ok",acted_at:"2026-03-20 09:40",comment:null},
+         {step:3,role:"조합장",approver:"김조합장",status:"ok",acted_at:"2026-03-21 08:30",comment:null}]},
+
+  {no:"WDR-2026-004", code:"WDR", title:"전자투표 철회 및 현장투표 재접수의 건",
+   amount:"", drafted:"2026-03-20", drafter:"류승현2", status:"pending",
+   body:"1. 2026년 정기총회 전자투표와 관련하여 아래 조합원의 철회 및 재접수를 품의합니다.\n  가. 조합원 : 이*희 (제 0418 호)\n  나. 철회 대상 : V-2026-0418\n  다. 철회 접수 : R-2026-0007\n  라. 재접수 : O-2026-0036 (현장투표)\n2. 확인 사항\n  가. 본인 서명·날인 : 확인\n  나. 신분 확인 : 신분증 대조\n3. 붙임 : 철회신청서 원본 1부 (03-23까지 보완 예정)",
+   files:[{name:"철회신청서.pdf", size:"보완 예정", kind:"철회신청서 원본", required:true, missing:true}],
+   line:[{step:1,role:"담당자",approver:"류승현2",status:"ok",acted_at:"2026-03-20 14:15",comment:null},
+         {step:2,role:"총무이사",approver:"박총무",status:"wait",acted_at:null,comment:null},
+         {step:3,role:"조합장",approver:"김조합장",status:"wait",acted_at:null,comment:null}]}
+];
+
+/* 서버에서 받아온다. 없으면 시연 자료로 시작한다. */
+let DOCS = (typeof hubLoad !== "undefined") ? hubLoad("docs", DOCS_SEED) : DOCS_SEED;
+const docsPut = who => {
+  if(typeof hubPush !== "undefined") hubPush("docs", DOCS, who);
+};
+/* ★ 20초마다 살펴본다. 직원이 올린 결재가 총무이사 화면에 저절로 뜬다.
+   무언가 치고 계실 때는 화면을 갈아엎지 않는다. */
+function docsTake(v){
+  if(!v) return;
+  if(JSON.stringify(v) === JSON.stringify(DOCS)) return;
+  DOCS = v;
+  const el = document.activeElement, t = el ? (el.tagName||"").toUpperCase() : "";
+  if(t === "INPUT" || t === "TEXTAREA" || t === "SELECT") return;
+  if(typeof render !== "undefined") render();
+}
+if(typeof hubPoll !== "undefined") hubPoll("docs", docsTake, 20);
+else if(typeof hubPull !== "undefined") hubPull("docs", docsTake);
+
+/* ══════════════════════════════════════════════════════════
+   인장날인 대장
+   ──────────────────────────────────────────────────────────
+   ★ 두 갈래로 들어온다
+       ① 일반 품의서에서 [조합인감 날인 필요] 체크
+       ② 날인만 받는 단독 품의 (SEL 분류)
+     어느 쪽이든 최종 결재가 떨어지면 이 대장 한 곳으로 모인다.
+
+   ★ 결재 완료 = 날인 승인이지, 날인한 것이 아니다.
+     조합장은 폰으로 승인했을 뿐이고 인감은 사무실 금고에 있다.
+     결재 시각을 날인 일자로 적으면 대장이 사실과 달라진다.
+     그래서 'pending(날인 대기)' 로 올려 두고,
+     실제로 도장을 찍은 뒤 일자·매수·날인자를 적어야 'done' 이 된다.
+
+   ★ 반출 여부를 반드시 남긴다.
+     조합 인감을 사무실 밖으로 들고 나가는 것이 사고가 가장 많은 대목이다.
+
+   ★ Supabase 대응 : seal_ledger
+       seal_no · doc_no · place(사용처) · reason(사유) · kind(인감 종류)
+       count(매수) · carry(반출) · keep(회수 문서)
+       approved_at · sealed_at · sealer · status
+   ══════════════════════════════════════════════════════════ */
+const SEAL_KINDS = ["조합 인감", "사용 인감", "조합장 직인", "법인 인감"];
+let SEAL_SEQ = 13;
+const sealNo = () => "SEAL-" + String(++SEAL_SEQ).padStart(4,"0");
+
+let SEAL_LEDGER = [
+  {no:"SEAL-0010", doc:"MTG-2026-005", place:"시공자 선정 입찰공고문",
+   reason:"입찰 공고 게시 및 관보 제출", kind:"조합 인감", count:3, carry:false,
+   keep:"공고문 사본 1부", approved_at:"2026-02-26", sealed_at:"2026-02-27",
+   sealer:"김조합장", status:"done"},
+  {no:"SEAL-0011", doc:"ADM-2026-012", place:"사무실 임대차계약서 원본 2부",
+   reason:"조합 사무실 임대차 계약 연장", kind:"조합 인감", count:2, carry:true,
+   keep:"계약서 사본 1부 회수", approved_at:"2026-03-06", sealed_at:"2026-03-06",
+   sealer:"김조합장", status:"done"},
+  {no:"SEAL-0012", doc:"MTG-2026-007", place:"총회 소집통지서 (등기 발송)",
+   reason:"2026년 정기총회 소집", kind:"조합 인감", count:1, carry:false,
+   keep:"통지서 사본 1부", approved_at:"2026-03-18", sealed_at:"2026-03-18",
+   sealer:"김조합장", status:"done"},
+  {no:"SEAL-0013", doc:"CON-2026-008", place:"○○정비사업전문관리(주) 용역계약서 원본 2부",
+   reason:"총회 의결(2026-03-20 제3호)에 따른 용역계약 체결", kind:"조합 인감",
+   count:2, carry:false, keep:"계약서 사본 1부 회수",
+   approved_at:"2026-03-21", sealed_at:null, sealer:null, status:"pending"}
+];
+
+/* 대장 조회 조건 */
+const SEALQ = {from:"2026-01-01", to:"2026-12-31", place:"", code:"", only:""};
+function sealRows(){
+  return SEAL_LEDGER.filter(x=>{
+    const d = x.sealed_at || x.approved_at;
+    if(SEALQ.from && d < SEALQ.from) return false;
+    if(SEALQ.to   && d > SEALQ.to)   return false;
+    if(SEALQ.code && !x.doc.startsWith(SEALQ.code)) return false;
+    if(SEALQ.place && x.place.indexOf(SEALQ.place) < 0) return false;
+    if(SEALQ.only === "pending" && x.status !== "pending") return false;
+    if(SEALQ.only === "carry"   && !x.carry) return false;
+    return true;
+  }).sort((a,b)=> a.no < b.no ? 1 : -1);
+}
+
+/* ★ 명부 변경 품의를 결재함에 이어 붙인다.
+   admin.html 에서 만든 문서와 같은 객체를 그대로 쓰므로
+   여기서 승인하면 저쪽 명부에 바로 반영된다. */
+function syncMBR(){
+  if(typeof MBR === "undefined") return;
+  MBR.forEach(m => { if(!DOCS.find(d => d.no === m.no)) DOCS.push(m); });
+}
+
+/* 지금 결재를 기다리는 단계 */
+const curStep = d => { const w = d.line.find(x => x.status === "wait"); return w ? w.step : 0; };
+const myTurn  = d => d.status === "pending" && curStep(d) === S.step;
+const waiting = () => DOCS.filter(d => d.status === "pending");
+const myWaiting = () => DOCS.filter(myTurn);
+
+/* ── 목록 상태 ───────────────────────────────────────────
+   기본은 최신이 맨 위(내림차순). 버튼으로 뒤집을 수 있다. */
+const LIST = {from:"2026-03-01", to:"2026-03-31", code:"", desc:true};
+function filtered(){
+  const out = DOCS.filter(d =>
+    (!LIST.code || d.code === LIST.code) &&
+    (!LIST.from || d.drafted >= LIST.from) &&
+    (!LIST.to   || d.drafted <= LIST.to));
+  out.sort((a,b) => LIST.desc ? (a.drafted < b.drafted ? 1 : -1)
+                              : (a.drafted > b.drafted ? 1 : -1));
+  return out;
+}
+
+/* ── 기안 상태 ───────────────────────────────────────── */
+const NEWDOC = {tpl:null, code:"", title:"", body:"", amount:"", item:"", payee:"",
+  bizNo:"", tax:"과세", files:[],
+  seal:{on:false, kind:"조합 인감", count:1, carry:false,
+        place:"", reason:"", keep:""}};
+
+/* ══ 화면 ══════════════════════════════════════════════ */
+const V = {};
+const STLAB = {approved:"승인 완료", rejected:"반려", pending:"결재 중", draft:"임시"};
+const STPILL = {approved:"p-ok", rejected:"p-red", pending:"p-warn", draft:"p-wait"};
+
+/* 결재선 표시 */
+function lineView(d, compact){
+  return `<div class="line">${d.line.map((x,i)=>{
+    const k = x.status==="ok" ? "ok" : x.status==="no" ? "no"
+            : (d.status==="pending" && curStep(d)===x.step) ? "now" : "";
+    const t = x.status==="ok" ? `<i style="color:var(--ok)">승인</i>`
+            : x.status==="no" ? `<i style="color:var(--red)">반려</i>`
+            : k==="now" ? `<i style="color:var(--amber)">${myTurn(d)&&S.step===x.step?"내 차례":"결재 대기"}</i>`
+            : `<i style="color:#B9C0C9">순서 대기</i>`;
+    return `<div class="step ${k}">
+      <em>${x.step}단계 · ${x.role}</em><b>${x.approver}</b>${t}
+      ${x.acted_at&&!compact?`<em style="margin-top:4px">${x.acted_at.slice(5)}</em>`:""}
+    </div>${i<2?`<span class="arrow">›</span>`:""}`;
+  }).join("")}</div>`;
+}
+
+/* ── 결재함 ───────────────────────────────────────────── */
+V.box = () => {
+  const list = filtered();
+  const pend = list.filter(d => d.status === "pending");
+  const done = list.filter(d => d.status !== "pending");
+  const rowOf = d => `<div class="docrow" data-doc="${d.no}">
+      <span class="no mono" style="color:var(--navy);font-weight:700">${d.no}</span>
+      <span class="ti">${d.title}</span>
+      <span class="dt mono">${d.drafted}</span>
+      <span class="st">${d.status==="pending"
+        ? `<span class="pill ${myTurn(d)?"p-warn":"p-wait"}">${myTurn(d)?"내 차례":curStep(d)+"단계 대기"}</span>`
+        : `<span class="pill ${STPILL[d.status]}">${STLAB[d.status]}</span>`}</span>
+    </div>`;
+  return `
+  <h2 class="pt">결재함</h2>
+  <p class="pd">${S.name} · ${S.role}${S.step?` · ${S.step}단계`:""}</p>
+
+  <div class="filt">
+    <input type="date" id="f-from" value="${LIST.from}">
+    <span style="color:var(--muted);font-size:.8rem">~</span>
+    <input type="date" id="f-to" value="${LIST.to}">
+    <button class="chipb" onclick="applyDate()">조회</button>
+    <button class="chipb" onclick="preset('month')">이번 달</button>
+    <button class="chipb" onclick="preset('week')">최근 7일</button>
+    <select id="f-code" onchange="LIST.code=this.value;render()">
+      <option value="">분류 전체</option>
+      ${CLASSES.filter(c=>c.active).map(c=>
+        `<option value="${c.code}" ${LIST.code===c.code?"selected":""}>${c.code} ${c.name}</option>`).join("")}
+    </select>
+    <button class="chipb on" onclick="LIST.desc=!LIST.desc;render()">
+      ${LIST.desc?"최신순 ↓":"오래된순 ↑"}</button>
+  </div>
+
+  <div class="sec">결재할 문서 · ${pend.length}건
+    <em>${LIST.desc?"위가 최신":"아래가 최신"}</em></div>
+  <div class="doclist pend">
+    ${pend.length ? pend.map(rowOf).join("")
+      : `<div class="docrow" style="color:var(--muted);cursor:default">기간 안에 결재할 문서가 없습니다.</div>`}
+  </div>
+
+  <div class="sec">결재 완료 · ${done.length}건</div>
+  <div class="doclist done">
+    ${done.length ? done.map(rowOf).join("")
+      : `<div class="docrow" style="color:var(--muted);cursor:default">기간 안에 완료된 문서가 없습니다.</div>`}
+  </div>
+
+  <p class="note">기간은 기안일 기준입니다. 정렬 버튼을 누르면 순서가 뒤집힙니다.</p>`;
+};
+function applyDate(){
+  const f=document.getElementById('f-from'), t=document.getElementById('f-to');
+  if(f) LIST.from=f.value; if(t) LIST.to=t.value; render();
+}
+function preset(k){
+  const d=new Date(), z=n=>String(n).padStart(2,"0");
+  const fmt=x=>`${x.getFullYear()}-${z(x.getMonth()+1)}-${z(x.getDate())}`;
+  if(k==="month"){ LIST.from=fmt(new Date(d.getFullYear(),d.getMonth(),1)); LIST.to=fmt(d); }
+  else { const s=new Date(d); s.setDate(d.getDate()-6); LIST.from=fmt(s); LIST.to=fmt(d); }
+  render();
+}
+
+/* ── 문서 상세 ───────────────────────────────────────── */
+let openDocNo = null;
+V.doc = () => {
+  const d = DOCS.find(x => x.no === openDocNo);
+  if(!d) return `<h2 class="pt">문서</h2><p class="pd">문서를 찾을 수 없습니다.</p>
+    <button class="btn ghost sm" onclick="go('box')">결재함으로</button>`;
+  const mine = myTurn(d);
+  const rej = d.line.find(x => x.status === "no");
+  return `
+  <button class="chipb" onclick="go('box')" style="margin-bottom:14px">← 결재함</button>
+
+  <div class="sec" style="margin-top:0">
+    <span style="font-size:1.05rem">${d.title}</span>
+    <span class="pill ${STPILL[d.status]}">${STLAB[d.status]}</span></div>
+  <div class="box">
+    <div class="row"><span>문서 분류번호</span><b class="mono" style="color:var(--navy)">${d.no}</b></div>
+    <div class="row"><span>분류</span><b>${cls(d.code)?cls(d.code).name:d.code}</b></div>
+    <div class="row"><span>기안</span><b>${d.drafter} · ${d.drafted}</b></div>
+    ${d.amount?`<div class="row"><span>금액</span><b>${d.amount}원</b></div>`:""}
+  </div>
+
+  <div class="sec">결재선</div>
+  ${lineView(d)}
+  ${rej?`<div class="warn"><b>${rej.role} ${rej.approver} 반려</b><p>${rej.comment||""}</p></div>`:""}
+
+  <div class="sec">본문</div>
+  <div class="box" style="white-space:pre-wrap;font-size:.83rem;line-height:2">${d.body}</div>
+
+  <div class="sec">증빙서류 · ${d.files.length}건</div>
+  <div class="box" style="padding:0;overflow:hidden">
+    ${d.files.length ? d.files.map((f,i)=>`
+      <div class="ev">
+        <span class="ck ${f.missing?"miss":""}">${f.missing?"":"✓"}</span>
+        <span class="nm">${f.kind}${f.required?` <span style="color:#8C3A12;font-size:.7rem">필수</span>`:""}
+          <span style="display:block;color:var(--muted);font-size:.74rem" class="mono">${f.name}</span></span>
+        <span class="fs">${f.size}</span>
+        <span class="ac">${f.missing?"미첨부":`<button onclick="viewPdf('${d.no}',${i})">보기</button>`}</span>
+      </div>`).join("")
+      : `<div class="ev" style="color:var(--muted)">첨부된 증빙이 없습니다.</div>`}
+  </div>
+  ${d.files.some(f=>f.missing)?`<div class="warn"><b>필수 증빙이 보완되지 않았습니다</b>
+    <p>결재는 진행할 수 있으나, 기한 안에 원본을 첨부해야 합니다.
+       증빙 없는 지출 품의는 감사에서 가장 먼저 지적됩니다.</p></div>`:""}
+
+  ${d.seal && d.seal.on ? `
+  <div class="sec">조합인감 날인</div>
+  <div class="box" style="border:1.5px solid var(--navy)">
+    <div class="row"><span>사용처</span><b>${d.seal.place}</b></div>
+    <div class="row"><span>사유</span><b style="font-weight:400">${d.seal.reason}</b></div>
+    <div class="row"><span>인감 · 매수</span><b>${d.seal.kind} · ${d.seal.count}매</b></div>
+    <div class="row"><span>반출</span>
+      <b style="color:${d.seal.carry?"var(--amber)":"var(--ink)"}">${d.seal.carry?"외부 반출":"사무실 내"}</b></div>
+    <div class="row"><span>대장</span>
+      <b class="mono">${(SEAL_LEDGER.find(x=>x.doc===d.no)||{}).no
+        || (d.status==="approved" ? "등록 예정" : "최종 결재 후 등록")}</b></div>
+  </div>
+  ${d.status==="approved"?`<button class="btn ghost sm" style="margin-top:11px"
+    onclick="go('seal')">인장날인 대장에서 보기</button>`:""}` : ""}
+
+  ${d.mbr ? (()=>{ const c = mbrAfterCount(d.mbr.kind, d.mbr.items);
+    const K = MBR_KIND[d.mbr.kind];
+    return `<div class="sec">명부 변경 내역
+      <span class="pill ${K.pill}">${K.label}</span></div>
+    <div class="box" style="padding:0;overflow:hidden">
+      <table><thead><tr>
+        <th style="width:74px">구분</th><th style="width:120px">조합원</th>
+        <th style="width:100px">항목</th><th>바뀌는 값</th>
+      </tr></thead><tbody>
+      ${d.mbr.items.slice(0,12).map(it=>`<tr>
+        <td><span class="pill ${K.pill}">${K.label}</span></td>
+        <td class="mono">${String(it.no).padStart(4,"0")}
+          ${it.name?it.name.charAt(0)+"*"+it.name.slice(-1):""}</td>
+        <td>${it.field || "신규 등록"}</td>
+        <td class="diff">${it.from!==undefined
+          ? `<s>${it.from}</s> → <b>${it.to}</b>`
+          : `<b>${(it.row&&it.row.addr)||""}</b>`}
+          ${it.why?`<span style="display:block;color:var(--muted)">사유 · ${it.why}</span>`:""}</td>
+      </tr>`).join("")}
+      </tbody></table>
+    </div>
+    ${d.mbr.items.length>12?`<p class="note">앞의 12건만 표시했습니다.
+      전체 ${d.mbr.items.length}건입니다.</p>`:""}
+
+    <div class="box" style="margin-top:12px">
+      <div class="row"><span>현재 명부</span>
+        <b>${ROSTER.length}명 · 의결권자 ${VOTER_N()}명</b></div>
+      <div class="row"><span>승인 후</span>
+        <b style="color:var(--navy)">${c.all}명 · 의결권자 ${c.voter}명
+          ${c.voter===VOTER_N()?`<span style="font-weight:400;color:var(--muted)">(변동 없음)</span>`:""}</b></div>
+      ${d.mbr.applied?`<div class="row"><span>반영 시각</span>
+        <b class="mono" style="color:var(--ok)">${d.mbr.appliedAt||"반영됨"}</b></div>`:""}
+    </div>
+
+    ${d.mbr.kind==="del"?`<div class="warn"><b>조합원 삭제는 되돌리기 어렵습니다</b>
+      <p>매매·상속으로 자격이 넘어간 경우에만 승인하십시오.
+         잘못 지우면 그분의 의결권이 사라집니다.
+         붙임 근거 문서를 반드시 확인해 주십시오.</p></div>`:""}
+
+    ${(typeof voteLocked!=="undefined" && voteLocked() && !d.mbr.applied)
+      ?`<div class="warn"><b>총회 투표가 진행 중입니다</b>
+        <p>승인하셔도 명부에는 <b>투표 마감 후에</b> 반영됩니다.
+           이미 표를 던지신 분들은 지금 모수를 기준으로 행사하셨습니다.
+           도중에 바뀌면 가결·부결이 뒤집힐 수 있습니다.</p></div>`:""}`;})() : ""}
+
+  ${d.amount && d.item ? (()=>{ const e = (typeof EXPENSE!=="undefined")
+      ? EXPENSE.find(x=>x.doc===d.no) : null;
+    return `<div class="sec">회계 집계</div>
+    <div class="box">
+      <div class="row"><span>예산 과목</span><b>${d.item}</b></div>
+      <div class="row"><span>지급처</span>
+        <b>${d.payee||"—"}${d.bizNo?` <span class="mono" style="font-weight:400;color:var(--muted)">${d.bizNo}</span>`:""}</b></div>
+      <div class="row"><span>과세 구분</span><b>${d.tax||"과세"}</b></div>
+      ${(()=>{ const amt=Number(String(d.amount).replace(/[^0-9]/g,""))||0;
+        const t=splitTax({amount:amt, tax:d.tax||"과세"});
+        return `<div class="row"><span>공급가액 · 부가세</span>
+          <b class="mono">${wonKR(t.supply)} · ${wonKR(t.vat)}</b></div>`;})()}
+      <div class="row"><span>집행 상태</span>
+        <b style="color:${e&&e.status==='paid'?'var(--ok)':'var(--amber)'}">
+          ${!e ? (d.status==="approved"?"등록 예정":"최종 결재 후 등록")
+            : e.status==="paid" ? `집행 완료 · ${e.paid}` : "집행 대기"}</b></div>
+    </div>
+    <p class="note">결재가 났다고 돈이 나간 것은 아닙니다.
+      실제 지급 후 직원 화면에서 집행 완료를 눌러야 조합원 공개 집계에 들어갑니다.</p>`;})():""}
+
+  <div class="sec">출력</div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn ghost sm" onclick="printDoc('${d.no}')">A4 출력</button>
+    <button class="btn ghost sm" onclick="printDoc('${d.no}')">PDF 저장</button>
+  </div>
+  <p class="note">인쇄하면 왼쪽 메뉴와 버튼은 빠지고 품의서 양식만 나옵니다.
+    결재란과 증빙 목록이 함께 인쇄됩니다.
+    PDF 저장은 인쇄 창에서 <b>대상을 'PDF로 저장'</b>으로 고르시면 됩니다.</p>
+
+  ${mine?`
+  <div class="sec">결재</div>
+  <div class="f"><label>의견 (반려 시 필수)</label>
+    <textarea id="a-cmt" style="min-height:80px" placeholder="반려하실 때는 사유를 적어 주십시오."></textarea></div>
+  <div class="actbar" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <button class="btn" onclick="act('${d.no}','ok')">승인</button>
+    <button class="btn red" onclick="act('${d.no}','no')">반려</button>
+  </div>`:""}`;
+};
+function openDoc(no){ openDocNo = no; go('doc'); }
+function act(no, how){
+  const d = DOCS.find(x=>x.no===no); if(!d) return;
+  const step = d.line.find(x=>x.status==="wait" && x.step===S.step);
+  if(!step){ alert("지금은 결재하실 차례가 아닙니다."); return; }
+  const el = document.getElementById('a-cmt');
+  const cmt = el ? el.value.trim() : "";
+  if(how==="no" && !cmt){ alert("반려하실 때는 사유를 적어 주십시오."); return; }
+  const now = new Date(), z=n=>String(n).padStart(2,"0");
+  step.status = how==="ok" ? "ok" : "no";
+  step.acted_at = `${now.getFullYear()}-${z(now.getMonth()+1)}-${z(now.getDate())} ${z(now.getHours())}:${z(now.getMinutes())}`;
+  step.comment = cmt || null;
+  if(typeof docsPut !== "undefined") docsPut(S.name);
+  if(how==="no"){
+    d.status = "rejected";
+    /* 동의서 묶음이면 서면들을 다시 접수 대기로 돌린다.
+       보완해서 다시 올리실 수 있어야 한다. */
+    if(d.code === "CSN" && d.batch && typeof consentBatchReject !== "undefined")
+      consentBatchReject(d.batch, cmt);
+    /* 서식이 반려되면 작성 중으로 되돌려 고치실 수 있게 한다 */
+    if(d.code === "CSN" && d.formId && typeof CONSENT_MADE !== "undefined"){
+      const cf = CONSENT_MADE.find(x => x.id === d.formId);
+      if(cf){ cf.state = "draft"; formsPut(S.name); }
+    }
+    /* 반려 → 기안자에게 사유와 함께 */
+    notify("reject", {to:d.drafter, phone:phoneOf(d.drafter), reason:"반려",
+      doc:d.no, title:d.title, by:`${S.role} ${S.name}`, comment:cmt});
+  } else if(d.line.every(x=>x.status==="ok")){
+    d.status = "approved";
+    /* ★ 명부 변경 품의면 여기서 실제로 명부에 반영한다.
+       단, 투표가 진행 중이면 미뤄 둔다.
+       도중에 모수가 바뀌면 이미 던져진 표들의 기준이 달라진다. */
+    if(d.mbr){
+      const r = mbrApply(d);
+      if(r.held){
+        alert(`승인했습니다 (시연)\n\n다만 총회 투표가 진행 중이라\n`
+          + `명부에는 투표 마감 후에 반영됩니다.\n\n`
+          + `도중에 모수가 바뀌면 이미 던져진 표의 기준이 달라집니다.`);
+      } else if(r.ok){
+        alert(`승인했습니다 (시연)\n\n명부에 반영되었습니다.\n`
+          + `추가 ${r.add} · 갱신 ${r.upd} · 삭제 ${r.del}\n`
+          + `명부 ${r.all}명 · 의결권자 ${r.voter}명`);
+      }
+    }
+
+    /* ★ 동의서 징구 명단이면 대장에 확정한다.
+       조합장 승인 전까지는 대장이 아니다. 서면 접수만으로는 숫자가 되지 않는다. */
+    /* ★ 동의서 서식 승인이면 그 서식을 '승인' 으로 바꾼다.
+       승인 전에는 징구를 시작할 수 없다. */
+    if(d.code === "CSN" && d.formId && typeof CONSENT_MADE !== "undefined"){
+      const cf = CONSENT_MADE.find(x => x.id === d.formId);
+      if(cf){ cf.state = "approved"; formsPut(S.name); }
+      alert(`승인했습니다 (시연)\n\n${d.title}\n\n`
+        + `직원 화면에서 [징구 시작]을 누르시면\n조합원 앱에 나타납니다.`);
+    }
+
+    if(d.code === "CSN" && d.batch && typeof consentBatchApprove !== "undefined"){
+      const r = consentBatchApprove(d.batch);
+      if(r.ok){
+        const t = (typeof consentTally !== "undefined")
+          ? consentTally((typeof consentOf!=="undefined") ? "C-ESTAB" : "") : null;
+        alert(`승인했습니다 (시연)\n\n서면 ${r.n}건이 대장에 확정되었습니다.`
+          + (t ? `\n\n대장 ${t.submitted}건 · 동의 ${t.yes}명\n`
+               + `사람 수 ${t.yes}/${t.needOwner} ${t.okOwner?"충족":"미달"}\n`
+               + `면적 ${t.areaYes}/${t.needArea}㎡ ${t.okArea?"충족":"미달"}` : ""));
+      }
+    }
+
+    /* ★ 지출 품의면 회계 집계로 자동 등록 (집행 대기)
+       결재가 났다고 돈이 나간 것은 아니다.
+       실제로 지급한 뒤 직원 화면에서 '집행 완료'를 눌러야 집계에 들어간다. */
+    if(typeof EXPENSE !== "undefined" && d.amount && d.item){
+      const eid = "E-" + String(EXPENSE.length + 1).padStart(4,"0");
+      /* 날인 대장이 함께 만들어졌으면 그 번호를 물려 준다.
+         세무사가 이 번호로 인감 사용 기록까지 대조한다. */
+      const sealNoOf = (d.seal && d.seal.on)
+        ? (SEAL_LEDGER.find(x=>x.doc===d.no)||{}).no || "" : "";
+      EXPENSE.push({id:eid, doc:d.no, item:d.item, title:d.title,
+        amount: Number(String(d.amount).replace(/[^0-9]/g,"")) || 0,
+        approved: step.acted_at.slice(0,10), paid:null, status:"approved",
+        payee: d.payee || "—", tax: d.tax || "과세", bizNo: d.bizNo || "", seal: sealNoOf,
+        files: d.files.filter(f=>!f.missing).map(f=>({kind:f.kind, name:f.name}))});
+    }
+
+    /* ★ 날인이 필요한 문서면 인장날인 대장으로 자동 등록 (날인 대기) */
+    if(d.seal && d.seal.on){
+      const sn = sealNo();
+      SEAL_LEDGER.push({no:sn, doc:d.no, place:d.seal.place, reason:d.seal.reason,
+        kind:d.seal.kind, count:d.seal.count, carry:!!d.seal.carry, keep:d.seal.keep,
+        approved_at: step.acted_at.slice(0,10), sealed_at:null, sealer:null, status:"pending"});
+      d.seal.ledger = sn;
+    }
+    /* 최종 승인 → 기안자에게 완료 알림 */
+    notify("done", {to:d.drafter, phone:phoneOf(d.drafter), reason:"결재 완료",
+      doc:d.no, title:d.title});
+  } else {
+    /* 다음 단계 결재자에게 순차 도래 알림 */
+    const nx = d.line.find(x=>x.status==="wait");
+    if(nx) notify(nx.step===3 ? "final" : "new", {
+      to:nx.approver, phone:phoneOf(nx.approver), reason:"순차 도래",
+      doc:d.no, title:d.title, drafter:d.drafter,
+      prev:`${S.role} ${S.name} 승인 ${step.acted_at.slice(5)}`});
+  }
+  alert(how==="ok" ? `승인했습니다 (시연)\n${d.no}` : `반려했습니다 (시연)\n${d.no}`);
+  go('box');
+}
+
+/* ── 기안 ─────────────────────────────────────────────── */
+/* ★ 기안은 두 단계다.
+     pick : 양식만 고른다 (카드 2열)
+     form : 고른 양식의 작성 화면
+   한 화면에 다 펼치면 PC 에서 아래로 너무 길어진다. */
+let WSTEP = "pick";
+
+V.write = () => {
+  const t = NEWDOC.tpl ? TEMPLATES.find(x=>x.id===NEWDOC.tpl) : null;
+  const miss = NEWDOC.files.filter(f=>f.required && f.missing).length;
+
+  /* ── 1단계 · 양식 고르기 ── */
+  if(WSTEP === "pick" || !t) return `
+  <h2 class="pt">문서 기안</h2>
+  <p class="pd">먼저 품의문 양식을 고르십시오. 제목과 본문, 필수 증빙이 함께 채워집니다.</p>
+  <div class="sample"><b>시연용 화면입니다</b>
+    <p>저장해도 실제로 보관되지 않습니다. 파일 첨부도 흉내만 냅니다.</p></div>
+
+  <div class="sec">품의문 양식 <em>${TEMPLATES.length}종</em></div>
+  <div class="tpl">
+    ${TEMPLATES.map(x=>`<button class="tplc" onclick="pickTpl('${x.id}')">
+      <em>${x.code}</em><b>${x.name}</b><p>${x.desc}</p>
+      ${x.need.length?`<i>증빙 · ${x.need.join(" · ")}</i>`
+        :`<i style="color:var(--muted)">필수 증빙 없음</i>`}
+      <span class="ar">›</span>
+    </button>`).join("")}
+  </div>
+  <p class="note">양식을 누르면 작성 화면으로 넘어갑니다.
+    양식마다 필수 증빙이 정해져 있어, 다 채우기 전에는 결재를 올릴 수 없습니다.</p>`;
+
+  /* ── 2단계 · 작성 ── */
+  return `
+  <button class="chipb" onclick="backToPick()" style="margin-bottom:14px">← 양식 다시 고르기</button>
+
+  <div class="picked">
+    <span class="pc">${t.code}</span>
+    <b>${t.name}</b>
+    <button onclick="backToPick()">변경</button>
+  </div>
+
+  ${`
+  <div class="sec">문서 정보</div>
+  <div class="box">
+    <div class="g2">
+      <div class="f"><label>문서 분류</label>
+        <select id="w-code" onchange="NEWDOC.code=this.value;render()">
+          ${CLASSES.filter(c=>c.active).map(c=>
+            `<option value="${c.code}" ${NEWDOC.code===c.code?"selected":""}>${c.code} · ${c.name}</option>`).join("")}
+        </select></div>
+      <div class="f"><label>문서 분류번호 · 저장 시 확정</label>
+        <input value="${peekNo(NEWDOC.code)}" readonly
+          style="background:var(--mist);font-family:ui-monospace,monospace;color:var(--navy);font-weight:700"></div>
+    </div>
+    <div class="f wide"><label>제목</label><input id="w-title" value="${NEWDOC.title}"></div>
+    <div class="g2">
+      <div class="f"><label>금액 (없으면 비워 두십시오)</label>
+        <input id="w-amount" value="${NEWDOC.amount}" placeholder="38,500,000"></div>
+      <div class="f"><label>예산 과목 (지출일 때)</label>
+        <select id="w-item" onchange="NEWDOC.item=this.value">
+          <option value="">해당 없음</option>
+          ${(typeof BUDGET!=="undefined"?BUDGET:[]).map(x=>
+            `<option ${NEWDOC.item===x?"selected":""}>${x}</option>`).join("")}
+        </select></div>
+    </div>
+    <div class="g3">
+      <div class="f"><label>지급처 (지출일 때)</label>
+        <input id="w-payee" value="${NEWDOC.payee||''}" placeholder="○○정비사업전문관리(주)"></div>
+      <div class="f"><label>사업자등록번호</label>
+        <input id="w-biz" value="${NEWDOC.bizNo||''}" placeholder="123-81-45678"></div>
+      <div class="f"><label>과세 구분</label>
+        <select id="w-tax" onchange="NEWDOC.tax=this.value">
+          ${(typeof TAX_TYPES!=="undefined"?TAX_TYPES:["과세","면세","불공제"]).map(t=>
+            `<option ${NEWDOC.tax===t?"selected":""}>${t}</option>`).join("")}
+        </select></div>
+    </div>
+    ${NEWDOC.amount ? (()=>{ const amt = Number(String(NEWDOC.amount).replace(/[^0-9]/g,""))||0;
+      const t = (typeof splitTax!=="undefined")
+        ? splitTax({amount:amt, tax:NEWDOC.tax||"과세"}) : {supply:amt, vat:0};
+      return `<div class="box" style="background:var(--mist);border:0;padding:11px 13px;margin-bottom:11px">
+        <div class="row" style="border:0;padding:3px 0"><span>공급가액</span>
+          <b class="mono">${wonKR(t.supply)}원</b></div>
+        <div class="row" style="border:0;padding:3px 0"><span>부가세</span>
+          <b class="mono">${wonKR(t.vat)}원</b></div>
+        <div class="row" style="border:0;padding:3px 0"><span>합계</span>
+          <b class="mono">${wonKR(amt)}원</b></div>
+        <p class="note" style="margin-top:7px">${NEWDOC.tax==="과세"
+          ? "과세 건이라 10%를 역산했습니다. 세금계산서 금액과 맞는지 확인해 주십시오."
+          : NEWDOC.tax==="면세"
+          ? "면세 건이라 부가세를 잡지 않습니다. 전액이 공급가액입니다."
+          : "불공제 건이라 부가세를 잡지 않습니다. 접대비 · 비영업용 차량 등이 여기 해당합니다."}</p>
+      </div>`;})() : ""}
+    <div class="f wide"><label>본문</label><textarea id="w-body">${NEWDOC.body}</textarea></div>
+  </div>
+
+  <div class="sec">조합인감 날인</div>
+  <div class="box" style="${NEWDOC.seal.on?'border:1.5px solid var(--navy);background:#F0F5FB':''}">
+    <label style="display:flex;gap:11px;align-items:flex-start;cursor:pointer">
+      <input type="checkbox" id="s-on" ${NEWDOC.seal.on?"checked":""} onchange="sealOn(this.checked)"
+        style="width:19px;height:19px;margin-top:1px;flex-shrink:0;accent-color:#12365F">
+      <span><b style="font-size:.84rem">조합인감(직인) 날인이 필요합니다</b>
+        <span style="display:block;font-size:.78rem;color:var(--muted);line-height:1.6;margin-top:2px">
+          체크하면 최종 결재가 떨어지는 순간 인장날인 대장에 자동 등록됩니다.</span></span>
+    </label>
+
+    ${NEWDOC.seal.on?`
+    <div class="g2" style="margin-top:13px">
+      <div class="f"><label>인감 종류</label>
+        <select id="s-kind" onchange="NEWDOC.seal.kind=this.value">
+          ${SEAL_KINDS.map(k=>`<option ${NEWDOC.seal.kind===k?"selected":""}>${k}</option>`).join("")}
+        </select></div>
+      <div class="f"><label>날인 매수</label>
+        <input id="s-cnt" type="number" min="1" value="${NEWDOC.seal.count}"></div>
+    </div>
+    <div class="f wide"><label>사용처 · 어디에 찍는가</label>
+      <input id="s-place" value="${NEWDOC.seal.place}" placeholder="○○ 계약서 원본 2부"></div>
+    <div class="f wide"><label>사유 · 왜 찍는가</label>
+      <input id="s-reason" value="${NEWDOC.seal.reason}" placeholder="총회 의결에 따른 계약 체결"></div>
+    <div class="g2">
+      <div class="f"><label>반출 여부</label>
+        <div class="seg">
+          <button class="${NEWDOC.seal.carry?"":"on"}" onclick="sealCarry(false)">사무실 내</button>
+          <button class="${NEWDOC.seal.carry?"on":""}" onclick="sealCarry(true)">외부 반출</button>
+        </div></div>
+      <div class="f"><label>회수 · 보관 문서</label>
+        <input id="s-keep" value="${NEWDOC.seal.keep}" placeholder="계약서 사본 1부 회수"></div>
+    </div>
+    <div class="warn" style="margin-top:4px"><b>결재 완료 = 날인 승인이지, 날인한 것은 아닙니다</b>
+      <p>대장에는 <b>날인 대기</b>로 올라갑니다.
+         실제로 도장을 찍은 뒤 날인자가 일자와 매수를 확인해야 완결됩니다.</p></div>
+    `:""}
+  </div>
+
+  <div class="sec">결재선<button class="chipb" onclick="go('approver')">결재자 관리</button></div>
+  ${lineView({status:"pending", line:mkLine()}, true)}
+
+  <div class="sec">증빙서류<button class="chipb" onclick="addFile()">PDF 첨부</button></div>
+  <div class="box" style="padding:0;overflow:hidden">
+    ${NEWDOC.files.length ? NEWDOC.files.map((f,i)=>`
+      <div class="ev">
+        <span class="ck ${f.missing?"miss":""}">${f.missing?"":"✓"}</span>
+        <span class="nm">${f.kind}${f.required?` <span style="color:#8C3A12;font-size:.7rem">필수</span>`:""}
+          <span style="display:block;color:var(--muted);font-size:.74rem" class="mono">${f.missing?"미첨부":f.name}</span></span>
+        <span class="fs">${f.missing?"":f.size}</span>
+        <span class="ac">${f.missing
+          ? `<button onclick="fillFile(${i})" style="color:var(--amber)">첨부하기</button>`
+          : `<button onclick="dropFile(${i})">삭제</button>`}</span>
+      </div>`).join("")
+      : `<div class="ev" style="color:var(--muted)">첨부할 증빙이 없습니다.</div>`}
+  </div>
+  ${miss?`<div class="warn"><b>필수 증빙 ${miss}건이 빠졌습니다</b>
+    <p>증빙 없는 지출 품의는 결재선에 올릴 수 없습니다.
+       나중에 감사에서 가장 먼저 지적되는 대목입니다.</p></div>`:""}
+
+  <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn sm ${miss?"off":""}" onclick="submitDoc()">
+      ${miss?"결재 올리기 · 증빙 필요":"기안하고 결재 올리기"}</button>
+    <button class="btn ghost sm" onclick="backToPick()">양식 다시 고르기</button>
+  </div>
+  <p class="note">저장하는 순간 문서 분류번호가 확정됩니다. 이후에는 바뀌지 않습니다.
+    문서번호가 나중에 바뀌면 결재·보관·인용이 전부 어긋납니다.</p>
+  `}`;
+};
+
+function backToPick(){ keepWrite(); WSTEP = "pick"; render(); scrollTo(0,0); }
+function pickTpl(id){
+  const t = TEMPLATES.find(x=>x.id===id); if(!t) return;
+  NEWDOC.tpl=id; NEWDOC.code=t.code; NEWDOC.title=t.title; NEWDOC.body=t.body; NEWDOC.amount="";
+  NEWDOC.files = t.need.map(k=>({kind:k, name:"", size:"", required:true, missing:true}));
+  /* 날인 전용 양식은 날인 칸을 자동으로 켠다 */
+  NEWDOC.seal = {on:!!t.seal, kind:"조합 인감", count:1, carry:false,
+                 place:"", reason:"", keep:""};
+  NEWDOC.item = ""; NEWDOC.payee = ""; NEWDOC.bizNo = ""; NEWDOC.tax = "과세";
+  WSTEP = "form";                 /* 작성 화면으로 넘어간다 */
+  render(); scrollTo(0,0);
+}
+function keepWrite(){
+  const g=id=>{const e=document.getElementById(id);return e?e.value:null;};
+  const a=g('w-title'), b=g('w-body'), c=g('w-amount');
+  if(a!==null) NEWDOC.title=a; if(b!==null) NEWDOC.body=b; if(c!==null) NEWDOC.amount=c;
+  const it=g('w-item'), py=g('w-payee'), bz=g('w-biz'), tx=g('w-tax');
+  if(it!==null) NEWDOC.item=it; if(py!==null) NEWDOC.payee=py;
+  if(bz!==null) NEWDOC.bizNo=bz; if(tx!==null) NEWDOC.tax=tx;
+  const p=g('s-place'), r=g('s-reason'), k=g('s-keep'), n=g('s-cnt');
+  if(p!==null) NEWDOC.seal.place=p; if(r!==null) NEWDOC.seal.reason=r;
+  if(k!==null) NEWDOC.seal.keep=k;  if(n!==null) NEWDOC.seal.count=Number(n)||1;
+}
+function sealOn(v){ keepWrite(); NEWDOC.seal.on=v; render(); }
+function sealCarry(v){ keepWrite(); NEWDOC.seal.carry=v; render(); }
+function addFile(){
+  keepWrite();
+  const k = prompt("증빙 종류를 적어 주십시오 (예: 견적서)");
+  if(!k) return;
+  NEWDOC.files.push({kind:k, name:k.replace(/\s/g,"")+".pdf", size:"0.8MB", required:false, missing:false});
+  render();
+}
+function fillFile(i){
+  keepWrite();
+  const f = NEWDOC.files[i]; if(!f) return;
+  f.missing=false; f.name=f.kind.replace(/\s/g,"")+".pdf"; f.size="1.1MB";
+  render();
+}
+function dropFile(i){ keepWrite(); NEWDOC.files.splice(i,1); render(); }
+function submitDoc(){
+  keepWrite();
+  if(!NEWDOC.title.trim()){ alert("제목을 적어 주십시오."); return; }
+  const no = nextNo(NEWDOC.code);
+  const line = mkLine();
+  line[0].status="ok";
+  const now=new Date(), z=n=>String(n).padStart(2,"0");
+  const today=`${now.getFullYear()}-${z(now.getMonth()+1)}-${z(now.getDate())}`;
+  line[0].acted_at=`${today} ${z(now.getHours())}:${z(now.getMinutes())}`;
+  if(NEWDOC.seal.on && !NEWDOC.seal.place.trim()){
+    alert("날인 사용처를 적어 주십시오. 어디에 찍는지가 대장의 핵심입니다."); return; }
+  DOCS.push({no, code:NEWDOC.code, title:NEWDOC.title, amount:NEWDOC.amount,
+    drafted:today, drafter:S.name, status:"pending", body:NEWDOC.body,
+    files:NEWDOC.files.slice(), line,
+    item: NEWDOC.item || null, payee: NEWDOC.payee || null,
+    bizNo: NEWDOC.bizNo || "", tax: NEWDOC.tax || "과세",
+    seal: NEWDOC.seal.on ? Object.assign({}, NEWDOC.seal) : null});
+  /* 신규 기안 → 2단계 결재자에게 */
+  notify("new", {to:line[1].approver, phone:phoneOf(line[1].approver), reason:"신규 기안",
+    doc:no, title:NEWDOC.title, drafter:S.name});
+  alert(`기안 완료 (시연)\n문서 분류번호 ${no}\n${line[1].role} ${line[1].approver}님께 알림이 갑니다.`);
+  NEWDOC.tpl=null; NEWDOC.files=[]; NEWDOC.item=""; NEWDOC.payee="";
+  NEWDOC.bizNo=""; NEWDOC.tax="과세"; WSTEP="pick";
+  NEWDOC.seal={on:false, kind:"조합 인감", count:1, carry:false, place:"", reason:"", keep:""};
+  openDocNo=no; go('doc');
+}
+
+/* ── 문서 분류 관리 (CRUD) ───────────────────────────── */
+V.cls = () => `
+  <h2 class="pt">문서 분류 관리</h2>
+  <p class="pd">분류번호는 [분류코드]-[발행연도]-[일련번호 3자리]로 자동 채번됩니다.</p>
+
+  <div class="box">
+    <div class="g3">
+      <div class="f"><label>분류코드 (영문 3자리)</label><input id="c-code" placeholder="ADM" maxlength="3"></div>
+      <div class="f"><label>분류명</label><input id="c-name" placeholder="조합 행정"></div>
+      <div class="f"><label>보존연한</label>
+        <select id="c-keep"><option>영구</option><option>10년</option><option>5년</option><option>3년</option></select></div>
+    </div>
+    <button class="btn sm" onclick="addCls()">분류 추가</button>
+  </div>
+
+  <div class="sec">분류 목록 · ${CLASSES.length}건</div>
+  <div class="box" style="padding:0;overflow:hidden">
+    <table><thead><tr>
+      <th style="width:74px">코드</th><th>분류명</th><th style="width:74px">보존</th>
+      <th style="width:100px">채번 현황</th><th style="width:62px">사용</th><th style="width:110px">관리</th>
+    </tr></thead><tbody>
+    ${CLASSES.map((c,i)=>`<tr class="${c.active?"":"dim"}">
+      <td class="mono" style="color:${c.active?"var(--navy)":"var(--muted)"};font-weight:700">${c.code}</td>
+      <td>${c.name}</td><td style="color:var(--muted)">${c.keep}</td>
+      <td class="mono" style="color:var(--muted)">${c.year}-${String(c.seq).padStart(3,"0")}</td>
+      <td><span class="pill ${c.active?"p-ok":"p-wait"}">${c.active?"Y":"N"}</span></td>
+      <td><button style="color:var(--blue);font-weight:700;font-size:.76rem" onclick="renCls(${i})">수정</button>
+        · <button style="color:var(--blue);font-weight:700;font-size:.76rem" onclick="togCls(${i})">
+        ${c.active?"중지":"되살리기"}</button></td>
+    </tr>`).join("")}
+    </tbody></table>
+  </div>
+
+  <div class="warn"><b>이미 쓴 분류는 지우지 않고 사용 N 으로 바꿉니다</b>
+    <p>지워 버리면 그 코드로 발행된 옛 문서의 분류번호가 미아가 됩니다.
+       사용 N 으로 두면 새 문서 작성 목록에서만 빠지고, 옛 문서는 그대로 남습니다.</p></div>`;
+function addCls(){
+  const g=id=>{const e=document.getElementById(id);return e?e.value.trim():"";};
+  const code=g('c-code').toUpperCase(), name=g('c-name'), keep=g('c-keep');
+  if(!/^[A-Z]{2,3}$/.test(code)){ alert("분류코드는 영문 2~3자리로 적어 주십시오."); return; }
+  if(!name){ alert("분류명을 적어 주십시오."); return; }
+  if(cls(code)){ alert("이미 있는 분류코드입니다."); return; }
+  CLASSES.push({code, name, keep, active:true, year:new Date().getFullYear(), seq:0});
+  render();
+}
+function renCls(i){
+  const c=CLASSES[i]; if(!c) return;
+  const n=prompt("분류명을 수정해 주십시오", c.name); if(n===null) return;
+  if(n.trim()) c.name=n.trim();
+  render();
+}
+function togCls(i){ const c=CLASSES[i]; if(c) c.active=!c.active; render(); }
+
+/* ── 결재자 관리 ─────────────────────────────────────── */
+V.approver = () => `
+  <h2 class="pt">결재자 관리</h2>
+  <p class="pd">단계는 고정이고 사람만 바꿉니다. 겸직·위임이 잦은 조합 사정을 고려한 구조입니다.</p>
+
+  <div class="sec">현재 결재선</div>
+  ${lineView({status:"pending", line:mkLine()}, true)}
+
+  <div class="box">
+    <div class="g3">
+      <div class="f"><label>단계</label>
+        <select id="p-step"><option value="1">1단계 · 담당자</option>
+          <option value="2">2단계 · 총무이사</option><option value="3">3단계 · 조합장</option></select></div>
+      <div class="f"><label>이름</label><input id="p-name" placeholder="이름"></div>
+      <div class="f"><label>휴대폰</label><input id="p-phone" placeholder="010-0000-0000"></div>
+    </div>
+    <button class="btn sm" onclick="addApp()">결재자 추가</button>
+  </div>
+
+  <div class="sec">결재자 목록</div>
+  <div class="box" style="padding:0;overflow:hidden">
+    <table><thead><tr>
+      <th style="width:120px">단계</th><th style="width:100px">이름</th>
+      <th>휴대폰</th><th style="width:74px">사용</th><th style="width:110px">관리</th>
+    </tr></thead><tbody>
+    ${APPROVERS.map((a,i)=>`<tr class="${a.active?"":"dim"}">
+      <td>${a.step}단계 · ${a.role}</td><td><b>${a.name}</b></td>
+      <td class="mono" style="color:var(--muted)">${a.phone}</td>
+      <td><span class="pill ${a.active?"p-ok":"p-wait"}">${a.active?"사용":"대기"}</span></td>
+      <td><button style="color:var(--blue);font-weight:700;font-size:.76rem" onclick="useApp(${i})">
+        ${a.active?"해제":"지정"}</button>
+        · <button style="color:var(--blue);font-weight:700;font-size:.76rem" onclick="delApp(${i})">삭제</button></td>
+    </tr>`).join("")}
+    </tbody></table>
+  </div>
+  <p class="note">한 단계에는 한 사람만 지정됩니다. 다른 사람을 지정하면 앞사람은 자동으로 해제됩니다.
+    이미 결재가 진행 중인 문서의 결재선은 바뀌지 않습니다.</p>`;
+const ROLE_OF = {1:"담당자", 2:"총무이사", 3:"조합장"};
+function addApp(){
+  const g=id=>{const e=document.getElementById(id);return e?e.value.trim():"";};
+  const step=Number(g('p-step')), name=g('p-name'), phone=g('p-phone')||"010-****-0000";
+  if(!name){ alert("이름을 적어 주십시오."); return; }
+  APPROVERS.push({step, role:ROLE_OF[step], name, phone, active:false});
+  render();
+}
+function useApp(i){
+  const a=APPROVERS[i]; if(!a) return;
+  if(a.active){ a.active=false; }
+  else { APPROVERS.filter(x=>x.step===a.step).forEach(x=>x.active=false); a.active=true; }
+  render();
+}
+function delApp(i){
+  const a=APPROVERS[i]; if(!a) return;
+  if(a.active){ alert("사용 중인 결재자는 먼저 해제한 뒤 삭제하십시오."); return; }
+  APPROVERS.splice(i,1); render();
+}
+
+/* ── 증빙 미리보기 ───────────────────────────────────── */
+async function viewPdf(no, i){
+  const d = DOCS.find(x=>x.no===no); if(!d) return;
+  const f = d.files[i]; if(!f) return;
+
+  /* ★ 실제로 올라간 스캔이면 그것을 연다.
+     조합장이 명단만 보고 승인하시는 것과
+     스캔을 직접 확인하고 승인하시는 것은 다르다.
+     나중에 다투게 되면 "실제로 보고 승인했다"는 기록이 필요하다. */
+  if(f.path && typeof hubFileUrl !== "undefined"){
+    if(f.path.indexOf("/") >= 0){
+      alert("예전 방식으로 올라간 스캔이라 열 수 없습니다.\n\n"
+        + "조합 직원에게 다시 올려 달라고 알려 주십시오."); return;
+    }
+    const u = await hubFileUrl(f.path, 3600);
+    if(u){ window.open(u, "_blank"); return; }
+    alert("스캔을 열지 못했습니다.\n잠시 뒤 다시 눌러 주십시오.");
+    return;
+  }
+
+  document.getElementById('modal').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
+      <b style="font-size:.9rem">${f.kind}</b>
+      <span class="mono" style="font-size:.76rem;color:var(--muted)">${f.name} · 1/1</span></div>
+    <div class="pdfbox"><div class="pdfpg">
+      <h4>${f.kind}</h4>
+      <div>문서번호 ${d.no}<br>작성일 ${d.drafted}<br>
+        ${d.amount?`금액 ${d.amount}원<br>`:""}
+        조합 미아2재정비촉진구역<br><br>
+        (증빙 원본 내용이 이 자리에 표시됩니다)</div>
+    </div></div>
+    <p class="note">시연 화면이라 원본 대신 요약을 보여줍니다.
+      실제로는 Supabase Storage 의 PDF 를 그대로 띄웁니다.</p>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn ghost sm" onclick="alert('시연 화면입니다')">내려받기</button>
+      <button class="btn sm" onclick="closeModal()">닫기</button></div>`;
+  document.getElementById('mask').classList.add('on');
+}
+function closeModal(){ document.getElementById('mask').classList.remove('on'); }
+
+/* ── A4 인쇄 ─────────────────────────────────────────── */
+function printDoc(no){
+  const d = DOCS.find(x=>x.no===no); if(!d) return;
+  const st = d.line.map(x=>`<div>
+      <div class="lb">${x.role}</div>
+      <div class="sg">${x.status==="ok"?`<span>${x.approver.charAt(0)}</span>`
+        :x.status==="no"?`<span style="border-color:#5F6B7A;color:#5F6B7A">반</span>`:""}</div>
+      <div class="dt">${x.acted_at?x.acted_at.slice(5,10):""}</div>
+    </div>`).join("");
+  const att = d.files.length
+    ? d.files.map((f,i)=>`${i+1}. ${f.kind} 1부 &nbsp;<span style="color:#8A94A0;font-family:ui-monospace,monospace">${f.missing?"보완 예정":f.name}</span>`).join("<br>")
+    : "없음";
+  const now = new Date(), z=n=>String(n).padStart(2,"0");
+  document.getElementById('paper').innerHTML = `
+    <div class="ph">
+      <div>
+        <div class="mono" style="font-size:8.5pt;color:#5F6B7A">${d.no}</div>
+        <div style="font-size:8.5pt;color:#5F6B7A;margin-top:2px">미아2재정비촉진구역 주택재개발정비사업조합</div>
+      </div>
+      <div class="stamp">${st}</div>
+    </div>
+    <h1>품 의 서</h1>
+    <div class="fr"><div class="k">제 목</div><div class="v">${d.title}</div></div>
+    <div class="fr"><div class="k">기 안 일</div><div class="v">${d.drafted} · 기안자 ${d.drafter}</div></div>
+    ${d.amount?`<div class="fr"><div class="k">금 액</div><div class="v">₩${d.amount}</div></div>`:""}
+    <div class="bd">${d.body}</div>
+    <div class="att"><b style="display:block;margin-bottom:6px">붙임 · 증빙서류</b>${att}</div>
+    <div class="ft">${d.no} · 1/1 · ${now.getFullYear()}-${z(now.getMonth()+1)}-${z(now.getDate())} 출력 · 다알아 전자결재</div>`;
+  window.print();
+}
+
+/* ── 인장날인 대장 ───────────────────────────────────── */
+V.seal = () => {
+  const R = sealRows();
+  const sum = R.reduce((a,x)=>a + (x.status==="done" ? x.count : 0), 0);
+  const pend = R.filter(x=>x.status==="pending").length;
+  const carry = R.filter(x=>x.carry).length;
+  const places = [...new Set(SEAL_LEDGER.map(x=>x.place))];
+  return `
+  <h2 class="pt">인장날인 대장</h2>
+  <p class="pd">조합 인감을 언제 · 어디에 · 몇 매 찍었는지 남기는 장부입니다.</p>
+
+  <div class="filt">
+    <input type="date" id="q-from" value="${SEALQ.from}">
+    <span style="color:var(--muted);font-size:.8rem">~</span>
+    <input type="date" id="q-to" value="${SEALQ.to}">
+    <select id="q-place" onchange="SEALQ.place=this.value;render()">
+      <option value="">사용처 전체</option>
+      ${places.map(p=>`<option ${SEALQ.place===p?"selected":""}>${p}</option>`).join("")}
+    </select>
+    <select id="q-code" onchange="SEALQ.code=this.value;render()">
+      <option value="">분류 전체</option>
+      ${CLASSES.filter(c=>c.active).map(c=>
+        `<option value="${c.code}" ${SEALQ.code===c.code?"selected":""}>${c.code} ${c.name}</option>`).join("")}
+    </select>
+    <button class="chipb" onclick="applySeal()">조회</button>
+    <button class="chipb ${SEALQ.only==='pending'?'on':''}"
+      onclick="SEALQ.only=SEALQ.only==='pending'?'':'pending';render()">날인 대기만</button>
+    <button class="chipb ${SEALQ.only==='carry'?'on':''}"
+      onclick="SEALQ.only=SEALQ.only==='carry'?'':'carry';render()">반출만</button>
+    <button class="chipb" onclick="printSeal()">A4 출력</button>
+  </div>
+
+  <div class="g3">
+    <div class="box"><div class="row" style="border:0;padding:0">
+      <span>조회 건수</span><b>${R.length}건 · ${sum}매</b></div></div>
+    <div class="box"><div class="row" style="border:0;padding:0">
+      <span>외부 반출</span><b style="color:${carry?"var(--amber)":"var(--ink)"}">${carry}건</b></div></div>
+    <div class="box"><div class="row" style="border:0;padding:0">
+      <span>날인 대기</span><b style="color:${pend?"var(--amber)":"var(--ink)"}">${pend}건</b></div></div>
+  </div>
+
+  <div class="sec">대장 <em>최신순</em></div>
+  <div class="box" style="padding:0;overflow:hidden">
+    <table><thead><tr>
+      <th style="width:96px">대장번호</th><th style="width:78px">날인일</th>
+      <th>사용처</th><th style="width:112px">근거 문서</th>
+      <th style="width:52px">매수</th><th style="width:60px">반출</th><th style="width:88px">상태</th>
+    </tr></thead><tbody>
+    ${R.length ? R.map((x,i)=>`<tr class="tap" ${x.status==="pending"?'style="background:#FFFBF7"':''}
+        onclick="sealDetail('${x.no}')">
+      <td class="mono" style="color:${x.status==="pending"?"var(--navy)":"var(--muted)"};font-weight:700">${x.no}</td>
+      <td class="mono" style="color:var(--muted)">${x.sealed_at?x.sealed_at.slice(5):"—"}</td>
+      <td>${x.place}</td>
+      <td class="mono" style="color:var(--muted)">${x.doc}</td>
+      <td style="color:var(--muted)">${x.count}</td>
+      <td>${x.carry?`<span class="pill p-warn">반출</span>`:`<span style="color:var(--muted)">내부</span>`}</td>
+      <td>${x.status==="pending"
+        ? `<button class="pill p-warn" onclick="event.stopPropagation();doSeal('${x.no}')">날인 처리</button>`
+        : `<span class="pill p-ok">완료</span>`}</td>
+    </tr>`).join("")
+    : `<tr><td colspan="7" style="color:var(--muted)">조건에 맞는 기록이 없습니다.</td></tr>`}
+    </tbody></table>
+  </div>
+
+  ${pend?`<div class="warn"><b>날인 대기 ${pend}건은 아직 도장을 찍지 않은 건입니다</b>
+    <p>결재는 났지만 실물 날인이 안 됐습니다.
+       <b>날인 처리</b>를 눌러 일자·매수·날인자를 적어야 대장이 완결됩니다.
+       결재 시각을 날인 일자로 적으면 대장이 사실과 달라지고,
+       감사에서 "이날 정말 찍었느냐"는 물음에 답할 수 없게 됩니다.</p></div>`:""}
+
+  <div class="sec">대장에 들어오는 두 갈래</div>
+  <div class="box">
+    <div class="row"><span>일반 품의서</span><b>[조합인감 날인 필요] 체크 → 최종 결재 시 자동 등록</b></div>
+    <div class="row"><span>날인 단독 품의</span><b class="mono">SEL</b></div>
+    <div class="row"><span>공통</span><b>최종 결재 → 날인 대기 → 실물 날인 → 완료</b></div>
+  </div>
+  <p class="note">조합 인감을 사무실 밖으로 들고 나가는 것이 사고가 가장 많은 대목입니다.
+    반출 건은 따로 세어 보이도록 했습니다.</p>`;
+};
+function applySeal(){
+  const f=document.getElementById('q-from'), t=document.getElementById('q-to');
+  if(f) SEALQ.from=f.value; if(t) SEALQ.to=t.value; render();
+}
+function sealDetail(no){
+  const x = SEAL_LEDGER.find(y=>y.no===no); if(!x) return;
+  document.getElementById('modal').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
+      <b style="font-size:.95rem">${x.no}</b>
+      <span class="pill ${x.status==="done"?"p-ok":"p-warn"}">${x.status==="done"?"완료":"날인 대기"}</span></div>
+    <div class="box">
+      <div class="row"><span>사용처</span><b>${x.place}</b></div>
+      <div class="row"><span>사유</span><b style="font-weight:400">${x.reason}</b></div>
+      <div class="row"><span>인감 종류</span><b>${x.kind}</b></div>
+      <div class="row"><span>매수</span><b>${x.count}매</b></div>
+      <div class="row"><span>반출</span>
+        <b style="color:${x.carry?"var(--amber)":"var(--ink)"}">${x.carry?"외부 반출":"사무실 내"}</b></div>
+      <div class="row"><span>회수 문서</span><b style="font-weight:400">${x.keep||"—"}</b></div>
+      <div class="row"><span>근거 문서</span><b class="mono">${x.doc}</b></div>
+      <div class="row"><span>결재 완료</span><b class="mono">${x.approved_at}</b></div>
+      <div class="row"><span>실제 날인</span>
+        <b class="mono" style="color:${x.sealed_at?"var(--ink)":"var(--amber)"}">
+          ${x.sealed_at?`${x.sealed_at} · ${x.sealer}`:"아직 찍지 않음"}</b></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      ${x.status==="pending"
+        ? `<button class="btn sm" onclick="closeModal();doSeal('${x.no}')">날인 처리</button>` : ""}
+      <button class="btn ghost sm" onclick="closeModal()">닫기</button></div>`;
+  document.getElementById('mask').classList.add('on');
+}
+function doSeal(no){
+  const x = SEAL_LEDGER.find(y=>y.no===no); if(!x) return;
+  const now = new Date(), z=v=>String(v).padStart(2,"0");
+  const today = `${now.getFullYear()}-${z(now.getMonth()+1)}-${z(now.getDate())}`;
+  const d = prompt(`실제로 도장을 찍은 날짜를 적어 주십시오.\n(대장에는 이 날짜가 남습니다)`, today);
+  if(d===null) return;
+  const c = prompt(`실제 날인 매수는 몇 매입니까?\n(품의 때 ${x.count}매로 올렸습니다)`, String(x.count));
+  if(c===null) return;
+  const who = prompt("날인자를 적어 주십시오", "김조합장");
+  if(who===null) return;
+  x.sealed_at = d.trim() || today;
+  x.count = Number(c) || x.count;
+  x.sealer = who.trim() || "김조합장";
+  x.status = "done";
+  alert(`날인 처리했습니다 (시연)\n${x.no} · ${x.sealed_at} · ${x.count}매`);
+  render();
+}
+
+/* 대장 A4 출력 */
+function printSeal(){
+  const R = sealRows();
+  const sum = R.reduce((a,x)=>a + (x.status==="done" ? x.count : 0), 0);
+  const now = new Date(), z=v=>String(v).padStart(2,"0");
+  document.getElementById('paper').innerHTML = `
+    <h1 style="border-top:0;padding-top:0">인 장 날 인 대 장</h1>
+    <div style="display:flex;justify-content:space-between;font-size:8.5pt;color:#5F6B7A;padding:8px 2px 12px">
+      <span>미아2재정비촉진구역 주택재개발정비사업조합</span>
+      <span>${SEALQ.from} ~ ${SEALQ.to} · ${R.length}건 ${sum}매</span></div>
+    <table style="width:100%;border-collapse:collapse;border:1px solid #0B1F3A;font-size:8.5pt">
+      <thead><tr style="background:#F5F7FA;border-bottom:1px solid #0B1F3A">
+        <th style="width:56px;padding:6px 5px;text-align:left;border-right:1px solid #D8DEE6">번호</th>
+        <th style="width:56px;padding:6px 5px;text-align:left;border-right:1px solid #D8DEE6">날인일</th>
+        <th style="padding:6px 5px;text-align:left;border-right:1px solid #D8DEE6">사용처</th>
+        <th style="width:86px;padding:6px 5px;text-align:left;border-right:1px solid #D8DEE6">근거 문서</th>
+        <th style="width:34px;padding:6px 5px;text-align:left;border-right:1px solid #D8DEE6">매수</th>
+        <th style="width:40px;padding:6px 5px;text-align:left;border-right:1px solid #D8DEE6">반출</th>
+        <th style="width:56px;padding:6px 5px;text-align:left">날인자</th>
+      </tr></thead>
+      <tbody>${R.map(x=>`<tr style="border-bottom:1px solid #E9EDF2">
+        <td style="padding:6px 5px;border-right:1px solid #E9EDF2;font-family:ui-monospace,monospace">${x.no.replace("SEAL-","")}</td>
+        <td style="padding:6px 5px;border-right:1px solid #E9EDF2">${x.sealed_at?x.sealed_at.slice(5):"미날인"}</td>
+        <td style="padding:6px 5px;border-right:1px solid #E9EDF2">${x.place}</td>
+        <td style="padding:6px 5px;border-right:1px solid #E9EDF2;font-family:ui-monospace,monospace">${x.doc}</td>
+        <td style="padding:6px 5px;border-right:1px solid #E9EDF2">${x.count}</td>
+        <td style="padding:6px 5px;border-right:1px solid #E9EDF2">${x.carry?"반출":"내부"}</td>
+        <td style="padding:6px 5px">${x.sealer||"—"}</td>
+      </tr>`).join("")}</tbody>
+    </table>
+    <div style="display:flex;justify-content:space-between;font-size:8.5pt;color:#41576B;
+      margin-top:18px;padding-top:11px;border-top:1px solid #D8DEE6">
+      <span>작성자 ${S.name} (인)</span><span>확인자 총무이사 (인)</span><span>조합장 (인)</span></div>
+    <div class="ft">다알아 전자결재 · ${now.getFullYear()}-${z(now.getMonth()+1)}-${z(now.getDate())} 출력 · 1/1</div>`;
+  window.print();
+}
+
+/* ── 알림 발송 이력 ──────────────────────────────────── */
+V.notify = () => {
+  const L = [...NOTIFY_LOG].reverse();
+  const cnt = k => NOTIFY_LOG.filter(x=>x.result===k).length;
+  const ch  = k => NOTIFY_LOG.filter(x=>x.channel===k).length;
+  const stale = DOCS.filter(d=>{
+    if(d.status!=="pending") return false;
+    const days = (Date.now() - new Date(d.drafted).getTime()) / 86400000;
+    return days >= NOTIFY.remindDays;
+  });
+  return `
+  <h2 class="pt">알림 발송 이력</h2>
+  <p class="pd">결재가 도래하면 문자 · 카카오 알림톡으로 알려 드립니다.</p>
+  <div class="sample"><b>지금은 시연 모드입니다</b>
+    <p>실제로 발송하지 않고 화면 오른쪽 아래 배너와 브라우저 콘솔에만 남깁니다.
+       발신번호 등록과 알림톡 템플릿 심사를 마쳐야 실제 발송이 됩니다.</p></div>
+
+  <div class="g3">
+    <div class="box"><div class="row" style="border:0;padding:0">
+      <span>전체 발송</span><b>${NOTIFY_LOG.length}건</b></div></div>
+    <div class="box"><div class="row" style="border:0;padding:0">
+      <span>알림톡 · 문자</span><b>${ch("알림톡")} · ${ch("문자")}</b></div></div>
+    <div class="box"><div class="row" style="border:0;padding:0">
+      <span>실패 · 보류</span>
+      <b style="color:${cnt("fail")+cnt("hold")?"var(--amber)":"var(--ink)"}">${cnt("fail")} · ${cnt("hold")}</b></div></div>
+  </div>
+
+  <div class="sec">발송 내역 <em>최신순</em></div>
+  <div class="box" style="padding:0;overflow:hidden">
+    <table><thead><tr>
+      <th style="width:130px">시각</th><th style="width:88px">받는 사람</th>
+      <th>사유 · 문서</th><th style="width:74px">채널</th><th style="width:96px">결과</th>
+    </tr></thead><tbody>
+    ${L.map((x,i)=>`<tr class="${x.result==="fail"?"":""}"
+        ${x.result==="fail"?'style="background:#FFFBF7"':''}>
+      <td class="mono" style="color:var(--muted)">${x.at.slice(5)}</td>
+      <td>${x.to}</td>
+      <td>${x.reason} · <span class="mono" style="color:var(--navy)">${x.doc}</span></td>
+      <td style="color:var(--muted)">${x.channel}</td>
+      <td>${x.result==="fail"
+        ? `<button class="pill p-warn" onclick="resend(${NOTIFY_LOG.length-1-i})">재발송</button>`
+        : `<span class="pill ${RESULT_PILL[x.result]}">${RESULT_LAB[x.result]}</span>`}</td>
+    </tr>`).join("")}
+    </tbody></table>
+  </div>
+
+  <div class="warn"><b>알림톡이 실패하면 문자로 자동 대체합니다</b>
+    <p>카카오톡을 안 쓰거나 채널을 차단한 분에게는 알림톡이 가지 않습니다.
+       조합 임원 중에 반드시 있습니다. 그분은 결재가 온 줄도 모르게 됩니다.</p></div>
+
+  <div class="sec">미결 독촉 <em>${NOTIFY.remindDays}일 경과 · 1회만</em></div>
+  <div class="box">
+    ${stale.length ? stale.map(d=>`<div class="row">
+      <span class="mono">${d.no}</span>
+      <b>${d.title}<br><span style="font-weight:400;color:var(--muted)">
+        ${curStep(d)}단계 ${d.line.find(x=>x.status==="wait").approver} 대기 · 기안 ${d.drafted}</span></b>
+      </div>`).join("") + `<button class="btn ghost sm" style="margin-top:12px"
+        onclick="remindAll()">독촉 알림 보내기</button>`
+      : `<div class="row" style="color:var(--muted)">${NOTIFY.remindDays}일 넘게 묵힌 문서가 없습니다.</div>`}
+  </div>
+  <p class="note">독촉은 한 번만 보냅니다. 계속 보내면 스팸으로 취급받아
+    그다음부터는 알림 자체를 꺼 버리십니다.</p>
+
+  <div class="sec">발송 설정</div>
+  <div class="box">
+    <div class="row"><span>야간 발송</span>
+      <b>${NOTIFY.quietFrom}시~${NOTIFY.quietTo}시 보류 후 아침 발송</b></div>
+    <div class="row"><span>미결 독촉</span><b>${NOTIFY.remindDays}일 경과 시 1회</b></div>
+    <div class="row"><span>채널 순서</span><b>알림톡 → 실패 시 문자</b></div>
+    <div class="row"><span>링크</span><b>1회용 · 24시간 만료</b></div>
+    <div class="row"><span>발신번호</span>
+      <b style="color:var(--amber)">${NOTIFY.sender} · 사전 등록 필요</b></div>
+    <div class="row"><span>발송 모드</span>
+      <b>${NOTIFY.mode === "demo" ? "시연 (실제 발송 없음)" : "운영"}</b></div>
+  </div>
+
+  <div class="sec">발급된 링크 토큰 <em>${TOKENS.length}건</em></div>
+  <div class="box" style="padding:0;overflow:hidden">
+    ${TOKENS.length ? `<table><thead><tr>
+      <th style="width:100px">토큰</th><th style="width:130px">문서</th>
+      <th>받는 사람</th><th style="width:130px">만료</th><th style="width:70px">사용</th>
+    </tr></thead><tbody>
+    ${TOKENS.slice(-8).reverse().map(t=>`<tr>
+      <td class="mono">${t.token}</td><td class="mono" style="color:var(--navy)">${t.doc}</td>
+      <td>${t.approver}</td>
+      <td class="mono" style="color:var(--muted)">${t.expires.toISOString().slice(5,16).replace("T"," ")}</td>
+      <td><span class="pill ${t.used?"p-wait":"p-ok"}">${t.used?"사용됨":"유효"}</span></td>
+    </tr>`).join("")}</tbody></table>`
+    : `<div class="ev" style="color:var(--muted)">아직 발급된 토큰이 없습니다. 기안하거나 승인해 보십시오.</div>`}
+  </div>
+  <p class="note">문자는 남에게 전달되기 쉽습니다.
+    링크가 영구적이면 캡처 한 장으로 아무나 결재 화면에 들어옵니다.
+    그래서 한 번 쓰면 막고 24시간 뒤 만료시킵니다.</p>
+
+  <div class="sec">운영으로 바꾸려면</div>
+  <div class="box">
+    <div class="row"><span>1</span><b>발신번호 사전등록 (통신사 · 수일)</b></div>
+    <div class="row"><span>2</span><b>카카오 채널 개설 · 알림톡 템플릿 심사</b></div>
+    <div class="row"><span>3</span><b>중계사 계약 (솔라피 · 알리고 등)</b></div>
+    <div class="row"><span>4</span><b>Edge Function 배포 · Webhook 연결</b></div>
+    <div class="row"><span>5</span><b>NOTIFY.mode 를 live 로 변경</b></div>
+  </div>
+  <p class="note">1번과 2번은 조합 명의로 해야 해서 조합 협조가 필요합니다.
+    SQL 과 Edge Function 예시는 <b class="mono">supabase-notify</b> 폴더에 있습니다.</p>`;
+};
+function resend(i){
+  const x = NOTIFY_LOG[i]; if(!x) return;
+  NOTIFY_LOG.push({at:stamp(), to:x.to, phone:x.phone, reason:x.reason,
+    doc:x.doc, channel:"문자", result:"fallback"});
+  banner({to:x.to, phone:x.phone, reason:x.reason+" · 재발송", channel:"문자", hold:false,
+    msg:`[다알아 전자결재]\n[${x.to}님] 알림톡 발송에 실패하여 문자로 다시 보냅니다.\n문서 : ${x.doc}`});
+  render();
+}
+function remindAll(){
+  DOCS.filter(d=>d.status==="pending").forEach(d=>{
+    const days = (Date.now() - new Date(d.drafted).getTime()) / 86400000;
+    if(days < NOTIFY.remindDays) return;
+    const nx = d.line.find(x=>x.status==="wait"); if(!nx) return;
+    notify("new", {to:nx.approver, phone:phoneOf(nx.approver), reason:"미결 독촉",
+      doc:d.no, title:d.title, drafter:d.drafter});
+  });
+  render();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   돌아가는 길 (2026-08-22 오후)
+   ───────────────────────────────────────────────────────────
+   ★ 전자결재는 새 창으로 열린다. 그래서 나갈 길이 없었다.
+     브라우저 뒤로가기는 이 창에 앞 기록이 없어 아무 일도 안 한다.
+     창을 닫는 수밖에 없었는데, 처음 오신 분은
+     원래 화면이 뒤에 살아 있는 줄도 모르신다.
+
+   ★★★ 자리마다 돌아갈 곳이 다르다. 한 곳으로 몰면 안 된다 ★★★
+
+       운영자(0단계)   → 운영자 콘솔
+       담당자(1단계)   → 조합 직원 화면
+       총무이사(2단계) → 없음
+       조합장(3단계)   → 없음
+
+     총무이사와 조합장은 admin · console 계정이 아니다.
+     그분들께 단추를 보여 드리면 눌러도 로그인 창만 뜬다.
+     "왜 안 들어가지냐" 는 문의가 오고, 답할 것이 없다.
+
+     특히 **조합장을 운영자 콘솔로 보내면 안 된다.**
+     콘솔에는 전 구역 자료와 우리 요금 원가가 들어 있다.
+     조합장은 우리 고객이지 운영자가 아니다.
+     (인수인계서 9번 절 — 운영진과 조합은 보는 것이 다르다)
+
+   ★ 새 창으로 열렸으면 창을 닫아 원래 창으로 돌려보낸다.
+     같은 자리로 옮겨 가면 직원 화면이 두 개가 된다.
+     어느 쪽에서 고친 것이 맞는지 알 수 없게 된다. */
+const BACKS = {
+  0: {url:"console.html", label:"운영자 콘솔",   memo:"전 구역 관리"},
+  1: {url:"admin.html",   label:"조합 직원 화면", memo:"미아2재정비촉진구역"}
+};
+
+function drawBack(){
+  const el = document.getElementById('back');
+  if(!el) return;
+  const b = BACKS[S.step];
+  if(!b){                                        /* 총무이사 · 조합장 */
+    el.style.display = "none";
+    el.innerHTML = ""; el.onclick = null;        /* 안 보여도 남겨 두지 않는다 */
+    return;
+  }
+
+  /* 원래 창이 아직 살아 있는가 */
+  let opened = false;
+  try { opened = !!(window.opener && !window.opener.closed); } catch(e){ opened = false; }
+
+  el.style.display = "flex";
+  el.innerHTML = `<i>←</i><span><b>${b.label}</b>`
+    + `<em>${opened ? "이 창을 닫고 돌아갑니다" : b.memo}</em></span>`;
+  el.title = b.label + " 으로 돌아가기";
+  el.onclick = () => goBack(b, opened);
+}
+
+function goBack(b, opened){
+  if(opened){
+    try {
+      window.opener.focus();
+      window.close();
+      /* ★ 창이 안 닫히는 브라우저가 있다. 그때는 그냥 옮겨 간다.
+         눌렀는데 아무 일이 없으면 무엇이 잘못됐는지 알 수 없다. */
+      setTimeout(() => { if(!window.closed) location.href = b.url; }, 250);
+      return;
+    } catch(e){ /* 아래로 내려가 옮겨 간다 */ }
+  }
+  location.href = b.url;
+}
+
+/* ── 라우팅 ─────────────────────────────────────────── */
+const MENU = [
+  ["box","결재함"], ["write","문서 기안"], ["seal","인장날인 대장"],
+  ["notify","알림 발송 이력"], ["cls","문서 분류 관리"], ["approver","결재자 관리"]
+];
+const MMENU = [["box","결재함"], ["write","기안"], ["seal","날인"],
+  ["notify","알림"], ["cls","분류"]];
+let cur = "box";
+function go(k){ cur = k; render(); scrollTo(0,0); }
+
+function render(){
+  syncMBR();                      /* 명부 변경 품의를 결재함에 이어 붙인다 */
+  const wait = myWaiting().length;
+  document.getElementById('nav').innerHTML = MENU.map(([k,l])=>
+    `<button class="${cur===k||(cur==='doc'&&k==='box')?'on':''}" data-m="${k}">${l}
+      ${k==='box'&&wait?`<span class="bdg">${wait}</span>`:""}</button>`).join('');
+  document.getElementById('mtabs').innerHTML = MMENU.map(([k,l])=>
+    `<button class="${cur===k||(cur==='doc'&&k==='box')?'on':''}" data-m="${k}">${l}
+      ${k==='box'&&wait?` (${wait})`:""}</button>`).join('');
+  document.getElementById('main').innerHTML = (V[cur]||V.box)();
+  drawBack();
+  document.getElementById('who-name').textContent = S.name;
+  document.getElementById('who-role').textContent = S.role + (S.step?` · ${S.step}단계`:"");
+  document.getElementById('m-title').textContent = S.name + " · " + S.role;
+  document.getElementById('m-sub').textContent = wait ? `결재 대기 ${wait}건` : "결재 대기 없음";
+  document.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>go(b.dataset.m));
+  document.querySelectorAll('[data-doc]').forEach(b=>b.onclick=()=>openDoc(b.dataset.doc));
+}
+
+/* ★ 직원 화면에서 이어서 들어온다 (2026-08-22) ─────────
+   admin.html 에서 [결재함 열기]를 누르면 그 직원 계정으로 곧장 들어온다.
+   한 번에 로그인을 두 번 치시게 하면 결국 결재를 미루신다.
+
+   ★★ 담당자(1단계)까지만 이어진다. ★★
+     총무이사 · 조합장은 아무리 표를 들고 와도 통과시키지 않는다.
+     직원 PC에서 조합장 결재를 누를 수 있으면 결재가 아무 의미가 없다.
+     결재선을 지키는 것이 이 화면을 따로 만든 이유다.
+
+   ★ 표는 60초만 쓴다. 한 번 쓰면 바로 지운다.
+     남겨 두면 나중에 그 PC를 쓰는 사람이 그대로 들어온다.
+
+   ★ 지금은 화면 안에서만 확인한다. 진짜 자물쇠가 아니다.
+     Supabase Auth 를 붙일 때 서버에서 발급한 토큰으로 바꾼다.
+     → 인수인계서 「배포 전 반드시 ⑱ Supabase Auth 로 관리자 로그인 이전」 */
+const AP_PASS = "daara_ap_pass";
+function takePass(){
+  let raw = null;
+  try { raw = localStorage.getItem(AP_PASS); } catch(e){ return false; }
+  if(!raw) return false;
+  try { localStorage.removeItem(AP_PASS); } catch(e){}   /* 한 번 쓰고 버린다 */
+
+  let t; try { t = JSON.parse(raw); } catch(e){ return false; }
+  if(!t || !t.name) return false;
+  if(Date.now() - (t.at||0) > 60000) return false;        /* 60초 지나면 버린다 */
+
+  const u = USERS.find(x => x.name === String(t.name).normalize("NFC").trim());
+  if(!u) return false;
+  if(u.step > 1) return false;                            /* ★ 담당자까지만 */
+
+  S.name = u.name; S.role = u.role; S.step = u.step;
+  return true;
+}
+
+/* ★ 다른 화면에서 바로 어느 자리로 갈지 정해 준다 (2026-08-22).
+   admin.html 의 [전자결재]에서 넘어올 때 쓴다.
+     approval.html?go=box      결재함
+     approval.html?go=write    문서 기안
+     approval.html?go=seal     인장날인 대장
+   ★ 없는 이름이 오면 결재함으로 보낸다.
+     주소를 손으로 고치다 오타가 나도 빈 화면이 나오면 안 된다. */
+function takeGo(){
+  const q = new URLSearchParams(location.search);
+  const g = (q.get("go") || "").trim();
+  if(!g) return false;
+  cur = MENU.some(([k]) => k === g) ? g : "box";
+  return true;
+}
+
+/* ★ 다른 화면에서 넘어온 품의 내용을 받아 기안 칸을 채운다.
+   직원이 금액을 손으로 옮겨 적으면 오타가 난다. */
+function takeHandoff(){
+  const q = new URLSearchParams(location.search);
+  if(!q.get("title")) return false;
+  const tid = q.get("tpl") || "T1";
+  const t = TEMPLATES.find(x => x.id === tid);
+  if(t){
+    NEWDOC.tpl = t.id; NEWDOC.code = t.code;
+    NEWDOC.files = t.need.map(k => ({kind:k, name:"", size:"", required:true, missing:true}));
+    NEWDOC.seal = {on:false, kind:"조합 인감", count:1, carry:false, place:"", reason:"", keep:""};
+  }
+  NEWDOC.title  = q.get("title") || "";
+  NEWDOC.body   = q.get("body")  || NEWDOC.body;
+  NEWDOC.amount = q.get("amount") ? Number(q.get("amount")).toLocaleString("ko-KR") : "";
+  NEWDOC.item   = q.get("item")  || "";
+  NEWDOC.payee  = q.get("payee") || "";
+  NEWDOC.bizNo  = q.get("biz")   || "";
+  NEWDOC.tax    = q.get("tax")   || "과세";
+  WSTEP = "form"; cur = "write";
+  return true;
+}
+
+document.getElementById('g-go').onclick = () => {
+  const n = document.getElementById('g-name').value.trim();
+  const p = document.getElementById('g-pw').value;
+  const e = document.getElementById('g-err');
+  if(!n || !p){ e.textContent='이름과 암호를 입력하세요.'; return; }
+  const u = USERS.find(x => x.hash === hsh(`${n}|${p}`));
+  if(!u){ e.textContent='이름 또는 암호가 맞지 않습니다.'; return; }
+  S.name=u.name; S.role=u.role; S.step=u.step;
+  document.getElementById('gate').style.display='none';
+  document.getElementById('wrap').classList.add('on');
+  takeGo();                      /* ?go= 로 지정한 자리로 */
+  takeHandoff();                 /* 넘어온 품의가 있으면 기안 화면으로 */
+  render();
+};
+document.getElementById('g-pw').addEventListener('keydown', e=>{
+  if(e.key==='Enter') document.getElementById('g-go').click();
+});
+document.getElementById('logout').onclick = () => location.reload();
+document.getElementById('mask').onclick = e => { if(e.target.id==='mask') closeModal(); };
+
+/* ★ 직원 화면에서 이어서 들어오신 경우 로그인 창을 건너뛴다.
+   표가 없거나 담당자 위 자리면 평소대로 로그인 창이 뜬다. */
+if(takePass()){
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('wrap').classList.add('on');
+  takeGo();
+  takeHandoff();
+  render();
+}
+</script>
+</body>
+</html>

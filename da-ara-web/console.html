@@ -1,0 +1,2158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1100">
+<meta name="robots" content="noindex,nofollow">
+<title>다알아 운영 콘솔</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+/* ═══════════════════════════════════════════════════════════
+   다알아 (Da-Ara) — 운영자 콘솔
+   ───────────────────────────────────────────────────────────
+   ★ PC 전용. 플랫폼 전체를 관리하는 사람(운영사)만 쓴다.
+   ★ index.html(조합원) · admin.html(조합 직원) 과 완전히 분리돼 있다.
+
+   ★ 운영자만 할 수 있는 일
+     · 구역 전환 (조합 직원은 자기 구역 고정)
+     · 새 구역 추가 · 프로비저닝
+     · 계정 생성 및 권한 부여
+     · 검산 규칙 관리
+     · 감사 로그 열람
+     · 요금 · 사용량 확인
+
+   ★ 구역 전환은 반드시 감사 로그를 남긴다.
+     조합이 "운영사가 우리 자료를 들여다본 것 아니냐"고 물을 때
+     답할 수 있는 유일한 근거다. 로그를 끄는 기능은 만들지 않는다.
+
+   ※ 지금은 시연용이다. 로그인·로그 모두 화면 안에서만 동작한다.
+   ═══════════════════════════════════════════════════════════ */
+:root{
+  --ink:#0B1F3A; --navy:#12365F; --blue:#2563EB; --amber:#F26419;
+  /* ★ 2026-09-16 밤 — 테두리가 너무 흐려 안 보인다는 말씀.
+     #E2E7EE 는 흰 바탕 위에서 거의 사라진다. 특히 밝은 사무실 화면에서.
+     ★ 두 단계로 나눈다 —
+       --line   칸을 가르는 얇은 줄 (표 · 목록)
+       --edge   상자를 두르는 진한 줄 (박스 · 입력칸)
+     둘을 같은 색으로 두면 「무엇이 한 덩이인지」가 안 보인다. */
+  --paper:#FFF; --mist:#F5F7FA; --line:#A9B7C8; --edge:#8695AA; --muted:#5F6B7A;
+  --ok:#0EA97A; --side:#12365F;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Pretendard Variable',Pretendard,-apple-system,sans-serif;
+  background:var(--mist);color:var(--ink);-webkit-font-smoothing:antialiased}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
+
+.gate{min-height:100vh;display:grid;place-items:center;padding:20px}
+.gate-box{width:360px;background:var(--paper);border-radius:16px;padding:32px 30px;
+  border:1px solid var(--line)}
+.gate-box h1{font-size:1.15rem;font-weight:800;margin-bottom:4px}
+.gate-box p.sub{font-size:.82rem;color:var(--muted);margin-bottom:22px}
+.f{margin-bottom:12px}
+.f label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:6px}
+.f input,.f select{width:100%;border:1px solid var(--line);border-radius:9px;padding:11px 13px;
+  font-size:.9rem;font-family:inherit;outline:none;background:#fff}
+.f input:focus{border-color:var(--navy)}
+.btn{display:block;width:100%;background:var(--navy);color:#fff;border-radius:10px;
+  padding:13px;font-size:.9rem;font-weight:700;text-align:center}
+.btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--line)}
+.btn.sm{width:auto;display:inline-block;padding:9px 16px;font-size:.82rem}
+.err{font-size:.78rem;color:var(--amber);margin-top:10px;min-height:18px}
+
+.wrap{display:none;min-height:100vh}
+.wrap.on{display:flex}
+aside{width:210px;background:var(--side);flex-shrink:0;padding:18px 0;
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{padding:0 18px 16px;border-bottom:1px solid rgba(255,255,255,.14)}
+.brand b{display:block;color:#fff;font-size:1rem;font-weight:800}
+.brand span{display:block;color:#F3B99B;font-size:.76rem;margin-top:3px}
+nav{padding:10px 0;flex:1}
+nav button{display:block;width:100%;text-align:left;color:#C3D3E5;font-size:.85rem;
+  padding:10px 18px;border-left:3px solid transparent}
+nav button:hover{color:#fff;background:rgba(255,255,255,.07)}
+nav button.on{color:#fff;background:rgba(255,255,255,.12);border-left-color:var(--amber);font-weight:700}
+.who{padding:14px 18px 0;border-top:1px solid rgba(255,255,255,.14)}
+.who b{display:block;color:#DCE7F3;font-size:.8rem;font-weight:700}
+.who span{display:block;color:#8FA3BA;font-size:.74rem;margin-top:3px}
+.who button{color:#8FA3BA;font-size:.74rem;margin-top:10px;text-decoration:underline}
+
+main{flex:1;padding:26px 30px;min-width:0;max-width:920px}
+/* ★ 두 칸으로 쓰는 화면만 폭을 넓힌다 (2026-08-22).
+   920px 는 글을 읽는 폭이다. 눈이 왼쪽 끝에서 오른쪽 끝까지 오갈 일이 없어야 한다.
+   다만 왼쪽에 설정, 오른쪽에 결과를 놓는 화면은 그 폭으로는 둘 다 못 담는다.
+   본문 폭 규칙은 그대로 두고, 이 화면만 예외로 한다. */
+main.wide{max-width:1420px}
+
+/* ── 두 칸 (2026-08-22) ─────────────────────────────────
+   왼쪽 설정은 폭이 고정이다. 칸 넓이가 정해져 있어 늘어날 이유가 없다.
+   오른쪽 결과가 남는 폭을 다 쓴다. 목록은 넓을수록 좋다. */
+.two{display:grid;grid-template-columns:390px minmax(0,1fr);gap:20px;align-items:start}
+@media(max-width:1180px){.two{grid-template-columns:1fr}}
+.two > .col{min-width:0}
+
+/* 왼쪽 설정 칸 — 스크롤을 내려도 따라온다 */
+.stick{position:sticky;top:20px}
+
+/* ── 홈 화면 관리 두 칸 (2026-08-22 오후) ────────────────
+   ★ deal · apt 와 반대로 놓는다.
+     저 둘은 왼쪽이 설정(폭 고정)이고 오른쪽이 결과 목록(넓을수록 좋다).
+     홈 화면은 반대다. 왼쪽이 입력이고 오른쪽은 폰 모양이라
+     폰 폭인 300px 에서 늘어날 이유가 없다.
+
+   ★ 폭을 1420 이 아니라 1180 으로 둔다.
+     1420 이면 입력칸이 1,000px 을 넘어간다.
+     「보통 입력칸 420px」 규칙(15번 절)이 무너지고
+     이름 한 칸이 화면을 가로지른다. */
+main.mid{max-width:1180px}
+.two.rev{grid-template-columns:minmax(0,1fr) 300px}
+@media(max-width:1080px){.two.rev{grid-template-columns:1fr}}
+
+/* ── 고정 머리띠 (2026-08-22 오후) ───────────────────────
+   ★ 저장 단추를 찾으러 스크롤을 내리지 않아도 되게 한다.
+     main 의 좌우 여백(30px)만큼 음수 여백을 줘서 끝까지 채운다.
+     그래야 밑에 글이 지나갈 때 가려 준다. */
+.pghd{position:sticky;top:0;z-index:20;background:var(--paper);
+  margin:-26px -30px 18px;padding:15px 30px 13px;
+  border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.pghd .pgL{min-width:0}
+.pghd .pgR{display:flex;align-items:center;gap:12px}
+
+/* 저장 상태 — 색으로만 알리지 않는다. 글자로도 적는다 */
+.hmS{font-size:.76rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+.hmS::before{content:"";width:7px;height:7px;border-radius:99px;background:var(--ok)}
+.hmS.on{color:var(--amber);font-weight:700}
+.hmS.on::before{background:var(--amber)}
+
+/* ── 컴팩트 입력 (2026-08-22 오후) ──────────────────────
+   ★ 줄 사이를 좁힌다. 홈 화면은 칸이 넷뿐인데
+     .sec 가 22px 씩 벌려 놓아 화면 두 배를 먹고 있었다. */
+.tight .sec{margin:16px 0 8px;font-size:.84rem}
+.tight .sec:first-child{margin-top:0}
+.tight .box{padding:13px 15px}
+.tight .f{margin-bottom:11px}
+.tight .f:last-child{margin-bottom:0}
+.tight .f label{font-size:.74rem;margin-bottom:4px}
+.tight .f input{padding:9px 11px;font-size:.85rem}
+
+/* 이미지 고르는 자리 — 높이를 절반으로 */
+.hero{border:1.5px dashed var(--navy);background:#F8FAFD;border-radius:11px;
+  padding:15px;text-align:center;cursor:pointer;display:flex;
+  align-items:center;justify-content:center;gap:11px}
+.hero:hover{background:#F1F6FC}
+.hero b{font-size:.83rem}
+.hero span{font-size:.74rem;color:var(--muted)}
+
+/* 접은 제원 — 요약 줄에 숫자를 그대로 보인다 */
+.fold > summary .sm{margin-left:auto;font-weight:600;font-size:.75rem;
+  color:var(--muted);font-family:ui-monospace,Menlo,monospace}
+.fold.warnf > summary .sm{color:#A9613C}
+.lock{font-size:.68rem;font-weight:700;color:#8C3A12;background:#FFE6D6;
+  border-radius:99px;padding:2px 8px}
+
+/* ── 접어 두는 설명 ─────────────────────────────────────
+   ★ 왜 그렇게 했는지는 지우지 않는다. 접어 둘 뿐이다.
+     지우면 다음 사람이 같은 실수를 한다.
+     매일 쓰는 사람에게는 방해가 되고, 처음 오는 사람에게는 꼭 필요하다. */
+.fold{border:1px solid var(--line);border-radius:10px;margin-top:10px;overflow:hidden}
+.fold > summary{padding:9px 13px;font-size:.79rem;font-weight:700;color:var(--navy);
+  cursor:pointer;background:var(--mist);list-style:none;display:flex;align-items:center;gap:7px}
+.fold > summary::-webkit-details-marker{display:none}
+.fold > summary::before{content:"▸";color:var(--muted);font-size:.72rem}
+.fold[open] > summary::before{content:"▾"}
+.fold > summary:hover{background:#EDF1F6}
+.fold .fb{padding:11px 14px 13px;font-size:.77rem;color:#41576B;line-height:1.7}
+.fold .fb b{color:var(--navy)}
+.fold.warnf > summary{background:#FFF4EC;color:#8C3A12}
+.fold.warnf > summary:hover{background:#FFEBDC}
+.fold.warnf{border-color:#F3C7AC}
+
+/* ── 컴팩트 입력 줄 ───────────────────────────────────── */
+.rowf{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.rowf .f{margin:0}
+.rowf .f label{font-size:.7rem;margin-bottom:3px}
+.rowf .f input,.rowf .f select{padding:8px 10px;font-size:.82rem}
+.w90{width:90px}.w110{width:110px}.w150{width:150px}
+.btn.go{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:800;
+  padding:9px 18px;font-size:.85rem}
+.btn.go:disabled{opacity:.5}
+.hint{font-size:.72rem;color:var(--muted);margin-top:7px;line-height:1.55}
+.hint b{color:var(--navy)}
+
+/* ── 사이드바 갈래 이름 (2026-08-22) ────────────────────
+   ★ 갈래 이름은 하위 메뉴보다 밝게 둔다.
+     너무 흐리면 표지 노릇을 못 한다. 직원 화면에서 배운 것이다. */
+.mg{color:#F3B99B;font-size:.72rem;font-weight:800;letter-spacing:.02em;
+  padding:16px 18px 6px;margin-top:8px;border-top:1px solid rgba(255,255,255,.12)}
+.mg:first-child{margin-top:0;border-top:0;padding-top:14px}
+nav button.sub{padding-left:26px}
+
+/* ── 구 고르기 단추 (2026-08-22) ────────────────────────
+   ★ 코드를 외우게 하면 오타가 나고, 오타가 나면 0건이 나온다.
+     왜 0건인지 알 수 없어 국토부 탓인 줄 아신다. */
+.gubar{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+.gub{border:1px solid var(--line);background:#fff;color:var(--ink);
+  border-radius:9px;padding:8px 13px;font-size:.82rem;font-weight:700;
+  text-align:center;display:flex;align-items:center;gap:6px;cursor:pointer}
+.gub:hover{border-color:var(--navy)}
+.gub em{font-style:normal;font-family:ui-monospace,Menlo,monospace;
+  font-size:.68rem;color:var(--muted);font-weight:600}
+.gub.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.gub.on em{color:#A9C0DA}
+.gub.more{color:var(--blue);border-style:dashed}
+.gub.sm2{padding:6px 11px;font-size:.78rem;font-weight:400}
+.gub.sm2.on{font-weight:700}
+
+/* ── 비교 아파트 설정 (2026-08-22) ──────────────────────
+   ★ 칸 폭은 담기는 것에 맞춘다.
+     이름은 넓게, 평형·금액은 좁게. 다 같은 폭이면 눈이 헤맨다. */
+.f3{display:grid;grid-template-columns:1fr 130px 1fr;gap:10px}
+@media(max-width:760px){.f3{grid-template-columns:1fr}}
+input.sm{width:100%;border:1px solid var(--line);border-radius:7px;
+  padding:7px 8px;font-size:.8rem;font-family:ui-monospace,Menlo,monospace;
+  text-align:right;outline:none}
+input.sm:focus{border-color:var(--navy)}
+
+/* ── 운영자 재무 대시보드 (2026-08-22) ──────────────────
+   ★ 초록 = 남는다 / 주황 = 밑진다. 색이 곧 뜻이다. */
+.card .cnote{font-size:.72rem;color:var(--muted);margin-top:5px;line-height:1.5}
+.card b em{font-style:normal;font-size:.8rem;font-weight:700;
+  color:var(--muted);margin-left:3px}
+.card.good{border-color:#A9E0CD;background:#F4FCF9}
+.card.good b{color:var(--ok)}
+.card.bad{border-color:#F3C7AC;background:#FFF9F4}
+.card.bad b{color:var(--amber)}
+.gp{font-style:normal;font-size:.7rem;font-weight:800;margin-left:6px;
+  border-radius:99px;padding:2px 7px}
+.gp.up{background:rgba(14,169,122,.13);color:var(--ok)}
+.gp.dn{background:#FFF0E6;color:var(--amber)}
+
+/* 수입 대비 지출 — 가로 누적 막대 */
+.opbar{display:flex;height:26px;border-radius:9px;overflow:hidden;
+  background:rgba(14,169,122,.18);margin-bottom:13px}
+.opbar i{display:block;height:26px;transition:width .5s ease}
+.opbar i.c1{background:var(--navy)}
+.opbar i.c2{background:#9BB2CC}
+.oplg{display:flex;gap:22px;flex-wrap:wrap;font-size:.82rem}
+.oplg > div{display:flex;align-items:center;gap:8px}
+.oplg i{width:11px;height:11px;border-radius:3px;flex:none}
+.oplg i.c1{background:var(--navy)}
+.oplg i.c2{background:#9BB2CC}
+.oplg i.c3{background:rgba(14,169,122,.4)}
+.oplg b{font-family:ui-monospace,Menlo,monospace;font-weight:800}
+.oplg span{font-size:.74rem;color:var(--muted)}
+
+/* 구역별 기여도 막대 */
+.shb{height:6px;background:#EDF1F6;border-radius:99px;overflow:hidden;margin-bottom:3px}
+.shb i{display:block;height:6px;border-radius:99px;background:var(--navy)}
+tr.pick{background:#F0F5FB}
+.lnk{background:none;border:0;color:var(--blue);font-size:.78rem;
+  font-weight:700;cursor:pointer;padding:0;text-decoration:underline}
+.tiny{font-size:.72rem;color:var(--muted);display:block;margin-top:2px}
+
+/* ── 구역 탭 ────────────────────────────────────────────
+   ★ 지금 어느 조합 자료를 만지고 있는지 화면마다 보여야 한다.
+     사이드바 구석의 작은 글자로는 부족하다.
+     미아3 자료를 고치면서 미아2인 줄 아는 일이 생긴다. */
+.zbar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+.zbar.off{opacity:.42}
+.zt{border:1px solid var(--line);background:#fff;border-radius:10px;
+  padding:8px 13px;font-size:.82rem;font-weight:700;color:var(--ink);
+  text-align:center;display:flex;align-items:center;gap:7px;cursor:pointer;
+  transition:border-color .15s,background .15s}
+.zt:hover{border-color:var(--navy)}
+.zt em{font-style:normal;font-family:ui-monospace,Menlo,monospace;
+  font-size:.7rem;color:var(--muted);font-weight:600}
+.zt.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.zt.on em{color:#A9C0DA}
+.zt .zw{font-style:normal;font-size:.66rem;font-weight:700;
+  background:#F0F3F7;color:var(--muted);border-radius:99px;padding:2px 7px}
+.zt.on .zw{background:rgba(255,255,255,.2);color:#fff}
+
+/* ── 지금 다루는 구역 띠 ───────────────────────────────── */
+.znow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:#F0F5FB;border:1px solid #C6D6E8;border-left:4px solid var(--navy);
+  border-radius:10px;padding:11px 15px;margin-bottom:20px;font-size:.83rem}
+.znow > span:first-child{color:var(--muted);font-size:.76rem}
+.znow b{font-weight:800;font-size:.9rem}
+.znow em{font-style:normal;font-size:.76rem;color:var(--navy);
+  background:#fff;border:1px solid #C6D6E8;border-radius:6px;padding:2px 7px}
+.znow .zs{font-style:normal;font-size:.7rem;font-weight:700;
+  background:#EEE;color:var(--muted);border-radius:99px;padding:3px 9px}
+.znow .zs.ok{background:rgba(14,169,122,.13);color:var(--ok)}
+.znow .zh{margin-left:auto;font-size:.75rem;color:var(--muted)}
+.znow .zh b{font-size:.75rem;color:var(--navy)}
+.znow.all{background:#FFF4EC;border-color:#F3C7AC;border-left-color:var(--amber)}
+.znow.all > span:first-child{color:#8C3A12;font-weight:700}
+.znow.all b{color:#8C3A12}
+.znow.all .zh{color:#A85B33}
+
+/* ★ 계약이 안 된 구역 — 파란 띠와 확실히 갈라 놓는다.
+   미아2와 똑같이 보이면 상담 중인 구역을 고쳐 두고 잊으신다. */
+.znow.warnz{background:#FFF4EC;border-color:#F3C7AC;border-left-color:var(--amber)}
+.znow.warnz > span:first-child{color:#A85B33}
+.znow.warnz b{color:#8C3A12}
+.znow.warnz em{border-color:#F3C7AC;color:#8C3A12}
+.znow.warnz .zh{color:#8C3A12}
+.znow.warnz .zh b{color:#8C3A12;font-weight:800}
+.znow .zs.hot{background:var(--amber);color:#fff}
+
+/* ★ 입력칸을 내용에 맞게 잡는다.
+   한 줄짜리 칸이 화면 끝까지 늘어나면 엉성해 보이고
+   눈이 왼쪽 끝에서 오른쪽 끝까지 오가야 해서 읽기도 나쁘다. */
+.f input,.f select,.f textarea{max-width:420px}
+.f.wide input,.f.wide select,.f.wide textarea{max-width:100%}
+.f.mini input,.f.mini select{max-width:170px}
+.f.half input,.f.half select{max-width:280px}
+.g2 .f input,.g2 .f select,.g3 .f input,.g3 .f select{max-width:100%}
+.frow{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+.frow .f{margin-bottom:0}
+.frow .grow{flex:1;min-width:220px}
+.frow .grow input{max-width:100%}
+h2.pt{font-size:1.2rem;font-weight:800;margin-bottom:3px}
+p.pd{font-size:.83rem;color:var(--muted);margin-bottom:20px}
+.sec{font-size:.9rem;font-weight:800;margin:22px 0 10px}
+.box{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.row{display:flex;justify-content:space-between;gap:14px;padding:9px 0;
+  border-bottom:1px dashed var(--line);font-size:.84rem}
+.row:last-child{border-bottom:0}
+.row span{color:var(--muted)}
+.row b{font-weight:700}
+
+table{width:100%;border-collapse:collapse;font-size:.84rem}
+th{background:var(--mist);color:var(--muted);font-size:.78rem;font-weight:700;
+  text-align:left;padding:10px 12px}
+td{padding:11px 12px;border-top:1px solid var(--line)}
+tr.tap{cursor:pointer}
+tr.tap:hover{background:var(--mist)}
+tr.now{background:#F0F5FB}
+.pill{display:inline-block;font-size:.74rem;font-weight:700;padding:3px 9px;border-radius:999px}
+.p-ok{background:rgba(14,169,122,.13);color:var(--ok)}
+.p-wait{background:#EEE;color:var(--muted)}
+.p-warn{background:#FFF0E6;color:#A85B33}
+.p-blue{background:#E8EEF7;color:var(--navy)}
+.warn{background:#FFF4EC;border:1px solid #F3C7AC;border-radius:11px;padding:13px 15px;margin-top:16px}
+/* ★ 제목만 줄을 바꾼다.
+   본문 안의 강조까지 block 이면 문장이 토막 나서 읽기 나쁘다.
+       다시 제출하시면 앞의 것은
+       대체됨
+       으로 남고 …
+   이렇게 끊긴다. 강조가 오히려 방해가 된다. */
+.warn > b:first-child{display:block;font-size:.84rem;color:#8C3A12;margin-bottom:4px}
+.warn p{font-size:.8rem;color:#A85B33;line-height:1.75}
+.warn p b{font-weight:800;color:#8C3A12}
+.note{font-size:.8rem;color:var(--muted);line-height:1.7;margin-top:12px}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:.8rem}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.f{margin-bottom:11px}
+.f label{display:block;font-size:.76rem;color:var(--muted);margin-bottom:5px}
+.f input,.f select{width:100%;border:1px solid var(--line);border-radius:9px;
+  padding:10px 12px;font-size:.86rem;outline:none;background:#fff;color:var(--ink);font-family:inherit}
+.f input:focus,.f select:focus{border-color:var(--navy)}
+tr.tap{cursor:pointer}
+tr.tap:hover{background:var(--mist)}
+.sec em{font-style:normal;font-size:.76rem;font-weight:400;color:var(--muted)}
+.sample{background:#FFF4EC;border:1px solid #F3C7AC;border-radius:11px;
+  padding:12px 15px;margin-bottom:18px}
+.sample > b:first-child{display:block;font-size:.84rem;color:#8C3A12;margin-bottom:3px}
+.sample p b{font-weight:800;color:#8C3A12}
+.sample p{font-size:.8rem;color:#A85B33;line-height:1.6}
+/* ── 폰 미리보기 · 조합원 화면 그대로 (2026-09-16 밤) ──────
+   ★ 예전에는 「닮은 카드」였다. 운영자가 단계를 바꿔도
+     실제로 어떻게 나가는지 알 수 없었다.
+   ★ 크기만 줄인 같은 그림을 그린다. 폭 280px. */
+.pv{width:330px;margin:0 auto;border:1px solid var(--edge);
+  border-radius:16px;overflow:hidden;background:#fff;
+  box-shadow:0 3px 14px rgba(11,31,58,.09)}
+.pv-hero{height:156px;position:relative;background-size:cover;background-position:center}
+.pv-credit{position:absolute;right:9px;bottom:9px;font-size:.6rem;
+  color:rgba(255,255,255,.8)}
+.pv-txt{position:absolute;left:12px;bottom:12px;color:#fff}
+.pv-eye{display:inline-block;font-size:.6rem;background:rgba(255,255,255,.22);
+  padding:2px 8px;border-radius:99px}
+.pv-h1{font-size:.95rem;font-weight:800;letter-spacing:-.03em;margin-top:4px}
+.pv-sub{font-size:.62rem;opacity:.9;margin-top:2px}
+
+.pv-prog{position:relative;z-index:2;margin:-22px 11px 11px;background:#fff;
+  border:1px solid var(--line);border-radius:14px;padding:12px 12px 11px;
+  box-shadow:0 4px 16px rgba(11,31,58,.1)}
+.pv-top{display:flex;align-items:flex-start;gap:8px;margin-bottom:12px}
+.pv-top>b{font-size:.72rem;font-weight:800;letter-spacing:-.02em;
+  word-break:keep-all;flex:1;padding-top:2px}
+.pv-dd{text-align:right;flex:none}
+.pv-dd b{display:block;font-size:.8rem;font-weight:800;color:var(--amber)}
+.pv-dd span{font-size:.55rem;color:var(--muted)}
+
+/* ★ 아홉 칸은 280px 에 안 들어간다. 밀되 막대는 숨긴다. */
+.pv-scroll{overflow-x:auto;margin:0 -2px;padding:0 2px;
+  scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch}
+.pv-scroll::-webkit-scrollbar{display:none}
+.pv-line{min-width:100%;position:relative;padding-top:2px}
+/* 점 지름 9px → 가운데가 2+4.5=6.5px. 선(3px)의 위를 5px 에 둔다. */
+.pv-trk{position:absolute;top:5px;height:3px;background:var(--line);
+  border-radius:99px;overflow:hidden}
+.pv-trk i{display:block;height:100%;border-radius:99px;
+  background:linear-gradient(90deg,#FFB27A,#F26419)}
+.pv-dots{display:flex;position:relative;z-index:2}
+.pv-cell{flex:1;display:flex;justify-content:center;min-width:0}
+.pv-dot{width:9px;height:9px;border-radius:50%;background:#fff;
+  border:2px solid var(--line);display:block}
+.pv-dot.done{background:#F26419;border-color:#F26419}
+.pv-dot.now{background:#fff;border-color:#F26419;box-shadow:0 0 0 4px rgba(242,100,25,.18)}
+.pv-labs{display:flex;margin-top:7px}
+.pv-labs span{flex:1;min-width:0;text-align:center;font-size:.52rem;
+  color:#98A9BC;font-weight:600;line-height:1.3}
+.pv-labs span.on{color:var(--navy)}
+.pv-foot{display:flex;gap:14px;margin-top:11px;padding-top:10px;
+  border-top:1px solid var(--line)}
+.pv-foot b{display:block;font-size:.76rem;font-weight:800;letter-spacing:-.02em}
+.pv-foot span{font-size:.55rem;color:var(--muted)}
+
+/* ── 단계 칸 · 좌우로 민다 (2026-09-16 밤) ────────────────
+   ★ 아홉 칸이라 한 줄에 안 들어간다.
+     줄바꿈(flex-wrap)으로 두 줄이 되면 차례가 흐트러져
+     「조합설립 다음이 무엇인가」가 안 보인다.
+   ★ 그래서 한 줄로 두고 **좌우로 민다.**
+     스크롤바는 숨긴다 — 폰에서는 손가락으로 밀면 그만이고,
+     막대가 보이면 칸을 덮어 글자가 가린다. */
+.stagerow{display:flex;gap:7px;overflow-x:auto;padding:2px 2px 6px;
+  scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
+.stagerow::-webkit-scrollbar{display:none}
+.stagerow{scrollbar-width:none;-ms-overflow-style:none}
+.stageb{flex:none;white-space:nowrap;border:1px solid var(--edge);background:#fff;
+  color:var(--muted);border-radius:99px;padding:8px 14px;font-size:.8rem;
+  font-weight:400;cursor:pointer}
+.stageb:hover{border-color:var(--navy);color:var(--navy)}
+.stageb.on{border:2px solid var(--navy);background:var(--navy);color:#fff;font-weight:700;
+  box-shadow:0 0 0 3px rgba(18,54,95,.14)}
+.stagebox{border:2px solid var(--navy) !important}
+.stagenow{margin-top:8px;font-size:.79rem;color:var(--muted);
+  display:flex;align-items:center;gap:10px}
+.stagenow b{color:var(--navy);font-weight:800}
+.stagenow em{margin-left:auto;font-style:normal;font-size:.73rem;color:#A9B6C6}
+
+/* ★ 폰 미리보기가 따라다닌다.
+   아래로 내려가며 일정을 고치셔도 계속 보여야
+   「이렇게 나가는구나」를 그 자리에서 아신다. */
+.two.rev > .col:last-child{position:sticky;top:14px;align-self:start}
+
+/* ── 테두리에 힘을 준다 (2026-09-16 밤) ──────────────────
+   ★ 「외곽 테두리가 너무 희미해서 안 보인다」는 말씀.
+     칸을 가르는 줄(--line)과 상자를 두르는 줄(--edge)을 갈랐다.
+     흰 바탕 대비 1.24 : 1 → 상자선 3.05 : 1 (권장 3:1)
+   ★ 이 덩이는 맨 아래에 둔다. 위의 규칙을 덮어써야 한다. */
+.box,.card,.panel,.warn,.fold{border-color:var(--edge)}
+th{border-bottom:2px solid var(--edge)}
+td{border-top:1px solid var(--line)}
+tbody tr:nth-child(even) > td{background:#FAFCFE}
+input,select,textarea{border-color:var(--edge)}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--navy);box-shadow:0 0 0 3px rgba(18,54,95,.12)}
+.btn.ghost,.btn.sm,.chipb{border-color:var(--edge)}
+
+/* ── 사진 자리 잡기 (2026-09-17) ─────────────────────────
+   ★ 십자 화살표는 걷어냈다. 사진을 직접 끄는 것으로 바꿨다. */
+.heropos{margin-top:10px}
+.hpt{font-size:.82rem;font-weight:700;color:var(--navy);
+  display:flex;align-items:center;gap:10px}
+.hpt span{margin-left:auto;font-weight:400;font-size:.76rem;color:var(--muted)}
+
+/* ── 우리 구역 설정 전용 이름 (2026-09-17) ────────────────
+   ★ .two · .lock 은 두 화면에서 **다른 것**을 가리키고 있었다.
+     직원 화면의 .lock 은 잠금 안내용 큰 상자(padding:30px)라
+     「읽기 전용」 석 자가 큰 상자가 됐다.
+   ★ CSS 이름도 겹친다. 자바스크립트 이름만 세면 놓친다.
+     → ztwo · zlock 으로 갈라 양쪽에 같은 것을 둔다. */
+.ztwo{display:grid;grid-template-columns:390px minmax(0,1fr);gap:20px;align-items:start}
+.ztwo.rev{grid-template-columns:minmax(0,1fr) 372px}
+@media(max-width:1180px){.ztwo,.ztwo.rev{grid-template-columns:1fr}}
+.zlock{font-size:.68rem;font-weight:700;color:#8C3A12;background:#FFE6D6;
+  border-radius:99px;padding:2px 8px;margin-left:6px}
+
+/* ── 단계 칸 좌우 화살표 (2026-09-17) ─────────────────────
+   ★ 예전에는 「◀ 옆으로 밀어 보십시오 ▶」가 **그냥 글자**였다.
+     화살표처럼 생겼으니 눌러 보시는 것이 당연한데 아무 일이 없다. */
+.stagear{margin-left:auto;display:flex;align-items:center;gap:7px}
+.stagear button{border:1px solid var(--edge);background:#fff;border-radius:7px;
+  width:26px;height:24px;font-size:.7rem;color:var(--navy);cursor:pointer;
+  display:flex;align-items:center;justify-content:center}
+.stagear button:hover{background:var(--mist);border-color:var(--navy)}
+.stagear .sm{font-size:.73rem;color:#A9B6C6}
+
+/* ── 사진을 끌어서 자리 잡기 (2026-09-17 고침) ─────────────
+   ★ 화살표 단추 다섯 개를 없애고 사진을 직접 끌게 했다.
+     여섯 번 누를 것을 한 번 끌면 된다.
+   ★ 밝은 자리가 폰에 나올 데다. 나머지는 어둡게 덮어
+     「여기가 잘립니다」가 눈에 보이게 한다. */
+.hdwrap{margin-top:10px}
+.hdbox{position:relative;width:100%;height:190px;border-radius:12px;
+  overflow:hidden;background:#0B1F3A;cursor:grab;touch-action:none;
+  user-select:none;-webkit-user-select:none}
+.hdbox.dragging{cursor:grabbing}
+.hdbox img{position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;display:block;pointer-events:none}
+/* 폰에 나올 자리만 남기고 좌우를 덮는다. 폰은 세로로 길어 가운데가 좁다. */
+.hdmask{position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,rgba(11,31,58,.62) 0%,rgba(11,31,58,.62) 31%,
+    rgba(11,31,58,0) 31%,rgba(11,31,58,0) 69%,
+    rgba(11,31,58,.62) 69%,rgba(11,31,58,.62) 100%)}
+.hdframe{position:absolute;top:0;bottom:0;left:31%;right:31%;
+  border:2px solid #fff;border-radius:6px;pointer-events:none;
+  box-shadow:0 0 0 1px rgba(11,31,58,.35)}
+.hdframe span{position:absolute;left:0;right:0;bottom:6px;text-align:center;
+  font-size:.62rem;color:#fff;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.hdhand{position:absolute;left:0;right:0;top:8px;text-align:center;
+  font-size:.7rem;color:#fff;font-weight:700;pointer-events:none;
+  text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.hdfoot{display:flex;align-items:flex-start;gap:12px;margin-top:10px}
+.hdfoot .hint{flex:1;margin:0}
+
+/* ── 사진 확대 · 축소 (2026-09-17 저녁) ───────────────────
+   ★ 「좌우 조절이 안 된다」 하셨다. 당길 데가 없어서였다.
+     조감도는 가로가 아주 길어 폰 자리에 맞추면 좌우에 남는 데가 없다.
+     크기를 키워야 그때 좌우로도 밀 수 있다.
+   ★ 막대로 크게 움직이고, ＋ － 로 미세하게 맞춘다. */
+.hdzoom{display:flex;align-items:center;gap:9px;margin-top:10px}
+.hdzoom input[type=range]{flex:1;min-width:0;height:22px;cursor:pointer;
+  accent-color:var(--navy)}
+.hzb{flex:none;width:30px;height:28px;border:1px solid var(--edge);background:#fff;
+  border-radius:8px;font-size:.9rem;font-weight:700;color:var(--navy);cursor:pointer;
+  display:flex;align-items:center;justify-content:center}
+.hzb:hover{background:var(--mist);border-color:var(--navy)}
+.hdzoom #hdZoomT{flex:none;width:44px;text-align:right;
+  font-size:.78rem;font-weight:700;color:var(--navy)}
+/* 사진은 100%일 때 전체가 보이도록 아래 색을 깐다 */
+.hdbox img{transform-origin:center center}
+
+/* ═══════════════════════════════════════════════════════════
+   ★★★ 세 곳의 가로세로비를 하나로 (2026-09-17 밤) ★★★
+   ───────────────────────────────────────────────────────────
+   「폰에 나오는 자리와 실제 폰 화면과 조절 화면이 서로 다르다」
+
+   ★ 재 보니 정말 제각각이었다.
+
+       조합원 화면(실제)   폰마다 달랐다 → 480/300 으로 못 박음
+       폰 미리보기          330 x 156  →  2.12   더 납작하다
+       조절 상자의 밝은 네모 198 x 190  →  1.04   세로로 길다
+
+     맞춰 놓은 자리가 폰에서 **다른 데**로 나오니 맞출 수가 없다.
+
+   ★ 실제 조합원 화면(1.55)에 나머지 둘을 맞춘다.
+     기준은 늘 **조합원이 보는 것**이어야 한다.
+
+   ★ 비율은 aspect-ratio 로 못 박는다. 높이를 손으로 적으면
+     폭이 바뀔 때 또 어긋난다.
+   ═══════════════════════════════════════════════════════════ */
+.pv-hero{height:auto !important;aspect-ratio:480 / 300}
+.hdbox{height:auto !important;aspect-ratio:480 / 300}
+/* 밝은 네모 = 상자 전체. 조합원 화면이 이 비율 그대로 꽉 채우기 때문이다. */
+.hdmask{background:none !important}
+.hdframe{left:0 !important;right:0 !important;
+  border:2px solid rgba(255,255,255,.9) !important;border-radius:12px !important}
+
+/* ★ 미리보기 조감도도 <img> 로 바꿨다 (2026-09-17 밤).
+   조합원 화면 · 조절 상자와 같은 셈법을 쓰려면 같은 방식이어야 한다. */
+.pv-bg{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
+.pv-hero{overflow:hidden}
+.pv-credit,.pv-txt{z-index:2}
+/* 조합원 화면처럼 위아래를 어둡게 덮어 글자가 읽히게 한다 */
+/* ★ 조합원 화면(.shot:before)과 **똑같은 값**을 쓴다 (2026-09-17 밤).
+   비슷하게 하면 미리보기가 더 밝아 보여 「사진이 다르다」가 된다. */
+.pv-hero:before{content:"";position:absolute;inset:0;z-index:1;
+  background:linear-gradient(180deg,rgba(11,31,58,.6) 0%,rgba(11,31,58,.1) 34%,rgba(11,31,58,.5) 66%,rgba(11,31,58,.92) 100%)}
+/* ★ 조절 상자에도 같은 층을 씌운다. 폰에서 어떻게 보일지 그대로 알 수 있다. */
+.hdbox:after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(11,31,58,.6) 0%,rgba(11,31,58,.1) 34%,rgba(11,31,58,.5) 66%,rgba(11,31,58,.92) 100%)}
+
+/* ═══════════════════════════════════════════════════════════
+   홈 세 덩이 채우기 (2026-09-17 밤)
+   ★ 우리 구역 한눈에 · 이번 고시 변경 · 궁금한 것
+   ★ 흐린 글씨(placeholder)가 예시다. 조합원 화면에는 안 나간다.
+   ═══════════════════════════════════════════════════════════ */
+.hbbox{padding:12px 13px}
+.hbhd{display:flex;align-items:center;gap:10px}
+.hbt{font-size:.8rem;color:var(--muted);flex:1;min-width:0}
+.hbsw{flex:none;width:38px;height:21px;border-radius:99px;border:0;
+  background:#C3CEDC;position:relative;cursor:pointer;transition:background .15s}
+.hbsw.on{background:var(--navy)}
+.hbsw i{position:absolute;left:2px;top:2px;width:17px;height:17px;border-radius:50%;
+  background:#fff;transition:left .15s;display:block}
+.hbsw.on i{left:19px}
+.hbst{flex:none;font-size:.74rem;font-weight:700;color:var(--muted);width:30px}
+.hbst.on{color:var(--navy)}
+.hbcard{border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:#FAFCFE}
+.hbrow2{display:flex;gap:7px}
+.hbline{display:flex;align-items:flex-start;gap:9px;padding:9px 0;
+  border-top:1px solid var(--line)}
+.hbno{flex:none;width:18px;text-align:center;font-size:.74rem;font-weight:700;
+  color:var(--muted);padding-top:22px}
+.hbgrid{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:7px}
+.hbgrid .f{flex:1;min-width:110px;margin-bottom:0}
+.hbgrid .f.wide{flex-basis:100%}
+.hbact{flex:none;display:flex;gap:4px;padding-top:22px}
+.hbact button{width:26px;height:26px;border:1px solid var(--edge);background:#fff;
+  border-radius:7px;font-size:.7rem;color:var(--muted);cursor:pointer}
+.hbact button:hover{border-color:var(--navy);color:var(--navy)}
+.hbact button.del:hover{border-color:var(--red);color:var(--red)}
+.hbplus{width:100%;margin-top:9px;border:1px dashed var(--edge);background:#fff;
+  border-radius:9px;padding:9px;font-size:.82rem;font-weight:700;
+  color:var(--blue);cursor:pointer}
+.hbplus:hover{background:#F2F7FD;border-color:var(--blue)}
+.hbplus.sm{padding:6px;font-size:.78rem;margin-top:5px}
+.hbq{border-top:1px solid var(--line);padding:11px 0}
+.hbans{margin:9px 0 0 27px;padding:10px 12px;background:#F6F9FC;
+  border:1px solid var(--line);border-radius:10px}
+.hbat{font-size:.76rem;font-weight:700;color:var(--navy)}
+.hbta{width:100%;border:1px solid var(--edge);border-radius:9px;padding:9px 11px;
+  font-size:.82rem;font-family:inherit;line-height:1.7;resize:vertical;margin-top:6px}
+.hbta:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(18,54,95,.12)}
+.w60{max-width:60px}
+
+/* ── 폰 미리보기의 아랫부분 ───────────────────────────────── */
+.pv-more{padding:0 11px 12px}
+.pv-sec{font-size:.72rem;font-weight:800;color:var(--ink);margin:11px 0 6px}
+.pv-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.pv-kpi{border:1px solid var(--line);border-radius:9px;padding:7px 6px;text-align:left}
+.pv-kpi span{display:block;font-size:.54rem;color:var(--muted)}
+.pv-kpi b{display:block;font-size:.76rem;font-weight:800;margin-top:2px}
+.pv-kpi b i{font-size:.52rem;font-weight:600;color:var(--muted);font-style:normal}
+.pv-kpi em{display:block;font-size:.52rem;font-style:normal;color:var(--amber);
+  font-weight:700;margin-top:1px}
+.pv-scroll2{display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;
+  scrollbar-width:none;-ms-overflow-style:none}
+.pv-scroll2::-webkit-scrollbar{display:none}
+.pv-hc{flex:none;width:96px;border:1px solid var(--line);border-radius:9px;padding:7px 8px}
+.pv-hc span{display:block;font-size:.54rem;color:var(--muted)}
+.pv-hc b{display:block;font-size:.66rem;font-weight:800;margin-top:2px}
+.pv-hc b i{font-size:.56rem;font-weight:600;color:var(--muted);font-style:normal}
+.pv-hc em{display:block;font-size:.5rem;font-style:normal;color:var(--amber);
+  font-weight:700;margin-top:2px}
+.pv-faq{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.pv-fq{display:flex;align-items:center;gap:6px;padding:8px 9px;
+  border-bottom:1px solid var(--line)}
+.pv-fq:last-child{border-bottom:0}
+.pv-fq.gray span{color:var(--muted)}
+.pv-fq span{flex:1;min-width:0;font-size:.64rem;font-weight:600;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pv-fq em{flex:none;font-size:.52rem;font-style:normal;font-weight:700;
+  color:#8C3A12;background:#FFE6D6;padding:1px 6px;border-radius:99px}
+.pv-fq i{flex:none;color:#C3CEDC;font-style:normal}
+
+/* ── 우리집 딱지 (2026-09-17) ─────────────────────────────
+   ★ 시세 단지 · 비교 아파트 · 지분 실거래를 하나로 묶었다.
+     왼쪽 메뉴가 길어지지 않게 안에서 딱지로 넘긴다. */
+.mhtabs{display:flex;gap:8px;margin:0 0 18px;flex-wrap:wrap}
+.mhb{flex:1;min-width:150px;border:1px solid var(--edge);background:#fff;
+  border-radius:12px;padding:11px 13px;text-align:left;cursor:pointer}
+.mhb:hover{border-color:var(--navy)}
+.mhb b{display:block;font-size:.88rem;font-weight:700;color:var(--muted)}
+.mhb em{display:block;font-size:.72rem;font-style:normal;color:#A9B6C6;margin-top:3px}
+.mhb.on{border:2px solid var(--navy);background:var(--navy);
+  box-shadow:0 0 0 3px rgba(18,54,95,.14)}
+.mhb.on b{color:#fff;font-weight:800}
+.mhb.on em{color:#B9C9DD}
+
+/* ── 지분 실거래 한 건씩 빼기 (2026-09-17) ────────────────
+   ★ 기본은 다 나간다. 이상한 것만 체크를 풀어 뺀다.
+     6,568건을 하나씩 켤 수는 없다. */
+.dchk{width:16px;height:16px;cursor:pointer;accent-color:var(--navy)}
+.dchk:disabled{cursor:not-allowed;opacity:.35}
+tr.dealoff > td{background:#FFF4EC !important;color:#C08B6B}
+tr.dealoff > td .pill{opacity:.45}
+tr.dealoff > td.mono{text-decoration:line-through;text-decoration-color:#E0A883}
+
+/* ── 우리집 폰 미리보기 (2026-09-17) ──────────────────────
+   ★ 조합원 화면(calcView)의 여덟 줄을 줄여 그린다.
+     직원이 넣는 것은 ④ 비례율과 ⑦ 분양가뿐이라
+     나머지는 「조합원이 넣음 · 자동」으로만 보여 준다. */
+.pvtabs{display:flex;gap:4px;padding:10px 11px 0}
+.pvtabs span{flex:1;font-size:.54rem;text-align:center;padding:5px 2px;
+  border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+.pvtabs span.on{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:700}
+.pvbody{padding:11px}
+.pvt{font-size:.68rem;font-weight:800;margin-bottom:8px}
+.pvr{display:flex;align-items:center;gap:6px;border:1px solid var(--line);
+  border-radius:9px;padding:7px 9px;margin-bottom:5px;font-size:.6rem;font-weight:600}
+.pvr.in{border:1.5px solid var(--navy)}
+.pvr.org{border:1.5px solid #A9E0CD;background:#F2FAF6}
+.pvr.auto{background:var(--mist);border-color:transparent;color:var(--muted)}
+.pvr.lock{background:#FFF7F1;border-color:#F7DCC8;color:#A85B33}
+.pvn{flex:none;width:13px;height:13px;border-radius:50%;background:var(--navy);
+  color:#fff;font-size:.45rem;font-weight:800;display:flex;
+  align-items:center;justify-content:center}
+.pvr.auto .pvn,.pvr.lock .pvn{background:#C3CEDC;color:#5B6C80}
+.pvr b{margin-left:auto;font-size:.66rem;font-weight:800;color:var(--navy)}
+.pvr em{margin-left:auto;font-style:normal;font-size:.54rem;color:#A9B6C6;font-weight:600}
+.pvgreen{background:#F2FAF6;border:1px solid #A9E0CD;border-radius:9px;
+  padding:7px 9px;margin:-2px 0 6px;font-size:.56rem;color:#0A6E51;line-height:1.7}
+.pvgreen b{font-weight:800}
+.pvgreen span{display:inline-block;margin-right:8px}
+.pvgreen i{display:block;font-style:normal;color:#5AA98C;margin-top:3px}
+.pvfin{display:flex;align-items:center;gap:6px;background:var(--navy);color:#fff;
+  border-radius:9px;padding:9px 10px;font-size:.64rem;font-weight:800}
+.pvfin .pvn{background:rgba(255,255,255,.22)}
+.pvfin em{margin-left:auto;font-style:normal;font-size:.54rem;opacity:.75;font-weight:600}
+.pvcap{text-align:center;font-size:.72rem;color:var(--muted);margin-top:8px}
+
+/* ★ 홈 새 소식 건수 고르기 (2026-09-18) */
+.nwn{display:flex;gap:6px;margin-top:4px}
+.nwnb{flex:1;border:1px solid var(--edge);background:#fff;border-radius:9px;
+  padding:9px 2px;font-size:.82rem;font-weight:700;color:var(--muted);cursor:pointer}
+.nwnb:hover{border-color:var(--navy);color:var(--navy)}
+.nwnb.on{border:2px solid var(--navy);background:var(--navy);color:#fff;
+  box-shadow:0 0 0 3px rgba(18,54,95,.14)}
+
+/* ★ 자료를 홈 「궁금한 것」에 올리기 (2026-09-20) */
+.hmb.on{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:800}
+.hmb:disabled{opacity:.4;cursor:not-allowed}
+/* 자료에서 올린 줄 — 여기서 못 고친다 */
+.hbq.hbdoc{background:#F7FBFF;border-radius:10px;padding:10px 11px;margin-top:7px}
+.hbdv{font-size:.86rem;font-weight:700;color:var(--navy);padding:8px 0 0}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <div class="gate-box">
+    <h1>다알아 운영 콘솔</h1>
+    <p class="sub">운영자 전용 · 전 구역 관리</p>
+    <div class="f"><label>이름</label><input id="g-name" type="text" placeholder="운영자 이름"></div>
+    <div class="f"><label>암호</label><input id="g-pw" type="password" placeholder="6자리"></div>
+    <button class="btn" id="g-go">로그인</button>
+    <div class="err" id="g-err"></div>
+    <p class="note">이 화면에서 하는 모든 구역 전환은 감사 로그에 기록됩니다.</p>
+  </div>
+</div>
+
+<div class="wrap" id="wrap">
+  <aside>
+    <div class="brand"><b>운영 콘솔</b><span>전 구역 관리</span></div>
+    <nav id="nav"></nav>
+    <div class="who">
+      <b id="who-name">운영자</b>
+      <span id="who-t">보는 중 · 미아2</span>
+      <button id="logout">로그아웃</button>
+    </div>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<script src="hub.js"></script>
+<script src="tenant-demo.js"></script>
+<!-- ★ 홈 세 덩이 — 조합이 채우는 자료 (2026-09-17) -->
+<script src="home-blocks.js"></script>
+<script src="billing-demo.js"></script>
+<script src="auth-demo.js"></script>
+<script src="roster-demo.js"></script>
+<script src="archive-demo.js"></script>
+<script>
+/* ★ 어딘가에서 오류가 나면 그 아래 코드가 통째로 실행되지 않는다.
+   그러면 로그인 버튼에 아무것도 걸리지 않아 눌러도 반응이 없다.
+   무엇이 문제인지 화면에 띄워 준다. 안 그러면 알 길이 없다. */
+window.onerror = function(msg, src, line){
+  const e = document.getElementById('g-err');
+  if(e) e.innerHTML = `화면을 여는 중 문제가 생겼습니다<br>
+    <span style="font-size:.72rem">${msg} (${String(src||"").split("/").pop()}:${line})</span><br>
+    <span style="font-size:.72rem">이 문구를 그대로 알려 주십시오.</span>`;
+  return false;
+};
+
+const hsh = t => { let x=5381; for(const c of t){ x=((x*33)^c.codePointAt(0))>>>0 } return x.toString(36); };
+/* 운영자 계정 : 이름|암호 의 해시
+   류승현1 / 111111   ← 2026-08-21 추가
+   류승현  / 111111 */
+const OPS = ["fw17vx", "1f08nek"];
+
+const S = {name:"", tenant:"MIA-002"};
+
+/* ── 데이터 (나중에 Supabase 로 교체할 자리) ────────────── */
+/* ★ 회원사 · 홈 화면 · 전역 법령 자료는 tenant-demo.js 를 쓴다.
+   화면 표시값과 데이터베이스 tenant_id 가 같은 값(MIA-002)이다. */
+
+const ACCOUNTS = [
+  {tenant:"MIA-002", role:"조합장",   name:"김○○", scope:"전체",      active:true,  byOps:true},
+  {tenant:"MIA-002", role:"총무이사", name:"박○○", scope:"전체",      active:true,  byOps:true},
+  {tenant:"MIA-002", role:"직원",     name:"류○○", scope:"명부 제외", active:true,  byOps:false}
+];
+
+const AUDIT = [
+  ["2026-08-20 14:52", "류승현", "구역 전환", "MIA-002 열람 시작"],
+  ["2026-08-20 11:10", "류승현", "계정 발급", "MIA-002 · 조합장 마스터 계정"],
+  ["2026-08-19 16:40", "류승현", "전역 법령", "도시정비법 시행일 갱신 (2025-06-04)"],
+  ["2026-08-19 09:05", "류승현", "구역 추가", "JAN-001 상담 등록"]
+];
+
+function switchTenant(code){
+  const t = tnOf(code); if(!t) return;
+
+  /* ★ 저장하지 않은 것이 있으면 먼저 여쭙는다 (2026-08-22 오후).
+     홈 화면을 고쳐 놓고 다른 구역 탭을 누르면 그대로 날아갔다.
+     장위1 이름을 고치다 미아3 을 눌러 보고 돌아오면
+     고친 것이 없어져 있는데 왜 없어졌는지 알 수 없다. */
+  if(HOME_DIRTY && !confirm(
+      `${tName(TENANT_CODE)} 홈 화면에 저장하지 않은 변경이 있습니다.\n\n`
+    + `구역을 바꾸면 수정하신 내용이 사라집니다.\n`
+    + `그래도 옮기시겠습니까?`)) return;
+  HOME_DIRTY = false;
+
+  TENANT_CODE = code; S.tenant = code;
+  const d = new Date(), z = v => String(v).padStart(2,"0");
+  AUDIT.unshift([`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} `
+    + `${z(d.getHours())}:${z(d.getMinutes())}`,
+    S.name, "구역 전환", `${code} 열람 시작`]);
+  /* ★ 보시던 화면을 그대로 둔다 (2026-08-22).
+     예전에는 구역을 바꿀 때마다 「구역 정보」로 튕겼다.
+     홈 화면을 세 구역 연달아 고치실 때 매번 다시 들어가셔야 했다.
+     전역 화면을 보고 계셨으면 구역 정보로 데려간다. */
+  if(!isZoneView(cur)) cur = "one";
+  render(); scrollTo(0,0);
+}
+const T = () => TN();
+
+/* ═══════════════════════════════════════════════════════════
+   메뉴를 두 갈래로 나눈다 (2026-08-22)
+   ───────────────────────────────────────────────────────────
+   ★ 왜 나눴나
+     한 줄로 열두 개가 늘어서 있으니 어느 것이 전 구역에 걸리고
+     어느 것이 고른 구역에만 걸리는지 알 수 없었다.
+
+     전역 법령을 고치면 모든 조합에 반영되고,
+     홈 화면을 고치면 그 구역에만 반영된다.
+     이 둘을 같은 줄에 두면 언젠가 반드시 헷갈린다.
+     경기도 조합에 서울시 조례가 나갈 뻔한 것과 같은 종류의 사고다.
+
+   ★ 전역     구역을 고르든 말든 결과가 같다
+   ★ 구역별   위쪽 구역 탭에서 고른 구역에만 걸린다               */
+const MENU_G = [
+  {g:"전역 관리", items:[
+    ["tenants","회원사 현황"],
+    ["add",    "구역 추가"],
+    ["laws",   "전역 법령"],
+    ["ask",    "조문 짝짓기"],
+    ["idv",    "본인인증 정책"],
+    ["audit",  "감사 로그"],
+    ["bill",   "요금 · 사용량"]
+  ]},
+  {g:"고른 구역 관리", items:[
+    ["one",    "구역 정보"],
+    ["home",   "홈 화면 · 단계 일정"],
+    /* ★ 2026-09-17 — 셋을 「우리집」 하나로 묶었다 (직원 화면과 같게). */
+    ["myhome", "우리집"],
+    ["rules",  "검산 규칙"],
+    ["staff",  "직원 화면 열기 ↗"]
+  ]}
+];
+/* 예전 이름을 쓰는 곳이 있어 펼쳐 둔다 */
+const MENU = MENU_G.flatMap(x => x.items);
+
+/* ★ 어느 화면이 구역에 매인 것인가.
+   구역 탭과 띠는 이 목록을 보고 켜고 끈다. */
+/* ★ myhome 을 더했다 (2026-09-17). 예전 이름(market·apt·deal)도 남겨 둔다.
+   예전 주소를 눌러도 구역 띠가 사라지지 않게. */
+const ZONE_VIEWS = ["one","home","plan","myhome","market","apt","deal","rules","staff"];
+/* 왼쪽 설정 · 오른쪽 결과로 두 칸을 쓰는 화면 */
+const WIDE = ["deal","apt","myhome"];      /* 1420px — 오른쪽이 목록이라 넓을수록 좋다 */
+const MID  = ["home"];            /* 1180px — 오른쪽이 폰 모양이라 더 넓힐 이유가 없다 */
+const isZoneView = k => ZONE_VIEWS.includes(k);
+
+let cur = "tenants";
+/* ★ zone-admin.js 를 기다린 횟수 (2026-09-17) */
+let ZW_TRY = 0;
+
+/* ── 화면 ─────────────────────────────────────────────── */
+const V = {};
+
+/* ── 고른 구역의 직원 화면으로 ───────────────────────────
+   ★ 운영자는 조합 명부를 열람하지 않는다.
+     콘솔에는 인원 수만 보이고 이름 · 연락처는 나오지 않는다.
+     계정을 열어 주는 일과 명부를 보는 일은 다르다.
+
+   ★ 그래서 회계 집계 · 전자결재 · 조합원 명부를 콘솔로 옮기지 않았다.
+     그것들은 조합 직원이 자기 구역에서 쓰는 화면이다.
+     콘솔에 같은 것을 또 만들면 운영자가 남의 조합 자료를 보게 된다.
+
+   ★ 대신 그 구역 직원 화면으로 넘어가는 자리를 둔다.
+     넘어가면 그쪽 로그인을 거치므로 권한이 뒤섞이지 않는다. */
+/* ★ 이 자리에 있던 것은 zone-admin.js 로 옮겼다 (2026-09-17).
+     조합 직원 화면과 함께 읽는다. 복사하지 않는다. */
+/* ★ 이 자리에 있던 것은 zone-admin.js 로 옮겼다 (2026-09-17).
+     조합 직원 화면과 함께 읽는다. 복사하지 않는다. */
+V.staff = () => {
+  const t = T();
+  const acc = (typeof ACCOUNTS !== "undefined")
+    ? ACCOUNTS.filter(a => a.tenant === t.code) : [];
+  return `
+  <h2 class="pt">직원 화면 열기</h2>
+  <p class="pd"><b class="mono" style="color:var(--navy)">${t.code}</b> ·
+    ${t.name}의 조합 직원 화면으로 넘어갑니다</p>
+
+  <div class="warn"><b>운영자는 조합 명부를 열람하지 않습니다</b>
+    <p>회계 집계 · 전자결재 · 조합원 명부는 <b>조합 직원이 쓰는 화면</b>에 있습니다.
+       콘솔에 같은 것을 또 만들면 운영자가 남의 조합 자료를 그대로 보게 됩니다.
+       계정을 열어 드리는 일과 명부를 보는 일은 다릅니다.
+       넘어가시면 그쪽 로그인을 다시 거치므로 권한이 뒤섞이지 않습니다.</p></div>
+
+  <div class="box" style="margin-top:14px">
+    <div class="row"><span>조합 직원 화면</span><b class="mono">/admin</b></div>
+    <div class="row"><span>전자결재</span><b class="mono">/approval</b></div>
+    <div class="row"><span>조합원 앱</span><b class="mono">/</b></div>
+    <div class="row"><span>이 구역 계정</span>
+      <b>${acc.length ? acc.length + "개 발급됨" : "아직 없음"}</b></div>
+  </div>
+
+  <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px">
+    <button class="btn sm" onclick="openZone('admin.html')">
+      조합 직원 화면</button>
+    <button class="btn sm ghost" onclick="openZone('approval.html','go=box')">
+      전자결재</button>
+    <button class="btn sm ghost" onclick="openZone('index.html')">
+      조합원 앱</button>
+  </div>
+
+  <div class="warn" style="margin-top:14px"><b>구역이 함께 넘어갑니다</b>
+    <p>지금 고르신 <b class="mono">${t.code}</b> 로 열립니다.
+       예전에는 어느 구역을 고르셔도 <b>미아2 자료가 열렸습니다.</b>
+       미아3 홈 화면을 수정해 두고 직원 화면을 여시면 미아2 것이 보여
+       수정한 것이 안 들어간 줄 아시게 됩니다.<br>
+       다만 이것은 <b>화면이 어느 구역을 보여 줄까</b>일 뿐 진짜 차단이 아닙니다.
+       주소 끝의 구역 코드를 손으로 수정하면 남의 구역이 열립니다.
+       Supabase Auth 를 붙일 때 로그인한 사람의 구역만 열리도록 좁힙니다.</p></div>
+
+  <p class="note">${t.sub === "운영중"
+    ? "이 구역은 운영 중입니다."
+    : `이 구역은 <b>${t.sub}</b> 상태입니다. 계정을 먼저 발급하셔야 직원이 들어갈 수 있습니다.`}
+    한 조합 안에서 쓰는 화면이라 구역을 고르는 칸이 없습니다.
+    구역마다 주소가 갈리는 것은 Supabase Auth 를 붙일 때 함께 합니다.</p>`;
+};
+
+/* ★ 고른 구역을 함께 넘긴다 (2026-08-22 오후).
+   예전에는 그냥 admin.html 을 열었다. 그런데 그 화면은
+   TENANT_CODE 가 언제나 MIA-002 로 시작한다.
+   운영자가 장위1 을 고른 채로 직원 화면을 열면 미아2 자료가 나왔다.
+   자료를 고쳐 두고 안 들어간 줄 아시게 되는 자리다. */
+function openZone(page, extra){
+  const q = "t=" + encodeURIComponent(TENANT_CODE) + (extra ? "&" + extra : "");
+  const w = window.open(page + "?" + q, "_blank");
+  if(!w) alert("새 창이 열리지 않았습니다.\n\n"
+    + "브라우저가 팝업을 막고 있습니다.\n"
+    + "주소창 오른쪽 끝의 막힘 표시를 누르고 「항상 허용」을 고르십시오.");
+}
+
+/* ── 회원사 현황판 ─────────────────────────────────────── */
+/* ★ 환율은 운영자가 고친다.
+   달러로 내는 것이 있어 환율이 오르면 마진이 줄어드는데,
+   숫자로 보이지 않으면 그 사실을 모른 채 지나간다. */
+function fxSet(){
+  const v = prompt("원/달러 환율을 적어 주십시오.\n\n"
+    + "달러로 내는 고정비를 원화로 환산하는 데 씁니다.\n"
+    + "환율이 오르면 순수익이 줄어듭니다.", String(FX));
+  if(v === null) return;
+  const n = Number(String(v).replace(/[^0-9.]/g, ""));
+  if(!n || n < 100 || n > 5000){
+    alert("환율이 이상합니다.\n100 ~ 5000 사이로 적어 주십시오."); return; }
+  FX = Math.round(n); render();
+}
+
+V.tenants = () => {
+  const on    = TENANTS.filter(t=>t.sub==="운영중").length;
+  const units = TENANTS.reduce((a,t)=>a+(t.facts.units||0), 0);
+  const P     = opProfit();
+  const Q     = opPrev();
+  const share = opByTenant();
+  const won   = v => (v||0).toLocaleString("ko-KR");
+
+  /* 지난달 대비 — 지난달이 0이면 비율이 무한대가 되므로 표시하지 않는다 */
+  const gap = (now, was) => {
+    if(!was) return "";
+    const r = (now - was) / was * 100;
+    const up = r >= 0;
+    return `<i class="gp ${up?"up":"dn"}">${up?"▲":"▼"} ${Math.abs(r).toFixed(0)}%</i>`;
+  };
+  const bar = P.revenue ? Math.min(P.cost / P.revenue * 100, 100) : 0;
+
+  return `
+  <h2 class="pt">운영 현황</h2>
+  <p class="pd">이번 달 수지와 회원사 구독 상태입니다 · ${BILLQ.from}${BILLQ.to!==BILLQ.from?` ~ ${BILLQ.to}`:""}</p>
+
+  <div class="cards" style="grid-template-columns:repeat(3,1fr)">
+    <div class="card">
+      <span>이번 달 수입 ${gap(P.revenue, Q.revenue)}</span>
+      <b>${won(P.revenue)}<em>원</em></b>
+      <p class="cnote">구독료 + 초과 사용분 · 부가세 제외</p>
+    </div>
+    <div class="card">
+      <span>이번 달 지출 ${gap(P.cost, Q.cost)}</span>
+      <b>${won(P.cost)}<em>원</em></b>
+      <p class="cnote">고정 ${won(P.fixCost)} · 변동 ${won(P.varCost)}</p>
+    </div>
+    <div class="card ${P.profit>=0?"good":"bad"}">
+      <span>순수익 ${gap(P.profit, Q.profit)}</span>
+      <b>${P.profit<0?"−":""}${won(Math.abs(P.profit))}<em>원</em></b>
+      <p class="cnote">${P.profit>=0
+        ? `남습니다 · 수익률 ${P.rate.toFixed(1)}%`
+        : `밑집니다 · 조합 ${Math.ceil(Math.abs(P.profit)/ (PLAN.base||1))}곳이 더 필요합니다`}</p>
+    </div>
+  </div>
+
+  <div class="sec">수입 대비 지출</div>
+  <div class="box">
+    <div class="opbar">
+      <i class="c1" style="width:${P.revenue?P.fixCost/P.revenue*100:0}%"></i>
+      <i class="c2" style="width:${P.revenue?P.varCost/P.revenue*100:0}%"></i>
+    </div>
+    <div class="oplg">
+      <div><i class="c1"></i>고정비 <b>${won(P.fixCost)}</b>
+        <span>서버 · 도메인</span></div>
+      <div><i class="c2"></i>변동비 <b>${won(P.varCost)}</b>
+        <span>문자 · 본인확인 · AI</span></div>
+      <div><i class="c3"></i>남는 돈 <b>${won(Math.max(P.profit,0))}</b>
+        <span>수입의 ${(100-bar).toFixed(0)}%</span></div>
+    </div>
+    ${P.varCost===0?`<p class="note">
+      <b>이 기간에는 변동비가 없습니다.</b> 문자 · 본인확인을 보내지 않으신 달입니다.
+      총회가 있는 달에는 변동비가 크게 늘어납니다.
+      기간을 <b>2026-03</b> 으로 바꿔 보시면 총회 달의 수지를 보실 수 있습니다.</p>`:""}
+    ${P.profit<0?`<p class="note" style="color:#8C3A12">
+      <b>지출이 수입을 넘었습니다.</b> 회원사가 늘기 전까지는 이것이 정상입니다.
+      기본료 ${won(PLAN.base)}원 기준으로 조합
+      <b>${Math.ceil((P.cost)/(PLAN.base||1))}곳</b>이면 손익이 맞습니다.</p>`
+    :`<p class="note">고정비는 조합이 하나도 없어도 나갑니다.
+      회원사가 늘수록 한 조합이 지는 몫이 줄어듭니다.</p>`}
+  </div>
+
+  <div class="sec">구역별 구독 · 수납</div>
+  <div class="box" style="padding:0;overflow:hidden">
+    <table><thead><tr>
+      <th style="width:88px">고유번호</th><th>조합명</th>
+      <th style="width:96px">구독 플랜</th>
+      <th style="width:108px;text-align:right">이번 달 수입</th>
+      <th style="width:74px;text-align:right">기여도</th>
+      <th style="width:78px">납부</th><th style="width:56px">관리</th>
+    </tr></thead><tbody>
+    ${TENANTS.map(t=>{
+      const f  = share.find(x=>x.code===t.code);
+      const rv = f ? f.revenue : 0;
+      const sh = f ? f.share : 0;
+      const me = t.code===TENANT_CODE;
+      return `<tr class="tap ${me?"pick":""}" onclick="switchTenant('${t.code}')">
+      <td class="mono" style="color:${me?'var(--navy)':'var(--muted)'};font-weight:700">${t.code}</td>
+      <td><b style="font-weight:${me?800:400}">${t.name}</b>
+        <span class="tiny">${t.kind} · ${t.stage}${t.facts.units?` · ${won(t.facts.units)}세대`:""}</span></td>
+      <td>${t.sub==="운영중"
+        ? `<span class="pill p-blue">${PLAN.name}</span>`
+        : `<span class="tiny" style="color:var(--muted)">—</span>`}</td>
+      <td class="mono" style="text-align:right;font-weight:${rv?700:400};
+        color:${rv?'var(--ink)':'var(--muted)'}">${rv?won(rv):"—"}</td>
+      <td style="text-align:right">${rv?`<div class="shb">
+          <i style="width:${sh}%"></i></div><span class="tiny">${sh.toFixed(0)}%</span>`:`<span class="tiny">—</span>`}</td>
+      <td><span class="pill ${t.sub==="운영중"?"p-ok":t.sub==="미계약"?"p-warn":"p-wait"}">${t.sub}</span></td>
+      <td style="color:var(--blue);font-weight:700;font-size:.76rem">열기</td>
+    </tr>`;}).join("")}
+    <tr style="background:var(--mist)">
+      <td></td><td><b>합계 · 계약 ${TENANTS.length}곳 중 운영 중 ${on}곳</b></td>
+      <td></td>
+      <td class="mono" style="text-align:right;font-weight:800">${won(P.revenue)}</td>
+      <td style="text-align:right"><b class="tiny">100%</b></td>
+      <td colspan="2"></td>
+    </tr>
+    </tbody></table>
+  </div>
+  <p class="note">줄을 누르시면 그 구역으로 바뀝니다 · 누적 세대수 ${won(units)}세대<br>
+    <b>부가세는 수입에 넣지 않았습니다.</b> 받아서 국가에 내는 돈이라
+    수입으로 세면 10%가 통째로 부풀려집니다. (이번 기간 부가세 ${won(P.vat)}원)</p>
+
+  <div class="sec">나가는 돈 <em>고정비 · 환율 ${won(FX)}원/$</em></div>
+  <div class="box" style="padding:0;overflow:hidden">
+    <table><thead><tr>
+      <th style="width:40px"></th><th>항목</th><th style="width:150px">받는 곳</th>
+      <th style="width:96px;text-align:right">월 금액</th>
+    </tr></thead><tbody>
+    ${OPEX.map((o,i)=>`<tr style="${o.on?"":"opacity:.45"}">
+      <td><input type="checkbox" ${o.on?"checked":""}
+        onchange="OPEX[${i}].on=this.checked;render()"
+        style="width:15px;height:15px;accent-color:#12365F;cursor:pointer"></td>
+      <td><b>${o.name}</b>${o.usd?`<span class="tiny"> $${o.usd}</span>`:""}</td>
+      <td style="color:var(--muted)">${o.from}</td>
+      <td class="mono" style="text-align:right;font-weight:700">
+        ${opexOf(o)?won(opexOf(o)):"무료"}</td>
+    </tr>`).join("")}
+    <tr style="background:var(--mist)">
+      <td></td><td><b>한 달 고정비</b></td><td></td>
+      <td class="mono" style="text-align:right;font-weight:800">${won(opexSum())}</td>
+    </tr>
+    </tbody></table>
+  </div>
+  <p class="note">아직 계약하지 않은 것은 체크를 꺼 두었습니다.
+    계약하시면 켜십시오. 켜는 순간 순수익에 반영됩니다.<br>
+    환율은 <b>${won(FX)}원</b>으로 잡았습니다. 오르면 마진이 줄어듭니다.
+    <button class="lnk" onclick="fxSet()">환율 수정</button></p>
+
+  <div class="sec">시연 자료</div>
+  <div class="box">
+    <div class="row"><span>화면 사이 연결</span>
+      <b style="color:${HUB_ON?'var(--ok)':'var(--amber)'}">${HUB_ON?'켜짐':'사용 불가'}</b></div>
+    <div class="row"><span>어디까지 통하나</span>
+      <b style="font-weight:400">같은 컴퓨터 · 같은 브라우저</b></div>
+    <p class="note">${HUB_NOTE}<br>
+      직원 화면에서 소식을 올리면 조합원 앱에 그대로 나갑니다.
+      기기가 다르면 통하지 않습니다. 그건 Supabase 연동이 필요합니다.</p>
+    <button class="btn ghost sm" style="color:var(--red);margin-top:10px" onclick="wipeDemo()">
+      시연 자료 초기화</button>
+    <p class="note">시연 중에 올린 소식을 지우고 처음 상태로 되돌립니다.
+      조합장께 다시 보여드리기 전에 쓰십시오.</p>
+  </div>
+
+  <div class="sec">넘버링 규칙 <em>지역 3자리 + 구역번호 3자리</em></div>
+  <div class="box">
+    <div class="row"><span class="mono">MIA-002</span><b style="font-weight:400">미아 2구역</b></div>
+    <div class="row"><span class="mono">JAN-001</span><b style="font-weight:400">장위 1구역</b></div>
+    <div class="row"><span class="mono">HEU-003</span><b style="font-weight:400">흑석 3구역</b></div>
+  </div>
+  <p class="note">이 번호가 화면 표시이자 곧 데이터베이스의 <b class="mono">tenant_id</b> 입니다.
+    DB 행 · 접근제어 · 파일 폴더 · 감사 로그가 전부 이 값에 묶여 있어
+    <b>한 번 정하면 바꾸지 않습니다.</b></p>`;
+};
+
+/* ── 구역 관리 ─────────────────────────────────────────── */
+V.one = () => {
+  const t = T();
+  const acc = ACCOUNTS.filter(a=>a.tenant===t.code);
+  return `
+  <h2 class="pt">${t.name}</h2>
+  <p class="pd"><b class="mono" style="color:var(--navy)">${t.code}</b> · ${t.kind} · ${t.stage}</p>
+
+  <div class="sec">데이터가 어떻게 갈려 있는가</div>
+  <div class="box">
+    ${isolation(t.code).map(([k,v])=>`<div class="row">
+      <span>${k}</span><b class="mono">${v}</b></div>`).join("")}
+  </div>
+  <p class="note">구역이 늘어나도 서로의 자료를 볼 수 없습니다.
+    행 단위 접근 제어가 걸려 있어 코드가 잘못돼도 다른 구역 자료는 조회되지 않습니다.</p>
+
+  <div class="sec">발급된 계정 <em>${acc.length}개</em></div>
+  <div class="box" style="padding:0;overflow:hidden">
+    ${acc.length?`<table><thead><tr>
+      <th style="width:96px">권한</th><th style="width:96px">이름</th>
+      <th>접근 범위</th><th style="width:80px">상태</th><th style="width:74px">관리</th>
+    </tr></thead><tbody>
+    ${acc.map((a,i)=>`<tr>
+      <td><b>${a.role}</b>${a.byOps?"":`<span style="display:block;font-size:.72rem;color:var(--muted)">조합장이 발급</span>`}</td>
+      <td>${a.name}</td>
+      <td class="mono" style="color:var(--muted)">${t.code} · ${a.scope}</td>
+      <td><span class="pill ${a.active?"p-ok":"p-wait"}">${a.active?"사용":"정지"}</span></td>
+      <td><button style="color:${a.active?"var(--red)":"var(--blue)"};font-weight:700;font-size:.76rem"
+        onclick="toggleAcc(${i})">${a.active?"정지":"해제"}</button></td>
+    </tr>`).join("")}</tbody></table>`
+    :`<div style="padding:15px 17px;color:var(--muted);font-size:.84rem">
+        아직 발급된 계정이 없습니다.</div>`}
+  </div>
+
+  <div class="warn"><b>운영진이 만드는 것은 마스터 계정까지입니다</b>
+    <p>직원 계정은 조합장이 직접 만들고 권한을 정합니다.
+       위 직원 줄은 조합장이 만든 것이며, 운영진은 정지만 할 수 있습니다.
+       조합 내부의 행정 판단과 권한 배분에는 관여하지 않습니다.</p></div>
+
+  <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+    <button class="btn sm" onclick="issueMaster()">마스터 계정 발급</button>
+    <button class="btn ghost sm" onclick="cur='bill';render()">사용량 보기</button>
+    <button class="btn ghost sm" style="color:var(--red)" onclick="stopTenant()">구역 전체 정지</button>
+  </div>
+
+  <p class="note">이 콘솔에는 조합원 이름과 연락처가 나오지 않습니다.
+    계정을 열어 드리는 일과 명부를 보는 일은 다릅니다.</p>`;
+};
+function wipeDemo(){
+  if(!confirm("시연 중에 올린 자료를 모두 지웁니다.\n\n처음 상태로 되돌리시겠습니까?")) return;
+  hubReset();
+  alert("초기화했습니다.\n각 화면을 새로수정하시면 처음 상태로 돌아갑니다.");
+}
+function toggleAcc(i){
+  const acc = ACCOUNTS.filter(a=>a.tenant===T().code)[i]; if(!acc) return;
+  acc.active = !acc.active;
+  logIt(acc.active?"계정 해제":"계정 정지", `${T().code} · ${acc.role} ${acc.name}`);
+  render();
+}
+function issueMaster(){
+  const role = prompt("발급할 마스터 계정을 고르십시오\n\n1. 조합장\n2. 총무이사", "1");
+  if(role===null) return;
+  const r = role.trim()==="2" ? "총무이사" : "조합장";
+  const nm = prompt(`${r} 성함을 적어 주십시오`, "○○○"); if(nm===null) return;
+  ACCOUNTS.push({tenant:T().code, role:r, name:nm.trim()||"○○○",
+    scope:"전체", active:true, byOps:true});
+  logIt("계정 발급", `${T().code} · ${r} 마스터 계정`);
+  alert(`마스터 계정을 발급했습니다 (시연)\n\n${T().code} · ${r}\n`
+    + `직원 계정은 조합장이 직접 만드십니다.`);
+  render();
+}
+function stopTenant(){
+  const t = T();
+  if(!confirm(`${t.code} ${t.name}\n\n구역 전체를 정지합니다.\n`
+    + `조합원 앱과 직원 화면이 모두 막힙니다. 계속하시겠습니까?`)) return;
+  t.sub = t.sub === "정지" ? "운영중" : "정지";
+  logIt(t.sub==="정지"?"구역 정지":"구역 재개", `${t.code}`);
+  render();
+}
+function logIt(what, detail){
+  const d = new Date(), z = v => String(v).padStart(2,"0");
+  AUDIT.unshift([`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} `
+    + `${z(d.getHours())}:${z(d.getMinutes())}`, S.name, what, detail]);
+}
+
+/* ★ 이 자리에 있던 것은 zone-admin.js 로 옮겼다 (2026-09-17).
+     조합 직원 화면과 함께 읽는다. 복사하지 않는다. */
+/* ── 전역 법령 ─────────────────────────────────────────── */
+V.laws = () => `
+  <h2 class="pt">전역 법령</h2>
+  <p class="pd">모든 조합에 함께 적용되는 기준 법규입니다.</p>
+
+  <div class="box" style="background:#E8EEF7;border:0">
+    <b style="font-size:.84rem;color:var(--navy)">여기서 수정하면
+      법률 · 시행령은 ${TENANTS.length}개 조합 모두에, 조례는 해당 시·도 조합에만 반영됩니다</b>
+    <p style="font-size:.8rem;color:#41576B;line-height:1.65;margin-top:4px">
+      법률 · 시행령 · 시행규칙 · 국토부 고시는 전국 어디나 같으므로 구역별로 넣지 않습니다.
+      다만 <b>조례는 시·도마다 다릅니다.</b> 서울시 조례를 경기도 조합원께 보여 드리면
+      임대주택 의무비율부터 틀린 것을 보시게 됩니다. 적용 범위를 반드시 고르십시오.<br>
+      개별 조합의 정관 · 규정은 각 조합 자료실에서 관리합니다.</p>
+  </div>
+
+  <div class="box" style="background:#FFF4EC;border:1px solid #F3C7AC">
+    <b style="font-size:.84rem;color:#8C3A12">법령 전문은 올리지 않는 편이 낫습니다</b>
+    <p style="font-size:.8rem;color:#A85B33;line-height:1.7;margin-top:4px">
+      전문을 복사해 두면 <b>개정될 때마다 낡은 조문이 남습니다.</b>
+      아래 <b>법령 목록</b>에 이름 · 시행일 · 요약 · 국가법령정보센터 주소만 넣으시면
+      조합원이 누를 때마다 <b>언제나 현행</b>이 나옵니다.<br>
+      조합원 화면에는 요약과 시행일이 나가고, 원문은 링크로 보냅니다.</p>
+  </div>
+
+  <p class="note" style="margin-top:10px">법령 원문을 파일로 보관하지 않습니다.
+    개정될 때마다 낡은 조문이 남기 때문입니다.
+    폐지된 옛 법처럼 국가법령정보센터에 없는 것이 꼭 필요하시면 알려 주십시오.</p>
+
+  ${(()=>{ const old = LAWS.filter(l=>{
+      if(!l.eff) return true;
+      const d = new Date(l.eff.replace(/\./g,"-"));
+      return isNaN(d) || (Date.now() - d.getTime()) > 730*24*3600*1000;
+    });
+    return old.length ? `<div class="warn"><b>시행일이 오래된 것이 ${old.length}건 있습니다</b>
+      <p>${old.map(l=>`${l.name} · 시행 ${l.eff||"없음"}`).join("<br>")}</p>
+      <p>법이 그 뒤에 개정됐을 수 있습니다.
+         국가법령정보센터에서 <b>현행 시행일</b>을 확인하시고 수정해 주십시오.
+         조합원 화면에 이 날짜가 그대로 나갑니다.</p></div>` : ""; })()}
+
+  <div class="sec">법령 목록 <em>${LAWS.length}건</em>
+    <span style="font-size:.74rem;color:var(--muted);font-weight:400">
+      · 조합원이 누르면 국가법령정보센터로 갑니다</span></div>
+  <div class="box" style="padding:0;overflow:hidden">
+    <table><thead><tr>
+      <th style="width:80px">구분</th><th>법령명</th>
+      <th style="width:110px">현행 시행일</th><th style="width:88px">상태</th>
+      <th style="width:88px">관리</th>
+    </tr></thead><tbody>
+    ${LAWS.map((l,i)=>`<tr ${l.state!=="현행"?'style="background:#FFFBF7"':''}>
+      <td><span class="pill ${l.kind==="법률"?"p-blue":"p-wait"}">${l.kind}</span></td>
+      <td><b style="font-weight:400">${l.name}</b>
+        ${l.note?`<span style="display:block;font-size:.74rem;color:var(--muted);
+          line-height:1.5;margin-top:2px">${l.note}</span>`:""}</td>
+      <td class="mono" style="color:var(--muted)">${l.eff}</td>
+      <td><span class="pill ${l.state==="현행"?"p-ok":"p-warn"}">${l.state}</span></td>
+      <td><button style="color:var(--blue);font-weight:700;font-size:.76rem"
+          onclick="editLaw(${i})">수정</button>
+        · <button style="color:var(--blue);font-weight:700;font-size:.76rem"
+          onclick="delLaw(${i})">삭제</button></td>
+    </tr>`).join("")}
+    </tbody></table>
+  </div>
+
+  <div class="sec">법령 추가</div>
+  <div class="box">
+    <div class="g3">
+      <div class="f"><label>구분</label>
+        <select id="l-kind">${LAW_KINDS.map(k=>`<option>${k}</option>`).join("")}</select></div>
+      <div class="f"><label>법령명</label><input id="l-name" placeholder="도시 및 주거환경정비법"></div>
+      <div class="f"><label>시행일</label><input id="l-eff" type="date"></div>
+    </div>
+    <div class="f"><label>적용 범위 · 조례는 반드시 시·도를 고르십시오</label>
+      <select id="l-scope">
+        <option value="전국">전국 — 법률 · 시행령 · 시행규칙 · 국토부 고시</option>
+        ${SIDO.map(x=>`<option value="${x}">${x} — 조례 · 자치법규</option>`).join("")}
+      </select></div>
+    <div class="f"><label>원문 링크 (국가법령정보센터)</label>
+      <input id="l-url" placeholder="https://www.law.go.kr/법령/…"></div>
+    <div class="f"><label>요약 (선택) · AI 답변에도 함께 쓰입니다</label>
+      <input id="l-note" placeholder="제45조 제6항 신설로 상시 전자투표가 허용됐습니다."></div>
+    <button class="btn sm" onclick="addLaw()">법령 추가</button>
+  </div>
+
+  <div class="warn"><b>원문은 링크로 겁니다</b>
+    <p>법령 전문을 복사해 두면 개정될 때마다 낡은 조문이 남습니다.
+       국가법령정보센터로 연결하면 항상 현행이 나옵니다.
+       조합원 화면에는 <b>요약과 시행일</b>이 나가고 원문은 링크로 보냅니다.</p>
+    <p><b>조례는 시·도마다 다릅니다.</b> 적용 범위를 고르지 않으시면
+       다른 지역 조합원께 남의 조례가 나갑니다.</p></div>`;
+/* 시·도 목록 — 조례는 여기서 고른 곳에만 나간다 */
+const SIDO = ["서울특별시","부산광역시","대구광역시","인천광역시","광주광역시","대전광역시",
+  "울산광역시","세종특별자치시","경기도","강원특별자치도","충청북도","충청남도",
+  "전북특별자치도","전라남도","경상북도","경상남도","제주특별자치도"];
+
+function addLaw(){
+  const g=id=>{const e=document.getElementById(id);return e?e.value.trim():"";};
+  const name=g('l-name'); if(!name){ alert("법령명을 적어 주십시오."); return; }
+  const kind = g('l-kind')||"법률";
+  const sc = g('l-scope')||"전국";
+  /* ★ 조례를 전국으로 두면 다른 지역 조합원께 남의 조례가 나간다.
+     임대주택 의무비율은 지자체마다 다르다. */
+  if((kind==="조례" || /조례|자치법규/.test(name)) && sc==="전국"){
+    alert("조례는 시·도마다 다릅니다.\n\n"
+      + "적용 범위에서 해당 시·도를 골라 주십시오.\n"
+      + "전국으로 두시면 다른 지역 조합원께 남의 조례가 나갑니다."); return; }
+  LAWS.push({id:"L"+(LAWS.length+1), kind, name, scope:sc,
+    eff:g('l-eff')||"", state:"현행", url:g('l-url')||"", note:g('l-note')||""});
+  logIt("전역 법령 추가", `${name} · ${sc}`);
+  const n = sc === "전국" ? TENANTS.length
+    : TENANTS.filter(t => sidoOf(t) === sc).length;
+  alert(`법령을 추가했습니다 (시연)\n\n적용 범위 · ${sc}\n`
+    + `${n}개 조합 자료실에 반영됩니다.`
+    + (sc !== "전국" && !n ? `\n\n★ 지금 ${sc} 조합이 없어 아무 데도 나가지 않습니다.` : ""));
+  render();
+}
+/* ══════════════════════════════════════════════════════════
+   조문 짝짓기   (2026-08-21 추가)
+   ──────────────────────────────────────────────────────────
+   ★ 조합원이 물으시는 말과 답이 있는 자리를 이어 둔 표다.
+     "임원 해임" 하고 물으시면 제43조로 보낸다.
+
+   ★ 조문 번호는 틀릴 수 있다.
+     법이 개정되면 조 번호가 밀리는 일이 있다.
+     여기서 고치면 모든 조합에 함께 반영된다.
+
+   ★ 법으로 답할 수 없는 것은 갈래를 나눠 둔다.
+     정관 · 우리 구역 사실 · 아직 정해지지 않은 것.
+     엉뚱한 조문을 짚어 주는 것보다 없다고 말하는 편이 낫다.
+   ══════════════════════════════════════════════════════════ */
+const ASKV = {q:"", t:"all"};
+const ASK_KIND = {law:"법 조문", rule:"조합 정관", fact:"구역 자료", later:"아직"};
+
+function askEdit(i, field, v){
+  ASK_FIX[i] = Object.assign({}, ASK_FIX[i] || {});
+  ASK_FIX[i][field] = v;
+  if(typeof hubPushCommon !== "undefined") hubPushCommon("ask_fix", ASK_FIX, S.name);
+}
+function askSave(i){
+  const g=id=>{const e=document.getElementById(id);return e?e.value.trim():"";};
+  const art = g("ak-art-"+i), sum = g("ak-sum-"+i);
+  const o = askOf(i);
+  if(art !== (o.art||"")) askEdit(i, "art", art);
+  if(sum !== (o.sum||"")) askEdit(i, "sum", sum);
+  logIt("조문 짝짓기", `${o.w[0]} → ${art||"(없음)"}`);
+  alert(`고쳤습니다.\n\n${o.w[0]} → ${art||"조문 없음"}\n\n`
+    + `모든 조합에 함께 반영됩니다.`);
+  render();
+}
+function askReset(i){
+  const o = ASK_MAP[i];
+  if(!confirm(`${o.w[0]}\n\n처음 값으로 되돌리시겠습니까?\n`
+    + `조문 ${o.art||"없음"} · ${o.sum}`)) return;
+  delete ASK_FIX[i];
+  if(typeof hubPushCommon !== "undefined") hubPushCommon("ask_fix", ASK_FIX, S.name);
+  render();
+}
+
+V.ask = () => {
+  const rows = askAll().map((a,i)=>({a,i}))
+    .filter(({a}) => ASKV.t==="all" || a.t===ASKV.t)
+    .filter(({a}) => !ASKV.q || a.w.some(w=>w.indexOf(ASKV.q)>=0)
+                     || (a.sum||"").indexOf(ASKV.q)>=0
+                     || (a.art||"").indexOf(ASKV.q)>=0);
+  const cnt = k => askAll().filter(a=>a.t===k).length;
+  const fixed = Object.keys(ASK_FIX).length;
+  return `
+  <h2 class="pt">조문 짝짓기</h2>
+  <p class="pd">조합원이 물으시는 말과 답이 있는 자리를 이어 둡니다.</p>
+
+  <div class="box" style="background:#E8EEF7;border:0">
+    <b style="font-size:.84rem;color:var(--navy)">여기서 수정하면 모든 조합에 함께 반영됩니다</b>
+    <p style="font-size:.8rem;color:#41576B;line-height:1.7;margin-top:4px">
+      법이 개정되면 조 번호가 밀리는 일이 있습니다. 조합원이 엉뚱한 조문으로 가시지 않도록
+      <b>국가법령정보센터에서 확인하시고 수정해 주십시오.</b><br>
+      법으로 답할 수 없는 것은 갈래를 나눠 두었습니다.
+      정관에 있는 것을 법에서 찾아 답하면 틀립니다.</p>
+  </div>
+
+  <div class="cards" style="grid-template-columns:repeat(5,1fr);margin-top:12px">
+    <div class="card"><span>전체</span><b>${askAll().length}</b></div>
+    <div class="card"><span>법 조문</span><b>${cnt("law")}</b></div>
+    <div class="card"><span>조합 정관</span><b>${cnt("rule")}</b></div>
+    <div class="card"><span>구역 자료</span><b>${cnt("fact")}</b></div>
+    <div class="card"><span>수정하신 것</span><b style="color:var(--amber)">${fixed}</b></div>
+  </div>
+
+  <div style="display:flex;gap:7px;flex-wrap:wrap;margin:14px 0 10px">
+    ${[["all","전체"],["law","법 조문"],["rule","조합 정관"],["fact","구역 자료"],["later","아직"]]
+      .map(([k,l])=>`<button
+      style="border:${ASKV.t===k?"1.5px solid var(--navy)":"1px solid var(--line)"};
+      background:${ASKV.t===k?"var(--navy)":"#fff"};color:${ASKV.t===k?"#fff":"var(--muted)"};
+      border-radius:99px;padding:7px 14px;font-size:.8rem;
+      font-weight:${ASKV.t===k?700:400}"
+      onclick="ASKV.t='${k}';render()">${l}</button>`).join("")}
+    <input value="${ASKV.q}" placeholder="물으실 말 · 조문으로 찾기"
+      oninput="ASKV.q=this.value" onkeydown="if(event.key==='Enter')render()"
+      style="flex:1;min-width:180px;border:1px solid var(--line);border-radius:8px;
+      padding:7px 11px;font-size:.8rem;outline:none">
+    <button class="btn ghost sm" onclick="render()">찾기</button>
+  </div>
+
+  <div class="box" style="padding:0;overflow:hidden">
+    <table><thead><tr>
+      <th style="width:210px">물으실 말</th><th style="width:78px">갈래</th>
+      <th style="width:120px">조문</th><th>조합원 화면에 나가는 말</th>
+      <th style="width:120px"></th>
+    </tr></thead><tbody>
+    ${rows.map(({a,i})=>`<tr ${ASK_FIX[i]?'style="background:#FFF9F4"':''}>
+      <td><b style="font-weight:400">${a.w[0]}</b>
+        ${a.w.length>1?`<span style="display:block;font-size:.7rem;color:var(--muted)">
+          ${a.w.slice(1).join(" · ")}</span>`:""}</td>
+      <td><span class="pill ${a.t==="law"?"p-blue":a.t==="rule"?"p-warn":
+        a.t==="fact"?"p-wait":"p-wait"}">${ASK_KIND[a.t]}</span></td>
+      <td>${a.t==="law"
+        ? `<input id="ak-art-${i}" value="${a.art||""}" placeholder="제45조"
+            style="width:100%;border:1px solid var(--line);border-radius:6px;
+            padding:5px 8px;font-size:.78rem;font-family:monospace">
+           <span style="display:block;font-size:.68rem;color:var(--muted);margin-top:2px">
+             ${(LAWS.find(l=>l.id===a.id)||{}).kind||""}</span>`
+        : `<span style="color:var(--muted);font-size:.76rem">—</span>`}</td>
+      <td><input id="ak-sum-${i}" value="${(a.sum||"").replace(/"/g,'&quot;')}"
+        style="width:100%;border:1px solid var(--line);border-radius:6px;
+        padding:5px 8px;font-size:.78rem"></td>
+      <td><div style="display:flex;gap:5px;flex-wrap:wrap">
+        <button class="btn ghost sm" style="padding:4px 9px;font-size:.72rem"
+          onclick="askSave(${i})">저장</button>
+        ${ASK_FIX[i]?`<button class="btn ghost sm" style="padding:4px 9px;font-size:.72rem"
+          onclick="askReset(${i})">되돌리기</button>`:""}
+      </div></td>
+    </tr>`).join("")}
+    ${!rows.length?`<tr><td colspan="5" style="text-align:center;color:var(--muted);
+      padding:20px">찾으시는 것이 없습니다</td></tr>`:""}
+    </tbody></table>
+  </div>
+
+  <p class="note">조문 칸을 비우시면 법 첫 화면으로 갑니다.
+    <b>제45조</b>처럼 적으시면 그 조문에서 열립니다.
+    <b>제86조의2</b>처럼 「의2」가 붙는 것도 그대로 적으시면 됩니다.</p>
+
+  <div class="warn" style="margin-top:12px"><b>정관 · 구역 자료는 조문을 적지 않습니다</b>
+    <p>법에는 "정관으로 정한다"고만 되어 있어 실제 내용은 정관에 있습니다.
+       조합원께는 <b>"조합 정관에 있습니다 · 아직 등록 전입니다"</b>라고 안내하고
+       조합 사무실로 문의하시라고 알려 드립니다.
+       조합이 정관을 올리면 그때부터 원문을 열어 드립니다.</p></div>`;
+};
+
+/* ★ 이 자리에 있던 것은 zone-admin.js 로 옮겼다 (2026-09-17).
+     조합 직원 화면과 함께 읽는다. 복사하지 않는다. */
+
+/* ── 법령 원문 올리기 ────────────────────────────────────
+   ★ 법은 모든 조합에 똑같이 적용된다.
+     조합마다 올리면 개정될 때 조합 수만큼 손이 가고,
+     안 고친 조합은 옛 법을 그대로 보게 된다.
+     운영자가 한 번 올려 모든 조합이 같은 것을 본다. */
+/* ★ LAW_DOCS · LAW_SEQ · lawPut 은 archive-demo.js 에 있다.
+     조문 짝짓기(ASK_MAP)를 쓰려고 그 파일을 불러오므로 여기서 또 선언하면
+     "이미 선언됨" 오류가 나고 화면이 통째로 안 그려진다. */
+
+const LWU = {title:"", sub:"", file:null, busy:false};
+function lwKeep(){
+  const g=id=>{const e=document.getElementById(id);return e?e.value:null;};
+  const t=g("lw-t"), b=g("lw-s");
+  if(t!==null) LWU.title=t; if(b!==null) LWU.sub=b;
+}
+function lwPick(){
+  const inp = document.createElement("input");
+  inp.type="file"; inp.accept=".pdf,.hwp,.hwpx,.doc,.docx";
+  inp.onchange = () => {
+    const f = inp.files && inp.files[0]; if(!f) return;
+    if(f.size > 40*1024*1024){ alert(`파일이 너무 큽니다 (${hubSize(f.size)})\n한 건에 40MB까지입니다.`); return; }
+    lwKeep(); LWU.file = f;
+    if(!LWU.title) LWU.title = f.name.replace(/\.[^.]+$/, "");
+    render();
+  };
+  inp.click();
+}
+async function lwUp(){
+  lwKeep();
+  if(!LWU.file){ alert("올릴 파일을 골라 주십시오."); return; }
+  if(!LWU.title.trim()){ alert("법령명을 적어 주십시오."); return; }
+  if(LWU.busy) return;
+  LWU.busy = true; render();
+  const f = LWU.file;
+  const ext = (f.name.match(/\.[A-Za-z0-9]+$/) || [".pdf"])[0].toLowerCase();
+  const id = "LW-" + new Date().getFullYear() + "-" + String(++LAW_SEQ).padStart(3,"0");
+  const r = await hubUpload(f, hubPath("law", id) + ext);
+  if(!r.ok){ LWU.busy=false; LAW_SEQ--; render(); alert(r.why); return; }
+  const d = new Date(), z = v => String(v).padStart(2,"0");
+  LAW_DOCS.push({id, cat:"law", title:LWU.title.trim(), sub:LWU.sub.trim(),
+    file:f.name, path:r.path, size:r.size,
+    at:`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`,
+    by:"운영자", state:"verified"});
+  lawPut("운영자");
+  LWU.file=null; LWU.title=""; LWU.sub=""; LWU.busy=false;
+  alert(`올렸습니다.\n\n${f.name}\n\n${TENANTS.length}개 조합 자료실에 함께 나타납니다.`);
+  render();
+}
+async function lwOpen(id){
+  const d = LAW_DOCS.find(x=>x.id===id); if(!d) return;
+  const u = await hubFileUrl(d.path, 3600);
+  if(!u){ alert("파일을 열지 못했습니다."); return; }
+  window.open(u, "_blank");
+}
+function lwHide(id){
+  const d = LAW_DOCS.find(x=>x.id===id); if(!d) return;
+  if(!confirm(`${d.title}\n\n모든 조합 자료실에서 감추시겠습니까?\n`
+    + `법이 개정되어 옛 법이 된 경우에 쓰십시오.`)) return;
+  d.state="hidden"; lawPut("운영자"); render();
+}
+function lwShow(id){
+  const d = LAW_DOCS.find(x=>x.id===id); if(!d) return;
+  d.state="verified"; lawPut("운영자"); render();
+}
+async function lwDel(id){
+  const d = LAW_DOCS.find(x=>x.id===id); if(!d) return;
+  if(!confirm(`${d.title}\n${d.file}\n\n`
+    + `모든 조합 자료실에서 지웁니다.\n올린 파일도 함께 지워집니다.\n\n`
+    + `되돌릴 수 없습니다. 계속하시겠습니까?`)) return;
+  if(d.path && typeof hubFileDel !== "undefined") await hubFileDel(d.path);
+  LAW_DOCS = LAW_DOCS.filter(x => x.id !== id);
+  lawPut("운영자");
+  render();
+}
+
+function editLaw(i){
+  const l=LAWS[i]; if(!l) return;
+  const eff=prompt(`${l.name}\n\n시행일을 적어 주십시오`, l.eff); if(eff===null) return;
+  const st=prompt("상태를 적어 주십시오 (현행 · 확인 필요 · 폐지)", l.state); if(st===null) return;
+  l.eff=eff.trim()||l.eff; l.state=st.trim()||l.state;
+  logIt("전역 법령 수정", `${l.name} · ${l.eff}`); render();
+}
+function delLaw(i){
+  const l=LAWS[i]; if(!l) return;
+  if(!confirm(`${l.name}\n\n삭제하면 모든 조합 자료실에서 사라집니다. 계속하시겠습니까?`)) return;
+  LAWS.splice(i,1); logIt("전역 법령 삭제", l.name); render();
+}
+
+/* ★ 검산 규칙 — 원래 자료가 빠져 있어 이 화면이 열리지 않았다.
+   고시문에서 뽑은 수치가 서로 맞는지 기계가 스스로 따져 보는 규칙이다.
+   사람이 일일이 확인할 수 없으니, 규칙이 의심 지점을 짚어 주면
+   그 부분만 사람이 원문과 대조한다. */
+const RULES = [
+  ["AREA",  6, "구역 면적 · 획지별 면적의 합이 전체와 맞는가"],
+  ["FAR",   5, "용적률 · 기준 · 허용 · 상한 · 법적상한의 순서와 산식"],
+  ["UNIT",  4, "세대수 · 분양 + 임대 = 전체"],
+  ["RENT",  3, "임대주택 · 세대수와 면적이 함께 움직이는가"],
+  ["INFRA", 3, "기반시설 · 도로 · 공원 · 학교 면적의 합"],
+  ["DATE",  2, "일정 · 앞뒤 순서가 뒤집히지 않았는가"]
+];
+
+/* ★ 구역 추가 — 화면 자체가 없어 메뉴를 누르면 아무 일도 없었다. */
+V.add = () => `
+  <h2 class="pt">구역 추가</h2>
+  <p class="pd">새 조합을 받으실 때 여기서 시작합니다.</p>
+
+  <div class="box" style="background:#E8EEF7;border:0">
+    <b style="font-size:.84rem;color:var(--navy)">구역 하나를 여는 데 필요한 것</b>
+    <p style="font-size:.8rem;color:#41576B;line-height:1.7;margin-top:4px">
+      아래 다섯 가지가 갖춰져야 조합원 화면을 열 수 있습니다.
+      하나라도 빠지면 숫자가 비거나 틀린 채로 나갑니다.</p>
+  </div>
+
+  <div class="box" style="padding:0;overflow:hidden;margin-top:12px">
+    <table><thead><tr>
+      <th style="width:40px"></th><th>준비할 것</th><th style="width:280px">왜 필요한가</th>
+    </tr></thead><tbody>
+    ${[["구역 코드 · 이름", "MIA-002 처럼 겹치지 않는 코드. 모든 자료가 이 코드로 묶입니다."],
+       ["고시문 원문", "확정 수치를 여기서 뽑습니다. 검산을 거쳐야 화면에 나갑니다."],
+       ["조합원 명부", "의결권자 수 · 면적 요건의 모수입니다. 이것 없이는 아무것도 셀 수 없습니다."],
+       ["조합 정관", "의결 요건과 임원 구성이 정관마다 다릅니다."],
+       ["직원 계정", "누가 무엇을 했는지 남기려면 사람마다 따로 있어야 합니다."]]
+      .map(([t,d],i)=>`<tr>
+        <td class="mono" style="color:var(--muted)">${i+1}</td>
+        <td><b style="font-weight:400">${t}</b></td>
+        <td style="color:var(--muted);font-size:.8rem;line-height:1.6">${d}</td>
+      </tr>`).join("")}
+    </tbody></table>
+  </div>
+
+  <div class="box" style="margin-top:12px">
+    <b style="font-size:.84rem;color:var(--navy)">상담 등록</b>
+    <p class="note" style="margin-top:4px">아직 자료가 안 갖춰진 조합은 상담으로만 적어 둡니다.
+      실제 구역을 여는 것은 자료를 다 받은 뒤입니다.</p>
+    <div class="frow" style="margin-top:10px">
+      <div class="f mini" style="margin:0"><label>구역 코드</label>
+        <input id="ad-code" placeholder="JAN-001"></div>
+      <div class="f grow" style="margin:0"><label>구역 이름</label>
+        <input id="ad-name" placeholder="○○재정비촉진구역"></div>
+      <button class="btn sm" style="flex:0 0 auto" onclick="addTenant()">상담 등록</button>
+    </div>
+  </div>
+
+  <p class="note">지금은 시연이라 상담 등록까지만 됩니다.
+    실제 구역 개설은 고시문 검산과 명부 검증을 마친 뒤 진행합니다.</p>`;
+
+function addTenant(){
+  const g=id=>{const e=document.getElementById(id);return e?e.value.trim():"";};
+  const c=g("ad-code"), n=g("ad-name");
+  if(!c || !n){ alert("구역 코드와 이름을 넣어 주십시오."); return; }
+  if(TENANTS.some(t=>t.code===c)){ alert("이미 있는 구역 코드입니다."); return; }
+  const d=new Date(), z=v=>String(v).padStart(2,"0");
+  AUDIT.unshift([`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())} `
+    + `${z(d.getHours())}:${z(d.getMinutes())}`, S.name, "구역 추가", `${c} 상담 등록`]);
+  alert(`상담으로 등록했습니다 (시연)\n\n${c} · ${n}\n\n`
+    + `실제 구역 개설은 고시문 · 명부 · 정관을 받은 뒤 진행합니다.`);
+  render();
+}
+
+V.rules = () => {
+  const total = RULES.reduce((a,[,n])=>a+n,0);
+  return `
+  <h2 class="pt">검산 규칙</h2>
+  <p class="pd">규칙 ${total}개 · ${T().name}</p>
+  <div class="box" style="padding:0;overflow:hidden">
+    <table><thead><tr>
+      <th style="width:140px">규칙군</th><th style="width:80px">개수</th>
+      <th>내용</th><th style="width:90px">결과</th>
+    </tr></thead><tbody>
+    ${RULES.map(([k,n,d])=>`<tr><td class="mono">${k}</td><td>${n}</td><td>${d}</td>
+      <td><span class="pill ${T().facts?'p-ok':'p-wait'}">${T().facts?'통과':'자료 없음'}</span></td>
+    </tr>`).join('')}
+    </tbody></table>
+  </div>
+  <div class="warn"><b>규칙은 구역마다 다시 확인해야 합니다</b>
+    <p>지금 규칙은 미아2 고시문 서식에 맞춰 만든 것입니다.
+       서식이 다른 구역에서는 그대로 쓸 수 없고, 같은 방식으로 다시 만들어야 합니다.
+       "23개가 어디에나 그대로 적용된다"고 말하면 나중에 문제가 됩니다.</p></div>
+  <p class="note">행정 고시문의 표는 내부 합계가 맞아떨어지도록 만들어져 있습니다.
+    그 성질을 이용해 옮겨 적는 과정의 오류를 자동으로 잡아냅니다.</p>`;
+};
+
+V.audit = () => `
+  <h2 class="pt">감사 로그</h2>
+  <p class="pd">지울 수 없는 기록 ${AUDIT.length}건</p>
+  <div class="box" style="padding:0;overflow:hidden">
+    <table><thead><tr>
+      <th style="width:140px">시각</th><th style="width:90px">사용자</th>
+      <th style="width:120px">행위</th><th>내용</th>
+    </tr></thead><tbody>
+    ${[...AUDIT].reverse().map(a=>`<tr>
+      <td class="mono">${a.t}</td><td>${a.who}</td>
+      <td><span class="pill ${a.lv==='switch'?'p-blue':a.lv==='warn'?'p-warn':'p-wait'}">${a.act}</span></td>
+      <td>${a.detail}</td></tr>`).join('')}
+    </tbody></table>
+  </div>
+  <p class="note">구역 현황에서 다른 구역을 눌러 보시면 이 목록에 <b>구역 전환</b> 기록이 바로 쌓입니다.
+    분쟁이 생기면 이 기록을 그대로 제출할 수 있어야 하므로,
+    정식 운영 시에는 수정할 수 없는 저장소에 따로 보관합니다.</p>`;
+
+/* ── 본인인증 ──────────────────────────────────────────────
+   ★ 여기서만 원가와 청구 단가를 함께 본다.
+   ★ PIN · 생체는 기기 안에서 끝나므로 공급처에 낼 돈이 없다. */
+V.idv = () => {
+  const sum = idvSummary();
+  const b = billOf(T().code);
+  const passLine = b.lines.find(l=>l.k==="pass") || {used:0, amount:0};
+  const niceLine = b.lines.find(l=>l.k==="nice") || {used:0, amount:0};
+  return `
+  <h2 class="pt">본인인증</h2>
+  <p class="pd">최초 1회 확인 · 평상시 무인증 · 의결 직전 재확인</p>
+
+  <div class="sec">연동 방식</div>
+  <div class="svg2">
+    ${IDV_GATEWAYS.map(g=>`<button class="svc ${IDV_GATEWAY===g.k?'':''}"
+      style="${IDV_GATEWAY===g.k?'border:1.5px solid var(--navy);background:#F0F5FB':''}"
+      onclick="IDV_GATEWAY='${g.k}';logIt('인증 연동 변경',g.name);render()">
+      <b>${g.name}${IDV_GATEWAY===g.k?` <span class="pill p-blue" style="margin-left:6px">사용 중</span>`:""}</b>
+      <p>${g.desc}</p></button>`).join("")}
+  </div>
+
+  <div class="sec">인증 수단 · 단가
+    <em>단가를 수정하면 청구가 다시 계산됩니다</em></div>
+  <div class="box" style="padding:0;overflow:hidden">
+    <table><thead><tr>
+      <th>인증 수단</th><th style="width:104px">공급처</th>
+      <th style="width:88px">원가</th><th style="width:96px">청구 단가</th>
+      <th style="width:74px;text-align:right">이 기간</th>
+      <th style="width:88px;text-align:right">청구액</th>
+      <th style="width:62px">사용</th>
+    </tr></thead><tbody>
+    ${IDV_PROVIDERS.map((p,i)=>{
+      const used = p.k==="pass" ? passLine.used : p.k==="nice" ? niceLine.used
+                 : (sum[p.k]||{n:0}).n;
+      const amt  = p.k==="pass" ? passLine.amount : p.k==="nice" ? niceLine.amount : 0;
+      return `<tr ${p.off?'style="opacity:.5"':''}>
+      <td><b style="font-weight:400">${p.name}</b>
+        <span style="display:block;font-size:.74rem;color:var(--muted)">${p.desc}</span></td>
+      <td style="color:var(--muted)">${p.from}</td>
+      <td>${p.strong?`<input type="number" value="${p.cost}"
+        onchange="setIdv(${i},'cost',this.value)"
+        style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px 7px;
+        font-size:.76rem;text-align:right;font-family:ui-monospace,monospace;
+        color:var(--muted);outline:none">`
+        :`<span style="color:var(--ok);font-weight:700">0</span>`}</td>
+      <td>${p.strong?`<input type="number" value="${p.fee}"
+        onchange="setIdv(${i},'fee',this.value)"
+        style="width:100%;border:1px solid var(--navy);border-radius:6px;padding:5px 7px;
+        font-size:.76rem;text-align:right;font-family:ui-monospace,monospace;
+        font-weight:700;color:var(--navy);outline:none">`
+        :`<span style="color:var(--ok);font-weight:700">0</span>`}</td>
+      <td class="mono" style="text-align:right">${wonB(used)}</td>
+      <td class="mono" style="text-align:right;font-weight:700">
+        ${p.strong?wonB(amt):`<span style="color:var(--ok)">0</span>`}</td>
+      <td><button style="color:var(--blue);font-weight:700;font-size:.76rem"
+        onclick="toggleIdv(${i})">${p.off?"열기":"끄기"}</button></td>
+    </tr>`;}).join("")}
+    </tbody></table>
+  </div>
+  <p class="note">PASS · NICE 단가는 요금 화면의 본인확인 항목과 같은 값입니다.
+    한쪽에서 수정하면 양쪽이 함께 바뀝니다.</p>
+
+  <div class="sec">재인증 등급</div>
+  <div class="box" style="padding:0;overflow:hidden">
+    <table><thead><tr>
+      <th>무엇을 할 때</th><th style="width:150px">필요한 확인</th><th>왜</th>
+    </tr></thead><tbody>
+    <tr><td>공지 · 자료실 · AI 질의</td>
+      <td><span class="pill p-ok">인증 없이</span></td>
+      <td style="color:var(--muted)">법적 증빙이 필요 없습니다</td></tr>
+    <tr><td>설문 응답</td>
+      <td><span class="pill p-blue">PIN · 생체</span></td>
+      <td style="color:var(--muted)">참고용 조사이나 1인 1회는 지켜야 합니다</td></tr>
+    <tr><td>일반 안건 전자투표</td>
+      <td><span class="pill p-blue">PIN · 생체</span></td>
+      <td style="color:var(--muted)">대리 투표를 막습니다. 기기 안에서 처리되어 과금이 없습니다</td></tr>
+    <tr style="background:#FFFBF7"><td><b>시공자 선정 의결</b></td>
+      <td><span class="pill p-warn">PASS 필수</span></td>
+      <td style="color:#8C3A12">법이 조합원 과반수 직접 출석을 요구하는 안건입니다</td></tr>
+    <tr style="background:#FFFBF7"><td><b>동의서 제출</b></td>
+      <td><span class="pill p-warn">PASS 필수</span></td>
+      <td style="color:#8C3A12">소송에서 가장 치열하게 다투는 서류입니다</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="sec">세션 정책</div>
+  <div class="box">
+    <div class="row"><span>세션 유효기간</span>
+      <b><input type="number" value="${IDV_POLICY.sessionDays}"
+        onchange="IDV_POLICY.sessionDays=Number(this.value)||90;render()"
+        style="width:80px;border:1px solid var(--line);border-radius:6px;padding:5px 7px;
+        font-size:.8rem;text-align:right;font-family:ui-monospace,monospace;outline:none"> 일</b></div>
+    <div class="row"><span>기기를 바꾸면</span>
+      <b><button style="color:var(--blue);font-weight:700"
+        onclick="IDV_POLICY.deviceBound=!IDV_POLICY.deviceBound;render()">
+        ${IDV_POLICY.deviceBound?"다시 인증":"그대로 사용"}</button></b></div>
+    <div class="row"><span>명부가 바뀌면</span>
+      <b><button style="color:var(--blue);font-weight:700"
+        onclick="IDV_POLICY.rosterRecheck=!IDV_POLICY.rosterRecheck;render()">
+        ${IDV_POLICY.rosterRecheck?"다시 대조":"그대로 사용"}</button></b></div>
+  </div>
+  <p class="note">명부가 바뀌면 다시 대조하는 편이 안전합니다.
+    지분이나 대표조합원이 바뀌면 의결권도 달라지는데,
+    옛 세션이 남아 있으면 의결권 없는 분이 투표할 수 있습니다.</p>
+
+  <div class="warn"><b>인증 정보는 조합에 저장하지 않습니다</b>
+    <p>본인확인기관이 준 식별값(CI)만 받아 명부와 대조하고 버립니다.
+       주민번호나 생년월일을 조합 서버에 두면 그 자체가 사고 위험입니다.
+       「개인정보 보호법」상 조합이 처리자, 운영사가 수탁자입니다.</p></div>`;
+};
+function setIdv(i, key, v){
+  const p = IDV_PROVIDERS[i]; if(!p) return;
+  p[key] = Number(v) || 0;
+  /* 요금표의 같은 항목도 함께 고친다. 한쪽만 바뀌면 청구가 어긋난다. */
+  const bp = (typeof PRICE !== "undefined") ? PRICE.find(x=>x.k===p.k) : null;
+  if(bp) bp[key] = p[key];
+  logIt("인증 단가 수정", `${p.name} · ${key}=${p[key]}`);
+  render();
+}
+function toggleIdv(i){
+  const p = IDV_PROVIDERS[i]; if(!p) return;
+  if(!p.strong){ alert("PIN · 생체는 끌 수 없습니다.\n일반 안건 재인증의 기본 수단입니다."); return; }
+  p.off = !p.off;
+  logIt(p.off?"인증 수단 중지":"인증 수단 개시", p.name);
+  render();
+}
+
+/* ── 요금 · 사용량 ─────────────────────────────────────────
+   ★ 여기서만 원가와 단가를 함께 본다. 조합 화면에는 나오지 않는다.
+   ★ 초과분은 달마다 따로 센다.
+     분기 합계로 계산하면 제공량을 세 배로 준 셈이 되어
+     실제보다 적게 청구된다. 정산에서 가장 흔한 실수다. */
+V.bill = () => {
+  const all = billAll();
+  const b = billOf(T().code);
+  return `
+  <h2 class="pt">요금 · 사용량</h2>
+  <p class="pd">기본료에 든 만큼은 그냥 쓰시고, 넘긴 만큼만 더 내십니다.</p>
+
+  <div class="filt" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+    <input type="month" value="${BILLQ.from}" onchange="BILLQ.from=this.value;render()">
+    <span style="color:var(--muted);font-size:.8rem">~</span>
+    <input type="month" value="${BILLQ.to}" onchange="BILLQ.to=this.value;render()">
+    ${[["1분기","2026-01","2026-03"],["이번 달","2026-03","2026-03"],
+       ["지난달","2026-02","2026-02"],["올해","2026-01","2026-12"]].map(([l,f,t])=>
+      `<button class="btn ghost sm" style="${BILLQ.from===f&&BILLQ.to===t
+        ?'border-color:var(--navy);color:var(--navy);font-weight:800':''}"
+        onclick="BILLQ.from='${f}';BILLQ.to='${t}';render()">${l}</button>`).join("")}
+    <button class="btn ghost sm" style="margin-left:auto" onclick="csvBill()">CSV</button>
+  </div>
+
+  <div class="cards" style="grid-template-columns:repeat(4,1fr)">
+    <div class="card"><span>과금 대상</span>
+      <b>${all.each.length}<span style="font-size:.8rem;color:var(--muted)"> / ${TENANTS.length}</span></b></div>
+    <div class="card"><span>발송 건수</span><b>${wonB(b.sendCnt)}</b></div>
+    <div class="card"><span>본인확인 · AI</span><b>${wonB(b.authCnt + b.aiCnt)}</b></div>
+    <div class="card"><span>청구 예정</span>
+      <b style="color:var(--navy)">${wonB(all.sum.total)}<span style="font-size:.8rem"> 원</span></b></div>
+  </div>
+
+  <div class="sec">항목별 사용량 · 단가
+    <em>단가를 수정하면 모든 계산이 다시 됩니다</em></div>
+  <div class="box" style="padding:0;overflow:hidden">
+    <table><thead><tr>
+      <th>항목</th><th style="width:104px">공급처</th>
+      <th style="width:72px;text-align:right">사용</th>
+      <th style="width:72px;text-align:right">제공량</th>
+      <th style="width:64px;text-align:right">초과</th>
+      <th style="width:88px">원가</th><th style="width:88px">청구 단가</th>
+      <th style="width:84px;text-align:right">청구액</th>
+    </tr></thead><tbody>
+    ${b.lines.map((l,i)=>`<tr ${l.over?'style="background:#FFFBF7"':''}>
+      <td><b style="font-weight:${l.over?700:400}">${l.name}</b></td>
+      <td style="color:var(--muted)">${l.from}</td>
+      <td class="mono" style="text-align:right">${wonB(l.used)}</td>
+      <td class="mono" style="text-align:right;color:var(--muted)">${wonB(l.incl)}</td>
+      <td class="mono" style="text-align:right;color:${l.over?'var(--amber)':'var(--muted)'}">
+        ${l.over?wonB(l.over):"—"}</td>
+      <td><input type="number" value="${l.cost}" onchange="setPrice(${i},'cost',this.value)"
+        style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px 7px;
+        font-size:.76rem;text-align:right;font-family:ui-monospace,monospace;
+        color:var(--muted);outline:none"></td>
+      <td><input type="number" value="${l.fee}" onchange="setPrice(${i},'fee',this.value)"
+        style="width:100%;border:1px solid var(--navy);border-radius:6px;padding:5px 7px;
+        font-size:.76rem;text-align:right;font-family:ui-monospace,monospace;
+        font-weight:700;color:var(--navy);outline:none"></td>
+      <td class="mono" style="text-align:right;font-weight:700">${wonB(l.amount)}</td>
+    </tr>`).join("")}
+    <tr style="background:var(--mist)">
+      <td><b>초과 요금 합계</b></td><td></td>
+      <td class="mono" style="text-align:right"><b>${wonB(b.lines.reduce((a,l)=>a+l.used,0))}</b></td>
+      <td></td>
+      <td class="mono" style="text-align:right"><b>${wonB(b.lines.reduce((a,l)=>a+l.over,0))}</b></td>
+      <td colspan="2" style="text-align:right;color:var(--muted);font-size:.76rem">
+        원가 ${wonB(b.cost)}</td>
+      <td class="mono" style="text-align:right;font-weight:800">${wonB(b.overSum)}</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="sec">기본 제공량 <em>기본료에 들어 있는 월 사용량</em></div>
+  <div class="box" style="padding:0;overflow:hidden">
+    <table><thead><tr>
+      <th>항목</th><th style="width:150px">월 제공량</th>
+      <th style="width:150px">기본료 (월)</th><th>비고</th>
+    </tr></thead><tbody>
+    ${PRICE.map((p,i)=>`<tr>
+      <td>${p.name}</td>
+      <td><input type="number" value="${p.incl}" onchange="setPrice(${i},'incl',this.value)"
+        style="width:100%;border:1px solid var(--line);border-radius:6px;padding:5px 7px;
+        font-size:.78rem;text-align:right;font-family:ui-monospace,monospace;outline:none"></td>
+      ${i===0?`<td rowspan="${PRICE.length}" style="vertical-align:top">
+        <input type="number" value="${PLAN.base}" onchange="PLAN.base=Number(this.value)||0;render()"
+          style="width:100%;border:1px solid var(--navy);border-radius:6px;padding:5px 7px;
+          font-size:.78rem;text-align:right;font-family:ui-monospace,monospace;
+          font-weight:700;color:var(--navy);outline:none">
+        <span style="display:block;font-size:.74rem;color:var(--muted);margin-top:5px">
+          ${PLAN.name} · ${PLAN.note}</span></td>`:""}
+      <td style="color:var(--muted);font-size:.78rem">
+        ${p.k==="ai"?"조합원이 자료실에서 물어본 횟수":
+          p.k==="alim"?"실패 시 문자로 대체되면 문자로 셉니다":"—"}</td>
+    </tr>`).join("")}
+    </tbody></table>
+  </div>
+  <p class="note">초과분은 <b>달마다 따로</b> 셉니다.
+    분기 합계로 계산하면 제공량을 세 배로 준 셈이 되어 실제보다 적게 청구됩니다.
+    정산에서 가장 흔한 실수입니다.</p>
+
+  <div class="sec">구역별 상세</div>
+  <div class="box" style="padding:0;overflow:hidden">
+    <table><thead><tr>
+      <th style="width:92px">고유번호</th><th>조합명</th>
+      ${PRICE.map(p=>`<th style="width:58px;text-align:right">${p.name.replace(/ .*/,"").replace("카카오","알림톡").replace("본인확인","")}</th>`).join("")}
+      <th style="width:88px;text-align:right">청구액</th>
+    </tr></thead><tbody>
+    ${TENANTS.map(t=>{
+      const has = USAGE.some(u=>u.code===t.code);
+      const bb = has ? billOf(t.code) : null;
+      const su = has ? usageSum(t.code) : null;
+      return `<tr ${has?'':'style="opacity:.5"'}>
+        <td class="mono" style="color:${has?'var(--navy)':'var(--muted)'};font-weight:${has?700:400}">${t.code}</td>
+        <td>${t.short}${has?"":` <span style="font-size:.72rem;color:var(--muted)">(${t.sub})</span>`}</td>
+        ${PRICE.map(p=>`<td class="mono" style="text-align:right;color:${has?'var(--ink)':'#B9C0C9'}">
+          ${has?wonB(su[p.k]):"—"}</td>`).join("")}
+        <td class="mono" style="text-align:right;font-weight:700">${has?wonB(bb.total):"0"}</td>
+      </tr>`;}).join("")}
+    </tbody></table>
+  </div>
+
+  <div class="sec">${T().code} · 청구서</div>
+  <div class="box" style="border:1px solid var(--navy);background:#F8FAFD">
+    <div class="row"><span>기본 이용료 (월 ${wonB(PLAN.base)}원 × ${b.ms.length}개월)</span>
+      <b class="mono">${wonB(b.base)}</b></div>
+    <div class="row"><span>초과 사용 요금</span><b class="mono">${wonB(b.overSum)}</b></div>
+    <div class="row"><span>공급가액</span><b class="mono">${wonB(b.supply)}</b></div>
+    <div class="row"><span>부가세 10%</span><b class="mono">${wonB(b.vat)}</b></div>
+    <div class="row" style="border-top:1px solid var(--line);padding-top:11px">
+      <span style="font-weight:700;color:var(--navy)">합계</span>
+      <b class="mono" style="font-size:1.05rem;color:var(--navy)">${wonB(b.total)}원</b></div>
+  </div>
+
+  <div class="box" style="margin-top:12px">
+    <div class="row"><span>공급처 원가</span><b class="mono">${wonB(b.cost)}</b></div>
+    <div class="row"><span>운영 마진</span>
+      <b class="mono" style="color:var(--ok)">${wonB(b.margin)}</b></div>
+    <div class="row"><span>마진율</span>
+      <b>${b.supply?Math.round(b.margin/b.supply*1000)/10:0}%</b></div>
+  </div>
+  <p class="note">원가와 마진은 <b>이 콘솔에서만</b> 보입니다.
+    조합 화면에는 묶음 청구 금액만 나갑니다.</p>`;
+};
+function setPrice(i, key, v){
+  const p = PRICE[i]; if(!p) return;
+  p[key] = Number(v) || 0;
+  /* ★ 본인인증 화면의 같은 항목도 함께 고친다.
+     한쪽만 바뀌면 두 화면이 다른 단가를 보여주고,
+     어느 쪽으로 청구되는지 알 수 없게 된다. */
+  if(typeof IDV_PROVIDERS !== "undefined"){
+    const ip = IDV_PROVIDERS.find(x => x.k === p.k);
+    if(ip && (key === "cost" || key === "fee")) ip[key] = p[key];
+  }
+  logIt("단가 수정", `${p.name} · ${key}=${p[key]}`);
+  render();
+}
+function csvBill(){
+  const b = billOf(T().code);
+  const rows = [
+    ["다알아 · 사용량 및 요금 명세"],
+    [T().code, T().name, `${BILLQ.from} ~ ${BILLQ.to}`],
+    [],
+    ["항목","공급처","사용","제공량","초과","청구단가","청구액"]
+  ];
+  b.lines.forEach(l=>rows.push([l.name,l.from,l.used,l.incl,l.over,l.fee,l.amount]));
+  rows.push([], ["기본 이용료","","","","","",b.base], ["초과 사용 요금","","","","","",b.overSum],
+    ["공급가액","","","","","",b.supply], ["부가세","","","","","",b.vat],
+    ["합계","","","","","",b.total]);
+  const csv = "\uFEFF" + rows.map(r=>r.map(v=>{
+    const s=String(v==null?"":v); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
+  }).join(",")).join("\r\n") + "\r\n";
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  a.download = `요금명세_${T().code}_${BILLQ.from}_${BILLQ.to}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+/* ★ 한글이 조합되는 중에는 다시 그리지 않는다 (2026-08-22 밤).
+   자세한 것은 admin.html 의 imeWatch 주석 참고.
+/* ★ IME_ON · alqType · imeBind 는 zone-admin.js 로 옮겼다 (2026-09-17).
+     비교 아파트 찾기 칸(AL.q)을 다루는 짝이라 함께 두어야 한다. */
+
+function render(){
+  try { renderInner(); stageCenter();
+        if(typeof homeMark !== "undefined") homeMark(); }
+  catch(e){
+    document.getElementById('main').innerHTML =
+      `<h2 class="pt">화면을 여는 중 문제가 생겼습니다</h2>
+       <div class="box" style="border-color:var(--amber);background:#FFF4EC">
+         <b style="color:#8C3A12">${(e && e.message) || "알 수 없는 오류"}</b>
+         <p style="font-size:.82rem;color:#A85B33;line-height:1.7;margin-top:6px">
+           이 화면만 열리지 않는 것이고 자료는 그대로 있습니다.<br>
+           Ctrl + Shift + R 을 눌러 새로 불러와 보시고,
+           그래도 같으면 이 문구를 그대로 알려 주십시오.</p></div>`;
+  }
+}
+/* ★ 구역 코드로 이름을 찾는다. 원래 없어서 화면이 열리지 않았다. */
+/* ═══════════════════════════════════════════════════════════
+   구역 탭 · 지금 다루는 구역 띠 (2026-08-22)
+   ───────────────────────────────────────────────────────────
+   ★ 운영자가 지금 어느 조합 자료를 만지고 있는지
+     화면을 볼 때마다 알 수 있어야 한다.
+     사이드바 구석의 작은 글자로는 부족하다.
+     미아3 자료를 고치면서 미아2인 줄 아는 일이 생긴다.
+
+   ★ 전역 화면에서는 탭을 흐리게 하고 「구역과 상관없습니다」를 띄운다.
+     끄지 않고 흐리게만 두는 이유는, 아예 사라지면
+     "왜 없어졌지" 하고 찾게 되기 때문이다.
+
+   ★ 계약이 안 된 구역도 탭에 나온다. 다만 눌러도 되는지를 표시한다.
+     상담 중인 구역을 미리 손봐 두는 일이 있다.              */
+function zoneBar(){
+  const zone = isZoneView(cur);
+  const t = T();
+  return `
+  <div class="zbar ${zone?"":"off"}">
+    ${TENANTS.map(x=>{
+      const on = x.code === TENANT_CODE;
+      return `<button class="zt ${on?"on":""}" data-t="${x.code}"
+        title="${x.name}">
+        ${(x.short||x.name).replace("재정비촉진구역","")}
+        <em>${x.code}</em>
+        ${x.sub!=="운영중"?`<i class="zw">${x.sub}</i>`:""}
+      </button>`;}).join("")}
+  </div>
+
+  ${zone ? (() => {
+      /* ★ 계약이 안 된 구역은 띠 색을 바꾼다 (2026-08-22).
+         미아2와 똑같이 파랗게 보이면 상담 중인 구역을 고쳐 두고 잊으신다.
+         나중에 그 조합이 들어왔을 때 누가 언제 넣은 값인지 알 수 없다. */
+      const live = t.sub === "운영중";
+      const why  = t.sub === "미계약"
+        ? "아직 계약 전입니다 · 여기서 수정한 값은 계약이 끝나야 쓰입니다"
+        : "대기 중인 구역입니다 · 아직 조합원에게 나가지 않습니다";
+      return `<div class="znow ${live?"":"warnz"}">
+      <span>지금 다루는 조합</span>
+      <b>${t.name}</b>
+      <em class="mono">${t.code}</em>
+      <i class="zs ${live?"ok":"hot"}">${t.sub}</i>
+      <span class="zh">${live
+        ? `이 화면에서 수정하는 것은 <b>이 구역에만</b> 반영됩니다`
+        : `<b>${why}</b>`}</span>
+    </div>`; })()
+    : `<div class="znow all">
+      <span>전역 관리</span>
+      <b>모든 회원사에 함께 적용됩니다</b>
+      <span class="zh">위 구역 탭은 이 화면과 상관이 없습니다</span>
+    </div>`}`;
+}
+
+function tName(code){
+  const t = (typeof TENANTS !== "undefined")
+    ? TENANTS.find(x => x.code === code) : null;
+  return t ? (t.short || t.name) : (code || "구역 없음");
+}
+
+function renderInner(){
+  /* ★ 사이드바 — 갈래 이름은 하위 메뉴보다 밝게 둔다.
+     너무 흐리면 표지 노릇을 못 한다. 직원 화면에서 배운 것이다. */
+  document.getElementById('nav').innerHTML = MENU_G.map(gr =>
+    (gr.g ? `<div class="mg">${gr.g}</div>` : '') +
+    gr.items.map(([k,l]) =>
+      `<button class="sub ${cur===k?'on':''}" data-m="${k}">${l}</button>`).join('')
+  ).join('');
+
+  /* ★ 구역 탭과 띠는 어느 화면에서나 맨 위에 있다. */
+  /* ★ 설정과 결과를 나란히 놓는 화면만 폭을 넓힌다.
+     나머지는 920px 그대로 — 글을 읽는 폭이다. */
+  const M = document.getElementById('main');
+  M.className = WIDE.includes(cur) ? 'wide' : (MID.includes(cur) ? 'mid' : '');
+  /* ★ 2026-09-17 — zone-admin.js 가 아직 안 읽혔을 수 있다.
+     세 번까지 기다렸다 다시 그린다. 자세한 것은 인수인계서 88-2. */
+  if(typeof V[cur] !== "function"){
+    ZW_TRY = (ZW_TRY || 0) + 1;
+    if(ZW_TRY <= 3){
+      M.innerHTML = zoneBar()
+        + `<h2 class="pt">불러오는 중입니다</h2>
+           <div class="box"><p class="hint" style="margin:0">
+             화면을 준비하고 있습니다. 잠시만 기다려 주십시오.</p></div>`;
+      setTimeout(render, 300);
+      return;
+    }
+    ZW_TRY = 0;
+    M.innerHTML = zoneBar()
+      + `<h2 class="pt">이 화면을 불러오지 못했습니다</h2>
+         <div class="warn"><b>zone-admin.js 를 읽지 못했습니다</b>
+           <p>파일이 서버에 올라가지 않았거나 인터넷이 끊겼을 수 있습니다.<br>
+              ★ <b>Ctrl + Shift + R</b> 로 새로 불러와 보십시오.<br>
+              ★ 그래도 같으면 <b>GitHub 에 zone-admin.js 가 올라갔는지</b>
+                확인해 주십시오.</p></div>`;
+    return;
+  }
+  ZW_TRY = 0;
+  M.innerHTML = zoneBar() + V[cur]();
+  if(typeof imeBind !== "undefined") imeBind();
+  /* ★ 우리 구역 설정의 찾기 칸 (zone-admin.js) */
+  if(typeof zqBind !== "undefined") zqBind();
+
+  document.getElementById('who-name').textContent = S.name + ' · 운영자';
+  document.getElementById('who-t').textContent =
+    '고른 구역 · ' + tName(TENANT_CODE).replace('재정비촉진구역','');
+
+  document.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{
+    /* ★ 홈 화면을 고치다 다른 메뉴로 가시면 그대로 날아간다.
+       구역 탭과 같은 이유로 먼저 여쭙는다 (2026-08-22 오후). */
+    if(HOME_DIRTY && b.dataset.m !== cur && !confirm(
+        "홈 화면에 저장하지 않은 변경이 있습니다.\n\n"
+      + "화면을 옮기면 수정하신 내용이 사라집니다.\n그래도 옮기시겠습니까?")) return;
+    HOME_DIRTY = false;
+    cur=b.dataset.m; render(); scrollTo(0,0); });
+  /* ★ 목록 찾기 칸 — 한 글자 칠 때마다 다시 그리되 커서를 되돌린다.
+     안 되돌리면 커서가 맨 앞으로 튀어 아무도 못 쓴다. */
+  const alq = document.getElementById('alq');
+  if(alq){
+    const pos = alq.selectionStart;
+    alq.focus(); alq.setSelectionRange(pos, pos);
+  }
+  document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>switchTenant(b.dataset.t));
+}
+
+document.getElementById('g-go').onclick = () => {
+  /* ★ 한글은 겉보기가 같아도 담기는 방식이 두 가지다.
+     "류승현" 이 세 글자로 들어올 수도, 여덟 조각으로 들어올 수도 있다.
+     화면에는 똑같이 보이는데 컴퓨터는 다른 것으로 본다.
+     자동 채우기나 복사해 붙여넣기에서 자주 생긴다.
+     normalize 로 모양을 하나로 맞춘 뒤 비교한다.
+
+     암호도 뒤에 공백이 붙는 일이 있어 잘라낸다. */
+  const norm = v => String(v||"").normalize("NFC").trim();
+  const n = norm(document.getElementById('g-name').value);
+  const p = norm(document.getElementById('g-pw').value);
+  const e = document.getElementById('g-err');
+  if(!n || !p){ e.textContent='이름과 암호를 입력하세요.'; return; }
+  if(!OPS.includes(hsh(`${n}|${p}`))){
+    e.innerHTML = `이름 또는 암호가 맞지 않습니다.<br>
+      <span style="font-size:.72rem">넣으신 이름 ${n.length}자 · 암호 ${p.length}자</span>`;
+    return; }
+  S.name = n;
+  /* ★ 감사 로그는 배열 형태다. [시각, 누가, 무엇을, 자세히]
+     예전에는 여기만 객체로 넣고 있었고, 없는 stamp() 를 불러
+     로그인 자체가 되지 않았다. */
+  const _d = new Date(), _z = v => String(v).padStart(2,"0");
+  AUDIT.unshift([
+    `${_d.getFullYear()}-${_z(_d.getMonth()+1)}-${_z(_d.getDate())} `
+      + `${_z(_d.getHours())}:${_z(_d.getMinutes())}`,
+    n, "로그인", "운영 콘솔"
+  ]);
+  document.getElementById('gate').style.display='none';
+  document.getElementById('wrap').classList.add('on');
+  render();
+  /* ★ 로그인한 뒤에 받아온다.
+     화면이 그려지기 전에 부르면, 콜백이 없는 화면을 건드려 오류가 난다. */
+  if(typeof hubPollCommon !== "undefined"){
+    hubPollCommon("law_seq",  v => { LAW_SEQ = Math.max(LAW_SEQ, v || 0); }, 60);
+    hubPollCommon("law_docs", v => {
+      if(!v || JSON.stringify(v) === JSON.stringify(LAW_DOCS)) return;
+      LAW_DOCS = v; render();
+    }, 60);
+  }
+  /* ★ zone-admin.js 는 이 글 뒤에 읽힌다. 있는지 보고 부른다. */
+  if(typeof homePullAll !== "undefined") homePullAll();
+};
+
+/* ★ homePullAll() 은 zone-admin.js 로 옮겼다 (2026-09-17).
+   저장해 둔 홈 화면 설정을 구역마다 받아온다.
+   이것이 없으면 저장은 되는데 다음에 열 때 예전 값이 보인다. */
+document.getElementById('g-pw').addEventListener('keydown', e=>{
+  if(e.key==='Enter') document.getElementById('g-go').click();
+});
+document.getElementById('logout').onclick = () => location.reload();
+</script>
+<!-- ★★★ 우리 구역 설정 — 직원 화면과 같은 파일을 읽는다 (2026-09-17)
+     ★ 반드시 위의 <script> 보다 **뒤**에 두어야 한다.
+       그 안에서 const V · const S 를 선언하기 때문이다.
+       앞에 두면 "V is not defined" 로 화면이 통째로 안 열린다. -->
+<script src="zone-admin.js"></script>
+</body>
+</html>
