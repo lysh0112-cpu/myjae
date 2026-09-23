@@ -50,7 +50,6 @@ export default function ChargePage() {
   const [amount, setAmount] = useState<number>(CHARGE_AMOUNTS[1])
   /** 🔴 ★승인 전에는 큐보드·골프온 이름을 «안» 보입니다 [대표님 2026-09-22] */
   const sisterOn = useSisterLinks()
-  const [custom, setCustom] = useState('')
   const [widgets, setWidgets] = useState<TossPaymentsWidgets | null>(null)
   const [ready, setReady] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -171,7 +170,6 @@ export default function ChargePage() {
   const pick = (n: number) => {
     setAmount(n)
     amountRef.current = n
-    setCustom('')
     setErr('')
   }
 
@@ -208,7 +206,7 @@ export default function ChargePage() {
         <div style={{ fontSize: 12, color: C.sub, marginBottom: 9 }}>얼마를 충전하실까요?</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7 }}>
           {CHARGE_AMOUNTS.map(n => {
-            const on = amount === n && custom === ''
+            const on = amount === n
             return (
               <button key={n} type="button" onClick={() => pick(n)}
                 style={{
@@ -224,32 +222,17 @@ export default function ChargePage() {
           })}
         </div>
 
-        {/*  ★직접 입력 — ⚠️ 토스는 «100원 미만» 을 안 받습니다. 1,000원부터로 둡니다. */}
-        <div style={{ marginTop: 9, display: 'flex', alignItems: 'center', gap: 7 }}>
-          <input
-            type="number" inputMode="numeric" value={custom} placeholder="직접 입력"
-            onChange={e => {
-              const v = e.target.value
-              setCustom(v)
-              setErr('')
-              const n = Number(v)
-              const got = Number.isFinite(n) ? Math.floor(n) : 0
-              setAmount(got)
-              amountRef.current = got
-            }}
-            style={{
-              flex: 1, height: 42, borderRadius: 10, padding: '0 12px',
-              border: `0.5px solid ${C.thin}`, background: '#fff',
-              fontSize: 14, fontFamily: 'inherit', color: C.ink,
-            }}
-          />
-          <span style={{ fontSize: 13, color: C.sub }}>원</span>
+        {/*  ⛔⛔ ★2026-09-23 (11부) — «직접 입력» 칸을 «걷어냈습니다».
+          *  [토스 충전업종 가이드 4쪽 · 3번]
+          *    「★임의 금액 입력 후 충전하는 결제 방식은 이용이 «불가능» 해요.
+          *      반드시 ★10만원 이하의 금액을 «선택» 하도록 구현해 주세요.」
+          *  [토스 회신 2026-09-23] 「충전금액 한도를 ★1회 10만원으로 제한해 주세요.」
+          *  ⇒ 🔴 손님이 «적어 넣는» 길을 두면 ★심사에서 반려됩니다.
+          *  ⛔ 다시 만들지 «마십시오». 금액은 ★CHARGE_AMOUNTS 다섯 개 «중에서만» 고릅니다.
+          *  ⚠️ 다섯 개의 «맨 위» 가 정확히 100,000 이라야 합니다 (그 이상은 안 됩니다). */}
+        <div style={{ fontSize: 11, color: C.sub, marginTop: 9, lineHeight: 1.7 }}>
+          한 번에 최대 100,000원까지 충전하실 수 있어요.
         </div>
-        {custom !== '' && amount < 1000 && (
-          <div style={{ fontSize: 11, color: '#A32D2D', marginTop: 6 }}>
-            1,000원부터 충전하실 수 있어요.
-          </div>
-        )}
       </div>
 
       {/*  ★결제수단 · 약관 — 토스가 그립니다 */}
@@ -266,12 +249,25 @@ export default function ChargePage() {
 
       {/*  ⚠️ ★충전은 «물건» 이 아니라 «돈을 넣는» 것이라 청약철회 문구가 다릅니다.
         *     ⇒ 약관 제8조 1항 — 충전일로부터 7일 이내 «미사용» 충전금 청약철회.
-        *  ⛔ 「결과를 확인하신 뒤에는」 같은 말을 여기에 쓰지 마십시오. 물건이 아닙니다. */}
-      <div style={{ fontSize: 11, color: C.sub, lineHeight: 1.7, margin: '12px 2px' }}>
-        충전한 금액은 1년간 쓰실 수 있어요.
+        *  ⛔ 「결과를 확인하신 뒤에는」 같은 말을 여기에 쓰지 마십시오. 물건이 아닙니다.
+        *
+        *  🔴🔴 ★2026-09-23 (11부) — 토스 «포인트충전 업종» 요건 [회신 2026-09-23]
+        *    「홈페이지 «내» 에 충전된 포인트에 대한 ★환불 정책을 기재해 주세요」
+        *    ⇒ 약관에만 두지 «않고» ★손님이 «결제하는 그 화면» 에 적습니다.
+        *  ⛔ 아래 네 줄을 지우지 «마십시오» — 심사가 이 자리를 봅니다.
+        *     · 이용·환불 기한 ★«결제시점으로부터 1년»   (약관 제7조 3항)
+        *     · 7일 이내 청약철회                      (제8조 1항)
+        *     · 환불은 ★«결제하신 수단» 으로            (제7조 4항 · 제8조 3항)
+        *     · ★양도 불가                             (제7조 1항)
+        *  ⚠️ 약관을 고치면 ★이 글도 «함께» 고치십시오 (말이 달라지면 심사에서 걸립니다). */}
+      <div style={{ fontSize: 11, color: C.sub, lineHeight: 1.75, margin: '12px 2px' }}>
+        충전금은 결제하신 날로부터 1년간 쓰실 수 있어요.
         <br />
         쓰지 않은 충전금은 충전일로부터 7일 안에 취소하실 수 있고, 그 뒤에도 환불을 요청하실 수 있어요.
-        
+        <br />
+        환불은 결제하신 수단으로 돌려드려요.
+        <br />
+        충전금은 다른 회원에게 넘기실 수 없어요.
       </div>
 
       <button type="button" onClick={pay}
