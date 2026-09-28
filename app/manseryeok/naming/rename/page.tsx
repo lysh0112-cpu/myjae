@@ -11,7 +11,8 @@ const MENUS = [
     title1: '내 이름 정밀분석',
     title2: '+ 개명하기',
     desc: '지금 내 이름이 사주에 맞는지 풀어주고, 더 좋은 한자로 바꿔드려요',
-    price: '9,900원~',
+    //  🔴 ★2026-09-29 — «~» 를 뺐습니다 [토스 회신 · 변동가 오해]
+    price: '9,900원',
     href: '/manseryeok/naming/diagnosis',
   },
 ]
