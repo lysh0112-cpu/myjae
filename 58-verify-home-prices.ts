@@ -893,8 +893,13 @@ function main() {
      *     경고문이 있어서, 그것까지 세면 ★«헛 실패» 가 납니다. */
     ok(!/gsk_|sk_live|_sk_/.test(payLive),
       '🔴🔴 ⛔ ★충전 화면에 «시크릿 키» 가 없습니다 (손님에게 드러나면 안 됩니다)')
-    ok(/test_gck_/.test(pay),
-      '★클라이언트 키는 «주문서형»(gck)입니다 (구버전 ck 와 섞으면 오류)')
+    /*  🔴 ★2026-09-30 (12부) — 라이브로 바꿨습니다.
+     *     ⚠️ «이름» 을 외우지 않고 ★«실제 값» 을 봅니다 (10부 3-3 교훈). */
+    const ck = (payLive.match(/const CLIENT_KEY = '([^']*)'/) || [])[1] || ''
+    ok(/^live_gck_[A-Za-z0-9]+$/.test(ck),
+      '🔴 ★클라이언트 키는 «라이브 · 주문서형»(live_gck_)입니다 (구버전 ck · 테스트 키 섞으면 오류)')
+    ok(!/test_gck_|test_ck_/.test(payLive),
+      '⛔ ★충전 화면 코드에 «테스트 키» 가 남아 있지 않습니다')
     ok(/process\.env\.TOSS_SECRET_KEY/.test(api),
       '⛔ ★시크릿 키는 «서버» 에서만 읽습니다')
     ok(!/TOSS_SECRET_KEY/.test(payLive),

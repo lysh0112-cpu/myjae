@@ -18,9 +18,10 @@
 //     ④ 거기서 ★/api/toss/confirm 을 불러 «승인» 하고 지갑에 넣습니다
 //     ⛔ ★«승인» 을 화면에서 하지 마십시오 — 시크릿 키가 드러납니다. 서버 몫입니다.
 //
-//  ⚠️ ★테스트 키(test_gck_…)입니다. 진짜 돈은 «안» 빠집니다.
-//     라이브로 바꾸실 때는 ★이 파일의 CLIENT_KEY 와
-//     Vercel 의 TOSS_SECRET_KEY 를 «함께» 바꾸십시오. 섞으면 INVALID_API_KEY 입니다.
+//  🔴 ★2026-09-30 (12부) — ★라이브 키(live_gck_…)입니다. «진짜 돈» 이 빠집니다.
+//     [토스페이먼츠 재심사 승인 2026-09-30]
+//     ⇒ Vercel 의 TOSS_SECRET_KEY 도 ★live_gsk_… 여야 합니다. 섞으면 INVALID_API_KEY 입니다.
+//     ⛔ 테스트로 되돌리실 때도 ★«둘 다 함께» 바꾸십시오.
 // ══════════════════════════════════════════════════════════════════════
 
 import { useEffect, useRef, useState } from 'react'
@@ -32,13 +33,13 @@ import { CHARGE_AMOUNTS } from '@/app/components/common/WalletPanel'
 import { useSisterLinks } from '@/app/components/common/useSisterLinks'
 
 /**
- *  ★결제위젯 «클라이언트» 키 (test_gck_…).
+ *  ★결제위젯 «클라이언트» 키 (live_gck_… · 주식회사 명연재 · 라이브).
  *  ⚠️ 이 값은 ★손님 브라우저에 «드러나는» 것이 정상입니다. 숨길 값이 아닙니다.
- *  ⛔ «시크릿» 키(test_gsk_…)는 ★여기에 «절대» 적지 마십시오 —
+ *  ⛔ «시크릿» 키(live_gsk_…)는 ★여기에 «절대» 적지 마십시오 —
  *     그것은 Vercel 의 TOSS_SECRET_KEY 에만 있고, 서버만 씁니다.
  *  ⚠️ ★주문서형·결제창형 키(gck)입니다. 구버전 키(ck)와 «섞으면» INVALID_API_KEY.
  */
-const CLIENT_KEY = 'test_gck_Poxy1XQL8RJvqkojNak587nO5Wml'
+const CLIENT_KEY = 'live_gck_ma60RZblrqoEw0xgZv6e3wzYWBn1'
 
 const C = {
   bg: '#FDF6F0', card: '#FFFBF7', line: '#9c7a58', thin: '#e8dccf',
